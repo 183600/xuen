@@ -44,7 +44,7 @@ class UI:
             self.raw("\n" + self._c("cyan", "─" * width) + "\n")
 
     def banner(self) -> None:
-        self.raw("\n" + self._c("bold", "⟡ research-loop ⟡")
+        self.raw("\n" + self._c("bold", "⟡ xuangen ⟡")
                  + self._c("dim", "  随机灵感词 × 人类研究者模拟\n"))
 
     def info(self, text: str) -> None: self.line("· ", text, "cyan")

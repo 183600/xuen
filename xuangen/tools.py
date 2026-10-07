@@ -141,9 +141,9 @@ class ToolBox:
 
         output = "".join(chunks)
         if killed["flag"]:
-            output += f"\n[research-loop] 命令超时（{timeout}s），已强制终止"
+            output += f"\n[xuangen] 命令超时（{timeout}s），已强制终止"
         elif proc.returncode not in (0, None):
-            output += f"\n[research-loop] 退出码 {proc.returncode}"
+            output += f"\n[xuangen] 退出码 {proc.returncode}"
         return self._truncate(output)
 
     def _truncate(self, text: str) -> str:

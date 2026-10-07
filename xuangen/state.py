@@ -21,8 +21,8 @@ def end_marker(name: str) -> str:
 
 def scaffold(task: str) -> str:
     return (
-        f"# 研究循环 · {task}\n\n"
-        "> 本文件由 research-loop 维护：『想法区』『产物区』跨轮保留，"
+        f"# 玄根 · {task}\n\n"
+        "> 本文件由 xuangen 维护：『想法区』『产物区』跨轮保留，"
         "每次写入会整体覆盖对应区块。编辑时请保留标记行。\n\n"
         f"{start_marker(SECTION_IDEA)}\n（暂无）\n{end_marker(SECTION_IDEA)}\n\n"
         f"{start_marker(SECTION_ARTIFACT)}\n（暂无）\n{end_marker(SECTION_ARTIFACT)}\n"
@@ -70,7 +70,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
 # 从而实现「生成想法 / 生成产物」这两个工具（覆盖对应区块）。
 # ----------------------------------------------------------------_Settings
 HELPER_TEMPLATE = '''#!/usr/bin/env python3
-"""research-loop 区块写入助手（供外部 agent 通过 shell 调用）。
+"""xuangen 区块写入助手（供外部 agent 通过 shell 调用）。
 
 用法:
   cat new.md | python write_section.py idea       # 用 stdin 内容覆盖『想法区』

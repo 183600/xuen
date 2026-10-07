@@ -3,14 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "research-loop"
+name = "xuangen"
 version = "0.1.0"
 description = "随机灵感词驱动的 LLM 研究者模拟循环（CLI）"
 requires-python = ">=3.9"
 dependencies = ["requests>=2.28", "PyYAML>=6.0"]
 
 [project.scripts]
-research-loop = "research_loop.cli:main"
+xuangen = "xuangen.cli:main"
 
 [tool.setuptools]
-packages = ["research_loop"]
+packages = ["xuangen"]

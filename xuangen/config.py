@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-DEFAULT_CONFIG_PATHS = ("config.yaml", "config.yml", "research-loop.yaml")
+DEFAULT_CONFIG_PATHS = ("config.yaml", "config.yml", "xuangen.yaml")
 
 
 @dataclass

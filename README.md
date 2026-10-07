@@ -1,4 +1,4 @@
-# research-loop
+# xuangen
 
 一个"随机灵感词 × 人类研究者模拟"的 CLI 循环。
 
@@ -29,12 +29,12 @@ shell 模式（agent.mode=shell，如 opencode run "$prompt"）：
 ## 目录结构
 
 ```
-research-loop/
+xuangen/
 ├── main.py                    # 入口
 ├── requirements.txt
 ├── pyproject.toml
 ├── config.example.yaml        # 复制为 config.yaml 使用
-└── research_loop/
+└── xuangen/
     ├── __init__.py
     ├── __main__.py
     ├── cli.py                 # 命令行
@@ -106,4 +106,4 @@ $ python -c "print(2**10)"
 | 工具可同时调用 | 同一消息多个 tool_calls 用线程池并行执行 |
 | 想法区+产物区持久化到一个文件并输出到 stdout | `research.md`（标记区块），写入即回显，每轮结束再整体打印 |
 
-**注意事项**：Ctrl+C 可随时安全中断（状态都在文件里，重跑自动从上次的 `research.md` 继续）；上下文变长时可调小 `agent.max_steps` / `tools.max_tool_output`；`RESEARCH_LOOP_DEBUG=1` 可查看 MCP 服务器日志。
+**注意事项**：Ctrl+C 可随时安全中断（状态都在文件里，重跑自动从上次的 `research.md` 继续）；上下文变长时可调小 `agent.max_steps` / `tools.max_tool_output`；`XUANGEN_DEBUG=1` 可查看 MCP 服务器日志。

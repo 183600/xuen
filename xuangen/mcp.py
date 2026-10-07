@@ -91,11 +91,11 @@ class MCPClient:
             return
         self._send({
             "jsonrpc": "2.0", "id": msg["id"],
-            "error": {"code": -32601, "message": f"research-loop 不支持该服务端请求: {msg.get('method')}"},
+            "error": {"code": -32601, "message": f"xuangen 不支持该服务端请求: {msg.get('method')}"},
         })
 
     def _drain_stderr(self) -> None:
-        debug = bool(os.environ.get("RESEARCH_LOOP_DEBUG"))
+        debug = bool(os.environ.get("XUANGEN_DEBUG"))
         try:
             for line in self.proc.stderr:
                 if debug and line.strip():
@@ -129,7 +129,7 @@ class MCPClient:
             {
                 "protocolVersion": self.PROTOCOL_VERSION,
                 "capabilities": {},
-                "clientInfo": {"name": "research-loop", "version": "0.1.0"},
+                "clientInfo": {"name": "xuangen", "version": "0.1.0"},
             },
             timeout=30,
         )
