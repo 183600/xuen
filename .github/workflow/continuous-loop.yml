@@ -1,0 +1,168 @@
+name: Continuous Loop
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+concurrency:
+  group: continuous-loop
+  cancel-in-progress: false
+
+jobs:
+  run-opencode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free up disk space (keep miniconda)
+        run: |
+          set +e
+          echo "=== disk before cleanup ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet \
+                      /usr/share/swift \
+                      /usr/local/lib/android \
+                      /usr/local/share/boost \
+                      /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          sudo apt-get clean
+          echo "=== disk after cleanup ==="
+          df -h /
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure swap (safe version)
+        run: |
+          set -e
+          echo "=== Before ==="
+          free -h
+          df -h /
+
+          sudo systemctl disable --now systemd-oomd.socket systemd-oomd.service 2>/dev/null || true
+
+          sudo modprobe zram 2>/dev/null || true
+          if [ -e /dev/zram0 ]; then
+            sudo swapoff /dev/zram0 2>/dev/null || true
+            echo 8G | sudo tee /sys/block/zram0/disksize >/dev/null || true
+            sudo mkswap /dev/zram0 >/dev/null 2>&1 || true
+            sudo swapon -p 100 /dev/zram0 2>/dev/null && echo "[ok] zram enabled (8G, prio=100)" \
+              || echo "[warn] zram enable failed"
+          else
+            echo "[info] zram not available, skip"
+          fi
+
+          AVAIL_KB=$(df --output=avail / | tail -1)
+          AVAIL_MB=$((AVAIL_KB / 1024))
+          WANT_MB=$((AVAIL_MB - 3072))
+          if [ "$WANT_MB" -gt 8192 ]; then WANT_MB=8192; fi
+          if [ "$WANT_MB" -lt 2048 ]; then WANT_MB=2048; fi
+          echo "[info] available disk: ${AVAIL_MB}MB, will create swapfile: ${WANT_MB}MB"
+
+          sudo swapoff /swapfile 2>/dev/null || true
+          sudo rm -f /swapfile
+          if ! sudo fallocate -l "${WANT_MB}M" /swapfile 2>/dev/null; then
+            echo "[info] fallocate failed, falling back to dd"
+            sudo dd if=/dev/zero of=/swapfile bs=1M count=$WANT_MB status=none
+          fi
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile >/dev/null
+          sudo swapon -p 10 /swapfile && echo "[ok] swapfile enabled"
+
+          sudo sysctl -w vm.swappiness=100
+          sudo sysctl -w vm.vfs_cache_pressure=200
+          sudo sysctl -w vm.overcommit_memory=1
+          sudo sysctl -w vm.dirty_ratio=40
+          sudo sysctl -w vm.dirty_background_ratio=10
+          sudo sysctl -w vm.watermark_scale_factor=200 2>/dev/null || true
+
+          echo "=== After ==="
+          free -h
+          swapon --show
+          df -h /
+
+      - name: Install opencode
+        run: npm i -g opencode-ai
+
+      - name: Configure opencode (NVIDIA)
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          mkdir -p ~/.config/opencode
+
+          cat > ~/.config/opencode/opencode.json <<'EOF'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "provider": {
+              "nvidia": {
+                "npm": "@ai-sdk/openai-compatible",
+                "name": "NVIDIA",
+                "options": {
+                  "baseURL": "https://integrate.api.nvidia.com/v1",
+                  "apiKey": "{env:NVIDIA_API_KEY}"
+                },
+                "models": {
+                  "moonshotai/kimi-k3": { "name": "moonshotai/kimi-k3" }
+                }
+              }
+            },
+            "model": "nvidia/moonshotai/kimi-k3"
+          }
+          EOF
+
+          echo "=== opencode config ==="
+          cat ~/.config/opencode/opencode.json
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run opencode (fix bugs only)
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          opencode run --model nvidia/moonshotai/kimi-k3 <<'PROMPT'
+          You are working inside this repository. Your ONLY task is to find and fix bugs.
+
+          Rules:
+          - Focus exclusively on bug fixes (crashes, incorrect logic, edge cases, failing tests, type errors, null/undefined handling, off-by-one, race conditions).
+          - Do NOT add new features, do NOT refactor for style, do NOT reformat files, do NOT touch documentation unless it is directly tied to a bug fix.
+          - Make the smallest correct change that fixes each bug.
+          - Prefer running existing tests / linters / builds to verify fixes.
+          - If there are no bugs to fix, make no changes and exit.
+          PROMPT
+
+      - name: Commit and push changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: automated bug fixes by opencode"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Push to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ secrets.GITEE_REPO }}
+        run: |
+          if [ -z "$GITEE_TOKEN" ] || [ -z "$GITEE_REPO" ]; then
+            echo "GITEE_TOKEN or GITEE_REPO not set, skipping Gitee push."
+            exit 0
+          fi
+          git remote remove gitee 2>/dev/null || true
+          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
+          git push gitee "HEAD:${GITHUB_REF_NAME}" || echo "[warn] push to Gitee failed"
