@@ -1,0 +1,67 @@
+# ============================================================
+# research-loop 配置示例：复制为 config.yaml 后按需修改
+# ============================================================
+
+# ---- 模型（任意 OpenAI 兼容接口：OpenAI / DeepSeek / Moonshot / vLLM / Ollama…）----
+model:
+  name: gpt-4o
+  base_url: https://api.openai.com/v1
+  api_key: ""                    # 留空则读取环境变量
+  api_key_env: OPENAI_API_KEY
+  temperature: 1.0
+  max_tokens: 4096
+  stream: true
+  request_timeout: 600
+  # extra_headers:
+  #   X-Foo: bar
+
+# ---- 给 LLM 的额外备注（拼进系统提示词 / 外部 agent 提示词）----
+extra_notes: |
+  你偏好第一性原理推导，先给直觉解释再给严谨定义；
+  伪代码一律用 Python 风格；
+  每轮结尾用一句话指出当前方案最大的风险。
+
+# ---- 领域词库 ----
+words:
+  count: 1000     # 目标词数
+  batch: 100      # 每次请求生成多少个（自动分批凑齐 count）
+  pick: 2         # 每轮随机抽的灵感词数量 n（>=0；0 = 不以词为灵感）
+  reuse: true     # words.txt 已存在时直接复用（--regen-words 可强制重建）
+  via: auto       # auto | direct | shell
+
+# ---- 循环 ----
+loop:
+  iterations: 6   # 轮数；写 inf 表示无限循环（Ctrl+C 结束）
+
+# ---- Agent ----
+agent:
+  mode: direct        # direct: 直连 LLM（内置工具循环）
+                      # shell:  用命令行调用外部 agent，想法区/产物区由 agent
+                      #         直接写文件覆盖（经 workspace/write_section.py）
+  # shell 模式必须给命令模板，例如：
+  #   command: 'opencode run "$prompt"'
+  #   command: 'claude -p "$prompt"'
+  # 提示词很长时可改用文件占位符：
+  #   command: 'aider --message "$(cat $prompt_file)"'
+  command: ""
+  timeout: 1800      # shell 模式单轮超时（秒）
+  max_steps: 24      # direct 模式每轮最大工具轮次
+
+# ---- direct 模式的内置工具 ----
+tools:
+  shell: true          # 是否提供 run_shell
+  shell_timeout: 600   # 单条命令超时（秒）
+  max_tool_output: 20000
+
+# ---- MCP 服务器（仅 direct 模式；工具自动注入给模型）----
+mcp_servers: []
+#  - name: fetch
+#    command: npx
+#    args: ["-y", "@modelcontextprotocol/server-fetch"]
+#    env: {}
+#    call_timeout: 300
+
+# ---- 工作区（research.md / words.txt / write_section.py 所在目录）----
+workspace: ./workspace
+
+color: true

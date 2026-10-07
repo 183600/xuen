@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# 运行时生成的工作区（research.md / words.txt / write_section.py 等）
+workspace/
+
+# 本地配置（含 API key，勿提交）
+config.yaml
+config.yml
+research-loop.yaml
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+.DS_Store
