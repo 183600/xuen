@@ -1,6 +1,6 @@
 """配置加载与校验。
 
-xuangen 只通过外部 agent（如 opencode）工作，不再内置直连 LLM 的模式，
+xuen 只通过外部 agent（如 opencode）工作，不再内置直连 LLM 的模式，
 因此配置项也大幅简化：核心就是 agent.command（外部 agent 命令模板）。
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ from typing import Any, List, Optional
 
 import yaml
 
-DEFAULT_CONFIG_PATHS = ("config.yaml", "config.yml", "xuangen.yaml")
+DEFAULT_CONFIG_PATHS = ("config.yaml", "config.yml", "xuen.yaml")
 
 
 @dataclass

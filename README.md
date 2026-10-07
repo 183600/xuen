@@ -1,8 +1,8 @@
-# xuangen
+# xuen
 
 一个"随机灵感词 × 外部 agent 模拟人类研究者"的 **TUI** 循环。
 
-xuangen **只调用外部 agent**（如 opencode）来完成所有思考：首次运行让外部 agent
+xuen **只调用外部 agent**（如 opencode）来完成所有思考：首次运行让外部 agent
 生成领域词库；每轮从词库**纯随机**抽取灵感词（此步绝不调任何模型），把
 「任务 + 灵感词 + 当前想法区/产物区 + 用户输入」拼成提示词交给外部 agent，
 由它覆盖「想法区 / 产物区」。
@@ -63,12 +63,12 @@ python main.py "设计一个新的优化器" --regen-words
 ## 目录结构
 
 ```
-xuangen/
+xuen/
 ├── main.py                    # 入口
 ├── requirements.txt
 ├── pyproject.toml
 ├── config.example.yaml        # 复制为 config.yaml 使用
-└── xuangen/
+└── xuen/
     ├── cli.py                 # 命令行
     ├── config.py              # 配置
     ├── tui.py                 # TUI（textual）：区块面板 + 日志 + 底部输入框

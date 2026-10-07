@@ -3,14 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "xuangen"
+name = "xuen"
 version = "0.2.0"
 description = "随机灵感词驱动的外部 agent 研究者模拟循环（TUI）"
 requires-python = ">=3.9"
 dependencies = ["PyYAML>=6.0", "textual>=0.60"]
 
 [project.scripts]
-xuangen = "xuangen.cli:main"
+xuen = "xuen.cli:main"
 
 [tool.setuptools]
-packages = ["xuangen"]
+packages = ["xuen"]

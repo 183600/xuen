@@ -10,7 +10,7 @@ from .ui import configure, ui
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="xuangen",
+        prog="xuen",
         description="灵感词驱动的研究循环：生成领域词库 → 每轮随机抽词 → "
                     "外部 agent（如 opencode）模拟人类研究者思考并演进想法区/产物区",
         epilog='示例：python main.py "设计一个新的优化器"',

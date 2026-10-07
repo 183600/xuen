@@ -113,10 +113,10 @@ class TuiSink(Sink):
 
 
 class XuangenApp(App):
-    """xuangen TUI 主程序。"""
+    """xuen TUI 主程序。"""
 
     CSS = _CSS
-    TITLE = "xuangen"
+    TITLE = "xuen"
     SUB_TITLE = "随机灵感词 × 外部 agent 研究循环"
     BINDINGS = [("q", "quit", "退出"), ("ctrl+c", "quit", "退出")]
 
