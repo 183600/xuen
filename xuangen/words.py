@@ -1,25 +1,14 @@
-"""领域词库：生成、解析、持久化、随机抽样（抽样这一步绝不调用 LLM）。"""
+"""领域词库：由外部 agent 生成、解析、持久化、随机抽样（抽样这一步绝不调用任何 LLM）。"""
 from __future__ import annotations
 
 import random
 import re
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from .ui import ui
 
 _BULLET = re.compile(r"^(?:\d{1,3}\s*[\.\)、]\s*|[-*•·]\s*)+")
-
-_WORD_PROMPT = """你要为一个研究方向建立术语库。
-
-研究方向：{task}
-
-请写出 {batch} 个与该方向紧密相关的术语或关键词
-（算法、概念、方法、现象、技术、著名工作或人名等均可，中英文不限）。
-要求：
-- 每行一个词；
-- 不要编号、不要项目符号、不要解释、不要空行；
-- 尽量不重复。"""
 
 
 def _clean_line(line: str) -> Optional[str]:
@@ -76,32 +65,10 @@ def sample_words(wlist: List[str], n: int) -> List[str]:
     return random.sample(wlist, min(n, len(wlist)))
 
 
-def generate_words_direct(llm, task: str, count: int, batch: int) -> List[str]:
-    wlist: List[str] = []
-    seen = set()
-    max_batches = max(4, (count // max(batch, 1)) * 2 + 4)
-    for i in range(max_batches):
-        if len(wlist) >= count:
-            break
-        ask = min(batch, count - len(wlist) + 20)
-        ui.info(f"生成领域词库 {len(wlist)}/{count}（第 {i + 1} 批，请求 {ask} 个）")
-        msg = llm.chat([{"role": "user", "content": _WORD_PROMPT.format(task=task, batch=ask)}])
-        fresh = 0
-        for w in parse_word_lines(msg.get("content") or ""):
-            key = w.casefold()
-            if key not in seen:
-                seen.add(key)
-                wlist.append(w)
-                fresh += 1
-        if wlist:
-            ui.dim("样例: " + "、".join(wlist[-min(6, fresh or 6):]))
-        if fresh == 0:
-            ui.warn("词表不再增长，提前结束收集")
-            break
-    return wlist[:count]
-
-
-def generate_words_shell(shell_agent, task: str, count: int, batch: int) -> List[str]:
+def generate_words_shell(shell_agent, task: str, count: int, batch: int,
+                         info: Callable[[str], None] = ui.info,
+                         warn: Callable[[str], None] = ui.warn) -> List[str]:
+    """通过外部 agent（如 opencode）分批生成领域词库。"""
     wlist: List[str] = []
     seen = set()
     max_batches = max(2, count // max(batch, 1) + 3)
@@ -109,7 +76,7 @@ def generate_words_shell(shell_agent, task: str, count: int, batch: int) -> List
         if len(wlist) >= count:
             break
         ask = min(batch, count - len(wlist) + 20)
-        ui.info(f"通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）")
+        info(f"通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）")
         prompt = (
             f"请为研究方向「{task}」列出 {ask} 个紧密相关的术语/关键词。\n"
             "要求：每行一个词；不要编号、不要解释、不要输出任何多余内容；只输出词表本身。"
@@ -123,6 +90,6 @@ def generate_words_shell(shell_agent, task: str, count: int, batch: int) -> List
                 wlist.append(w)
                 fresh += 1
         if fresh == 0:
-            ui.warn("词表不再增长，提前结束收集")
+            warn("词表不再增长，提前结束收集")
             break
     return wlist[:count]

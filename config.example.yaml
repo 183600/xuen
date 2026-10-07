@@ -1,67 +1,41 @@
 # ============================================================
 # xuangen 配置示例：复制为 config.yaml 后按需修改
+#
+# xuangen 只通过【外部 agent】工作（如 opencode）：
+# 程序把任务/灵感词/当前状态拼成提示词交给外部 agent，agent 通过
+# workspace/write_section.py 直接写文件来覆盖「想法区 / 产物区」。
 # ============================================================
 
-# ---- 模型（任意 OpenAI 兼容接口：OpenAI / DeepSeek / Moonshot / vLLM / Ollama…）----
-model:
-  name: gpt-4o
-  base_url: https://api.openai.com/v1
-  api_key: ""                    # 留空则读取环境变量
-  api_key_env: OPENAI_API_KEY
-  temperature: 1.0
-  max_tokens: 4096
-  stream: true
-  request_timeout: 600
-  # extra_headers:
-  #   X-Foo: bar
+# ---- 外部 agent（必填）----
+agent:
+  # 命令模板。占位符：
+  #   "$prompt"      整段提示词（shell 转义后替换）
+  #   $prompt_file   提示词写入 工作区/.prompt.md，替换为该文件路径
+  command: 'opencode run "$prompt"'
+  # command: 'claude -p "$prompt"'
+  # command: 'aider --message-file $prompt_file'
+  timeout: 1800      # 单次调用超时（秒）
 
-# ---- 给 LLM 的额外备注（拼进系统提示词 / 外部 agent 提示词）----
+# ---- 给外部 agent 的额外备注（拼进每轮提示词开头）----
 extra_notes: |
-  你偏好第一性原理推导，先给直觉解释再给严谨定义；
-  伪代码一律用 Python 风格；
+  请像一位严谨的跨学科研究者一样思考；
+  先给直觉解释再给严谨定义；
   每轮结尾用一句话指出当前方案最大的风险。
 
-# ---- 领域词库 ----
+# ---- 领域词库（首次运行由外部 agent 分批生成，持久化到 words.txt）----
 words:
   count: 1000     # 目标词数
-  batch: 100      # 每次请求生成多少个（自动分批凑齐 count）
+  batch: 100      # 每批向外部 agent 请求的词数
   pick: 2         # 每轮随机抽的灵感词数量 n（>=0；0 = 不以词为灵感）
   reuse: true     # words.txt 已存在时直接复用（--regen-words 可强制重建）
-  via: auto       # auto | direct | shell
 
 # ---- 循环 ----
 loop:
-  iterations: 6   # 轮数；写 inf 表示无限循环（Ctrl+C 结束）
+  iterations: 5   # 轮数；写 inf 表示无限循环（TUI 中按 q 结束）
 
-# ---- Agent ----
-agent:
-  mode: direct        # direct: 直连 LLM（内置工具循环）
-                      # shell:  用命令行调用外部 agent，想法区/产物区由 agent
-                      #         直接写文件覆盖（经 workspace/write_section.py）
-  # shell 模式必须给命令模板，例如：
-  #   command: 'opencode run "$prompt"'
-  #   command: 'claude -p "$prompt"'
-  # 提示词很长时可改用文件占位符：
-  #   command: 'aider --message "$(cat $prompt_file)"'
-  command: ""
-  timeout: 1800      # shell 模式单轮超时（秒）
-  max_steps: 24      # direct 模式每轮最大工具轮次
-
-# ---- direct 模式的内置工具 ----
-tools:
-  shell: true          # 是否提供 run_shell
-  shell_timeout: 600   # 单条命令超时（秒）
-  max_tool_output: 20000
-
-# ---- MCP 服务器（仅 direct 模式；工具自动注入给模型）----
-mcp_servers: []
-#  - name: fetch
-#    command: npx
-#    args: ["-y", "@modelcontextprotocol/server-fetch"]
-#    env: {}
-#    call_timeout: 300
+# ---- 界面 ----
+tui: true         # TUI：修改想法区 / 修改产物区 / 输出日志 / 底部输入框；--no-tui 可关闭
+color: true       # 纯终端输出（--no-tui）时的颜色
 
 # ---- 工作区（research.md / words.txt / write_section.py 所在目录）----
 workspace: ./workspace
-
-color: true

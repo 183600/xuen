@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="xuangen",
         description="灵感词驱动的研究循环：生成领域词库 → 每轮随机抽词 → "
-                    "LLM 模拟人类研究者思考并演进想法区/产物区",
+                    "外部 agent（如 opencode）模拟人类研究者思考并演进想法区/产物区",
         epilog='示例：python main.py "设计一个新的优化器"',
     )
     p.add_argument("task", nargs="*", help="任务描述，例如：设计一个新的优化器")
@@ -21,10 +21,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--workspace", help="覆盖工作区目录")
     p.add_argument("--iterations", help="覆盖轮数（整数或 inf）")
     p.add_argument("--pick", type=int, help="覆盖每轮随机灵感词数量 n（>=0）")
-    p.add_argument("--mode", choices=("direct", "shell"), help="覆盖 agent 模式")
     p.add_argument("--regen-words", action="store_true", help="忽略已有词库并重新生成")
-    p.add_argument("--no-mcp", action="store_true", help="本次运行不启动 MCP 服务器")
-    p.add_argument("--no-color", action="store_true", help="关闭彩色输出")
+    p.add_argument("--no-tui", action="store_true", help="不用 TUI，直接输出到终端")
+    p.add_argument("--no-color", action="store_true", help="关闭彩色输出（--no-tui 时有效）")
     return p
 
 
@@ -64,8 +63,6 @@ def main(argv=None) -> int:
 
     if args.workspace:
         cfg.workspace = args.workspace
-    if args.mode:
-        cfg.agent.mode = args.mode
     if args.pick is not None:
         if args.pick < 0:
             print("--pick 必须 >= 0", file=sys.stderr)
@@ -80,10 +77,19 @@ def main(argv=None) -> int:
         ui.err("未提供任务")
         return 2
 
+    # TUI 模式（默认）：两个区块面板 + agent 输出日志 + 底部输入框
+    if cfg.tui and not args.no_tui and sys.stdout.isatty():
+        try:
+            from .tui import run_tui
+        except ImportError:
+            ui.warn("未安装 textual，回退到纯终端输出（pip install textual 可启用 TUI）")
+        else:
+            return run_tui(cfg, task, regen_words=args.regen_words)
+
     from .runner import run  # 延迟导入，加快 --help
 
     try:
-        run(cfg, task, regen_words=args.regen_words, use_mcp=not args.no_mcp)
+        run(cfg, task, regen_words=args.regen_words)
     except KeyboardInterrupt:
         print()
         ui.warn("已中断")

@@ -1,77 +1,30 @@
-"""Agent 执行器：DirectAgent（直连 LLM 工具循环）与 ShellAgent（外部 agent 命令）。"""
+"""外部 agent 执行器：通过 shell 命令调用 opencode / claude / aider 等外部 agent。
+
+xuangen 不再内置直连 LLM 的模式 —— 所有的"研究者思考"都由外部 agent 完成：
+程序把任务/灵感词/当前状态拼成提示词交给外部 agent，agent 通过
+workspace/write_section.py 直接写文件来"覆盖想法区 / 产物区"。
+"""
 from __future__ import annotations
 
-import json
 import os
 import shlex
 import subprocess
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Dict, List
+from typing import Callable, List, Optional
 
-from .config import Config
-from .llm import LLMClient
 from .procs import kill_process_tree, popen_kwargs
-from .tools import ToolBox
 from .ui import ui
 
+OutputCallback = Callable[[str], None]
 
-class DirectAgent:
-    """直连 LLM：思考实时流式输出；同一消息里的多个工具调用并行执行。"""
 
-    def __init__(self, llm: LLMClient, toolbox: ToolBox, cfg: Config):
-        self.llm = llm
-        self.toolbox = toolbox
-        self.max_steps = max(1, cfg.agent.max_steps)
+def _default_on_output(line: str) -> None:
+    ui.raw(line)
 
-    def run_round(self, history: List[Dict], round_message: str) -> List[Dict]:
-        messages = history + [{"role": "user", "content": round_message}]
-        exhausted = True
-        for step in range(1, self.max_steps + 1):
-            ui.rule(f"研究者思考 · 第 {step} 步")
-            msg = self.llm.chat(
-                messages,
-                tools=self.toolbox.schemas,
-                on_text=ui.agent_chunk,
-                on_reasoning=ui.agent_reasoning_chunk,
-            )
-            ui.raw("\n")
-            messages.append(msg)
 
-            calls = msg.get("tool_calls") or []
-            if not calls:
-                exhausted = False
-                if not (msg.get("content") or "").strip():
-                    ui.warn("模型返回了空消息，本轮提前结束")
-                break
-
-            # 并行执行同一条消息里的全部工具调用，按原顺序回填结果
-            with ThreadPoolExecutor(max_workers=len(calls)) as pool:
-                futures = [pool.submit(self._exec_tool_call, tc) for tc in calls]
-                results = [f.result() for f in futures]
-            for tc, result in zip(calls, results):
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc["id"],
-                    "content": result,
-                })
-        if exhausted:
-            ui.warn(f"已达到单轮最大步数 {self.max_steps}，强制进入下一轮")
-        return messages
-
-    def _exec_tool_call(self, tc: Dict) -> str:
-        fn = tc.get("function") or {}
-        name = fn.get("name", "?")
-        try:
-            arguments = json.loads(fn.get("arguments") or "{}")
-            if not isinstance(arguments, dict):
-                arguments = {"value": arguments}
-        except json.JSONDecodeError as e:
-            return f"参数 JSON 解析失败: {e}"
-        brief = json.dumps(arguments, ensure_ascii=False)
-        ui.tool(f"{name}({brief if len(brief) <= 200 else brief[:200] + '…'})")
-        return self.toolbox.execute(name, arguments)
+def _default_on_stderr(line: str) -> None:
+    ui.dim("│ " + line.rstrip("\n"))
 
 
 def _quote(prompt: str) -> str:
@@ -86,12 +39,24 @@ class ShellAgent:
     命令模板占位符：
       "$prompt" / $prompt   —— 替换为 shell 转义后的整段提示词
       $prompt_file          —— 提示词写入 工作区/.prompt.md，替换为该文件路径
+
+    on_output / on_stderr：每行输出的回调（默认打到终端；TUI 模式下注入到界面）。
     """
 
-    def __init__(self, command: str, workspace: Path, timeout: float = 1800.0):
+    def __init__(
+        self,
+        command: str,
+        workspace: Path,
+        timeout: float = 1800.0,
+        on_output: Optional[OutputCallback] = None,
+        on_stderr: Optional[OutputCallback] = None,
+    ):
         self.template = command
         self.workspace = workspace
         self.timeout = timeout
+        self.on_output = on_output or _default_on_output
+        self.on_stderr = on_stderr or _default_on_stderr
+        self._proc: Optional[subprocess.Popen] = None
 
     def render_command(self, prompt: str) -> str:
         tpl = self.template
@@ -106,11 +71,16 @@ class ShellAgent:
             return tpl.replace("'$prompt'", quoted)
         return tpl.replace("$prompt", quoted)
 
+    def kill(self) -> None:
+        """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。"""
+        proc = self._proc
+        if proc is not None and proc.poll() is None:
+            kill_process_tree(proc)
+
     def run(self, prompt: str) -> str:
         command = self.render_command(prompt)
-        ui.rule("外部 agent")
         shown = command if len(command) <= 300 else command[:300] + " …"
-        ui.dim(f"$ {shown}")
+        self.on_stderr(f"$ {shown}\n")
 
         proc = subprocess.Popen(
             command, shell=True,
@@ -118,23 +88,23 @@ class ShellAgent:
             text=True, encoding="utf-8", errors="replace",
             **popen_kwargs(),
         )
+        self._proc = proc
         out: List[str] = []
-        err: List[str] = []
         killed = {"flag": False}
 
-        def pump(pipe, sink: List[str], echo: bool) -> None:
+        def pump(pipe, sink: List[str], cb: OutputCallback) -> None:
             try:
                 for line in pipe:
                     sink.append(line)
-                    if echo:
-                        ui.raw(line)              # agent 输出原样上屏
-                    else:
-                        ui.dim("│ " + line.rstrip("\n"))
+                    try:
+                        cb(line)
+                    except Exception:
+                        pass
             except Exception:
                 pass
 
-        t_out = threading.Thread(target=pump, args=(proc.stdout, out, True), daemon=True)
-        t_err = threading.Thread(target=pump, args=(proc.stderr, err, False), daemon=True)
+        t_out = threading.Thread(target=pump, args=(proc.stdout, out, self.on_output), daemon=True)
+        t_err = threading.Thread(target=pump, args=(proc.stderr, [], self.on_stderr), daemon=True)
         t_out.start()
         t_err.start()
 
@@ -154,6 +124,7 @@ class ShellAgent:
             timer.cancel()
             t_out.join(timeout=5)
             t_err.join(timeout=5)
+            self._proc = None
         if killed["flag"]:
-            ui.warn(f"外部 agent 超时（{self.timeout:.0f}s），已强制终止")
+            self.on_stderr(f"外部 agent 超时（{self.timeout:.0f}s），已强制终止\n")
         return "".join(out)
