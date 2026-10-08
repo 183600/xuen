@@ -75,6 +75,8 @@ def main(argv=None) -> int:
         else:
             try:
                 cfg.loop.iterations = int(v)
+                if cfg.loop.iterations < 1:
+                    raise ValueError
             except ValueError:
                 print(f"--iterations 无效：{args.iterations!r}（应为整数或 inf）", file=sys.stderr)
                 return 2

@@ -201,7 +201,7 @@ class XuangenApp(App):
         text = event.value.strip()
         if not text:
             return
-        event.input.value = ""
+        self.query_one("#user-input", Input).value = ""
         self._user_inputs.put(text)
         log = self.query_one("#log", RichLog)
         log.write(Text(f"⌨ 已记录（下次调用 agent 时带给它）：{text}", style="bold blue"))

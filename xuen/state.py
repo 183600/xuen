@@ -38,7 +38,7 @@ def ensure_state_file(path: Path, task: str) -> str:
 
 def get_section(text: str, name: str) -> str:
     s, e = start_marker(name), end_marker(name)
-    if s not in text or e not in text:
+    if s not in text or e not in text or text.index(s) >= text.index(e):
         return ""
     i = text.index(s) + len(s)
     j = text.index(e, i)

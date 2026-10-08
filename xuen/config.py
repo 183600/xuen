@@ -104,3 +104,5 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.pick（n）必须 >= 0")
     if cfg.words.count < 1 or cfg.words.batch < 1:
         raise ValueError("words.count / words.batch 必须为正整数")
+    if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
+        raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
