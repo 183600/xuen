@@ -136,14 +136,7 @@ jobs:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
           opencode run --model nvidia/moonshotai/kimi-k3 <<'PROMPT'
-          You are working inside this repository. Your ONLY task is to find and fix bugs.
-
-          Rules:
-          - Focus exclusively on bug fixes (crashes, incorrect logic, edge cases, failing tests, type errors, null/undefined handling, off-by-one, race conditions).
-          - Do NOT add new features, do NOT refactor for style, do NOT reformat files, do NOT touch documentation unless it is directly tied to a bug fix.
-          - Make the smallest correct change that fixes each bug.
-          - Prefer running existing tests / linters / builds to verify fixes.
-          - If there are no bugs to fix, make no changes and exit.
+          判断是否有bug，如果有就修复
           PROMPT
 
       - name: Commit and push changes
