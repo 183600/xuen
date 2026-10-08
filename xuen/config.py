@@ -106,3 +106,5 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.count / words.batch 必须为正整数")
     if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
+    if cfg.agent.timeout <= 0:
+        raise ValueError("agent.timeout 必须为正数（秒）")
