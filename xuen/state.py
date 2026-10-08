@@ -58,9 +58,13 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding="utf-8") if path.exists() else scaffold("")
     old = get_section(text, name)
-    new = content.strip().strip("\n")
 
     s, e = start_marker(name), end_marker(name)
+    # 新内容里的字面量标记也必须清除（任一区块的），否则写入后
+    # get_section 会在内容中的伪标记处截断/串区，区块数据被悄悄破坏
+    new = content.strip().strip("\n")
+    for nm in (SECTION_IDEA, SECTION_ARTIFACT):
+        new = new.replace(start_marker(nm), "").replace(end_marker(nm), "")
     body = "\n" + new + "\n"
     i_s = text.find(s)
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
@@ -119,7 +123,12 @@ def main() -> int:
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, encoding="utf-8") as f:
             text = f.read()
-    body = "\\n" + content.strip().strip("\\n") + "\\n"
+    # 新内容里的字面量标记也要清除（任一区块的），否则写入后区块会在
+    # 内容中的伪标记处截断/串区
+    cleaned = content.strip().strip("\\n")
+    for nm in NAMES.values():
+        cleaned = cleaned.replace(f"<!-- {nm}:START -->", "").replace(f"<!-- {nm}:END -->", "")
+    body = "\\n" + cleaned + "\\n"
     i_s = text.find(s)
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
     if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
