@@ -60,7 +60,7 @@ def _parse_iterations(value: Any) -> Optional[int]:
     if value is None:
         return 5
     if isinstance(value, str):
-        if value.strip().lower() in ("inf", "infinite", "-1", "∞"):
+        if value.strip().lower() in ("inf", ".inf", "+.inf", "infinite", "-1", "∞"):
             return None
         value = value.strip()
     # YAML 会把 .inf 解析成 float('inf')，int() 会抛 OverflowError
