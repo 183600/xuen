@@ -5,12 +5,40 @@ on:
   schedule:
     - cron: '0 */6 * * *'
 
-concurrency:
-  group: continuous-loop
-  cancel-in-progress: false
-
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Check for earlier in-progress runs
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          my_id=${{ github.run_id }}
+          earlier=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "${{ github.workflow }}" \
+            --status in_progress \
+            --limit 100 \
+            --json databaseId \
+            --jq "[.[] | select(.databaseId < $my_id)] | length")
+          echo "My run_id: $my_id"
+          echo "Earlier in-progress runs: $earlier"
+          if [ "$earlier" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   run-opencode:
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     permissions:
@@ -126,7 +154,7 @@ jobs:
 
       - name: Configure git
         run: |
-          git config user.name  "github-actions[bot]" 
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run opencode (fix bugs only)
