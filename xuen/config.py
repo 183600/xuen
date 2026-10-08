@@ -5,6 +5,7 @@ xuen 只通过外部 agent（如 opencode）工作，不再内置直连 LLM 的�
 """
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
@@ -61,7 +62,10 @@ def _parse_iterations(value: Any) -> Optional[int]:
     if isinstance(value, str):
         if value.strip().lower() in ("inf", "infinite", "-1", "∞"):
             return None
-        value = int(value.strip())
+        value = value.strip()
+    # YAML 会把 .inf 解析成 float('inf')，int() 会抛 OverflowError
+    if isinstance(value, float) and math.isinf(value):
+        return None
     n = int(value)
     return None if n == -1 else n
 
@@ -91,7 +95,10 @@ def load_config(path: Optional[str] = None) -> Config:
         timeout=float(agent.get("timeout", cfg.agent.timeout)),
     )
 
-    cfg.workspace = str(raw.get("workspace", cfg.workspace))
+    # workspace 显式写成 null/空 时不能变成字面目录 "None"
+    workspace = raw.get("workspace")
+    if workspace is not None and str(workspace).strip():
+        cfg.workspace = str(workspace)
     cfg.tui = bool(raw.get("tui", cfg.tui))
     cfg.color = bool(raw.get("color", cfg.color))
 
