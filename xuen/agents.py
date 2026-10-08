@@ -65,11 +65,12 @@ class ShellAgent:
             pfile.write_text(prompt, encoding="utf-8")
             tpl = tpl.replace("$prompt_file", str(pfile.resolve()))
         quoted = _quote(prompt)
-        if '"$prompt"' in tpl:
-            tpl = tpl.replace('"$prompt"', quoted)
-        if "'$prompt'" in tpl:
-            tpl = tpl.replace("'$prompt'", quoted)
-        return tpl.replace("$prompt", quoted)
+        # 先统一替换成哨兵再一次性换成 quoted，避免提示词内容里
+        # 恰好含有 "$prompt" 时被二次替换、破坏 shell 引号结构
+        sentinel = "\0XUEN_PROMPT\0"
+        for ph in ('"$prompt"', "'$prompt'", "$prompt"):
+            tpl = tpl.replace(ph, sentinel)
+        return tpl.replace(sentinel, quoted)
 
     def kill(self) -> None:
         """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。"""
@@ -127,4 +128,7 @@ class ShellAgent:
             self._proc = None
         if killed["flag"]:
             self.on_stderr(f"外部 agent 超时（{self.timeout:.0f}s），已强制终止\n")
+        elif proc.returncode:
+            self.on_stderr(f"外部 agent 异常退出（退出码 {proc.returncode}），"
+                           "本轮可能未更新区块\n")
         return "".join(out)

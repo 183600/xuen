@@ -51,6 +51,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     word_list = [] if regen_words else words.load_words(words_path)
     if word_list and cfg.words.reuse and not regen_words:
         sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
+    elif cfg.words.pick == 0:
+        sink.info("words.pick=0：本轮循环不使用灵感词，跳过词库生成")
     else:
         try:
             sink.info(f"通过外部 agent 生成领域词库（目标 {cfg.words.count} 个，"
