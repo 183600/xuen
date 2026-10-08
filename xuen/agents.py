@@ -63,7 +63,8 @@ class ShellAgent:
         if "$prompt_file" in tpl:
             pfile = self.workspace / ".prompt.md"
             pfile.write_text(prompt, encoding="utf-8")
-            tpl = tpl.replace("$prompt_file", str(pfile.resolve()))
+            # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
+            tpl = tpl.replace("$prompt_file", _quote(str(pfile.resolve())))
         quoted = _quote(prompt)
         # 先统一替换成哨兵再一次性换成 quoted，避免提示词内容里
         # 恰好含有 "$prompt" 时被二次替换、破坏 shell 引号结构
