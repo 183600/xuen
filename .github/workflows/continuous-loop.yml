@@ -5,45 +5,19 @@ on:
   schedule:
     - cron: '*/20 * * * *'
 
-jobs:
-  guard:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-    outputs:
-      skip: ${{ steps.check.outputs.skip }}
-    steps:
-      - name: Check for earlier in-progress runs
-        id: check
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          my_id=${{ github.run_id }}
-          earlier=$(gh run list \
-            --repo "${{ github.repository }}" \
-            --workflow "${{ github.workflow }}" \
-            --status in_progress \
-            --limit 100 \
-            --json databaseId \
-            --jq "[.[] | select(.databaseId < $my_id)] | length")
-          echo "My run_id: $my_id"
-          echo "Earlier in-progress runs: $earlier"
-          if [ "$earlier" -gt 0 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
+# ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）
+# 上一个 run 一结束，队列里的下一个立刻开始 → "上一个结束立刻触发下一个"
+concurrency:
+  group: continuous-loop
+  cancel-in-progress: false
 
+jobs:
   run-opencode:
-    needs: guard
-    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     permissions:
       contents: write
-      actions: write
+      actions: write   # gh workflow run 需要
 
     steps:
       - name: Checkout
@@ -194,3 +168,16 @@ jobs:
           git remote remove gitee 2>/dev/null || true
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
           git push gitee "HEAD:${GITHUB_REF_NAME}" || echo "[warn] push to Gitee failed"
+
+      # ⭐ 关键 2：本 run 的所有实质步骤完成后，立刻排下一个
+      # 由于 concurrency.cancel-in-progress=false，
+      # 这个新 run 会阻塞等待当前 run 退出 → 当前 run 一结束立刻开始
+      - name: Trigger next run (continuous loop)
+        if: success()             # 只有本次没崩才续；想"崩了也续"就改成 always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Dispatching next run of '${{ github.workflow }}' on '${{ github.ref_name }}' ..."
+          gh workflow run "${{ github.workflow }}" \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.ref_name }}"
