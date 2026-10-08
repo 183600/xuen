@@ -70,7 +70,14 @@ def main(argv=None) -> int:
         cfg.words.pick = args.pick
     if args.iterations is not None:
         v = args.iterations.strip().lower()
-        cfg.loop.iterations = None if v in ("inf", "infinite", "-1") else int(v)
+        if v in ("inf", "infinite", "∞", "-1"):
+            cfg.loop.iterations = None
+        else:
+            try:
+                cfg.loop.iterations = int(v)
+            except ValueError:
+                print(f"--iterations 无效：{args.iterations!r}（应为整数或 inf）", file=sys.stderr)
+                return 2
 
     task = _resolve_task(args)
     if not task:

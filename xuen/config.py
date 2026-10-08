@@ -61,8 +61,9 @@ def _parse_iterations(value: Any) -> Optional[int]:
     if isinstance(value, str):
         if value.strip().lower() in ("inf", "infinite", "-1", "∞"):
             return None
-        return int(value.strip())
-    return int(value)
+        value = int(value.strip())
+    n = int(value)
+    return None if n == -1 else n
 
 
 def load_config(path: Optional[str] = None) -> Config:

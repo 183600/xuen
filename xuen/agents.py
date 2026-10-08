@@ -66,9 +66,9 @@ class ShellAgent:
             tpl = tpl.replace("$prompt_file", str(pfile.resolve()))
         quoted = _quote(prompt)
         if '"$prompt"' in tpl:
-            return tpl.replace('"$prompt"', quoted)
+            tpl = tpl.replace('"$prompt"', quoted)
         if "'$prompt'" in tpl:
-            return tpl.replace("'$prompt'", quoted)
+            tpl = tpl.replace("'$prompt'", quoted)
         return tpl.replace("$prompt", quoted)
 
     def kill(self) -> None:

@@ -166,10 +166,16 @@ class XuangenApp(App):
             self.post_status("异常结束（按 q 退出）")
 
     # ---- 线程 → 界面 的安全投递 ----
+    def _safe_call_from_thread(self, fn) -> None:
+        try:
+            self.call_from_thread(fn)
+        except Exception:
+            pass  # 应用已在退出过程中，丢弃后台线程的界面更新
+
     def post_log(self, text: str, style: str = "") -> None:
         def _write() -> None:
             self.query_one("#log", RichLog).write(Text(text, style=style))
-        self.call_from_thread(_write)
+        self._safe_call_from_thread(_write)
 
     def post_section(self, name: str, content: str) -> None:
         widget_id = "#idea" if name == SECTION_IDEA else "#artifact"
@@ -180,12 +186,12 @@ class XuangenApp(App):
             view.clear()
             view.write(Text(tag, style="bold yellow"))
             view.write(Text(content))
-        self.call_from_thread(_update)
+        self._safe_call_from_thread(_update)
 
     def post_status(self, text: str) -> None:
         def _update() -> None:
             self.query_one("#status", Static).update(text)
-        self.call_from_thread(_update)
+        self._safe_call_from_thread(_update)
 
     def post_finished(self) -> None:
         pass  # 状态栏已提示；保持界面让用户回看

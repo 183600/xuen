@@ -109,7 +109,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
 # ----------------------------------------------------------------------
 def _read_sections(state_path: Path) -> tuple:
-    text = state_path.read_text(encoding="utf-8")
+    try:
+        text = state_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "", ""
     return (state.get_section(text, state.SECTION_IDEA),
             state.get_section(text, state.SECTION_ARTIFACT))
 
