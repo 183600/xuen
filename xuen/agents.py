@@ -7,6 +7,7 @@ workspace/write_section.py 直接写文件来"覆盖想法区 / 产物区"。
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
 import threading
@@ -58,19 +59,26 @@ class ShellAgent:
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
 
+    # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
+    # 占位符为前缀的普通变量，不能被子串替换误伤
+    _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
+
     def render_command(self, prompt: str) -> str:
         tpl = self.template
-        if "$prompt_file" in tpl:
+        if re.search(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY, tpl):
             pfile = self.workspace / ".prompt.md"
             pfile.write_text(prompt, encoding="utf-8")
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
-            tpl = tpl.replace("$prompt_file", _quote(str(pfile.resolve())))
+            quoted_path = _quote(str(pfile.resolve()))
+            tpl = re.sub(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY,
+                         lambda m: quoted_path, tpl)
         quoted = _quote(prompt)
         # 先统一替换成哨兵再一次性换成 quoted，避免提示词内容里
         # 恰好含有 "$prompt" 时被二次替换、破坏 shell 引号结构
         sentinel = "\0XUEN_PROMPT\0"
-        for ph in ('"$prompt"', "'$prompt'", "$prompt"):
+        for ph in ('"$prompt"', "'$prompt'"):
             tpl = tpl.replace(ph, sentinel)
+        tpl = re.sub(r"\$prompt" + self._PLACEHOLDER_BOUNDARY, sentinel, tpl)
         return tpl.replace(sentinel, quoted)
 
     def kill(self) -> None:
