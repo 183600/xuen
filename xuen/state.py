@@ -37,11 +37,19 @@ def ensure_state_file(path: Path, task: str) -> str:
 
 
 def get_section(text: str, name: str) -> str:
+    """提取区块内容：END 标记必须在 START 之后查找。
+
+    若区块内容里出现了标记字面文本、或文件中 END 先于 START，
+    视为标记错乱，返回空串（由 update_section_file 负责修复）。
+    """
     s, e = start_marker(name), end_marker(name)
-    if s not in text or e not in text or text.index(s) >= text.index(e):
+    i_s = text.find(s)
+    if i_s < 0:
         return ""
-    i = text.index(s) + len(s)
-    j = text.index(e, i)
+    i = i_s + len(s)
+    j = text.find(e, i)
+    if j < 0:
+        return ""
     return text[i:j].strip("\n")
 
 
@@ -54,9 +62,12 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
 
     s, e = start_marker(name), end_marker(name)
     body = "\n" + new + "\n"
-    if s in text and e in text and text.index(s) < text.index(e):
-        text = text[: text.index(s) + len(s)] + body + text[text.index(e):]
-    else:
+    i_s = text.find(s)
+    j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
+    if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
+        text = text[: i_s + len(s)] + body + text[j:]
+    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
+        text = text.replace(s, "").replace(e, "")
         text = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
 
     tmp = path.with_name(path.name + ".tmp")
@@ -105,9 +116,12 @@ def main() -> int:
         with open(STATE_FILE, encoding="utf-8") as f:
             text = f.read()
     body = "\\n" + content.strip().strip("\\n") + "\\n"
-    if s in text and e in text and text.index(s) < text.index(e):
-        text = text[: text.index(s) + len(s)] + body + text[text.index(e):]
-    else:
+    i_s = text.find(s)
+    j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
+    if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
+        text = text[: i_s + len(s)] + body + text[j:]
+    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
+        text = text.replace(s, "").replace(e, "")
         text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
     tmp = STATE_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
