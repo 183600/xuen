@@ -65,7 +65,11 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     i_s = text.find(s)
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
     if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
-        text = text[: i_s + len(s)] + body + text[j:]
+        # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，
+        # 因此前缀/后缀中本区块的标记一律清除（其他区块标记名不同，不受影响）
+        prefix = text[:i_s].replace(s, "").replace(e, "")
+        suffix = text[j + len(e):].replace(s, "").replace(e, "")
+        text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
         text = text.replace(s, "").replace(e, "")
         text = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
@@ -119,7 +123,10 @@ def main() -> int:
     i_s = text.find(s)
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
     if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
-        text = text[: i_s + len(s)] + body + text[j:]
+        # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，一并清除
+        prefix = text[:i_s].replace(s, "").replace(e, "")
+        suffix = text[j + len(e):].replace(s, "").replace(e, "")
+        text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
         text = text.replace(s, "").replace(e, "")
         text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
