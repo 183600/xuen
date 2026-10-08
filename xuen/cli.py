@@ -30,8 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
 def _resolve_task(args) -> str:
     task = " ".join(args.task).strip()
     if args.task_file:
-        with open(args.task_file, encoding="utf-8") as f:
-            task = f.read().strip()
+        try:
+            with open(args.task_file, encoding="utf-8") as f:
+                task = f.read().strip()
+        except OSError as e:
+            print(f"无法读取任务文件 {args.task_file!r}：{e}", file=sys.stderr)
+            raise SystemExit(2)
     if not task:
         try:
             task = input("请输入任务（例如：设计一个新的优化器）：").strip()

@@ -19,7 +19,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         sink: Optional[Sink] = None) -> None:
     sink = sink or ConsoleSink()
 
-    workspace = Path(cfg.workspace).expanduser()
+    # resolve 成绝对路径：外部 agent 的工作目录不一定是 xuen 的 cwd，
+    # 提示词里的 helper / state 路径必须对任何 cwd 都有效
+    workspace = Path(cfg.workspace).expanduser().resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     state_path = workspace / "research.md"
     words_path = workspace / "words.txt"

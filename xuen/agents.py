@@ -104,6 +104,11 @@ class ShellAgent:
                         pass
             except Exception:
                 pass
+            finally:
+                try:
+                    pipe.close()
+                except Exception:
+                    pass
 
         t_out = threading.Thread(target=pump, args=(proc.stdout, out, self.on_output), daemon=True)
         t_err = threading.Thread(target=pump, args=(proc.stderr, [], self.on_stderr), daemon=True)
@@ -111,6 +116,8 @@ class ShellAgent:
         t_err.start()
 
         def _on_timeout() -> None:
+            if proc.poll() is not None:
+                return  # 进程已正常退出，避免竞态误报超时/误杀
             killed["flag"] = True
             kill_process_tree(proc)
 

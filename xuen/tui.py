@@ -16,6 +16,7 @@ import threading
 from typing import List, Optional
 
 from rich.text import Text
+from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Input, RichLog, Static
@@ -61,6 +62,21 @@ Screen {
 
 _LEVEL_STYLE = {"info": "cyan", "ok": "green", "warn": "yellow", "err": "red"}
 _LEVEL_PREFIX = {"info": "· ", "ok": "✔ ", "warn": "⚠ ", "err": "✘ "}
+
+
+class _InputBox(Input):
+    """底部输入框：为空时按 q 退出；已有内容时 q 作为普通字符输入。
+
+    Input 会消费可打印字符键（事件不会冒泡到 App 的 BINDINGS），
+    因此必须在这里拦截，否则「按 q 退出」在输入框聚焦时永远不生效。
+    """
+
+    async def _on_key(self, event: events.Key) -> None:
+        if event.key == "q" and not self.value:
+            event.stop()
+            self.app.action_quit()
+            return
+        await super()._on_key(event)
 
 
 class TuiSink(Sink):
@@ -139,8 +155,8 @@ class XuangenApp(App):
         with VerticalScroll(id="log-box"):
             yield RichLog(id="log", wrap=True, auto_scroll=True)
         yield Static("准备中……", id="status")
-        yield Input(
-            placeholder="输入给 agent 的话，回车提交 —— 将在下次调用 agent 时带给 agent",
+        yield _InputBox(
+            placeholder="输入给 agent 的话，回车提交 —— 将在下次调用 agent 时带给 agent（空输入时按 q 退出）",
             id="user-input",
         )
         yield Footer()
