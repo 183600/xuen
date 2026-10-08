@@ -135,7 +135,8 @@ class ShellAgent:
             t_err.join(timeout=5)
             self._proc = None
         if killed["flag"]:
-            self.on_stderr(f"外部 agent 超时（{self.timeout:.0f}s），已强制终止\n")
+            # :g 避免小数秒（如 0.5）被 :.0f 四舍五入成「0s」
+            self.on_stderr(f"外部 agent 超时（{self.timeout:g}s），已强制终止\n")
         elif proc.returncode:
             self.on_stderr(f"外部 agent 异常退出（退出码 {proc.returncode}），"
                            "本轮可能未更新区块\n")
