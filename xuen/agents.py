@@ -70,8 +70,14 @@ class ShellAgent:
             pfile.write_text(prompt, encoding="utf-8")
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
             quoted_path = _quote(str(pfile.resolve()))
+            # 若占位符被模板自带的引号包住，先连引号一起替换成哨兵，
+            # 否则转义结果嵌在引号里会被当作字面值、路径被破坏
+            sentinel = "\0XUEN_PROMPT_FILE\0"
+            for ph in ('"$prompt_file"', "'$prompt_file'"):
+                tpl = tpl.replace(ph, sentinel)
             tpl = re.sub(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY,
-                         lambda m: quoted_path, tpl)
+                         sentinel, tpl)
+            tpl = tpl.replace(sentinel, quoted_path)
         quoted = _quote(prompt)
         # 先统一替换成哨兵再一次性换成 quoted，避免提示词内容里
         # 恰好含有 "$prompt" 时被二次替换、破坏 shell 引号结构
