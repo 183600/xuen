@@ -54,15 +54,17 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     sink.agent = agent  # 供 sink.stop_agent() 终止当前进程
 
     # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
-    if regen_words:
-        word_list = []
-    else:
-        try:
-            word_list = words.load_words(words_path)
-        except (OSError, UnicodeDecodeError) as e:
-            # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback
+    try:
+        disk_words = words.load_words(words_path)
+    except (OSError, UnicodeDecodeError) as e:
+        # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
+        # 但 --regen-words 模式下反正要重新生成，不应被旧文件阻塞
+        if not regen_words:
             raise SystemExit(f"词库读取失败：{e}")
-    if word_list and cfg.words.reuse and not regen_words:
+        sink.warn(f"已有词库读取失败（{e}），将重新生成")
+        disk_words = []
+    word_list = disk_words if not regen_words else []
+    if word_list and cfg.words.reuse:
         sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
     elif cfg.words.pick == 0:
         sink.info("words.pick=0：本轮循环不使用灵感词，跳过词库生成")
@@ -78,6 +80,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             if word_list:
                 words.save_words(words_path, word_list)
                 sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
+            elif disk_words:
+                # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止
+                word_list = disk_words
+                sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
         except OSError as e:
             raise SystemExit(f"词库生成失败：{e}")
         if len(word_list) < cfg.words.count:
