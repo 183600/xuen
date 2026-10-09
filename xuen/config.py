@@ -71,6 +71,18 @@ def _parse_iterations(value: Any) -> Optional[int]:
     return None if n == -1 else n
 
 
+def _parse_bool(value: Any, name: str) -> bool:
+    """解析布尔配置；容忍带引号的字符串写法，如 tui: "false"。"""
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in ("true", "yes", "on", "1"):
+            return True
+        if v in ("false", "no", "off", "0"):
+            return False
+        raise ValueError(f"{name} 必须是布尔值（true/false），收到: {value!r}")
+    return bool(value)
+
+
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
     with open(real_path, encoding="utf-8") as f:
@@ -84,7 +96,7 @@ def load_config(path: Optional[str] = None) -> Config:
         count=int(words.get("count", cfg.words.count)),
         batch=int(words.get("batch", cfg.words.batch)),
         pick=int(words.get("pick", cfg.words.pick)),
-        reuse=bool(words.get("reuse", cfg.words.reuse)),
+        reuse=_parse_bool(words.get("reuse", cfg.words.reuse), "words.reuse"),
     )
 
     loop = raw.get("loop") or {}
@@ -100,8 +112,8 @@ def load_config(path: Optional[str] = None) -> Config:
     workspace = raw.get("workspace")
     if workspace is not None and str(workspace).strip():
         cfg.workspace = str(workspace)
-    cfg.tui = bool(raw.get("tui", cfg.tui))
-    cfg.color = bool(raw.get("color", cfg.color))
+    cfg.tui = _parse_bool(raw.get("tui", cfg.tui), "tui")
+    cfg.color = _parse_bool(raw.get("color", cfg.color), "color")
 
     _validate(cfg)
     return cfg
