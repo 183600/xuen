@@ -180,6 +180,11 @@ class XuangenApp(App):
             self.exit_code = int(e.code) if isinstance(e.code, int) and e.code else 1
             self.sink.err(str(e))
             self.post_status(f"已退出：{e}")
+        except KeyboardInterrupt as e:
+            # runner 会向上传播 SIGINT；不捕获则退出码/状态栏丢失
+            self.exit_code = 130
+            self.sink.err(f"被中断：{e!r}")
+            self.post_status("已中断（按 q 退出）")
         except Exception as e:  # 后台线程里的异常要打到界面上
             self.exit_code = 1
             self.sink.err(f"运行异常：{e!r}")

@@ -67,6 +67,12 @@ def _parse_iterations(value: Any) -> Optional[int]:
     # YAML 会把 .inf 解析成 float('inf')，int() 会抛 OverflowError
     if isinstance(value, float) and math.isinf(value):
         return None
+    # YAML 把 yes/no/true/false 解析成 bool（int 的子类），
+    # int(True)==1 会把 iterations: yes 静默解释成 1 轮
+    if isinstance(value, bool):
+        raise ValueError(f"loop.iterations 必须是整数或 inf，收到布尔值: {value!r}")
+    if isinstance(value, float) and not value.is_integer():
+        raise ValueError(f"loop.iterations 必须是整数或 inf，收到: {value!r}")
     n = int(value)
     return None if n == -1 else n
 
