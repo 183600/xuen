@@ -64,8 +64,9 @@ def _parse_iterations(value: Any) -> Optional[int]:
         if value.strip().lower() in ("inf", ".inf", "+.inf", "infinite", "-1", "∞"):
             return None
         value = value.strip()
-    # YAML 会把 .inf 解析成 float('inf')，int() 会抛 OverflowError
-    if isinstance(value, float) and math.isinf(value):
+    # YAML 会把 .inf 解析成 float('inf')，int() 会抛 OverflowError；
+    # 注意 -.inf 的 isinf 也为真，但负无穷不是合法的「无限循环」写法，放给后面按数值报错
+    if isinstance(value, float) and math.isinf(value) and value > 0:
         return None
     # YAML 把 yes/no/true/false 解析成 bool（int 的子类），
     # int(True)==1 会把 iterations: yes 静默解释成 1 轮
@@ -118,8 +119,11 @@ def load_config(path: Optional[str] = None) -> Config:
     workspace = raw.get("workspace")
     if workspace is not None and str(workspace).strip():
         cfg.workspace = str(workspace)
-    cfg.tui = _parse_bool(raw.get("tui", cfg.tui), "tui")
-    cfg.color = _parse_bool(raw.get("color", cfg.color), "color")
+    # tui: / tui: null 时 raw.get 返回 None 而非默认值；与 workspace 同理不能把 null 当显式值
+    tui = raw.get("tui")
+    cfg.tui = cfg.tui if tui is None else _parse_bool(tui, "tui")
+    color = raw.get("color")
+    cfg.color = cfg.color if color is None else _parse_bool(color, "color")
 
     _validate(cfg)
     return cfg

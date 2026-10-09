@@ -145,6 +145,9 @@ class XuangenApp(App):
         self._user_inputs: "queue.Queue[str]" = queue.Queue()
         self.stop_requested = False
         self.loop_finished = False
+        # 后台 _run_loop 线程失败时改写为非 0；必须在 __init__ 初始化，
+        # 否则不走 run_tui() 的运行方式（测试、嵌入）会 AttributeError
+        self.exit_code = 0
         self._worker: Optional[threading.Thread] = None
 
     # ---- 布局 ----
@@ -257,6 +260,5 @@ class XuangenApp(App):
 
 def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     app = XuangenApp(cfg, task, regen_words)
-    app.exit_code = 0  # 后台 _run_loop 线程失败时改写为非 0
     app.run()
     return getattr(app, "exit_code", 0)

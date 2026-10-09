@@ -8,9 +8,10 @@ from typing import Callable, List, Optional
 
 from .ui import ui
 
-# 序号也要兼容全角形式：1. / 2、 / 3) / 4）/ （5）—— 中文 LLM 常用后者
+# 序号也要兼容全角形式：1. / 2、 / 3) / 4）/ （5）—— 中文 LLM 常用后者；
+# 分隔符后跟数字时是真实术语（如 "0.5倍速"、"2.5D"），不能当序号剥掉
 _BULLET = re.compile(
-    r"^(?:\d{1,3}\s*[\.\)、）]\s*|（\d{1,3}）\s*|[-*•·]\s*)+")
+    r"^(?:\d{1,3}\s*[\.\)、）](?!\d)\s*|（\d{1,3}）\s*|[-*•·]\s*)+")
 
 
 def _clean_line(line: str) -> Optional[str]:
@@ -22,9 +23,10 @@ def _clean_line(line: str) -> Optional[str]:
         return None
     for sep in ("：", ":"):  # "词：解释"/"词:解释" 只留词
         if sep in w:
-            head, _, tail = w.partition(sep)
+            head, _, _ = w.partition(sep)
             head = head.strip()
-            if not head or len(head) > 30 or not tail.strip():
+            # 尾部为空（如 "术语："）时仍应保留词头，只有词头本身非法才丢
+            if not head or len(head) > 30:
                 return None
             w = head
             break
