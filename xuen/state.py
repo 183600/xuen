@@ -110,8 +110,12 @@ def main() -> int:
         return 0
     cmd = argv[0].lower()
     if cmd == "show":
-        with open(STATE_FILE, encoding="utf-8") as f:
-            sys.stdout.write(f.read())
+        try:
+            with open(STATE_FILE, encoding="utf-8") as f:
+                sys.stdout.write(f.read())
+        except OSError as e:
+            print(f"状态文件读取失败：{e}", file=sys.stderr)
+            return 1
         return 0
     if cmd not in NAMES:
         print(f"未知区块 {cmd!r}，可用: idea / artifact / show", file=sys.stderr)
