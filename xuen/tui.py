@@ -232,7 +232,7 @@ class XuangenApp(App):
         return items
 
     # ---- 退出 ----
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:  # textual >= 1.0 起是协程，覆盖时也必须 async
         self.stop_requested = True
         self.sink.stop_agent()
         self.exit()
