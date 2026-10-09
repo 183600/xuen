@@ -17,13 +17,17 @@ _BULLET = re.compile(
 # 否则 "「`词`," 之类会留下 '「`词' 残片混进词库）
 _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗 "
 
+# 纯数字（含 "3.14" / "2.5" 这类小数，isdigit() 拦不住）不是词；
+# 但 "0.5倍速"、"2.5D" 这类含非数字字符的术语必须保留，故用整串匹配
+_PURE_NUMBER = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
+
 
 def _clean_line(line: str) -> Optional[str]:
     w = _BULLET.sub("", line.strip()).strip()
     w = w.strip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
-    if w.startswith(("#", ">", "|", "=")) or w.isdigit():
+    if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
         return None
     for sep in ("：", ":"):  # "词：解释"/"词:解释" 只留词
         if sep in w:
@@ -42,7 +46,7 @@ def _clean_line(line: str) -> Optional[str]:
     # 否则纯数字 / 以 # > | = 开头的残片会混进词库
     if not w or len(w) > 60:
         return None
-    if w.startswith(("#", ">", "|", "=")) or w.isdigit():
+    if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
         return None
     return w
 
