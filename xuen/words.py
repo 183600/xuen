@@ -30,7 +30,10 @@ def _clean_line(line: str) -> Optional[str]:
                 return None
             w = head
             break
+    # 尾部标点剥除后，可能露出此前被标点挡住的引号/反引号
+    # （如 "「`词`," → "词`"），需再剥一次，否则残片混进词库
     w = w.rstrip(".。,，;；!！?？ ")
+    w = w.strip("`*_^~'\"“”‘’ ").strip()
     # 冒号截断后词形已变（如 "12: 解释" → "12"），需复查拦截条件，
     # 否则纯数字 / 以 # > | = 开头的残片会混进词库
     if not w or len(w) > 60:
