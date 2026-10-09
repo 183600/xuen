@@ -58,6 +58,8 @@ class ShellAgent:
         self.on_output = on_output or _default_on_output
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
+        self.returncode: Optional[int] = None
+        self.timed_out = False
 
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
     # 占位符为前缀的普通变量，不能被子串替换误伤
@@ -167,7 +169,9 @@ class ShellAgent:
             t_out.join(timeout=5)
             t_err.join(timeout=5)
             self._proc = None
-        if killed["flag"]:
+        self.returncode = proc.returncode
+        self.timed_out = killed["flag"]
+        if self.timed_out:
             # :g 避免小数秒（如 0.5）被 :.0f 四舍五入成「0s」
             self.on_stderr(f"外部 agent 超时（{self.timeout:g}s），已强制终止\n")
         elif proc.returncode:

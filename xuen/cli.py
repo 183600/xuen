@@ -30,6 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
 def _resolve_task(args) -> str:
     task = " ".join(args.task).strip()
     if args.task_file:
+        if task:
+            print("位置参数任务与 --task-file 不能同时使用", file=sys.stderr)
+            raise SystemExit(2)
         try:
             with open(args.task_file, encoding="utf-8") as f:
                 task = f.read().strip()

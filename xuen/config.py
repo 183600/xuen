@@ -132,8 +132,8 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.count / words.batch 必须为正整数")
     if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
-    if cfg.agent.timeout <= 0:
-        raise ValueError("agent.timeout 必须为正数（秒）")
+    if not math.isfinite(cfg.agent.timeout) or cfg.agent.timeout <= 0:
+        raise ValueError("agent.timeout 必须为有限的正数（秒）")
     cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
     if cmd.strip() and not re.search(r"\$prompt(?:_file)?(?![A-Za-z0-9_])", cmd):

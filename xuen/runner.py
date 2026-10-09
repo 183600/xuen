@@ -99,6 +99,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
     counter = (itertools.count(1) if cfg.loop.iterations is None
                else range(1, cfg.loop.iterations + 1))
+    rounds = failures = consecutive_failures = 0
     try:
         for i in counter:
             if sink.should_stop():
@@ -110,12 +111,24 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             sink.round_header(i, label)
             # 底部输入框的内容：在下次调用 agent 时带给 agent
             user_notes = sink.drain_user_input()
+            rounds += 1
             try:
                 agent.run(_shell_prompt(cfg, task, i, inspiration,
                                         state_path, helper, user_notes))
             except OSError as e:
+                failures += 1
+                consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
+                if consecutive_failures >= 3:
+                    raise SystemExit("外部 agent 连续 3 次启动失败，已中止循环")
                 continue
+            if agent.timed_out or agent.returncode:
+                failures += 1
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    raise SystemExit("外部 agent 连续 3 次执行失败，已中止循环")
+            else:
+                consecutive_failures = 0
             # 读取状态文件：哪个区块被覆盖了就上报哪个（屏幕显示 [修改xx区]<内容>）
             idea, artifact = _read_sections(state_path)
             if idea != prev_idea:
@@ -132,6 +145,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         raise
 
     sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+    # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
+    # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。
+    if rounds and failures == rounds:
+        raise SystemExit("外部 agent 所有轮次均执行失败")
 
 
 # ----------------------------------------------------------------------

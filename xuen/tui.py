@@ -144,6 +144,7 @@ class XuangenApp(App):
         self.sink = TuiSink(self)
         self._user_inputs: "queue.Queue[str]" = queue.Queue()
         self.stop_requested = False
+        self.loop_finished = False
         self._worker: Optional[threading.Thread] = None
 
     # ---- 布局 ----
@@ -189,6 +190,8 @@ class XuangenApp(App):
             self.exit_code = 1
             self.sink.err(f"运行异常：{e!r}")
             self.post_status("异常结束（按 q 退出）")
+        finally:
+            self.loop_finished = True
 
     # ---- 线程 → 界面 的安全投递 ----
     def _safe_call_from_thread(self, fn) -> None:
@@ -225,6 +228,11 @@ class XuangenApp(App):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
         if not text:
+            return
+        if self.loop_finished:
+            self.query_one("#log", RichLog).write(
+                Text("循环已结束，本次输入不会被投递", style="bold yellow")
+            )
             return
         self.query_one("#user-input", Input).value = ""
         self._user_inputs.put(text)
