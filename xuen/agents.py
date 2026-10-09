@@ -135,8 +135,13 @@ class ShellAgent:
             kill_process_tree(proc)
             # 复查回收结果：kill 送达前进程可能已自然退出（退出码 >= 0），
             # 此时不算超时；主线程在 timer.join() 之后才读取 killed，
-            # 因此这里的置位/不置位对主线程可见且无竞态
-            if proc.wait() >= 0:
+            # 因此这里的置位/不置位对主线程可见且无竞态。
+            # 注意：该「自然退出」判定仅在 POSIX 下成立 —— POSIX 下被
+            # SIGKILL 终止的进程退出码为负（-9），而 Windows 上 taskkill
+            # 杀掉的进程退出码是正数（通常 1），若不做区分会把 Windows 上
+            # 的真实超时误报成「异常退出」
+            rc = proc.wait()
+            if os.name != "nt" and rc >= 0:
                 return
             killed["flag"] = True
 
