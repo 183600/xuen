@@ -175,9 +175,13 @@ class XuangenApp(App):
         try:
             run(self.cfg, self.task_desc, regen_words=self.regen_words, sink=self.sink)
         except SystemExit as e:
+            # 记录失败退出码：run_tui() 最终把它作为进程退出码返回，
+            # 否则配置错误等失败会被掩盖成「成功退出」
+            self.exit_code = int(e.code) if isinstance(e.code, int) and e.code else 1
             self.sink.err(str(e))
             self.post_status(f"已退出：{e}")
         except Exception as e:  # 后台线程里的异常要打到界面上
+            self.exit_code = 1
             self.sink.err(f"运行异常：{e!r}")
             self.post_status("异常结束（按 q 退出）")
 
@@ -240,5 +244,6 @@ class XuangenApp(App):
 
 def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     app = XuangenApp(cfg, task, regen_words)
+    app.exit_code = 0  # 后台 _run_loop 线程失败时改写为非 0
     app.run()
-    return 0
+    return getattr(app, "exit_code", 0)

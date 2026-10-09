@@ -120,6 +120,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 sink.section(SECTION_ARTIFACT, artifact or "（空）")
     except KeyboardInterrupt:
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
+        sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+        # 向上传播中断，让 cli 以 130 退出；若在此吞掉，
+        # 进程会以 0 退出且 cli 的 KeyboardInterrupt 分支成为死代码
+        raise
 
     sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
 

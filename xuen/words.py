@@ -56,7 +56,9 @@ def parse_word_lines(text: str) -> List[str]:
 def load_words(path: Path) -> List[str]:
     if not path.exists():
         return []
-    return [ln.strip() for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    # 复用 parse_word_lines：清洗无效行并按 casefold 去重，
+    # 否则文件中的重复词会扭曲 random.sample 的抽样分布
+    return parse_word_lines(path.read_text(encoding="utf-8"))
 
 
 def save_words(path: Path, wlist: List[str]) -> None:

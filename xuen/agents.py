@@ -140,8 +140,13 @@ class ShellAgent:
             # SIGKILL 终止的进程退出码为负（-9），而 Windows 上 taskkill
             # 杀掉的进程退出码是正数（通常 1），若不做区分会把 Windows 上
             # 的真实超时误报成「异常退出」
-            rc = proc.wait()
-            if os.name != "nt" and rc >= 0:
+            try:
+                rc = proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # kill 未能终结进程（kill_process_tree 内部吞掉了失败）：
+                # 不能无限阻塞，否则主线程 timer.join() 会把整个运行卡死
+                rc = None
+            if rc is not None and os.name != "nt" and rc >= 0:
                 return
             killed["flag"] = True
 
