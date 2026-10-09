@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -115,3 +116,10 @@ def _validate(cfg: Config) -> None:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
     if cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为正数（秒）")
+    cmd = cfg.agent.command
+    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
+    if cmd.strip() and not re.search(r"\$prompt(?:_file)?(?![A-Za-z0-9_])", cmd):
+        raise ValueError(
+            "agent.command 必须包含 $prompt 或 $prompt_file 占位符，"
+            "否则提示词无法传给外部 agent"
+        )
