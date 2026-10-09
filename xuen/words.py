@@ -20,7 +20,7 @@ def _clean_line(line: str) -> Optional[str]:
         return None
     if w.startswith(("#", ">", "|", "=")) or w.isdigit():
         return None
-    for sep in ("：", ": "):  # "词：解释" 只留词
+    for sep in ("：", ":"):  # "词：解释"/"词:解释" 只留词
         if sep in w:
             head, _, tail = w.partition(sep)
             head = head.strip()

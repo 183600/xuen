@@ -50,7 +50,13 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     sink.agent = agent  # 供 sink.stop_agent() 终止当前进程
 
     # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
-    word_list = [] if regen_words else words.load_words(words_path)
+    if regen_words:
+        word_list = []
+    else:
+        try:
+            word_list = words.load_words(words_path)
+        except OSError as e:
+            raise SystemExit(f"词库读取失败：{e}")
     if word_list and cfg.words.reuse and not regen_words:
         sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
     elif cfg.words.pick == 0:

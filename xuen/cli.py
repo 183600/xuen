@@ -74,7 +74,7 @@ def main(argv=None) -> int:
         cfg.words.pick = args.pick
     if args.iterations is not None:
         v = args.iterations.strip().lower()
-        if v in ("inf", "infinite", "∞", "-1"):
+        if v in ("inf", ".inf", "+.inf", "infinite", "∞", "-1"):  # 与 config._parse_iterations 保持一致
             cfg.loop.iterations = None
         else:
             try:
