@@ -74,7 +74,7 @@ class _InputBox(Input):
     async def _on_key(self, event: events.Key) -> None:
         if event.key == "q" and not self.value:
             event.stop()
-            self.app.action_quit()
+            await self.app.action_quit()  # textual >= 1.0 起 action_quit 是协程，必须 await
             return
         await super()._on_key(event)
 
