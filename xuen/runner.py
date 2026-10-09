@@ -74,7 +74,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                       f"每批 {cfg.words.batch} 个）")
             word_list = words.generate_words_shell(
                 agent, task, cfg.words.count, cfg.words.batch,
-                info=sink.info, warn=sink.warn,
+                info=sink.info, warn=sink.warn, stop=sink.should_stop,
             )
             # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库
             if word_list:
@@ -89,7 +89,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         if len(word_list) < cfg.words.count:
             sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
 
-    if not word_list and cfg.words.pick > 0:
+    # 用户主动停止（如 TUI 按 q 中断词库生成）导致的空词库不算失败，
+    # 否则正常退出会被记成非零退出码的「词库为空」错误
+    if not word_list and cfg.words.pick > 0 and not sink.should_stop():
         raise SystemExit(f"词库为空，无法继续。文件：{words_path}")
 
     # 3) 循环

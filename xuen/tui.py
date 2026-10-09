@@ -198,6 +198,10 @@ class XuangenApp(App):
 
     # ---- 线程 → 界面 的安全投递 ----
     def _safe_call_from_thread(self, fn) -> None:
+        # app 退出后继续投递不仅会被丢弃，textual 内部已创建的回调协程
+        # 也无处调度，产生 "coroutine was never awaited" RuntimeWarning
+        if not self.is_running:
+            return
         try:
             self.call_from_thread(fn)
         except Exception:

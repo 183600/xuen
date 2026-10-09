@@ -77,13 +77,21 @@ def sample_words(wlist: List[str], n: int) -> List[str]:
 
 def generate_words_shell(shell_agent, task: str, count: int, batch: int,
                          info: Callable[[str], None] = ui.info,
-                         warn: Callable[[str], None] = ui.warn) -> List[str]:
-    """通过外部 agent（如 opencode）分批生成领域词库。"""
+                         warn: Callable[[str], None] = ui.warn,
+                         stop: Optional[Callable[[], bool]] = None) -> List[str]:
+    """通过外部 agent（如 opencode）分批生成领域词库。
+
+    stop：可选的停止回调（如 TUI 按 q）。当前批次的 agent 会被外部
+    kill，但若不检查停止标志，循环仍会为剩余批次继续拉起新 agent 进程。
+    """
     wlist: List[str] = []
     seen = set()
     max_batches = max(2, count // max(batch, 1) + 3)
     for i in range(max_batches):
         if len(wlist) >= count:
+            break
+        if stop is not None and stop():
+            info("收到停止请求，中断词库生成")
             break
         ask = min(batch, count - len(wlist) + 20)
         info(f"通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）")
