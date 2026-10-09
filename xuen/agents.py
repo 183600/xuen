@@ -96,6 +96,10 @@ class ShellAgent:
             kill_process_tree(proc)
 
     def run(self, prompt: str) -> str:
+        # 先复位上一轮的结果：若 Popen 抛 OSError，调用方看到的
+        # returncode/timed_out 不能是上一次运行的残留值
+        self.returncode = None
+        self.timed_out = False
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")

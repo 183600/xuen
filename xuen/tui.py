@@ -181,7 +181,10 @@ class XuangenApp(App):
         except SystemExit as e:
             # 记录失败退出码：run_tui() 最终把它作为进程退出码返回，
             # 否则配置错误等失败会被掩盖成「成功退出」
-            self.exit_code = int(e.code) if isinstance(e.code, int) and e.code else 1
+            # SystemExit(0) / SystemExit(None) 是正常退出，不能误记为失败；
+            # 非 int 的 code（如错误消息字符串）才按失败记 1
+            self.exit_code = (e.code if isinstance(e.code, int)
+                              else (0 if e.code is None else 1))
             self.sink.err(str(e))
             self.post_status(f"已退出：{e}")
         except KeyboardInterrupt as e:
