@@ -39,7 +39,11 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
               f"｜轮数：{'∞' if cfg.loop.iterations is None else cfg.loop.iterations}")
 
     # 1) 状态文件 + 区块写入助手
-    state.ensure_state_file(state_path, task)
+    try:
+        state.ensure_state_file(state_path, task)
+    except (OSError, UnicodeDecodeError) as e:
+        # 状态文件损坏（含坏编码）时给出明确提示而不是 traceback
+        raise SystemExit(f"状态文件读取失败：{e}（可备份后删除 {state_path} 重建）")
     helper = state.write_helper_script(workspace, state_path)
     sink.info(f"状态文件：{state_path}（外部写入助手：{helper.name}）")
 
@@ -55,7 +59,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     else:
         try:
             word_list = words.load_words(words_path)
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
+            # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback
             raise SystemExit(f"词库读取失败：{e}")
     if word_list and cfg.words.reuse and not regen_words:
         sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
@@ -121,7 +126,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 def _read_sections(state_path: Path) -> tuple:
     try:
         text = state_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
+    except (OSError, UnicodeDecodeError):
+        # 文件缺失/读取失败/编码损坏：当作空区块，避免循环每轮 traceback 崩溃
         return "", ""
     return (state.get_section(text, state.SECTION_IDEA),
             state.get_section(text, state.SECTION_ARTIFACT))
