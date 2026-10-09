@@ -8,7 +8,9 @@ from typing import Callable, List, Optional
 
 from .ui import ui
 
-_BULLET = re.compile(r"^(?:\d{1,3}\s*[\.\)、]\s*|[-*•·]\s*)+")
+# 序号也要兼容全角形式：1. / 2、 / 3) / 4）/ （5）—— 中文 LLM 常用后者
+_BULLET = re.compile(
+    r"^(?:\d{1,3}\s*[\.\)、）]\s*|（\d{1,3}）\s*|[-*•·]\s*)+")
 
 
 def _clean_line(line: str) -> Optional[str]:
