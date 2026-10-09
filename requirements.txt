@@ -1,2 +1,2 @@
 PyYAML>=6.0
-textual>=0.60
+textual>=1.0
