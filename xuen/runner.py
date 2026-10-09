@@ -147,7 +147,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
     # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
     # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。
-    if rounds and failures == rounds:
+    if rounds and failures == rounds and not sink.should_stop():
+        # sink.should_stop() 为真 = 用户主动请求停止（TUI 按 q 会先杀掉
+        # 正在运行的 agent，该轮计入 failures）：这是正常退出，不能误报
+        # 为「所有轮次均执行失败」，否则 TUI 会把用户退出记成失败退出码
         raise SystemExit("外部 agent 所有轮次均执行失败")
 
 
