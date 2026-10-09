@@ -29,7 +29,11 @@ def _clean_line(line: str) -> Optional[str]:
             w = head
             break
     w = w.rstrip(".。,，;；!！?？ ")
+    # 冒号截断后词形已变（如 "12: 解释" → "12"），需复查拦截条件，
+    # 否则纯数字 / 以 # > | = 开头的残片会混进词库
     if not w or len(w) > 60:
+        return None
+    if w.startswith(("#", ">", "|", "=")) or w.isdigit():
         return None
     return w
 

@@ -132,8 +132,13 @@ class ShellAgent:
         def _on_timeout() -> None:
             if proc.poll() is not None:
                 return  # 进程已正常退出，避免竞态误报超时/误杀
-            killed["flag"] = True
             kill_process_tree(proc)
+            # 复查回收结果：kill 送达前进程可能已自然退出（退出码 >= 0），
+            # 此时不算超时；主线程在 timer.join() 之后才读取 killed，
+            # 因此这里的置位/不置位对主线程可见且无竞态
+            if proc.wait() >= 0:
+                return
+            killed["flag"] = True
 
         timer = threading.Timer(self.timeout, _on_timeout)
         timer.daemon = True
@@ -145,6 +150,10 @@ class ShellAgent:
             raise
         finally:
             timer.cancel()
+            # 超时回调可能已开始执行（正在 kill/复查退出码）：
+            # 必须等它执行完，否则主线程读到的 killed 标志可能不是最终值，
+            # 导致「真超时被报成异常退出」或反之
+            timer.join()
             t_out.join(timeout=5)
             t_err.join(timeout=5)
             self._proc = None
