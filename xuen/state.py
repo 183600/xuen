@@ -99,7 +99,7 @@ HELPER_TEMPLATE = '''#!/usr/bin/env python3
 import os
 import sys
 
-STATE_FILE = r"""__STATE_FILE__"""
+STATE_FILE = __STATE_FILE__
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
@@ -158,8 +158,10 @@ if __name__ == "__main__":
 
 def write_helper_script(workspace: Path, state_path: Path) -> Path:
     helper = workspace / HELPER_NAME
+    # 用 repr() 生成路径字面量：r-string 拼接在路径含连续双引号 /
+    # 换行（POSIX 合法）时会生成语法损坏的脚本，repr() 总能安全转义
     helper.write_text(
-        HELPER_TEMPLATE.replace("__STATE_FILE__", str(state_path.resolve())),
+        HELPER_TEMPLATE.replace("__STATE_FILE__", repr(str(state_path.resolve()))),
         encoding="utf-8",
     )
     return helper
