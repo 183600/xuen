@@ -74,10 +74,12 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 agent, task, cfg.words.count, cfg.words.batch,
                 info=sink.info, warn=sink.warn,
             )
-            words.save_words(words_path, word_list)
+            # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库
+            if word_list:
+                words.save_words(words_path, word_list)
+                sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
         except OSError as e:
             raise SystemExit(f"词库生成失败：{e}")
-        sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
         if len(word_list) < cfg.words.count:
             sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
 
