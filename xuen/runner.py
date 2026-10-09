@@ -121,13 +121,15 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 failures += 1
                 consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
-                if consecutive_failures >= 3:
+                if consecutive_failures >= 3 and not sink.should_stop():
                     raise SystemExit("外部 agent 连续 3 次启动失败，已中止循环")
                 continue
             if agent.timed_out or agent.returncode:
                 failures += 1
                 consecutive_failures += 1
-                if consecutive_failures >= 3:
+                # should_stop() 为真 = 用户主动按 q，本轮是被 stop_agent() 杀掉的，
+                # 不能计入「连续失败」中止，否则用户正常退出被误报为失败
+                if consecutive_failures >= 3 and not sink.should_stop():
                     raise SystemExit("外部 agent 连续 3 次执行失败，已中止循环")
             else:
                 consecutive_failures = 0
