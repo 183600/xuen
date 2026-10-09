@@ -11,9 +11,25 @@ concurrency:
   group: continuous-loop
   cancel-in-progress: false
 
+# ⭐ 关键 2：全局环境从源头防日志乱码
+#   - LANG/LC_ALL=C.UTF-8        强制 UTF-8 locale，中文输出不会变问号/乱码
+#   - NO_COLOR/FORCE_COLOR/TERM  让 opencode / npm / gh 等关闭颜色与 TUI 动画
+#   - PYTHONIOENCODING/PYTHONUTF8  子进程里的 Python 一律 UTF-8
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  NO_COLOR: '1'
+  FORCE_COLOR: '0'
+  TERM: dumb
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: '1'
+
 jobs:
   run-opencode:
     runs-on: ubuntu-latest
+    # ⭐ 关键 3：硬超时 330 分钟（GitHub 单 job 上限 360 分钟）。
+    # 实际时长由「Run opencode loop」里的工作窗口控制：约 4h45m 的连续工作
+    # + 前置安装约 5 分钟 + 收尾约 3 分钟 → 单次 job 约 5 小时。
     timeout-minutes: 330
     permissions:
       contents: write
@@ -130,17 +146,79 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 中文内容防乱码：提交一律 UTF-8，路径不做八进制转义显示
+          git config i18n.commitEncoding utf-8
+          git config core.quotepath false
 
-      - name: Run opencode (fix bugs only)
+      # ⭐ 关键 4：约 4h45m 的连续工作窗口。
+      # 反复运行 opencode 修 bug，每轮独立限时并增量提交；
+      # 窗口耗尽（或剩余不足 10 分钟）后退出，交给后面的收尾步骤。
+      # 前置安装 ~5 分钟 + 工作窗口 285 分钟 + 收尾 ~3 分钟 ≈ 单次 job 5 小时左右。
+      - name: Run opencode loop (~5h job)
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
-          opencode run --model nvidia/moonshotai/kimi-k3 <<'PROMPT'
-          判断是否有bug，如果有就修复
-          PROMPT
+          set +e
+          PROMPT='判断是否有bug，如果有就修复'
+          WORK_SECONDS=17100        # 工作窗口：4 小时 45 分 = 17100 秒
+          MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
+          MAX_ITER_SECONDS=2400     # 单轮 opencode 最多 40 分钟（剩余更少时自动缩短）
+          CLEANER=".github/scripts/clean_log.py"
+          [ -f "$CLEANER" ] || CLEANER=cat   # 兜底：净化器不在就原样输出
+
+          DEADLINE=$((SECONDS + WORK_SECONDS))
+          ITER=0
+          while :; do
+            ITER=$((ITER + 1))
+            REMAIN=$((DEADLINE - SECONDS))
+            [ "$REMAIN" -le 0 ] && break
+            echo "::group::第 ${ITER} 轮 · 工作窗口剩余 $((REMAIN / 60)) 分钟"
+            if [ "$REMAIN" -lt "$MIN_RUN_SECONDS" ]; then
+              echo "剩余时间不足 $((MIN_RUN_SECONDS / 60)) 分钟，不再开启新一轮。"
+              echo "::endgroup::"
+              break
+            fi
+
+            CAP=$((REMAIN - 120))                 # 给本轮收尾留 2 分钟
+            if [ "$CAP" -gt "$MAX_ITER_SECONDS" ]; then CAP=$MAX_ITER_SECONDS; fi
+            T0=$(date +%s)
+            # 输出经 clean_log.py 净化后再进 Actions 日志（剥 ANSI/控制字符/坏字节）
+            timeout --signal=INT --kill-after=30s "${CAP}" \
+              opencode run --model nvidia/moonshotai/kimi-k3 "$PROMPT" 2>&1 \
+              | python3 "$CLEANER"
+            RC=${PIPESTATUS[0]}
+            if [ "$RC" -eq 124 ]; then
+              echo "（本轮达到单轮时间上限 ${CAP}s 被截断，已完成的修改会照常提交）"
+            elif [ "$RC" -ne 0 ]; then
+              echo "::warning::opencode 本轮退出码 ${RC}，继续下一轮"
+            fi
+            echo "本轮耗时 $(( $(date +%s) - T0 )) 秒"
+
+            # ⭐ 保护循环自身：把 AI 对 .github 的改动回滚，
+            # 防止 opencode 误改/误删 workflow 导致 Continuous Loop 断掉
+            git checkout HEAD -- .github 2>/dev/null
+            git clean -fdq .github 2>/dev/null
+
+            # 增量提交 + 推送，改动尽早落盘（推送失败下一轮自动补推）
+            if [ -n "$(git status --porcelain)" ]; then
+              git add -A
+              git commit -m "chore: automated bug fixes by opencode (iter ${ITER})" 2>/dev/null
+            fi
+            git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
+            echo "::endgroup::"
+
+            LEFT=$((DEADLINE - SECONDS))
+            [ "$LEFT" -le 0 ] && break
+            sleep 30
+          done
+          echo "工作循环结束：共 ${ITER} 轮，工作窗口累计 $((SECONDS / 60)) 分钟。"
+          exit 0
 
       - name: Commit and push changes
+        if: ${{ !cancelled() }}   # 手动取消才跳过；中途失败也要把已完成的改动收尾提交
         run: |
+          git checkout HEAD -- .github 2>/dev/null || true
+          git clean -fdq .github 2>/dev/null || true
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
             git commit -m "chore: automated bug fixes by opencode"
@@ -150,6 +228,7 @@ jobs:
           fi
 
       - name: Push to Gitee
+        if: ${{ !cancelled() }}
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           GITEE_REPO: ${{ secrets.GITEE_REPO }}
@@ -162,11 +241,13 @@ jobs:
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
           git push gitee "HEAD:${GITHUB_REF_NAME}" || echo "[warn] push to Gitee failed"
 
-      # ⭐ 关键 2：本 run 的所有实质步骤完成后，立刻排下一个
+      # ⭐ 关键 5：本 run 的所有实质步骤完成后，立刻排下一个
       # 由于 concurrency.cancel-in-progress=false，
       # 这个新 run 会阻塞等待当前 run 退出 → 当前 run 一结束立刻开始
+      # !cancelled()：除"手动取消"外都续跑（失败也续），确保循环不中断；
+      # 定时触发 */20 同时充当看门狗：即使某次续跑失败，最多 20 分钟后自动恢复
       - name: Trigger next run (continuous loop)
-        if: success()             # 只有本次没崩才续；想"崩了也续"就改成 always()
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
