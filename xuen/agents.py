@@ -65,27 +65,27 @@ class ShellAgent:
 
     def render_command(self, prompt: str) -> str:
         tpl = self.template
-        if re.search(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY, tpl):
+        f_sentinel = "\0XUEN_PROMPT_FILE\0"
+        p_sentinel = "\0XUEN_PROMPT\0"
+        # 先把两处占位符统一换成哨兵，最后才一次性替换成实际内容。
+        # 若先插入内容再做另一处替换，后插入的内容（转义后的提示词 /
+        # 提示词文件路径）里恰好含有占位符字面量时会被二次替换、破坏命令
+        # （占位符被模板自带引号包住时，连引号一起换成哨兵，否则转义结果
+        # 嵌在引号里会被当作字面值）
+        for ph in ('"$prompt_file"', "'$prompt_file'"):
+            tpl = tpl.replace(ph, f_sentinel)
+        tpl = re.sub(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY,
+                     f_sentinel, tpl)
+        for ph in ('"$prompt"', "'$prompt'"):
+            tpl = tpl.replace(ph, p_sentinel)
+        tpl = re.sub(r"\$prompt" + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
+
+        if f_sentinel in tpl:
             pfile = self.workspace / ".prompt.md"
             pfile.write_text(prompt, encoding="utf-8")
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
-            quoted_path = _quote(str(pfile.resolve()))
-            # 若占位符被模板自带的引号包住，先连引号一起替换成哨兵，
-            # 否则转义结果嵌在引号里会被当作字面值、路径被破坏
-            sentinel = "\0XUEN_PROMPT_FILE\0"
-            for ph in ('"$prompt_file"', "'$prompt_file'"):
-                tpl = tpl.replace(ph, sentinel)
-            tpl = re.sub(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY,
-                         sentinel, tpl)
-            tpl = tpl.replace(sentinel, quoted_path)
-        quoted = _quote(prompt)
-        # 先统一替换成哨兵再一次性换成 quoted，避免提示词内容里
-        # 恰好含有 "$prompt" 时被二次替换、破坏 shell 引号结构
-        sentinel = "\0XUEN_PROMPT\0"
-        for ph in ('"$prompt"', "'$prompt'"):
-            tpl = tpl.replace(ph, sentinel)
-        tpl = re.sub(r"\$prompt" + self._PLACEHOLDER_BOUNDARY, sentinel, tpl)
-        return tpl.replace(sentinel, quoted)
+            tpl = tpl.replace(f_sentinel, _quote(str(pfile.resolve())))
+        return tpl.replace(p_sentinel, _quote(prompt))
 
     def kill(self) -> None:
         """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。"""
