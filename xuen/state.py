@@ -53,6 +53,47 @@ def get_section(text: str, name: str) -> str:
     return text[i:j].strip("\n")
 
 
+def _section_spans(text: str) -> list:
+    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间，text 坐标。"""
+    spans = []
+    for nm in (SECTION_IDEA, SECTION_ARTIFACT):
+        sm, em = start_marker(nm), end_marker(nm)
+        k = 0
+        while True:
+            a = text.find(sm, k)
+            if a < 0:
+                break
+            b = text.find(em, a + len(sm))
+            if b < 0:
+                break
+            spans.append((a, b + len(em)))
+            k = b + len(em)
+    return spans
+
+
+def _strip_stray_markers(segment: str, spans: list, seg_start: int,
+                         s: str, e: str) -> str:
+    """清除 segment 中「不落在任何有效区块区间内」的本区块标记字面量。
+
+    spans / seg_start 均为原始 text 坐标。落在其他有效区块区间内的标记
+    字面量是该区块的合法内容（如产物区记录了「请保留 <!-- IDEA:START -->」
+    之类的写入协议），绝不能动——否则更新一个区块会悄悄删改另一个区块。
+    """
+    out = []
+    pos = 0
+    for a, b in sorted(spans):
+        lo = max(a - seg_start, 0)
+        hi = min(b - seg_start, len(segment))
+        if lo > pos:
+            out.append(segment[pos:lo].replace(s, "").replace(e, ""))
+        if hi > max(pos, lo):
+            out.append(segment[max(pos, lo):hi])
+        pos = max(pos, hi)
+    if pos < len(segment):
+        out.append(segment[pos:].replace(s, "").replace(e, ""))
+    return "".join(out)
+
+
 def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -70,9 +111,11 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
     if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
         # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，
-        # 因此前缀/后缀中本区块的标记一律清除（其他区块标记名不同，不受影响）
-        prefix = text[:i_s].replace(s, "").replace(e, "")
-        suffix = text[j + len(e):].replace(s, "").replace(e, "")
+        # 因此前缀/后缀中本区块的孤立标记要清除；但落在其他有效区块
+        # 区间内的标记字面量是该区块的内容，必须原样保留
+        spans = _section_spans(text)
+        prefix = _strip_stray_markers(text[:i_s], spans, 0, s, e)
+        suffix = _strip_stray_markers(text[j + len(e):], spans, j + len(e), s, e)
         text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
         text = text.replace(s, "").replace(e, "")
@@ -101,6 +144,43 @@ import sys
 
 STATE_FILE = __STATE_FILE__
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
+
+
+def _spans(text):
+    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间。"""
+    spans = []
+    for nm in NAMES.values():
+        sm = f"<!-- {nm}:START -->"
+        em = f"<!-- {nm}:END -->"
+        k = 0
+        while True:
+            a = text.find(sm, k)
+            if a < 0:
+                break
+            b = text.find(em, a + len(sm))
+            if b < 0:
+                break
+            spans.append((a, b + len(em)))
+            k = b + len(em)
+    return spans
+
+
+def _strip_stray(segment, spans, seg_start, s, e):
+    """清除 segment 中不落在任何有效区块内的标记字面量；
+    落在其他有效区块区间内的是该区块的合法内容，必须保留。"""
+    out = []
+    pos = 0
+    for a, b in sorted(spans):
+        lo = max(a - seg_start, 0)
+        hi = min(b - seg_start, len(segment))
+        if lo > pos:
+            out.append(segment[pos:lo].replace(s, "").replace(e, ""))
+        if hi > max(pos, lo):
+            out.append(segment[max(pos, lo):hi])
+        pos = max(pos, hi)
+    if pos < len(segment):
+        out.append(segment[pos:].replace(s, "").replace(e, ""))
+    return "".join(out)
 
 
 def main() -> int:
@@ -136,9 +216,11 @@ def main() -> int:
     i_s = text.find(s)
     j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
     if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
-        # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，一并清除
-        prefix = text[:i_s].replace(s, "").replace(e, "")
-        suffix = text[j + len(e):].replace(s, "").replace(e, "")
+        # 区块外孤立残留标记要清除；但其他有效区块区间内的标记字面量
+        # 是该区块的合法内容，必须原样保留
+        spans = _spans(text)
+        prefix = _strip_stray(text[:i_s], spans, 0, s, e)
+        suffix = _strip_stray(text[j + len(e):], spans, j + len(e), s, e)
         text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
         text = text.replace(s, "").replace(e, "")

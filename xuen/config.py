@@ -78,6 +78,24 @@ def _parse_iterations(value: Any) -> Optional[int]:
     return None if n == -1 else n
 
 
+def _parse_int(value: Any, name: str) -> int:
+    """解析整数配置；与 _parse_iterations 同理拒绝 bool 与非整数 float：
+    YAML 把 yes 解析成 True，int(True)==1 会把 words.pick: yes 静默解释成 1；
+    count: 100.5 会被 int() 静默截断成 100。"""
+    if isinstance(value, bool):
+        raise ValueError(f"{name} 必须是整数，收到布尔值: {value!r}")
+    if isinstance(value, float) and not value.is_integer():
+        raise ValueError(f"{name} 必须是整数，收到: {value!r}")
+    return int(value)
+
+
+def _parse_float(value: Any, name: str) -> float:
+    """解析浮点配置；拒绝 bool（timeout: yes 会被静默当成 1.0 秒）。"""
+    if isinstance(value, bool):
+        raise ValueError(f"{name} 必须是数值（秒），收到布尔值: {value!r}")
+    return float(value)
+
+
 def _parse_bool(value: Any, name: str) -> bool:
     """解析布尔配置；容忍带引号的字符串写法，如 tui: "false"。"""
     if isinstance(value, str):
@@ -100,9 +118,9 @@ def load_config(path: Optional[str] = None) -> Config:
 
     words = raw.get("words") or {}
     cfg.words = WordsConfig(
-        count=int(words.get("count", cfg.words.count)),
-        batch=int(words.get("batch", cfg.words.batch)),
-        pick=int(words.get("pick", cfg.words.pick)),
+        count=_parse_int(words.get("count", cfg.words.count), "words.count"),
+        batch=_parse_int(words.get("batch", cfg.words.batch), "words.batch"),
+        pick=_parse_int(words.get("pick", cfg.words.pick), "words.pick"),
         reuse=_parse_bool(words.get("reuse", cfg.words.reuse), "words.reuse"),
     )
 
@@ -112,7 +130,7 @@ def load_config(path: Optional[str] = None) -> Config:
     agent = raw.get("agent") or {}
     cfg.agent = AgentConfig(
         command=str(agent.get("command", "") or ""),
-        timeout=float(agent.get("timeout", cfg.agent.timeout)),
+        timeout=_parse_float(agent.get("timeout", cfg.agent.timeout), "agent.timeout"),
     )
 
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
