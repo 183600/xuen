@@ -24,8 +24,13 @@ class UI:
         return f"{_CODES[code]}{text}{_CODES['reset']}"
 
     def raw(self, text: str = "") -> None:
-        sys.stdout.write(text)
-        sys.stdout.flush()
+        try:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+        except BrokenPipeError:
+            # 下游已关闭（如 xuen --no-tui … | head）：静默丢弃后续输出，
+            # 否则 BrokenPipeError traceback 会打断研究循环、污染退出码
+            pass
 
     def line(self, prefix: str, text: str, color: str) -> None:
         for ln in str(text).splitlines() or [""]:
