@@ -36,7 +36,8 @@ def _resolve_task(args) -> str:
         try:
             with open(args.task_file, encoding="utf-8") as f:
                 task = f.read().strip()
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
+            # UnicodeDecodeError：任务文件不是合法 UTF-8（如二进制/GBK 文件）
             print(f"无法读取任务文件 {args.task_file!r}：{e}", file=sys.stderr)
             raise SystemExit(2)
     if not task:
