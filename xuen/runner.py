@@ -84,7 +84,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止
                 word_list = disk_words
                 sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
-        except OSError as e:
+        except (OSError, ValueError) as e:
+            # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte
+            #（如 --task-file 读入二进制文件）；与启动失败同等对待
             raise SystemExit(f"词库生成失败：{e}")
         if len(word_list) < cfg.words.count:
             sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
@@ -117,7 +119,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             try:
                 agent.run(_shell_prompt(cfg, task, i, inspiration,
                                         state_path, helper, user_notes))
-            except OSError as e:
+            except (OSError, ValueError) as e:
+                # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte，
+                # 属「启动失败」，计入轮次失败而非让 traceback 崩溃整个循环
                 failures += 1
                 consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
