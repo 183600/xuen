@@ -10,6 +10,9 @@ venv/
 # 运行时生成的工作区（research.md / words.txt / write_section.py 等）
 workspace/
 
+# 提示词文件残留（$prompt_file 模式若在仓库根运行会产生）
+.prompt.md
+
 # 本地配置（含 API key，勿提交）
 config.yaml
 config.yml
