@@ -111,13 +111,16 @@ class ShellAgent:
         # returncode/timed_out 不能是上一次运行的残留值
         self.returncode = None
         self.timed_out = False
-        # 注意：绝不能在此复位 self._killed —— kill() 可能在上一轮
+        # 注意：绝不能简单在此复位 self._killed —— kill() 可能在上一轮
         # should_stop() 检查通过之后、本轮 Popen 之前到达（kill 先到达、
-        # self._proc 仍为 None，杀不到任何进程）；若复位，这次停止请求会被
-        # 丢弃，刚拉起的外部 agent（start_new_session 脱离终端会话）就成
-        # 孤儿一直跑到超时。让 kill 标志穿过本轮，由 Popen 后的补杀兜底；
-        # 而 kill() 只由退出路径触发，后续轮次会被 should_stop() 拦下，
-        # 不存在「上一轮 kill 误杀本轮」的合法流程
+        # self._proc 仍为 None，杀不到任何进程）；若丢弃这次停止请求，
+        # 刚拉起的外部 agent（start_new_session 脱离终端会话）就成孤儿
+        # 一直跑到超时。正确做法：读取并清掉旗标，把「待处理的 kill 请求」
+        # 传到 Popen 后的补杀一并兑现；否则 _killed 一旦置位便永不复位，
+        # 之后每次 run() 都会拉起进程又立刻误杀（返回 -9 且 timed_out=False，
+        # 还会被误报为「异常退出」），agent 实例就此失效。
+        killed_before = self._killed
+        self._killed = False
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
@@ -130,8 +133,9 @@ class ShellAgent:
             **popen_kwargs(),
         )
         self._proc = proc
-        # kill() 在 Popen 与本赋值之间到达：进程刚拉起，立即补杀
-        if self._killed:
+        # kill 请求在 Popen 前（killed_before）或 Popen 与本赋值之间
+        # （self._killed）到达：进程刚拉起，立即补杀
+        if killed_before or self._killed:
             kill_process_tree(proc)
         out: List[str] = []
         killed = {"flag": False}
