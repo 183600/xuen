@@ -183,7 +183,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         # 与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
         # 配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
         # 被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
-        new = content.strip().strip("\n").replace(e, "")
+        new = content.strip().strip("\n")
         new = "\n".join(
             line for line in new.splitlines() if not _SECTION_MARKER.match(line)
         )
@@ -365,7 +365,7 @@ def main() -> int:
             # 与本区块 END 一样，任何独成一行的区块标记都会参与 _spans 配对：
             # 若作为内容原样写入，会被当成真实区块边界，导致相邻区块被截断
             # 甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
-            cleaned = content.strip().strip("\\n").replace(e, "")
+            cleaned = content.strip().strip("\\n")
             cleaned = "\\n".join(
                 line for line in cleaned.splitlines()
                 if not _SECTION_MARKER_RE.match(line)
