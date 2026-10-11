@@ -59,6 +59,11 @@ class ShellAgent:
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
         self._killed = False
+        # 保护 _killed/_proc：「run() 读取并清掉待处理 kill 请求」与
+        # 「kill() 置位并取当前进程」必须各自原子完成，否则 kill()
+        # 若恰好落在 run() 的读取与清除之间，这次停止请求会被静默丢弃
+        # （详见 run() 中注释），刚拉起的 agent 会一直跑到超时
+        self._kill_lock = threading.Lock()
         self.returncode: Optional[int] = None
         self.timed_out = False
 
@@ -101,8 +106,9 @@ class ShellAgent:
         刚拉起的外部 agent 会因 start_new_session 脱离终端会话而
         成为孤儿继续运行。
         """
-        self._killed = True
-        proc = self._proc
+        with self._kill_lock:
+            self._killed = True
+            proc = self._proc
         if proc is not None and proc.poll() is None:
             kill_process_tree(proc)
 
@@ -119,8 +125,9 @@ class ShellAgent:
         # 传到 Popen 后的补杀一并兑现；否则 _killed 一旦置位便永不复位，
         # 之后每次 run() 都会拉起进程又立刻误杀（返回 -9 且 timed_out=False，
         # 还会被误报为「异常退出」），agent 实例就此失效。
-        killed_before = self._killed
-        self._killed = False
+        with self._kill_lock:
+            killed_before = self._killed
+            self._killed = False
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
