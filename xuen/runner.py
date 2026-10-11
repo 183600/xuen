@@ -81,8 +81,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             if word_list:
                 words.save_words(words_path, word_list)
                 sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
-            elif disk_words:
-                # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止
+            elif disk_words and cfg.words.reuse:
+                # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止。
+                # words.reuse=false 是显式禁用复用，不能绕回旧词库。
                 word_list = disk_words
                 sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
         except (OSError, ValueError) as e:

@@ -121,11 +121,11 @@ class TuiSink(Sink):
         return self.app.stop_requested
 
     def finish(self, idea: str, artifact: str) -> None:
+        self.app.post_finished()  # 先阻断新输入并丢弃无法再投递的排队内容
         self._log("─" * 12 + " 研究循环结束 " + "─" * 12, "bold green")
         self.section(SECTION_IDEA, idea)
         self.section(SECTION_ARTIFACT, artifact)
         self.app.post_status("已结束（按 q 或 Ctrl+C 退出）")
-        self.app.post_finished()
 
 
 class XuangenApp(App):
@@ -197,7 +197,7 @@ class XuangenApp(App):
             self.sink.err(f"运行异常：{e!r}")
             self.post_status("异常结束（按 q 退出）")
         finally:
-            self.loop_finished = True
+            self.post_finished()  # 异常路径也停止接收输入（finish() 路径下是幂等的）
 
     # ---- 线程 → 界面 的安全投递 ----
     def _safe_call_from_thread(self, fn) -> None:
@@ -232,7 +232,14 @@ class XuangenApp(App):
         self._safe_call_from_thread(_update)
 
     def post_finished(self) -> None:
-        pass  # 状态栏已提示；保持界面让用户回看
+        """停止接收新输入，并清空 loop 已经结束后来不及投递的队列。"""
+        self.loop_finished = True
+        dropped = self.drain_user_input()
+        if dropped:
+            self.post_log(
+                f"研究循环已开始收尾，已丢弃 {len(dropped)} 条来不及投递的输入",
+                "bold yellow",
+            )
 
     # ---- 用户输入 ----
     def on_input_submitted(self, event: Input.Submitted) -> None:

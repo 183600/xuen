@@ -29,6 +29,10 @@ def _clean_line(line: str) -> Optional[str]:
         return None
     if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
         return None
+    if "://" in w:
+        # URL 不是灵感词；若交给下面按 ':' 截断，会把 "http"/"https"
+        # 这类协议名误收进词库。
+        return None
     for sep in ("：", ":"):  # "词：解释"/"词:解释" 只留词
         if sep in w:
             head, _, _ = w.partition(sep)

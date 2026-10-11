@@ -74,7 +74,10 @@ def _parse_iterations(value: Any) -> Optional[int]:
         raise ValueError(f"loop.iterations 必须是整数或 inf，收到布尔值: {value!r}")
     if isinstance(value, float) and not value.is_integer():
         raise ValueError(f"loop.iterations 必须是整数或 inf，收到: {value!r}")
-    n = int(value)
+    try:
+        n = int(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(f"loop.iterations 必须是整数或 inf，收到: {value!r}") from None
     return None if n == -1 else n
 
 
