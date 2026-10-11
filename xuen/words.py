@@ -39,11 +39,16 @@ def _clean_line(line: str) -> Optional[str]:
         if sep in w:
             head, _, _ = w.partition(sep)
             head = head.strip()
-            # 尾部为空（如 "术语："）时仍应保留词头，只有词头本身非法才丢
+            # 尾部为空（如 "术语："）时仍应保留词头；词头非法则尝试下一个
+            # 分隔符（如 "term：subterm: 解释"），两者都截不出合法词头才丢
             if not head or len(head) > 30:
-                return None
+                continue
             w = head
             break
+    else:
+        # 含冒号但任何分隔符都截不出合法词头：整行是解释性文字，丢弃
+        if "：" in w or ":" in w:
+            return None
     # 尾部标点剥除后，可能露出此前被标点挡住的引号/反引号
     # （如 "「`词`," → "词`"），需再剥一次，否则残片混进词库
     w = w.rstrip(".。,，;；!！?？ ")
@@ -117,6 +122,12 @@ def generate_words_shell(shell_agent, task: str, count: int, batch: int,
             "要求：每行一个词；不要编号、不要解释、不要输出任何多余内容；只输出词表本身。"
         )
         out = shell_agent.run(prompt) or ""
+        # 超时/非零退出的输出是截断的半成品，不能直接解析；
+        # 且同一 agent 命令大概率批批失败，继续只会空烧时间
+        if (getattr(shell_agent, "timed_out", False)
+                or getattr(shell_agent, "returncode", 0)):
+            warn("词库生成批次执行失败（超时或非零退出），停止生成")
+            break
         fresh = 0
         for w in parse_word_lines(out):
             key = w.casefold()

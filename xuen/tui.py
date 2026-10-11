@@ -216,7 +216,8 @@ class XuangenApp(App):
         self._safe_call_from_thread(_write)
 
     def post_section(self, name: str, content: str) -> None:
-        widget_id = "#idea" if name == SECTION_IDEA else "#artifact"
+        # 显式映射：未知的区块名直接报错，不能静默写进产物区面板
+        widget_id = {SECTION_IDEA: "#idea", SECTION_ARTIFACT: "#artifact"}[name]
         tag = SECTION_TAG.get(name, f"[{name}]")
 
         def _update() -> None:

@@ -56,7 +56,7 @@ def get_section(text: str, name: str) -> str:
 # 区块标记必须独占一行（允许行首/行尾空白）。同一行内出现的标记文本是
 # 普通内容（例如说明写入协议），不能参与区块配对。
 _SECTION_MARKER = re.compile(
-    r"(?m)^[ \t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t]*$"
+    r"(?m)^[ \t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t]*\r?$"
 )
 
 
