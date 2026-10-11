@@ -115,11 +115,11 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     old = get_section(text, name)
 
     s, e = start_marker(name), end_marker(name)
-    # 新内容里的字面量标记也必须清除（任一区块的），否则写入后
-    # get_section 会在内容中的伪标记处截断/串区，区块数据被悄悄破坏
-    new = content.strip().strip("\n")
-    for nm in (SECTION_IDEA, SECTION_ARTIFACT):
-        new = new.replace(start_marker(nm), "").replace(end_marker(nm), "")
+    # 新内容里只需剥掉本区块的 END 字面量：它会让 _section_spans 提前配对、
+    # 区块被截断。本区块的 START 与另一区块的标记字面量写入后都落在有效
+    # 区块区间内，是该区块的合法内容（如产物区记录着「请保留
+    # <!-- IDEA:START -->」的写入协议），一律剥掉会悄悄删改区块内容
+    new = content.strip().strip("\n").replace(e, "")
     body = "\n" + new + "\n"
     # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
     # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块
@@ -240,11 +240,9 @@ def main() -> int:
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, encoding="utf-8") as f:
             text = f.read()
-    # 新内容里的字面量标记也要清除（任一区块的），否则写入后区块会在
-    # 内容中的伪标记处截断/串区
-    cleaned = content.strip().strip("\\n")
-    for nm in NAMES.values():
-        cleaned = cleaned.replace(f"<!-- {nm}:START -->", "").replace(f"<!-- {nm}:END -->", "")
+    # 只剥本区块的 END 字面量（否则会提前配对、区块被截断）；本区块的
+    # START 与另一区块的标记字面量落在有效区块区间内，是合法内容
+    cleaned = content.strip().strip("\\n").replace(e, "")
     body = "\\n" + cleaned + "\\n"
     # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
     # 的合法内容），否则会替换到错误位置、破坏相邻区块
