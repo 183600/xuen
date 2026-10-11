@@ -161,6 +161,7 @@ import os
 import sys
 
 STATE_FILE = __STATE_FILE__
+SCAFFOLD = __SCAFFOLD__
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
@@ -236,10 +237,13 @@ def main() -> int:
     content = sys.stdin.read()
     name = NAMES[cmd]
     s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
-    text = ""
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, encoding="utf-8") as f:
             text = f.read()
+    else:
+        # 状态文件在运行过程中被删除时，与 xuen.state.update_section_file
+        # 保持一致：从完整 scaffold 恢复，而不是只追加一个孤立区块
+        text = SCAFFOLD
     # 只剥本区块的 END 字面量（否则会提前配对、区块被截断）；本区块的
     # START 与另一区块的标记字面量落在有效区块区间内，是合法内容
     cleaned = content.strip().strip("\\n").replace(e, "")
@@ -260,6 +264,9 @@ def main() -> int:
         # 合法内容，必须原样保留，不能全局 replace 误删
         text = _strip_stray(text, spans, 0, s, e)
         text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+    # dirname(STATE_FILE) 必定非空（生成时已 resolve 成绝对路径）；
+    # 外部 agent 可能误删父目录，恢复时需与 update_section_file 一样先建目录
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     tmp = STATE_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(text)
@@ -278,7 +285,9 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
     # 用 repr() 生成路径字面量：r-string 拼接在路径含连续双引号 /
     # 换行（POSIX 合法）时会生成语法损坏的脚本，repr() 总能安全转义
     helper.write_text(
-        HELPER_TEMPLATE.replace("__STATE_FILE__", repr(str(state_path.resolve()))),
+        HELPER_TEMPLATE
+        .replace("__SCAFFOLD__", repr(scaffold("")))
+        .replace("__STATE_FILE__", repr(str(state_path.resolve()))),
         encoding="utf-8",
     )
     return helper
