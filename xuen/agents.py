@@ -108,12 +108,16 @@ class ShellAgent:
         # returncode/timed_out 不能是上一次运行的残留值
         self.returncode = None
         self.timed_out = False
+        # _killed 只应代表“终止当前这一轮运行”：若 kill() 在上一轮被调用过
+        # 而这里不复位，下面的补杀逻辑会误杀本轮刚拉起的进程
+        self._killed = False
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
 
         proc = subprocess.Popen(
             command, shell=True,
+            stdin=subprocess.DEVNULL,  # 防止外部 agent 继承 stdin 与 TUI 争抢键盘/挂起
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, encoding="utf-8", errors="replace",
             **popen_kwargs(),

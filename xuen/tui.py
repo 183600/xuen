@@ -268,4 +268,11 @@ class XuangenApp(App):
 def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     app = XuangenApp(cfg, task, regen_words)
     app.run()
+    # 等后台 _run_loop 线程收尾：action_quit() 只设置了 stop_requested 并
+    # 停掉 agent，worker 此刻可能仍在运行并即将改写 exit_code；不等它就把
+    # 初始值 0 返回，失败会被掩盖成「成功退出」。agent 已被 stop_agent()
+    # 终止，正常几秒之内线程就会退出；超时兜底防止极端情况下卡死进程
+    worker = app._worker
+    if worker is not None:
+        worker.join(timeout=10)
     return getattr(app, "exit_code", 0)
