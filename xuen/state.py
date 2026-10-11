@@ -122,18 +122,23 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     字面量是该区块的合法内容（如产物区记录了「请保留 <!-- IDEA:START -->」
     之类的写入协议），绝不能动——否则更新一个区块会悄悄删改另一个区块。
     """
+    def clean(seg: str) -> str:
+        # 只删除独占整行的标记；行内提及的标记文本是普通内容，必须保留
+        return "\n".join(l for l in seg.split("\n")
+                         if not _SECTION_MARKER.match(l))
+
     out = []
     pos = 0
     for a, b in sorted(spans):
         lo = max(a - seg_start, 0)
         hi = min(b - seg_start, len(segment))
         if lo > pos:
-            out.append(segment[pos:lo].replace(s, "").replace(e, ""))
+            out.append(clean(segment[pos:lo]))
         if hi > max(pos, lo):
             out.append(segment[max(pos, lo):hi])
         pos = max(pos, hi)
     if pos < len(segment):
-        out.append(segment[pos:].replace(s, "").replace(e, ""))
+        out.append(clean(segment[pos:]))
     return "".join(out)
 
 
@@ -290,18 +295,24 @@ def _spans(text):
 def _strip_stray(segment, spans, seg_start, s, e):
     """清除 segment 中不落在任何有效区块内的标记字面量；
     落在其他有效区块区间内的是该区块的合法内容，必须保留。"""
+    def clean(seg):
+        # 与 xuen.state._strip_stray_markers 一致：只删除独占整行的标记，
+        # 行内提及的标记文本是普通内容，必须保留
+        return "\\n".join(l for l in seg.split("\\n")
+                         if not _SECTION_MARKER_RE.match(l))
+
     out = []
     pos = 0
     for a, b in sorted(spans):
         lo = max(a - seg_start, 0)
         hi = min(b - seg_start, len(segment))
         if lo > pos:
-            out.append(segment[pos:lo].replace(s, "").replace(e, ""))
+            out.append(clean(segment[pos:lo]))
         if hi > max(pos, lo):
             out.append(segment[max(pos, lo):hi])
         pos = max(pos, hi)
     if pos < len(segment):
-        out.append(segment[pos:].replace(s, "").replace(e, ""))
+        out.append(clean(segment[pos:]))
     return "".join(out)
 
 
