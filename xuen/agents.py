@@ -58,6 +58,7 @@ class ShellAgent:
         self.on_output = on_output or _default_on_output
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
+        self._killed = False
         self.returncode: Optional[int] = None
         self.timed_out = False
 
@@ -90,7 +91,14 @@ class ShellAgent:
         return tpl.replace(p_sentinel, _quote(prompt))
 
     def kill(self) -> None:
-        """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。"""
+        """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。
+
+        记 _killed 标志以覆盖竞态：kill 与 run() 起跑（Popen 到
+        self._proc 赋值之间）并发时 proc 读到 None，若不记标志，
+        刚拉起的外部 agent 会因 start_new_session 脱离终端会话而
+        成为孤儿继续运行。
+        """
+        self._killed = True
         proc = self._proc
         if proc is not None and proc.poll() is None:
             kill_process_tree(proc)
@@ -111,6 +119,9 @@ class ShellAgent:
             **popen_kwargs(),
         )
         self._proc = proc
+        # kill() 在 Popen 与本赋值之间到达：进程刚拉起，立即补杀
+        if self._killed:
+            kill_process_tree(proc)
         out: List[str] = []
         killed = {"flag": False}
 

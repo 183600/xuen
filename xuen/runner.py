@@ -22,15 +22,16 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     # resolve 成绝对路径：外部 agent 的工作目录不一定是 xuen 的 cwd，
     # 提示词里的 helper / state 路径必须对任何 cwd 都有效
     workspace = Path(cfg.workspace).expanduser().resolve()
-    workspace.mkdir(parents=True, exist_ok=True)
     state_path = workspace / "research.md"
     words_path = workspace / "words.txt"
 
+    # 先校验配置再建目录：配置错误退出时不应留下空的 workspace
     if not cfg.agent.command.strip():
         raise SystemExit(
             "配置错误：缺少外部 agent 命令。请在配置文件设置，例如：\n"
             "  agent:\n    command: 'opencode run \"$prompt\"'"
         )
+    workspace.mkdir(parents=True, exist_ok=True)
 
     sink.info(f"任务：{task}")
     sink.info(f"工作区：{workspace.resolve()}")
