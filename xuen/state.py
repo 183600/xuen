@@ -45,11 +45,17 @@ def get_section(text: str, name: str) -> str:
     _section_spans / _strip_stray_markers），必须跳过，否则读出的内容会
     跨越相邻区块；END 先于 START / 缺 END 等标记错乱则视为区块缺失，
     返回空串（由 update_section_file 负责修复）。
+
+    换行符统一规整为 \n：状态文件若以 CRLF 保存（Windows 编辑 /
+    git autocrlf），逐行残留的 \r 会进入区块上报与提示词，
+    也让 update_section_file 返回的 old 带杂质。
     """
     s, e = start_marker(name), end_marker(name)
     for a, b in _section_spans(text):
         if text.startswith(s, a):
-            return text[a + len(s): b - len(e)].strip("\n")
+            content = text[a + len(s): b - len(e)]
+            content = content.replace("\r\n", "\n").replace("\r", "\n")
+            return content.strip("\n")
     return ""
 
 
