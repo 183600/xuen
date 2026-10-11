@@ -239,12 +239,14 @@ class XuangenApp(App):
         text = event.value.strip()
         if not text:
             return
+        # 先清空输入框：内容残留在框里会让用户以为没提交成功，
+        # 且输入框非空时按 q 会被当作普通字符输入而无法退出
+        self.query_one("#user-input", Input).value = ""
         if self.loop_finished:
             self.query_one("#log", RichLog).write(
                 Text("循环已结束，本次输入不会被投递", style="bold yellow")
             )
             return
-        self.query_one("#user-input", Input).value = ""
         self._user_inputs.put(text)
         log = self.query_one("#log", RichLog)
         log.write(Text(f"⌨ 已记录（下次调用 agent 时带给它）：{text}", style="bold blue"))
