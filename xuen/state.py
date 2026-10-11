@@ -244,7 +244,7 @@ NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
 _SECTION_MARKER_RE = re.compile(
-    r"(?m)^[ \\t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t]*$"
+    r"(?m)^[ \\t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t]*\\r?$"
 )
 
 
