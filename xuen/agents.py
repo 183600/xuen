@@ -108,9 +108,13 @@ class ShellAgent:
         # returncode/timed_out 不能是上一次运行的残留值
         self.returncode = None
         self.timed_out = False
-        # _killed 只应代表“终止当前这一轮运行”：若 kill() 在上一轮被调用过
-        # 而这里不复位，下面的补杀逻辑会误杀本轮刚拉起的进程
-        self._killed = False
+        # 注意：绝不能在此复位 self._killed —— kill() 可能在上一轮
+        # should_stop() 检查通过之后、本轮 Popen 之前到达（kill 先到达、
+        # self._proc 仍为 None，杀不到任何进程）；若复位，这次停止请求会被
+        # 丢弃，刚拉起的外部 agent（start_new_session 脱离终端会话）就成
+        # 孤儿一直跑到超时。让 kill 标志穿过本轮，由 Popen 后的补杀兜底；
+        # 而 kill() 只由退出路径触发，后续轮次会被 should_stop() 拦下，
+        # 不存在「上一轮 kill 误杀本轮」的合法流程
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
