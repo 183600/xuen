@@ -63,7 +63,9 @@ class ShellAgent:
         self.timed_out = False
 
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
-    # 占位符为前缀的普通变量，不能被子串替换误伤
+    # 占位符为前缀的普通变量，不能被子串替换误伤；x$prompt 这类前面紧贴
+    # 单词字符的也只是普通 shell 变量拼接，同样不能误替换
+    _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_])"
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
 
     def render_command(self, prompt: str) -> str:
@@ -77,11 +79,12 @@ class ShellAgent:
         # 嵌在引号里会被当作字面值）
         for ph in ('"$prompt_file"', "'$prompt_file'"):
             tpl = tpl.replace(ph, f_sentinel)
-        tpl = re.sub(r"\$prompt_file" + self._PLACEHOLDER_BOUNDARY,
-                     f_sentinel, tpl)
+        tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt_file"
+                     + self._PLACEHOLDER_BOUNDARY, f_sentinel, tpl)
         for ph in ('"$prompt"', "'$prompt'"):
             tpl = tpl.replace(ph, p_sentinel)
-        tpl = re.sub(r"\$prompt" + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
+        tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt"
+                     + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
 
         if f_sentinel in tpl:
             pfile = self.workspace / ".prompt.md"

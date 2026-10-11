@@ -129,9 +129,13 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         i_s, i_span_end = own
         # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，
         # 因此前缀/后缀中本区块的孤立标记要清除；但落在其他有效区块
-        # 区间内的标记字面量是该区块的内容，必须原样保留
-        prefix = _strip_stray_markers(text[:i_s], spans, 0, s, e)
-        suffix = _strip_stray_markers(text[i_span_end:], spans, i_span_end, s, e)
+        # 区间内的标记字面量是该区块的内容，必须原样保留。
+        # 重复的同名区块（第二对同样的 START/END）不能算「其他区块」：
+        # 它永远不会被读取/更新，保护它的标记会让死数据永久残留
+        other_spans = [(a, b) for a, b in spans if not text.startswith(s, a)]
+        prefix = _strip_stray_markers(text[:i_s], other_spans, 0, s, e)
+        suffix = _strip_stray_markers(text[i_span_end:], other_spans,
+                                      i_span_end, s, e)
         text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
         # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
@@ -255,9 +259,11 @@ def main() -> int:
     if own is not None:  # END 必须在 START 之后配对才算有效区块
         i_s, i_span_end = own
         # 区块外孤立残留标记要清除；但其他有效区块区间内的标记字面量
-        # 是该区块的合法内容，必须原样保留
-        prefix = _strip_stray(text[:i_s], spans, 0, s, e)
-        suffix = _strip_stray(text[i_span_end:], spans, i_span_end, s, e)
+        # 是该区块的合法内容，必须原样保留。重复的同名区块不算「其他
+        # 区块」：保护它的标记会让永远读不到/更新不到的死数据残留
+        other = [(a, b) for a, b in spans if not text.startswith(s, a)]
+        prefix = _strip_stray(text[:i_s], other, 0, s, e)
+        suffix = _strip_stray(text[i_span_end:], other, i_span_end, s, e)
         text = prefix + s + body + e + suffix
     else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
         # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的

@@ -146,6 +146,11 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             if artifact != prev_artifact:
                 prev_artifact = artifact
                 sink.section(SECTION_ARTIFACT, artifact or "（空）")
+    except SystemExit:
+        # 连续失败等「提前中止」路径也要先收尾（打印最终区块状态 /
+        # 通知 TUI 循环结束），与正常结束、键盘中断路径保持一致
+        sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+        raise
     except KeyboardInterrupt:
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
