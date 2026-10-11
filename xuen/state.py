@@ -219,7 +219,29 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
             # 合法内容，必须原样保留，不能全局 replace 误删
             text = _strip_stray_markers(text, spans, 0, s, e)
-            text = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+            candidate = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+            # 回读校验必须用 None 哨兵：get_section 在区块缺失/交叉失效时
+            # 返回 ''，与「写入空内容」无法区分，会漏掉需要修复的场景
+            back = next(
+                (candidate[a + len(s): b - len(e)].strip("\n")
+                 for a, b in _section_spans(candidate)
+                 if candidate.startswith(s, a)),
+                None,
+            )
+            if back != new:
+                # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
+                # 无配对 END，是损坏残留）会抢先与新追加的 END 交叉配对，
+                # 导致新区块永远读不出来、且每次写入都追加出死数据。此时该
+                # 孤立标记按损坏数据处理：清掉本区块所有标记行后重建区块。
+                own_marker = re.compile(
+                    r"(?m)^[ \t]*<!-- " + re.escape(name)
+                    + r":(?:START|END) -->[ \t]*\r?$"
+                )
+                text = "\n".join(
+                    l for l in text.split("\n") if not own_marker.match(l)
+                )
+                candidate = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+            text = candidate
 
         tmp = path.with_name(path.name + ".tmp")
         tmp.write_text(text, encoding="utf-8")
@@ -405,7 +427,26 @@ def main() -> int:
                 # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
                 # 合法内容，必须原样保留，不能全局 replace 误删
                 text = _strip_stray(text, spans, 0, s, e)
-                text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                candidate = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                back = next(
+                    (candidate[a + len(s): b - len(e)].strip("\\n")
+                     for a, b in _spans(candidate) if candidate.startswith(s, a)),
+                    None,
+                )
+                if back != cleaned:
+                    # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
+                    # 无配对 END，是损坏残留）会抢先与新追加的 END 交叉配对，
+                    # 导致新区块永远读不出来。按损坏数据处理：清掉本区块所有
+                    # 标记行后重建区块。
+                    own_marker = re.compile(
+                        r"(?m)^[ \\t]*<!-- " + re.escape(name)
+                        + r":(?:START|END) -->[ \\t]*\\r?$"
+                    )
+                    text = "\\n".join(
+                        l for l in text.split("\\n") if not own_marker.match(l)
+                    )
+                    candidate = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                text = candidate
             tmp = STATE_FILE + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
                 f.write(text)
