@@ -111,15 +111,29 @@ def _parse_bool(value: Any, name: str) -> bool:
     return bool(value)
 
 
+def _mapping_section(raw: Any, name: str) -> dict:
+    """配置段落缺省（null/未写）时使用默认映射；标量则给出明确字段错误。"""
+    value = raw.get(name)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} 必须是映射（字典），收到: {value!r}")
+    return value
+
+
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
     with open(real_path, encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or {}
+        raw = yaml.safe_load(f)
+    if raw is None:
+        raw = {}
+    elif not isinstance(raw, dict):
+        raise ValueError(f"配置文件顶层必须是映射（字典），收到: {raw!r}")
 
     cfg = Config()
     cfg.extra_notes = str(raw.get("extra_notes") or "")
 
-    words = raw.get("words") or {}
+    words = _mapping_section(raw, "words")
     cfg.words = WordsConfig(
         count=_parse_int(words.get("count", cfg.words.count), "words.count"),
         batch=_parse_int(words.get("batch", cfg.words.batch), "words.batch"),
@@ -127,10 +141,10 @@ def load_config(path: Optional[str] = None) -> Config:
         reuse=_parse_bool(words.get("reuse", cfg.words.reuse), "words.reuse"),
     )
 
-    loop = raw.get("loop") or {}
+    loop = _mapping_section(raw, "loop")
     cfg.loop = LoopConfig(iterations=_parse_iterations(loop.get("iterations", 5)))
 
-    agent = raw.get("agent") or {}
+    agent = _mapping_section(raw, "agent")
     cfg.agent = AgentConfig(
         command=str(agent.get("command", "") or ""),
         timeout=_parse_float(agent.get("timeout", cfg.agent.timeout), "agent.timeout"),

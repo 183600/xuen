@@ -28,9 +28,18 @@ class UI:
             sys.stdout.write(text)
             sys.stdout.flush()
         except BrokenPipeError:
-            # 下游已关闭（如 xuen --no-tui … | head）：静默丢弃后续输出，
-            # 否则 BrokenPipeError traceback 会打断研究循环、污染退出码
-            pass
+            # 下游已关闭（如 xuen --no-tui … | head）：静默丢弃后续输出。
+            # 仅吞掉异常还不够：stdout 是缓冲流，解释器退出时会再次 flush，
+            # 触发 Exception ignored 并把退出码改成 120。把底层 fd 重定向到
+            # devnull 后，最终 flush 落到空设备，进程才能按真实结果退出。
+            try:
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                try:
+                    os.dup2(devnull, sys.stdout.fileno())
+                finally:
+                    os.close(devnull)
+            except (OSError, ValueError):
+                pass
 
     def line(self, prefix: str, text: str, color: str) -> None:
         for ln in str(text).splitlines() or [""]:

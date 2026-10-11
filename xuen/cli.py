@@ -69,8 +69,12 @@ def main(argv=None) -> int:
 
     configure(not (args.no_color or not cfg.color))
 
-    if args.workspace:
-        cfg.workspace = args.workspace
+    if args.workspace is not None:
+        workspace = args.workspace.strip()
+        if not workspace:
+            print("--workspace 不能为空", file=sys.stderr)
+            return 2
+        cfg.workspace = workspace
     if args.pick is not None:
         if args.pick < 0:
             print("--pick 必须 >= 0", file=sys.stderr)

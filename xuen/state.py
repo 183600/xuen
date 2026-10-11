@@ -180,11 +180,13 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         old = get_section(text, name)
 
         s, e = start_marker(name), end_marker(name)
-        # 新内容里只需剥掉本区块的 END 字面量：它会让 _section_spans 提前配对、
-        # 区块被截断。本区块的 START 与另一区块的标记字面量写入后都落在有效
-        # 区块区间内，是该区块的合法内容（如产物区记录着「请保留
-        # <!-- IDEA:START -->」的写入协议），一律剥掉会悄悄删改区块内容
+        # 与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
+        # 配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
+        # 被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
         new = content.strip().strip("\n").replace(e, "")
+        new = "\n".join(
+            line for line in new.splitlines() if not _SECTION_MARKER.match(line)
+        )
         body = "\n" + new + "\n"
         # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
         # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块
@@ -350,41 +352,50 @@ def main() -> int:
         return 2
     content = sys.stdin.read()
     name = NAMES[cmd]
-    with _locked():
-        s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
-        if os.path.exists(STATE_FILE):
-            with open(STATE_FILE, encoding="utf-8") as f:
-                text = f.read()
-        else:
-            # 状态文件在运行过程中被删除时，与 xuen.state.update_section_file
-            # 保持一致：从完整 scaffold 恢复，而不是只追加一个孤立区块
-            text = SCAFFOLD
-        # 只剥本区块的 END 字面量（否则会提前配对、区块被截断）；本区块的
-        # START 与另一区块的标记字面量落在有效区块区间内，是合法内容
-        cleaned = content.strip().strip("\\n").replace(e, "")
-        body = "\\n" + cleaned + "\\n"
-        # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
-        # 的合法内容），否则会替换到错误位置、破坏相邻区块
-        spans = _spans(text)
-        own = next(((a, b) for a, b in spans if text.startswith(s, a)), None)
-        if own is not None:  # END 必须在 START 之后配对才算有效区块
-            i_s, i_span_end = own
-            # 区块外孤立残留标记要清除；但其他有效区块区间内的标记字面量
-            # 是该区块的合法内容，必须原样保留。重复的同名区块不算「其他
-            # 区块」：保护它的标记会让永远读不到/更新不到的死数据残留
-            other = [(a, b) for a, b in spans if not text.startswith(s, a)]
-            prefix = _strip_stray(text[:i_s], other, 0, s, e)
-            suffix = _strip_stray(text[i_span_end:], other, i_span_end, s, e)
-            text = prefix + s + body + e + suffix
-        else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
-            # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
-            # 合法内容，必须原样保留，不能全局 replace 误删
-            text = _strip_stray(text, spans, 0, s, e)
-            text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
-        tmp = STATE_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, STATE_FILE)
+    try:
+        with _locked():
+            s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
+            if os.path.exists(STATE_FILE):
+                with open(STATE_FILE, encoding="utf-8") as f:
+                    text = f.read()
+            else:
+                # 状态文件在运行过程中被删除时，与 xuen.state.update_section_file
+                # 保持一致：从完整 scaffold 恢复，而不是只追加一个孤立区块
+                text = SCAFFOLD
+            # 与本区块 END 一样，任何独成一行的区块标记都会参与 _spans 配对：
+            # 若作为内容原样写入，会被当成真实区块边界，导致相邻区块被截断
+            # 甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
+            cleaned = content.strip().strip("\\n").replace(e, "")
+            cleaned = "\\n".join(
+                line for line in cleaned.splitlines()
+                if not _SECTION_MARKER_RE.match(line)
+            )
+            body = "\\n" + cleaned + "\\n"
+            # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
+            # 的合法内容），否则会替换到错误位置、破坏相邻区块
+            spans = _spans(text)
+            own = next(((a, b) for a, b in spans if text.startswith(s, a)), None)
+            if own is not None:  # END 必须在 START 之后配对才算有效区块
+                i_s, i_span_end = own
+                # 区块外孤立残留标记要清除；但其他有效区块区间内的标记字面量
+                # 是该区块的合法内容，必须原样保留。重复的同名区块不算「其他
+                # 区块」：保护它的标记会让永远读不到/更新不到的死数据残留
+                other = [(a, b) for a, b in spans if not text.startswith(s, a)]
+                prefix = _strip_stray(text[:i_s], other, 0, s, e)
+                suffix = _strip_stray(text[i_span_end:], other, i_span_end, s, e)
+                text = prefix + s + body + e + suffix
+            else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
+                # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
+                # 合法内容，必须原样保留，不能全局 replace 误删
+                text = _strip_stray(text, spans, 0, s, e)
+                text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+            tmp = STATE_FILE + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+            os.replace(tmp, STATE_FILE)
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"状态文件写入失败：{exc}", file=sys.stderr)
+        return 1
     print(f"[write_section] 已覆盖 {cmd} 区（{len(content)} 字符）", file=sys.stderr)
     return 0
 
