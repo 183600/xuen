@@ -37,37 +37,51 @@ def ensure_state_file(path: Path, task: str) -> str:
 
 
 def get_section(text: str, name: str) -> str:
-    """提取区块内容：END 标记必须在 START 之后查找。
+    """提取区块内容：只认「有效配对且不落其他区块内部」的标记。
 
-    若区块内容里出现了标记字面文本、或文件中 END 先于 START，
-    视为标记错乱，返回空串（由 update_section_file 负责修复）。
+    落在其他有效区块区间内的同名标记字面量是该区块的合法内容（见
+    _section_spans / _strip_stray_markers），必须跳过，否则读出的内容会
+    跨越相邻区块；END 先于 START / 缺 END 等标记错乱则视为区块缺失，
+    返回空串（由 update_section_file 负责修复）。
     """
     s, e = start_marker(name), end_marker(name)
-    i_s = text.find(s)
-    if i_s < 0:
-        return ""
-    i = i_s + len(s)
-    j = text.find(e, i)
-    if j < 0:
-        return ""
-    return text[i:j].strip("\n")
+    for a, b in _section_spans(text):
+        if text.startswith(s, a):
+            return text[a + len(s): b - len(e)].strip("\n")
+    return ""
 
 
 def _section_spans(text: str) -> list:
-    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间，text 坐标。"""
-    spans = []
+    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间，text 坐标。
+
+    两类区块的标记必须按在文件中出现的全局位置顺序处理（不能按区块名
+    一类一类地扫），否则「其他区块内容中的标记字面量」会被先扫的那类
+    抢先配成假区块、把相邻区块整个吞掉；落在已确认区块区间内的标记
+    只是该区块内容里的字面量（如产物区记录着写入协议），不参与配对。
+    """
+    marks = []  # (位置, 是否START, 区块名)
     for nm in (SECTION_IDEA, SECTION_ARTIFACT):
         sm, em = start_marker(nm), end_marker(nm)
-        k = 0
-        while True:
-            a = text.find(sm, k)
-            if a < 0:
-                break
-            b = text.find(em, a + len(sm))
-            if b < 0:
-                break
-            spans.append((a, b + len(em)))
-            k = b + len(em)
+        i = text.find(sm)
+        while i >= 0:
+            marks.append((i, True, nm))
+            i = text.find(sm, i + 1)
+        i = text.find(em)
+        while i >= 0:
+            marks.append((i, False, nm))
+            i = text.find(em, i + 1)
+    marks.sort(key=lambda m: m[0])
+    spans = []
+    for pos, is_start, nm in marks:
+        if any(a <= pos < b for a, b in spans):
+            continue  # 已确认区块内的标记字面量是内容，跳过
+        if not is_start:
+            continue  # 孤立 END
+        em = end_marker(nm)
+        b = text.find(em, pos + len(start_marker(nm)))
+        if b < 0:
+            continue  # 缺 END 的孤立 START
+        spans.append((pos, b + len(em)))
     return spans
 
 
@@ -107,18 +121,22 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     for nm in (SECTION_IDEA, SECTION_ARTIFACT):
         new = new.replace(start_marker(nm), "").replace(end_marker(nm), "")
     body = "\n" + new + "\n"
-    i_s = text.find(s)
-    j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
-    if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
+    # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
+    # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块
+    spans = _section_spans(text)
+    own = next(((a, b) for a, b in spans if text.startswith(s, a)), None)
+    if own is not None:  # END 必须在 START 之后配对才算有效区块
+        i_s, i_span_end = own
         # 区块内容若混入字面量标记，替换后区块外会留下孤立残留标记，
         # 因此前缀/后缀中本区块的孤立标记要清除；但落在其他有效区块
         # 区间内的标记字面量是该区块的内容，必须原样保留
-        spans = _section_spans(text)
         prefix = _strip_stray_markers(text[:i_s], spans, 0, s, e)
-        suffix = _strip_stray_markers(text[j + len(e):], spans, j + len(e), s, e)
+        suffix = _strip_stray_markers(text[i_span_end:], spans, i_span_end, s, e)
         text = prefix + s + body + e + suffix
-    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
-        text = text.replace(s, "").replace(e, "")
+    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
+        # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
+        # 合法内容，必须原样保留，不能全局 replace 误删
+        text = _strip_stray_markers(text, spans, 0, s, e)
         text = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
 
     tmp = path.with_name(path.name + ".tmp")
@@ -147,21 +165,36 @@ NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
 def _spans(text):
-    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间。"""
-    spans = []
+    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间。
+
+    两类区块的标记必须按在文件中出现的全局位置顺序处理（否则其他区块
+    内容里的标记字面量会被抢先配成假区块）；落在已确认区块区间内的标记
+    只是该区块内容里的字面量，不参与配对。"""
+    marks = []  # (位置, 是否START, 区块名)
     for nm in NAMES.values():
         sm = f"<!-- {nm}:START -->"
         em = f"<!-- {nm}:END -->"
-        k = 0
-        while True:
-            a = text.find(sm, k)
-            if a < 0:
-                break
-            b = text.find(em, a + len(sm))
-            if b < 0:
-                break
-            spans.append((a, b + len(em)))
-            k = b + len(em)
+        i = text.find(sm)
+        while i >= 0:
+            marks.append((i, True, nm))
+            i = text.find(sm, i + 1)
+        i = text.find(em)
+        while i >= 0:
+            marks.append((i, False, nm))
+            i = text.find(em, i + 1)
+    marks.sort(key=lambda m: m[0])
+    spans = []
+    for pos, is_start, nm in marks:
+        if any(a <= pos < b for a, b in spans):
+            continue  # 已确认区块内的标记字面量是内容，跳过
+        if not is_start:
+            continue  # 孤立 END
+        sm = f"<!-- {nm}:START -->"
+        em = f"<!-- {nm}:END -->"
+        b = text.find(em, pos + len(sm))
+        if b < 0:
+            continue  # 缺 END 的孤立 START
+        spans.append((pos, b + len(em)))
     return spans
 
 
@@ -213,17 +246,21 @@ def main() -> int:
     for nm in NAMES.values():
         cleaned = cleaned.replace(f"<!-- {nm}:START -->", "").replace(f"<!-- {nm}:END -->", "")
     body = "\\n" + cleaned + "\\n"
-    i_s = text.find(s)
-    j = text.find(e, i_s + len(s)) if i_s >= 0 else -1
-    if i_s >= 0 and j >= 0:  # END 必须在 START 之后才算有效区块
+    # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
+    # 的合法内容），否则会替换到错误位置、破坏相邻区块
+    spans = _spans(text)
+    own = next(((a, b) for a, b in spans if text.startswith(s, a)), None)
+    if own is not None:  # END 必须在 START 之后配对才算有效区块
+        i_s, i_span_end = own
         # 区块外孤立残留标记要清除；但其他有效区块区间内的标记字面量
         # 是该区块的合法内容，必须原样保留
-        spans = _spans(text)
         prefix = _strip_stray(text[:i_s], spans, 0, s, e)
-        suffix = _strip_stray(text[j + len(e):], spans, j + len(e), s, e)
+        suffix = _strip_stray(text[i_span_end:], spans, i_span_end, s, e)
         text = prefix + s + body + e + suffix
-    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的
-        text = text.replace(s, "").replace(e, "")
+    else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
+        # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
+        # 合法内容，必须原样保留，不能全局 replace 误删
+        text = _strip_stray(text, spans, 0, s, e)
         text = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
     tmp = STATE_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
