@@ -150,10 +150,11 @@ class ShellAgent:
         out: List[str] = []
         killed = {"flag": False}
 
-        def pump(pipe, sink: List[str], cb: OutputCallback) -> None:
+        def pump(pipe, sink: Optional[List[str]], cb: OutputCallback) -> None:
             try:
                 for line in pipe:
-                    sink.append(line)
+                    if sink is not None:
+                        sink.append(line)
                     try:
                         cb(line)
                     except Exception:
@@ -167,7 +168,8 @@ class ShellAgent:
                     pass
 
         t_out = threading.Thread(target=pump, args=(proc.stdout, out, self.on_output), daemon=True)
-        t_err = threading.Thread(target=pump, args=(proc.stderr, [], self.on_stderr), daemon=True)
+        # stderr 不回读、仅回调：丢弃列表避免长会话无界内存增长
+        t_err = threading.Thread(target=pump, args=(proc.stderr, None, self.on_stderr), daemon=True)
         t_out.start()
         t_err.start()
 
