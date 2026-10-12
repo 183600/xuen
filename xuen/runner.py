@@ -140,7 +140,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
                 if consecutive_failures >= 3 and not sink.should_stop():
-                    raise SystemExit("外部 agent 连续 3 次启动失败，已中止循环")
+                    # 运行期失败用退出码 1（消息走 sink.err），与预检错误的
+                    # 字符串 SystemExit（退出码 2）区分，见 cli.main 注释
+                    sink.err("外部 agent 连续 3 次启动失败，已中止循环")
+                    raise SystemExit(1)
                 continue
             if agent.timed_out or agent.returncode:
                 failures += 1
@@ -148,7 +151,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 # should_stop() 为真 = 用户主动按 q，本轮是被 stop_agent() 杀掉的，
                 # 不能计入「连续失败」中止，否则用户正常退出被误报为失败
                 if consecutive_failures >= 3 and not sink.should_stop():
-                    raise SystemExit("外部 agent 连续 3 次执行失败，已中止循环")
+                    sink.err("外部 agent 连续 3 次执行失败，已中止循环")
+                    raise SystemExit(1)
             else:
                 consecutive_failures = 0
             # 读取状态文件：哪个区块被覆盖了就上报哪个（屏幕显示 [修改xx区]<内容>）
@@ -178,7 +182,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         # sink.should_stop() 为真 = 用户主动请求停止（TUI 按 q 会先杀掉
         # 正在运行的 agent，该轮计入 failures）：这是正常退出，不能误报
         # 为「所有轮次均执行失败」，否则 TUI 会把用户退出记成失败退出码
-        raise SystemExit("外部 agent 所有轮次均执行失败")
+        sink.err("外部 agent 所有轮次均执行失败")
+        raise SystemExit(1)
 
 
 # ----------------------------------------------------------------------

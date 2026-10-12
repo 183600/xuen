@@ -180,13 +180,22 @@ class XuangenApp(App):
             run(self.cfg, self.task_desc, regen_words=self.regen_words, sink=self.sink)
         except SystemExit as e:
             # 记录失败退出码：run_tui() 最终把它作为进程退出码返回，
-            # 否则配置错误等失败会被掩盖成「成功退出」
-            # SystemExit(0) / SystemExit(None) 是正常退出，不能误记为失败；
-            # 非 int 的 code（如错误消息字符串）才按失败记 1
-            self.exit_code = (e.code if isinstance(e.code, int)
-                              else (0 if e.code is None else 1))
-            self.sink.err(str(e))
-            self.post_status(f"已退出：{e}")
+            # 否则配置错误等失败会被掩盖成「成功退出」。
+            # 与 cli 无 TUI 路径的约定保持一致：int code（runner 的运行期
+            # 失败 SystemExit(1)）按其值传递；字符串 code 是预检错误的
+            # 日志消息，统一映射为 2（不能记 1，否则与「全部轮次失败」的
+            # 退出码混淆，且同一失败在 TUI / 无 TUI 下退出码相反）。
+            # SystemExit(0) / SystemExit(None) 是正常退出，不能误记为失败
+            if isinstance(e.code, int):
+                self.exit_code = e.code
+                self.post_status(f"已退出（退出码 {e.code}）" if e.code else "已退出")
+            elif e.code is None:
+                self.exit_code = 0
+                self.post_status("已退出")
+            else:
+                self.exit_code = 2
+                self.sink.err(str(e.code))
+                self.post_status(f"已退出：{e.code}")
         except KeyboardInterrupt as e:
             # runner 会向上传播 SIGINT；不捕获则退出码/状态栏丢失
             self.exit_code = 130
