@@ -213,8 +213,28 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             other_spans = [(a, b) for a, b in spans if not text.startswith(s, a)]
             prefix = _strip_stray_markers(text[:i_s], other_spans, 0, s, e)
             suffix = _strip_stray_markers(text[i_span_end:], other_spans,
-                                          i_span_end, s, e)
-            text = prefix + s + body + e + suffix
+                                           i_span_end, s, e)
+            candidate = prefix + s + body + e + suffix
+            # 与 else 分支同理必须回读校验：其他有效区块内部「受保护」的
+            # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
+            # 区块立即读不出来、且相邻区块一并失效。校验失败则按损坏数据
+            # 处理：清掉本区块所有标记行，在末尾重建干净的区块。
+            back = next(
+                (candidate[a + len(s): b - len(e)].strip("\n")
+                 for a, b in _section_spans(candidate)
+                 if candidate.startswith(s, a)),
+                None,
+            )
+            if back != new:
+                own_marker = re.compile(
+                    r"(?m)^[ \t]*<!-- " + re.escape(name)
+                    + r":(?:START|END) -->[ \t]*\r?$"
+                )
+                candidate = "\n".join(
+                    l for l in candidate.split("\n") if not own_marker.match(l)
+                )
+                candidate = candidate.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+            text = candidate
         else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
             # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
             # 合法内容，必须原样保留，不能全局 replace 误删
@@ -389,9 +409,11 @@ def main() -> int:
     if cmd not in NAMES:
         print(f"未知区块 {cmd!r}，可用: idea / artifact / show", file=sys.stderr)
         return 2
-    content = sys.stdin.read()
     name = NAMES[cmd]
     try:
+        # stdin 读取也必须放进 try：管道传入非法 UTF-8 字节时
+        # UnicodeDecodeError 应转成友好报错，而不是整段 traceback
+        content = sys.stdin.read()
         with _locked():
             s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
             if os.path.exists(STATE_FILE):
@@ -422,7 +444,26 @@ def main() -> int:
                 other = [(a, b) for a, b in spans if not text.startswith(s, a)]
                 prefix = _strip_stray(text[:i_s], other, 0, s, e)
                 suffix = _strip_stray(text[i_span_end:], other, i_span_end, s, e)
-                text = prefix + s + body + e + suffix
+                candidate = prefix + s + body + e + suffix
+                # 与 else 分支同理必须回读校验：其他有效区块内部「受保护」的
+                # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
+                # 区块立即读不出来、且相邻区块一并失效。校验失败则按损坏数据
+                # 处理：清掉本区块所有标记行，在末尾重建干净的区块。
+                back = next(
+                    (candidate[a + len(s): b - len(e)].strip("\\n")
+                     for a, b in _spans(candidate) if candidate.startswith(s, a)),
+                    None,
+                )
+                if back != cleaned:
+                    own_marker = re.compile(
+                        r"(?m)^[ \\t]*<!-- " + re.escape(name)
+                        + r":(?:START|END) -->[ \\t]*\\r?$"
+                    )
+                    candidate = "\\n".join(
+                        l for l in candidate.split("\\n") if not own_marker.match(l)
+                    )
+                    candidate = candidate.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                text = candidate
             else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
                 # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
                 # 合法内容，必须原样保留，不能全局 replace 误删

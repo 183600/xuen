@@ -104,11 +104,14 @@ class ShellAgent:
         记 _killed 标志以覆盖竞态：kill 与 run() 起跑（Popen 到
         self._proc 赋值之间）并发时 proc 读到 None，若不记标志，
         刚拉起的外部 agent 会因 start_new_session 脱离终端会话而
-        成为孤儿继续运行。
+        成为孤儿继续运行。注意只在杀不到进程时置位：若已把当前进程
+        杀死，本次停止请求就已兑现，残留的 _killed 会被下一轮 run()
+        读成「待处理请求」，把新拉起的 agent 立即误杀。
         """
         with self._kill_lock:
-            self._killed = True
             proc = self._proc
+            if proc is None:
+                self._killed = True
         if proc is not None and proc.poll() is None:
             kill_process_tree(proc)
 
