@@ -99,6 +99,12 @@ def _parse_float(value: Any, name: str) -> float:
     return float(value)
 
 
+def _config_value(source: dict, name: str, default: Any) -> Any:
+    """读取字段；YAML 显式写成 `null` 时视为未设置并回落默认值。"""
+    value = source.get(name)
+    return default if value is None else value
+
+
 def _parse_bool(value: Any, name: str) -> bool:
     """解析布尔配置；容忍带引号的字符串写法，如 tui: "false"。"""
     if isinstance(value, str):
@@ -135,10 +141,14 @@ def load_config(path: Optional[str] = None) -> Config:
 
     words = _mapping_section(raw, "words")
     cfg.words = WordsConfig(
-        count=_parse_int(words.get("count", cfg.words.count), "words.count"),
-        batch=_parse_int(words.get("batch", cfg.words.batch), "words.batch"),
-        pick=_parse_int(words.get("pick", cfg.words.pick), "words.pick"),
-        reuse=_parse_bool(words.get("reuse", cfg.words.reuse), "words.reuse"),
+        count=_parse_int(_config_value(words, "count", cfg.words.count),
+                         "words.count"),
+        batch=_parse_int(_config_value(words, "batch", cfg.words.batch),
+                         "words.batch"),
+        pick=_parse_int(_config_value(words, "pick", cfg.words.pick),
+                        "words.pick"),
+        reuse=_parse_bool(_config_value(words, "reuse", cfg.words.reuse),
+                          "words.reuse"),
     )
 
     loop = _mapping_section(raw, "loop")
@@ -147,7 +157,10 @@ def load_config(path: Optional[str] = None) -> Config:
     agent = _mapping_section(raw, "agent")
     cfg.agent = AgentConfig(
         command=str(agent.get("command", "") or ""),
-        timeout=_parse_float(agent.get("timeout", cfg.agent.timeout), "agent.timeout"),
+        timeout=_parse_float(
+            _config_value(agent, "timeout", cfg.agent.timeout),
+            "agent.timeout",
+        ),
     )
 
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
@@ -180,4 +193,12 @@ def _validate(cfg: Config) -> None:
         raise ValueError(
             "agent.command 必须包含 $prompt 或 $prompt_file 占位符，"
             "否则提示词无法传给外部 agent"
+        )
+    if (os.name == "nt" and re.search(
+            r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", cmd)):
+        # cmd.exe 无法安全接收内嵌多行参数：换行会把提示词后续内容拆成
+        # 独立命令执行，且 %,&,^ 等字符还会被命令解释器展开。
+        raise ValueError(
+            "Windows 的 agent.command 不能使用 $prompt；请改用 "
+            "$prompt_file（提示词会被写入文件，避免 cmd 转义/换行问题）"
         )

@@ -1,6 +1,7 @@
 """领域词库：由外部 agent 生成、解析、持久化、随机抽样（抽样这一步绝不调用任何 LLM）。"""
 from __future__ import annotations
 
+import os
 import random
 import re
 from pathlib import Path
@@ -87,7 +88,10 @@ def load_words(path: Path) -> List[str]:
 
 def save_words(path: Path, wlist: List[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(wlist) + "\n", encoding="utf-8")
+    # 原子替换：避免写入途中被 kill 或两个实例并发运行时得到撕裂的词库文件
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def sample_words(wlist: List[str], n: int) -> List[str]:

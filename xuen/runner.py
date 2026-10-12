@@ -31,7 +31,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             "配置错误：缺少外部 agent 命令。请在配置文件设置，例如：\n"
             "  agent:\n    command: 'opencode run \"$prompt\"'"
         )
-    workspace.mkdir(parents=True, exist_ok=True)
+    try:
+        workspace.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        raise SystemExit(f"工作区不可用：{workspace}（{e}）")
 
     sink.info(f"任务：{task}")
     sink.info(f"工作区：{workspace.resolve()}")
@@ -45,7 +48,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     except (OSError, UnicodeDecodeError) as e:
         # 状态文件损坏（含坏编码）时给出明确提示而不是 traceback
         raise SystemExit(f"状态文件读取失败：{e}（可备份后删除 {state_path} 重建）")
-    helper = state.write_helper_script(workspace, state_path)
+    try:
+        helper = state.write_helper_script(workspace, state_path)
+    except OSError as e:
+        raise SystemExit(f"写入助手创建失败：{workspace / state.HELPER_NAME}（{e}）")
     sink.info(f"状态文件：{state_path}（外部写入助手：{helper.name}）")
 
     agent = ShellAgent(

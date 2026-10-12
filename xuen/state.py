@@ -22,8 +22,10 @@ def end_marker(name: str) -> str:
 
 
 def scaffold(task: str) -> str:
+    # 标题必须保持单行：任务文本若引入换行，可能被误写成区块标记并污染解析
+    title_task = task.replace("\r", " ").replace("\n", " ")
     return (
-        f"# 玄 · {task}\n\n"
+        f"# 玄 · {title_task}\n\n"
         "> 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，"
         "每次写入会整体覆盖对应区块。编辑时请保留标记行。\n\n"
         f"{start_marker(SECTION_IDEA)}\n（暂无）\n{end_marker(SECTION_IDEA)}\n\n"
@@ -286,6 +288,13 @@ import re
 import sys
 from contextlib import contextmanager
 
+try:
+    # Windows 控制台常使用本地代码页（如 GBK）；xuen 的状态文件固定为 UTF-8，
+    # show 子命令若按 locale 编码输出会出现乱码或 UnicodeEncodeError。
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, OSError):
+    pass
+
 STATE_FILE = __STATE_FILE__
 SCAFFOLD = __SCAFFOLD__
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
@@ -411,9 +420,10 @@ def main() -> int:
         return 2
     name = NAMES[cmd]
     try:
-        # stdin 读取也必须放进 try：管道传入非法 UTF-8 字节时
-        # UnicodeDecodeError 应转成友好报错，而不是整段 traceback
-        content = sys.stdin.read()
+        # stdin 固定按 UTF-8 解码：sys.stdin.read() 在本地代码页控制台
+        # （典型为中文 Windows 的 GBK）会无法接收 UTF-8 管道内容。
+        # errors="replace" 保证坏输入也只是降级为替换符，而非整段 traceback。
+        content = sys.stdin.buffer.read().decode("utf-8", "replace")
         with _locked():
             s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
             if os.path.exists(STATE_FILE):
