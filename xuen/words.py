@@ -89,7 +89,8 @@ def load_words(path: Path) -> List[str]:
 def save_words(path: Path, wlist: List[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # 原子替换：避免写入途中被 kill 或两个实例并发运行时得到撕裂的词库文件
-    tmp = path.with_name(path.name + ".tmp")
+    # tmp 名带 PID：两个 xuen 实例并发写同一 workspace 时不会互踩临时文件
+    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
     tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
     os.replace(tmp, path)
 

@@ -33,11 +33,14 @@ def kill_process_tree(proc: subprocess.Popen) -> None:
         # Windows：shell=True 时 proc 是 cmd 外壳，proc.kill() 杀不到
         # 其下的子进程（外部 agent），需用 taskkill /T 整棵树终止
         try:
-            subprocess.run(
+            r = subprocess.run(
                 ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
                 capture_output=True, check=False,
             )
-            return
+            # taskkill 失败（权限不足、PID 复用等）不能当成功直接返回，
+            # 否则会跳过下面的 proc.kill() 兜底，导致 agent 进程泄漏
+            if r.returncode == 0:
+                return
         except Exception:
             pass
     try:

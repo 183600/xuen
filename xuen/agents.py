@@ -192,6 +192,11 @@ class ShellAgent:
                 rc = None
             if rc is not None and os.name != "nt" and rc >= 0:
                 return
+            with self._kill_lock:
+                # 用户主动 kill（TUI 按 q / Ctrl+C）与超时定时器几乎同时到达时，
+                # 进程是被用户请求杀掉的，不能误报成超时
+                if self._killed:
+                    return
             killed["flag"] = True
 
         timer = threading.Timer(self.timeout, _on_timeout)

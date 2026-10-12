@@ -130,10 +130,16 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     字面量是该区块的合法内容（如产物区记录了「请保留 <!-- IDEA:START -->」
     之类的写入协议），绝不能动——否则更新一个区块会悄悄删改另一个区块。
     """
+    # 只匹配「本区块」（s/e 传入的区块）的标记：更新一个区块时不应删改散
+    # 落在自由文本里的另一类区块标记字面量（那是其他区块的内容/残留）
+    own_marker = re.compile(
+        r"(?m)^[ \t]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \t]*\r?$"
+    )
+
     def clean(seg: str) -> str:
         # 只删除独占整行的标记；行内提及的标记文本是普通内容，必须保留
         return "\n".join(l for l in seg.split("\n")
-                         if not _SECTION_MARKER.match(l))
+                         if not own_marker.match(l))
 
     out = []
     pos = 0
@@ -350,11 +356,16 @@ def _spans(text):
 def _strip_stray(segment, spans, seg_start, s, e):
     """清除 segment 中不落在任何有效区块内的标记字面量；
     落在其他有效区块区间内的是该区块的合法内容，必须保留。"""
+    # 与 xuen.state._strip_stray_markers 一致：只匹配本区块（s/e 传入的
+    # 区块）的标记，不能误删自由文本中另一类区块的标记字面量
+    own_marker = re.compile(
+        r"(?m)^[ \\t]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \\t]*\\r?$"
+    )
+
     def clean(seg):
-        # 与 xuen.state._strip_stray_markers 一致：只删除独占整行的标记，
-        # 行内提及的标记文本是普通内容，必须保留
+        # 只删除独占整行的标记，行内提及的标记文本是普通内容，必须保留
         return "\\n".join(l for l in seg.split("\\n")
-                         if not _SECTION_MARKER_RE.match(l))
+                         if not own_marker.match(l))
 
     out = []
     pos = 0

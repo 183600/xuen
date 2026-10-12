@@ -111,6 +111,14 @@ def main(argv=None) -> int:
 
     try:
         run(cfg, task, regen_words=args.regen_words)
+    except SystemExit as e:
+        # run() 预检失败（如缺少 agent 命令）会以字符串消息抛 SystemExit；
+        # 保持与 main() 其他配置错误一致退出码 2，避免与「全部轮次失败」
+        # 的退出码 1 混淆
+        if not isinstance(e.code, int):
+            print(e.code, file=sys.stderr)
+            return 2
+        return e.code if e.code is not None else 0
     except KeyboardInterrupt:
         print()
         ui.warn("已中断")
