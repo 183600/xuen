@@ -108,7 +108,7 @@ def _section_spans(text: str) -> list:
         for j, other in enumerate(candidates):
             if candidate[0] == other[0]:
                 continue
-            if candidate[1] < other[1] and other[2] < candidate[2]:
+            if candidate[1] < other[1] and other[2] <= candidate[2]:
                 inner_has_prior = any(
                     prior != other and prior[0] == other[0]
                     and prior[2] <= candidate[1]
@@ -148,6 +148,14 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     if pos < len(segment):
         out.append(clean(segment[pos:]))
     return "".join(out)
+
+
+def _purge_marker_lines(text: str, name: str) -> str:
+    """清除某区块的残留标记行，但保留其他有效区块里的标记字面量。"""
+    s = start_marker(name)
+    spans = _section_spans(text)
+    other_spans = [(a, b) for a, b in spans if not text.startswith(s, a)]
+    return _strip_stray_markers(text, other_spans, 0, s, end_marker(name))
 
 
 @contextmanager
@@ -196,10 +204,10 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         # 与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
         # 配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
         # 被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
-        new = content.strip().strip("\n")
         new = "\n".join(
-            line for line in new.splitlines() if not _SECTION_MARKER.match(line)
-        )
+            line for line in content.strip().strip("\n").splitlines()
+            if not _SECTION_MARKER.match(line)
+        ).strip("\n")
         body = "\n" + new + "\n"
         # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
         # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块
@@ -220,7 +228,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             # 与 else 分支同理必须回读校验：其他有效区块内部「受保护」的
             # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
             # 区块立即读不出来、且相邻区块一并失效。校验失败则按损坏数据
-            # 处理：清掉本区块所有标记行，在末尾重建干净的区块。
+            # 处理：清掉本区块的游离标记行，在文件开头重建干净的区块。
             back = next(
                 (candidate[a + len(s): b - len(e)].strip("\n")
                  for a, b in _section_spans(candidate)
@@ -228,14 +236,10 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 None,
             )
             if back != new:
-                own_marker = re.compile(
-                    r"(?m)^[ \t]*<!-- " + re.escape(name)
-                    + r":(?:START|END) -->[ \t]*\r?$"
-                )
-                candidate = "\n".join(
-                    l for l in candidate.split("\n") if not own_marker.match(l)
-                )
-                candidate = candidate.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+                candidate = _purge_marker_lines(candidate, name)
+                # 必须放在最前面：其他有效区块中保留了同名字面量标记时，
+                # 若继续追加，那些标记会抢先与新 END 交叉配对，新区块仍读不出来
+                candidate = f"{s}{body}{e}\n\n" + candidate.lstrip("\n")
             text = candidate
         else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
             # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
@@ -254,15 +258,9 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
                 # 无配对 END，是损坏残留）会抢先与新追加的 END 交叉配对，
                 # 导致新区块永远读不出来、且每次写入都追加出死数据。此时该
-                # 孤立标记按损坏数据处理：清掉本区块所有标记行后重建区块。
-                own_marker = re.compile(
-                    r"(?m)^[ \t]*<!-- " + re.escape(name)
-                    + r":(?:START|END) -->[ \t]*\r?$"
-                )
-                text = "\n".join(
-                    l for l in text.split("\n") if not own_marker.match(l)
-                )
-                candidate = text.rstrip("\n") + f"\n\n{s}{body}{e}\n"
+                # 孤立标记按损坏数据处理：清掉本区块的游离标记行后重建区块。
+                text = _purge_marker_lines(text, name)
+                candidate = f"{s}{body}{e}\n\n" + text.lstrip("\n")
             text = candidate
 
         tmp = path.with_name(path.name + ".tmp")
@@ -336,7 +334,7 @@ def _spans(text):
         for j, other in enumerate(candidates):
             if candidate[0] == other[0]:
                 continue
-            if candidate[1] < other[1] and other[2] < candidate[2]:
+            if candidate[1] < other[1] and other[2] <= candidate[2]:
                 inner_has_prior = any(
                     prior != other and prior[0] == other[0]
                     and prior[2] <= candidate[1]
@@ -371,6 +369,14 @@ def _strip_stray(segment, spans, seg_start, s, e):
     if pos < len(segment):
         out.append(clean(segment[pos:]))
     return "".join(out)
+
+
+def _purge_marker_lines(text, name):
+    """清除某区块的残留标记行，但保留其他有效区块里的标记字面量。"""
+    s = f"<!-- {name}:START -->"
+    spans = _spans(text)
+    other = [(a, b) for a, b in spans if not text.startswith(s, a)]
+    return _strip_stray(text, other, 0, s, f"<!-- {name}:END -->")
 
 
 @contextmanager
@@ -436,11 +442,10 @@ def main() -> int:
             # 与本区块 END 一样，任何独成一行的区块标记都会参与 _spans 配对：
             # 若作为内容原样写入，会被当成真实区块边界，导致相邻区块被截断
             # 甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
-            cleaned = content.strip().strip("\\n")
             cleaned = "\\n".join(
-                line for line in cleaned.splitlines()
+                line for line in content.strip().strip("\\n").splitlines()
                 if not _SECTION_MARKER_RE.match(line)
-            )
+            ).strip("\\n")
             body = "\\n" + cleaned + "\\n"
             # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
             # 的合法内容），否则会替换到错误位置、破坏相邻区块
@@ -458,21 +463,17 @@ def main() -> int:
                 # 与 else 分支同理必须回读校验：其他有效区块内部「受保护」的
                 # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
                 # 区块立即读不出来、且相邻区块一并失效。校验失败则按损坏数据
-                # 处理：清掉本区块所有标记行，在末尾重建干净的区块。
+                # 处理：清掉本区块的游离标记行，在文件开头重建干净的区块。
                 back = next(
                     (candidate[a + len(s): b - len(e)].strip("\\n")
                      for a, b in _spans(candidate) if candidate.startswith(s, a)),
                     None,
                 )
                 if back != cleaned:
-                    own_marker = re.compile(
-                        r"(?m)^[ \\t]*<!-- " + re.escape(name)
-                        + r":(?:START|END) -->[ \\t]*\\r?$"
-                    )
-                    candidate = "\\n".join(
-                        l for l in candidate.split("\\n") if not own_marker.match(l)
-                    )
-                    candidate = candidate.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                    candidate = _purge_marker_lines(candidate, name)
+                    # 与模块实现一致：必须放在最前面，避免其他有效区块中的同名字面量
+                    # 标记抢先与新 END 交叉配对
+                    candidate = f"{s}{body}{e}\\n\\n" + candidate.lstrip("\\n")
                 text = candidate
             else:  # 标记缺失/错乱：清除该区块所有残留标记，再追加一对干净的。
                 # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
@@ -488,15 +489,9 @@ def main() -> int:
                     # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
                     # 无配对 END，是损坏残留）会抢先与新追加的 END 交叉配对，
                     # 导致新区块永远读不出来。按损坏数据处理：清掉本区块所有
-                    # 标记行后重建区块。
-                    own_marker = re.compile(
-                        r"(?m)^[ \\t]*<!-- " + re.escape(name)
-                        + r":(?:START|END) -->[ \\t]*\\r?$"
-                    )
-                    text = "\\n".join(
-                        l for l in text.split("\\n") if not own_marker.match(l)
-                    )
-                    candidate = text.rstrip("\\n") + f"\\n\\n{s}{body}{e}\\n"
+                    # 游离标记行后重建区块，但不删除其他区块的合法内容。
+                    text = _purge_marker_lines(text, name)
+                    candidate = f"{s}{body}{e}\\n\\n" + text.lstrip("\\n")
                 text = candidate
             tmp = STATE_FILE + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:

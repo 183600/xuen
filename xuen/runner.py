@@ -59,17 +59,23 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         on_output=sink.agent_output, on_stderr=sink.agent_stderr,
     )
     sink.agent = agent  # 供 sink.stop_agent() 终止当前进程
+    # 若用户在 agent 引用注入前就请求退出，注入后补做一次，避免慢速磁盘 IO
+    # 造成的竞态窗口里继续启动外部 agent
+    if sink.should_stop():
+        sink.stop_agent()
 
     # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
-    try:
-        disk_words = words.load_words(words_path)
-    except (OSError, UnicodeDecodeError) as e:
-        # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
-        # 但 --regen-words 模式下反正要重新生成，不应被旧文件阻塞
-        if not regen_words:
-            raise SystemExit(f"词库读取失败：{e}")
-        sink.warn(f"已有词库读取失败（{e}），将重新生成")
-        disk_words = []
+    disk_words: List[str] = []
+    if cfg.words.pick > 0:
+        try:
+            disk_words = words.load_words(words_path)
+        except (OSError, UnicodeDecodeError) as e:
+            # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
+            # 但 --regen-words 模式下反正要重新生成，不应被旧文件阻塞
+            if not regen_words:
+                raise SystemExit(f"词库读取失败：{e}")
+            sink.warn(f"已有词库读取失败（{e}），将重新生成")
+            disk_words = []
     word_list = disk_words if not regen_words else []
     if word_list and cfg.words.reuse:
         sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")

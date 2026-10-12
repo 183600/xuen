@@ -244,12 +244,12 @@ class XuangenApp(App):
 
     # ---- 用户输入 ----
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        # 先清空输入框：内容残留在框里会让用户以为没提交成功，且输入框
+        # 非空时按 q 会被当作普通字符输入而无法退出（纯空白提交也应清空）
+        self.query_one("#user-input", Input).value = ""
         text = event.value.strip()
         if not text:
             return
-        # 先清空输入框：内容残留在框里会让用户以为没提交成功，
-        # 且输入框非空时按 q 会被当作普通字符输入而无法退出
-        self.query_one("#user-input", Input).value = ""
         if self.loop_finished:
             self.query_one("#log", RichLog).write(
                 Text("循环已结束，本次输入不会被投递", style="bold yellow")
@@ -285,4 +285,7 @@ def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     worker = app._worker
     if worker is not None:
         worker.join(timeout=10)
+        # join 超时时 exit_code 可能仍是初始的 0；不能把未干净收尾误报为成功
+        if worker.is_alive():
+            return 1
     return getattr(app, "exit_code", 0)
