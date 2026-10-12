@@ -57,14 +57,17 @@ def get_section(text: str, name: str) -> str:
         if text.startswith(s, a):
             content = text[a + len(s): b - len(e)]
             content = content.replace("\r\n", "\n").replace("\r", "\n")
-            return content.strip("\n")
+            # 标记行允许带首尾空白/BOM（见 _SECTION_MARKER）；这些属于
+            # 标记行本身，不能算进区块内容，否则读出的内容会混入杂质
+            return content.strip(" \t\n\ufeff")
     return ""
 
 
 # 区块标记必须独占一行（允许行首/行尾空白）。同一行内出现的标记文本是
 # 普通内容（例如说明写入协议），不能参与区块配对。
 _SECTION_MARKER = re.compile(
-    r"(?m)^[ \t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t]*\r?$"
+    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记
+    r"(?m)^[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t\ufeff]*\r?$"
 )
 
 
@@ -133,7 +136,7 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     # 只匹配「本区块」（s/e 传入的区块）的标记：更新一个区块时不应删改散
     # 落在自由文本里的另一类区块标记字面量（那是其他区块的内容/残留）
     own_marker = re.compile(
-        r"(?m)^[ \t]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \t]*\r?$"
+        r"(?m)^[ \t\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \t\ufeff]*\r?$"
     )
 
     def clean(seg: str) -> str:
@@ -314,7 +317,8 @@ NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
 _SECTION_MARKER_RE = re.compile(
-    r"(?m)^[ \\t]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t]*\\r?$"
+    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记
+    r"(?m)^[ \\t\\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t\\ufeff]*\\r?$"
 )
 
 
@@ -368,7 +372,7 @@ def _strip_stray(segment, spans, seg_start, s, e):
     # 与 xuen.state._strip_stray_markers 一致：只匹配本区块（s/e 传入的
     # 区块）的标记，不能误删自由文本中另一类区块的标记字面量
     own_marker = re.compile(
-        r"(?m)^[ \\t]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \\t]*\\r?$"
+        r"(?m)^[ \\t\\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \\t\\ufeff]*\\r?$"
     )
 
     def clean(seg):

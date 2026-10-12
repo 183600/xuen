@@ -280,7 +280,8 @@ class ShellAgent:
             timer.join()
             t_out.join(timeout=5)
             t_err.join(timeout=5)
-            self._proc = None
+            with self._kill_lock:
+                self._proc = None
             # 清理本次的提示词文件（子进程已退出，不再需要；
             # 循环长跑时避免工作区堆积 .prompt.*.md）
             self._cleanup_prompt_file()

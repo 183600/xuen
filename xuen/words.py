@@ -85,8 +85,10 @@ def load_words(path: Path) -> List[str]:
     if not path.exists():
         return []
     # 复用 parse_word_lines：清洗无效行并按 casefold 去重，
-    # 否则文件中的重复词会扭曲 random.sample 的抽样分布
-    return parse_word_lines(path.read_text(encoding="utf-8"))
+    # 否则文件中的重复词会扭曲 random.sample 的抽样分布。
+    # utf-8-sig 剥掉 UTF-8 BOM：Windows 编辑器保存的 words.txt 常带 BOM，
+    # 否则首词会静默变成 "\ufeff词"，既污染词库又破坏大小写去重
+    return parse_word_lines(path.read_text(encoding="utf-8-sig"))
 
 
 def save_words(path: Path, wlist: List[str]) -> None:
