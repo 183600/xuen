@@ -91,8 +91,16 @@ def save_words(path: Path, wlist: List[str]) -> None:
     # 原子替换：避免写入途中被 kill 或两个实例并发运行时得到撕裂的词库文件
     # tmp 名带 PID：两个 xuen 实例并发写同一 workspace 时不会互踩临时文件
     tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
-    tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    try:
+        tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError:
+        # 失败时清理临时文件，避免在工作区堆积 words.txt.<pid>.tmp 垃圾
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def sample_words(wlist: List[str], n: int) -> List[str]:

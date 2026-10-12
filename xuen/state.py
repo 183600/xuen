@@ -524,10 +524,21 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
     helper = workspace / HELPER_NAME
     # 用 repr() 生成路径字面量：r-string 拼接在路径含连续双引号 /
     # 换行（POSIX 合法）时会生成语法损坏的脚本，repr() 总能安全转义
-    helper.write_text(
+    content = (
         HELPER_TEMPLATE
         .replace("__SCAFFOLD__", repr(scaffold("")))
-        .replace("__STATE_FILE__", repr(str(state_path.resolve()))),
-        encoding="utf-8",
+        .replace("__STATE_FILE__", repr(str(state_path.resolve())))
     )
+    # 原子替换：写入途中被 kill 时不会留下语法损坏的半成品脚本，
+    # 否则外部 agent 执行 write_section.py 会直接 SyntaxError
+    tmp = helper.with_name(f"{helper.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, helper)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
     return helper
