@@ -270,8 +270,17 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             text = candidate
 
         tmp = path.with_name(path.name + ".tmp")
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
+        try:
+            tmp.write_text(text, encoding="utf-8")
+            os.replace(tmp, path)
+        except OSError:
+            # 写入/替换失败时清掉半成品临时文件，避免在工作区残留垃圾。
+            # 目标文件仍保持写入前状态，因此旧数据不会被破坏。
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
         return old, new
 
 
@@ -505,9 +514,18 @@ def main() -> int:
                     candidate = f"{s}{body}{e}\\n\\n" + text.lstrip("\\n")
                 text = candidate
             tmp = STATE_FILE + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                f.write(text)
-            os.replace(tmp, STATE_FILE)
+            try:
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.write(text)
+                os.replace(tmp, STATE_FILE)
+            except OSError:
+                # 与 xuen.state.update_section_file 一致：写入/替换失败时
+                # 清理半成品临时文件，避免外部 agent 重复调用后堆积垃圾。
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+                raise
     except (OSError, UnicodeDecodeError) as exc:
         print(f"状态文件写入失败：{exc}", file=sys.stderr)
         return 1

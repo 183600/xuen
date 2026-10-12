@@ -78,6 +78,12 @@ class ShellAgent:
         # run() 结束后清理；None 表示未使用 $prompt_file
         self._prompt_file: Optional[Path] = None
 
+    @property
+    def user_killed(self) -> bool:
+        """本轮退出是否由用户的停止请求触发。"""
+        with self._kill_lock:
+            return self._user_killed
+
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
     # 占位符为前缀的普通变量，不能被子串替换误伤；x$prompt 这类前面紧贴
     # 单词字符的也只是普通 shell 变量拼接，同样不能误替换
@@ -173,7 +179,9 @@ class ShellAgent:
         with self._kill_lock:
             killed_before = self._killed
             self._killed = False
-            self._user_killed = False
+            # killed_before 本身就是一次用户停止请求（kill 到达时尚无进程可杀），
+            # 不能在这里降级成普通的 start→rc=-9 失败轮次。
+            self._user_killed = killed_before
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
@@ -277,6 +285,10 @@ class ShellAgent:
         if self.timed_out:
             # :g 避免小数秒（如 0.5）被 :.0f 四舍五入成「0s」
             self.on_stderr(f"外部 agent 超时（{self.timeout:g}s），已强制终止\n")
+        elif proc.returncode and self.user_killed:
+            # 用户按 q / Ctrl+C 触发的终止不是 agent 执行失败：被 SIGKILL
+            # 杀掉的进程退出码为 -9，不能按「异常退出」计入失败统计。
+            self.on_stderr("已按请求终止外部 agent\n")
         elif proc.returncode:
             self.on_stderr(f"外部 agent 异常退出（退出码 {proc.returncode}），"
                            "本轮可能未更新区块\n")

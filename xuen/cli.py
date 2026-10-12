@@ -115,7 +115,17 @@ def main(argv=None) -> int:
         except ImportError:
             ui.warn("未安装 textual，回退到纯终端输出（pip install textual 可启用 TUI）")
         else:
-            return run_tui(cfg, task, regen_words=args.regen_words)
+            try:
+                return run_tui(cfg, task, regen_words=args.regen_words)
+            except KeyboardInterrupt:
+                print()
+                ui.warn("已中断")
+                return 130
+            except Exception as e:
+                # textual 在应用启动阶段失败时（如终端能力不足）后台线程的
+                # 异常兜底尚未接管；在这里统一降级为友好错误与退出码 1
+                ui.err(f"TUI 启动失败：{e}")
+                return 1
 
     from .runner import run  # 延迟导入，加快 --help
 
