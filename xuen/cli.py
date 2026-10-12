@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .config import load_config
+from .config import _validate, load_config
 from .ui import configure, ui
 
 
@@ -92,6 +92,16 @@ def main(argv=None) -> int:
             except ValueError:
                 print(f"--iterations 无效：{args.iterations!r}（应为整数或 inf）", file=sys.stderr)
                 return 2
+
+    if args.workspace is not None:
+        # CLI 覆盖发生在 load_config 的校验之后，须对覆盖结果重新校验，
+        # 否则 Windows 下 --workspace 可绕过 cmd 元字符检查，导致
+        # $prompt_file 路径传给外部 agent 时被 cmd 展开/吞掉而错乱
+        try:
+            _validate(cfg)
+        except ValueError as e:
+            print(f"--workspace 无效：{e}", file=sys.stderr)
+            return 2
 
     task = _resolve_task(args)
     if not task:

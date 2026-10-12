@@ -197,7 +197,11 @@ class ShellAgent:
                 # kill 未能终结进程（kill_process_tree 内部吞掉了失败）：
                 # 不能无限阻塞，否则主线程 timer.join() 会把整个运行卡死
                 rc = None
-            if rc is not None and os.name != "nt" and rc >= 0:
+            if rc is not None and rc >= 0 and (os.name != "nt" or rc == 0):
+                # Windows 补充：taskkill 杀掉的进程退出码为正（通常 1），无法
+                # 与自然失败（rc=1）区分；但 rc=0（干净成功）几乎不可能来自
+                # taskkill，此时输出已完整写出，应算自然退出而非超时，
+                # 否则完整结果会被当作超时截断内容丢弃
                 return
             with self._kill_lock:
                 # 用户主动 kill（TUI 按 q / Ctrl+C）与超时定时器几乎同时到达时，
