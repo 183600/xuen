@@ -199,10 +199,14 @@ class ShellAgent:
             # 必须清理，否则每次启动失败都在工作区留一个 .prompt.*.md
             self._cleanup_prompt_file()
             raise
-        self._proc = proc
-        # kill 请求在 Popen 前（killed_before）或 Popen 与本赋值之间
-        # （self._killed）到达：进程刚拉起，立即补杀
-        if killed_before or self._killed:
+        # _proc/_killed 归属 _kill_lock 保护：赋值与检查必须在锁内完成，
+        # 否则与 kill() 的竞态依赖 GIL 语义，与锁不变式不符
+        with self._kill_lock:
+            self._proc = proc
+            # kill 请求在 Popen 前（killed_before）或 Popen 与本赋值之间
+            # （self._killed）到达：进程刚拉起，立即补杀
+            pending_kill = killed_before or self._killed
+        if pending_kill:
             kill_process_tree(proc)
         out: List[str] = []
         killed = {"flag": False}

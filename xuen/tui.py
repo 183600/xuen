@@ -290,10 +290,12 @@ def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     # 等后台 _run_loop 线程收尾：action_quit() 只设置了 stop_requested 并
     # 停掉 agent，worker 此刻可能仍在运行并即将改写 exit_code；不等它就把
     # 初始值 0 返回，失败会被掩盖成「成功退出」。agent 已被 stop_agent()
-    # 终止，正常几秒之内线程就会退出；超时兜底防止极端情况下卡死进程
+    # 终止，正常几秒之内线程就会退出；超时兜底防止极端情况下卡死进程。
+    # 注意上限必须覆盖 agent 收尾的最坏耗时（超时回调里的 wait/join 合计
+    # 可达 ~15s），否则正常退出会被误报为失败退出码 1
     worker = app._worker
     if worker is not None:
-        worker.join(timeout=10)
+        worker.join(timeout=20)
         # join 超时时 exit_code 可能仍是初始的 0；不能把未干净收尾误报为成功
         if worker.is_alive():
             return 1
