@@ -10,7 +10,8 @@
 agent:
   # 命令模板。占位符：
   #   "$prompt"      整段提示词（shell 转义后替换；Windows 请改用 $prompt_file）
-  #   $prompt_file   提示词写入 工作区/.prompt.md，替换为该文件路径（跨平台推荐）
+  #   $prompt_file   提示词写入工作区内每次运行唯一的 .prompt.XXXXXX.md，
+  #                  替换为该文件路径（跨平台推荐；运行结束后自动清理）
   command: 'opencode run "$prompt"'
   # command: 'claude -p "$prompt"'
   # command: 'aider --message-file $prompt_file'

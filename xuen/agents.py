@@ -10,6 +10,7 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 import threading
 from pathlib import Path
 from typing import Callable, List, Optional
@@ -39,7 +40,9 @@ class ShellAgent:
 
     命令模板占位符：
       "$prompt" / $prompt   —— 替换为 shell 转义后的整段提示词
-      $prompt_file          —— 提示词写入 工作区/.prompt.md，替换为该文件路径
+      $prompt_file          —— 提示词写入工作区内本次运行唯一的
+                              .prompt.XXXXXX.md 文件，替换为该文件路径
+                              （run() 结束后文件会被清理）
 
     on_output / on_stderr：每行输出的回调（默认打到终端；TUI 模式下注入到界面）。
     """
@@ -71,6 +74,9 @@ class ShellAgent:
         self._kill_lock = threading.Lock()
         self.returncode: Optional[int] = None
         self.timed_out = False
+        # 本次 run() 经 render_command 创建的提示词文件（$prompt_file 模式），
+        # run() 结束后清理；None 表示未使用 $prompt_file
+        self._prompt_file: Optional[Path] = None
 
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
     # 占位符为前缀的普通变量，不能被子串替换误伤；x$prompt 这类前面紧贴
@@ -96,12 +102,42 @@ class ShellAgent:
         tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt"
                      + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
 
+        self._prompt_file = None
         if f_sentinel in tpl:
-            pfile = self.workspace / ".prompt.md"
-            pfile.write_text(prompt, encoding="utf-8")
+            # mkstemp 原子创建唯一文件名：同进程多实例或多进程并发共用同一
+            # workspace 时，固定名（如 .prompt.md）会互相覆盖提示词，
+            # agent 读到的是另一实例的内容（state/words 均已做并发防护，
+            # 提示词文件同理）
+            fd, fname = tempfile.mkstemp(
+                prefix=".prompt.", suffix=".md", dir=self.workspace)
+            pfile = Path(fname)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(prompt)
+            except Exception:
+                # 写入失败时关掉 fd 并清掉半成品文件，避免工作区堆积
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+                try:
+                    pfile.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
+            self._prompt_file = pfile
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
             tpl = tpl.replace(f_sentinel, _quote(str(pfile.resolve())))
         return tpl.replace(p_sentinel, _quote(prompt))
+
+    def _cleanup_prompt_file(self) -> None:
+        pfile = self._prompt_file
+        self._prompt_file = None
+        if pfile is not None:
+            try:
+                pfile.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def kill(self) -> None:
         """强制终止当前正在运行的外部 agent（TUI 退出 / 中断时使用）。
@@ -142,13 +178,19 @@ class ShellAgent:
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
 
-        proc = subprocess.Popen(
-            command, shell=True,
-            stdin=subprocess.DEVNULL,  # 防止外部 agent 继承 stdin 与 TUI 争抢键盘/挂起
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, encoding="utf-8", errors="replace",
-            **popen_kwargs(),
-        )
+        try:
+            proc = subprocess.Popen(
+                command, shell=True,
+                stdin=subprocess.DEVNULL,  # 防止外部 agent 继承 stdin 与 TUI 争抢键盘/挂起
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace",
+                **popen_kwargs(),
+            )
+        except Exception:
+            # 启动失败（如提示词含 NUL 字节）时提示词文件已无消费者，
+            # 必须清理，否则每次启动失败都在工作区留一个 .prompt.*.md
+            self._cleanup_prompt_file()
+            raise
         self._proc = proc
         # kill 请求在 Popen 前（killed_before）或 Popen 与本赋值之间
         # （self._killed）到达：进程刚拉起，立即补杀
@@ -227,6 +269,9 @@ class ShellAgent:
             t_out.join(timeout=5)
             t_err.join(timeout=5)
             self._proc = None
+            # 清理本次的提示词文件（子进程已退出，不再需要；
+            # 循环长跑时避免工作区堆积 .prompt.*.md）
+            self._cleanup_prompt_file()
         self.returncode = proc.returncode
         self.timed_out = killed["flag"]
         if self.timed_out:
