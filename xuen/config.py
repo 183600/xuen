@@ -202,3 +202,13 @@ def _validate(cfg: Config) -> None:
             "Windows 的 agent.command 不能使用 $prompt；请改用 "
             "$prompt_file（提示词会被写入文件，避免 cmd 转义/换行问题）"
         )
+    if (os.name == "nt"
+            and re.search(r"(?<![A-Za-z0-9_])\$prompt_file(?![A-Za-z0-9_])", cmd)
+            and re.search(r"[%!&^<>|]", cfg.workspace)):
+        # $prompt_file 的路径嵌入 cmd 命令行时只经 list2cmdline 处理空格/引号，
+        # 不转义 cmd 元字符：%...% 会被变量展开、! 在延迟展开下会被吞掉，
+        # 工作区路径含这些字符时外部 agent 会拿到错误路径
+        raise ValueError(
+            "Windows 下工作区路径含 cmd 元字符（% ! & ^ < > |），"
+            "$prompt_file 无法安全传递给外部 agent；请更换工作区路径"
+        )

@@ -59,6 +59,11 @@ class ShellAgent:
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
         self._killed = False
+        # 记录「本轮运行期间用户发起过 kill」：超时定时器与用户 kill 几乎
+        # 同时到达时，被用户杀掉的进程（rc=-9）会被误判成超时，需要靠
+        # 这个标志甄别（_killed 是跨轮次的待处理请求标志，run() 读到即清，
+        # 不能承担此职）
+        self._user_killed = False
         # 保护 _killed/_proc：「run() 读取并清掉待处理 kill 请求」与
         # 「kill() 置位并取当前进程」必须各自原子完成，否则 kill()
         # 若恰好落在 run() 的读取与清除之间，这次停止请求会被静默丢弃
@@ -110,6 +115,7 @@ class ShellAgent:
         """
         with self._kill_lock:
             proc = self._proc
+            self._user_killed = True
             if proc is None:
                 self._killed = True
         if proc is not None and proc.poll() is None:
@@ -131,6 +137,7 @@ class ShellAgent:
         with self._kill_lock:
             killed_before = self._killed
             self._killed = False
+            self._user_killed = False
         command = self.render_command(prompt)
         shown = command if len(command) <= 300 else command[:300] + " …"
         self.on_stderr(f"$ {shown}\n")
@@ -195,7 +202,7 @@ class ShellAgent:
             with self._kill_lock:
                 # 用户主动 kill（TUI 按 q / Ctrl+C）与超时定时器几乎同时到达时，
                 # 进程是被用户请求杀掉的，不能误报成超时
-                if self._killed:
+                if self._user_killed:
                     return
             killed["flag"] = True
 
