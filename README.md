@@ -32,17 +32,67 @@ xuen **只调用外部 agent**（如 opencode）来完成所有思考：首次�
 ## 整体流程
 
 ```
-输入任务 ──► 首次运行：外部 agent 分批生成领域词 ──► words.txt
-                        │
-                        ▼
-   ┌────────────── 循环（轮数可配，支持 inf）──────────────┐
-   │ 1. 从词库纯随机抽 n 个词（n≥0，默认 2，不调任何模型）   │
-   │ 2. 取底部输入框中积累的用户输入                         │
-   │ 3. 拼提示词 → 调用外部 agent（如 opencode run "$prompt"）│
-   │    agent 经 workspace/write_section.py 覆盖想法区/产物区 │
-   │ 4. 哪个区块被改了，就在屏幕上显示 [修改xx区]<新内容>      │
-   └────────────────────────────────────────────────────────┘
+python main.py "任务"
+   │
+   ├─ ① 解析命令行 ──► 加载 config.yaml ──► CLI 覆盖同名配置 ──► 校验
+   ├─ ② 初始化工作区：research.md（想法区/产物区）+ 写入助手 write_section.py
+   ├─ ③ 构建外部 agent：ShellAgent（按 agent.command 模板，$prompt / $prompt_file）
+   │
+   ├─ ④ 领域词库（仅 words.pick > 0 时）
+   │      words.txt 已存在且 reuse=true ──► 直接复用（--regen-words 强制重建）
+   │      否则 ──► 外部 agent 分批生成 ──► 解析/清洗/去重 ──► 原子保存 words.txt
+   │
+   └─ ⑤ 研究循环 × N 轮（loop.iterations，支持 inf 无限循环）
+          1. 纯随机抽词：random.sample 抽 n 个灵感词（此步绝不调任何模型）
+          2. 取出底部输入框中积累的用户输入
+          3. 拼提示词：extra_notes + 任务 + 轮次 + 灵感词
+             + 当前想法区/产物区内容 + 用户输入 + 覆盖区块的写入指令
+          4. 调用外部 agent（如 opencode run "$prompt"）：
+             思考过程实时打到输出日志；经 write_section.py 整体覆盖想法区/产物区
+          5. 重读 research.md 做 diff：哪个区块被改了，
+             就在屏幕上显示 [修改xx区]<新内容>
 ```
+
+### 各阶段说明
+
+**① 启动与配置**（`main.py` → `xuen/cli.py`）
+- 解析命令行：任务描述（位置参数 / `--task-file` / 交互输入）、`--iterations`（整数或 `inf`）、
+  `--pick`（每轮词数 n ≥ 0）、`--workspace`、`--regen-words`、`--no-tui`、`--no-color`；
+- 加载 `config.yaml`（默认查找 `config.yaml` / `config.yml` / `xuen.yaml`，或 `-c` 指定），
+  CLI 参数覆盖同名配置，覆盖 `--workspace` 后重新校验。
+
+**② 界面选择**
+- 默认启用 TUI（需安装 `textual` 且在真实终端中运行）；
+- 条件不满足或指定 `--no-tui` 时，自动降级为纯终端输出。
+
+**③ 工作区初始化**（`xuen/state.py`）
+- 创建状态文件 `research.md`：标题为任务，含 `IDEA`（想法区）与 `ARTIFACT`（产物区）
+  两个跨轮保留的标记区块；已存在则自动续用；
+- 生成独立写入助手 `write_section.py`：外部 agent 用 stdin 整体覆盖指定区块
+  （`python write_section.py idea|artifact`），内置跨进程文件锁，防止并发写互相覆盖。
+
+**④ 外部 agent 调用**（`xuen/agents.py`）
+- `agent.command` 命令模板支持两种占位符：`$prompt`（整段提示词 shell 转义后替换）、
+  `$prompt_file`（提示词写入工作区内唯一临时文件后替换为路径，跨平台推荐）；
+- `agent.timeout` 超时后强制终止整个进程树；TUI 中 `q` / `Ctrl+C` 也会先终止正在运行的 agent。
+
+**⑤ 词库生成**（`xuen/words.py`）
+- 分批向外部 agent 请求「为研究方向列出 N 个术语/关键词」，程序只负责解析、清洗、去重
+  （剥序号/引号/冒号解释等），原子写入 `words.txt`；
+- 词表不再增长则提前结束；生成失败时回退复用磁盘上的旧词库；
+  `words.pick=0` 时跳过词库，循环中不给灵感词。
+
+**⑥ 研究循环**（`xuen/runner.py`）
+- 每轮顺序执行：纯随机抽词 → 收集用户输入 → 拼提示词 → 运行外部 agent → diff 区块变化；
+- 提示词要求 agent：输出思考过程（供用户在屏幕前看），并完整保留区块标记行的前提下
+  整体覆盖想法区 / 产物区；
+- 失败处理：外部 agent 连续 3 次启动/执行失败则中止循环（退出码 1）；
+  用户主动停止或至少成功一轮时不计为整体失败。
+
+**⑦ 退出与持久化**
+- 所有状态都落在工作区文件里（`research.md` / `words.txt` / `write_section.py`），
+  中断后重跑自动续上；
+- 退出码：`0` 正常结束；`1` 所有轮次均执行失败；`2` 配置/参数错误；`130` 被 Ctrl+C 中断。
 
 ## 使用
 
