@@ -89,8 +89,23 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 agent, task, cfg.words.count, cfg.words.batch,
                 info=sink.info, warn=sink.warn, stop=sink.should_stop,
             )
-            # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库
-            if word_list:
+            # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库。
+            # 生成未达目标（用户停止 / 批次失败 / 词表不再增长）时拿到的可能
+            # 只是半截词表，若比磁盘上已有的词还少同样不能落盘：否则下次
+            # reuse 会把完整旧词库永久换成残缺词表（词汇静默丢失）
+            if word_list and len(word_list) < cfg.words.count \
+                    and disk_words and len(word_list) < len(disk_words):
+                if cfg.words.reuse:
+                    sink.warn(f"词库生成未完成（{len(word_list)} 个），"
+                              f"保留并复用磁盘上更完整的旧词库"
+                              f"（{len(disk_words)} 个词）")
+                    word_list = disk_words
+                else:
+                    # words.reuse=false 是显式禁用复用，不能绕回旧词库；
+                    # 但也不能用残缺词表覆盖它，本次循环临时使用生成结果
+                    sink.warn(f"词库生成未完成（{len(word_list)}/{cfg.words.count}），"
+                              "本次临时使用，不覆盖磁盘上更完整的旧词库")
+            elif word_list:
                 words.save_words(words_path, word_list)
                 sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
             elif disk_words and cfg.words.reuse:
@@ -102,7 +117,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte
             #（如 --task-file 读入二进制文件）；与启动失败同等对待
             raise SystemExit(f"词库生成失败：{e}")
-        if len(word_list) < cfg.words.count:
+        # 空词库不再谎报「先继续」：下面会以「词库为空」正式中止
+        if word_list and len(word_list) < cfg.words.count:
             sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
 
     # 用户主动停止（如 TUI 按 q 中断词库生成）导致的空词库不算失败，

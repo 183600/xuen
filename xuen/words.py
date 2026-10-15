@@ -24,11 +24,13 @@ _BULLET = re.compile(
 _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.、 "
 
 # 纯数字（含 "3.14" / "2.5" 这类小数，isdigit() 拦不住）不是词；
-# 但 "0.5倍速"、"2.5D" 这类含非数字字符的术语必须保留，故用整串匹配
-_PURE_NUMBER = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
+# 但 "0.5倍速"、"2.5D" 这类含非数字字符的术语必须保留，故用整串匹配。
+# 小数点同时接受全角 ．：中文 LLM 输出 "３．１４" 时 \d 能匹配全角数字、
+# 小数点却不能只认半角，否则全角小数会漏进词库（与 _BULLET 保持一致）
+_PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 
 
-def _clean_line(line: str) -> Optional[str]:
+def _clean_once(line: str) -> str | None:
     w = _BULLET.sub("", line.strip()).strip()
     w = w.strip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
@@ -39,19 +41,19 @@ def _clean_line(line: str) -> Optional[str]:
         # URL 不是灵感词；若交给下面按 ':' 截断，会把 "http"/"https"
         # 这类协议名误收进词库。
         return None
-    for sep in ("：", ":"):  # "词：解释"/"词:解释" 只留词
-        if sep in w:
-            head, _, _ = w.partition(sep)
-            head = head.strip()
-            # 尾部为空（如 "术语："）时仍应保留词头；词头非法则尝试下一个
-            # 分隔符（如 "term：subterm: 解释"），两者都截不出合法词头才丢
-            if not head or len(head) > 30:
-                continue
-            w = head
-            break
-    else:
-        # 含冒号但任何分隔符都截不出合法词头：整行是解释性文字，丢弃
-        if "：" in w or ":" in w:
+    while "：" in w or ":" in w:  # "词：解释"/"词:解释" 只留词
+        for sep in ("：", ":"):
+            if sep in w:
+                head, _, _ = w.partition(sep)
+                head = head.strip()
+                # 尾部为空（如 "术语："）时仍应保留词头；词头非法则尝试下一个
+                # 分隔符（如 "term：subterm: 解释"），两者都截不出合法词头才丢
+                if not head or len(head) > 30:
+                    continue
+                w = head
+                break
+        else:
+            # 含冒号但任何分隔符都截不出合法词头：整行是解释性文字，丢弃
             return None
     # 尾部标点剥除后，可能露出此前被标点挡住的引号/反引号
     # （如 "「`词`," → "词`"），需再剥一次，否则残片混进词库
@@ -63,6 +65,23 @@ def _clean_line(line: str) -> Optional[str]:
         return None
     if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
         return None
+    return w
+
+
+def _clean_line(line: str) -> Optional[str]:
+    """清洗到不动点：单次清洗剥掉边缘字符后可能暴露出新的序号/标点/分隔符
+    （如 "「9、注意力」" 先剥引号、下一轮才露出 "9、"），只清洗一次会让
+    generate_words_shell 保存的词与 load_words 再次清洗得到的词不一致
+    （词表随保存-读取漂移），且带引号的编号词会残留序号混进词库。
+    每次有效清洗都严格变短，故循环必然收敛。"""
+    w = line
+    for _ in range(64):
+        nxt = _clean_once(w)
+        if nxt is None:
+            return None
+        if nxt == w:
+            return w
+        w = nxt
     return w
 
 

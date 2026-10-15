@@ -204,8 +204,13 @@ class ShellAgent:
         with self._kill_lock:
             self._proc = proc
             # kill 请求在 Popen 前（killed_before）或 Popen 与本赋值之间
-            # （self._killed）到达：进程刚拉起，立即补杀
+            # （self._killed）到达：进程刚拉起，立即补杀。
+            # 补杀后必须清掉 _killed：这次停止请求已在下面兑现，若残留，
+            # 下一轮 run() 会把它当作新的待处理 kill，把新拉起的进程再次
+            # 误杀（rc=-9）。此后 kill() 读到的 _proc 已非 None，只会直接
+            # 杀进程，不会再置位 _killed，故此处清除不会丢任何请求
             pending_kill = killed_before or self._killed
+            self._killed = False
         if pending_kill:
             kill_process_tree(proc)
         out: List[str] = []
