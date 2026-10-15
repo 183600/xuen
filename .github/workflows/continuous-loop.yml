@@ -1,0 +1,466 @@
+name: Continuous Loop
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/20 * * * *'
+
+# ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）
+# 上一个 run 一结束，队列里的下一个立刻开始 → "上一个结束立刻触发下一个"
+concurrency:
+  group: continuous-loop
+  cancel-in-progress: false
+
+# ⭐ 关键 2：全局环境从源头防日志乱码
+#   - LANG/LC_ALL=C.UTF-8        强制 UTF-8 locale，中文输出不会变问号/乱码
+#   - NO_COLOR/FORCE_COLOR/TERM  让 opencode / npm / gh 等关闭颜色与 TUI 动画
+#   - PYTHONIOENCODING/PYTHONUTF8  子进程里的 Python 一律 UTF-8
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  NO_COLOR: '1'
+  FORCE_COLOR: '0'
+  TERM: dumb
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: '1'
+
+jobs:
+  run-opencode:
+    runs-on: ubuntu-latest
+    # ⭐ 关键 3：硬超时 330 分钟（GitHub 单 job 上限 360 分钟）。
+    # 实际时长由「Run opencode loop」里的工作窗口控制：约 4h45m 的连续工作
+    # + 前置安装约 5 分钟 + 收尾约 3 分钟 → 单次 job 约 5 小时。
+    timeout-minutes: 330
+    permissions:
+      contents: write
+      actions: write   # gh workflow run 需要
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free up disk space (keep miniconda)
+        run: |
+          set +e
+          echo "=== disk before cleanup ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet \
+                      /usr/share/swift \
+                      /usr/local/lib/android \
+                      /usr/local/share/boost \
+                      /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL 2>/dev/null || true
+          sudo apt-get clean
+          echo "=== disk after cleanup ==="
+          df -h /
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure swap (safe version)
+        run: |
+          set -e
+          echo "=== Before ==="
+          free -h
+          df -h /
+
+          sudo systemctl disable --now systemd-oomd.socket systemd-oomd.service 2>/dev/null || true
+
+          sudo modprobe zram 2>/dev/null || true
+          if [ -e /dev/zram0 ]; then
+            sudo swapoff /dev/zram0 2>/dev/null || true
+            echo 8G | sudo tee /sys/block/zram0/disksize >/dev/null || true
+            sudo mkswap /dev/zram0 >/dev/null 2>&1 || true
+            sudo swapon -p 100 /dev/zram0 2>/dev/null && echo "[ok] zram enabled (8G, prio=100)" \
+              || echo "[warn] zram enable failed"
+          else
+            echo "[info] zram not available, skip"
+          fi
+
+          AVAIL_KB=$(df --output=avail / | tail -1)
+          AVAIL_MB=$((AVAIL_KB / 1024))
+          WANT_MB=$((AVAIL_MB - 3072))
+          if [ "$WANT_MB" -gt 8192 ]; then WANT_MB=8192; fi
+          if [ "$WANT_MB" -lt 2048 ]; then WANT_MB=2048; fi
+          echo "[info] available disk: ${AVAIL_MB}MB, will create swapfile: ${WANT_MB}MB"
+
+          sudo swapoff /swapfile 2>/dev/null || true
+          sudo rm -f /swapfile
+          if ! sudo fallocate -l "${WANT_MB}M" /swapfile 2>/dev/null; then
+            echo "[info] fallocate failed, falling back to dd"
+            sudo dd if=/dev/zero of=/swapfile bs=1M count=$WANT_MB status=none
+          fi
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile >/dev/null
+          sudo swapon -p 10 /swapfile && echo "[ok] swapfile enabled"
+
+          sudo sysctl -w vm.swappiness=100
+          sudo sysctl -w vm.vfs_cache_pressure=200
+          sudo sysctl -w vm.overcommit_memory=1
+          sudo sysctl -w vm.dirty_ratio=40
+          sudo sysctl -w vm.dirty_background_ratio=10
+          sudo sysctl -w vm.watermark_scale_factor=200 2>/dev/null || true
+
+          echo "=== After ==="
+          free -h
+          swapon --show
+          df -h /
+
+      - name: Install opencode
+        run: npm i -g opencode-ai
+
+      - name: Configure opencode (OpenCode Zen free models)
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          # opencode 自带的 OpenCode Zen 免费 provider 无需任何 API key；
+          # 如需更高限额，可在仓库 secrets 里可选配置 OPENCODE_API_KEY。
+          if [ -n "$OPENCODE_API_KEY" ]; then
+            echo "[info] OPENCODE_API_KEY 已配置（用于提升免费模型限额）"
+          else
+            echo "[info] 未配置 OPENCODE_API_KEY，匿名使用免费模型（有速率限制）"
+          fi
+          mkdir -p ~/.config/opencode
+
+          cat > ~/.config/opencode/opencode.json <<'EOF'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": {
+              "*": "allow",
+              "edit": {
+                "*": "allow",
+                ".github/**": "deny",
+                "**/.github/**": "deny",
+                "LICENSE": "deny",
+                "**/LICENSE": "deny",
+                "**/LICENSE.*": "deny"
+              },
+              "bash": {
+                "*": "allow",
+                "rm -rf .github*": "deny",
+                "rm -r .github*": "deny",
+                "rm .github*": "deny",
+                "mv .github*": "deny",
+                "git rm -r .github*": "deny",
+                "rm *LICENSE*": "deny",
+                "mv *LICENSE*": "deny",
+                "cp *LICENSE*": "deny",
+                "git rm *LICENSE*": "deny",
+                "git push*": "deny"
+              }
+            },
+            "model": "opencode/deepseek-v4.1-flash-free"
+          }
+          EOF
+
+          echo "=== opencode config ==="
+          cat ~/.config/opencode/opencode.json
+
+          echo "=== OpenCode Zen 可用模型目录 ==="
+          opencode models opencode 2>/dev/null \
+            || opencode models 2>/dev/null | grep -F 'opencode/' \
+            || echo "[warn] 暂时无法获取模型列表，将在运行时重试"
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 中文内容防乱码：提交一律 UTF-8，路径不做八进制转义显示
+          git config i18n.commitEncoding utf-8
+          git config core.quotepath false
+
+      # ⭐ 关键 4：约 4h45m 的连续工作窗口。
+      # 反复运行 opencode 修 bug，每轮独立限时并增量提交；
+      # 窗口耗尽（或剩余不足 10 分钟）后退出，交给后面的收尾步骤。
+      # 前置安装 ~5 分钟 + 工作窗口 285 分钟 + 收尾 ~3 分钟 ≈ 单次 job 5 小时左右。
+      - name: Run opencode loop (~5h job)
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set +e
+          PROMPT='判断是否有bug，如果有就修复'
+          WORK_SECONDS=17100        # 工作窗口：4 小时 45 分 = 17100 秒
+          MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
+          MAX_ITER_SECONDS=2400     # 单轮 opencode 最多 40 分钟（剩余更少时自动缩短）
+          CLEANER=".github/scripts/clean_log.py"
+          [ -f "$CLEANER" ] || CLEANER=cat   # 兜底：净化器不在就原样输出
+          OUT=/tmp/oc_out.log       # 原始输出留档，用于限流(429)检测
+
+          # ================= 动态模型池（与 ada-squash 相同） =================
+          # 池直接来自 `opencode models opencode` 的实时输出：模型上新自动入池、
+          # 下线自动出池，无需再改本文件。同时通过 --verbose 读取每个模型支持的
+          # variant（思考强度档位，如 low/high/max）。
+          declare -A MODEL_VARIANTS=()
+          FREE_MODELS=()
+          CURRENT_MODEL=""
+          PREVIOUS_MODEL=""
+          # ================= 优先模型：deepseek-v4.1-flash-free =================
+          # 池中存在时始终优先选用；不存在时保持随机选择。
+          # 同一轮内若优先模型刚失败/限流，则暂时回退随机，下一轮开始时自动恢复优先。
+          PREFERRED_MODEL="opencode/deepseek-v4.1-flash-free"
+          PREFERRED_BROKEN=0
+          # ---- 解析脚本：从 --verbose 输出提取模型 ID + 支持的 variant 列表 ----
+          # `opencode models --verbose` 在每个模型行后输出一段 JSON 元数据，其中
+          # variants 字段列出该模型支持的思考强度档位。输出两列（\t 分隔）：
+          # opencode/<model-id>  逗号分隔 variant。
+          cat > /tmp/parse_model_variants.py <<'PYEOF'
+          import sys, json, re
+          text = sys.stdin.read()
+          parts = re.split(r'(?m)^opencode/([A-Za-z0-9][A-Za-z0-9._-]*)[ \t]*$', text)
+          for i in range(1, len(parts) - 1, 2):
+              mid, blob = parts[i], parts[i + 1]
+              try:
+                  meta = json.loads(blob)
+              except Exception:
+                  try:
+                      meta = json.loads(blob[:blob.rindex('}') + 1])
+                  except Exception:
+                      continue
+              variants = sorted((meta.get('variants') or {}).keys())
+              print('opencode/%s\t%s' % (mid, ','.join(variants)))
+          PYEOF
+          build_model_pool() {
+            local out tsv m v
+            local pool=()
+            # --refresh 强制拉取线上最新目录（避免 runner 本地缓存过期、错过新上的模型）；
+            # refresh 失败时自动回退缓存目录，仍失败则返回空，由 pick_model 惰性重建重试。
+            out="$(opencode models opencode --verbose --refresh 2>/dev/null \
+              || opencode models opencode --verbose 2>/dev/null \
+              || opencode models --verbose 2>/dev/null \
+              || true)"
+            [ -z "$out" ] && return 1
+            tsv="$(printf '%s\n' "$out" | python3 /tmp/parse_model_variants.py 2>/dev/null)" || true
+            [ -z "$tsv" ] && return 1
+            MODEL_VARIANTS=()
+            while IFS=$'\t' read -r m v; do
+              [ -n "$m" ] || continue
+              pool+=("$m")
+              MODEL_VARIANTS["$m"]="$v"
+            done <<< "$tsv"
+            [ ${#pool[@]} -eq 0 ] && return 1
+            FREE_MODELS=("${pool[@]}")
+            echo "[info] 动态模型池（${#FREE_MODELS[@]} 个）: ${FREE_MODELS[*]}"
+            if printf '%s\n' "${FREE_MODELS[@]}" | grep -qx -- "$PREFERRED_MODEL"; then
+              echo "[info] 优先模型在池中: $PREFERRED_MODEL (variant: ${MODEL_VARIANTS[$PREFERRED_MODEL]:-无})"
+            else
+              echo "[warn] 优先模型 $PREFERRED_MODEL 不在池中，本轮改用随机模型"
+            fi
+            return 0
+          }
+          if ! build_model_pool; then
+            echo "[warn] 启动时读取模型目录失败，模型池暂空；将随轮次重试自动重建"
+            FREE_MODELS=()
+            MODEL_VARIANTS=()
+          fi
+
+          # ---------- 选模型：优先 deepseek-v4.1-flash-free，没有则随机 ----------
+          # 1) 优先模型在池中、且本轮内未刚失败/限流时，始终优先选用；
+          # 2) 否则保持随机选择，并尽量避免和上次相同。
+          # 池为空时先惰性重建（目录 API 瞬时故障的自愈）；
+          # 重建后仍为空则返回 1，由调用方计入失败并稍后重试。
+          pick_model() {
+            if [ ${#FREE_MODELS[@]} -eq 0 ]; then
+              build_model_pool || true
+            fi
+            local n=${#FREE_MODELS[@]}
+            if [ "$n" -eq 0 ]; then
+              CURRENT_MODEL=""
+              return 1
+            fi
+            local m="" x
+            if [ -n "$PREFERRED_MODEL" ] && [ "$PREFERRED_BROKEN" -ne 1 ]; then
+              for x in "${FREE_MODELS[@]}"; do
+                if [ "$x" = "$PREFERRED_MODEL" ]; then m="$x"; break; fi
+              done
+            fi
+            if [ -z "$m" ]; then
+              for _ in 1 2 3; do
+                m="${FREE_MODELS[$((RANDOM % n))]}"
+                if [ "$n" -le 1 ] || [ "$m" != "$PREVIOUS_MODEL" ]; then break; fi
+              done
+            fi
+            PREVIOUS_MODEL="$m"
+            CURRENT_MODEL="$m"
+            return 0
+          }
+
+          # ---------- 确定模型思考强度：优先 max，无 max 用 high，都不支持则不设置 ----------
+          # 从模型官方元数据公布的 variant 列表中选取；都不支持时按默认方式启动
+          # （不传 --variant），避免传无效值导致启动失败。
+          variant_for() {
+            local v="${MODEL_VARIANTS[$1]:-}"
+            case ",$v," in
+              *,max,*)  echo "max" ;;
+              *,high,*) echo "high" ;;
+              *)        echo "" ;;
+            esac
+          }
+
+          DEADLINE=$((SECONDS + WORK_SECONDS))
+          ITER=0
+          while :; do
+            ITER=$((ITER + 1))
+            REMAIN=$((DEADLINE - SECONDS))
+            [ "$REMAIN" -le 0 ] && break
+            echo "::group::第 ${ITER} 轮 · 工作窗口剩余 $((REMAIN / 60)) 分钟"
+            if [ "$REMAIN" -lt "$MIN_RUN_SECONDS" ]; then
+              echo "剩余时间不足 $((MIN_RUN_SECONDS / 60)) 分钟，不再开启新一轮。"
+              echo "::endgroup::"
+              break
+            fi
+
+            T0=$(date +%s)
+            # ---- 单轮执行（带重试 + 换模型，模型/思考强度逻辑与 ada-squash 相同） ----
+            attempt=0
+            FAIL_COUNT=0
+            RATE_COUNT=0
+            PREFERRED_BROKEN=0   # 每轮开始时恢复优先模型
+            while [ "$attempt" -lt 3 ]; do
+              attempt=$((attempt + 1))
+
+              if ! pick_model; then
+                FAIL_COUNT=$((FAIL_COUNT + 1))
+                echo "[warn] 模型池为空（目录不可达），连续 $FAIL_COUNT 次，120s 后重试"
+                if [ "$FAIL_COUNT" -ge 3 ]; then
+                  echo "[warn] 连续 3 次拿不到模型目录，放弃本轮"
+                  break
+                fi
+                sleep 120
+                continue
+              fi
+
+              # 思考强度：模型支持则尽量调 max（无 max 用 high），都不支持则不设置
+              EFFORT="$(variant_for "$CURRENT_MODEL")"
+              VARFLAG=()
+              if [ -n "$EFFORT" ]; then
+                VARFLAG=(--variant "$EFFORT")
+                echo "[info] model=$CURRENT_MODEL 思考强度=$EFFORT"
+              else
+                echo "[info] model=$CURRENT_MODEL 不支持调节思考强度，按默认档位启动"
+              fi
+              echo "第 ${ITER} 轮 · 尝试 ${attempt}/3 · model=$CURRENT_MODEL effort=${EFFORT:-none}"
+
+              # 本轮剩余时间收窄（给收尾留 2 分钟；重试同样受工作窗口约束）
+              REMAIN_NOW=$((DEADLINE - SECONDS))
+              [ "$REMAIN_NOW" -le 120 ] && break
+              CAP=$((REMAIN_NOW - 120))
+              if [ "$CAP" -gt "$MAX_ITER_SECONDS" ]; then CAP=$MAX_ITER_SECONDS; fi
+
+              # 输出经 clean_log.py 净化后再进 Actions 日志（剥 ANSI/控制字符/坏字节）
+              : > "$OUT"
+              timeout --signal=INT --kill-after=30s "${CAP}" \
+                opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$PROMPT" 2>&1 \
+                | tee "$OUT" | python3 "$CLEANER"
+              RC=${PIPESTATUS[0]}
+
+              # 成功，或达到单轮时间上限被截断：已完成的修改照常进入提交环节
+              if [ "$RC" -eq 0 ]; then
+                break
+              fi
+              if [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ] || [ "$RC" -eq 143 ]; then
+                echo "（本轮达到单轮时间上限 ${CAP}s 被截断，已完成的修改会照常提交）"
+                break
+              fi
+
+              # 429 限流：休息一会儿，随机换一个免费模型再试
+              if tail -40 "$OUT" | grep -qiE "too many requests|rate.?limit|status.{0,3}429"; then
+                RATE_COUNT=$((RATE_COUNT + 1))
+                echo "[warn] 命中限流(429) (连续: $RATE_COUNT)，90s 后换模型重试"
+                if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
+                  PREFERRED_BROKEN=1
+                  echo "[info] 优先模型命中限流，本轮内改用随机模型"
+                fi
+                if [ "$RATE_COUNT" -ge 8 ]; then
+                  echo "[warn] 连续 8 次限流，放弃本轮"
+                  break
+                fi
+                sleep 90
+                continue
+              fi
+
+              # 鉴权类错误提示（免费模型匿名限额耗尽/需要 key 时的排查线索）
+              if tail -40 "$OUT" | grep -qiE "401|unauthorized|invalid.{0,4}api.?key|missing.{0,4}api.?key"; then
+                echo "[hint] 疑似鉴权问题：匿名限额可能耗尽。可在仓库 secrets 配置 OPENCODE_API_KEY 提升限额后重试"
+              fi
+
+              # 其它非零退出：随机换一个免费模型重试
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+              echo "::warning::opencode 本轮退出码 ${RC}（模型 $CURRENT_MODEL），换模型重试"
+              if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
+                PREFERRED_BROKEN=1
+                echo "[info] 优先模型失败，本轮内改用随机模型"
+              fi
+              if [ "$FAIL_COUNT" -ge 3 ]; then
+                echo "[warn] 连续 3 次失败，放弃本轮"
+                break
+              fi
+              sleep 30
+            done
+
+            echo "本轮耗时 $(( $(date +%s) - T0 )) 秒"
+
+            # ⭐ 保护循环自身：把 AI 对 .github 的改动回滚，
+            # 防止 opencode 误改/误删 workflow 导致 Continuous Loop 断掉
+            git checkout HEAD -- .github 2>/dev/null
+            git clean -fdq .github 2>/dev/null
+
+            # 增量提交 + 推送，改动尽早落盘（推送失败下一轮自动补推）
+            if [ -n "$(git status --porcelain)" ]; then
+              git add -A
+              git commit -m "chore: automated bug fixes by opencode (iter ${ITER})" 2>/dev/null
+            fi
+            git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
+            echo "::endgroup::"
+
+            LEFT=$((DEADLINE - SECONDS))
+            [ "$LEFT" -le 0 ] && break
+            sleep 30
+          done
+          echo "工作循环结束：共 ${ITER} 轮，工作窗口累计 $((SECONDS / 60)) 分钟。"
+          exit 0
+
+      - name: Commit and push changes
+        if: ${{ !cancelled() }}   # 手动取消才跳过；中途失败也要把已完成的改动收尾提交
+        run: |
+          git checkout HEAD -- .github 2>/dev/null || true
+          git clean -fdq .github 2>/dev/null || true
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: automated bug fixes by opencode"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Push to Gitee
+        if: ${{ !cancelled() }}
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ secrets.GITEE_REPO }}
+        run: |
+          if [ -z "$GITEE_TOKEN" ] || [ -z "$GITEE_REPO" ]; then
+            echo "GITEE_TOKEN or GITEE_REPO not set, skipping Gitee push."
+            exit 0
+          fi
+          git remote remove gitee 2>/dev/null || true
+          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
+          git push gitee "HEAD:${GITHUB_REF_NAME}" || echo "[warn] push to Gitee failed"
+
+      # ⭐ 关键 5：本 run 的所有实质步骤完成后，立刻排下一个
+      # 由于 concurrency.cancel-in-progress=false，
+      # 这个新 run 会阻塞等待当前 run 退出 → 当前 run 一结束立刻开始
+      # !cancelled()：除"手动取消"外都续跑（失败也续），确保循环不中断；
+      # 定时触发 */20 同时充当看门狗：即使某次续跑失败，最多 20 分钟后自动恢复
+      - name: Trigger next run (continuous loop)
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Dispatching next run of '${{ github.workflow }}' on '${{ github.ref_name }}' ..."
+          gh workflow run "${{ github.workflow }}" \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.ref_name }}"
