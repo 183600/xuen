@@ -108,8 +108,15 @@ def main(argv=None) -> int:
         ui.err("未提供任务")
         return 2
 
-    # TUI 模式（默认）：两个区块面板 + agent 输出日志 + 底部输入框
-    if cfg.tui and not args.no_tui and sys.stdout.isatty():
+    # TUI 模式（默认）：两个区块面板 + agent 输出日志 + 底部输入框。
+    # textual 从 stdin 读取键盘输入：stdin 被重定向/关闭时（如
+    # `xuen 任务 < /dev/null` 或先前的管道读到 EOF），TUI 收不到 q 与
+    # 输入框内容，循环结束后会一直挂到进程被杀；此时按 README 的约定
+    # 降级为纯终端输出。stdin/stdout 可能为 None（无控制台解释器），
+    # getattr 兜底避免启动即 AttributeError。
+    tty = all(getattr(stream, "isatty", lambda: False)()
+              for stream in (sys.stdin, sys.stdout))
+    if cfg.tui and not args.no_tui and tty:
         try:
             from .tui import run_tui
         except ImportError:
