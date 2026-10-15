@@ -104,20 +104,21 @@ def _section_spans(text: str) -> list:
     ]
     # 区块不允许包含另一个完整区块：这通常说明外层候选的 END 落在相邻
     # 区块内容里（典型场景是外层真实 END 被删除），优先保留内层的真实
-    # 相邻区块。若同类区块此前已有一个完整候选，内层同名标记则只是内容
-    # 中独立成行的字面量，保留外层。
+    # 相邻区块。若内层同名区块在外层候选之外（此前或此后）已有一个完整
+    # 候选，内层标记则只是内容中独立成行的字面量，保留外层。
     invalid = set()
     for i, candidate in enumerate(candidates):
         for j, other in enumerate(candidates):
             if candidate[0] == other[0]:
                 continue
             if candidate[1] < other[1] and other[2] <= candidate[2]:
-                inner_has_prior = any(
+                inner_elsewhere = any(
                     prior != other and prior[0] == other[0]
-                    and prior[2] <= candidate[1]
+                    and (prior[2] <= candidate[1]
+                         or prior[1] >= candidate[2])
                     for prior in candidates
                 )
-                invalid.add(j if inner_has_prior else i)
+                invalid.add(j if inner_elsewhere else i)
             elif candidate[1] < other[1] < candidate[2] < other[2]:
                 # 两类区块交叉嵌套，无法判断哪个 END 可信，均拒绝后走修复路径
                 invalid.update((i, j))
@@ -354,12 +355,13 @@ def _spans(text):
             if candidate[0] == other[0]:
                 continue
             if candidate[1] < other[1] and other[2] <= candidate[2]:
-                inner_has_prior = any(
+                inner_elsewhere = any(
                     prior != other and prior[0] == other[0]
-                    and prior[2] <= candidate[1]
+                    and (prior[2] <= candidate[1]
+                         or prior[1] >= candidate[2])
                     for prior in candidates
                 )
-                invalid.add(j if inner_has_prior else i)
+                invalid.add(j if inner_elsewhere else i)
             elif candidate[1] < other[1] < candidate[2] < other[2]:
                 invalid.update((i, j))
     return sorted((a, b) for i, (_, a, b) in enumerate(candidates)
