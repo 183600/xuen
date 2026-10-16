@@ -71,8 +71,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             disk_words = words.load_words(words_path)
         except (OSError, UnicodeDecodeError) as e:
             # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
-            # 但 --regen-words 模式下反正要重新生成，不应被旧文件阻塞
-            if not regen_words:
+            # 但 --regen-words 或 words.reuse=false 时反正要重新生成、
+            # 旧词库不会被使用，不应被坏文件阻塞
+            if not regen_words and cfg.words.reuse:
                 raise SystemExit(f"词库读取失败：{e}")
             sink.warn(f"已有词库读取失败（{e}），将重新生成")
             disk_words = []

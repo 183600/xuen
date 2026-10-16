@@ -134,7 +134,7 @@ class XuangenApp(App):
     CSS = _CSS
     TITLE = "xuen"
     SUB_TITLE = "随机灵感词 × 外部 agent 研究循环"
-    BINDINGS = [("q", "quit", "退出"), ("ctrl+c", "quit", "退出")]
+    BINDINGS = [("q", "quit", "退出"), ("ctrl+c", "interrupt", "中断退出")]
 
     def __init__(self, cfg: Config, task: str, regen_words: bool = False):
         super().__init__()
@@ -145,6 +145,10 @@ class XuangenApp(App):
         self._user_inputs: "queue.Queue[str]" = queue.Queue()
         self.stop_requested = False
         self.loop_finished = False
+        # Ctrl+C 与 q 都用于退出，但 Ctrl+C 属于「被中断」：循环尚未收尾时
+        # 置位，run_tui() 据此返回 130，与 README 的退出码约定和无 TUI 路径
+        # （KeyboardInterrupt -> 130）保持一致；q 退出仍返回实际退出码
+        self.interrupted = False
         # 后台 _run_loop 线程失败时改写为非 0；必须在 __init__ 初始化，
         # 否则不走 run_tui() 的运行方式（测试、嵌入）会 AttributeError
         self.exit_code = 0
@@ -283,6 +287,12 @@ class XuangenApp(App):
         self.sink.stop_agent()
         self.exit()
 
+    async def action_interrupt(self) -> None:
+        # Ctrl+C：只有循环仍在进行才算「被中断」；循环已结束（正常结束或
+        # 失败结束）后按 Ctrl+C 只是关闭界面，不能把已有的退出码改写为 130
+        self.interrupted = not self.loop_finished
+        await self.action_quit()
+
 
 def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     app = XuangenApp(cfg, task, regen_words)
@@ -299,4 +309,8 @@ def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
         # join 超时时 exit_code 可能仍是初始的 0；不能把未干净收尾误报为成功
         if worker.is_alive():
             return 1
+    # 循环尚未收尾时被 Ctrl+C 中断：按 README 约定返回 130，而不是把
+    # 初始/残留的 exit_code（通常为 0，或中断导致的失败码）返回
+    if getattr(app, "interrupted", False):
+        return 130
     return getattr(app, "exit_code", 0)
