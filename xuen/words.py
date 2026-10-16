@@ -33,13 +33,20 @@ _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.�
 # 小数点却不能只认半角，否则全角小数会漏进词库（与 _BULLET 保持一致）
 _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 
+# 纯符号/装饰行（如 "///"、"()"、"[]"、"<>"、"——"、"…"）不是术语：
+# 词必须至少含一个字母/数字/CJK 字符（[^\W_] 即 Unicode 字母与数字），
+# 否则 markdown 分隔线/括号/省略号之类的残片会混进词库，
+# 再被当作灵感词展示并拼进外部 agent 的提示词
+_HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
+
 
 def _clean_once(line: str) -> str | None:
     w = _BULLET.sub("", line.strip()).strip()
     w = w.strip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
-    if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
+    if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
+            or not _HAS_WORD_CHAR.search(w)):
         return None
     if "://" in w:
         # URL 不是灵感词；若交给下面按 ':' 截断，会把 "http"/"https"
@@ -63,11 +70,13 @@ def _clean_once(line: str) -> str | None:
     # （如 "「`词`," → "词`"），需再剥一次，否则残片混进词库
     w = w.rstrip(".。,，;；!！?？ ")
     w = w.strip(_EDGE_CHARS).strip()
-    # 冒号截断后词形已变（如 "12: 解释" → "12"），需复查拦截条件，
-    # 否则纯数字 / 以 # > | = 开头的残片会混进词库
+    # 冒号截断后词形已变（如 "12: 解释" → "12"、"()：解释" → "()"），
+    # 需复查拦截条件，否则纯数字 / 纯符号 / 以 # > | = 开头的残片
+    # 会混进词库
     if not w or len(w) > 60:
         return None
-    if w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w):
+    if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
+            or not _HAS_WORD_CHAR.search(w)):
         return None
     return w
 
