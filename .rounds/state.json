@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-105041-r1",
-    "sha": "8ceb5e079ff602059db174bde9b6c2e4c2b779f4",
+    "snap": "snap/20261016-110744-r2",
+    "sha": "273054db140971e6c7373b3f8e8d22324dc8be0a",
     "tests": "pass",
-    "at": "2026-10-16T10:53:05Z",
+    "at": "2026-10-16T11:08:43Z",
     "by": "ai",
-    "iter": "1"
+    "iter": "2"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -229,6 +229,31 @@
         "verdict": "accept",
         "reason": "修复了命令替换解析中嵌套括号（子 shell）被误判为结束的真实 bug，消除了提示词拆词与分号注入风险，并新增了针对性的回归测试，无删改测试或引入风险。",
         "at": "2026-10-16T10:53:05Z"
+      }
+    },
+    {
+      "id": "20261016-110744-r2",
+      "snap": "snap/20261016-110744-r2",
+      "sha": "273054db140971e6c7373b3f8e8d22324dc8be0a",
+      "ts": "2026-10-16T11:08:43Z",
+      "iter": "2",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "321365b2971fc96674b4f71170fe7ac6af43f496",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "这是合理的安全加固：把反引号命令替换与算术语境（$[...]、((...))、${name[下标]}）识别为无法安全转义的数据区并整体跳过，堵住了原先会真正执行提示词中 $(...)/`...` 的注入面，且新增的是纯测试（无删除/弱化），自动验证通过；仅因对部分合法模板偏保守（如含字面 [ 的参数展开会被拒）留有小瑕疵，故给 8 分而非满分。",
+        "at": "2026-10-16T11:08:43Z"
       }
     }
   ],
