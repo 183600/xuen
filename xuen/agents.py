@@ -64,6 +64,28 @@ def _escape_in_double_quotes(value: str) -> str:
                  .replace("$", "\\$").replace("`", "\\`"))
 
 
+def _arithmetic_end(tpl: str, i: int) -> int:
+    """返回位置 i 处 $((...)) 算术展开结束后的下标（吞掉匹配的两个右括号）。
+
+    算术表达式内部可以嵌套括号（如 $(( (1+2) * 3 ))），用括号深度配对。
+    模板缺少匹配括号时按 shell 语法错误处理：一直算到模板结尾，剩余部分
+    不再参与占位符替换（与 heredoc 找不到终止符时的策略一致）。
+    """
+    depth = 1
+    j = i + 3
+    n = len(tpl)
+    while j < n:
+        c = tpl[j]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return min(j + 2, n)
+        j += 1
+    return n
+
+
 class ShellAgent:
     """通过 shell 命令调用外部 agent（opencode / claude / aider …）。
 
@@ -172,6 +194,14 @@ class ShellAgent:
         引号状态，裸上下文用 shlex.quote，单引号内用 '\\'' 闭合重开写法，
         双引号内反斜杠转义 $ ` " \\。
 
+        $(...) 命令替换与 $((...)) 算术展开是独立的解析上下文：内部的
+        引号自成一体、不能影响外层引号状态。必须用栈记录进入时的外层
+        引号状态并在配对的 ) 处恢复，否则 "$(cmd "$prompt")" 这类模板
+        会把内层 " 误当成外层引号闭合，$prompt 按裸上下文插入——
+        模板自己的双引号还在，shlex.quote 的单引号被当成字面值，提示词
+        里的 $(cmd) 反而被 shell 执行（注入）。算术展开内部是表达式，
+        整体跳过不替换（shell 会把那里的 $prompt 当变量展开）。
+
         heredoc（<< / <<-）正文是数据而不是命令文本：正文里的引号只是普通
         字符，shlex.quote 的引号在正文中不起保护作用（不加引号的终止符下
         正文还会做参数/命令替换），因此在正文里替换 $prompt 会让提示词里的
@@ -251,6 +281,8 @@ class ShellAgent:
             return pos
 
         out: List[str] = []
+        # 进入 $( 时的外层引号状态栈：配对的 ) 处恢复
+        subst_stack: List[str] = []
         state = "bare"  # bare / single / double
         i = 0
         n = len(tpl)
@@ -279,6 +311,18 @@ class ShellAgent:
                 # 原样成对复制，避免把 \x 的转义状态算错导致引号误判
                 if ch == "\\" and i + 1 < n and tpl[i + 1] in ("\\", '"', "$", "`", "\n"):
                     out.append(tpl[i:i + 2])
+                    i += 2
+                    continue
+                if tpl.startswith("$(", i):
+                    # 双引号内的命令替换/算术展开同样开启独立上下文
+                    if tpl.startswith("$((", i):
+                        j = _arithmetic_end(tpl, i)
+                        out.append(tpl[i:j])
+                        i = j
+                        continue
+                    out.append(tpl[i:i + 2])
+                    subst_stack.append("double")
+                    state = "bare"
                     i += 2
                     continue
                 if ch == '"':
@@ -326,6 +370,27 @@ class ShellAgent:
                         # 本行以注释结尾，但行内的 << 仍开启了正文
                         i = consume_heredoc_bodies(i)
                 continue
+            if tpl.startswith("$((", i):
+                # 算术展开内部是表达式，整体原样跳过：既不替换占位符
+                # （shell 会把那里的 $prompt 当普通变量展开，送不到
+                # agent），也避免位移运算符 << 被误登记成 heredoc
+                j = _arithmetic_end(tpl, i)
+                out.append(tpl[i:j])
+                i = j
+                continue
+            if tpl.startswith("$(", i):
+                # 命令替换开启独立解析上下文（见方法说明）
+                out.append(tpl[i:i + 2])
+                subst_stack.append("bare")
+                state = "bare"
+                i += 2
+                continue
+            if ch == ")" and subst_stack:
+                # 与 $( 配对的右括号：恢复进入替换前的外层引号状态
+                state = subst_stack.pop()
+                out.append(ch)
+                i += 1
+                continue
             if tpl.startswith("<<<", i):
                 # here-string（<<<）没有正文，整段按普通文本处理
                 out.append("<<<")
@@ -334,8 +399,8 @@ class ShellAgent:
             if ch == "<" and tpl.startswith("<<", i):
                 # heredoc 重定向：登记终止符，正文里的占位符一律不替换
                 # （见 consume_heredoc_bodies）。不做完整 shell 语法分析：
-                # 裸上下文里的 << 一律按重定向处理（含 $(( )) 位移这类
-                # 极端场景），无法兑现的占位符由配置校验拒绝，而不是替换
+                # 裸上下文里的 << 一律按重定向处理，无法兑现的占位符由
+                # 配置校验拒绝，而不是替换
                 j = i + 2
                 strip_tabs = False
                 if j < n and tpl[j] == "-":

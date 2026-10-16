@@ -164,6 +164,76 @@ def test_render_command_after_heredoc_still_substitutes(tmp_path):
     assert r.stdout == prompt
 
 
+def test_render_command_command_substitution_quotes(tmp_path):
+    """$(...) 内部的引号自成一体，不能影响外层引号状态。
+
+    回归：解析器用单一引号状态机，把 "$(printf %s "$prompt")" 里的内层 "
+    误判为闭合外层双引号，$prompt 按裸上下文插入 shlex.quote 引号——而
+    模板自己的双引号还在，单引号变成字面值，提示词里的 $(cmd)/`cmd`
+    反而被 shell 执行（注入）；$prompt_file 路径含空格时也会被拆碎。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"a'b $(touch {marker}) `touch {marker}.bt` \"d\" $HOME \\x"
+    for tpl in ('printf %s "$(printf %s "$prompt")"',
+                'printf %s "$( (printf %s "$prompt") )"'):
+        assert command_receives_prompt(tpl) is True
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        r = subprocess.run(agent.render_command(prompt), shell=True,
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout == prompt
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 外层未加引号时命令替换结果按空白拆词是 shell 语义，但绝不能执行内容
+    tpl = 'printf %s $(printf %s "$prompt")'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(agent.render_command(prompt), shell=True,
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.replace(" ", "") == prompt.replace(" ", "")
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+    # $prompt_file：内层引号里的路径必须原样送达（工作区路径含空格时
+    # 不会被拆碎），双引号/单引号语境都要安全
+    workspace = tmp_path / "some dir"
+    workspace.mkdir()
+    for tpl in ('printf %s "$(cat "$prompt_file")"',
+                "printf %s \"$(cat '$prompt_file')\""):
+        assert command_receives_prompt(tpl) is True
+        agent = ShellAgent(tpl, workspace, timeout=5)
+        r = subprocess.run(agent.render_command(prompt), shell=True,
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout == prompt
+
+
+def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
+    """$((...)) 算术展开里的 << 不能按 heredoc 重定向登记。
+
+    回归：$((1 << 2)) 的 << 被当成 heredoc 起始，模板后续换行处的
+    $prompt 会连同「正文」一起被跳过，command_receives_prompt 误判为
+    「提示词送不到」而拒绝合法模板。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    tpl = 'echo $((1 << 2))\nprintf %s "$prompt"'
+    assert command_receives_prompt(tpl) is True
+
+    if not _posix_shell_available():
+        return
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(agent.render_command("hi `id`"), shell=True,
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "4\nhi `id`"
+
+
 def _run_fake_words_scenario(tmp_path, agent_stdout, *, regen_words, reuse=True):
     """用假 agent（把收到的提示词记到日志、stdout 固定输出指定词表）跑一轮
     runner.run，返回 (sink, prompts, workspace, SystemExit 或 None)。"""
