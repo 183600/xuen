@@ -35,6 +35,31 @@ def _quote(prompt: str) -> str:
     return shlex.quote(prompt)
 
 
+# 占位符边界：与 config._validate 的正则一致，A-Za-z0-9_ 是「单词字符」
+_WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
+
+
+def _escape_in_single_quotes(value: str) -> str:
+    """把值安全地嵌进已打开的单引号内部（模板形如 '前缀 $prompt'）。
+
+    单引号内无法用反斜杠转义单引号，只能用「闭合-转义-重开」写法：
+    值中的 ' 输出为 '\\''，shell 解析后仍是原值。shlex.quote 生成的是
+    带引号的完整 token，直接塞进已有引号会被当成字面值。
+    """
+    return value.replace("'", "'\\''")
+
+
+def _escape_in_double_quotes(value: str) -> str:
+    """把值安全地嵌进已打开的双引号内部（模板形如 "前缀 $prompt"）。
+
+    双引号内 $ ` " \\ 仍有特殊含义：不转义的话，提示词里的 $(cmd)、`
+    cmd`、$VAR 会被 shell 展开执行，引号会提前闭合导致参数被拆碎。
+    反斜杠必须最先转义，避免把后续转义产生的反斜杠二次转义。
+    """
+    return (value.replace("\\", "\\\\").replace('"', '\\"')
+                 .replace("$", "\\$").replace("`", "\\`"))
+
+
 class ShellAgent:
     """通过 shell 命令调用外部 agent（opencode / claude / aider …）。
 
@@ -86,12 +111,144 @@ class ShellAgent:
 
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
     # 占位符为前缀的普通变量，不能被子串替换误伤；x$prompt 这类前面紧贴
-    # 单词字符的也只是普通 shell 变量拼接，同样不能误替换
+    # 单词字符的也只是普通 shell 变量拼接，同样不能误替换。
+    # Windows 分支仍用正则哨兵替换，边界类与之配套
     _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_])"
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
 
     def render_command(self, prompt: str) -> str:
-        tpl = self.template
+        self._prompt_file = None
+        if os.name == "nt":
+            return self._render_windows(self.template, prompt)
+        return self._render_posix(self.template, prompt)
+
+    def _placeholder_at(self, tpl: str, i: int) -> Optional[str]:
+        """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。"""
+        if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
+            return None
+        for ph in ("$prompt_file", "$prompt"):
+            j = i + len(ph)
+            if tpl.startswith(ph, i) and (
+                    j >= len(tpl) or not _WORD_CHAR.match(tpl[j])):
+                return ph
+        return None
+
+    def _write_prompt_file(self, prompt: str) -> Path:
+        # mkstemp 原子创建唯一文件名：同进程多实例或多进程并发共用同一
+        # workspace 时，固定名（如 .prompt.md）会互相覆盖提示词，
+        # agent 读到的是另一实例的内容（state/words 均已做并发防护，
+        # 提示词文件同理）
+        fd, fname = tempfile.mkstemp(
+            prefix=".prompt.", suffix=".md", dir=self.workspace)
+        pfile = Path(fname)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(prompt)
+        except Exception:
+            # 写入失败时关掉 fd 并清掉半成品文件，避免工作区堆积
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                pfile.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
+        self._prompt_file = pfile
+        return pfile
+
+    def _render_posix(self, tpl: str, prompt: str) -> str:
+        """按占位符所在的 shell 引号语境分别转义后替换。
+
+        不能把 shlex.quote 生成的「带引号完整 token」直接塞进模板：模板里
+        占位符可能位于自己打开的引号内部（如 "方向: $prompt"），插入的引号
+        会被当成字面值，参数里多出引号；双引号内还不拦住 $ ` 展开，提示词
+        中的 $(cmd)/`cmd` 会被 shell 执行（注入）。这里逐字符扫描模板跟踪
+        引号状态，裸上下文用 shlex.quote，单引号内用 '\\'' 闭合重开写法，
+        双引号内反斜杠转义 $ ` " \\。"""
+        def file_value() -> str:
+            if self._prompt_file is None:
+                return str(self._write_prompt_file(prompt).resolve())
+            return str(self._prompt_file.resolve())
+
+        out: List[str] = []
+        state = "bare"  # bare / single / double
+        i = 0
+        n = len(tpl)
+        while i < n:
+            ch = tpl[i]
+            if state == "single":
+                if ch == "'":
+                    state = "bare"
+                    out.append(ch)
+                    i += 1
+                    continue
+                ph = self._placeholder_at(tpl, i)
+                if ph == "$prompt":
+                    out.append(_escape_in_single_quotes(prompt))
+                    i += len(ph)
+                    continue
+                if ph == "$prompt_file":
+                    out.append(_escape_in_single_quotes(file_value()))
+                    i += len(ph)
+                    continue
+                out.append(ch)
+                i += 1
+                continue
+            if state == "double":
+                # 双引号内反斜杠仅对 $ ` " \ 换行有转义作用，遇到这类组合
+                # 原样成对复制，避免把 \x 的转义状态算错导致引号误判
+                if ch == "\\" and i + 1 < n and tpl[i + 1] in ("\\", '"', "$", "`", "\n"):
+                    out.append(tpl[i:i + 2])
+                    i += 2
+                    continue
+                if ch == '"':
+                    state = "bare"
+                    out.append(ch)
+                    i += 1
+                    continue
+                ph = self._placeholder_at(tpl, i)
+                if ph == "$prompt":
+                    out.append(_escape_in_double_quotes(prompt))
+                    i += len(ph)
+                    continue
+                if ph == "$prompt_file":
+                    out.append(_escape_in_double_quotes(file_value()))
+                    i += len(ph)
+                    continue
+                out.append(ch)
+                i += 1
+                continue
+            # 裸上下文
+            if ch == "\\" and i + 1 < n:
+                out.append(tpl[i:i + 2])
+                i += 2
+                continue
+            if ch == "'":
+                state = "single"
+                out.append(ch)
+                i += 1
+                continue
+            if ch == '"':
+                state = "double"
+                out.append(ch)
+                i += 1
+                continue
+            ph = self._placeholder_at(tpl, i)
+            if ph == "$prompt":
+                out.append(_quote(prompt))
+                i += len(ph)
+                continue
+            if ph == "$prompt_file":
+                out.append(_quote(file_value()))
+                i += len(ph)
+                continue
+            out.append(ch)
+            i += 1
+        return "".join(out)
+
+    def _render_windows(self, tpl: str, prompt: str) -> str:
         f_sentinel = "\0XUEN_PROMPT_FILE\0"
         p_sentinel = "\0XUEN_PROMPT\0"
         # 先把两处占位符统一换成哨兵，最后才一次性替换成实际内容。
@@ -108,30 +265,8 @@ class ShellAgent:
         tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt"
                      + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
 
-        self._prompt_file = None
         if f_sentinel in tpl:
-            # mkstemp 原子创建唯一文件名：同进程多实例或多进程并发共用同一
-            # workspace 时，固定名（如 .prompt.md）会互相覆盖提示词，
-            # agent 读到的是另一实例的内容（state/words 均已做并发防护，
-            # 提示词文件同理）
-            fd, fname = tempfile.mkstemp(
-                prefix=".prompt.", suffix=".md", dir=self.workspace)
-            pfile = Path(fname)
-            try:
-                with os.fdopen(fd, "w", encoding="utf-8") as f:
-                    f.write(prompt)
-            except Exception:
-                # 写入失败时关掉 fd 并清掉半成品文件，避免工作区堆积
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-                try:
-                    pfile.unlink(missing_ok=True)
-                except OSError:
-                    pass
-                raise
-            self._prompt_file = pfile
+            pfile = self._write_prompt_file(prompt)
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
             tpl = tpl.replace(f_sentinel, _quote(str(pfile.resolve())))
         return tpl.replace(p_sentinel, _quote(prompt))
