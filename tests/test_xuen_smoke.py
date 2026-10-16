@@ -76,6 +76,47 @@ def test_shell_prompt_heredoc_snippet_is_executable(tmp_path):
         == "这里是新的产物区内容……"
 
 
+def test_shell_prompt_snippet_quotes_workspace_path(tmp_path):
+    """工作区路径含 shell 元字符时，提示词中的写入片段必须仍可执行。
+
+    回归：片段里的 helper 路径原先只用双引号包裹，而 POSIX shell 在双引号
+    内仍会展开 $ 与反引号（工作区名为「ws $x `id`」时，外部 agent 按提示词
+    执行会拿到错误路径、区块永远写不进去）。修复：路径经 _shell_path 按
+    当前平台 shell 的规则转义后再拼进提示词。
+    """
+    import subprocess
+    import sys
+    from xuen.config import Config
+    from xuen.runner import _shell_prompt
+
+    if not _posix_shell_available():
+        return
+    ws = tmp_path / "ws $x `id` 'q'"
+    ws.mkdir()
+    helper = ws / "write_section.py"
+    helper.write_text(
+        "import pathlib, sys\n"
+        "pathlib.Path(sys.argv[1] + '.out').write_bytes(sys.stdin.buffer.read())\n",
+        encoding="utf-8",
+    )
+    prompt = _shell_prompt(Config(), "任务", 1, [], ws / "research.md",
+                           helper, [])
+    lines = prompt.splitlines()
+    start = next(i for i, l in enumerate(lines) if l.startswith("cat <<'"))
+    end = max(i for i, l in enumerate(lines) if l.startswith("XUEN_EOF"))
+    snippet = "\n".join(lines[start:end + 1])
+    # 测试环境不保证存在 `python` 命令，替换为当前解释器
+    snippet = snippet.replace("python ", f'"{sys.executable}" ')
+    r = subprocess.run(["bash", "-c", snippet], cwd=ws,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert r.stderr == "", r.stderr
+    assert (ws / "idea.out").read_text(encoding="utf-8").strip() \
+        == "这里是新的想法区内容……"
+    assert (ws / "artifact.out").read_text(encoding="utf-8").strip() \
+        == "这里是新的产物区内容……"
+
+
 def test_render_command_ignores_shell_comments(tmp_path):
     """命令模板里 shell 注释中的不成对引号不能污染后续占位符的转义。
 
