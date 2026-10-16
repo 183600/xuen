@@ -103,3 +103,102 @@ def test_command_receives_prompt_ignores_comments():
     # 注释里的 $prompt 不会送达 agent：必须判负，否则会放行一个
     # 「提示词被静默丢弃」的模板
     assert command_receives_prompt('opencode run # $prompt') is False
+
+
+def _run_fake_words_scenario(tmp_path, agent_stdout, *, regen_words, reuse=True):
+    """用假 agent（把收到的提示词记到日志、stdout 固定输出指定词表）跑一轮
+    runner.run，返回 (sink, prompts, workspace, SystemExit 或 None)。"""
+    import sys
+    from xuen.config import AgentConfig, Config, LoopConfig, WordsConfig
+    from xuen.runner import run
+    from xuen.sink import Sink
+
+    class _RecordingSink(Sink):
+        def __init__(self):
+            self.messages = []
+
+        def info(self, text): self.messages.append(("info", text))
+        def ok(self, text): self.messages.append(("ok", text))
+        def warn(self, text): self.messages.append(("warn", text))
+        def err(self, text): self.messages.append(("err", text))
+        def round_header(self, index, label): self.messages.append(("round", label))
+        def agent_output(self, line): pass
+        def agent_stderr(self, line): pass
+        def section(self, name, content): pass
+
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    logs = tmp_path / "agent_log.txt"
+    script = tmp_path / "fake_agent.py"
+    out_text = agent_stdout + "\n"
+    script.write_text(
+        "import pathlib, sys\n"
+        f"log = pathlib.Path({str(logs)!r})\n"
+        "prev = log.read_text(encoding='utf-8') if log.exists() else ''\n"
+        "log.write_text(prev + '\\n===PROMPT===\\n' + sys.argv[1], encoding='utf-8')\n"
+        f"sys.stdout.write({out_text!r})\n",
+        encoding="utf-8",
+    )
+    (workspace / "words.txt").write_text(
+        "\n".join(f"DISKWORD{i}" for i in range(1, 6)) + "\n", encoding="utf-8")
+
+    cfg = Config(
+        workspace=str(workspace),
+        agent=AgentConfig(command=f'"{sys.executable}" "{script}" "$prompt"'),
+        words=WordsConfig(count=10, batch=10, pick=1, reuse=reuse),
+        loop=LoopConfig(iterations=1),
+    )
+    sink = _RecordingSink()
+    try:
+        run(cfg, "测试任务", regen_words=regen_words, sink=sink)
+        exc = None
+    except SystemExit as e:
+        exc = e
+    prompts = logs.read_text(encoding="utf-8").split("===PROMPT===")[1:]
+    return sink, prompts, workspace, exc
+
+
+def _round_prompts(prompts):
+    return [p for p in prompts if "本轮随机灵感词" in p]
+
+
+def test_regen_words_partial_generation_uses_fresh_words(tmp_path):
+    """--regen-words 明确要求重建词库：生成未完成时不能悄悄绕回旧词库。
+
+    回归：生成结果比磁盘旧词库少时走了「保留并复用旧词库」分支，与
+    --regen-words（忽略已有词库并重新生成）的语义相悖——用户显式要求
+    重建，却拿到正是自己想替换掉的旧词，且新生成的词被整批丢弃。
+    """
+    sink, prompts, workspace, exc = _run_fake_words_scenario(
+        tmp_path, "FRESHWORD1\nFRESHWORD2", regen_words=True)
+    assert exc is None
+    rounds = _round_prompts(prompts)
+    assert rounds, "未观察到研究循环轮次的提示词"
+    assert "FRESHWORD" in rounds[-1]
+    assert "DISKWORD" not in rounds[-1]
+    assert any("本次临时使用" in m for _, m in sink.messages)
+    # 不能再拿残缺新词表覆盖磁盘上更完整的旧词库
+    assert (workspace / "words.txt").read_text(encoding="utf-8") \
+        .startswith("DISKWORD")
+
+
+def test_regen_words_failed_generation_does_not_reuse_old_words(tmp_path):
+    """--regen-words 下生成失败也不能回退复用旧词库，应明确失败。"""
+    sink, prompts, workspace, exc = _run_fake_words_scenario(
+        tmp_path, "", regen_words=True)
+    assert exc is not None and "词库为空" in str(exc)
+    assert not _round_prompts(prompts), "生成失败后不应进入研究循环"
+    assert any("忽略磁盘上的旧词库" in m for _, m in sink.messages)
+    assert (workspace / "words.txt").read_text(encoding="utf-8") \
+        .startswith("DISKWORD")
+
+
+def test_reuse_true_still_skips_generation(tmp_path):
+    """未指定 --regen-words 时复用旧词库的常规路径不受影响。"""
+    sink, prompts, workspace, exc = _run_fake_words_scenario(
+        tmp_path, "FRESHWORD1\nFRESHWORD2", regen_words=False)
+    assert exc is None
+    rounds = _round_prompts(prompts)
+    assert "DISKWORD" in rounds[-1]
+    assert "FRESHWORD" not in rounds[-1]
+    assert any("复用已有词库" in m for _, m in sink.messages)

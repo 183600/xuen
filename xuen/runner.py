@@ -96,24 +96,31 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             # reuse 会把完整旧词库永久换成残缺词表（词汇静默丢失）
             if word_list and len(word_list) < cfg.words.count \
                     and disk_words and len(word_list) < len(disk_words):
-                if cfg.words.reuse:
+                if cfg.words.reuse and not regen_words:
                     sink.warn(f"词库生成未完成（{len(word_list)} 个），"
                               f"保留并复用磁盘上更完整的旧词库"
                               f"（{len(disk_words)} 个词）")
                     word_list = disk_words
                 else:
-                    # words.reuse=false 是显式禁用复用，不能绕回旧词库；
-                    # 但也不能用残缺词表覆盖它，本次循环临时使用生成结果
+                    # words.reuse=false 与 --regen-words 都是显式拒绝复用
+                    # 旧词库，不能绕回旧词库；但也不能用残缺词表覆盖它，
+                    # 本次循环临时使用生成结果
                     sink.warn(f"词库生成未完成（{len(word_list)}/{cfg.words.count}），"
                               "本次临时使用，不覆盖磁盘上更完整的旧词库")
             elif word_list:
                 words.save_words(words_path, word_list)
                 sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
-            elif disk_words and cfg.words.reuse:
+            elif disk_words and not regen_words and cfg.words.reuse:
                 # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止。
                 # words.reuse=false 是显式禁用复用，不能绕回旧词库。
                 word_list = disk_words
                 sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
+            elif disk_words and regen_words:
+                # --regen-words 明确要求忽略已有词库：生成失败时不能悄悄
+                # 绕回旧词库（用户可能正是因为旧词库不可用才要求重建），
+                # 保持空词库，由下面的「词库为空」检查给出明确失败
+                sink.warn(f"词库生成失败；--regen-words 已按请求忽略磁盘上的"
+                          f"旧词库（{len(disk_words)} 个词）")
         except (OSError, ValueError) as e:
             # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte
             #（如 --task-file 读入二进制文件）；与启动失败同等对待
