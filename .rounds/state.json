@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "best": {
+    "snap": "snap/baseline-20261016-054952",
+    "sha": "2dbc67d9b6a389a4a04699a03bbd04657e0ef92a",
+    "tests": "pass",
+    "at": "2026-10-16T05:49:58Z",
+    "by": "baseline"
+  },
+  "promote_score": 7,
+  "unsynced_tags": [],
+  "notes": [],
+  "rounds": [
+    {
+      "id": "baseline-20261016-054952",
+      "snap": "snap/baseline-20261016-054952",
+      "sha": "2dbc67d9b6a389a4a04699a03bbd04657e0ef92a",
+      "ts": "2026-10-16T05:49:58Z",
+      "iter": 0,
+      "changed": 0,
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "基线化：迁移到轮次守卫时的初始最佳"
+      },
+      "verdict": "promoted",
+      "by": "baseline"
+    }
+  ]
+}
