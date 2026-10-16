@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-120243-r5",
-    "sha": "d85388b872d6bee892bf3355e517527550198eff",
+    "snap": "snap/20261016-122041-r6",
+    "sha": "00ff8a7a601a8f697317af1449aef43a1847b14a",
     "tests": "pass",
-    "at": "2026-10-16T12:04:46Z",
+    "at": "2026-10-16T12:22:35Z",
     "by": "ai",
-    "iter": "5"
+    "iter": "6"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -329,6 +329,31 @@
         "verdict": "accept",
         "reason": "该改动修复了一个真实且可复现的健壮性缺陷——旧代码把提示词按双引号规则塞进 `${x:-word}` 等参数展开词语境，但提示词里的 `'` 会让 bash 解析失败（unexpected EOF）、`}` 会在 bash 与 dash 下提前结束展开导致静默丢字符，而一套转义无法同时适配两种 shell；改动改为整段跳过并由配置校验拒绝，同时新增了覆盖 bash/dash 的回归测试、仅把已失效",
         "at": "2026-10-16T12:04:46Z"
+      }
+    },
+    {
+      "id": "20261016-122041-r6",
+      "snap": "snap/20261016-122041-r6",
+      "sha": "00ff8a7a601a8f697317af1449aef43a1847b14a",
+      "ts": "2026-10-16T12:22:35Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "0858a0b8e89ced5263b673c2f3515ba5cb2e55fd",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "真实修复了 `${...}/$[...]/$((...))` 内引号隐藏结束符导致扫描器误判、进而把提示词内容注入 shell 执行的漏洞，测试为纯新增回归用例（含正面对照，未删改弱化），自动验证通过；仅对算术语境里的参数展开/反斜杠略显保守、可能拒绝少数旧模板，属可接受小瑕疵。",
+        "at": "2026-10-16T12:22:35Z"
       }
     }
   ],
