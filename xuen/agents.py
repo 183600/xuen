@@ -6,6 +6,7 @@ workspace/write_section.py 直接写文件来"覆盖想法区 / 产物区"。
 """
 from __future__ import annotations
 
+import errno
 import os
 import re
 import shlex
@@ -19,6 +20,16 @@ from .procs import kill_process_tree, popen_kwargs
 from .ui import ui
 
 OutputCallback = Callable[[str], None]
+
+
+class PromptTooLongError(ValueError):
+    """提示词作为命令行参数超出系统长度上限（E2BIG）。
+
+    继承 ValueError：调用方原有的 (OSError, ValueError) 失败处理仍适用。
+    $prompt 模板把整段提示词塞进 sh -c 的单个参数（Linux 单参数上限约
+    128KB），提示词会随想法区/产物区内容逐轮增长，最终必然触达上限；
+    $prompt_file 模板只传文件路径，不受影响。
+    """
 
 
 def _default_on_output(line: str) -> None:
@@ -796,10 +807,23 @@ class ShellAgent:
                 text=True, encoding="utf-8", errors="replace",
                 **popen_kwargs(),
             )
-        except Exception:
+        except Exception as e:
             # 启动失败（如提示词含 NUL 字节）时提示词文件已无消费者，
             # 必须清理，否则每次启动失败都在工作区留一个 .prompt.*.md
             self._cleanup_prompt_file()
+            if isinstance(e, OSError) and e.errno == errno.E2BIG:
+                # 命令行参数过长（提示词太大）：把裸 [Errno 7] 换成可操作
+                # 的错误并附上解法（改用 $prompt_file，只传文件路径）。
+                # 区块内容只增不减，同模板重试必然同样失败
+                raise PromptTooLongError(
+                    "外部 agent 调用命令过长：提示词经 $prompt 作为命令行"
+                    "参数传递，超出了系统对单个参数的长度上限（Linux 约 "
+                    "128KB），且提示词会随想法区/产物区内容增长而变长。"
+                    "请在 agent.command 中改用 $prompt_file（提示词写入"
+                    "工作区文件、命令只传路径，例如 "
+                    "'opencode run \"$prompt_file\"'）后重跑，"
+                    "研究状态会从 research.md 继续。"
+                ) from e
             raise
         # _proc/_killed 归属 _kill_lock 保护：赋值与检查必须在锁内完成，
         # 否则与 kill() 的竞态依赖 GIL 语义，与锁不变式不符

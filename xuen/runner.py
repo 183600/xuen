@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import state, words
-from .agents import ShellAgent
+from .agents import PromptTooLongError, ShellAgent
 from .config import Config
 from .sink import SECTION_ARTIFACT, SECTION_IDEA, ConsoleSink, Sink
 
@@ -157,6 +157,12 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             try:
                 agent.run(_shell_prompt(cfg, task, i, inspiration,
                                         state_path, helper, user_notes))
+            except PromptTooLongError as e:
+                # 提示词随区块内容只增不减，同模板重试必然同样失败：
+                # 不再空转 3 轮，立即中止并给出可操作的建议
+                sink.err(str(e))
+                sink.err("重试不会成功，已中止循环")
+                raise SystemExit(1)
             except (OSError, ValueError) as e:
                 # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte，
                 # 属「启动失败」，计入轮次失败而非让 traceback 崩溃整个循环

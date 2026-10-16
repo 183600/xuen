@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import importlib
 
+from xuen.sink import Sink
+
 
 def _import(name):
     return importlib.import_module(name)
@@ -603,26 +605,28 @@ def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     assert r.stdout == "4\nhi `id`"
 
 
+class _RecordingSink(Sink):
+    """记录 runner 上报消息的测试用 sink。"""
+
+    def __init__(self):
+        self.messages = []
+
+    def info(self, text): self.messages.append(("info", text))
+    def ok(self, text): self.messages.append(("ok", text))
+    def warn(self, text): self.messages.append(("warn", text))
+    def err(self, text): self.messages.append(("err", text))
+    def round_header(self, index, label): self.messages.append(("round", label))
+    def agent_output(self, line): pass
+    def agent_stderr(self, line): pass
+    def section(self, name, content): pass
+
+
 def _run_fake_words_scenario(tmp_path, agent_stdout, *, regen_words, reuse=True):
     """用假 agent（把收到的提示词记到日志、stdout 固定输出指定词表）跑一轮
     runner.run，返回 (sink, prompts, workspace, SystemExit 或 None)。"""
     import sys
     from xuen.config import AgentConfig, Config, LoopConfig, WordsConfig
     from xuen.runner import run
-    from xuen.sink import Sink
-
-    class _RecordingSink(Sink):
-        def __init__(self):
-            self.messages = []
-
-        def info(self, text): self.messages.append(("info", text))
-        def ok(self, text): self.messages.append(("ok", text))
-        def warn(self, text): self.messages.append(("warn", text))
-        def err(self, text): self.messages.append(("err", text))
-        def round_header(self, index, label): self.messages.append(("round", label))
-        def agent_output(self, line): pass
-        def agent_stderr(self, line): pass
-        def section(self, name, content): pass
 
     workspace = tmp_path / "ws"
     workspace.mkdir()
@@ -700,3 +704,82 @@ def test_reuse_true_still_skips_generation(tmp_path):
     assert "DISKWORD" in rounds[-1]
     assert "FRESHWORD" not in rounds[-1]
     assert any("复用已有词库" in m for _, m in sink.messages)
+
+
+def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
+    """E2BIG（命令行参数过长）不能以裸 [Errno 7] 抛出。
+
+    回归：$prompt 模板把整段提示词塞进 sh -c 的单个参数，超过系统上限
+    （Linux 约 128KB）时 Popen 抛 OSError(E2BIG)，运行期只看到
+    「[Errno 7] Argument list too long」，看不出是提示词太长、更不知道
+    该改用 $prompt_file。必须换成带解法建议的 PromptTooLongError；渲染时
+    已落盘的提示词文件（混合 $prompt_file 模板）也要在失败路径清理。
+    """
+    import errno
+    from xuen import agents
+    from xuen.agents import PromptTooLongError, ShellAgent
+
+    def boom(*args, **kwargs):
+        raise OSError(errno.E2BIG, "Argument list too long: '/bin/sh'")
+
+    monkeypatch.setattr(agents.subprocess, "Popen", boom)
+    agent = ShellAgent('cat "$prompt_file" >/dev/null; printf %s "$prompt"',
+                       tmp_path, timeout=5)
+    try:
+        agent.run("x")
+    except PromptTooLongError as e:
+        assert "$prompt_file" in str(e), str(e)
+    else:
+        raise AssertionError("E2BIG 应转换为 PromptTooLongError")
+    assert [p.name for p in tmp_path.iterdir()] == []
+
+
+def test_prompt_too_long_detected_on_real_ebig(tmp_path):
+    """真实超过 Linux 单参数上限（MAX_ARG_STRLEN）时必须被识别。"""
+    import sys
+    from xuen.agents import PromptTooLongError, ShellAgent
+
+    if not sys.platform.startswith("linux") or not _posix_shell_available():
+        return
+    agent = ShellAgent('printf %s "$prompt"', tmp_path, timeout=5)
+    try:
+        agent.run("x" * 300_000)
+    except PromptTooLongError as e:
+        assert "$prompt_file" in str(e), str(e)
+    else:
+        raise AssertionError("超过 Linux 单参数上限应触发 PromptTooLongError")
+
+
+def test_runner_aborts_immediately_when_prompt_too_long(tmp_path, monkeypatch):
+    """提示词过长是「模板/内容」问题，重试必然失败：必须立即中止。
+
+    回归：E2BIG 被当作普通轮次失败，连续空转 3 轮后才以退出码 1 中止，
+    错误信息也看不出根因；提示词不会自行缩短，重试毫无意义。
+    """
+    import errno
+    from xuen import agents
+    from xuen.config import AgentConfig, Config, LoopConfig, WordsConfig
+    from xuen.runner import run
+
+    calls = []
+
+    def boom(*args, **kwargs):
+        calls.append(args)
+        raise OSError(errno.E2BIG, "Argument list too long: '/bin/sh'")
+
+    monkeypatch.setattr(agents.subprocess, "Popen", boom)
+    cfg = Config(
+        workspace=str(tmp_path / "ws"),
+        agent=AgentConfig(command='printf %s "$prompt"'),
+        words=WordsConfig(pick=0),
+        loop=LoopConfig(iterations=5),
+    )
+    sink = _RecordingSink()
+    try:
+        run(cfg, "测试任务", sink=sink)
+    except SystemExit as e:
+        assert e.code == 1
+    else:
+        raise AssertionError("提示词过长应中止循环")
+    assert len(calls) == 1, "重试必然失败，不应空转多轮"
+    assert any("$prompt_file" in m for _, m in sink.messages), sink.messages

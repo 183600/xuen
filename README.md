@@ -74,6 +74,9 @@ python main.py "任务"
 **④ 外部 agent 调用**（`xuen/agents.py`）
 - `agent.command` 命令模板支持两种占位符：`$prompt`（整段提示词 shell 转义后替换）、
   `$prompt_file`（提示词写入工作区内唯一临时文件后替换为路径，跨平台推荐）；
+- `$prompt` 把整段提示词作为命令行参数传递，受系统单参数长度上限约束
+  （Linux 约 128KB）；提示词随想法区/产物区内容逐轮增长，长跑请使用
+  `$prompt_file`——超限时会明确提示并中止循环，而不是抛出裸 `[Errno 7]`；
 - `agent.timeout` 超时后强制终止整个进程树；TUI 中 `q` / `Ctrl+C` 也会先终止正在运行的 agent。
 
 **⑤ 词库生成**（`xuen/words.py`）
