@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-170850-r4",
-    "sha": "ebe6d55e8b7a008aa4b1d20ee8e8de52455477ab",
+    "snap": "snap/20261016-172346-r5",
+    "sha": "20ce321066cd669dc2bac8bc06b25af89c0fa6ff",
     "tests": "pass",
-    "at": "2026-10-16T17:12:46Z",
+    "at": "2026-10-16T17:24:58Z",
     "by": "ai",
-    "iter": "4"
+    "iter": "5"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -604,6 +604,31 @@
         "verdict": "accept",
         "reason": "改动新增了续行拼接操作符/展开的严格安全校验并配套真实回归测试，未见删除或弱化现有测试，编译与测试均通过。",
         "at": "2026-10-16T17:12:46Z"
+      }
+    },
+    {
+      "id": "20261016-172346-r5",
+      "snap": "snap/20261016-172346-r5",
+      "sha": "20ce321066cd669dc2bac8bc06b25af89c0fa6ff",
+      "ts": "2026-10-16T17:24:58Z",
+      "iter": "5",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "3e38c27fd8acfc6b9a145b17d2641c31a0c2b5eb",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了词首判定未排除被转义边界字符导致的真实命令注入 bug，并新增含正反对照的回归测试，未删改或弱化任何测试，全量 45 项测试通过。",
+        "at": "2026-10-16T17:24:58Z"
       }
     }
   ],
