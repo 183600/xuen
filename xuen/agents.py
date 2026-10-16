@@ -38,6 +38,10 @@ def _quote(prompt: str) -> str:
 # 占位符边界：与 config._validate 的正则一致，A-Za-z0-9_ 是「单词字符」
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
+# 占位符探测令牌（供 command_receives_prompt 的 dry_run 渲染使用）：
+# 全为单词字符，途经任意引号语境/转义后仍原样保留在渲染结果里
+_PLACEHOLDER_PROBE = "XUENPROMPTPROBE7C4F1D"
+
 
 def _escape_in_single_quotes(value: str) -> str:
     """把值安全地嵌进已打开的单引号内部（模板形如 '前缀 $prompt'）。
@@ -116,11 +120,11 @@ class ShellAgent:
     _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_])"
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
 
-    def render_command(self, prompt: str) -> str:
+    def render_command(self, prompt: str, *, dry_run: bool = False) -> str:
         self._prompt_file = None
         if os.name == "nt":
-            return self._render_windows(self.template, prompt)
-        return self._render_posix(self.template, prompt)
+            return self._render_windows(self.template, prompt, dry_run)
+        return self._render_posix(self.template, prompt, dry_run)
 
     def _placeholder_at(self, tpl: str, i: int) -> Optional[str]:
         """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。"""
@@ -158,7 +162,7 @@ class ShellAgent:
         self._prompt_file = pfile
         return pfile
 
-    def _render_posix(self, tpl: str, prompt: str) -> str:
+    def _render_posix(self, tpl: str, prompt: str, dry_run: bool = False) -> str:
         """按占位符所在的 shell 引号语境分别转义后替换。
 
         不能把 shlex.quote 生成的「带引号完整 token」直接塞进模板：模板里
@@ -166,8 +170,13 @@ class ShellAgent:
         会被当成字面值，参数里多出引号；双引号内还不拦住 $ ` 展开，提示词
         中的 $(cmd)/`cmd` 会被 shell 执行（注入）。这里逐字符扫描模板跟踪
         引号状态，裸上下文用 shlex.quote，单引号内用 '\\'' 闭合重开写法，
-        双引号内反斜杠转义 $ ` " \\。"""
+        双引号内反斜杠转义 $ ` " \\。
+
+        dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
+        替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
+            if dry_run:
+                return f"/xuen-dry-run/{_PLACEHOLDER_PROBE}"
             if self._prompt_file is None:
                 return str(self._write_prompt_file(prompt).resolve())
             return str(self._prompt_file.resolve())
@@ -248,7 +257,7 @@ class ShellAgent:
             i += 1
         return "".join(out)
 
-    def _render_windows(self, tpl: str, prompt: str) -> str:
+    def _render_windows(self, tpl: str, prompt: str, dry_run: bool = False) -> str:
         f_sentinel = "\0XUEN_PROMPT_FILE\0"
         p_sentinel = "\0XUEN_PROMPT\0"
         # 先把两处占位符统一换成哨兵，最后才一次性替换成实际内容。
@@ -266,9 +275,14 @@ class ShellAgent:
                      + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
 
         if f_sentinel in tpl:
-            pfile = self._write_prompt_file(prompt)
+            if dry_run:
+                # 只探测占位符是否会被兑现：不落盘提示词文件
+                path = f"/xuen-dry-run/{_PLACEHOLDER_PROBE}"
+            else:
+                pfile = self._write_prompt_file(prompt)
+                path = str(pfile.resolve())
             # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
-            tpl = tpl.replace(f_sentinel, _quote(str(pfile.resolve())))
+            tpl = tpl.replace(f_sentinel, _quote(path))
         return tpl.replace(p_sentinel, _quote(prompt))
 
     def _cleanup_prompt_file(self) -> None:
@@ -438,3 +452,15 @@ class ShellAgent:
             self.on_stderr(f"外部 agent 异常退出（退出码 {proc.returncode}），"
                            "本轮可能未更新区块\n")
         return "".join(out)
+
+
+def command_receives_prompt(template: str) -> bool:
+    """命令模板是否会把提示词真正传给外部 agent。
+
+    直接复用 ShellAgent 的实际渲染逻辑（dry_run 不落盘 $prompt_file
+    文件）判断，而不是用正则近似匹配 "$prompt" 子串：被 shell 转义的
+    \\$prompt 虽然包含 "$prompt" 子串，渲染时并不会替换，提示词会被
+    静默丢弃——这正是配置校验要拦下的场景。"""
+    probe_agent = ShellAgent(template, Path("."), timeout=1.0)
+    return _PLACEHOLDER_PROBE in probe_agent.render_command(
+        _PLACEHOLDER_PROBE, dry_run=True)

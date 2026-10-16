@@ -187,13 +187,19 @@ def _validate(cfg: Config) -> None:
     if not math.isfinite(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
     cmd = cfg.agent.command
-    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-    if cmd.strip() and not re.search(
-            r"(?<![A-Za-z0-9_])\$prompt(?:_file)?(?![A-Za-z0-9_])", cmd):
-        raise ValueError(
-            "agent.command 必须包含 $prompt 或 $prompt_file 占位符，"
-            "否则提示词无法传给外部 agent"
-        )
+    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转。
+    # 判断必须复用 ShellAgent 的实际渲染逻辑，不能用正则近似匹配
+    # "$prompt" 子串：被 shell 转义的 \$prompt（或 "$prompt"）虽然包含
+    # 子串，渲染时并不会替换，恰好会漏掉本条校验要拦的场景。
+    # 延迟导入：避免 --help 等路径也背上 agents 的依赖
+    if cmd.strip():
+        from .agents import command_receives_prompt
+        if not command_receives_prompt(cmd):
+            raise ValueError(
+                "agent.command 必须包含会被实际替换的 $prompt 或 "
+                "$prompt_file 占位符（被转义的 \\$prompt 不会被替换），"
+                "否则提示词无法传给外部 agent"
+            )
     if (os.name == "nt" and re.search(
             r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", cmd)):
         # cmd.exe 无法安全接收内嵌多行参数：换行会把提示词后续内容拆成
