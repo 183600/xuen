@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-114100-r4",
-    "sha": "eae89c283b5e8ecdedce85ce35654f9b90bc136d",
+    "snap": "snap/20261016-120243-r5",
+    "sha": "d85388b872d6bee892bf3355e517527550198eff",
     "tests": "pass",
-    "at": "2026-10-16T11:43:15Z",
+    "at": "2026-10-16T12:04:46Z",
     "by": "ai",
-    "iter": "4"
+    "iter": "5"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -304,6 +304,31 @@
         "verdict": "accept",
         "reason": "候选把存在真实命令注入漏洞的 ANSI-C 引用（$'...'）模板改为整体拒绝，修好了 dash 下可被注入的安全 bug，且测试是随之合理修正而非删弱凑过。",
         "at": "2026-10-16T11:43:15Z"
+      }
+    },
+    {
+      "id": "20261016-120243-r5",
+      "snap": "snap/20261016-120243-r5",
+      "sha": "d85388b872d6bee892bf3355e517527550198eff",
+      "ts": "2026-10-16T12:04:46Z",
+      "iter": "5",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "7bb378c4c288061129afaa5f01086636cea40895",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "该改动修复了一个真实且可复现的健壮性缺陷——旧代码把提示词按双引号规则塞进 `${x:-word}` 等参数展开词语境，但提示词里的 `'` 会让 bash 解析失败（unexpected EOF）、`}` 会在 bash 与 dash 下提前结束展开导致静默丢字符，而一套转义无法同时适配两种 shell；改动改为整段跳过并由配置校验拒绝，同时新增了覆盖 bash/dash 的回归测试、仅把已失效",
+        "at": "2026-10-16T12:04:46Z"
       }
     }
   ],
