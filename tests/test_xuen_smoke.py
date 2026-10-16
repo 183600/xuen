@@ -212,6 +212,42 @@ def test_render_command_command_substitution_quotes(tmp_path):
         assert r.stdout == prompt
 
 
+def test_render_command_subshell_inside_command_substitution(tmp_path):
+    """$(...) 内部的子 shell 括号不能提前结束命令替换的解析语境。
+
+    回归：解析器遇到任意裸 ) 就弹出外层引号状态，子 shell 的 ) 会被误当成
+    命令替换的结束——之后的 $prompt 按错误语境插入：提示词被拆词（多词
+    粘连 / 参数碎裂），其中的分号等 shell 元字符还会被直接执行（注入）。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"a b; touch {marker}; printf %s y"
+    tpl = 'echo "$( (true); printf %s $prompt )"'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(agent.render_command(prompt), shell=True,
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt + "\n"
+    assert not marker.exists()
+
+    # 多层子 shell 之后的双引号语境也要正确：$prompt_file 路径含空格
+    # 时必须是「双引号内转义」，而不是被误判成裸语境套上 shlex.quote 引号
+    workspace = tmp_path / "some dir"
+    workspace.mkdir()
+    tpl2 = 'printf %s "$( ( (true) ); cat "$prompt_file" )"'
+    assert command_receives_prompt(tpl2) is True
+    agent2 = ShellAgent(tpl2, workspace, timeout=5)
+    r2 = subprocess.run(agent2.render_command(prompt), shell=True,
+                        capture_output=True, text=True, cwd=tmp_path)
+    assert r2.returncode == 0, r2.stderr
+    assert r2.stdout == prompt
+
+
 def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     """$((...)) 算术展开里的 << 不能按 heredoc 重定向登记。
 

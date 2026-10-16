@@ -202,6 +202,12 @@ class ShellAgent:
         里的 $(cmd) 反而被 shell 执行（注入）。算术展开内部是表达式，
         整体跳过不替换（shell 会把那里的 $prompt 当变量展开）。
 
+        命令替换内部还允许嵌套普通括号（子 shell、函数定义等），它们
+        与 $( 共用同一个 ) 字符：必须按括号深度配对，只有深度归零的 )
+        才是命令替换的结束。见到任意裸 ) 就恢复外层引号状态，会把
+        子 shell 的 ) 误当成命令替换结束——之后的 $prompt 按错误语境
+        插入（提示词被拆词、甚至分号等元字符被 shell 执行）。
+
         heredoc（<< / <<-）正文是数据而不是命令文本：正文里的引号只是普通
         字符，shlex.quote 的引号在正文中不起保护作用（不加引号的终止符下
         正文还会做参数/命令替换），因此在正文里替换 $prompt 会让提示词里的
@@ -281,8 +287,10 @@ class ShellAgent:
             return pos
 
         out: List[str] = []
-        # 进入 $( 时的外层引号状态栈：配对的 ) 处恢复
-        subst_stack: List[str] = []
+        # 进入 $( 时的解析上下文栈：[外层引号状态, 括号深度]。
+        # 深度用于区分「子 shell 的 )」与「$( 的 )」：前者只减深度，
+        # 后者（深度归零）才恢复外层引号状态
+        subst_stack: List[list] = []
         state = "bare"  # bare / single / double
         i = 0
         n = len(tpl)
@@ -321,7 +329,7 @@ class ShellAgent:
                         i = j
                         continue
                     out.append(tpl[i:i + 2])
-                    subst_stack.append("double")
+                    subst_stack.append([state, 1])
                     state = "bare"
                     i += 2
                     continue
@@ -381,13 +389,26 @@ class ShellAgent:
             if tpl.startswith("$(", i):
                 # 命令替换开启独立解析上下文（见方法说明）
                 out.append(tpl[i:i + 2])
-                subst_stack.append("bare")
+                subst_stack.append([state, 1])
                 state = "bare"
                 i += 2
                 continue
+            if ch == "(" and subst_stack:
+                # 命令替换内部的普通左括号（子 shell、函数定义等）：
+                # 记入当前替换的括号深度，避免其配对的 ) 被误当成
+                # 命令替换的结束
+                subst_stack[-1][1] += 1
+                out.append(ch)
+                i += 1
+                continue
             if ch == ")" and subst_stack:
-                # 与 $( 配对的右括号：恢复进入替换前的外层引号状态
-                state = subst_stack.pop()
+                # 只有深度归零的 ) 才与 $( 配对：恢复进入替换前的外层
+                # 引号状态；子 shell 的 ) 只减深度、不改变外层语境
+                frame = subst_stack[-1]
+                frame[1] -= 1
+                if frame[1] <= 0:
+                    subst_stack.pop()
+                    state = frame[0]
                 out.append(ch)
                 i += 1
                 continue

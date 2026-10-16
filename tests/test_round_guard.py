@@ -55,6 +55,13 @@ def run(cmd, cwd):
 
 
 def guard_run(repo: Path, *args, env=None):
+    # Python 的 .pyc 只按「源文件 mtime 秒 + 大小」判定是否过期：这些集成
+    # 测试在同一个合成仓库里连续多轮改写同大小文件（如 X = 'v1' -> 'v2'），
+    # 若都落在同一秒内，guard 自动验证里的 pytest 会命中上一轮留下的
+    # __pycache__、导入旧内容，使候选验证结果随机翻转（好候选被拒/坏候选
+    # 通过）。测试不应依赖宿主的字节码缓存时序，每次调用 guard 前清一次。
+    for d in repo.rglob("__pycache__"):
+        shutil.rmtree(d, ignore_errors=True)
     return subprocess.run(
         [sys.executable, str(repo / ".github" / "scripts" / "round_guard.py"), *args],
         cwd=str(repo), capture_output=True, text=True, env=env or git_env(), timeout=600,
