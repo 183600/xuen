@@ -249,13 +249,17 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
 3. 用本轮的具体产物【整体覆盖】产物区（方案 / 伪代码 / 推导 / 实验设计 / 实验结果等）。
 
 【覆盖区块的方式】（推荐：用 shell 执行，内容经 stdin 传入）：
-  cat <<'EOF' | python "{helper}" idea
-  这里是新的想法区内容……
-  EOF
+注意：下面的命令与结束标记都必须【顶格】（行首不能有空格）。
+结束标记 XUEN_EOF 必须独占一行，否则 shell 会把后续内容一并
+吞进区块内容里。
 
-  cat <<'EOF' | python "{helper}" artifact
-  这里是新的产物区内容……
-  EOF
+cat <<'XUEN_EOF' | python "{helper}" idea
+这里是新的想法区内容……
+XUEN_EOF
+
+cat <<'XUEN_EOF' | python "{helper}" artifact
+这里是新的产物区内容……
+XUEN_EOF
 
 也可以先写入临时文件再 `python "{helper}" idea < tmp.md`，
 或用你自己的文件编辑能力直接修改 {state_path}——

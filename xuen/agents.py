@@ -234,6 +234,21 @@ class ShellAgent:
                 out.append(tpl[i:i + 2])
                 i += 2
                 continue
+            if ch == "#" and (i == 0 or tpl[i - 1] in " \t\n;&|()<>"):
+                # shell 注释：词首的 # 之后直到行尾都原样保留、不参与解析。
+                # 注释里的不成对引号若被当成引号状态，会让后续占位符按
+                # 错误的引号语境转义（转义过弱 = 提示词可被 shell 解释执行，
+                # 转义过强 = 参数被拆错）；注释里的 $prompt 也不会真正送到
+                # agent，command_receives_prompt 不能把它当作有效占位符。
+                # 词中的 #（如 foo#bar、=$#）不是注释，照常按字符处理。
+                j = tpl.find("\n", i)
+                if j < 0:
+                    out.append(tpl[i:])
+                    i = n
+                else:
+                    out.append(tpl[i:j + 1])
+                    i = j + 1
+                continue
             if ch == "'":
                 state = "single"
                 out.append(ch)
