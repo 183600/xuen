@@ -669,6 +669,87 @@ def test_render_command_does_not_substitute_in_redirect_word(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_does_not_substitute_after_unescaped_dollar(tmp_path):
+    """紧跟在未转义 $ 后面的占位符不能替换（shell 把它当 $$ 的后半）。
+
+    回归（bash 与 dash 行为一致）：`$$prompt` 里 shell 把 $$ 当 PID、
+    `prompt` 只是字面量，`$prompt` 并不是真正的参数展开；但渲染器只检查
+    前一个字符不是单词字符，仍会替换：双引号语境拼成 `"$"+提示词`——
+    提示词以 ( 开头就直接构成 `$(...)` 命令替换并执行（注入，下方用
+    `(touch ...)` 复现），以字母开头则被当成变量名（提示词被吞）；
+    裸语境拼成 `$'...'` ANSI-C 引用，bash 解释反斜杠转义、dash 原样
+    保留（提示词被篡改且两 shell 行为不一致）；`$$prompt_file` 把路径
+    前缀上一个 $、agent 拿到坏路径。修复：连续未转义 $ 两两配成 $$、
+    落单的那个才算展开开始（$$prompt 不替换；\\$$prompt、$$$prompt
+    照常替换），单引号语境里 $ 只是字面量、不受影响。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    # 不依赖 shell 的判负用例：这些模板的占位符不会送达 agent
+    for tpl in ('printf %s "$$prompt"', "printf %s $$prompt",
+                'printf %s "x$$prompt"', "printf %s x$$prompt",
+                'printf %s "$$prompt_file"',
+                'printf %s "\\\\$$prompt"',    # 两个反斜杠：$$ 仍是 PID
+                'printf %s "$$$$prompt"',      # 两对 $$，仍是字面量
+                "printf %s \\$$$prompt"):      # $ 被转义后剩 $$ 配对
+        assert command_receives_prompt(tpl) is False, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command("(touch PWNED)")
+        # 占位符原样保留，提示词绝不进入渲染结果
+        assert "$prompt" in rendered, tpl
+        assert "PWNED" not in rendered, tpl
+
+    if not _posix_shell_available():
+        return
+    # 注入回归：修复前 `printf %s "$$prompt"` 渲染成
+    # `printf %s "$(touch ...)"`，命令替换被真正执行
+    marker = tmp_path / "pwned"
+    for tpl in ('printf %s "$$prompt"', 'printf %s "x$$prompt"'):
+        prompt = f"(touch {marker})"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([shell, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists(), tpl
+
+    # 对照：转义 $ 后的 \\$$prompt 里 $prompt 是新展开（shell 会先做
+    # 转义再解析），照常替换；两个 shell 下都送达 $+提示词
+    prompt = "P $(echo no) `echo no` Q"
+    for tpl in ("printf %s \\$$prompt", 'printf %s "\\$$prompt"'):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert r.stdout == "$" + prompt, (tpl, shell, r.stdout)
+    # 对照：连续的三个 $ 里落单的 $ 才开启新展开，$$$prompt 照常替换
+    for tpl in ("printf %s $$$prompt", 'printf %s "$$$prompt"'):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            prefix = r.stdout[:-len(prompt)] if r.stdout.endswith(prompt) else ""
+            assert prefix and prefix.isdigit(), (tpl, shell, r.stdout)
+    # 对照：单引号语境没有 $ 展开，'$$prompt' 仍是占位符、原样送达
+    tpl = "printf %s '$$prompt'"
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([shell, "-c", agent.render_command(prompt)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (shell, r.stderr)
+        assert r.stdout == "$" + prompt, (shell, r.stdout)
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 

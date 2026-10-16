@@ -49,6 +49,29 @@ def _quote(prompt: str) -> str:
 # 占位符边界：与 config._validate 的正则一致，A-Za-z0-9_ 是「单词字符」
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
+
+def _dollar_starts_expansion(tpl: str, i: int) -> bool:
+    """位置 i 处的 $ 是否开启新展开（紧邻的 $ 会被 shell 两两配成 $$）。
+
+    shell 从左到右扫描连续未转义的 $：前两个配成一个 $$（PID），落单的
+    那个才是 `$名字` 展开的开始——`$$prompt` 里 `prompt` 只是字面量，
+    `$$$prompt` 才是 `$$` 加真正的 `$prompt` 展开（bash/dash 行为一致）。
+    被反斜杠转义的 $ 是字面量、不参与配对：连续 $ 段的首个 $ 前有奇数个
+    反斜杠时，未转义段从第二个 $ 起算（`\\$$prompt` 里 $$ 仍是 PID）。
+    返回 False 表示 i 处的 $ 只是前一个 $$ 的后半，不是展开的开始。
+    """
+    start = i
+    while start > 0 and tpl[start - 1] == "$":
+        start -= 1
+    k, n = start - 1, 0
+    while k >= 0 and tpl[k] == "\\":
+        n += 1
+        k -= 1
+    if n % 2:
+        start += 1
+    return (i - start) % 2 == 0
+
+
 # 占位符探测令牌（供 command_receives_prompt 的 dry_run 渲染使用）：
 # 全为单词字符，途经任意引号语境/转义后仍原样保留在渲染结果里
 _PLACEHOLDER_PROBE = "XUENPROMPTPROBE7C4F1D"
@@ -380,7 +403,9 @@ class ShellAgent:
 
     # 占位符必须是“完整词”：$prompt_out / $prompt_filex 之类只是以
     # 占位符为前缀的普通变量，不能被子串替换误伤；x$prompt 这类前面紧贴
-    # 单词字符的也只是普通 shell 变量拼接，同样不能误替换。
+    # 单词字符的也只是普通 shell 变量拼接，同样不能误替换；$$prompt 里
+    # shell 把 $$ 当 PID、prompt 只是字面量，也不算完整占位符（见
+    # _placeholder_at）。
     # Windows 分支仍用正则哨兵替换，边界类与之配套
     _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_])"
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
@@ -397,9 +422,24 @@ class ShellAgent:
             self._cleanup_prompt_file()
             raise
 
-    def _placeholder_at(self, tpl: str, i: int) -> Optional[str]:
-        """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。"""
+    def _placeholder_at(self, tpl: str, i: int,
+                        state: str = "bare") -> Optional[str]:
+        """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。
+
+        除单词字符边界外还要挡住紧跟在未转义 $ 后面的情况：shell 把
+        `$$prompt` 的 $$ 当 PID（bash/dash 一致）、`prompt` 只是字面量，
+        替换提示词会与模板原语义错位——双引号语境下拼成 `"$"+提示词`，
+        提示词以 ( 开头就构成命令替换（注入），以字母开头则被当成变量名
+        （提示词被吞）；裸语境下拼成 `$'...'` ANSI-C 引用，bash 解释
+        反斜杠转义而 dash 原样保留（提示词被篡改且两 shell 行为不一）；
+        `$$prompt_file` 还会把路径前缀上一个 $、agent 拿到坏路径。
+        单引号语境没有 $ 展开（$ 只是字面量），'$prompt' / '$$prompt'
+        仍是合法占位符，按 state 放行。
+        """
         if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
+            return None
+        if (state != "single" and i > 0 and tpl[i - 1] == "$"
+                and not _dollar_starts_expansion(tpl, i)):
             return None
         for ph in ("$prompt_file", "$prompt"):
             j = i + len(ph)
@@ -509,6 +549,17 @@ class ShellAgent:
         双引号里的 \\$ / \\` 也拦不住。与 heredoc 正文/反引号一致整词
         原样跳过（command_receives_prompt 据此拒绝这类模板）。
 
+        紧跟在未转义 $ 后面的占位符（`$$prompt`）也不是完整占位符：
+        shell 把 $$ 当 PID、`prompt` 只是字面量。替换会让提示词与模板
+        原语义错位——双引号语境下拼成 `"$"+提示词`，提示词以 ( 开头就
+        被当成命令替换执行（注入）、以字母开头则被当成变量名（提示词被
+        吞掉）；裸语境下拼成 `$'...'` ANSI-C 引用（bash 解释反斜杠、
+        dash 原样保留，提示词被篡改）；`$$prompt_file` 会把文件路径
+        前缀上一个 $。与上述跳过区同理：不替换（command_receives_prompt
+        据此拒绝这类模板）；`\\$$prompt`（$ 被转义、$prompt 是新展开）
+        与 `$$$prompt`（落单的 $ 开启新展开）照常替换，单引号语境里
+        $ 只是字面量、也不受影响（见 _placeholder_at）。
+
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
@@ -596,7 +647,7 @@ class ShellAgent:
                     out.append(ch)
                     i += 1
                     continue
-                ph = self._placeholder_at(tpl, i)
+                ph = self._placeholder_at(tpl, i, state="single")
                 if ph == "$prompt":
                     out.append(_escape_in_single_quotes(prompt))
                     i += len(ph)
@@ -654,7 +705,7 @@ class ShellAgent:
                     out.append(ch)
                     i += 1
                     continue
-                ph = self._placeholder_at(tpl, i)
+                ph = self._placeholder_at(tpl, i, state="double")
                 if ph == "$prompt":
                     out.append(_escape_in_double_quotes(prompt))
                     i += len(ph)
@@ -831,7 +882,7 @@ class ShellAgent:
                 out.append(ch)
                 i += 1
                 continue
-            ph = self._placeholder_at(tpl, i)
+            ph = self._placeholder_at(tpl, i, state="bare")
             if ph == "$prompt":
                 out.append(_quote(prompt))
                 i += len(ph)
