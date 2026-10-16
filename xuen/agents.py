@@ -272,6 +272,63 @@ def _parameter_expansion_end(tpl: str, i: int) -> int:
     return n
 
 
+def _redirect_word_end(tpl: str, j: int) -> int:
+    """返回裸上下文 `>&` 后重定向词结束处的下标；无法安全扫描时返回模板结尾。
+
+    bash 把无 fd 号的 `>&word` 当作 `&>word` 的别名，但对 word 的展开
+    不遵守引号规则：单引号里的 $(...)/`...`/参数展开仍会被执行
+    （`bash -c "printf x >&'$(touch pwned)'"` 会真的执行 touch），
+    双引号里的 \\$ / \\` 也拦不住。因此该词内无法安全插入提示词：
+    调用方据返回值整词原样跳过、不做替换（command_receives_prompt
+    据此拒绝只在该词里使用占位符的模板）。
+    词里出现嵌套替换/展开（$( ${ $[ 反引号）或进程替换（>( / <(）
+    时无法可靠找出词尾边界，整体吞到模板结尾——宁可多跳过，也不把
+    提示词插进无法确保安全的位置（与 heredoc / 反引号 / 参数展开的
+    处理口径一致）。
+    """
+    n = len(tpl)
+    while j < n and tpl[j] in " \t":
+        j += 1
+    if j < n and tpl[j] == "\n":
+        # 重定向词跨行（`>&` 后换行再给词）：无法安全确定边界，整体跳过
+        return n
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "'":
+            end = tpl.find("'", j + 1)
+            if end < 0:
+                return n
+            j = end + 1
+            continue
+        if c == '"':
+            j += 1
+            while j < n:
+                if tpl[j] == "\\":
+                    j += 2
+                    continue
+                if tpl[j] == '"':
+                    j += 1
+                    break
+                if tpl[j] in "`$":
+                    return n
+                j += 1
+            continue
+        if c in "`$":
+            return n
+        if c in "<>" and j + 1 < n and tpl[j + 1] == "(":
+            # `>(...)`/`<(...)` 进程替换是词的一部分且有自己的解析上下文，
+            # 无法安全找出词尾：整体吞到模板结尾。注意 `>` 后不跟 `(`
+            # 时是重定向操作符（`>&x>y` 的词是 `x`），按词尾处理
+            return n
+        if c in " \t\n;&|<>()":
+            return j
+        j += 1
+    return j
+
+
 class ShellAgent:
     """通过 shell 命令调用外部 agent（opencode / claude / aider …）。
 
@@ -445,6 +502,12 @@ class ShellAgent:
         下打乱引号边界，使提示词里的 $(...)/`...` 逃出引用被真正执行
         （注入）。这种无法确定语义的语境整体拒绝（抛 ValueError），由
         配置校验拦下，而不是替换。
+
+        裸 `>&word`（无 fd 号）重定向词也无法安全替换：bash 把它当
+        `&>word` 的别名，但对 word 的展开不遵守引号规则——单引号里的
+        $(...)/`...`/参数展开仍会被执行（`>&'$(cmd)'` 真的会跑 cmd），
+        双引号里的 \\$ / \\` 也拦不住。与 heredoc 正文/反引号一致整词
+        原样跳过（command_receives_prompt 据此拒绝这类模板）。
 
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
@@ -722,6 +785,19 @@ class ShellAgent:
                     state = frame[0]
                 out.append(ch)
                 i += 1
+                continue
+            if tpl.startswith(">&", i):
+                # 裸 `>&word`（无 fd 号）是 `&>word` 的别名，但 bash 对
+                # word 的展开不遵守引号规则：单引号里的 $(...)/`...` 与
+                # 参数展开仍会被执行，双引号里的 \$ / \` 也拦不住——按
+                # 普通引号语境插入提示词会让提示词里的 $(...)/`...` 被
+                # 真正执行（注入）。与 heredoc 正文/反引号/算术语境同理：
+                # 整词原样跳过、不做替换（command_receives_prompt 据此
+                # 拒绝这类模板）。`&>`/`<>`/`>|` 等写法遵守引号规则，
+                # 不在此列
+                j = _redirect_word_end(tpl, i + 2)
+                out.append(tpl[i:j])
+                i = j
                 continue
             if tpl.startswith("<<<", i):
                 # here-string（<<<）没有正文，整段按普通文本处理

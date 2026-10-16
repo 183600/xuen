@@ -594,6 +594,81 @@ def test_render_command_case_pattern_paren_in_expansion_cannot_inject(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_does_not_substitute_in_redirect_word(tmp_path):
+    """裸 `>&word`（无 fd 号）重定向词里的占位符不能替换。
+
+    回归（bash 下可复现，bash --posix / 以 sh 调用同样复现）：bash 把
+    `>&word` 当 `&>word` 的别名，但对 word 的展开不遵守引号规则——单引号
+    里的 $(...)/`...`/参数展开仍会被执行（`>&'$(cmd)'` 真的会跑 cmd），
+    双引号里的 \\$ 也拦不住。按普通引号语境插入提示词会让提示词里的
+    $(...)/`...` 被真正执行（注入）。修复：整词原样跳过、不做替换，
+    并由配置校验拒绝这类模板；`&>`/`<>`/`>|` 等写法遵守引号规则，
+    不在跳过之列（下方的正面对照）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    bash = shutil.which("bash")
+    marker = tmp_path / "pwned"
+    prompt = f"P $(touch {marker}) `touch {marker}.bt` Q"
+    templates = (
+        "printf %s >&$prompt",
+        "printf %s >&'$prompt'",
+        'printf %s >&"$prompt"',
+        "printf %s >&pre$prompt",
+        "printf %s >&case'$prompt'",
+        "printf %s >&2'$prompt'",
+        "cat >&$prompt_file",
+        # `>` 紧跟 `(` 时是进程替换、仍属于该重定向词（`>&x>(...)` 同理），
+        # 无法安全找词尾：整段跳过而不是把 $prompt 插进词的后半段
+        'printf %s >&>(( 1 ))"$prompt">$(true)',
+        'printf %s >&pre>(echo x)"$prompt"',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 与 heredoc 正文一致：占位符原样保留，提示词绝不进入该词
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        r = subprocess.run([bash, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+        # 该词里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+    # 对照：`>&` 词之外的占位符照常替换，常见 fd 重定向写法不受影响
+    for tpl, stream in (('printf %s "$prompt" >&2', "stderr"),
+                        ('printf %s "$prompt" 2>&1', "stdout"),
+                        ('printf %s 2>&1 "$prompt"', "stdout")):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        r = subprocess.run([bash, "-c", agent.render_command(prompt)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (tpl, r.stderr)
+        assert getattr(r, stream).strip() == prompt, tpl
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    # 对照：跳过词后同一行的后续参数照常替换（词边界识别正确）
+    tpl = "printf %s >&'out' \"$prompt\""
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run([bash, "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / "out").read_text(encoding="utf-8") == prompt
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 对照：`&>` 遵守引号规则，占位符照常送达且不执行
+    tpl = 'printf %s &>' + "'out2' \"$prompt\""
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run([bash, "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / "out2").read_text(encoding="utf-8") == prompt
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 
