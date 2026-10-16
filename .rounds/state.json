@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-075111-r3",
-    "sha": "5c68b83af27f122db3077abc63bcc172336ce6a6",
+    "snap": "snap/20261016-083141-r4",
+    "sha": "bb2515506abf28b40c572520c9adae0d30eff5f0",
     "tests": "pass",
-    "at": "2026-10-16T07:51:16Z",
-    "by": "auto",
-    "iter": "3"
+    "at": "2026-10-16T08:34:22Z",
+    "by": "ai",
+    "iter": "4"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -75,6 +75,32 @@
       },
       "verdict": "promoted",
       "by": "auto"
+    },
+    {
+      "id": "20261016-083141-r4",
+      "snap": "snap/20261016-083141-r4",
+      "sha": "bb2515506abf28b40c572520c9adae0d30eff5f0",
+      "ts": "2026-10-16T08:34:22Z",
+      "iter": "4",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "8e52d914731f2b91a9ec94db4cc83523371abc16",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了 shell 注释内引号污染占位符转义（可致提示词被 shell 执行）与提示词 heredoc 示例缩进导致内容污染两个 bug，且为二者新增了可执行回归测试，未删改任何既有测试，自动验证全绿，无风险。",
+        "at": "2026-10-16T08:34:22Z"
+      }
     }
-  ]
+  ],
+  "ai_judge": {}
 }
