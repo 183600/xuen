@@ -1,11 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/baseline-20261016-054952",
-    "sha": "2dbc67d9b6a389a4a04699a03bbd04657e0ef92a",
+    "snap": "snap/20261016-071033-r2",
+    "sha": "79686db3bacb16e6d22685ad9940311d3ab1792d",
     "tests": "pass",
-    "at": "2026-10-16T05:49:58Z",
-    "by": "baseline"
+    "at": "2026-10-16T07:10:39Z",
+    "by": "auto",
+    "iter": "2"
   },
   "promote_score": 7,
   "unsynced_tags": [],
@@ -39,6 +40,22 @@
         "reason": "本轮无改动"
       },
       "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-071033-r2",
+      "snap": "snap/20261016-071033-r2",
+      "sha": "79686db3bacb16e6d22685ad9940311d3ab1792d",
+      "ts": "2026-10-16T07:10:39Z",
+      "iter": "2",
+      "changed": 1,
+      "touched_tests": false,
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚"
+      },
+      "verdict": "promoted",
       "by": "auto"
     }
   ]
