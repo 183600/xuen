@@ -1,0 +1,13 @@
+# 候选评分表（用户填写；round_guard 只读取、从不改写此文件）
+#
+# 每行一条，格式：  snap/<快照ID>: accept | reject | 1-10 的整数
+#   - 分数 >= 7 ：自动采纳为最佳（promote_score 可在 state.json 调整）
+#   - accept / reject ：直接裁决
+#   - 采纳一个旧快照 = 把仓库回滚到该方案（保留全部历史与其它快照）
+#
+# 快照清单与裁决进度见 .rounds/review.md；每条候选的改动详情见 .rounds/pending/。
+# 已处理的条目会归档到 .rounds/verdicts.processed.txt，此文件里可以删掉已处理行。
+#
+# 示例（去掉行首 # 号即生效）：
+#   snap/20261016-061234-r3: 8
+#   snap/20261016-070001-r4: reject

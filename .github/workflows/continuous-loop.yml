@@ -113,6 +113,15 @@ jobs:
       - name: Install opencode
         run: npm i -g opencode-ai
 
+      # ⭐ 轮次验证依赖：round_guard 每轮会用 pytest / 编译检查 / 冒烟
+      # 验证候选（详见 .github/scripts/round_guard.py 与 .rounds/README.md）
+      - name: Install Python deps for round validation
+        run: |
+          python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
+          python3 -m pip install -r requirements.txt pytest \
+            || python3 -m pip install --break-system-packages -r requirements.txt pytest
+          python3 -c "import sys; print('validation python:', sys.version.split()[0])"
+
       - name: Configure opencode (OpenCode Zen free models)
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -135,6 +144,8 @@ jobs:
                 "*": "allow",
                 ".github/**": "deny",
                 "**/.github/**": "deny",
+                ".rounds/**": "deny",
+                "**/.rounds/**": "deny",
                 "LICENSE": "deny",
                 "**/LICENSE": "deny",
                 "**/LICENSE.*": "deny"
@@ -146,11 +157,18 @@ jobs:
                 "rm .github*": "deny",
                 "mv .github*": "deny",
                 "git rm -r .github*": "deny",
+                "rm -rf .rounds*": "deny",
+                "rm -r .rounds*": "deny",
+                "rm .rounds*": "deny",
+                "mv .rounds*": "deny",
+                "git rm -r .rounds*": "deny",
                 "rm *LICENSE*": "deny",
                 "mv *LICENSE*": "deny",
                 "cp *LICENSE*": "deny",
                 "git rm *LICENSE*": "deny",
-                "git push*": "deny"
+                "git push*": "deny",
+                "git tag -f*": "deny",
+                "git tag -d*": "deny"
               }
             },
             "model": "opencode/deepseek-v4.1-flash-free"
@@ -300,6 +318,11 @@ jobs:
             esac
           }
 
+          # ⭐ 轮次守卫初始化：同步远端、处理用户评分（verdicts.txt）、
+          # 首次运行时把当前 master 固化为基线最佳。失败不阻断循环。
+          python3 .github/scripts/round_guard.py init \
+            || echo "::warning::round_guard init 失败，本轮循环按无状态继续"
+
           DEADLINE=$((SECONDS + WORK_SECONDS))
           ITER=0
           while :; do
@@ -403,17 +426,19 @@ jobs:
 
             echo "本轮耗时 $(( $(date +%s) - T0 )) 秒"
 
-            # ⭐ 保护循环自身：把 AI 对 .github 的改动回滚，
-            # 防止 opencode 误改/误删 workflow 导致 Continuous Loop 断掉
-            git checkout HEAD -- .github 2>/dev/null
-            git clean -fdq .github 2>/dev/null
-
-            # 增量提交 + 推送，改动尽早落盘（推送失败下一轮自动补推）
-            if [ -n "$(git status --porcelain)" ]; then
-              git add -A
-              git commit -m "chore: automated bug fixes by opencode (iter ${ITER})" 2>/dev/null
-            fi
-            git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
+            # ⭐ 每轮快照 + 候选/最佳分离 + 自动验证（机制见 .rounds/README.md）：
+            #   1. 回滚 AI 对 .github/.rounds 的改动（保护循环与轮次状态）
+            #   2. 本轮改动提交为候选快照 snap/<id> 并立即推送 —— 永不丢失
+            #   3. 自动验证候选（pytest/编译/冒烟，能跑的都跑）
+            #      - 通过               → 晋升为最佳（master 前进）
+            #      - 失败且最佳通过     → 拒绝候选、保留最佳（master 不动）
+            #      - 无法自动验证       → 记入待评分，等用户在 verdicts.txt 裁决
+            #   4. 下一轮从当前最佳出发，而不是从被拒绝的候选继续
+            # guard 自身失败不阻断循环（最坏退化为旧行为：改动留到下一轮合并处理）
+            git checkout HEAD -- .github .rounds 2>/dev/null || true
+            git clean -fdq .github .rounds 2>/dev/null || true
+            python3 .github/scripts/round_guard.py after-round --iter "${ITER}" \
+              || echo "::warning::round_guard after-round 失败，改动留在工作区下一轮合并处理"
             echo "::endgroup::"
 
             LEFT=$((DEADLINE - SECONDS))
@@ -423,18 +448,14 @@ jobs:
           echo "工作循环结束：共 ${ITER} 轮，工作窗口累计 $((SECONDS / 60)) 分钟。"
           exit 0
 
-      - name: Commit and push changes
-        if: ${{ !cancelled() }}   # 手动取消才跳过；中途失败也要把已完成的改动收尾提交
+      # ⭐ 收尾：最后一轮改动同样走「快照 → 验证 → 裁决」，不会直接覆盖最佳
+      - name: Finalize round state (snapshot + best guard)
+        if: ${{ !cancelled() }}   # 手动取消才跳过；中途失败也要把已完成的改动收尾处理
         run: |
-          git checkout HEAD -- .github 2>/dev/null || true
-          git clean -fdq .github 2>/dev/null || true
-          if [ -n "$(git status --porcelain)" ]; then
-            git add -A
-            git commit -m "chore: automated bug fixes by opencode"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git checkout HEAD -- .github .rounds 2>/dev/null || true
+          git clean -fdq .github .rounds 2>/dev/null || true
+          python3 .github/scripts/round_guard.py after-round --iter final \
+            || echo "::warning::round_guard 收尾失败，改动留在本地未推送"
 
       - name: Push to Gitee
         if: ${{ !cancelled() }}

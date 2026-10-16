@@ -145,3 +145,22 @@ xuen/
 
 **注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt`），中断后重跑自动继续；
 `agent.timeout` 控制单次外部调用超时。
+
+## Continuous Loop（自动修 bug）的轮次保护机制
+
+本仓库由 `.github/workflows/continuous-loop.yml` 驱动：opencode 反复
+「判断是否有 bug，如果有就修复」。为避免**下一轮直接覆盖掉更好的方案**，
+每轮结束后都经过轮次守卫 `.github/scripts/round_guard.py`（详见 `.rounds/README.md`）：
+
+1. **每轮保存快照**：本轮改动提交为 `snap/<时间>-r<轮次>` 标签并立即推送，
+   无论验证结果如何，这一轮的产物都不会丢；
+2. **候选 ≠ 最佳**：`master` 分支只保存「当前最佳」；候选只存在于快照标签
+   与 `.rounds/` 的记录中，不会直接覆盖 master；
+3. **能自动验证的就跑测试**：round_guard 自动探测并运行
+   `pytest`（本仓库 `tests/`）→ Python 编译检查 → `main.py --help` → 包导入冒烟：
+   - 候选通过 → 晋升为新的最佳；
+   - 候选失败而最佳通过 → 拒绝候选、保留最佳，**下一轮从最佳重新出发**；
+4. **不能自动验证的让用户评分**：在 `.rounds/verdicts.txt` 写一行
+   `snap/<快照ID>: 8`（1-10 分，≥7 采纳）或 `accept` / `reject`；
+   采纳旧快照即回滚到该方案。总览见 `.rounds/review.md`，
+   每条候选的 diff 见 `.rounds/pending/`。
