@@ -804,6 +804,75 @@ def test_render_command_comment_hash_after_expansion_close(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_line_continuation_word_boundaries(tmp_path):
+    """分词前删除的续行（反斜杠-换行）必须参与词边界与 $ 配对判断。
+
+    回归（bash 与 dash 行为一致）：
+    1) `a\\<换行># "$prompt"` 拼成 `a# "$prompt"`，`#` 是词中字符、不是
+       注释；渲染器按「前一个字符是换行」误判成注释后整行跳过：$prompt
+       原样保留、agent 收到字面量 `$prompt`（提示词被静默丢弃），而且
+       这个模板本可送达提示词，command_receives_prompt 却误判为 False；
+       $() 结束 ) 后的 # 同理（`$(cmd)\\<换行>#` 仍是同一个词）。
+    2) `$\\<换行>$prompt` 拼成 `$$prompt`：第二个 $ 只是 $$（PID）的
+       后半、不是展开的开始；误替换会在裸语境拼出 `$'提示词'`——bash
+       按 ANSI-C 引用解释反斜杠转义、dash 把 $ 当字面量，提示词被篡改
+       且行为随 /bin/sh 方言而变（$'...' 正是渲染器明确拒绝的写法）。
+    修复：词边界、`#` 词首判定与连续 $ 配对都按「删除续行后的相邻关系」
+    进行（_prev_effective_pos）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    prompt = "P $HOME `id` 'q' \\ d"
+    # 能送达的模板：占位符替换后两个 shell 输出一致且提示词完整
+    deliver = (
+        # 词中 #（a# 是一个词），行尾的 "$prompt" 照常送达
+        ('printf "<%s>\\n" a\\\n# "$prompt"', "<a#>\n<" + prompt + ">\n"),
+        # $() 结束 ) 后的 # 仍是词中字符：词内 ) 的位置比较要跨过续行
+        ('printf "%s\\n" $(echo hi)\\\n# "$prompt"', "hi#\n" + prompt + "\n"),
+        # 续行删除后 $prompt 位于词首，照常送达
+        ('printf "<%s>\\n" \\\n$prompt', "<" + prompt + ">\n"),
+        # \$ 转义 + 续行删除后，落单的 $prompt 仍是真正的展开
+        ('printf "<%s>\\n" \\$\\\n$prompt', "<$" + prompt + ">\n"),
+    )
+    for tpl, expected in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        if not _posix_shell_available():
+            continue
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert r.stdout == expected, (tpl, shell, r.stdout)
+
+    # 不能送达的模板：占位符必须原样保留（不替换、不拼出 $'...'）
+    for frag in (
+        '$\\\n$prompt',     # 拼成 $$prompt：$$ 是 PID，prompt 只是字面量
+        'x\\\n$prompt',     # 拼成 x$prompt：紧贴单词字符，不是完整占位符
+        '\\\n# "$prompt"',  # 拼成行首 #：是注释，$prompt 不会送达
+    ):
+        tpl = 'printf "%s" ' + frag
+        assert command_receives_prompt(tpl) is False, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        assert "$prompt" in rendered and prompt not in rendered, tpl
+
+    if not _posix_shell_available():
+        return
+    # 对照：$$ 加续行再接 $prompt（拼成 $$$prompt）里落单的 $ 是真展开，
+    # 照常替换：两个 shell 都输出 PID + 提示词
+    tpl2 = 'printf "%s" $$\\\n$prompt'
+    assert command_receives_prompt(tpl2) is True
+    rendered2 = ShellAgent(tpl2, tmp_path, timeout=5).render_command(prompt)
+    for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([shell, "-c", rendered2], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert r.returncode == 0, (shell, r.stderr)
+        assert r.stdout.endswith(prompt), (shell, r.stdout)
+        assert r.stdout[:-len(prompt)].isdigit(), (shell, r.stdout)
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 

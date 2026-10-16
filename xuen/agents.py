@@ -50,6 +50,30 @@ def _quote(prompt: str) -> str:
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
+def _prev_effective_pos(tpl: str, i: int) -> int:
+    """返回 i 左侧「shell 分词时真正相邻」字符的下标；无则为 -1。
+
+    分词前 shell 会先删掉续行（未转义反斜杠 + 换行）：`a\\<换行>b` 的 b
+    左侧真正相邻的是 a，`a\\<换行>#` 的 # 是词中字符而不是注释。续行判定
+    按反斜杠奇偶：`a\\\\<换行>#`（两个）里换行不是续行、仍是词边界；三个
+    反斜杠时删掉换行与最后一个反斜杠，紧邻 # 的是剩下的字面反斜杠。
+    单引号语境不删续行，调用方不要在那里使用本函数。
+    """
+    k = i - 1
+    while k >= 0 and tpl[k] == "\n":
+        j = k - 1
+        n = 0
+        while j >= 0 and tpl[j] == "\\":
+            n += 1
+            j -= 1
+        if n % 2 == 0:
+            return k  # 真换行：词边界
+        if n >= 3:
+            return k - 2  # 续行只删掉换行与最后一个反斜杠
+        k = j
+    return k
+
+
 def _dollar_starts_expansion(tpl: str, i: int) -> bool:
     """位置 i 处的 $ 是否开启新展开（紧邻的 $ 会被 shell 两两配成 $$）。
 
@@ -58,18 +82,24 @@ def _dollar_starts_expansion(tpl: str, i: int) -> bool:
     `$$$prompt` 才是 `$$` 加真正的 `$prompt` 展开（bash/dash 行为一致）。
     被反斜杠转义的 $ 是字面量、不参与配对：连续 $ 段的首个 $ 前有奇数个
     反斜杠时，未转义段从第二个 $ 起算（`\\$$prompt` 里 $$ 仍是 PID）。
+    续行在分词前被删掉，跨行相邻关系按删除后的文本判断：`$\\<换行>
+    $prompt` 就是 `$$prompt`，第二个 $ 只是前一个 $$ 的后半、不是展开。
     返回 False 表示 i 处的 $ 只是前一个 $$ 的后半，不是展开的开始。
     """
-    start = i
-    while start > 0 and tpl[start - 1] == "$":
-        start -= 1
-    k, n = start - 1, 0
+    run = 0  # i 左侧紧邻的连续 $ 个数（按删除续行后的相邻关系）
+    k = i
+    while True:
+        k = _prev_effective_pos(tpl, k)
+        if k < 0 or tpl[k] != "$":
+            break
+        run += 1
+    n = 0  # $ 段之前紧邻的连续反斜杠个数（同样按删除续行后的相邻关系）
     while k >= 0 and tpl[k] == "\\":
         n += 1
-        k -= 1
+        k = _prev_effective_pos(tpl, k)
     if n % 2:
-        start += 1
-    return (i - start) % 2 == 0
+        run -= 1
+    return run % 2 == 0
 
 
 # 占位符探测令牌（供 command_receives_prompt 的 dry_run 渲染使用）：
@@ -435,12 +465,23 @@ class ShellAgent:
         `$$prompt_file` 还会把路径前缀上一个 $、agent 拿到坏路径。
         单引号语境没有 $ 展开（$ 只是字面量），'$prompt' / '$$prompt'
         仍是合法占位符，按 state 放行。
+        单引号之外的语境分词前会删掉续行：左侧相邻字符要按
+        _prev_effective_pos 跨行判断，否则 `x\\<换行>$prompt`（拼成
+        `x$prompt`）会被当成词首占位符替换，而 `$\\<换行>$prompt`
+        （拼成 `$$prompt`）会被当成真正的展开替换成 `$'提示词'`——
+        bash 解释反斜杠转义而 dash 原样保留，提示词被篡改且行为随
+        /bin/sh 方言而变（见 _dollar_starts_expansion）。
         """
-        if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
-            return None
-        if (state != "single" and i > 0 and tpl[i - 1] == "$"
-                and not _dollar_starts_expansion(tpl, i)):
-            return None
+        if state == "single":
+            if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
+                return None
+        else:
+            prev = _prev_effective_pos(tpl, i)
+            if prev >= 0 and _WORD_CHAR.match(tpl[prev]):
+                return None
+            if (prev >= 0 and tpl[prev] == "$"
+                    and not _dollar_starts_expansion(tpl, i)):
+                return None
         for ph in ("$prompt_file", "$prompt"):
             j = i + len(ph)
             if tpl.startswith(ph, i) and (
@@ -740,9 +781,7 @@ class ShellAgent:
                 out.append(tpl[i:i + 2])
                 i += 2
                 continue
-            if ch == "#" and (i == 0 or (
-                    tpl[i - 1] in " \t\n;&|()<>"
-                    and i - 1 != word_internal_paren_end)):
+            if ch == "#":
                 # shell 注释：词首的 # 之后直到行尾都原样保留、不参与解析。
                 # 注释里的不成对引号若被当成引号状态，会让后续占位符按
                 # 错误的引号语境转义（转义过弱 = 提示词可被 shell 解释执行，
@@ -752,18 +791,25 @@ class ShellAgent:
                 # 紧跟 $()/$((...))/>(...)/<(...) 结束 ) 的 # 同样是词中
                 # 字符（echo $(echo hi)#there 输出 hi#there），不算注释——
                 # 若误判成注释会跳过引号、与实际 shell 的引号状态脱节，
-                # 后续 $prompt 会按错误语境插入（注入）
-                j = tpl.find("\n", i)
-                if j < 0:
-                    out.append(tpl[i:])
-                    i = n
-                else:
-                    out.append(tpl[i:j + 1])
-                    i = j + 1
-                    if pending_heredocs:
-                        # 本行以注释结尾，但行内的 << 仍开启了正文
-                        i = consume_heredoc_bodies(i)
-                continue
+                # 后续 $prompt 会按错误语境插入（注入）。
+                # 「词首」判定必须按删除续行后的相邻字符：`a\<换行># x`
+                # 拼成 `a# x`，# 是词中字符而不是注释，按裸换行误判成
+                # 注释会跳过整行、$prompt 原样保留（提示词被静默丢弃）
+                prev = _prev_effective_pos(tpl, i)
+                if prev < 0 or (
+                        tpl[prev] in " \t\n;&|()<>"
+                        and prev != word_internal_paren_end):
+                    j = tpl.find("\n", i)
+                    if j < 0:
+                        out.append(tpl[i:])
+                        i = n
+                    else:
+                        out.append(tpl[i:j + 1])
+                        i = j + 1
+                        if pending_heredocs:
+                            # 本行以注释结尾，但行内的 << 仍开启了正文
+                            i = consume_heredoc_bodies(i)
+                    continue
             if ch == "`":
                 # 反引号命令替换：shell 对它的「第一遍」处理对引号不敏感
                 # （\$ 会被还原成 $、引号里的裸反引号也会结束替换），插入
