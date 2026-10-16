@@ -114,7 +114,8 @@ jobs:
         run: npm i -g opencode-ai
 
       # ⭐ 轮次验证依赖：round_guard 每轮会用 pytest / 编译检查 / 冒烟
-      # 验证候选（详见 .github/scripts/round_guard.py 与 .rounds/README.md）
+      # 验证候选；无法自动验证的候选由 AI 评分代替人工裁决（详见
+      # .github/scripts/round_guard.py 与 .rounds/README.md）
       - name: Install Python deps for round validation
         run: |
           python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
@@ -195,9 +196,19 @@ jobs:
       # 反复运行 opencode 修 bug，每轮独立限时并增量提交；
       # 窗口耗尽（或剩余不足 10 分钟）后退出，交给后面的收尾步骤。
       # 前置安装 ~5 分钟 + 工作窗口 285 分钟 + 收尾 ~3 分钟 ≈ 单次 job 5 小时左右。
+      #
+      # AI 评分渠道（round_guard 用它代替人类给"测试无法验证"的候选打分）：
+      #   - 默认走本机 opencode 免费模型，零配置；
+      #   - 在仓库 secrets 配置 AIJUDGE_API_KEY（OpenAI 兼容）可启用 API 渠道，
+      #     并可用仓库变量 AIJUDGE_BASE_URL / AIJUDGE_API_MODEL / AIJUDGE_OC_MODEL
+      #     指定端点与模型；详见 .rounds/README.md。
       - name: Run opencode loop (~5h job)
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          AIJUDGE_API_KEY: ${{ secrets.AIJUDGE_API_KEY }}
+          AIJUDGE_BASE_URL: ${{ vars.AIJUDGE_BASE_URL }}
+          AIJUDGE_API_MODEL: ${{ vars.AIJUDGE_API_MODEL }}
+          AIJUDGE_OC_MODEL: ${{ vars.AIJUDGE_OC_MODEL }}
         run: |
           set +e
           PROMPT='判断是否有bug，如果有就修复'
@@ -319,7 +330,8 @@ jobs:
           }
 
           # ⭐ 轮次守卫初始化：同步远端、处理用户评分（verdicts.txt）、
-          # 首次运行时把当前 master 固化为基线最佳。失败不阻断循环。
+          # AI 补评分积压轮次、首次运行时把当前 master 固化为基线最佳。
+          # 失败不阻断循环。
           python3 .github/scripts/round_guard.py init \
             || echo "::warning::round_guard init 失败，本轮循环按无状态继续"
 
@@ -426,13 +438,16 @@ jobs:
 
             echo "本轮耗时 $(( $(date +%s) - T0 )) 秒"
 
-            # ⭐ 每轮快照 + 候选/最佳分离 + 自动验证（机制见 .rounds/README.md）：
+            # ⭐ 每轮快照 + 候选/最佳分离 + 自动验证 + AI 评分（机制见
+            #    .rounds/README.md）：
             #   1. 回滚 AI 对 .github/.rounds 的改动（保护循环与轮次状态）
             #   2. 本轮改动提交为候选快照 snap/<id> 并立即推送 —— 永不丢失
             #   3. 自动验证候选（pytest/编译/冒烟，能跑的都跑）
             #      - 通过               → 晋升为最佳（master 前进）
             #      - 失败且最佳通过     → 拒绝候选、保留最佳（master 不动）
-            #      - 无法自动验证       → 记入待评分，等用户在 verdicts.txt 裁决
+            #      - 无法自动验证       → AI 评分代替人工（≥7 采纳；AI 不可用
+            #                           才记为待评分，等用户在 verdicts.txt 裁决）
+            #      - 测试通过但改了测试文件 → AI 复核，防"删/弱化测试凑通过"
             #   4. 下一轮从当前最佳出发，而不是从被拒绝的候选继续
             # guard 自身失败不阻断循环（最坏退化为旧行为：改动留到下一轮合并处理）
             git checkout HEAD -- .github .rounds 2>/dev/null || true
@@ -448,9 +463,14 @@ jobs:
           echo "工作循环结束：共 ${ITER} 轮，工作窗口累计 $((SECONDS / 60)) 分钟。"
           exit 0
 
-      # ⭐ 收尾：最后一轮改动同样走「快照 → 验证 → 裁决」，不会直接覆盖最佳
+      # ⭐ 收尾：最后一轮改动同样走「快照 → 验证 → AI 评分 → 晋升/保留最佳」
       - name: Finalize round state (snapshot + best guard)
         if: ${{ !cancelled() }}   # 手动取消才跳过；中途失败也要把已完成的改动收尾处理
+        env:
+          AIJUDGE_API_KEY: ${{ secrets.AIJUDGE_API_KEY }}
+          AIJUDGE_BASE_URL: ${{ vars.AIJUDGE_BASE_URL }}
+          AIJUDGE_API_MODEL: ${{ vars.AIJUDGE_API_MODEL }}
+          AIJUDGE_OC_MODEL: ${{ vars.AIJUDGE_OC_MODEL }}
         run: |
           git checkout HEAD -- .github .rounds 2>/dev/null || true
           git clean -fdq .github .rounds 2>/dev/null || true

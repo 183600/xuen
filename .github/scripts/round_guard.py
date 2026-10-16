@@ -12,13 +12,22 @@
      再加 Python 编译检查 + CLI 冒烟 + 包导入冒烟）：
        - 候选通过           -> 晋升为新的最佳（master 前进）
        - 候选失败、最佳通过 -> 拒绝候选、保留最佳，下一轮从最佳重新出发
-       - 无法自动验证       -> 记为"等待评分"，由用户裁决
-  4. 用户评分       —— 在 .rounds/verdicts.txt 写 `snap/<id>: 8`（>=7 采纳）
-     或 accept / reject；采纳旧快照即回滚到该方案。
+       - 无法自动验证       -> 交给 AI 评分（见 4），AI 不可用才等用户
+  4. AI 评分        —— 代替人类给"测试无法裁决"的候选打分（1-10 分，
+     >= 阈值采纳；渠道：OpenAI 兼容 API（AIJUDGE_API_KEY）或本机 opencode
+     免费模型，CI 里零配置可用）：
+       - 无法自动验证的候选   -> AI 打分决定采纳/拒绝
+       - 测试通过但改动了测试文件的候选 -> AI 复核，防止"删/弱化测试凑通过"
+       - review_promoted 开启时，所有测试通过的候选也做一次 AI 复核
+       - AI 不可用/出错 -> 退回"等待用户评分"，绝不卡住循环
+  5. 用户评分       —— 在 .rounds/verdicts.txt 写 `snap/<id>: 8`（>=7 采纳）
+     或 accept / reject；采纳旧快照即回滚到该方案。用户裁决优先级最高，
+     随时可翻测试或 AI 的案。
 
 子命令：
-  init                       job 开始：同步远端、处理用户评分、必要时建立基线
-  after-round --iter N       每轮结束：快照 -> 验证 -> 裁决 -> 晋升/保留最佳
+  init                       job 开始：同步远端、处理用户评分、AI 补评分、建基线
+  after-round --iter N       每轮结束：快照 -> 验证 -> （必要时）AI 评分 -> 晋升/保留
+  ai-judge [--snap S]        手动触发 AI 评分（默认处理全部待评分轮次）
   validate                   对当前工作树跑一遍自动验证（调试用）
   show                       打印当前状态（调试用）
 
@@ -32,12 +41,14 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]          # .github/scripts/round_guard.py
@@ -55,6 +66,14 @@ KEEP_PENDING_DOCS = 30                              # pending/ 下保留的评�
 TEST_TIMEOUT = 900                                  # 单条验证命令超时（秒）
 GIT_RETRY_SLEEP = 20
 
+# ---- AI 评分（AI Judge）默认参数；可用 state.json 的 ai_judge 或环境变量覆盖
+AI_OC_DEFAULT_MODEL = "opencode/deepseek-v4.1-flash-free"   # opencode 渠道默认模型
+AI_API_DEFAULT_MODEL = "gpt-4o-mini"                        # API 渠道默认模型
+AI_API_DEFAULT_BASE = "https://api.openai.com/v1"           # OpenAI 兼容端点
+AI_DEFAULT_TIMEOUT = 180                                    # 单次 AI 调用超时（秒）
+AI_MAX_DIFF_CHARS = 100_000                                 # 评审材料里 diff 的字符上限
+AI_MAX_BACKLOG = 3                                          # init 时最多补评分的轮数
+
 VERDICTS_HEADER = """\
 # 候选评分表（用户填写；round_guard 只读取、从不改写此文件）
 #
@@ -62,6 +81,10 @@ VERDICTS_HEADER = """\
 #   - 分数 >= 7 ：自动采纳为最佳（promote_score 可在 state.json 调整）
 #   - accept / reject ：直接裁决
 #   - 采纳一个旧快照 = 把仓库回滚到该方案（保留全部历史与其它快照）
+#
+# 说明：无法自动验证的候选默认会先由 AI 评审打分（代替人工，可在
+# state.json 的 ai_judge 里停用）；你的裁决优先级最高，随时可以给任意
+# 快照重新打分翻案——包括推翻 AI 或测试已经做出的结论。
 #
 # 快照清单与裁决进度见 .rounds/review.md；每条候选的改动详情见 .rounds/pending/。
 # 已处理的条目会归档到 .rounds/verdicts.processed.txt，此文件里可以删掉已处理行。
@@ -145,6 +168,7 @@ def default_state() -> dict:
         "version": 1,
         "best": None,
         "promote_score": PROMOTE_SCORE_DEFAULT,
+        "ai_judge": {},                    # AI 评分配置（空 = 全用默认值）
         "unsynced_tags": [],
         "notes": [],
         "rounds": [],
@@ -160,6 +184,7 @@ def load_state() -> dict | None:
         log(f"state.json 解析失败，将重建基线：{e}")
         return None
     st.setdefault("promote_score", PROMOTE_SCORE_DEFAULT)
+    st.setdefault("ai_judge", {})
     st.setdefault("unsynced_tags", [])
     st.setdefault("notes", [])
     st.setdefault("rounds", [])
@@ -265,7 +290,9 @@ def detect_test_commands(root) -> list:
     cmds = []
 
     def _py(p: Path) -> bool:
-        return not any(s in p.parts for s in (".git", ".rounds"))
+        # .github 是循环自身的代码，不作为"产品可验证性"的依据；
+        # 排除后，纯文档/数据仓库才会真正进入"无法自动验证 -> AI 评分"路径
+        return not any(s in p.parts for s in (".git", ".rounds", ".github"))
 
     test_files = [p for p in root.rglob("test_*.py") if _py(p)]
     test_files += [p for p in root.rglob("*_test.py") if _py(p)]
@@ -354,7 +381,8 @@ def decide(cand: str, best: str):
     verdict（决策动作）：
       promote      晋升候选为新的最佳
       reject       拒绝候选、保留最佳（候选仍以快照保留，用户可翻案）
-      pending_user 无法自动验证，等待用户评分
+      pending_user 无法自动验证 -> 先交给 AI 评分（run_ai_judge），
+                   AI 不可用才落到"等待用户评分"
     """
     if cand == "none":
         return "pending_user", "没有可运行的自动验证手段，等待用户评分"
@@ -374,6 +402,404 @@ def decide(cand: str, best: str):
     return ("reject",
             "候选测试失败（最佳未通过或状态未知）：不采纳候选，保留最佳；"
             "如认可候选可在 verdicts.txt 评分翻案")
+
+
+# ---------------------------------------------------------------- AI 评分（AI Judge）
+# 代替人类给候选打分。渠道按优先级：
+#   1. OpenAI 兼容 API —— 配置了环境变量 AIJUDGE_API_KEY 时启用
+#      （AIJUDGE_BASE_URL / AIJUDGE_API_MODEL 可选）
+#   2. 本机 opencode CLI —— CI 循环本身就装了它，免费模型零配置可用
+#      （AIJUDGE_OC_MODEL 可选，默认 deepseek-v4.1-flash-free）
+# 评审在临时目录里进行（材料写成 judge_task.md），评审模型即使想改文件
+# 也碰不到仓库；解析只认 SCORE/VERDICT/REASON 三个字段，拿不到就当失败，
+# 绝不影响循环继续。
+
+def ai_judge_config(st: dict | None) -> dict:
+    """AI 评审配置：代码默认 <- state.json['ai_judge'] <- 环境变量（优先级最高）。"""
+    st = st or {}
+    cfg = {
+        "enabled": True,            # 总开关（False = 完全回到纯人工评分）
+        "min_score": None,          # 采纳阈值；None = 跟随 promote_score
+        "review_promoted": False,   # True = 测试通过的候选也要过一遍 AI 复核
+        "timeout": AI_DEFAULT_TIMEOUT,
+        "max_diff_chars": AI_MAX_DIFF_CHARS,
+        "max_backlog": AI_MAX_BACKLOG,
+    }
+    over = st.get("ai_judge") or {}
+    for k in cfg:
+        if over.get(k) is not None:
+            cfg[k] = over[k]
+    env = os.environ
+    flag = env.get("AIJUDGE_ENABLED", "").strip().lower()
+    if flag in ("0", "false", "no", "off"):
+        cfg["enabled"] = False
+    elif flag in ("1", "true", "yes", "on"):
+        cfg["enabled"] = True
+    rp = env.get("AIJUDGE_REVIEW_PROMOTED", "").strip().lower()
+    if rp in ("0", "false", "no", "off"):
+        cfg["review_promoted"] = False
+    elif rp in ("1", "true", "yes", "on"):
+        cfg["review_promoted"] = True
+    for k, envk in (("min_score", "AIJUDGE_MIN_SCORE"),
+                    ("timeout", "AIJUDGE_TIMEOUT"),
+                    ("max_diff_chars", "AIJUDGE_MAX_DIFF_CHARS"),
+                    ("max_backlog", "AIJUDGE_MAX_BACKLOG")):
+        v = env.get(envk, "").strip()
+        if re.fullmatch(r"\d+", v):
+            cfg[k] = int(v)
+    return cfg
+
+
+def ai_judge_threshold(cfg: dict, st: dict) -> int:
+    return cfg.get("min_score") or st.get("promote_score", PROMOTE_SCORE_DEFAULT)
+
+
+def ai_judge_available() -> bool:
+    """是否有任何可用的 AI 评分渠道（API key 或本机 opencode）。"""
+    if os.environ.get("AIJUDGE_API_KEY", "").strip():
+        return True
+    return shutil.which("opencode") is not None
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b.")
+
+
+def strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text or "")
+
+
+# 各字段允许多种写法（中英文冒号、markdown 加粗、中文裁决词）；
+# 同一字段出现多次时取最后一次（模型先复读格式说明再作答时，答案在后）
+_AI_SCORE_RE = re.compile(r"(?im)^\s*[\*\s]*SCORE\s*[\*\s]*[:：]\s*(\d{1,3})")
+_AI_VERDICT_RE = re.compile(
+    r"(?im)^\s*[\*\s]*VERDICT\s*[\*\s]*[:：]\s*\**\s*(accept|reject|采纳|拒绝)")
+_AI_REASON_RE = re.compile(r"(?im)^\s*[\*\s]*REASON\s*[\*\s]*[:：]\s*(.+)$")
+
+
+def parse_ai_reply(text) -> dict | None:
+    """解析 AI 评审输出 -> {score, verdict('accept'/'reject'), reason}。
+
+    score 与 verdict 拿到任意一个即算有效；都没有返回 None。
+    分数钳制到 1-10；显式 VERDICT 的决策优先级高于分数。
+    """
+    if not text:
+        return None
+    t = strip_ansi(text)
+    score, verdict, reason = None, None, None
+    ms = _AI_SCORE_RE.findall(t)
+    if ms:
+        try:
+            score = max(1, min(10, int(ms[-1])))
+        except ValueError:
+            score = None
+    mv = _AI_VERDICT_RE.findall(t)
+    if mv:
+        v = mv[-1].strip().strip("*").lower()
+        verdict = "reject" if v in ("reject", "拒绝") else "accept"
+    mr = _AI_REASON_RE.findall(t)
+    if mr:
+        reason = mr[-1].strip().strip("*").strip()[:200]
+    if score is None and verdict is None:
+        return None
+    return {"score": score, "verdict": verdict, "reason": reason or ""}
+
+
+JUDGE_PROMPT_TEMPLATE = """你是一名严格的代码评审员（AI Judge），负责代替人类给自动化循环产出的改动打分。
+
+## 背景
+- 一个自动化 AI 循环在仓库里持续工作，任务：判断仓库是否有 bug，有就修复。
+- 每轮改动保存为候选快照；你的评分决定该候选是否替换"当前最佳"方案。
+- 候选不会丢失（永远留档可翻案），但错误的高分会让坏方案覆盖好方案；
+  拿不准时请保守打低分。
+{touched}
+## 评审材料
+
+### 1) 改动文件清单
+```
+{files}
+```
+
+### 2) 改动统计（diff --stat）
+```
+{stat}
+```
+
+### 3) 完整 diff（base -> 候选）
+```diff
+{diff}
+```
+
+### 4) 自动验证情况
+- 自动验证结果：{val_status}（none = 没有任何可运行的自动验证手段）
+{val_log}
+### 5) 仓库简介（README 前 60 行）
+```
+{readme}
+```
+
+## 评分标准（1-10 整数）
+- 9-10  明显改进：修复了真实 bug、明显提升质量或健壮性，无风险
+- 7-8   整体是改进，小瑕疵可以接受
+- 5-6   中性改动：利弊参半、收益不确定
+- 3-4   轻微退化、引入风险或收益存疑
+- 1-2   明显破坏：引入 bug、删除功能、危险操作、或靠删改测试"凑通过"
+
+## 输出格式（前三个字段必须严格按此格式单行输出，供机器解析；不要复读格式说明）
+SCORE: <1-10 的整数>
+VERDICT: accept 或 reject
+REASON: <一句话理由>
+
+（三个字段之后，你可以自由补充详细分析。）"""
+
+
+def build_judge_prompt(diff_base, cand_sha, val, changed, touched_tests,
+                       cfg) -> str:
+    """组装评审提示词：diff + 验证情况 + 仓库简介 + 评分标准。"""
+    stat = gout("diff", "--stat", diff_base, cand_sha)
+    diff = git("diff", diff_base, cand_sha).stdout or ""
+    cap = int(cfg.get("max_diff_chars") or AI_MAX_DIFF_CHARS)
+    if len(diff) > cap:
+        diff = diff[:cap] + f"\n...（diff 过长已截断：原文 {len(diff)} 字符）"
+    readme = ""
+    rp = REPO / "README.md"
+    if rp.exists():
+        readme = "\n".join(
+            rp.read_text(encoding="utf-8", errors="replace").splitlines()[:60])
+    files = "\n".join((changed or [])[:80]) or "（无法获取）"
+    val_status = (val or {}).get("status") or "unknown"
+    log_text = ((val or {}).get("log") or "").strip()
+    val_log = ""
+    if log_text:
+        val_log = "- 验证日志（截断）：\n```\n" + log_text[-2500:] + "\n```\n"
+    touched = ""
+    if touched_tests:
+        touched = ("\n- 特别注意：本轮改动包含 tests/ 下的测试文件。请重点评估这是"
+                   "合理的新增/修正测试，还是通过删除或弱化测试来\"凑通过\""
+                   "（后者请给 1-3 分）。\n")
+    return JUDGE_PROMPT_TEMPLATE.format(
+        touched=touched, files=files, stat=stat, diff=diff,
+        val_status=val_status, val_log=val_log, readme=readme)
+
+
+def _api_judge(prompt: str, cfg: dict):
+    """OpenAI 兼容 /chat/completions。返回 (回复文本, 错误说明)。"""
+    key = os.environ.get("AIJUDGE_API_KEY", "").strip()
+    if not key:
+        return None, "未配置 AIJUDGE_API_KEY"
+    base = (os.environ.get("AIJUDGE_BASE_URL") or AI_API_DEFAULT_BASE).rstrip("/")
+    model = (os.environ.get("AIJUDGE_API_MODEL") or AI_API_DEFAULT_MODEL).strip()
+    body = json.dumps({
+        "model": model, "temperature": 0.2,
+        "messages": [{"role": "user", "content": prompt}],
+    }, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        base + "/chat/completions", data=body, method="POST",
+        headers={"Authorization": "Bearer " + key,
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=cfg["timeout"]) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+        return (data["choices"][0]["message"]["content"] or ""), None
+    except Exception as e:
+        return None, f"API({model}) 调用失败: {str(e)[:200]}"
+
+
+def _opencode_model_pool() -> list:
+    """`opencode models opencode` 的输出 -> 模型 id 列表（失败返回空）。"""
+    try:
+        p = sh(["opencode", "models", "opencode"], cwd=REPO, timeout=60)
+    except Exception:
+        return []
+    if p.returncode != 0:
+        return []
+    return re.findall(r"(?m)^(opencode/[A-Za-z0-9][A-Za-z0-9._-]*)\s*$",
+                      p.stdout)
+
+
+def _opencode_judge(prompt: str, cfg: dict, model: str):
+    """opencode CLI 评审：在临时目录里执行，评审模型碰不到仓库。"""
+    tmpd = Path(tempfile.mkdtemp(prefix="rg_judge_"))
+    try:
+        (tmpd / "judge_task.md").write_text(prompt, encoding="utf-8")
+        instruction = ("请阅读当前目录中的 judge_task.md 文件，严格按照文件里的"
+                       "背景、评分标准与输出格式要求完成任务。直接输出要求的"
+                       "SCORE/VERDICT/REASON 三个字段，用中文。"
+                       "不要创建或修改任何文件。")
+        try:
+            p = sh(["opencode", "run", "-m", model, instruction],
+                   cwd=tmpd, timeout=cfg["timeout"])
+        except subprocess.TimeoutExpired:
+            return None, f"opencode({model}) 超时(>{cfg['timeout']}s)"
+        out = (p.stdout or "") + "\n" + (p.stderr or "")
+        if p.returncode != 0 and not parse_ai_reply(out):
+            tail = strip_ansi(out).strip()[-300:]
+            return None, f"opencode({model}) 退出码 {p.returncode}: {tail}"
+        return out, None
+    finally:
+        shutil.rmtree(tmpd, ignore_errors=True)
+
+
+def _ai_result(provider: str, model: str, parsed: dict, threshold: int,
+               result: dict) -> dict:
+    final = parsed.get("verdict")
+    if final not in ("accept", "reject"):
+        s = parsed.get("score")
+        final = None if s is None else ("accept" if s >= threshold else "reject")
+    result.update({
+        "ok": True, "provider": provider, "model": model,
+        "score": parsed.get("score"), "verdict": parsed.get("verdict"),
+        "final": final or "reject", "reason": parsed.get("reason") or "",
+    })
+    return result
+
+
+def run_ai_judge(diff_base, cand_sha, val, changed, touched_tests, st) -> dict:
+    """尝试用 AI 给候选打分（代替人类评分）。
+
+    返回 {ok, score, verdict, final('accept'/'reject'), reason,
+          provider, model, error}；ok=False 表示两个渠道都没给出可解析结论。
+    """
+    cfg = ai_judge_config(st)
+    threshold = ai_judge_threshold(cfg, st)
+    result = {"ok": False, "score": None, "verdict": None, "final": None,
+              "reason": "", "provider": None, "model": None, "error": None}
+    if not cfg["enabled"]:
+        result["error"] = "AI 评分已在配置中停用"
+        return result
+    try:
+        prompt = build_judge_prompt(diff_base, cand_sha, val, changed,
+                                    touched_tests, cfg)
+    except Exception as e:
+        result["error"] = f"构造评审材料失败: {e}"
+        return result
+
+    errors = []
+    # 渠道 1：OpenAI 兼容 API（配置了 AIJUDGE_API_KEY 才启用）
+    if os.environ.get("AIJUDGE_API_KEY", "").strip():
+        try:
+            model = (os.environ.get("AIJUDGE_API_MODEL")
+                     or AI_API_DEFAULT_MODEL).strip()
+            text, err = _api_judge(prompt, cfg)
+            parsed = parse_ai_reply(text) if text else None
+            if parsed:
+                return _ai_result("api", model, parsed, threshold, result)
+            errors.append(err or "API 回复无法解析")
+        except Exception as e:
+            errors.append(f"API 渠道异常: {str(e)[:200]}")
+
+    # 渠道 2：本机 opencode（CI 里免费模型可用，零配置）
+    if shutil.which("opencode") is not None:
+        try:
+            preferred = (os.environ.get("AIJUDGE_OC_MODEL")
+                         or AI_OC_DEFAULT_MODEL).strip()
+            candidates = [preferred]
+            for m in _opencode_model_pool():
+                if m not in candidates:
+                    candidates.append(m)
+            for m in candidates[:2]:          # 最多试 2 个模型，控制耗时
+                text, err = _opencode_judge(prompt, cfg, m)
+                parsed = parse_ai_reply(text) if text else None
+                if parsed:
+                    return _ai_result("opencode", m, parsed, threshold, result)
+                errors.append(err or f"opencode({m}) 回复无法解析")
+        except Exception as e:
+            errors.append(f"opencode 渠道异常: {str(e)[:200]}")
+
+    result["error"] = "; ".join(e for e in errors if e) or "没有可用的 AI 评分渠道"
+    return result
+
+
+def _ai_record(res: dict) -> dict:
+    """AI 评分结果 -> 存进轮次记录的精简形式。"""
+    if res.get("ok"):
+        return {"provider": res.get("provider"), "model": res.get("model"),
+                "score": res.get("score"), "verdict": res.get("verdict"),
+                "reason": (res.get("reason") or "")[:200], "at": now_iso()}
+    return {"error": (res.get("error") or "")[:200], "at": now_iso()}
+
+
+def process_pending_ai(st: dict, only_snap: str | None = None) -> None:
+    """给积压的 pending_user 轮次补 AI 评分（用户裁决已处理过的不会再动）。
+
+    在 init 与 `ai-judge` 子命令里调用；单次最多处理 max_backlog 条，
+    防止一次性占用太多时间。
+    """
+    cfg = ai_judge_config(st)
+    if not cfg.get("enabled"):
+        return
+    pend = [r for r in st["rounds"]
+            if r.get("verdict") == "pending_user" and r.get("snap")]
+    if only_snap:
+        pend = [r for r in pend if r.get("snap") == only_snap]
+    if not pend:
+        return
+    if not ai_judge_available():
+        log(f"有 {len(pend)} 条待评分轮次，但无可用 AI 渠道，继续等待用户")
+        return
+    threshold = ai_judge_threshold(cfg, st)
+    saved_verdicts = None
+    if VERDICTS_FILE.exists():
+        saved_verdicts = VERDICTS_FILE.read_text(encoding="utf-8")
+    did = []
+    for r in pend[:cfg["max_backlog"]]:
+        snap = r.get("snap")
+        sha = r.get("sha")
+        if (not sha or not rev_exists(sha)) and not rev_exists(snap or ""):
+            add_note(st, f"待评分轮次 {snap} 的提交不存在，跳过")
+            continue
+        if not sha or not rev_exists(sha):
+            sha = gout("rev-parse", f"{snap}^{{commit}}")
+            r["sha"] = sha
+        diff_base = r.get("diff_base") or (sha + "^")
+        try:
+            changed = git("diff", "--name-only", diff_base, sha).stdout.split()
+        except Exception:
+            changed = []
+        val = {"status": (r.get("auto") or {}).get("status", "unknown"),
+               "log": ""}
+        log(f"AI 补评分：{snap} ...")
+        res = run_ai_judge(diff_base, sha, val, changed,
+                           bool(r.get("touched_tests")), st)
+        if not res["ok"]:
+            add_note(st, f"AI 补评分失败 {snap}: {res['error']}")
+            continue
+        r["ai"] = _ai_record(res)
+        sc = res["score"]
+        sc_txt = f"{sc}分" if sc is not None else res["final"]
+        if res["final"] == "accept":
+            ok, new_sha = promote_snap(st, snap)
+            if ok and new_sha:
+                tests = (r.get("auto") or {}).get("status")
+                st["best"] = {"snap": snap, "sha": new_sha, "tests": tests,
+                              "at": now_iso(), "by": "ai"}
+                r["verdict"] = "promoted"
+                r["by"] = "ai"
+                r["auto"] = r.get("auto") or {}
+                r["auto"]["verdict"] = "promoted"
+                r["auto"]["reason"] = (f"AI 评分 {sc_txt}："
+                                       f"{res['reason'] or '评审通过'}")
+                did.append(f"{snap}: promoted(AI {sc_txt})")
+            else:
+                add_note(st, f"AI 采纳 {snap} 推送失败，保留待评分")
+                continue
+        else:
+            r["verdict"] = "rejected"
+            r["by"] = "ai"
+            r["auto"] = r.get("auto") or {}
+            r["auto"]["verdict"] = "rejected"
+            r["auto"]["reason"] = (f"AI 评分 {sc_txt}（阈值 {threshold}）："
+                                   f"{res['reason'] or '评审未通过'}")
+            did.append(f"{snap}: rejected(AI {sc_txt})")
+    if did:
+        # promote_snap 可能回滚了 .rounds 里的用户文件，先恢复再落盘
+        fetch()
+        git("checkout", "-B", "master", "origin/master", check=False)
+        if saved_verdicts is not None:
+            VERDICTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            VERDICTS_FILE.write_text(saved_verdicts, encoding="utf-8")
+        write_state_and_docs(st)
+        meta_record(st, "chore(rounds): AI 补评分 " + "; ".join(did))
+        log(f"AI 补评分完成: {did}")
 
 
 # ---------------------------------------------------------------- git 轮次操作
@@ -615,8 +1041,11 @@ def write_review(st: dict) -> None:
         "",
         f"- 当前最佳：{_best_line(st)}",
         "- 候选快照：`snap/<时间>-r<轮次>` 标签，`git ls-remote --tags origin 'snap/*'` 查看全部",
-        "- 评分方法：编辑 `.rounds/verdicts.txt`，写 `snap/<id>: 8`（1-10 分，"
-        f">={st.get('promote_score', PROMOTE_SCORE_DEFAULT)} 采纳）或 `accept` / `reject`",
+        "- 裁决链：测试能验证的听测试；无法验证的先由 AI 评分（代替人工）；"
+        "你的裁决优先级最高，可随时翻案",
+        "- 人工/AI 评分：编辑 `.rounds/verdicts.txt`，写 `snap/<id>: 8`（1-10 分，"
+        f">={st.get('promote_score', PROMOTE_SCORE_DEFAULT)} 采纳）或 `accept` / `reject`；"
+        "AI 评分的阈值与开关可在 state.json 的 `ai_judge` 调整",
         "- 各候选改动详情：`.rounds/pending/<id>.md`",
         "",
         "| 快照 | 时间(UTC) | 轮次 | 改动文件 | 自动验证 | 裁决 | 说明 |",
@@ -633,6 +1062,10 @@ def write_review(st: dict) -> None:
         label = VERDICT_LABEL.get(verdict, verdict)
         if r.get("by") == "user":
             label += "（用户）"
+        elif r.get("by") == "ai":
+            ai = r.get("ai") or {}
+            s = ai.get("score")
+            label += "（AI" + (f" {s}分" if s is not None else "") + "）"
         reason = ((r.get("auto") or {}).get("reason") or "").replace("|", "\\|")
         if r.get("touched_tests"):
             reason = "[本轮改动了测试文件] " + reason
@@ -647,7 +1080,7 @@ def write_review(st: dict) -> None:
 
 
 def write_pending_doc(rid, snap, base_sha, cand_sha, val, verdict, reason,
-                      touched) -> None:
+                      touched, ai=None, by="auto") -> None:
     PENDING_DIR.mkdir(parents=True, exist_ok=True)
     stat = gout("diff", "--stat", base_sha, cand_sha)
     diff = git("diff", base_sha, cand_sha).stdout or ""
@@ -658,17 +1091,27 @@ def write_pending_doc(rid, snap, base_sha, cand_sha, val, verdict, reason,
         f"# 候选快照 `{snap}`",
         "",
         f"- 轮次：{rid}",
-        f"- 验证：{val.get('status', 'unknown')}；裁决：{verdict}",
+        f"- 验证：{val.get('status', 'unknown')}；裁决：{verdict}（by {by}）",
         f"- 理由：{reason}",
         f"- base `{base_sha[:10]}` -> candidate `{cand_sha[:10]}`",
     ]
+    if ai:
+        if "error" in ai:
+            head.append(f"- AI 评分：不可用（{ai['error']}）")
+        else:
+            sc = ai.get("score")
+            sc_txt = "-" if sc is None else f"{sc} 分"
+            head.append(f"- AI 评分：{sc_txt}（{ai.get('provider')}/"
+                        f"{ai.get('model')}）：{ai.get('reason', '')}")
     if touched:
         head.append(f"- **注意：本轮改动了测试文件**（{', '.join(touched[:8])}）")
     if verdict == "pending_user":
         head += ["", f"## 如何评分", "",
+                 "自动验证与 AI 评分都没能给出结论，等待你的裁决：", "",
                  f"在 `.rounds/verdicts.txt` 增加一行（去掉注释直接生效）：", "",
                  f"    {snap}: 8", "",
-                 f"分数 1-10，>= 7 采纳为最佳；也可写 `accept` / `reject`。"]
+                 f"分数 1-10，>= {PROMOTE_SCORE_DEFAULT} 采纳为最佳；也可写 `accept` / `reject`。",
+                 "你的裁决优先级最高，也可用来推翻 AI 或测试已经做出的结论。"]
     head += ["", "## 验证日志", "", "```", (val.get("log") or "").strip()[-4000:], "```",
              "", "## diff --stat", "", "```", stat, "```",
              "", "## diff", "", "```diff", diff, "```", ""]
@@ -721,7 +1164,8 @@ def cmd_init(args) -> int:
     ensure_verdicts_file()
     st = load_or_bootstrap()
     push_unsynced_tags(st)
-    process_verdicts(st)
+    process_verdicts(st)        # 用户裁决优先级最高，先处理
+    process_pending_ai(st)      # 剩下的待评分轮次再由 AI 补评分
     log(f"init 完成：最佳={_best_line(st)}；待评分轮数="
         f"{sum(1 for r in st['rounds'] if r.get('verdict') == 'pending_user')}")
     return 0
@@ -795,28 +1239,87 @@ def cmd_after_round(args) -> int:
             best_status = "unknown"
             add_note(st, f"最佳基线验证失败：{e}")
 
-    # ---- 4) 裁决 ----
+    # ---- 4) 裁决：测试优先；测试无法裁决时先 AI 评分（代替人类），再人类 ----
     verdict, reason = decide(cand_val["status"], best_status or "unknown")
+    judged_by = "auto"
+    ai_result = None
+    cfg = ai_judge_config(st)
+
+    # AI 评分介入的三种情形（都可通过 ai_judge 配置/环境变量关闭）：
+    #   a. 测试无法自动验证（pending_user）—— AI 代替人类打分；
+    #   b. 测试通过但改动了测试文件 —— AI 复核，防止"删/弱化测试凑通过"；
+    #   c. review_promoted 开启时，测试通过的候选也做一次 AI 例行复核。
+    want_ai = (
+        verdict == "pending_user"
+        or (verdict == "promote" and (touched_tests or cfg.get("review_promoted")))
+    )
+    if want_ai and cfg["enabled"] and ai_judge_available():
+        channel = ("API + opencode" if os.environ.get("AIJUDGE_API_KEY", "").strip()
+                   else "opencode")
+        log(f"{rid}：调用 AI 评分（渠道：{channel}）...")
+        ai_result = run_ai_judge(diff_base, cand_sha, cand_val, changed,
+                                 touched_tests, st)
+        if ai_result["ok"]:
+            judged_by = "ai"
+            thr = ai_judge_threshold(cfg, st)
+            sc = ai_result["score"]
+            sc_txt = f"{sc}分" if sc is not None else ai_result["final"]
+            if ai_result["final"] == "accept":
+                if verdict == "pending_user":
+                    verdict = "promote"
+                    reason = (f"AI 评分 {sc_txt}（阈值 {thr}）："
+                              f"{ai_result['reason'] or '评审通过'}；"
+                              f"如不认可可在 verdicts.txt 翻案")
+                else:  # 测试通过 + AI 复核通过
+                    note = ("测试改动经 AI 复核为合理改进" if touched_tests
+                            else "AI 例行复核通过")
+                    reason += f"；{note}（{sc_txt}）"
+            else:
+                if verdict == "pending_user":
+                    verdict = "reject"
+                    reason = (f"AI 评分 {sc_txt}（阈值 {thr}）未达采纳线，保留当前最佳："
+                              f"{ai_result['reason'] or '评审未通过'}；"
+                              f"如不认可可在 verdicts.txt 翻案")
+                else:  # 测试通过但 AI 复核不认可
+                    why = ("不认可本轮对测试文件的改动（疑似规避测试）" if touched_tests
+                           else "AI 复核未通过")
+                    verdict = "reject"
+                    reason = (f"测试虽通过，但{why}（{sc_txt}）："
+                              f"{ai_result['reason'] or ''}；"
+                              f"候选保留为快照，如不认可可在 verdicts.txt 翻案")
+        else:
+            log(f"{rid}：AI 评分不可用（{ai_result['error']}）")
+            if verdict == "pending_user":
+                reason += f"；AI 评分不可用（{ai_result['error']}），等待用户裁决"
+            else:
+                # 测试已给出客观结论，AI 只是复核：不可用就不拦截，按测试结果走
+                add_note(st, f"{rid} AI 复核不可用（{ai_result['error']}），按测试结果处理")
+    elif want_ai and verdict == "pending_user":
+        log(f"{rid}：无可用 AI 评分渠道，等待用户评分")
+
     past = VERDICT_PAST.get(verdict, verdict)   # 记录用过去时：promoted/rejected
-    log(f"{rid}：裁决 = {past}（{reason}）")
+    log(f"{rid}：裁决 = {past}（by {judged_by}）{reason}")
 
     rec = {
         "id": rid, "snap": snap, "sha": cand_sha, "ts": now_iso(),
         "iter": iteration, "changed": len(changed),
         "touched_tests": bool(touched_tests),
+        "diff_base": diff_base,            # 供之后 AI 补评分时重算 diff
         "auto": {"status": cand_val["status"], "verdict": past, "reason": reason},
-        "verdict": past, "by": "auto",
+        "verdict": past, "by": judged_by,
     }
+    if ai_result is not None:
+        rec["ai"] = _ai_record(ai_result)
 
     if verdict == "promote":
         _record_round(st, rec)
         st["best"] = {"snap": snap, "sha": cand_sha, "tests": cand_val["status"],
-                      "at": now_iso(), "by": "auto", "iter": iteration}
+                      "at": now_iso(), "by": judged_by, "iter": iteration}
         write_state_and_docs(st)
         write_pending_doc(rid, snap, diff_base, cand_sha, cand_val, past,
-                          reason, touched_tests)
-        commit_rounds_files(f"chore(rounds): {rid} 通过验证（{cand_val['status']}），"
-                            f"晋升为最佳")
+                          reason, touched_tests, ai=rec.get("ai"), by=judged_by)
+        commit_rounds_files(f"chore(rounds): {rid} 晋升为最佳"
+                            f"（验证: {cand_val['status']}，by {judged_by}）")
         if push_master_with_recovery():
             log(f"{rid}：已晋升为最佳并推送")
         else:
@@ -831,12 +1334,12 @@ def cmd_after_round(args) -> int:
         _record_round(st, rec)
         write_review(st)
         write_pending_doc(rid, snap, diff_base, cand_sha, cand_val, past,
-                          reason, touched_tests)
-        meta_record(st, f"chore(rounds): {rid} {past}"
-                          f"（候选验证: {cand_val['status']}，最佳: {best_status}）")
+                          reason, touched_tests, ai=rec.get("ai"), by=judged_by)
+        meta_record(st, f"chore(rounds): {rid} {past}（候选验证: {cand_val['status']}，"
+                          f"最佳: {best_status}，by {judged_by}）")
         log(f"{rid}：候选保留为快照，master 维持最佳；工作区已回到最佳")
 
-    # ---- 5) 顺带处理用户评分（用户可在任意时刻翻案/回滚） ----
+    # ---- 5) 顺带处理用户评分（用户可在任意时刻翻案/回滚，优先级最高） ----
     process_verdicts(st)
     return 0
 
@@ -845,6 +1348,14 @@ def cmd_validate(args) -> int:
     val = run_validation(REPO)
     print(json.dumps(val, ensure_ascii=False, indent=2))
     return 0 if val["status"] in ("pass", "none") else 1
+
+
+def cmd_ai_judge(args) -> int:
+    fetch()
+    git("checkout", "-B", "master", "origin/master", check=False)
+    st = load_or_bootstrap()
+    process_pending_ai(st, only_snap=args.snap)
+    return 0
 
 
 def cmd_show(args) -> int:
@@ -861,11 +1372,15 @@ def main(argv=None) -> int:
                                  description="Continuous Loop 轮次守卫")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("init", help="job 开始：同步远端、处理用户评分、建立基线")
+    sub.add_parser("init", help="job 开始：同步远端、处理用户评分、AI 补评分、建立基线")
 
-    p2 = sub.add_parser("after-round", help="每轮结束：快照/验证/裁决/晋升")
+    p2 = sub.add_parser("after-round", help="每轮结束：快照/验证/AI 评分/晋升")
     p2.add_argument("--iter", required=True,
                     help="轮次编号（工作流里的 ITER，或 final）")
+
+    p3 = sub.add_parser("ai-judge", help="手动触发 AI 评分（默认处理全部待评分轮次）")
+    p3.add_argument("--snap", default=None,
+                    help="只评分指定快照，如 snap/20261016-061234-r3")
 
     sub.add_parser("validate", help="对当前工作树跑自动验证")
     sub.add_parser("show", help="打印当前状态")
@@ -876,6 +1391,8 @@ def main(argv=None) -> int:
             return cmd_init(args)
         if args.cmd == "after-round":
             return cmd_after_round(args)
+        if args.cmd == "ai-judge":
+            return cmd_ai_judge(args)
         if args.cmd == "validate":
             return cmd_validate(args)
         if args.cmd == "show":
