@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-124055-r7",
-    "sha": "233ec9691398cee025e7d2648054f23509219d63",
+    "snap": "snap/20261016-125345-r8",
+    "sha": "37926c1c4109193fefaec56fbb89488720856cb7",
     "tests": "pass",
-    "at": "2026-10-16T12:41:50Z",
+    "at": "2026-10-16T12:55:08Z",
     "by": "ai",
-    "iter": "7"
+    "iter": "8"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -379,6 +379,31 @@
         "verdict": "accept",
         "reason": "真实 bug 修复——把 $prompt 过长导致的裸 E2BIG 转换为带解法建议的 PromptTooLongError 并立即中止循环，新增三个针对性回归测试且未删改弱化任何原有测试，README 同步，无风险。",
         "at": "2026-10-16T12:41:50Z"
+      }
+    },
+    {
+      "id": "20261016-125345-r8",
+      "snap": "snap/20261016-125345-r8",
+      "sha": "37926c1c4109193fefaec56fbb89488720856cb7",
+      "ts": "2026-10-16T12:55:08Z",
+      "iter": "8",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "c81f69c5bf054aeec1b101375c928a73494308e4",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "新增测试（未删改）修复了命令替换内裸 case 的括号配对漏洞所导致的 shell 注入，实现保守且 39 项测试全过，仅对 `$(... case ...)` 中作为普通参数的裸 case 有少量误报式拒绝。",
+        "at": "2026-10-16T12:55:08Z"
       }
     }
   ],
