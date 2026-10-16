@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-162632-r3",
-    "sha": "f978b2fefcc9cd3c37f1b24f6666db7fda38e466",
+    "snap": "snap/20261016-170850-r4",
+    "sha": "ebe6d55e8b7a008aa4b1d20ee8e8de52455477ab",
     "tests": "pass",
-    "at": "2026-10-16T16:31:00Z",
+    "at": "2026-10-16T17:12:46Z",
     "by": "ai",
-    "iter": "3"
+    "iter": "4"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -579,6 +579,31 @@
         "verdict": "accept",
         "reason": "修复了行续行在词边界与 $ 配对中的处理，避免提示词被静默丢弃或篡改，并新增对应回归测试，全部测试通过。",
         "at": "2026-10-16T16:31:00Z"
+      }
+    },
+    {
+      "id": "20261016-170850-r4",
+      "snap": "snap/20261016-170850-r4",
+      "sha": "ebe6d55e8b7a008aa4b1d20ee8e8de52455477ab",
+      "ts": "2026-10-16T17:12:46Z",
+      "iter": "4",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "ea283cbe7944de8d76437e7338a319712f58b5ec",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/beam-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "改动新增了续行拼接操作符/展开的严格安全校验并配套真实回归测试，未见删除或弱化现有测试，编译与测试均通过。",
+        "at": "2026-10-16T17:12:46Z"
       }
     }
   ],
