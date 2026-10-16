@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-172346-r5",
-    "sha": "20ce321066cd669dc2bac8bc06b25af89c0fa6ff",
+    "snap": "snap/20261016-174236-r6",
+    "sha": "81d9fe25f6c6c395496fe354265a9508e36d9152",
     "tests": "pass",
-    "at": "2026-10-16T17:24:58Z",
+    "at": "2026-10-16T17:43:56Z",
     "by": "ai",
-    "iter": "5"
+    "iter": "6"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -629,6 +629,31 @@
         "verdict": "accept",
         "reason": "修复了词首判定未排除被转义边界字符导致的真实命令注入 bug，并新增含正反对照的回归测试，未删改或弱化任何测试，全量 45 项测试通过。",
         "at": "2026-10-16T17:24:58Z"
+      }
+    },
+    {
+      "id": "20261016-174236-r6",
+      "snap": "snap/20261016-174236-r6",
+      "sha": "81d9fe25f6c6c395496fe354265a9508e36d9152",
+      "ts": "2026-10-16T17:43:56Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "8d1cd11c0b298c3307cb0d8b1d5859a08ce13917",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了 heredoc 终止符词含 `$(`/`${`/`$[`/`$'`/`$\"`/反引号时被提前截断、导致提示词注入（实测基线版会执行提示词里的命令并创建文件、且配置校验误判为可送达）的漏洞，改动与既有解析防线同口径、保守拒绝，未误删或弱化任何测试，新增 6 个注入变体及 2 组对照测试，自动验证 46 项全过。",
+        "at": "2026-10-16T17:43:56Z"
       }
     }
   ],
