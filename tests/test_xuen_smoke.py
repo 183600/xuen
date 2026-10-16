@@ -523,6 +523,77 @@ def test_render_command_quoted_closers_in_expansions_cannot_inject(tmp_path):
         assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_case_pattern_paren_in_expansion_cannot_inject(tmp_path):
+    """命令替换里 case 的 pattern ) 不配对 (，不能被当成替换的结束。
+
+    回归（bash 与 dash 下均可复现）：$(case x in x) echo "$prompt";; esac)
+    里 pattern 结束的裸 ) 让括号深度配对提前闭合命令替换、恢复外层引号
+    状态（双引号 → 裸），之后的 $prompt 按裸语境插入 shlex.quote 的单引号——
+    但 shell 仍在双引号内，单引号只是字面量，提示词里的 $(...)/`...`
+    被真正执行（注入）；参数文本也被拆坏。修复：命令替换内的裸 case
+    之后无法安全配对括号，整体吞到模板结尾、不做替换，并由配置校验
+    拒绝这类模板。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"P $(touch {marker}) `touch {marker}.bt` Q"
+    templates = (
+        'printf %s "$(case x in x) echo "$prompt";; esac)"',
+        'printf %s "$(case x in x) echo $prompt;; esac)"',
+        'printf %s "$(echo "$(case x in x) echo "$prompt";; esac)")"',
+        # shell 分词前会删掉续行：ca\<换行>se 仍是 case 保留字，不能漏认
+        'printf %s "$(ca\\\nse x in x) echo "$prompt";; esac)"',
+        'printf %s "$(c\\\na\\\ns\\\ne x in x) echo "$prompt";; esac)"',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 与 heredoc 正文一致：占位符原样保留，提示词绝不进入该区域
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert str(marker) not in r.stdout, tpl
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+        # 命令替换里 case 之后的 $prompt 不会送达 agent：配置校验必须拒绝
+        assert command_receives_prompt(tpl) is False, tpl
+    # 对照：case 在命令替换之外不参与括号配对，$prompt 照常替换、正常送达
+    tpl = "printf %s $prompt; case x in x) true;; esac"
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 对照：只是以 case 为子串的普通单词（showcase）不触发关键字处理
+    tpl3 = 'printf %s "$(showcase)" "$prompt"'
+    assert command_receives_prompt(tpl3) is True
+    agent3 = ShellAgent(tpl3, tmp_path, timeout=5)
+    r3 = subprocess.run(["bash", "-c", agent3.render_command(prompt)],
+                        capture_output=True, text=True, cwd=tmp_path)
+    assert r3.returncode == 0, r3.stderr
+    assert r3.stdout == prompt
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 对照：双引号里的 case 是普通字面量、不触发 case 关键字处理，
+    # 命令替换内的 $prompt 仍安全送达
+    tpl2 = 'printf %s "$(echo "case" "$prompt")"'
+    assert command_receives_prompt(tpl2) is True
+    agent2 = ShellAgent(tpl2, tmp_path, timeout=5)
+    r2 = subprocess.run(["bash", "-c", agent2.render_command(prompt)],
+                        capture_output=True, text=True, cwd=tmp_path)
+    assert r2.returncode == 0, r2.stderr
+    assert r2.stdout == "case " + prompt
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 

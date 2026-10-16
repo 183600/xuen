@@ -97,6 +97,37 @@ def _has_unsafe_construct(tpl: str, j: int,
             or tpl.startswith(heads, j))
 
 
+def _is_case_keyword(tpl: str, i: int) -> bool:
+    """位置 i 起是否为裸 case 保留字（允许 \\+换行 续行把单词拆开）。
+
+    shell 在分词前会先删掉反斜杠-换行（续行），因此 `ca\\<换行>se`
+    仍被识别为 case 保留字；扫描器若只按字面匹配 "case" 会漏掉这种
+    写法，其后的 pattern ) 又会破坏括号配对（见 _render_posix 说明）。
+    单词边界两侧同样先跨过续行再判断，且反斜杠转义其他字符、引号都
+    会让单词不再是保留字（`c\\ase`、`c'a'se` 均不是 case）。
+    """
+    n = len(tpl)
+
+    def skip_continuations(pos: int) -> int:
+        while pos + 1 < n and tpl[pos] == "\\" and tpl[pos + 1] == "\n":
+            pos += 2
+        return pos
+
+    k = i
+    while k >= 2 and tpl[k - 1] == "\n" and tpl[k - 2] == "\\":
+        k -= 2
+    if k > 0 and _WORD_CHAR.match(tpl[k - 1]):
+        return False
+    j = i
+    for letter in "case":
+        j = skip_continuations(j)
+        if j >= n or tpl[j] != letter:
+            return False
+        j += 1
+    j = skip_continuations(j)
+    return j >= n or not _WORD_CHAR.match(tpl[j])
+
+
 def _arithmetic_end(tpl: str, i: int) -> int:
     """返回位置 i 处 $((...)) 算术展开结束后的下标（吞掉匹配的两个右括号）。
 
@@ -387,6 +418,14 @@ class ShellAgent:
         不构成保护：表达式会对其中的 $(cmd)/`cmd` 求值执行（bash）。
         这些位置无法安全送达提示词，同样整体原样跳过、不替换。
 
+        case 的 pattern 以裸 ) 结束、不配对任何 (（case x in x) ...;; esac）：
+        在命令替换内部，括号深度配对会把这个 ) 误当成替换/子 shell 的结束，
+        提前恢复外层引号状态——之后的 $prompt 按错误语境插入（模板外层是
+        双引号时用单引号转义，单引号在双引号内只是字面量），提示词里的
+        $(...)/`...` 被真正执行（注入）。与 heredoc 正文/反引号/算术语境
+        同理：命令替换内的裸 case 之后无法安全配对，整体吞到模板结尾、
+        不做替换（command_receives_prompt 据此拒绝这类模板）。
+
         ${...} 参数展开内部也是无法安全替换的数据区，整体跳过、不替换：
         - 算术语境（数组下标 ${name[...]}、子串展开 ${name:offset[:length]}）
           插入的引号只是表达式文本，$(...)/`...` 会被求值执行；
@@ -601,6 +640,14 @@ class ShellAgent:
                 j = _backquote_end(tpl, i)
                 out.append(tpl[i:j])
                 i = j
+                continue
+            if subst_stack and _is_case_keyword(tpl, i):
+                # 命令替换内的裸 case 关键字：pattern 结束的 ) 不配对任何 (，
+                # 括号深度配对会提前把替换错误闭合、恢复错误的引号状态，
+                # 之后的 $prompt 会按错误语境插入（见方法说明）。无法安全
+                # 配对时与其他跳过区一致：整段原样保留、不替换
+                out.append(tpl[i:])
+                i = n
                 continue
             if tpl.startswith("$((", i):
                 # 算术展开内部是表达式，整体原样跳过：既不替换占位符
