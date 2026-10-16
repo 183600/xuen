@@ -337,6 +337,99 @@ def test_render_command_does_not_substitute_in_arithmetic_contexts(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
+    """${name:offset[:length]} 子串展开的 offset/length 是算术语境。
+
+    回归（bash 下可复现）：${x:'$(touch ...)'} 里的引号只是表达式文本，
+    不构成保护——插入的提示词会真正执行其中的 $(...)/`...`（注入）。
+    与 ${name[下标]} 同理整体跳过、不做替换，并由配置校验拒绝这类模板；
+    词语境的 ${x:-$prompt} / ${x:+$prompt} 仍照常安全替换。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    bash = shutil.which("bash")
+    marker = tmp_path / "pwned"
+    prompt = f"0+$(touch {marker})"
+    templates = (
+        "x=abcdefgh; echo ${x:$prompt}",
+        'x=abcdefgh; echo "${x:$prompt}"',
+        "x=abcdefgh; echo ${x:1:$prompt}",
+        'set a b; echo "${@:$prompt}"',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入算术语境
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        r = subprocess.run([bash, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists(), tpl
+        # 算术语境里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+    # 正面对照：默认值/替代值等词语境照常替换、正常送达且不执行
+    tpl = 'printf %s "${x:-$prompt}"'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run([bash, "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt
+    assert not marker.exists()
+
+
+def test_render_command_ansi_c_quotes_escape_prompt(tmp_path):
+    """ANSI-C 引用（$'...'）里的占位符必须按反斜杠转义规则插入。
+
+    回归（bash 下可复现）：沿用普通单引号的 '\\'' 闭合重开写法时，
+    值里的 \\' 在 $'...' 里是被转义的单引号、不会闭合引用——引号奇偶
+    被打乱，值里随后的裸命令替换逃出引用被真正执行（注入）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    bash = shutil.which("bash")
+    marker = tmp_path / "pwned"
+    tpl = "printf %s $'pre $prompt post'"
+    assert command_receives_prompt(tpl) is True
+    prompt = f"\\' ; touch {marker} ; echo \\'"
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    rendered = agent.render_command(prompt)
+    assert "$prompt" not in rendered
+    r = subprocess.run([bash, "-c", rendered], capture_output=True,
+                       text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    # 提示词原样送达（不执行、不被 ANSI-C 转义解释）
+    assert r.stdout == f"pre {prompt} post"
+    assert not marker.exists()
+    # $prompt_file：路径经 ANSI-C 转义后仍能通向提示词文件（含空格工作区）
+    workspace = tmp_path / "some dir"
+    workspace.mkdir()
+    tpl_file = "cat $'$prompt_file'"
+    assert command_receives_prompt(tpl_file) is True
+    agent_file = ShellAgent(tpl_file, workspace, timeout=5)
+    r_file = subprocess.run([bash, "-c", agent_file.render_command(prompt)],
+                            capture_output=True, text=True, cwd=tmp_path)
+    assert r_file.returncode == 0, r_file.stderr
+    assert r_file.stdout == prompt
+    # 值尾部的反斜杠不能吞掉模板的结束引号；\x 序列不被解释成转义
+    tpl2 = "printf %s $'$prompt'"
+    assert command_receives_prompt(tpl2) is True
+    for value in ("abc\\", "a\\nb", "a'b"):
+        agent2 = ShellAgent(tpl2, tmp_path, timeout=5)
+        r2 = subprocess.run([bash, "-c", agent2.render_command(value)],
+                            capture_output=True, text=True, cwd=tmp_path)
+        assert r2.returncode == 0, r2.stderr
+        assert r2.stdout == value
+
+
 def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     """$((...)) 算术展开里的 << 不能按 heredoc 重定向登记。
 

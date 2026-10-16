@@ -109,6 +109,18 @@ def _backquote_end(tpl: str, i: int) -> int:
     return n
 
 
+def _escape_in_ansi_c_quotes(value: str) -> str:
+    """把值安全地嵌进已打开的 ANSI-C 引用（$'...'）内部。
+
+    ANSI-C 引用会处理反斜杠转义，不能沿用普通单引号的 '\\'' 闭合重开
+    写法：值中的 \\' 在 $'...' 里是「被转义的单引号」——不会闭合引用，
+    反而让引号奇偶错位，值里随后的裸命令替换会被真正执行（注入）。
+    这里反斜杠必须最先转义（避免吞掉模板的结束引号或让值里的 \\n 等
+    被 shell 解释成别的字符），再把 ' 写成 \\'（转义后不会结束引用）。
+    """
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 def _legacy_arithmetic_end(tpl: str, i: int) -> int:
     """返回位置 i（$[）处旧式算术展开结束后的下标（吞掉匹配的 ]）。
 
@@ -186,6 +198,38 @@ def _parameter_expansion_end(tpl: str, i: int) -> int:
                 return j + 1
         j += 1
     return n
+
+
+# 参数名：标识符 / 纯数字（位置参数）/ 单个特殊参数（@ * # ? - $ ! 等）
+_PARAM_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[^A-Za-z0-9_]")
+
+
+def _parameter_expansion_is_arithmetic(segment: str) -> bool:
+    """判断 ${...} 展开体是否含算术语境（插入的引号不构成保护）。
+
+    - 数组下标 ${name[下标]}：下标是算术表达式；
+    - 子串展开 ${name:offset[:length]}：offset/length 也是算术表达式，
+      bash 会对其中 $(...)/`...` 求值执行——即使被引号包住，如
+      ${x:'$(cmd)'}（引号字符只是表达式文本，不阻止求值）；
+    - ${name:-word} / ${name:=word} / ${name:?word} / ${name:+word}
+      的 word 是普通词语境，照常安全替换；# % / ^ , @ 等模式/变换
+      操作符同理。
+    """
+    body = segment[2:]
+    if body.endswith("}"):
+        body = body[:-1]
+    if "[" in body:
+        # 不解析嵌套/模式中的 [：宁可整体跳过，也不冒险插入
+        return True
+    if body[:1] in ("#", "!"):
+        # ${#name} 长度 / ${!name} 间接：前缀字符不属于参数名
+        body = body[1:]
+    match = _PARAM_NAME.match(body)
+    if match is None:
+        return False
+    op = body[match.end():]
+    # 子串展开：首个 : 之后不是 - = ? +（那四种是词语境的默认值操作符）
+    return op.startswith(":") and (len(op) < 2 or op[1] not in "-=?+")
 
 
 class ShellAgent:
@@ -325,10 +369,16 @@ class ShellAgent:
         这类模板）。
 
         算术语境（$((...))、旧式 $[...]、算术命令 ((...))、参数展开的
-        数组下标 ${name[...]}）里插入的引号也不构成保护：表达式会对其中
-        的 $(cmd)/`cmd` 求值执行（bash）。这些位置无法安全送达提示词，
-        同样整体原样跳过、不替换。没有下标的 ${x:-$prompt} 仍是普通词
-        语境，照常转义替换。
+        数组下标 ${name[...]} 与子串展开 ${name:offset[:length]}）里插入
+        的引号也不构成保护：表达式会对其中的 $(cmd)/`cmd` 求值执行
+        （bash）。这些位置无法安全送达提示词，同样整体原样跳过、不替换。
+        没有下标的 ${x:-$prompt} 仍是普通词语境，照常转义替换。
+
+        ANSI-C 引用（$'...'）内部只做反斜杠转义、没有命令替换等展开，
+        但普通单引号的 '\\'' 闭合重开写法在这里不成立（\\' 是被转义的
+        单引号、不会闭合引用），占位符必须按 ANSI-C 转义插入
+        （见 _escape_in_ansi_c_quotes），否则值里的引号/反斜杠会打乱
+        引用边界、把命令替换暴露成可执行代码（注入）。
 
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
@@ -457,9 +507,10 @@ class ShellAgent:
                     continue
                 if tpl.startswith("${", i):
                     j = _parameter_expansion_end(tpl, i)
-                    if "[" in tpl[i:j]:
-                        # ${name[下标]} 的下标是算术语境，无法安全替换
-                        # （见裸上下文同名分支），整段原样跳过
+                    if _parameter_expansion_is_arithmetic(tpl[i:j]):
+                        # ${name[下标]} 与 ${name:offset} 子串展开都是算术
+                        # 语境，插入的引号不构成保护（见裸上下文同名分支），
+                        # 整段原样跳过、不替换
                         out.append(tpl[i:j])
                         i = j
                         continue
@@ -535,12 +586,13 @@ class ShellAgent:
                 continue
             if tpl.startswith("${", i):
                 j = _parameter_expansion_end(tpl, i)
-                if "[" in tpl[i:j]:
-                    # ${name[下标]} 的下标是算术语境：插入的引号不被当作
-                    # 保护，下标里的 $(...)/`...` 会被求值执行（bash）。
+                if _parameter_expansion_is_arithmetic(tpl[i:j]):
+                    # ${name[下标]} 的下标与 ${name:offset[:length]} 子串
+                    # 展开的 offset/length 都是算术语境：插入的引号不被
+                    # 当作保护，其中的 $(...)/`...` 会被求值执行（bash）。
                     # 无法安全替换，整段原样跳过（command_receives_prompt
                     # 据此拒绝这类模板）。没有下标的参数展开（如
-                    # ${x:-$prompt}）仍按普通词语境照常替换
+                    # ${x:-$prompt}）仍是普通词语境，照常替换
                     out.append(tpl[i:j])
                     i = j
                     continue
@@ -550,6 +602,38 @@ class ShellAgent:
                 j = _legacy_arithmetic_end(tpl, i)
                 out.append(tpl[i:j])
                 i = j
+                continue
+            if tpl.startswith("$'", i):
+                # ANSI-C 引用（$'...'）：内部只做反斜杠转义，没有命令
+                # 替换等展开，但普通单引号的 '\'' 闭合重开写法在这里
+                # 不成立——\' 是被转义的单引号、不会闭合引用，会打乱
+                # 引号奇偶，把值里随后的命令替换暴露成可执行代码（注入）。
+                # 这里按 shell 规则逐字符解析（\x 成对跳过、裸 ' 结束），
+                # 占位符按 ANSI-C 转义插入（见 _escape_in_ansi_c_quotes）
+                out.append("$'")
+                k = i + 2
+                while k < n:
+                    c = tpl[k]
+                    if c == "\\":
+                        out.append(tpl[k:k + 2])
+                        k += 2
+                        continue
+                    if c == "'":
+                        out.append(c)
+                        k += 1
+                        break
+                    ph = self._placeholder_at(tpl, k)
+                    if ph == "$prompt":
+                        out.append(_escape_in_ansi_c_quotes(prompt))
+                        k += len(ph)
+                        continue
+                    if ph == "$prompt_file":
+                        out.append(_escape_in_ansi_c_quotes(file_value()))
+                        k += len(ph)
+                        continue
+                    out.append(c)
+                    k += 1
+                i = k
                 continue
             if tpl.startswith("((", i):
                 # 算术命令 ((...))：内部是表达式，插入的引号不构成保护，
