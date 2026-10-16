@@ -34,7 +34,9 @@ def _resolve_task(args) -> str:
             print("位置参数任务与 --task-file 不能同时使用", file=sys.stderr)
             raise SystemExit(2)
         try:
-            with open(args.task_file, encoding="utf-8") as f:
+            # utf-8-sig：Windows 记事本保存的任务文件常带 BOM，
+            # 按 utf-8 读取会把 \ufeff 带进任务文本（标题与每轮提示词）
+            with open(args.task_file, encoding="utf-8-sig") as f:
                 task = f.read().strip()
         except (OSError, UnicodeDecodeError) as e:
             # UnicodeDecodeError：任务文件不是合法 UTF-8（如二进制/GBK 文件）
