@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-122041-r6",
-    "sha": "00ff8a7a601a8f697317af1449aef43a1847b14a",
+    "snap": "snap/20261016-124055-r7",
+    "sha": "233ec9691398cee025e7d2648054f23509219d63",
     "tests": "pass",
-    "at": "2026-10-16T12:22:35Z",
+    "at": "2026-10-16T12:41:50Z",
     "by": "ai",
-    "iter": "6"
+    "iter": "7"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -354,6 +354,31 @@
         "verdict": "accept",
         "reason": "真实修复了 `${...}/$[...]/$((...))` 内引号隐藏结束符导致扫描器误判、进而把提示词内容注入 shell 执行的漏洞，测试为纯新增回归用例（含正面对照，未删改弱化），自动验证通过；仅对算术语境里的参数展开/反斜杠略显保守、可能拒绝少数旧模板，属可接受小瑕疵。",
         "at": "2026-10-16T12:22:35Z"
+      }
+    },
+    {
+      "id": "20261016-124055-r7",
+      "snap": "snap/20261016-124055-r7",
+      "sha": "233ec9691398cee025e7d2648054f23509219d63",
+      "ts": "2026-10-16T12:41:50Z",
+      "iter": "7",
+      "changed": 4,
+      "touched_tests": true,
+      "diff_base": "edb961079a5699617e468fea9e10e9f4d5ab7af6",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实 bug 修复——把 $prompt 过长导致的裸 E2BIG 转换为带解法建议的 PromptTooLongError 并立即中止循环，新增三个针对性回归测试且未删改弱化任何原有测试，README 同步，无风险。",
+        "at": "2026-10-16T12:41:50Z"
       }
     }
   ],
