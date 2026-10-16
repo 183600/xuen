@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-131326-r9",
-    "sha": "c97629e0b7bdf067ab37a94edf74ec2f0e8e5278",
+    "snap": "snap/20261016-133102-r10",
+    "sha": "49a66069d0ca02c4859fcd562c3c28b97689636c",
     "tests": "pass",
-    "at": "2026-10-16T13:15:51Z",
+    "at": "2026-10-16T13:32:45Z",
     "by": "ai",
-    "iter": "9"
+    "iter": "10"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -429,6 +429,31 @@
         "verdict": "accept",
         "reason": "修复了经实测可复现的真实 bash 注入缺陷（裸 `>&word` 展开不遵守引号规则），且纯新增测试与防御代码、无删改测试，回归测试通过、风险低。",
         "at": "2026-10-16T13:15:51Z"
+      }
+    },
+    {
+      "id": "20261016-133102-r10",
+      "snap": "snap/20261016-133102-r10",
+      "sha": "49a66069d0ca02c4859fcd562c3c28b97689636c",
+      "ts": "2026-10-16T13:32:45Z",
+      "iter": "10",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "b598f51ea382109c570968a1dd10298f12775236",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了一个真实的命令注入/语义错位 bug（`$$prompt` 被误当成 `$prompt` 替换，双引号下构成 `$(...)` 注入、裸语境下变成 `$'...'` ANSI-C 引用），并新增了充分的回归测试，未删改既有测试，自动验证通过、风险低。",
+        "at": "2026-10-16T13:32:45Z"
       }
     }
   ],
