@@ -918,6 +918,21 @@ class ShellAgent:
             >= 当前深度同样覆盖这种情况；即使 dash 把它当命令执行，这里
             多吞（不替换）也是安全方向。
 
+            待收正文的读取顺序必须与 shell 一致：登记深度更深（嵌套在
+            命令替换里）的 heredoc 先读，同深度按登记顺序。bash 实测
+            `cat <<A $(cat <<B)` 先读 B 的正文再读 A 的（probe 验证嵌套
+            深度优先、同深度按登记顺序；相邻探测如
+            `3<<T1 5<<T3 $(cat <<T2) $(cat <<T4)` 的读取顺序是
+            T2,T4,T1,T3）。按登记顺序收会把两个 heredoc 的正文边界张冠
+            李戴：`cat <<A $(cat <<B)\\nBODY\\nB\\nA\\n$prompt` 里按登记
+            顺序先收 A（把 B 行当 A 的终止符、正文提前结束），随后在
+            shell 仍当作 A 正文的区域恢复替换——bash 实际先收 B 的正文
+            （BODY、B）、A 的正文从 `$prompt` 行延伸下去，提示词里的
+            $(...)/`` 在该区域被真正执行（注入，实测创建文件）。
+            dash 对已闭合替换里的 heredoc 按空正文处理、外层正文按登记
+            顺序读：其正文区域都落在深度优先所吞掉的范围之内，恢复替换
+            的位置只会更晚，同样是安全方向。
+
             不带引号的正文里出现横跨终止符行仍未闭合的 $()/`` 等展开时，
             这一行不是真正的正文结束：dash 会把它吞进展开、正文继续
             （见 _heredoc_body_open_substitution），此处继续按正文往后吞，
@@ -925,10 +940,15 @@ class ShellAgent:
             """
             depth = len(subst_stack)
             kept = []
-            for delim, strip_tabs, reg_depth, quoted in pending_heredocs:
-                if reg_depth < depth:
-                    kept.append((delim, strip_tabs, reg_depth, quoted))
-                    continue
+            consume = []
+            for entry in pending_heredocs:
+                if entry[2] < depth:
+                    kept.append(entry)
+                else:
+                    consume.append(entry)
+            # sorted 是稳定排序：同深度保持登记顺序，深度优先与 bash 一致
+            consume.sort(key=lambda e: -e[2])
+            for delim, strip_tabs, reg_depth, quoted in consume:
                 body_start = pos
                 while pos < n:
                     j = tpl.find("\n", pos)

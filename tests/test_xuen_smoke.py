@@ -343,6 +343,85 @@ def test_render_command_heredoc_inside_command_substitution_cannot_inject(tmp_pa
         assert r.stdout == prompt2, sh
 
 
+def test_render_command_closed_substitution_heredoc_read_before_outer(tmp_path):
+    """多个待收 heredoc 的正文读取顺序必须与 shell 一致：深度优先。
+
+    回归：`cat <<A $(cat <<B)` 里 B 的替换在同一行闭合，外层换行处 A 和
+    B 都待收正文。渲染器按登记顺序先收 A，把 B 行当成 A 的终止符、在
+    shell 仍当作 A 正文的区域恢复替换——bash 实际先收 B 的正文
+    （REMBODY、B），A 的正文从 `$prompt` 行一直延伸到模板结尾，提示词
+    里的 $(...)/`` 被 bash 当成不加引号正文执行（注入，实测创建文件）。
+    修复：待收正文按登记深度降序（同深度按登记顺序）读取，与 bash
+    实测行为一致；dash 对已闭合替换里的 heredoc 按空正文处理、外层正文
+    按登记顺序读，其正文区域落在深度优先吞掉的范围之内，同样安全。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    # 注入模板：B 的正文吃掉 x、A 行后，bash 把 $prompt 行当作 A 的正文
+    templates = (
+        ("cat <<A > /dev/null $(cat <<B)\n"
+         "x\n"
+         "A\n"
+         "B\n"
+         "$prompt\n"),
+        # 深度 2：C 最先读，然后 B，最后 A
+        ("cat <<A > /dev/null $(cat <<B $(cat <<C))\n"
+         "x\n"
+         "A\n"
+         "B\n"
+         "C\n"
+         "$prompt\n"),
+    )
+    prompt = f"$(touch {tmp_path / 'pwned'}) `touch {tmp_path / 'pwned.bt'}`"
+    for tpl in templates:
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    if not _posix_shell_available():
+        return
+    # 对照 1：正文在终止符行前正常结束，深度优先收完后终止符之后的
+    # $prompt 照常送达（bash/dash 都把提示词作为 printf 的参数输出）
+    tpl = ("cat <<A > /dev/null $(cat <<B)\n"
+           "y\n"
+           "B\n"
+           "A\n"
+           "printf %s $prompt")
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    prompt2 = "a'b $HOME `id`"
+    for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (sh, r.stderr)
+        assert r.stdout == prompt2, sh
+    # 对照 2：深度 2 的嵌套替换同理，先收 C 再收 B，A 空正文不吞占位符
+    tpl = ("cat <<A > /dev/null $(cat <<B $(cat <<C))\n"
+           "z\n"
+           "C\n"
+           "B\n"
+           "A\n"
+           "printf %s $prompt")
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (sh, r.stderr)
+        assert r.stdout == prompt2, sh
+
+
 def test_render_command_unquoted_heredoc_body_spanning_expansion_cannot_inject(tmp_path):
     """不加引号的 heredoc 正文里横跨终止符行的展开不能在正文外恢复替换。
 
