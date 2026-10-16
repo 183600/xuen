@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-101137-r7",
-    "sha": "e3e722400a1dae58a71f1f15ded8a6b992d383dd",
+    "snap": "snap/20261016-105041-r1",
+    "sha": "8ceb5e079ff602059db174bde9b6c2e4c2b779f4",
     "tests": "pass",
-    "at": "2026-10-16T10:13:10Z",
+    "at": "2026-10-16T10:53:05Z",
     "by": "ai",
-    "iter": "7"
+    "iter": "1"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -205,6 +205,31 @@
       },
       "verdict": "noop",
       "by": "auto"
+    },
+    {
+      "id": "20261016-105041-r1",
+      "snap": "snap/20261016-105041-r1",
+      "sha": "8ceb5e079ff602059db174bde9b6c2e4c2b779f4",
+      "ts": "2026-10-16T10:53:05Z",
+      "iter": "1",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "17e7b30367eaffe4f8de9e4bd2e4b959e4fe3680",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了命令替换解析中嵌套括号（子 shell）被误判为结束的真实 bug，消除了提示词拆词与分号注入风险，并新增了针对性的回归测试，无删改测试或引入风险。",
+        "at": "2026-10-16T10:53:05Z"
+      }
     }
   ],
   "ai_judge": {}
