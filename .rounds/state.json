@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-184751-r8",
-    "sha": "cb7fd9931f5153a0d43cd8e0be49f6b324a957bf",
+    "snap": "snap/20261016-205828-r2",
+    "sha": "7c07026d40e92a9db5fc048a787a5c14c3fb6e6d",
     "tests": "pass",
-    "at": "2026-10-16T18:49:10Z",
+    "at": "2026-10-16T21:00:51Z",
     "by": "ai",
-    "iter": "8"
+    "iter": "2"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -755,6 +755,31 @@
       },
       "verdict": "noop",
       "by": "auto"
+    },
+    {
+      "id": "20261016-205828-r2",
+      "snap": "snap/20261016-205828-r2",
+      "sha": "7c07026d40e92a9db5fc048a787a5c14c3fb6e6d",
+      "ts": "2026-10-16T21:00:51Z",
+      "iter": "2",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "db90f1c763424808731ce8d8bb433126542dfd9a",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了提示词中路径在 POSIX 双引号内仍会被 `$`/反引号展开的真实缺陷，改用 `shlex.quote` 按平台转义，并新增了合规的回归测试（未删改弱化测试），验证全绿、无回归风险。",
+        "at": "2026-10-16T21:00:51Z"
+      }
     }
   ],
   "ai_judge": {}
