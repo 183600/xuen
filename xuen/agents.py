@@ -919,10 +919,17 @@ class ShellAgent:
                 # 「词首」判定必须按删除续行后的相邻字符：`a\<换行># x`
                 # 拼成 `a# x`，# 是词中字符而不是注释，按裸换行误判成
                 # 注释会跳过整行、$prompt 原样保留（提示词被静默丢弃）
+                # 且必须排除被反斜杠转义的边界字符：`echo \ #x` 里 `\ `
+                # 是转义空格、属于词的一部分（bash 与 dash 都输出 ` #x`），
+                # 其后的 # 不是注释。若误判成注释会跳过该行剩余部分（含
+                # 不成对引号），与实际 shell 的引号状态脱节，后续 $prompt
+                # 按错误语境插入、提示词里的 $(...)/`...` 被真正执行
+                # （注入，见 test_render_command_escaped_delimiter_hash）
                 prev = _prev_effective_pos(tpl, i)
                 if prev < 0 or (
                         tpl[prev] in " \t\n;&|()<>"
-                        and prev != word_internal_paren_end):
+                        and prev != word_internal_paren_end
+                        and not _escaped_at(tpl, prev)):
                     j = tpl.find("\n", i)
                     if j < 0:
                         out.append(tpl[i:])

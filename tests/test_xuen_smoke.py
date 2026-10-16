@@ -804,6 +804,74 @@ def test_render_command_comment_hash_after_expansion_close(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_escaped_delimiter_hash_is_not_comment(tmp_path):
+    """被反斜杠转义的词边界字符之后的 # 不是注释。
+
+    回归（bash 与 dash 行为一致）：`echo \\ #x` 输出 ` #x`——`\\ ` 是转义
+    空格、属于词的一部分，其后的 # 是词中字符而不是注释；渲染器只按前
+    一个字符是否属于 " \\t\\n;&|()<>" 判断，把 # 误当注释、把该行剩余部分
+    （含不成对引号）整体跳过，与真实 shell 的引号状态正好相反：
+    `echo \\ #"` + 换行 + `printf %s $prompt` + 换行 + `"` 里 shell 的
+    双引号从第一行一直引用到最后，提示词落在双引号词内，而渲染器按裸
+    语境插入单引号（单引号在双引号内只是字面量），提示词里的
+    $(...)/`...` 被真正执行（注入，下方复现同类模板）。修复：前一个字符
+    被转义（_escaped_at）时不算词边界，# 不再是注释；`;`/`(`/`&` 等
+    被转义的边界字符同理（每种都曾是同样的注入面）。未转义的边界字符
+    后 # 仍是注释（下方正面对照）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    templates = (
+        'echo \\ #"\nprintf %s $prompt\n"',
+        'echo \\;#"\nprintf %s $prompt\n"',
+        'echo \\(#"\nprintf %s $prompt\n"',
+        'echo \\&#"\nprintf %s $prompt\n"',
+        'echo \\|#"\nprintf %s $prompt\n"',
+        'echo \\>#"\nprintf %s $prompt\n"',
+        'echo \\<#"\nprintf %s $prompt\n"',
+    )
+    for tpl in templates:
+        # 提示词确实送达（落在引号状态正确的词内），不是拒绝模板
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 提示词按双引号语境转义插入：$(...)/`...` 被反斜杠转义成字面量
+        assert "\\$(touch" in rendered, tpl
+        assert "\\`touch" in rendered, tpl
+        if not _posix_shell_available():
+            continue
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+
+    if not _posix_shell_available():
+        return
+    # 对照：未转义的边界字符后 # 仍是注释——注释里不成对的引号不能
+    # 污染后续占位符：第一行被两个 shell 当注释忽略，第二行照常按
+    # 双引号语境插入提示词、原样送达且不执行
+    for tpl in ('echo ;#"\nprintf %s "$prompt"',
+                'echo \\\\ #"\nprintf %s "$prompt"'):
+        # `\\\\ `（两个反斜杠）是字面反斜杠 + 未转义空格：空格仍是词边界
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 第一行的 " 必须整行留在注释里：line 2 的提示词按双引号语境转义
+        assert "\\$(touch" in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            # echo 行先输出（空行 / 字面反斜杠），随后 printf 原样输出提示词
+            assert r.stdout.endswith(prompt), (tpl, shell, r.stdout)
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_line_continuation_word_boundaries(tmp_path):
     """分词前删除的续行（反斜杠-换行）必须参与词边界与 $ 配对判断。
 
