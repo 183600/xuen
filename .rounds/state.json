@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-110744-r2",
-    "sha": "273054db140971e6c7373b3f8e8d22324dc8be0a",
+    "snap": "snap/20261016-112221-r3",
+    "sha": "e5457a85ebf5d2b7772d7cca25d8b404ceda2c54",
     "tests": "pass",
-    "at": "2026-10-16T11:08:43Z",
+    "at": "2026-10-16T11:24:19Z",
     "by": "ai",
-    "iter": "2"
+    "iter": "3"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -254,6 +254,31 @@
         "verdict": "accept",
         "reason": "这是合理的安全加固：把反引号命令替换与算术语境（$[...]、((...))、${name[下标]}）识别为无法安全转义的数据区并整体跳过，堵住了原先会真正执行提示词中 $(...)/`...` 的注入面，且新增的是纯测试（无删除/弱化），自动验证通过；仅因对部分合法模板偏保守（如含字面 [ 的参数展开会被拒）留有小瑕疵，故给 8 分而非满分。",
         "at": "2026-10-16T11:08:43Z"
+      }
+    },
+    {
+      "id": "20261016-112221-r3",
+      "snap": "snap/20261016-112221-r3",
+      "sha": "e5457a85ebf5d2b7772d7cca25d8b404ceda2c54",
+      "ts": "2026-10-16T11:24:19Z",
+      "iter": "3",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "953e70f9870e5461285ecf08f708802e91b68600",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了 `${x:substring}` 子串展开算术语境与 ANSI-C 引用（`$'...'`）两处真实命令注入漏洞，测试为纯新增回归用例（无删改弱化），33 项测试全过，未发现风险。",
+        "at": "2026-10-16T11:24:19Z"
       }
     }
   ],
