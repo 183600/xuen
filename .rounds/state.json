@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-214122-r3",
-    "sha": "3dc2cea69c535eb127dbc8c5c81f7c12208404d2",
+    "snap": "snap/20261016-221731-r4",
+    "sha": "9ec9b7382c6f58258798becdc20d54d6afeb912f",
     "tests": "pass",
-    "at": "2026-10-16T21:42:50Z",
+    "at": "2026-10-16T22:18:57Z",
     "by": "ai",
-    "iter": "3"
+    "iter": "4"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -804,6 +804,31 @@
         "verdict": "accept",
         "reason": "新增测试针对真实存在的 heredoc 命令替换注入漏洞（在基线代码上确会失败），修复引入深度/引号感知的正文边界判定，方向保守（宁可多吞不替换），未删改弱化任何测试，全部 50 项测试通过。",
         "at": "2026-10-16T21:42:50Z"
+      }
+    },
+    {
+      "id": "20261016-221731-r4",
+      "snap": "snap/20261016-221731-r4",
+      "sha": "9ec9b7382c6f58258798becdc20d54d6afeb912f",
+      "ts": "2026-10-16T22:18:57Z",
+      "iter": "4",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "382107d9cccc7f9b3ac1035ef4ca7bb4dc1d9a1d",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了多深度 heredoc 正文读取顺序与 shell 不一致导致提示词被当作正文执行的注入漏洞（已用 bash 实测确认深度优先读取），并仅新增回归测试、未删改任何测试，51 项测试通过。",
+        "at": "2026-10-16T22:18:57Z"
       }
     }
   ],
