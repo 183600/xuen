@@ -858,8 +858,15 @@ class ShellAgent:
                     out.append(tpl[i:i + 2])
                     i += 2
                     continue
-                if tpl.startswith("$(", i):
-                    # 双引号内的命令替换/算术展开同样开启独立上下文
+                if (tpl.startswith("$(", i)
+                        and _dollar_starts_expansion(tpl, i)):
+                    # 双引号内的命令替换/算术展开同样开启独立上下文。
+                    # 必须确认这个 $ 真的开启展开：`$$(` 里第二个 $ 只是
+                    # PID（$$）的后半，双引号内的 ( 是字面量（bash/dash
+                    # 一致）；若按 $( 切到独立上下文，后续 $prompt 会按裸
+                    # 语境插入（shlex.quote 的单引号），而实际 shell 仍在
+                    # 双引号里——单引号只是字面量，提示词里的 $(...)/`...`
+                    # 逃出引用被真正执行（注入）
                     if tpl.startswith("$((", i):
                         j = _arithmetic_end(tpl, i)
                         out.append(tpl[i:j])
@@ -877,17 +884,21 @@ class ShellAgent:
                     out.append(tpl[i:j])
                     i = j
                     continue
-                if tpl.startswith("${", i):
+                if (tpl.startswith("${", i)
+                        and _dollar_starts_expansion(tpl, i)):
                     # ${...} 参数展开（算术语境的数组下标/子串展开与词语境
                     # 的 ${x:-word} 等）都是无法安全替换的数据区
-                    # （见方法说明），整段原样跳过、不替换
+                    # （见方法说明），整段原样跳过、不替换。
+                    # `$${...` 同理不是参数展开（$$ 是 PID，{ 是字面量），
+                    # 不能按 ${ 跳掉实际会被 shell 正常解析的文本
                     j = _parameter_expansion_end(tpl, i)
                     out.append(tpl[i:j])
                     i = j
                     continue
-                if tpl.startswith("$[", i):
+                if (tpl.startswith("$[", i)
+                        and _dollar_starts_expansion(tpl, i)):
                     # 双引号内的旧式算术展开 $[...] 同样是表达式语境，
-                    # 整体原样跳过、不替换
+                    # 整体原样跳过、不替换；`$$[...` 的 $[ 同理不是展开
                     j = _legacy_arithmetic_end(tpl, i)
                     out.append(tpl[i:j])
                     i = j
@@ -981,10 +992,12 @@ class ShellAgent:
                 out.append(tpl[i:])
                 i = n
                 continue
-            if tpl.startswith("$((", i):
+            if (tpl.startswith("$((", i)
+                    and _dollar_starts_expansion(tpl, i)):
                 # 算术展开内部是表达式，整体原样跳过：既不替换占位符
                 # （shell 会把那里的 $prompt 当普通变量展开，送不到
-                # agent），也避免位移运算符 << 被误登记成 heredoc
+                # agent），也避免位移运算符 << 被误登记成 heredoc。
+                # `$$((` 不是算术展开（$$ 是 PID），不能按 $(( 跳过
                 j = _arithmetic_end(tpl, i)
                 out.append(tpl[i:j])
                 if j > i and tpl[j - 1] == ")":
@@ -993,23 +1006,28 @@ class ShellAgent:
                     word_internal_paren_end = j - 1
                 i = j
                 continue
-            if tpl.startswith("${", i):
+            if (tpl.startswith("${", i)
+                    and _dollar_starts_expansion(tpl, i)):
                 # ${...} 参数展开（数组下标/子串展开等算术语境与
                 # ${x:-word} 等词语境）内部都无法安全替换占位符
                 # （见方法说明），整段原样跳过（command_receives_prompt
-                # 据此拒绝这类模板）
+                # 据此拒绝这类模板）。`$${...` 不是参数展开（$$ 是 PID、
+                # { 是字面量），不能按 ${ 跳过后面实际正常解析的文本
                 j = _parameter_expansion_end(tpl, i)
                 out.append(tpl[i:j])
                 i = j
                 continue
-            if tpl.startswith("$[", i):
+            if (tpl.startswith("$[", i)
+                    and _dollar_starts_expansion(tpl, i)):
                 # 旧式算术展开 $[...]：内部是表达式，与 $((...)) 同理，
-                # 插入的引号不构成保护，整体原样跳过、不替换
+                # 插入的引号不构成保护，整体原样跳过、不替换；
+                # `$$[...` 的 $[ 同理不是展开
                 j = _legacy_arithmetic_end(tpl, i)
                 out.append(tpl[i:j])
                 i = j
                 continue
-            if tpl.startswith("$'", i):
+            if (tpl.startswith("$'", i)
+                    and _dollar_starts_expansion(tpl, i)):
                 # ANSI-C 引用（$'...'）的解释随 /bin/sh 方言而变：bash 按
                 # 反斜杠转义处理，dash 则把 $ 当字面量、后面当普通单引号串。
                 # xuen 用 shell=True 执行（Linux 上通常是 dash，macOS/RHEL
@@ -1017,7 +1035,9 @@ class ShellAgent:
                 # 在 dash 下引号边界会被打乱——提示词里的 `; cmd` / $(cmd)
                 # 逃出引用被真正执行（注入）；按 POSIX 规则插入，则会在
                 # bash 下注入。与其他不安全语境一致：整体拒绝这类模板，
-                # 绝不替换（command_receives_prompt 据此让配置校验拒绝）
+                # 绝不替换（command_receives_prompt 据此让配置校验拒绝）。
+                # `$$'...` 不是 ANSI-C 引用（$$ 是 PID、' 是普通单引号
+                # 开头），照下面的 ' 分支按单引号语境处理
                 raise ValueError(
                     "agent.command 不支持 ANSI-C 引用（$'...'）：不同系统"
                     "的 /bin/sh（bash 支持、dash 不支持）对它的解释不同，"
@@ -1033,8 +1053,13 @@ class ShellAgent:
                 out.append(tpl[i:j])
                 i = j
                 continue
-            if tpl.startswith("$(", i):
-                # 命令替换开启独立解析上下文（见方法说明）
+            if (tpl.startswith("$(", i)
+                    and _dollar_starts_expansion(tpl, i)):
+                # 命令替换开启独立解析上下文（见方法说明）。
+                # 必须确认这个 $ 真的开启展开：`$$(` 里第二个 $ 是 PID
+                # （$$）的后半，( 只是普通字符（另一层含义见
+                # _placeholder_at：$$prompt 也不是占位符）；误按 $( 处理
+                # 会让后续 $prompt 按错误引号语境插入（注入）
                 out.append(tpl[i:i + 2])
                 subst_stack.append([state, 1])
                 state = "bare"

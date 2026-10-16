@@ -813,6 +813,75 @@ def test_render_command_does_not_substitute_after_unescaped_dollar(tmp_path):
         assert r.stdout == "$" + prompt, (shell, r.stdout)
 
 
+def test_render_command_pid_dollar_does_not_open_substitution(tmp_path):
+    """`$$(` 里第二个 $ 是 PID（$$）的后半，不能当命令替换处理。
+
+    回归（bash 与 dash 一致）：`"x$$($prompt)x"` 里 $$ 是 PID、双引号内
+    的 ( 只是字面量，$prompt 就是双引号语境里的普通参数展开；但渲染器
+    对第二个 $ 匹配 `$(` 后切到独立（裸）上下文，按裸语境用 shlex.quote
+    插入提示词（单引号），而实际 shell 仍在双引号里——单引号只是字面量，
+    提示词里的 $(...)/`...` 逃出引用被真正执行（注入，下方两个 shell
+    都能复现）。同理 `$${` / `$$[` / `$$'` 也不是参数展开/旧式算术/
+    ANSI-C 引用。修复：这些展开头都要求 $ 真的开启展开
+    （_dollar_starts_expansion），$$(、$${、$$[、$$' 按普通字符解析；
+    渲染结果在双引号内转义 $，提示词原样送达且不执行。
+    """
+    import re
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    prompt = "$(touch PWNED) `touch PWNED2` $((1+1))"
+    # 修复前会把提示词按裸语境插入；修复后这些模板仍然可用（送达提示词）
+    for tpl in ('printf %s "x$$($prompt)x"',
+                'printf %s "$$($prompt"',
+                'printf %s "a$$($prompt"'):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert "PWNED" in rendered and "touch PWNED2" in rendered, tpl
+        # 提示词按双引号语境转义：$ ` 都被反斜杠保护成字面量
+        assert "\\$(touch PWNED)" in rendered, tpl
+        assert "\\`touch PWNED2\\`" in rendered, tpl
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    shells = filter(None, (shutil.which("bash"), shutil.which("dash")))
+    for tpl in ('printf %s "x$$($prompt)x"', 'printf %s "$$($prompt"'):
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 提示词按双引号语境转义：$ 与 ` 都被反斜杠保护成字面量
+        assert "\\$(touch" in rendered, tpl
+        for shell in shells:
+            subprocess.run([shell, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+
+    # 对照：提示词确实送达（落在双引号词内、被转义成字面量）且原样保留。
+    # 对照提示词特意不含 $ ` ( )：bash 对 `$$(` 还会先按命令列表扫描括号
+    # 内容来找配对（展开时仍是 PID + 字面量），提示词里出现未配对的 (
+    # 时会报解析错误（模板极端写法，安全性不受影响），对照用普通文本即可
+    prompt = "P one; two Q"
+    esc = re.escape(prompt)
+    controls = (
+        ('printf %s "x$$($prompt)x"', rf"x\d+\({esc}\)x"),
+        ('printf %s "$$((1+1))$prompt"', rf"\d+\(\(1\+1\)\){esc}"),
+        ('printf %s "$${y}$prompt"', rf"\d+\{{y\}}{esc}"),
+        ("printf %s \"$$'$prompt'\"", rf"\d+'{esc}'"),
+    )
+    for tpl, pattern in controls:
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert re.fullmatch(pattern, r.stdout), (tpl, shell, r.stdout)
+
+
 def test_render_command_comment_hash_after_expansion_close(tmp_path):
     """紧跟命令替换/算术展开/进程替换结束 ) 的 # 不是注释。
 
