@@ -141,13 +141,18 @@ def main(argv=None) -> int:
     try:
         run(cfg, task, regen_words=args.regen_words)
     except SystemExit as e:
+        # SystemExit(None)（如某个库直接 sys.exit()）是正常退出，必须判在
+        # isinstance 之前：None 不是 int，否则会被误当日志消息打印出
+        # "None" 并返回 2；TUI 路径（tui._run_loop）采用同一约定
+        if e.code is None:
+            return 0
         # run() 预检失败（如缺少 agent 命令）会以字符串消息抛 SystemExit；
         # 保持与 main() 其他配置错误一致退出码 2，避免与「全部轮次失败」
         # 的退出码 1 混淆
         if not isinstance(e.code, int):
             print(e.code, file=sys.stderr)
             return 2
-        return e.code if e.code is not None else 0
+        return e.code
     except KeyboardInterrupt:
         print()
         ui.warn("已中断")
