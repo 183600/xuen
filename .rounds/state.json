@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-160211-r2",
-    "sha": "eb6a62f75f4f050f4a8359e3b8406045db1451d4",
+    "snap": "snap/20261016-162632-r3",
+    "sha": "f978b2fefcc9cd3c37f1b24f6666db7fda38e466",
     "tests": "pass",
-    "at": "2026-10-16T16:06:11Z",
+    "at": "2026-10-16T16:31:00Z",
     "by": "ai",
-    "iter": "2"
+    "iter": "3"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -554,6 +554,31 @@
         "verdict": "accept",
         "reason": "修复了命令替换、算术展开与进程替换结束后紧随 # 时被误判为注释的问题，避免引号状态脱节导致提示词注入，并新增了回归测试；改动与现有 42 项测试全部通过。",
         "at": "2026-10-16T16:06:11Z"
+      }
+    },
+    {
+      "id": "20261016-162632-r3",
+      "snap": "snap/20261016-162632-r3",
+      "sha": "f978b2fefcc9cd3c37f1b24f6666db7fda38e466",
+      "ts": "2026-10-16T16:31:00Z",
+      "iter": "3",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "38cc85ce834e4420b833066f131ec5fcc764ff28",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/beam-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了行续行在词边界与 $ 配对中的处理，避免提示词被静默丢弃或篡改，并新增对应回归测试，全部测试通过。",
+        "at": "2026-10-16T16:31:00Z"
       }
     }
   ],
