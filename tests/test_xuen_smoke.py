@@ -750,6 +750,60 @@ def test_render_command_does_not_substitute_after_unescaped_dollar(tmp_path):
         assert r.stdout == "$" + prompt, (shell, r.stdout)
 
 
+def test_render_command_comment_hash_after_expansion_close(tmp_path):
+    """紧跟命令替换/算术展开/进程替换结束 ) 的 # 不是注释。
+
+    回归（bash 与 dash 行为一致，进程替换在 bash 下）：`echo $(echo hi)#there`
+    输出 hi#there——$() 的结束 ) 仍是同一个词的一部分，其后的 # 是词中
+    字符；但渲染器只按前一个字符是 ) 判断，把 # 误当注释、把该行剩余
+    部分（含不成对引号）整体跳过，与真实 shell 的引号状态正好相反：
+    `true $(echo x)#'\\n' " $prompt"` 里 shell 的 ' 从行尾一直引用到下一行
+    行首，提示词落在双引号词内，而渲染器按单引号语境插入（不转义 $），
+    提示词里的 $(...)/`...` 被真正执行（注入，下方复现）。修复：记录
+    词内 ) 的位置，其后的 # 不再算注释；子 shell/case pattern 的 ) 是
+    词边界，其后的 # 仍是注释（下方正面对照）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    templates = (
+        "true $(echo x)#'\n' \" $prompt\"",
+        "true $((1+1))#'\n' \" $prompt\"",
+        "true >(echo x)#'\n' \" $prompt\"",
+    )
+    for tpl in templates:
+        # 提示词确实送达 agent（落在引号状态正确的词内），不是拒绝模板
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 提示词按双引号语境转义插入：$(...) 被转义成 \$(...) 字面量
+        assert "\\$(touch" in rendered, tpl
+        if not _posix_shell_available():
+            continue
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([shell, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+
+    if not _posix_shell_available():
+        return
+    # 对照：子 shell 的 ) 是词边界，其后的 # 仍是注释——注释里的 ' 不能
+    # 污染后续占位符：`(true)#'` 整行被两个 shell 当注释忽略，第二行照常
+    # 按双引号语境插入提示词、原样送达且不执行
+    tpl = "(true)#'\nprintf %s \"$prompt\""
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([shell, "-c", agent.render_command(prompt)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (shell, r.stderr)
+        assert r.stdout == prompt, (shell, r.stdout)
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 

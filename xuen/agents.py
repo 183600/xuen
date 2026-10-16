@@ -560,6 +560,14 @@ class ShellAgent:
         与 `$$$prompt`（落单的 $ 开启新展开）照常替换，单引号语境里
         $ 只是字面量、也不受影响（见 _placeholder_at）。
 
+        注释（词首的 # 到行尾）里的引号只是普通字符：渲染器若把注释里的
+        ' 当引号开启，与实际 shell 的引号状态脱节，后续 $prompt 按错误
+        语境插入（注入）。判断「词首」必须区分词边界 ) 与词内 )：
+        $()/$((...))/>(...)/<(...) 的结束 ) 仍是同一个词的一部分，其后
+        紧挨的 # 不是注释（echo $(echo hi)#there 输出 hi#there），误判成
+        注释同样会跳过引号、让状态脱节；子 shell/case pattern 的 ) 才是
+        词边界，其后的 # 仍是注释。
+
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
@@ -636,6 +644,11 @@ class ShellAgent:
         # 深度用于区分「子 shell 的 )」与「$( 的 )」：前者只减深度，
         # 后者（深度归零）才恢复外层引号状态
         subst_stack: List[list] = []
+        # 最近一次「词内 )」在模板中的位置（$()/$((...))/>(...)/<(...)
+        # 的结束括号）：紧跟其后的 # 仍是同一个词的一部分，不是注释
+        # （echo $(echo hi)#there 输出 hi#there）。子 shell/case pattern
+        # 的 ) 是词边界，其后的 # 才是注释，必须区分（见下面的 # 分支）
+        word_internal_paren_end = -1
         state = "bare"  # bare / single / double
         i = 0
         n = len(tpl)
@@ -727,13 +740,19 @@ class ShellAgent:
                 out.append(tpl[i:i + 2])
                 i += 2
                 continue
-            if ch == "#" and (i == 0 or tpl[i - 1] in " \t\n;&|()<>"):
+            if ch == "#" and (i == 0 or (
+                    tpl[i - 1] in " \t\n;&|()<>"
+                    and i - 1 != word_internal_paren_end)):
                 # shell 注释：词首的 # 之后直到行尾都原样保留、不参与解析。
                 # 注释里的不成对引号若被当成引号状态，会让后续占位符按
                 # 错误的引号语境转义（转义过弱 = 提示词可被 shell 解释执行，
                 # 转义过强 = 参数被拆错）；注释里的 $prompt 也不会真正送到
                 # agent，command_receives_prompt 不能把它当作有效占位符。
-                # 词中的 #（如 foo#bar、=$#）不是注释，照常按字符处理。
+                # 词中的 #（如 foo#bar、=$#）不是注释，照常按字符处理；
+                # 紧跟 $()/$((...))/>(...)/<(...) 结束 ) 的 # 同样是词中
+                # 字符（echo $(echo hi)#there 输出 hi#there），不算注释——
+                # 若误判成注释会跳过引号、与实际 shell 的引号状态脱节，
+                # 后续 $prompt 会按错误语境插入（注入）
                 j = tpl.find("\n", i)
                 if j < 0:
                     out.append(tpl[i:])
@@ -769,6 +788,10 @@ class ShellAgent:
                 # agent），也避免位移运算符 << 被误登记成 heredoc
                 j = _arithmetic_end(tpl, i)
                 out.append(tpl[i:j])
+                if j > i and tpl[j - 1] == ")":
+                    # $((...)) 的结束 )) 是词内字符：紧随其后的 #
+                    # 不是注释（echo $((1+1))#there 输出 2#there）
+                    word_internal_paren_end = j - 1
                 i = j
                 continue
             if tpl.startswith("${", i):
@@ -818,6 +841,20 @@ class ShellAgent:
                 state = "bare"
                 i += 2
                 continue
+            if tpl.startswith(">(", i) or tpl.startswith("<(", i):
+                # 进程替换 >(...) / <(...)（bash 等支持）：内部是命令列表，
+                # 与 $( 一样开启独立解析上下文（进程替换也可嵌套在 $( 内）。
+                # 结束的 ) 仍是同一个词的一部分，其后紧挨的 # 不是注释
+                # （echo <(echo hi)#there 在 bash 下输出 /dev/fd/63#there）；
+                # 不跟踪的话 # 会被误当注释、引号状态与实际 shell 脱节，
+                # 后续 $prompt 会按错误语境插入（注入）。dash 等不支持
+                # 进程替换的 shell 会直接报语法错误，此时按命令替换解析
+                # 不影响实际执行
+                out.append(tpl[i:i + 2])
+                subst_stack.append([state, 1])
+                state = "bare"
+                i += 2
+                continue
             if ch == "(" and subst_stack:
                 # 命令替换内部的普通左括号（子 shell、函数定义等）：
                 # 记入当前替换的括号深度，避免其配对的 ) 被误当成
@@ -834,6 +871,9 @@ class ShellAgent:
                 if frame[1] <= 0:
                     subst_stack.pop()
                     state = frame[0]
+                    # $()/>(...)/<(...) 的结束括号是词内字符：紧随其后的
+                    # # 不是注释，记录位置供 # 分支判断
+                    word_internal_paren_end = i
                 out.append(ch)
                 i += 1
                 continue
