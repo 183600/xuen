@@ -197,7 +197,9 @@ def _validate(cfg: Config) -> None:
         if not command_receives_prompt(cmd):
             raise ValueError(
                 "agent.command 必须包含会被实际替换的 $prompt 或 "
-                "$prompt_file 占位符（被转义的 \\$prompt 不会被替换），"
+                "$prompt_file 占位符（被转义的 \\$prompt、shell 注释、"
+                "heredoc 正文、反引号命令替换、算术语境（$[...]、"
+                "((...))、${name[下标]}）内的占位符都不会被替换），"
                 "否则提示词无法传给外部 agent"
             )
     if (os.name == "nt" and re.search(

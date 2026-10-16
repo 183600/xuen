@@ -86,6 +86,108 @@ def _arithmetic_end(tpl: str, i: int) -> int:
     return n
 
 
+def _backquote_end(tpl: str, i: int) -> int:
+    """返回位置 i（`）处整个反引号命令替换结束后的下标。
+
+    与 heredoc 正文同理，反引号内容是不能安全插入占位符的数据区：
+    shell 对反引号的「第一遍」处理对引号不敏感——\\$ 会被还原成 $、
+    引号里的裸反引号也会结束替换——插入的转义（如 \\\\\\$）在内层
+    shell 中并不成立，提示词里的 $(...)/`...` 会被真正执行（注入）。
+    因此这里整体跳过：结束位置按 shell 的配对规则取第一个未被反斜杠
+    转义的反引号；找不到则一直吞到模板结尾（与 heredoc 一致）。
+    """
+    n = len(tpl)
+    j = i + 1
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "`":
+            return j + 1
+        j += 1
+    return n
+
+
+def _legacy_arithmetic_end(tpl: str, i: int) -> int:
+    """返回位置 i（$[）处旧式算术展开结束后的下标（吞掉匹配的 ]）。
+
+    与 $((...)) 同理：算术表达式内部不是普通词语境，插入的引号不被
+    当作保护（bash 会对表达式里的 $(...)/`...` 求值执行），因此整体
+    跳过、不替换占位符。下标可以嵌套（如 $[ ${a[0]} + 1 ]），按 [ ]
+    深度配对；找不到匹配的 ] 时一直吞到模板结尾。
+    """
+    n = len(tpl)
+    depth = 1
+    j = i + 2
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            depth += 1
+        elif c == "]":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return n
+
+
+def _arithmetic_command_end(tpl: str, i: int) -> int:
+    """返回位置 i（((）处算术命令结束后的下标（吞掉匹配的 ))。
+
+    算术命令（bash/ksh 的 ((...))）内部是表达式：插入的引号不构成
+    保护，表达式里的 $(...)/`...` 会被求值执行。按括号深度配对找
+    匹配的 ))，整体跳过、不替换占位符；找不到则吞到模板结尾。
+    """
+    n = len(tpl)
+    depth = 2
+    j = i + 2
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return n
+
+
+def _parameter_expansion_end(tpl: str, i: int) -> int:
+    """返回位置 i（${）处参数展开结束后的下标（吞掉匹配的 }）。
+
+    只做保守配对：\\x 转义跳过，嵌套 ${ 计深度。上层据此探测展开体内
+    是否出现数组下标 [（算术语境）；找不到匹配的 } 时返回模板结尾，
+    让调用方整体跳过——宁可拒绝模板，也不把占位符插进无法确保安全
+    的位置（与 heredoc / 算术展开的处理口径一致）。
+    """
+    n = len(tpl)
+    depth = 1
+    j = i + 2
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            j += 2
+            continue
+        if tpl.startswith("${", j):
+            depth += 1
+            j += 2
+            continue
+        if c == "}":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return n
+
+
 class ShellAgent:
     """通过 shell 命令调用外部 agent（opencode / claude / aider …）。
 
@@ -215,6 +317,19 @@ class ShellAgent:
         shell 变量展开或字面量，不会把提示词送达 agent，这里原样跳过正文、
         不做替换（command_receives_prompt 据此拒绝这类模板）。
 
+        反引号命令替换（`...`）同样是无法安全替换的数据区：shell 对反引号
+        的「第一遍」处理对引号不敏感——\\$ 会被还原成 $（而不是保护 $），
+        引号里的裸反引号也会结束替换——插入的任何转义在内层 shell 中都
+        不成立，提示词里的 $(cmd)/`cmd` 会被真正执行（注入）。与 heredoc
+        正文相同：整体原样跳过、不替换（command_receives_prompt 据此拒绝
+        这类模板）。
+
+        算术语境（$((...))、旧式 $[...]、算术命令 ((...))、参数展开的
+        数组下标 ${name[...]}）里插入的引号也不构成保护：表达式会对其中
+        的 $(cmd)/`cmd` 求值执行（bash）。这些位置无法安全送达提示词，
+        同样整体原样跳过、不替换。没有下标的 ${x:-$prompt} 仍是普通词
+        语境，照常转义替换。
+
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
@@ -333,6 +448,28 @@ class ShellAgent:
                     state = "bare"
                     i += 2
                     continue
+                if ch == "`":
+                    # 反引号命令替换（双引号内也是独立的一次「第一遍」处理）：
+                    # 与 heredoc 正文同理不能安全插入转义，整体跳过不替换
+                    j = _backquote_end(tpl, i)
+                    out.append(tpl[i:j])
+                    i = j
+                    continue
+                if tpl.startswith("${", i):
+                    j = _parameter_expansion_end(tpl, i)
+                    if "[" in tpl[i:j]:
+                        # ${name[下标]} 的下标是算术语境，无法安全替换
+                        # （见裸上下文同名分支），整段原样跳过
+                        out.append(tpl[i:j])
+                        i = j
+                        continue
+                if tpl.startswith("$[", i):
+                    # 双引号内的旧式算术展开 $[...] 同样是表达式语境，
+                    # 整体原样跳过、不替换
+                    j = _legacy_arithmetic_end(tpl, i)
+                    out.append(tpl[i:j])
+                    i = j
+                    continue
                 if ch == '"':
                     state = "bare"
                     out.append(ch)
@@ -378,11 +515,48 @@ class ShellAgent:
                         # 本行以注释结尾，但行内的 << 仍开启了正文
                         i = consume_heredoc_bodies(i)
                 continue
+            if ch == "`":
+                # 反引号命令替换：shell 对它的「第一遍」处理对引号不敏感
+                # （\$ 会被还原成 $、引号里的裸反引号也会结束替换），插入
+                # 的转义在内层 shell 中并不成立，替换 $prompt 会让提示词里的
+                # $(...)/`...` 被真正执行（注入）。与 heredoc 正文同理整体
+                # 跳过、不替换（command_receives_prompt 据此拒绝这类模板）
+                j = _backquote_end(tpl, i)
+                out.append(tpl[i:j])
+                i = j
+                continue
             if tpl.startswith("$((", i):
                 # 算术展开内部是表达式，整体原样跳过：既不替换占位符
                 # （shell 会把那里的 $prompt 当普通变量展开，送不到
                 # agent），也避免位移运算符 << 被误登记成 heredoc
                 j = _arithmetic_end(tpl, i)
+                out.append(tpl[i:j])
+                i = j
+                continue
+            if tpl.startswith("${", i):
+                j = _parameter_expansion_end(tpl, i)
+                if "[" in tpl[i:j]:
+                    # ${name[下标]} 的下标是算术语境：插入的引号不被当作
+                    # 保护，下标里的 $(...)/`...` 会被求值执行（bash）。
+                    # 无法安全替换，整段原样跳过（command_receives_prompt
+                    # 据此拒绝这类模板）。没有下标的参数展开（如
+                    # ${x:-$prompt}）仍按普通词语境照常替换
+                    out.append(tpl[i:j])
+                    i = j
+                    continue
+            if tpl.startswith("$[", i):
+                # 旧式算术展开 $[...]：内部是表达式，与 $((...)) 同理，
+                # 插入的引号不构成保护，整体原样跳过、不替换
+                j = _legacy_arithmetic_end(tpl, i)
+                out.append(tpl[i:j])
+                i = j
+                continue
+            if tpl.startswith("((", i):
+                # 算术命令 ((...))：内部是表达式，插入的引号不构成保护，
+                # 表达式里的 $(...)/`...` 会被求值执行。整体原样跳过、
+                # 不替换（不做完整 shell 语法分析：裸上下文里的 (( 一律
+                # 按算术命令对待，无法兑现的占位符由配置校验拒绝）
+                j = _arithmetic_command_end(tpl, i)
                 out.append(tpl[i:j])
                 i = j
                 continue

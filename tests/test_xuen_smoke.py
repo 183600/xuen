@@ -248,6 +248,95 @@ def test_render_command_subshell_inside_command_substitution(tmp_path):
     assert r2.stdout == prompt
 
 
+def test_render_command_does_not_substitute_in_backquotes(tmp_path):
+    """反引号命令替换内的占位符不能替换（插入的转义在内层 shell 失效）。
+
+    回归：解析器把反引号当普通字符，$prompt 按外层引号语境插入的转义
+    在 shell 对反引号的「第一遍」处理后会失效（\\$ 被还原成 $、引号里的
+    裸反引号还会结束替换），提示词里的 $(...)/`...` 被真正执行（注入）。
+    与 heredoc 正文同理：整体跳过、不做替换，并由配置校验拒绝这类模板。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"x $(touch {marker}) `touch {marker}.bt` y"
+    for tpl in ('printf %s "`printf %s $prompt`"',
+                "printf %s `printf %s $prompt`"):
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 与 heredoc 正文一致：占位符原样保留，提示词绝不进入反引号内容
+        assert "$prompt" in rendered
+        assert str(marker) not in rendered
+        r = subprocess.run(rendered, shell=True, capture_output=True, text=True,
+                           cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+        # 反引号内的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False
+    # 反引号区域之外的占位符照常替换，提示词正常送达且不被执行
+    tpl = 'printf %s "`echo ok`" "$prompt"'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(agent.render_command(prompt), shell=True,
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert "ok" in r.stdout and str(marker) in r.stdout
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
+def test_render_command_does_not_substitute_in_arithmetic_contexts(tmp_path):
+    """算术语境里的占位符不能替换（插入的引号在表达式里不构成保护）。
+
+    回归（bash 下可复现）：$[ $prompt ]、(( $prompt )) 与数组下标
+    ${x[$prompt]} 都会对表达式里的 $(...)/`...` 求值执行——即使 $prompt
+    被 shlex.quote/单引号包裹，引号字符只是表达式文本，不构成保护。
+    与 heredoc 正文同理：整体跳过、不做替换，并由配置校验拒绝这类模板；
+    没有下标的 ${x:-$prompt} 仍是词语境，照常安全替换。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    bash = shutil.which("bash")
+    marker = tmp_path / "pwned"
+    prompt = f"x $(touch {marker}) `touch {marker}.bt` y"
+    templates = (
+        "echo $[ $prompt ] 2>/dev/null; echo done",
+        "echo $[ ${a[0]} + $prompt ] 2>/dev/null; echo done",
+        'echo "$[ $prompt ]" 2>/dev/null; echo done',
+        "(( $prompt )) 2>/dev/null; echo done",
+        "x=1; (( x + $prompt )) 2>/dev/null; echo done",
+        "echo ${x[$prompt]:-y} 2>/dev/null; echo done",
+        'echo "${x[$prompt]:-y}" 2>/dev/null; echo done',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 与 heredoc 正文一致：占位符原样保留，提示词绝不进入算术语境
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        # 显式用 bash 执行：这些语境在 bash 里会对 $(...)/`...` 求值执行
+        r = subprocess.run([bash, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+        # 算术语境里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+    # 没有下标的参数展开仍是安全的词语境：照常替换、正常送达且不执行
+    tpl = 'printf %s "${x:-$prompt}"; echo'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run([bash, "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert str(marker) in r.stdout
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     """$((...)) 算术展开里的 << 不能按 heredoc 重定向登记。
 
