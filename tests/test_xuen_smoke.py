@@ -873,6 +873,126 @@ def test_render_command_line_continuation_word_boundaries(tmp_path):
         assert r.stdout[:-len(prompt)].isdigit(), (shell, r.stdout)
 
 
+def test_render_command_rejects_continuation_split_operators(tmp_path):
+    """用续行（反斜杠-换行）拆开操作符/展开头的模板必须整体拒绝。
+
+    回归：shell 在分词前删除续行，两侧字符会拼成一个新的操作符/展开头，
+    而渲染器按续行两侧字符独立解析，引号状态与实际 shell 脱节：实测
+    bash 下 `printf %s >\\<换行>&"$prompt"` 把提示词当裸 `>&` 重定向词
+    执行（提示词里的 $(...) 真的会跑）；`cat <\\<换行><EOF` 拼成 heredoc
+    （正文不认引号，bash 与 dash 都可注入）；双引号内的 `"$\\<换行>(`
+    拼成 `"$(`（命令替换在引号内照常生效，bash 与 dash 都可注入）；
+    `$[`（旧式算术）、`${`（参数展开）同理。修复：按「删除续行后的相邻
+    关系」检测拼出的头部（_continuation_split_head），命中即整体拒绝，
+    由配置校验拦下（与 $'...' 同口径）；`&&`/`>>` 等普通操作符与普通
+    续行不受影响，`\\>`/`$$` 等转义或配对情形也不会误伤。另有
+    `>&\\<换行>word`：重定向词被续行隔到下一行，词边界同样按删除续行后
+    的相邻关系识别（_redirect_word_end），词里的占位符照旧整词跳过，
+    否则 `>&"$prompt"` 这种不遵守引号规则的展开会把提示词当重定向词执行。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    prompt = "P $HOME `id` 'q' \\ d"
+
+    # 拼出特殊头（>& / << / $( / $[ / ${ / (( / <( 等）：整体拒绝
+    for tpl in (
+        'printf %s >\\\n&"$prompt"',    # >\<换行>& 拼成裸 >&（bash 注入）
+        'printf %s >\\\n&$prompt',      # 同上，裸提示词
+        'cat <\\\n<EOF\n$prompt\nEOF',  # <\<换行>< 拼成 heredoc（两 shell）
+        'printf %s $\\\n[$prompt]',     # $[ 旧式算术（bash）
+        'printf %s $\\\n{$prompt}',     # ${ 参数展开
+        'printf %s "$\\\n{$prompt}"',   # 双引号内 ${ 参数展开
+        'printf %s "$\\\n(printf %s "$prompt")"',  # 双引号内 $(
+        'printf %s (\\\n(printf %s "$prompt")',    # (( 算术命令
+        'printf %s <\\\n(printf %s "$prompt")',    # <( 进程替换
+    ):
+        assert command_receives_prompt(tpl) is False, tpl
+        try:
+            ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"续行拆开操作符的模板应被拒绝: {tpl}")
+
+    # 不构成特殊头（转义/配对排除）：不拒绝、照常渲染
+    allow = (
+        'printf %s \\>\\\n& "$prompt"',        # > 被转义：没有拼出 >&
+        'printf %s "$$\\\n( "$prompt" )"',     # $$ 是 PID：不是 $( 展开
+    )
+    for tpl in allow:
+        assert command_receives_prompt(tpl) is True, tpl
+        ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+
+    # 能送达的模板：占位符替换后两个 shell 输出一致且提示词完整
+    deliver = (
+        # 普通续行（两侧不是操作符字符）照常送达
+        ('printf "<%s>\\n" \\\n"$prompt"', "<" + prompt + ">\n"),
+        ('printf "<%s>\\n" \\\n$prompt', "<" + prompt + ">\n"),
+        # && 被续行拆开：普通操作符，照常送达
+        ('true &\\\n& printf "<%s>\\n" "$prompt"', "<" + prompt + ">\n"),
+        # 模板末尾的续行删除后占位符仍是完整词，照常送达
+        ('printf "%s" $prompt\\\n', prompt),
+    )
+    for tpl, expected in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        if not _posix_shell_available():
+            continue
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert r.stdout == expected, (tpl, shell, r.stdout)
+
+    # >> 被续行拆开：重定向到文件，提示词完整性用文件内容验证
+    tpl = 'printf "%s" >\\\n>out "$prompt"'
+    assert command_receives_prompt(tpl) is True
+    rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+    if _posix_shell_available():
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            out = tmp_path / "out"
+            if out.exists():
+                out.unlink()
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (shell, r.stderr)
+            assert out.read_text(encoding="utf-8") == prompt, shell
+
+    # >& 的重定向词被续行隔到下一行：词按删除续行后的相邻关系识别。
+    # `>&\<换行>"$prompt"` 的 $prompt 仍是重定向词（bash 对 >&word 的
+    # 展开不遵守引号规则、可执行提示词里的 $(...)），照旧整词跳过；
+    # `>&\<换行>out "$prompt"` 的词是 out，后续参数照常送达
+    tpl = 'printf %s >&\\\n"$prompt"'
+    assert command_receives_prompt(tpl) is False
+    rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+    assert "$prompt" in rendered and prompt not in rendered
+    tpl = 'printf %s >&\\\nout "$prompt"'
+    assert command_receives_prompt(tpl) is True
+    rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+    bash = shutil.which("bash")
+    if _posix_shell_available() and bash:
+        # dash 不支持无 fd 号的 >&word（Bad fd number），只用 bash 验证
+        out = tmp_path / "out"
+        if out.exists():
+            out.unlink()
+        r = subprocess.run([bash, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert out.read_text(encoding="utf-8") == prompt
+
+    # 续行拼成的尾缀：占位符后还接着单词字符，不是完整占位符
+    for frag in (
+        '$prompt\\\nx',      # 拼成 $promptx：变量名还在延续
+        '$prompt\\\n_file',  # 拼成 $prompt_file：整体是文件名占位符
+    ):
+        tpl = 'printf "%s" ' + frag
+        assert command_receives_prompt(tpl) is False, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        assert "$prompt" in rendered and prompt not in rendered, tpl
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 

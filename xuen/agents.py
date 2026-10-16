@@ -102,6 +102,82 @@ def _dollar_starts_expansion(tpl: str, i: int) -> bool:
     return run % 2 == 0
 
 
+def _escaped_at(tpl: str, pos: int) -> bool:
+    """pos 处字符是否被紧邻的奇数个反斜杠转义（不跨续行判断）。
+
+    续行（反斜杠-换行）在分词前被删除，`\\>\\<换行>&` 里 `>` 紧跟的
+    换行不是转义、`>` 是字面量；直接数物理相邻的反斜杠即可。
+    """
+    k = pos - 1
+    cnt = 0
+    while k >= 0 and tpl[k] == "\\":
+        cnt += 1
+        k -= 1
+    return cnt % 2 == 1
+
+
+# 续行（反斜杠-换行）在 shell 分词前会被删除，两侧的字符会被拼到一起：
+# `>`+续行+`&` 拼成 `>&`、`<`+续行+`<` 拼成 heredoc `<<`、`$`+续行+`(`
+# 拼成命令替换、`(`+续行+`(` 拼成算术命令、`>`/`<`+续行+`(` 拼成进程
+# 替换……这些头部（及其 `$[`/`${`/`$'` 变体）的引号与展开规则都与普通
+# 文本不同：`>&` 的重定向词无视引号执行提示词里的 $(...)、`<<` 正文不认
+# 引号（实测 bash 下这些模板都会执行提示词里的命令替换）。渲染器按续行
+# 两侧字符独立解析会与实际 shell 脱节，因此这类模板整体拒绝、由配置
+# 校验拦下（与 $'...' 的处理口径一致），而不是替换。
+# `\\$$<续行>(` 里 $$ 是 PID、`(` 只是普通括号，`\\`+`>`+续行+`&` 里
+# `>` 是字面量，都不构成头部（见 _continuation_split_head）。
+_CONTINUATION_SPLIT_HEADS = frozenset((
+    ">&",   # 裸 >&word 重定向词：展开不遵守引号规则
+    "<<",   # heredoc：正文是数据/可被展开，不认引号
+    "$(",   # 命令替换 / $(( 算术展开
+    "$[",   # 旧式算术展开
+    "${",   # 参数展开
+    "$'",   # ANSI-C 引用：解释随 /bin/sh 方言而变
+    "((",   # 算术命令
+    ">(",   # 进程替换
+    "<(",   # 进程替换
+))
+
+
+def _continuation_split_head(tpl: str, i: int) -> Optional[str]:
+    """续行位置 i 两侧的有效字符是否拼成需特殊解析的操作符/展开头。
+
+    返回拼成的头部文本（如 ">&"）；不构成时返回 None。
+    `$` 开头的组合必须先确认是真正的展开（_dollar_starts_expansion，
+    `\\$$<续行>(` 里的 $$ 是 PID，`(` 不是命令替换的起点）；其他字符
+    先确认未被反斜杠转义（`\\>`+续行+`&` 里 `>` 是字面量、不是 `>&`）。
+    """
+    n = len(tpl)
+    prev = _prev_effective_pos(tpl, i)
+    if prev < 0:
+        return None
+    k = i
+    while k + 1 < n and tpl[k] == "\\" and tpl[k + 1] == "\n":
+        k += 2
+    if k >= n:
+        return None
+    head = tpl[prev] + tpl[k]
+    if head not in _CONTINUATION_SPLIT_HEADS:
+        return None
+    if tpl[prev] == "$":
+        if not _dollar_starts_expansion(tpl, prev):
+            return None
+    elif _escaped_at(tpl, prev):
+        return None
+    return head
+
+
+def _continuation_split_error(head: str) -> ValueError:
+    return ValueError(
+        f"agent.command 不支持用续行（反斜杠-换行）拆分操作符/展开："
+        f"续行在 shell 分词前被删除，两侧字符拼成了 `{head}`。"
+        "该语境的引号/展开规则与普通文本不同（如 >& 的重定向词会无视"
+        "引号执行提示词里的 $(...)，<< 正文不认引号），按续行两侧独立"
+        "解析会与实际 shell 脱节、无法安全传递提示词；请把操作符写在"
+        "同一行（行尾的普通续行不受影响）"
+    )
+
+
 # 占位符探测令牌（供 command_receives_prompt 的 dry_run 渲染使用）：
 # 全为单词字符，途经任意引号语境/转义后仍原样保留在渲染结果里
 _PLACEHOLDER_PROBE = "XUENPROMPTPROBE7C4F1D"
@@ -338,10 +414,20 @@ def _redirect_word_end(tpl: str, j: int) -> int:
     时无法可靠找出词尾边界，整体吞到模板结尾——宁可多跳过，也不把
     提示词插进无法确保安全的位置（与 heredoc / 反引号 / 参数展开的
     处理口径一致）。
+    续行（反斜杠-换行）在分词前被删除，要与空白一样先跳过：`>&\\<换行>
+     word` 等同于 `>& word`，重定向词是续行之后的那个词；不跳会把词
+    判成空、把后面的 $prompt 当普通参数替换，而 bash 对 `>&word` 的
+    展开不遵守引号规则，提示词里的 $(...) 就会被真正执行（注入）。
     """
     n = len(tpl)
-    while j < n and tpl[j] in " \t":
-        j += 1
+    while j < n:
+        if tpl[j] in " \t":
+            j += 1
+            continue
+        if tpl[j] == "\\" and j + 1 < n and tpl[j + 1] == "\n":
+            j += 2
+            continue
+        break
     if j < n and tpl[j] == "\n":
         # 重定向词跨行（`>&` 后换行再给词）：无法安全确定边界，整体跳过
         return n
@@ -470,7 +556,12 @@ class ShellAgent:
         `x$prompt`）会被当成词首占位符替换，而 `$\\<换行>$prompt`
         （拼成 `$$prompt`）会被当成真正的展开替换成 `$'提示词'`——
         bash 解释反斜杠转义而 dash 原样保留，提示词被篡改且行为随
-        /bin/sh 方言而变（见 _dollar_starts_expansion）。
+        /bin/sh 方言而变（见 _dollar_starts_expansion）。右侧边界同理：
+        `$prompt\\<换行>x` 拼成 `$promptx`、`$prompt\\<换行>_file` 拼成
+        `$prompt_file`，占位符后面还接着单词字符，只是普通变量名，不是
+        完整占位符；替换会静默多拼出后缀、或把 $prompt_file 误当
+        $prompt 用（单引号内续行不被删除，那里的反斜杠-换行本就终止
+        变量名，不适用本条）。
         """
         if state == "single":
             if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
@@ -483,9 +574,16 @@ class ShellAgent:
                     and not _dollar_starts_expansion(tpl, i)):
                 return None
         for ph in ("$prompt_file", "$prompt"):
+            if not tpl.startswith(ph, i):
+                continue
             j = i + len(ph)
-            if tpl.startswith(ph, i) and (
-                    j >= len(tpl) or not _WORD_CHAR.match(tpl[j])):
+            if state != "single":
+                # 续行在分词前被删除：`$prompt\<换行>x` 拼成 `$promptx`，
+                # 变量名仍在延续，不是完整占位符
+                while (j + 1 < len(tpl) and tpl[j] == "\\"
+                       and tpl[j + 1] == "\n"):
+                    j += 2
+            if j >= len(tpl) or not _WORD_CHAR.match(tpl[j]):
                 return ph
         return None
 
@@ -589,6 +687,17 @@ class ShellAgent:
         $(...)/`...`/参数展开仍会被执行（`>&'$(cmd)'` 真的会跑 cmd），
         双引号里的 \\$ / \\` 也拦不住。与 heredoc 正文/反引号一致整词
         原样跳过（command_receives_prompt 据此拒绝这类模板）。
+
+        续行（反斜杠-换行）在分词前被删除，也会把两侧字符拼成一个新的
+        操作符/展开头：`>`+续行+`&` 拼成 `>&`、`<`+续行+`<` 拼成 heredoc
+        `<<`、`$`+续行+`(`/`[`/`{`/`'` 拼成命令替换/旧式算术/参数展开/
+        ANSI-C 引用、`(`+续行+`(` 拼成算术命令、`>`/`<`+续行+`(`
+        拼成进程替换。按续行两侧字符独立解析会让引号状态与实际 shell
+        脱节：实测 bash 下 `printf %s >\\<换行>&"$prompt"`、`cat \\<换行>
+        <EOF...`、`printf %s $\\<换行>[$prompt]` 都会执行提示词里的命令
+        $(...)，双引号内的 `"$\\<换行>(` 在 bash 与 dash 下同样可注入。
+        这类模板与 $'...' 同口径：整体拒绝（抛 ValueError），由配置
+        校验拦下（见 _continuation_split_head）。
 
         紧跟在未转义 $ 后面的占位符（`$$prompt`）也不是完整占位符：
         shell 把 $$ 当 PID、`prompt` 只是字面量。替换会让提示词与模板
@@ -717,6 +826,13 @@ class ShellAgent:
                 # 双引号内反斜杠仅对 $ ` " \ 换行有转义作用，遇到这类组合
                 # 原样成对复制，避免把 \x 的转义状态算错导致引号误判
                 if ch == "\\" and i + 1 < n and tpl[i + 1] in ("\\", '"', "$", "`", "\n"):
+                    if tpl[i + 1] == "\n":
+                        # 双引号内的续行同样在分词前被删除：`"$\<换行>(`
+                        # 拼成 `"$(`，引号内的命令替换照常生效；按普通
+                        # 字符解析会让状态与实际 shell 脱节（注入）
+                        head = _continuation_split_head(tpl, i)
+                        if head is not None:
+                            raise _continuation_split_error(head)
                     out.append(tpl[i:i + 2])
                     i += 2
                     continue
@@ -778,6 +894,14 @@ class ShellAgent:
                 i = consume_heredoc_bodies(i + 1)
                 continue
             if ch == "\\" and i + 1 < n:
+                if tpl[i + 1] == "\n":
+                    # 续行在分词前被删除：两侧字符会拼成新 token/操作符
+                    # （`>\<换行>&` 是 >&、`$\<换行>(` 是命令替换……），
+                    # 按续行两侧独立解析会与实际 shell 脱节（注入），
+                    # 这类模板整体拒绝（与 $'...' 同口径）
+                    head = _continuation_split_head(tpl, i)
+                    if head is not None:
+                        raise _continuation_split_error(head)
                 out.append(tpl[i:i + 2])
                 i += 2
                 continue
