@@ -270,6 +270,59 @@ def test_render_command_heredoc_delimiter_expansion_cannot_inject(tmp_path):
     assert "X" in r.stdout
 
 
+def test_render_command_heredoc_delimiter_word_continuation_and_escapes(tmp_path):
+    """heredoc 终止符词要按 shell 的引号移除规则拼接（续行/双引号内转义）。
+
+    回归：`cat <<E\\<换行>OF` 的终止符是 EOF（反斜杠-换行在分词前被整对
+    删除、词跨行继续拼接，bash/dash 实测一致）；`cat <<"E\\$OF"` 的终止符
+    是 E$OF（双引号内 \\$ 是引号移除后的字面 $）；`<<"A\\\\B"` 是 A\\B。
+    渲染器原先把续行当普通字符（终止符里多出一个换行、永远匹配不到任何
+    物理行），又把双引号内的反斜杠原样保留，正文因此被整体吞到模板结尾：
+    合法模板的 $prompt 被静默丢弃、配置校验还会误报「缺少占位符」。
+    修复：终止符词按同一套引号移除规则拼接（单引号外续行整对删除、
+    双引号内 \\" \\\\ \\$ \\` 去掉反斜杠），正文边界与 shell 一致。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # 续行拆开的终止符词：shell 视为 EOF
+        "cat <<E\\\nOF > /dev/null\nbody\nEOF\nprintf %s $prompt",
+        # 双引号 + 续行：同样是 EOF
+        'cat <<"E\\\nOF" > /dev/null\nbody\nEOF\nprintf %s $prompt',
+        # 双引号内的 \$ 是引号移除后的字面 $
+        'cat <<"E\\$OF" > /dev/null\nbody\nE$OF\nprintf %s $prompt',
+        # 双引号内的 \\ 是单个字面反斜杠
+        'cat <<"A\\\\B" > /dev/null\nbody\nA\\B\nprintf %s $prompt',
+        # 裸露的 \$ 照常等价于字面 $
+        "cat <<E\\$OF > /dev/null\nbody\nE$OF\nprintf %s $prompt",
+    )
+    prompt = "a'b $HOME `id` $(touch pwned)"
+    for tpl in templates:
+        assert command_receives_prompt(tpl) is True, tpl
+        if not _posix_shell_available():
+            continue
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert "$prompt" not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            if (tmp_path / "pwned").exists():
+                (tmp_path / "pwned").unlink()
+            r = subprocess.run([sh, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, sh, r.stderr)
+            assert r.stdout == prompt, (tpl, sh, r.stdout)
+            assert not (tmp_path / "pwned").exists(), (tpl, sh)
+    if not _posix_shell_available():
+        return
+    # 对照：找不到闭合双引号时仍按原有保守口径整体吞掉、不替换
+    tpl = 'cat <<"EOF > /dev/null\nbody\nprintf %s $prompt'
+    assert command_receives_prompt(tpl) is False
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    assert "$prompt" in agent.render_command(prompt)
+
+
 def test_render_command_heredoc_inside_command_substitution_cannot_inject(tmp_path):
     """命令替换内部的换行不能提前收「外层命令的 heredoc」正文。
 

@@ -836,6 +836,14 @@ class ShellAgent:
             $(...)/`...` 一直解析下去、连终止符行一起吞进替换（见
             _heredoc_body_open_substitution），必须用第三个返回值区分。
 
+            引号移除还要处理续行与双引号内的转义：反斜杠-换行在单引号外
+            会被整对删除、词跨行继续拼接（`<<E\\<换行>OF` 的终止符是
+            EOF），删除本身不产生引用字符；单引号内不删续行；双引号内
+            \\" \\\\ \\$ \\` 去掉反斜杠只留被转义字符（`<<"E\\$OF"` 的
+            终止符是 E$OF）。按普通字符原样拼接会把终止符算错（多出
+            换行/反斜杠）：这类合法模板的正文被整体吞到模板结尾、$prompt
+            被静默丢弃，配置校验误报「缺少占位符」。
+
             终止符词里的 $(、${、$[、$'、$"、` 是展开/引用语法：词边界
             由展开内部的解析决定（内部的空白、括号、引号都不会结束词），
             简单扫描会提前截断终止符——渲染器以为正文已结束、把 $prompt
@@ -851,6 +859,11 @@ class ShellAgent:
             while pos < n:
                 c = tpl[pos]
                 if c == "\\" and pos + 1 < n:
+                    if tpl[pos + 1] == "\n":
+                        # 续行：分词前整对删除、词在下一行继续拼接。
+                        # 删除不产生引用字符（不算引号），故不置 quoted
+                        pos += 2
+                        continue
                     buf.append(tpl[pos + 1])
                     pos += 2
                     quoted = True
@@ -865,11 +878,27 @@ class ShellAgent:
                     quoted = True
                     continue
                 if c == '"':
+                    # 双引号内做引号移除：续行整对删除；\\" \\\\ \\$ \\` 去掉
+                    # 反斜杠只留被转义字符；其他 \\x 的反斜杠是字面量。原样
+                    # 拼接会把终止符算错（多出反斜杠/换行）、合法模板被整体
+                    # 吞掉（见方法说明）
+                    chunk: List[str] = []
                     end = pos + 1
-                    while end < n and tpl[end] != '"':
-                        if (tpl[end] == "\\" and end + 1 < n
-                                and tpl[end + 1] in '"\\$`'):
-                            end += 2
+                    while end < n:
+                        if tpl[end] == '"':
+                            end += 1
+                            break
+                        if tpl[end] == "\\" and end + 1 < n:
+                            nxt = tpl[end + 1]
+                            if nxt == "\n":
+                                end += 2
+                                continue
+                            if nxt in '"\\$`':
+                                chunk.append(nxt)
+                                end += 2
+                                continue
+                            chunk.append("\\")
+                            end += 1
                             continue
                         if (tpl[end] == "`" or tpl.startswith("$(", end)
                                 or tpl.startswith("${", end)
@@ -877,9 +906,10 @@ class ShellAgent:
                             # 双引号内同样是嵌套解析：展开内部按自己的
                             # 规则处理引号，字面找 " 会截错词边界
                             return None, n, False
+                        chunk.append(tpl[end])
                         end += 1
-                    buf.append(tpl[pos + 1:end])
-                    pos = min(end + 1, n)
+                    buf.append("".join(chunk))
+                    pos = min(end, n)
                     quoted = True
                     continue
                 if (c == "`" or tpl.startswith("$(", pos)
