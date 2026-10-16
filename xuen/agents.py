@@ -401,6 +401,101 @@ def _parameter_expansion_end(tpl: str, i: int) -> int:
     return n
 
 
+def _command_substitution_end(tpl: str, i: int) -> int:
+    """返回位置 i（$() 处命令替换结束后的保守下标；不确定时返回模板结尾。
+
+    专用于 heredoc 正文边界判定：不加引号的正文里 $(...) 若不在正文区域内
+    闭合，dash 会把后续行（包括与终止符相同的行）当作替换内容继续解析
+    （实测 `cat <<A` 正文里的 `$(` 会吞掉 A 终止符行、在 `)` 之后才恢复
+    终止符匹配；bash 则直接报错）。渲染器按行找终止符会以为正文已结束、
+    把 $prompt 插进 shell 仍是正文的区域——提示词里的 $(...)/`...` 被真正
+    执行（注入）。
+    只做括号深度配对；引号、反斜杠、注释、嵌套展开/引用（$( ${ $[ $' $"）、
+    正文内嵌 heredoc、case 等无法简单可靠配对的内容一律返回模板结尾
+    （视为未闭合），宁可多吞（不替换）也不把提示词插进无法确保安全的
+    位置（与 heredoc / 反引号 / 参数展开的处理口径一致）。
+    """
+    n = len(tpl)
+    depth = 1
+    j = i + 2
+    while j < n:
+        c = tpl[j]
+        if c in "'\"\\`#":
+            # 引号/转义/反引号/注释都可能藏着 )，按未闭合处理
+            return n
+        if c == "$":
+            if j + 1 < n and tpl[j + 1] in "({['\"":
+                # 嵌套 $( ${ $[ $' $"：内层解析边界不可靠
+                return n
+            j += 1
+            continue
+        if c == "<" and tpl.startswith("<<", j):
+            # 正文内嵌 heredoc：其中的 ) 可能只是正文
+            return n
+        if _is_case_keyword(tpl, j):
+            # case pattern 的 ) 不配对任何 (（见 _render_posix 说明）
+            return n
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return n
+
+
+def _heredoc_body_open_substitution(tpl: str, start: int, end: int) -> bool:
+    """未加引号的 heredoc 正文 [start,end) 结束处是否仍有未闭合的展开。
+
+    返回 True 表示无法证明结束处没有横跨终止符行的命令替换/展开：
+    调用方不能在这里结束正文（dash 会把终止符行吞进未闭合的 $()/``，
+    正文继续；渲染器若恢复替换会把 $prompt 插进 shell 的正文区域，
+    注入）。返回 False 表示所有展开都在区域内闭合（含 ${}/$[]/$((…))
+    这类边界一开口就确定的展开），按行匹配终止符与两种 shell 一致。
+    反斜杠按转义跳过（与正文里反斜杠只对 $、反引号、反斜杠、换行生效
+    相比略宽，只影响是否继续吞，安全方向）。
+    """
+    i = start
+    while i < end:
+        c = tpl[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c == "`":
+            j = _backquote_end(tpl, i)
+            if j > end:
+                return True
+            i = j
+            continue
+        if tpl.startswith("$((", i):
+            j = _arithmetic_end(tpl, i)
+            if j > end:
+                return True
+            i = j
+            continue
+        if tpl.startswith("$(", i):
+            j = _command_substitution_end(tpl, i)
+            if j > end:
+                return True
+            i = j
+            continue
+        if tpl.startswith("${", i):
+            j = _parameter_expansion_end(tpl, i)
+            if j > end:
+                return True
+            i = j
+            continue
+        if tpl.startswith("$[", i):
+            j = _legacy_arithmetic_end(tpl, i)
+            if j > end:
+                return True
+            i = j
+            continue
+        i += 1
+    return False
+
+
 def _redirect_word_end(tpl: str, j: int) -> int:
     """返回裸上下文 `>&` 后重定向词结束处的下标；无法安全扫描时返回模板结尾。
 
@@ -642,6 +737,10 @@ class ShellAgent:
         $(...)/`...` 被 shell 执行。与注释同理，正文里的 $prompt 本就只是
         shell 变量展开或字面量，不会把提示词送达 agent，这里原样跳过正文、
         不做替换（command_receives_prompt 据此拒绝这类模板）。
+        正文从「命令行的换行」之后开始：注册在外层命令里的 heredoc，其
+        正文不会因命令替换内部的换行而开始（bash/dash 一致，实测替换内部
+        与终止符相同的行仍作为替换内命令执行），必须等替换闭合后的外层
+        换行再收（见 consume_heredoc_bodies；按注册深度区分）。
 
         反引号命令替换（`...`）同样是无法安全替换的数据区：shell 对反引号
         的「第一遍」处理对引号不敏感——\\$ 会被还原成 $（而不是保护 $），
@@ -728,10 +827,14 @@ class ShellAgent:
             return str(self._prompt_file.resolve())
 
         def read_heredoc_delim(pos: int) -> tuple:
-            """读取 << 之后的终止符词，返回 (终止符, 词结束位置)。
+            """读取 << 之后的终止符词，返回 (终止符, 词结束位置, 是否带引号)。
 
             按 shell 的引号移除规则拼出终止符（'EOF' / "EOF" / E\\OF / EOF
-            等价）；是否加引号不影响这里的处理——两种正文都不替换占位符。
+            等价）；是否加引号不影响这里的占位符处理——两种正文都不替换
+            占位符——但影响正文边界判定：加引号的正文是纯字面量、终止符行
+            按行精确匹配；不加引号的正文会做参数/命令替换，dash 会把跨行的
+            $(...)/`...` 一直解析下去、连终止符行一起吞进替换（见
+            _heredoc_body_open_substitution），必须用第三个返回值区分。
 
             终止符词里的 $(、${、$[、$'、$"、` 是展开/引用语法：词边界
             由展开内部的解析决定（内部的空白、括号、引号都不会结束词），
@@ -744,19 +847,22 @@ class ShellAgent:
             整体吞掉、不做替换（command_receives_prompt 据此拒绝）。
             """
             buf: List[str] = []
+            quoted = False
             while pos < n:
                 c = tpl[pos]
                 if c == "\\" and pos + 1 < n:
                     buf.append(tpl[pos + 1])
                     pos += 2
+                    quoted = True
                     continue
                 if c == "'":
                     end = tpl.find("'", pos + 1)
                     if end < 0:
                         buf.append(tpl[pos + 1:])
-                        return "".join(buf), n
+                        return "".join(buf), n, True
                     buf.append(tpl[pos + 1:end])
                     pos = end + 1
+                    quoted = True
                     continue
                 if c == '"':
                     end = pos + 1
@@ -770,25 +876,27 @@ class ShellAgent:
                                 or tpl.startswith("$[", end)):
                             # 双引号内同样是嵌套解析：展开内部按自己的
                             # 规则处理引号，字面找 " 会截错词边界
-                            return None, n
+                            return None, n, False
                         end += 1
                     buf.append(tpl[pos + 1:end])
                     pos = min(end + 1, n)
+                    quoted = True
                     continue
                 if (c == "`" or tpl.startswith("$(", pos)
                         or tpl.startswith("${", pos)
                         or tpl.startswith("$[", pos)
                         or tpl.startswith("$'", pos)
                         or tpl.startswith('$"', pos)):
-                    return None, n
+                    return None, n, False
                 # shell 词在空白与控制运算符处结束
                 if c in " \t\n;&|<>()":
                     break
                 buf.append(c)
                 pos += 1
-            return "".join(buf), pos
+            return "".join(buf), pos, quoted
 
-        pending_heredocs: List[tuple] = []  # [(终止符, 是否 <<-)]
+        # [(终止符, 是否 <<-, 登记时的命令替换深度, 终止符词是否带引号)]
+        pending_heredocs: List[tuple] = []
 
         def consume_heredoc_bodies(pos: int) -> int:
             """把已登记 heredoc 的正文原样吞掉（不做任何占位符替换）。
@@ -798,8 +906,30 @@ class ShellAgent:
             都只是普通字符，起不到保护作用。因此绝不能替换正文里的
             $prompt，否则提示词里的 $(...)/`...` 会被 shell 执行。
             找不到终止符时与 shell 一致：一直吞到模板结尾。
+
+            只收注册深度 >= 当前替换深度的 heredoc：命令替换内部的换行
+            不会让「外层命令的 heredoc」开始收正文（bash/dash 一致，实测
+            换行后与该终止符相同的行仍作为替换内部命令执行），外层 heredoc
+            要等替换闭合后的外层换行再收；若在这里提前收，会把替换内部的
+            命令行当成正文吞掉、随后又在外层正文位置恢复替换——正好把
+            $prompt 插进 shell 真正当正文处理的区域（注入）。
+            反之，注册在更深层替换里的 heredoc 若其替换已闭合仍未收正文
+            （`echo $(cat <<B)`），bash 会在下一个换行处补收，深度条件
+            >= 当前深度同样覆盖这种情况；即使 dash 把它当命令执行，这里
+            多吞（不替换）也是安全方向。
+
+            不带引号的正文里出现横跨终止符行仍未闭合的 $()/`` 等展开时，
+            这一行不是真正的正文结束：dash 会把它吞进展开、正文继续
+            （见 _heredoc_body_open_substitution），此处继续按正文往后吞，
+            直到某个终止符行处所有展开都已闭合（或吞到模板结尾）。
             """
-            for delim, strip_tabs in pending_heredocs:
+            depth = len(subst_stack)
+            kept = []
+            for delim, strip_tabs, reg_depth, quoted in pending_heredocs:
+                if reg_depth < depth:
+                    kept.append((delim, strip_tabs, reg_depth, quoted))
+                    continue
+                body_start = pos
                 while pos < n:
                     j = tpl.find("\n", pos)
                     end = n if j < 0 else j + 1
@@ -807,8 +937,14 @@ class ShellAgent:
                     out.append(tpl[pos:end])
                     pos = end
                     if (line.lstrip("\t") if strip_tabs else line) == delim:
-                        break
-            pending_heredocs.clear()
+                        # 不加引号的正文里若有横跨终止符行仍未闭合的
+                        # $()/`` 等展开：dash 会把这一行也吞进展开、正文
+                        # 继续（见 _heredoc_body_open_substitution），
+                        # 此处不是真正的正文结束，继续按正文往后吞
+                        if quoted or not _heredoc_body_open_substitution(
+                                tpl, body_start, pos):
+                            break
+            pending_heredocs[:] = kept
             return pos
 
         out: List[str] = []
@@ -1131,7 +1267,7 @@ class ShellAgent:
                     j += 1
                 while j < n and tpl[j] in " \t":
                     j += 1
-                delim, j = read_heredoc_delim(j)
+                delim, j, delim_quoted = read_heredoc_delim(j)
                 if delim is None:
                     # 终止符词含无法安全确定边界的展开（$(、${、$[...、$'、
                     # $"、` 等）：与实际 shell 的词边界可能不一致，正文
@@ -1141,7 +1277,8 @@ class ShellAgent:
                     i = n
                     continue
                 out.append(tpl[i:j])
-                pending_heredocs.append((delim, strip_tabs))
+                pending_heredocs.append(
+                    (delim, strip_tabs, len(subst_stack), delim_quoted))
                 i = j
                 continue
             if ch == "'":

@@ -270,6 +270,145 @@ def test_render_command_heredoc_delimiter_expansion_cannot_inject(tmp_path):
     assert "X" in r.stdout
 
 
+def test_render_command_heredoc_inside_command_substitution_cannot_inject(tmp_path):
+    """命令替换内部的换行不能提前收「外层命令的 heredoc」正文。
+
+    回归：`cat <<A $(echo hi\\nA\\n)\\n$prompt\\nA` 里替换内部有一行与
+    终止符相同的 A。shell（bash/dash 一致，实测该行仍作为替换内部命令
+    执行）在替换内部的换行处不会开始收外层 heredoc 的正文，正文从替换
+    闭合后的外层换行才开始；渲染器原先一见换行就登记正文、把替换内部
+    的 A 行当成终止符，随后又在外层正文位置恢复替换——$prompt 正好被
+    插入 shell 当作不加引号 heredoc 正文的区域，正文会做参数/命令替换，
+    提示词里的 $(touch ...)/反引号被真正执行（注入，实测创建文件）。
+    修复：heredoc 记录登记时的替换深度，只在深度 >= 当前的换行处收正文；
+    外层待收的 heredoc 留到替换闭合后的外层换行。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # 裸命令替换：替换内部出现与终止符相同的行
+        "cat <<A $(echo hi\nA\n)\n$prompt\nA\n",
+        # 注释分支：替换内部以注释结尾的换行同样不能触发正文
+        "cat <<A $(echo x\n# note\nA\n)\n$prompt\nA\n",
+        # 双引号内的命令替换
+        'cat <<A "$(echo hi\nA\n)"\n$prompt\nA\n',
+        # 嵌套替换（深度 2 的换行）
+        "cat <<A $(echo $(echo hi\nA\n)\n)\n$prompt\nA\n",
+        # <<- 与制表符缩进的终止符行
+        "cat <<-A $(echo hi\n\tA\n)\n$prompt\nA\n",
+    )
+    prompt = f"$(touch {tmp_path / 'pwned'}) `touch {tmp_path / 'pwned.bt'}`"
+    for tpl in templates:
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入 shell 当作正文的区域
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    if not _posix_shell_available():
+        return
+    # 对照 1：命令替换内部有换行，但外层 heredoc 照常在外层换行收正文、
+    # 终止符之后的 $prompt 正常送达
+    tpl = ("cat <<A > /dev/null\n"
+           "$(printf hi\n)\n"
+           "A\n"
+           "printf %s $prompt")
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    prompt2 = "a'b $HOME `id`"
+    for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (sh, r.stderr)
+        assert r.stdout == prompt2, sh
+    # 对照 2：注册在命令替换内部的 heredoc 在替换内部的换行处收正文，
+    # 正文里的行不得被当成命令替换的一部分替换占位符
+    tpl = "x=$(cat <<B\ninner\nB\n)\nprintf %s $prompt"
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (sh, r.stderr)
+        assert r.stdout == prompt2, sh
+
+
+def test_render_command_unquoted_heredoc_body_spanning_expansion_cannot_inject(tmp_path):
+    """不加引号的 heredoc 正文里横跨终止符行的展开不能在正文外恢复替换。
+
+    回归：dash 对正文里的 $(...)/`...` 会跨行从输入流继续解析——终止符行
+    被吞进展开、正文继续，直到展开闭合后的下一个终止符行才收尾（实测
+    `cat <<A >/dev/null\\n$(echo hi\\nA\\n)\\nA\\nprintf %s $prompt` 在 dash
+    下第一个 A 行不终止正文；bash 在这类模板上直接报错）。渲染器若按行
+    就此结束正文、把 $prompt 插进后面，就正好落进 shell 仍当作正文的
+    区域：不加引号的正文会做参数/命令替换，提示词里的 $(touch ...)/
+    反引号被真正执行（注入，实测 dash 创建文件）。修复：记录终止符词
+    是否带引号；不加引号时用 _heredoc_body_open_substitution 检查区域内
+    的展开是否都已闭合，未闭合则继续按正文吞（吞到模板结尾也不替换）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    # 展开在模板内不闭合：占位符留在正文里不替换、必须判为未送达
+    swallowed = (
+        "<<A\n$(\nA\n)$prompt",
+        "<<A\n$('\nA\n$prompt')",
+        "cat <<A >/dev/null\n$(echo hi\nA\nprintf %s $prompt\nA\n",
+    )
+    for tpl in swallowed:
+        assert command_receives_prompt(tpl) is False, tpl
+    # 展开在后续行闭合：第一个终止符行被吞、后续终止符行才是真终止符，
+    # 之后的占位符照常送达
+    spanning = (
+        "cat <<A >/dev/null\n$(echo hi\nA\n)\nA\nprintf %s $prompt",
+        "cat <<A >/dev/null\n`echo hi\nA\n`\nA\nprintf %s $prompt",
+    )
+    for tpl in spanning:
+        assert command_receives_prompt(tpl) is True, tpl
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    for tpl in swallowed:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    for tpl in spanning:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    # 对照：同一行/区域内在终止符行之前闭合的展开照常送达
+    prompt2 = "a'b $HOME `id`"
+    for tpl in ("cat <<A >/dev/null\n$(printf hi)\nA\nprintf %s $prompt",
+                "cat <<A >/dev/null\n$(printf hi\n)\nA\nprintf %s $prompt"):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                               capture_output=True, text=True, cwd=tmp_path)
+            assert r.returncode == 0, (sh, r.stderr)
+            assert r.stdout == prompt2, sh
+
+
 def test_render_command_command_substitution_quotes(tmp_path):
     """$(...) 内部的引号自成一体，不能影响外层引号状态。
 
