@@ -105,6 +105,65 @@ def test_command_receives_prompt_ignores_comments():
     assert command_receives_prompt('opencode run # $prompt') is False
 
 
+def test_render_command_does_not_substitute_in_heredoc(tmp_path):
+    """heredoc 正文里绝不能替换 $prompt。
+
+    回归：正文里的 shlex.quote 引号只是普通字符，不加引号的终止符下正文
+    会做参数/命令替换——提示词里的 $(touch ...)/反引号会被 shell 执行
+    （注入）；加引号的终止符下引号则原样进入 agent 输入。正文里的
+    $prompt 本来也只是 shell 变量展开/字面量，不会把提示词送达 agent，
+    必须判为未送达，由配置校验拦下。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    for tpl in (f"cat <<EOF\n$prompt\nEOF",
+                f"cat <<'EOF'\n$prompt\nEOF",
+                f"cat <<-EOF\n\t$prompt\n\tEOF"):
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词内容没有被塞进正文
+        assert "$prompt" in rendered
+        assert str(marker) not in rendered
+        r = subprocess.run(rendered, shell=True, capture_output=True, text=True,
+                           cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False
+    # here-string（<<<）没有正文，不按 heredoc 处理
+    assert command_receives_prompt("cat <<< $prompt") is True
+
+
+def test_render_command_after_heredoc_still_substitutes(tmp_path):
+    """heredoc 正文中的不成对引号/井号不能污染终止符之后的 $prompt 渲染。
+
+    回归：正文里的单引号会被当成「打开引号」，终止符之后的 $prompt 就会
+    按错误的引号语境插入，参数被拆碎或提示词被注入执行。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    tpl = ("cat <<'EOF' > /dev/null\n"
+           "it's # not a comment\n"
+           "EOF\n"
+           "printf '%s' $prompt")
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    prompt = "a'b \"c\" $HOME `id`"
+    rendered = agent.render_command(prompt)
+    r = subprocess.run(rendered, shell=True, capture_output=True, text=True,
+                       cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt
+
+
 def _run_fake_words_scenario(tmp_path, agent_stdout, *, regen_words, reuse=True):
     """用假 agent（把收到的提示词记到日志、stdout 固定输出指定词表）跑一轮
     runner.run，返回 (sink, prompts, workspace, SystemExit 或 None)。"""

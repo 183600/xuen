@@ -172,6 +172,13 @@ class ShellAgent:
         引号状态，裸上下文用 shlex.quote，单引号内用 '\\'' 闭合重开写法，
         双引号内反斜杠转义 $ ` " \\。
 
+        heredoc（<< / <<-）正文是数据而不是命令文本：正文里的引号只是普通
+        字符，shlex.quote 的引号在正文中不起保护作用（不加引号的终止符下
+        正文还会做参数/命令替换），因此在正文里替换 $prompt 会让提示词里的
+        $(...)/`...` 被 shell 执行。与注释同理，正文里的 $prompt 本就只是
+        shell 变量展开或字面量，不会把提示词送达 agent，这里原样跳过正文、
+        不做替换（command_receives_prompt 据此拒绝这类模板）。
+
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
@@ -180,6 +187,68 @@ class ShellAgent:
             if self._prompt_file is None:
                 return str(self._write_prompt_file(prompt).resolve())
             return str(self._prompt_file.resolve())
+
+        def read_heredoc_delim(pos: int) -> tuple:
+            """读取 << 之后的终止符词，返回 (终止符, 词结束位置)。
+
+            按 shell 的引号移除规则拼出终止符（'EOF' / "EOF" / E\\OF / EOF
+            等价）；是否加引号不影响这里的处理——两种正文都不替换占位符。
+            """
+            buf: List[str] = []
+            while pos < n:
+                c = tpl[pos]
+                if c == "\\" and pos + 1 < n:
+                    buf.append(tpl[pos + 1])
+                    pos += 2
+                    continue
+                if c == "'":
+                    end = tpl.find("'", pos + 1)
+                    if end < 0:
+                        buf.append(tpl[pos + 1:])
+                        return "".join(buf), n
+                    buf.append(tpl[pos + 1:end])
+                    pos = end + 1
+                    continue
+                if c == '"':
+                    end = pos + 1
+                    while end < n and tpl[end] != '"':
+                        if (tpl[end] == "\\" and end + 1 < n
+                                and tpl[end + 1] in '"\\$`'):
+                            end += 2
+                            continue
+                        end += 1
+                    buf.append(tpl[pos + 1:end])
+                    pos = min(end + 1, n)
+                    continue
+                # shell 词在空白与控制运算符处结束
+                if c in " \t\n;&|<>()":
+                    break
+                buf.append(c)
+                pos += 1
+            return "".join(buf), pos
+
+        pending_heredocs: List[tuple] = []  # [(终止符, 是否 <<-)]
+
+        def consume_heredoc_bodies(pos: int) -> int:
+            """把已登记 heredoc 的正文原样吞掉（不做任何占位符替换）。
+
+            正文按 shell 语义处理：不加引号的终止符下正文会做参数/命令替换，
+            加引号时正文是纯字面量——两种情况下 shlex.quote 加的引号在正文里
+            都只是普通字符，起不到保护作用。因此绝不能替换正文里的
+            $prompt，否则提示词里的 $(...)/`...` 会被 shell 执行。
+            找不到终止符时与 shell 一致：一直吞到模板结尾。
+            """
+            for delim, strip_tabs in pending_heredocs:
+                while pos < n:
+                    j = tpl.find("\n", pos)
+                    end = n if j < 0 else j + 1
+                    line = tpl[pos:] if j < 0 else tpl[pos:j]
+                    out.append(tpl[pos:end])
+                    pos = end
+                    if (line.lstrip("\t") if strip_tabs else line) == delim:
+                        break
+            pending_heredocs.clear()
+            return pos
 
         out: List[str] = []
         state = "bare"  # bare / single / double
@@ -230,6 +299,11 @@ class ShellAgent:
                 i += 1
                 continue
             # 裸上下文
+            if ch == "\n" and pending_heredocs:
+                # 命令行结束：其后的正文属于 heredoc，原样跳过
+                out.append(ch)
+                i = consume_heredoc_bodies(i + 1)
+                continue
             if ch == "\\" and i + 1 < n:
                 out.append(tpl[i:i + 2])
                 i += 2
@@ -248,6 +322,31 @@ class ShellAgent:
                 else:
                     out.append(tpl[i:j + 1])
                     i = j + 1
+                    if pending_heredocs:
+                        # 本行以注释结尾，但行内的 << 仍开启了正文
+                        i = consume_heredoc_bodies(i)
+                continue
+            if tpl.startswith("<<<", i):
+                # here-string（<<<）没有正文，整段按普通文本处理
+                out.append("<<<")
+                i += 3
+                continue
+            if ch == "<" and tpl.startswith("<<", i):
+                # heredoc 重定向：登记终止符，正文里的占位符一律不替换
+                # （见 consume_heredoc_bodies）。不做完整 shell 语法分析：
+                # 裸上下文里的 << 一律按重定向处理（含 $(( )) 位移这类
+                # 极端场景），无法兑现的占位符由配置校验拒绝，而不是替换
+                j = i + 2
+                strip_tabs = False
+                if j < n and tpl[j] == "-":
+                    strip_tabs = True
+                    j += 1
+                while j < n and tpl[j] in " \t":
+                    j += 1
+                delim, j = read_heredoc_delim(j)
+                out.append(tpl[i:j])
+                pending_heredocs.append((delim, strip_tabs))
+                i = j
                 continue
             if ch == "'":
                 state = "single"
