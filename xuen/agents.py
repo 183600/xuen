@@ -64,24 +64,59 @@ def _escape_in_double_quotes(value: str) -> str:
                  .replace("$", "\\$").replace("`", "\\`"))
 
 
+# 这些字符出现在「整体跳过」的语境内时，可能隐藏（或吞掉）配对的结束符：
+# 引号里的 } / ] / ) 不终结展开，反斜杠会转义结束符，反引号与 $( 命令
+# 替换内部还有自己的解析上下文。只用深度配对会提前停在假结束符上，余下
+# 模板被按外层引号语境解析——占位符可能被插进错误语境（单引号落在双引号
+# 里只是字面量），提示词里的 $(...)/`...` 会被真正执行（注入）。
+# 与 heredoc 正文一致：遇到即整体吞到模板结尾（宁可拒绝模板，也不把
+# 占位符插进无法确保安全的位置）。
+_UNSAFE_IN_SKIPPED_CONTEXT = "'\"`\\"
+# 算术/下标语境里嵌套的替换与展开可能含有引号或花括号，一律按无法
+# 安全配对处理，整体吞到模板结尾
+_UNSAFE_SUBSTITUTION_HEADS = ("$(", "$[", "${")
+# ${...} 里的嵌套 ${（无引号等构造时）可以安全计深度，故不在此列
+_UNSAFE_PARAMETER_HEADS = ("$(", "$[")
+
+
+def _has_unsafe_construct(tpl: str, j: int,
+                          heads: tuple = _UNSAFE_SUBSTITUTION_HEADS) -> bool:
+    """位置 j 处的字符是否使「整体跳过」语境无法安全找结束符。"""
+    return (tpl[j] in _UNSAFE_IN_SKIPPED_CONTEXT
+            or tpl.startswith(heads, j))
+
+
 def _arithmetic_end(tpl: str, i: int) -> int:
     """返回位置 i 处 $((...)) 算术展开结束后的下标（吞掉匹配的两个右括号）。
 
     算术表达式内部可以嵌套括号（如 $(( (1+2) * 3 ))），用括号深度配对。
     模板缺少匹配括号时按 shell 语法错误处理：一直算到模板结尾，剩余部分
     不再参与占位符替换（与 heredoc 找不到终止符时的策略一致）。
+    引号/反引号/反斜杠/嵌套替换可能隐藏右括号（如 $(( $(echo ")") ))），
+    使「第一个深度归零的 )」不再是真实结束位置；这些字符在表达式里的
+    语义还随 shell 方言变化，遇到即整体吞到模板结尾（见
+    _UNSAFE_IN_SKIPPED_CONTEXT 的说明）。
     """
     depth = 1
     j = i + 3
     n = len(tpl)
     while j < n:
+        if _has_unsafe_construct(tpl, j):
+            return n
         c = tpl[j]
         if c == "(":
             depth += 1
         elif c == ")":
             depth -= 1
             if depth == 0:
-                return min(j + 2, n)
+                # 必须真的跟着第二个 )：$(()) 才是算术展开。$((")... 这类
+                # 写法下 shell 会改按命令替换 + 子 shell 解析（与我们的
+                # 括号计数不同），紧挨着的引号若被当成跳过区吞掉会错位
+                # 引号状态、让后续 $prompt 以错误语境插入（注入），
+                # 遇到即整体吞到模板结尾
+                if j + 1 < n and tpl[j + 1] == ")":
+                    return j + 2
+                return n
         j += 1
     return n
 
@@ -115,16 +150,18 @@ def _legacy_arithmetic_end(tpl: str, i: int) -> int:
     与 $((...)) 同理：算术表达式内部不是普通词语境，插入的引号不被
     当作保护（bash 会对表达式里的 $(...)/`...` 求值执行），因此整体
     跳过、不替换占位符。下标可以嵌套（如 $[ ${a[0]} + 1 ]），按 [ ]
-    深度配对；找不到匹配的 ] 时一直吞到模板结尾。
+    深度配对；引号/反引号/反斜杠/嵌套替换可能隐藏 ]（bash 识别引号，
+    如 $[ "]" ] 的 ] 不终结展开），遇到即整体吞到模板结尾——提前停在
+    假结束符上会让余下模板按错误的引号语境解析（注入风险）。
+    找不到匹配的 ] 时同样吞到模板结尾。
     """
     n = len(tpl)
     depth = 1
     j = i + 2
     while j < n:
+        if _has_unsafe_construct(tpl, j):
+            return n
         c = tpl[j]
-        if c == "\\":
-            j += 2
-            continue
         if c == "[":
             depth += 1
         elif c == "]":
@@ -140,16 +177,17 @@ def _arithmetic_command_end(tpl: str, i: int) -> int:
 
     算术命令（bash/ksh 的 ((...))）内部是表达式：插入的引号不构成
     保护，表达式里的 $(...)/`...` 会被求值执行。按括号深度配对找
-    匹配的 ))，整体跳过、不替换占位符；找不到则吞到模板结尾。
+    匹配的 ))，整体跳过、不替换占位符；引号/反引号/反斜杠/嵌套替换
+    可能隐藏右括号，遇到即整体吞到模板结尾（见
+    _UNSAFE_IN_SKIPPED_CONTEXT），找不到则同样吞到模板结尾。
     """
     n = len(tpl)
     depth = 2
     j = i + 2
     while j < n:
+        if _has_unsafe_construct(tpl, j):
+            return n
         c = tpl[j]
-        if c == "\\":
-            j += 2
-            continue
         if c == "(":
             depth += 1
         elif c == ")":
@@ -163,25 +201,28 @@ def _arithmetic_command_end(tpl: str, i: int) -> int:
 def _parameter_expansion_end(tpl: str, i: int) -> int:
     """返回位置 i（${）处参数展开结束后的下标（吞掉匹配的 }）。
 
-    只做保守配对：\\x 转义跳过，嵌套 ${ 计深度。整个 ${...} 展开都是
-    无法安全替换的数据区（见 _render_posix 说明），调用方据此整段
-    跳过、不做占位符替换；找不到匹配的 } 时返回模板结尾，同样整体
-    跳过——宁可拒绝模板，也不把占位符插进无法确保安全的位置
-    （与 heredoc / 反引号的处理口径一致）。
+    整个 ${...} 展开都是无法安全替换的数据区（见 _render_posix 说明），
+    调用方据此整段跳过、不做占位符替换。配对必须保守：引号里的 } 不
+    终结展开（${x:-"}"}）、反斜杠会转义 }、$( 与反引号内部还有自己的
+    解析上下文——提前停在假结束符上会让余下模板按错误的引号语境解析
+    （如 ${x:-"}$prompt"}：$prompt 会按裸语境插入单引号，而 shell 仍在
+    双引号内，提示词里的 $(...)/`...` 被真正执行）。
+    嵌套 ${（无引号等构造时）计深度；遇到引号/反引号/反斜杠/嵌套替换
+    （可能隐藏 }）或找不到匹配的 } 时，返回模板结尾、整体跳过——宁可
+    拒绝模板，也不把占位符插进无法确保安全的位置（与 heredoc / 反引号
+    的处理口径一致）。
     """
     n = len(tpl)
     depth = 1
     j = i + 2
     while j < n:
-        c = tpl[j]
-        if c == "\\":
-            j += 2
-            continue
+        if _has_unsafe_construct(tpl, j, _UNSAFE_PARAMETER_HEADS):
+            return n
         if tpl.startswith("${", j):
             depth += 1
             j += 2
             continue
-        if c == "}":
+        if tpl[j] == "}":
             depth -= 1
             if depth == 0:
                 return j + 1

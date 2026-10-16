@@ -447,6 +447,80 @@ def test_render_command_does_not_substitute_in_parameter_expansion_words(tmp_pat
     assert r.stdout == "okhi\n"
 
 
+def test_render_command_quoted_closers_in_expansions_cannot_inject(tmp_path):
+    """${...}/$[...]/$((...)) 内被引号「保护」的结束符不得被误当段尾。
+
+    回归（bash 与 dash 下均可复现）：扫描器只用「第一个收尾符」给这类
+    整体跳过的语境找结束位置，不识别引号——引号里的 } / ] / ) 并不终结
+    展开（如 ${x:-"}"}、$[ "]" ]），扫描却提前停在假结束符上：余下模板
+    被按外层引号语境解析，$prompt 的转义与 shell 的真实语境错位
+    （如 ${x:-"}$prompt"}：$prompt 按裸语境插入 shlex.quote 的单引号，
+    但 shell 仍在双引号内，单引号只是字面量），提示词里的 $(...)/`...`
+    被真正执行（注入）。$((...)) 还有 $(("... 这类写法：shell 改按
+    命令替换解析，紧挨结束符的引号若被跳过区吞掉同样会错位。
+    修复：引号/反引号/反斜杠/嵌套替换可能隐藏结束符，遇到即整体吞到
+    模板结尾（拒绝替换）；$((...)) 必须确认真的跟着第二个 )。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"P $(touch {marker}) `touch {marker}.bt` Q"
+    templates = (
+        # ${...}：引号里的 } 不终结展开
+        'printf %s ${x:-"}$prompt"}',
+        'printf "%s ${x:-"}$prompt"}"',
+        "printf %s ${x:-'}'}$prompt",
+        "printf %s ${x:-'}$prompt}'",
+        "printf %s ${x:-'}'} $prompt ",
+        'echo ${x:-"}"} "$prompt"',
+        # $[...]：bash 识别引号（$[ "]" ] 的 ] 不终结展开）
+        "printf %s $[']']$prompt",
+        # $((...))：$(("... 时 shell 改按命令替换 + 子 shell 解析
+        'printf "%s $(()""))$prompt"',
+        'printf "%s $(()\\"))$prompt"',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入这类语境
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            try:
+                subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path, timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), (tpl, shell)
+        # 这类语境里的 $prompt 不会送达 agent：配置校验必须拒绝
+        assert command_receives_prompt(tpl) is False, tpl
+    # 正面对照：嵌套 ${（无引号等构造）与正常语境照常按深度配对/替换
+    tpl = 'printf %s ${x:-${y:-plain}} "$prompt"; echo'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "plain" + prompt + "\n"
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 正面对照：普通 $((...))/$[...] 不再被误判（配对仍然正确）
+    for tpl, expected in (
+        ('printf %s $((1 << 2)) "$prompt"; echo', "4"),
+        ('printf %s $[ 1 + 2 ] "$prompt"; echo', "3"),
+    ):
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                           capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (tpl, r.stderr)
+        assert r.stdout == expected + prompt + "\n", tpl
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_rejects_ansi_c_quotes(tmp_path):
     """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 
