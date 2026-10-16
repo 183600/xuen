@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-094608-r6",
-    "sha": "d7026967e10731d509329b67c21644e557ef5199",
+    "snap": "snap/20261016-101137-r7",
+    "sha": "e3e722400a1dae58a71f1f15ded8a6b992d383dd",
     "tests": "pass",
-    "at": "2026-10-16T09:48:16Z",
+    "at": "2026-10-16T10:13:10Z",
     "by": "ai",
-    "iter": "6"
+    "iter": "7"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -149,6 +149,31 @@
         "verdict": "accept",
         "reason": "修复了 heredoc 正文中替换 $prompt 导致的命令注入与配置校验误判（真实缺陷），仅新增测试未删改弱化，自动验证通过；但「裸上下文一律按 << 重定向」的近似解析会误伤 `$(( << ))` 等极罕见模板，属可接受小瑕疵。",
         "at": "2026-10-16T09:48:16Z"
+      }
+    },
+    {
+      "id": "20261016-101137-r7",
+      "snap": "snap/20261016-101137-r7",
+      "sha": "e3e722400a1dae58a71f1f15ded8a6b992d383dd",
+      "ts": "2026-10-16T10:13:10Z",
+      "iter": "7",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "165b65f4dc06525be89e8d58d98e11b595f2bb70",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了真实且安全的解析 bug——命令替换 `$(...)` 的独立引号上下文未跟踪，导致 `\"$(cmd \"$prompt\")\"` 中内层引号破坏外层引号状态、提示词按裸上下文插入，触发命令注入/参数拆碎；新增两条回归测试经核实在基线代码上失败、候选上通过。",
+        "at": "2026-10-16T10:13:10Z"
       }
     }
   ],
