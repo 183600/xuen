@@ -199,10 +199,11 @@ def _validate(cfg: Config) -> None:
                 "agent.command 必须包含会被实际替换的 $prompt 或 "
                 "$prompt_file 占位符（被转义的 \\$prompt、shell 注释、"
                 "heredoc 正文、反引号命令替换、算术语境（$[...]、"
-                "((...))、${name[下标]}、${name:offset} 子串展开）内的"
-                "占位符都不会被替换；ANSI-C 引用（$'...'）的语义随系统 "
-                "/bin/sh 方言（bash/dash）变化、无法安全替换，这类模板"
-                "也会被拒绝），否则提示词无法传给外部 agent"
+                "((...))）与 ${...} 参数展开（含数组下标/子串展开等算术"
+                "语境和 ${x:-word} 等词语境）内的占位符都不会被替换；"
+                "ANSI-C 引用（$'...'）的语义随系统 /bin/sh 方言（bash/"
+                "dash）变化、无法安全替换，这类模板也会被拒绝），否则"
+                "提示词无法传给外部 agent"
             )
     if (os.name == "nt" and re.search(
             r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", cmd)):

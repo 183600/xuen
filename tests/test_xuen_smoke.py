@@ -294,7 +294,8 @@ def test_render_command_does_not_substitute_in_arithmetic_contexts(tmp_path):
     ${x[$prompt]} 都会对表达式里的 $(...)/`...` 求值执行——即使 $prompt
     被 shlex.quote/单引号包裹，引号字符只是表达式文本，不构成保护。
     与 heredoc 正文同理：整体跳过、不做替换，并由配置校验拒绝这类模板；
-    没有下标的 ${x:-$prompt} 仍是词语境，照常安全替换。
+    ${x:-$prompt} 这类参数展开词语境同样整体跳过（无法安全转义，见
+    test_render_command_does_not_substitute_in_parameter_expansion_words）。
     """
     import shutil
     import subprocess
@@ -326,8 +327,8 @@ def test_render_command_does_not_substitute_in_arithmetic_contexts(tmp_path):
         assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
         # 算术语境里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
         assert command_receives_prompt(tpl) is False, tpl
-    # 没有下标的参数展开仍是安全的词语境：照常替换、正常送达且不执行
-    tpl = 'printf %s "${x:-$prompt}"; echo'
+    # 正面对照：普通双引号语境照常替换、正常送达且不执行
+    tpl = 'printf %s "$prompt"; echo'
     assert command_receives_prompt(tpl) is True
     agent = ShellAgent(tpl, tmp_path, timeout=5)
     r = subprocess.run([bash, "-c", agent.render_command(prompt)],
@@ -343,7 +344,8 @@ def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
     回归（bash 下可复现）：${x:'$(touch ...)'} 里的引号只是表达式文本，
     不构成保护——插入的提示词会真正执行其中的 $(...)/`...`（注入）。
     与 ${name[下标]} 同理整体跳过、不做替换，并由配置校验拒绝这类模板；
-    词语境的 ${x:-$prompt} / ${x:+$prompt} 仍照常安全替换。
+    词语境的 ${x:-$prompt} / ${x:+$prompt} 同样整体跳过（无法安全转义，
+    见 test_render_command_does_not_substitute_in_parameter_expansion_words）。
     """
     import shutil
     import subprocess
@@ -371,8 +373,8 @@ def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
         assert not marker.exists(), tpl
         # 算术语境里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
         assert command_receives_prompt(tpl) is False, tpl
-    # 正面对照：默认值/替代值等词语境照常替换、正常送达且不执行
-    tpl = 'printf %s "${x:-$prompt}"'
+    # 正面对照：普通双引号语境照常替换、正常送达且不执行
+    tpl = 'printf %s "$prompt"'
     assert command_receives_prompt(tpl) is True
     agent = ShellAgent(tpl, tmp_path, timeout=5)
     r = subprocess.run([bash, "-c", agent.render_command(prompt)],
@@ -380,6 +382,69 @@ def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
     assert r.returncode == 0, r.stderr
     assert r.stdout == prompt
     assert not marker.exists()
+
+
+def test_render_command_does_not_substitute_in_parameter_expansion_words(tmp_path):
+    """${x:-word} 等参数展开词语境也必须整体跳过（无法安全转义）。
+
+    回归：此前把 ${x:-$prompt} 当普通词语境、按双引号规则插入提示词，
+    但一套转义无法同时适配 bash 与 dash（提示词内容运行时才确定）：
+      - 提示词含 ' 时：按 dash 规则转义的 \\' 在 bash 展开体里不是转义
+        （bash 把 ' 当引号），落单的 ' 让整条命令解析失败（unexpected
+        EOF）；按 bash 规则转义又会在 dash 下出现别的偏差；
+      - 提示词含 } 时：} 提前结束参数展开，两种 shell 下都静默丢字符
+        （"${x:-foo}barbaz}" 输出 foobarbaz}，而不是 foo}barbaz）；
+      - bash 还会把展开体里未配对的 >( / <( 当进程替换解析而报错。
+    与算术/反引号/heredoc 正文一致：整段原样跳过、不做替换，并由配置
+    校验拒绝这类模板。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"x $(touch {marker}) `touch {marker}.bt` y"
+    templates = (
+        'printf %s "${x:-$prompt}"; echo',
+        'printf %s "${x:+$prompt}"; echo',
+        "printf %s ${x:-$prompt}; echo",
+        'printf %s "${x:-pre $prompt post}"; echo',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入参数展开
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert str(marker) not in r.stdout, tpl
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+        # 参数展开里的 $prompt 不会送达 agent：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+    # 对照：展开区之外的占位符照常送达，展开区内的那处原样跳过
+    tpl = 'printf %s "$prompt" "${x:-$prompt}"; echo'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    rendered = agent.render_command(prompt)
+    assert '"${x:-$prompt}"' in rendered
+    r = subprocess.run(["bash", "-c", rendered], capture_output=True,
+                       text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt + "\n"
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+    # 不含占位符的参数展开照常原样保留、正常执行
+    tpl = 'x=ok; printf %s "${x:-no}" "$prompt"; echo'
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command("hi")],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "okhi\n"
 
 
 def test_render_command_rejects_ansi_c_quotes(tmp_path):

@@ -163,10 +163,11 @@ def _arithmetic_command_end(tpl: str, i: int) -> int:
 def _parameter_expansion_end(tpl: str, i: int) -> int:
     """返回位置 i（${）处参数展开结束后的下标（吞掉匹配的 }）。
 
-    只做保守配对：\\x 转义跳过，嵌套 ${ 计深度。上层据此探测展开体内
-    是否出现数组下标 [（算术语境）；找不到匹配的 } 时返回模板结尾，
-    让调用方整体跳过——宁可拒绝模板，也不把占位符插进无法确保安全
-    的位置（与 heredoc / 算术展开的处理口径一致）。
+    只做保守配对：\\x 转义跳过，嵌套 ${ 计深度。整个 ${...} 展开都是
+    无法安全替换的数据区（见 _render_posix 说明），调用方据此整段
+    跳过、不做占位符替换；找不到匹配的 } 时返回模板结尾，同样整体
+    跳过——宁可拒绝模板，也不把占位符插进无法确保安全的位置
+    （与 heredoc / 反引号的处理口径一致）。
     """
     n = len(tpl)
     depth = 1
@@ -186,38 +187,6 @@ def _parameter_expansion_end(tpl: str, i: int) -> int:
                 return j + 1
         j += 1
     return n
-
-
-# 参数名：标识符 / 纯数字（位置参数）/ 单个特殊参数（@ * # ? - $ ! 等）
-_PARAM_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|[^A-Za-z0-9_]")
-
-
-def _parameter_expansion_is_arithmetic(segment: str) -> bool:
-    """判断 ${...} 展开体是否含算术语境（插入的引号不构成保护）。
-
-    - 数组下标 ${name[下标]}：下标是算术表达式；
-    - 子串展开 ${name:offset[:length]}：offset/length 也是算术表达式，
-      bash 会对其中 $(...)/`...` 求值执行——即使被引号包住，如
-      ${x:'$(cmd)'}（引号字符只是表达式文本，不阻止求值）；
-    - ${name:-word} / ${name:=word} / ${name:?word} / ${name:+word}
-      的 word 是普通词语境，照常安全替换；# % / ^ , @ 等模式/变换
-      操作符同理。
-    """
-    body = segment[2:]
-    if body.endswith("}"):
-        body = body[:-1]
-    if "[" in body:
-        # 不解析嵌套/模式中的 [：宁可整体跳过，也不冒险插入
-        return True
-    if body[:1] in ("#", "!"):
-        # ${#name} 长度 / ${!name} 间接：前缀字符不属于参数名
-        body = body[1:]
-    match = _PARAM_NAME.match(body)
-    if match is None:
-        return False
-    op = body[match.end():]
-    # 子串展开：首个 : 之后不是 - = ? +（那四种是词语境的默认值操作符）
-    return op.startswith(":") and (len(op) < 2 or op[1] not in "-=?+")
 
 
 class ShellAgent:
@@ -362,11 +331,21 @@ class ShellAgent:
         正文相同：整体原样跳过、不替换（command_receives_prompt 据此拒绝
         这类模板）。
 
-        算术语境（$((...))、旧式 $[...]、算术命令 ((...))、参数展开的
-        数组下标 ${name[...]} 与子串展开 ${name:offset[:length]}）里插入
-        的引号也不构成保护：表达式会对其中的 $(cmd)/`cmd` 求值执行
-        （bash）。这些位置无法安全送达提示词，同样整体原样跳过、不替换。
-        没有下标的 ${x:-$prompt} 仍是普通词语境，照常转义替换。
+        算术语境（$((...))、旧式 $[...]、算术命令 ((...))）里插入的引号
+        不构成保护：表达式会对其中的 $(cmd)/`cmd` 求值执行（bash）。
+        这些位置无法安全送达提示词，同样整体原样跳过、不替换。
+
+        ${...} 参数展开内部也是无法安全替换的数据区，整体跳过、不替换：
+        - 算术语境（数组下标 ${name[...]}、子串展开 ${name:offset[:length]}）
+          插入的引号只是表达式文本，$(...)/`...` 会被求值执行；
+        - 词语境（${x:-word} / ${x:=word} / ${x:?word} / ${x:+word} 等）
+          无法用一套转义同时适配 bash 与 dash：dash 需要把 ' 转义成 \\'，
+          而 bash 在展开体内把 ' 当引号，落单的 ' 直接让整条命令解析失败
+          （unexpected EOF）；} 在两种 shell 下都会提前结束参数展开、静默
+          丢字符（"${x:-foo}barbaz}" 输出 foobarbaz} 而不是 foo}barbaz）；
+          bash 还会把展开体内未配对的 >( / <( 当进程替换解析而报错。
+        提示词内容运行时才能确定、模板无法预知，因此与 heredoc 正文/反引号
+        一致整段跳过（command_receives_prompt 据此拒绝这类模板）。
 
         ANSI-C 引用（$'...'）的语义取决于实际执行命令的 /bin/sh 方言：
         bash 支持它（解释反斜杠转义），dash/POSIX sh 不支持（$ 是字面量、
@@ -502,14 +481,13 @@ class ShellAgent:
                     i = j
                     continue
                 if tpl.startswith("${", i):
+                    # ${...} 参数展开（算术语境的数组下标/子串展开与词语境
+                    # 的 ${x:-word} 等）都是无法安全替换的数据区
+                    # （见方法说明），整段原样跳过、不替换
                     j = _parameter_expansion_end(tpl, i)
-                    if _parameter_expansion_is_arithmetic(tpl[i:j]):
-                        # ${name[下标]} 与 ${name:offset} 子串展开都是算术
-                        # 语境，插入的引号不构成保护（见裸上下文同名分支），
-                        # 整段原样跳过、不替换
-                        out.append(tpl[i:j])
-                        i = j
-                        continue
+                    out.append(tpl[i:j])
+                    i = j
+                    continue
                 if tpl.startswith("$[", i):
                     # 双引号内的旧式算术展开 $[...] 同样是表达式语境，
                     # 整体原样跳过、不替换
@@ -581,17 +559,14 @@ class ShellAgent:
                 i = j
                 continue
             if tpl.startswith("${", i):
+                # ${...} 参数展开（数组下标/子串展开等算术语境与
+                # ${x:-word} 等词语境）内部都无法安全替换占位符
+                # （见方法说明），整段原样跳过（command_receives_prompt
+                # 据此拒绝这类模板）
                 j = _parameter_expansion_end(tpl, i)
-                if _parameter_expansion_is_arithmetic(tpl[i:j]):
-                    # ${name[下标]} 的下标与 ${name:offset[:length]} 子串
-                    # 展开的 offset/length 都是算术语境：插入的引号不被
-                    # 当作保护，其中的 $(...)/`...` 会被求值执行（bash）。
-                    # 无法安全替换，整段原样跳过（command_receives_prompt
-                    # 据此拒绝这类模板）。没有下标的参数展开（如
-                    # ${x:-$prompt}）仍是普通词语境，照常替换
-                    out.append(tpl[i:j])
-                    i = j
-                    continue
+                out.append(tpl[i:j])
+                i = j
+                continue
             if tpl.startswith("$[", i):
                 # 旧式算术展开 $[...]：内部是表达式，与 $((...)) 同理，
                 # 插入的引号不构成保护，整体原样跳过、不替换
