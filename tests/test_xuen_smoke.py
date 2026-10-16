@@ -166,6 +166,69 @@ def test_render_command_after_heredoc_still_substitutes(tmp_path):
     assert r.stdout == prompt
 
 
+def test_render_command_heredoc_delimiter_expansion_cannot_inject(tmp_path):
+    """heredoc 终止符词里的展开语法不能按字面截断词边界。
+
+    回归：shell 不对终止符词做展开、词边界由展开内部的解析决定
+    （`cat <<$(echo X)` 的终止符是字面量 $(echo X)，含空白的
+    ${...}/$[...] 与反引号同理）。渲染器若在 ( 或空白处截断终止符
+    （把 $(echo X) 读成 $），就会以为正文在模板中途结束、把 $prompt
+    替换进后面的文本；而 shell 的正文一直延伸到真正的终止符，不加引号
+    的正文会展开替换文本里的 $(...)/`...`——提示词里的命令被真正执行
+    （注入，实测 bash 下创建文件）。修复：终止符词含无法安全确定边界的
+    展开时把剩余模板整体吞掉（与 heredoc 正文/反引号/算术语境同口径），
+    配置校验据此拒绝这类模板。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        "cat <<$(echo X)\nX\n$\n$prompt\n",
+        "cat <<$(echo X) > /dev/null\nX\n$\n$prompt\n",
+        "cat <<$((1+1))\n$\n$prompt\n",
+        "cat <<a${X:-b c}\na${X:-b\n$prompt\n}\na${X:-b c}\n",
+        "cat <<a$[b c]d\na$[b\n$prompt\n]\na$[b c]d\n",
+        "cat <<`echo a b`\n`echo\n$prompt\n`echo a b`\n",
+    )
+    for tpl in templates:
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(f"$(touch {marker}) `touch {marker}.bt`")
+        # 占位符原样保留，提示词绝不进入终止符词之后的任何命令/正文
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    if not _posix_shell_available():
+        return
+    # 对照 1：单引号终止符里的 $(...) 是字面量，照常截断正文、正常送达
+    tpl = "cat <<'$(echo X)' > /dev/null\n$(echo X)\nprintf %s $prompt"
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    prompt = "a b $HOME `id`"
+    r = subprocess.run(agent.render_command(prompt), shell=True,
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt
+    # 对照 2：终止符词之前的 $prompt 照常送达；危险区之后的整体吞掉，
+    # 不会因为拒绝而丢掉已兑现的占位符（该写法 dash 直接语法错误，
+    # 这里用 bash 验证）
+    tpl = "printf %s $prompt\ncat <<$(echo X)\nX\n$(echo X)\n"
+    assert command_receives_prompt(tpl) is True
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run([shutil.which("bash"), "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.startswith(prompt)
+    assert "X" in r.stdout
+
+
 def test_render_command_command_substitution_quotes(tmp_path):
     """$(...) 内部的引号自成一体，不能影响外层引号状态。
 

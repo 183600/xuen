@@ -732,6 +732,16 @@ class ShellAgent:
 
             按 shell 的引号移除规则拼出终止符（'EOF' / "EOF" / E\\OF / EOF
             等价）；是否加引号不影响这里的处理——两种正文都不替换占位符。
+
+            终止符词里的 $(、${、$[、$'、$"、` 是展开/引用语法：词边界
+            由展开内部的解析决定（内部的空白、括号、引号都不会结束词），
+            简单扫描会提前截断终止符——渲染器以为正文已结束、把 $prompt
+            替换进后面，而 shell 的正文一直延伸到真正的终止符。不加引号的
+            正文会展开其中的 $(...)/`...`：实测 bash 下 `cat <<$(echo X)`
+            的终止符是字面量 $(echo X)（词不展开、只做引号移除），提示词
+            因此被当成正文执行（注入）；$((...))、含空白的 ${...}/$[...]、
+            含空白的反引号同理。这类词返回 (None, n)，调用方把剩余模板
+            整体吞掉、不做替换（command_receives_prompt 据此拒绝）。
             """
             buf: List[str] = []
             while pos < n:
@@ -755,10 +765,22 @@ class ShellAgent:
                                 and tpl[end + 1] in '"\\$`'):
                             end += 2
                             continue
+                        if (tpl[end] == "`" or tpl.startswith("$(", end)
+                                or tpl.startswith("${", end)
+                                or tpl.startswith("$[", end)):
+                            # 双引号内同样是嵌套解析：展开内部按自己的
+                            # 规则处理引号，字面找 " 会截错词边界
+                            return None, n
                         end += 1
                     buf.append(tpl[pos + 1:end])
                     pos = min(end + 1, n)
                     continue
+                if (c == "`" or tpl.startswith("$(", pos)
+                        or tpl.startswith("${", pos)
+                        or tpl.startswith("$[", pos)
+                        or tpl.startswith("$'", pos)
+                        or tpl.startswith('$"', pos)):
+                    return None, n
                 # shell 词在空白与控制运算符处结束
                 if c in " \t\n;&|<>()":
                     break
@@ -1085,6 +1107,14 @@ class ShellAgent:
                 while j < n and tpl[j] in " \t":
                     j += 1
                 delim, j = read_heredoc_delim(j)
+                if delim is None:
+                    # 终止符词含无法安全确定边界的展开（$(、${、$[...、$'、
+                    # $"、` 等）：与实际 shell 的词边界可能不一致，正文
+                    # 范围无法判断。与 heredoc 正文同口径：整体吞到模板
+                    # 结尾、不做替换
+                    out.append(tpl[i:])
+                    i = n
+                    continue
                 out.append(tpl[i:j])
                 pending_heredocs.append((delim, strip_tabs))
                 i = j
