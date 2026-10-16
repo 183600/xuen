@@ -382,52 +382,64 @@ def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
     assert not marker.exists()
 
 
-def test_render_command_ansi_c_quotes_escape_prompt(tmp_path):
-    """ANSI-C 引用（$'...'）里的占位符必须按反斜杠转义规则插入。
+def test_render_command_rejects_ansi_c_quotes(tmp_path):
+    """裸上下文中的 ANSI-C 引用（$'...'）模板必须整体拒绝。
 
-    回归（bash 下可复现）：沿用普通单引号的 '\\'' 闭合重开写法时，
-    值里的 \\' 在 $'...' 里是被转义的单引号、不会闭合引用——引号奇偶
-    被打乱，值里随后的裸命令替换逃出引用被真正执行（注入）。
+    回归：xuen 用 shell=True 执行命令，实际解释器是 /bin/sh ——
+    Ubuntu/Debian 下是 dash，它不支持 ANSI-C 引用（$ 是字面量、后面是
+    普通单引号串）；macOS/RHEL 下却是 bash（按反斜杠转义解释）。
+    此前按 bash 语义转义插入提示词，在 dash 下引号边界会被打乱：
+    提示词里的 `; touch ...` 逃出引用被当作命令执行（注入），而
+    command_receives_prompt 仍按 bash 语义误判为「能送达」。方言无法预知，
+    因此与 heredoc/反引号/算术语境一致：整体拒绝，绝不替换。
     """
-    import shutil
     import subprocess
     from xuen.agents import ShellAgent, command_receives_prompt
 
+    for tpl in ("printf %s $'pre $prompt post'",
+                "cat $'$prompt_file'",
+                "printf %s $'$prompt'",
+                # 曾在 dash 下可注入的模板：提示词里的引号能逃出引用
+                "printf %s $'$prompt' '"):
+        assert command_receives_prompt(tpl) is False, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        try:
+            agent.render_command("x")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"含 $'...' 的模板应被拒绝: {tpl}")
+    # 拒绝发生后工作区不能残留无消费者的提示词文件：$prompt_file 先落盘、
+    # 随后的 $'...' 才触发拒绝时，渲染失败路径也必须清理
+    mixed = '''printf %s "$prompt_file" >/dev/null; printf %s $'$prompt' '''
+    with_cleanup = ShellAgent(mixed, tmp_path, timeout=5)
+    try:
+        with_cleanup.render_command("x")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("含 $'...' 的模板应被拒绝")
+    assert [p.name for p in tmp_path.iterdir()] == []
+
     if not _posix_shell_available():
         return
-    bash = shutil.which("bash")
-    marker = tmp_path / "pwned"
-    tpl = "printf %s $'pre $prompt post'"
+    # 对照：$' 出现在 shell 注释里不参与解析，不触发拒绝
+    prompt = "a'b \"c\" $HOME `id`"
+    tpl = "printf %s $prompt # $'x'"
     assert command_receives_prompt(tpl) is True
-    prompt = f"\\' ; touch {marker} ; echo \\'"
-    agent = ShellAgent(tpl, tmp_path, timeout=5)
-    rendered = agent.render_command(prompt)
-    assert "$prompt" not in rendered
-    r = subprocess.run([bash, "-c", rendered], capture_output=True,
-                       text=True, cwd=tmp_path)
-    assert r.returncode == 0, r.stderr
-    # 提示词原样送达（不执行、不被 ANSI-C 转义解释）
-    assert r.stdout == f"pre {prompt} post"
-    assert not marker.exists()
-    # $prompt_file：路径经 ANSI-C 转义后仍能通向提示词文件（含空格工作区）
-    workspace = tmp_path / "some dir"
-    workspace.mkdir()
-    tpl_file = "cat $'$prompt_file'"
-    assert command_receives_prompt(tpl_file) is True
-    agent_file = ShellAgent(tpl_file, workspace, timeout=5)
-    r_file = subprocess.run([bash, "-c", agent_file.render_command(prompt)],
-                            capture_output=True, text=True, cwd=tmp_path)
-    assert r_file.returncode == 0, r_file.stderr
-    assert r_file.stdout == prompt
-    # 值尾部的反斜杠不能吞掉模板的结束引号；\x 序列不被解释成转义
-    tpl2 = "printf %s $'$prompt'"
+    rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+    for argv in (["/bin/sh", "-c", rendered], ["bash", "-c", rendered]):
+        r = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout == prompt
+    # 对照：双引号内的 $' 是普通字面量，不是 ANSI-C 语境
+    tpl2 = "printf %s \"$'x' $prompt\""
     assert command_receives_prompt(tpl2) is True
-    for value in ("abc\\", "a\\nb", "a'b"):
-        agent2 = ShellAgent(tpl2, tmp_path, timeout=5)
-        r2 = subprocess.run([bash, "-c", agent2.render_command(value)],
-                            capture_output=True, text=True, cwd=tmp_path)
-        assert r2.returncode == 0, r2.stderr
-        assert r2.stdout == value
+    rendered2 = ShellAgent(tpl2, tmp_path, timeout=5).render_command(prompt)
+    for argv in (["/bin/sh", "-c", rendered2], ["bash", "-c", rendered2]):
+        r = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout == "$'x' " + prompt
 
 
 def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):

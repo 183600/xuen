@@ -109,18 +109,6 @@ def _backquote_end(tpl: str, i: int) -> int:
     return n
 
 
-def _escape_in_ansi_c_quotes(value: str) -> str:
-    """把值安全地嵌进已打开的 ANSI-C 引用（$'...'）内部。
-
-    ANSI-C 引用会处理反斜杠转义，不能沿用普通单引号的 '\\'' 闭合重开
-    写法：值中的 \\' 在 $'...' 里是「被转义的单引号」——不会闭合引用，
-    反而让引号奇偶错位，值里随后的裸命令替换会被真正执行（注入）。
-    这里反斜杠必须最先转义（避免吞掉模板的结束引号或让值里的 \\n 等
-    被 shell 解释成别的字符），再把 ' 写成 \\'（转义后不会结束引用）。
-    """
-    return value.replace("\\", "\\\\").replace("'", "\\'")
-
-
 def _legacy_arithmetic_end(tpl: str, i: int) -> int:
     """返回位置 i（$[）处旧式算术展开结束后的下标（吞掉匹配的 ]）。
 
@@ -290,9 +278,15 @@ class ShellAgent:
 
     def render_command(self, prompt: str, *, dry_run: bool = False) -> str:
         self._prompt_file = None
-        if os.name == "nt":
-            return self._render_windows(self.template, prompt, dry_run)
-        return self._render_posix(self.template, prompt, dry_run)
+        try:
+            if os.name == "nt":
+                return self._render_windows(self.template, prompt, dry_run)
+            return self._render_posix(self.template, prompt, dry_run)
+        except Exception:
+            # 渲染中途失败（如模板含无法安全替换的 $'...'）时，$prompt_file
+            # 可能已落盘：必须清掉，否则工作区会留下无消费者的 .prompt.*.md
+            self._cleanup_prompt_file()
+            raise
 
     def _placeholder_at(self, tpl: str, i: int) -> Optional[str]:
         """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。"""
@@ -374,11 +368,13 @@ class ShellAgent:
         （bash）。这些位置无法安全送达提示词，同样整体原样跳过、不替换。
         没有下标的 ${x:-$prompt} 仍是普通词语境，照常转义替换。
 
-        ANSI-C 引用（$'...'）内部只做反斜杠转义、没有命令替换等展开，
-        但普通单引号的 '\\'' 闭合重开写法在这里不成立（\\' 是被转义的
-        单引号、不会闭合引用），占位符必须按 ANSI-C 转义插入
-        （见 _escape_in_ansi_c_quotes），否则值里的引号/反斜杠会打乱
-        引用边界、把命令替换暴露成可执行代码（注入）。
+        ANSI-C 引用（$'...'）的语义取决于实际执行命令的 /bin/sh 方言：
+        bash 支持它（解释反斜杠转义），dash/POSIX sh 不支持（$ 是字面量、
+        后面只是普通单引号串）。xuen 用 shell=True 执行命令，/bin/sh 在
+        不同系统上可能是 bash 也可能是 dash：按任一方言转义都会在另一方言
+        下打乱引号边界，使提示词里的 $(...)/`...` 逃出引用被真正执行
+        （注入）。这种无法确定语义的语境整体拒绝（抛 ValueError），由
+        配置校验拦下，而不是替换。
 
         dry_run=True：只探测哪些占位符会被兑现，$prompt_file 不落盘，
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
@@ -604,37 +600,20 @@ class ShellAgent:
                 i = j
                 continue
             if tpl.startswith("$'", i):
-                # ANSI-C 引用（$'...'）：内部只做反斜杠转义，没有命令
-                # 替换等展开，但普通单引号的 '\'' 闭合重开写法在这里
-                # 不成立——\' 是被转义的单引号、不会闭合引用，会打乱
-                # 引号奇偶，把值里随后的命令替换暴露成可执行代码（注入）。
-                # 这里按 shell 规则逐字符解析（\x 成对跳过、裸 ' 结束），
-                # 占位符按 ANSI-C 转义插入（见 _escape_in_ansi_c_quotes）
-                out.append("$'")
-                k = i + 2
-                while k < n:
-                    c = tpl[k]
-                    if c == "\\":
-                        out.append(tpl[k:k + 2])
-                        k += 2
-                        continue
-                    if c == "'":
-                        out.append(c)
-                        k += 1
-                        break
-                    ph = self._placeholder_at(tpl, k)
-                    if ph == "$prompt":
-                        out.append(_escape_in_ansi_c_quotes(prompt))
-                        k += len(ph)
-                        continue
-                    if ph == "$prompt_file":
-                        out.append(_escape_in_ansi_c_quotes(file_value()))
-                        k += len(ph)
-                        continue
-                    out.append(c)
-                    k += 1
-                i = k
-                continue
+                # ANSI-C 引用（$'...'）的解释随 /bin/sh 方言而变：bash 按
+                # 反斜杠转义处理，dash 则把 $ 当字面量、后面当普通单引号串。
+                # xuen 用 shell=True 执行（Linux 上通常是 dash，macOS/RHEL
+                # 上是 bash），无法预知方言：按 bash 规则转义插入提示词，
+                # 在 dash 下引号边界会被打乱——提示词里的 `; cmd` / $(cmd)
+                # 逃出引用被真正执行（注入）；按 POSIX 规则插入，则会在
+                # bash 下注入。与其他不安全语境一致：整体拒绝这类模板，
+                # 绝不替换（command_receives_prompt 据此让配置校验拒绝）
+                raise ValueError(
+                    "agent.command 不支持 ANSI-C 引用（$'...'）：不同系统"
+                    "的 /bin/sh（bash 支持、dash 不支持）对它的解释不同，"
+                    "无法安全传递提示词；请改用普通引号，例如 "
+                    '"$prompt" 或 \'$prompt\''
+                )
             if tpl.startswith("((", i):
                 # 算术命令 ((...))：内部是表达式，插入的引号不构成保护，
                 # 表达式里的 $(...)/`...` 会被求值执行。整体原样跳过、
@@ -918,7 +897,11 @@ def command_receives_prompt(template: str) -> bool:
     直接复用 ShellAgent 的实际渲染逻辑（dry_run 不落盘 $prompt_file
     文件）判断，而不是用正则近似匹配 "$prompt" 子串：被 shell 转义的
     \\$prompt 虽然包含 "$prompt" 子串，渲染时并不会替换，提示词会被
-    静默丢弃——这正是配置校验要拦下的场景。"""
+    静默丢弃——这正是配置校验要拦下的场景。渲染直接拒绝的模板
+    （如 ANSI-C 引用 $'...'）同样按「提示词无法送达」处理。"""
     probe_agent = ShellAgent(template, Path("."), timeout=1.0)
-    return _PLACEHOLDER_PROBE in probe_agent.render_command(
-        _PLACEHOLDER_PROBE, dry_run=True)
+    try:
+        rendered = probe_agent.render_command(_PLACEHOLDER_PROBE, dry_run=True)
+    except ValueError:
+        return False
+    return _PLACEHOLDER_PROBE in rendered
