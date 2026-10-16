@@ -68,11 +68,18 @@ GIT_RETRY_SLEEP = 20
 
 # ---- AI 评分（AI Judge）默认参数；可用 state.json 的 ai_judge 或环境变量覆盖
 AI_OC_DEFAULT_MODEL = "opencode/deepseek-v4.1-flash-free"   # opencode 渠道默认模型
+AI_OC_FALLBACK_MODEL = "opencode/big-pickle"                # 默认模型不可用时的兜底模型
 AI_API_DEFAULT_MODEL = "gpt-4o-mini"                        # API 渠道默认模型
 AI_API_DEFAULT_BASE = "https://api.openai.com/v1"           # OpenAI 兼容端点
 AI_DEFAULT_TIMEOUT = 180                                    # 单次 AI 调用超时（秒）
 AI_MAX_DIFF_CHARS = 100_000                                 # 评审材料里 diff 的字符上限
 AI_MAX_BACKLOG = 3                                          # init 时最多补评分的轮数
+
+def _model_tag() -> str:
+    """提交信息附带本轮使用的模型（workflow 通过 ROUND_MODEL 环境变量传入）。"""
+    m = os.environ.get("ROUND_MODEL", "").strip()
+    return f" [model: {m}]" if m else ""
+
 
 VERDICTS_HEADER = """\
 # 候选评分表（用户填写；round_guard 只读取、从不改写此文件）
@@ -693,6 +700,9 @@ def run_ai_judge(diff_base, cand_sha, val, changed, touched_tests, st) -> dict:
             preferred = (os.environ.get("AIJUDGE_OC_MODEL")
                          or AI_OC_DEFAULT_MODEL).strip()
             candidates = [preferred]
+            # ⭐ 默认/指定模型不可用时优先换 big-pickle 兜底（同为 Zen 网关免费模型）
+            if AI_OC_FALLBACK_MODEL not in candidates:
+                candidates.append(AI_OC_FALLBACK_MODEL)
             for m in _opencode_model_pool():
                 if m not in candidates:
                     candidates.append(m)
@@ -849,7 +859,7 @@ def write_state_and_docs(st: dict) -> None:
 
 def commit_rounds_files(message: str) -> None:
     git("add", "-A", ".rounds", check=False)
-    git("commit", "-m", message, check=False)
+    git("commit", "-m", message + _model_tag(), check=False)
 
 
 def push_master_with_recovery() -> bool:
@@ -929,7 +939,8 @@ def promote_snap(st: dict, snap: str) -> tuple:
         return True, sha
     # 回滚 / 分叉：内容取快照，父提交取当前 master
     new = gout("commit-tree", f"{sha}^{{tree}}", "-p", om,
-               "-m", f"chore(rounds): 采纳 {snap} 为最佳（用户裁决，内容回滚到该快照）")
+               "-m", f"chore(rounds): 采纳 {snap} 为最佳（用户裁决，内容回滚到该快照）"
+                     f"{_model_tag()}")
     p = git("push", "origin", f"{new}:refs/heads/master",
             check=False, retry=3, timeout=180)
     return (p.returncode == 0, new if p.returncode == 0 else None)
@@ -1201,7 +1212,8 @@ def cmd_after_round(args) -> int:
     if git("status", "--porcelain").stdout.strip():
         git("add", "-A")
         git("commit", "-m",
-            f"cand({iteration}): 候选快照 {rid}（尚未验证，不代表最佳）", check=False)
+            f"cand({iteration}): 候选快照 {rid}（尚未验证，不代表最佳）"
+            f"{_model_tag()}", check=False)
     cand_sha = gout("rev-parse", "HEAD")
     git("tag", snap, cand_sha)
     push_tags([snap], st)

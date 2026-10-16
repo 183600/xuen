@@ -232,6 +232,12 @@ jobs:
           # 同一轮内若优先模型刚失败/限流，则暂时回退随机，下一轮开始时自动恢复优先。
           PREFERRED_MODEL="opencode/deepseek-v4.1-flash-free"
           PREFERRED_BROKEN=0
+          # ================= 兜底模型：big-pickle =================
+          # 优先模型 deepseek-v4.1-flash-free 失效（限流/失败/不在池中）时，
+          # 优先切换 opencode/big-pickle（Big Pickle，同为 Zen 网关免费模型）；
+          # big-pickle 也不可用时才回退随机模型。
+          FALLBACK_MODEL="opencode/big-pickle"
+          FALLBACK_BROKEN=0
           # ---- 解析脚本：从 --verbose 输出提取模型 ID + 支持的 variant 列表 ----
           # `opencode models --verbose` 在每个模型行后输出一段 JSON 元数据，其中
           # variants 字段列出该模型支持的思考强度档位。输出两列（\t 分隔）：
@@ -306,6 +312,15 @@ jobs:
                 if [ "$x" = "$PREFERRED_MODEL" ]; then m="$x"; break; fi
               done
             fi
+            # ⭐ 优先模型不可用（刚失败/限流/不在池中）：改用兜底 big-pickle
+            if [ -z "$m" ] && [ -n "$FALLBACK_MODEL" ] && [ "$FALLBACK_BROKEN" -ne 1 ]; then
+              for x in "${FREE_MODELS[@]}"; do
+                if [ "$x" = "$FALLBACK_MODEL" ]; then m="$x"; break; fi
+              done
+              if [ -n "$m" ]; then
+                echo "[info] 优先模型不可用，改用兜底模型: $m"
+              fi
+            fi
             if [ -z "$m" ]; then
               for _ in 1 2 3; do
                 m="${FREE_MODELS[$((RANDOM % n))]}"
@@ -314,6 +329,18 @@ jobs:
             fi
             PREVIOUS_MODEL="$m"
             CURRENT_MODEL="$m"
+            return 0
+          }
+
+          # ---------- 提交信息附带本轮实际使用的模型（写入 /tmp/last_model_used.txt） ----------
+          MODEL_TAG_FILE=/tmp/last_model_used.txt
+          record_model() {
+            printf '%s' "$1" > "$MODEL_TAG_FILE" 2>/dev/null || true
+          }
+          model_tag() {
+            local m=""
+            [ -f "$MODEL_TAG_FILE" ] && m="$(head -c 120 "$MODEL_TAG_FILE" 2>/dev/null)"
+            [ -n "$m" ] && printf ' [model: %s]' "$m"
             return 0
           }
 
@@ -354,6 +381,7 @@ jobs:
             FAIL_COUNT=0
             RATE_COUNT=0
             PREFERRED_BROKEN=0   # 每轮开始时恢复优先模型
+            FALLBACK_BROKEN=0   # 每轮开始时恢复兜底模型
             while [ "$attempt" -lt 3 ]; do
               attempt=$((attempt + 1))
 
@@ -387,6 +415,7 @@ jobs:
 
               # 输出经 clean_log.py 净化后再进 Actions 日志（剥 ANSI/控制字符/坏字节）
               : > "$OUT"
+              record_model "$CURRENT_MODEL"
               timeout --signal=INT --kill-after=30s "${CAP}" \
                 opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$PROMPT" 2>&1 \
                 | tee "$OUT" | python3 "$CLEANER"
@@ -407,7 +436,11 @@ jobs:
                 echo "[warn] 命中限流(429) (连续: $RATE_COUNT)，90s 后换模型重试"
                 if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
                   PREFERRED_BROKEN=1
-                  echo "[info] 优先模型命中限流，本轮内改用随机模型"
+                  echo "[info] 优先模型命中限流，本轮内改用兜底模型 big-pickle"
+                fi
+                if [ "$CURRENT_MODEL" = "$FALLBACK_MODEL" ]; then
+                  FALLBACK_BROKEN=1
+                  echo "[info] 兜底模型 big-pickle 命中限流，本轮内改用随机模型"
                 fi
                 if [ "$RATE_COUNT" -ge 8 ]; then
                   echo "[warn] 连续 8 次限流，放弃本轮"
@@ -427,7 +460,11 @@ jobs:
               echo "::warning::opencode 本轮退出码 ${RC}（模型 $CURRENT_MODEL），换模型重试"
               if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
                 PREFERRED_BROKEN=1
-                echo "[info] 优先模型失败，本轮内改用随机模型"
+                echo "[info] 优先模型失败，本轮内改用兜底模型 big-pickle"
+              fi
+              if [ "$CURRENT_MODEL" = "$FALLBACK_MODEL" ]; then
+                FALLBACK_BROKEN=1
+                echo "[info] 兜底模型 big-pickle 失败，本轮内改用随机模型"
               fi
               if [ "$FAIL_COUNT" -ge 3 ]; then
                 echo "[warn] 连续 3 次失败，放弃本轮"
@@ -452,7 +489,7 @@ jobs:
             # guard 自身失败不阻断循环（最坏退化为旧行为：改动留到下一轮合并处理）
             git checkout HEAD -- .github .rounds 2>/dev/null || true
             git clean -fdq .github .rounds 2>/dev/null || true
-            python3 .github/scripts/round_guard.py after-round --iter "${ITER}" \
+            ROUND_MODEL="$CURRENT_MODEL" python3 .github/scripts/round_guard.py after-round --iter "${ITER}" \
               || echo "::warning::round_guard after-round 失败，改动留在工作区下一轮合并处理"
             echo "::endgroup::"
 
@@ -474,6 +511,7 @@ jobs:
         run: |
           git checkout HEAD -- .github .rounds 2>/dev/null || true
           git clean -fdq .github .rounds 2>/dev/null || true
+          ROUND_MODEL="$(head -c 120 /tmp/last_model_used.txt 2>/dev/null || true)" \
           python3 .github/scripts/round_guard.py after-round --iter final \
             || echo "::warning::round_guard 收尾失败，改动留在本地未推送"
 
