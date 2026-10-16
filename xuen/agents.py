@@ -933,6 +933,22 @@ class ShellAgent:
             顺序读：其正文区域都落在深度优先所吞掉的范围之内，恢复替换
             的位置只会更晚，同样是安全方向。
 
+            不加引号的正文会做展开，反斜杠-换行在展开时被删除、终止符
+            匹配发生在「逻辑行」上：行尾奇数个反斜杠要把下一物理行拼进
+            同一个逻辑行再比较（bash 实测 `foo\\`+换行+`EOF` 拼成 fooEOF、
+            不是终止符，正文继续到下一个 EOF 行；`\\`+换行+`EOF` 拼成
+            EOF 则终止）。dash 也先吃掉续行再找终止符，但只在「检查点」
+            （正文开头、真实换行之后、整行反斜杠的续行之后）逐字比较
+            物理行，行内续行拼出的终止符不算数（实测 `EO\\`+换行+`F` 只有
+            bash 终止）。按物理行匹配会让渲染器提前结束正文、把 $prompt
+            替换进 shell 仍当作正文的续行区域——不加引号的正文会执行
+            提示词里的 $(...)/``，bash 与 dash 均可注入（实测创建文件）。
+            这里按 dash 的检查点口径匹配（终止符行要求此前没有非空续行
+            前缀、且自身不以反斜杠续行结尾）：dash 的正文边界与它完全
+            一致，bash 的边界只会相同或更早，恢复替换的位置对两种 shell
+            都安全（bash 更早结束的行宁可多吞、不替换）。加引号的正文
+            不展开、没有续行语义，仍按物理行精确匹配。
+
             不带引号的正文里出现横跨终止符行仍未闭合的 $()/`` 等展开时，
             这一行不是真正的正文结束：dash 会把它吞进展开、正文继续
             （见 _heredoc_body_open_substitution），此处继续按正文往后吞，
@@ -950,20 +966,40 @@ class ShellAgent:
             consume.sort(key=lambda e: -e[2])
             for delim, strip_tabs, reg_depth, quoted in consume:
                 body_start = pos
+                # 不加引号的正文按续行语义找终止符（见方法说明）：
+                # logical_prefix 非空 = 当前处于逻辑行中间，不是 dash 的
+                # 终止符检查点，与行尾反斜杠一起决定本行能否结束正文
+                logical_prefix = ""
                 while pos < n:
                     j = tpl.find("\n", pos)
                     end = n if j < 0 else j + 1
                     line = tpl[pos:] if j < 0 else tpl[pos:j]
                     out.append(tpl[pos:end])
                     pos = end
-                    if (line.lstrip("\t") if strip_tabs else line) == delim:
+                    if quoted:
+                        if (line.lstrip("\t") if strip_tabs
+                                else line) == delim:
+                            break
+                        continue
+                    # 行尾奇数个反斜杠 = 续行：删除末尾反斜杠与换行，
+                    # 与下一物理行拼成同一个逻辑行
+                    k = len(line)
+                    while k > 0 and line[k - 1] == "\\":
+                        k -= 1
+                    if (len(line) - k) % 2:
+                        logical_prefix += line[:-1]
+                        continue
+                    if (not logical_prefix
+                            and (line.lstrip("\t") if strip_tabs
+                                 else line) == delim):
                         # 不加引号的正文里若有横跨终止符行仍未闭合的
                         # $()/`` 等展开：dash 会把这一行也吞进展开、正文
                         # 继续（见 _heredoc_body_open_substitution），
                         # 此处不是真正的正文结束，继续按正文往后吞
-                        if quoted or not _heredoc_body_open_substitution(
+                        if not _heredoc_body_open_substitution(
                                 tpl, body_start, pos):
                             break
+                    logical_prefix = ""
             pending_heredocs[:] = kept
             return pos
 

@@ -488,6 +488,72 @@ def test_render_command_unquoted_heredoc_body_spanning_expansion_cannot_inject(t
             assert r.stdout == prompt2, sh
 
 
+def test_render_command_heredoc_backslash_continuation_cannot_inject(tmp_path):
+    """不加引号 heredoc 正文的行尾反斜杠续行不能按物理行提前收正文。
+
+    回归：`cat <<EOF\\nfoo\\<换行>EOF\\n$prompt\\nEOF` 里 bash 与 dash 都把
+    `foo\\`+换行+`EOF` 拼成逻辑行 fooEOF（不是终止符），正文继续到真正的
+    EOF 行；渲染器按物理行匹配，以为正文在第一个 EOF 行结束，把 $prompt
+    替换进 shell 仍当作不加引号正文的区域——正文会做命令替换，提示词里的
+    $(touch ...)/反引号被真正执行（注入，实测两 shell 均创建文件）。
+    `EO\\`+换行+`F` 更隐蔽：bash 拼出 EOF 会结束正文，dash 只在行首检查点
+    逐字比较物理行、不结束，跨 shell 必须取更晚的边界。修复：不加引号的
+    正文按反斜杠-换行先拼逻辑行、以 dash 的检查点口径匹配终止符
+    （见 consume_heredoc_bodies），$prompt 因此留在正文里不替换，由配置
+    校验拒绝这类模板；加引号的正文没有续行语义，仍按物理行精确匹配。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # 续行拼出的「终止符」行不是终止符：正文继续到下一个 EOF
+        "cat <<EOF\nfoo\\\nEOF\n$prompt\nEOF\n",
+        # <<- 与制表符缩进的续行
+        "cat <<-EOF\nfoo\\\n\tEOF\n$prompt\n\tEOF\n",
+        # bash 终止、dash 不终止：跨 shell 取更晚的正文边界
+        "cat <<EOF\nEO\\\nF\n$prompt\nEOF\n",
+    )
+    prompt = f"$(touch {tmp_path / 'pwned'}) `touch {tmp_path / 'pwned.bt'}`"
+    for tpl in templates:
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+    if not _posix_shell_available():
+        return
+    # 对照：这些续行/终止符组合下两种 shell 的正文边界一致、都同意正文
+    # 在终止符行结束——之后的 $prompt 必须照常送达（不被多吞误伤）
+    deliver = (
+        # 续行在真正的终止符行之前结束，正文照常收束
+        "cat <<EOF > /dev/null\nfoo\\\nbar\nEOF\nprintf %s $prompt",
+        # 偶数个反斜杠不续行，下一行 EOF 正常终止
+        "cat <<EOF > /dev/null\nfoo\\\\\nEOF\nprintf %s $prompt",
+        # 加引号的正文没有续行语义，物理行 EOF 即终止
+        "cat <<'EOF' > /dev/null\nfoo\\\nEOF\nprintf %s $prompt",
+        # 整行反斜杠的续行与终止符拼成终止符（两 shell 一致），正文为空
+        "cat <<EOF > /dev/null\n\\\nEOF\nprintf %s $prompt",
+    )
+    prompt2 = "a'b $HOME `id`"
+    for tpl in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([sh, "-c", agent.render_command(prompt2)],
+                               capture_output=True, text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, sh, r.stderr)
+            assert r.stdout == prompt2, (tpl, sh)
+
+
 def test_render_command_command_substitution_quotes(tmp_path):
     """$(...) 内部的引号自成一体，不能影响外层引号状态。
 
