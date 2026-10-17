@@ -1954,3 +1954,73 @@ def test_render_windows_prompt_file_inside_quotes_is_not_double_quoted(
     for tpl in ('tool "pre $prompt_file suf"', 'tool "a $prompt_file"'):
         rendered, _ = render(tpl)
         assert '""' not in rendered, rendered
+
+
+def test_render_command_rejects_array_assignment(tmp_path):
+    """裸上下文中的 bash 数组赋值（NAME=(...)）模板必须整体拒绝。
+
+    回归：`v=(; $prompt` 这类模板此前能通过配置校验——`(` 在裸上下文按
+    普通字符原样保留、$prompt 被替换成跨行单引号串。但 bash 对数组内语法
+    错误（`;`）的恢复是「放弃当前命令、把后续行当命令执行」：渲染后提示词
+    的第 2..n 行成了被执行的命令，实测其中 $(touch x)/`touch x` 创建文件
+    （dash 则在 `(` 处直接报语法错误、什么也不执行，提示词也送不到）。
+    数组是非 POSIX 语法（dash 下命令永远跑不了），`NAME=((` 这类非法写法
+    同样触发恢复，合法数组在 dash 下也无法运行；方言无法预知——与
+    $'...' 同口径整体拒绝、绝不替换。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    exploits = (
+        "v=(; $prompt",
+        'v=("x"; v="$v"$prompt"; echo "$v"',
+        "v+=($prompt)",
+        "v=((1+1)); $prompt",
+        "v[$i]=($prompt)",
+        "declare -a v=(x $prompt)",
+        "local v=(; $prompt",
+        # 续行拼接成 v=(：分词前反斜杠-换行被删除
+        "v=\\\n(; $prompt",
+        # 合法 bash 数组同样拒绝：dash 下无法运行、无方言安全的支持方式
+        "v=($prompt)",
+    )
+    for tpl in exploits:
+        assert command_receives_prompt(tpl) is False, tpl
+        try:
+            ShellAgent(tpl, tmp_path, timeout=5).render_command("x")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"含数组赋值的模板应被拒绝: {tpl}")
+    # 拒绝发生后工作区不能残留无消费者的提示词文件（$prompt_file 先落盘、
+    # 随后的数组赋值才触发拒绝）
+    mixed = 'printf %s "$prompt_file" >/dev/null; v=(; $prompt'
+    try:
+        ShellAgent(mixed, tmp_path, timeout=5).render_command("x")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("含数组赋值的模板应被拒绝")
+    assert [p.name for p in tmp_path.iterdir()] == []
+
+    if not _posix_shell_available():
+        return
+    # 端到端：run() 必须在渲染阶段拒绝，绝不能把注入模板交给 shell 执行
+    agent = ShellAgent("v=(; $prompt", tmp_path, timeout=5)
+    try:
+        agent.run("line1\n$(touch pwned1)\n`touch pwned2`")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("数组赋值模板必须在运行前被拒绝")
+    assert sorted(p.name for p in tmp_path.iterdir()) == []
+    # 对照：`=` 之外位置的裸括号（子 shell 等）不是数组，照常送达且两
+    # shell 一致（( 在 () 内被当普通括号，不触发拒绝）
+    tpl2 = '(echo "$prompt")'
+    assert command_receives_prompt(tpl2) is True
+    prompt = "a'b \"c\" $HOME `id`"
+    rendered = ShellAgent(tpl2, tmp_path, timeout=5).render_command(prompt)
+    for argv in (["/bin/sh", "-c", rendered], ["bash", "-c", rendered]):
+        r = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path)
+        assert r.returncode == 0, (argv, r.stderr)
+        assert r.stdout == prompt + "\n", (argv, r.stdout)
