@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261017-025930-r4",
-    "sha": "f0e9cb9dc61354c0994ad13a57c8358c17f6451f",
+    "snap": "snap/20261017-031037-r5",
+    "sha": "55d6b9153677a08ffd0a392637f062f59df122dc",
     "tests": "pass",
-    "at": "2026-10-17T03:00:57Z",
+    "at": "2026-10-17T03:11:54Z",
     "by": "ai",
-    "iter": "4"
+    "iter": "5"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -1074,6 +1074,31 @@
         "verdict": "accept",
         "reason": "修复了真实 bug——分隔符列出的多个装饰术语此前只剥首段、后续段装饰头残留在词库，新增了针对性回归测试且未删改/弱化任何测试，59 项测试通过；唯一小瑕疵是分隔符后以边缘字符开头的词段会被多剥一个前导字符（如 \"a, .NET\"→\"a, NET\"、\"a, _loss_fn\"→\"a, loss_fn\"），属与行首既有行为一致的轻微边界副作用，可接受。",
         "at": "2026-10-17T03:00:57Z"
+      }
+    },
+    {
+      "id": "20261017-031037-r5",
+      "snap": "snap/20261017-031037-r5",
+      "sha": "55d6b9153677a08ffd0a392637f062f59df122dc",
+      "ts": "2026-10-17T03:11:54Z",
+      "iter": "5",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "673574f28fdddc51aba5cb9551c47d0f4d7af257",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了真实 bug（分隔符列表中后续词段的序号/装饰残片混入词库），仅新增 36 行回归测试、未删改既有测试，60 项测试全部通过，属整体改进但有少量边界风险。",
+        "at": "2026-10-17T03:11:54Z"
       }
     }
   ],
