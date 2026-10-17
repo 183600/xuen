@@ -374,6 +374,14 @@ def _legacy_arithmetic_end(tpl: str, i: int) -> int:
     深度配对；引号/反引号/反斜杠/嵌套替换可能隐藏 ]（bash 识别引号，
     如 $[ "]" ] 的 ] 不终结展开），遇到即整体吞到模板结尾——提前停在
     假结束符上会让余下模板按错误的引号语境解析（注入风险）。
+    词首的 # 同理：dash 等不支持 $[...] 的 /bin/sh 把 $[ 当普通词、
+    区域内容按普通词语境解析，词首 # 会开启注释，把结束符 ] 与同行
+    后续（可能是替换所依赖的引号语境）一起吞到行尾——实测
+    `$[ #c elif local ] for[declare[ (echo $prompt)` 渲染后，提示词的
+    后续行在 dash 下成为裸命令、$(...)/`...` 被真正执行（注入）；
+    bash 则在算术区解析 # 报错、不执行。遇到即整体吞到模板结尾
+    （与引号等构造同口径），宁可拒绝模板也不让 $prompt 留在与实际
+    shell 脱节的语境里。
     找不到匹配的 ] 时同样吞到模板结尾。
     """
     n = len(tpl)
@@ -383,6 +391,11 @@ def _legacy_arithmetic_end(tpl: str, i: int) -> int:
         if _has_unsafe_construct(tpl, j):
             return n
         c = tpl[j]
+        if c == "#" and tpl[j - 1] in " \t\n;&|()<>":
+            # 词首 #（dash 里是注释起点；$[ 紧跟的 [ 后不算词首，如
+            # $[#x] 是单个词；bash 基数写法 $[16#ff] 的 # 前是数字，
+            # 也不触发）
+            return n
         if c == "[":
             depth += 1
         elif c == "]":

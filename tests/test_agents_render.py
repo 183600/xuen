@@ -844,6 +844,61 @@ def test_render_command_does_not_substitute_in_arithmetic_contexts(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_legacy_arithmetic_hash_comment_cannot_inject(tmp_path):
+    """$[...] 区域内的词首 # 在 dash 下是注释，会吞掉提示词的引号语境。
+
+    回归（dash 下实测创建文件）：dash 不支持 $[...]——`$[` 只是普通词、
+    区域内容按普通词语境解析，词首 # 开启注释、把结束符 ] 与同行后续
+    （含后面单引号串的起始引号）一起吞到行尾，提示词的第二行成为裸命令、
+    其中的 $(...)/`...` 被真正执行（fuzz 模板 `$[ #c elif local ] for[
+    declare[ (echo $prompt)` 下 $(touch PWN_A)/$(( $(touch PWN_B) )) 均被
+    执行；bash 在算术区解析 # 报错、不执行）。修复：$[...] 区域内遇到
+    词首 # 即整体吞到模板结尾，占位符原样保留、不替换
+    （command_receives_prompt 据此拒绝这类模板）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"l1\n$(touch {marker})\n$(( $(touch {marker}.bt) ))\nend\n"
+    templates = (
+        # fuzz 实测命中的模板（dash 下 PWN_A/PWN_B 均被创建）
+        "$[ #c elif local ] for[declare[ (echo $prompt)",
+        # 最小化：区域内词首 # 的注释吞掉结束符后的引号
+        "$[ # ] (echo $prompt)",
+        # 双引号语境同样按「整体跳过、不替换」处理
+        'printf %s "$[ #x ]$prompt"',
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入这类语境
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            try:
+                subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path, timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), (tpl, shell)
+        # 这类语境里的 $prompt 不会送达 agent：配置校验必须拒绝
+        assert command_receives_prompt(tpl) is False, tpl
+    # 正面对照：# 前是数字的 bash 基数写法不触发（词中 # 不是注释），
+    # 普通 $[...] 照常按深度配对、其后占位符正常替换
+    tpl = 'printf %s $[16#ff] "$prompt"; echo'
+    assert command_receives_prompt(tpl) is True, tpl
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "255" + prompt + "\n", r.stdout
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
     """${name:offset[:length]} 子串展开的 offset/length 是算术语境。
 
