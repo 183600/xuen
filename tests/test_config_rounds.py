@@ -122,3 +122,33 @@ def test_rounds_scalar_section_rejected(tmp_path):
         load_config(write_cfg(tmp_path, BASE + """
 rounds: on
 """))
+
+
+def test_windows_agent_command_prompt_rejected(tmp_path, monkeypatch):
+    """Windows 下 cmd.exe 无法安全接收内嵌多行的 $prompt。"""
+    monkeypatch.setattr("os.name", "nt")
+    with pytest.raises(ValueError, match="agent.command"):
+        load_config(write_cfg(tmp_path, BASE))
+
+
+def test_windows_judge_command_prompt_rejected(tmp_path, monkeypatch):
+    """评审命令与 agent.command 同经 cmd.exe 执行：$prompt 同样要拦下，
+    否则评审提示词（含模型生成的候选内容）里的换行/&/% 会被 cmd 执行。"""
+    monkeypatch.setattr("os.name", "nt")
+    with pytest.raises(ValueError, match="judge_command"):
+        load_config(write_cfg(tmp_path, """
+agent:
+  command: 'opencode run "$prompt_file"'
+rounds:
+  judge_command: 'opencode run "$prompt"'
+"""))
+
+
+def test_windows_judge_command_bad_workspace(monkeypatch):
+    """工作区路径含 cmd 元字符时，评审命令的 $prompt_file 也必须拒绝：
+    只校验 agent.command 会漏掉评审命令（两条命令的路径都无法安全传递）。"""
+    from xuen import config
+    monkeypatch.setattr("os.name", "nt")
+    with pytest.raises(ValueError, match="judge_command"):
+        config._validate_windows_command(
+            "rounds.judge_command", 'opencode run "$prompt_file"', "./ws&dir")

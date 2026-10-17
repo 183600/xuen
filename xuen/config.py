@@ -239,6 +239,32 @@ def load_config(path: Optional[str] = None) -> Config:
     return cfg
 
 
+def _validate_windows_command(name: str, template: str,
+                              workspace: str) -> None:
+    """校验命令模板在 Windows（cmd.exe）下能否安全接收提示词。
+
+    agent.command 与 rounds.judge_command 都经 ShellAgent 交给 cmd.exe
+    执行：$prompt 会把多行提示词直接嵌进命令行（换行把提示词后续内容
+    拆成独立命令执行，% & ^ 等元字符还会被命令解释器展开），含元字符的
+    工作区路径也会让 $prompt_file 的路径被 cmd 破坏。两条命令必须同口径
+    校验——只查 agent.command 会把评审提示词里的候选内容送进 cmd 解析。
+    """
+    if os.name != "nt":
+        return
+    if re.search(r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", template):
+        raise ValueError(
+            f"Windows 的 {name} 不能使用 $prompt；请改用 $prompt_file"
+            "（提示词会被写入文件，避免 cmd 转义/换行问题）"
+        )
+    if (re.search(r"(?<![A-Za-z0-9_])\$prompt_file(?![A-Za-z0-9_])", template)
+            and re.search(r"[%!&^<>|]", workspace)):
+        raise ValueError(
+            f"Windows 下工作区路径含 cmd 元字符（% ! & ^ < > |），"
+            f"{name} 的 $prompt_file 无法安全传递给外部 agent；"
+            "请更换工作区路径"
+        )
+
+
 def _validate(cfg: Config) -> None:
     if cfg.words.pick < 0:
         raise ValueError("words.pick（n）必须 >= 0")
@@ -303,21 +329,8 @@ def _validate(cfg: Config) -> None:
                 "dash）变化、无法安全替换，这类模板也会被拒绝），否则"
                 "提示词无法传给外部 agent"
             )
-    if (os.name == "nt" and re.search(
-            r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", cmd)):
-        # cmd.exe 无法安全接收内嵌多行参数：换行会把提示词后续内容拆成
-        # 独立命令执行，且 %,&,^ 等字符还会被命令解释器展开。
-        raise ValueError(
-            "Windows 的 agent.command 不能使用 $prompt；请改用 "
-            "$prompt_file（提示词会被写入文件，避免 cmd 转义/换行问题）"
-        )
-    if (os.name == "nt"
-            and re.search(r"(?<![A-Za-z0-9_])\$prompt_file(?![A-Za-z0-9_])", cmd)
-            and re.search(r"[%!&^<>|]", cfg.workspace)):
-        # $prompt_file 的路径嵌入 cmd 命令行时只经 list2cmdline 处理空格/引号，
-        # 不转义 cmd 元字符：%...% 会被变量展开、! 在延迟展开下会被吞掉，
-        # 工作区路径含这些字符时外部 agent 会拿到错误路径
-        raise ValueError(
-            "Windows 下工作区路径含 cmd 元字符（% ! & ^ < > |），"
-            "$prompt_file 无法安全传递给外部 agent；请更换工作区路径"
-        )
+    # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
+    # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
+    # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
+    _validate_windows_command("agent.command", cmd, cfg.workspace)
+    _validate_windows_command("rounds.judge_command", jcmd, cfg.workspace)
