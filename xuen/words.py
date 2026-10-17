@@ -98,6 +98,31 @@ _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 _HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
 
 
+# 同一行里用分隔符列出的多个术语可能各自带装饰头/收尾（LLM 常写
+# "**卷积**、**池化**、**全连接**"、"*fast*, *slow*"）：只从整行词头
+# unwrap 会只剥第一段，后面段的收尾被 rstrip(_EDGE_CHARS) 剥掉、装饰头
+# 却留在词中（"卷积、**池化"），残片随词库进入每轮提示词。按分隔符
+# 分段、逐段剥（分隔符与原有空白原样保留）。
+_SEGMENT_SEP = re.compile(r"([、,，;；])")
+
+
+def _unwrap_segments(w: str) -> str:
+    """对分隔符分开的每一段分别剥词头装饰。"""
+    parts = _SEGMENT_SEP.split(w)
+    for i in range(0, len(parts), 2):
+        part = parts[i]
+        core = part.strip()
+        if not core:
+            continue
+        lead = part[:len(part) - len(part.lstrip())]
+        trail = part[len(part.rstrip()):]
+        core = _unwrap_pair(core)
+        while core and core[0] in _EDGE_CHARS:
+            core = _unwrap_pair(core[1:])
+        parts[i] = lead + core + trail
+    return "".join(parts)
+
+
 def _clean_once(line: str) -> str | None:
     # 行首与剥序号后各 unwrap 一次：行首覆盖 "**词** 解释"、"「词」（解释）"；
     # 剥序号覆盖 "- **词** 解释"（装饰头在序号后面才露出来）。unwrap 必须在
@@ -110,6 +135,8 @@ def _clean_once(line: str) -> str | None:
     # 串中（"词**（解释）"）；逐个剥则能在装饰头露头时连收尾一起剥掉
     while w and w[0] in _EDGE_CHARS:
         w = _unwrap_pair(w[1:])
+    # 分隔符后面的词段同样可能是装饰头（见 _unwrap_segments 说明）
+    w = _unwrap_segments(w)
     w = w.rstrip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None

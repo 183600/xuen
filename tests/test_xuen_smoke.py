@@ -2010,6 +2010,39 @@ def test_words_clean_keeps_intraword_underscores_and_leading_edge_chars():
         assert _clean_line(w) == w, w
 
 
+def test_words_clean_unwraps_each_segment_after_separators():
+    """同一行分隔符列出的多个装饰术语必须逐段剥干净。
+
+    回归：LLM 常输出 "**卷积**、**池化**、**全连接**"、"*fast*, *slow*"。
+    只从整行词头 unwrap 时仅第一段被剥，后续段的收尾被 rstrip(_EDGE_CHARS)
+    剥掉、装饰头却留在词中（"卷积、**池化、**全连接"），残片随词库进入
+    每轮提示词。按分隔符分段后每段都要能剥掉自己的装饰头/收尾。
+    """
+    from xuen.words import _clean_line
+
+    assert _clean_line("**卷积**、**池化**、**全连接**") == "卷积、池化、全连接"
+    assert _clean_line("1. **卷积**、**池化**、**全连接**") == "卷积、池化、全连接"
+    assert _clean_line("*fast*, *slow*") == "fast, slow"
+    assert _clean_line("`a`, `b`") == "a, b"
+    assert _clean_line("*α*、*β*、*γ*") == "α、β、γ"
+    assert _clean_line("*a*; *b*; *c*") == "a; b; c"
+    assert _clean_line('"a", "b"') == "a, b"
+    assert _clean_line("「a」、「b」") == "a、b"
+    # 单个装饰对跨分隔符时整体剥掉，不被分段撕开
+    assert _clean_line("*a, b*") == "a, b"
+    assert _clean_line("「a、b」") == "a、b"
+    # 未装饰的术语列表与词中分隔符/下划线不能被误伤
+    assert _clean_line("梯度下降、反向传播、Adam") == "梯度下降、反向传播、Adam"
+    assert _clean_line("x_0, x_1") == "x_0, x_1"
+    assert _clean_line("*args, **kwargs") == "args, kwargs"
+    # 清洗必须是不动点
+    for src in ("**卷积**、**池化**、**全连接**", "*fast*, *slow*",
+                "*a, b*", "*args, **kwargs"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
     """E2BIG（命令行参数过长）不能以裸 [Errno 7] 抛出。
 
