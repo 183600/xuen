@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Set
 
 from .procs import kill_process_tree, popen_kwargs
 from .ui import ui
@@ -71,7 +71,8 @@ def _cmd_double_quotes_after(text: str, in_quotes: bool) -> bool:
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
-def _prev_effective_pos(tpl: str, i: int) -> int:
+def _prev_effective_pos(tpl: str, i: int,
+                        commented_backslashes: Optional[Set[int]] = None) -> int:
     """返回 i 左侧「shell 分词时真正相邻」字符的下标；无则为 -1。
 
     分词前 shell 会先删掉续行（未转义反斜杠 + 换行）：`a\\<换行>b` 的 b
@@ -79,9 +80,20 @@ def _prev_effective_pos(tpl: str, i: int) -> int:
     按反斜杠奇偶：`a\\\\<换行>#`（两个）里换行不是续行、仍是词边界；三个
     反斜杠时删掉换行与最后一个反斜杠，紧邻 # 的是剩下的字面反斜杠。
     单引号语境不删续行，调用方不要在那里使用本函数。
+
+    commented_backslashes：渲染器已消费的注释里紧贴换行（直接位于换行
+    左侧）的反斜杠位置集合。注释里的反斜杠不被 shell 当续行——注释在
+    物理换行处结束（bash/dash 实测 `#x\\<换行>echo y` 会执行 echo y），
+    反斜杠只是被注释吞掉的普通字符。这种换行是硬换行：跨过去会把注释
+    内的字符当成「相邻字符」，渲染器据此误判注释起点（`#\\<换行>#$prompt`
+    里第二个 # 被当成词中字符，$prompt 被替换进 shell 的注释里，提示词的
+    换行逃出注释成为命令——注入），或误判占位符的词边界。命中即返回换行
+    位置（词边界），与实际 shell 一致。
     """
     k = i - 1
     while k >= 0 and tpl[k] == "\n":
+        if commented_backslashes and (k - 1) in commented_backslashes:
+            return k  # 注释吞掉了反斜杠：硬换行，是词边界
         j = k - 1
         n = 0
         while j >= 0 and tpl[j] == "\\":
@@ -114,7 +126,9 @@ def _directly_after_placeholder(tpl: str, i: int, prev_ph_end: int) -> bool:
     return k == i
 
 
-def _dollar_starts_expansion(tpl: str, i: int) -> bool:
+def _dollar_starts_expansion(tpl: str, i: int,
+                             commented_backslashes: Optional[Set[int]] = None
+                             ) -> bool:
     """位置 i 处的 $ 是否开启新展开（紧邻的 $ 会被 shell 两两配成 $$）。
 
     shell 从左到右扫描连续未转义的 $：前两个配成一个 $$（PID），落单的
@@ -125,18 +139,21 @@ def _dollar_starts_expansion(tpl: str, i: int) -> bool:
     续行在分词前被删掉，跨行相邻关系按删除后的文本判断：`$\\<换行>
     $prompt` 就是 `$$prompt`，第二个 $ 只是前一个 $$ 的后半、不是展开。
     返回 False 表示 i 处的 $ 只是前一个 $$ 的后半，不是展开的开始。
+    commented_backslashes 透传给 _prev_effective_pos：注释吞掉的反斜杠
+    不续行，注释里的 $ 段不参与跨行配对（`#\\<换行>$prompt` 的 $ 是
+    新展开，按注释内相邻关系会误算成 $$ 的后半）。
     """
     run = 0  # i 左侧紧邻的连续 $ 个数（按删除续行后的相邻关系）
     k = i
     while True:
-        k = _prev_effective_pos(tpl, k)
+        k = _prev_effective_pos(tpl, k, commented_backslashes)
         if k < 0 or tpl[k] != "$":
             break
         run += 1
     n = 0  # $ 段之前紧邻的连续反斜杠个数（同样按删除续行后的相邻关系）
     while k >= 0 and tpl[k] == "\\":
         n += 1
-        k = _prev_effective_pos(tpl, k)
+        k = _prev_effective_pos(tpl, k, commented_backslashes)
     if n % 2:
         run -= 1
     return run % 2 == 0
@@ -180,16 +197,21 @@ _CONTINUATION_SPLIT_HEADS = frozenset((
 ))
 
 
-def _continuation_split_head(tpl: str, i: int) -> Optional[str]:
+def _continuation_split_head(tpl: str, i: int,
+                             commented_backslashes: Optional[Set[int]] = None
+                             ) -> Optional[str]:
     """续行位置 i 两侧的有效字符是否拼成需特殊解析的操作符/展开头。
 
     返回拼成的头部文本（如 ">&"）；不构成时返回 None。
     `$` 开头的组合必须先确认是真正的展开（_dollar_starts_expansion，
     `\\$$<续行>(` 里的 $$ 是 PID，`(` 不是命令替换的起点）；其他字符
     先确认未被反斜杠转义（`\\>`+续行+`&` 里 `>` 是字面量、不是 `>&`）。
+    commented_backslashes 透传给 _prev_effective_pos / _dollar_starts_
+    expansion：注释吞掉的反斜杠不续行，跨过它会把注释内字符当成续行
+    左侧的相邻字符（如把注释里的 > 与后续 & 误拼成 >& 而整体拒绝）。
     """
     n = len(tpl)
-    prev = _prev_effective_pos(tpl, i)
+    prev = _prev_effective_pos(tpl, i, commented_backslashes)
     if prev < 0:
         return None
     k = i
@@ -201,7 +223,7 @@ def _continuation_split_head(tpl: str, i: int) -> Optional[str]:
     if head not in _CONTINUATION_SPLIT_HEADS:
         return None
     if tpl[prev] == "$":
-        if not _dollar_starts_expansion(tpl, prev):
+        if not _dollar_starts_expansion(tpl, prev, commented_backslashes):
             return None
     elif _escaped_at(tpl, prev):
         return None
@@ -698,7 +720,9 @@ class ShellAgent:
 
     def _placeholder_at(self, tpl: str, i: int,
                         state: str = "bare",
-                        prev_ph_end: int = -1) -> Optional[str]:
+                        prev_ph_end: int = -1,
+                        commented_backslashes: Optional[Set[int]] = None
+                        ) -> Optional[str]:
         """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。
 
         除单词字符边界外还要挡住紧跟在未转义 $ 后面的情况：shell 把
@@ -727,6 +751,9 @@ class ShellAgent:
         拼成同一个词，第二个占位符要照常兑现（见
         _directly_after_placeholder）；模板里字面紧贴的 `x$prompt`
         仍然不替换。
+        commented_backslashes：透传给 _prev_effective_pos / _dollar_
+        starts_expansion，注释吞掉的反斜杠不续行（否则会把注释内的字符
+        当成占位符左侧的相邻字符，误判词边界或 $ 配对）。
         """
         if state == "single":
             # 单引号内续行不被删除，相邻要求物理紧邻（不能用跨续行的
@@ -735,12 +762,13 @@ class ShellAgent:
                     and prev_ph_end != i):
                 return None
         else:
-            prev = _prev_effective_pos(tpl, i)
+            prev = _prev_effective_pos(tpl, i, commented_backslashes)
             if (prev >= 0 and _WORD_CHAR.match(tpl[prev])
                     and not _directly_after_placeholder(tpl, i, prev_ph_end)):
                 return None
             if (prev >= 0 and tpl[prev] == "$"
-                    and not _dollar_starts_expansion(tpl, i)):
+                    and not _dollar_starts_expansion(
+                        tpl, i, commented_backslashes)):
                 return None
         for ph in ("$prompt_file", "$prompt"):
             if not tpl.startswith(ph, i):
@@ -1196,6 +1224,13 @@ class ShellAgent:
         # （echo $(echo hi)#there 输出 hi#there）。子 shell/case pattern
         # 的 ) 是词边界，其后的 # 才是注释，必须区分（见下面的 # 分支）
         word_internal_paren_end = -1
+        # 已消费注释里紧贴换行的反斜杠位置集合（注释吞掉的反斜杠不构
+        # 成续行：换行仍是硬换行、结束注释；`#a\\<换行>#$prompt` 里第二
+        # 个 # 仍开注释）。不记录的话 _prev_effective_pos 会把跨过它的
+        # 换行当续行删除、把注释内的字符当成相邻字符，误判 # 不是注释
+        # 起点，$prompt 被替换进 shell 的注释里——提示词的换行逃出注释
+        # 成为被执行的命令（注入，见 _prev_effective_pos）
+        commented_backslashes: Set[int] = set()
         # 最近一次兑现的占位符在模板中的结束位置：紧贴它的单词字符是
         # 替换结果的结尾、不是模板字面量（`$prompt$prompt` 的第二个
         # 占位符要照常替换，见 _placeholder_at / _directly_after_placeholder）
@@ -1212,7 +1247,8 @@ class ShellAgent:
                     i += 1
                     continue
                 ph = self._placeholder_at(tpl, i, state="single",
-                                          prev_ph_end=last_ph_end)
+                                          prev_ph_end=last_ph_end,
+                                          commented_backslashes=commented_backslashes)
                 if ph == "$prompt":
                     out.append(_escape_in_single_quotes(prompt))
                     last_ph_end = i + len(ph)
@@ -1234,14 +1270,14 @@ class ShellAgent:
                         # 双引号内的续行同样在分词前被删除：`"$\<换行>(`
                         # 拼成 `"$(`，引号内的命令替换照常生效；按普通
                         # 字符解析会让状态与实际 shell 脱节（注入）
-                        head = _continuation_split_head(tpl, i)
+                        head = _continuation_split_head(tpl, i, commented_backslashes)
                         if head is not None:
                             raise _continuation_split_error(head)
                     out.append(tpl[i:i + 2])
                     i += 2
                     continue
                 if (tpl.startswith("$(", i)
-                        and _dollar_starts_expansion(tpl, i)):
+                        and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                     # 双引号内的命令替换/算术展开同样开启独立上下文。
                     # 必须确认这个 $ 真的开启展开：`$$(` 里第二个 $ 只是
                     # PID（$$）的后半，双引号内的 ( 是字面量（bash/dash
@@ -1267,7 +1303,7 @@ class ShellAgent:
                     i = j
                     continue
                 if (tpl.startswith("${", i)
-                        and _dollar_starts_expansion(tpl, i)):
+                        and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                     # ${...} 参数展开（算术语境的数组下标/子串展开与词语境
                     # 的 ${x:-word} 等）都是无法安全替换的数据区
                     # （见方法说明），整段原样跳过、不替换。
@@ -1278,7 +1314,7 @@ class ShellAgent:
                     i = j
                     continue
                 if (tpl.startswith("$[", i)
-                        and _dollar_starts_expansion(tpl, i)):
+                        and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                     # 双引号内的旧式算术展开 $[...] 同样是表达式语境，
                     # 整体原样跳过、不替换；`$$[...` 的 $[ 同理不是展开
                     j = _legacy_arithmetic_end(tpl, i)
@@ -1291,7 +1327,8 @@ class ShellAgent:
                     i += 1
                     continue
                 ph = self._placeholder_at(tpl, i, state="double",
-                                          prev_ph_end=last_ph_end)
+                                          prev_ph_end=last_ph_end,
+                                          commented_backslashes=commented_backslashes)
                 if ph == "$prompt":
                     out.append(_escape_in_double_quotes(prompt))
                     last_ph_end = i + len(ph)
@@ -1317,7 +1354,7 @@ class ShellAgent:
                     # （`>\<换行>&` 是 >&、`$\<换行>(` 是命令替换……），
                     # 按续行两侧独立解析会与实际 shell 脱节（注入），
                     # 这类模板整体拒绝（与 $'...' 同口径）
-                    head = _continuation_split_head(tpl, i)
+                    head = _continuation_split_head(tpl, i, commented_backslashes)
                     if head is not None:
                         raise _continuation_split_error(head)
                 out.append(tpl[i:i + 2])
@@ -1342,17 +1379,29 @@ class ShellAgent:
                 # 其后的 # 不是注释。若误判成注释会跳过该行剩余部分（含
                 # 不成对引号），与实际 shell 的引号状态脱节，后续 $prompt
                 # 按错误语境插入、提示词里的 $(...)/`...` 被真正执行
-                # （注入，见 test_render_command_escaped_delimiter_hash）
-                prev = _prev_effective_pos(tpl, i)
+                # （注入，见 test_render_command_escaped_delimiter_hash）。
+                # 注释行尾的反斜杠不续行（被注释吞掉）：`#a\<换行>#x` 里
+                # 第二个 # 仍是词首注释，不能因为反斜杠奇偶判定成续行、
+                # 把 # 当成上一行注释的词中字符——那会把 $prompt 替换进
+                # shell 的注释里，提示词的换行逃出注释成为被执行的命令
+                # （注入）。_prev_effective_pos 按 commented_backslashes
+                # 返回硬换行的位置，此时该换行前的反斜杠不构成转义
+                prev = _prev_effective_pos(tpl, i, commented_backslashes)
                 if prev < 0 or (
                         tpl[prev] in " \t\n;&|()<>"
                         and prev != word_internal_paren_end
-                        and not _escaped_at(tpl, prev)):
+                        and not (_escaped_at(tpl, prev)
+                                 and (prev - 1) not in
+                                 commented_backslashes)):
                     j = tpl.find("\n", i)
                     if j < 0:
                         out.append(tpl[i:])
                         i = n
                     else:
+                        if tpl[j - 1] == "\\":
+                            # 注释在换行处结束，行尾反斜杠被注释吞掉、
+                            # 不构成续行：记录位置供 _prev_effective_pos
+                            commented_backslashes.add(j - 1)
                         out.append(tpl[i:j + 1])
                         i = j + 1
                         if pending_heredocs:
@@ -1378,7 +1427,7 @@ class ShellAgent:
                 i = n
                 continue
             if (tpl.startswith("$((", i)
-                    and _dollar_starts_expansion(tpl, i)):
+                    and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                 # 算术展开内部是表达式，整体原样跳过：既不替换占位符
                 # （shell 会把那里的 $prompt 当普通变量展开，送不到
                 # agent），也避免位移运算符 << 被误登记成 heredoc。
@@ -1392,7 +1441,7 @@ class ShellAgent:
                 i = j
                 continue
             if (tpl.startswith("${", i)
-                    and _dollar_starts_expansion(tpl, i)):
+                    and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                 # ${...} 参数展开（数组下标/子串展开等算术语境与
                 # ${x:-word} 等词语境）内部都无法安全替换占位符
                 # （见方法说明），整段原样跳过（command_receives_prompt
@@ -1403,7 +1452,7 @@ class ShellAgent:
                 i = j
                 continue
             if (tpl.startswith("$[", i)
-                    and _dollar_starts_expansion(tpl, i)):
+                    and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                 # 旧式算术展开 $[...]：内部是表达式，与 $((...)) 同理，
                 # 插入的引号不构成保护，整体原样跳过、不替换；
                 # `$$[...` 的 $[ 同理不是展开
@@ -1412,7 +1461,7 @@ class ShellAgent:
                 i = j
                 continue
             if ((tpl.startswith("$'", i) or tpl.startswith('$"', i))
-                    and _dollar_starts_expansion(tpl, i)):
+                    and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                 # ANSI-C 引用（$'...'）与本地化引用（$"..."）的解释随
                 # /bin/sh 方言而变：bash 按引用处理（前者解释反斜杠转义，
                 # 后者做 gettext 翻译），dash 则把 $ 当字面量、后面当普通
@@ -1445,7 +1494,7 @@ class ShellAgent:
                 # /bin/sh 方言无法预知，与 $'...' 同口径：整体拒绝、绝不
                 # 替换（command_receives_prompt 据此让配置校验拒绝），
                 # 也避免合法数组模板在 dash 下「能通过校验却永远跑不了」
-                prev = _prev_effective_pos(tpl, i)
+                prev = _prev_effective_pos(tpl, i, commented_backslashes)
                 if (prev >= 0 and tpl[prev] == "="
                         and not _escaped_at(tpl, prev)):
                     raise ValueError(
@@ -1465,7 +1514,7 @@ class ShellAgent:
                 i = j
                 continue
             if (tpl.startswith("$(", i)
-                    and _dollar_starts_expansion(tpl, i)):
+                    and _dollar_starts_expansion(tpl, i, commented_backslashes)):
                 # 命令替换开启独立解析上下文（见方法说明）。
                 # 必须确认这个 $ 真的开启展开：`$$(` 里第二个 $ 是 PID
                 # （$$）的后半，( 只是普通字符（另一层含义见
@@ -1567,7 +1616,8 @@ class ShellAgent:
                 i += 1
                 continue
             ph = self._placeholder_at(tpl, i, state="bare",
-                                      prev_ph_end=last_ph_end)
+                                      prev_ph_end=last_ph_end,
+                                      commented_backslashes=commented_backslashes)
             if ph == "$prompt":
                 out.append(_quote(prompt))
                 last_ph_end = i + len(ph)
