@@ -844,6 +844,16 @@ class ShellAgent:
             换行/反斜杠）：这类合法模板的正文被整体吞到模板结尾、$prompt
             被静默丢弃，配置校验误报「缺少占位符」。
 
+            续行删除后两侧字符同样会拼成新的展开头（`$`+续行+`(` 是
+            命令替换、`$`+续行+`"` 是本地化引用……，与 _continuation_
+            split_head 同一套判断）：实测 bash 下 `cat <<$\\<换行>
+            (echo X) > /dev/null` + 正文行 `$` + `printf %s $prompt`
+            里，shell 的终止符是字面量 `$(echo X)`，渲染器若在 ( 处把
+            词截成 `$`，正文就会提前结束、把 $prompt 替换进 shell 仍当作
+            正文的区域——不加引号的正文会执行提示词里的 $(...)/`...`
+            （注入，实测创建文件）。拼接出的展开头/引用头与紧邻写法
+            同口径：整体拒绝（quoted 语义与边界都无法安全确定）。
+
             终止符词里的 $(、${、$[、$'、$"、` 是展开/引用语法：词边界
             由展开内部的解析决定（内部的空白、括号、引号都不会结束词），
             简单扫描会提前截断终止符——渲染器以为正文已结束、把 $prompt
@@ -861,7 +871,26 @@ class ShellAgent:
                 if c == "\\" and pos + 1 < n:
                     if tpl[pos + 1] == "\n":
                         # 续行：分词前整对删除、词在下一行继续拼接。
-                        # 删除不产生引用字符（不算引号），故不置 quoted
+                        # 删除不产生引用字符（不算引号），故不置 quoted。
+                        # 拼接可能把两侧字符拼成展开头/引用头（`$`+续行+
+                        # `(` 拼成命令替换、+`"` 拼成本地化引用——后者不在
+                        # _CONTINUATION_SPLIT_HEADS 里，单独用 $ 配对 + 字面
+                        # 双引号判断）：与紧邻写法同口径，整体拒绝（见方法
+                        # 说明；否则终止符词被截短、正文提前结束，提示词被
+                        # 替换进 shell 仍当作正文的区域，可注入）
+                        head = _continuation_split_head(tpl, pos)
+                        if head is None:
+                            prev = _prev_effective_pos(tpl, pos)
+                            k = pos
+                            while k + 1 < n and tpl[k] == "\\" \
+                                    and tpl[k + 1] == "\n":
+                                k += 2
+                            if (prev >= 0 and tpl[prev] == "$"
+                                    and _dollar_starts_expansion(tpl, prev)
+                                    and k < n and tpl[k] == '"'):
+                                head = '$"'
+                        if head is not None:
+                            return None, n, False
                         pos += 2
                         continue
                     buf.append(tpl[pos + 1])
@@ -891,6 +920,14 @@ class ShellAgent:
                         if tpl[end] == "\\" and end + 1 < n:
                             nxt = tpl[end + 1]
                             if nxt == "\n":
+                                # 双引号内的续行同样在分词前整对删除：
+                                # `"$`+续行+`(` 拼成 `"$(`，与紧邻写法
+                                # 同口径（嵌套展开内部按自己的规则处理
+                                # 引号，字面找 " 会截错词边界、正文范围
+                                # 失控）：拼出 $(/${/$[ 时整体拒绝
+                                head = _continuation_split_head(tpl, end)
+                                if head in ("$(", "${", "$["):
+                                    return None, n, False
                                 end += 2
                                 continue
                             if nxt in '"\\$`':

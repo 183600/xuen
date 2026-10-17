@@ -323,6 +323,77 @@ def test_render_command_heredoc_delimiter_word_continuation_and_escapes(tmp_path
     assert "$prompt" in agent.render_command(prompt)
 
 
+def test_render_command_heredoc_delimiter_split_expansion_cannot_inject(tmp_path):
+    """终止符词里用续行拆开的展开头/引用头不能按截断后的短终止符收正文。
+
+    回归：shell 在分词前删除续行，`cat <<$\\<换行>(echo X) > /dev/null`
+    的终止符词是字面量 `$(echo X)`（词不展开、只做引号移除）；渲染器在
+    `(` 处把词截成 `$`，正文行 `$` 被当成终止符、正文提前结束，$prompt
+    被替换进 shell 仍当作正文的区域——不加引号的正文会执行提示词里的
+    $(...)/`...`（注入，实测 bash 下创建文件）。`$[`/`${` 含空白的展开
+    内部同理（`$[X Y]` 的终止符是字面量 `$[X Y]`，简单扫描按空白截断）。
+    修复：终止符词里续行拼出的展开/引用头与紧邻写法同口径整体拒绝
+    （$(`、$[、${、$'、$"，双引号内的 $(/${/$[）：边界与 quoted 语义
+    都无法安全确定，由配置校验拦下；普通续行拼接（E+续行+OF、
+    $+续行+X、A$+续行+B、被转义的 \\$+续行+( ）不受影响。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # $ + 续行 + ( 拼成命令替换：终止符是字面量 $(echo X)（注入）
+        "cat <<$\\\n(echo X) > /dev/null\n$\nprintf %s $prompt\n",
+        # $[ / ${ 的展开内部含空白：按空白截断词边界会提前收正文
+        "cat <<$\\\n[X Y] > /dev/null\n$[X\nprintf %s $prompt\n",
+        "cat <<$\\\n{X:-a b} > /dev/null\n${X:-a\nprintf %s $prompt\n",
+        # $' / $" 是方言相关的引用语法（bash 解释、dash 当字面量）
+        "cat <<$\\\n'EOF' > /dev/null\nbody\nprintf %s $prompt\n",
+        'cat <<$\\\n"EOF" > /dev/null\nbody\nprintf %s $prompt\n',
+        # 双引号内的 $ + 续行 + ( 同理：嵌套展开内部的引号让字面找 "
+        # 截错词边界，正文范围失控
+        'cat <<"$\\\n(echo "x y")" > /dev/null\nbody\nprintf %s $prompt\n',
+    )
+    prompt = "a'b $HOME `id` $(touch pwned) \\ d"
+    for tpl in templates:
+        assert command_receives_prompt(tpl) is False, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入任何会被 shell 执行的区域
+        assert "$prompt" in rendered, tpl
+        assert "touch" not in rendered and "pwned" not in rendered, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            if marker.exists():
+                marker.unlink()
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+            assert not marker.exists(), (tpl, sh)
+    if not _posix_shell_available():
+        return
+    # 对照：普通续行拼接不构成展开头，照常送达；被转义的 \$ 只是字面量
+    deliver = (
+        "cat <<E\\\nOF > /dev/null\nbody\nEOF\nprintf %s $prompt",
+        "cat <<A$\\\nB > /dev/null\nbody\nA$B\nprintf %s $prompt",
+        "cat <<$\\\nX > /dev/null\nbody\n$X\nprintf %s $prompt",
+        'cat <<"a\\$\\\n(x)" > /dev/null\nbody\na$(x)\nprintf %s $prompt',
+    )
+    for tpl in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            if (tmp_path / "pwned").exists():
+                (tmp_path / "pwned").unlink()
+            r = subprocess.run([sh, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, sh, r.stderr)
+            assert r.stdout == prompt, (tpl, sh, r.stdout)
+            assert not (tmp_path / "pwned").exists(), (tpl, sh)
+
+
 def test_render_command_heredoc_inside_command_substitution_cannot_inject(tmp_path):
     """命令替换内部的换行不能提前收「外层命令的 heredoc」正文。
 
