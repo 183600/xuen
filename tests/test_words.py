@@ -112,6 +112,40 @@ def test_words_clean_unwraps_multiple_pairs_in_one_word():
         assert _clean_line(w) == w, w
 
 
+def test_words_clean_unwraps_multiple_single_char_quote_pairs():
+    """单字内容的连续引语对必须各自完整剥掉，不能并成一对留下残片。
+
+    回归：引号对内容若允许跨过自己的收尾符，可选组的贪婪匹配会先吃掉
+    真正的收尾符、再一路滑到行内最后一个同类收尾符——"「a」和「b」"
+    被当成一对剥出 "a」和「b"（收尾符残片留在词中），"『x』与『y』"、
+    "“a”和“b”"、「甲」与「乙」同理；残片随词库进入每轮提示词。
+    """
+    assert _clean_line("「a」和「b」") == "a和b"
+    assert _clean_line("『x』与『y』") == "x与y"
+    assert _clean_line("“a”和“b”") == "a和b"
+    assert _clean_line("‘a’与‘b’") == "a与b"
+    assert _clean_line("「甲」与「乙」") == "甲与乙"
+    assert _clean_line("《A》与《B》") == "A与B"
+    assert _clean_line("【A】和【B】") == "A和B"
+    assert _clean_line("〔x〕与〔y〕") == "x与y"
+    assert _clean_line("〖a〗与〖b〗") == "a与b"
+    # 多对连排、被其他文字包裹时同样不能并对
+    assert _clean_line("「a」和「b」和「c」") == "a和b和c"
+    assert _clean_line("A「x」B「y」C") == "AxByC"
+    assert _clean_line("（「x」与「y」）") == "（x与y）"
+    # 多字内容与强调对不受影响
+    assert _clean_line("「注意」与「记忆」") == "注意与记忆"
+    assert _clean_line("**A**和**B**") == "A和B"
+    assert _clean_line('"a" and "b"') == "a and b"
+    # 真实词表端到端：单字引语残片不能混进词库
+    assert parse_word_lines("- 「a」和「b」\n") == ["a和b"]
+    # 清洗必须是不动点
+    for src in ("「a」和「b」", "『x』与『y』", "“a”和“b”", "A「x」B「y」C"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_words_clean_unwraps_each_segment_after_separators():
     """同一行分隔符列出的多个装饰术语必须逐段剥干净。
 

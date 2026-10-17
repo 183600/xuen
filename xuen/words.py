@@ -58,12 +58,21 @@ _QUOTE_PAIRS = (
 # 是乘法/星号记号而非 markdown 斜体；成对的双星号/反引号等仍照剥。
 _ANY_EMPHASIS_PAIR = re.compile(
     r"(?<![*~`])([*~`]{1,3})(?=\S)(.+?)\1(?![*~`])")
-# 引号对内层要求首尾都是非空白字符（空引号 ""、纯空白引号不剥）。
+# 引号对内层要求首尾都是非空白字符（空引号 ""、纯空白引号不剥），且
+# 【不含收尾符】：内容的 `.*?` 若可跨过收尾符，可选组 `(?:...)?` 的
+# 贪婪匹配会先吃掉真正的收尾符、再一路滑到行内最后一个同类收尾符——
+# 单字内容的「a」和「b」会被并成一对剥出 "a」和「b"（收尾符残片留在
+# 词中）。把收尾符排除在内容之外，配对只能止于自己的收尾符。
 # ASCII 单/双引号以回调再要求开引号不在 ASCII 字母数字之后：
 # "don't"、"O'Reilly"、英寸号 6" 里的引号不是成对装饰。
+def _quote_pair_re(open_ch: str, close_ch: str) -> "re.Pattern":
+    content = (r"(\S(?:[^" + re.escape(close_ch) + r"]*[^\s"
+               + re.escape(close_ch) + r"])?)")
+    return re.compile(re.escape(open_ch) + content + re.escape(close_ch))
+
+
 _QUOTE_PAIR_RES = tuple(
-    (open_ch, close_ch,
-     re.compile(re.escape(open_ch) + r"(\S(?:.*?\S)?)" + re.escape(close_ch)))
+    (open_ch, close_ch, _quote_pair_re(open_ch, close_ch))
     for open_ch, close_ch in _QUOTE_PAIRS)
 _ASCII_WORD_CHAR = re.compile(r"[0-9A-Za-z]")
 _WORD_CHAR = re.compile(r"\w")
