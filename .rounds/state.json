@@ -1,0 +1,1162 @@
+{
+  "version": 1,
+  "best": {
+    "snap": "snap/20261017-040148-r7",
+    "sha": "6c20bc940579bd203d2236dc5e180869f2f8aee1",
+    "tests": "pass",
+    "at": "2026-10-17T04:02:42Z",
+    "by": "ai",
+    "iter": "7"
+  },
+  "promote_score": 7,
+  "unsynced_tags": [
+    "snap/20261016-075111-r3",
+    "snap/20261017-040148-r7"
+  ],
+  "notes": [
+    {
+      "at": "2026-10-17T04:02:42Z",
+      "msg": "20261017-040148-r7 晋升推送与远端冲突，已降级为待评分"
+    }
+  ],
+  "rounds": [
+    {
+      "id": "baseline-20261016-054952",
+      "snap": "snap/baseline-20261016-054952",
+      "sha": "2dbc67d9b6a389a4a04699a03bbd04657e0ef92a",
+      "ts": "2026-10-16T05:49:58Z",
+      "iter": 0,
+      "changed": 0,
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "基线化：迁移到轮次守卫时的初始最佳"
+      },
+      "verdict": "promoted",
+      "by": "baseline"
+    },
+    {
+      "id": "20261016-063000-r1",
+      "snap": null,
+      "sha": "b10264823ca8783b5ea458e9483264b23235d031",
+      "ts": "2026-10-16T06:30:00Z",
+      "iter": "1",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-071033-r2",
+      "snap": "snap/20261016-071033-r2",
+      "sha": "79686db3bacb16e6d22685ad9940311d3ab1792d",
+      "ts": "2026-10-16T07:10:39Z",
+      "iter": "2",
+      "changed": 1,
+      "touched_tests": false,
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚"
+      },
+      "verdict": "promoted",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-075111-r3",
+      "snap": "snap/20261016-075111-r3",
+      "sha": "5c68b83af27f122db3077abc63bcc172336ce6a6",
+      "ts": "2026-10-16T07:51:16Z",
+      "iter": "3",
+      "changed": 2,
+      "touched_tests": false,
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚"
+      },
+      "verdict": "promoted",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-083141-r4",
+      "snap": "snap/20261016-083141-r4",
+      "sha": "bb2515506abf28b40c572520c9adae0d30eff5f0",
+      "ts": "2026-10-16T08:34:22Z",
+      "iter": "4",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "8e52d914731f2b91a9ec94db4cc83523371abc16",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了 shell 注释内引号污染占位符转义（可致提示词被 shell 执行）与提示词 heredoc 示例缩进导致内容污染两个 bug，且为二者新增了可执行回归测试，未删改任何既有测试，自动验证全绿，无风险。",
+        "at": "2026-10-16T08:34:22Z"
+      }
+    },
+    {
+      "id": "20261016-091422-r5",
+      "snap": "snap/20261016-091422-r5",
+      "sha": "4757e289514cab30925b6495795375a92093aab2",
+      "ts": "2026-10-16T09:15:41Z",
+      "iter": "5",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "1d3748b9bde2bfde8a3930f6ab399514ee87afbd",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了真实 bug（`--regen-words` 在词库生成未完成/失败时会悄悄回退复用旧词库，与\"忽略已有词库并重新生成\"的语义相悖），并新增了 3 个针对性回归测试、未删除或弱化任何测试，24 项测试全通过，风险低。",
+        "at": "2026-10-16T09:15:41Z"
+      }
+    },
+    {
+      "id": "20261016-094608-r6",
+      "snap": "snap/20261016-094608-r6",
+      "sha": "d7026967e10731d509329b67c21644e557ef5199",
+      "ts": "2026-10-16T09:48:16Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "0060efa8a8e3a3e0a2893c2f89cf5bf88866c03d",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了 heredoc 正文中替换 $prompt 导致的命令注入与配置校验误判（真实缺陷），仅新增测试未删改弱化，自动验证通过；但「裸上下文一律按 << 重定向」的近似解析会误伤 `$(( << ))` 等极罕见模板，属可接受小瑕疵。",
+        "at": "2026-10-16T09:48:16Z"
+      }
+    },
+    {
+      "id": "20261016-101137-r7",
+      "snap": "snap/20261016-101137-r7",
+      "sha": "e3e722400a1dae58a71f1f15ded8a6b992d383dd",
+      "ts": "2026-10-16T10:13:10Z",
+      "iter": "7",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "165b65f4dc06525be89e8d58d98e11b595f2bb70",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了真实且安全的解析 bug——命令替换 `$(...)` 的独立引号上下文未跟踪，导致 `\"$(cmd \"$prompt\")\"` 中内层引号破坏外层引号状态、提示词按裸上下文插入，触发命令注入/参数拆碎；新增两条回归测试经核实在基线代码上失败、候选上通过。",
+        "at": "2026-10-16T10:13:10Z"
+      }
+    },
+    {
+      "id": "20261016-103302-r8",
+      "snap": null,
+      "sha": "62b718e049734b697ab5525703640b512b1d1287",
+      "ts": "2026-10-16T10:33:02Z",
+      "iter": "8",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-103335-rfinal",
+      "snap": null,
+      "sha": "e9357de0e1b80cd4d3923f3a03911fa07d495108",
+      "ts": "2026-10-16T10:33:35Z",
+      "iter": "final",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-105041-r1",
+      "snap": "snap/20261016-105041-r1",
+      "sha": "8ceb5e079ff602059db174bde9b6c2e4c2b779f4",
+      "ts": "2026-10-16T10:53:05Z",
+      "iter": "1",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "17e7b30367eaffe4f8de9e4bd2e4b959e4fe3680",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了命令替换解析中嵌套括号（子 shell）被误判为结束的真实 bug，消除了提示词拆词与分号注入风险，并新增了针对性的回归测试，无删改测试或引入风险。",
+        "at": "2026-10-16T10:53:05Z"
+      }
+    },
+    {
+      "id": "20261016-110744-r2",
+      "snap": "snap/20261016-110744-r2",
+      "sha": "273054db140971e6c7373b3f8e8d22324dc8be0a",
+      "ts": "2026-10-16T11:08:43Z",
+      "iter": "2",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "321365b2971fc96674b4f71170fe7ac6af43f496",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "这是合理的安全加固：把反引号命令替换与算术语境（$[...]、((...))、${name[下标]}）识别为无法安全转义的数据区并整体跳过，堵住了原先会真正执行提示词中 $(...)/`...` 的注入面，且新增的是纯测试（无删除/弱化），自动验证通过；仅因对部分合法模板偏保守（如含字面 [ 的参数展开会被拒）留有小瑕疵，故给 8 分而非满分。",
+        "at": "2026-10-16T11:08:43Z"
+      }
+    },
+    {
+      "id": "20261016-112221-r3",
+      "snap": "snap/20261016-112221-r3",
+      "sha": "e5457a85ebf5d2b7772d7cca25d8b404ceda2c54",
+      "ts": "2026-10-16T11:24:19Z",
+      "iter": "3",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "953e70f9870e5461285ecf08f708802e91b68600",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了 `${x:substring}` 子串展开算术语境与 ANSI-C 引用（`$'...'`）两处真实命令注入漏洞，测试为纯新增回归用例（无删改弱化），33 项测试全过，未发现风险。",
+        "at": "2026-10-16T11:24:19Z"
+      }
+    },
+    {
+      "id": "20261016-114100-r4",
+      "snap": "snap/20261016-114100-r4",
+      "sha": "eae89c283b5e8ecdedce85ce35654f9b90bc136d",
+      "ts": "2026-10-16T11:43:15Z",
+      "iter": "4",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "04fa396cfc3309097909079d4c4a9405b532d252",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "候选把存在真实命令注入漏洞的 ANSI-C 引用（$'...'）模板改为整体拒绝，修好了 dash 下可被注入的安全 bug，且测试是随之合理修正而非删弱凑过。",
+        "at": "2026-10-16T11:43:15Z"
+      }
+    },
+    {
+      "id": "20261016-120243-r5",
+      "snap": "snap/20261016-120243-r5",
+      "sha": "d85388b872d6bee892bf3355e517527550198eff",
+      "ts": "2026-10-16T12:04:46Z",
+      "iter": "5",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "7bb378c4c288061129afaa5f01086636cea40895",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "该改动修复了一个真实且可复现的健壮性缺陷——旧代码把提示词按双引号规则塞进 `${x:-word}` 等参数展开词语境，但提示词里的 `'` 会让 bash 解析失败（unexpected EOF）、`}` 会在 bash 与 dash 下提前结束展开导致静默丢字符，而一套转义无法同时适配两种 shell；改动改为整段跳过并由配置校验拒绝，同时新增了覆盖 bash/dash 的回归测试、仅把已失效",
+        "at": "2026-10-16T12:04:46Z"
+      }
+    },
+    {
+      "id": "20261016-122041-r6",
+      "snap": "snap/20261016-122041-r6",
+      "sha": "00ff8a7a601a8f697317af1449aef43a1847b14a",
+      "ts": "2026-10-16T12:22:35Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "0858a0b8e89ced5263b673c2f3515ba5cb2e55fd",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "真实修复了 `${...}/$[...]/$((...))` 内引号隐藏结束符导致扫描器误判、进而把提示词内容注入 shell 执行的漏洞，测试为纯新增回归用例（含正面对照，未删改弱化），自动验证通过；仅对算术语境里的参数展开/反斜杠略显保守、可能拒绝少数旧模板，属可接受小瑕疵。",
+        "at": "2026-10-16T12:22:35Z"
+      }
+    },
+    {
+      "id": "20261016-124055-r7",
+      "snap": "snap/20261016-124055-r7",
+      "sha": "233ec9691398cee025e7d2648054f23509219d63",
+      "ts": "2026-10-16T12:41:50Z",
+      "iter": "7",
+      "changed": 4,
+      "touched_tests": true,
+      "diff_base": "edb961079a5699617e468fea9e10e9f4d5ab7af6",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实 bug 修复——把 $prompt 过长导致的裸 E2BIG 转换为带解法建议的 PromptTooLongError 并立即中止循环，新增三个针对性回归测试且未删改弱化任何原有测试，README 同步，无风险。",
+        "at": "2026-10-16T12:41:50Z"
+      }
+    },
+    {
+      "id": "20261016-125345-r8",
+      "snap": "snap/20261016-125345-r8",
+      "sha": "37926c1c4109193fefaec56fbb89488720856cb7",
+      "ts": "2026-10-16T12:55:08Z",
+      "iter": "8",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "c81f69c5bf054aeec1b101375c928a73494308e4",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "新增测试（未删改）修复了命令替换内裸 case 的括号配对漏洞所导致的 shell 注入，实现保守且 39 项测试全过，仅对 `$(... case ...)` 中作为普通参数的裸 case 有少量误报式拒绝。",
+        "at": "2026-10-16T12:55:08Z"
+      }
+    },
+    {
+      "id": "20261016-131326-r9",
+      "snap": "snap/20261016-131326-r9",
+      "sha": "c97629e0b7bdf067ab37a94edf74ec2f0e8e5278",
+      "ts": "2026-10-16T13:15:51Z",
+      "iter": "9",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "5e05c3564939519dad9df9d2e62003337be67900",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了经实测可复现的真实 bash 注入缺陷（裸 `>&word` 展开不遵守引号规则），且纯新增测试与防御代码、无删改测试，回归测试通过、风险低。",
+        "at": "2026-10-16T13:15:51Z"
+      }
+    },
+    {
+      "id": "20261016-133102-r10",
+      "snap": "snap/20261016-133102-r10",
+      "sha": "49a66069d0ca02c4859fcd562c3c28b97689636c",
+      "ts": "2026-10-16T13:32:45Z",
+      "iter": "10",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "b598f51ea382109c570968a1dd10298f12775236",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了一个真实的命令注入/语义错位 bug（`$$prompt` 被误当成 `$prompt` 替换，双引号下构成 `$(...)` 注入、裸语境下变成 `$'...'` ANSI-C 引用），并新增了充分的回归测试，未删改既有测试，自动验证通过、风险低。",
+        "at": "2026-10-16T13:32:45Z"
+      }
+    },
+    {
+      "id": "20261016-141317-r11",
+      "snap": null,
+      "sha": "7a8079c7b7c2276da007d5312aab863b925572a5",
+      "ts": "2026-10-16T14:13:17Z",
+      "iter": "11",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-145350-r12",
+      "snap": null,
+      "sha": "43a9d4c56d9b4f70c4328d2ef7f268a7bd0ed96a",
+      "ts": "2026-10-16T14:53:50Z",
+      "iter": "12",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-151858-r13",
+      "snap": null,
+      "sha": "46f807425021b350a4a438fa61c72676455b37cf",
+      "ts": "2026-10-16T15:18:58Z",
+      "iter": "13",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-151931-rfinal",
+      "snap": null,
+      "sha": "06a4fe281618033b18819c9084a96f2e642fca1d",
+      "ts": "2026-10-16T15:19:31Z",
+      "iter": "final",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-154427-r1",
+      "snap": null,
+      "sha": "81958f304123cdcf34a3c79f07b73a31c948d49e",
+      "ts": "2026-10-16T15:44:27Z",
+      "iter": "1",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-160211-r2",
+      "snap": "snap/20261016-160211-r2",
+      "sha": "eb6a62f75f4f050f4a8359e3b8406045db1451d4",
+      "ts": "2026-10-16T16:06:11Z",
+      "iter": "2",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "b02aedf1132836d9fbc0ad0081a68945a7206afb",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/beam-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了命令替换、算术展开与进程替换结束后紧随 # 时被误判为注释的问题，避免引号状态脱节导致提示词注入，并新增了回归测试；改动与现有 42 项测试全部通过。",
+        "at": "2026-10-16T16:06:11Z"
+      }
+    },
+    {
+      "id": "20261016-162632-r3",
+      "snap": "snap/20261016-162632-r3",
+      "sha": "f978b2fefcc9cd3c37f1b24f6666db7fda38e466",
+      "ts": "2026-10-16T16:31:00Z",
+      "iter": "3",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "38cc85ce834e4420b833066f131ec5fcc764ff28",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/beam-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了行续行在词边界与 $ 配对中的处理，避免提示词被静默丢弃或篡改，并新增对应回归测试，全部测试通过。",
+        "at": "2026-10-16T16:31:00Z"
+      }
+    },
+    {
+      "id": "20261016-170850-r4",
+      "snap": "snap/20261016-170850-r4",
+      "sha": "ebe6d55e8b7a008aa4b1d20ee8e8de52455477ab",
+      "ts": "2026-10-16T17:12:46Z",
+      "iter": "4",
+      "changed": 3,
+      "touched_tests": true,
+      "diff_base": "ea283cbe7944de8d76437e7338a319712f58b5ec",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/beam-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "改动新增了续行拼接操作符/展开的严格安全校验并配套真实回归测试，未见删除或弱化现有测试，编译与测试均通过。",
+        "at": "2026-10-16T17:12:46Z"
+      }
+    },
+    {
+      "id": "20261016-172346-r5",
+      "snap": "snap/20261016-172346-r5",
+      "sha": "20ce321066cd669dc2bac8bc06b25af89c0fa6ff",
+      "ts": "2026-10-16T17:24:58Z",
+      "iter": "5",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "3e38c27fd8acfc6b9a145b17d2641c31a0c2b5eb",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了词首判定未排除被转义边界字符导致的真实命令注入 bug，并新增含正反对照的回归测试，未删改或弱化任何测试，全量 45 项测试通过。",
+        "at": "2026-10-16T17:24:58Z"
+      }
+    },
+    {
+      "id": "20261016-174236-r6",
+      "snap": "snap/20261016-174236-r6",
+      "sha": "81d9fe25f6c6c395496fe354265a9508e36d9152",
+      "ts": "2026-10-16T17:43:56Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "8d1cd11c0b298c3307cb0d8b1d5859a08ce13917",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了 heredoc 终止符词含 `$(`/`${`/`$[`/`$'`/`$\"`/反引号时被提前截断、导致提示词注入（实测基线版会执行提示词里的命令并创建文件、且配置校验误判为可送达）的漏洞，改动与既有解析防线同口径、保守拒绝，未误删或弱化任何测试，新增 6 个注入变体及 2 组对照测试，自动验证 46 项全过。",
+        "at": "2026-10-16T17:43:56Z"
+      }
+    },
+    {
+      "id": "20261016-180719-r7",
+      "snap": null,
+      "sha": "1453d6b9acfdb6b8c41cc2b61968148d0359f9aa",
+      "ts": "2026-10-16T18:07:19Z",
+      "iter": "7",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-184751-r8",
+      "snap": "snap/20261016-184751-r8",
+      "sha": "cb7fd9931f5153a0d43cd8e0be49f6b324a957bf",
+      "ts": "2026-10-16T18:49:10Z",
+      "iter": "8",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "f4a32fd8243e28892bd397af0adca83f243291d0",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了 `$$(`/`$${`/`$$[`/`$$'`/`$$((` 被误判为展开头导致的 shell 注入真实 bug，沿用已有 `_dollar_starts_expansion` 口径一致、无功能删减，并新增真实回归测试（唯一改动是新增测试函数，未删改弱化既有测试）。",
+        "at": "2026-10-16T18:49:10Z"
+      }
+    },
+    {
+      "id": "20261016-192942-r9",
+      "snap": null,
+      "sha": "6bc4844606a46fd0f1e83a75f277b0ba86ad6646",
+      "ts": "2026-10-16T19:29:42Z",
+      "iter": "9",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-200507-r10",
+      "snap": null,
+      "sha": "49d5ed258225d9bca61a191ffec79034074b9314",
+      "ts": "2026-10-16T20:05:07Z",
+      "iter": "10",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-200540-rfinal",
+      "snap": null,
+      "sha": "6ed482bbc7ea3c5d8443b33a3deb03095d448f50",
+      "ts": "2026-10-16T20:05:40Z",
+      "iter": "final",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-204748-r1",
+      "snap": null,
+      "sha": "236bb43995e462230b20345e3c5c068762f35113",
+      "ts": "2026-10-16T20:47:48Z",
+      "iter": "1",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-205828-r2",
+      "snap": "snap/20261016-205828-r2",
+      "sha": "7c07026d40e92a9db5fc048a787a5c14c3fb6e6d",
+      "ts": "2026-10-16T21:00:51Z",
+      "iter": "2",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "db90f1c763424808731ce8d8bb433126542dfd9a",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了提示词中路径在 POSIX 双引号内仍会被 `$`/反引号展开的真实缺陷，改用 `shlex.quote` 按平台转义，并新增了合规的回归测试（未删改弱化测试），验证全绿、无回归风险。",
+        "at": "2026-10-16T21:00:51Z"
+      }
+    },
+    {
+      "id": "20261016-214122-r3",
+      "snap": "snap/20261016-214122-r3",
+      "sha": "3dc2cea69c535eb127dbc8c5c81f7c12208404d2",
+      "ts": "2026-10-16T21:42:50Z",
+      "iter": "3",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "da38bca8d431cfd511338af8055b50059872060a",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "新增测试针对真实存在的 heredoc 命令替换注入漏洞（在基线代码上确会失败），修复引入深度/引号感知的正文边界判定，方向保守（宁可多吞不替换），未删改弱化任何测试，全部 50 项测试通过。",
+        "at": "2026-10-16T21:42:50Z"
+      }
+    },
+    {
+      "id": "20261016-221731-r4",
+      "snap": "snap/20261016-221731-r4",
+      "sha": "9ec9b7382c6f58258798becdc20d54d6afeb912f",
+      "ts": "2026-10-16T22:18:57Z",
+      "iter": "4",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "382107d9cccc7f9b3ac1035ef4ca7bb4dc1d9a1d",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了多深度 heredoc 正文读取顺序与 shell 不一致导致提示词被当作正文执行的注入漏洞（已用 bash 实测确认深度优先读取），并仅新增回归测试、未删改任何测试，51 项测试通过。",
+        "at": "2026-10-16T22:18:57Z"
+      }
+    },
+    {
+      "id": "20261016-225928-r5",
+      "snap": null,
+      "sha": "ac61cfe02f3bf198ce1cad13d3c4d19628635359",
+      "ts": "2026-10-16T22:59:28Z",
+      "iter": "5",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261016-232025-r6",
+      "snap": "snap/20261016-232025-r6",
+      "sha": "b981a3860a45b7d6bdcdbfcd9d56956fde687d7a",
+      "ts": "2026-10-16T23:22:02Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "3750e8f230524198204edad1eb35ea3775b6ef4c",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了不加引号 heredoc 正文中反斜杠续行导致的真实 shell 注入漏洞，且新增测试为真实回归测试而非削弱测试，全部 52 项测试通过。",
+        "at": "2026-10-16T23:22:02Z"
+      }
+    },
+    {
+      "id": "20261016-234514-r7",
+      "snap": "snap/20261016-234514-r7",
+      "sha": "57f30c099c8bbe184f0cc49d40ded33c5a7e428a",
+      "ts": "2026-10-16T23:46:14Z",
+      "iter": "7",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "e3a4d41e085532505abe4f848feede6f9e10e3ba",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了 heredoc 终止符词在续行与双引号转义下按错误规则拼接、导致合法模板 $prompt 被吞掉并误报缺少占位符的真实 bug，且新增严格回归测试（未删除或弱化任何测试），全部 53 项测试与验证均通过。",
+        "at": "2026-10-16T23:46:14Z"
+      }
+    },
+    {
+      "id": "20261017-001346-r8",
+      "snap": "snap/20261017-001346-r8",
+      "sha": "aa722dd7a13e5e6b5c4b9b180b0134d3d3afefd0",
+      "ts": "2026-10-17T00:15:00Z",
+      "iter": "8",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "2d869f79959e935687d635609af54f4c35515e92",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "真实修复 heredoc 终止符词中续行拼出展开头导致的提示词注入，新增回归测试且未删改测试，符合既有保守拒绝策略，风险低。",
+        "at": "2026-10-17T00:15:00Z"
+      }
+    },
+    {
+      "id": "20261017-003428-r9",
+      "snap": "snap/20261017-003428-r9",
+      "sha": "62a6766deb23ddde7967aad8a8fa1adf1ac3cbaa",
+      "ts": "2026-10-17T00:36:02Z",
+      "iter": "9",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "15884fc2500e6337748c7f08152f4201a17bbfa4",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了相邻占位符（`$prompt$prompt` / `$prompt_file$prompt` / 跨续行）第二个被当模板字面量而漏替换、导致提示词被 shell 静默吞掉的 bug，且新增 78 行均为回归测试（含负面对照），未删改弱化任何测试，自动验证全绿、风险低。",
+        "at": "2026-10-17T00:36:02Z"
+      }
+    },
+    {
+      "id": "20261017-005047-r10",
+      "snap": null,
+      "sha": "ea9e64430274b25d792ef9cfa4515395e9d960be",
+      "ts": "2026-10-17T00:50:47Z",
+      "iter": "10",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261017-005119-rfinal",
+      "snap": null,
+      "sha": "2ec6f2ee8797d760feeb940e20f9aaf1f1842d94",
+      "ts": "2026-10-17T00:51:19Z",
+      "iter": "final",
+      "changed": 0,
+      "auto": {
+        "status": "none",
+        "verdict": "noop",
+        "reason": "本轮无改动"
+      },
+      "verdict": "noop",
+      "by": "auto"
+    },
+    {
+      "id": "20261017-013344-r1",
+      "snap": "snap/20261017-013344-r1",
+      "sha": "b2f9c2fdf50841d352a1851e93f5a028ee4982b7",
+      "ts": "2026-10-17T01:36:34Z",
+      "iter": "1",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "71b9fdfcc1c30fe572ff4c5147ba1dba6c39f8dd",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了真实且可利用的注入漏洞（注释行尾反斜杠被误当续行导致漏认 `case`、括号配对错乱使提示词注入执行），并新增针对性回归测试，未删改弱化任何测试，保守方向安全。",
+        "at": "2026-10-17T01:36:34Z"
+      }
+    },
+    {
+      "id": "20261017-020911-r2",
+      "snap": "snap/20261017-020911-r2",
+      "sha": "250ea883a5ec78e294efd06e613c6e775328ab6b",
+      "ts": "2026-10-17T02:11:02Z",
+      "iter": "2",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "1db8363eac70a2122d36776f4b08d5df8f006820",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "真实修复了成对装饰符（如 \"- **术语**（解释）\"）只剥两端导致收尾符残片混入词库的 bug，新增测试为补充性正向/负向回归且未删改测试，全套测试通过，仅有装饰符启发式对以 `_`/`*`/`~` 开头等个别畸形串的轻微行为变化。",
+        "at": "2026-10-17T02:11:02Z"
+      }
+    },
+    {
+      "id": "20261017-021743-r3",
+      "snap": "snap/20261017-021743-r3",
+      "sha": "40eee5a017ca11069da462a91fd40ec486ac1ee8",
+      "ts": "2026-10-17T02:18:58Z",
+      "iter": "3",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "f4631f5d67ada796ea8f31764012edf6c36af369",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了词中下划线被误当强调符配对的真实回归（\"_private_var\"→\"privatevar\"），并解决装饰头紧邻边缘字符时收尾符残留（\".**词**（解释）\"→\"词（解释）\"）；仅新增回归测试、未删改任何旧测试，58 项全部通过；仅对 \"_word_语言\" 这类下划线强调后紧跟单词字符的极端情形有轻微行为变化，属可接受小瑕疵。",
+        "at": "2026-10-17T02:18:58Z"
+      }
+    },
+    {
+      "id": "20261017-025930-r4",
+      "snap": "snap/20261017-025930-r4",
+      "sha": "f0e9cb9dc61354c0994ad13a57c8358c17f6451f",
+      "ts": "2026-10-17T03:00:57Z",
+      "iter": "4",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "61885fb3eb5624cb02191cb0f3b7dedc5f7cd959",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了真实 bug——分隔符列出的多个装饰术语此前只剥首段、后续段装饰头残留在词库，新增了针对性回归测试且未删改/弱化任何测试，59 项测试通过；唯一小瑕疵是分隔符后以边缘字符开头的词段会被多剥一个前导字符（如 \"a, .NET\"→\"a, NET\"、\"a, _loss_fn\"→\"a, loss_fn\"），属与行首既有行为一致的轻微边界副作用，可接受。",
+        "at": "2026-10-17T03:00:57Z"
+      }
+    },
+    {
+      "id": "20261017-031037-r5",
+      "snap": "snap/20261017-031037-r5",
+      "sha": "55d6b9153677a08ffd0a392637f062f59df122dc",
+      "ts": "2026-10-17T03:11:54Z",
+      "iter": "5",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "673574f28fdddc51aba5cb9551c47d0f4d7af257",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "修复了真实 bug（分隔符列表中后续词段的序号/装饰残片混入词库），仅新增 36 行回归测试、未删改既有测试，60 项测试全部通过，属整体改进但有少量边界风险。",
+        "at": "2026-10-17T03:11:54Z"
+      }
+    },
+    {
+      "id": "20261017-034215-r6",
+      "snap": "snap/20261017-034215-r6",
+      "sha": "d8de851f93c943c333d8031c6bcf39404fa1ecd5",
+      "ts": "2026-10-17T03:43:38Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "ec01d389fc7ef7d367927bfba2bf65b711713de9",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了经实测证实的提示词注入漏洞（heredoc 终止符词中的 `<(`/`>(` 及已闭合深层替换的正文终点不一致），测试为新增且未被弱化，自动验证全通过。",
+        "at": "2026-10-17T03:43:38Z"
+      }
+    },
+    {
+      "id": "20261017-040148-r7",
+      "snap": "snap/20261017-040148-r7",
+      "sha": "6c20bc940579bd203d2236dc5e180869f2f8aee1",
+      "ts": "2026-10-17T04:02:42Z",
+      "iter": "7",
+      "changed": 44,
+      "touched_tests": true,
+      "diff_base": "80dfe0719f84754e070fd56c66ddede95ef77321",
+      "auto": {
+        "status": "pass",
+        "verdict": "pending_user",
+        "reason": "晋升推送与远端 master 冲突，等待人工处理"
+      },
+      "verdict": "pending_user",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "全部 63 项测试通过，测试文件为纯新增回归用例（无删除或弱化痕迹），xuen/agents.py 的修复针对命令替换、反引号、算术展开等真实注入面并配套回归测试，属实质改进；唯一小瑕疵是变更体量极大且对部分合法模板（如含字面 `[` 的参数展开）偏保守会被拒绝，故给 8 分而非满分。",
+        "at": "2026-10-17T04:02:42Z"
+      }
+    }
+  ],
+  "ai_judge": {}
+}
