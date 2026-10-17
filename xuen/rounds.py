@@ -48,7 +48,7 @@ import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -525,11 +525,19 @@ class RoundGuard:
             verdicts = {}
         if cid in verdicts:
             score, comment = verdicts[cid]
-            adopted = score is not None and score >= self.cfg.rounds.adopt_score
+            if score is None:
+                # 行存在但分数解析不出（打错字/格式不对）：按「挂起」处理，
+                # 不能当拒绝——「已决」的拒绝会被记进 history，用户改好
+                # 这行也会在 _apply_user_verdicts 里被永久跳过
+                return Verdict(verifier="user", result="pending",
+                               reason="评分无法解析（格式：<候选id> <0-10分> [评语]），"
+                                      "保持挂起等待修正",
+                               comment=comment)
+            adopted = score >= self.cfg.rounds.adopt_score
             return Verdict(
                 verifier="user", score=score,
                 result="adopted" if adopted else "rejected",
-                reason=f"用户评分 {score:g}" if score is not None else "评分无法解析",
+                reason=f"用户评分 {score:g}",
                 comment=comment)
         return Verdict(verifier="user", result="pending",
                        reason="等待用户在 verdicts.txt 中评分")
@@ -744,51 +752,62 @@ class RoundGuard:
             if cid in resolved or cid not in candidates:
                 continue
             score, comment = score_comment
+            if score is None:
+                # 解析不出的行按「挂起」处理（README：既不采纳也不丢弃）：
+                # 记为「已决」会把候选永久锁死，用户修正这行也再翻不了案
+                self.sink.warn(f"候选 {cid} 的评分行无法解析（保持挂起）："
+                               f"请改为「{cid} <0-10分> [评语]」")
+                continue
             round_no = candidates[cid].get("round", 0)
-            adopted = score is not None and score >= self.cfg.rounds.adopt_score
-            verdict = Verdict(verifier="user", score=score,
-                              result="adopted" if adopted else "rejected",
-                              reason=(f"用户补评分 {score:g}"
-                                      if score is not None else "评分无法解析"),
-                              comment=comment)
-            self._append_event({"event": "verdict", "id": cid,
-                                "round": round_no, "late": True,
-                                **_verdict_fields(verdict)})
+            adopted = score >= self.cfg.rounds.adopt_score
+            text = None
             if adopted:
-                # 前进式采纳旧快照：内容成为新最佳，并写回状态文件，
-                # 下一轮直接从它继续（不改写 history.jsonl 的既有记录）
+                # 先读快照再记「已决」事件：读不到就还是挂起，不能先写
+                # 一条 adopted 事件把候选锁死——快照恢复后也兑现不了
                 cand_path = self.dir / f"{CAND_PREFIX}{cid}.md"
                 try:
                     text = cand_path.read_text(encoding="utf-8")
                 except (OSError, UnicodeDecodeError) as e:
-                    self.sink.warn(f"采纳旧候选 {cid} 失败（快照不可读）：{e}")
+                    self.sink.warn(f"采纳旧候选 {cid} 失败（快照不可读，保持挂起）：{e}")
                     continue
-                _atomic_write(self.best_md, text)
-                self.best = {"id": cid, "round": round_no, "verifier": "user",
-                             "score": score, "ts": _ts(), "late": True,
-                             "reason": verdict.reason}
-                _atomic_write(self.best_json,
-                              json.dumps(self.best, ensure_ascii=False, indent=2))
-                self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
-                             f"前进式晋升为最佳并写回状态文件")
-                cur = self._read_state_text()
-                for name in (state.SECTION_IDEA, state.SECTION_ARTIFACT):
-                    want = _readable_section(text, name)
-                    if want is None:
-                        want = ""
-                    have = _readable_section(cur, name)
-                    if want != have:
-                        try:
-                            state.update_section_file(self.state_path, name, want)
-                        except (OSError, ValueError) as e:
-                            self.sink.warn(f"写回区块失败（{name}）：{e}")
-                self._append_event({"event": "restored", "round": round_no,
-                                    "why": "旧候选被补评采纳", "best": cid,
-                                    "changed": ["idea", "artifact"]})
-            else:
-                self.sink.info(f"旧候选 {cid} 获用户补评"
-                               + (f" {score:g}" if score is not None else "")
-                               + "，未达阈值，保持当前最佳")
+            verdict = Verdict(verifier="user", score=score,
+                              result="adopted" if adopted else "rejected",
+                              reason=f"用户补评分 {score:g}",
+                              comment=comment)
+            self._append_event({"event": "verdict", "id": cid,
+                                "round": round_no, "late": True,
+                                **_verdict_fields(verdict)})
+            if not adopted:
+                self.sink.info(f"旧候选 {cid} 获用户补评 {score:g}，"
+                               "未达阈值，保持当前最佳")
+                continue
+            # 前进式采纳旧快照：内容成为新最佳，并写回状态文件，
+            # 下一轮直接从它继续（不改写 history.jsonl 的既有记录）
+            _atomic_write(self.best_md, text)
+            self.best = {"id": cid, "round": round_no, "verifier": "user",
+                         "score": score, "ts": _ts(), "late": True,
+                         "reason": verdict.reason}
+            _atomic_write(self.best_json,
+                          json.dumps(self.best, ensure_ascii=False, indent=2))
+            self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
+                         f"前进式晋升为最佳并写回状态文件")
+            cur = self._read_state_text()
+            changed: List[str] = []
+            for name, key in ((state.SECTION_IDEA, "idea"),
+                              (state.SECTION_ARTIFACT, "artifact")):
+                want = _readable_section(text, name)
+                if want is None:
+                    want = ""
+                have = _readable_section(cur, name)
+                if want != have:
+                    try:
+                        state.update_section_file(self.state_path, name, want)
+                        changed.append(key)
+                    except (OSError, ValueError) as e:
+                        self.sink.warn(f"写回区块失败（{name}）：{e}")
+            self._append_event({"event": "restored", "round": round_no,
+                                "why": "旧候选被补评采纳", "best": cid,
+                                "changed": changed})
 
 
 # ----------------------------------------------------------------------

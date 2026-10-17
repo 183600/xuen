@@ -696,6 +696,68 @@ def test_verdicts_non_finite_score_not_adopted(ws):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_user_verdict_malformed_line_pends_in_round(ws):
+    """轮内就看到坏评分行时按挂起处理：解析不出 ≠ 用户拒绝。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    guard.dir.mkdir(parents=True, exist_ok=True)
+    (guard.dir / "verdicts.txt").write_text("cand-x abc 手滑\n", encoding="utf-8")
+    v = guard._user_verdict("cand-x")
+    assert v.result == "pending" and v.score is None
+
+
+def test_user_unparseable_score_stays_pending_and_can_be_fixed(ws):
+    """评分行打错不能被当成拒绝：候选保持挂起，改好该行仍能翻案。
+
+    回归：解析不出的用户评分若记成「已决」（rejected），用户修正这行
+    后的正确评分会被 history 里的 verdict 事件永久挡住（resolved），
+    旧快照再也无法前进式晋升——违反 README「解析不出按挂起处理」。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "值得补评的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    # 手滑：分数写成了汉字（解析不出）
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 八分 手滑\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["round"] == 0
+    # 没有产生任何「已决」结论，候选仍可翻案
+    assert [e["result"] for e in events(guard) if e["event"] == "verdict"] \
+        == ["pending"]
+    # 修正这行后收尾兑现：旧候选前进式晋升
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 改好了\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.best["verifier"] == "user"
+    assert read_idea(state_path) == "值得补评的想法"
+
+
+def test_late_adoption_snapshot_unreadable_stays_pending(ws):
+    """快照不可读时不能记「已决」：修复快照后仍能兑现晋升。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "快照待采纳")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    snap = guard.dir / f"cand-{cid}.md"
+    saved = snap.read_text(encoding="utf-8")
+    snap.unlink()
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+    guard.finish()
+    # 快照读不到：不采纳、也不记 adopted 事件把候选锁死
+    assert guard.best["round"] == 0
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+    # 快照恢复后再次兑现：正常晋升
+    snap.write_text(saved, encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+
+
 # ---------------------------------------------------------------- 失败轮次
 def test_round_failed_restores_best(ws):
     """agent 失败轮次的半截产物同样不能污染下一轮起点。"""
