@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import itertools
+import os
+import shlex
 from pathlib import Path
 from typing import List, Optional
 
 from . import state, words
-from .agents import ShellAgent
+from .agents import PromptTooLongError, ShellAgent
 from .config import Config
 from .rounds import RoundGuard
 from .sink import SECTION_ARTIFACT, SECTION_IDEA, ConsoleSink, Sink
@@ -162,6 +164,12 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             try:
                 agent.run(_shell_prompt(cfg, task, i, inspiration,
                                         state_path, helper, user_notes))
+            except PromptTooLongError as e:
+                # 提示词随区块内容只增不减，同模板重试必然同样失败：
+                # 不再空转 3 轮，立即中止并给出可操作的建议
+                sink.err(str(e))
+                sink.err("重试不会成功，已中止循环")
+                raise SystemExit(1)
             except (OSError, ValueError) as e:
                 # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte，
                 # 属「启动失败」，计入轮次失败而非让 traceback 崩溃整个循环
@@ -274,6 +282,20 @@ def _read_sections(state_path: Path) -> tuple:
             state.get_section(text, state.SECTION_ARTIFACT))
 
 
+def _shell_path(path: Path) -> str:
+    """把路径安全地嵌入提示词，供外部 agent 的 shell 直接执行。
+
+    POSIX 下不能用双引号包裹路径：shell 在双引号内仍会展开 $ 与反引号
+    （工作区名为 "ws$x`id`" 时，外部 agent 按提示词执行会拿到错误路径、
+    区块永远写不进去），必须用 shlex.quote 单引号保护；Windows cmd 不
+    展开 $/反引号，双引号（含空格路径）即可，文件名也不可能含双引号。
+    """
+    text = str(path)
+    if os.name == "nt":
+        return f'"{text}"'
+    return shlex.quote(text)
+
+
 def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
                   state_path: Path, helper: Path,
                   user_notes: List[str]) -> str:
@@ -281,6 +303,9 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
     idea, artifact = _read_sections(state_path)
     ins = ("、".join(f"「{w}」" for w in inspiration)
            if inspiration else "（本轮没有随机灵感词，请自由发挥）")
+    # 提示词会被外部 agent 按 shell 复制执行：路径必须按当前平台的 shell
+    # 规则转义后再拼进去（简单路径下 shlex.quote 原样返回、不影响可读性）
+    state_q, helper_q = _shell_path(state_path), _shell_path(helper)
 
     user_part = ""
     if user_notes:
@@ -297,7 +322,7 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
 你正在参加一场「灵感驱动研究循环」的第 {i} 轮，请模拟一位人类研究者的思考过程。
 本轮随机灵感词：{ins}
 {user_part}
-状态文件 {state_path} 中有两个跨轮保留的区块，当前内容：
+状态文件 {state_q} 中有两个跨轮保留的区块，当前内容：
 
 --- 想法区 ---
 {idea or "（空）"}
@@ -311,16 +336,20 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
 3. 用本轮的具体产物【整体覆盖】产物区（方案 / 伪代码 / 推导 / 实验设计 / 实验结果等）。
 
 【覆盖区块的方式】（推荐：用 shell 执行，内容经 stdin 传入）：
-  cat <<'EOF' | python "{helper}" idea
-  这里是新的想法区内容……
-  EOF
+注意：下面的命令与结束标记都必须【顶格】（行首不能有空格）。
+结束标记 XUEN_EOF 必须独占一行，否则 shell 会把后续内容一并
+吞进区块内容里。
 
-  cat <<'EOF' | python "{helper}" artifact
-  这里是新的产物区内容……
-  EOF
+cat <<'XUEN_EOF' | python {helper_q} idea
+这里是新的想法区内容……
+XUEN_EOF
 
-也可以先写入临时文件再 `python "{helper}" idea < tmp.md`，
-或用你自己的文件编辑能力直接修改 {state_path}——
+cat <<'XUEN_EOF' | python {helper_q} artifact
+这里是新的产物区内容……
+XUEN_EOF
+
+也可以先写入临时文件再 `python {helper_q} idea < tmp.md`，
+或用你自己的文件编辑能力直接修改 {state_q}——
 但必须完整保留 IDEA / ARTIFACT 的 START / END 标记行。
 
 完成后，用一两句话总结本轮的结论。"""

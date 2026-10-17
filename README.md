@@ -74,9 +74,15 @@ python main.py "任务"
   （`python write_section.py idea|artifact`），内置跨进程文件锁，防止并发写互相覆盖。
 
 **④ 外部 agent 调用**（`xuen/agents.py`）
-- `agent.command` 命令模板支持两种占位符：`$prompt`（整段提示词 shell 转义后替换）、
-  `$prompt_file`（提示词写入工作区内唯一临时文件后替换为路径，跨平台推荐）；
-- `agent.timeout` 超时后强制终止整个进程树；TUI 中 `q` / `Ctrl+C` 也会先终止正在运行的 agent。
+- `agent.command` 命令模板支持两种占位符：`$prompt`（整段提示词按所在 shell 语境的
+  引号规则转义后替换）、`$prompt_file`（提示词写入工作区内唯一临时文件后替换为路径，
+  跨平台推荐）；
+- 渲染器跟踪模板的 shell 语法：命令替换 `$(...)` / 反引号、算术语境、heredoc 正文、
+  注释、`${...}` 参数展开等无法安全转义的区域不改写占位符（提示词里的 `$(...)` /
+  反引号不会被注入执行）；占位符落在这些区域或模板用了 `$'...'` 等随 `/bin/sh`
+  方言变化的写法时，配置校验直接报错提示，而不是静默丢弃提示词；
+- `agent.timeout` 超时后强制终止整个进程树；TUI 中 `q` / `Ctrl+C` 也会先终止正在运行的 agent；
+  提示词超过系统单参数上限（`$prompt` 模式）时给出改用 `$prompt_file` 的明确建议并中止循环。
 
 **⑤ 词库生成**（`xuen/words.py`）
 - 分批向外部 agent 请求「为研究方向列出 N 个术语/关键词」，程序只负责解析、清洗、去重
@@ -174,7 +180,7 @@ xuen/
 ├── requirements.txt
 ├── pyproject.toml
 ├── config.example.yaml        # 复制为 config.yaml 使用
-├── tests/                     # pytest 测试（轮次守卫单元/集成 + 冒烟）
+├── tests/                     # pytest 测试（轮次守卫单元/集成 + shell 渲染回归 + 冒烟）
 └── xuen/
     ├── cli.py                 # 命令行
     ├── config.py              # 配置（含 rounds 轮次守卫段）

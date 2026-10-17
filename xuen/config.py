@@ -286,8 +286,22 @@ def _validate(cfg: Config) -> None:
         if not command_receives_prompt(cmd):
             raise ValueError(
                 "agent.command 必须包含会被实际替换的 $prompt 或 "
-                "$prompt_file 占位符（被转义的 \\$prompt 不会被替换），"
-                "否则提示词无法传给外部 agent"
+                "$prompt_file 占位符（被转义的 \\$prompt、shell 注释、"
+                "heredoc 正文、反引号命令替换、算术语境（$[...]、"
+                "((...))）与 ${...} 参数展开（含数组下标/子串展开等算术"
+                "语境和 ${x:-word} 等词语境）内的占位符都不会被替换；"
+                "命令替换（$(...)）内的 case 语句因 pattern 以裸 ) 结束、"
+                "无法安全配对括号，其后的占位符同样不会被替换；"
+                "裸 >&word 重定向词（bash 按 &>word 处理、展开不遵守"
+                "引号规则，单引号里的 $(...)/`...` 仍会被执行）内的占位符"
+                "不会被替换；紧跟在未转义 $ 后面的占位符（如 $$prompt，"
+                "shell 把 $$ 当 PID、prompt 只是字面量）也不会被替换；"
+                "用续行（反斜杠-换行）拆开操作符/展开头的模板（如 > 后"
+                "换行再 & 拼成 >&、$ 后换行再 ( 拼成 $(，续行在 shell"
+                "分词前会被删除、两侧字符实际拼成一个操作符）会整体拒绝；"
+                "ANSI-C 引用（$'...'）的语义随系统 /bin/sh 方言（bash/"
+                "dash）变化、无法安全替换，这类模板也会被拒绝），否则"
+                "提示词无法传给外部 agent"
             )
     if (os.name == "nt" and re.search(
             r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", cmd)):
