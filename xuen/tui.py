@@ -74,6 +74,10 @@ class _InputBox(Input):
     async def _on_key(self, event: events.Key) -> None:
         if event.key == "q" and not self.value:
             event.stop()
+            # stop() 只阻止事件冒泡（不触发 App 的 q 绑定）；textual 的消息
+            # 派发还会沿 MRO 继续调用基类 Input._on_key，必须 prevent_default()
+            # 才能阻止它把 "q" 插入输入框（否则退出前框里会留下残字）
+            event.prevent_default()
             await self.app.action_quit()  # textual >= 1.0 起 action_quit 是协程，必须 await
             return
         await super()._on_key(event)
