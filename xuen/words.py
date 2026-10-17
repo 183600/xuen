@@ -49,14 +49,59 @@ _QUOTE_PAIRS = (
     ("【", "】"), ("〔", "〕"), ("〖", "〗"),
 )
 
+# 词中任意位置的成对装饰符：只剥词头时，被连接词/空格隔开的第二组装饰
+# （"**前置**和**后置**"、"“x”与“y”"）会把收尾符留给整行 rstrip 当边缘
+# 字符剥掉、开头装饰符却留在词中（"前置和**后置"），残片随词库进入每轮
+# 提示词。这里用非贪婪匹配找出所有完整成对（同字符、同数量）的装饰并连
+# 配对一起剥；没有配对的词中符号（"2**10"、"C*代数"、"_private_var"）
+# 不匹配、原样保留。单星号加 (?<!\w) 保护：词中的 a*b*c、C*代数与D*几何
+# 是乘法/星号记号而非 markdown 斜体；成对的双星号/反引号等仍照剥。
+_ANY_EMPHASIS_PAIR = re.compile(
+    r"(?<![*~`])([*~`]{1,3})(?=\S)(.+?)\1(?![*~`])")
+# 引号对内层要求首尾都是非空白字符（空引号 ""、纯空白引号不剥）。
+# ASCII 单/双引号以回调再要求开引号不在 ASCII 字母数字之后：
+# "don't"、"O'Reilly"、英寸号 6" 里的引号不是成对装饰。
+_QUOTE_PAIR_RES = tuple(
+    (open_ch, close_ch,
+     re.compile(re.escape(open_ch) + r"(\S(?:.*?\S)?)" + re.escape(close_ch)))
+    for open_ch, close_ch in _QUOTE_PAIRS)
+_ASCII_WORD_CHAR = re.compile(r"[0-9A-Za-z]")
+_WORD_CHAR = re.compile(r"\w")
+
+
+def _emph_repl(m: "re.Match") -> str:
+    if (m.group(1) == "*" and m.start() > 0
+            and _WORD_CHAR.match(m.string[m.start() - 1])):
+        return m.group(0)
+    return m.group(2)
+
+
+def _quote_repl(m: "re.Match", open_ch: str) -> str:
+    if (open_ch in "\"'" and m.start() > 0
+            and _ASCII_WORD_CHAR.match(m.string[m.start() - 1])):
+        return m.group(0)
+    return m.group(1)
+
+
+def _strip_pairs(w: str) -> str:
+    """剥掉词中任意位置完整成对的装饰符（循环到不动点）。"""
+    changed = True
+    while changed:
+        before = w
+        w = _ANY_EMPHASIS_PAIR.sub(_emph_repl, w)
+        for open_ch, close_ch, rx in _QUOTE_PAIR_RES:
+            w = rx.sub(lambda m, _open=open_ch: _quote_repl(m, _open), w)
+        changed = w != before
+    return w
+
 
 def _unwrap_pair(w: str) -> str:
-    """剥掉词头成对装饰符（含被后续解释挡住的收尾符）。
+    """剥掉成对装饰符：先剥词头（含被后续解释挡住的收尾符），
+    再剥词中任意位置的完整成对（_strip_pairs）。
 
-    只从词头开始剥，循环处理嵌套（如 "「**术语**（解释）」"）；每次
-    至少剥掉两个装饰符、严格变短，必然收敛。收尾符找不到配对时原样
-    返回（如 "*args"、"C*代数"、"_private_var" 这类词中下划线），
-    交给后续的边缘字符剥离。
+    循环处理嵌套（如 "「**术语**（解释）」"）；每次至少剥掉两个装饰符、
+    严格变短，必然收敛。收尾符找不到配对时原样返回（如 "*args"、
+    "C*代数"、"_private_var" 这类词中符号），交给后续的边缘字符剥离。
     """
     while True:
         m = _EMPHASIS_PAIR.match(w)
@@ -82,7 +127,10 @@ def _unwrap_pair(w: str) -> str:
             w = (rest[:end] + tail).strip()
             break
         else:
-            return w
+            stripped = _strip_pairs(w)
+            if stripped == w:
+                return w
+            w = stripped
 
 
 # 纯数字（含 "3.14" / "2.5" 这类小数，isdigit() 拦不住）不是词；

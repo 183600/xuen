@@ -72,6 +72,46 @@ def test_words_clean_keeps_intraword_underscores_and_leading_edge_chars():
         assert _clean_line(w) == w, w
 
 
+def test_words_clean_unwraps_multiple_pairs_in_one_word():
+    """同一行里被连接词/空格隔开的多组装饰对必须连配对一起剥干净。
+
+    回归：只从词头 unwrap 时，第二组装饰的收尾符会被整行 rstrip 当边缘
+    字符剥掉、开头的装饰符却留在词中（"**备忘**和**结论**" ->
+    "备忘和**结论"），残片随词库进入每轮提示词；连续引语
+    "「注意」与「记忆」" 也会留下 "注意」与「记忆" 这类不对称残片。
+    完整成对（同字符、同数量）的装饰要连配对一起剥。
+    """
+    assert _clean_line("**前置**和**后置**") == "前置和后置"
+    assert _clean_line("**A**、**B** 和 **C**") == "A、B 和 C"
+    assert _clean_line("**A**和**B**和**C**") == "A和B和C"
+    assert _clean_line("*a* or *b*") == "a or b"
+    assert _clean_line("`code` and `more`") == "code and more"
+    assert _clean_line("「注意」与「记忆」") == "注意与记忆"
+    assert _clean_line("“生成模型”与“判别模型”") == "生成模型与判别模型"
+    assert _clean_line("**术语**（解释）与**别的**（解释2）") \
+        == "术语（解释）与别的（解释2）"
+    assert _clean_line("（**重点**）") == "（重点）"
+    assert _clean_line("！**重点**！") == "！重点"
+    # 不能误伤：没有配对或词中是乘号/星号记号/撇号时原样保留
+    assert _clean_line("2**10") == "2**10"
+    assert _clean_line("C*代数") == "C*代数"
+    assert _clean_line("C*代数与D*几何") == "C*代数与D*几何"
+    assert _clean_line("a*b*c") == "a*b*c"
+    assert _clean_line("m*n*k") == "m*n*k"
+    assert _clean_line("don't panic") == "don't panic"
+    assert _clean_line("Newton's method") == "Newton's method"
+    assert _clean_line("x_0, x_1") == "x_0, x_1"
+    # 真实词表端到端：多组装饰/引语同行时残片不能混进词库
+    assert parse_word_lines("- **注意力**和**记忆**\n“卷积”与“池化”\n") \
+        == ["注意力和记忆", "卷积与池化"]
+    # 清洗必须是不动点
+    for src in ("**前置**和**后置**", "「注意」与「记忆」",
+                "“生成模型”与“判别模型”", "**A**、**B** 和 **C**"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_words_clean_unwraps_each_segment_after_separators():
     """同一行分隔符列出的多个装饰术语必须逐段剥干净。
 
