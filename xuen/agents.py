@@ -900,8 +900,16 @@ class ShellAgent:
             正文会展开其中的 $(...)/`...`：实测 bash 下 `cat <<$(echo X)`
             的终止符是字面量 $(echo X)（词不展开、只做引号移除），提示词
             因此被当成正文执行（注入）；$((...))、含空白的 ${...}/$[...]、
-            含空白的反引号同理。这类词返回 (None, n)，调用方把剩余模板
-            整体吞掉、不做替换（command_receives_prompt 据此拒绝）。
+            含空白的反引号同理。
+            进程替换 <(...)/>(...) 也属于同一个词（`echo a<(cmd)` 输出
+            a/dev/fd/63；实测 `cat <<EOF<(cmd)` 的终止符是字面量
+            `EOF<(cmd)`，进程替换本身不执行、只留字面文本）：渲染器在
+            < 处把词截断，正文提前结束、$prompt 被替换进 shell 仍当作
+            正文的区域——不加引号的正文会执行提示词里的 $(...)/`...`
+            （注入，实测 bash 创建文件；dash 对 <( 直接报语法错误）；
+            带引号的终止符词虽不展开，提示词也会被静默吞掉。这类词返回
+            (None, n)，调用方把剩余模板整体吞掉、不做替换
+            （command_receives_prompt 据此拒绝）。
             """
             buf: List[str] = []
             quoted = False
@@ -994,6 +1002,11 @@ class ShellAgent:
                         or tpl.startswith("$'", pos)
                         or tpl.startswith('$"', pos)):
                     return None, n, False
+                if c in "<>" and pos + 1 < n and tpl[pos + 1] == "(":
+                    # 进程替换 <(...)/>(...) 与前面的字符同属一个词（见
+                    # 方法说明）：内部是任意命令文本，词边界无法简单
+                    # 确定——与 ${/反引号 等同类，整体拒绝
+                    return None, n, False
                 # shell 词在空白与控制运算符处结束
                 if c in " \t\n;&|<>()":
                     break
@@ -1020,9 +1033,19 @@ class ShellAgent:
             命令行当成正文吞掉、随后又在外层正文位置恢复替换——正好把
             $prompt 插进 shell 真正当正文处理的区域（注入）。
             反之，注册在更深层替换里的 heredoc 若其替换已闭合仍未收正文
-            （`echo $(cat <<B)`），bash 会在下一个换行处补收，深度条件
-            >= 当前深度同样覆盖这种情况；即使 dash 把它当命令执行，这里
-            多吞（不替换）也是安全方向。
+            （`echo $(cat <<B)`），bash 会在下一个换行处补收（带 warning），
+            深度条件 >= 当前深度会把它一并收掉；但 dash 对这类 heredoc
+            的处理随命令形态而变：实测 `x=$(cat <<B)` 静默丢弃（后续行被
+            当命令执行，其中的 `<<x` 会另外开启一个吞到模板结尾的正文），
+            `x=$(exec 3<<B; :)` 又照常收正文——丢弃时渲染器多吞掉的区域
+            正是 shell 当命令解析的区域，若正文终点不一致就可能在 dash
+            仍当作正文的区域恢复替换（提示词里的 $(...)/`` 被真正执行，
+            注入，实测创建文件）。因此存在这种「比当前深度更深」的
+            heredoc 时，只有 dash 口径（只收深度 == 当前深度的正文，从
+            换行处按登记顺序）与 bash 口径（深度降序收全部）的正文终点
+            完全一致，才恢复替换；不一致时与其它无法安全替换的语境一致，
+            剩余模板整体吞掉、不做替换（command_receives_prompt 据此
+            拒绝这类模板）。
 
             待收正文的读取顺序必须与 shell 一致：登记深度更深（嵌套在
             命令替换里）的 heredoc 先读，同深度按登记顺序。bash 实测
@@ -1060,27 +1083,20 @@ class ShellAgent:
             （见 _heredoc_body_open_substitution），此处继续按正文往后吞，
             直到某个终止符行处所有展开都已闭合（或吞到模板结尾）。
             """
-            depth = len(subst_stack)
-            kept = []
-            consume = []
-            for entry in pending_heredocs:
-                if entry[2] < depth:
-                    kept.append(entry)
-                else:
-                    consume.append(entry)
-            # sorted 是稳定排序：同深度保持登记顺序，深度优先与 bash 一致
-            consume.sort(key=lambda e: -e[2])
-            for delim, strip_tabs, reg_depth, quoted in consume:
+            def scan_body(pos: int, delim: str, strip_tabs: bool,
+                          quoted: bool) -> int:
+                """从 pos 起收一个 heredoc 的正文，返回正文（含终止符行）后的下标。
+
+                不加引号的正文按续行语义找终止符（见 consume_heredoc_bodies
+                说明）：logical_prefix 非空 = 当前处于逻辑行中间，不是 dash
+                的终止符检查点，与行尾反斜杠一起决定本行能否结束正文。
+                """
                 body_start = pos
-                # 不加引号的正文按续行语义找终止符（见方法说明）：
-                # logical_prefix 非空 = 当前处于逻辑行中间，不是 dash 的
-                # 终止符检查点，与行尾反斜杠一起决定本行能否结束正文
                 logical_prefix = ""
                 while pos < n:
                     j = tpl.find("\n", pos)
                     end = n if j < 0 else j + 1
                     line = tpl[pos:] if j < 0 else tpl[pos:j]
-                    out.append(tpl[pos:end])
                     pos = end
                     if quoted:
                         if (line.lstrip("\t") if strip_tabs
@@ -1106,6 +1122,42 @@ class ShellAgent:
                                 tpl, body_start, pos):
                             break
                     logical_prefix = ""
+                return pos
+
+            depth = len(subst_stack)
+            kept = []
+            consume = []
+            for entry in pending_heredocs:
+                if entry[2] < depth:
+                    kept.append(entry)
+                else:
+                    consume.append(entry)
+            # sorted 是稳定排序：同深度保持登记顺序，深度优先与 bash 一致
+            consume.sort(key=lambda e: -e[2])
+            if any(e[2] > depth for e in consume):
+                # 注册在「已闭合的更深替换」里的 heredoc：bash 会在下一个
+                # 换行处补收正文（带 warning），dash 的处理却随命令形态而
+                # 变（见方法说明），只有两 shell 的正文终点完全一致时才
+                # 能恢复替换。dash 只收「登记深度 == 当前深度」的正文
+                # （从换行处开始、按登记顺序），bash 按深度降序收全部；
+                # 终点不一致时渲染器多吞的区域会被 dash 当命令解析
+                # （其中的 `<<x` 会开启吞到模板结尾的正文），继续替换
+                # 可注入，必须整体吞到模板结尾、不做替换。
+                active = [e for e in consume if e[2] == depth]
+                dash_end = pos
+                for delim, strip_tabs, _d, quoted in active:
+                    dash_end = scan_body(dash_end, delim, strip_tabs, quoted)
+                bash_end = pos
+                for delim, strip_tabs, _d, quoted in consume:
+                    bash_end = scan_body(bash_end, delim, strip_tabs, quoted)
+                if dash_end != bash_end:
+                    out.append(tpl[pos:])
+                    pending_heredocs[:] = kept
+                    return n
+            for delim, strip_tabs, _reg_depth, quoted in consume:
+                end = scan_body(pos, delim, strip_tabs, quoted)
+                out.append(tpl[pos:end])
+                pos = end
             pending_heredocs[:] = kept
             return pos
 

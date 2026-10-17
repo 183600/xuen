@@ -394,6 +394,51 @@ def test_render_command_heredoc_delimiter_split_expansion_cannot_inject(tmp_path
             assert not (tmp_path / "pwned").exists(), (tpl, sh)
 
 
+def test_render_command_heredoc_delimiter_process_substitution_cannot_inject(tmp_path):
+    """终止符词里的进程替换 <(...)/>(...) 不能按 < 截断后的短终止符收正文。
+
+    回归：进程替换与相邻字符同属一个词（`echo a<(cmd)` 输出
+    a/dev/fd/63）；bash 对 `cat <<EOF<(echo X)` 的终止符是字面量
+    `EOF<(echo X)`（进程替换本身不执行、只留字面文本），正文一直延伸到
+    模板结尾。渲染器在 < 处把词截成 EOF、正文提前结束，$prompt 被替换进
+    shell 仍当作正文的区域——不加引号的正文会执行提示词里的 $(...)/``
+    （注入，实测 bash 创建文件；dash 对 <( 直接报语法错误）；带引号部分
+    不改变 <( 同属一词（`<<'EOF'<(cmd)` 的终止符仍是 EOF<(cmd)），虽不
+    展开、提示词也会被静默吞掉。修复：终止符词里的裸 <( / >( 与
+    ${/反引号 等同类，返回 (None, n) 整体拒绝，剩余模板吞掉、不替换。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # 裸 <(：bash 的终止符是字面量 EOF<(echo X)
+        "cat <<EOF<(echo X) > /dev/null\nbody\nEOF\n$prompt\n",
+        # 裸 >(：同理
+        "cat <<a>(echo X) > /dev/null\nbody\na\n$prompt\n",
+        # 带引号的部分不改变 <( 属于同一个词
+        "cat <<'EOF'<(echo X) > /dev/null\nbody\nEOF\n$prompt\n",
+        # 续行隔开 $ 与 <(：拼接后仍同属一个词
+        "cat<<$\\\n<(echo X) > /dev/null\n$\nprintf %s $prompt\n",
+    )
+    prompt = f"$(touch {tmp_path / 'pwned'}) `touch {tmp_path / 'pwned.bt'}`"
+    for tpl in templates:
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入 shell 当作正文的区域
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
+
+
 def test_render_command_heredoc_inside_command_substitution_cannot_inject(tmp_path):
     """命令替换内部的换行不能提前收「外层命令的 heredoc」正文。
 
@@ -544,6 +589,57 @@ def test_render_command_closed_substitution_heredoc_read_before_outer(tmp_path):
                            capture_output=True, text=True, cwd=tmp_path)
         assert r.returncode == 0, (sh, r.stderr)
         assert r.stdout == prompt2, sh
+
+
+def test_render_command_closed_substitution_heredoc_without_outer_cannot_inject(tmp_path):
+    """已闭合替换里的 heredoc 没有外层正文覆盖时必须整体吞掉、不替换。
+
+    回归：`cat <> /dev/null $(cat <<B)\\n<<x\\nA\\nB\\n$prompt` 里 B 的替换
+    在同一行闭合、外层没有任何 heredoc。bash 在下一个换行处补收 B 的正文
+    （`<<x`、`A`，终止符 `B`），dash 却把 B 静默丢弃、把后续行当命令解析：
+    其中 `<<x` 会再开一个吞到模板结尾的正文，渲染器在这之后恢复替换的
+    `$prompt` 行正落进该正文——不加引号的正文会执行提示词里的
+    $(touch ...)/反引号（注入，实测 dash 创建文件；bash 无此问题，跨 shell
+    必须按更危险的一侧处理）。修复：存在登记深度比当前深度更深的 heredoc
+    时，只有 dash 口径（只收深度 == 当前深度的正文）与 bash 口径（深度
+    降序收全部）的正文终点完全一致才恢复替换，否则剩余模板整体吞掉、
+    不做替换（见 consume_heredoc_bodies）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    templates = (
+        # 无外层 heredoc：dash 丢弃 B，`<<x` 开启吞到模板结尾的正文
+        ("cat <> /dev/null $(cat <<B)\n"
+         "<<x\n"
+         "A\n"
+         "B\n"
+         "$prompt\n"),
+        # 深度 2：B、C 都注册在已闭合的替换里，同理
+        ("cat <> /dev/null $(cat <<B $(cat <<C))\n"
+         "<<x\n"
+         "A\n"
+         "B\n"
+         "C\n"
+         "$prompt\n"),
+    )
+    prompt = f"$(touch {tmp_path / 'pwned'}) `touch {tmp_path / 'pwned.bt'}`"
+    for tpl in templates:
+        # 正文里的 $prompt 不会被替换：配置校验必须拒绝这类模板
+        assert command_receives_prompt(tpl) is False, tpl
+        if not _posix_shell_available():
+            continue
+        marker = tmp_path / "pwned"
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入 shell 当作正文的区域
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for sh in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            subprocess.run([sh, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), tpl
 
 
 def test_render_command_unquoted_heredoc_body_spanning_expansion_cannot_inject(tmp_path):
