@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261016-234514-r7",
-    "sha": "57f30c099c8bbe184f0cc49d40ded33c5a7e428a",
+    "snap": "snap/20261017-001346-r8",
+    "sha": "aa722dd7a13e5e6b5c4b9b180b0134d3d3afefd0",
     "tests": "pass",
-    "at": "2026-10-16T23:46:14Z",
+    "at": "2026-10-17T00:15:00Z",
     "by": "ai",
-    "iter": "7"
+    "iter": "8"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -894,6 +894,31 @@
         "verdict": "accept",
         "reason": "修复了 heredoc 终止符词在续行与双引号转义下按错误规则拼接、导致合法模板 $prompt 被吞掉并误报缺少占位符的真实 bug，且新增严格回归测试（未删除或弱化任何测试），全部 53 项测试与验证均通过。",
         "at": "2026-10-16T23:46:14Z"
+      }
+    },
+    {
+      "id": "20261017-001346-r8",
+      "snap": "snap/20261017-001346-r8",
+      "sha": "aa722dd7a13e5e6b5c4b9b180b0134d3d3afefd0",
+      "ts": "2026-10-17T00:15:00Z",
+      "iter": "8",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "2d869f79959e935687d635609af54f4c35515e92",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（8分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 8,
+        "verdict": "accept",
+        "reason": "真实修复 heredoc 终止符词中续行拼出展开头导致的提示词注入，新增回归测试且未删改测试，符合既有保守拒绝策略，风险低。",
+        "at": "2026-10-17T00:15:00Z"
       }
     }
   ],
