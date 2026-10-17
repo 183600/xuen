@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261017-031037-r5",
-    "sha": "55d6b9153677a08ffd0a392637f062f59df122dc",
+    "snap": "snap/20261017-034215-r6",
+    "sha": "d8de851f93c943c333d8031c6bcf39404fa1ecd5",
     "tests": "pass",
-    "at": "2026-10-17T03:11:54Z",
+    "at": "2026-10-17T03:43:38Z",
     "by": "ai",
-    "iter": "5"
+    "iter": "6"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -1099,6 +1099,31 @@
         "verdict": "accept",
         "reason": "修复了真实 bug（分隔符列表中后续词段的序号/装饰残片混入词库），仅新增 36 行回归测试、未删改既有测试，60 项测试全部通过，属整体改进但有少量边界风险。",
         "at": "2026-10-17T03:11:54Z"
+      }
+    },
+    {
+      "id": "20261017-034215-r6",
+      "snap": "snap/20261017-034215-r6",
+      "sha": "d8de851f93c943c333d8031c6bcf39404fa1ecd5",
+      "ts": "2026-10-17T03:43:38Z",
+      "iter": "6",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "ec01d389fc7ef7d367927bfba2bf65b711713de9",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "修复了经实测证实的提示词注入漏洞（heredoc 终止符词中的 `<(`/`>(` 及已闭合深层替换的正文终点不一致），测试为新增且未被弱化，自动验证全通过。",
+        "at": "2026-10-17T03:43:38Z"
       }
     }
   ],
