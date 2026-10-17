@@ -263,6 +263,15 @@ def _is_case_keyword(tpl: str, i: int) -> bool:
 
     k = i
     while k >= 2 and tpl[k - 1] == "\n" and tpl[k - 2] == "\\":
+        # 续行必须真的生效才能跨过：反斜杠所在物理行若含 #，它可能落在
+        # 注释里，反斜杠-换行并不续行（`#x\<换行>case` 里 case 仍是新行
+        # 行首的关键字）。误当续行会把单词边界判反、漏认 case（见
+        # _render_posix 的 case 说明，漏认会让 pattern ) 破坏括号配对）。
+        # 无法确定时按硬换行处理：宁可误认关键字（整体跳过/拒绝），
+        # 不可漏认
+        line_start = tpl.rfind("\n", 0, k - 1) + 1
+        if "#" in tpl[line_start:k - 2]:
+            break
         k -= 2
     if k > 0 and _WORD_CHAR.match(tpl[k - 1]):
         return False

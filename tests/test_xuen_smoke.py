@@ -1106,6 +1106,46 @@ def test_render_command_case_pattern_paren_in_expansion_cannot_inject(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_case_after_comment_line_continuation_cannot_inject(tmp_path):
+    """注释行尾的反斜杠不续行：`#x\\<换行>case` 的 case 仍是关键字。
+
+    回归（bash 与 dash 下均可复现）：反斜杠是注释内最后一个字符时，
+    换行结束注释、并不构成续行；命令替换里的裸 case 依旧是真关键字。
+    而 _is_case_keyword 的向左边界检查无条件跨过 `\\<换行>`，把上一行
+    注释里的字符当成词内字符、漏认 case，pattern ) 破坏括号配对恢复
+    错误引号状态，之后的 $prompt 按裸语境插入双引号转义——shell 仍在
+    裸语境，提示词里的 `; touch ...` 被真正执行（注入）。修复：向左
+    跨续行前确认反斜杠所在物理行不含 #（可能在注释里时按硬换行处理，
+    宁可误认关键字整体跳过/拒绝，不可漏认）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt, _is_case_keyword
+
+    # 真续行合并出的词（xcase）不是关键字；注释里的反斜杠不合并
+    assert _is_case_keyword("x\\\ncase", 3) is False
+    assert _is_case_keyword("#x\\\ncase", 4) is True
+    assert _is_case_keyword("#a\\\n\\\ncase", 6) is True
+    assert _is_case_keyword("#a\\\nb\\\ncase", 7) is False
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"x; touch {marker}; echo y"
+    tpl = 'printf %s "$(echo hi #x\\\ncase x in x) printf %s $prompt;; esac)"'
+    # 命令替换里 case 之后的 $prompt 不会送达 agent：配置校验必须拒绝
+    assert command_receives_prompt(tpl) is False
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    rendered = agent.render_command(prompt)
+    assert "$prompt" in rendered, tpl
+    assert str(marker) not in rendered, tpl
+    for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                           text=True, cwd=tmp_path)
+        assert r.returncode == 0, (shell, r.stderr)
+        assert not marker.exists(), (shell, rendered)
+
+
 def test_render_command_does_not_substitute_in_redirect_word(tmp_path):
     """裸 `>&word`（无 fd 号）重定向词里的占位符不能替换。
 
