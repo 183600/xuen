@@ -171,8 +171,11 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     pkg = repo / "package.json"
     if pkg.is_file() and shutil.which("npm"):
         try:
-            scripts = json.loads(pkg.read_text(encoding="utf-8", errors="replace")).get("scripts") or {}
-            test_cmd = scripts.get("test")
+            # JSON 合法但结构不对（顶层是 list、scripts 是 list/str 等）
+            # 都按「没有 npm 套件」处理：这类脏数据不能把探测整个打断
+            data = json.loads(pkg.read_text(encoding="utf-8", errors="replace"))
+            scripts = data.get("scripts") if isinstance(data, dict) else None
+            test_cmd = scripts.get("test") if isinstance(scripts, dict) else None
             if isinstance(test_cmd, str) and test_cmd.strip() \
                     and "no test specified" not in test_cmd:
                 return ["npm", "test"]

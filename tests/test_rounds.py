@@ -267,6 +267,65 @@ def test_detect_test_suite_make(tmp_path):
     assert suite == ["make", "test"]
 
 
+def _fake_npm(monkeypatch):
+    """让 npm 探测分支无视本机是否装了 npm（只伪造 npm 的 which 结果）。"""
+    real_which = shutil.which
+
+    def which(name, *args, **kwargs):
+        if name == "npm":
+            return "/usr/bin/npm"
+        return real_which(name, *args, **kwargs)
+
+    monkeypatch.setattr("xuen.rounds.shutil.which", which)
+
+
+def test_detect_test_suite_npm(tmp_path, monkeypatch):
+    _fake_npm(monkeypatch)
+    (tmp_path / "package.json").write_text(
+        '{"scripts": {"test": "vitest run"}}', encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["npm", "test"]
+
+
+def test_detect_test_suite_npm_placeholder_ignored(tmp_path, monkeypatch):
+    _fake_npm(monkeypatch)
+    (tmp_path / "package.json").write_text(
+        '{"scripts": {"test": "echo \\"Error: no test specified\\" && exit 1"}}',
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("pkg", [
+    '["not", "an", "object"]',   # 顶层不是对象：.get 不存在
+    '{"scripts": ["npm test"]}',  # scripts 是数组：.get 不存在
+    '{"scripts": "npm test"}',    # scripts 是字符串
+    '{"scripts": {"test": 123}}',  # test 不是字符串
+    "null",
+])
+def test_detect_test_suite_npm_malformed_shape_ignored(tmp_path, monkeypatch,
+                                                       pkg):
+    """JSON 合法但结构不对的 package.json 不能抛 AttributeError：探测异常
+    会让 on_round_end 跳过验证，未验证候选滞留循环状态。"""
+    _fake_npm(monkeypatch)
+    (tmp_path / "package.json").write_text(pkg, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_guard_survives_malformed_package_json(ws, tmp_path, monkeypatch):
+    """端到端：脏 package.json 下守卫正常给出「无法验证 → 挂起」，
+    并把挂起候选还原出循环状态（绝不因探测崩溃放行候选）。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "package.json").write_text(
+        '{"scripts": ["npm test"]}', encoding="utf-8")
+    _fake_npm(monkeypatch)
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="tests", repo=str(repo))
+    guard.start()
+    write_idea(state_path, "脏 package.json 下的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert read_idea(state_path) == "（暂无）"
+
+
 def test_resolve_repo_explicit_wins(tmp_path, tmp_path_factory):
     workspace = tmp_path / "ws"
     workspace.mkdir()
