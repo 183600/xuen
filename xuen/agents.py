@@ -74,6 +74,25 @@ def _prev_effective_pos(tpl: str, i: int) -> int:
     return k
 
 
+def _directly_after_placeholder(tpl: str, i: int, prev_ph_end: int) -> bool:
+    """i 是否紧跟在上一个被兑现的占位符之后（中间只隔着续行）。
+
+    「完整词」边界检查挡住的是模板里紧贴占位符的字面单词字符
+    （`x$prompt` 不替换，见 _placeholder_at）；但上一个占位符的替换结果
+    不是模板字面量：`$prompt$prompt` 里第二个占位符紧贴的是第一个的兑现
+    结果，shell 会把两段展开拼成同一个词，第二个必须照常替换，否则会以
+    字面量留在命令里被 shell 当空变量展开（提示词被静默丢弃一半）。
+    续行（反斜杠-换行）在分词前被删除，`$prompt\\<换行>$prompt` 与紧邻
+    写法等价，同样按相邻处理。
+    """
+    if prev_ph_end < 0 or prev_ph_end > i:
+        return False
+    k = prev_ph_end
+    while k + 1 < len(tpl) and tpl[k] == "\\" and tpl[k + 1] == "\n":
+        k += 2
+    return k == i
+
+
 def _dollar_starts_expansion(tpl: str, i: int) -> bool:
     """位置 i 处的 $ 是否开启新展开（紧邻的 $ 会被 shell 两两配成 $$）。
 
@@ -634,7 +653,8 @@ class ShellAgent:
             raise
 
     def _placeholder_at(self, tpl: str, i: int,
-                        state: str = "bare") -> Optional[str]:
+                        state: str = "bare",
+                        prev_ph_end: int = -1) -> Optional[str]:
         """位置 i 处是否为完整占位符（含 $prompt_file 前缀关系保护）。
 
         除单词字符边界外还要挡住紧跟在未转义 $ 后面的情况：shell 把
@@ -657,13 +677,23 @@ class ShellAgent:
         完整占位符；替换会静默多拼出后缀、或把 $prompt_file 误当
         $prompt 用（单引号内续行不被删除，那里的反斜杠-换行本就终止
         变量名，不适用本条）。
+        prev_ph_end：调用方最近一次兑现的占位符结束位置。紧贴它的字面
+        单词字符不是模板字面量，而是上一个占位符的替换结果（如
+        `$prompt$prompt`、`$prompt\\<换行>$prompt`）：shell 会把两段
+        拼成同一个词，第二个占位符要照常兑现（见
+        _directly_after_placeholder）；模板里字面紧贴的 `x$prompt`
+        仍然不替换。
         """
         if state == "single":
-            if i > 0 and _WORD_CHAR.match(tpl[i - 1]):
+            # 单引号内续行不被删除，相邻要求物理紧邻（不能用跨续行的
+            # _directly_after_placeholder）
+            if (i > 0 and _WORD_CHAR.match(tpl[i - 1])
+                    and prev_ph_end != i):
                 return None
         else:
             prev = _prev_effective_pos(tpl, i)
-            if prev >= 0 and _WORD_CHAR.match(tpl[prev]):
+            if (prev >= 0 and _WORD_CHAR.match(tpl[prev])
+                    and not _directly_after_placeholder(tpl, i, prev_ph_end)):
                 return None
             if (prev >= 0 and tpl[prev] == "$"
                     and not _dollar_starts_expansion(tpl, i)):
@@ -1080,6 +1110,10 @@ class ShellAgent:
         # （echo $(echo hi)#there 输出 hi#there）。子 shell/case pattern
         # 的 ) 是词边界，其后的 # 才是注释，必须区分（见下面的 # 分支）
         word_internal_paren_end = -1
+        # 最近一次兑现的占位符在模板中的结束位置：紧贴它的单词字符是
+        # 替换结果的结尾、不是模板字面量（`$prompt$prompt` 的第二个
+        # 占位符要照常替换，见 _placeholder_at / _directly_after_placeholder）
+        last_ph_end = -1
         state = "bare"  # bare / single / double
         i = 0
         n = len(tpl)
@@ -1091,13 +1125,16 @@ class ShellAgent:
                     out.append(ch)
                     i += 1
                     continue
-                ph = self._placeholder_at(tpl, i, state="single")
+                ph = self._placeholder_at(tpl, i, state="single",
+                                          prev_ph_end=last_ph_end)
                 if ph == "$prompt":
                     out.append(_escape_in_single_quotes(prompt))
+                    last_ph_end = i + len(ph)
                     i += len(ph)
                     continue
                 if ph == "$prompt_file":
                     out.append(_escape_in_single_quotes(file_value()))
+                    last_ph_end = i + len(ph)
                     i += len(ph)
                     continue
                 out.append(ch)
@@ -1167,13 +1204,16 @@ class ShellAgent:
                     out.append(ch)
                     i += 1
                     continue
-                ph = self._placeholder_at(tpl, i, state="double")
+                ph = self._placeholder_at(tpl, i, state="double",
+                                          prev_ph_end=last_ph_end)
                 if ph == "$prompt":
                     out.append(_escape_in_double_quotes(prompt))
+                    last_ph_end = i + len(ph)
                     i += len(ph)
                     continue
                 if ph == "$prompt_file":
                     out.append(_escape_in_double_quotes(file_value()))
+                    last_ph_end = i + len(ph)
                     i += len(ph)
                     continue
                 out.append(ch)
@@ -1414,13 +1454,16 @@ class ShellAgent:
                 out.append(ch)
                 i += 1
                 continue
-            ph = self._placeholder_at(tpl, i, state="bare")
+            ph = self._placeholder_at(tpl, i, state="bare",
+                                      prev_ph_end=last_ph_end)
             if ph == "$prompt":
                 out.append(_quote(prompt))
+                last_ph_end = i + len(ph)
                 i += len(ph)
                 continue
             if ph == "$prompt_file":
                 out.append(_quote(file_value()))
+                last_ph_end = i + len(ph)
                 i += len(ph)
                 continue
             out.append(ch)

@@ -1331,6 +1331,84 @@ def test_render_command_pid_dollar_does_not_open_substitution(tmp_path):
             assert re.fullmatch(pattern, r.stdout), (tpl, shell, r.stdout)
 
 
+def test_render_command_adjacent_placeholders(tmp_path):
+    """紧贴上一个占位符兑现结果的占位符（含只隔续行的情形）也要替换。
+
+    回归：`$prompt$prompt` 里第二个占位符前面紧贴的是第一个占位符的
+    替换结果（单词字符 t/e），渲染器的「完整词」左边界检查把替换结果
+    误当模板字面量、只兑现第一个：命令里留下字面 `$prompt`，shell 把它
+    当空变量展开——提示词被静默丢掉一半；`$prompt_file$prompt`
+    （或 `$prompt_file$prompt_file`）同理漏替换。隔续行的
+    `$prompt\\<换行>$prompt` 在分词前被删除、与紧邻写法等价，同样会漏。
+    修复：记录最近兑现占位符的结束位置，紧贴它的单词字符不再拦截；
+    模板里字面紧贴的 `x$prompt` / `$prompt_out` / `$$prompt` 仍然不
+    替换（下方负面对照）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    prompt = "P $(touch PWNED) `touch PWNED2` 'q' \\ d"
+
+    # 相邻占位符全部兑现：两个 shell 下都输出提示词拼接/翻倍
+    deliver = (
+        ("printf %s $prompt$prompt", prompt + prompt),
+        ('printf %s "$prompt$prompt"', prompt + prompt),
+        ("printf %s '$prompt$prompt'", prompt + prompt),
+        # 续行在分词前被删除：第二个占位符同样紧贴第一个的兑现结果
+        ("printf %s $prompt\\\n$prompt", prompt + prompt),
+        # 三个相邻占位符都要兑现（漏一个就会少一段）
+        ("printf %s $prompt$prompt$prompt", prompt * 3),
+    )
+    for tpl, expected in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        # 不依赖 shell 的判据（用无特殊字符的提示词，转义后原样可数）：
+        # 修复前只有第一个占位符被兑现，计数必然偏少
+        count = expected.count(prompt)
+        probe = ShellAgent(tpl, tmp_path, timeout=5).render_command("PPXQ")
+        assert probe.count("PPXQ") == count, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        if not _posix_shell_available():
+            continue
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert r.stdout == expected, (tpl, shell, r.stdout)
+            assert not (tmp_path / "PWNED").exists(), (tpl, shell)
+            assert not (tmp_path / "PWNED2").exists(), (tpl, shell)
+
+    # $prompt_file 与 $prompt 相邻混排：路径与提示词兑现为同一个词
+    mixed = (
+        ("printf %s $prompt_file$prompt", False),
+        ("printf %s $prompt$prompt_file", True),
+    )
+    for tpl, prompt_first in mixed:
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        pfile = agent._prompt_file
+        assert pfile is not None
+        if not _posix_shell_available():
+            continue
+        path = str(pfile.resolve())
+        expected = prompt + path if prompt_first else path + prompt
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert r.stdout == expected, (tpl, shell, r.stdout)
+
+    # 负面对照：模板里字面紧贴的单词字符/$$ 仍不算占位符（不替换）
+    for tpl in ("printf %s x$prompt", "printf %s $prompt_out",
+                "printf %s $$prompt", 'printf %s "x$prompt"',
+                "printf %s x$prompt$prompt", "printf %s $promptx$prompt"):
+        assert command_receives_prompt(tpl) is False, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        assert "$prompt" in rendered and prompt not in rendered, tpl
+
+
 def test_render_command_comment_hash_after_expansion_close(tmp_path):
     """紧跟命令替换/算术展开/进程替换结束 ) 的 # 不是注释。
 
