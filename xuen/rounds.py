@@ -486,9 +486,16 @@ class RoundGuard:
                                reason="未检测到可运行的测试套件，等待用户评分")
             # auto 且（无套件 / 套件不可用）→ 兜底评分者
 
-        if self.cfg.rounds.fallback == "ai" or mode == "ai":
+        if mode == "ai":
             return self._ai_verdict(round_no, cid)
-        # 用户评分（mode == "user" 或 auto 兜底到 user）
+        if mode == "user":
+            # 显式 user：只认用户评分。fallback 只服务于 auto（默认就是
+            # ai），若拿 fallback 顶替用户的选择，verify=user 会被静默
+            # 变成 AI 评分——用户永远等不到 verdicts.txt 的兑现通道
+            return self._user_verdict(cid)
+        # auto 且无可用测试套件 → fallback 指定的兜底评分者
+        if self.cfg.rounds.fallback == "ai":
+            return self._ai_verdict(round_no, cid)
         return self._user_verdict(cid)
 
     def _user_verdict(self, cid: str) -> Verdict:

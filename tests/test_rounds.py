@@ -355,6 +355,46 @@ def test_verify_off_adopts_without_verification(ws):
 
 
 # ---------------------------------------------------------------- 用户评分
+def test_verify_user_ignores_ai_fallback(ws):
+    """verify=user 必须走用户评分：fallback（默认 ai）只服务 auto 模式，
+    不能顶替用户的显式选择，否则候选会被 AI 静默打分而非等待用户。"""
+    workspace, state_path = ws
+    called = {"judge": 0}
+
+    def fake_judge(prompt):
+        called["judge"] += 1
+        return True, "评分: 9"
+
+    guard = make_guard(workspace, state_path, verify="user", fallback="ai",
+                       judge=fake_judge)
+    guard.start()
+    write_idea(state_path, "用户还没看过的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert called["judge"] == 0
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_auto_fallback_user_waits_for_user(ws, tmp_path):
+    """auto + fallback=user：无测试套件时挂起等用户评分，不得调用 AI 评审。"""
+    repo = tmp_path / "empty"
+    repo.mkdir()
+    called = {"judge": 0}
+
+    def fake_judge(prompt):
+        called["judge"] += 1
+        return True, "评分: 9"
+
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="auto", fallback="user",
+                       repo=str(repo), judge=fake_judge)
+    guard.start()
+    write_idea(state_path, "等待用户评分的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert called["judge"] == 0
+    assert guard.best["round"] == 0
+
+
 def test_user_pending_then_late_adoption_restores_candidate(ws):
     """异步用户评分：挂起候选拿到高分后，前进式晋升并写回状态文件。"""
     workspace, state_path = ws
