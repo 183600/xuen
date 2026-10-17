@@ -46,6 +46,27 @@ def _quote(prompt: str) -> str:
     return shlex.quote(prompt)
 
 
+def _cmd_double_quotes_after(text: str, in_quotes: bool) -> bool:
+    """cmd.exe 中扫描 text 后的「是否仍在双引号内」状态。
+
+    只跟踪双引号：cmd 的引号状态由未转义的 " 翻转；引号外的 ^ 转义下一个
+    字符（^" 是字面引号、不翻转）。%VAR% 展开也可能带来引号，但模板无法
+    预知展开结果，不在跟踪范围内（$prompt_file 路径本身不含 %，含 cmd
+    元字符的工作区会在配置校验被拒绝，见 config._validate）。
+    """
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == "^" and not in_quotes:
+            i += 2
+            continue
+        if c == '"':
+            in_quotes = not in_quotes
+        i += 1
+    return in_quotes
+
+
 # 占位符边界：与 config._validate 的正则一致，A-Za-z0-9_ 是「单词字符」
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
@@ -1527,6 +1548,10 @@ class ShellAgent:
 
     def _render_windows(self, tpl: str, prompt: str, dry_run: bool = False) -> str:
         f_sentinel = "\0XUEN_PROMPT_FILE\0"
+        # 引号内的占位符单独用一个哨兵：外层引号已经把路径归组，插入
+        # list2cmdline 生成的引号会变成嵌套引号（"pre "C:\Users\John
+        # Doe\p.md" suf"），cmd 把参数拆错、外部 agent 拿到坏路径
+        f_inq_sentinel = "\0XUEN_PROMPT_FILE_INQ\0"
         p_sentinel = "\0XUEN_PROMPT\0"
         # 先把两处占位符统一换成哨兵，最后才一次性替换成实际内容。
         # 若先插入内容再做另一处替换，后插入的内容（转义后的提示词 /
@@ -1535,21 +1560,37 @@ class ShellAgent:
         # 嵌在引号里会被当作字面值）
         for ph in ('"$prompt_file"', "'$prompt_file'"):
             tpl = tpl.replace(ph, f_sentinel)
-        tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt_file"
-                     + self._PLACEHOLDER_BOUNDARY, f_sentinel, tpl)
+        # 剩余占位符要按所在的 cmd 引号状态区分：引号内插裸路径、引号外
+        # 插转义路径（Windows 上 $prompt 已被配置校验整体拒绝，只有
+        # $prompt_file 需要区分；见 config._validate）
+        pattern = re.compile(self._PLACEHOLDER_HEAD + r"\$prompt_file"
+                             + self._PLACEHOLDER_BOUNDARY)
+        parts = []
+        last = 0
+        in_quotes = False
+        for match in pattern.finditer(tpl):
+            in_quotes = _cmd_double_quotes_after(tpl[last:match.start()],
+                                                 in_quotes)
+            parts.append(tpl[last:match.start()])
+            parts.append(f_inq_sentinel if in_quotes else f_sentinel)
+            last = match.end()
+        parts.append(tpl[last:])
+        tpl = "".join(parts)
         for ph in ('"$prompt"', "'$prompt'"):
             tpl = tpl.replace(ph, p_sentinel)
         tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt"
                      + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
 
-        if f_sentinel in tpl:
+        if f_sentinel in tpl or f_inq_sentinel in tpl:
             if dry_run:
                 # 只探测占位符是否会被兑现：不落盘提示词文件
                 path = f"/xuen-dry-run/{_PLACEHOLDER_PROBE}"
             else:
                 pfile = self._write_prompt_file(prompt)
                 path = str(pfile.resolve())
-            # 路径可能含空格：与 $prompt 一样做 shell 转义后再替换
+            # 引号内直接插裸路径（文件名不可能含 "，且含 cmd 元字符的
+            # 工作区在配置校验已拒绝）；引号外按 cmd 规则加引号
+            tpl = tpl.replace(f_inq_sentinel, path)
             tpl = tpl.replace(f_sentinel, _quote(path))
         return tpl.replace(p_sentinel, _quote(prompt))
 

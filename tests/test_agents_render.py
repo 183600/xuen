@@ -1895,3 +1895,62 @@ def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     assert r.stdout == "4\nhi `id`"
 
 
+def test_render_windows_prompt_file_inside_quotes_is_not_double_quoted(
+        tmp_path, monkeypatch):
+    """Windows 下 $prompt_file 嵌在双引号串中间时不能再套一层引号。
+
+    回归：模板 `tool "pre $prompt_file suf"`（占位符前后还有字面量，
+    不匹配整词的 "$prompt_file" 预处理）在渲染时被替换成
+    subprocess.list2cmdline 生成、带引号的路径，而它本身已在一对双引号
+    内，结果得到 `tool "pre "C:\\Users\\John Doe\\p.md" suf"` 这类嵌套
+    引号：cmd.exe 会把参数拆成多段，外部 agent 拿到坏路径（工作区含
+    空格时必现，Windows 用户目录常含空格）。修复：按 cmd 的引号状态
+    决定插入裸路径（引号内）还是 list2cmdline 转义后的路径（引号外）。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    ws = tmp_path / "ws with space"
+    ws.mkdir()
+
+    def render(tpl):
+        agent = agents.ShellAgent(tpl, ws, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None
+            path = str(agent._prompt_file.resolve())
+            assert " " in path
+            return rendered, path
+        finally:
+            agent._cleanup_prompt_file()
+
+    # 引号内有前后缀：路径直接插入引号内，不能再生成嵌套引号
+    rendered, path = render('tool "pre $prompt_file suf"')
+    assert rendered == f'tool "pre {path} suf"', rendered
+    rendered, path = render('tool "a $prompt_file"')
+    assert rendered == f'tool "a {path}"', rendered
+    # 引号外：仍按 cmd 规则给含空格的路径加引号
+    rendered, path = render('tool pre $prompt_file')
+    assert rendered == f'tool pre "{path}"', rendered
+    rendered, path = render('tool --file=$prompt_file')
+    assert rendered == f'tool --file="{path}"', rendered
+    # 引号外的 ^" 是字面引号、不开启引号语境：路径仍按 cmd 规则加引号
+    rendered, path = render('tool ^"pre $prompt_file suf^"')
+    assert rendered == f'tool ^"pre "{path}" suf^"', rendered
+    # 整词被引号包住的既有写法（预处理路径）不受影响
+    rendered, path = render('tool "$prompt_file"')
+    assert rendered == f'tool "{path}"', rendered
+    rendered, path = render('tool "$prompt_file" --end')
+    assert rendered == f'tool "{path}" --end', rendered
+    # 死活：任何位置都不能出现引用路径的嵌套引号（"" 视作异常）
+    for tpl in ('tool "pre $prompt_file suf"', 'tool "a $prompt_file"'):
+        rendered, _ = render(tpl)
+        assert '""' not in rendered, rendered
