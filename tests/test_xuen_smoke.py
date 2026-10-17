@@ -2043,6 +2043,42 @@ def test_words_clean_unwraps_each_segment_after_separators():
         assert _clean_line(w) == w, w
 
 
+def test_words_clean_strips_numbering_of_each_segment():
+    """分隔符分隔的带序号词表每一项都要剥掉序号（含装饰）。
+
+    回归：LLM 常输出 "1. **卷积**、2. **池化**、3. **全连接**" 这类编号
+    词表；只剥整行行首的序号时后续项残留 "2. **池化**"，且末项的收尾
+    装饰符被整行 rstrip 剥掉、前段却保留，词库混入不对称残片
+    （"卷积、2. **池化**、3. **全连接"）。中文编号 "1、卷积、2、池化"
+    的序号分隔符与术语分隔符同为 "、"，分段后序号单独成段，也要按纯
+    数字不是术语的既有规则连同相邻分隔符丢弃。
+    """
+    from xuen.words import _clean_line
+
+    assert _clean_line("1. 卷积、2. 池化、3. 全连接") == "卷积、池化、全连接"
+    assert _clean_line("1. **卷积**、2. **池化**、3. **全连接**") \
+        == "卷积、池化、全连接"
+    assert _clean_line("（1）卷积、（2）池化") == "卷积、池化"
+    assert _clean_line("(1) 卷积, (2) 池化") == "卷积, 池化"
+    assert _clean_line("1) 卷积; 2) 池化; 3) 全连接") == "卷积; 池化; 全连接"
+    assert _clean_line("1、卷积、2、池化、3、全连接") == "卷积、池化、全连接"
+    assert _clean_line("1、卷积；2、池化") == "卷积；池化"
+    assert _clean_line("卷积、2、池化") == "卷积、池化"
+    # 序号与装饰头相邻：必须先把成对装饰剥掉再剥序号，否则 "*" 被列表
+    # 符号规则吃掉、收尾符失去配对成为残片（"卷积、*池化**"）
+    assert _clean_line("1. **卷积**、2. **池化**") == "卷积、池化"
+    assert _clean_line("1. 卷积**、2. 池化") == "卷积、池化"
+    # 小数/版本号等真实术语不能被序号规则误伤
+    assert _clean_line("2.5D、0.5倍速") == "2.5D、0.5倍速"
+    assert _clean_line("3.14、2.718") == "3.14、2.718"
+    # 清洗必须是不动点
+    for src in ("1. **卷积**、2. **池化**", "1、卷积、2、池化",
+                "（1）卷积、（2）池化"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
     """E2BIG（命令行参数过长）不能以裸 [Errno 7] 抛出。
 

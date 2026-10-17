@@ -99,28 +99,74 @@ _HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
 
 
 # 同一行里用分隔符列出的多个术语可能各自带装饰头/收尾（LLM 常写
-# "**卷积**、**池化**、**全连接**"、"*fast*, *slow*"）：只从整行词头
-# unwrap 会只剥第一段，后面段的收尾被 rstrip(_EDGE_CHARS) 剥掉、装饰头
-# 却留在词中（"卷积、**池化"），残片随词库进入每轮提示词。按分隔符
-# 分段、逐段剥（分隔符与原有空白原样保留）。
+# "**卷积**、**池化**、**全连接**"、"*fast*, *slow*"）或各自的序号
+# （"1. 卷积、2. 池化、3. 全连接"）：只从整行词头 unwrap / 剥序号
+# 会只处理第一段，后面段的收尾被 rstrip(_EDGE_CHARS) 剥掉、序号与
+# 装饰头却留在词中（"卷积、2. **池化"），残片随词库进入每轮提示词。
+# 按分隔符分段、逐段剥（分隔符与原有空白原样保留）。
 _SEGMENT_SEP = re.compile(r"([、,，;；])")
 
 
+def _clean_segment_head(core: str) -> str:
+    """剥掉词段开头的成对装饰与序号/列表符号（不动点循环）。
+
+    顺序与 _clean_once 一致：先按成对装饰剥（"**词**" -> "词"），再剥
+    序号（"2. **词**" -> "**词**" -> "词"），反复到不动点。顺序反过来
+    会让 _BULLET 的列表符先吃掉装饰头的一个 "*"（"**词**" -> "*词**"，
+    收尾符失去配对成为残片）。
+    """
+    while True:
+        nxt = _unwrap_pair(core)
+        nxt = _unwrap_pair(_BULLET.sub("", nxt).strip())
+        if nxt == core:
+            return core
+        core = nxt
+
+
 def _unwrap_segments(w: str) -> str:
-    """对分隔符分开的每一段分别剥词头装饰。"""
+    """对分隔符分开的每一段分别剥词头装饰/序号并清理两端。"""
     parts = _SEGMENT_SEP.split(w)
+    cleaned = []
     for i in range(0, len(parts), 2):
         part = parts[i]
         core = part.strip()
         if not core:
+            cleaned.append(part)
             continue
         lead = part[:len(part) - len(part.lstrip())]
         trail = part[len(part.rstrip()):]
-        core = _unwrap_pair(core)
+        core = _clean_segment_head(core)
         while core and core[0] in _EDGE_CHARS:
-            core = _unwrap_pair(core[1:])
-        parts[i] = lead + core + trail
-    return "".join(parts)
+            core = _clean_segment_head(core[1:])
+        # 段尾同理：中段的装饰收尾/序号残片不在整行末尾，
+        # 整行 rstrip 碰不到（"1. 卷积**、2. 池化" 的 "*"）
+        core = core.rstrip(_EDGE_CHARS).strip()
+        cleaned.append(lead + core + trail)
+    # 中文编号 "1、卷积、2、池化" 的序号分隔符与术语分隔符同为 "、"：
+    # 分段后序号单独成段（"2"），_clean_segment_head 无处可剥。纯数字段
+    # 不是术语（与 _PURE_NUMBER 拒绝整行纯数字一致）；只要列表里还有
+    # 其他词段，就把纯数字段连同紧邻的分隔符一起丢弃。整个列表都是
+    # 纯数字时保持原样，交给 _PURE_NUMBER 统一裁决，不在这里清空。
+    has_word = any(t.strip() and not _PURE_NUMBER.match(t.strip())
+                   for t in cleaned)
+    out = []
+    i = 0
+    while i < len(parts):
+        t = cleaned[i // 2]
+        if i % 2 == 0 and has_word and t.strip() and _PURE_NUMBER.match(
+                t.strip()):
+            # 丢弃序号段与其后的分隔符（"卷积；2、池化" 保留 "；"）；
+            # 序号段在末尾（"卷积、2"）时改丢它前面的分隔符
+            if i + 1 < len(parts):
+                i += 2
+            else:
+                if out:
+                    out.pop()
+                i += 1
+            continue
+        out.append(t if i % 2 == 0 else parts[i])
+        i += 1
+    return "".join(out)
 
 
 def _clean_once(line: str) -> str | None:
