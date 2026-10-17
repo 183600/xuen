@@ -246,6 +246,50 @@ def test_corrupt_markers_auto_rejected(ws):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_corrupt_markers_restored_even_when_best_sections_empty(ws):
+    """最佳区块内容为空时，损坏的 research.md 依然必须被还原出标记行。
+
+    回归：还原原先按 get_section 的字符串相等判断「无需还原」，而区块缺失
+    与内容为空都读成 ""——最佳区块为空时损坏文件被误判为无需还原，之后
+    每一轮都从无标记的坏文件出发，结构检查永远拒绝、循环再也回不到最佳。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    # 采纳一个两个区块都为空的最佳（agent 有权把区块覆盖为空）
+    write_idea(state_path, "")
+    write_artifact(state_path, "")
+    assert guard.on_round_end(1) == "adopted"
+
+    state_path.write_text("# 只剩标题，标记全没了\n", encoding="utf-8")
+    assert guard.on_round_end(2) == "rejected"
+    text = state_path.read_text(encoding="utf-8")
+    # 标记行必须已修复（读取为空串而不是 None），内容与最佳一致
+    assert state._first_section(text, state.SECTION_IDEA) == ""
+    assert state._first_section(text, state.SECTION_ARTIFACT) == ""
+    assert [e["event"] for e in events(guard)][-1] == "restored"
+
+
+def test_late_adoption_writes_back_and_repairs_empty_sections(ws):
+    """补评采纳的候选区块为空、且当前状态文件损坏时，仍要写回并修复结构。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "")
+    write_artifact(state_path, "")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+
+    # 候选挂起期间外部 agent 把当前状态文件的标记弄丢
+    state_path.write_text("# 只剩标题，标记全没了\n", encoding="utf-8")
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    text = state_path.read_text(encoding="utf-8")
+    assert state._first_section(text, state.SECTION_IDEA) == ""
+    assert state._first_section(text, state.SECTION_ARTIFACT) == ""
+
+
 # ---------------------------------------------------------------- 测试级联
 def test_detect_test_suite_pytest(tmp_path):
     (tmp_path / "tests").mkdir()

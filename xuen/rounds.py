@@ -113,6 +113,18 @@ def parse_score(text: str) -> Optional[float]:
     return max(0.0, min(10.0, best[1]))
 
 
+def _readable_section(text: str, name: str) -> Optional[str]:
+    """区块的「结构可读」内容：缺文件 / 标记损坏返回 None，内容为空返回 ""。
+
+    state.get_section 把「区块缺失」与「内容为空」都读成 ""，还原时直接
+    比较会把「文件损坏但最佳区块也为空」误判成「无需还原」，research.md
+    的标记就永远修不回来；区分这两种情况必须先看结构是否可读。
+    """
+    if not text:
+        return None
+    return state._first_section(text, name)
+
+
 @dataclass
 class SuiteResult:
     """一次测试套件运行的结果。available=False 表示套件根本没能运行
@@ -636,8 +648,11 @@ class RoundGuard:
         changed: List[str] = []
         for name, key in ((state.SECTION_IDEA, "idea"),
                           (state.SECTION_ARTIFACT, "artifact")):
-            want = state.get_section(best_text, name)
-            have = state.get_section(cur, name) if cur else ""
+            want = _readable_section(best_text, name)
+            if want is None:
+                # best.md 自身损坏时按「空内容」处理，但结构仍要修复回来
+                want = ""
+            have = _readable_section(cur, name)
             if want == have:
                 continue
             try:
@@ -749,8 +764,10 @@ class RoundGuard:
                              f"前进式晋升为最佳并写回状态文件")
                 cur = self._read_state_text()
                 for name in (state.SECTION_IDEA, state.SECTION_ARTIFACT):
-                    want = state.get_section(text, name)
-                    have = state.get_section(cur, name) if cur else ""
+                    want = _readable_section(text, name)
+                    if want is None:
+                        want = ""
+                    have = _readable_section(cur, name)
                     if want != have:
                         try:
                             state.update_section_file(self.state_path, name, want)
