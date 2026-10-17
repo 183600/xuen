@@ -1812,6 +1812,67 @@ def test_render_command_rejects_ansi_c_quotes(tmp_path):
         assert r.stdout == "$'x' " + prompt
 
 
+def test_render_command_rejects_locale_quotes(tmp_path):
+    """裸上下文中的本地化引用（$"..."）模板必须整体拒绝。
+
+    回归：$"..." 与 $'...' 同为方言相关的引用语法——bash 把 $"..."
+    当 gettext 本地化字符串，dash（Ubuntu/Debian 的 /bin/sh）则把 $ 当
+    字面量、后面只是普通双引号串。此前这类模板能通过配置校验：在 dash
+    下送达的提示词被静默多拼出一个 $ 前缀（`$"$prompt"` 渲染成
+    `$"提示词"`，dash 输出 `$提示词`），两 shell 送达内容不一致；
+    `$`+续行+`"` 拼成的本地化引用同样漏网。方言无法预知，与 $'...'
+    同口径整体拒绝，绝不替换。
+    """
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    for tpl in ('printf %s $"$prompt"',
+                'printf %s x$"$prompt"',
+                'printf %s x=$"$prompt"',
+                'printf %s $"$prompt_file"',
+                'printf %s $\\\n"$prompt"',     # 续行拼成本地化引用
+                'printf %s x$\\\n"$prompt"'):
+        assert command_receives_prompt(tpl) is False, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        try:
+            agent.render_command("x")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'含 $"..." 的模板应被拒绝: {tpl}')
+    # 拒绝发生后工作区不能残留无消费者的提示词文件：$prompt_file 先落盘、
+    # 随后的 $"..." 才触发拒绝时，渲染失败路径也必须清理
+    mixed = 'printf %s "$prompt_file" >/dev/null; printf %s $"$prompt"'
+    with_cleanup = ShellAgent(mixed, tmp_path, timeout=5)
+    try:
+        with_cleanup.render_command("x")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('含 $"..." 的模板应被拒绝')
+    assert [p.name for p in tmp_path.iterdir()] == []
+
+    if not _posix_shell_available():
+        return
+    # 对照：$$" 是 PID + 普通双引号、\$" 的 $ 被转义、双引号内的 $ 紧邻
+    # 结束引号——都不是本地化引用，照常送达且两 shell 一致
+    prompt = "a'b \"c\" $HOME `id`"
+    for tpl, prefix in (('printf %s $$"$prompt"', None),
+                        ('printf %s \\$"$prompt"', "$"),
+                        ('printf %s "x$"y"$prompt"', "x$y")):
+        assert command_receives_prompt(tpl) is True, tpl
+        rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+        for argv in (["/bin/sh", "-c", rendered], ["bash", "-c", rendered]):
+            r = subprocess.run(argv, capture_output=True, text=True,
+                               cwd=tmp_path)
+            assert r.returncode == 0, (tpl, argv, r.stderr)
+            if prefix is None:
+                assert r.stdout.endswith(prompt), (tpl, r.stdout)
+                assert r.stdout[:-len(prompt)].isdigit(), (tpl, r.stdout)
+            else:
+                assert r.stdout == prefix + prompt, (tpl, r.stdout)
+
+
 def test_arithmetic_expansion_not_treated_as_heredoc(tmp_path):
     """$((...)) 算术展开里的 << 不能按 heredoc 重定向登记。
 
