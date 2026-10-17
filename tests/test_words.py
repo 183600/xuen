@@ -209,3 +209,35 @@ def test_words_clean_strips_numbering_of_each_segment():
         w = _clean_line(src)
         assert w is not None
         assert _clean_line(w) == w, w
+
+
+def test_words_clean_keeps_terms_with_tight_ascii_separators():
+    """数字前缀 + 紧贴的 ASCII 逗号/分号不是列表序号，术语不能被截断。
+
+    回归：纯数字段被当列表序号丢弃时只看分隔符分段，未区分分隔符类型。
+    "1,2-丙二醇" 被截成 "2-丙二醇"、"2,4-D" 被截成 "4-D"、"1,25-二羟基
+    维生素D3" 被截成 "25-二羟基维生素D3"——词形变成另一个术语（1,2-丙二醇
+    与 2-丙二醇是不同化合物），词库进入每轮提示词后会误导外部 agent。
+    紧贴数字的 ASCII 逗号/分号是术语内部连接符（列表序号常见写法
+    "1. " / "1) " / "1、" 已由 _BULLET 与顿号规则处理）；分隔符后跟空白
+    （"1, 卷积"）或使用中文顿号（"1、卷积"）时仍按列表序号剥掉。
+    """
+    # 化学名/版本号：紧贴的 ASCII 逗号在术语内部
+    assert _clean_line("1,2-丙二醇") == "1,2-丙二醇"
+    assert _clean_line("2,3-二甲基丁烷") == "2,3-二甲基丁烷"
+    assert _clean_line("1,3,5-三嗪") == "1,3,5-三嗪"
+    assert _clean_line("1,25-二羟基维生素D3") == "1,25-二羟基维生素D3"
+    assert _clean_line("2,4-D") == "2,4-D"
+    # 术语后面还有列表时也不受影响
+    assert _clean_line("2,3-二甲基丁烷、乙醇") == "2,3-二甲基丁烷、乙醇"
+    # 不能借机放宽真正的列表序号：带空白 / 中文顿号仍要剥
+    assert _clean_line("1, 卷积") == "卷积"
+    assert _clean_line("1, 卷积, 2, 池化") == "卷积, 池化"
+    assert _clean_line("1、卷积、2、池化") == "卷积、池化"
+    # 真实词表端到端：被截断的词不能混进词库
+    assert parse_word_lines("1,2-丙二醇\n2,4-D\n") == ["1,2-丙二醇", "2,4-D"]
+    # 清洗必须是不动点
+    for src in ("1,2-丙二醇", "1,3,5-三嗪", "2,4-D", "1, 卷积, 2, 池化"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w

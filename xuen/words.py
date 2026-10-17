@@ -180,6 +180,23 @@ def _clean_segment_head(core: str) -> str:
         core = nxt
 
 
+def _is_list_index_sep(parts: List[str], i: int) -> bool:
+    """纯数字段（parts[i]）的相邻分隔符是否把它标记为列表序号。
+
+    "1、卷积" 的中文顿号与 "1, 卷积" 的 ", "（分隔符后跟空白）是列表
+    排版；而 "1,2-丙二醇"、"2,4-D" 里紧贴数字的 ASCII 逗号/分号是术语
+    内部的连接符——列表序号极少这样写（常见写法 "1. " / "1) " / "1、"
+    已由 _BULLET 与顿号规则处理），按序号丢弃会把术语悄悄截成另一个词。
+    """
+    if i + 1 < len(parts):
+        sep, after = parts[i + 1], parts[i + 2]
+    else:
+        sep, after = parts[i - 1], parts[i]
+    if sep in "、；，":
+        return True
+    return sep in ",;" and after[:1].isspace()
+
+
 def _unwrap_segments(w: str) -> str:
     """对分隔符分开的每一段分别剥词头装饰/序号并清理两端。"""
     parts = _SEGMENT_SEP.split(w)
@@ -212,6 +229,12 @@ def _unwrap_segments(w: str) -> str:
         t = cleaned[i // 2]
         if i % 2 == 0 and has_word and t.strip() and _PURE_NUMBER.match(
                 t.strip()):
+            # 紧贴数字的 ASCII 逗号/分号（"1,2-丙二醇"）是术语内部连接符，
+            # 不是列表序号，原样保留（见 _is_list_index_sep）
+            if not _is_list_index_sep(parts, i):
+                out.append(t)
+                i += 1
+                continue
             # 丢弃序号段与其后的分隔符（"卷积；2、池化" 保留 "；"）；
             # 序号段在末尾（"卷积、2"）时改丢它前面的分隔符
             if i + 1 < len(parts):
