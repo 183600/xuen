@@ -149,6 +149,46 @@ def _round_prompts(prompts):
     return [p for p in prompts if "本轮随机灵感词" in p]
 
 
+def test_regen_words_partial_generation_uses_fresh_words(tmp_path):
+    """--regen-words 明确要求重建词库：生成未完成时不能悄悄绕回旧词库。
+
+    回归：生成结果比磁盘旧词库少时走了「保留并复用旧词库」分支，与
+    --regen-words（忽略已有词库并重新生成）的语义相悖——用户显式要求
+    重建，却拿到正是自己想替换掉的旧词，且新生成的词被整批丢弃。
+    """
+    sink, prompts, workspace, exc = _run_fake_words_scenario(
+        tmp_path, "FRESHWORD1\nFRESHWORD2", regen_words=True)
+    assert exc is None
+    rounds = _round_prompts(prompts)
+    assert rounds, "未观察到研究循环轮次的提示词"
+    assert "FRESHWORD" in rounds[-1]
+    assert "DISKWORD" not in rounds[-1]
+    assert any("本次临时使用" in m for _, m in sink.messages)
+    # 不能再拿残缺新词表覆盖磁盘上更完整的旧词库
+    assert (workspace / "words.txt").read_text(encoding="utf-8") \
+        .startswith("DISKWORD")
+
+
+def test_regen_words_failed_generation_does_not_reuse_old_words(tmp_path):
+    """--regen-words 下生成失败也不能回退复用旧词库，应明确失败。"""
+    sink, prompts, workspace, exc = _run_fake_words_scenario(
+        tmp_path, "", regen_words=True)
+    assert exc is not None and "词库为空" in str(exc)
+    assert not _round_prompts(prompts), "生成失败后不应进入研究循环"
+    assert any("忽略磁盘上的旧词库" in m for _, m in sink.messages)
+    assert (workspace / "words.txt").read_text(encoding="utf-8") \
+        .startswith("DISKWORD")
+
+
+def test_reuse_true_still_skips_generation(tmp_path):
+    """未指定 --regen-words 时复用旧词库的常规路径不受影响。"""
+    sink, prompts, _workspace, exc = _run_fake_words_scenario(
+        tmp_path, "FRESHWORD1\nFRESHWORD2", regen_words=False)
+    assert exc is None
+    rounds = _round_prompts(prompts)
+    assert "DISKWORD" in rounds[-1]
+    assert "FRESHWORD" not in rounds[-1]
+    assert any("复用已有词库" in m for _, m in sink.messages)
 
 
 def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
