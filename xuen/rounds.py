@@ -159,11 +159,15 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 for p in list(repo.glob(pat)) + list((repo / "tests").glob(pat))]
     if py_tests and _find_spec("pytest"):
         return [sys.executable, "-m", "pytest", "-q"]
-    # 2) make test：Makefile 里定义了 test 目标
+    # 2) make test：Makefile 里定义了 test 目标。只认精确的 test 目标：
+    #    test-unit / test-ci 之类后缀目标不算——探测命中后会执行
+    #    `make test`，而 Makefile 里根本没有 test 目标时 make 以退出码 2
+    #    失败，run_suite 会把它当成「测试失败」拒绝候选，连 auto 模式的
+    #    兜底评分（user/ai）都被跳过；该场景应属「没有可运行套件」
     makefile = repo / "Makefile"
     if makefile.is_file() and shutil.which("make"):
         try:
-            if re.search(r"(?m)^test[a-zA-Z0-9_.-]*\s*:", makefile.read_text(encoding="utf-8", errors="replace")):
+            if re.search(r"(?m)^test\s*:", makefile.read_text(encoding="utf-8", errors="replace")):
                 return ["make", "test"]
         except OSError:
             pass

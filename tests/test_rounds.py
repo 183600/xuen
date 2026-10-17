@@ -267,6 +267,25 @@ def test_detect_test_suite_make(tmp_path):
     assert suite == ["make", "test"]
 
 
+def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
+    """只有 test-unit / test-ci 之类后缀目标不算 make 套件：探测命中会执行
+    `make test`，而 Makefile 并没有 test 目标、make 以退出码 2 失败，
+    会被误判为「测试失败」拒绝候选（该场景应属「没有可运行套件」）。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("test-unit:\n\techo unit\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_exact_target_alongside_suffixed(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test-unit:\n\techo unit\ntest:\n\techo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def _fake_npm(monkeypatch):
     """让 npm 探测分支无视本机是否装了 npm（只伪造 npm 的 which 结果）。"""
     real_which = shutil.which
@@ -428,6 +447,32 @@ def test_auto_mode_falls_back_to_ai_without_suite(ws, tmp_path):
     write_idea(state_path, "想法")
     assert guard.on_round_end(1) == "adopted"
     assert guard.best["verifier"] == "ai"
+
+
+def test_auto_mode_make_without_exact_test_target_falls_back(ws, tmp_path):
+    """Makefile 只有 test-unit 目标（无 test 目标）时不能因 `make test` 报
+    错而拒绝候选：应视为没有可运行套件，转 auto 的兜底评分（ai）。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "Makefile").write_text("test-unit:\n\techo unit only\n",
+                                   encoding="utf-8")
+    called = {"suite": 0}
+
+    def fake_suite(argv, cwd, timeout):
+        called["suite"] += 1
+        return SuiteResult(available=True, ok=False, reason="退出码 2")
+
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="auto", fallback="ai",
+                       repo=str(repo), suite_runner=fake_suite,
+                       judge=lambda p: (True, "评分: 8"))
+    guard.start()
+    write_idea(state_path, "想法")
+    assert guard.on_round_end(1) == "adopted"
+    assert guard.best["verifier"] == "ai"
+    assert called["suite"] == 0
 
 
 def test_verify_off_adopts_without_verification(ws):
