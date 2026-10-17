@@ -1943,6 +1943,41 @@ def test_reuse_true_still_skips_generation(tmp_path):
     assert any("复用已有词库" in m for _, m in sink.messages)
 
 
+def test_words_clean_unwraps_decorated_terms_with_annotation():
+    """词头成对装饰符后跟解释时不能留下残片。
+
+    回归：LLM 常输出 "- **术语**（解释）"、"*术语*: 说明" 这类 markdown；
+    收尾装饰符被后面的解释挡在串尾之外，只按两端字符剥离会留下
+    "术语**（解释）"、"术语*" 残片混进词库，再被当作灵感词拼进每轮
+    提示词。成对装饰符（**、*、`、引号等）必须连收尾一起剥掉，
+    同时不能误伤词中装饰（"C*代数"）或纯数字/表达式（"2**10"）。
+    """
+    from xuen.words import _clean_line, parse_word_lines
+
+    assert _clean_line("- **Term** (explanation)") == "Term (explanation)"
+    assert _clean_line("*术语*（解释）") == "术语（解释）"
+    assert _clean_line("- `梯度下降`（Gradient Descent）") \
+        == "梯度下降（Gradient Descent）"
+    assert _clean_line("“生成模型”（generative model）") \
+        == "生成模型（generative model）"
+    assert _clean_line("「**术语**（x）」") == "术语（x）"
+    assert _clean_line("- **C**语言") == "C语言"
+    assert _clean_line("**Term**") == "Term"
+    assert _clean_line("__init__") == "init"
+    # 不能误伤：装饰符在词中 / 没有配对的收尾符
+    assert _clean_line("2**10") == "2**10"
+    assert _clean_line("C*代数") == "C*代数"
+    assert _clean_line("*args") == "args"
+    assert _clean_line("**kwargs") == "kwargs"
+    assert _clean_line("- Term (explanation)") == "Term (explanation)"
+    # 清洗必须是不动点：保存到 words.txt 的词 load_words 再洗一遍不能变
+    for src in ("- **Term** (explanation)", "*术语*（解释）", "「**术语**（x）」"):
+        w = _clean_line(src)
+        assert _clean_line(w) == w, w
+    assert parse_word_lines("- **注意力机制**（Attention）\n2**10\n") \
+        == ["注意力机制（Attention）", "2**10"]
+
+
 def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
     """E2BIG（命令行参数过长）不能以裸 [Errno 7] 抛出。
 
