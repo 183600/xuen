@@ -275,6 +275,26 @@ def _locked_state(path: Path) -> Iterator[None]:
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
+def sanitize_section_content(content: str) -> str:
+    """区块内容写入 update_section_file 时会得到的规整形态。
+
+    与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
+    配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
+    被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
+    剥离标记行后，首/尾行可能残留空白或 BOM（如内容以标记行开头，
+    紧随其后的正文行带缩进）：get_section/_first_section 读出时同样
+    会剥掉这些字符，这里必须用同一套规整，否则返回的新内容与文件
+    实际可读内容不一致，回读校验也失去意义。
+    比较「区块内容是否相同」的调用方（如轮次守卫的心跳/还原判定）
+    必须用本函数规整后再比较，否则含标记字面量的区块在落盘规整后
+    永远比较不相等。
+    """
+    return "\n".join(
+        line for line in content.strip().strip("\n").splitlines()
+        if not _SECTION_MARKER.match(line)
+    ).strip(" \t\n\ufeff")
+
+
 def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
     with _locked_state(path):
@@ -284,17 +304,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         old = get_section(text, name)
 
         s, e = start_marker(name), end_marker(name)
-        # 与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
-        # 配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
-        # 被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
-        # 剥离标记行后，首/尾行可能残留空白或 BOM（如内容以标记行开头，
-        # 紧随其后的正文行带缩进）：get_section/_first_section 读出时同样
-        # 会剥掉这些字符，这里必须用同一套规整，否则返回的 new 与文件
-        # 实际可读内容不一致，回读校验也失去意义
-        new = "\n".join(
-            line for line in content.strip().strip("\n").splitlines()
-            if not _SECTION_MARKER.match(line)
-        ).strip(" \t\n\ufeff")
+        new = sanitize_section_content(content)
         body = "\n" + new + "\n"
         # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
         # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块

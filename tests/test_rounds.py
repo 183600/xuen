@@ -123,6 +123,57 @@ def test_heartbeat_when_no_change(ws):
     assert guard.stats.candidates == 0
 
 
+def test_marker_literal_content_reaches_heartbeat_after_restore(ws):
+    """区块正文含独占一行的区块标记字面量时，还原后必须能回到心跳。
+
+    回归：产物区正文里独占一行的 IDEA:START 是合法内容（重复 START 被
+    解析器过滤为同区块字面量）。守卫还原时 update_section_file 会按写入
+    协议剥掉这类标记行，而心跳/还原判定原先比较原样内容——最佳区永远
+    带字面量、磁盘区永远没有，agent 不再改动也会每轮误生成候选快照、
+    挂起并重复还原，永远无法心跳。
+    """
+    workspace, state_path = ws
+    literal = state.start_marker(state.SECTION_IDEA)
+    with_literal = f"伪代码 v1\n{literal}\n写入协议字面量"
+    # 基线直接落盘（绕过写入协议，模拟外部 agent 直接编辑出含字面量的区块）
+    state_path.write_text(
+        f"# 研究\n\n{state.start_marker(state.SECTION_IDEA)}\n想法 v1\n"
+        f"{state.end_marker(state.SECTION_IDEA)}\n\n"
+        f"{state.start_marker(state.SECTION_ARTIFACT)}\n{with_literal}\n"
+        f"{state.end_marker(state.SECTION_ARTIFACT)}\n",
+        encoding="utf-8")
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    assert state.get_section((guard.dir / "best.md").read_text(encoding="utf-8"),
+                             state.SECTION_ARTIFACT) == with_literal
+
+    # 第 1 轮：标记交叉错乱的候选被守卫拒绝，research.md 还原为最佳；
+    # 写入协议把产物区正文里的标记字面量规整掉
+    state_path.write_text(
+        f"# 研究\n\n{state.start_marker(state.SECTION_IDEA)}\n想法 v2\n"
+        f"{state.start_marker(state.SECTION_ARTIFACT)}\n产物 v2\n"
+        f"{state.end_marker(state.SECTION_IDEA)}\n"
+        f"{state.end_marker(state.SECTION_ARTIFACT)}\n",
+        encoding="utf-8")
+    assert guard.on_round_end(1) == "rejected"
+    assert state.get_section(state_path.read_text(encoding="utf-8"),
+                             state.SECTION_ARTIFACT) \
+        == "伪代码 v1\n写入协议字面量"
+    restored = guard.stats.restored
+    assert len(cand_files(guard)) == 1
+
+    # 第 2、3 轮：agent 不再改动 → 心跳；不得再生成候选 / 挂起 / 重复还原
+    assert guard.on_round_end(2) == "heartbeat"
+    assert guard.on_round_end(3) == "heartbeat"
+    assert guard.stats.heartbeat == 2
+    assert guard.stats.candidates == 1
+    assert guard.stats.pending == 0
+    assert guard.stats.restored == restored
+    assert len(cand_files(guard)) == 1
+    assert [e["event"] for e in events(guard) if e.get("round") in (2, 3)] \
+        == ["heartbeat", "heartbeat"]
+
+
 # ---------------------------------------------------------------- AI 评分
 def test_ai_adopt_promotes_candidate(ws):
     workspace, state_path = ws

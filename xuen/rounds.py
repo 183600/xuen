@@ -116,13 +116,24 @@ def parse_score(text: str) -> Optional[float]:
 def _readable_section(text: str, name: str) -> Optional[str]:
     """区块的「结构可读」内容：缺文件 / 标记损坏返回 None，内容为空返回 ""。
 
-    state.get_section 把「区块缺失」与「内容为空」都读成 ""，还原时直接
-    比较会把「文件损坏但最佳区块也为空」误判成「无需还原」，research.md
-    的标记就永远修不回来；区分这两种情况必须先看结构是否可读。
+    区分 None 与 ""：state.get_section 把「区块缺失」与「内容为空」都读成
+    ""，还原时直接比较会把「文件损坏但最佳区块也为空」误判成「无需还原」，
+    research.md 的标记就永远修不回来；必须先看结构是否可读。
+
+    内容按写入规整形态返回（见 state.sanitize_section_content）：还原 /
+    补评写回时 update_section_file 会剥掉内容里独占一行的区块标记字面量，
+    比较时必须用同一形态，否则含标记字面量的最佳内容与磁盘上规整后的
+    内容永远不相等——每轮都会误判为「仍有差异」并重复还原。
+
+    注意与 state.get_section 的区分：后者返回原样内容，供展示 / 提示词
+    使用；本函数服务于「比较后可能写回」的守卫判定。
     """
     if not text:
         return None
-    return state._first_section(text, name)
+    content = state._first_section(text, name)
+    if content is None:
+        return None
+    return state.sanitize_section_content(content)
 
 
 @dataclass
@@ -338,8 +349,13 @@ class RoundGuard:
             return ""
 
     def _sections(self, text: str) -> Tuple[str, str]:
-        return (state.get_section(text, state.SECTION_IDEA),
-                state.get_section(text, state.SECTION_ARTIFACT))
+        # 取「写入规整形态」：心跳 / 改动判定必须与 update_section_file
+        # 落盘后的可读内容一致，否则含标记字面量的区块永远判为有改动，
+        # 每轮都生成无意义候选并重复还原（见 _readable_section）
+        return (state.sanitize_section_content(
+                    state.get_section(text, state.SECTION_IDEA)),
+                state.sanitize_section_content(
+                    state.get_section(text, state.SECTION_ARTIFACT)))
 
     def _new_id(self, round_no: int) -> str:
         base = f"{time.strftime('%Y%m%d-%H%M%S')}-r{round_no}"
