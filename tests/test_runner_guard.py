@@ -232,3 +232,81 @@ def test_red_repo_pending_via_user_verdicts(env, tmp_path):
     assert state.get_section(snap_text, state.SECTION_IDEA) in (
         "第 2 版想法", "第 1 版想法", "第 3 版想法")
     assert _read(ws, "IDEA") == state.get_section(snap_text, state.SECTION_IDEA)
+
+
+class _ScriptedAgent:
+    """用行为闭包替代 ShellAgent 的假 agent：不启真实进程，行为完全可控。"""
+
+    def __init__(self, behavior):
+        self._behavior = behavior
+        self.returncode = None
+        self.timed_out = False
+        self.user_killed = False
+
+    def run(self, prompt):
+        return self._behavior(self)
+
+    def kill(self):
+        pass
+
+
+def test_user_killed_round_restores_best(env, tmp_path, monkeypatch):
+    """TUI 按 q 终止运行中的 agent：半截区块必须还原最佳——重跑时的起点
+    必须是已验证内容，而不是被 kill 时只写了一半的候选。"""
+    from xuen import state as st
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.loop.iterations = 1
+
+    class StopAfterKill(NullSink):
+        stopped = False
+
+        def should_stop(self):
+            return self.stopped
+
+    sink = StopAfterKill()
+
+    def behavior(agent):
+        # agent 只来得及写想法区就被用户杀掉（TUI 按 q / Ctrl+C）
+        st.update_section_file(ws / "research.md", st.SECTION_IDEA,
+                               "被 kill 的半截想法")
+        agent.returncode = -9
+        agent.user_killed = True
+        sink.stopped = True
+
+    monkeypatch.setattr(runner, "ShellAgent",
+                        lambda *a, **k: _ScriptedAgent(behavior))
+    runner.run(cfg, "测试任务", sink=sink)
+
+    # 半截内容没有留在状态文件里，循环停在基线最佳上；轮次按「跳过」记账
+    assert _read(ws, "IDEA") == "（暂无）"
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["verifier"] == "baseline"
+    events = _events(ws)
+    assert any(e["event"] == "skipped" and "用户终止" in e.get("reason", "")
+               for e in events)
+    assert not any(e["event"] == "candidate" for e in events)
+
+
+def test_interrupted_round_restores_best(env, tmp_path, monkeypatch):
+    """非 TUI 下 Ctrl+C 中断 agent：半截区块同样还原最佳，重跑从已验证
+    内容继续（此前中断轮次不归还，半截内容会流进下一轮起点）。"""
+    from xuen import state as st
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+
+    def behavior(agent):
+        st.update_section_file(ws / "research.md", st.SECTION_IDEA,
+                               "中断时的半截想法")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runner, "ShellAgent",
+                        lambda *a, **k: _ScriptedAgent(behavior))
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(cfg, "测试任务", sink=NullSink())
+
+    assert _read(ws, "IDEA") == "（暂无）"
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["verifier"] == "baseline"
