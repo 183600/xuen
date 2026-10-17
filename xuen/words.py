@@ -14,9 +14,12 @@ from .ui import ui
 # 不会是真实术语，序号必须剥掉，否则 "(6) LAMB" 会原样混进词库；
 # 小数点后跟数字时是真实术语（如 "0.5倍速"、"2.5D"），不能当序号剥掉；
 # 叠层编号（如 "1、2、词"、"1)2) 词"）要求 ) 、 ）等不带数字保护，
-# 否则第一层编号被保护挡下、整个编号残留词中，故仅对点号加 (?!\d)
+# 否则第一层编号被保护挡下、整个编号残留词中，故仅对点号加 (?!\d)。
+# 每次只剥一层：剥多层要交给 _clean_line 的不动点循环，否则 "- **词**（解释）"
+# 会被一次性连开头的 "**" 一起当序号剥掉（"[-*•·]\s*" 可匹配零个空格，
+# 连续星号被当成多个列表符号），成对装饰符的收尾符就成了残片
 _BULLET = re.compile(
-    r"^(?:\d+\s*[\.\．](?!\d)\s*|\d+\s*[、）)]\s*|（\d+）\s*|\(\d+\)\s*|\[\d+\]\s*|[-*•·]\s*)+")
+    r"^(?:\d+\s*[\.\．](?!\d)\s*|\d+\s*[、）)]\s*|（\d+）\s*|\(\d+\)\s*|\[\d+\]\s*|[-*•·]\s*)")
 
 # 词形两端要剥掉的引号/书名号/装饰符（含中文成对括号，
 # 否则 "「`词`," 之类会留下 '「`词' 残片混进词库；
@@ -26,6 +29,61 @@ _BULLET = re.compile(
 # 文件首个 BOM 剥掉，造成同一条词在保存与读取之间静默漂移；
 # 仅剩 BOM 的行（或 "\ufeff#注释"）也会绕过空行/注释过滤
 _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.、 \ufeff"
+
+# 成对装饰符：markdown 强调/代码（同字符成对，可叠 1~3 个）与中英文引号
+# （开闭不同字符）。LLM 常把词形装饰后再跟解释，如 "- **术语**（解释）"；
+# 此时收尾装饰符被 "（解释）" 挡在串尾之外，只剥两端的旧逻辑会留下
+# "术语**（解释）" 残片混进词库（再被当作灵感词拼进提示词）。
+# 强调对的收尾后仍可紧跟单词字符（markdown 里 "**C**语言" 是加粗 C 加
+# "语言"），引号对则要求收尾后是空白/行尾/非单词字符，避免把
+# "“x”与“y”" 这类连续引语误并成 "x与“y”"。
+# 下划线单独处理：markdown 规定 "_" 不能在词中配对（CommonMark 的
+# 左右侧翼规则），"_private_var" 是含下划线的术语而非斜体。若无此限制，
+# 词中下划线会被当作收尾符吃掉（"_private_var" → "privatevar"），
+# 而旧版只剥两端时恰好保留 "_private_var" 原形，属回归。
+_EMPHASIS_PAIR = re.compile(r"^([*~`]{1,3})(?=\S)(.+?)\1")
+_UNDERSCORE_PAIR = re.compile(r"^(_+)(?=\S)(.+?)\1(?=$|[^\w])")
+_QUOTE_PAIRS = (
+    ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"),
+    ("「", "」"), ("『", "』"), ("《", "》"), ("〈", "〉"),
+    ("【", "】"), ("〔", "〕"), ("〖", "〗"),
+)
+
+
+def _unwrap_pair(w: str) -> str:
+    """剥掉词头成对装饰符（含被后续解释挡住的收尾符）。
+
+    只从词头开始剥，循环处理嵌套（如 "「**术语**（解释）」"）；每次
+    至少剥掉两个装饰符、严格变短，必然收敛。收尾符找不到配对时原样
+    返回（如 "*args"、"C*代数"、"_private_var" 这类词中下划线），
+    交给后续的边缘字符剥离。
+    """
+    while True:
+        m = _EMPHASIS_PAIR.match(w)
+        if m:
+            w = (m.group(2) + w[m.end():]).strip()
+            continue
+        m = _UNDERSCORE_PAIR.match(w)
+        if m:
+            w = (m.group(2) + w[m.end():]).strip()
+            continue
+        for open_ch, close_ch in _QUOTE_PAIRS:
+            if not w.startswith(open_ch):
+                continue
+            rest = w[len(open_ch):]
+            if not rest or rest[0].isspace():
+                continue
+            end = rest.find(close_ch)
+            if end < 0:
+                continue
+            tail = rest[end + len(close_ch):]
+            if tail[:1].isalnum() or tail.startswith("_"):
+                continue
+            w = (rest[:end] + tail).strip()
+            break
+        else:
+            return w
+
 
 # 纯数字（含 "3.14" / "2.5" 这类小数，isdigit() 拦不住）不是词；
 # 但 "0.5倍速"、"2.5D" 这类含非数字字符的术语必须保留，故用整串匹配。
@@ -40,9 +98,92 @@ _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 _HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
 
 
+# 同一行里用分隔符列出的多个术语可能各自带装饰头/收尾（LLM 常写
+# "**卷积**、**池化**、**全连接**"、"*fast*, *slow*"）或各自的序号
+# （"1. 卷积、2. 池化、3. 全连接"）：只从整行词头 unwrap / 剥序号
+# 会只处理第一段，后面段的收尾被 rstrip(_EDGE_CHARS) 剥掉、序号与
+# 装饰头却留在词中（"卷积、2. **池化"），残片随词库进入每轮提示词。
+# 按分隔符分段、逐段剥（分隔符与原有空白原样保留）。
+_SEGMENT_SEP = re.compile(r"([、,，;；])")
+
+
+def _clean_segment_head(core: str) -> str:
+    """剥掉词段开头的成对装饰与序号/列表符号（不动点循环）。
+
+    顺序与 _clean_once 一致：先按成对装饰剥（"**词**" -> "词"），再剥
+    序号（"2. **词**" -> "**词**" -> "词"），反复到不动点。顺序反过来
+    会让 _BULLET 的列表符先吃掉装饰头的一个 "*"（"**词**" -> "*词**"，
+    收尾符失去配对成为残片）。
+    """
+    while True:
+        nxt = _unwrap_pair(core)
+        nxt = _unwrap_pair(_BULLET.sub("", nxt).strip())
+        if nxt == core:
+            return core
+        core = nxt
+
+
+def _unwrap_segments(w: str) -> str:
+    """对分隔符分开的每一段分别剥词头装饰/序号并清理两端。"""
+    parts = _SEGMENT_SEP.split(w)
+    cleaned = []
+    for i in range(0, len(parts), 2):
+        part = parts[i]
+        core = part.strip()
+        if not core:
+            cleaned.append(part)
+            continue
+        lead = part[:len(part) - len(part.lstrip())]
+        trail = part[len(part.rstrip()):]
+        core = _clean_segment_head(core)
+        while core and core[0] in _EDGE_CHARS:
+            core = _clean_segment_head(core[1:])
+        # 段尾同理：中段的装饰收尾/序号残片不在整行末尾，
+        # 整行 rstrip 碰不到（"1. 卷积**、2. 池化" 的 "*"）
+        core = core.rstrip(_EDGE_CHARS).strip()
+        cleaned.append(lead + core + trail)
+    # 中文编号 "1、卷积、2、池化" 的序号分隔符与术语分隔符同为 "、"：
+    # 分段后序号单独成段（"2"），_clean_segment_head 无处可剥。纯数字段
+    # 不是术语（与 _PURE_NUMBER 拒绝整行纯数字一致）；只要列表里还有
+    # 其他词段，就把纯数字段连同紧邻的分隔符一起丢弃。整个列表都是
+    # 纯数字时保持原样，交给 _PURE_NUMBER 统一裁决，不在这里清空。
+    has_word = any(t.strip() and not _PURE_NUMBER.match(t.strip())
+                   for t in cleaned)
+    out = []
+    i = 0
+    while i < len(parts):
+        t = cleaned[i // 2]
+        if i % 2 == 0 and has_word and t.strip() and _PURE_NUMBER.match(
+                t.strip()):
+            # 丢弃序号段与其后的分隔符（"卷积；2、池化" 保留 "；"）；
+            # 序号段在末尾（"卷积、2"）时改丢它前面的分隔符
+            if i + 1 < len(parts):
+                i += 2
+            else:
+                if out:
+                    out.pop()
+                i += 1
+            continue
+        out.append(t if i % 2 == 0 else parts[i])
+        i += 1
+    return "".join(out)
+
+
 def _clean_once(line: str) -> str | None:
-    w = _BULLET.sub("", line.strip()).strip()
-    w = w.strip(_EDGE_CHARS).strip()
+    # 行首与剥序号后各 unwrap 一次：行首覆盖 "**词** 解释"、"「词」（解释）"；
+    # 剥序号覆盖 "- **词** 解释"（装饰头在序号后面才露出来）。unwrap 必须在
+    # 剥边缘字符之前：装饰符本身也是边缘字符，剥边缘会把成对装饰头连同
+    # 后面的空白一起吃掉、只剩收尾符残片
+    w = _unwrap_pair(line.strip())
+    w = _unwrap_pair(_BULLET.sub("", w).strip())
+    # 边缘字符逐个剥、每剥一个就再试一次成对装饰符：一次性 strip 会把
+    # ".**词**（解释）" 的 "." 和装饰头 "**" 一起吃掉，收尾符失去配对留在
+    # 串中（"词**（解释）"）；逐个剥则能在装饰头露头时连收尾一起剥掉
+    while w and w[0] in _EDGE_CHARS:
+        w = _unwrap_pair(w[1:])
+    # 分隔符后面的词段同样可能是装饰头（见 _unwrap_segments 说明）
+    w = _unwrap_segments(w)
+    w = w.rstrip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
     if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
