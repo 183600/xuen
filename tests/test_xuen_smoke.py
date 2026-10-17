@@ -1978,6 +1978,38 @@ def test_words_clean_unwraps_decorated_terms_with_annotation():
         == ["注意力机制（Attention）", "2**10"]
 
 
+def test_words_clean_keeps_intraword_underscores_and_leading_edge_chars():
+    """下划线不能在词中配对；装饰头与边缘字符相邻时也要剥干净。
+
+    回归 1：下划线被当作强调符后，"_private_var" 的词中下划线被当成收尾
+    符吃掉、词形变成 "privatevar"（"_loss_fn" → "lossfn"），而 CommonMark
+    明确规定 "_" 不能在词中配对，这类下划线是术语本身的一部分。
+    回归 2："。**词**（解释）" 这类装饰头与其它边缘字符直接相邻的写法，
+    一次性 strip 边缘字符会把 "." 和装饰头一起吃掉，收尾符失去配对接
+    留在串中（"词**（解释）"），必须逐个剥离、露头即 unwrap。
+    """
+    from xuen.words import _clean_line
+
+    # 词中下划线必须保留（旧版只剥两端时即如此，不能被装饰符逻辑吃回）
+    assert _clean_line("_private_var") == "private_var"
+    assert _clean_line("_loss_fn（说明）") == "loss_fn（说明）"
+    assert _clean_line("_grad_accum: 梯度累积") == "grad_accum"
+    assert _clean_line("_x_1") == "x_1"
+    # 整体斜体下划线对仍要连收尾一起剥
+    assert _clean_line("__init__") == "init"
+    assert _clean_line("_术语_（解释）") == "术语（解释）"
+    assert _clean_line("___粗斜___（说明）") == "粗斜（说明）"
+    # 装饰头与边缘字符相邻：收尾符不能留在词中
+    assert _clean_line(".**词**（解释）") == "词（解释）"
+    assert _clean_line("、**词**（说明）") == "词（说明）"
+    assert _clean_line(".「术语」（解释）") == "术语（解释）"
+    # 清洗必须是不动点：保存到 words.txt 的词 load_words 再洗一遍不能变
+    for src in ("_private_var", "__init__", ".**词**（解释）", "_术语_（解释）"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
     """E2BIG（命令行参数过长）不能以裸 [Errno 7] 抛出。
 

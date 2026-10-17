@@ -37,7 +37,12 @@ _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.�
 # 强调对的收尾后仍可紧跟单词字符（markdown 里 "**C**语言" 是加粗 C 加
 # "语言"），引号对则要求收尾后是空白/行尾/非单词字符，避免把
 # "“x”与“y”" 这类连续引语误并成 "x与“y”"。
-_EMPHASIS_PAIR = re.compile(r"^([*_~`]{1,3})(?=\S)(.+?)\1")
+# 下划线单独处理：markdown 规定 "_" 不能在词中配对（CommonMark 的
+# 左右侧翼规则），"_private_var" 是含下划线的术语而非斜体。若无此限制，
+# 词中下划线会被当作收尾符吃掉（"_private_var" → "privatevar"），
+# 而旧版只剥两端时恰好保留 "_private_var" 原形，属回归。
+_EMPHASIS_PAIR = re.compile(r"^([*~`]{1,3})(?=\S)(.+?)\1")
+_UNDERSCORE_PAIR = re.compile(r"^(_+)(?=\S)(.+?)\1(?=$|[^\w])")
 _QUOTE_PAIRS = (
     ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"),
     ("「", "」"), ("『", "』"), ("《", "》"), ("〈", "〉"),
@@ -50,10 +55,15 @@ def _unwrap_pair(w: str) -> str:
 
     只从词头开始剥，循环处理嵌套（如 "「**术语**（解释）」"）；每次
     至少剥掉两个装饰符、严格变短，必然收敛。收尾符找不到配对时原样
-    返回（如 "*args"、"C*代数"），交给后续的边缘字符剥离。
+    返回（如 "*args"、"C*代数"、"_private_var" 这类词中下划线），
+    交给后续的边缘字符剥离。
     """
     while True:
         m = _EMPHASIS_PAIR.match(w)
+        if m:
+            w = (m.group(2) + w[m.end():]).strip()
+            continue
+        m = _UNDERSCORE_PAIR.match(w)
         if m:
             w = (m.group(2) + w[m.end():]).strip()
             continue
@@ -92,11 +102,15 @@ def _clean_once(line: str) -> str | None:
     # 行首与剥序号后各 unwrap 一次：行首覆盖 "**词** 解释"、"「词」（解释）"；
     # 剥序号覆盖 "- **词** 解释"（装饰头在序号后面才露出来）。unwrap 必须在
     # 剥边缘字符之前：装饰符本身也是边缘字符，剥边缘会把成对装饰头连同
-    # 后面的空白一起吃掉、只剩收尾符残片（如 ".**词**（解释）" 这种装饰头
-    # 与其它边缘字符直接相邻的极端写法）
+    # 后面的空白一起吃掉、只剩收尾符残片
     w = _unwrap_pair(line.strip())
     w = _unwrap_pair(_BULLET.sub("", w).strip())
-    w = w.strip(_EDGE_CHARS).strip()
+    # 边缘字符逐个剥、每剥一个就再试一次成对装饰符：一次性 strip 会把
+    # ".**词**（解释）" 的 "." 和装饰头 "**" 一起吃掉，收尾符失去配对留在
+    # 串中（"词**（解释）"）；逐个剥则能在装饰头露头时连收尾一起剥掉
+    while w and w[0] in _EDGE_CHARS:
+        w = _unwrap_pair(w[1:])
+    w = w.rstrip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
     if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
