@@ -154,6 +154,33 @@ def test_guard_crash_degrades_not_blocks(env, tmp_path, monkeypatch):
     assert _read(ws, "IDEA") == "第 3 版想法"
 
 
+def test_guard_startup_non_oserror_degrades(env, tmp_path):
+    """守卫启用失败不止 OSError：rounds.dir 为非法路径（如 YAML 双引号里
+    的 "\\0" 转义）时 Path.resolve/mkdir 抛 ValueError，必须同样降级——
+    守卫的既定契约是「失败一律降级、绝不阻断研究循环」。"""
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.rounds.dir = "guard\0dir"      # 真实复现：resolve 抛 ValueError
+    assert cfg.rounds.enabled
+    runner.run(cfg, "测试任务", sink=NullSink())
+    # 循环照常完成，且没有半截的守卫目录
+    assert (ws / "counter.txt").read_text() == "3"
+    assert _read(ws, "IDEA") == "第 3 版想法"
+    assert not (ws / "rounds").exists()
+
+
+def test_bad_workspace_path_friendly_error(env, tmp_path):
+    """非法工作区路径（配置错误）应给友好提示，不是 traceback。"""
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.workspace = "bad\0dir"
+    with pytest.raises(SystemExit) as ei:
+        runner.run(cfg, "测试任务", sink=NullSink())
+    assert "工作区不可用" in str(ei.value)
+
+
 def test_no_rounds_runs_legacy_behavior(env, tmp_path):
     """--no-rounds：完全退回旧行为（无快照、无最佳、每轮直接覆盖）。"""
     ws, script = env

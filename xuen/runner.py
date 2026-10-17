@@ -23,8 +23,13 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     sink = sink or ConsoleSink()
 
     # resolve 成绝对路径：外部 agent 的工作目录不一定是 xuen 的 cwd，
-    # 提示词里的 helper / state 路径必须对任何 cwd 都有效
-    workspace = Path(cfg.workspace).expanduser().resolve()
+    # 提示词里的 helper / state 路径必须对任何 cwd 都有效。
+    # 非法路径（如 YAML 的 "\0" 转义）会让 resolve 抛 ValueError，
+    # 属于配置错误，按约定给出友好提示（退出码 2）而不是 traceback
+    try:
+        workspace = Path(cfg.workspace).expanduser().resolve()
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"工作区不可用：{cfg.workspace}（{e}）")
     state_path = workspace / "research.md"
     words_path = workspace / "words.txt"
 
@@ -74,7 +79,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         try:
             guard = RoundGuard(cfg, task, state_path, workspace, sink)
             guard.start()
-        except OSError as e:
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则，见 rounds 模块
+            # 不止 OSError：Path.resolve/mkdir 对非法路径（如 YAML 的
+            # "\0" 转义）会抛 ValueError，同样必须降级而不是炸掉循环
             sink.warn(f"轮次守卫启用失败，本轮循环降级为无守卫模式：{e}")
             guard = None
 
