@@ -190,6 +190,33 @@ def test_ai_judge_infrastructure_failure_pends(ws):
     assert guard.on_round_end(1) == "pending"
 
 
+def test_ai_judge_registered_as_current_agent(ws, monkeypatch):
+    """评审期间 sink.agent 必须指向评审员：TUI 退出才能终止正在跑的评审，
+    否则 kill 落到已结束的主 agent 上，评审进程会孤儿化跑到超时。"""
+    from xuen import agents
+
+    workspace, state_path = ws
+    sink = RecordingSink()
+    sentinel = object()
+    sink.agent = sentinel
+    seen = []
+    real_run = agents.ShellAgent.run
+
+    def spy_run(self, prompt):
+        seen.append(getattr(sink, "agent", None))
+        return real_run(self, prompt)
+
+    monkeypatch.setattr(agents.ShellAgent, "run", spy_run)
+    guard = make_guard(workspace, state_path, sink=sink, verify="ai",
+                       judge_command='printf "评分: 9\\n"')
+    guard.start()
+    write_idea(state_path, "某个想法")
+    assert guard.on_round_end(1) == "adopted"
+    assert len(seen) == 1
+    assert seen[0] is not None and seen[0] is not sentinel
+    assert sink.agent is sentinel  # 评审结束后恢复原引用
+
+
 def test_ai_score_threshold_boundary(ws):
     """评分恰好等于阈值也算采纳（>= adopt_score）。"""
     workspace, state_path = ws
@@ -463,6 +490,28 @@ def test_verdicts_bad_lines_ignored(ws):
     v = guard._read_verdicts()
     assert "only-one-token" not in v
     assert v["id-but-not-a-number"][0] is None
+
+
+def test_verdicts_non_finite_score_not_adopted(ws):
+    """nan/inf 不是合法评分：不能因 min/max 夹取而变成 10 分被采纳。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    (guard.dir / "verdicts.txt").write_text(
+        "cand-nan nan\ncand-inf inf\ncand-ninf -inf\n", encoding="utf-8")
+    v = guard._read_verdicts()
+    assert v["cand-nan"][0] is None
+    assert v["cand-inf"][0] is None
+    assert v["cand-ninf"][0] is None
+
+    # 端到端：待评分候选被补一行 nan，收尾兑现时绝不能晋升为最佳
+    write_idea(state_path, "被搁置的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} nan\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
 
 
 # ---------------------------------------------------------------- 失败轮次

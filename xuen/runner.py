@@ -223,17 +223,22 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         # 连续失败等「提前中止」路径也要先收尾（打印最终区块状态 /
         # 通知 TUI 循环结束），与正常结束、键盘中断路径保持一致
         _guard_finish(guard)
+        prev_idea, prev_artifact = _read_sections(state_path)
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
         raise
     except KeyboardInterrupt:
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
         _guard_finish(guard)
+        prev_idea, prev_artifact = _read_sections(state_path)
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
         # 向上传播中断，让 cli 以 130 退出；若在此吞掉，
         # 进程会以 0 退出且 cli 的 KeyboardInterrupt 分支成为死代码
         raise
 
     _guard_finish(guard)
+    # guard.finish() 可能兑现循环期间补交的用户评分并写回区块：
+    # 最终展示必须重读状态文件，否则屏幕会停在已被替换的旧内容上
+    prev_idea, prev_artifact = _read_sections(state_path)
     sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
     # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
     # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。

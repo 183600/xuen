@@ -41,6 +41,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -540,11 +541,18 @@ class RoundGuard:
             cmd, self.workspace, timeout=self.cfg.rounds.judge_timeout,
             on_output=self.sink.agent_output, on_stderr=self.sink.agent_stderr,
         )
+        # 评审期间把 sink 的「当前 agent」指向评审员：TUI 里按 q / Ctrl+C
+        # 才能终止正在运行的评审。否则 stop_agent() 杀的是已结束的主
+        # agent，评审进程会脱离终端会话跑满 judge_timeout（并让退出码误报）
+        prev_agent = getattr(self.sink, "agent", None)
+        self.sink.agent = agent
         try:
             text = agent.run(prompt)
         except (OSError, ValueError) as e:
             self.sink.warn(f"AI 评审调用失败：{e}")
             return False, ""
+        finally:
+            self.sink.agent = prev_agent
         if agent.timed_out:
             self.sink.warn("AI 评审超时")
             return False, text
@@ -667,9 +675,16 @@ class RoundGuard:
             cid, raw = parts[0], parts[1]
             comment = parts[2].strip() if len(parts) > 2 else ""
             try:
-                score = max(0.0, min(10.0, float(raw)))
+                score = float(raw)
             except ValueError:
                 score = None
+            else:
+                # nan/inf 不是合法评分：min/max 夹取会把它们留成 10 分，
+                # 等于凭空给候选满分——必须和「解析不出」同等对待
+                if not math.isfinite(score):
+                    score = None
+                else:
+                    score = max(0.0, min(10.0, score))
             out[cid] = (score, comment)
         return out
 

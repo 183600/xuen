@@ -166,6 +166,45 @@ def test_no_rounds_runs_legacy_behavior(env, tmp_path):
     assert not (ws / "rounds").exists()
 
 
+def test_late_verdict_adoption_shown_in_finish(env, tmp_path, monkeypatch):
+    """循环期间补交的评分在 finish() 兑现后，最终展示不能停在旧内容。"""
+    from xuen.rounds import RoundGuard
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.rounds.verify = "user"
+    cfg.loop.iterations = 1
+
+    real_on_round_end = RoundGuard.on_round_end
+
+    def on_round_end_with_late_verdict(self, i):
+        result = real_on_round_end(self, i)
+        # 模拟「用户看到挂起候选后、循环还没结束就补交评分」
+        cid = [e for e in self._read_events()
+               if e.get("event") == "candidate"][-1]["id"]
+        (self.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(RoundGuard, "on_round_end",
+                        on_round_end_with_late_verdict)
+
+    class FinishSink(NullSink):
+        def __init__(self):
+            self.final = None
+
+        def finish(self, idea, artifact):
+            self.final = (idea, artifact)
+
+    sink = FinishSink()
+    runner.run(cfg, "测试任务", sink=sink)
+    # 补分在 finish() 兑现：最佳与 research.md 都翻案为第 1 轮候选
+    assert _read(ws, "IDEA") == "第 1 版想法"
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["round"] == 1 and best["late"] is True
+    # 最终展示必须与 research.md 一致（修复前这里停在还原后的「（暂无）」）
+    assert sink.final == ("第 1 版想法", "第 1 版产物")
+
+
 def test_red_repo_pending_via_user_verdicts(env, tmp_path):
     """红测试 + verify=user：候选挂起；verdicts.txt 补高分后前进式翻案。"""
     from xuen import state
