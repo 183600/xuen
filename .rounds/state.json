@@ -1,12 +1,12 @@
 {
   "version": 1,
   "best": {
-    "snap": "snap/20261017-001346-r8",
-    "sha": "aa722dd7a13e5e6b5c4b9b180b0134d3d3afefd0",
+    "snap": "snap/20261017-003428-r9",
+    "sha": "62a6766deb23ddde7967aad8a8fa1adf1ac3cbaa",
     "tests": "pass",
-    "at": "2026-10-17T00:15:00Z",
+    "at": "2026-10-17T00:36:02Z",
     "by": "ai",
-    "iter": "8"
+    "iter": "9"
   },
   "promote_score": 7,
   "unsynced_tags": [
@@ -919,6 +919,31 @@
         "verdict": "accept",
         "reason": "真实修复 heredoc 终止符词中续行拼出展开头导致的提示词注入，新增回归测试且未删改测试，符合既有保守拒绝策略，风险低。",
         "at": "2026-10-17T00:15:00Z"
+      }
+    },
+    {
+      "id": "20261017-003428-r9",
+      "snap": "snap/20261017-003428-r9",
+      "sha": "62a6766deb23ddde7967aad8a8fa1adf1ac3cbaa",
+      "ts": "2026-10-17T00:36:02Z",
+      "iter": "9",
+      "changed": 2,
+      "touched_tests": true,
+      "diff_base": "15884fc2500e6337748c7f08152f4201a17bbfa4",
+      "auto": {
+        "status": "pass",
+        "verdict": "promoted",
+        "reason": "候选通过全部测试（最佳也通过）：按轮次推进为新的最佳；如认为不如旧方案，可在 verdicts.txt 采纳旧快照回滚；测试改动经 AI 复核为合理改进（9分）"
+      },
+      "verdict": "promoted",
+      "by": "ai",
+      "ai": {
+        "provider": "opencode",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "score": 9,
+        "verdict": "accept",
+        "reason": "真实修复了相邻占位符（`$prompt$prompt` / `$prompt_file$prompt` / 跨续行）第二个被当模板字面量而漏替换、导致提示词被 shell 静默吞掉的 bug，且新增 78 行均为回归测试（含负面对照），未删改弱化任何测试，自动验证全绿、风险低。",
+        "at": "2026-10-17T00:36:02Z"
       }
     }
   ],
