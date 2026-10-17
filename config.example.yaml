@@ -34,6 +34,39 @@ words:
 loop:
   iterations: 5   # 轮数；写 inf 表示无限循环（TUI 中按 q 结束）
 
+# ---- 轮次守卫（每轮快照、候选/最佳分离、自动验证与评分）----
+# 背景：外部 agent 每轮【整体覆盖】想法区/产物区，下一轮无条件继承最新
+# 状态——某轮产出更差方案时，更好的前一轮就被覆盖丢失。守卫的职责：
+#   1. 每轮改动先存为候选快照 rounds/cand-<id>.md（任何一轮的产物都不丢）；
+#   2. 候选 ≠ 最佳：通过验证（测试全绿 / 评分 >= adopt_score）才晋升为
+#      rounds/best.md；失败或待评分则把 research.md 还原为当前最佳，
+#      下一轮【永远从最佳出发】，更差的候选无法污染后续轮次；
+#   3. 全部事件追加进 rounds/history.jsonl（审计用，只增不改）。
+rounds:
+  enabled: true
+  dir: rounds            # 守卫目录（相对 workspace）
+  # 候选验证方式：
+  #   auto  有可运行的测试套件就跑测试（pytest → make test → npm test →
+  #         go test 级联探测）；没有则用 fallback 指定的评分者
+  #   tests 只跑测试；没有套件时候选挂起，等待用户在 verdicts.txt 评分
+  #   user  只用用户评分：在 <workspace>/rounds/verdicts.txt 追加
+  #         「<候选id> <0-10分> [评语]」；守卫在每轮开始/结束时兑现，
+  #         给旧候选补高分可前进式翻案（内容写回 research.md）
+  #   ai    只用 AI 评分：复用外部 agent 当评审员对比候选与最佳打分
+  #   off   不验证：快照照存，最新即最佳（退化为"防丢失"模式）
+  verify: auto
+  fallback: ai           # auto 模式无测试可用时的兜底评分者：user / ai
+  adopt_score: 7         # 评分达到该阈值才采纳候选为最佳（0-10）
+  verify_timeout: 600    # 单次测试套件运行超时（秒）
+  # 测试验证的目标目录；留空 = 自动探测（工作区所在 git 仓库根，
+  # 非 git 环境退化为工作区本身）。循环要打磨某个代码仓库时指向它，
+  # 候选改动就能被该仓库的测试套件自动验证。
+  repo: ""
+  # AI 评审命令模板；留空 = 复用 agent.command。占位符同 agent.command
+  # （$prompt / $prompt_file）。想用更便宜/更快的模型当评审员时在这里配。
+  judge_command: ""
+  judge_timeout: 600     # AI 评审单次调用超时（秒）
+
 # ---- 界面 ----
 tui: true         # TUI：修改想法区 / 修改产物区 / 输出日志 / 底部输入框；--no-tui 可关闭
 color: true       # 纯终端输出（--no-tui）时的颜色

@@ -36,11 +36,35 @@ class AgentConfig:
 
 
 @dataclass
+class RoundsConfig:
+    """轮次守卫（xuen/rounds.py）：每轮快照、候选/最佳分离、自动验证与评分。
+
+    verify 取值：
+      auto  有可运行的测试套件就跑测试（pytest → make → npm → go 级联），
+            没有则用 fallback 指定的评分者（user / ai）
+      tests 只跑测试；没有套件/跑不起来时候选挂起等待用户评分
+      user  只用用户评分（rounds/verdicts.txt，异步补分）
+      ai    只用 AI 评分（复用外部 agent 当评审员打分）
+      off   不验证：快照照存，最新即最佳（仅退化为“防丢失”模式）
+    """
+    enabled: bool = True
+    dir: str = "rounds"          # 守卫目录（相对 workspace）
+    verify: str = "auto"
+    fallback: str = "ai"         # auto 模式下无测试可用时的兑底评分者：user / ai
+    adopt_score: float = 7.0     # 评分达到该阈值才采纳候选为最佳（0-10）
+    verify_timeout: float = 600.0   # 单次测试套件运行超时（秒）
+    repo: str = ""               # 测试验证的目标目录；空 = 自动探测（工作区所在 git 根，否则工作区）
+    judge_command: str = ""      # AI 评审命令模板；空 = 复用 agent.command
+    judge_timeout: float = 600.0    # AI 评审单次调用超时（秒）
+
+
+@dataclass
 class Config:
     extra_notes: str = ""
     words: WordsConfig = field(default_factory=WordsConfig)
     loop: LoopConfig = field(default_factory=LoopConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
+    rounds: RoundsConfig = field(default_factory=RoundsConfig)
     workspace: str = "./workspace"
     tui: bool = True        # 默认启用 TUI（--no-tui 可关闭）
     color: bool = True
@@ -127,6 +151,18 @@ def _mapping_section(raw: Any, name: str) -> dict:
     return value
 
 
+def _mode_str(value: Any) -> str:
+    """枚举型配置取字符串。YAML 1.1 会把未加引号的 on/off/yes/no 解析成
+    布尔：off/no=False 在语义上正对应 "off"（如 verify: off）；True 没有
+    对应模式，保留 "on" 让后续校验给出明确报错，而不是经 `or 默认值`
+    静默吞掉用户的显式选择（verify: off 曾因此悄悄变成 auto）。"""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "off" if not value else "on"
+    return str(value).strip().lower()
+
+
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
     with open(real_path, encoding="utf-8") as f:
@@ -163,6 +199,32 @@ def load_config(path: Optional[str] = None) -> Config:
         ),
     )
 
+    rounds = _mapping_section(raw, "rounds")
+    verify = _mode_str(_config_value(rounds, "verify", cfg.rounds.verify)) \
+        or cfg.rounds.verify
+    fallback = _mode_str(_config_value(rounds, "fallback",
+                                       cfg.rounds.fallback)) \
+        or cfg.rounds.fallback
+    cfg.rounds = RoundsConfig(
+        enabled=_parse_bool(_config_value(rounds, "enabled", cfg.rounds.enabled),
+                            "rounds.enabled"),
+        dir=str(_config_value(rounds, "dir", cfg.rounds.dir) or "rounds"),
+        verify=verify,
+        fallback=fallback,
+        adopt_score=_parse_float(
+            _config_value(rounds, "adopt_score", cfg.rounds.adopt_score),
+            "rounds.adopt_score"),
+        verify_timeout=_parse_float(
+            _config_value(rounds, "verify_timeout", cfg.rounds.verify_timeout),
+            "rounds.verify_timeout"),
+        repo=str(_config_value(rounds, "repo", cfg.rounds.repo) or ""),
+        judge_command=str(_config_value(rounds, "judge_command",
+                                        cfg.rounds.judge_command) or ""),
+        judge_timeout=_parse_float(
+            _config_value(rounds, "judge_timeout", cfg.rounds.judge_timeout),
+            "rounds.judge_timeout"),
+    )
+
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
     workspace = raw.get("workspace")
     if workspace is not None and str(workspace).strip():
@@ -186,6 +248,33 @@ def _validate(cfg: Config) -> None:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
     if not math.isfinite(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    # ---- 轮次守卫 ----
+    # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
+    from .rounds import FALLBACK_SCORERS, VERIFY_MODES
+    if cfg.rounds.verify not in VERIFY_MODES:
+        raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
+                         f"收到: {cfg.rounds.verify!r}")
+    if cfg.rounds.fallback not in FALLBACK_SCORERS:
+        raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
+                         f"收到: {cfg.rounds.fallback!r}")
+    if not (0.0 <= cfg.rounds.adopt_score <= 10.0):
+        raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
+                         f"收到: {cfg.rounds.adopt_score!r}")
+    if cfg.rounds.enabled and not cfg.rounds.dir.strip():
+        raise ValueError("rounds.dir 不能为空")
+    for name in ("verify_timeout", "judge_timeout"):
+        v = getattr(cfg.rounds, name)
+        if not math.isfinite(v) or v <= 0:
+            raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
+    jcmd = cfg.rounds.judge_command
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
+    # AI 评分会静默拿不到候选内容而永远解析不出分数
+    if jcmd.strip():
+        from .agents import command_receives_prompt
+        if not command_receives_prompt(jcmd):
+            raise ValueError(
+                "rounds.judge_command 必须包含会被实际替换的 $prompt 或 "
+                "$prompt_file 占位符（被转义的 \\$prompt 不会被替换）")
     cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转。
     # 判断必须复用 ShellAgent 的实际渲染逻辑，不能用正则近似匹配

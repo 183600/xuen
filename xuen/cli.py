@@ -24,6 +24,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--regen-words", action="store_true", help="忽略已有词库并重新生成")
     p.add_argument("--no-tui", action="store_true", help="不用 TUI，直接输出到终端")
     p.add_argument("--no-color", action="store_true", help="关闭彩色输出（--no-tui 时有效）")
+    # ---- 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分 ----
+    p.add_argument("--no-rounds", action="store_true",
+                   help="关闭轮次守卫（退回旧行为：每轮直接覆盖，无快照无最佳）")
+    p.add_argument("--rounds-verify", choices=("auto", "tests", "user", "ai", "off"),
+                   help="候选验证方式（默认 auto：有测试跑测试，否则用兑底评分者）")
+    p.add_argument("--rounds-fallback", choices=("user", "ai"),
+                   help="auto 模式下无测试可用时的兑底评分者（默认 ai）")
+    p.add_argument("--rounds-score", type=float, metavar="N",
+                   help="采纳阈值：评分 >= N 才把候选晋升为最佳（0-10，默认 7）")
     return p
 
 
@@ -99,10 +108,32 @@ def main(argv=None) -> int:
         # CLI 覆盖发生在 load_config 的校验之后，须对覆盖结果重新校验，
         # 否则 Windows 下 --workspace 可绕过 cmd 元字符检查，导致
         # $prompt_file 路径传给外部 agent 时被 cmd 展开/吞掉而错乱
+        # （轮次守卫的 CLI 覆盖同理，一并纳入重校验）
+        need_revalidate = True
+    else:
+        need_revalidate = False
+
+    # ---- 轮次守卫 CLI 覆盖 ----
+    if args.no_rounds:
+        cfg.rounds.enabled = False
+    if args.rounds_verify is not None:
+        cfg.rounds.verify = args.rounds_verify
+        need_revalidate = True
+    if args.rounds_fallback is not None:
+        cfg.rounds.fallback = args.rounds_fallback
+        need_revalidate = True
+    if args.rounds_score is not None:
+        if not (0.0 <= args.rounds_score <= 10.0):
+            print("--rounds-score 必须在 0-10 之间", file=sys.stderr)
+            return 2
+        cfg.rounds.adopt_score = args.rounds_score
+        need_revalidate = True
+
+    if need_revalidate:
         try:
             _validate(cfg)
         except ValueError as e:
-            print(f"--workspace 无效：{e}", file=sys.stderr)
+            print(f"参数覆盖无效：{e}", file=sys.stderr)
             return 2
 
     task = _resolve_task(args)

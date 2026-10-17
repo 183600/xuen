@@ -12,6 +12,7 @@ from typing import List, Optional
 from . import state, words
 from .agents import ShellAgent
 from .config import Config
+from .rounds import RoundGuard
 from .sink import SECTION_ARTIFACT, SECTION_IDEA, ConsoleSink, Sink
 
 
@@ -63,6 +64,17 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     # 造成的竞态窗口里继续启动外部 agent
     if sink.should_stop():
         sink.stop_agent()
+
+    # 4) 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分。
+    #    启用失败（目录不可写等）一律降级为无守卫模式，不阻断研究循环
+    guard: Optional[RoundGuard] = None
+    if cfg.rounds.enabled:
+        try:
+            guard = RoundGuard(cfg, task, state_path, workspace, sink)
+            guard.start()
+        except OSError as e:
+            sink.warn(f"轮次守卫启用失败，本轮循环降级为无守卫模式：{e}")
+            guard = None
 
     # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
     disk_words: List[str] = []
@@ -156,6 +168,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 failures += 1
                 consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
+                _guard_round_failed(guard, i, f"启动失败：{e}")
                 if consecutive_failures >= 3 and not sink.should_stop():
                     # 运行期失败用退出码 1（消息走 sink.err），与预检错误的
                     # 字符串 SystemExit（退出码 2）区分，见 cli.main 注释
@@ -165,6 +178,10 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             if (agent.timed_out or agent.returncode) and not agent.user_killed:
                 failures += 1
                 consecutive_failures += 1
+                _guard_round_failed(
+                    guard, i,
+                    "超时" if agent.timed_out
+                    else f"退出码 {agent.returncode}")
                 if consecutive_failures >= 3 and not sink.should_stop():
                     sink.err("外部 agent 连续 3 次执行失败，已中止循环")
                     raise SystemExit(1)
@@ -178,18 +195,37 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             if artifact != prev_artifact:
                 prev_artifact = artifact
                 sink.section(SECTION_ARTIFACT, artifact or "（空）")
+            # 轮次守卫：快照 → 验证 → 晋升/还原。守卫自身异常一律降级跳过，
+            # 绝不阻断研究循环（但还原后的区块变化要重读并上报给用户）
+            if guard is not None and not (
+                    agent.timed_out or (agent.returncode not in (0, None))) \
+                    and not agent.user_killed:
+                try:
+                    guard.on_round_end(i)
+                    idea, artifact = _read_sections(state_path)
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    sink.warn(f"轮次守卫本轮异常（已降级跳过）：{e}")
+                if idea != prev_idea:
+                    prev_idea = idea
+                    sink.section(SECTION_IDEA, idea or "（空）")
+                if artifact != prev_artifact:
+                    prev_artifact = artifact
+                    sink.section(SECTION_ARTIFACT, artifact or "（空）")
     except SystemExit:
         # 连续失败等「提前中止」路径也要先收尾（打印最终区块状态 /
         # 通知 TUI 循环结束），与正常结束、键盘中断路径保持一致
+        _guard_finish(guard)
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
         raise
     except KeyboardInterrupt:
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
+        _guard_finish(guard)
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
         # 向上传播中断，让 cli 以 130 退出；若在此吞掉，
         # 进程会以 0 退出且 cli 的 KeyboardInterrupt 分支成为死代码
         raise
 
+    _guard_finish(guard)
     sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
     # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
     # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。
@@ -202,6 +238,32 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
 
 # ----------------------------------------------------------------------
+def _guard_finish(guard: Optional[RoundGuard]) -> None:
+    """守卫收尾（应用待决用户评分 + 汇总）；守卫自身异常不外溅。"""
+    if guard is None:
+        return
+    try:
+        guard.finish()
+    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+        try:
+            guard.sink.warn(f"轮次守卫收尾异常（忽略）：{e}")
+        except Exception:
+            pass
+
+
+def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> None:
+    """agent 失败的轮次：不留候选（半截产物不可信），仅记账。"""
+    if guard is None:
+        return
+    try:
+        guard.on_round_failed(i, reason)
+    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+        try:
+            guard.sink.warn(f"轮次守卫记账异常（忽略）：{e}")
+        except Exception:
+            pass
+
+
 def _read_sections(state_path: Path) -> tuple:
     try:
         text = state_path.read_text(encoding="utf-8")

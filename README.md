@@ -51,6 +51,8 @@ python main.py "任务"
              思考过程实时打到输出日志；经 write_section.py 整体覆盖想法区/产物区
           5. 重读 research.md 做 diff：哪个区块被改了，
              就在屏幕上显示 [修改xx区]<新内容>
+          6. 轮次守卫（rounds.enabled，默认开）：快照 → 验证 → 晋升/还原
+             （见下节；守卫异常一律降级，绝不阻断研究循环）
 ```
 
 ### 各阶段说明
@@ -83,16 +85,65 @@ python main.py "任务"
   `words.pick=0` 时跳过词库，循环中不给灵感词。
 
 **⑥ 研究循环**（`xuen/runner.py`）
-- 每轮顺序执行：纯随机抽词 → 收集用户输入 → 拼提示词 → 运行外部 agent → diff 区块变化；
+- 每轮顺序执行：纯随机抽词 → 收集用户输入 → 拼提示词 → 运行外部 agent → diff 区块变化
+  → 轮次守卫（快照/验证/晋升或还原）；
 - 提示词要求 agent：输出思考过程（供用户在屏幕前看），并完整保留区块标记行的前提下
   整体覆盖想法区 / 产物区；
 - 失败处理：外部 agent 连续 3 次启动/执行失败则中止循环（退出码 1）；
   用户主动停止或至少成功一轮时不计为整体失败。
 
 **⑦ 退出与持久化**
-- 所有状态都落在工作区文件里（`research.md` / `words.txt` / `write_section.py`），
-  中断后重跑自动续上；
+- 所有状态都落在工作区文件里（`research.md` / `words.txt` / `write_section.py` /
+  `rounds/`），中断后重跑自动续上；
 - 退出码：`0` 正常结束；`1` 所有轮次均执行失败；`2` 配置/参数错误；`130` 被 Ctrl+C 中断。
+
+## 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分
+
+（`xuen/rounds.py`，配置段 `rounds:`，默认启用，`--no-rounds` 可关闭）
+
+外部 agent 每轮【整体覆盖】想法区/产物区，旧实现里下一轮无条件继承最新
+状态——某轮产出更差方案时，更好的前一轮就被覆盖丢失。守卫在不改变循环
+主体的前提下加了一道闸：
+
+```
+每轮结束
+  │
+  ├─ 无改动 → 记「心跳」，不产生候选
+  ├─ 区块标记损坏 → 守卫直接拒绝，还原最佳
+  ├─ 有改动 → 快照为候选 rounds/cand-<id>.md（候选 ≠ 最佳，绝不直接当最佳）
+  │        │
+  │        ├─ 能用测试验证的跑测试：pytest → make test → npm test → go test
+  │        │   级联探测（rounds.repo 指向的目标仓库；空 = 自动探测工作区
+  │        │   所在 git 根）。全绿 → 晋升；全红 → 拒绝并还原
+  │        ├─ 不能用测试验证的，二选一（rounds.fallback / rounds.verify）：
+  │        │   · 用户评分：在 rounds/verdicts.txt 追加「<候选id> <0-10分> [评语]」，
+  │        │     守卫在每轮开始/结束时兑现；候选先按最佳还原，拿到高分后
+  │        │     前进式翻案（内容写回 research.md，不改写任何历史记录）
+  │        │   · AI 评分：复用外部 agent 当评审员（rounds.judge_command
+  │        │     可单独配更便宜的模型），对比候选与当前最佳打 0-10 分
+  │        │
+  │        ├─ 通过（测试全绿 / 评分 >= rounds.adopt_score）→ 晋升为最佳
+  │        │    rounds/best.md + best.json 更新（前进式，只增不改）
+  │        └─ 失败 / 挂起 → research.md 还原为当前最佳
+  │             —— 下一轮【永远从最佳出发】，更差的候选无法污染后续轮
+  └─ 全部事件追加进 rounds/history.jsonl（审计用，只增不改）
+```
+
+要点：
+
+- **每轮保存快照**：任何一轮的产物都落在 `rounds/cand-<id>.md`，永不丢失；
+- **候选与最佳分离**：`best.md` / `best.json` 只保存「当前最佳」；候选
+  必须通过验证（或拿到高分）才晋升；
+- **避免下一轮覆盖更好方案**：被拒绝/待评分的候选立即还原最佳——即使
+  agent 连续产出多轮更差的内容，循环状态也始终停在最佳上；
+- **agent 失败轮次**同样不留候选（半截产物不可信）并还原最佳；
+- **守卫自身异常一律降级**（目录不可写、评审员超时、评分解析不出……），
+  绝不阻断研究循环；解析不出分数时按「挂起」处理，既不采纳也不丢弃；
+- **用户异步翻案**：给旧候选补分达到阈值时，旧快照被前进式晋升为最佳
+  并写回 `research.md`，等价于回滚到它，但 `history.jsonl` 不改写一行。
+
+CLI 快捷参数：`--no-rounds`（关闭守卫）、`--rounds-verify auto|tests|user|ai|off`、
+`--rounds-fallback user|ai`、`--rounds-score N`（采纳阈值）。
 
 ## 使用
 
@@ -108,6 +159,11 @@ python main.py "设计一个新的优化器"              # TUI 模式（默认�
 python main.py "设计一个新的优化器" --no-tui     # 纯终端输出
 python main.py "设计一个新的优化器" --iterations inf --pick 3
 python main.py "设计一个新的优化器" --regen-words
+python main.py "设计一个新的优化器" --rounds-verify ai --rounds-score 8
+python main.py "设计一个新的优化器" --no-rounds   # 退回旧行为：无快照无最佳
+
+# 循环打磨某个代码仓库：把 rounds.repo 指向它，候选改动会被该仓库的
+# 测试套件自动验证（pytest/make/npm/go 级联探测）
 ```
 
 ## 目录结构
@@ -118,9 +174,10 @@ xuen/
 ├── requirements.txt
 ├── pyproject.toml
 ├── config.example.yaml        # 复制为 config.yaml 使用
+├── tests/                     # pytest 测试（轮次守卫单元/集成 + 冒烟）
 └── xuen/
     ├── cli.py                 # 命令行
-    ├── config.py              # 配置
+    ├── config.py              # 配置（含 rounds 轮次守卫段）
     ├── tui.py                 # TUI（textual）：区块面板 + 日志 + 底部输入框
     ├── sink.py                # 输出通道抽象（控制台 / TUI 共用）
     ├── ui.py                  # 纯终端输出（--no-tui）
@@ -128,6 +185,7 @@ xuen/
     ├── words.py               # 词库：外部 agent 生成 / 解析 / 抽样
     ├── procs.py               # 跨平台进程工具
     ├── agents.py              # ShellAgent（外部 agent 命令）
+    ├── rounds.py              # 轮次守卫：快照 / 候选与最佳分离 / 验证与评分
     └── runner.py              # 主循环编排
 ```
 
@@ -142,6 +200,10 @@ xuen/
 | 修改产物区显示 `[修改产物区]<写入产物区的内容>` | 「修改产物区」面板：产物区被覆盖后显示标记 + 新内容 |
 | 底部输入框，内容下次调用 agent 时带给 agent | 输入入队 → 下一轮提示词中带「【用户输入】」段落 |
 | 想法区+产物区持久化 | `research.md`（标记区块），重跑自动续上 |
+| 每轮保存快照，区分候选与当前最佳 | `rounds/cand-<id>.md` 候选快照 + `rounds/best.md|best.json` 当前最佳 + `history.jsonl` 审计日志 |
+| 能用测试验证的就运行测试 | `rounds.repo`（默认自动探测 git 根）：pytest → make → npm → go 级联 |
+| 不能测试验证的：用户评分 / AI 评分 | `verdicts.txt` 异步补分（可翻案旧候选） / 复用外部 agent 当评审员打分 |
+| 避免下一轮覆盖更好方案 | 候选失败/挂起即还原最佳；下一轮永远从最佳出发；采纳旧快照用前进式晋升、不改写历史 |
 
 **注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt`），中断后重跑自动继续；
 `agent.timeout` 控制单次外部调用超时。
