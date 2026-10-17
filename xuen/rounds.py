@@ -625,7 +625,16 @@ class RoundGuard:
             return state.scaffold(self.task)
 
     def _adopt(self, cid: str, round_no: int, verdict: Verdict) -> None:
-        text = self._read_state_text()
+        # 晋升的必须是被验证过的候选快照本身：测试套件 / AI 评审可能跑很久，
+        # 期间状态文件可能被外部再改一次。直接读当前状态会把未经验证的内容
+        # 写进 best.md（best.json 记录的却是候选 id）；下一轮候选被拒时
+        # _restore_best 就会把这份未验证内容还原进研究循环，破坏候选/最佳
+        # 分离。快照不可读（如被外部删除）时才退回当前状态
+        cand_path = self.dir / f"{CAND_PREFIX}{cid}.md"
+        try:
+            text = cand_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            text = self._read_state_text()
         if text:
             _atomic_write(self.best_md, text)
         # best.json 记录的是「哪份快照是最佳」；研究循环只前进不改写历史，

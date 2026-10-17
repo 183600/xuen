@@ -142,6 +142,40 @@ def test_ai_adopt_promotes_candidate(ws):
     assert len(cand_files(guard)) == 1
 
 
+def test_ai_adopt_promotes_verified_snapshot_not_live_state(ws):
+    """验证期间状态文件被外部再改时，晋升的必须是被验证过的候选快照。
+
+    回归：晋升原先重读当前状态文件写入 best.md，而 AI 评审/测试套件可能
+    跑很久，期间外部 agent 若又改了 research.md，未经验证的内容会被当成
+    最佳（best.json 却记录候选 id）；下一轮候选被拒时 _restore_best 会把
+    这份未验证内容还原进研究循环，候选/最佳分离被破坏。
+    """
+    workspace, state_path = ws
+
+    def judge(prompt):
+        # 模拟评审员进程/测试套件跑动期间外部又改写了状态文件
+        write_idea(state_path, "评审期间被外部改掉的内容")
+        return True, "评分: 9"
+
+    guard = make_guard(workspace, state_path, verify="ai", judge=judge)
+    guard.start()
+    write_idea(state_path, "被验证通过的候选")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+    # best.md 必须与候选快照一致，而不是验证期间被改写的当前状态
+    assert read_idea(guard.best_md) == "被验证通过的候选"
+    assert read_idea(guard.dir / f"cand-{cid}.md") == "被验证通过的候选"
+
+    # 端到端：下一轮更差的候选被拒后，还原到的是验证过的候选，而不是
+    # 评审期间混进来的未验证内容
+    guard2 = make_guard(workspace, state_path, verify="ai",
+                        judge=lambda p: (True, "评分: 3"))
+    guard2.start()
+    write_idea(state_path, "更差的第二轮想法")
+    assert guard2.on_round_end(2) == "rejected"
+    assert read_idea(state_path) == "被验证通过的候选"
+
+
 def test_ai_reject_restores_best_and_keeps_snapshot(ws):
     """核心回归：被拒绝的候选绝不留在循环状态里，但快照必须保留。"""
     workspace, state_path = ws
