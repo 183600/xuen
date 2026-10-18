@@ -802,6 +802,60 @@ def test_user_pending_then_late_adoption_restores_candidate(ws):
     assert late.get("late") is True
 
 
+def test_pending_verdict_cashed_in_at_end_of_each_round(ws):
+    """评分必须在每轮结束时兑现，而不是只等整个会话收尾。
+
+    回归：_apply_user_verdicts 只在 start()/finish() 调用（文档承诺
+    「守卫在每轮开始/结束时兑现」）。`iterations: inf` 的长循环里用户
+    补分将永远等不到兑现，后续轮次也不会从重新采纳的最佳继续。修复后
+    每轮结束兑现一次，且必须在【本轮快照与判定之后】：提前兑现会把旧
+    候选写回 research.md、覆盖 agent 刚产出且尚未快照的本轮内容。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "第一轮的好想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    assert read_idea(state_path) == "（暂无）"
+
+    # 用户在循环运行中补分（此时循环远未收尾）
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+    # 第二轮 agent 产出普通内容：本轮候选照常快照、判定、还原；
+    # 随后本轮结束时的兑现把第一轮的好想法写回，成为下一轮起点
+    write_idea(state_path, "第二轮的一般想法")
+    assert guard.on_round_end(2) == "pending"
+    assert guard.best["id"] == cid
+    assert guard.best["verifier"] == "user"
+    assert read_idea(state_path) == "第一轮的好想法"
+    # 本轮候选先落盘（快照不因随后兑现的旧候选而丢失）
+    assert len(cand_files(guard)) == 2
+    kinds = [e["event"] for e in events(guard)]
+    assert kinds[-2] == "verdict" and kinds[-1] == "restored"
+
+
+def test_midloop_cashin_keeps_current_round_candidate_snapshot(ws):
+    """每轮兑现旧评分不得吞掉本轮产物：快照必须先于兑现落盘。
+
+    回归保护：若把兑现放在本轮判定【之前】，旧候选会先写回
+    research.md，agent 刚产出的内容被覆盖且没有快照——违反 README
+    「任何一轮的产物都落在 rounds/cand-<id>.md，永不丢失」。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "旧的好想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+
+    write_idea(state_path, "本轮全新的想法")
+    assert guard.on_round_end(2) == "pending"
+    snaps = [p.read_text(encoding="utf-8")
+             for p in sorted(guard.dir.glob("cand-*.md"))]
+    assert any("本轮全新的想法" in s for s in snaps)
+
+
 def test_user_late_low_score_keeps_best(ws):
     workspace, state_path = ws
     guard = make_guard(workspace, state_path, verify="user")

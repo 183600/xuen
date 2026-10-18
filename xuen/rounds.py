@@ -482,7 +482,24 @@ class RoundGuard:
     # ---- 每轮守卫主流程 ----
     def on_round_end(self, round_no: int) -> str:
         """一轮 agent 成功结束后调用；返回 adopted / rejected / pending /
-        heartbeat / skipped 供调用方与测试断言。"""
+        heartbeat / skipped 供调用方与测试断言。
+
+        本轮判定完成后兑现一次待决用户评分（与 start/finish 同一通道）。
+        「每轮开始/结束时兑现」不能只落在会话首尾：`iterations: inf` 的
+        长循环里用户补分将永远等不到兑现，后续轮次也不会从重新采纳的
+        最佳继续，与 README / config 注释的承诺相矛盾。必须放在本轮
+        快照与判定【之后】：提前兑现会先把旧候选写回 research.md，
+        覆盖掉 agent 刚产出、尚未快照的本轮内容（违反「任何一轮的产物
+        都落盘」）。
+        """
+        result = self._process_round_end(round_no)
+        try:
+            self._apply_user_verdicts()
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+            self.sink.warn(f"应用待决用户评分失败（忽略，稍后重试）：{e}")
+        return result
+
+    def _process_round_end(self, round_no: int) -> str:
         self.stats.rounds += 1
         text = self._read_state_text()
         if not text:
