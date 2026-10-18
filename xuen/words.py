@@ -171,9 +171,14 @@ _CJK_INDEX = re.compile(r"^[" + _CJK_NUMERALS + r"]+$")
 
 
 def _is_index_segment(t: str) -> bool:
-    """词段是否只是列表序号（阿拉伯数字或汉字数字），不是术语。"""
-    t = t.strip()
-    return bool(t) and bool(_PURE_NUMBER.match(t) or _CJK_INDEX.match(t))
+    """词段是否只是列表序号（阿拉伯整数或汉字数字），不是术语。
+
+    小数不算序号：_PURE_NUMBER 也匹配 "3.14" / "2.5"，若直接复用会把
+    混在术语列表里的真实小数术语当序号丢弃（"卷积、3.14、池化" ->
+    "卷积、池化"），与 _is_plain_index 的判定口径（"3.14、2.718" 是
+    真实术语列表）自相矛盾。段级判定必须用 _is_plain_index 排除小数。
+    """
+    return _is_plain_index(t)
 
 
 def _is_plain_index(t: str) -> bool:
@@ -321,6 +326,7 @@ def _clean_once(line: str) -> str | None:
     if not w or len(w) > 60:
         return None
     if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
+            or _CJK_INDEX.match(w)
             or not _HAS_WORD_CHAR.search(w)):
         return None
     if "://" in w or "：//" in w:
@@ -347,11 +353,12 @@ def _clean_once(line: str) -> str | None:
     w = w.rstrip(".。,，;；!！?？ ")
     w = w.strip(_EDGE_CHARS).strip()
     # 冒号截断后词形已变（如 "12: 解释" → "12"、"()：解释" → "()"），
-    # 需复查拦截条件，否则纯数字 / 纯符号 / 以 # > | = 开头的残片
-    # 会混进词库
+    # 需复查拦截条件，否则纯数字 / 纯汉字数字 / 纯符号 / 以 # > | =
+    # 开头的残片会混进词库
     if not w or len(w) > 60:
         return None
     if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
+            or _CJK_INDEX.match(w)
             or not _HAS_WORD_CHAR.search(w)):
         return None
     return w

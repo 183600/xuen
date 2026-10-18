@@ -345,3 +345,50 @@ def test_words_clean_strips_cjk_numbering_of_each_segment():
         w = _clean_line(src)
         if w is not None:
             assert _clean_line(w) == w, w
+
+
+def test_words_clean_rejects_lone_cjk_index_and_keeps_decimal_terms():
+    """纯汉字数字序号行不是词；术语列表里的小数术语不能被当序号丢掉。
+
+    回归 1：_BULLET 会先剥掉行首的 "一、"（"一、二" -> "二"），剩下的
+    单个汉字数字段再也走不到 _unwrap_segments 的整列丢弃规则：
+    _clean_line("一、二") / _clean_line("二、三") 把末项序号 "二"/"三"
+    当成词返回，_clean_line("一") / _clean_line("十一") 也放行——而阿拉伯
+    数字的对应写法（"1、2"、"1"）由 _PURE_NUMBER 统一拒绝，与本文件锁定的
+    「整行只有序号段 → 不是词」（"一、二、三" -> None）自相矛盾；序号残片
+    会随词库进入每轮提示词。纯汉字数字与纯数字同口径拒绝。
+
+    回归 2：段级序号判定 _is_index_segment 直接复用 _PURE_NUMBER，而该
+    正则也匹配小数，混在术语列表里的真实小数术语被当序号丢掉
+    （"卷积、3.14、池化" -> "卷积、池化"、"Adam、2.5、SGD" -> "Adam、SGD"），
+    与 _is_plain_index 的「"3.14、2.718" 是真实术语列表」口径矛盾：
+    段级序号只认整数/汉字数字。
+    """
+    # 回归 1：纯汉字数字（含整列被剥到只剩末项）与纯数字同口径拒绝
+    assert _clean_line("一") is None
+    assert _clean_line("十一") is None
+    assert _clean_line("〇") is None
+    assert _clean_line("一、二") is None
+    assert _clean_line("二、三") is None
+    assert _clean_line("（一）、二") is None
+    assert _clean_line("1、2") is None
+    assert _clean_line("1") is None
+    # 不能误伤：汉字数字开头但没有序号分隔符的真实术语
+    assert _clean_line("一氧化碳") == "一氧化碳"
+    assert _clean_line("万有引力") == "万有引力"
+    # 回归 2：混在术语列表里的小数术语必须保留
+    assert _clean_line("卷积、3.14、池化") == "卷积、3.14、池化"
+    assert _clean_line("Adam、2.5、SGD") == "Adam、2.5、SGD"
+    assert _clean_line("x、0.5、y") == "x、0.5、y"
+    # 整数序号仍要剥掉：段级判定不能借机放宽
+    assert _clean_line("卷积、2、池化") == "卷积、池化"
+    assert _clean_line("一、卷积、二、池化") == "卷积、池化"
+    # 真实词表端到端
+    assert parse_word_lines("一、二\n三\n") == []
+    assert parse_word_lines("卷积、3.14、池化\nAdam、2.5、SGD\n") \
+        == ["卷积、3.14、池化", "Adam、2.5、SGD"]
+    # 清洗必须是不动点
+    for src in ("一、二", "二、三", "卷积、3.14、池化", "Adam、2.5、SGD"):
+        w = _clean_line(src)
+        if w is not None:
+            assert _clean_line(w) == w, w
