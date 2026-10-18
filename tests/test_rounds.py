@@ -149,6 +149,37 @@ def test_baseline_partial_write_not_mistaken_as_established(ws, monkeypatch):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_atomic_write_tmp_is_pid_scoped(ws, monkeypatch):
+    """临时文件名必须带 PID：并发实例绝不能互踩同一个 .tmp。
+
+    回归：best.json / best.md 曾用固定名 <name>.tmp。同一 workspace 并发
+    运行两个 xuen 实例时，两边会交错写同一临时文件，os.replace 把撕裂的
+    内容发布成「有效」的最佳文件——best.json 解析失败退化成未知基线、
+    best.md 碎裂后下一次还原把垃圾写回 research.md。words.txt 与
+    write_section.py 的写入早已按 PID 隔离，守卫的原子写必须同口径。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.start()
+
+    seen = []
+    real_write = Path.write_text
+
+    def spy(self, *args, **kwargs):
+        seen.append(self.name)
+        return real_write(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", spy)
+    rounds._atomic_write(guard.best_json, "{}")
+    rounds._atomic_write(guard.best_md, "x")
+
+    pid = os.getpid()
+    assert seen == [f"{rounds.BEST_JSON_NAME}.{pid}.tmp",
+                    f"{rounds.BEST_MD_NAME}.{pid}.tmp"]
+    assert guard.best_json.read_text(encoding="utf-8") == "{}"
+    assert guard.best_md.read_text(encoding="utf-8") == "x"
+
+
 def test_heartbeat_when_no_change(ws):
     workspace, state_path = ws
     guard = make_guard(workspace, state_path)

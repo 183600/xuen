@@ -79,8 +79,15 @@ _SCORE_PATTERNS = (
 # ----------------------------------------------------------------------
 # 小工具
 def _atomic_write(path: Path, text: str) -> None:
-    """tmp + os.replace 原子写：读端永远不会看到半截文件。"""
-    tmp = path.with_name(path.name + ".tmp")
+    """tmp + os.replace 原子写：读端永远不会看到半截文件。
+
+    tmp 名带 PID：同一 workspace 并发运行两个 xuen 实例时，固定名 .tmp
+    会被两边交错写入（各自截断后各自覆盖），os.replace 随后把撕裂内容
+    发布成有效的 best.json / best.md——元数据解析失败、还原源内容碎裂。
+    words.txt / write_section.py 的写入早已按 PID 隔离（见
+    words.save_words / state.write_helper_script），守卫的原子写同理。
+    """
+    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
     try:
         tmp.write_text(text, encoding="utf-8")
         os.replace(tmp, path)
