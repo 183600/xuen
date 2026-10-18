@@ -223,15 +223,22 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             # 轮次守卫：快照 → 验证 → 晋升/还原。守卫自身异常一律降级跳过，
             # 绝不阻断研究循环（但还原后的区块变化要重读并上报给用户）
             if guard is not None:
-                if agent.user_killed:
+                # 本轮是否完整跑完：只有真正被中途终止（超时/非零退出码）
+                # 才算「未完成」。用户停止请求可能晚于进程正常退出到达
+                # （kill() 的 poll 与 killpg 之间进程恰好以 0 退出，或收尾
+                # 窗口里的请求已由 kill() 记为待处理），此时区块内容完整，
+                # 不能当半截候选丢弃——否则完整一轮的成果会因晚到的停止
+                # 请求被还原掉
+                round_completed = (not agent.timed_out
+                                   and agent.returncode in (0, None))
+                if agent.user_killed and not round_completed:
                     # 用户主动终止（TUI 按 q / Ctrl+C 会先杀掉 agent）的轮次：
                     # agent 可能只写了一半就被杀，半截产物同样不能作为下一轮
                     # 的起点；按失败轮次还原最佳，但不计入 agent 失败统计
                     # （用户停止不是 agent 失败）。还原会改回区块内容，下方
                     # 统一重读上报，屏幕不能停在未验证的半截候选上
                     _guard_round_failed(guard, i, "被用户终止，轮次未完成")
-                elif not (agent.timed_out
-                          or (agent.returncode not in (0, None))):
+                elif round_completed:
                     try:
                         guard.on_round_end(i)
                     except Exception as e:  # noqa: BLE001 —— 守卫降级原则

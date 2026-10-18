@@ -1821,11 +1821,20 @@ class ShellAgent:
         成为孤儿继续运行。注意只在杀不到进程时置位：若已把当前进程
         杀死，本次停止请求就已兑现，残留的 _killed 会被下一轮 run()
         读成「待处理请求」，把新拉起的 agent 立即误杀。
+        _user_killed 只在确实杀掉一个存活进程时置位：进程已退出的收尾
+        窗口里到达的 kill（如 TUI 按 q 恰好落在 Popen 收尾期间）什么都
+        杀不到，若也置位，刚完整跑完（rc=0）的轮次会被 runner 当作
+        「被用户终止，轮次未完成」丢弃并还原最佳。杀不到进程时只记
+        _killed，由下一次 run() 在 Popen 后立即补杀并自行补置位
+        _user_killed——本轮已结束，不能再被晚到的停止请求改写。
         """
         with self._kill_lock:
             proc = self._proc
-            self._user_killed = True
-            if proc is None:
+            if proc is not None and proc.poll() is None:
+                # 正在运行的进程会被杀掉：本次请求已兑现为「终止本轮」
+                self._user_killed = True
+            else:
+                # 进程已退出 / 尚未拉起：一个都没杀到，只记待处理请求
                 self._killed = True
         if proc is not None and proc.poll() is None:
             kill_process_tree(proc)
@@ -1888,9 +1897,15 @@ class ShellAgent:
             # 补杀后必须清掉 _killed：这次停止请求已在下面兑现，若残留，
             # 下一轮 run() 会把它当作新的待处理 kill，把新拉起的进程再次
             # 误杀（rc=-9）。此后 kill() 读到的 _proc 已非 None，只会直接
-            # 杀进程，不会再置位 _killed，故此处清除不会丢任何请求
+            # 杀进程，不会再置位 _killed，故此处清除不会丢任何请求。
+            # kill() 杀不到进程时只记 _killed、不再直接置位 _user_killed
+            # （见 kill() 注释），所以这里发现待处理请求（进程马上会被
+            # 补杀）时要补置 _user_killed：本轮的 rc=-9 是用户终止，不能
+            # 被计成 agent 执行失败
             pending_kill = killed_before or self._killed
             self._killed = False
+            if pending_kill:
+                self._user_killed = True
         if pending_kill:
             kill_process_tree(proc)
         out: List[str] = []
