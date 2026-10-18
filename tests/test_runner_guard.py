@@ -232,6 +232,77 @@ def test_late_verdict_adoption_shown_in_finish(env, tmp_path, monkeypatch):
     assert sink.final == ("第 1 版想法", "第 1 版产物")
 
 
+def test_interrupt_after_guard_not_double_counted(env, tmp_path, monkeypatch):
+    """Ctrl+C 晚到（守卫已完成本轮判定）时不得重复按失败/未完成记账：
+    history 里同一轮不能既有候选又记 skipped，汇总的轮次数/跳过数也
+    不能被虚增；已完成的判定（如采纳）不得被中断改写。"""
+    from xuen.rounds import RoundGuard
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.loop.iterations = 1
+
+    real_on_round_end = RoundGuard.on_round_end
+
+    def on_round_end_then_interrupt(self, i):
+        real_on_round_end(self, i)
+        # 模拟中断落在守卫处理完之后（如随后上报区块内容、打印汇总时）
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(RoundGuard, "on_round_end",
+                        on_round_end_then_interrupt)
+
+    class InfoSink(NullSink):
+        def __init__(self):
+            self.infos = []
+
+        def info(self, text):
+            self.infos.append(text)
+
+    sink = InfoSink()
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(cfg, "测试任务", sink=sink)
+
+    # 本轮候选已通过测试并晋升：中断不撤销已完成的守卫结论
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["verifier"] == "tests" and best["round"] == 1
+    assert _read(ws, "IDEA") == "第 1 版想法"
+    # 修复前：这里会多出一条「被中断，轮次未完成」的 skipped 事件
+    assert not any(e["event"] == "skipped" for e in _events(ws))
+    summary = [t for t in sink.infos if "轮次守卫汇总" in t][-1]
+    assert "轮次 1（候选 1：采纳 1" in summary
+
+
+def test_interrupt_mid_guard_restores_without_double_count(
+        env, tmp_path, monkeypatch):
+    """Ctrl+C 落在守卫验证途中（候选已快照、尚未定论）：仍要还原最佳
+    （未验证的半截状态不能流进下一轮起点），但该轮已按完成轮次记账，
+    不能再记 skipped、也不能把轮次数重复计一遍。"""
+    from xuen.rounds import RoundGuard
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.loop.iterations = 1
+
+    def verify_then_interrupt(self, round_no, cid):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(RoundGuard, "_verify", verify_then_interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(cfg, "测试任务", sink=NullSink())
+
+    events = _events(ws)
+    # 候选已快照（产物不丢）、尚未定论；状态被还原到基线
+    assert any(e["event"] == "candidate" for e in events)
+    assert not any(e["event"] == "verdict" for e in events)
+    assert not any(e["event"] == "skipped" for e in events)
+    assert any(e["event"] == "restored" for e in events)
+    assert _read(ws, "IDEA") == "（暂无）"
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["verifier"] == "baseline"
+
+
 def test_red_repo_pending_via_user_verdicts(env, tmp_path):
     """红测试 + verify=user：候选挂起；verdicts.txt 补高分后前进式翻案。"""
     from xuen import state

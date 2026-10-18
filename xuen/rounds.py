@@ -365,6 +365,10 @@ class RoundGuard:
         # 本会话里挂起、可被 verdicts.txt 补分改判的候选；补分兑现时
         # 统计要从「待评分」桶迁走，否则汇总与晋升日志自相矛盾
         self._pending_ids: set = set()
+        # 本会话内已由 on_round_end 处理（或已按失败/中断记账）的轮次：
+        # KeyboardInterrupt 可能晚于守卫处理到达，on_round_failed 再记一遍
+        # 会让轮次数/跳过数虚增、审计日志为同一轮记出自相矛盾的候选+跳过
+        self._handled_rounds: set = set()
         self._hinted = False  # 「如何评分」提示只打印一次
 
     # ---- 基础设施 ----
@@ -472,7 +476,17 @@ class RoundGuard:
 
     def on_round_failed(self, round_no: int, reason: str) -> None:
         """agent 启动/执行失败的轮次：不留候选（半截产物不可信），仅记账；
-        同时还原最佳——失败轮次留下的半截产物同样不能污染下一轮的起点。"""
+        同时还原最佳——失败轮次留下的半截产物同样不能污染下一轮的起点。
+
+        中断（KeyboardInterrupt）可能晚于 on_round_end 到达：该轮已按完成
+        轮次产出候选/心跳/判定事件，重复记账会虚增轮次数与跳过数，还会在
+        审计日志里为同一轮同时留下候选与 skipped 两条自相矛盾的事件。
+        此时只补做一次「还原最佳」（判定已完成时通常是无变化的空操作），
+        确保状态仍停在最佳，不再追加任何记账。"""
+        if round_no in self._handled_rounds:
+            self._restore_best(round_no, why=f"轮次失败（{reason}）")
+            return
+        self._handled_rounds.add(round_no)
         self.stats.rounds += 1
         self.stats.skipped += 1
         self._append_event({"event": "skipped", "round": round_no,
@@ -500,6 +514,7 @@ class RoundGuard:
         return result
 
     def _process_round_end(self, round_no: int) -> str:
+        self._handled_rounds.add(round_no)
         self.stats.rounds += 1
         text = self._read_state_text()
         if not text:
