@@ -59,6 +59,11 @@ _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.�
 # 而旧版只剥两端时恰好保留 "_private_var" 原形，属回归。
 _EMPHASIS_PAIR = re.compile(r"^([*~`]{1,3})(?=\S)(.+?)\1")
 _UNDERSCORE_PAIR = re.compile(r"^(_+)(?=\S)(.+?)\1(?=$|[^\w])")
+# _UNDERSCORE_PAIR 收尾符的必要条件：存在 "_" 且其紧随字符为结尾或非词字符
+# （收尾符 \1 的最后一个下划线必然满足）。没有这种位置时 regex 必定不匹配，
+# 却要回溯 group1 × group2（"_"*n + "a" 实测 O(n³)，255 字符要 109ms）；
+# 先用一次线性扫描挡掉，词库生成/读取里大量此类损坏行不再级联放大。
+_UNDERSCORE_CLOSE = re.compile(r"_(?=$|[^\w])")
 _QUOTE_PAIRS = (
     ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"),
     ("「", "」"), ("『", "』"), ("《", "》"), ("〈", "〉"),
@@ -90,8 +95,19 @@ def _quote_pair_re(open_ch: str, close_ch: str) -> "re.Pattern":
 _QUOTE_PAIR_RES = tuple(
     (open_ch, close_ch, _quote_pair_re(open_ch, close_ch))
     for open_ch, close_ch in _QUOTE_PAIRS)
+_EMPHASIS_CHARS = frozenset("*~`")
 _ASCII_WORD_CHAR = re.compile(r"[0-9A-Za-z]")
 _WORD_CHAR = re.compile(r"\w")
+
+# 成对装饰的「可起始符」（强调符、下划线、全部开引号）与「可收尾符」
+# （强调符、下划线、全部收尾引号）。_unwrap_pair / _strip_pairs 想改动
+# 字符串，至少要先有一个可起始符（词头 unwrap、成对 regex 都从它开始），
+# 并且要有对应的收尾符；两个集合任缺其一，必然恒等变换——逐字符剥离
+# 循环可安全地整体跳过（见 _clean_once 的快速路径）。
+_PAIR_OPENERS = frozenset(
+    "*~`_" + "".join(open_ch for open_ch, _ in _QUOTE_PAIRS))
+_PAIR_PARTICIPANTS = frozenset(
+    "*~`_" + "".join(close_ch for _, close_ch in _QUOTE_PAIRS))
 
 
 def _emph_repl(m: "re.Match") -> str:
@@ -113,8 +129,14 @@ def _strip_pairs(w: str) -> str:
     changed = True
     while changed:
         before = w
-        w = _ANY_EMPHASIS_PAIR.sub(_emph_repl, w)
+        if not _EMPHASIS_CHARS.isdisjoint(w):
+            w = _ANY_EMPHASIS_PAIR.sub(_emph_repl, w)
         for open_ch, close_ch, rx in _QUOTE_PAIR_RES:
+            # 缺少任一端的字符不可能成对；跳过还能避免长串同字符（如
+            # "「「「…" 无收尾符）让 regex 的 [^收尾符]* 在每一起始位
+            # 回溯到串尾，扫描退化成 O(n²)——超长行的清洗成本大头在此
+            if open_ch not in w or close_ch not in w:
+                continue
             w = rx.sub(lambda m, _open=open_ch: _quote_repl(m, _open), w)
         changed = w != before
     return w
@@ -133,7 +155,9 @@ def _unwrap_pair(w: str) -> str:
         if m:
             w = (m.group(2) + w[m.end():]).strip()
             continue
-        m = _UNDERSCORE_PAIR.match(w)
+        m = None
+        if w.startswith("_") and _UNDERSCORE_CLOSE.search(w):
+            m = _UNDERSCORE_PAIR.match(w)
         if m:
             w = (m.group(2) + w[m.end():]).strip()
             continue
@@ -319,7 +343,18 @@ def _clean_once(line: str) -> str | None:
     # ".**词**（解释）" 的 "." 和装饰头 "**" 一起吃掉，收尾符失去配对留在
     # 串中（"词**（解释）"）；逐个剥则能在装饰头露头时连收尾一起剥掉
     while w and w[0] in _EDGE_CHARS:
-        w = _unwrap_pair(w[1:])
+        rest = w[1:]
+        # 余串没有任何可起始符（新配对无从开始）或没有任何可收尾符
+        # （已开的配对无处收尾）：后续每次 unwrap 都是恒等变换（后缀同样
+        # 满足），逐字符剥离等价于一次性剥掉整段前导边缘字符。整行重复
+        # 的未配对装饰符（"「「「…"、"」」」…"）在逐字符路径上会退化成
+        # O(n²)~O(n³) 的正则回退（实测 n=1600 就要 17s、n=20000 数十分钟），
+        # 足以挂死词库生成/读取
+        if (_PAIR_OPENERS.isdisjoint(rest)
+                or _PAIR_PARTICIPANTS.isdisjoint(rest)):
+            w = w.lstrip(_EDGE_CHARS)
+            break
+        w = _unwrap_pair(rest)
     # 分隔符后面的词段同样可能是装饰头（见 _unwrap_segments 说明）
     w = _unwrap_segments(w)
     w = w.rstrip(_EDGE_CHARS).strip()
@@ -364,12 +399,22 @@ def _clean_once(line: str) -> str | None:
     return w
 
 
+# 单词行清洗后的长度上限是 60；输入行远大于该上限时只可能来自损坏的
+# words.txt（含手工编辑事故）或异常/恶意的 agent 输出。清洗是「逐字符
+# 剥离 + 不定点循环」，夹带未配对装饰符的超长行会退化成超线性（见
+# _clean_once 的快速路径说明），实测 20 万字符可挂死数十分钟；合法词
+# 加装饰与注释远小于该上限，超限直接按非词拒绝，保证清洗必然快速返回。
+_MAX_CLEAN_LEN = 256
+
+
 def _clean_line(line: str) -> Optional[str]:
     """清洗到不动点：单次清洗剥掉边缘字符后可能暴露出新的序号/标点/分隔符
     （如 "「9、注意力」" 先剥引号、下一轮才露出 "9、"），只清洗一次会让
     generate_words_shell 保存的词与 load_words 再次清洗得到的词不一致
     （词表随保存-读取漂移），且带引号的编号词会残留序号混进词库。
     每次有效清洗都严格变短，故循环必然收敛。"""
+    if len(line) > _MAX_CLEAN_LEN:
+        return None
     w = line
     for _ in range(64):
         nxt = _clean_once(w)

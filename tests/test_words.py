@@ -347,6 +347,29 @@ def test_words_clean_strips_cjk_numbering_of_each_segment():
             assert _clean_line(w) == w, w
 
 
+def test_words_clean_rejects_pathological_long_lines_without_hanging():
+    """超长行必须快速判非词：清洗对未配对装饰符的长串是超线性的。
+
+    回归：损坏的 words.txt（手工编辑事故）或异常/恶意的 agent 输出里
+    一行重复的未配对装饰符（如 "「「「…"）会让 _clean_line 退化成
+    O(n²)~O(n³) 的正则回退（实测 1600 字符就要 17 秒、2 万字符数十分钟），
+    词库生成/读取整体挂死。单词行清洗后的上限是 60 字符，超长行直接
+    按非词拒绝；上限内的装饰长词仍照常清洗。
+    """
+    assert _clean_line("「" * 10000) is None
+    assert _clean_line("「" * 10000 + "词") is None   # 超上限整体拒绝
+    assert _clean_line("'" * 10000) is None
+    assert _clean_line("." * 10000) is None
+    # 上限内的装饰长词（含配对）仍照常清洗，不能借机放宽
+    assert _clean_line("「" * 200 + "词" + "」" * 20) == "词"
+    assert _clean_line("." * 100 + "**词**（解释）") == "词（解释）"
+    # 超长行不能阻塞同批的合法短词；整批解析必须瞬时完成
+    assert parse_word_lines("「" * 5000 + "\n「」" * 5000 + "\nalpha\n") \
+        == ["alpha"]
+    # 不动点口径：超长行清洗结果是 None，再洗任何派生输入也不会翻案
+    assert _clean_line("「" * 300) is None
+
+
 def test_words_clean_rejects_lone_cjk_index_and_keeps_decimal_terms():
     """纯汉字数字序号行不是词；术语列表里的小数术语不能被当序号丢掉。
 
