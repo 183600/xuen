@@ -1077,6 +1077,47 @@ def test_late_adoption_best_write_failure_stays_pending(ws, monkeypatch):
     assert read_idea(state_path) == "写盘失败也要保住的想法"
 
 
+def test_adopted_round_best_write_failure_not_marked_resolved(ws, monkeypatch):
+    """本轮采纳但 best 写盘失败：候选不能先被记成「已决」。
+
+    回归：_process_round_end 先记 verdict(adopted) 事件、后调 _adopt 写
+    best.md/best.json。写盘抛 OSError（磁盘满 / 目录只读）时事件已把候选
+    锁死——_apply_user_verdicts 的 resolved 集合此后永久跳过它，用户腾出
+    磁盘后补分也再翻不了案，审计日志还留下一条未兑现的 adopted。与
+    _apply_user_verdicts 的修复同一口径：外部副作用成功前不能留下不可
+    撤销的结论（不记已决事件、不改统计、不改 self.best）。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "写盘失败也要保住的想法")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+    assert guard.best["round"] == 0
+    assert guard.stats.adopted == 0
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+    # 写盘恢复后用补分通道仍能晋升：候选没有被那条未兑现的已决事件锁死
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    cid = [e for e in events(guard) if e["event"] == "candidate"][-1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 补分采纳\n",
+                                            encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+    assert read_idea(state_path) == "写盘失败也要保住的想法"
+
+
 # ---------------------------------------------------------------- 失败轮次
 def test_round_failed_restores_best(ws):
     """agent 失败轮次的半截产物同样不能污染下一轮起点。"""

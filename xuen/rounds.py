@@ -552,10 +552,17 @@ class RoundGuard:
 
         # 4) 验证 → 晋升 / 拒绝 / 挂起
         verdict = self._verify(round_no, cid)
+        if verdict.result == "adopted":
+            # 先完成外部副作用（best.md / best.json 写盘）再记已决事件：
+            # 写盘失败（磁盘满 / 目录只读）时保持「未决」——先记一条
+            # adopted 会让 _apply_user_verdicts 的 resolved 集合永久跳过
+            # 该候选，用户腾出磁盘后补分也再翻不了案，审计日志还会留下
+            # 一条未兑现的 adopted（与 _apply_user_verdicts 的修复同一
+            # 口径：外部副作用成功前不能留下不可撤销的结论）
+            self._adopt(cid, round_no, verdict)
         self._append_event({"event": "verdict", "id": cid,
                             "round": round_no, **_verdict_fields(verdict)})
         if verdict.result == "adopted":
-            self._adopt(cid, round_no, verdict)
             return "adopted"
         if verdict.result == "rejected":
             self.stats.rejected += 1
@@ -759,11 +766,15 @@ class RoundGuard:
             _atomic_write(self.best_md, text)
         # best.json 记录的是「哪份快照是最佳」；研究循环只前进不改写历史，
         # 旧 best.md 内容已被这份覆盖前仍在各轮 cand-*.md / git 提交里留档
-        self.best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
-                     "score": verdict.score, "ts": _ts(),
-                     "reason": verdict.reason}
+        best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
+                "score": verdict.score, "ts": _ts(),
+                "reason": verdict.reason}
+        # 两个文件都写盘成功后才提交内存状态与统计：best.md 成功、
+        # best.json 失败时 self.best / 统计不能指向一份没有完整落盘的最佳
+        # （调用方据异常按「守卫本轮降级」处理，候选保持未决可补分翻案）
         _atomic_write(self.best_json,
-                      json.dumps(self.best, ensure_ascii=False, indent=2))
+                      json.dumps(best, ensure_ascii=False, indent=2))
+        self.best = best
         self.stats.adopted += 1
         self.sink.ok(f"第 {round_no} 轮候选通过验证（{verdesc(verdict)}），"
                      f"晋升为最佳（{cid}）")
