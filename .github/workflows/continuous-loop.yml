@@ -3,7 +3,7 @@ name: Continuous Loop
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/20 * * * *'
+    - cron: '*/5 * * * *'
 
 # ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）
 # 上一个 run 一结束，队列里的下一个立刻开始 → "上一个结束立刻触发下一个"
@@ -36,6 +36,61 @@ jobs:
       actions: write   # gh workflow run 需要
 
     steps:
+      # ⭐ 立刻续跑（上）：本 run 一开始就把「下一个 run」排进 concurrency 队列。
+      # concurrency.cancel-in-progress=false → 组内 1 running + 1 pending，
+      # 本 run 无论以何种方式结束（成功 / 失败 / 超时被取消 / runner 宕机），
+      # 队列里的后继 run 都会在几秒内自动开始；不依赖任何收尾步骤是否被执行。
+      - name: Queue next run (immediate hand-off)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set +e
+          BRANCH="${GITHUB_REF_NAME}"
+          WF_REF="${GITHUB_WORKFLOW_REF%%@*}"
+          WF_FILE="${WF_REF##*/}"
+          case "$WF_FILE" in
+            *.yml|*.yaml) ;;
+            *) WF_FILE="continuous-loop.yml" ;;
+          esac
+          echo "[loop] repo=${GH_REPO} workflow=${WF_FILE} branch=${BRANCH} run=${RUN_ID}"
+          # 组内是否已有「另一个」排队中的 run（排除当前 run 自己：
+          # 它刚启动时 API 状态可能还是 pending，不能当成后继）
+          pending_other() {
+            gh api "repos/${GH_REPO}/actions/workflows/${WF_FILE}/runs?per_page=30" \
+              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' \
+              2>/dev/null
+          }
+          Q="$(pending_other)"
+          # 查询失败时按 0 处理：宁可多派一个（会被队列合并），也绝不能漏派而断链
+          case "$Q" in ''|*[!0-9]*) Q=0 ;; esac
+          echo "[loop] queued successors before dispatch: ${Q}"
+          if [ "$Q" != "0" ]; then
+            echo "[loop] 后继 run 已在队列中，无需重复派发"
+            exit 0
+          fi
+          for attempt in 1 2 3 4 5; do
+            if gh workflow run "$WF_FILE" --ref "$BRANCH"; then
+              for _ in 1 2 3 4 5 6; do
+                sleep 5
+                Q="$(pending_other)"
+                case "$Q" in ''|*[!0-9]*) Q=0 ;; esac
+                if [ "$Q" != "0" ]; then
+                  echo "[loop] 后继 run 已排队（attempt ${attempt}）——当前 run 一结束它就会立刻起跑"
+                  exit 0
+                fi
+              done
+              echo "[loop][warn] 派发已提交但暂未看到排队的 run（attempt ${attempt}）"
+            else
+              echo "[loop][warn] 派发失败（attempt ${attempt}）"
+            fi
+            sleep 10
+          done
+          echo "[loop][warn] 未能确认后继 run；收尾的 next-run job 与 */5 心跳会补位"
+          exit 0
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -455,12 +510,42 @@ jobs:
       # 这个新 run 会阻塞等待当前 run 退出 → 当前 run 一结束立刻开始
       # !cancelled()：除"手动取消"外都续跑（失败也续），确保循环不中断；
       # 定时触发 */20 同时充当看门狗：即使某次续跑失败，最多 20 分钟后自动恢复
-      - name: Trigger next run (continuous loop)
-        if: ${{ !cancelled() }}
+  # ===== loop hand-off (added) =====
+
+  # ⭐ 立刻续跑（下）：独立的收尾 job。
+  # needs + if: always()：工作 job 无论成功、失败、超时被取消，这个 job 都会紧接着启动（已实测验证）。
+  # 这里无条件派发一个新的后继 run：它在组内排队，本 run 退出的一瞬间就被调度。
+  # 万一这个 job 连启动都没机会（整个 run 被强杀），*/5 心跳会兜底。
+  next-run:
+    needs: [run-opencode]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write
+    steps:
+      - name: Ensure next run is queued
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          echo "Dispatching next run of '${{ github.workflow }}' on '${{ github.ref_name }}' ..."
-          gh workflow run "${{ github.workflow }}" \
-            --repo "${{ github.repository }}" \
-            --ref "${{ github.ref_name }}"
+          set +e
+          BRANCH="${GITHUB_REF_NAME}"
+          WF_REF="${GITHUB_WORKFLOW_REF%%@*}"
+          WF_FILE="${WF_REF##*/}"
+          case "$WF_FILE" in
+            *.yml|*.yaml) ;;
+            *) WF_FILE="continuous-loop.yml" ;;
+          esac
+          echo "[loop] repo=${GH_REPO} workflow=${WF_FILE} branch=${BRANCH} run=${RUN_ID}"
+          for attempt in 1 2 3 4 5; do
+            if gh workflow run "$WF_FILE" --ref "$BRANCH"; then
+              echo "[loop] 已派发后继 run（attempt ${attempt}）——本 run 结束后立刻起跑"
+              exit 0
+            fi
+            echo "[loop][warn] 派发失败（attempt ${attempt}）10s 后重试"
+            sleep 10
+          done
+          echo "[loop][warn] 派发失败；下一次 */5 心跳会补位"
+          exit 0
