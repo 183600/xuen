@@ -238,6 +238,9 @@ jobs:
         run: |
           set +e
           PROMPT='判断是否有bug，如果有就修复'
+          ISSUES_FILE=".opencode_issues.md"
+          DETECT_PROMPT="$(printf '本次只做检测，绝对不要修改任何代码或文件（唯一允许写入的是临时问题清单 `%s`）。\n\n阶段任务如下（其中所有“修改/修复/改进”动作都留到第二步，本次一律不执行）：\n%s\n\n要求：\n1. 通读相关代码、配置、测试与实验脚本，尽可能具体地定位问题（尽量给出 `文件:行号`）。\n2. 把发现的问题按严重程度从高到低写入 `%s`；每条包含位置、问题描述、为什么是问题、建议的修复方向。\n3. 即使没有发现问题，也要在文件里写明“未发现问题”；该清单是流程要求的临时中间文件，不属于任务中禁止的“报告”。\n4. 除该清单外，不要修改、删除或移动任何文件（尤其 .github/、LICENSE、README*、PLAN.md、测试与数据文件），不要 git add/commit/push，不要运行会改变仓库状态的命令。\n5. 再次强调：本次只输出问题清单，不要动手修复。\n' "$ISSUES_FILE" "$PROMPT" "$ISSUES_FILE")"
+          FIX_PROMPT="$(printf '本阶段分两步执行：第一步（检测）已经完成或因剩余时间不足而跳过，问题清单保存在 `%s`。\n第二步（现在执行）：先读取该清单，逐条修复其中列出的全部问题，不要遗漏；若清单不存在、为空或明显不完整，则自行重新检查并修复。修复完成后必须删除 `%s`，并确认仓库中不再残留该文件；该清单是流程要求的临时中间文件，不属于任务中禁止的“报告”。\n\n下面是本阶段原本的任务与约束：\n%s\n' "$ISSUES_FILE" "$ISSUES_FILE" "$PROMPT")"
           WORK_SECONDS=17100        # 工作窗口：4 小时 45 分 = 17100 秒
           MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
           MAX_ITER_SECONDS=2400     # 单轮 opencode 最多 40 分钟（剩余更少时自动缩短）
@@ -405,19 +408,36 @@ jobs:
               CAP=$((REMAIN_NOW - 120))
               if [ "$CAP" -gt "$MAX_ITER_SECONDS" ]; then CAP=$MAX_ITER_SECONDS; fi
 
-              # 输出经 clean_log.py 净化后再进 Actions 日志（剥 ANSI/控制字符/坏字节）
+              # 第一步：只检测，把问题清单写入临时 .md（输出同样净化后进日志）
+              DETECT_CAP=$(( CAP / 4 ))
+              [ "$DETECT_CAP" -lt 120 ] && DETECT_CAP=120
+              [ "$DETECT_CAP" -gt 600 ] && DETECT_CAP=600
+              FIX_CAP=$(( CAP - DETECT_CAP ))
+              [ "$FIX_CAP" -lt 180 ] && FIX_CAP=180
+              echo "第 ${ITER} 轮 · 第一步：检测问题（预算 ${DETECT_CAP}s）"
               : > "$OUT"
-              timeout --signal=INT --kill-after=30s "${CAP}" \
-                opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$PROMPT" 2>&1 \
+              timeout --signal=INT --kill-after=30s "${DETECT_CAP}" \
+                opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$DETECT_PROMPT" 2>&1 \
                 | tee "$OUT" | python3 "$CLEANER"
+              RC_D=${PIPESTATUS[0]}
+              if [ "$RC_D" -ne 0 ]; then
+                echo "::warning::检测步骤退出码 ${RC_D}；继续执行修复步骤（修复步骤会自行补检）"
+              fi
+
+              # 第二步：修复清单中的全部问题，然后删除临时清单
+              echo "第 ${ITER} 轮 · 第二步：修复问题（预算 ${FIX_CAP}s）"
+              timeout --signal=INT --kill-after=30s "${FIX_CAP}" \
+                opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$FIX_PROMPT" 2>&1 \
+                | tee -a "$OUT" | python3 "$CLEANER"
               RC=${PIPESTATUS[0]}
+              rm -f "$ISSUES_FILE"
 
               # 成功，或达到单轮时间上限被截断：已完成的修改照常进入提交环节
               if [ "$RC" -eq 0 ]; then
                 break
               fi
               if [ "$RC" -eq 124 ] || [ "$RC" -eq 137 ] || [ "$RC" -eq 143 ]; then
-                echo "（本轮达到单轮时间上限 ${CAP}s 被截断，已完成的修改会照常提交）"
+                echo "（本轮达到单轮时间上限 ${FIX_CAP}s 被截断，已完成的修改会照常提交）"
                 break
               fi
 
@@ -464,6 +484,7 @@ jobs:
             git clean -fdq .github 2>/dev/null
 
             # 增量提交 + 推送，改动尽早落盘（推送失败下一轮自动补推）
+            rm -f "$ISSUES_FILE"
             if [ -n "$(git status --porcelain)" ]; then
               git add -A
               git commit -m "chore: automated bug fixes by opencode (iter ${ITER})" 2>/dev/null
@@ -483,6 +504,7 @@ jobs:
         run: |
           git checkout HEAD -- .github 2>/dev/null || true
           git clean -fdq .github 2>/dev/null || true
+          rm -f .opencode_issues.md
           if [ -n "$(git status --porcelain)" ]; then
             git add -A
             git commit -m "chore: automated bug fixes by opencode"
