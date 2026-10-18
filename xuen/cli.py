@@ -54,7 +54,12 @@ def _resolve_task(args) -> str:
     if not task:
         try:
             task = input("请输入任务（例如：设计一个新的优化器）：").strip()
-        except (EOFError, KeyboardInterrupt):
+        except EOFError:
+            # stdin 被关闭/重定向（如 `xuen < /dev/null`、管道已读到 EOF）：
+            # 没有任务可问，按「未提供任务」处理（退出码 2）。
+            # KeyboardInterrupt 绝不能在这里一并吞掉：交互提示处按 Ctrl+C
+            # 是「被中断」，必须按 README 的退出码约定返回 130，而不是被
+            # 当成 EOF 一路走到「未提供任务」的退出码 2（由 main 统一处理）
             task = ""
     return task
 
@@ -136,7 +141,14 @@ def main(argv=None) -> int:
             print(f"参数覆盖无效：{e}", file=sys.stderr)
             return 2
 
-    task = _resolve_task(args)
+    try:
+        task = _resolve_task(args)
+    except KeyboardInterrupt:
+        # 交互式询问任务时按 Ctrl+C：与运行期中断同一约定（130），
+        # 不能被 _resolve_task 吞成「未提供任务」（退出码 2 + 误导性报错）
+        print()
+        ui.warn("已中断")
+        return 130
     if not task:
         ui.err("未提供任务")
         return 2
