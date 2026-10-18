@@ -530,6 +530,98 @@ def _command_substitution_end(tpl: str, i: int) -> int:
     return n
 
 
+def _pid_bracket_quote_region(tpl: str, i: int,
+                              commented_backslashes: Optional[Set[int]] = None
+                              ) -> bool:
+    """位置 i（`(` 或 `{`）处是否为「$$ 后区域含引号切换」的写法。
+
+    shell 把 `$$(` / `$${` 的 $$ 当 PID、后面的括号/花括号当字面量
+    （bash/dash 都继续解析后续文本），但 bash 会对 `(` 到配对 `)`（以及
+    `{` 到配对 `}`）的区域做一次命令替换式的配对扫描：区域里的引号只是
+    字面量、不切换外层双引号状态（实测 `v="$$(a"b"c)d"` 在 bash 下 v 是
+    `PID(a"b"c)d`、dash 是 `PID(abc)d`；`$${x:-"b"}` 同理 bash 保留引号）。
+    渲染器（与 dash 一致）在 `"` 处切换语境：区域里的 `"` 之后插入的
+    $prompt 会按裸语境用 shlex.quote 单引号包裹，而 bash 仍把它当双引号
+    内文本——单引号只是字面量，提示词里的 $(...)/`...` 逃出引用被真正
+    执行（注入，实测 `printf %s "$$<续行>( "$prompt" )"` 与
+    `printf "%s $${x:-"}$prompt"}"` 渲染后 bash 创建文件、dash 安全）。
+    区域里出现会切换引号的 `"` 且能配到结束的 `)` / `}` 时返回 True
+    （调用方整体拒绝）。
+    区域没有配对的结束符时 bash 报解析错误、不会继续执行，按安全处理；
+    区域里的嵌套命令替换/参数展开/旧式算术/反引号按与渲染器相同的跳过
+    程序跨过（bash 同样把它们视为配对内部），无法可靠跳过的一律按不安全
+    处理。只在双引号语境调用：单引号里 `$$(`/`$${` 是纯字面量，裸语境下
+    bash/dash 的解析一致或直接报语法错误。
+    """
+    opener = tpl[i]
+    closer = ")" if opener == "(" else "}"
+    prev = _prev_effective_pos(tpl, i, commented_backslashes)
+    if prev < 0 or tpl[prev] != "$":
+        return False
+    prev2 = _prev_effective_pos(tpl, prev, commented_backslashes)
+    if prev2 < 0 or tpl[prev2] != "$":
+        return False
+    if not _dollar_starts_expansion(tpl, prev2, commented_backslashes):
+        return False
+    n = len(tpl)
+    depth = 1
+    quote = False
+    j = i + 1
+    while j < n:
+        c = tpl[j]
+        if c == "\\":
+            # 与双引号内的转义规则一致：\ + $ ` " \ 换行 成对复制
+            if j + 1 < n and tpl[j + 1] in ("\\", '"', "$", "`", "\n"):
+                j += 2
+            else:
+                j += 1
+            continue
+        if c == '"':
+            k = j - 1
+            backslashes = 0
+            while k > i and tpl[k] == "\\":
+                backslashes += 1
+                k -= 1
+            if backslashes % 2 == 0:
+                # 渲染器会在这个 " 处切换引号状态（bash 不会）
+                quote = True
+            j += 1
+            continue
+        if c == "`":
+            j = _backquote_end(tpl, j)
+            if j >= n:
+                # 反引号未闭合：bash 报解析错误，不会执行
+                return False
+            continue
+        if c == "$" and j + 1 < n and tpl[j + 1] in ("(", "{", "["):
+            if not _dollar_starts_expansion(tpl, j, commented_backslashes):
+                j += 1
+                continue
+            if tpl.startswith("$(", j):
+                j = _command_substitution_end(tpl, j)
+                if j >= n:
+                    # 嵌套命令替换的边界无法可靠确定：宁可拒绝
+                    return True
+            elif tpl.startswith("${", j):
+                j = _parameter_expansion_end(tpl, j)
+                if j >= n:
+                    # 渲染器会整段跳过剩余模板、不再替换，按安全处理
+                    return False
+            else:
+                j = _legacy_arithmetic_end(tpl, j)
+                if j >= n:
+                    return False
+            continue
+        if c == opener:
+            depth += 1
+        elif c == closer:
+            depth -= 1
+            if depth == 0:
+                return quote
+        j += 1
+    return False
+
+
 def _heredoc_body_open_substitution(tpl: str, start: int, end: int) -> bool:
     """未加引号的 heredoc 正文 [start,end) 结束处是否仍有未闭合的展开。
 
@@ -911,6 +1003,14 @@ class ShellAgent:
         据此拒绝这类模板）；`\\$$prompt`（$ 被转义、$prompt 是新展开）
         与 `$$$prompt`（落单的 $ 开启新展开）照常替换，单引号语境里
         $ 只是字面量、也不受影响（见 _placeholder_at）。
+
+        双引号内的 `$$(` / `$${`（PID + 字面括号/花括号）还有一层
+        bash/dash 差异：bash 会对 `(` 到配对 `)`（以及 `{` 到配对 `}`）
+        的区域做命令替换式配对扫描——区域里的引号只是字面量、不切换
+        外层双引号状态；dash 与渲染器按普通规则在引号处切换。区域里
+        出现引号时后续 $prompt 会按错误语境插入（双引号里插入单引号
+        没有保护作用），提示词里的 $(...)/`...` 被真正执行（注入）。
+        这类模板整体拒绝（见 _pid_bracket_quote_region）。
 
         注释（词首的 # 到行尾）里的引号只是普通字符：渲染器若把注释里的
         ' 当引号开启，与实际 shell 的引号状态脱节，后续 $prompt 按错误
@@ -1321,6 +1421,25 @@ class ShellAgent:
                     out.append(tpl[i:j])
                     i = j
                     continue
+                if ch in "({" and _pid_bracket_quote_region(
+                        tpl, i, commented_backslashes):
+                    # `$$(` / `$${` 的区域里有会切换引号状态的 "：bash 对
+                    # 区域做命令替换式配对扫描、区域内的引号只是字面量、
+                    # 不切换外层双引号，而渲染器（与 dash 一致）在这里切到
+                    # 裸语境——区域内的 $prompt 会按裸语境插入单引号，
+                    # bash 却仍在双引号里，单引号只是字面量，提示词里的
+                    # $(...)/`...` 逃出引用被真正执行（注入）。与 $'...'
+                    # 同口径：整体拒绝、绝不替换（command_receives_prompt
+                    # 据此让配置校验拒绝），见 _pid_bracket_quote_region
+                    raise ValueError(
+                        "agent.command 不支持 `$$(` / `$${` 后括号区域里"
+                        "出现引号的写法：shell 把 $$ 当 PID、括号当字面量，"
+                        " bash 会对括号到配对结束符的区域做命令替换式扫描"
+                        "（区域里的引号只是字面量、不切换外层引号），而实"
+                        "际解析会按引号状态把提示词放错语境——提示词里的 "
+                        "$(...)/`...` 被真正执行（注入）。请改用普通写法，"
+                        '例如 "$prompt"'
+                    )
                 if ch == '"':
                     state = "bare"
                     out.append(ch)

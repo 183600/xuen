@@ -1360,7 +1360,9 @@ def test_render_command_pid_dollar_does_not_open_substitution(tmp_path):
     都能复现）。同理 `$${` / `$$[` / `$$'` 也不是参数展开/旧式算术/
     ANSI-C 引用。修复：这些展开头都要求 $ 真的开启展开
     （_dollar_starts_expansion），$$(、$${、$$[、$$' 按普通字符解析；
-    渲染结果在双引号内转义 $，提示词原样送达且不执行。
+    渲染结果在双引号内转义 $，提示词原样送达且不执行。区域里出现引号
+    （渲染器会切换语境、bash 不会）的写法另见
+    test_render_command_rejects_pid_paren_quote_region。
     """
     import re
     import shutil
@@ -1416,6 +1418,82 @@ def test_render_command_pid_dollar_does_not_open_substitution(tmp_path):
                                text=True, cwd=tmp_path)
             assert r.returncode == 0, (tpl, shell, r.stderr)
             assert re.fullmatch(pattern, r.stdout), (tpl, shell, r.stdout)
+
+
+def test_render_command_rejects_pid_paren_quote_region(tmp_path):
+    """`$$(` / `$${` 区域里出现引号切换的模板必须整体拒绝（bash 注入回归）。
+
+    回归：shell 把 `$$(` / `$${` 的 $$ 当 PID、后面的括号当字面量，但
+    bash 会对 `(` 到配对 `)`（以及 `{` 到配对 `}`）的区域做命令替换式
+    配对扫描——区域里的引号只是字面量、不切换外层双引号状态（实测
+    `v="$$(a"b"c)d"` 在 bash 下 v 是 `PID(a"b"c)d`、dash 是
+    `PID(abc)d`；`$${x:-"b"}` 同理 bash 保留引号、dash 去掉引号）。
+    渲染器（与 dash 一致）在 `"` 处切换语境：
+    `printf %s "$$<续行>( "$prompt" )"` 与
+    `printf "%s $${x:-"}$prompt"}"` 渲染后提示词按裸语境插成
+    shlex.quote 单引号，而 bash（实际执行 /bin/sh 的方言无法预知）仍把
+    它当双引号内文本——单引号只是字面量，提示词里的 $(...)/`...` 逃出
+    引用被真正执行（注入，实测 bash 创建文件、dash 安全；前者此前还是
+    「续行拆操作符」测试里的允许对照）。修复：区域里出现会切换引号的
+    `"` 且能配到结束符时整体拒绝（与 $'...' / 续行拆操作符同口径），
+    由配置校验拦下（command_receives_prompt 返回 False）。
+    区域没有结束符时 bash 报解析错误、不会执行（允许对照）；
+    配对结束符之后的引号两个 shell 行为一致，不受影响（允许对照）。
+    """
+    import re
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    reject = (
+        'printf %s "$$\\\n( "$prompt" )"',    # 旧允许对照：实测 bash 注入
+        'printf %s "$$\\\n( "*$prompt" )"',   # 区域内还有 * 前缀的变体
+        'printf %s "$$("$prompt")"',           # 无续行：区域里直接切换引号
+        'printf %s "x$$(a"b"$prompt"c)d"',     # 引号在前、提示词仍在区域内
+        'printf %s "$$(x\\\\"$prompt)"',       # 双反斜杠后引号仍会切换
+        'printf %s "$$(x"y)$prompt"',          # 提示词在配对的 ) 之前
+        'printf "%s $${x:-"}$prompt"}"',       # $${ 区域：实测 bash 注入
+        'printf "%s $${x:-"a b"}$prompt"',     # $${ 区域：bash 报坏替换
+    )
+    for tpl in reject:
+        assert command_receives_prompt(tpl) is False, tpl
+        try:
+            ShellAgent(tpl, tmp_path, timeout=5).render_command("x")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"`$$(` 区域含引号的模板应被拒绝: {tpl}")
+
+    # 允许对照：区域内没有引号切换，两个 shell 行为一致、照常送达
+    prompt = "P one; two Q"
+    esc = re.escape(prompt)
+    deliver = (
+        # 区域紧跟提示词（不含引号）：bash 在该区域内按双引号展开，一致
+        ('printf %s "$$\\\n($prompt)done"', rf"\d+\({esc}\)done"),
+        # 配对 ) 之后的引号照常切换，两个 shell 一致
+        ('printf %s "$$(x)"$prompt""', rf"\d+\(x\){esc}"),
+    )
+    for tpl, pattern in deliver:
+        assert command_receives_prompt(tpl) is True, tpl
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            r = subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path)
+            assert r.returncode == 0, (tpl, shell, r.stderr)
+            assert re.fullmatch(pattern, r.stdout), (tpl, shell, r.stdout)
+
+    # 没有结束 ) 的区域：bash 报解析错误、dash 正常送达，都不可注入
+    marker = tmp_path / "pwned"
+    prompt = f"$(touch {marker}) `touch {marker}.bt`"
+    tpl = 'printf %s "$$($prompt"'
+    assert command_receives_prompt(tpl) is True
+    rendered = ShellAgent(tpl, tmp_path, timeout=5).render_command(prompt)
+    assert "\\$(touch" in rendered
+    for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+        subprocess.run([shell, "-c", rendered], capture_output=True,
+                       text=True, cwd=tmp_path)
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
 def test_render_command_adjacent_placeholders(tmp_path):
@@ -1733,7 +1811,10 @@ def test_render_command_rejects_continuation_split_operators(tmp_path):
     # 不构成特殊头（转义/配对排除）：不拒绝、照常渲染
     allow = (
         'printf %s \\>\\\n& "$prompt"',        # > 被转义：没有拼出 >&
-        'printf %s "$$\\\n( "$prompt" )"',     # $$ 是 PID：不是 $( 展开
+        # $$ 是 PID：( 不是 $( 展开的起点；区域内没有引号，照常渲染
+        # （区域里出现引号切换的 `$$(` 写法见
+        # test_render_command_rejects_pid_paren_quote_region）
+        'printf %s "$$\\\n($prompt)done"',
     )
     for tpl in allow:
         assert command_receives_prompt(tpl) is True, tpl
