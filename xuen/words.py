@@ -164,6 +164,32 @@ def _unwrap_pair(w: str) -> str:
 # 小数点却不能只认半角，否则全角小数会漏进词库（与 _BULLET 保持一致）
 _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 
+# 汉字数字序号段："一、卷积、二、池化" 按分隔符分段后 "二" 单独成段，
+# 与阿拉伯数字段同级（对应 "1、卷积、2、池化" 的 "2"）；整串只有汉字
+# 数字（"一、二、三"）时也是编号列表，不是术语（见 _unwrap_segments）
+_CJK_INDEX = re.compile(r"^[" + _CJK_NUMERALS + r"]+$")
+
+
+def _is_index_segment(t: str) -> bool:
+    """词段是否只是列表序号（阿拉伯数字或汉字数字），不是术语。"""
+    t = t.strip()
+    return bool(t) and bool(_PURE_NUMBER.match(t) or _CJK_INDEX.match(t))
+
+
+def _is_plain_index(t: str) -> bool:
+    """段是否只是整数/汉字数字序号（小数除外）。
+
+    "3.14、2.718" 这类纯小数列表是真实术语列表（已被测试锁住），
+    不是编号列表，不能被整行丢弃规则误伤。
+    """
+    t = t.strip()
+    if not t:
+        return False
+    if _CJK_INDEX.match(t):
+        return True
+    return bool(_PURE_NUMBER.match(t)) and "." not in t and "．" not in t
+
+
 # 纯符号/装饰行（如 "///"、"()"、"[]"、"<>"、"——"、"…"）不是术语：
 # 词必须至少含一个字母/数字/CJK 字符（[^\W_] 即 Unicode 字母与数字），
 # 否则 markdown 分隔线/括号/省略号之类的残片会混进词库，
@@ -197,7 +223,7 @@ def _clean_segment_head(core: str) -> str:
 
 
 def _is_list_index_sep(parts: List[str], i: int) -> bool:
-    """纯数字段（parts[i]）的相邻分隔符是否把它标记为列表序号。
+    """序号段（parts[i]，纯数字或汉字数字）的相邻分隔符是否把它标记为列表序号。
 
     "1、卷积" 的中文顿号与 "1, 卷积" 的 ", "（分隔符后跟空白）是列表
     排版；而 "1,2-丙二醇"、"2,4-D" 里紧贴数字的 ASCII 逗号/分号是术语
@@ -233,18 +259,30 @@ def _unwrap_segments(w: str) -> str:
         core = core.rstrip(_EDGE_CHARS).strip()
         cleaned.append(lead + core + trail)
     # 中文编号 "1、卷积、2、池化" 的序号分隔符与术语分隔符同为 "、"：
-    # 分段后序号单独成段（"2"），_clean_segment_head 无处可剥。纯数字段
-    # 不是术语（与 _PURE_NUMBER 拒绝整行纯数字一致）；只要列表里还有
-    # 其他词段，就把纯数字段连同紧邻的分隔符一起丢弃。整个列表都是
-    # 纯数字时保持原样，交给 _PURE_NUMBER 统一裁决，不在这里清空。
-    has_word = any(t.strip() and not _PURE_NUMBER.match(t.strip())
-                   for t in cleaned)
+    # 分段后序号单独成段（"2"），_clean_segment_head 无处可剥。序号段
+    # （纯数字或汉字数字，见 _is_index_segment）不是术语（与 _PURE_NUMBER
+    # 拒绝整行纯数字一致）；只要列表里还有其他词段，就把序号段连同紧邻的
+    # 分隔符一起丢弃。整个列表都是整数/汉字数字序号段（"一、二、三"、
+    # "1, 2, 3"）时整行是编号列表而非术语：分隔符按列表排版（见
+    # _is_list_index_sep）就丢弃，让 _clean_line 返回 None——否则 "一、二、
+    # 三" 会逐层剥掉行首序号只剩末项 "三" 被当词、"1, 2, 3" 会整串混进
+    # 词库；分隔符是术语内部连接符（"1,2"、"一,二"，见 _is_list_index_sep）
+    # 或列表是纯小数术语（"3.14、2.718"）时保持原样，交给 _PURE_NUMBER
+    # 统一裁决。
+    is_index = [_is_index_segment(t) for t in cleaned]
+    has_word = any(t.strip() and not idx for t, idx in zip(cleaned, is_index))
+    if (not has_word
+            and all(t.strip() and _is_plain_index(t) for t in cleaned
+                    if t.strip())
+            and all(_is_list_index_sep(parts, i)
+                    for i in range(0, len(parts), 2)
+                    if cleaned[i // 2].strip())):
+        return ""
     out = []
     i = 0
     while i < len(parts):
         t = cleaned[i // 2]
-        if i % 2 == 0 and has_word and t.strip() and _PURE_NUMBER.match(
-                t.strip()):
+        if i % 2 == 0 and has_word and is_index[i // 2]:
             # 紧贴数字的 ASCII 逗号/分号（"1,2-丙二醇"）是术语内部连接符，
             # 不是列表序号，原样保留（见 _is_list_index_sep）
             if not _is_list_index_sep(parts, i):

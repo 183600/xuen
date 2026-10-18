@@ -306,3 +306,42 @@ def test_words_clean_strips_cjk_and_circled_numbering():
         w = _clean_line(src)
         assert w is not None
         assert _clean_line(w) == w, w
+
+
+def test_words_clean_strips_cjk_numbering_of_each_segment():
+    """汉字数字作序号的列表每一段都要剥掉，序号段不能残留在词里。
+
+    回归：汉字数字序号只在紧跟分隔符时由 _BULLET 剥掉（"一、卷积"），
+    "一、卷积、二、池化" 按分隔符分段后 "二" 单独成段、既不是 _PURE_NUMBER
+    也不匹配任何规则，被当成术语保留（"卷积、二、池化"），残片随词库进
+    每轮提示词。整行都是汉字序号时（"一、二、三"）逐层剥行首序号后只剩
+    末项 "三" 被当成词；数字序号整行都是序号时由 _PURE_NUMBER 统一拒绝
+    （"1、2、3" -> None），"1, 2, 3" / "1；2" 这类 ASCII 分隔写法却整串
+    混进词库。汉字数字是序号的规则与数字序号同口径（见 _BULLET）。
+    """
+    assert _clean_line("一、卷积、二、池化") == "卷积、池化"
+    assert _clean_line("一、卷积、二、池化、三、全连接") \
+        == "卷积、池化、全连接"
+    assert _clean_line("十一、卷积、十二、池化") == "卷积、池化"
+    assert _clean_line("一、卷积；二、池化") == "卷积；池化"
+    assert _clean_line("一，卷积，二，池化") == "卷积，池化"
+    assert _clean_line("卷积、一、池化") == "卷积、池化"
+    assert _clean_line("卷积、一") == "卷积"
+    # 整行只有序号段：是编号列表不是词（与数字序号 "1、2、3" 同口径）
+    assert _clean_line("一、二、三") is None
+    assert _clean_line("1, 2, 3") is None
+    assert _clean_line("1；2") is None
+    # 不能误伤：无序号分隔符的汉字数字术语、紧贴 ASCII 逗号的术语
+    assert _clean_line("一氧化碳") == "一氧化碳"
+    assert _clean_line("二进制") == "二进制"
+    assert _clean_line("2,4-D") == "2,4-D"
+    assert _clean_line("一,二") == "一,二"
+    # 真实词表端到端：序号段不能混进词库
+    assert parse_word_lines(
+        "一、卷积、二、池化\n1. 全连接\n") == ["卷积、池化", "全连接"]
+    # 清洗必须是不动点
+    for src in ("一、卷积、二、池化", "一、卷积；二、池化", "卷积、一",
+                "一、二、三", "1, 2, 3"):
+        w = _clean_line(src)
+        if w is not None:
+            assert _clean_line(w) == w, w
