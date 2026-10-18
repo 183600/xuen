@@ -799,7 +799,11 @@ class ShellAgent:
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
 
     def render_command(self, prompt: str, *, dry_run: bool = False) -> str:
-        self._prompt_file = None
+        # 同一实例可能被连续渲染多次（直接 API 调用，或上一次渲染后未走
+        # run() 收尾）：先把上一次留下的提示词文件删掉，否则直接把
+        # _prompt_file 置 None 会让旧文件失去引用、永久残留在工作区
+        # （run() 的兜底清理只能删掉最后一个）
+        self._cleanup_prompt_file()
         try:
             if os.name == "nt":
                 return self._render_windows(self.template, prompt, dry_run)

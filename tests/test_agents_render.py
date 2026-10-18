@@ -2092,6 +2092,35 @@ def test_render_windows_prompt_file_inside_quotes_is_not_double_quoted(
         assert '""' not in rendered, rendered
 
 
+def test_render_command_repeated_calls_do_not_leak_prompt_files(tmp_path):
+    """同一实例连续 render_command 时旧提示词文件不能残留。
+
+    回归：render_command 开头直接 self._prompt_file = None，只渲染不
+    run()（或渲染后再次渲染）时，前一个 .prompt.*.md 失去引用、永久残留
+    在工作区；run() 的兜底清理只能删掉最后一个。修复：渲染新命令前先走
+    _cleanup_prompt_file()。
+    """
+    from xuen.agents import ShellAgent
+
+    agent = ShellAgent("tool $prompt_file", tmp_path, timeout=5)
+    agent.render_command("one")
+    first = agent._prompt_file
+    assert first is not None and first.exists()
+
+    agent.render_command("two")
+    second = agent._prompt_file
+    assert second is not None and second.exists()
+    assert second != first
+    # 第二次渲染必须清掉第一个文件，工作区只留当前提示词文件
+    assert not first.exists()
+    assert sorted(p.name for p in tmp_path.glob(".prompt.*.md")) == [second.name]
+
+    # dry_run 不落盘，但也不能把上一次的真实文件留在工作区
+    agent.render_command("three", dry_run=True)
+    assert agent._prompt_file is None
+    assert list(tmp_path.glob(".prompt.*.md")) == []
+
+
 def test_render_command_rejects_array_assignment(tmp_path):
     """裸上下文中的 bash 数组赋值（NAME=(...)）模板必须整体拒绝。
 
