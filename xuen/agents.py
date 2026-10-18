@@ -404,6 +404,9 @@ def _legacy_arithmetic_end(tpl: str, i: int) -> int:
     bash 则在算术区解析 # 报错、不执行。遇到即整体吞到模板结尾
     （与引号等构造同口径），宁可拒绝模板也不让 $prompt 留在与实际
     shell 脱节的语境里。
+    区域里的 << 同理：dash 把 << 当 heredoc 起点（bash 是左移），
+    heredoc 正文会吞掉后续行并展开其中的命令替换，实测可注入；遇到
+    即整体吞到模板结尾。
     找不到匹配的 ] 时同样吞到模板结尾。
     """
     n = len(tpl)
@@ -417,6 +420,15 @@ def _legacy_arithmetic_end(tpl: str, i: int) -> int:
             # 词首 #（dash 里是注释起点；$[ 紧跟的 [ 后不算词首，如
             # $[#x] 是单个词；bash 基数写法 $[16#ff] 的 # 前是数字，
             # 也不触发）
+            return n
+        if c == "<" and tpl.startswith("<<", j):
+            # 不支持 $[...] 的 /bin/sh（dash）把区域内容按普通词语境
+            # 解析，<< 是 heredoc 起点：正文会吞掉后续行并展开/执行
+            # 其中的 $(...)/`...`——实测模板 `echo $[x<<EOF` 换行
+            # `]$prompt` 渲染后，$prompt 被替换进 dash 的 heredoc 正文、
+            # 提示词里的命令替换被真正执行（注入）；bash 则在算术区按
+            # 左移解析、不执行。遇到即整体吞到模板结尾（与词首 # 同
+            # 口径），宁可拒绝模板
             return n
         if c == "[":
             depth += 1
@@ -436,6 +448,13 @@ def _arithmetic_command_end(tpl: str, i: int) -> int:
     匹配的 ))，整体跳过、不替换占位符；引号/反引号/反斜杠/嵌套替换
     可能隐藏右括号，遇到即整体吞到模板结尾（见
     _UNSAFE_IN_SKIPPED_CONTEXT），找不到则同样吞到模板结尾。
+    dash 不支持算术命令：(( 被当作两个嵌套子 shell、区域内容按普通
+    命令解析，<< 是 heredoc 起点，正文会吞掉后续行并展开其中的命令
+    替换。渲染器按括号深度算出的结束位置会落在 dash 的正文之内，其
+    后的占位符被替换进正文并在执行时展开——实测模板 `true;
+    ((x<<EOF` 换行 `))$prompt` 换行 `EOF` 换行 `))` 下 dash 执行了
+    提示词里的 $(...)（bash 因语法错误不执行）。遇到 << 即整体吞到
+    模板结尾（与 $[...] 内的词首 # 同口径），宁可拒绝模板。
     """
     n = len(tpl)
     depth = 2
@@ -444,6 +463,10 @@ def _arithmetic_command_end(tpl: str, i: int) -> int:
         if _has_unsafe_construct(tpl, j):
             return n
         c = tpl[j]
+        if c == "<" and tpl.startswith("<<", j):
+            # 见 docstring：dash 下这里是 heredoc 起点，正文会吞掉
+            # 后续行并展开其中的命令替换，遇到即整体吞到模板结尾
+            return n
         if c == "(":
             depth += 1
         elif c == ")":

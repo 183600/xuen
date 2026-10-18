@@ -899,6 +899,118 @@ def test_render_command_legacy_arithmetic_hash_comment_cannot_inject(tmp_path):
     assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
 
 
+def test_render_command_legacy_arithmetic_heredoc_cannot_inject(tmp_path):
+    """$[...] 区域内的 << 在 dash 下是 heredoc 起点，正文会执行命令替换。
+
+    回归（dash 下实测创建文件）：dash 不支持 $[...]——`$[` 只是普通词、
+    区域内容按普通词语境解析，区域里的 << 开启 heredoc，正文一直吞到
+    终止符行；渲染器按 [ ] 深度配对提前结束区域，之后的占位符被替换进
+    dash 的 heredoc 正文，提示词里的 $(...)/`...` 在命令执行时被展开
+    （fuzz 模板 `printf %s $prompt$[local<<EOF` 换行 `]$prompt` 下
+    $prompt 中的命令替换被执行；bash 在算术区按左移解析、不执行）。
+    修复：$[...] 区域内遇到 << 即整体吞到模板结尾，区域后的占位符
+    原样保留、不替换；区域前若有占位符仍按安全语境正常替换。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"l1\n$(touch {marker})\n`touch {marker}.bt`\nend\n"
+    cases = (
+        # fuzz 实测命中的模板：区域前还有可用的 $prompt（按裸词安全
+        # 替换），区域之后的第二个 $prompt 必须原样保留，绝不能进入
+        # dash 的 heredoc 正文；命令仍能收到提示词
+        ("printf %s $prompt$[local<<EOF\n]$prompt", True),
+        # 最小化：区域内 heredoc 头吞掉区域结束符与后续替换
+        ("echo $[x<<EOF\n]$prompt", False),
+        # 带终止符行时也按「整体跳过、不替换」处理
+        ("echo $[x<<EOF\n]$prompt\nEOF", False),
+        # 双引号语境同样按「整体跳过、不替换」处理
+        ('printf %s "$[x<<EOF\n]$prompt"', False),
+    )
+    for tpl, receives in cases:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 区域后的占位符原样保留，提示词绝不进入这类语境
+        assert "$prompt" in rendered, tpl
+        if not receives:
+            assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            try:
+                subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path, timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), (tpl, shell)
+        # 占位符全在区域后的模板不会送达 agent：配置校验必须拒绝
+        assert command_receives_prompt(tpl) is receives, tpl
+    # 正面对照：不含 << 的普通 $[...] 照常按深度配对、其后占位符正常替换
+    tpl = 'printf %s $[1+2] "$prompt"; echo'
+    assert command_receives_prompt(tpl) is True, tpl
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == "3" + prompt + "\n", r.stdout
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
+def test_render_command_arithmetic_command_heredoc_cannot_inject(tmp_path):
+    """((...)) 区域内的 << 在 dash 下是 heredoc：(( 是嵌套子 shell。
+
+    回归（dash 下实测创建文件）：dash 不支持算术命令——(( 被当作两个
+    嵌套子 shell、区域内容按普通命令解析，区域里的 << 开启 heredoc，
+    正文吞掉后续行并展开其中的命令替换。渲染器按括号深度配对的结束位置
+    落在 dash 的正文之内，其后的占位符被替换进正文，提示词里的
+    $(...)/`...` 在命令执行时被展开（模板 `true; ((x<<EOF` 换行
+    `))$prompt` 换行 `EOF` 换行 `))` 下 dash 执行了提示词里的命令替换；
+    bash 因语法错误不执行）。修复：((...)) 区域内遇到 << 即整体吞到
+    模板结尾，占位符原样保留、不替换（command_receives_prompt 据此
+    拒绝这类模板）。
+    """
+    import shutil
+    import subprocess
+    from xuen.agents import ShellAgent, command_receives_prompt
+
+    if not _posix_shell_available():
+        return
+    marker = tmp_path / "pwned"
+    prompt = f"l1\n$(touch {marker})\n`touch {marker}.bt`\nend\n"
+    templates = (
+        # 实测模板（dash 下命令替换被执行）
+        "true; ((x<<EOF\n))$prompt\nEOF\n))",
+        # 最小化：区域结束位置在 dash 的 heredoc 正文之内
+        "((x<<EOF\n))$prompt\nEOF\n))",
+    )
+    for tpl in templates:
+        agent = ShellAgent(tpl, tmp_path, timeout=5)
+        rendered = agent.render_command(prompt)
+        # 占位符原样保留，提示词绝不进入这类语境
+        assert "$prompt" in rendered, tpl
+        assert str(marker) not in rendered, tpl
+        for shell in filter(None, (shutil.which("bash"), shutil.which("dash"))):
+            try:
+                subprocess.run([shell, "-c", rendered], capture_output=True,
+                               text=True, cwd=tmp_path, timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
+            assert not marker.exists() and not (tmp_path / "pwned.bt").exists(), (tpl, shell)
+        # 这类语境里的 $prompt 不会送达 agent：配置校验必须拒绝
+        assert command_receives_prompt(tpl) is False, tpl
+    # 正面对照：不含 << 的普通 ((...)) 照常按深度配对、其后占位符正常替换
+    tpl = 'x=1; ((x++)); printf %s "$prompt"; echo'
+    assert command_receives_prompt(tpl) is True, tpl
+    agent = ShellAgent(tpl, tmp_path, timeout=5)
+    r = subprocess.run(["bash", "-c", agent.render_command(prompt)],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert r.stdout == prompt + "\n", r.stdout
+    assert not marker.exists() and not (tmp_path / "pwned.bt").exists()
+
+
 def test_render_command_does_not_substitute_in_substring_expansion(tmp_path):
     """${name:offset[:length]} 子串展开的 offset/length 是算术语境。
 
