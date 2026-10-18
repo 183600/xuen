@@ -9,6 +9,14 @@ venv/
 
 # 运行时生成的工作区（research.md / words.txt / write_section.py 等）
 workspace/
+# 自动化会话遗留的临时工作区（等同 workspace/：research.md + 生成的
+# write_section.py）。它会被 git add -A 误提交，其中的 write_section.py
+# 还内嵌了生成机器的绝对路径（换环境后毫无意义）
+ws/
+
+# 测试覆盖率数据（coverage.py 运行产物，二进制文件，勿提交）
+.coverage
+.coverage.*
 
 # 提示词文件（$prompt_file 模式若在仓库根运行会产生；正常会在运行后清理）
 .prompt.md
