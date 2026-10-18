@@ -28,9 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-rounds", action="store_true",
                    help="关闭轮次守卫（退回旧行为：每轮直接覆盖，无快照无最佳）")
     p.add_argument("--rounds-verify", choices=("auto", "tests", "user", "ai", "off"),
-                   help="候选验证方式（默认 auto：有测试跑测试，否则用兑底评分者）")
+                   help="候选验证方式（默认 auto：有测试跑测试，否则用兜底评分者）")
     p.add_argument("--rounds-fallback", choices=("user", "ai"),
-                   help="auto 模式下无测试可用时的兑底评分者（默认 ai）")
+                   help="auto 模式下无测试可用时的兜底评分者（默认 ai）")
     p.add_argument("--rounds-score", type=float, metavar="N",
                    help="采纳阈值：评分 >= N 才把候选晋升为最佳（0-10，默认 7）")
     return p

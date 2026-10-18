@@ -50,7 +50,7 @@ class RoundsConfig:
     enabled: bool = True
     dir: str = "rounds"          # 守卫目录（相对 workspace）
     verify: str = "auto"
-    fallback: str = "ai"         # auto 模式下无测试可用时的兑底评分者：user / ai
+    fallback: str = "ai"         # auto 模式下无测试可用时的兜底评分者：user / ai
     adopt_score: float = 7.0     # 评分达到该阈值才采纳候选为最佳（0-10）
     verify_timeout: float = 600.0   # 单次测试套件运行超时（秒）
     repo: str = ""               # 测试验证的目标目录；空 = 自动探测（工作区所在 git 根，否则工作区）
