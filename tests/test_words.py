@@ -241,3 +241,24 @@ def test_words_clean_keeps_terms_with_tight_ascii_separators():
         w = _clean_line(src)
         assert w is not None
         assert _clean_line(w) == w, w
+
+
+def test_words_clean_rejects_fullwidth_colon_urls():
+    """全角冒号 URL 不能截出协议名残片混进词库。
+
+    回归：URL 拦截只匹配半角 "://"，中文语料常见的 "http：//example.com"
+    （全角冒号）绕过检查、落到冒号截断逻辑，协议名 "http"/"https"/"ftp"
+    被当作词头留下，随灵感词拼进每轮提示词——这正是 URL 检查要拦的行为。
+    """
+    assert _clean_line("http：//example.com") is None
+    assert _clean_line("https：//example.com/a/b") is None
+    assert _clean_line("ftp：//files.example.com") is None
+    assert _clean_line("HTTP：//example.com") is None
+    # URL 前后还有解释文字时同样整行丢弃（半角冒号 URL 即如此）
+    assert _clean_line("见 http：//example.com 的说明") is None
+    # 不能误伤正常的冒号解释截断
+    assert _clean_line("损失函数：交叉熵") == "损失函数"
+    assert _clean_line("_grad_accum：梯度累积") == "grad_accum"
+    # 端到端：协议名不能混进词库
+    assert parse_word_lines(
+        "http：//example.com\nalpha\nhttps：//x.org\nbeta\n") == ["alpha", "beta"]

@@ -269,9 +269,10 @@ def _clean_once(line: str) -> str | None:
     if (w.startswith(("#", ">", "|", "=")) or _PURE_NUMBER.match(w)
             or not _HAS_WORD_CHAR.search(w)):
         return None
-    if "://" in w:
+    if "://" in w or "：//" in w:
         # URL 不是灵感词；若交给下面按 ':' 截断，会把 "http"/"https"
-        # 这类协议名误收进词库。
+        # 这类协议名误收进词库。全角冒号（"http：//…"）在中文语料里
+        # 常见，漏掉它同样会从 URL 里截出 "http"/"https"/"ftp" 残片。
         return None
     while "：" in w or ":" in w:  # "词：解释"/"词:解释" 只留词
         for sep in ("：", ":"):
