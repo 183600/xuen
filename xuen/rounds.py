@@ -439,13 +439,18 @@ class RoundGuard:
         else:
             # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是脚手架）。
             # 有了基线，「第 1 轮候选被拒绝时还原到什么」才有明确答案。
+            # 与 _commit_best 同序：best.md 是「基线已建立」的存在标志，
+            # 必须最后落盘。反序（best.md 先成功、best.json 失败）会留下
+            # 没有元数据的 best.md——下次启动走「复用已有最佳」分支读到
+            # 未知 id，基线事件也永远不会补记。
             text = self._read_state_text() or state.scaffold(self.task)
-            _atomic_write(self.best_md, text)
-            self.best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
-                         "round": 0, "verifier": "baseline", "score": None,
-                         "ts": _ts()}
+            best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
+                    "round": 0, "verifier": "baseline", "score": None,
+                    "ts": _ts()}
             _atomic_write(self.best_json,
-                          json.dumps(self.best, ensure_ascii=False, indent=2))
+                          json.dumps(best, ensure_ascii=False, indent=2))
+            _atomic_write(self.best_md, text)
+            self.best = best
             self._append_event({"event": "baseline", **self.best})
             self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
         self.sink.info(
@@ -766,6 +771,40 @@ class RoundGuard:
             # 损坏内容当最佳写回 research.md
             return state.scaffold(self.task)
 
+    def _commit_best(self, text: Optional[str], best: Dict) -> None:
+        """把候选快照晋升为最佳：best.json + best.md 两个文件都成功才生效。
+
+        提交顺序必须让内容源（best.md，_restore_best / _read_best_md 的
+        唯一内容来源）最后落盘：反序（best.md 先成功、best.json 失败）时
+        未完成晋升的候选内容已成为下一轮的还原源——self.best / 统计 /
+        best.json 都还指向旧最佳，内容却已被悄悄替换，「候选必须通过
+        验证（或拿到高分）才晋升」的核心不变式被破坏。
+        best.json 先落盘、best.md 失败时最多元数据短暂超前、内容仍停在
+        旧最佳；此时尽力把元数据回滚为旧指针，保持两个文件一致。
+        调用方据异常保持候选「未决」：写盘恢复后补分/重试仍能兑现。
+        """
+        if not text:
+            # 快照与当前状态都读不出内容（如快照被外部删除）时没有任何
+            # 被验证过的内容可写进最佳：只推进元数据会把最佳指向一份读
+            # 不到内容的快照。按写盘失败同等处理，保持候选未决可重试
+            raise OSError("候选快照不可读，无法写盘晋升最佳")
+        # best.json 记录的是「哪份快照是最佳」；研究循环只前进不改写历史，
+        # 旧 best.md 内容被覆盖前仍在各轮 cand-*.md / git 提交里留档
+        _atomic_write(self.best_json,
+                      json.dumps(best, ensure_ascii=False, indent=2))
+        try:
+            _atomic_write(self.best_md, text)
+        except OSError:
+            # 内容源写盘失败：撤销刚推进的元数据指针，回到「两个文件都
+            # 指向旧最佳」的一致状态（回滚自身也可能失败，尽力而为）
+            try:
+                _atomic_write(self.best_json,
+                              json.dumps(self.best, ensure_ascii=False,
+                                         indent=2))
+            except OSError:
+                pass
+            raise
+
     def _adopt(self, cid: str, round_no: int, verdict: Verdict) -> None:
         # 晋升的必须是被验证过的候选快照本身：测试套件 / AI 评审可能跑很久，
         # 期间状态文件可能被外部再改一次。直接读当前状态会把未经验证的内容
@@ -777,18 +816,13 @@ class RoundGuard:
             text = cand_path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             text = self._read_state_text()
-        if text:
-            _atomic_write(self.best_md, text)
-        # best.json 记录的是「哪份快照是最佳」；研究循环只前进不改写历史，
-        # 旧 best.md 内容已被这份覆盖前仍在各轮 cand-*.md / git 提交里留档
         best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
                 "score": verdict.score, "ts": _ts(),
                 "reason": verdict.reason}
-        # 两个文件都写盘成功后才提交内存状态与统计：best.md 成功、
-        # best.json 失败时 self.best / 统计不能指向一份没有完整落盘的最佳
-        # （调用方据异常按「守卫本轮降级」处理，候选保持未决可补分翻案）
-        _atomic_write(self.best_json,
-                      json.dumps(best, ensure_ascii=False, indent=2))
+        # 两个文件都写盘成功后才提交内存状态与统计：任何一步失败时
+        # self.best / 统计都不能指向一份没有完整落盘的最佳（调用方据
+        # 异常按「守卫本轮降级」处理，候选保持未决可补分翻案）
+        self._commit_best(text, best)
         self.best = best
         self.stats.adopted += 1
         self.sink.ok(f"第 {round_no} 轮候选通过验证（{verdesc(verdict)}），"
@@ -919,15 +953,14 @@ class RoundGuard:
                 # 会让本函数永久跳过该候选（resolved），用户腾出磁盘后也
                 # 再翻不了案，而汇总还会一边虚报「采纳 1」一边留着旧最佳。
                 # 与上面「先读快照再记已决」同一口径：外部副作用成功前
-                # 不能留下不可撤销的结论
+                # 不能留下不可撤销的结论。写盘顺序见 _commit_best：内容源
+                # best.md 最后提交，半途失败不会把未采纳的候选内容泄漏为
+                # 下一轮的还原源
                 best = {"id": cid, "round": round_no, "verifier": "user",
                         "score": score, "ts": _ts(), "late": True,
                         "reason": verdict.reason}
                 try:
-                    _atomic_write(self.best_md, text)
-                    _atomic_write(self.best_json,
-                                  json.dumps(best, ensure_ascii=False,
-                                             indent=2))
+                    self._commit_best(text, best)
                 except OSError as e:
                     self.sink.warn(f"采纳旧候选 {cid} 失败（最佳写盘失败，"
                                    f"保持挂起）：{e}")

@@ -116,6 +116,39 @@ def test_start_reuses_existing_best(ws):
     assert [e["event"] for e in evs].count("baseline") == 1
 
 
+def test_baseline_partial_write_not_mistaken_as_established(ws, monkeypatch):
+    """基线建立中途写盘失败：best.md 不能先落盘。
+
+    best.md 是否存在是「基线已建立」的存在标志。反序（best.md 先成功、
+    best.json 失败）会留下没有元数据的 best.md：下次启动走「复用已有
+    最佳」分支读到未知 id，基线事件永远不会补记。内容源最后提交后，
+    失败的下一次启动会重新建立完整基线。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(OSError):
+        guard.start()
+    assert not (guard.dir / rounds.BEST_MD_NAME).exists()
+
+    # 写盘恢复后重试：建立真实基线，不把半截状态当成「已有最佳」
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    guard2 = make_guard(workspace, state_path)
+    guard2.start()
+    assert guard2.best["verifier"] == "baseline"
+    assert guard2.best["round"] == 0
+    assert [e["event"] for e in events(guard2)].count("baseline") == 1
+    assert read_idea(state_path) == "（暂无）"
+
+
 def test_heartbeat_when_no_change(ws):
     workspace, state_path = ws
     guard = make_guard(workspace, state_path)
@@ -1116,6 +1149,124 @@ def test_adopted_round_best_write_failure_not_marked_resolved(ws, monkeypatch):
     assert guard.best["id"] == cid
     assert guard.stats.adopted == 1
     assert read_idea(state_path) == "写盘失败也要保住的想法"
+
+
+def test_partial_best_write_content_source_last(ws, monkeypatch):
+    """best.md 先写成功、best.json 失败时，候选内容绝不能泄漏为还原源。
+
+    回归：_adopt / _apply_user_verdicts 原来先写 best.md 再写 best.json。
+    best.json 写盘失败（磁盘满 / 目录只读）时异常已抛出、self.best /
+    统计 / best.json 都还指向旧最佳，但 best.md（_restore_best /
+    _read_best_md 的唯一内容来源）已被替换成未经完整晋升的候选内容——
+    下一轮候选被拒时还原的就是这份「未采纳」内容，候选/最佳分离被破坏。
+    修复后内容源最后提交：best.json 失败时 best.md 原样不动。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_best = guard.best["id"]
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "不该泄漏成最佳的候选")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_JSON_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+    assert guard.best["id"] == baseline_best
+    assert guard.stats.adopted == 0
+    # 内容源停在旧最佳：还原 / 心跳比较不会再看到候选内容
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert json.loads((guard.dir / rounds.BEST_JSON_NAME).read_text(
+        encoding="utf-8"))["id"] == baseline_best
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+    # 写盘恢复后候选仍可被补分采纳（没有被半截提交锁死）
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    cid = [e for e in events(guard) if e["event"] == "candidate"][-1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 补分采纳\n",
+                                            encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert read_idea(state_path) == "不该泄漏成最佳的候选"
+
+
+def test_partial_best_md_failure_keeps_content_and_rolls_back_json(
+        ws, monkeypatch):
+    """best.json 先落盘、best.md 失败：元数据要回滚，内容源保持旧最佳。
+
+    反序提交下 best.json 已成功而 best.md 失败时，如果放任元数据超前，
+    重启后的 _load_best 会把「最佳」指向一份内容仍旧的快照，汇总与还原
+    自相矛盾。修复后 md 失败即回滚 json 指针，两个文件重新一致。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_best = guard.best["id"]
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "md 写盘失败也要保住的候选")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+    # 内容源没有被候选污染；元数据回滚为旧指针，两个文件仍相互一致
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert json.loads((guard.dir / rounds.BEST_JSON_NAME).read_text(
+        encoding="utf-8"))["id"] == baseline_best
+    assert guard.best["id"] == baseline_best
+    assert guard.stats.adopted == 0
+
+
+def test_late_adoption_partial_best_failure_keeps_content(ws, monkeypatch):
+    """补分采纳的 best 写盘中途失败：未采纳的候选内容不得流进还原源。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "待评分的候选")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    guard.finish()
+    assert guard.best["round"] == 0
+    assert guard.stats.adopted == 0
+    assert guard.stats.pending == 1
+    assert read_idea(state_path) == "（暂无）"
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+    # 写盘恢复后同一评分再次兑现：内容源与元数据一起切换
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+    assert read_idea(state_path) == "待评分的候选"
 
 
 # ---------------------------------------------------------------- 失败轮次
