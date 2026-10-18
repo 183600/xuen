@@ -263,6 +263,44 @@ def test_ai_adopt_promotes_verified_snapshot_not_live_state(ws):
     assert read_idea(state_path) == "被验证通过的候选"
 
 
+def test_ai_judge_prompt_shows_candidate_snapshot_not_live_state(ws, tmp_path):
+    """AI 评审员看到的候选必须与晋升物一致（同为候选快照）。
+
+    回归：_judge_prompt 原先重读 research.md 作为候选内容，而晋升
+    （_adopt / _apply_user_verdicts）读的是 cand-<id>.md。测试套件与 AI
+    评审串联时，套件跑动期间状态文件若被外部再改一次（后台进程收尾、
+    用户手改、并发的另一实例），评审员给改后的实时内容打分，分却被用来
+    采纳从未被验证过的快照内容——「评审的是 A、晋升的是 B」，候选/最佳
+    分离的验证不变量被破坏。
+    """
+    workspace, state_path = ws
+    repo = tmp_path / "repo"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "test_ok.py").write_text(
+        "def test_ok():\n    assert True\n", encoding="utf-8")
+    seen = {}
+
+    def suite(suite_argv, repo_path, timeout):
+        # 模拟套件运行期间外部又改写了状态文件（快照已落盘、评审未开始）
+        write_idea(state_path, "套件运行期间被外部改掉的内容")
+        return SuiteResult(available=False, reason="模拟套件不可用")
+
+    def judge(prompt):
+        seen["prompt"] = prompt
+        return True, "评分: 9"
+
+    guard = make_guard(workspace, state_path, verify="auto",
+                       repo=str(repo), judge=judge, suite_runner=suite)
+    guard.start()
+    write_idea(state_path, "被快照的候选")
+    assert guard.on_round_end(1) == "adopted"
+    # 评审员必须看到快照内容，而不是套件期间的实时改动
+    assert "被快照的候选" in seen["prompt"]
+    assert "套件运行期间被外部改掉的内容" not in seen["prompt"]
+    # 晋升的候选快照本身仍是唯一内容源
+    assert read_idea(guard.best_md) == "被快照的候选"
+
+
 def test_ai_reject_restores_best_and_keeps_snapshot(ws):
     """核心回归：被拒绝的候选绝不留在循环状态里，但快照必须保留。"""
     workspace, state_path = ws

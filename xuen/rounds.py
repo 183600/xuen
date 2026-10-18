@@ -727,11 +727,25 @@ class RoundGuard:
             return False, text
         return True, text
 
+    def _read_candidate_text(self, cid: str) -> str:
+        """候选快照内容；不可读（如被外部删除）时退回当前状态。
+
+        与 _adopt 同一读取口径：评审员必须看到与被晋升物【完全相同】的
+        内容。评审期间 research.md 可能被外部再改一次（后台进程收尾、
+        用户手改、并发的另一实例），直接重读实时状态会让评审的是 A、
+        晋升的是快照 B——AI 给 A 打的分被用来采纳从未被验证过的 B，
+        候选/最佳分离的验证不变量被破坏。
+        """
+        try:
+            return (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
+                encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return self._read_state_text()
+
     def _judge_prompt(self, round_no: int, cid: str) -> str:
         best_text = self._read_best_md()
         b_idea, b_artifact = self._sections(best_text)
-        c_text = self._read_state_text()
-        c_idea, c_artifact = self._sections(c_text)
+        c_idea, c_artifact = self._sections(self._read_candidate_text(cid))
         best = self.best
         score_note = (f"（历史评分 {best.get('score'):g}）"
                       if isinstance(best.get("score"), (int, float))
@@ -810,12 +824,9 @@ class RoundGuard:
         # 期间状态文件可能被外部再改一次。直接读当前状态会把未经验证的内容
         # 写进 best.md（best.json 记录的却是候选 id）；下一轮候选被拒时
         # _restore_best 就会把这份未验证内容还原进研究循环，破坏候选/最佳
-        # 分离。快照不可读（如被外部删除）时才退回当前状态
-        cand_path = self.dir / f"{CAND_PREFIX}{cid}.md"
-        try:
-            text = cand_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            text = self._read_state_text()
+        # 分离。快照不可读（如被外部删除）时才退回当前状态（见
+        # _read_candidate_text，评审提示词也用同一读取口径）
+        text = self._read_candidate_text(cid)
         best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
                 "score": verdict.score, "ts": _ts(),
                 "reason": verdict.reason}
