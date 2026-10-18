@@ -262,3 +262,47 @@ def test_words_clean_rejects_fullwidth_colon_urls():
     # 端到端：协议名不能混进词库
     assert parse_word_lines(
         "http：//example.com\nalpha\nhttps：//x.org\nbeta\n") == ["alpha", "beta"]
+
+
+def test_words_clean_strips_cjk_and_circled_numbering():
+    """汉字数字与圈号/带括号数字序号也要剥掉，不能连术语混进词库。
+
+    回归：_BULLET 的序号规则只认 \\d 数字与 -/* 等列表符，中文 LLM
+    词表常见的 "一、梯度下降"、"（一）反向传播"、"①注意力机制"、
+    "⑴ 池化" 会把序号连术语一起入库；序号单独成行时（"①"、"（一）"、
+    "一、"）序号本身还会被当成词——圈号是 alnum（_HAS_WORD_CHAR 放行）、
+    半角括号序号剥后剩的汉字数字又不匹配 _PURE_NUMBER。残片随灵感词
+    拼进每轮提示词，同一术语按 "1." 与 "①" 两种写法出现时也无法按
+    casefold 去重。
+    """
+    assert _clean_line("一、梯度下降") == "梯度下降"
+    assert _clean_line("十、卷积") == "卷积"
+    assert _clean_line("（一）反向传播") == "反向传播"
+    assert _clean_line("二）池化") == "池化"
+    assert _clean_line("①注意力机制") == "注意力机制"
+    assert _clean_line("② 池化") == "池化"
+    assert _clean_line("⑩第十项") == "第十项"
+    assert _clean_line("⑴ 全连接") == "全连接"
+    assert _clean_line("⒈ 引言") == "引言"
+    assert _clean_line("㈠ 方案") == "方案"
+    assert _clean_line("① **注意力机制**（Attention）") \
+        == "注意力机制（Attention）"
+    assert _clean_line("（一）卷积、（二）池化") == "卷积、池化"
+    # 序号单独成行不是词
+    assert _clean_line("①") is None
+    assert _clean_line("⓪") is None
+    assert _clean_line("（一）") is None
+    assert _clean_line("一、") is None
+    # 不能误伤：汉字数字开头但没有序号分隔符的真实术语
+    assert _clean_line("一氧化碳") == "一氧化碳"
+    assert _clean_line("万有引力") == "万有引力"
+    assert _clean_line("二进制") == "二进制"
+    assert _clean_line("十进制") == "十进制"
+    # 真实词表端到端：序号与序号词不能混进词库/造成重复
+    assert parse_word_lines(
+        "①卷积\n（一）池化\n一、全连接\n1. 全连接\n") == ["卷积", "池化", "全连接"]
+    # 清洗必须是不动点
+    for src in ("一、梯度下降", "（一）反向传播", "①注意力机制", "⒈ 引言"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
