@@ -56,6 +56,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 from . import state
 from .agents import ShellAgent
 from .config import Config
+from .procs import kill_process_tree, popen_kwargs
 from .sink import Sink
 
 VERIFY_MODES = ("auto", "tests", "user", "ai", "off")
@@ -140,11 +141,14 @@ def _readable_section(text: str, name: str) -> Optional[str]:
 class SuiteResult:
     """一次测试套件运行的结果。available=False 表示套件根本没能运行
     （运行时缺命令等），与「跑了但失败」（ok=False）必须区分：
-    前者不能给候选下结论，只能转兜底评分或挂起。"""
+    前者不能给候选下结论，只能转兜底评分或挂起。
+    stopped=True 表示运行被用户主动停止（TUI 按 q / Ctrl+C）：套件
+    已被整组终止、没有验证结论，调用方不能再拉起兜底评审。"""
     available: bool
     ok: bool = False
     reason: str = ""
     detail: str = ""
+    stopped: bool = False
 
 
 @dataclass
@@ -214,27 +218,78 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     return None
 
 
-def run_suite(argv: List[str], repo: Path, timeout: float) -> SuiteResult:
+# 套件停止轮询间隔：0.2s 足以让 TUI 的 q / Ctrl+C 及时兑现，又不空转 CPU
+_SUITE_POLL_SECONDS = 0.2
+
+
+def run_suite(argv: List[str], repo: Path, timeout: float,
+              stop: Optional[Callable[[], bool]] = None) -> SuiteResult:
     """运行测试套件。退出码 0 = 通过；非 0 = 失败；超时 = 失败（保守：
-    宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。"""
+    宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。
+
+    stop：可选的「是否请求停止」回调。传入时按短间隔轮询，回调一旦
+    为真就终止整个进程组并返回 stopped=True（available=False）——
+    TUI 里按 q / Ctrl+C 时若守卫正阻塞在套件上，worker 会跑满
+    verify_timeout（默认 600s），而 run_tui 只等 20s：用户主动退出被
+    误报成退出码 1，被丢下的测试进程还会作为孤儿继续跑。
+
+    与 subprocess.run 的差异：自己拉起进程并借 procs.kill_process_tree
+    整组终止，测试拉起的子孙进程（xfail 子进程、npm/go 的子孙）不会
+    泄漏；KeyboardInterrupt 等 BaseException 也先收尾再传播（与
+    subprocess.run 的兜底行为一致）。"""
     try:
-        proc = subprocess.run(
-            argv, cwd=str(repo), timeout=timeout,
+        proc = subprocess.Popen(
+            argv, cwd=str(repo),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
+            **popen_kwargs(),
         )
-    except subprocess.TimeoutExpired:
-        return SuiteResult(available=True, ok=False,
-                           reason=f"测试超时（>{timeout:g}s）")
     except (OSError, ValueError):
         # 探测时存在、运行时却拉不起来（PATH 变化 / 权限 ……）
         return SuiteResult(available=False, reason="测试命令无法启动")
-    detail = (proc.stdout or "").strip()
+    deadline = time.monotonic() + timeout
+    stopped = False
+    out = ""
+    try:
+        while True:
+            try:
+                # communicate 在 TimeoutExpired 后可安全重试，输出累积不丢
+                out, _ = proc.communicate(timeout=_SUITE_POLL_SECONDS)
+                break
+            except subprocess.TimeoutExpired:
+                if stop is not None and stop():
+                    stopped = True
+                    kill_process_tree(proc)
+                    _reap_suite(proc)
+                    break
+                if time.monotonic() >= deadline:
+                    kill_process_tree(proc)
+                    _reap_suite(proc)
+                    return SuiteResult(available=True, ok=False,
+                                       reason=f"测试超时（>{timeout:g}s）")
+    except BaseException:
+        # Ctrl+C / 进程被中断：先终止整组再传播，避免测试进程成孤儿
+        # （自己拉起的进程必须自己收尾，subprocess.run 也是这么兜底的）
+        kill_process_tree(proc)
+        _reap_suite(proc)
+        raise
+    if stopped:
+        return SuiteResult(available=False, stopped=True,
+                           reason="用户请求停止，未验证")
+    detail = (out or "").strip()
     if proc.returncode == 0:
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
     tail = "\n".join(detail.splitlines()[-15:])
     return SuiteResult(available=True, ok=False,
                        reason=f"退出码 {proc.returncode}", detail=tail)
+
+
+def _reap_suite(proc: subprocess.Popen) -> None:
+    """回收被终止的套件进程（communicate 顺带读尽残留输出并 wait）。"""
+    try:
+        proc.communicate(timeout=5)
+    except (subprocess.TimeoutExpired, ValueError):
+        pass
 
 
 def resolve_repo(explicit: str, workspace: Path) -> Path:
@@ -276,6 +331,8 @@ class RoundGuard:
 
     suite_runner / judge 两个参数是可注入的测试接缝（tests/ 里用它们
     伪造测试结果与评审员输出，避免真实跑 pytest / 外部 agent）。
+    suite_runner 传 None 时使用默认 run_suite，并接上 sink.should_stop：
+    TUI 按 q / Ctrl+C 才能终止正在运行的测试套件（见 _run_suite）。
     """
 
     def __init__(
@@ -286,7 +343,7 @@ class RoundGuard:
         workspace: Path,
         sink: Sink,
         *,
-        suite_runner: Callable[[List[str], Path, float], SuiteResult] = run_suite,
+        suite_runner: Optional[Callable[[List[str], Path, float], SuiteResult]] = None,
         judge: Optional[Callable[[str], Tuple[bool, str]]] = None,
     ):
         self.cfg = cfg
@@ -492,6 +549,18 @@ class RoundGuard:
         return "pending"
 
     # ---- 验证决策 ----
+    def _run_suite(self, suite: List[str]) -> SuiteResult:
+        """跑测试套件。默认运行器接上 sink.should_stop：TUI 按 q /
+        Ctrl+C 时立即整组终止套件，否则守卫会在套件上阻塞到
+        verify_timeout（默认 600s），run_tui 只等 20s——主动退出会被
+        误报成退出码 1，测试进程还会成孤儿。注入的测试接缝保持原
+        三参数签名（它们不接触真实进程，不存在停止时延）。"""
+        runner = self._suite_runner
+        if runner is None:
+            return run_suite(suite, self.repo, self.cfg.rounds.verify_timeout,
+                             stop=self.sink.should_stop)
+        return runner(suite, self.repo, self.cfg.rounds.verify_timeout)
+
     def _verify(self, round_no: int, cid: str) -> Verdict:
         mode = self.cfg.rounds.verify
         if mode == "off":
@@ -501,14 +570,20 @@ class RoundGuard:
         if mode in ("auto", "tests"):
             suite = detect_test_suite(self.repo)
             if suite is not None:
-                res = self._suite_runner(suite, self.repo,
-                                         self.cfg.rounds.verify_timeout)
+                res = self._run_suite(suite)
                 if res.available:
                     if res.ok:
                         return Verdict(verifier="tests", result="adopted",
                                        reason="测试全部通过｜" + detail_field(res))
                     return Verdict(verifier="tests", result="rejected",
                                    reason="测试失败｜" + detail_field(res))
+                if res.stopped:
+                    # 套件被用户停止：候选没有验证结论，挂起等待评分；
+                    # 不能再转兜底评审——用户已经离开，拉起新进程只会让
+                    # run_tui 的等待再次超时、把主动退出误报成退出码 1
+                    self.sink.warn("用户请求停止：测试套件已终止，候选挂起")
+                    return Verdict(verifier="tests", result="pending",
+                                   reason="用户请求停止，套件未跑完")
                 if mode == "tests":
                     # 显式只要测试，但套件运行时拉不起来：无法下结论 → 挂起
                     self.sink.warn(f"测试套件无法运行（{res.reason}），"

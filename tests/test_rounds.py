@@ -1,11 +1,14 @@
 """轮次守卫单元测试：快照、候选/最佳分离、验证级联、用户/AI 评分、还原语义。"""
 import json
+import os
 import shutil
+import sys
+import time
 from pathlib import Path
 
 import pytest
 
-from xuen import state
+from xuen import rounds, state
 from xuen.config import Config
 from xuen.rounds import (
     RoundGuard,
@@ -539,6 +542,121 @@ def test_tests_mode_pending_when_no_suite(ws, tmp_path):
     write_idea(state_path, "无从验证的想法")
     assert guard.on_round_end(1) == "pending"
     assert read_idea(state_path) == "（暂无）"
+
+
+# ------------------------------------------ 套件运行的用户停止（q / Ctrl+C）
+def _pid_dead(pid):
+    for _ in range(10):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def test_run_suite_green_and_red(tmp_path):
+    green = rounds.run_suite(
+        [sys.executable, "-c", "print('ok')"], tmp_path, 30.0)
+    assert (green.available, green.ok) == (True, True)
+    assert "ok" in green.detail
+    red = rounds.run_suite(
+        [sys.executable, "-c", "import sys; print('bad'); sys.exit(3)"],
+        tmp_path, 30.0)
+    assert (red.available, red.ok) == (True, False)
+    assert red.reason == "退出码 3"
+    assert "bad" in red.detail
+
+
+def test_run_suite_stop_terminates_suite_promptly(tmp_path):
+    """用户停止（TUI 按 q / Ctrl+C）必须立即终止套件并返回未验证：
+    修复前守卫会阻塞到 verify_timeout（默认 600s），run_tui 只等 20s，
+    用户主动退出被误报成退出码 1，pytest 还作为孤儿继续跑。"""
+    pid_file = tmp_path / "suite.pid"
+    code = ("import os, time;"
+            f"open({str(pid_file)!r}, 'w').write(str(os.getpid()));"
+            "time.sleep(30)")
+    calls = {"n": 0}
+
+    def stop():
+        calls["n"] += 1
+        return calls["n"] >= 2  # 套件确实拉起并跑过一个轮询周期后才停止
+
+    t0 = time.monotonic()
+    res = rounds.run_suite([sys.executable, "-c", code], tmp_path, 60.0,
+                           stop=stop)
+    assert time.monotonic() - t0 < 15.0
+    assert res.available is False and res.stopped is True
+    assert "用户" in res.reason
+    assert pid_file.exists()  # 不是启动失败，而是被杀掉
+    if os.name == "posix":
+        assert _pid_dead(int(pid_file.read_text()))
+
+
+def test_run_suite_unstartable_command(tmp_path):
+    res = rounds.run_suite(["/nonexistent-xuen-suite-cmd"], tmp_path, 10.0)
+    assert (res.available, res.stopped) == (False, False)
+    assert res.reason == "测试命令无法启动"
+
+
+def test_run_suite_timeout_kills_long_suite(tmp_path):
+    pid_file = tmp_path / "suite.pid"
+    code = ("import os, time;"
+            f"open({str(pid_file)!r}, 'w').write(str(os.getpid()));"
+            "time.sleep(30)")
+    t0 = time.monotonic()
+    res = rounds.run_suite([sys.executable, "-c", code], tmp_path, 0.5)
+    assert time.monotonic() - t0 < 15.0
+    assert (res.available, res.ok) == (True, False)
+    assert "测试超时" in res.reason
+    if os.name == "posix":
+        assert _pid_dead(int(pid_file.read_text()))
+
+
+def test_default_suite_runner_gets_stop_callback(ws, tmp_path, monkeypatch):
+    """默认（未注入）运行器要拿到 sink.should_stop 回调，q 才能终止套件。"""
+    repo = tmp_path / "repo"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "test_ok.py").write_text("", encoding="utf-8")
+    seen = {}
+
+    def fake_run_suite(argv, repo_path, timeout, stop=None):
+        seen["stop"] = stop
+        return SuiteResult(available=True, ok=True, reason="exit 0")
+
+    monkeypatch.setattr(rounds, "run_suite", fake_run_suite)
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="tests", repo=str(repo))
+    guard.start()
+    write_idea(state_path, "默认接缝也要可停止")
+    assert guard.on_round_end(1) == "adopted"
+    assert getattr(seen["stop"], "__self__", None) is guard.sink
+    assert seen["stop"]() is False  # RecordingSink 默认不请求停止
+
+
+def test_stopped_suite_does_not_fall_back_to_judge(ws, tmp_path, monkeypatch):
+    """套件被用户停止后不能再拉起兜底评审：用户已经离开，新进程只会让
+    run_tui 的等待再次超时、把主动退出误报成失败退出码。"""
+    repo = tmp_path / "repo"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "test_ok.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        rounds, "run_suite",
+        lambda argv, repo_path, timeout, stop=None:
+        SuiteResult(available=False, stopped=True, reason="用户请求停止，未验证"))
+    called = {"judge": 0}
+
+    def fake_judge(prompt):
+        called["judge"] += 1
+        return True, "评分: 9"
+
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="auto", fallback="ai",
+                       repo=str(repo), judge=fake_judge)
+    guard.start()
+    write_idea(state_path, "停止期间的候选")
+    assert guard.on_round_end(1) == "pending"
+    assert called["judge"] == 0
 
 
 def test_auto_mode_prefers_tests_over_fallback(ws, tmp_path):
