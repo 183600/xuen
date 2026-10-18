@@ -362,6 +362,9 @@ class RoundGuard:
         self._judge_override = judge
         self.best: Dict = {}
         self.stats = _Stats()
+        # 本会话里挂起、可被 verdicts.txt 补分改判的候选；补分兑现时
+        # 统计要从「待评分」桶迁走，否则汇总与晋升日志自相矛盾
+        self._pending_ids: set = set()
         self._hinted = False  # 「如何评分」提示只打印一次
 
     # ---- 基础设施 ----
@@ -544,6 +547,7 @@ class RoundGuard:
             self._restore_best(round_no, why="候选被拒绝")
             return "rejected"
         self.stats.pending += 1
+        self._pending_ids.add(cid)
         self._restore_best(round_no, why="候选待评分")
         self._hint_user_scoring(cid)
         return "pending"
@@ -868,6 +872,17 @@ class RoundGuard:
             self._append_event({"event": "verdict", "id": cid,
                                 "round": round_no, "late": True,
                                 **_verdict_fields(verdict)})
+            # 统计与改判同步：采纳/拒绝是对「本次运行兑现的判定」的计数
+            # （跨会话旧候选也计入，否则汇总会一边宣布晋升、一边报
+            # 「采纳 0」）；pending 只回减本会话计入过待评分的候选，
+            # 跨会话候选从未加过，绝不能把它减成负数
+            if cid in self._pending_ids:
+                self._pending_ids.discard(cid)
+                self.stats.pending -= 1
+            if adopted:
+                self.stats.adopted += 1
+            else:
+                self.stats.rejected += 1
             if not adopted:
                 self.sink.info(f"旧候选 {cid} 获用户补评 {score:g}，"
                                "未达阈值，保持当前最佳")
@@ -899,6 +914,8 @@ class RoundGuard:
             self._append_event({"event": "restored", "round": round_no,
                                 "why": "旧候选被补评采纳", "best": cid,
                                 "changed": changed})
+            # 回写最佳也是一次实际还原：与上面这条 restored 事件保持 1:1
+            self.stats.restored += 1
 
 
 # ----------------------------------------------------------------------

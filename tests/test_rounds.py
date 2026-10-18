@@ -815,6 +815,59 @@ def test_user_late_low_score_keeps_best(ws):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_late_verdict_moves_candidates_out_of_pending_stats(ws):
+    """补分兑现必须同步迁移轮次统计。
+
+    回归：_apply_user_verdicts 只晋升/记账、不更新 stats，导致同一会话里
+    候选先计入「待评分」，被补分采纳/拒绝后仍留在待评分桶——finish()
+    一边宣布「前进式晋升为最佳」，一边报「采纳 0 / 拒绝 0 / 待评分 N」。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "候选一")
+    assert guard.on_round_end(1) == "pending"
+    write_idea(state_path, "候选二")
+    assert guard.on_round_end(2) == "pending"
+    assert guard.stats.pending == 2
+    ids = [e["id"] for e in events(guard) if e["event"] == "candidate"]
+    (guard.dir / "verdicts.txt").write_text(
+        f"{ids[0]} 9 采纳\n{ids[1]} 2\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == ids[0]
+    s = guard.stats
+    # 一个挂起候选被采纳、一个被拒绝：桶数必须随改判迁移
+    assert (s.adopted, s.rejected, s.pending) == (1, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    # 晋升回写也是一次实际还原：与 history 里的 restored 事件一一对应
+    assert s.restored == len([e for e in events(guard)
+                              if e["event"] == "restored"])
+
+
+def test_carryover_late_adoption_counted_in_finish(ws):
+    """上一会话挂起的候选由新会话 start() 兑现补分时，汇总必须报告这次
+    采纳，而不是「采纳 0」——那与本会话自己打印的「前进式晋升为最佳」
+    日志自相矛盾；跨会话候选也绝不能把 pending 减成负数。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "被搁置的好想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+
+    sink = RecordingSink()
+    guard2 = make_guard(workspace, state_path, sink, verify="user")
+    guard2.start()          # 新会话启动时兑现上轮遗留的补分
+    assert guard2.best["id"] == cid
+    assert guard2.stats.adopted == 1
+    assert guard2.stats.pending == 0
+    guard2.finish()
+    summary = [m for _, m in sink.messages if "汇总" in m]
+    assert summary and "采纳 1" in summary[-1]
+    assert "采纳 0" not in summary[-1]
+
+
 def test_verdicts_only_applied_once(ws):
     """同一候选的评分不会被重复应用（verdict 事件即「已决」标记）。"""
     workspace, state_path = ws
