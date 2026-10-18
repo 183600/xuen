@@ -370,6 +370,8 @@ class RoundGuard:
         # 会让轮次数/跳过数虚增、审计日志为同一轮记出自相矛盾的候选+跳过
         self._handled_rounds: set = set()
         self._hinted = False  # 「如何评分」提示只打印一次
+        # verdicts.txt 里引用未知候选 id 的行：每个 id 只警告一次
+        self._warned_unknown_cids: set = set()
 
     # ---- 基础设施 ----
     def _append_event(self, ev: Dict) -> None:
@@ -421,15 +423,35 @@ class RoundGuard:
                 state.sanitize_section_content(
                     state.get_section(text, state.SECTION_ARTIFACT)))
 
-    def _new_id(self, round_no: int) -> str:
+    def _snapshot_candidate(self, round_no: int, text: str) -> str:
+        """原子创建候选快照，返回实际占用的 id（撞车自动追加序号）。
+
+        不能先算 id 再 _atomic_write：exists() 检查与写盘之间是竞态，
+        同一 workspace 的两个实例在同一秒、同一轮号会算出同一 id，后写者
+        用 os.replace 覆盖先写者的快照——候选快照是被拒绝/挂起候选事后在
+        verdicts.txt 翻案的唯一凭据，绝不能被覆盖。O_CREAT|O_EXCL 把
+        「检查 + 占用」合并为一个原子操作，跨进程并发下也不会覆盖已有快照。
+        写入失败时删除半截文件：坏快照既会永久占住 id，又会被「快照可读」
+        的检查误判。
+        """
         base = f"{time.strftime('%Y%m%d-%H%M%S')}-r{round_no}"
         cid, seq = base, 2
-        # 同一秒内多轮（快速测试/时钟回拨）也不允许 id 撞车：撞车会让
-        # 旧候选被新快照覆盖——恰恰是本模块要根除的问题
-        while (self.dir / f"{CAND_PREFIX}{cid}.md").exists():
-            cid = f"{base}-{seq}"
-            seq += 1
-        return cid
+        while True:
+            path = self.dir / f"{CAND_PREFIX}{cid}.md"
+            try:
+                with open(path, "x", encoding="utf-8") as f:
+                    f.write(text)
+            except FileExistsError:
+                cid = f"{base}-{seq}"
+                seq += 1
+                continue
+            except OSError:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
+            return cid
 
     # ---- 生命周期 ----
     def start(self) -> None:
@@ -535,8 +557,7 @@ class RoundGuard:
         if state._first_section(text, state.SECTION_IDEA) is None \
                 or state._first_section(text, state.SECTION_ARTIFACT) is None:
             self.stats.candidates += 1
-            cid = self._new_id(round_no)
-            _atomic_write(self.dir / f"{CAND_PREFIX}{cid}.md", text)
+            cid = self._snapshot_candidate(round_no, text)
             self._append_event({"event": "candidate", "id": cid,
                                 "round": round_no, "corrupt": True})
             verdict = Verdict(verifier="guard", result="rejected",
@@ -559,8 +580,7 @@ class RoundGuard:
 
         # 3) 有改动 → 候选快照（先落盘：无论后续验证成败，本轮产物都不丢）
         self.stats.candidates += 1
-        cid = self._new_id(round_no)
-        _atomic_write(self.dir / f"{CAND_PREFIX}{cid}.md", text)
+        cid = self._snapshot_candidate(round_no, text)
         changed = [n for n, (c, b) in {
             "idea": (cand_idea, best_idea),
             "artifact": (cand_artifact, best_artifact),
@@ -884,11 +904,15 @@ class RoundGuard:
     def _read_verdicts(self) -> Dict[str, Tuple[Optional[float], str]]:
         out: Dict[str, Tuple[Optional[float], str]] = {}
         try:
-            text = self.verdicts_path.read_text(encoding="utf-8")
+            # utf-8-sig：与 words / cli 等其它用户可编辑文件同一 BOM 防护口径。
+            # 带 BOM 的首行若不剥，cid 会变成 "\ufeff<cid>"，用户评分被静默忽略
+            text = self.verdicts_path.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeDecodeError):
             return out
         for line in text.splitlines():
-            line = line.strip()
+            # 逐行再剥一次 BOM：utf-8-sig 只处理文件首，拼接/粘贴的多段
+            # 内容里靠后的行同样可能带 BOM
+            line = line.strip().lstrip("\ufeff").strip()
             if not line or line.startswith("#"):
                 continue
             parts = line.split(None, 2)
@@ -932,7 +956,17 @@ class RoundGuard:
                 # 不算——挂起候选正是要等这里的补分来翻案的
                 resolved.add(cid)
         for cid, score_comment in verdicts.items():
-            if cid in resolved or cid not in candidates:
+            if cid in resolved:
+                continue
+            if cid not in candidates:
+                # 引用了不存在的候选 id（抄错一个字符等）：静默忽略会让
+                # 用户以为评分已提交，实际永远不生效。每个 id 只提示一次，
+                # 避免长循环里每轮刷屏
+                if cid not in self._warned_unknown_cids:
+                    self._warned_unknown_cids.add(cid)
+                    self.sink.warn(
+                        f"rounds/verdicts.txt 里的候选 id「{cid}」不存在"
+                        "（该行被忽略，请核对是否抄写错误）")
                 continue
             score, comment = score_comment
             if score is None:

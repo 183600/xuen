@@ -17,7 +17,7 @@ from xuen.rounds import (
     parse_score,
     resolve_repo,
 )
-from xuen.sink import SECTION_ARTIFACT, SECTION_IDEA, Sink
+from xuen.sink import Sink
 
 
 class RecordingSink(Sink):
@@ -1021,6 +1021,39 @@ def test_verdicts_bad_lines_ignored(ws):
     assert v["id-but-not-a-number"][0] is None
 
 
+def test_verdicts_bom_tolerated(ws):
+    """带 BOM 的评分行（Windows 记事本保存）不能静默失效。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "带 BOM 也要能翻案的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_bytes(
+        b"\xef\xbb\xbf" + f"{cid} 9 很好\n".encode("utf-8"))
+    v = guard._read_verdicts()
+    assert v[cid][0] == 9.0
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+
+
+def test_unknown_verdict_cid_warns_once(ws):
+    """抄错的候选 id 必须给出提示（且只提示一次），不能静默吞掉评分。"""
+    workspace, state_path = ws
+    sink = RecordingSink()
+    guard = make_guard(workspace, state_path, sink, verify="user")
+    guard.start()
+    write_idea(state_path, "想法")
+    assert guard.on_round_end(1) == "pending"
+    (guard.dir / "verdicts.txt").write_text("20990101-000000-r1 9\n",
+                                            encoding="utf-8")
+    guard.finish()
+    guard.finish()
+    warns = [m for lvl, m in sink.messages if lvl == "warn" and "不存在" in m]
+    assert len(warns) == 1
+
+
 def test_verdicts_non_finite_score_not_adopted(ws):
     """nan/inf 不是合法评分：不能因 min/max 夹取而变成 10 分被采纳。"""
     workspace, state_path = ws
@@ -1321,14 +1354,18 @@ def test_round_failed_restores_best(ws):
 
 
 # ---------------------------------------------------------------- 其它
-def test_id_collision_gets_suffix(ws):
+def test_candidate_snapshot_collision_gets_suffix(ws):
+    """同 id 快照已存在时原子创建必须换名，绝不覆盖旧快照。"""
     workspace, state_path = ws
     guard = make_guard(workspace, state_path)
     guard.dir.mkdir(parents=True, exist_ok=True)
-    id1 = guard._new_id(1)
-    (guard.dir / f"cand-{id1}.md").write_text("x", encoding="utf-8")
-    id2 = guard._new_id(1)
+    id1 = guard._snapshot_candidate(1, "第一份")
+    id2 = guard._snapshot_candidate(1, "第二份")
     assert id1 != id2
+    assert (guard.dir / f"cand-{id1}.md").read_text(
+        encoding="utf-8") == "第一份"
+    assert (guard.dir / f"cand-{id2}.md").read_text(
+        encoding="utf-8") == "第二份"
 
 
 def test_next_round_starts_from_best_not_last_candidate(ws):

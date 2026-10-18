@@ -2,7 +2,6 @@
 import textwrap
 
 import pytest
-import yaml
 
 from xuen.config import load_config
 
