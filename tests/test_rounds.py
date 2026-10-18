@@ -1034,6 +1034,49 @@ def test_late_adoption_snapshot_unreadable_stays_pending(ws):
     assert guard.best["id"] == cid
 
 
+def test_late_adoption_best_write_failure_stays_pending(ws, monkeypatch):
+    """最佳写盘失败时不能记「已决」：腾出磁盘后仍能兑现晋升。
+
+    回归：_apply_user_verdicts 先写 verdict 事件再写 best.md/best.json。
+    best 写盘抛 OSError（磁盘满 / 目录只读）时事件已把候选锁死——resolved
+    集合此后永久跳过它（「应用失败稍后重试」不再可能），汇总还会虚报
+    「采纳 1」而最佳仍是旧内容、research.md 也没写回。写盘成功前不能
+    记已决事件、不能改判统计、不能改 self.best；与快照读取同一口径。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "写盘失败也要保住的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    guard.finish()  # 兑现失败：降级告警，候选保持挂起
+    assert guard.best["round"] == 0
+    assert guard.stats.adopted == 0
+    assert guard.stats.pending == 1
+    assert read_idea(state_path) == "（暂无）"
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+    # 写盘恢复后再次兑现：同一评分必须还能兑现（候选没有被锁死）
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.best["verifier"] == "user"
+    assert guard.stats.adopted == 1
+    assert guard.stats.pending == 0
+    assert read_idea(state_path) == "写盘失败也要保住的想法"
+
+
 # ---------------------------------------------------------------- 失败轮次
 def test_round_failed_restores_best(ws):
     """agent 失败轮次的半截产物同样不能污染下一轮起点。"""

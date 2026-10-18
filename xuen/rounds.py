@@ -886,6 +886,26 @@ class RoundGuard:
                               result="adopted" if adopted else "rejected",
                               reason=f"用户补评分 {score:g}",
                               comment=comment)
+            best: Dict = {}
+            if adopted:
+                # 先把最佳写盘、再记「已决」事件：best.md/best.json 写盘
+                # 失败（磁盘满 / 目录只读……）时必须保持挂起——已决事件
+                # 会让本函数永久跳过该候选（resolved），用户腾出磁盘后也
+                # 再翻不了案，而汇总还会一边虚报「采纳 1」一边留着旧最佳。
+                # 与上面「先读快照再记已决」同一口径：外部副作用成功前
+                # 不能留下不可撤销的结论
+                best = {"id": cid, "round": round_no, "verifier": "user",
+                        "score": score, "ts": _ts(), "late": True,
+                        "reason": verdict.reason}
+                try:
+                    _atomic_write(self.best_md, text)
+                    _atomic_write(self.best_json,
+                                  json.dumps(best, ensure_ascii=False,
+                                             indent=2))
+                except OSError as e:
+                    self.sink.warn(f"采纳旧候选 {cid} 失败（最佳写盘失败，"
+                                   f"保持挂起）：{e}")
+                    continue
             self._append_event({"event": "verdict", "id": cid,
                                 "round": round_no, "late": True,
                                 **_verdict_fields(verdict)})
@@ -897,6 +917,7 @@ class RoundGuard:
                 self._pending_ids.discard(cid)
                 self.stats.pending -= 1
             if adopted:
+                self.best = best
                 self.stats.adopted += 1
             else:
                 self.stats.rejected += 1
@@ -906,12 +927,6 @@ class RoundGuard:
                 continue
             # 前进式采纳旧快照：内容成为新最佳，并写回状态文件，
             # 下一轮直接从它继续（不改写 history.jsonl 的既有记录）
-            _atomic_write(self.best_md, text)
-            self.best = {"id": cid, "round": round_no, "verifier": "user",
-                         "score": score, "ts": _ts(), "late": True,
-                         "reason": verdict.reason}
-            _atomic_write(self.best_json,
-                          json.dumps(self.best, ensure_ascii=False, indent=2))
             self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
                          f"前进式晋升为最佳并写回状态文件")
             cur = self._read_state_text()
