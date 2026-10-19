@@ -1588,6 +1588,31 @@ def test_best_json_and_history_lost_rebuilds_baseline(ws):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_append_event_after_partial_line_not_swallowed(ws):
+    """history.jsonl 末尾留下无换行的残行（写盘中途被杀 / ENOSPC）时，
+    后续事件不能与残行拼成一行被静默丢弃。
+
+    回归：_append_event 直接以 "a" 追加，新事件会被粘进残行；
+    _read_events 逐行解析坏行跳过——审计记录、_recover_best 的恢复源、
+    _apply_user_verdicts 的已决/未决判定（如一条被采纳的 verdict）会
+    一起丢失。修复：追加前保证文件以换行结尾。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    with open(guard.history_path, "a", encoding="utf-8") as f:
+        f.write('{"event": "candidate", "id": "被截')  # 无结尾换行的残行
+    write_idea(state_path, "半截轮次留下的内容")
+    guard.on_round_failed(1, "被中断")
+
+    kinds = [e["event"] for e in events(guard)]
+    assert kinds[-2:] == ["skipped", "restored"]
+    raw = guard.history_path.read_text(encoding="utf-8")
+    # 残行独立成行（保留可人工检查），新事件没有被拼接进残行
+    assert '{"event": "candidate", "id": "被截\n{"event": "skipped"' in raw
+    assert raw.endswith("\n")
+    assert "" not in raw.splitlines()  # 不以换行结尾时不额外插入空行
+
+
 def test_late_adoption_state_already_matching_no_restore_noise(ws):
     """补分采纳时 research.md 已与快照一致（无区块需写回）：不产生多余
     restored 事件、不虚增还原统计（与 _restore_best 的无变化口径一致），

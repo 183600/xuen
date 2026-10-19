@@ -421,8 +421,22 @@ class RoundGuard:
     def _append_event(self, ev: Dict) -> None:
         ev = dict(ev)
         ev.setdefault("ts", _ts())
-        with open(self.history_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+        line = json.dumps(ev, ensure_ascii=False) + "\n"
+        # 追加前确保文件以换行结尾：上一次写入若在 ENOSPC / 进程被杀时
+        # 中途截断，记录里会留下无结尾换行的残行；直接追加会把新事件与
+        # 残行拼成一行，_read_events 逐行解析时【两条】都会被当坏行跳过
+        # ——审计日志、_recover_best 的恢复源、_apply_user_verdicts 的
+        # 已决/未决判定会一起丢失。补一个换行让残行独立成行（保留可人工
+        # 检查），新事件照常可读。单个 "a+b" 句柄上先 seek 再读末尾一位，
+        # 避免「两次打开文件」之间被并发实例插入写入。
+        with open(self.history_path, "a+b") as f:
+            f.seek(0, os.SEEK_END)
+            if f.tell() > 0:
+                f.seek(-1, os.SEEK_END)
+                if f.read(1) != b"\n":
+                    f.seek(0, os.SEEK_END)
+                    f.write(b"\n")
+            f.write(line.encode("utf-8"))
 
     def _read_events(self) -> List[Dict]:
         events: List[Dict] = []
