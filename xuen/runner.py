@@ -272,6 +272,11 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                         guard.on_round_end(i)
                     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
                         sink.warn(f"轮次守卫本轮异常（已降级跳过）：{e}")
+                        # 异常可能发生在验证/晋升途中（如 best.md 写盘
+                        # 失败）：未验证的候选仍留在 research.md，不能
+                        # 成为下一轮的起点。on_round_failed 对已处理轮次
+                        # 只补做还原、不重复记账（见 rounds.RoundGuard）
+                        _guard_round_failed(guard, i, f"守卫处理异常：{e}")
                 # 守卫可能改写了区块（还原最佳 / 晋升候选）：重读并上报
                 idea, artifact = _read_sections(state_path)
                 if idea != prev_idea:

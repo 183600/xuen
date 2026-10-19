@@ -154,6 +154,32 @@ def test_guard_crash_degrades_not_blocks(env, tmp_path, monkeypatch):
     assert _read(ws, "IDEA") == "第 3 版想法"
 
 
+def test_guard_round_exception_restores_best(env, tmp_path, monkeypatch):
+    """守卫在验证/晋升途中抛异常（如 best.md 写盘失败）时，本轮未验证的
+    候选内容不能留在 research.md 里成为下一轮起点：runner 必须补做还原。
+
+    回归：except 分支只告警、不还原，异常轮次的候选（含半截/未验证内容）
+    会一直留在循环状态，下一轮从被污染的状态继续。
+    """
+    from xuen.rounds import RoundGuard
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+
+    def explode(self, round_no, cid):
+        raise OSError("模拟晋升写盘失败")
+
+    monkeypatch.setattr(RoundGuard, "_verify", explode)
+    runner.run(cfg, "测试任务", sink=NullSink())
+    # agent 跑满 3 轮，但每轮候选都因守卫异常被还原回基线
+    assert (ws / "counter.txt").read_text() == "3"
+    assert _read(ws, "IDEA") == "（暂无）"
+    assert _read(ws, "ARTIFACT") == "（暂无）"
+    best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
+    assert best["round"] == 0
+    assert len([e for e in _events(ws) if e["event"] == "restored"]) == 3
+
+
 def test_guard_startup_non_oserror_degrades(env, tmp_path):
     """守卫启用失败不止 OSError：rounds.dir 为非法路径（如 YAML 双引号里
     的 "\\0" 转义）时 Path.resolve/mkdir 抛 ValueError，必须同样降级——

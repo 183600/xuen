@@ -577,6 +577,44 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "test := x",
+    "test::= x",
+    "test:::= x",
+    "test : = x",
+    "test ?= x",
+    "test += x",
+    "test != echo x",
+    "test = x",
+])
+def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
+                                                                   line):
+    """变量赋值行不是 test 目标：`make test` 会以退出码 2 失败，探测命中
+    会被误判为「测试失败」拒绝候选（应属「没有可运行套件」）。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line + "\nall:\n\t@echo hi\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:",
+    "test::",
+    "test :",
+    " test:",
+    "test:; echo ok",
+    "test: dep",
+])
+def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
+    """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line + "\n\techo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_exact_target_alongside_suffixed(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

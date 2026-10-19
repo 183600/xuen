@@ -46,3 +46,18 @@ def test_existing_task_never_prompts(monkeypatch):
     monkeypatch.setattr("builtins.input", boom)
     args = cli.build_parser().parse_args(["设计一个新的优化器"])
     assert cli._resolve_task(args) == "设计一个新的优化器"
+
+
+def test_task_file_conflict_returns_2_not_raise(tmp_path, capsys):
+    """位置参数与 --task-file 冲突：main() 必须返回 2，而不是让
+    _resolve_task 的 SystemExit 外泄（main 的契约是返回 int）。"""
+    rc = cli.main(["-c", EXAMPLE, "任务", "--task-file", str(tmp_path / "t")])
+    assert rc == 2
+    assert "不能同时使用" in capsys.readouterr().err
+
+
+def test_unreadable_task_file_returns_2_not_raise(tmp_path, capsys):
+    """任务文件读不到：同样返回 2（错误信息已打印），不外泄 SystemExit。"""
+    rc = cli.main(["-c", EXAMPLE, "--task-file", str(tmp_path / "missing")])
+    assert rc == 2
+    assert "无法读取任务文件" in capsys.readouterr().err

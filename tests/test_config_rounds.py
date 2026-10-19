@@ -216,3 +216,18 @@ def test_windows_double_dollar_prompt_file_rejected(tmp_path, monkeypatch):
 agent:
   command: 'opencode run $$prompt_file'
 """))
+
+
+def test_windows_double_dollar_prompt_is_literal(tmp_path, monkeypatch):
+    """$$prompt 不是占位符，与 $prompt_file 同模板时必须放行。
+
+    回归：$prompt 的前置字符集漏了 $（$prompt_file 的那条有），
+    `$$prompt "$prompt_file"` 被误当成真的用了 $prompt 拒绝；两侧
+    渲染器都按字面量处理 $$prompt（cmd 也不展开 $），口径应一致。
+    """
+    monkeypatch.setattr("os.name", "nt")
+    cfg = load_config(write_cfg(tmp_path, """
+agent:
+  command: 'opencode run $$prompt "$prompt_file"'
+"""))
+    assert cfg.agent.command == 'opencode run $$prompt "$prompt_file"'

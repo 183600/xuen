@@ -149,6 +149,11 @@ def main(argv=None) -> int:
         print()
         ui.warn("已中断")
         return 130
+    except SystemExit as e:
+        # _resolve_task 已把具体原因打印到 stderr，这里只把退出码转成
+        # main() 的返回值：main() 的契约是返回 int（入口 sys.exit(main())），
+        # 让 SystemExit 直接外泄会绕过调用方对返回码的处理
+        return e.code if isinstance(e.code, int) else 2
     if not task:
         ui.err("未提供任务")
         return 2

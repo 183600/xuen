@@ -240,11 +240,15 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    test-unit / test-ci 之类后缀目标不算——探测命中后会执行
     #    `make test`，而 Makefile 里根本没有 test 目标时 make 以退出码 2
     #    失败，run_suite 会把它当成「测试失败」拒绝候选，连 auto 模式的
-    #    兜底评分（user/ai）都被跳过；该场景应属「没有可运行套件」
+    #    兜底评分（user/ai）都被跳过；该场景应属「没有可运行套件」。
+    #    变量赋值（test := / ?= / += / != / ::=）与 test: = x 这类空变量名
+    #    同样不是目标：make test 会以退出码 2 失败，必须按无套件处理。
+    #    负向前瞻吞掉冒号后任意个冒号再接 = 的写法（::= / :::=）。
     makefile = repo / "Makefile"
     if makefile.is_file() and shutil.which("make"):
         try:
-            if re.search(r"(?m)^test\s*:", makefile.read_text(encoding="utf-8", errors="replace")):
+            if re.search(r"(?m)^[ ]*test[ \t]*:(?![\t ]*:*=)",
+                         makefile.read_text(encoding="utf-8", errors="replace")):
                 return ["make", "test"]
         except OSError:
             pass

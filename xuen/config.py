@@ -290,7 +290,7 @@ def _validate_windows_command(name: str, template: str,
     """
     if os.name != "nt":
         return
-    if re.search(r"(?<![A-Za-z0-9_])\$prompt(?![A-Za-z0-9_])", template):
+    if re.search(r"(?<![A-Za-z0-9_$])\$prompt(?![A-Za-z0-9_])", template):
         raise ValueError(
             f"Windows 的 {name} 不能使用 $prompt；请改用 $prompt_file"
             "（提示词会被写入文件，避免 cmd 转义/换行问题）"
