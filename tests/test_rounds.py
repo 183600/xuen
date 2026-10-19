@@ -1519,3 +1519,56 @@ def test_late_adoption_state_already_matching_no_restore_noise(ws):
                 if e["event"] == "restored"]) == n0
     oks = [m for lvl, m in sink.messages if lvl == "ok" and "晋升为最佳" in m]
     assert oks and "无需写回" in oks[-1]
+
+
+def test_adopt_corrupt_snapshot_not_committed(ws, monkeypatch):
+    """晋升前必须重新校验快照结构：快照落盘后被外部截断/篡改时，
+    损坏内容绝不能进 best.md（否则下次还原会把空区块写回 research.md，
+    静默丢掉当前最佳）。异常按写盘失败口径上抛，候选保持未决。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_id = guard.best["id"]
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "结构损坏的快照不能进最佳")
+    real_verify = guard._verify
+
+    def corrupt_snapshot(round_no, cid):
+        (guard.dir / f"{rounds.CAND_PREFIX}{cid}.md").write_text(
+            "坏掉的内容（缺少区块标记）", encoding="utf-8")
+        return real_verify(round_no, cid)
+
+    monkeypatch.setattr(guard, "_verify", corrupt_snapshot)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+    assert guard.best["id"] == baseline_id
+    assert guard.stats.adopted == 0
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+
+def test_late_adoption_corrupt_snapshot_stays_pending(ws):
+    """用户补分采纳旧候选前同样要校验快照结构：损坏快照保持挂起，
+    不写 best.md、不写回 research.md，也不留不可翻案的 adopted 事件。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "等待补分的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e for e in events(guard) if e["event"] == "candidate"][-1]["id"]
+    (guard.dir / f"{rounds.CAND_PREFIX}{cid}.md").write_text(
+        "坏掉的内容（缺少区块标记）", encoding="utf-8")
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n",
+                                            encoding="utf-8")
+    guard.finish()
+    assert guard.best["round"] == 0
+    assert guard.stats.adopted == 0
+    assert guard.stats.pending == 1
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert read_idea(state_path) == "（暂无）"
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]

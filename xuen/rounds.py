@@ -166,6 +166,21 @@ def _readable_section(text: str, name: str) -> Optional[str]:
     return state.sanitize_section_content(content)
 
 
+def _structure_intact(text: str) -> bool:
+    """两个区块的标记是否都能安全读出（见 state._first_section）。
+
+    候选内容进入最佳前的最后一道结构闸门：快照落盘后可能被外部截断 /
+    篡改（写盘中途崩溃、用户误编辑、并发实例），而读取路径
+    （_adopt / _apply_user_verdicts）必须在写盘前重新校验——损坏内容
+    绝不能进 best.md，否则下一次还原会把空区块写回 research.md，静默
+    丢掉当前最佳（候选/最佳分离与「结构损坏不得进最佳」的核心不变量）。
+    """
+    if not text:
+        return False
+    return (state._first_section(text, state.SECTION_IDEA) is not None
+            and state._first_section(text, state.SECTION_ARTIFACT) is not None)
+
+
 @dataclass
 class SuiteResult:
     """一次测试套件运行的结果。available=False 表示套件根本没能运行
@@ -637,8 +652,7 @@ class RoundGuard:
 
         # 1) 结构检查：区块标记被外部 agent 弄坏的内容无法被安全读取，
         #    更不能进最佳——结构损坏直接拒绝（守卫级判定，无需测试/评分）
-        if state._first_section(text, state.SECTION_IDEA) is None \
-                or state._first_section(text, state.SECTION_ARTIFACT) is None:
+        if not _structure_intact(text):
             self.stats.candidates += 1
             cid = self._snapshot_candidate(round_no, text)
             self._append_event({"event": "candidate", "id": cid,
@@ -930,6 +944,11 @@ class RoundGuard:
         # 分离。快照不可读（如被外部删除）时才退回当前状态（见
         # _read_candidate_text，评审提示词也用同一读取口径）
         text = self._read_candidate_text(cid)
+        # 快照写入后可能被外部截断/篡改（见 _structure_intact）：晋升前
+        # 重新校验区块结构，损坏快照按写盘失败处理（异常上抛，候选保持
+        # 未决可补分重试，self.best / 统计都不动），绝不让它进 best.md
+        if not _structure_intact(text):
+            raise OSError("候选快照区块标记损坏，无法晋升为最佳")
         best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
                 "score": verdict.score, "ts": _ts(),
                 "reason": verdict.reason}
@@ -1020,7 +1039,8 @@ class RoundGuard:
     def _apply_user_verdicts(self) -> None:
         """把 verdicts.txt 里的新评分应用到仍处「待评分」的候选上。
         采纳旧候选 = 前进式晋升（快照内容成为新最佳并写回 research.md），
-        拒绝旧候选 = 只记账。这是异步用户评分的兑现通道。"""
+        拒绝旧候选 = 只记账。这是异步用户评分的兑现通道。采纳前会重新
+        校验快照的区块结构（见 _structure_intact），损坏快照保持挂起。"""
         verdicts = self._read_verdicts()
         if not verdicts:
             return
@@ -1069,6 +1089,17 @@ class RoundGuard:
                     text = cand_path.read_text(encoding="utf-8")
                 except (OSError, UnicodeDecodeError) as e:
                     self.sink.warn(f"采纳旧候选 {cid} 失败（快照不可读，保持挂起）：{e}")
+                    continue
+                # 快照写入后可能被外部截断/篡改：补分晋升前必须重新校验
+                # 区块结构（与 _process_round_end / _adopt 同一不变量——
+                # 损坏内容绝不进 best.md）。保持挂起而不是拒绝，与「快照
+                # 不可读」同口径：用户修复快照后补分仍能兑现
+                if not _structure_intact(text):
+                    self.sink.warn(f"采纳旧候选 {cid} 失败（快照区块标记"
+                                   "损坏，保持挂起）")
+                    # 快照损坏前若曾晋升写盘失败，research.md 可能仍残留
+                    # 该候选内容：顺手还原最佳，保证下一轮从最佳出发
+                    self._restore_best(round_no, why="候选快照结构损坏")
                     continue
             verdict = Verdict(verifier="user", score=score,
                               result="adopted" if adopted else "rejected",
