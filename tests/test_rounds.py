@@ -1212,6 +1212,41 @@ def test_verdicts_bad_lines_ignored(ws):
     assert v["id-but-not-a-number"][0] is None
 
 
+def test_verdicts_unicode_line_separator_in_comment_not_split(ws):
+    """评语里的 U+2028/U+2029/U+0085 不能把一行评分切成两行。
+
+    回归：_read_verdicts 用 str.splitlines()，这些 Unicode 行分隔符也是
+    行边界；评语后半段若恰以「cid 分数」开头，就会被解析成一条凭空出现
+    的伪评分（把无关候选按用户没写过的分数采纳/拒绝），与 _read_events
+    换成 ASCII 换行切分是同一类问题。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    for sep in ("\u2028", "\u2029", "\x85"):
+        (guard.dir / "verdicts.txt").write_text(
+            f"cand-a 9 很好{sep}cand-b 0 差\n", encoding="utf-8")
+        v = guard._read_verdicts()
+        assert v["cand-a"][0] == 9.0
+        assert f"cand-b 0 差" in v["cand-a"][1]
+        # 评语里的 cand-b 不能变成一条独立评分
+        assert "cand-b" not in v
+
+
+def test_parse_score_full_caps_score_keyword():
+    """英文模式要像中英文那样容忍大小写：AI 评审员输出 "SCORE:" 时
+    不能解析不出分数而把候选永久挂起（"Score:"/"score:" 一直可用）。"""
+    assert parse_score("SCORE: 8.5") == 8.5
+    assert parse_score("SCORE：7") == 7.0
+    assert parse_score("评语\nTotal SCORE: 9") == 9.0
+    assert parse_score("sCoRe: 10") == 10.0
+
+
+def test_last_comment_excludes_full_caps_score_line():
+    """_last_comment 同一套模式：全大写 SCORE 行也不该被当评语展示。"""
+    text = "第一行评语\nSCORE: 8"
+    assert rounds._last_comment(text) == "第一行评语"
+
+
 def test_verdicts_bom_tolerated(ws):
     """带 BOM 的评分行（Windows 记事本保存）不能静默失效。"""
     workspace, state_path = ws

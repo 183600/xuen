@@ -70,9 +70,10 @@ CAND_PREFIX = "cand-"
 
 # 评分解析：兼容中英文、全半角冒号；取【最后一次】出现的分数
 # （评审员被要求把「评分: N」放在输出最后一行，但容错取最后匹配）
+# 英文模式不分大小写：AI 评审员可能输出 "score"/"Score"/"SCORE"
 _SCORE_PATTERNS = (
     re.compile(r"评\s*分\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)"),
-    re.compile(r"[Ss]core\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)"),
+    re.compile(r"score\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE),
 )
 
 
@@ -1120,7 +1121,11 @@ class RoundGuard:
         # 出现在评语里，替换后这两列照常解析；与本函数「坏行跳过、好行
         # 照常生效」的容错口径一致
         text = raw.decode("utf-8-sig", errors="replace")
-        for line in text.splitlines():
+        # 只按 ASCII 换行切分（与 _read_events 同一口径）：str.splitlines
+        # 还会在 U+2028/U+2029/U+0085 等 Unicode 行分隔符处切开，评语里
+        # 含这些字符时一行评分会被拆成两行——后半段若恰好以「cid 分数」
+        # 开头，就会被解析成一条凭空出现的伪评分（用户被迫翻案/拒绝）。
+        for line in re.split(r"\r\n|\r|\n", text):
             # 逐行再剥一次 BOM：utf-8-sig 只处理文件首，拼接/粘贴的多段
             # 内容里靠后的行同样可能带 BOM
             line = line.strip().lstrip("\ufeff").strip()

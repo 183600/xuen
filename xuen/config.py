@@ -108,19 +108,43 @@ def _parse_iterations(value: Any) -> Optional[int]:
 def _parse_int(value: Any, name: str) -> int:
     """解析整数配置；与 _parse_iterations 同理拒绝 bool 与非整数 float：
     YAML 把 yes 解析成 True，int(True)==1 会把 words.pick: yes 静默解释成 1；
-    count: 100.5 会被 int() 静默截断成 100。"""
+    count: 100.5 会被 int() 静默截断成 100。
+    不可解析的值（如带引号的 "5.5"/"abc"）要带字段名报错：int() 的原生
+    ValueError 只说 invalid literal，多字段配置下无法定位是哪一个。"""
     if isinstance(value, bool):
         raise ValueError(f"{name} 必须是整数，收到布尔值: {value!r}")
     if isinstance(value, float) and not value.is_integer():
         raise ValueError(f"{name} 必须是整数，收到: {value!r}")
-    return int(value)
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(f"{name} 必须是整数，收到: {value!r}") from None
 
 
 def _parse_float(value: Any, name: str) -> float:
-    """解析浮点配置；拒绝 bool（timeout: yes 会被静默当成 1.0 秒）。"""
+    """解析浮点配置；拒绝 bool（timeout: yes 会被静默当成 1.0 秒）。
+    不可解析的值（如带引号的 "abc"）同样要带字段名报错，不能漏出
+    float() 的原生 could not convert string 消息。"""
     if isinstance(value, bool):
         raise ValueError(f"{name} 必须是数值（秒），收到布尔值: {value!r}")
-    return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} 必须是数值，收到: {value!r}") from None
+
+
+def _parse_str(value: Any, name: str) -> str:
+    """解析字符串配置；拒绝 list/dict 等结构化值。
+
+    YAML 把列表/映射写进字符串字段几乎都是笔误：str() 会静默变成
+    Python repr——`command: [opencode, run, "$prompt"]` 渲染成
+    "['opencode', 'run', ...]"，命令校验在 repr 里看到 $prompt 竟会
+    放行，运行时才以 `sh: [opencode,: not found` 失败；`workspace: []`
+    会直接创建名为 "[]" 的目录。缩进写错（`workspace:` 下多一层列表）
+    同样落入此类。标量（数字/字符串/日期）照常转字符串。"""
+    if isinstance(value, (list, dict)):
+        raise ValueError(f"{name} 必须是字符串，收到: {value!r}")
+    return str(value)
 
 
 def _config_value(source: dict, name: str, default: Any) -> Any:
@@ -182,7 +206,8 @@ def load_config(path: Optional[str] = None) -> Config:
         raise ValueError(f"配置文件顶层必须是映射（字典），收到: {raw!r}")
 
     cfg = Config()
-    cfg.extra_notes = str(raw.get("extra_notes") or "")
+    cfg.extra_notes = _parse_str(_config_value(raw, "extra_notes", ""),
+                                 "extra_notes")
 
     words = _mapping_section(raw, "words")
     cfg.words = WordsConfig(
@@ -201,7 +226,8 @@ def load_config(path: Optional[str] = None) -> Config:
 
     agent = _mapping_section(raw, "agent")
     cfg.agent = AgentConfig(
-        command=str(agent.get("command", "") or ""),
+        command=_parse_str(_config_value(agent, "command", ""),
+                           "agent.command"),
         timeout=_parse_float(
             _config_value(agent, "timeout", cfg.agent.timeout),
             "agent.timeout",
@@ -217,7 +243,8 @@ def load_config(path: Optional[str] = None) -> Config:
     cfg.rounds = RoundsConfig(
         enabled=_parse_bool(_config_value(rounds, "enabled", cfg.rounds.enabled),
                             "rounds.enabled"),
-        dir=str(_config_value(rounds, "dir", cfg.rounds.dir) or "rounds"),
+        dir=_parse_str(_config_value(rounds, "dir", cfg.rounds.dir),
+                       "rounds.dir") or "rounds",
         verify=verify,
         fallback=fallback,
         adopt_score=_parse_float(
@@ -226,9 +253,11 @@ def load_config(path: Optional[str] = None) -> Config:
         verify_timeout=_parse_float(
             _config_value(rounds, "verify_timeout", cfg.rounds.verify_timeout),
             "rounds.verify_timeout"),
-        repo=str(_config_value(rounds, "repo", cfg.rounds.repo) or ""),
-        judge_command=str(_config_value(rounds, "judge_command",
-                                        cfg.rounds.judge_command) or ""),
+        repo=_parse_str(_config_value(rounds, "repo", cfg.rounds.repo),
+                        "rounds.repo") or "",
+        judge_command=_parse_str(
+            _config_value(rounds, "judge_command", cfg.rounds.judge_command),
+            "rounds.judge_command") or "",
         judge_timeout=_parse_float(
             _config_value(rounds, "judge_timeout", cfg.rounds.judge_timeout),
             "rounds.judge_timeout"),
@@ -236,8 +265,10 @@ def load_config(path: Optional[str] = None) -> Config:
 
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
     workspace = raw.get("workspace")
-    if workspace is not None and str(workspace).strip():
-        cfg.workspace = str(workspace)
+    if workspace is not None:
+        workspace = _parse_str(workspace, "workspace")
+        if workspace.strip():
+            cfg.workspace = workspace
     # tui: / tui: null 时 raw.get 返回 None 而非默认值；与 workspace 同理不能把 null 当显式值
     tui = raw.get("tui")
     cfg.tui = cfg.tui if tui is None else _parse_bool(tui, "tui")

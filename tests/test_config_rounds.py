@@ -231,3 +231,67 @@ agent:
   command: 'opencode run $$prompt "$prompt_file"'
 """))
     assert cfg.agent.command == 'opencode run $$prompt "$prompt_file"'
+
+
+def test_unparseable_number_messages_include_field_name(tmp_path):
+    """带引号的非数字（"5.5"/"abc"）也要报出字段名。
+
+    回归：_parse_int/_parse_float 直接 int()/float()，原生 ValueError
+    只说 invalid literal for int()/could not convert string to float，
+    多字段配置下无法定位是哪个字段写错；_parse_iterations 一直带
+    字段名（loop.iterations），口径必须一致。
+    """
+    with pytest.raises(ValueError, match="words.count"):
+        load_config(write_cfg(tmp_path, BASE + """
+words:
+  count: "abc"
+"""))
+    with pytest.raises(ValueError, match="words.batch"):
+        load_config(write_cfg(tmp_path, BASE + """
+words:
+  batch: "5.5"
+"""))
+    with pytest.raises(ValueError, match="agent.timeout"):
+        load_config(write_cfg(tmp_path, """
+agent:
+  command: 'opencode run "$prompt"'
+  timeout: "abc"
+"""))
+    with pytest.raises(ValueError, match="rounds.adopt_score"):
+        load_config(write_cfg(tmp_path, BASE + """
+rounds:
+  adopt_score: "x"
+"""))
+
+
+def test_structured_values_rejected_for_string_fields(tmp_path):
+    """字符串字段收到 list/dict 必须报错，不能 str() 成 Python repr。
+
+    回归：`agent.command: [opencode, run, "$prompt"]`（按 argv 数组写）
+    被 str() 成 "['opencode', 'run', '$prompt']"，命令校验在 repr 里
+    看到 $prompt 竟会放行，运行时才以 `sh: [opencode,: not found` 崩溃；
+    `workspace: []` 会直接创建名为 "[]" 的目录。缩进写错同样落入此类。
+    """
+    with pytest.raises(ValueError, match="agent.command"):
+        load_config(write_cfg(tmp_path, """
+agent:
+  command:
+    - opencode
+    - run
+    - $prompt
+"""))
+    with pytest.raises(ValueError, match="workspace"):
+        load_config(write_cfg(tmp_path, BASE + "workspace: []\n"))
+    with pytest.raises(ValueError, match="rounds.dir"):
+        load_config(write_cfg(tmp_path, BASE + """
+rounds:
+  dir: [snap]
+"""))
+    with pytest.raises(ValueError, match="rounds.repo"):
+        load_config(write_cfg(tmp_path, BASE + """
+rounds:
+  repo: {path: /tmp/x}
+"""))
+    # 标量照常接受
+    cfg = load_config(write_cfg(tmp_path, BASE + "workspace: 2024\n"))
+    assert cfg.workspace == "2024"
