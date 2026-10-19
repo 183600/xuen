@@ -100,6 +100,17 @@ def _events(ws: Path):
             .splitlines() if ln.strip()]
 
 
+def test_surrogate_task_rejected_before_writing(env, tmp_path):
+    """程序化调用 runner 传入含孤立代理字符的任务：按配置错误口径退出码 2
+    的 SystemExit，而不是写状态文件/提示词时抛 UnicodeEncodeError。"""
+    ws, script = env
+    cfg = _make_cfg(ws, script, tmp_path / "repo")
+    with pytest.raises(SystemExit) as ei:
+        runner.run(cfg, "坏任务\udcff", sink=NullSink())
+    assert "UTF-8" in str(ei.value)
+    assert not (ws / "research.md").exists()
+
+
 def test_green_repo_each_round_promoted(env, tmp_path):
     ws, script = env
     repo = _make_repo(tmp_path, ok=True)

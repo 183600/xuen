@@ -30,6 +30,13 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         workspace = Path(cfg.workspace).expanduser().resolve()
     except (OSError, ValueError) as e:
         raise SystemExit(f"工作区不可用：{cfg.workspace}（{e}）")
+    # 程序化调用（cli 之外）同样可能传入含孤立代理字符的任务：它们无法
+    # 按 UTF-8 写盘，会在状态文件/提示词文件处抛 UnicodeEncodeError。
+    # 与配置错误同口径提前给出退出码 2 的友好提示
+    try:
+        task.encode("utf-8")
+    except UnicodeEncodeError:
+        raise SystemExit("任务包含无法用 UTF-8 编码的字符，无法写入状态文件")
     state_path = workspace / "research.md"
     words_path = workspace / "words.txt"
 

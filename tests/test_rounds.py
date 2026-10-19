@@ -1726,6 +1726,25 @@ def test_missing_best_md_without_snapshot_falls_back_to_scaffold(ws):
     assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
 
 
+def test_corrupt_best_md_without_snapshot_falls_back_to_scaffold(ws):
+    """best.md 损坏且无候选快照（基线）时按脚手架处理，不返回损坏文本。
+
+    缺失分支早已如此；损坏分支若直接返回原文，_restore_best 会把损坏
+    区块当成空内容写回 research.md（而不是脚手架的「暂无」），且损坏
+    内容会被当作最佳继续比较。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    assert guard.best["round"] == 0
+    guard.best_md.write_text("被外部篡改的垃圾内容，没有区块标记",
+                             encoding="utf-8")
+
+    text = guard._read_best_md()
+    assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "（暂无）"
+
+
 def test_start_recovers_best_from_snapshot_when_best_md_deleted(ws):
     """重启时 best.md 缺失：从 best.json 指向的候选快照恢复，而不是以
     当前 research.md 重建基线（那会把旧最佳悄悄降级为新基线）。"""
@@ -1920,6 +1939,40 @@ def test_best_json_recovery_skips_corrupt_history_fields(ws):
     assert rounds._valid_best(json.loads(
         guard2.best_json.read_text(encoding="utf-8")))
     guard2.finish()
+
+
+def test_best_json_non_finite_or_huge_score_treated_as_corrupt(ws):
+    """best.json 的 score 必须是有限数值：NaN/inf 参与阈值比较会让判定
+    失效，超出 float 范围的巨大整数会在 `:g` 格式化（评审提示词/评分
+    理由）时抛 OverflowError。二者与文本 score 同口径，按损坏元数据
+    处理并从 history 恢复。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "第 1 轮产物")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+
+    for bad in (float("nan"), float("inf"), float("-inf"), 10 ** 400):
+        assert not rounds._valid_best(
+            {"id": cid, "round": 1, "score": bad}), bad
+    for good in (0, 9, 9.5):
+        assert rounds._valid_best({"id": cid, "round": 1, "score": good})
+
+    # 损坏元数据不能把 NaN/inf/巨大分数带进 self.best；从 history 的最后
+    # 一条有效采纳事件恢复（本轮 verify=off，历史 score 为 None）
+    for bad in (float("nan"), float("inf"), 10 ** 400):
+        guard.best_json.write_text(
+            json.dumps({"id": cid, "round": 1, "verifier": "off",
+                        "score": bad}), encoding="utf-8")
+        restarted = make_guard(workspace, state_path, verify="off")
+        restarted.start()
+        assert restarted.best["id"] == cid
+        assert restarted.best["score"] is None
+        assert rounds._valid_best(json.loads(
+            restarted.best_json.read_text(encoding="utf-8")))
+        restarted.finish()
 
 
 def test_best_json_nul_cid_treated_as_corrupt(ws):
@@ -2350,3 +2403,280 @@ def test_late_adoption_corrupt_snapshot_stays_pending(ws):
     assert read_idea(state_path) == "（暂无）"
     assert not [e for e in events(guard)
                 if e["event"] == "verdict" and e.get("result") == "adopted"]
+
+
+@pytest.mark.parametrize("mode, expected", [
+    ("off", "adopted"),
+    ("tests", "rejected"),
+    ("user", "pending"),
+])
+def test_verdict_event_append_failure_keeps_result_accounting(
+        ws, monkeypatch, mode, expected):
+    """判定事件写盘失败不能把已生效的判定变成异常。
+
+    回归：_process_round_end 在 _adopt/拒绝/挂起分派【之前】写 verdict
+    事件且未捕获 OSError。磁盘满时采纳轮已计入 adopted（不变式尚可），
+    拒绝/挂起轮却因异常直接跳出——stats 停在「候选 1、采纳/拒绝/待评
+    分全 0」，拒绝/挂起路径的还原与补分登记也全部跳过，汇总自相矛盾。
+    判定事件只是审计/恢复源，写盘失败应告警降级，判定本身照常完成。
+    """
+    workspace, state_path = ws
+    kwargs = {"verify": mode}
+    if mode == "tests":
+        monkeypatch.setattr(rounds, "detect_test_suite", lambda repo: ["pytest"])
+        kwargs["suite_runner"] = lambda *a, **k: SuiteResult(
+            available=True, ok=False, reason="退出码 1")
+    guard = make_guard(workspace, state_path, **kwargs)
+    guard.start()
+    write_idea(state_path, "判定事件写盘失败也要完成本轮")
+    real_append = guard._append_event
+
+    def fail_verdict_event(ev):
+        if ev.get("event") == "verdict":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_verdict_event)
+    assert guard.on_round_end(1) == expected
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == {
+        "adopted": (1, 1, 0, 0),
+        "rejected": (1, 0, 1, 0),
+        "pending": (1, 0, 0, 1),
+    }[expected]
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert any("记录判定事件失败" in m for _, m in guard.sink.messages)
+    # 判定已生效：拒绝/挂起必须还原最佳，采纳则保留候选内容为最佳
+    assert read_idea(state_path) == (
+        "判定事件写盘失败也要完成本轮" if expected == "adopted" else "（暂无）")
+
+
+def test_corrupt_verdict_event_failure_keeps_rejection_accounting(
+        ws, monkeypatch):
+    """结构损坏分支的判定事件写盘失败同样只告警，拒绝记账与还原照常完成。
+
+    回归：该分支的 verdict 事件写入不在任何 try 内；磁盘满时异常直接
+    跳出，stats 停在「候选 1、拒绝 0」，还原也被跳过——与正常验证分支
+    修复前的自相矛盾完全一致。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    state_path.write_text("区块标记被外部删除", encoding="utf-8")
+    real_append = guard._append_event
+
+    def fail_verdict_event(ev):
+        if ev.get("event") == "verdict":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_verdict_event)
+    assert guard.on_round_end(1) == "rejected"
+
+    s = guard.stats
+    assert (s.rounds, s.candidates, s.rejected) == (1, 1, 1)
+    assert (s.adopted, s.pending, s.skipped) == (0, 0, 0)
+    assert cand_files(guard)  # 本轮产物照常快照留档
+    assert any("记录判定事件失败" in m for _, m in guard.sink.messages)
+    assert read_idea(state_path) == "（暂无）"  # 已还原最佳
+
+
+def test_user_verdict_event_failure_not_reapplied_by_round_tail(
+        ws, monkeypatch):
+    """用户评分在 _process_round_end 里已兑现、但判定事件写盘失败时，
+    本轮收尾的 _apply_user_verdicts 不能把 verdicts.txt 里同一行再兑现
+    一次（拒绝统计翻倍，adopted+rejected+pending==candidates 破裂）。
+
+    回归：事件失败只告警后没有把候选记入 _applied_verdicts；本轮结束时
+    resolved 里没有该 id（事件缺失）、当前最佳也不是它，于是同一行评分
+    被再次应用。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "用户评分低于阈值")
+    monkeypatch.setattr(guard, "_snapshot_candidate",
+                        lambda round_no, text: "fixedcid")
+    (guard.dir / "verdicts.txt").write_text("fixedcid 2\n", encoding="utf-8")
+    real_append = guard._append_event
+
+    def fail_verdict_event(ev):
+        if ev.get("event") == "verdict":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_verdict_event)
+    assert guard.on_round_end(1) == "rejected"
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 0, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert "fixedcid" in guard._applied_verdicts
+    assert read_idea(state_path) == "（暂无）"  # 拒绝路径已还原最佳
+
+
+def test_skipped_and_heartbeat_event_failure_does_not_abort_round(
+        ws, monkeypatch):
+    """心跳/跳过事件的写盘失败只告警：轮次返回值与还原照常。
+
+    回归：这三处 _append_event 未捕获，磁盘满时 heartbeat/skipped 轮次
+    直接抛异常——runner 误判为「守卫处理异常」，失败轮次的半截产物还会
+    因为跳过还原而留在 research.md 污染下一轮。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+
+    def fail_append(kinds):
+        real_append = guard._append_event
+
+        def _append(ev):
+            if ev.get("event") in kinds:
+                raise OSError("磁盘满（模拟）")
+            return real_append(ev)
+        return _append
+
+    # 心跳：内容与基线一致
+    monkeypatch.setattr(guard, "_append_event", fail_append({"heartbeat"}))
+    assert guard.on_round_end(1) == "heartbeat"
+    assert guard.stats.heartbeat == 1
+    assert any("记录心跳事件失败" in m for _, m in guard.sink.messages)
+
+    # 跳过：状态文件缺失
+    monkeypatch.setattr(guard, "_append_event", fail_append({"skipped"}))
+    state_path.unlink()
+    assert guard.on_round_end(2) == "skipped"
+    assert read_idea(state_path) == "（暂无）"  # 还原重建了状态文件
+    assert any("记录跳过事件失败" in m for _, m in guard.sink.messages)
+
+    # on_round_failed 的跳过记账同理：还原不能被事件失败挡住
+    write_idea(state_path, "半截产物")
+    guard.on_round_failed(3, "agent 超时")
+    assert (guard.stats.rounds, guard.stats.skipped) == (3, 2)
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_late_verdict_event_write_failure_still_applies_and_dedupes(ws, monkeypatch):
+    """补分判定事件写盘失败时，已落盘的晋升仍要完成记账且不能重复兑现。
+
+    回归：_apply_user_verdicts 在 _commit_best 成功后才写 verdict 事件，
+    写盘失败（磁盘满）会直接抛出——self.best/stats 停在旧值，调用方只看到
+    「补分失败稍后重试」，而 best.md/best.json 已经指向新候选；下一次
+    start/finish/每轮兑现会再次采纳同一候选。判定已生效，事件失败应告警
+    降级，并用内存集合阻止同一行评分重复兑现。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "补分事件写盘失败也要晋升")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e["id"] for e in events(guard) if e["event"] == "candidate"][-1]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+
+    real_append = guard._append_event
+
+    def fail_verdict_event(ev):
+        if ev.get("event") == "verdict":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_verdict_event)
+    guard.finish()
+    assert guard.best["id"] == cid
+    s = guard.stats
+    assert (s.adopted, s.pending) == (1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert read_idea(state_path) == "补分事件写盘失败也要晋升"
+    assert any("记录补分判定事件失败" in m for _, m in guard.sink.messages)
+
+    # 历史里没有已决事件也不能重复兑现（同一会话再次 finish）
+    monkeypatch.setattr(guard, "_append_event", real_append)
+    guard.finish()
+    assert guard.stats.adopted == 1
+    assert guard.stats.adopted + guard.stats.rejected + guard.stats.pending \
+        == guard.stats.candidates
+
+
+def test_current_best_score_does_not_create_rejection_verdict(ws):
+    """当前最佳已经是「已决」，历史 verdict 丢失后补分也不能再判它。
+
+    回归：_apply_user_verdicts 只按 history 的 verdict 事件去重。采纳事件
+    若因写盘失败/外部截断缺失，用户再给当前最佳写一行低分，会记一条
+    「拒绝当前最佳」的 late 判定并增加拒绝统计，但最佳内容不会也不该
+    回退——审计与汇总自相矛盾。当前最佳 id 应天然视为已决。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "已采纳的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+    # 模拟采纳 verdict 事件丢失（只保留 candidate 事件）
+    kept = [e for e in events(guard)
+            if not (e.get("event") == "verdict" and e.get("id") == cid)]
+    guard.history_path.write_text(
+        "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in kept),
+        encoding="utf-8")
+
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 2\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.rejected == 0
+    assert guard.stats.adopted == 1
+    late = [e for e in events(guard) if e["event"] == "verdict"
+            and e.get("id") == cid and e.get("late")]
+    assert late == []
+
+
+def test_restore_event_write_failure_does_not_abort_round(ws, monkeypatch):
+    """还原事件写盘失败不能把已完成的还原变成异常。
+
+    回归：_restore_best 先写回 research.md、增加 restored 统计，再追加
+    restored 事件；事件写入失败（磁盘满）时异常一路冒出 on_round_end，
+    调用方误以为整轮守卫失败。挂起候选的 pending 记账虽已完成，但
+    「如何评分」提示会丢失，runner 还会再做一次无意义的补还原。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "还原事件写盘失败也要完成挂起")
+    real_append = guard._append_event
+
+    def fail_restored_event(ev):
+        if ev.get("event") == "restored":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_restored_event)
+    assert guard.on_round_end(1) == "pending"
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending, s.restored) \
+        == (1, 0, 0, 1, 1)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert read_idea(state_path) == "（暂无）"
+    assert any("记录还原事件失败" in m for _, m in guard.sink.messages)
+
+
+def test_later_malformed_verdict_line_does_not_erase_valid_score(ws):
+    """同一候选的坏评分行不能覆盖前面的有效评分。
+
+    回归：_read_verdicts 按行覆盖 out[cid]，用户先写「cid 9」、随后
+    补了一行打错的「cid abc」时，坏行把有效评分替换成 None，候选永远
+    挂起——与「坏行跳过、好行照常生效」的容错口径相反。坏行应跳过，
+    但后一条有效评分仍按最后一条覆盖（用户纠正分数的主要写法）。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "坏行不能覆盖有效补分")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e["id"] for e in events(guard) if e["event"] == "candidate"][-1]
+    (guard.dir / "verdicts.txt").write_text(
+        f"{cid} 9\n{cid} 3x\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+    assert guard.stats.pending == 0
+    assert guard.stats.adopted + guard.stats.rejected + guard.stats.pending \
+        == guard.stats.candidates

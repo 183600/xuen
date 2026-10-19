@@ -135,8 +135,9 @@ def _valid_best(data: object) -> bool:
     只校验下游会直接使用/比较的字段：round 参与 `best.get("round", 0) > 0`
     比较（字符串会让 finish() 抛 TypeError、汇总整段丢失），id 用于展示、
     事件关联并拼候选快照路径（见 _valid_cid）；score 允许 None（基线与
-    「解析不出」的历史）。类型不对的 best.json 与损坏文件同等对待，
-    交给 _recover_best 修复。
+    「解析不出」的历史）或有限数值。NaN/inf 会让评分比较失效，超出
+    float 范围的巨大整数会在 `:g` 格式化时抛 OverflowError，二者都必须
+    按损坏元数据处理，交给 _recover_best 修复。
     """
     if not isinstance(data, dict):
         return False
@@ -145,9 +146,15 @@ def _valid_best(data: object) -> bool:
     if not _valid_round(data.get("round")):
         return False
     score = data.get("score")
-    if score is not None and (isinstance(score, bool)
-                              or not isinstance(score, (int, float))):
-        return False
+    if score is not None:
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            return False
+        try:
+            finite = math.isfinite(float(score))
+        except (OverflowError, ValueError):
+            return False
+        if not finite:
+            return False
     return True
 
 
@@ -451,6 +458,11 @@ class RoundGuard:
         self._hinted = False  # 「如何评分」提示只打印一次
         # verdicts.txt 里引用未知候选 id 的行：每个 id 只警告一次
         self._warned_unknown_cids: set = set()
+        # 本会话已兑现的评分：判定事件写盘失败（磁盘满）时历史里没有
+        # 「已决」标记，仅靠 _read_events 的 resolved 会让同一行评分在
+        # 下一次 start/finish/每轮兑现时被重复应用（拒绝统计翻倍、采纳
+        # 重复写盘）。内存集合与事件写入解耦，写盘失败也不重复兑现。
+        self._applied_verdicts: set = set()
         # 评分解析不出的行：同样每个 id 只警告一次（_apply_user_verdicts
         # 在每轮开始/结束时都会兑现，inf 循环里每轮重复刷同一行警告会
         # 淹没真正的循环输出）
@@ -556,7 +568,10 @@ class RoundGuard:
                     "round": 0, "verifier": "baseline", "score": None,
                     "ts": _ts()}
             baseline_only = True
-            self._append_event({"event": "baseline", **best})
+            try:
+                self._append_event({"event": "baseline", **best})
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                self.sink.warn(f"记录基线事件失败（忽略）：{e}")
         try:
             _atomic_write(self.best_json,
                           json.dumps(best, ensure_ascii=False, indent=2))
@@ -657,7 +672,10 @@ class RoundGuard:
                               json.dumps(best, ensure_ascii=False, indent=2))
                 _atomic_write(self.best_md, text)
                 self.best = best
-                self._append_event({"event": "baseline", **self.best})
+                try:
+                    self._append_event({"event": "baseline", **self.best})
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录基线事件失败（忽略）：{e}")
                 self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
         self.sink.info(
             f"轮次守卫已启用：{self.dir}（每轮快照；候选需验证通过才晋升为最佳；"
@@ -667,13 +685,13 @@ class RoundGuard:
             + "）")
         try:
             self._apply_user_verdicts()
-        except OSError as e:
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
             self.sink.warn(f"应用待决用户评分失败（忽略，稍后重试）：{e}")
 
     def finish(self) -> None:
         try:
             self._apply_user_verdicts()
-        except OSError as e:
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
             self.sink.warn(f"应用待决用户评分失败（忽略）：{e}")
         s = self.stats
         best = self.best
@@ -700,8 +718,13 @@ class RoundGuard:
         self._handled_rounds.add(round_no)
         self.stats.rounds += 1
         self.stats.skipped += 1
-        self._append_event({"event": "skipped", "round": round_no,
-                            "reason": reason})
+        # 记账事件只是审计：写盘失败不能反过来跳过还原，否则失败轮次的
+        # 半截产物会留在 research.md 污染下一轮的起点
+        try:
+            self._append_event({"event": "skipped", "round": round_no,
+                                "reason": reason})
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+            self.sink.warn(f"记录跳过事件失败（忽略）：{e}")
         self._restore_best(round_no, why=f"轮次失败（{reason}）")
 
     # ---- 每轮守卫主流程 ----
@@ -731,8 +754,11 @@ class RoundGuard:
         if not text:
             # research.md 整个没了：没法当候选，也别让下一轮拿到空状态
             self.stats.skipped += 1
-            self._append_event({"event": "skipped", "round": round_no,
-                                "reason": "状态文件缺失或不可读"})
+            try:
+                self._append_event({"event": "skipped", "round": round_no,
+                                    "reason": "状态文件缺失或不可读"})
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                self.sink.warn(f"记录跳过事件失败（忽略）：{e}")
             self._restore_best(round_no, why="状态文件缺失")
             return "skipped"
 
@@ -750,14 +776,21 @@ class RoundGuard:
                 try:
                     self._append_event({"event": "skipped", "round": round_no,
                                         "reason": f"候选快照写盘失败：{e}"})
-                except OSError as e2:
+                except Exception as e2:  # noqa: BLE001 —— 守卫降级原则
                     self.sink.warn(f"记录跳过事件失败（忽略）：{e2}")
                 self._restore_best(round_no, why="候选快照写盘失败")
                 raise
             verdict = Verdict(verifier="guard", result="rejected",
                               reason="区块标记缺失或损坏，无法安全读取")
-            self._append_event({"event": "verdict", "id": cid,
-                                "round": round_no, **_verdict_fields(verdict)})
+            try:
+                self._append_event({"event": "verdict", "id": cid,
+                                    "round": round_no,
+                                    **_verdict_fields(verdict)})
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                self.sink.warn(f"记录判定事件失败（判定已生效，忽略）：{e}")
+                # 判定已生效：事件缺失时靠内存集合阻止本轮收尾的
+                # _apply_user_verdicts 把同一候选再拒绝/采纳一次
+                self._applied_verdicts.add(cid)
             self.stats.rejected += 1
             self.sink.err(f"候选 {cid} 被守卫拒绝：{verdict.reason}，已还原最佳")
             self._restore_best(round_no, why="结构损坏")
@@ -769,7 +802,13 @@ class RoundGuard:
         best_idea, best_artifact = self._sections(best_text)
         if (cand_idea, cand_artifact) == (best_idea, best_artifact):
             self.stats.heartbeat += 1
-            self._append_event({"event": "heartbeat", "round": round_no})
+            # 心跳事件写盘失败不能把「无改动」变成守卫异常：本轮没有
+            # 候选/判定，记账已完成，事件只是审计噪音
+            try:
+                self._append_event({"event": "heartbeat",
+                                    "round": round_no})
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                self.sink.warn(f"记录心跳事件失败（忽略）：{e}")
             return "heartbeat"
 
         # 3) 有改动 → 候选快照（先落盘：无论后续验证成败，本轮产物都不丢）
@@ -788,7 +827,7 @@ class RoundGuard:
             try:
                 self._append_event({"event": "skipped", "round": round_no,
                                     "reason": f"候选快照写盘失败：{e}"})
-            except OSError as e2:
+            except Exception as e2:  # noqa: BLE001 —— 守卫降级原则
                 self.sink.warn(f"记录跳过事件失败（忽略）：{e2}")
             self._restore_best(round_no, why="候选快照写盘失败")
             raise
@@ -820,12 +859,26 @@ class RoundGuard:
                                     "result": "pending", "score": None,
                                     "reason": f"验证或晋升失败（{e}），"
                                               "候选挂起等待重试"})
-            except OSError as e2:
+            except Exception as e2:  # noqa: BLE001 —— 守卫降级原则
                 self.sink.warn(f"记录候选挂起事件失败（忽略）：{e2}")
             self._pend(round_no, cid, "验证失败，候选挂起")
             raise
-        self._append_event({"event": "verdict", "id": cid,
-                            "round": round_no, **_verdict_fields(verdict)})
+        # 判定已经生效（采纳已完成外部副作用，拒绝/挂起只是记账），
+        # 审计事件写盘失败（磁盘满 / 只读）不能反过来把本轮变成异常：
+        # 异常会被 runner 当成「守卫处理异常」跳过后续记账——拒绝/挂起
+        # 的 stats 不更新，汇总出现「候选 1，采纳/拒绝/待评分全 0」，
+        # 违反 adopted+rejected+pending==candidates；采纳轮虽已计入
+        # adopted，但 research.md 也不会按拒绝/挂起路径还原。历史丢失
+        # 只影响审计与恢复源，不能让本轮判定与状态机自相矛盾。
+        try:
+            self._append_event({"event": "verdict", "id": cid,
+                                "round": round_no, **_verdict_fields(verdict)})
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+            self.sink.warn(f"记录判定事件失败（判定已生效，忽略）：{e}")
+            # 判定已生效但事件缺失：本轮收尾的 _apply_user_verdicts 会
+            # 因为 resolved 里没有该 id 而重新兑现 verdicts.txt 里的同一
+            # 行——拒绝统计翻倍、采纳重复写盘。内存集合与事件写入解耦。
+            self._applied_verdicts.add(cid)
         if verdict.result == "adopted":
             return "adopted"
         if verdict.result == "rejected":
@@ -1079,6 +1132,9 @@ class RoundGuard:
                                f"（{self.best.get('id', '?')}）")
                 self._heal_best_md(recovered)
                 return recovered
+            # 无快照可救（基线 / 快照也丢失）：与缺失分支同一口径按
+            # 「空」处理，绝不能把损坏内容当最佳写回 research.md。
+            return state.scaffold(self.task)
         return text
 
     def _commit_best(self, text: Optional[str], best: Dict) -> None:
@@ -1164,9 +1220,15 @@ class RoundGuard:
         if not changed:
             return changed
         self.stats.restored += 1
-        self._append_event({"event": "restored", "round": round_no,
-                            "why": why, "best": self.best.get("id"),
-                            "changed": changed})
+        # 区块已实际写回，还原已经生效：审计事件写盘失败只能告警，
+        # 不能让调用方误以为还原失败（拒绝/挂起路径会因异常跳过后续
+        # 提示与返回；runner 再补还原也只是空操作）
+        try:
+            self._append_event({"event": "restored", "round": round_no,
+                                "why": why, "best": self.best.get("id"),
+                                "changed": changed})
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+            self.sink.warn(f"记录还原事件失败（还原已生效，忽略）：{e}")
         self.sink.warn(f"已还原为当前最佳 {self.best.get('id', '?')}"
                        f"（改动区块：{'、'.join(changed)}）；"
                        "下一轮将从最佳继续，更差的候选不会污染后续轮次")
@@ -1221,6 +1283,12 @@ class RoundGuard:
                     score = None
                 else:
                     score = max(0.0, min(10.0, score))
+            if score is None and cid in out and out[cid][0] is not None:
+                # 同一候选写了两行、后一行分数打错（"abc"/"nan"）时，
+                # 不能让坏行覆盖前面已解析出的有效评分——本函数的约定是
+                # 「坏行跳过、好行照常生效」。后一行有效评分仍按最后一条
+                # 覆盖（用户用新分数纠正旧分数的主要写法）。
+                continue
             out[cid] = (score, comment)
         return out
 
@@ -1257,8 +1325,13 @@ class RoundGuard:
                 # 不能算已决：否则一个坏事件会把候选永久锁死，用户补分
                 # 再也翻不了案；已知结论之外的值一律不采信。
                 resolved.add(cid)
+        # 当前最佳天然已经「已决」：历史里的 verdict 事件可能因磁盘满
+        # 丢失（见 _process_round_end 的降级写），但即便事件缺失，也不该
+        # 让用户后来的一行评分把当前最佳再采纳一次（统计重复）或记一条
+        # 「拒绝当前最佳」的自相矛盾判定（最佳内容不会因此回退）。
+        resolved.add(self.best.get("id"))
         for cid, score_comment in verdicts.items():
-            if cid in resolved:
+            if cid in resolved or cid in self._applied_verdicts:
                 continue
             if cid not in candidates:
                 # 引用了不存在的候选 id（抄错一个字符等）：静默忽略会让
@@ -1337,9 +1410,18 @@ class RoundGuard:
                     self.sink.warn(f"采纳旧候选 {cid} 失败（最佳写盘失败，"
                                    f"保持挂起）：{e}")
                     continue
-            self._append_event({"event": "verdict", "id": cid,
-                                "round": round_no, "late": True,
-                                **_verdict_fields(verdict)})
+            # 已决事件是补分兑现的审计/去重依据，但写盘失败不能反过来
+            # 阻断兑现：采纳候选时 best.md/best.json 已经成功落盘，
+            # 此时抛异常会让 self.best/统计停在旧值（调用方只看到
+            # 「补分失败，稍后重试」），下一次兑现又会重复写盘/统计；
+            # 拒绝同样会漏记统计。事件缺失用内存 _applied_verdicts 去重。
+            try:
+                self._append_event({"event": "verdict", "id": cid,
+                                    "round": round_no, "late": True,
+                                    **_verdict_fields(verdict)})
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                self.sink.warn(f"记录补分判定事件失败（判定已生效，忽略）：{e}")
+            self._applied_verdicts.add(cid)
             # 统计与改判同步：采纳/拒绝是对「本次运行兑现的判定」的计数
             # （跨会话旧候选也计入，否则汇总会一边宣布晋升、一边报
             # 「采纳 0」）；pending 只回减本会话计入过待评分的候选，
@@ -1376,10 +1458,14 @@ class RoundGuard:
             # 变化（research.md 已与快照一致）或写回失败时不能产生事件、
             # 也不能虚增统计（与 _restore_best 的无变化口径一致）
             if changed:
-                self._append_event({"event": "restored", "round": round_no,
-                                    "why": "旧候选被补评采纳", "best": cid,
-                                    "changed": changed})
                 self.stats.restored += 1
+                try:
+                    self._append_event({"event": "restored",
+                                        "round": round_no,
+                                        "why": "旧候选被补评采纳",
+                                        "best": cid, "changed": changed})
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录还原事件失败（还原已生效，忽略）：{e}")
             self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
                          "前进式晋升为最佳"
                          + ("并写回状态文件" if changed else

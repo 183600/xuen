@@ -61,3 +61,22 @@ def test_unreadable_task_file_returns_2_not_raise(tmp_path, capsys):
     rc = cli.main(["-c", EXAMPLE, "--task-file", str(tmp_path / "missing")])
     assert rc == 2
     assert "无法读取任务文件" in capsys.readouterr().err
+
+
+def test_surrogate_task_rejected_with_exit_2(capsys):
+    """终端传入非法字节（surrogateescape 解出孤立代理字符）时给出退出码 2
+    的明确错误，而不是把 UnicodeEncodeError 留到写状态文件/提示词时炸掉。"""
+    rc = cli.main(["-c", EXAMPLE, "坏任务\udcff"])
+    assert rc == 2
+    assert "UTF-8" in capsys.readouterr().err
+
+
+def test_invalid_utf8_at_task_prompt_returns_2(monkeypatch, capsys):
+    """stdin 严格解码失败（管道里是非法 UTF-8）同样给退出码 2 的友好错误，
+    不能让 UnicodeDecodeError 从 input() 外泄成 traceback。"""
+    def bad_input(prompt=""):
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+    monkeypatch.setattr("builtins.input", bad_input)
+    rc = cli.main(["-c", EXAMPLE])
+    assert rc == 2
+    assert "UTF-8" in capsys.readouterr().err

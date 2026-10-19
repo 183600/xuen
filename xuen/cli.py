@@ -51,9 +51,25 @@ def _resolve_task(args) -> str:
             # UnicodeDecodeError：任务文件不是合法 UTF-8（如二进制/GBK 文件）
             print(f"无法读取任务文件 {args.task_file!r}：{e}", file=sys.stderr)
             raise SystemExit(2)
+    if task:
+        # 终端传入非法字节时，Python 以 surrogateescape 解出孤立代理字符：
+        # 它们无法按 UTF-8 写进 research.md / 提示词文件（UnicodeEncodeError），
+        # 必须在进入循环前给出明确错误，而不是运行期 traceback 或首轮失败
+        try:
+            task.encode("utf-8")
+        except UnicodeEncodeError:
+            print("任务包含无法用 UTF-8 编码的字符（终端传入的非法字节），"
+                  "请重新输入", file=sys.stderr)
+            raise SystemExit(2)
     if not task:
         try:
             task = input("请输入任务（例如：设计一个新的优化器）：").strip()
+        except UnicodeError as e:
+            # stdin 按严格 UTF-8 解码（sys.stdin.errors == "strict"）时，
+            # 管道/终端里的非法字节会在 input() 内抛 UnicodeDecodeError；
+            # 不能让它外泄成 traceback
+            print(f"读取任务失败（输入不是合法 UTF-8）：{e}", file=sys.stderr)
+            raise SystemExit(2)
         except EOFError:
             # stdin 被关闭/重定向（如 `xuen < /dev/null`、管道已读到 EOF）：
             # 没有任务可问，按「未提供任务」处理（退出码 2）。
