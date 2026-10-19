@@ -130,7 +130,14 @@ def _config_value(source: dict, name: str, default: Any) -> Any:
 
 
 def _parse_bool(value: Any, name: str) -> bool:
-    """解析布尔配置；容忍带引号的字符串写法，如 tui: "false"。"""
+    """解析布尔配置；容忍带引号的字符串写法与 0/1，如 tui: "false"、color: 1。
+
+    拒绝 list/dict 等非标量（YAML 缩进写错成 `tui: []`）与 0/1 之外的数值：
+    bool([]) 会静默变成 False——写错缩进可能悄悄关掉轮次守卫，与
+    _parse_int/_parse_float 拒绝非法类型的口径一致。
+    """
+    if isinstance(value, bool):
+        return value
     if isinstance(value, str):
         v = value.strip().lower()
         if v in ("true", "yes", "on", "1"):
@@ -138,7 +145,9 @@ def _parse_bool(value: Any, name: str) -> bool:
         if v in ("false", "no", "off", "0"):
             return False
         raise ValueError(f"{name} 必须是布尔值（true/false），收到: {value!r}")
-    return bool(value)
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    raise ValueError(f"{name} 必须是布尔值（true/false），收到: {value!r}")
 
 
 def _mapping_section(raw: Any, name: str) -> dict:

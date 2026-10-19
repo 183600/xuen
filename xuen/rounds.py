@@ -103,6 +103,28 @@ def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _valid_best(data: object) -> bool:
+    """best.json 的最小字段校验：id 为非空字符串、round 为真整数。
+
+    只校验下游会直接使用/比较的字段：round 参与 `best.get("round", 0) > 0`
+    比较（字符串会让 finish() 抛 TypeError、汇总整段丢失），id 用于展示与
+    事件关联；score 允许 None（基线与「解析不出」的历史）。类型不对的
+    best.json 与损坏文件同等对待，交给 _recover_best 修复。
+    """
+    if not isinstance(data, dict):
+        return False
+    if not isinstance(data.get("id"), str) or not data["id"]:
+        return False
+    round_no = data.get("round")
+    if isinstance(round_no, bool) or not isinstance(round_no, int):
+        return False
+    score = data.get("score")
+    if score is not None and (isinstance(score, bool)
+                              or not isinstance(score, (int, float))):
+        return False
+    return True
+
+
 def parse_score(text: str) -> Optional[float]:
     """从评审输出里解析 0-10 分；解析不出返回 None（调用方按挂起处理）。"""
     if not text:
@@ -406,14 +428,65 @@ class RoundGuard:
         return events
 
     def _load_best(self) -> Dict:
+        """读取 best.json；缺失/损坏/字段不合法（见 _valid_best）返回 {}。
+
+        返回 {} 而不是未知占位：start() 据「best.md 存在但元数据不可用」
+        走 _recover_best() 恢复，避免「最佳」永远停在 unknown——拒绝与
+        挂起的轮次不会更新 best，汇总/评审提示词会持续失真。
+        """
         try:
             data = json.loads(self.best_json.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
         except (OSError, ValueError):
-            pass
-        return {"id": "unknown", "round": -1, "verifier": "unknown",
-                "score": None, "ts": ""}
+            return {}
+        return data if _valid_best(data) else {}
+
+    def _recover_best(self) -> Dict:
+        """best.md 存在但 best.json 缺失/损坏：恢复最佳元数据并回写。
+
+        正常提交顺序下 best.json 先于 best.md 落盘（见 start/_commit_best），
+        只有外部删除/损坏 best.json 才会出现该组合。优先从 history.jsonl 的
+        最后一条基线/采纳事件重建（历史只读，不追加事件）；历史也不可用时
+        按 best.md 合成一条基线并补记 baseline 事件。恢复结果回写 best.json，
+        后续启动直接命中；写盘失败只告警（元数据在内存中已可用，守卫照常
+        工作——降级原则）。
+        """
+        best: Optional[Dict] = None
+        baseline_only = False
+        for ev in reversed(self._read_events()):
+            if not ev.get("id"):
+                continue
+            if ev.get("event") == "baseline":
+                best = {"id": ev["id"], "round": 0, "verifier": "baseline",
+                        "score": None, "ts": ev.get("ts", "")}
+            elif ev.get("event") == "verdict" and ev.get("result") == "adopted":
+                best = {"id": ev["id"], "round": ev.get("round", 0),
+                        "verifier": ev.get("verifier", "unknown"),
+                        "score": ev.get("score"), "ts": ev.get("ts", "")}
+            else:
+                continue
+            round_no = best["round"]
+            if isinstance(round_no, bool) or not isinstance(round_no, int):
+                best = None  # 历史记录字段损坏：继续向前找
+                continue
+            break
+        if best is None:
+            best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
+                    "round": 0, "verifier": "baseline", "score": None,
+                    "ts": _ts()}
+            baseline_only = True
+            self._append_event({"event": "baseline", **best})
+        try:
+            _atomic_write(self.best_json,
+                          json.dumps(best, ensure_ascii=False, indent=2))
+        except OSError as e:
+            self.sink.warn(f"恢复的最佳元数据写盘失败（忽略）：{e}")
+        if baseline_only:
+            self.sink.warn("rounds/best.json 与 history.jsonl 均不可用："
+                           f"已按 best.md 重建基线最佳（{best['id']}）")
+        else:
+            self.sink.warn("rounds/best.json 缺失或损坏：已从 history.jsonl "
+                           f"恢复最佳元数据（{best['id']}）")
+        return best
 
     def _read_state_text(self) -> str:
         try:
@@ -464,7 +537,10 @@ class RoundGuard:
     def start(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
         if self.best_md.exists():
-            self.best = self._load_best()
+            loaded = self._load_best()
+            # best.md 是「基线/最佳已建立」的内容源；元数据缺失/损坏时
+            # 从历史或 best.md 恢复，而不是把 best 永远停在 unknown
+            self.best = loaded if loaded else self._recover_best()
         else:
             # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是脚手架）。
             # 有了基线，「第 1 轮候选被拒绝时还原到什么」才有明确答案。
@@ -1038,8 +1114,6 @@ class RoundGuard:
                 continue
             # 前进式采纳旧快照：内容成为新最佳，并写回状态文件，
             # 下一轮直接从它继续（不改写 history.jsonl 的既有记录）
-            self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
-                         f"前进式晋升为最佳并写回状态文件")
             cur = self._read_state_text()
             changed: List[str] = []
             for name, key in ((state.SECTION_IDEA, "idea"),
@@ -1054,11 +1128,18 @@ class RoundGuard:
                         changed.append(key)
                     except (OSError, ValueError) as e:
                         self.sink.warn(f"写回区块失败（{name}）：{e}")
-            self._append_event({"event": "restored", "round": round_no,
-                                "why": "旧候选被补评采纳", "best": cid,
-                                "changed": changed})
-            # 回写最佳也是一次实际还原：与上面这条 restored 事件保持 1:1
-            self.stats.restored += 1
+            # 回写最佳也是一次实际还原：与 restored 事件保持 1:1。无区块
+            # 变化（research.md 已与快照一致）或写回失败时不能产生事件、
+            # 也不能虚增统计（与 _restore_best 的无变化口径一致）
+            if changed:
+                self._append_event({"event": "restored", "round": round_no,
+                                    "why": "旧候选被补评采纳", "best": cid,
+                                    "changed": changed})
+                self.stats.restored += 1
+            self.sink.ok(f"旧候选 {cid} 获用户补评 {score:g}，"
+                         "前进式晋升为最佳"
+                         + ("并写回状态文件" if changed else
+                            "（状态文件已与快照一致，无需写回）"))
 
 
 # ----------------------------------------------------------------------

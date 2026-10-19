@@ -143,6 +143,37 @@ rounds:
 """))
 
 
+def test_bool_fields_reject_non_boolean_values(tmp_path):
+    """布尔配置写错类型必须报错，不能静默取真值。
+
+    回归：_parse_bool 末尾直接 bool(value)——`tui: []`（缩进写错）会静默
+    变成 False，`rounds.enabled: []` 更会悄悄关掉轮次守卫；与
+    _parse_int/_parse_float 拒绝非法类型的口径保持一致。
+    """
+    with pytest.raises(ValueError, match="tui"):
+        load_config(write_cfg(tmp_path, BASE + "tui: []\n"))
+    with pytest.raises(ValueError, match="rounds.enabled"):
+        load_config(write_cfg(tmp_path, BASE + """
+rounds:
+  enabled: []
+"""))
+    with pytest.raises(ValueError, match="words.reuse"):
+        load_config(write_cfg(tmp_path, BASE + """
+words:
+  reuse: 2
+"""))
+    # 常见的标量写法仍然接受：数字 0/1、带引号的字符串
+    cfg = load_config(write_cfg(tmp_path, BASE + """
+tui: 1
+color: "off"
+words:
+  reuse: 0
+"""))
+    assert cfg.tui is True
+    assert cfg.color is False
+    assert cfg.words.reuse is False
+
+
 def test_windows_judge_command_bad_workspace(monkeypatch):
     """工作区路径含 cmd 元字符时，评审命令的 $prompt_file 也必须拒绝：
     只校验 agent.command 会漏掉评审命令（两条命令的路径都无法安全传递）。"""

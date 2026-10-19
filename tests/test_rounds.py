@@ -1430,3 +1430,92 @@ def test_parse_score_variants():
     assert parse_score("评分: -1") is None           # 负分不可解析→挂起
     assert parse_score("") is None
     assert parse_score("没有任何分数") is None
+
+
+# ------------------------------------------- best.json 外部丢失/损坏的恢复
+def test_best_json_lost_recovers_metadata_from_history(ws):
+    """best.json 被外部删除/损坏时，从 history 的最后一条基线/采纳事件
+    恢复最佳元数据并回写。
+
+    回归：修复前 _load_best 返回 {'id': 'unknown', 'round': -1} 且不补
+    baseline 事件；拒绝与挂起轮次不会更新 best，汇总与评审提示词会永久
+    停在「当前最佳：unknown」——只能等一次采纳才能自愈。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "被补评采纳的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n",
+                                            encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    # 损坏成合法 JSON、字段却不可用：与文件缺失同口径处理
+    (guard.dir / rounds.BEST_JSON_NAME).write_text('{"foo": 1}',
+                                                   encoding="utf-8")
+
+    sink = RecordingSink()
+    guard2 = make_guard(workspace, state_path, sink, verify="user")
+    guard2.start()
+    assert guard2.best["id"] == cid
+    assert guard2.best["round"] == 1
+    assert guard2.best["verifier"] == "user"
+    assert guard2.best["score"] == 9.0
+    # 恢复结果已回写：下一次启动直接命中，不再走恢复分支
+    assert json.loads((guard.dir / rounds.BEST_JSON_NAME).read_text(
+        encoding="utf-8"))["id"] == cid
+    assert any(lvl == "warn" and "恢复" in m for lvl, m in sink.messages)
+    guard2.finish()
+    summary = [m for lvl, m in sink.messages if "汇总" in m][-1]
+    assert "unknown" not in summary
+    assert cid in summary
+
+
+def test_best_json_and_history_lost_rebuilds_baseline(ws):
+    """best.json 与 history.jsonl 都不可用：按 best.md 合成基线并补记
+    baseline 事件，best.json 回写后重启自洽，内容源（best.md）原样保留。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.start()
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    (guard.dir / rounds.BEST_JSON_NAME).unlink()
+    guard.history_path.unlink()
+
+    sink = RecordingSink()
+    guard2 = make_guard(workspace, state_path, sink)
+    guard2.start()
+    assert guard2.best["verifier"] == "baseline"
+    assert guard2.best["round"] == 0
+    assert [e["event"] for e in events(guard2)].count("baseline") == 1
+    assert (guard.dir / rounds.BEST_JSON_NAME).exists()
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_late_adoption_state_already_matching_no_restore_noise(ws):
+    """补分采纳时 research.md 已与快照一致（无区块需写回）：不产生多余
+    restored 事件、不虚增还原统计（与 _restore_best 的无变化口径一致），
+    日志也不得虚称「写回状态文件」。"""
+    workspace, state_path = ws
+    sink = RecordingSink()
+    guard = make_guard(workspace, state_path, sink, verify="user")
+    guard.start()
+    write_idea(state_path, "外部已写回的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    # 外部（或用户）已把快照内容完整写回 research.md
+    state_path.write_text((guard.dir / f"cand-{cid}.md").read_text(
+        encoding="utf-8"), encoding="utf-8")
+    before = guard.stats.restored
+    n0 = len([e for e in events(guard) if e["event"] == "restored"])
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+    assert guard.stats.restored == before
+    assert len([e for e in events(guard)
+                if e["event"] == "restored"]) == n0
+    oks = [m for lvl, m in sink.messages if lvl == "ok" and "晋升为最佳" in m]
+    assert oks and "无需写回" in oks[-1]
