@@ -354,9 +354,13 @@ def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> Non
 
 def _read_sections(state_path: Path) -> tuple:
     try:
-        text = state_path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        # 文件缺失/读取失败/编码损坏：当作空区块，避免循环每轮 traceback 崩溃
+        # 与 state 模块其它读路径同一自愈口径：非法 UTF-8 降级为替换符并
+        # 回写修复。若直接严格解码后按空处理，一个坏字节就会让提示词里的
+        # 想法区/产物区双双变「（空）」——agent 丢掉全部跨轮上下文，屏幕
+        # 也显示为空（--no-rounds 下没有守卫兜底修复时尤其致命）。
+        text = state.read_state_file(state_path)
+    except OSError:
+        # 文件缺失/读取失败：当作空区块，避免循环每轮 traceback 崩溃
         return "", ""
     return (state.get_section(text, state.SECTION_IDEA),
             state.get_section(text, state.SECTION_ARTIFACT))

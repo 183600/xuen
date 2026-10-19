@@ -1845,6 +1845,68 @@ def test_best_json_recovery_skips_corrupt_history_fields(ws):
     guard2.finish()
 
 
+def test_best_json_nul_cid_treated_as_corrupt(ws):
+    """best.json 的 id 含 NUL 时按损坏元数据处理，不得让守卫启动崩溃。
+
+    回归：_valid_best 只要求 id 是非空字符串，NUL 通过校验后
+    _recover_best_text 拼出 cand-<id>.md，Path.read_text 抛
+    ValueError("embedded null byte")。start()/finish() 只捕获 OSError，
+    异常冒泡到 runner 的降级分支——整轮快照/验证/还原被静默禁用。
+    生成侧只会产出 [0-9A-Za-z_-]，因此不安全 id 与类型损坏同口径：
+    best.json 交给 _recover_best / 首次运行路径修复。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "第一轮产物")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+
+    (guard.dir / rounds.BEST_JSON_NAME).write_text(
+        json.dumps({"id": f"{cid}\u0000x", "round": 1,
+                    "verifier": "user", "score": 9}),
+        encoding="utf-8")
+    (guard.dir / rounds.BEST_MD_NAME).unlink()
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()  # 修复前：ValueError: embedded null byte
+    assert rounds._valid_best(restarted.best)
+    assert "\u0000" not in restarted.best["id"]
+    # 内容源没丢：按当前状态重建基线（research.md 仍是第 1 轮采纳内容）
+    assert read_idea(restarted.best_md) == "第一轮产物"
+
+    write_idea(state_path, "第二轮产物")
+    assert restarted.on_round_end(2) == "adopted"
+    assert rounds._valid_best(json.loads(
+        restarted.best_json.read_text(encoding="utf-8")))
+    restarted.finish()
+
+
+def test_verdicts_nul_cid_does_not_crash(ws):
+    """history/verdicts 里的候选 id 含 NUL 时按未知 id 忽略，不能抛异常。
+
+    回归：_apply_user_verdicts 只校验 id 是非空字符串，含 NUL 的
+    candidate 事件被当作有效候选；采纳分支拼出 cand-<id>.md 后
+    read_text 抛 ValueError，start()/finish() 的 except OSError 接不住，
+    守卫在补分兑现时崩溃（runner 随后禁用守卫）。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    with open(guard.history_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"event": "candidate", "id": "bad\u0000id",
+                            "round": 1}, ensure_ascii=False) + "\n")
+    (guard.dir / rounds.VERDICTS_NAME).write_text(
+        "bad\u0000id 9 采纳\n", encoding="utf-8")
+
+    guard.finish()  # 修复前：ValueError: embedded null byte
+    assert guard.best["round"] == 0
+    assert not [e for e in events(guard) if e.get("event") == "verdict"]
+    assert any(lvl == "warn" and "不存在" in m
+               for lvl, m in guard.sink.messages)
+
+
 def test_best_json_and_history_lost_rebuilds_baseline(ws):
     """best.json 与 history.jsonl 都不可用：按 best.md 合成基线并补记
     baseline 事件，best.json 回写后重启自洽，内容源（best.md）原样保留。"""
@@ -1911,6 +1973,29 @@ def test_restore_heals_invalid_utf8_state_file(ws):
     text = state_path.read_text(encoding="utf-8")  # 修复后不应再抛
     assert state.get_section(text, state.SECTION_IDEA) == "好想法"
     assert state.get_section(text, state.SECTION_ARTIFACT) == "好产物"
+
+
+def test_invalid_utf8_round_snapshotted_and_healed(ws):
+    """运行中 agent 写出的内容夹着非法 UTF-8 字节时不能整轮丢弃。
+
+    回归：_read_state_text 严格解码，一个坏字节让 _process_round_end 把
+    本轮当「状态文件缺失或不可读」记 skipped——候选快照不留、产物丢失；
+    而 state 模块其它路径（ensure_state_file / update_section_file / 写入
+    助手）都是「按替换符降级读取并回写修复」的自愈口径，守卫也必须
+    一致：坏字节降级为 U+FFFD、文件就地修复，本轮内容照常快照并参与
+    验证。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "好想法")
+    state_path.write_bytes(
+        state_path.read_bytes().replace("好想法".encode("utf-8"), b"\xff\xfe"))
+    assert guard.on_round_end(1) == "adopted"
+    text = state_path.read_text(encoding="utf-8")  # 修复后严格解码不应抛
+    assert state.get_section(text, state.SECTION_IDEA) == "\ufffd\ufffd"
+    assert cand_files(guard), "本轮候选必须留快照，不能整轮丢弃"
+    assert not any(e["event"] == "skipped" for e in events(guard))
+    assert guard.best["verifier"] == "none"
 
 
 def test_ensure_state_file_heals_invalid_utf8_at_startup(tmp_path):

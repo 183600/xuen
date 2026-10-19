@@ -88,6 +88,29 @@ def test_shell_prompt_snippet_quotes_workspace_path(tmp_path):
         == "这里是新的产物区内容……"
 
 
+def test_shell_prompt_heals_invalid_utf8_state(tmp_path):
+    """research.md 混入非法 UTF-8 字节时，提示词里的区块不能变成「（空）」。
+
+    回归：_read_sections 严格解码失败后返回空区块——一个坏字节让 agent
+    每轮都在「两个区块都是空」的提示词上工作，丢掉全部跨轮上下文（且
+    屏幕显示同样为空）。与 state 模块其它读路径一致：降级为 U+FFFD 并
+    就地回写修复，区块内容照常进入提示词。"""
+    from xuen import state
+    from xuen.config import Config
+    from xuen.runner import _shell_prompt
+
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "任务")
+    state.update_section_file(state_path, state.SECTION_IDEA, "旧想法")
+    state_path.write_bytes(state_path.read_bytes().replace(
+        "旧想法".encode("utf-8"), b"\xff\xfe"))
+
+    prompt = _shell_prompt(Config(), "任务", 1, [], state_path,
+                           tmp_path / "write_section.py", [])
+    assert "--- 想法区 ---\n\ufffd\ufffd" in prompt
+    # 文件已就地修复：严格解码不再抛，坏字节变成替换符
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "\ufffd\ufffd"
 
 
 class _RecordingSink(Sink):

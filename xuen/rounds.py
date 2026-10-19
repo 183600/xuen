@@ -111,17 +111,36 @@ def _valid_round(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+_CID_RE = re.compile(r"[A-Za-z0-9_-]+\Z")
+
+
+def _valid_cid(value: object) -> bool:
+    """候选 id 是否可安全拼进快照文件名 `rounds/cand-<id>.md`。
+
+    生成侧（_snapshot_candidate / 基线）只会产出 [0-9A-Za-z_-]，但
+    best.json / history.jsonl / verdicts.txt 可能被外部编辑或由外部 agent
+    写入：id 是合法 JSON 字符串却含 NUL 或路径分隔符时，拼出的路径会让
+    read_text 抛 ValueError（embedded null byte）、或在 Windows 上把读取
+    带出 rounds 目录。凡不满足安全字符集的 id 一律按损坏元数据处理
+    （best.json 走 _recover_best 恢复、事件无法归属候选则跳过），绝不用
+    它拼路径——守卫的降级原则要求损坏文件最多丢一次恢复机会，不能把
+    整个守卫炸掉（start() 抛出的 ValueError 会让 runner 永久禁用守卫）。
+    """
+    return isinstance(value, str) and _CID_RE.match(value) is not None
+
+
 def _valid_best(data: object) -> bool:
-    """best.json 的最小字段校验：id 为非空字符串、round 为真整数。
+    """best.json 的最小字段校验：id 为可作文件名的安全字符串、round 为真整数。
 
     只校验下游会直接使用/比较的字段：round 参与 `best.get("round", 0) > 0`
-    比较（字符串会让 finish() 抛 TypeError、汇总整段丢失），id 用于展示与
-    事件关联；score 允许 None（基线与「解析不出」的历史）。类型不对的
-    best.json 与损坏文件同等对待，交给 _recover_best 修复。
+    比较（字符串会让 finish() 抛 TypeError、汇总整段丢失），id 用于展示、
+    事件关联并拼候选快照路径（见 _valid_cid）；score 允许 None（基线与
+    「解析不出」的历史）。类型不对的 best.json 与损坏文件同等对待，
+    交给 _recover_best 修复。
     """
     if not isinstance(data, dict):
         return False
-    if not isinstance(data.get("id"), str) or not data["id"]:
+    if not _valid_cid(data.get("id")):
         return False
     if not _valid_round(data.get("round")):
         return False
@@ -553,8 +572,14 @@ class RoundGuard:
 
     def _read_state_text(self) -> str:
         try:
-            return self.state_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            # state.read_state_file 与其它读路径同一自愈口径：非法 UTF-8
+            # 按替换符降级并回写修复。这里若直接严格解码，一个坏字节会让
+            # _process_round_end 把整轮当「状态文件缺失或不可读」记
+            # skipped——候选快照不留、产物丢失，违反「任何一轮的产物都
+            # 落在 rounds/cand-<id>.md」的承诺。只有真正读不到（文件缺失/
+            # 权限/目录被占）才返回 "" 走 skipped。
+            return state.read_state_file(self.state_path)
+        except OSError:
             return ""
 
     def _sections(self, text: str) -> Tuple[str, str]:
@@ -967,7 +992,7 @@ class RoundGuard:
         """
         info = self.best if best is None else best
         cid = info.get("id") if isinstance(info, dict) else None
-        if not isinstance(cid, str) or not cid:
+        if not _valid_cid(cid):
             return None
         try:
             text = (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
@@ -1164,12 +1189,14 @@ class RoundGuard:
         for ev in events:
             ev_event = ev.get("event")
             cid = ev.get("id")
-            if not isinstance(cid, str) or not cid:
+            if not _valid_cid(cid):
                 # 历史行被外部编辑/其他工具写入时 id 可能是列表/字典等
                 # 非字符串：拿它当 candidates/resolved 的键会直接抛
                 # TypeError（unhashable），让 start()/finish() 的补分兑现
-                # 整体失败（守卫降级、汇总丢失）。与 _recover_best /
-                # _valid_best 的 id 校验同一口径：无法归属到候选的事件跳过
+                # 整体失败（守卫降级、汇总丢失）；含 NUL/路径分隔符的
+                # 字符串则会让后续 cand-<id>.md 的读取抛 ValueError 或
+                # 越出 rounds 目录。与 _recover_best / _valid_best 同一
+                # 口径（_valid_cid）：无法安全归属到候选的事件跳过
                 continue
             if ev_event == "candidate":
                 candidates[cid] = ev

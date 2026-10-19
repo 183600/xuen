@@ -33,19 +33,22 @@ def scaffold(task: str) -> str:
     )
 
 
-def ensure_state_file(path: Path, task: str) -> str:
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(scaffold(task), encoding="utf-8")
+def read_state_file(path: Path) -> str:
+    """严格读取状态文件；非法 UTF-8 时按替换符降级并立即回写修复。
+
+    与 update_section_file / 写入助手同一口径：非法 UTF-8（外部编辑器按
+    本地编码保存 / agent 写盘事故）按替换符降级读取，并把坏字节变
+    U+FFFD 后原子回写。所有读取路径（启动预检、守卫、研究循环的提示词/
+    展示）共用本函数，一个坏字节才不会让某条路径把整份状态当成空/缺失：
+    提示词里区块变「（空）」会让 agent 丢掉全部跨轮上下文，守卫则会把
+    整轮产物当 skipped 丢弃。
+
+    文件不存在等 OSError 原样抛出，由调用方决定是建 scaffold 还是按
+    空状态降级。加锁后重读：若并发实例/写入助手已修复，直接复用其结果。
+    """
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
-        # 与 update_section_file / 写入助手同一口径：非法 UTF-8（外部编辑器
-        # 按本地编码保存 / agent 写盘事故）按替换符降级读取，并立即回写修复
-        # （坏字节变 U+FFFD）。不能在这里抛错让整次运行中止——runner 会把
-        # 它转成「可备份后删除 research.md 重建」，按提示删文件等于丢掉全部
-        # 研究区块；运行期所有写入路径都能自愈，启动预检必须一致。
-        # 加锁后重读：若并发实例/写入助手已修复，直接复用其结果
         with _locked_state(path):
             try:
                 return path.read_text(encoding="utf-8")
@@ -57,13 +60,20 @@ def ensure_state_file(path: Path, task: str) -> str:
                     os.replace(tmp, path)
                 except OSError:
                     # 写盘失败时清掉半成品临时文件；抛给调用方按 OSError
-                    # 走友好提示（此时目录不可写，helper 也建不出来）
+                    # 处理（此时目录不可写，helper 也建不出来）
                     try:
                         tmp.unlink(missing_ok=True)
                     except OSError:
                         pass
                     raise
                 return text
+
+
+def ensure_state_file(path: Path, task: str) -> str:
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(scaffold(task), encoding="utf-8")
+    return read_state_file(path)
 
 
 def _first_span(text: str, name: str) -> tuple[int, int] | None:
