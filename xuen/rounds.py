@@ -103,6 +103,13 @@ def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _valid_round(value: object) -> bool:
+    """round 是否为可安全参与比较/写盘的整数（bool 不算：JSON true 会解析
+    成 True，`True > 0` 虽不报错但语义错误）。best.json 的加载校验、历史
+    恢复与补评采纳必须用同一口径，避免「一处拒绝、另一处照写」的裂缝。"""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _valid_best(data: object) -> bool:
     """best.json 的最小字段校验：id 为非空字符串、round 为真整数。
 
@@ -115,8 +122,7 @@ def _valid_best(data: object) -> bool:
         return False
     if not isinstance(data.get("id"), str) or not data["id"]:
         return False
-    round_no = data.get("round")
-    if isinstance(round_no, bool) or not isinstance(round_no, int):
+    if not _valid_round(data.get("round")):
         return False
     score = data.get("score")
     if score is not None and (isinstance(score, bool)
@@ -416,6 +422,10 @@ class RoundGuard:
         self._hinted = False  # 「如何评分」提示只打印一次
         # verdicts.txt 里引用未知候选 id 的行：每个 id 只警告一次
         self._warned_unknown_cids: set = set()
+        # 评分解析不出的行：同样每个 id 只警告一次（_apply_user_verdicts
+        # 在每轮开始/结束时都会兑现，inf 循环里每轮重复刷同一行警告会
+        # 淹没真正的循环输出）
+        self._warned_badscore_cids: set = set()
 
     # ---- 基础设施 ----
     def _append_event(self, ev: Dict) -> None:
@@ -488,19 +498,21 @@ class RoundGuard:
         best: Optional[Dict] = None
         baseline_only = False
         for ev in reversed(self._read_events()):
-            if not ev.get("id"):
-                continue
             if ev.get("event") == "baseline":
-                best = {"id": ev["id"], "round": 0, "verifier": "baseline",
+                best = {"id": ev.get("id"), "round": 0, "verifier": "baseline",
                         "score": None, "ts": ev.get("ts", "")}
             elif ev.get("event") == "verdict" and ev.get("result") == "adopted":
-                best = {"id": ev["id"], "round": ev.get("round", 0),
+                best = {"id": ev.get("id"), "round": ev.get("round", 0),
                         "verifier": ev.get("verifier", "unknown"),
                         "score": ev.get("score"), "ts": ev.get("ts", "")}
             else:
                 continue
-            round_no = best["round"]
-            if isinstance(round_no, bool) or not isinstance(round_no, int):
+            # 历史行被外部编辑/其他工具写入时字段类型可能损坏（id 是列表、
+            # round 是字符串、score 是文本……）：与 best.json 的加载校验
+            # （_valid_best）用同一口径，类型不对的事件不能恢复成最佳
+            # 元数据——否则回写的 best.json 下次启动仍会被拒绝，每次都走
+            # 恢复分支；非字符串 id 还会让展示/事件关联出现异常值
+            if not _valid_best(best):
                 best = None  # 历史记录字段损坏：继续向前找
                 continue
             break
@@ -1132,7 +1144,12 @@ class RoundGuard:
         for ev in events:
             ev_event = ev.get("event")
             cid = ev.get("id")
-            if not cid:
+            if not isinstance(cid, str) or not cid:
+                # 历史行被外部编辑/其他工具写入时 id 可能是列表/字典等
+                # 非字符串：拿它当 candidates/resolved 的键会直接抛
+                # TypeError（unhashable），让 start()/finish() 的补分兑现
+                # 整体失败（守卫降级、汇总丢失）。与 _recover_best /
+                # _valid_best 的 id 校验同一口径：无法归属到候选的事件跳过
                 continue
             if ev_event == "candidate":
                 candidates[cid] = ev
@@ -1156,11 +1173,25 @@ class RoundGuard:
             score, comment = score_comment
             if score is None:
                 # 解析不出的行按「挂起」处理（README：既不采纳也不丢弃）：
-                # 记为「已决」会把候选永久锁死，用户修正这行也再翻不了案
-                self.sink.warn(f"候选 {cid} 的评分行无法解析（保持挂起）："
-                               f"请改为「{cid} <0-10分> [评语]」")
+                # 记为「已决」会把候选永久锁死，用户修正这行也再翻不了案。
+                # 每个 id 只警告一次（与未知 id 同一口径），见字段注释
+                if cid not in self._warned_badscore_cids:
+                    self._warned_badscore_cids.add(cid)
+                    self.sink.warn(f"候选 {cid} 的评分行无法解析（保持挂起）："
+                                   f"请改为「{cid} <0-10分> [评语]」")
                 continue
             round_no = candidates[cid].get("round", 0)
+            if not _valid_round(round_no):
+                # 历史行被外部编辑/其他工具写入时可能是合法 JSON 但类型
+                # 不对的 round（字符串、true……）。原样写进 best.json 会让
+                # finish() 的 `best["round"] > 0` 比较抛 TypeError（汇总
+                # 整段丢失），下次启动也会因 _valid_best 拒绝而跳过该采纳
+                # 事件、把最佳回退到更早的记录。与 _recover_best 同一口径：
+                # round 不可信时按 0（基线轮次）归一化，采纳本身照常兑现
+                # （候选 id 与快照仍然有效，不能因元数据坏而丢失产物）
+                self.sink.warn(f"候选 {cid} 的历史轮次字段不可用"
+                               f"（{round_no!r}），已按第 0 轮记账")
+                round_no = 0
             adopted = score >= self.cfg.rounds.adopt_score
             text = None
             if adopted:

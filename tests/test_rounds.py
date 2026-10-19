@@ -480,6 +480,71 @@ def test_late_adoption_writes_back_and_repairs_empty_sections(ws):
     assert state._first_section(text, state.SECTION_ARTIFACT) == ""
 
 
+def test_late_adoption_tolerates_non_int_round_in_history(ws):
+    """history 里合法 JSON 但 round 类型损坏（字符串/布尔）时，补评采纳
+    仍要兑现，且写出的 best 元数据不能带坏字段。
+
+    回归：_recover_best / _valid_best 对 round 有真整数校验（专门防的正是
+    finish() 的 `best["round"] > 0` TypeError），但 _apply_user_verdicts
+    直接采信历史行的 round——字符串会被写进 best.json：finish() 抛
+    TypeError、汇总整段丢失，下次启动还会因 _valid_best 拒绝而跳过该采纳
+    事件、把最佳回退到更早的记录。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "等待补评的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+
+    # 模拟审计日志被外部编辑/旧版本写入：合法 JSON、round 却是字符串
+    lines = guard.history_path.read_text(encoding="utf-8").splitlines()
+    for i, ln in enumerate(lines):
+        ev = json.loads(ln)
+        if ev.get("event") == "candidate" and ev.get("id") == cid:
+            ev["round"] = "1"
+            lines[i] = json.dumps(ev, ensure_ascii=False)
+    guard.history_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+    guard.finish()  # 修复前：'str' 与 'int' 比较抛 TypeError
+    assert guard.best["id"] == cid
+    assert guard.best["round"] == 0
+    # best.json 必须能被 _valid_best 接受：重启后最佳元数据不丢失
+    assert rounds._valid_best(json.loads(
+        guard.best_json.read_text(encoding="utf-8")))
+    summary = [m for lvl, m in guard.sink.messages if "汇总" in m]
+    assert summary and cid in summary[-1]
+
+
+def test_history_non_string_id_does_not_break_verdict_cashin(ws):
+    """history 事件的 id 类型损坏（合法 JSON 的列表/对象）时，补分兑现
+    与汇总不能整体崩溃。
+
+    回归：_apply_user_verdicts 直接把历史行的 id 当 dict/set 的键，非
+    字符串（unhashable）会抛 TypeError，让 start()/finish() 的补分兑现
+    失败（守卫降级、汇总丢失）。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "等待补评的想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e for e in events(guard)
+           if e.get("event") == "candidate"][-1]["id"]
+
+    lines = guard.history_path.read_text(encoding="utf-8").splitlines()
+    lines.insert(1, json.dumps({"event": "candidate", "id": ["idea"],
+                                "round": 1}, ensure_ascii=False))
+    guard.history_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+
+    guard.finish()  # 修复前：TypeError: unhashable type: 'list'
+    assert guard.best["id"] == cid
+    summary = [m for lvl, m in guard.sink.messages if "汇总" in m]
+    assert summary and cid in summary[-1]
+
+
 # ---------------------------------------------------------------- 测试级联
 def test_detect_test_suite_pytest(tmp_path):
     (tmp_path / "tests").mkdir()
@@ -1171,6 +1236,32 @@ def test_user_unparseable_score_stays_pending_and_can_be_fixed(ws):
     assert read_idea(state_path) == "值得补评的想法"
 
 
+def test_unparseable_verdict_warns_once_per_cid(ws):
+    """评分解析不出的警告每个候选 id 只打一次（与未知 id 同口径）。
+
+    回归：_apply_user_verdicts 在每轮开始/结束都会兑现，inf 循环里同一行
+    坏评分会每轮重复刷警告，淹没真正的循环输出。
+    """
+    workspace, state_path = ws
+    sink = RecordingSink()
+    guard = make_guard(workspace, state_path, sink, verify="user")
+    guard.start()
+    write_idea(state_path, "想法")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e for e in events(guard)
+           if e.get("event") == "candidate"][-1]["id"]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 八分 手滑\n",
+                                            encoding="utf-8")
+    for _ in range(3):
+        guard.finish()
+    badscore = [m for lvl, m in sink.messages
+                if lvl == "warn" and "无法解析" in m]
+    assert len(badscore) == 1
+    # 仍是挂起：坏行不产生「已决」结论
+    assert [e["result"] for e in events(guard) if e["event"] == "verdict"] \
+        == ["pending"]
+
+
 def test_late_adoption_snapshot_unreadable_stays_pending(ws):
     """快照不可读时不能记「已决」：修复快照后仍能兑现晋升。"""
     workspace, state_path = ws
@@ -1589,6 +1680,39 @@ def test_best_json_lost_recovers_metadata_from_history(ws):
     summary = [m for lvl, m in sink.messages if "汇总" in m][-1]
     assert "unknown" not in summary
     assert cid in summary
+
+
+def test_best_json_recovery_skips_corrupt_history_fields(ws):
+    """从 history 恢复 best 元数据时，字段类型损坏的事件必须跳过（与
+    _valid_best 同一口径）：列表 id / 文本 score 不能进入恢复结果。
+
+    回归：_recover_best 原先只查 id 的真值，非字符串 id（合法 JSON 的
+    列表）会被原样写进 best.json——下次启动仍被 _valid_best 拒绝，每次
+    都走恢复分支；score 等字段不校验也会写出不可加载的元数据。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "第 1 轮产物")
+    assert guard.on_round_end(1) == "adopted"
+    good_id = guard.best["id"]
+
+    # best.json 丢失，history 的最后一条采纳事件字段类型损坏
+    (guard.dir / rounds.BEST_JSON_NAME).unlink()
+    lines = guard.history_path.read_text(encoding="utf-8").splitlines()
+    lines.append(json.dumps({"event": "verdict", "id": ["x"], "round": 1,
+                             "result": "adopted", "score": "好",
+                             "verifier": "user"}, ensure_ascii=False))
+    guard.history_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    sink = RecordingSink()
+    guard2 = make_guard(workspace, state_path, sink, verify="off")
+    guard2.start()
+    # 损坏事件被跳过，恢复到上一条真实采纳记录，回写的元数据可加载
+    assert guard2.best["id"] == good_id
+    assert rounds._valid_best(json.loads(
+        guard2.best_json.read_text(encoding="utf-8")))
+    guard2.finish()
 
 
 def test_best_json_and_history_lost_rebuilds_baseline(ws):

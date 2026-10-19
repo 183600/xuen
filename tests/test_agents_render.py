@@ -2239,6 +2239,47 @@ def test_render_windows_double_dollar_prompt_file_not_substituted(
     assert agents.command_receives_prompt('tool "$prompt_file"') is True
 
 
+def test_render_windows_rejects_dialect_quotes(tmp_path, monkeypatch):
+    """Windows 下 $'...' / $"..." 也要整体拒绝，与 POSIX 侧同口径。
+
+    回归：cmd 不展开 $，但这类写法几乎总是按 POSIX 语义书写的模板——
+    `tool $"$prompt_file"` 会把字面 $ 粘在替换出的路径前（引号内的
+    占位符被替换、外层 $ 与路径在 cmd 下拼接），外部 agent 拿到
+    `$C:\\...` 的坏路径，而 POSIX 侧对同一模板报错拒绝：同一份配置在
+    Windows 上静默跑坏、在 Linux 上直接拒绝。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    for tpl in ('tool $"$prompt_file"', "tool $'$prompt_file'",
+                'tool $"pre $prompt_file suf"'):
+        assert agents.command_receives_prompt(tpl) is False, tpl
+        agent = agents.ShellAgent(tpl, tmp_path, timeout=1)
+        try:
+            agent.render_command("PROMPT")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"含方言相关引用的模板应被拒绝: {tpl}")
+        finally:
+            agent._cleanup_prompt_file()
+        # 拒绝路径不能残留无消费者的提示词文件
+        assert [p.name for p in tmp_path.iterdir()] == []
+    # 对照：$$" 是字面 $$ + 普通双引号、\$" 的 $ 前有反斜杠、
+    # 双引号内紧跟结束引号的 $ 都不是方言引用，占位符照常兑现
+    for tpl in ('tool $$"$prompt_file"', 'tool \\$"$prompt_file"',
+                'tool "x$"y"$prompt_file"'):
+        assert agents.command_receives_prompt(tpl) is True, tpl
+
+
 def test_render_command_repeated_calls_do_not_leak_prompt_files(tmp_path):
     """同一实例连续 render_command 时旧提示词文件不能残留。
 

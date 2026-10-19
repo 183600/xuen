@@ -1788,6 +1788,39 @@ class ShellAgent:
         # Doe\p.md" suf"），cmd 把参数拆错、外部 agent 拿到坏路径
         f_inq_sentinel = "\0XUEN_PROMPT_FILE_INQ\0"
         p_sentinel = "\0XUEN_PROMPT\0"
+        # 与 POSIX 侧同口径：$'...' / $"..." 是方言相关的引用语法（bash
+        # 按 ANSI-C/本地化字符串解释、dash 把 $ 当字面量），xuen 无法预知
+        # 最终 shell。Windows 上 cmd 虽不展开 $，但这类写法几乎总是按
+        # POSIX 语义书写的模板（同一份配置应两端一致）：`$"$prompt_file"`
+        # 会把字面 $ 粘在替换出的路径前（先替换引号内占位符、外层 $ 与
+        # 引号里的路径在 cmd 下拼接），外部 agent 拿到 `$C:\...` 的坏路径，
+        # 而 POSIX 侧对同一模板报错拒绝。整体拒绝、由配置校验拦下。
+        # 扫描按 cmd 引号状态：双引号内的 $" 只是字面 $ 紧邻引号
+        # （如 "x$"y"$prompt_file"）、^" 是字面引号、\$" 的 $ 前有反斜杠
+        # ——都不是方言引用，照常兑现（与 _cmd_double_quotes_after 同规则）
+        i = 0
+        tpl_n = len(tpl)
+        in_quotes = False
+        while i + 1 < tpl_n:
+            c = tpl[i]
+            if c == "^" and not in_quotes:
+                i += 2
+                continue
+            if c == '"':
+                in_quotes = not in_quotes
+                i += 1
+                continue
+            if (not in_quotes
+                    and (tpl.startswith("$'", i) or tpl.startswith('$"', i))
+                    and _dollar_starts_expansion(tpl, i)):
+                form = "$'...'" if tpl[i + 1] == "'" else '$"...'
+                raise ValueError(
+                    f"agent.command 不支持方言相关的引用（{form}）：不同"
+                    "系统的 shell 对它解释不同，xuen 无法安全传递提示词"
+                    "（Windows 的 cmd 会把字面 $ 粘在替换出的路径前）；"
+                    '请改用普通引号，例如 "$prompt_file"'
+                )
+            i += 1
         # 先把两处占位符统一换成哨兵，最后才一次性替换成实际内容。
         # 若先插入内容再做另一处替换，后插入的内容（转义后的提示词 /
         # 提示词文件路径）里恰好含有占位符字面量时会被二次替换、破坏命令
