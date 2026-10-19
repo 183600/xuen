@@ -557,22 +557,35 @@ class RoundGuard:
             # 从历史或 best.md 恢复，而不是把 best 永远停在 unknown
             self.best = loaded if loaded else self._recover_best()
         else:
-            # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是脚手架）。
-            # 有了基线，「第 1 轮候选被拒绝时还原到什么」才有明确答案。
-            # 与 _commit_best 同序：best.md 是「基线已建立」的存在标志，
-            # 必须最后落盘。反序（best.md 先成功、best.json 失败）会留下
-            # 没有元数据的 best.md——下次启动走「复用已有最佳」分支读到
-            # 未知 id，基线事件也永远不会补记。
-            text = self._read_state_text() or state.scaffold(self.task)
-            best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
-                    "round": 0, "verifier": "baseline", "score": None,
-                    "ts": _ts()}
-            _atomic_write(self.best_json,
-                          json.dumps(best, ensure_ascii=False, indent=2))
-            _atomic_write(self.best_md, text)
-            self.best = best
-            self._append_event({"event": "baseline", **self.best})
-            self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
+            # best.md 缺失不一定是首次运行：外部删除 / 截断后 best.json
+            # 仍指向某个已晋升候选，对应快照 cand-<id>.md 还在——先按 id
+            # 把内容找回，否则会以「当前状态」（可能是未验证的半截轮次）
+            # 重建基线，等于把旧最佳悄悄降级、还可能把脏内容固化成基线。
+            # 找回失败（基线没有快照 / 快照也丢了）才走首次运行路径。
+            loaded = self._load_best()
+            recovered = self._recover_best_text(loaded) if loaded else None
+            if recovered is not None:
+                self.best = loaded
+                self._heal_best_md(recovered)
+                self.sink.warn(f"rounds/best.md 缺失，已从候选快照恢复"
+                               f"最佳内容（{loaded['id']}）")
+            else:
+                # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是
+                # 脚手架）。有了基线，「第 1 轮候选被拒绝时还原到什么」
+                # 才有明确答案。与 _commit_best 同序：best.md 是「基线已
+                # 建立」的存在标志，必须最后落盘。反序（best.md 先成功、
+                # best.json 失败）会留下没有元数据的 best.md——下次启动走
+                # 「复用已有最佳」分支读到未知 id，基线事件也永远不会补记。
+                text = self._read_state_text() or state.scaffold(self.task)
+                best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
+                        "round": 0, "verifier": "baseline", "score": None,
+                        "ts": _ts()}
+                _atomic_write(self.best_json,
+                              json.dumps(best, ensure_ascii=False, indent=2))
+                _atomic_write(self.best_md, text)
+                self.best = best
+                self._append_event({"event": "baseline", **self.best})
+                self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
         self.sink.info(
             f"轮次守卫已启用：{self.dir}（每轮快照；候选需验证通过才晋升为最佳；"
             f"verify={self.cfg.rounds.verify}"
@@ -894,13 +907,57 @@ class RoundGuard:
 （参考锚点：10 = 远超当前最佳；7 = 明显更好；5 = 大致相当；3 = 明显退步；0 = 完全偏离任务）"""
 
     # ---- 晋升 / 还原 ----
+    def _recover_best_text(self, best: Optional[Dict] = None) -> Optional[str]:
+        """从最佳 id 对应的候选快照找回最佳内容（结构完好才返回）。
+
+        best.md 是还原 / 评审的唯一内容源，但每个晋升过的最佳都有内容
+        完全相同的候选快照 cand-<id>.md（见 _commit_best：两者写自同一份
+        被验证内容）。best.md 被外部删除 / 截断 / 编码损坏时按 id 从快照
+        找回，避免 _restore_best 把脚手架（「暂无」）或空区块写回
+        research.md、静默丢掉当前最佳。基线最佳没有对应快照，读不到时
+        返回 None，调用方退回原口径。
+        """
+        info = self.best if best is None else best
+        cid = info.get("id") if isinstance(info, dict) else None
+        if not isinstance(cid, str) or not cid:
+            return None
+        try:
+            text = (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
+                encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+        # 快照也损坏（磁盘级损坏 / 被外部篡改）时不能拿它当最佳
+        return text if _structure_intact(text) else None
+
+    def _heal_best_md(self, text: str) -> None:
+        """把找回的最佳内容回写 best.md（自愈；失败只告警不阻断）。"""
+        try:
+            _atomic_write(self.best_md, text)
+        except OSError as e:
+            self.sink.warn(f"找回的最佳内容写回 best.md 失败（忽略）：{e}")
+
     def _read_best_md(self) -> str:
         try:
-            return self.best_md.read_text(encoding="utf-8")
+            text = self.best_md.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
-            # best.md 损坏时按「空」处理：等价于基线脚手架，绝不能把
-            # 损坏内容当最佳写回 research.md
+            # best.md 缺失 / 不可读：先按最佳 id 从候选快照找回，找回
+            # 失败才按「空」处理（等价于基线脚手架，绝不能把损坏内容
+            # 当最佳写回 research.md）
+            recovered = self._recover_best_text()
+            if recovered is not None:
+                self.sink.warn("best.md 缺失或不可读，已从候选快照恢复"
+                               f"最佳内容（{self.best.get('id', '?')}）")
+                self._heal_best_md(recovered)
+                return recovered
             return state.scaffold(self.task)
+        if not _structure_intact(text):
+            recovered = self._recover_best_text()
+            if recovered is not None:
+                self.sink.warn("best.md 结构损坏，已从候选快照恢复最佳内容"
+                               f"（{self.best.get('id', '?')}）")
+                self._heal_best_md(recovered)
+                return recovered
+        return text
 
     def _commit_best(self, text: Optional[str], best: Dict) -> None:
         """把候选快照晋升为最佳：best.json + best.md 两个文件都成功才生效。

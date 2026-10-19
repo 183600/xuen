@@ -1334,6 +1334,100 @@ def test_partial_best_md_failure_keeps_content_and_rolls_back_json(
     assert guard.stats.adopted == 0
 
 
+def test_restore_recovers_best_from_snapshot_when_best_md_deleted(ws):
+    """best.md 被外部删除后还原不能把脚手架写回 research.md。
+
+    回归：_read_best_md 读不到 best.md 时退回基线脚手架，候选被拒绝 /
+    挂起触发的还原会把「（暂无）」覆盖到 research.md——当前最佳的完整
+    内容明明还躺在 cand-<最佳id>.md 快照里（best.json 也指向它）。
+    修复：按最佳 id 从候选快照找回内容并回写 best.md（自愈）。
+    """
+    workspace, state_path = ws
+    sink = RecordingSink()
+    guard = make_guard(workspace, state_path, sink, verify="off")
+    guard.start()
+    write_idea(state_path, "第一轮晋升的最佳")
+    write_artifact(state_path, "第一轮晋升的产物")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+
+    (guard.dir / rounds.BEST_MD_NAME).unlink()
+    write_idea(state_path, "尚未验证的第二轮候选")
+    guard.cfg.rounds.verify = "user"
+    assert guard.on_round_end(2) == "pending"
+
+    # 还原到第一轮的最佳内容，而不是脚手架的「（暂无）」
+    assert read_idea(state_path) == "第一轮晋升的最佳"
+    assert state.get_section(state_path.read_text(encoding="utf-8"),
+                             state.SECTION_ARTIFACT) == "第一轮晋升的产物"
+    # best.md 自愈回写，内容与快照一致；元数据仍指向同一候选
+    assert read_idea(guard.best_md) == "第一轮晋升的最佳"
+    assert guard.best["id"] == cid
+    assert any("从候选快照恢复" in m
+               for lvl, m in sink.messages if lvl == "warn")
+
+
+def test_restore_recovers_best_from_snapshot_when_best_md_corrupt(ws):
+    """best.md 结构损坏（被截断 / 篡改）时同样从候选快照找回内容。"""
+    workspace, state_path = ws
+    sink = RecordingSink()
+    guard = make_guard(workspace, state_path, sink, verify="off")
+    guard.start()
+    write_idea(state_path, "第一轮晋升的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+
+    guard.best_md.write_text("被外部截断的垃圾内容，没有区块标记",
+                             encoding="utf-8")
+    write_idea(state_path, "尚未验证的第二轮候选")
+    guard.cfg.rounds.verify = "user"
+    assert guard.on_round_end(2) == "pending"
+
+    assert read_idea(state_path) == "第一轮晋升的最佳"
+    assert read_idea(guard.best_md) == "第一轮晋升的最佳"
+    assert guard.best["id"] == cid
+
+
+def test_missing_best_md_without_snapshot_falls_back_to_scaffold(ws):
+    """快照也丢失时退回原口径：按脚手架处理，而不是抛异常。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "晋升过的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+    (guard.dir / rounds.BEST_MD_NAME).unlink()
+    (guard.dir / f"{rounds.CAND_PREFIX}{cid}.md").unlink()
+
+    text = guard._read_best_md()
+    assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
+
+
+def test_start_recovers_best_from_snapshot_when_best_md_deleted(ws):
+    """重启时 best.md 缺失：从 best.json 指向的候选快照恢复，而不是以
+    当前 research.md 重建基线（那会把旧最佳悄悄降级为新基线）。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_events = [e for e in events(guard) if e["event"] == "baseline"]
+    write_idea(state_path, "晋升过的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+    (guard.dir / rounds.BEST_MD_NAME).unlink()
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()
+    assert restarted.best["id"] == cid
+    assert read_idea(restarted.best_md) == "晋升过的最佳"
+    assert read_idea(state_path) == "晋升过的最佳"
+    # 没有因为 best.md 缺失而补记新的基线事件
+    assert [e for e in events(restarted)
+            if e["event"] == "baseline"] == baseline_events
+    assert any("从候选快照恢复" in m
+               for lvl, m in sink.messages if lvl == "warn")
+
+
 def test_late_adoption_partial_best_failure_keeps_content(ws, monkeypatch):
     """补分采纳的 best 写盘中途失败：未采纳的候选内容不得流进还原源。"""
     workspace, state_path = ws

@@ -445,6 +445,35 @@ def test_interrupted_round_restores_best(env, tmp_path, monkeypatch):
     assert best["verifier"] == "baseline"
 
 
+def test_interrupt_before_first_round_not_recorded(env, tmp_path, monkeypatch):
+    """首轮取号前的中断：没有未完成的轮次，守卫不能凭空记一轮 skipped。
+
+    回归：i 初始化 0，KeyboardInterrupt 处理曾无条件调用 on_round_failed，
+    给不存在的「第 0 轮」补了一条 skipped 事件，守卫汇总的轮次数虚增。
+    """
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.loop.iterations = None  # 走 itertools.count 的无限循环分支
+
+    class Boom:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(runner.itertools, "count", lambda *a, **k: Boom())
+
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(cfg, "测试任务", sink=NullSink())
+
+    events = _events(ws)
+    assert not any(e["event"] in ("skipped", "candidate", "heartbeat")
+                   for e in events), events
+    assert _read(ws, "IDEA") == "（暂无）"
+
+
 def test_prompt_too_long_round_recorded_by_guard(env, tmp_path, monkeypatch):
     """提示词过长立即中止的轮次也要向守卫记账（skipped）。
 

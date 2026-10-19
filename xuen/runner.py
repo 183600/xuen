@@ -291,8 +291,12 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
         # 中断可能落在 agent 运行中（agent 已被杀，区块可能只写了一半）：
         # 与失败轮次同样还原最佳，确保重跑时从已验证内容继续，而不是把
-        # 未验证的半截内容当成下一轮的起点
-        _guard_round_failed(guard, i, "被中断，轮次未完成")
+        # 未验证的半截内容当成下一轮的起点。
+        # i == 0 表示首轮取号前就中断了（还没开始任何一轮）：没有「未完成
+        # 的轮次」可记，交给守卫记账会凭空多出一轮 skipped，汇总的轮次数
+        # 与主循环口径对不上
+        if i:
+            _guard_round_failed(guard, i, "被中断，轮次未完成")
         _guard_finish(guard)
         prev_idea, prev_artifact = _read_sections(state_path)
         sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
