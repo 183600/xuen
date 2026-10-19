@@ -1499,6 +1499,83 @@ def test_adopted_round_best_write_failure_not_marked_resolved(ws, monkeypatch):
     assert read_idea(state_path) == "写盘失败也要保住的想法"
 
 
+def test_adopt_failure_records_pending_stats_and_verdict(ws, monkeypatch):
+    """晋升写盘失败：候选必须计入「待评分」，汇总不能自相矛盾。
+
+    回归：_process_round_end 先记候选事件、后调 _adopt；_adopt 抛
+    OSError（best 写盘失败 / 快照损坏）时该轮既无 pending 也无
+    adopted/rejected 事件，stats 出现「候选 1、采纳/拒绝/待评分全 0」
+    ——违反 adopted+rejected+pending==candidates，待评分候选数也失真。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "晋升写盘失败也要挂在待评分")
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise OSError("磁盘满（模拟）")
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 0, 0, 1)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
+    # 挂起结论也要落审计日志（候选有对应 verdict 事件），但不能是 adopted
+    cid = [e["id"] for e in events(guard) if e["event"] == "candidate"][-1]
+    verdicts = [e for e in events(guard) if e["event"] == "verdict"]
+    assert [v for v in verdicts if v.get("result") == "adopted"] == []
+    pending = [v for v in verdicts if v.get("result") == "pending"]
+    assert pending and pending[-1]["id"] == cid
+
+    # 写盘恢复后补分仍能兑现：pending 迁移到 adopted，不变式仍成立
+    monkeypatch.setattr(rounds, "_atomic_write", real_write)
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9\n", encoding="utf-8")
+    guard.finish()
+    s = guard.stats
+    assert (s.adopted, s.pending) == (1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert read_idea(state_path) == "晋升写盘失败也要挂在待评分"
+
+
+def test_snapshot_write_failure_not_counted_as_candidate(ws, monkeypatch):
+    """候选快照写盘失败时不能先计入候选：该轮没有可评分的产物。
+
+    回归：_process_round_end 先 `stats.candidates += 1` 再调用
+    _snapshot_candidate；磁盘满/目录只读导致快照失败时异常虽由
+    runner 降级，但统计里留下一个没有 adopted/rejected/pending 的
+    候选，汇总违反 adopted+rejected+pending==candidates。候选快照
+    失败应按跳过记账并还原最佳，不能留下半截候选。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "快照写盘失败的想法")
+
+    def boom(*args, **kwargs):
+        raise OSError("磁盘满（模拟）")
+
+    monkeypatch.setattr(guard, "_snapshot_candidate", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending, s.skipped) \
+        == (0, 0, 0, 0, 1)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
+    evs = events(guard)
+    assert not [e for e in evs if e["event"] == "candidate"]
+    assert [e for e in evs if e["event"] == "skipped"][-1]["round"] == 1
+
+
 def test_partial_best_write_content_source_last(ws, monkeypatch):
     """best.md 先写成功、best.json 失败时，候选内容绝不能泄漏为还原源。
 
@@ -2158,6 +2235,41 @@ def test_read_events_preserves_unicode_line_separators(ws):
     evs = guard._read_events()
     assert [e["event"] for e in evs] == ["skipped", "heartbeat"]
     assert evs[0]["reason"] == reason
+
+
+def test_read_events_tolerates_bom(ws):
+    """history.jsonl 带 UTF-8 BOM 时首条事件不能被静默丢弃。
+
+    Windows 记事本等编辑器保存会在文件首加 BOM；json.loads 把 U+FEFF
+    当非法 JSON 前缀，首行事件（常见为 baseline，或外部拼接后的 candidate）
+    连同后续的恢复/已决依据一起丢失。拼接文件里靠后的 BOM 同样要剥。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.dir.mkdir(parents=True, exist_ok=True)
+    first = json.dumps({"event": "baseline", "id": "baseline-x", "round": 0})
+    second = json.dumps({"event": "candidate", "id": "cand-x", "round": 1})
+    guard.history_path.write_bytes(
+        b"\xef\xbb\xbf" + first.encode("utf-8") + b"\n"
+        + b"\xef\xbb\xbf" + second.encode("utf-8") + b"\n")
+    evs = guard._read_events()
+    assert [e["event"] for e in evs] == ["baseline", "candidate"]
+    assert evs[0]["id"] == "baseline-x"
+    assert evs[1]["id"] == "cand-x"
+
+
+def test_load_best_tolerates_bom(ws):
+    """best.json 带 UTF-8 BOM 时不能按损坏元数据丢弃。
+
+    丢弃会触发 _recover_best：历史也不可用时把最佳重建为 baseline，
+    round/score/verifier 全部失真，汇总与评审提示词长期显示错误信息。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.start()
+    guard.dir.mkdir(parents=True, exist_ok=True)
+    data = {"id": "cand-bom", "round": 3, "verifier": "user", "score": 9.0}
+    guard.best_json.write_bytes(
+        b"\xef\xbb\xbf" + json.dumps(data).encode("utf-8"))
+    assert guard._load_best() == data
 
 
 def test_late_adoption_state_already_matching_no_restore_noise(ws):

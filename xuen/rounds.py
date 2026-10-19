@@ -495,8 +495,8 @@ class RoundGuard:
         # ——任务名/评语里含这些字符时，一条合法 JSON 事件会被拆成两半并
         # 整体丢失（审计日志与 best 恢复源一起少一条记录）。
         for line in re.split(r"\r\n|\r|\n",
-                             raw.decode("utf-8", errors="replace")):
-            line = line.strip()
+                             raw.decode("utf-8-sig", errors="replace")):
+            line = line.strip().lstrip("\ufeff").strip()
             if not line:
                 continue
             try:
@@ -515,7 +515,7 @@ class RoundGuard:
         挂起的轮次不会更新 best，汇总/评审提示词会持续失真。
         """
         try:
-            data = json.loads(self.best_json.read_text(encoding="utf-8"))
+            data = json.loads(self.best_json.read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             return {}
         return data if _valid_best(data) else {}
@@ -740,9 +740,20 @@ class RoundGuard:
         #    更不能进最佳——结构损坏直接拒绝（守卫级判定，无需测试/评分）
         if not _structure_intact(text):
             self.stats.candidates += 1
-            cid = self._snapshot_candidate(round_no, text)
-            self._append_event({"event": "candidate", "id": cid,
-                                "round": round_no, "corrupt": True})
+            try:
+                cid = self._snapshot_candidate(round_no, text)
+                self._append_event({"event": "candidate", "id": cid,
+                                    "round": round_no, "corrupt": True})
+            except Exception as e:
+                self.stats.candidates -= 1
+                self.stats.skipped += 1
+                try:
+                    self._append_event({"event": "skipped", "round": round_no,
+                                        "reason": f"候选快照写盘失败：{e}"})
+                except OSError as e2:
+                    self.sink.warn(f"记录跳过事件失败（忽略）：{e2}")
+                self._restore_best(round_no, why="候选快照写盘失败")
+                raise
             verdict = Verdict(verifier="guard", result="rejected",
                               reason="区块标记缺失或损坏，无法安全读取")
             self._append_event({"event": "verdict", "id": cid,
@@ -763,26 +774,56 @@ class RoundGuard:
 
         # 3) 有改动 → 候选快照（先落盘：无论后续验证成败，本轮产物都不丢）
         self.stats.candidates += 1
-        cid = self._snapshot_candidate(round_no, text)
-        changed = [n for n, (c, b) in {
-            "idea": (cand_idea, best_idea),
-            "artifact": (cand_artifact, best_artifact),
-        }.items() if c != b]
-        self._append_event({"event": "candidate", "id": cid,
-                            "round": round_no, "changed": changed})
+        try:
+            cid = self._snapshot_candidate(round_no, text)
+            changed = [n for n, (c, b) in {
+                "idea": (cand_idea, best_idea),
+                "artifact": (cand_artifact, best_artifact),
+            }.items() if c != b]
+            self._append_event({"event": "candidate", "id": cid,
+                                "round": round_no, "changed": changed})
+        except Exception as e:
+            self.stats.candidates -= 1
+            self.stats.skipped += 1
+            try:
+                self._append_event({"event": "skipped", "round": round_no,
+                                    "reason": f"候选快照写盘失败：{e}"})
+            except OSError as e2:
+                self.sink.warn(f"记录跳过事件失败（忽略）：{e2}")
+            self._restore_best(round_no, why="候选快照写盘失败")
+            raise
         self.sink.info(f"候选快照：{CAND_PREFIX}{cid}.md"
                        "（尚未验证，不代表最佳）")
 
         # 4) 验证 → 晋升 / 拒绝 / 挂起
-        verdict = self._verify(round_no, cid)
-        if verdict.result == "adopted":
-            # 先完成外部副作用（best.md / best.json 写盘）再记已决事件：
-            # 写盘失败（磁盘满 / 目录只读）时保持「未决」——先记一条
-            # adopted 会让 _apply_user_verdicts 的 resolved 集合永久跳过
-            # 该候选，用户腾出磁盘后补分也再翻不了案，审计日志还会留下
-            # 一条未兑现的 adopted（与 _apply_user_verdicts 的修复同一
-            # 口径：外部副作用成功前不能留下不可撤销的结论）
-            self._adopt(cid, round_no, verdict)
+        try:
+            verdict = self._verify(round_no, cid)
+            if verdict.result == "adopted":
+                # 先完成外部副作用（best.md / best.json 写盘）再记已决事件：
+                # 写盘失败（磁盘满 / 目录只读）时保持「未决」——先记一条
+                # adopted 会让 _apply_user_verdicts 的 resolved 集合永久跳过
+                # 该候选，用户腾出磁盘后补分也再翻不了案，审计日志还会留下
+                # 一条未兑现的 adopted（与 _apply_user_verdicts 的修复同一
+                # 口径：外部副作用成功前不能留下不可撤销的结论）
+                self._adopt(cid, round_no, verdict)
+        except Exception as e:  # noqa: BLE001 —— 守卫降级 + 统计一致
+            # 验证/晋升中途失败（best.md/best.json 写盘失败、候选快照损坏
+            # 等）：候选已快照落盘，必须按「待评分」记账并还原最佳。绝不能
+            # 只把异常抛给 runner——未计入 adopted/rejected/pending 会让
+            # 汇总出现「候选 1，采纳/拒绝/待评分皆 0」的自相矛盾，违反
+            # adopted+rejected+pending==candidates 不变式；挂起结论照常落
+            # 审计日志，用户补分/重试仍可翻案。KeyboardInterrupt 等
+            # BaseException 不在此列：中断轮次由 runner 口径还原、不写判定。
+            try:
+                self._append_event({"event": "verdict", "id": cid,
+                                    "round": round_no, "verifier": "guard",
+                                    "result": "pending", "score": None,
+                                    "reason": f"验证或晋升失败（{e}），"
+                                              "候选挂起等待重试"})
+            except OSError as e2:
+                self.sink.warn(f"记录候选挂起事件失败（忽略）：{e2}")
+            self._pend(round_no, cid, "验证失败，候选挂起")
+            raise
         self._append_event({"event": "verdict", "id": cid,
                             "round": round_no, **_verdict_fields(verdict)})
         if verdict.result == "adopted":
@@ -793,11 +834,19 @@ class RoundGuard:
                            f"保留最佳并还原")
             self._restore_best(round_no, why="候选被拒绝")
             return "rejected"
+        self._pend(round_no, cid, "候选待评分")
+        return "pending"
+
+    def _pend(self, round_no: int, cid: str, why: str) -> None:
+        """把候选从「候选」计入「待评分」：还原最佳并提示用户评分。
+
+        正常挂起（评审无结论）与验证/晋升失败共用此记账口径：候选快照都
+        已落盘，统计必须与之一一对应（adopted+rejected+pending==candidates），
+        否则汇总自相矛盾、待评分候选数失真。"""
         self.stats.pending += 1
         self._pending_ids.add(cid)
-        self._restore_best(round_no, why="候选待评分")
+        self._restore_best(round_no, why=why)
         self._hint_user_scoring(cid)
-        return "pending"
 
     # ---- 验证决策 ----
     def _run_suite(self, suite: List[str]) -> SuiteResult:
