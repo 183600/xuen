@@ -239,7 +239,7 @@ jobs:
           set +e
           PROMPT='判断是否有bug，如果有就修复'
           ISSUES_FILE=".opencode_issues.md"
-          PROMPT="$(printf '直接定位并修复 bug，优先高价值、可验证的问题；不要把时间花在写分析报告上，尽快产出可提交的修复；至少完成一个可提交的修复，若 20 分钟内没有可提交改动，缩小范围先修一个边界条件或小 bug。若需要可把要点写入 `%s`，修完删除。\n\n%s\n' "$ISSUES_FILE" "$PROMPT")"
+          PROMPT="$(printf '先快速定位 bug（可把要点写入 `%s`，该临时清单不是报告），然后持续修复；在本轮预算内尽可能多修复高价值、可验证的 bug，不要只修一个就停，也不要为了赶时间提前结束。每个修复后运行自检；修完删除该临时清单。\n\n%s\n' "$ISSUES_FILE" "$PROMPT")"
 
           WORK_SECONDS=17100        # 工作窗口：4 小时 45 分 = 17100 秒
           MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
