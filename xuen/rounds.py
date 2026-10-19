@@ -878,7 +878,9 @@ class RoundGuard:
             # 判定已生效但事件缺失：本轮收尾的 _apply_user_verdicts 会
             # 因为 resolved 里没有该 id 而重新兑现 verdicts.txt 里的同一
             # 行——拒绝统计翻倍、采纳重复写盘。内存集合与事件写入解耦。
-            self._applied_verdicts.add(cid)
+            # 挂起不是终局判定，绝不能记入：用户之后补分仍需能翻案。
+            if verdict.result in ("adopted", "rejected"):
+                self._applied_verdicts.add(cid)
         if verdict.result == "adopted":
             return "adopted"
         if verdict.result == "rejected":

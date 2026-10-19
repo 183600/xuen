@@ -2516,6 +2516,42 @@ def test_user_verdict_event_failure_not_reapplied_by_round_tail(
     assert read_idea(state_path) == "（暂无）"  # 拒绝路径已还原最佳
 
 
+def test_pending_verdict_event_failure_allows_same_session_late_scoring(
+        ws, monkeypatch):
+    """挂起轮的判定事件写盘失败不能让候选永久无法补分。
+
+    回归：_process_round_end 的降级写把挂起也记入 _applied_verdicts。
+    挂起不是终局判定；用户随后在 verdicts.txt 补分时，_apply_user_verdicts
+    会直接跳过该 id，候选在本会话内永远无法采纳。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "等待补分的好想法")
+    real_append = guard._append_event
+
+    def fail_verdict_event(ev):
+        if ev.get("event") == "verdict":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", fail_verdict_event)
+    assert guard.on_round_end(1) == "pending"
+    cid = [e["id"] for e in events(guard)
+           if e["event"] == "candidate"][-1]
+    assert any("记录判定事件失败" in m for _, m in guard.sink.messages)
+    assert cid not in guard._applied_verdicts
+
+    monkeypatch.setattr(guard, "_append_event", real_append)
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n",
+                                             encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    s = guard.stats
+    assert (s.adopted, s.rejected, s.pending) == (1, 0, 0)
+    assert read_idea(state_path) == "等待补分的好想法"
+
+
 def test_skipped_and_heartbeat_event_failure_does_not_abort_round(
         ws, monkeypatch):
     """心跳/跳过事件的写盘失败只告警：轮次返回值与还原照常。
