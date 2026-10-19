@@ -1069,6 +1069,31 @@ def test_verdicts_bom_tolerated(ws):
     assert guard.stats.adopted == 1
 
 
+def test_verdicts_encoding_corrupt_line_keeps_other_lines(ws):
+    """verdicts.txt 里夹着非法 UTF-8 字节（非 UTF-8 编辑器保存 / 粘贴
+    损坏）时，其余评分行必须照常生效。
+
+    回归：_read_verdicts 整体 read_text 解码失败即返回 {}，cid 与分数
+    这类纯 ASCII 列完好也会被一并静默忽略——用户以为评分已提交，候选
+    永远等不到兑现。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "带坏字节的评分文件")
+    assert guard.on_round_end(1) == "pending"
+    cid = events(guard)[1]["id"]
+    guard.verdicts_path.write_bytes(
+        f"{cid} 9 很好\n".encode("utf-8")
+        + b"\xff\xfe broken line\n"
+        + b"other-cid 3\n")
+    v = guard._read_verdicts()
+    assert v[cid][0] == 9.0
+    assert v["other-cid"][0] == 3.0
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+
+
 def test_unknown_verdict_cid_warns_once(ws):
     """抄错的候选 id 必须给出提示（且只提示一次），不能静默吞掉评分。"""
     workspace, state_path = ws
@@ -1611,6 +1636,49 @@ def test_append_event_after_partial_line_not_swallowed(ws):
     assert '{"event": "candidate", "id": "被截\n{"event": "skipped"' in raw
     assert raw.endswith("\n")
     assert "" not in raw.splitlines()  # 不以换行结尾时不额外插入空行
+
+
+def test_restore_heals_invalid_utf8_state_file(ws):
+    """research.md 运行中混入非法 UTF-8 字节（外部编辑器按本地编码保存 /
+    agent 写盘事故）时，守卫还原必须仍能执行并把文件修复回来。
+
+    回归：update_section_file 严格解码，一字节损坏即抛 UnicodeDecodeError，
+    每轮还原都失败告警、研究循环永久卡死；外部写入助手读同一文件同样抛
+    异常，agent 再也写不进任何区块——只能人工删文件重启。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "好想法")
+    write_artifact(state_path, "好产物")
+    assert guard.on_round_end(1) == "adopted"
+    state_path.write_bytes(
+        state_path.read_bytes().replace("好想法".encode("utf-8"), b"\xff\xfe"))
+    guard.on_round_failed(2, "测试损坏恢复")
+    text = state_path.read_text(encoding="utf-8")  # 修复后不应再抛
+    assert state.get_section(text, state.SECTION_IDEA) == "好想法"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "好产物"
+
+
+def test_read_events_tolerates_encoding_corrupt_line(ws):
+    """history.jsonl 中间的行含非法 UTF-8 字节（写盘中途被杀留下的半截
+    多字节字符 / 手工编辑事故）时，其余事件必须照常可读。
+
+    回归：_read_events 整体 read_text 解码，一字节损坏即抛
+    UnicodeDecodeError 并把【整份】历史当作空——审计记录、_recover_best
+    的恢复源、_apply_user_verdicts 的已决/未决判定一起丢失，最佳元数据
+    会被错误地重建为基线、已决的拒绝还能被 verdicts.txt 翻案。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.dir.mkdir(parents=True, exist_ok=True)
+    good1 = json.dumps({"event": "heartbeat", "round": 1})
+    good2 = json.dumps({"event": "skipped", "round": 2, "reason": "x"})
+    guard.history_path.write_bytes(
+        good1.encode("utf-8") + b"\n"
+        + b'{"event": "heartbeat", "round": \xff\xfe}\n'  # 坏字节 + 非法 JSON
+        + good2.encode("utf-8") + b"\n")
+    evs = guard._read_events()
+    assert [(e["event"], e.get("round")) for e in evs] == [
+        ("heartbeat", 1), ("skipped", 2)]
 
 
 def test_late_adoption_state_already_matching_no_restore_noise(ws):

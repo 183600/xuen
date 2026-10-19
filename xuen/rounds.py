@@ -441,10 +441,16 @@ class RoundGuard:
     def _read_events(self) -> List[Dict]:
         events: List[Dict] = []
         try:
-            text = self.history_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            raw = self.history_path.read_bytes()
+        except OSError:
             return events
-        for line in text.splitlines():
+        # 单个坏字节（写盘中途被杀 / 磁盘满留下的半截多字节字符）不能让
+        # 整份审计日志不可读：errors="replace" 只影响坏字节所在的那一行
+        # （JSON 语法坏掉的行照常被跳过），其余事件照常解析。历史是
+        # _recover_best 的恢复源、_apply_user_verdicts 的「已决」判定依据，
+        # 一字节损坏就整份丢失会让最佳元数据被重建为基线、已决拒绝被翻案。
+        # 换行字节 0x0A 不可能出现在多字节 UTF-8 序列内部，逐行结构不受影响
+        for line in raw.decode("utf-8", errors="replace").splitlines():
             line = line.strip()
             if not line:
                 continue
@@ -1077,11 +1083,16 @@ class RoundGuard:
     def _read_verdicts(self) -> Dict[str, Tuple[Optional[float], str]]:
         out: Dict[str, Tuple[Optional[float], str]] = {}
         try:
-            # utf-8-sig：与 words / cli 等其它用户可编辑文件同一 BOM 防护口径。
-            # 带 BOM 的首行若不剥，cid 会变成 "\ufeff<cid>"，用户评分被静默忽略
-            text = self.verdicts_path.read_text(encoding="utf-8-sig")
-        except (OSError, UnicodeDecodeError):
+            raw = self.verdicts_path.read_bytes()
+        except OSError:
             return out
+        # utf-8-sig：与 words / cli 等其它用户可编辑文件同一 BOM 防护口径。
+        # 带 BOM 的首行若不剥，cid 会变成 "\ufeff<cid>"，用户评分被静默忽略。
+        # errors="replace"：个别坏字节（非 UTF-8 编辑器保存 / 粘贴损坏）
+        # 不能让整份评分文件静默失效——cid 与分数列都是 ASCII，坏字节只会
+        # 出现在评语里，替换后这两列照常解析；与本函数「坏行跳过、好行
+        # 照常生效」的容错口径一致
+        text = raw.decode("utf-8-sig", errors="replace")
         for line in text.splitlines():
             # 逐行再剥一次 BOM：utf-8-sig 只处理文件首，拼接/粘贴的多段
             # 内容里靠后的行同样可能带 BOM

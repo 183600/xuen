@@ -299,7 +299,17 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
     with _locked_state(path):
         path.parent.mkdir(parents=True, exist_ok=True)
-        original = path.read_text(encoding="utf-8") if path.exists() else scaffold("")
+        if not path.exists():
+            original = scaffold("")
+        else:
+            try:
+                original = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                # 非法 UTF-8（外部编辑器按本地编码保存 / agent 写盘事故）：
+                # 严格解码会让本函数与生成的助手脚本永久无法修复该文件——
+                # 每轮还原都失败、区块永远读不出来，研究循环卡死。按替换符
+                # 降级读取后照常写回，本次更新即把坏字节修复成 U+FFFD
+                original = path.read_text(encoding="utf-8", errors="replace")
         text = original
         old = get_section(text, name)
 
@@ -636,8 +646,16 @@ def main() -> int:
         with _locked():
             s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
             if os.path.exists(STATE_FILE):
-                with open(STATE_FILE, encoding="utf-8") as f:
-                    text = f.read()
+                try:
+                    with open(STATE_FILE, encoding="utf-8") as f:
+                        text = f.read()
+                except UnicodeDecodeError:
+                    # 与 xuen.state.update_section_file 保持一致：非法 UTF-8
+                    # 时按替换符降级读取，本次写入顺带把坏字节修复成 U+FFFD，
+                    # 而不是永远读不出文件、区块再也写不进去
+                    with open(STATE_FILE, encoding="utf-8",
+                              errors="replace") as f:
+                        text = f.read()
             else:
                 # 状态文件在运行过程中被删除时，与 xuen.state.update_section_file
                 # 保持一致：从完整 scaffold 恢复，而不是只追加一个孤立区块
