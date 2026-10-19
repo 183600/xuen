@@ -463,8 +463,14 @@ class RoundGuard:
         # （JSON 语法坏掉的行照常被跳过），其余事件照常解析。历史是
         # _recover_best 的恢复源、_apply_user_verdicts 的「已决」判定依据，
         # 一字节损坏就整份丢失会让最佳元数据被重建为基线、已决拒绝被翻案。
-        # 换行字节 0x0A 不可能出现在多字节 UTF-8 序列内部，逐行结构不受影响
-        for line in raw.decode("utf-8", errors="replace").splitlines():
+        # 换行字节 0x0A/0x0D 不可能出现在多字节 UTF-8 序列内部，逐行结构
+        # 不受影响。只按 ASCII 换行切分（兼容外部编辑器转成 CRLF/CR 的
+        # 文件）：str.splitlines 还会在 U+2028/U+2029/U+0085 等 Unicode
+        # 行分隔符处切开，而 json.dumps(ensure_ascii=False) 不会转义它们
+        # ——任务名/评语里含这些字符时，一条合法 JSON 事件会被拆成两半并
+        # 整体丢失（审计日志与 best 恢复源一起少一条记录）。
+        for line in re.split(r"\r\n|\r|\n",
+                             raw.decode("utf-8", errors="replace")):
             line = line.strip()
             if not line:
                 continue
@@ -1157,9 +1163,13 @@ class RoundGuard:
                 continue
             if ev_event == "candidate":
                 candidates[cid] = ev
-            elif ev_event == "verdict" and ev.get("result") != "pending":
+            elif (ev_event == "verdict"
+                  and ev.get("result") in ("adopted", "rejected")):
                 # 只有真正下了结论（采纳/拒绝）才算已决；「挂起」事件
-                # 不算——挂起候选正是要等这里的补分来翻案的
+                # 不算——挂起候选正是要等这里的补分来翻案的。
+                # 缺失/未知 result（外部编辑出合法 JSON 但字段损坏）同样
+                # 不能算已决：否则一个坏事件会把候选永久锁死，用户补分
+                # 再也翻不了案；已知结论之外的值一律不采信。
                 resolved.add(cid)
         for cid, score_comment in verdicts.items():
             if cid in resolved:

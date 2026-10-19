@@ -8,8 +8,30 @@ from typing import Callable, List, Optional
 from .ui import ui
 _CJK_NUMERALS = '一二三四五六七八九十百千万亿零〇两'
 _NUMERAL_MARKS = '①-⑳⓪⑴-⒇⒈-⒛㈠-㈩㊀-㊉'
-_BULLET = re.compile('^(?:\\d+\\s*[\\.\\．](?!\\d)\\s*|\\d+\\s*[、）)]\\s*|（\\d+）\\s*|\\(\\d+\\)\\s*|\\[\\d+\\]\\s*|[-*•·]\\s*|[' + _CJK_NUMERALS + ']+\\s*[、）)]\\s*|（[' + _CJK_NUMERALS + ']+）\\s*|[' + _NUMERAL_MARKS + ']\\s*)')
+_BULLET = re.compile('^(?:\\d+\\s*[\\.\\．](?!\\d)\\s*|\\d+\\s*[、）)]\\s*|（\\d+）\\s*|\\(\\d+\\)\\s*|\\[\\d+\\]\\s*|[-*•·](?!\\d)\\s*|[' + _CJK_NUMERALS + ']+\\s*[、）)]\\s*|（[' + _CJK_NUMERALS + ']+）\\s*|[' + _NUMERAL_MARKS + ']\\s*)')
 _EDGE_CHARS = '`*_^~\'"“”‘’「」『』《》〈〉【】〔〕〖〗.、 \ufeff'
+
+def _is_dot_term(w: str) -> bool:
+    """词首的点是否是术语本身的一部分（如 ".NET" / ".env" / ".gitignore"）。
+
+    点通常只是列表/装饰残留（".**词**"、".「术语」"、"." * N），必须剥掉；
+    但点后紧跟 ASCII 字母/下划线时它是域名、文件名、框架名的语义前缀。
+    只认字母/下划线：".5" 仍是残片（点后是数字），继续按非词拒绝。
+    """
+    return (len(w) > 1 and w[0] == '.'
+            and w[1].isascii() and (w[1].isalpha() or w[1] == '_'))
+
+def _strip_leading_edges(w: str) -> str:
+    """逐个剥词首边缘字符，但保留语义前导点（见 _is_dot_term）。
+
+    不能直接用 lstrip(_EDGE_CHARS)：它会把 "..NET" 的点一起吃掉；
+    逐个剥离能在剥到 ".NET" 时停下。
+    """
+    while w and w[0] in _EDGE_CHARS:
+        if _is_dot_term(w):
+            break
+        w = w[1:]
+    return w
 _EMPHASIS_PAIR = re.compile('^([*~`]{1,3})(?=\\S)(.+?)\\1')
 _UNDERSCORE_PAIR = re.compile('^(_+)(?=\\S)(.+?)\\1(?=$|[^\\w])')
 _UNDERSCORE_CLOSE = re.compile('_(?=$|[^\\w])')
@@ -161,6 +183,8 @@ def _unwrap_segments(w: str) -> str:
         trail = part[len(part.rstrip()):]
         core = _clean_segment_head(core)
         while core and core[0] in _EDGE_CHARS:
+            if _is_dot_term(core):
+                break
             core = _clean_segment_head(core[1:])
         core = core.rstrip(_EDGE_CHARS).strip()
         cleaned.append(lead + core + trail)
@@ -192,16 +216,18 @@ def _clean_once(line: str) -> str | None:
     w = _unwrap_pair(line.strip())
     w = _unwrap_pair(_BULLET.sub('', w).strip())
     while w and w[0] in _EDGE_CHARS:
+        if _is_dot_term(w):
+            break
         rest = w[1:]
         if _PAIR_OPENERS.isdisjoint(rest) or _PAIR_PARTICIPANTS.isdisjoint(rest):
-            w = w.lstrip(_EDGE_CHARS)
+            w = _strip_leading_edges(w)
             break
         w = _unwrap_pair(rest)
     w = _unwrap_segments(w)
     w = w.rstrip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
-    if w.startswith(('#', '>', '|', '=')) or _PURE_NUMBER.match(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
+    if w.startswith(('#', '>', '|', '=')) or _is_plain_index(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
         return None
     if '://' in w or '：//' in w:
         return None
@@ -217,10 +243,10 @@ def _clean_once(line: str) -> str | None:
         else:
             return None
     w = w.rstrip('.。,，;；!！?？ ')
-    w = w.strip(_EDGE_CHARS).strip()
+    w = _strip_leading_edges(w).rstrip(_EDGE_CHARS).strip()
     if not w or len(w) > 60:
         return None
-    if w.startswith(('#', '>', '|', '=')) or _PURE_NUMBER.match(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
+    if w.startswith(('#', '>', '|', '=')) or _is_plain_index(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
         return None
     return w
 _MAX_CLEAN_LEN = 256

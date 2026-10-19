@@ -545,6 +545,36 @@ def test_history_non_string_id_does_not_break_verdict_cashin(ws):
     assert summary and cid in summary[-1]
 
 
+def test_history_verdict_with_missing_result_does_not_lock_candidate(ws):
+    """history 里合法 JSON 但缺 result / result 未知的 verdict 事件不能把
+    候选当成已决。
+
+    回归：_apply_user_verdicts 以 `result != "pending"` 判定已决——缺字段
+    （None）或外部写入的未知值都会把候选永久锁死，之后用户评多少分都
+    被 resolved 集合跳过。只有 adopted / rejected 才是真正下了结论。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="user")
+    guard.start()
+    write_idea(state_path, "坏事件不能锁死的候选")
+    assert guard.on_round_end(1) == "pending"
+    cid = [e for e in events(guard)
+           if e.get("event") == "candidate"][-1]["id"]
+
+    with open(guard.history_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"event": "verdict", "id": cid}) + "\n")
+        f.write(json.dumps({"event": "verdict", "id": cid,
+                            "result": "unknown"}) + "\n")
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 采纳\n", encoding="utf-8")
+
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert guard.stats.adopted == 1
+    results = [e.get("result") for e in events(guard)
+               if e.get("event") == "verdict" and e.get("id") == cid]
+    assert results[-1] == "adopted"
+    assert results.count("adopted") == 1
+
+
 # ---------------------------------------------------------------- 测试级联
 def test_detect_test_suite_pytest(tmp_path):
     (tmp_path / "tests").mkdir()
@@ -1883,6 +1913,33 @@ def test_read_events_tolerates_encoding_corrupt_line(ws):
     evs = guard._read_events()
     assert [(e["event"], e.get("round")) for e in evs] == [
         ("heartbeat", 1), ("skipped", 2)]
+
+
+def test_read_events_preserves_unicode_line_separators(ws):
+    """history.jsonl 的逐行解析只能按 \\n 切分。
+
+    json.dumps(ensure_ascii=False) 不转义 U+2028/U+2029/U+0085，而
+    str.splitlines 会把它们当成换行——任务名 / 评语含这些字符时，一条
+    合法 JSON 事件会被拆成两半并被整体跳过，审计日志与 best 恢复源
+    静默丢记录。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.dir.mkdir(parents=True, exist_ok=True)
+    reason = "a\u2028b\u2029c\x85d"
+    sep_event = json.dumps({"event": "skipped", "round": 2,
+                            "reason": reason}, ensure_ascii=False)
+    tail = json.dumps({"event": "heartbeat", "round": 3})
+    guard.history_path.write_text(sep_event + "\n" + tail + "\n",
+                                  encoding="utf-8")
+    evs = guard._read_events()
+    assert [e["event"] for e in evs] == ["skipped", "heartbeat"]
+    assert evs[0]["reason"] == reason
+    # 外部编辑器转成 CR / CRLF 也不能把整份历史并成一行
+    guard.history_path.write_text(sep_event + "\r" + tail + "\r\n",
+                                  encoding="utf-8")
+    evs = guard._read_events()
+    assert [e["event"] for e in evs] == ["skipped", "heartbeat"]
+    assert evs[0]["reason"] == reason
 
 
 def test_late_adoption_state_already_matching_no_restore_noise(ws):

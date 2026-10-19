@@ -72,6 +72,54 @@ def test_words_clean_keeps_intraword_underscores_and_leading_edge_chars():
         assert _clean_line(w) == w, w
 
 
+def test_words_clean_does_not_treat_negative_decimal_as_bullet():
+    """紧贴数字的 "-" 是负号，不是无空格的列表符。
+
+    回归：_BULLET 的 [-*•·]\\s* 允许零个空格，"-0.5" 被剥成 "0.5"——
+    负的数值术语（如 "-0.5"、"-0.5倍速"）词形被悄悄改成另一个词。
+    真正的列表写法 "- 0.5"（有空白）仍按列表符处理。"""
+    assert _clean_line("-0.5") == "-0.5"
+    assert _clean_line("-0.5倍速") == "-0.5倍速"
+    assert _clean_line("- 0.5") == "0.5"
+    assert _clean_line("-0.5、-1.5") == "-0.5、-1.5"
+    assert parse_word_lines("-0.5\n- 0.5\n") == ["-0.5", "0.5"]
+    for src in ("-0.5", "-0.5倍速"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
+def test_words_clean_preserves_semantic_leading_dot():
+    """点后紧跟 ASCII 字母/下划线时，点是术语本身（".NET" / ".env"）。
+
+    回归：词首边缘字符统一剥离会把 dotfile、域名、框架名的语义前缀
+    当成列表/装饰残留吃掉（".NET" -> "NET"、".gitignore" -> "gitignore"），
+    词形变成另一个词。但点后是装饰符/空白/数字时仍必须剥掉（".**词**"、
+    ".「术语」"、".5"），且多个前导点只保留语义那一个。
+    """
+    assert _clean_line(".NET") == ".NET"
+    assert _clean_line(".env") == ".env"
+    assert _clean_line(".gitignore") == ".gitignore"
+    assert _clean_line(".bashrc") == ".bashrc"
+    assert _clean_line("..NET") == ".NET"
+    assert _clean_line("...NET") == ".NET"
+    assert _clean_line("**.NET**") == ".NET"
+    assert _clean_line("2. .NET") == ".NET"
+    assert _clean_line("1、.env") == ".env"
+    assert _clean_line(".NET、.env") == ".NET、.env"
+    assert parse_word_lines(".NET\n.env\n.NET\n") == [".NET", ".env"]
+    # 装饰残留与非术语点仍按原口径剥除
+    assert _clean_line(".**词**（解释）") == "词（解释）"
+    assert _clean_line(".「术语」（解释）") == "术语（解释）"
+    assert _clean_line(".5") is None
+    assert _clean_line("." * 100 + "**词**（解释）") == "词（解释）"
+    # 清洗必须是不动点
+    for src in (".NET", "..NET", ".gitignore、.env"):
+        w = _clean_line(src)
+        assert w is not None
+        assert _clean_line(w) == w, w
+
+
 def test_words_clean_unwraps_multiple_pairs_in_one_word():
     """同一行里被连接词/空格隔开的多组装饰对必须连配对一起剥干净。
 
@@ -403,6 +451,13 @@ def test_words_clean_rejects_lone_cjk_index_and_keeps_decimal_terms():
     assert _clean_line("卷积、3.14、池化") == "卷积、3.14、池化"
     assert _clean_line("Adam、2.5、SGD") == "Adam、2.5、SGD"
     assert _clean_line("x、0.5、y") == "x、0.5、y"
+    # 单独成行的小数同样不是序号，不能被整行丢弃规则误伤
+    assert _clean_line("3.14") == "3.14"
+    assert _clean_line("2.5") == "2.5"
+    assert _clean_line("+0.5") == "+0.5"
+    assert _clean_line("3.14.") == "3.14"
+    assert _clean_line("3.14: 圆周率") == "3.14"
+    assert parse_word_lines("3.14\n2.5\n1\n一\n") == ["3.14", "2.5"]
     # 整数序号仍要剥掉：段级判定不能借机放宽
     assert _clean_line("卷积、2、池化") == "卷积、池化"
     assert _clean_line("一、卷积、二、池化") == "卷积、池化"
