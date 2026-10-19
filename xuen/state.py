@@ -110,9 +110,13 @@ def get_section(text: str, name: str) -> str:
 
 # 区块标记必须独占一行（允许行首/行尾空白）。同一行内出现的标记文本是
 # 普通内容（例如说明写入协议），不能参与区块配对。
+# 行边界同时接受 LF、CRLF 与裸 CR：re.M 的 ^/$ 只认 \n，老式 Mac 编辑器
+# 或手工转换出的 CR-only 状态文件会让所有标记都认不出来，更新一个区块
+# 时另一区块读出内容被悄悄清空（见 test_state_supports_cr_only_line_endings）。
 _SECTION_MARKER = re.compile(
     # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记
-    r"(?m)^[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t\ufeff]*\r?$"
+    r"(?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
+    r"[ \t\ufeff]*(?=\r\n|\r|\n|$)"
 )
 
 
@@ -208,13 +212,19 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     # 只匹配「本区块」（s/e 传入的区块）的标记：更新一个区块时不应删改散
     # 落在自由文本里的另一类区块标记字面量（那是其他区块的内容/残留）
     own_marker = re.compile(
-        r"(?m)^[ \t\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \t\ufeff]*\r?$"
+        r"[ \t\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \t\ufeff]*"
     )
 
     def clean(seg: str) -> str:
-        # 只删除独占整行的标记；行内提及的标记文本是普通内容，必须保留
-        return "\n".join(l for l in seg.split("\n")
-                         if not own_marker.match(l))
+        # 只删除独占整行的标记；行内提及的标记文本是普通内容，必须保留。
+        # 按 CR/LF/CRLF 拆分（与 _SECTION_MARKER 的识别口径一致，CR-only
+        # 的孤立标记同样会被清掉），再用原文首选行尾重新拼接，避免把
+        # 同一行尾风格的普通文本改写成混合行尾。
+        parts = re.split(r"(\r\n|\r|\n)", seg)
+        lines = [line for line in parts[0::2]
+                 if not own_marker.fullmatch(line)]
+        endings = parts[1::2]
+        return (endings[0] if endings else "\n").join(lines)
 
     out = []
     pos = 0
@@ -462,8 +472,11 @@ NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
 _SECTION_MARKER_RE = re.compile(
-    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记
-    r"(?m)^[ \\t\\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t\\ufeff]*\\r?$"
+    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记。
+    # 行边界同时接受 LF/CRLF/裸 CR，与 xuen.state._SECTION_MARKER 一致：
+    # CR-only 状态文件的所有标记否则都认不出来。
+    r"(?m)(?:(?<=\\r)|^)[ \\t\\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
+    r"[ \\t\\ufeff]*(?=\\r\\n|\\r|\\n|$)"
 )
 
 
@@ -518,13 +531,18 @@ def _strip_stray(segment, spans, seg_start, s, e):
     # 与 xuen.state._strip_stray_markers 一致：只匹配本区块（s/e 传入的
     # 区块）的标记，不能误删自由文本中另一类区块的标记字面量
     own_marker = re.compile(
-        r"(?m)^[ \\t\\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \\t\\ufeff]*\\r?$"
+        r"[ \\t\\ufeff]*(?:" + re.escape(s) + "|" + re.escape(e) + r")[ \\t\\ufeff]*"
     )
 
     def clean(seg):
-        # 只删除独占整行的标记，行内提及的标记文本是普通内容，必须保留
-        return "\\n".join(l for l in seg.split("\\n")
-                         if not own_marker.match(l))
+        # 只删除独占整行的标记，行内提及的标记文本是普通内容，必须保留。
+        # 按 CR/LF/CRLF 拆分并用原文首选行尾拼接，与 xuen.state 一致：
+        # CR-only 文件里的孤立标记同样会被清掉。
+        parts = re.split(r"(\\r\\n|\\r|\\n)", seg)
+        lines = [line for line in parts[0::2]
+                 if not own_marker.fullmatch(line)]
+        endings = parts[1::2]
+        return (endings[0] if endings else "\\n").join(lines)
 
     out = []
     pos = 0

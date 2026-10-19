@@ -294,6 +294,11 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
     try:
         proc = subprocess.Popen(
             argv, cwd=str(repo),
+            # 与 ShellAgent.run 同口径隔离 stdin：TUI 模式下 textual 从
+            # stdin 读键盘，测试套件若也读 stdin 会抢键（测试的 input()
+            # 还会一直等不到输入、把守卫挂到 verify_timeout）。外部 agent
+            # 早已用 DEVNULL，套件不能例外。
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
             **popen_kwargs(),

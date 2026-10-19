@@ -828,6 +828,33 @@ def test_run_suite_stop_terminates_suite_promptly(tmp_path):
         assert _pid_dead(int(pid_file.read_text()))
 
 
+def test_run_suite_does_not_inherit_stdin(tmp_path):
+    """套件不得继承 xuen 的 stdin（外部 agent 早已用 DEVNULL 隔离）。
+
+    回归：TUI 模式下 textual 从 stdin 读键盘，测试套件若继承同一 stdin，
+    测试里的 input()/read() 会抢走按键（或一直等不到输入，守卫挂到
+    verify_timeout）。"""
+    if os.name != "posix":
+        pytest.skip("只在 POSIX 上构造带数据的父进程 stdin")
+    # 把带数据的管道 dup 到 fd 0：子进程若继承 stdin，read() 会拿到
+    # b"keystrokes" 并以 5 退出；DEVNULL 下 read() 得空串、以 0 退出
+    r, w = os.pipe()
+    os.write(w, b"keystrokes")
+    os.close(w)
+    saved = os.dup(0)
+    try:
+        os.dup2(r, 0)
+        os.close(r)
+        res = rounds.run_suite(
+            [sys.executable, "-c",
+             "import sys; sys.exit(5 if sys.stdin.read() else 0)"],
+            tmp_path, 30.0)
+    finally:
+        os.dup2(saved, 0)
+        os.close(saved)
+    assert (res.available, res.ok) == (True, True)
+
+
 def test_run_suite_unstartable_command(tmp_path):
     res = rounds.run_suite(["/nonexistent-xuen-suite-cmd"], tmp_path, 10.0)
     assert (res.available, res.stopped) == (False, False)
@@ -1891,6 +1918,77 @@ def test_helper_show_tolerates_invalid_utf8(tmp_path):
     assert "\ufffd" in out
     # 标记行与结构照常可读，供外边看现状
     assert state.SECTION_IDEA in out and state.SECTION_ARTIFACT in out
+
+
+def test_state_supports_cr_only_line_endings(tmp_path):
+    """状态文件为裸 CR 行尾（老式 Mac 编辑器 / 手工转换）时区块必须可读可写。
+
+    回归：_SECTION_MARKER 的 (?m)^...$ 只认 \\n，CR-only 文件里所有标记都
+    识别不到：get_section 两个区块都返回空串，update_section_file 还会在
+    文件末尾另建一对标记，原有内容沦为死数据。"""
+    state_path = tmp_path / "research.md"
+    state_path.write_bytes(
+        state.scaffold("测试任务").replace("\n", "\r").encode("utf-8"))
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "（暂无）"
+    assert state.update_section_file(state_path, state.SECTION_IDEA, "CR 想法") \
+        == ("（暂无）", "CR 想法")
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "CR 想法"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "（暂无）"
+
+
+def test_strip_stray_markers_handles_cr_only_lines():
+    """_strip_stray_markers 必须能清除裸 CR 行尾的独占整行标记。"""
+    s, e = state.start_marker(state.SECTION_IDEA), \
+        state.end_marker(state.SECTION_IDEA)
+    text = f"前言\r{s}\r正文\r{e}"
+    assert state._strip_stray_markers(text, [], 0, s, e) == "前言\r正文"
+    # 行内提及的标记文本是普通内容，必须保留
+    inline = f"前言\r说明：{s} 是标记\r正文"
+    assert state._strip_stray_markers(inline, [], 0, s, e) == inline
+
+
+def test_helper_writes_sections_in_cr_only_state(tmp_path):
+    """写入助手脚本必须与 xuen.state 同口径支持裸 CR 行尾。
+
+    回归：helper 内嵌的是 _SECTION_MARKER 的副本，只认 \\n；CR-only
+    状态文件里已有标记全被当正文，写入新区块后另一区块读出内容被清空。"""
+    import subprocess
+
+    state_path = tmp_path / "research.md"
+    state_path.write_bytes(
+        state.scaffold("测试任务").replace("\n", "\r").encode("utf-8"))
+    helper = state.write_helper_script(tmp_path, state_path)
+    r = subprocess.run([sys.executable, str(helper), "idea"],
+                       input="CR 想法".encode("utf-8"), capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "CR 想法"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "（暂无）"
+
+
+def test_update_section_preserves_other_section_with_mixed_line_endings(tmp_path):
+    """混合 CR/LF 行尾时更新一个区块不得改变另一区块读出内容。
+
+    回归：ARTIFACT 的 START 用 LF、紧接着的 END 用 CR、后面还有一个 LF
+    END 时，旧解析把 CR 行尾的 END 当正文、与后面的 LF END 配对；更新
+    IDEA 清除游离标记后，ARTIFACT 读出内容从「文本 + END 字面量」变成
+    「文本」。"""
+    state_path = tmp_path / "research.md"
+    text = (
+        f"{state.start_marker(state.SECTION_ARTIFACT)}\n"
+        f"文本\r{state.end_marker(state.SECTION_ARTIFACT)}\n"
+        f"{state.end_marker(state.SECTION_ARTIFACT)}\r"
+    )
+    state_path.write_bytes(text.encode("utf-8"))
+    before = state._first_section(text, state.SECTION_ARTIFACT)
+    assert before == "文本"
+    state.update_section_file(state_path, state.SECTION_IDEA, "新想法")
+    text = state_path.read_text(encoding="utf-8")
+    assert state._first_section(text, state.SECTION_ARTIFACT) == before
+    assert state.get_section(text, state.SECTION_IDEA) == "新想法"
 
 
 def test_read_events_tolerates_encoding_corrupt_line(ws):
