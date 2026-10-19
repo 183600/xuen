@@ -37,7 +37,33 @@ def ensure_state_file(path: Path, task: str) -> str:
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(scaffold(task), encoding="utf-8")
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        # 与 update_section_file / 写入助手同一口径：非法 UTF-8（外部编辑器
+        # 按本地编码保存 / agent 写盘事故）按替换符降级读取，并立即回写修复
+        # （坏字节变 U+FFFD）。不能在这里抛错让整次运行中止——runner 会把
+        # 它转成「可备份后删除 research.md 重建」，按提示删文件等于丢掉全部
+        # 研究区块；运行期所有写入路径都能自愈，启动预检必须一致。
+        # 加锁后重读：若并发实例/写入助手已修复，直接复用其结果
+        with _locked_state(path):
+            try:
+                return path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                text = path.read_text(encoding="utf-8", errors="replace")
+                tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+                try:
+                    tmp.write_text(text, encoding="utf-8")
+                    os.replace(tmp, path)
+                except OSError:
+                    # 写盘失败时清掉半成品临时文件；抛给调用方按 OSError
+                    # 走友好提示（此时目录不可写，helper 也建不出来）
+                    try:
+                        tmp.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                    raise
+                return text
 
 
 def _first_span(text: str, name: str) -> tuple[int, int] | None:
@@ -628,7 +654,10 @@ def main() -> int:
     cmd = argv[0].lower()
     if cmd == "show":
         try:
-            with open(STATE_FILE, encoding="utf-8") as f:
+            # 与写入路径同一口径：非法 UTF-8 按替换符降级输出（U+FFFD），
+            # 而不是 traceback——状态文件正因写盘事故损坏时，show 正是
+            # 查看现状的通道，严格解码会让它当场崩溃
+            with open(STATE_FILE, encoding="utf-8", errors="replace") as f:
                 sys.stdout.write(f.read())
         except OSError as e:
             print(f"状态文件读取失败：{e}", file=sys.stderr)

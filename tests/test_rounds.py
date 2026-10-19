@@ -1821,6 +1821,48 @@ def test_restore_heals_invalid_utf8_state_file(ws):
     assert state.get_section(text, state.SECTION_ARTIFACT) == "好产物"
 
 
+def test_ensure_state_file_heals_invalid_utf8_at_startup(tmp_path):
+    """启动预检遇到非法 UTF-8 时必须就地修复，而不是让整次运行中止。
+
+    回归：运行期所有写入路径（update_section_file / 写入助手 / 守卫还原）
+    遇到非法 UTF-8 都会按替换符降级并回写修复，但 ensure_state_file 仍严格
+    解码，runner 把它转成 SystemExit「状态文件读取失败…可备份后删除
+    research.md 重建」——按提示删文件等于丢掉全部研究区块。"""
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "测试任务")
+    state_path.write_bytes(state_path.read_bytes().replace(
+        "（暂无）".encode("utf-8"), b"\xff"))
+    text = state.ensure_state_file(state_path, "测试任务")  # 不应抛
+    assert state.get_section(text, state.SECTION_IDEA) == "\ufffd"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "\ufffd"
+    # 修复必须已落盘：严格解码不再抛，磁盘内容与返回值一致
+    assert state_path.read_text(encoding="utf-8") == text
+
+
+def test_helper_show_tolerates_invalid_utf8(tmp_path):
+    """write_section.py show 遇到非法 UTF-8 必须降级输出而不是 traceback。
+
+    回归：写入子命令（idea/artifact）早已按替换符降级并回写修复，show 仍
+    严格解码——状态文件正因写盘事故损坏时，show 正是查看现状的通道，
+    却直接 UnicodeDecodeError 冒泡成 traceback（退出码 1）。"""
+    import subprocess
+
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "测试任务")
+    state_path.write_bytes(state_path.read_bytes().replace(
+        "（暂无）".encode("utf-8"), b"\xff"))
+    helper = state.write_helper_script(tmp_path, state_path)
+    r = subprocess.run([sys.executable, str(helper), "show"],
+                       cwd=str(tmp_path), capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    err = r.stderr.decode("utf-8", "replace")
+    assert "Traceback" not in err, err
+    out = r.stdout.decode("utf-8")
+    assert "\ufffd" in out
+    # 标记行与结构照常可读，供外边看现状
+    assert state.SECTION_IDEA in out and state.SECTION_ARTIFACT in out
+
+
 def test_read_events_tolerates_encoding_corrupt_line(ws):
     """history.jsonl 中间的行含非法 UTF-8 字节（写盘中途被杀留下的半截
     多字节字符 / 手工编辑事故）时，其余事件必须照常可读。

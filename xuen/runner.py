@@ -68,7 +68,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     try:
         state.ensure_state_file(state_path, task)
     except (OSError, UnicodeDecodeError) as e:
-        # 状态文件损坏（含坏编码）时给出明确提示而不是 traceback
+        # 读取/回写失败（权限、目录被占等）给出明确提示而不是 traceback；
+        # 非法 UTF-8 已在 ensure_state_file 内降级并回写修复，不会走到这里
         raise SystemExit(f"状态文件读取失败：{e}（可备份后删除 {state_path} 重建）")
     try:
         helper = state.write_helper_script(workspace, state_path)

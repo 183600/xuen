@@ -254,6 +254,29 @@ def test_no_rounds_runs_legacy_behavior(env, tmp_path):
     assert not (ws / "rounds").exists()
 
 
+def test_startup_heals_invalid_utf8_state_file(env, tmp_path):
+    """research.md 在启动前即含非法 UTF-8 字节时，运行必须照常开始并把
+    文件修复，而不是以 SystemExit「可备份后删除 research.md 重建」中止。
+
+    回归：运行期所有写入路径都能自愈非法 UTF-8，但启动预检
+    ensure_state_file 严格解码，一字节损坏 = 整次运行被拒绝，用户按提示
+    删文件重建会丢掉全部研究区块。"""
+    from xuen import state
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    state_path = ws / "research.md"
+    state.ensure_state_file(state_path, "测试任务")
+    # 标题行混入坏字节：轮次只会覆盖两个区块，标题能证明修复已落盘
+    state_path.write_bytes(state_path.read_bytes().replace(
+        "测试任务".encode("utf-8"), b"\xff", 1))
+    runner.run(cfg, "测试任务", sink=NullSink())
+    assert (ws / "counter.txt").read_text() == "3"
+    text = state_path.read_text(encoding="utf-8")  # 修复后严格解码不应抛
+    assert "\ufffd" in text
+    assert state.get_section(text, state.SECTION_IDEA) == "第 3 版想法"
+
+
 def test_late_verdict_adoption_shown_in_finish(env, tmp_path, monkeypatch):
     """循环期间补交的评分在 finish() 兑现后，最终展示不能停在旧内容。"""
     from xuen.rounds import RoundGuard
