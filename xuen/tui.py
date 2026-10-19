@@ -310,11 +310,13 @@ def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
     worker = app._worker
     if worker is not None:
         worker.join(timeout=20)
-        # join 超时时 exit_code 可能仍是初始的 0；不能把未干净收尾误报为成功
-        if worker.is_alive():
-            return 1
     # 循环尚未收尾时被 Ctrl+C 中断：按 README 约定返回 130，而不是把
-    # 初始/残留的 exit_code（通常为 0，或中断导致的失败码）返回
+    # 初始/残留的 exit_code（通常为 0，或中断导致的失败码）返回。
+    # 必须在 is_alive() 判断之前：worker 未能在 20s 内收尾时同样不能把
+    # 用户的主动中断改写成「全部轮次失败」的退出码 1
     if getattr(app, "interrupted", False):
         return 130
+    if worker is not None and worker.is_alive():
+        # join 超时时 exit_code 可能仍是初始的 0；不能把未干净收尾误报为成功
+        return 1
     return getattr(app, "exit_code", 0)
