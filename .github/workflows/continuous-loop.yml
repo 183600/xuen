@@ -358,6 +358,106 @@ jobs:
             esac
           }
 
+          # ================= 新增：概率测试门（20% 执行 / 80% 跳过）=================
+          # 在每轮「修复 bug 的 opencode 调用」提交之后触发（调用点见主循环 git push 之后）。
+          # 掷骰子 1..100：≤20 才执行本步（80% 直接跳过）——跑一遍本仓库的测试；
+          # 跑不通 → 调用 opencode 修复 → 修复结果按本仓库既有提交路径落到 main/master。
+          maybe_run_tests() {
+            local iter="$1"
+            local TG_ROLL=$(( (RANDOM % 100) + 1 ))
+            if [ "$TG_ROLL" -gt 20 ]; then
+              echo "[test-gate] iter #$iter 骰子 ${TG_ROLL}/100 > 20，本轮不跑测试（80%）"
+              return 0
+            fi
+            echo "[test-gate] iter #$iter 骰子 ${TG_ROLL}/100 ≤ 20，本轮执行测试（20%）"
+            local TG_REMAIN=$(( DEADLINE - SECONDS ))
+            if [ "$TG_REMAIN" -lt 1200 ]; then
+              echo "[test-gate] 剩余时间不足 20 分钟，放弃本次测试"
+              return 0
+            fi
+            cat > /tmp/tg_run.sh <<'TGEOF'
+            set +e
+            [ -d tests ] || exit 42
+            python3 -m pip install --quiet pytest >/dev/null 2>&1 || exit 43
+            timeout 300 python3 -m pip install --quiet -r requirements.txt >/dev/null 2>&1 || true
+            python3 -m pytest tests/ -q
+            exit $?
+          TGEOF
+            local TG_LOG=/tmp/test_gate.log
+            echo "=========== TEST GATE (iter #$iter) ==========="
+            timeout --kill-after=60 1500 bash /tmp/tg_run.sh > "$TG_LOG" 2>&1
+            local TG_EC=$?
+            tail -25 "$TG_LOG" 2>/dev/null || true
+            if [ "$TG_EC" -eq 0 ]; then
+              echo "[test-gate] 测试通过，无需修复"
+              return 0
+            fi
+            if [ "$TG_EC" -eq 42 ]; then
+              echo "[test-gate] 本仓库没有可识别的测试，跳过"
+              return 0
+            fi
+            if [ "$TG_EC" -eq 43 ]; then
+              echo "[test-gate] 测试依赖环境不可用（安装失败），跳过修复"
+              return 0
+            fi
+            if [ "$TG_EC" -eq 124 ] || [ "$TG_EC" -eq 137 ] || [ "$TG_EC" -eq 143 ]; then
+              echo "[test-gate] 测试超时/被中断 (exit=$TG_EC)，结果不确定，本轮不修复"
+              return 0
+            fi
+            echo "[test-gate] 测试未通过 (exit=$TG_EC)，调用 opencode 修复"
+            local TG_FIX_BUDGET=$(( DEADLINE - SECONDS - 900 ))
+            if [ "$TG_FIX_BUDGET" -lt 900 ]; then
+              echo "[test-gate] 剩余时间不足以安排修复，仅记录失败"
+              return 0
+            fi
+            if [ "$TG_FIX_BUDGET" -gt 2700 ]; then TG_FIX_BUDGET=2700; fi
+            {
+              echo '本仓库的测试跑不通，请修复。复现方式：在仓库根目录运行 bash /tmp/tg_run.sh。'
+              echo
+              echo '失败日志（最后 80 行）：'
+              tail -80 "$TG_LOG" 2>/dev/null
+              echo
+              echo '要求：'
+              echo '1. 只修复导致测试失败的问题，不得削弱、跳过或删除测试，不得修改门禁脚本让断言失效；'
+              echo '2. 不要借修复之名重写无关代码，保持原有功能语义不变；'
+              echo '3. .github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；'
+              echo '4. 修复后必须自行运行测试并确认完全通过。'
+            } > /tmp/tg_fix_prompt.txt
+            if pick_model; then
+              local TG_EFFORT TG_FIXVAR
+              TG_EFFORT="$(variant_for "$CURRENT_MODEL")"
+              TG_FIXVAR=()
+              if [ -n "$TG_EFFORT" ]; then TG_FIXVAR=(--variant "$TG_EFFORT"); fi
+              echo "[test-gate] 修复调用 model=$CURRENT_MODEL effort=${TG_EFFORT:-none}"
+              : > "$OUT"
+              timeout --signal=INT --kill-after=30s "$TG_FIX_BUDGET" \
+                opencode run -m "$CURRENT_MODEL" ${TG_FIXVAR[@]+"${TG_FIXVAR[@]}"} "$(cat /tmp/tg_fix_prompt.txt)" 2>&1 \
+                | tee "$OUT" | python3 "$CLEANER" || true
+            else
+              echo "[test-gate] 拿不到可用模型，跳过修复"
+              return 0
+            fi
+
+
+            timeout --kill-after=30 600 bash /tmp/tg_run.sh > /tmp/test_gate_verify.log 2>&1
+            local TG_VEC=$?
+            if [ "$TG_VEC" -eq 0 ]; then
+              echo "[test-gate] 修复后复跑测试：通过"
+            else
+              echo "[test-gate] 修复后复跑测试仍未通过 (exit=$TG_VEC)"
+            fi
+
+            git checkout HEAD -- .github 2>/dev/null
+            git clean -fdq .github 2>/dev/null
+            if [ -n "$(git status --porcelain)" ]; then
+              git add -A
+              git commit -m "chore: test fixes by opencode (iter ${ITER})" 2>/dev/null
+            fi
+            git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
+
+            return 0
+          }
+
           DEADLINE=$((SECONDS + WORK_SECONDS))
           ITER=0
           while :; do
@@ -474,6 +574,9 @@ jobs:
               git commit -m "chore: automated bug fixes by opencode (iter ${ITER})" 2>/dev/null
             fi
             git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
+
+            # ⭐ 概率测试门（新增）：本轮 bug 修复提交后 20% 概率跑测试，详见 maybe_run_tests
+            maybe_run_tests "$ITER"
             echo "::endgroup::"
 
             LEFT=$((DEADLINE - SECONDS))
