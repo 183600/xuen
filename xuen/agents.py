@@ -817,8 +817,11 @@ class ShellAgent:
     # 单词字符的也只是普通 shell 变量拼接，同样不能误替换；$$prompt 里
     # shell 把 $$ 当 PID、prompt 只是字面量，也不算完整占位符（见
     # _placeholder_at）。
-    # Windows 分支仍用正则哨兵替换，边界类与之配套
-    _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_])"
+    # Windows 分支仍用正则哨兵替换，边界类与之配套：前置字符集要含 $，
+    # 否则 `$$prompt_file` 会把第二个 $prompt_file 替换掉、留下 `$+路径`
+    # 的坏参数（POSIX 侧对 $$ 后的占位符一律不替换、配置校验据此拒绝，
+    # Windows 上 cmd 不展开 $、没有对应语义，按同一口径不替换）。
+    _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_$])"
     _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
 
     def render_command(self, prompt: str, *, dry_run: bool = False) -> str:

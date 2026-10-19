@@ -181,6 +181,41 @@ def test_bad_workspace_path_friendly_error(env, tmp_path):
     assert "工作区不可用" in str(ei.value)
 
 
+def test_windows_runner_rejects_metachar_resolved_workspace(
+        env, tmp_path, monkeypatch):
+    """直接构造 Config（绕过 load_config 校验）时，runner 也要用解析后的
+    真实路径复核 cmd 元字符，绝不让坏路径裸插进 cmd 命令。
+
+    配置校验与 runner 的 resolve 之间存在符号链接改写窗口；本测试直接
+    构造含元字符路径的 Config，验证 runner 层的纵深防御。
+    """
+    import os as _os
+    from pathlib import PosixPath
+
+    from xuen import config
+
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    bad = ws.parent / "a&b"
+    bad.mkdir()
+    cfg.workspace = str(bad)
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    nt = _NtOs()
+    monkeypatch.setattr(runner, "os", nt)
+    monkeypatch.setattr(runner, "Path", PosixPath)
+    monkeypatch.setattr(config, "os", nt)
+    with pytest.raises(SystemExit) as ei:
+        runner.run(cfg, "测试任务", sink=NullSink())
+    assert "元字符" in str(ei.value), ei.value
+
+
 def test_no_rounds_runs_legacy_behavior(env, tmp_path):
     """--no-rounds：完全退回旧行为（无快照、无最佳、每轮直接覆盖）。"""
     ws, script = env
@@ -408,3 +443,79 @@ def test_interrupted_round_restores_best(env, tmp_path, monkeypatch):
     assert _read(ws, "IDEA") == "（暂无）"
     best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
     assert best["verifier"] == "baseline"
+
+
+def test_prompt_too_long_round_recorded_by_guard(env, tmp_path, monkeypatch):
+    """提示词过长立即中止的轮次也要向守卫记账（skipped）。
+
+    回归：该轮已计入主循环的 rounds，但 PromptTooLongError 分支直接
+    SystemExit，既没有 on_round_failed 也没有还原——守卫汇总的轮次数/
+    跳过数与主循环对不上，history.jsonl 里缺这一轮的记录（审计无法
+    还原「这一轮为什么没出现」）。
+    """
+    from xuen.agents import PromptTooLongError
+
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.loop.iterations = 3
+
+    def behavior(agent):
+        raise PromptTooLongError("提示词过长（E2BIG），请改用 $prompt_file")
+
+    monkeypatch.setattr(runner, "ShellAgent",
+                        lambda *a, **k: _ScriptedAgent(behavior))
+
+    class InfoSink(NullSink):
+        def __init__(self):
+            self.infos = []
+
+        def info(self, text):
+            self.infos.append(text)
+
+    sink = InfoSink()
+    with pytest.raises(SystemExit) as ei:
+        runner.run(cfg, "测试任务", sink=sink)
+    assert ei.value.code == 1
+    # 轮次在 history 里有记录（skipped），且汇总与主循环口径一致
+    events = _events(ws)
+    assert any(e["event"] == "skipped" and "提示词过长" in e.get("reason", "")
+               for e in events), events
+    summary = [t for t in sink.infos if "轮次守卫汇总" in t][-1]
+    assert "轮次 1（候选 0：采纳 0 / 拒绝 0 / 待评分 0；心跳 0 / 跳过 1" \
+        in summary, summary
+
+
+def test_keyboard_interrupt_in_words_stage_finishes_guard(
+        env, tmp_path, monkeypatch):
+    """词库生成阶段的 Ctrl+C 也必须先收尾守卫（打印汇总/兑现补分）。
+
+    回归：守卫 start() 后已建立基线，词库生成可能在外部 agent 里跑很久；
+    中断直接从 run() 传播到 cli 时 guard.finish() 从未执行，verdicts.txt
+    里补交的用户评分静默滞留到下次运行，守卫汇总也不打印。
+    """
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    cfg.words.pick = 2
+    cfg.words.count = 10
+    cfg.words.batch = 5
+
+    def interrupt(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runner.words, "generate_words_shell", interrupt)
+
+    class InfoSink(NullSink):
+        def __init__(self):
+            self.infos = []
+
+        def info(self, text):
+            self.infos.append(text)
+
+    sink = InfoSink()
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(cfg, "测试任务", sink=sink)
+    assert any("轮次守卫汇总" in t for t in sink.infos), sink.infos
+    # 基线已建立（start 执行过），中断未把守卫目录留成半截
+    assert (ws / "rounds" / "best.json").exists()

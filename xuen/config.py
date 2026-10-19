@@ -248,6 +248,32 @@ def load_config(path: Optional[str] = None) -> Config:
     return cfg
 
 
+_WINDOWS_CMD_METACHARS = re.compile(r"[%!&^<>|]")
+
+
+def _windows_workspace_unsafe(workspace: str) -> bool:
+    """工作区原始字符串或解析后的真实路径是否含 cmd 元字符。
+
+    runner 会把 workspace expanduser/resolve 成绝对路径后才拼进
+    $prompt_file（父目录、符号链接目标里的 & % ! ^ < > | 会随之进入
+    命令），只查配置里的原始字符串会被「相对路径 + 元字符父目录」绕过；
+    resolve 允许路径不存在、不会建目录。无法解析的路径（如含 NUL 字节）
+    由 runner 以「工作区不可用」拒绝，这里不算元字符问题。
+    """
+    if _WINDOWS_CMD_METACHARS.search(workspace):
+        return True
+    try:
+        # 用 os.path 而不是 pathlib.Path：WindowsPath 只能在 Windows 上
+        # 实例化，测试里 monkeypatch os.name 为 "nt" 时会直接抛
+        # NotImplementedError；realpath 与 Path.resolve(strict=False)
+        # 同口径（相对路径按 cwd 展开、解析符号链接、允许路径不存在）
+        resolved = os.path.realpath(os.path.expanduser(workspace))
+    except (OSError, ValueError):
+        # 无法解析的路径（如含 NUL 字节）由 runner 以「工作区不可用」拒绝
+        return False
+    return bool(_WINDOWS_CMD_METACHARS.search(resolved))
+
+
 def _validate_windows_command(name: str, template: str,
                               workspace: str) -> None:
     """校验命令模板在 Windows（cmd.exe）下能否安全接收提示词。
@@ -257,6 +283,10 @@ def _validate_windows_command(name: str, template: str,
     拆成独立命令执行，% & ^ 等元字符还会被命令解释器展开），含元字符的
     工作区路径也会让 $prompt_file 的路径被 cmd 破坏。两条命令必须同口径
     校验——只查 agent.command 会把评审提示词里的候选内容送进 cmd 解析。
+
+    占位符正则的前置字符集含 $：`$$prompt_file` 里第二个 $prompt_file
+    只是字面量（与 POSIX 侧两两配对的 $$ 口径一致），不会被替换，不能
+    按「兑现的占位符」校验工作区路径。
     """
     if os.name != "nt":
         return
@@ -265,8 +295,9 @@ def _validate_windows_command(name: str, template: str,
             f"Windows 的 {name} 不能使用 $prompt；请改用 $prompt_file"
             "（提示词会被写入文件，避免 cmd 转义/换行问题）"
         )
-    if (re.search(r"(?<![A-Za-z0-9_])\$prompt_file(?![A-Za-z0-9_])", template)
-            and re.search(r"[%!&^<>|]", workspace)):
+    if (re.search(r"(?<![A-Za-z0-9_$])\$prompt_file(?![A-Za-z0-9_])",
+                  template)
+            and _windows_workspace_unsafe(workspace)):
         raise ValueError(
             f"Windows 下工作区路径含 cmd 元字符（% ! & ^ < > |），"
             f"{name} 的 $prompt_file 无法安全传递给外部 agent；"

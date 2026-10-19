@@ -39,6 +39,20 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             "配置错误：缺少外部 agent 命令。请在配置文件设置，例如：\n"
             "  agent:\n    command: 'opencode run \"$prompt\"'"
         )
+    # Windows 下用解析后的真实路径复核一次 cmd 元字符：配置校验按
+    # 原字符串 resolve，与这里的 resolve 之间可能被符号链接改写；直接
+    # 构造 Config 的调用也绕过 load_config 的校验，而 $prompt_file 的
+    # 路径会裸插进 cmd 命令（& % ^ 等会被当命令分隔符/展开），
+    # 见 config._validate_windows_command
+    if os.name == "nt":
+        from .config import _validate_windows_command
+        try:
+            _validate_windows_command("agent.command", cfg.agent.command,
+                                      str(workspace))
+            _validate_windows_command("rounds.judge_command",
+                                      cfg.rounds.judge_command, str(workspace))
+        except ValueError as e:
+            raise SystemExit(f"配置错误：{e}")
     try:
         workspace.mkdir(parents=True, exist_ok=True)
     except OSError as e:
@@ -73,87 +87,97 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         sink.stop_agent()
 
     # 4) 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分。
-    #    启用失败（目录不可写等）一律降级为无守卫模式，不阻断研究循环
+    #    启用失败（目录不可写等）一律降级为无守卫模式，不阻断研究循环。
+    #    词库生成阶段（外部 agent 可能跑很久）与守卫创建一起放在 try 里：
+    #    这里的 Ctrl+C / 预检失败 SystemExit 没有轮次循环的收尾处理器兜底，
+    #    必须在向上传播前补做守卫收尾（兑现待决用户评分 + 打印汇总），
+    #    否则会话中段补交的评分会静默滞留到下次运行
     guard: Optional[RoundGuard] = None
-    if cfg.rounds.enabled:
-        try:
-            guard = RoundGuard(cfg, task, state_path, workspace, sink)
-            guard.start()
-        except Exception as e:  # noqa: BLE001 —— 守卫降级原则，见 rounds 模块
-            # 不止 OSError：Path.resolve/mkdir 对非法路径（如 YAML 的
-            # "\0" 转义）会抛 ValueError，同样必须降级而不是炸掉循环
-            sink.warn(f"轮次守卫启用失败，本轮循环降级为无守卫模式：{e}")
-            guard = None
+    try:
+        if cfg.rounds.enabled:
+            try:
+                guard = RoundGuard(cfg, task, state_path, workspace, sink)
+                guard.start()
+            except Exception as e:  # noqa: BLE001 —— 守卫降级原则，见 rounds 模块
+                # 不止 OSError：Path.resolve/mkdir 对非法路径（如 YAML 的
+                # "\0" 转义）会抛 ValueError，同样必须降级而不是炸掉循环
+                sink.warn(f"轮次守卫启用失败，本轮循环降级为无守卫模式：{e}")
+                guard = None
 
-    # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
-    disk_words: List[str] = []
-    if cfg.words.pick > 0:
-        try:
-            disk_words = words.load_words(words_path)
-        except (OSError, UnicodeDecodeError) as e:
-            # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
-            # 但 --regen-words 或 words.reuse=false 时反正要重新生成、
-            # 旧词库不会被使用，不应被坏文件阻塞
-            if not regen_words and cfg.words.reuse:
-                raise SystemExit(f"词库读取失败：{e}")
-            sink.warn(f"已有词库读取失败（{e}），将重新生成")
-            disk_words = []
-    word_list = disk_words if not regen_words else []
-    if word_list and cfg.words.reuse:
-        sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
-    elif cfg.words.pick == 0:
-        sink.info("words.pick=0：本轮循环不使用灵感词，跳过词库生成")
-    else:
-        try:
-            sink.info(f"通过外部 agent 生成领域词库（目标 {cfg.words.count} 个，"
-                      f"每批 {cfg.words.batch} 个）")
-            word_list = words.generate_words_shell(
-                agent, task, cfg.words.count, cfg.words.batch,
-                info=sink.info, warn=sink.warn, stop=sink.should_stop,
-            )
-            # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库。
-            # 生成未达目标（用户停止 / 批次失败 / 词表不再增长）时拿到的可能
-            # 只是半截词表，若比磁盘上已有的词还少同样不能落盘：否则下次
-            # reuse 会把完整旧词库永久换成残缺词表（词汇静默丢失）
-            if word_list and len(word_list) < cfg.words.count \
-                    and disk_words and len(word_list) < len(disk_words):
-                if cfg.words.reuse and not regen_words:
-                    sink.warn(f"词库生成未完成（{len(word_list)} 个），"
-                              f"保留并复用磁盘上更完整的旧词库"
-                              f"（{len(disk_words)} 个词）")
+        # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
+        disk_words: List[str] = []
+        if cfg.words.pick > 0:
+            try:
+                disk_words = words.load_words(words_path)
+            except (OSError, UnicodeDecodeError) as e:
+                # 词库文件损坏（含坏编码）时给出明确提示而不是 traceback；
+                # 但 --regen-words 或 words.reuse=false 时反正要重新生成、
+                # 旧词库不会被使用，不应被坏文件阻塞
+                if not regen_words and cfg.words.reuse:
+                    raise SystemExit(f"词库读取失败：{e}")
+                sink.warn(f"已有词库读取失败（{e}），将重新生成")
+                disk_words = []
+        word_list = disk_words if not regen_words else []
+        if word_list and cfg.words.reuse:
+            sink.ok(f"复用已有词库：{words_path}（{len(word_list)} 个词）")
+        elif cfg.words.pick == 0:
+            sink.info("words.pick=0：本轮循环不使用灵感词，跳过词库生成")
+        else:
+            try:
+                sink.info(f"通过外部 agent 生成领域词库（目标 {cfg.words.count} 个，"
+                          f"每批 {cfg.words.batch} 个）")
+                word_list = words.generate_words_shell(
+                    agent, task, cfg.words.count, cfg.words.batch,
+                    info=sink.info, warn=sink.warn, stop=sink.should_stop,
+                )
+                # 生成结果为空时不落盘：避免空词库覆盖掉磁盘上已有的可用词库。
+                # 生成未达目标（用户停止 / 批次失败 / 词表不再增长）时拿到的可能
+                # 只是半截词表，若比磁盘上已有的词还少同样不能落盘：否则下次
+                # reuse 会把完整旧词库永久换成残缺词表（词汇静默丢失）
+                if word_list and len(word_list) < cfg.words.count \
+                        and disk_words and len(word_list) < len(disk_words):
+                    if cfg.words.reuse and not regen_words:
+                        sink.warn(f"词库生成未完成（{len(word_list)} 个），"
+                                  f"保留并复用磁盘上更完整的旧词库"
+                                  f"（{len(disk_words)} 个词）")
+                        word_list = disk_words
+                    else:
+                        # words.reuse=false 与 --regen-words 都是显式拒绝复用
+                        # 旧词库，不能绕回旧词库；但也不能用残缺词表覆盖它，
+                        # 本次循环临时使用生成结果
+                        sink.warn(f"词库生成未完成（{len(word_list)}/{cfg.words.count}），"
+                                  "本次临时使用，不覆盖磁盘上更完整的旧词库")
+                elif word_list:
+                    words.save_words(words_path, word_list)
+                    sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
+                elif disk_words and not regen_words and cfg.words.reuse:
+                    # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止。
+                    # words.reuse=false 是显式禁用复用，不能绕回旧词库。
                     word_list = disk_words
-                else:
-                    # words.reuse=false 与 --regen-words 都是显式拒绝复用
-                    # 旧词库，不能绕回旧词库；但也不能用残缺词表覆盖它，
-                    # 本次循环临时使用生成结果
-                    sink.warn(f"词库生成未完成（{len(word_list)}/{cfg.words.count}），"
-                              "本次临时使用，不覆盖磁盘上更完整的旧词库")
-            elif word_list:
-                words.save_words(words_path, word_list)
-                sink.ok(f"词库已保存：{words_path}（{len(word_list)} 个词）")
-            elif disk_words and not regen_words and cfg.words.reuse:
-                # 生成失败但磁盘上已有可用词库：回退复用，而不是直接中止。
-                # words.reuse=false 是显式禁用复用，不能绕回旧词库。
-                word_list = disk_words
-                sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
-            elif disk_words and regen_words:
-                # --regen-words 明确要求忽略已有词库：生成失败时不能悄悄
-                # 绕回旧词库（用户可能正是因为旧词库不可用才要求重建），
-                # 保持空词库，由下面的「词库为空」检查给出明确失败
-                sink.warn("词库生成失败；--regen-words 已按请求忽略磁盘上的"
-                          f"旧词库（{len(disk_words)} 个词）")
-        except (OSError, ValueError) as e:
-            # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte
-            #（如 --task-file 读入二进制文件）；与启动失败同等对待
-            raise SystemExit(f"词库生成失败：{e}")
-        # 空词库不再谎报「先继续」：下面会以「词库为空」正式中止
-        if word_list and len(word_list) < cfg.words.count:
-            sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
+                    sink.warn(f"词库生成失败，回退复用已有词库（{len(disk_words)} 个词）")
+                elif disk_words and regen_words:
+                    # --regen-words 明确要求忽略已有词库：生成失败时不能悄悄
+                    # 绕回旧词库（用户可能正是因为旧词库不可用才要求重建），
+                    # 保持空词库，由下面的「词库为空」检查给出明确失败
+                    sink.warn("词库生成失败；--regen-words 已按请求忽略磁盘上的"
+                              f"旧词库（{len(disk_words)} 个词）")
+            except (OSError, ValueError) as e:
+                # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte
+                #（如 --task-file 读入二进制文件）；与启动失败同等对待
+                raise SystemExit(f"词库生成失败：{e}")
+            # 空词库不再谎报「先继续」：下面会以「词库为空」正式中止
+            if word_list and len(word_list) < cfg.words.count:
+                sink.warn(f"词库未达目标（{len(word_list)}/{cfg.words.count}），先继续")
 
-    # 用户主动停止（如 TUI 按 q 中断词库生成）导致的空词库不算失败，
-    # 否则正常退出会被记成非零退出码的「词库为空」错误
-    if not word_list and cfg.words.pick > 0 and not sink.should_stop():
-        raise SystemExit(f"词库为空，无法继续。文件：{words_path}")
+        # 用户主动停止（如 TUI 按 q 中断词库生成）导致的空词库不算失败，
+        # 否则正常退出会被记成非零退出码的「词库为空」错误
+        if not word_list and cfg.words.pick > 0 and not sink.should_stop():
+            raise SystemExit(f"词库为空，无法继续。文件：{words_path}")
+    except (KeyboardInterrupt, SystemExit):
+        # 与轮次循环的中止路径同口径：先收尾再向上传播（cli 以 130 /
+        # 字符串 SystemExit 退出码 2 处理）
+        _guard_finish(guard)
+        raise
 
     # 3) 循环
     prev_idea, prev_artifact = _read_sections(state_path)
@@ -183,9 +207,14 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                                         state_path, helper, user_notes))
             except PromptTooLongError as e:
                 # 提示词随区块内容只增不减，同模板重试必然同样失败：
-                # 不再空转 3 轮，立即中止并给出可操作的建议
+                # 不再空转 3 轮，立即中止并给出可操作的建议。
+                # 该轮已在上面计入 rounds，中止前必须与其它失败轮次
+                # 同口径向守卫记账（skipped），否则守卫汇总的轮次数/
+                # 跳过数与主循环对不上、history 里缺这一轮的记录；
+                # agent 从未启动、research.md 未改动，还原是空操作
                 sink.err(str(e))
                 sink.err("重试不会成功，已中止循环")
+                _guard_round_failed(guard, i, "提示词过长，轮次未完成")
                 raise SystemExit(1)
             except (OSError, ValueError) as e:
                 # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte，

@@ -182,3 +182,37 @@ def test_windows_judge_command_bad_workspace(monkeypatch):
     with pytest.raises(ValueError, match="judge_command"):
         config._validate_windows_command(
             "rounds.judge_command", 'opencode run "$prompt_file"', "./ws&dir")
+
+
+def test_windows_workspace_resolved_path_metachars_rejected(
+        tmp_path, monkeypatch):
+    """工作区原始字符串不含元字符、解析后的真实路径含元字符时也要拒绝。
+
+    回归：runner 拼进 $prompt_file 的是 expanduser/resolve 后的绝对路径，
+    只校验配置里的原始字符串会被「相对路径 + 元字符父目录」或符号链接
+    目标绕过：路径裸插进 cmd 命令后会拆命令/丢字符。
+    """
+    from xuen import config
+    monkeypatch.setattr("os.name", "nt")
+    real = tmp_path / "a&b"
+    real.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(real)
+    with pytest.raises(ValueError, match="元字符"):
+        config._validate_windows_command(
+            "agent.command", 'opencode run "$prompt_file"', str(link))
+
+
+def test_windows_double_dollar_prompt_file_rejected(tmp_path, monkeypatch):
+    """$$prompt_file 里的占位符不会兑现，配置必须拒绝而不是静默接受。
+
+    回归：Windows 侧渲染器把第二个 $prompt_file 也替换掉，命令里残留
+    `$+路径`（cmd 不展开 $，外部 agent 拿到坏路径）；POSIX 侧则整段
+    不替换、command_receives_prompt 返回 False 后由配置校验明确拒绝。
+    """
+    monkeypatch.setattr("os.name", "nt")
+    with pytest.raises(ValueError, match="必须包含会被实际替换"):
+        load_config(write_cfg(tmp_path, """
+agent:
+  command: 'opencode run $$prompt_file'
+"""))

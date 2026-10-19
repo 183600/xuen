@@ -2204,6 +2204,41 @@ def test_render_windows_prompt_file_inside_quotes_is_not_double_quoted(
         assert '""' not in rendered, rendered
 
 
+def test_render_windows_double_dollar_prompt_file_not_substituted(
+        tmp_path, monkeypatch):
+    """Windows 下 $$prompt_file 里的 $prompt_file 同样不能替换。
+
+    回归：Windows 侧正则的前置边界允许 `$`，第二个 $prompt_file 被替换
+    后命令里残留 `$` 前缀（cmd 不展开 $，外部 agent 拿到 `$C:\\...` 的
+    坏路径），而 POSIX 侧整段不替换、配置校验据此拒绝；修复后两侧口径
+    一致：$$prompt_file 不被兑现（command_receives_prompt 返回 False），
+    真正落单的 $prompt_file 照常兑现。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    for tpl in ('tool $$prompt_file', 'tool "$$prompt_file"',
+                "tool '$$prompt_file'"):
+        assert agents.command_receives_prompt(tpl) is False, tpl
+        agent = agents.ShellAgent(tpl, tmp_path, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert "$prompt_file" in rendered, rendered
+            assert agent._prompt_file is None
+        finally:
+            agent._cleanup_prompt_file()
+    # 对照：落单的占位符仍被识别并兑现
+    assert agents.command_receives_prompt('tool "$prompt_file"') is True
+
+
 def test_render_command_repeated_calls_do_not_leak_prompt_files(tmp_path):
     """同一实例连续 render_command 时旧提示词文件不能残留。
 
