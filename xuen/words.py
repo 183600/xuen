@@ -47,7 +47,7 @@ def _strip_pairs(w: str) -> str:
             if open_ch not in w or close_ch not in w:
                 continue
             w = rx.sub(lambda m, _open=open_ch: _quote_repl(m, _open), w)
-        changed = w == before
+        changed = w != before
     return w
 
 def _unwrap_pair(w: str) -> str:
