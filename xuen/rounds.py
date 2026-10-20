@@ -498,10 +498,11 @@ class RoundGuard:
         # 本会话已计入 adopted / rejected 的候选 id（挂起另有 _pending_ids
         # 跟踪）：兜底记账据此幂等，已决候选绝不再补记成待评分
         self._settled_cids: set = set()
-        # 本会话已计入 adopted 的候选 id。集合成员是计数是否生效的权威
+        # 本会话已计入各结论桶的候选 id。集合成员是计数是否生效的权威
         # 依据：中断可能落在「统计 +1」与「settled 标记」之间，单看 int
-        # 无法区分是否已计入；_count_adopted 可据此幂等对账
+        # 无法区分是否已计入；_sync_counts 可据此幂等对账
         self._adopted_ids: set = set()
+        self._rejected_ids: set = set()
         # 本会话内已由 on_round_end 处理（或已按失败/中断记账）的轮次：
         # KeyboardInterrupt 可能晚于守卫处理到达，on_round_failed 再记一遍
         # 会让轮次数/跳过数虚增、审计日志为同一轮记出自相矛盾的候选+跳过
@@ -746,6 +747,7 @@ class RoundGuard:
             self._apply_user_verdicts()
         except Exception as e:  # noqa: BLE001 —— 守卫降级原则
             self.sink.warn(f"应用待决用户评分失败（忽略）：{e}")
+        self._sync_counts()
         s = self.stats
         best = self.best
         self.sink.info(
@@ -828,6 +830,7 @@ class RoundGuard:
         该候选）时直接跳过，避免重复计数。记账本身失败只告警——不能
         掩盖触发它的原始异常。
         """
+        self._sync_counts()
         cid = self._inflight_cid
         if cid is None or cid in self._pending_ids \
                 or cid in self._settled_cids or self.best.get("id") == cid:
@@ -900,8 +903,7 @@ class RoundGuard:
                 # 判定已生效：事件缺失时靠内存集合阻止本轮收尾的
                 # _apply_user_verdicts 把同一候选再拒绝/采纳一次
                 self._applied_verdicts.add(cid)
-            self.stats.rejected += 1
-            self._settled_cids.add(cid)
+            self._count_rejected(cid)
             self.sink.err(f"候选 {cid} 被守卫拒绝：{verdict.reason}，已还原最佳")
             self._restore_best(round_no, why="结构损坏")
             return "rejected"
@@ -1045,8 +1047,7 @@ class RoundGuard:
         if verdict.result == "adopted":
             return "adopted"
         if verdict.result == "rejected":
-            self.stats.rejected += 1
-            self._settled_cids.add(cid)
+            self._count_rejected(cid)
             self.sink.warn(f"候选 {cid} 未通过（{verdesc(verdict)}），"
                            f"保留最佳并还原")
             self._restore_best(round_no, why="候选被拒绝")
@@ -1060,8 +1061,8 @@ class RoundGuard:
         正常挂起（评审无结论）与验证/晋升失败共用此记账口径：候选快照都
         已落盘，统计必须与之一一对应（adopted+rejected+pending==candidates），
         否则汇总自相矛盾、待评分候选数失真。"""
-        self.stats.pending += 1
         self._pending_ids.add(cid)
+        self._sync_counts()
         self._restore_best(round_no, why=why)
         self._hint_user_scoring(cid)
 
@@ -1353,11 +1354,23 @@ class RoundGuard:
                     pass
             raise
 
+    def _sync_counts(self) -> None:
+        """按本会话候选 id 集合重算结论桶，并补齐已决标记。"""
+        self.stats.adopted = len(self._adopted_ids)
+        self.stats.rejected = len(self._rejected_ids)
+        self.stats.pending = len(self._pending_ids)
+        self._settled_cids.update(self._adopted_ids)
+        self._settled_cids.update(self._rejected_ids)
+
     def _count_adopted(self, cid: str) -> None:
         """把候选计入 adopted；集合成员是幂等对账的提交点。"""
         self._adopted_ids.add(cid)
-        self.stats.adopted = len(self._adopted_ids)
-        self._settled_cids.add(cid)
+        self._sync_counts()
+
+    def _count_rejected(self, cid: str) -> None:
+        """把候选计入 rejected；集合成员是幂等对账的提交点。"""
+        self._rejected_ids.add(cid)
+        self._sync_counts()
 
     def _adopt(self, cid: str, round_no: int, verdict: Verdict) -> None:
         # 晋升的必须是被验证过的候选快照本身：测试套件 / AI 评审可能跑很久，
@@ -1614,14 +1627,12 @@ class RoundGuard:
             # （跨会话旧候选也计入，否则汇总会一边宣布晋升、一边报
             # 「采纳 0」）；pending 只回减本会话计入过待评分的候选，
             # 跨会话候选从未加过，绝不能把它减成负数
-            if cid in self._pending_ids:
-                self._pending_ids.discard(cid)
-                self.stats.pending -= 1
+            self._pending_ids.discard(cid)
             if adopted:
                 self.best = best
                 self._count_adopted(cid)
             else:
-                self.stats.rejected += 1
+                self._count_rejected(cid)
             if not adopted:
                 self.sink.info(f"旧候选 {cid} 获用户补评 {score:g}，"
                                "未达阈值，保持当前最佳")

@@ -3624,3 +3624,41 @@ def test_interrupt_inside_adopted_count_does_not_double_count(ws, monkeypatch):
     guard.on_round_failed(1, "被中断，轮次未完成")
     guard.finish()
     assert guard.stats.adopted == 1
+
+
+def test_interrupt_after_rejected_count_before_settled(ws, monkeypatch):
+    """拒绝记账中断：rejected 已加但已决标记未落时不能补成 pending。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "会被拒绝的想法")
+
+    monkeypatch.setattr(
+        guard, "_verify",
+        lambda round_no, cid: rounds.Verdict(
+            verifier="tests", result="rejected", reason="模拟拒绝"))
+    real_count = guard._count_rejected
+    armed = True
+
+    def half_count(cid):
+        nonlocal armed
+        if armed:
+            armed = False
+            guard._rejected_ids.add(cid)
+            guard.stats.rejected += 1
+            raise KeyboardInterrupt
+        return real_count(cid)
+
+    monkeypatch.setattr(guard, "_count_rejected", half_count)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 0, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard._inflight_cid is None
+    assert all(cid in guard._settled_cids for cid in guard._rejected_ids)
+    guard.on_round_failed(1, "被中断，轮次未完成")
+    guard.finish()
+    assert guard.stats.rejected == 1
+    assert guard.stats.pending == 0
