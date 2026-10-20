@@ -218,6 +218,23 @@ agent:
 """))
 
 
+def test_windows_triple_dollar_prompt_file_checks_workspace(monkeypatch):
+    """$$$prompt_file 的第三个 $ 会被兑现，Windows 工作区检查不能漏掉。
+
+    回归：`(?<![A-Za-z0-9_$])` 看不到紧跟在 $ 后的占位符，含 cmd 元字符的
+    工作区路径会被裸插进命令；连续 $ 的配对必须与渲染器一致。
+    """
+    from xuen import config
+
+    monkeypatch.setattr("os.name", "nt")
+    with pytest.raises(ValueError, match="元字符"):
+        config._validate_windows_command(
+            "agent.command", "opencode run $$$prompt_file", "./ws&dir")
+    # $$prompt_file 是字面量，不插入路径，工作区元字符无需拦截
+    config._validate_windows_command(
+        "agent.command", "opencode run $$prompt_file", "./ws&dir")
+
+
 def test_windows_double_dollar_prompt_is_literal(tmp_path, monkeypatch):
     """$$prompt 不是占位符，与 $prompt_file 同模板时必须放行。
 
@@ -307,6 +324,17 @@ def test_huge_integer_timeout_rejected_with_field_name(tmp_path):
         load_config(write_cfg(tmp_path, BASE + f"""
 rounds:
   verify_timeout: {huge}
+"""))
+
+
+def test_huge_iterations_rejected_with_field_name(tmp_path):
+    """超出平台 range 上限的轮数必须在配置阶段拒绝，不能让 runner 抛
+    OverflowError（正整数语义上合法，但 Python range 无法表示）。"""
+    huge = "9" * 400
+    with pytest.raises(ValueError, match="loop.iterations"):
+        load_config(write_cfg(tmp_path, BASE + f"""
+loop:
+  iterations: {huge}
 """))
 
 

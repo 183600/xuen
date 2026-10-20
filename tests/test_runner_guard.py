@@ -384,8 +384,16 @@ def test_interrupt_mid_guard_restores_without_double_count(
 
     monkeypatch.setattr(RoundGuard, "_verify", verify_then_interrupt)
 
+    class InfoSink(NullSink):
+        def __init__(self):
+            self.infos = []
+
+        def info(self, text):
+            self.infos.append(text)
+
+    sink = InfoSink()
     with pytest.raises(KeyboardInterrupt):
-        runner.run(cfg, "测试任务", sink=NullSink())
+        runner.run(cfg, "测试任务", sink=sink)
 
     events = _events(ws)
     # 候选已快照（产物不丢）、尚未定论；状态被还原到基线
@@ -396,6 +404,9 @@ def test_interrupt_mid_guard_restores_without_double_count(
     assert _read(ws, "IDEA") == "（暂无）"
     best = json.loads((ws / "rounds" / "best.json").read_text(encoding="utf-8"))
     assert best["verifier"] == "baseline"
+    # 中断候选不能从汇总里消失：候选已快照、尚未定论 → 待评分 1
+    summary = [t for t in sink.infos if "轮次守卫汇总" in t][-1]
+    assert "轮次 1（候选 1：采纳 0 / 拒绝 0 / 待评分 1" in summary, summary
 
 
 def test_red_repo_pending_via_user_verdicts(env, tmp_path):

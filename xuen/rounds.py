@@ -293,8 +293,15 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 return ["npm", "test"]
         except (OSError, ValueError):
             pass
-    # 4) go test
-    if any(repo.glob("*.go")) and shutil.which("go"):
+    # 4) go test：根目录直接有 .go 文件，或 go.mod 模块下任意子包有
+    #    .go 文件。只查根目录会把 `go.mod + cmd/ + internal/` 这类标准
+    #    布局当成没有套件（go test ./... 明明能跑），候选永远无法用测试
+    #    验证。没有 go.mod 的嵌套 .go 不算：模块模式下从仓库根执行
+    #    `go test ./...` 会因找不到 go.mod 失败，不属于可用套件。
+    if shutil.which("go") and (
+            any(repo.glob("*.go"))
+            or ((repo / "go.mod").is_file()
+                and any(repo.rglob("*.go")))):
         return ["go", "test", "./..."]
     return None
 
@@ -863,6 +870,20 @@ class RoundGuard:
                 self.sink.warn(f"记录候选挂起事件失败（忽略）：{e2}")
             self._pend(round_no, cid, "验证失败，候选挂起")
             raise
+        except KeyboardInterrupt:
+            # 中断落在验证/晋升途中：候选快照已落盘但还没有结论，必须按
+            # 「待评分」记账，否则汇总会出现「候选 1、采纳/拒绝/待评分全
+            # 0」，违反 adopted+rejected+pending==candidates。既有中断
+            # 语义保持不变：不写 verdict 事件（不能把中断伪装成已决），
+            # runner 的 on_round_failed 只补做还原，不重复记轮次。
+            # 若 _adopt 已在中断前提交成功（best 已指向该候选），则不能
+            # 再挂起它（否则 adopted+pending 会超过 candidates）。
+            if self.best.get("id") != cid:
+                try:
+                    self._pend(round_no, cid, "轮次被中断，候选挂起")
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+            raise
         # 判定已经生效（采纳已完成外部副作用，拒绝/挂起只是记账），
         # 审计事件写盘失败（磁盘满 / 只读）不能反过来把本轮变成异常：
         # 异常会被 runner 当成「守卫处理异常」跳过后续记账——拒绝/挂起
@@ -1035,19 +1056,22 @@ class RoundGuard:
         return True, text
 
     def _read_candidate_text(self, cid: str) -> str:
-        """候选快照内容；不可读（如被外部删除）时退回当前状态。
+        """严格读取候选快照内容；不可读时抛 OSError（不退回实时状态）。
 
-        与 _adopt 同一读取口径：评审员必须看到与被晋升物【完全相同】的
-        内容。评审期间 research.md 可能被外部再改一次（后台进程收尾、
-        用户手改、并发的另一实例），直接重读实时状态会让评审的是 A、
-        晋升的是快照 B——AI 给 A 打的分被用来采纳从未被验证过的 B，
-        候选/最佳分离的验证不变量被破坏。
+        与 _adopt / _apply_user_verdicts 同一读取口径：评审员必须看到与
+        被晋升物【完全相同】的内容。评审期间 research.md 可能被外部再改
+        一次（后台进程收尾、用户手改、并发的另一实例），直接重读实时状态
+        会让评审的是 A、晋升的是快照 B——AI 给 A 打的分被用来采纳从未被
+        验证过的 B，候选/最佳分离的验证不变量被破坏。
+        快照在验证期间被删除/损坏时，候选无法证明被验证过：调用方按
+        「待评分」挂起（快照恢复后仍可补分），绝不能拿未验证的实时状态
+        顶替。
         """
         try:
             return (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
                 encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            return self._read_state_text()
+        except (OSError, UnicodeDecodeError) as e:
+            raise OSError(f"候选快照 {cid} 不可读：{e}") from e
 
     def _judge_prompt(self, round_no: int, cid: str) -> str:
         best_text = self._read_best_md()
@@ -1178,8 +1202,8 @@ class RoundGuard:
         # 期间状态文件可能被外部再改一次。直接读当前状态会把未经验证的内容
         # 写进 best.md（best.json 记录的却是候选 id）；下一轮候选被拒时
         # _restore_best 就会把这份未验证内容还原进研究循环，破坏候选/最佳
-        # 分离。快照不可读（如被外部删除）时才退回当前状态（见
-        # _read_candidate_text，评审提示词也用同一读取口径）
+        # 分离。快照不可读（如验证期间被外部删除）时抛异常，由调用方
+        # 按「待评分」挂起；绝不能退回当前状态晋升未验证内容。
         text = self._read_candidate_text(cid)
         # 快照写入后可能被外部截断/篡改（见 _structure_intact）：晋升前
         # 重新校验区块结构，损坏快照按写盘失败处理（异常上抛，候选保持

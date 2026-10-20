@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -327,13 +328,13 @@ def _validate_windows_command(name: str, template: str,
     """
     if os.name != "nt":
         return
-    if re.search(r"(?<![A-Za-z0-9_$])\$prompt(?![A-Za-z0-9_])", template):
+    from .agents import _windows_placeholder_starts
+    if any(_windows_placeholder_starts(template, "$prompt")):
         raise ValueError(
             f"Windows 的 {name} 不能使用 $prompt；请改用 $prompt_file"
             "（提示词会被写入文件，避免 cmd 转义/换行问题）"
         )
-    if (re.search(r"(?<![A-Za-z0-9_$])\$prompt_file(?![A-Za-z0-9_])",
-                  template)
+    if (any(_windows_placeholder_starts(template, "$prompt_file"))
             and _windows_workspace_unsafe(workspace)):
         raise ValueError(
             f"Windows 下工作区路径含 cmd 元字符（% ! & ^ < > |），"
@@ -360,6 +361,9 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.count / words.batch 必须为正整数")
     if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
+    if (cfg.loop.iterations is not None
+            and cfg.loop.iterations > sys.maxsize):
+        raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
     # ---- 轮次守卫 ----

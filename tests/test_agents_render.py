@@ -2239,6 +2239,48 @@ def test_render_windows_double_dollar_prompt_file_not_substituted(
     assert agents.command_receives_prompt('tool "$prompt_file"') is True
 
 
+def test_render_windows_dollar_run_parity_for_prompt_file(
+        tmp_path, monkeypatch):
+    """Windows 下 $$$prompt_file 的第三个 $ 才是占位符（与 POSIX 配对一致）。
+
+    回归：前置边界 `(?<![A-Za-z0-9_$])` 把任何紧跟在 $ 后的占位符都排除，
+    `$$$prompt_file` 因此整段不替换；POSIX 侧把前两个 $ 配成 $$、第三个
+    才开启真实占位符，同一配置在 Windows 上静默丢掉提示词路径。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    for tpl in ('tool $$$prompt_file', 'tool "$$$prompt_file"',
+                "tool '$$$prompt_file'", 'tool $$$$$prompt_file'):
+        assert agents.command_receives_prompt(tpl) is True, tpl
+        agent = agents.ShellAgent(tpl, tmp_path, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None, tpl
+            path = str(agent._prompt_file.resolve())
+            assert rendered == tpl.replace("$prompt_file", path), rendered
+        finally:
+            agent._cleanup_prompt_file()
+    # 偶数个连续 $ 仍按字面量处理，不能凭空替换出坏路径
+    for tpl in ('tool $$prompt_file', 'tool $$$$prompt_file'):
+        assert agents.command_receives_prompt(tpl) is False, tpl
+        agent = agents.ShellAgent(tpl, tmp_path, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert "$prompt_file" in rendered, rendered
+            assert agent._prompt_file is None
+        finally:
+            agent._cleanup_prompt_file()
+
+
 def test_render_windows_rejects_dialect_quotes(tmp_path, monkeypatch):
     """Windows 下 $'...' / $"..." 也要整体拒绝，与 POSIX 侧同口径。
 

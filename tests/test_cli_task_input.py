@@ -56,6 +56,13 @@ def test_task_file_conflict_returns_2_not_raise(tmp_path, capsys):
     assert "不能同时使用" in capsys.readouterr().err
 
 
+def test_huge_iterations_returns_2_not_traceback(capsys):
+    """CLI 覆盖的巨大轮数必须在 _validate 阶段拒绝（range 无法表示）。"""
+    rc = cli.main(["-c", EXAMPLE, "--iterations", "9" * 400, "任务"])
+    assert rc == 2
+    assert "iterations" in capsys.readouterr().err
+
+
 def test_unreadable_task_file_returns_2_not_raise(tmp_path, capsys):
     """任务文件读不到：同样返回 2（错误信息已打印），不外泄 SystemExit。"""
     rc = cli.main(["-c", EXAMPLE, "--task-file", str(tmp_path / "missing")])

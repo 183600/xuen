@@ -71,6 +71,30 @@ def _cmd_double_quotes_after(text: str, in_quotes: bool) -> bool:
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
+def _windows_placeholder_starts(tpl: str, ph: str):
+    """Windows 模板中会兑现的占位符起点（按 $$ 两两配对判断）。"""
+    start = 0
+    while True:
+        i = tpl.find(ph, start)
+        if i < 0:
+            return
+        start = i + 1
+        end = i + len(ph)
+        if end < len(tpl) and _WORD_CHAR.match(tpl[end]):
+            continue
+        k = i - 1
+        dollars = 0
+        while k >= 0 and tpl[k] == "$":
+            dollars += 1
+            k -= 1
+        if dollars:
+            if dollars % 2 == 0:
+                yield i
+            continue
+        if k < 0 or not _WORD_CHAR.match(tpl[k]):
+            yield i
+
+
 def _prev_effective_pos(tpl: str, i: int,
                         commented_backslashes: Optional[Set[int]] = None) -> int:
     """返回 i 左侧「shell 分词时真正相邻」字符的下标；无则为 -1。
@@ -817,12 +841,10 @@ class ShellAgent:
     # 单词字符的也只是普通 shell 变量拼接，同样不能误替换；$$prompt 里
     # shell 把 $$ 当 PID、prompt 只是字面量，也不算完整占位符（见
     # _placeholder_at）。
-    # Windows 分支仍用正则哨兵替换，边界类与之配套：前置字符集要含 $，
-    # 否则 `$$prompt_file` 会把第二个 $prompt_file 替换掉、留下 `$+路径`
-    # 的坏参数（POSIX 侧对 $$ 后的占位符一律不替换、配置校验据此拒绝，
-    # Windows 上 cmd 不展开 $、没有对应语义，按同一口径不替换）。
-    _PLACEHOLDER_HEAD = r"(?<![A-Za-z0-9_$])"
-    _PLACEHOLDER_BOUNDARY = r"(?![A-Za-z0-9_])"
+    # Windows 分支同样按连续 $ 两两配对（_windows_placeholder_starts）：
+    # `$$prompt_file` 的第二个 $ 只是字面量，`$$$prompt_file` 的第三个
+    # 才是占位符；否则会把字面量当路径替换、或在奇数个 $ 时漏掉真正的
+    # 占位符（与 POSIX 侧口径一致）。
 
     def render_command(self, prompt: str, *, dry_run: bool = False) -> str:
         # 同一实例可能被连续渲染多次（直接 API 调用，或上一次渲染后未走
@@ -1851,23 +1873,26 @@ class ShellAgent:
         # 剩余占位符要按所在的 cmd 引号状态区分：引号内插裸路径、引号外
         # 插转义路径（Windows 上 $prompt 已被配置校验整体拒绝，只有
         # $prompt_file 需要区分；见 config._validate）
-        pattern = re.compile(self._PLACEHOLDER_HEAD + r"\$prompt_file"
-                             + self._PLACEHOLDER_BOUNDARY)
         parts = []
         last = 0
         in_quotes = False
-        for match in pattern.finditer(tpl):
-            in_quotes = _cmd_double_quotes_after(tpl[last:match.start()],
-                                                 in_quotes)
-            parts.append(tpl[last:match.start()])
+        for i in _windows_placeholder_starts(tpl, "$prompt_file"):
+            in_quotes = _cmd_double_quotes_after(tpl[last:i], in_quotes)
+            parts.append(tpl[last:i])
             parts.append(f_inq_sentinel if in_quotes else f_sentinel)
-            last = match.end()
+            last = i + len("$prompt_file")
         parts.append(tpl[last:])
         tpl = "".join(parts)
         for ph in ('"$prompt"', "'$prompt'"):
             tpl = tpl.replace(ph, p_sentinel)
-        tpl = re.sub(self._PLACEHOLDER_HEAD + r"\$prompt"
-                     + self._PLACEHOLDER_BOUNDARY, p_sentinel, tpl)
+        parts = []
+        last = 0
+        for i in _windows_placeholder_starts(tpl, "$prompt"):
+            parts.append(tpl[last:i])
+            parts.append(p_sentinel)
+            last = i + len("$prompt")
+        parts.append(tpl[last:])
+        tpl = "".join(parts)
 
         if f_sentinel in tpl or f_inq_sentinel in tpl:
             if dry_run:

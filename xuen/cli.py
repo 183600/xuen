@@ -125,14 +125,10 @@ def main(argv=None) -> int:
                 print(f"--iterations 无效：{args.iterations!r}（应为整数或 inf）", file=sys.stderr)
                 return 2
 
-    if args.workspace is not None:
-        # CLI 覆盖发生在 load_config 的校验之后，须对覆盖结果重新校验，
-        # 否则 Windows 下 --workspace 可绕过 cmd 元字符检查，导致
-        # $prompt_file 路径传给外部 agent 时被 cmd 展开/吞掉而错乱
-        # （轮次守卫的 CLI 覆盖同理，一并纳入重校验）
-        need_revalidate = True
-    else:
-        need_revalidate = False
+    # CLI 覆盖发生在 load_config 的校验之后，须对覆盖结果重新校验：
+    # --workspace 可绕过 Windows cmd 元字符检查，--iterations 的巨大整数
+    # 会让 runner 的 range() 抛 OverflowError（轮次守卫的 CLI 覆盖同理）
+    need_revalidate = args.workspace is not None or args.iterations is not None
 
     # ---- 轮次守卫 CLI 覆盖 ----
     if args.no_rounds:

@@ -332,6 +332,47 @@ def test_ai_judge_prompt_shows_candidate_snapshot_not_live_state(ws, tmp_path):
     assert read_idea(guard.best_md) == "被快照的候选"
 
 
+def test_ai_snapshot_deleted_during_judge_stays_pending(ws):
+    """验证期间快照被删除：绝不能拿未验证的实时状态顶替晋升。
+
+    回归：_read_candidate_text 在快照不可读时退回 research.md，导致
+    AI 评审期间被删掉的候选仍可能把外部改过的实时内容写成最佳，破坏
+    候选/最佳分离；原始候选恢复后也无从翻案（已被记成 adopted）。
+    """
+    workspace, state_path = ws
+    saved = {}
+
+    def judge(prompt):
+        snap = next(guard.dir.glob(f"{rounds.CAND_PREFIX}*.md"))
+        saved["path"] = snap
+        saved["text"] = snap.read_text(encoding="utf-8")
+        snap.unlink()
+        write_idea(state_path, "评审期间混进来的未验证内容")
+        return True, "评分: 9"
+
+    guard = make_guard(workspace, state_path, verify="ai", judge=judge)
+    guard.start()
+    write_idea(state_path, "被验证通过的候选")
+    # 与现有 _adopt 失败口径一致：挂起记账后异常上抛，由 runner 降级处理
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+    # 最佳没有被未验证内容污染，候选也没有被记成已决
+    assert guard.best["round"] == 0
+    assert read_idea(guard.best_md) == "（暂无）"
+    assert not [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("result") == "adopted"]
+    assert guard.stats.pending == 1
+    assert guard.stats.candidates == 1
+    # 快照恢复后补分仍能翻案：严格读取让原候选可继续兑现
+    saved["path"].write_text(saved["text"], encoding="utf-8")
+    cid = saved["path"].stem[len(rounds.CAND_PREFIX):]
+    (guard.dir / "verdicts.txt").write_text(f"{cid} 9 恢复后采纳\n",
+                                            encoding="utf-8")
+    guard.finish()
+    assert guard.best["id"] == cid
+    assert read_idea(state_path) == "被验证通过的候选"
+
+
 def test_ai_reject_restores_best_and_keeps_snapshot(ws):
     """核心回归：被拒绝的候选绝不留在循环状态里，但快照必须保留。"""
     workspace, state_path = ws
@@ -693,6 +734,38 @@ def test_detect_test_suite_npm_malformed_shape_ignored(tmp_path, monkeypatch,
     会让 on_round_end 跳过验证，未验证候选滞留循环状态。"""
     _fake_npm(monkeypatch)
     (tmp_path / "package.json").write_text(pkg, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def _fake_go(monkeypatch):
+    real_which = shutil.which
+
+    def which(name, *args, **kwargs):
+        if name == "go":
+            return "/usr/bin/go"
+        return real_which(name, *args, **kwargs)
+
+    monkeypatch.setattr("xuen.rounds.shutil.which", which)
+
+
+def test_detect_test_suite_go_nested_module(tmp_path, monkeypatch):
+    """go.mod 模块的包在子目录（cmd/、internal/ 等）时也要探测到：
+    `go test ./...` 从仓库根可运行，只查根目录 *.go 会漏掉标准布局。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "go.mod").write_text("module example.com/demo\n", encoding="utf-8")
+    pkg = tmp_path / "internal" / "store"
+    pkg.mkdir(parents=True)
+    (pkg / "store.go").write_text("package store\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["go", "test", "./..."]
+
+
+def test_detect_test_suite_go_mod_without_packages_not_a_suite(
+        tmp_path, monkeypatch):
+    """只有 go.mod、没有任何 .go 文件时 `go test ./...` 会报无包可用，
+    不能探测成套件并让探测失败被记成测试失败。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "go.mod").write_text("module example.com/empty\n",
+                                     encoding="utf-8")
     assert detect_test_suite(tmp_path) is None
 
 
