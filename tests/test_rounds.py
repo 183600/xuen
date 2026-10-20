@@ -683,6 +683,19 @@ def test_detect_test_suite_make(tmp_path):
     assert suite == ["make", "test"]
 
 
+def test_detect_test_suite_make_with_bom(tmp_path):
+    """Windows 编辑器保存的 Makefile 常带 UTF-8 BOM。
+
+    GNU make 会忽略文件首的 BOM、照常执行 test 目标；探测按 utf-8 读取
+    时 BOM 会粘在 "test" 前导致正则不匹配，把可运行的套件误判成「没有
+    测试」，候选转而进入评分兜底。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("\ufefftest:\n\techo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     """只有 test-unit / test-ci 之类后缀目标不算 make 套件：探测命中会执行
     `make test`，而 Makefile 并没有 test 目标、make 以退出码 2 失败，
@@ -756,6 +769,17 @@ def test_detect_test_suite_npm(tmp_path, monkeypatch):
     _fake_npm(monkeypatch)
     (tmp_path / "package.json").write_text(
         '{"scripts": {"test": "vitest run"}}', encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["npm", "test"]
+
+
+def test_detect_test_suite_npm_with_bom(tmp_path, monkeypatch):
+    """带 UTF-8 BOM 的 package.json（Windows 记事本常见）仍要探测到。
+
+    npm 自己会忽略 BOM 并正常执行 test 脚本，但探测器按 utf-8 读取后
+    json.loads 报「Unexpected UTF-8 BOM」，套件被误判为不存在。"""
+    _fake_npm(monkeypatch)
+    (tmp_path / "package.json").write_text(
+        '\ufeff{"scripts": {"test": "vitest run"}}', encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["npm", "test"]
 
 

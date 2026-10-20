@@ -313,8 +313,12 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     makefile = repo / "Makefile"
     if makefile.is_file() and shutil.which("make"):
         try:
+            # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
+            # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
+            # "test" 前、正则失配，可运行的套件被误判成没有测试
             if re.search(r"(?m)^[ ]*test[ \t]*:(?![\t ]*:*=)",
-                         makefile.read_text(encoding="utf-8", errors="replace")):
+                         makefile.read_text(encoding="utf-8-sig",
+                                            errors="replace")):
                 return ["make", "test"]
         except OSError:
             pass
@@ -323,8 +327,11 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     if pkg.is_file() and shutil.which("npm"):
         try:
             # JSON 合法但结构不对（顶层是 list、scripts 是 list/str 等）
-            # 都按「没有 npm 套件」处理：这类脏数据不能把探测整个打断
-            data = json.loads(pkg.read_text(encoding="utf-8", errors="replace"))
+            # 都按「没有 npm 套件」处理：这类脏数据不能把探测整个打断。
+            # utf-8-sig：npm 自己忽略 package.json 的 UTF-8 BOM 并正常
+            # 执行 test 脚本，按 utf-8 读取却会让 json.loads 报 BOM 错误
+            data = json.loads(pkg.read_text(encoding="utf-8-sig",
+                                            errors="replace"))
             scripts = data.get("scripts") if isinstance(data, dict) else None
             test_cmd = scripts.get("test") if isinstance(scripts, dict) else None
             if isinstance(test_cmd, str) and test_cmd.strip() \
