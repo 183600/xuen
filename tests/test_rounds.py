@@ -2349,6 +2349,38 @@ def test_start_recovers_best_from_snapshot_when_best_md_deleted(ws):
                for lvl, m in sink.messages if lvl == "warn")
 
 
+def test_start_recovers_best_when_best_md_and_json_both_lost(ws):
+    """best.md 与 best.json 同时丢失时，history.jsonl 里的最后采纳事件
+    和对应候选快照仍足以找回最佳。
+
+    回归：start() 只在 best.json 可读时才按 id 找快照；元数据也丢失后
+    直接拿当前 research.md 重建基线，把旧最佳降级成未验证的当前内容。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_events = [e for e in events(guard) if e["event"] == "baseline"]
+    write_idea(state_path, "第一轮晋升的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    cid = guard.best["id"]
+    (guard.dir / rounds.BEST_MD_NAME).unlink()
+    (guard.dir / rounds.BEST_JSON_NAME).unlink()
+    write_idea(state_path, "未验证的脏内容")
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()
+    assert restarted.best["id"] == cid
+    assert restarted.best["round"] == 1
+    assert read_idea(restarted.best_md) == "第一轮晋升的最佳"
+    assert json.loads(restarted.best_json.read_text(encoding="utf-8"))["id"] \
+        == cid
+    assert [e for e in events(restarted)
+            if e["event"] == "baseline"] == baseline_events
+    assert any("history.jsonl 与候选快照恢复" in m
+               for lvl, m in sink.messages if lvl == "warn")
+
+
 def test_late_adoption_partial_best_failure_keeps_content(ws, monkeypatch):
     """补分采纳的 best 写盘中途失败：未采纳的候选内容不得流进还原源。"""
     workspace, state_path = ws

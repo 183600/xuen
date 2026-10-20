@@ -674,18 +674,15 @@ class RoundGuard:
             return {}
         return data if _valid_best(data) else {}
 
-    def _recover_best(self) -> Dict:
-        """best.md 存在但 best.json 缺失/损坏：恢复最佳元数据并回写。
+    def _best_from_history(self) -> Optional[Dict]:
+        """从 history.jsonl 最后一条基线/采纳事件恢复元数据（无副作用）。
 
-        正常提交顺序下 best.json 先于 best.md 落盘（见 start/_commit_best），
-        只有外部删除/损坏 best.json 才会出现该组合。优先从 history.jsonl 的
-        最后一条基线/采纳事件重建（历史只读，不追加事件）；历史也不可用时
-        按 best.md 合成一条基线并补记 baseline 事件。恢复结果回写 best.json，
-        后续启动直接命中；写盘失败只告警（元数据在内存中已可用，守卫照常
-        工作——降级原则）。
+        历史行被外部编辑/其他工具写入时字段类型可能损坏（id 是列表、
+        round 是字符串、score 是文本……）：与 best.json 的加载校验
+        （_valid_best）用同一口径，类型不对的事件不能恢复成最佳元数据
+        ——否则回写的 best.json 下次启动仍会被拒绝，每次都走恢复分支；
+        非字符串 id 还会让展示/事件关联出现异常值。
         """
-        best: Optional[Dict] = None
-        baseline_only = False
         for ev in reversed(self._read_events()):
             if ev.get("event") == "baseline":
                 best = {"id": ev.get("id"), "round": 0, "verifier": "baseline",
@@ -696,15 +693,22 @@ class RoundGuard:
                         "score": ev.get("score"), "ts": ev.get("ts", "")}
             else:
                 continue
-            # 历史行被外部编辑/其他工具写入时字段类型可能损坏（id 是列表、
-            # round 是字符串、score 是文本……）：与 best.json 的加载校验
-            # （_valid_best）用同一口径，类型不对的事件不能恢复成最佳
-            # 元数据——否则回写的 best.json 下次启动仍会被拒绝，每次都走
-            # 恢复分支；非字符串 id 还会让展示/事件关联出现异常值
-            if not _valid_best(best):
-                best = None  # 历史记录字段损坏：继续向前找
-                continue
-            break
+            if _valid_best(best):
+                return best
+        return None
+
+    def _recover_best(self) -> Dict:
+        """best.md 存在但 best.json 缺失/损坏：恢复最佳元数据并回写。
+
+        正常提交顺序下 best.json 先于 best.md 落盘（见 start/_commit_best），
+        只有外部删除/损坏 best.json 才会出现该组合。优先从 history.jsonl 的
+        最后一条基线/采纳事件重建（历史只读，不追加事件）；历史也不可用时
+        按 best.md 合成一条基线并补记 baseline 事件。恢复结果回写 best.json，
+        后续启动直接命中；写盘失败只告警（元数据在内存中已可用，守卫照常
+        工作——降级原则）。
+        """
+        best = self._best_from_history()
+        baseline_only = False
         if best is None:
             best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
                     "round": 0, "verifier": "baseline", "score": None,
@@ -802,25 +806,50 @@ class RoundGuard:
                 self.sink.warn(f"rounds/best.md 缺失，已从候选快照恢复"
                                f"最佳内容（{loaded['id']}）")
             else:
-                # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是
-                # 脚手架）。有了基线，「第 1 轮候选被拒绝时还原到什么」
-                # 才有明确答案。与 _commit_best 同序：best.md 是「基线已
-                # 建立」的存在标志，必须最后落盘。反序（best.md 先成功、
-                # best.json 失败）会留下没有元数据的 best.md——下次启动走
-                # 「复用已有最佳」分支读到未知 id，基线事件也永远不会补记。
-                text = self._read_state_text() or state.scaffold(self.task)
-                best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
-                        "round": 0, "verifier": "baseline", "score": None,
-                        "ts": _ts()}
-                _atomic_write(self.best_json,
-                              json.dumps(best, ensure_ascii=False, indent=2))
-                _atomic_write(self.best_md, text)
-                self.best = best
-                try:
-                    self._append_event({"event": "baseline", **self.best})
-                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-                    self.sink.warn(f"记录基线事件失败（忽略）：{e}")
-                self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
+                # best.json 也缺失/损坏时，history.jsonl 仍可能保留最后的
+                # 采纳事件，对应快照 cand-<id>.md 也还在。只按当前状态重建
+                # 基线会把旧最佳悄悄降级，甚至把未验证的半截内容固化成
+                # 基线；先尝试用历史元数据 + 快照内容恢复。
+                history_best = (self._best_from_history()
+                                if not loaded else None)
+                recovered = (self._recover_best_text(history_best)
+                             if history_best is not None else None)
+                if recovered is not None and history_best is not None:
+                    self.best = history_best
+                    try:
+                        _atomic_write(
+                            self.best_json,
+                            json.dumps(history_best, ensure_ascii=False,
+                                       indent=2))
+                    except OSError as e:
+                        self.sink.warn("恢复的最佳元数据写盘失败（忽略）："
+                                       f"{e}")
+                    self._heal_best_md(recovered)
+                    self.sink.warn(
+                        "rounds/best.md 与 best.json 均缺失，已从"
+                        f"history.jsonl 与候选快照恢复最佳内容"
+                        f"（{history_best['id']}）")
+                else:
+                    # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是
+                    # 脚手架）。有了基线，「第 1 轮候选被拒绝时还原到什么」
+                    # 才有明确答案。与 _commit_best 同序：best.md 是「基线已
+                    # 建立」的存在标志，必须最后落盘。反序（best.md 先成功、
+                    # best.json 失败）会留下没有元数据的 best.md——下次启动走
+                    # 「复用已有最佳」分支读到未知 id，基线事件也永远不会补记。
+                    text = self._read_state_text() or state.scaffold(self.task)
+                    best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
+                            "round": 0, "verifier": "baseline", "score": None,
+                            "ts": _ts()}
+                    _atomic_write(
+                        self.best_json,
+                        json.dumps(best, ensure_ascii=False, indent=2))
+                    _atomic_write(self.best_md, text)
+                    self.best = best
+                    try:
+                        self._append_event({"event": "baseline", **self.best})
+                    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                        self.sink.warn(f"记录基线事件失败（忽略）：{e}")
+                    self.sink.ok(f"轮次守卫：建立基线最佳 {self.best['id']}")
         self.sink.info(
             f"轮次守卫已启用：{self.dir}（每轮快照；候选需验证通过才晋升为最佳；"
             f"verify={self.cfg.rounds.verify}"
