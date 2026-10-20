@@ -79,9 +79,12 @@ def read_state_file(path: Path) -> str:
 
 
 def ensure_state_file(path: Path, task: str) -> str:
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(scaffold(task), encoding="utf-8")
+    # 初始化也必须与 update_section_file / 写入助手共用锁：exists() 与
+    # write_text() 之间若另一个实例已创建并更新了状态，裸写 scaffold 会
+    # 把对方的研究进度整份覆盖掉。锁内只补建缺失文件，已存在时绝不重写。
+    with _locked_state(path):
+        if not path.exists():
+            path.write_text(scaffold(task), encoding="utf-8")
     return read_state_file(path)
 
 

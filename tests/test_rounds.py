@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -2545,6 +2546,50 @@ def test_read_state_file_heals_invalid_utf8_without_rewriting_line_endings(
     assert state.get_section(text, state.SECTION_IDEA) == "坏\ufffd"
     expected = prefix + "\ufffd".encode("utf-8") + suffix
     assert state_path.read_bytes() == expected
+
+
+def test_ensure_state_file_does_not_overwrite_concurrent_update(
+        tmp_path, monkeypatch):
+    """启动补建 scaffold 不能覆盖另一个实例已写入的研究进度。
+
+    回归：exists() 与 write_text() 之间没有状态锁，两个实例同时启动时后者
+    的裸写会把前者已完成的 research.md 整份换回「（暂无）」。测试让预检在
+    决定补建后暂停，期间并发 update_section_file；修复前更新会被 scaffold
+    盖掉，修复后 update 等锁并在补建之后完成。
+    """
+    state_path = tmp_path / "research.md"
+    scaffold_started = threading.Event()
+    concurrent_update_done = threading.Event()
+    original_scaffold = state.scaffold
+
+    def slow_scaffold(task):
+        if task == "新任务":
+            scaffold_started.set()
+            # 修复后并发 update 会被状态锁挡住，等到这里超时；修复前它会
+            # 立即完成并 set 事件，于是随后的 scaffold 写入把更新覆盖掉。
+            concurrent_update_done.wait(0.5)
+        return original_scaffold(task)
+
+    monkeypatch.setattr(state, "scaffold", slow_scaffold)
+    errors = []
+
+    def create():
+        try:
+            state.ensure_state_file(state_path, "新任务")
+        except BaseException as exc:  # pragma: no cover - 失败时报告
+            errors.append(exc)
+
+    creator = threading.Thread(target=create)
+    creator.start()
+    assert scaffold_started.wait(2), "ensure_state_file 未进入补建路径"
+
+    state.update_section_file(state_path, state.SECTION_IDEA, "并发更新")
+    concurrent_update_done.set()
+    creator.join(5)
+    assert not creator.is_alive()
+    assert not errors
+    assert state.get_section(
+        state.read_state_file(state_path), state.SECTION_IDEA) == "并发更新"
 
 
 def test_helper_show_tolerates_invalid_utf8(tmp_path):
