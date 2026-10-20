@@ -3442,3 +3442,36 @@ def test_later_malformed_verdict_line_does_not_erase_valid_score(ws):
     assert guard.stats.pending == 0
     assert guard.stats.adopted + guard.stats.rejected + guard.stats.pending \
         == guard.stats.candidates
+
+
+def test_helper_interrupt_cleans_tmp(tmp_path):
+    """写入助手被 Ctrl+C 打断时不能留下半成品临时文件。
+
+    回归：生成的 write_section.py 只捕 OSError，且临时文件名固定为
+    research.md.tmp。KeyboardInterrupt 落在 os.replace 上时半成品残留，
+    agent 每次被中断都往工作区堆一个垃圾文件；固定名还会让并发实例
+    互踩。与 xuen.state / rounds 的原子写同一口径：临时名带 PID，
+    任何中断都先清临时文件再传播。
+    """
+    import subprocess
+
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "测试任务")
+    helper = state.write_helper_script(tmp_path, state_path)
+    driver = tmp_path / "_ki_driver.py"
+    driver.write_text(
+        "import os, runpy, sys\n"
+        "helper = sys.argv[1]\n"
+        "sys.argv = [helper, 'idea']\n"
+        "def boom(src, dst):\n"
+        "    raise KeyboardInterrupt\n"
+        "os.replace = boom\n"
+        "runpy.run_path(helper, run_name='__main__')\n",
+        encoding="utf-8")
+    subprocess.run([sys.executable, str(driver), str(helper)],
+                   input="中断想法".encode("utf-8"), capture_output=True)
+
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
+    assert not (tmp_path / "research.md.tmp").exists()
+    assert not list(tmp_path.glob("research.md.*.tmp"))

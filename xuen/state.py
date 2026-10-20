@@ -858,14 +858,16 @@ def main() -> int:
             # 另一类区块原先失效的残片可能重新配对并抢先被读出；写盘前
             # 校验另一区块读出的内容未被本次更新悄悄改写
             text = _preserve_other_section(original, text, name)
-            tmp = STATE_FILE + ".tmp"
+            tmp = STATE_FILE + f".{os.getpid()}.tmp"
             try:
                 with open(tmp, "w", encoding="utf-8", newline="") as f:
                     f.write(text)
                 os.replace(tmp, STATE_FILE)
-            except OSError:
-                # 与 xuen.state.update_section_file 一致：写入/替换失败时
-                # 清理半成品临时文件，避免外部 agent 重复调用后堆积垃圾。
+            except BaseException:
+                # 与 xuen.state.update_section_file 一致：除了写入/替换
+                # 失败，被 Ctrl+C / SystemExit 中断时也要清理半成品临时
+                # 文件，避免外部 agent 重复调用后在工作区堆积垃圾。
+                # 临时名带 PID：并发实例（或残留文件）绝不互踩同一个 .tmp
                 try:
                     os.remove(tmp)
                 except OSError:
