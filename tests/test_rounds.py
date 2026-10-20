@@ -976,6 +976,28 @@ def test_tests_mode_pending_when_no_suite(ws, tmp_path):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_tests_mode_pending_when_pytest_collects_nothing(ws, tmp_path):
+    """pytest 配置把测试文件全排除时退出码 5（未收集到测试）：
+    这不是测试失败，而是没有可执行的验证 → 挂起等待用户评分。
+
+    回归：探测只看 test_*.py 是否存在，随后 `pytest -q` 因 python_files
+    只匹配 check_*.py 而返回 5，原先把「没有测试可跑」误判成测试失败并
+    拒绝候选（auto 模式还会跳过兜底评分）。
+    """
+    repo = tmp_path / "repo"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "test_never.py").write_text(
+        "def test_x():\n    assert True\n", encoding="utf-8")
+    (repo / "pytest.ini").write_text(
+        "[pytest]\npython_files = check_*.py\n", encoding="utf-8")
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="tests", repo=str(repo))
+    guard.start()
+    write_idea(state_path, "pytest 收集不到测试时的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert read_idea(state_path) == "（暂无）"
+
+
 # ------------------------------------------ 套件运行的用户停止（q / Ctrl+C）
 def _pid_dead(pid):
     for _ in range(10):
@@ -998,6 +1020,19 @@ def test_run_suite_green_and_red(tmp_path):
     assert (red.available, red.ok) == (True, False)
     assert red.reason == "退出码 3"
     assert "bad" in red.detail
+
+
+def test_run_suite_pytest_no_tests_collected_is_unavailable(tmp_path):
+    """pytest 的退出码 5 是「没有收集到测试」，不是测试失败：套件实际
+    没有验证任何东西，按不可用处理（转兜底评分 / 挂起），不能拒绝候选。"""
+    (tmp_path / "test_x.py").write_text(
+        "def test_x():\n    assert True\n", encoding="utf-8")
+    (tmp_path / "pytest.ini").write_text(
+        "[pytest]\npython_files = check_*.py\n", encoding="utf-8")
+    res = rounds.run_suite(
+        [sys.executable, "-m", "pytest", "-q"], tmp_path, 30.0)
+    assert (res.available, res.ok) == (False, False)
+    assert "未收集到测试" in res.reason
 
 
 def test_run_suite_stop_terminates_suite_promptly(tmp_path):

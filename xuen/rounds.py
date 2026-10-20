@@ -220,9 +220,9 @@ def _structure_intact(text: str) -> bool:
 
 @dataclass
 class SuiteResult:
-    """一次测试套件运行的结果。available=False 表示套件根本没能运行
-    （运行时缺命令等），与「跑了但失败」（ok=False）必须区分：
-    前者不能给候选下结论，只能转兜底评分或挂起。
+    """一次测试套件运行的结果。available=False 表示套件没有可用的验证
+    结论（运行时缺命令、pytest 未收集到测试等），与「跑了但失败」
+    （ok=False）必须区分：前者不能给候选下结论，只能转兜底评分或挂起。
     stopped=True 表示运行被用户主动停止（TUI 按 q / Ctrl+C）：套件
     已被整组终止、没有验证结论，调用方不能再拉起兜底评审。"""
     available: bool
@@ -373,10 +373,16 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
 _SUITE_POLL_SECONDS = 0.2
 
 
+def _is_pytest_run(argv: List[str]) -> bool:
+    """argv 是否为本模块探测出的 pytest 调用（sys.executable -m pytest ...）。"""
+    return len(argv) >= 3 and argv[1] == "-m" and argv[2] == "pytest"
+
+
 def run_suite(argv: List[str], repo: Path, timeout: float,
               stop: Optional[Callable[[], bool]] = None) -> SuiteResult:
     """运行测试套件。退出码 0 = 通过；非 0 = 失败；超时 = 失败（保守：
     宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。
+    pytest 的退出码 5（未收集到测试）例外：按套件不可用返回，不拒绝候选。
 
     stop：可选的「是否请求停止」回调。传入时按短间隔轮询，回调一旦
     为真就终止整个进程组并返回 stopped=True（available=False）——
@@ -439,6 +445,15 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
     if proc.returncode == 0:
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
     tail = "\n".join(detail.splitlines()[-15:])
+    if proc.returncode == 5 and _is_pytest_run(argv):
+        # pytest 文档定义的退出码 5：没有收集到任何测试。仓库里的
+        # test_*.py 可能被 pytest 配置（python_files / testpaths /
+        # addopts --ignore 等）整体排除，此时并没有「测试失败」，而是
+        # 没有可执行的验证——按套件不可用处理，交给调用方转兜底评分
+        # （auto）或挂起（tests），不能误拒候选
+        return SuiteResult(available=False, ok=False,
+                           reason="pytest 未收集到测试（退出码 5）",
+                           detail=tail)
     return SuiteResult(available=True, ok=False,
                        reason=f"退出码 {proc.returncode}", detail=tail)
 
