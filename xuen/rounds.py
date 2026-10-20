@@ -287,6 +287,90 @@ _MAKE_TEST_TARGET = re.compile(
 )
 
 
+def _make_unescaped_colon(text: str, start: int) -> int:
+    """返回 start 后第一个不在 $(...)/${...} 内、未被转义的冒号下标。
+
+    Make 的变量引用内部可以带冒号（如 ${X:--x}），它不是规则分隔符；
+    反斜杠转义的冒号（a\\:b）也只是文件名的一部分。注释/同行命令起点
+    （# / ;）之后的内容不再属于规则头，扫到即停止并返回 -1。
+    """
+    i = start
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch in "#;":
+            return -1
+        if ch == "$" and i + 1 < n and text[i + 1] in "({":
+            opener = text[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                cj = text[j]
+                if cj == "\\":
+                    j += 2
+                    continue
+                if cj == opener:
+                    depth += 1
+                elif cj == closer:
+                    depth -= 1
+                j += 1
+            i = j
+            continue
+        if ch == ":":
+            return i
+        i += 1
+    return -1
+
+
+def _make_rule_header_is_valid(line: str, colon: int) -> bool:
+    """检查已命中 test 目标的规则头里的第二个冒号是否合法。
+
+    普通规则里前置依赖不能再出现未转义冒号（test: a:b / test: dep: x
+    都会让 make 报 target pattern contains no '%'）；唯一例外是静态模式
+    规则 test: %.o: %.c——第二个冒号前必须恰好是一个含未转义 % 的
+    target-pattern（test: foo bar: dep 会报 multiple target patterns）。
+    变量引用可能展开出 %，静态检查无法确定，沿用原来的探测口径。
+    """
+    start = colon + 1
+    if start < len(line) and line[start] == ":":
+        start += 1
+    second = _make_unescaped_colon(line, start)
+    if second < 0:
+        return True
+    target_pattern = line[start:second].strip()
+    if not target_pattern or any(ch.isspace() for ch in target_pattern):
+        return False
+    if "$" in target_pattern:
+        return True
+    i = 0
+    while i < len(target_pattern):
+        ch = target_pattern[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "%":
+            return True
+        i += 1
+    return False
+
+
+def _make_defines_test_target(text: str) -> bool:
+    """规则头命中 test 且冒号结构合法时返回 True。"""
+    for match in _MAKE_TEST_TARGET.finditer(text):
+        line_end = text.find("\n", match.end())
+        if line_end < 0:
+            line_end = len(text)
+        line = text[match.start():line_end]
+        if _make_rule_header_is_valid(
+                line, match.end() - match.start() - 1):
+            return True
+    return False
+
+
 def _is_pytest_file(name: str) -> bool:
     return (name.endswith(".py")
             and (name.startswith("test_") or name.endswith("_test.py")))
@@ -370,7 +454,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
             # "test" 前、正则失配，可运行的套件被误判成没有测试
-            if _MAKE_TEST_TARGET.search(
+            if _make_defines_test_target(
                     makefile.read_text(encoding="utf-8-sig",
                                        errors="replace")):
                 return ["make", "test"]
