@@ -6,6 +6,11 @@
   - 分隔符列出的多项词表每一段都要剥装饰/序号；
   - 下划线不能在词中配对（"_private_var" 是术语，不是斜体）。
 """
+from pathlib import Path
+
+import pytest
+
+from xuen import words
 from xuen.words import _clean_line, parse_word_lines
 
 
@@ -483,3 +488,23 @@ def test_words_parse_splits_only_ascii_line_endings():
     for sep in ("\u2028", "\u2029", "\x85", "\x0b", "\x0c"):
         assert parse_word_lines("a" + sep + "b\n") == ["a" + sep + "b"]
     assert parse_word_lines("a\r\nb\rc\nd") == ["a", "b", "c", "d"]
+
+
+def test_save_words_interrupt_cleans_tmp(tmp_path, monkeypatch):
+    """保存词库被中断时不能在工作区留下半成品临时文件。
+
+    回归：save_words 只捕 OSError，KeyboardInterrupt / SystemExit 落在
+    write_text / os.replace 上时临时文件（words.txt.<pid>.tmp）残留——
+    每中断一次就多一个只增不减的垃圾文件，且没有任何后续路径会清理它。
+    与 state / rounds 的原子写同一口径：任何中断都先清临时文件再传播。
+    """
+    path = tmp_path / "words.txt"
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(words.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        words.save_words(path, ["甲", "乙"])
+    assert not path.exists()
+    assert not list(tmp_path.glob("words.txt.*.tmp"))

@@ -295,7 +295,10 @@ def save_words(path: Path, wlist: List[str]) -> None:
     try:
         tmp.write_text('\n'.join(wlist) + '\n', encoding='utf-8')
         os.replace(tmp, path)
-    except OSError:
+    except BaseException:
+        # 不止 OSError：写盘被 Ctrl+C / SystemExit 中断时同样要清掉
+        # 带 PID 的半成品临时文件（与 state / rounds 的原子写口径一致），
+        # 否则中断一次就在工作区留下一个只增不减的垃圾文件
         try:
             tmp.unlink(missing_ok=True)
         except OSError:
