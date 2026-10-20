@@ -262,6 +262,17 @@ _PYTEST_SKIP_DIRS = frozenset({
     "{arch}",
 })
 
+# Makefile 里真正的 test 目标。`test: VAR=...`（含 export/private/override
+# 等修饰）是 target-specific 变量赋值，不定义可执行目标：make test 会以
+# 退出码 2 报「No rule to make target」，若按测试套件处理会把候选误判成
+# 测试失败，连 auto 模式的兜底评分也会被跳过。
+_MAKE_TEST_TARGET = re.compile(
+    r"(?m)^[ ]*test[ \t]*:"
+    r"(?![\t ]*:*=)"
+    r"(?![ \t]*(?:(?:export|unexport|private|override)[ \t]+)*"
+    r"[A-Za-z0-9_.-]+[ \t]*(?:::=|::=|:=|\+=|\?=|!=|=))"
+)
+
 
 def _is_pytest_file(name: str) -> bool:
     return (name.endswith(".py")
@@ -335,9 +346,9 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
             # "test" 前、正则失配，可运行的套件被误判成没有测试
-            if re.search(r"(?m)^[ ]*test[ \t]*:(?![\t ]*:*=)",
-                         makefile.read_text(encoding="utf-8-sig",
-                                            errors="replace")):
+            if _MAKE_TEST_TARGET.search(
+                    makefile.read_text(encoding="utf-8-sig",
+                                       errors="replace")):
                 return ["make", "test"]
         except OSError:
             pass

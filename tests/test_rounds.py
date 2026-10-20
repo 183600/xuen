@@ -716,11 +716,24 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     "test += x",
     "test != echo x",
     "test = x",
+    "test: foo=bar",
+    "test: 1=2",
+    "test: .FOO=1",
+    "test: CFLAGS := -g",
+    "test: export X=1",
+    "test: private X:=1",
+    "test: override X+=1",
+    "test: X?=1",
+    "test: X!=echo 1",
+    "test: X=1 dep",
 ])
 def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
                                                                    line):
     """变量赋值行不是 test 目标：`make test` 会以退出码 2 失败，探测命中
-    会被误判为「测试失败」拒绝候选（应属「没有可运行套件」）。"""
+    会被误判为「测试失败」拒绝候选（应属「没有可运行套件」）。
+
+    target-specific 变量赋值（`test: VAR=...`）同样只作用于目标、不定义
+    可执行目标，不能按套件探测。"""
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(line + "\nall:\n\t@echo hi\n",
