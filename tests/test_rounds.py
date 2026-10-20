@@ -3552,3 +3552,75 @@ def test_candidate_event_failure_retracts_before_settle(ws, monkeypatch):
         == (0, 0, 0, 0, 1)
     assert s.adopted + s.rejected + s.pending == s.candidates
     assert guard.best["round"] == 0
+
+
+def test_interrupt_after_best_assignment_before_count(ws, monkeypatch):
+    """晋升中断落在 best 赋值之后、统计入账之前：不能漏记 adopted。
+
+    回归：_adopt 先提交 best.md/best.json、再 self.best = best、最后才
+    stats.adopted += 1。若 Ctrl+C 正好落在后两步之间，中断兜底看到
+    best 已指向候选就直接跳过，候选既不在 adopted 也不在 pending，
+    汇总永久违反 adopted+rejected+pending==candidates。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "中断前已提交的新想法")
+
+    def interrupted_adopt(cid, round_no, verdict):
+        text = guard._read_candidate_text(cid)
+        best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
+                "score": verdict.score, "ts": rounds._ts(),
+                "reason": verdict.reason}
+        guard._commit_best(text, best)
+        guard.best = best
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(guard, "_adopt", interrupted_adopt)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 1, 0, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard._load_best()["id"] == guard.best["id"]
+    verdicts = [e for e in events(guard) if e["event"] == "verdict"]
+    assert len(verdicts) == 1 and verdicts[0]["result"] == "adopted"
+
+    guard.on_round_failed(1, "被中断，轮次未完成")
+    assert guard.stats.skipped == 0
+    guard.finish()
+    assert guard.stats.adopted == 1
+
+
+def test_interrupt_inside_adopted_count_does_not_double_count(ws, monkeypatch):
+    """设置 adopted 集合后、同步统计/已决标记前中断：对账不能重复 +1。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "计数中途被打断的想法")
+
+    real_count = guard._count_adopted
+    armed = True
+
+    def half_count(cid):
+        nonlocal armed
+        if armed:
+            armed = False
+            guard._adopted_ids.add(cid)
+            guard.stats.adopted = len(guard._adopted_ids)
+            raise KeyboardInterrupt
+        return real_count(cid)
+
+    monkeypatch.setattr(guard, "_count_adopted", half_count)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 1, 0, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["id"] in guard._adopted_ids
+    assert guard.best["id"] in guard._settled_cids
+    guard.on_round_failed(1, "被中断，轮次未完成")
+    guard.finish()
+    assert guard.stats.adopted == 1

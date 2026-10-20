@@ -498,6 +498,10 @@ class RoundGuard:
         # 本会话已计入 adopted / rejected 的候选 id（挂起另有 _pending_ids
         # 跟踪）：兜底记账据此幂等，已决候选绝不再补记成待评分
         self._settled_cids: set = set()
+        # 本会话已计入 adopted 的候选 id。集合成员是计数是否生效的权威
+        # 依据：中断可能落在「统计 +1」与「settled 标记」之间，单看 int
+        # 无法区分是否已计入；_count_adopted 可据此幂等对账
+        self._adopted_ids: set = set()
         # 本会话内已由 on_round_end 处理（或已按失败/中断记账）的轮次：
         # KeyboardInterrupt 可能晚于守卫处理到达，on_round_failed 再记一遍
         # 会让轮次数/跳过数虚增、审计日志为同一轮记出自相矛盾的候选+跳过
@@ -995,25 +999,30 @@ class RoundGuard:
             # 语义保持不变：不写 verdict 事件（不能把中断伪装成已决），
             # runner 的 on_round_failed 只补做还原，不重复记轮次。
             # 若 _adopt 已在中断前提交成功（best 已指向该候选），则不能
-            # 再挂起它（否则 adopted+pending 会超过 candidates）。
-            if self.best.get("id") != cid:
-                committed = self._load_best()
-                if committed.get("id") == cid:
+            # 再挂起它（否则 adopted+pending 会超过 candidates）。提交成功
+            # 不等于统计已入账：中断可能正好落在 self.best = best 之后、
+            # stats.adopted += 1 之前，必须用 _adopted_ids 对账后补齐。
+            if self.best.get("id") == cid:
+                committed = None
+            else:
+                loaded = self._load_best()
+                committed = loaded if loaded.get("id") == cid else None
+            if self.best.get("id") == cid or committed is not None:
+                if committed is not None:
                     self.best = committed
-                    self.stats.adopted += 1
-                    self._settled_cids.add(cid)
-                    try:
-                        self._append_event({"event": "verdict", "id": cid,
-                                            "round": round_no,
-                                            **_verdict_fields(verdict)})
-                    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-                        self.sink.warn(f"记录中断前已生效判定失败（忽略）：{e}")
-                    self._applied_verdicts.add(cid)
-                else:
-                    try:
-                        self._pend(round_no, cid, "轮次被中断，候选挂起")
-                    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-                        self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+                self._count_adopted(cid)
+                try:
+                    self._append_event({"event": "verdict", "id": cid,
+                                        "round": round_no,
+                                        **_verdict_fields(verdict)})
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录中断前已生效判定失败（忽略）：{e}")
+                self._applied_verdicts.add(cid)
+            else:
+                try:
+                    self._pend(round_no, cid, "轮次被中断，候选挂起")
+                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
             raise
         # 判定已经生效（采纳已完成外部副作用，拒绝/挂起只是记账），
         # 审计事件写盘失败（磁盘满 / 只读）不能反过来把本轮变成异常：
@@ -1344,6 +1353,12 @@ class RoundGuard:
                     pass
             raise
 
+    def _count_adopted(self, cid: str) -> None:
+        """把候选计入 adopted；集合成员是幂等对账的提交点。"""
+        self._adopted_ids.add(cid)
+        self.stats.adopted = len(self._adopted_ids)
+        self._settled_cids.add(cid)
+
     def _adopt(self, cid: str, round_no: int, verdict: Verdict) -> None:
         # 晋升的必须是被验证过的候选快照本身：测试套件 / AI 评审可能跑很久，
         # 期间状态文件可能被外部再改一次。直接读当前状态会把未经验证的内容
@@ -1365,8 +1380,7 @@ class RoundGuard:
         # 异常按「守卫本轮降级」处理，候选保持未决可补分翻案）
         self._commit_best(text, best)
         self.best = best
-        self.stats.adopted += 1
-        self._settled_cids.add(cid)
+        self._count_adopted(cid)
         self.sink.ok(f"第 {round_no} 轮候选通过验证（{verdesc(verdict)}），"
                      f"晋升为最佳（{cid}）")
 
@@ -1605,7 +1619,7 @@ class RoundGuard:
                 self.stats.pending -= 1
             if adopted:
                 self.best = best
-                self.stats.adopted += 1
+                self._count_adopted(cid)
             else:
                 self.stats.rejected += 1
             if not adopted:
