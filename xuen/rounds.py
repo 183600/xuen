@@ -267,7 +267,12 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 退出码 2 报「No rule to make target」，若按测试套件处理会把候选误判成
 # 测试失败，连 auto 模式的兜底评分也会被跳过。
 _MAKE_TEST_TARGET = re.compile(
-    r"(?m)^[ ]*test[ \t]*:"
+    # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
+    # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
+    # 目标名排除 `:`（冒号是规则分隔符）与 `=`（变量赋值行），注释行
+    # 由 (?!#) 挡掉。
+    r"(?m)^[ ]*(?!#)(?:[^:=\s#]+[ \t]+)*test"
+    r"(?:[ \t]+[^:=\s#]+)*[ \t]*:"
     r"(?![\t ]*:*=)"
     r"(?![ \t]*:{2,})"
     r"(?![ \t]*(?:(?:export|unexport|private|override)[ \t]+)*"

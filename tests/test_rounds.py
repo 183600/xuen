@@ -779,6 +779,10 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     "test: X:::=1",
     "test: export X:::=1",
     "test: override X :::=1",
+    "foo test: X=1",
+    "foo test := x",
+    "test foo: export X=1",
+    "foo test:::",
 ])
 def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
                                                                    line):
@@ -801,6 +805,9 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     " test:",
     "test:; echo ok",
     "test: dep",
+    "foo test:",
+    "test test2:",
+    "foo test bar:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
