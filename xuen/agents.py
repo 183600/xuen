@@ -72,15 +72,25 @@ _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
 def _windows_placeholder_starts(tpl: str, ph: str):
-    """Windows 模板中会兑现的占位符起点（按 $$ 两两配对判断）。"""
-    start = 0
-    while True:
-        i = tpl.find(ph, start)
-        if i < 0:
-            return
-        start = i + 1
+    """Windows 模板中会兑现的占位符起点（按 $$ 两两配对、cmd ^ 转义判断）。"""
+    i = 0
+    in_quotes = False
+    n = len(tpl)
+    while i < n:
+        c = tpl[i]
+        if c == "^" and not in_quotes:
+            i += 2
+            continue
+        if c == '"':
+            in_quotes = not in_quotes
+            i += 1
+            continue
+        if not tpl.startswith(ph, i):
+            i += 1
+            continue
         end = i + len(ph)
-        if end < len(tpl) and _WORD_CHAR.match(tpl[end]):
+        if end < n and _WORD_CHAR.match(tpl[end]):
+            i += 1
             continue
         k = i - 1
         dollars = 0
@@ -90,9 +100,9 @@ def _windows_placeholder_starts(tpl: str, ph: str):
         if dollars:
             if dollars % 2 == 0:
                 yield i
-            continue
-        if k < 0 or not _WORD_CHAR.match(tpl[k]):
+        elif k < 0 or not _WORD_CHAR.match(tpl[k]):
             yield i
+        i = end
 
 
 def _prev_effective_pos(tpl: str, i: int,

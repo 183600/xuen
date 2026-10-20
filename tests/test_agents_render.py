@@ -2531,3 +2531,49 @@ def test_render_windows_single_quoted_prompt_file_inside_double_quotes(
         assert rendered == f'tool "{path}"', rendered
     finally:
         agent._cleanup_prompt_file()
+
+
+def test_render_windows_caret_escaped_prompt_file_not_substituted(
+        tmp_path, monkeypatch):
+    """cmd 的 ^ 转义：^$prompt_file 是字面量，不能被替换成未加引号的路径。
+
+    回归：_windows_placeholder_starts 只查占位符/单词边界，不识别 cmd
+    的 ^ 转义；`tool ^$prompt_file` 会被替换成 `tool ^"C:\\path"`，^" 在
+    cmd 中是字面引号、不能给含空格路径分组。配置校验也会误放行这种
+    永远不会送达提示词文件的模板。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    ws = tmp_path / "ws with space"
+    ws.mkdir()
+
+    assert agents.command_receives_prompt("tool ^$prompt_file") is False
+    agent = agents.ShellAgent("tool ^$prompt_file", ws, timeout=1)
+    try:
+        rendered = agent.render_command("PROMPT")
+        assert rendered == "tool ^$prompt_file"
+        assert agent._prompt_file is None
+    finally:
+        agent._cleanup_prompt_file()
+
+    # ^^ 只是字面 ^，占位符仍然有效；引号内的 ^ 不转义
+    assert agents.command_receives_prompt("tool ^^$prompt_file") is True
+    assert agents.command_receives_prompt('tool "^$prompt_file"') is True
+    for tpl in ("tool ^^$prompt_file", 'tool "^$prompt_file"'):
+        agent = agents.ShellAgent(tpl, ws, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None, tpl
+            path = str(agent._prompt_file.resolve())
+            assert path in rendered, (tpl, rendered)
+        finally:
+            agent._cleanup_prompt_file()
