@@ -839,6 +839,38 @@ def test_detect_test_suite_go_mod_without_packages_not_a_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("relpath", [
+    "vendor/dep/dep.go",
+    "testdata/fixture.go",
+    "_ignored/gen.go",
+    ".hidden/gen.go",
+])
+def test_detect_test_suite_go_ignored_dirs_not_a_suite(tmp_path, monkeypatch,
+                                                       relpath):
+    """`go test ./...` 不匹配的位置（vendor/testdata/._ 开头目录）里的
+    .go 文件不能算套件：只命中这些位置时 go 报「matched no packages」
+    并以退出码 1 失败，探测会把「没有可用测试」误记成测试失败。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "go.mod").write_text("module example.com/demo\n",
+                                     encoding="utf-8")
+    path = tmp_path / relpath
+    path.parent.mkdir(parents=True)
+    path.write_text("package demo\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_go_ignored_file_names_not_a_suite(tmp_path,
+                                                             monkeypatch):
+    """以 . 或 _ 开头的 .go 文件同样被 go 工具忽略，不算套件。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "go.mod").write_text("module example.com/demo\n",
+                                     encoding="utf-8")
+    (tmp_path / "_generated.go").write_text("package demo\n",
+                                            encoding="utf-8")
+    (tmp_path / ".hidden.go").write_text("package demo\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_go_files_without_mod_not_a_suite(tmp_path,
                                                             monkeypatch):
     """没有 go.mod 时根目录的 .go 也不能探测成套件：模块模式下从仓库根

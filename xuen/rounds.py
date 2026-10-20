@@ -287,6 +287,25 @@ def _has_pytest_file(repo: Path) -> bool:
     return False
 
 
+def _has_go_package(repo: Path) -> bool:
+    """模块内是否有 `go test ./...` 会匹配到的 .go 文件。
+
+    与 go 工具的忽略规则对齐：以 . 或 _ 开头的目录/文件名、testdata
+    目录，以及任意层级的 vendor 目录都不会被 `./...` 匹配。只命中这些
+    位置的仓库会以「matched no packages」（退出码 1）失败——探测成套件
+    会把「没有可用测试」误记成测试失败并拒绝候选。
+    """
+    for dirpath, dirnames, filenames in os.walk(repo):
+        dirnames[:] = [
+            d for d in dirnames
+            if not d.startswith((".", "_")) and d not in ("vendor", "testdata")
+        ]
+        if any(name.endswith(".go") and not name.startswith((".", "_"))
+               for name in filenames):
+            return True
+    return False
+
+
 def detect_test_suite(repo: Path) -> Optional[List[str]]:
     """按 pytest → make test → npm test → go test 的顺序探测可运行套件。
 
@@ -340,11 +359,12 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
         except (OSError, ValueError):
             pass
     # 4) go test：go.mod 模块下任意位置（根目录或 cmd/、internal/ 等
-    #    子包）有 .go 文件。没有 go.mod 时不管 .go 在根目录还是子目录都
-    #    不算：从仓库根执行 `go test ./...` 在模块模式下会因找不到 go.mod
-    #    失败，探测成套件只会把「没有可用测试」误记成测试失败。
+    #    子包）有 go 工具会匹配的 .go 文件。没有 go.mod 时不管 .go 在根
+    #    目录还是子目录都不算：从仓库根执行 `go test ./...` 在模块模式下
+    #    会因找不到 go.mod 失败，探测成套件只会把「没有可用测试」误记成
+    #    测试失败。vendor/testdata/._ 开头目录里的文件另见 _has_go_package。
     if (shutil.which("go") and (repo / "go.mod").is_file()
-            and any(p.is_file() for p in repo.rglob("*.go"))):
+            and _has_go_package(repo)):
         return ["go", "test", "./..."]
     return None
 
