@@ -2,11 +2,11 @@
 
 本仓库由自动化循环维护（.github/workflows/continuous-loop.yml）：
 每轮跑完测试后用 `git add -A` 提交全部改动——历史上 coverage 覆盖率数据
-（.coverage，二进制）与一次自动化会话遗留的临时工作区 ws/（含内嵌生成
-机器绝对路径的 write_section.py）被误提交后，会被后续每轮以内容变化
-持续重复提交，污染每次迭代的 diff。
+（.coverage，二进制）与自动化会话遗留的临时工作区 ws/（含内嵌生成机器
+绝对路径的 write_section.py）被误提交后，会被后续每轮以内容变化持续
+重复提交，污染每次迭代的 diff；同类工作区后来又以 ok-ws/ 的名字被误提交。
 
-这两个生成物必须保持「未被 git 跟踪」且「被 .gitignore 覆盖」：
+这些生成物必须保持「未被 git 跟踪」且「被 .gitignore 覆盖」：
 只要 .gitignore 有规则，`git add -A` 就不会再把它们重新纳入索引；
 本测试在非 git 环境（安装包 / 源码导出目录）自动跳过。
 """
@@ -21,7 +21,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 # 运行产物及其应命中的 .gitignore 规则（同一批路径，逐一断言）
-GENERATED = (".coverage", "ws/research.md", "ws/write_section.py")
+GENERATED = (
+    ".coverage",
+    "ws/research.md",
+    "ws/write_section.py",
+    "ok-ws/research.md",
+    "ok-ws/write_section.py",
+)
 
 
 def _git(*args: str):

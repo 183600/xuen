@@ -13,6 +13,7 @@ workspace/
 # write_section.py）。它会被 git add -A 误提交，其中的 write_section.py
 # 还内嵌了生成机器的绝对路径（换环境后毫无意义）
 ws/
+ok-ws/
 
 # 测试覆盖率数据（coverage.py 运行产物，二进制文件，勿提交）
 .coverage
