@@ -718,6 +718,34 @@ def test_detect_test_suite_make_respects_gnu_make_search_order(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_unusable_first_default_file_shadows_makefile(
+        tmp_path):
+    """GNUmakefile 是目录时 make 直接失败，不能跳过它去探测 Makefile。
+
+    回归：探测用 is_file() 选默认文件，目录/悬空链接类型的 GNUmakefile
+    被当作不存在，转而命中 Makefile 的 test 目标并执行 `make test`；
+    但 GNU make 会先选中目录并以退出码 2 报「Is a directory」，候选被
+    误判为测试失败。首个存在的默认文件不可用时应按「没有可运行套件」
+    处理。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "GNUmakefile").mkdir()
+    (tmp_path / "Makefile").write_text("test:\n\techo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_broken_symlink_shadows_makefile(tmp_path):
+    """悬空符号链接的 GNUmakefile 同样会让 make 失败，不能回退到 Makefile。"""
+    if not shutil.which("make") or not hasattr(os, "symlink"):
+        pytest.skip("make 或符号链接不可用")
+    try:
+        (tmp_path / "GNUmakefile").symlink_to(tmp_path / "missing")
+    except OSError:
+        pytest.skip("当前环境不允许创建符号链接")
+    (tmp_path / "Makefile").write_text("test:\n\techo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     """只有 test-unit / test-ci 之类后缀目标不算 make 套件：探测命中会执行
     `make test`，而 Makefile 并没有 test 目标、make 以退出码 2 失败，

@@ -344,10 +344,16 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    变量赋值（test := / ?= / += / != / ::=）与 test: = x 这类空变量名
     #    同样不是目标：make test 会以退出码 2 失败，必须按无套件处理。
     #    负向前瞻吞掉冒号后任意个冒号再接 = 的写法（::= / :::=）。
+    #    搜索顺序按「路径存在」而不是「是普通文件」判断：GNU make 遇到
+    #    GNUmakefile 是目录 / 悬空符号链接时同样先选中它、随后以退出码
+    #    2 失败，不会跳过它去读 Makefile。若这里用 is_file 跳过坏条目，
+    #    探测会命中 Makefile 并执行必然失败的 make test，把候选误判成
+    #    测试失败；坏条目存在时应按「没有可运行套件」处理。
     makefile = next(
         (repo / name for name in ("GNUmakefile", "makefile", "Makefile")
-         if (repo / name).is_file()), None)
-    if makefile is not None and shutil.which("make"):
+         if os.path.lexists(repo / name)), None)
+    if (makefile is not None and makefile.is_file()
+            and shutil.which("make")):
         try:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
