@@ -3853,6 +3853,43 @@ def test_candidate_event_failure_retracts_before_settle(ws, monkeypatch):
     assert guard.best["round"] == 0
 
 
+def test_sink_failure_after_adoption_does_not_pend_committed_candidate(ws):
+    """晋升提交成功后 sink.ok 抛错，不能把已采纳候选再挂起。
+
+    回归：_adopt 已完成 best.md/best.json 写盘、self.best 赋值与 adopted
+    计数，最后才 sink.ok。TUI 已退出等情况下该通知可能抛错，调用方的
+    except 会把同一个候选再计入 pending，adopted+pending 超过
+    candidates；应按已提交的 best 对账并保持 adopted。"""
+    workspace, state_path = ws
+
+    class FailingSink(RecordingSink):
+        def __init__(self):
+            super().__init__()
+            self.fail_ok = False
+
+        def ok(self, text):
+            if self.fail_ok:
+                raise RuntimeError("界面已退出（模拟）")
+            super().ok(text)
+
+    sink = FailingSink()
+    guard = make_guard(workspace, state_path, sink=sink, verify="off")
+    guard.start()
+    write_idea(state_path, "已写盘但通知失败的新想法")
+    sink.fail_ok = True
+
+    assert guard.on_round_end(1) == "adopted"
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 1, 0, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["id"] in guard._adopted_ids
+    assert read_idea(state_path) == "已写盘但通知失败的新想法"
+    verdicts = [e for e in events(guard) if e["event"] == "verdict"]
+    assert len(verdicts) == 1 and verdicts[0]["result"] == "adopted"
+    assert any("收尾失败" in m for _, m in sink.messages)
+
+
 def test_interrupt_after_best_assignment_before_count(ws, monkeypatch):
     """晋升中断落在 best 赋值之后、统计入账之前：不能漏记 adopted。
 

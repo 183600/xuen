@@ -1121,6 +1121,26 @@ class RoundGuard:
                 # 口径：外部副作用成功前不能留下不可撤销的结论）
                 self._adopt(cid, round_no, verdict)
         except Exception as e:  # noqa: BLE001 —— 守卫降级 + 统计一致
+            # 晋升可能已经提交成功，异常只落在提交后的统计/通知上（如
+            # sink.ok 在 TUI 已退出时抛错）。此时不能把候选再挂起：best
+            # 已指向它，再计入 pending 会让 adopted+pending 超过
+            # candidates。先按内存里的 best 对账，补记 adopted 与判定事件，
+            # 让调用方看到本轮已完成。
+            if self.best.get("id") == cid:
+                self._count_adopted(cid)
+                try:
+                    self._append_event({"event": "verdict", "id": cid,
+                                        "round": round_no,
+                                        **_verdict_fields(verdict)})
+                except Exception as e2:  # noqa: BLE001 —— 守卫降级原则
+                    self.sink.warn(f"记录判定事件失败（判定已生效，忽略）：{e2}")
+                self._applied_verdicts.add(cid)
+                try:
+                    self.sink.warn(f"候选 {cid} 已晋升，但收尾失败（忽略）："
+                                   f"{e}")
+                except Exception:  # noqa: BLE001 —— 通知失败不能改判定
+                    pass
+                return "adopted"
             # 验证/晋升中途失败（best.md/best.json 写盘失败、候选快照损坏
             # 等）：候选已快照落盘，必须按「待评分」记账并还原最佳。绝不能
             # 只把异常抛给 runner——未计入 adopted/rejected/pending 会让
