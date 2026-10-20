@@ -3,7 +3,7 @@ name: Continuous Loop
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
 
 # ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）
 # 上一个 run 一结束，队列里的下一个立刻开始 → "上一个结束立刻触发下一个"
@@ -27,10 +27,10 @@ env:
 jobs:
   run-opencode:
     runs-on: ubuntu-latest
-    # ⭐ 关键 3：硬超时 330 分钟（GitHub 单 job 上限 360 分钟）。
-    # 实际时长由「Run opencode loop」里的工作窗口控制：约 4h45m 的连续工作
-    # + 前置安装约 5 分钟 + 收尾约 3 分钟 → 单次 job 约 5 小时。
-    timeout-minutes: 330
+    # ⭐ 关键 3：硬超时 200 分钟（GitHub 单 job 上限 360 分钟）。
+    # 实际时长由「Run opencode loop」里的工作窗口控制：约 2h50m 的连续工作
+    # + 前置安装约 5 分钟 + 收尾约 3 分钟 → 单次 job 约 3 小时。
+    timeout-minutes: 200
     permissions:
       contents: write
       actions: write   # gh workflow run 需要
@@ -88,7 +88,7 @@ jobs:
             fi
             sleep 10
           done
-          echo "[loop][warn] 未能确认后继 run；收尾的 next-run job 与 */5 心跳会补位"
+          echo "[loop][warn] 未能确认后继 run；收尾的 next-run job 与 */15 心跳会补位"
           exit 0
 
       - name: Checkout
@@ -110,6 +110,26 @@ jobs:
           sudo apt-get clean
           echo "=== disk after cleanup ==="
           df -h /
+
+      - name: Setup Python (pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements-ci.txt
+            requirements.txt
+            pyproject.toml
+
+      # npm 全局包缓存：直接缓存 ~/.npm（不依赖 lock 文件），`npm i -g` 会复用其中的 tarball。
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+          key: ${{ runner.os }}-xuen-npm-${{ hashFiles('requirements-ci.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-xuen-npm-
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -164,6 +184,12 @@ jobs:
           free -h
           swapon --show
           df -h /
+
+      - name: Install Python test deps (cached)
+        run: |
+          set -e
+          python -m pip install --upgrade pip || echo "[warn] pip upgrade failed (non-fatal)"
+          python -m pip install -r requirements-ci.txt || echo "[warn] requirements-ci install failed (non-fatal)"
 
       - name: Install opencode
         run: npm i -g opencode-ai
@@ -228,22 +254,23 @@ jobs:
           git config i18n.commitEncoding utf-8
           git config core.quotepath false
 
-      # ⭐ 关键 4：约 4h45m 的连续工作窗口。
+      # ⭐ 关键 4：约 3 小时的连续工作窗口（硬预算 3 小时，其中留 10 分钟给收尾）。
       # 反复运行 opencode 修 bug，每轮独立限时并增量提交；
       # 窗口耗尽（或剩余不足 10 分钟）后退出，交给后面的收尾步骤。
-      # 前置安装 ~5 分钟 + 工作窗口 285 分钟 + 收尾 ~3 分钟 ≈ 单次 job 5 小时左右。
-      - name: Run opencode loop (~5h job)
+      # 前置安装 ~5 分钟 + 工作窗口 170 分钟 + 收尾 ~3 分钟 ≈ 单次 job 3 小时左右。
+      - name: Run opencode loop (~3h job)
+        timeout-minutes: 180
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           set +e
           PROMPT='判断是否有bug，如果有就修复'
           ISSUES_FILE=".opencode_issues.md"
-          PROMPT="$(printf '先快速定位 bug（可把要点写入 `%s`，该临时清单不是报告），然后持续修复；在本轮预算内尽可能多修复高价值、可验证的 bug，不要只修一个就停，也不要为了赶时间提前结束。每个修复后运行自检；修完删除该临时清单。\n\n%s\n' "$ISSUES_FILE" "$PROMPT")"
+          PROMPT="$(printf '先快速定位 bug（可把要点写入 `%s`，该临时清单不是报告），然后持续修复；在本轮预算内尽可能多修复高价值、可验证的 bug，不要只修一个就停，也不要为了赶时间提前结束。每个修复后运行自检；修完删除该临时清单。每完成一个可验证的修复就立即 git commit（不要 push、不要 amend），避免阶段被超时中断时丢失进度。\n\n%s\n' "$ISSUES_FILE" "$PROMPT")"
 
-          WORK_SECONDS=17100        # 工作窗口：4 小时 45 分 = 17100 秒
+          WORK_SECONDS=10200        # 工作窗口：3 小时 - 10 分钟 = 10200 秒
           MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
-          MAX_ITER_SECONDS=2400     # 单轮 opencode 最多 40 分钟（剩余更少时自动缩短）
+          MAX_ITER_SECONDS=2400     # 单轮（含本轮所有重试）最多 40 分钟（剩余更少时自动缩短）
           CLEANER=".github/scripts/clean_log.py"
           [ -f "$CLEANER" ] || CLEANER=cat   # 兜底：净化器不在就原样输出
           OUT=/tmp/oc_out.log       # 原始输出留档，用于限流(429)检测
@@ -258,9 +285,21 @@ jobs:
           PREVIOUS_MODEL=""
           # ================= 优先模型：deepseek-v4.1-flash-free =================
           # 池中存在时始终优先选用；不存在时保持随机选择。
-          # 同一轮内若优先模型刚失败/限流，则暂时回退随机，下一轮开始时自动恢复优先。
+          # 本次 run 内若优先模型失败/限流，会被记入 BROKEN_MODELS 并跳过；
+          # 只有重新探测（detect_model 的第二轮）才清空失效标记。
           PREFERRED_MODEL="opencode/deepseek-v4.1-flash-free"
-          PREFERRED_BROKEN=0
+          # 本次 run 内选定的模型（探测只在 run 开始时做一次，见 detect_model）
+          SELECTED_MODEL=""
+          SELECTED_PROVIDER=""
+          # 已失效（限流 / 5xx / 连接失败 / 非零退出 / 冒烟超时）的候选，逗号分隔
+          BROKEN_MODELS=""
+          mark_broken() {
+            [ -n "$1" ] || return 0
+            case ",$BROKEN_MODELS," in *",$1,"*) ;; *) BROKEN_MODELS="$BROKEN_MODELS${BROKEN_MODELS:+,}$1" ;; esac
+          }
+          is_broken() {
+            case ",$BROKEN_MODELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
+          }
           # ---- 解析脚本：从 --verbose 输出提取模型 ID + 支持的 variant 列表 ----
           # `opencode models --verbose` 在每个模型行后输出一段 JSON 元数据，其中
           # variants 字段列出该模型支持的思考强度档位。输出两列（\t 分隔）：
@@ -315,11 +354,11 @@ jobs:
             MODEL_VARIANTS=()
           fi
 
-          # ---------- 选模型：优先 deepseek-v4.1-flash-free，没有则随机 ----------
-          # 1) 优先模型在池中、且本轮内未刚失败/限流时，始终优先选用；
-          # 2) 否则保持随机选择，并尽量避免和上次相同。
-          # 池为空时先惰性重建（目录 API 瞬时故障的自愈）；
-          # 重建后仍为空则返回 1，由调用方计入失败并稍后重试。
+          # ---------- 选模型：优先 deepseek-v4.1-flash-free，没有则随机（跳过已失效） ----------
+          # 1) 池为空时先惰性重建（目录 API 瞬时故障的自愈）；
+          # 2) 优先模型在池中、且本次 run 内未失效时，始终优先选用；
+          # 3) 否则从「未失效」的模型里随机挑选，并尽量避免和上次相同；
+          # 4) 池内候选全部失效时返回 1，由 detect_model 清空失效标记后再试一轮。
           pick_model() {
             if [ ${#FREE_MODELS[@]} -eq 0 ]; then
               build_model_pool || true
@@ -329,15 +368,23 @@ jobs:
               CURRENT_MODEL=""
               return 1
             fi
-            local m="" x
-            if [ -n "$PREFERRED_MODEL" ] && [ "$PREFERRED_BROKEN" -ne 1 ]; then
-              for x in "${FREE_MODELS[@]}"; do
+            local m="" x i cands=()
+            for x in "${FREE_MODELS[@]}"; do
+              is_broken "$x" || cands+=("$x")
+            done
+            n=${#cands[@]}
+            if [ "$n" -eq 0 ]; then
+              CURRENT_MODEL=""
+              return 1
+            fi
+            if ! is_broken "$PREFERRED_MODEL"; then
+              for x in "${cands[@]}"; do
                 if [ "$x" = "$PREFERRED_MODEL" ]; then m="$x"; break; fi
               done
             fi
             if [ -z "$m" ]; then
-              for _ in 1 2 3; do
-                m="${FREE_MODELS[$((RANDOM % n))]}"
+              for i in 1 2 3; do
+                m="${cands[$((RANDOM % n))]}"
                 if [ "$n" -le 1 ] || [ "$m" != "$PREVIOUS_MODEL" ]; then break; fi
               done
             fi
@@ -358,18 +405,62 @@ jobs:
             esac
           }
 
-          # ================= 新增：概率测试门（20% 执行 / 80% 跳过）=================
+          # ---------- 一次性模型探测（每个 run 只做一次） ----------
+          # run 开始时探测一次并选定 SELECTED_MODEL；之后所有轮次直接
+          #   opencode run -m "$SELECTED_MODEL" "$prompt"
+          # 只有收到 429 / 5xx / 连接失败 / 非零退出时，才 mark_broken 并清空 SELECTED_MODEL，
+          # 由下一轮重新探测，且探测会跳过已判定失效的候选。
+          # 注意：只看目录不够——必须真跑一次冒烟调用，否则会选中“连得上但永远跑不完”的端点。
+          smoke_test() {
+            local m="$1" eff="" extra=()
+            eff="$(variant_for "$m")"
+            [ -n "$eff" ] && extra=(--variant "$eff")
+            # shellcheck disable=SC2086
+            timeout --kill-after=30 120 opencode run -m "$m" ${extra[@]+"${extra[@]}"} "只回复两个字：OK" > /tmp/smoke_test.log 2>&1
+          }
+
+          detect_model() {
+            local pass cand tries max
+            for pass in 1 2; do
+              tries=0
+              max=${#FREE_MODELS[@]}
+              # 冒烟调用最长 120s/个：每次探测最多尝试 6 个候选，避免启动探测吃掉过多预算
+              [ "$max" -gt 6 ] && max=6
+              [ "$max" -ge 1 ] || max=1
+              while [ "$tries" -lt "$max" ]; do
+                tries=$((tries + 1))
+                if ! pick_model; then
+                  echo "[warn] 模型池为空或候选均已失效，无法探测"
+                  break
+                fi
+                cand="$CURRENT_MODEL"
+                [ -n "$cand" ] || break
+                if smoke_test "$cand"; then
+                  SELECTED_MODEL="$cand"
+                  SELECTED_PROVIDER="opencode"
+                  echo "[provider] 选定 $cand（opencode），本次 run 内固定使用，不再逐轮探测"
+                  return 0
+                fi
+                echo "[warn] $cand 冒烟测试失败/超时，换下一个候选"
+                mark_broken "$cand"
+                CURRENT_MODEL=""
+              done
+              # 第一轮全部失效：清空失效标记再试一轮（可能是瞬时故障）
+              [ "$pass" -eq 1 ] && BROKEN_MODELS=""
+            done
+            SELECTED_MODEL=""
+            SELECTED_PROVIDER=""
+            return 1
+          }
+
+          # ================= 测试门（每轮提交后都执行）=================
           # 在每轮「修复 bug 的 opencode 调用」提交之后触发（调用点见主循环 git push 之后）。
-          # 掷骰子 1..100：≤20 才执行本步（80% 直接跳过）——跑一遍本仓库的测试；
+          # 不再按 20% 抽样：每个提交之后都跑一遍本仓库的测试（原先 80% 的提交从未被验证过）；
           # 跑不通 → 调用 opencode 修复 → 修复结果按本仓库既有提交路径落到 main/master。
+          # 保留「剩余时间不足 / 无测试 / 依赖装不上 / 超时」四类跳过保护。
           maybe_run_tests() {
             local iter="$1"
-            local TG_ROLL=$(( (RANDOM % 100) + 1 ))
-            if [ "$TG_ROLL" -gt 20 ]; then
-              echo "[test-gate] iter #$iter 骰子 ${TG_ROLL}/100 > 20，本轮不跑测试（80%）"
-              return 0
-            fi
-            echo "[test-gate] iter #$iter 骰子 ${TG_ROLL}/100 ≤ 20，本轮执行测试（20%）"
+            echo "[test-gate] iter #$iter 执行全量测试"
             local TG_REMAIN=$(( DEADLINE - SECONDS ))
             if [ "$TG_REMAIN" -lt 1200 ]; then
               echo "[test-gate] 剩余时间不足 20 分钟，放弃本次测试"
@@ -423,16 +514,27 @@ jobs:
               echo '3. .github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；'
               echo '4. 修复后必须自行运行测试并确认完全通过。'
             } > /tmp/tg_fix_prompt.txt
-            if pick_model; then
-              local TG_EFFORT TG_FIXVAR
-              TG_EFFORT="$(variant_for "$CURRENT_MODEL")"
+            # 正常路径：本 run 开始时已选定模型，这里直接使用（不再重新挑模型）
+            if [ -z "$SELECTED_MODEL" ]; then
+              detect_model || true
+            fi
+            if [ -n "$SELECTED_MODEL" ]; then
+              local TG_EFFORT TG_FIXVAR TG_FIX_RC
+              TG_EFFORT="$(variant_for "$SELECTED_MODEL")"
               TG_FIXVAR=()
               if [ -n "$TG_EFFORT" ]; then TG_FIXVAR=(--variant "$TG_EFFORT"); fi
-              echo "[test-gate] 修复调用 model=$CURRENT_MODEL effort=${TG_EFFORT:-none}"
+              echo "[test-gate] 修复调用 model=$SELECTED_MODEL effort=${TG_EFFORT:-none}"
               : > "$OUT"
               timeout --signal=INT --kill-after=30s "$TG_FIX_BUDGET" \
-                opencode run -m "$CURRENT_MODEL" ${TG_FIXVAR[@]+"${TG_FIXVAR[@]}"} "$(cat /tmp/tg_fix_prompt.txt)" 2>&1 \
-                | tee "$OUT" | python3 "$CLEANER" || true
+                opencode run -m "$SELECTED_MODEL" ${TG_FIXVAR[@]+"${TG_FIXVAR[@]}"} "$(cat /tmp/tg_fix_prompt.txt)" 2>&1 \
+                | tee "$OUT" | python3 "$CLEANER"
+              TG_FIX_RC=${PIPESTATUS[0]}
+              if [ "$TG_FIX_RC" -ne 0 ] && [ "$TG_FIX_RC" -ne 124 ] && [ "$TG_FIX_RC" -ne 137 ] && [ "$TG_FIX_RC" -ne 143 ]; then
+                echo "[test-gate] 修复调用失败 (exit=$TG_FIX_RC)，标记 $SELECTED_MODEL 失效，稍后重新探测"
+                mark_broken "$SELECTED_MODEL"
+                SELECTED_MODEL=""
+                CURRENT_MODEL=""
+              fi
             else
               echo "[test-gate] 拿不到可用模型，跳过修复"
               return 0
@@ -459,6 +561,13 @@ jobs:
           }
 
           DEADLINE=$((SECONDS + WORK_SECONDS))
+          # run 开始时探测一次并选定模型（冒烟调用真实返回才算可用）；失败也不阻塞，
+          # 第一轮需要时会再探测一次。
+          if detect_model; then
+            echo "[info] 本次 run 固定使用模型：$SELECTED_MODEL"
+          else
+            echo "[warn] 启动时未选出可用模型，第一轮会再探测一次"
+          fi
           ITER=0
           while :; do
             ITER=$((ITER + 1))
@@ -476,20 +585,28 @@ jobs:
             attempt=0
             FAIL_COUNT=0
             RATE_COUNT=0
-            PREFERRED_BROKEN=0   # 每轮开始时恢复优先模型
+            # 本轮硬上限（含本轮所有重试）：重试不得让总时长超过这个预算
+            ITER_REMAIN=$((DEADLINE - SECONDS - 120))
+            ITER_BUDGET=$ITER_REMAIN
+            if [ "$ITER_BUDGET" -gt "$MAX_ITER_SECONDS" ]; then ITER_BUDGET=$MAX_ITER_SECONDS; fi
+            ITER_END=$((SECONDS + ITER_BUDGET))
             while [ "$attempt" -lt 3 ]; do
               attempt=$((attempt + 1))
 
-              if ! pick_model; then
-                FAIL_COUNT=$((FAIL_COUNT + 1))
-                echo "[warn] 模型池为空（目录不可达），连续 $FAIL_COUNT 次，120s 后重试"
-                if [ "$FAIL_COUNT" -ge 3 ]; then
-                  echo "[warn] 连续 3 次拿不到模型目录，放弃本轮"
-                  break
+              # 正常路径：run 开始时已选定模型，这里不会发起任何网络探测
+              if [ -z "$SELECTED_MODEL" ]; then
+                if ! detect_model; then
+                  FAIL_COUNT=$((FAIL_COUNT + 1))
+                  echo "[warn] 暂时没有可用模型，连续 $FAIL_COUNT 次，120s 后重试"
+                  if [ "$FAIL_COUNT" -ge 3 ]; then
+                    echo "[warn] 连续 3 次拿不到可用模型，放弃本轮"
+                    break
+                  fi
+                  sleep 120
+                  continue
                 fi
-                sleep 120
-                continue
               fi
+              CURRENT_MODEL="$SELECTED_MODEL"
 
               # 思考强度：模型支持则尽量调 max（无 max 用 high），都不支持则不设置
               EFFORT="$(variant_for "$CURRENT_MODEL")"
@@ -502,16 +619,23 @@ jobs:
               fi
               echo "第 ${ITER} 轮 · 尝试 ${attempt}/3 · model=$CURRENT_MODEL effort=${EFFORT:-none}"
 
-              # 本轮剩余时间收窄（给收尾留 2 分钟；重试同样受工作窗口约束）
-              REMAIN_NOW=$((DEADLINE - SECONDS))
+              # 本轮预算：每次尝试都按「本轮硬上限 - 已用时间」重新计算，并 clamp 到
+              # 全局剩余时间（给收尾留 2 分钟）。失败重试共用同一个预算，不会跑出 2 倍。
+              NOW=$SECONDS
+              REMAIN_NOW=$((DEADLINE - NOW))
               [ "$REMAIN_NOW" -le 120 ] && break
-              CAP=$((REMAIN_NOW - 120))
-              if [ "$CAP" -gt "$MAX_ITER_SECONDS" ]; then CAP=$MAX_ITER_SECONDS; fi
+              CAP=$((ITER_END - NOW))
+              GLOBAL_CAP=$((REMAIN_NOW - 120))
+              if [ "$CAP" -gt "$GLOBAL_CAP" ]; then CAP=$GLOBAL_CAP; fi
+              if [ "$CAP" -le 60 ]; then
+                echo "[info] 本轮预算已用尽（剩余 ${CAP}s），结束本轮重试"
+                break
+              fi
 
               # 单次调用：先快速定位、再直接修复（不再单独消耗 detect 预算）
               : > "$OUT"
               timeout --signal=INT --kill-after=30s "${CAP}" \
-                opencode run -m "$CURRENT_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$PROMPT" 2>&1 \
+                opencode run -m "$SELECTED_MODEL" ${VARFLAG[@]+"${VARFLAG[@]}"} "$PROMPT" 2>&1 \
                 | tee "$OUT" | python3 "$CLEANER"
               RC=${PIPESTATUS[0]}
               rm -f "$ISSUES_FILE"
@@ -525,14 +649,13 @@ jobs:
                 break
               fi
 
-              # 429 限流：休息一会儿，随机换一个免费模型再试
-              if tail -40 "$OUT" | grep -qiE "too many requests|rate.?limit|status.{0,3}429"; then
+              # 429 限流 / 5xx / 连接失败：丢弃当前模型，下一次循环重新探测（并跳过它）
+              if tail -40 "$OUT" | grep -qiE "too many requests|rate.?limit|status.{0,3}429|FreeTierError|free tier|status.{0,3}5[0-9][0-9]|econnreset|etimedout|fetch failed|socket hang up|connection (refused|reset)"; then
                 RATE_COUNT=$((RATE_COUNT + 1))
-                echo "[warn] 命中限流(429) (连续: $RATE_COUNT)，90s 后换模型重试"
-                if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
-                  PREFERRED_BROKEN=1
-                  echo "[info] 优先模型命中限流，本轮内改用随机模型"
-                fi
+                echo "[warn] 命中限流/5xx/连接失败（$SELECTED_MODEL，连续: $RATE_COUNT），标记该模型失效，90s 后重新探测"
+                mark_broken "$SELECTED_MODEL"
+                SELECTED_MODEL=""
+                CURRENT_MODEL=""
                 if [ "$RATE_COUNT" -ge 8 ]; then
                   echo "[warn] 连续 8 次限流，放弃本轮"
                   break
@@ -546,13 +669,12 @@ jobs:
                 echo "[hint] 疑似鉴权问题：匿名限额可能耗尽。可在仓库 secrets 配置 OPENCODE_API_KEY 提升限额后重试"
               fi
 
-              # 其它非零退出：随机换一个免费模型重试
+              # 其它非零退出：同样标记当前模型失效并重新探测
               FAIL_COUNT=$((FAIL_COUNT + 1))
-              echo "::warning::opencode 本轮退出码 ${RC}（模型 $CURRENT_MODEL），换模型重试"
-              if [ "$CURRENT_MODEL" = "$PREFERRED_MODEL" ]; then
-                PREFERRED_BROKEN=1
-                echo "[info] 优先模型失败，本轮内改用随机模型"
-              fi
+              echo "::warning::opencode 本轮退出码 ${RC}（模型 $SELECTED_MODEL），标记该模型失效并重新探测"
+              mark_broken "$SELECTED_MODEL"
+              SELECTED_MODEL=""
+              CURRENT_MODEL=""
               if [ "$FAIL_COUNT" -ge 3 ]; then
                 echo "[warn] 连续 3 次失败，放弃本轮"
                 break
@@ -575,7 +697,7 @@ jobs:
             fi
             git push 2>/dev/null || echo "::warning::push 暂时失败，稍后自动重试"
 
-            # ⭐ 概率测试门（新增）：本轮 bug 修复提交后 20% 概率跑测试，详见 maybe_run_tests
+            # ⭐ 测试门：本轮 bug 修复提交后都跑测试，详见 maybe_run_tests
             maybe_run_tests "$ITER"
             echo "::endgroup::"
 
@@ -618,13 +740,13 @@ jobs:
       # 由于 concurrency.cancel-in-progress=false，
       # 这个新 run 会阻塞等待当前 run 退出 → 当前 run 一结束立刻开始
       # !cancelled()：除"手动取消"外都续跑（失败也续），确保循环不中断；
-      # 定时触发 */20 同时充当看门狗：即使某次续跑失败，最多 20 分钟后自动恢复
+      # 定时触发 */15 同时充当看门狗：即使某次续跑失败，最多 15 分钟后自动恢复
   # ===== loop hand-off (added) =====
 
   # ⭐ 立刻续跑（下）：独立的收尾 job。
   # needs + if: always()：工作 job 无论成功、失败、超时被取消，这个 job 都会紧接着启动（已实测验证）。
   # 这里无条件派发一个新的后继 run：它在组内排队，本 run 退出的一瞬间就被调度。
-  # 万一这个 job 连启动都没机会（整个 run 被强杀），*/5 心跳会兜底。
+  # 万一这个 job 连启动都没机会（整个 run 被强杀），*/15 心跳会兜底。
   next-run:
     needs: [run-opencode]
     if: always()
@@ -656,5 +778,5 @@ jobs:
             echo "[loop][warn] 派发失败（attempt ${attempt}）10s 后重试"
             sleep 10
           done
-          echo "[loop][warn] 派发失败；下一次 */5 心跳会补位"
+          echo "[loop][warn] 派发失败；下一次 */15 心跳会补位"
           exit 0
