@@ -270,7 +270,7 @@ jobs:
 
           WORK_SECONDS=10200        # 工作窗口：3 小时 - 10 分钟 = 10200 秒
           MIN_RUN_SECONDS=600       # 剩余不足 10 分钟就不再开启新一轮
-          MAX_ITER_SECONDS=2400     # 单轮（含本轮所有重试）最多 40 分钟（剩余更少时自动缩短）
+          MAX_ITER_SECONDS=10800    # 单轮（含本轮所有重试）最多 3 小时（剩余更少时自动缩短）
           CLEANER=".github/scripts/clean_log.py"
           [ -f "$CLEANER" ] || CLEANER=cat   # 兜底：净化器不在就原样输出
           OUT=/tmp/oc_out.log       # 原始输出留档，用于限流(429)检测
@@ -501,7 +501,7 @@ jobs:
               echo "[test-gate] 剩余时间不足以安排修复，仅记录失败"
               return 0
             fi
-            if [ "$TG_FIX_BUDGET" -gt 2700 ]; then TG_FIX_BUDGET=2700; fi
+            if [ "$TG_FIX_BUDGET" -gt 10800 ]; then TG_FIX_BUDGET=10800; fi
             {
               echo '本仓库的测试跑不通，请修复。复现方式：在仓库根目录运行 bash /tmp/tg_run.sh。'
               echo
