@@ -295,3 +295,47 @@ rounds:
     # 标量照常接受
     cfg = load_config(write_cfg(tmp_path, BASE + "workspace: 2024\n"))
     assert cfg.workspace == "2024"
+
+
+def test_huge_integer_timeout_rejected_with_field_name(tmp_path):
+    """超出 float 范围的整数（YAML 可解析成巨大 int）必须转成带字段名的
+    ValueError，不能从 float() 泄漏 OverflowError（多字段配置无法定位）。"""
+    huge = "9" * 400
+    with pytest.raises(ValueError, match="agent.timeout"):
+        load_config(write_cfg(tmp_path, BASE + f"  timeout: {huge}\n"))
+    with pytest.raises(ValueError, match="rounds.verify_timeout"):
+        load_config(write_cfg(tmp_path, BASE + f"""
+rounds:
+  verify_timeout: {huge}
+"""))
+
+
+def test_programmatic_validate_huge_timeout_raises_value_error():
+    """程序化构造 Config 绕过 load_config 时，_validate 也不能让
+    math.isfinite 对超大整数抛 OverflowError。"""
+    from xuen.config import AgentConfig, Config, _validate
+
+    cfg = Config(agent=AgentConfig(command='agent "$prompt"',
+                                   timeout=10 ** 1000))
+    with pytest.raises(ValueError, match="agent.timeout"):
+        _validate(cfg)
+    cfg = Config(agent=AgentConfig(command='agent "$prompt"'))
+    cfg.rounds.verify_timeout = 10 ** 1000
+    with pytest.raises(ValueError, match="rounds.verify_timeout"):
+        _validate(cfg)
+
+
+def test_empty_explicit_config_path_not_silently_defaulted(tmp_path, monkeypatch):
+    """`-c ""` 是显式传入空路径：不能静默回退到当前目录的 config.yaml。"""
+    write_cfg(tmp_path, BASE)
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(FileNotFoundError):
+        load_config("")
+
+
+def test_yaml_binary_and_set_rejected_for_string_fields(tmp_path):
+    """YAML 的 !!binary / !!set 不是字符串：不能 str() 成 Python repr。"""
+    with pytest.raises(ValueError, match="workspace"):
+        load_config(write_cfg(tmp_path, BASE + "workspace: !!binary d3M=\n"))
+    with pytest.raises(ValueError, match="workspace"):
+        load_config(write_cfg(tmp_path, BASE + "workspace: !!set {ws: null}\n"))

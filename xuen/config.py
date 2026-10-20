@@ -71,8 +71,10 @@ class Config:
 
 
 def find_config_path(explicit: Optional[str] = None) -> str:
-    if explicit:
-        if not os.path.exists(explicit):
+    # 显式传入空字符串（如 CLI `-c ""`）不是「未指定」：不能静默回退到
+    # 当前目录的默认配置，否则用户以为换了配置、实际仍在读另一份文件。
+    if explicit is not None:
+        if not explicit or not os.path.exists(explicit):
             raise FileNotFoundError(explicit)
         return explicit
     for p in DEFAULT_CONFIG_PATHS:
@@ -129,20 +131,24 @@ def _parse_float(value: Any, name: str) -> float:
         raise ValueError(f"{name} 必须是数值（秒），收到布尔值: {value!r}")
     try:
         return float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # 超出 float 范围的巨大整数（YAML 可以直接解析成 int）会让
+        # float() 抛 OverflowError，而不是 ValueError；与 _parse_int /
+        # _parse_iterations 同一口径，必须先转成带字段名的配置错误。
         raise ValueError(f"{name} 必须是数值，收到: {value!r}") from None
 
 
 def _parse_str(value: Any, name: str) -> str:
-    """解析字符串配置；拒绝 list/dict 等结构化值。
+    """解析字符串配置；拒绝 list/dict/set/bytes 等非文本值。
 
     YAML 把列表/映射写进字符串字段几乎都是笔误：str() 会静默变成
     Python repr——`command: [opencode, run, "$prompt"]` 渲染成
     "['opencode', 'run', ...]"，命令校验在 repr 里看到 $prompt 竟会
     放行，运行时才以 `sh: [opencode,: not found` 失败；`workspace: []`
     会直接创建名为 "[]" 的目录。缩进写错（`workspace:` 下多一层列表）
-    同样落入此类。标量（数字/字符串/日期）照常转字符串。"""
-    if isinstance(value, (list, dict)):
+    同样落入此类；`!!binary` / `!!set` 也会变成 "b'...'" / "{'...'}"
+    这样的 Python repr。标量（数字/字符串/日期）照常转字符串。"""
+    if isinstance(value, (list, dict, set, bytes, bytearray)):
         raise ValueError(f"{name} 必须是字符串，收到: {value!r}")
     return str(value)
 
@@ -336,6 +342,17 @@ def _validate_windows_command(name: str, template: str,
         )
 
 
+def _is_finite_number(value: Any) -> bool:
+    """数值且有限；程序化 Config 里的超大整数也不能让 math.isfinite 抛
+    OverflowError（load_config 已在 _parse_float 转成带字段名的错误）。"""
+    if isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except (TypeError, OverflowError):
+        return False
+
+
 def _validate(cfg: Config) -> None:
     if cfg.words.pick < 0:
         raise ValueError("words.pick（n）必须 >= 0")
@@ -343,7 +360,7 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.count / words.batch 必须为正整数")
     if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
         raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
-    if not math.isfinite(cfg.agent.timeout) or cfg.agent.timeout <= 0:
+    if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
     # ---- 轮次守卫 ----
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
@@ -361,7 +378,7 @@ def _validate(cfg: Config) -> None:
         raise ValueError("rounds.dir 不能为空")
     for name in ("verify_timeout", "judge_timeout"):
         v = getattr(cfg.rounds, name)
-        if not math.isfinite(v) or v <= 0:
+        if not _is_finite_number(v) or v <= 0:
             raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
     jcmd = cfg.rounds.judge_command
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，

@@ -1826,8 +1826,28 @@ class ShellAgent:
         # 提示词文件路径）里恰好含有占位符字面量时会被二次替换、破坏命令
         # （占位符被模板自带引号包住时，连引号一起换成哨兵，否则转义结果
         # 嵌在引号里会被当作字面值）
-        for ph in ('"$prompt_file"', "'$prompt_file'"):
+        for ph in ('"$prompt_file"',):
             tpl = tpl.replace(ph, f_sentinel)
+        # 单引号在 cmd 中只是普通字符：只有整对单引号位于双引号外时，才按
+        # 「整词占位符」处理（保持既有行为）。位于双引号内时保留单引号
+        # 字面量，只把内部占位符按「引号内」插入裸路径——否则
+        # `tool "'$prompt_file'"` 会被替换成 `tool ""C:\path""`，嵌套引号
+        # 让 cmd 拆错参数，外部 agent 拿到坏路径。
+        sq_pattern = re.compile(r"'\$prompt_file'")
+        sq_parts = []
+        sq_last = 0
+        sq_in_quotes = False
+        for match in sq_pattern.finditer(tpl):
+            sq_in_quotes = _cmd_double_quotes_after(
+                tpl[sq_last:match.start()], sq_in_quotes)
+            sq_parts.append(tpl[sq_last:match.start()])
+            if sq_in_quotes:
+                sq_parts.append("'" + f_inq_sentinel + "'")
+            else:
+                sq_parts.append(f_sentinel)
+            sq_last = match.end()
+        sq_parts.append(tpl[sq_last:])
+        tpl = "".join(sq_parts)
         # 剩余占位符要按所在的 cmd 引号状态区分：引号内插裸路径、引号外
         # 插转义路径（Windows 上 $prompt 已被配置校验整体拒绝，只有
         # $prompt_file 需要区分；见 config._validate）

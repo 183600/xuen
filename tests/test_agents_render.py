@@ -2377,3 +2377,42 @@ def test_render_command_rejects_array_assignment(tmp_path):
         r = subprocess.run(argv, capture_output=True, text=True, cwd=tmp_path)
         assert r.returncode == 0, (argv, r.stderr)
         assert r.stdout == prompt + "\n", (argv, r.stdout)
+
+
+def test_render_windows_single_quoted_prompt_file_inside_double_quotes(
+        tmp_path, monkeypatch):
+    """cmd 里单引号是字面字符：它位于双引号内时不能连同占位符一起
+    被替换成带引号的路径，否则 `"'$prompt_file'"` 会生成 `""C:\\path""`
+    的嵌套引号，cmd 拆错参数、外部 agent 拿到坏路径。"""
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    ws = tmp_path / "ws with space"
+    ws.mkdir()
+    for tpl in ('tool "\'$prompt_file\'"', 'tool "pre \'$prompt_file\' suf"',
+                'tool "\'a $prompt_file b\'"'):
+        agent = agents.ShellAgent(tpl, ws, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None
+            path = str(agent._prompt_file.resolve())
+            assert rendered == tpl.replace("$prompt_file", path), rendered
+            assert '""' not in rendered, rendered
+        finally:
+            agent._cleanup_prompt_file()
+    # 双引号外的整词单引号写法保持既有口径：去掉单引号并按 cmd 加引号
+    agent = agents.ShellAgent("tool '$prompt_file'", ws, timeout=1)
+    try:
+        rendered = agent.render_command("PROMPT")
+        path = str(agent._prompt_file.resolve())
+        assert rendered == f'tool "{path}"', rendered
+    finally:
+        agent._cleanup_prompt_file()
