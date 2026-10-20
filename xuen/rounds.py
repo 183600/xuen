@@ -485,6 +485,15 @@ class RoundGuard:
         # 本会话里挂起、可被 verdicts.txt 补分改判的候选；补分兑现时
         # 统计要从「待评分」桶迁走，否则汇总与晋升日志自相矛盾
         self._pending_ids: set = set()
+        # 本轮已快照、但还没有终结结论（adopted/rejected/pending）的候选
+        # id：任何未被现有分支覆盖的 BaseException（最典型的是 Ctrl+C 正好
+        # 落在 sink 输出等点上）都会带着 candidates 已 +1、三个结论桶全 0
+        # 的统计逃出去，违反 adopted+rejected+pending==candidates；而
+        # on_round_failed 看到轮次已处理只会补做还原，无法弥补统计
+        self._inflight_cid: Optional[str] = None
+        # 本会话已计入 adopted / rejected 的候选 id（挂起另有 _pending_ids
+        # 跟踪）：兜底记账据此幂等，已决候选绝不再补记成待评分
+        self._settled_cids: set = set()
         # 本会话内已由 on_round_end 处理（或已按失败/中断记账）的轮次：
         # KeyboardInterrupt 可能晚于守卫处理到达，on_round_failed 再记一遍
         # 会让轮次数/跳过数虚增、审计日志为同一轮记出自相矛盾的候选+跳过
@@ -786,6 +795,44 @@ class RoundGuard:
     def _process_round_end(self, round_no: int) -> str:
         self._handled_rounds.add(round_no)
         self.stats.rounds += 1
+        try:
+            result = self._process_round_end_body(round_no)
+        except BaseException:
+            # 中断（或任何异常）落在候选快照之后、终结结论入账之前的
+            # 未覆盖点：候选已计入 candidates，却没有 adopted/rejected/
+            # pending，违反汇总不变式；此时轮次已在 _handled_rounds 里，
+            # on_round_failed 只会补做还原，补不了统计。这里兜底补记
+            # 「待评分」再传播原异常；已挂起/已决/已晋升的候选幂等跳过。
+            try:
+                self._settle_inflight_candidate(round_no)
+            finally:
+                self._inflight_cid = None
+            raise
+        else:
+            self._inflight_cid = None
+        return result
+
+    def _settle_inflight_candidate(self, round_no: int) -> None:
+        """异常路径兜底：把本轮已快照但无结论的候选记为「待评分」。
+
+        只处理「快照成功、尚无任何终结结论」这一种状态；已挂起
+        （_pending_ids）、已决（_settled_cids）或已晋升（best 已指向
+        该候选）时直接跳过，避免重复计数。记账本身失败只告警——不能
+        掩盖触发它的原始异常。
+        """
+        cid = self._inflight_cid
+        if cid is None or cid in self._pending_ids \
+                or cid in self._settled_cids or self.best.get("id") == cid:
+            return
+        try:
+            self._pend(round_no, cid, "轮次被中断，候选挂起")
+        except BaseException as e:  # noqa: BLE001 —— 守卫降级原则
+            try:
+                self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+            except BaseException:  # noqa: BLE001 —— 连告警都失败时保原始异常
+                pass
+
+    def _process_round_end_body(self, round_no: int) -> str:
         text = self._read_state_text()
         if not text:
             # research.md 整个没了：没法当候选，也别让下一轮拿到空状态
@@ -805,6 +852,7 @@ class RoundGuard:
             cid = None
             try:
                 cid = self._snapshot_candidate(round_no, text)
+                self._inflight_cid = cid
                 self._append_event({"event": "candidate", "id": cid,
                                     "round": round_no, "corrupt": True})
             except KeyboardInterrupt:
@@ -825,6 +873,7 @@ class RoundGuard:
             except Exception as e:
                 self.stats.candidates -= 1
                 self.stats.skipped += 1
+                self._inflight_cid = None  # 候选已撤销，兜底不得再挂起
                 try:
                     self._append_event({"event": "skipped", "round": round_no,
                                         "reason": f"候选快照写盘失败：{e}"})
@@ -844,6 +893,7 @@ class RoundGuard:
                 # _apply_user_verdicts 把同一候选再拒绝/采纳一次
                 self._applied_verdicts.add(cid)
             self.stats.rejected += 1
+            self._settled_cids.add(cid)
             self.sink.err(f"候选 {cid} 被守卫拒绝：{verdict.reason}，已还原最佳")
             self._restore_best(round_no, why="结构损坏")
             return "rejected"
@@ -872,6 +922,7 @@ class RoundGuard:
         }.items() if c != b]
         try:
             cid = self._snapshot_candidate(round_no, text)
+            self._inflight_cid = cid
             self._append_event({"event": "candidate", "id": cid,
                                 "round": round_no, "changed": changed})
         except KeyboardInterrupt:
@@ -893,6 +944,7 @@ class RoundGuard:
         except Exception as e:
             self.stats.candidates -= 1
             self.stats.skipped += 1
+            self._inflight_cid = None  # 候选已撤销，兜底不得再挂起
             try:
                 self._append_event({"event": "skipped", "round": round_no,
                                     "reason": f"候选快照写盘失败：{e}"})
@@ -945,6 +997,7 @@ class RoundGuard:
                 if committed.get("id") == cid:
                     self.best = committed
                     self.stats.adopted += 1
+                    self._settled_cids.add(cid)
                     try:
                         self._append_event({"event": "verdict", "id": cid,
                                             "round": round_no,
@@ -980,6 +1033,7 @@ class RoundGuard:
             return "adopted"
         if verdict.result == "rejected":
             self.stats.rejected += 1
+            self._settled_cids.add(cid)
             self.sink.warn(f"候选 {cid} 未通过（{verdesc(verdict)}），"
                            f"保留最佳并还原")
             self._restore_best(round_no, why="候选被拒绝")
@@ -1308,6 +1362,7 @@ class RoundGuard:
         self._commit_best(text, best)
         self.best = best
         self.stats.adopted += 1
+        self._settled_cids.add(cid)
         self.sink.ok(f"第 {round_no} 轮候选通过验证（{verdesc(verdict)}），"
                      f"晋升为最佳（{cid}）")
 

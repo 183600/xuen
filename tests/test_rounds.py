@@ -3475,3 +3475,76 @@ def test_helper_interrupt_cleans_tmp(tmp_path):
     assert state.get_section(text, state.SECTION_IDEA) == "（暂无）"
     assert not (tmp_path / "research.md.tmp").exists()
     assert not list(tmp_path.glob("research.md.*.tmp"))
+
+
+def test_interrupt_after_snapshot_before_verdict_settles_candidate(ws, monkeypatch):
+    """快照后、判定入账前的中断不能留下「候选 1、结论全 0」的统计。
+
+    回归：候选快照成功、候选事件已落盘后，sink.info 输出（或其他未覆盖
+    点）收到 KeyboardInterrupt 时，candidates 已 +1 却没有任何结论桶；
+    轮次已在 _handled_rounds，runner 的 on_round_failed 只补做还原，补
+    不了统计——汇总永久违反 adopted+rejected+pending==candidates。
+    中断语义不变：不写 verdict 事件（不能把中断伪装成已决），候选按
+    「待评分」计入并还原最佳，用户补分仍可翻案。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "中断也要保住的新想法")
+
+    real_info = guard.sink.info
+
+    def boom(text):
+        if "候选快照" in text:
+            raise KeyboardInterrupt
+        return real_info(text)
+
+    monkeypatch.setattr(guard.sink, "info", boom)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 0, 0, 1)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
+    verdicts = [e for e in events(guard) if e["event"] == "verdict"]
+    assert verdicts == []
+
+    # runner 的失败处理（轮次已处理，只补还原）不能让统计再次失衡
+    guard.on_round_failed(1, "被中断，轮次未完成")
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending, s.skipped) \
+        == (1, 0, 0, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    guard.finish()
+
+
+def test_candidate_event_failure_retracts_before_settle(ws, monkeypatch):
+    """候选快照成功、候选事件写盘失败：按跳过撤销后兜底不能补成待评分。
+
+    回归：兜底记账只看 _inflight_cid 仍指向刚被撤销的候选，会把它补记
+    成「待评分」——candidates 已 -1，pending 却 +1，汇总反而多出一个
+    并不存在的待评分候选。任何撤销候选（candidates -= 1）的路径都必须
+    同步清空 in-flight 标记。
+    """
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "候选事件写盘失败的想法")
+    real_append = guard._append_event
+
+    def boom(ev):
+        if ev.get("event") == "candidate":
+            raise OSError("磁盘满（模拟）")
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", boom)
+    with pytest.raises(OSError):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending, s.skipped) \
+        == (0, 0, 0, 0, 1)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["round"] == 0
