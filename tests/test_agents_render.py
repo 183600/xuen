@@ -2399,6 +2399,31 @@ def test_render_command_keyboard_interrupt_cleans_prompt_file(tmp_path,
     assert list(tmp_path.glob(".prompt.*.md")) == []
 
 
+def test_write_prompt_file_interrupt_closes_and_cleans_temp(tmp_path,
+                                                            monkeypatch):
+    """_write_prompt_file 自身被 Ctrl+C 打断时也不能留下半成品文件。
+
+    回归：该函数只捕获 Exception，KeyboardInterrupt 会绕过清理；且
+    _prompt_file 直到写入成功后才登记，render_command 的外层清理也看不到
+    这个已创建的 .prompt.*.md（内含研究状态），文件永久残留。"""
+    from xuen import agents
+
+    agent = agents.ShellAgent("tool $prompt_file", tmp_path, timeout=5)
+
+    def interrupted(fd, *args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(agents.os, "fdopen", interrupted)
+    try:
+        agent._write_prompt_file("机密提示词")
+    except KeyboardInterrupt:
+        pass
+    else:
+        raise AssertionError("KeyboardInterrupt 应向上传播")
+    assert agent._prompt_file is None
+    assert list(tmp_path.glob(".prompt.*.md")) == []
+
+
 def test_render_command_rejects_array_assignment(tmp_path):
     """裸上下文中的 bash 数组赋值（NAME=(...)）模板必须整体拒绝。
 

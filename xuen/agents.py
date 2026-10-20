@@ -939,11 +939,16 @@ class ShellAgent:
         fd, fname = tempfile.mkstemp(
             prefix=".prompt.", suffix=".md", dir=self.workspace)
         pfile = Path(fname)
+        # 先登记再写入：Ctrl+C 可能落在 with 退出与赋值之间；若此时才
+        # 登记，外层 render_command 的清理看不到该文件。写入失败时下方
+        # 清掉登记，避免调用方再次 unlink 一个已删除/半成品的路径。
+        self._prompt_file = pfile
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(prompt)
-        except Exception:
-            # 写入失败时关掉 fd 并清掉半成品文件，避免工作区堆积
+        except BaseException:
+            # 写入失败（含 KeyboardInterrupt/SystemExit）时关掉 fd 并清掉
+            # 半成品文件，避免内含研究状态的 .prompt.*.md 留在工作区
             try:
                 os.close(fd)
             except OSError:
@@ -952,8 +957,8 @@ class ShellAgent:
                 pfile.unlink(missing_ok=True)
             except OSError:
                 pass
+            self._prompt_file = None
             raise
-        self._prompt_file = pfile
         return pfile
 
     def _render_posix(self, tpl: str, prompt: str, dry_run: bool = False,
