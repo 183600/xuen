@@ -808,6 +808,7 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "foo test:",
     "test test2:",
     "foo test bar:",
+    "test: %.o: %.c",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -825,11 +826,14 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test: :x",
     "test: : = x",
     "foo test: :x",
+    "test: a::b",
+    "test: dep::x",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
-    """三个及以上冒号、分隔符后以空白+冒号开头的非法依赖都不是合法
-    test 目标（GNU make 报 missing target pattern），探测命中会让
-    `make test` 以退出码 2 误伤候选。"""
+    """三个及以上冒号、分隔符后以空白+冒号开头、依赖里带连续冒号的
+    写法都不是合法 test 目标（GNU make 报 missing target pattern /
+    target pattern contains no '%'），探测命中会让 `make test` 以退出码
+    2 误伤候选。"""
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(line + "\n", encoding="utf-8")
