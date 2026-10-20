@@ -769,7 +769,26 @@ def test_detect_test_suite_npm(tmp_path, monkeypatch):
     _fake_npm(monkeypatch)
     (tmp_path / "package.json").write_text(
         '{"scripts": {"test": "vitest run"}}', encoding="utf-8")
-    assert detect_test_suite(tmp_path) == ["npm", "test"]
+    assert detect_test_suite(tmp_path) == ["/usr/bin/npm", "test"]
+
+
+def test_detect_test_suite_npm_uses_resolved_executable(tmp_path, monkeypatch):
+    """探测结果必须带上 which 解析出的完整路径。
+
+    Windows 上 npm 实际是 npm.cmd；CreateProcess 对无扩展名的程序只补
+    .exe，裸 "npm" 启动会以 WinError 2 失败，套件被误判成不可用。"""
+    real_which = shutil.which
+
+    def which(name, *args, **kwargs):
+        if name == "npm":
+            return r"C:\Program Files\nodejs\npm.cmd"
+        return real_which(name, *args, **kwargs)
+
+    monkeypatch.setattr("xuen.rounds.shutil.which", which)
+    (tmp_path / "package.json").write_text(
+        '{"scripts": {"test": "vitest run"}}', encoding="utf-8")
+    assert detect_test_suite(tmp_path) == [
+        r"C:\Program Files\nodejs\npm.cmd", "test"]
 
 
 def test_detect_test_suite_npm_with_bom(tmp_path, monkeypatch):
@@ -780,7 +799,7 @@ def test_detect_test_suite_npm_with_bom(tmp_path, monkeypatch):
     _fake_npm(monkeypatch)
     (tmp_path / "package.json").write_text(
         '\ufeff{"scripts": {"test": "vitest run"}}', encoding="utf-8")
-    assert detect_test_suite(tmp_path) == ["npm", "test"]
+    assert detect_test_suite(tmp_path) == ["/usr/bin/npm", "test"]
 
 
 def test_detect_test_suite_npm_placeholder_ignored(tmp_path, monkeypatch):

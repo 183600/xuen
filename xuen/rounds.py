@@ -343,7 +343,11 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             pass
     # 3) npm test：package.json 声明了非占位的 test 脚本
     pkg = repo / "package.json"
-    if pkg.is_file() and shutil.which("npm"):
+    # 用 which 解析出的完整路径而不是裸 "npm"：Windows 上 npm 实际是
+    # npm.cmd，CreateProcess 对无扩展名的程序只补 .exe，裸 "npm" 会以
+    # WinError 2 启动失败，套件被误判成不可用（tests 模式永远挂起）。
+    npm = shutil.which("npm") if pkg.is_file() else None
+    if npm:
         try:
             # JSON 合法但结构不对（顶层是 list、scripts 是 list/str 等）
             # 都按「没有 npm 套件」处理：这类脏数据不能把探测整个打断。
@@ -355,7 +359,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             test_cmd = scripts.get("test") if isinstance(scripts, dict) else None
             if isinstance(test_cmd, str) and test_cmd.strip() \
                     and "no test specified" not in test_cmd:
-                return ["npm", "test"]
+                return [npm, "test"]
         except (OSError, ValueError):
             pass
     # 4) go test：go.mod 模块下任意位置（根目录或 cmd/、internal/ 等
