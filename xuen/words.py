@@ -250,6 +250,7 @@ def _clean_once(line: str) -> str | None:
         return None
     return w
 _MAX_CLEAN_LEN = 256
+_LINE_SPLIT = re.compile(r"\r\n|\r|\n")
 
 def _clean_line(line: str) -> Optional[str]:
     """清洗到不动点：单次清洗剥掉边缘字符后可能暴露出新的序号/标点/分隔符
@@ -272,7 +273,7 @@ def _clean_line(line: str) -> Optional[str]:
 def parse_word_lines(text: str) -> List[str]:
     out: List[str] = []
     seen = set()
-    for ln in text.splitlines():
+    for ln in _LINE_SPLIT.split(text):
         w = _clean_line(ln)
         if not w:
             continue

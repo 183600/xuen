@@ -470,3 +470,16 @@ def test_words_clean_rejects_lone_cjk_index_and_keeps_decimal_terms():
         w = _clean_line(src)
         if w is not None:
             assert _clean_line(w) == w, w
+
+
+def test_words_parse_splits_only_ascii_line_endings():
+    """只有 CR/LF 是词表行边界，Unicode 行分隔符属于词内容。
+
+    回归：parse_word_lines 用 str.splitlines()，它还会在 U+2028/U+2029/
+    U+0085/VT/FF 等位置切行；agent 输出或手工编辑的 words.txt 中若出现
+    这些字符，一个词会被静默拆成多个词，保存后再读取也无法恢复。
+    与 state/rounds 的用户可编辑文件同一口径，只按 ASCII 换行切分。
+    """
+    for sep in ("\u2028", "\u2029", "\x85", "\x0b", "\x0c"):
+        assert parse_word_lines("a" + sep + "b\n") == ["a" + sep + "b"]
+    assert parse_word_lines("a\r\nb\rc\nd") == ["a", "b", "c", "d"]
