@@ -723,7 +723,7 @@ class RoundGuard:
             return best
         return None
 
-    def _recover_best(self) -> Dict:
+    def _recover_best(self, *, require_snapshot: bool = False) -> Dict:
         """best.md 存在但 best.json 缺失/损坏：恢复最佳元数据并回写。
 
         正常提交顺序下 best.json 先于 best.md 落盘（见 start/_commit_best），
@@ -732,8 +732,17 @@ class RoundGuard:
         按 best.md 合成一条基线并补记 baseline 事件。恢复结果回写 best.json，
         后续启动直接命中；写盘失败只告警（元数据在内存中已可用，守卫照常
         工作——降级原则）。
+
+        require_snapshot=True 用于 best.md 自身结构已损坏、不能充当内容源
+        的情况：只采用候选快照仍可读的 history 最佳（当前最佳快照丢了也
+        要退回较早可恢复的最佳），并从该快照自愈 best.md；否则只恢复
+        元数据，内容仍以完好且可能更新的 best.md 为准。
         """
-        best = self._best_from_history()
+        best = self._best_from_history(require_snapshot=require_snapshot)
+        if best is None and require_snapshot:
+            # 没有任何可恢复的快照：仍尽量恢复最新元数据；内容只能按
+            # 既有「快照不可用」口径退回脚手架，不能继续用损坏的 best.md
+            best = self._best_from_history()
         baseline_only = False
         if best is None:
             best = {"id": f"baseline-{time.strftime('%Y%m%d-%H%M%S')}",
@@ -749,9 +758,22 @@ class RoundGuard:
                           json.dumps(best, ensure_ascii=False, indent=2))
         except OSError as e:
             self.sink.warn(f"恢复的最佳元数据写盘失败（忽略）：{e}")
+        if require_snapshot:
+            recovered_text = (None if baseline_only
+                              else self._recover_best_text(best))
+            if recovered_text is not None:
+                self._heal_best_md(recovered_text)
+                self.sink.warn("rounds/best.md 结构损坏，已从候选快照恢复"
+                               f"可用的最佳内容（{best['id']}）")
+            else:
+                # 没有可恢复的内容（基线 / 快照也丢失）：把损坏的
+                # best.md 重建成脚手架，后续读取不必反复走损坏回退
+                self._heal_best_md(state.scaffold(self.task))
+                self.sink.warn("rounds/best.md 结构损坏且没有可恢复的候选"
+                               "快照：已重建为空内容")
         if baseline_only:
             self.sink.warn("rounds/best.json 与 history.jsonl 均不可用："
-                           f"已按 best.md 重建基线最佳（{best['id']}）")
+                           f"已重建基线最佳（{best['id']}）")
         else:
             self.sink.warn("rounds/best.json 缺失或损坏：已从 history.jsonl "
                            f"恢复最佳元数据（{best['id']}）")
@@ -816,8 +838,19 @@ class RoundGuard:
         if self.best_md.exists():
             loaded = self._load_best()
             # best.md 是「基线/最佳已建立」的内容源；元数据缺失/损坏时
-            # 从历史或 best.md 恢复，而不是把 best 永远停在 unknown
-            self.best = loaded if loaded else self._recover_best()
+            # 从历史或 best.md 恢复，而不是把 best 永远停在 unknown。
+            # best.md 自身结构也损坏时，它不能再充当内容源：恢复历史最佳
+            # 必须优先选快照仍可读的事件（当前最新快照丢了要退回较早的），
+            # 否则元数据会指向一份内容已无从找回的最佳。
+            if loaded:
+                self.best = loaded
+            else:
+                try:
+                    md_intact = _structure_intact(
+                        self.best_md.read_text(encoding="utf-8"))
+                except (OSError, UnicodeDecodeError):
+                    md_intact = False
+                self.best = self._recover_best(require_snapshot=not md_intact)
         else:
             # best.md 缺失不一定是首次运行：外部删除 / 截断后 best.json
             # 仍指向某个已晋升候选，对应快照 cand-<id>.md 还在——先按 id

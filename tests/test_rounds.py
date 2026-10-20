@@ -2494,6 +2494,60 @@ def test_start_recovers_older_best_when_current_snapshot_missing(ws):
                for lvl, m in sink.messages if lvl == "warn")
 
 
+def test_start_damaged_best_md_recovers_older_readable_snapshot(ws):
+    """best.md 结构损坏且 best.json 丢失时，也要优先恢复快照可读的最佳。
+
+    回归：该组合会走 _recover_best 取 history 最新采纳事件（不检查快照），
+    best.md 又损坏不能充当内容源；若最新快照恰好丢了，内容就退回脚手架，
+    而更早的最佳快照明明完整可读——旧最佳被静默丢弃。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_events = [e for e in events(guard) if e["event"] == "baseline"]
+    write_idea(state_path, "第一轮晋升的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    first_id = guard.best["id"]
+    write_idea(state_path, "第二轮晋升的最佳")
+    assert guard.on_round_end(2) == "adopted"
+    second_id = guard.best["id"]
+
+    (guard.dir / rounds.BEST_MD_NAME).write_text(
+        "被外部截断的垃圾内容，没有区块标记", encoding="utf-8")
+    (guard.dir / rounds.BEST_JSON_NAME).unlink()
+    (guard.dir / f"{rounds.CAND_PREFIX}{second_id}.md").unlink()
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()
+    assert restarted.best["id"] == first_id
+    assert restarted.best["round"] == 1
+    assert read_idea(restarted.best_md) == "第一轮晋升的最佳"
+    assert json.loads(restarted.best_json.read_text(
+        encoding="utf-8"))["id"] == first_id
+    assert [e for e in events(restarted)
+            if e["event"] == "baseline"] == baseline_events
+    assert any("从候选快照恢复" in m
+               for lvl, m in sink.messages if lvl == "warn")
+
+
+def test_start_damaged_best_md_without_snapshot_rebuilds_scaffold(ws):
+    """best.md 损坏、无快照且元数据丢失时，重建有效脚手架而不是留下坏文件。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    guard.best_md.write_text("被外部截断的垃圾内容，没有区块标记",
+                             encoding="utf-8")
+    guard.best_json.unlink()
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()
+    assert read_idea(restarted.best_md) == "（暂无）"
+    assert state._first_section(
+        restarted.best_md.read_text(encoding="utf-8"),
+        state.SECTION_ARTIFACT) is not None
+
+
 def test_late_adoption_partial_best_failure_keeps_content(ws, monkeypatch):
     """补分采纳的 best 写盘中途失败：未采纳的候选内容不得流进还原源。"""
     workspace, state_path = ws
