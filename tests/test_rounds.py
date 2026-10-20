@@ -2513,6 +2513,40 @@ def test_strip_stray_markers_handles_cr_only_lines():
     assert state._strip_stray_markers(inline, [], 0, s, e) == inline
 
 
+def test_section_content_keeps_unicode_line_separators(tmp_path):
+    """区块内容里的 U+2028/U+2029/U+0085 不是标记行边界。
+
+    回归：sanitize_section_content 用 str.splitlines() 切行（helper 副本
+    相同），会把这类 Unicode 行分隔符后面的标记样文本当成独占整行标记
+    删除，并把分隔符改写成换行，导致写入内容丢字/变形；而区块标记解析
+    （_SECTION_MARKER）只认 CR/LF，这些文本本来就不会参与配对。"""
+    import subprocess
+
+    for sep in ("\u2028", "\u2029", "\x85"):
+        # 行分隔符既在内容中间，也在首尾：两端不能被当成可剥空白后
+        # 把后面的标记样文本暴露成“独占整行”的标记
+        contents = (
+            f"甲{sep}{state.start_marker(state.SECTION_IDEA)}{sep}乙",
+            f"{sep}{state.start_marker(state.SECTION_IDEA)}{sep}",
+        )
+        for content in contents:
+            assert state.sanitize_section_content(content) == content
+
+            state_path = tmp_path / "research.md"
+            state.ensure_state_file(state_path, "测试任务")
+            state.update_section_file(state_path, state.SECTION_IDEA, content)
+            text = state_path.read_text(encoding="utf-8")
+            assert state.get_section(text, state.SECTION_IDEA) == content
+
+            helper = state.write_helper_script(tmp_path, state_path)
+            r = subprocess.run([sys.executable, str(helper), "idea"],
+                               input=content.encode("utf-8"),
+                               capture_output=True)
+            assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+            text = state_path.read_text(encoding="utf-8")
+            assert state.get_section(text, state.SECTION_IDEA) == content
+
+
 def test_helper_writes_sections_in_cr_only_state(tmp_path):
     """写入助手脚本必须与 xuen.state 同口径支持裸 CR 行尾。
 
@@ -2530,6 +2564,38 @@ def test_helper_writes_sections_in_cr_only_state(tmp_path):
     text = state_path.read_text(encoding="utf-8")
     assert state.get_section(text, state.SECTION_IDEA) == "CR 想法"
     assert state.get_section(text, state.SECTION_ARTIFACT) == "（暂无）"
+
+
+def test_helper_and_module_keep_same_state_entry_when_symlink_replaced(tmp_path):
+    """状态文件是符号链接时，helper 不得写解析后的目标而模块写链接路径。"""
+    import subprocess
+
+    if not hasattr(os, "symlink"):
+        pytest.skip("平台不支持符号链接")
+    real_path = tmp_path / "real.md"
+    state.ensure_state_file(real_path, "测试任务")
+    state_path = tmp_path / "research.md"
+    try:
+        state_path.symlink_to(real_path)
+    except OSError:
+        pytest.skip("平台不允许创建符号链接")
+    helper = state.write_helper_script(tmp_path, state_path)
+
+    r = subprocess.run([sys.executable, str(helper), "idea"],
+                       input="helper 一".encode("utf-8"), capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    assert state.get_section(state_path.read_text(encoding="utf-8"),
+                             state.SECTION_IDEA) == "helper 一"
+
+    state.update_section_file(state_path, state.SECTION_ARTIFACT, "module")
+    assert not state_path.is_symlink()
+    r = subprocess.run([sys.executable, str(helper), "idea"],
+                       input="helper 二".encode("utf-8"), capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == "helper 二"
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "module"
 
 
 def test_update_section_preserves_other_section_with_mixed_line_endings(tmp_path):

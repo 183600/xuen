@@ -9,6 +9,7 @@
   - 守卫自身崩溃 → 研究循环照常完成（失败一律降级、不阻断循环）。
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -216,6 +217,25 @@ def test_bad_workspace_path_friendly_error(env, tmp_path):
     with pytest.raises(SystemExit) as ei:
         runner.run(cfg, "测试任务", sink=NullSink())
     assert "工作区不可用" in str(ei.value)
+
+
+def test_workspace_symlink_loop_friendly_error(env, tmp_path):
+    """工作区是符号链接环时 Path.resolve 抛 RuntimeError，也必须按配置
+    错误给友好提示；漏掉 RuntimeError 会直接 traceback。"""
+    if os.name == "nt":
+        pytest.skip("Windows 创建符号链接需要额外权限")
+    ws, script = env
+    repo = _make_repo(tmp_path, ok=True)
+    cfg = _make_cfg(ws, script, repo)
+    loop_a = tmp_path / "loop_a"
+    loop_b = tmp_path / "loop_b"
+    loop_a.symlink_to(loop_b)
+    loop_b.symlink_to(loop_a)
+    cfg.workspace = str(loop_a)
+    with pytest.raises(SystemExit) as ei:
+        runner.run(cfg, "测试任务", sink=NullSink())
+    assert "工作区不可用" in str(ei.value)
+    assert "Symlink loop" in str(ei.value)
 
 
 def test_windows_runner_rejects_metachar_resolved_workspace(

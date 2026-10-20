@@ -25,10 +25,11 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     # resolve 成绝对路径：外部 agent 的工作目录不一定是 xuen 的 cwd，
     # 提示词里的 helper / state 路径必须对任何 cwd 都有效。
     # 非法路径（如 YAML 的 "\0" 转义）会让 resolve 抛 ValueError，
-    # 属于配置错误，按约定给出友好提示（退出码 2）而不是 traceback
+    # 符号链接环会抛 RuntimeError；都属于配置错误，按约定给出友好提示
+    # （退出码 2）而不是 traceback
     try:
         workspace = Path(cfg.workspace).expanduser().resolve()
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, RuntimeError) as e:
         raise SystemExit(f"工作区不可用：{cfg.workspace}（{e}）")
     # 程序化调用（cli 之外）同样可能传入含孤立代理字符的任务：它们无法
     # 按 UTF-8 写盘，会在状态文件/提示词文件处抛 UnicodeEncodeError。
