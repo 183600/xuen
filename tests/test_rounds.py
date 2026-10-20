@@ -822,10 +822,14 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test:::",
     "test::::",
     "test::: dep",
+    "test: :x",
+    "test: : = x",
+    "foo test: :x",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
-    """三个及以上冒号不是合法目标（GNU make 报 missing target pattern），
-    探测命中会让 `make test` 以退出码 2 误伤候选。"""
+    """三个及以上冒号、分隔符后以空白+冒号开头的非法依赖都不是合法
+    test 目标（GNU make 报 missing target pattern），探测命中会让
+    `make test` 以退出码 2 误伤候选。"""
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(line + "\n", encoding="utf-8")
