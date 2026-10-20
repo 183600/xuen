@@ -332,7 +332,10 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    已支持嵌套包）；目录名恰好叫 test_x.py 的也不能算测试文件。
     if _has_pytest_file(repo) and _find_spec("pytest"):
         return [sys.executable, "-m", "pytest", "-q"]
-    # 2) make test：Makefile 里定义了 test 目标。只认精确的 test 目标：
+    # 2) make test：Makefile 里定义了 test 目标。GNU make 按
+    #    GNUmakefile → makefile → Makefile 的顺序取第一个存在的文件；
+    #    只查 Makefile 会漏掉合法的 lowercase/GNUmakefile 套件，也会在
+    #    GNUmakefile 覆盖 Makefile 时按后者误判。只认精确的 test 目标：
     #    test-unit / test-ci 之类后缀目标不算——探测命中后会执行
     #    `make test`，而 Makefile 里根本没有 test 目标时 make 以退出码 2
     #    失败，run_suite 会把它当成「测试失败」拒绝候选，连 auto 模式的
@@ -340,8 +343,10 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    变量赋值（test := / ?= / += / != / ::=）与 test: = x 这类空变量名
     #    同样不是目标：make test 会以退出码 2 失败，必须按无套件处理。
     #    负向前瞻吞掉冒号后任意个冒号再接 = 的写法（::= / :::=）。
-    makefile = repo / "Makefile"
-    if makefile.is_file() and shutil.which("make"):
+    makefile = next(
+        (repo / name for name in ("GNUmakefile", "makefile", "Makefile")
+         if (repo / name).is_file()), None)
+    if makefile is not None and shutil.which("make"):
         try:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在

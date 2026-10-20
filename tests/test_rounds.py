@@ -696,6 +696,28 @@ def test_detect_test_suite_make_with_bom(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("name", ["GNUmakefile", "makefile"])
+def test_detect_test_suite_make_default_file_names(tmp_path, name):
+    """GNU make 也搜索 GNUmakefile / makefile；只查 Makefile 会漏掉套件，
+    auto 模式于是白白跳过测试、转去 AI 评分。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / name).write_text("test:\n\techo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_respects_gnu_make_search_order(tmp_path):
+    """GNUmakefile 存在时 make 不会再看 Makefile：后者里的 test 目标
+    不可运行，探测命中会让 make test 以退出码 2 拒绝候选。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "GNUmakefile").write_text("all:\n\techo all\n",
+                                          encoding="utf-8")
+    (tmp_path / "Makefile").write_text("test:\n\techo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     """只有 test-unit / test-ci 之类后缀目标不算 make 套件：探测命中会执行
     `make test`，而 Makefile 并没有 test 目标、make 以退出码 2 失败，
