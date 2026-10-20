@@ -680,7 +680,7 @@ class RoundGuard:
             return {}
         return data if _valid_best(data) else {}
 
-    def _best_from_history(self) -> Optional[Dict]:
+    def _best_from_history(self, *, require_snapshot: bool = False) -> Optional[Dict]:
         """从 history.jsonl 最后一条基线/采纳事件恢复元数据（无副作用）。
 
         历史行被外部编辑/其他工具写入时字段类型可能损坏（id 是列表、
@@ -688,6 +688,9 @@ class RoundGuard:
         （_valid_best）用同一口径，类型不对的事件不能恢复成最佳元数据
         ——否则回写的 best.json 下次启动仍会被拒绝，每次都走恢复分支；
         非字符串 id 还会让展示/事件关联出现异常值。
+
+        require_snapshot=True 时只返回候选快照仍完整可读的最佳：调用方
+        要拿快照当内容源（best.md 丢失），仅有元数据不够。
         """
         for ev in reversed(self._read_events()):
             if ev.get("event") == "baseline":
@@ -699,8 +702,11 @@ class RoundGuard:
                         "score": ev.get("score"), "ts": ev.get("ts", "")}
             else:
                 continue
-            if _valid_best(best):
-                return best
+            if not _valid_best(best):
+                continue
+            if require_snapshot and self._recover_best_text(best) is None:
+                continue
+            return best
         return None
 
     def _recover_best(self) -> Dict:
@@ -813,11 +819,12 @@ class RoundGuard:
                                f"最佳内容（{loaded['id']}）")
             else:
                 # best.json 也缺失/损坏时，history.jsonl 仍可能保留最后的
-                # 采纳事件，对应快照 cand-<id>.md 也还在。只按当前状态重建
-                # 基线会把旧最佳悄悄降级，甚至把未验证的半截内容固化成
-                # 基线；先尝试用历史元数据 + 快照内容恢复。
-                history_best = (self._best_from_history()
-                                if not loaded else None)
+                # 采纳事件，对应快照 cand-<id>.md 也还在；best.json 虽可读
+                # 但当前最佳快照丢失时，历史里也可能有更早、快照仍完整的
+                # 最佳。只按当前状态重建基线会把旧最佳悄悄降级，甚至把
+                # 未验证的半截内容固化成基线；先尝试用历史中“快照可读”的
+                # 最新最佳恢复。
+                history_best = self._best_from_history(require_snapshot=True)
                 recovered = (self._recover_best_text(history_best)
                              if history_best is not None else None)
                 if recovered is not None and history_best is not None:
@@ -831,10 +838,16 @@ class RoundGuard:
                         self.sink.warn("恢复的最佳元数据写盘失败（忽略）："
                                        f"{e}")
                     self._heal_best_md(recovered)
-                    self.sink.warn(
-                        "rounds/best.md 与 best.json 均缺失，已从"
-                        f"history.jsonl 与候选快照恢复最佳内容"
-                        f"（{history_best['id']}）")
+                    if loaded:
+                        self.sink.warn(
+                            "rounds/best.md 缺失且当前最佳快照不可用，已从"
+                            "history.jsonl 与候选快照恢复较早的最佳内容"
+                            f"（{history_best['id']}）")
+                    else:
+                        self.sink.warn(
+                            "rounds/best.md 与 best.json 均缺失，已从"
+                            f"history.jsonl 与候选快照恢复最佳内容"
+                            f"（{history_best['id']}）")
                 else:
                     # 首次运行：把当前 research.md 固化为基线最佳（哪怕还是
                     # 脚手架）。有了基线，「第 1 轮候选被拒绝时还原到什么」
