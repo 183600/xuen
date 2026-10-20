@@ -13,6 +13,21 @@ SECTION_ARTIFACT = "ARTIFACT"
 HELPER_NAME = "write_section.py"
 
 
+def _atomic_write_text(path: Path, text: str, *, newline=None) -> None:
+    """写入 UTF-8 文本并原子替换目标；任何中断都不留临时半成品。"""
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8", newline=newline) as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def start_marker(name: str) -> str:
     return f"<!-- {name}:START -->"
 
@@ -62,29 +77,22 @@ def read_state_file(path: Path) -> str:
                           newline="") as f:
                     raw_text = f.read()
                 text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
-                tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-                try:
-                    with open(tmp, "w", encoding="utf-8", newline="") as f:
-                        f.write(raw_text)
-                    os.replace(tmp, path)
-                except OSError:
-                    # 写盘失败时清掉半成品临时文件；抛给调用方按 OSError
-                    # 处理（此时目录不可写，helper 也建不出来）
-                    try:
-                        tmp.unlink(missing_ok=True)
-                    except OSError:
-                        pass
-                    raise
+                # 写盘失败或中断时由 _atomic_write_text 清掉半成品临时
+                # 文件；OSError 照常抛给调用方（此时目录不可写，helper
+                # 也建不出来）。
+                _atomic_write_text(path, raw_text, newline="")
                 return text
 
 
 def ensure_state_file(path: Path, task: str) -> str:
     # 初始化也必须与 update_section_file / 写入助手共用锁：exists() 与
-    # write_text() 之间若另一个实例已创建并更新了状态，裸写 scaffold 会
-    # 把对方的研究进度整份覆盖掉。锁内只补建缺失文件，已存在时绝不重写。
+    # 实际写入之间若另一个实例已创建并更新了状态，裸写 scaffold 会把
+    # 对方的研究进度整份覆盖掉。锁内只补建缺失文件，已存在时绝不重写。
     with _locked_state(path):
         if not path.exists():
-            path.write_text(scaffold(task), encoding="utf-8")
+            # 不能直接写目标文件：写盘途中被中断会留下半截 scaffold，
+            # 下次启动因 exists() 为真而跳过补建，研究循环拿到损坏状态。
+            _atomic_write_text(path, scaffold(task))
     return read_state_file(path)
 
 
@@ -474,19 +482,9 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
         # 被读出；写盘前校验另一区块读出的内容未被本次更新悄悄改写
         text = _preserve_other_section(original, text, name)
 
-        tmp = path.with_name(path.name + ".tmp")
-        try:
-            with open(tmp, "w", encoding="utf-8", newline="") as f:
-                f.write(text)
-            os.replace(tmp, path)
-        except OSError:
-            # 写入/替换失败时清掉半成品临时文件，避免在工作区残留垃圾。
-            # 目标文件仍保持写入前状态，因此旧数据不会被破坏。
-            try:
-                tmp.unlink(missing_ok=True)
-            except OSError:
-                pass
-            raise
+        # 写入/替换失败或中断时清掉半成品临时文件；目标文件仍保持
+        # 写入前状态，因此旧数据不会被破坏。
+        _atomic_write_text(path, text, newline="")
         return old, new
 
 
@@ -887,14 +885,5 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
     )
     # 原子替换：写入途中被 kill 时不会留下语法损坏的半成品脚本，
     # 否则外部 agent 执行 write_section.py 会直接 SyntaxError
-    tmp = helper.with_name(f"{helper.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(tmp, helper)
-    except OSError:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+    _atomic_write_text(helper, content)
     return helper

@@ -2667,6 +2667,71 @@ def test_ensure_state_file_does_not_overwrite_concurrent_update(
         state.read_state_file(state_path), state.SECTION_IDEA) == "并发更新"
 
 
+def test_ensure_state_file_interrupt_leaves_no_partial_file(tmp_path, monkeypatch):
+    """补建 scaffold 被中断时不得留下半截目标文件。
+
+    回归：ensure_state_file 直接 write_text 目标文件，写入途中中断后
+    exists() 为真，后续启动不再补建；这里让 os.replace 抛
+    KeyboardInterrupt，模拟写完临时文件、发布前的最后一次中断。
+    """
+    state_path = tmp_path / "research.md"
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(state.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        state.ensure_state_file(state_path, "中断")
+    assert not state_path.exists()
+    assert not list(tmp_path.glob("research.md.*.tmp"))
+
+
+def test_read_state_file_heal_interrupt_cleans_tmp(tmp_path, monkeypatch):
+    """非法 UTF-8 回写被中断时不能把临时文件留在工作区。"""
+    state_path = tmp_path / "research.md"
+    state_path.write_bytes(b"bad \xff bytes")
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(state.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        state.read_state_file(state_path)
+    assert state_path.read_bytes() == b"bad \xff bytes"
+    assert not list(tmp_path.glob("research.md.*.tmp"))
+
+
+def test_update_section_interrupt_cleans_tmp(tmp_path, monkeypatch):
+    """更新区块被中断时目标保持旧内容，且不留下临时半成品。"""
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "测试任务")
+    before = state_path.read_text(encoding="utf-8")
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(state.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        state.update_section_file(state_path, state.SECTION_IDEA, "新想法")
+    assert state_path.read_text(encoding="utf-8") == before
+    assert not list(tmp_path.glob("research.md.*.tmp"))
+
+
+def test_write_helper_interrupt_cleans_tmp(tmp_path, monkeypatch):
+    """写助手脚本被中断时不能留下语法未完成的模板文件。"""
+    state_path = tmp_path / "research.md"
+    helper = tmp_path / state.HELPER_NAME
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(state.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        state.write_helper_script(tmp_path, state_path)
+    assert not helper.exists()
+    assert not list(tmp_path.glob("write_section.py.*.tmp"))
+
+
 def test_helper_show_tolerates_invalid_utf8(tmp_path):
     """write_section.py show 遇到非法 UTF-8 必须降级输出而不是 traceback。
 
