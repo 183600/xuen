@@ -44,6 +44,27 @@ def test_command_receives_prompt_ignores_comments():
     assert command_receives_prompt('opencode run # $prompt') is False
 
 
+def test_command_receives_prompt_ignores_probe_literal_in_template():
+    """模板里恰好含探测令牌时不能误判成「占位符已送达」。
+
+    回归：dry_run 用固定令牌 XUENPROMPTPROBE7C4F1D 渲染，模板本身含
+    该字面量但没有 $prompt/$prompt_file 时，探测结果里当然能找到令牌，
+    旧逻辑因此放行一个提示词被静默丢弃的模板。"""
+    from xuen.agents import _PLACEHOLDER_PROBE, command_receives_prompt
+
+    literal = f"opencode run {_PLACEHOLDER_PROBE}"
+    assert command_receives_prompt(literal) is False
+    assert command_receives_prompt(f"{literal} # \\$prompt") is False
+    # 有真正的占位符时仍要判真（令牌字面量本身不能干扰探测）
+    assert command_receives_prompt(f"{literal} $prompt") is True
+    assert command_receives_prompt(
+        f"{literal} \"$prompt\"") is True
+    assert command_receives_prompt(f"{literal} $prompt_file") is True
+    # 令牌字面量 + 注释里的占位符仍然没有送达
+    assert command_receives_prompt(f"{literal} # $prompt") is False
+    assert command_receives_prompt(f"{literal} # $prompt_file") is False
+
+
 def test_render_command_does_not_substitute_in_heredoc(tmp_path):
     """heredoc 正文里绝不能替换 $prompt。
 

@@ -248,6 +248,33 @@ def _find_spec(name: str) -> bool:
         return False
 
 
+# 递归探测 pytest 文件时跳过的目录：虚拟环境/依赖缓存里常有第三方测试，
+# 按它们探测会误判「本仓库有测试套件」，随后 pytest 从仓库根收集这些文件，
+# 既慢又可能因第三方测试失败而拒绝所有候选。
+_PYTEST_SKIP_DIRS = frozenset({
+    ".git", ".hg", ".svn", ".tox", ".nox", ".venv", "venv", ".env",
+    "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
+    ".ruff_cache", "site-packages", "build", "dist", "CVS", "_darcs",
+})
+
+
+def _is_pytest_file(name: str) -> bool:
+    return (name.endswith(".py")
+            and (name.startswith("test_") or name.endswith("_test.py")))
+
+
+def _has_pytest_file(repo: Path) -> bool:
+    for dirpath, dirnames, filenames in os.walk(repo):
+        # 与 pytest 默认 norecursedirs 对齐：点目录、build/dist、虚拟环境
+        # 和依赖目录不会被 `pytest -q` 收集，只按它们探测会得到「有测试
+        # 套件」的假阳性，随后运行 pytest 以「未收集到测试」退出。
+        dirnames[:] = [d for d in dirnames
+                       if not d.startswith(".") and d not in _PYTEST_SKIP_DIRS]
+        if any(_is_pytest_file(name) for name in filenames):
+            return True
+    return False
+
+
 def detect_test_suite(repo: Path) -> Optional[List[str]]:
     """按 pytest → make test → npm test → go test 的顺序探测可运行套件。
 
@@ -258,10 +285,10 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     """
     if not repo.is_dir():
         return None
-    # 1) pytest：仓库根或 tests/ 下有 test_*.py / *_test.py，且本机装了 pytest
-    py_tests = [p for pat in ("test_*.py", "*_test.py")
-                for p in list(repo.glob(pat)) + list((repo / "tests").glob(pat))]
-    if py_tests and _find_spec("pytest"):
+    # 1) pytest：仓库任意子目录有 test_*.py / *_test.py，且本机装了 pytest。
+    #    只查根目录和 tests/ 会漏掉 src/pkg/tests/ 等标准布局（而 go 分支
+    #    已支持嵌套包）；目录名恰好叫 test_x.py 的也不能算测试文件。
+    if _has_pytest_file(repo) and _find_spec("pytest"):
         return [sys.executable, "-m", "pytest", "-q"]
     # 2) make test：Makefile 里定义了 test 目标。只认精确的 test 目标：
     #    test-unit / test-ci 之类后缀目标不算——探测命中后会执行
@@ -299,9 +326,9 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    验证。没有 go.mod 的嵌套 .go 不算：模块模式下从仓库根执行
     #    `go test ./...` 会因找不到 go.mod 失败，不属于可用套件。
     if shutil.which("go") and (
-            any(repo.glob("*.go"))
+            any(p.is_file() for p in repo.glob("*.go"))
             or ((repo / "go.mod").is_file()
-                and any(repo.rglob("*.go")))):
+                and any(p.is_file() for p in repo.rglob("*.go")))):
         return ["go", "test", "./..."]
     return None
 

@@ -846,7 +846,8 @@ class ShellAgent:
     # 才是占位符；否则会把字面量当路径替换、或在奇数个 $ 时漏掉真正的
     # 占位符（与 POSIX 侧口径一致）。
 
-    def render_command(self, prompt: str, *, dry_run: bool = False) -> str:
+    def render_command(self, prompt: str, *, dry_run: bool = False,
+                       probe: str = _PLACEHOLDER_PROBE) -> str:
         # 同一实例可能被连续渲染多次（直接 API 调用，或上一次渲染后未走
         # run() 收尾）：先把上一次留下的提示词文件删掉，否则直接把
         # _prompt_file 置 None 会让旧文件失去引用、永久残留在工作区
@@ -854,8 +855,9 @@ class ShellAgent:
         self._cleanup_prompt_file()
         try:
             if os.name == "nt":
-                return self._render_windows(self.template, prompt, dry_run)
-            return self._render_posix(self.template, prompt, dry_run)
+                return self._render_windows(self.template, prompt, dry_run,
+                                            probe)
+            return self._render_posix(self.template, prompt, dry_run, probe)
         except BaseException:
             # 渲染中途失败（如模板含无法安全替换的 $'...' 或用户按
             # Ctrl+C）时，$prompt_file 可能已落盘：必须清掉，否则工作区
@@ -954,7 +956,8 @@ class ShellAgent:
         self._prompt_file = pfile
         return pfile
 
-    def _render_posix(self, tpl: str, prompt: str, dry_run: bool = False) -> str:
+    def _render_posix(self, tpl: str, prompt: str, dry_run: bool = False,
+                      probe: str = _PLACEHOLDER_PROBE) -> str:
         """按占位符所在的 shell 引号语境分别转义后替换。
 
         不能把 shlex.quote 生成的「带引号完整 token」直接塞进模板：模板里
@@ -1077,7 +1080,7 @@ class ShellAgent:
         替换成带探测令牌的假路径（供 command_receives_prompt 使用）。"""
         def file_value() -> str:
             if dry_run:
-                return f"/xuen-dry-run/{_PLACEHOLDER_PROBE}"
+                return f"/xuen-dry-run/{probe}"
             if self._prompt_file is None:
                 return str(self._write_prompt_file(prompt).resolve())
             return str(self._prompt_file.resolve())
@@ -1804,7 +1807,8 @@ class ShellAgent:
             i += 1
         return "".join(out)
 
-    def _render_windows(self, tpl: str, prompt: str, dry_run: bool = False) -> str:
+    def _render_windows(self, tpl: str, prompt: str, dry_run: bool = False,
+                        probe: str = _PLACEHOLDER_PROBE) -> str:
         f_sentinel = "\0XUEN_PROMPT_FILE\0"
         # 引号内的占位符单独用一个哨兵：外层引号已经把路径归组，插入
         # list2cmdline 生成的引号会变成嵌套引号（"pre "C:\Users\John
@@ -1898,7 +1902,7 @@ class ShellAgent:
         if f_sentinel in tpl or f_inq_sentinel in tpl:
             if dry_run:
                 # 只探测占位符是否会被兑现：不落盘提示词文件
-                path = f"/xuen-dry-run/{_PLACEHOLDER_PROBE}"
+                path = f"/xuen-dry-run/{probe}"
             else:
                 pfile = self._write_prompt_file(prompt)
                 path = str(pfile.resolve())
@@ -2123,9 +2127,12 @@ def command_receives_prompt(template: str) -> bool:
     \\$prompt 虽然包含 "$prompt" 子串，渲染时并不会替换，提示词会被
     静默丢弃——这正是配置校验要拦下的场景。渲染直接拒绝的模板
     （如方言相关的引用 $'...' / $"..."）同样按「提示词无法送达」处理。"""
+    probe = _PLACEHOLDER_PROBE
+    while probe in template:
+        probe += "Z"
     probe_agent = ShellAgent(template, Path("."), timeout=1.0)
     try:
-        rendered = probe_agent.render_command(_PLACEHOLDER_PROBE, dry_run=True)
+        rendered = probe_agent.render_command(probe, dry_run=True, probe=probe)
     except ValueError:
         return False
-    return _PLACEHOLDER_PROBE in rendered
+    return probe in rendered

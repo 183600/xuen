@@ -625,6 +625,49 @@ def test_detect_test_suite_pytest(tmp_path):
     assert suite is not None and "pytest" in suite
 
 
+@pytest.mark.parametrize("relpath", [
+    "src/pkg/tests/test_deep.py",
+    "src/pkg/tests/deep_test.py",
+    "tests/unit/test_nested.py",
+])
+def test_detect_test_suite_pytest_nested(tmp_path, relpath):
+    """pytest 文件在任意子目录（src/pkg/tests/ 等标准布局）也要探测到。
+
+    回归：只查仓库根和 tests/ 会把 `src/pkg/tests/test_x.py` 这类嵌套
+    套件当成没有测试，候选永远无法通过测试验证。"""
+    path = tmp_path / relpath
+    path.parent.mkdir(parents=True)
+    path.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    suite = detect_test_suite(tmp_path)
+    assert suite is not None and "pytest" in suite
+
+
+def test_detect_test_suite_pytest_directory_named_like_test_file(tmp_path):
+    """目录名恰好是 test_x.py / x_test.py 不是测试文件。
+
+    回归：glob 同时返回目录，旧探测会把空目录当成 pytest 套件，随后
+    `pytest -q` 没有可收集文件、以退出码 5 失败，候选被误判为测试失败。"""
+    (tmp_path / "test_not_a_file.py").mkdir()
+    nested = tmp_path / "tests" / "pkg_test.py"
+    nested.mkdir(parents=True)
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_pytest_ignores_uncollected_dirs(tmp_path):
+    """pytest 默认不收集的目录里的测试不能被当成本仓库的套件。
+
+    虚拟环境、依赖目录、build/dist 与点目录里的第三方/生成测试都不会被
+    `pytest -q` 收集；按它们探测会得到假阳性，随后 pytest 以退出码 5
+    失败，候选被误判为测试失败。"""
+    for relpath in ("node_modules/dep/test_dep.py", ".venv/lib/test_env.py",
+                    ".hidden/test_hidden.py", "build/test_build.py",
+                    "dist/test_dist.py"):
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_none(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
@@ -766,6 +809,18 @@ def test_detect_test_suite_go_mod_without_packages_not_a_suite(
     _fake_go(monkeypatch)
     (tmp_path / "go.mod").write_text("module example.com/empty\n",
                                      encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_go_directories_named_like_source(tmp_path,
+                                                           monkeypatch):
+    """目录名以 .go 结尾不是 Go 源文件，不能探测成套件。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "not_a_file.go").mkdir()
+    (tmp_path / "go.mod").write_text("module example.com/demo\n",
+                                     encoding="utf-8")
+    nested = tmp_path / "internal" / "also_not_a_file.go"
+    nested.mkdir(parents=True)
     assert detect_test_suite(tmp_path) is None
 
 
