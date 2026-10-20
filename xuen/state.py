@@ -299,13 +299,19 @@ def _preserve_other_section(original: str, text: str, name: str) -> str:
         # 修复过程中若它变得可读，属于顺带修复，不应回退
         return text
     s, e = start_marker(other), end_marker(other)
-    for _ in range(64):
+    # 每轮至少清掉一个抢先配对的 START；上限按标记数取，避免恶意超大
+    # 文件把更新拖成无界循环，同时不再用固定 64 轮静默放弃保护。
+    max_passes = min(text.count(s), 4096)
+    if not max_passes:
+        raise ValueError("状态文件另一区块已损坏，无法安全更新")
+    for _ in range(max_passes):
         if _first_section(text, other) == want:
             return text
         shadow = _first_span(text, other)
         if shadow is None:
-            # 真实区块（want 的来源）始终有效且受保护，理论上不会走到
-            return text
+            # 真实区块（want 的来源）应始终有效且受保护；走到这里说明
+            # 文本已丢失它，继续写盘会静默改写另一区块，必须拒绝更新。
+            raise ValueError("状态文件另一区块已损坏，无法安全更新")
         # 保护除抢先配对残片外的所有有效区块（含真实区块与本轮更新的
         # 区块），只清除残片的标记行，绝不改动它们的正文
         protected = [(a, b) for a, b in _section_spans(text) if (a, b) != shadow]
@@ -315,7 +321,7 @@ def _preserve_other_section(original: str, text: str, name: str) -> str:
         # 重复 START 过滤保证这些候选区间不会覆盖 shadow 的标记行
         protected += [p for p in _paired_spans(text, other) if p != shadow]
         text = _strip_stray_markers(text, protected, 0, s, e)
-    return text
+    raise ValueError("状态文件区块标记嵌套过深，无法安全更新")
 
 
 @contextmanager
@@ -677,13 +683,17 @@ def _preserve_other_section(original, text, name):
         # 属于顺带修复，不应回退
         return text
     s, e = f"<!-- {other}:START -->", f"<!-- {other}:END -->"
-    for _ in range(64):
+    # 与 xuen.state._preserve_other_section 一致：按标记数限制轮数，
+    # 固定 64 轮会静默放弃保护、改写另一区块。
+    max_passes = min(text.count(s), 4096)
+    if not max_passes:
+        raise ValueError("状态文件另一区块已损坏，无法安全更新")
+    for _ in range(max_passes):
         if _first_section(text, other) == want:
             return text
         shadow = _first_span(text, other)
         if shadow is None:
-            # 真实区块始终有效且受保护，理论上不会走到
-            return text
+            raise ValueError("状态文件另一区块已损坏，无法安全更新")
         # 保护除抢先配对残片外的所有有效区块，只清除残片的标记行
         protected = [(a, b) for a, b in _spans(text) if (a, b) != shadow]
         # 真实区块也可能因交叉配对、当前不是「有效区块」；它的候选配对
@@ -691,7 +701,7 @@ def _preserve_other_section(original, text, name):
         # （与 xuen.state._preserve_other_section 保持一致）
         protected += [p for p in _paired_spans(text, other) if p != shadow]
         text = _strip_stray(text, protected, 0, s, e)
-    return text
+    raise ValueError("状态文件区块标记嵌套过深，无法安全更新")
 
 
 @contextmanager
@@ -861,7 +871,7 @@ def main() -> int:
                 except OSError:
                     pass
                 raise
-    except (OSError, UnicodeDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
         print(f"状态文件写入失败：{exc}", file=sys.stderr)
         return 1
     print(f"[write_section] 已覆盖 {cmd} 区（{len(content)} 字符）", file=sys.stderr)

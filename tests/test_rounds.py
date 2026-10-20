@@ -2893,6 +2893,42 @@ def test_update_section_preserves_other_section_with_mixed_line_endings(tmp_path
     assert state.get_section(text, state.SECTION_IDEA) == "新想法"
 
 
+def test_update_section_preserves_other_section_past_fixed_pass_limit(tmp_path):
+    """抢先配对的残片多于 64 个时也必须保住另一区块。
+
+    回归：_preserve_other_section 固定只跑 64 轮，耗尽后静默返回仍被
+    残片抢先的文本；80 个交叉 IDEA 标记让 ARTIFACT 从 WANT 变成 A65，
+    模块与写入助手都会把另一区块的大部分历史当游离标记删掉。
+    """
+    import subprocess
+
+    idea_s = state.start_marker(state.SECTION_IDEA)
+    idea_e = state.end_marker(state.SECTION_IDEA)
+    art_s = state.start_marker(state.SECTION_ARTIFACT)
+    art_e = state.end_marker(state.SECTION_ARTIFACT)
+    parts = []
+    for n in range(1, 80):
+        parts += [art_s, f"A{n}", idea_s, art_e, "cross", idea_e]
+    parts += [art_s, "WANT", art_e, idea_s, "OWN", idea_e]
+    original = "\n".join(parts) + "\n"
+    state_path = tmp_path / "research.md"
+
+    state_path.write_text(original, encoding="utf-8")
+    state.update_section_file(state_path, state.SECTION_IDEA, "NEW")
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "WANT"
+    assert state.get_section(text, state.SECTION_IDEA) == "NEW"
+
+    state_path.write_text(original, encoding="utf-8")
+    helper = state.write_helper_script(tmp_path, state_path)
+    r = subprocess.run([sys.executable, str(helper), "idea"],
+                       input=b"NEW", capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_ARTIFACT) == "WANT"
+    assert state.get_section(text, state.SECTION_IDEA) == "NEW"
+
+
 def test_update_section_preserves_unrelated_line_endings(tmp_path):
     """更新一个区块不得把自由文本及其他区块的行尾统统改成 LF。
 
