@@ -748,6 +748,9 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     "test: X?=1",
     "test: X!=echo 1",
     "test: X=1 dep",
+    "test: X:::=1",
+    "test: export X:::=1",
+    "test: override X :::=1",
 ])
 def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
                                                                    line):
@@ -778,6 +781,20 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     (tmp_path / "Makefile").write_text(line + "\n\techo ok\n",
                                        encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "test:::",
+    "test::::",
+    "test::: dep",
+])
+def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
+    """三个及以上冒号不是合法目标（GNU make 报 missing target pattern），
+    探测命中会让 `make test` 以退出码 2 误伤候选。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line + "\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
 
 
 def test_detect_test_suite_make_exact_target_alongside_suffixed(tmp_path):

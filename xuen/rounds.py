@@ -269,8 +269,9 @@ _PYTEST_SKIP_DIRS = frozenset({
 _MAKE_TEST_TARGET = re.compile(
     r"(?m)^[ ]*test[ \t]*:"
     r"(?![\t ]*:*=)"
+    r"(?![ \t]*:{2,})"
     r"(?![ \t]*(?:(?:export|unexport|private|override)[ \t]+)*"
-    r"[A-Za-z0-9_.-]+[ \t]*(?:::=|::=|:=|\+=|\?=|!=|=))"
+    r"[A-Za-z0-9_.-]+[ \t]*(?:[+?]?=|:*=|!=))"
 )
 
 
