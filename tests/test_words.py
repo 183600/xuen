@@ -6,8 +6,6 @@
   - 分隔符列出的多项词表每一段都要剥装饰/序号；
   - 下划线不能在词中配对（"_private_var" 是术语，不是斜体）。
 """
-from pathlib import Path
-
 import pytest
 
 from xuen import words
