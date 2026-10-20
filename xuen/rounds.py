@@ -378,11 +378,28 @@ def _is_pytest_run(argv: List[str]) -> bool:
     return len(argv) >= 3 and argv[1] == "-m" and argv[2] == "pytest"
 
 
+def _is_go_test_run(argv: List[str]) -> bool:
+    """argv 是否为本模块探测出的 go test 调用（go test ./...）。"""
+    return len(argv) >= 2 and argv[0] == "go" and argv[1] == "test"
+
+
+def _go_matched_no_packages(detail: str) -> bool:
+    """go test 的输出是否是「没有匹配到任何包」（不是测试失败）。
+
+    go 对 `./...` 未匹配到包时依次打印 `go: warning: "./..." matched
+    no packages` 与 `no packages to test` 并以退出码 1 结束。要求两行
+    同时出现，避免把测试自身碰巧打印的同名文本当成 go 的诊断。
+    """
+    return ("matched no packages" in detail
+            and "no packages to test" in detail)
+
+
 def run_suite(argv: List[str], repo: Path, timeout: float,
               stop: Optional[Callable[[], bool]] = None) -> SuiteResult:
     """运行测试套件。退出码 0 = 通过；非 0 = 失败；超时 = 失败（保守：
     宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。
-    pytest 的退出码 5（未收集到测试）例外：按套件不可用返回，不拒绝候选。
+    pytest 的退出码 5（未收集到测试）与 go 的「matched no packages」（构建
+    约束/忽略规则排除了全部包）例外：按套件不可用返回，不拒绝候选。
 
     stop：可选的「是否请求停止」回调。传入时按短间隔轮询，回调一旦
     为真就终止整个进程组并返回 stopped=True（available=False）——
@@ -453,6 +470,14 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
         # （auto）或挂起（tests），不能误拒候选
         return SuiteResult(available=False, ok=False,
                            reason="pytest 未收集到测试（退出码 5）",
+                           detail=tail)
+    if _is_go_test_run(argv) and _go_matched_no_packages(detail):
+        # 仓库里的 .go 文件被构建约束（//go:build windows 等）或 go 的
+        # 忽略规则整体排除时，`go test ./...` 以退出码 1 报「matched no
+        # packages」——同样不是测试失败，而是没有可执行的验证。按套件
+        # 不可用处理，交给调用方转兜底评分（auto）或挂起（tests）
+        return SuiteResult(available=False, ok=False,
+                           reason="go 未匹配到任何包",
                            detail=tail)
     return SuiteResult(available=True, ok=False,
                        reason=f"退出码 {proc.returncode}", detail=tail)

@@ -998,6 +998,31 @@ def test_tests_mode_pending_when_pytest_collects_nothing(ws, tmp_path):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_tests_mode_pending_when_go_matches_no_packages(ws, tmp_path):
+    """仓库的 .go 文件全被构建约束排除时，go test ./... 以退出码 1 报
+    「matched no packages」：这不是测试失败，而是没有可执行的验证 →
+    挂起等待用户评分。
+
+    回归：探测只看是否有 go 文件，随后的 go test 因 //go:build windows
+    在 Linux 上匹配不到包，原先把「没有可测试的包」误判成测试失败并
+    拒绝候选（auto 模式还会跳过兜底评分）。
+    """
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "go.mod").write_text("module example.com/nopkg\n",
+                                 encoding="utf-8")
+    (repo / "x_windows.go").write_text(
+        "//go:build windows\n\npackage nopkg\n", encoding="utf-8")
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="tests", repo=str(repo))
+    guard.start()
+    write_idea(state_path, "go 构建约束排除全部包时的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert read_idea(state_path) == "（暂无）"
+
+
 # ------------------------------------------ 套件运行的用户停止（q / Ctrl+C）
 def _pid_dead(pid):
     for _ in range(10):
@@ -1033,6 +1058,21 @@ def test_run_suite_pytest_no_tests_collected_is_unavailable(tmp_path):
         [sys.executable, "-m", "pytest", "-q"], tmp_path, 30.0)
     assert (res.available, res.ok) == (False, False)
     assert "未收集到测试" in res.reason
+
+
+def test_run_suite_go_no_packages_is_unavailable(tmp_path):
+    """go test ./... 报「matched no packages」时套件实际没有验证任何东西，
+    按不可用处理（转兜底评分 / 挂起），不能拒绝候选。"""
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    (tmp_path / "go.mod").write_text("module example.com/nopkg\n",
+                                     encoding="utf-8")
+    (tmp_path / "x_windows.go").write_text(
+        "//go:build windows\n\npackage nopkg\n", encoding="utf-8")
+    res = rounds.run_suite(["go", "test", "./..."], tmp_path, 60.0)
+    assert (res.available, res.ok) == (False, False)
+    assert "未匹配到任何包" in res.reason
+    assert "matched no packages" in res.detail
 
 
 def test_run_suite_stop_terminates_suite_promptly(tmp_path):
