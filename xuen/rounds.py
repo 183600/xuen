@@ -73,7 +73,11 @@ CAND_PREFIX = "cand-"
 # 英文模式不分大小写：AI 评审员可能输出 "score"/"Score"/"SCORE"
 _SCORE_PATTERNS = (
     re.compile(r"评\s*分\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)"),
-    re.compile(r"score\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)", re.IGNORECASE),
+    # 前置负向断言：score 不能粘在英文单词尾部（「prescore: 3」「underscore:
+    # 3」里的 score 只是单词后缀，不是评分标签）；空格 / 行首 / 下划线等
+    # 非字母前缀（overall_score: 5）照常匹配
+    re.compile(r"(?<![A-Za-z])score\s*[:：]\s*([0-9]+(?:\.[0-9]+)?)",
+               re.IGNORECASE),
 )
 
 

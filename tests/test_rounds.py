@@ -2314,6 +2314,10 @@ def test_next_round_starts_from_best_not_last_candidate(ws):
 def test_parse_score_variants():
     assert parse_score("评语\n评分: 8") == 8.0
     assert parse_score("score: 7.5") == 7.5
+    # 「score」粘在英文单词尾部只是后缀，不是评分标签；空格/下划线前缀照常
+    assert parse_score("prescore: 3") is None
+    assert parse_score("underscore: 3") is None
+    assert parse_score("overall_score: 6") == 6.0
     assert parse_score("评分：9/10") == 9.0
     assert parse_score("评分: 12") == 10.0          # 上限截断
     assert parse_score("评分: 3 ... 最终 score: 8.5") == 8.5  # 取最后一次
