@@ -41,6 +41,19 @@ def test_example_config_loads():
     assert cfg.rounds.enabled is True
 
 
+def test_ui_output_without_stdout_is_silently_dropped(monkeypatch):
+    """无控制台解释器里 sys.stdout 为 None：日志输出不能抛 AttributeError。
+
+    回归：UI.raw 只处理 BrokenPipeError，pythonw 等环境没有 stdout 时
+    write 调用直接 AttributeError，--no-tui 启动即崩溃。"""
+    from xuen import ui as ui_module
+
+    monkeypatch.setattr(ui_module.sys, "stdout", None)
+    ui_module.ui.raw("x")
+    ui_module.ui.info("x")
+    ui_module.ui.rule("标题")
+
+
 def test_main_module_help_smoke():
     proc = subprocess.run(
         [sys.executable, "-m", "xuen", "--help"],

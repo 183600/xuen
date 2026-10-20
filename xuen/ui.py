@@ -24,6 +24,11 @@ class UI:
         return f"{_CODES[code]}{text}{_CODES['reset']}"
 
     def raw(self, text: str = "") -> None:
+        # 无控制台解释器（Windows 的 pythonw / 嵌入环境）里 sys.stdout
+        # 可能为 None；此时没有可写的终端，直接丢弃输出，不能让每次
+        # 日志调用都以 AttributeError 炸掉整个研究循环。
+        if sys.stdout is None:
+            return
         try:
             sys.stdout.write(text)
             sys.stdout.flush()
