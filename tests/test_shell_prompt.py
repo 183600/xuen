@@ -242,6 +242,30 @@ def test_prompt_too_long_converted_to_actionable_error(tmp_path, monkeypatch):
     assert [p.name for p in tmp_path.iterdir()] == []
 
 
+def test_keyboard_interrupt_during_popen_cleans_prompt_file(tmp_path,
+                                                            monkeypatch):
+    """Popen 阶段被 Ctrl+C 打断时提示词文件不能残留。
+
+    回归：Popen 只按 Exception 清理，KeyboardInterrupt / SystemExit
+    会在渲染已落盘后直接穿出，工作区留下内含研究状态的 .prompt.*.md。"""
+    from xuen import agents
+    from xuen.agents import ShellAgent
+
+    def boom(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(agents.subprocess, "Popen", boom)
+    agent = ShellAgent('cat "$prompt_file" >/dev/null', tmp_path, timeout=5)
+    try:
+        agent.run("x")
+    except KeyboardInterrupt:
+        pass
+    else:
+        raise AssertionError("KeyboardInterrupt 应向上传播")
+    assert agent._prompt_file is None
+    assert [p.name for p in tmp_path.iterdir()] == []
+
+
 def test_prompt_too_long_detected_on_real_ebig(tmp_path):
     """真实超过 Linux 单参数上限（MAX_ARG_STRLEN）时必须被识别。"""
     import sys

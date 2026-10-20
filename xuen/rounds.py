@@ -325,6 +325,9 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
     整组终止，测试拉起的子孙进程（xfail 子进程、npm/go 的子孙）不会
     泄漏；KeyboardInterrupt 等 BaseException 也先收尾再传播（与
     subprocess.run 的兜底行为一致）。"""
+    if stop is not None and stop():
+        return SuiteResult(available=False, stopped=True,
+                           reason="用户请求停止，未验证")
     try:
         proc = subprocess.Popen(
             argv, cwd=str(repo),
@@ -622,20 +625,22 @@ class RoundGuard:
         verdicts.txt 翻案的唯一凭据，绝不能被覆盖。O_CREAT|O_EXCL 把
         「检查 + 占用」合并为一个原子操作，跨进程并发下也不会覆盖已有快照。
         写入失败时删除半截文件：坏快照既会永久占住 id，又会被「快照可读」
-        的检查误判。
+        的检查误判。KeyboardInterrupt / SystemExit 同样要清掉半成品再传播。
         """
         base = f"{time.strftime('%Y%m%d-%H%M%S')}-r{round_no}"
         cid, seq = base, 2
         while True:
             path = self.dir / f"{CAND_PREFIX}{cid}.md"
             try:
-                with open(path, "x", encoding="utf-8") as f:
-                    f.write(text)
+                created = open(path, "x", encoding="utf-8")
             except FileExistsError:
                 cid = f"{base}-{seq}"
                 seq += 1
                 continue
-            except OSError:
+            try:
+                with created as f:
+                    f.write(text)
+            except BaseException:
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
@@ -773,10 +778,26 @@ class RoundGuard:
         #    更不能进最佳——结构损坏直接拒绝（守卫级判定，无需测试/评分）
         if not _structure_intact(text):
             self.stats.candidates += 1
+            cid = None
             try:
                 cid = self._snapshot_candidate(round_no, text)
                 self._append_event({"event": "candidate", "id": cid,
                                     "round": round_no, "corrupt": True})
+            except KeyboardInterrupt:
+                if cid is not None:
+                    try:
+                        self._append_event({"event": "candidate", "id": cid,
+                                            "round": round_no, "corrupt": True})
+                    except Exception as e2:  # noqa: BLE001
+                        self.sink.warn(f"记录候选事件失败（中断，忽略）：{e2}")
+                    try:
+                        self._pend(round_no, cid, "轮次被中断，候选挂起")
+                    except Exception as e:  # noqa: BLE001
+                        self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+                else:
+                    self.stats.candidates -= 1
+                    self.stats.skipped += 1
+                raise
             except Exception as e:
                 self.stats.candidates -= 1
                 self.stats.skipped += 1
@@ -820,14 +841,31 @@ class RoundGuard:
 
         # 3) 有改动 → 候选快照（先落盘：无论后续验证成败，本轮产物都不丢）
         self.stats.candidates += 1
+        cid = None
+        changed = [n for n, (c, b) in {
+            "idea": (cand_idea, best_idea),
+            "artifact": (cand_artifact, best_artifact),
+        }.items() if c != b]
         try:
             cid = self._snapshot_candidate(round_no, text)
-            changed = [n for n, (c, b) in {
-                "idea": (cand_idea, best_idea),
-                "artifact": (cand_artifact, best_artifact),
-            }.items() if c != b]
             self._append_event({"event": "candidate", "id": cid,
                                 "round": round_no, "changed": changed})
+        except KeyboardInterrupt:
+            if cid is not None:
+                try:
+                    self._append_event({"event": "candidate", "id": cid,
+                                        "round": round_no,
+                                        "changed": changed})
+                except Exception as e2:  # noqa: BLE001
+                    self.sink.warn(f"记录候选事件失败（中断，忽略）：{e2}")
+                try:
+                    self._pend(round_no, cid, "轮次被中断，候选挂起")
+                except Exception as e:  # noqa: BLE001
+                    self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+            else:
+                self.stats.candidates -= 1
+                self.stats.skipped += 1
+            raise
         except Exception as e:
             self.stats.candidates -= 1
             self.stats.skipped += 1
@@ -942,6 +980,10 @@ class RoundGuard:
         if mode == "off":
             return Verdict(verifier="none", result="adopted",
                            reason="verify=off：不验证，最新即最佳（快照照存）")
+        if self.sink.should_stop():
+            self.sink.warn("用户请求停止：跳过候选验证，候选挂起")
+            return Verdict(verifier="guard", result="pending",
+                           reason="用户请求停止，未验证")
 
         if mode in ("auto", "tests"):
             suite = detect_test_suite(self.repo)
@@ -1041,6 +1083,9 @@ class RoundGuard:
         prev_agent = getattr(self.sink, "agent", None)
         self.sink.agent = agent
         try:
+            if self.sink.should_stop():
+                self.sink.warn("用户请求停止：跳过 AI 评审，候选挂起")
+                return False, ""
             text = agent.run(prompt)
         except (OSError, ValueError) as e:
             self.sink.warn(f"AI 评审调用失败：{e}")

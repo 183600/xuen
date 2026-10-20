@@ -994,6 +994,95 @@ def test_stopped_suite_does_not_fall_back_to_judge(ws, tmp_path, monkeypatch):
     assert called["judge"] == 0
 
 
+class StopSink(RecordingSink):
+    def should_stop(self):
+        return True
+
+
+def test_stop_before_verification_spawns_no_suite_or_judge(ws, monkeypatch):
+    """用户停止后不得再拉起测试套件/AI 评审：候选直接挂起。
+
+    回归：套件运行期间的停止已有回调，但停止标志在进入验证时若已为真，
+    verify=ai（或 auto 无套件 + fallback=ai）仍会启动评审进程，跑满
+    judge_timeout；run_tui 只等 20s，主动退出会被误报成退出码 1，评审
+    进程还会成为孤儿。"""
+    called = {"suite": 0, "judge": 0, "detect": 0}
+
+    def fake_suite(*args, **kwargs):
+        called["suite"] += 1
+        return SuiteResult(available=True, ok=True, reason="exit 0")
+
+    def fake_judge(prompt):
+        called["judge"] += 1
+        return True, "评分: 9"
+
+    def fake_detect(repo_path):
+        called["detect"] += 1
+        return [sys.executable, "-c", "pass"]
+
+    monkeypatch.setattr(rounds, "detect_test_suite", fake_detect)
+    workspace, state_path = ws
+
+    for index, (verify, fallback) in enumerate(
+            (("ai", "ai"), ("tests", "ai"), ("auto", "ai")), start=1):
+        guard = make_guard(workspace, state_path, StopSink(),
+                           verify=verify, fallback=fallback,
+                           judge=fake_judge, suite_runner=fake_suite)
+        guard.start()
+        write_idea(state_path, f"停止期间的候选 {index}")
+        assert guard.on_round_end(index) == "pending"
+        assert guard.stats.pending == 1
+    assert called == {"suite": 0, "judge": 0, "detect": 0}
+
+
+def test_stop_after_verify_check_before_judge_run_skips_process(ws, monkeypatch):
+    """停止请求落在验证检查与评审启动之间时也不能拉起评审进程。
+
+    回归：_verify 先检查 should_stop，随后 _run_judge 才把评审员挂到
+    sink.agent；TUI 的 q 恰好落在这段窗口里时 stop_agent 杀的是已结束的
+    主 agent，评审仍会启动并跑满 judge_timeout。"""
+    workspace, state_path = ws
+
+    class LateStopSink(RecordingSink):
+        def __init__(self):
+            super().__init__()
+            self.calls = 0
+
+        def should_stop(self):
+            self.calls += 1
+            return self.calls >= 2
+
+    created = {}
+
+    class FakeAgent:
+        def __init__(self, *args, **kwargs):
+            created["agent"] = self
+            self.run_called = False
+
+        def run(self, prompt):
+            self.run_called = True
+            return "评分: 9"
+
+    monkeypatch.setattr(rounds, "ShellAgent", FakeAgent)
+    sink = LateStopSink()
+    guard = make_guard(workspace, state_path, sink, verify="ai")
+    guard.start()
+    write_idea(state_path, "竞态窗口候选")
+    assert guard.on_round_end(1) == "pending"
+    assert created["agent"].run_called is False
+    assert sink.agent is None
+
+
+def test_run_suite_stop_before_start_does_not_spawn(tmp_path):
+    """停止标志在套件启动前已为真时，不应先拉起测试进程再等 0.2s 轮询。"""
+    marker = tmp_path / "spawned"
+    code = f"open({str(marker)!r}, 'w').write('x')"
+    res = rounds.run_suite([sys.executable, "-c", code], tmp_path, 30.0,
+                           stop=lambda: True)
+    assert (res.available, res.stopped) == (False, True)
+    assert not marker.exists()
+
+
 def test_auto_mode_prefers_tests_over_fallback(ws, tmp_path):
     repo = tmp_path / "repo"
     (repo / "tests").mkdir(parents=True)
@@ -1649,6 +1738,117 @@ def test_snapshot_write_failure_not_counted_as_candidate(ws, monkeypatch):
     assert [e for e in evs if e["event"] == "skipped"][-1]["round"] == 1
 
 
+def test_interrupt_during_candidate_event_keeps_candidate_pending(ws, monkeypatch):
+    """中断落在候选事件写盘时，快照已落盘就必须按待评分记账。
+
+    回归：快照成功后写事件时收到 KeyboardInterrupt，except Exception
+    捕不到；统计里留下一个没有 adopted/rejected/pending 的候选，汇总
+    违反 adopted+rejected+pending==candidates，快照也因缺少 candidate
+    事件无法被 verdicts.txt 补分。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.start()
+    write_idea(state_path, "中断时的候选")
+    real_append = guard._append_event
+    raised = {"done": False}
+
+    def flaky(ev):
+        if ev.get("event") == "candidate" and not raised["done"]:
+            raised["done"] = True
+            raise KeyboardInterrupt
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", flaky)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.pending, s.adopted, s.rejected) == (1, 1, 0, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    cids = [e["id"] for e in events(guard) if e["event"] == "candidate"]
+    assert len(cids) == 1
+    assert cids[0] in guard._pending_ids
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_interrupt_during_corrupt_candidate_event_keeps_stats_consistent(
+        ws, monkeypatch):
+    """结构损坏分支同样不能在中断时留下没有结论的候选。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path)
+    guard.start()
+    state_path.write_text("# 区块标记全丢了\n", encoding="utf-8")
+    real_append = guard._append_event
+    raised = {"done": False}
+
+    def flaky(ev):
+        if ev.get("event") == "candidate" and not raised["done"]:
+            raised["done"] = True
+            raise KeyboardInterrupt
+        return real_append(ev)
+
+    monkeypatch.setattr(guard, "_append_event", flaky)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    s = guard.stats
+    assert (s.candidates, s.pending, s.adopted, s.rejected) == (1, 1, 0, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert guard.best["round"] == 0
+    assert state.get_section(state_path.read_text(encoding="utf-8"),
+                             state.SECTION_IDEA) == "（暂无）"
+
+
+def test_interrupt_during_snapshot_rolls_back_candidate(ws, monkeypatch):
+    """快照本身被中断（没有留下任何文件）时要回滚候选计数。
+
+    回归：候选计数在调用 _snapshot_candidate 之前 +1，中断落在快照
+    写盘时没有 cid 可挂起；回滚 candidates 并按跳过记账后，摘要才
+    不会出现「候选 1、采纳/拒绝/待评分全 0」。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "快照被中断的想法")
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(guard, "_snapshot_candidate", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+    # runner 的中断路径：已处理轮次只补做还原，不再重复记账
+    guard.on_round_failed(1, "被中断，轮次未完成")
+
+    s = guard.stats
+    assert (s.rounds, s.candidates, s.skipped, s.pending) == (1, 0, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert not [e for e in events(guard) if e["event"] == "candidate"]
+    assert guard.best["round"] == 0
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_interrupt_during_corrupt_snapshot_rolls_back_candidate(ws, monkeypatch):
+    """结构损坏分支的快照被中断时同样回滚候选计数。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    state_path.write_text("# 区块标记全丢了\n", encoding="utf-8")
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(guard, "_snapshot_candidate", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+    guard.on_round_failed(1, "被中断，轮次未完成")
+
+    s = guard.stats
+    assert (s.rounds, s.candidates, s.skipped, s.pending) == (1, 0, 1, 0)
+    assert s.adopted + s.rejected + s.pending == s.candidates
+    assert not [e for e in events(guard) if e["event"] == "candidate"]
+    assert guard.best["round"] == 0
+
+
 def test_partial_best_write_content_source_last(ws, monkeypatch):
     """best.md 先写成功、best.json 失败时，候选内容绝不能泄漏为还原源。
 
@@ -1906,6 +2106,46 @@ def test_candidate_snapshot_collision_gets_suffix(ws):
         encoding="utf-8") == "第一份"
     assert (guard.dir / f"cand-{id2}.md").read_text(
         encoding="utf-8") == "第二份"
+
+
+def test_snapshot_interrupted_write_leaves_no_partial_file(ws, monkeypatch):
+    """快照写到一半被 KeyboardInterrupt 打断时不能留下半截文件。
+
+    回归：_snapshot_candidate 只在 OSError 时清理，except Exception
+    捕不到中断/SystemExit；半截快照会永久占住 id，后续同轮快照被迫
+    加序号，而且「快照可读」检查会把坏内容当成合法候选。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    real_open = open
+    prefix = str(guard.dir / "cand-")
+
+    class InterruptedFile:
+        def __init__(self, path, mode, *args, **kwargs):
+            self.inner = real_open(path, mode, *args, **kwargs)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.inner.close()
+
+        def write(self, text):
+            raise KeyboardInterrupt
+
+    def flaky_open(path, mode="r", *args, **kwargs):
+        if str(path).startswith(prefix) and "x" in mode:
+            return InterruptedFile(path, mode, *args, **kwargs)
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.open", flaky_open)
+    with pytest.raises(KeyboardInterrupt):
+        guard._snapshot_candidate(1, "只写了一半")
+    assert not list(guard.dir.glob("cand-*.md"))
+
+    monkeypatch.setattr("builtins.open", real_open)
+    cid = guard._snapshot_candidate(1, "完整快照")
+    assert [p.name for p in guard.dir.glob("cand-*.md")] == [f"cand-{cid}.md"]
 
 
 def test_next_round_starts_from_best_not_last_candidate(ws):

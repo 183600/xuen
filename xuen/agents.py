@@ -856,9 +856,10 @@ class ShellAgent:
             if os.name == "nt":
                 return self._render_windows(self.template, prompt, dry_run)
             return self._render_posix(self.template, prompt, dry_run)
-        except Exception:
-            # 渲染中途失败（如模板含无法安全替换的 $'...'）时，$prompt_file
-            # 可能已落盘：必须清掉，否则工作区会留下无消费者的 .prompt.*.md
+        except BaseException:
+            # 渲染中途失败（如模板含无法安全替换的 $'...' 或用户按
+            # Ctrl+C）时，$prompt_file 可能已落盘：必须清掉，否则工作区
+            # 会留下无消费者的 .prompt.*.md（内含研究状态）
             self._cleanup_prompt_file()
             raise
 
@@ -1962,11 +1963,12 @@ class ShellAgent:
             # killed_before 本身就是一次用户停止请求（kill 到达时尚无进程可杀），
             # 不能在这里降级成普通的 start→rc=-9 失败轮次。
             self._user_killed = killed_before
-        command = self.render_command(prompt)
-        shown = command if len(command) <= 300 else command[:300] + " …"
-        self.on_stderr(f"$ {shown}\n")
-
+        proc = None
         try:
+            command = self.render_command(prompt)
+            shown = command if len(command) <= 300 else command[:300] + " …"
+            self.on_stderr(f"$ {shown}\n")
+
             proc = subprocess.Popen(
                 command, shell=True,
                 stdin=subprocess.DEVNULL,  # 防止外部 agent 继承 stdin 与 TUI 争抢键盘/挂起
@@ -1991,6 +1993,15 @@ class ShellAgent:
                     "'opencode run \"$prompt_file\"'）后重跑，"
                     "研究状态会从 research.md 继续。"
                 ) from e
+            raise
+        except BaseException:
+            # KeyboardInterrupt / SystemExit 落在渲染或 Popen 之间（Ctrl+C
+            # 的常见窗口）时同样清理：提示词文件已无消费者，内含研究状态，
+            # 不能留在工作区。Popen 已返回但还没进入 wait 收尾时进程可能
+            # 已在运行：先杀掉再清理，不要留下孤儿进程去读已删除的文件
+            if proc is not None:
+                kill_process_tree(proc)
+            self._cleanup_prompt_file()
             raise
         # _proc/_killed 归属 _kill_lock 保护：赋值与检查必须在锁内完成，
         # 否则与 kill() 的竞态依赖 GIL 语义，与锁不变式不符
