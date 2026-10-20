@@ -812,6 +812,16 @@ def test_detect_test_suite_go_mod_without_packages_not_a_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_go_files_without_mod_not_a_suite(tmp_path,
+                                                            monkeypatch):
+    """没有 go.mod 时根目录的 .go 也不能探测成套件：模块模式下从仓库根
+    执行 `go test ./...` 会因找不到 go.mod 失败，探测命中只会把「没有
+    可用测试」误记成测试失败并拒绝候选。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "main.go").write_text("package main\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_go_directories_named_like_source(tmp_path,
                                                            monkeypatch):
     """目录名以 .go 结尾不是 Go 源文件，不能探测成套件。"""
@@ -2673,6 +2683,44 @@ def test_update_section_preserves_other_section_with_mixed_line_endings(tmp_path
     text = state_path.read_text(encoding="utf-8")
     assert state._first_section(text, state.SECTION_ARTIFACT) == before
     assert state.get_section(text, state.SECTION_IDEA) == "新想法"
+
+
+def test_update_section_preserves_unrelated_line_endings(tmp_path):
+    """更新一个区块不得把自由文本及其他区块的行尾统统改成 LF。
+
+    回归：读写都用 Path.read_text/write_text 的通用换行模式，更新任意
+    区块都会把整个文件的 CRLF/CR 行尾重写成 LF；混合行尾仓库里即使只
+    改 IDEA，suffix 及其他区块的字节也会被悄悄改写。
+    """
+    import subprocess
+    import sys
+
+    def raw(path):
+        with open(path, encoding="utf-8", newline="") as f:
+            return f.read()
+
+    state_path = tmp_path / "research.md"
+    s = state.start_marker(state.SECTION_IDEA)
+    e = state.end_marker(state.SECTION_IDEA)
+    original = (f"prefix\nline1\r\nline2\n{s}\nold\n{e}\n"
+                "suffix\r\nend\n")
+    state_path.write_bytes(original.encode("utf-8"))
+    state.update_section_file(state_path, state.SECTION_IDEA, "new")
+    assert raw(state_path) == (
+        f"prefix\nline1\r\nline2\n{s}\nnew\n{e}\nsuffix\r\nend\n")
+
+    helper = state.write_helper_script(tmp_path, state_path)
+    r = subprocess.run([sys.executable, str(helper), "idea"],
+                       input=b"helper", capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    assert raw(state_path) == (
+        f"prefix\nline1\r\nline2\n{s}\nhelper\n{e}\nsuffix\r\nend\n")
+
+    crlf_path = tmp_path / "crlf.md"
+    crlf_path.write_bytes(
+        f"head\r\n{s}\r\nold\r\n{e}\r\ntail\r\n".encode("utf-8"))
+    state.update_section_file(crlf_path, state.SECTION_IDEA, "a\nb")
+    assert raw(crlf_path) == f"head\r\n{s}\r\na\r\nb\r\n{e}\r\ntail\r\n"
 
 
 def test_read_events_tolerates_encoding_corrupt_line(ws):

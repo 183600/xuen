@@ -228,13 +228,25 @@ def _strip_stray_markers(segment: str, spans: list, seg_start: int,
     def clean(seg: str) -> str:
         # 只删除独占整行的标记；行内提及的标记文本是普通内容，必须保留。
         # 按 CR/LF/CRLF 拆分（与 _SECTION_MARKER 的识别口径一致，CR-only
-        # 的孤立标记同样会被清掉），再用原文首选行尾重新拼接，避免把
-        # 同一行尾风格的普通文本改写成混合行尾。
+        # 的孤立标记同样会被清掉），逐行保留原有行尾，避免更新一个区块时
+        # 把自由文本的混合行尾（甚至其后的其他区块）悄悄改写。
         parts = re.split(r"(\r\n|\r|\n)", seg)
-        lines = [line for line in parts[0::2]
-                 if not own_marker.fullmatch(line)]
-        endings = parts[1::2]
-        return (endings[0] if endings else "\n").join(lines)
+        out = []
+        final_removed_without_ending = False
+        for i in range(0, len(parts), 2):
+            line = parts[i]
+            ending = parts[i + 1] if i + 1 < len(parts) else ""
+            if own_marker.fullmatch(line):
+                if not ending and i == len(parts) - 1:
+                    final_removed_without_ending = True
+                continue
+            out.append(line)
+            out.append(ending)
+        cleaned = "".join(out)
+        if final_removed_without_ending and cleaned.endswith(
+                ("\r\n", "\r", "\n")):
+            cleaned = cleaned[:-2] if cleaned.endswith("\r\n") else cleaned[:-1]
+        return cleaned
 
     out = []
     pos = 0
@@ -350,19 +362,24 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             original = scaffold("")
         else:
             try:
-                original = path.read_text(encoding="utf-8")
+                with open(path, encoding="utf-8", newline="") as f:
+                    original = f.read()
             except UnicodeDecodeError:
                 # 非法 UTF-8（外部编辑器按本地编码保存 / agent 写盘事故）：
                 # 严格解码会让本函数与生成的助手脚本永久无法修复该文件——
                 # 每轮还原都失败、区块永远读不出来，研究循环卡死。按替换符
                 # 降级读取后照常写回，本次更新即把坏字节修复成 U+FFFD
-                original = path.read_text(encoding="utf-8", errors="replace")
+                with open(path, encoding="utf-8", errors="replace",
+                          newline="") as f:
+                    original = f.read()
         text = original
         old = get_section(text, name)
 
         s, e = start_marker(name), end_marker(name)
         new = sanitize_section_content(content)
-        body = "\n" + new + "\n"
+        first_nl = re.search(r"\r\n|\r|\n", original)
+        nl = first_nl.group(0) if first_nl else "\n"
+        body = nl + new.replace("\n", nl) + nl
         # 区块定位必须与 get_section/_section_spans 一致：跳过落在其他有效
         # 区块区间内的同名标记字面量，否则会替换到错误位置、破坏相邻区块
         spans = _section_spans(text)
@@ -384,11 +401,13 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             # 区块立即读不出来、且相邻区块一并失效。校验失败则在文件开头
             # 重建干净的区块（见下），绝不整段清除本区块标记。
             back = next(
-                (candidate[a + len(s): b - len(e)].strip("\n")
+                (candidate[a + len(s): b - len(e)].strip("\r\n")
                  for a, b in _section_spans(candidate)
                  if candidate.startswith(s, a)),
                 None,
             )
+            if back is not None:
+                back = back.replace("\r\n", "\n").replace("\r", "\n")
             if back != new:
                 # 不回退到「清除本区块所有标记再重建」：回读校验失败时本区块
                 # 与另一区块会交叉失效，此时清除本区块标记会把另一区块区间
@@ -396,7 +415,8 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 # （prefix/suffix 已按原有有效区块清好），把新区块放到文件
                 # 开头即可 —— 新写入的 START 在前，必与紧随其后的自身 END
                 # 配对，留在后面的同名字面量标记不再能抢先配对
-                candidate = f"{s}{body}{e}\n\n" + (prefix + suffix).lstrip("\n")
+                candidate = (f"{s}{body}{e}{nl}{nl}"
+                             + (prefix + suffix).lstrip("\r\n"))
             text = candidate
         else:  # 标记缺失/错乱：清除该区块所有残留标记，再补一对干净的。
             # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
@@ -412,18 +432,22 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                            if m.group(2) == other and m.group(3) == "START"),
                           None)
             if anchor is not None:
-                line_start = text.rfind("\n", 0, anchor) + 1
-                candidate = text[:line_start] + block + "\n\n" + text[line_start:]
+                line_start = max(text.rfind("\n", 0, anchor),
+                                 text.rfind("\r", 0, anchor)) + 1
+                candidate = (text[:line_start] + block + nl + nl
+                             + text[line_start:])
             else:
-                candidate = text.rstrip("\n") + f"\n\n{block}\n"
+                candidate = text.rstrip("\r\n") + nl + nl + block + nl
             # 回读校验必须用 None 哨兵：get_section 在区块缺失/交叉失效时
             # 返回 ''，与「写入空内容」无法区分，会漏掉需要修复的场景
             back = next(
-                (candidate[a + len(s): b - len(e)].strip("\n")
+                (candidate[a + len(s): b - len(e)].strip("\r\n")
                  for a, b in _section_spans(candidate)
                  if candidate.startswith(s, a)),
                 None,
             )
+            if back is not None:
+                back = back.replace("\r\n", "\n").replace("\r", "\n")
             if back != new:
                 # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
                 # 无配对 END，是损坏残留）会抢先与新插入的 END 交叉配对，
@@ -431,7 +455,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 # 不再二次清除（交叉失效会误删另一区块区间内的合法正文），
                 # 直接把新区块放到文件开头：START 在前必与自身 END 配对。
                 # text 已在分支开头清过一次本区块的游离标记，无需重复清除
-                candidate = f"{block}\n\n" + text.lstrip("\n")
+                candidate = f"{block}{nl}{nl}" + text.lstrip("\r\n")
             text = candidate
 
         # 清除本区块标记后，另一类区块原先失效的残片可能重新配对并抢先
@@ -440,7 +464,8 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
 
         tmp = path.with_name(path.name + ".tmp")
         try:
-            tmp.write_text(text, encoding="utf-8")
+            with open(tmp, "w", encoding="utf-8", newline="") as f:
+                f.write(text)
             os.replace(tmp, path)
         except OSError:
             # 写入/替换失败时清掉半成品临时文件，避免在工作区残留垃圾。
@@ -547,13 +572,25 @@ def _strip_stray(segment, spans, seg_start, s, e):
 
     def clean(seg):
         # 只删除独占整行的标记，行内提及的标记文本是普通内容，必须保留。
-        # 按 CR/LF/CRLF 拆分并用原文首选行尾拼接，与 xuen.state 一致：
+        # 按 CR/LF/CRLF 拆分并逐行保留原有行尾，与 xuen.state 一致：
         # CR-only 文件里的孤立标记同样会被清掉。
         parts = re.split(r"(\\r\\n|\\r|\\n)", seg)
-        lines = [line for line in parts[0::2]
-                 if not own_marker.fullmatch(line)]
-        endings = parts[1::2]
-        return (endings[0] if endings else "\\n").join(lines)
+        out = []
+        final_removed_without_ending = False
+        for i in range(0, len(parts), 2):
+            line = parts[i]
+            ending = parts[i + 1] if i + 1 < len(parts) else ""
+            if own_marker.fullmatch(line):
+                if not ending and i == len(parts) - 1:
+                    final_removed_without_ending = True
+                continue
+            out.append(line)
+            out.append(ending)
+        cleaned = "".join(out)
+        if final_removed_without_ending and cleaned.endswith(
+                ("\\r\\n", "\\r", "\\n")):
+            cleaned = cleaned[:-2] if cleaned.endswith("\\r\\n") else cleaned[:-1]
+        return cleaned
 
     out = []
     pos = 0
@@ -705,14 +742,14 @@ def main() -> int:
             s, e = f"<!-- {name}:START -->", f"<!-- {name}:END -->"
             if os.path.exists(STATE_FILE):
                 try:
-                    with open(STATE_FILE, encoding="utf-8") as f:
+                    with open(STATE_FILE, encoding="utf-8", newline="") as f:
                         text = f.read()
                 except UnicodeDecodeError:
                     # 与 xuen.state.update_section_file 保持一致：非法 UTF-8
                     # 时按替换符降级读取，本次写入顺带把坏字节修复成 U+FFFD，
                     # 而不是永远读不出文件、区块再也写不进去
                     with open(STATE_FILE, encoding="utf-8",
-                              errors="replace") as f:
+                              errors="replace", newline="") as f:
                         text = f.read()
             else:
                 # 状态文件在运行过程中被删除时，与 xuen.state.update_section_file
@@ -730,7 +767,9 @@ def main() -> int:
                     r"\\r\\n|\\r|\\n", content.strip(" \\t\\r\\n\\ufeff"))
                 if not _SECTION_MARKER_RE.match(line)
             ).strip(" \\t\\n\\ufeff")
-            body = "\\n" + cleaned + "\\n"
+            first_nl = re.search(r"\\r\\n|\\r|\\n", original)
+            nl = first_nl.group(0) if first_nl else "\\n"
+            body = nl + cleaned.replace("\\n", nl) + nl
             # 区块定位须跳过落在其他有效区块区间内的同名标记字面量（那是该区块
             # 的合法内容），否则会替换到错误位置、破坏相邻区块
             spans = _spans(text)
@@ -748,14 +787,17 @@ def main() -> int:
                 # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
                 # 区块立即读不出来、且相邻区块一并失效。
                 back = next(
-                    (candidate[a + len(s): b - len(e)].strip("\\n")
+                    (candidate[a + len(s): b - len(e)].strip("\\r\\n")
                      for a, b in _spans(candidate) if candidate.startswith(s, a)),
                     None,
                 )
+                if back is not None:
+                    back = back.replace("\\r\\n", "\\n").replace("\\r", "\\n")
                 if back != cleaned:
                     # 与模块实现一致：舍弃刚插入的区块（prefix/suffix 已按
                     # 原有有效区块清好），把新区块放到文件开头
-                    candidate = f"{s}{body}{e}\\n\\n" + (prefix + suffix).lstrip("\\n")
+                    candidate = (f"{s}{body}{e}{nl}{nl}"
+                                 + (prefix + suffix).lstrip("\\r\\n"))
                 text = candidate
             else:  # 标记缺失/错乱：清除该区块所有残留标记，再补一对干净的。
                 # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
@@ -771,22 +813,26 @@ def main() -> int:
                     None,
                 )
                 if anchor is not None:
-                    line_start = text.rfind("\\n", 0, anchor) + 1
-                    candidate = text[:line_start] + block + "\\n\\n" + text[line_start:]
+                    line_start = max(text.rfind("\\n", 0, anchor),
+                                     text.rfind("\\r", 0, anchor)) + 1
+                    candidate = (text[:line_start] + block + nl + nl
+                                 + text[line_start:])
                 else:
-                    candidate = text.rstrip("\\n") + "\\n\\n" + block + "\\n"
+                    candidate = text.rstrip("\\r\\n") + nl + nl + block + nl
                 back = next(
-                    (candidate[a + len(s): b - len(e)].strip("\\n")
+                    (candidate[a + len(s): b - len(e)].strip("\\r\\n")
                      for a, b in _spans(candidate) if candidate.startswith(s, a)),
                     None,
                 )
+                if back is not None:
+                    back = back.replace("\\r\\n", "\\n").replace("\\r", "\\n")
                 if back != cleaned:
                     # 极端场景：其他有效区块内部「受保护」的同名孤立 START
                     # （本身无配对 END，是损坏残留）会抢先与新插入的 END
                     # 交叉配对。与模块实现一致：不再二次清除（交叉失效会
                     # 误删另一区块区间内的合法正文），直接把新区块放到
                     # 文件开头：START 在前必与自身 END 配对
-                    candidate = block + "\\n\\n" + text.lstrip("\\n")
+                    candidate = f"{block}{nl}{nl}" + text.lstrip("\\r\\n")
                 text = candidate
             # 与 xuen.state.update_section_file 一致：清除本区块标记后，
             # 另一类区块原先失效的残片可能重新配对并抢先被读出；写盘前
@@ -794,7 +840,7 @@ def main() -> int:
             text = _preserve_other_section(original, text, name)
             tmp = STATE_FILE + ".tmp"
             try:
-                with open(tmp, "w", encoding="utf-8") as f:
+                with open(tmp, "w", encoding="utf-8", newline="") as f:
                     f.write(text)
                 os.replace(tmp, STATE_FILE)
             except OSError:

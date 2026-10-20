@@ -320,15 +320,12 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 return ["npm", "test"]
         except (OSError, ValueError):
             pass
-    # 4) go test：根目录直接有 .go 文件，或 go.mod 模块下任意子包有
-    #    .go 文件。只查根目录会把 `go.mod + cmd/ + internal/` 这类标准
-    #    布局当成没有套件（go test ./... 明明能跑），候选永远无法用测试
-    #    验证。没有 go.mod 的嵌套 .go 不算：模块模式下从仓库根执行
-    #    `go test ./...` 会因找不到 go.mod 失败，不属于可用套件。
-    if shutil.which("go") and (
-            any(p.is_file() for p in repo.glob("*.go"))
-            or ((repo / "go.mod").is_file()
-                and any(p.is_file() for p in repo.rglob("*.go")))):
+    # 4) go test：go.mod 模块下任意位置（根目录或 cmd/、internal/ 等
+    #    子包）有 .go 文件。没有 go.mod 时不管 .go 在根目录还是子目录都
+    #    不算：从仓库根执行 `go test ./...` 在模块模式下会因找不到 go.mod
+    #    失败，探测成套件只会把「没有可用测试」误记成测试失败。
+    if (shutil.which("go") and (repo / "go.mod").is_file()
+            and any(p.is_file() for p in repo.rglob("*.go"))):
         return ["go", "test", "./..."]
     return None
 
