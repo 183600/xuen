@@ -1,0 +1,20 @@
+# CI-only dependency set (Python 3.12).
+#
+# 与 requirements.txt / pyproject.toml 的依赖保持一致并固定版本，只用于 CI：
+#   - continuous-loop.yml 的「Install Python test deps (cached)」里预热一次；
+#   - 作为 actions/setup-python 的 pip 缓存键（cache-dependency-path）。
+# 这样 pip 缓存有稳定的依赖文件可 hash，也避免 CI 每次去解析 requirements.txt
+# 的宽版本范围（PyYAML>=6.0、textual>=1.0）导致缓存频繁失效。
+#
+# 覆盖范围：
+#   PyYAML  —— requirements.txt / pyproject.toml 的运行时依赖
+#   textual —— requirements.txt / pyproject.toml 的运行时依赖（TUI）
+#   rich    —— xuen/tui.py 直接 import rich.text；同时是 textual 的依赖（>=14.2.0）
+#   pytest  —— tests/ 的测试运行器（pyproject.toml 的 dev extra）
+#
+# 安装方式：
+#   python -m pip install -r requirements-ci.txt
+PyYAML==6.0.3
+textual==8.2.8
+rich==15.0.0
+pytest==9.1.1
