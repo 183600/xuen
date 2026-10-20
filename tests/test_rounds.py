@@ -657,12 +657,14 @@ def test_detect_test_suite_pytest_directory_named_like_test_file(tmp_path):
 def test_detect_test_suite_pytest_ignores_uncollected_dirs(tmp_path):
     """pytest 默认不收集的目录里的测试不能被当成本仓库的套件。
 
-    虚拟环境、依赖目录、build/dist 与点目录里的第三方/生成测试都不会被
+    虚拟环境、依赖目录、build/dist、点目录以及 pytest 默认忽略的
+    *.egg（安装产物）/{arch} 目录里的第三方/生成测试都不会被
     `pytest -q` 收集；按它们探测会得到假阳性，随后 pytest 以退出码 5
     失败，候选被误判为测试失败。"""
     for relpath in ("node_modules/dep/test_dep.py", ".venv/lib/test_env.py",
                     ".hidden/test_hidden.py", "build/test_build.py",
-                    "dist/test_dist.py"):
+                    "dist/test_dist.py", "pkg.egg/test_egg.py",
+                    "{arch}/test_arch.py"):
         path = tmp_path / relpath
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("def test_ok():\n    assert True\n", encoding="utf-8")

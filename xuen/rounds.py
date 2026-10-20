@@ -259,6 +259,7 @@ _PYTEST_SKIP_DIRS = frozenset({
     ".git", ".hg", ".svn", ".tox", ".nox", ".venv", "venv", ".env",
     "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
     ".ruff_cache", "site-packages", "build", "dist", "CVS", "_darcs",
+    "{arch}",
 })
 
 
@@ -272,8 +273,15 @@ def _has_pytest_file(repo: Path) -> bool:
         # 与 pytest 默认 norecursedirs 对齐：点目录、build/dist、虚拟环境
         # 和依赖目录不会被 `pytest -q` 收集，只按它们探测会得到「有测试
         # 套件」的假阳性，随后运行 pytest 以「未收集到测试」退出。
-        dirnames[:] = [d for d in dirnames
-                       if not d.startswith(".") and d not in _PYTEST_SKIP_DIRS]
+        dirnames[:] = [
+            d for d in dirnames
+            if not d.startswith(".") and d not in _PYTEST_SKIP_DIRS
+            # pytest 的 norecursedirs 还包含通配模式 *.egg（如
+            # pkg.egg/）：安装产物里的测试同样不会被收集，探测时必须
+            # 跳过，否则只命中这种目录的仓库会以退出码 5「无测试可收集」
+            # 被误判成测试失败
+            and not d.endswith(".egg")
+        ]
         if any(_is_pytest_file(name) for name in filenames):
             return True
     return False
