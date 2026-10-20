@@ -2524,6 +2524,29 @@ def test_ensure_state_file_heals_invalid_utf8_at_startup(tmp_path):
     assert state_path.read_text(encoding="utf-8") == text
 
 
+def test_read_state_file_heals_invalid_utf8_without_rewriting_line_endings(
+        tmp_path):
+    """修坏字节时不能顺手把整个文件的 CRLF/CR 混合行尾改成 LF。
+
+    回归：read_state_file 的回写路径用 Path.read_text/write_text 的通用
+    换行模式，一个非法字节就会让整份 research.md 的行尾被重写；与
+    update_section_file 已有修复的「更新一个区块不得改写无关行尾」同一
+    类数据损坏。返回值仍应与普通读取路径一样规整为 \\n。"""
+    state_path = tmp_path / "research.md"
+    start = state.start_marker(state.SECTION_IDEA)
+    end = state.end_marker(state.SECTION_IDEA)
+    prefix = ("head\r\n" + start + "\r\n" + "坏").encode("utf-8")
+    suffix = ("\r\n" + end + "\r\n" + "mid\rtail\n").encode("utf-8")
+    state_path.write_bytes(prefix + b"\xff" + suffix)
+
+    text = state.read_state_file(state_path)
+
+    assert "\r" not in text
+    assert state.get_section(text, state.SECTION_IDEA) == "坏\ufffd"
+    expected = prefix + "\ufffd".encode("utf-8") + suffix
+    assert state_path.read_bytes() == expected
+
+
 def test_helper_show_tolerates_invalid_utf8(tmp_path):
     """write_section.py show 遇到非法 UTF-8 必须降级输出而不是 traceback。
 

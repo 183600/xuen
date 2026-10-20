@@ -53,10 +53,19 @@ def read_state_file(path: Path) -> str:
             try:
                 return path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
-                text = path.read_text(encoding="utf-8", errors="replace")
+                # newline="" 保留原始 CRLF/CR 字节：Path.read_text 会做通用
+                # 换行转换，回写时把整个文件的混合行尾悄悄改成 LF（POSIX）
+                # 或 CRLF（Windows），与 update_section_file 已修复的同类
+                # 问题一致。返回值仍按普通读取路径规整为 \n，调用方看到的
+                # 文本语义不变。
+                with open(path, encoding="utf-8", errors="replace",
+                          newline="") as f:
+                    raw_text = f.read()
+                text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
                 tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
                 try:
-                    tmp.write_text(text, encoding="utf-8")
+                    with open(tmp, "w", encoding="utf-8", newline="") as f:
+                        f.write(raw_text)
                     os.replace(tmp, path)
                 except OSError:
                     # 写盘失败时清掉半成品临时文件；抛给调用方按 OSError
