@@ -1996,6 +1996,81 @@ def test_partial_best_md_failure_keeps_content_and_rolls_back_json(
     assert guard.stats.adopted == 0
 
 
+def test_atomic_write_removes_tmp_on_keyboard_interrupt(tmp_path, monkeypatch):
+    """中断原子写不能在工作区留下半成品临时文件。"""
+    path = tmp_path / "best.json"
+
+    def interrupted(src, dst):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(rounds.os, "replace", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        rounds._atomic_write(path, "new")
+    assert not path.exists()
+    assert not list(tmp_path.glob(path.name + ".*.tmp"))
+
+
+def test_interrupt_during_best_md_write_rolls_back_json(ws, monkeypatch):
+    """best.json 已写、best.md 写入时中断：元数据必须回滚。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    baseline_best = guard.best["id"]
+    baseline_md = (guard.dir / rounds.BEST_MD_NAME).read_text(encoding="utf-8")
+    write_idea(state_path, "中断写盘时的候选")
+
+    real_write = rounds._atomic_write
+
+    def boom(path, text):
+        if Path(path).name == rounds.BEST_MD_NAME:
+            raise KeyboardInterrupt
+        return real_write(path, text)
+
+    monkeypatch.setattr(rounds, "_atomic_write", boom)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    assert json.loads((guard.dir / rounds.BEST_JSON_NAME).read_text(
+        encoding="utf-8"))["id"] == baseline_best
+    assert (guard.dir / rounds.BEST_MD_NAME).read_text(
+        encoding="utf-8") == baseline_md
+    assert guard.best["id"] == baseline_best
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.pending) == (1, 0, 1)
+
+
+def test_interrupt_after_best_commit_reconciles_adopted(ws, monkeypatch):
+    """两次写盘都完成、内存尚未更新时中断：按已采纳补记账，不能挂起。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "中断前已提交的最佳")
+
+    real_commit = guard._commit_best
+
+    def commit_then_interrupt(text, best):
+        real_commit(text, best)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(guard, "_commit_best", commit_then_interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        guard.on_round_end(1)
+
+    cid = guard.best["id"]
+    assert cid != [e for e in events(guard)
+                   if e["event"] == "baseline"][-1]["id"]
+    s = guard.stats
+    assert (s.candidates, s.adopted, s.rejected, s.pending) == (1, 1, 0, 0)
+    assert read_idea(state_path) == "中断前已提交的最佳"
+    assert read_idea(guard.best_md) == "中断前已提交的最佳"
+    assert json.loads((guard.dir / rounds.BEST_JSON_NAME).read_text(
+        encoding="utf-8"))["id"] == cid
+    verdicts = [e for e in events(guard)
+                if e["event"] == "verdict" and e.get("id") == cid]
+    assert len(verdicts) == 1
+    assert verdicts[0]["result"] == "adopted"
+
+
 def test_restore_recovers_best_from_snapshot_when_best_md_deleted(ws):
     """best.md 被外部删除后还原不能把脚手架写回 research.md。
 

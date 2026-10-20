@@ -92,7 +92,7 @@ def _atomic_write(path: Path, text: str) -> None:
     try:
         tmp.write_text(text, encoding="utf-8")
         os.replace(tmp, path)
-    except OSError:
+    except BaseException:
         try:
             tmp.unlink(missing_ok=True)
         except OSError:
@@ -941,10 +941,22 @@ class RoundGuard:
             # 若 _adopt 已在中断前提交成功（best 已指向该候选），则不能
             # 再挂起它（否则 adopted+pending 会超过 candidates）。
             if self.best.get("id") != cid:
-                try:
-                    self._pend(round_no, cid, "轮次被中断，候选挂起")
-                except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-                    self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
+                committed = self._load_best()
+                if committed.get("id") == cid:
+                    self.best = committed
+                    self.stats.adopted += 1
+                    try:
+                        self._append_event({"event": "verdict", "id": cid,
+                                            "round": round_no,
+                                            **_verdict_fields(verdict)})
+                    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                        self.sink.warn(f"记录中断前已生效判定失败（忽略）：{e}")
+                    self._applied_verdicts.add(cid)
+                else:
+                    try:
+                        self._pend(round_no, cid, "轮次被中断，候选挂起")
+                    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+                        self.sink.warn(f"记录中断候选挂起失败（忽略）：{e}")
             raise
         # 判定已经生效（采纳已完成外部副作用，拒绝/挂起只是记账），
         # 审计事件写盘失败（磁盘满 / 只读）不能反过来把本轮变成异常：
@@ -1251,19 +1263,27 @@ class RoundGuard:
             raise OSError("候选快照不可读，无法写盘晋升最佳")
         # best.json 记录的是「哪份快照是最佳」；研究循环只前进不改写历史，
         # 旧 best.md 内容被覆盖前仍在各轮 cand-*.md / git 提交里留档
-        _atomic_write(self.best_json,
-                      json.dumps(best, ensure_ascii=False, indent=2))
         try:
+            _atomic_write(self.best_json,
+                          json.dumps(best, ensure_ascii=False, indent=2))
             _atomic_write(self.best_md, text)
-        except OSError:
+        except BaseException:
             # 内容源写盘失败：撤销刚推进的元数据指针，回到「两个文件都
-            # 指向旧最佳」的一致状态（回滚自身也可能失败，尽力而为）
+            # 指向旧最佳」的一致状态（回滚自身也可能失败，尽力而为）。
+            # best.md 已经发布时说明两次写盘都已完成，中断只是落在返回前，
+            # 不能反过来把元数据回滚成旧指针。
             try:
-                _atomic_write(self.best_json,
-                              json.dumps(self.best, ensure_ascii=False,
-                                         indent=2))
-            except OSError:
-                pass
+                md_committed = self.best_md.read_text(
+                    encoding="utf-8") == text
+            except (OSError, UnicodeDecodeError):
+                md_committed = False
+            if not md_committed:
+                try:
+                    _atomic_write(self.best_json,
+                                  json.dumps(self.best, ensure_ascii=False,
+                                             indent=2))
+                except BaseException:
+                    pass
             raise
 
     def _adopt(self, cid: str, round_no: int, verdict: Verdict) -> None:
