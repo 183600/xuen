@@ -2054,6 +2054,106 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         pos = start + len(replacement)
 
 
+def _make_find_foreach_call(text: str, pos: int):
+    """从 pos 起找下一个 `$(foreach ...)` / `${foreach ...}` 调用。"""
+    i = pos
+    while i + 1 < len(text):
+        if text[i] == "$" and text[i + 1] == "$":
+            i += 2
+            continue
+        if text[i] != "$" or text[i + 1] not in "({":
+            i += 1
+            continue
+        opener = text[i + 1]
+        closer = ")" if opener == "(" else "}"
+        stack = [closer]
+        k = i + 2
+        while k < len(text):
+            ch = text[k]
+            if ch == "\\":
+                k += 2
+                continue
+            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
+                stack.append(")" if text[k + 1] == "(" else "}")
+                k += 2
+                continue
+            if ch == stack[-1]:
+                stack.pop()
+                if not stack:
+                    break
+            k += 1
+        if stack:
+            raise _MakeRequiredIncludeError(text[i:])
+        after = i + 9
+        if (text[i + 2:after] == "foreach" and after < len(text)
+                and text[after] in " \t"):
+            return i, k + 1, text[after:k].lstrip(" \t")
+        i += 1
+    return None
+
+
+def _make_expand_foreach_part(text: str,
+                              variables: Dict[str, Optional[str]],
+                              simple: Dict[str, bool],
+                              repo: Optional[Path],
+                              depth: int) -> str:
+    """展开 foreach 参数/循环体里的静态变量与函数。"""
+    for _ in range(20):
+        before = text
+        text = _make_expand_foreach(text, variables, simple, repo, depth + 1)
+        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_condition_functions(text, variables, simple, repo)
+        text = _make_expand_refs(text, variables, simple)
+        if repo is not None:
+            text = _make_expand_include_functions(text, repo)
+            text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_computed_refs(text, variables, simple)
+        text = _make_resolve_single_char_refs(text, variables, simple)
+        if text == before:
+            break
+    return text
+
+
+def _make_expand_foreach(text: str,
+                         variables: Dict[str, Optional[str]],
+                         simple: Dict[str, bool],
+                         repo: Optional[Path] = None,
+                         depth: int = 0) -> str:
+    """静态展开 `$(foreach var,list,body)`（含嵌套）。
+
+    foreach 在目标名里很常见（`$(foreach x,test foo,$(x))::` 会同时
+    定义 test/foo）。不展开会把函数原文当成一个目标名，既可能漏掉
+    test，也可能漏掉与已有 test 规则的 :/:: 冲突。
+    """
+    if depth > 20:
+        return text
+    pos = 0
+    while True:
+        call = _make_find_foreach_call(text, pos)
+        if call is None:
+            return text
+        start, end, args = call
+        parts = _make_split_function_args(args, 3)
+        if len(parts) < 3:
+            raise _MakeRequiredIncludeError("foreach: missing argument")
+        name = _make_expand_foreach_part(
+            parts[0], variables, simple, repo, depth + 1).strip()
+        words = _make_expand_foreach_part(
+            parts[1], variables, simple, repo, depth + 1).split()
+        body = parts[2]
+        results = []
+        for word in words:
+            local_vars = dict(variables)
+            local_simple = dict(simple)
+            local_vars[name] = word
+            local_simple[name] = True
+            results.append(_make_expand_foreach_part(
+                body, local_vars, local_simple, repo, depth + 1))
+        replacement = " ".join(results)
+        text = text[:start] + replacement + text[end:]
+        pos = start + len(replacement)
+
+
 def _make_standalone_eval_args(body: str) -> Optional[List[str]]:
     """整行只有 `$(eval ...)` 调用时返回各参数原文。
 
@@ -2858,13 +2958,17 @@ def _make_expand_simple_vars(text: str,
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
-        expanded = _make_expand_refs(expand_input, variables, simple)
+        expanded = _make_expand_foreach(
+            expand_input, variables, simple, repo)
+        expanded = _make_expand_refs(expanded, variables, simple)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
         # 静态函数要交替展开到不动点：先条件后静态才能正确处理
         # `$(strip $(or ,test))`，而条件参数里也可能嵌套静态函数。
         for _ in range(20):
             before = expanded
+            expanded = _make_expand_foreach(
+                expanded, variables, simple, repo)
             expanded = _make_expand_condition_functions(
                 expanded, variables, simple, repo)
             expanded = _make_expand_refs(expanded, variables, simple)
@@ -2910,8 +3014,10 @@ def _make_expand_simple_vars(text: str,
                                  or prefix.strip(" \t") == ""))):
                     skip = True
             if not skip:
+                expanded_targets = _make_expand_foreach(
+                    raw_targets, variables, simple, repo)
                 expanded_targets = _make_resolve_single_char_refs(
-                    raw_targets, variables, simple)
+                    expanded_targets, variables, simple)
                 expanded_targets = _make_expand_refs(
                     expanded_targets, variables, simple)
                 # 目标列表也可能由条件/静态函数组成：`$(if ,x):$(Y)=1`
@@ -2919,6 +3025,8 @@ def _make_expand_simple_vars(text: str,
                 # 原文当成目标，误报 empty variable name。
                 for _ in range(20):
                     before_targets = expanded_targets
+                    expanded_targets = _make_expand_foreach(
+                        expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_condition_functions(
                         expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_refs(

@@ -2983,6 +2983,43 @@ def test_detect_test_suite_make_dynamic_name_triple_colon(tmp_path):
 
 
 @pytest.mark.parametrize("line", [
+    "$(foreach x,test foo,$(x))::",
+])
+def test_detect_test_suite_make_foreach_target_conflict_not_a_suite(
+        tmp_path, line):
+    """foreach 展开出的目标与已有 test 规则冲突时 make 读取失败。
+
+    回归：`$(foreach x,test foo,$(x))::` 会同时定义 test/foo 的 :: 规则，
+    与前面的 `test:` 冲突；不展开函数原文会漏掉这个冲突，把必然失败的
+    Makefile 误判成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(foreach x,foo test,$(x)):",
+    "$(foreach x,$(TESTS),$(x)):",
+    "$(foreach x,foo test,$(foreach y,$(x),$(y) z)):",
+])
+def test_detect_test_suite_make_foreach_target_detected(tmp_path, line):
+    """foreach 展开出 test 目标的合法规则必须探测到套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "TESTS := foo test\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "foo: %.o: %.c",
     "foo: a\\:b",
     "foo: X:=1",
