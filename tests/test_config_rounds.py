@@ -367,3 +367,27 @@ def test_yaml_binary_and_set_rejected_for_string_fields(tmp_path):
         load_config(write_cfg(tmp_path, BASE + "workspace: !!binary d3M=\n"))
     with pytest.raises(ValueError, match="workspace"):
         load_config(write_cfg(tmp_path, BASE + "workspace: !!set {ws: null}\n"))
+
+def test_programmatic_non_integer_fields_raise_value_error():
+    """程序化 Config 的 words/loop 非整数字段也要带字段名报 ValueError，
+    不能让比较运算先抛 TypeError，或把 1.5/True 静默带进下游。"""
+    from xuen.config import (Config, LoopConfig, WordsConfig, _validate)
+
+    for name, value in (("pick", "2"), ("pick", 1.5), ("pick", True),
+                        ("count", "100"), ("batch", 2.5)):
+        cfg = Config(words=WordsConfig(**{name: value}))
+        with pytest.raises(ValueError, match=f"words\\.{name}"):
+            _validate(cfg)
+
+    for value in ("5", 1.5, True):
+        cfg = Config(loop=LoopConfig(iterations=value))
+        with pytest.raises(ValueError, match="loop\\.iterations"):
+            _validate(cfg)
+
+    cfg = Config()
+    cfg.rounds.adopt_score = "7"
+    with pytest.raises(ValueError, match="rounds\\.adopt_score"):
+        _validate(cfg)
+    cfg.rounds.adopt_score = True
+    with pytest.raises(ValueError, match="rounds\\.adopt_score"):
+        _validate(cfg)

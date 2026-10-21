@@ -355,15 +355,26 @@ def _is_finite_number(value: Any) -> bool:
 
 
 def _validate(cfg: Config) -> None:
+    if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
+        raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:
         raise ValueError("words.pick（n）必须 >= 0")
+    for name in ("count", "batch"):
+        value = getattr(cfg.words, name)
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ValueError(f"words.{name} 必须是正整数，收到: {value!r}")
     if cfg.words.count < 1 or cfg.words.batch < 1:
         raise ValueError("words.count / words.batch 必须为正整数")
-    if cfg.loop.iterations is not None and cfg.loop.iterations < 1:
-        raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
-    if (cfg.loop.iterations is not None
-            and cfg.loop.iterations > sys.maxsize):
-        raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
+    if cfg.loop.iterations is not None:
+        if (not isinstance(cfg.loop.iterations, int)
+                or isinstance(cfg.loop.iterations, bool)):
+            raise ValueError(
+                f"loop.iterations 必须是整数或 inf(-1)，收到: "
+                f"{cfg.loop.iterations!r}")
+        if cfg.loop.iterations < 1:
+            raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
+        if cfg.loop.iterations > sys.maxsize:
+            raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
     # ---- 轮次守卫 ----
@@ -375,7 +386,12 @@ def _validate(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    if not (0.0 <= cfg.rounds.adopt_score <= 10.0):
+    try:
+        score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
+                       and 0.0 <= cfg.rounds.adopt_score <= 10.0)
+    except TypeError:
+        score_valid = False
+    if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
