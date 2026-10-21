@@ -32,18 +32,21 @@ class UI:
         try:
             sys.stdout.write(text)
             sys.stdout.flush()
-        except BrokenPipeError:
+        except (BrokenPipeError, OSError, ValueError):
             # 下游已关闭（如 xuen --no-tui … | head）：静默丢弃后续输出。
             # 仅吞掉异常还不够：stdout 是缓冲流，解释器退出时会再次 flush，
             # 触发 Exception ignored 并把退出码改成 120。把底层 fd 重定向到
             # devnull 后，最终 flush 落到空设备，进程才能按真实结果退出。
+            # OSError/ValueError 覆盖非管道场景：stdout 被显式 close() 后
+            # write 抛 ValueError，终端写入失败抛 OSError；输出通道失效
+            # 不能反过来炸掉研究循环（没有可展示的终端时只能丢弃）。
             try:
                 devnull = os.open(os.devnull, os.O_WRONLY)
                 try:
                     os.dup2(devnull, sys.stdout.fileno())
                 finally:
                     os.close(devnull)
-            except (OSError, ValueError):
+            except (OSError, ValueError, AttributeError):
                 pass
 
     def line(self, prefix: str, text: str, color: str) -> None:

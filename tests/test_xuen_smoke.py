@@ -54,6 +54,23 @@ def test_ui_output_without_stdout_is_silently_dropped(monkeypatch):
     ui_module.ui.rule("标题")
 
 
+def test_ui_output_with_closed_stdout_is_silently_dropped(monkeypatch):
+    """stdout 被关闭（write 抛 ValueError）时日志不能炸掉研究循环。"""
+    from xuen import ui as ui_module
+
+    class ClosedStdout:
+        def write(self, text):
+            raise ValueError("I/O operation on closed file")
+
+        def flush(self):
+            raise ValueError("I/O operation on closed file")
+
+    monkeypatch.setattr(ui_module.sys, "stdout", ClosedStdout())
+    ui_module.ui.raw("x")
+    ui_module.ui.info("x")
+    ui_module.ui.rule("标题")
+
+
 def test_main_module_help_smoke():
     proc = subprocess.run(
         [sys.executable, "-m", "xuen", "--help"],
