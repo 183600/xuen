@@ -2697,6 +2697,7 @@ def test_detect_test_suite_make_computed_assignment(tmp_path, makefile):
     r"A\:B=x",
     r"A\ B=x",
     r"test\:$(X)=1",
+    r"$(info $(if x,a\ b)) = :",
 ])
 def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
         tmp_path, line):
@@ -2728,6 +2729,9 @@ def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
     "override ::=x",
     "test:$(if x, ,)=1",
     "test:$(subst x, ,x)=1",
+    r"$(patsubst a\ b,test,$$) = x",
+    r"$(subst a\ b,test,$$) = x",
+    r"$(info $(if x,a\ b))foo = x",
 ])
 def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                                                                line):

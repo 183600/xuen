@@ -3224,6 +3224,38 @@ def _make_apply_define(name: str, op: str, body: str,
         simple[name] = False
 
 
+def _make_assignment_name_bad_escape(token: str) -> bool:
+    r"""赋值名顶层是否含 `\ ` / `\:` / `\#` 这类非法转义。
+
+    函数参数里的反斜杠由函数自己解释，不属于变量名语法；只扫描变量
+    引用之外，避免 `$(patsubst a\ b,test,$$) = x` 被误判成 missing
+    separator。
+    """
+    i = 0
+    n = len(token)
+    while i < n:
+        ch = token[i]
+        if ch == "$" and i + 1 < n and token[i + 1] in "({":
+            opener = token[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                if token[j] == opener:
+                    depth += 1
+                elif token[j] == closer:
+                    depth -= 1
+                j += 1
+            if depth:
+                return False
+            i = j
+            continue
+        if ch == "\\" and i + 1 < n and token[i + 1] in " \t:#":
+            return True
+        i += 1
+    return False
+
+
 def _make_dynamic_assignment_name(body: str) -> Optional[str]:
     """返回 `$($(A)) = x` 这类含嵌套引用的赋值变量名。
 
@@ -3290,7 +3322,8 @@ def _make_dynamic_assignment_name(body: str) -> Optional[str]:
         return None
     # 转义空白/冒号/井号不能进入顶层变量名（`A\:B=x` / `A\ B=x`
     # 会让 make 报 missing separator），即使变量名里还有合法引用。
-    if re.search(r"\\[ \t:#]", token) is not None:
+    # 函数参数里的转义空白不属于变量名语法。
+    if _make_assignment_name_bad_escape(token):
         return None
     # `X$(Y)?=1` / `X$(Y)+=1` / `X$(Y)!=1` 的运算符前半截会被扫描
     # 进 token；剥掉它交给调用方按原行识别完整运算符。
