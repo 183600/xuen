@@ -1539,9 +1539,13 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 后续 _make_expand_simple_vars 看不到 define 块；给简单的
                 # 变量名补一行占位赋值，规则头里的 $(VAR) 才能展开。
                 # 目标列表只关心换行与空白的切分，合并成空格不影响探测。
+                # 多行值在目标行展开时会被 make 当作行尾处理，不能合并成
+                # 空格（那会凭空多出 `test` 目标）；用空占位赋值覆盖之前
+                # 的同名变量，避免第二遍展开误用旧值。
                 if re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
-                    raw = _make_quote_value_for_assignment(
-                        " ".join(body_lines))
+                    raw = ("" if len(body_lines) > 1 else
+                           _make_quote_value_for_assignment(
+                               " ".join(body_lines)))
                     out.append(f"{define_name} = {raw}\n")
             continue
         if active and _MAKE_ENDEF_LINE.match(body):

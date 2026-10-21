@@ -1662,6 +1662,12 @@ def test_detect_test_suite_make_define_body_is_data(tmp_path):
         encoding="utf-8")
     assert detect_test_suite(tmp_path) is None
 
+    # 多行 define 覆盖旧值后，$(BODY) 的目标行展开不会得到 test。
+    (tmp_path / "Makefile").write_text(
+        "BODY = test\ndefine BODY\nfoo\nbar\nendef\n"
+        "$(BODY):\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
     (tmp_path / "Makefile").write_text(
         "ifeq (0,1)\ndefine BODY\ntest:\n\t@true\nendef\nendif\n"
         "test:\n\t@true\n", encoding="utf-8")
