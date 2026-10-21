@@ -537,11 +537,10 @@ def _make_include_names(args: str) -> List[str]:
     return names
 
 
-_MAKE_INCLUDE_FUNCTION = re.compile(
-    r"\$\((wildcard|dir|notdir|addprefix|addsuffix|strip|basename|suffix)"
-    r"[ \t]+([^)]*)\)"
-    r"|\$\{(wildcard|dir|notdir|addprefix|addsuffix|strip|basename|suffix)"
-    r"[ \t]+([^}]*)\}")
+_MAKE_INCLUDE_FUNCTIONS = frozenset({
+    "wildcard", "dir", "notdir", "addprefix", "addsuffix", "strip",
+    "basename", "suffix",
+})
 
 
 def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
@@ -597,16 +596,63 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     return " ".join(part[index] for part in parts)
 
 
-def _make_expand_include_functions(text: str, repo: Path) -> str:
-    """展开 include 文件名里可静态求值的函数（wildcard/dir/addprefix 等）。"""
-    def repl(match: re.Match) -> str:
-        name = match.group(1) if match.group(1) is not None \
-            else match.group(3)
-        args = match.group(2) if match.group(2) is not None \
-            else match.group(4)
-        return _make_expand_include_function(name, args, repo)
+def _make_find_include_function(text: str, pos: int):
+    """从 pos 起找下一个可静态求值的 make 函数调用。
 
-    return _MAKE_INCLUDE_FUNCTION.sub(repl, text)
+    返回 (start, end, name, args)；找不到返回 None。按括号嵌套扫描，
+    这样 `$(wildcard $(addprefix $(D)/, *.mk))` 这类常见嵌套也能展开。
+    """
+    i = pos
+    while i + 1 < len(text):
+        if text[i] != "$" or text[i + 1] not in "({":
+            i += 1
+            continue
+        opener = text[i + 1]
+        closer = ")" if opener == "(" else "}"
+        j = i + 2
+        while j < len(text) and (text[j].isalnum() or text[j] in "_-"):
+            j += 1
+        name = text[i + 2:j]
+        if name not in _MAKE_INCLUDE_FUNCTIONS or j >= len(text) \
+                or text[j] not in " \t":
+            i += 1
+            continue
+        stack = [closer]
+        k = j
+        while k < len(text):
+            ch = text[k]
+            if ch == "\\":
+                k += 2
+                continue
+            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
+                stack.append(")" if text[k + 1] == "(" else "}")
+                k += 2
+                continue
+            if ch == stack[-1]:
+                stack.pop()
+                if not stack:
+                    return i, k + 1, name, text[j:k].lstrip(" \t")
+            k += 1
+        i += 1
+    return None
+
+
+def _make_expand_include_functions(text: str, repo: Path) -> str:
+    """展开 include 文件名里可静态求值的函数（支持嵌套调用）。"""
+    pos = 0
+    while True:
+        call = _make_find_include_function(text, pos)
+        if call is None:
+            return text
+        start, end, name, args = call
+        evaluated = _make_expand_include_functions(args, repo)
+        if "$" in evaluated:
+            # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
+            pos = end
+            continue
+        replacement = _make_expand_include_function(name, evaluated, repo)
+        text = text[:start] + replacement + text[end:]
+        pos = start + len(replacement)
 
 
 def _make_include_paths(name: str, repo: Path) -> List[Path]:
