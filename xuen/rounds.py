@@ -836,6 +836,21 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
             # `foo $::`：`$:` 吃掉第一个冒号，第二个冒号仍是规则分隔符，
             # make 正常接受。
             continue
+        # `$:` 吃掉冒号后，前缀与剩余文本会拼成一行重新解析：
+        # `foo$:X:=1` 是变量 `fooX` 的赋值（make 接受）。纯变量引用
+        # 目标（`$x$:`）展开后前缀可能为空，只接受无空白的普通赋值，
+        # 无法静态判断空动态变量名时仍保守拒绝。
+        suffix = body[colon + 1:]
+        suffix_at_start = not suffix.startswith((" ", "\t"))
+        if bare and suffix_at_start and not only_refs:
+            rebuilt = targets[:-1] + suffix
+            if (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
+                    or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
+                    is not None):
+                continue
+        elif (only_refs and suffix_at_start
+                and _MAKE_VAR_ASSIGNMENT.match(suffix) is not None):
+            continue
         # `$:` 只吃掉紧邻的冒号；规则头剩余部分若还有未转义冒号，整行
         # 仍可能被 make 接受（`foo $: a:b` 定义目标 foo a）。只有后续
         # 再没有冒号，或第一个剩余冒号属于 `:=`（空变量名）时才失败。

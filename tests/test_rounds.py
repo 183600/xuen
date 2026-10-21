@@ -6581,6 +6581,10 @@ def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
     "$x:$(X)=1",
     "$x&:$(X)=1",
     "foo$:$(X)=1",
+    "$:X:=1",
+    "x$:X:=1",
+    "foo$:bar:=1",
+    "$x$:X:=1",
 ])
 def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
         tmp_path, line):
