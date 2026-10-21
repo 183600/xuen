@@ -1263,7 +1263,7 @@ def _make_target_word_units(word: str) -> List[str]:
     """按 make 规则头词法再切分目标词：未转义 `=` 是词分隔符。
 
     `foo test=1:` 定义目标 foo / test / 1，`test+=1:` 的 `+`/`?`
-    运算符前缀被吸收；`test\=1:` 里的等号被转义，属于目标名本身。
+    运算符前缀被吸收；`test\\=1:` 里的等号被转义，属于目标名本身。
     """
     units: List[str] = []
     buf: List[str] = []
@@ -2367,9 +2367,12 @@ def _make_expand_call_arg(
         before = text
         text = _make_expand_automatic_refs(text)
         text = _make_expand_value(text, variables, simple)
-        text = _make_expand_foreach(text, variables, simple, repo)
+        if repo is not None:
+            text = _make_expand_include_functions(
+                text, repo, variables, simple, overrides)
         text = _make_expand_condition_functions(
             text, variables, simple, repo, overrides=overrides)
+        text = _make_expand_foreach(text, variables, simple, repo)
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
@@ -2452,10 +2455,10 @@ def _make_expand_foreach_part(text: str,
         before = text
         text = _make_expand_automatic_refs(text)
         text = _make_expand_value(text, variables, simple, depth + 1)
+        text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_foreach(
             text, variables, simple, repo, depth + 1, active)
         text = _make_expand_refs(text, variables, simple, active=active)
-        text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_error_functions(text)
         text = _make_expand_side_effect_functions(text)
         text = _make_expand_call_functions(
@@ -2861,7 +2864,6 @@ def _make_expand_immediate_value(
         before = value
         value = _make_expand_automatic_refs(value)
         value = _make_expand_value(value, variables, simple)
-        value = _make_expand_foreach(value, variables, simple, repo)
         # 与目标行同理：参数边界按原文确定，静态函数要赶在变量/条件
         # 展开之前处理，否则变量展开为空后留下的参数值空白会被当成
         # 函数名后的语法空白丢掉。
@@ -2870,6 +2872,7 @@ def _make_expand_immediate_value(
                 value, repo, variables, simple, overrides)
         value = _make_expand_condition_functions(
             value, variables, simple, repo)
+        value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_metadata_functions(value, variables, simple)
         value = _make_expand_error_functions(value)
         value = _make_expand_side_effect_functions(value)
@@ -3410,14 +3413,20 @@ def _make_expand_simple_vars(text: str,
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_value(
             expand_input, variables, simple)
-        expanded = _make_expand_foreach(
-            expanded, variables, simple, repo)
         # 静态函数必须在展开变量引用之前处理：参数边界按原文确定，
         # `$(subst $x ,...)` 里 `$x` 展开为空后剩下的空格属于参数值，
         # 先展开变量会让静态函数误把它当成函数名后的语法空白丢掉。
+        # 它也要先于条件函数：`$(addsuffix $(if x, foo, bar), test)`
+        # 的参数空白由静态函数按原文保留。
         if repo is not None:
             expanded = _make_expand_include_functions(
                 expanded, repo, variables, simple, overrides)
+        # 条件函数必须先于 foreach/变量展开：if 参数的源码空白在展开前
+        # 去掉，而展开结果里的空白（如 foreach 空 body）是值的一部分。
+        expanded = _make_expand_condition_functions(
+            expanded, variables, simple, repo)
+        expanded = _make_expand_foreach(
+            expanded, variables, simple, repo)
         expanded = _make_expand_refs(expanded, variables, simple)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
@@ -3427,12 +3436,12 @@ def _make_expand_simple_vars(text: str,
             before = expanded
             expanded = _make_expand_value(
                 expanded, variables, simple)
-            expanded = _make_expand_foreach(
-                expanded, variables, simple, repo)
             if repo is not None:
                 expanded = _make_expand_include_functions(
                     expanded, repo, variables, simple, overrides)
             expanded = _make_expand_condition_functions(
+                expanded, variables, simple, repo)
+            expanded = _make_expand_foreach(
                 expanded, variables, simple, repo)
             expanded = _make_expand_metadata_functions(
                 expanded, variables, simple, overrides)
@@ -3836,6 +3845,10 @@ def _make_expand_condition_arg(
         # 提前暴露出来。
         value = _make_expand_condition_functions(
             value, variables, simple, repo, depth + 1, overrides)
+        # foreach 也必须等条件函数选中分支后再展开：它可能出现在 if 的
+        # 条件里，先展开会把循环体产生的空白当成源码空白丢掉，改变
+        # `$(if $(foreach x,test, ),then,else)` 的真假。
+        value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_metadata_functions(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
@@ -3943,9 +3956,9 @@ def _make_expand_condition_text(text: str,
     for _ in range(20):
         before = text
         text = _make_expand_automatic_refs(text)
-        text = _make_expand_refs(text, variables, simple)
         text = _make_expand_condition_functions(
             text, variables, simple, repo, overrides=overrides)
+        text = _make_expand_refs(text, variables, simple)
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)

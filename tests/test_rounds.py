@@ -2033,6 +2033,8 @@ def test_detect_test_suite_make_short_circuit_skips_static_args(tmp_path,
     "ifeq ($(if a,test ),test)\ntest:\n\t@true\nendif\n",
     # if 只取前三个参数；多余的逗号属于 else 分支，目标不是 test。
     "$(if ,b,test,c):\n\t@true\n",
+    # 变量展开出的空白对 if 来说是非空值，不能按源码空白去掉。
+    "space := $(empty) $(empty)\n$(if $(space),x,test):\n\t@true\n",
 ])
 def test_detect_test_suite_make_condition_functions_negative(tmp_path,
                                                               makefile):
@@ -2051,6 +2053,12 @@ def test_detect_test_suite_make_condition_functions_negative(tmp_path,
     "X = test\nifeq ($(and a,$(X) ),test)\ntest:\n\t@true\nendif\n",
     "X := $(strip $(or ,test))\n$(X):\n\t@true\n",
     "$(if a,test,b,c):\n\t@true\n",
+    # foreach 循环体里的空格是展开结果，if 的真值判断不能把它当源码
+    # 空白丢掉。
+    "$(if $(foreach x,test, ),test,x):\n\t@true\n",
+    "space := $(empty) $(empty)\n$(if $(space),test,x):\n\t@true\n",
+    "ifeq ($(if $(foreach x,test, ),yes,no),yes)\n"
+    "test:\n\t@true\nendif\n",
 ])
 def test_detect_test_suite_make_condition_functions_in_targets(
         tmp_path, makefile):
