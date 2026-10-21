@@ -268,8 +268,10 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 测试失败，连 auto 模式的兜底评分也会被跳过。
 # 目标名里的字符：反斜杠转义的冒号 / 井号 / 空格属于名字本身
 # （`foo\:bar test:`、`test foo\#bar:` 都能正常执行 test）；未转义的
-# 分号会开始同行命令、井号是注释、等号是变量赋值，不能算目标名。
-_MAKE_TARGET_WORD = r"(?:[^:=\s#;\\]|\\(?:[^\s;=]|[ \t]))+"
+# 分号会开始同行命令、井号是注释，不能算目标名。`test` 之后的目标名可以
+# 含未转义等号（`test foo=bar:` 同时定义 test 与 foo=bar）；但 `test = x:`
+# 这类紧跟 test 的赋值形式仍不是目标，见 _MAKE_TEST_TARGET 的负向前瞻。
+_MAKE_TARGET_WORD = r"(?:[^:\s#;\\]|\\(?:[^\s;]|[ \t]))+"
 # test 之前的目标名不能含未转义的 %：`foo% test:` 会被 make 当成
 # 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
@@ -280,6 +282,9 @@ _MAKE_TEST_TARGET = re.compile(
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
     # 注释行由 (?!#) 挡掉；`;` 后的同行命令不属于目标列表。
     r"(?m)^[ ]*(?!#)(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + r"[ \t]+)*test"
+    # test 后第一个词若是 ?= / += / != / := / ::= 等赋值/空变量名写法，
+    # 整行不是目标规则；后续词可以含 =（`test foo=bar:` 是合法目标名）。
+    r"(?![ \t]+(?:[+?!]?=|:*=))"
     r"(?:[ \t]+" + _MAKE_TARGET_WORD + r")*[ \t]*:"
     r"(?![\t ]*:*=)"
     r"(?![ \t]*:{2,})"

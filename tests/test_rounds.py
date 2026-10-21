@@ -824,6 +824,13 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "test foo\\#bar:",
     "test foo\\ bar:",
     "foo\\% test:",
+    # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
+    "test foo=bar:",
+    "test foo\\=bar:",
+    "test foo = bar:",
+    "test foo += bar:",
+    "test foo?=bar:",
+    "test foo=bar baz:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -860,6 +867,15 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "foo;bar test:",
     "test foo;bar:",
     "foo\\;bar test:",
+    # 紧跟 test 的赋值形式不是目标（`test foo = bar:` 才是）
+    "test = bar:",
+    "test ?= bar:",
+    "test += bar:",
+    "test != bar:",
+    "test := bar:",
+    "test ::= bar:",
+    "test foo:=bar:",
+    "test foo::=bar:",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     """三冒号、空白+冒号、依赖里带冒号等写法都不是合法 test 目标
