@@ -485,7 +485,9 @@ def _make_apply_assignment(match: re.Match,
                            variables: Dict[str, Optional[str]],
                            simple: Dict[str, bool]) -> None:
     name, op, raw = match.groups()
-    raw = _make_strip_comment(raw).rstrip()
+    # make 保留注释前的尾随空白（`T = test # c` 的值是 `test `），
+    # 它会在 `$(T)-unit:` 里把目标拆成 test 与 -unit；rstrip 会漏掉 test。
+    raw = _make_strip_comment(raw)
     if op == "!=":
         variables[name] = None
         simple[name] = False

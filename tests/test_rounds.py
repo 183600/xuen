@@ -801,6 +801,9 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     "T = U\n$(T) = test\n$(U):\n\t@true\n",
     "T = U\n$(T) := test\n$(U):\n\t@true\n",
     "T = U\n$(T) += test\n$(U):\n\t@true\n",
+    "T = test # c\n$(T)-unit:\n\t@true\n",
+    "T = test # c\n$(T)x:\n\t@true\n",
+    "T = test # c\n$(T) foo:\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_target(tmp_path, makefile):
     """test 目标写在简单变量展开后的规则头里时也要探测到。"""
