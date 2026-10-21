@@ -1392,7 +1392,10 @@ def _make_eval_condition(kind: str, rest: str,
                          variables: Dict[str, Optional[str]],
                          simple: Dict[str, bool],
                          repo: Optional[Path] = None) -> bool:
-    rest = _make_strip_comment(rest).strip()
+    # 条件行里的 # 注释与变量赋值同口径：奇数个反斜杠转义 #，偶数个
+    # 开始注释。`ifeq ($(X),a\#b)` 的右值实际是 a#b（反斜杠被吃掉），
+    # 不能按普通文本原样保留。
+    rest = _make_strip_value_comment(rest).strip()
     if kind in ("ifdef", "ifndef"):
         name = _make_expand_condition_text(rest, variables, simple,
                                            repo).rstrip()

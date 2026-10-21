@@ -1241,6 +1241,28 @@ def test_detect_test_suite_make_append_whitespace(tmp_path, makefile,
     assert result == (["make", "test"] if expected else None)
 
 
+@pytest.mark.parametrize("makefile, expected", [
+    # 条件参数的注释转义与赋值一致：奇数反斜杠让 # 变成字面量。
+    ("X = foo\\#bar\nifeq ($(X),foo\\#bar)\n"
+     "test:\n\t@true\nendif\n", True),
+    ("X = a\\\\\\#b\nifeq ($(X),a\\\\\\#b)\n"
+     "test:\n\t@true\nendif\n", True),
+    ("X = a\\\\\\#b\nifeq ($(X),a\\#b)\n"
+     "test:\n\t@true\nendif\n", False),
+    # 偶数反斜杠让 # 开始注释，条件缺少右括号/逗号是读取期错误。
+    ("X = a\\\\#b\nifeq ($(X),a\\\\#b)\n"
+     "test:\n\t@true\nendif\n", False),
+])
+def test_detect_test_suite_make_conditional_hash_escape(
+        tmp_path, makefile, expected):
+    """ifeq 参数里的 \\# 要按 make 注释语义去掉反斜杠。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    result = detect_test_suite(tmp_path)
+    assert result == (["make", "test"] if expected else None)
+
+
 @pytest.mark.parametrize("makefile", [
     "ifeq (foo ,foo)\ntest:\n\t@true\nendif\n",
     "ifeq (foo, foo)\ntest:\n\t@true\nendif\n",
