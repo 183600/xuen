@@ -1712,8 +1712,15 @@ def _make_split_function_args(args: str, arity: int) -> List[str]:
     return parts
 
 
-def _make_expand_include_function(name: str, args, repo: Path) -> str:
-    """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。"""
+def _make_expand_include_function(
+        name: str, args, repo: Path, *, expanded: bool = False) -> str:
+    """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。
+
+    `expanded=False` 表示 args 还是未展开的原文，函数名后的第一个参数
+    需要按 make 参数解析去掉起始空白；调用方若已经先展开参数，则先对
+    原文做过这一步，必须传 expanded=True，否则展开结果自身的前导空白
+    会被错误吃掉（`$(subst $(...) ,... )` 的模式可能就是空格）。
+    """
     if isinstance(args, str):
         args = _make_split_function_args(args, _MAKE_FUNCTION_ARITY[name])
     parts = args
@@ -1745,7 +1752,8 @@ def _make_expand_include_function(name: str, args, repo: Path) -> str:
         affix, names = parts
         # 非末位参数的起始空白由 make 的参数解析去掉；尾随空白属于
         # 参数本身（`$(addsuffix x ,a)` 的后缀是 "x "）。
-        affix = affix.lstrip(" \t")
+        if not expanded:
+            affix = affix.lstrip(" \t")
         words = names.split()
         if name == "addprefix":
             return " ".join(affix + word for word in words)
@@ -1769,7 +1777,8 @@ def _make_expand_include_function(name: str, args, repo: Path) -> str:
         old, new, text = parts
         # 只有紧跟函数名的第一个参数会被 make 去掉起始空白；逗号后的
         # 参数保留自己的起始空白（它可能就是要替换成的文本）。
-        old = old.lstrip(" \t")
+        if not expanded:
+            old = old.lstrip(" \t")
         if not old:
             # GNU make 对空 from 的 subst 把 new 追加到 text 末尾
             # （$(subst ,x,foo) -> foox），不是 Python 的逐字符插入。
@@ -1780,7 +1789,8 @@ def _make_expand_include_function(name: str, args, repo: Path) -> str:
             raise _MakeRequiredIncludeError("patsubst: missing argument")
         pattern, repl, text = parts
         # 第一个参数前的空白属于函数语法；repl 的起始空白是有效内容。
-        pattern = pattern.lstrip(" \t")
+        if not expanded:
+            pattern = pattern.lstrip(" \t")
         wildcard, _run_start = _make_pattern_wildcard(pattern)
         if wildcard < 0 and any(ch.isspace() for ch in pattern):
             return _make_patsubst_literal_sequence(pattern, repl, text)
@@ -1828,7 +1838,9 @@ def _make_expand_include_function(name: str, args, repo: Path) -> str:
     if name == "findstring":
         if len(parts) < 2:
             raise _MakeRequiredIncludeError("findstring: missing argument")
-        needle = parts[0].lstrip(" \t")
+        needle = parts[0]
+        if not expanded:
+            needle = needle.lstrip(" \t")
         return needle if needle in parts[1] else ""
     if name == "strip":
         return " ".join(parts[0].split())
@@ -1858,11 +1870,17 @@ def _make_expand_include_function(name: str, args, repo: Path) -> str:
         for word in words:
             path = word if os.path.isabs(word) else os.path.join(str(repo),
                                                                 word)
-            path = os.path.abspath(path)
             if name == "realpath":
+                # 先按原样（含尾随 /）判断存在性：文件 `a` 存在，但
+                # `a/` 在 make 里不是有效路径，realpath 返回空。若先
+                # abspath 规范化掉尾随斜杠，会错误地返回文件路径。
+                if not os.path.exists(path):
+                    continue
                 path = os.path.realpath(path)
                 if not os.path.exists(path):
                     continue
+            else:
+                path = os.path.abspath(path)
             result.append(path)
         return " ".join(result)
     if name == "dir":
@@ -1954,13 +1972,17 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         # 内容，不能再当成参数分隔符（否则 findstring 的 find 参数会被截断）。
         raw_parts = _make_split_function_args(
             args, _MAKE_FUNCTION_ARITY[name])
+        # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
+        # 处理，展开结果里的前导空格属于值本身。
+        raw_parts[0] = raw_parts[0].lstrip(" \t")
         evaluated = [_make_expand_include_functions(part, repo)
                      for part in raw_parts]
         if any("$" in part for part in evaluated):
             # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
             pos = end
             continue
-        replacement = _make_expand_include_function(name, evaluated, repo)
+        replacement = _make_expand_include_function(
+            name, evaluated, repo, expanded=True)
         text = text[:start] + replacement + text[end:]
         pos = start + len(replacement)
 

@@ -1196,6 +1196,23 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
         expand("join", "a", tmp_path)
 
 
+def test_make_expand_functions_keep_expanded_leading_space(tmp_path):
+    """静态函数参数展开后自带的前导空白不能被再次 lstrip 掉。"""
+    (tmp_path / "a").write_text("", encoding="utf-8")
+    assert rounds._make_expand_include_functions(
+        "$(subst ..,\\%, )", tmp_path) == " "
+    assert rounds._make_expand_include_functions(
+        "$(subst $(subst ..,\\%, ),3,c)", tmp_path) == "c"
+
+
+def test_make_realpath_trailing_slash_on_file_is_empty(tmp_path):
+    """`realpath a/` 在 a 是普通文件时返回空，不能先 abspath 掉尾随斜杠。"""
+    (tmp_path / "a").write_text("", encoding="utf-8")
+    expand = rounds._make_expand_include_function
+    assert expand("realpath", "a/", tmp_path) == ""
+    assert expand("realpath", "a", tmp_path) == str(tmp_path / "a")
+
+
 @pytest.mark.parametrize("makefile", [
     "%:\n\t@echo ok\n",
     "%::\n\t@echo ok\n",
