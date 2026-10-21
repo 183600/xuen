@@ -703,13 +703,14 @@ def _make_function_words(value: str) -> List[str]:
     return value.split()
 
 
-def _make_function_index(value: str, function: str) -> int:
+def _make_function_index(value: str, function: str,
+                         allow_zero: bool = False) -> int:
     try:
         index = int(value.strip())
     except (TypeError, ValueError):
         raise _MakeRequiredIncludeError(
             f"{function}: non-numeric index") from None
-    if index < 1:
+    if index < 0 or (index == 0 and not allow_zero):
         raise _MakeRequiredIncludeError(f"{function}: invalid index")
     return index
 
@@ -759,7 +760,9 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             raise _MakeRequiredIncludeError("subst: missing argument")
         old, new, text = parts
         if not old:
-            raise _MakeRequiredIncludeError("subst: empty from")
+            # GNU make 对空 from 的 subst 把 new 追加到 text 末尾
+            # （$(subst ,x,foo) -> foox），不是 Python 的逐字符插入。
+            return text + new
         return text.replace(old, new)
     if name == "patsubst":
         parts = args.split(",", 2)
@@ -783,7 +786,8 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("wordlist: missing argument")
         start = _make_function_index(parts[0], "wordlist")
-        end = _make_function_index(parts[1], "wordlist")
+        # GNU make 允许 wordlist 的结束下标为 0（结果为空），开始下标仍须 >=1。
+        end = _make_function_index(parts[1], "wordlist", allow_zero=True)
         words = _make_function_words(parts[2])
         if start > end:
             return ""

@@ -947,9 +947,11 @@ def test_detect_test_suite_make_wildcard_include(tmp_path):
     "include $(filter %.mk,other.txt tests.mk)",
     "include $(filter-out %.txt,tests.mk other.txt)",
     "include $(subst x,tests,x.mk)",
+    "include $(subst ,,tests.mk)",
     "include $(patsubst %.txt,%.mk,tests.txt)",
     "include $(word 2,other.mk tests.mk)",
     "include $(wordlist 2,2,other.mk tests.mk)",
+    "include $(wordlist 1,0,other.mk) tests.mk",
     "include $(sort other.mk tests.mk other.mk)",
     "include $(filter %.mk,$(sort other.txt tests.mk))",
     "include $(wildcard $(patsubst %.txt,%.mk,tests.txt))",
@@ -978,7 +980,10 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     for directive in ("include $(word x,tests.mk)",
-                      "include $(wordlist 2,x,tests.mk other.mk)"):
+                      "include $(word 0,tests.mk)",
+                      "include $(wordlist 2,x,tests.mk other.mk)",
+                      "include $(wordlist 0,1,tests.mk)",
+                      "include $(wordlist 1,-1,tests.mk)"):
         (tmp_path / "Makefile").write_text(directive + "\n",
                                            encoding="utf-8")
         (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
