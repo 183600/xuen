@@ -274,7 +274,8 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 这类紧跟 test 的赋值形式仍不是目标，见 _MAKE_TEST_TARGET 的负向前瞻。
 _MAKE_VAR_UNIT = r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\})"
 _MAKE_TARGET_WORD = (
-    r"(?:" + _MAKE_VAR_UNIT + r"|[^:\s#;\\]|\\(?:[^\s;]|[ \t]))+")
+    r"(?:" + _MAKE_VAR_UNIT
+    + r"|[^:\s#;\\]|\\(?:[^\s;]|[ \t]+(?![ \t])))+")
 # 逻辑行内的词分隔：空白，或反斜杠续行。make 把续行与周围空白压成一个
 # 空格（`test \` + `foo:` 与 `test foo:` 等价、`test\` + `:` 与 `test :`
 # 等价），目标列表跨续行时同样要能识别 test；续行进入词内部则拆成两个
@@ -285,7 +286,7 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
 _MAKE_TARGET_WORD_BEFORE_TEST = (
     r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]))+")
+    + r"|[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]+(?![ \t])))+")
 # 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
 # `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
 # 定义 test。展开后再判断会在目标列表里误删可运行套件。
