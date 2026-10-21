@@ -2381,7 +2381,11 @@ def _make_text_with_includes(text: str, repo: Path,
             # 生效分支里未处于 define 块中的 endef 是游离指令：make 报
             # missing separator 并停止解析。未生效分支里的 endef 会被
             # 直接忽略（不会报错），不能据此拒绝后面的 test 目标。
-            raise _MakeRequiredIncludeError("extraneous endef")
+            # 但 `endef = x` 是普通变量赋值、`endef test:` 是目标列表，
+            # 它们只在第一个词上碰巧叫 endef，make 不会当成指令。
+            if (_MAKE_VAR_ASSIGNMENT.match(body) is None
+                    and _make_unescaped_colon(body, 0) < 0):
+                raise _MakeRequiredIncludeError("extraneous endef")
         conditional = _MAKE_CONDITIONAL_LINE.match(body)
         if conditional is not None:
             _make_apply_conditional(conditional.group(1),

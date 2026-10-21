@@ -2354,6 +2354,10 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test: export X\\;Y:::=1",
     "test: export $(U) X=1",
     "test:: $(U) X=1",
+    # `endef` 只是第一个词时是普通目标名/变量名，不是游离指令。
+    "endef test:",
+    "endef test% test ::",
+    "endef = x\ntest:",
     # 目标列表里的未转义等号是词分隔符：`foo test=1:` 定义 foo / test /
     # 1；`+=` / `?=` 的运算符前缀也被吸收（test 仍是目标）。
     "test foo=bar:",
