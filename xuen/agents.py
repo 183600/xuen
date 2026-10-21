@@ -2123,6 +2123,13 @@ class ShellAgent:
             try:
                 proc.wait()
                 reaped = True
+                # 进程已回收即本轮已完整结束：收尾还要 join 输出线程、
+                # 等待超时回调结束，可能持续数秒。这个窗口里到达的 kill
+                # 已没有任何进程可终止，不能记成待处理请求——否则会在
+                # 下一轮 Popen 后立即补杀，把完整的下一轮误报成用户终止。
+                # 必须在这里就标记空闲，不能等到整个 finally 结束。
+                with self._kill_lock:
+                    self._idle_after_run = True
             except KeyboardInterrupt:
                 kill_process_tree(proc)
                 raise
