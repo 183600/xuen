@@ -1016,6 +1016,19 @@ def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_repeated_include_reprocessed(tmp_path):
+    """同一 include 文件被包含两次时要各处理一次：条件分支依赖的变量
+    可能在两次之间变化，只处理第一次会漏掉第二次才生效的 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "tests.mk").write_text(
+        "ifeq ($(T),test)\ntest:\n\t@true\nendif\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "T = other\ninclude tests.mk\nT = test\ninclude tests.mk\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_include_variable_order(tmp_path):
     """include 插入位置要保留变量赋值顺序，规则头才能按 make 语义展开。"""
     if not shutil.which("make"):

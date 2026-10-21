@@ -828,10 +828,18 @@ def _make_text_with_includes(text: str, repo: Path,
                     except (OSError, ValueError, RuntimeError):
                         raise _MakeRequiredIncludeError(name) from None
                     seen.add(key)
-                    out.append("\n")
-                    out.append(_make_text_with_includes(
-                        included, repo, seen, depth + 1, variables, simple))
-                    out.append("\n")
+                    try:
+                        out.append("\n")
+                        out.append(_make_text_with_includes(
+                            included, repo, seen, depth + 1, variables,
+                            simple))
+                        out.append("\n")
+                    finally:
+                        # 只把「正在处理」的文件留在 seen 里，防止 include
+                        # 环无限递归；同一文件在前后两次 include 中仍应
+                        # 按 make 语义各处理一次（条件分支可能因变量变化
+                        # 而不同）。
+                        seen.discard(key)
             i += 1
             continue
         out.append(line)
