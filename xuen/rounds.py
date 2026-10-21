@@ -353,15 +353,20 @@ def _make_unescaped_colon(text: str, start: int) -> int:
     return -1
 
 
+# GNU make 的变量名可含除空白、:、#、=、; 之外的字符（/ % + @ ! ^ & * 等
+# 都是合法的 target-specific 变量名）；只允许 [A-Za-z0-9_.-] 会把
+# `test: X/Y=1` 这类「只有变量赋值、没有可执行 test 目标」的 Makefile
+# 误判成有测试套件。反斜杠转义的下一个字符属于名字本身。
+_MAKE_VAR_NAME_UNIT = r"(?:\\.|[^\s:#=;])+"
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
-    r"(?:[A-Za-z0-9_.\\-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
+    r"(?:" + _MAKE_VAR_NAME_UNIT + r"[ \t]*)?(?:[+?]?=|:*=|!=)"
 )
 
 
 _MAKE_NAMED_TARGET_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
-    r"[A-Za-z0-9_.\-]+[ \t]*(?:[+?]?=|::=|:=|!=)")
+    + _MAKE_VAR_NAME_UNIT + r"[ \t]*(?:[+?]?=|::=|:=|!=)")
 
 
 def _make_rule_is_target_specific(line: str, colon: int) -> bool:
@@ -406,9 +411,14 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     start = colon + 1
     if start < len(line) and line[start] == ":":
         start += 1
+    # target-specific 赋值可能使用 := / ::=，其冒号会被误当成静态模式
+    # 规则的第二个冒号；变量名里又允许 %（如 `test: X%Y:=1`），不能靠
+    # 「第二个冒号前有 %」放行。先按赋值语义识别，这类行不是可执行规则。
+    if _make_target_specific_assignment(line[start:]):
+        return False
     second = _make_unescaped_colon(line, start)
     if second < 0:
-        return not _make_target_specific_assignment(line[start:])
+        return True
     target_pattern = line[start:second].strip()
     if not target_pattern:
         return False

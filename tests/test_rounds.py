@@ -2057,6 +2057,17 @@ def test_detect_test_suite_make_include_variable_order(tmp_path):
     "test: X:::=1",
     "test: export X:::=1",
     "test: override X :::=1",
+    # GNU make 的变量名可含 / % + @ ! ^ & * 等字符：只有赋值、没有
+    # 可执行 test 目标时仍不能当作测试套件（% 与 := 组合尤其容易被
+    # 误认成静态模式规则 `test: %.o: %.c`）
+    "test: X/Y=1",
+    "test: X+Y=1",
+    "test: X@Y=1",
+    "test: X%Y=1",
+    "test: X%Y:=1",
+    "test: X%Y::=1",
+    "test: X&Y!=true",
+    "test: X*Y?=1",
     "foo test: X=1",
     "foo test := x",
     "test foo: export X=1",
