@@ -2255,6 +2255,68 @@ def _make_apply_define(name: str, op: str, body: str,
         simple[name] = False
 
 
+def _make_dynamic_assignment_name(body: str) -> Optional[str]:
+    """返回 `$($(A)) = x` 这类含嵌套引用的赋值变量名。
+
+    `_MAKE_DYNAMIC_VAR_ASSIGNMENT` 的单元只支持一层 `$(...)`；变量名
+    本身由变量展开得到（`$($(A))` / `${${A}}`）时正则匹配不到，赋值
+    会被当成普通行，展开为空的名字也不会触发 make 的 fatal 错误。
+    这里只负责切出变量名 token，真正的展开交给调用方。
+    """
+    rest = body.lstrip(" \t")
+    while True:
+        modifier = re.match(
+            r"(?:export|override|private)(?:[ \t]+|$)", rest)
+        if modifier is None:
+            break
+        rest = rest[modifier.end():]
+    n = len(rest)
+    i = 0
+    has_ref = False
+    while i < n:
+        ch = rest[i]
+        if ch in " \t:#=;":
+            break
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "$" and i + 1 < n and rest[i + 1] in "({":
+            has_ref = True
+            stack = [")" if rest[i + 1] == "(" else "}"]
+            j = i + 2
+            while j < n and stack:
+                cj = rest[j]
+                if cj == "\\":
+                    j += 2
+                    continue
+                if cj == "$" and j + 1 < n and rest[j + 1] in "({":
+                    stack.append(")" if rest[j + 1] == "(" else "}")
+                    j += 2
+                    continue
+                if cj == stack[-1]:
+                    stack.pop()
+                j += 1
+            if stack:
+                return None
+            i = j
+            continue
+        if ch == "$":
+            has_ref = True
+            i += 2
+            continue
+        i += 1
+    if not has_ref or i == 0:
+        return None
+    token = rest[:i]
+    j = i
+    while j < n and rest[j] in " \t":
+        j += 1
+    if any(rest.startswith(op, j)
+           for op in (":::=", "::=", ":=", "?=", "+=", "!=", "=")):
+        return token
+    return None
+
+
 def _make_scan_assignment(body: str,
                           variables: Dict[str, Optional[str]],
                           simple: Dict[str, bool],
@@ -2299,6 +2361,18 @@ def _make_scan_assignment(body: str,
             raise _MakeRequiredIncludeError("empty variable name")
         expanded = _make_expand_refs(body, variables, simple)
         match = _MAKE_VAR_ASSIGNMENT.match(expanded)
+    if match is None and "$" in body:
+        computed_name = _make_dynamic_assignment_name(body)
+        if computed_name is not None:
+            name = _make_expand_computed_refs(
+                computed_name, variables, simple)
+            name = _make_expand_refs(name, variables, simple)
+            name = _make_resolve_single_char_refs(name, variables, simple)
+            if not name:
+                raise _MakeRequiredIncludeError("empty variable name")
+            expanded = _make_expand_computed_refs(body, variables, simple)
+            expanded = _make_expand_refs(expanded, variables, simple)
+            match = _MAKE_VAR_ASSIGNMENT.match(expanded)
     if match is None:
         if _MAKE_EMPTY_VAR_ASSIGNMENT.match(_make_strip_comment(expanded)):
             # `$(UNDEFINED) = x` 展开后是空变量名，make 在读取阶段直接报错。

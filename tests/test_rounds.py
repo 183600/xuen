@@ -1965,6 +1965,46 @@ def test_detect_test_suite_make_dynamic_target_variable(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("line", [
+    "$($(A)) = x",
+    "$($(A)) := x",
+    "$($(A)) += x",
+    "$($(A)) ?= x",
+    "$($(A)) != echo x",
+    "export $($(A)) = x",
+    "export $($(A)):= x",
+    "${${A}} = x",
+])
+def test_detect_test_suite_make_computed_assignment_empty_name(tmp_path,
+                                                               line):
+    """变量名由变量展开得到且为空时 make 报错，不能探测出 test 套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "A = B\nB = X\n$($(A)) = test\n$(X):\n\t@true\n",
+    "A = B\nB = X\n$($(A)) := test\n$(X):\n\t@true\n",
+    "A = B\nB = X\n${${A}} = test\n${X}:\n\t@true\n",
+    "A = B\nB = C\nC = X\n$($($(A))) = test\n$(X):\n\t@true\n",
+])
+def test_detect_test_suite_make_computed_assignment(tmp_path, makefile):
+    """嵌套变量名赋值的名字要展开后再查表，定义的 test 目标不能漏掉。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     # 展开后的变量名（含空格）未定义，整体是空目标而不是名为 test 的目标。
     "A = test foo\n$($(A)):\n\t@true\n",
