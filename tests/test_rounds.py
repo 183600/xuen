@@ -2309,6 +2309,11 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test $$:",
     "test $ x:",
     "test $ :",
+    # make 会规范化目标名前导的 `./`：`make test` 仍能执行 `./test`。
+    "./test:",
+    ".//test:",
+    "././test:",
+    "foo ./test:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -2392,6 +2397,10 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test $$$:",
     "test x$:",
     "test \\$:",
+    # 只有前导 `./` 会被规范化，`../test` / `foo/./test` 不是 test 目标。
+    "../test:",
+    "foo/./test:",
+    "./../test:",
     # 续行里紧跟 test 的赋值形式同样不是目标（续行压成空格后与
     # `test = bar:` 等价）
     "test \\\n = bar:",

@@ -310,7 +310,11 @@ _MAKE_TEST_TARGET = re.compile(
     # 候选误判成测试失败。仅出现在目标列表中间时（`foo export test:`）
     # 仍是普通目标名，照常放行。
     r"(?!(?:export|unexport)" + _MAKE_SEP + r"+)"
-    r"(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + _MAKE_TARGET_SEP + r"+)*test"
+    # 目标名前的 `./`（可重复，如 `./test` / `.//test` / `././test`）
+    # 会被 make 规范化掉，`make test` 仍能命中该目标；这不是模式规则，
+    # 不能漏探测。`../test` / `foo/./test` 则与 test 不同名。
+    r"(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + _MAKE_TARGET_SEP + r"+)*"
+    r"(?:\./+)*test"
     # test 后可以继续跟目标名（`test foo=bar:` 定义 test / foo / bar）。
     # 行首的 `test = bar:` / `test := x` 已在 _make_expand_simple_vars
     # 里按变量赋值整行剔除，不需要在这里做赋值的负向前瞻——那会误伤
