@@ -2449,6 +2449,35 @@ def _make_expand_metadata_functions(
 _MAKE_SIDE_EFFECT_FUNCTIONS = ("info", "warning")
 
 
+def _make_expand_eval_functions(
+        text: str,
+        variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> str:
+    """展开赋值名/define 名里的 `$(eval ...)`，结果为空串。
+
+    eval 的参数会先展开并作为 Makefile 行立即解析，再返回空串。名称里
+    出现 eval（`$(eval X=1) = 2`）时，make 仍按空变量名报错；只需删除
+    eval 调用并应用其中的简单赋值，避免把原文当成非空名称漏检。
+    """
+    pos = 0
+    while True:
+        call = _make_find_function_call(text, pos, "eval")
+        if call is None:
+            return text
+        start, end, args = call
+        expanded_arg = _make_expand_condition_text(
+            args, variables, simple, repo, overrides)
+        for eval_line in expanded_arg.splitlines():
+            if eval_line.startswith("\t"):
+                continue
+            _make_scan_assignment(
+                eval_line, variables, simple, overrides, repo)
+        text = text[:start] + text[end:]
+        pos = start
+
+
 def _make_expand_side_effect_functions(text: str) -> str:
     """把只产生输出、结果为空串的 `$(info ...)` / `$(warning ...)` 展开掉。
 
@@ -3302,6 +3331,8 @@ def _make_expand_assignment_name(
         name = _make_expand_refs(name, variables, simple, repo=repo)
         name = _make_expand_condition_functions(
             name, variables, simple, repo)
+        name = _make_expand_eval_functions(
+            name, variables, simple, repo, overrides)
         name = _make_expand_metadata_functions(
             name, variables, simple, overrides)
         name = _make_expand_error_functions(name)

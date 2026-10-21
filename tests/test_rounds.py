@@ -2010,6 +2010,9 @@ def test_detect_test_suite_make_empty_define_ifdef_false(tmp_path):
     "$(subst a,a,)",
     "$(filter-out a,a)",
     "$(wildcard /nonexistent)",
+    "$(eval X=1)",
+    "$(eval )",
+    "$(eval $(info x))",
 ])
 def test_detect_test_suite_make_function_expanded_empty_define_name(
         tmp_path, name):
@@ -7786,6 +7789,9 @@ def test_detect_test_suite_make_expanded_missing_separator_blocks_suite(
     "$(call undefined,)=1",
     "$(call undefined,x)=1",
     "$(addprefix ,)=1",
+    "$(eval X=1)=1",
+    "$(eval )=1",
+    "$(eval $(info x))=1",
 ])
 def test_detect_test_suite_make_empty_expanded_assignment_name_blocks_suite(
         tmp_path, line):
