@@ -583,6 +583,28 @@ def _make_missing_test_target(detail: str) -> bool:
     return _MAKE_MISSING_TEST_TARGET.search(detail) is not None
 
 
+# GNU make 4.x：Nothing to be done for 'test'. / 'test' is up to date.
+# GNU make 3.81（macOS）：Nothing to be done for `test'. / `test' is up to date.
+# 只认顶层 make（不带 [n] 前缀）：子 make 无事可做不代表外层 test 没跑测试。
+_MAKE_NOOP_TEST_TARGET = re.compile(
+    r"(?m)^(?:make|gmake)(?:\.exe)?: "
+    r"(?:Nothing to be done for [`'\"]test[`'\"]\.|"
+    r"[`'\"]test[`'\"] is up to date\.)[ \t]*$")
+
+
+def _make_noop_test_target(detail: str) -> bool:
+    """make test 是否退出 0 但根本没有执行测试。
+
+    空的 `test:` 目标、已存在的同名文件/目录、以及 target 只写在未生效
+    条件分支里而工作区恰有 test 文件时，`make test` 都以 0 退出并打印
+    「Nothing to be done for 'test'」/「'test' is up to date」。这不是
+    「测试全部通过」：tests 模式会把完全未验证的候选直接采纳为最佳，
+    auto 模式也会跳过兜底评分。按套件不可用处理，与 pytest 退出码 5、
+    go 全部 [no test files] 同口径。
+    """
+    return _MAKE_NOOP_TEST_TARGET.search(detail) is not None
+
+
 def _go_matched_no_packages(detail: str) -> bool:
     """go test 的输出是否是「没有匹配到任何包」（不是测试失败）。
 
@@ -687,6 +709,10 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
         if _is_go_test_run(argv) and _go_no_tests_ran(detail):
             return SuiteResult(available=False, ok=False,
                                reason="go 没有可执行的测试（全部为 no test files）",
+                               detail=detail)
+        if _is_make_test_run(argv) and _make_noop_test_target(detail):
+            return SuiteResult(available=False, ok=False,
+                               reason="make test 没有执行任何测试（目标无事可做）",
                                detail=detail)
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
     tail = "\n".join(detail.splitlines()[-15:])

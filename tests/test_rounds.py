@@ -1369,6 +1369,48 @@ def test_go_no_tests_ran_false_when_some_package_ran(detail):
     assert rounds._go_no_tests_ran(detail) is False
 
 
+@pytest.mark.parametrize("makefile", [
+    "test:\n",
+    ".PHONY: test\ntest:\n",
+    "ifeq (0,1)\ntest:\n\t@echo TEST\nendif\n",
+])
+def test_run_suite_make_noop_target_is_unavailable(tmp_path, makefile):
+    """空 test 目标 / 已存在的 test 文件让 make 以 0 退出但没有跑任何
+    测试：不能当成「测试全部通过」采纳候选。第三例模拟 target 只在
+    未生效条件分支里、工作区恰好有 test 文件时的假阳性。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    if "ifeq" in makefile:
+        (tmp_path / "test").write_text("", encoding="utf-8")
+    res = rounds.run_suite(["make", "test"], tmp_path, 60.0)
+    assert (res.available, res.ok) == (False, False)
+    assert "没有执行任何测试" in res.reason
+
+
+@pytest.mark.parametrize("detail", [
+    "make: Nothing to be done for 'test'.",
+    "make: Nothing to be done for `test'.",
+    'make: Nothing to be done for "test".',
+    "make: 'test' is up to date.",
+    "make: `test' is up to date.",
+    'make: "test" is up to date.',
+])
+def test_make_noop_test_target_detected(detail):
+    assert rounds._make_noop_test_target(detail) is True
+
+
+@pytest.mark.parametrize("detail", [
+    "make[1]: Nothing to be done for 'test'.",
+    "make: Nothing to be done for 'test-unit'.",
+    "make: 'test-unit' is up to date.",
+    "make: *** [test] Error 1",
+    "",
+])
+def test_make_noop_test_target_false_for_other_output(detail):
+    assert rounds._make_noop_test_target(detail) is False
+
+
 def test_run_suite_make_conditional_target_is_unavailable(tmp_path):
     """test 目标写在未生效的 ifeq 分支里：静态探测误以为有套件，而
     make test 以退出码 2 报「No rule to make target 'test'」。这与 make
