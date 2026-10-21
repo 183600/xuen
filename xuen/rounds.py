@@ -301,7 +301,10 @@ _MAKE_TEST_TARGET = re.compile(
     # 整行不是目标规则；后续词可以含 =（`test foo=bar:` 是合法目标名）。
     r"(?!" + _MAKE_SEP + r"+(?:[+?!]?=|:*=))"
     r"(?:" + _MAKE_SEP + r"+" + _MAKE_TARGET_WORD + r")*"
-    + _MAKE_SEP + r"*:"
+    # GNU make 4.3 的 grouped target 用 `&:` 分隔，且不要求 & 前有空白
+    # （`test&:` 与 `test &:` 都定义可执行的 test 目标）；`test& :` 则是
+    # 名为 test& 的普通目标，不能命中。
+    + _MAKE_SEP + r"*(?:&)?:"
     r"(?![\t ]*:*=)"
     r"(?![ \t]*:{2,})"
     # 分隔符后再出现「空白 + 冒号」不是合法前置依赖（如 test: :x）；
