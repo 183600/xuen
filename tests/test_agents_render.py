@@ -2225,6 +2225,46 @@ def test_render_windows_prompt_file_inside_quotes_is_not_double_quoted(
         assert '""' not in rendered, rendered
 
 
+def test_render_windows_quoted_prompt_file_between_quoted_segments(
+        tmp_path, monkeypatch):
+    """占位符夹在「已闭合引号」与「新开引号」之间时不能被整词预处理吞引号。
+
+    回归：`tool "x"$prompt_file"y"` 里的 `"$prompt_file"` 前一个引号其实是
+    x 的收尾引号、后一个引号是 y 的起始引号。整词预处理把它们一起换成
+    哨兵后，路径按「引号外」规则插入，但两侧引号已被消费，最终变成
+    `tool "x"{path}"y"`：含空格的工作区路径没有引号保护，cmd 会把参数
+    拆成多段。这里占位符实际位于引号外，必须按扫描到的引号状态加引号，
+    与两侧引号串拼接成同一个参数。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    ws = tmp_path / "ws with space"
+    ws.mkdir()
+
+    for tpl, expected in (
+            ('tool "x"$prompt_file"y"', 'tool "x""{path}""y"'),
+            ('tool a"$prompt_file"b', 'tool a"{path}"b'),
+            ('tool x"$prompt_file"', 'tool x"{path}"'),
+    ):
+        agent = agents.ShellAgent(tpl, ws, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None
+            path = str(agent._prompt_file.resolve())
+            assert rendered == expected.format(path=path), (tpl, rendered)
+        finally:
+            agent._cleanup_prompt_file()
+
+
 def test_render_windows_double_dollar_prompt_file_not_substituted(
         tmp_path, monkeypatch):
     """Windows 下 $$prompt_file 里的 $prompt_file 同样不能替换。
