@@ -783,6 +783,16 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     "foo test := x",
     "test foo: export X=1",
     "foo test:::",
+    # 行首 export/unexport 是导出指令而不是规则头：make 把 test 当变量名
+    # 导出、不定义目标，`make test` 以退出码 2 失败，探测命中会把候选
+    # 误判成测试失败（leading 空白 / tab / 续行展开后仍是同一指令）
+    "export test:",
+    "export foo test:",
+    "unexport test:",
+    " export test:",
+    "export\ttest:",
+    "export \\\n test:",
+    "unexport \\\n test:",
 ])
 def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
                                                                    line):
@@ -876,6 +886,9 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test ::= bar:",
     "test foo:=bar:",
     "test foo::=bar:",
+    # 续行里紧跟 test 的赋值形式同样不是目标（续行压成空格后与
+    # `test = bar:` 等价）
+    "test \\\n = bar:",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     """三冒号、空白+冒号、依赖里带冒号等写法都不是合法 test 目标
@@ -893,6 +906,28 @@ def test_detect_test_suite_make_exact_target_alongside_suffixed(tmp_path):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(
         "test-unit:\n\techo unit\ntest:\n\techo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("text", [
+    # 反斜杠续行压成一个空格：与单行的目标列表写法等价，test 同样是
+    # 可执行目标，漏检会让可运行的套件被降级成评分兜底
+    "test \\\n\tfoo:\n\techo ok\n",
+    "foo \\\n\ttest:\n\techo ok\n",
+    "test \\\n foo:\n\techo ok\n",
+    "test\\\n:\n\techo ok\n",
+    "foo\\\n\ttest:\n\techo ok\n",
+    "test \\\n\tfoo \\\n\tbar:\n\techo ok\n",
+])
+def test_detect_test_suite_make_continued_target_list_detected(tmp_path,
+                                                               text):
+    """目标列表跨反斜杠续行时仍要识别 test：make 把续行与周围空白压成
+    一个空格（`test \\` + `foo:` 与 `test foo:` 等价、`test\\` + `:` 与
+    `test :` 等价），漏检会让可运行的测试套件被当成「没有套件」降级
+    成评分兜底。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(text, encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 

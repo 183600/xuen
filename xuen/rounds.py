@@ -272,6 +272,11 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 含未转义等号（`test foo=bar:` 同时定义 test 与 foo=bar）；但 `test = x:`
 # 这类紧跟 test 的赋值形式仍不是目标，见 _MAKE_TEST_TARGET 的负向前瞻。
 _MAKE_TARGET_WORD = r"(?:[^:\s#;\\]|\\(?:[^\s;]|[ \t]))+"
+# 逻辑行内的词分隔：空白，或反斜杠续行。make 把续行与周围空白压成一个
+# 空格（`test \` + `foo:` 与 `test foo:` 等价、`test\` + `:` 与 `test :`
+# 等价），目标列表跨续行时同样要能识别 test；续行进入词内部则拆成两个
+# 词（`te\` + `st:` 是目标 te 与 st），与加空格的行为一致。
+_MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # test 之前的目标名不能含未转义的 %：`foo% test:` 会被 make 当成
 # 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
@@ -280,12 +285,23 @@ _MAKE_TARGET_WORD_BEFORE_TEST = (
 _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
-    # 注释行由 (?!#) 挡掉；`;` 后的同行命令不属于目标列表。
-    r"(?m)^[ ]*(?!#)(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + r"[ \t]+)*test"
+    # 注释行由 (?!#) 挑掉；`;` 后的同行命令不属于目标列表。
+    # (?<!\\\n)：前一物理行以反斜杠续行结尾时，本行不是逻辑行起点，
+    # 不能把续行展开后的后半截（如 `unexport \\` + ` test:`）再当成
+    # 独立规则头匹配。
+    r"(?m)(?<!\\\n)(?<!\\\r\n)^[ ]*(?!#)"
+    # 行首 export/unexport 是导出指令而不是规则头：make 把整行当变量名
+    # 列表（`export test:` 导出变量 test、`export foo test:` 导出 foo 与
+    # test），不定义任何目标，`make test` 以退出码 2 失败——探测命中会把
+    # 候选误判成测试失败。仅出现在目标列表中间时（`foo export test:`）
+    # 仍是普通目标名，照常放行。
+    r"(?!(?:export|unexport)" + _MAKE_SEP + r"+)"
+    r"(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + _MAKE_SEP + r"+)*test"
     # test 后第一个词若是 ?= / += / != / := / ::= 等赋值/空变量名写法，
     # 整行不是目标规则；后续词可以含 =（`test foo=bar:` 是合法目标名）。
-    r"(?![ \t]+(?:[+?!]?=|:*=))"
-    r"(?:[ \t]+" + _MAKE_TARGET_WORD + r")*[ \t]*:"
+    r"(?!" + _MAKE_SEP + r"+(?:[+?!]?=|:*=))"
+    r"(?:" + _MAKE_SEP + r"+" + _MAKE_TARGET_WORD + r")*"
+    + _MAKE_SEP + r"*:"
     r"(?![\t ]*:*=)"
     r"(?![ \t]*:{2,})"
     # 分隔符后再出现「空白 + 冒号」不是合法前置依赖（如 test: :x）；
