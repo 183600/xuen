@@ -1,4 +1,4 @@
 # 开发/测试依赖：运行时依赖 + 测试工具。
 -r requirements.txt
-pytest>=7
+pytest>=7,<9
 pytest-cov>=4

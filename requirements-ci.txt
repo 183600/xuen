@@ -17,4 +17,4 @@
 PyYAML==6.0.3
 textual==8.2.8
 rich==15.0.0
-pytest==9.1.1
+pytest==8.4.2
