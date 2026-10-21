@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -1030,6 +1031,50 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    # 未配对 / 重复的 else / 缺失 endif / 游离 endef 都会让 make 在读取
+    # 阶段报错停止，即使文件里写了 test 目标也不会被执行。
+    "test:\n\t@echo ok\nendif\n",
+    "test:\n\t@echo ok\nelse\n",
+    "ifeq (1,1)\ntest:\n\t@echo ok\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse\ntest:\n\t@echo ok\nelse\n"
+    "all2:\n\t@true\nendif\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse\ntest:\n\t@echo ok\n"
+    "else ifeq (1,1)\nall2:\n\t@true\nendif\n",
+    "test:\n\t@echo ok\ndefine X\nfoo\n",
+    "test:\n\t@echo ok\nendef\n",
+])
+def test_detect_test_suite_make_malformed_directives_not_a_suite(
+        tmp_path, makefile):
+    """损坏的条件/define 指令会让 make 解析失败，不能探测成可运行套件。
+
+    回归：未配对 endif / else、缺失 endif、重复 else、缺少 endef 与游离
+    endef 原先被静默忽略，探测命中后 `make test` 以退出码 2 失败，候选
+    被误判成测试失败（应属没有可运行套件）。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\nall2:\n\t@true\n"
+    "else ifeq (1,1)\ntest:\n\t@echo ok\nendif\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\nall2:\n\t@true\n"
+    "else\ntest:\n\t@echo ok\nendif\n",
+])
+def test_detect_test_suite_make_else_if_chain_still_detected(tmp_path,
+                                                            makefile):
+    """else if 链与「else if 后接普通 else」是合法写法，不能误判失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 def test_detect_test_suite_make_conditional_missing_include(tmp_path):

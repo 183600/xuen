@@ -884,16 +884,24 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
                             variables: Dict[str, Optional[str]],
                             simple: Dict[str, bool]) -> None:
     if kind == "endif":
-        if stack:
-            stack.pop()
+        if not stack:
+            # 没有可配对的 ifeq/ifdef：make 报 extraneous 'endif' 并停止
+            # 解析，任何 test 目标都不会被执行。
+            raise _MakeRequiredIncludeError("extraneous endif")
+        stack.pop()
         return
     if kind == "else":
         if not stack:
-            return
+            # 没有可配对的 ifeq/ifdef：make 报 extraneous 'else' 并停止
+            raise _MakeRequiredIncludeError("extraneous else")
         frame = stack[-1]
         nested = _MAKE_CONDITIONAL_LINE.match(rest.strip())
         if (nested is not None
                 and nested.group(1) in ("ifeq", "ifneq", "ifdef", "ifndef")):
+            # else if... 是 else 的变体，但不结束条件块；同一个条件里
+            # 可以连续出现多个 else if，只有普通 else 之后不能再接。
+            if frame["plain_else"]:
+                raise _MakeRequiredIncludeError("only one else per conditional")
             cond = False
             if frame["parent"] and not frame["taken"]:
                 cond = _make_eval_condition(nested.group(1),
@@ -901,6 +909,10 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
                                             variables, simple)
             active = frame["parent"] and not frame["taken"] and cond
         else:
+            if frame["plain_else"]:
+                # make: only one 'else' per conditional
+                raise _MakeRequiredIncludeError("only one else per conditional")
+            frame["plain_else"] = True
             active = frame["parent"] and not frame["taken"]
         frame["active"] = active
         frame["taken"] = frame["taken"] or active
@@ -909,7 +921,8 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
     cond = (_make_eval_condition(kind, rest, variables, simple)
             if parent else False)
     active = parent and cond
-    stack.append({"parent": parent, "taken": active, "active": active})
+    stack.append({"parent": parent, "taken": active, "active": active,
+                  "plain_else": False})
 
 
 def _make_text_with_includes(text: str, repo: Path,
@@ -965,7 +978,15 @@ def _make_text_with_includes(text: str, repo: Path,
                 elif _MAKE_ENDEF_LINE.match(inner):
                     define_depth -= 1
                 i += 1
+            if define_depth:
+                # 缺少 endef：make 在读取阶段直接报错并停止，后面的 test
+                # 目标（以及 define 之前的目标）都不会被执行。
+                raise _MakeRequiredIncludeError("missing endef")
             continue
+        if _MAKE_ENDEF_LINE.match(body):
+            # 未处于 define 块中的 endef 是游离指令：make 报
+            # missing separator 并停止解析。
+            raise _MakeRequiredIncludeError("extraneous endef")
         conditional = _MAKE_CONDITIONAL_LINE.match(body)
         if conditional is not None:
             _make_apply_conditional(conditional.group(1),
@@ -1038,6 +1059,10 @@ def _make_text_with_includes(text: str, repo: Path,
         out.append(line)
         _make_scan_assignment(body, variables, simple)
         i += 1
+    if stack:
+        # 条件块没在文件内闭合：make 报 missing 'endif' 并停止解析。
+        # 条件不能跨 include 文件（GNU make 同样在文件末尾报错）。
+        raise _MakeRequiredIncludeError("missing endif")
     return "".join(out)
 
 
