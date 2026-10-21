@@ -1809,6 +1809,47 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
 
 
 @pytest.mark.parametrize("makefile", [
+    "ifeq ($(origin X),undefined)\ntest:\n\t@true\nendif\n",
+    "X = 1\nifeq ($(origin X),file)\ntest:\n\t@true\nendif\n",
+    "override X = 1\nifeq ($(origin X),override)\n"
+    "test:\n\t@true\nendif\n",
+    "X := 1\nifeq ($(flavor X),simple)\ntest:\n\t@true\nendif\n",
+    "X = 1\nifeq ($(flavor X),recursive)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(flavor X),undefined)\ntest:\n\t@true\nendif\n",
+    "Y = X\nifeq ($(origin $(Y)),undefined)\ntest:\n\t@true\nendif\n",
+    "$(if $(origin X),test,):\n\t@true\n",
+    "$(if $(flavor X),test,):\n\t@true\n",
+    "ifeq ($(origin PATH),environment)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_origin_flavor_functions(tmp_path, makefile):
+    """`$(origin)`/`$(flavor)` 按变量表静态求值，条件分支才能选对。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "X = 1\nifeq ($(origin X),undefined)\ntest:\n\t@true\nendif\n",
+    "X := 1\nifeq ($(flavor X),recursive)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(flavor X),simple)\ntest:\n\t@true\nendif\n",
+    "$(if $(flavor X),,test):\n\t@true\n",
+])
+def test_detect_test_suite_make_origin_flavor_negative(tmp_path, makefile):
+    """origin/flavor 与 make 的实际元数据不一致时不能探测出套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq ($(if a,b,c),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(or ,,),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(and a,),x)\ntest:\n\t@true\nendif\n",

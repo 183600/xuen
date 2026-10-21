@@ -2094,6 +2094,55 @@ def _make_find_function_call(text: str, pos: int, name: str):
     return None
 
 
+_MAKE_METADATA_FUNCTIONS = frozenset({"origin", "flavor"})
+
+
+def _make_expand_metadata_functions(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        overrides: Optional[set] = None) -> str:
+    """展开可静态求值的 `$(origin var)` / `$(flavor var)`。
+
+    origin 的返回值按读取期能确定的信息计算：变量在 makefile 里赋值是
+    `file`（带 override 是 `override`），继承自环境是 `environment`，
+    其余是 `undefined`；flavor 对应 `simple` / `recursive` / `undefined`。
+    常见写法 `ifeq ($(origin X),undefined)` 不展开会被当成字面文本，
+    条件恒不成立，从而漏掉或凭空多出 test 目标。
+    """
+    pos = 0
+    while True:
+        best = None
+        for name in _MAKE_METADATA_FUNCTIONS:
+            call = _make_find_function_call(text, pos, name)
+            if call is None:
+                continue
+            if best is None or call[0] < best[0]:
+                best = call
+        if best is None:
+            return text
+        start, end, args = best
+        raw_args = _make_split_function_args(args, 1)
+        argument = raw_args[0]
+        if "$" in argument:
+            # 参数里还有无法展开的引用（shell/call 等），不能猜变量名。
+            pos = end
+            continue
+        name = argument
+        if name in variables:
+            origin = "override" if overrides and name in overrides else "file"
+            flavor = "simple" if simple.get(name) else "recursive"
+        elif name in os.environ:
+            origin = "environment"
+            flavor = "recursive"
+        else:
+            origin = "undefined"
+            flavor = "undefined"
+        replacement = origin if text[start + 2:start + 2 + len(
+            "origin")] == "origin" else flavor
+        text = text[:start] + replacement + text[end:]
+        pos = start + len(replacement)
+
+
 def _make_expand_error_functions(text: str) -> str:
     """遇到会立即展开的 `$(error ...)` 时按 make 读取失败处理。
 
@@ -2568,6 +2617,7 @@ def _make_expand_immediate_value(
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_condition_functions(
             value, variables, simple, repo)
+        value = _make_expand_metadata_functions(value, variables, simple)
         value = _make_expand_error_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
@@ -3116,6 +3166,8 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, repo)
             expanded = _make_expand_condition_functions(
                 expanded, variables, simple, repo)
+            expanded = _make_expand_metadata_functions(
+                expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
             expanded = _make_expand_refs(expanded, variables, simple)
             if repo is not None:
@@ -3494,7 +3546,7 @@ def _make_split_all_function_args(args: str) -> List[str]:
 def _make_expand_condition_arg(
         text: str, variables: Dict[str, Optional[str]],
         simple: Dict[str, bool], repo: Optional[Path],
-        depth: int) -> Optional[str]:
+        depth: int, overrides: Optional[set] = None) -> Optional[str]:
     """展开条件函数的一个参数；仍有无法静态求值的引用时返回 None。"""
     value = text
     for _ in range(20):
@@ -3506,7 +3558,9 @@ def _make_expand_condition_arg(
         # 的参数先在未判定分支时被展开，甚至把未生效分支的语法错误
         # 提前暴露出来。
         value = _make_expand_condition_functions(
-            value, variables, simple, repo, depth + 1)
+            value, variables, simple, repo, depth + 1, overrides)
+        value = _make_expand_metadata_functions(
+            value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
@@ -3525,7 +3579,7 @@ def _make_expand_condition_arg(
 def _make_expand_condition_functions(
         text: str, variables: Dict[str, Optional[str]],
         simple: Dict[str, bool], repo: Optional[Path],
-        depth: int = 0) -> str:
+        depth: int = 0, overrides: Optional[set] = None) -> str:
     """展开条件里可静态求值的 `$(if ...)` / `$(or ...)` / `$(and ...)`。
 
     三个函数都短路：if 只展开生效分支，or 在第一个非空参数处停止，
@@ -3551,14 +3605,15 @@ def _make_expand_condition_functions(
             # 条件与 or/and 的参数原文空白由 make 的参数解析去掉；展开
             # 结果自身的空白属于值本身。then/else 连原文空白也保留。
             cond = _make_expand_condition_arg(
-                parts[0].strip(" \t"), variables, simple, repo, depth)
+                parts[0].strip(" \t"), variables, simple, repo, depth,
+                overrides)
             if cond is None:
                 pos = end
                 continue
             selected = parts[1] if cond else (
                 parts[2] if len(parts) > 2 else "")
             result = _make_expand_condition_arg(
-                selected, variables, simple, repo, depth)
+                selected, variables, simple, repo, depth, overrides)
             if result is None:
                 pos = end
                 continue
@@ -3567,7 +3622,8 @@ def _make_expand_condition_functions(
             unresolved = False
             for part in parts:
                 value = _make_expand_condition_arg(
-                    part.strip(" \t"), variables, simple, repo, depth)
+                    part.strip(" \t"), variables, simple, repo, depth,
+                    overrides)
                 if value is None:
                     unresolved = True
                     break
@@ -3582,7 +3638,8 @@ def _make_expand_condition_functions(
             unresolved = False
             for part in parts:
                 value = _make_expand_condition_arg(
-                    part.strip(" \t"), variables, simple, repo, depth)
+                    part.strip(" \t"), variables, simple, repo, depth,
+                    overrides)
                 if value is None:
                     unresolved = True
                     break
@@ -3600,13 +3657,16 @@ def _make_expand_condition_functions(
 def _make_expand_condition_text(text: str,
                                 variables: Dict[str, Optional[str]],
                                 simple: Dict[str, bool],
-                                repo: Optional[Path]) -> str:
+                                repo: Optional[Path],
+                                overrides: Optional[set] = None) -> str:
     for _ in range(20):
         before = text
         text = _make_expand_automatic_refs(text)
         text = _make_expand_refs(text, variables, simple)
         text = _make_expand_condition_functions(
-            text, variables, simple, repo)
+            text, variables, simple, repo, overrides=overrides)
+        text = _make_expand_metadata_functions(
+            text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
@@ -3618,14 +3678,15 @@ def _make_expand_condition_text(text: str,
 def _make_eval_condition(kind: str, rest: str,
                          variables: Dict[str, Optional[str]],
                          simple: Dict[str, bool],
-                         repo: Optional[Path] = None) -> bool:
+                         repo: Optional[Path] = None,
+                         overrides: Optional[set] = None) -> bool:
     # 条件行里的 # 注释与变量赋值同口径：奇数个反斜杠转义 #，偶数个
     # 开始注释。`ifeq ($(X),a\#b)` 的右值实际是 a#b（反斜杠被吃掉），
     # 不能按普通文本原样保留。
     rest = _make_strip_value_comment(rest).strip()
     if kind in ("ifdef", "ifndef"):
         name = _make_expand_condition_text(rest, variables, simple,
-                                           repo).rstrip()
+                                           repo, overrides).rstrip()
         if any(ch.isspace() for ch in name):
             # ifdef 的变量名展开后必须是单个词；`ifdef X Y` 会让
             # make 报 invalid syntax in conditional 并停止读取。
@@ -3638,8 +3699,10 @@ def _make_eval_condition(kind: str, rest: str,
         # ifeq/ifneq 参数缺失、括号未闭合或缺少逗号都是读取期错误，
         # 即使文件后面有 test 目标 make 也不会执行。
         raise _MakeRequiredIncludeError("invalid conditional")
-    left = _make_expand_condition_text(left, variables, simple, repo)
-    right = _make_expand_condition_text(right, variables, simple, repo)
+    left = _make_expand_condition_text(left, variables, simple, repo,
+                                       overrides)
+    right = _make_expand_condition_text(right, variables, simple, repo,
+                                        overrides)
     # 括号写法的语法空白已在 _make_ifeq_args 里、变量展开前去掉；
     # 引号写法保留引号内的空白（ifeq "a " "a" 不相等）。
     equal = left == right
@@ -3649,7 +3712,8 @@ def _make_eval_condition(kind: str, rest: str,
 def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
                             variables: Dict[str, Optional[str]],
                             simple: Dict[str, bool],
-                            repo: Optional[Path] = None) -> None:
+                            repo: Optional[Path] = None,
+                            overrides: Optional[set] = None) -> None:
     if kind == "endif":
         if not stack:
             # 没有可配对的 ifeq/ifdef：make 报 extraneous 'endif' 并停止
@@ -3673,7 +3737,8 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
             if frame["parent"] and not frame["taken"]:
                 cond = _make_eval_condition(nested.group(1),
                                             nested.group(2) or "",
-                                            variables, simple, repo)
+                                            variables, simple, repo,
+                                            overrides)
             active = frame["parent"] and not frame["taken"] and cond
         else:
             if frame["plain_else"]:
@@ -3685,7 +3750,8 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
         frame["taken"] = frame["taken"] or active
         return
     parent = not stack or stack[-1]["active"]
-    cond = (_make_eval_condition(kind, rest, variables, simple, repo)
+    cond = (_make_eval_condition(kind, rest, variables, simple, repo,
+                                 overrides)
             if parent else False)
     active = parent and cond
     stack.append({"parent": parent, "taken": active, "active": active,
@@ -3848,7 +3914,7 @@ def _make_text_with_includes(text: str, repo: Path,
         if conditional is not None:
             _make_apply_conditional(conditional.group(1),
                                     conditional.group(2) or "", stack,
-                                    variables, simple, repo)
+                                    variables, simple, repo, overrides)
             i += 1
             continue
         if stack and not stack[-1]["active"]:
