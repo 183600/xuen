@@ -7916,3 +7916,46 @@ def test_detect_test_suite_make_expanded_empty_target_colon_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "undefine $(strip )",
+    "undefine $(info x)",
+    "undefine $(foreach v,,$(v))",
+    "undefine $(call undefined)",
+    "undefine $(value X)",
+    "undefine $(X)",
+])
+def test_detect_test_suite_make_function_expanded_empty_undefine_name(
+        tmp_path, line):
+    """undefine 名称里的函数展开为空时 make 报 empty variable name。
+
+    回归：undefine 只按固定变量名正则处理，函数形式既不展开也不判空，
+    后面存在的 test 目标让探测误以为套件可运行，实际 make 读取失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "X = a\nundefine $(strip X)\ntest:\n\t@echo ok\n",
+    "X = a\nundefine $(foreach v,X,$(v))\ntest:\n\t@echo ok\n",
+    "undefine X Y\ntest:\n\t@echo ok\n",
+    "undefine = x\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_undefine_function_name_keeps_suite(
+        tmp_path, makefile):
+    """undefine 名称展开后非空（含空格/等号）仍是合法指令。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

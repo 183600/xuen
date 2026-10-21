@@ -3315,11 +3315,19 @@ def _make_scan_assignment(body: str,
     if overrides is None:
         overrides = set()
     stripped_body = _make_strip_comment(body)
+    # undefine 的名称同样在读取期展开，且可以包含空白/等号等字符
+    # （`undefine $(strip X)` / `undefine X Y`）。按固定变量名正则匹配
+    # 会漏掉函数形式：名称展开为空时 make 报 empty variable name，探测
+    # 却继续把后面的 test 目标当成可运行套件。
     undef = re.match(
-        r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine[ \t]+"
-        r"(" + _MAKE_VAR_NAME + r")[ \t]*$", stripped_body)
+        r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine"
+        r"(?:[ \t]+(.*?))?[ \t]*$", stripped_body)
     if undef is not None:
-        name = undef.group(1)
+        raw_name = undef.group(1) or ""
+        name = _make_expand_assignment_name(
+            raw_name, variables, simple, repo, overrides)
+        if not name:
+            raise _MakeRequiredIncludeError("empty variable name")
         # 普通 undefine 不能删除 override 变量；override undefine 才行。
         if name in overrides and "override" not in (
                 stripped_body[:undef.start(1)].split()):
