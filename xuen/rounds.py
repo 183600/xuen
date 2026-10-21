@@ -3017,6 +3017,12 @@ def _make_expand_simple_vars(text: str,
             # 注释在展开前就已切掉，变量值里的 # 是目标名的一部分，
             # 不能让下游把它当成注释起点而漏掉同一目标列表里的 test。
             expanded = expanded.replace("#", "\x01")
+        if body.strip() and not expanded.strip():
+            # 非空原文展开成空行（`$:` / `$(UNDEFINED)` / `$(info ...)`）
+            # 会清空 make 的当前目标，后续 tab 行报 recipe commences
+            # before first target；用哨兵保留「这里有一行非空输入」，
+            # 字面空行/纯空白行则不影响 recipe 归属。
+            expanded = _MAKE_CONTEXT_RESET
         out.append(expanded + newline)
         i += 1
     return "".join(out)

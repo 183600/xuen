@@ -2703,6 +2703,10 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "private undefine ?&: dep",
     "$(info hi)",
     "$(eval X=1)",
+    "$:",
+    "$(X)",
+    "$x ;",
+    "$: ;",
 ])
 def test_detect_test_suite_make_recipe_after_non_rule_not_a_suite(
         tmp_path, gap):
