@@ -2574,6 +2574,44 @@ def test_render_windows_single_quoted_prompt_file_inside_double_quotes(
         agent._cleanup_prompt_file()
 
 
+def test_render_windows_caret_escaped_single_quote_still_quotes_path(
+        tmp_path, monkeypatch):
+    """cmd 的 ^ 转义只作用于单引号本身，不能连带吞掉路径两侧的引号保护。
+
+    回归：模板 `tool ^'$prompt_file'` 里第一个单引号被 ^ 转义，整词单引号
+    预处理却仍把 `'$prompt_file'` 一起换掉，得到 `tool ^"C:\\ws with
+    space\\p.md"`：^" 在 cmd 中是字面引号，含空格路径没有分组引号。修复：
+    第一个单引号被 ^ 转义时不做整词预处理，只替换占位符，保留两侧单引号
+    字面量，并按引号外规则给路径加引号。
+    """
+    import os as _os
+
+    from xuen import agents
+
+    class _NtOs:
+        name = "nt"
+
+        def __getattr__(self, key):
+            return getattr(_os, key)
+
+    monkeypatch.setattr(agents, "os", _NtOs())
+    ws = tmp_path / "ws with space"
+    ws.mkdir()
+
+    assert agents.command_receives_prompt("tool ^'$prompt_file'") is True
+    for tpl in ("tool ^'$prompt_file'", "tool ^'$prompt_file' --end"):
+        agent = agents.ShellAgent(tpl, ws, timeout=1)
+        try:
+            rendered = agent.render_command("PROMPT")
+            assert agent._prompt_file is not None
+            path = str(agent._prompt_file.resolve())
+            expected = tpl.replace("$prompt_file", f'"{path}"')
+            assert rendered == expected, rendered
+            assert '""' not in rendered, rendered
+        finally:
+            agent._cleanup_prompt_file()
+
+
 def test_render_windows_caret_escaped_prompt_file_not_substituted(
         tmp_path, monkeypatch):
     """cmd 的 ^ 转义：^$prompt_file 是字面量，不能被替换成未加引号的路径。

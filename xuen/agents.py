@@ -71,6 +71,23 @@ def _cmd_double_quotes_after(text: str, in_quotes: bool) -> bool:
 _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
+def _cmd_caret_escaped_at(text: str, pos: int) -> bool:
+    """pos 处字符是否被 cmd 引号外的 ^ 转义（引号内 ^ 只是字面量）。"""
+    i = 0
+    in_quotes = False
+    while i < pos:
+        c = text[i]
+        if c == "^" and not in_quotes:
+            if i + 1 == pos:
+                return True
+            i += 2
+            continue
+        if c == '"':
+            in_quotes = not in_quotes
+        i += 1
+    return False
+
+
 def _windows_placeholder_starts(tpl: str, ph: str):
     """Windows 模板中会兑现的占位符起点（按 $$ 两两配对、cmd ^ 转义判断）。"""
     i = 0
@@ -1918,6 +1935,12 @@ class ShellAgent:
             sq_parts.append(tpl[sq_last:match.start()])
             if sq_in_quotes:
                 sq_parts.append("'" + f_inq_sentinel + "'")
+            elif _cmd_caret_escaped_at(tpl, match.start()):
+                # 第一个单引号被 ^ 转义：它不是分组引号，保留两侧单引号
+                # 字面量，占位符交给下面的通用扫描按引号外加引号。
+                sq_parts.append("'")
+                sq_last = match.start() + 1
+                continue
             else:
                 sq_parts.append(f_sentinel)
             sq_last = match.end()
