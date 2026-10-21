@@ -556,6 +556,9 @@ _MAKE_EMPTY_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
     r"(?:::=|::=|:=|\?=|\+=|!=|=)")
 
+_MAKE_EMPTY_UNDEFINE = re.compile(
+    r"^[ ]*(?:(?:export|override|private)[ \t]+)*undefine[ \t]*$")
+
 _MAKE_VAR_REF = re.compile(
     r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)(?::([^()\r\n]*))?\)"
     r"|\{([A-Za-z0-9_.-]+)(?::([^{}\r\n]*))?\}"
@@ -1081,13 +1084,16 @@ def _make_scan_assignment(body: str,
                           variables: Dict[str, Optional[str]],
                           simple: Dict[str, bool]) -> Optional[str]:
     """处理一行赋值/undefine；是赋值时返回展开后的行，否则返回 None。"""
+    stripped_body = _make_strip_comment(body)
     undef = re.match(
         r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine[ \t]+"
-        r"([A-Za-z0-9_.-]+)[ \t]*$", _make_strip_comment(body))
+        r"([A-Za-z0-9_.-]+)[ \t]*$", stripped_body)
     if undef is not None:
         variables.pop(undef.group(1), None)
         simple.pop(undef.group(1), None)
         return body
+    if _MAKE_EMPTY_UNDEFINE.match(stripped_body):
+        raise _MakeRequiredIncludeError("empty variable name")
     match = _MAKE_VAR_ASSIGNMENT.match(body)
     expanded = body
     if match is None and "$" in body:
