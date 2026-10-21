@@ -809,6 +809,7 @@ def _make_expand_simple_vars(text: str) -> str:
     variables: Dict[str, Optional[str]] = {}
     simple: Dict[str, bool] = {}
     out = []
+    text = _make_join_continuations(text)
     for line in text.splitlines(keepends=True):
         body = line.rstrip("\r\n")
         newline = line[len(body):]
@@ -843,6 +844,62 @@ def _make_line_continues(body: str) -> bool:
             break
         count += 1
     return count % 2 == 1
+
+
+def _make_join_continuations(text: str) -> str:
+    """把非 recipe 的物理行按 make 语义合并成逻辑行。
+
+    make 在读取阶段把「反斜杠-换行」及其两侧空白压成一个空格；变量
+    赋值、条件、include 和规则头都可能跨行。逐物理行扫描会把
+    `T = test \\` + `  unit` 当成两个独立行，目标变量展开后漏掉 test。
+    recipe 行（以 tab 开头）的续行属于 shell 命令，不能合并。
+
+    注释行也按 make 的续行规则合并：`# ... \\` 会把下一行继续吞进
+    注释，合并后目标探测才不会把注释里的 `test:` 当成真实规则。
+    """
+    lines = text.splitlines(keepends=True)
+    out: List[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        body = line.rstrip("\r\n")
+        if body.startswith("\t"):
+            out.append(line)
+            i += 1
+            continue
+        if not _make_line_continues(body):
+            out.append(line)
+            i += 1
+            continue
+        pieces: List[str] = []
+        ending = line[len(body):]
+        while True:
+            if _make_line_continues(body):
+                pieces.append(body[:-1])
+                i += 1
+                if i >= len(lines):
+                    break
+                nxt = lines[i]
+                body = nxt.rstrip("\r\n")
+                ending = nxt[len(body):]
+            else:
+                pieces.append(body)
+                break
+        head = pieces[0].rstrip()
+        if len(pieces) == 1:
+            out.append(line)
+        else:
+            # 只保留最后一个物理行的行尾空白；中间行两侧的空白都属于
+            # 续行分隔，按 make 语义压缩成一个空格。
+            middle = [piece.strip() for piece in pieces[1:-1]]
+            last = pieces[-1].lstrip()
+            words = [piece for piece in middle if piece]
+            if last:
+                words.append(last)
+            joined = head + ((" " + " ".join(words)) if words else "")
+            out.append(joined + ending)
+        i += 1
+    return "".join(out)
 
 
 def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
@@ -951,6 +1008,7 @@ def _make_text_with_includes(text: str, repo: Path,
         simple = {}
     if depth > 20:
         return text
+    text = _make_join_continuations(text)
     lines = text.splitlines(keepends=True)
     out: List[str] = []
     stack: List[dict] = []

@@ -1157,6 +1157,39 @@ def test_detect_test_suite_make_variable_target_negative(tmp_path, makefile):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    # make 在读取阶段把反斜杠-换行（及两侧空白）压成一个空格：
+    # `T = test \\` + `  unit` 的 T 是 "test unit"，目标列表含 test。
+    "T = test \\\n  unit\n$(T):\n\t@echo ok\n",
+    "T = test\nT += \\\n foo\n$(T):\n\t@echo ok\n",
+    "T = test \\\n# comment\n$(T):\n\t@echo ok\n",
+    # 条件行也能跨续行
+    "ifeq (x,\\\n x)\ntest:\n\t@echo ok\nendif\n",
+    # include 前的变量赋值跨续行
+    "T = other.mk \\\n tests.mk\ninclude $(T)\n",
+])
+def test_detect_test_suite_make_continued_assignment_detected(tmp_path,
+                                                              makefile):
+    """跨反斜杠续行的变量/条件/include 按 make 语义合并后仍要探测到。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@echo ok\n",
+                                       encoding="utf-8")
+    (tmp_path / "other.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_comment_continuation_swallows_target(tmp_path):
+    """注释行末尾的反斜杠会继续吞掉下一行，规则里的 test 不能算套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "# comment \\\ntest:\n\t@echo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     """`$T` 是 make 的单字符变量写法，目标名也要按变量展开。"""
     if not shutil.which("make"):
