@@ -2915,8 +2915,19 @@ def _make_expand_simple_vars(text: str,
                 # 只跨过规则分隔符本身（`:` 或 `::`）。再多的冒号属于
                 # 目标模式/赋值运算符，`foo::: X=1` 是 make 读取错误，
                 # 不能因为后面看似 `X=1` 就把整行当合法赋值吞掉。
+                #
+                # 目标列表以裸 `$` 结尾时，raw_colon 处的冒号已被 `$:`
+                # 吃掉，真正的规则分隔符从下一字符开始：`x$::$(X)=1`
+                # 余下的是单冒号，`x$:::$(X)=1` 则是双冒号。按原文冒号
+                # 位置只跨一个会把 `:$(X)=1` 当成剩余文本，漏掉空变量名
+                # 错误（make 报 empty variable name）。
                 rest_start = raw_colon + 1
-                if (rest_start < len(body)
+                if _make_target_list_has_bare_trailing_dollar(raw_targets):
+                    if body.startswith("::", rest_start):
+                        rest_start += 2
+                    elif body.startswith(":", rest_start):
+                        rest_start += 1
+                elif (rest_start < len(body)
                         and body[rest_start] == ":"):
                     rest_start += 1
                 if (_make_raw_rule_is_target_assignment(
