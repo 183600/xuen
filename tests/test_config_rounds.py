@@ -389,6 +389,24 @@ def test_programmatic_non_string_fields_raise_value_error():
             _validate(cfg)
 
 
+def test_programmatic_non_bool_fields_raise_value_error():
+    """程序化 Config 的布尔字段写成字符串/数字时也要带字段名报错，
+    不能让 `if cfg.rounds.enabled:` 把 "false" 当成真。"""
+    from xuen.config import Config, _validate
+
+    cases = [
+        ("words.reuse", lambda c: setattr(c.words, "reuse", "false")),
+        ("rounds.enabled", lambda c: setattr(c.rounds, "enabled", "false")),
+        ("tui", lambda c: setattr(c, "tui", "false")),
+        ("color", lambda c: setattr(c, "color", 0)),
+    ]
+    for name, mutate in cases:
+        cfg = Config()
+        mutate(cfg)
+        with pytest.raises(ValueError, match=name.replace(".", "\\.")):
+            _validate(cfg)
+
+
 def test_programmatic_non_integer_fields_raise_value_error():
     """程序化 Config 的 words/loop 非整数字段也要带字段名报 ValueError，
     不能让比较运算先抛 TypeError，或把 1.5/True 静默带进下游。"""

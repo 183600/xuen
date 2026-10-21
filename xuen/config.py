@@ -368,6 +368,16 @@ def _validate(cfg: Config) -> None:
     ):
         if not isinstance(value, str):
             raise ValueError(f"{name} 必须是字符串，收到: {value!r}")
+    # 布尔字段同样要拒绝程序化传入的 "false"/0/None：下游用 `if cfg.x:`
+    # 判断时非空字符串会静默启用/关闭错误的功能（如 rounds.enabled）。
+    for name, value in (
+        ("words.reuse", cfg.words.reuse),
+        ("rounds.enabled", cfg.rounds.enabled),
+        ("tui", cfg.tui),
+        ("color", cfg.color),
+    ):
+        if not isinstance(value, bool):
+            raise ValueError(f"{name} 必须是布尔值，收到: {value!r}")
     if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
         raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:
