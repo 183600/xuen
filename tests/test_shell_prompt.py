@@ -414,6 +414,18 @@ def test_clip_state_sections_tiny_budget_never_exceeds():
         assert kept <= budget, budget
         assert omitted == 200 - kept, budget
 
+    # 两区都很短时也不能各拿 1 个字符而超出预算（如 idea/artifact 各 1）。
+    for idea_len in range(4):
+        for artifact_len in range(4):
+            idea, artifact = "i" * idea_len, "a" * artifact_len
+            for budget in range(1, 5):
+                clipped_idea, clipped_artifact, omitted = _clip_state_sections(
+                    idea, artifact, budget)
+                kept = (clipped_idea.count("i")
+                        + clipped_artifact.count("a"))
+                assert kept <= budget, (idea_len, artifact_len, budget)
+                assert omitted == idea_len + artifact_len - kept
+
 
 def test_clip_state_sections_redistributes_unused_budget():
     """一区内容不足时，未用完的份额要让给另一区，不能固定锁死在 40/60。"""
