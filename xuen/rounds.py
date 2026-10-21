@@ -286,7 +286,7 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
 _MAKE_TARGET_WORD_BEFORE_TEST = (
     r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:=\s#;\\%]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
+    + r"|[^:=\s#;\\%]|\\(?:[^\s=]|[ \t]+(?![ \t])))+")
 # 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
 # `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
 # 定义 test。展开后再判断会在目标列表里误删可运行套件。
