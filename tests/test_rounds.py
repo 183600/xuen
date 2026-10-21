@@ -7959,3 +7959,52 @@ def test_detect_test_suite_make_undefine_function_name_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("name", [
+    "$(if x,A=B,C)",
+    "$(if x,A:=B,C)",
+    "$(subst =,x,A)",
+    "$(filter a=b,a=b c)",
+    "$(findstring =,a=b)",
+    "$(word 1,a=b)",
+    "$(foreach v,a=b,$(v))",
+    "$(strip X=Y)",
+    "$(strip X := Y)",
+])
+def test_detect_test_suite_make_define_operator_inside_reference(
+        tmp_path, name):
+    """define 名称里的赋值符在函数参数内时不是运算符。
+
+    回归：按第一个 `=` / `:=` 粗暴截断会得到未闭合引用，把
+    `define $(if x,A=B,C)` / `define $(subst =,x,A)` 这类 make 完全
+    接受的写法误判成读取失败，后面的 test 套件因此漏检。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"X = test\nY = A\ndefine {name}\nbody\nendef\n"
+        "test:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("name", [
+    "$(findstring =,a=b)",
+    "$(strip =)",
+    "$(subst a,=,a)",
+])
+def test_detect_test_suite_make_define_expands_to_operator_name(
+        tmp_path, name):
+    """define 名称展开后以 `=` 开头时仍是合法变量名，不是空名。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"define {name}\nbody\nendef\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

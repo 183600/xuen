@@ -3535,15 +3535,8 @@ def _make_expand_simple_vars(text: str,
             # 第一遍把生效分支里的 define 原样保留下来；这里按顺序记录
             # 变量值，但不把 define 体当作规则行输出，避免体里的
             # `test:` 被误判成目标。
-            name_text = _make_strip_value_comment(
-                define_match.group(1) or "").strip()
-            define_op = "="
-            for candidate in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
-                found = name_text.find(candidate)
-                if found >= 0:
-                    name_text = name_text[:found].rstrip()
-                    define_op = candidate
-                    break
+            name_text, define_op = _make_define_header(
+                _make_strip_value_comment(define_match.group(1) or ""))
             name = _make_expand_refs(name_text, variables, simple)
             define_prefix = body[:body.find("define")].split()
             define_override = "override" in define_prefix
@@ -3847,6 +3840,55 @@ _MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t].*)?$")
 _MAKE_ENDEF_LINE_STRICT = re.compile(
     r"^[ \t]*endef(?:[ \t]*(?:#.*)?)?$")
 _MAKE_DEFINE_EMPTY_NAME = re.compile(r"^(?:::=|::=|:=|\?=|\+=|!=|=)")
+_MAKE_DEFINE_OPERATORS = (":::=", "::=", ":=", "?=", "+=", "!=", "=")
+
+
+def _make_define_header(text: str) -> Tuple[str, str]:
+    """切分 define 行里的变量名与赋值运算符。
+
+    GNU make 只在函数/变量引用之外识别 `=` / `:=` 等运算符：
+    `define $(if x,A=B,C)` 的 `=` 属于函数参数，整个名称展开后是
+    `A=B`；按第一个 `=` 粗暴截断会得到未闭合的 `$(if x,A`，把一个
+    读取期完全合法的 Makefile 误判成不可用套件。引用只按与起始括号
+    相同的字符配对，反斜杠后的字符不参与运算符识别。
+    """
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if (ch == "$" and i + 1 < n and text[i + 1] in "({"):
+            opener = text[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            k = i + 2
+            while k < n:
+                ck = text[k]
+                if ck == "\\":
+                    k += 2
+                    continue
+                if ck == opener:
+                    depth += 1
+                elif ck == closer:
+                    depth -= 1
+                    if depth == 0:
+                        break
+                k += 1
+            if depth:
+                # 未闭合引用会由名称展开路径报错；这里保留原文即可。
+                return text.strip(), "="
+            i = k + 1
+            continue
+        if ch == "$":
+            i += 2
+            continue
+        for op in _MAKE_DEFINE_OPERATORS:
+            if text.startswith(op, i):
+                return text[:i].rstrip(), op
+        i += 1
+    return text.strip(), "="
 
 
 def _make_line_continues(body: str) -> bool:
@@ -4354,25 +4396,21 @@ def _make_text_with_includes(text: str, repo: Path,
             # 跳过，但仍需做词法配对，不能校验名称。
             define_name = ""
             if active:
-                name_text = _make_strip_value_comment(
-                    define_match.group(1) or "").strip()
-                # `define X = x` 只警告并定义 X，赋值符后的文本不是名称。
-                define_op = "="
-                for candidate in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
-                    found = name_text.find(candidate)
-                    if found >= 0:
-                        name_text = name_text[:found].rstrip()
-                        define_op = candidate
-                        break
+                # `define X = x` 只警告并定义 X，赋值符后的文本不是名称；
+                # 运算符只认引用之外的那个。
+                name_text, define_op = _make_define_header(
+                    _make_strip_value_comment(
+                        define_match.group(1) or ""))
                 # 名称里的静态/条件/foreach/call/value/info 等函数同样
                 # 会在读取期展开；`define $(strip )` / `define $(info x)`
                 # 展开为空时 make 报 empty variable name，只展开普通引用
                 # 会把函数原文当成非空名称，漏掉必然的读取失败。
                 define_name = _make_expand_assignment_name(
                     name_text, variables, simple, repo, overrides)
-                if (not define_name.strip()
-                        or _MAKE_DEFINE_EMPTY_NAME.match(
-                            define_name.strip())):
+                # 只有原始名称（或展开结果）为空才是空变量名；函数展开
+                # 结果恰好以 `=` 等运算符开头（`define $(findstring =,a=b)`）
+                # 时 make 会定义名为 `=` 的变量，不能误判成空名。
+                if not define_name.strip():
                     raise _MakeRequiredIncludeError("empty define name")
             define_depth = 1
             body_lines: List[str] = []
