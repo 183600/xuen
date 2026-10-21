@@ -569,12 +569,32 @@ def _go_matched_no_packages(detail: str) -> bool:
             and "no packages to test" in detail)
 
 
+_GO_NO_TEST_FILES_LINE = re.compile(
+    r"^\?\s+\S+\s+\[no test files\]\s*$", re.MULTILINE)
+
+
+def _go_no_tests_ran(detail: str) -> bool:
+    """go test 是否一个测试都没跑（所有匹配到的包都 [no test files]）。
+
+    模块里有 .go 源码但没有任何 *_test.go 时，`go test ./...` 会为每个包
+    打印 `?   pkg\t[no test files]` 并以退出码 0 结束。这与 pytest 退出码
+    5 同义：编译通过不等于测试验证，不能当成「测试全部通过」——tests
+    模式会把完全未验证的候选直接采纳为最佳，auto 模式也会跳过兜底评分。
+    只有出现了 go 自己的 [no test files] 行、且没有任何包打印 ok/FAIL
+    时才这样判定；混有真实测试的模块会打印 ok 行，不受影响。
+    """
+    if not _GO_NO_TEST_FILES_LINE.search(detail):
+        return False
+    return not re.search(r"^(?:ok|FAIL)[ \t]", detail, re.MULTILINE)
+
+
 def run_suite(argv: List[str], repo: Path, timeout: float,
               stop: Optional[Callable[[], bool]] = None) -> SuiteResult:
     """运行测试套件。退出码 0 = 通过；非 0 = 失败；超时 = 失败（保守：
     宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。
     pytest 的退出码 5（未收集到测试）与 go 的「matched no packages」（构建
-    约束/忽略规则排除了全部包）例外：按套件不可用返回，不拒绝候选。
+    约束/忽略规则排除了全部包）、「全部包都是 [no test files]」（没有任何
+    *_test.go）例外：按套件不可用返回，不拒绝候选。
 
     stop：可选的「是否请求停止」回调。传入时按短间隔轮询，回调一旦
     为真就终止整个进程组并返回 stopped=True（available=False）——
@@ -635,6 +655,13 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
                            reason="用户请求停止，未验证")
     detail = (out or "").strip()
     if proc.returncode == 0:
+        # go test 在没有测试文件时同样以 0 退出（逐包打印 [no test files]），
+        # 不能当「测试通过」：与 pytest 退出码 5 同义，按套件不可用处理，
+        # 交给调用方转兜底评分（auto）或挂起（tests）
+        if _is_go_test_run(argv) and _go_no_tests_ran(detail):
+            return SuiteResult(available=False, ok=False,
+                               reason="go 没有可执行的测试（全部为 no test files）",
+                               detail=detail)
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
     tail = "\n".join(detail.splitlines()[-15:])
     if proc.returncode == 5 and _is_pytest_run(argv):

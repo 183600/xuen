@@ -1272,6 +1272,64 @@ def test_run_suite_go_no_packages_is_unavailable(tmp_path):
     assert "matched no packages" in res.detail
 
 
+def test_run_suite_go_no_test_files_is_unavailable(tmp_path):
+    """模块里有 .go 源码但没有任何 *_test.go 时，go test ./... 以退出码 0
+    打印 [no test files]。这与 pytest 退出码 5 同义（没有可执行的验证），
+    不能当成「测试全部通过」：tests 模式会把未验证候选直接采纳为最佳，
+    auto 模式也会跳过兜底评分。"""
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    (tmp_path / "go.mod").write_text("module example.com/notests\n",
+                                     encoding="utf-8")
+    (tmp_path / "main.go").write_text(
+        "package main\n\nfunc main() {}\n", encoding="utf-8")
+    res = rounds.run_suite(["go", "test", "./..."], tmp_path, 60.0)
+    assert (res.available, res.ok) == (False, False)
+    assert "no test files" in res.detail
+
+
+def test_run_suite_go_with_some_real_tests_is_a_pass(tmp_path):
+    """混有真实测试的模块仍按通过处理：[no test files] 的包不能把同一
+    命令里其他包真正跑过的测试否掉。"""
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    (tmp_path / "go.mod").write_text("module example.com/mixed\n",
+                                     encoding="utf-8")
+    (tmp_path / "main.go").write_text(
+        "package main\n\nfunc main() {}\n", encoding="utf-8")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "sub.go").write_text("package sub\n", encoding="utf-8")
+    (sub / "sub_test.go").write_text(
+        "package sub\n\nimport \"testing\"\n\nfunc TestX(t *testing.T) {}\n",
+        encoding="utf-8")
+    res = rounds.run_suite(["go", "test", "./..."], tmp_path, 60.0)
+    assert (res.available, res.ok) == (True, True)
+
+
+@pytest.mark.parametrize("detail", [
+    "?   \texample.com/m\t[no test files]",
+    "?   \texample.com/a\t[no test files]\n"
+    "?   \texample.com/b\t[no test files]",
+    "go: downloading example.com/dep v1.0.0\n"
+    "?   \texample.com/m\t[no test files]",
+])
+def test_go_no_tests_ran_detects_all_no_test_files(detail):
+    assert rounds._go_no_tests_ran(detail) is True
+
+
+@pytest.mark.parametrize("detail", [
+    "?   \texample.com/m\t[no test files]\n"
+    "ok  \texample.com/sub\t0.002s",
+    "?   \texample.com/m\t[no test files]\n"
+    "ok  \texample.com/sub\t(cached)",
+    "ok  \texample.com/m\t0.002s",
+    "",
+])
+def test_go_no_tests_ran_false_when_some_package_ran(detail):
+    assert rounds._go_no_tests_ran(detail) is False
+
+
 def test_run_suite_stop_terminates_suite_promptly(tmp_path):
     """用户停止（TUI 按 q / Ctrl+C）必须立即终止套件并返回未验证：
     修复前守卫会阻塞到 verify_timeout（默认 600s），run_tui 只等 20s，
