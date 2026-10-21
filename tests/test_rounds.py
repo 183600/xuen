@@ -817,6 +817,13 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "test: ${X:--x}",
     "test:: %.o: %.c",
     "test::dep",
+    # 其他目标名里的转义冒号 / 井号 / 空格是名字本身，不影响 test 目标
+    "foo\\:bar test:",
+    "foo\\#bar test:",
+    "test foo\\:bar:",
+    "test foo\\#bar:",
+    "test foo\\ bar:",
+    "foo\\% test:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -848,6 +855,11 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "foo test::X=1",
     "test: foo\\=bar",
     "test::foo\\=bar",
+    # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则
+    "foo% test:",
+    "foo;bar test:",
+    "test foo;bar:",
+    "foo\\;bar test:",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     """三冒号、空白+冒号、依赖里带冒号等写法都不是合法 test 目标

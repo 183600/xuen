@@ -266,13 +266,21 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 等修饰）是 target-specific 变量赋值，不定义可执行目标：make test 会以
 # 退出码 2 报「No rule to make target」，若按测试套件处理会把候选误判成
 # 测试失败，连 auto 模式的兜底评分也会被跳过。
+# 目标名里的字符：反斜杠转义的冒号 / 井号 / 空格属于名字本身
+# （`foo\:bar test:`、`test foo\#bar:` 都能正常执行 test）；未转义的
+# 分号会开始同行命令、井号是注释、等号是变量赋值，不能算目标名。
+_MAKE_TARGET_WORD = r"(?:[^:=\s#;\\]|\\(?:[^\s;=]|[ \t]))+"
+# test 之前的目标名不能含未转义的 %：`foo% test:` 会被 make 当成
+# 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
+# GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
+_MAKE_TARGET_WORD_BEFORE_TEST = (
+    r"(?:[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]))+")
 _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
-    # 目标名排除 `:`（冒号是规则分隔符）与 `=`（变量赋值行），注释行
-    # 由 (?!#) 挡掉。
-    r"(?m)^[ ]*(?!#)(?:[^:=\s#]+[ \t]+)*test"
-    r"(?:[ \t]+[^:=\s#]+)*[ \t]*:"
+    # 注释行由 (?!#) 挡掉；`;` 后的同行命令不属于目标列表。
+    r"(?m)^[ ]*(?!#)(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + r"[ \t]+)*test"
+    r"(?:[ \t]+" + _MAKE_TARGET_WORD + r")*[ \t]*:"
     r"(?![\t ]*:*=)"
     r"(?![ \t]*:{2,})"
     # 分隔符后再出现「空白 + 冒号」不是合法前置依赖（如 test: :x）；
