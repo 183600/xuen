@@ -2143,6 +2143,31 @@ def _make_expand_metadata_functions(
         pos = start + len(replacement)
 
 
+_MAKE_SIDE_EFFECT_FUNCTIONS = ("info", "warning")
+
+
+def _make_expand_side_effect_functions(text: str) -> str:
+    """把只产生输出、结果为空串的 `$(info ...)` / `$(warning ...)` 展开掉。
+
+    调用方必须已展开条件函数并检查 error：`$(info $(if a,$(error x),))`
+    里的 error 仍然会触发读取失败，不能先把它连同 info 一起删掉。
+    """
+    pos = 0
+    while True:
+        best = None
+        for name in _MAKE_SIDE_EFFECT_FUNCTIONS:
+            call = _make_find_function_call(text, pos, name)
+            if call is None:
+                continue
+            if best is None or call[0] < best[0]:
+                best = call
+        if best is None:
+            return text
+        start, end, args = best
+        text = text[:start] + text[end:]
+        pos = start
+
+
 def _make_expand_error_functions(text: str) -> str:
     """遇到会立即展开的 `$(error ...)` 时按 make 读取失败处理。
 
@@ -2214,6 +2239,7 @@ def _make_expand_foreach_part(text: str,
         text = _make_expand_refs(text, variables, simple, active=active)
         text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_error_functions(text)
+        text = _make_expand_side_effect_functions(text)
         text = _make_expand_refs(text, variables, simple, active=active)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
@@ -2619,6 +2645,7 @@ def _make_expand_immediate_value(
             value, variables, simple, repo)
         value = _make_expand_metadata_functions(value, variables, simple)
         value = _make_expand_error_functions(value)
+        value = _make_expand_side_effect_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             value = _make_expand_include_functions(value, repo)
@@ -3169,6 +3196,7 @@ def _make_expand_simple_vars(text: str,
             expanded = _make_expand_metadata_functions(
                 expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
+            expanded = _make_expand_side_effect_functions(expanded)
             expanded = _make_expand_refs(expanded, variables, simple)
             if repo is not None:
                 expanded = _make_expand_include_functions(expanded, repo)
@@ -3562,6 +3590,7 @@ def _make_expand_condition_arg(
         value = _make_expand_metadata_functions(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
+        value = _make_expand_side_effect_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             try:
@@ -3668,6 +3697,7 @@ def _make_expand_condition_text(text: str,
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
+        text = _make_expand_side_effect_functions(text)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
         if text == before:

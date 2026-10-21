@@ -1833,6 +1833,42 @@ def test_detect_test_suite_make_origin_flavor_functions(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    "$(info ignored)\ntest:\n\t@true\n",
+    "$(warning ignored)\ntest:\n\t@true\n",
+    "$(addprefix $(info ignored),test):\n\t@true\n",
+    "$(strip $(warning x) test):\n\t@true\n",
+    "$(info $(if ,$(error boom),))\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_info_warning_expand_empty(tmp_path,
+                                                           makefile):
+    """`$(info)`/`$(warning)` 结果为空，不能把函数原文当成目标名。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(info test foo):\n\t@true\n",
+    "$(warning test foo):\n\t@true\n",
+    "$(info $(if a,test,)):\n\t@true\n",
+])
+def test_detect_test_suite_make_info_warning_text_not_target(tmp_path,
+                                                             makefile):
+    """info/warning 参数里的 test 文本不是目标，展开后目标为空。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "X = 1\nifeq ($(origin X),undefined)\ntest:\n\t@true\nendif\n",
     "X := 1\nifeq ($(flavor X),recursive)\ntest:\n\t@true\nendif\n",
     "ifeq ($(flavor X),simple)\ntest:\n\t@true\nendif\n",
