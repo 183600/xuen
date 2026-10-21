@@ -2425,6 +2425,13 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "foo %test %bar test:",
     "test %test:",
     "\\%foo %test test:",
+    # private / override 后跟规则头时只是目标名，不是指令；它们后面的
+    # recipe 属于真实目标，不能误判成「首个目标前出现 recipe」。
+    "private foo:\n\t@true\ntest:",
+    "override foo:\n\t@true\ntest:",
+    "private foo: dep\n\t@true\ntest:",
+    # 目标名里带 & 的静态模式规则同样不是 grouped target。
+    "private export&: %.o: %.c\n\t@true\ntest:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""

@@ -648,9 +648,12 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
 _MAKE_EMPTY_TARGET_ASSIGNMENT = re.compile(r"^(?:::=|::=|:=|[+?]?=|!=)")
 
 
+# private / override 不列入：后面跟规则头时它们是普通目标名
+# （`private foo:` / `override foo:` 都定义 foo），只有跟变量赋值/
+# define 时才是修饰符；赋值行已由 _MAKE_VAR_ASSIGNMENT 跳过。
 _MAKE_NON_RULE_DIRECTIVE = re.compile(
     r"^[ \t]*(?:include|sinclude|-include|vpath|undefine|export|unexport|"
-    r"override|private|define)(?:[ \t]|$)")
+    r"define)(?:[ \t]|$)")
 
 
 def _make_has_grouped_target_without_recipe(text: str) -> bool:
