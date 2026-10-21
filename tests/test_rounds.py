@@ -869,6 +869,55 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "ifeq (1,1)\ntest:\n\t@true\nendif\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse\ntest:\n\t@true\nendif\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse ifeq (1,1)\ntest:\n\t@true\nendif\n",
+    "ifndef X\ntest:\n\t@true\nendif\n",
+    "X = 1\nifeq ($(X),1)\ntest:\n\t@true\nendif\n",
+    "include vars.mk\nifeq ($(X),1)\ntest:\n\t@true\nendif\n",
+    "ifeq (1,1)\nifeq (1,1)\ntest:\n\t@true\nendif\nendif\n",
+    'ifeq "a" "a"\ntest:\n\t@true\nendif\n',
+])
+def test_detect_test_suite_make_conditional_branch(tmp_path, makefile):
+    """只有生效条件分支里的 test 目标才算套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    (tmp_path / "vars.mk").write_text("X = 1\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq (0,1)\ntest:\n\t@true\nendif\n",
+    "ifdef X\ntest:\n\t@true\nendif\n",
+    "ifeq (1,1)\nall:\n\t@true\nelse\ntest:\n\t@true\nendif\n",
+    "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\ntest:\n\t@true\nendif\n",
+    "ifeq (0,1)\nifeq (1,1)\ntest:\n\t@true\nendif\nendif\n",
+])
+def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
+                                                           makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_conditional_missing_include(tmp_path):
+    """未生效分支里的必需 include 不会让 make 失败，不能因此漏掉套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "ifeq (0,1)\ninclude missing.mk\nendif\n"
+        "test:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    (tmp_path / "Makefile").write_text(
+        "ifeq (1,1)\ninclude missing.mk\nendif\n"
+        "test:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_required_include_error_blocks_suite(tmp_path):
     """必需的 include 读不到时 make 在执行 test 前就失败，不能算有套件。"""
     if not shutil.which("make"):

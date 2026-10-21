@@ -617,20 +617,103 @@ def _make_expand_simple_vars(text: str) -> str:
     return "".join(out)
 
 
+_MAKE_INCLUDE_LINE = re.compile(
+    r"^[ ]*(include|-include|sinclude)[ \t]+(.*)$")
+_MAKE_CONDITIONAL_LINE = re.compile(
+    r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
+
+
+def _make_line_continues(body: str) -> bool:
+    """行尾是否有未转义的续行反斜杠。"""
+    count = 0
+    for ch in reversed(body):
+        if ch != "\\":
+            break
+        count += 1
+    return count % 2 == 1
+
+
+def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
+    """解析 ifeq/ifneq 的两种参数写法，返回左右值。"""
+    rest = rest.strip()
+    if rest.startswith("(") and rest.endswith(")"):
+        inner = rest[1:-1]
+        if "," not in inner:
+            return None, None
+        left, right = inner.split(",", 1)
+        return left, right
+    match = re.match(
+        r"^(['\"])(.*?)\1[ \t]+(['\"])(.*?)\3[ \t]*$", rest)
+    if match is None:
+        return None, None
+    return match.group(2), match.group(4)
+
+
+def _make_eval_condition(kind: str, rest: str,
+                         variables: Dict[str, Optional[str]],
+                         simple: Dict[str, bool]) -> bool:
+    rest = _make_strip_comment(rest).strip()
+    if kind in ("ifdef", "ifndef"):
+        name = _make_expand_refs(rest, variables, simple).strip()
+        value = variables.get(name)
+        defined = value is not None and value != ""
+        return defined if kind == "ifdef" else not defined
+    left, right = _make_ifeq_args(rest)
+    if left is None:
+        return False
+    left = _make_expand_refs(left, variables, simple)
+    right = _make_expand_refs(right, variables, simple)
+    # make 只去掉逗号两侧的空白：左值 rstrip、右值 lstrip。
+    equal = left.rstrip() == right.lstrip()
+    return equal if kind == "ifeq" else not equal
+
+
+def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
+                            variables: Dict[str, Optional[str]],
+                            simple: Dict[str, bool]) -> None:
+    if kind == "endif":
+        if stack:
+            stack.pop()
+        return
+    if kind == "else":
+        if not stack:
+            return
+        frame = stack[-1]
+        nested = _MAKE_CONDITIONAL_LINE.match(rest.strip())
+        if (nested is not None
+                and nested.group(1) in ("ifeq", "ifneq", "ifdef", "ifndef")):
+            cond = False
+            if frame["parent"] and not frame["taken"]:
+                cond = _make_eval_condition(nested.group(1),
+                                            nested.group(2) or "",
+                                            variables, simple)
+            active = frame["parent"] and not frame["taken"] and cond
+        else:
+            active = frame["parent"] and not frame["taken"]
+        frame["active"] = active
+        frame["taken"] = frame["taken"] or active
+        return
+    parent = not stack or stack[-1]["active"]
+    cond = (_make_eval_condition(kind, rest, variables, simple)
+            if parent else False)
+    active = parent and cond
+    stack.append({"parent": parent, "taken": active, "active": active})
+
+
 def _make_text_with_includes(text: str, repo: Path,
                              seen: Optional[set] = None,
                              depth: int = 0,
                              variables: Optional[Dict[str, Optional[str]]] = None,
                              simple: Optional[Dict[str, bool]] = None) -> str:
-    """把字面 include 的文件内容插到指令位置，供目标探测使用。
+    """读取 include 文件并丢弃未生效条件分支，供目标探测使用。
 
-    只读取仓库内已存在的普通文件；变量展开/通配符留给 make 自己处理。
-    `include` 的文件缺失或不可读时 make 会在执行 test 前以退出码 2 失败，
-    不能把主 Makefile 里同时存在的 test 目标当成可用套件（否则会被
-    run_suite 误判成测试失败）；`-include` / `sinclude` 的缺失文件则
-    按 make 语义忽略。条件分支里的 include 可能被误读，但运行
-    `make test` 后仍由「No rule to make target」/no-op 兜底，不会把
-    未执行的测试当成通过。
+    只读取仓库内已存在的普通文件；include 文件名支持简单变量、通配符
+    与 `$(wildcard ...)`。`include` 的文件缺失或不可读时 make 会在执行
+    test 前以退出码 2 失败，不能把主 Makefile 里同时存在的 test 目标
+    当成可用套件（否则会被 run_suite 误判成测试失败）；`-include` /
+    `sinclude` 的缺失文件按 make 语义忽略。条件分支按 ifeq/ifneq/ifdef/
+    ifndef/else/endif 静态求值，未生效分支里的 include 不会误读，也不会
+    把其中的 test 目标当成可用套件。
     """
     if seen is None:
         seen = set()
@@ -640,43 +723,76 @@ def _make_text_with_includes(text: str, repo: Path,
         simple = {}
     if depth > 20:
         return text
-    parts = []
-    last = 0
-    for match in _MAKE_INCLUDE_DIRECTIVE.finditer(text):
-        _make_scan_assignments(text[last:match.start()], variables, simple)
-        directive = match.group(1)
-        parts.append(text[last:match.end()])
-        args = _make_expand_refs(match.group(2), variables, simple)
-        args = _make_expand_wildcard_functions(args, repo)
-        for name in _make_include_names(args):
-            for path in _make_include_paths(name, repo):
-                try:
-                    key = path.resolve()
-                    if key in seen:
-                        continue
-                    if not path.is_file():
-                        # 悬空符号链接的 exists() 为 False，与 make 的「缺失」
-                        # 口径一致；目录等存在但不可读的路径两种 include 都报错。
-                        if path.exists() or directive == "include":
-                            raise _MakeRequiredIncludeError(name)
-                        continue
-                    if path.stat().st_size > 2_000_000:
-                        continue
-                    included = path.read_text(encoding="utf-8-sig",
-                                              errors="replace")
-                except _MakeRequiredIncludeError:
-                    raise
-                except (OSError, ValueError, RuntimeError):
-                    raise _MakeRequiredIncludeError(name) from None
-                seen.add(key)
-                parts.append("\n")
-                parts.append(_make_text_with_includes(
-                    included, repo, seen, depth + 1, variables, simple))
-                parts.append("\n")
-        last = match.end()
-    _make_scan_assignments(text[last:], variables, simple)
-    parts.append(text[last:])
-    return "".join(parts)
+    lines = text.splitlines(keepends=True)
+    out: List[str] = []
+    stack: List[dict] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        body = line.rstrip("\r\n")
+        if body.startswith("\t"):
+            if not stack or stack[-1]["active"]:
+                out.append(line)
+            i += 1
+            continue
+        conditional = _MAKE_CONDITIONAL_LINE.match(body)
+        if conditional is not None:
+            _make_apply_conditional(conditional.group(1),
+                                    conditional.group(2) or "", stack,
+                                    variables, simple)
+            i += 1
+            continue
+        if stack and not stack[-1]["active"]:
+            i += 1
+            continue
+        include = _MAKE_INCLUDE_LINE.match(body)
+        if include is not None:
+            logical = body
+            while _make_line_continues(logical):
+                logical = logical[:-1]
+                if i + 1 >= len(lines):
+                    break
+                i += 1
+                logical += " " + lines[i].rstrip("\r\n")
+            include = _MAKE_INCLUDE_LINE.match(logical)
+            if include is None:
+                i += 1
+                continue
+            directive = include.group(1)
+            args = _make_expand_refs(include.group(2), variables, simple)
+            args = _make_expand_wildcard_functions(args, repo)
+            for name in _make_include_names(args):
+                for path in _make_include_paths(name, repo):
+                    try:
+                        key = path.resolve()
+                        if key in seen:
+                            continue
+                        if not path.is_file():
+                            # 悬空符号链接的 exists() 为 False，与 make 的
+                            # 「缺失」口径一致；目录等存在但不可读的路径
+                            # 两种 include 都报错。
+                            if path.exists() or directive == "include":
+                                raise _MakeRequiredIncludeError(name)
+                            continue
+                        if path.stat().st_size > 2_000_000:
+                            continue
+                        included = path.read_text(encoding="utf-8-sig",
+                                                  errors="replace")
+                    except _MakeRequiredIncludeError:
+                        raise
+                    except (OSError, ValueError, RuntimeError):
+                        raise _MakeRequiredIncludeError(name) from None
+                    seen.add(key)
+                    out.append("\n")
+                    out.append(_make_text_with_includes(
+                        included, repo, seen, depth + 1, variables, simple))
+                    out.append("\n")
+            i += 1
+            continue
+        out.append(line)
+        _make_scan_assignment(body, variables, simple)
+        i += 1
+    return "".join(out)
 
 
 def _is_pytest_file(name: str) -> bool:
