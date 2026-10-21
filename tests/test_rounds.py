@@ -7700,3 +7700,40 @@ def test_detect_test_suite_make_literal_dollar_origin_eval_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    # 递归变量值里的 foreach 列表由静态函数决定；不展开静态函数会把
+    # `$(suffix \)` 拆成多个词，空列表被误算成非空，选中 test 分支。
+    "Y = $(if $(foreach test,$(suffix \\,),$(abspath \\,)),test,x)\n"
+    "$(Y):\n\t@true\n",
+    "Y = $(foreach v,$(suffix \\,),$(abspath \\,))\n$(Y):\n\t@true\n",
+])
+def test_detect_test_suite_make_recursive_foreach_static_functions(
+        tmp_path, makefile):
+    """变量值里的 foreach 要能调用静态函数并得到正确的空/非空列表。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "Y = $(foreach v,$(basename test.c),$(v))\n$(Y):\n\t@true\n",
+    "Y = $(foreach v,test,$(if $(v),$(v),x))\n$(Y):\n\t@true\n",
+    "Y = $(if x,test,$(foreach v,${a,b},x))\n$(Y):\n\t@true\n",
+    "Y = $(if ,$(foreach v,${a,b},x),test)\n$(Y):\n\t@true\n",
+])
+def test_detect_test_suite_make_recursive_foreach_keeps_suite(
+        tmp_path, makefile):
+    """变量值里 foreach 的静态函数与未生效分支不能误伤 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

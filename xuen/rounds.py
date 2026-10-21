@@ -2507,7 +2507,7 @@ def _make_expand_call_arg(
         text = _make_expand_side_effect_functions(text)
         text = _make_expand_call_functions(
             text, variables, simple, repo, overrides, depth)
-        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_refs(text, variables, simple, repo=repo)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
         text = _make_expand_computed_refs(text, variables, simple)
@@ -2587,15 +2587,18 @@ def _make_expand_foreach_part(text: str,
         text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_foreach(
             text, variables, simple, repo, depth + 1, active)
-        text = _make_expand_refs(text, variables, simple, active=active)
+        text = _make_expand_refs(
+            text, variables, simple, active=active, repo=repo)
         text = _make_expand_error_functions(text)
         text = _make_expand_side_effect_functions(text)
         text = _make_expand_call_functions(
             text, variables, simple, repo)
-        text = _make_expand_refs(text, variables, simple, active=active)
+        text = _make_expand_refs(
+            text, variables, simple, active=active, repo=repo)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
-            text = _make_expand_refs(text, variables, simple, active=active)
+            text = _make_expand_refs(
+                text, variables, simple, active=active, repo=repo)
         text = _make_expand_computed_refs(text, variables, simple)
         text = _make_resolve_single_char_refs(text, variables, simple)
         if text == before:
@@ -2732,7 +2735,8 @@ def _make_substitute_ref(value: str, spec: str) -> str:
 
 def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
                       simple: Dict[str, bool], depth: int = 0,
-                      active: Optional[set] = None) -> str:
+                      active: Optional[set] = None,
+                      repo: Optional[Path] = None) -> str:
     if depth > 20:
         return text
     if active is None:
@@ -2759,10 +2763,16 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
                 raise _MakeRequiredIncludeError(name)
             active.add(name)
             try:
+                # 与目标展开主流程一致：条件先于 foreach，且静态函数要
+                # 拿到 repo 才能求值（`$(foreach v,$(suffix x),...)`）。
+                # 递归变量值里的 foreach 若在条件未生效分支中，make 不会
+                # 展开它；提前按外层变量展开会误判分支或触发参数错误。
+                value = _make_expand_condition_functions(
+                    value, variables, simple, repo, depth + 1)
                 value = _make_expand_foreach(
-                    value, variables, simple, None, depth + 1, active)
+                    value, variables, simple, repo, depth + 1, active)
                 value = _make_expand_refs(value, variables, simple,
-                                          depth + 1, active)
+                                          depth + 1, active, repo)
             finally:
                 active.discard(name)
         if spec is not None:
@@ -2997,13 +3007,13 @@ def _make_expand_immediate_value(
         value = _make_expand_side_effect_functions(value)
         value = _make_expand_call_functions(
             value, variables, simple, repo, overrides)
-        value = _make_expand_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple, repo=repo)
         if repo is not None:
             value = _make_expand_include_functions(
                 value, repo, variables, simple, overrides)
         value = _make_expand_computed_refs(value, variables, simple)
         value = _make_resolve_single_char_refs(value, variables, simple)
-        value = _make_expand_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple, repo=repo)
         if value == before:
             break
     return value
@@ -3225,7 +3235,7 @@ def _make_expand_assignment_name(
         name = _make_expand_automatic_refs(name)
         name = _make_expand_value(name, variables, simple)
         name = _make_resolve_single_char_refs(name, variables, simple)
-        name = _make_expand_refs(name, variables, simple)
+        name = _make_expand_refs(name, variables, simple, repo=repo)
         name = _make_expand_condition_functions(
             name, variables, simple, repo)
         name = _make_expand_foreach(name, variables, simple, repo)
@@ -3235,7 +3245,7 @@ def _make_expand_assignment_name(
             name, variables, simple, overrides)
         name = _make_expand_error_functions(name)
         name = _make_expand_side_effect_functions(name)
-        name = _make_expand_refs(name, variables, simple)
+        name = _make_expand_refs(name, variables, simple, repo=repo)
         if repo is not None:
             name = _make_expand_include_functions(
                 name, repo, variables, simple, overrides)
@@ -3564,7 +3574,8 @@ def _make_expand_simple_vars(text: str,
         # `${a` 片段也就不再暴露 make 的 unterminated reference 错误。
         expanded = _make_expand_call_functions(
             expanded, variables, simple, repo, overrides)
-        expanded = _make_expand_refs(expanded, variables, simple)
+        expanded = _make_expand_refs(
+            expanded, variables, simple, repo=repo)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
         # 静态函数要交替展开到不动点：先条件后静态才能正确处理
@@ -3586,8 +3597,10 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
             expanded = _make_expand_side_effect_functions(expanded)
-            expanded = _make_expand_refs(expanded, variables, simple)
-            expanded = _make_expand_refs(expanded, variables, simple)
+            expanded = _make_expand_refs(
+                expanded, variables, simple, repo=repo)
+            expanded = _make_expand_refs(
+                expanded, variables, simple, repo=repo)
             if expanded == before:
                 break
         expanded = _make_expand_computed_refs(expanded, variables, simple)
@@ -3638,7 +3651,7 @@ def _make_expand_simple_vars(text: str,
                 expanded_targets = _make_resolve_single_char_refs(
                     expanded_targets, variables, simple)
                 expanded_targets = _make_expand_refs(
-                    expanded_targets, variables, simple)
+                    expanded_targets, variables, simple, repo=repo)
                 # 目标列表也可能由条件/静态函数组成：`$(if ,x):$(Y)=1`
                 # 的目标展开为空，make 接受后面的赋值；不展开会把非空
                 # 原文当成目标，误报 empty variable name。
@@ -3651,12 +3664,12 @@ def _make_expand_simple_vars(text: str,
                     expanded_targets = _make_expand_foreach(
                         expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_refs(
-                        expanded_targets, variables, simple)
+                        expanded_targets, variables, simple, repo=repo)
                     if repo is not None:
                         expanded_targets = _make_expand_include_functions(
                             expanded_targets, repo)
                         expanded_targets = _make_expand_refs(
-                            expanded_targets, variables, simple)
+                            expanded_targets, variables, simple, repo=repo)
                     expanded_targets = _make_expand_computed_refs(
                         expanded_targets, variables, simple)
                     expanded_targets = _make_resolve_single_char_refs(
@@ -4002,7 +4015,7 @@ def _make_expand_condition_arg(
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_call_functions(
             value, variables, simple, repo, overrides)
-        value = _make_expand_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple, repo=repo)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
         # 的参数先在未判定分支时被展开，甚至把未生效分支的语法错误
@@ -4013,11 +4026,11 @@ def _make_expand_condition_arg(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
         value = _make_expand_side_effect_functions(value)
-        value = _make_expand_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple, repo=repo)
         if repo is not None:
             value = _make_expand_include_functions(
                 value, repo, variables, simple, overrides)
-        value = _make_expand_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple, repo=repo)
         if value == before:
             break
     if "$" in value.replace("$$", ""):
@@ -4117,7 +4130,7 @@ def _make_expand_condition_text(text: str,
         # 当成外层未定义变量清空（`ifeq ($(foreach v,test,$(v)),test)`）。
         text = _make_expand_value(text, variables, simple)
         text = _make_expand_foreach(text, variables, simple, repo)
-        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_refs(text, variables, simple, repo=repo)
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
