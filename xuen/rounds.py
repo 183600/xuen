@@ -467,6 +467,31 @@ def _make_include_names(args: str) -> List[str]:
     return names
 
 
+_MAKE_WILDCARD_FUNCTION = re.compile(
+    r"\$\((?:wildcard)[ \t]+([^)]*)\)"
+    r"|\$\{(?:wildcard)[ \t]+([^}]*)\}")
+
+
+def _make_expand_wildcard_functions(text: str, repo: Path) -> str:
+    """展开 include 文件名里的 `$(wildcard ...)`（只处理这一种函数）。"""
+    def repl(match: re.Match) -> str:
+        patterns = match.group(1) if match.group(1) is not None \
+            else match.group(2)
+        found = []
+        for token in re.findall(r"(?:\\.|[^\s])+", patterns):
+            name = re.sub(r"\\(.)", r"\1", token)
+            path = Path(name)
+            if not path.is_absolute():
+                path = repo / path
+            try:
+                found.extend(sorted(glob.glob(str(path))))
+            except (OSError, re.error):
+                found.append(str(path))
+        return " ".join(found)
+
+    return _MAKE_WILDCARD_FUNCTION.sub(repl, text)
+
+
 def _make_include_paths(name: str, repo: Path) -> List[Path]:
     """把 include 文件名（含通配符）展开成待读取路径。
 
@@ -622,6 +647,7 @@ def _make_text_with_includes(text: str, repo: Path,
         directive = match.group(1)
         parts.append(text[last:match.end()])
         args = _make_expand_refs(match.group(2), variables, simple)
+        args = _make_expand_wildcard_functions(args, repo)
         for name in _make_include_names(args):
             for path in _make_include_paths(name, repo):
                 try:
