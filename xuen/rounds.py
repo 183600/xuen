@@ -290,7 +290,7 @@ _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
     # 注释行由 (?!#) 挑掉；`;` 后的同行命令不属于目标列表。
-    r"(?m)^[ ]*(?!#)"
+    r"(?m)^(?!\t)[ \t]*(?!#)"
     # 行首 export/unexport 是导出指令而不是规则头：make 把整行当变量名
     # 列表（`export test:` 导出变量 test、`export foo test:` 导出 foo 与
     # test），不定义任何目标，`make test` 以退出码 2 失败——探测命中会把
