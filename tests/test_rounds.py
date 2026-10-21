@@ -868,6 +868,18 @@ def test_detect_test_suite_make_undefined_include_path(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_escaped_dollar_function(tmp_path):
+    """`$$(wildcard ...)` 里的 $$ 是字面 $，不能按函数展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $$(wildcard tests.mk)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_unterminated_function(tmp_path):
     """未闭合的 include 函数引用会让 make 直接报错，不能继续探测。"""
     if not shutil.which("make"):

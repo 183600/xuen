@@ -630,6 +630,10 @@ def _make_find_include_function(text: str, pos: int):
     """
     i = pos
     while i + 1 < len(text):
+        if text[i] == "$" and text[i + 1] == "$":
+            # make 把 $$ 当字面 $，后面的 (...) 不会被当成函数调用。
+            i += 2
+            continue
         if text[i] != "$" or text[i + 1] not in "({":
             i += 1
             continue
