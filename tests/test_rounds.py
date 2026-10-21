@@ -2109,6 +2109,10 @@ def test_detect_test_suite_make_origin_flavor_negative(tmp_path, makefile):
     "T = test\nX = $(1)\n$(call X,$(T)):\n\t@true\n",
     "X = $(2)$(1)\n$(call X,test,x) test:\n\t@true\n",
     "X = $(1)\n$(call X,te$(Y)st):\n\t@true\n",
+    # call 参数无法静态求值，但 callable 的值是常量，不影响目标名。
+    "test = test\n$(call test,$(shell echo dynamic)):\n\t@true\n",
+    # 递归赋值的右值读取期不展开，其中的跨括号逗号不触发读取错误。
+    "test = test\nX = $(call test,${a,b})\ntest:\n\t@true\n",
 ])
 def test_detect_test_suite_make_call_function_defines_test(tmp_path,
                                                            makefile):
@@ -2126,6 +2130,12 @@ def test_detect_test_suite_make_call_function_defines_test(tmp_path,
     "test = $(1)\n$(call test):\n\t@true\n",
     "$(call undefined,test):\n\t@true\n",
     "X = literal\n$(call X,$(error boom)):\n\t@true\n",
+    # call 先按原文切分参数；花括号里的逗号在外层圆括号 call 中仍是
+    # 参数分隔符，切出的 `${a` 是 unterminated variable reference。
+    "test = test\n$(call test,${a,b}):\n\t@true\n",
+    # 花括号 call 里的 `$(strip (a,b))` 同样先被逗号切开，留下未闭合
+    # 的 `$(strip (a`，后面的 test 目标不会执行。
+    "test = test\n${call test,test,$(strip (a,b))}:\n\t@true\n",
 ])
 def test_detect_test_suite_make_call_function_not_a_suite(tmp_path,
                                                           makefile):

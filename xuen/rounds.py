@@ -1880,6 +1880,91 @@ def _make_split_function_args(args: str, arity: int,
     return parts
 
 
+def _make_check_refs_closed(text: str) -> None:
+    """检查文本里的变量/函数引用是否成对，未闭合时按 make 读取错误处理。
+
+    引用只按与起始括号相同的字符配对；`$(...${...}...)` 里的花括号
+    不影响外层圆括号的结束位置。函数参数按顶层逗号切开后，跨括号
+    类型留下的 `${a` 这类片段在 make 里同样是 unterminated reference。
+    """
+    i = 0
+    n = len(text)
+    while i + 1 < n:
+        if text[i] != "$":
+            i += 1
+            continue
+        nxt = text[i + 1]
+        if nxt == "$":
+            i += 2
+            continue
+        if nxt not in "({":
+            i += 2
+            continue
+        opener = nxt
+        closer = ")" if opener == "(" else "}"
+        depth = 1
+        k = i + 2
+        while k < n:
+            if text[k] == opener:
+                depth += 1
+            elif text[k] == closer:
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if depth:
+            raise _MakeRequiredIncludeError(text[i:])
+        i = k + 1
+
+
+def _make_check_top_level_call_args(text: str) -> None:
+    """校验顶层 `$(call ...)` 原文的参数片段是否闭合。
+
+    其他静态函数展开可能先改写 call 参数里的内容（甚至把跨括号类型的
+    逗号片段拼回去），所以必须在任何展开之前按原文切分并检查。只检查
+    顶层 call：未生效条件分支里的 call 不会被 make 展开。
+    """
+    i = 0
+    n = len(text)
+    while i + 1 < n:
+        if text[i] != "$":
+            i += 1
+            continue
+        nxt = text[i + 1]
+        if nxt == "$":
+            i += 2
+            continue
+        if nxt not in "({":
+            i += 2
+            continue
+        opener = nxt
+        closer = ")" if opener == "(" else "}"
+        depth = 1
+        k = i + 2
+        while k < n:
+            if text[k] == opener:
+                depth += 1
+            elif text[k] == closer:
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if depth:
+            return
+        j = i + 2
+        while j < k and (text[j].isalnum() or text[j] in "_-"):
+            j += 1
+        if (text[i + 2:j] == "call" and j < k
+                and text[j] in " \t"):
+            raw_args = text[j:k].lstrip(" \t")
+            for part in _make_split_function_args(raw_args, 1000000, opener):
+                _make_check_refs_closed(part)
+                # call 会展开全部参数，参数里的嵌套 call 同样按原文切分；
+                # `$(call f,$(call g,x,${a,b}))` 的 `${a` 片段也会报错。
+                _make_check_top_level_call_args(part)
+        i = k + 1
+
+
 def _make_expand_include_function(
         name: str, args, repo: Path, *, expanded: bool = False) -> str:
     """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。
@@ -2325,6 +2410,10 @@ def _make_expand_call_functions(
             return text
         start, end, args = call
         parts = _make_split_function_args(args, 1000000, text[start + 1])
+        # call 会先展开全部参数；任一参数里的未闭合引用都是读取期错误，
+        # 即使 callable 的值根本不使用这个参数。
+        for part in parts:
+            _make_check_refs_closed(part)
         raw_name = parts[0].lstrip(" \t")
         name = _make_expand_call_arg(
             raw_name, variables, simple, repo, overrides, depth + 1)
@@ -2353,7 +2442,7 @@ def _make_expand_call_functions(
                 unresolved = True
                 break
             params.append(value_part)
-        if unresolved:
+        if unresolved and "$" in value:
             pos = end
             continue
         local_vars = dict(variables)
@@ -3411,6 +3500,7 @@ def _make_expand_simple_vars(text: str,
         # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
+        _make_check_top_level_call_args(body)
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_value(
             expand_input, variables, simple)
@@ -3428,6 +3518,11 @@ def _make_expand_simple_vars(text: str,
             expanded, variables, simple, repo)
         expanded = _make_expand_foreach(
             expanded, variables, simple, repo)
+        # call 的参数边界同样按原文确定；必须在普通变量引用展开前处理，
+        # 否则 `${a,b}` 会先被当成变量名整体展开，跨括号类型留下的
+        # `${a` 片段也就不再暴露 make 的 unterminated reference 错误。
+        expanded = _make_expand_call_functions(
+            expanded, variables, simple, repo, overrides)
         expanded = _make_expand_refs(expanded, variables, simple)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
@@ -3444,12 +3539,12 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, repo)
             expanded = _make_expand_foreach(
                 expanded, variables, simple, repo)
+            expanded = _make_expand_call_functions(
+                expanded, variables, simple, repo, overrides)
             expanded = _make_expand_metadata_functions(
                 expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
             expanded = _make_expand_side_effect_functions(expanded)
-            expanded = _make_expand_call_functions(
-                expanded, variables, simple, repo, overrides)
             expanded = _make_expand_refs(expanded, variables, simple)
             expanded = _make_expand_refs(expanded, variables, simple)
             if expanded == before:
@@ -3860,6 +3955,8 @@ def _make_expand_condition_arg(
         # 条件里，先展开会把循环体产生的空白当成源码空白丢掉，改变
         # `$(if $(foreach x,test, ),then,else)` 的真假。
         value = _make_expand_foreach(value, variables, simple, repo)
+        value = _make_expand_call_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
@@ -3871,8 +3968,6 @@ def _make_expand_condition_arg(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
         value = _make_expand_side_effect_functions(value)
-        value = _make_expand_call_functions(
-            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             value = _make_expand_include_functions(
