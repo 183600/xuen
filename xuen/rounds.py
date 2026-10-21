@@ -3726,6 +3726,19 @@ def _make_expand_simple_vars(text: str,
                 and _MAKE_EXPORT_DIRECTIVE.match(body) is None
                 and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
             raw_targets = body[:early_colon]
+            # 规则头左侧在读取期立即展开；其中的 eval 参数会先作为
+            # Makefile 行解析，`$(eval x):` 的 `x` 没有分隔符，make 在
+            # 读取阶段就失败。只校验冒号左侧，避免把 target-specific
+            # 赋值的延迟右侧（如 `test: A=$(eval x)`）提前求值。
+            cleaned_targets = _make_expand_eval_functions(
+                raw_targets, variables, simple, repo, overrides)
+            if cleaned_targets != raw_targets:
+                # eval 返回空串，但其中的赋值会影响同一行后续的目标名：
+                # `$(eval X=test)$(X):` 展开后是 `test:`，必须用去掉
+                # eval 的文本继续探测。
+                body = cleaned_targets + body[early_colon:]
+                early_colon = len(cleaned_targets)
+                raw_targets = cleaned_targets
             raw_rest_start = early_colon + 1
             if (raw_rest_start < len(body)
                     and body[raw_rest_start] == ":"):

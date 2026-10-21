@@ -2739,6 +2739,8 @@ def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
     r"$(subst a\ b,test,$$) = x",
     r"$(info $(if x,a\ b))foo = x",
     "$(eval x=1)foo = x",
+    # 规则头左侧的 eval 也会展开并应用其中的赋值，后面的目标名随之可见。
+    "$(eval X=test)$(X):\n\t@true\n",
 ])
 def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                                                                line):
@@ -2768,6 +2770,28 @@ def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(
         line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(eval x):\ntest:\n\t@echo ok\n",
+    "$(eval x) test:\n\t@echo ok\n",
+    "X = test\n$(eval $(X)):\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
+        tmp_path, makefile):
+    """规则头左侧的 eval 参数没有分隔符时 make 读取失败。
+
+    `$(eval x):` 先展开成 `x:`，eval 参数 `x` 本身不是合法的 Makefile
+    行；原先只展开赋值名里的 eval，规则头里的调用被当成空变量引用，
+    后面的 test 目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
     p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode != 0
