@@ -275,18 +275,25 @@ _PYTEST_SKIP_DIRS = frozenset({
 _MAKE_VAR_UNIT = r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\})"
 _MAKE_TARGET_WORD = (
     r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:\s#;\\]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
+    + r"|[^:\s#;\\=]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
 # 逻辑行内的词分隔：空白，或反斜杠续行。make 把续行与周围空白压成一个
 # 空格（`test \` + `foo:` 与 `test foo:` 等价、`test\` + `:` 与 `test :`
 # 等价），目标列表跨续行时同样要能识别 test；续行进入词内部则拆成两个
 # 词（`te\` + `st:` 是目标 te 与 st），与加空格的行为一致。
 _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
+# 目标列表内部的词分隔还包含未转义等号。GNU make 把目标列表里的 `=`
+# 也当作词分隔符（`foo test=1:` 定义 foo / test / 1 三个目标；
+# `test\=1:` 才是名为 test=1 的目标）。`+=` / `?=` 的运算符前缀也属于
+# 分隔符：`test+=1:` 定义 test 与 1，但 `test!=1:` 的目标名是 test!。
+# 赋值形式检测（test 后紧跟 `= x`）仍只用 _MAKE_SEP，不能把 `test==x`
+# 里的第二个等号吃掉。
+_MAKE_TARGET_SEP = r"(?:[ \t]|[+?]?=|\\\r?\n)"
 # test 之前的目标名不能含未转义的 %：`foo% test:` 会被 make 当成
 # 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
 _MAKE_TARGET_WORD_BEFORE_TEST = (
     r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:\s#;\\%]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
+    + r"|[^:\s#;\\%=]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
 # 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
 # `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
 # 定义 test。展开后再判断会在目标列表里误删可运行套件。
@@ -303,15 +310,16 @@ _MAKE_TEST_TARGET = re.compile(
     # 候选误判成测试失败。仅出现在目标列表中间时（`foo export test:`）
     # 仍是普通目标名，照常放行。
     r"(?!(?:export|unexport)" + _MAKE_SEP + r"+)"
-    r"(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + _MAKE_SEP + r"+)*test"
-    # test 后第一个词若是 ?= / += / != / := / ::= 等赋值/空变量名写法，
-    # 整行不是目标规则；后续词可以含 =（`test foo=bar:` 是合法目标名）。
-    r"(?!" + _MAKE_SEP + r"+(?:[+?!]?=|:*=))"
-    r"(?:" + _MAKE_SEP + r"+" + _MAKE_TARGET_WORD + r")*"
+    r"(?:" + _MAKE_TARGET_WORD_BEFORE_TEST + _MAKE_TARGET_SEP + r"+)*test"
+    # test 后可以继续跟目标名（`test foo=bar:` 定义 test / foo / bar）。
+    # 行首的 `test = bar:` / `test := x` 已在 _make_expand_simple_vars
+    # 里按变量赋值整行剔除，不需要在这里做赋值的负向前瞻——那会误伤
+    # `foo test =1:`（make 定义 foo / test / 1）。
+    r"(?:" + _MAKE_TARGET_SEP + r"+" + _MAKE_TARGET_WORD + r")*"
     # GNU make 4.3 的 grouped target 用 `&:` 分隔，且不要求 & 前有空白
     # （`test&:` 与 `test &:` 都定义可执行的 test 目标）；`test& :` 则是
     # 名为 test& 的普通目标，不能命中。
-    + _MAKE_SEP + r"*(?:&)?:"
+    + _MAKE_TARGET_SEP + r"*(?:&)?:"
     # 分隔符后的冒号、赋值形态（test:::、test: :x、test: X=1、
     # test: = x）不能在这里用负向前瞻跳过：文件里另有合法 test 目标时，
     # make 仍可能因这些行在读取阶段报错。改由 _make_rule_header_is_valid

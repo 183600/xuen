@@ -2286,9 +2286,15 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test: export X\\;Y:::=1",
     "test: export $(U) X=1",
     "test:: $(U) X=1",
-    # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
+    # 目标列表里的未转义等号是词分隔符：`foo test=1:` 定义 foo / test /
+    # 1；`+=` / `?=` 的运算符前缀也被吸收（test 仍是目标）。
     "test foo=bar:",
     "test foo\\=bar:",
+    "foo test=1:",
+    "foo test =1:",
+    "foo bar test==1:",
+    "foo test+=1:",
+    "foo test?=1:",
     "all test=1 test:",
     "all foo=bar test:",
     "all foo\\=bar test:",
@@ -2370,6 +2376,12 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test ::= bar:",
     "test foo:=bar:",
     "test foo::=bar:",
+    # 反斜杠转义/感叹号后的等号不是分隔符，目标名是 test=1 / test!；
+    # `:=` 会让 make 报 empty variable name，同样没有 test 目标。
+    "foo test\\=1:",
+    "foo test!=1:",
+    "foo test:=1:",
+    "foo test:=",
     # 续行里紧跟 test 的赋值形式同样不是目标（续行压成空格后与
     # `test = bar:` 等价）
     "test \\\n = bar:",
