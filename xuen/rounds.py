@@ -633,6 +633,11 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
         for word in words:
             if word.endswith("&"):
                 word = word[:-1]
+            # 行首/目标前的 `\;` 会被 make 丢弃，`\;test&::` 实际仍是
+            # test 的 grouped 双冒号规则；不剥掉前缀会漏掉与已有 test:
+            # 的 :/:: 冲突，整份 Makefile 读取失败却被误判成套件。
+            while word.startswith("\\;"):
+                word = word[2:]
             if not word or _make_pattern_wildcard(word)[0] >= 0:
                 # 模式规则允许同一模式分别用 : 和 :: 定义，make 不会报
                 # both : and :: entries；只有具体目标才做冲突检查。
