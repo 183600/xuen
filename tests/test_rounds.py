@@ -988,6 +988,41 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("directive,filename", [
+    ("include foo\\*.mk\n", "foo*.mk"),
+    ("include foo\\?.mk\n", "foo?.mk"),
+    ("include foo\\[x\\].mk\n", "foo[x].mk"),
+    ("include $(wildcard foo\\*.mk)\n", "foo*.mk"),
+    ("include foo\\ bar.mk\n", "foo bar.mk"),
+    ("include foo\\#bar.mk\n", "foo#bar.mk"),
+])
+def test_detect_test_suite_make_escaped_glob_is_literal(tmp_path, directive,
+                                                        filename):
+    """反斜杠转义的通配符/空格是文件名本身，不能当通配符展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(directive, encoding="utf-8")
+    (tmp_path / filename).write_text("test:\n\t@true\n",
+                                     encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("directive,decoy", [
+    ("include foo\\*.mk\n", "foobar.mk"),
+    ("include foo\\?.mk\n", "fooX.mk"),
+    ("include foo\\[x\\].mk\n", "foox.mk"),
+    ("include $(wildcard foo\\*.mk)\n", "foobar.mk"),
+])
+def test_detect_test_suite_make_escaped_glob_does_not_match_decoy(
+        tmp_path, directive, decoy):
+    """转义后的通配符只能匹配字面文件名，不能匹配其他文件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(directive, encoding="utf-8")
+    (tmp_path / decoy).write_text("test:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_wildcard_function_no_match_is_empty(tmp_path):
     """`$(wildcard missing.mk)` 无匹配时展开为空，不能当字面文件名 include。"""
     if not shutil.which("make"):

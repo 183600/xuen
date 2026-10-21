@@ -527,15 +527,57 @@ def _make_strip_comment(line: str) -> str:
 
 
 def _make_include_names(args: str) -> List[str]:
-    """提取 include/-include/sinclude 的文件名（变量引用留给 make）。"""
+    """提取 include/-include/sinclude 的文件名（保留反斜杠转义）。
+
+    保留转义是必要的：`include foo\\*.mk` 里的 * 是文件名的一部分，
+    不能当成通配符；路径里的空格也靠反斜杠转义。需要真实文件名时用
+    _make_unescape_name。
+    """
     names = []
     flat = re.sub(r"\\\r?\n", " ", _make_strip_comment(args))
     for token in re.findall(r"(?:\\.|[^\s])+", flat):
-        name = re.sub(r"\\(.)", r"\1", token)
-        if "$" in name:
+        if "$" in token:
             continue
-        names.append(name)
+        names.append(token)
     return names
+
+
+def _make_unescape_name(name: str) -> str:
+    """去掉 make 文件名里的反斜杠转义（`\\ ` -> 空格、`\\*` -> *）。"""
+    return re.sub(r"\\(.)", r"\1", name)
+
+
+def _make_glob_pattern(name: str) -> str:
+    """把 make 文件名转成 glob 模式：只有未转义的 * ? [ 是通配符。"""
+    out = []
+    i = 0
+    while i < len(name):
+        ch = name[i]
+        if ch == "\\" and i + 1 < len(name):
+            out.append(glob.escape(name[i + 1]))
+            i += 2
+            continue
+        out.append(ch if ch in "*?[" else glob.escape(ch))
+        i += 1
+    return "".join(out)
+
+
+def _make_glob_matches(name: str, repo: Path) -> Tuple[List[str], bool]:
+    """按 make 的 wildcard 语义展开文件名，返回 (匹配, 是否绝对路径)。
+
+    与 include 的必需文件检查共用：转义的通配符按字面匹配，未转义的
+    才交给 glob。
+    """
+    unescaped = _make_unescape_name(name)
+    absolute = Path(unescaped).is_absolute()
+    pattern = _make_glob_pattern(name)
+    if not absolute:
+        pattern = os.path.join(glob.escape(str(repo)), pattern)
+    try:
+        matches = sorted(glob.glob(pattern))
+    except (OSError, re.error):
+        matches = []
+    return matches, absolute
 
 
 _MAKE_INCLUDE_FUNCTIONS = frozenset({
@@ -633,14 +675,8 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     if name == "wildcard":
         found = []
         for token in re.findall(r"(?:\\.|[^\s])+", args):
-            raw = re.sub(r"\\(.)", r"\1", token)
-            path = Path(raw)
-            absolute = path.is_absolute()
-            pattern = str(path if absolute else repo / path)
-            try:
-                matches = sorted(glob.glob(pattern))
-            except (OSError, re.error):
-                matches = []
+            matches, absolute = _make_glob_matches(token, repo)
+            raw = _make_unescape_name(token)
             for match in matches:
                 if absolute:
                     found.append(match)
@@ -834,14 +870,15 @@ def _make_include_paths(name: str, repo: Path) -> List[Path]:
 
     通配符按 make 的 wildcard 语义展开；没有匹配时保留原字面量，让
     `include` 的必需文件缺失检查把它当成错误（`-include` 则忽略）。
+    反斜杠转义的通配符/空格按字面文件名处理。
     """
-    path = Path(name)
-    if not path.is_absolute():
+    matches, absolute = _make_glob_matches(name, repo)
+    if matches:
+        return [Path(match) for match in matches]
+    path = Path(_make_unescape_name(name))
+    if not absolute:
         path = repo / path
-    if not any(ch in name for ch in "*?["):
-        return [path]
-    matches = sorted(glob.glob(str(path)))
-    return [Path(match) for match in matches] or [path]
+    return [path]
 
 
 def _make_substitute_ref(value: str, spec: str) -> str:
@@ -1279,6 +1316,7 @@ def _make_text_with_includes(text: str, repo: Path,
             args = _make_expand_refs(include.group(2), variables, simple)
             args = _make_expand_include_functions(args, repo)
             for name in _make_include_names(args):
+                display = _make_unescape_name(name)
                 for path in _make_include_paths(name, repo):
                     try:
                         key = path.resolve()
@@ -1289,7 +1327,7 @@ def _make_text_with_includes(text: str, repo: Path,
                             # 「缺失」口径一致；目录等存在但不可读的路径
                             # 两种 include 都报错。
                             if path.exists() or directive == "include":
-                                raise _MakeRequiredIncludeError(name)
+                                raise _MakeRequiredIncludeError(display)
                             continue
                         if path.stat().st_size > 2_000_000:
                             continue
@@ -1298,7 +1336,7 @@ def _make_text_with_includes(text: str, repo: Path,
                     except _MakeRequiredIncludeError:
                         raise
                     except (OSError, ValueError, RuntimeError):
-                        raise _MakeRequiredIncludeError(name) from None
+                        raise _MakeRequiredIncludeError(display) from None
                     seen.add(key)
                     # MAKEFILE_LIST 按读取顺序追加：include 文件里的
                     # `$(lastword $(MAKEFILE_LIST))` 和之后的主文件都要
@@ -1306,7 +1344,7 @@ def _make_text_with_includes(text: str, repo: Path,
                     makefile_list = variables.get("MAKEFILE_LIST")
                     if makefile_list is not None:
                         variables["MAKEFILE_LIST"] = (
-                            (makefile_list + " " + name).strip())
+                            (makefile_list + " " + display).strip())
                     try:
                         out.append("\n")
                         out.append(_make_text_with_includes(
