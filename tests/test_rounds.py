@@ -790,6 +790,34 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_required_include_error_blocks_suite(tmp_path):
+    """必需的 include 读不到时 make 在执行 test 前就失败，不能算有套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include missing.mk\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_optional_missing_include_keeps_suite(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "-include missing.mk\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_nested_required_include_error_blocks_suite(
+        tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include tests.mk\ntest:\n\t@true\n", encoding="utf-8")
+    (tmp_path / "tests.mk").write_text(
+        "include missing.mk\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     "T = test\n$(T):\n\t@true\n",
     "T := test\n${T}:\n\t@true\n",

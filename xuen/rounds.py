@@ -427,8 +427,12 @@ def _make_defines_test_target(text: str) -> bool:
 
 
 _MAKE_INCLUDE_DIRECTIVE = re.compile(
-    r"(?m)^[ ]*(?:-?include|sinclude)[ \t]+"
+    r"(?m)^[ ]*(include|-include|sinclude)[ \t]+"
     r"((?:\\\r?\n|[^\r\n])*)")
+
+
+class _MakeRequiredIncludeError(Exception):
+    """必需的 include 无法读取：make 会在执行 test 前直接失败。"""
 
 _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
@@ -558,10 +562,13 @@ def _make_text_with_includes(text: str, repo: Path,
                              depth: int = 0) -> str:
     """把字面 include 的文件内容插到指令位置，供目标探测使用。
 
-    只读取仓库内已存在的普通文件；变量展开/通配符/缺失文件留给 make
-    自己报错（探测不到 test 目标时按无套件处理）。条件分支里的 include
-    可能被误读，但运行 `make test` 后仍由「No rule to make target」/
-    no-op 兜底，不会把未执行的测试当成通过。
+    只读取仓库内已存在的普通文件；变量展开/通配符留给 make 自己处理。
+    `include` 的文件缺失或不可读时 make 会在执行 test 前以退出码 2 失败，
+    不能把主 Makefile 里同时存在的 test 目标当成可用套件（否则会被
+    run_suite 误判成测试失败）；`-include` / `sinclude` 的缺失文件则
+    按 make 语义忽略。条件分支里的 include 可能被误读，但运行
+    `make test` 后仍由「No rule to make target」/no-op 兜底，不会把
+    未执行的测试当成通过。
     """
     if seen is None:
         seen = set()
@@ -570,21 +577,30 @@ def _make_text_with_includes(text: str, repo: Path,
     parts = []
     last = 0
     for match in _MAKE_INCLUDE_DIRECTIVE.finditer(text):
+        directive = match.group(1)
         parts.append(text[last:match.end()])
-        for name in _make_include_names(match.group(1)):
+        for name in _make_include_names(match.group(2)):
             path = Path(name)
             if not path.is_absolute():
                 path = repo / path
             try:
                 key = path.resolve()
-                if key in seen or not path.is_file():
+                if key in seen:
+                    continue
+                if not path.is_file():
+                    # 悬空符号链接的 exists() 为 False，与 make 的「缺失」
+                    # 口径一致；目录等存在但不可读的路径两种 include 都报错。
+                    if path.exists() or directive == "include":
+                        raise _MakeRequiredIncludeError(name)
                     continue
                 if path.stat().st_size > 2_000_000:
                     continue
                 included = path.read_text(encoding="utf-8-sig",
                                           errors="replace")
-            except (OSError, ValueError):
-                continue
+            except _MakeRequiredIncludeError:
+                raise
+            except (OSError, ValueError, RuntimeError):
+                raise _MakeRequiredIncludeError(name) from None
             seen.add(key)
             parts.append("\n")
             parts.append(_make_text_with_includes(included, repo, seen,
@@ -685,7 +701,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             text = _make_expand_simple_vars(text)
             if _make_defines_test_target(text):
                 return ["make", "test"]
-        except OSError:
+        except (_MakeRequiredIncludeError, OSError):
             pass
     # 3) npm test：package.json 声明了非占位的 test 脚本
     pkg = repo / "package.json"
