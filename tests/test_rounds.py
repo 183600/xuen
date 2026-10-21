@@ -981,9 +981,12 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         pytest.skip("make 不可用")
     for directive in ("include $(word x,tests.mk)",
                       "include $(word 0,tests.mk)",
+                      "include $(word +1,tests.mk)",
                       "include $(wordlist 2,x,tests.mk other.mk)",
                       "include $(wordlist 0,1,tests.mk)",
-                      "include $(wordlist 1,-1,tests.mk)"):
+                      "include $(wordlist 1,-1,tests.mk)",
+                      "include $(wordlist +1,2,tests.mk)",
+                      "include $(wordlist 1,+2,tests.mk)"):
         (tmp_path / "Makefile").write_text(directive + "\n",
                                            encoding="utf-8")
         (tmp_path / "tests.mk").write_text("test:\n\t@true\n",

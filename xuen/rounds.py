@@ -730,11 +730,10 @@ def _make_function_words(value: str) -> List[str]:
 
 def _make_function_index(value: str, function: str,
                          allow_zero: bool = False) -> int:
-    try:
-        index = int(value.strip())
-    except (TypeError, ValueError):
-        raise _MakeRequiredIncludeError(
-            f"{function}: non-numeric index") from None
+    text = value.strip()
+    if not re.fullmatch(r"[0-9]+", text):
+        raise _MakeRequiredIncludeError(f"{function}: non-numeric index")
+    index = int(text)
     if index < 0 or (index == 0 and not allow_zero):
         raise _MakeRequiredIncludeError(f"{function}: invalid index")
     return index
