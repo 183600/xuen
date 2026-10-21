@@ -394,7 +394,12 @@ def _clip_section(text: str, limit: int) -> tuple:
     只影响拼进提示词的副本；工作区文件保持完整。截断标记明确告诉 agent
     中间内容被省略、完整内容仍在状态文件里，避免它把省略号当成真实内容。
     """
-    if limit <= 0 or len(text) <= limit:
+    if limit <= 0:
+        # 调用方已保证 _clip_state_sections 的 budget<=0 表示不限制；
+        # 这里收到 0 说明某个区块分到的预算被另一个区块占满，仍须截空，
+        # 否则两区都很长、预算极小时会把全文拼进提示词。
+        return ("", len(text)) if text else ("", 0)
+    if len(text) <= limit:
         return text, 0
     head_len = max(1, limit * 3 // 5)
     tail_len = max(0, limit - head_len)

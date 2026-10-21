@@ -400,6 +400,21 @@ def test_shell_prompt_truncates_state_to_budget(tmp_path):
     assert state.get_section(text, state.SECTION_ARTIFACT) == artifact
 
 
+def test_clip_state_sections_tiny_budget_never_exceeds():
+    """预算极小时（某个区块分到 0 字符）也必须真的截空，不能反而返回全文。"""
+    from xuen.runner import _clip_state_sections
+
+    idea = "i" * 100
+    artifact = "a" * 100
+    for budget in (1, 2, 3, 5, 17):
+        clipped_idea, clipped_artifact, omitted = _clip_state_sections(
+            idea, artifact, budget)
+        # 截断提示本身也占字符；这里只约束保留的原内容总长度。
+        kept = clipped_idea.count("i") + clipped_artifact.count("a")
+        assert kept <= budget, budget
+        assert omitted == 200 - kept, budget
+
+
 def test_shell_prompt_budget_zero_keeps_everything(tmp_path):
     from xuen import state
     from xuen.config import Config
