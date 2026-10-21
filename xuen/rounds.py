@@ -647,6 +647,12 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
 
 _MAKE_EMPTY_TARGET_ASSIGNMENT = re.compile(r"^(?:::=|::=|:=|[+?]?=|!=)")
 
+# 展开阶段会把变量赋值/define 等行替换成注释，但 make 读取时它们会清空
+# 「当前目标」：紧跟其后的 tab 行属于 recipe commences before first target。
+# 真正由用户写的注释不会清空上下文，所以这里用一个带控制字符的注释作为
+# 哨兵，让 _make_has_recipe_before_first_target 能区分两者。
+_MAKE_CONTEXT_RESET = "#\x02"
+
 
 # private / override 不列入：后面跟规则头时它们是普通目标名
 # （`private foo:` / `override foo:` 都定义 foo），只有跟变量赋值/
@@ -786,32 +792,56 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
     会把这种 Makefile 当成可运行套件，随后 `make test` 失败并误伤候选。
     """
     seen_rule = False
+    define_depth = 0
     for line in text.splitlines():
         body = line.rstrip("\r")
         if not body:
+            continue
+        if define_depth:
+            # define 体不是 Makefile 语法，里面的 tab 行也不是 recipe。
+            if _MAKE_DEFINE_LINE.match(body) is not None:
+                define_depth += 1
+            elif _MAKE_ENDEF_LINE.match(body) is not None:
+                define_depth -= 1
             continue
         if body.startswith("\t"):
             if not seen_rule:
                 return True
             continue
         stripped = body.lstrip(" \t")
+        if stripped.startswith(_MAKE_CONTEXT_RESET):
+            # 变量赋值/define/include 等非规则行会清空当前目标；真正的
+            # 用户注释不会，所以只有哨兵注释才重置。
+            seen_rule = False
+            continue
         if stripped.startswith("#"):
             continue
-        if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
-                or _MAKE_ENDEF_LINE_STRICT.match(body) is not None):
+        if _MAKE_DEFINE_LINE.match(body) is not None:
+            define_depth = 1
+            seen_rule = False
+            continue
+        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
+            seen_rule = False
             continue
         # 传入的是展开后的文本：变量赋值行已被 _make_expand_simple_vars
-        # 替换成注释，因此这里仍带冒号的「赋值形」行其实往往是变量展开后
-        # 的目标列表（如 `$(T) foo=bar test:`，T 为空）——不能按变量赋值
-        # 跳过，否则会把随后的合法 recipe 误判成「首个目标前出现 recipe」。
+        # 替换成哨兵注释，因此这里仍带冒号的「赋值形」行其实往往是变量
+        # 展开后的目标列表（如 `$(T) foo=bar test:`，T 为空）——不能按
+        # 变量赋值跳过，否则会把随后的合法 recipe 误判成「首个目标前出现
+        # recipe」。
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
+            # 其他非规则行（export / vpath / $(info ...) 等）同样会清空
+            # 当前目标。
+            seen_rule = False
             continue
         targets = body[:colon].lstrip(" \t")
         if not targets or targets == "&":
             seen_rule = True
             continue
         if _make_rule_is_target_specific(body, colon):
+            # target-specific 赋值不是可挂 recipe 的规则；make 会让随后的
+            # tab 行报 recipe commences before first target。
+            seen_rule = False
             continue
         seen_rule = True
     return False
@@ -2104,13 +2134,15 @@ def _make_expand_simple_vars(text: str,
             if name:
                 variables[name] = "\n".join(body_lines)
                 simple[name] = False
+            # define 块本身不定义目标，但 make 读取时会清空当前目标。
+            out.append(_MAKE_CONTEXT_RESET + newline)
             continue
         expanded = _make_scan_assignment(body, variables, simple)
         if expanded is not None:
-            # 赋值/undefine 行不定义目标。输出成注释，防止变量展开后的
-            # 目标行（如 `$(T) foo=bar test:`，T 为空）被误认成赋值；
-            # 后面的目标探测也不再需要这些行的原文。
-            out.append("#" + newline)
+            # 赋值/undefine 行不定义目标。输出成哨兵注释，防止变量展开
+            # 后的目标行（如 `$(T) foo=bar test:`，T 为空）被误认成赋值；
+            # 同时让后续 recipe 上下文检查知道这里清空过当前目标。
+            out.append(_MAKE_CONTEXT_RESET + newline)
             i += 1
             continue
         if body.lstrip().startswith("#"):
@@ -2171,7 +2203,10 @@ _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
 _MAKE_DEFINE_LINE = re.compile(
     r"^[ \t]*(?:(?:override|export|private)[ \t]+)*define"
-    r"(?:[ \t]+(.*))?$")
+    # `define = x` / `define += x` 等是名为 define 的普通变量赋值，不是
+    # define 指令；按指令处理会把后面的真实目标吞进 define 体，导致可
+    # 运行的 test 套件漏检。`:::=` 不被 GNU make 4.3 当成赋值运算符。
+    r"(?:[ \t]+(?!(?:::=|::=|:=|\?=|\+=|!=|=))(.*))?$")
 # endef 后只要求有空白分隔；多余文本在生效分支只警告
 # （extraneous text after 'endef' directive），仍会结束 define 块。
 _MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t].*)?$")
@@ -2569,6 +2604,10 @@ def _make_text_with_includes(text: str, repo: Path,
             directive = include.group(1)
             args = _make_expand_refs(include.group(2), variables, simple)
             args = _make_expand_include_functions(args, repo)
+            # include 指令本身会清空 make 的当前目标：被 include 文件开头
+            # 的 tab 行、以及 include 之后紧跟的 tab 行都不是任何规则的
+            # recipe。哨兵注释在展开阶段之后仍可被上下文检查识别。
+            out.append(_MAKE_CONTEXT_RESET + "\n")
             for name in _make_include_names(args):
                 display = _make_unescape_name(name)
                 absolute_name = Path(display).is_absolute()
@@ -2621,6 +2660,7 @@ def _make_text_with_includes(text: str, repo: Path,
                         # 按 make 语义各处理一次（条件分支可能因变量变化
                         # 而不同）。
                         seen.discard(key)
+            out.append(_MAKE_CONTEXT_RESET + "\n")
             i += 1
             continue
         out.append(line)

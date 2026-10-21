@@ -2487,6 +2487,77 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("gap", [
+    "X=1",
+    "X := 1",
+    "export X=1",
+    "override X=1",
+    "private X=1",
+    "undefine X",
+    "vpath %.c src",
+    "test: X=1",
+    "foo&: X=1",
+    "define X\nfoo\nendef",
+    "$(info hi)",
+    "$(eval X=1)",
+])
+def test_detect_test_suite_make_recipe_after_non_rule_not_a_suite(
+        tmp_path, gap):
+    """规则/recipe 之间夹着赋值、指令或 define 时，后面的 tab 行是
+    recipe commences before first target，make 读取阶段直接失败。
+
+    回归：探测只检查第一个目标之前是否有 recipe，一旦见过规则就把后续
+    所有 tab 行都当成该规则的 recipe，导致这类 Makefile 被误判成可运行
+    套件。真正的注释和空行不会清空当前目标，仍需放行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + gap + "\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("gap", [
+    "",
+    "# comment",
+    "\n# comment\n",
+])
+def test_detect_test_suite_make_recipe_after_comment_keeps_suite(tmp_path,
+                                                                 gap):
+    """空行/注释不会清空当前目标，后面的 tab 行仍是有效 recipe。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + gap + "\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("included", [
+    "",
+    "X=1\n",
+    "# comment\n",
+    "foo:\n",
+    "foo:\n\t@true\n",
+])
+def test_detect_test_suite_make_recipe_after_include_not_a_suite(
+        tmp_path, included):
+    """include 指令会清空当前目标，之后紧跟的 tab 行不是 recipe。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "inc.mk").write_text(included, encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\ninclude inc.mk\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "test:::",
     "test::::",
@@ -2687,6 +2758,32 @@ def test_detect_test_suite_make_empty_target_recipe_keeps_suite(
     (tmp_path / "Makefile").write_text(
         prefix + "test:\n\t@echo ok\n", encoding="utf-8")
     p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "define = x",
+    "define += x",
+    "define +=:: X::=1",
+    "define ?= x",
+    "define != echo hi",
+    "private define = x",
+    "override define += x",
+    "export define := x",
+])
+def test_detect_test_suite_make_define_named_assignment_keeps_suite(
+        tmp_path, line):
+    """`define = x` 是名为 define 的变量赋值，不是 define 指令。
+
+    回归：按 define 指令解析会把后面的 test 目标吞进变量值，进而误报
+    缺少 endef，把可运行套件判成没有测试。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
