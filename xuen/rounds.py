@@ -1394,7 +1394,8 @@ def _make_text_with_includes(text: str, repo: Path,
             # 跳过，但仍需做词法配对，不能校验名称。
             if active:
                 define_name = _make_expand_refs(
-                    (define_match.group(1) or "").strip(), variables, simple)
+                    _make_strip_comment(define_match.group(1) or "").strip(),
+                    variables, simple)
                 if (not define_name.strip()
                         or _MAKE_DEFINE_EMPTY_NAME.match(
                             define_name.strip())):
