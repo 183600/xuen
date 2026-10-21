@@ -1282,6 +1282,8 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
     "test:\n\t@echo ok\nendef\n",
     "test:\n\t@echo ok\ndefine\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine # c\nfoo\nendef\n",
+    "test:\n\t@echo ok\nprivate define\nfoo\nendef\n",
+    "test:\n\t@echo ok\nprivate define # c\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine $(UNDEFINED)\nfoo\nendef\n",
     "test:\n\t@echo ok\n$(UNDEFINED) = x\n",
     "test:\n\t@echo ok\n$(UNDEFINED) := x\n",
@@ -1329,6 +1331,8 @@ def test_detect_test_suite_make_inactive_directive_errors_ignored(
     "define X\nfoo\nendef # comment\ntest:\n\t@echo ok\n",
     "X = foo\ndefine $(X)\nbar\nendef\ntest:\n\t@echo ok\n",
     "define X = x\nfoo\nendef\ntest:\n\t@echo ok\n",
+    "private define X\nfoo\nendef\ntest:\n\t@echo ok\n",
+    "private override define X\nfoo\nendef\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_define_tail_text_still_detected(
         tmp_path, makefile):

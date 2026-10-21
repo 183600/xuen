@@ -1151,7 +1151,8 @@ _MAKE_INCLUDE_LINE = re.compile(
 _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
 _MAKE_DEFINE_LINE = re.compile(
-    r"^[ \t]*(?:(?:override|export)[ \t]+)*define(?:[ \t]+(.*))?$")
+    r"^[ \t]*(?:(?:override|export|private)[ \t]+)*define"
+    r"(?:[ \t]+(.*))?$")
 # endef 后只要求有空白分隔；多余文本在生效分支只警告
 # （extraneous text after 'endef' directive），仍会结束 define 块。
 _MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t].*)?$")
