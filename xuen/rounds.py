@@ -4472,11 +4472,36 @@ def _make_text_with_includes(text: str, repo: Path,
                 i += 1
                 continue
             directive = include.group(1)
-            args = _make_expand_refs(include.group(2), variables, simple)
-            args = _make_expand_condition_functions(
-                args, variables, simple, repo)
-            args = _make_expand_error_functions(args)
-            args = _make_expand_include_functions(args, repo)
+            # include 参数与普通读取期文本一样会展开 value/foreach/call/
+            # 条件/静态函数；只展开普通引用会把
+            # `include $(foreach f,a.mk b.mk,$(f))` / `$(value FILES)` /
+            # `$(call files)` 当成字面文件名，漏读真正的目标文件。
+            # 与条件参数同一顺序，循环到不动点，避免嵌套函数残留。
+            args = include.group(2)
+            for _ in range(20):
+                before = args
+                args = _make_expand_automatic_refs(args)
+                args = _make_expand_value(args, variables, simple)
+                args = _make_expand_foreach(
+                    args, variables, simple, repo)
+                args = _make_expand_call_functions(
+                    args, variables, simple, repo, overrides)
+                args = _make_expand_refs(
+                    args, variables, simple, repo=repo)
+                args = _make_expand_condition_functions(
+                    args, variables, simple, repo)
+                args = _make_expand_metadata_functions(
+                    args, variables, simple, overrides)
+                args = _make_expand_error_functions(args)
+                args = _make_expand_side_effect_functions(args)
+                args = _make_expand_refs(
+                    args, variables, simple, repo=repo)
+                args = _make_expand_include_functions(
+                    args, repo, variables, simple, overrides)
+                args = _make_expand_refs(
+                    args, variables, simple, repo=repo)
+                if args == before:
+                    break
             # include 指令本身会清空 make 的当前目标：被 include 文件开头
             # 的 tab 行、以及 include 之后紧跟的 tab 行都不是任何规则的
             # recipe。哨兵注释在展开阶段之后仍可被上下文检查识别。

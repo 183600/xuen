@@ -824,6 +824,44 @@ def test_detect_test_suite_make_variable_include(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "F = tests.mk\ninclude $(foreach f,$(F),$(f))\n",
+    "F = tests.mk\ninclude $(value F)\n",
+    "F = tests.mk\nfiles = $(F)\ninclude $(call files)\n",
+    "include $(if x,tests.mk,missing.mk)\n",
+    "include $(info )tests.mk\n",
+    "include $(warning )tests.mk\n",
+    "X = tests.mk\ninclude $(if $(origin X),tests.mk)\n",
+    "X := tests.mk\ninclude $(if $(flavor X),tests.mk)\n",
+])
+def test_detect_test_suite_make_include_argument_functions(tmp_path,
+                                                           makefile):
+    """include 参数里的 value/foreach/call/条件/元数据函数要按 make 展开。
+
+    回归：include 只展开普通引用与静态函数，`include $(value F)` /
+    `$(foreach f,...)` 被当成字面文件名，真正的 tests.mk 没有读入，
+    可运行的 test 目标被误判成没有套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_empty_info_include_is_noop(tmp_path):
+    """`include $(info x)` 展开成空文件名，make 不读任何文件也不会失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(info x)\ntest:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_basename_dotfile(tmp_path):
     """make 的 basename 对 `.tests` 返回空串，不能按 splitext 保留原词。"""
     if not shutil.which("make"):
