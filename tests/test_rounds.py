@@ -1684,6 +1684,11 @@ def test_detect_test_suite_make_else_if_chain_still_detected(tmp_path,
     "ifeq ($(filter %.mk,tests.mk),tests.mk)\ntest:\n\t@true\nendif\n",
     "ifeq ($(sort b a),a b)\ntest:\n\t@true\nendif\n",
     "ifeq ($(wildcard tests.mk),tests.mk)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(if a,b,c),b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(if ,b,c),c)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(or ,b,c),b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(and a,b),b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(subst a,$(if a,b,c),a),b)\ntest:\n\t@true\nendif\n",
     "X = 1\nifdef $(strip X)\ntest:\n\t@true\nendif\n",
 ])
 def test_detect_test_suite_make_condition_static_functions(tmp_path,
@@ -1698,6 +1703,20 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
     (tmp_path / "tests.mk").write_text("all:\n\t@true\n",
                                        encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq ($(if a,b,c),x)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(or ,,),x)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(and a,),x)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_condition_functions_negative(tmp_path,
+                                                              makefile):
+    """if/or/and 求值后不成立时，未生效分支里的 test 目标不算套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
 
 
 @pytest.mark.parametrize("makefile", [

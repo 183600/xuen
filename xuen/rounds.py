@@ -2956,13 +2956,118 @@ def _make_ifeq_args(rest: str
     return match.group(2), match.group(4), False
 
 
+_MAKE_CONDITION_FUNCTIONS = frozenset({"if", "or", "and"})
+
+
+def _make_find_condition_function(text: str, pos: int):
+    """找下一个可静态求值的 if/or/and 调用，返回 (start, end, name, args)。"""
+    i = pos
+    while i + 1 < len(text):
+        if text[i] == "$" and text[i + 1] == "$":
+            i += 2
+            continue
+        if text[i] != "$" or text[i + 1] not in "({":
+            i += 1
+            continue
+        opener = text[i + 1]
+        closer = ")" if opener == "(" else "}"
+        stack = [closer]
+        k = i + 2
+        while k < len(text):
+            ch = text[k]
+            if ch == "\\":
+                k += 2
+                continue
+            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
+                stack.append(")" if text[k + 1] == "(" else "}")
+                k += 2
+                continue
+            if ch == stack[-1]:
+                stack.pop()
+                if not stack:
+                    break
+            k += 1
+        if stack:
+            return None
+        j = i + 2
+        while j < len(text) and (text[j].isalnum() or text[j] in "_-"):
+            j += 1
+        name = text[i + 2:j]
+        if name in _MAKE_CONDITION_FUNCTIONS and (
+                j >= len(text) or text[j] in " \t"):
+            return i, k + 1, name, text[j:k].lstrip(" \t")
+        i += 1
+    return None
+
+
+def _make_split_all_function_args(args: str) -> List[str]:
+    return _make_split_function_args(args, 1000000)
+
+
+def _make_expand_condition_functions(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool], repo: Optional[Path],
+        depth: int = 0) -> str:
+    """展开条件里可静态求值的 `$(if ...)` / `$(or ...)` / `$(and ...)`。"""
+    if depth > 20 or "$(" not in text and "${" not in text:
+        return text
+    pos = 0
+    while True:
+        call = _make_find_condition_function(text, pos)
+        if call is None:
+            return text
+        start, end, name, raw = call
+        arity = 3 if name == "if" else 1000000
+        parts = _make_split_function_args(raw, arity)
+        values: List[str] = []
+        unresolved = False
+        for part in parts:
+            value = _make_expand_refs(part, variables, simple)
+            if repo is not None:
+                try:
+                    value = _make_expand_include_functions(value, repo)
+                except _MakeRequiredIncludeError:
+                    unresolved = True
+                    break
+            value = _make_expand_condition_functions(
+                value, variables, simple, repo, depth + 1)
+            value = _make_expand_refs(value, variables, simple)
+            if "$" in value.replace("$$", ""):
+                unresolved = True
+                break
+            values.append(value)
+        if unresolved or not values:
+            pos = end
+            continue
+        if name == "if":
+            if len(values) < 2:
+                pos = end
+                continue
+            cond, then, otherwise = (values + ["", ""])[:3]
+            result = then if cond.strip() else otherwise
+        elif name == "or":
+            result = next((value for value in values if value.strip()), "")
+        else:  # and
+            result = ""
+            if all(value.strip() for value in values) and values:
+                result = values[-1]
+        text = text[:start] + result + text[end:]
+        pos = start + len(result)
+
+
 def _make_expand_condition_text(text: str,
                                 variables: Dict[str, Optional[str]],
                                 simple: Dict[str, bool],
                                 repo: Optional[Path]) -> str:
-    text = _make_expand_refs(text, variables, simple)
-    if repo is not None:
-        text = _make_expand_include_functions(text, repo)
+    for _ in range(20):
+        before = text
+        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_condition_functions(
+            text, variables, simple, repo)
+        if repo is not None:
+            text = _make_expand_include_functions(text, repo)
+        if text == before:
+            break
     return text
 
 
