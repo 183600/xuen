@@ -791,6 +791,7 @@ def test_detect_test_suite_make_included_file(tmp_path, directive):
     "M = other.mk tests.mk\ninclude $(M)\n",
     "include vars.mk\ninclude $(T)\n",
     "T = tests.mk\ninclude $T\n",
+    "include $(CURDIR)/tests.mk\n",
 ])
 def test_detect_test_suite_make_variable_include(tmp_path, makefile):
     """include 的文件名由简单变量展开时也要按 make 语义读取。"""

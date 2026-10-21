@@ -766,8 +766,11 @@ def _make_text_with_includes(text: str, repo: Path,
     if seen is None:
         seen = set()
     if variables is None:
-        variables = {}
-    if simple is None:
+        # make 内置 CURDIR 是执行目录的绝对路径（探测时即 repo）。
+        # include $(CURDIR)/tests.mk 很常见，不预置会因未展开变量而跳过。
+        variables = {"CURDIR": str(repo.resolve())}
+        simple = {"CURDIR": True}
+    elif simple is None:
         simple = {}
     if depth > 20:
         return text
