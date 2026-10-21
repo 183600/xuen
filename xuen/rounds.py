@@ -1036,17 +1036,22 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。"""
     if name == "wildcard":
         found = []
+        repo_prefix = str(repo) + os.sep
         for token in re.findall(r"(?:\\.|[^\s])+", args):
-            matches, absolute = _make_glob_matches(token, repo)
-            raw = _make_unescape_name(token)
+            pattern = _make_glob_pattern(token)
+            if not Path(_make_unescape_name(token)).is_absolute():
+                pattern = os.path.join(glob.escape(str(repo)), pattern)
+            try:
+                matches = sorted(glob.glob(pattern))
+            except (OSError, re.error):
+                matches = []
             for match in matches:
-                if absolute:
-                    found.append(match)
+                if match.startswith(repo_prefix):
+                    # 保留用户写的 `./`、`..`、双斜杠等路径前缀；
+                    # make 的 wildcard 会原样返回它们。
+                    found.append(match[len(repo_prefix):])
                 else:
-                    rel = os.path.relpath(match, str(repo))
-                    if raw.endswith("/") and not rel.endswith("/"):
-                        rel += "/"
-                    found.append(rel)
+                    found.append(match)
         return " ".join(found)
     if name in ("addprefix", "addsuffix"):
         # make 对少于两个参数（缺少逗号）直接报错并停止解析：不能当成
