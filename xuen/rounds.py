@@ -900,7 +900,7 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"((?:\\[^\s=]|\\|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_DYNAMIC_VAR_UNIT = (
-    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\\[^\s=]|\\"
+    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\$[^\r\n]|\\[^\s=]|\\"
     r"|[^\s:#=;$(){}])")
 _MAKE_DYNAMIC_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
@@ -1849,11 +1849,23 @@ def _make_scan_assignment(body: str,
         raise _MakeRequiredIncludeError("empty variable name")
     match = _MAKE_VAR_ASSIGNMENT.match(body)
     expanded = body
-    if (match is None and "$" in body
-            and _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(body) is not None):
+    dynamic = _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(body)
+    if match is None and "$" in body and dynamic is not None:
         # 只有原行本身是「动态变量名 + 赋值运算符」时才展开后重试；
         # `$(T) foo=bar test:` 原行是目标列表，展开后以 foo=bar 开头
         # 也不能反过来当成变量赋值。
+        #
+        # 变量名里的单字符引用（`$x` / `$:` / `$#`）同样在读取阶段展开；
+        # 展开为空（`$x = 1`、`$(UNDEFINED) += 1`）时 make 直接报
+        # `empty variable name`。必须在普通赋值正则之前判断：后者会把
+        # 展开后开头的 `+` / `?` 当成变量名，吞掉 `+=` / `?=` 运算符，
+        # 把这条 fatal 行误当成合法赋值。
+        name = _make_resolve_single_char_refs(
+            dynamic.group(1), variables, simple)
+        name = _make_expand_refs(name, variables, simple)
+        name = _make_resolve_single_char_refs(name, variables, simple)
+        if not name:
+            raise _MakeRequiredIncludeError("empty variable name")
         expanded = _make_expand_refs(body, variables, simple)
         match = _MAKE_VAR_ASSIGNMENT.match(expanded)
     if match is None:
