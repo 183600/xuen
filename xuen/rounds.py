@@ -1273,7 +1273,7 @@ def _make_eval_condition(kind: str, rest: str,
     rest = _make_strip_comment(rest).strip()
     if kind in ("ifdef", "ifndef"):
         name = _make_expand_condition_text(rest, variables, simple,
-                                           repo).strip()
+                                           repo).rstrip()
         if any(ch.isspace() for ch in name):
             # ifdef 的变量名展开后必须是单个词；`ifdef X Y` 会让
             # make 报 invalid syntax in conditional 并停止读取。

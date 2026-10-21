@@ -1201,6 +1201,31 @@ def test_detect_test_suite_make_conditional_literal_comma_whitespace(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_ifdef_expanded_leading_whitespace(
+        tmp_path):
+    """ifdef 展开后以空白开头是读取期错误；不能 strip 后误判成已定义。
+
+    变量值尾随空白会被 make 忽略，但前导空白会让 make 报 invalid syntax
+    in conditional；探测命中会把必然失败的 make test 当成测试失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "Y = 1\nX = $(subst x, Y,x)\nifdef $(X)\ntest:\n\t@true\nendif\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_ifdef_expanded_trailing_whitespace(tmp_path):
+    """ifdef 展开后的尾随空白按 make 语义忽略，不能漏掉可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "Y = 1\nX = $(subst x,Y ,x)\nifdef $(X)\ntest:\n\t@true\nendif\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")
