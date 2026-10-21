@@ -956,16 +956,17 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
                 break
             i += 1
         if later < 0:
-            # `foo$:$(X)=1` 的 `$:` 吃掉冒号后剩 `foo$(X)=1`，是合法的
-            # 动态变量名赋值（make 接受），不是缺少分隔符。只有目标列表
-            # 里确实有字面目标时才这样重建；`$x$:` 这类纯变量引用目标
-            # 展开后为空，仍按缺失分隔符处理。
-            if bare and not only_refs:
-                rebuilt = targets[:-1] + body[colon + 1:]
-                if (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
-                        or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
-                        is not None):
-                    continue
+            # `foo$:$(X)=1` / `$:$(X)=1` 的 `$:` 吃掉冒号后剩
+            # `foo$(X)=1` / `$(X)=1`，是合法的动态变量名赋值（make
+            # 接受），不是缺少分隔符。纯变量引用目标只在重建行确实是
+            # 赋值时放过；`$x$:foo` 这类展开后没有分隔符的行仍报错。
+            rebuilt = targets[:-1] + body[colon + 1:]
+            if (suffix_at_start
+                    and (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
+                         or _make_dynamic_assignment_name(rebuilt) is not None
+                         or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
+                         is not None)):
+                continue
             return True
         if later + 1 < len(body) and body[later + 1] == "=":
             return True

@@ -3044,6 +3044,24 @@ def test_detect_test_suite_make_foreach_target_detected(tmp_path, line):
 
 
 @pytest.mark.parametrize("line", [
+    "$:$(X)=1",
+    "$x$:$(X)=1",
+    "$:X = 1",
+])
+def test_detect_test_suite_make_bare_dollar_dynamic_assignment_keeps_suite(
+        tmp_path, line):
+    """`$:` 吃掉冒号后剩下动态变量名赋值时 make 接受，不能误拒套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X=foo\ntest:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "foo: %.o: %.c",
     "foo: a\\:b",
     "foo: X:=1",
