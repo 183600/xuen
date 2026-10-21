@@ -2093,6 +2093,21 @@ def _make_find_function_call(text: str, pos: int, name: str):
     return None
 
 
+def _make_expand_error_functions(text: str) -> str:
+    """遇到会立即展开的 `$(error ...)` 时按 make 读取失败处理。
+
+    调用方必须先展开条件函数：未生效的 if/or/and 分支会被删掉，剩下的
+    error 调用在读取阶段必然执行并终止 make；忽略它会把后面存在的 test
+    目标误判成可运行套件。
+    """
+    pos = 0
+    while True:
+        call = _make_find_function_call(text, pos, "error")
+        if call is None:
+            return text
+        raise _MakeRequiredIncludeError("error")
+
+
 def _make_expand_value(text: str,
                        variables: Dict[str, Optional[str]],
                        simple: Dict[str, bool],
@@ -2147,6 +2162,7 @@ def _make_expand_foreach_part(text: str,
             text, variables, simple, repo, depth + 1, active)
         text = _make_expand_refs(text, variables, simple, active=active)
         text = _make_expand_condition_functions(text, variables, simple, repo)
+        text = _make_expand_error_functions(text)
         text = _make_expand_refs(text, variables, simple, active=active)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
@@ -2516,6 +2532,7 @@ def _make_expand_immediate_value(
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_condition_functions(
             value, variables, simple, repo)
+        value = _make_expand_error_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             value = _make_expand_include_functions(value, repo)
@@ -2739,6 +2756,7 @@ def _make_expand_assignment_name(
         name = _make_expand_refs(name, variables, simple)
         name = _make_expand_condition_functions(
             name, variables, simple, repo)
+        name = _make_expand_error_functions(name)
         name = _make_expand_refs(name, variables, simple)
         if repo is not None:
             name = _make_expand_include_functions(name, repo)
@@ -2933,6 +2951,7 @@ def _make_raw_rule_is_target_assignment(
             name = _make_expand_refs(name, variables, simple)
             name = _make_expand_condition_functions(
                 name, variables, simple, repo)
+            name = _make_expand_error_functions(name)
             name = _make_expand_refs(name, variables, simple)
             if repo is not None:
                 name = _make_expand_include_functions(name, repo)
@@ -3061,6 +3080,7 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, repo)
             expanded = _make_expand_condition_functions(
                 expanded, variables, simple, repo)
+            expanded = _make_expand_error_functions(expanded)
             expanded = _make_expand_refs(expanded, variables, simple)
             if repo is not None:
                 expanded = _make_expand_include_functions(expanded, repo)
@@ -3450,6 +3470,7 @@ def _make_expand_condition_arg(
         # 提前暴露出来。
         value = _make_expand_condition_functions(
             value, variables, simple, repo, depth + 1)
+        value = _make_expand_error_functions(value)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             try:
@@ -3548,6 +3569,7 @@ def _make_expand_condition_text(text: str,
         text = _make_expand_refs(text, variables, simple)
         text = _make_expand_condition_functions(
             text, variables, simple, repo)
+        text = _make_expand_error_functions(text)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
         if text == before:
@@ -3809,6 +3831,9 @@ def _make_text_with_includes(text: str, repo: Path,
                 continue
             directive = include.group(1)
             args = _make_expand_refs(include.group(2), variables, simple)
+            args = _make_expand_condition_functions(
+                args, variables, simple, repo)
+            args = _make_expand_error_functions(args)
             args = _make_expand_include_functions(args, repo)
             # include 指令本身会清空 make 的当前目标：被 include 文件开头
             # 的 tab 行、以及 include 之后紧跟的 tab 行都不是任何规则的

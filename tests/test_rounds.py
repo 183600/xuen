@@ -1652,6 +1652,46 @@ def test_detect_test_suite_make_malformed_directives_not_a_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "$(error boom)\ntest:\n\t@true\n",
+    "ifeq (1,1)\n$(error boom)\nendif\ntest:\n\t@true\n",
+    "$(if a,$(error boom),)\ntest:\n\t@true\n",
+    "$(or ,$(error boom))\ntest:\n\t@true\n",
+    "$(and a,$(error boom))\ntest:\n\t@true\n",
+    "$(strip $(error boom))\ntest:\n\t@true\n",
+    "X := $(error boom)\ntest:\n\t@true\n",
+    "X != $(error boom)\ntest:\n\t@true\n",
+    "test: $(error boom)\n\t@true\n",
+    "$(error boom):\n\t@true\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_expanded_error_not_a_suite(tmp_path,
+                                                            makefile):
+    """读取期会执行的 `$(error ...)` 让 make 停止，后面的 test 不算套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq (0,1)\n$(error boom)\nendif\ntest:\n\t@true\n",
+    "$(if ,$(error boom),)\ntest:\n\t@true\n",
+    "$(and ,$(error boom))\ntest:\n\t@true\n",
+    "X = $(error boom)\ntest:\n\t@true\n",
+    "test:\n\t@echo $(error boom)\n",
+])
+def test_detect_test_suite_make_inactive_or_recipe_error_keeps_suite(
+        tmp_path, makefile):
+    """未生效分支/递归赋值/recipe 里的 error 不在探测阶段执行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("snippet", [
     "ifeq (0,1)\ndefine\nfoo\nendef\nendif\n",
     "ifeq (0,1)\nendef\nendif\n",
