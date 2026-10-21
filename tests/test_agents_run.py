@@ -56,3 +56,40 @@ def test_kill_during_completed_run_cleanup_does_not_poison_next_run(
     assert agent.run("") == "ok"
     assert agent.returncode == 0
     assert agent.user_killed is False
+
+def test_kill_after_process_exit_before_wait_does_not_poison_next_run(
+        tmp_path, monkeypatch):
+    """进程已退出但 run() 尚未从 wait() 返回时到达的 kill 也要忽略。
+
+    回归：kill() 只看 _idle_after_run，未看 proc.poll()；这个窗口里
+    进程已回收/已退出，kill 杀不到任何东西，却把请求记成「待处理」，
+    下一次 run() 刚拉起的进程会被立即补杀。
+    """
+    import os
+    import subprocess
+    from xuen.agents import ShellAgent
+
+    if os.name != "posix":
+        return
+    agent = ShellAgent("printf ok", tmp_path, timeout=5)
+    real_wait = subprocess.Popen.wait
+    fired = {"done": False}
+
+    def wait(self, timeout=None):
+        if timeout is None:
+            rc = real_wait(self)
+        else:
+            rc = real_wait(self, timeout=timeout)
+        if not fired["done"]:
+            fired["done"] = True
+            agent.kill()
+        return rc
+
+    monkeypatch.setattr(subprocess.Popen, "wait", wait)
+    assert agent.run("") == "ok"
+    assert agent.returncode == 0
+    monkeypatch.setattr(subprocess.Popen, "wait", real_wait)
+
+    assert agent.run("") == "ok"
+    assert agent.returncode == 0
+    assert agent.user_killed is False

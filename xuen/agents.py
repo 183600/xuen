@@ -1952,18 +1952,24 @@ class ShellAgent:
         杀死，本次停止请求就已兑现，残留的 _killed 会被下一轮 run()
         读成「待处理请求」，把新拉起的 agent 立即误杀。
         _user_killed 只在确实杀掉一个存活进程时置位：进程已退出的收尾
-        窗口里到达的 kill（如 TUI 按 q 恰好落在 Popen 收尾期间）什么都
-        杀不到，若也置位，刚完整跑完（rc=0）的轮次会被 runner 当作
-        「被用户终止，轮次未完成」丢弃并还原最佳。run() 已起跑但进程
-        尚未拉起时杀不到，会记 _killed，由本次 run 在 Popen 后立即补杀
-        并自行补置位 _user_killed；上一轮已收尾后的空闲期则不记，避免
-        晚到请求把下一轮刚拉起的 agent 误杀。
+        窗口里到达的 kill（如 TUI 按 q 恰好落在进程退出与 run() 收尾
+        之间）什么都杀不到，若也置位，刚完整跑完（rc=0）的轮次会被
+        runner 当作「被用户终止，轮次未完成」丢弃并还原最佳。同理，
+        proc 已存在但 poll() 非 None 时只忽略请求、不记待处理，否则会
+        误杀下一轮。run() 已起跑但进程尚未拉起时杀不到，会记 _killed，
+        由本次 run 在 Popen 后立即补杀并自行补置位 _user_killed；上一轮
+        已收尾后的空闲期则不记，避免晚到请求把下一轮刚拉起的 agent
+        误杀。
         """
         with self._kill_lock:
             proc = self._proc
-            if proc is not None and proc.poll() is None:
-                # 正在运行的进程会被杀掉：本次请求已兑现为「终止本轮」
-                self._user_killed = True
+            if proc is not None:
+                # 进程对象还在（本轮 run() 已起跑）：只有仍存活时才需要
+                # 终止。poll() 非 None 表示进程已经自行退出、只是 run()
+                # 尚未 wait()/收尾——此时 kill 什么都杀不到，当前轮内容
+                # 已完整；绝不能记成待处理请求，否则会误杀下一轮。
+                if proc.poll() is None:
+                    self._user_killed = True
             elif not self._idle_after_run:
                 # 本轮尚未拉起进程（run() 已起跑）或从未 run 过：记成
                 # 待处理请求。上一轮已完整收尾后的空闲期不能再记——
