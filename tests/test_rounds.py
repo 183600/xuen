@@ -1212,6 +1212,26 @@ def test_detect_test_suite_make_conditional_expanded_whitespace(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile, expected", [
+    # make 的 += 保留追加值自身的尾随空白：值确实是 "foo bar "，
+    # 与 "foo bar" 比较不相等；空追加值也不会凭空加一个分隔空格。
+    ("X = foo\nX += bar \n"
+     'ifeq "$(X)" "foo bar "\ntest:\n\t@true\nendif\n', True),
+    ("X = foo\nX += bar \n"
+     "ifeq ($(X),foo bar)\ntest:\n\t@true\nendif\n", False),
+    ("X = foo\nX +=\n"
+     "ifeq ($(X),foo)\ntest:\n\t@true\nendif\n", True),
+])
+def test_detect_test_suite_make_append_whitespace(tmp_path, makefile,
+                                                  expected):
+    """+= 的拼接语义要与 make 一致，不能 strip 掉尾随空白。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    result = detect_test_suite(tmp_path)
+    assert result == (["make", "test"] if expected else None)
+
+
 @pytest.mark.parametrize("makefile", [
     "ifeq (foo ,foo)\ntest:\n\t@true\nendif\n",
     "ifeq (foo, foo)\ntest:\n\t@true\nendif\n",

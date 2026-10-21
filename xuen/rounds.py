@@ -1131,7 +1131,13 @@ def _make_apply_assignment(match: re.Match,
             value = raw
             if simple.get(name):
                 value = _make_expand_refs(value, variables, simple)
-            variables[name] = (variables[name] + " " + value).strip()
+            # make 只在旧值非空且追加值非空时插入一个分隔空格；两侧的
+            # 尾随空白都属于变量值本身（`X += bar ` 的值是 `foo bar `），
+            # strip() 会把它吃掉，进而让 ifeq 等条件判断出错。
+            if not variables[name]:
+                variables[name] = value
+            elif value:
+                variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
         variables[name] = _make_expand_refs(raw, variables, simple)
         simple[name] = True
