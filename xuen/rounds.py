@@ -650,7 +650,7 @@ _MAKE_EMPTY_TARGET_ASSIGNMENT = re.compile(r"^(?:::=|::=|:=|[+?]?=|!=)")
 
 _MAKE_NON_RULE_DIRECTIVE = re.compile(
     r"^[ \t]*(?:include|sinclude|-include|vpath|undefine|export|unexport|"
-    r"override|private|define|endef)(?:[ \t]|$)")
+    r"override|private|define)(?:[ \t]|$)")
 
 
 def _make_has_invalid_extra_rule_colon(text: str) -> bool:
@@ -675,6 +675,9 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
             continue
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
+            continue
+        targets = body[:colon].lstrip(" \t")
+        if not targets or targets == "&":
             continue
         start = colon + 1
         if start < len(body) and body[start] == ":":
@@ -728,12 +731,19 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
         stripped = body.lstrip(" \t")
         if stripped.startswith("#"):
             continue
+        if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                or _MAKE_ENDEF_LINE_STRICT.match(body) is not None):
+            continue
         # 传入的是展开后的文本：变量赋值行已被 _make_expand_simple_vars
         # 替换成注释，因此这里仍带冒号的「赋值形」行其实往往是变量展开后
         # 的目标列表（如 `$(T) foo=bar test:`，T 为空）——不能按变量赋值
         # 跳过，否则会把随后的合法 recipe 误判成「首个目标前出现 recipe」。
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
+            continue
+        targets = body[:colon].lstrip(" \t")
+        if not targets or targets == "&":
+            seen_rule = True
             continue
         if _make_rule_is_target_specific(body, colon):
             continue

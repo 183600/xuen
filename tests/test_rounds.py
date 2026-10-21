@@ -1357,6 +1357,10 @@ def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
     "X=1\n\t@true\ntest:\n\t@true\n",
     "test: X=1\n\t@true\ntest:\n\t@true\n",
     "# comment\n\n\t@true\ntest:\n\t@true\n",
+    "export private test foo :\t\n\t@true\ntest:\n\t@true\n",
+    "unexport test X:=1\n\t@true\ntest:\n\t@true\n",
+    "vpath %.c src:x\n\t@true\ntest:\n\t@true\n",
+    "override X=1\n\t@true\ntest:\n\t@true\n",
 ])
 def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
     """grouped target 无 recipe / : 与 :: 混用会让 make 直接报错。"""
@@ -2592,6 +2596,29 @@ def test_detect_test_suite_make_valid_other_rule_keeps_suite(tmp_path, line):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(
         "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("prefix", [
+    ":?= $(X)\n\t@true\n",
+    ": test=: X:=1\n\t@true\n",
+    "&: test+= X=1\n\t@true\n",
+    ": dep\n\t@true\n",
+    "&:\n\t@true\n",
+])
+def test_detect_test_suite_make_empty_target_recipe_keeps_suite(
+        tmp_path, prefix):
+    """空目标列表/裸 `&:` 后的 recipe 行不触发「首个目标前 recipe」误判。
+
+    make 把这类行当成可挂 recipe 的空目标/特殊 grouped 目标，后面的
+    合法 test 目标仍可执行；探测不能把 tab 行一律当成读取错误。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        prefix + "test:\n\t@echo ok\n", encoding="utf-8")
     p = subprocess.run(["make", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0
