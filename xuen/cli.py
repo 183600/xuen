@@ -77,6 +77,11 @@ def _resolve_task(args) -> str:
             # 是「被中断」，必须按 README 的退出码约定返回 130，而不是被
             # 当成 EOF 一路走到「未提供任务」的退出码 2（由 main 统一处理）
             task = ""
+        except RuntimeError:
+            # 无控制台解释器（pythonw / 嵌入环境）里 sys.stdin 可能为 None，
+            # input() 抛的是 RuntimeError('lost sys.stdin') 而不是 EOFError；
+            # 与 EOF 同口径按「未提供任务」处理，不能让 traceback 外泄。
+            task = ""
     return task
 
 

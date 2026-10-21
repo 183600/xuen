@@ -87,3 +87,12 @@ def test_invalid_utf8_at_task_prompt_returns_2(monkeypatch, capsys):
     rc = cli.main(["-c", EXAMPLE])
     assert rc == 2
     assert "UTF-8" in capsys.readouterr().err
+
+
+def test_missing_stdin_at_task_prompt_returns_2(monkeypatch, capsys):
+    """无控制台解释器（sys.stdin is None）时 input() 抛 RuntimeError，
+    不能外泄成 traceback：按「未提供任务」返回退出码 2。"""
+    monkeypatch.setattr("sys.stdin", None)
+    rc = cli.main(["-c", EXAMPLE])
+    assert rc == 2
+    assert "未提供任务" in capsys.readouterr().out
