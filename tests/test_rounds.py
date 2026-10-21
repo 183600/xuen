@@ -7651,3 +7651,52 @@ def test_detect_test_suite_make_nonempty_expanded_assignment_name_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "test: $(findstring $(subst $$,1),x)",
+    "$(info $(findstring $(subst $$,1),x))",
+    "X := $(findstring $(subst $$,1),x)",
+])
+def test_detect_test_suite_make_literal_dollar_does_not_hide_arity_error(
+        tmp_path, line):
+    """`$$` 展开后是字面 `$`，不能把含它的静态函数当成无法求值跳过。
+
+    回归：参数值里的 `$$` 被误判成未展开引用，`$(subst $$,1)` 的参数
+    不足错误因此被吞掉；make 在读取阶段失败，探测却返回可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_literal_dollar_condition_keeps_suite(
+        tmp_path):
+    """字面 `$` 在条件里是非空值，`$(if $$,test,x)` 仍定义 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "$(if $$,test,x):\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_literal_dollar_origin_eval_blocks_suite(
+        tmp_path):
+    """eval 里的 `$(origin $$)` 展开为 undefined，作为 Makefile 行无分隔符。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "$(eval $(origin $(if b,$$, )))\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None

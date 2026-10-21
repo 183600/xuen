@@ -2223,6 +2223,11 @@ def _make_find_include_function(text: str, pos: int):
     return None
 
 
+def _make_has_unresolved_ref(text: str) -> bool:
+    """文本里是否还有无法静态求值的 `$` 引用（`$$` 是字面美元符，不算）。"""
+    return "$" in text.replace("$$", "")
+
+
 def _make_expand_include_functions(
         text: str, repo: Path,
         variables: Optional[Dict[str, Optional[str]]] = None,
@@ -2260,12 +2265,15 @@ def _make_expand_include_functions(
             if value is None:
                 value = _make_expand_include_functions(
                     _make_expand_automatic_refs(part), repo)
-            if "$" in value:
+            if _make_has_unresolved_ref(value):
                 # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
                 unresolved = True
                 evaluated.append(None)
                 continue
-            evaluated.append(value)
+            # `$$` 在参数展开后是字面 `$`；用非引用哨兵占位，避免后续
+            # 静态函数再次把它当成单字符变量引用。`$(subst $$,1,x)`
+            # 的参数个数/替换边界仍按 make 语义判断。
+            evaluated.append(value.replace("$$", "\x03"))
         if unresolved:
             # 后面的参数无法静态求值时整个函数不能展开，但 word/wordlist
             # 的下标参数已展开时，非法下标仍会让 make 在读取期报错
@@ -2365,11 +2373,12 @@ def _make_expand_metadata_functions(
         start, end, args = best
         raw_args = _make_split_function_args(args, 1, text[start + 1])
         argument = raw_args[0]
-        if "$" in argument:
+        if _make_has_unresolved_ref(argument):
             # 参数里还有无法展开的引用（shell/call 等），不能猜变量名。
             pos = end
             continue
-        name = argument
+        # `$$` 是字面 `$`：`$(origin $$)` 查的是名为 `$` 的变量。
+        name = argument.replace("$$", "$")
         if name in variables:
             origin = "override" if overrides and name in overrides else "file"
             flavor = "simple" if simple.get(name) else "recursive"
