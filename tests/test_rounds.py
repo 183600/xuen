@@ -1360,6 +1360,41 @@ def test_detect_test_suite_make_define_tail_text_still_detected(
 
 
 @pytest.mark.parametrize("makefile", [
+    "define X\nfoo\nendef\nifdef X\ntest:\n\t@echo ok\nendif\n",
+    "define X\nendef\nifndef X\ntest:\n\t@echo ok\nendif\n",
+    "define X\nfoo\nendef\nifeq ($(X),foo)\n"
+    "test:\n\t@echo ok\nendif\n",
+    "define X = x\nfoo\nendef\nifdef X\ntest:\n\t@echo ok\nendif\n",
+    "define T\ntest\nendef\n$(T):\n\t@echo ok\n",
+    "X = test\ndefine T\n$(X)\nendef\n$(T):\n\t@echo ok\n",
+    "define X\nfoo\nendef\nundefine X\nifndef X\n"
+    "test:\n\t@echo ok\nendif\n",
+    "define X\nendef\nifeq ($(X),)\ntest:\n\t@echo ok\nendif\n",
+])
+def test_detect_test_suite_make_define_assigns_variable(tmp_path, makefile):
+    """define 定义递归变量，后续 ifdef/ifeq 与目标展开要能看到它的值。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_empty_define_ifdef_false(tmp_path):
+    """空 define 变量值为空，ifdef 为假，不能探测成套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    makefile = "define X\nendef\nifdef X\ntest:\n\t@echo ok\nendif\n"
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\nall2:\n\t@true\n"
     "else ifeq (1,1)\ntest:\n\t@echo ok\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\nall2:\n\t@true\n"

@@ -607,6 +607,36 @@ def _make_strip_value_comment(line: str) -> str:
     return "".join(out)
 
 
+def _make_quote_value_for_assignment(value: str) -> str:
+    """把已按 make 语义处理过的值重新编码成单行赋值的 raw 值。
+
+    `_make_strip_value_comment` 会去掉 # 前的转义；这里反向加倍反斜杠，
+    保证重新扫描时得到同一个值（主要用于把 define 体转成占位赋值）。
+    """
+    out = []
+    i = 0
+    while i < len(value):
+        if value[i] == "\\":
+            j = i
+            while j < len(value) and value[j] == "\\":
+                j += 1
+            count = j - i
+            if j < len(value) and value[j] == "#":
+                out.append("\\" * (count * 2 + 1))
+                out.append("#")
+                i = j + 1
+                continue
+            out.append(value[i:j])
+            i = j
+            continue
+        if value[i] == "#":
+            out.append("\\#")
+        else:
+            out.append(value[i])
+        i += 1
+    return "".join(out)
+
+
 def _make_include_names(args: str) -> List[str]:
     """提取 include/-include/sinclude 的文件名（保留反斜杠转义）。
 
@@ -1466,15 +1496,23 @@ def _make_text_with_includes(text: str, repo: Path,
             # 不会执行。`define X = x` 这类带赋值符/尾随文本的写法只警告，
             # 名称非空仍按合法 define 处理。未生效分支里的 define 虽被
             # 跳过，但仍需做词法配对，不能校验名称。
+            define_name = ""
             if active:
-                define_name = _make_expand_refs(
-                    _make_strip_comment(define_match.group(1) or "").strip(),
-                    variables, simple)
+                name_text = _make_strip_value_comment(
+                    define_match.group(1) or "").strip()
+                # `define X = x` 只警告并定义 X，赋值符后的文本不是名称。
+                for op in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
+                    found = name_text.find(op)
+                    if found >= 0:
+                        name_text = name_text[:found].rstrip()
+                        break
+                define_name = _make_expand_refs(name_text, variables, simple)
                 if (not define_name.strip()
                         or _MAKE_DEFINE_EMPTY_NAME.match(
                             define_name.strip())):
                     raise _MakeRequiredIncludeError("empty define name")
             define_depth = 1
+            body_lines: List[str] = []
             i += 1
             endef_pattern = (_MAKE_ENDEF_LINE if active
                              else _MAKE_ENDEF_LINE_STRICT)
@@ -1482,13 +1520,29 @@ def _make_text_with_includes(text: str, repo: Path,
                 inner = lines[i].rstrip("\r\n")
                 if _MAKE_DEFINE_LINE.match(inner):
                     define_depth += 1
+                    body_lines.append(inner)
                 elif endef_pattern.match(inner):
                     define_depth -= 1
+                    if define_depth:
+                        body_lines.append(inner)
+                else:
+                    body_lines.append(inner)
                 i += 1
             if define_depth:
                 # 缺少 endef：make 在读取阶段直接报错并停止，后面的 test
                 # 目标（以及 define 之前的目标）都不会被执行。
                 raise _MakeRequiredIncludeError("missing endef")
+            if active:
+                # define 定义的是递归变量，体里的换行原样保留。
+                variables[define_name] = "\n".join(body_lines)
+                simple[define_name] = False
+                # 后续 _make_expand_simple_vars 看不到 define 块；给简单的
+                # 变量名补一行占位赋值，规则头里的 $(VAR) 才能展开。
+                # 目标列表只关心换行与空白的切分，合并成空格不影响探测。
+                if re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
+                    raw = _make_quote_value_for_assignment(
+                        " ".join(body_lines))
+                    out.append(f"{define_name} = {raw}\n")
             continue
         if active and _MAKE_ENDEF_LINE.match(body):
             # 生效分支里未处于 define 块中的 endef 是游离指令：make 报
