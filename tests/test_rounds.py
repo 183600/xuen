@@ -1281,6 +1281,21 @@ def test_detect_test_suite_make_conditional_hash_escape(
     assert result == (["make", "test"] if expected else None)
 
 
+def test_detect_test_suite_make_conditional_escaped_comma(tmp_path):
+    """条件参数里的反斜杠不转义逗号，第一个逗号仍是参数分隔符。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "ifneq (a\\,b,a\\,b)\ntest:\n\t@true\nendif\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    (tmp_path / "Makefile").write_text(
+        "ifeq (a\\,b,a\\,b)\ntest:\n\t@true\nendif\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     "ifeq (foo ,foo)\ntest:\n\t@true\nendif\n",
     "ifeq (foo, foo)\ntest:\n\t@true\nendif\n",

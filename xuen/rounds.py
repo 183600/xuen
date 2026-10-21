@@ -1371,9 +1371,8 @@ def _make_ifeq_args(rest: str
         i = 0
         while i < len(inner):
             ch = inner[i]
-            if ch == "\\":
-                i += 2
-                continue
+            # 条件参数里的反斜杠不转义逗号：`ifeq (a\\,b,a\\,b)` 的
+            # 第一个逗号就是参数分隔符（make 不把 \\, 当成字面逗号）。
             if ch in "({":
                 depth += 1
             elif ch in ")}":
