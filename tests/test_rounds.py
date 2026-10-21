@@ -2746,6 +2746,29 @@ def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("line", [
+    "$(foreach,$(if x,a,b)) = 1",
+    "$(call,$(if x,a,b)) = 1",
+    "test: $(foreach,$(if x,a,b))=1",
+])
+def test_detect_test_suite_make_nested_ref_in_unspaced_function_name(
+        tmp_path, line):
+    """`$(foreach,...)` / `$(call,...)` 没有空白时是普通变量引用。
+
+    变量名里的嵌套 if 会在读取期展开，整个名字仍未定义 -> 空变量名；
+    原先扫描器把无空白的 foreach/call 也当成函数调用整段跳过，嵌套
+    条件不展开，名字原文被当成非空，后面的 test 目标被误判成可运行。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     "$(eval test:)",
     "$(eval test: )",

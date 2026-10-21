@@ -2258,11 +2258,14 @@ def _make_find_include_function(text: str, pos: int):
         if (name in _MAKE_INCLUDE_FUNCTIONS and j < len(text)
                 and text[j] in " \t"):
             return i, k + 1, name, text[j:k].lstrip(" \t")
-        if name in _MAKE_CONDITION_FUNCTIONS or name == "foreach":
+        if ((name in _MAKE_CONDITION_FUNCTIONS or name == "foreach")
+                and j < len(text) and text[j] in " \t"):
             # if/or/and 短路、foreach 的 body 只对非空列表求值：里面的
             # 静态函数不能在这里提前展开，否则未选中的分支/空列表 body
             # 里的参数错误会被误当成读取期错误。交给条件/foreach 展开器
-            # 选中后再处理。
+            # 选中后再处理。只有函数名后紧跟空白才是调用；`$(foreach,...)`
+            # 没有空白，是名为 `foreach,...` 的普通变量引用，继续向下
+            # 扫描才能展开其中嵌套的 if/or/and。
             i = k + 1
             continue
         i += 1
@@ -4190,11 +4193,14 @@ def _make_find_condition_function(text: str, pos: int):
         if name in _MAKE_CONDITION_FUNCTIONS and (
                 j >= len(text) or text[j] in " \t"):
             return i, k + 1, name, text[j:k].lstrip(" \t")
-        if name == "foreach" or name == "call":
+        if ((name == "foreach" or name == "call")
+                and j < len(text) and text[j] in " \t"):
             # foreach 的循环变量、call 的参数变量在当前作用域里还不存在。
             # 不能先展开它们 body 里的 if/or/and：那会用外层变量表求值，
             # `$(foreach v,test,$(if $(v),test,y))` 会被误算成 y。交给
-            # 对应的展开器绑定局部变量后再处理。
+            # 对应的展开器绑定局部变量后再处理。只有函数名后紧跟空白才是
+            # 调用；`$(call,...)` / `$(foreach,...)` 是普通变量引用，里面
+            # 嵌套的 if/or/and 仍按 make 语义在变量名展开时求值。
             i = k + 1
             continue
         i += 1
