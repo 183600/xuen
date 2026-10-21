@@ -341,20 +341,25 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     if second < 0:
         return True
     target_pattern = line[start:second].strip()
-    if not target_pattern or any(ch.isspace() for ch in target_pattern):
+    if not target_pattern:
         return False
-    if "$" in target_pattern:
-        return True
+    # 空白只在【未转义】时才是多个 target pattern（make 报 multiple
+    # target patterns）；反斜杠转义的空格属于文件名本身，如
+    # `test: foo%bar\ baz: dep` 是合法的静态模式规则。变量引用可能
+    # 展开出 %，静态检查无法确定，沿用原来的探测口径放行。
     i = 0
+    has_percent = False
     while i < len(target_pattern):
         ch = target_pattern[i]
         if ch == "\\":
             i += 2
             continue
+        if ch.isspace():
+            return False
         if ch == "%":
-            return True
+            has_percent = True
         i += 1
-    return False
+    return has_percent or "$" in target_pattern
 
 
 def _make_defines_test_target(text: str) -> bool:

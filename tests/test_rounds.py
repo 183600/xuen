@@ -813,6 +813,7 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "test: %.o: %.c: extra",
     "test: %.o:: %.c",
     "test:: %.o:: %.c",
+    "test: foo%bar\\ baz: dep",
     "test: ${X:--x}",
     "test:: %.o: %.c",
 ])
