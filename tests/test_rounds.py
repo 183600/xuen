@@ -6373,3 +6373,32 @@ def test_detect_test_suite_make_override_in_include_keeps_suite(tmp_path):
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("text, expected", [
+    # ?= 不覆盖已定义变量：test 只存在于 define 体里，没有真实目标。
+    ("A = foo\ndefine A ?=\ntest\nendef\n$(A):", None),
+    ("A = foo\noverride define A ?=\ntest\nendef\n$(A):", None),
+    # += 追加值；A 展开成 `foo test`，规则里确实有 test 目标。
+    ("A = foo\ndefine A +=\ntest\nendef\n$(A):", ["make", "test"]),
+    # := 立即覆盖旧值，test 目标消失。
+    ("A = test\ndefine A :=\nfoo\nendef\n$(A):", None),
+    # 普通 define 不能覆盖 override 变量。
+    ("override A = test\ndefine A\nfoo\nendef\n$(A):", ["make", "test"]),
+    # override define 可以覆盖普通变量。
+    ("A = foo\noverride define A\ntest\nendef\n$(A):", ["make", "test"]),
+])
+def test_detect_test_suite_make_define_assignment_operators(
+        tmp_path, text, expected):
+    """define 名称后的 ?=/+=/:= 必须按 make 语义生效。
+
+    回归：原先把运算符从名称里截掉后一律用 define 体替换变量，
+    `define A ?=` 会覆盖已有值，把不存在的 test 目标误判成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        text + "\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert (p.returncode == 0) is (expected is not None)
+    assert detect_test_suite(tmp_path) == expected

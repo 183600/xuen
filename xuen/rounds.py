@@ -2108,6 +2108,51 @@ def _make_apply_assignment(match: re.Match,
         simple[name] = False
 
 
+def _make_apply_define(name: str, op: str, body: str,
+                       variables: Dict[str, Optional[str]],
+                       simple: Dict[str, bool],
+                       overrides: Optional[set] = None,
+                       is_override: bool = False) -> None:
+    """按 define 名称后的赋值运算符更新变量表。
+
+    make 4.3 支持 `define X ?=` / `+=` / `:=` / `::=` / `!=` / `=`；
+    `?=` 在变量已定义时不覆盖，`+=` 追加而不是替换。原先把运算符从
+    名称里截掉后一律替换，会让 `A = foo` 后的 `define A ?= test` 把 A
+    错改成 test，探测到并不存在的 test 目标。
+    """
+    if not name:
+        return
+    if overrides is None:
+        overrides = set()
+    if name in overrides and not is_override:
+        return
+    if op == "?=" and name in variables:
+        return
+    if is_override:
+        overrides.add(name)
+    if op == "!=":
+        variables[name] = None
+        simple[name] = False
+    elif op == "+=":
+        if name not in variables:
+            variables[name] = body
+            simple[name] = False
+        elif variables[name] is not None:
+            value = body
+            if simple.get(name):
+                value = _make_expand_refs(value, variables, simple)
+            if not variables[name]:
+                variables[name] = value
+            elif value:
+                variables[name] = variables[name] + " " + value
+    elif op in (":=", "::="):
+        variables[name] = _make_expand_refs(body, variables, simple)
+        simple[name] = True
+    else:
+        variables[name] = body
+        simple[name] = False
+
+
 def _make_scan_assignment(body: str,
                           variables: Dict[str, Optional[str]],
                           simple: Dict[str, bool],
@@ -2298,10 +2343,12 @@ def _make_expand_simple_vars(text: str,
             # `test:` 被误判成目标。
             name_text = _make_strip_value_comment(
                 define_match.group(1) or "").strip()
-            for op in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
-                found = name_text.find(op)
+            define_op = "="
+            for candidate in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
+                found = name_text.find(candidate)
                 if found >= 0:
                     name_text = name_text[:found].rstrip()
+                    define_op = candidate
                     break
             name = _make_expand_refs(name_text, variables, simple)
             define_prefix = body[:body.find("define")].split()
@@ -2321,11 +2368,8 @@ def _make_expand_simple_vars(text: str,
                 else:
                     body_lines.append(inner)
                 i += 1
-            if name and (name not in overrides or define_override):
-                variables[name] = "\n".join(body_lines)
-                simple[name] = False
-                if define_override:
-                    overrides.add(name)
+            _make_apply_define(name, define_op, "\n".join(body_lines),
+                               variables, simple, overrides, define_override)
             # define 块本身不定义目标，但 make 读取时会清空当前目标。
             out.append(_MAKE_CONTEXT_RESET + newline)
             continue
@@ -2711,10 +2755,12 @@ def _make_text_with_includes(text: str, repo: Path,
                 name_text = _make_strip_value_comment(
                     define_match.group(1) or "").strip()
                 # `define X = x` 只警告并定义 X，赋值符后的文本不是名称。
-                for op in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
-                    found = name_text.find(op)
+                define_op = "="
+                for candidate in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
+                    found = name_text.find(candidate)
                     if found >= 0:
                         name_text = name_text[:found].rstrip()
+                        define_op = candidate
                         break
                 define_name = _make_expand_refs(name_text, variables, simple)
                 if (not define_name.strip()
@@ -2746,13 +2792,11 @@ def _make_text_with_includes(text: str, repo: Path,
                 # define 定义的是递归变量，体里的换行原样保留。带
                 # override 的 define 会锁定变量，之后普通 define/赋值
                 # 不能覆盖它；普通 define 也不能覆盖已有的 override 变量。
-                define_override = "override" in body[:body.find("define")].split()
-                if define_name and (
-                        define_name not in overrides or define_override):
-                    variables[define_name] = "\n".join(body_lines)
-                    simple[define_name] = False
-                    if define_override:
-                        overrides.add(define_name)
+                define_override = (
+                    "override" in body[:body.find("define")].split())
+                _make_apply_define(
+                    define_name, define_op, "\n".join(body_lines),
+                    variables, simple, overrides, define_override)
                 # 保留 define 块交给第二遍展开；变量名含 ? 等特殊字符
                 # 时改用可被 _MAKE_VAR_REF 识别的别名，并把引用改写过去。
                 target_name = define_name
@@ -2766,8 +2810,12 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 保留真正的多行值（而不是压成占位赋值），第二遍展开
                 # 目标头时才能让 firstword/lastword/strip 等函数看到与
                 # make 相同的空白和换行。
+                # 赋值运算符必须原样保留给第二遍：`define A ?=` 与
+                # `define A` 在变量已定义时结果不同，丢掉 ?= 会让第二遍
+                # 无条件覆盖，重新引入误报。
+                op_suffix = "" if define_op == "=" else " " + define_op
                 out.append(("override " if define_override else "")
-                           + f"define {target_name}\n")
+                           + f"define {target_name}{op_suffix}\n")
                 for body_line in body_lines:
                     out.append(body_line + "\n")
                 out.append("endef\n")
