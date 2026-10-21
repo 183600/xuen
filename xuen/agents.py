@@ -2062,58 +2062,85 @@ class ShellAgent:
                 except Exception:
                     pass
 
-        t_out = threading.Thread(target=pump, args=(proc.stdout, out, self.on_output), daemon=True)
+        t_out: Optional[threading.Thread] = None
         # stderr 不回读、仅回调：丢弃列表避免长会话无界内存增长
-        t_err = threading.Thread(target=pump, args=(proc.stderr, None, self.on_stderr), daemon=True)
-        t_out.start()
-        t_err.start()
-
-        def _on_timeout() -> None:
-            if proc.poll() is not None:
-                return  # 进程已正常退出，避免竞态误报超时/误杀
-            kill_process_tree(proc)
-            # 复查回收结果：kill 送达前进程可能已自然退出（退出码 >= 0），
-            # 此时不算超时；主线程在 timer.join() 之后才读取 killed，
-            # 因此这里的置位/不置位对主线程可见且无竞态。
-            # 注意：该「自然退出」判定仅在 POSIX 下成立 —— POSIX 下被
-            # SIGKILL 终止的进程退出码为负（-9），而 Windows 上 taskkill
-            # 杀掉的进程退出码是正数（通常 1），若不做区分会把 Windows 上
-            # 的真实超时误报成「异常退出」
-            try:
-                rc = proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                # kill 未能终结进程（kill_process_tree 内部吞掉了失败）：
-                # 不能无限阻塞，否则主线程 timer.join() 会把整个运行卡死
-                rc = None
-            if rc is not None and rc >= 0 and (os.name != "nt" or rc == 0):
-                # Windows 补充：taskkill 杀掉的进程退出码为正（通常 1），无法
-                # 与自然失败（rc=1）区分；但 rc=0（干净成功）几乎不可能来自
-                # taskkill，此时输出已完整写出，应算自然退出而非超时，
-                # 否则完整结果会被当作超时截断内容丢弃
-                return
-            with self._kill_lock:
-                # 用户主动 kill（TUI 按 q / Ctrl+C）与超时定时器几乎同时到达时，
-                # 进程是被用户请求杀掉的，不能误报成超时
-                if self._user_killed:
-                    return
-            killed["flag"] = True
-
-        timer = threading.Timer(self.timeout, _on_timeout)
-        timer.daemon = True
-        timer.start()
+        t_err: Optional[threading.Thread] = None
+        timer: Optional[threading.Timer] = None
+        reaped = False
         try:
-            proc.wait()
-        except KeyboardInterrupt:
-            kill_process_tree(proc)
-            raise
+            t_out = threading.Thread(target=pump, args=(proc.stdout, out, self.on_output), daemon=True)
+            t_err = threading.Thread(target=pump, args=(proc.stderr, None, self.on_stderr), daemon=True)
+            t_out.start()
+            t_err.start()
+
+            def _on_timeout() -> None:
+                if proc.poll() is not None:
+                    return  # 进程已正常退出，避免竞态误报超时/误杀
+                kill_process_tree(proc)
+                # 复查回收结果：kill 送达前进程可能已自然退出（退出码 >= 0），
+                # 此时不算超时；主线程在 timer.join() 之后才读取 killed，
+                # 因此这里的置位/不置位对主线程可见且无竞态。
+                # 注意：该「自然退出」判定仅在 POSIX 下成立 —— POSIX 下被
+                # SIGKILL 终止的进程退出码为负（-9），而 Windows 上 taskkill
+                # 杀掉的进程退出码是正数（通常 1），若不做区分会把 Windows 上
+                # 的真实超时误报成「异常退出」
+                try:
+                    rc = proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    # kill 未能终结进程（kill_process_tree 内部吞掉了失败）：
+                    # 不能无限阻塞，否则主线程 timer.join() 会把整个运行卡死
+                    rc = None
+                if rc is not None and rc >= 0 and (os.name != "nt" or rc == 0):
+                    # Windows 补充：taskkill 杀掉的进程退出码为正（通常 1），无法
+                    # 与自然失败（rc=1）区分；但 rc=0（干净成功）几乎不可能来自
+                    # taskkill，此时输出已完整写出，应算自然退出而非超时，
+                    # 否则完整结果会被当作超时截断内容丢弃
+                    return
+                with self._kill_lock:
+                    # 用户主动 kill（TUI 按 q / Ctrl+C）与超时定时器几乎同时到达时，
+                    # 进程是被用户请求杀掉的，不能误报成超时
+                    if self._user_killed:
+                        return
+                killed["flag"] = True
+
+            timer = threading.Timer(self.timeout, _on_timeout)
+            timer.daemon = True
+            timer.start()
+            try:
+                proc.wait()
+                reaped = True
+            except KeyboardInterrupt:
+                kill_process_tree(proc)
+                raise
         finally:
-            timer.cancel()
-            # 超时回调可能已开始执行（正在 kill/复查退出码）：
-            # 必须等它执行完，否则主线程读到的 killed 标志可能不是最终值，
-            # 导致「真超时被报成异常退出」或反之
-            timer.join()
-            t_out.join(timeout=5)
-            t_err.join(timeout=5)
+            # 线程创建 / 启动 / 定时器设置期间也可能被 Ctrl+C 或
+            # SystemExit 打断（这些步骤都在 proc.wait 的 try 之外）。
+            # 此时子进程已在运行、提示词文件也已落盘：必须先终止并
+            # 回收进程，否则 start_new_session 的子进程会成为孤儿。
+            if timer is not None:
+                timer.cancel()
+            if not reaped:
+                try:
+                    if proc.poll() is None:
+                        kill_process_tree(proc)
+                    proc.wait(timeout=5)
+                except (subprocess.TimeoutExpired, OSError, ValueError):
+                    pass
+            if timer is not None:
+                # 超时回调可能已开始执行（正在 kill/复查退出码）：
+                # 必须等它执行完，否则主线程读到的 killed 标志可能不是最终值，
+                # 导致「真超时被报成异常退出」或反之。Timer 可能尚未成功启动
+                # （启动瞬间被中断），此时 join 会抛 RuntimeError，忽略即可。
+                try:
+                    timer.join()
+                except RuntimeError:
+                    pass
+            for thread in (t_out, t_err):
+                if thread is not None:
+                    try:
+                        thread.join(timeout=5)
+                    except RuntimeError:
+                        pass
             with self._kill_lock:
                 self._proc = None
             # 清理本次的提示词文件（子进程已退出，不再需要；

@@ -266,6 +266,61 @@ def test_keyboard_interrupt_during_popen_cleans_prompt_file(tmp_path,
     assert [p.name for p in tmp_path.iterdir()] == []
 
 
+def test_keyboard_interrupt_during_timer_setup_kills_child(tmp_path,
+                                                           monkeypatch):
+    """定时器创建阶段被 Ctrl+C 打断时不能留下孤儿进程与提示词文件。
+
+    回归：Popen 成功后的线程/定时器启动都在 proc.wait 的 try 之外，
+    Timer 构造抛 KeyboardInterrupt 会直接穿出 run()：子进程已在运行、
+    提示词文件也已落盘，却既不回收进程也不清理文件。
+    """
+    import os
+    import signal
+    import threading
+    import types
+    from xuen import agents
+    from xuen.agents import ShellAgent
+
+    if not _posix_shell_available():
+        return
+    procs = []
+    real_popen = agents.subprocess.Popen
+
+    def capture(*args, **kwargs):
+        proc = real_popen(*args, **kwargs)
+        procs.append(proc)
+        return proc
+
+    class BoomTimer:
+        def __init__(self, *args, **kwargs):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(agents.subprocess, "Popen", capture)
+    monkeypatch.setattr(agents, "threading", types.SimpleNamespace(
+        Thread=threading.Thread, Timer=BoomTimer, Lock=threading.Lock))
+    agent = ShellAgent('sleep 30; : "$prompt_file"', tmp_path, timeout=60)
+    try:
+        try:
+            agent.run("x")
+        except KeyboardInterrupt:
+            pass
+        else:
+            raise AssertionError("KeyboardInterrupt 应向上传播")
+    finally:
+        for proc in procs:
+            if proc.poll() is None:
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except OSError:
+                    pass
+                proc.wait(timeout=5)
+    assert len(procs) == 1
+    assert procs[0].returncode is not None
+    assert agent._proc is None
+    assert agent._prompt_file is None
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_prompt_too_long_detected_on_real_ebig(tmp_path):
     """真实超过 Linux 单参数上限（MAX_ARG_STRLEN）时必须被识别。"""
     import sys
