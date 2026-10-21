@@ -415,6 +415,27 @@ def test_clip_state_sections_tiny_budget_never_exceeds():
         assert omitted == 200 - kept, budget
 
 
+def test_clip_state_sections_redistributes_unused_budget():
+    """一区内容不足时，未用完的份额要让给另一区，不能固定锁死在 40/60。"""
+    from xuen.runner import _clip_state_sections
+
+    idea, artifact = "i" * 100, "a" * 10
+    for budget in (20, 50, 100):
+        clipped_idea, clipped_artifact, omitted = _clip_state_sections(
+            idea, artifact, budget)
+        kept = clipped_idea.count("i") + clipped_artifact.count("a")
+        assert kept == budget, budget
+        assert omitted == 110 - budget, budget
+
+    idea, artifact = "i" * 10, "a" * 100
+    for budget in (20, 50, 100):
+        clipped_idea, clipped_artifact, omitted = _clip_state_sections(
+            idea, artifact, budget)
+        kept = clipped_idea.count("i") + clipped_artifact.count("a")
+        assert kept == budget, budget
+        assert omitted == 110 - budget, budget
+
+
 def test_shell_prompt_budget_zero_keeps_everything(tmp_path):
     from xuen import state
     from xuen.config import Config

@@ -424,6 +424,15 @@ def _clip_state_sections(idea: str, artifact: str, budget: int) -> tuple:
         artifact_budget = min(len(artifact), budget - idea_budget)
     if artifact_budget < len(artifact):
         idea_budget = min(len(idea), budget - artifact_budget)
+    # 某一区内容不足、用不完自己的份额时，把剩余预算让给另一区（产物区
+    # 很短而想法区很长时，想法区不应被固定锁死在 40%）。
+    slack = budget - idea_budget - artifact_budget
+    if slack > 0 and artifact_budget < len(artifact):
+        extra = min(slack, len(artifact) - artifact_budget)
+        artifact_budget += extra
+        slack -= extra
+    if slack > 0 and idea_budget < len(idea):
+        idea_budget += min(slack, len(idea) - idea_budget)
     clipped_idea, idea_omitted = _clip_section(idea, idea_budget)
     clipped_artifact, artifact_omitted = _clip_section(
         artifact, artifact_budget)
