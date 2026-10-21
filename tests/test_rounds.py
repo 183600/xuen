@@ -916,6 +916,16 @@ def test_detect_test_suite_make_wildcard_include(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_wildcard_function_no_match_is_empty(tmp_path):
+    """`$(wildcard missing.mk)` 无匹配时展开为空，不能当字面文件名 include。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(wildcard missing.mk)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_wildcard_include_no_match(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

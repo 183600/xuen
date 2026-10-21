@@ -548,13 +548,22 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     if name == "wildcard":
         found = []
         for token in re.findall(r"(?:\\.|[^\s])+", args):
-            path = Path(re.sub(r"\\(.)", r"\1", token))
-            if not path.is_absolute():
-                path = repo / path
+            raw = re.sub(r"\\(.)", r"\1", token)
+            path = Path(raw)
+            absolute = path.is_absolute()
+            pattern = str(path if absolute else repo / path)
             try:
-                found.extend(sorted(glob.glob(str(path))))
+                matches = sorted(glob.glob(pattern))
             except (OSError, re.error):
-                found.append(str(path))
+                matches = []
+            for match in matches:
+                if absolute:
+                    found.append(match)
+                else:
+                    rel = os.path.relpath(match, str(repo))
+                    if raw.endswith("/") and not rel.endswith("/"):
+                        rel += "/"
+                    found.append(rel)
         return " ".join(found)
     if name in ("addprefix", "addsuffix"):
         # make 对少于两个参数（缺少逗号）直接报错并停止解析：不能当成
