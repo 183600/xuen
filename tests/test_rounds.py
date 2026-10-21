@@ -824,6 +824,9 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "test: %.o:: %.c",
     "test:: %.o:: %.c",
     "test: foo%bar\\ baz: dep",
+    # unexport 不是 target-specific 变量修饰符：make 把它当依赖名，
+    # `test` 目标本身仍然存在（缺依赖会失败，但不是「没有套件」）。
+    "test: unexport X=1",
     # GNU make 4.3 grouped target：& 与冒号之间不需要空白
     "test&:",
     "test&::",

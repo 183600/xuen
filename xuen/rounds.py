@@ -313,7 +313,7 @@ _MAKE_TEST_TARGET = re.compile(
     # 非法 target pattern test: a::b）交给 _make_rule_header_is_valid
     # 按规则头逐行判定：只看正则会把合法的静态模式双冒号规则漏掉。
     r"(?![ \t]+:)"
-    r"(?![ \t]*(?:(?:export|unexport|private|override)[ \t]+)*"
+    r"(?![ \t]*(?:(?:export|private|override)[ \t]+)*"
     r"[A-Za-z0-9_.-]+[ \t]*(?:[+?]?=|:*=|!=))"
 )
 
@@ -358,7 +358,7 @@ def _make_unescaped_colon(text: str, start: int) -> int:
 
 
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
-    r"(?:(?:export|unexport|private|override)[ \t]+)*"
+    r"(?:(?:export|private|override)[ \t]+)*"
     r"(?:[A-Za-z0-9_.\\-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
 )
 
