@@ -815,6 +815,26 @@ def test_detect_test_suite_make_variable_include(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_basename_dotfile(tmp_path):
+    """make 的 basename 对 `.tests` 返回空串，不能按 splitext 保留原词。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(basename .tests).mk\n", encoding="utf-8")
+    (tmp_path / ".tests.mk").write_text("test:\n\t@true\n",
+                                        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_suffix_dotfile(tmp_path):
+    """make 的 suffix 对 `.tests` 返回 `.tests`，缺失的必需 include 要报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(suffix .tests)\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_variable_include_missing(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

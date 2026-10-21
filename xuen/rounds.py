@@ -546,14 +546,28 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     if name == "dir":
         result = []
         for word in words:
-            directory = os.path.dirname(word)
-            result.append((directory + "/") if directory else "./")
+            slash = word.rfind("/")
+            result.append(word[:slash + 1] if slash >= 0 else "./")
         return " ".join(result)
     if name == "notdir":
-        return " ".join(os.path.basename(word) for word in words)
-    if name == "basename":
-        return " ".join(os.path.splitext(word)[0] for word in words)
-    return " ".join(os.path.splitext(word)[1] for word in words)
+        result = []
+        for word in words:
+            slash = word.rfind("/")
+            result.append(word[slash + 1:] if slash >= 0 else word)
+        return " ".join(result)
+    # make 的 basename/suffix 只看最后一个 / 之后的最后一个点：
+    # `foo/.bar` 的 basename 是 `foo/`、suffix 是 `.bar`；`.hidden`
+    # 的 basename 为空、suffix 为 `.hidden`；目录名里的点不算后缀。
+    parts = []
+    for word in words:
+        slash = word.rfind("/")
+        dot = word.rfind(".")
+        if dot > slash:
+            parts.append((word[:dot], word[dot:]))
+        else:
+            parts.append((word, ""))
+    index = 0 if name == "basename" else 1
+    return " ".join(part[index] for part in parts)
 
 
 def _make_expand_include_functions(text: str, repo: Path) -> str:
@@ -823,14 +837,14 @@ def _make_text_with_includes(text: str, repo: Path,
         # 否则未生效分支里的 include missing.mk 会误触发必需 include 错误，
         # 生效分支里的 test: 又会把 define 体误判成测试目标。
         if _MAKE_DEFINE_LINE.match(body):
-            depth = 1
+            define_depth = 1
             i += 1
-            while i < len(lines) and depth:
+            while i < len(lines) and define_depth:
                 inner = lines[i].rstrip("\r\n")
                 if _MAKE_DEFINE_LINE.match(inner):
-                    depth += 1
+                    define_depth += 1
                 elif _MAKE_ENDEF_LINE.match(inner):
-                    depth -= 1
+                    define_depth -= 1
                 i += 1
             continue
         conditional = _MAKE_CONDITIONAL_LINE.match(body)
