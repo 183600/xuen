@@ -539,7 +539,7 @@ def _make_include_names(args: str) -> List[str]:
 
 _MAKE_INCLUDE_FUNCTIONS = frozenset({
     "wildcard", "dir", "notdir", "addprefix", "addsuffix", "strip",
-    "basename", "suffix",
+    "basename", "suffix", "firstword", "lastword", "abspath", "realpath",
 })
 
 
@@ -578,6 +578,22 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     if name == "strip":
         return " ".join(args.split())
     words = args.split()
+    if name == "firstword":
+        return words[0] if words else ""
+    if name == "lastword":
+        return words[-1] if words else ""
+    if name in ("abspath", "realpath"):
+        result = []
+        for word in words:
+            path = word if os.path.isabs(word) else os.path.join(str(repo),
+                                                                word)
+            path = os.path.abspath(path)
+            if name == "realpath":
+                path = os.path.realpath(path)
+                if not os.path.exists(path):
+                    continue
+            result.append(path)
+        return " ".join(result)
     if name == "dir":
         result = []
         for word in words:
@@ -1097,7 +1113,10 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             text = makefile.read_text(encoding="utf-8-sig",
                                       errors="replace")
             text = _make_text_with_includes(
-                text, repo, {makefile.resolve()}, 0)
+                text, repo, {makefile.resolve()}, 0,
+                {"CURDIR": str(repo.resolve()),
+                 "MAKEFILE_LIST": makefile.name},
+                {"CURDIR": True, "MAKEFILE_LIST": True})
             text = _make_expand_simple_vars(text)
             if _make_defines_test_target(text):
                 return ["make", "test"]

@@ -802,6 +802,10 @@ def test_detect_test_suite_make_included_file(tmp_path, directive):
     "include $(addprefix mk/, $(notdir mk/tests.mk))\n",
     "include $(dir $(wildcard mk/tests.mk))tests.mk\n",
     "include $(strip $(wildcard tests.mk))\n",
+    "include $(dir $(lastword $(MAKEFILE_LIST)))tests.mk\n",
+    "include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tests.mk\n",
+    "include $(lastword Makefile tests.mk)\n",
+    "include $(realpath tests.mk)\n",
 ])
 def test_detect_test_suite_make_variable_include(tmp_path, makefile):
     """include 的文件名由简单变量展开时也要按 make 语义读取。"""
