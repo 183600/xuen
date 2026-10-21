@@ -645,6 +645,69 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
     return False
 
 
+_MAKE_EMPTY_TARGET_ASSIGNMENT = re.compile(r"^(?:::=|::=|:=|[+?]?=|!=)")
+
+
+_MAKE_NON_RULE_DIRECTIVE = re.compile(
+    r"^[ \t]*(?:include|sinclude|-include|vpath|undefine|export|unexport|"
+    r"override|private|define|endef)(?:[ \t]|$)")
+
+
+def _make_has_invalid_extra_rule_colon(text: str) -> bool:
+    """任一规则头的第二个未转义冒号是否让 make 读取失败。
+
+    `foo: a:b`、`foo: :x`、`foo::: dep` 等不是合法规则，GNU make 会在
+    读取阶段报 target pattern contains no '%' / missing target pattern。
+    即使别处定义了 test，整份 Makefile 也不会执行。探测原先只校验命中
+    test 的规则头，其他目标的非法冒号结构会让候选被误判成测试套件。
+    """
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body or body.startswith("\t"):
+            continue
+        stripped = body.lstrip(" \t")
+        if not stripped or stripped.startswith("#"):
+            continue
+        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
+            continue
+        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
+            continue
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0:
+            continue
+        start = colon + 1
+        if start < len(body) and body[start] == ":":
+            start += 1
+        rest = body[start:].lstrip(" \t")
+        if _MAKE_EMPTY_TARGET_ASSIGNMENT.match(rest):
+            return True
+        if _MAKE_NAMED_TARGET_ASSIGNMENT.match(rest) is not None:
+            continue
+        rest_end = start + _make_rule_header_rest_end(body[start:])
+        second = _make_unescaped_colon(body[:rest_end], start)
+        if second < 0:
+            continue
+        target_pattern = body[start:second].strip(" \t")
+        if not target_pattern:
+            return True
+        i = 0
+        has_percent = False
+        while i < len(target_pattern):
+            ch = target_pattern[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch.isspace():
+                return True
+            if ch == "%":
+                has_percent = True
+            i += 1
+        if not has_percent and "$" not in target_pattern:
+            return True
+    return False
+
+
 def _make_has_recipe_before_first_target(text: str) -> bool:
     """在第一个真正的目标规则之前出现 recipe 行时，make 读取即失败。
 
@@ -682,6 +745,8 @@ def _make_defines_test_target(text: str,
                               repo: Optional[Path] = None) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
     if _make_has_mixed_target_colon_style(text):
+        return False
+    if _make_has_invalid_extra_rule_colon(text):
         return False
     if _make_has_recipe_before_first_target(text):
         return False

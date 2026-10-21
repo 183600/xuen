@@ -2547,6 +2547,58 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
 
 
 @pytest.mark.parametrize("line", [
+    "foo: a:b",
+    "foo bar: a:b",
+    "foo &: a:b",
+    "foo: a:b ; @true",
+    "foo: :x",
+    "foo::: dep",
+    "foo:: a:b",
+    "foo: = x",
+    "foo:: = x",
+    "foo: +=x",
+    "foo: !=x",
+    "foo: =%.o: %.c",
+])
+def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
+    """其他目标的非法规则头同样会让 make 读取失败，不能只看 test 行。
+
+    回归：`foo: a:b` 等规则的第二个冒号不是合法静态模式规则，make 在
+    读取阶段报 target pattern contains no '%'；`foo: = x` 报 empty
+    variable name。即使另有合法 test 规则，整份 Makefile 也不会执行，
+    探测必须返回「没有可运行套件」。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "foo: %.o: %.c",
+    "foo: a\\:b",
+    "foo: X:=1",
+    "foo: export X::=1",
+    "foo: +X=1",
+    "export foo:bar",
+    "vpath %.c src:x",
+])
+def test_detect_test_suite_make_valid_other_rule_keeps_suite(tmp_path, line):
+    """其他目标的合法规则/指令不能把可运行 test 套件误拒。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "test:= x",
     "test ::= x",
     "test: X=1",
