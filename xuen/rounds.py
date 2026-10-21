@@ -2099,9 +2099,6 @@ def _make_find_include_function(text: str, pos: int):
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "\\":
-                k += 2
-                continue
             if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
@@ -2212,9 +2209,6 @@ def _make_find_function_call(text: str, pos: int, name: str):
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "\\":
-                k += 2
-                continue
             if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
@@ -2551,9 +2545,6 @@ def _make_standalone_eval_args(body: str) -> Optional[List[str]]:
         k = i + 2
         while k < n:
             ch = body[k]
-            if ch == "\\":
-                k += 2
-                continue
             if ch == "$" and k + 1 < n and body[k + 1] in "({":
                 stack.append(")" if body[k + 1] == "(" else "}")
                 k += 2
@@ -2799,9 +2790,6 @@ def _make_expand_computed_refs(text: str,
         k = i + 2
         while k < n:
             ch = text[k]
-            if ch == "\\":
-                k += 2
-                continue
             if ch == "$" and k + 1 < n and text[k + 1] in "({":
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
@@ -3805,9 +3793,6 @@ def _make_find_condition_function(text: str, pos: int):
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "\\":
-                k += 2
-                continue
             if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2

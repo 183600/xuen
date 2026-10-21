@@ -1976,6 +1976,27 @@ def test_detect_test_suite_make_condition_value_and_local_scope(
 
 
 @pytest.mark.parametrize("makefile", [
+    # 反斜杠不转义变量引用的右括号：变量名是 `X\`，引用在 `)` 处结束。
+    "X\\ = test\n$(X\\):\n\t@true\n",
+    "$(value X\\)\nX=test\n$(X):\n\t@true\n",
+    "${value X\\}\nX=test\n$(X):\n\t@true\n",
+])
+def test_detect_test_suite_make_variable_ref_backslash_close(
+        tmp_path, makefile):
+    r"""变量引用里的反斜杠是名字的一部分，不会吞掉右括号。
+
+    回归：扫描器把 `\)` 当转义整体跳过，导致引用被误判为未闭合，
+    后面合法定义的 test 目标被当成没有套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
     "X = foo\nifeq ($(value X),test)\ntest:\n\t@true\nendif\n",
     "X = y\n$(foreach v,test,$(if $(v),x,y)):\n\t@true\n",
     "f = $(if $(1),x,y)\n$(call f,test):\n\t@true\n",
