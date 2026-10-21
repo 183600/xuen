@@ -2994,6 +2994,18 @@ def test_detect_test_suite_make_value_target_conflict_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_undefined_value_keeps_suite(tmp_path):
+    """未定义变量的 `$(value X)` 展开为空，后面的目标列表不能凭空报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n$(value X): a:b\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_value_target_detected(tmp_path):
     """`$(value X)` 展开出的 test 目标必须探测到套件。"""
     if not shutil.which("make"):

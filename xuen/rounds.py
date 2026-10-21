@@ -2114,12 +2114,17 @@ def _make_expand_value(text: str,
         raw_name = parts[0].lstrip(" \t")
         name = _make_expand_foreach_part(
             raw_name, variables, simple, None, depth + 1)
-        if "$" in name or name not in variables:
-            # 未知变量/含引用的名字无法静态确定；shell 赋值也不猜。
+        if "$" in name:
+            replacement = None
+        elif name not in variables:
+            # make 里未定义变量的 value 是空串。
+            replacement = ""
+        elif variables[name] is None:
+            # shell 赋值的值未知，不能猜。
             replacement = None
         else:
             replacement = variables[name]
-            if replacement is not None and "$" in replacement:
+            if "$" in replacement:
                 replacement = None
         if replacement is None:
             pos = end
