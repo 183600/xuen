@@ -924,6 +924,14 @@ _MAKE_INCLUDE_FUNCTIONS = frozenset({
     "filter", "filter-out", "subst", "patsubst", "word", "wordlist",
     "words", "sort", "findstring", "join",
 })
+# 这些函数无法静态求值：参数里出现未定义变量时保留原样，不能把函数
+# 名当成变量名展开为空（`$(shell echo test)` 可能真的产生 test 目标）。
+_MAKE_UNSUPPORTED_FUNCTIONS = frozenset({
+    "shell", "eval", "call", "foreach", "if", "or", "and", "intcmp",
+    "let", "file", "value", "origin", "flavor", "info", "warning",
+    "error", "guile",
+})
+_MAKE_FUNCTIONS = _MAKE_INCLUDE_FUNCTIONS | _MAKE_UNSUPPORTED_FUNCTIONS
 
 
 def _make_pattern_unescape(text: str) -> str:
@@ -1415,6 +1423,100 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
     return _MAKE_VAR_REF.sub(repl, text)
 
 
+def _make_expand_computed_refs(text: str,
+                                variables: Dict[str, Optional[str]],
+                                simple: Dict[str, bool],
+                                depth: int = 0) -> str:
+    """展开变量名本身由变量展开得到的引用（`$($(A))`）。
+
+    make 先展开 `$(...)` 里的内容，再把结果当变量名查表；未定义时展开为
+    空。`_MAKE_VAR_REF` 只认不含空白/括号的简单变量名，无法匹配
+    `$($(A))`，若不补这一步，`A = B; B = test` 这种间接目标会漏探测，
+    而 `$($(A) test foo)`（变量名为 "test foo ..."，未定义）又会被当成
+    字面目标误探测。
+    """
+    if depth > 20 or "$" not in text:
+        return text
+    out: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text.startswith("$$", i):
+            out.append("$$")
+            i += 2
+            continue
+        if text[i] != "$" or i + 1 >= n or text[i + 1] not in "({":
+            out.append(text[i])
+            i += 1
+            continue
+        opener = text[i + 1]
+        closer = ")" if opener == "(" else "}"
+        stack = [closer]
+        k = i + 2
+        while k < n:
+            ch = text[k]
+            if ch == "\\":
+                k += 2
+                continue
+            if ch == "$" and k + 1 < n and text[k + 1] in "({":
+                stack.append(")" if text[k + 1] == "(" else "}")
+                k += 2
+                continue
+            if ch == stack[-1]:
+                stack.pop()
+                if not stack:
+                    break
+            k += 1
+        if stack:
+            # 未闭合的引用留给上层按 make 解析错误处理。
+            out.append(text[i:])
+            break
+        content = text[i + 2:k]
+        inner = _make_expand_computed_refs(content, variables, simple,
+                                           depth + 1)
+        try:
+            inner = _make_expand_refs(inner, variables, simple)
+        except _MakeRequiredIncludeError:
+            out.append(text[i:k + 1])
+            i = k + 1
+            continue
+        if "$" in inner:
+            # 还有 shell/未知变量，无法确定变量名；保留原样。
+            out.append(text[i:k + 1])
+            i = k + 1
+            continue
+        function = re.match(r"([A-Za-z0-9_-]+)[ \t]", inner.lstrip(" \t"))
+        if function is not None and function.group(1) in _MAKE_FUNCTIONS:
+            out.append(text[i:k + 1])
+            i = k + 1
+            continue
+        if ":" in inner:
+            # 替换引用等语法不能当成普通变量名；留给已有逻辑处理。
+            out.append(text[i:k + 1])
+            i = k + 1
+            continue
+        if inner not in variables:
+            # 未定义的变量名按 make 语义展开为空。
+            i = k + 1
+            continue
+        value = variables[inner]
+        if value is None:
+            # shell 赋值等未知值：保留原样，无法静态求值。
+            out.append(text[i:k + 1])
+        else:
+            if not simple.get(inner):
+                try:
+                    value = _make_expand_refs(value, variables, simple)
+                except _MakeRequiredIncludeError:
+                    out.append(text[i:k + 1])
+                    i = k + 1
+                    continue
+            out.append(_make_expand_computed_refs(
+                value, variables, simple, depth + 1))
+        i = k + 1
+    return "".join(out)
+
+
 def _make_apply_assignment(match: re.Match,
                            variables: Dict[str, Optional[str]],
                            simple: Dict[str, bool]) -> None:
@@ -1661,6 +1763,10 @@ def _make_expand_simple_vars(text: str,
         expanded = _make_expand_refs(expand_input, variables, simple)
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
+        # 动态变量名 `$($(A))` 里层展开后外层才变成 `$(B)`；函数展开也
+        # 可能暴露新的变量引用，所以再跑一遍简单引用展开。
+        expanded = _make_expand_refs(expanded, variables, simple)
+        expanded = _make_expand_computed_refs(expanded, variables, simple)
         # make 在展开前判定 target-specific 赋值：原始行第一个变量名
         # token 展开为空、或其后不是运算符时，后面的 `X=1` 只是前置
         # 依赖。整行展开后不能把它误认成赋值；插入哨兵让下游赋值识别

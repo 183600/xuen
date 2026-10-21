@@ -1913,6 +1913,39 @@ def test_detect_test_suite_make_substitution_reference_include(tmp_path):
 
 
 @pytest.mark.parametrize("makefile", [
+    # 变量名本身由变量展开得到：内层先展开成 B，再用 B 的值查表。
+    "A = B\nB = test\n$($(A)):\n\t@true\n",
+    "A = B\nB = C\nC = test\n$($($(A))):\n\t@true\n",
+    # 变量名恰好与函数同名且后面没有空白时，make 按变量而不是函数处理。
+    "sort = test\n$(sort):\n\t@true\n",
+    "A = B\nB = test\nfoo $($(A)):\n\t@true\n",
+])
+def test_detect_test_suite_make_dynamic_target_variable(tmp_path, makefile):
+    """`$($(A))` 这类动态变量名要按 make 语义展开后再判断 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    # 展开后的变量名（含空格）未定义，整体是空目标而不是名为 test 的目标。
+    "A = test foo\n$($(A)):\n\t@true\n",
+    "A = test foo\n$($(A) test):\n\t@true\n",
+    "V = foo\n$($(addsuffix test,test) $(V)):\n\t@true\n",
+    # 函数名后有空白时是函数调用，空结果不定义 test。
+    "sort = test\n$(sort ):\n\t@true\n",
+])
+def test_detect_test_suite_make_dynamic_target_variable_negative(tmp_path,
+                                                                 makefile):
+    """动态变量名未定义 / 函数参数为空时不能把引用里的 test 字面量算目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "T = a.o\n$(T:%.c=test):\n\t@true\n",
     "T = foo bar\n$(T:baz=test):\n\t@true\n",
     "$(UNDEFINED:%.c=test):\n\t@true\n",
