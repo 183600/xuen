@@ -653,6 +653,35 @@ _MAKE_NON_RULE_DIRECTIVE = re.compile(
     r"override|private|define)(?:[ \t]|$)")
 
 
+def _make_has_grouped_target_without_recipe(text: str) -> bool:
+    """任一 grouped target 缺少 recipe 都会让 make 读取失败。
+
+    `foo&: dep` / `foo&:` 后面没有同行 `;` 或 tab recipe 时，make 报
+    `grouped targets must provide a recipe`；即使别处有合法 test 目标也
+    不会执行。原先只校验命中 test 的 grouped 目标，其他目标的同类错误
+    会被漏掉。裸 `&:`（目标列表为空或只有一个 `&`）是 make 接受的空规则，
+    不在此列。
+    """
+    pos = 0
+    for raw in text.splitlines(keepends=True):
+        body = raw.rstrip("\r\n")
+        if body and not body.startswith("\t"):
+            stripped = body.lstrip(" \t")
+            if (stripped and not stripped.startswith("#")
+                    and _MAKE_VAR_ASSIGNMENT.match(body) is None
+                    and _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is None
+                    and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+                colon = _make_unescaped_colon(body, 0)
+                targets = body[:colon].lstrip(" \t") if colon >= 0 else ""
+                if (colon > 0 and targets not in ("", "&")
+                        and body[colon - 1] == "&"):
+                    if not _make_grouped_target_has_recipe(
+                            text, body, colon, pos + len(body)):
+                        return True
+        pos += len(raw)
+    return False
+
+
 def _make_has_invalid_extra_rule_colon(text: str) -> bool:
     """任一规则头的第二个未转义冒号是否让 make 读取失败。
 
@@ -757,6 +786,8 @@ def _make_defines_test_target(text: str,
     if _make_has_mixed_target_colon_style(text):
         return False
     if _make_has_invalid_extra_rule_colon(text):
+        return False
+    if _make_has_grouped_target_without_recipe(text):
         return False
     if _make_has_recipe_before_first_target(text):
         return False

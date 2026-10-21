@@ -1346,6 +1346,11 @@ def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
 @pytest.mark.parametrize("makefile", [
     "test&:\n",
     "test&: dep\n",
+    # 其他目标的 grouped target 缺 recipe 同样让整份 Makefile 读取失败。
+    "foo&:\ntest:\n\t@true\n",
+    "foo&: dep\ntest:\n\t@true\n",
+    "foo &: dep\ntest:\n\t@true\n",
+    "foo&: \\\n\t@true\ntest:\n\t@true\n",
     "test:\ntest::\n\t@true\n",
     "test::\ntest:\n\t@true\n",
     # 冲突目标不是 test 本身时整个 Makefile 也会读取失败。
@@ -1507,7 +1512,9 @@ def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     for makefile in ("test&: ;\n", "test&:\n\t@true\n",
                      "test&: dep\n\t@true\n",
                      "test&:\n\t# shell comment\n",
-                     "test&:\n\t\n"):
+                     "test&:\n\t\n",
+                     "foo&:\n\t@true\ntest:\n\t@true\n",
+                     "foo &: ; @true\ntest:\n\t@true\n"):
         (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
         assert detect_test_suite(tmp_path) == ["make", "test"], makefile
 
