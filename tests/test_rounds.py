@@ -1688,6 +1688,8 @@ def test_detect_test_suite_make_else_if_chain_still_detected(tmp_path,
     "ifeq ($(if ,b,c),c)\ntest:\n\t@true\nendif\n",
     "ifeq ($(or ,b,c),b)\ntest:\n\t@true\nendif\n",
     "ifeq ($(and a,b),b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(and a,),)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(if ,$(word x,a),test),test)\ntest:\n\t@true\nendif\n",
     "ifeq ($(subst a,$(if a,b,c),a),b)\ntest:\n\t@true\nendif\n",
     "X = 1\nifdef $(strip X)\ntest:\n\t@true\nendif\n",
 ])
@@ -1709,6 +1711,11 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
     "ifeq ($(if a,b,c),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(or ,,),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(and a,),x)\ntest:\n\t@true\nendif\n",
+    # and 在遇到空参数时立即短路，纯空白展开结果则算非空。
+    "ifeq ($(and a,$(if x, ,y)),)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(if a,test ),test)\ntest:\n\t@true\nendif\n",
+    # if 只取前三个参数；多余的逗号属于 else 分支，目标不是 test。
+    "$(if ,b,test,c):\n\t@true\n",
 ])
 def test_detect_test_suite_make_condition_functions_negative(tmp_path,
                                                               makefile):
@@ -1725,6 +1732,8 @@ def test_detect_test_suite_make_condition_functions_negative(tmp_path,
     "$(and a,test):\n\t@true\n",
     "X = test\nifeq ($(or $(X) ,a),test)\ntest:\n\t@true\nendif\n",
     "X = test\nifeq ($(and a,$(X) ),test)\ntest:\n\t@true\nendif\n",
+    "X := $(strip $(or ,test))\n$(X):\n\t@true\n",
+    "$(if a,test,b,c):\n\t@true\n",
 ])
 def test_detect_test_suite_make_condition_functions_in_targets(
         tmp_path, makefile):

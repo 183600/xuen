@@ -2694,14 +2694,20 @@ def _make_expand_simple_vars(text: str,
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_refs(expand_input, variables, simple)
-        if repo is not None:
-            expanded = _make_expand_include_functions(expanded, repo)
-        # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make 语义
-        # 展开；否则本来能定义 test 目标的规则会漏检。展开后可能暴露
-        # 新的变量引用，再跑一遍简单引用展开。
-        expanded = _make_expand_condition_functions(
-            expanded, variables, simple, repo)
-        expanded = _make_expand_refs(expanded, variables, simple)
+        # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
+        # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
+        # 静态函数要交替展开到不动点：先条件后静态才能正确处理
+        # `$(strip $(or ,test))`，而条件参数里也可能嵌套静态函数。
+        for _ in range(20):
+            before = expanded
+            expanded = _make_expand_condition_functions(
+                expanded, variables, simple, repo)
+            expanded = _make_expand_refs(expanded, variables, simple)
+            if repo is not None:
+                expanded = _make_expand_include_functions(expanded, repo)
+            expanded = _make_expand_refs(expanded, variables, simple)
+            if expanded == before:
+                break
         expanded = _make_expand_computed_refs(expanded, variables, simple)
         # make 在展开前判定 target-specific 赋值：原始行第一个变量名
         # token 展开为空、或其后不是运算符时，后面的 `X=1` 只是前置
@@ -3007,11 +3013,45 @@ def _make_split_all_function_args(args: str) -> List[str]:
     return _make_split_function_args(args, 1000000)
 
 
+def _make_expand_condition_arg(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool], repo: Optional[Path],
+        depth: int) -> Optional[str]:
+    """展开条件函数的一个参数；仍有无法静态求值的引用时返回 None。"""
+    value = text
+    for _ in range(20):
+        before = value
+        value = _make_expand_refs(value, variables, simple)
+        # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
+        # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
+        # 的参数先在未判定分支时被展开，甚至把未生效分支的语法错误
+        # 提前暴露出来。
+        value = _make_expand_condition_functions(
+            value, variables, simple, repo, depth + 1)
+        value = _make_expand_refs(value, variables, simple)
+        if repo is not None:
+            try:
+                value = _make_expand_include_functions(value, repo)
+            except _MakeRequiredIncludeError:
+                return None
+        value = _make_expand_refs(value, variables, simple)
+        if value == before:
+            break
+    if "$" in value.replace("$$", ""):
+        return None
+    return value
+
+
 def _make_expand_condition_functions(
         text: str, variables: Dict[str, Optional[str]],
         simple: Dict[str, bool], repo: Optional[Path],
         depth: int = 0) -> str:
-    """展开条件里可静态求值的 `$(if ...)` / `$(or ...)` / `$(and ...)`。"""
+    """展开条件里可静态求值的 `$(if ...)` / `$(or ...)` / `$(and ...)`。
+
+    三个函数都短路：if 只展开生效分支，or 在第一个非空参数处停止，
+    and 在第一个空参数处停止。未生效分支里的 shell/eval 等无法静态
+    求值的调用不能连累整个表达式（make 本来也不会展开它们）。
+    """
     if depth > 20 or "$(" not in text and "${" not in text:
         return text
     pos = 0
@@ -3022,41 +3062,56 @@ def _make_expand_condition_functions(
         start, end, name, raw = call
         arity = 3 if name == "if" else 1000000
         parts = _make_split_function_args(raw, arity)
-        values: List[str] = []
-        unresolved = False
-        for part in parts:
-            value = _make_expand_refs(part, variables, simple)
-            if repo is not None:
-                try:
-                    value = _make_expand_include_functions(value, repo)
-                except _MakeRequiredIncludeError:
-                    unresolved = True
-                    break
-            value = _make_expand_condition_functions(
-                value, variables, simple, repo, depth + 1)
-            value = _make_expand_refs(value, variables, simple)
-            if "$" in value.replace("$$", ""):
-                unresolved = True
-                break
-            values.append(value)
-        if unresolved or not values:
+        if name == "if" and len(parts) < 2:
+            # make 对参数不足的 if 直接报错停止解析；保留原样交给上层。
             pos = end
             continue
         if name == "if":
-            if len(values) < 2:
+            # 条件与 or/and 的参数原文空白由 make 的参数解析去掉；展开
+            # 结果自身的空白属于值本身。then/else 连原文空白也保留。
+            cond = _make_expand_condition_arg(
+                parts[0].strip(" \t"), variables, simple, repo, depth)
+            if cond is None:
                 pos = end
                 continue
-            cond, then, otherwise = (values + ["", ""])[:3]
-            result = then if cond.strip() else otherwise
+            selected = parts[1] if cond else (
+                parts[2] if len(parts) > 2 else "")
+            result = _make_expand_condition_arg(
+                selected, variables, simple, repo, depth)
+            if result is None:
+                pos = end
+                continue
         elif name == "or":
-            # GNU make 的 or/and 会剥掉生效参数的空白；if 的 then/else
-            # 分支则原样保留（两者语义不同，不能统一 strip）。
-            result = next((value.strip() for value in values
-                           if value.strip()), "")
+            result = ""
+            unresolved = False
+            for part in parts:
+                value = _make_expand_condition_arg(
+                    part.strip(" \t"), variables, simple, repo, depth)
+                if value is None:
+                    unresolved = True
+                    break
+                if value:
+                    result = value
+                    break
+            if unresolved:
+                pos = end
+                continue
         else:  # and
             result = ""
-            if all(value.strip() for value in values) and values:
-                result = values[-1].strip()
+            unresolved = False
+            for part in parts:
+                value = _make_expand_condition_arg(
+                    part.strip(" \t"), variables, simple, repo, depth)
+                if value is None:
+                    unresolved = True
+                    break
+                if not value:
+                    result = ""
+                    break
+                result = value
+            if unresolved:
+                pos = end
+                continue
         text = text[:start] + result + text[end:]
         pos = start + len(result)
 
