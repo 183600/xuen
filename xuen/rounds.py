@@ -645,10 +645,45 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
     return False
 
 
+def _make_has_recipe_before_first_target(text: str) -> bool:
+    """在第一个真正的目标规则之前出现 recipe 行时，make 读取即失败。
+
+    `X=1` / target-specific 赋值 / export 等指令之后紧跟制表符开头的
+    recipe 行，GNU make 都会报 `recipe commences before first target`，
+    即使文件后面另有合法的 test 目标也不会执行。探测若只看 test 行，
+    会把这种 Makefile 当成可运行套件，随后 `make test` 失败并误伤候选。
+    """
+    seen_rule = False
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body:
+            continue
+        if body.startswith("\t"):
+            if not seen_rule:
+                return True
+            continue
+        stripped = body.lstrip(" \t")
+        if stripped.startswith("#"):
+            continue
+        # 传入的是展开后的文本：变量赋值行已被 _make_expand_simple_vars
+        # 替换成注释，因此这里仍带冒号的「赋值形」行其实往往是变量展开后
+        # 的目标列表（如 `$(T) foo=bar test:`，T 为空）——不能按变量赋值
+        # 跳过，否则会把随后的合法 recipe 误判成「首个目标前出现 recipe」。
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0:
+            continue
+        if _make_rule_is_target_specific(body, colon):
+            continue
+        seen_rule = True
+    return False
+
+
 def _make_defines_test_target(text: str,
                               repo: Optional[Path] = None) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
     if _make_has_mixed_target_colon_style(text):
+        return False
+    if _make_has_recipe_before_first_target(text):
         return False
     saw_single = False
     saw_double = False

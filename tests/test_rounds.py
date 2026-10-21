@@ -1351,6 +1351,12 @@ def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
     # 冲突目标不是 test 本身时整个 Makefile 也会读取失败。
     "test foo::\n\t@true\nfoo:\n",
     "test:\n\t@true\nother::\nother:\n",
+    # 第一个目标规则之前的 recipe 行会让 make 直接停止读取，即使后面
+    # 另有合法 test 目标也不会执行。
+    "\t@true\ntest:\n\t@true\n",
+    "X=1\n\t@true\ntest:\n\t@true\n",
+    "test: X=1\n\t@true\ntest:\n\t@true\n",
+    "# comment\n\n\t@true\ntest:\n\t@true\n",
 ])
 def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
     """grouped target 无 recipe / : 与 :: 混用会让 make 直接报错。"""
