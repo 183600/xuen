@@ -974,6 +974,17 @@ def test_detect_test_suite_make_more_include_functions(tmp_path, directive):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_join_function_include(tmp_path):
+    """include 路径里的 $(join ...) 要按 make 语义拼出实际文件名。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(join a,tests.mk)\n", encoding="utf-8")
+    (tmp_path / "atests.mk").write_text("test:\n\t@true\n",
+                                        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         tmp_path):
     """word/wordlist 的非法下标会让 make 在展开时报错，不能忽略。"""
@@ -1127,6 +1138,13 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
     assert expand("wordlist", "1,2,  a  b  c ", tmp_path) == "a  b"
     assert expand("wordlist", "2, ,a b", tmp_path) == ""
     assert expand("suffix", "foo.o a/b bar.c", tmp_path) == ".o .c"
+    assert expand("join", "a,tests.mk", tmp_path) == "atests.mk"
+    assert expand("join", "a b,c d", tmp_path) == "ac bd"
+    assert expand("join", "a b,c", tmp_path) == "ac b"
+    assert expand("join", ",a b", tmp_path) == "a b"
+    assert expand("join", "a b,", tmp_path) == "a b"
+    with pytest.raises(rounds._MakeRequiredIncludeError):
+        expand("join", "a", tmp_path)
 
 
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):

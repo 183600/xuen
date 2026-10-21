@@ -695,7 +695,7 @@ _MAKE_INCLUDE_FUNCTIONS = frozenset({
     "wildcard", "dir", "notdir", "addprefix", "addsuffix", "strip",
     "basename", "suffix", "firstword", "lastword", "abspath", "realpath",
     "filter", "filter-out", "subst", "patsubst", "word", "wordlist",
-    "words", "sort", "findstring",
+    "words", "sort", "findstring", "join",
 })
 
 
@@ -930,6 +930,22 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         return parts[0] if parts[0] in parts[1] else ""
     if name == "strip":
         return " ".join(args.split())
+    if name == "join":
+        if "," not in args:
+            raise _MakeRequiredIncludeError("join: missing argument")
+        left, right = args.split(",", 1)
+        left_words = left.split()
+        right_words = right.split()
+        out = []
+        for index in range(max(len(left_words), len(right_words))):
+            word = ((left_words[index] if index < len(left_words) else "")
+                    + (right_words[index]
+                       if index < len(right_words) else ""))
+            # 较短的列表缺少对应词时按空串拼接；两侧对应的词都为空
+            # （实际上只会出现在较短列表耗尽后）时 make 不输出空词。
+            if word:
+                out.append(word)
+        return " ".join(out)
     words = args.split()
     if name == "firstword":
         return words[0] if words else ""
