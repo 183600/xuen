@@ -2500,10 +2500,38 @@ def _make_expand_computed_refs(text: str,
     return "".join(out)
 
 
+def _make_expand_immediate_value(
+        value: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        repo: Optional[Path] = None) -> str:
+    """按 make 读取期语义展开 `:=`/`+=`/`!=` 的右值。
+
+    这些赋值会在读取时立即展开右值，静态函数的参数错误（如
+    `$(wordlist foo,,x)`）会让 make 直接停止解析；只展开变量引用会把
+    错误函数留到探测末尾，导致后面存在的 test 目标被误判成可运行套件。
+    """
+    for _ in range(20):
+        before = value
+        value = _make_expand_value(value, variables, simple)
+        value = _make_expand_foreach(value, variables, simple, repo)
+        value = _make_expand_condition_functions(
+            value, variables, simple, repo)
+        value = _make_expand_refs(value, variables, simple)
+        if repo is not None:
+            value = _make_expand_include_functions(value, repo)
+        value = _make_expand_computed_refs(value, variables, simple)
+        value = _make_resolve_single_char_refs(value, variables, simple)
+        value = _make_expand_refs(value, variables, simple)
+        if value == before:
+            break
+    return value
+
+
 def _make_apply_assignment(match: re.Match,
                            variables: Dict[str, Optional[str]],
                            simple: Dict[str, bool],
-                           overrides: Optional[set] = None) -> None:
+                           overrides: Optional[set] = None,
+                           repo: Optional[Path] = None) -> None:
     name, op, raw = match.groups()
     # `override` 标记的变量不会再被后续普通赋值/undefine 覆盖；只有另一条
     # 带 override 的赋值才能改它。make 在读取阶段就按这个优先级决定最终
@@ -2511,14 +2539,15 @@ def _make_apply_assignment(match: re.Match,
     # 展开成空，漏掉实际可运行的套件。
     prefix = match.group(0)[:match.start(1)]
     _make_apply_assignment_parts(name, op, raw, prefix,
-                                 variables, simple, overrides)
+                                 variables, simple, overrides, repo)
 
 
 def _make_apply_assignment_parts(
         name: str, op: str, raw: str, prefix: str,
         variables: Dict[str, Optional[str]],
         simple: Dict[str, bool],
-        overrides: Optional[set] = None) -> None:
+        overrides: Optional[set] = None,
+        repo: Optional[Path] = None) -> None:
     """按已展开的变量名/运算符更新变量表（动态变量名路径复用）。"""
     if overrides is None:
         overrides = set()
@@ -2535,6 +2564,9 @@ def _make_apply_assignment_parts(
     # 它会在 `$(T)-unit:` 里把目标拆成 test 与 -unit；rstrip 会漏掉 test。
     raw = _make_strip_value_comment(raw)
     if op == "!=":
+        # `!=` 先展开右值再交给 shell；静态函数的参数错误仍在读取期
+        # 直接终止 make，不能因为不保存 shell 结果就跳过展开。
+        _make_expand_immediate_value(raw, variables, simple, repo)
         variables[name] = None
         simple[name] = False
     elif op == "?=":
@@ -2547,9 +2579,8 @@ def _make_apply_assignment_parts(
         elif variables[name] is not None:
             value = raw
             if simple.get(name):
-                value = _make_expand_foreach(
-                    value, variables, simple)
-                value = _make_expand_refs(value, variables, simple)
+                value = _make_expand_immediate_value(
+                    value, variables, simple, repo)
             # make 只在旧值非空且追加值非空时插入一个分隔空格；两侧的
             # 尾随空白都属于变量值本身（`X += bar ` 的值是 `foo bar `），
             # strip() 会把它吃掉，进而让 ifeq 等条件判断出错。
@@ -2558,8 +2589,8 @@ def _make_apply_assignment_parts(
             elif value:
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
-        value = _make_expand_foreach(raw, variables, simple)
-        variables[name] = _make_expand_refs(value, variables, simple)
+        variables[name] = _make_expand_immediate_value(
+            raw, variables, simple, repo)
         simple[name] = True
     else:
         variables[name] = raw
@@ -2570,7 +2601,8 @@ def _make_apply_define(name: str, op: str, body: str,
                        variables: Dict[str, Optional[str]],
                        simple: Dict[str, bool],
                        overrides: Optional[set] = None,
-                       is_override: bool = False) -> None:
+                       is_override: bool = False,
+                       repo: Optional[Path] = None) -> None:
     """按 define 名称后的赋值运算符更新变量表。
 
     make 4.3 支持 `define X ?=` / `+=` / `:=` / `::=` / `!=` / `=`；
@@ -2589,6 +2621,7 @@ def _make_apply_define(name: str, op: str, body: str,
     if is_override:
         overrides.add(name)
     if op == "!=":
+        _make_expand_immediate_value(body, variables, simple, repo)
         variables[name] = None
         simple[name] = False
     elif op == "+=":
@@ -2598,16 +2631,15 @@ def _make_apply_define(name: str, op: str, body: str,
         elif variables[name] is not None:
             value = body
             if simple.get(name):
-                value = _make_expand_foreach(
-                    value, variables, simple)
-                value = _make_expand_refs(value, variables, simple)
+                value = _make_expand_immediate_value(
+                    value, variables, simple, repo)
             if not variables[name]:
                 variables[name] = value
             elif value:
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
-        value = _make_expand_foreach(body, variables, simple)
-        variables[name] = _make_expand_refs(value, variables, simple)
+        variables[name] = _make_expand_immediate_value(
+            body, variables, simple, repo)
         simple[name] = True
     else:
         variables[name] = body
@@ -2777,14 +2809,14 @@ def _make_scan_assignment(body: str,
             raw = body[j + len(op):]
             _make_apply_assignment_parts(
                 name, op, raw, body[:body.find(computed_name)],
-                variables, simple, overrides)
+                variables, simple, overrides, repo)
             return body
     if match is None:
         if _MAKE_EMPTY_VAR_ASSIGNMENT.match(_make_strip_comment(expanded)):
             # `$(UNDEFINED) = x` 展开后是空变量名，make 在读取阶段直接报错。
             raise _MakeRequiredIncludeError("empty variable name")
         return None
-    _make_apply_assignment(match, variables, simple, overrides)
+    _make_apply_assignment(match, variables, simple, overrides, repo)
     return expanded
 
 
@@ -2979,7 +3011,8 @@ def _make_expand_simple_vars(text: str,
                     body_lines.append(inner)
                 i += 1
             _make_apply_define(name, define_op, "\n".join(body_lines),
-                               variables, simple, overrides, define_override)
+                               variables, simple, overrides, define_override,
+                               repo)
             # define 块本身不定义目标，但 make 读取时会清空当前目标。
             out.append(_MAKE_CONTEXT_RESET + newline)
             continue
@@ -3718,7 +3751,7 @@ def _make_text_with_includes(text: str, repo: Path,
                     "override" in body[:body.find("define")].split())
                 _make_apply_define(
                     define_name, define_op, "\n".join(body_lines),
-                    variables, simple, overrides, define_override)
+                    variables, simple, overrides, define_override, repo)
                 # 保留 define 块交给第二遍展开；变量名含 ? 等特殊字符
                 # 时改用可被 _MAKE_VAR_REF 识别的别名，并把引用改写过去。
                 target_name = define_name

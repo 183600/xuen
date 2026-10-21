@@ -1067,6 +1067,50 @@ def test_detect_test_suite_make_function_missing_arg_not_a_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("assignment", [
+    "X := $(wordlist foo,,x)",
+    "X := $(word x,a b)",
+    "X := $(word 0,a b)",
+    "X := $(addprefix a)",
+    "X := $(filter a)",
+    "X := $(subst a,b)",
+    "X := ok\nX += $(wordlist foo,,x)",
+    "export X := $(wordlist foo,,x)",
+    "override X := $(wordlist foo,,x)",
+    "define X :=\n$(wordlist foo,,x)\nendef",
+    "X != $(wordlist foo,,x)",
+])
+def test_detect_test_suite_make_invalid_immediate_assignment_blocks_suite(
+        tmp_path, assignment):
+    """`:=`/`+=`/`!=` 右值读取期展开出错时 make 不会执行后面的 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        assignment + "\ntest:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("assignment", [
+    "X = $(wordlist foo,,x)",
+    "X += $(wordlist foo,,x)",
+    "X = ok\nX ?= $(wordlist foo,,x)",
+])
+def test_detect_test_suite_make_recursive_assignment_not_expanded(
+        tmp_path, assignment):
+    """递归赋值在使用前不会展开，右值里的错误函数不影响 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        assignment + "\ntest:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("directive,filename", [
     ("include foo\\*.mk\n", "foo*.mk"),
     ("include foo\\?.mk\n", "foo?.mk"),
