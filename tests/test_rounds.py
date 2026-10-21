@@ -2719,6 +2719,9 @@ def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     "$(or $@,test):\n\t@true\n",
     "$(if $@,,test):\n\t@true\n",
     "ifeq ($@,)\ntest:\n\t@true\nendif\n",
+    # 原文不是 recipe，展开后自动变量消失留下的 tab 只是目标列表空白。
+    "$<\ttest:\n\t@true\n",
+    "$<\tfoo test:\n\t@true\n",
 ])
 def test_detect_test_suite_make_automatic_variables_expand_empty(
         tmp_path, makefile):

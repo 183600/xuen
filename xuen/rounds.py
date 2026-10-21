@@ -3612,6 +3612,12 @@ def _make_expand_simple_vars(text: str,
             # before first target；用哨兵保留「这里有一行非空输入」，
             # 字面空行/纯空白行则不影响 recipe 归属。
             expanded = _MAKE_CONTEXT_RESET
+        if not body.startswith("\t") and expanded.startswith("\t"):
+            # recipe 行与否按原文首字符判定；`$<\ttest:` 这类原文不是
+            # recipe、展开后却以 tab 开头的行仍是规则头（tab 只是目标
+            # 列表里的空白）。保留 tab 会让下游按 recipe 跳过，漏掉
+            # 实际可执行的 test 目标。
+            expanded = " " + expanded.lstrip("\t")
         out.append(expanded + newline)
         i += 1
     return "".join(out)
