@@ -2703,6 +2703,23 @@ def test_detect_test_suite_make_nested_function_arguments(tmp_path, makefile,
     assert (detect_test_suite(tmp_path) is not None) is expected
 
 
+@pytest.mark.parametrize("makefile, expected", [
+    # 裸括号也参与函数引用的配对，其中的逗号不能当参数分隔符。
+    ("$(if x,test,y(z)):\n\t@true\n", True),
+    ("$(if (x,y),test,z):\n\t@true\n", True),
+    ("${if {x,y},test,z}:\n\t@true\n", True),
+    ("f = $(if x,test,y(z))\n$(call f):\n\t@true\n", True),
+    # 只有与引用自身相同的括号参与配对；另一种括号里的逗号仍是分隔符。
+    ("$(if {x,y},test,z):\n\t@true\n", False),
+    ("${if (x,y),test,z}:\n\t@true\n", False),
+])
+def test_detect_test_suite_make_bare_parentheses_in_function_arguments(
+        tmp_path, makefile, expected):
+    """函数参数扫描按 make 语义配对裸括号，不能提前结束引用。"""
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert (detect_test_suite(tmp_path) is not None) is expected
+
+
 def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     """`$T` 是 make 的单字符变量写法，目标名也要按变量展开。"""
     if not shutil.which("make"):

@@ -1848,7 +1848,8 @@ _MAKE_FUNCTION_ARITY = {
 }
 
 
-def _make_split_function_args(args: str, arity: int) -> List[str]:
+def _make_split_function_args(args: str, arity: int,
+                              opener: str = "(") -> List[str]:
     """按 make 的函数参数个数在顶层逗号处切分（嵌套引用里的逗号不切）。
 
     先切分再展开每个参数，参数展开结果里的逗号才不会在重新拼接时被
@@ -1857,19 +1858,27 @@ def _make_split_function_args(args: str, arity: int) -> List[str]:
     """
     parts: List[str] = []
     start = 0
-    depth = 0
+    stack: List[tuple[str, str]] = []
     i = 0
     while i < len(args) and len(parts) < arity - 1:
         ch = args[i]
         # GNU make 的函数参数分隔只看顶层逗号，反斜杠不转义逗号：
         # `$(if a\,b,x,y)` 仍有四个参数（条件为 `a\`）。
         if ch == "$" and i + 1 < len(args) and args[i + 1] in "({":
-            depth += 1
+            stack.append((args[i + 1], ")" if args[i + 1] == "(" else "}"))
             i += 2
             continue
-        if ch in ")}" and depth:
-            depth -= 1
-        elif ch == "," and not depth:
+        if stack:
+            # 与函数引用自身相同的裸括号也参与配对：make 允许
+            # `$(subst (a,b),X,(a,b))`，里面的逗号不是参数分隔符。
+            top_opener, top_closer = stack[-1]
+            if ch == top_opener:
+                stack.append((ch, top_closer))
+            elif ch == top_closer:
+                stack.pop()
+        elif ch == opener:
+            stack.append((ch, ")" if ch == "(" else "}"))
+        elif ch == ",":
             parts.append(args[start:i])
             start = i + 1
         i += 1
@@ -2103,6 +2112,10 @@ def _make_find_include_function(text: str, pos: int):
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
                 continue
+            if ch == opener:
+                stack.append(closer)
+                k += 1
+                continue
             if ch == stack[-1]:
                 stack.pop()
                 if not stack:
@@ -2147,10 +2160,11 @@ def _make_expand_include_functions(
         if call is None:
             return text
         start, end, name, args = call
+        opener = text[start + 1]
         # 按函数参数个数先切分、再分别展开：展开结果里自带的逗号属于参数
         # 内容，不能再当成参数分隔符（否则 findstring 的 find 参数会被截断）。
         raw_parts = _make_split_function_args(
-            args, _MAKE_FUNCTION_ARITY[name])
+            args, _MAKE_FUNCTION_ARITY[name], opener)
         # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
         # 处理，展开结果里的前导空格属于值本身。
         raw_parts[0] = raw_parts[0].lstrip(" \t")
@@ -2213,6 +2227,10 @@ def _make_find_function_call(text: str, pos: int, name: str):
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
                 continue
+            if ch == opener:
+                stack.append(closer)
+                k += 1
+                continue
             if ch == stack[-1]:
                 stack.pop()
                 if not stack:
@@ -2255,7 +2273,7 @@ def _make_expand_metadata_functions(
         if best is None:
             return text
         start, end, args = best
-        raw_args = _make_split_function_args(args, 1)
+        raw_args = _make_split_function_args(args, 1, text[start + 1])
         argument = raw_args[0]
         if "$" in argument:
             # 参数里还有无法展开的引用（shell/call 等），不能猜变量名。
@@ -2320,7 +2338,7 @@ def _make_expand_call_functions(
         if call is None:
             return text
         start, end, args = call
-        parts = _make_split_function_args(args, 1000000)
+        parts = _make_split_function_args(args, 1000000, text[start + 1])
         raw_name = parts[0].lstrip(" \t")
         name = _make_expand_call_arg(
             raw_name, variables, simple, repo, overrides, depth + 1)
@@ -2428,7 +2446,7 @@ def _make_expand_value(text: str,
         if call is None:
             return text
         start, end, args = call
-        parts = _make_split_function_args(args, 1)
+        parts = _make_split_function_args(args, 1, text[start + 1])
         raw_name = parts[0].lstrip(" \t")
         name = _make_expand_foreach_part(
             raw_name, variables, simple, None, depth + 1)
@@ -2501,7 +2519,7 @@ def _make_expand_foreach(text: str,
         if call is None:
             return text
         start, end, args = call
-        parts = _make_split_function_args(args, 3)
+        parts = _make_split_function_args(args, 3, text[start + 1])
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("foreach: missing argument")
         name = _make_expand_foreach_part(
@@ -2548,6 +2566,10 @@ def _make_standalone_eval_args(body: str) -> Optional[List[str]]:
             if ch == "$" and k + 1 < n and body[k + 1] in "({":
                 stack.append(")" if body[k + 1] == "(" else "}")
                 k += 2
+                continue
+            if ch == opener:
+                stack.append(closer)
+                k += 1
                 continue
             if ch == stack[-1]:
                 stack.pop()
@@ -2793,6 +2815,10 @@ def _make_expand_computed_refs(text: str,
             if ch == "$" and k + 1 < n and text[k + 1] in "({":
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
+                continue
+            if ch == opener:
+                stack.append(closer)
+                k += 1
                 continue
             if ch == stack[-1]:
                 stack.pop()
@@ -3803,6 +3829,10 @@ def _make_find_condition_function(text: str, pos: int):
                 stack.append(")" if text[k + 1] == "(" else "}")
                 k += 2
                 continue
+            if ch == opener:
+                stack.append(closer)
+                k += 1
+                continue
             if ch == stack[-1]:
                 stack.pop()
                 if not stack:
@@ -3901,7 +3931,7 @@ def _make_expand_condition_functions(
             return text
         start, end, name, raw = call
         arity = 3 if name == "if" else 1000000
-        parts = _make_split_function_args(raw, arity)
+        parts = _make_split_function_args(raw, arity, text[start + 1])
         if name == "if" and len(parts) < 2:
             # `$(if x)` 只有一个参数时 make 报 insufficient number of
             # arguments 并停止解析，后面的 test 目标不会执行。参数不足
