@@ -7673,6 +7673,45 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "T =\n$(T): A=$(word x,a b)\ntest:\n\t@echo ok\n",
+    "$(X): A:=$(word x,a b)\ntest:\n\t@echo ok\n",
+    "test: A=$(word x,a b)\ntest:\n\t@echo ok\n",
+    "test: A=$(call f,\ntest:\n\t@echo ok\n",
+    "test: A=$(error boom)\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_deferred_target_assignment_value_keeps_suite(
+        tmp_path, makefile):
+    """target-specific 赋值右侧不一定在读取期展开，不能提前报错。
+
+    回归：`=`/`?=`/`+=` 的值延迟到变量被使用时才展开；目标列表展开为空
+    时 make 连 `:=`/`!=` 的右侧也忽略。整行预展开会误报右侧静态函数的
+    fatal 错误，漏掉后面的合法 test 目标。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("op", [":=", "::=", "!=", ":::="])
+def test_detect_test_suite_make_immediate_target_assignment_value_blocks_suite(
+        tmp_path, op):
+    """非空目标列表的立即赋值右侧仍在读取期展开，静态函数错误是 fatal。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"test: A{op}$(word x,a b)\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "$(X)",
     "$(X) $(Y)",

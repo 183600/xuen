@@ -3441,21 +3441,8 @@ def _make_flatten_target_newlines(text: str) -> str:
     return "".join(out).lstrip(" \t")
 
 
-def _make_raw_rule_is_target_assignment(
-        rest: str,
-        variables: Dict[str, Optional[str]],
-        simple: Dict[str, bool],
-        repo: Optional[Path] = None,
-        overrides: Optional[set] = None) -> bool:
-    """原始规则头冒号后是否会被 make 当成 target-specific 赋值。
-
-    GNU make 在展开前就决定第一个 token（跳过 export/private/override
-    修饰符）是不是赋值名，并展开该 token 判断其后是否紧跟赋值运算符。
-    `test: $(U) X=1` 的第一个 token 展开为空，后面的 X=1 只是前置依赖；
-    `test: $(U)override X=1` 的第一个 token 展开为 override，但后面不是
-    运算符，也仍是依赖。变量引用与赋值名粘在同一 token
-    （`$(U)X=1` / `$(T)=1`）才是赋值。
-    """
+def _make_target_assignment_parts(rest: str) -> Tuple[str, Optional[str]]:
+    """拆出规则头冒号后的 target-specific 赋值名原文与运算符。"""
     pos = 0
     n = len(rest)
     while True:
@@ -3494,8 +3481,29 @@ def _make_raw_rule_is_target_assignment(
     prefix = rest[start:pos]
     while pos < n and rest[pos] in " \t":
         pos += 1
-    if not prefix or re.match(r"(?:::=|::=|:=|[+?]?=|!=)",
-                             rest[pos:]) is None:
+    op_match = re.match(r"(?:::=|::=|:=|[+?]?=|!=)", rest[pos:])
+    if not prefix or op_match is None:
+        return "", None
+    return prefix, op_match.group(0)
+
+
+def _make_raw_rule_is_target_assignment(
+        rest: str,
+        variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> bool:
+    """原始规则头冒号后是否会被 make 当成 target-specific 赋值。
+
+    GNU make 在展开前就决定第一个 token（跳过 export/private/override
+    修饰符）是不是赋值名，并展开该 token 判断其后是否紧跟赋值运算符。
+    `test: $(U) X=1` 的第一个 token 展开为空，后面的 X=1 只是前置依赖；
+    `test: $(U)override X=1` 的第一个 token 展开为 override，但后面不是
+    运算符，也仍是依赖。变量引用与赋值名粘在同一 token
+    （`$(U)X=1` / `$(T)=1`）才是赋值。
+    """
+    prefix, op = _make_target_assignment_parts(rest)
+    if op is None:
         return False
     try:
         # 赋值名同样按 make 语义展开：静态/条件/foreach/call/value 等
@@ -3600,6 +3608,43 @@ def _make_expand_simple_vars(text: str,
         # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
+        early_colon = _make_unescaped_colon(body, 0)
+        if (early_colon >= 0
+                and _MAKE_EXPORT_DIRECTIVE.match(body) is None
+                and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+            raw_targets = body[:early_colon]
+            raw_rest_start = early_colon + 1
+            if (raw_rest_start < len(body)
+                    and body[raw_rest_start] == ":"):
+                raw_rest_start += 1
+            raw_targets_stripped = raw_targets.rstrip(" \t")
+            _, target_op = _make_target_assignment_parts(
+                body[raw_rest_start:])
+            if (target_op is not None
+                    and raw_targets.lstrip(" \t") not in ("", "&")
+                    and not raw_targets_stripped.endswith(("&", "$"))
+                    and _make_unescaped_colon(raw_targets, 0) < 0):
+                # target-specific 赋值不定义目标，但赋值右侧并非都在读取
+                # 期展开：`=`/`?=`/`+=` 延迟到变量被使用时；目标列表展开
+                # 为空时 make 连 `:=`/`!=` 的右侧也忽略。提前整行展开会
+                # 把右侧静态函数的 fatal 错误误报成读取错误，漏掉后面的
+                # 合法 test 目标。
+                expanded_targets = _make_expand_assignment_name(
+                    raw_targets, variables, simple, repo, overrides)
+                expanded_targets = expanded_targets.strip(" \t")
+                if _make_expanded_targets_end_with_colon(
+                        expanded_targets):
+                    raise _MakeRequiredIncludeError("missing target pattern")
+                targets_empty = expanded_targets == "" or (
+                    expanded_targets == "&"
+                    and raw_targets.rstrip(" \t").endswith("&"))
+                if targets_empty or target_op in ("=", "?=", "+="):
+                    if targets_empty or _make_raw_rule_is_target_assignment(
+                            body[raw_rest_start:], variables, simple, repo,
+                            overrides):
+                        out.append(_MAKE_CONTEXT_RESET + newline)
+                        i += 1
+                        continue
         _make_check_top_level_call_args(body)
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_value(
