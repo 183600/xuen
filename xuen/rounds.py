@@ -2043,7 +2043,8 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
         # 处理，展开结果里的前导空格属于值本身。
         raw_parts[0] = raw_parts[0].lstrip(" \t")
-        evaluated = [_make_expand_include_functions(part, repo)
+        evaluated = [_make_expand_include_functions(
+                         _make_expand_automatic_refs(part), repo)
                      for part in raw_parts]
         if any("$" in part for part in evaluated):
             # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
@@ -2157,6 +2158,7 @@ def _make_expand_foreach_part(text: str,
     """展开 foreach 参数/循环体里的静态变量与函数。"""
     for _ in range(20):
         before = text
+        text = _make_expand_automatic_refs(text)
         text = _make_expand_value(text, variables, simple, depth + 1)
         text = _make_expand_foreach(
             text, variables, simple, repo, depth + 1, active)
@@ -2422,6 +2424,38 @@ def _make_resolve_single_char_refs(
     return "".join(out)
 
 
+_MAKE_AUTOMATIC_REF_CHARS = frozenset("@%<?^+*|")
+"""目标/赋值读取期的自动变量：尚未绑定到具体目标，展开为空。"""
+
+
+def _make_expand_automatic_refs(text: str) -> str:
+    """把自动变量引用展开为空（`$@` / `$<` / `$^` 等）。
+
+    `_MAKE_VAR_REF` 只认字母数字下划线组成的单字符变量名，`$@` 这类
+    引用在函数参数、条件表达式内部不会被常规展开；不处理会让
+    `$(addsuffix $@,test)` 漏探测 test，或让 `$(word $@,a b)` 跳过
+    make 的读取期报错。recipe 行不会被本函数处理（recipe 里的自动变量
+    在执行期才有值）。
+    """
+    out: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "$" and i + 1 < n:
+            nxt = text[i + 1]
+            if nxt == "$":
+                out.append("$$")
+                i += 2
+                continue
+            if nxt in _MAKE_AUTOMATIC_REF_CHARS:
+                i += 2
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _make_expand_computed_refs(text: str,
                                 variables: Dict[str, Optional[str]],
                                 simple: Dict[str, bool],
@@ -2471,7 +2505,8 @@ def _make_expand_computed_refs(text: str,
             out.append(text[i:])
             break
         content = text[i + 2:k]
-        inner = _make_expand_computed_refs(content, variables, simple,
+        inner = _make_expand_automatic_refs(content)
+        inner = _make_expand_computed_refs(inner, variables, simple,
                                            depth + 1)
         try:
             inner = _make_expand_refs(inner, variables, simple)
@@ -2528,6 +2563,7 @@ def _make_expand_immediate_value(
     """
     for _ in range(20):
         before = value
+        value = _make_expand_automatic_refs(value)
         value = _make_expand_value(value, variables, simple)
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_condition_functions(
@@ -3463,6 +3499,7 @@ def _make_expand_condition_arg(
     value = text
     for _ in range(20):
         before = value
+        value = _make_expand_automatic_refs(value)
         value = _make_expand_refs(value, variables, simple)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
@@ -3566,6 +3603,7 @@ def _make_expand_condition_text(text: str,
                                 repo: Optional[Path]) -> str:
     for _ in range(20):
         before = text
+        text = _make_expand_automatic_refs(text)
         text = _make_expand_refs(text, variables, simple)
         text = _make_expand_condition_functions(
             text, variables, simple, repo)

@@ -2308,6 +2308,43 @@ def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "$(addsuffix $@,test):\n\t@true\n",
+    "$(addprefix $<,test):\n\t@true\n",
+    "$@ test:\n\t@true\n",
+    "$(or $@,test):\n\t@true\n",
+    "$(if $@,,test):\n\t@true\n",
+    "ifeq ($@,)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_automatic_variables_expand_empty(
+        tmp_path, makefile):
+    """目标/条件读取期的 `$@` 等自动变量为空，函数参数里的也要展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(if $@,test,):\n\t@true\n",
+    "$(and $@,test):\n\t@true\n",
+    "$(wordlist $@ , test ,a b):\n\t@true\n",
+])
+def test_detect_test_suite_make_empty_automatic_argument_blocks_suite(
+        tmp_path, makefile):
+    """空自动变量参与的函数要么分支不生效，要么暴露 make 的参数错误。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_define_body_is_data(tmp_path):
     """define 体里的 include/test 不是 Makefile 指令，不能误读或误判。"""
     if not shutil.which("make"):
