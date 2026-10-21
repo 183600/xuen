@@ -685,6 +685,36 @@ def _make_has_grouped_target_without_recipe(text: str) -> bool:
     return False
 
 
+def _make_has_escaped_semicolon_target_without_recipe(text: str) -> bool:
+    r"""任一规则的目标名里有 `\;`、且没有同行命令分隔符时 make 读取失败。
+
+    GNU make 4.3 对目标名里的转义分号有解析限制：`foo\;bar:` 即使后面
+    另有 tab recipe，也会在读取阶段报 missing separator；只有同一逻辑行
+    出现未转义的 `;`（哪怕是空命令）才接受。原先只校验命中 test 的行，
+    其他目标（如 `private foo\;bar:`）的同类错误会漏掉，导致探测把必然
+    失败的 Makefile 当成可运行套件。
+    """
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body or body.startswith("\t"):
+            continue
+        stripped = body.lstrip(" \t")
+        if not stripped or stripped.startswith("#"):
+            continue
+        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
+            continue
+        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
+            continue
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0:
+            continue
+        if (_make_has_escaped_semicolon(body[:colon])
+                and not _make_has_recipe_separator(body[colon + 1:])):
+            return True
+    return False
+
+
 def _make_has_invalid_extra_rule_colon(text: str) -> bool:
     """任一规则头的第二个未转义冒号是否让 make 读取失败。
 
@@ -789,6 +819,8 @@ def _make_defines_test_target(text: str,
     if _make_has_mixed_target_colon_style(text):
         return False
     if _make_has_invalid_extra_rule_colon(text):
+        return False
+    if _make_has_escaped_semicolon_target_without_recipe(text):
         return False
     if _make_has_grouped_target_without_recipe(text):
         return False

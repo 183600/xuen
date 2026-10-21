@@ -2308,6 +2308,51 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
 
 
 @pytest.mark.parametrize("line", [
+    "foo\\;bar:",
+    "foo\\;bar: dep",
+    "foo\\;bar: X=1",
+    "private foo\\;bar:",
+    "override foo\\;bar:",
+    "foo\\;bar:: dep",
+    "foo\\;bar&: dep",
+])
+def test_detect_test_suite_make_other_escaped_semicolon_target_blocks_suite(
+        tmp_path, line):
+    r"""其他目标名里的 `\;` 缺少同行命令分隔符时 make 读取失败。
+
+    回归：原先只校验命中 test 的规则行，`private foo\;bar:` 等会让
+    make 在读取阶段报 missing separator，即使别处有合法 test 目标也
+    不会执行，探测必须返回「没有可运行套件」。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\n\t@true\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "foo\\;bar: ;",
+    "foo\\;bar: dep ; @true",
+    "foo: a\\;b",
+    "foo: X\\;Y=1",
+])
+def test_detect_test_suite_make_other_escaped_semicolon_target_keeps_suite(
+        tmp_path, line):
+    r"""同行有命令分隔符（或 `\;` 不在目标名里）时 make 仍可执行 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "test:",
     "test::",
     "test :",
