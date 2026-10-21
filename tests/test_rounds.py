@@ -8008,3 +8008,26 @@ def test_detect_test_suite_make_define_expands_to_operator_name(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(X)",
+    "$(sort =)",
+    "$(subst a,=,a)",
+])
+def test_detect_test_suite_make_expanded_assignment_like_line_blocks_suite(
+        tmp_path, line):
+    """非赋值行展开成赋值形态仍是 missing separator。
+
+    回归：展开后的缺分隔符扫描跳过了所有匹配赋值正则的行，
+    `X = =` 后的 `$(X)` / `$(sort =)` 展开成 `=` 被当成合法赋值，
+    后面存在的 test 目标让探测误以为套件可运行，实际 make 读取失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = =\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None

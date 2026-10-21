@@ -1225,7 +1225,16 @@ def _make_has_missing_separator_line(text: str, *,
         if _MAKE_DEFINE_LINE.match(body) is not None:
             define_depth = 1
             continue
-        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+        if expanded:
+            # 展开后的扫描只看到「不是赋值、但展开结果像赋值」的行：
+            # 真正的赋值行已在 _make_expand_simple_vars 里换成上下文
+            # 哨兵。make 在展开前就决定一行是不是赋值，`X = =` 后的
+            # `$(X)` 展开成 `=` 仍是缺失分隔符的规则头，不能因为展开
+            # 文本匹配赋值正则就放过。
+            if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                    or _MAKE_CONDITIONAL_LINE.match(body) is not None):
+                continue
+        elif (_MAKE_VAR_ASSIGNMENT.match(body) is not None
                 or _make_dynamic_assignment_name(body) is not None
                 or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
                 or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None
