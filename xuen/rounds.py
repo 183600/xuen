@@ -506,9 +506,49 @@ def _make_continues_recipe_line(text: str, start: int) -> bool:
     return count % 2 == 1
 
 
+def _make_has_mixed_target_colon_style(text: str) -> bool:
+    """任一目标是否同时以 : 和 :: 定义（make 会直接停止解析）。
+
+    GNU make 对每个具体目标只允许一种冒号风格；冲突目标不一定是 test
+    本身（`test foo::` 后再写 `foo:` 也会让整个 Makefile 读取失败），
+    因此必须在整份文本里检查，不能只看命中 test 的那一行。
+    """
+    styles: Dict[str, bool] = {}
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body or body.startswith("\t"):
+            continue
+        stripped = body.lstrip()
+        if stripped.startswith("#"):
+            continue
+        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
+            continue
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0 or _make_rule_is_target_specific(body, colon):
+            continue
+        double = body[colon:colon + 2] == "::"
+        words = re.findall(r"(?:\\.|[^\s])+", body[:colon])
+        for word in words:
+            if word.endswith("&"):
+                word = word[:-1]
+            if not word or _make_pattern_wildcard(word)[0] >= 0:
+                # 模式规则允许同一模式分别用 : 和 :: 定义，make 不会报
+                # both : and :: entries；只有具体目标才做冲突检查。
+                continue
+            previous = styles.get(word)
+            if previous is None:
+                styles[word] = double
+            elif previous != double:
+                return True
+    return False
+
+
 def _make_defines_test_target(text: str,
                               repo: Optional[Path] = None) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
+    if _make_has_mixed_target_colon_style(text):
+        return False
     saw_single = False
     saw_double = False
     for match in _MAKE_TEST_TARGET.finditer(text):

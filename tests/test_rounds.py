@@ -1153,6 +1153,8 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
     "t%st:\n\t@echo ok\n",
     "%: ; @echo ok\n",
     "%:\n# comment\n\t@echo ok\n",
+    # 同一模式分别用 : 和 :: 定义是合法的，不算具体目标的冒号冲突。
+    "%:\n\t@echo ok\n%::\n\t@echo ok\n",
     "%: |\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_pattern_rule_target(tmp_path, makefile):
@@ -1223,6 +1225,22 @@ def test_detect_test_suite_make_pattern_rule_not_applicable(tmp_path,
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_target_specific_colon_style_not_conflict(
+        tmp_path):
+    """target-specific 赋值不定义目标，不参与 : / :: 冲突判断。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for makefile in (
+        "test: X=1\ntest::\n\t@echo ok\n",
+        "test:: X=1\ntest:\n\t@echo ok\n",
+    ):
+        (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+        p = subprocess.run(["make", "test"], cwd=tmp_path,
+                           capture_output=True, text=True)
+        assert p.returncode == 0
+        assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
     """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
     if not shutil.which("make"):
@@ -1269,6 +1287,9 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     "test&: dep\n",
     "test:\ntest::\n\t@true\n",
     "test::\ntest:\n\t@true\n",
+    # 冲突目标不是 test 本身时整个 Makefile 也会读取失败。
+    "test foo::\n\t@true\nfoo:\n",
+    "test:\n\t@true\nother::\nother:\n",
 ])
 def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
     """grouped target 无 recipe / : 与 :: 混用会让 make 直接报错。"""
