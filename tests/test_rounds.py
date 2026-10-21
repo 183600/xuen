@@ -1478,6 +1478,10 @@ def test_detect_test_suite_make_variable_target(tmp_path, makefile):
     "$(T):\n\t@true\nT = test\n",
     "T = test\n$(T) := x\n",
     "T = test\nundefine T\n$(T):\n\t@true\n",
+    "T = test\nprivate undefine T\n$(T):\n\t@true\n",
+    "T = test\nexport undefine T\n$(T):\n\t@true\n",
+    "T = test\nprivate export undefine T\n$(T):\n\t@true\n",
+    "T = test\nundefine T # c\n$(T):\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_target_negative(tmp_path, makefile):
     if not shutil.which("make"):

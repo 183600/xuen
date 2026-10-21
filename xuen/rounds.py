@@ -1082,8 +1082,8 @@ def _make_scan_assignment(body: str,
                           simple: Dict[str, bool]) -> Optional[str]:
     """处理一行赋值/undefine；是赋值时返回展开后的行，否则返回 None。"""
     undef = re.match(
-        r"^[ ]*(?:override[ \t]+)?undefine[ \t]+"
-        r"([A-Za-z0-9_.-]+)[ \t]*$", body)
+        r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine[ \t]+"
+        r"([A-Za-z0-9_.-]+)[ \t]*$", _make_strip_comment(body))
     if undef is not None:
         variables.pop(undef.group(1), None)
         simple.pop(undef.group(1), None)
