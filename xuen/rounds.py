@@ -540,7 +540,91 @@ def _make_include_names(args: str) -> List[str]:
 _MAKE_INCLUDE_FUNCTIONS = frozenset({
     "wildcard", "dir", "notdir", "addprefix", "addsuffix", "strip",
     "basename", "suffix", "firstword", "lastword", "abspath", "realpath",
+    "filter", "filter-out", "subst", "patsubst", "word", "wordlist",
+    "words", "sort", "findstring",
 })
+
+
+def _make_pattern_match(pattern: str, word: str
+                        ) -> Tuple[bool, Optional[str]]:
+    """make 的 % 模式匹配，返回 (是否匹配, % 位置的词干)。
+
+    反斜杠转义下一个字符（``\\%`` 是字面 %），其余字符按字面匹配。
+    没有 % 的模式只做精确比较，词干为 None。
+    """
+    regex = []
+    stem_group = None
+    i = 0
+    has_percent = False
+    while i < len(pattern):
+        ch = pattern[i]
+        if ch == "\\" and i + 1 < len(pattern):
+            regex.append(re.escape(pattern[i + 1]))
+            i += 2
+            continue
+        if ch == "%":
+            has_percent = True
+            stem_group = len(regex)
+            regex.append(".*")
+        else:
+            regex.append(re.escape(ch))
+        i += 1
+    if not has_percent:
+        return pattern == word, None
+    match = re.fullmatch("".join(regex), word)
+    if match is None:
+        return False, None
+    # 重新用捕获组算词干：把 % 换成 (.*) 会比事后反推可靠
+    captured = []
+    i = 0
+    while i < len(pattern):
+        ch = pattern[i]
+        if ch == "\\" and i + 1 < len(pattern):
+            captured.append(re.escape(pattern[i + 1]))
+            i += 2
+            continue
+        if ch == "%":
+            captured.append("(.*?)")
+        else:
+            captured.append(re.escape(ch))
+        i += 1
+    match = re.fullmatch("".join(captured), word)
+    return True, match.group(1) if match is not None else ""
+
+
+def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:
+    """patsubst 对单个词的替换；不匹配返回 None。"""
+    matched, stem = _make_pattern_match(pattern, word)
+    if not matched:
+        return None
+    if stem is None:
+        return repl
+    out = []
+    i = 0
+    while i < len(repl):
+        ch = repl[i]
+        if ch == "\\" and i + 1 < len(repl):
+            out.append(repl[i + 1])
+            i += 2
+            continue
+        out.append(stem if ch == "%" else ch)
+        i += 1
+    return "".join(out)
+
+
+def _make_function_words(value: str) -> List[str]:
+    return value.split()
+
+
+def _make_function_index(value: str, function: str) -> int:
+    try:
+        index = int(value.strip())
+    except (TypeError, ValueError):
+        raise _MakeRequiredIncludeError(
+            f"{function}: non-numeric index") from None
+    if index < 1:
+        raise _MakeRequiredIncludeError(f"{function}: invalid index")
+    return index
 
 
 def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
@@ -575,6 +659,63 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if name == "addprefix":
             return " ".join(affix + word for word in words)
         return " ".join(word + affix for word in words)
+    if name in ("filter", "filter-out"):
+        if "," not in args:
+            patterns, text = args, ""
+        else:
+            patterns, text = args.split(",", 1)
+        pats = patterns.split()
+        keep = []
+        for word in text.split():
+            matched = any(_make_pattern_match(pat, word)[0]
+                          for pat in pats)
+            if matched == (name == "filter"):
+                keep.append(word)
+        return " ".join(keep)
+    if name == "subst":
+        parts = args.split(",", 2)
+        if len(parts) < 3:
+            raise _MakeRequiredIncludeError("subst: missing argument")
+        old, new, text = parts
+        if not old:
+            raise _MakeRequiredIncludeError("subst: empty from")
+        return text.replace(old, new)
+    if name == "patsubst":
+        parts = args.split(",", 2)
+        if len(parts) < 3:
+            raise _MakeRequiredIncludeError("patsubst: missing argument")
+        pattern, repl, text = parts
+        out = []
+        for word in text.split():
+            replaced = _make_pattern_subst(pattern, repl, word)
+            out.append(word if replaced is None else replaced)
+        return " ".join(out)
+    if name == "word":
+        parts = args.split(",", 1)
+        if len(parts) < 2:
+            raise _MakeRequiredIncludeError("word: missing argument")
+        index = _make_function_index(parts[0], "word")
+        words = _make_function_words(parts[1])
+        return words[index - 1] if index <= len(words) else ""
+    if name == "wordlist":
+        parts = args.split(",", 2)
+        if len(parts) < 3:
+            raise _MakeRequiredIncludeError("wordlist: missing argument")
+        start = _make_function_index(parts[0], "wordlist")
+        end = _make_function_index(parts[1], "wordlist")
+        words = _make_function_words(parts[2])
+        if start > end:
+            return ""
+        return " ".join(words[start - 1:end])
+    if name == "words":
+        return str(len(_make_function_words(args)))
+    if name == "sort":
+        return " ".join(sorted(set(_make_function_words(args))))
+    if name == "findstring":
+        parts = args.split(",", 1)
+        if len(parts) < 2:
+            raise _MakeRequiredIncludeError("findstring: missing argument")
+        return parts[0] if parts[0] in parts[1] else ""
     if name == "strip":
         return " ".join(args.split())
     words = args.split()

@@ -943,6 +943,51 @@ def test_detect_test_suite_make_wildcard_include(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("directive", [
+    "include $(filter %.mk,other.txt tests.mk)",
+    "include $(filter-out %.txt,tests.mk other.txt)",
+    "include $(subst x,tests,x.mk)",
+    "include $(patsubst %.txt,%.mk,tests.txt)",
+    "include $(word 2,other.mk tests.mk)",
+    "include $(wordlist 2,2,other.mk tests.mk)",
+    "include $(sort other.mk tests.mk other.mk)",
+    "include $(filter %.mk,$(sort other.txt tests.mk))",
+    "include $(wildcard $(patsubst %.txt,%.mk,tests.txt))",
+])
+def test_detect_test_suite_make_more_include_functions(tmp_path, directive):
+    """include 文件名里的静态文本函数要按 make 语义展开。
+
+    filter/filter-out/subst/patsubst/word/wordlist/sort 等函数常用于
+    拼出 include 路径；不展开会漏掉可运行的 test 目标，把套件降级成
+    评分兜底。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(directive + "\n", encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "other.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "other.txt").write_text("", encoding="utf-8")
+    (tmp_path / "tests.txt").write_text("", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
+        tmp_path):
+    """word/wordlist 的非法下标会让 make 在展开时报错，不能忽略。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for directive in ("include $(word x,tests.mk)",
+                      "include $(wordlist 2,x,tests.mk other.mk)"):
+        (tmp_path / "Makefile").write_text(directive + "\n",
+                                           encoding="utf-8")
+        (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                           encoding="utf-8")
+        (tmp_path / "other.mk").write_text("all:\n\t@true\n",
+                                           encoding="utf-8")
+        assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_wildcard_function_no_match_is_empty(tmp_path):
     """`$(wildcard missing.mk)` 无匹配时展开为空，不能当字面文件名 include。"""
     if not shutil.which("make"):
