@@ -426,6 +426,74 @@ def _make_defines_test_target(text: str) -> bool:
     return False
 
 
+_MAKE_INCLUDE_DIRECTIVE = re.compile(
+    r"^[ ]*(?:-?include|sinclude)[ \t]+(.*)$")
+
+
+def _make_strip_comment(line: str) -> str:
+    i = 0
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2
+            continue
+        if line[i] == "#":
+            return line[:i]
+        i += 1
+    return line
+
+
+def _make_include_names(text: str) -> List[str]:
+    """提取 include/-include/sinclude 的字面文件名（跳过变量/通配符）。"""
+    names = []
+    flat = re.sub(r"\\\r?\n", " ", text)
+    for line in flat.splitlines():
+        match = _MAKE_INCLUDE_DIRECTIVE.match(line)
+        if match is None:
+            continue
+        args = _make_strip_comment(match.group(1))
+        for token in re.findall(r"(?:\\.|[^\s])+", args):
+            name = re.sub(r"\\(.)", r"\1", token)
+            if "$" in name or any(ch in name for ch in "*?["):
+                continue
+            names.append(name)
+    return names
+
+
+def _make_text_with_includes(text: str, repo: Path,
+                             seen: Optional[set] = None,
+                             depth: int = 0) -> str:
+    """把字面 include 的文件内容附在 Makefile 文本后，供目标探测使用。
+
+    只读取仓库内已存在的普通文件；变量展开/通配符/缺失文件留给 make
+    自己报错（探测不到 test 目标时按无套件处理）。条件分支里的 include
+    可能被误读，但运行 `make test` 后仍由「No rule to make target」/
+    no-op 兜底，不会把未执行的测试当成通过。
+    """
+    if seen is None:
+        seen = set()
+    if depth > 20:
+        return text
+    parts = [text]
+    for name in _make_include_names(text):
+        path = Path(name)
+        if not path.is_absolute():
+            path = repo / path
+        try:
+            key = path.resolve()
+            if key in seen or not path.is_file():
+                continue
+            if path.stat().st_size > 2_000_000:
+                continue
+            included = path.read_text(encoding="utf-8-sig",
+                                      errors="replace")
+        except (OSError, ValueError):
+            continue
+        seen.add(key)
+        parts.append(_make_text_with_includes(included, repo, seen,
+                                              depth + 1))
+    return "\n".join(parts)
+
+
 def _is_pytest_file(name: str) -> bool:
     return (name.endswith(".py")
             and (name.startswith("test_") or name.endswith("_test.py")))
@@ -509,9 +577,11 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
             # "test" 前、正则失配，可运行的套件被误判成没有测试
-            if _make_defines_test_target(
-                    makefile.read_text(encoding="utf-8-sig",
-                                       errors="replace")):
+            text = makefile.read_text(encoding="utf-8-sig",
+                                      errors="replace")
+            text = _make_text_with_includes(
+                text, repo, {makefile.resolve()}, 0)
+            if _make_defines_test_target(text):
                 return ["make", "test"]
         except OSError:
             pass

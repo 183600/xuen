@@ -757,6 +757,39 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("directive", [
+    "include tests.mk",
+    "-include tests.mk",
+    "sinclude tests.mk",
+    " include tests.mk # comment",
+    "include tests.mk other.mk",
+    "include tests.mk \\\n",
+])
+def test_detect_test_suite_make_included_file(tmp_path, directive):
+    """test 目标写在 include 进来的 Makefile 里时也要探测到。
+
+    GNU make 会读取 include/-include/sinclude 的文件；只扫描主 Makefile
+    会把这类可运行的 `make test` 误判成没有套件，tests 模式永远挂起。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(directive + "\n",
+                                       encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "other.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("include missing.mk\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "test := x",
     "test::= x",
