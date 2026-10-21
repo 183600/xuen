@@ -1007,6 +1007,16 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_empty_wordlist_arg_not_a_suite(tmp_path):
+    """wordlist 第二个参数完全省略时 make 报错，不能静默展开成空串。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(wordlist 1,,tests.mk)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("directive", [
     "include $(filter %.mk)",
     "include $(filter-out %.mk)",
@@ -1137,6 +1147,16 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
     assert expand("patsubst", ",R,x", tmp_path) == "x"
     assert expand("wordlist", "1,2,  a  b  c ", tmp_path) == "a  b"
     assert expand("wordlist", "2, ,a b", tmp_path) == ""
+    # 函数名后的第一个参数会去掉起始空白；逗号后的参数保留空白。
+    assert expand("subst", " x,Y,x x", tmp_path) == "Y Y"
+    assert expand("subst", "x, foo,x", tmp_path) == " foo"
+    assert expand("patsubst", " a%,b%,a a", tmp_path) == "b b"
+    assert expand("addprefix", " x,a b", tmp_path) == "xa xb"
+    assert expand("addsuffix", " x,a b", tmp_path) == "ax bx"
+    assert expand("findstring", " a, a", tmp_path) == "a"
+    # 第二个参数完全省略（不是写成空白）时 make 报错，不能当 0。
+    with pytest.raises(rounds._MakeRequiredIncludeError):
+        expand("wordlist", "1,,a b", tmp_path)
     assert expand("suffix", "foo.o a/b bar.c", tmp_path) == ".o .c"
     assert expand("join", "a,tests.mk", tmp_path) == "atests.mk"
     assert expand("join", "a b,c d", tmp_path) == "ac bd"

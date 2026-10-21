@@ -986,7 +986,10 @@ def _make_function_words(value: str) -> List[str]:
 def _make_function_index(value: str, function: str,
                          allow_zero: bool = False) -> int:
     text = value.strip()
-    if allow_zero and not text:
+    if allow_zero and not text and value:
+        # 只有显式写了空白（`$(wordlist 1, ,a b)`）才按 0 处理；
+        # 完全省略参数（`$(wordlist 1,,a b)`）时 GNU make 报
+        # non-numeric second argument，不能静默当成空结果。
         return 0
     if not re.fullmatch(r"[0-9]+", text):
         raise _MakeRequiredIncludeError(f"{function}: non-numeric index")
@@ -1018,6 +1021,9 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if "," not in args:
             raise _MakeRequiredIncludeError(args)
         affix, names = args.split(",", 1)
+        # 非末位参数的起始空白由 make 的参数解析去掉；尾随空白属于
+        # 参数本身（`$(addsuffix x ,a)` 的后缀是 "x "）。
+        affix = affix.lstrip(" \t")
         words = names.split()
         if name == "addprefix":
             return " ".join(affix + word for word in words)
@@ -1040,6 +1046,9 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("subst: missing argument")
         old, new, text = parts
+        # 只有紧跟函数名的第一个参数会被 make 去掉起始空白；逗号后的
+        # 参数保留自己的起始空白（它可能就是要替换成的文本）。
+        old = old.lstrip(" \t")
         if not old:
             # GNU make 对空 from 的 subst 把 new 追加到 text 末尾
             # （$(subst ,x,foo) -> foox），不是 Python 的逐字符插入。
@@ -1050,6 +1059,8 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("patsubst: missing argument")
         pattern, repl, text = parts
+        # 第一个参数前的空白属于函数语法；repl 的起始空白是有效内容。
+        pattern = pattern.lstrip(" \t")
         wildcard, _run_start = _make_pattern_wildcard(pattern)
         if wildcard < 0:
             # 不含通配 % 时 make 原地替换每个词，保留输入文本原有空白；
@@ -1098,7 +1109,8 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         parts = args.split(",", 1)
         if len(parts) < 2:
             raise _MakeRequiredIncludeError("findstring: missing argument")
-        return parts[0] if parts[0] in parts[1] else ""
+        needle = parts[0].lstrip(" \t")
+        return needle if needle in parts[1] else ""
     if name == "strip":
         return " ".join(args.split())
     if name == "join":
