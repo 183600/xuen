@@ -835,6 +835,16 @@ def test_detect_test_suite_make_suffix_dotfile(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_bad_addprefix_args(tmp_path):
+    """addprefix/addsuffix 缺少逗号时 make 直接报错，不能当空展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for expr in ("$(addprefix a)", "$(addsuffix a)", "$(addprefix )"):
+        (tmp_path / "Makefile").write_text(
+            f"include {expr}\ntest:\n\t@true\n", encoding="utf-8")
+        assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_variable_include_missing(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

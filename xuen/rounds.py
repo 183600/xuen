@@ -533,8 +533,10 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
                 found.append(str(path))
         return " ".join(found)
     if name in ("addprefix", "addsuffix"):
+        # make 对少于两个参数（缺少逗号）直接报错并停止解析：不能当成
+        # 空展开继续找 test 目标，否则会把必然失败的 make test 探测成套件。
         if "," not in args:
-            return ""
+            raise _MakeRequiredIncludeError(args)
         affix, names = args.split(",", 1)
         words = names.split()
         if name == "addprefix":
