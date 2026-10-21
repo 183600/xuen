@@ -1794,6 +1794,37 @@ def test_detect_test_suite_make_multiline_define_target(tmp_path, makefile):
     p = subprocess.run(["make", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0
+
+
+@pytest.mark.parametrize("ref, expected", [
+    ("$(firstword $(BODY))", False),
+    ("$(lastword $(BODY))", True),
+])
+def test_detect_test_suite_make_multiline_define_function_target(
+        tmp_path, ref, expected):
+    """多行 define 交给函数展开时要保留真实换行，不能只取最后一行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"define BODY\nfoo\n test\nendef\n{ref}:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert (p.returncode == 0) == expected
+    assert bool(detect_test_suite(tmp_path)) == expected
+
+
+def test_detect_test_suite_make_define_trailing_space_splits_target(tmp_path):
+    """上一行以空格结尾时，换行也会把最后一行拆成独立目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "define BODY\nfoo \ntest\nendef\n$(BODY):\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 

@@ -1212,37 +1212,111 @@ def _make_scan_assignments(text: str,
             _make_scan_assignment(body, variables, simple)
 
 
+def _make_flatten_target_newlines(text: str) -> str:
+    """把变量展开到规则头时产生的换行按 make 语义折叠。
+
+    make 只在换行紧邻空格/制表符（或位于行首）时才把展开值拆成多个
+    目标；`define BODY\nfoo\ntest` 直接展开得到的目标名包含换行，
+    `test` 不是独立目标（`$(firstword $(BODY))` 也只看 foo）。用哨兵
+    字符打断裸换行，避免 `_MAKE_TEST_TARGET` 把 `test` 误认成新行上的
+    目标；紧邻空白的换行则折叠成空格。
+    """
+    out: List[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] != "\n":
+            out.append(text[i])
+            i += 1
+            continue
+        j = i
+        while j < len(text) and text[j] == "\n":
+            j += 1
+        before = out[-1] if out else ""
+        after = text[j] if j < len(text) else ""
+        if (not any(ch not in " \t" for ch in out)
+                or before in " \t" or after in " \t"):
+            # 行首换行会被 make 跳过；紧邻空白的换行是目标列表分隔。
+            # 保留换行还能避免展开值里的 `#` 被误当成注释起点。
+            out.append(text[i:j])
+        else:
+            # 裸换行属于目标名的一部分，不能用行分隔符参与后续匹配。
+            out.append("\x00" * (j - i))
+        i = j
+    return "".join(out)
+
+
 def _make_expand_simple_vars(text: str,
                              repo: Optional[Path] = None) -> str:
     """按出现顺序展开简单的 make 变量引用，供目标探测使用。
 
-    只处理单行 `NAME =/:=/?=/+=/!=` 赋值；define、shell 输出等无法静态
-    求值的写法保持原样（探测不到就按无套件处理）。变量在规则头之前赋值
-    才会生效，与 make 逐行读取的行为一致；recipe 行不展开。变量名本身也
-    可以是展开结果（`$(T) = test`），展开后按赋值处理。规则头里的静态
-    函数（如 `T = $(subst x,test,x)` 后的 `$(T):`）按使用位置展开。
+    处理单行 `NAME =/:=/?=/+=/!=` 赋值、undefine 和 define 块；shell
+    输出等无法静态求值的写法保持原样（探测不到就按无套件处理）。变量在
+    规则头之前赋值才会生效，与 make 逐行读取的行为一致；recipe 行不展开。
+    变量名本身也可以是展开结果（`$(T) = test`），展开后按赋值处理。规则
+    头里的静态函数（如 `T = $(subst x,test,x)` 后的 `$(T):`）按使用位置
+    展开。
     """
     variables: Dict[str, Optional[str]] = {}
     simple: Dict[str, bool] = {}
     out = []
     text = _make_join_continuations(text)
-    for line in text.splitlines(keepends=True):
+    lines = text.splitlines(keepends=True)
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         body = line.rstrip("\r\n")
         newline = line[len(body):]
         if body.startswith("\t"):
             out.append(line)
+            i += 1
+            continue
+        define_match = _MAKE_DEFINE_LINE.match(body)
+        if define_match is not None:
+            # 第一遍把生效分支里的 define 原样保留下来；这里按顺序记录
+            # 变量值，但不把 define 体当作规则行输出，避免体里的
+            # `test:` 被误判成目标。
+            name_text = _make_strip_value_comment(
+                define_match.group(1) or "").strip()
+            for op in (":::=", "::=", ":=", "?=", "+=", "!=", "="):
+                found = name_text.find(op)
+                if found >= 0:
+                    name_text = name_text[:found].rstrip()
+                    break
+            name = _make_expand_refs(name_text, variables, simple)
+            depth = 1
+            body_lines = []
+            i += 1
+            while i < len(lines) and depth:
+                inner = lines[i].rstrip("\r\n")
+                if _MAKE_DEFINE_LINE.match(inner):
+                    depth += 1
+                    body_lines.append(inner)
+                elif _MAKE_ENDEF_LINE.match(inner):
+                    depth -= 1
+                    if depth:
+                        body_lines.append(inner)
+                else:
+                    body_lines.append(inner)
+                i += 1
+            if name:
+                variables[name] = "\n".join(body_lines)
+                simple[name] = False
             continue
         expanded = _make_scan_assignment(body, variables, simple)
         if expanded is not None:
             out.append(expanded + newline)
+            i += 1
             continue
         if body.lstrip().startswith("#"):
             out.append(line)
+            i += 1
             continue
         expanded = _make_expand_refs(body, variables, simple)
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
+        expanded = _make_flatten_target_newlines(expanded)
         out.append(expanded + newline)
+        i += 1
     return "".join(out)
 
 
@@ -1590,29 +1664,8 @@ def _make_text_with_includes(text: str, repo: Path,
                 # define 定义的是递归变量，体里的换行原样保留。
                 variables[define_name] = "\n".join(body_lines)
                 simple[define_name] = False
-                # 后续 _make_expand_simple_vars 看不到 define 块；给简单的
-                # 变量名补一行占位赋值，规则头里的 $(VAR) 才能展开。
-                # 目标列表只关心换行与空白的切分，合并成空格不影响探测。
-                # 多行值在目标行展开时会被 make 当作行尾处理，不能合并成
-                # 空格（那会凭空多出 `test` 目标）；用空占位赋值覆盖之前
-                # 的同名变量，避免第二遍展开误用旧值。
-                if len(body_lines) <= 1:
-                    value = " ".join(body_lines)
-                else:
-                    # 多行值展开到目标行时，只有最后一行的前导空白会
-                    # 让 make 把它当作独立的目标列表；否则整段值
-                    # （含换行）都是同一个目标名，`test` 只是其中
-                    # 一部分。最后一行前面全是空行时同理，直接看
-                    # 最后一行即可。其余多行值用空占位，避免误判。
-                    last = body_lines[-1]
-                    if not last.strip():
-                        value = ""
-                    elif last[:1] in (" ", "\t") or all(
-                            not line.strip()
-                            for line in body_lines[:-1]):
-                        value = last
-                    else:
-                        value = ""
+                # 保留 define 块交给第二遍展开；变量名含 ? 等特殊字符
+                # 时改用可被 _MAKE_VAR_REF 识别的别名，并把引用改写过去。
                 target_name = define_name
                 if not re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
                     index = len(aliases)
@@ -1621,8 +1674,13 @@ def _make_text_with_includes(text: str, repo: Path,
                         index += 1
                     target_name = f"__xuen_define_{index}"
                     aliases[define_name] = target_name
-                raw = _make_quote_value_for_assignment(value)
-                out.append(f"{target_name} = {raw}\n")
+                # 保留真正的多行值（而不是压成占位赋值），第二遍展开
+                # 目标头时才能让 firstword/lastword/strip 等函数看到与
+                # make 相同的空白和换行。
+                out.append(f"define {target_name}\n")
+                for body_line in body_lines:
+                    out.append(body_line + "\n")
+                out.append("endef\n")
             continue
         if active and _MAKE_ENDEF_LINE.match(body):
             # 生效分支里未处于 define 块中的 endef 是游离指令：make 报
