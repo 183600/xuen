@@ -2693,6 +2693,29 @@ def test_detect_test_suite_make_empty_target_recipe_keeps_suite(
 
 
 @pytest.mark.parametrize("line", [
+    "foo&: X=1",
+    "foo&: X:=1",
+    "foo&:: X=1",
+    "private foo&: X=1",
+    "override foo bar&: X:=1",
+])
+def test_detect_test_suite_make_grouped_target_assignment_keeps_suite(
+        tmp_path, line):
+    """带 & 的目标只做 target-specific 变量赋值时不需要 recipe。
+
+    回归：原先把所有 `foo&: dep` 形式的行都当成缺少 recipe 的 grouped
+    target，导致后面合法的 test 套件被误判成不可运行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "test:= x",
     "test ::= x",
     "test: X=1",

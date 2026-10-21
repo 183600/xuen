@@ -677,7 +677,11 @@ def _make_has_grouped_target_without_recipe(text: str) -> bool:
                 colon = _make_unescaped_colon(body, 0)
                 targets = body[:colon].lstrip(" \t") if colon >= 0 else ""
                 if (colon > 0 and targets not in ("", "&")
-                        and body[colon - 1] == "&"):
+                        and body[colon - 1] == "&"
+                        # `foo&: X=1` 是 target-specific 变量赋值，make 不
+                        # 要求它带 recipe；只有真正的 grouped target 缺
+                        # recipe 才会报错。
+                        and not _make_rule_is_target_specific(body, colon)):
                     if not _make_grouped_target_has_recipe(
                             text, body, colon, pos + len(body)):
                         return True
