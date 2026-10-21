@@ -2024,12 +2024,29 @@ def _make_find_include_function(text: str, pos: int):
         if (name in _MAKE_INCLUDE_FUNCTIONS and j < len(text)
                 and text[j] in " \t"):
             return i, k + 1, name, text[j:k].lstrip(" \t")
+        if name in _MAKE_CONDITION_FUNCTIONS or name == "foreach":
+            # if/or/and 短路、foreach 的 body 只对非空列表求值：里面的
+            # 静态函数不能在这里提前展开，否则未选中的分支/空列表 body
+            # 里的参数错误会被误当成读取期错误。交给条件/foreach 展开器
+            # 选中后再处理。
+            i = k + 1
+            continue
         i += 1
     return None
 
 
-def _make_expand_include_functions(text: str, repo: Path) -> str:
-    """展开 include 文件名里可静态求值的函数（支持嵌套调用）。"""
+def _make_expand_include_functions(
+        text: str, repo: Path,
+        variables: Optional[Dict[str, Optional[str]]] = None,
+        simple: Optional[Dict[str, bool]] = None,
+        overrides: Optional[set] = None) -> str:
+    """展开 include 文件名里可静态求值的函数（支持嵌套调用）。
+
+    传入变量表时参数按 make 语义完整展开（含变量/条件/嵌套函数）：
+    参数边界必须在原文上确定，否则先展开变量、再按「函数名后的空白」
+    丢首空白会把变量值自身的前导空白吃掉（`$(subst $x ,...)` 的 `$x`
+    展开为空后，那个空格属于 old 参数，不是语法空白）。
+    """
     pos = 0
     while True:
         call = _make_find_include_function(text, pos)
@@ -2043,11 +2060,23 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
         # 处理，展开结果里的前导空格属于值本身。
         raw_parts[0] = raw_parts[0].lstrip(" \t")
-        evaluated = [_make_expand_include_functions(
-                         _make_expand_automatic_refs(part), repo)
-                     for part in raw_parts]
-        if any("$" in part for part in evaluated):
-            # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
+        evaluated: List[str] = []
+        unresolved = False
+        for part in raw_parts:
+            if variables is not None:
+                value = _make_expand_condition_arg(
+                    part, variables, simple or {}, repo, 0, overrides)
+            else:
+                value = None
+            if value is None:
+                value = _make_expand_include_functions(
+                    _make_expand_automatic_refs(part), repo)
+            if "$" in value:
+                # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
+                unresolved = True
+                break
+            evaluated.append(value)
+        if unresolved:
             pos = end
             continue
         replacement = _make_expand_include_function(
@@ -3278,6 +3307,12 @@ def _make_expand_simple_vars(text: str,
             expand_input, variables, simple)
         expanded = _make_expand_foreach(
             expanded, variables, simple, repo)
+        # 静态函数必须在展开变量引用之前处理：参数边界按原文确定，
+        # `$(subst $x ,...)` 里 `$x` 展开为空后剩下的空格属于参数值，
+        # 先展开变量会让静态函数误把它当成函数名后的语法空白丢掉。
+        if repo is not None:
+            expanded = _make_expand_include_functions(
+                expanded, repo, variables, simple, overrides)
         expanded = _make_expand_refs(expanded, variables, simple)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
@@ -3289,6 +3324,9 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple)
             expanded = _make_expand_foreach(
                 expanded, variables, simple, repo)
+            if repo is not None:
+                expanded = _make_expand_include_functions(
+                    expanded, repo, variables, simple, overrides)
             expanded = _make_expand_condition_functions(
                 expanded, variables, simple, repo)
             expanded = _make_expand_metadata_functions(
@@ -3298,8 +3336,6 @@ def _make_expand_simple_vars(text: str,
             expanded = _make_expand_call_functions(
                 expanded, variables, simple, repo, overrides)
             expanded = _make_expand_refs(expanded, variables, simple)
-            if repo is not None:
-                expanded = _make_expand_include_functions(expanded, repo)
             expanded = _make_expand_refs(expanded, variables, simple)
             if expanded == before:
                 break
@@ -3680,6 +3716,14 @@ def _make_expand_condition_arg(
     for _ in range(20):
         before = value
         value = _make_expand_automatic_refs(value)
+        # 静态函数先于变量引用展开：参数边界按原文确定，变量展开为空后
+        # 留下的空格可能属于参数值（`$(subst $x ,...)`），不能丢。
+        if repo is not None:
+            try:
+                value = _make_expand_include_functions(
+                    value, repo, variables, simple, overrides)
+            except _MakeRequiredIncludeError:
+                return None
         value = _make_expand_refs(value, variables, simple)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
@@ -3696,7 +3740,8 @@ def _make_expand_condition_arg(
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             try:
-                value = _make_expand_include_functions(value, repo)
+                value = _make_expand_include_functions(
+                    value, repo, variables, simple, overrides)
             except _MakeRequiredIncludeError:
                 return None
         value = _make_expand_refs(value, variables, simple)

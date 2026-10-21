@@ -1922,6 +1922,42 @@ def test_detect_test_suite_make_call_function_not_a_suite(tmp_path,
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_static_args_keep_expanded_space(tmp_path):
+    """变量在静态函数参数里展开为空时，其后的空格属于参数值而不是语法
+    空白。`$(subst $x ,test: ,$+)` 的替换是空操作，后面的目标行仍只有
+    test；先展开变量再按语法空白 lstrip 会把函数算成追加 "test: "，把
+    单冒号规则误变成 `test test::` 双冒号冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@true\n"
+        "$(addprefix $(firstword test) , $(subst $x ,test: ,$+)):\n"
+        "\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(and ,$(wordlist foo,,x)) test:\n\t@true\n",
+    "$(if ,$(wordlist foo,,x),) test:\n\t@true\n",
+    "$(or test,$(wordlist foo,,x)) test:\n\t@true\n",
+    "$(foreach x,,$(wordlist foo,,x)) test:\n\t@true\n",
+])
+def test_detect_test_suite_make_short_circuit_skips_static_args(tmp_path,
+                                                                makefile):
+    """if/or/and/foreach 未求值分支里的静态函数参数错误不能让探测失败：
+    make 不展开这些分支，后面的 test 目标仍可运行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     "ifeq ($(if a,b,c),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(or ,,),x)\ntest:\n\t@true\nendif\n",
