@@ -7579,3 +7579,29 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(X)",
+    "$(X) $(Y)",
+    "foo$(X) bar",
+    "${a}${X}b",
+    "$(strip )$(X)",
+])
+def test_detect_test_suite_make_expanded_missing_separator_blocks_suite(
+        tmp_path, line):
+    """原始行以 `$` 开头、展开后仍有非空文本且无规则分隔符时 make 读取失败。
+
+    回归：missing separator 只在变量展开前扫描，而展开前以 `$` 开头的行
+    被交给后续展开逻辑；`X = test` + `$(X)` 展开成裸 `test` 后漏检，
+    后面合法 test 目标会让探测误以为套件可运行。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = test\nY = foo\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None

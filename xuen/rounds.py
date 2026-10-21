@@ -1185,7 +1185,8 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
     return False
 
 
-def _make_has_missing_separator_line(text: str) -> bool:
+def _make_has_missing_separator_line(text: str, *,
+                                    expanded: bool = False) -> bool:
     """是否有会被 make 报 missing separator 的非规则行。
 
     `foo` / `test\\:` / `a\\:b` 这类既不是变量赋值、也不是读取指令的
@@ -1215,6 +1216,11 @@ def _make_has_missing_separator_line(text: str) -> bool:
         stripped = body.lstrip(" \t")
         if (not stripped or stripped.startswith("#")
                 or stripped.startswith(_MAKE_CONTEXT_RESET)):
+            continue
+        if expanded and stripped.startswith(";"):
+            # `$: ;` / `$(X) ;` 的目标列表由空变量引用组成，展开后只剩
+            # 同行命令；make 接受这种空目标规则，不能当成 missing
+            # separator。字面 ` ;` 已在展开前的扫描里拒绝。
             continue
         if _MAKE_DEFINE_LINE.match(body) is not None:
             define_depth = 1
@@ -4557,6 +4563,10 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             if _make_has_bare_trailing_dollar_rule(text):
                 return None
             text = _make_expand_simple_vars(text, repo)
+            # 展开后的非规则行同样会在读取阶段报 missing separator
+            #（`$(X) $(Y)` 这类变量组成的无冒号行），展开前扫描看不到。
+            if _make_has_missing_separator_line(text, expanded=True):
+                return None
             if _make_defines_test_target(text, repo):
                 return ["make", "test"]
         except (_MakeRequiredIncludeError, OSError):
