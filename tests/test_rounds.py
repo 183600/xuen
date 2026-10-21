@@ -6476,3 +6476,84 @@ def test_detect_test_suite_make_nonempty_or_split_target_assignment_keeps_suite(
     (tmp_path / "Makefile").write_text(
         line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
     assert detect_test_suite(tmp_path, ) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "foo",
+    "foo bar",
+    "echo hi",
+    "test\\:",
+    "test\\: dep",
+    "test\\:$(X)=1",
+    "foo\\: dep",
+    "a\\:b",
+    "private export foo",
+])
+def test_detect_test_suite_make_missing_separator_line_blocks_suite(
+        tmp_path, line):
+    """展开后没有规则分隔符的非指令行让 make 在读取阶段直接失败。
+
+    回归：原先只扫描带冒号的行，`foo` / `test\\: dep` 这类 missing
+    separator 被漏掉，别处存在的合法 test 目标会让探测误以为套件可运行，
+    随后 `make test` 失败并误伤候选。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$: ;",
+    "$x ;",
+    "$(X) ;",
+    "$(info hi)",
+    "export foo",
+    "vpath %.c src",
+    "test $#:",
+    "test $;::",
+    "test $$:",
+])
+def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
+        tmp_path, line):
+    """变量引用展开为空、读取期函数和导出/vpath 指令不是 missing separator。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    if line.startswith("test "):
+        text = line + "\n\techo ok\n"
+    else:
+        text = line + "\ntest:\n\t@echo ok\n"
+    (tmp_path / "Makefile").write_text(text, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "&:$(X)=1",
+    "&::$(X)=1",
+    "$(X):$(Y)=1",
+    "$(X) $(Y):$(Z)=1",
+    "$x:$(X)=1",
+    "$x&:$(X)=1",
+    "foo$:$(X)=1",
+])
+def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
+        tmp_path, line):
+    """目标列表本身展开为空时 make 接受 target-specific 赋值。
+
+    回归：为空 target-specific 变量名加的读取期检查只看赋值名，没先看
+    目标列表；`$(X):$(Y)=1` / `&:$(X)=1` 被误判成 empty variable name，
+    可运行的 test 套件被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

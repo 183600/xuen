@@ -853,6 +853,16 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
                 break
             i += 1
         if later < 0:
+            # `foo$:$(X)=1` 的 `$:` 吃掉冒号后剩 `foo$(X)=1`，是合法的
+            # 动态变量名赋值（make 接受），不是缺少分隔符。只有目标列表
+            # 里确实有字面目标时才这样重建；`$x$:` 这类纯变量引用目标
+            # 展开后为空，仍按缺失分隔符处理。
+            if bare and not only_refs:
+                rebuilt = targets[:-1] + body[colon + 1:]
+                if (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
+                        or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
+                        is not None):
+                    continue
             return True
         if later + 1 < len(body) and body[later + 1] == "=":
             return True
@@ -1012,6 +1022,79 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
             seen_rule = False
             continue
         seen_rule = True
+    return False
+
+
+def _make_has_missing_separator_line(text: str) -> bool:
+    """是否有会被 make 报 missing separator 的非规则行。
+
+    `foo` / `test\\:` / `a\\:b` 这类既不是变量赋值、也不是读取指令的
+    行没有规则分隔符，make 在读取阶段直接失败，后面的 test 目标不会
+    执行。原先只扫描带冒号的行，导致这类错误被漏掉，可运行的 test 套件
+    反被误判成「有套件」（实际 `make test` 失败后会误伤候选）。
+
+    必须在变量展开前扫描：`$: ;` / `$x ;` 这类整行变量引用会展开成
+    空目标列表并被执行，展开后就只剩一个 `;`，无法与真正的裸 `;`
+    （missing rule before recipe）区分。行首 `$` 的写法交给后续的变量
+    展开逻辑判断；展开为空的合法行不会再报错，展开成文本的由调用方
+    继续按规则头处理。
+    """
+    define_depth = 0
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body:
+            continue
+        if define_depth:
+            if _MAKE_DEFINE_LINE.match(body) is not None:
+                define_depth += 1
+            elif _MAKE_ENDEF_LINE.match(body) is not None:
+                define_depth -= 1
+            continue
+        if body.startswith("\t"):
+            continue
+        stripped = body.lstrip(" \t")
+        if (not stripped or stripped.startswith("#")
+                or stripped.startswith(_MAKE_CONTEXT_RESET)):
+            continue
+        if _MAKE_DEFINE_LINE.match(body) is not None:
+            define_depth = 1
+            continue
+        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                or _MAKE_CONDITIONAL_LINE.match(body) is not None):
+            continue
+        raw_colon = _make_unescaped_colon(body, 0)
+        if raw_colon >= 0:
+            if _make_target_list_has_bare_trailing_dollar(body[:raw_colon]):
+                # `foo$:...` 的 `$:` 会吃掉规则冒号，行是否合法由
+                # _make_has_bare_trailing_dollar_rule 统一判定。
+                continue
+            continue
+        # `$#` / `$;` / `$:` 这类单字符引用会吃掉后面的字符：`test $#:`
+        # 里的 `#` 不是注释起点、`test $::` 里第一个冒号被 `$:` 吃掉，
+        # 但第二个冒号仍是规则分隔符。先遮住单字符引用再找规则冒号。
+        masked: List[str] = []
+        pos = 0
+        while pos < len(body):
+            if body[pos] == "$" and pos + 1 < len(body):
+                if body[pos + 1] == "$":
+                    # `$$` 是字面 `$`，不构成单字符引用；后面的冒号仍是
+                    # 规则分隔符（`test $$:` 定义可执行的 test 目标）。
+                    masked.append("$$")
+                    pos += 2
+                    continue
+                if body[pos + 1] not in "({":
+                    masked.append("\x03")
+                    pos += 2
+                    continue
+            masked.append(body[pos])
+            pos += 1
+        if _make_unescaped_colon("".join(masked), 0) >= 0:
+            continue
+        if stripped.startswith("$"):
+            continue
+        return True
     return False
 
 
@@ -2439,11 +2522,31 @@ def _make_expand_simple_vars(text: str,
             # 之前判定（`test:$(X)=1` 展开后是 `test:=1`）。
             # 行首 export/vpath 等指令里的冒号/等号只是参数文本，不是
             # 规则头（`export test:$(X)=1` 仍能执行后面的 test 目标）。
-            rest_start = raw_colon + 1
-            if rest_start < len(body) and body[rest_start] == ":":
-                rest_start += 1
-            _make_raw_rule_is_target_assignment(
-                body[rest_start:], variables, simple)
+            raw_targets = body[:raw_colon]
+            skip = raw_targets.lstrip(" \t") in ("", "&")
+            if (not skip
+                    and _make_target_list_has_bare_trailing_dollar(raw_targets)):
+                # `foo$:$(X)=1` 的 `$:` 会吃掉规则分隔符，后面的内容按
+                # recipe/赋值处理，不再是 target-specific 赋值。
+                skip = True
+            if not skip:
+                expanded_targets = _make_resolve_single_char_refs(
+                    raw_targets, variables, simple)
+                expanded_targets = _make_expand_refs(
+                    expanded_targets, variables, simple)
+                expanded_targets = _make_expand_computed_refs(
+                    expanded_targets, variables, simple)
+                expanded_targets = _make_resolve_single_char_refs(
+                    expanded_targets, variables, simple)
+                # 目标列表本身展开为空（`$(X):$(Y)=1` / `$x:...`）或只剩
+                # grouped 标记 `&` 时 make 接受空目标，不会报空变量名。
+                skip = expanded_targets.strip(" \t") in ("", "&")
+            if not skip:
+                rest_start = raw_colon + 1
+                if rest_start < len(body) and body[rest_start] == ":":
+                    rest_start += 1
+                _make_raw_rule_is_target_assignment(
+                    body[rest_start:], variables, simple)
         if (raw_colon >= 0 and expanded_colon >= 0
                 and _make_rule_is_target_specific(expanded, expanded_colon)
                 and not _make_rule_is_target_specific(body, raw_colon)):
@@ -3061,6 +3164,8 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 {"CURDIR": str(repo.resolve()),
                  "MAKEFILE_LIST": makefile.name},
                 {"CURDIR": True, "MAKEFILE_LIST": True})
+            if _make_has_missing_separator_line(text):
+                return None
             if _make_has_bare_trailing_dollar_rule(text):
                 return None
             text = _make_expand_simple_vars(text, repo)
