@@ -1036,6 +1036,25 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "$(wordlist x,x,$(shell true)) test:",
+    "$(wordlist 1,x,$(shell true)) test:",
+    "$(word x,$(shell true)) test:",
+    "$(wordlist $(shell true), $(abspath x), a) test:",
+])
+def test_detect_test_suite_make_bad_index_with_unsupported_tail(
+        tmp_path, line):
+    """后续参数含无法静态求值的 shell 时，非法下标仍会让 make 报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line + "\n\t@true\n",
+                                       encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_empty_wordlist_arg_not_a_suite(tmp_path):
     """wordlist 第二个参数完全省略时 make 报错，不能静默展开成空串。"""
     if not shutil.which("make"):
@@ -1087,6 +1106,23 @@ def test_detect_test_suite_make_invalid_immediate_assignment_blocks_suite(
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(
         assignment + "\ntest:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:\n\t@true\n$(if $(wordlist $< , $* , foo) ,x ,y):\n\t@true\n",
+    "test:\n\t@true\n$(and $(wordlist test foo,,x), y):\n\t@true\n",
+    "test:\n\t@true\n$(or $(word 0,a b),y):\n\t@true\n",
+])
+def test_detect_test_suite_make_condition_function_error_blocks_suite(
+        tmp_path, line):
+    """if/or/and 求值时展开出的非法下标是读取期错误，不能被吞掉。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line, encoding="utf-8")
     p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode != 0
@@ -2059,6 +2095,8 @@ def test_detect_test_suite_make_condition_functions_negative(tmp_path,
     "space := $(empty) $(empty)\n$(if $(space),test,x):\n\t@true\n",
     "ifeq ($(if $(foreach x,test, ),yes,no),yes)\n"
     "test:\n\t@true\nendif\n",
+    # 未生效分支里的非法下标不会被 make 展开，不能因此拒绝套件。
+    "$(if ,$(wordlist x,x,foo),test):\n\t@true\n",
 ])
 def test_detect_test_suite_make_condition_functions_in_targets(
         tmp_path, makefile):

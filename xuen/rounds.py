@@ -2158,7 +2158,7 @@ def _make_expand_include_functions(
         # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
         # 处理，展开结果里的前导空格属于值本身。
         raw_parts[0] = raw_parts[0].lstrip(" \t")
-        evaluated: List[str] = []
+        evaluated: List[Optional[str]] = []
         unresolved = False
         for part in raw_parts:
             if variables is not None:
@@ -2172,9 +2172,23 @@ def _make_expand_include_functions(
             if "$" in value:
                 # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
                 unresolved = True
-                break
+                evaluated.append(None)
+                continue
             evaluated.append(value)
         if unresolved:
+            # 后面的参数无法静态求值时整个函数不能展开，但 word/wordlist
+            # 的下标参数已展开时，非法下标仍会让 make 在读取期报错
+            # （`$(wordlist x,x,$(shell ...)) test:` 不会执行 test）。
+            # 参数按下标独立检查：前一个含 shell 不影响后一个判错。
+            if name == "word":
+                if evaluated and evaluated[0] is not None:
+                    _make_function_index(evaluated[0], "word")
+            elif name == "wordlist":
+                if evaluated and evaluated[0] is not None:
+                    _make_function_index(evaluated[0], "wordlist")
+                if len(evaluated) > 1 and evaluated[1] is not None:
+                    _make_function_index(
+                        evaluated[1], "wordlist", allow_zero=True)
             pos = end
             continue
         replacement = _make_expand_include_function(
@@ -3833,11 +3847,11 @@ def _make_expand_condition_arg(
         # 静态函数先于变量引用展开：参数边界按原文确定，变量展开为空后
         # 留下的空格可能属于参数值（`$(subst $x ,...)`），不能丢。
         if repo is not None:
-            try:
-                value = _make_expand_include_functions(
-                    value, repo, variables, simple, overrides)
-            except _MakeRequiredIncludeError:
-                return None
+            # 静态函数的参数错误（如 wordlist 非法下标）是读取期 fatal
+            # 错误，即使在 if 条件里也必须向上抛；吞掉会把必然失败的
+            # Makefile 误判成可运行套件。
+            value = _make_expand_include_functions(
+                value, repo, variables, simple, overrides)
         value = _make_expand_refs(value, variables, simple)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
@@ -3857,11 +3871,8 @@ def _make_expand_condition_arg(
             value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
-            try:
-                value = _make_expand_include_functions(
-                    value, repo, variables, simple, overrides)
-            except _MakeRequiredIncludeError:
-                return None
+            value = _make_expand_include_functions(
+                value, repo, variables, simple, overrides)
         value = _make_expand_refs(value, variables, simple)
         if value == before:
             break
