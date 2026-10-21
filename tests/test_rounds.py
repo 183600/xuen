@@ -835,6 +835,17 @@ def test_detect_test_suite_make_suffix_dotfile(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_undefined_include_path(tmp_path):
+    """未定义变量展开为空：`include $(T)/tests.mk` 会变成 /tests.mk，
+    make 因必需 include 缺失而失败，不能当空文件名跳过。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(UNDEFINED)/tests.mk\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_bad_addprefix_args(tmp_path):
     """addprefix/addsuffix 缺少逗号时 make 直接报错，不能当空展开。"""
     if not shutil.which("make"):
@@ -922,6 +933,9 @@ def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    "ifeq ($(UNDEFINED),)\ntest:\n\t@true\nendif\n",
+    'ifeq "$(UNDEFINED)" ""\ntest:\n\t@true\nendif\n',
+    "test$(UNDEFINED):\n\t@true\n",
     "ifeq (1,1)\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (1,1)\ntest:\n\t@true\nendif\n",

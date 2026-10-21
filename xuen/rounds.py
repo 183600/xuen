@@ -607,7 +607,9 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
     def repl(match: re.Match) -> str:
         name = match.group(1) or match.group(2) or match.group(3)
         if name not in variables:
-            return match.group(0)
+            # make 里未定义变量展开为空串：`ifeq ($(T),)`、`test$(T):`
+            # 都依赖这一点。shell 赋值（!=）的值未知，仍保留原样。
+            return ""
         value = variables[name]
         if value is None:
             return match.group(0)
