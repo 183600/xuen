@@ -790,6 +790,7 @@ def test_detect_test_suite_make_included_file(tmp_path, directive):
     "D = mk\ninclude $(D)/tests.mk\n",
     "M = other.mk tests.mk\ninclude $(M)\n",
     "include vars.mk\ninclude $(T)\n",
+    "T = tests.mk\ninclude $T\n",
 ])
 def test_detect_test_suite_make_variable_include(tmp_path, makefile):
     """include 的文件名由简单变量展开时也要按 make 语义读取。"""
@@ -1004,6 +1005,15 @@ def test_detect_test_suite_make_variable_target_negative(tmp_path, makefile):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
     assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_single_char_variable_target(tmp_path):
+    """`$T` 是 make 的单字符变量写法，目标名也要按变量展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "T = test\n$T:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 def test_detect_test_suite_make_include_variable_order(tmp_path):

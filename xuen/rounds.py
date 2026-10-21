@@ -484,7 +484,8 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"([A-Za-z0-9_.-]+)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_VAR_REF = re.compile(
-    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)\)|\{([A-Za-z0-9_.-]+)\})")
+    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)\)|\{([A-Za-z0-9_.-]+)\}"
+    r"|([A-Za-z0-9_]))")
 
 
 def _make_strip_comment(line: str) -> str:
@@ -557,7 +558,7 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
         return text
 
     def repl(match: re.Match) -> str:
-        name = match.group(1) or match.group(2)
+        name = match.group(1) or match.group(2) or match.group(3)
         if name not in variables:
             return match.group(0)
         value = variables[name]
