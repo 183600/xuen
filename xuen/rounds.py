@@ -900,8 +900,15 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
         # 无法静态判断空动态变量名时仍保守拒绝。
         suffix = body[colon + 1:]
         suffix_at_start = not suffix.startswith((" ", "\t"))
+        rebuilt = targets[:-1] + suffix
+        spaced = (bare and len(targets) >= 2
+                  and targets[-2] in " \t")
+        if spaced and _make_unescaped_colon(rebuilt, 0) < 0:
+            # `foo $:X=1` / `foo $: =x` / `foo $:+=1`：`$` 是独立目标
+            # 词，吃掉冒号后 make 不会把 `foo X=1` 重新当成变量赋值，
+            # 而是报 missing separator。
+            return True
         if bare and suffix_at_start and not only_refs:
-            rebuilt = targets[:-1] + suffix
             if (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
                     or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
                     is not None):
@@ -909,6 +916,23 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
         elif (only_refs and suffix_at_start
                 and _MAKE_VAR_ASSIGNMENT.match(suffix) is not None):
             continue
+        escaped_dollar = False
+        if targets.endswith("$"):
+            slashes = 0
+            pos = len(targets) - 2
+            while pos >= 0 and targets[pos] == "\\":
+                slashes += 1
+                pos -= 1
+            escaped_dollar = slashes % 2 == 1
+        if (bare or only_refs) and not escaped_dollar:
+            # `$:` 吃掉冒号后 make 只看剩余文本里是否还有规则分隔符：
+            # 重建行 `X:::=1` / `X\:Y=1` 仍会让整个 Makefile 读取失败，
+            # 必须按无套件处理，不能被后续展开洗成合法赋值。
+            if _make_has_missing_separator_line(rebuilt):
+                return True
+            if (_make_unescaped_colon(rebuilt, 0) >= 0
+                    and _make_has_invalid_extra_rule_colon(rebuilt)):
+                return True
         # `$:` 只吃掉紧邻的冒号；规则头剩余部分若还有未转义冒号，整行
         # 仍可能被 make 接受（`foo $: a:b` 定义目标 foo a）。只有后续
         # 再没有冒号，或第一个剩余冒号属于 `:=`（空变量名）时才失败。
@@ -1340,7 +1364,7 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"((?:\\[^\s=:#$]|\\|[^\s:#=$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_DYNAMIC_VAR_UNIT = (
-    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\$[^\r\n]|\\[^\s=]|\\"
+    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\$[^\r\n]|\\[^\s=:#$]|\\"
     r"|[^\s:#=;$(){}])")
 _MAKE_DYNAMIC_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
