@@ -1886,6 +1886,43 @@ def test_detect_test_suite_make_origin_flavor_negative(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    "test = $(1)\n$(call test,test):\n\t@true\n",
+    "test = $(1)\n$(call test,test) foo:\n\t@true\n",
+    "T = test\nX = $(1)\n$(call X,$(T)):\n\t@true\n",
+    "X = $(2)$(1)\n$(call X,test,x) test:\n\t@true\n",
+    "X = $(1)\n$(call X,te$(Y)st):\n\t@true\n",
+])
+def test_detect_test_suite_make_call_function_defines_test(tmp_path,
+                                                           makefile):
+    """`$(call var,...)` 按参数展开变量值，展开出的 test 目标要能探测。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "test = $(1)\n$(call test):\n\t@true\n",
+    "$(call undefined,test):\n\t@true\n",
+    "X = literal\n$(call X,$(error boom)):\n\t@true\n",
+])
+def test_detect_test_suite_make_call_function_not_a_suite(tmp_path,
+                                                          makefile):
+    """call 展开为空或参数触发 error 时，后面的 test 目标要么不存在
+    要么不会执行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq ($(if a,b,c),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(or ,,),x)\ntest:\n\t@true\nendif\n",
     "ifeq ($(and a,),x)\ntest:\n\t@true\nendif\n",

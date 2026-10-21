@@ -2168,6 +2168,97 @@ def _make_expand_side_effect_functions(text: str) -> str:
         pos = start
 
 
+def _make_expand_call_functions(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool], repo: Optional[Path] = None,
+        overrides: Optional[set] = None, depth: int = 0) -> str:
+    """静态展开 `$(call var,参数...)`。
+
+    make 先展开变量名与每个参数，再把参数按序号赋给 `$(1)`…`$(0)` 保持
+    变量名，最后在局部变量表里展开变量值。`$(call test,test)` 这类写法
+    常用于动态拼目标名，不展开会把函数原文留成目标名而漏探测 test。
+    """
+    if depth > 10:
+        return text
+    pos = 0
+    while True:
+        call = _make_find_function_call(text, pos, "call")
+        if call is None:
+            return text
+        start, end, args = call
+        parts = _make_split_function_args(args, 1000000)
+        raw_name = parts[0].lstrip(" \t")
+        name = _make_expand_call_arg(
+            raw_name, variables, simple, repo, overrides, depth + 1)
+        if "$" in name:
+            pos = end
+            continue
+        if name in variables:
+            value = variables[name]
+            if value is None:
+                # shell 赋值的值未知，不能猜。
+                pos = end
+                continue
+        elif name in os.environ:
+            value = os.environ[name]
+        else:
+            # 未定义的 callable 展开为空。
+            text = text[:start] + text[end:]
+            pos = start
+            continue
+        params = []
+        unresolved = False
+        for part in parts[1:]:
+            value_part = _make_expand_call_arg(
+                part, variables, simple, repo, overrides, depth + 1)
+            if "$" in value_part:
+                unresolved = True
+                break
+            params.append(value_part)
+        if unresolved:
+            pos = end
+            continue
+        local_vars = dict(variables)
+        local_simple = dict(simple)
+        local_vars["0"] = name
+        local_simple["0"] = True
+        for index, param in enumerate(params, 1):
+            local_vars[str(index)] = param
+            local_simple[str(index)] = True
+        result = _make_expand_call_arg(
+            value, local_vars, local_simple, repo, overrides, depth + 1)
+        text = text[:start] + result + text[end:]
+        pos = start + len(result)
+
+
+def _make_expand_call_arg(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool], repo: Optional[Path] = None,
+        overrides: Optional[set] = None, depth: int = 0) -> str:
+    """把静态可求值的函数展开到不动点，供 call 的参数/函数体复用。"""
+    for _ in range(20):
+        before = text
+        text = _make_expand_automatic_refs(text)
+        text = _make_expand_value(text, variables, simple)
+        text = _make_expand_foreach(text, variables, simple, repo)
+        text = _make_expand_condition_functions(
+            text, variables, simple, repo, overrides=overrides)
+        text = _make_expand_metadata_functions(
+            text, variables, simple, overrides)
+        text = _make_expand_error_functions(text)
+        text = _make_expand_side_effect_functions(text)
+        text = _make_expand_call_functions(
+            text, variables, simple, repo, overrides, depth)
+        text = _make_expand_refs(text, variables, simple)
+        if repo is not None:
+            text = _make_expand_include_functions(text, repo)
+        text = _make_expand_computed_refs(text, variables, simple)
+        text = _make_resolve_single_char_refs(text, variables, simple)
+        if text == before:
+            break
+    return text
+
+
 def _make_expand_error_functions(text: str) -> str:
     """遇到会立即展开的 `$(error ...)` 时按 make 读取失败处理。
 
@@ -2240,6 +2331,8 @@ def _make_expand_foreach_part(text: str,
         text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_error_functions(text)
         text = _make_expand_side_effect_functions(text)
+        text = _make_expand_call_functions(
+            text, variables, simple, repo)
         text = _make_expand_refs(text, variables, simple, active=active)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
@@ -2629,7 +2722,8 @@ def _make_expand_computed_refs(text: str,
 def _make_expand_immediate_value(
         value: str, variables: Dict[str, Optional[str]],
         simple: Dict[str, bool],
-        repo: Optional[Path] = None) -> str:
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> str:
     """按 make 读取期语义展开 `:=`/`+=`/`!=` 的右值。
 
     这些赋值会在读取时立即展开右值，静态函数的参数错误（如
@@ -2646,6 +2740,8 @@ def _make_expand_immediate_value(
         value = _make_expand_metadata_functions(value, variables, simple)
         value = _make_expand_error_functions(value)
         value = _make_expand_side_effect_functions(value)
+        value = _make_expand_call_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             value = _make_expand_include_functions(value, repo)
@@ -2696,7 +2792,8 @@ def _make_apply_assignment_parts(
     if op == "!=":
         # `!=` 先展开右值再交给 shell；静态函数的参数错误仍在读取期
         # 直接终止 make，不能因为不保存 shell 结果就跳过展开。
-        _make_expand_immediate_value(raw, variables, simple, repo)
+        _make_expand_immediate_value(raw, variables, simple, repo,
+                                     overrides)
         variables[name] = None
         simple[name] = False
     elif op == "?=":
@@ -2710,7 +2807,7 @@ def _make_apply_assignment_parts(
             value = raw
             if simple.get(name):
                 value = _make_expand_immediate_value(
-                    value, variables, simple, repo)
+                    value, variables, simple, repo, overrides)
             # make 只在旧值非空且追加值非空时插入一个分隔空格；两侧的
             # 尾随空白都属于变量值本身（`X += bar ` 的值是 `foo bar `），
             # strip() 会把它吃掉，进而让 ifeq 等条件判断出错。
@@ -2720,7 +2817,7 @@ def _make_apply_assignment_parts(
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
         variables[name] = _make_expand_immediate_value(
-            raw, variables, simple, repo)
+            raw, variables, simple, repo, overrides)
         simple[name] = True
     else:
         variables[name] = raw
@@ -2751,7 +2848,8 @@ def _make_apply_define(name: str, op: str, body: str,
     if is_override:
         overrides.add(name)
     if op == "!=":
-        _make_expand_immediate_value(body, variables, simple, repo)
+        _make_expand_immediate_value(body, variables, simple, repo,
+                                     overrides)
         variables[name] = None
         simple[name] = False
     elif op == "+=":
@@ -2762,14 +2860,14 @@ def _make_apply_define(name: str, op: str, body: str,
             value = body
             if simple.get(name):
                 value = _make_expand_immediate_value(
-                    value, variables, simple, repo)
+                    value, variables, simple, repo, overrides)
             if not variables[name]:
                 variables[name] = value
             elif value:
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
         variables[name] = _make_expand_immediate_value(
-            body, variables, simple, repo)
+            body, variables, simple, repo, overrides)
         simple[name] = True
     else:
         variables[name] = body
@@ -3197,6 +3295,8 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
             expanded = _make_expand_side_effect_functions(expanded)
+            expanded = _make_expand_call_functions(
+                expanded, variables, simple, repo, overrides)
             expanded = _make_expand_refs(expanded, variables, simple)
             if repo is not None:
                 expanded = _make_expand_include_functions(expanded, repo)
@@ -3591,6 +3691,8 @@ def _make_expand_condition_arg(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
         value = _make_expand_side_effect_functions(value)
+        value = _make_expand_call_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
             try:
@@ -3698,6 +3800,8 @@ def _make_expand_condition_text(text: str,
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
         text = _make_expand_side_effect_functions(text)
+        text = _make_expand_call_functions(
+            text, variables, simple, repo, overrides)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
         if text == before:
