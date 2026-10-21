@@ -2190,6 +2190,10 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     # 反斜杠空格是目标名的一部分；后面的普通空格仍分隔下一个目标。
     "foo\\ bar test:",
     "foo\\ \tbar test:",
+    # 转义的分号/等号是目标名的一部分，不是同行命令/赋值。
+    "test foo\\;bar:",
+    "foo\\;bar test:",
+    "foo\\=bar test:",
     # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
     "test foo=bar:",
     "test foo\\=bar:",
@@ -2244,7 +2248,6 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test \\\n ${X:--x}",
     "a test ${X:--x} X=1",
     "test foo;bar:",
-    "foo\\;bar test:",
     # 紧跟 test 的赋值形式不是目标（`test foo = bar:` 才是）
     "test = bar:",
     "test ?= bar:",
