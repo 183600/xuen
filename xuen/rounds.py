@@ -452,6 +452,13 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     target-pattern（test: foo bar: dep 会报 multiple target patterns）。
     变量引用可能展开出 %，静态检查无法确定，沿用原来的探测口径。
     """
+    # 目标列表紧贴着规则分隔符、且末尾是奇数个 `$` 时，make 会把最后的
+    # `$` 与 `:` 拼成变量引用（`a $:` / `a x$:` / `a \$:` 都报 missing
+    # separator，后面的 test 目标也不会生效）；`$$` 是字面 `$`，不受影响。
+    targets = line[:colon]
+    if targets.endswith("$") and (
+            len(targets) - len(targets.rstrip("$"))) % 2 == 1:
+        return False
     start = colon + 1
     if start < len(line) and line[start] == ":":
         start += 1

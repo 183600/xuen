@@ -2304,6 +2304,11 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test foo += bar:",
     "test foo?=bar:",
     "test foo=bar baz:",
+    # 目标列表末尾紧贴分隔符的 `$` 必须成对：`$$` 是字面 `$`，
+    # 单个 `$` 会与 `:` 拼成变量引用并报 missing separator。
+    "test $$:",
+    "test $ x:",
+    "test $ :",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -2382,6 +2387,11 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "foo test!=1:",
     "foo test:=1:",
     "foo test:=",
+    # 末尾奇数个 `$` 紧贴规则分隔符时 make 报 missing separator。
+    "test $:",
+    "test $$$:",
+    "test x$:",
+    "test \\$:",
     # 续行里紧跟 test 的赋值形式同样不是目标（续行压成空格后与
     # `test = bar:` 等价）
     "test \\\n = bar:",
