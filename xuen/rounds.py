@@ -2132,18 +2132,20 @@ def _make_expand_foreach_part(text: str,
                               variables: Dict[str, Optional[str]],
                               simple: Dict[str, bool],
                               repo: Optional[Path],
-                              depth: int) -> str:
+                              depth: int,
+                              active: Optional[set] = None) -> str:
     """展开 foreach 参数/循环体里的静态变量与函数。"""
     for _ in range(20):
         before = text
         text = _make_expand_value(text, variables, simple, depth + 1)
-        text = _make_expand_foreach(text, variables, simple, repo, depth + 1)
-        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_foreach(
+            text, variables, simple, repo, depth + 1, active)
+        text = _make_expand_refs(text, variables, simple, active=active)
         text = _make_expand_condition_functions(text, variables, simple, repo)
-        text = _make_expand_refs(text, variables, simple)
+        text = _make_expand_refs(text, variables, simple, active=active)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
-            text = _make_expand_refs(text, variables, simple)
+            text = _make_expand_refs(text, variables, simple, active=active)
         text = _make_expand_computed_refs(text, variables, simple)
         text = _make_resolve_single_char_refs(text, variables, simple)
         if text == before:
@@ -2155,7 +2157,8 @@ def _make_expand_foreach(text: str,
                          variables: Dict[str, Optional[str]],
                          simple: Dict[str, bool],
                          repo: Optional[Path] = None,
-                         depth: int = 0) -> str:
+                         depth: int = 0,
+                         active: Optional[set] = None) -> str:
     """静态展开 `$(foreach var,list,body)`（含嵌套）。
 
     foreach 在目标名里很常见（`$(foreach x,test foo,$(x))::` 会同时
@@ -2174,9 +2177,9 @@ def _make_expand_foreach(text: str,
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("foreach: missing argument")
         name = _make_expand_foreach_part(
-            parts[0], variables, simple, repo, depth + 1).strip()
+            parts[0], variables, simple, repo, depth + 1, active).strip()
         words = _make_expand_foreach_part(
-            parts[1], variables, simple, repo, depth + 1).split()
+            parts[1], variables, simple, repo, depth + 1, active).split()
         body = parts[2]
         results = []
         for word in words:
@@ -2185,7 +2188,7 @@ def _make_expand_foreach(text: str,
             local_vars[name] = word
             local_simple[name] = True
             results.append(_make_expand_foreach_part(
-                body, local_vars, local_simple, repo, depth + 1))
+                body, local_vars, local_simple, repo, depth + 1, active))
         replacement = " ".join(results)
         text = text[:start] + replacement + text[end:]
         pos = start + len(replacement)
@@ -2311,6 +2314,8 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
                 raise _MakeRequiredIncludeError(name)
             active.add(name)
             try:
+                value = _make_expand_foreach(
+                    value, variables, simple, None, depth + 1, active)
                 value = _make_expand_refs(value, variables, simple,
                                           depth + 1, active)
             finally:
@@ -2537,6 +2542,8 @@ def _make_apply_assignment_parts(
         elif variables[name] is not None:
             value = raw
             if simple.get(name):
+                value = _make_expand_foreach(
+                    value, variables, simple)
                 value = _make_expand_refs(value, variables, simple)
             # make 只在旧值非空且追加值非空时插入一个分隔空格；两侧的
             # 尾随空白都属于变量值本身（`X += bar ` 的值是 `foo bar `），
@@ -2546,7 +2553,8 @@ def _make_apply_assignment_parts(
             elif value:
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
-        variables[name] = _make_expand_refs(raw, variables, simple)
+        value = _make_expand_foreach(raw, variables, simple)
+        variables[name] = _make_expand_refs(value, variables, simple)
         simple[name] = True
     else:
         variables[name] = raw
@@ -2585,13 +2593,16 @@ def _make_apply_define(name: str, op: str, body: str,
         elif variables[name] is not None:
             value = body
             if simple.get(name):
+                value = _make_expand_foreach(
+                    value, variables, simple)
                 value = _make_expand_refs(value, variables, simple)
             if not variables[name]:
                 variables[name] = value
             elif value:
                 variables[name] = variables[name] + " " + value
     elif op in (":=", "::="):
-        variables[name] = _make_expand_refs(body, variables, simple)
+        value = _make_expand_foreach(body, variables, simple)
+        variables[name] = _make_expand_refs(value, variables, simple)
         simple[name] = True
     else:
         variables[name] = body

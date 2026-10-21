@@ -3061,6 +3061,43 @@ def test_detect_test_suite_make_bare_dollar_dynamic_assignment_keeps_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("assignment", [
+    "F = $(foreach x,foo test,$(x))",
+    "F := $(foreach x,foo test,$(x))",
+    "F = foo\nF += $(foreach x,bar test,$(x))",
+    "define F\n$(foreach x,foo test,$(x))\nendef",
+])
+def test_detect_test_suite_make_foreach_in_variable_detected(
+        tmp_path, assignment):
+    """变量值里的 foreach 也要展开，否则 $(F): 定义 test 会漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        assignment + "\n$(F):\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("assignment", [
+    "F = $(foreach x,test foo,$(x))",
+    "F := $(foreach x,test foo,$(x))",
+])
+def test_detect_test_suite_make_foreach_in_variable_conflict(
+        tmp_path, assignment):
+    """变量值里的 foreach 展开出 test 的 :: 时也要识别冒号风格冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + assignment + "\n$(F)::\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "foo: %.o: %.c",
     "foo: a\\:b",
