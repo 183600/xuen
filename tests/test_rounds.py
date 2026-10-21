@@ -2756,6 +2756,10 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "$: X = 1",
     "$x$: dep",
     "$ $: X=1",
+    "x$::$(X)=1",
+    "x$:::$(X)=1",
+    "foo $::$(X)=1",
+    "foo $::$(X):=1",
 ])
 def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     """其他目标的非法规则头同样会让 make 读取失败，不能只看 test 行。
@@ -6585,6 +6589,10 @@ def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
     "x$:X:=1",
     "foo$:bar:=1",
     "$x$:X:=1",
+    "$::$(X)=1",
+    "$x$::$(X)=1",
+    "$x $::$(X)=1",
+    "foo $:: x=1",
 ])
 def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
         tmp_path, line):

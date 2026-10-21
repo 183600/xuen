@@ -787,6 +787,43 @@ def _make_target_list_only_variable_refs(targets: str) -> bool:
     return True
 
 
+def _make_target_text_only_refs(text: str) -> bool:
+    """目标文本是否只由变量引用、空白和 grouped 标记 `&` 组成。"""
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch.isspace() or ch == "&":
+            i += 1
+            continue
+        if ch == "\\":
+            return False
+        if ch == "$" and i + 1 < n:
+            if text[i + 1] in "({":
+                opener = text[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n and depth:
+                    cj = text[j]
+                    if cj == "\\":
+                        j += 2
+                        continue
+                    if cj == "$" and j + 1 < n and text[j + 1] in "({":
+                        depth += 1
+                        j += 2
+                        continue
+                    if cj == closer:
+                        depth -= 1
+                    j += 1
+                i = j
+                continue
+            i += 2
+            continue
+        return False
+    return True
+
+
 def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
     r"""原始文本里是否有目标列表以裸 `$` 吃掉规则分隔符的规则。
 
@@ -833,9 +870,12 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
             # `$:` 吃掉冒号后整行展开为空目标列表，make 接受。
             continue
         if colon + 1 < len(body) and body[colon + 1] == ":":
-            # `foo $::`：`$:` 吃掉第一个冒号，第二个冒号仍是规则分隔符，
-            # make 正常接受。
-            continue
+            # `foo $::`：`$:` 吃掉第一个冒号，第二个冒号仍是规则分隔符。
+            # 目标前缀只有变量引用（`$x$::` / `$::`）时整行仍接受；
+            # `foo $::$(X)=1` 则是 target-specific 赋值，变量名为空时
+            # 由展开阶段的 raw 检查报错，不能在这里直接放过。
+            if _make_target_text_only_refs(targets[:-1]):
+                continue
         # `$:` 吃掉冒号后，前缀与剩余文本会拼成一行重新解析：
         # `foo$:X:=1` 是变量 `fooX` 的赋值（make 接受）。纯变量引用
         # 目标（`$x$:`）展开后前缀可能为空，只接受无空白的普通赋值，
@@ -2613,11 +2653,23 @@ def _make_expand_simple_vars(text: str,
             # 规则头（`export test:$(X)=1` 仍能执行后面的 test 目标）。
             raw_targets = body[:raw_colon]
             skip = raw_targets.lstrip(" \t") in ("", "&")
+            double_colon = (raw_colon + 1 < len(body)
+                            and body[raw_colon + 1] == ":")
+            if (not skip and double_colon
+                    and _make_target_list_only_variable_refs(raw_targets)):
+                # `$::$(X)=1` 这类目标列表只有变量引用、展开为空，
+                # 后面的 `$(X)=1` 不是 target-specific 赋值。
+                skip = True
             if (not skip
                     and _make_target_list_has_bare_trailing_dollar(raw_targets)):
                 # `foo$:$(X)=1` 的 `$:` 会吃掉规则分隔符，后面的内容按
-                # recipe/赋值处理，不再是 target-specific 赋值。
-                skip = True
+                # recipe/赋值处理，不再是 target-specific 赋值。双冒号
+                # `foo $::$(X)=1` 的第二个冒号仍是规则分隔符，且目标前缀
+                # 有字面名字时，后面仍是 target-specific 赋值。
+                if not (double_colon
+                        and not _make_target_text_only_refs(
+                            raw_targets[:-1])):
+                    skip = True
             if not skip:
                 expanded_targets = _make_resolve_single_char_refs(
                     raw_targets, variables, simple)
@@ -2632,15 +2684,26 @@ def _make_expand_simple_vars(text: str,
                 skip = expanded_targets.strip(" \t") in ("", "&")
             if not skip:
                 rest_start = raw_colon + 1
-                if rest_start < len(body) and body[rest_start] == ":":
+                while (rest_start < len(body)
+                       and body[rest_start] == ":"):
                     rest_start += 1
                 _make_raw_rule_is_target_assignment(
                     body[rest_start:], variables, simple)
+        raw_bare_empty = False
+        if raw_colon >= 0:
+            raw_targets = body[:raw_colon]
+            if (raw_colon + 1 < len(body)
+                    and body[raw_colon + 1] == ":"
+                    and _make_target_text_only_refs(raw_targets)):
+                # `$::$(X)=1` 的目标列表展开为空，后面的赋值不是
+                # target-specific 赋值，make 接受。
+                raw_bare_empty = True
         if (raw_colon >= 0 and expanded_colon >= 0
+                and not raw_bare_empty
                 and _make_rule_is_target_specific(expanded, expanded_colon)
                 and not _make_rule_is_target_specific(body, raw_colon)):
             rest_start = raw_colon + 1
-            if rest_start < len(body) and body[rest_start] == ":":
+            while rest_start < len(body) and body[rest_start] == ":":
                 rest_start += 1
             if not _make_raw_rule_is_target_assignment(
                     body[rest_start:], variables, simple):
