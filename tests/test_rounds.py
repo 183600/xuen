@@ -1751,6 +1751,25 @@ def test_detect_test_suite_make_expanded_export_is_target(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    # 变量展开后以 foo=bar 开头的目标列表仍是规则；make 在展开前
+    # 就完成了赋值/规则判定，不能反过来按展开结果当成赋值。
+    "$(T) foo=bar test:\n\t@true\n",
+    "$(T) test=1 test:\n\t@true\n",
+    "$(T) foo\\=bar test:\n\t@true\n",
+])
+def test_detect_test_suite_make_expanded_assignment_like_target(
+        tmp_path, makefile):
+    """展开后看似赋值的动态目标行仍要探测出 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
     "T = test-unit\n$(T):\n\t@true\n",
     "T = test\n$(T)-unit:\n\t@true\n",
     "$(T):\n\t@true\nT = test\n",

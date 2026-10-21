@@ -585,10 +585,6 @@ def _make_defines_test_target(text: str,
             continue
         line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
-        # 变量赋值行即使值里出现 `test:` 也不定义目标。先按 make 的
-        # 赋值语法排除，避免放开目标名里的 `=` 后误报。
-        if _MAKE_VAR_ASSIGNMENT.match(line) is not None:
-            continue
         colon = match.end() - match.start() - 1
         # 正则里的冒号可能落在目标名中的变量引用里（如
         # `test ${X:--x}` 并没有规则分隔符）。只有行内第一个真正的
@@ -718,6 +714,14 @@ _MAKE_PLAIN_VAR_NAME = r"(?:\\.|[^\s:#=;$(){}])+"
 _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
     r"((?:\\.|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+
+_MAKE_DYNAMIC_VAR_UNIT = (
+    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\\[^\r\n]"
+    r"|[^\s:#=;$(){}])")
+_MAKE_DYNAMIC_VAR_ASSIGNMENT = re.compile(
+    r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
+    r"(" + _MAKE_DYNAMIC_VAR_UNIT + r"+?)[ \t]*"
+    r"(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_EMPTY_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
@@ -1402,7 +1406,11 @@ def _make_scan_assignment(body: str,
         raise _MakeRequiredIncludeError("empty variable name")
     match = _MAKE_VAR_ASSIGNMENT.match(body)
     expanded = body
-    if match is None and "$" in body:
+    if (match is None and "$" in body
+            and _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(body) is not None):
+        # 只有原行本身是「动态变量名 + 赋值运算符」时才展开后重试；
+        # `$(T) foo=bar test:` 原行是目标列表，展开后以 foo=bar 开头
+        # 也不能反过来当成变量赋值。
         expanded = _make_expand_refs(body, variables, simple)
         match = _MAKE_VAR_ASSIGNMENT.match(expanded)
     if match is None:
@@ -1514,7 +1522,10 @@ def _make_expand_simple_vars(text: str,
             continue
         expanded = _make_scan_assignment(body, variables, simple)
         if expanded is not None:
-            out.append(expanded + newline)
+            # 赋值/undefine 行不定义目标。输出成注释，防止变量展开后的
+            # 目标行（如 `$(T) foo=bar test:`，T 为空）被误认成赋值；
+            # 后面的目标探测也不再需要这些行的原文。
+            out.append("#" + newline)
             i += 1
             continue
         if body.lstrip().startswith("#"):
