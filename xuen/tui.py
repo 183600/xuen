@@ -298,18 +298,38 @@ class XuangenApp(App):
         await self.action_quit()
 
 
-def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
-    app = XuangenApp(cfg, task, regen_words)
-    app.run()
+def _finish_worker(app: "XuangenApp"):
+    """App 退出后收尾后台线程；异常退出时也不能留下孤儿 agent。"""
+    worker = getattr(app, "_worker", None)
+    if worker is not None and worker.is_alive():
+        # action_quit() 之外的退出路径（textual 运行期异常 / 嵌入方直接
+        # exit）没有设置停止标志，worker 可能还在跑外部 agent；不补停就会
+        # 在进程退出后留下 start_new_session 的孤儿进程。
+        app.stop_requested = True
+        sink = getattr(app, "sink", None)
+        if sink is not None:
+            sink.stop_agent()
     # 等后台 _run_loop 线程收尾：action_quit() 只设置了 stop_requested 并
     # 停掉 agent，worker 此刻可能仍在运行并即将改写 exit_code；不等它就把
     # 初始值 0 返回，失败会被掩盖成「成功退出」。agent 已被 stop_agent()
     # 终止，正常几秒之内线程就会退出；超时兜底防止极端情况下卡死进程。
     # 注意上限必须覆盖 agent 收尾的最坏耗时（超时回调里的 wait/join 合计
     # 可达 ~15s），否则正常退出会被误报为失败退出码 1
-    worker = app._worker
     if worker is not None:
         worker.join(timeout=20)
+    return worker
+
+
+def run_tui(cfg: Config, task: str, *, regen_words: bool = False) -> int:
+    app = XuangenApp(cfg, task, regen_words)
+    try:
+        app.run()
+    except BaseException:
+        # textual 在应用启动/运行阶段抛错时 run_tui 的调用方只会看到异常；
+        # 必须先停掉可能已经拉起的后台循环与外部 agent，再把异常抛出去。
+        _finish_worker(app)
+        raise
+    worker = _finish_worker(app)
     # 循环尚未收尾时被 Ctrl+C 中断：按 README 约定返回 130，而不是把
     # 初始/残留的 exit_code（通常为 0，或中断导致的失败码）返回。
     # 必须在 is_alive() 判断之前：worker 未能在 20s 内收尾时同样不能把

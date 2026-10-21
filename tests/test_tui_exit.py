@@ -62,3 +62,36 @@ def test_clean_worker_returns_recorded_exit_code(monkeypatch):
     assert _run_tui(monkeypatch, interrupted=False, alive=False,
                     exit_code=1) == 1
     assert _run_tui(monkeypatch, interrupted=False, alive=False) == 0
+
+def test_run_exception_stops_worker_and_agent(monkeypatch):
+    """textual 运行期异常时也要停掉后台循环与外部 agent。
+
+    回归：run_tui() 只在 app.run() 正常返回后 join worker；异常路径直接
+    抛给 cli，后台 daemon 线程被进程退出杀掉，但 ShellAgent 拉起的子进程
+    在新会话里会继续运行成孤儿。"""
+    apps = []
+
+    class FakeSink:
+        def __init__(self):
+            self.stopped = 0
+
+        def stop_agent(self):
+            self.stopped += 1
+
+    class FakeApp:
+        def __init__(self, cfg, task, regen_words=False):
+            self.stop_requested = False
+            self.sink = FakeSink()
+            self._worker = _FakeWorker(True)
+            apps.append(self)
+
+        def run(self):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(tui, "XuangenApp", FakeApp)
+    with pytest.raises(RuntimeError, match="boom"):
+        tui.run_tui(Config(), "任务")
+    app = apps[0]
+    assert app.stop_requested is True
+    assert app.sink.stopped == 1
+    assert app._worker.join_timeouts == [20]
