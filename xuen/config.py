@@ -355,6 +355,19 @@ def _is_finite_number(value: Any) -> bool:
 
 
 def _validate(cfg: Config) -> None:
+    # 程序化构造 Config 时字符串字段可能被写成 None/list 等：先给出带
+    # 字段名的 ValueError，避免后面的 .strip()/正则/Path() 抛 AttributeError
+    # 或 TypeError（与 _parse_str 对 YAML 非字符串字段的口径一致）。
+    for name, value in (
+        ("extra_notes", cfg.extra_notes),
+        ("workspace", cfg.workspace),
+        ("agent.command", cfg.agent.command),
+        ("rounds.dir", cfg.rounds.dir),
+        ("rounds.repo", cfg.rounds.repo),
+        ("rounds.judge_command", cfg.rounds.judge_command),
+    ):
+        if not isinstance(value, str):
+            raise ValueError(f"{name} 必须是字符串，收到: {value!r}")
     if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
         raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:

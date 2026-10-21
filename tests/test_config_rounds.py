@@ -368,6 +368,27 @@ def test_yaml_binary_and_set_rejected_for_string_fields(tmp_path):
     with pytest.raises(ValueError, match="workspace"):
         load_config(write_cfg(tmp_path, BASE + "workspace: !!set {ws: null}\n"))
 
+def test_programmatic_non_string_fields_raise_value_error():
+    """程序化 Config 的字符串字段写成 None/list 时也要带字段名报 ValueError，
+    不能让 .strip()/正则/Path() 先抛 AttributeError/TypeError。"""
+    from xuen.config import AgentConfig, Config, _validate
+
+    cases = [
+        ("extra_notes", lambda c: setattr(c, "extra_notes", None)),
+        ("workspace", lambda c: setattr(c, "workspace", None)),
+        ("agent.command", lambda c: setattr(c.agent, "command", None)),
+        ("rounds.dir", lambda c: setattr(c.rounds, "dir", None)),
+        ("rounds.repo", lambda c: setattr(c.rounds, "repo", None)),
+        ("rounds.judge_command",
+         lambda c: setattr(c.rounds, "judge_command", None)),
+    ]
+    for name, mutate in cases:
+        cfg = Config(agent=AgentConfig(command='agent "$prompt"'))
+        mutate(cfg)
+        with pytest.raises(ValueError, match=name.replace(".", "\\.")):
+            _validate(cfg)
+
+
 def test_programmatic_non_integer_fields_raise_value_error():
     """程序化 Config 的 words/loop 非整数字段也要带字段名报 ValueError，
     不能让比较运算先抛 TypeError，或把 1.5/True 静默带进下游。"""
