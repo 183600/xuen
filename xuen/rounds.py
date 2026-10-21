@@ -512,20 +512,19 @@ def _make_include_names(args: str) -> List[str]:
     return names
 
 
-_MAKE_WILDCARD_FUNCTION = re.compile(
-    r"\$\((?:wildcard)[ \t]+([^)]*)\)"
-    r"|\$\{(?:wildcard)[ \t]+([^}]*)\}")
+_MAKE_INCLUDE_FUNCTION = re.compile(
+    r"\$\((wildcard|dir|notdir|addprefix|addsuffix|strip|basename|suffix)"
+    r"[ \t]+([^)]*)\)"
+    r"|\$\{(wildcard|dir|notdir|addprefix|addsuffix|strip|basename|suffix)"
+    r"[ \t]+([^}]*)\}")
 
 
-def _make_expand_wildcard_functions(text: str, repo: Path) -> str:
-    """展开 include 文件名里的 `$(wildcard ...)`（只处理这一种函数）。"""
-    def repl(match: re.Match) -> str:
-        patterns = match.group(1) if match.group(1) is not None \
-            else match.group(2)
+def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
+    """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。"""
+    if name == "wildcard":
         found = []
-        for token in re.findall(r"(?:\\.|[^\s])+", patterns):
-            name = re.sub(r"\\(.)", r"\1", token)
-            path = Path(name)
+        for token in re.findall(r"(?:\\.|[^\s])+", args):
+            path = Path(re.sub(r"\\(.)", r"\1", token))
             if not path.is_absolute():
                 path = repo / path
             try:
@@ -533,8 +532,40 @@ def _make_expand_wildcard_functions(text: str, repo: Path) -> str:
             except (OSError, re.error):
                 found.append(str(path))
         return " ".join(found)
+    if name in ("addprefix", "addsuffix"):
+        if "," not in args:
+            return ""
+        affix, names = args.split(",", 1)
+        words = names.split()
+        if name == "addprefix":
+            return " ".join(affix + word for word in words)
+        return " ".join(word + affix for word in words)
+    if name == "strip":
+        return " ".join(args.split())
+    words = args.split()
+    if name == "dir":
+        result = []
+        for word in words:
+            directory = os.path.dirname(word)
+            result.append((directory + "/") if directory else "./")
+        return " ".join(result)
+    if name == "notdir":
+        return " ".join(os.path.basename(word) for word in words)
+    if name == "basename":
+        return " ".join(os.path.splitext(word)[0] for word in words)
+    return " ".join(os.path.splitext(word)[1] for word in words)
 
-    return _MAKE_WILDCARD_FUNCTION.sub(repl, text)
+
+def _make_expand_include_functions(text: str, repo: Path) -> str:
+    """展开 include 文件名里可静态求值的函数（wildcard/dir/addprefix 等）。"""
+    def repl(match: re.Match) -> str:
+        name = match.group(1) if match.group(1) is not None \
+            else match.group(3)
+        args = match.group(2) if match.group(2) is not None \
+            else match.group(4)
+        return _make_expand_include_function(name, args, repo)
+
+    return _MAKE_INCLUDE_FUNCTION.sub(repl, text)
 
 
 def _make_include_paths(name: str, repo: Path) -> List[Path]:
@@ -827,7 +858,7 @@ def _make_text_with_includes(text: str, repo: Path,
                 continue
             directive = include.group(1)
             args = _make_expand_refs(include.group(2), variables, simple)
-            args = _make_expand_wildcard_functions(args, repo)
+            args = _make_expand_include_functions(args, repo)
             for name in _make_include_names(args):
                 for path in _make_include_paths(name, repo):
                     try:
