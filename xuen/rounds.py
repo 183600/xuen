@@ -1517,7 +1517,14 @@ def _make_join_continuations(text: str) -> str:
             words = [piece for piece in middle if piece]
             if last:
                 words.append(last)
-            joined = head + ((" " + " ".join(words)) if words else "")
+            if words:
+                joined = head + " " + " ".join(words)
+            else:
+                # 续行后面紧跟空行时，反斜杠-换行替换出的空格仍留在
+                # 逻辑行尾（下一行自己的换行才是行尾）。丢掉这个空格
+                # 会让 define 值里的 `test \n` 变成 `test\n`，目标
+                # 列表语义随之改变：裸换行会粘进前一个目标名。
+                joined = head + " "
             out.append(joined + ending)
         i += 1
     return "".join(out)

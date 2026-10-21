@@ -1861,6 +1861,10 @@ def test_detect_test_suite_make_define_special_name_target(tmp_path):
     "define BODY\nfoo\nbar\n test\nendef\n$(BODY):\n\t@echo ok\n",
     # 注释行在前、最后一行带前导空白时，同样能执行 test。
     "define BODY\n# c\n test\nendef\n$(BODY):\n\t@echo ok\n",
+    # 续行后接空行时，反斜杠-换行替换出的空格留在行尾；丢掉它会
+    # 让 `test \n` 变成 `test\n`，换行粘进目标名而不是分隔目标。
+    "define BODY\ntest\\\n\nendef\n$(BODY):\n\t@echo ok\n",
+    "define BODY\ntest\\\n\nfoo\nendef\n$(BODY):\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_multiline_define_target(tmp_path, makefile):
     """多行 define 展开后仍可能定义可执行的 test 目标，不能一律置空。"""
