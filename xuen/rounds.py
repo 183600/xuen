@@ -2635,6 +2635,9 @@ def _make_expand_foreach_part(text: str,
     for _ in range(20):
         before = text
         text = _make_expand_automatic_refs(text)
+        # 与条件文本同理：info/warning 删除前先检查参数里的静态函数。
+        if repo is not None:
+            text = _make_expand_include_functions(text, repo)
         text = _make_expand_value(text, variables, simple, depth + 1)
         text = _make_expand_condition_functions(text, variables, simple, repo)
         text = _make_expand_foreach(
@@ -4227,6 +4230,11 @@ def _make_expand_condition_text(text: str,
     for _ in range(20):
         before = text
         text = _make_expand_automatic_refs(text)
+        # 静态函数参数错误是 fatal 的，必须在 info/warning 被删掉之前
+        # 检查：`ifeq ($(info $(word x,a b)),)` 不能当成空条件。
+        if repo is not None:
+            text = _make_expand_include_functions(
+                text, repo, variables, simple, overrides)
         text = _make_expand_condition_functions(
             text, variables, simple, repo, overrides=overrides)
         # value/foreach 要先于普通引用展开，否则 foreach 循环变量会被
@@ -4536,6 +4544,11 @@ def _make_text_with_includes(text: str, repo: Path,
             for _ in range(20):
                 before = args
                 args = _make_expand_automatic_refs(args)
+                # 静态函数要先于 info/warning 删除：make 会先展开函数
+                # 参数再丢弃输出，`include $(info $(word x,a b))` 的
+                # 非法下标仍是读取期 fatal 错误。
+                args = _make_expand_include_functions(
+                    args, repo, variables, simple, overrides)
                 args = _make_expand_value(args, variables, simple)
                 args = _make_expand_foreach(
                     args, variables, simple, repo)

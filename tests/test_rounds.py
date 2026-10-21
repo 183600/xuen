@@ -8031,3 +8031,26 @@ def test_detect_test_suite_make_expanded_assignment_like_line_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "include $(info $(word x,a b))\ntest:\n\t@echo ok\n",
+    "include $(warning $(addprefix a))\ntest:\n\t@echo ok\n",
+    "ifeq ($(info $(subst a,b)),)\ntest:\n\t@echo ok\nendif\n",
+    "ifeq ($(warning $(wordlist x,1,a b)),)\ntest:\n\t@echo ok\nendif\n",
+    "$(foreach v,a,$(info $(word x,a b))):\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_info_warning_argument_error_blocks_suite(
+        tmp_path, makefile):
+    """info/warning 的参数会先展开，里面的静态函数错误仍是 fatal。
+
+    回归：info/warning 被整块删除时没有检查参数，`$(info $(word x,...))`
+    的非法下标丢失，探测把读取期必然失败的 Makefile 当成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
