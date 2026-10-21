@@ -3276,14 +3276,20 @@ def _make_expand_assignment_name(
     for _ in range(20):
         before = name
         name = _make_expand_automatic_refs(name)
+        # 静态函数先于普通引用：参数边界按原文确定，foreach/call 的局部
+        # 变量也不能在绑定前被当成外层变量清空（`$(foreach v,a,$(v))`
+        # 必须展开成 a，而不是先清空 `$(v)` 得到空名字）。
+        if repo is not None:
+            name = _make_expand_include_functions(
+                name, repo, variables, simple, overrides)
         name = _make_expand_value(name, variables, simple)
+        name = _make_expand_foreach(name, variables, simple, repo)
+        name = _make_expand_call_functions(
+            name, variables, simple, repo, overrides)
         name = _make_resolve_single_char_refs(name, variables, simple)
         name = _make_expand_refs(name, variables, simple, repo=repo)
         name = _make_expand_condition_functions(
             name, variables, simple, repo)
-        name = _make_expand_foreach(name, variables, simple, repo)
-        name = _make_expand_call_functions(
-            name, variables, simple, repo, overrides)
         name = _make_expand_metadata_functions(
             name, variables, simple, overrides)
         name = _make_expand_error_functions(name)
@@ -3419,7 +3425,8 @@ def _make_raw_rule_is_target_assignment(
         rest: str,
         variables: Dict[str, Optional[str]],
         simple: Dict[str, bool],
-        repo: Optional[Path] = None) -> bool:
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> bool:
     """原始规则头冒号后是否会被 make 当成 target-specific 赋值。
 
     GNU make 在展开前就决定第一个 token（跳过 export/private/override
@@ -3471,27 +3478,13 @@ def _make_raw_rule_is_target_assignment(
                              rest[pos:]) is None:
         return False
     try:
-        # 赋值名同样按 make 语义展开：静态函数/条件函数可能展开成空串，
-        # 此时 make 报 empty variable name（`test:$(if ,x)=1` /
-        # `test:$(strip )=1`），不能因为原文非空就当成合法赋值。
-        # 与目标名的展开顺序一致：条件函数 → 变量/静态函数交替 →
-        # 动态变量名，避免把未生效分支里的函数提前展开。
-        name = prefix
-        for _ in range(20):
-            before = name
-            name = _make_resolve_single_char_refs(name, variables, simple)
-            name = _make_expand_refs(name, variables, simple)
-            name = _make_expand_condition_functions(
-                name, variables, simple, repo)
-            name = _make_expand_error_functions(name)
-            name = _make_expand_refs(name, variables, simple)
-            if repo is not None:
-                name = _make_expand_include_functions(name, repo)
-                name = _make_expand_refs(name, variables, simple)
-            name = _make_expand_computed_refs(name, variables, simple)
-            name = _make_resolve_single_char_refs(name, variables, simple)
-            if name == before:
-                break
+        # 赋值名同样按 make 语义展开：静态/条件/foreach/call/value 等
+        # 函数可能展开成空串，此时 make 报 empty variable name
+        # （`test:$(if ,x)=1` / `test:$(foreach v,,x)=1`），不能因为
+        # 原文非空就当成合法赋值。复用普通赋值名的完整展开逻辑，避免
+        # 两条路径对函数覆盖不一致。
+        name = _make_expand_assignment_name(
+            prefix, variables, simple, repo, overrides)
     except _MakeRequiredIncludeError:
         return False
     if not name:
@@ -3754,7 +3747,8 @@ def _make_expand_simple_vars(text: str,
                         and body[rest_start] == ":"):
                     rest_start += 1
                 if (_make_raw_rule_is_target_assignment(
-                        body[rest_start:], variables, simple, repo)
+                        body[rest_start:], variables, simple, repo,
+                        overrides)
                         and not (
                             _make_has_escaped_semicolon(raw_targets)
                             and not _make_has_recipe_separator(
@@ -3789,7 +3783,8 @@ def _make_expand_simple_vars(text: str,
                     and body[rest_start] == ":"):
                 rest_start += 1
             if not _make_raw_rule_is_target_assignment(
-                    body[rest_start:], variables, simple, repo):
+                    body[rest_start:], variables, simple, repo,
+                    overrides):
                 insert_at = expanded_colon + 1
                 if (insert_at < len(expanded) and expanded[insert_at] == ":"):
                     insert_at += 1
@@ -4361,7 +4356,12 @@ def _make_text_with_includes(text: str, repo: Path,
                         name_text = name_text[:found].rstrip()
                         define_op = candidate
                         break
-                define_name = _make_expand_refs(name_text, variables, simple)
+                # 名称里的静态/条件/foreach/call/value/info 等函数同样
+                # 会在读取期展开；`define $(strip )` / `define $(info x)`
+                # 展开为空时 make 报 empty variable name，只展开普通引用
+                # 会把函数原文当成非空名称，漏掉必然的读取失败。
+                define_name = _make_expand_assignment_name(
+                    name_text, variables, simple, repo, overrides)
                 if (not define_name.strip()
                         or _MAKE_DEFINE_EMPTY_NAME.match(
                             define_name.strip())):

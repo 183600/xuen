@@ -1919,6 +1919,60 @@ def test_detect_test_suite_make_empty_define_ifdef_false(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("name", [
+    "$(strip )",
+    "$(if ,x)",
+    "$(if x,,)",
+    "$(foreach v,,x)",
+    "$(foreach v,a,)",
+    "$(call undefined)",
+    "$(value X)",
+    "$(info x)",
+    "$(warning x)",
+    "$(subst a,a,)",
+    "$(filter-out a,a)",
+    "$(wildcard /nonexistent)",
+])
+def test_detect_test_suite_make_function_expanded_empty_define_name(
+        tmp_path, name):
+    """define 名称里的函数展开为空时 make 报 empty variable name。
+
+    回归：define 名称只展开普通变量引用，`define $(strip )` /
+    `define $(info x)` 被当成非空名称，后面合法的 test 目标让探测
+    返回可运行套件，实际 make 在读取阶段就失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"define {name}\nbody\nendef\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("name", [
+    "$(origin X)",
+    "$(flavor X)",
+    "$(strip X)",
+    "$(if x,a,b)",
+    "$(foreach v,a,$(v))",
+])
+def test_detect_test_suite_make_function_expanded_nonempty_define_name(
+        tmp_path, name):
+    """define 名称展开后非空时仍是合法定义，不能误伤后面的 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"define {name}\nbody\nendef\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\nall2:\n\t@true\n"
     "else ifeq (1,1)\ntest:\n\t@echo ok\nendif\n",
@@ -7632,6 +7686,54 @@ def test_detect_test_suite_make_empty_expanded_assignment_name_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:$(foreach v,,x)=1",
+    "test:$(foreach v,a,)=1",
+    "test:$(call undefined)=1",
+    "test:$(value X)=1",
+    "test:$(info x)=1",
+    "test:$(warning x)=1",
+])
+def test_detect_test_suite_make_empty_target_assignment_function_name(
+        tmp_path, line):
+    """target-specific 赋值名里的 value/foreach/call/info 同样会展开为空。
+
+    回归：普通赋值名已覆盖这些函数，target-specific 赋值名却仍只展开
+    普通引用与条件函数，`test:$(foreach v,,x)=1` 被当成合法赋值吞掉，
+    后面存在的 test 目标让探测误以为套件可运行，实际 make 读取失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(foreach v,test,$(v)) = 1",
+    "$(foreach v,test,$(v)) := 1",
+])
+def test_detect_test_suite_make_foreach_assignment_name_binds_variable(
+        tmp_path, line):
+    """foreach 的循环变量必须先绑定再展开循环体。
+
+    回归：赋值名展开先做普通引用展开，`$(foreach v,test,$(v))` 里的
+    `$(v)` 被当成未定义变量清空，整个名字变成空串并误报 empty variable
+    name；make 实际定义名为 test 的变量，后面的 test 目标可正常运行。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 @pytest.mark.parametrize("line", [
