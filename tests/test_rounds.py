@@ -1283,6 +1283,30 @@ def test_detect_test_suite_make_continued_assignment_detected(tmp_path,
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("slashes, has_suite", [
+    (1, False),
+    (2, True),
+    (3, False),
+    (4, True),
+])
+def test_detect_test_suite_make_recipe_backslash_parity(tmp_path, slashes,
+                                                        has_suite):
+    """recipe 行尾反斜杠按奇偶决定是否续行；偶数后的 test: 仍是真目标。
+
+    回归：负向后顾只看「反斜杠+换行」，把 `\\`（转义反斜杠、不续行）
+    后面的 test 目标也当成 recipe 续行，漏掉可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "all:\n\t@echo " + "\\" * slashes
+        + "\ntest:\n\t@echo RAN\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert (p.returncode == 0 and "RAN" in p.stdout) is has_suite
+    expected = ["make", "test"] if has_suite else None
+    assert detect_test_suite(tmp_path) == expected
+
+
 def test_detect_test_suite_make_comment_continuation_swallows_target(tmp_path):
     """注释行末尾的反斜杠会继续吞掉下一行，规则里的 test 不能算套件。"""
     if not shutil.which("make"):

@@ -290,10 +290,7 @@ _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
     # 注释行由 (?!#) 挑掉；`;` 后的同行命令不属于目标列表。
-    # (?<!\\\n)：前一物理行以反斜杠续行结尾时，本行不是逻辑行起点，
-    # 不能把续行展开后的后半截（如 `unexport \\` + ` test:`）再当成
-    # 独立规则头匹配。
-    r"(?m)(?<!\\\n)(?<!\\\r\n)^[ ]*(?!#)"
+    r"(?m)^[ ]*(?!#)"
     # 行首 export/unexport 是导出指令而不是规则头：make 把整行当变量名
     # 列表（`export test:` 导出变量 test、`export foo test:` 导出 foo 与
     # test），不定义任何目标，`make test` 以退出码 2 失败——探测命中会把
@@ -490,11 +487,32 @@ def _make_logical_line_end(text: str, start: int) -> int:
         pos = end + 1
 
 
+def _make_continues_recipe_line(text: str, start: int) -> bool:
+    """start 所在行是否是上一 recipe 物理行的续行。
+
+    非 recipe 续行已由 _make_join_continuations 合并，不会再产生新行首；
+    剩下的只有 recipe 续行。必须按反斜杠个数奇偶判断：`\\` 是转义的
+    反斜杠，不续行，后面的 test: 仍是真实目标。
+    """
+    if start < 2 or text[start - 1] != "\n":
+        return False
+    end = start - 1
+    if end > 0 and text[end - 1] == "\r":
+        end -= 1
+    count = 0
+    while end > 0 and text[end - 1] == "\\":
+        count += 1
+        end -= 1
+    return count % 2 == 1
+
+
 def _make_defines_test_target(text: str) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
     saw_single = False
     saw_double = False
     for match in _MAKE_TEST_TARGET.finditer(text):
+        if _make_continues_recipe_line(text, match.start()):
+            continue
         line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
         colon = match.end() - match.start() - 1
@@ -1463,7 +1481,9 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
     #    兜底评分（user/ai）都被跳过；该场景应属「没有可运行套件」。
     #    变量赋值（test := / ?= / += / != / ::=）与 test: = x 这类空变量名
     #    同样不是目标：make test 会以退出码 2 失败，必须按无套件处理。
-    #    负向前瞻吞掉冒号后任意个冒号再接 = 的写法（::= / :::=）。
+    #    target-specific 赋值（test: X=1）只作用于目标，本身不定义可执行
+    #    目标；但 test::: / test: a:b 等非法规则头会让 make 读取失败，
+    #    即使别处有 test 目标也按无套件处理。
     #    搜索顺序按「路径存在」而不是「是普通文件」判断：GNU make 遇到
     #    GNUmakefile 是目录 / 悬空符号链接时同样先选中它、随后以退出码
     #    2 失败，不会跳过它去读 Makefile。若这里用 is_file 跳过坏条目，
