@@ -1283,6 +1283,9 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
     "test:\n\t@echo ok\ndefine\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine # c\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine $(UNDEFINED)\nfoo\nendef\n",
+    "test:\n\t@echo ok\n$(UNDEFINED) = x\n",
+    "test:\n\t@echo ok\n$(UNDEFINED) := x\n",
+    "test:\n\t@echo ok\n = x\n",
     "test:\n\t@echo ok\ndefine = x\nfoo\nendef\n",
     "test:\n\t@echo ok\nifeq\nall:\n\t@true\nendif\n",
     "test:\n\t@echo ok\nifeq (a)\nall:\n\t@true\nendif\n",
@@ -1452,6 +1455,10 @@ def test_detect_test_suite_make_nested_required_include_error_blocks_suite(
     "T = test # c\n$(T)-unit:\n\t@true\n",
     "T = test # c\n$(T)x:\n\t@true\n",
     "T = test # c\n$(T) foo:\n\t@true\n",
+    "T = $(subst x,test,x)\n$(T):\n\t@true\n",
+    "T := $(subst x,test,x)\n$(T):\n\t@true\n",
+    "T = $(filter %test,test)\n$(T):\n\t@true\n",
+    "$(subst x,test,x):\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_target(tmp_path, makefile):
     """test 目标写在简单变量展开后的规则头里时也要探测到。"""

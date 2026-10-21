@@ -552,6 +552,10 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
     r"([A-Za-z0-9_.-]+)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
+_MAKE_EMPTY_VAR_ASSIGNMENT = re.compile(
+    r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
+    r"(?:::=|::=|:=|\?=|\+=|!=|=)")
+
 _MAKE_VAR_REF = re.compile(
     r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)(?::([^()\r\n]*))?\)"
     r"|\{([A-Za-z0-9_.-]+)(?::([^{}\r\n]*))?\}"
@@ -1090,6 +1094,9 @@ def _make_scan_assignment(body: str,
         expanded = _make_expand_refs(body, variables, simple)
         match = _MAKE_VAR_ASSIGNMENT.match(expanded)
     if match is None:
+        if _MAKE_EMPTY_VAR_ASSIGNMENT.match(_make_strip_comment(expanded)):
+            # `$(UNDEFINED) = x` 展开后是空变量名，make 在读取阶段直接报错。
+            raise _MakeRequiredIncludeError("empty variable name")
         return None
     _make_apply_assignment(match, variables, simple)
     return expanded
@@ -1105,13 +1112,15 @@ def _make_scan_assignments(text: str,
             _make_scan_assignment(body, variables, simple)
 
 
-def _make_expand_simple_vars(text: str) -> str:
+def _make_expand_simple_vars(text: str,
+                             repo: Optional[Path] = None) -> str:
     """按出现顺序展开简单的 make 变量引用，供目标探测使用。
 
-    只处理单行 `NAME =/:=/?=/+=/!=` 赋值；函数调用、define、shell 输出
-    等无法静态求值的写法保持原样（探测不到就按无套件处理）。变量在规则
-    头之前赋值才会生效，与 make 逐行读取的行为一致；recipe 行不展开。
-    变量名本身也可以是展开结果（`$(T) = test`），展开后按赋值处理。
+    只处理单行 `NAME =/:=/?=/+=/!=` 赋值；define、shell 输出等无法静态
+    求值的写法保持原样（探测不到就按无套件处理）。变量在规则头之前赋值
+    才会生效，与 make 逐行读取的行为一致；recipe 行不展开。变量名本身也
+    可以是展开结果（`$(T) = test`），展开后按赋值处理。规则头里的静态
+    函数（如 `T = $(subst x,test,x)` 后的 `$(T):`）按使用位置展开。
     """
     variables: Dict[str, Optional[str]] = {}
     simple: Dict[str, bool] = {}
@@ -1130,7 +1139,10 @@ def _make_expand_simple_vars(text: str) -> str:
         if body.lstrip().startswith("#"):
             out.append(line)
             continue
-        out.append(_make_expand_refs(body, variables, simple) + newline)
+        expanded = _make_expand_refs(body, variables, simple)
+        if repo is not None:
+            expanded = _make_expand_include_functions(expanded, repo)
+        out.append(expanded + newline)
     return "".join(out)
 
 
@@ -1618,7 +1630,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 {"CURDIR": str(repo.resolve()),
                  "MAKEFILE_LIST": makefile.name},
                 {"CURDIR": True, "MAKEFILE_LIST": True})
-            text = _make_expand_simple_vars(text)
+            text = _make_expand_simple_vars(text, repo)
             if _make_defines_test_target(text):
                 return ["make", "test"]
         except (_MakeRequiredIncludeError, OSError):
