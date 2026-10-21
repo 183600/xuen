@@ -8010,6 +8010,8 @@ def test_detect_test_suite_make_expanded_empty_target_colon_keeps_suite(
     "undefine $(call undefined)",
     "undefine $(value X)",
     "undefine $(X)",
+    "undefine $(subst a, ,a)",
+    "undefine $(foreach v,a, )",
 ])
 def test_detect_test_suite_make_function_expanded_empty_undefine_name(
         tmp_path, line):

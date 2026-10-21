@@ -3369,7 +3369,9 @@ def _make_scan_assignment(body: str,
         raw_name = undef.group(1) or ""
         name = _make_expand_assignment_name(
             raw_name, variables, simple, repo, overrides)
-        if not name:
+        # 与普通赋值不同，undefine 的名称只含空白也是 empty variable
+        # name（`undefine $(subst a, ,a)`），不能只用真值判断。
+        if not name.strip():
             raise _MakeRequiredIncludeError("empty variable name")
         # 普通 undefine 不能删除 override 变量；override undefine 才行。
         if name in overrides and "override" not in (
