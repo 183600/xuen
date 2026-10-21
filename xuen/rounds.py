@@ -531,7 +531,11 @@ def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
     """grouped target（test&:）必须带 recipe，否则 make 直接报错。"""
     if colon < 1 or line[colon - 1] != "&":
         return True
-    if _make_has_recipe_separator(line[colon + 1:]):
+    rest = line[colon + 1:]
+    # 与 _make_rule_header_rest_end 同口径：没有未转义分号时，GNU make 4.3
+    # 会把第一个 `\;` 当同行 recipe 分隔符（`test &: foo\;bar` 不报
+    # grouped targets must provide a recipe），不能只看未转义分号。
+    if _make_has_recipe_separator(rest) or "\\;" in rest:
         return True
     pos = line_end + 1 if line_end < len(text) else len(text)
     while pos < len(text):

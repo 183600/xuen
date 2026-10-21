@@ -1331,6 +1331,18 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
+    """grouped 目标没有真 recipe 时，make 4.3 会把 `\;` 当 recipe 分隔符。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("test &: foo\\;bar\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+    (tmp_path / "Makefile").write_text("test &: foo\\:bar\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     "test&:\n",
     "test&: dep\n",
