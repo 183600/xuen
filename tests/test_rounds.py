@@ -1220,6 +1220,45 @@ def test_tests_mode_pending_when_go_matches_no_packages(ws, tmp_path):
     assert read_idea(state_path) == "（暂无）"
 
 
+def test_tests_mode_pending_when_go_has_no_test_files(ws, tmp_path):
+    """模块只有 .go 源码、没有任何 *_test.go 时 go test 以 0 退出并打印
+    [no test files]：没有可执行的验证 → 挂起等待用户评分，不能当成测试
+    全部通过把候选采纳为最佳。"""
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "go.mod").write_text("module example.com/notests\n",
+                                 encoding="utf-8")
+    (repo / "main.go").write_text(
+        "package main\n\nfunc main() {}\n", encoding="utf-8")
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="tests", repo=str(repo))
+    guard.start()
+    write_idea(state_path, "go 没有测试文件时的想法")
+    assert guard.on_round_end(1) == "pending"
+    assert read_idea(state_path) == "（暂无）"
+
+
+def test_auto_mode_falls_back_when_go_has_no_test_files(ws, tmp_path):
+    """auto 模式下 go 包没有测试文件时不算验证通过：应转兜底评分。"""
+    if not shutil.which("go"):
+        pytest.skip("go 不可用")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "go.mod").write_text("module example.com/notests\n",
+                                 encoding="utf-8")
+    (repo / "main.go").write_text(
+        "package main\n\nfunc main() {}\n", encoding="utf-8")
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="auto", fallback="ai",
+                       repo=str(repo), judge=lambda p: (True, "评分: 8"))
+    guard.start()
+    write_idea(state_path, "go 没有测试文件时的想法")
+    assert guard.on_round_end(1) == "adopted"
+    assert guard.best["verifier"] == "ai"
+
+
 # ------------------------------------------ 套件运行的用户停止（q / Ctrl+C）
 def _pid_dead(pid):
     for _ in range(10):
