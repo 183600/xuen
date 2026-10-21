@@ -2017,6 +2017,11 @@ class ShellAgent:
             self._cleanup_prompt_file()
             with self._kill_lock:
                 self._idle_after_run = True
+                # 本轮 Popen 已失败、没有进程可终止：启动期间到达的 kill
+                # 已无对象可兑现，不能作为待处理请求留给下一轮（否则下轮
+                # 刚拉起就被补杀）。若用户仍要停止，sink.should_stop() 会
+                # 在进入下一轮前拦截。
+                self._killed = False
             if isinstance(e, OSError) and e.errno == errno.E2BIG:
                 # 命令行参数过长（提示词太大）：把裸 [Errno 7] 换成可操作
                 # 的错误并附上解法（改用 $prompt_file，只传文件路径）。
@@ -2041,6 +2046,9 @@ class ShellAgent:
             self._cleanup_prompt_file()
             with self._kill_lock:
                 self._idle_after_run = True
+                # 同 Popen 异常路径：本轮已经中止，启动窗口里的 kill
+                # 没有进程可兑现，不能污染下一次 run()。
+                self._killed = False
             raise
         # _proc/_killed 归属 _kill_lock 保护：赋值与检查必须在锁内完成，
         # 否则与 kill() 的竞态依赖 GIL 语义，与锁不变式不符

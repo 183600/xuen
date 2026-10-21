@@ -93,3 +93,34 @@ def test_kill_after_process_exit_before_wait_does_not_poison_next_run(
     assert agent.run("") == "ok"
     assert agent.returncode == 0
     assert agent.user_killed is False
+
+
+def test_kill_during_failed_popen_not_delivered_to_next_run(
+        tmp_path, monkeypatch):
+    """Popen 失败期间到达的 kill 没有进程可杀，不能留给下一轮补杀。"""
+    import os
+    import subprocess
+    import pytest
+    from xuen.agents import ShellAgent
+
+    if os.name != "posix":
+        return
+    agent = ShellAgent("printf ok", tmp_path, timeout=5)
+    real_popen = subprocess.Popen
+    fired = {"done": False}
+
+    def popen(*args, **kwargs):
+        if not fired["done"]:
+            fired["done"] = True
+            agent.kill()
+            raise OSError("boom")
+        return real_popen(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "Popen", popen)
+    with pytest.raises(OSError, match="boom"):
+        agent.run("")
+    monkeypatch.setattr(subprocess, "Popen", real_popen)
+
+    assert agent.run("") == "ok"
+    assert agent.returncode == 0
+    assert agent.user_killed is False
