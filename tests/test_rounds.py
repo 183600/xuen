@@ -870,6 +870,20 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
 
 
 @pytest.mark.parametrize("makefile", [
+    "test&:\n",
+    "test&: dep\n",
+    "test:\ntest::\n\t@true\n",
+    "test::\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
+    """grouped target 无 recipe / : 与 :: 混用会让 make 直接报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq (1,1)\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (1,1)\ntest:\n\t@true\nendif\n",
@@ -886,6 +900,15 @@ def test_detect_test_suite_make_conditional_branch(tmp_path, makefile):
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
     (tmp_path / "vars.mk").write_text("X = 1\n", encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for makefile in ("test&: ;\n", "test&:\n\t@true\n",
+                     "test&: dep\n\t@true\n"):
+        (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+        assert detect_test_suite(tmp_path) == ["make", "test"], makefile
 
 
 @pytest.mark.parametrize("makefile", [

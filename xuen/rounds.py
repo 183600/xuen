@@ -414,26 +414,70 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     return has_percent or "$" in target_pattern
 
 
+def _make_has_recipe_separator(rest: str) -> bool:
+    """规则头剩余部分是否有未转义、未进注释的同行命令分隔符 ;。"""
+    i = 0
+    while i < len(rest):
+        ch = rest[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "#":
+            return False
+        if ch == ";":
+            return True
+        i += 1
+    return False
+
+
+def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
+                                    line_end: int) -> bool:
+    """grouped target（test&:）必须带 recipe，否则 make 直接报错。"""
+    if colon < 1 or line[colon - 1] != "&":
+        return True
+    if _make_has_recipe_separator(line[colon + 1:]):
+        return True
+    pos = line_end + 1 if line_end < len(text) else len(text)
+    while pos < len(text):
+        end = text.find("\n", pos)
+        if end < 0:
+            end = len(text)
+        nxt = text[pos:end]
+        stripped = nxt.strip()
+        if not stripped or stripped.startswith("#"):
+            pos = end + 1
+            continue
+        return nxt.startswith("\t")
+    return False
+
+
 def _make_defines_test_target(text: str) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
+    saw_single = False
+    saw_double = False
     for match in _MAKE_TEST_TARGET.finditer(text):
         line_end = text.find("\n", match.end())
         if line_end < 0:
             line_end = len(text)
         line = text[match.start():line_end]
-        if _make_rule_header_is_valid(
-                line, match.end() - match.start() - 1):
-            return True
-    return False
-
-
-_MAKE_INCLUDE_DIRECTIVE = re.compile(
-    r"(?m)^[ ]*(include|-include|sinclude)[ \t]+"
-    r"((?:\\\r?\n|[^\r\n])*)")
+        colon = match.end() - match.start() - 1
+        if not _make_rule_header_is_valid(line, colon):
+            continue
+        if line[colon:colon + 2] == "::":
+            saw_double = True
+        else:
+            saw_single = True
+        if saw_single and saw_double:
+            # make: target file 'test' has both : and :: entries.
+            return False
+        if not _make_grouped_target_has_recipe(text, line, colon, line_end):
+            return False
+    return saw_single or saw_double
 
 
 class _MakeRequiredIncludeError(Exception):
     """必需的 include 无法读取：make 会在执行 test 前直接失败。"""
+
 
 _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
