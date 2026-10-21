@@ -7737,3 +7737,42 @@ def test_detect_test_suite_make_recursive_foreach_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(join test,:)",
+    "$(subst x,a:,x)",
+    "$(subst x,a::,x)",
+])
+def test_detect_test_suite_make_expanded_target_trailing_colon_blocks_suite(
+        tmp_path, line):
+    """目标表达式展开后以裸冒号结尾时 make 报 missing target pattern。
+
+    回归：`$(join test,:):` 展开成 `test::`，在展开后的文本上与合法
+    双冒号规则无法区分，导致后面存在的 test 目标被误判成套件可运行。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + ":\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(subst x,:,x)",
+    "$(subst x,:a,x)",
+])
+def test_detect_test_suite_make_expanded_empty_target_colon_keeps_suite(
+        tmp_path, line):
+    """展开后目标列表只有/以冒号开头时 make 接受空目标，不能误伤套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + ":\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

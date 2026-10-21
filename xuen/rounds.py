@@ -1265,6 +1265,43 @@ def _make_has_missing_separator_line(text: str, *,
     return False
 
 
+def _make_last_unescaped_colon(text: str) -> int:
+    """返回 text 里最后一个未转义冒号的下标（无则 -1）。"""
+    last = -1
+    i = 0
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+            continue
+        if text[i] == ":":
+            last = i
+        i += 1
+    return last
+
+
+def _make_expanded_targets_end_with_colon(targets: str) -> bool:
+    r"""展开后的单个目标词是否以裸冒号结尾并成为非法静态模式。
+
+    `$(join test,:):` 展开后被 make 看成目标 `test:` 加规则分隔符，
+    报 missing target pattern；`$(subst x,:,x):` 展开成 `::` 则是空
+    目标列表，make 接受。只有裸冒号前还有字面目标名（且目标列表不是
+    以冒号开头）时才按读取错误处理；`\:` 是目标名里的字面冒号。
+
+    多个目标词的情况更复杂：`$(addprefix ...)` 整体展开成
+    `test test:` 时 make 仍接受，因此这里只对单个目标词判定。
+    """
+    text = targets.strip(" \t")
+    if not text or len(text.split()) != 1:
+        return False
+    last = _make_last_unescaped_colon(text)
+    if last < 0 or last != len(text) - 1:
+        return False
+    prefix = text[:last].rstrip(" \t")
+    if not prefix or prefix.lstrip(" \t").startswith(":"):
+        return False
+    return True
+
+
 def _make_target_word_units(word: str) -> List[str]:
     """按 make 规则头词法再切分目标词：未转义 `=` 是词分隔符。
 
@@ -3682,6 +3719,12 @@ def _make_expand_simple_vars(text: str,
                 # 时仍是普通目标，后面的空变量名照样报错（前面已按原文
                 # 判断过整体就是 `&` 的情况）。
                 expanded_targets = expanded_targets.strip(" \t")
+                if _make_expanded_targets_end_with_colon(
+                        expanded_targets):
+                    # `$(join test,:):` 展开成 `test::`，但第一个冒号来自
+                    # 目标名，make 报 missing target pattern；字面 `test::`
+                    # 是合法的双冒号规则，不能在展开后的文本上区分。
+                    raise _MakeRequiredIncludeError("missing target pattern")
                 skip = expanded_targets == "" or (
                     expanded_targets == "&"
                     and raw_targets.endswith("&"))
