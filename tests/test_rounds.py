@@ -1720,6 +1720,25 @@ def test_detect_test_suite_make_condition_functions_negative(tmp_path,
 
 
 @pytest.mark.parametrize("makefile", [
+    "X := $(or $(subst a,test,a),x)\n$(X):\n\t@true\n",
+    "$(if a,test,x):\n\t@true\n",
+    "$(and a,test):\n\t@true\n",
+    "X = test\nifeq ($(or $(X) ,a),test)\ntest:\n\t@true\nendif\n",
+    "X = test\nifeq ($(and a,$(X) ),test)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_condition_functions_in_targets(
+        tmp_path, makefile):
+    """目标名与条件里的 if/or/and 都要静态展开；or/and 的生效参数去空白。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq (a,a) junk\ntest:\n\t@echo ok\nendif\n",
     'ifeq "a" "a"junk\ntest:\n\t@echo ok\nendif\n',
     # 未生效分支里的非法条件语法会被 make 忽略；不能因此拒绝后面的套件。

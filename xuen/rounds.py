@@ -2696,8 +2696,11 @@ def _make_expand_simple_vars(text: str,
         expanded = _make_expand_refs(expand_input, variables, simple)
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
-        # 动态变量名 `$($(A))` 里层展开后外层才变成 `$(B)`；函数展开也
-        # 可能暴露新的变量引用，所以再跑一遍简单引用展开。
+        # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make 语义
+        # 展开；否则本来能定义 test 目标的规则会漏检。展开后可能暴露
+        # 新的变量引用，再跑一遍简单引用展开。
+        expanded = _make_expand_condition_functions(
+            expanded, variables, simple, repo)
         expanded = _make_expand_refs(expanded, variables, simple)
         expanded = _make_expand_computed_refs(expanded, variables, simple)
         # make 在展开前判定 target-specific 赋值：原始行第一个变量名
@@ -3046,11 +3049,14 @@ def _make_expand_condition_functions(
             cond, then, otherwise = (values + ["", ""])[:3]
             result = then if cond.strip() else otherwise
         elif name == "or":
-            result = next((value for value in values if value.strip()), "")
+            # GNU make 的 or/and 会剥掉生效参数的空白；if 的 then/else
+            # 分支则原样保留（两者语义不同，不能统一 strip）。
+            result = next((value.strip() for value in values
+                           if value.strip()), "")
         else:  # and
             result = ""
             if all(value.strip() for value in values) and values:
-                result = values[-1]
+                result = values[-1].strip()
         text = text[:start] + result + text[end:]
         pos = start + len(result)
 
