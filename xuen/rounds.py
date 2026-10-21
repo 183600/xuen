@@ -2282,8 +2282,13 @@ def _make_expand_include_functions(
         pos = start + len(replacement)
 
 
-def _make_find_function_call(text: str, pos: int, name: str):
-    """从 pos 起找下一个 `$(name ...)` / `${name ...}` 调用。"""
+def _make_find_function_call(text: str, pos: int, name: str,
+                             *, skip_compound: bool = False):
+    """从 pos 起找下一个 `$(name ...)` / `${name ...}` 调用。
+
+    skip_compound 会跳过整个条件/foreach/call 引用，交给各自的展开器
+    按原文确定参数边界后再处理其中的目标函数。
+    """
     i = pos
     while i + 1 < len(text):
         if text[i] == "$" and text[i + 1] == "$":
@@ -2309,6 +2314,14 @@ def _make_find_function_call(text: str, pos: int, name: str):
             k += 1
         if depth:
             raise _MakeRequiredIncludeError(text[i:])
+        j = i + 2
+        while j < len(text) and (text[j].isalnum() or text[j] in "_-"):
+            j += 1
+        if (skip_compound
+                and (text[i + 2:j] in _MAKE_CONDITION_FUNCTIONS
+                     or text[i + 2:j] in ("foreach", "call"))):
+            i = k + 1
+            continue
         after = i + 2 + len(name)
         if (text[i + 2:after] == name and after < len(text)
                 and text[after] in " \t"):
@@ -2517,7 +2530,8 @@ def _make_expand_value(text: str,
         return text
     pos = 0
     while True:
-        call = _make_find_function_call(text, pos, "value")
+        call = _make_find_function_call(
+            text, pos, "value", skip_compound=True)
         if call is None:
             return text
         start, end, args = call

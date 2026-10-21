@@ -1968,6 +1968,10 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
     "X = test\nifeq ($(foreach v,test,$(v)),test)\n"
     "test:\n\t@true\nendif\n",
     "X = test\n$(if $(value X),test,x):\n\t@true\n",
+    # value 返回的逗号属于条件值；先展开 value 再切分 if 参数会把
+    # `a,b` 当成两个参数，错选分支或丢掉 test。
+    "X = a,b\n$(if $(value X),test,x):\n\t@true\n",
+    "X = ,x\n$(if $(value X),test,x):\n\t@true\n",
     # foreach 的循环变量在 body 展开前才绑定，不能先用外层变量表
     # 展开 body 里的条件函数（那会把 test 误算成 y）。
     "X = y\n$(foreach v,test,$(if $(v),test,x)):\n\t@true\n",
