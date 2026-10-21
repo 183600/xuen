@@ -1549,9 +1549,24 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 空格（那会凭空多出 `test` 目标）；用空占位赋值覆盖之前
                 # 的同名变量，避免第二遍展开误用旧值。
                 if re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
-                    raw = ("" if len(body_lines) > 1 else
-                           _make_quote_value_for_assignment(
-                               " ".join(body_lines)))
+                    if len(body_lines) <= 1:
+                        value = " ".join(body_lines)
+                    else:
+                        # 多行值展开到目标行时，只有最后一行的前导空白会
+                        # 让 make 把它当作独立的目标列表；否则整段值
+                        # （含换行）都是同一个目标名，`test` 只是其中
+                        # 一部分。最后一行前面全是空行时同理，直接看
+                        # 最后一行即可。其余多行值用空占位，避免误判。
+                        last = body_lines[-1]
+                        if not last.strip():
+                            value = ""
+                        elif last[:1] in (" ", "\t") or all(
+                                not line.strip()
+                                for line in body_lines[:-1]):
+                            value = last
+                        else:
+                            value = ""
+                    raw = _make_quote_value_for_assignment(value)
                     out.append(f"{define_name} = {raw}\n")
             continue
         if active and _MAKE_ENDEF_LINE.match(body):

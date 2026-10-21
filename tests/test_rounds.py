@@ -1694,6 +1694,46 @@ def test_detect_test_suite_make_define_body_is_data(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    # 多行 define 的前导空行不会让最后一行成为目标名的一部分。
+    "define BODY\n\ntest\nendef\n$(BODY):\n\t@echo ok\n",
+    "define BODY\n\n\n  test  \nendef\n$(BODY):\n\t@echo ok\n",
+    # 最后一行的前导空白会把前面的行与它分开，test 仍是独立目标。
+    "define BODY\nfoo\n test\nendef\n$(BODY):\n\t@echo ok\n",
+    "define BODY\nfoo\nbar\n test\nendef\n$(BODY):\n\t@echo ok\n",
+    # 注释行在前、最后一行带前导空白时，同样能执行 test。
+    "define BODY\n# c\n test\nendef\n$(BODY):\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_multiline_define_target(tmp_path, makefile):
+    """多行 define 展开后仍可能定义可执行的 test 目标，不能一律置空。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    # 最后一行没有前导空白且前面有非空行时，整段值是一个目标名。
+    "define BODY\nfoo\ntest\nendef\n$(BODY):\n\t@echo ok\n",
+    "define BODY\n# c\ntest\nendef\n$(BODY):\n\t@echo ok\n",
+    # 尾部空行/文本会让 test 不再是独立目标。
+    "define BODY\n\ntest\n \nendef\n$(BODY):\n\t@echo ok\n",
+    "define BODY\nfoo\n test\nx\nendef\n$(BODY):\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_multiline_define_not_a_target(tmp_path,
+                                                              makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_repeated_include_reprocessed(tmp_path):
     """同一 include 文件被包含两次时要各处理一次：条件分支依赖的变量
     可能在两次之间变化，只处理第一次会漏掉第二次才生效的 test 目标。"""
