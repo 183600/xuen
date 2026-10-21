@@ -1122,6 +1122,28 @@ def test_detect_test_suite_make_else_if_chain_still_detected(tmp_path,
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "ifeq ($(strip x),x)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(subst a,b,a),b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(filter %.mk,tests.mk),tests.mk)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(sort b a),a b)\ntest:\n\t@true\nendif\n",
+    "ifeq ($(wildcard tests.mk),tests.mk)\ntest:\n\t@true\nendif\n",
+    "X = 1\nifdef $(strip X)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_condition_static_functions(tmp_path,
+                                                           makefile):
+    """条件里的静态函数与嵌套逗号要按 make 语义求值。
+
+    回归：`ifeq ($(subst a,b,a),b)` 按第一个逗号切分左值，条件被误判为
+    不成立；`ifeq ($(strip x),x)` 里的 strip 也未展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_conditional_missing_include(tmp_path):
     """未生效分支里的必需 include 不会让 make 失败，不能因此漏掉套件。"""
     if not shutil.which("make"):

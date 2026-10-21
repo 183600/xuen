@@ -1076,14 +1076,35 @@ def _make_join_continuations(text: str) -> str:
 
 
 def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
-    """解析 ifeq/ifneq 的两种参数写法，返回左右值。"""
+    """解析 ifeq/ifneq 的两种参数写法，返回左右值。
+
+    括号写法的第一个逗号必须在嵌套变量/函数引用之外：常见写法
+    `ifeq ($(subst a,b,a),b)` 的前两个逗号都属于 subst 的参数，旧实现
+    按第一个逗号切分会把左值截成 `$(subst a`，导致条件判断错误。
+    """
     rest = rest.strip()
     if rest.startswith("(") and rest.endswith(")"):
         inner = rest[1:-1]
-        if "," not in inner:
+        depth = 0
+        comma = -1
+        i = 0
+        while i < len(inner):
+            ch = inner[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch in "({":
+                depth += 1
+            elif ch in ")}":
+                if depth > 0:
+                    depth -= 1
+            elif ch == "," and depth == 0:
+                comma = i
+                break
+            i += 1
+        if comma < 0:
             return None, None
-        left, right = inner.split(",", 1)
-        return left, right
+        return inner[:comma], inner[comma + 1:]
     match = re.match(
         r"^(['\"])(.*?)\1[ \t]+(['\"])(.*?)\3[ \t]*$", rest)
     if match is None:
@@ -1091,20 +1112,32 @@ def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
     return match.group(2), match.group(4)
 
 
+def _make_expand_condition_text(text: str,
+                                variables: Dict[str, Optional[str]],
+                                simple: Dict[str, bool],
+                                repo: Optional[Path]) -> str:
+    text = _make_expand_refs(text, variables, simple)
+    if repo is not None:
+        text = _make_expand_include_functions(text, repo)
+    return text
+
+
 def _make_eval_condition(kind: str, rest: str,
                          variables: Dict[str, Optional[str]],
-                         simple: Dict[str, bool]) -> bool:
+                         simple: Dict[str, bool],
+                         repo: Optional[Path] = None) -> bool:
     rest = _make_strip_comment(rest).strip()
     if kind in ("ifdef", "ifndef"):
-        name = _make_expand_refs(rest, variables, simple).strip()
+        name = _make_expand_condition_text(rest, variables, simple,
+                                           repo).strip()
         value = variables.get(name)
         defined = value is not None and value != ""
         return defined if kind == "ifdef" else not defined
     left, right = _make_ifeq_args(rest)
     if left is None:
         return False
-    left = _make_expand_refs(left, variables, simple)
-    right = _make_expand_refs(right, variables, simple)
+    left = _make_expand_condition_text(left, variables, simple, repo)
+    right = _make_expand_condition_text(right, variables, simple, repo)
     # make 只去掉逗号两侧的空白：左值 rstrip、右值 lstrip。
     equal = left.rstrip() == right.lstrip()
     return equal if kind == "ifeq" else not equal
@@ -1112,7 +1145,8 @@ def _make_eval_condition(kind: str, rest: str,
 
 def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
                             variables: Dict[str, Optional[str]],
-                            simple: Dict[str, bool]) -> None:
+                            simple: Dict[str, bool],
+                            repo: Optional[Path] = None) -> None:
     if kind == "endif":
         if not stack:
             # 没有可配对的 ifeq/ifdef：make 报 extraneous 'endif' 并停止
@@ -1136,7 +1170,7 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
             if frame["parent"] and not frame["taken"]:
                 cond = _make_eval_condition(nested.group(1),
                                             nested.group(2) or "",
-                                            variables, simple)
+                                            variables, simple, repo)
             active = frame["parent"] and not frame["taken"] and cond
         else:
             if frame["plain_else"]:
@@ -1148,7 +1182,7 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
         frame["taken"] = frame["taken"] or active
         return
     parent = not stack or stack[-1]["active"]
-    cond = (_make_eval_condition(kind, rest, variables, simple)
+    cond = (_make_eval_condition(kind, rest, variables, simple, repo)
             if parent else False)
     active = parent and cond
     stack.append({"parent": parent, "taken": active, "active": active,
@@ -1222,7 +1256,7 @@ def _make_text_with_includes(text: str, repo: Path,
         if conditional is not None:
             _make_apply_conditional(conditional.group(1),
                                     conditional.group(2) or "", stack,
-                                    variables, simple)
+                                    variables, simple, repo)
             i += 1
             continue
         if stack and not stack[-1]["active"]:
