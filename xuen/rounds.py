@@ -2523,6 +2523,12 @@ def _make_expand_eval_functions(
         for eval_line in expanded_arg.splitlines():
             if eval_line.startswith("\t"):
                 continue
+            # eval 参数先展开、再按 Makefile 行解析；`$(eval foo)` 的
+            # `foo` 没有规则分隔符，会让 make 在读取阶段直接失败。原先
+            # 只扫描赋值，非赋值行被静默丢弃，后面的 test 目标因此被
+            # 误判成可运行套件。
+            if _make_has_missing_separator_line(eval_line):
+                raise _MakeRequiredIncludeError("eval: missing separator")
             _make_scan_assignment(
                 eval_line, variables, simple, overrides, repo)
         text = text[:start] + text[end:]

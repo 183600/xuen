@@ -2732,6 +2732,7 @@ def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
     r"$(patsubst a\ b,test,$$) = x",
     r"$(subst a\ b,test,$$) = x",
     r"$(info $(if x,a\ b))foo = x",
+    "$(eval x=1)foo = x",
 ])
 def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                                                                line):
@@ -2744,6 +2745,27 @@ def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(eval x)foo = 1",
+    "$(eval x) = 1",
+])
+def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
+        tmp_path, line):
+    """赋值名里的 eval 参数会作为 Makefile 行解析，`$(eval x)` 缺少分隔符。
+
+    原先只处理 eval 里的赋值、忽略其他行，`$(eval x)foo = 1` 被当成
+    合法动态赋值，后面的 test 目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
 
 
 @pytest.mark.parametrize("line", [
