@@ -824,6 +824,12 @@ class ShellAgent:
         self.on_stderr = on_stderr or _default_on_stderr
         self._proc: Optional[subprocess.Popen] = None
         self._killed = False
+        # 上一次 run() 是否已完整收尾（进程已回收、_proc 已清空）。
+        # kill() 在空闲期不能把请求留成「待下一次 run 补杀」：正常跑完
+        # 一轮后到达的晚到 kill 不应让下一轮刚拉起的 agent 被误杀。
+        # run() 一开始就清掉它，因此「本轮起跑后、Popen 前」的 kill
+        # 仍会记成待处理请求，由 Popen 后补杀。
+        self._idle_after_run = False
         # 记录「本轮运行期间用户发起过 kill」：超时定时器与用户 kill 几乎
         # 同时到达时，被用户杀掉的进程（rc=-9）会被误判成超时，需要靠
         # 这个标志甄别（_killed 是跨轮次的待处理请求标志，run() 读到即清，
@@ -1948,17 +1954,20 @@ class ShellAgent:
         _user_killed 只在确实杀掉一个存活进程时置位：进程已退出的收尾
         窗口里到达的 kill（如 TUI 按 q 恰好落在 Popen 收尾期间）什么都
         杀不到，若也置位，刚完整跑完（rc=0）的轮次会被 runner 当作
-        「被用户终止，轮次未完成」丢弃并还原最佳。杀不到进程时只记
-        _killed，由下一次 run() 在 Popen 后立即补杀并自行补置位
-        _user_killed——本轮已结束，不能再被晚到的停止请求改写。
+        「被用户终止，轮次未完成」丢弃并还原最佳。run() 已起跑但进程
+        尚未拉起时杀不到，会记 _killed，由本次 run 在 Popen 后立即补杀
+        并自行补置位 _user_killed；上一轮已收尾后的空闲期则不记，避免
+        晚到请求把下一轮刚拉起的 agent 误杀。
         """
         with self._kill_lock:
             proc = self._proc
             if proc is not None and proc.poll() is None:
                 # 正在运行的进程会被杀掉：本次请求已兑现为「终止本轮」
                 self._user_killed = True
-            else:
-                # 进程已退出 / 尚未拉起：一个都没杀到，只记待处理请求
+            elif not self._idle_after_run:
+                # 本轮尚未拉起进程（run() 已起跑）或从未 run 过：记成
+                # 待处理请求。上一轮已完整收尾后的空闲期不能再记——
+                # 那会把晚到的停止请求错误地兑现到下一轮。
                 self._killed = True
         if proc is not None and proc.poll() is None:
             kill_process_tree(proc)
@@ -1977,6 +1986,7 @@ class ShellAgent:
         # 之后每次 run() 都会拉起进程又立刻误杀（返回 -9 且 timed_out=False，
         # 还会被误报为「异常退出」），agent 实例就此失效。
         with self._kill_lock:
+            self._idle_after_run = False
             killed_before = self._killed
             self._killed = False
             # killed_before 本身就是一次用户停止请求（kill 到达时尚无进程可杀），
@@ -1999,6 +2009,8 @@ class ShellAgent:
             # 启动失败（如提示词含 NUL 字节）时提示词文件已无消费者，
             # 必须清理，否则每次启动失败都在工作区留一个 .prompt.*.md
             self._cleanup_prompt_file()
+            with self._kill_lock:
+                self._idle_after_run = True
             if isinstance(e, OSError) and e.errno == errno.E2BIG:
                 # 命令行参数过长（提示词太大）：把裸 [Errno 7] 换成可操作
                 # 的错误并附上解法（改用 $prompt_file，只传文件路径）。
@@ -2021,6 +2033,8 @@ class ShellAgent:
             if proc is not None:
                 kill_process_tree(proc)
             self._cleanup_prompt_file()
+            with self._kill_lock:
+                self._idle_after_run = True
             raise
         # _proc/_killed 归属 _kill_lock 保护：赋值与检查必须在锁内完成，
         # 否则与 kill() 的竞态依赖 GIL 语义，与锁不变式不符
@@ -2143,6 +2157,7 @@ class ShellAgent:
                         pass
             with self._kill_lock:
                 self._proc = None
+                self._idle_after_run = True
             # 清理本次的提示词文件（子进程已退出，不再需要；
             # 循环长跑时避免工作区堆积 .prompt.*.md）
             self._cleanup_prompt_file()
