@@ -1007,6 +1007,13 @@ def _make_text_with_includes(text: str, repo: Path,
                     except (OSError, ValueError, RuntimeError):
                         raise _MakeRequiredIncludeError(name) from None
                     seen.add(key)
+                    # MAKEFILE_LIST 按读取顺序追加：include 文件里的
+                    # `$(lastword $(MAKEFILE_LIST))` 和之后的主文件都要
+                    # 看到刚读入的文件名（与 make 一致）。
+                    makefile_list = variables.get("MAKEFILE_LIST")
+                    if makefile_list is not None:
+                        variables["MAKEFILE_LIST"] = (
+                            (makefile_list + " " + name).strip())
                     try:
                         out.append("\n")
                         out.append(_make_text_with_includes(

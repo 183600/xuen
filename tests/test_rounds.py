@@ -1132,6 +1132,21 @@ def test_detect_test_suite_make_repeated_include_reprocessed(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_makefile_list_updates(tmp_path):
+    """MAKEFILE_LIST 要按 include 顺序追加，lastword 才能指向子目录文件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "mk").mkdir()
+    (tmp_path / "mk" / "vars.mk").write_text("", encoding="utf-8")
+    (tmp_path / "mk" / "tests.mk").write_text("test:\n\t@true\n",
+                                              encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "include mk/vars.mk\n"
+        "include $(dir $(lastword $(MAKEFILE_LIST)))tests.mk\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_include_variable_order(tmp_path):
     """include 插入位置要保留变量赋值顺序，规则头才能按 make 语义展开。"""
     if not shutil.which("make"):
