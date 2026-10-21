@@ -2498,6 +2498,9 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test: X=1",
     "foo&: X=1",
     "define X\nfoo\nendef",
+    "private undefine X",
+    "override undefine X",
+    "private undefine ?&: dep",
     "$(info hi)",
     "$(eval X=1)",
 ])
@@ -2707,6 +2710,9 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "override \\$: # c",
     r"override a\\: = 1",
     r"?,\\: = 1",
+    "$: X = 1",
+    "$x$: dep",
+    "$ $: X=1",
 ])
 def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     """其他目标的非法规则头同样会让 make 读取失败，不能只看 test 行。
@@ -2739,6 +2745,9 @@ def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     "foo $: a:b",
     "foo $::",
     "foo $: %.o: %.c",
+    "$: a:b",
+    "$: ;",
+    "$x$: a:b",
     r"a\; = x",
     r"a\ = x",
 ])

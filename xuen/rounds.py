@@ -658,8 +658,10 @@ _MAKE_CONTEXT_RESET = "#\x02"
 # （`private foo:` / `override foo:` 都定义 foo），只有跟变量赋值/
 # define 时才是修饰符；赋值行已由 _MAKE_VAR_ASSIGNMENT 跳过。
 _MAKE_NON_RULE_DIRECTIVE = re.compile(
-    r"^[ \t]*(?:include|sinclude|-include|vpath|undefine|export|unexport|"
-    r"define)(?:[ \t]|$)")
+    # private / override 只能修饰 undefine；它们后面跟其他指令关键字
+    # （`private export foo`）或规则头（`private foo:`）时是普通目标名。
+    r"^[ \t]*(?:(?:(?:private|override)[ \t]+)*undefine"
+    r"|include|sinclude|-include|vpath|export|unexport|define)(?:[ \t]|$)")
 
 
 def _make_has_grouped_target_without_recipe(text: str) -> bool:
@@ -739,6 +741,41 @@ def _make_target_list_has_bare_trailing_dollar(targets: str) -> bool:
     return real
 
 
+def _make_target_list_only_variable_refs(targets: str) -> bool:
+    """目标列表是否只由变量引用/空白组成、且以裸 `$` 结尾。"""
+    if not targets.endswith("$"):
+        return False
+    if (len(targets) - len(targets.rstrip("$"))) % 2 == 0:
+        return False
+    i = 0
+    last = len(targets) - 1
+    while i < last:
+        ch = targets[i]
+        if ch == "\\":
+            return False
+        if ch.isspace():
+            i += 1
+            continue
+        if ch == "$" and i + 1 < last:
+            if targets[i + 1] in "({":
+                opener = targets[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < len(targets) and depth:
+                    if targets[j] == opener:
+                        depth += 1
+                    elif targets[j] == closer:
+                        depth -= 1
+                    j += 1
+                i = j
+                continue
+            i += 2
+            continue
+        return False
+    return True
+
+
 def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
     r"""原始文本里是否有目标列表以裸 `$` 吃掉规则分隔符的规则。
 
@@ -774,7 +811,15 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
             continue
-        if not _make_target_list_has_bare_trailing_dollar(body[:colon]):
+        targets = body[:colon]
+        bare = _make_target_list_has_bare_trailing_dollar(targets)
+        only_refs = _make_target_list_only_variable_refs(targets)
+        if not bare and not only_refs:
+            continue
+        if (only_refs
+                and re.match(r"^[ \t]*(?:[;#]|$)", body[colon + 1:])):
+            # `$:` / `$x$:` 后面没有内容（或只有注释/同行命令）时，
+            # `$:` 吃掉冒号后整行展开为空目标列表，make 接受。
             continue
         if colon + 1 < len(body) and body[colon + 1] == ":":
             # `foo $::`：`$:` 吃掉第一个冒号，第二个冒号仍是规则分隔符，
