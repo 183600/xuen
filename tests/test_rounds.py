@@ -868,6 +868,16 @@ def test_detect_test_suite_make_undefined_include_path(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_unterminated_function(tmp_path):
+    """未闭合的 include 函数引用会让 make 直接报错，不能继续探测。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for expr in ("$(wildcard tests.mk", "$(T"):
+        (tmp_path / "Makefile").write_text(
+            f"include {expr}\ntest:\n\t@true\n", encoding="utf-8")
+        assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_bad_addprefix_args(tmp_path):
     """addprefix/addsuffix 缺少逗号时 make 直接报错，不能当空展开。"""
     if not shutil.which("make"):

@@ -626,6 +626,7 @@ def _make_find_include_function(text: str, pos: int):
 
     返回 (start, end, name, args)；找不到返回 None。按括号嵌套扫描，
     这样 `$(wildcard $(addprefix $(D)/, *.mk))` 这类常见嵌套也能展开。
+    未闭合的 `$(` / `${` 会让 make 直接报错，按无套件处理。
     """
     i = pos
     while i + 1 < len(text):
@@ -634,16 +635,8 @@ def _make_find_include_function(text: str, pos: int):
             continue
         opener = text[i + 1]
         closer = ")" if opener == "(" else "}"
-        j = i + 2
-        while j < len(text) and (text[j].isalnum() or text[j] in "_-"):
-            j += 1
-        name = text[i + 2:j]
-        if name not in _MAKE_INCLUDE_FUNCTIONS or j >= len(text) \
-                or text[j] not in " \t":
-            i += 1
-            continue
         stack = [closer]
-        k = j
+        k = i + 2
         while k < len(text):
             ch = text[k]
             if ch == "\\":
@@ -656,8 +649,18 @@ def _make_find_include_function(text: str, pos: int):
             if ch == stack[-1]:
                 stack.pop()
                 if not stack:
-                    return i, k + 1, name, text[j:k].lstrip(" \t")
+                    break
             k += 1
+        if stack:
+            # 未闭合的变量/函数引用会让 make 直接报错并停止解析。
+            raise _MakeRequiredIncludeError(text[i:])
+        j = i + 2
+        while j < len(text) and (text[j].isalnum() or text[j] in "_-"):
+            j += 1
+        name = text[i + 2:j]
+        if (name in _MAKE_INCLUDE_FUNCTIONS and j < len(text)
+                and text[j] in " \t"):
+            return i, k + 1, name, text[j:k].lstrip(" \t")
         i += 1
     return None
 
