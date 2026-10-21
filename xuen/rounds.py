@@ -2775,9 +2775,15 @@ def _make_expand_simple_vars(text: str,
                     expanded_targets, variables, simple)
                 expanded_targets = _make_resolve_single_char_refs(
                     expanded_targets, variables, simple)
-                # 目标列表本身展开为空（`$(X):$(Y)=1` / `$x:...`）或只剩
-                # grouped 标记 `&` 时 make 接受空目标，不会报空变量名。
-                skip = expanded_targets.strip(" \t") in ("", "&")
+                # 目标列表本身展开为空（`$(X):$(Y)=1` / `$x:...`）时
+                # make 接受空目标，不会报空变量名。只有原文以字面 `&`
+                # 结尾时才是 grouped 标记；`&$x` / `&$(G)` 展开成 `&`
+                # 时仍是普通目标，后面的空变量名照样报错（前面已按原文
+                # 判断过整体就是 `&` 的情况）。
+                expanded_targets = expanded_targets.strip(" \t")
+                skip = expanded_targets == "" or (
+                    expanded_targets == "&"
+                    and raw_targets.endswith("&"))
             if not skip:
                 rest_start = raw_colon + 1
                 while (rest_start < len(body)

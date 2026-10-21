@@ -6595,6 +6595,9 @@ def test_detect_test_suite_make_export_directive_is_not_rule(tmp_path, line):
     "test:$(X)!=1",
     "test:$(X)?=1",
     "test:$(X):=1",
+    "&$x:$(X)=1",
+    "&$(U):$(X)=1",
+    "$(X)& :$(X)=1",
 ])
 def test_detect_test_suite_make_empty_target_assignment_name_blocks_suite(
         tmp_path, line):
@@ -6690,6 +6693,7 @@ def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
     "$(X) $(Y):$(Z)=1",
     "$x:$(X)=1",
     "$x&:$(X)=1",
+    "$(X)&:$(X)=1",
     "foo$:$(X)=1",
     "$:X:=1",
     "x$:X:=1",
