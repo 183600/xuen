@@ -636,11 +636,11 @@ def _make_pattern_match(pattern: str, word: str
                         ) -> Tuple[bool, Optional[str]]:
     """make 的 % 模式匹配，返回 (是否匹配, % 位置的词干)。
 
-    反斜杠转义下一个字符（``\\%`` 是字面 %），其余字符按字面匹配。
-    没有 % 的模式只做精确比较，词干为 None。
+    反斜杠转义下一个字符（``\\%`` 是字面 %）。只有第一个未转义的 %
+    是通配符，后续 % 按字面 % 匹配（GNU make 的 filter/patsubst 语义）；
+    没有 % 的模式做精确比较，词干为 None。
     """
     regex = []
-    stem_group = None
     i = 0
     has_percent = False
     while i < len(pattern):
@@ -649,34 +649,18 @@ def _make_pattern_match(pattern: str, word: str
             regex.append(re.escape(pattern[i + 1]))
             i += 2
             continue
-        if ch == "%":
+        if ch == "%" and not has_percent:
             has_percent = True
-            stem_group = len(regex)
-            regex.append(".*")
+            regex.append("(.*)")
         else:
             regex.append(re.escape(ch))
         i += 1
-    if not has_percent:
-        return pattern == word, None
     match = re.fullmatch("".join(regex), word)
     if match is None:
         return False, None
-    # 重新用捕获组算词干：把 % 换成 (.*) 会比事后反推可靠
-    captured = []
-    i = 0
-    while i < len(pattern):
-        ch = pattern[i]
-        if ch == "\\" and i + 1 < len(pattern):
-            captured.append(re.escape(pattern[i + 1]))
-            i += 2
-            continue
-        if ch == "%":
-            captured.append("(.*?)")
-        else:
-            captured.append(re.escape(ch))
-        i += 1
-    match = re.fullmatch("".join(captured), word)
-    return True, match.group(1) if match is not None else ""
+    if not has_percent:
+        return True, None
+    return True, match.group(1)
 
 
 def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:

@@ -1028,6 +1028,40 @@ def test_detect_test_suite_make_escaped_glob_does_not_match_decoy(
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_filter_escaped_percent_is_literal(tmp_path):
+    """filter 模式里的 \\% 是字面 %，不是通配符。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(filter tests.m\\%,tests.m%)\n", encoding="utf-8")
+    (tmp_path / "tests.m%").write_text("test:\n\t@echo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_patsubst_escaped_percent_is_literal(tmp_path):
+    """patsubst 的 pattern 里 \\% 是字面 %；替换结果要能命中真实文件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(patsubst tests.m\\%,tests.mk,tests.m%)\n",
+        encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@echo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
+    """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(filter %%.mk,tests.mk)\n", encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@echo ok\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_wildcard_function_no_match_is_empty(tmp_path):
     """`$(wildcard missing.mk)` 无匹配时展开为空，不能当字面文件名 include。"""
     if not shutil.which("make"):
