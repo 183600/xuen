@@ -782,6 +782,29 @@ def test_detect_test_suite_make_included_file(tmp_path, directive):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_wildcard_include(tmp_path):
+    """include *.mk 要按 make 的 wildcard 语义读取所有匹配文件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("include *.mk\n", encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "vars.mk").write_text("X = 1\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_wildcard_include_no_match(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include *.mk\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+    (tmp_path / "Makefile").write_text(
+        "-include *.mk\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

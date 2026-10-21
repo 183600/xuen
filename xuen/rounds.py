@@ -40,6 +40,7 @@
 """
 from __future__ import annotations
 
+import glob
 import json
 import math
 import os
@@ -455,15 +456,30 @@ def _make_strip_comment(line: str) -> str:
 
 
 def _make_include_names(args: str) -> List[str]:
-    """提取 include/-include/sinclude 的字面文件名（跳过变量/通配符）。"""
+    """提取 include/-include/sinclude 的文件名（变量引用留给 make）。"""
     names = []
     flat = re.sub(r"\\\r?\n", " ", _make_strip_comment(args))
     for token in re.findall(r"(?:\\.|[^\s])+", flat):
         name = re.sub(r"\\(.)", r"\1", token)
-        if "$" in name or any(ch in name for ch in "*?["):
+        if "$" in name:
             continue
         names.append(name)
     return names
+
+
+def _make_include_paths(name: str, repo: Path) -> List[Path]:
+    """把 include 文件名（含通配符）展开成待读取路径。
+
+    通配符按 make 的 wildcard 语义展开；没有匹配时保留原字面量，让
+    `include` 的必需文件缺失检查把它当成错误（`-include` 则忽略）。
+    """
+    path = Path(name)
+    if not path.is_absolute():
+        path = repo / path
+    if not any(ch in name for ch in "*?["):
+        return [path]
+    matches = sorted(glob.glob(str(path)))
+    return [Path(match) for match in matches] or [path]
 
 
 def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
@@ -580,32 +596,30 @@ def _make_text_with_includes(text: str, repo: Path,
         directive = match.group(1)
         parts.append(text[last:match.end()])
         for name in _make_include_names(match.group(2)):
-            path = Path(name)
-            if not path.is_absolute():
-                path = repo / path
-            try:
-                key = path.resolve()
-                if key in seen:
-                    continue
-                if not path.is_file():
-                    # 悬空符号链接的 exists() 为 False，与 make 的「缺失」
-                    # 口径一致；目录等存在但不可读的路径两种 include 都报错。
-                    if path.exists() or directive == "include":
-                        raise _MakeRequiredIncludeError(name)
-                    continue
-                if path.stat().st_size > 2_000_000:
-                    continue
-                included = path.read_text(encoding="utf-8-sig",
-                                          errors="replace")
-            except _MakeRequiredIncludeError:
-                raise
-            except (OSError, ValueError, RuntimeError):
-                raise _MakeRequiredIncludeError(name) from None
-            seen.add(key)
-            parts.append("\n")
-            parts.append(_make_text_with_includes(included, repo, seen,
-                                                  depth + 1))
-            parts.append("\n")
+            for path in _make_include_paths(name, repo):
+                try:
+                    key = path.resolve()
+                    if key in seen:
+                        continue
+                    if not path.is_file():
+                        # 悬空符号链接的 exists() 为 False，与 make 的「缺失」
+                        # 口径一致；目录等存在但不可读的路径两种 include 都报错。
+                        if path.exists() or directive == "include":
+                            raise _MakeRequiredIncludeError(name)
+                        continue
+                    if path.stat().st_size > 2_000_000:
+                        continue
+                    included = path.read_text(encoding="utf-8-sig",
+                                              errors="replace")
+                except _MakeRequiredIncludeError:
+                    raise
+                except (OSError, ValueError, RuntimeError):
+                    raise _MakeRequiredIncludeError(name) from None
+                seen.add(key)
+                parts.append("\n")
+                parts.append(_make_text_with_includes(included, repo, seen,
+                                                      depth + 1))
+                parts.append("\n")
         last = match.end()
     parts.append(text[last:])
     return "".join(parts)
