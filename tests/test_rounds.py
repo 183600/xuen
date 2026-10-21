@@ -1722,6 +1722,31 @@ def test_detect_test_suite_make_makefile_list_updates(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_makefile_list_uses_matched_names(tmp_path):
+    """通配符 include 的 MAKEFILE_LIST 要记录实际文件，不是 `*.mk`。
+
+    `include mk/*.mk` 后 `lastword $(MAKEFILE_LIST)` 必须是最后一个匹配
+    文件；记录通配符表达式会让条件判断走错分支，漏掉可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "mk").mkdir()
+    (tmp_path / "mk" / "a.mk").write_text("", encoding="utf-8")
+    (tmp_path / "mk" / "tests.mk").write_text("", encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "include mk/*.mk\n"
+        "ifeq ($(lastword $(MAKEFILE_LIST)),mk/tests.mk)\n"
+        "test:\n\t@true\nendif\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    # `./tests.mk` 在 make 的 MAKEFILE_LIST 里规整为 `tests.mk`。
+    (tmp_path / "Makefile").write_text(
+        "include ./only.mk\n"
+        "ifeq ($(lastword $(MAKEFILE_LIST)),only.mk)\n"
+        "test:\n\t@true\nendif\n", encoding="utf-8")
+    (tmp_path / "only.mk").write_text("", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_include_variable_order(tmp_path):
     """include 插入位置要保留变量赋值顺序，规则头才能按 make 语义展开。"""
     if not shutil.which("make"):

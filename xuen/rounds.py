@@ -1587,6 +1587,7 @@ def _make_text_with_includes(text: str, repo: Path,
             args = _make_expand_include_functions(args, repo)
             for name in _make_include_names(args):
                 display = _make_unescape_name(name)
+                absolute_name = Path(display).is_absolute()
                 for path in _make_include_paths(name, repo):
                     try:
                         key = path.resolve()
@@ -1610,11 +1611,20 @@ def _make_text_with_includes(text: str, repo: Path,
                     seen.add(key)
                     # MAKEFILE_LIST 按读取顺序追加：include 文件里的
                     # `$(lastword $(MAKEFILE_LIST))` 和之后的主文件都要
-                    # 看到刚读入的文件名（与 make 一致）。
+                    # 看到刚读入的文件名（与 make 一致）。通配符 include
+                    # 要记录实际匹配到的文件名，而不是 `*.mk` 这样的原始
+                    # 表达式；`./foo.mk` 也按 make 语义规整成 `foo.mk`。
+                    if absolute_name:
+                        listed = str(path)
+                    else:
+                        try:
+                            listed = os.path.relpath(str(path), str(repo))
+                        except ValueError:
+                            listed = str(path)
                     makefile_list = variables.get("MAKEFILE_LIST")
                     if makefile_list is not None:
                         variables["MAKEFILE_LIST"] = (
-                            (makefile_list + " " + display).strip())
+                            (makefile_list + " " + listed).strip())
                     try:
                         out.append("\n")
                         out.append(_make_text_with_includes(
