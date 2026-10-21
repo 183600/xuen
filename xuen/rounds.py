@@ -1965,6 +1965,58 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         pos = start + len(replacement)
 
 
+def _make_standalone_eval_args(body: str) -> Optional[List[str]]:
+    """整行只有 `$(eval ...)` 调用时返回各参数原文。
+
+    eval 在读取时展开并立即解析参数内容，可定义目标/变量；但 eval 行
+    本身不会成为后续 tab recipe 的当前目标。只处理整行调用，嵌在目标
+    行或 recipe 里的 eval 情况更复杂，保持原样交给保守路径。
+    """
+    calls: List[str] = []
+    i = 0
+    n = len(body)
+    while i < n:
+        if body[i] in " \t":
+            i += 1
+            continue
+        if (body[i] != "$" or i + 1 >= n
+                or body[i + 1] not in "({"):
+            return None
+        opener = body[i + 1]
+        closer = ")" if opener == "(" else "}"
+        stack = [closer]
+        k = i + 2
+        while k < n:
+            ch = body[k]
+            if ch == "\\":
+                k += 2
+                continue
+            if ch == "$" and k + 1 < n and body[k + 1] in "({":
+                stack.append(")" if body[k + 1] == "(" else "}")
+                k += 2
+                continue
+            if ch == stack[-1]:
+                stack.pop()
+                if not stack:
+                    break
+            k += 1
+        if stack:
+            return None
+        content = body[i + 2:k]
+        name_end = 0
+        while (name_end < len(content)
+               and (content[name_end].isalnum()
+                    or content[name_end] in "_-")):
+            name_end += 1
+        if content[:name_end] != "eval":
+            return None
+        if name_end < len(content) and content[name_end] not in " \t":
+            return None
+        calls.append(content[name_end:].lstrip(" \t"))
+        i = k + 1
+    return calls or None
+
+
 def _make_include_paths(name: str, repo: Path) -> List[Path]:
     """把 include 文件名（含通配符）展开成待读取路径。
 
@@ -2625,6 +2677,17 @@ def _make_expand_simple_vars(text: str,
         if body.lstrip().startswith("#"):
             out.append(line)
             i += 1
+            continue
+        eval_args = _make_standalone_eval_args(body)
+        if eval_args is not None:
+            # eval 的参数先原样作为 Makefile 行插入，交给同一轮主循环按
+            # 顺序展开/应用（参数里的赋值也要影响后续行）。eval 行本身
+            # 不建立当前目标，插入后补一个上下文重置哨兵。
+            injected: List[str] = []
+            for argument in eval_args:
+                for eval_line in argument.splitlines():
+                    injected.append(eval_line + newline)
+            lines[i:i + 1] = injected + [_MAKE_CONTEXT_RESET + newline]
             continue
         # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。

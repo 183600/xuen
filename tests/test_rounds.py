@@ -2006,6 +2006,43 @@ def test_detect_test_suite_make_computed_assignment(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    "$(eval test:)",
+    "$(eval test: )",
+    "$(eval test: ; @true)",
+    "$(eval test:; @true)",
+    "$(eval test: ;)",
+    "$(eval X=test)\n$(X):\n\t@true\n",
+    "$(eval X := test:)\n$(X) ; @true\n",
+])
+def test_detect_test_suite_make_eval_defines_test(tmp_path, makefile):
+    """`$(eval ...)` 在读取时解析参数，参数里的 test 目标要能探测到。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(eval test:)\n\t@echo hi\n",
+    "test:\n\t@echo ok\n$(eval X=1)\n\t@true\n",
+    "$(eval foo)\n",
+])
+def test_detect_test_suite_make_eval_does_not_keep_target_context(
+        tmp_path, makefile):
+    """eval 行不建立当前目标，其后的 tab 行仍是 recipe commences 错误。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     # 展开后的变量名（含空格）未定义，整体是空目标而不是名为 test 的目标。
     "A = test foo\n$($(A)):\n\t@true\n",
     "A = test foo\n$($(A) test):\n\t@true\n",
