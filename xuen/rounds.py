@@ -3764,17 +3764,18 @@ def _make_ifeq_args(rest: str
         i = 1
         while i < len(rest):
             ch = rest[i]
-            if ch == "\\":
-                i += 2
-                continue
-            if ch in "({":
+            # 反斜杠不转义条件里的右括号：`ifeq (\,\)` 的两个值都是
+            # 单个反斜杠，条件为真；跳过 `\)` 会找不到外层右括号。
+            # 括号写法的参数边界只按圆括号配对，裸花括号不参与：
+            # `ifeq ({a,b},{a,b})` 在逗号处分成 `{a` 与 `b},{a,b}`，条件
+            # 为假，不能把花括号里的逗号当成嵌套。
+            if ch == "(":
                 depth += 1
-            elif ch in ")}":
-                if depth == 0 and ch == ")":
+            elif ch == ")":
+                if depth == 0:
                     close = i
                     break
-                if depth > 0:
-                    depth -= 1
+                depth -= 1
             i += 1
         if close < 0:
             return None, None, True
@@ -3786,9 +3787,11 @@ def _make_ifeq_args(rest: str
             ch = inner[i]
             # 条件参数里的反斜杠不转义逗号：`ifeq (a\\,b,a\\,b)` 的
             # 第一个逗号就是参数分隔符（make 不把 \\, 当成字面逗号）。
-            if ch in "({":
+            # 与参数边界一致，只有圆括号参与配对；`ifeq ({a,b},{a,b})`
+            # 的第一个逗号在裸花括号内，仍是参数分隔符。
+            if ch == "(":
                 depth += 1
-            elif ch in ")}":
+            elif ch == ")":
                 if depth > 0:
                     depth -= 1
             elif ch == "," and depth == 0:

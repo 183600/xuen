@@ -1632,6 +1632,22 @@ def test_detect_test_suite_make_conditional_escaped_comma(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_conditional_bare_paren_boundaries(tmp_path):
+    """条件括号只按圆括号配对，反斜杠和裸花括号都不改变参数边界。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    # 反斜杠不转义右括号：两个值都是单个反斜杠，条件为真。
+    (tmp_path / "Makefile").write_text(
+        "ifeq (\\,\\)\ntest:\n\t@true\nendif\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    # 裸花括号不保护逗号：左右值是 `{a` 与 `b},{a,b}`，条件为假。
+    (tmp_path / "Makefile").write_text(
+        "ifeq ({a,b},{a,b})\ntest:\n\t@true\nendif\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     # 函数参数里的反斜杠同样不转义逗号；`a\,test` 是 `a\` 与
     # `test` 两个参数，if 选中第二参数 test。
