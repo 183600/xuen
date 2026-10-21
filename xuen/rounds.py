@@ -2666,9 +2666,11 @@ def _make_expand_simple_vars(text: str,
                 # recipe/赋值处理，不再是 target-specific 赋值。双冒号
                 # `foo $::$(X)=1` 的第二个冒号仍是规则分隔符，且目标前缀
                 # 有字面名字时，后面仍是 target-specific 赋值。
-                if not (double_colon
-                        and not _make_target_text_only_refs(
-                            raw_targets[:-1])):
+                prefix = raw_targets[:-1]
+                if (not double_colon
+                        or (_make_target_text_only_refs(prefix)
+                            and ("$" in prefix
+                                 or prefix.strip(" \t") == ""))):
                     skip = True
             if not skip:
                 expanded_targets = _make_resolve_single_char_refs(
@@ -2692,8 +2694,12 @@ def _make_expand_simple_vars(text: str,
         raw_bare_empty = False
         if raw_colon >= 0:
             raw_targets = body[:raw_colon]
+            prefix = (raw_targets[:-1] if raw_targets.endswith("$")
+                      else raw_targets)
             if (raw_colon + 1 < len(body)
                     and body[raw_colon + 1] == ":"
+                    and ("$" in prefix
+                         or prefix.strip(" \t") == "")
                     and _make_target_text_only_refs(raw_targets)):
                 # `$::$(X)=1` 的目标列表展开为空，后面的赋值不是
                 # target-specific 赋值，make 接受。

@@ -2760,6 +2760,10 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "x$:::$(X)=1",
     "foo $::$(X)=1",
     "foo $::$(X):=1",
+    "&&::$(U) X=1",
+    "&&::$(X) X=1",
+    "&$::$(X)=1",
+    "&&$::$(X)=1",
 ])
 def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     """其他目标的非法规则头同样会让 make 读取失败，不能只看 test 行。
@@ -2864,6 +2868,7 @@ def test_detect_test_suite_make_define_named_assignment_keeps_suite(
     "foo&: X=1",
     "foo&: X:=1",
     "foo&:: X=1",
+    "&&:: X=1",
     "private foo&: X=1",
     "override foo bar&: X:=1",
 ])
