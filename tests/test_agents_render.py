@@ -2252,6 +2252,7 @@ def test_render_windows_quoted_prompt_file_between_quoted_segments(
 
     for tpl, expected in (
             ('tool "x"$prompt_file"y"', 'tool "x""{path}""y"'),
+            ('tool "a-"$prompt_file"x"', 'tool "a-""{path}""x"'),
             ('tool a"$prompt_file"b', 'tool a"{path}"b'),
             ('tool x"$prompt_file"', 'tool x"{path}"'),
     ):

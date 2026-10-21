@@ -1874,26 +1874,33 @@ class ShellAgent:
         # 提示词文件路径）里恰好含有占位符字面量时会被二次替换、破坏命令
         # （占位符被模板自带引号包住时，连引号一起换成哨兵，否则转义结果
         # 嵌在引号里会被当作字面值）
-        # 只有真正独立成词的 "$prompt_file" 才连引号一起换成哨兵。若前一个
-        # 字符是单词字符或引号，这一对引号其实是相邻文本的收尾/起始引号
-        # （`"x"$prompt_file"y"`、`a"$prompt_file"b`），吞掉它们会让路径
-        # 落到引号外却不再补引号，含空格的工作区路径会被 cmd 拆开；留给下面
-        # 按引号状态扫描的通用路径处理。
+        # 只有真正「引号外开场、引号内结束」的 "$prompt_file" 才连引号一起
+        # 换成哨兵。若第一个引号其实是前面文本的收尾引号（如
+        # `"x"$prompt_file"y"`、`"a-"$prompt_file"x"`），吞掉这一对引号会
+        # 把路径落到引号外却不再补引号，含空格的工作区路径会被 cmd 拆开；
+        # 被 ^ 转义的引号同理不是分组引号。这些情况留给下面按引号状态扫描
+        # 的通用路径处理。
         needle = '"$prompt_file"'
         parts = []
         last = 0
+        in_quotes = False
         while True:
             i = tpl.find(needle, last)
             if i < 0:
                 break
-            prev = tpl[i - 1] if i else ""
-            if prev and (_WORD_CHAR.match(prev) or prev == '"'):
+            in_quotes = _cmd_double_quotes_after(tpl[last:i], in_quotes)
+            after_open = _cmd_double_quotes_after(tpl[last:i + 1],
+                                                  in_quotes)
+            if in_quotes or not after_open:
+                # 第一个引号是收尾引号或被 ^ 转义：不是独立成词的开场引号
                 parts.append(tpl[last:i + 1])
                 last = i + 1
+                in_quotes = after_open
                 continue
             parts.append(tpl[last:i])
             parts.append(f_sentinel)
             last = i + len(needle)
+            in_quotes = False
         parts.append(tpl[last:])
         tpl = "".join(parts)
         # 单引号在 cmd 中只是普通字符：只有整对单引号位于双引号外时，才按
