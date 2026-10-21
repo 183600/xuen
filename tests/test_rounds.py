@@ -6618,6 +6618,7 @@ def test_detect_test_suite_make_empty_target_assignment_name_blocks_suite(
 
 @pytest.mark.parametrize("line", [
     "test:$(if ,x)=1",
+    "test:$(if x)=1",
     "test:$(if x,,)=1",
     "test:$(if $(Y),x,)=1",
     "test:$(and ,x)=1",

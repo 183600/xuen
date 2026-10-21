@@ -3124,9 +3124,10 @@ def _make_expand_condition_functions(
         arity = 3 if name == "if" else 1000000
         parts = _make_split_function_args(raw, arity)
         if name == "if" and len(parts) < 2:
-            # make 对参数不足的 if 直接报错停止解析；保留原样交给上层。
-            pos = end
-            continue
+            # `$(if x)` 只有一个参数时 make 报 insufficient number of
+            # arguments 并停止解析，后面的 test 目标不会执行。参数不足
+            # 必须在这里直接拒绝，保留原文会被后续展开当成非空变量名。
+            raise _MakeRequiredIncludeError("if: missing argument")
         if name == "if":
             # 条件与 or/and 的参数原文空白由 make 的参数解析去掉；展开
             # 结果自身的空白属于值本身。then/else 连原文空白也保留。
