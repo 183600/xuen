@@ -811,6 +811,8 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "test: %.o: %.c",
     "test: %.o : %.c",
     "test: %.o: %.c: extra",
+    "test: %.o:: %.c",
+    "test:: %.o:: %.c",
     "test: ${X:--x}",
     "test:: %.o: %.c",
 ])
@@ -843,7 +845,7 @@ def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     """三冒号、空白+冒号、依赖里带冒号等写法都不是合法 test 目标
     （GNU make 报 missing target pattern / target pattern contains no
     '%'），探测命中会让 `make test` 以退出码 2 误伤候选。静态模式规则
-    test: %.o: %.c 的第二个冒号由 target-pattern 里的 % 放行。"""
+    test: %.o: %.c 与 test: %.o:: %.c 的冒号由 target-pattern 里的 % 放行。"""
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(line + "\n", encoding="utf-8")
