@@ -2275,6 +2275,12 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test: X\\ Y=1",
     "test: X\\#Y=1",
     "test: X\\:Y=1",
+    # 第一个变量名 token 展开为空时，后面的 X=1 只是前置依赖，不是
+    # target-specific 赋值；test 目标仍然存在。
+    "test: $(U) X=1",
+    "test: $(U)override X=1",
+    "test: export $(U) X=1",
+    "test:: $(U) X=1",
     # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
     "test foo=bar:",
     "test foo\\=bar:",
@@ -2325,6 +2331,7 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     # 转义空白后的赋值运算符不是 target-specific 赋值：make 会把第二个
     # 冒号当成静态模式分隔符并报 target pattern contains no '%'。
     "test: X\\ Y:=1",
+    "test: $(U) X:=1",
     # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则
     "foo% test:",
     "foo;bar test:",
@@ -2413,6 +2420,9 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "test: X\\;Y=1",
     "test: X\\ =1",
     "test: X\\\\=1",
+    # 变量引用与赋值名粘在同一 token 时仍是 target-specific 赋值；
+    # 全行展开后即使空变量消失也不能把 test 当成可执行目标。
+    "test: $(U)X=1",
 ])
 def test_detect_test_suite_make_valid_assignment_keeps_suite(tmp_path, line):
     """合法变量赋值/target-specific 赋值不能把别处的可运行 test 套件拒掉。"""

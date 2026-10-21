@@ -366,7 +366,7 @@ def _make_unescaped_colon(text: str, start: int) -> int:
 # 不行：`test: X\ Y=1` 是前置依赖 `X Y=1`，`test: X\:Y=1` 也是依赖，
 # 它们都不是 target-specific 变量赋值。反斜杠本身仍可作名字的最后一个
 # 字符（`test: X\ =1` 的变量名是 `X\`）。
-_MAKE_VAR_NAME_UNIT = r"(?:\\[^\s#:=]|\\|[^\s:#=;\\])+"
+_MAKE_VAR_NAME_UNIT = r"(?:\\[^\s#:=]|\\|[^\s:#=;\\\x00-\x02])+"
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
     r"(?:" + _MAKE_VAR_NAME_UNIT + r"[ \t]*)?"
@@ -1479,6 +1479,66 @@ def _make_flatten_target_newlines(text: str) -> str:
     return "".join(out).lstrip(" \t")
 
 
+def _make_raw_rule_is_target_assignment(
+        rest: str,
+        variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool]) -> bool:
+    """原始规则头冒号后是否会被 make 当成 target-specific 赋值。
+
+    GNU make 在展开前就决定第一个 token（跳过 export/private/override
+    修饰符）是不是赋值名，并展开该 token 判断其后是否紧跟赋值运算符。
+    `test: $(U) X=1` 的第一个 token 展开为空，后面的 X=1 只是前置依赖；
+    `test: $(U)override X=1` 的第一个 token 展开为 override，但后面不是
+    运算符，也仍是依赖。变量引用与赋值名粘在同一 token
+    （`$(U)X=1` / `$(T)=1`）才是赋值。
+    """
+    pos = 0
+    n = len(rest)
+    while True:
+        while pos < n and rest[pos] in " \t":
+            pos += 1
+        modifier = re.match(r"(?:export|private|override)[ \t]+", rest[pos:])
+        if modifier is None:
+            break
+        pos += modifier.end()
+    start = pos
+    while pos < n:
+        ch = rest[pos]
+        if ch == "$" and pos + 1 < n and rest[pos + 1] in "({":
+            opener = rest[pos + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            pos += 2
+            while pos < n and depth:
+                if rest[pos] == "\\":
+                    pos += 2
+                    continue
+                if rest[pos] == "(" and opener == "(":
+                    depth += 1
+                elif rest[pos] == "{" and opener == "{":
+                    depth += 1
+                elif rest[pos] == closer:
+                    depth -= 1
+                pos += 1
+            continue
+        if ch == "\\" and pos + 1 < n and rest[pos + 1] not in " \t#:=":
+            pos += 2
+            continue
+        if ch in " \t#:=;+?!":
+            break
+        pos += 1
+    prefix = rest[start:pos]
+    while pos < n and rest[pos] in " \t":
+        pos += 1
+    if not prefix or re.match(r"(?:::=|::=|:=|[+?]?=|!=)",
+                             rest[pos:]) is None:
+        return False
+    try:
+        return bool(_make_expand_refs(prefix, variables, simple))
+    except _MakeRequiredIncludeError:
+        return False
+
+
 def _make_expand_simple_vars(text: str,
                              repo: Optional[Path] = None) -> str:
     """按出现顺序展开简单的 make 变量引用，供目标探测使用。
@@ -1555,6 +1615,26 @@ def _make_expand_simple_vars(text: str,
         expanded = _make_expand_refs(expand_input, variables, simple)
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
+        # make 在展开前判定 target-specific 赋值：原始行第一个变量名
+        # token 展开为空、或其后不是运算符时，后面的 `X=1` 只是前置
+        # 依赖。整行展开后不能把它误认成赋值；插入哨兵让下游赋值识别
+        # 失败，test 目标仍按规则头探测。
+        raw_colon = _make_unescaped_colon(body, 0)
+        expanded_colon = _make_unescaped_colon(expanded, 0)
+        if (raw_colon >= 0 and expanded_colon >= 0
+                and _make_rule_is_target_specific(expanded, expanded_colon)
+                and not _make_rule_is_target_specific(body, raw_colon)):
+            rest_start = raw_colon + 1
+            if rest_start < len(body) and body[rest_start] == ":":
+                rest_start += 1
+            if not _make_raw_rule_is_target_assignment(
+                    body[rest_start:], variables, simple):
+                insert_at = expanded_colon + 1
+                if (insert_at < len(expanded) and expanded[insert_at] == ":"):
+                    insert_at += 1
+                while insert_at < len(expanded) and expanded[insert_at] in " \t":
+                    insert_at += 1
+                expanded = expanded[:insert_at] + "\x02" + expanded[insert_at:]
         expanded = _make_flatten_target_newlines(expanded)
         if (_MAKE_EXPORT_DIRECTIVE.match(expanded)
                 and not _MAKE_EXPORT_DIRECTIVE.match(body)):
