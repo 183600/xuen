@@ -267,12 +267,24 @@ class XuangenApp(App):
         text = event.value.strip()
         if not text:
             return
-        if self.loop_finished:
+
+        def reject_finished_input() -> None:
+            # 收尾可能恰好落在 put 前后：把晚到的输入取回来丢弃，避免它
+            # 永远留在队列里（循环结束后不会再 drain），同时明确告知用户
+            self.drain_user_input()
             self.query_one("#log", RichLog).write(
                 Text("循环已结束，本次输入不会被投递", style="bold yellow")
             )
+
+        if self.loop_finished:
+            reject_finished_input()
             return
         self._user_inputs.put(text)
+        # put 前检查通过不等于一定送达：post_finished() 可能已在检查与
+        # put 之间置位并清空队列。put 后必须复查并自行清理残留。
+        if self.loop_finished:
+            reject_finished_input()
+            return
         log = self.query_one("#log", RichLog)
         log.write(Text(f"⌨ 已记录（下次调用 agent 时带给它）：{text}", style="bold blue"))
 
