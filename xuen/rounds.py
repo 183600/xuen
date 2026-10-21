@@ -624,10 +624,12 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
             continue
         if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
                 or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
-                # 行首 export/unexport 是导出指令，不是规则头：
-                # `export test::` 只把变量名 test 导出，后面的合法 test
-                # 规则仍可执行，不能把它当成 test 的 :: 规则制造冲突。
-                or _MAKE_EXPORT_DIRECTIVE.match(body) is not None):
+                # 行首 export/unexport/vpath 等是读取指令，不是规则头：
+                # `export test::` 只把变量名 test 导出、`vpath test:...`
+                # 只是搜索路径，后面的合法 test 规则仍可执行，不能把
+                # 它们当成 test 的 :: / : 规则制造冲突。
+                or _MAKE_EXPORT_DIRECTIVE.match(body) is not None
+                or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None):
             continue
         colon = _make_unescaped_colon(body, 0)
         if colon < 0 or _make_rule_is_target_specific(body, colon):
@@ -1033,6 +1035,10 @@ def _make_defines_test_target(text: str,
             continue
         line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
+        if _MAKE_NON_RULE_DIRECTIVE.match(line):
+            # `vpath test:$(X)=1` 是 vpath 指令（参数里恰好有 test:），
+            # 不定义目标；不能因为它命中正则就否掉别处的合法 test 规则。
+            continue
         colon = match.end() - match.start() - 1
         # 正则里的冒号可能落在目标名中的变量引用里（如
         # `test ${X:--x}` 并没有规则分隔符）。只有行内第一个真正的
@@ -2425,10 +2431,14 @@ def _make_expand_simple_vars(text: str,
         # 失败，test 目标仍按规则头探测。
         raw_colon = _make_unescaped_colon(body, 0)
         expanded_colon = _make_unescaped_colon(expanded, 0)
-        if raw_colon >= 0:
+        if (raw_colon >= 0
+                and _MAKE_EXPORT_DIRECTIVE.match(body) is None
+                and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
             # 原始规则头的 target-specific 赋值变量名展开为空时 make
             # 直接报 empty variable name；必须在整行展开丢失冒号/空格
             # 之前判定（`test:$(X)=1` 展开后是 `test:=1`）。
+            # 行首 export/vpath 等指令里的冒号/等号只是参数文本，不是
+            # 规则头（`export test:$(X)=1` 仍能执行后面的 test 目标）。
             rest_start = raw_colon + 1
             if rest_start < len(body) and body[rest_start] == ":":
                 rest_start += 1
