@@ -3200,24 +3200,36 @@ def _make_expand_assignment_name(
         name: str,
         variables: Dict[str, Optional[str]],
         simple: Dict[str, bool],
-        repo: Optional[Path] = None) -> str:
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> str:
     """按 make 读取期语义展开赋值语句左侧的变量名。
 
     变量名里的静态函数/条件函数可能展开为空（`$(strip ) = x` /
     `$(if ,x) = x`），make 会报 empty variable name；只展开普通变量
     引用会把函数原文当成非空名字，误判成合法赋值。条件函数必须与静态
-    函数交替展开，且未生效分支不能提前求值。
+    函数交替展开，且未生效分支不能提前求值。value/foreach/call 与
+    info/warning 同样会在读取期展开并可能得到空名字
+    （`$(foreach v,,x) = 1` / `$(info x) = 1`）。
     """
     for _ in range(20):
         before = name
+        name = _make_expand_automatic_refs(name)
+        name = _make_expand_value(name, variables, simple)
         name = _make_resolve_single_char_refs(name, variables, simple)
         name = _make_expand_refs(name, variables, simple)
         name = _make_expand_condition_functions(
             name, variables, simple, repo)
+        name = _make_expand_foreach(name, variables, simple, repo)
+        name = _make_expand_call_functions(
+            name, variables, simple, repo, overrides)
+        name = _make_expand_metadata_functions(
+            name, variables, simple, overrides)
         name = _make_expand_error_functions(name)
+        name = _make_expand_side_effect_functions(name)
         name = _make_expand_refs(name, variables, simple)
         if repo is not None:
-            name = _make_expand_include_functions(name, repo)
+            name = _make_expand_include_functions(
+                name, repo, variables, simple, overrides)
             name = _make_expand_refs(name, variables, simple)
         name = _make_expand_computed_refs(name, variables, simple)
         name = _make_resolve_single_char_refs(name, variables, simple)
@@ -3271,7 +3283,7 @@ def _make_scan_assignment(body: str,
             # 期展开（`$(strip ) = x` 会变成空名字），只按普通变量引用
             # 展开会把函数原文当成合法名字。
             name = _make_expand_assignment_name(
-                computed_name, variables, simple, repo)
+                computed_name, variables, simple, repo, overrides)
             if not name:
                 raise _MakeRequiredIncludeError("empty variable name")
             # 从原行里取出赋值运算符与其后的值；不能整行展开，递归变量

@@ -7605,3 +7605,49 @@ def test_detect_test_suite_make_expanded_missing_separator_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(info x)=1",
+    "$(warning x)=1",
+    "$(foreach v,,x)=1",
+    "$(value X)=1",
+    "$(call undefined,)=1",
+    "$(call undefined,x)=1",
+    "$(addprefix ,)=1",
+])
+def test_detect_test_suite_make_empty_expanded_assignment_name_blocks_suite(
+        tmp_path, line):
+    """赋值名里的 value/foreach/call/info 展开为空时 make 报空变量名。
+
+    回归：赋值名展开只处理普通引用与条件/静态函数，`$(info x)=1` /
+    `$(foreach v,,x)=1` 被当成合法赋值整行吞掉，后面存在的 test 目标让
+    探测误以为套件可运行，实际 `make test` 在读取阶段就失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(origin X)=1",
+    "$(flavor X)=1",
+    "$(if ,foo,bar)=1",
+    "$(info x)foo=1",
+])
+def test_detect_test_suite_make_nonempty_expanded_assignment_name_keeps_suite(
+        tmp_path, line):
+    """赋值名展开后非空（origin/flavor 返回文本）时仍是合法赋值。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
