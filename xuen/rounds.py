@@ -327,7 +327,7 @@ def _make_unescaped_colon(text: str, start: int) -> int:
 
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|unexport|private|override)[ \t]+)*"
-    r"(?:[A-Za-z0-9_.-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
+    r"(?:[A-Za-z0-9_.\\-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
 )
 
 
