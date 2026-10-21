@@ -1175,6 +1175,32 @@ def test_detect_test_suite_make_conditional_branch(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    # 括号写法的空白只在语法层去掉；变量值展开后自带的首尾空白仍必须
+    # 参与比较，否则会把未生效分支里的 test 目标误当成可用套件。
+    "X = foo \nifeq ($(X),foo)\ntest:\n\t@true\nendif\n",
+    "X = $(subst x, foo,x)\nifeq (foo,$(X))\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_conditional_expanded_whitespace(
+        tmp_path, makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq (foo ,foo)\ntest:\n\t@true\nendif\n",
+    "ifeq (foo, foo)\ntest:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_conditional_literal_comma_whitespace(
+        tmp_path, makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")
