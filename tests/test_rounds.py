@@ -790,6 +790,56 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "T = test\n$(T):\n\t@true\n",
+    "T := test\n${T}:\n\t@true\n",
+    "T ?= test\n$(T):\n\t@true\n",
+    "T = $(U)\nU = test\n$(T):\n\t@true\n",
+    "T = test\nT += foo\n$(T):\n\t@true\n",
+    "T = test\n$(T) foo:\n\t@true\n",
+    "T = test\n$(T)&:\n\t@true\n",
+    "T = U\n$(T) = test\n$(U):\n\t@true\n",
+    "T = U\n$(T) := test\n$(U):\n\t@true\n",
+    "T = U\n$(T) += test\n$(U):\n\t@true\n",
+])
+def test_detect_test_suite_make_variable_target(tmp_path, makefile):
+    """test 目标写在简单变量展开后的规则头里时也要探测到。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "T = test-unit\n$(T):\n\t@true\n",
+    "T = test\n$(T)-unit:\n\t@true\n",
+    "$(T):\n\t@true\nT = test\n",
+    "T = test\n$(T) := x\n",
+    "T = test\nundefine T\n$(T):\n\t@true\n",
+])
+def test_detect_test_suite_make_variable_target_negative(tmp_path, makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_include_variable_order(tmp_path):
+    """include 插入位置要保留变量赋值顺序，规则头才能按 make 语义展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "vars.mk").write_text("T = test\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "include vars.mk\n$(T):\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    (tmp_path / "tests.mk").write_text(
+        "$(T):\n\t@true\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "T = test\ninclude tests.mk\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("line", [
     "test := x",
     "test::= x",

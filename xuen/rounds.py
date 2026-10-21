@@ -427,7 +427,15 @@ def _make_defines_test_target(text: str) -> bool:
 
 
 _MAKE_INCLUDE_DIRECTIVE = re.compile(
-    r"^[ ]*(?:-?include|sinclude)[ \t]+(.*)$")
+    r"(?m)^[ ]*(?:-?include|sinclude)[ \t]+"
+    r"((?:\\\r?\n|[^\r\n])*)")
+
+_MAKE_VAR_ASSIGNMENT = re.compile(
+    r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
+    r"([A-Za-z0-9_.-]+)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+
+_MAKE_VAR_REF = re.compile(
+    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)\)|\{([A-Za-z0-9_.-]+)\})")
 
 
 def _make_strip_comment(line: str) -> str:
@@ -442,27 +450,111 @@ def _make_strip_comment(line: str) -> str:
     return line
 
 
-def _make_include_names(text: str) -> List[str]:
+def _make_include_names(args: str) -> List[str]:
     """提取 include/-include/sinclude 的字面文件名（跳过变量/通配符）。"""
     names = []
-    flat = re.sub(r"\\\r?\n", " ", text)
-    for line in flat.splitlines():
-        match = _MAKE_INCLUDE_DIRECTIVE.match(line)
-        if match is None:
+    flat = re.sub(r"\\\r?\n", " ", _make_strip_comment(args))
+    for token in re.findall(r"(?:\\.|[^\s])+", flat):
+        name = re.sub(r"\\(.)", r"\1", token)
+        if "$" in name or any(ch in name for ch in "*?["):
             continue
-        args = _make_strip_comment(match.group(1))
-        for token in re.findall(r"(?:\\.|[^\s])+", args):
-            name = re.sub(r"\\(.)", r"\1", token)
-            if "$" in name or any(ch in name for ch in "*?["):
-                continue
-            names.append(name)
+        names.append(name)
     return names
+
+
+def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
+                      simple: Dict[str, bool], depth: int = 0) -> str:
+    if depth > 20:
+        return text
+
+    def repl(match: re.Match) -> str:
+        name = match.group(1) or match.group(2)
+        if name not in variables:
+            return match.group(0)
+        value = variables[name]
+        if value is None:
+            return match.group(0)
+        if simple.get(name):
+            return value
+        return _make_expand_refs(value, variables, simple, depth + 1)
+
+    return _MAKE_VAR_REF.sub(repl, text)
+
+
+def _make_apply_assignment(match: re.Match,
+                           variables: Dict[str, Optional[str]],
+                           simple: Dict[str, bool]) -> None:
+    name, op, raw = match.groups()
+    raw = _make_strip_comment(raw).rstrip()
+    if op == "!=":
+        variables[name] = None
+        simple[name] = False
+    elif op == "?=":
+        if name not in variables:
+            variables[name] = raw
+            simple[name] = False
+    elif op == "+=":
+        if name not in variables:
+            variables[name] = raw
+            simple[name] = False
+        elif variables[name] is not None:
+            value = raw
+            if simple.get(name):
+                value = _make_expand_refs(value, variables, simple)
+            variables[name] = (variables[name] + " " + value).strip()
+    elif op in (":=", "::="):
+        variables[name] = _make_expand_refs(raw, variables, simple)
+        simple[name] = True
+    else:
+        variables[name] = raw
+        simple[name] = False
+
+
+def _make_expand_simple_vars(text: str) -> str:
+    """按出现顺序展开简单的 make 变量引用，供目标探测使用。
+
+    只处理单行 `NAME =/:=/?=/+=/!=` 赋值；函数调用、define、shell 输出
+    等无法静态求值的写法保持原样（探测不到就按无套件处理）。变量在规则
+    头之前赋值才会生效，与 make 逐行读取的行为一致；recipe 行不展开。
+    变量名本身也可以是展开结果（`$(T) = test`），展开后按赋值处理。
+    """
+    variables: Dict[str, Optional[str]] = {}
+    simple: Dict[str, bool] = {}
+    out = []
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        newline = line[len(body):]
+        if body.startswith("\t"):
+            out.append(line)
+            continue
+        undef = re.match(
+            r"^[ ]*(?:override[ \t]+)?undefine[ \t]+"
+            r"([A-Za-z0-9_.-]+)[ \t]*$", body)
+        if undef is not None:
+            variables.pop(undef.group(1), None)
+            simple.pop(undef.group(1), None)
+            out.append(line)
+            continue
+        match = _MAKE_VAR_ASSIGNMENT.match(body)
+        expanded = body
+        if match is None and "$" in body:
+            expanded = _make_expand_refs(body, variables, simple)
+            match = _MAKE_VAR_ASSIGNMENT.match(expanded)
+        if match is not None:
+            _make_apply_assignment(match, variables, simple)
+            out.append(expanded + newline)
+            continue
+        if body.lstrip().startswith("#"):
+            out.append(line)
+            continue
+        out.append(_make_expand_refs(body, variables, simple) + newline)
+    return "".join(out)
 
 
 def _make_text_with_includes(text: str, repo: Path,
                              seen: Optional[set] = None,
                              depth: int = 0) -> str:
-    """把字面 include 的文件内容附在 Makefile 文本后，供目标探测使用。
+    """把字面 include 的文件内容插到指令位置，供目标探测使用。
 
     只读取仓库内已存在的普通文件；变量展开/通配符/缺失文件留给 make
     自己报错（探测不到 test 目标时按无套件处理）。条件分支里的 include
@@ -473,25 +565,32 @@ def _make_text_with_includes(text: str, repo: Path,
         seen = set()
     if depth > 20:
         return text
-    parts = [text]
-    for name in _make_include_names(text):
-        path = Path(name)
-        if not path.is_absolute():
-            path = repo / path
-        try:
-            key = path.resolve()
-            if key in seen or not path.is_file():
+    parts = []
+    last = 0
+    for match in _MAKE_INCLUDE_DIRECTIVE.finditer(text):
+        parts.append(text[last:match.end()])
+        for name in _make_include_names(match.group(1)):
+            path = Path(name)
+            if not path.is_absolute():
+                path = repo / path
+            try:
+                key = path.resolve()
+                if key in seen or not path.is_file():
+                    continue
+                if path.stat().st_size > 2_000_000:
+                    continue
+                included = path.read_text(encoding="utf-8-sig",
+                                          errors="replace")
+            except (OSError, ValueError):
                 continue
-            if path.stat().st_size > 2_000_000:
-                continue
-            included = path.read_text(encoding="utf-8-sig",
-                                      errors="replace")
-        except (OSError, ValueError):
-            continue
-        seen.add(key)
-        parts.append(_make_text_with_includes(included, repo, seen,
-                                              depth + 1))
-    return "\n".join(parts)
+            seen.add(key)
+            parts.append("\n")
+            parts.append(_make_text_with_includes(included, repo, seen,
+                                                  depth + 1))
+            parts.append("\n")
+        last = match.end()
+    parts.append(text[last:])
+    return "".join(parts)
 
 
 def _is_pytest_file(name: str) -> bool:
@@ -581,6 +680,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                                       errors="replace")
             text = _make_text_with_includes(
                 text, repo, {makefile.resolve()}, 0)
+            text = _make_expand_simple_vars(text)
             if _make_defines_test_target(text):
                 return ["make", "test"]
         except OSError:
