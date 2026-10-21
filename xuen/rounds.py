@@ -632,51 +632,80 @@ _MAKE_INCLUDE_FUNCTIONS = frozenset({
 })
 
 
+def _make_pattern_unescape(text: str) -> str:
+    """处理 pattern/replacement 中第一个通配 % 之前的反斜杠。
+
+    紧邻 % 的连续反斜杠两两折叠成一个字面反斜杠，并把 % 变成字面 %；
+    不紧邻 % 的反斜杠原样保留。第一个通配 % 之后的文本由调用方按字面
+    使用，不再做反转义（GNU make 的行为）。
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch != "\\":
+            out.append(ch)
+            i += 1
+            continue
+        j = i
+        while j < n and text[j] == "\\":
+            j += 1
+        count = j - i
+        if j < n and text[j] == "%":
+            out.append("\\" * (count // 2))
+            out.append("%")
+            i = j + 1
+        else:
+            out.append("\\" * count)
+            i = j
+    return "".join(out)
+
+
+def _make_pattern_wildcard(text: str) -> Tuple[int, int]:
+    """返回第一个未转义 % 的位置及其前面连续反斜杠的起点。
+
+    没有通配 % 时返回 (-1, -1)。
+    """
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] == "\\":
+            j = i
+            while j < n and text[j] == "\\":
+                j += 1
+            if j < n and text[j] == "%":
+                if (j - i) % 2 == 0:
+                    return j, i
+                i = j + 1
+                continue
+            i = j
+            continue
+        if text[i] == "%":
+            return i, i
+        i += 1
+    return -1, -1
+
+
 def _make_pattern_match(pattern: str, word: str
                         ) -> Tuple[bool, Optional[str]]:
     """make 的 % 模式匹配，返回 (是否匹配, % 位置的词干)。
 
-    只有第一个未转义的 % 是通配符，后续 % 按字面匹配。反斜杠只有在
-    紧邻 % 时才参与转义：连续反斜杠两两折叠成一个字面反斜杠，奇数个
-    时最后一个转义 %（字面 %），偶数个时 % 保持通配；不紧邻 % 的
-    反斜杠原样保留（GNU make 的 filter/patsubst 语义）。
+    只有第一个未转义的 % 是通配符；第一个通配符之前的反斜杠按
+    GNU make 规则反转义，之后的字符全部按字面匹配（包括反斜杠和
+    后续 %）。
     """
-    regex = []
-    i = 0
-    n = len(pattern)
-    has_percent = False
-    while i < n:
-        ch = pattern[i]
-        if ch == "\\":
-            j = i
-            while j < n and pattern[j] == "\\":
-                j += 1
-            count = j - i
-            if j < n and pattern[j] == "%":
-                regex.append(re.escape("\\" * (count // 2)))
-                if count % 2 == 1:
-                    regex.append(re.escape("%"))
-                elif not has_percent:
-                    has_percent = True
-                    regex.append("(.*)")
-                else:
-                    regex.append(re.escape("%"))
-                i = j + 1
-                continue
-            regex.append(re.escape("\\" * count))
-            i = j
-            continue
-        if ch == "%" and not has_percent:
-            has_percent = True
-            regex.append("(.*)")
-        else:
-            regex.append(re.escape(ch))
-        i += 1
-    match = re.fullmatch("".join(regex), word)
+    wildcard, run_start = _make_pattern_wildcard(pattern)
+    if wildcard < 0:
+        regex = re.escape(_make_pattern_unescape(pattern))
+        return re.fullmatch(regex, word) is not None, None
+    prefix = _make_pattern_unescape(pattern[:run_start])
+    prefix += "\\" * ((wildcard - run_start) // 2)
+    suffix = pattern[wildcard + 1:]
+    regex = re.escape(prefix) + "(.*)" + re.escape(suffix)
+    match = re.fullmatch(regex, word)
     if match is None:
         return False, None
-    if not has_percent:
-        return True, None
     return True, match.group(1)
 
 
@@ -685,38 +714,14 @@ def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:
     matched, stem = _make_pattern_match(pattern, word)
     if not matched:
         return None
-    out = []
-    i = 0
-    n = len(repl)
-    has_percent = False
-    while i < n:
-        ch = repl[i]
-        if ch == "\\":
-            j = i
-            while j < n and repl[j] == "\\":
-                j += 1
-            count = j - i
-            if j < n and repl[j] == "%":
-                out.append("\\" * (count // 2))
-                if count % 2 == 1:
-                    out.append("%")
-                elif not has_percent and stem is not None:
-                    has_percent = True
-                    out.append(stem)
-                else:
-                    out.append("%")
-                i = j + 1
-                continue
-            out.append("\\" * count)
-            i = j
-            continue
-        if ch == "%" and not has_percent and stem is not None:
-            has_percent = True
-            out.append(stem)
-        else:
-            out.append(ch)
-        i += 1
-    return "".join(out)
+    if stem is None:
+        return _make_pattern_unescape(repl)
+    wildcard, run_start = _make_pattern_wildcard(repl)
+    if wildcard < 0:
+        return _make_pattern_unescape(repl)
+    prefix = _make_pattern_unescape(repl[:run_start])
+    prefix += "\\" * ((wildcard - run_start) // 2)
+    return prefix + stem + repl[wildcard + 1:]
 
 
 def _make_function_words(value: str) -> List[str]:
