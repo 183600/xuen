@@ -636,18 +636,35 @@ def _make_pattern_match(pattern: str, word: str
                         ) -> Tuple[bool, Optional[str]]:
     """make 的 % 模式匹配，返回 (是否匹配, % 位置的词干)。
 
-    反斜杠转义下一个字符（``\\%`` 是字面 %）。只有第一个未转义的 %
-    是通配符，后续 % 按字面 % 匹配（GNU make 的 filter/patsubst 语义）；
-    没有 % 的模式做精确比较，词干为 None。
+    只有第一个未转义的 % 是通配符，后续 % 按字面匹配。反斜杠只有在
+    紧邻 % 时才参与转义：连续反斜杠两两折叠成一个字面反斜杠，奇数个
+    时最后一个转义 %（字面 %），偶数个时 % 保持通配；不紧邻 % 的
+    反斜杠原样保留（GNU make 的 filter/patsubst 语义）。
     """
     regex = []
     i = 0
+    n = len(pattern)
     has_percent = False
-    while i < len(pattern):
+    while i < n:
         ch = pattern[i]
-        if ch == "\\" and i + 1 < len(pattern):
-            regex.append(re.escape(pattern[i + 1]))
-            i += 2
+        if ch == "\\":
+            j = i
+            while j < n and pattern[j] == "\\":
+                j += 1
+            count = j - i
+            if j < n and pattern[j] == "%":
+                regex.append(re.escape("\\" * (count // 2)))
+                if count % 2 == 1:
+                    regex.append(re.escape("%"))
+                elif not has_percent:
+                    has_percent = True
+                    regex.append("(.*)")
+                else:
+                    regex.append(re.escape("%"))
+                i = j + 1
+                continue
+            regex.append(re.escape("\\" * count))
+            i = j
             continue
         if ch == "%" and not has_percent:
             has_percent = True
@@ -668,17 +685,36 @@ def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:
     matched, stem = _make_pattern_match(pattern, word)
     if not matched:
         return None
-    if stem is None:
-        return repl
     out = []
     i = 0
-    while i < len(repl):
+    n = len(repl)
+    has_percent = False
+    while i < n:
         ch = repl[i]
-        if ch == "\\" and i + 1 < len(repl):
-            out.append(repl[i + 1])
-            i += 2
+        if ch == "\\":
+            j = i
+            while j < n and repl[j] == "\\":
+                j += 1
+            count = j - i
+            if j < n and repl[j] == "%":
+                out.append("\\" * (count // 2))
+                if count % 2 == 1:
+                    out.append("%")
+                elif not has_percent and stem is not None:
+                    has_percent = True
+                    out.append(stem)
+                else:
+                    out.append("%")
+                i = j + 1
+                continue
+            out.append("\\" * count)
+            i = j
             continue
-        out.append(stem if ch == "%" else ch)
+        if ch == "%" and not has_percent and stem is not None:
+            has_percent = True
+            out.append(stem)
+        else:
+            out.append(ch)
         i += 1
     return "".join(out)
 

@@ -1051,6 +1051,28 @@ def test_detect_test_suite_make_patsubst_escaped_percent_is_literal(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_patsubst_only_first_percent_replaced(tmp_path):
+    """patsubst 的 replacement 里只有第一个未转义 % 会被词干替换。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(patsubst tests%,tests.mk%%,tests)\n", encoding="utf-8")
+    (tmp_path / "tests.mk%").write_text("test:\n\t@echo ok\n",
+                                        encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_make_pattern_backslash_matches_gnu_make():
+    """pattern/replacement 的反斜杠只在紧邻 % 时参与转义。"""
+    assert rounds._make_pattern_match("a\\X", "aX") == (False, None)
+    assert rounds._make_pattern_match("a\\X", "a\\X") == (True, None)
+    assert rounds._make_pattern_subst("a%", "\\%b", "ac") == "%b"
+    assert rounds._make_pattern_subst("a%", "\\\\%b", "ac") == "\\cb"
+    assert rounds._make_pattern_subst("a%", "X%Y%Z", "abc") == "XbcY%Z"
+
+
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
     """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
     if not shutil.which("make"):
