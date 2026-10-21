@@ -1973,6 +1973,23 @@ def test_detect_test_suite_make_substitution_reference_negative(tmp_path,
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile, expected", [
+    # 参数展开后自带逗号，仍属于同一个函数参数，不能重新按逗号切分。
+    ("$(findstring $(filter-out a,test,test foo),"
+     "$(firstword test foo)):\n\t@true\n", False),
+    # 无 % 但含空白的 patsubst 模式按连续词序列匹配。
+    ("V = test foo\n$(addsuffix $(findstring  , ),"
+     "$(patsubst test test,bar,test test)):\n\t@true\n", False),
+    ("V = test foo\n$(filter-out $(patsubst test foo,x,test foo),"
+     "$(filter-out dir/test,test foo)):\n\t@true\n", True),
+])
+def test_detect_test_suite_make_nested_function_arguments(tmp_path, makefile,
+                                                          expected):
+    """嵌套函数的参数边界与含空白 patsubst 模式要按 make 语义展开。"""
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert (detect_test_suite(tmp_path) is not None) is expected
+
+
 def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     """`$T` 是 make 的单字符变量写法，目标名也要按变量展开。"""
     if not shutil.which("make"):

@@ -1063,6 +1063,42 @@ def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:
     return prefix + stem + repl[wildcard + 1:]
 
 
+def _make_patsubst_literal_sequence(pattern: str, repl: str,
+                                    text: str) -> str:
+    """无 % 但含空白的 patsubst 模式按 make 的实际行为做序列替换。
+
+    GNU make 4.3 对 `$(patsubst test foo,X,test foo)` 会把连续词序列
+    "test foo"（包括词间原有空白）整体替换成 X，而不是逐词比较；只有
+    边界是空白/行首/行尾时才命中，`xtest foo` 与双空格 `test  foo`
+    都不匹配。
+    """
+    literal = _make_pattern_unescape(pattern)
+    replacement = _make_pattern_unescape(repl)
+    if not literal:
+        return text
+    out: List[str] = []
+    start = 0
+    pos = 0
+    while True:
+        found = text.find(literal, pos)
+        if found < 0:
+            break
+        end = found + len(literal)
+        before_ok = found == 0 or text[found - 1].isspace()
+        after_ok = end == len(text) or text[end].isspace()
+        if before_ok and after_ok:
+            out.append(text[start:found])
+            out.append(replacement)
+            start = end
+            pos = end
+        else:
+            out.append(text[start:found + 1])
+            start = found + 1
+            pos = found + 1
+    out.append(text[start:])
+    return "".join(out)
+
+
 def _make_pattern_subst_words(pattern: str, repl: str, text: str) -> str:
     """对 text 的每个词做 % 模式替换，按 make 语义丢弃空结果。
 
@@ -1100,12 +1136,55 @@ def _make_function_index(value: str, function: str,
     return index
 
 
-def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
+_MAKE_FUNCTION_ARITY = {
+    "wildcard": 1, "dir": 1, "notdir": 1, "addprefix": 2,
+    "addsuffix": 2, "strip": 1, "basename": 1, "suffix": 1,
+    "firstword": 1, "lastword": 1, "abspath": 1, "realpath": 1,
+    "filter": 2, "filter-out": 2, "subst": 3, "patsubst": 3,
+    "word": 2, "wordlist": 3, "words": 1, "sort": 1,
+    "findstring": 2, "join": 2,
+}
+
+
+def _make_split_function_args(args: str, arity: int) -> List[str]:
+    """按 make 的函数参数个数在顶层逗号处切分（嵌套引用里的逗号不切）。
+
+    先切分再展开每个参数，参数展开结果里的逗号才不会在重新拼接时被
+    误当成新的参数分隔符：`$(findstring $(filter-out a,test,test foo),
+    test)` 的第一个参数展开后含逗号，仍属于同一个 find 参数。
+    """
+    parts: List[str] = []
+    start = 0
+    depth = 0
+    i = 0
+    while i < len(args) and len(parts) < arity - 1:
+        ch = args[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "$" and i + 1 < len(args) and args[i + 1] in "({":
+            depth += 1
+            i += 2
+            continue
+        if ch in ")}" and depth:
+            depth -= 1
+        elif ch == "," and not depth:
+            parts.append(args[start:i])
+            start = i + 1
+        i += 1
+    parts.append(args[start:])
+    return parts
+
+
+def _make_expand_include_function(name: str, args, repo: Path) -> str:
     """展开 include 文件名里可静态求值的 make 函数（不含 shell/eval）。"""
+    if isinstance(args, str):
+        args = _make_split_function_args(args, _MAKE_FUNCTION_ARITY[name])
+    parts = args
     if name == "wildcard":
         found = []
         repo_prefix = str(repo) + os.sep
-        for token in re.findall(r"(?:\\.|[^\s])+", args):
+        for token in re.findall(r"(?:\\.|[^\s])+", parts[0]):
             absolute = Path(_make_unescape_name(token)).is_absolute()
             pattern = _make_glob_pattern(token)
             if not absolute:
@@ -1125,9 +1204,9 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
     if name in ("addprefix", "addsuffix"):
         # make 对少于两个参数（缺少逗号）直接报错并停止解析：不能当成
         # 空展开继续找 test 目标，否则会把必然失败的 make test 探测成套件。
-        if "," not in args:
-            raise _MakeRequiredIncludeError(args)
-        affix, names = args.split(",", 1)
+        if len(parts) < 2:
+            raise _MakeRequiredIncludeError(name + ": missing argument")
+        affix, names = parts
         # 非末位参数的起始空白由 make 的参数解析去掉；尾随空白属于
         # 参数本身（`$(addsuffix x ,a)` 的后缀是 "x "）。
         affix = affix.lstrip(" \t")
@@ -1136,10 +1215,10 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             return " ".join(affix + word for word in words)
         return " ".join(word + affix for word in words)
     if name in ("filter", "filter-out"):
-        if "," not in args:
+        if len(parts) < 2:
             raise _MakeRequiredIncludeError(
                 f"{name}: missing argument")
-        patterns, text = args.split(",", 1)
+        patterns, text = parts
         pats = patterns.split()
         keep = []
         for word in text.split():
@@ -1149,7 +1228,6 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
                 keep.append(word)
         return " ".join(keep)
     if name == "subst":
-        parts = args.split(",", 2)
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("subst: missing argument")
         old, new, text = parts
@@ -1162,13 +1240,14 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             return text + new
         return text.replace(old, new)
     if name == "patsubst":
-        parts = args.split(",", 2)
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("patsubst: missing argument")
         pattern, repl, text = parts
         # 第一个参数前的空白属于函数语法；repl 的起始空白是有效内容。
         pattern = pattern.lstrip(" \t")
         wildcard, _run_start = _make_pattern_wildcard(pattern)
+        if wildcard < 0 and any(ch.isspace() for ch in pattern):
+            return _make_patsubst_literal_sequence(pattern, repl, text)
         if wildcard < 0:
             # 不含通配 % 时 make 原地替换每个词，保留输入文本原有空白；
             # 空 pattern 还会匹配文本末尾的空词（包括纯空白文本）。
@@ -1187,14 +1266,12 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             return result
         return _make_pattern_subst_words(pattern, repl, text)
     if name == "word":
-        parts = args.split(",", 1)
         if len(parts) < 2:
             raise _MakeRequiredIncludeError("word: missing argument")
         index = _make_function_index(parts[0], "word")
         words = _make_function_words(parts[1])
         return words[index - 1] if index <= len(words) else ""
     if name == "wordlist":
-        parts = args.split(",", 2)
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("wordlist: missing argument")
         start = _make_function_index(parts[0], "wordlist")
@@ -1209,21 +1286,20 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             return ""
         return parts[2][selected[0].start():selected[-1].end()]
     if name == "words":
-        return str(len(_make_function_words(args)))
+        return str(len(_make_function_words(parts[0])))
     if name == "sort":
-        return " ".join(sorted(set(_make_function_words(args))))
+        return " ".join(sorted(set(_make_function_words(parts[0]))))
     if name == "findstring":
-        parts = args.split(",", 1)
         if len(parts) < 2:
             raise _MakeRequiredIncludeError("findstring: missing argument")
         needle = parts[0].lstrip(" \t")
         return needle if needle in parts[1] else ""
     if name == "strip":
-        return " ".join(args.split())
+        return " ".join(parts[0].split())
     if name == "join":
-        if "," not in args:
+        if len(parts) < 2:
             raise _MakeRequiredIncludeError("join: missing argument")
-        left, right = args.split(",", 1)
+        left, right = parts
         left_words = left.split()
         right_words = right.split()
         out = []
@@ -1236,7 +1312,7 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             if word:
                 out.append(word)
         return " ".join(out)
-    words = args.split()
+    words = parts[0].split()
     if name == "firstword":
         return words[0] if words else ""
     if name == "lastword":
@@ -1338,8 +1414,13 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         if call is None:
             return text
         start, end, name, args = call
-        evaluated = _make_expand_include_functions(args, repo)
-        if "$" in evaluated:
+        # 按函数参数个数先切分、再分别展开：展开结果里自带的逗号属于参数
+        # 内容，不能再当成参数分隔符（否则 findstring 的 find 参数会被截断）。
+        raw_parts = _make_split_function_args(
+            args, _MAKE_FUNCTION_ARITY[name])
+        evaluated = [_make_expand_include_functions(part, repo)
+                     for part in raw_parts]
+        if any("$" in part for part in evaluated):
             # 参数里还有未展开的函数/变量（如 shell/eval），不能静态求值。
             pos = end
             continue
