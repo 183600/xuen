@@ -27,6 +27,13 @@ GENERATED = (
     "ws/write_section.py",
     "ok-ws/research.md",
     "ok-ws/write_section.py",
+    # 仓库根直接跑循环时产生的运行期状态（.rounds 曾被误提交）
+    ".rounds/state.json",
+    ".rounds/review.md",
+    "research.md",
+    "words.txt",
+    "write_section.py",
+    "rounds/history.jsonl",
 )
 
 

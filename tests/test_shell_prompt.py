@@ -370,3 +370,65 @@ def test_runner_aborts_immediately_when_prompt_too_long(tmp_path, monkeypatch):
         raise AssertionError("提示词过长应中止循环")
     assert len(calls) == 1, "重试必然失败，不应空转多轮"
     assert any("$prompt_file" in m for _, m in sink.messages), sink.messages
+
+
+def test_shell_prompt_truncates_state_to_budget(tmp_path):
+    """提示词预算：只截断提示词副本，保留首尾与指向完整文件的说明。"""
+    from xuen import state
+    from xuen.config import Config
+    from xuen.runner import _shell_prompt
+
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "任务")
+    idea = "IDEA_START" + "a" * 5000 + "IDEA_END"
+    artifact = "ARTIFACT_START" + "b" * 5000 + "ARTIFACT_END"
+    state.update_section_file(state_path, state.SECTION_IDEA, idea)
+    state.update_section_file(state_path, state.SECTION_ARTIFACT, artifact)
+
+    cfg = Config()
+    cfg.prompt.max_state_chars = 1200
+    prompt = _shell_prompt(cfg, "任务", 1, [], state_path,
+                           tmp_path / "write_section.py", [])
+    assert "提示词预算截断" in prompt
+    assert "prompt.max_state_chars=1200" in prompt
+    assert "IDEA_START" in prompt and "IDEA_END" in prompt
+    assert "ARTIFACT_START" in prompt and "ARTIFACT_END" in prompt
+
+    # 工作区文件本身必须保持完整，截断只作用于提示词副本。
+    text = state_path.read_text(encoding="utf-8")
+    assert state.get_section(text, state.SECTION_IDEA) == idea
+    assert state.get_section(text, state.SECTION_ARTIFACT) == artifact
+
+
+def test_shell_prompt_budget_zero_keeps_everything(tmp_path):
+    from xuen import state
+    from xuen.config import Config
+    from xuen.runner import _shell_prompt
+
+    state_path = tmp_path / "research.md"
+    state.ensure_state_file(state_path, "任务")
+    idea = "IDEA_START" + "x" * 3000 + "IDEA_MIDDLE" + "x" * 3000 + "IDEA_END"
+    state.update_section_file(state_path, state.SECTION_IDEA, idea)
+
+    cfg = Config()
+    cfg.prompt.max_state_chars = 0
+    prompt = _shell_prompt(cfg, "任务", 1, [], state_path,
+                           tmp_path / "write_section.py", [])
+    assert "提示词预算截断" not in prompt
+    assert "IDEA_MIDDLE" in prompt
+
+
+def test_config_reads_prompt_budget(tmp_path):
+    from xuen.config import load_config
+
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(
+        "agent:\n"
+        "  command: 'echo $prompt'\n"
+        "prompt:\n"
+        "  max_state_chars: 4321\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(str(cfg_path))
+    assert cfg.prompt.max_state_chars == 4321
+

@@ -60,12 +60,25 @@ class RoundsConfig:
 
 
 @dataclass
+class PromptConfig:
+    """拼给外部 agent 的状态区预算。
+
+    每轮都会把「完整想法区 + 完整产物区」拼进提示词；不设上限时提示词会
+    随轮次单调增长，最终超过外部 agent 的上下文窗口。超过预算时只截断
+    提示词副本（中间省略、保留首尾），工作区里的完整内容不变。
+    0 表示不限制。
+    """
+    max_state_chars: int = 60000
+
+
+@dataclass
 class Config:
     extra_notes: str = ""
     words: WordsConfig = field(default_factory=WordsConfig)
     loop: LoopConfig = field(default_factory=LoopConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
     rounds: RoundsConfig = field(default_factory=RoundsConfig)
+    prompt: PromptConfig = field(default_factory=PromptConfig)
     workspace: str = "./workspace"
     tui: bool = True        # 默认启用 TUI（--no-tui 可关闭）
     color: bool = True
@@ -270,6 +283,15 @@ def load_config(path: Optional[str] = None) -> Config:
             "rounds.judge_timeout"),
     )
 
+    prompt = _mapping_section(raw, "prompt")
+    cfg.prompt = PromptConfig(
+        max_state_chars=_parse_int(
+            _config_value(prompt, "max_state_chars",
+                          cfg.prompt.max_state_chars),
+            "prompt.max_state_chars",
+        ),
+    )
+
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
     workspace = raw.get("workspace")
     if workspace is not None:
@@ -388,6 +410,13 @@ def _validate(cfg: Config) -> None:
             raise ValueError(f"words.{name} 必须是正整数，收到: {value!r}")
     if cfg.words.count < 1 or cfg.words.batch < 1:
         raise ValueError("words.count / words.batch 必须为正整数")
+    if (not isinstance(cfg.prompt.max_state_chars, int)
+            or isinstance(cfg.prompt.max_state_chars, bool)):
+        raise ValueError(
+            f"prompt.max_state_chars 必须是整数，收到: "
+            f"{cfg.prompt.max_state_chars!r}")
+    if cfg.prompt.max_state_chars < 0:
+        raise ValueError("prompt.max_state_chars 必须 >= 0（0 表示不限制）")
     if cfg.loop.iterations is not None:
         if (not isinstance(cfg.loop.iterations, int)
                 or isinstance(cfg.loop.iterations, bool)):

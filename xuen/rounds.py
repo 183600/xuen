@@ -2188,6 +2188,16 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
     if stop is not None and stop():
         return SuiteResult(available=False, stopped=True,
                            reason="用户请求停止，未验证")
+    # make 的诊断文本随 locale 变化（中文环境是「无需做任何事」），而
+    # _make_noop_test_target / _make_missing_test_target 按英文 GNU make
+    # 输出判断。只对 make 固定 C locale，让「没跑测试」的判定与 CI 一致；
+    # pytest/npm/go 仍继承用户 locale。
+    env = None
+    if _is_make_test_run(argv):
+        env = os.environ.copy()
+        env["LC_ALL"] = "C"
+        env["LANG"] = "C"
+        env["LANGUAGE"] = "C"
     try:
         proc = subprocess.Popen(
             argv, cwd=str(repo),
@@ -2198,6 +2208,7 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
+            env=env,
             **popen_kwargs(),
         )
     except (OSError, ValueError):

@@ -32,3 +32,10 @@ xuen.yaml
 .idea/
 .vscode/
 .DS_Store
+
+# 仓库根直接运行循环时的运行期产物（.rounds 曾被误提交）
+/.rounds/
+/research.md
+/words.txt
+/write_section.py
+/rounds/

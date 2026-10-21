@@ -1,2 +1,5 @@
+# 运行时依赖（与 pyproject.toml 的 [project].dependencies 同步）。
+# 开发/测试依赖见 requirements-dev.txt，CI 固定版本见 requirements-ci.txt。
 PyYAML>=6.0
 textual>=1.0
+rich>=14.2.0

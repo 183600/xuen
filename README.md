@@ -178,39 +178,84 @@ python main.py "设计一个新的优化器" --no-rounds   # 退回旧行为：�
 ```
 xuen/
 ├── main.py                    # 入口
-├── requirements.txt
-├── pyproject.toml
+├── requirements.txt           # 运行时依赖（PyYAML / textual）
+├── requirements-ci.txt        # CI 固定版本依赖（含 pytest / rich）
+├── pyproject.toml             # 包元数据；pip install -e . / .[dev]
 ├── config.example.yaml        # 复制为 config.yaml 使用
-├── tests/                     # pytest 测试（轮次守卫单元/集成 + shell 渲染回归 + 冒烟）
+├── .github/workflows/         # CI / 自动化循环
+├── tests/                     # pytest：守卫、shell 渲染、TUI 降级、仓库卫生、冒烟
 └── xuen/
-    ├── cli.py                 # 命令行
-    ├── config.py              # 配置（含 rounds 轮次守卫段）
+    ├── cli.py                 # 命令行（TUI 导入失败时降级到纯终端）
+    ├── config.py              # 配置（含 rounds 与 prompt 预算段）
     ├── tui.py                 # TUI（textual）：区块面板 + 日志 + 底部输入框
     ├── sink.py                # 输出通道抽象（控制台 / TUI 共用）
     ├── ui.py                  # 纯终端输出（--no-tui）
     ├── state.py               # research.md（想法区/产物区）+ 写入助手脚本
     ├── words.py               # 词库：外部 agent 生成 / 解析 / 抽样
     ├── procs.py               # 跨平台进程工具
-    ├── agents.py              # ShellAgent（外部 agent 命令）
-    ├── rounds.py              # 轮次守卫：快照 / 候选与最佳分离 / 验证与评分
+    ├── agents.py              # ShellAgent + 命令模板的 shell 转义/安全检查
+    ├── rounds.py              # 轮次守卫 + 测试套件探测（pytest/make/npm/go）
     └── runner.py              # 主循环编排
 ```
+
+`agents.py` / `rounds.py` 体量较大，因为前者包含完整的 shell 模板解析与
+安全检查，后者包含轮次守卫和 Makefile/测试套件探测；**不是遗留的直连 LLM、
+内置工具或 MCP 代码**。工作区的运行期状态（`.rounds/`、`research.md`、
+`words.txt`、`write_section.py`、`rounds/`）都在 `.gitignore` 中，不进入版本库。
+
+## 提示词预算
+
+每轮提示词都会附带完整的想法区/产物区；轮次多了以后会单调增长，最终可能
+超过外部 agent 的上下文上限。配置 `prompt.max_state_chars`（默认 60000）
+给两区总字符数设上限：
+
+```yaml
+prompt:
+  max_state_chars: 60000   # 0 = 不限制
+```
+
+超出时只截断**提示词副本**：保留首尾、中间标注省略字符数，并提示完整内容
+仍在 `research.md`；工作区文件本身不会被裁剪。
+
+## 开发与测试
+
+```bash
+# 运行时依赖
+pip install -r requirements.txt
+# 开发安装（含 pytest / pytest-cov）
+pip install -e ".[dev]"
+# 或不装包、只装开发依赖
+pip install -r requirements-dev.txt
+
+pytest -q
+pytest --cov=xuen --cov-report=term-missing
+```
+
+测试覆盖轮次守卫、shell 提示词渲染/注入防护、TUI 降级路径、仓库卫生
+（运行产物不得被跟踪）、CLI 与冒烟流程。CI 使用 `requirements-ci.txt`
+的固定版本依赖；本地 `requirements.txt` 与 `pyproject.toml` 的运行时依赖
+保持同步。
+
+默认分支是 `master`。其它 MoonBit 仓库使用 `main`；本仓库暂保留 `master`
+以避免打断已有 CI/外部链接，迁移时会单独做一次带历史的重命名。
 
 ## 需求对照
 
 | 需求 | 实现 |
 |---|---|
-| 只调用外部 agent（如 opencode） | 仅剩 `ShellAgent`；词库也由外部 agent 生成；已删除直连 LLM / 内置工具 / MCP 代码 |
+| 只调用外部 agent（如 opencode） | 外部 agent 调用集中在 `ShellAgent`（`agents.py` 同时含 shell 模板转义/安全检查）；词库也由外部 agent 生成；无直连 LLM / 内置工具 / MCP |
 | 配置 shell 命令调用外部 agent | `agent.command`，`$prompt` / `$prompt_file` 占位符 |
-| TUI | `textual` 实现，默认启用（`--no-tui` 关闭） |
+| TUI | `textual` 实现，默认启用（`--no-tui` 关闭）；未安装 textual 时自动降级 |
 | 修改想法区显示 `[修改想法区]<写入想法区的内容>` | 「修改想法区」面板：想法区被覆盖后显示标记 + 新内容 |
 | 修改产物区显示 `[修改产物区]<写入产物区的内容>` | 「修改产物区」面板：产物区被覆盖后显示标记 + 新内容 |
 | 底部输入框，内容下次调用 agent 时带给 agent | 输入入队 → 下一轮提示词中带「【用户输入】」段落 |
-| 想法区+产物区持久化 | `research.md`（标记区块），重跑自动续上 |
+| 想法区+产物区持久化 | `research.md`（标记区块），重跑自动续上；写入前校验标记结构并原子替换 |
 | 每轮保存快照，区分候选与当前最佳 | `rounds/cand-<id>.md` 候选快照 + `rounds/best.md|best.json` 当前最佳 + `history.jsonl` 审计日志 |
 | 能用测试验证的就运行测试 | `rounds.repo`（默认自动探测 git 根）：pytest → make → npm → go 级联 |
 | 不能测试验证的：用户评分 / AI 评分 | `verdicts.txt` 异步补分（可翻案旧候选） / 复用外部 agent 当评审员打分 |
 | 避免下一轮覆盖更好方案 | 候选失败/挂起即还原最佳；下一轮永远从最佳出发；采纳旧快照用前进式晋升、不改写历史 |
+| 提示词不随轮次无限增长 | `prompt.max_state_chars` 首尾截断 + 截断提示；完整内容保留在状态文件 |
 
-**注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt`），中断后重跑自动继续；
-`agent.timeout` 控制单次外部调用超时。
+**注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt` / `rounds/`），中断后重跑自动继续；
+`agent.timeout` 控制单次外部调用超时。仓库根目录的 `.rounds/` 是运行期产物，
+已被移除并加入 `.gitignore`，请勿再提交。

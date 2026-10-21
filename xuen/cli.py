@@ -8,6 +8,12 @@ from .config import _validate, load_config
 from .ui import configure, ui
 
 
+def _load_tui():
+    """延迟导入 TUI；独立成函数便于测试「未安装 textual」的降级路径。"""
+    from .tui import run_tui
+    return run_tui
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="xuen",
@@ -185,7 +191,7 @@ def main(argv=None) -> int:
               for stream in (sys.stdin, sys.stdout))
     if cfg.tui and not args.no_tui and tty:
         try:
-            from .tui import run_tui
+            run_tui = _load_tui()
         except ImportError:
             ui.warn("未安装 textual，回退到纯终端输出（pip install textual 可启用 TUI）")
         else:

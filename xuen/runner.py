@@ -388,11 +388,59 @@ def _shell_path(path: Path) -> str:
     return shlex.quote(text)
 
 
+def _clip_section(text: str, limit: int) -> tuple:
+    """按字符预算保留 ``text`` 的首尾，返回 ``(clipped, omitted)``。
+
+    只影响拼进提示词的副本；工作区文件保持完整。截断标记明确告诉 agent
+    中间内容被省略、完整内容仍在状态文件里，避免它把省略号当成真实内容。
+    """
+    if limit <= 0 or len(text) <= limit:
+        return text, 0
+    head_len = max(1, limit * 3 // 5)
+    tail_len = max(0, limit - head_len)
+    omitted = len(text) - limit
+    marker = f"\n\n…[提示词预算截断：省略 {omitted} 字符；完整内容见状态文件]…\n\n"
+    tail = text[-tail_len:] if tail_len else ""
+    return text[:head_len] + marker + tail, omitted
+
+
+def _clip_state_sections(idea: str, artifact: str, budget: int) -> tuple:
+    """把想法区/产物区压进 ``budget`` 字符的提示词预算。
+
+    ``budget <= 0``（或内容本来就没超）时原样返回。产物区通常更长，默认
+    给它约 60% 预算；某一区没用到自己的份额时，剩余预算让给另一区。
+    """
+    total = len(idea) + len(artifact)
+    if budget <= 0 or total <= budget:
+        return idea, artifact, 0
+    idea_budget = min(len(idea), max(1, budget * 2 // 5))
+    artifact_budget = min(len(artifact), max(1, budget - idea_budget))
+    if idea_budget < len(idea):
+        artifact_budget = min(len(artifact), budget - idea_budget)
+    if artifact_budget < len(artifact):
+        idea_budget = min(len(idea), budget - artifact_budget)
+    clipped_idea, idea_omitted = _clip_section(idea, idea_budget)
+    clipped_artifact, artifact_omitted = _clip_section(
+        artifact, artifact_budget)
+    return clipped_idea, clipped_artifact, idea_omitted + artifact_omitted
+
+
 def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
                   state_path: Path, helper: Path,
                   user_notes: List[str]) -> str:
     notes = cfg.extra_notes.strip()
     idea, artifact = _read_sections(state_path)
+    original_total = len(idea) + len(artifact)
+    idea, artifact, omitted = _clip_state_sections(
+        idea, artifact, cfg.prompt.max_state_chars)
+    truncation_note = ""
+    if omitted:
+        truncation_note = (
+            f"\n【注意】想法区/产物区共 {original_total} "
+            f"字符，超过 prompt.max_state_chars={cfg.prompt.max_state_chars}；"
+            f"下方只保留首尾（已省略 {omitted} 字符），完整内容仍在状态文件 "
+            f"{state_path} 中。\n"
+        )
     ins = ("、".join(f"「{w}」" for w in inspiration)
            if inspiration else "（本轮没有随机灵感词，请自由发挥）")
     # 提示词会被外部 agent 按 shell 复制执行：路径必须按当前平台的 shell
@@ -413,7 +461,7 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
 
 你正在参加一场「灵感驱动研究循环」的第 {i} 轮，请模拟一位人类研究者的思考过程。
 本轮随机灵感词：{ins}
-{user_part}
+{truncation_note}{user_part}
 状态文件 {state_q} 中有两个跨轮保留的区块，当前内容：
 
 --- 想法区 ---
