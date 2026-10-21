@@ -1087,9 +1087,14 @@ _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
 _MAKE_DEFINE_LINE = re.compile(
     r"^[ \t]*(?:(?:override|export)[ \t]+)*define(?:[ \t]+(.*))?$")
-# endef 后只要求有空白分隔；多余文本 make 只警告
+# endef 后只要求有空白分隔；多余文本在生效分支只警告
 # （extraneous text after 'endef' directive），仍会结束 define 块。
 _MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t].*)?$")
+# 未生效条件分支里 make 对 define/endef 仍做词法配对，但只认没有尾随
+# 文本的 endef；`endef foo` 不会结束 define，后面直到真正的 endef/EOF
+# 都被吞掉。严格版用于非活动分支，保证探测与 make 行为一致。
+_MAKE_ENDEF_LINE_STRICT = re.compile(
+    r"^[ \t]*endef(?:[ \t]*(?:#.*)?)?$")
 _MAKE_DEFINE_EMPTY_NAME = re.compile(r"^(?:::=|::=|:=|\?=|\+=|!=|=)")
 
 
@@ -1317,24 +1322,30 @@ def _make_text_with_includes(text: str, repo: Path,
         # 无论 define 位于生效还是未生效分支，都先按词法配对跳过整个块；
         # 否则未生效分支里的 include missing.mk 会误触发必需 include 错误，
         # 生效分支里的 test: 又会把 define 体误判成测试目标。
+        active = not stack or stack[-1]["active"]
         define_match = _MAKE_DEFINE_LINE.match(body)
         if define_match is not None:
             # define 的变量名会先展开；空名称（`define` / `define = x` /
             # `define $(UNDEFINED)`）会让 make 直接报错，后面的 test 目标
             # 不会执行。`define X = x` 这类带赋值符/尾随文本的写法只警告，
-            # 名称非空仍按合法 define 处理。
-            define_name = _make_expand_refs(
-                (define_match.group(1) or "").strip(), variables, simple)
-            if (not define_name.strip()
-                    or _MAKE_DEFINE_EMPTY_NAME.match(define_name.strip())):
-                raise _MakeRequiredIncludeError("empty define name")
+            # 名称非空仍按合法 define 处理。未生效分支里的 define 虽被
+            # 跳过，但仍需做词法配对，不能校验名称。
+            if active:
+                define_name = _make_expand_refs(
+                    (define_match.group(1) or "").strip(), variables, simple)
+                if (not define_name.strip()
+                        or _MAKE_DEFINE_EMPTY_NAME.match(
+                            define_name.strip())):
+                    raise _MakeRequiredIncludeError("empty define name")
             define_depth = 1
             i += 1
+            endef_pattern = (_MAKE_ENDEF_LINE if active
+                             else _MAKE_ENDEF_LINE_STRICT)
             while i < len(lines) and define_depth:
                 inner = lines[i].rstrip("\r\n")
                 if _MAKE_DEFINE_LINE.match(inner):
                     define_depth += 1
-                elif _MAKE_ENDEF_LINE.match(inner):
+                elif endef_pattern.match(inner):
                     define_depth -= 1
                 i += 1
             if define_depth:
@@ -1342,9 +1353,10 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 目标（以及 define 之前的目标）都不会被执行。
                 raise _MakeRequiredIncludeError("missing endef")
             continue
-        if _MAKE_ENDEF_LINE.match(body):
-            # 未处于 define 块中的 endef 是游离指令：make 报
-            # missing separator 并停止解析。
+        if active and _MAKE_ENDEF_LINE.match(body):
+            # 生效分支里未处于 define 块中的 endef 是游离指令：make 报
+            # missing separator 并停止解析。未生效分支里的 endef 会被
+            # 直接忽略（不会报错），不能据此拒绝后面的 test 目标。
             raise _MakeRequiredIncludeError("extraneous endef")
         conditional = _MAKE_CONDITIONAL_LINE.match(body)
         if conditional is not None:

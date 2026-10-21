@@ -1116,6 +1116,10 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
 @pytest.mark.parametrize("makefile", [
     # 未配对 / 重复的 else / 缺失 endif / 游离 endef 都会让 make 在读取
     # 阶段报错停止，即使文件里写了 test 目标也不会被执行。
+    # 未生效分支里的 define/endef 仍做词法配对，但 endef 尾随文本不会
+    # 结束 define，后面的 endif 被吞掉，同样在读取阶段失败。
+    "ifeq (0,1)\ndefine X\nfoo\nendef foo\nendif\n"
+    "test:\n\t@echo ok\n",
     "test:\n\t@echo ok\nendif\n",
     "test:\n\t@echo ok\nelse\n",
     "ifeq (1,1)\ntest:\n\t@echo ok\n",
@@ -1143,6 +1147,23 @@ def test_detect_test_suite_make_malformed_directives_not_a_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("snippet", [
+    "ifeq (0,1)\ndefine\nfoo\nendef\nendif\n",
+    "ifeq (0,1)\nendef\nendif\n",
+])
+def test_detect_test_suite_make_inactive_directive_errors_ignored(
+        tmp_path, snippet):
+    """未生效分支里的空 define / 游离 endef 被 make 忽略，不能误伤套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        snippet + "test:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 @pytest.mark.parametrize("makefile", [
