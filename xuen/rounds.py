@@ -2410,6 +2410,12 @@ def _make_expand_metadata_functions(
         start, end, args = best
         raw_args = _make_split_function_args(args, 1, text[start + 1])
         argument = raw_args[0]
+        # 参数本身可以嵌套 origin/flavor：`$(flavor $(flavor ;))` 的
+        # 内层先展开成 undefined，外层再查名为 undefined 的变量。嵌套
+        # 参数必须先递归展开，否则整个调用被当成未解析引用跳过，eval
+        # 注入的 `undefined` 行就漏掉 missing separator。
+        argument = _make_expand_metadata_functions(
+            argument, variables, simple, overrides)
         if _make_has_unresolved_ref(argument):
             # 参数里还有无法展开的引用（shell/call 等），不能猜变量名。
             pos = end
