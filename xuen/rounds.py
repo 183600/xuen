@@ -3602,6 +3602,10 @@ def _make_expand_simple_vars(text: str,
             if not skip:
                 expanded_targets = _make_expand_value(
                     raw_targets, variables, simple)
+                # 条件先于 foreach：未生效分支里的 foreach 参数错误
+                # 不能让 make 失败，也不能把分支里的逗号当成目标名。
+                expanded_targets = _make_expand_condition_functions(
+                    expanded_targets, variables, simple, repo)
                 expanded_targets = _make_expand_foreach(
                     expanded_targets, variables, simple, repo)
                 expanded_targets = _make_resolve_single_char_refs(
@@ -3615,9 +3619,9 @@ def _make_expand_simple_vars(text: str,
                     before_targets = expanded_targets
                     expanded_targets = _make_expand_value(
                         expanded_targets, variables, simple)
-                    expanded_targets = _make_expand_foreach(
-                        expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_condition_functions(
+                        expanded_targets, variables, simple, repo)
+                    expanded_targets = _make_expand_foreach(
                         expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_refs(
                         expanded_targets, variables, simple)

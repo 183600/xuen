@@ -1972,6 +1972,9 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
     # `a,b` 当成两个参数，错选分支或丢掉 test。
     "X = a,b\n$(if $(value X),test,x):\n\t@true\n",
     "X = ,x\n$(if $(value X),test,x):\n\t@true\n",
+    # 未生效分支里的 foreach 参数边界错误不能让目标行失败；条件必须先
+    # 于 foreach 展开（target-specific 赋值的原始目标预检也一样）。
+    "$(if test,test,$(foreach v,${a,b},x)):\n\t@true\n",
     # foreach 的循环变量在 body 展开前才绑定，不能先用外层变量表
     # 展开 body 里的条件函数（那会把 test 误算成 y）。
     "X = y\n$(foreach v,test,$(if $(v),test,x)):\n\t@true\n",
