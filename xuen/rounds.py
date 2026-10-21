@@ -1172,8 +1172,29 @@ def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
     按第一个逗号切分会把左值截成 `$(subst a`，导致条件判断错误。
     """
     rest = rest.strip()
-    if rest.startswith("(") and rest.endswith(")"):
-        inner = rest[1:-1]
+    if rest.startswith("("):
+        # 找外层配对的右括号；后面即使还有文本，make 也只警告
+        # extraneous text after 'ifeq' directive，条件仍按括号内求值。
+        depth = 0
+        close = -1
+        i = 1
+        while i < len(rest):
+            ch = rest[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch in "({":
+                depth += 1
+            elif ch in ")}":
+                if depth == 0 and ch == ")":
+                    close = i
+                    break
+                if depth > 0:
+                    depth -= 1
+            i += 1
+        if close < 0:
+            return None, None
+        inner = rest[1:close]
         depth = 0
         comma = -1
         i = 0
@@ -1194,8 +1215,9 @@ def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
         if comma < 0:
             return None, None
         return inner[:comma], inner[comma + 1:]
+    # 引号写法同样允许后续多余文本（warning）。
     match = re.match(
-        r"^(['\"])(.*?)\1[ \t]+(['\"])(.*?)\3[ \t]*$", rest)
+        r"^(['\"])(.*?)\1[ \t]+(['\"])(.*?)\3", rest)
     if match is None:
         return None, None
     return match.group(2), match.group(4)
@@ -1219,12 +1241,18 @@ def _make_eval_condition(kind: str, rest: str,
     if kind in ("ifdef", "ifndef"):
         name = _make_expand_condition_text(rest, variables, simple,
                                            repo).strip()
+        if any(ch.isspace() for ch in name):
+            # ifdef 的变量名展开后必须是单个词；`ifdef X Y` 会让
+            # make 报 invalid syntax in conditional 并停止读取。
+            raise _MakeRequiredIncludeError("invalid conditional")
         value = variables.get(name)
         defined = value is not None and value != ""
         return defined if kind == "ifdef" else not defined
     left, right = _make_ifeq_args(rest)
     if left is None:
-        return False
+        # ifeq/ifneq 参数缺失、括号未闭合或缺少逗号都是读取期错误，
+        # 即使文件后面有 test 目标 make 也不会执行。
+        raise _MakeRequiredIncludeError("invalid conditional")
     left = _make_expand_condition_text(left, variables, simple, repo)
     right = _make_expand_condition_text(right, variables, simple, repo)
     # make 只去掉逗号两侧的空白：左值 rstrip、右值 lstrip。

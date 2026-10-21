@@ -1132,6 +1132,9 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
     "test:\n\t@echo ok\ndefine\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine $(UNDEFINED)\nfoo\nendef\n",
     "test:\n\t@echo ok\ndefine = x\nfoo\nendef\n",
+    "test:\n\t@echo ok\nifeq\nall:\n\t@true\nendif\n",
+    "test:\n\t@echo ok\nifeq (a)\nall:\n\t@true\nendif\n",
+    "test:\n\t@echo ok\nifdef X Y\nall:\n\t@true\nendif\n",
 ])
 def test_detect_test_suite_make_malformed_directives_not_a_suite(
         tmp_path, makefile):
@@ -1218,6 +1221,25 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
     (tmp_path / "tests.mk").write_text("all:\n\t@true\n",
                                        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq (a,a) junk\ntest:\n\t@echo ok\nendif\n",
+    'ifeq "a" "a"junk\ntest:\n\t@echo ok\nendif\n',
+    # 未生效分支里的非法条件语法会被 make 忽略；不能因此拒绝后面的套件。
+    "ifeq (0,1)\nifeq (a)\nall:\n\t@true\nendif\nendif\n"
+    "test:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_condition_tail_text_still_detected(
+        tmp_path, makefile):
+    """条件指令后的多余文本只警告；未生效分支里的非法条件也不报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
