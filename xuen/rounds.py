@@ -4243,6 +4243,26 @@ def _make_text_with_includes(text: str, repo: Path,
         if stack and not stack[-1]["active"]:
             i += 1
             continue
+        eval_args = _make_standalone_eval_args(body)
+        if eval_args is not None:
+            # eval 的参数此刻已按读取期语义展开，随后才作为 Makefile
+            # 行解析。必须在这里就地插入，让其中的 include 与条件指令
+            # 走同一套处理：只留给第二遍展开会漏读 eval include 的
+            # 目标，也会漏掉 `$(eval include missing.mk)` 这种必然
+            # 让 make 失败的必需 include。
+            newline = "\r\n" if line.endswith("\r\n") else "\n"
+            injected: List[str] = []
+            for argument in eval_args:
+                expanded_arg = _make_expand_condition_arg(
+                    argument, variables, simple, repo, 0, overrides)
+                if expanded_arg is None:
+                    # 含 shell 等无法静态求值的引用：保留原文交给第二遍
+                    # 的保守路径，不能猜它的展开结果。
+                    expanded_arg = argument
+                for eval_line in expanded_arg.splitlines():
+                    injected.append(eval_line + newline)
+            lines[i:i + 1] = injected + [_MAKE_CONTEXT_RESET + newline]
+            continue
         include = _MAKE_INCLUDE_LINE.match(body)
         if include is not None:
             logical = body

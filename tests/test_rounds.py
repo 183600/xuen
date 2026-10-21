@@ -2536,6 +2536,48 @@ def test_detect_test_suite_make_eval_defines_test(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_eval_include_reads_targets(tmp_path):
+    """`$(eval include ...)` 的文件在读取期就解析，里面的 test 目标要能
+    探测到；只把 eval 留到第二遍会让这种套件被当成没有测试。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "inc.mk").write_text("test:\n\t@true\n",
+                                      encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "$(eval include inc.mk)\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_eval_required_include_error(tmp_path):
+    """`$(eval include missing.mk)` 同样是读取期 fatal，后面的 test 目标
+    不会执行，不能探测成套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "$(eval include missing.mk)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_eval_optional_include_missing(tmp_path):
+    """eval 里的可选 include 缺失时 make 继续读取，后面的 test 目标可用。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "$(eval -include missing.mk)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     "$(eval test:)\n\t@echo hi\n",
     "test:\n\t@echo ok\n$(eval X=1)\n\t@true\n",
