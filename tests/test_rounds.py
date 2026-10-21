@@ -2758,6 +2758,12 @@ def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
 @pytest.mark.parametrize("line", [
     "$(eval x)foo = 1",
     "$(eval x) = 1",
+    # eval 的参数只展开一次，`$$` 在生成的 Makefile 行里是字面 `$`，
+    # 会继续展开/形成非法行，不能当成普通未解析引用放过。
+    "$(eval $$)foo = 1",
+    "$(eval $$,x)foo = 1",
+    "$(eval $$$$)foo = 1",
+    "X = test\n$(eval $$(X))foo = 1",
 ])
 def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
         tmp_path, line):
