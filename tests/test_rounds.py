@@ -2069,6 +2069,65 @@ def test_detect_test_suite_make_computed_assignment(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("line", [
+    "$(strip ):=x",
+    "$(if ,x)=1",
+    "$(and ,x)=1",
+    "$(firstword ):=x",
+    "?=x",
+    "+=x",
+    "!=x",
+    ":=x",
+    "::=x",
+    "=x",
+    r"A\:B=x",
+    r"A\ B=x",
+    r"test\:$(X)=1",
+])
+def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
+        tmp_path, line):
+    """顶层赋值名展开为空/含非法转义字符时 make 直接停止读取。
+
+    回归：`$(strip ):=x` / `?=x` 被普通赋值正则当成合法语句，后面的
+    test 目标被探测成可运行套件；`A\:B=x` 实际报 missing separator。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "X$(Y)=1",
+    "X$(Y)?=test",
+    "X$(Y) =$$",
+    "A;B=x",
+    "X;=x",
+    "$(if x,y,)=1",
+    "$(subst ,,x)=1",
+    "private  +=a b",
+    "export  ?=test",
+    "override ::=x",
+    "test:$(if x, ,)=1",
+    "test:$(subst x, ,x)=1",
+])
+def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
+                                                               line):
+    """动态变量名/含分号名字/修饰词当名字的合法赋值不能漏掉 test 套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     "$(eval test:)",
     "$(eval test: )",

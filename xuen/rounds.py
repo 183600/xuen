@@ -1115,6 +1115,7 @@ def _make_has_missing_separator_line(text: str) -> bool:
             define_depth = 1
             continue
         if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _make_dynamic_assignment_name(body) is not None
                 or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
                 or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None
                 or _MAKE_CONDITIONAL_LINE.match(body) is not None):
@@ -1309,7 +1310,7 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     # 反斜杠本身仍可作名字的最后一个字符（`foo\=bar` 是变量 foo\ = bar）。
     # `:` `#` `$` 即使转义也不能进入变量名：`a\\: = x` 会被 make 当作
     # 目标/空变量名错误，不能按赋值整行跳过，否则后面的 test 套件会误判。
-    r"((?:\\[^\s=:#$]|\\|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+    r"((?:\\[^\s=:#$]|\\|[^\s:#=$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_DYNAMIC_VAR_UNIT = (
     r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\$[^\r\n]|\\[^\s=]|\\"
@@ -1319,9 +1320,18 @@ _MAKE_DYNAMIC_VAR_ASSIGNMENT = re.compile(
     r"(" + _MAKE_DYNAMIC_VAR_UNIT + r"+?)[ \t]*"
     r"(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
+# GNU make 4.3 不把 `:::=` 当成赋值运算符：行首 `:::=x` 是空目标列表的
+# target-specific 赋值（make 接受），而 `::=x` / `:=x` / `=x` 才是空变量
+# 名错误。这里不能把 `:::=` 列入，否则可运行的 test 套件会被误判。
 _MAKE_EMPTY_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
-    r"(?:::=|::=|:=|\?=|\+=|!=|=)")
+    r"(?:::=|:=|\?=|\+=|!=|=)")
+
+# 行首真正没有变量名的赋值（`=x` / `?=x` / `+=x` / `!=x` / `:=x` /
+# `::=x`）。带修饰符的写法不同：`private +=x` 里 make 把 `private` 当
+# 变量名（运算符前的最后一个词成为名字），所以不能把修饰符算进来。
+_MAKE_TRULY_EMPTY_VAR_ASSIGNMENT = re.compile(
+    r"^[ \t]*(?:::=|:=|\?=|\+=|!=|=)")
 
 _MAKE_EMPTY_UNDEFINE = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*undefine[ \t]*$")
@@ -2291,13 +2301,23 @@ def _make_apply_assignment(match: re.Match,
                            simple: Dict[str, bool],
                            overrides: Optional[set] = None) -> None:
     name, op, raw = match.groups()
-    if overrides is None:
-        overrides = set()
     # `override` 标记的变量不会再被后续普通赋值/undefine 覆盖；只有另一条
     # 带 override 的赋值才能改它。make 在读取阶段就按这个优先级决定最终
     # 值，忽略它会让 `override A = test` 后的 `A = $(B)` 把 test 目标
     # 展开成空，漏掉实际可运行的套件。
     prefix = match.group(0)[:match.start(1)]
+    _make_apply_assignment_parts(name, op, raw, prefix,
+                                 variables, simple, overrides)
+
+
+def _make_apply_assignment_parts(
+        name: str, op: str, raw: str, prefix: str,
+        variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        overrides: Optional[set] = None) -> None:
+    """按已展开的变量名/运算符更新变量表（动态变量名路径复用）。"""
+    if overrides is None:
+        overrides = set()
     is_override = "override" in prefix.split()
     if name in overrides and not is_override:
         return
@@ -2404,7 +2424,10 @@ def _make_dynamic_assignment_name(body: str) -> Optional[str]:
     has_ref = False
     while i < n:
         ch = rest[i]
-        if ch in " \t:#=;":
+        # 顶层变量名可以含未转义的 `;`（`A;B=x` 是合法赋值）；它只在
+        # 规则头的目标之后才开始 recipe。空白/冒号/井号/等号仍然结束
+        # 变量名。
+        if ch in " \t:#=":
             break
         if ch == "\\":
             i += 2
@@ -2440,16 +2463,54 @@ def _make_dynamic_assignment_name(body: str) -> Optional[str]:
     j = i
     while j < n and rest[j] in " \t":
         j += 1
-    if any(rest.startswith(op, j)
-           for op in (":::=", "::=", ":=", "?=", "+=", "!=", "=")):
-        return token
-    return None
+    if not any(rest.startswith(op, j)
+               for op in (":::=", "::=", ":=", "?=", "+=", "!=", "=")):
+        return None
+    # 转义空白/冒号/井号不能进入顶层变量名（`A\:B=x` / `A\ B=x`
+    # 会让 make 报 missing separator），即使变量名里还有合法引用。
+    if re.search(r"\\[ \t:#]", token) is not None:
+        return None
+    # `X$(Y)?=1` / `X$(Y)+=1` / `X$(Y)!=1` 的运算符前半截会被扫描
+    # 进 token；剥掉它交给调用方按原行识别完整运算符。
+    if rest[j:j + 1] == "=" and token[-1:] in ("?", "+", "!"):
+        token = token[:-1]
+    return token
+
+
+def _make_expand_assignment_name(
+        name: str,
+        variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool],
+        repo: Optional[Path] = None) -> str:
+    """按 make 读取期语义展开赋值语句左侧的变量名。
+
+    变量名里的静态函数/条件函数可能展开为空（`$(strip ) = x` /
+    `$(if ,x) = x`），make 会报 empty variable name；只展开普通变量
+    引用会把函数原文当成非空名字，误判成合法赋值。条件函数必须与静态
+    函数交替展开，且未生效分支不能提前求值。
+    """
+    for _ in range(20):
+        before = name
+        name = _make_resolve_single_char_refs(name, variables, simple)
+        name = _make_expand_refs(name, variables, simple)
+        name = _make_expand_condition_functions(
+            name, variables, simple, repo)
+        name = _make_expand_refs(name, variables, simple)
+        if repo is not None:
+            name = _make_expand_include_functions(name, repo)
+            name = _make_expand_refs(name, variables, simple)
+        name = _make_expand_computed_refs(name, variables, simple)
+        name = _make_resolve_single_char_refs(name, variables, simple)
+        if name == before:
+            break
+    return name
 
 
 def _make_scan_assignment(body: str,
                           variables: Dict[str, Optional[str]],
                           simple: Dict[str, bool],
-                          overrides: Optional[set] = None) -> Optional[str]:
+                          overrides: Optional[set] = None,
+                          repo: Optional[Path] = None) -> Optional[str]:
     """处理一行赋值/undefine；是赋值时返回展开后的行，否则返回 None。"""
     if overrides is None:
         overrides = set()
@@ -2469,39 +2530,43 @@ def _make_scan_assignment(body: str,
         return body
     if _MAKE_EMPTY_UNDEFINE.match(stripped_body):
         raise _MakeRequiredIncludeError("empty variable name")
+    # `?=x` / `+=x` / `!=x` 这类运算符开头的行是空变量名，make 直接
+    # 报错；普通赋值正则会把运算符首字符当成变量名（名为 `?` / `+` /
+    # `!`），必须优先按空名字拒绝。
+    if _MAKE_TRULY_EMPTY_VAR_ASSIGNMENT.match(
+            _make_strip_comment(body)):
+        raise _MakeRequiredIncludeError("empty variable name")
     match = _MAKE_VAR_ASSIGNMENT.match(body)
     expanded = body
-    dynamic = _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(body)
-    if match is None and "$" in body and dynamic is not None:
-        # 只有原行本身是「动态变量名 + 赋值运算符」时才展开后重试；
-        # `$(T) foo=bar test:` 原行是目标列表，展开后以 foo=bar 开头
-        # 也不能反过来当成变量赋值。
-        #
-        # 变量名里的单字符引用（`$x` / `$:` / `$#`）同样在读取阶段展开；
-        # 展开为空（`$x = 1`、`$(UNDEFINED) += 1`）时 make 直接报
-        # `empty variable name`。必须在普通赋值正则之前判断：后者会把
-        # 展开后开头的 `+` / `?` 当成变量名，吞掉 `+=` / `?=` 运算符，
-        # 把这条 fatal 行误当成合法赋值。
-        name = _make_resolve_single_char_refs(
-            dynamic.group(1), variables, simple)
-        name = _make_expand_refs(name, variables, simple)
-        name = _make_resolve_single_char_refs(name, variables, simple)
-        if not name:
-            raise _MakeRequiredIncludeError("empty variable name")
-        expanded = _make_expand_refs(body, variables, simple)
-        match = _MAKE_VAR_ASSIGNMENT.match(expanded)
     if match is None and "$" in body:
         computed_name = _make_dynamic_assignment_name(body)
         if computed_name is not None:
-            name = _make_expand_computed_refs(
-                computed_name, variables, simple)
-            name = _make_expand_refs(name, variables, simple)
-            name = _make_resolve_single_char_refs(name, variables, simple)
+            # 只有原行本身是「动态变量名 + 赋值运算符」时才展开后重试；
+            # `$(T) foo=bar test:` 原行是目标列表，展开后以 foo=bar 开头
+            # 也不能反过来当成变量赋值。
+            #
+            # 变量名里的单字符引用（`$x` / `$:` / `$#`）同样在读取阶段
+            # 展开；展开为空（`$x = 1`、`$(UNDEFINED) += 1`）时 make
+            # 直接报 `empty variable name`。静态函数与条件函数也在读取
+            # 期展开（`$(strip ) = x` 会变成空名字），只按普通变量引用
+            # 展开会把函数原文当成合法名字。
+            name = _make_expand_assignment_name(
+                computed_name, variables, simple, repo)
             if not name:
                 raise _MakeRequiredIncludeError("empty variable name")
-            expanded = _make_expand_computed_refs(body, variables, simple)
-            expanded = _make_expand_refs(expanded, variables, simple)
-            match = _MAKE_VAR_ASSIGNMENT.match(expanded)
+            # 从原行里取出赋值运算符与其后的值；不能整行展开，递归变量
+            # 的值应当在被引用时再展开。
+            j = body.find(computed_name) + len(computed_name)
+            while j < len(body) and body[j] in " \t":
+                j += 1
+            op = next((candidate for candidate in
+                       (":::=", "::=", ":=", "?=", "+=", "!=", "=")
+                       if body.startswith(candidate, j)), "=")
+            raw = body[j + len(op):]
+            _make_apply_assignment_parts(
+                name, op, raw, body[:body.find(computed_name)],
+                variables, simple, overrides)
+            return body
     if match is None:
         if _MAKE_EMPTY_VAR_ASSIGNMENT.match(_make_strip_comment(expanded)):
             # `$(UNDEFINED) = x` 展开后是空变量名，make 在读取阶段直接报错。
@@ -2514,14 +2579,15 @@ def _make_scan_assignment(body: str,
 def _make_scan_assignments(text: str,
                            variables: Dict[str, Optional[str]],
                            simple: Dict[str, bool],
-                           overrides: Optional[set] = None) -> None:
+                           overrides: Optional[set] = None,
+                           repo: Optional[Path] = None) -> None:
     """按出现顺序把文本里的单行赋值应用到变量表（recipe 行除外）。"""
     if overrides is None:
         overrides = set()
     for line in text.splitlines(keepends=True):
         body = line.rstrip("\r\n")
         if not body.startswith("\t"):
-            _make_scan_assignment(body, variables, simple, overrides)
+            _make_scan_assignment(body, variables, simple, overrides, repo)
 
 
 def _make_flatten_target_newlines(text: str) -> str:
@@ -2705,7 +2771,8 @@ def _make_expand_simple_vars(text: str,
             # define 块本身不定义目标，但 make 读取时会清空当前目标。
             out.append(_MAKE_CONTEXT_RESET + newline)
             continue
-        expanded = _make_scan_assignment(body, variables, simple, overrides)
+        expanded = _make_scan_assignment(
+            body, variables, simple, overrides, repo)
         if expanded is not None:
             # 赋值/undefine 行不定义目标。输出成哨兵注释，防止变量展开
             # 后的目标行（如 `$(T) foo=bar test:`，T 为空）被误认成赋值；
@@ -2822,8 +2889,16 @@ def _make_expand_simple_vars(text: str,
                 while (rest_start < len(body)
                        and body[rest_start] == ":"):
                     rest_start += 1
-                _make_raw_rule_is_target_assignment(
-                    body[rest_start:], variables, simple, repo)
+                if _make_raw_rule_is_target_assignment(
+                        body[rest_start:], variables, simple, repo):
+                    # target-specific 赋值不定义可执行目标。原文可能因
+                    # 变量名展开成空白（`test:$(if x, ,)=1`）而在整行
+                    # 展开后不再符合赋值形态，继续输出会被下游当成非法
+                    # 规则头拒绝掉后面合法的 test；直接按赋值行处理，
+                    # 同时用哨兵清空 recipe 上下文（与普通赋值一致）。
+                    out.append(_MAKE_CONTEXT_RESET + newline)
+                    i += 1
+                    continue
         raw_bare_empty = False
         if raw_colon >= 0:
             raw_targets = body[:raw_colon]
@@ -3509,7 +3584,7 @@ def _make_text_with_includes(text: str, repo: Path,
             i += 1
             continue
         out.append(line)
-        _make_scan_assignment(body, variables, simple, overrides)
+        _make_scan_assignment(body, variables, simple, overrides, repo)
         i += 1
     if stack:
         # 条件块没在文件内闭合：make 报 missing 'endif' 并停止解析。
