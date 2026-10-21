@@ -1692,6 +1692,14 @@ def test_detect_test_suite_make_nested_required_include_error_blocks_suite(
     "T := $(subst x,test,x)\n$(T):\n\t@true\n",
     "T = $(filter %test,test)\n$(T):\n\t@true\n",
     "$(subst x,test,x):\n\t@true\n",
+    # 普通赋值/undefine 的变量名也可含 / % + @ ! ^ & * ? 等字符：
+    # 目标头引用同样要能静态展开。
+    "X/Y = test\n$(X/Y):\n\t@true\n",
+    "X%Y := test\n$(X%Y):\n\t@true\n",
+    "X+Y = test\n${X+Y}:\n\t@true\n",
+    "X? = test\n$(X?):\n\t@true\n",
+    "X@Y = test\n$(X@Y):\n\t@true\n",
+    "X&Y = test\n$(X&Y):\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_target(tmp_path, makefile):
     """test 目标写在简单变量展开后的规则头里时也要探测到。"""
@@ -1711,6 +1719,8 @@ def test_detect_test_suite_make_variable_target(tmp_path, makefile):
     "T = test\nexport undefine T\n$(T):\n\t@true\n",
     "T = test\nprivate export undefine T\n$(T):\n\t@true\n",
     "T = test\nundefine T # c\n$(T):\n\t@true\n",
+    "X/Y = test\nundefine X/Y\n$(X/Y):\n\t@true\n",
+    "X%Y = test\nprivate undefine X%Y\n$(X%Y):\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_target_negative(tmp_path, makefile):
     if not shutil.which("make"):

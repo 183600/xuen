@@ -678,9 +678,17 @@ class _MakeRequiredIncludeError(Exception):
     """必需的 include 无法读取：make 会在执行 test 前直接失败。"""
 
 
+# 变量名可含除空白、:、#、=、; 之外的字符（/ % + @ ! ^ & * 等）；
+# 名称用非贪婪匹配，让 `X?=1` 仍按 `?=` 运算符解析、`X? =1` 才是
+# 名为 `X?` 的普通赋值。只允许 [A-Za-z0-9_.-] 会漏掉这些合法变量，
+# 目标头里的 `$(X/Y)` 展开为空、可运行的 test 套件被误判成没有测试。
+_MAKE_VAR_NAME = r"(?:\\.|[^\s:#=;])+"
+# 赋值行先匹配字面变量名；`$(T) = test` 这类动态变量名要留给下面的
+# 展开路径，名字里不能吞掉 $ ( ) { }（否则会被当成名为 `$(T` 的赋值）。
+_MAKE_PLAIN_VAR_NAME = r"(?:\\.|[^\s:#=;$(){}])+"
 _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
-    r"([A-Za-z0-9_.-]+)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+    r"((?:\\.|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_EMPTY_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
@@ -690,8 +698,8 @@ _MAKE_EMPTY_UNDEFINE = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*undefine[ \t]*$")
 
 _MAKE_VAR_REF = re.compile(
-    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)(?::([^()\r\n]*))?\)"
-    r"|\{([A-Za-z0-9_.-]+)(?::([^{}\r\n]*))?\}"
+    r"(?<!\$)\$(?:\(([^\s:{}()=#;]+)(?::([^()\r\n]*))?\)"
+    r"|\{([^\s:{}()=#;]+)(?::([^{}\r\n]*))?\}"
     r"|([A-Za-z0-9_]))")
 
 
@@ -1344,7 +1352,7 @@ def _make_scan_assignment(body: str,
     stripped_body = _make_strip_comment(body)
     undef = re.match(
         r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine[ \t]+"
-        r"([A-Za-z0-9_.-]+)[ \t]*$", stripped_body)
+        r"(" + _MAKE_VAR_NAME + r")[ \t]*$", stripped_body)
     if undef is not None:
         variables.pop(undef.group(1), None)
         simple.pop(undef.group(1), None)
