@@ -2211,6 +2211,11 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
     "test foo=bar:",
     "test foo\\=bar:",
+    "all test=1 test:",
+    "all foo=bar test:",
+    "all foo\\=bar test:",
+    "all X = test:",
+    "all override test=1 test:",
     "test foo = bar:",
     "test foo += bar:",
     "test foo?=bar:",
@@ -2267,6 +2272,11 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test foo\\;bar:",
     # 行首目标名里的 \= 会让整行按变量赋值解析，不定义 test。
     "foo\\=bar test:",
+    "test=1 test:",
+    "all = test:",
+    "override test=1 test:",
+    "private test=1 test:",
+    "export test=1 test:",
     # 紧跟 test 的赋值形式不是目标（`test foo = bar:` 才是）
     "test = bar:",
     "test ?= bar:",

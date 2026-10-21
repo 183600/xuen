@@ -286,7 +286,7 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
 _MAKE_TARGET_WORD_BEFORE_TEST = (
     r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:=\s#;\\%]|\\(?:[^\s=]|[ \t]+(?![ \t])))+")
+    + r"|[^:\s#;\\%]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
 # 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
 # `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
 # 定义 test。展开后再判断会在目标列表里误删可运行套件。
@@ -585,6 +585,10 @@ def _make_defines_test_target(text: str,
             continue
         line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
+        # 变量赋值行即使值里出现 `test:` 也不定义目标。先按 make 的
+        # 赋值语法排除，避免放开目标名里的 `=` 后误报。
+        if _MAKE_VAR_ASSIGNMENT.match(line) is not None:
+            continue
         colon = match.end() - match.start() - 1
         # 正则里的冒号可能落在目标名中的变量引用里（如
         # `test ${X:--x}` 并没有规则分隔符）。只有行内第一个真正的
