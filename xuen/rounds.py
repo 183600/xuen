@@ -1213,13 +1213,13 @@ def _make_scan_assignments(text: str,
 
 
 def _make_flatten_target_newlines(text: str) -> str:
-    """把变量展开到规则头时产生的换行按 make 语义折叠。
+    """按 make 的目标列表语义折叠变量展开产生的换行。
 
-    make 只在换行紧邻空格/制表符（或位于行首）时才把展开值拆成多个
-    目标；`define BODY\nfoo\ntest` 直接展开得到的目标名包含换行，
-    `test` 不是独立目标（`$(firstword $(BODY))` 也只看 foo）。用哨兵
-    字符打断裸换行，避免 `_MAKE_TEST_TARGET` 把 `test` 误认成新行上的
-    目标；紧邻空白的换行则折叠成空格。
+    make 只按空格/制表符拆分目标词；换行不属于分隔符。换行若直接跟在
+    非空白字符后，它属于前一个目标名（`define BODY\nfoo\ntest` 展开
+    后是名为 foo<换行>test 的目标，`test` 不是独立目标）；若位于行首
+    或紧跟在空格/制表符后，则属于下一个目标词前的空白，会被跳过
+    （`foo \ntest` 与 `\ntest` 都能得到独立目标 test）。
     """
     out: List[str] = []
     i = 0
@@ -1231,18 +1231,16 @@ def _make_flatten_target_newlines(text: str) -> str:
         j = i
         while j < len(text) and text[j] == "\n":
             j += 1
-        before = out[-1] if out else ""
-        after = text[j] if j < len(text) else ""
-        if (not any(ch not in " \t" for ch in out)
-                or before in " \t" or after in " \t"):
-            # 行首换行会被 make 跳过；紧邻空白的换行是目标列表分隔。
-            # 保留换行还能避免展开值里的 `#` 被误当成注释起点。
-            out.append(text[i:j])
+        if not out or out[-1] in " \t":
+            # 行首/空白后的换行只是下一目标词的前导空白。
+            pass
         else:
-            # 裸换行属于目标名的一部分，不能用行分隔符参与后续匹配。
+            # 裸换行属于前一个目标名，不能作为行分隔符参与匹配。
             out.append("\x00" * (j - i))
         i = j
-    return "".join(out)
+    # 展开值可能以制表符开头；规则头前的空白按 make 语义忽略，而下游
+    # 用行首制表符区分 recipe，必须先把这类前导制表符消掉。
+    return "".join(out).lstrip(" \t")
 
 
 def _make_expand_simple_vars(text: str,
@@ -1315,6 +1313,10 @@ def _make_expand_simple_vars(text: str,
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
         expanded = _make_flatten_target_newlines(expanded)
+        if "#" not in body:
+            # 注释在展开前就已切掉，变量值里的 # 是目标名的一部分，
+            # 不能让下游把它当成注释起点而漏掉同一目标列表里的 test。
+            expanded = expanded.replace("#", "\x01")
         out.append(expanded + newline)
         i += 1
     return "".join(out)

@@ -1825,6 +1825,24 @@ def test_detect_test_suite_make_define_trailing_space_splits_target(tmp_path):
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("body", [
+    "\t test",
+    "test \n# c",
+    "# c\n test",
+])
+def test_detect_test_suite_make_define_body_comment_and_tab(tmp_path, body):
+    """define 体里的 # 是字面量，前导制表符也只是目标列表分隔。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        f"define BODY\n{body}\nendef\n$(BODY):\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
