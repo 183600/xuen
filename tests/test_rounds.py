@@ -1118,6 +1118,7 @@ def test_detect_test_suite_make_invalid_target_structure(tmp_path, makefile):
     "include vars.mk\nifeq ($(X),1)\ntest:\n\t@true\nendif\n",
     "ifeq (1,1)\nifeq (1,1)\ntest:\n\t@true\nendif\nendif\n",
     'ifeq "a" "a"\ntest:\n\t@true\nendif\n',
+    'ifeq " a " " a "\ntest:\n\t@true\nendif\n',
 ])
 def test_detect_test_suite_make_conditional_branch(tmp_path, makefile):
     """只有生效条件分支里的 test 目标才算套件。"""
@@ -1143,6 +1144,7 @@ def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     "ifeq (1,1)\nall:\n\t@true\nelse\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nall:\n\t@true\nelse ifeq (0,1)\ntest:\n\t@true\nendif\n",
     "ifeq (0,1)\nifeq (1,1)\ntest:\n\t@true\nendif\nendif\n",
+    'ifeq "a " "a"\ntest:\n\t@true\nendif\n',
 ])
 def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
                                                            makefile):

@@ -1152,8 +1152,12 @@ def _make_join_continuations(text: str) -> str:
     return "".join(out)
 
 
-def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
-    """解析 ifeq/ifneq 的两种参数写法，返回左右值。
+def _make_ifeq_args(rest: str
+                    ) -> Tuple[Optional[str], Optional[str], bool]:
+    """解析 ifeq/ifneq 的两种参数写法，返回 (左值, 右值, 是否去逗号空白)。
+
+    括号写法 make 只去掉逗号两侧空白（左值 rstrip、右值 lstrip）；
+    引号写法保留引号内所有空白，不能套用同样的 strip。
 
     括号写法的第一个逗号必须在嵌套变量/函数引用之外：常见写法
     `ifeq ($(subst a,b,a),b)` 的前两个逗号都属于 subst 的参数，旧实现
@@ -1181,7 +1185,7 @@ def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
                     depth -= 1
             i += 1
         if close < 0:
-            return None, None
+            return None, None, True
         inner = rest[1:close]
         depth = 0
         comma = -1
@@ -1201,14 +1205,14 @@ def _make_ifeq_args(rest: str) -> Tuple[Optional[str], Optional[str]]:
                 break
             i += 1
         if comma < 0:
-            return None, None
-        return inner[:comma], inner[comma + 1:]
+            return None, None, True
+        return inner[:comma], inner[comma + 1:], True
     # 引号写法同样允许后续多余文本（warning）。
     match = re.match(
         r"^(['\"])(.*?)\1[ \t]+(['\"])(.*?)\3", rest)
     if match is None:
-        return None, None
-    return match.group(2), match.group(4)
+        return None, None, False
+    return match.group(2), match.group(4), False
 
 
 def _make_expand_condition_text(text: str,
@@ -1236,15 +1240,19 @@ def _make_eval_condition(kind: str, rest: str,
         value = variables.get(name)
         defined = value is not None and value != ""
         return defined if kind == "ifdef" else not defined
-    left, right = _make_ifeq_args(rest)
+    left, right, strip_comma_spaces = _make_ifeq_args(rest)
     if left is None:
         # ifeq/ifneq 参数缺失、括号未闭合或缺少逗号都是读取期错误，
         # 即使文件后面有 test 目标 make 也不会执行。
         raise _MakeRequiredIncludeError("invalid conditional")
     left = _make_expand_condition_text(left, variables, simple, repo)
     right = _make_expand_condition_text(right, variables, simple, repo)
-    # make 只去掉逗号两侧的空白：左值 rstrip、右值 lstrip。
-    equal = left.rstrip() == right.lstrip()
+    if strip_comma_spaces:
+        # 括号写法只去掉逗号两侧的空白：左值 rstrip、右值 lstrip。
+        equal = left.rstrip() == right.lstrip()
+    else:
+        # 引号写法保留引号内的空白（ifeq "a " "a" 不相等）。
+        equal = left == right
     return equal if kind == "ifeq" else not equal
 
 
