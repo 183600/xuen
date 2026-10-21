@@ -1045,6 +1045,15 @@ class RoundGuard:
             self._apply_user_verdicts()
         except Exception as e:  # noqa: BLE001 —— 守卫降级原则
             self.sink.warn(f"应用待决用户评分失败（忽略，稍后重试）：{e}")
+        # 进程可能在轮次中途被 kill/断电：research.md 已留下未验证内容，
+        # 而 best.md 仍是上一个已提交最佳。启动时必须先把「当前状态」拨回
+        # 最佳，否则下一轮 agent 会从半截内容继续，甚至把脏内容晋升成最佳。
+        # 补分兑现可能刚把新最佳写回 research.md，故放在其后；内容一致时
+        # _restore_best 是空操作，不会产生事件或虚增还原统计。
+        try:
+            self._restore_best(0, "启动时还原未完成轮次")
+        except Exception as e:  # noqa: BLE001 —— 守卫降级原则
+            self.sink.warn(f"启动时还原最佳失败（忽略）：{e}")
 
     def finish(self) -> None:
         try:
@@ -1755,7 +1764,7 @@ class RoundGuard:
         except Exception as e:  # noqa: BLE001 —— 守卫降级原则
             self.sink.warn(f"记录还原事件失败（还原已生效，忽略）：{e}")
         self.sink.warn(f"已还原为当前最佳 {self.best.get('id', '?')}"
-                       f"（改动区块：{'、'.join(changed)}）；"
+                       f"（{why}；改动区块：{'、'.join(changed)}）；"
                        "下一轮将从最佳继续，更差的候选不会污染后续轮次")
         return changed
 

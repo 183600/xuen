@@ -2495,6 +2495,29 @@ def test_start_recovers_best_when_best_md_and_json_both_lost(ws):
                for lvl, m in sink.messages if lvl == "warn")
 
 
+def test_start_restores_dirty_research_to_best(ws):
+    """进程在轮次中途退出后重启：research.md 里未验证的半截内容不能
+    留给下一轮 agent 当起点，必须先从 best.md 还原。"""
+    workspace, state_path = ws
+    guard = make_guard(workspace, state_path, verify="off")
+    guard.start()
+    write_idea(state_path, "已晋升的最佳")
+    assert guard.on_round_end(1) == "adopted"
+    best_id = guard.best["id"]
+    # 模拟下一轮 agent 已写入但进程在 on_round_end 前被 kill
+    write_idea(state_path, "未验证的半截内容")
+
+    sink = RecordingSink()
+    restarted = make_guard(workspace, state_path, sink, verify="off")
+    restarted.start()
+    assert read_idea(state_path) == "已晋升的最佳"
+    assert restarted.best["id"] == best_id
+    assert restarted.stats.restored == 1
+    restored = [e for e in events(restarted) if e["event"] == "restored"]
+    assert restored and restored[-1]["round"] == 0
+    assert any("启动时还原" in m for lvl, m in sink.messages if lvl == "warn")
+
+
 def test_start_recovers_older_best_when_current_snapshot_missing(ws):
     """当前最佳快照丢失、best.md 也丢失时，退回历史里仍有快照的较早最佳。
 
