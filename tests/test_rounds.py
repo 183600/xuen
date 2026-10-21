@@ -2376,6 +2376,13 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     ".//test:",
     "././test:",
     "foo ./test:",
+    # 首目标是普通名时，后面混入模式目标只会触发 deprecated 警告，
+    # make 仍把精确的 test 定义成普通目标并执行。
+    "foo %test test:",
+    "foo % test:",
+    "foo %test %bar test:",
+    "test %test:",
+    "\\%foo %test test:",
 ])
 def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     """真正的 test 目标（含双冒号规则、前导空格、同行命令）仍要探测到。"""
@@ -2417,8 +2424,12 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test: $(U) X:=1",
     # 后面还有未转义分号时，前面的 \; 属于依赖名，依赖里的冒号仍非法。
     "test: a\\;b:c ; recipe",
-    # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则
+    # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则；
+    # 首目标本身是模式时（%test test: / foo% %test test:）仍是 fatal。
     "foo% test:",
+    "%test test:",
+    "% test:",
+    "foo% %test test:",
     "foo;bar test:",
     # 反斜杠后的整段空白都属于同一个目标名，不再分隔出 test。
     "foo\\ test:",

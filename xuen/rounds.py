@@ -288,12 +288,12 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # 赋值形式检测（test 后紧跟 `= x`）仍只用 _MAKE_SEP，不能把 `test==x`
 # 里的第二个等号吃掉。
 _MAKE_TARGET_SEP = r"(?:[ \t]|[+?]?=|\\\r?\n)"
-# test 之前的目标名不能含未转义的 %：`foo% test:` 会被 make 当成
-# 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
-# GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
-_MAKE_TARGET_WORD_BEFORE_TEST = (
-    r"(?:" + _MAKE_VAR_UNIT
-    + r"|[^:\s#;\\%=]|\\(?:[^\s]|[ \t]+(?![ \t])))+")
+# test 之前的目标名也可以含未转义的 %：GNU make 4.3 只有在【第一个
+# 目标】是模式时才会报 fatal 的 mixed implicit and normal rules；第一个
+# 目标是普通名时只警告 deprecated syntax 并继续定义 test（`foo %test
+# test:` 仍能执行 test）。正则先放行 %，首目标是否为模式交给
+# _make_mixed_targets_are_fatal 判断，避免漏掉可运行套件。
+_MAKE_TARGET_WORD_BEFORE_TEST = _MAKE_TARGET_WORD
 # 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
 # `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
 # 定义 test。展开后再判断会在目标列表里误删可运行套件。
@@ -447,6 +447,18 @@ def _make_rule_header_rest_end(rest: str) -> int:
     return escaped if escaped >= 0 else len(rest)
 
 
+def _make_mixed_targets_are_fatal(targets: str) -> bool:
+    """目标列表首词是模式时，混入普通目标会让 make 直接停止解析。
+
+    GNU make 4.3 对 `%test test:` 报 fatal error，但对 `foo %test test:`
+    只警告 mixed implicit and normal rules: deprecated syntax，并继续把
+    test 定义为普通目标。决定 fatal 与否的是第一个目标是否为模式；这里
+    只做这一项判断，是否真的含 test 已由调用方的正则保证。
+    """
+    words = re.findall(r"(?:\\.|[^\s=])+", targets)
+    return bool(words) and _make_pattern_wildcard(words[0])[0] >= 0
+
+
 def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     """检查已命中 test 目标的规则头里的第二个冒号是否合法。
 
@@ -460,6 +472,8 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     # `$` 与 `:` 拼成变量引用（`a $:` / `a x$:` / `a \$:` 都报 missing
     # separator，后面的 test 目标也不会生效）；`$$` 是字面 `$`，不受影响。
     targets = line[:colon]
+    if _make_mixed_targets_are_fatal(targets):
+        return False
     if targets.endswith("$") and (
             len(targets) - len(targets.rstrip("$"))) % 2 == 1:
         return False
