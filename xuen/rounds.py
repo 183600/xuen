@@ -1381,7 +1381,11 @@ def _make_expand_simple_vars(text: str,
             out.append(line)
             i += 1
             continue
-        expanded = _make_expand_refs(body, variables, simple)
+        # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
+        # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
+        # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
+        expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
+        expanded = _make_expand_refs(expand_input, variables, simple)
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
         expanded = _make_flatten_target_newlines(expanded)

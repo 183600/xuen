@@ -2093,6 +2093,8 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test: foo bar: dep",
     # `&` 与冒号之间有空白时是名为 test& 的普通目标，不是 grouped test
     "test& :",
+    # 变量展开为空也不能把 `test&$(T):` 变回 grouped test 目标。
+    "test&$(T):",
     "test: foo\\%: dep",
     "test:: dep: x",
     "test::X=1",
