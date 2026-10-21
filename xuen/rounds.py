@@ -362,8 +362,11 @@ def _make_unescaped_colon(text: str, start: int) -> int:
 # GNU make 的变量名可含除空白、:、#、=、; 之外的字符（/ % + @ ! ^ & * 等
 # 都是合法的 target-specific 变量名）；只允许 [A-Za-z0-9_.-] 会把
 # `test: X/Y=1` 这类「只有变量赋值、没有可执行 test 目标」的 Makefile
-# 误判成有测试套件。反斜杠转义的下一个字符属于名字本身。
-_MAKE_VAR_NAME_UNIT = r"(?:\\.|[^\s:#=;])+"
+# 误判成有测试套件。反斜杠转义的下一个字符属于名字本身，但空白、:、#
+# 不行：`test: X\ Y=1` 是前置依赖 `X Y=1`，`test: X\:Y=1` 也是依赖，
+# 它们都不是 target-specific 变量赋值。反斜杠本身仍可作名字的最后一个
+# 字符（`test: X\ =1` 的变量名是 `X\`）。
+_MAKE_VAR_NAME_UNIT = r"(?:\\[^\s#:=]|\\|[^\s:#=;\\])+"
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
     r"(?:" + _MAKE_VAR_NAME_UNIT + r"[ \t]*)?(?:[+?]?=|:*=|!=)"
