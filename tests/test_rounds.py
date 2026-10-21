@@ -2158,6 +2158,7 @@ def test_detect_test_suite_make_include_variable_order(tmp_path):
     "test: X:::=1",
     "test: export X:::=1",
     "test: override X :::=1",
+    "test: X/Y:::=1",
     # GNU make 的变量名可含 / % + @ ! ^ & * 等字符：只有赋值、没有
     # 可执行 test 目标时仍不能当作测试套件（% 与 := 组合尤其容易被
     # 误认成静态模式规则 `test: %.o: %.c`）
@@ -2236,6 +2237,9 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test: %.o: %.c: extra",
     "test: %.o:: %.c",
     "test:: %.o:: %.c",
+    # GNU make 4.3 把带 % 的三冒号写法当静态模式规则（即使告警仍会
+    # 执行 recipe），不是 target-specific 赋值。
+    "test: X%Y:::=1",
     "test: foo%bar\\ baz: dep",
     # unexport 不是 target-specific 变量修饰符：make 把它当依赖名，
     # `test` 目标本身仍然存在（缺依赖会失败，但不是「没有套件」）。

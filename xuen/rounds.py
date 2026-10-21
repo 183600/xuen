@@ -369,7 +369,8 @@ def _make_unescaped_colon(text: str, start: int) -> int:
 _MAKE_VAR_NAME_UNIT = r"(?:\\[^\s#:=]|\\|[^\s:#=;\\])+"
 _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
-    r"(?:" + _MAKE_VAR_NAME_UNIT + r"[ \t]*)?(?:[+?]?=|:*=|!=)"
+    r"(?:" + _MAKE_VAR_NAME_UNIT + r"[ \t]*)?"
+    r"(?:::=|::=|:=|[+?]?=|!=)"
 )
 
 
