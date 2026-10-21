@@ -1166,6 +1166,45 @@ def test_detect_test_suite_make_pattern_rule_target(tmp_path, makefile):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile, prereqs", [
+    ("%: %.c\n\t@echo ok\n", ["test.c"]),
+    ("t%t: %.src\n\t@echo ok\n", ["es.src"]),
+    ("%: %.c %.h | %.stamp\n\t@echo ok\n",
+     ["test.c", "test.h", "test.stamp"]),
+    ("%: %.c # comment\n\t@echo ok\n", ["test.c"]),
+    # 模式依赖里的 % 不做反斜杠转义：反斜杠是文件名的一部分。
+    ("%: pre\\%post\n\t@echo ok\n", ["pre\\testpost"]),
+    # 自依赖会被 make 以 circular dependency dropped 忽略。
+    ("%: %\n\t@echo ok\n", []),
+    ("%: % %.c\n\t@echo ok\n", ["test.c"]),
+])
+def test_detect_test_suite_make_pattern_rule_existing_prereqs(
+        tmp_path, makefile, prereqs):
+    """模式规则的依赖都是已存在文件时 make test 也能执行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    for name in prereqs:
+        (tmp_path / name).write_text("", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_pattern_rule_missing_prereq(tmp_path):
+    """模式依赖缺失且无其它规则可构建时 make test 失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "%: %.c %.h\n\t@echo ok\n", encoding="utf-8")
+    (tmp_path / "test.c").write_text("", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     # stem 为空时 make 不会用 test% / %test 匹配 test。
     "test%:\n\t@echo ok\n",

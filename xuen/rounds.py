@@ -506,7 +506,8 @@ def _make_continues_recipe_line(text: str, start: int) -> bool:
     return count % 2 == 1
 
 
-def _make_defines_test_target(text: str) -> bool:
+def _make_defines_test_target(text: str,
+                              repo: Optional[Path] = None) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
     saw_single = False
     saw_double = False
@@ -543,16 +544,19 @@ def _make_defines_test_target(text: str) -> bool:
             return False
     if saw_single or saw_double:
         return True
-    return _make_pattern_rule_defines_test(text)
+    return _make_pattern_rule_defines_test(text, repo)
 
 
-def _make_pattern_rule_defines_test(text: str) -> bool:
-    """无依赖的模式规则是否能为 test 提供 recipe。
+def _make_pattern_rule_defines_test(text: str,
+                                    repo: Optional[Path] = None) -> bool:
+    """模式规则是否能为 test 提供 recipe。
 
     `%:` / `t%st:` 这类模式规则在模式能匹配 test 且没有依赖时，
     `make test` 会直接执行它的 recipe；`test%` / `%test` 需要非空
-    stem，GNU make 不会用它们匹配 test。带依赖的模式规则需要判断依赖
-    能否构建，静态探测无法确定，交给「没有套件」处理。
+    stem，GNU make 不会用它们匹配 test。带依赖的模式规则只有在依赖
+    都是已存在的字面文件时才可静态确认（例如 `%: %.c` + 现有
+    test.c），其余依赖可能来自变量、其它隐式规则或需要构建，交给
+    「没有套件」处理。
     """
     lines = text.splitlines(keepends=True)
     for index, line in enumerate(lines):
@@ -578,12 +582,9 @@ def _make_pattern_rule_defines_test(text: str) -> bool:
             continue
         if _make_has_recipe_separator(rest):
             prereq = rest.split(";", 1)[0]
-            if prereq.strip(" \t|"):
-                continue
             has_recipe = True
         else:
-            if rest.strip(" \t|"):
-                continue
+            prereq = rest
             has_recipe = False
             pos = index + 1
             while pos < len(lines):
@@ -598,6 +599,7 @@ def _make_pattern_rule_defines_test(text: str) -> bool:
                 break
         if not has_recipe:
             continue
+        prereq = _make_strip_comment(prereq)
         targets = body[:colon]
         if targets.endswith("&"):
             targets = targets[:-1]
@@ -611,7 +613,13 @@ def _make_pattern_rule_defines_test(text: str) -> bool:
             matched, stem = _make_pattern_match(pattern, "test")
             if not matched:
                 continue
-            if stem or _make_pattern_unescape(pattern) == "%":
+            if not (stem or _make_pattern_unescape(pattern) == "%"):
+                continue
+            if not prereq.strip(" \t|"):
+                return True
+            if (repo is not None
+                    and _make_pattern_prereqs_exist(prereq, stem or "",
+                                                    repo)):
                 return True
     return False
 
@@ -824,6 +832,39 @@ def _make_pattern_wildcard(text: str) -> Tuple[int, int]:
             return i, i
         i += 1
     return -1, -1
+
+
+def _make_pattern_apply_stem(text: str, stem: str) -> str:
+    """把模式依赖里第一个 % 替换成 stem。
+
+    GNU make 对模式规则依赖里的 % 不做反斜杠转义：`pre\\%post` 仍会把
+    第一个 % 换成 stem，反斜杠原样保留；后续 % 按字面使用。
+    """
+    return text.replace("%", stem, 1)
+
+
+def _make_pattern_prereqs_exist(prereq: str, stem: str, repo: Path) -> bool:
+    """模式规则依赖是否都是仓库内已存在的文件（含 order-only）。
+
+    GNU make 找不到依赖且没有其它规则可构建时会直接失败；这里只接受
+    已存在的字面文件，避免把需要动态构建或由变量决定的依赖误判成
+    可运行套件。目录也算存在（make 不会因为没有 recipe 而去重建它）。
+    """
+    words = re.findall(r"(?:\\.|[^\s|])+", prereq)
+    if not words:
+        return False
+    for word in words:
+        name = _make_pattern_apply_stem(word, stem)
+        # 模式规则把 test 自己列为依赖时，make 会以「Circular test <-
+        # test dependency dropped」忽略该依赖；其余依赖仍需存在。
+        if name == "test":
+            continue
+        path = Path(name)
+        if not path.is_absolute():
+            path = repo / path
+        if not path.exists():
+            return False
+    return True
 
 
 def _make_pattern_match(pattern: str, word: str
@@ -1951,7 +1992,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                  "MAKEFILE_LIST": makefile.name},
                 {"CURDIR": True, "MAKEFILE_LIST": True})
             text = _make_expand_simple_vars(text, repo)
-            if _make_defines_test_target(text):
+            if _make_defines_test_target(text, repo):
                 return ["make", "test"]
         except (_MakeRequiredIncludeError, OSError):
             pass
