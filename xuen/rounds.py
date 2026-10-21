@@ -509,7 +509,8 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"([A-Za-z0-9_.-]+)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_VAR_REF = re.compile(
-    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)\)|\{([A-Za-z0-9_.-]+)\}"
+    r"(?<!\$)\$(?:\(([A-Za-z0-9_.-]+)(?::([^()\r\n]*))?\)"
+    r"|\{([A-Za-z0-9_.-]+)(?::([^{}\r\n]*))?\}"
     r"|([A-Za-z0-9_]))")
 
 
@@ -843,6 +844,30 @@ def _make_include_paths(name: str, repo: Path) -> List[Path]:
     return [Path(match) for match in matches] or [path]
 
 
+def _make_substitute_ref(value: str, spec: str) -> str:
+    """展开 make 的变量替换引用 `$(VAR:old=new)`。
+
+    没有 % 时是后缀替换（每个以 old 结尾的词把后缀换成 new；old 为空
+    时在词尾追加 new）；含 % 时等价于 patsubst。没有 = 的写法在 make
+    里展开为空串。
+    """
+    if "=" not in spec:
+        return ""
+    old, new = spec.split("=", 1)
+    words = value.split()
+    if "%" in old:
+        out = []
+        for word in words:
+            replaced = _make_pattern_subst(old, new, word)
+            out.append(word if replaced is None else replaced)
+        return " ".join(out)
+    if old == "":
+        return " ".join(word + new for word in words)
+    return " ".join(
+        word[:-len(old)] + new if word.endswith(old) else word
+        for word in words)
+
+
 def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
                       simple: Dict[str, bool], depth: int = 0,
                       active: Optional[set] = None) -> str:
@@ -852,7 +877,12 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
         active = set()
 
     def repl(match: re.Match) -> str:
-        name = match.group(1) or match.group(2) or match.group(3)
+        name = match.group(1) or match.group(3) or match.group(5)
+        spec = None
+        if match.group(1) is not None:
+            spec = match.group(2)
+        elif match.group(3) is not None:
+            spec = match.group(4)
         if name not in variables:
             # make 里未定义变量展开为空串：`ifeq ($(T),)`、`test$(T):`
             # 都依赖这一点。shell 赋值（!=）的值未知，仍保留原样。
@@ -860,18 +890,20 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
         value = variables[name]
         if value is None:
             return match.group(0)
-        if simple.get(name):
-            return value
-        if name in active:
-            # 递归变量自引用/互相引用会让 make 在展开时直接报错，
-            # 不能继续探测出 test 目标（随后 make test 必然失败）。
-            raise _MakeRequiredIncludeError(name)
-        active.add(name)
-        try:
-            return _make_expand_refs(value, variables, simple, depth + 1,
-                                     active)
-        finally:
-            active.discard(name)
+        if not simple.get(name):
+            if name in active:
+                # 递归变量自引用/互相引用会让 make 在展开时直接报错，
+                # 不能继续探测出 test 目标（随后 make test 必然失败）。
+                raise _MakeRequiredIncludeError(name)
+            active.add(name)
+            try:
+                value = _make_expand_refs(value, variables, simple,
+                                          depth + 1, active)
+            finally:
+                active.discard(name)
+        if spec is not None:
+            value = _make_substitute_ref(value, spec)
+        return value
 
     return _MAKE_VAR_REF.sub(repl, text)
 

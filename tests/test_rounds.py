@@ -1235,6 +1235,48 @@ def test_detect_test_suite_make_comment_continuation_swallows_target(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "T = test\n$(T:test=test):\n\t@true\n",
+    "T = test-unit\n$(T:test-unit=test):\n\t@true\n",
+    "T = test.x\n$(T:.x=):\n\t@true\n",
+    "T = test\n$(T:%=%):\n\t@true\n",
+    "T = te\n$(T:=st):\n\t@true\n",
+    "T = tesst\n$(T:tesst=test):\n\t@true\n",
+    "T = a.o\n$(T:%.o=test):\n\t@true\n",
+])
+def test_detect_test_suite_make_substitution_reference(tmp_path, makefile):
+    """变量替换引用 $(T:old=new) / $(T:%=%) 要按 make 语义展开目标名。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_substitution_reference_include(tmp_path):
+    """include 文件名里的变量替换引用同样要展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "T = tests.txt\ninclude $(T:.txt=.mk)\n", encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "T = a.o\n$(T:%.c=test):\n\t@true\n",
+    "T = foo bar\n$(T:baz=test):\n\t@true\n",
+    "$(UNDEFINED:%.c=test):\n\t@true\n",
+])
+def test_detect_test_suite_make_substitution_reference_negative(tmp_path,
+                                                                makefile):
+    """替换后不产生 test 目标（或变量未定义）时不能探测成套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     """`$T` 是 make 的单字符变量写法，目标名也要按变量展开。"""
     if not shutil.which("make"):
