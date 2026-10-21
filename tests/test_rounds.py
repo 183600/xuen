@@ -1207,6 +1207,8 @@ def test_detect_test_suite_make_variable_assignment_is_not_a_suite(tmp_path,
     "foo test&:",
     "test test2&:",
     "test: ${X:--x}",
+    "foo ${X:--x} test:",
+    "$(X:--x) test:",
     "test:: %.o: %.c",
     "test::dep",
     # 其他目标名里的转义冒号 / 井号 / 空格是名字本身，不影响 test 目标
@@ -1259,6 +1261,9 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则
     "foo% test:",
     "foo;bar test:",
+    "test ${X:--x}",
+    "test \\\n ${X:--x}",
+    "a test ${X:--x} X=1",
     "test foo;bar:",
     "foo\\;bar test:",
     # 紧跟 test 的赋值形式不是目标（`test foo = bar:` 才是）
@@ -1273,6 +1278,7 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     # 续行里紧跟 test 的赋值形式同样不是目标（续行压成空格后与
     # `test = bar:` 等价）
     "test \\\n = bar:",
+    "test \\\n test \\\n : \\\n :",
 ])
 def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     """三冒号、空白+冒号、依赖里带冒号等写法都不是合法 test 目标

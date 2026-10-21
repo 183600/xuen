@@ -272,7 +272,9 @@ _PYTEST_SKIP_DIRS = frozenset({
 # 分号会开始同行命令、井号是注释，不能算目标名。`test` 之后的目标名可以
 # 含未转义等号（`test foo=bar:` 同时定义 test 与 foo=bar）；但 `test = x:`
 # 这类紧跟 test 的赋值形式仍不是目标，见 _MAKE_TEST_TARGET 的负向前瞻。
-_MAKE_TARGET_WORD = r"(?:[^:\s#;\\]|\\(?:[^\s;]|[ \t]))+"
+_MAKE_VAR_UNIT = r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\})"
+_MAKE_TARGET_WORD = (
+    r"(?:" + _MAKE_VAR_UNIT + r"|[^:\s#;\\]|\\(?:[^\s;]|[ \t]))+")
 # 逻辑行内的词分隔：空白，或反斜杠续行。make 把续行与周围空白压成一个
 # 空格（`test \` + `foo:` 与 `test foo:` 等价、`test\` + `:` 与 `test :`
 # 等价），目标列表跨续行时同样要能识别 test；续行进入词内部则拆成两个
@@ -282,7 +284,8 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 # 「mixed implicit and normal rules」直接报错；test 之后的 % 则是
 # GNU make 容忍的旧写法（make test 仍可执行），不能一并拒绝。
 _MAKE_TARGET_WORD_BEFORE_TEST = (
-    r"(?:[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]))+")
+    r"(?:" + _MAKE_VAR_UNIT
+    + r"|[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]))+")
 _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
@@ -451,16 +454,38 @@ def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
     return False
 
 
+def _make_logical_line_end(text: str, start: int) -> int:
+    """返回从 start 开始的逻辑行末尾（跳过反斜杠续行）。"""
+    pos = start
+    while True:
+        end = text.find("\n", pos)
+        if end < 0:
+            return len(text)
+        i = end - 1
+        if i >= pos and text[i] == "\r":
+            i -= 1
+        count = 0
+        while i >= pos and text[i] == "\\":
+            count += 1
+            i -= 1
+        if count % 2 == 0:
+            return end
+        pos = end + 1
+
+
 def _make_defines_test_target(text: str) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
     saw_single = False
     saw_double = False
     for match in _MAKE_TEST_TARGET.finditer(text):
-        line_end = text.find("\n", match.end())
-        if line_end < 0:
-            line_end = len(text)
+        line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
         colon = match.end() - match.start() - 1
+        # 正则里的冒号可能落在目标名中的变量引用里（如
+        # `test ${X:--x}` 并没有规则分隔符）。只有行内第一个真正的
+        # 未转义冒号才是规则分隔符；不一致时说明这是变量引用里的冒号。
+        if _make_unescaped_colon(line, 0) != colon:
+            continue
         if not _make_rule_header_is_valid(line, colon):
             continue
         if line[colon:colon + 2] == "::":
