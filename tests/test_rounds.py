@@ -1633,6 +1633,43 @@ def test_detect_test_suite_make_conditional_escaped_comma(tmp_path):
 
 
 @pytest.mark.parametrize("makefile", [
+    # 函数参数里的反斜杠同样不转义逗号；`a\,test` 是 `a\` 与
+    # `test` 两个参数，if 选中第二参数 test。
+    "$(if a\\,test,x):\n\t@true\n",
+    "$(and a\\,test,test):\n\t@true\n",
+    "$(and x,a\\,test):\n\t@true\n",
+])
+def test_detect_test_suite_make_function_escaped_comma(tmp_path, makefile):
+    """反斜杠不参与函数参数分隔，转义逗号不能吞掉后续参数。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    # 四个参数时 if 选中 b 而不是 test；subst 的最后一个参数是
+    # `test,test`，整体不是 test 目标。
+    "$(if a\\,b,test,test):\n\t@true\n",
+    "$(subst a\\,b,test,test):\n\t@true\n",
+    "$(if test\\,x,test,x):\n\t@true\n",
+])
+def test_detect_test_suite_make_function_escaped_comma_negative(
+        tmp_path, makefile):
+    r"""把 `\,` 当转义会错切参数并凭空探测出 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq (foo ,foo)\ntest:\n\t@true\nendif\n",
     "ifeq (foo, foo)\ntest:\n\t@true\nendif\n",
 ])

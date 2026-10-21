@@ -1861,9 +1861,8 @@ def _make_split_function_args(args: str, arity: int) -> List[str]:
     i = 0
     while i < len(args) and len(parts) < arity - 1:
         ch = args[i]
-        if ch == "\\":
-            i += 2
-            continue
+        # GNU make 的函数参数分隔只看顶层逗号，反斜杠不转义逗号：
+        # `$(if a\,b,x,y)` 仍有四个参数（条件为 `a\`）。
         if ch == "$" and i + 1 < len(args) and args[i + 1] in "({":
             depth += 1
             i += 2
