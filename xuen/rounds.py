@@ -355,9 +355,6 @@ def _make_unescaped_colon(text: str, start: int) -> int:
             j = i + 2
             while j < n and depth:
                 cj = text[j]
-                if cj == "\\":
-                    j += 2
-                    continue
                 if cj == opener:
                     depth += 1
                 elif cj == closer:
@@ -649,9 +646,6 @@ def _make_target_words(text: str) -> List[str]:
             j = i + 2
             while j < n and depth:
                 cj = text[j]
-                if cj == "\\":
-                    j += 2
-                    continue
                 if cj == opener:
                     depth += 1
                 elif cj == closer:
@@ -871,9 +865,6 @@ def _make_target_text_only_refs(text: str) -> bool:
                 j = i + 2
                 while j < n and depth:
                     cj = text[j]
-                    if cj == "\\":
-                        j += 2
-                        continue
                     if cj == "$" and j + 1 < n and text[j + 1] in "({":
                         depth += 1
                         j += 2
@@ -2957,9 +2948,6 @@ def _make_resolve_single_char_refs(
             j = i + 2
             while j < n and depth:
                 cj = text[j]
-                if cj == "\\":
-                    j += 2
-                    continue
                 if cj == "$" and j + 1 < n and text[j + 1] in "({":
                     depth += 1
                     j += 2
@@ -3347,9 +3335,6 @@ def _make_dynamic_assignment_name(body: str) -> Optional[str]:
             j = i + 2
             while j < n and stack:
                 cj = rest[j]
-                if cj == "\\":
-                    j += 2
-                    continue
                 if cj == "$" and j + 1 < n and rest[j + 1] in "({":
                     stack.append(")" if rest[j + 1] == "(" else "}")
                     j += 2

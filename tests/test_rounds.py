@@ -2138,6 +2138,12 @@ def test_detect_test_suite_make_condition_value_and_local_scope(
     "X\\ = test\n$(X\\):\n\t@true\n",
     "$(value X\\)\nX=test\n$(X):\n\t@true\n",
     "${value X\\}\nX=test\n$(X):\n\t@true\n",
+    # 动态变量名里的 `\)` 是名字的一部分；`$(strip \)` 展开成 `\`，
+    # 后面的 test 目标仍可运行。
+    "$(strip \\)=test\ntest:\n\t@true\n",
+    # 目标列表里的引用同样不能把 `\)` 当转义吞掉，`$(strip \\)foo`
+    # 展开成目标名 `\\foo`，后面的 test 目标仍存在。
+    "$(strip \\)foo test:\n\t@true\n",
 ])
 def test_detect_test_suite_make_variable_ref_backslash_close(
         tmp_path, makefile):
@@ -7930,6 +7936,28 @@ def test_detect_test_suite_make_foreach_assignment_name_binds_variable(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(strip,\\)=1",
+    "$(strip,\\):=1",
+])
+def test_detect_test_suite_make_backslash_before_ref_close_empty_name(
+        tmp_path, line):
+    r"""变量名里的 `\,` / `\)` 不构成函数调用或转义。
+
+    `$(strip,\)` 没有函数名后的空白，是名字为 `strip,\)` 的变量引用；
+    未定义时展开为空，make 报 empty variable name。回归：引用扫描器把
+    `\)` 当转义整体跳过，引用被误判为未闭合，后面的 test 目标被误报
+    成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
 
 
 @pytest.mark.parametrize("line", [
