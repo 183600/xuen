@@ -1038,17 +1038,18 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         found = []
         repo_prefix = str(repo) + os.sep
         for token in re.findall(r"(?:\\.|[^\s])+", args):
+            absolute = Path(_make_unescape_name(token)).is_absolute()
             pattern = _make_glob_pattern(token)
-            if not Path(_make_unescape_name(token)).is_absolute():
+            if not absolute:
                 pattern = os.path.join(glob.escape(str(repo)), pattern)
             try:
                 matches = sorted(glob.glob(pattern))
             except (OSError, re.error):
                 matches = []
             for match in matches:
-                if match.startswith(repo_prefix):
-                    # 保留用户写的 `./`、`..`、双斜杠等路径前缀；
-                    # make 的 wildcard 会原样返回它们。
+                if not absolute and match.startswith(repo_prefix):
+                    # 相对模式要保留用户写的 `./`、`..`、双斜杠等
+                    # 路径前缀；make 的 wildcard 会原样返回它们。
                     found.append(match[len(repo_prefix):])
                 else:
                     found.append(match)
