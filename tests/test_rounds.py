@@ -6322,3 +6322,54 @@ def test_interrupt_after_rejected_count_before_settled(ws, monkeypatch):
     guard.finish()
     assert guard.stats.rejected == 1
     assert guard.stats.pending == 0
+
+
+@pytest.mark.parametrize("text", [
+    "override A = test\nA = foo\n$(A):",
+    "override A ?= test\nA = foo\n$(A):",
+    "override A += test\nA = foo\n$(A):",
+    "override A := test\nA = foo\n$(A):",
+    "A = foo\noverride A = test\n$(A):",
+    "override A = test\nundefine A\n$(A):",
+    "override define A\ntest\nendef\nA = foo\n$(A):",
+])
+def test_detect_test_suite_make_override_variable_keeps_suite(
+        tmp_path, text):
+    """override 变量不能被后续普通赋值/undefine 覆盖。
+
+    回归：探测按出现顺序直接覆盖变量表，`override A = test` 后的
+    `A = foo` 会把 test 目标展开成 foo，漏掉 make 实际能运行的套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        text + "\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_override_undefine_removes_suite(tmp_path):
+    """override undefine 才是真正删除 override 变量的写法。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "override A = test\noverride undefine A\n$(A):\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_override_in_include_keeps_suite(tmp_path):
+    """include 文件里的 override 变量在主文件中仍然不可被普通赋值覆盖。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "inc.mk").write_text("override A = test\n", encoding="utf-8")
+    (tmp_path / "Makefile").write_text(
+        "include inc.mk\nA = foo\n$(A):\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

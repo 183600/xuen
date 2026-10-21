@@ -2057,8 +2057,25 @@ def _make_expand_computed_refs(text: str,
 
 def _make_apply_assignment(match: re.Match,
                            variables: Dict[str, Optional[str]],
-                           simple: Dict[str, bool]) -> None:
+                           simple: Dict[str, bool],
+                           overrides: Optional[set] = None) -> None:
     name, op, raw = match.groups()
+    if overrides is None:
+        overrides = set()
+    # `override` 标记的变量不会再被后续普通赋值/undefine 覆盖；只有另一条
+    # 带 override 的赋值才能改它。make 在读取阶段就按这个优先级决定最终
+    # 值，忽略它会让 `override A = test` 后的 `A = $(B)` 把 test 目标
+    # 展开成空，漏掉实际可运行的套件。
+    prefix = match.group(0)[:match.start(1)]
+    is_override = "override" in prefix.split()
+    if name in overrides and not is_override:
+        return
+    # make 的 `?=` 只在变量尚未定义时生效；override ?= 命中已定义变量时
+    # 也不会把该变量升级成 override（后续普通赋值仍可覆盖）。
+    if op == "?=" and name in variables:
+        return
+    if is_override:
+        overrides.add(name)
     # make 保留注释前的尾随空白（`T = test # c` 的值是 `test `），
     # 它会在 `$(T)-unit:` 里把目标拆成 test 与 -unit；rstrip 会漏掉 test。
     raw = _make_strip_value_comment(raw)
@@ -2066,9 +2083,8 @@ def _make_apply_assignment(match: re.Match,
         variables[name] = None
         simple[name] = False
     elif op == "?=":
-        if name not in variables:
-            variables[name] = raw
-            simple[name] = False
+        variables[name] = raw
+        simple[name] = False
     elif op == "+=":
         if name not in variables:
             variables[name] = raw
@@ -2094,15 +2110,24 @@ def _make_apply_assignment(match: re.Match,
 
 def _make_scan_assignment(body: str,
                           variables: Dict[str, Optional[str]],
-                          simple: Dict[str, bool]) -> Optional[str]:
+                          simple: Dict[str, bool],
+                          overrides: Optional[set] = None) -> Optional[str]:
     """处理一行赋值/undefine；是赋值时返回展开后的行，否则返回 None。"""
+    if overrides is None:
+        overrides = set()
     stripped_body = _make_strip_comment(body)
     undef = re.match(
         r"^[ ]*(?:(?:override|export|private)[ \t]+)*undefine[ \t]+"
         r"(" + _MAKE_VAR_NAME + r")[ \t]*$", stripped_body)
     if undef is not None:
-        variables.pop(undef.group(1), None)
-        simple.pop(undef.group(1), None)
+        name = undef.group(1)
+        # 普通 undefine 不能删除 override 变量；override undefine 才行。
+        if name in overrides and "override" not in (
+                stripped_body[:undef.start(1)].split()):
+            return body
+        variables.pop(name, None)
+        simple.pop(name, None)
+        overrides.discard(name)
         return body
     if _MAKE_EMPTY_UNDEFINE.match(stripped_body):
         raise _MakeRequiredIncludeError("empty variable name")
@@ -2132,18 +2157,21 @@ def _make_scan_assignment(body: str,
             # `$(UNDEFINED) = x` 展开后是空变量名，make 在读取阶段直接报错。
             raise _MakeRequiredIncludeError("empty variable name")
         return None
-    _make_apply_assignment(match, variables, simple)
+    _make_apply_assignment(match, variables, simple, overrides)
     return expanded
 
 
 def _make_scan_assignments(text: str,
                            variables: Dict[str, Optional[str]],
-                           simple: Dict[str, bool]) -> None:
+                           simple: Dict[str, bool],
+                           overrides: Optional[set] = None) -> None:
     """按出现顺序把文本里的单行赋值应用到变量表（recipe 行除外）。"""
+    if overrides is None:
+        overrides = set()
     for line in text.splitlines(keepends=True):
         body = line.rstrip("\r\n")
         if not body.startswith("\t"):
-            _make_scan_assignment(body, variables, simple)
+            _make_scan_assignment(body, variables, simple, overrides)
 
 
 def _make_flatten_target_newlines(text: str) -> str:
@@ -2250,6 +2278,7 @@ def _make_expand_simple_vars(text: str,
     """
     variables: Dict[str, Optional[str]] = {}
     simple: Dict[str, bool] = {}
+    overrides: set = set()
     out = []
     text = _make_join_continuations(text)
     lines = text.splitlines(keepends=True)
@@ -2275,6 +2304,8 @@ def _make_expand_simple_vars(text: str,
                     name_text = name_text[:found].rstrip()
                     break
             name = _make_expand_refs(name_text, variables, simple)
+            define_prefix = body[:body.find("define")].split()
+            define_override = "override" in define_prefix
             depth = 1
             body_lines = []
             i += 1
@@ -2290,13 +2321,15 @@ def _make_expand_simple_vars(text: str,
                 else:
                     body_lines.append(inner)
                 i += 1
-            if name:
+            if name and (name not in overrides or define_override):
                 variables[name] = "\n".join(body_lines)
                 simple[name] = False
+                if define_override:
+                    overrides.add(name)
             # define 块本身不定义目标，但 make 读取时会清空当前目标。
             out.append(_MAKE_CONTEXT_RESET + newline)
             continue
-        expanded = _make_scan_assignment(body, variables, simple)
+        expanded = _make_scan_assignment(body, variables, simple, overrides)
         if expanded is not None:
             # 赋值/undefine 行不定义目标。输出成哨兵注释，防止变量展开
             # 后的目标行（如 `$(T) foo=bar test:`，T 为空）被误认成赋值；
@@ -2620,7 +2653,8 @@ def _make_text_with_includes(text: str, repo: Path,
                              depth: int = 0,
                              variables: Optional[Dict[str, Optional[str]]] = None,
                              simple: Optional[Dict[str, bool]] = None,
-                             aliases: Optional[Dict[str, str]] = None) -> str:
+                             aliases: Optional[Dict[str, str]] = None,
+                             overrides: Optional[set] = None) -> str:
     """读取 include 文件并丢弃未生效条件分支，供目标探测使用。
 
     只读取仓库内已存在的普通文件；include 文件名支持简单变量、通配符
@@ -2635,6 +2669,8 @@ def _make_text_with_includes(text: str, repo: Path,
         seen = set()
     if aliases is None:
         aliases = {}
+    if overrides is None:
+        overrides = set()
     if variables is None:
         # make 内置 CURDIR 是执行目录的绝对路径（探测时即 repo）。
         # include $(CURDIR)/tests.mk 很常见，不预置会因未展开变量而跳过。
@@ -2707,9 +2743,16 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 目标（以及 define 之前的目标）都不会被执行。
                 raise _MakeRequiredIncludeError("missing endef")
             if active:
-                # define 定义的是递归变量，体里的换行原样保留。
-                variables[define_name] = "\n".join(body_lines)
-                simple[define_name] = False
+                # define 定义的是递归变量，体里的换行原样保留。带
+                # override 的 define 会锁定变量，之后普通 define/赋值
+                # 不能覆盖它；普通 define 也不能覆盖已有的 override 变量。
+                define_override = "override" in body[:body.find("define")].split()
+                if define_name and (
+                        define_name not in overrides or define_override):
+                    variables[define_name] = "\n".join(body_lines)
+                    simple[define_name] = False
+                    if define_override:
+                        overrides.add(define_name)
                 # 保留 define 块交给第二遍展开；变量名含 ? 等特殊字符
                 # 时改用可被 _MAKE_VAR_REF 识别的别名，并把引用改写过去。
                 target_name = define_name
@@ -2723,7 +2766,8 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 保留真正的多行值（而不是压成占位赋值），第二遍展开
                 # 目标头时才能让 firstword/lastword/strip 等函数看到与
                 # make 相同的空白和换行。
-                out.append(f"define {target_name}\n")
+                out.append(("override " if define_override else "")
+                           + f"define {target_name}\n")
                 for body_line in body_lines:
                     out.append(body_line + "\n")
                 out.append("endef\n")
@@ -2811,7 +2855,7 @@ def _make_text_with_includes(text: str, repo: Path,
                         out.append("\n")
                         out.append(_make_text_with_includes(
                             included, repo, seen, depth + 1, variables,
-                            simple, aliases))
+                            simple, aliases, overrides))
                         out.append("\n")
                     finally:
                         # 只把「正在处理」的文件留在 seen 里，防止 include
@@ -2823,7 +2867,7 @@ def _make_text_with_includes(text: str, repo: Path,
             i += 1
             continue
         out.append(line)
-        _make_scan_assignment(body, variables, simple)
+        _make_scan_assignment(body, variables, simple, overrides)
         i += 1
     if stack:
         # 条件块没在文件内闭合：make 报 missing 'endif' 并停止解析。
