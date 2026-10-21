@@ -286,6 +286,11 @@ _MAKE_SEP = r"(?:[ \t]|\\\r?\n)"
 _MAKE_TARGET_WORD_BEFORE_TEST = (
     r"(?:" + _MAKE_VAR_UNIT
     + r"|[^:=\s#;\\%]|\\(?:[^\s;=]|[ \t]))+")
+# 行首的 export/unexport 只有在本行还是字面文本时才是导出指令；
+# `$(T) export test:` 这类变量展开出的 export 是普通目标名，make 仍会
+# 定义 test。展开后再判断会在目标列表里误删可运行套件。
+_MAKE_EXPORT_DIRECTIVE = re.compile(r"^[ \t]*(?:export|unexport)(?:[ \t]|$)")
+
 _MAKE_TEST_TARGET = re.compile(
     # 一行可以声明多个目标（`foo test:` / `test test2:`），test 不必是
     # 第一个；只认目标列表里的精确 test，`test-unit` / `test%` 不算。
@@ -1500,6 +1505,11 @@ def _make_expand_simple_vars(text: str,
         if repo is not None:
             expanded = _make_expand_include_functions(expanded, repo)
         expanded = _make_flatten_target_newlines(expanded)
+        if (_MAKE_EXPORT_DIRECTIVE.match(expanded)
+                and not _MAKE_EXPORT_DIRECTIVE.match(body)):
+            # 这是变量展开后才变成 export/unexport 的目标行；加哨兵避免
+            # 下游把它误当成字面导出指令而漏掉同一目标列表里的 test。
+            expanded = "\x01" + expanded
         if "#" not in body:
             # 注释在展开前就已切掉，变量值里的 # 是目标名的一部分，
             # 不能让下游把它当成注释起点而漏掉同一目标列表里的 test。

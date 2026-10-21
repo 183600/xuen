@@ -1730,6 +1730,27 @@ def test_detect_test_suite_make_variable_target(tmp_path, makefile):
 
 
 @pytest.mark.parametrize("makefile", [
+    # 变量展开出的 export/unexport 只是目标名；make 在展开前已经完成
+    # 指令识别，仍会定义同一行里的 test 目标。
+    "$(T) export test:\n\t@true\n",
+    "$(T) unexport test:\n\t@true\n",
+    "$(T)export test:\n\t@true\n",
+    "X = export\n$(X) test:\n\t@true\n",
+    "X = unexport\n$(X) test:\n\t@true\n",
+    "X = export\n$(X) foo test:\n\t@true\n",
+])
+def test_detect_test_suite_make_expanded_export_is_target(tmp_path, makefile):
+    """展开后才变成 export/unexport 的行仍是目标列表，不能漏掉 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
     "T = test-unit\n$(T):\n\t@true\n",
     "T = test\n$(T)-unit:\n\t@true\n",
     "$(T):\n\t@true\nT = test\n",
