@@ -459,6 +459,24 @@ def _make_mixed_targets_are_fatal(targets: str) -> bool:
     return bool(words) and _make_pattern_wildcard(words[0])[0] >= 0
 
 
+def _make_targets_mix_pattern_and_normal(targets: str) -> bool:
+    """首个目标是模式，且同一规则里还混有普通目标。
+
+    GNU make 4.3 只在首个目标是模式时把这种混用当成 fatal
+    （`%test foo:` 失败；`foo %test:` 只警告并继续解析）。分组标记
+    末尾的单独 `&` 不是目标。
+    """
+    words = re.findall(r"(?:\\.|[^\s=])+", targets)
+    if words and words[-1] == "&" and targets.endswith("&"):
+        # 只有紧贴规则分隔符的 `&` 是 grouped 标记；`%test & :` 里的
+        # `&` 本身是普通目标，仍构成 mixed implicit and normal rules。
+        words.pop()
+    if not words or _make_pattern_wildcard(words[0])[0] < 0:
+        return False
+    kinds = [_make_pattern_wildcard(word)[0] >= 0 for word in words]
+    return not all(kinds)
+
+
 def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     """检查已命中 test 目标的规则头里的第二个冒号是否合法。
 
@@ -980,6 +998,10 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
         targets = body[:colon].lstrip(" \t")
         if not targets or targets == "&":
             continue
+        if _make_targets_mix_pattern_and_normal(targets):
+            # `%test foo:` / `test% & :` 等模式目标与普通目标混用；
+            # 首个目标是模式时 make 读取即停止，即使别处有 test。
+            return True
         if _make_target_list_has_bare_trailing_dollar(body[:colon]):
             # `foo $:` 的 `$:` 吃掉规则分隔符，make 在读取阶段报
             # missing separator；即使别处有 test 目标也无法执行。
@@ -998,6 +1020,11 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
             continue
         target_pattern = body[start:second].strip(" \t")
         if not target_pattern:
+            return True
+        if _make_pattern_wildcard(targets.split()[0])[0] >= 0:
+            # 模式目标后面再出现第二个冒号是 static pattern rule；
+            # make 报 mixed implicit and static pattern rules（首个目标
+            # 为普通名时只警告，因此这里同样看首目标）。
             return True
         i = 0
         has_percent = False
@@ -2885,12 +2912,19 @@ def _make_expand_simple_vars(text: str,
                     expanded_targets == "&"
                     and raw_targets.endswith("&"))
             if not skip:
+                # 只跨过规则分隔符本身（`:` 或 `::`）。再多的冒号属于
+                # 目标模式/赋值运算符，`foo::: X=1` 是 make 读取错误，
+                # 不能因为后面看似 `X=1` 就把整行当合法赋值吞掉。
                 rest_start = raw_colon + 1
-                while (rest_start < len(body)
-                       and body[rest_start] == ":"):
+                if (rest_start < len(body)
+                        and body[rest_start] == ":"):
                     rest_start += 1
-                if _make_raw_rule_is_target_assignment(
-                        body[rest_start:], variables, simple, repo):
+                if (_make_raw_rule_is_target_assignment(
+                        body[rest_start:], variables, simple, repo)
+                        and not (
+                            _make_has_escaped_semicolon(raw_targets)
+                            and not _make_has_recipe_separator(
+                                body[raw_colon + 1:]))):
                     # target-specific 赋值不定义可执行目标。原文可能因
                     # 变量名展开成空白（`test:$(if x, ,)=1`）而在整行
                     # 展开后不再符合赋值形态，继续输出会被下游当成非法
@@ -2917,7 +2951,8 @@ def _make_expand_simple_vars(text: str,
                 and _make_rule_is_target_specific(expanded, expanded_colon)
                 and not _make_rule_is_target_specific(body, raw_colon)):
             rest_start = raw_colon + 1
-            while rest_start < len(body) and body[rest_start] == ":":
+            if (rest_start < len(body)
+                    and body[rest_start] == ":"):
                 rest_start += 1
             if not _make_raw_rule_is_target_assignment(
                     body[rest_start:], variables, simple, repo):
