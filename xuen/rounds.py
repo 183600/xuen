@@ -1086,8 +1086,11 @@ _MAKE_INCLUDE_LINE = re.compile(
 _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
 _MAKE_DEFINE_LINE = re.compile(
-    r"^[ \t]*(?:(?:override|export)[ \t]+)*define(?:[ \t]+.*)?$")
-_MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t]*(?:#.*)?)?$")
+    r"^[ \t]*(?:(?:override|export)[ \t]+)*define(?:[ \t]+(.*))?$")
+# endef 后只要求有空白分隔；多余文本 make 只警告
+# （extraneous text after 'endef' directive），仍会结束 define 块。
+_MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t].*)?$")
+_MAKE_DEFINE_EMPTY_NAME = re.compile(r"^(?:::=|::=|:=|\?=|\+=|!=|=)")
 
 
 def _make_line_continues(body: str) -> bool:
@@ -1314,7 +1317,17 @@ def _make_text_with_includes(text: str, repo: Path,
         # 无论 define 位于生效还是未生效分支，都先按词法配对跳过整个块；
         # 否则未生效分支里的 include missing.mk 会误触发必需 include 错误，
         # 生效分支里的 test: 又会把 define 体误判成测试目标。
-        if _MAKE_DEFINE_LINE.match(body):
+        define_match = _MAKE_DEFINE_LINE.match(body)
+        if define_match is not None:
+            # define 的变量名会先展开；空名称（`define` / `define = x` /
+            # `define $(UNDEFINED)`）会让 make 直接报错，后面的 test 目标
+            # 不会执行。`define X = x` 这类带赋值符/尾随文本的写法只警告，
+            # 名称非空仍按合法 define 处理。
+            define_name = _make_expand_refs(
+                (define_match.group(1) or "").strip(), variables, simple)
+            if (not define_name.strip()
+                    or _MAKE_DEFINE_EMPTY_NAME.match(define_name.strip())):
+                raise _MakeRequiredIncludeError("empty define name")
             define_depth = 1
             i += 1
             while i < len(lines) and define_depth:

@@ -1125,6 +1125,9 @@ def test_detect_test_suite_make_inactive_conditional_branch(tmp_path,
     "else ifeq (1,1)\nall2:\n\t@true\nendif\n",
     "test:\n\t@echo ok\ndefine X\nfoo\n",
     "test:\n\t@echo ok\nendef\n",
+    "test:\n\t@echo ok\ndefine\nfoo\nendef\n",
+    "test:\n\t@echo ok\ndefine $(UNDEFINED)\nfoo\nendef\n",
+    "test:\n\t@echo ok\ndefine = x\nfoo\nendef\n",
 ])
 def test_detect_test_suite_make_malformed_directives_not_a_suite(
         tmp_path, makefile):
@@ -1140,6 +1143,24 @@ def test_detect_test_suite_make_malformed_directives_not_a_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "define X\nfoo\nendef foo\ntest:\n\t@echo ok\n",
+    "define X\nfoo\nendef # comment\ntest:\n\t@echo ok\n",
+    "X = foo\ndefine $(X)\nbar\nendef\ntest:\n\t@echo ok\n",
+    "define X = x\nfoo\nendef\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_define_tail_text_still_detected(
+        tmp_path, makefile):
+    """endef 的尾随文本、define 的赋值符写法只触发 warning，不是解析错误。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 @pytest.mark.parametrize("makefile", [
