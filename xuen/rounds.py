@@ -447,6 +447,19 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     return has_percent or "$" in target_pattern
 
 
+def _make_has_escaped_semicolon(text: str) -> bool:
+    """目标列表里是否有反斜杠转义的分号（目标名的一部分）。"""
+    i = 0
+    while i < len(text):
+        if text[i] == "\\":
+            if i + 1 < len(text) and text[i + 1] == ";":
+                return True
+            i += 2
+            continue
+        i += 1
+    return False
+
+
 def _make_has_recipe_separator(rest: str) -> bool:
     """规则头剩余部分是否有未转义、未进注释的同行命令分隔符 ;。"""
     i = 0
@@ -595,6 +608,12 @@ def _make_defines_test_target(text: str,
             saw_single = True
         if saw_single and saw_double:
             # make: target file 'test' has both : and :: entries.
+            return False
+        # GNU make 4.3 对目标名里的 \; 有个解析限制：没有同行命令
+        # 分隔符（哪怕是空的 `;`）时整行会报 missing separator。此时
+        # make test 必然失败，不能探测成套件。
+        if (_make_has_escaped_semicolon(line[:colon])
+                and not _make_has_recipe_separator(line[colon + 1:])):
             return False
         if not _make_grouped_target_has_recipe(text, line, colon, line_end):
             return False
