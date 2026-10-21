@@ -1112,6 +1112,15 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
     expand = rounds._make_expand_include_function
     assert expand("patsubst", "a,b, a  b ", tmp_path) == " b  b "
     assert expand("patsubst", "a%,x%, a  b ", tmp_path) == "x b"
+    # 含 % 的模式分支按词替换，空结果不保留多余空格。
+    assert expand("patsubst", "a%,,a b", tmp_path) == "b"
+    assert expand("patsubst", "a%,,a x a", tmp_path) == "x"
+    assert expand("patsubst", "%,,a b", tmp_path) == ""
+    assert expand("patsubst", "a%, ,a b", tmp_path) == "  b"
+    # 变量替换引用：转义的 % 是字面后缀，空替换结果同样不占词。
+    assert rounds._make_substitute_ref("a b", "a%=") == "b"
+    assert rounds._make_substitute_ref("xa%", "a\\%=test") == "xtest"
+    assert rounds._make_substitute_ref("xa%", "\\%=test") == "xatest"
     assert expand("patsubst", ",R, ", tmp_path) == " R"
     assert expand("patsubst", ",R,x ", tmp_path) == "x R"
     assert expand("patsubst", ",R,x", tmp_path) == "x"
@@ -1639,6 +1648,13 @@ def test_detect_test_suite_make_substitution_reference_include(tmp_path):
     (tmp_path / "Makefile").write_text(
         "T = tests.txt\ninclude $(T:.txt=.mk)\n", encoding="utf-8")
     (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    # 转义的 % 是字面后缀：xa% 的后缀 a% 换成 xtest.mk。
+    (tmp_path / "Makefile").write_text(
+        "T = xa%\ninclude $(T:a\\%=test.mk)\n", encoding="utf-8")
+    (tmp_path / "xtest.mk").write_text("test:\n\t@true\n",
                                        encoding="utf-8")
     assert detect_test_suite(tmp_path) == ["make", "test"]
 

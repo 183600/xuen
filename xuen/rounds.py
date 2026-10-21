@@ -791,6 +791,23 @@ def _make_pattern_subst(pattern: str, repl: str, word: str) -> Optional[str]:
     return prefix + stem + repl[wildcard + 1:]
 
 
+def _make_pattern_subst_words(pattern: str, repl: str, text: str) -> str:
+    """对 text 的每个词做 % 模式替换，按 make 语义丢弃空结果。
+
+    含通配 % 的 patsubst / 变量替换引用先按词切分再用单个空格拼接。
+    替换参数本身为空时，make 会丢掉匹配词的空结果（`$(patsubst a%,,
+    a b)` 是 `b` 而不是 ` b`）；但替换参数非空、只是展开后碰巧为空时
+    仍占用一个词的位置（`$(patsubst a%,%,a b)` 是 ` b`）。
+    """
+    out = []
+    for word in text.split():
+        replaced = _make_pattern_subst(pattern, repl, word)
+        value = word if replaced is None else replaced
+        if value or repl:
+            out.append(value)
+    return " ".join(out)
+
+
 def _make_function_words(value: str) -> List[str]:
     return value.split()
 
@@ -879,11 +896,7 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             if not pattern and (not text or text[-1].isspace()):
                 result += _make_pattern_unescape(repl)
             return result
-        out = []
-        for word in text.split():
-            replaced = _make_pattern_subst(pattern, repl, word)
-            out.append(word if replaced is None else replaced)
-        return " ".join(out)
+        return _make_pattern_subst_words(pattern, repl, text)
     if name == "word":
         parts = args.split(",", 1)
         if len(parts) < 2:
@@ -1056,16 +1069,15 @@ def _make_substitute_ref(value: str, spec: str) -> str:
         return ""
     old, new = spec.split("=", 1)
     words = value.split()
-    if "%" in old:
-        out = []
-        for word in words:
-            replaced = _make_pattern_subst(old, new, word)
-            out.append(word if replaced is None else replaced)
-        return " ".join(out)
-    if old == "":
+    # 只有未转义的 % 才让替换引用按 patsubst 解释；`a\%` 是字面后缀，
+    # 否则 `$(X:a\%=test)` 会被错误地当成整词匹配。
+    if _make_pattern_wildcard(old)[0] >= 0:
+        return _make_pattern_subst_words(old, new, value)
+    suffix = _make_pattern_unescape(old)
+    if suffix == "":
         return " ".join(word + new for word in words)
     return " ".join(
-        word[:-len(old)] + new if word.endswith(old) else word
+        word[:-len(suffix)] + new if word.endswith(suffix) else word
         for word in words)
 
 
