@@ -2256,6 +2256,11 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     # 反斜杠空格是目标名的一部分；后面的普通空格仍分隔下一个目标。
     "foo\\ bar test:",
     "foo\\ \tbar test:",
+    # 变量名里的空白就是分隔符（即使写成反斜杠转义）；`foo\ x=y`
+    # 不是赋值，后面的 test 仍是目标列表的一部分。
+    "foo\\ x=y test:",
+    "foo\\ bar=1 test:",
+    "foo\\ bar\\ baz=1 test:",
     # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
     "test foo=bar:",
     "test foo\\=bar:",

@@ -713,10 +713,12 @@ _MAKE_VAR_NAME = r"(?:\\.|[^\s:#=;])+"
 _MAKE_PLAIN_VAR_NAME = r"(?:\\.|[^\s:#=;$(){}])+"
 _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
-    r"((?:\\.|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+    # 变量名里的空白就是分隔符：`foo\ x=y` 不是名为 `foo x` 的赋值。
+    # 反斜杠本身仍可作名字的最后一个字符（`foo\=bar` 是变量 foo\ = bar）。
+    r"((?:\\[^\s=]|\\|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_DYNAMIC_VAR_UNIT = (
-    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\\[^\r\n]"
+    r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\\[^\s=]|\\"
     r"|[^\s:#=;$(){}])")
 _MAKE_DYNAMIC_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
