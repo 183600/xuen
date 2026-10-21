@@ -2279,6 +2279,11 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     # target-specific 赋值；test 目标仍然存在。
     "test: $(U) X=1",
     "test: $(U)override X=1",
+    # 没有未转义分号时，\; 结束依赖列表，后面的 := / :::= 不再属于
+    # 规则头；make 仍定义 test（依赖 a / X 等缺失时失败但不是没套件）。
+    "test: a\\;b X:=1",
+    "test: X\\;Y:::=1",
+    "test: export X\\;Y:::=1",
     "test: export $(U) X=1",
     "test:: $(U) X=1",
     # test 之后的目标名可以含等号（GNU make 同时定义 test 与 foo=bar）
@@ -2332,6 +2337,8 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     # 冒号当成静态模式分隔符并报 target pattern contains no '%'。
     "test: X\\ Y:=1",
     "test: $(U) X:=1",
+    # 后面还有未转义分号时，前面的 \; 属于依赖名，依赖里的冒号仍非法。
+    "test: a\\;b:c ; recipe",
     # test 之前出现未转义的 % / 分号会让整行不是可执行的目标规则
     "foo% test:",
     "foo;bar test:",

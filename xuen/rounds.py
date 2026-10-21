@@ -409,6 +409,32 @@ def _make_target_specific_assignment(text: str) -> bool:
     return _MAKE_TARGET_SPECIFIC_ASSIGNMENT.match(text.lstrip(" \t")) is not None
 
 
+def _make_rule_header_rest_end(rest: str) -> int:
+    r"""返回冒号后属于规则头/前置依赖的结束位置。
+
+    make 优先用未转义的分号分隔同行 recipe；没有未转义分号时，GNU make
+    4.3 会把第一个转义分号当分隔符。例如 `test: a\;b X:=1` 定义 test，
+    依赖 a，recipe 是 `b X:=1`；但 `test: a\;b:c ; recipe` 里后面的
+    未转义分号让 `a\;b:c` 整体进入依赖列表，第二个冒号仍需校验。
+    """
+    i = 0
+    escaped = -1
+    while i < len(rest):
+        ch = rest[i]
+        if ch == "\\":
+            if i + 1 < len(rest) and rest[i + 1] == ";":
+                if escaped < 0:
+                    escaped = i
+            i += 2
+            continue
+        if ch == "#":
+            break
+        if ch == ";":
+            return i
+        i += 1
+    return escaped if escaped >= 0 else len(rest)
+
+
 def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     """检查已命中 test 目标的规则头里的第二个冒号是否合法。
 
@@ -426,7 +452,8 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     # 「第二个冒号前有 %」放行。先按赋值语义识别，这类行不是可执行规则。
     if _make_target_specific_assignment(line[start:]):
         return False
-    second = _make_unescaped_colon(line, start)
+    rest_end = start + _make_rule_header_rest_end(line[start:])
+    second = _make_unescaped_colon(line[:rest_end], start)
     if second < 0:
         return True
     target_pattern = line[start:second].strip()
