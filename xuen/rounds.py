@@ -1858,27 +1858,21 @@ def _make_split_function_args(args: str, arity: int,
     """
     parts: List[str] = []
     start = 0
-    stack: List[tuple[str, str]] = []
+    closer = ")" if opener == "(" else "}"
+    depth = 0
     i = 0
     while i < len(args) and len(parts) < arity - 1:
         ch = args[i]
         # GNU make 的函数参数分隔只看顶层逗号，反斜杠不转义逗号：
         # `$(if a\,b,x,y)` 仍有四个参数（条件为 `a\`）。
-        if ch == "$" and i + 1 < len(args) and args[i + 1] in "({":
-            stack.append((args[i + 1], ")" if args[i + 1] == "(" else "}"))
-            i += 2
-            continue
-        if stack:
-            # 与函数引用自身相同的裸括号也参与配对：make 允许
-            # `$(subst (a,b),X,(a,b))`，里面的逗号不是参数分隔符。
-            top_opener, top_closer = stack[-1]
-            if ch == top_opener:
-                stack.append((ch, top_closer))
-            elif ch == top_closer:
-                stack.pop()
-        elif ch == opener:
-            stack.append((ch, ")" if ch == "(" else "}"))
-        elif ch == ",":
+        # 嵌套只按与函数引用自身相同的括号配对：`$(subst (a,b),X,(a,b))`
+        # 里的逗号不是分隔符，而 `$(subst {a,b},X,{a,b})` 里的逗号是。
+        if ch == opener:
+            depth += 1
+        elif ch == closer:
+            if depth:
+                depth -= 1
+        elif ch == "," and depth == 0:
             parts.append(args[start:i])
             start = i + 1
         i += 1
@@ -2104,24 +2098,20 @@ def _make_find_include_function(text: str, pos: int):
             continue
         opener = text[i + 1]
         closer = ")" if opener == "(" else "}"
-        stack = [closer]
+        depth = 1
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
-                stack.append(")" if text[k + 1] == "(" else "}")
-                k += 2
-                continue
+            # 引用只按与起始括号相同的字符配对；另一种括号嵌套
+            #（`$(...${...}...)`）里的右括号仍会结束外层引用。
             if ch == opener:
-                stack.append(closer)
-                k += 1
-                continue
-            if ch == stack[-1]:
-                stack.pop()
-                if not stack:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
                     break
             k += 1
-        if stack:
+        if depth:
             # 未闭合的变量/函数引用会让 make 直接报错并停止解析。
             raise _MakeRequiredIncludeError(text[i:])
         j = i + 2
@@ -2219,24 +2209,20 @@ def _make_find_function_call(text: str, pos: int, name: str):
             continue
         opener = text[i + 1]
         closer = ")" if opener == "(" else "}"
-        stack = [closer]
+        depth = 1
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
-                stack.append(")" if text[k + 1] == "(" else "}")
-                k += 2
-                continue
+            # 引用只按与起始括号相同的字符配对；另一种括号嵌套
+            #（`$(...${...}...)`）里的右括号仍会结束外层引用。
             if ch == opener:
-                stack.append(closer)
-                k += 1
-                continue
-            if ch == stack[-1]:
-                stack.pop()
-                if not stack:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
                     break
             k += 1
-        if stack:
+        if depth:
             raise _MakeRequiredIncludeError(text[i:])
         after = i + 2 + len(name)
         if (text[i + 2:after] == name and after < len(text)
@@ -2559,24 +2545,18 @@ def _make_standalone_eval_args(body: str) -> Optional[List[str]]:
             return None
         opener = body[i + 1]
         closer = ")" if opener == "(" else "}"
-        stack = [closer]
+        depth = 1
         k = i + 2
         while k < n:
             ch = body[k]
-            if ch == "$" and k + 1 < n and body[k + 1] in "({":
-                stack.append(")" if body[k + 1] == "(" else "}")
-                k += 2
-                continue
             if ch == opener:
-                stack.append(closer)
-                k += 1
-                continue
-            if ch == stack[-1]:
-                stack.pop()
-                if not stack:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
                     break
             k += 1
-        if stack:
+        if depth:
             return None
         content = body[i + 2:k]
         name_end = 0
@@ -2808,24 +2788,18 @@ def _make_expand_computed_refs(text: str,
             continue
         opener = text[i + 1]
         closer = ")" if opener == "(" else "}"
-        stack = [closer]
+        depth = 1
         k = i + 2
         while k < n:
             ch = text[k]
-            if ch == "$" and k + 1 < n and text[k + 1] in "({":
-                stack.append(")" if text[k + 1] == "(" else "}")
-                k += 2
-                continue
             if ch == opener:
-                stack.append(closer)
-                k += 1
-                continue
-            if ch == stack[-1]:
-                stack.pop()
-                if not stack:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
                     break
             k += 1
-        if stack:
+        if depth:
             # 未闭合的引用留给上层按 make 解析错误处理。
             out.append(text[i:])
             break
@@ -3824,24 +3798,20 @@ def _make_find_condition_function(text: str, pos: int):
             continue
         opener = text[i + 1]
         closer = ")" if opener == "(" else "}"
-        stack = [closer]
+        depth = 1
         k = i + 2
         while k < len(text):
             ch = text[k]
-            if ch == "$" and k + 1 < len(text) and text[k + 1] in "({":
-                stack.append(")" if text[k + 1] == "(" else "}")
-                k += 2
-                continue
+            # 引用只按与起始括号相同的字符配对；另一种括号嵌套
+            #（`$(...${...}...)`）里的右括号仍会结束外层引用。
             if ch == opener:
-                stack.append(closer)
-                k += 1
-                continue
-            if ch == stack[-1]:
-                stack.pop()
-                if not stack:
+                depth += 1
+            elif ch == closer:
+                depth -= 1
+                if depth == 0:
                     break
             k += 1
-        if stack:
+        if depth:
             return None
         j = i + 2
         while j < len(text) and (text[j].isalnum() or text[j] in "_-"):

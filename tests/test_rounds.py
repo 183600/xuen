@@ -2728,6 +2728,10 @@ def test_detect_test_suite_make_nested_function_arguments(tmp_path, makefile,
     # 只有与引用自身相同的括号参与配对；另一种括号里的逗号仍是分隔符。
     ("$(if {x,y},test,z):\n\t@true\n", False),
     ("${if (x,y),test,z}:\n\t@true\n", False),
+    # 另一种括号里的右括号也不会结束外层引用；`${foo)}` 是未定义变量。
+    ("$(if x,test,${foo)}):\n\t@true\n", False),
+    ("${if x,test,$(foo{)}:\n\t@true\n", False),
+    ("$(if x,test,${subst {a,b},X,{a,b}}):\n\t@true\n", True),
 ])
 def test_detect_test_suite_make_bare_parentheses_in_function_arguments(
         tmp_path, makefile, expected):
