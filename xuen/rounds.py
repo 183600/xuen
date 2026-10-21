@@ -1954,7 +1954,11 @@ def _make_resolve_single_char_refs(
                 out.append(value)
         # 反斜杠原本转义的是 `$`，引用消失后它不能转而把后面的规则
         # 分隔符（`test \$::` 的第二个冒号）也转义掉；插入哨兵隔开。
-        if out and out[-1].endswith("\\") and i + 2 < n:
+        # 但 `$\` 引用本身已消耗一个反斜杠，前一个反斜杠要与后面的
+        # 反斜杠配对（`*\$\\:` 的两个反斜杠让冒号仍是分隔符），
+        # 插入哨兵会拆散配对、把冒号错误转义掉。
+        if (out and out[-1].endswith("\\") and i + 2 < n
+                and nxt != "\\"):
             out.append("\x03")
         # 未定义的单字符变量展开为空。
         i += 2
