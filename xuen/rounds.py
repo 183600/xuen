@@ -768,9 +768,9 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         return " ".join(word + affix for word in words)
     if name in ("filter", "filter-out"):
         if "," not in args:
-            patterns, text = args, ""
-        else:
-            patterns, text = args.split(",", 1)
+            raise _MakeRequiredIncludeError(
+                f"{name}: missing argument")
+        patterns, text = args.split(",", 1)
         pats = patterns.split()
         keep = []
         for word in text.split():

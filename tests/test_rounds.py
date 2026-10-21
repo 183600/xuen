@@ -993,6 +993,27 @@ def test_detect_test_suite_make_include_function_bad_index_not_a_suite(
         assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("directive", [
+    "include $(filter %.mk)",
+    "include $(filter-out %.mk)",
+    "include $(subst a,b)",
+    "include $(patsubst a,b)",
+    "include $(word 1)",
+    "include $(wordlist 1,2)",
+    "include $(findstring a)",
+    "include $(addprefix x)",
+    "include $(addsuffix x)",
+])
+def test_detect_test_suite_make_function_missing_arg_not_a_suite(
+        tmp_path, directive):
+    """静态函数缺参会让 make 展开时报错，不能把后面的 test 当可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        directive + "\ntest:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("directive,filename", [
     ("include foo\\*.mk\n", "foo*.mk"),
     ("include foo\\?.mk\n", "foo?.mk"),
