@@ -541,7 +541,79 @@ def _make_defines_test_target(text: str) -> bool:
             return False
         if not _make_grouped_target_has_recipe(text, line, colon, line_end):
             return False
-    return saw_single or saw_double
+    if saw_single or saw_double:
+        return True
+    return _make_pattern_rule_defines_test(text)
+
+
+def _make_pattern_rule_defines_test(text: str) -> bool:
+    """无依赖的模式规则是否能为 test 提供 recipe。
+
+    `%:` / `t%st:` 这类模式规则在模式能匹配 test 且没有依赖时，
+    `make test` 会直接执行它的 recipe；`test%` / `%test` 需要非空
+    stem，GNU make 不会用它们匹配 test。带依赖的模式规则需要判断依赖
+    能否构建，静态探测无法确定，交给「没有套件」处理。
+    """
+    lines = text.splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        body = line.rstrip("\r\n")
+        if not body or body.startswith("\t"):
+            continue
+        stripped = body.lstrip()
+        if stripped.startswith("#"):
+            continue
+        if _MAKE_VAR_ASSIGNMENT.match(body):
+            continue
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0:
+            continue
+        if colon + 1 < len(body) and body[colon + 1] == ":":
+            rest_start = colon + 2
+        else:
+            rest_start = colon + 1
+        rest = body[rest_start:]
+        # 静态模式规则（test: %.o: %.c）与带依赖的规则都不在静态探测
+        # 范围内；这里只接无依赖、有 recipe 的模式规则。
+        if _make_unescaped_colon(rest, 0) >= 0:
+            continue
+        if _make_has_recipe_separator(rest):
+            prereq = rest.split(";", 1)[0]
+            if prereq.strip(" \t|"):
+                continue
+            has_recipe = True
+        else:
+            if rest.strip(" \t|"):
+                continue
+            has_recipe = False
+            pos = index + 1
+            while pos < len(lines):
+                following = lines[pos].rstrip("\r\n")
+                if following.startswith("\t"):
+                    has_recipe = True
+                    break
+                if (not following.strip()
+                        or following.lstrip().startswith("#")):
+                    pos += 1
+                    continue
+                break
+        if not has_recipe:
+            continue
+        targets = body[:colon]
+        if targets.endswith("&"):
+            targets = targets[:-1]
+        words = re.findall(r"(?:\\.|[^\s])+", targets)
+        if not words or any(_make_pattern_wildcard(word)[0] < 0
+                            for word in words):
+            # 普通目标与模式目标混在一行会让 make 报
+            # 「mixed implicit and normal rules」并停止解析。
+            continue
+        for pattern in words:
+            matched, stem = _make_pattern_match(pattern, "test")
+            if not matched:
+                continue
+            if stem or _make_pattern_unescape(pattern) == "%":
+                return True
+    return False
 
 
 class _MakeRequiredIncludeError(Exception):

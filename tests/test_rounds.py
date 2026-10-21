@@ -1147,6 +1147,43 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
         expand("join", "a", tmp_path)
 
 
+@pytest.mark.parametrize("makefile", [
+    "%:\n\t@echo ok\n",
+    "%::\n\t@echo ok\n",
+    "t%st:\n\t@echo ok\n",
+    "%: ; @echo ok\n",
+    "%:\n# comment\n\t@echo ok\n",
+    "%: |\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_pattern_rule_target(tmp_path, makefile):
+    """无依赖且能匹配 test 的模式规则让 make test 可执行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    # stem 为空时 make 不会用 test% / %test 匹配 test。
+    "test%:\n\t@echo ok\n",
+    "%test:\n\t@echo ok\n",
+    "%.o:\n\t@echo ok\n",
+    # 带依赖、没有 recipe 的模式规则无法静态确认可执行。
+    "%: dep\n\t@echo ok\n",
+    "%:\n",
+    "ifeq (0,1)\n%:\n\t@echo ok\nendif\n",
+])
+def test_detect_test_suite_make_pattern_rule_not_applicable(tmp_path,
+                                                            makefile):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
     """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
     if not shutil.which("make"):
