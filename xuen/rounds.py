@@ -2764,6 +2764,12 @@ def _make_expand_immediate_value(
         value = _make_expand_automatic_refs(value)
         value = _make_expand_value(value, variables, simple)
         value = _make_expand_foreach(value, variables, simple, repo)
+        # 与目标行同理：参数边界按原文确定，静态函数要赶在变量/条件
+        # 展开之前处理，否则变量展开为空后留下的参数值空白会被当成
+        # 函数名后的语法空白丢掉。
+        if repo is not None:
+            value = _make_expand_include_functions(
+                value, repo, variables, simple, overrides)
         value = _make_expand_condition_functions(
             value, variables, simple, repo)
         value = _make_expand_metadata_functions(value, variables, simple)
@@ -2773,7 +2779,8 @@ def _make_expand_immediate_value(
             value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple)
         if repo is not None:
-            value = _make_expand_include_functions(value, repo)
+            value = _make_expand_include_functions(
+                value, repo, variables, simple, overrides)
         value = _make_expand_computed_refs(value, variables, simple)
         value = _make_resolve_single_char_refs(value, variables, simple)
         value = _make_expand_refs(value, variables, simple)

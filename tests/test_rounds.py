@@ -1240,6 +1240,33 @@ def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
         expand("join", "a", tmp_path)
 
 
+
+def test_make_expand_immediate_value_keeps_argument_space(tmp_path):
+    """`:=` 右值的静态函数参数也要按原文定边界：变量展开为空后留下的
+    空格属于参数值。`$(subst $x ,test: ,$+)` 是空操作，
+    `$(addprefix $(E) , test)` 的前缀是单个空格。"""
+    expand = rounds._make_expand_immediate_value
+    assert expand("$(subst $x ,test: ,$+)", {}, {}, tmp_path) == ""
+    assert expand("$(addprefix $(E) , test)",
+                  {"E": ""}, {"E": True}, tmp_path) == " test"
+
+
+def test_detect_test_suite_make_immediate_argument_space_affects_ifeq(
+        tmp_path):
+    """`:=` 值的前导空格参与 ifeq 比较，不能因为展开顺序被吞掉。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "E =\n"
+        "Y := $(addprefix $(E) , test)\n"
+        "ifeq ($(Y), test)\n"
+        "test:\n\t@true\n"
+        "endif\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
 def test_make_expand_functions_keep_expanded_leading_space(tmp_path):
     """静态函数参数展开后自带的前导空白不能被再次 lstrip 掉。"""
     (tmp_path / "a").write_text("", encoding="utf-8")
