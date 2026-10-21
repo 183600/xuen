@@ -850,6 +850,46 @@ def test_detect_test_suite_make_include_argument_functions(tmp_path,
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("line", [
+    "include =",
+    "include := x",
+    "include ?= x",
+    "include += x",
+    "include ::= x",
+    "-include =",
+    "sinclude = x",
+    " include = x",
+])
+def test_detect_test_suite_make_include_assignment_is_not_directive(
+        tmp_path, line):
+    """`include =` 等是名为 include 的普通变量赋值，不是 include 指令。
+
+    回归：include 正则把赋值运算符当必需文件名，`include =` 被误报成
+    缺失文件，后面可运行的 test 目标被漏检。-include/sinclude 同理。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_unsupported_include_assignment_op_missing_file(
+        tmp_path):
+    """`:::=` 在 make 4.3 不是赋值运算符，`include :::=` 仍是 include。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include :::=\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_empty_info_include_is_noop(tmp_path):
     """`include $(info x)` 展开成空文件名，make 不读任何文件也不会失败。"""
     if not shutil.which("make"):

@@ -4567,6 +4567,11 @@ def _make_text_with_includes(text: str, repo: Path,
             lines[i:i + 1] = injected + [_MAKE_CONTEXT_RESET + newline]
             continue
         include = _MAKE_INCLUDE_LINE.match(body)
+        if include is not None and _MAKE_VAR_ASSIGNMENT.match(body) is not None:
+            # `include =` / `include := x` 是名为 include 的普通变量赋值，
+            # 不是 include 指令（-include/sinclude 同理）。按指令解析会把
+            # 运算符当成必需文件名，误报缺失 include。
+            include = None
         if include is not None:
             logical = body
             while _make_line_continues(logical):
