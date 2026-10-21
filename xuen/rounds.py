@@ -325,6 +325,25 @@ def _make_unescaped_colon(text: str, start: int) -> int:
     return -1
 
 
+_MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
+    r"(?:(?:export|unexport|private|override)[ \t]+)*"
+    r"(?:[A-Za-z0-9_.-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
+)
+
+
+def _make_target_specific_assignment(text: str) -> bool:
+    """规则头分隔符后是否是 target-specific 变量赋值（test::X=1 等）。
+
+    双冒号紧贴分隔符时（test::X=1），正则里的赋值排除模式只看到第一个
+    冒号后的 `:X=1`，匹配不到 `X=`；但 make 仍把它当作目标的变量赋值，
+    不定义可执行目标，`make test` 以「No rule to make target」失败。
+    这里从分隔符之后（含跳过双冒号）重新判断，且只认行首的赋值，避免
+    把普通前置依赖 `test::foo bar=1`（foo 是依赖、bar=1 只是文件名）
+    误判成赋值。
+    """
+    return _MAKE_TARGET_SPECIFIC_ASSIGNMENT.match(text.lstrip(" \t")) is not None
+
+
 def _make_rule_header_is_valid(line: str, colon: int) -> bool:
     """检查已命中 test 目标的规则头里的第二个冒号是否合法。
 
@@ -339,7 +358,7 @@ def _make_rule_header_is_valid(line: str, colon: int) -> bool:
         start += 1
     second = _make_unescaped_colon(line, start)
     if second < 0:
-        return True
+        return not _make_target_specific_assignment(line[start:])
     target_pattern = line[start:second].strip()
     if not target_pattern:
         return False
