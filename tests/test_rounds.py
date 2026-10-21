@@ -6405,3 +6405,70 @@ def test_detect_test_suite_make_define_assignment_operators(
                        capture_output=True, text=True)
     assert (p.returncode == 0) is (expected is not None)
     assert detect_test_suite(tmp_path) == expected
+
+
+@pytest.mark.parametrize("line", [
+    "export test::",
+    "export test:: dep",
+    "export test: a:b",
+    "unexport foo:",
+    "export foo:\nfoo::",
+    r"export foo\;bar:",
+    "export foo&::",
+])
+def test_detect_test_suite_make_export_directive_is_not_rule(tmp_path, line):
+    """行首 export/unexport 是导出指令，不是规则头。
+
+    回归：`export test::` 被混合冒号风格检查当成 test 的 :: 规则，
+    与后面合法的 test: 规则制造假冲突，可运行的套件被误判成没有测试。
+    导出指令后的 `test::` / `a:b` 等都只是变量名列表的一部分。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "test:$(X)=1",
+    "test:$X=1",
+    "test:$(X) =1",
+    "test:$(X)+=1",
+    "test: $X+=1",
+    "test:$(X)!=1",
+    "test:$(X)?=1",
+    "test:$(X):=1",
+])
+def test_detect_test_suite_make_empty_target_assignment_name_blocks_suite(
+        tmp_path, line):
+    """target-specific 赋值变量名展开为空时 make 报 empty variable name。
+
+    回归：`test:$(X)=1`（X 未定义）整行展开后变成 `test:=1`，下游把它
+    当成合法的变量赋值 test := 1 而放过，误以为存在可运行的 test 目标；
+    make 实际在读取阶段直接失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:$(X)X=1",
+    "test:X$(X)=1",
+    "test:$(X) X=1",
+])
+def test_detect_test_suite_make_nonempty_or_split_target_assignment_keeps_suite(
+        tmp_path, line):
+    """展开后的变量名非空、或空引用后面只是普通前置依赖时不变。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path, ) == ["make", "test"]

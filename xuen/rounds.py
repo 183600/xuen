@@ -623,7 +623,11 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
         if stripped.startswith("#"):
             continue
         if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
-                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
+                # 行首 export/unexport 是导出指令，不是规则头：
+                # `export test::` 只把变量名 test 导出，后面的合法 test
+                # 规则仍可执行，不能把它当成 test 的 :: 规则制造冲突。
+                or _MAKE_EXPORT_DIRECTIVE.match(body) is not None):
             continue
         colon = _make_unescaped_colon(body, 0)
         if colon < 0 or _make_rule_is_target_specific(body, colon):
@@ -2314,9 +2318,19 @@ def _make_raw_rule_is_target_assignment(
                              rest[pos:]) is None:
         return False
     try:
-        return bool(_make_expand_refs(prefix, variables, simple))
+        name = _make_resolve_single_char_refs(prefix, variables, simple)
+        name = _make_expand_refs(name, variables, simple)
+        name = _make_expand_computed_refs(name, variables, simple)
+        name = _make_resolve_single_char_refs(name, variables, simple)
     except _MakeRequiredIncludeError:
         return False
+    if not name:
+        # 原始规则头的 target-specific 赋值变量名展开为空（如
+        # `test:$(X)=1`，X 未定义）时 make 报 empty variable name。
+        # 必须在这里拒绝：整行展开后会变成 `test:=1`，下游会把它
+        # 误当成合法的变量赋值而放过，随后把 test 探测成可运行套件。
+        raise _MakeRequiredIncludeError("empty variable name")
+    return True
 
 
 def _make_expand_simple_vars(text: str,
@@ -2411,6 +2425,15 @@ def _make_expand_simple_vars(text: str,
         # 失败，test 目标仍按规则头探测。
         raw_colon = _make_unescaped_colon(body, 0)
         expanded_colon = _make_unescaped_colon(expanded, 0)
+        if raw_colon >= 0:
+            # 原始规则头的 target-specific 赋值变量名展开为空时 make
+            # 直接报 empty variable name；必须在整行展开丢失冒号/空格
+            # 之前判定（`test:$(X)=1` 展开后是 `test:=1`）。
+            rest_start = raw_colon + 1
+            if rest_start < len(body) and body[rest_start] == ":":
+                rest_start += 1
+            _make_raw_rule_is_target_assignment(
+                body[rest_start:], variables, simple)
         if (raw_colon >= 0 and expanded_colon >= 0
                 and _make_rule_is_target_specific(expanded, expanded_colon)
                 and not _make_rule_is_target_specific(body, raw_colon)):
