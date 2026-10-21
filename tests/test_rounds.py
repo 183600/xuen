@@ -1568,6 +1568,56 @@ def test_detect_test_suite_make_invalid_target_is_not_a_suite(tmp_path, line):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "test: a:b",
+    "test::: dep",
+    "test: :x",
+    "test: = x",
+    "test:::= x",
+    "test:: = x",
+    "test: X:::=1",
+    "test: export X:::=1",
+])
+def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
+                                                                line):
+    """已有合法 test 规则时，另一条非法 test 规则仍会让 make 读取失败。
+
+    回归：探测原先只跳过非法规则头，看到别处的合法 test 规则就返回套件；
+    但 make 在读取阶段遇到非法规则会直接退出，根本不会执行 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:= x",
+    "test ::= x",
+    "test: X=1",
+    "test::X=1",
+    "test: X::=1",
+    "test: export X=1",
+    "test: private X:=1",
+    "test: override X+=1",
+    "test: X != echo hi",
+    "test: 1=2",
+])
+def test_detect_test_suite_make_valid_assignment_keeps_suite(tmp_path, line):
+    """合法变量赋值/target-specific 赋值不能把别处的可运行 test 套件拒掉。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo ok\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_exact_target_alongside_suffixed(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")

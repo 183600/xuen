@@ -309,16 +309,11 @@ _MAKE_TEST_TARGET = re.compile(
     # （`test&:` 与 `test &:` 都定义可执行的 test 目标）；`test& :` 则是
     # 名为 test& 的普通目标，不能命中。
     + _MAKE_SEP + r"*(?:&)?:"
-    r"(?![\t ]*:*=)"
-    r"(?![ \t]*:{2,})"
-    # 分隔符后再出现「空白 + 冒号」不是合法前置依赖（如 test: :x）；
-    # 双冒号规则 test:: 的第二个冒号紧贴分隔符，不受影响。依赖里更复杂
-    # 的冒号结构（静态模式规则 test: %.o: %.c 与 test: %.o:: %.c、
-    # 非法 target pattern test: a::b）交给 _make_rule_header_is_valid
-    # 按规则头逐行判定：只看正则会把合法的静态模式双冒号规则漏掉。
-    r"(?![ \t]+:)"
-    r"(?![ \t]*(?:(?:export|private|override)[ \t]+)*"
-    r"[A-Za-z0-9_.-]+[ \t]*(?:[+?]?=|:*=|!=))"
+    # 分隔符后的冒号、赋值形态（test:::、test: :x、test: X=1、
+    # test: = x）不能在这里用负向前瞻跳过：文件里另有合法 test 目标时，
+    # make 仍可能因这些行在读取阶段报错。改由 _make_rule_header_is_valid
+    # 判定，target-specific 变量赋值在 _make_defines_test_target 中跳过，
+    # 其余非法规则头直接拒绝整个套件。
 )
 
 
@@ -365,6 +360,28 @@ _MAKE_TARGET_SPECIFIC_ASSIGNMENT = re.compile(
     r"(?:(?:export|private|override)[ \t]+)*"
     r"(?:[A-Za-z0-9_.\\-]+[ \t]*)?(?:[+?]?=|:*=|!=)"
 )
+
+
+_MAKE_NAMED_TARGET_ASSIGNMENT = re.compile(
+    r"(?:(?:export|private|override)[ \t]+)*"
+    r"[A-Za-z0-9_.\-]+[ \t]*(?:[+?]?=|::=|:=|!=)")
+
+
+def _make_rule_is_target_specific(line: str, colon: int) -> bool:
+    """规则头是否是 target-specific 变量赋值（test: X=1 / test::X=1）。
+
+    这类行不定义可执行目标，但也不是语法错误：同一个 test 目标可以在
+    别处定义，make 仍会执行它。探测必须跳过而不是据此拒绝整个套件。
+
+    变量名必须非空且赋值运算符合法：`test: = x`、`test:::= x` 等会让
+    make 报 empty variable name / target pattern 错误，不能当成可跳过
+    的 target-specific 赋值。
+    """
+    start = colon + 1
+    if start < len(line) and line[start] == ":":
+        start += 1
+    return _MAKE_NAMED_TARGET_ASSIGNMENT.match(
+        line[start:].lstrip(" \t")) is not None
 
 
 def _make_target_specific_assignment(text: str) -> bool:
@@ -487,7 +504,16 @@ def _make_defines_test_target(text: str) -> bool:
         if _make_unescaped_colon(line, 0) != colon:
             continue
         if not _make_rule_header_is_valid(line, colon):
-            continue
+            # 整行本身就是变量赋值（test:= x / test ::= x）时 test 不是
+            # 规则头，跳过；target-specific 变量赋值也不是可执行目标，
+            # 可以跳过。其余非法规则头会让 make 在读取阶段报错，即使
+            # 别处定义了 test 目标也无法执行，必须按「没有可运行套件」
+            # 处理。
+            if _MAKE_VAR_ASSIGNMENT.match(line):
+                continue
+            if _make_rule_is_target_specific(line, colon):
+                continue
+            return False
         if line[colon:colon + 2] == "::":
             saw_double = True
         else:
