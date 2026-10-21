@@ -600,9 +600,12 @@ def _make_include_paths(name: str, repo: Path) -> List[Path]:
 
 
 def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
-                      simple: Dict[str, bool], depth: int = 0) -> str:
+                      simple: Dict[str, bool], depth: int = 0,
+                      active: Optional[set] = None) -> str:
     if depth > 20:
         return text
+    if active is None:
+        active = set()
 
     def repl(match: re.Match) -> str:
         name = match.group(1) or match.group(2) or match.group(3)
@@ -615,7 +618,16 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
             return match.group(0)
         if simple.get(name):
             return value
-        return _make_expand_refs(value, variables, simple, depth + 1)
+        if name in active:
+            # 递归变量自引用/互相引用会让 make 在展开时直接报错，
+            # 不能继续探测出 test 目标（随后 make test 必然失败）。
+            raise _MakeRequiredIncludeError(name)
+        active.add(name)
+        try:
+            return _make_expand_refs(value, variables, simple, depth + 1,
+                                     active)
+        finally:
+            active.discard(name)
 
     return _MAKE_VAR_REF.sub(repl, text)
 

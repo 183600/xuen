@@ -835,6 +835,20 @@ def test_detect_test_suite_make_suffix_dotfile(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_recursive_variable(tmp_path):
+    """递归变量自引用/互引用会让 make 展开时报错，不能探测出套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    cases = [
+        "T = $(T)\ninclude $(T)\ntest:\n\t@true\n",
+        "T = $(T)\n$(T):\n\t@true\n",
+        "A = $(B)\nB = $(A)\ninclude $(A)\ntest:\n\t@true\n",
+    ]
+    for makefile in cases:
+        (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+        assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_undefined_include_path(tmp_path):
     """未定义变量展开为空：`include $(T)/tests.mk` 会变成 /tests.mk，
     make 因必需 include 缺失而失败，不能当空文件名跳过。"""
