@@ -695,6 +695,114 @@ def _make_has_grouped_target_without_recipe(text: str) -> bool:
     return False
 
 
+def _make_target_list_has_bare_trailing_dollar(targets: str) -> bool:
+    r"""目标列表末尾的奇数次 `$` 是否吃掉了规则分隔符。
+
+    `foo $:` 里的 `$:` 是单字符变量引用，冒号被吃掉后整行没有规则
+    分隔符，make 报 missing separator；`$:` / `$x$:` 这类只剩变量引用
+    的整行展开为空目标列表，make 反而接受。判断时先跳过变量引用与转义
+    字符，只有还剩下真实字符时才认为会报错。
+    """
+    if not targets.endswith("$"):
+        return False
+    if (len(targets) - len(targets.rstrip("$"))) % 2 == 0:
+        return False
+    i = 0
+    real = False
+    last = len(targets) - 1
+    while i < last:
+        ch = targets[i]
+        if ch == "\\":
+            # 反斜杠后的字符是字面目标名，不是变量引用，算真实字符。
+            real = True
+            i += 2
+            continue
+        if ch == "$" and i + 1 < last:
+            if targets[i + 1] in "({":
+                opener = targets[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < len(targets) and depth:
+                    if targets[j] == opener:
+                        depth += 1
+                    elif targets[j] == closer:
+                        depth -= 1
+                    j += 1
+                i = j
+                continue
+            i += 2
+            continue
+        if not ch.isspace():
+            real = True
+        i += 1
+    return real
+
+
+def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
+    r"""原始文本里是否有目标列表以裸 `$` 吃掉规则分隔符的规则。
+
+    `foo $:` 在展开前就因 `$:` 变量引用吃掉冒号而缺少规则分隔符，make
+    报 missing separator。变量展开阶段会把这类行整个展开掉，后续的规则
+    结构检查就看不到冒号了，所以必须在展开前单独扫一遍。`$:` / `$x$:`
+    这类只剩变量引用的行展开为空目标列表，make 接受，交给
+    _make_target_list_has_bare_trailing_dollar 判断。
+    """
+    define_depth = 0
+    for line in text.splitlines():
+        body = line.rstrip("\r")
+        if not body:
+            continue
+        if define_depth:
+            if _MAKE_DEFINE_LINE.match(body) is not None:
+                define_depth += 1
+            elif _MAKE_ENDEF_LINE.match(body) is not None:
+                define_depth -= 1
+            continue
+        if body.startswith("\t"):
+            continue
+        stripped = body.lstrip(" \t")
+        if not stripped or stripped.startswith("#"):
+            continue
+        if _MAKE_DEFINE_LINE.match(body) is not None:
+            define_depth = 1
+            continue
+        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None
+                or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None):
+            continue
+        colon = _make_unescaped_colon(body, 0)
+        if colon < 0:
+            continue
+        if not _make_target_list_has_bare_trailing_dollar(body[:colon]):
+            continue
+        if colon + 1 < len(body) and body[colon + 1] == ":":
+            # `foo $::`：`$:` 吃掉第一个冒号，第二个冒号仍是规则分隔符，
+            # make 正常接受。
+            continue
+        # `$:` 只吃掉紧邻的冒号；规则头剩余部分若还有未转义冒号，整行
+        # 仍可能被 make 接受（`foo $: a:b` 定义目标 foo a）。只有后续
+        # 再没有冒号，或第一个剩余冒号属于 `:=`（空变量名）时才失败。
+        i = colon + 1
+        later = -1
+        while i < len(body):
+            ch = body[i]
+            if ch == "\\":
+                i += 2
+                continue
+            if ch in "#;":
+                break
+            if ch == ":":
+                later = i
+                break
+            i += 1
+        if later < 0:
+            return True
+        if later + 1 < len(body) and body[later + 1] == "=":
+            return True
+    return False
+
+
 def _make_has_escaped_semicolon_target_without_recipe(text: str) -> bool:
     r"""任一规则的目标名里有 `\;`、且没有同行命令分隔符时 make 读取失败。
 
@@ -751,6 +859,10 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
         targets = body[:colon].lstrip(" \t")
         if not targets or targets == "&":
             continue
+        if _make_target_list_has_bare_trailing_dollar(body[:colon]):
+            # `foo $:` 的 `$:` 吃掉规则分隔符，make 在读取阶段报
+            # missing separator；即使别处有 test 目标也无法执行。
+            return True
         start = colon + 1
         if start < len(body) and body[start] == ":":
             start += 1
@@ -997,7 +1109,9 @@ _MAKE_VAR_ASSIGNMENT = re.compile(
     r"^[ ]*(?:(?:export|override|private)[ \t]+)*"
     # 变量名里的空白就是分隔符：`foo\ x=y` 不是名为 `foo x` 的赋值。
     # 反斜杠本身仍可作名字的最后一个字符（`foo\=bar` 是变量 foo\ = bar）。
-    r"((?:\\[^\s=]|\\|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+    # `:` `#` `$` 即使转义也不能进入变量名：`a\\: = x` 会被 make 当作
+    # 目标/空变量名错误，不能按赋值整行跳过，否则后面的 test 套件会误判。
+    r"((?:\\[^\s=:#$]|\\|[^\s:#=;$(){}])+?)[ \t]*(::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
 
 _MAKE_DYNAMIC_VAR_UNIT = (
     r"(?:\$\([^()\r\n]*\)|\$\{[^{}\r\n]*\}|\$[^\r\n]|\\[^\s=]|\\"
@@ -2768,6 +2882,8 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 {"CURDIR": str(repo.resolve()),
                  "MAKEFILE_LIST": makefile.name},
                 {"CURDIR": True, "MAKEFILE_LIST": True})
+            if _make_has_bare_trailing_dollar_rule(text):
+                return None
             text = _make_expand_simple_vars(text, repo)
             if _make_defines_test_target(text, repo):
                 return ["make", "test"]

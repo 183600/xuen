@@ -2701,6 +2701,12 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "foo: +=x",
     "foo: !=x",
     "foo: =%.o: %.c",
+    "foo $:",
+    "foo x$: ;",
+    "override $: X:=1",
+    "override \\$: # c",
+    r"override a\\: = 1",
+    r"?,\\: = 1",
 ])
 def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     """其他目标的非法规则头同样会让 make 读取失败，不能只看 test 行。
@@ -2727,6 +2733,14 @@ def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
     "foo: +X=1",
     "export foo:bar",
     "vpath %.c src:x",
+    "$:",
+    "$x$:",
+    "foo $$:",
+    "foo $: a:b",
+    "foo $::",
+    "foo $: %.o: %.c",
+    r"a\; = x",
+    r"a\ = x",
 ])
 def test_detect_test_suite_make_valid_other_rule_keeps_suite(tmp_path, line):
     """其他目标的合法规则/指令不能把可运行 test 套件误拒。"""
