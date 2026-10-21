@@ -1378,6 +1378,45 @@ def test_detect_test_suite_make_target_specific_colon_style_not_conflict(
         assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_target_words_ignore_variable_internals(
+        tmp_path):
+    """变量引用内部的 test 不是目标词，不能和真实的 test 规则冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    makefiles = (
+        "Z := $(firstword test:)\n"
+        "W != $(strip test)\n"
+        "test:\n\t@true\n"
+        "$(flavor $(abspath test:) , $(flavor test foo, $<)):: a\n"
+        "\t@true\n",
+        "Z += $(info test/, foo)\n"
+        "V = $(abspath test)\n"
+        "test:\n\t@true\n"
+        "$(origin ./test , $<):: a\n"
+        "\t@true\n",
+    )
+    for makefile in makefiles:
+        (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+        p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                           capture_output=True, text=True)
+        assert p.returncode == 0
+        assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(flavor $(abspath test:) , $(flavor test foo, $<)):: a",
+    "$(origin ./test , $<):: a",
+])
+def test_detect_test_suite_make_variable_internal_test_not_a_target(
+        tmp_path, line):
+    """只有变量引用里出现 test 的目标列表不定义 test 目标。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(line + "\n\t@true\n",
+                                       encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
     """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
     if not shutil.which("make"):

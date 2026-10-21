@@ -625,6 +625,53 @@ def _make_continues_recipe_line(text: str, start: int) -> bool:
     return count % 2 == 1
 
 
+def _make_target_words(text: str) -> List[str]:
+    """按 make 的词法切分目标列表，把整个 `$(...)`/`${...}` 当作一个词。
+
+    变量引用内部可以有空白与字面 `test`（`$(flavor test foo, ...)`），
+    它们不是目标名。按空白直接切会把内部的 test 当成目标，再和真实的
+    `test:` 规则比较冒号风格，误报 `: / ::` 冲突。
+    """
+    words: List[str] = []
+    buf: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and i + 1 < n:
+            buf.append(text[i:i + 2])
+            i += 2
+            continue
+        if ch == "$" and i + 1 < n and text[i + 1] in "({":
+            opener = text[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                cj = text[j]
+                if cj == "\\":
+                    j += 2
+                    continue
+                if cj == opener:
+                    depth += 1
+                elif cj == closer:
+                    depth -= 1
+                j += 1
+            buf.append(text[i:j])
+            i = j
+            continue
+        if ch.isspace():
+            if buf:
+                words.append("".join(buf))
+                buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    if buf:
+        words.append("".join(buf))
+    return words
+
+
 def _make_has_mixed_target_colon_style(text: str) -> bool:
     """任一目标是否同时以 : 和 :: 定义（make 会直接停止解析）。
 
@@ -653,7 +700,7 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
         if colon < 0 or _make_rule_is_target_specific(body, colon):
             continue
         double = body[colon:colon + 2] == "::"
-        words = re.findall(r"(?:\\.|[^\s])+", body[:colon])
+        words = _make_target_words(body[:colon])
         for word in words:
             if word.endswith("&"):
                 word = word[:-1]
@@ -1212,6 +1259,54 @@ def _make_has_missing_separator_line(text: str) -> bool:
     return False
 
 
+def _make_target_word_units(word: str) -> List[str]:
+    """按 make 规则头词法再切分目标词：未转义 `=` 是词分隔符。
+
+    `foo test=1:` 定义目标 foo / test / 1，`test+=1:` 的 `+`/`?`
+    运算符前缀被吸收；`test\=1:` 里的等号被转义，属于目标名本身。
+    """
+    units: List[str] = []
+    buf: List[str] = []
+    i = 0
+    n = len(word)
+    while i < n:
+        ch = word[i]
+        if ch == "\\" and i + 1 < n:
+            buf.append(word[i:i + 2])
+            i += 2
+            continue
+        if ch == "=":
+            units.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    units.append("".join(buf))
+    return [unit.rstrip("+?") for unit in units if unit.rstrip("+?")]
+
+
+def _make_line_defines_test(line: str, colon: int) -> bool:
+    """规则头的目标列表里是否有真正的 test 目标词。
+
+    `_MAKE_TEST_TARGET` 允许目标词任意拼接，会把 `$(origin ./test , $<):`
+    这类表达式内部的 `test` 当目标；多出来的 :: 又会和真实 test 规则
+    触发伪冲突。按 make 词法切词后只认完整的 test / ./test 目标。
+    """
+    targets = line[:colon]
+    for word in _make_target_words(targets):
+        if word.endswith("&"):
+            word = word[:-1]
+        while word.startswith("\\;"):
+            word = word[2:]
+        for unit in _make_target_word_units(word):
+            if unit.endswith("&"):
+                unit = unit[:-1]
+            if re.fullmatch(r"(?:\./+)*test", unit):
+                return True
+    return False
+
+
 def _make_defines_test_target(text: str,
                               repo: Optional[Path] = None) -> bool:
     """规则头命中 test 且冒号结构合法时返回 True。"""
@@ -1241,6 +1336,9 @@ def _make_defines_test_target(text: str,
         # `test ${X:--x}` 并没有规则分隔符）。只有行内第一个真正的
         # 未转义冒号才是规则分隔符；不一致时说明这是变量引用里的冒号。
         if _make_unescaped_colon(line, 0) != colon:
+            continue
+        if not _make_line_defines_test(line, colon):
+            # 正则可能命中变量引用内部的 test（如 $(origin ./test,...)）。
             continue
         if not _make_rule_header_is_valid(line, colon):
             # 整行本身就是变量赋值（test:= x / test ::= x）时 test 不是
@@ -1329,7 +1427,7 @@ def _make_pattern_rule_defines_test(text: str,
         targets = body[:colon]
         if targets.endswith("&"):
             targets = targets[:-1]
-        words = re.findall(r"(?:\\.|[^\s])+", targets)
+        words = _make_target_words(targets)
         if not words or any(_make_pattern_wildcard(word)[0] < 0
                             for word in words):
             # 普通目标与模式目标混在一行会让 make 报
