@@ -1522,6 +1522,76 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
     return _MAKE_VAR_REF.sub(repl, text)
 
 
+def _make_resolve_single_char_refs(
+        text: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool]) -> str:
+    """展开目标行里剩下的单字符变量引用（`$x` / `$:` / `$ `）。
+
+    GNU make 的变量引用可以只由一个字符组成，且该字符可以是冒号、井号、
+    分号或空白：`test $:` 里的 `$:` 会吃掉规则分隔符（missing separator），
+    而 `test$ test:` 里的 `$ ` 会吃掉词间空白，把两个词粘成 `testtest`。
+    这些语法在 `_MAKE_VAR_REF` 的常规展开之后仍然存在（未定义的标点变量
+    不会被它匹配），若不处理，目标探测会把被吃掉的 `test` 当成独立目标，
+    或者反过来把 `test test$::` 这类可运行套件误判成没有 test。
+
+    `$$` 是字面 `$`，用非分隔哨兵保留其占位，避免它再次被当引用；已知的
+    标点变量名（如 `$!`）按赋值展开，未定义的单字符引用展开为空，与
+    make 一致。`$(...)` / `${...}` 保持原样，交给已有的静态函数/未知
+    变量逻辑处理。
+    """
+    out: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch != "$" or i + 1 >= n:
+            out.append(ch)
+            i += 1
+            continue
+        nxt = text[i + 1]
+        if nxt in "({":
+            # 未知引用的内容仍可能展开出 test，不能动；整段原样保留。
+            closer = ")" if nxt == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                cj = text[j]
+                if cj == "\\":
+                    j += 2
+                    continue
+                if cj == "$" and j + 1 < n and text[j + 1] in "({":
+                    depth += 1
+                    j += 2
+                    continue
+                if cj == closer:
+                    depth -= 1
+                j += 1
+            out.append(text[i:j])
+            i = j
+            continue
+        if nxt == "$":
+            out.append("\x03")
+            i += 2
+            continue
+        if nxt in variables:
+            value = variables[nxt]
+            if value is None:
+                out.append(text[i:i + 2])
+            else:
+                try:
+                    value = _make_expand_refs(value, variables, simple)
+                except _MakeRequiredIncludeError:
+                    value = text[i:i + 2]
+                out.append(value)
+        # 反斜杠原本转义的是 `$`，引用消失后它不能转而把后面的规则
+        # 分隔符（`test \$::` 的第二个冒号）也转义掉；插入哨兵隔开。
+        if out and out[-1].endswith("\\") and i + 2 < n:
+            out.append("\x03")
+        # 未定义的单字符变量展开为空。
+        i += 2
+    return "".join(out)
+
+
 def _make_expand_computed_refs(text: str,
                                 variables: Dict[str, Optional[str]],
                                 simple: Dict[str, bool],
@@ -1887,6 +1957,8 @@ def _make_expand_simple_vars(text: str,
                     insert_at += 1
                 expanded = expanded[:insert_at] + "\x02" + expanded[insert_at:]
         expanded = _make_flatten_target_newlines(expanded)
+        expanded = _make_resolve_single_char_refs(
+            expanded, variables, simple)
         if (_MAKE_EXPORT_DIRECTIVE.match(expanded)
                 and not _MAKE_EXPORT_DIRECTIVE.match(body)):
             # 这是变量展开后才变成 export/unexport 的目标行；加哨兵避免

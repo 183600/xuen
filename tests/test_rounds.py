@@ -2371,6 +2371,19 @@ def test_detect_test_suite_make_escaped_semicolon_target_with_recipe(
     "test $$:",
     "test $ x:",
     "test $ :",
+    # 单字符变量引用会吃掉后一个字符：`$:` 吃掉第一个冒号后第二个冒号
+    # 仍是规则分隔符；`$ ` 吃掉空白后下一词与前一词粘连（这也意味着
+    # 粘出来的名字不能再算独立的 test）。
+    "test test$::",
+    "test$::",
+    "test $$$::",
+    "test \\$::",
+    "foo $ test:",
+    "test$x:",
+    "test $#:",
+    "test $;::",
+    "test$  test:",
+    "test test$ x:",
     # make 会规范化目标名前导的 `./`：`make test` 仍能执行 `./test`。
     "./test:",
     ".//test:",
@@ -2470,6 +2483,13 @@ def test_detect_test_suite_make_target_forms_still_detected(tmp_path, line):
     "test $$$:",
     "test x$:",
     "test \\$:",
+    # `$ ` 吃掉唯一的词间空白后，后面的 test 被粘成 testtest；
+    # `test$$` 是名为 test$ 的目标，都不能算可执行的 test。
+    "test$ test:",
+    "test$:",
+    "test$$:",
+    "foo$ test:",
+    "test$\ttest:",
     # 只有前导 `./` 会被规范化，`../test` / `foo/./test` 不是 test 目标。
     "../test:",
     "foo/./test:",
