@@ -1097,6 +1097,16 @@ def test_make_pattern_backslash_matches_gnu_make():
     assert rounds._make_pattern_subst("a%", "X%Y%Z", "abc") == "XbcY%Z"
 
 
+def test_make_strip_value_comment_matches_gnu_make():
+    """变量赋值里的 # 注释按 make 的反斜杠奇偶规则处理。"""
+    strip = rounds._make_strip_value_comment
+    assert strip("a\\#b") == "a#b"
+    assert strip("a\\\\#b") == "a\\"
+    assert strip("a\\\\\\#b") == "a\\#b"
+    assert strip("a\\\\\\\\#b") == "a\\\\"
+    assert strip("a#b") == "a"
+
+
 def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
     """patsubst/wordlist/suffix 的空白与空占位语义与 GNU make 一致。"""
     expand = rounds._make_expand_include_function
@@ -1582,6 +1592,8 @@ def test_detect_test_suite_make_substitution_reference_include(tmp_path):
     "T = a.o\n$(T:%.c=test):\n\t@true\n",
     "T = foo bar\n$(T:baz=test):\n\t@true\n",
     "$(UNDEFINED:%.c=test):\n\t@true\n",
+    # 赋值里的 \\# 是字面 #，变量值是 a#b；替换引用的 old 不是 a#b。
+    "T = a\\#b\n$(T:a\\#b=test):\n\t@true\n",
 ])
 def test_detect_test_suite_make_substitution_reference_negative(tmp_path,
                                                                 makefile):

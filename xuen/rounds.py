@@ -577,6 +577,36 @@ def _make_strip_comment(line: str) -> str:
     return line
 
 
+def _make_strip_value_comment(line: str) -> str:
+    """按 make 变量赋值语义去掉注释并处理 # 前的反斜杠。
+
+    连续 n 个反斜杠后跟 #：输出 n//2 个反斜杠；n 为奇数时 # 是字面量，
+    为偶数时 # 开始注释。其他位置的反斜杠原样保留。
+    """
+    out = []
+    i = 0
+    while i < len(line):
+        if line[i] != "\\":
+            if line[i] == "#":
+                break
+            out.append(line[i])
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j] == "\\":
+            j += 1
+        if j < len(line) and line[j] == "#":
+            out.append("\\" * ((j - i) // 2))
+            if (j - i) % 2:
+                out.append("#")
+                i = j + 1
+                continue
+            return "".join(out)
+        out.append(line[i:j])
+        i = j
+    return "".join(out)
+
+
 def _make_include_names(args: str) -> List[str]:
     """提取 include/-include/sinclude 的文件名（保留反斜杠转义）。
 
@@ -1055,7 +1085,7 @@ def _make_apply_assignment(match: re.Match,
     name, op, raw = match.groups()
     # make 保留注释前的尾随空白（`T = test # c` 的值是 `test `），
     # 它会在 `$(T)-unit:` 里把目标拆成 test 与 -unit；rstrip 会漏掉 test。
-    raw = _make_strip_comment(raw)
+    raw = _make_strip_value_comment(raw)
     if op == "!=":
         variables[name] = None
         simple[name] = False
