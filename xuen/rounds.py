@@ -532,6 +532,38 @@ def _make_apply_assignment(match: re.Match,
         simple[name] = False
 
 
+def _make_scan_assignment(body: str,
+                          variables: Dict[str, Optional[str]],
+                          simple: Dict[str, bool]) -> Optional[str]:
+    """处理一行赋值/undefine；是赋值时返回展开后的行，否则返回 None。"""
+    undef = re.match(
+        r"^[ ]*(?:override[ \t]+)?undefine[ \t]+"
+        r"([A-Za-z0-9_.-]+)[ \t]*$", body)
+    if undef is not None:
+        variables.pop(undef.group(1), None)
+        simple.pop(undef.group(1), None)
+        return body
+    match = _MAKE_VAR_ASSIGNMENT.match(body)
+    expanded = body
+    if match is None and "$" in body:
+        expanded = _make_expand_refs(body, variables, simple)
+        match = _MAKE_VAR_ASSIGNMENT.match(expanded)
+    if match is None:
+        return None
+    _make_apply_assignment(match, variables, simple)
+    return expanded
+
+
+def _make_scan_assignments(text: str,
+                           variables: Dict[str, Optional[str]],
+                           simple: Dict[str, bool]) -> None:
+    """按出现顺序把文本里的单行赋值应用到变量表（recipe 行除外）。"""
+    for line in text.splitlines(keepends=True):
+        body = line.rstrip("\r\n")
+        if not body.startswith("\t"):
+            _make_scan_assignment(body, variables, simple)
+
+
 def _make_expand_simple_vars(text: str) -> str:
     """按出现顺序展开简单的 make 变量引用，供目标探测使用。
 
@@ -549,21 +581,8 @@ def _make_expand_simple_vars(text: str) -> str:
         if body.startswith("\t"):
             out.append(line)
             continue
-        undef = re.match(
-            r"^[ ]*(?:override[ \t]+)?undefine[ \t]+"
-            r"([A-Za-z0-9_.-]+)[ \t]*$", body)
-        if undef is not None:
-            variables.pop(undef.group(1), None)
-            simple.pop(undef.group(1), None)
-            out.append(line)
-            continue
-        match = _MAKE_VAR_ASSIGNMENT.match(body)
-        expanded = body
-        if match is None and "$" in body:
-            expanded = _make_expand_refs(body, variables, simple)
-            match = _MAKE_VAR_ASSIGNMENT.match(expanded)
-        if match is not None:
-            _make_apply_assignment(match, variables, simple)
+        expanded = _make_scan_assignment(body, variables, simple)
+        if expanded is not None:
             out.append(expanded + newline)
             continue
         if body.lstrip().startswith("#"):
@@ -575,7 +594,9 @@ def _make_expand_simple_vars(text: str) -> str:
 
 def _make_text_with_includes(text: str, repo: Path,
                              seen: Optional[set] = None,
-                             depth: int = 0) -> str:
+                             depth: int = 0,
+                             variables: Optional[Dict[str, Optional[str]]] = None,
+                             simple: Optional[Dict[str, bool]] = None) -> str:
     """把字面 include 的文件内容插到指令位置，供目标探测使用。
 
     只读取仓库内已存在的普通文件；变量展开/通配符留给 make 自己处理。
@@ -588,14 +609,20 @@ def _make_text_with_includes(text: str, repo: Path,
     """
     if seen is None:
         seen = set()
+    if variables is None:
+        variables = {}
+    if simple is None:
+        simple = {}
     if depth > 20:
         return text
     parts = []
     last = 0
     for match in _MAKE_INCLUDE_DIRECTIVE.finditer(text):
+        _make_scan_assignments(text[last:match.start()], variables, simple)
         directive = match.group(1)
         parts.append(text[last:match.end()])
-        for name in _make_include_names(match.group(2)):
+        args = _make_expand_refs(match.group(2), variables, simple)
+        for name in _make_include_names(args):
             for path in _make_include_paths(name, repo):
                 try:
                     key = path.resolve()
@@ -617,10 +644,11 @@ def _make_text_with_includes(text: str, repo: Path,
                     raise _MakeRequiredIncludeError(name) from None
                 seen.add(key)
                 parts.append("\n")
-                parts.append(_make_text_with_includes(included, repo, seen,
-                                                      depth + 1))
+                parts.append(_make_text_with_includes(
+                    included, repo, seen, depth + 1, variables, simple))
                 parts.append("\n")
         last = match.end()
+    _make_scan_assignments(text[last:], variables, simple)
     parts.append(text[last:])
     return "".join(parts)
 

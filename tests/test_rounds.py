@@ -782,6 +782,45 @@ def test_detect_test_suite_make_included_file(tmp_path, directive):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "T = tests.mk\ninclude $(T)\n",
+    "T := tests.mk\ninclude ${T}\n",
+    "T ?= tests.mk\ninclude $(T)\n",
+    "T = other.mk\nT += tests.mk\ninclude $(T)\n",
+    "D = mk\ninclude $(D)/tests.mk\n",
+    "M = other.mk tests.mk\ninclude $(M)\n",
+    "include vars.mk\ninclude $(T)\n",
+])
+def test_detect_test_suite_make_variable_include(tmp_path, makefile):
+    """include 的文件名由简单变量展开时也要按 make 语义读取。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    (tmp_path / "tests.mk").write_text("test:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "other.mk").write_text("all:\n\t@true\n",
+                                       encoding="utf-8")
+    (tmp_path / "vars.mk").write_text("T = tests.mk\n", encoding="utf-8")
+    (tmp_path / "mk").mkdir()
+    (tmp_path / "mk" / "tests.mk").write_text("test:\n\t@true\n",
+                                              encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_variable_include_missing(tmp_path):
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "T = missing.mk\ninclude $(T)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+    (tmp_path / "Makefile").write_text(
+        "T = missing.mk\n-include $(T)\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_wildcard_include(tmp_path):
     """include *.mk 要按 make 的 wildcard 语义读取所有匹配文件。"""
     if not shutil.which("make"):
