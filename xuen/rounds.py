@@ -2054,8 +2054,8 @@ def _make_expand_include_functions(text: str, repo: Path) -> str:
         pos = start + len(replacement)
 
 
-def _make_find_foreach_call(text: str, pos: int):
-    """从 pos 起找下一个 `$(foreach ...)` / `${foreach ...}` 调用。"""
+def _make_find_function_call(text: str, pos: int, name: str):
+    """从 pos 起找下一个 `$(name ...)` / `${name ...}` 调用。"""
     i = pos
     while i + 1 < len(text):
         if text[i] == "$" and text[i + 1] == "$":
@@ -2084,12 +2084,47 @@ def _make_find_foreach_call(text: str, pos: int):
             k += 1
         if stack:
             raise _MakeRequiredIncludeError(text[i:])
-        after = i + 9
-        if (text[i + 2:after] == "foreach" and after < len(text)
+        after = i + 2 + len(name)
+        if (text[i + 2:after] == name and after < len(text)
                 and text[after] in " \t"):
             return i, k + 1, text[after:k].lstrip(" \t")
         i += 1
     return None
+
+
+def _make_expand_value(text: str,
+                       variables: Dict[str, Optional[str]],
+                       simple: Dict[str, bool],
+                       depth: int = 0) -> str:
+    """静态展开 `$(value var)`：返回变量未展开的原始值。
+
+    只处理值里不含 `$` 的简单情况；原始值里的引用在 make 里不会再次
+    展开，直接放回文本会被后续展开误当成目标/变量，保留原样更安全。
+    """
+    if depth > 20:
+        return text
+    pos = 0
+    while True:
+        call = _make_find_function_call(text, pos, "value")
+        if call is None:
+            return text
+        start, end, args = call
+        parts = _make_split_function_args(args, 1)
+        raw_name = parts[0].lstrip(" \t")
+        name = _make_expand_foreach_part(
+            raw_name, variables, simple, None, depth + 1)
+        if "$" in name or name not in variables:
+            # 未知变量/含引用的名字无法静态确定；shell 赋值也不猜。
+            replacement = None
+        else:
+            replacement = variables[name]
+            if replacement is not None and "$" in replacement:
+                replacement = None
+        if replacement is None:
+            pos = end
+            continue
+        text = text[:start] + replacement + text[end:]
+        pos = start + len(replacement)
 
 
 def _make_expand_foreach_part(text: str,
@@ -2100,6 +2135,7 @@ def _make_expand_foreach_part(text: str,
     """展开 foreach 参数/循环体里的静态变量与函数。"""
     for _ in range(20):
         before = text
+        text = _make_expand_value(text, variables, simple, depth + 1)
         text = _make_expand_foreach(text, variables, simple, repo, depth + 1)
         text = _make_expand_refs(text, variables, simple)
         text = _make_expand_condition_functions(text, variables, simple, repo)
@@ -2129,7 +2165,7 @@ def _make_expand_foreach(text: str,
         return text
     pos = 0
     while True:
-        call = _make_find_foreach_call(text, pos)
+        call = _make_find_function_call(text, pos, "foreach")
         if call is None:
             return text
         start, end, args = call
@@ -2958,8 +2994,10 @@ def _make_expand_simple_vars(text: str,
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
+        expanded = _make_expand_value(
+            expand_input, variables, simple)
         expanded = _make_expand_foreach(
-            expand_input, variables, simple, repo)
+            expanded, variables, simple, repo)
         expanded = _make_expand_refs(expanded, variables, simple)
         # 目标名/依赖里的静态条件函数（如 `$(if ...)`）也要按 make
         # 语义展开；否则本来能定义 test 目标的规则会漏检。条件函数与
@@ -2967,6 +3005,8 @@ def _make_expand_simple_vars(text: str,
         # `$(strip $(or ,test))`，而条件参数里也可能嵌套静态函数。
         for _ in range(20):
             before = expanded
+            expanded = _make_expand_value(
+                expanded, variables, simple)
             expanded = _make_expand_foreach(
                 expanded, variables, simple, repo)
             expanded = _make_expand_condition_functions(
@@ -3014,8 +3054,10 @@ def _make_expand_simple_vars(text: str,
                                  or prefix.strip(" \t") == ""))):
                     skip = True
             if not skip:
+                expanded_targets = _make_expand_value(
+                    raw_targets, variables, simple)
                 expanded_targets = _make_expand_foreach(
-                    raw_targets, variables, simple, repo)
+                    expanded_targets, variables, simple, repo)
                 expanded_targets = _make_resolve_single_char_refs(
                     expanded_targets, variables, simple)
                 expanded_targets = _make_expand_refs(
@@ -3025,6 +3067,8 @@ def _make_expand_simple_vars(text: str,
                 # 原文当成目标，误报 empty variable name。
                 for _ in range(20):
                     before_targets = expanded_targets
+                    expanded_targets = _make_expand_value(
+                        expanded_targets, variables, simple)
                     expanded_targets = _make_expand_foreach(
                         expanded_targets, variables, simple, repo)
                     expanded_targets = _make_expand_condition_functions(

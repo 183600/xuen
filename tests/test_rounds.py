@@ -2982,6 +2982,30 @@ def test_detect_test_suite_make_dynamic_name_triple_colon(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_value_target_conflict_not_a_suite(tmp_path):
+    """`$(value X)` 返回原始值 test，后面的 :: 与已有 test: 冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X=test\ntest:\n\t@echo ok\n$(value X)::\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_value_target_detected(tmp_path):
+    """`$(value X)` 展开出的 test 目标必须探测到套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X=test\n$(value X):\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("line", [
     "$(foreach x,test foo,$(x))::",
 ])
