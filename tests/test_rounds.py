@@ -1765,6 +1765,17 @@ def test_detect_test_suite_make_define_body_is_data(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_define_special_name_target(tmp_path):
+    """define 名称含 ? 等特殊字符时，目标头里的引用也要展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for ref in ("$(X?)", "${X?}"):
+        (tmp_path / "Makefile").write_text(
+            f"define X?\ntest\nendef\n{ref}:\n\t@true\n",
+            encoding="utf-8")
+        assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     # 多行 define 的前导空行不会让最后一行成为目标名的一部分。
     "define BODY\n\ntest\nendef\n$(BODY):\n\t@echo ok\n",

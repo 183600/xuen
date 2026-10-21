@@ -1480,11 +1480,27 @@ def _make_apply_conditional(kind: str, rest: str, stack: List[dict],
                   "plain_else": False})
 
 
+def _make_rewrite_define_refs(text: str, name: str, alias: str) -> str:
+    """把非简单变量名的引用改写成静态探测可展开的别名。
+
+    make 允许 `define X?` 这类名字，但 `_MAKE_VAR_REF` 与第二遍的
+    `_make_expand_simple_vars` 只认常规变量名。define 处补一行别名赋值，
+    再把后续 `$(X?)` / `${X?}`（含替换引用）改成 `$(__xuen_define_N)`，
+    规则头才能正常展开。
+    """
+    if any(ch in name for ch in "$(){}\r\n"):
+        return text
+    pattern = re.compile(
+        r"(?<!\$)\$([({])" + re.escape(name) + r"(?=[:)}])")
+    return pattern.sub(lambda match: "$" + match.group(1) + alias, text)
+
+
 def _make_text_with_includes(text: str, repo: Path,
                              seen: Optional[set] = None,
                              depth: int = 0,
                              variables: Optional[Dict[str, Optional[str]]] = None,
-                             simple: Optional[Dict[str, bool]] = None) -> str:
+                             simple: Optional[Dict[str, bool]] = None,
+                             aliases: Optional[Dict[str, str]] = None) -> str:
     """读取 include 文件并丢弃未生效条件分支，供目标探测使用。
 
     只读取仓库内已存在的普通文件；include 文件名支持简单变量、通配符
@@ -1497,6 +1513,8 @@ def _make_text_with_includes(text: str, repo: Path,
     """
     if seen is None:
         seen = set()
+    if aliases is None:
+        aliases = {}
     if variables is None:
         # make 内置 CURDIR 是执行目录的绝对路径（探测时即 repo）。
         # include $(CURDIR)/tests.mk 很常见，不预置会因未展开变量而跳过。
@@ -1578,26 +1596,33 @@ def _make_text_with_includes(text: str, repo: Path,
                 # 多行值在目标行展开时会被 make 当作行尾处理，不能合并成
                 # 空格（那会凭空多出 `test` 目标）；用空占位赋值覆盖之前
                 # 的同名变量，避免第二遍展开误用旧值。
-                if re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
-                    if len(body_lines) <= 1:
-                        value = " ".join(body_lines)
+                if len(body_lines) <= 1:
+                    value = " ".join(body_lines)
+                else:
+                    # 多行值展开到目标行时，只有最后一行的前导空白会
+                    # 让 make 把它当作独立的目标列表；否则整段值
+                    # （含换行）都是同一个目标名，`test` 只是其中
+                    # 一部分。最后一行前面全是空行时同理，直接看
+                    # 最后一行即可。其余多行值用空占位，避免误判。
+                    last = body_lines[-1]
+                    if not last.strip():
+                        value = ""
+                    elif last[:1] in (" ", "\t") or all(
+                            not line.strip()
+                            for line in body_lines[:-1]):
+                        value = last
                     else:
-                        # 多行值展开到目标行时，只有最后一行的前导空白会
-                        # 让 make 把它当作独立的目标列表；否则整段值
-                        # （含换行）都是同一个目标名，`test` 只是其中
-                        # 一部分。最后一行前面全是空行时同理，直接看
-                        # 最后一行即可。其余多行值用空占位，避免误判。
-                        last = body_lines[-1]
-                        if not last.strip():
-                            value = ""
-                        elif last[:1] in (" ", "\t") or all(
-                                not line.strip()
-                                for line in body_lines[:-1]):
-                            value = last
-                        else:
-                            value = ""
-                    raw = _make_quote_value_for_assignment(value)
-                    out.append(f"{define_name} = {raw}\n")
+                        value = ""
+                target_name = define_name
+                if not re.fullmatch(r"[A-Za-z0-9_.-]+", define_name):
+                    index = len(aliases)
+                    while (f"__xuen_define_{index}" in variables
+                           or f"__xuen_define_{index}" in aliases.values()):
+                        index += 1
+                    target_name = f"__xuen_define_{index}"
+                    aliases[define_name] = target_name
+                raw = _make_quote_value_for_assignment(value)
+                out.append(f"{target_name} = {raw}\n")
             continue
         if active and _MAKE_ENDEF_LINE.match(body):
             # 生效分支里未处于 define 块中的 endef 是游离指令：make 报
@@ -1674,7 +1699,7 @@ def _make_text_with_includes(text: str, repo: Path,
                         out.append("\n")
                         out.append(_make_text_with_includes(
                             included, repo, seen, depth + 1, variables,
-                            simple))
+                            simple, aliases))
                         out.append("\n")
                     finally:
                         # 只把「正在处理」的文件留在 seen 里，防止 include
@@ -1691,7 +1716,10 @@ def _make_text_with_includes(text: str, repo: Path,
         # 条件块没在文件内闭合：make 报 missing 'endif' 并停止解析。
         # 条件不能跨 include 文件（GNU make 同样在文件末尾报错）。
         raise _MakeRequiredIncludeError("missing endif")
-    return "".join(out)
+    result = "".join(out)
+    for name, alias in aliases.items():
+        result = _make_rewrite_define_refs(result, name, alias)
+    return result
 
 
 def _is_pytest_file(name: str) -> bool:
