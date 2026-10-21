@@ -6617,6 +6617,56 @@ def test_detect_test_suite_make_empty_target_assignment_name_blocks_suite(
 
 
 @pytest.mark.parametrize("line", [
+    "test:$(if ,x)=1",
+    "test:$(if x,,)=1",
+    "test:$(if $(Y),x,)=1",
+    "test:$(and ,x)=1",
+    "test:$(strip )=1",
+    "test:$(subst a,,a)=1",
+    "test:$(filter-out a,a)=1",
+    "test:$(wildcard /nonexistent)=1",
+])
+def test_detect_test_suite_make_function_empty_assignment_name_blocks_suite(
+        tmp_path, line):
+    """target-specific 赋值名里的静态/条件函数也可能展开为空。
+
+    回归：`test:$(strip )=1` / `test:$(if ,x)=1` 的变量名原文非空，
+    但 make 展开后报 empty variable name；只检查变量引用的探测会把
+    随后的合法 test 目标误判成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "test:$(if x,y,)=1",
+    "test:$(or ,x)=1",
+    "test:$(and x,y)=1",
+    "test:$(subst ,,x)=1",
+    "$(if ,x):$(Y)=1",
+    "$(strip ):$(Y)=1",
+    "$(subst a,,a):$(Y)=1",
+    "$(if x,,):$(Y)=1",
+])
+def test_detect_test_suite_make_function_assignment_names_keep_suite(
+        tmp_path, line):
+    """函数展开后变量名非空、或目标列表展开为空时仍是合法写法。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "test:$(X)X=1",
     "test:X$(X)=1",
     "test:$(X) X=1",

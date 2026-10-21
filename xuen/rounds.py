@@ -2558,7 +2558,8 @@ def _make_flatten_target_newlines(text: str) -> str:
 def _make_raw_rule_is_target_assignment(
         rest: str,
         variables: Dict[str, Optional[str]],
-        simple: Dict[str, bool]) -> bool:
+        simple: Dict[str, bool],
+        repo: Optional[Path] = None) -> bool:
     """原始规则头冒号后是否会被 make 当成 target-specific 赋值。
 
     GNU make 在展开前就决定第一个 token（跳过 export/private/override
@@ -2610,10 +2611,26 @@ def _make_raw_rule_is_target_assignment(
                              rest[pos:]) is None:
         return False
     try:
-        name = _make_resolve_single_char_refs(prefix, variables, simple)
-        name = _make_expand_refs(name, variables, simple)
-        name = _make_expand_computed_refs(name, variables, simple)
-        name = _make_resolve_single_char_refs(name, variables, simple)
+        # 赋值名同样按 make 语义展开：静态函数/条件函数可能展开成空串，
+        # 此时 make 报 empty variable name（`test:$(if ,x)=1` /
+        # `test:$(strip )=1`），不能因为原文非空就当成合法赋值。
+        # 与目标名的展开顺序一致：条件函数 → 变量/静态函数交替 →
+        # 动态变量名，避免把未生效分支里的函数提前展开。
+        name = prefix
+        for _ in range(20):
+            before = name
+            name = _make_resolve_single_char_refs(name, variables, simple)
+            name = _make_expand_refs(name, variables, simple)
+            name = _make_expand_condition_functions(
+                name, variables, simple, repo)
+            name = _make_expand_refs(name, variables, simple)
+            if repo is not None:
+                name = _make_expand_include_functions(name, repo)
+                name = _make_expand_refs(name, variables, simple)
+            name = _make_expand_computed_refs(name, variables, simple)
+            name = _make_resolve_single_char_refs(name, variables, simple)
+            if name == before:
+                break
     except _MakeRequiredIncludeError:
         return False
     if not name:
@@ -2771,10 +2788,26 @@ def _make_expand_simple_vars(text: str,
                     raw_targets, variables, simple)
                 expanded_targets = _make_expand_refs(
                     expanded_targets, variables, simple)
-                expanded_targets = _make_expand_computed_refs(
-                    expanded_targets, variables, simple)
-                expanded_targets = _make_resolve_single_char_refs(
-                    expanded_targets, variables, simple)
+                # 目标列表也可能由条件/静态函数组成：`$(if ,x):$(Y)=1`
+                # 的目标展开为空，make 接受后面的赋值；不展开会把非空
+                # 原文当成目标，误报 empty variable name。
+                for _ in range(20):
+                    before_targets = expanded_targets
+                    expanded_targets = _make_expand_condition_functions(
+                        expanded_targets, variables, simple, repo)
+                    expanded_targets = _make_expand_refs(
+                        expanded_targets, variables, simple)
+                    if repo is not None:
+                        expanded_targets = _make_expand_include_functions(
+                            expanded_targets, repo)
+                        expanded_targets = _make_expand_refs(
+                            expanded_targets, variables, simple)
+                    expanded_targets = _make_expand_computed_refs(
+                        expanded_targets, variables, simple)
+                    expanded_targets = _make_resolve_single_char_refs(
+                        expanded_targets, variables, simple)
+                    if expanded_targets == before_targets:
+                        break
                 # 目标列表本身展开为空（`$(X):$(Y)=1` / `$x:...`）时
                 # make 接受空目标，不会报空变量名。只有原文以字面 `&`
                 # 结尾时才是 grouped 标记；`&$x` / `&$(G)` 展开成 `&`
@@ -2790,7 +2823,7 @@ def _make_expand_simple_vars(text: str,
                        and body[rest_start] == ":"):
                     rest_start += 1
                 _make_raw_rule_is_target_assignment(
-                    body[rest_start:], variables, simple)
+                    body[rest_start:], variables, simple, repo)
         raw_bare_empty = False
         if raw_colon >= 0:
             raw_targets = body[:raw_colon]
@@ -2812,7 +2845,7 @@ def _make_expand_simple_vars(text: str,
             while rest_start < len(body) and body[rest_start] == ":":
                 rest_start += 1
             if not _make_raw_rule_is_target_assignment(
-                    body[rest_start:], variables, simple):
+                    body[rest_start:], variables, simple, repo):
                 insert_at = expanded_colon + 1
                 if (insert_at < len(expanded) and expanded[insert_at] == ":"):
                     insert_at += 1
