@@ -2277,6 +2277,54 @@ def _make_has_unresolved_ref(text: str) -> bool:
     return "$" in text.replace("$$", "")
 
 
+def _make_refs_only_without_literals(text: str) -> bool:
+    """文本是否只由无法静态求值的引用/空白组成、没有字面字符。
+
+    变量名里的 `$(shell ...)` 输出未知：若名字还含字面字符（`A$(shell
+    ...)`），无论 shell 输出什么都非空；若只有引用（`$(shell ...)` /
+    `$(foreach,$(shell ...))`），输出为空时 make 会报 empty variable
+    name，静态探测无法确认套件可运行，必须按「没有套件」处理。
+    """
+    i = 0
+    n = len(text)
+    has_literal = False
+    while i < n:
+        if text[i] == "$" and i + 1 < n:
+            if text[i + 1] == "$":
+                # `$$` 是字面美元符。
+                has_literal = True
+                i += 2
+                continue
+            if text[i + 1] in "({":
+                opener = text[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n and depth:
+                    if text[j] == opener:
+                        depth += 1
+                    elif text[j] == closer:
+                        depth -= 1
+                    j += 1
+                if depth:
+                    return False
+                i = j
+                continue
+            # `$x` 这类单字符引用同样不是字面字符。
+            i += 2
+            continue
+        if not text[i].isspace():
+            has_literal = True
+        i += 1
+    return not has_literal
+
+
+def _make_unknown_name_may_be_empty(name: str) -> bool:
+    """名字里只剩无法静态求值的引用时，结果可能为空（见上）。"""
+    return _make_has_unresolved_ref(name) and _make_refs_only_without_literals(
+        name)
+
+
 def _make_expand_include_functions(
         text: str, repo: Path,
         variables: Optional[Dict[str, Optional[str]]] = None,
@@ -3406,8 +3454,11 @@ def _make_scan_assignment(body: str,
         name = _make_expand_assignment_name(
             raw_name, variables, simple, repo, overrides)
         # 与普通赋值不同，undefine 的名称只含空白也是 empty variable
-        # name（`undefine $(subst a, ,a)`），不能只用真值判断。
-        if not name.strip():
+        # name（`undefine $(subst a, ,a)`），不能只用真值判断。名字里
+        # 只剩未知引用（`undefine $(shell ...)`）时输出可能为空，同样
+        # 无法确认套件可运行。
+        if (not name.strip()
+                or _make_unknown_name_may_be_empty(name)):
             raise _MakeRequiredIncludeError("empty variable name")
         # 普通 undefine 不能删除 override 变量；override undefine 才行。
         if name in overrides and "override" not in (
@@ -3441,7 +3492,8 @@ def _make_scan_assignment(body: str,
             # 展开会把函数原文当成合法名字。
             name = _make_expand_assignment_name(
                 computed_name, variables, simple, repo, overrides)
-            if not name:
+            if (not name
+                    or _make_unknown_name_may_be_empty(name)):
                 raise _MakeRequiredIncludeError("empty variable name")
             # 从原行里取出赋值运算符与其后的值；不能整行展开，递归变量
             # 的值应当在被引用时再展开。
@@ -3584,7 +3636,8 @@ def _make_raw_rule_is_target_assignment(
             prefix, variables, simple, repo, overrides)
     except _MakeRequiredIncludeError:
         return False
-    if not name:
+    if (not name
+            or _make_unknown_name_may_be_empty(name)):
         # 原始规则头的 target-specific 赋值变量名展开为空（如
         # `test:$(X)=1`，X 未定义）时 make 报 empty variable name。
         # 必须在这里拒绝：整行展开后会变成 `test:=1`，下游会把它
@@ -4543,8 +4596,10 @@ def _make_text_with_includes(text: str, repo: Path,
                     name_text, variables, simple, repo, overrides)
                 # 只有原始名称（或展开结果）为空才是空变量名；函数展开
                 # 结果恰好以 `=` 等运算符开头（`define $(findstring =,a=b)`）
-                # 时 make 会定义名为 `=` 的变量，不能误判成空名。
-                if not define_name.strip():
+                # 时 make 会定义名为 `=` 的变量，不能误判成空名。名字里
+                # 只剩未知引用（`define $(shell ...)`）时输出可能为空。
+                if (not define_name.strip()
+                        or _make_unknown_name_may_be_empty(define_name)):
                     raise _MakeRequiredIncludeError("empty define name")
             define_depth = 1
             body_lines: List[str] = []

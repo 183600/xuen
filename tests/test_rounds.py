@@ -7865,6 +7865,30 @@ def test_detect_test_suite_make_empty_target_assignment_function_name(
 
 
 @pytest.mark.parametrize("line", [
+    "$(shell ) = x",
+    "$(shell true) = x",
+    "test: $(shell ) = x",
+    "define $(shell )\nbody\nendef",
+    "undefine $(shell )",
+])
+def test_detect_test_suite_make_unknown_shell_name_may_be_empty(
+        tmp_path, line):
+    """名字里只剩无法静态求值的 shell 引用时，输出可能为空。
+
+    `$(shell )` 展开为空会让 make 报 empty variable name；静态探测无法
+    知道任意 shell 命令的输出，不能把原文当成非空名字继续探测套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
     "$(foreach v,test,$(v)) = 1",
     "$(foreach v,test,$(v)) := 1",
 ])
