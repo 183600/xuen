@@ -1911,6 +1911,48 @@ def test_detect_test_suite_make_condition_static_functions(tmp_path,
 
 
 @pytest.mark.parametrize("makefile", [
+    "X = test\nifeq ($(value X),test)\ntest:\n\t@true\nendif\n",
+    "X = test\nifeq ($(foreach v,test,$(v)),test)\n"
+    "test:\n\t@true\nendif\n",
+    "X = test\n$(if $(value X),test,x):\n\t@true\n",
+    # foreach 的循环变量在 body 展开前才绑定，不能先用外层变量表
+    # 展开 body 里的条件函数（那会把 test 误算成 y）。
+    "X = y\n$(foreach v,test,$(if $(v),test,x)):\n\t@true\n",
+    "f = $(if $(1),test,y)\n$(call f,test):\n\t@true\n",
+    "f = $(if $(1),test,y)\nifeq ($(call f,test),test)\n"
+    "test:\n\t@true\nendif\n",
+])
+def test_detect_test_suite_make_condition_value_and_local_scope(
+        tmp_path, makefile):
+    """条件的 value/foreach/call 展开要看清局部变量作用域。
+
+    回归：ifeq 参数里残留 `$(value X)` / `$(foreach ...)` 原文时条件
+    被误判为不成立；条件函数扫描器又会在 foreach/call 绑定参数前，
+    用外层变量表展开其 body 里的 if/or/and。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "X = foo\nifeq ($(value X),test)\ntest:\n\t@true\nendif\n",
+    "X = y\n$(foreach v,test,$(if $(v),x,y)):\n\t@true\n",
+    "f = $(if $(1),x,y)\n$(call f,test):\n\t@true\n",
+])
+def test_detect_test_suite_make_condition_value_and_local_scope_negative(
+        tmp_path, makefile):
+    """value/foreach/call 展开后没有 test 目标时不能误报套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq ($(origin X),undefined)\ntest:\n\t@true\nendif\n",
     "X = 1\nifeq ($(origin X),file)\ntest:\n\t@true\nendif\n",
     "override X = 1\nifeq ($(origin X),override)\n"

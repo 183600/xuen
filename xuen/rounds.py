@@ -3827,6 +3827,13 @@ def _make_find_condition_function(text: str, pos: int):
         if name in _MAKE_CONDITION_FUNCTIONS and (
                 j >= len(text) or text[j] in " \t"):
             return i, k + 1, name, text[j:k].lstrip(" \t")
+        if name == "foreach" or name == "call":
+            # foreach 的循环变量、call 的参数变量在当前作用域里还不存在。
+            # 不能先展开它们 body 里的 if/or/and：那会用外层变量表求值，
+            # `$(foreach v,test,$(if $(v),test,y))` 会被误算成 y。交给
+            # 对应的展开器绑定局部变量后再处理。
+            i = k + 1
+            continue
         i += 1
     return None
 
@@ -3852,6 +3859,14 @@ def _make_expand_condition_arg(
             # Makefile 误判成可运行套件。
             value = _make_expand_include_functions(
                 value, repo, variables, simple, overrides)
+        # value/foreach 必须在普通变量引用之前展开：foreach 的循环变量
+        # 尚未绑定，先做引用展开会把 `$(foreach v,test,$(v))` 的循环体
+        # 清空；value 返回的原始文本也不应被再次展开。
+        value = _make_expand_value(value, variables, simple)
+        # foreach 也必须等条件函数选中分支后再展开：它可能出现在 if 的
+        # 条件里，先展开会把循环体产生的空白当成源码空白丢掉，改变
+        # `$(if $(foreach x,test, ),then,else)` 的真假。
+        value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_refs(value, variables, simple)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and
         # 参数内部的内容，顺序反过来会让 `$(if cond,$(addsuffix ...))`
@@ -3859,10 +3874,6 @@ def _make_expand_condition_arg(
         # 提前暴露出来。
         value = _make_expand_condition_functions(
             value, variables, simple, repo, depth + 1, overrides)
-        # foreach 也必须等条件函数选中分支后再展开：它可能出现在 if 的
-        # 条件里，先展开会把循环体产生的空白当成源码空白丢掉，改变
-        # `$(if $(foreach x,test, ),then,else)` 的真假。
-        value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_metadata_functions(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
@@ -3969,6 +3980,10 @@ def _make_expand_condition_text(text: str,
         text = _make_expand_automatic_refs(text)
         text = _make_expand_condition_functions(
             text, variables, simple, repo, overrides=overrides)
+        # value/foreach 要先于普通引用展开，否则 foreach 循环变量会被
+        # 当成外层未定义变量清空（`ifeq ($(foreach v,test,$(v)),test)`）。
+        text = _make_expand_value(text, variables, simple)
+        text = _make_expand_foreach(text, variables, simple, repo)
         text = _make_expand_refs(text, variables, simple)
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
