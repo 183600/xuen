@@ -731,6 +731,8 @@ def _make_function_words(value: str) -> List[str]:
 def _make_function_index(value: str, function: str,
                          allow_zero: bool = False) -> int:
     text = value.strip()
+    if allow_zero and not text:
+        return 0
     if not re.fullmatch(r"[0-9]+", text):
         raise _MakeRequiredIncludeError(f"{function}: non-numeric index")
     index = int(text)
@@ -793,6 +795,23 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("patsubst: missing argument")
         pattern, repl, text = parts
+        wildcard, _run_start = _make_pattern_wildcard(pattern)
+        if wildcard < 0:
+            # 不含通配 % 时 make 原地替换每个词，保留输入文本原有空白；
+            # 空 pattern 还会匹配文本末尾的空词（包括纯空白文本）。
+            out = []
+            last = 0
+            for match in re.finditer(r"\S+", text):
+                out.append(text[last:match.start()])
+                word = match.group(0)
+                replaced = _make_pattern_subst(pattern, repl, word)
+                out.append(word if replaced is None else replaced)
+                last = match.end()
+            out.append(text[last:])
+            result = "".join(out)
+            if not pattern and (not text or text[-1].isspace()):
+                result += _make_pattern_unescape(repl)
+            return result
         out = []
         for word in text.split():
             replaced = _make_pattern_subst(pattern, repl, word)
@@ -810,12 +829,16 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
         if len(parts) < 3:
             raise _MakeRequiredIncludeError("wordlist: missing argument")
         start = _make_function_index(parts[0], "wordlist")
-        # GNU make 允许 wordlist 的结束下标为 0（结果为空），开始下标仍须 >=1。
+        # GNU make 允许 wordlist 的结束下标为 0（结果为空），开始下标仍须 >=1；
+        # 结束参数为纯空白时同样按 0 处理。
         end = _make_function_index(parts[1], "wordlist", allow_zero=True)
-        words = _make_function_words(parts[2])
-        if start > end:
+        words = list(re.finditer(r"\S+", parts[2]))
+        if start > end or start > len(words):
             return ""
-        return " ".join(words[start - 1:end])
+        selected = words[start - 1:end]
+        if not selected:
+            return ""
+        return parts[2][selected[0].start():selected[-1].end()]
     if name == "words":
         return str(len(_make_function_words(args)))
     if name == "sort":
@@ -867,8 +890,10 @@ def _make_expand_include_function(name: str, args: str, repo: Path) -> str:
             parts.append((word[:dot], word[dot:]))
         else:
             parts.append((word, ""))
-    index = 0 if name == "basename" else 1
-    return " ".join(part[index] for part in parts)
+    if name == "suffix":
+        # make 的 suffix 跳过没有后缀的词，不会输出空占位。
+        return " ".join(suffix for _base, suffix in parts if suffix)
+    return " ".join(base for base, _suffix in parts)
 
 
 def _make_find_include_function(text: str, pos: int):

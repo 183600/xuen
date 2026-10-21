@@ -1097,6 +1097,19 @@ def test_make_pattern_backslash_matches_gnu_make():
     assert rounds._make_pattern_subst("a%", "X%Y%Z", "abc") == "XbcY%Z"
 
 
+def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
+    """patsubst/wordlist/suffix 的空白与空占位语义与 GNU make 一致。"""
+    expand = rounds._make_expand_include_function
+    assert expand("patsubst", "a,b, a  b ", tmp_path) == " b  b "
+    assert expand("patsubst", "a%,x%, a  b ", tmp_path) == "x b"
+    assert expand("patsubst", ",R, ", tmp_path) == " R"
+    assert expand("patsubst", ",R,x ", tmp_path) == "x R"
+    assert expand("patsubst", ",R,x", tmp_path) == "x"
+    assert expand("wordlist", "1,2,  a  b  c ", tmp_path) == "a  b"
+    assert expand("wordlist", "2, ,a b", tmp_path) == ""
+    assert expand("suffix", "foo.o a/b bar.c", tmp_path) == ".o .c"
+
+
 def test_detect_test_suite_make_pattern_second_percent_is_literal(tmp_path):
     """模式里只有第一个 %% 是通配符，后续 %% 按字面匹配。"""
     if not shutil.which("make"):
