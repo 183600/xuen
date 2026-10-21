@@ -2929,6 +2929,8 @@ def test_detect_test_suite_make_invalid_extra_rule_blocks_suite(tmp_path,
     "foo $: =x",
     "foo $:+=1",
     "foo $:!=1",
+    "foo $::=x",
+    "foo $:::=x",
     "foo $:$(X)::=1",
     "foo $:$:X=1",
     "foo foo$:$:X=1",
@@ -2953,6 +2955,27 @@ def test_detect_test_suite_make_invalid_other_rule_blocks_suite(tmp_path, line):
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_dynamic_name_triple_colon(tmp_path):
+    """`$(X):::=x` 不是 GNU make 4.3 的赋值：X 非空时读取即报空变量名，
+    X 为空时目标列表为空、make 接受。探测必须跟随变量值，不能一律吞成
+    动态变量赋值。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X=foo\n$(X):::=x\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+    (tmp_path / "Makefile").write_text(
+        "X=\n$(X):::=x\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 @pytest.mark.parametrize("line", [

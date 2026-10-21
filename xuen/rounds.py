@@ -908,7 +908,13 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
             # 词，吃掉冒号后 make 不会把 `foo X=1` 重新当成变量赋值，
             # 而是报 missing separator。
             return True
-        if bare and suffix_at_start and not only_refs:
+        if spaced and re.match(r"(?:::=|::=|:=|[+?]?=|!=)",
+                               suffix.lstrip(": \t")):
+            # `foo $::=x` / `foo $:::=x`：`$` 是独立目标词时，剩余冒号
+            # 是规则分隔符，后面的 `=x` 是空变量名，而不是把整行重建成
+            # `foo :=x` 赋值。
+            return True
+        if bare and suffix_at_start and not only_refs and not spaced:
             if (_MAKE_VAR_ASSIGNMENT.match(rebuilt) is not None
                     or _MAKE_DYNAMIC_VAR_ASSIGNMENT.match(rebuilt)
                     is not None):
@@ -2514,8 +2520,10 @@ def _make_dynamic_assignment_name(body: str) -> Optional[str]:
     j = i
     while j < n and rest[j] in " \t":
         j += 1
+    # GNU make 4.3 不把 `:::=` 当作赋值运算符；动态变量名后跟
+    # `:::=`（`$(X):::=x`）仍按规则头解析，不能整行吞成赋值。
     if not any(rest.startswith(op, j)
-               for op in (":::=", "::=", ":=", "?=", "+=", "!=", "=")):
+               for op in ("::=", ":=", "?=", "+=", "!=", "=")):
         return None
     # 转义空白/冒号/井号不能进入顶层变量名（`A\:B=x` / `A\ B=x`
     # 会让 make 报 missing separator），即使变量名里还有合法引用。
