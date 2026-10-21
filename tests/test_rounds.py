@@ -1330,6 +1330,51 @@ def test_go_no_tests_ran_false_when_some_package_ran(detail):
     assert rounds._go_no_tests_ran(detail) is False
 
 
+def test_run_suite_make_conditional_target_is_unavailable(tmp_path):
+    """test 目标写在未生效的 ifeq 分支里：静态探测误以为有套件，而
+    make test 以退出码 2 报「No rule to make target 'test'」。这与 make
+    跑测试失败同码，不能据此拒绝候选——按套件不可用处理。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "ifeq (0,1)\ntest:\n\t@echo TEST\nendif\n", encoding="utf-8")
+    res = rounds.run_suite(["make", "test"], tmp_path, 60.0)
+    assert (res.available, res.ok) == (False, False)
+    assert "没有 test 目标" in res.reason
+    assert "No rule to make target" in res.detail
+
+
+def test_run_suite_make_recipe_failure_is_still_a_failure(tmp_path):
+    """make 真的运行了 test 失败时仍按测试失败处理，不能误判成不可用。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test:\n\t@echo boom; false\n", encoding="utf-8")
+    res = rounds.run_suite(["make", "test"], tmp_path, 60.0)
+    assert (res.available, res.ok) == (True, False)
+    assert "No rule" not in res.detail
+
+
+@pytest.mark.parametrize("detail", [
+    "make: *** No rule to make target 'test'.  Stop.",
+    "make[1]: *** No rule to make target 'test'.  Stop.",
+    "make: *** No rule to make target `test'.  Stop.",
+    'make: *** No rule to make target "test".  Stop.',
+])
+def test_make_missing_test_target_detected(detail):
+    assert rounds._make_missing_test_target(detail) is True
+
+
+@pytest.mark.parametrize("detail", [
+    "make: *** No rule to make target 'prereq', needed by 'test'.  Stop.",
+    "make: *** No rule to make target 'test-unit'.  Stop.",
+    "make: *** [test] Error 1",
+    "",
+])
+def test_make_missing_test_target_false_for_other_errors(detail):
+    assert rounds._make_missing_test_target(detail) is False
+
+
 def test_run_suite_stop_terminates_suite_promptly(tmp_path):
     """用户停止（TUI 按 q / Ctrl+C）必须立即终止套件并返回未验证：
     修复前守卫会阻塞到 verify_timeout（默认 600s），run_tui 只等 20s，

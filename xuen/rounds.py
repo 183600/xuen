@@ -558,6 +558,31 @@ def _is_go_test_run(argv: List[str]) -> bool:
     return len(argv) >= 2 and argv[0] == "go" and argv[1] == "test"
 
 
+def _is_make_test_run(argv: List[str]) -> bool:
+    """argv 是否为本模块探测出的 make test 调用。"""
+    return (len(argv) == 2 and argv[1] == "test"
+            and os.path.basename(argv[0]).lower()
+            in ("make", "gmake", "make.exe", "gmake.exe"))
+
+
+# GNU make 4.x：No rule to make target 'test'.
+# GNU make 3.81（macOS）：No rule to make target `test'.
+_MAKE_MISSING_TEST_TARGET = re.compile(
+    r"No rule to make target [`'\"`]test[`'\"`]")
+
+
+def _make_missing_test_target(detail: str) -> bool:
+    """make test 是否因「没有 test 目标」而失败（不是测试失败）。
+
+    探测是静态读 Makefile 的：target 写在 ifeq/ifdef 等条件分支里、而
+    当前环境走的正是另一支时，静态命中但实际没有该目标，`make test` 以
+    退出码 2 报「No rule to make target 'test'」。这与「make test 跑了但
+    命令失败」同码，不能按测试失败拒绝候选——按套件不可用处理。只匹配
+    目标名为 test 的报错，缺前置目标（needed by 'test'）等仍按失败处理。
+    """
+    return _MAKE_MISSING_TEST_TARGET.search(detail) is not None
+
+
 def _go_matched_no_packages(detail: str) -> bool:
     """go test 的输出是否是「没有匹配到任何包」（不是测试失败）。
 
@@ -594,7 +619,8 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
     宁可不采纳候选，也不让超时的测试把可能损坏的产物放进最佳）。
     pytest 的退出码 5（未收集到测试）与 go 的「matched no packages」（构建
     约束/忽略规则排除了全部包）、「全部包都是 [no test files]」（没有任何
-    *_test.go）例外：按套件不可用返回，不拒绝候选。
+    *_test.go），以及 make 因条件分支未生效而报「No rule to make target」
+    例外：按套件不可用返回，不拒绝候选。
 
     stop：可选的「是否请求停止」回调。传入时按短间隔轮询，回调一旦
     为真就终止整个进程组并返回 stopped=True（available=False）——
@@ -681,6 +707,12 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
         return SuiteResult(available=False, ok=False,
                            reason="go 未匹配到任何包",
                            detail=tail)
+    if _is_make_test_run(argv) and _make_missing_test_target(detail):
+        # Makefile 的 test 目标写在未生效的条件分支里时，静态探测会误以为
+        # 有套件，make test 以退出码 2 报「No rule to make target 'test'」。
+        # 与 make 跑测试失败同码，不能据此拒绝候选——按套件不可用处理
+        return SuiteResult(available=False, ok=False,
+                           reason="make 没有 test 目标", detail=tail)
     return SuiteResult(available=True, ok=False,
                        reason=f"退出码 {proc.returncode}", detail=tail)
 
