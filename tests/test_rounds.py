@@ -1016,6 +1016,26 @@ def test_detect_test_suite_make_single_char_variable_target(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+def test_detect_test_suite_make_define_body_is_data(tmp_path):
+    """define 体里的 include/test 不是 Makefile 指令，不能误读或误判。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "define BODY\ninclude missing.mk\nendef\ntest:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+    (tmp_path / "Makefile").write_text(
+        "define BODY\ntest:\n\t@true\nendef\nall:\n\t@true\n",
+        encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+    (tmp_path / "Makefile").write_text(
+        "ifeq (0,1)\ndefine BODY\ntest:\n\t@true\nendef\nendif\n"
+        "test:\n\t@true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_repeated_include_reprocessed(tmp_path):
     """同一 include 文件被包含两次时要各处理一次：条件分支依赖的变量
     可能在两次之间变化，只处理第一次会漏掉第二次才生效的 test 目标。"""

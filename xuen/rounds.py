@@ -666,6 +666,9 @@ _MAKE_INCLUDE_LINE = re.compile(
     r"^[ ]*(include|-include|sinclude)[ \t]+(.*)$")
 _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
+_MAKE_DEFINE_LINE = re.compile(
+    r"^[ \t]*(?:(?:override|export)[ \t]+)*define(?:[ \t]+.*)?$")
+_MAKE_ENDEF_LINE = re.compile(r"^[ \t]*endef(?:[ \t]*(?:#.*)?)?$")
 
 
 def _make_line_continues(body: str) -> bool:
@@ -779,6 +782,22 @@ def _make_text_with_includes(text: str, repo: Path,
             if not stack or stack[-1]["active"]:
                 out.append(line)
             i += 1
+            continue
+        # define 体是变量值而不是 Makefile 语法：里面的 include/test 目标
+        # 要等 $(eval ...) 展开才生效，静态探测不能把它们当成真实指令。
+        # 无论 define 位于生效还是未生效分支，都先按词法配对跳过整个块；
+        # 否则未生效分支里的 include missing.mk 会误触发必需 include 错误，
+        # 生效分支里的 test: 又会把 define 体误判成测试目标。
+        if _MAKE_DEFINE_LINE.match(body):
+            depth = 1
+            i += 1
+            while i < len(lines) and depth:
+                inner = lines[i].rstrip("\r\n")
+                if _MAKE_DEFINE_LINE.match(inner):
+                    depth += 1
+                elif _MAKE_ENDEF_LINE.match(inner):
+                    depth -= 1
+                i += 1
             continue
         conditional = _MAKE_CONDITIONAL_LINE.match(body)
         if conditional is not None:
