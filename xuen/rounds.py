@@ -489,11 +489,15 @@ def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
         if end < 0:
             end = len(text)
         nxt = text[pos:end]
+        # 制表符开头的行就是 recipe（哪怕内容只是 shell 注释或空行）；
+        # 只有非 recipe 的空白/注释行才允许出现在目标与 recipe 之间。
+        if nxt.startswith("\t"):
+            return True
         stripped = nxt.strip()
         if not stripped or stripped.startswith("#"):
             pos = end + 1
             continue
-        return nxt.startswith("\t")
+        return False
     return False
 
 

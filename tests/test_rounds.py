@@ -1483,7 +1483,9 @@ def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     for makefile in ("test&: ;\n", "test&:\n\t@true\n",
-                     "test&: dep\n\t@true\n"):
+                     "test&: dep\n\t@true\n",
+                     "test&:\n\t# shell comment\n",
+                     "test&:\n\t\n"):
         (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
         assert detect_test_suite(tmp_path) == ["make", "test"], makefile
 
