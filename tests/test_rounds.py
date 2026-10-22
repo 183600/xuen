@@ -9652,3 +9652,22 @@ def test_detect_test_suite_make_expanded_directive_target_colon_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(strip test): ; $(error boom)\ntest:\n\t@true\n",
+    "test: ; $(error boom)\ntest:\n\t@true\n",
+    "foo: ; $(error boom)\ntest:\n\t@true\n",
+    "foo: ; $(warning boom)\ntest:\n\t@true\n",
+    "foo: dep; $(eval bad)\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_recipe_error_not_read_time(tmp_path,
+                                                           makefile):
+    """同行 recipe 里的 error/eval 不在读取期执行，后面的 test 仍可运行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]

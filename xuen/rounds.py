@@ -4544,9 +4544,24 @@ def _make_expand_simple_vars(text: str,
                 expanded, variables, simple, repo, overrides)
             expanded = _make_expand_metadata_functions(
                 expanded, variables, simple, overrides)
-            expanded = _make_expand_error_functions(expanded)
-            expanded = _make_expand_side_effect_functions(
-                expanded, variables, simple, repo, overrides)
+            # 同行 recipe（未转义分号之后）在读取期不展开，其中的
+            # `$(error ...)` / info/warning 只有目标真正执行时才生效。
+            # 非 test 目标的 recipe 可能被后面的规则覆盖，不能因为它
+            # 在文本里出现就让整个探测放弃套件。
+            error_end = len(expanded)
+            header_colon = _make_unescaped_colon(expanded, 0)
+            if header_colon >= 0:
+                header_start = header_colon + 1
+                if (header_start < len(expanded)
+                        and expanded[header_start] == ":"):
+                    header_start += 1
+                error_end = header_start + _make_rule_header_rest_end(
+                    expanded[header_start:])
+            error_head = _make_expand_error_functions(
+                expanded[:error_end])
+            error_head = _make_expand_side_effect_functions(
+                error_head, variables, simple, repo, overrides)
+            expanded = error_head + expanded[error_end:]
             expanded = _make_expand_refs(
                 expanded, variables, simple, repo=repo)
             expanded = _make_expand_refs(
