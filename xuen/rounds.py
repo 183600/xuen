@@ -4577,6 +4577,10 @@ def _make_expand_condition_text(text: str,
         text = _make_expand_side_effect_functions(text)
         text = _make_expand_call_functions(
             text, variables, simple, repo, overrides)
+        # ifeq/ifneq 的比较值在读取期展开，其中的 eval 会先解析参数行；
+        # `ifeq ($(eval x),a)` 里的 `x` 让 make 直接报 missing separator。
+        text = _make_expand_eval_functions(
+            text, variables, simple, repo, overrides)
         if repo is not None:
             text = _make_expand_include_functions(text, repo)
         if text == before:

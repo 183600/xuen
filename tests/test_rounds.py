@@ -2813,8 +2813,12 @@ def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
 
 
 @pytest.mark.parametrize("makefile", [
-    "ifeq ($(eval x),a)\ntest:\n\t@echo ok\nendif\n",
+    "ifeq ($(eval x),a)\nendif\ntest:\n\t@echo ok\n",
+    "ifeq ($(basename,$(eval x),-lfoo),)\nendif\n"
+    "test:\n\t@echo ok\n",
     "X := $(if $(eval x),a,b)\ntest:\n\t@echo ok\n",
+    "X := $(if $(basename,$(eval x),-lfoo),a,b)\n"
+    "test:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_eval_in_condition_blocks_suite(
         tmp_path, makefile):
