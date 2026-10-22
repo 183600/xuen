@@ -4215,6 +4215,22 @@ def _make_expand_simple_vars(text: str,
                 while insert_at < len(expanded) and expanded[insert_at] in " \t":
                     insert_at += 1
                 expanded = expanded[:insert_at] + "\x02" + expanded[insert_at:]
+        raw_rule_colon = _make_unescaped_colon(body, 0)
+        if (raw_rule_colon >= 0
+                and _MAKE_EXPORT_DIRECTIVE.match(body) is None
+                and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+            expanded_rule_colon = _make_unescaped_colon(expanded, 0)
+            raw_targets = body[:raw_rule_colon]
+            if (expanded_rule_colon >= 0
+                    and "=" in expanded[:expanded_rule_colon]
+                    and "=" not in _make_name_without_refs(raw_targets)):
+                # make 在展开前已把这一行判定为规则；目标名展开后即使
+                # 含 `=`（`$(notdir a=b): a:b`）也不会重新变成变量赋值。
+                # 用哨兵保留「这是规则」的信息，下游才能继续检查依赖里
+                # 的第二个冒号并报 target pattern contains no '%'。
+                expanded = (
+                    expanded[:expanded_rule_colon].replace("=", "\x04")
+                    + expanded[expanded_rule_colon:])
         expanded = _make_flatten_target_newlines(expanded)
         expanded = _make_resolve_single_char_refs(
             expanded, variables, simple)

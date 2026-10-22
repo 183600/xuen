@@ -8375,6 +8375,42 @@ def test_detect_test_suite_make_expanded_hash_target_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "$(notdir a=b): a:b",
+    "X = a=b\n$(X): a:b",
+])
+def test_detect_test_suite_make_expanded_equal_target_colon_blocks_suite(
+        tmp_path, line):
+    """目标名展开出 `=` 后仍是规则，依赖里的第二个冒号照样报错。
+
+    回归：`$(notdir a=b): a:b` 展开成 `a=b: a:b`，下游按变量赋值跳过，
+    实际 make 在展开前已判定为规则并报 target pattern contains no '%'。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = test\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_expanded_equal_target_without_colon_keeps_suite(
+        tmp_path):
+    """展开出 `=` 的普通目标仍然合法，后面的 test 目标不能漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = a=b\n$(X): dep\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("makefile", [
     "$(basename a:b): a=b\ntest:\n\t@echo ok\n",
     "$(sort a:b): $(abspath x+y) := a:b\ntest:\n\t@echo ok\n",
