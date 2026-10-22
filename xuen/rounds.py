@@ -1419,8 +1419,14 @@ def _make_has_missing_separator_line(text: str, *,
         if stripped.startswith("\\;"):
             # 目标词开头的 `\;` 会被 make 丢弃，整行即使没有规则分隔符
             # 也不报 missing separator（`\;test:` 定义 test，`\;`
-            # 只是空行）；展开阶段也会产生这种行。
-            continue
+            # 只是空行）；展开阶段也会产生这种行。但同行 recipe 分隔符
+            # 会让 make 按规则解析：`\;test$: ; @true` 的 `$:` 吃掉冒号
+            # 后仍因 recipe 报 missing separator，不能把整行忽略。
+            if not _make_has_recipe_separator(body, skip_refs=True):
+                continue
+            indent = body[:len(body) - len(stripped)]
+            body = indent + stripped[2:]
+            stripped = body.lstrip(" \t")
         if _MAKE_DEFINE_LINE.match(body) is not None:
             define_depth = 1
             continue

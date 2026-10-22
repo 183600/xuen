@@ -825,6 +825,40 @@ def test_detect_test_suite_make_ignored_escape_semicolon_still_expands(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "\\;test$: ; @true",
+    "\\;test$: ;",
+])
+def test_detect_test_suite_make_ignored_escape_semicolon_with_recipe(
+        tmp_path, line):
+    r"""`\;test$: ; ...` 带同行 recipe 时不能被整行忽略。
+
+    行首 `\;` 只有在没有同行分隔符时才会让 make 丢掉规则；一旦有 `;`
+    recipe，`$:` 吃掉冒号后 make 报 missing separator，后面的 test
+    目标不可达。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_ignored_escape_semicolon_bare_dollar(
+        tmp_path):
+    r"""`\;test$:` 无同行 recipe 时仍被忽略，后面的 test 可运行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "\\;test$:\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_ignored_escape_semicolon_skips_header(
         tmp_path):
     r"""被 `\;` 忽略的规则里，`a:b` 不会触发规则头校验。
