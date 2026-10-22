@@ -3676,6 +3676,30 @@ def test_detect_test_suite_make_other_escaped_semicolon_target_keeps_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile, expected", [
+    ("\\;test:\ntest:\n\t@true\n", ["make", "test"]),
+    ("\\;test: ; @true\n", ["make", "test"]),
+    ("\\;test:\n\t@true\n", None),
+    ("foo \\;test:\ntest:\n\t@true\n", None),
+    ("$(join \\;,test): ; @true\n", None),
+    ("X = \\;test\n$(X): ; @true\n", None),
+])
+def test_detect_test_suite_make_leading_escaped_semicolon_target(
+        tmp_path, makefile, expected):
+    r"""行首 `\;` 被 make 丢弃，展开产生的 `\;` 则是普通目标名字符。
+
+    回归：`\;test:` 无同行分隔符时整行忽略，不能探测成 test；
+    `$(join \;,test):` 展开出的 `\;test` 是目标名，也不是 test。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert (p.returncode == 0) == (expected is not None)
+    assert detect_test_suite(tmp_path) == expected
+
+
 @pytest.mark.parametrize("line", [
     "test:",
     "test::",

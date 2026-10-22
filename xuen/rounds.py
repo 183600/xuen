@@ -559,13 +559,36 @@ def _make_has_escaped_semicolon(text: str) -> bool:
     return False
 
 
-def _make_has_recipe_separator(rest: str) -> bool:
-    """规则头剩余部分是否有未转义、未进注释的同行命令分隔符 ;。"""
+def _make_has_recipe_separator(rest: str, *,
+                               skip_refs: bool = False) -> bool:
+    """规则头剩余部分是否有未转义、未进注释的同行命令分隔符 ;。
+
+    skip_refs 用于原始文本：变量引用内部的分号只是参数，make 要等展开后
+    才可能把它变成分隔符，不能先当成 recipe 起点。
+    """
     i = 0
-    while i < len(rest):
+    n = len(rest)
+    while i < n:
         ch = rest[i]
         if ch == "\\":
             i += 2
+            continue
+        if skip_refs and ch == "$" and i + 1 < n and rest[i + 1] in "({":
+            opener = rest[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n:
+                cj = rest[j]
+                if cj == opener:
+                    depth += 1
+                elif cj == closer:
+                    depth -= 1
+                    if depth == 0:
+                        j += 1
+                        break
+                j += 1
+            i = j
             continue
         if ch == "#":
             return False
@@ -1033,35 +1056,38 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
     return False
 
 
-def _make_has_escaped_semicolon_target_without_recipe(text: str) -> bool:
-    r"""任一规则的目标名里有 `\;`、且没有同行命令分隔符时 make 读取失败。
+def _make_targets_have_internal_escaped_semicolon(targets: str) -> bool:
+    r"""目标列表里是否有需要同行分隔符的原始 `\;`。
 
-    GNU make 4.3 对目标名里的转义分号有解析限制：`foo\;bar:` 即使后面
-    另有 tab recipe，也会在读取阶段报 missing separator；只有同一逻辑行
-    出现未转义的 `;`（哪怕是空命令）才接受。原先只校验命中 test 的行，
-    其他目标（如 `private foo\;bar:`）的同类错误会漏掉，导致探测把必然
-    失败的 Makefile 当成可运行套件。
+    make 4.3 对目标名里的 `\;` 有限制：没有同行命令分隔符时整行报
+    missing separator。行首（前导空白后）连续的 `\;` 是特例，会在展开
+    阶段单独剥离/忽略；本函数只扫描引用之外剩余的 `\;`。
     """
-    for line in text.splitlines():
-        body = line.rstrip("\r")
-        if not body or body.startswith("\t"):
+    i = 0
+    n = len(targets)
+    while i < n:
+        ch = targets[i]
+        if ch == "$" and i + 1 < n and targets[i + 1] in "({":
+            opener = targets[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n:
+                cj = targets[j]
+                if cj == opener:
+                    depth += 1
+                elif cj == closer:
+                    depth -= 1
+                    if depth == 0:
+                        j += 1
+                        break
+                j += 1
+            i = j
             continue
-        stripped = body.lstrip(" \t")
-        if not stripped or stripped.startswith("#"):
-            continue
-        if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
-                or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
-            continue
-        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
-            continue
-        colon = _make_unescaped_colon(body, 0)
-        if colon < 0:
-            continue
-        if (_make_has_escaped_semicolon(body[:colon])
-                and not _make_has_recipe_separator(body[colon + 1:])):
+        if ch == "\\" and i + 1 < n and targets[i + 1] == ";":
             return True
+        i += 2 if ch == "\\" else 1
     return False
-
 
 def _make_has_invalid_extra_rule_colon(text: str) -> bool:
     """任一规则头的第二个未转义冒号是否让 make 读取失败。
@@ -1350,6 +1376,11 @@ def _make_has_missing_separator_line(text: str, *,
             # 同行命令；make 接受这种空目标规则，不能当成 missing
             # separator。字面 ` ;` 已在展开前的扫描里拒绝。
             continue
+        if stripped.startswith("\\;"):
+            # 目标词开头的 `\;` 会被 make 丢弃，整行即使没有规则分隔符
+            # 也不报 missing separator（`\;test:` 定义 test，`\;`
+            # 只是空行）；展开阶段也会产生这种行。
+            continue
         if _MAKE_DEFINE_LINE.match(body) is not None:
             define_depth = 1
             continue
@@ -1514,8 +1545,6 @@ def _make_defines_test_target(text: str,
         return False
     if _make_has_invalid_extra_rule_colon(text):
         return False
-    if _make_has_escaped_semicolon_target_without_recipe(text):
-        return False
     if _make_has_grouped_target_without_recipe(text):
         return False
     if _make_has_recipe_before_first_target(text):
@@ -1557,12 +1586,6 @@ def _make_defines_test_target(text: str,
             saw_single = True
         if saw_single and saw_double:
             # make: target file 'test' has both : and :: entries.
-            return False
-        # GNU make 4.3 对目标名里的 \; 有个解析限制：没有同行命令
-        # 分隔符（哪怕是空的 `;`）时整行会报 missing separator。此时
-        # make test 必然失败，不能探测成套件。
-        if (_make_has_escaped_semicolon(line[:colon])
-                and not _make_has_recipe_separator(line[colon + 1:])):
             return False
         if not _make_grouped_target_has_recipe(text, line, colon, line_end):
             return False
@@ -3980,6 +4003,23 @@ def _make_expand_simple_vars(text: str,
                     injected.append(eval_line + newline)
             lines[i:i + 1] = injected + [_MAKE_CONTEXT_RESET + newline]
             continue
+        stripped_body = body.lstrip(" \t")
+        if stripped_body.startswith("\\;"):
+            special_colon = _make_unescaped_colon(body, 0)
+            if special_colon >= 0:
+                if not _make_has_recipe_separator(
+                        body[special_colon + 1:], skip_refs=True):
+                    # 行首 `\;` 在没有原文同行分隔符时会让 make 忽略
+                    # 整行，不定义任何目标；后续 tab 行会报 recipe
+                    # commences before first target。
+                    out.append(_MAKE_CONTEXT_RESET + newline)
+                    i += 1
+                    continue
+                indent = body[:len(body) - len(stripped_body)]
+                stripped_body = stripped_body
+                while stripped_body.startswith("\\;"):
+                    stripped_body = stripped_body[2:]
+                body = indent + stripped_body
         # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
@@ -4112,9 +4152,16 @@ def _make_expand_simple_vars(text: str,
                     expanded_targets == "&"
                     and raw_targets.rstrip(" \t").endswith("&"))
                 if targets_empty or target_op in ("=", "?=", "+="):
-                    if targets_empty or _make_raw_rule_is_target_assignment(
-                            body[raw_rest_start:], variables, simple, repo,
-                            overrides):
+                    needs_escaped_check = (
+                        _make_targets_have_internal_escaped_semicolon(
+                            raw_targets)
+                        and not _make_has_recipe_separator(
+                            body[raw_rest_start:], skip_refs=True))
+                    if (targets_empty or (
+                            _make_raw_rule_is_target_assignment(
+                                body[raw_rest_start:], variables, simple,
+                                repo, overrides)
+                            and not needs_escaped_check)):
                         out.append(_MAKE_CONTEXT_RESET + newline)
                         i += 1
                         continue
@@ -4299,7 +4346,7 @@ def _make_expand_simple_vars(text: str,
                         and not (
                             _make_has_escaped_semicolon(raw_targets)
                             and not _make_has_recipe_separator(
-                                body[raw_colon + 1:]))):
+                                body[raw_colon + 1:], skip_refs=True))):
                     # target-specific 赋值不定义可执行目标。原文可能因
                     # 变量名展开成空白（`test:$(if x, ,)=1`）而在整行
                     # 展开后不再符合赋值形态，继续输出会被下游当成非法
@@ -4391,6 +4438,19 @@ def _make_expand_simple_vars(text: str,
             # 列表里的空白）。保留 tab 会让下游按 recipe 跳过，漏掉
             # 实际可执行的 test 目标。
             expanded = " " + expanded.lstrip("\t")
+        expanded_rule_colon = _make_unescaped_colon(expanded, 0)
+        raw_rule_colon = _make_unescaped_colon(body, 0)
+        if (raw_rule_colon >= 0 and expanded_rule_colon >= 0
+                and _MAKE_EXPORT_DIRECTIVE.match(body) is None
+                and _MAKE_NON_RULE_DIRECTIVE.match(body) is None
+                and _make_targets_have_internal_escaped_semicolon(
+                    body[:raw_rule_colon])
+                and not _make_has_recipe_separator(
+                    body[raw_rule_colon + 1:], skip_refs=True)):
+            # 原始目标名内部的 \; 必须由同一逻辑行原文里的未转义分号
+            # 提供 recipe 分隔符，否则 make 读取阶段就报 missing
+            # separator。引用内部的 ; 和展开产生的 \; 都不算。
+            raise _MakeRequiredIncludeError("missing separator")
         out.append(expanded + newline)
         i += 1
     return "".join(out)
