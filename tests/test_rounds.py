@@ -4875,6 +4875,24 @@ def test_detect_test_suite_go_nested_module(tmp_path, monkeypatch):
     assert detect_test_suite(tmp_path) == ["go", "test", "./..."]
 
 
+def test_detect_test_suite_go_nested_module_only_not_a_suite(
+        tmp_path, monkeypatch):
+    """只有嵌套模块里有 .go 文件时父模块的 `go test ./...` 不匹配任何包。
+
+    回归：遍历时没有把带 go.mod 的子目录当成模块边界，只命中子模块的
+    仓库被探测成 go 套件，随后 go 以 matched no packages（退出码 1）
+    失败，候选被误判成测试失败。"""
+    _fake_go(monkeypatch)
+    (tmp_path / "go.mod").write_text("module example.com/root\n",
+                                     encoding="utf-8")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "go.mod").write_text("module example.com/sub\n",
+                                encoding="utf-8")
+    (sub / "sub.go").write_text("package sub\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_go_mod_without_packages_not_a_suite(
         tmp_path, monkeypatch):
     """只有 go.mod、没有任何 .go 文件时 `go test ./...` 会报无包可用，

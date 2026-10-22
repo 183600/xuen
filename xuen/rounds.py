@@ -5643,6 +5643,12 @@ def _has_go_package(repo: Path) -> bool:
     会把「没有可用测试」误记成测试失败并拒绝候选。
     """
     for dirpath, dirnames, filenames in os.walk(repo):
+        # 嵌套模块是独立的包边界，父模块的 `go test ./...` 不会进入；
+        # 只命中子模块时 go 会报 matched no packages 并以退出码 1 失败。
+        current = Path(dirpath)
+        if current != repo and (current / "go.mod").is_file():
+            dirnames[:] = []
+            continue
         dirnames[:] = [
             d for d in dirnames
             if not d.startswith((".", "_")) and d not in ("vendor", "testdata")
