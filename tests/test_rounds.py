@@ -780,6 +780,30 @@ def test_detect_test_suite_make_escaped_grouped_marker_without_recipe(
 
 
 @pytest.mark.parametrize("line", [
+    "$(X)& : a:b",
+    "$(X)& : =1",
+    "$(X)& : :",
+    "$(X)& : :=1",
+    "$(X)& : $(error x)",
+])
+def test_detect_test_suite_make_spaced_ampersand_is_target_not_marker(
+        tmp_path, line):
+    """`$(X)& : ...`（& 与冒号之间有空白）里的 & 是普通目标名。
+
+    变量 X 为空时展开成 `& : ...`，make 把 & 当作目标、继续校验分隔符
+    后的内容并报读取错误；探测曾把展开成 `&` 的目标列表一律当成空
+    grouped 标记，整行被吞掉，后面的非法冒号/空变量名全部漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
     "./test::",
     ".//test:: foo",
     "$(strip ) test=1::",

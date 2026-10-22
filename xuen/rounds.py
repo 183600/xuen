@@ -4182,7 +4182,7 @@ def _make_expand_simple_vars(text: str,
                 expanded_targets = expanded_targets.strip(" \t")
                 if (expanded_targets == ""
                         or (expanded_targets == "&"
-                            and raw_targets.rstrip(" \t").endswith("&"))):
+                            and raw_targets.endswith("&"))):
                     # make 把空目标列表当成可挂 recipe 的空规则：后续
                     # tab 行合法但不会影响任何具名目标，输出一个空规则
                     # 保留这个上下文，不能当作赋值清空当前目标。
