@@ -758,6 +758,43 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_make_tab_comment_before_target(tmp_path):
+    """首个目标前的制表符注释行不是 recipe，make 会忽略它。
+
+    `\t# ...` / 只有空白的 tab 行不产生 recipe commences before first
+    target；后面的 test 目标仍可运行。探测把它当作首个目标前的 recipe
+    会把可运行套件误判成没有测试。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    for prefix in ("\t# comment\n", "\t   \n", "\t  # comment\n"):
+        (tmp_path / "Makefile").write_text(
+            prefix + "test:\n\t@true\n", encoding="utf-8")
+        p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                           capture_output=True, text=True)
+        assert p.returncode == 0
+        assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("recipe", [
+    "\t@r\\\nue\n",
+    "\t@\\\ntrue\n\t@true\n\techo hi\n",
+    "\t@r\\\n ue\n",
+])
+def test_detect_test_suite_make_recipe_continuation(tmp_path, recipe):
+    """recipe 续行的物理行不以 tab 开头，仍属于上一条 recipe。
+
+    回归：探测把续行当成新的 Makefile 行扫描，`test:` 后面的
+    `\t@r\` + `ue` 被当成 missing separator，可运行套件被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("test:\n" + recipe,
+                                       encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("directive", [
     "include tests.mk",
     "-include tests.mk",

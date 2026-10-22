@@ -1187,6 +1187,14 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
                 define_depth -= 1
             continue
         if body.startswith("\t"):
+            # GNU make 在首个目标前允许制表符开头的空行/注释行（以及
+            # `\t` 后只有变量引用且展开为空的读取期文本）；它们不是
+            # recipe，不能据此判定 suite 不可运行。`\t# c` / `\t   `
+            # 在真实 make 中会被忽略，后面的 test 目标照常执行。
+            if not seen_rule and body[1:].lstrip(" \t").startswith("#"):
+                continue
+            if not seen_rule and not body[1:].strip():
+                continue
             if not seen_rule:
                 return True
             continue
@@ -4611,8 +4619,23 @@ def _make_join_continuations(text: str) -> str:
         line = lines[i]
         body = line.rstrip("\r\n")
         if body.startswith("\t"):
+            # recipe 的续行属于 shell 命令，不能与非 recipe 续行一样合并；
+            # 但物理续行本身不以 tab 开头，后续逐行扫描（missing
+            # separator / recipe-before-first-target 等）会把它当成新的
+            # Makefile 行，把 `\t@r\` + `ue` 这类合法 recipe 误判成
+            # 非规则文本。给续行补上 tab 前缀，保持「recipe 行」身份，
+            # 同时不改变拼接后的命令主体可供探测的部分。
             out.append(line)
             i += 1
+            while _make_line_continues(body) and i < len(lines):
+                nxt = lines[i]
+                nbody = nxt.rstrip("\r\n")
+                if nxt.startswith("\t"):
+                    out.append(nxt)
+                else:
+                    out.append("\t" + nbody + nxt[len(nbody):])
+                body = nbody
+                i += 1
             continue
         if not _make_line_continues(body):
             out.append(line)
