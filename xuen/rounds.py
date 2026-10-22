@@ -1286,14 +1286,16 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
             define_depth = 1
             seen_rule = False
             continue
-        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
+        if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                and stripped.endswith(_MAKE_LITERAL_DIRECTIVE)):
             seen_rule = False
             continue
         # 传入的是展开后的文本：变量赋值行已被 _make_expand_simple_vars
         # 替换成哨兵注释，因此这里仍带冒号的「赋值形」行其实往往是变量
         # 展开后的目标列表（如 `$(T) foo=bar test:`，T 为空）——不能按
         # 变量赋值跳过，否则会把随后的合法 recipe 误判成「首个目标前出现
-        # recipe」。
+        # recipe」。同理，展开出的 `include x:` 是以 include 为目标的
+        # 规则，不是读取指令。
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
             # 其他非规则行（export / vpath / $(info ...) 等）同样会清空
@@ -1518,10 +1520,13 @@ def _make_has_missing_separator_line(text: str, *,
             if expanded:
                 # define 块在展开阶段已换成上下文哨兵；展开后才出现的
                 # `define Y` 来自变量值，make 不会重新开启 define 块，
-                # 而是直接报 missing separator。
-                return True
-            define_depth = 1
-            continue
+                # 而是直接报 missing separator。若末尾还有规则冒号，
+                # 它是展开出的多行目标名（如 `$(B):`），不是游离指令。
+                if _make_unescaped_colon(body, 0) < 0:
+                    return True
+            else:
+                define_depth = 1
+                continue
         immediate_assignment = _MAKE_VAR_ASSIGNMENT.match(body)
         if expanded:
             # 展开后的扫描只看到「不是赋值、但展开结果像赋值」的行：

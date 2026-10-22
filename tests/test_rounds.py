@@ -9615,3 +9615,23 @@ def test_detect_test_suite_make_expanded_directive_is_missing_separator(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "define B\ndefine Y\ntest\nendef\nendef\n$(B):\ntest:\n\t@true\n",
+    "define B\ndefine Y\ntest\nendef\nendef\n$(B) foo:\ntest:\n\t@true\n",
+    "define B\ninclude x\nendef\n$(B):\n\t@true\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_multiline_define_as_target_keeps_suite(
+        tmp_path, makefile):
+    """多行 define 值可以成为目标名的一部分，不是游离指令。
+
+    `$(B):` 展开后虽然没有字面 test 目标，但后面的合法 test 规则仍能
+    运行；把展开文本里的 `define ...` 一律当成 missing separator 会漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
