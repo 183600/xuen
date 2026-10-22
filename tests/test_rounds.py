@@ -8454,6 +8454,49 @@ def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    ".RECIPEPREFIX = >\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX := >\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX = > \ntest:\n>@echo ok\n",
+    ".RECIPEPREFIX = >\n\ttest: ; @echo ok\n",
+    ".RECIPEPREFIX = >\ntest&:\n> @echo ok\n",
+    ".RECIPEPREFIX = >\ntest:\n> @echo ok\n.RECIPEPREFIX =\n"
+    "foo:\n\t@true\n",
+    ".RECIPEPREFIX = >\ndefine X\ntest: ; @true\nendef\n"
+    "test:\n> @echo ok\n",
+])
+def test_detect_test_suite_make_recipe_prefix(tmp_path, makefile):
+    """`.RECIPEPREFIX` 改写 recipe 前缀后仍要探测到 test。
+
+    回归：规则扫描全部按 tab recipe 实现，`> @echo` 被当成 missing
+    separator，使用 `.RECIPEPREFIX = >` 的合法套件被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    ".RECIPEPREFIX = >\ntest:\n\t@echo ok\n",
+    ".RECIPEPREFIX = >\n\tfoo\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX = >\nX=1\n> @echo x\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX = >\ntest&:\n",
+])
+def test_detect_test_suite_make_recipe_prefix_invalid_lines(
+        tmp_path, makefile):
+    """前缀不是 tab 时，tab 行是普通文本；非法行仍要拒绝整个套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "&:$(X)=1",
     "&::$(X)=1",

@@ -4794,6 +4794,70 @@ def _make_join_continuations(text: str) -> str:
     return "".join(out)
 
 
+_MAKE_RECIPE_PREFIX_ASSIGNMENT = re.compile(
+    r"^[ \t]*(?:(?:override|private|export)[ \t]+)*"
+    r"\.RECIPEPREFIX[ \t]*(:::=|::=|:=|\?=|\+=|!=|=)[ \t]*(.*)$")
+
+
+def _make_normalize_recipe_prefixes(text: str) -> str:
+    """把 `.RECIPEPREFIX` 生效后的 recipe 行统一标记为制表符开头。
+
+    后续所有规则扫描都按 GNU make 默认的 tab recipe 前缀实现；Makefile
+    用 `.RECIPEPREFIX = >` 改写前缀时，真正的 recipe 行会被当成
+    missing separator，含 test 的可运行套件因此被漏检。这里按顺序跟踪
+    字面量 `.RECIPEPREFIX` 赋值并就地改写行首：当前前缀开头的行改成
+    tab；前缀不是 tab 时，行首 tab 只是普通缩进，改成空格以免被误当
+    recipe。只处理不含 `$` 的值；无法静态求值时保守保留原前缀。
+    """
+    lines = text.splitlines(keepends=True)
+    out: List[str] = []
+    prefix = "\t"
+    value = ""
+    seen_assignment = False
+    define_depth = 0
+    for line in lines:
+        body = line.rstrip("\r\n")
+        ending = line[len(body):]
+        if define_depth:
+            if _MAKE_DEFINE_LINE.match(body) is not None:
+                define_depth += 1
+            elif _MAKE_ENDEF_LINE.match(body) is not None:
+                define_depth -= 1
+            out.append(line)
+            continue
+        if prefix != "\t" and body.startswith(prefix):
+            out.append("\t" + body[1:] + ending)
+            continue
+        if prefix != "\t" and body.startswith("\t"):
+            out.append(" " + body[1:] + ending)
+            continue
+        if body.startswith("\t"):
+            out.append(line)
+            continue
+        if _MAKE_DEFINE_LINE.match(body) is not None:
+            define_depth = 1
+            out.append(line)
+            continue
+        match = _MAKE_RECIPE_PREFIX_ASSIGNMENT.match(body)
+        if match is not None:
+            op = match.group(1)
+            raw = _make_strip_value_comment(match.group(2)).strip(" \t")
+            if "$" not in raw:
+                if op in ("=", ":=", "::=", ":::="):
+                    value = raw
+                    seen_assignment = True
+                elif op == "?=":
+                    if not seen_assignment:
+                        value = raw
+                        seen_assignment = True
+                elif op == "+=":
+                    value += raw
+                    seen_assignment = True
+                prefix = value[0] if value else "\t"
+        out.append(line)
+    return "".join(out)
+
+
 def _make_ifeq_args(rest: str
                     ) -> Tuple[Optional[str], Optional[str], bool]:
     """解析 ifeq/ifneq 的两种参数写法，返回 (左值, 右值, 是否去逗号空白)。
@@ -5586,6 +5650,7 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
                 {"CURDIR": str(repo.resolve()),
                  "MAKEFILE_LIST": makefile.name},
                 {"CURDIR": True, "MAKEFILE_LIST": True})
+            text = _make_normalize_recipe_prefixes(text)
             if _make_has_missing_separator_line(text):
                 return None
             if _make_has_bare_trailing_dollar_rule(text):
