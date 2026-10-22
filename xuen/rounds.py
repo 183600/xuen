@@ -1163,8 +1163,12 @@ def _make_targets_have_internal_escaped_semicolon(targets: str) -> bool:
     """
     i = 0
     n = len(targets)
+    seen_literal = False
     while i < n:
         ch = targets[i]
+        if ch.isspace():
+            i += 1
+            continue
         if ch == "$" and i + 1 < n and targets[i + 1] in "({":
             opener = targets[i + 1]
             closer = ")" if opener == "(" else "}"
@@ -1183,7 +1187,14 @@ def _make_targets_have_internal_escaped_semicolon(targets: str) -> bool:
             i = j
             continue
         if ch == "\\" and i + 1 < n and targets[i + 1] == ";":
-            return True
+            # 目标列表最前面的 `\;`（可以隔着展开为空的引用）会被
+            # make 丢弃；只有前面已有字面目标词时，目标名内部的 `\;`
+            # 才要求同一行同时给出未转义分号。
+            if seen_literal:
+                return True
+            i += 2
+            continue
+        seen_literal = True
         i += 2 if ch == "\\" else 1
     return False
 

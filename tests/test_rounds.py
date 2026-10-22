@@ -9733,3 +9733,22 @@ def test_detect_test_suite_make_empty_target_semicolon_recipe_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(X) \\; : X=1",
+    "$(X) $(Y) \\; : X=1",
+    "$(X) \\;$(Y) : X=1",
+    "$(X) \\; foo: X=1",
+])
+def test_detect_test_suite_make_leading_escaped_semicolon_keeps_suite(
+        tmp_path, line):
+    """目标列表最前面的 `\\;` 会被 make 丢弃，不是目标名内部的转义。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X =\nY =\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
