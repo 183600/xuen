@@ -781,8 +781,9 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
                 # `export test::` 只把变量名 test 导出、`vpath test:...`
                 # 只是搜索路径，后面的合法 test 规则仍可执行，不能把
                 # 它们当成 test 的 :: / : 规则制造冲突。
-                or _MAKE_EXPORT_DIRECTIVE.match(body) is not None
-                or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None):
+                or ((_MAKE_EXPORT_DIRECTIVE.match(body) is not None
+                     or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None)
+                    and body.rstrip().endswith(_MAKE_LITERAL_DIRECTIVE))):
             continue
         colon = _make_unescaped_colon(body, 0)
         if colon < 0 or _make_rule_is_target_specific(body, colon):
@@ -873,7 +874,9 @@ def _make_has_grouped_target_without_recipe(text: str) -> bool:
             if (stripped and not stripped.startswith("#")
                     and _MAKE_VAR_ASSIGNMENT.match(body) is None
                     and _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is None
-                    and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+                    and not (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                             and stripped.endswith(
+                                 _MAKE_LITERAL_DIRECTIVE))):
                 colon = _make_unescaped_colon(body, 0)
                 targets = body[:colon].lstrip(" \t") if colon >= 0 else ""
                 if (colon > 0 and targets not in ("", "&")
@@ -1184,7 +1187,8 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
         if (_MAKE_VAR_ASSIGNMENT.match(body) is not None
                 or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None):
             continue
-        if _MAKE_NON_RULE_DIRECTIVE.match(body) is not None:
+        if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                and stripped.endswith(_MAKE_LITERAL_DIRECTIVE)):
             continue
         colon = _make_unescaped_colon(body, 0)
         if colon < 0:
@@ -1741,9 +1745,11 @@ def _make_defines_test_target(text: str,
             continue
         line_end = _make_logical_line_end(text, match.start())
         line = text[match.start():line_end]
-        if _MAKE_NON_RULE_DIRECTIVE.match(line):
-            # `vpath test:$(X)=1` 是 vpath 指令（参数里恰好有 test:），
-            # 不定义目标；不能因为它命中正则就否掉别处的合法 test 规则。
+        if (_MAKE_NON_RULE_DIRECTIVE.match(line)
+                and line.rstrip().endswith(_MAKE_LITERAL_DIRECTIVE)):
+            # `vpath test:$(X)=1` 是原文里的 vpath 指令（参数里恰好有
+            # test:），不定义目标；展开后才出现的同名行是普通目标名，
+            # 不能跳过。
             continue
         colon = match.end() - match.start() - 1
         # 正则里的冒号可能落在目标名中的变量引用里（如
@@ -2984,9 +2990,15 @@ def _make_expand_eval_functions(
             # `foo` 没有规则分隔符，会让 make 在读取阶段直接失败。原先
             # 只扫描赋值，非赋值行被静默丢弃，后面的 test 目标因此被
             # 误判成可运行套件。
-            if _make_has_missing_separator_line(check_line):
+            directive_line = check_line
+            if _MAKE_LITERAL_DIRECTIVE_MATCH(check_line):
+                # eval 参数本身就是 Makefile 行：以 vpath/export 等开头
+                # 时 make 仍按读取指令解析，扫描前补上与普通展开文本
+                # 一致的「原文指令」哨兵。
+                directive_line = check_line + _MAKE_LITERAL_DIRECTIVE
+            if _make_has_missing_separator_line(directive_line):
                 raise _MakeRequiredIncludeError("eval: missing separator")
-            if _make_has_invalid_extra_rule_colon(check_line):
+            if _make_has_invalid_extra_rule_colon(directive_line):
                 # eval 生成的行同样要按 Makefile 规则校验：`$(eval foo:
                 # a:b)` 在读取期报 target pattern contains no '%'，
                 # `$(eval foo: =1)` 报 empty variable name。只检查
@@ -2996,7 +3008,7 @@ def _make_expand_eval_functions(
                     "eval: invalid rule header")
             _make_scan_assignment(
                 eval_line, variables, simple, overrides, repo)
-            if _make_defines_test_target(check_line, repo):
+            if _make_defines_test_target(directive_line, repo):
                 # eval 生成的可执行 test 目标已实际定义；外层目标行只
                 # 负责其余名字，探测不能因为 test 不在外层文本里而漏检。
                 _MAKE_EVAL_TEST_TARGET_SEEN = True

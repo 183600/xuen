@@ -9635,3 +9635,20 @@ def test_detect_test_suite_make_multiline_define_as_target_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "define B\nvpath test:\nendef\n$(B) foo:\ntest:\n\t@true\n",
+    "define B\ninclude test:\nendef\n$(B) foo:\ntest:\n\t@true\n",
+    "X = vpath test: foo:\n$(X)\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_expanded_directive_target_colon_blocks_suite(
+        tmp_path, makefile):
+    """展开出的指令样目标仍按规则解析，第二个冒号会让 make 读取失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
