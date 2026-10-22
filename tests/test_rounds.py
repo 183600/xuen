@@ -1581,6 +1581,27 @@ def test_detect_test_suite_make_missing_include_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "test: $(addprefix ;,)\ntest:\n\t@true\n",
+    "test: $(if x,;)\ntest:\n\t@true\n",
+    "X = ;\ntest: $(X)\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_semicolon_inside_ref_keeps_suite(
+        tmp_path, makefile):
+    """变量引用内部的分号不是规则头的同行 recipe 分隔符。
+
+    回归：`test: $(addprefix ;,)` 展开后依赖为空，不能把引用内部的 ;
+    当成 recipe 分隔符并截断成未闭合引用，导致漏掉后面的 test 目标。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
     """grouped 目标没有真 recipe 时，make 4.3 会把 `\;` 当 recipe 分隔符。"""
     if not shutil.which("make"):

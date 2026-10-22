@@ -436,6 +436,26 @@ def _make_rule_header_rest_end(rest: str) -> int:
                     escaped = i
             i += 2
             continue
+        if ch == "$" and i + 1 < len(rest) and rest[i + 1] in "({":
+            # 变量引用内部的分号是参数，不是同行 recipe 分隔符：
+            # `test: $(addprefix ;,)` 展开后依赖列表为空，不能在这里
+            # 截断成未闭合的 `$(addprefix ` 而误报读取失败。
+            opener = rest[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < len(rest):
+                cj = rest[j]
+                if cj == opener:
+                    depth += 1
+                elif cj == closer:
+                    depth -= 1
+                    if depth == 0:
+                        j += 1
+                        break
+                j += 1
+            i = j
+            continue
         if ch == "#":
             break
         if ch == ";":
