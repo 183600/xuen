@@ -4813,11 +4813,15 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
     out: List[str] = []
     prefix = "\t"
     value = ""
+    value_simple = True
     # make 预定义了 .RECIPEPREFIX（空值），所以 `?=` 不会生效；只有
     # 显式 `undefine` 后才可能赋值，这里不跟踪该罕见写法。
     seen_assignment = True
     define_depth = 0
     conditional_depth = 0
+    # 记录前面无条件的字面量赋值，供 `.RECIPEPREFIX = $(P)` 展开。
+    # 只存不含 `$` 的值，避免在错误的时间展开延迟/递归变量。
+    variables: Dict[str, str] = {}
     for line in lines:
         body = line.rstrip("\r\n")
         ending = line[len(body):]
@@ -4854,18 +4858,55 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
         if match is not None and conditional_depth == 0:
             op = match.group(1)
             raw = _make_strip_value_comment(match.group(2)).strip(" \t")
-            if "$" not in raw:
-                if op in ("=", ":=", "::=", ":::="):
+            # make 只在立即赋值（`:=`/`::=`）以及当前值是立即值时展开
+            # 右侧；`=` 保留原文，`$(P)` 的首字符 `$` 本身就是 recipe
+            # 前缀，不能提前展开成 P 的值。
+            expand_raw = op in (":=", "::=", ":::=") or (
+                op == "+=" and value_simple)
+            if expand_raw and "$" in raw:
+                expanded = raw
+                for _ in range(20):
+                    before = expanded
+                    expanded = _make_expand_refs(
+                        expanded, variables, {})
+                    expanded = _make_expand_value(
+                        expanded, variables, {})
+                    if expanded == before:
+                        break
+                raw = expanded
+            if op in ("=", ":=", "::=", ":::="):
+                value = raw
+                value_simple = op != "="
+                seen_assignment = True
+            elif op == "?=":
+                if not seen_assignment:
                     value = raw
+                    value_simple = True
                     seen_assignment = True
-                elif op == "?=":
-                    if not seen_assignment:
-                        value = raw
-                        seen_assignment = True
-                elif op == "+=":
-                    value += raw
-                    seen_assignment = True
-                prefix = value[0] if value else "\t"
+            elif op == "+=":
+                value += raw
+                seen_assignment = True
+            prefix = value[0] if value else "\t"
+        elif conditional_depth == 0:
+            assignment = _MAKE_VAR_ASSIGNMENT.match(body)
+            if assignment is not None:
+                name, op, raw = assignment.groups()
+                raw = _make_strip_value_comment(raw)
+                if name != ".RECIPEPREFIX" and op != "!=" and "$" not in raw:
+                    if op == "?=":
+                        variables.setdefault(name, raw)
+                    elif op == "+=":
+                        old = variables.get(name)
+                        if old is None:
+                            variables[name] = raw
+                        elif old and raw:
+                            variables[name] = old + " " + raw
+                        elif old:
+                            variables[name] = old
+                        else:
+                            variables[name] = raw
+                    else:
+                        variables[name] = raw
         out.append(line)
     return "".join(out)
 
