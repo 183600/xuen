@@ -1686,20 +1686,52 @@ def _make_strip_value_comment(line: str) -> str:
 
     连续 n 个反斜杠后跟 #：输出 n//2 个反斜杠；n 为奇数时 # 是字面量，
     为偶数时 # 开始注释。其他位置的反斜杠原样保留。
+
+    变量引用内部的 # 不是注释起点（make 在引用未闭合时也一直把它当
+    字面量）：`X = $(subst #,x,#)` 的值是两个 # 参与函数调用，而不是
+    从第一个 # 截断。引用外的 # 才按上述反斜杠规则处理。
     """
     out = []
     i = 0
-    while i < len(line):
-        if line[i] != "\\":
-            if line[i] == "#":
+    n = len(line)
+    while i < n:
+        ch = line[i]
+        if ch == "$" and i + 1 < n:
+            nxt = line[i + 1]
+            if nxt in "({":
+                opener = nxt
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n and depth:
+                    cj = line[j]
+                    if cj == "\\":
+                        j += 2
+                        continue
+                    if cj == opener:
+                        depth += 1
+                    elif cj == closer:
+                        depth -= 1
+                    j += 1
+                # 未闭合的引用一直延伸到行尾，其中的 # 仍是字面量。
+                out.append(line[i:j])
+                i = j
+                continue
+            # `$$` 是字面美元符，`$#` / `$:` 等是单字符变量引用；两者
+            # 后面的字符都不构成注释起点。
+            out.append(line[i:i + 2])
+            i += 2
+            continue
+        if ch != "\\":
+            if ch == "#":
                 break
-            out.append(line[i])
+            out.append(ch)
             i += 1
             continue
         j = i
-        while j < len(line) and line[j] == "\\":
+        while j < n and line[j] == "\\":
             j += 1
-        if j < len(line) and line[j] == "#":
+        if j < n and line[j] == "#":
             out.append("\\" * ((j - i) // 2))
             if (j - i) % 2:
                 out.append("#")

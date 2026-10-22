@@ -1313,6 +1313,15 @@ def test_make_strip_value_comment_matches_gnu_make():
     assert strip("a\\\\\\#b") == "a\\#b"
     assert strip("a\\\\\\\\#b") == "a\\\\"
     assert strip("a#b") == "a"
+    # 变量/函数引用内部的 # 是参数，不是注释起点。
+    assert strip("$(subst #,x,#)") == "$(subst #,x,#)"
+    assert strip("a$(subst #,x,#)b#c") == "a$(subst #,x,#)b"
+    assert strip("${subst #,x,#}") == "${subst #,x,#}"
+    # 未闭合引用一直延伸到行尾，中间的 # 仍是字面量。
+    assert strip("$(subst #,x,#") == "$(subst #,x,#"
+    # $$ 是字面美元符，$# 是单字符变量引用；后面的 # 不开始注释。
+    assert strip("$#x") == "$#x"
+    assert strip("$$#x") == "$$"
 
 
 def test_make_expand_functions_match_gnu_make_whitespace(tmp_path):
@@ -8351,6 +8360,23 @@ def test_detect_test_suite_make_expanded_target_trailing_colon_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_hash_inside_variable_reference_keeps_suite(
+        tmp_path):
+    """变量引用内部的 # 不是注释，if 条件能看到完整的 # 参数。
+
+    回归：`X = $(if #,test,foo)` 依注释截断后变成不完整引用，X 不再
+    展开成 test，导致真实 test 目标漏检。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = $(if #,test,foo)\n$(X):\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
 @pytest.mark.parametrize("line", [
