@@ -1491,6 +1491,7 @@ def _make_has_missing_separator_line(text: str, *,
         if _MAKE_DEFINE_LINE.match(body) is not None:
             define_depth = 1
             continue
+        immediate_assignment = _MAKE_VAR_ASSIGNMENT.match(body)
         if expanded:
             # 展开后的扫描只看到「不是赋值、但展开结果像赋值」的行：
             # 真正的赋值行已在 _make_expand_simple_vars 里换成上下文
@@ -1500,6 +1501,15 @@ def _make_has_missing_separator_line(text: str, *,
             if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
                     or _MAKE_CONDITIONAL_LINE.match(body) is not None):
                 continue
+            if (immediate_assignment is not None
+                    and immediate_assignment.group(2)
+                    in (":=", "::=", ":::=")):
+                # 形如 `$(strip X := Y)` / `$(if x,A:=B,C)` / `$(X)`
+                # （X = a:=b）的整行展开结果是 `X := Y` / `A:=B`。
+                # GNU make 对这类读取期展开成立即赋值的行报 empty
+                # variable name：真正的赋值语句在展开前就已登记并换成
+                # 哨兵，这里看到的只能是展开产出的伪赋值。
+                return True
         elif (_MAKE_VAR_ASSIGNMENT.match(body) is not None
                 or _make_dynamic_assignment_name(body) is not None
                 or _MAKE_EMPTY_VAR_ASSIGNMENT.match(body) is not None

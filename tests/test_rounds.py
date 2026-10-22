@@ -9530,3 +9530,24 @@ def test_detect_test_suite_make_expanded_leading_semicolon_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "$(if x,A:=B,C)\ntest:\n\t@echo ok\n",
+    "$(strip X := Y)\ntest:\n\t@echo ok\n",
+    "$(subst x,A:=B,x)\ntest:\n\t@echo ok\n",
+    "X = a:=b\n$(X)\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_expanded_immediate_assignment_blocks_suite(
+        tmp_path, makefile):
+    """整行展开成 `X := Y` 时 make 报 empty variable name。
+
+    真正的赋值行会在展开前登记并换成哨兵；展开后才出现的立即赋值是
+    伪赋值，读取阶段直接失败，后面的 test 目标不能当成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
