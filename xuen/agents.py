@@ -296,6 +296,13 @@ def _continuation_split_error(head: str) -> ValueError:
 # 全为单词字符，途经任意引号语境/转义后仍原样保留在渲染结果里
 _PLACEHOLDER_PROBE = "XUENPROMPTPROBE7C4F1D"
 
+# 探测用工作区：在模块 import 时按真实平台定型。command_receives_prompt()
+# 会在测试把 os.name monkeypatch 成 "nt" 的环境下构造 ShellAgent；若那时
+# 才执行 Path(".")，Python <= 3.11 的 pathlib 会因 _WindowsFlavour.is_supported
+# 在 import 时已固定为 False 而抛 NotImplementedError。dry_run 渲染不使用
+# workspace，这里只需一个真实平台的 Path 占位。
+_PROBE_WORKSPACE = Path(".")
+
 
 def _escape_in_single_quotes(value: str) -> str:
     """把值安全地嵌进已打开的单引号内部（模板形如 '前缀 $prompt'）。
@@ -2258,7 +2265,7 @@ def command_receives_prompt(template: str) -> bool:
     probe = _PLACEHOLDER_PROBE
     while probe in template:
         probe += "Z"
-    probe_agent = ShellAgent(template, Path("."), timeout=1.0)
+    probe_agent = ShellAgent(template, _PROBE_WORKSPACE, timeout=1.0)
     try:
         rendered = probe_agent.render_command(probe, dry_run=True, probe=probe)
     except ValueError:
