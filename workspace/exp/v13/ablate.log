@@ -1,0 +1,97 @@
+inst 0 n 13
+   canon 3981 0.057
+   canon+packfront 3981 0.054
+   canon+subfront 2763 0.043
+   canon+both 2763 0.041
+   canon+both K=8 2763 0.042
+   canon+both K=2 2954 0.048
+   canon+both K=1 3215 0.047
+inst 1 n 12
+   canon 641 0.012
+   canon+packfront 641 0.014
+   canon+subfront 478 0.009
+   canon+both 478 0.009
+   canon+both K=8 478 0.009
+   canon+both K=2 478 0.01
+   canon+both K=1 484 0.01
+inst 2 n 12
+   canon 2443 0.034
+   canon+packfront 2443 0.035
+   canon+subfront 961 0.015
+   canon+both 961 0.016
+   canon+both K=8 961 0.015
+   canon+both K=2 969 0.02
+   canon+both K=1 1161 0.019
+inst 3 n 15
+   canon 1132 0.023
+   canon+packfront 1132 0.023
+   canon+subfront 892 0.018
+   canon+both 892 0.019
+   canon+both K=8 892 0.019
+   canon+both K=2 967 0.02
+   canon+both K=1 1026 0.022
+inst 4 n 16
+   canon 59860 0.905
+   canon+packfront 59860 0.863
+   canon+subfront 32939 0.55
+   canon+both 32939 0.538
+   canon+both K=8 35957 0.582
+   canon+both K=2 52208 0.822
+   canon+both K=1 56108 0.897
+inst 5 n 14
+   canon 15576 0.213
+   canon+packfront 15576 0.226
+   canon+subfront 3077 0.049
+   canon+both 3077 0.052
+   canon+both K=8 3079 0.054
+   canon+both K=2 4174 0.068
+   canon+both K=1 5717 0.091
+inst 6 n 12
+   canon 10750 0.148
+   canon+packfront 10750 0.141
+   canon+subfront 3290 0.052
+   canon+both 3290 0.055
+   canon+both K=8 3381 0.053
+   canon+both K=2 4733 0.073
+   canon+both K=1 5865 0.089
+inst 7 n 16
+   canon 6117 0.112
+   canon+packfront 6117 0.111
+   canon+subfront 1652 0.036
+   canon+both 1652 0.036
+   canon+both K=8 1655 0.038
+   canon+both K=2 1964 0.048
+   canon+both K=1 2542 0.055
+inst 8 n 14
+   canon 2385 0.039
+   canon+packfront 2385 0.038
+   canon+subfront 1835 0.032
+   canon+both 1835 0.031
+   canon+both K=8 1835 0.031
+   canon+both K=2 1917 0.033
+   canon+both K=1 2061 0.039
+inst 9 n 12
+   canon 19332 0.236
+   canon+packfront 19332 0.24
+   canon+subfront 8226 0.116
+   canon+both 8226 0.114
+   canon+both K=8 8801 0.122
+   canon+both K=2 12842 0.173
+   canon+both K=1 15556 0.208
+inst 10 n 16
+   canon 46328 0.66
+   canon+packfront 46328 0.675
+   canon+subfront 4647 0.088
+   canon+both 4647 0.084
+   canon+both K=8 4857 0.089
+   canon+both K=2 14470 0.242
+   canon+both K=1 29438 0.468
+inst 11 n 15
+   canon 13363 0.214
+   canon+packfront 13363 0.21
+   canon+subfront 8930 0.151
+   canon+both 8930 0.156
+   canon+both K=8 9168 0.154
+   canon+both K=2 10568 0.179
+   canon+both K=1 11494 0.189
+saved

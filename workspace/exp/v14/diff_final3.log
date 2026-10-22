@@ -1,0 +1,8 @@
+done cases 1800 mismatch 0 pot-prune cases 278 time 5.0
+.. 0 cases 5 bad 0 t 0.0
+.. 20 cases 105 bad 0 t 0.5
+.. 40 cases 205 bad 0 t 0.8
+.. 60 cases 305 bad 0 t 1.2
+.. 80 cases 405 bad 0 t 1.4
+.. 100 cases 505 bad 0 t 1.9
+DONE cases 600 bad 0 t 2.2

@@ -1,0 +1,746 @@
+[
+ {
+  "n": 13,
+  "opt": 28,
+  "bench": {
+   "canon": {
+    "nodes": 3981,
+    "t": 0.0566,
+    "tables": 738,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 3981,
+    "t": 0.0541,
+    "tables": 695,
+    "packfh": 43,
+    "subfh": 0,
+    "fmax": 3
+   },
+   "canon+subfront": {
+    "nodes": 2763,
+    "t": 0.043,
+    "tables": 478,
+    "packfh": 0,
+    "subfh": 105,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 2763,
+    "t": 0.0412,
+    "tables": 468,
+    "packfh": 10,
+    "subfh": 105,
+    "fmax": 3
+   },
+   "canon+both K=8": {
+    "nodes": 2763,
+    "t": 0.0415,
+    "tables": 468,
+    "packfh": 10,
+    "subfh": 105,
+    "fmax": 3
+   },
+   "canon+both K=2": {
+    "nodes": 2954,
+    "t": 0.0478,
+    "tables": 507,
+    "packfh": 10,
+    "subfh": 97,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 3215,
+    "t": 0.0474,
+    "tables": 558,
+    "packfh": 24,
+    "subfh": 83,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 12,
+  "opt": 36,
+  "bench": {
+   "canon": {
+    "nodes": 641,
+    "t": 0.012,
+    "tables": 221,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 641,
+    "t": 0.0138,
+    "tables": 214,
+    "packfh": 7,
+    "subfh": 0,
+    "fmax": 5
+   },
+   "canon+subfront": {
+    "nodes": 478,
+    "t": 0.0093,
+    "tables": 148,
+    "packfh": 0,
+    "subfh": 52,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 478,
+    "t": 0.0092,
+    "tables": 148,
+    "packfh": 0,
+    "subfh": 52,
+    "fmax": 5
+   },
+   "canon+both K=8": {
+    "nodes": 478,
+    "t": 0.0093,
+    "tables": 148,
+    "packfh": 0,
+    "subfh": 52,
+    "fmax": 5
+   },
+   "canon+both K=2": {
+    "nodes": 478,
+    "t": 0.0097,
+    "tables": 153,
+    "packfh": 0,
+    "subfh": 47,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 484,
+    "t": 0.0097,
+    "tables": 162,
+    "packfh": 0,
+    "subfh": 38,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 12,
+  "opt": 29,
+  "bench": {
+   "canon": {
+    "nodes": 2443,
+    "t": 0.0338,
+    "tables": 567,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 2443,
+    "t": 0.0349,
+    "tables": 563,
+    "packfh": 4,
+    "subfh": 0,
+    "fmax": 5
+   },
+   "canon+subfront": {
+    "nodes": 961,
+    "t": 0.0152,
+    "tables": 249,
+    "packfh": 0,
+    "subfh": 64,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 961,
+    "t": 0.0157,
+    "tables": 249,
+    "packfh": 0,
+    "subfh": 64,
+    "fmax": 5
+   },
+   "canon+both K=8": {
+    "nodes": 961,
+    "t": 0.0154,
+    "tables": 249,
+    "packfh": 0,
+    "subfh": 64,
+    "fmax": 5
+   },
+   "canon+both K=2": {
+    "nodes": 969,
+    "t": 0.0195,
+    "tables": 254,
+    "packfh": 0,
+    "subfh": 59,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 1161,
+    "t": 0.0186,
+    "tables": 294,
+    "packfh": 0,
+    "subfh": 69,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 15,
+  "opt": 37,
+  "bench": {
+   "canon": {
+    "nodes": 1132,
+    "t": 0.023,
+    "tables": 311,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 1132,
+    "t": 0.0231,
+    "tables": 296,
+    "packfh": 15,
+    "subfh": 0,
+    "fmax": 3
+   },
+   "canon+subfront": {
+    "nodes": 892,
+    "t": 0.0184,
+    "tables": 217,
+    "packfh": 0,
+    "subfh": 48,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 892,
+    "t": 0.0188,
+    "tables": 216,
+    "packfh": 1,
+    "subfh": 48,
+    "fmax": 2
+   },
+   "canon+both K=8": {
+    "nodes": 892,
+    "t": 0.0187,
+    "tables": 216,
+    "packfh": 1,
+    "subfh": 48,
+    "fmax": 2
+   },
+   "canon+both K=2": {
+    "nodes": 967,
+    "t": 0.0203,
+    "tables": 239,
+    "packfh": 1,
+    "subfh": 36,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 1026,
+    "t": 0.0218,
+    "tables": 263,
+    "packfh": 2,
+    "subfh": 20,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 16,
+  "opt": 38,
+  "bench": {
+   "canon": {
+    "nodes": 59860,
+    "t": 0.9049,
+    "tables": 11482,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 59860,
+    "t": 0.863,
+    "tables": 8760,
+    "packfh": 2722,
+    "subfh": 0,
+    "fmax": 5
+   },
+   "canon+subfront": {
+    "nodes": 32939,
+    "t": 0.5498,
+    "tables": 5649,
+    "packfh": 0,
+    "subfh": 2051,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 32939,
+    "t": 0.538,
+    "tables": 4634,
+    "packfh": 1015,
+    "subfh": 2051,
+    "fmax": 5
+   },
+   "canon+both K=8": {
+    "nodes": 35957,
+    "t": 0.5825,
+    "tables": 5095,
+    "packfh": 1225,
+    "subfh": 1972,
+    "fmax": 5
+   },
+   "canon+both K=2": {
+    "nodes": 52208,
+    "t": 0.8222,
+    "tables": 7991,
+    "packfh": 1815,
+    "subfh": 953,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 56108,
+    "t": 0.8973,
+    "tables": 9505,
+    "packfh": 1191,
+    "subfh": 462,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 14,
+  "opt": 39,
+  "bench": {
+   "canon": {
+    "nodes": 15576,
+    "t": 0.213,
+    "tables": 3638,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 15576,
+    "t": 0.2262,
+    "tables": 3245,
+    "packfh": 393,
+    "subfh": 0,
+    "fmax": 13
+   },
+   "canon+subfront": {
+    "nodes": 3077,
+    "t": 0.0493,
+    "tables": 753,
+    "packfh": 0,
+    "subfh": 524,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 3077,
+    "t": 0.052,
+    "tables": 716,
+    "packfh": 37,
+    "subfh": 524,
+    "fmax": 9
+   },
+   "canon+both K=8": {
+    "nodes": 3079,
+    "t": 0.0545,
+    "tables": 722,
+    "packfh": 38,
+    "subfh": 517,
+    "fmax": 8
+   },
+   "canon+both K=2": {
+    "nodes": 4174,
+    "t": 0.0682,
+    "tables": 1070,
+    "packfh": 75,
+    "subfh": 414,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 5717,
+    "t": 0.0909,
+    "tables": 1480,
+    "packfh": 67,
+    "subfh": 325,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 12,
+  "opt": 33,
+  "bench": {
+   "canon": {
+    "nodes": 10750,
+    "t": 0.1479,
+    "tables": 3165,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 10750,
+    "t": 0.1415,
+    "tables": 2419,
+    "packfh": 746,
+    "subfh": 0,
+    "fmax": 13
+   },
+   "canon+subfront": {
+    "nodes": 3290,
+    "t": 0.0517,
+    "tables": 948,
+    "packfh": 0,
+    "subfh": 407,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 3290,
+    "t": 0.0549,
+    "tables": 784,
+    "packfh": 164,
+    "subfh": 407,
+    "fmax": 9
+   },
+   "canon+both K=8": {
+    "nodes": 3381,
+    "t": 0.0532,
+    "tables": 808,
+    "packfh": 179,
+    "subfh": 403,
+    "fmax": 8
+   },
+   "canon+both K=2": {
+    "nodes": 4733,
+    "t": 0.0732,
+    "tables": 1231,
+    "packfh": 251,
+    "subfh": 315,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 5865,
+    "t": 0.0891,
+    "tables": 1631,
+    "packfh": 167,
+    "subfh": 253,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 16,
+  "opt": 48,
+  "bench": {
+   "canon": {
+    "nodes": 6117,
+    "t": 0.1119,
+    "tables": 2293,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 6117,
+    "t": 0.1109,
+    "tables": 1659,
+    "packfh": 634,
+    "subfh": 0,
+    "fmax": 9
+   },
+   "canon+subfront": {
+    "nodes": 1652,
+    "t": 0.0355,
+    "tables": 700,
+    "packfh": 0,
+    "subfh": 326,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 1652,
+    "t": 0.0363,
+    "tables": 608,
+    "packfh": 92,
+    "subfh": 326,
+    "fmax": 9
+   },
+   "canon+both K=8": {
+    "nodes": 1655,
+    "t": 0.038,
+    "tables": 611,
+    "packfh": 98,
+    "subfh": 320,
+    "fmax": 8
+   },
+   "canon+both K=2": {
+    "nodes": 1964,
+    "t": 0.0475,
+    "tables": 818,
+    "packfh": 144,
+    "subfh": 215,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 2542,
+    "t": 0.0552,
+    "tables": 1123,
+    "packfh": 138,
+    "subfh": 150,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 14,
+  "opt": 31,
+  "bench": {
+   "canon": {
+    "nodes": 2385,
+    "t": 0.0388,
+    "tables": 523,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 2385,
+    "t": 0.0382,
+    "tables": 459,
+    "packfh": 64,
+    "subfh": 0,
+    "fmax": 4
+   },
+   "canon+subfront": {
+    "nodes": 1835,
+    "t": 0.032,
+    "tables": 408,
+    "packfh": 0,
+    "subfh": 26,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 1835,
+    "t": 0.0312,
+    "tables": 373,
+    "packfh": 35,
+    "subfh": 26,
+    "fmax": 4
+   },
+   "canon+both K=8": {
+    "nodes": 1835,
+    "t": 0.0315,
+    "tables": 373,
+    "packfh": 35,
+    "subfh": 26,
+    "fmax": 4
+   },
+   "canon+both K=2": {
+    "nodes": 1917,
+    "t": 0.0328,
+    "tables": 388,
+    "packfh": 43,
+    "subfh": 26,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 2061,
+    "t": 0.0392,
+    "tables": 419,
+    "packfh": 41,
+    "subfh": 21,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 12,
+  "opt": 27,
+  "bench": {
+   "canon": {
+    "nodes": 19332,
+    "t": 0.2355,
+    "tables": 4380,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 19332,
+    "t": 0.2404,
+    "tables": 3641,
+    "packfh": 739,
+    "subfh": 0,
+    "fmax": 12
+   },
+   "canon+subfront": {
+    "nodes": 8226,
+    "t": 0.1158,
+    "tables": 1796,
+    "packfh": 0,
+    "subfh": 560,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 8226,
+    "t": 0.1136,
+    "tables": 1659,
+    "packfh": 137,
+    "subfh": 560,
+    "fmax": 12
+   },
+   "canon+both K=8": {
+    "nodes": 8801,
+    "t": 0.1219,
+    "tables": 1752,
+    "packfh": 160,
+    "subfh": 564,
+    "fmax": 8
+   },
+   "canon+both K=2": {
+    "nodes": 12842,
+    "t": 0.1732,
+    "tables": 2576,
+    "packfh": 245,
+    "subfh": 524,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 15556,
+    "t": 0.2082,
+    "tables": 3272,
+    "packfh": 212,
+    "subfh": 372,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 16,
+  "opt": 42,
+  "bench": {
+   "canon": {
+    "nodes": 46328,
+    "t": 0.6596,
+    "tables": 8914,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 46328,
+    "t": 0.6746,
+    "tables": 8218,
+    "packfh": 696,
+    "subfh": 0,
+    "fmax": 9
+   },
+   "canon+subfront": {
+    "nodes": 4647,
+    "t": 0.0876,
+    "tables": 1109,
+    "packfh": 0,
+    "subfh": 690,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 4647,
+    "t": 0.0844,
+    "tables": 1063,
+    "packfh": 46,
+    "subfh": 690,
+    "fmax": 6
+   },
+   "canon+both K=8": {
+    "nodes": 4857,
+    "t": 0.0888,
+    "tables": 1103,
+    "packfh": 51,
+    "subfh": 717,
+    "fmax": 6
+   },
+   "canon+both K=2": {
+    "nodes": 14470,
+    "t": 0.2415,
+    "tables": 2975,
+    "packfh": 138,
+    "subfh": 833,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 29438,
+    "t": 0.4684,
+    "tables": 5800,
+    "packfh": 169,
+    "subfh": 597,
+    "fmax": 1
+   }
+  }
+ },
+ {
+  "n": 15,
+  "opt": 35,
+  "bench": {
+   "canon": {
+    "nodes": 13363,
+    "t": 0.2143,
+    "tables": 2605,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0
+   },
+   "canon+packfront": {
+    "nodes": 13363,
+    "t": 0.21,
+    "tables": 2325,
+    "packfh": 280,
+    "subfh": 0,
+    "fmax": 7
+   },
+   "canon+subfront": {
+    "nodes": 8930,
+    "t": 0.1514,
+    "tables": 1691,
+    "packfh": 0,
+    "subfh": 406,
+    "fmax": 0
+   },
+   "canon+both": {
+    "nodes": 8930,
+    "t": 0.156,
+    "tables": 1546,
+    "packfh": 145,
+    "subfh": 406,
+    "fmax": 6
+   },
+   "canon+both K=8": {
+    "nodes": 9168,
+    "t": 0.1541,
+    "tables": 1588,
+    "packfh": 146,
+    "subfh": 403,
+    "fmax": 6
+   },
+   "canon+both K=2": {
+    "nodes": 10568,
+    "t": 0.1791,
+    "tables": 1909,
+    "packfh": 166,
+    "subfh": 239,
+    "fmax": 2
+   },
+   "canon+both K=1": {
+    "nodes": 11494,
+    "t": 0.1891,
+    "tables": 2134,
+    "packfh": 127,
+    "subfh": 179,
+    "fmax": 1
+   }
+  }
+ }
+]

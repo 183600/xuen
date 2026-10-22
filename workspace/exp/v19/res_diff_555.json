@@ -1,0 +1,15 @@
+{
+ "N": 5000,
+ "seed": 555,
+ "mode": "pot",
+ "het": true,
+ "hpack": true,
+ "yes": 1704,
+ "bad": 0,
+ "nodes": {
+  "base": 26018,
+  "dcd": 23583
+ },
+ "node_ratio": 1.103,
+ "time": 4.096
+}

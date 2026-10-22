@@ -1,0 +1,34 @@
+{
+ "rows": [
+  {
+   "tag": "hard3",
+   "idx": 5,
+   "n": 14,
+   "m": 3,
+   "opt": 39,
+   "all_elig": true,
+   "base": 216,
+   "odom": 185,
+   "dcd": 164,
+   "full": 115,
+   "base_t": 61,
+   "full_t": 39
+  }
+ ],
+ "totals": {
+  "base": 273,
+  "odom": 242,
+  "dcd": 221,
+  "full": 172
+ },
+ "tables": {
+  "base": 69,
+  "full": 47
+ },
+ "time": {
+  "base": 0.0437,
+  "full": 0.0408
+ },
+ "node_ratio": 1.587,
+ "dcd_vs_odom": 1.095
+}

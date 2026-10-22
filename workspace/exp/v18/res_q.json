@@ -1,0 +1,34 @@
+{
+ "rows": [
+  {
+   "tag": "hard3",
+   "idx": 5,
+   "n": 14,
+   "m": 3,
+   "opt": 39,
+   "full": true,
+   "base": 216,
+   "odom": 185,
+   "hpack": 160,
+   "q": 130,
+   "base_t": 61,
+   "q_t": 43
+  }
+ ],
+ "totals": {
+  "base": 273,
+  "odom": 242,
+  "hpack": 217,
+  "q": 187
+ },
+ "tables": {
+  "base": 69,
+  "q": 51
+ },
+ "time": {
+  "base": 0.0443,
+  "q": 0.0424
+ },
+ "node_ratio": 1.46,
+ "time_ratio": 1.044
+}

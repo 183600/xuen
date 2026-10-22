@@ -1,0 +1,110 @@
+[
+ {
+  "nodes": 2763,
+  "t": 0.0427,
+  "tables": 15,
+  "packfh": 10,
+  "subfh": 105,
+  "greedy": 421,
+  "dff": 32
+ },
+ {
+  "nodes": 478,
+  "t": 0.01,
+  "tables": 15,
+  "packfh": 0,
+  "subfh": 52,
+  "greedy": 87,
+  "dff": 46
+ },
+ {
+  "nodes": 961,
+  "t": 0.0168,
+  "tables": 38,
+  "packfh": 0,
+  "subfh": 64,
+  "greedy": 164,
+  "dff": 47
+ },
+ {
+  "nodes": 892,
+  "t": 0.0208,
+  "tables": 50,
+  "packfh": 1,
+  "subfh": 48,
+  "greedy": 155,
+  "dff": 11
+ },
+ {
+  "nodes": 32939,
+  "t": 0.5797,
+  "tables": 1336,
+  "packfh": 1015,
+  "subfh": 2051,
+  "greedy": 3097,
+  "dff": 201
+ },
+ {
+  "nodes": 3077,
+  "t": 0.0519,
+  "tables": 32,
+  "packfh": 37,
+  "subfh": 524,
+  "greedy": 543,
+  "dff": 141
+ },
+ {
+  "nodes": 3290,
+  "t": 0.0551,
+  "tables": 131,
+  "packfh": 164,
+  "subfh": 407,
+  "greedy": 535,
+  "dff": 118
+ },
+ {
+  "nodes": 1652,
+  "t": 0.0372,
+  "tables": 0,
+  "packfh": 92,
+  "subfh": 326,
+  "greedy": 317,
+  "dff": 291
+ },
+ {
+  "nodes": 1835,
+  "t": 0.0346,
+  "tables": 90,
+  "packfh": 35,
+  "subfh": 26,
+  "greedy": 248,
+  "dff": 35
+ },
+ {
+  "nodes": 8226,
+  "t": 0.1288,
+  "tables": 204,
+  "packfh": 137,
+  "subfh": 560,
+  "greedy": 1143,
+  "dff": 312
+ },
+ {
+  "nodes": 4647,
+  "t": 0.0891,
+  "tables": 182,
+  "packfh": 46,
+  "subfh": 690,
+  "greedy": 751,
+  "dff": 130
+ },
+ {
+  "nodes": 8930,
+  "t": 0.1576,
+  "tables": 269,
+  "packfh": 145,
+  "subfh": 406,
+  "greedy": 1238,
+  "dff": 39
+ }
+]
