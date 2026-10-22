@@ -1,0 +1,12 @@
+{
+ "beam2_mean_excess": 5.0,
+ "beam4_mean_excess": 4.764705882352941,
+ "beam8_mean_excess": 4.235294117647059,
+ "beam16_mean_excess": 3.9411764705882355,
+ "cert": {
+  "base": 854,
+  "E": 818,
+  "K": 847,
+  "EK": 818
+ }
+}

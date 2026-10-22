@@ -1,0 +1,3208 @@
+{
+ "dense": [
+  {
+   "k": 0,
+   "OPT": 15,
+   "base": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 1,
+   "OPT": 17,
+   "base": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 112,
+    "t": 0.0005,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 112,
+    "t": 0.0005,
+    "proved": true
+   },
+   "full": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 2,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 12,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 12,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 12,
+    "t": 0.0001,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 12,
+    "t": 0.0001,
+    "proved": true
+   }
+  },
+  {
+   "k": 3,
+   "OPT": 17,
+   "base": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 4,
+   "OPT": 30,
+   "base": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0001,
+    "proved": true
+   },
+   "full": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0001,
+    "proved": true
+   }
+  },
+  {
+   "k": 5,
+   "OPT": 19,
+   "base": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0001,
+    "proved": true
+   },
+   "full": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 14,
+    "t": 0.0001,
+    "proved": true
+   }
+  },
+  {
+   "k": 6,
+   "OPT": 22,
+   "base": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 186,
+    "t": 0.001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 186,
+    "t": 0.0013,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 186,
+    "t": 0.0009,
+    "proved": true
+   },
+   "full": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 186,
+    "t": 0.0014,
+    "proved": true
+   }
+  },
+  {
+   "k": 7,
+   "OPT": 32,
+   "base": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 155,
+    "t": 0.0007,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 153,
+    "t": 0.0008,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 155,
+    "t": 0.0007,
+    "proved": true
+   },
+   "full": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 153,
+    "t": 0.0008,
+    "proved": true
+   }
+  },
+  {
+   "k": 8,
+   "OPT": 23,
+   "base": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10,
+    "t": 0.0001,
+    "proved": true
+   },
+   "full": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10,
+    "t": 0.0001,
+    "proved": true
+   }
+  },
+  {
+   "k": 9,
+   "OPT": 17,
+   "base": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 26,
+    "t": 0.0002,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 26,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 26,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 26,
+    "t": 0.0004,
+    "proved": true
+   }
+  },
+  {
+   "k": 10,
+   "OPT": 25,
+   "base": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 41,
+    "t": 0.0003,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 39,
+    "t": 0.0004,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 41,
+    "t": 0.0003,
+    "proved": true
+   },
+   "full": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 39,
+    "t": 0.0004,
+    "proved": true
+   }
+  },
+  {
+   "k": 11,
+   "OPT": 41,
+   "base": {
+    "U": 41,
+    "L": 41,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 669,
+    "t": 0.0029,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 41,
+    "L": 41,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 591,
+    "t": 0.0033,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 41,
+    "L": 41,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 669,
+    "t": 0.0029,
+    "proved": true
+   },
+   "full": {
+    "U": 41,
+    "L": 41,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 591,
+    "t": 0.0037,
+    "proved": true
+   }
+  },
+  {
+   "k": 12,
+   "OPT": 23,
+   "base": {
+    "U": 23,
+    "L": 23,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 128,
+    "t": 0.0005,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 23,
+    "L": 23,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 31,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 23,
+    "L": 23,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 128,
+    "t": 0.0005,
+    "proved": true
+   },
+   "full": {
+    "U": 23,
+    "L": 23,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 31,
+    "t": 0.0003,
+    "proved": true
+   }
+  },
+  {
+   "k": 13,
+   "OPT": 27,
+   "base": {
+    "U": 27,
+    "L": 27,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 299,
+    "t": 0.0014,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 27,
+    "L": 27,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 109,
+    "t": 0.0008,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 27,
+    "L": 27,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 299,
+    "t": 0.0013,
+    "proved": true
+   },
+   "full": {
+    "U": 27,
+    "L": 27,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 109,
+    "t": 0.0008,
+    "proved": true
+   }
+  },
+  {
+   "k": 14,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 135,
+    "t": 0.0007,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 93,
+    "t": 0.0007,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 135,
+    "t": 0.0007,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 93,
+    "t": 0.0007,
+    "proved": true
+   }
+  },
+  {
+   "k": 15,
+   "OPT": 20,
+   "base": {
+    "U": 20,
+    "L": 20,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 23,
+    "t": 0.0002,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 20,
+    "L": 20,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 23,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 20,
+    "L": 20,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 23,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 20,
+    "L": 20,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 23,
+    "t": 0.0003,
+    "proved": true
+   }
+  },
+  {
+   "k": 16,
+   "OPT": 29,
+   "base": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 416,
+    "t": 0.0016,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 23,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 416,
+    "t": 0.0015,
+    "proved": true
+   },
+   "full": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 23,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 17,
+   "OPT": 23,
+   "base": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 63,
+    "t": 0.0003,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 18,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 63,
+    "t": 0.0003,
+    "proved": true
+   },
+   "full": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 18,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 18,
+   "OPT": 25,
+   "base": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 193,
+    "t": 0.001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 146,
+    "t": 0.0012,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 193,
+    "t": 0.001,
+    "proved": true
+   },
+   "full": {
+    "U": 25,
+    "L": 25,
+    "rounds": 3,
+    "calls": 3,
+    "nodes": 146,
+    "t": 0.0011,
+    "proved": true
+   }
+  },
+  {
+   "k": 19,
+   "OPT": 32,
+   "base": {
+    "U": 32,
+    "L": 32,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 319,
+    "t": 0.0017,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 32,
+    "L": 32,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 319,
+    "t": 0.0021,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 32,
+    "L": 32,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 319,
+    "t": 0.0016,
+    "proved": true
+   },
+   "full": {
+    "U": 32,
+    "L": 32,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 319,
+    "t": 0.0022,
+    "proved": true
+   }
+  },
+  {
+   "k": 20,
+   "OPT": 29,
+   "base": {
+    "U": 29,
+    "L": 29,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 27,
+    "t": 0.0002,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 29,
+    "L": 29,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 25,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 29,
+    "L": 29,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 27,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 29,
+    "L": 29,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 25,
+    "t": 0.0003,
+    "proved": true
+   }
+  },
+  {
+   "k": 21,
+   "OPT": 22,
+   "base": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 22,
+    "t": 0.0002,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 22,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 22,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 22,
+    "L": 22,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 22,
+    "t": 0.0003,
+    "proved": true
+   }
+  },
+  {
+   "k": 22,
+   "OPT": 21,
+   "base": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 42,
+    "t": 0.0002,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 19,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 42,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 19,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 23,
+   "OPT": 16,
+   "base": {
+    "U": 16,
+    "L": 16,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 16,
+    "L": 16,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 16,
+    "L": 16,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 16,
+    "L": 16,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0007,
+    "proved": true
+   }
+  },
+  {
+   "k": 24,
+   "OPT": 19,
+   "base": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 25,
+   "OPT": 21,
+   "base": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 371,
+    "t": 0.0017,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 263,
+    "t": 0.0017,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 371,
+    "t": 0.0017,
+    "proved": true
+   },
+   "full": {
+    "U": 21,
+    "L": 21,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 263,
+    "t": 0.0018,
+    "proved": true
+   }
+  },
+  {
+   "k": 26,
+   "OPT": 17,
+   "base": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0001,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   },
+   "full": {
+    "U": 17,
+    "L": 17,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 20,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 27,
+   "OPT": 21,
+   "base": {
+    "U": 21,
+    "L": 21,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 487,
+    "t": 0.0023,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 21,
+    "L": 21,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 487,
+    "t": 0.0029,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 21,
+    "L": 21,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 487,
+    "t": 0.0024,
+    "proved": true
+   },
+   "full": {
+    "U": 21,
+    "L": 21,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 487,
+    "t": 0.0029,
+    "proved": true
+   }
+  },
+  {
+   "k": 28,
+   "OPT": 24,
+   "base": {
+    "U": 24,
+    "L": 24,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 52,
+    "t": 0.0003,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 24,
+    "L": 24,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 27,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 24,
+    "L": 24,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 52,
+    "t": 0.0003,
+    "proved": true
+   },
+   "full": {
+    "U": 24,
+    "L": 24,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 27,
+    "t": 0.0004,
+    "proved": true
+   }
+  },
+  {
+   "k": 29,
+   "OPT": 35,
+   "base": {
+    "U": 35,
+    "L": 35,
+    "rounds": 4,
+    "calls": 4,
+    "nodes": 1527,
+    "t": 0.0069,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 35,
+    "L": 35,
+    "rounds": 4,
+    "calls": 4,
+    "nodes": 1497,
+    "t": 0.0086,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 35,
+    "L": 35,
+    "rounds": 4,
+    "calls": 4,
+    "nodes": 1527,
+    "t": 0.0081,
+    "proved": true
+   },
+   "full": {
+    "U": 35,
+    "L": 35,
+    "rounds": 4,
+    "calls": 4,
+    "nodes": 1497,
+    "t": 0.0086,
+    "proved": true
+   }
+  }
+ ],
+ "part2": [
+  {
+   "k": 0,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 9941,
+    "t": 0.0369,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 1,
+   "OPT": 45,
+   "base": {
+    "U": 45,
+    "L": 45,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 4053,
+    "t": 0.0166,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 45,
+    "L": 45,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 45,
+    "L": 45,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 45,
+    "L": 45,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 2,
+   "OPT": 30,
+   "base": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 4821,
+    "t": 0.0172,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 3,
+   "OPT": 32,
+   "base": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7327,
+    "t": 0.0299,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 32,
+    "L": 32,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 32,
+    "L": 32,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 4,
+   "OPT": 41,
+   "base": {
+    "U": 41,
+    "L": 41,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 6967,
+    "t": 0.0265,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 41,
+    "L": 41,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 41,
+    "L": 41,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 41,
+    "L": 41,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 5,
+   "OPT": 30,
+   "base": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 2571,
+    "t": 0.0102,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 6,
+   "OPT": 48,
+   "base": {
+    "U": 48,
+    "L": 48,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 2988,
+    "t": 0.0116,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 48,
+    "L": 48,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 14,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 48,
+    "L": 48,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 13,
+    "t": 0.0001,
+    "proved": true
+   },
+   "full": {
+    "U": 48,
+    "L": 48,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 13,
+    "t": 0.0002,
+    "proved": true
+   }
+  },
+  {
+   "k": 7,
+   "OPT": 24,
+   "base": {
+    "U": 24,
+    "L": 24,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 3877,
+    "t": 0.0133,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 24,
+    "L": 24,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 24,
+    "L": 24,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 24,
+    "L": 24,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 8,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 9795,
+    "t": 0.0362,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 9,
+   "OPT": 28,
+   "base": {
+    "U": 28,
+    "L": 28,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11961,
+    "t": 0.0473,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 28,
+    "L": 28,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 28,
+    "L": 28,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 28,
+    "L": 28,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 10,
+   "OPT": 39,
+   "base": {
+    "U": 39,
+    "L": 39,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10561,
+    "t": 0.0394,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 39,
+    "L": 39,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 39,
+    "L": 39,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 39,
+    "L": 39,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 11,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10269,
+    "t": 0.0398,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 12,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 17109,
+    "t": 0.0663,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 13,
+   "OPT": 33,
+   "base": {
+    "U": 33,
+    "L": 33,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 5627,
+    "t": 0.0225,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 33,
+    "L": 33,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 33,
+    "L": 33,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 33,
+    "L": 33,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 14,
+   "OPT": 29,
+   "base": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 2455,
+    "t": 0.0087,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 29,
+    "L": 29,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 29,
+    "L": 29,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 29,
+    "L": 29,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 15,
+   "OPT": 26,
+   "base": {
+    "U": 26,
+    "L": 26,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 3113,
+    "t": 0.0111,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 26,
+    "L": 26,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 26,
+    "L": 26,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 26,
+    "L": 26,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 16,
+   "OPT": 35,
+   "base": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 2633,
+    "t": 0.0094,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 17,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10269,
+    "t": 0.0401,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 18,
+   "OPT": 40,
+   "base": {
+    "U": 40,
+    "L": 40,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 6835,
+    "t": 0.0259,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 40,
+    "L": 40,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 40,
+    "L": 40,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 40,
+    "L": 40,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 19,
+   "OPT": 32,
+   "base": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7683,
+    "t": 0.0289,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 32,
+    "L": 32,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 32,
+    "L": 32,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 32,
+    "L": 32,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 20,
+   "OPT": 44,
+   "base": {
+    "U": 44,
+    "L": 44,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7145,
+    "t": 0.0263,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 44,
+    "L": 44,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 44,
+    "L": 44,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 44,
+    "L": 44,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 21,
+   "OPT": 47,
+   "base": {
+    "U": 47,
+    "L": 47,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 8217,
+    "t": 0.0397,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 47,
+    "L": 47,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 47,
+    "L": 47,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 47,
+    "L": 47,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 22,
+   "OPT": 39,
+   "base": {
+    "U": 39,
+    "L": 39,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 4641,
+    "t": 0.017,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 39,
+    "L": 39,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 39,
+    "L": 39,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 39,
+    "L": 39,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 23,
+   "OPT": 35,
+   "base": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10089,
+    "t": 0.0379,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 24,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7921,
+    "t": 0.0295,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 25,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 3445,
+    "t": 0.0126,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 26,
+   "OPT": 35,
+   "base": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10525,
+    "t": 0.0412,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 35,
+    "L": 35,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 35,
+    "L": 35,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 27,
+   "OPT": 30,
+   "base": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11859,
+    "t": 0.0448,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 30,
+    "L": 30,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 30,
+    "L": 30,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 28,
+   "OPT": 28,
+   "base": {
+    "U": 28,
+    "L": 28,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7713,
+    "t": 0.0278,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 28,
+    "L": 28,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 28,
+    "L": 28,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 28,
+    "L": 28,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 29,
+   "OPT": 38,
+   "base": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 9311,
+    "t": 0.0345,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 38,
+    "L": 38,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 38,
+    "L": 38,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  }
+ ],
+ "part3": [
+  {
+   "k": 0,
+   "OPT": 16,
+   "base": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 32212,
+    "t": 0.104,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 1,
+   "OPT": 19,
+   "base": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 44914,
+    "t": 0.1522,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 2,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 31795,
+    "t": 0.1297,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0025,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 3,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 11979,
+    "t": 0.0415,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 2,
+    "calls": 2,
+    "nodes": 12,
+    "t": 0.0004,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0005,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11,
+    "t": 0.0006,
+    "proved": true
+   }
+  },
+  {
+   "k": 4,
+   "OPT": 16,
+   "base": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 13801,
+    "t": 0.0444,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 5,
+   "OPT": 14,
+   "base": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 11839,
+    "t": 0.0511,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 6,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 9622,
+    "t": 0.0349,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 7,
+   "OPT": 12,
+   "base": {
+    "U": 12,
+    "L": 12,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 12646,
+    "t": 0.0433,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 12,
+    "L": 12,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0003,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 12,
+    "L": 12,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 12,
+    "L": 12,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 8,
+   "OPT": 16,
+   "base": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 25879,
+    "t": 0.0826,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 9,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 54442,
+    "t": 0.1808,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 10,
+   "OPT": 14,
+   "base": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1597,
+    "t": 0.0056,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 11,
+   "OPT": 14,
+   "base": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 17683,
+    "t": 0.0572,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 12,
+   "OPT": 17,
+   "base": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 28429,
+    "t": 0.0959,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 17,
+    "L": 17,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 17,
+    "L": 17,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 17,
+    "L": 17,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 13,
+   "OPT": 14,
+   "base": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10795,
+    "t": 0.0351,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 14,
+    "L": 14,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 14,
+    "L": 14,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 14,
+   "OPT": 18,
+   "base": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 63283,
+    "t": 0.2678,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 18,
+    "L": 18,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0014,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 18,
+    "L": 18,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 15,
+   "OPT": 19,
+   "base": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 27712,
+    "t": 0.0928,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 19,
+    "L": 19,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0002,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 19,
+    "L": 19,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 16,
+   "OPT": 15,
+   "base": {
+    "U": 15,
+    "L": 15,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 3469,
+    "t": 0.0125,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 15,
+    "L": 15,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 15,
+    "L": 15,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 17,
+   "OPT": 11,
+   "base": {
+    "U": 11,
+    "L": 11,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 7357,
+    "t": 0.0244,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 11,
+    "L": 11,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0001,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 11,
+    "L": 11,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 11,
+    "L": 11,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 18,
+   "OPT": 16,
+   "base": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 10537,
+    "t": 0.0374,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 16,
+    "L": 16,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0005,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 16,
+    "L": 16,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  },
+  {
+   "k": 19,
+   "OPT": 23,
+   "base": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 17929,
+    "t": 0.0674,
+    "proved": true
+   },
+   "nodePACK": {
+    "U": 23,
+    "L": 23,
+    "rounds": 1,
+    "calls": 1,
+    "nodes": 1,
+    "t": 0.0021,
+    "proved": true
+   },
+   "IPbound": {
+    "U": 23,
+    "L": 23,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   },
+   "full": {
+    "U": 23,
+    "L": 23,
+    "rounds": 0,
+    "calls": 0,
+    "nodes": 0,
+    "t": 0.0,
+    "proved": true
+   }
+  }
+ ]
+}

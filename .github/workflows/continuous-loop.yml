@@ -192,7 +192,7 @@ jobs:
           fi
           echo "[loop] MAIN_FLAGS='${MAIN_FLAGS:-（默认命令）}' JUDGE_FLAGS='${JUDGE_FLAGS:-（默认命令）}'"
 
-          cat > config.yaml <<EOF
+          cat > config.yaml <<'EOF'
           # 本文件由 CI 生成：xuen 研究循环配置（任务：设计一个新的算法）
           agent:
             command: 'dsh --profile headless "$prompt"'
