@@ -15,3 +15,9 @@
 {"event": "restored", "round": 4, "why": "轮次失败（超时）", "best": "20261022-072011-r3", "changed": ["idea", "artifact"], "ts": "2026-10-22 07:46:17"}
 {"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-22 08:11:17"}
 {"event": "skipped", "round": 6, "reason": "超时", "ts": "2026-10-22 08:36:17"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-22 09:02:45"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261022-072011-r3", "changed": ["idea", "artifact"], "ts": "2026-10-22 09:02:45"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-22 09:27:45"}
+{"event": "restored", "round": 2, "why": "轮次失败（超时）", "best": "20261022-072011-r3", "changed": ["idea", "artifact"], "ts": "2026-10-22 09:27:45"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-22 09:52:45"}
+{"event": "restored", "round": 3, "why": "轮次失败（超时）", "best": "20261022-072011-r3", "changed": ["idea", "artifact"], "ts": "2026-10-22 09:52:45"}
