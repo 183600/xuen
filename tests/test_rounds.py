@@ -8465,6 +8465,8 @@ def test_detect_test_suite_make_no_separator_but_valid_lines_keep_suite(
     ".RECIPEPREFIX = >\ndefine X\ntest: ; @true\nendef\n"
     "test:\n> @echo ok\n",
     "ifeq (1,1)\n.RECIPEPREFIX = >\nendif\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX += >\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX ?= >\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_recipe_prefix(tmp_path, makefile):
     """`.RECIPEPREFIX` 改写 recipe 前缀后仍要探测到 test。
@@ -8486,6 +8488,7 @@ def test_detect_test_suite_make_recipe_prefix(tmp_path, makefile):
     ".RECIPEPREFIX = >\nX=1\n> @echo x\ntest:\n> @echo ok\n",
     ".RECIPEPREFIX = >\ntest&:\n",
     "ifeq (1,0)\n.RECIPEPREFIX = >\nendif\ntest:\n> @echo ok\n",
+    ".RECIPEPREFIX ?= >\ntest:\n> @echo ok\n",
 ])
 def test_detect_test_suite_make_recipe_prefix_invalid_lines(
         tmp_path, makefile):

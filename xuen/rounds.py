@@ -4813,7 +4813,9 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
     out: List[str] = []
     prefix = "\t"
     value = ""
-    seen_assignment = False
+    # make 预定义了 .RECIPEPREFIX（空值），所以 `?=` 不会生效；只有
+    # 显式 `undefine` 后才可能赋值，这里不跟踪该罕见写法。
+    seen_assignment = True
     define_depth = 0
     conditional_depth = 0
     for line in lines:
