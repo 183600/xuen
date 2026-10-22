@@ -259,8 +259,7 @@ def _find_spec(name: str) -> bool:
 _PYTEST_SKIP_DIRS = frozenset({
     ".git", ".hg", ".svn", ".tox", ".nox", ".venv", "venv", ".env",
     "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
-    ".ruff_cache", "site-packages", "build", "dist", "CVS", "_darcs",
-    "{arch}",
+    ".ruff_cache", "build", "dist", "CVS", "_darcs", "{arch}",
 })
 
 # Makefile 里真正的 test 目标。`test: VAR=...`（含 export/private/override

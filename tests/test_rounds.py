@@ -655,6 +655,19 @@ def test_detect_test_suite_pytest_directory_named_like_test_file(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+def test_detect_test_suite_pytest_collects_site_packages(tmp_path):
+    """顶层 site-packages 不是 pytest 默认忽略目录。
+
+    pytest 默认 norecursedirs 不含 site-packages；探测却把它当依赖目录
+    跳过，只在该目录里有 test_*.py 的仓库会被误判成没有套件，而实际
+    `pytest -q` 能正常运行。"""
+    path = tmp_path / "site-packages" / "test_vendor.py"
+    path.parent.mkdir()
+    path.write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    suite = detect_test_suite(tmp_path)
+    assert suite is not None and "pytest" in suite
+
+
 def test_detect_test_suite_pytest_ignores_uncollected_dirs(tmp_path):
     """pytest 默认不收集的目录里的测试不能被当成本仓库的套件。
 
