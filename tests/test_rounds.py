@@ -804,6 +804,44 @@ def test_detect_test_suite_make_spaced_ampersand_is_target_not_marker(
 
 
 @pytest.mark.parametrize("line", [
+    "\\;test: $(error x)",
+    "\\;test: $(eval foo)",
+    "\\;test: $(word x,a)",
+    "\\;test: $(eval foo: a:b)",
+])
+def test_detect_test_suite_make_ignored_escape_semicolon_still_expands(
+        tmp_path, line):
+    r"""行首 `\;` 让规则本身被忽略，但依赖列表仍会在读取期展开。
+
+    `\;test: $(error x)` 不定义 test 目标，make 却会展开依赖并报错；
+    原先整行被直接跳过，后面的 test 目标被误判成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_ignored_escape_semicolon_skips_header(
+        tmp_path):
+    r"""被 `\;` 忽略的规则里，`a:b` 不会触发规则头校验。
+
+    make 接受 `\;test: a:b` 并继续执行后面的 test；展开校验若把依赖
+    当成正常规则头，会误报 target pattern contains no '%'。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "\\;test: a:b\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
     "./test::",
     ".//test:: foo",
     "$(strip ) test=1::",

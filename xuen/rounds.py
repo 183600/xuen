@@ -3999,6 +3999,43 @@ def _make_raw_rule_is_target_assignment(
     return True
 
 
+def _make_validate_ignored_rule_deps(
+        rest: str, variables: Dict[str, Optional[str]],
+        simple: Dict[str, bool], overrides: Optional[set],
+        repo: Optional[Path] = None) -> None:
+    r"""校验行首 `\;` 被忽略的规则里依赖列表的读取期展开。
+
+    `\;foo: $(error x)` 不定义目标，但 make 仍会展开依赖并执行其中的
+    eval；`$(error x)` / `$(word x,a)` / `$(eval foo: a:b)` 都会让读取
+    立即失败。原实现直接跳过整行，后面的 test 目标被误判成可运行套件。
+    用临时立即赋值承载依赖文本：它不按规则头校验 `a:b`（make 对这类
+    被忽略的行也不报错），但会走完整的读取期展开/求值路径。临时变量
+    名在结束后恢复，eval 对真实变量的副作用照常保留。
+    """
+    temp_name = "__xuen_ignored_rule_deps__"
+    marker = object()
+    saved_value = variables.get(temp_name, marker)
+    saved_simple = simple.get(temp_name, marker)
+    saved_override = temp_name in overrides if overrides is not None else False
+    try:
+        _make_scan_assignment(temp_name + " := " + rest, variables, simple,
+                              overrides, repo)
+    finally:
+        if saved_value is marker:
+            variables.pop(temp_name, None)
+        else:
+            variables[temp_name] = saved_value
+        if saved_simple is marker:
+            simple.pop(temp_name, None)
+        else:
+            simple[temp_name] = saved_simple
+        if overrides is not None:
+            if saved_override:
+                overrides.add(temp_name)
+            else:
+                overrides.discard(temp_name)
+
+
 def _make_expand_simple_vars(text: str,
                              repo: Optional[Path] = None) -> str:
     """按出现顺序展开简单的 make 变量引用，供目标探测使用。
@@ -4098,7 +4135,12 @@ def _make_expand_simple_vars(text: str,
                         body[special_colon + 1:], skip_refs=True):
                     # 行首 `\;` 在没有原文同行分隔符时会让 make 忽略
                     # 整行，不定义任何目标；后续 tab 行会报 recipe
-                    # commences before first target。
+                    # commences before first target。整行虽被忽略，依赖
+                    # 列表仍会在读取期展开，其中的 error / eval / 函数
+                    # 参数错误照样会让 make 直接失败。
+                    _make_validate_ignored_rule_deps(
+                        body[special_colon + 1:], variables, simple,
+                        overrides, repo)
                     out.append(_MAKE_CONTEXT_RESET + newline)
                     i += 1
                     continue
