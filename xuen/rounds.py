@@ -4755,6 +4755,15 @@ def _make_expand_simple_vars(text: str,
                     _make_escape_target_semicolons(
                         expanded[:expanded_target_colon])
                     + expanded[expanded_target_colon:])
+        expanded_stripped = expanded.lstrip(" \t")
+        if (expanded_stripped.startswith("\\;")
+                and not body.lstrip(" \t").startswith("\\;")):
+            # 原文行首的 `\;` 会被 make 丢弃；变量展开产生的 `\;` 则是
+            # 目标名里的字面字符。用哨兵保留这个区别，避免下行把
+            # `$(X):`（X = \;test）误当成 test 规则，与后面的 test::
+            # 形成虚假的 :/:: 冲突而漏掉可运行套件。
+            indent = len(expanded) - len(expanded_stripped)
+            expanded = expanded[:indent] + "\x06" + expanded[indent:]
         out.append(expanded + newline)
         i += 1
     return "".join(out)

@@ -9513,3 +9513,20 @@ def test_detect_test_suite_make_expanded_hash_target_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_expanded_leading_semicolon_keeps_suite(
+        tmp_path):
+    r"""变量展开出的行首 `\;` 是目标名字符，不是会被丢弃的字面前缀。
+
+    回归：`X = \;test` + `$(X):` 在冒号风格检查里被剥成 test（单冒号），
+    与后面的 test:: 误报冲突，真实 test 目标因此漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = \\;test\n$(X): ; @true\ntest::\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
