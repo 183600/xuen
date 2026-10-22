@@ -9159,6 +9159,27 @@ def test_detect_test_suite_make_expanded_empty_target_colon_keeps_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "X = a;b\ntest$(X): ; @true\ntest:\n\t@echo ok\n",
+    "X = a;b\n$(X): ; @true\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_expanded_target_semicolon_keeps_suite(
+        tmp_path, makefile):
+    """目标名展开出的分号是名字的一部分，不能当成 recipe 分隔符。
+
+    回归：`test$(X): ;` 在 X=a;b 时定义目标 `testa;b`，后续 test
+    目标仍可运行；把展开后的分号当同行 recipe 起点会报 missing
+    separator，漏掉可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 @pytest.mark.parametrize("line", [
     "undefine $(strip )",
     "undefine $(info x)",

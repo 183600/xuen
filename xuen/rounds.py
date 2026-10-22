@@ -331,12 +331,15 @@ _MAKE_TEST_TARGET = re.compile(
 )
 
 
-def _make_unescaped_colon(text: str, start: int) -> int:
+def _make_unescaped_colon(text: str, start: int, *,
+                         ignore_semicolon: bool = False) -> int:
     """返回 start 后第一个不在 $(...)/${...} 内、未被转义的冒号下标。
 
     Make 的变量引用内部可以带冒号（如 ${X:--x}），它不是规则分隔符；
     反斜杠转义的冒号（a\\:b）也只是文件名的一部分。注释/同行命令起点
     （# / ;）之后的内容不再属于规则头，扫到即停止并返回 -1。
+    `ignore_semicolon` 用于展开后的目标列表：变量值里的分号是目标名的
+    一部分，不能当成同行 recipe 起点。
     """
     i = start
     n = len(text)
@@ -345,7 +348,7 @@ def _make_unescaped_colon(text: str, start: int) -> int:
         if ch == "\\":
             i += 2
             continue
-        if ch in "#;":
+        if ch in "#;" and not (ignore_semicolon and ch == ";"):
             return -1
         if ch == "$" and i + 1 < n:
             if text[i + 1] in "({":
@@ -1499,6 +1502,23 @@ def _make_has_missing_separator_line(text: str, *,
             continue
         return True
     return False
+
+
+def _make_escape_target_semicolons(text: str) -> str:
+    """把展开后目标名里的分号转义，避免下游当成同行 recipe 分隔符。"""
+    out = []
+    i = 0
+    while i < len(text):
+        if text[i] == "\\" and i + 1 < len(text):
+            out.append(text[i:i + 2])
+            i += 2
+            continue
+        if text[i] == ";":
+            out.append("\\;")
+        else:
+            out.append(text[i])
+        i += 1
+    return "".join(out)
 
 
 def _make_last_unescaped_colon(text: str) -> int:
@@ -4630,6 +4650,14 @@ def _make_expand_simple_vars(text: str,
             # 提供 recipe 分隔符，否则 make 读取阶段就报 missing
             # separator。引用内部的 ; 和展开产生的 \; 都不算。
             raise _MakeRequiredIncludeError("missing separator")
+        if raw_rule_colon >= 0:
+            expanded_target_colon = _make_unescaped_colon(
+                expanded, 0, ignore_semicolon=True)
+            if expanded_target_colon >= 0:
+                expanded = (
+                    _make_escape_target_semicolons(
+                        expanded[:expanded_target_colon])
+                    + expanded[expanded_target_colon:])
         out.append(expanded + newline)
         i += 1
     return "".join(out)
