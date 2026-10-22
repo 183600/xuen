@@ -1354,6 +1354,13 @@ def _make_has_missing_separator_line(text: str, *,
                 # `foo$:...` 的 `$:` 会吃掉规则冒号，行是否合法由
                 # _make_has_bare_trailing_dollar_rule 统一判定。
                 continue
+            if _make_targets_mix_pattern_and_normal(
+                    _make_name_without_refs(
+                        body[:raw_colon].lstrip(" \t"))):
+                # `%\.o foo ?= a:b` 这类首个目标是模式、后面又混入普通
+                # 目标的写法，即使含有赋值运算符，make 也会在读取期报
+                # mixed implicit and normal rules。
+                return True
             continue
         # `$#` / `$;` / `$:` 这类单字符引用会吃掉后面的字符：`test $#:`
         # 里的 `#` 不是注释起点、`test $::` 里第一个冒号被 `$:` 吃掉，

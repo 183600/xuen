@@ -2967,6 +2967,30 @@ def test_detect_test_suite_make_assignment_lhs_space_blocks_suite(
 
 
 @pytest.mark.parametrize("line", [
+    "%\\.o $(addsuffix,$(patsubst a,b,a),x) ?= a:b",
+    "%\\.o foo := x",
+    "%\\.o foo = x",
+])
+def test_detect_test_suite_make_mixed_pattern_assignment_blocks_suite(
+        tmp_path, line):
+    """首个目标是模式又混入普通目标时，赋值运算符也救不了该行。
+
+    回归：`%\.o $(addsuffix...) ?= a:b` 含 `?=`，展开后可能被当成
+    合法变量赋值；make 在读取期却报 mixed implicit and normal rules /
+    empty variable name，后面的 test 目标不会执行。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = test\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
     "export X Y = z",
     "export $(X) $(strip ) := z",
     "foo bar = x: y",
