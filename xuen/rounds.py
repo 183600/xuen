@@ -705,6 +705,23 @@ def _make_continues_recipe_line(text: str, start: int) -> bool:
     return count % 2 == 1
 
 
+_MAKE_ESCAPED_TARGET_MARK = "\ue000"
+
+
+def _make_mark_escaped_target_whitespace(text: str) -> str:
+    r"""给目标名里的反斜杠空白段打尾哨兵，保留原始词边界。
+
+    `test\  $(strip ) test::` 里第一个词是 `test\  $(strip )`，第二个
+    词是 `test`。若先按文本把转义空白压成空格、再展开变量，引用展开
+    为空后两个词会粘成一个 `test `，丢失第二个 test 目标，也与后续
+    `test:` 的单/双冒号冲突检查失之交臂。哨兵不占词边界，展开结束后
+    再由目标词解析去掉。
+    """
+    return re.sub(r"\\[ \t]+",
+                  lambda match: match.group(0) + _MAKE_ESCAPED_TARGET_MARK,
+                  text)
+
+
 def _make_target_words(text: str) -> List[str]:
     """按 make 的词法切分目标列表，把整个 `$(...)`/`${...}` 当作一个词。
 
@@ -750,13 +767,14 @@ def _make_target_words(text: str) -> List[str]:
             continue
         if ch.isspace():
             if buf:
-                words.append("".join(buf))
+                words.append("".join(buf).replace(
+                    _MAKE_ESCAPED_TARGET_MARK, ""))
                 buf = []
         else:
             buf.append(ch)
         i += 1
     if buf:
-        words.append("".join(buf))
+        words.append("".join(buf).replace(_MAKE_ESCAPED_TARGET_MARK, ""))
     return words
 
 
@@ -4334,6 +4352,14 @@ def _make_expand_simple_vars(text: str,
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
         expanded_rule_targets: Optional[str] = None
         early_colon = _make_unescaped_colon(body, 0)
+        if (early_colon >= 0
+                and _MAKE_EXPORT_DIRECTIVE.match(body) is None
+                and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+            # 目标名里的 `\ ` 是名字内部的空格，后面的变量引用即使展开
+            # 为空也不能让下一个原始目标词粘上来。打哨兵后再做整行展开。
+            body = (_make_mark_escaped_target_whitespace(
+                body[:early_colon]) + body[early_colon:])
+            early_colon = _make_unescaped_colon(body, 0)
         if (early_colon >= 0
                 and _MAKE_EXPORT_DIRECTIVE.match(body) is None
                 and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):

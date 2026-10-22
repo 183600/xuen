@@ -9671,3 +9671,23 @@ def test_detect_test_suite_make_recipe_error_not_read_time(tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line,expected", [
+    ("test\\  $(strip ) test::", None),
+    ("foo\\  $(strip ) test::", None),
+    ("test\\  $(strip ) foo::", ["make", "test"]),
+    ("test\\  $(strip )::", ["make", "test"]),
+    ("foo\\  test::", ["make", "test"]),
+    ("test\\  $(X)::", ["make", "test"]),
+])
+def test_detect_test_suite_make_escaped_target_boundaries(tmp_path, line,
+                                                          expected):
+    """转义空白后的空引用不能让原始目标词粘连，丢失冒号冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X =\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert detect_test_suite(tmp_path) == expected, p.stderr
