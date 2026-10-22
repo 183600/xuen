@@ -4832,7 +4832,14 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
             out.append(line)
             continue
         if prefix != "\t" and body.startswith(prefix):
-            out.append("\t" + body[1:] + ending)
+            # GNU make 只对默认 tab 前缀放过首个目标前的空/注释 recipe；
+            # 自定义前缀的这类行仍报 recipe commences before first target。
+            # 改写成非注释的 no-op，避免被首个目标前的空白规则误放行。
+            rest = body[1:]
+            if not rest.strip() or rest.lstrip(" \t").startswith("#"):
+                out.append("\t:" + ending)
+            else:
+                out.append("\t" + rest + ending)
             continue
         if prefix != "\t" and body.startswith("\t"):
             out.append(" " + body[1:] + ending)
