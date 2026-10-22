@@ -4251,15 +4251,17 @@ def _make_expand_simple_vars(text: str,
         raw_grouped_colon = _make_unescaped_colon(body, 0)
         raw_grouped_marker = False
         if raw_grouped_colon > 0 and body[raw_grouped_colon - 1] == "&":
-            backslashes = 0
             pos = raw_grouped_colon - 2
-            while pos >= 0 and body[pos] == "\\":
-                backslashes += 1
+            # `\&` 仍被 make 当成 grouped 标记（反斜杠只影响目标名，
+            # 不吃掉 & 的分隔语义）；只有紧邻的 `$&` 是单字符变量
+            # 引用，不属于标记。`$$&` 里的 `$$` 是字面美元符，后面的
+            # & 仍是 grouped 标记，因此按 `$` 个数的奇偶判断引用。
+            dollars = 0
+            while pos >= 0 and body[pos] == "$":
+                dollars += 1
                 pos -= 1
-            # `\&` 是目标名里的字面 &；`$&` 是单字符变量引用。
-            escaped = backslashes % 2 == 1
-            single_ref = pos >= 0 and body[pos] == "$"
-            raw_grouped_marker = not escaped and not single_ref
+            single_ref = dollars % 2 == 1
+            raw_grouped_marker = not single_ref
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_value(
             expand_input, variables, simple)

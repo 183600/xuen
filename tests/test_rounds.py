@@ -758,6 +758,27 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "test& test=1  \\&: dep\ntest:\n\t@true\n",
+    "$$&: $(info x)\ntest: ; @true\n",
+    "$(wildcard x) $$&: @true\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_escaped_grouped_marker_without_recipe(
+        tmp_path, makefile):
+    """`\&:` / `$$&:` 仍是 grouped 标记，缺 recipe 时 make 读取失败。
+
+    反斜杠不会取消 & 的分组语义；`$$` 展开成字面美元符后，末尾的 &
+    依旧紧贴规则分隔符。展开阶段曾把这些 & 当作普通目标名打上哨兵，
+    漏掉 grouped targets must provide a recipe。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "./test::",
     ".//test:: foo",
