@@ -1176,6 +1176,83 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
     return False
 
 
+_MAKE_ASSIGNMENT_OPERATORS = (":::=", "::=", ":=", "?=", "+=", "!=", "=")
+
+
+def _make_assignment_lhs_has_space(body: str) -> bool:
+    """独立赋值左侧在运算符前是否仍有空白分隔的多个词。
+
+    `foo bar = x` / `$(X) $(strip ) := x` 的左侧字面空白会让 make 报
+    missing separator 或 empty variable name；只有运算符前的尾部空白
+    会被去掉。`export X Y = z` 是导出多个变量，属于特例。规则行
+    （运算符前已有未转义冒号）是 target-specific 赋值/依赖列表，不按
+    独立赋值处理。
+    """
+    stripped = body.lstrip(" \t")
+    if re.match(r"export(?:[ \t]+|$)", stripped) is not None:
+        return False
+    i = 0
+    n = len(body)
+    op_pos = -1
+    op = ""
+    while i < n:
+        ch = body[i]
+        if ch == "#":
+            break
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "$" and i + 1 < n and body[i + 1] in "({":
+            opener = body[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                if body[j] == opener:
+                    depth += 1
+                elif body[j] == closer:
+                    depth -= 1
+                j += 1
+            if depth:
+                return False
+            i = j
+            continue
+        if ch == "$":
+            # 单字符引用可能吃掉后面的冒号/等号（`$: = x`）。
+            i += 2
+            continue
+        for candidate in _MAKE_ASSIGNMENT_OPERATORS:
+            if body.startswith(candidate, i):
+                op_pos = i
+                op = candidate
+                break
+        if op_pos >= 0:
+            break
+        i += 1
+    if op_pos < 0:
+        return False
+    lhs = body[:op_pos]
+    if _make_unescaped_colon(lhs, 0) >= 0:
+        return False
+    lhs = lhs.lstrip(" \t")
+    for _ in range(2):
+        modifier = re.match(
+            r"(?:override|private)(?:[ \t]+|$)", lhs)
+        if modifier is None:
+            break
+        lhs = lhs[modifier.end():]
+    if not re.search(r"[ \t]", lhs.rstrip(" \t")):
+        return False
+    if op in (":=", "::="):
+        # 立即展开运算符已经确定是赋值，左侧多词直接报 empty variable
+        # name，后面的冒号不会把它改判成规则。
+        return True
+    # 延迟运算符的左侧有多词时，make 会继续寻找后面的规则冒号；找到
+    # 就按目标/依赖列表解析（`foo bar = x: y` 定义目标 foo/bar），
+    # 没找到才是 missing separator。
+    return _make_unescaped_colon(body[op_pos + len(op):], 0) < 0
+
+
 def _make_has_missing_separator_line(text: str, *,
                                     expanded: bool = False) -> bool:
     """是否有会被 make 报 missing separator 的非规则行。
@@ -1231,6 +1308,8 @@ def _make_has_missing_separator_line(text: str, *,
                 or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None
                 or _MAKE_CONDITIONAL_LINE.match(body) is not None):
             continue
+        if _make_assignment_lhs_has_space(body):
+            return True
         raw_colon = _make_unescaped_colon(body, 0)
         if raw_colon >= 0:
             if _make_target_list_has_bare_trailing_dollar(body[:raw_colon]):
@@ -2343,6 +2422,11 @@ def _make_expand_include_functions(
         # 内容，不能再当成参数分隔符（否则 findstring 的 find 参数会被截断）。
         raw_parts = _make_split_function_args(
             args, _MAKE_FUNCTION_ARITY[name], opener)
+        # 参数个数只看顶层逗号，与参数能否静态求值无关；即使后面是
+        # `$(shell ...)`，`$(addprefix $(shell ))` 仍会报 insufficient
+        # number of arguments 并停止读取。
+        if len(raw_parts) < _MAKE_FUNCTION_ARITY[name]:
+            raise _MakeRequiredIncludeError(name + ": missing argument")
         # make 只去掉函数名后第一个参数原文的起始空白；必须在展开前
         # 处理，展开结果里的前导空格属于值本身。
         raw_parts[0] = raw_parts[0].lstrip(" \t")
@@ -3767,8 +3851,23 @@ def _make_expand_simple_vars(text: str,
                     and body[raw_rest_start] == ":"):
                 raw_rest_start += 1
             raw_targets_stripped = raw_targets.rstrip(" \t")
-            _, target_op = _make_target_assignment_parts(
+            target_prefix, target_op = _make_target_assignment_parts(
                 body[raw_rest_start:])
+            if target_op is not None:
+                # target-specific 赋值的变量名同样在读取期立即展开，
+                # 即使右侧是延迟的 `=`；`test: $(eval x) = x` 里的
+                # eval 参数 `x` 没有分隔符，make 直接报错。
+                _make_expand_eval_functions(
+                    target_prefix, variables, simple, repo, overrides)
+            else:
+                # 不是 target-specific 赋值时，冒号后的依赖列表在读取期
+                # 展开；同行 recipe（分号后）不在读取期展开，不能提前
+                # 校验其中的 eval。
+                header_rest = body[raw_rest_start:]
+                header_end = _make_rule_header_rest_end(header_rest)
+                _make_expand_eval_functions(
+                    header_rest[:header_end], variables, simple, repo,
+                    overrides)
             if (target_op is not None
                     and raw_targets.lstrip(" \t") not in ("", "&")
                     and not raw_targets_stripped.endswith(("&", "$"))

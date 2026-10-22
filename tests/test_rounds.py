@@ -2786,6 +2786,9 @@ def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
     "$(eval x):\ntest:\n\t@echo ok\n",
     "$(eval x) test:\n\t@echo ok\n",
     "X = test\n$(eval $(X)):\ntest:\n\t@echo ok\n",
+    "test: $(eval x) = x\ntest:\n\t@echo ok\n",
+    "test: foo $(eval x)\ntest:\n\t@echo ok\n",
+    "X = test\ntest: $(X) $(eval x) = x\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
         tmp_path, makefile):
@@ -2798,6 +2801,77 @@ def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "foo bar = x",
+    "$(X) $(strip ) := x",
+    "foo\\ bar = x",
+    "$x $y = z",
+    "override foo bar := x",
+])
+def test_detect_test_suite_make_assignment_lhs_space_blocks_suite(
+        tmp_path, line):
+    """独立赋值左侧在运算符前有空白分隔的多个词时 make 读取失败。
+
+    `foo bar = x` 报 missing separator，`foo bar := x` 报 empty variable
+    name；只有运算符前的尾部空白会被去掉。原先动态名扫描在第一个空白
+    处停止，`$(X) $(strip ) := x` 被当成普通行，后面的 test 目标因此
+    被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = test\nY = x\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "export X Y = z",
+    "export $(X) $(strip ) := z",
+    "foo bar = x: y",
+])
+def test_detect_test_suite_make_assignment_lhs_space_keeps_suite(
+        tmp_path, line):
+    """export 多变量行与带规则冒号的延迟运算符行仍是合法 Makefile。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = test\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(addprefix $(shell ))",
+    "$(addsuffix $(shell echo x))",
+    "$(subst $(shell ),x)",
+    "$(patsubst x,$(shell ))",
+])
+def test_detect_test_suite_make_function_arity_with_unresolved_arg(
+        tmp_path, line):
+    """函数参数个数与参数能否静态求值无关。
+
+    `$(addprefix $(shell ))` 只有一个参数，make 展开 shell 后仍报
+    insufficient number of arguments；原先遇到 shell 就跳过整个函数，
+    后面的 test 目标被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + ":\n\t@echo ok\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
     p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode != 0
@@ -7807,6 +7881,7 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
     "test: A=$(word x,a b)\ntest:\n\t@echo ok\n",
     "test: A=$(call f,\ntest:\n\t@echo ok\n",
     "test: A=$(error boom)\ntest:\n\t@echo ok\n",
+    "test: A=$(eval x)\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_deferred_target_assignment_value_keeps_suite(
         tmp_path, makefile):
