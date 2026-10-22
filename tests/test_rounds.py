@@ -9551,3 +9551,25 @@ def test_detect_test_suite_make_expanded_immediate_assignment_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "test&: $(eval test: ; @true)\n",
+    "private test&: $(eval test: ; @true)\n",
+    "foo&: $(eval test: ; @true)\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_eval_does_not_give_grouped_recipe(
+        tmp_path, makefile):
+    """grouped target 的 recipe 只能来自本行 ; 或 tab 行。
+
+    `$(eval ...)` 展开为空，参数里的分号属于 eval 内部行，不会成为外层
+    grouped 规则的 recipe；make 读取时直接报 grouped targets must
+    provide a recipe。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert "grouped targets must provide a recipe" in p.stderr
+    assert detect_test_suite(tmp_path) is None

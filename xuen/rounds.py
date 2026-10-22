@@ -613,12 +613,33 @@ def _make_has_recipe_separator(rest: str, *,
     return False
 
 
+def _make_strip_eval_calls(text: str) -> str:
+    """删除 `$(eval ...)` / `${eval ...}` 调用，返回其展开结果空串。
+
+    只用于判断规则头是否自带 recipe：eval 的副作用（定义目标/变量）
+    另行处理，它本身不会给当前规则提供 `;` 分隔符。参数里的分号只是
+    eval 内部 Makefile 行的一部分，不能把外层 grouped target 误判成
+    已有 recipe。
+    """
+    pos = 0
+    while True:
+        try:
+            call = _make_find_function_call(text, pos, "eval")
+        except _MakeRequiredIncludeError:
+            return text
+        if call is None:
+            return text
+        start, end, _ = call
+        text = text[:start] + text[end:]
+        pos = start
+
+
 def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
                                     line_end: int) -> bool:
     """grouped target（test&:）必须带 recipe，否则 make 直接报错。"""
     if colon < 1 or line[colon - 1] != "&":
         return True
-    rest = line[colon + 1:]
+    rest = _make_strip_eval_calls(line[colon + 1:])
     # 与 _make_rule_header_rest_end 同口径：没有未转义分号时，GNU make 4.3
     # 会把第一个 `\;` 当同行 recipe 分隔符（`test &: foo\;bar` 不报
     # grouped targets must provide a recipe），不能只看未转义分号。
