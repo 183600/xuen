@@ -4300,17 +4300,24 @@ def _make_expand_simple_vars(text: str,
                 targets_empty = expanded_targets == "" or (
                     expanded_targets == "&"
                     and raw_targets.rstrip(" \t").endswith("&"))
-                if targets_empty or target_op in ("=", "?=", "+="):
+                if targets_empty:
+                    # 目标列表展开为空时 make 按空规则处理，后续 tab 行
+                    # 合法且不会清空当前目标；输出空规则而不是赋值哨兵，
+                    # 避免把 `$(T): X=1` 后面的 recipe 误报成首个目标
+                    # 前的 recipe。
+                    out.append(":" + newline)
+                    i += 1
+                    continue
+                if target_op in ("=", "?=", "+="):
                     needs_escaped_check = (
                         _make_targets_have_internal_escaped_semicolon(
                             raw_targets)
                         and not _make_has_recipe_separator(
                             body[raw_rest_start:], skip_refs=True))
-                    if (targets_empty or (
-                            _make_raw_rule_is_target_assignment(
-                                body[raw_rest_start:], variables, simple,
-                                repo, overrides)
-                            and not needs_escaped_check)):
+                    if (_make_raw_rule_is_target_assignment(
+                            body[raw_rest_start:], variables, simple,
+                            repo, overrides)
+                            and not needs_escaped_check):
                         out.append(_MAKE_CONTEXT_RESET + newline)
                         i += 1
                         continue

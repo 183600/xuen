@@ -8490,6 +8490,44 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
 
 
 @pytest.mark.parametrize("makefile", [
+    "test: ; @echo ok\n$(T): X=1\n\t@echo ignored\n",
+    "test: ; @echo ok\n$(T):: X=1\n\t@echo ignored\n",
+    "$(T):: X=1\n\t@echo ignored\ntest:\n\t@echo ok\n",
+    "$(T): X=1\n\t@echo ignored\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_empty_target_assignment_keeps_recipe_context(
+        tmp_path, makefile):
+    """目标列表展开为空的 target-specific 赋值不清空 recipe 上下文。
+
+    回归：`$(T): X=1` 后跟 tab 行时 make 把该行当空规则的 recipe 接受，
+    不会报 recipe commences before first target；探测却输出赋值哨兵，
+    把后面可运行的 test 目标误判成没有套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "X=1\n\t@echo ignored\ntest:\n\t@echo ok\n",
+    "foo: X=1\n\t@echo ignored\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_assignment_before_recipe_still_blocks(
+        tmp_path, makefile):
+    """普通赋值和非空 target-specific 赋值仍会让 tab 行成为非法 recipe。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "T =\n$(T): A=$(word x,a b)\ntest:\n\t@echo ok\n",
     "$(X): A:=$(word x,a b)\ntest:\n\t@echo ok\n",
     "test: A=$(word x,a b)\ntest:\n\t@echo ok\n",
