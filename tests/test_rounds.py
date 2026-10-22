@@ -9472,3 +9472,25 @@ def test_detect_test_suite_make_expanded_double_colon_rule_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "private export undefine T",
+    "export private undefine T",
+    "override export undefine T",
+    "export override undefine T",
+])
+def test_detect_test_suite_make_export_undefine_modifier_order(
+        tmp_path, line):
+    """export/private/override 可以任意顺序修饰 undefine。
+
+    回归：`private export undefine T` 未被识别为指令，按 missing
+    separator 拒绝整份 Makefile，后面的合法 test 目标因此漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "T = test\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

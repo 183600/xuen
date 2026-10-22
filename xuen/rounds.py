@@ -828,9 +828,10 @@ _MAKE_EVAL_TEST_TARGET_STYLE: Optional[str] = None
 # （`private foo:` / `override foo:` 都定义 foo），只有跟变量赋值/
 # define 时才是修饰符；赋值行已由 _MAKE_VAR_ASSIGNMENT 跳过。
 _MAKE_NON_RULE_DIRECTIVE = re.compile(
-    # private / override 只能修饰 undefine；它们后面跟其他指令关键字
-    # （`private export foo`）或规则头（`private foo:`）时是普通目标名。
-    r"^[ \t]*(?:(?:(?:private|override)[ \t]+)*undefine"
+    # private / override / export 以任意顺序修饰 undefine；它们后面跟
+    # 其他指令关键字（`private export foo`）或规则头（`private foo:`）
+    # 时是普通目标名。
+    r"^[ \t]*(?:(?:(?:private|override|export)[ \t]+)*undefine"
     r"|include|sinclude|-include|vpath|export|unexport|define)(?:[ \t]|$)")
 
 
