@@ -3818,6 +3818,13 @@ def _make_expand_simple_vars(text: str,
             out.append(line)
             i += 1
             continue
+        if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+                or _MAKE_EXPORT_DIRECTIVE.match(body) is not None):
+            # include/vpath/export 等指令的参数在读取期展开；其中的
+            # `$(eval x)` 会立即解析参数行并失败。赋值形式的 export 已在
+            # 上面按赋值处理，这里只校验非赋值指令。
+            _make_expand_eval_functions(
+                body, variables, simple, repo, overrides)
         eval_args = _make_standalone_eval_args(body)
         if eval_args is not None:
             # eval 的参数先原样作为 Makefile 行插入，交给同一轮主循环按
@@ -3872,6 +3879,23 @@ def _make_expand_simple_vars(text: str,
                 _make_expand_eval_functions(
                     header_rest[:header_end], variables, simple, repo,
                     overrides)
+            if target_op in (":=", "::=", "!=", ":::="):
+                # target-specific 立即赋值的目标列表非空时，右侧也在
+                # 读取期展开；`%: X := $(eval x)` 会先执行 eval 并失败。
+                # 目标列表展开为空时 make 连右侧都忽略，不能提前报错。
+                immediate_targets = _make_expand_assignment_name(
+                    raw_targets, variables, simple, repo, overrides)
+                immediate_targets = immediate_targets.strip(" \t")
+                if immediate_targets not in ("", "&"):
+                    rest = body[raw_rest_start:]
+                    name_at = rest.find(target_prefix)
+                    op_at = rest.find(
+                        target_op, name_at + len(target_prefix))
+                    if op_at >= 0:
+                        value = _make_strip_value_comment(
+                            rest[op_at + len(target_op):])
+                        _make_expand_eval_functions(
+                            value, variables, simple, repo, overrides)
             if (target_op is not None
                     and raw_targets.lstrip(" \t") not in ("", "&")
                     and not raw_targets_stripped.endswith(("&", "$"))
@@ -4420,6 +4444,11 @@ def _make_expand_condition_arg(
         # `$(if $(foreach x,test, ),then,else)` 的真假。
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_call_functions(
+            value, variables, simple, repo, overrides)
+        # eval 会在读取期立即展开参数并解析；条件参数里的
+        # `$(eval x)` 会让 make 直接报 missing separator，不能当成
+        # 未解析引用留给条件比较。
+        value = _make_expand_eval_functions(
             value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple, repo=repo)
         # 先展开条件函数再展开静态函数：静态函数扫描会改写 if/or/and

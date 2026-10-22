@@ -2792,6 +2792,8 @@ def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
     "test: $(eval x) = x\ntest:\n\t@echo ok\n",
     "test: foo $(eval x)\ntest:\n\t@echo ok\n",
     "X = test\ntest: $(X) $(eval x) = x\ntest:\n\t@echo ok\n",
+    "test: A := $(eval x)\ntest:\n\t@echo ok\n",
+    "%: $(X) := $(eval x)\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
         tmp_path, makefile):
@@ -2804,6 +2806,50 @@ def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
     if not shutil.which("make"):
         pytest.skip("make 不可用")
     (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "ifeq ($(eval x),a)\ntest:\n\t@echo ok\nendif\n",
+    "X := $(if $(eval x),a,b)\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_eval_in_condition_blocks_suite(
+        tmp_path, makefile):
+    """条件参数在读取期立即展开，其中的 eval 同样会解析参数行。
+
+    `ifeq ($(eval x),a)` 的 eval 参数 `x` 没有分隔符，make 在判定条件
+    前就报 missing separator；原先条件展开只处理静态函数/引用，eval
+    原文被当成非空条件值，后面的 test 目标被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "export $(eval x)",
+    "vpath $(eval x)",
+    "include $(eval x)",
+])
+def test_detect_test_suite_make_eval_in_directive_blocks_suite(
+        tmp_path, line):
+    """include/vpath/export 的参数在读取期展开，eval 也在此时执行。
+
+    `export $(eval x)` / `include $(eval x)` 里的 eval 参数 `x` 没有
+    分隔符，make 报 missing separator；原先非规则指令整行跳过，后面的
+    test 目标被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
     p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert p.returncode != 0
@@ -7885,6 +7931,7 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
     "test: A=$(call f,\ntest:\n\t@echo ok\n",
     "test: A=$(error boom)\ntest:\n\t@echo ok\n",
     "test: A=$(eval x)\ntest:\n\t@echo ok\n",
+    "$(X): A:=$(eval x)\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_deferred_target_assignment_value_keeps_suite(
         tmp_path, makefile):
