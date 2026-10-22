@@ -2742,6 +2742,7 @@ def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
     # 规则头左侧的 eval 也会展开并应用其中的赋值，后面的目标名随之可见。
     "$(eval X=test)$(X):\n\t@true\n",
     "$(eval $(eval x=1))foo = x",
+    "$(eval x=1) #c := $$",
 ])
 def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                                                                line):
@@ -2774,6 +2775,28 @@ def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
 
     原先只处理 eval 里的赋值、忽略其他行，`$(eval x)foo = 1` 被当成
     合法动态赋值，后面的 test 目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "$(eval x) #c := $$",
+    "$(eval x) # comment",
+])
+def test_detect_test_suite_make_eval_line_with_trailing_comment_blocks_suite(
+        tmp_path, line):
+    """eval 行尾注释不阻止 eval 在读取期执行。
+
+    `$(eval x) #c := $$` 去掉注释后仍是独立的 eval 调用，参数 `x`
+    缺少分隔符，make 读取失败；原先整行只有 eval 的识别被注释打断，
+    后面的 test 目标因此被误判成可运行套件。
     """
     if not shutil.which("make"):
         pytest.skip("make 不可用")

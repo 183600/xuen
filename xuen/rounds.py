@@ -3829,7 +3829,10 @@ def _make_expand_simple_vars(text: str,
             # 上面按赋值处理，这里只校验非赋值指令。
             _make_expand_eval_functions(
                 body, variables, simple, repo, overrides)
-        eval_args = _make_standalone_eval_args(body)
+        # 行尾注释不是 eval 调用的一部分，但 eval 仍会在读取期展开；
+        # `$(eval x) #c := $$` 的 `#` 之后是注释，`$(eval x)` 仍需执行。
+        eval_args = _make_standalone_eval_args(
+            _make_strip_comment(body))
         if eval_args is not None:
             # eval 的参数先原样作为 Makefile 行插入，交给同一轮主循环按
             # 顺序展开/应用（参数里的赋值也要影响后续行）。eval 行本身
@@ -4840,7 +4843,10 @@ def _make_text_with_includes(text: str, repo: Path,
         if stack and not stack[-1]["active"]:
             i += 1
             continue
-        eval_args = _make_standalone_eval_args(body)
+        # 行尾注释不是 eval 调用的一部分，但 eval 仍会在读取期展开；
+        # `$(eval x) #c := $$` 的 `#` 之后是注释，`$(eval x)` 仍需执行。
+        eval_args = _make_standalone_eval_args(
+            _make_strip_comment(body))
         if eval_args is not None:
             # eval 的参数此刻已按读取期语义展开，随后才作为 Makefile
             # 行解析。必须在这里就地插入，让其中的 include 与条件指令
