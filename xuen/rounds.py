@@ -2611,6 +2611,10 @@ def _make_expand_eval_functions(
             check_line = eval_line
             for _ in range(20):
                 before_line = check_line
+                # 嵌套 eval 会在外层参数展开时先执行；`$(eval $(eval x))`
+                # 的内层 `x` 已经让 make 读取失败，不能随外层一起删掉。
+                check_line = _make_expand_eval_functions(
+                    check_line, variables, simple, repo, overrides)
                 if "$$" in check_line:
                     check_line = check_line.replace("$$", "$")
                 check_line = _make_resolve_single_char_refs(

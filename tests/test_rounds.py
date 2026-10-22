@@ -2741,6 +2741,7 @@ def test_detect_test_suite_make_empty_or_invalid_assignment_blocks_suite(
     "$(eval x=1)foo = x",
     # 规则头左侧的 eval 也会展开并应用其中的赋值，后面的目标名随之可见。
     "$(eval X=test)$(X):\n\t@true\n",
+    "$(eval $(eval x=1))foo = x",
 ])
 def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
                                                                line):
@@ -2764,6 +2765,8 @@ def test_detect_test_suite_make_dynamic_assignment_keeps_suite(tmp_path,
     "$(eval $$,x)foo = 1",
     "$(eval $$$$)foo = 1",
     "X = test\n$(eval $$(X))foo = 1",
+    "$(eval $(eval x))foo = 1",
+    "$(eval $(eval x=1),x)foo = 1",
 ])
 def test_detect_test_suite_make_eval_invalid_assignment_name_blocks_suite(
         tmp_path, line):
