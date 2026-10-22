@@ -803,6 +803,53 @@ def test_detect_test_suite_make_spaced_ampersand_is_target_not_marker(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "test+:: ; @true\ntest: ; @true\n",
+    "test?:: ; @true\ntest: ; @true\n",
+    "test+:\n\t@true\ntest: ; @true\n",
+])
+def test_detect_test_suite_make_target_trailing_plus_or_question(
+        tmp_path, makefile):
+    """目标名末尾的 `+` / `?` 没有紧跟 `=` 时属于目标名本身。
+
+    `test+:` 只定义 test+，不是 test；原先按统一 rstrip("+?") 把它当成
+    test，导致 `test+:` 被误判成套件、`test+::` 还会与 `test:` 误报
+    冒号风格冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert "No rule to make target" not in p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_target_plus_equals_conflict(tmp_path):
+    """`foo test+=1::` 仍定义 test，与后面的 test: 构成 :/:: 冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "foo test+=1:: ; @true\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert "both : and :: entries" in p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_target_plus_only_is_not_a_suite(tmp_path):
+    """`test+:` 单独存在时 make test 找不到目标，不能算套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text("test+:\n\t@true\n",
+                                       encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "\\;test: $(error x)",
     "\\;test: $(eval foo)",

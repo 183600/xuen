@@ -1537,10 +1537,13 @@ def _make_expanded_targets_end_with_colon(targets: str) -> bool:
 def _make_target_word_units(word: str) -> List[str]:
     """按 make 规则头词法再切分目标词：未转义 `=` 是词分隔符。
 
-    `foo test=1:` 定义目标 foo / test / 1，`test+=1:` 的 `+`/`?`
-    运算符前缀被吸收；`test\\=1:` 里的等号被转义，属于目标名本身。
+    `foo test=1:` 定义目标 foo / test / 1；`foo test+=1:` 的 `+`/`?`
+    是紧贴 `=` 的运算符前缀，只吸收一个（`test++=1` 的目标是 test+）。
+    没有 `=` 时，末尾的 `+`/`?` 属于目标名本身：`test+:` 只定义
+    test+，不能当成 test 而与后面的 `test:` 误报冒号风格冲突。
+    `test\\=1:` 里的等号被转义，属于目标名本身。
     """
-    units: List[str] = []
+    units: List[Tuple[str, bool]] = []
     buf: List[str] = []
     i = 0
     n = len(word)
@@ -1555,14 +1558,20 @@ def _make_target_word_units(word: str) -> List[str]:
             # make 仍把 `test=1:` 的目标列表分成 test / 1，冲突检查
             # 必须按同样的词边界切分，否则 `$(X) test=1::` 与后面的
             # `test:` 冲突会被漏掉。
-            units.append("".join(buf))
+            units.append(("".join(buf), True))
             buf = []
             i += 1
             continue
         buf.append(ch)
         i += 1
-    units.append("".join(buf))
-    return [unit.rstrip("+?") for unit in units if unit.rstrip("+?")]
+    units.append(("".join(buf), False))
+    result: List[str] = []
+    for unit, before_equals in units:
+        if before_equals and unit.endswith(("+", "?")):
+            unit = unit[:-1]
+        if unit:
+            result.append(unit)
+    return result
 
 
 def _make_line_defines_test(line: str, colon: int) -> bool:
