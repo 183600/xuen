@@ -750,12 +750,16 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
         if colon < 0 or _make_rule_is_target_specific(body, colon):
             continue
         double = body[colon:colon + 2] == "::"
-        words = _make_target_words(body[:colon])
+        raw_targets = body[:colon]
+        # 只有紧贴规则分隔符的 `&` 才是 grouped 标记；`foo& :` 里的 &
+        # 与冒号之间有空白，是名为 foo& 的普通目标，不能剥成 foo。
+        grouped_marker = raw_targets.endswith("&")
+        words = _make_target_words(raw_targets)
         for index, word in enumerate(words):
             last_word = index == len(words) - 1
             # 只有最后一个目标词的末尾 `&` 是 grouped 标记；
             # `test& foo:` 里的 test& 是普通目标名，不能当成 test。
-            if last_word and word.endswith("&"):
+            if last_word and grouped_marker and word.endswith("&"):
                 word = word[:-1]
             # 行首/目标前的 `\;` 会被 make 丢弃，`\;test&::` 实际仍是
             # test 的 grouped 双冒号规则；不剥掉前缀会漏掉与已有 test:
@@ -767,7 +771,8 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
             # 字面等号换成 \x04，_make_target_word_units 两种都切。
             units = _make_target_word_units(word)
             for unit_index, unit in enumerate(units):
-                if (last_word and unit_index == len(units) - 1
+                if (last_word and grouped_marker
+                        and unit_index == len(units) - 1
                         and unit.endswith("&")):
                     unit = unit[:-1]
                 while unit.startswith("\\;"):

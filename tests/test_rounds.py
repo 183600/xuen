@@ -779,6 +779,41 @@ def test_detect_test_suite_make_escaped_grouped_marker_without_recipe(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "foo& :\ntest: ; @true\nfoo:: ; @true\n",
+    "foo& : ;\ntest: ; @true\nfoo:: ; @true\n",
+    "test: ; @true\nfoo:: ; @true\nfoo& : a#b\n",
+    "test!:: \ntest: ; @true\ntest!& :\n",
+    "test&$: ::\ntest: ; @true\n",
+])
+def test_detect_test_suite_make_spaced_ampersand_no_colon_conflict(
+        tmp_path, makefile):
+    """`foo& :` 的 & 与冒号之间有空白，是普通目标 foo&。
+
+    它不能与 `foo::` 组成 :/:: 冲突；原先冲突检查无条件剥掉目标词末尾
+    的 &，把 foo& 当成 foo，导致后面可运行的 test 目标被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_grouped_marker_colon_conflict(tmp_path):
+    """紧贴冒号的 `foo&:` 仍是 grouped 标记，与 foo:: 冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "foo&:\n\t@true\nfoo:: ; @true\ntest: ; @true\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "$(X)& : a:b",
     "$(X)& : =1",
