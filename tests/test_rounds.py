@@ -764,6 +764,29 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     "% test\\::: X+=1",
     "test% test: X=1",
 ])
+@pytest.mark.parametrize("line", [
+    "test=1::",
+    "./test::",
+    ".//test:: foo",
+    "$(strip ) test=1::",
+])
+def test_detect_test_suite_make_mixed_colon_style_split_targets(tmp_path,
+                                                                 line):
+    """目标列表里的 `=` 与 `./` 前缀不改变目标身份。
+
+    `test=1::` 定义带 `::` 的 test / 1；`./test::` 的 test 会被 make
+    规范化。它们后面的 `test:` 会让 make 报 both : and :: entries，
+    探测必须按同样的词边界/路径规整识别冲突。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest: ; @true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_mixed_targets_target_specific(tmp_path,
                                                               line):
     """模式目标与普通目标混用只对真正的规则致命。

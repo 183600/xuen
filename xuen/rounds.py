@@ -752,24 +752,39 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
         double = body[colon:colon + 2] == "::"
         words = _make_target_words(body[:colon])
         for index, word in enumerate(words):
+            last_word = index == len(words) - 1
             # 只有最后一个目标词的末尾 `&` 是 grouped 标记；
             # `test& foo:` 里的 test& 是普通目标名，不能当成 test。
-            if index == len(words) - 1 and word.endswith("&"):
+            if last_word and word.endswith("&"):
                 word = word[:-1]
             # 行首/目标前的 `\;` 会被 make 丢弃，`\;test&::` 实际仍是
             # test 的 grouped 双冒号规则；不剥掉前缀会漏掉与已有 test:
             # 的 :/:: 冲突，整份 Makefile 读取失败却被误判成套件。
             while word.startswith("\\;"):
                 word = word[2:]
-            if not word or _make_pattern_wildcard(word)[0] >= 0:
-                # 模式规则允许同一模式分别用 : 和 :: 定义，make 不会报
-                # both : and :: entries；只有具体目标才做冲突检查。
-                continue
-            previous = styles.get(word)
-            if previous is None:
-                styles[word] = double
-            elif previous != double:
-                return True
+            # 目标列表里的未转义 `=` 也是词分隔符：`test=1::` 同时定义
+            # test 与 1，且两者都带 `::`。展开阶段会把规则目标名里的
+            # 字面等号换成 \x04，_make_target_word_units 两种都切。
+            units = _make_target_word_units(word)
+            for unit_index, unit in enumerate(units):
+                if (last_word and unit_index == len(units) - 1
+                        and unit.endswith("&")):
+                    unit = unit[:-1]
+                while unit.startswith("\\;"):
+                    unit = unit[2:]
+                # make 会把目标名前的 `./` / `.//` 规范化掉，`./test`
+                # 与 `test` 是同一条规则；不规整会漏掉 :/:: 冲突。
+                unit = re.sub(r"^(?:\./+)+", "", unit)
+                if not unit or _make_pattern_wildcard(unit)[0] >= 0:
+                    # 模式规则允许同一模式分别用 : 和 :: 定义，make
+                    # 不会报 both : and :: entries；只有具体目标才做
+                    # 冲突检查。
+                    continue
+                previous = styles.get(unit)
+                if previous is None:
+                    styles[unit] = double
+                elif previous != double:
+                    return True
     return False
 
 
@@ -1529,7 +1544,11 @@ def _make_target_word_units(word: str) -> List[str]:
             buf.append(word[i:i + 2])
             i += 2
             continue
-        if ch == "=":
+        if ch in ("=", "\x04"):
+            # \x04 是展开阶段给规则目标名里的字面等号打的哨兵：
+            # make 仍把 `test=1:` 的目标列表分成 test / 1，冲突检查
+            # 必须按同样的词边界切分，否则 `$(X) test=1::` 与后面的
+            # `test:` 冲突会被漏掉。
             units.append("".join(buf))
             buf = []
             i += 1
