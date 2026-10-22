@@ -1,0 +1,16 @@
+{
+ "N": 3000,
+ "seed": 555,
+ "mode": "pot",
+ "het": true,
+ "hpack": true,
+ "nodcd": false,
+ "yes": 1022,
+ "bad": 0,
+ "nodes": {
+  "off": 14829,
+  "on": 13617
+ },
+ "ratio": 1.089,
+ "time": 2.64
+}

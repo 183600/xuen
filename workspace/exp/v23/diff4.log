@@ -1,0 +1,1 @@
+{'N': 1000, 'seed': 888, 'het': True, 'yes': 221, 'bad': 0, 'pi_prunes': 9, 'cbc_prunes': 3, 'nodes': {'v20': 3426, 'v23': 3227}, 'ratio': 1.0617, 'time': 0.71}

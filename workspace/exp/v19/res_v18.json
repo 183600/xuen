@@ -26,8 +26,8 @@
   "full": 47
  },
  "time": {
-  "base": 0.0437,
-  "full": 0.0408
+  "base": 0.0443,
+  "full": 0.0406
  },
  "node_ratio": 1.587,
  "dcd_vs_odom": 1.095

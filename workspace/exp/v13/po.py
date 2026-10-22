@@ -157,6 +157,12 @@ def pack_exact(inst, rem, A, est, q, h, stats=None):
     if m == 2:
         return _pack2(sizes, caps)
     eligs = [el for _, el in flex]
+    # The equal-capacity symmetry break below is only valid when every
+    # flexible task can use every machine.  With heterogeneous eligibility
+    # two machines with the same remaining capacity are NOT interchangeable:
+    # placing a task on one may block a later task that can only use that one.
+    # (Minimal counterexample: p=(3,2,3), m=3, elig=({1},{0,1},{0,2}), h=3.)
+    uni = all(el == list(range(m)) for el in eligs)
     order = sorted(range(len(sizes)), key=lambda j: (len(eligs[j]), -sizes[j]))
     sizes = [sizes[j] for j in order]
     eligs = [eligs[j] for j in order]
@@ -174,9 +180,10 @@ def pack_exact(inst, rem, A, est, q, h, stats=None):
         seen = set()
         for k in eligs[j]:
             b = bins[k]
-            if b < s or b in seen:
+            if b < s or (uni and b in seen):
                 continue
-            seen.add(b)
+            if uni:
+                seen.add(b)
             bins[k] = b - s
             if dfs(j + 1):
                 bins[k] = b

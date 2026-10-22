@@ -1,0 +1,23 @@
+{
+ "bench38": {
+  "nodes": 95,
+  "d": 82,
+  "dr": 66,
+  "rhd_drops": 16,
+  "dcd_skips": 12,
+  "c": 54,
+  "calls": 25
+ },
+ "deep": {
+  "nodes": 236,
+  "d": 395,
+  "dr": 273,
+  "rhd_drops": 122,
+  "dcd_skips": 45,
+  "c": 228,
+  "calls": 117
+ },
+ "root38": 6,
+ "rootdeep": 2,
+ "root_hard3_5": 1
+}

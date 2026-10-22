@@ -1,0 +1,9 @@
+{
+ "N": 4000,
+ "seed": 11,
+ "nmax": 7,
+ "yes": 3060,
+ "bad": 0,
+ "use_norm": true,
+ "sec": 0.7
+}

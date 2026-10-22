@@ -1,0 +1,105 @@
+{
+ "bench38": {
+  "rows": [
+   {
+    "tag": "hard3",
+    "idx": 5,
+    "dcd": 115,
+    "tsd": 126,
+    "noest": 89,
+    "noest_nop": 26,
+    "est_ge": 115
+   }
+  ],
+  "tot": {
+   "dcd": 172,
+   "tsd": 183,
+   "noest": 146,
+   "noest_nop": 83,
+   "est_ge": 172
+  }
+ },
+ "deep": {
+  "rows": [
+   {
+    "idx": 0,
+    "n": 12,
+    "dcd": 1,
+    "tsd": 1,
+    "noest": 1,
+    "noest_nop": 1,
+    "est_ge": 1
+   },
+   {
+    "idx": 1,
+    "n": 13,
+    "dcd": 116,
+    "tsd": 44,
+    "noest": 102,
+    "noest_nop": 13,
+    "est_ge": 158
+   },
+   {
+    "idx": 2,
+    "n": 13,
+    "dcd": 1,
+    "tsd": 1,
+    "noest": 1,
+    "noest_nop": 1,
+    "est_ge": 1
+   },
+   {
+    "idx": 3,
+    "n": 16,
+    "dcd": 410,
+    "tsd": 75,
+    "noest": 275,
+    "noest_nop": 27,
+    "est_ge": 535
+   },
+   {
+    "idx": 4,
+    "n": 16,
+    "dcd": 52,
+    "tsd": 39,
+    "noest": 24,
+    "noest_nop": 15,
+    "est_ge": 96
+   },
+   {
+    "idx": 5,
+    "n": 16,
+    "dcd": 232,
+    "tsd": 213,
+    "noest": 218,
+    "noest_nop": 88,
+    "est_ge": 243
+   },
+   {
+    "idx": 6,
+    "n": 14,
+    "dcd": 151,
+    "tsd": 121,
+    "noest": 113,
+    "noest_nop": 59,
+    "est_ge": 190
+   },
+   {
+    "idx": 7,
+    "n": 13,
+    "dcd": 79,
+    "tsd": 67,
+    "noest": 73,
+    "noest_nop": 27,
+    "est_ge": 106
+   }
+  ],
+  "tot": {
+   "dcd": 1042,
+   "tsd": 561,
+   "noest": 807,
+   "noest_nop": 231,
+   "est_ge": 1330
+  }
+ }
+}
