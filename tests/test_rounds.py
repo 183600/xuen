@@ -9590,3 +9590,28 @@ def test_detect_test_suite_make_dynamic_recipe_prefix(tmp_path, makefile):
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "define B\ndefine Y\ntest\nendef\nendef\n$(B)\ntest:\n\t@true\n",
+    "X = define Y\n$(X)\ntest:\n\t@true\n",
+    "X = include foo\n$(X)\ntest:\n\t@true\n",
+    "X = vpath %.c src\n$(X)\ntest:\n\t@true\n",
+    "X = export Y\n$(X)\ntest:\n\t@true\n",
+    "X = undefine Y\n$(X)\ntest:\n\t@true\n",
+    "X = ifeq (1,1)\n$(X)\ntest:\n\t@true\nendif\n",
+    "X = endef\n$(X)\ntest:\n\t@true\n",
+])
+def test_detect_test_suite_make_expanded_directive_is_missing_separator(
+        tmp_path, makefile):
+    """变量展开出的指令字样只是普通文本，make 报 missing separator。
+
+    原文里的 vpath/export 等指令经展开后仍保留，但展开才生成的
+    `define` / `include` / `ifeq` 等不会被重新识别成读取指令。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None

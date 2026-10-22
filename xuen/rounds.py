@@ -1509,7 +1509,17 @@ def _make_has_missing_separator_line(text: str, *,
             indent = body[:len(body) - len(stripped)]
             body = indent + stripped[2:]
             stripped = body.lstrip(" \t")
+        if expanded and stripped.endswith(_MAKE_LITERAL_DIRECTIVE):
+            # 原文里的 vpath/export 等读取指令经展开后仍在文本里，后缀
+            # 哨兵标明它原本就是指令；展开过程新生成的同名行没有哨兵，
+            # make 会按普通行报 missing separator。
+            continue
         if _MAKE_DEFINE_LINE.match(body) is not None:
+            if expanded:
+                # define 块在展开阶段已换成上下文哨兵；展开后才出现的
+                # `define Y` 来自变量值，make 不会重新开启 define 块，
+                # 而是直接报 missing separator。
+                return True
             define_depth = 1
             continue
         immediate_assignment = _MAKE_VAR_ASSIGNMENT.match(body)
@@ -1519,9 +1529,6 @@ def _make_has_missing_separator_line(text: str, *,
             # 哨兵。make 在展开前就决定一行是不是赋值，`X = =` 后的
             # `$(X)` 展开成 `=` 仍是缺失分隔符的规则头，不能因为展开
             # 文本匹配赋值正则就放过。
-            if (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
-                    or _MAKE_CONDITIONAL_LINE.match(body) is not None):
-                continue
             if (immediate_assignment is not None
                     and immediate_assignment.group(2)
                     in (":=", "::=", ":::=")):
@@ -4795,6 +4802,8 @@ def _make_expand_simple_vars(text: str,
             # 形成虚假的 :/:: 冲突而漏掉可运行套件。
             indent = len(expanded) - len(expanded_stripped)
             expanded = expanded[:indent] + "\x06" + expanded[indent:]
+        if _MAKE_LITERAL_DIRECTIVE_MATCH(body):
+            expanded += _MAKE_LITERAL_DIRECTIVE
         out.append(expanded + newline)
         i += 1
     return "".join(out)
@@ -4804,6 +4813,14 @@ _MAKE_INCLUDE_LINE = re.compile(
     r"^[ ]*(include|-include|sinclude)[ \t]+(.*)$")
 _MAKE_CONDITIONAL_LINE = re.compile(
     r"^[ \t]*(ifeq|ifneq|ifdef|ifndef|else|endif)(?:[ \t]+(.*))?$")
+# 展开文本里给「原文就是读取指令」的行加后缀，避免展开后新生成的
+# include/export/define 等字样被误当成合法指令。
+_MAKE_LITERAL_DIRECTIVE = "\x08"
+
+
+def _MAKE_LITERAL_DIRECTIVE_MATCH(body: str) -> bool:
+    return (_MAKE_NON_RULE_DIRECTIVE.match(body) is not None
+            or _MAKE_EXPORT_DIRECTIVE.match(body) is not None)
 _MAKE_DEFINE_LINE = re.compile(
     r"^[ \t]*(?:(?:override|export|private)[ \t]+)*define"
     # `define = x` / `define += x` 等是名为 define 的普通变量赋值，不是
