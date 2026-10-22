@@ -3247,6 +3247,10 @@ def _make_expand_immediate_value(
         value = _make_expand_side_effect_functions(value)
         value = _make_expand_call_functions(
             value, variables, simple, repo, overrides)
+        # eval 在读取期立即执行；`X := $(eval x)` 会先解析参数行 `x`
+        # 并报 missing separator，不能把它留成普通变量值。
+        value = _make_expand_eval_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple, repo=repo)
         if repo is not None:
             value = _make_expand_include_functions(

@@ -2813,6 +2813,32 @@ def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
 
 
 @pytest.mark.parametrize("makefile", [
+    "test ::= $(eval x)\ntest:\n\t@echo ok\n",
+    "X := $(eval x)\ntest:\n\t@echo ok\n",
+    "x?y != $(eval x)\ntest:\n\t@echo ok\n",
+    "./x != $(eval x)\ntest:\n\t@echo ok\n",
+    "X = test\n$(X) := $(eval x)\ntest:\n\t@echo ok\n",
+    "$(origin X) ::= $(eval x)\ntest:\n\t@echo ok\n",
+    "X := a\nX += $(eval x)\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_eval_in_immediate_assignment_value_blocks_suite(
+        tmp_path, makefile):
+    """立即赋值右值的 eval 先于变量引用展开，参数行错误会让 make 停止。
+
+    `X := $(eval x)` / `test ::= $(eval x)` 都会先解析 eval 参数 `x`
+    并报 missing separator；原先只校验赋值名里的 eval，右侧被当成普通
+    变量值，后面的 test 目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "ifeq ($(eval x),a)\nendif\ntest:\n\t@echo ok\n",
     "ifeq ($(basename,$(eval x),-lfoo),)\nendif\n"
     "test:\n\t@echo ok\n",
@@ -7936,6 +7962,8 @@ def test_detect_test_suite_make_empty_target_list_assignment_keeps_suite(
     "test: A=$(error boom)\ntest:\n\t@echo ok\n",
     "test: A=$(eval x)\ntest:\n\t@echo ok\n",
     "$(X): A:=$(eval x)\ntest:\n\t@echo ok\n",
+    "X = test\nX += $(eval x)\ntest:\n\t@echo ok\n",
+    "X = test\nX ?= $(eval x)\ntest:\n\t@echo ok\n",
 ])
 def test_detect_test_suite_make_deferred_target_assignment_value_keeps_suite(
         tmp_path, makefile):
