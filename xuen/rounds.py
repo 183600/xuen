@@ -3962,6 +3962,53 @@ def _make_expand_simple_vars(text: str,
                 _make_expand_eval_functions(
                     header_rest[:header_end], variables, simple, repo,
                     overrides)
+                # 目标列表展开为空时 make 忽略整行，连前置依赖都不会
+                # 展开：`$(X): $(word x,a)` 在 X 为空时仍可运行 test，
+                # 提前展开依赖会把必然执行的 test 误判成读取失败。
+                # 目标列表本身的展开错误仍要抛出（make 确实会展开它）。
+                # 展开顺序与主流程一致：条件先于 foreach，未生效分支
+                # 里的函数不能提前求值。
+                expanded_targets = _make_expand_value(
+                    raw_targets, variables, simple)
+                expanded_targets = _make_expand_condition_functions(
+                    expanded_targets, variables, simple, repo)
+                expanded_targets = _make_expand_foreach(
+                    expanded_targets, variables, simple, repo)
+                expanded_targets = _make_resolve_single_char_refs(
+                    expanded_targets, variables, simple)
+                expanded_targets = _make_expand_refs(
+                    expanded_targets, variables, simple, repo=repo)
+                for _ in range(20):
+                    before_targets = expanded_targets
+                    expanded_targets = _make_expand_value(
+                        expanded_targets, variables, simple)
+                    expanded_targets = _make_expand_condition_functions(
+                        expanded_targets, variables, simple, repo)
+                    expanded_targets = _make_expand_foreach(
+                        expanded_targets, variables, simple, repo)
+                    expanded_targets = _make_expand_refs(
+                        expanded_targets, variables, simple, repo=repo)
+                    if repo is not None:
+                        expanded_targets = _make_expand_include_functions(
+                            expanded_targets, repo)
+                        expanded_targets = _make_expand_refs(
+                            expanded_targets, variables, simple, repo=repo)
+                    expanded_targets = _make_expand_computed_refs(
+                        expanded_targets, variables, simple)
+                    expanded_targets = _make_resolve_single_char_refs(
+                        expanded_targets, variables, simple)
+                    if expanded_targets == before_targets:
+                        break
+                expanded_targets = expanded_targets.strip(" \t")
+                if (expanded_targets == ""
+                        or (expanded_targets == "&"
+                            and raw_targets.rstrip(" \t").endswith("&"))):
+                    # make 把空目标列表当成可挂 recipe 的空规则：后续
+                    # tab 行合法但不会影响任何具名目标，输出一个空规则
+                    # 保留这个上下文，不能当作赋值清空当前目标。
+                    out.append(":" + newline)
+                    i += 1
+                    continue
             if target_op in (":=", "::=", "!=", ":::="):
                 # target-specific 立即赋值的目标列表非空时，右侧也在
                 # 读取期展开；`%: X := $(eval x)` 会先执行 eval 并失败。

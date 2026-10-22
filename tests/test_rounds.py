@@ -8588,3 +8588,37 @@ def test_detect_test_suite_make_info_warning_argument_error_blocks_suite(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "X =\n$(X): $(word x,a)\ntest:\n\t@true\n",
+    "X =\n$(X)&: $(word x,a)\ntest:\n\t@true\n",
+    "X =\n$(if ,$(word x,a),$(X)): $(error boom)\n"
+    "test:\n\t@true\n",
+])
+def test_detect_test_suite_make_empty_target_skips_prereq_expansion(
+        tmp_path, makefile):
+    """目标列表展开为空时 make 忽略整行，前置依赖里的函数错误不生效。
+
+    回归：`$(X): $(word x,a)` 在 X 为空时仍能运行后面的 test 目标；
+    提前展开依赖会把合法的 test 套件误判成读取失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_nonempty_target_still_expands_prereqs(
+        tmp_path):
+    """目标列表非空时依赖列表照常展开，语法错误仍应拒绝整个套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X = foo\n$(X): $(word x,a)\ntest:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
