@@ -1955,6 +1955,9 @@ def test_detect_test_suite_make_grouped_escaped_semicolon_recipe(tmp_path):
     "foo&: dep\ntest:\n\t@true\n",
     "foo &: dep\ntest:\n\t@true\n",
     "foo&: \\\n\t@true\ntest:\n\t@true\n",
+    # 赋值/define 会清空当前目标；其后的 tab 注释不算 grouped recipe。
+    "test&:\nX=1\n\t# c\ntest:\n\t@true\n",
+    "test&:\ndefine X\ntest: ; @true\nendef\n\t# c\ntest:\n\t@true\n",
     "test:\ntest::\n\t@true\n",
     "test::\ntest:\n\t@true\n",
     # 冲突目标不是 test 本身时整个 Makefile 也会读取失败。

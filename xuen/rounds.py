@@ -635,6 +635,10 @@ def _make_grouped_target_has_recipe(text: str, line: str, colon: int,
         if nxt.startswith("\t"):
             return True
         stripped = nxt.strip()
+        if stripped.startswith(_MAKE_CONTEXT_RESET):
+            # 赋值/define 等非 recipe 行会清空当前目标；其后的 tab 行
+            # 不再属于 grouped target，不能当成它的 recipe。
+            return False
         if not stripped or stripped.startswith("#"):
             pos = end + 1
             continue
