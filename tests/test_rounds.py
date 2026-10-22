@@ -1005,6 +1005,45 @@ def test_detect_test_suite_make_recipe_continuation(tmp_path, recipe):
 
 
 @pytest.mark.parametrize("directive", [
+    "include /dev/null",
+    "-include /dev/null",
+])
+def test_detect_test_suite_make_include_dev_null(tmp_path, directive):
+    """`include /dev/null` 是常见写法，字符设备可读且内容为空。
+
+    探测曾要求 include 目标是普通文件，把 /dev/null 当成不可读的必需
+    文件，后面的 test 目标被误判成没有套件。"""
+    if not shutil.which("make") or not Path("/dev/null").exists():
+        pytest.skip("make 或 /dev/null 不可用")
+    (tmp_path / "Makefile").write_text(
+        directive + "\ntest: ; @true\n", encoding="utf-8")
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_optional_unreadable_include_ignored(
+        tmp_path):
+    """-include 的权限错误与缺失文件一样被 make 忽略。
+
+    required include 读取失败才终止解析；-include / sinclude 只在目录
+    这类 make 明确报错的路径上失败。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    if (hasattr(os, "geteuid") and os.geteuid() == 0):
+        pytest.skip("root 忽略文件权限，无法构造不可读文件")
+    (tmp_path / "noread.mk").write_text("foo\n", encoding="utf-8")
+    os.chmod(tmp_path / "noread.mk", 0)
+    try:
+        (tmp_path / "Makefile").write_text(
+            "-include noread.mk\ntest: ; @true\n", encoding="utf-8")
+        assert detect_test_suite(tmp_path) == ["make", "test"]
+        (tmp_path / "Makefile").write_text(
+            "include noread.mk\ntest: ; @true\n", encoding="utf-8")
+        assert detect_test_suite(tmp_path) is None
+    finally:
+        os.chmod(tmp_path / "noread.mk", 0o600)
+
+
+@pytest.mark.parametrize("directive", [
     "include tests.mk",
     "-include tests.mk",
     "sinclude tests.mk",

@@ -5413,17 +5413,26 @@ def _make_text_with_includes(text: str, repo: Path,
                         key = path.resolve()
                         if key in seen:
                             continue
-                        if not path.is_file():
-                            # 悬空符号链接的 exists() 为 False，与 make 的
-                            # 「缺失」口径一致；目录等存在但不可读的路径
-                            # 两种 include 都报错。
-                            if path.exists() or directive == "include":
+                        # 不能要求 is_file：`include /dev/null` 是常见
+                        # 写法，字符设备可读且内容为空，make 正常接受。
+                        # 限制读取长度，避免 /dev/zero、/dev/full 这类
+                        # 无穷设备把探测卡死；普通大文件仍按 2MB 上限
+                        # 跳过内容（只影响静态目标探测，不会执行它们）。
+                        try:
+                            if path.is_dir():
+                                raise IsADirectoryError(str(path))
+                            with path.open("rb") as handle:
+                                raw = handle.read(2_000_001)
+                        except OSError:
+                            # make 对目录即使 -include 也报错；普通文件
+                            # 缺失/权限不足时只有必需 include 才终止，
+                            # -include / sinclude 按语义忽略。
+                            if path.is_dir() or directive == "include":
                                 raise _MakeRequiredIncludeError(display)
                             continue
-                        if path.stat().st_size > 2_000_000:
+                        if len(raw) > 2_000_000:
                             continue
-                        included = path.read_text(encoding="utf-8-sig",
-                                                  errors="replace")
+                        included = raw.decode("utf-8-sig", errors="replace")
                     except _MakeRequiredIncludeError:
                         raise
                     except (OSError, ValueError, RuntimeError):
