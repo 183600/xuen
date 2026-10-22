@@ -348,19 +348,24 @@ def _make_unescaped_colon(text: str, start: int) -> int:
             continue
         if ch in "#;":
             return -1
-        if ch == "$" and i + 1 < n and text[i + 1] in "({":
-            opener = text[i + 1]
-            closer = ")" if opener == "(" else "}"
-            depth = 1
-            j = i + 2
-            while j < n and depth:
-                cj = text[j]
-                if cj == opener:
-                    depth += 1
-                elif cj == closer:
-                    depth -= 1
-                j += 1
-            i = j
+        if ch == "$" and i + 1 < n:
+            if text[i + 1] in "({":
+                opener = text[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n and depth:
+                    cj = text[j]
+                    if cj == opener:
+                        depth += 1
+                    elif cj == closer:
+                        depth -= 1
+                    j += 1
+                i = j
+            else:
+                # `$;`、`$#` 等单字符变量引用内部的分号/井号不是注释或
+                # 同行命令起点；它们展开后可能正好是规则分隔符之前的空白。
+                i += 2
             continue
         if ch == ":":
             return i
@@ -4448,6 +4453,20 @@ def _make_expand_simple_vars(text: str,
             expanded = " " + expanded.lstrip("\t")
         expanded_rule_colon = _make_unescaped_colon(expanded, 0)
         raw_rule_colon = _make_unescaped_colon(body, 0)
+        if (expanded_rule_colon >= 0
+                and expanded[expanded_rule_colon:expanded_rule_colon + 2]
+                == "::"
+                and not (raw_rule_colon >= 0
+                         and body[raw_rule_colon:raw_rule_colon + 2]
+                         == "::")
+                and expanded[:expanded_rule_colon].strip(" \t")
+                and not expanded[:expanded_rule_colon].lstrip(
+                    " \t").startswith(":")):
+            # 原文只有单冒号，但目标表达式展开出的冒号紧挨规则分隔符
+            # 形成 `::`（`foo $(if x,:,):` 展开成 `foo ::`）。make 把
+            # 前一个冒号当成目标名的一部分，报 missing target pattern；
+            # 字面 `foo ::` 已由 raw 双冒号分支排除。
+            raise _MakeRequiredIncludeError("missing target pattern")
         if (raw_rule_colon >= 0 and expanded_rule_colon >= 0
                 and _MAKE_EXPORT_DIRECTIVE.match(body) is None
                 and _MAKE_NON_RULE_DIRECTIVE.match(body) is None

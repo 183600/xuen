@@ -8467,6 +8467,33 @@ def test_detect_test_suite_make_expanded_target_trailing_colon_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "foo $(and x,:):",
+    "foo $(foreach v,a,$(v):):",
+    "foo $(if x,:,y):",
+    "foo $(join :,):",
+    "foo $(if x,a:,):",
+    "$(addprefix foo ,a:):",
+    "$(if x,foo a:,):",
+])
+def test_detect_test_suite_make_expanded_colon_before_target_tail_blocks_suite(
+        tmp_path, line):
+    """目标列表前缀展开出冒号并紧挨规则分隔符时 make 报 reading 错误。
+
+    回归：`foo $(and x,:):` 展开成 `foo ::`，make 把前一个冒号当成
+    目标名的一部分，报 missing target pattern；展开后的文本与合法
+    `foo ::` 双冒号规则无法区分，导致后面的 test 被误判成套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_hash_inside_variable_reference_keeps_suite(
         tmp_path):
     """变量引用内部的 # 不是注释，if 条件能看到完整的 # 参数。
