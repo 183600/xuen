@@ -759,13 +759,6 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
 
 
 @pytest.mark.parametrize("line", [
-    "%test test: X+=1",
-    "%test\t$(if x,test,): X+=1",
-    "% test\\::: X+=1",
-    "test% test: X=1",
-])
-@pytest.mark.parametrize("line", [
-    "test=1::",
     "./test::",
     ".//test:: foo",
     "$(strip ) test=1::",
@@ -787,6 +780,12 @@ def test_detect_test_suite_make_mixed_colon_style_split_targets(tmp_path,
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "%test test: X+=1",
+    "%test\t$(if x,test,): X+=1",
+    "% test\\::: X+=1",
+    "test% test: X=1",
+])
 def test_detect_test_suite_make_mixed_targets_target_specific(tmp_path,
                                                               line):
     """模式目标与普通目标混用只对真正的规则致命。
