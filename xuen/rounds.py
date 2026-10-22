@@ -1179,6 +1179,36 @@ def _make_has_recipe_before_first_target(text: str) -> bool:
 _MAKE_ASSIGNMENT_OPERATORS = (":::=", "::=", ":=", "?=", "+=", "!=", "=")
 
 
+def _make_name_without_refs(text: str) -> str:
+    """遮住变量引用/转义字符，只留下会分隔变量名的字面空白。"""
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == "\\" and i + 1 < n:
+            out.append("X")
+            i += 2
+            continue
+        if ch == "$" and i + 1 < n and text[i + 1] in "({":
+            opener = text[i + 1]
+            closer = ")" if opener == "(" else "}"
+            depth = 1
+            j = i + 2
+            while j < n and depth:
+                if text[j] == opener:
+                    depth += 1
+                elif text[j] == closer:
+                    depth -= 1
+                j += 1
+            out.append("X")
+            i = j
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _make_assignment_lhs_has_space(body: str) -> bool:
     """独立赋值左侧在运算符前是否仍有空白分隔的多个词。
 
@@ -1187,14 +1217,18 @@ def _make_assignment_lhs_has_space(body: str) -> bool:
     会被去掉。`export X Y = z` 是导出多个变量，属于特例。规则行
     （运算符前已有未转义冒号）是 target-specific 赋值/依赖列表，不按
     独立赋值处理。
+
+    make 会跳过左侧有多词的运算符继续找下一个：`foo a=b := c` 里
+    第一个 `=` 左侧多词，但后面的 `:=` 是立即赋值运算符，仍会让 make
+    报 empty variable name，不能因为后面还有冒号就当成规则。
     """
     stripped = body.lstrip(" \t")
     if re.match(r"export(?:[ \t]+|$)", stripped) is not None:
         return False
     i = 0
     n = len(body)
-    op_pos = -1
-    op = ""
+    has_invalid = False
+    has_immediate = False
     while i < n:
         ch = body[i]
         if ch == "#":
@@ -1221,36 +1255,40 @@ def _make_assignment_lhs_has_space(body: str) -> bool:
             # 单字符引用可能吃掉后面的冒号/等号（`$: = x`）。
             i += 2
             continue
+        op = ""
         for candidate in _MAKE_ASSIGNMENT_OPERATORS:
             if body.startswith(candidate, i):
-                op_pos = i
                 op = candidate
                 break
-        if op_pos >= 0:
-            break
-        i += 1
-    if op_pos < 0:
-        return False
-    lhs = body[:op_pos]
-    if _make_unescaped_colon(lhs, 0) >= 0:
-        return False
-    lhs = lhs.lstrip(" \t")
-    for _ in range(2):
-        modifier = re.match(
-            r"(?:override|private)(?:[ \t]+|$)", lhs)
-        if modifier is None:
-            break
-        lhs = lhs[modifier.end():]
-    if not re.search(r"[ \t]", lhs.rstrip(" \t")):
-        return False
-    if op in (":=", "::="):
-        # 立即展开运算符已经确定是赋值，左侧多词直接报 empty variable
-        # name，后面的冒号不会把它改判成规则。
+        if not op:
+            i += 1
+            continue
+        lhs = body[:i]
+        if _make_unescaped_colon(lhs, 0) >= 0:
+            return False
+        lhs = _make_name_without_refs(lhs).lstrip(" \t")
+        for _ in range(2):
+            modifier = re.match(
+                r"(?:override|private)(?:[ \t]+|$)", lhs)
+            if modifier is None:
+                break
+            lhs = lhs[modifier.end():]
+        if not re.search(r"[ \t]", lhs.rstrip(" \t")):
+            # 左侧是单个变量名，make 在这里就确定是赋值。
+            return False
+        if op in (":=", "::=", "!=", ":::="):
+            has_immediate = True
+        else:
+            has_invalid = True
+        i += len(op)
+    if has_immediate:
         return True
-    # 延迟运算符的左侧有多词时，make 会继续寻找后面的规则冒号；找到
-    # 就按目标/依赖列表解析（`foo bar = x: y` 定义目标 foo/bar），
-    # 没找到才是 missing separator。
-    return _make_unescaped_colon(body[op_pos + len(op):], 0) < 0
+    if has_invalid:
+        # 延迟运算符左侧有多词时，make 会继续寻找后面的规则冒号；找到
+        # 就按目标/依赖列表解析（`foo bar = x: y` 定义目标 foo/bar），
+        # 没找到才是 missing separator。
+        return _make_unescaped_colon(body, 0) < 0
+    return False
 
 
 def _make_has_missing_separator_line(text: str, *,

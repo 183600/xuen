@@ -2940,6 +2940,11 @@ def test_detect_test_suite_make_eval_in_directive_blocks_suite(
     "foo\\ bar = x",
     "$x $y = z",
     "override foo bar := x",
+    "$(U) a=b := $(X)",
+    "$(wildcard x) a=b ::= a#b",
+    "$(call ,x) a=b := a:b",
+    "$(eval x=1) a=b ::= $(X)",
+    "foo a=b = c",
 ])
 def test_detect_test_suite_make_assignment_lhs_space_blocks_suite(
         tmp_path, line):
@@ -2965,6 +2970,8 @@ def test_detect_test_suite_make_assignment_lhs_space_blocks_suite(
     "export X Y = z",
     "export $(X) $(strip ) := z",
     "foo bar = x: y",
+    "foo = b := c",
+    "foo a=b: c",
 ])
 def test_detect_test_suite_make_assignment_lhs_space_keeps_suite(
         tmp_path, line):
