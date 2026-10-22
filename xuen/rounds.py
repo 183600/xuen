@@ -1973,6 +1973,16 @@ _MAKE_FUNCTION_ARITY = {
     "findstring": 2, "join": 2,
 }
 
+# `$(call name,...)` 的 name 若正好是内建函数名，make 会直接调用该
+# 函数；参数个数不足时和普通函数调用一样是读取期 fatal 错误。
+# 这里只记录最少参数个数（file 允许 1 或 2 个参数）。
+_MAKE_CALL_MIN_ARGS = {
+    **_MAKE_FUNCTION_ARITY,
+    "file": 1, "foreach": 3, "if": 2, "or": 1, "and": 1,
+    "value": 1, "origin": 1, "flavor": 1, "error": 1, "info": 1,
+    "warning": 1, "shell": 1, "guile": 1, "intcmp": 2, "let": 2,
+}
+
 
 def _make_split_function_args(args: str, arity: int,
                               opener: str = "(") -> List[str]:
@@ -2700,6 +2710,11 @@ def _make_expand_call_functions(
         if "$" in name:
             pos = end
             continue
+        # 内建函数名不是变量，call 会直接调用它；参数不足时 make 报
+        # insufficient number of arguments，即使存在同名用户变量也一样。
+        min_args = _MAKE_CALL_MIN_ARGS.get(name)
+        if min_args is not None and len(parts) - 1 < min_args:
+            raise _MakeRequiredIncludeError(name + ": missing argument")
         if name in variables:
             value = variables[name]
             if value is None:

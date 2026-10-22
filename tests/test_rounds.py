@@ -2809,6 +2809,29 @@ def test_detect_test_suite_make_eval_line_with_trailing_comment_blocks_suite(
 
 
 @pytest.mark.parametrize("makefile", [
+    "$(call file)\ntest:\n\t@echo ok\n",
+    "$(call subst,a)\ntest:\n\t@echo ok\n",
+    "X = test\n$(flavor X): $(call $(origin X))\n"
+    "$(X): $$\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_builtin_call_missing_args_blocks_suite(
+        tmp_path, makefile):
+    """内建函数名作为 call 的 callable 时，参数不足是读取期错误。
+
+    回归：`$(call $(origin X))` 在 X 已定义时等价于 `$(call file)`，
+    make 报 insufficient number of arguments；原先把未在变量表里的
+    callable 当成未定义变量展开为空，后面的 test 目标被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "$(eval x):\ntest:\n\t@echo ok\n",
     "$(eval x) test:\n\t@echo ok\n",
     "X = test\n$(eval $(X)):\ntest:\n\t@echo ok\n",
