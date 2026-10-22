@@ -104,37 +104,128 @@ python main.py "任务"
   `rounds/`），中断后重跑自动续上；
 - 退出码：`0` 正常结束；`1` 所有轮次均执行失败；`2` 配置/参数错误；`130` 被 Ctrl+C 中断。
 
-## 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分
+## 轮次守卫：把「防丢失 + 防倒退」做成独立卖点
 
 （`xuen/rounds.py`，配置段 `rounds:`，默认启用，`--no-rounds` 可关闭）
 
 外部 agent 每轮【整体覆盖】想法区/产物区，旧实现里下一轮无条件继承最新
-状态——某轮产出更差方案时，更好的前一轮就被覆盖丢失。守卫在不改变循环
-主体的前提下加了一道闸：
+状态——某轮产出更差方案时，更好的前一轮就被覆盖丢失。轮次守卫是 xuen
+区别于「裸跑 agent 循环」的核心机制，四件事共同保证**进度只会前进，
+不会倒退，更不会丢失**：每轮快照、候选/最佳分离、自动验证、渐进翻案。
+
+### 一图流：候选的生命周期
+
+快照 → 候选 → 验证 → 晋升/还原，外加一条「渐进翻案」的回环：
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    Best: 当前最佳（best.md / best.json）
+    Cand: 候选快照（rounds/cand-编号.md）
+    Pend: 挂起（等 verdicts.txt 补分）
+
+    [*] --> Best: 启动时固化基线
+    Best --> Cand: 一轮有改动 → 先落盘快照（任何一轮的产物都不丢）
+    Cand --> Best: 通过验证（测试全绿 / 评分 ≥ adopt_score）→ 前进式晋升
+    Cand --> Best: 被拒绝 → 还原最佳（下一轮永远从最佳出发）
+    Cand --> Pend: 无结论（评审失败 / verify=user）→ 还原最佳
+    Pend --> Best: 补分 ≥ 阈值 → 渐进翻案（快照写回 research.md）
+    Pend --> Pend: 补分 < 阈值或解析不出 → 保持挂起
+```
+
+终端友好版（与实现一一对应）：
 
 ```
 每轮结束
   │
   ├─ 无改动 → 记「心跳」，不产生候选
   ├─ 区块标记损坏 → 守卫直接拒绝，还原最佳
-  ├─ 有改动 → 快照为候选 rounds/cand-<id>.md（候选 ≠ 最佳，绝不直接当最佳）
+  ├─ 有改动 → ① 快照为候选 rounds/cand-<id>.md（候选 ≠ 最佳，绝不直接当最佳）
   │        │
-  │        ├─ 能用测试验证的跑测试：pytest → make test → npm test → go test
-  │        │   级联探测（rounds.repo 指向的目标仓库；空 = 自动探测工作区
-  │        │   所在 git 根）。全绿 → 晋升；全红 → 拒绝并还原
-  │        ├─ 不能用测试验证的，二选一（rounds.fallback / rounds.verify）：
-  │        │   · 用户评分：在 rounds/verdicts.txt 追加「<候选id> <0-10分> [评语]」，
-  │        │     守卫在每轮开始/结束时兑现；候选先按最佳还原，拿到高分后
-  │        │     前进式翻案（内容写回 research.md，不改写任何历史记录）
-  │        │   · AI 评分：复用外部 agent 当评审员（rounds.judge_command
-  │        │     可单独配更便宜的模型），对比候选与当前最佳打 0-10 分
+  │        ├─ ② 验证 rounds.verify：
+  │        │    auto  有可运行测试套件就跑测试；没有则用 fallback 评分者
+  │        │    tests 只跑测试（pytest → make → npm → go 级联）
+  │        │    user  只认 verdicts.txt 用户评分（异步、可跨会话补分）
+  │        │    ai    复用外部 agent 当评审员（judge_command 可配便宜模型）
+  │        │    off   不验证，最新即最佳（退化为「防丢失」模式）
   │        │
-  │        ├─ 通过（测试全绿 / 评分 >= rounds.adopt_score）→ 晋升为最佳
-  │        │    rounds/best.md + best.json 更新（前进式，只增不改）
-  │        └─ 失败 / 挂起 → research.md 还原为当前最佳
-  │             —— 下一轮【永远从最佳出发】，更差的候选无法污染后续轮
+  │        ├─ ③ 通过（测试全绿 / 评分 >= rounds.adopt_score）→ 前进式晋升为最佳
+  │        │    rounds/best.md + best.json 更新（只增不改，不改写历史）
+  │        └─ ③ 失败 / 挂起 → research.md 还原为当前最佳
+  │             —— 下一轮【永远从最佳出发】，更差的候选无法污染后续轮次
+  │
+  ├─ 挂起的候选 ← 用户在 rounds/verdicts.txt 追加「<候选id> <0-10分> [评语]」
+  │        └─ 补分 ≥ 阈值 → 前进式翻案：旧快照晋升为最佳并写回 research.md
   └─ 全部事件追加进 rounds/history.jsonl（审计用，只增不改）
 ```
+
+### 卖点一：`verify: user` 的渐进翻案机制
+
+研究是异步的：现在看起来「没结论」的候选，可能几小时后才被证明有价值。
+守卫不强迫用户守在屏幕前打分，而是把评分通道做成了**文件追加协议**——
+在 `<workspace>/rounds/verdicts.txt` 里加一行：
+
+```
+<候选id> <0-10 分> [评语]
+例如： 20261017-031037-r5 8 想法区更有深度，产物区伪代码可落地
+```
+
+守卫在每轮结束 / `start()` / `finish()` 三个时机兑现待决评分：挂起的旧
+候选一旦补分达到 `adopt_score`，就被**前进式晋升**为最佳并写回
+`research.md`——等价于回滚到它，但 `history.jsonl` 不改写一行（审计
+日志只增不改，翻案本身也是一条新事件）。补分低于阈值则记为拒绝；
+下一轮永远从当前最佳继续。评分通道对各种脏数据免疫：未知候选 id、
+打错字的分数、快照被删的候选，都只是保持挂起并提示一次，绝不锁死、
+绝不误杀。这套协议天然兼容 CI / 后台循环——verdicts.txt 持久化在
+工作区里，跨会话、跨 run 都能兑现。
+
+### 卖点二：`judge_command`——用便宜模型当评审员
+
+验证没结论的候选需要有人打分，但「评审」和「研究」对模型的要求完全
+不同：研究要深度思考（强模型 + 高思考档位），评审只需要对比两份文本
+给出 0-10 分（快、便宜、稳定就够）。`rounds.judge_command` 允许给评审
+员单独配一条命令模板（占位符与 `agent.command` 相同）：
+
+```yaml
+rounds:
+  verify: ai
+  judge_command: 'opencode run -m opencode/deepseek-v4.1-flash-free "$prompt"'
+  judge_timeout: 600
+```
+
+留空则复用 `agent.command`。评审的严格性不打折：评审员看到的是**候选
+快照与当前最佳**（不是可能被外部改写的实时状态），评分 >= `adopt_score`
+才采纳；评审员超时、非零退出、输出里解析不出分数，一律按「挂起」处理
+——评审员故障 ≠ 候选差，绝不因基础设施问题误杀候选（挂起的候选仍可
+事后用 verdicts.txt 翻案）。
+
+### 卖点三：进度永不丢失
+
+所有状态都落在工作区文件里，没有任何内存态：`research.md`（当前状态）、
+`words.txt`（词库）、`rounds/cand-*.md`（每轮快照，`O_EXCL` 原子创建，
+并发实例也不会互相覆盖）、`rounds/best.md|best.json`（当前最佳，tmp +
+`os.replace` 原子写）、`rounds/history.jsonl`（追加式审计日志）。恢复
+链按可靠性逐级回退：`best.json` → `history.jsonl` 的采纳事件 → 候选
+快照（内容权威：每个晋升过的最佳都有内容完全相同的快照）→ `best.md`
+镜像 → 基线重建。进程被 kill / 断电 / 磁盘写坏任何一环，下次启动都能
+回到最近的**已验证**进展；启动时还会自动把 `research.md` 拨回最佳，
+半截轮次的内容不会污染下一轮的起点。
+
+### 验证方式一览
+
+| `rounds.verify` | 行为 |
+|---|---|
+| `auto` | 有可运行测试套件就跑测试（pytest → make → npm → go 级联）；没有则用 `rounds.fallback` 评分者 |
+| `tests` | 只跑测试；没有套件 / 跑不起来 → 候选挂起，等待用户在 verdicts.txt 评分 |
+| `user` | 只认用户评分（verdicts.txt 异步补分，可跨会话翻案） |
+| `ai` | 只用 AI 评分（judge_command 可单独配便宜模型，对比候选与当前最佳打 0-10 分） |
+| `off` | 不验证：快照照存，最新即最佳（退化为「防丢失」模式） |
+
+Makefile 分支只做存在性检查，「是否真的定义了 test 目标」（写在
+ifeq 分支里、include 进来、eval 生成、模式规则、grouped targets……）
+由 GNU make 在运行时回答：`make: No rule to make target 'test'` 与
+`Nothing to be done for 'test'` 都按「套件不可用」处理，转兜底评分，
+而不是误判成测试失败。
 
 要点：
 
@@ -145,9 +236,7 @@ python main.py "任务"
   agent 连续产出多轮更差的内容，循环状态也始终停在最佳上；
 - **agent 失败轮次**同样不留候选（半截产物不可信）并还原最佳；
 - **守卫自身异常一律降级**（目录不可写、评审员超时、评分解析不出……），
-  绝不阻断研究循环；解析不出分数时按「挂起」处理，既不采纳也不丢弃；
-- **用户异步翻案**：给旧候选补分达到阈值时，旧快照被前进式晋升为最佳
-  并写回 `research.md`，等价于回滚到它，但 `history.jsonl` 不改写一行。
+  绝不阻断研究循环；解析不出分数时按「挂起」处理，既不采纳也不丢弃。
 
 CLI 快捷参数：`--no-rounds`（关闭守卫）、`--rounds-verify auto|tests|user|ai|off`、
 `--rounds-fallback user|ai`、`--rounds-score N`（采纳阈值）。
@@ -173,6 +262,19 @@ python main.py "设计一个新的优化器" --no-rounds   # 退回旧行为：�
 # 测试套件自动验证（pytest/make/npm/go 级联探测）
 ```
 
+## 在 CI 里无人值守长跑
+
+`.github/workflows/continuous-loop.yml` 把整套研究循环搬进 GitHub Actions：
+任务「**设计一个新的算法**」交给 xuen 跑（约 3 小时工作窗口，窗口到点发
+SIGINT 优雅收尾），`rounds.verify: ai` + `rounds.judge_command` 用更快的
+免费模型当评审员，主模型从动态模型池里选（优先 deepseek-v4.1-flash-free，
+其次 big-pickle，再其次池内随机，带冒烟测试与失效剔除）。
+
+工作区（`research.md` / `words.txt` / `rounds/`）经专用的 `xuen-loop` 分支
+跨 run 保存：每次 run 开头恢复、结尾 checkpoint（不动 master，仓库卫生
+不受影响）。配合每轮落盘的守卫快照，任何一次 run 中途挂掉，下一次也能
+从最近的已验证进展继续——这就是「进度会保存」的完整闭环。
+
 ## 目录结构
 
 ```
@@ -182,7 +284,7 @@ xuen/
 ├── requirements-ci.txt        # CI 固定版本依赖（含 pytest / rich）
 ├── pyproject.toml             # 包元数据；pip install -e . / .[dev]
 ├── config.example.yaml        # 复制为 config.yaml 使用
-├── .github/workflows/         # CI / 自动化循环
+├── .github/workflows/         # CI（pytest）/ xuen 自动研究循环（continuous-loop）
 ├── tests/                     # pytest：守卫、shell 渲染、TUI 降级、仓库卫生、冒烟
 └── xuen/
     ├── cli.py                 # 命令行（TUI 导入失败时降级到纯终端）
@@ -194,14 +296,18 @@ xuen/
     ├── words.py               # 词库：外部 agent 生成 / 解析 / 抽样
     ├── procs.py               # 跨平台进程工具
     ├── agents.py              # ShellAgent + 命令模板的 shell 转义/安全检查
-    ├── rounds.py              # 轮次守卫 + 测试套件探测（pytest/make/npm/go）
+    ├── rounds.py              # 轮次守卫：快照/验证/晋升/还原 + 渐进翻案
+    │                          #（Makefile 是否定义 test 目标由 make 运行时判定）
     └── runner.py              # 主循环编排
 ```
 
-`agents.py` / `rounds.py` 体量较大，因为前者包含完整的 shell 模板解析与
-安全检查，后者包含轮次守卫和 Makefile/测试套件探测；**不是遗留的直连 LLM、
-内置工具或 MCP 代码**。工作区的运行期状态（`.rounds/`、`research.md`、
-`words.txt`、`write_section.py`、`rounds/`）都在 `.gitignore` 中，不进入版本库。
+`agents.py` 体量较大，因为包含完整的 shell 模板解析与安全检查；`rounds.py`
+则是全面重写后的紧凑实现（约 1500 行含文档）：Makefile 不再做数千行
+静态解析，「是否定义了 test 目标」由 GNU make 在运行时回答，最佳内容的
+权威源是候选快照（best.md 只是镜像）。工作区的运行期状态
+（`.rounds/`、`research.md`、`words.txt`、`write_section.py`、`rounds/`）
+都在 `.gitignore` 中，不进入版本库；CI 自动循环的工作区进度经专用的
+`xuen-loop` 分支保存，master 保持干净。
 
 ## 提示词预算
 
@@ -255,6 +361,7 @@ pytest --cov=xuen --cov-report=term-missing
 | 不能测试验证的：用户评分 / AI 评分 | `verdicts.txt` 异步补分（可翻案旧候选） / 复用外部 agent 当评审员打分 |
 | 避免下一轮覆盖更好方案 | 候选失败/挂起即还原最佳；下一轮永远从最佳出发；采纳旧快照用前进式晋升、不改写历史 |
 | 提示词不随轮次无限增长 | `prompt.max_state_chars` 首尾截断 + 截断提示；完整内容保留在状态文件 |
+| CI 自动循环调用 xuen 且进度可续 | `continuous-loop.yml`：任务「设计一个新的算法」，verify=ai + 便宜模型评审员；工作区经 `xuen-loop` 分支跨 run 保存 |
 
 **注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt` / `rounds/`），中断后重跑自动继续；
 `agent.timeout` 控制单次外部调用超时。仓库根目录的 `.rounds/` 是运行期产物，
