@@ -1587,9 +1587,15 @@ def _make_has_missing_separator_line(text: str, *,
                 or _MAKE_NON_RULE_DIRECTIVE.match(body) is not None
                 or _MAKE_CONDITIONAL_LINE.match(body) is not None):
             continue
-        if _make_assignment_lhs_has_space(body):
-            return True
         raw_colon = _make_unescaped_colon(body, 0)
+        if not (raw_colon >= 0
+                and _make_target_text_only_refs(body[:raw_colon])
+                and len(_make_target_words(body[:raw_colon])) >= 2):
+            # 目标列表只由变量引用组成时，先让展开逻辑按变量当前值判断：
+            # `$(U) $(V) ::= x` 在两个引用都为空时是合法的空规则，引用
+            # 有一个非空才报 empty variable name。
+            if _make_assignment_lhs_has_space(body):
+                return True
         if raw_colon >= 0:
             if _make_target_list_has_bare_trailing_dollar(body[:raw_colon]):
                 # `foo$:...` 的 `$:` 会吃掉规则冒号，行是否合法由
@@ -4700,6 +4706,16 @@ def _make_expand_simple_vars(text: str,
                 # 时仍是普通目标，后面的空变量名照样报错（前面已按原文
                 # 判断过整体就是 `&` 的情况）。
                 expanded_targets = expanded_targets.strip(" \t")
+                if (raw_colon >= 0
+                        and body.startswith((":=", "::="), raw_colon)
+                        and _make_target_text_only_refs(raw_targets)
+                        and len(_make_target_words(raw_targets)) >= 2
+                        and expanded_targets not in ("", "&")):
+                    # 多个空引用组成的“目标”列表展开后非空时，make
+                    # 把它当成赋值名并报 empty variable name；展开为空
+                    # 才是可忽略的空规则（`$(U) $(V) ::= x`）。
+                    raise _MakeRequiredIncludeError(
+                        "empty variable name")
                 if _make_expanded_targets_end_with_colon(
                         expanded_targets):
                     # `$(join test,:):` 展开成 `test::`，但第一个冒号来自
@@ -4879,7 +4895,8 @@ def _make_expand_simple_vars(text: str,
                         expanded[:expanded_target_colon])
                     + expanded[expanded_target_colon:])
         expanded_stripped = expanded.lstrip(" \t")
-        if (expanded_stripped.startswith("\\;")
+        if (raw_rule_colon >= 0 and expanded_target_colon >= 0
+                and expanded_stripped.startswith("\\;")
                 and not body.lstrip(" \t").startswith("\\;")):
             # 原文行首的 `\;` 会被 make 丢弃；变量展开产生的 `\;` 则是
             # 目标名里的字面字符。用哨兵保留这个区别，避免下行把

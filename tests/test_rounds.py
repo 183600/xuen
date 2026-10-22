@@ -9752,3 +9752,23 @@ def test_detect_test_suite_make_leading_escaped_semicolon_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$: \\;x",
+    "$(strip ) $(U) ::=:  dep|dep2",
+    "$(U) $(V) ::= dep",
+    "$(U) $(V) ;: =1",
+    "$(strip ) $(U) : := dep",
+])
+def test_detect_test_suite_make_empty_refs_ignore_broken_tail(tmp_path,
+                                                              line):
+    """引用目标列表全为空时 make 忽略整行，尾部冒号/转义分号不报错。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "U =\nV =\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
