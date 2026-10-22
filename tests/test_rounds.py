@@ -9451,3 +9451,24 @@ def test_detect_test_suite_make_escaped_space_run_keeps_test(tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(subst x,a::,x)",
+    "$(join test,:)",
+])
+def test_detect_test_suite_make_expanded_double_colon_rule_keeps_suite(
+        tmp_path, line):
+    """原文没有规则冒号时，整行展开成双冒号规则是 make 接受的目标。
+
+    `$(subst x,a::,x)` 展开成 `a::` 定义目标 a；不能因为展开结果以
+    冒号结尾就按 `$(join test,:):` 的 missing target pattern 拒绝，
+    否则后面的 test 目标会被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

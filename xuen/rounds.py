@@ -4684,11 +4684,11 @@ def _make_expand_simple_vars(text: str,
             expanded = " " + expanded.lstrip("\t")
         expanded_rule_colon = _make_unescaped_colon(expanded, 0)
         raw_rule_colon = _make_unescaped_colon(body, 0)
-        if (expanded_rule_colon >= 0
+        if (raw_rule_colon >= 0
+                and expanded_rule_colon >= 0
                 and expanded[expanded_rule_colon:expanded_rule_colon + 2]
                 == "::"
-                and not (raw_rule_colon >= 0
-                         and body[raw_rule_colon:raw_rule_colon + 2]
+                and not (body[raw_rule_colon:raw_rule_colon + 2]
                          == "::")
                 and expanded[:expanded_rule_colon].strip(" \t")
                 and not expanded[:expanded_rule_colon].lstrip(
