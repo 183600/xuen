@@ -1380,9 +1380,14 @@ def _make_assignment_lhs_has_space(body: str) -> bool:
         if not re.search(r"[ \t]", lhs.rstrip(" \t")):
             # 左侧是单个变量名，make 在这里就确定是赋值。
             return False
-        if op in (":=", "::=", "!=", ":::="):
+        if op in (":=", "::=", ":::="):
             has_immediate = True
         else:
+            # `!=` 与 `=` / `+=` / `?=` 一样：变量名可以包含 `!`，
+            # `foo bar != baz` 在 make 看来不是“多词左侧的立即赋值”，
+            # 而是继续往后找规则冒号；找到冒号就按目标列表读取。
+            # 把它当作 immediate 会把 `foo test!=1:` 后面合法 test
+            # 目标误判成 missing separator 而漏掉整套测试。
             has_invalid = True
         i += len(op)
     if has_immediate:

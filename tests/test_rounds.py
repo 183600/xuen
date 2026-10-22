@@ -9408,3 +9408,24 @@ def test_detect_test_suite_make_nonempty_target_still_expands_prereqs(
                        capture_output=True, text=True)
     assert p.returncode != 0
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "foo test!=1:",
+    "foo bar != baz:",
+    "foo test! = 1:",
+])
+def test_detect_test_suite_make_bang_assignment_like_rule_keeps_suite(
+        tmp_path, line):
+    """`!=` 前有空白时 make 仍按规则读取，后面的 test 目标可执行。
+
+    回归：把 `foo test!=1:` 当成“多词左侧的立即赋值”会误报
+    missing separator，后续合法 test 套件被漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
