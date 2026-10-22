@@ -1,0 +1,300 @@
+算法设计
+算法分析
+问题建模
+问题抽象
+形式化建模
+算法框架
+算法范式
+时间复杂度
+空间复杂度
+渐进分析
+摊还分析
+概率分析
+最坏情况分析
+平均情况分析
+正确性证明
+循环不变式
+复杂度下界
+计算复杂性
+分治法
+动态规划
+贪心算法
+回溯法
+分支限界
+递归
+迭代
+减治
+增量法
+随机化算法
+近似算法
+启发式算法
+元启发式算法
+在线算法
+离线算法
+流算法
+并行算法
+分布式算法
+量子算法
+固定参数算法
+参数化复杂度
+核化
+近似方案
+近似比
+竞争分析
+竞争比
+组合优化
+凸优化
+线性规划
+整数规划
+非线性规划
+状态压缩
+记忆化搜索
+剪枝
+迭代加深
+双向搜索
+广度优先搜索
+深度优先搜索
+启发式搜索
+A*搜索
+蒙特卡洛树搜索
+极小极大算法
+Alpha-Beta剪枝
+博弈树搜索
+图算法
+最短路算法
+最小生成树
+网络流
+最大流最小割
+二分图匹配
+并查集
+堆
+优先队列
+哈希表
+平衡树
+线段树
+树状数组
+字典树
+后缀数组
+字符串匹配
+计算几何
+凸包
+三角剖分
+空间索引
+贝尔曼方程
+状态转移
+最优子结构
+重叠子问题
+贪心选择性质
+搜索空间
+解空间树
+约束满足
+可满足性求解
+自动推理
+程序合成
+编译器优化
+调度算法
+资源分配
+负载均衡
+缓存替换
+容错算法
+共识算法
+计算复杂度
+算法可行性
+形式化描述
+输入输出规范
+数据结构
+伪代码
+剪枝策略
+解空间
+目标函数
+约束条件
+优化模型
+多目标优化
+帕累托最优
+全局最优
+局部最优
+遗传算法
+蚁群算法
+粒子群算法
+模拟退火
+禁忌搜索
+局部搜索
+邻域搜索
+进化算法
+随机算法
+概率算法
+确定性算法
+流式算法
+近似查询
+采样算法
+蒙特卡洛方法
+马尔可夫链
+马尔可夫决策过程
+强化学习
+深度学习
+神经网络
+梯度下降
+反向传播
+损失函数
+超参数优化
+参数调优
+泛化能力
+鲁棒性
+可扩展性
+收敛性
+收敛速度
+复杂度分析
+平摊分析
+下界分析
+上界分析
+归约
+NP完全性
+NP难问题
+P类问题
+可计算性
+图灵机
+计算模型
+算法正确性
+算法效率
+基准测试
+消融实验
+实验评估
+最短路径
+algorithm design
+novel algorithm
+algorithm synthesis
+algorithm engineering
+algorithmic paradigm
+algorithmic framework
+computational method
+computational model
+problem formulation
+problem abstraction
+mathematical modeling
+formal specification
+specification refinement
+correctness proof
+partial correctness
+total correctness
+termination proof
+invariant
+loop invariant
+precondition
+postcondition
+hoare logic
+refinement calculus
+denotational semantics
+operational semantics
+axiomatic semantics
+abstract interpretation
+type system
+static analysis
+dynamic analysis
+program analysis
+dataflow analysis
+control-flow analysis
+dependency analysis
+complexity analysis
+time complexity
+space complexity
+asymptotic analysis
+amortized analysis
+worst-case analysis
+average-case analysis
+best-case analysis
+lower bound
+upper bound
+tight bound
+computational complexity
+complexity class
+np-hardness
+np-completeness
+polynomial-time algorithm
+exponential-time algorithm
+approximation algorithm
+approximation ratio
+approximation guarantee
+ptas
+fptas
+randomized algorithm
+las vegas algorithm
+monte carlo algorithm
+deterministic algorithm
+probabilistic analysis
+derandomization
+online algorithm
+competitive ratio
+competitive analysis
+offline algorithm
+streaming algorithm
+sublinear algorithm
+parallel algorithm
+distributed algorithm
+concurrent algorithm
+asynchronous algorithm
+synchronous algorithm
+cache-oblivious algorithm
+external-memory algorithm
+in-place algorithm
+out-of-core algorithm
+quantum algorithm
+heuristic algorithm
+metaheuristic
+local search
+simulated annealing
+tabu search
+genetic algorithm
+evolutionary algorithm
+swarm intelligence
+ant colony optimization
+particle swarm optimization
+machine learning algorithm
+supervised learning
+unsupervised learning
+reinforcement learning
+gradient descent
+stochastic gradient descent
+dynamic programming
+greedy algorithm
+divide and conquer
+branch and bound
+backtracking
+pruning
+memoization
+recursion
+iterative refinement
+fixed-point iteration
+linear programming
+integer programming
+convex optimization
+nonconvex optimization
+constraint programming
+satisfiability solving
+sat solver
+smt solver
+reduction
+problem transformation
+problem relaxation
+decomposition
+modularity
+scalability
+robustness
+adaptivity
+parameterized algorithm
+fixed-parameter tractability
+kernelization
+exact algorithm
+anytime algorithm
+incremental algorithm
+adaptive algorithm
+self-stabilizing algorithm
+fault-tolerant algorithm
+energy-efficient algorithm
+resource-aware algorithm
+communication complexity
+round complexity
+space-time tradeoff
+preprocessing
+data structure design
+indexing
+hashing

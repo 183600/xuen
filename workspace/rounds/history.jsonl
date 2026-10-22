@@ -1,0 +1,8 @@
+{"event": "baseline", "id": "baseline-20261022-043415", "round": 0, "verifier": "baseline", "score": null, "ts": "2026-10-22 04:34:15"}
+{"event": "heartbeat", "round": 1, "ts": "2026-10-22 04:44:18"}
+{"event": "candidate", "id": "20261022-045503-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-10-22 04:55:03"}
+{"event": "verdict", "id": "20261022-045503-r2", "round": 2, "verifier": "ai", "score": 7.5, "result": "adopted", "reason": "AI 评分 7.5（阈值 7）", "ts": "2026-10-22 04:56:30"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-22 05:21:30"}
+{"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-22 05:46:30"}
+{"event": "restored", "round": 4, "why": "轮次失败（超时）", "best": "20261022-045503-r2", "changed": ["idea", "artifact"], "ts": "2026-10-22 05:46:30"}
+{"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-22 06:11:31"}
