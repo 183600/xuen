@@ -9791,3 +9791,15 @@ def test_detect_test_suite_make_leading_escaped_semicolon_ignores_line(
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+def test_detect_test_suite_make_bare_colon_eval_defines_test(tmp_path):
+    """`$:` 吃掉冒号后剩下的 eval 仍在读取期执行并定义 test。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "$: $(eval test: ; @true)\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]

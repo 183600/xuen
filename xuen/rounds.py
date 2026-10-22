@@ -1080,6 +1080,10 @@ def _make_has_bare_trailing_dollar_rule(text: str) -> bool:
         # 目标（`$x$:`）展开后前缀可能为空，只接受无空白的普通赋值，
         # 无法静态判断空动态变量名时仍保守拒绝。
         suffix = body[colon + 1:]
+        if only_refs and _make_target_text_only_refs(suffix):
+            # `$: $(U)` / `$: $(eval ...)` 的 `$:` 吃掉冒号后只剩变量
+            # 引用/函数，展开为空或执行 eval；make 接受这类整行。
+            continue
         suffix_at_start = not suffix.startswith((" ", "\t"))
         rebuilt = targets[:-1] + suffix
         spaced = (bare and len(targets) >= 2
@@ -4378,7 +4382,8 @@ def _make_expand_simple_vars(text: str,
         # 行尾注释不是 eval 调用的一部分，但 eval 仍会在读取期展开；
         # `$(eval x) #c := $$` 的 `#` 之后是注释，`$(eval x)` 仍需执行。
         eval_args = _make_standalone_eval_args(
-            _make_strip_comment(body))
+            _make_resolve_single_char_refs(
+                _make_strip_comment(body), variables, simple))
         if eval_args is not None:
             # eval 的参数先原样作为 Makefile 行插入，交给同一轮主循环按
             # 顺序展开/应用（参数里的赋值也要影响后续行）。eval 行本身
