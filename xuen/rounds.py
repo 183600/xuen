@@ -1422,6 +1422,11 @@ def _make_assignment_lhs_has_space(body: str) -> bool:
         ch = body[i]
         if ch == "#":
             break
+        if ch == ";":
+            # 未转义分号后的文本是同行 recipe，不再是赋值语句。
+            # `$(U) ; X=1` 里的 `X=1` 不会让 make 报 empty variable
+            # name；空目标列表加 recipe 在 `$(U)` 展开为空时合法。
+            break
         if ch == "\\":
             i += 2
             continue
@@ -4587,6 +4592,13 @@ def _make_expand_simple_vars(text: str,
             # 注释里的 `$(error ...)` 不会在读取期执行：
             # `export # comment $(error x)` 仍能继续定义 test。
             error_end = min(error_end, len(_make_strip_comment(expanded)))
+            if (_MAKE_EXPORT_DIRECTIVE.match(body) is None
+                    and _MAKE_NON_RULE_DIRECTIVE.match(body) is None):
+                # 没有规则冒号时，`$: ; $(error x)` / `$(X) ; $(error x)`
+                # 仍可能因目标列表展开为空而把分号后当 recipe；读取期
+                # 不执行。export/vpath 等指令的参数不适用这一条。
+                error_end = min(
+                    error_end, _make_rule_header_rest_end(expanded))
             error_head = _make_expand_error_functions(
                 expanded[:error_end])
             error_head = _make_expand_side_effect_functions(

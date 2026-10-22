@@ -9711,3 +9711,25 @@ def test_detect_test_suite_make_directive_comment_error_keeps_suite(tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "${Y} ;:  =1",
+    "$(X) ${Y} ; a/b:  X=1",
+    "$x ; =\t: ;",
+    "$: ; $(error boom)",
+    "$(X) ; $(error boom)",
+    "$(U) ; baz:; X+=1",
+])
+def test_detect_test_suite_make_empty_target_semicolon_recipe_keeps_suite(
+        tmp_path, line):
+    """空引用目标后的同行 recipe 不是赋值，也不会在读取期展开。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "X =\nY =\nU =\n" + line + "\ntest:\n\t@echo ok\n",
+        encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
