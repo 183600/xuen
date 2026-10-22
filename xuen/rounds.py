@@ -3946,6 +3946,12 @@ def _make_expand_simple_vars(text: str,
                 expanded_targets = _make_expand_assignment_name(
                     raw_targets, variables, simple, repo, overrides)
                 expanded_targets = expanded_targets.strip(" \t")
+                if _make_unescaped_colon(expanded_targets, 0) >= 0:
+                    # 目标名展开后带未转义冒号（`$(basename a:b): A=x`
+                    # 展开成 `a:b: A=x`）时，make 按 static pattern rule
+                    # 解析并报 target pattern contains no '%'。
+                    raise _MakeRequiredIncludeError(
+                        "target pattern contains no '%'")
                 if _make_expanded_targets_end_with_colon(
                         expanded_targets):
                     raise _MakeRequiredIncludeError("missing target pattern")

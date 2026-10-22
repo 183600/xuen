@@ -8322,6 +8322,28 @@ def test_detect_test_suite_make_expanded_target_trailing_colon_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("makefile", [
+    "$(basename a:b): a=b\ntest:\n\t@echo ok\n",
+    "$(sort a:b): $(abspath x+y) := a:b\ntest:\n\t@echo ok\n",
+    "$(lastword a:b): $(word 1,a b)=./x\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_target_assignment_expanded_colon_blocks_suite(
+        tmp_path, makefile):
+    """target-specific 赋值的目标名展开后带冒号会让 make 读取失败。
+
+    回归：`$(basename a:b): A=x` 展开成 `a:b: A=x`，make 按 static
+    pattern rule 解析并报 target pattern contains no '%'；原先只按
+    target-specific 赋值跳过整行，后面的 test 目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "$(subst x,:,x)",
     "$(subst x,:a,x)",
