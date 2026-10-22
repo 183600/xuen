@@ -758,6 +758,29 @@ def test_detect_test_suite_make_suffixed_target_only_is_not_a_suite(tmp_path):
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "%test test: X+=1",
+    "%test\t$(if x,test,): X+=1",
+    "% test\\::: X+=1",
+    "test% test: X=1",
+])
+def test_detect_test_suite_make_mixed_targets_target_specific(tmp_path,
+                                                              line):
+    """模式目标与普通目标混用只对真正的规则致命。
+
+    `%test test: X+=1` 是 target-specific 变量赋值，不定义可执行目标，
+    GNU make 不报 mixed implicit and normal rules；别处合法的 test
+    目标仍可运行。探测不能把这类赋值行当成读取期错误。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "test: ; @true\n" + line + "\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
 def test_detect_test_suite_make_tab_comment_before_target(tmp_path):
     """首个目标前的制表符注释行不是 recipe，make 会忽略它。
 

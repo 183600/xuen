@@ -406,8 +406,16 @@ def _make_rule_is_target_specific(line: str, colon: int) -> bool:
     start = colon + 1
     if start < len(line) and line[start] == ":":
         start += 1
-    return _MAKE_NAMED_TARGET_ASSIGNMENT.match(
-        line[start:].lstrip(" \t")) is not None
+    rest = line[start:].lstrip(" \t")
+    # `+=` / `?=` / `!=` 紧跟在分隔符后是空变量名（make 报 empty
+    # variable name），不是 target-specific 赋值；正则的变量名单元
+    # 会把 `+`/`?`/`!` 吃成名字，需要先排除这种运算符开头的写法。
+    # `+ =x` / `+?=x` 的变量名非空，仍是合法赋值。
+    modifier = re.match(r"(?:(?:export|private|override)[ \t]+)*",
+                        rest)
+    if re.match(r"(?:\+=|\?=|!=)", rest[modifier.end():]) is not None:
+        return False
+    return _MAKE_NAMED_TARGET_ASSIGNMENT.match(rest) is not None
 
 
 def _make_target_specific_assignment(text: str) -> bool:
@@ -1120,6 +1128,10 @@ def _make_has_invalid_extra_rule_colon(text: str) -> bool:
         targets = body[:colon].lstrip(" \t")
         if not targets or targets == "&":
             continue
+        if _make_rule_is_target_specific(body, colon):
+            # target-specific 赋值（`%test test: X+=1`）即使目标列表里
+            # 模式与普通目标混用也合法，不能按 mixed 规则拒绝。
+            continue
         if _make_targets_mix_pattern_and_normal(targets):
             # `%test foo:` / `test% & :` 等模式目标与普通目标混用；
             # 首个目标是模式时 make 读取即停止，即使别处有 test。
@@ -1419,6 +1431,11 @@ def _make_has_missing_separator_line(text: str, *,
             if _make_target_list_has_bare_trailing_dollar(body[:raw_colon]):
                 # `foo$:...` 的 `$:` 会吃掉规则冒号，行是否合法由
                 # _make_has_bare_trailing_dollar_rule 统一判定。
+                continue
+            if _make_rule_is_target_specific(body, raw_colon):
+                # target-specific 变量赋值不定义可执行目标，GNU make
+                # 不会对它的目标列表报 mixed implicit and normal rules：
+                # `%test test: X+=1` 合法，后面的测试目标照常执行。
                 continue
             if _make_targets_mix_pattern_and_normal(
                     _make_name_without_refs(
