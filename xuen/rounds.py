@@ -4815,6 +4815,7 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
     value = ""
     seen_assignment = False
     define_depth = 0
+    conditional_depth = 0
     for line in lines:
         body = line.rstrip("\r\n")
         ending = line[len(body):]
@@ -4838,8 +4839,17 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
             define_depth = 1
             out.append(line)
             continue
+        conditional = _MAKE_CONDITIONAL_LINE.match(body)
+        if conditional is not None:
+            if conditional.group(1) == "endif":
+                if conditional_depth:
+                    conditional_depth -= 1
+            else:
+                conditional_depth += 1
+            out.append(line)
+            continue
         match = _MAKE_RECIPE_PREFIX_ASSIGNMENT.match(body)
-        if match is not None:
+        if match is not None and conditional_depth == 0:
             op = match.group(1)
             raw = _make_strip_value_comment(match.group(2)).strip(" \t")
             if "$" not in raw:
