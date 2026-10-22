@@ -695,8 +695,10 @@ def _make_has_mixed_target_colon_style(text: str) -> bool:
             continue
         double = body[colon:colon + 2] == "::"
         words = _make_target_words(body[:colon])
-        for word in words:
-            if word.endswith("&"):
+        for index, word in enumerate(words):
+            # 只有最后一个目标词的末尾 `&` 是 grouped 标记；
+            # `test& foo:` 里的 test& 是普通目标名，不能当成 test。
+            if index == len(words) - 1 and word.endswith("&"):
                 word = word[:-1]
             # 行首/目标前的 `\;` 会被 make 丢弃，`\;test&::` 实际仍是
             # test 的 grouped 双冒号规则；不剥掉前缀会漏掉与已有 test:
@@ -1463,15 +1465,22 @@ def _make_line_defines_test(line: str, colon: int) -> bool:
     `_MAKE_TEST_TARGET` 允许目标词任意拼接，会把 `$(origin ./test , $<):`
     这类表达式内部的 `test` 当目标；多出来的 :: 又会和真实 test 规则
     触发伪冲突。按 make 词法切词后只认完整的 test / ./test 目标。
+
+    只有目标列表的【最后一个词】末尾的 `&` 是 grouped 标记；`test& foo:`
+    定义的是目标 `test&` 与 foo，不能把 `test&` 剥成 test。
     """
     targets = line[:colon]
-    for word in _make_target_words(targets):
-        if word.endswith("&"):
+    words = _make_target_words(targets)
+    for index, word in enumerate(words):
+        last_word = index == len(words) - 1
+        if last_word and word.endswith("&"):
             word = word[:-1]
         while word.startswith("\\;"):
             word = word[2:]
-        for unit in _make_target_word_units(word):
-            if unit.endswith("&"):
+        units = _make_target_word_units(word)
+        for unit_index, unit in enumerate(units):
+            if (last_word and unit_index == len(units) - 1
+                    and unit.endswith("&")):
                 unit = unit[:-1]
             if re.fullmatch(r"(?:\./+)*test", unit):
                 return True
@@ -4090,6 +4099,21 @@ def _make_expand_simple_vars(text: str,
                         i += 1
                         continue
         _make_check_top_level_call_args(body)
+        # grouped 标记只在原始文本里紧贴规则分隔符的 `&` 才算；由变量/
+        # 函数展开产生的尾部 `&` 属于目标名本身（`$(addsuffix &,test):`
+        # 定义目标 test&）。这里记录原始状态，展开后再保护产生出的 &。
+        raw_grouped_colon = _make_unescaped_colon(body, 0)
+        raw_grouped_marker = False
+        if raw_grouped_colon > 0 and body[raw_grouped_colon - 1] == "&":
+            backslashes = 0
+            pos = raw_grouped_colon - 2
+            while pos >= 0 and body[pos] == "\\":
+                backslashes += 1
+                pos -= 1
+            # `\&` 是目标名里的字面 &；`$&` 是单字符变量引用。
+            escaped = backslashes % 2 == 1
+            single_ref = pos >= 0 and body[pos] == "$"
+            raw_grouped_marker = not escaped and not single_ref
         expand_input = re.sub(r"&(?=\$[({])", "&\x01", body)
         expanded = _make_expand_value(
             expand_input, variables, simple)
@@ -4313,6 +4337,14 @@ def _make_expand_simple_vars(text: str,
         expanded = _make_flatten_target_newlines(expanded)
         expanded = _make_resolve_single_char_refs(
             expanded, variables, simple)
+        if not raw_grouped_marker:
+            expanded_colon_now = _make_unescaped_colon(expanded, 0)
+            if (expanded_colon_now > 0
+                    and expanded[expanded_colon_now - 1] == "&"):
+                # 展开出来的 & 不是 grouped 标记，用普通目标名哨兵保留，
+                # 避免下游剥成 test 或误报「grouped target 缺 recipe」。
+                expanded = (expanded[:expanded_colon_now - 1] + "\x05"
+                            + expanded[expanded_colon_now:])
         if (_MAKE_EXPORT_DIRECTIVE.match(expanded)
                 and not _MAKE_EXPORT_DIRECTIVE.match(body)):
             # 这是变量展开后才变成 export/unexport 的目标行；加哨兵避免

@@ -1809,6 +1809,66 @@ def test_detect_test_suite_make_ifdef_expanded_trailing_whitespace(tmp_path):
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "$(addsuffix &,test): ; @true\n",
+    "$(join test,&): ; @true\n",
+    "X = test&\n$(X): ; @true\n",
+])
+def test_detect_test_suite_make_expanded_ampersand_target_blocks_suite(
+        tmp_path, makefile):
+    """展开产生的尾部 & 是目标名，不是 grouped 标记。
+
+    回归：`$(addsuffix &,test):` 展开成 `test&:`，make 定义的目标是
+    test& 而不是 grouped test；下游按展开文本剥掉 & 后会误判套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        makefile + "other:\n\t@true\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("line", [
+    "foo $(join &,):",
+    "foo $(subst @,&,@):",
+    "test $(join &,): ; @true",
+])
+def test_detect_test_suite_make_expanded_ampersand_target_keeps_suite(
+        tmp_path, line):
+    """展开产生尾部 & 后不是 grouped 标记，不能要求 recipe。
+
+    回归：`foo $(join &,):` 展开成 `foo &:`，make 把 & 当普通目标名，
+    原先把展开文本当 grouped 目标并以缺少 recipe 为由漏检 test。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile, expected", [
+    ("test& foo: ; @true\n", None),
+    ("foo test&: ; @true\n", ["make", "test"]),
+])
+def test_detect_test_suite_make_grouped_ampersand_only_on_last_target(
+        tmp_path, makefile, expected):
+    """只有目标列表最后一个词的末尾 & 是 grouped 标记。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert (p.returncode == 0) == (expected is not None)
+    assert detect_test_suite(tmp_path) == expected
+
+
 def test_detect_test_suite_make_grouped_target_with_recipe(tmp_path):
     if not shutil.which("make"):
         pytest.skip("make 不可用")
