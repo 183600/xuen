@@ -9691,3 +9691,23 @@ def test_detect_test_suite_make_escaped_target_boundaries(tmp_path, line,
     p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
                        capture_output=True, text=True)
     assert detect_test_suite(tmp_path) == expected, p.stderr
+
+
+@pytest.mark.parametrize("line", [
+    "export # :: $(error boom)",
+    "unexport a#b $(error boom)",
+    "export X a#b :: $(error boom)",
+    "export # $(eval bad)",
+    "unexport # $(warning boom)",
+])
+def test_detect_test_suite_make_directive_comment_error_keeps_suite(tmp_path,
+                                                                    line):
+    """export/unexport 参数里注释后的 error/eval 不在读取期执行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]

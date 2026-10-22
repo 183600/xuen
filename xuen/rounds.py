@@ -4310,7 +4310,8 @@ def _make_expand_simple_vars(text: str,
             # `$(eval x)` 会立即解析参数行并失败。赋值形式的 export 已在
             # 上面按赋值处理，这里只校验非赋值指令。
             _make_expand_eval_functions(
-                body, variables, simple, repo, overrides)
+                _make_strip_comment(body), variables, simple, repo,
+                overrides)
         # 行尾注释不是 eval 调用的一部分，但 eval 仍会在读取期展开；
         # `$(eval x) #c := $$` 的 `#` 之后是注释，`$(eval x)` 仍需执行。
         eval_args = _make_standalone_eval_args(
@@ -4583,6 +4584,9 @@ def _make_expand_simple_vars(text: str,
                     header_start += 1
                 error_end = header_start + _make_rule_header_rest_end(
                     expanded[header_start:])
+            # 注释里的 `$(error ...)` 不会在读取期执行：
+            # `export # comment $(error x)` 仍能继续定义 test。
+            error_end = min(error_end, len(_make_strip_comment(expanded)))
             error_head = _make_expand_error_functions(
                 expanded[:error_end])
             error_head = _make_expand_side_effect_functions(
