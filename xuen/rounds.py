@@ -803,6 +803,11 @@ _MAKE_EMPTY_TARGET_ASSIGNMENT = re.compile(r"^(?:::=|::=|:=|[+?]?=|!=)")
 # 哨兵，让 _make_has_recipe_before_first_target 能区分两者。
 _MAKE_CONTEXT_RESET = "#\x02"
 
+# eval 在展开位置立即解析参数并定义目标；参数里的 test 规则不会出现在
+# 外层展开文本里，需要单独记录，否则 `$(eval test: ; ...)foo:` 会漏检。
+_MAKE_EVAL_TEST_TARGET_SEEN = False
+_MAKE_EVAL_TEST_TARGET_STYLE: Optional[str] = None
+
 
 # private / override 不列入：后面跟规则头时它们是普通目标名
 # （`private foo:` / `override foo:` 都定义 foo），只有跟变量赋值/
@@ -2848,6 +2853,7 @@ def _make_expand_eval_functions(
     出现 eval（`$(eval X=1) = 2`）时，make 仍按空变量名报错；只需删除
     eval 调用并应用其中的简单赋值，避免把原文当成非空名称漏检。
     """
+    global _MAKE_EVAL_TEST_TARGET_SEEN, _MAKE_EVAL_TEST_TARGET_STYLE
     pos = 0
     while True:
         call = _make_find_function_call(text, pos, "eval")
@@ -2898,6 +2904,33 @@ def _make_expand_eval_functions(
                     "eval: invalid rule header")
             _make_scan_assignment(
                 eval_line, variables, simple, overrides, repo)
+            if _make_defines_test_target(check_line, repo):
+                # eval 生成的可执行 test 目标已实际定义；外层目标行只
+                # 负责其余名字，探测不能因为 test 不在外层文本里而漏检。
+                _MAKE_EVAL_TEST_TARGET_SEEN = True
+                for target_match in _MAKE_TEST_TARGET.finditer(check_line):
+                    target_end = _make_logical_line_end(
+                        check_line, target_match.start())
+                    target_line = check_line[
+                        target_match.start():target_end]
+                    target_colon = (
+                        target_match.end() - target_match.start() - 1)
+                    if (_make_unescaped_colon(target_line, 0)
+                            != target_colon):
+                        continue
+                    if not _make_line_defines_test(
+                            target_line, target_colon):
+                        continue
+                    if not _make_rule_header_is_valid(
+                            target_line, target_colon):
+                        continue
+                    if _make_rule_is_target_specific(
+                            target_line, target_colon):
+                        continue
+                    _MAKE_EVAL_TEST_TARGET_STYLE = (
+                        "::" if target_line[
+                            target_colon:target_colon + 2] == "::" else ":")
+                    break
         text = text[:start] + text[end:]
         pos = start
 
@@ -3300,6 +3333,10 @@ def _make_expand_refs(text: str, variables: Dict[str, Optional[str]],
                     value, variables, simple, repo, depth + 1, active)
                 value = _make_expand_refs(value, variables, simple,
                                           depth + 1, active, repo)
+                # 递归变量值里的 eval 在变量被使用时才执行；
+                # `X = $(eval test: ; ...)` + `$(X)foo:` 会定义 test。
+                value = _make_expand_eval_functions(
+                    value, variables, simple, repo)
             finally:
                 active.discard(name)
         if spec is not None:
@@ -5745,6 +5782,9 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
          if os.path.lexists(repo / name)), None)
     if (makefile is not None and makefile.is_file()
             and shutil.which("make")):
+        global _MAKE_EVAL_TEST_TARGET_SEEN, _MAKE_EVAL_TEST_TARGET_STYLE
+        _MAKE_EVAL_TEST_TARGET_SEEN = False
+        _MAKE_EVAL_TEST_TARGET_STYLE = None
         try:
             # utf-8-sig：Windows 编辑器保存的 Makefile 常带 BOM；GNU make
             # 会忽略 BOM 并照常执行 test 目标，按 utf-8 读取则 BOM 粘在
@@ -5766,6 +5806,25 @@ def detect_test_suite(repo: Path) -> Optional[List[str]]:
             #（`$(X) $(Y)` 这类变量组成的无冒号行），展开前扫描看不到。
             if _make_has_missing_separator_line(text, expanded=True):
                 return None
+            if _MAKE_EVAL_TEST_TARGET_SEEN:
+                # eval 生成的 test 不在外层文本里；把同风格的 test 规则
+                # 补进文本再走一遍完整校验，才能和别处的 : / :: 冲突。
+                if _MAKE_EVAL_TEST_TARGET_STYLE is not None:
+                    eval_text = (
+                        text + "\ntest" + _MAKE_EVAL_TEST_TARGET_STYLE
+                        + " ; @echo eval\n")
+                    if _make_defines_test_target(eval_text, repo):
+                        return ["make", "test"]
+                    # eval 已定义 test，但外层目标同名单/双冒号冲突或
+                    # 其它规则读取失败：make 不会执行任何测试。
+                    return None
+                if (not _make_has_mixed_target_colon_style(text)
+                        and not _make_has_invalid_extra_rule_colon(text)
+                        and not _make_has_grouped_target_without_recipe(text)
+                        and not _make_has_recipe_before_first_target(text)):
+                    # eval 定义的是能匹配 test 的模式规则，没有字面
+                    # test 目标可补；外层无其它读取错误即可。
+                    return ["make", "test"]
             if _make_defines_test_target(text, repo):
                 return ["make", "test"]
         except (_MakeRequiredIncludeError, OSError):

@@ -3512,6 +3512,13 @@ def test_detect_test_suite_make_nested_ref_in_unspaced_function_name(
     "$(eval test: ;)",
     "$(eval X=test)\n$(X):\n\t@true\n",
     "$(eval X := test:)\n$(X) ; @true\n",
+    "$(eval test: ; @echo HI): ; @true\n",
+    "$(eval test: ; @echo HI)foo: ; @true\n",
+    "X = $(eval test: ; @echo HI)\n$(X) foo: ; @true\n",
+    "foo: $(eval test: ; @echo HI)\n",
+    "X = $(eval test: ; @echo HI)\nfoo: $(X)\n",
+    "$(eval %: ; @echo HI)foo: ; @true\n",
+    "test::\n$(eval %: ; @echo HI)foo: ; @true\n",
 ])
 def test_detect_test_suite_make_eval_defines_test(tmp_path, makefile):
     """`$(eval ...)` 在读取时解析参数，参数里的 test 目标要能探测到。"""
@@ -3522,6 +3529,31 @@ def test_detect_test_suite_make_eval_defines_test(tmp_path, makefile):
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    # 递归变量未被使用，eval 不会执行。
+    "X = $(eval test: ; @echo HI)\nfoo: ; @true\n",
+    # eval 只定义 target-specific 变量，不是可执行 test 目标。
+    "$(eval test: X=1): ; @true\n",
+    # 未生效条件分支里的 eval 不会执行。
+    "ifeq (1,0)\n$(eval test: ; @echo HI)\nendif\nfoo: ; @true\n",
+    # eval 定义的 test 有效，但外层规则头的第二个冒号仍是读取错误。
+    "$(eval test: ; @echo HI) foo: a:b\n",
+    # eval 生成的单/双冒号 test 与别处定义冲突。
+    "$(eval test: ; @echo HI)\ntest::\n",
+    "test::\n$(eval test: ; @echo HI)\n",
+    "$(eval test:: ; @echo HI)\ntest:\n",
+])
+def test_detect_test_suite_make_embedded_eval_negative(tmp_path, makefile):
+    """未实际执行或外层规则非法的 eval 不能仅凭参数里的 test 命中。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
 
 
 def test_detect_test_suite_make_eval_include_reads_targets(tmp_path):
