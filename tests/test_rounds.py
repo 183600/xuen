@@ -9573,3 +9573,20 @@ def test_detect_test_suite_make_eval_does_not_give_grouped_recipe(
     assert p.returncode != 0
     assert "grouped targets must provide a recipe" in p.stderr
     assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
+    "P = .RECIPEPREFIX\n$(P) = >\ntest:\n>@true\n",
+    "P = .RECIPEPREFIX\n$(P) := >\ntest:\n>@true\n",
+    "P := .RECIPEPREFIX\n${P} = >\ntest:\n>@true\n",
+    "P = .RECIPEPREFIX\n$(P) = >\ntest:\n>@true\ntest2:\n>@true\n",
+])
+def test_detect_test_suite_make_dynamic_recipe_prefix(tmp_path, makefile):
+    """变量名展开成 `.RECIPEPREFIX` 时同样改写 recipe 前缀。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

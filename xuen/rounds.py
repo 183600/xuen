@@ -4986,6 +4986,40 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
     # 记录前面无条件的字面量赋值，供 `.RECIPEPREFIX = $(P)` 展开。
     # 只存不含 `$` 的值，避免在错误的时间展开延迟/递归变量。
     variables: Dict[str, str] = {}
+
+    def apply_prefix(op: str, raw: str) -> str:
+        """应用一次 `.RECIPEPREFIX` 赋值，返回新的 recipe 前缀。"""
+        nonlocal value, value_simple, seen_assignment
+        # make 只在立即赋值（`:=`/`::=`）以及当前值是立即值时展开
+        # 右侧；`=` 保留原文，`$(P)` 的首字符 `$` 本身就是 recipe
+        # 前缀，不能提前展开成 P 的值。
+        expand_raw = op in (":=", "::=", ":::=") or (
+            op == "+=" and value_simple)
+        if expand_raw and "$" in raw:
+            expanded = raw
+            for _ in range(20):
+                before = expanded
+                expanded = _make_expand_refs(
+                    expanded, variables, {})
+                expanded = _make_expand_value(
+                    expanded, variables, {})
+                if expanded == before:
+                    break
+            raw = expanded
+        if op in ("=", ":=", "::=", ":::="):
+            value = raw
+            value_simple = op != "="
+            seen_assignment = True
+        elif op == "?=":
+            if not seen_assignment:
+                value = raw
+                value_simple = True
+                seen_assignment = True
+        elif op == "+=":
+            value += raw
+            seen_assignment = True
+        return value[0] if value else "\t"
+
     for line in lines:
         body = line.rstrip("\r\n")
         ending = line[len(body):]
@@ -5029,40 +5063,53 @@ def _make_normalize_recipe_prefixes(text: str) -> str:
         if match is not None and conditional_depth == 0:
             op = match.group(1)
             raw = _make_strip_value_comment(match.group(2)).strip(" \t")
-            # make 只在立即赋值（`:=`/`::=`）以及当前值是立即值时展开
-            # 右侧；`=` 保留原文，`$(P)` 的首字符 `$` 本身就是 recipe
-            # 前缀，不能提前展开成 P 的值。
-            expand_raw = op in (":=", "::=", ":::=") or (
-                op == "+=" and value_simple)
-            if expand_raw and "$" in raw:
-                expanded = raw
-                for _ in range(20):
-                    before = expanded
-                    expanded = _make_expand_refs(
-                        expanded, variables, {})
-                    expanded = _make_expand_value(
-                        expanded, variables, {})
-                    if expanded == before:
-                        break
-                raw = expanded
-            if op in ("=", ":=", "::=", ":::="):
-                value = raw
-                value_simple = op != "="
-                seen_assignment = True
-            elif op == "?=":
-                if not seen_assignment:
-                    value = raw
-                    value_simple = True
-                    seen_assignment = True
-            elif op == "+=":
-                value += raw
-                seen_assignment = True
-            prefix = value[0] if value else "\t"
+            prefix = apply_prefix(op, raw)
         elif conditional_depth == 0:
             assignment = _MAKE_VAR_ASSIGNMENT.match(body)
+            if assignment is None and "$" in body:
+                computed_name = _make_dynamic_assignment_name(body)
+                if computed_name is not None:
+                    j = body.find(computed_name) + len(computed_name)
+                    while j < len(body) and body[j] in " \t":
+                        j += 1
+                    op = next((
+                        candidate for candidate in
+                        (":::=", "::=", ":=", "?=", "+=", "!=", "=")
+                        if body.startswith(candidate, j)), "=")
+                    raw = _make_strip_value_comment(
+                        body[j + len(op):]).strip(" \t")
+                    expanded_name = computed_name
+                    for _ in range(20):
+                        before_name = expanded_name
+                        expanded_name = _make_expand_refs(
+                            expanded_name, variables, {})
+                        expanded_name = _make_expand_value(
+                            expanded_name, variables, {})
+                        if expanded_name == before_name:
+                            break
+                    if expanded_name.strip(" \t") == ".RECIPEPREFIX":
+                        prefix = apply_prefix(op, raw)
+                        out.append(line)
+                        continue
             if assignment is not None:
                 name, op, raw = assignment.groups()
                 raw = _make_strip_value_comment(raw)
+                if "$" in name:
+                    # 变量名也按读取期展开：`$(P) = >` 在 P 展开为
+                    # `.RECIPEPREFIX` 时同样改变 recipe 前缀。
+                    expanded_name = name
+                    for _ in range(20):
+                        before_name = expanded_name
+                        expanded_name = _make_expand_refs(
+                            expanded_name, variables, {})
+                        expanded_name = _make_expand_value(
+                            expanded_name, variables, {})
+                        if expanded_name == before_name:
+                            break
+                    if expanded_name.strip(" \t") == ".RECIPEPREFIX":
+                        prefix = apply_prefix(op, raw.strip(" \t"))
+                        out.append(line)
+                        continue
                 if name != ".RECIPEPREFIX" and op != "!=" and "$" not in raw:
                     if op == "?=":
                         variables.setdefault(name, raw)
