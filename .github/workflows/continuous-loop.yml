@@ -124,57 +124,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install opencode
-        run: npm i -g opencode-ai
-
-      - name: Configure opencode (permission guards)
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      - name: Install DeepSeek Harness (dsh)
         run: |
-          # opencode 自带的 OpenCode Zen 免费 provider 无需任何 API key；
-          # 如需更高限额，可在仓库 secrets 里可选配置 OPENCODE_API_KEY。
-          if [ -n "$OPENCODE_API_KEY" ]; then
-            echo "[info] OPENCODE_API_KEY 已配置（用于提升免费模型限额）"
-          else
-            echo "[info] 未配置 OPENCODE_API_KEY，匿名使用免费模型（有速率限制）"
-          fi
-          mkdir -p ~/.config/opencode
+          npm i -g @deepseek-ai/dsh@0.2.1-rc.2
+          dsh --version
 
-          cat > ~/.config/opencode/opencode.json <<'EOF'
-          {
-            "$schema": "https://opencode.ai/config.json",
-            "permission": {
-              "*": "allow",
-              "edit": {
-                "*": "allow",
-                ".github/**": "deny",
-                "**/.github/**": "deny",
-                "LICENSE": "deny",
-                "**/LICENSE": "deny",
-                "**/LICENSE.*": "deny"
-              },
-              "bash": {
-                "*": "allow",
-                "rm -rf .github*": "deny",
-                "rm -r .github*": "deny",
-                "rm .github*": "deny",
-                "mv .github*": "deny",
-                "git rm -r .github*": "deny",
-                "rm *LICENSE*": "deny",
-                "mv *LICENSE*": "deny",
-                "cp *LICENSE*": "deny",
-                "git rm *LICENSE*": "deny",
-                "git push*": "deny"
-              }
-            },
-            "model": "opencode/deepseek-v4.1-flash-free"
-          }
-          EOF
-
-          echo "=== opencode config ==="
-          cat ~/.config/opencode/opencode.json
+      - name: Configure dsh (DeepSeek official API)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          set -e
+          [ -n "$DEEPSEEK_API_KEY" ] || { echo "[error] secrets.DEEPSEEK_API_KEY 未配置" >&2; exit 1; }
+          echo "[info] dsh $(dsh --version) | provider=deepseek-official | model=deepseek-flash"
 
       - name: Configure git
         run: |
@@ -190,194 +153,13 @@ jobs:
       # variant（思考强度档位，如 low/high/max）。
       # 优先级：deepseek-v4.1-flash-free → big-pickle → 池内随机（尽量不与上次相同）。
       # 评审员（judge_command）优先用最快的 flash 模型——便宜模型当评审员。
-      - name: Pick opencode models (main + judge)
-        id: models
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      - name: Use DeepSeek Harness (dsh) for main + judge
         run: |
-          set +e
-          declare -A MODEL_VARIANTS=()
-          FREE_MODELS=()
-          CURRENT_MODEL=""
-          PREVIOUS_MODEL=""
-          SELECTED_MODEL=""
-          PREFERRED_MODELS=("opencode/deepseek-v4.1-flash-free" "opencode/big-pickle")
-          # 已失效（限流 / 5xx / 连接失败 / 非零退出 / 冒烟超时）的候选，逗号分隔
-          BROKEN_MODELS=""
-          mark_broken() {
-            [ -n "$1" ] || return 0
-            case ",$BROKEN_MODELS," in *",$1,"*) ;; *) BROKEN_MODELS="$BROKEN_MODELS${BROKEN_MODELS:+,}$1" ;; esac
-          }
-          is_broken() {
-            case ",$BROKEN_MODELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
-          }
-          # ---- 解析脚本：从 --verbose 输出提取模型 ID + 支持的 variant 列表 ----
-          cat > /tmp/parse_model_variants.py <<'PYEOF'
-          import sys, json, re
-          text = sys.stdin.read()
-          parts = re.split(r'(?m)^opencode/([A-Za-z0-9][A-Za-z0-9._-]*)[ \t]*$', text)
-          for i in range(1, len(parts) - 1, 2):
-              mid, blob = parts[i], parts[i + 1]
-              try:
-                  meta = json.loads(blob)
-              except Exception:
-                  try:
-                      meta = json.loads(blob[:blob.rindex('}') + 1])
-                  except Exception:
-                      continue
-              variants = sorted((meta.get('variants') or {}).keys())
-              print('opencode/%s\t%s' % (mid, ','.join(variants)))
-          PYEOF
-          build_model_pool() {
-            local out tsv m v
-            local pool=()
-            # --refresh 强制拉取线上最新目录（避免 runner 本地缓存过期、错过新上的模型）；
-            # refresh 失败时自动回退缓存目录，仍失败则返回空，由 pick_model 惰性重建重试。
-            out="$(opencode models opencode --verbose --refresh 2>/dev/null \
-              || opencode models opencode --verbose 2>/dev/null \
-              || opencode models --verbose 2>/dev/null \
-              || true)"
-            [ -z "$out" ] && return 1
-            tsv="$(printf '%s\n' "$out" | python3 /tmp/parse_model_variants.py 2>/dev/null)" || true
-            [ -z "$tsv" ] && return 1
-            MODEL_VARIANTS=()
-            while IFS=$'\t' read -r m v; do
-              [ -n "$m" ] || continue
-              pool+=("$m")
-              MODEL_VARIANTS["$m"]="$v"
-            done <<< "$tsv"
-            [ ${#pool[@]} -eq 0 ] && return 1
-            FREE_MODELS=("${pool[@]}")
-            echo "[info] 动态模型池（${#FREE_MODELS[@]} 个）: ${FREE_MODELS[*]}"
-            for p in "${PREFERRED_MODELS[@]}"; do
-              if printf '%s\n' "${FREE_MODELS[@]}" | grep -qx -- "$p"; then
-                echo "[info] 优先模型在池中: $p (variant: ${MODEL_VARIANTS[$p]:-无})"
-              fi
-            done
-            return 0
-          }
-          if ! build_model_pool; then
-            echo "[warn] 启动时读取模型目录失败，模型池暂空；将随探测重试自动重建"
-            FREE_MODELS=()
-            MODEL_VARIANTS=()
-          fi
-
-          # ---------- 选模型：按优先级列表，没有则随机（跳过已失效） ----------
-          pick_model() {
-            if [ ${#FREE_MODELS[@]} -eq 0 ]; then
-              build_model_pool || true
-            fi
-            local n=${#FREE_MODELS[@]}
-            if [ "$n" -eq 0 ]; then
-              CURRENT_MODEL=""
-              return 1
-            fi
-            local m="" x i cands=()
-            for x in "${FREE_MODELS[@]}"; do
-              is_broken "$x" || cands+=("$x")
-            done
-            n=${#cands[@]}
-            if [ "$n" -eq 0 ]; then
-              CURRENT_MODEL=""
-              return 1
-            fi
-            for p in "${PREFERRED_MODELS[@]}"; do
-              is_broken "$p" && continue
-              for x in "${cands[@]}"; do
-                if [ "$x" = "$p" ]; then m="$x"; break; fi
-              done
-              [ -n "$m" ] && break
-            done
-            if [ -z "$m" ]; then
-              for i in 1 2 3; do
-                m="${cands[$((RANDOM % n))]}"
-                if [ "$n" -le 1 ] || [ "$m" != "$PREVIOUS_MODEL" ]; then break; fi
-              done
-            fi
-            PREVIOUS_MODEL="$m"
-            CURRENT_MODEL="$m"
-            return 0
-          }
-
-          # ---------- 确定模型思考强度：优先 max，无 max 用 high，都不支持则不设置 ----------
-          variant_for() {
-            local v="${MODEL_VARIANTS[$1]:-}"
-            case ",$v," in
-              *,max,*)  echo "max" ;;
-              *,high,*) echo "high" ;;
-              *)        echo "" ;;
-            esac
-          }
-
-          # ---------- 冒烟探测：目录里连得上 ≠ 跑得完，必须真调一次 ----------
-          smoke_test() {
-            local m="$1" eff="" extra=()
-            eff="$(variant_for "$m")"
-            [ -n "$eff" ] && extra=(--variant "$eff")
-            # shellcheck disable=SC2086
-            timeout --kill-after=30 120 opencode run -m "$m" ${extra[@]+"${extra[@]}"} "只回复两个字：OK" > /tmp/smoke_test.log 2>&1
-          }
-
-          detect_model() {
-            local pass cand tries max
-            for pass in 1 2; do
-              tries=0
-              max=${#FREE_MODELS[@]}
-              # 冒烟调用最长 120s/个：每次探测最多尝试 6 个候选，避免启动探测吃掉过多预算
-              [ "$max" -gt 6 ] && max=6
-              [ "$max" -ge 1 ] || max=1
-              while [ "$tries" -lt "$max" ]; do
-                tries=$((tries + 1))
-                if ! pick_model; then
-                  echo "[warn] 模型池为空或候选均已失效，无法探测"
-                  break
-                fi
-                cand="$CURRENT_MODEL"
-                [ -n "$cand" ] || break
-                if smoke_test "$cand"; then
-                  SELECTED_MODEL="$cand"
-                  echo "[provider] 选定 $cand（opencode），本次 run 内固定使用"
-                  return 0
-                fi
-                echo "[warn] $cand 冒烟测试失败/超时，换下一个候选"
-                mark_broken "$cand"
-                CURRENT_MODEL=""
-              done
-              # 第一轮全部失效：清空失效标记再试一轮（可能是瞬时故障）
-              [ "$pass" -eq 1 ] && BROKEN_MODELS=""
-            done
-            SELECTED_MODEL=""
-            return 1
-          }
-
-          if detect_model; then
-            echo "MAIN_MODEL=$SELECTED_MODEL" >> "$GITHUB_ENV"
-            echo "MAIN_VARIANT=$(variant_for "$SELECTED_MODEL")" >> "$GITHUB_ENV"
-          else
-            echo "[warn] 未探测到可用模型：xuen 将用默认命令运行，本轮大概率空转（进度不丢）"
-            echo "MAIN_MODEL=" >> "$GITHUB_ENV"
-            echo "MAIN_VARIANT=" >> "$GITHUB_ENV"
-          fi
-
-          # ---------- 评审员：优先最快的 flash 模型（judge_command 便宜模型当评审员） ----------
-          # 主模型与评审可以不同：主模型要深度思考（max/high），评审员只要能稳定打分。
-          JUDGE_MODEL="${SELECTED_MODEL}"
-          for p in "${PREFERRED_MODELS[@]}"; do
-            if ! is_broken "$p" && [ ${#FREE_MODELS[@]} -gt 0 ] \
-                && printf '%s\n' "${FREE_MODELS[@]}" | grep -qx -- "$p"; then
-              JUDGE_MODEL="$p"
-              break
-            fi
-          done
-          echo "JUDGE_MODEL=$JUDGE_MODEL" >> "$GITHUB_ENV"
-          echo "JUDGE_VARIANT=$(variant_for "$JUDGE_MODEL")" >> "$GITHUB_ENV"
-          echo "[info] 主模型=${SELECTED_MODEL:-默认} 评审员=${JUDGE_MODEL:-默认}"
-
-      # ⭐ 进度保存（跨 run）：工作区 = 研究进度的全部状态
-      #   research.md（想法区/产物区）+ words.txt（词库）+ rounds/（每轮候选
-      #   快照、best.md/best.json 当前最佳、history.jsonl 审计、verdicts.txt）。
-      #   这些路径被 .gitignore 覆盖（master 保持干净），进度通过专用的
-      #   xuen-loop 分支跨 run 保存：run 开始时恢复，结束时 checkpoint。
+          echo "MAIN_MODEL=" >> "$GITHUB_ENV"
+          echo "MAIN_VARIANT=" >> "$GITHUB_ENV"
+          echo "JUDGE_MODEL=" >> "$GITHUB_ENV"
+          echo "JUDGE_VARIANT=" >> "$GITHUB_ENV"
+          echo "[info] 主模型与评审员统一走 dsh --profile headless（provider=deepseek-official, model=deepseek-flash）"
       - name: Restore workspace from xuen-loop branch
         run: |
           set -e
@@ -413,7 +195,7 @@ jobs:
           cat > config.yaml <<EOF
           # 本文件由 CI 生成：xuen 研究循环配置（任务：设计一个新的算法）
           agent:
-            command: 'opencode run ${MAIN_FLAGS} "\$prompt"'
+            command: 'dsh --profile headless "$prompt"'
             timeout: 1500
 
           extra_notes: |
@@ -446,7 +228,7 @@ jobs:
             adopt_score: 7
             verify_timeout: 600
             repo: ""
-            judge_command: 'opencode run ${JUDGE_FLAGS} "\$prompt"'
+            judge_command: 'dsh --profile headless "$prompt"'
             judge_timeout: 600
 
           tui: false
@@ -464,7 +246,7 @@ jobs:
       - name: Run xuen loop (~3h window)
         timeout-minutes: 175
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
