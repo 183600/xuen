@@ -9494,3 +9494,22 @@ def test_detect_test_suite_make_export_undefine_modifier_order(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("makefile", [
+    "T = a\\#b\n$(T:a\\#b=test):\ntest:\n\t@echo ok\n",
+    "T = a\\#b\n$(T):\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_expanded_hash_target_keeps_suite(
+        tmp_path, makefile):
+    r"""变量值里的 `\#` 展开后是目标名里的 #，不是注释起点。
+
+    回归：`$(T:a\#b=test):` 展开成 `a#b:` 后，下游按注释截断并误报
+    recipe commences before first target，后面的 test 目标漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
