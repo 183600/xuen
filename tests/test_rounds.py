@@ -8329,6 +8329,28 @@ def test_detect_test_suite_make_expanded_target_trailing_colon_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "$(notdir #c):  := $(info x)",
+    "$(notdir #c):  := x",
+])
+def test_detect_test_suite_make_expanded_hash_target_blocks_suite(
+        tmp_path, line):
+    """变量引用内部的 # 不是注释起点，展开成目标名后不能被跳过。
+
+    回归：`$(notdir #c): := x` 展开成 `#c: := x`，make 报 empty
+    variable name；展开后的文本以 # 开头，下游误当成注释，后面的 test
+    目标因此被误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("makefile", [
     "$(basename a:b): a=b\ntest:\n\t@echo ok\n",
     "$(sort a:b): $(abspath x+y) := a:b\ntest:\n\t@echo ok\n",

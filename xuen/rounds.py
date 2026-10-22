@@ -4216,9 +4216,14 @@ def _make_expand_simple_vars(text: str,
             # 这是变量展开后才变成 export/unexport 的目标行；加哨兵避免
             # 下游把它误当成字面导出指令而漏掉同一目标列表里的 test。
             expanded = "\x01" + expanded
-        if "#" not in body:
+        if ("#" not in body
+                or ("\\#" not in body
+                    and "#" not in _make_name_without_refs(body))):
             # 注释在展开前就已切掉，变量值里的 # 是目标名的一部分，
             # 不能让下游把它当成注释起点而漏掉同一目标列表里的 test。
+            # # 可能出现在变量引用内部（`$(notdir #c)` 的 # 不是注释
+            # 起点），因此引用被遮住后没有 # 时也要替换；源文件里
+            # 转义的 `\#` 仍按字面名字保留。
             expanded = expanded.replace("#", "\x01")
         if body.strip() and not expanded.strip():
             # 非空原文展开成空行（`$:` / `$(UNDEFINED)` / `$(info ...)`）
