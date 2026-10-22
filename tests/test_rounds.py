@@ -9429,3 +9429,25 @@ def test_detect_test_suite_make_bang_assignment_like_rule_keeps_suite(
                        capture_output=True, text=True)
     assert p.returncode == 0
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("prefix", [
+    "foo\\  test:",
+    "foo\\ \ttest:",
+    "foo\\ bar baz:",
+])
+def test_detect_test_suite_make_escaped_space_run_keeps_test(tmp_path,
+                                                             prefix):
+    r"""反斜杠转义的空白会吞掉紧随其后的整段空白，目标名只有一个。
+
+    `foo\  test:` 定义的目标是 `foo test`，不是 `foo\ ` 与 `test`；
+    把 test 误当成单冒号规则后，后面的 test:: 会被误判成 :/:: 冲突，
+    真实可运行的 test 目标因此漏检。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        prefix + "\ntest::\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]

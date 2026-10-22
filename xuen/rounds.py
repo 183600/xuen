@@ -698,6 +698,17 @@ def _make_target_words(text: str) -> List[str]:
     while i < n:
         ch = text[i]
         if ch == "\\" and i + 1 < n:
+            if text[i + 1].isspace():
+                # make 的目标词法：反斜杠转义空白时，紧邻的整段空白都
+                # 属于同一个目标名，并压成一个空格。`foo\  test:` 的
+                # 目标名是 `foo test`，不是 `foo\ ` + `test`；按后者
+                # 切分会把 test 误当成另一条 : 规则，与后续 test:: 产生
+                # 虚假的冒号风格冲突而漏掉可运行套件。
+                buf.append(" ")
+                i += 2
+                while i < n and text[i].isspace():
+                    i += 1
+                continue
             buf.append(text[i:i + 2])
             i += 2
             continue
