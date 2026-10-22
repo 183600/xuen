@@ -2637,11 +2637,18 @@ def _make_expand_eval_functions(
         pos = start
 
 
-def _make_expand_side_effect_functions(text: str) -> str:
+def _make_expand_side_effect_functions(
+        text: str,
+        variables: Optional[Dict[str, Optional[str]]] = None,
+        simple: Optional[Dict[str, bool]] = None,
+        repo: Optional[Path] = None,
+        overrides: Optional[set] = None) -> str:
     """把只产生输出、结果为空串的 `$(info ...)` / `$(warning ...)` 展开掉。
 
     调用方必须已展开条件函数并检查 error：`$(info $(if a,$(error x),))`
     里的 error 仍然会触发读取失败，不能先把它连同 info 一起删掉。
+    参数本身也会在读取期展开，其中的 eval 同样会先解析参数行；
+    `$(warning $(eval x))` 不能把未生效的 eval 连同 warning 一起删掉。
     """
     pos = 0
     while True:
@@ -2655,6 +2662,11 @@ def _make_expand_side_effect_functions(text: str) -> str:
         if best is None:
             return text
         start, end, args = best
+        if variables is not None:
+            # 只校验参数展开的读取期错误；warning/info 的输出不参与
+            # Makefile 语义，展开结果本身仍然丢弃。
+            _make_expand_condition_text(
+                args, variables, simple or {}, repo, overrides)
         text = text[:start] + text[end:]
         pos = start
 
@@ -2744,7 +2756,8 @@ def _make_expand_call_arg(
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
-        text = _make_expand_side_effect_functions(text)
+        text = _make_expand_side_effect_functions(
+            text, variables, simple, repo, overrides)
         text = _make_expand_call_functions(
             text, variables, simple, repo, overrides, depth)
         text = _make_expand_refs(text, variables, simple, repo=repo)
@@ -2833,7 +2846,8 @@ def _make_expand_foreach_part(text: str,
         text = _make_expand_refs(
             text, variables, simple, active=active, repo=repo)
         text = _make_expand_error_functions(text)
-        text = _make_expand_side_effect_functions(text)
+        text = _make_expand_side_effect_functions(
+            text, variables, simple, repo)
         text = _make_expand_call_functions(
             text, variables, simple, repo)
         text = _make_expand_refs(
@@ -3244,7 +3258,8 @@ def _make_expand_immediate_value(
         value = _make_expand_foreach(value, variables, simple, repo)
         value = _make_expand_metadata_functions(value, variables, simple)
         value = _make_expand_error_functions(value)
-        value = _make_expand_side_effect_functions(value)
+        value = _make_expand_side_effect_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_call_functions(
             value, variables, simple, repo, overrides)
         # eval 在读取期立即执行；`X := $(eval x)` 会先解析参数行 `x`
@@ -3526,7 +3541,8 @@ def _make_expand_assignment_name(
         name = _make_expand_metadata_functions(
             name, variables, simple, overrides)
         name = _make_expand_error_functions(name)
-        name = _make_expand_side_effect_functions(name)
+        name = _make_expand_side_effect_functions(
+            name, variables, simple, repo, overrides)
         name = _make_expand_refs(name, variables, simple, repo=repo)
         if repo is not None:
             name = _make_expand_include_functions(
@@ -3973,7 +3989,8 @@ def _make_expand_simple_vars(text: str,
             expanded = _make_expand_metadata_functions(
                 expanded, variables, simple, overrides)
             expanded = _make_expand_error_functions(expanded)
-            expanded = _make_expand_side_effect_functions(expanded)
+            expanded = _make_expand_side_effect_functions(
+                expanded, variables, simple, repo, overrides)
             expanded = _make_expand_refs(
                 expanded, variables, simple, repo=repo)
             expanded = _make_expand_refs(
@@ -4467,7 +4484,8 @@ def _make_expand_condition_arg(
         value = _make_expand_metadata_functions(
             value, variables, simple, overrides)
         value = _make_expand_error_functions(value)
-        value = _make_expand_side_effect_functions(value)
+        value = _make_expand_side_effect_functions(
+            value, variables, simple, repo, overrides)
         value = _make_expand_refs(value, variables, simple, repo=repo)
         if repo is not None:
             value = _make_expand_include_functions(
@@ -4581,7 +4599,8 @@ def _make_expand_condition_text(text: str,
         text = _make_expand_metadata_functions(
             text, variables, simple, overrides)
         text = _make_expand_error_functions(text)
-        text = _make_expand_side_effect_functions(text)
+        text = _make_expand_side_effect_functions(
+            text, variables, simple, repo, overrides)
         text = _make_expand_call_functions(
             text, variables, simple, repo, overrides)
         # ifeq/ifneq 的比较值在读取期展开，其中的 eval 会先解析参数行；
@@ -4911,7 +4930,8 @@ def _make_text_with_includes(text: str, repo: Path,
                 args = _make_expand_metadata_functions(
                     args, variables, simple, overrides)
                 args = _make_expand_error_functions(args)
-                args = _make_expand_side_effect_functions(args)
+                args = _make_expand_side_effect_functions(
+                    args, variables, simple, repo, overrides)
                 args = _make_expand_refs(
                     args, variables, simple, repo=repo)
                 args = _make_expand_include_functions(

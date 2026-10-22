@@ -2865,6 +2865,8 @@ def test_detect_test_suite_make_eval_in_immediate_assignment_value_blocks_suite(
     "ifeq ($(eval x),a)\nendif\ntest:\n\t@echo ok\n",
     "ifeq ($(basename,$(eval x),-lfoo),)\nendif\n"
     "test:\n\t@echo ok\n",
+    "ifeq ($(info $(eval x)),)\nendif\ntest:\n\t@echo ok\n",
+    "ifeq ($(warning $(eval x)),)\nendif\ntest:\n\t@echo ok\n",
     "X := $(if $(eval x),a,b)\ntest:\n\t@echo ok\n",
     "X := $(if $(basename,$(eval x),-lfoo),a,b)\n"
     "test:\n\t@echo ok\n",
