@@ -9180,6 +9180,27 @@ def test_detect_test_suite_make_expanded_target_semicolon_keeps_suite(
     assert detect_test_suite(tmp_path) == ["make", "test"]
 
 
+@pytest.mark.parametrize("makefile", [
+    "define X\ntest: ; @echo RAN_TEST\nendef\n$(X)&: ; @true\n",
+    "X = a:b;c\ntest$(X): ; @true\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_expanded_rule_in_target_blocks_suite(
+        tmp_path, makefile):
+    """目标列表展开出整条规则并同行带 recipe 时 make 读取失败。
+
+    回归：define 体或变量值里的 `test: ; ...` 被拼进目标列表后，make
+    报 multiple target patterns / target pattern contains no '%'；原先把
+    展开文本里的 test: 当成目标，误判成可运行套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 @pytest.mark.parametrize("line", [
     "undefine $(strip )",
     "undefine $(info x)",

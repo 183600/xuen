@@ -4191,6 +4191,7 @@ def _make_expand_simple_vars(text: str,
         # `&` 后紧跟变量引用的 grouped target 写法在变量展开为空时仍按
         # 普通目标名处理（`test&$(T):` 是目标 test&，不是 grouped test）。
         # 插入一个非空白哨兵，避免展开后误判成 `test&:`。
+        expanded_rule_targets: Optional[str] = None
         early_colon = _make_unescaped_colon(body, 0)
         if (early_colon >= 0
                 and _MAKE_EXPORT_DIRECTIVE.match(body) is None
@@ -4269,6 +4270,7 @@ def _make_expand_simple_vars(text: str,
                     if expanded_targets == before_targets:
                         break
                 expanded_targets = expanded_targets.strip(" \t")
+                expanded_rule_targets = expanded_targets
                 if (expanded_targets == ""
                         or (expanded_targets == "&"
                             and raw_targets.endswith("&"))):
@@ -4650,6 +4652,17 @@ def _make_expand_simple_vars(text: str,
             # 提供 recipe 分隔符，否则 make 读取阶段就报 missing
             # separator。引用内部的 ; 和展开产生的 \; 都不算。
             raise _MakeRequiredIncludeError("missing separator")
+        if (expanded_rule_targets is not None
+                and raw_rule_colon >= 0
+                and _make_has_recipe_separator(
+                    body[raw_rule_colon + 1:], skip_refs=True)
+                and _make_unescaped_colon(
+                    expanded_rule_targets, 0, ignore_semicolon=True) >= 0
+                and _make_has_recipe_separator(expanded_rule_targets)):
+            # 目标列表展开出冒号和分号，同一行又带原文 recipe 时，
+            # make 会把这些冒号按 static pattern 规则解析并报
+            # multiple target patterns / target pattern contains no '%'。
+            raise _MakeRequiredIncludeError("multiple target patterns")
         if raw_rule_colon >= 0:
             expanded_target_colon = _make_unescaped_colon(
                 expanded, 0, ignore_semicolon=True)
