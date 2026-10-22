@@ -9803,3 +9803,22 @@ def test_detect_test_suite_make_bare_colon_eval_defines_test(tmp_path):
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$ \\= test:: dep",
+    "$ \\= test::",
+    "$ \\= test:",
+    "$ \\= test: ; @true",
+])
+def test_detect_test_suite_make_space_ref_escaped_equals_ignores_line(
+        tmp_path, line):
+    """`$ ` 展开为空后的行首转义等号让 make 忽略整行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]

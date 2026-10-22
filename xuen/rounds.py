@@ -4941,6 +4941,14 @@ def _make_expand_simple_vars(text: str,
                         expanded[:expanded_target_colon])
                     + expanded[expanded_target_colon:])
         expanded_stripped = expanded.lstrip(" \t")
+        if (re.match(r"^[ \t]*\$[ \t]", body) is not None
+                and variables.get(" ") in (None, "")
+                and expanded_stripped.startswith("\\\x04")):
+            # `$ \= test::` 的单字符空格变量展开为空后，行首是转义
+            # 等号；make 会忽略整行，后面的 test 规则仍可执行。
+            out.append(_MAKE_CONTEXT_RESET + newline)
+            i += 1
+            continue
         if (expanded_stripped.startswith("\\;")
                 and not body.lstrip(" \t").startswith("\\;")
                 and (raw_rule_colon < 0
