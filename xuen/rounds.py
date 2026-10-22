@@ -1727,15 +1727,45 @@ _MAKE_VAR_REF = re.compile(
 
 
 def _make_strip_comment(line: str) -> str:
+    """去掉引用之外的注释；变量引用内部的 # 是字面量。
+
+    与 make 读取指令/规则头的语义一致：`$(join #,)`、`$#` 里的 # 不
+    会提前截断；只有引用外的 # 才按反斜杠转义规则开始注释。
+    """
+    out = []
     i = 0
-    while i < len(line):
-        if line[i] == "\\":
+    n = len(line)
+    while i < n:
+        ch = line[i]
+        if ch == "$" and i + 1 < n:
+            nxt = line[i + 1]
+            if nxt in "({":
+                opener = nxt
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n and depth:
+                    cj = line[j]
+                    if cj == opener:
+                        depth += 1
+                    elif cj == closer:
+                        depth -= 1
+                    j += 1
+                out.append(line[i:j])
+                i = j
+            else:
+                out.append(line[i:i + 2])
+                i += 2
+            continue
+        if ch == "\\" and i + 1 < n:
+            out.append(line[i:i + 2])
             i += 2
             continue
-        if line[i] == "#":
-            return line[:i]
+        if ch == "#":
+            break
+        out.append(ch)
         i += 1
-    return line
+    return "".join(out)
 
 
 def _make_strip_value_comment(line: str) -> str:
@@ -1838,7 +1868,7 @@ def _make_include_names(args: str) -> List[str]:
     _make_unescape_name。
     """
     names = []
-    flat = re.sub(r"\\\r?\n", " ", _make_strip_comment(args))
+    flat = re.sub(r"\\\r?\n", " ", args)
     for token in re.findall(r"(?:\\.|[^\s])+", flat):
         if "$" in token:
             continue
@@ -5214,7 +5244,7 @@ def _make_text_with_includes(text: str, repo: Path,
             # `include $(foreach f,a.mk b.mk,$(f))` / `$(value FILES)` /
             # `$(call files)` 当成字面文件名，漏读真正的目标文件。
             # 与条件参数同一顺序，循环到不动点，避免嵌套函数残留。
-            args = include.group(2)
+            args = _make_strip_comment(include.group(2))
             for _ in range(20):
                 before = args
                 args = _make_expand_automatic_refs(args)

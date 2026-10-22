@@ -8494,6 +8494,69 @@ def test_detect_test_suite_make_expanded_colon_before_target_tail_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "undefine $(join #,)",
+    "undefine $(join a#b,)",
+    "undefine $(subst @,#,@)",
+    "undefine $(subst @,a#b,@)",
+])
+def test_detect_test_suite_make_hash_inside_undefine_name_keeps_suite(
+        tmp_path, line):
+    """undefine 名称展开出的 # 是变量名，不是注释起点。
+
+    回归：先按通用注释规则截断 `undefine $(join #,)` 会留下不完整引用，
+    名称展开为空后被误判成 empty variable name，真实 test 目标漏检。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0
+    assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(eval a#b)",
+    "$(eval $(join a#b,))",
+    "$(eval $(subst @,a#b,@))",
+])
+def test_detect_test_suite_make_eval_expanded_hash_blocks_suite(
+        tmp_path, line):
+    """eval 参数里的引用内部 # 要保留，注入后的行再按注释解析。
+
+    回归：在 eval 调用原文上提前截断 # 会丢掉整个 eval，无法发现
+    `a#b` 注入后只剩 `a` 并报 missing separator，后面的 test 目标
+    因此被误判成套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+def test_detect_test_suite_make_hash_from_include_expansion_blocks_suite(
+        tmp_path):
+    """include 展开出的 # 是文件名，不能在展开后再当注释丢弃。
+
+    回归：`include $(join #,)` 的展开结果是必需文件 `#`；展开后再次
+    去注释会得到空文件名，漏掉必然的 include 失败。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "include $(join #,)\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_hash_inside_variable_reference_keeps_suite(
         tmp_path):
     """变量引用内部的 # 不是注释，if 条件能看到完整的 # 参数。
