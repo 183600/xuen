@@ -1198,6 +1198,39 @@ def _make_targets_have_internal_escaped_semicolon(targets: str) -> bool:
         i += 2 if ch == "\\" else 1
     return False
 
+def _make_target_starts_with_escaped_semicolon(targets: str) -> bool:
+    r"""目标列表在仅由引用/空白组成的前缀后是否紧跟 `\;`。"""
+    i = 0
+    n = len(targets)
+    while i < n:
+        ch = targets[i]
+        if ch.isspace() or ch == "&":
+            i += 1
+            continue
+        if ch == "$" and i + 1 < n:
+            if targets[i + 1] in "({":
+                opener = targets[i + 1]
+                closer = ")" if opener == "(" else "}"
+                depth = 1
+                j = i + 2
+                while j < n:
+                    cj = targets[j]
+                    if cj == opener:
+                        depth += 1
+                    elif cj == closer:
+                        depth -= 1
+                        if depth == 0:
+                            j += 1
+                            break
+                    j += 1
+                i = j
+                continue
+            i += 2
+            continue
+        return targets.startswith("\\;", i)
+    return False
+
+
 def _make_has_invalid_extra_rule_colon(text: str) -> bool:
     """任一规则头的第二个未转义冒号是否让 make 读取失败。
 
@@ -1588,6 +1621,14 @@ def _make_has_missing_separator_line(text: str, *,
                 or _MAKE_CONDITIONAL_LINE.match(body) is not None):
             continue
         raw_colon = _make_unescaped_colon(body, 0)
+        if (raw_colon >= 0
+                and _make_target_starts_with_escaped_semicolon(
+                    body[:raw_colon])
+                and not _make_has_recipe_separator(
+                    body[raw_colon + 1:], skip_refs=True)):
+            # `$(U) \; :: test:` 的 `\;` 位于目标列表开头，且没有
+            # 同行 recipe；make 会把整行丢掉，后面的冒号不再校验。
+            continue
         if not (raw_colon >= 0
                 and _make_target_text_only_refs(body[:raw_colon])
                 and len(_make_target_words(body[:raw_colon])) >= 2):
@@ -4895,6 +4936,18 @@ def _make_expand_simple_vars(text: str,
                         expanded[:expanded_target_colon])
                     + expanded[expanded_target_colon:])
         expanded_stripped = expanded.lstrip(" \t")
+        if (expanded_stripped.startswith("\\;")
+                and not body.lstrip(" \t").startswith("\\;")
+                and (raw_rule_colon < 0
+                     or not _make_has_recipe_separator(
+                         body[raw_rule_colon + 1:], skip_refs=True))):
+            # 展开产生的行首 `\;` 且原文没有同行 recipe 时，make 忽略
+            # 整行；后续冒号/目标名都不参与解析（`$(U) \; :: test:`
+            # 仍能运行后面的 test）。有 recipe 时才是目标名里的字面
+            # 分号，交给下面的哨兵逻辑。
+            out.append(_MAKE_CONTEXT_RESET + newline)
+            i += 1
+            continue
         if (raw_rule_colon >= 0 and expanded_target_colon >= 0
                 and expanded_stripped.startswith("\\;")
                 and not body.lstrip(" \t").startswith("\\;")):

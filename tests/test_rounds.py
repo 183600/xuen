@@ -9772,3 +9772,22 @@ def test_detect_test_suite_make_empty_refs_ignore_broken_tail(tmp_path,
                        capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
     assert detect_test_suite(tmp_path) == ["make", "test"]
+
+
+@pytest.mark.parametrize("line", [
+    "$(U) \\; :: test:",
+    "$(U) \\; ::=::  dep\t@true",
+    "$(if ,test,) \\; ::=::  dep\t@true",
+    "$(U) \\; test::",
+])
+def test_detect_test_suite_make_leading_escaped_semicolon_ignores_line(
+        tmp_path, line):
+    """目标列表开头的 `\\;` 且无同行 recipe 时 make 忽略整行。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        "U =\n" + line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert detect_test_suite(tmp_path) == ["make", "test"]
