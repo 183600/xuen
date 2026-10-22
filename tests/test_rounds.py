@@ -3076,6 +3076,28 @@ def test_detect_test_suite_make_eval_in_rule_target_blocks_suite(
 
 
 @pytest.mark.parametrize("makefile", [
+    "foo: $(eval foo: a:b)\ntest:\n\t@echo ok\n",
+    "test: $(eval foo: a:b)\ntest:\n\t@echo ok\n",
+    "X := $(eval foo: =1)\ntest:\n\t@echo ok\n",
+    "foo: $(eval foo::: dep)\ntest:\n\t@echo ok\n",
+])
+def test_detect_test_suite_make_eval_generated_invalid_rule_blocks_suite(
+        tmp_path, makefile):
+    """eval 生成的规则行也要按 Makefile 规则头校验。
+
+    嵌在依赖/立即赋值右侧的 eval 只检查了 missing separator，生成的
+    `foo: a:b` / `foo: =1` / `foo::: dep` 会让 make 在读取阶段报错；
+    漏检会把后面本不可达的 test 目标误判成可运行套件。"""
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(makefile, encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
+@pytest.mark.parametrize("makefile", [
     "test ::= $(eval x)\ntest:\n\t@echo ok\n",
     "X := $(eval x)\ntest:\n\t@echo ok\n",
     "x?y != $(eval x)\ntest:\n\t@echo ok\n",

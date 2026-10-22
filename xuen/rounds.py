@@ -2849,6 +2849,14 @@ def _make_expand_eval_functions(
             # 误判成可运行套件。
             if _make_has_missing_separator_line(check_line):
                 raise _MakeRequiredIncludeError("eval: missing separator")
+            if _make_has_invalid_extra_rule_colon(check_line):
+                # eval 生成的行同样要按 Makefile 规则校验：`$(eval foo:
+                # a:b)` 在读取期报 target pattern contains no '%'，
+                # `$(eval foo: =1)` 报 empty variable name。只检查
+                # missing separator 会让嵌在依赖/赋值右侧的 eval 漏掉
+                # 这些错误，后面看似可运行的 test 目标被误判成套件。
+                raise _MakeRequiredIncludeError(
+                    "eval: invalid rule header")
             _make_scan_assignment(
                 eval_line, variables, simple, overrides, repo)
         text = text[:start] + text[end:]
