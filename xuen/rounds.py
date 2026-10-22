@@ -4401,6 +4401,14 @@ def _make_expand_simple_vars(text: str,
                 expanded = (
                     expanded[:expanded_rule_colon].replace("=", "\x04")
                     + expanded[expanded_rule_colon:])
+            elif (expanded_rule_colon >= 0
+                    and _MAKE_VAR_ASSIGNMENT.match(expanded) is not None
+                    and _MAKE_VAR_ASSIGNMENT.match(body) is None):
+                # 原文是规则，但目标表达式展开后整行长得像赋值
+                # （`$(join a::=b,):` 展开成 `a::=b:`）。make 在展开前
+                # 已决定这是规则，不能按赋值跳过；遮住等号让下游继续
+                # 检查 `=b:` 的空变量名错误，同时保留 test 目标词。
+                expanded = expanded.replace("=", "\x04")
         expanded = _make_flatten_target_newlines(expanded)
         expanded = _make_resolve_single_char_refs(
             expanded, variables, simple)

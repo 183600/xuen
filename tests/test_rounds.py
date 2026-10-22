@@ -8528,6 +8528,28 @@ def test_detect_test_suite_make_expanded_equal_target_colon_blocks_suite(
     assert detect_test_suite(tmp_path) is None
 
 
+@pytest.mark.parametrize("line", [
+    "$(join a::=b,):",
+    "$(join a:=b,):",
+    "$(join a::=b,): dep",
+])
+def test_detect_test_suite_make_expanded_assignment_operator_target_blocks_suite(
+        tmp_path, line):
+    """原文是规则，展开出的 `:=` 不能反过来把整行当赋值放过。
+
+    回归：`$(join a::=b,):` 展开成 `a::=b:`，make 按规则解析并报
+    empty variable name；下游若按赋值跳过，会把后面的 test 误判成套件。
+    """
+    if not shutil.which("make"):
+        pytest.skip("make 不可用")
+    (tmp_path / "Makefile").write_text(
+        line + "\ntest:\n\t@echo ok\n", encoding="utf-8")
+    p = subprocess.run(["make", "-n", "test"], cwd=tmp_path,
+                       capture_output=True, text=True)
+    assert p.returncode != 0
+    assert detect_test_suite(tmp_path) is None
+
+
 def test_detect_test_suite_make_expanded_equal_target_without_colon_keeps_suite(
         tmp_path):
     """展开出 `=` 的普通目标仍然合法，后面的 test 目标不能漏检。"""
