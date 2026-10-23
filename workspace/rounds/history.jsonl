@@ -3,3 +3,10 @@
 {"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "baseline-20261023-121406", "changed": ["idea", "artifact"], "ts": "2026-10-23 12:45:45"}
 {"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-23 13:15:45"}
 {"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-23 13:45:45"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-23 14:16:27"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "baseline-20261023-121406", "changed": ["idea", "artifact"], "ts": "2026-10-23 14:16:27"}
+{"event": "candidate", "id": "20261023-144434-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-10-23 14:44:34"}
+{"event": "verdict", "id": "20261023-144434-r2", "round": 2, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-10-23 14:44:40"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-23 15:14:40"}
+{"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-23 15:44:40"}
+{"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-23 16:14:40"}
