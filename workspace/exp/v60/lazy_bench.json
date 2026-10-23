@@ -1,0 +1,1537 @@
+{
+ "holdout50": {
+  "n": 50,
+  "root_no": 48,
+  "branch_cases": 2,
+  "branch_nodes": 8,
+  "nodes": 58,
+  "cuts": 35,
+  "no": 50,
+  "unknown": 0,
+  "t": 0.2838413715362549,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004344940185546875
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003976583480834961
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005252838134765625
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004329204559326172
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00524139404296875
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "feasible",
+    "nodes": 5,
+    "cuts": 7,
+    "rounds": 8,
+    "branches": [
+     [
+      7,
+      18,
+      0
+     ],
+     [
+      3,
+      10,
+      1
+     ]
+    ],
+    "t": 0.026103496551513672
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004007101058959961
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0039331912994384766
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003991127014160156
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003790140151977539
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0038330554962158203
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004633903503417969
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004039287567138672
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0051577091217041016
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00515437126159668
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003941059112548828
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0032176971435546875
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0044612884521484375
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005163669586181641
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004351615905761719
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004746913909912109
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 5,
+    "rounds": 2,
+    "branches": [],
+    "t": 0.008404731750488281
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0045359134674072266
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004580497741699219
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00453948974609375
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004175662994384766
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003647327423095703
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.006329536437988281
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0038025379180908203
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0047686100006103516
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0037317276000976562
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00389862060546875
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 8,
+    "rounds": 3,
+    "branches": [],
+    "t": 0.012616395950317383
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004174232482910156
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0038437843322753906
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0057909488677978516
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005158662796020508
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003632783889770508
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004353523254394531
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 3,
+    "rounds": 2,
+    "branches": [],
+    "t": 0.009547710418701172
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004902362823486328
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0035440921783447266
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 5,
+    "rounds": 2,
+    "branches": [],
+    "t": 0.008994579315185547
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005221843719482422
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003905773162841797
+   },
+   {
+    "idx": 45,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003941535949707031
+   },
+   {
+    "idx": 46,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003930330276489258
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "root": "feasible",
+    "nodes": 5,
+    "cuts": 7,
+    "rounds": 7,
+    "branches": [
+     [
+      11,
+      31,
+      0
+     ],
+     [
+      3,
+      6,
+      1
+     ]
+    ],
+    "t": 0.027161836624145508
+   },
+   {
+    "idx": 48,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0033414363861083984
+   },
+   {
+    "idx": 49,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0035822391510009766
+   }
+  ]
+ },
+ "synth45": {
+  "n": 45,
+  "root_no": 45,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 45,
+  "cuts": 0,
+  "no": 45,
+  "unknown": 0,
+  "t": 0.1431288719177246,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027892589569091797
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027000904083251953
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0031135082244873047
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027191638946533203
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0036668777465820312
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003324747085571289
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0037806034088134766
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027954578399658203
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003873586654663086
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.002774477005004883
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003840923309326172
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0029878616333007812
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003185272216796875
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0033631324768066406
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027093887329101562
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003812551498413086
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003407001495361328
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0031659603118896484
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003676176071166992
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003987550735473633
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00284576416015625
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0032546520233154297
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003177165985107422
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003123760223388672
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0029637813568115234
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0029861927032470703
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003117799758911133
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0024995803833007812
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003408193588256836
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0040400028228759766
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0034341812133789062
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003015756607055664
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0031006336212158203
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0030984878540039062
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0027527809143066406
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0030829906463623047
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0032203197479248047
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00226593017578125
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003083467483520508
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003468036651611328
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0036110877990722656
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.002396821975708008
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00286102294921875
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003606557846069336
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0029418468475341797
+   }
+  ]
+ },
+ "large_a": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "cuts": 0,
+  "no": 8,
+  "unknown": 0,
+  "t": 0.054884910583496094,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.006315946578979492
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005002260208129883
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.006013154983520508
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005794048309326172
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.012105703353881836
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.006048440933227539
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005881786346435547
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00770258903503418
+   }
+  ]
+ },
+ "large_b": {
+  "n": 10,
+  "root_no": 10,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 10,
+  "cuts": 0,
+  "no": 10,
+  "unknown": 0,
+  "t": 0.10447812080383301,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.012130975723266602
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.010090351104736328
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.010086774826049805
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.007263898849487305
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.016040325164794922
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.010700464248657227
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.009530067443847656
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.013251781463623047
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.008787155151367188
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0065708160400390625
+   }
+  ]
+ },
+ "large_het": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "cuts": 0,
+  "no": 8,
+  "unknown": 0,
+  "t": 0.1485884189605713,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.03172445297241211
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.012071371078491211
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.008400917053222656
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.024273157119750977
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.007020473480224609
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.03315329551696777
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.010229110717773438
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.021688222885131836
+   }
+  ]
+ },
+ "hard3": {
+  "n": 12,
+  "root_no": 12,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 12,
+  "cuts": 0,
+  "no": 12,
+  "unknown": 0,
+  "t": 0.058624982833862305,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0047419071197509766
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004330873489379883
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003569364547729492
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0041539669036865234
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.00796365737915039
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0045146942138671875
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004809856414794922
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004719972610473633
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004919767379760742
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004206418991088867
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004742622375488281
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005923032760620117
+   }
+  ]
+ },
+ "deep8": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "cuts": 0,
+  "no": 8,
+  "unknown": 0,
+  "t": 0.03539299964904785,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0055429935455322266
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.004817485809326172
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003525257110595703
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.005989789962768555
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0042591094970703125
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.003705263137817383
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0036993026733398438
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "cuts": 0,
+    "rounds": 1,
+    "branches": [],
+    "t": 0.0038323402404785156
+   }
+  ]
+ },
+ "_total": {
+  "n": 141,
+  "root_no": 139,
+  "branch_cases": 2,
+  "branch_nodes": 8,
+  "nodes": 149,
+  "cuts": 35,
+  "t": 0.82893967628479,
+  "no": 141,
+  "unknown": 0
+ },
+ "_wall": 0.8325293064117432
+}
