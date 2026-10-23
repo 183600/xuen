@@ -1,0 +1,535 @@
+{
+ "bench38": {
+  "nodes": {
+   "v20": 88,
+   "v24": 38
+  },
+  "tables": {
+   "v20": 23,
+   "v24": 2
+  },
+  "time": {
+   "v20": 0.0317,
+   "v24": 0.1145
+  },
+  "rows": [
+   {
+    "tag": "hard3",
+    "idx": 5,
+    "n": 14,
+    "v20": 31,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "tag": "large_het",
+    "idx": 1,
+    "n": 15,
+    "v20": 21,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   }
+  ]
+ },
+ "deep": {
+  "nodes": {
+   "v20": 223,
+   "v24": 8
+  },
+  "tables": {
+   "v20": 115,
+   "v24": 6
+  },
+  "time": {
+   "v20": 0.0786,
+   "v24": 0.32
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "n": 12,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 1,
+    "n": 13,
+    "v20": 29,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 2,
+    "n": 13,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 3,
+    "n": 16,
+    "v20": 42,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 4,
+    "n": 16,
+    "v20": 23,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 5,
+    "n": 16,
+    "v20": 56,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 6,
+    "n": 14,
+    "v20": 31,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 7,
+    "n": 13,
+    "v20": 40,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   }
+  ]
+ },
+ "holdout": {
+  "nodes": {
+   "v20": 1935,
+   "v24": 229
+  },
+  "tables": {
+   "v20": 818,
+   "v24": 128
+  },
+  "time": {
+   "v20": 0.5342,
+   "v24": 2.281
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "n": 14,
+    "v20": 23,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 1,
+    "n": 15,
+    "v20": 53,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 2,
+    "n": 15,
+    "v20": 55,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 3,
+    "n": 16,
+    "v20": 40,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 4,
+    "n": 15,
+    "v20": 52,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 5,
+    "n": 15,
+    "v20": 31,
+    "v24": 26,
+    "map_calls": 14,
+    "map_prunes": 2
+   },
+   {
+    "idx": 6,
+    "n": 16,
+    "v20": 24,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 7,
+    "n": 13,
+    "v20": 27,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 8,
+    "n": 13,
+    "v20": 36,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 9,
+    "n": 13,
+    "v20": 52,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 10,
+    "n": 12,
+    "v20": 29,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 11,
+    "n": 15,
+    "v20": 22,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 12,
+    "n": 16,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 13,
+    "n": 16,
+    "v20": 32,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 14,
+    "n": 16,
+    "v20": 39,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 15,
+    "n": 15,
+    "v20": 27,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 16,
+    "n": 13,
+    "v20": 24,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 17,
+    "n": 13,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 18,
+    "n": 13,
+    "v20": 23,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 19,
+    "n": 14,
+    "v20": 76,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 20,
+    "n": 13,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 21,
+    "n": 13,
+    "v20": 26,
+    "v24": 23,
+    "map_calls": 9,
+    "map_prunes": 1
+   },
+   {
+    "idx": 22,
+    "n": 16,
+    "v20": 44,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 23,
+    "n": 14,
+    "v20": 29,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 24,
+    "n": 16,
+    "v20": 48,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 25,
+    "n": 15,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 26,
+    "n": 15,
+    "v20": 39,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 27,
+    "n": 15,
+    "v20": 58,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 28,
+    "n": 12,
+    "v20": 34,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 29,
+    "n": 16,
+    "v20": 87,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 30,
+    "n": 14,
+    "v20": 22,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 31,
+    "n": 15,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 32,
+    "n": 15,
+    "v20": 47,
+    "v24": 47,
+    "map_calls": 16,
+    "map_prunes": 0
+   },
+   {
+    "idx": 33,
+    "n": 14,
+    "v20": 29,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 34,
+    "n": 13,
+    "v20": 36,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 35,
+    "n": 16,
+    "v20": 103,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 36,
+    "n": 14,
+    "v20": 64,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 37,
+    "n": 12,
+    "v20": 50,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 38,
+    "n": 13,
+    "v20": 38,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 39,
+    "n": 16,
+    "v20": 40,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 40,
+    "n": 16,
+    "v20": 48,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 41,
+    "n": 14,
+    "v20": 1,
+    "v24": 1,
+    "map_calls": 0,
+    "map_prunes": 0
+   },
+   {
+    "idx": 42,
+    "n": 16,
+    "v20": 78,
+    "v24": 42,
+    "map_calls": 19,
+    "map_prunes": 6
+   },
+   {
+    "idx": 43,
+    "n": 13,
+    "v20": 56,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 44,
+    "n": 13,
+    "v20": 24,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 45,
+    "n": 15,
+    "v20": 48,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 46,
+    "n": 12,
+    "v20": 41,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 47,
+    "n": 15,
+    "v20": 130,
+    "v24": 46,
+    "map_calls": 28,
+    "map_prunes": 11
+   },
+   {
+    "idx": 48,
+    "n": 12,
+    "v20": 22,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   },
+   {
+    "idx": 49,
+    "n": 13,
+    "v20": 23,
+    "v24": 1,
+    "map_calls": 1,
+    "map_prunes": 1
+   }
+  ],
+  "wins": 43,
+  "ties": 7,
+  "losses": 0
+ }
+}

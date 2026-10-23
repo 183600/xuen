@@ -1,0 +1,58 @@
+[
+ {
+  "tau": 0,
+  "nodes": 184,
+  "tables": 89,
+  "time": 0.881,
+  "calls": 0,
+  "prunes": 0
+ },
+ {
+  "tau": 1,
+  "nodes": 114,
+  "tables": 48,
+  "time": 1.623,
+  "calls": 2,
+  "prunes": 2
+ },
+ {
+  "tau": 2,
+  "nodes": 46,
+  "tables": 25,
+  "time": 2.306,
+  "calls": 4,
+  "prunes": 4
+ },
+ {
+  "tau": 3,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.175,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "tau": 4,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.192,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "tau": 5,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.176,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "tau": 6,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.173,
+  "calls": 5,
+  "prunes": 5
+ }
+]

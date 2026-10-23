@@ -1,0 +1,67 @@
+{
+ "cap": 4000,
+ "critical_cap4000": {
+  "5": "NO",
+  "21": "UNK",
+  "32": "NO",
+  "42": "NO",
+  "47": "UNK",
+  "closed": 3
+ },
+ "longest_cap4000": {
+  "5": "NO",
+  "21": "NO",
+  "32": "NO",
+  "42": "NO",
+  "47": "NO",
+  "closed": 5,
+  "note": "different tie-break from critical; e.g. idx47 chain [0,1,3,4,8,11], 217 placements, max 1854, total 181634"
+ },
+ "random_portfolio": {
+  "21": {
+   "hits": 12,
+   "trials": 30,
+   "best_chain": [
+    0,
+    2,
+    3,
+    11
+   ],
+   "best_max": 2036,
+   "best_placements": 501,
+   "best_total": 48444
+  },
+  "47": {
+   "hits": 10,
+   "trials": 30,
+   "best_chain": [
+    0,
+    1,
+    3,
+    4,
+    8,
+    11
+   ],
+   "best_max": 1854,
+   "best_placements": 217,
+   "best_total": 181634
+  }
+ },
+ "default_cap300k": {
+  "critical_closed": 5,
+  "portfolio_extra": 0
+ },
+ "negative": {
+  "random_residual_order_case42": {
+   "minopts_asc": 19208,
+   "rand_seed0": 1580254,
+   "rand_seed2": 547573,
+   "maxp": 2427057
+  },
+  "hetero_random_400": {
+   "critical_NO": 21,
+   "portfolio_extra_NO": 0,
+   "unknown": 379
+  }
+ }
+}

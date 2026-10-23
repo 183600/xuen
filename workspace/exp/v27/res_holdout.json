@@ -1,0 +1,2108 @@
+[
+ {
+  "idx": 0,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 54,
+   "cut": 10,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    11,
+    18
+   ],
+   "status": "ok",
+   "time": 0.01
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 16,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    3
+   ],
+   "status": "ok",
+   "time": 0.018
+  }
+ },
+ {
+  "idx": 1,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 4,
+   "L": 6,
+   "nodes": 280,
+   "cut": 30,
+   "plc": 210,
+   "levels": [
+    1,
+    2,
+    5,
+    13,
+    26,
+    66,
+    137
+   ],
+   "status": "ok",
+   "time": 0.079
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 3,
+   "L": 6,
+   "nodes": 97,
+   "cut": 41,
+   "plc": 84,
+   "levels": [
+    1,
+    1,
+    1,
+    3,
+    6,
+    15,
+    30
+   ],
+   "status": "ok",
+   "time": 0.737
+  }
+ },
+ {
+  "idx": 2,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 177,
+   "cut": 4,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    5,
+    14,
+    28,
+    48,
+    75
+   ],
+   "status": "ok",
+   "time": 0.064
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 74,
+   "cut": 23,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    2,
+    5,
+    9,
+    14,
+    20
+   ],
+   "status": "ok",
+   "time": 0.724
+  }
+ },
+ {
+  "idx": 3,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 8,
+   "nodes": 46,
+   "cut": 1,
+   "plc": 9,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "status": "ok",
+   "time": 0.086
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 8,
+   "nodes": 9,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.029
+  }
+ },
+ {
+  "idx": 4,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "UNK",
+   "S": 3,
+   "L": 6,
+   "nodes": null,
+   "cut": null,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    10,
+    25,
+    47
+   ],
+   "status": "timeout",
+   "time": 15.0
+  },
+  "lo": {
+   "verdict": "UNK",
+   "S": 2,
+   "L": 6,
+   "nodes": null,
+   "cut": null,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    2,
+    5,
+    9
+   ],
+   "status": "timeout",
+   "time": 15.0
+  }
+ },
+ {
+  "idx": 5,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 79,
+   "cut": 1,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    5,
+    9,
+    14,
+    20,
+    27
+   ],
+   "status": "ok",
+   "time": 0.03
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.348
+  }
+ },
+ {
+  "idx": 6,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 5,
+   "nodes": 49,
+   "cut": 4,
+   "plc": 21,
+   "levels": [
+    1,
+    2,
+    4,
+    8,
+    13,
+    17
+   ],
+   "status": "ok",
+   "time": 0.02
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 5,
+   "nodes": 16,
+   "cut": 6,
+   "plc": 6,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3,
+    3
+   ],
+   "status": "ok",
+   "time": 0.055
+  }
+ },
+ {
+  "idx": 7,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 5,
+   "nodes": 89,
+   "cut": 6,
+   "plc": 56,
+   "levels": [
+    1,
+    2,
+    5,
+    11,
+    23,
+    41
+   ],
+   "status": "ok",
+   "time": 0.023
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 5,
+   "nodes": 24,
+   "cut": 12,
+   "plc": 21,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    3,
+    6
+   ],
+   "status": "ok",
+   "time": 0.063
+  }
+ },
+ {
+  "idx": 8,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 84,
+   "cut": 0,
+   "plc": 28,
+   "levels": [
+    1,
+    3,
+    6,
+    10,
+    15,
+    21,
+    28
+   ],
+   "status": "ok",
+   "time": 0.013
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 34,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.008
+  }
+ },
+ {
+  "idx": 9,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 84,
+   "cut": 0,
+   "plc": 28,
+   "levels": [
+    1,
+    3,
+    6,
+    10,
+    15,
+    21,
+    28
+   ],
+   "status": "ok",
+   "time": 0.015
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 34,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.011
+  }
+ },
+ {
+  "idx": 10,
+  "n": 12,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 5,
+   "nodes": 46,
+   "cut": 3,
+   "plc": 21,
+   "levels": [
+    1,
+    2,
+    3,
+    7,
+    12,
+    18
+   ],
+   "status": "ok",
+   "time": 0.012
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 5,
+   "nodes": 17,
+   "cut": 6,
+   "plc": 6,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3,
+    4
+   ],
+   "status": "ok",
+   "time": 0.047
+  }
+ },
+ {
+  "idx": 11,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 5,
+   "nodes": 21,
+   "cut": 0,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.008
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 5,
+   "nodes": 6,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.048
+  }
+ },
+ {
+  "idx": 12,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 169,
+   "cut": 12,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    6,
+    13,
+    24,
+    44,
+    67
+   ],
+   "status": "ok",
+   "time": 0.072
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 53,
+   "cut": 23,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    2,
+    3,
+    4,
+    9,
+    11
+   ],
+   "status": "ok",
+   "time": 0.063
+  }
+ },
+ {
+  "idx": 13,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 5,
+   "nodes": 21,
+   "cut": 0,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.077
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 5,
+   "nodes": 6,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.592
+  }
+ },
+ {
+  "idx": 14,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 7,
+   "nodes": 106,
+   "cut": 5,
+   "plc": 36,
+   "levels": [
+    1,
+    2,
+    3,
+    7,
+    12,
+    18,
+    25,
+    33
+   ],
+   "status": "ok",
+   "time": 0.159
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 7,
+   "nodes": 30,
+   "cut": 8,
+   "plc": 8,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.242
+  }
+ },
+ {
+  "idx": 15,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 5,
+   "nodes": 21,
+   "cut": 0,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.008
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 5,
+   "nodes": 6,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.003
+  }
+ },
+ {
+  "idx": 16,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 5,
+   "nodes": 21,
+   "cut": 0,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.006
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 5,
+   "nodes": 6,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.003
+  }
+ },
+ {
+  "idx": 17,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 4,
+   "nodes": 54,
+   "cut": 7,
+   "plc": 35,
+   "levels": [
+    1,
+    2,
+    5,
+    13,
+    26
+   ],
+   "status": "ok",
+   "time": 1.787
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 4,
+   "nodes": 21,
+   "cut": 10,
+   "plc": 15,
+   "levels": [
+    1,
+    1,
+    1,
+    3,
+    6
+   ],
+   "status": "ok",
+   "time": 1.519
+  }
+ },
+ {
+  "idx": 18,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 4,
+   "nodes": 30,
+   "cut": 2,
+   "plc": 15,
+   "levels": [
+    1,
+    2,
+    4,
+    8,
+    13
+   ],
+   "status": "ok",
+   "time": 0.006
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 4,
+   "nodes": 12,
+   "cut": 5,
+   "plc": 5,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3
+   ],
+   "status": "ok",
+   "time": 0.057
+  }
+ },
+ {
+  "idx": 19,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 205,
+   "cut": 1,
+   "plc": 84,
+   "levels": [
+    1,
+    3,
+    9,
+    19,
+    34,
+    55,
+    83
+   ],
+   "status": "ok",
+   "time": 0.072
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 105,
+   "cut": 28,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    5,
+    9,
+    14,
+    20,
+    27
+   ],
+   "status": "ok",
+   "time": 0.326
+  }
+ },
+ {
+  "idx": 20,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 4,
+   "nodes": 51,
+   "cut": 4,
+   "plc": 35,
+   "levels": [
+    1,
+    2,
+    5,
+    13,
+    26
+   ],
+   "status": "ok",
+   "time": 0.009
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 4,
+   "nodes": 21,
+   "cut": 10,
+   "plc": 15,
+   "levels": [
+    1,
+    1,
+    1,
+    3,
+    6
+   ],
+   "status": "ok",
+   "time": 0.847
+  }
+ },
+ {
+  "idx": 21,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 4,
+   "nodes": 61,
+   "cut": 5,
+   "plc": 35,
+   "levels": [
+    1,
+    2,
+    7,
+    16,
+    30
+   ],
+   "status": "ok",
+   "time": 0.215
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 4,
+   "nodes": 32,
+   "cut": 12,
+   "plc": 15,
+   "levels": [
+    1,
+    1,
+    3,
+    6,
+    10
+   ],
+   "status": "ok",
+   "time": 0.671
+  }
+ },
+ {
+  "idx": 22,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 185,
+   "cut": 2,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    7,
+    16,
+    30,
+    50,
+    77
+   ],
+   "status": "ok",
+   "time": 0.07
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 79,
+   "cut": 23,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    3,
+    6,
+    10,
+    15,
+    21
+   ],
+   "status": "ok",
+   "time": 0.07
+  }
+ },
+ {
+  "idx": 23,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 113,
+   "cut": 12,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    13,
+    28,
+    50
+   ],
+   "status": "ok",
+   "time": 0.02
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 38,
+   "cut": 16,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    3,
+    6,
+    10
+   ],
+   "status": "ok",
+   "time": 1.176
+  }
+ },
+ {
+  "idx": 24,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 7,
+   "nodes": 120,
+   "cut": 0,
+   "plc": 36,
+   "levels": [
+    1,
+    3,
+    6,
+    10,
+    15,
+    21,
+    28,
+    36
+   ],
+   "status": "ok",
+   "time": 0.046
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 7,
+   "nodes": 43,
+   "cut": 8,
+   "plc": 8,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "status": "ok",
+   "time": 1.798
+  }
+ },
+ {
+  "idx": 25,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 199,
+   "cut": 3,
+   "plc": 84,
+   "levels": [
+    1,
+    3,
+    8,
+    18,
+    33,
+    53,
+    80
+   ],
+   "status": "ok",
+   "time": 0.059
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 96,
+   "cut": 27,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    4,
+    8,
+    13,
+    18,
+    24
+   ],
+   "status": "ok",
+   "time": 0.07
+  }
+ },
+ {
+  "idx": 26,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 0,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.008
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 6,
+   "nodes": 7,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.005
+  }
+ },
+ {
+  "idx": 27,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 7,
+   "nodes": 248,
+   "cut": 7,
+   "plc": 120,
+   "levels": [
+    1,
+    2,
+    3,
+    10,
+    22,
+    40,
+    65,
+    98
+   ],
+   "status": "ok",
+   "time": 0.146
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 7,
+   "nodes": 82,
+   "cut": 25,
+   "plc": 36,
+   "levels": [
+    1,
+    1,
+    1,
+    3,
+    6,
+    10,
+    15,
+    21
+   ],
+   "status": "ok",
+   "time": 0.882
+  }
+ },
+ {
+  "idx": 28,
+  "n": 12,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 5,
+   "nodes": 80,
+   "cut": 8,
+   "plc": 56,
+   "levels": [
+    1,
+    2,
+    3,
+    8,
+    20,
+    38
+   ],
+   "status": "ok",
+   "time": 0.011
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 5,
+   "nodes": 32,
+   "cut": 14,
+   "plc": 21,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    5,
+    9
+   ],
+   "status": "ok",
+   "time": 0.201
+  }
+ },
+ {
+  "idx": 29,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 79,
+   "cut": 1,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    5,
+    9,
+    14,
+    20,
+    27
+   ],
+   "status": "ok",
+   "time": 0.164
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 11.551
+  }
+ },
+ {
+  "idx": 30,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 143,
+   "cut": 8,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    3,
+    8,
+    20,
+    38,
+    63
+   ],
+   "status": "ok",
+   "time": 0.032
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 51,
+   "cut": 19,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    5,
+    9,
+    14
+   ],
+   "status": "ok",
+   "time": 0.099
+  }
+ },
+ {
+  "idx": 31,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 0,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.009
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 6,
+   "nodes": 7,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.007
+  }
+ },
+ {
+  "idx": 32,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 5,
+   "nodes": 123,
+   "cut": 5,
+   "plc": 56,
+   "levels": [
+    1,
+    3,
+    9,
+    19,
+    34,
+    52
+   ],
+   "status": "ok",
+   "time": 0.042
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 5,
+   "nodes": 69,
+   "cut": 21,
+   "plc": 21,
+   "levels": [
+    1,
+    2,
+    5,
+    9,
+    14,
+    18
+   ],
+   "status": "ok",
+   "time": 0.043
+  }
+ },
+ {
+  "idx": 33,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 6,
+   "nodes": 155,
+   "cut": 6,
+   "plc": 84,
+   "levels": [
+    1,
+    2,
+    5,
+    11,
+    23,
+    41,
+    66
+   ],
+   "status": "ok",
+   "time": 0.139
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 6,
+   "nodes": 38,
+   "cut": 16,
+   "plc": 28,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    3,
+    6,
+    10
+   ],
+   "status": "ok",
+   "time": 0.437
+  }
+ },
+ {
+  "idx": 34,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 0,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.004
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 6,
+   "nodes": 7,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.016
+  }
+ },
+ {
+  "idx": 35,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 4,
+   "L": 5,
+   "nodes": 168,
+   "cut": 14,
+   "plc": 126,
+   "levels": [
+    1,
+    2,
+    5,
+    17,
+    43,
+    86
+   ],
+   "status": "ok",
+   "time": 3.979
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 3,
+   "L": 5,
+   "nodes": 61,
+   "cut": 26,
+   "plc": 56,
+   "levels": [
+    1,
+    1,
+    1,
+    4,
+    10,
+    19
+   ],
+   "status": "ok",
+   "time": 9.881
+  }
+ },
+ {
+  "idx": 36,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 3,
+   "L": 5,
+   "nodes": 99,
+   "cut": 7,
+   "plc": 56,
+   "levels": [
+    1,
+    2,
+    5,
+    13,
+    26,
+    45
+   ],
+   "status": "ok",
+   "time": 3.525
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 2,
+   "L": 5,
+   "nodes": 35,
+   "cut": 14,
+   "plc": 21,
+   "levels": [
+    1,
+    1,
+    1,
+    3,
+    6,
+    10
+   ],
+   "status": "ok",
+   "time": 4.308
+  }
+ },
+ {
+  "idx": 37,
+  "n": 12,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 7,
+   "nodes": 36,
+   "cut": 0,
+   "plc": 8,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "status": "ok",
+   "time": 0.013
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 7,
+   "nodes": 8,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.007
+  }
+ },
+ {
+  "idx": 38,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 4,
+   "nodes": 28,
+   "cut": 3,
+   "plc": 15,
+   "levels": [
+    1,
+    2,
+    3,
+    7,
+    12
+   ],
+   "status": "ok",
+   "time": 0.024
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 4,
+   "nodes": 12,
+   "cut": 5,
+   "plc": 5,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3
+   ],
+   "status": "ok",
+   "time": 0.06
+  }
+ },
+ {
+  "idx": 39,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 0,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.008
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 6,
+   "nodes": 7,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.791
+  }
+ },
+ {
+  "idx": 40,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 5,
+   "L": 6,
+   "nodes": 316,
+   "cut": 23,
+   "plc": 462,
+   "levels": [
+    1,
+    2,
+    3,
+    5,
+    25,
+    76,
+    181
+   ],
+   "status": "ok",
+   "time": 0.123
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 4,
+   "L": 6,
+   "nodes": 105,
+   "cut": 47,
+   "plc": 210,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    5,
+    15,
+    35
+   ],
+   "status": "ok",
+   "time": 8.551
+  }
+ },
+ {
+  "idx": 41,
+  "n": 14,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 60,
+   "cut": 7,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    8,
+    14,
+    21
+   ],
+   "status": "ok",
+   "time": 0.023
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 16,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    3
+   ],
+   "status": "ok",
+   "time": 0.03
+  }
+ },
+ {
+  "idx": 42,
+  "n": 16,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 4,
+   "L": 5,
+   "nodes": 202,
+   "cut": 9,
+   "plc": 126,
+   "levels": [
+    1,
+    2,
+    9,
+    25,
+    55,
+    101
+   ],
+   "status": "ok",
+   "time": 0.084
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 3,
+   "L": 5,
+   "nodes": 106,
+   "cut": 38,
+   "plc": 56,
+   "levels": [
+    1,
+    1,
+    4,
+    10,
+    20,
+    33
+   ],
+   "status": "ok",
+   "time": 0.278
+  }
+ },
+ {
+  "idx": 43,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 4,
+   "L": 4,
+   "nodes": 95,
+   "cut": 3,
+   "plc": 70,
+   "levels": [
+    1,
+    2,
+    9,
+    25,
+    55
+   ],
+   "status": "ok",
+   "time": 0.022
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 3,
+   "L": 4,
+   "nodes": 58,
+   "cut": 23,
+   "plc": 35,
+   "levels": [
+    1,
+    1,
+    4,
+    10,
+    20
+   ],
+   "status": "ok",
+   "time": 6.948
+  }
+ },
+ {
+  "idx": 44,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 4,
+   "nodes": 30,
+   "cut": 2,
+   "plc": 15,
+   "levels": [
+    1,
+    2,
+    4,
+    8,
+    13
+   ],
+   "status": "ok",
+   "time": 0.007
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 4,
+   "nodes": 12,
+   "cut": 5,
+   "plc": 5,
+   "levels": [
+    1,
+    1,
+    1,
+    2,
+    3
+   ],
+   "status": "ok",
+   "time": 0.255
+  }
+ },
+ {
+  "idx": 45,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 70,
+   "cut": 6,
+   "plc": 28,
+   "levels": [
+    1,
+    2,
+    3,
+    6,
+    11,
+    17,
+    24
+   ],
+   "status": "ok",
+   "time": 0.124
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 19,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    2,
+    3,
+    4
+   ],
+   "status": "ok",
+   "time": 0.129
+  }
+ },
+ {
+  "idx": 46,
+  "n": 12,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 5,
+   "nodes": 56,
+   "cut": 0,
+   "plc": 21,
+   "levels": [
+    1,
+    3,
+    6,
+    10,
+    15,
+    21
+   ],
+   "status": "ok",
+   "time": 0.008
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 5,
+   "nodes": 26,
+   "cut": 6,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.087
+  }
+ },
+ {
+  "idx": 47,
+  "n": 15,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 2,
+   "L": 6,
+   "nodes": 84,
+   "cut": 0,
+   "plc": 28,
+   "levels": [
+    1,
+    3,
+    6,
+    10,
+    15,
+    21,
+    28
+   ],
+   "status": "ok",
+   "time": 0.029
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 1,
+   "L": 6,
+   "nodes": 34,
+   "cut": 7,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.614
+  }
+ },
+ {
+  "idx": 48,
+  "n": 12,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 5,
+   "nodes": 21,
+   "cut": 0,
+   "plc": 6,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "status": "ok",
+   "time": 0.005
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 5,
+   "nodes": 6,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.007
+  }
+ },
+ {
+  "idx": 49,
+  "n": 13,
+  "m": 3,
+  "opt": {
+   "verdict": "YES",
+   "S": 1,
+   "L": 6,
+   "nodes": 28,
+   "cut": 0,
+   "plc": 7,
+   "levels": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "status": "ok",
+   "time": 0.007
+  },
+  "lo": {
+   "verdict": "NO",
+   "S": 0,
+   "L": 6,
+   "nodes": 7,
+   "cut": 1,
+   "plc": 1,
+   "levels": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "status": "ok",
+   "time": 0.002
+  }
+ }
+]

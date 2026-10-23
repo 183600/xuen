@@ -1,0 +1,42 @@
+[
+ {
+  "depth": 0,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.19,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "depth": 1,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.191,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "depth": 2,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.178,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "depth": 3,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.175,
+  "calls": 5,
+  "prunes": 5
+ },
+ {
+  "depth": 1000000000,
+  "nodes": 5,
+  "tables": 5,
+  "time": 2.175,
+  "calls": 5,
+  "prunes": 5
+ }
+]

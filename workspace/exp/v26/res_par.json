@@ -1,0 +1,57 @@
+{
+ "env": "4 vCPU, Python 3.12, os.fork, static round-robin chunks, default nodecap=300000",
+ "rows": [
+  {
+   "idx": 5,
+   "n": 15,
+   "nplace": 7,
+   "W1": 0.3379,
+   "W2": 0.1779,
+   "W4": 0.1656,
+   "speedup4": 2.04
+  },
+  {
+   "idx": 21,
+   "n": 13,
+   "nplace": 15,
+   "W1": 0.7552,
+   "W2": 0.4105,
+   "W4": 0.3655,
+   "speedup4": 2.07
+  },
+  {
+   "idx": 32,
+   "n": 15,
+   "nplace": 21,
+   "W1": 0.0268,
+   "W2": 0.0159,
+   "W4": 0.0158,
+   "speedup4": 1.7
+  },
+  {
+   "idx": 42,
+   "n": 16,
+   "nplace": 56,
+   "W1": 0.2703,
+   "W2": 0.1576,
+   "W4": 0.1481,
+   "speedup4": 1.83
+  },
+  {
+   "idx": 47,
+   "n": 15,
+   "nplace": 7,
+   "W1": 0.6065,
+   "W2": 0.3812,
+   "W4": 0.3114,
+   "speedup4": 1.95
+  }
+ ],
+ "total": {
+  "W1": 1.9967,
+  "W2": 1.1431,
+  "W4": 1.0064,
+  "speedup4": 1.98
+ },
+ "note": "median of 3; NO verdict; W=1 is sequential"
+}

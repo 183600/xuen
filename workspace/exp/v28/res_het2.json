@@ -1,0 +1,116 @@
+[
+ {
+  "idx": 0,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 134336
+ },
+ {
+  "idx": 0,
+  "tag": "h0",
+  "v": true,
+  "nodes": 638,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 1,
+  "tag": "hM1",
+  "v": true,
+  "nodes": 148,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 1,
+  "tag": "h0",
+  "v": true,
+  "nodes": 96,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 2,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 1
+ },
+ {
+  "idx": 2,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "greedy": true,
+  "exact_assign": true
+ },
+ {
+  "idx": 3,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001
+ },
+ {
+  "idx": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 60,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 4,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 2
+ },
+ {
+  "idx": 4,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 5,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001
+ },
+ {
+  "idx": 5,
+  "tag": "h0",
+  "v": true,
+  "nodes": 73,
+  "greedy": false,
+  "exact_assign": false
+ },
+ {
+  "idx": 6,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 21
+ },
+ {
+  "idx": 6,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "greedy": true,
+  "exact_assign": true
+ },
+ {
+  "idx": 7,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001
+ },
+ {
+  "idx": 7,
+  "tag": "h0",
+  "v": true,
+  "nodes": 332,
+  "greedy": false,
+  "exact_assign": false
+ }
+]

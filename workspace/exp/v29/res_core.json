@@ -1,0 +1,309 @@
+{
+ "agg": {
+  "n": 50,
+  "irreducible": 20,
+  "t": 0.193
+ },
+ "rows": [
+  {
+   "idx": 0,
+   "n": 14,
+   "irreducible": false,
+   "tested": 12
+  },
+  {
+   "idx": 1,
+   "n": 15,
+   "irreducible": false,
+   "tested": 6
+  },
+  {
+   "idx": 2,
+   "n": 15,
+   "irreducible": true,
+   "tested": 15
+  },
+  {
+   "idx": 3,
+   "n": 16,
+   "irreducible": false,
+   "tested": 2
+  },
+  {
+   "idx": 4,
+   "n": 15,
+   "irreducible": false,
+   "tested": 3
+  },
+  {
+   "idx": 5,
+   "n": 15,
+   "irreducible": true,
+   "tested": 15
+  },
+  {
+   "idx": 6,
+   "n": 16,
+   "irreducible": false,
+   "tested": 2
+  },
+  {
+   "idx": 7,
+   "n": 13,
+   "irreducible": false,
+   "tested": 6
+  },
+  {
+   "idx": 8,
+   "n": 13,
+   "irreducible": false,
+   "tested": 5
+  },
+  {
+   "idx": 9,
+   "n": 13,
+   "irreducible": false,
+   "tested": 12
+  },
+  {
+   "idx": 10,
+   "n": 12,
+   "irreducible": true,
+   "tested": 12
+  },
+  {
+   "idx": 11,
+   "n": 15,
+   "irreducible": true,
+   "tested": 15
+  },
+  {
+   "idx": 12,
+   "n": 16,
+   "irreducible": false,
+   "tested": 5
+  },
+  {
+   "idx": 13,
+   "n": 16,
+   "irreducible": true,
+   "tested": 16
+  },
+  {
+   "idx": 14,
+   "n": 16,
+   "irreducible": true,
+   "tested": 16
+  },
+  {
+   "idx": 15,
+   "n": 15,
+   "irreducible": false,
+   "tested": 11
+  },
+  {
+   "idx": 16,
+   "n": 13,
+   "irreducible": true,
+   "tested": 13
+  },
+  {
+   "idx": 17,
+   "n": 13,
+   "irreducible": false,
+   "tested": 4
+  },
+  {
+   "idx": 18,
+   "n": 13,
+   "irreducible": false,
+   "tested": 13
+  },
+  {
+   "idx": 19,
+   "n": 14,
+   "irreducible": false,
+   "tested": 11
+  },
+  {
+   "idx": 20,
+   "n": 13,
+   "irreducible": false,
+   "tested": 13
+  },
+  {
+   "idx": 21,
+   "n": 13,
+   "irreducible": true,
+   "tested": 13
+  },
+  {
+   "idx": 22,
+   "n": 16,
+   "irreducible": false,
+   "tested": 9
+  },
+  {
+   "idx": 23,
+   "n": 14,
+   "irreducible": false,
+   "tested": 6
+  },
+  {
+   "idx": 24,
+   "n": 16,
+   "irreducible": false,
+   "tested": 3
+  },
+  {
+   "idx": 25,
+   "n": 15,
+   "irreducible": false,
+   "tested": 6
+  },
+  {
+   "idx": 26,
+   "n": 15,
+   "irreducible": false,
+   "tested": 4
+  },
+  {
+   "idx": 27,
+   "n": 15,
+   "irreducible": false,
+   "tested": 13
+  },
+  {
+   "idx": 28,
+   "n": 12,
+   "irreducible": false,
+   "tested": 8
+  },
+  {
+   "idx": 29,
+   "n": 16,
+   "irreducible": false,
+   "tested": 4
+  },
+  {
+   "idx": 30,
+   "n": 14,
+   "irreducible": false,
+   "tested": 3
+  },
+  {
+   "idx": 31,
+   "n": 15,
+   "irreducible": false,
+   "tested": 3
+  },
+  {
+   "idx": 32,
+   "n": 15,
+   "irreducible": false,
+   "tested": 7
+  },
+  {
+   "idx": 33,
+   "n": 14,
+   "irreducible": true,
+   "tested": 14
+  },
+  {
+   "idx": 34,
+   "n": 13,
+   "irreducible": true,
+   "tested": 13
+  },
+  {
+   "idx": 35,
+   "n": 16,
+   "irreducible": true,
+   "tested": 16
+  },
+  {
+   "idx": 36,
+   "n": 14,
+   "irreducible": true,
+   "tested": 14
+  },
+  {
+   "idx": 37,
+   "n": 12,
+   "irreducible": false,
+   "tested": 8
+  },
+  {
+   "idx": 38,
+   "n": 13,
+   "irreducible": false,
+   "tested": 7
+  },
+  {
+   "idx": 39,
+   "n": 16,
+   "irreducible": true,
+   "tested": 16
+  },
+  {
+   "idx": 40,
+   "n": 16,
+   "irreducible": false,
+   "tested": 2
+  },
+  {
+   "idx": 41,
+   "n": 14,
+   "irreducible": false,
+   "tested": 3
+  },
+  {
+   "idx": 42,
+   "n": 16,
+   "irreducible": true,
+   "tested": 16
+  },
+  {
+   "idx": 43,
+   "n": 13,
+   "irreducible": true,
+   "tested": 13
+  },
+  {
+   "idx": 44,
+   "n": 13,
+   "irreducible": true,
+   "tested": 13
+  },
+  {
+   "idx": 45,
+   "n": 15,
+   "irreducible": true,
+   "tested": 15
+  },
+  {
+   "idx": 46,
+   "n": 12,
+   "irreducible": true,
+   "tested": 12
+  },
+  {
+   "idx": 47,
+   "n": 15,
+   "irreducible": true,
+   "tested": 15
+  },
+  {
+   "idx": 48,
+   "n": 12,
+   "irreducible": true,
+   "tested": 12
+  },
+  {
+   "idx": 49,
+   "n": 13,
+   "irreducible": false,
+   "tested": 6
+  }
+ ]
+}
