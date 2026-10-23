@@ -1,0 +1,220 @@
+{
+ "span": {
+  "total": {
+   "lp": 38,
+   "nodes": 7,
+   "probes": 14,
+   "no": 7,
+   "audit": 7
+  },
+  "rows": [
+   {
+    "name": "holdout50",
+    "idx": 5,
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     6,
+     12,
+     17
+    ],
+    "audit": true
+   },
+   {
+    "name": "holdout50",
+    "idx": 47,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   },
+   {
+    "name": "h5",
+    "idx": 6,
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     6,
+     13,
+     18
+    ],
+    "audit": true
+   },
+   {
+    "name": "h5",
+    "idx": 16,
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     6,
+     13,
+     18
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 6,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 18,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     5,
+     7
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 26,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   }
+  ]
+ },
+ "support": {
+  "total": {
+   "lp": 44,
+   "nodes": 7,
+   "probes": 20,
+   "no": 7,
+   "audit": 7
+  },
+  "rows": [
+   {
+    "name": "holdout50",
+    "idx": 5,
+    "v": false,
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "trap": [
+     6,
+     12,
+     17
+    ],
+    "audit": true
+   },
+   {
+    "name": "holdout50",
+    "idx": 47,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   },
+   {
+    "name": "h5",
+    "idx": 6,
+    "v": false,
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "trap": [
+     6,
+     13,
+     18
+    ],
+    "audit": true
+   },
+   {
+    "name": "h5",
+    "idx": 16,
+    "v": false,
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "trap": [
+     6,
+     13,
+     18
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 6,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 18,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     5,
+     7
+    ],
+    "audit": true
+   },
+   {
+    "name": "h47",
+    "idx": 26,
+    "v": false,
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "trap": [
+     3,
+     6,
+     8
+    ],
+    "audit": true
+   }
+  ]
+ }
+}
