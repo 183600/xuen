@@ -1,0 +1,5 @@
+{"event": "baseline", "id": "baseline-20261023-121406", "round": 0, "verifier": "baseline", "score": null, "ts": "2026-10-23 12:14:06"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-23 12:45:45"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "baseline-20261023-121406", "changed": ["idea", "artifact"], "ts": "2026-10-23 12:45:45"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-23 13:15:45"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-23 13:45:45"}
