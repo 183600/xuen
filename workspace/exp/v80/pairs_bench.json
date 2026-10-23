@@ -1,0 +1,6336 @@
+{
+ "rows": [
+  {
+   "changes": [
+    [
+     1,
+     -1
+    ],
+    [
+     2,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 32,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023386240005493164,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020641803741455078,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020907163619995117,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020493030548095703,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026375770568847656,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026491641998291016,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026896238327026367,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027460813522338867,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     1,
+     1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03313851356506348,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.033249855041503906,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03351259231567383,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03344106674194336,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     1,
+     1
+    ],
+    [
+     6,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03310990333557129,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03287625312805176,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03309154510498047,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03279876708984375,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     -1
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0302584171295166,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03034496307373047,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.030160188674926758,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03039240837097168,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     -1
+    ],
+    [
+     6,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029556989669799805,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029620885848999023,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029593944549560547,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029434680938720703,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     5,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020483732223510742,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020417213439941406,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020719528198242188,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0208132266998291,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     6,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020630836486816406,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02066349983215332,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020693302154541016,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020407676696777344,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     6,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02321338653564453,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02314305305480957,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023262739181518555,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023218631744384766,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     8,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0285642147064209,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028723716735839844,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028839826583862305,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0285336971282959,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.016109228134155273,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.016143798828125,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.016121625900268555,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.016002416610717773,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     11,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02656102180480957,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026335477828979492,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026711463928222656,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026538372039794922,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     12,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025012731552124023,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02506089210510254,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025015830993652344,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025090456008911133,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.032776594161987305,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03275108337402344,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.032712697982788086,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03273797035217285,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     1
+    ],
+    [
+     5,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023082256317138672,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023011445999145508,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023116111755371094,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0230715274810791,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     7,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027794837951660156,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027980804443359375,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02798938751220703,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027926921844482422,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027291059494018555,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027180194854736328,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027480602264404297,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027410030364990234,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02353191375732422,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023020505905151367,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02307748794555664,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023263216018676758,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     8,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027478933334350586,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028267383575439453,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027869224548339844,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027592182159423828,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     -1
+    ],
+    [
+     11,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02379918098449707,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02382969856262207,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023900747299194336,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02399587631225586,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     12,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03162193298339844,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03525805473327637,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.031768083572387695,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03169131278991699,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     -1
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026190996170043945,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026041269302368164,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02602219581604004,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026317834854125977,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024117231369018555,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02421259880065918,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024206161499023438,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024366140365600586,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024553298950195312,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024524927139282227,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024810791015625,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024549484252929688,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04819178581237793,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.0484158992767334,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04814863204956055,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04830479621887207,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     1
+    ],
+    [
+     12,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02742910385131836,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027546405792236328,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027717113494873047,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03628993034362793,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02420210838317871,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024049043655395508,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024388551712036133,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024327516555786133,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     7,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020813465118408203,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02059340476989746,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.020752906799316406,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02075815200805664,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     8,
+     -1
+    ],
+    [
+     9,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03146171569824219,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03137350082397461,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03153395652770996,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.031789302825927734,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     8,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.035103559494018555,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03523707389831543,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03506660461425781,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03688979148864746,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     8,
+     1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 9,
+     "nodes": 5,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.036493778228759766,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 5,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03643155097961426,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 9,
+     "nodes": 4,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.0364377498626709,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 4,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.036432743072509766,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     8,
+     -1
+    ],
+    [
+     11,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028597116470336914,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0286715030670166,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028704404830932617,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028786659240722656,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     8,
+     -1
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029328107833862305,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02893829345703125,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.029067277908325195,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02896428108215332,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     9,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02363872528076172,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023801326751708984,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023878097534179688,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024392127990722656,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     9,
+     -1
+    ],
+    [
+     11,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026237964630126953,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027022123336791992,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026364564895629883,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02635979652404785,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     9,
+     1
+    ],
+    [
+     11,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024088621139526367,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024150609970092773,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024046659469604492,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024170875549316406,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     11,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023618221282958984,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023616552352905273,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023752689361572266,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02369379997253418,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     11,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028490543365478516,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02842235565185547,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028284788131713867,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02819681167602539,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     -1
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024926424026489258,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02482438087463379,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025027990341186523,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025005578994750977,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     -1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024634599685668945,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024378061294555664,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024458885192871094,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02434372901916504,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027708053588867188,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027523517608642578,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02764582633972168,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02769637107849121,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     13,
+     1
+    ],
+    [
+     14,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 5,
+   "opt": 33,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02799081802368164,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027878761291503906,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02840280532836914,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028080463409423828,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     -1
+    ],
+    [
+     2,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.050234079360961914,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05044245719909668,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.049118995666503906,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 6,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.04289507865905762,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     1
+    ],
+    [
+     2,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 36,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.050051212310791016,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.050885915756225586,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04878664016723633,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 6,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.04247331619262695,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     -1
+    ],
+    [
+     5,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.049752235412597656,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05033993721008301,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04886937141418457,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 6,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.04208517074584961,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     1
+    ],
+    [
+     5,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 36,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05042695999145508,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05071830749511719,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 9,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.04879426956176758,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 6,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.042633056640625,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02623152732849121,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026277542114257812,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02636575698852539,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026301860809326172,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     0,
+     1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 36,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02632427215576172,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02643108367919922,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02676558494567871,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026743173599243164,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     1,
+     -1
+    ],
+    [
+     3,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 11,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.06069207191467285,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 11,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.060781002044677734,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 11,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.06196999549865723,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 11,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05990171432495117,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     1,
+     -1
+    ],
+    [
+     4,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03432869911193848,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03438997268676758,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03439021110534668,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03447270393371582,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     -1
+    ],
+    [
+     5,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0268404483795166,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027024507522583008,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026958703994750977,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026954174041748047,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     1
+    ],
+    [
+     5,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04036521911621094,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04007720947265625,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03924059867858887,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03908991813659668,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02758502960205078,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027647018432617188,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027780771255493164,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02792644500732422,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     1
+    ],
+    [
+     12,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027541637420654297,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027490854263305664,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027652502059936523,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027651071548461914,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     2,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027698993682861328,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027775049209594727,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027945995330810547,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027805089950561523,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     4,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.035535335540771484,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03557443618774414,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03579902648925781,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03593850135803223,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     4,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027455568313598633,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027897357940673828,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027367115020751953,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027559995651245117,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     6,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02590775489807129,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025721311569213867,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025592327117919922,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025530338287353516,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     8,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027271747589111328,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02732110023498535,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027627944946289062,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02763962745666504,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024249553680419922,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024121999740600586,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02446722984313965,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024287939071655273,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024755001068115234,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024527549743652344,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024628400802612305,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02455425262451172,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     10,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023654699325561523,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02336883544921875,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02382636070251465,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.023794174194335938,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     11,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028786420822143555,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02863287925720215,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028880596160888672,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028952360153198242,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     3,
+     -1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.034937143325805664,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03499150276184082,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03542661666870117,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.035260915756225586,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     6,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025337696075439453,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025381803512573242,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025641202926635742,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025533676147460938,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026032686233520508,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025937557220458984,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026351213455200195,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026051044464111328,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.01951742172241211,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.01936626434326172,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.019477128982543945,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 3,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.019441843032836914,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     10,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02621626853942871,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026386022567749023,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026615381240844727,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026325702667236328,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     11,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 34,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028066158294677734,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028155088424682617,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028359651565551758,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02833390235900879,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     4,
+     -1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 12,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.06489014625549316,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 12,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.06426596641540527,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 11,
+     "nodes": 7,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 4,
+      "clause": 0
+     },
+     "t": 0.05472254753112793,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 10,
+     "nodes": 6,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 1
+     },
+     "t": 0.052037954330444336,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027530670166015625,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027591943740844727,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027629375457763672,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02764439582824707,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     12,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027554750442504883,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02784109115600586,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02801823616027832,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027642250061035156,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     5,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02783966064453125,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027998685836791992,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02796649932861328,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028107643127441406,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     -1
+    ],
+    [
+     9,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04458045959472656,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04514646530151367,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04383373260498047,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.043627023696899414,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04496884346008301,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.044840097427368164,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04405665397644043,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 8,
+     "nodes": 5,
+     "leaves": 3,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.04397225379943848,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.030268192291259766,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.030295610427856445,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03079533576965332,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03060126304626465,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     6,
+     1
+    ],
+    [
+     10,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03164935111999512,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03198719024658203,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03287553787231445,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03217577934265137,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     7,
+     1
+    ],
+    [
+     9,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028122901916503906,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028378009796142578,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028440237045288086,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028444766998291016,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     9,
+     -1
+    ],
+    [
+     10,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 12,
+     "nodes": 9,
+     "leaves": 5,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 4,
+      "clause": 0
+     },
+     "t": 0.0668644905090332,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 19,
+     "nodes": 15,
+     "leaves": 8,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 4,
+      "clause": 3
+     },
+     "t": 0.10778975486755371,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05390787124633789,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 10,
+     "nodes": 7,
+     "leaves": 4,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 3,
+      "clause": 0
+     },
+     "t": 0.05368781089782715,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     9,
+     1
+    ],
+    [
+     10,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 6,
+     "nodes": 5,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03224825859069824,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 5,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03259873390197754,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 6,
+     "nodes": 4,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.03221273422241211,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 6,
+     "nodes": 4,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 2,
+      "clause": 0
+     },
+     "t": 0.032239437103271484,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     10,
+     1
+    ],
+    [
+     11,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026228904724121094,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.025998353958129883,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.026201486587524414,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02620720863342285,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     10,
+     1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 36,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03567910194396973,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03577232360839844,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03586888313293457,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03570842742919922,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     -1
+    ],
+    [
+     13,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024130582809448242,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024244308471679688,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.024208545684814453,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 4,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02428460121154785,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     1
+    ],
+    [
+     13,
+     -1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.034148454666137695,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.034081220626831055,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03427839279174805,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 7,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.03403949737548828,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     12,
+     -1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.0276644229888916,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.027935266494750977,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02802109718322754,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02792525291442871,
+     "audit": true
+    }
+   }
+  },
+  {
+   "changes": [
+    [
+     13,
+     -1
+    ],
+    [
+     14,
+     1
+    ]
+   ],
+   "name": "holdout50",
+   "idx": 47,
+   "opt": 35,
+   "res": {
+    "base": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.028323650360107422,
+     "audit": true
+    },
+    "loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": false,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02832484245300293,
+     "audit": true
+    },
+    "up": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02854609489440918,
+     "audit": true
+    },
+    "up_loss": {
+     "v": false,
+     "lp": 5,
+     "nodes": 3,
+     "leaves": 2,
+     "prop": 0,
+     "gconf": true,
+     "src": {
+      "base": 1,
+      "clause": 0
+     },
+     "t": 0.02880549430847168,
+     "audit": true
+    }
+   }
+  }
+ ],
+ "agg": {
+  "base": {
+   "lp": 519,
+   "nodes": 302,
+   "leaves": 192,
+   "t": 2.6200826168060303,
+   "no": 86,
+   "audit": 86,
+   "prop": 0,
+   "gconf": 0,
+   "wins": 0,
+   "losses": 0,
+   "ties": 0
+  },
+  "loss": {
+   "lp": 526,
+   "nodes": 308,
+   "leaves": 195,
+   "t": 2.665419816970825,
+   "no": 86,
+   "audit": 86,
+   "prop": 0,
+   "gconf": 0,
+   "wins": 0,
+   "losses": 0,
+   "ties": 0
+  },
+  "up": {
+   "lp": 516,
+   "nodes": 298,
+   "leaves": 190,
+   "t": 2.5984418392181396,
+   "no": 86,
+   "audit": 86,
+   "prop": 0,
+   "gconf": 82,
+   "wins": 0,
+   "losses": 0,
+   "ties": 0
+  },
+  "up_loss": {
+   "lp": 511,
+   "nodes": 293,
+   "leaves": 186,
+   "t": 2.5753185749053955,
+   "no": 86,
+   "audit": 86,
+   "prop": 0,
+   "gconf": 86,
+   "wins": 6,
+   "losses": 0,
+   "ties": 80
+  }
+ }
+}
