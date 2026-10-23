@@ -1,0 +1,62 @@
+{
+ "0": {
+  "no": 10,
+  "audit": 10,
+  "leaves": 0,
+  "forces": 0
+ },
+ "1": {
+  "no": 164,
+  "audit": 164,
+  "leaves": 154,
+  "forces": 0
+ },
+ "2": {
+  "no": 186,
+  "audit": 186,
+  "leaves": 176,
+  "forces": 0
+ },
+ "3": {
+  "no": 194,
+  "audit": 194,
+  "leaves": 184,
+  "forces": 0
+ },
+ "4": {
+  "no": 194,
+  "audit": 194,
+  "leaves": 187,
+  "forces": 3
+ },
+ "5": {
+  "no": 195,
+  "audit": 195,
+  "leaves": 192,
+  "forces": 6
+ },
+ "6": {
+  "no": 198,
+  "audit": 198,
+  "leaves": 198,
+  "forces": 6
+ },
+ "7": {
+  "no": 200,
+  "audit": 200,
+  "leaves": 200,
+  "forces": 6
+ },
+ "8": {
+  "no": 200,
+  "audit": 200,
+  "leaves": 201,
+  "forces": 6
+ },
+ "9": {
+  "no": 201,
+  "audit": 201,
+  "leaves": 202,
+  "forces": 6
+ }
+}

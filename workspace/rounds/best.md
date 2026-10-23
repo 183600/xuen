@@ -3,502 +3,470 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-## 一、上一轮留下的硬结论
+## 一、上一轮留下的两个硬问题
 
-v6.0 SD-ECC 把 v5.0 的「期望开始时间」行换成了随机占优累计行：
+v6.1 ALC 已经把「判定 + 证书」做成同一个事件，141/141 NO、141/141 证书重放通过。它留下的不是强度问题，而是两个很具体的问题：
 
-  F_i(t) ≥ F_j(t+p_i),  F_i(t)=Σ_{s≤t} z_{i,s}.
+- **Q1**：holdout idx 5、47 为什么根层闭不上？是割不够强，还是「单个 Farkas 证书」这个对象本身不够用？
+- **Q2**：证书里的信息，除了「这个节点 NO」以外，还能不能反过来约束搜索？v6.1 只把它当输出，没有当约束用。
 
-这不是再加一条剪枝，而是把优先序从「期望」变成「分布占优」。结果很硬：
+数据是：idx 5 要 5 节点 / 8 LP，idx 47 要 5 节点 / 7 LP；其余 139 例根层 1 LP 闭合。证书成本占 42%。
 
-- 141/141 NO；根层 139/141；holdout 48/50；只剩 idx 5、47 需要 1 层开始二分（4 个分支节点，总 145 节点）。
-- 整数 Farkas 证书 143 个（133 packing + 10 critical path），0 失败；scale 中位数 9，最大 720；β 最大 87，dom 最大 4。
-- lazy 版（按需分离 SD 割）只需 35 条割就复现 141/141，总 149 节点、0.83 s；full 版 2.22 s（含证书）。
+本轮灵感词是「约束条件 / 调度算法 / 共识算法」。我的第一反应不是再加强割，而是：
 
-所以 v6.0 已经把「证书强度」推到了 139/141 根层。它留下的不是强度问题，而是**证书的生命周期问题**：
+> 一个 Farkas 证书到底证明了哪个区域？
 
-1. 判定和证书不同步：lazy 先判 NO，证书事后再提取；full 版先建全矩阵，再提取。
-2. 没有预算接口：给定 1 ms / 1 次 LP / 1 条割，算法不能回答「现在能证什么」。
-3. 证书不可增量复用：换 h、换分支节点，都要重新提取。
-4. 2 个残例（5/47）根层未闭合；它们的证书要带分支 forbid 才能提取。
+如果它证明的区域比当前分支节点更大，那证书就不该绑在节点上；如果它证明的区域可以被翻译成一条**全局约束**，那它就能参与后续搜索。这两件事都指向「证书的语义」，而不是「割的强度」。
 
-本轮的问题因此不是「再加一条割」，而是：
+## 二、第一次尝试：把 essential scope 当成「禁」——方向错了
 
-> 能不能把 v6.0 的 lazy 分离 + 整数证书，改造成一个**任意预算下都单调、且判定与证书同步**的 anytime 认证器？
+我在 v6.1 的叶节点上做了一个逐列重放：证书 Φ 在节点 forbid 集 F 上有效，但对每个 c∈F 单独算列松弛
 
-灵感词是「algorithm engineering / anytime algorithm / 算法框架」。我的解读：
+  σ_c = α_i + Σ_{k∈elig(i)} Σ_{u=s}^{s+p_i-1} β_{k,u} + (dom 项).
 
-- algorithm engineering：证书提取不是离线后处理，而是判定路径的一部分；它的成本必须可测、可开关。
-- anytime：预算增加时，答案只能变强，不能回退；中间答案必须可解释。
-- 框架：割束（cut sheaf）+ 认证器状态机 + 预算调度，而不是单一函数。
+只有 σ_c<0 的列是「必须被删掉」的；其余列即使加回来，A^T y≥0 仍然成立。记
 
-## 二、第一次尝试：连续对偶上升，失败
+  E(Φ) = { c∈F : σ_c<0 }.
 
-我先把 start-time LP 的 Farkas 对偶写成价格形式：
+实验结果很漂亮：
 
-  D(β,γ)=Σ_i min_t [B_i(t)+tσ_i] + Σ_e p_i γ_e − mΣ_t β_t.
+- idx 5 的三个叶子：|F|=5→|E|=3，|F|=17→|E|=7，|F|=3→|E|=3；
+- idx 47 的三个叶子：1→1，8→4，7→4。
 
-β≥0 是时间割价，γ≥0 是优先序割价；D>0 即 NO。D 是凹的、1-齐次的。于是很自然地想用归一化次梯度上升（ADA）来 anytime 地找证书：每步 O(nT)，找到 D>0 就停，找不到就返回当前 D 作为进度。
+于是我自然地想：既然只删 E 就能让 LP 不可行，那在根层把 E 删掉，根 LP 不就不可行了？我跑了：
 
-在 5 个 MPC 残例上跑 2000 步：
+- idx 5，E={7:21,22,23}：根层删 E 后 LP **不可行**；
+- idx 47，E={11:32}：根层删 E 后 LP **不可行**。
 
-- idx 21/32/42（LP 根层不可行）：best D = −0.345 / −0.306 / −0.421；
-- idx 5/47（LP 根层可行）：best D = −0.563 / −0.235。
+当时以为 Q1 解决了：两个残例都能在根层用「学到的洞」闭合。
 
-全部为负，连根层不可行的三例都没找到证书。
+**然后检查了蕴含方向，发现是错的。** LP 删掉 E 代表的是区域「s_i ∉ E」，它不可行只能推出
 
-原因不是实现 bug，而是证书太薄：把 Farkas LP 归一化后，最优目标只有 0.001–0.026（21/32/42）。D 在非光滑的 min 处有大量断点，次梯度在 10^-3 量级的裕度上收敛极慢。这个负结果把 v6.0 的设计解释清楚了：**必须解整数 Farkas LP 并对对偶解做有理舍入，不能靠连续爬山**。它也解释了 `integer_certificate` 为什么要扫 DENS 网格（1..200, ..., 10000）。
+  s_i ∉ E 不可能  ⇒  s_i ∈ E 是必然的，
 
-## 三、第二次尝试：把证书做成「束」
+也就是说 E 是**被迫落在**的区域（一个 must），不是「禁止」的区域（一个 ban）。我真正测到的是「补区域为空」，不是「根不可行」。反过来把 E 强制住（删掉补集）再解根 LP，两例都 **可行**：
 
-回到 v6.0 的 lazy 代码，我注意到一个结构性事实：SD 割集 C 只增；LP(C) 的可行域嵌套；并且**旧证书对新割仍然有效**。因为新增的 SD 割行在 Farkas 证书里的对偶系数可以取 0，`A^T y` 不会变小，`b^T y` 不变。
+- idx 5：force s_7∈{21,22,23}，根 LP 3 轮后 FEAS；
+- idx 47：force s_11=32，根 LP 3 轮后 FEAS。
 
-也就是说：
+这个错误很值得写下来：**证书是对「一个子立方体」的陈述，不是对「一个节点」的陈述；E 是子立方体里活下来的那部分，不是被砍掉的那部分。** 方向搞反，就会把「被迫」当成「禁止」，把 feasible 当成 closed。
 
-- 一旦在某个割集上提取并验证了证书 Φ，后续无论加多少割，Φ 都仍然证明 NO；
-- 判定不会回退，证书可以缓存；
-- 这把「证书」从一个输出对象变成了一个**单调状态**。
+## 三、纠正后的读法：证书 = 一个 quorum
 
-于是 ALC 的状态就是 `(C, Φ, B, LB)`：割集、证书、已用 LP 次数、已证下界。每一步：
+把上面的事说清楚。设 D_i 是任务 i 的可行开始时间集合，列 c=(i,t)，LP(S) 表示把 S 中列删掉后的 start-time LP。
 
-1. 解 LP(C)；
-2. 不可行 → 立即用当前 C 提取整数证书 Φ，验证，返回 NO；
-3. 可行 → 分离违反的 SD 割，按预算加 k 条，重复；
-4. 预算耗尽 → 返回 UNKNOWN，但保留 C/Φ/LB。
+> **quorum 引理**：若 Φ 证明 LP(F) 不可行，且 E={c∈F: σ_c<0}，则 Φ 也证明 LP(E) 不可行；且 E 是对这个 y 唯一的最小 scope（再少一列，该列松弛为负，重放失败）。
 
-外层再从 EPC 下界开始逐 h 探测：证一个 h，LB 加一；证书和割集跨 h 复用（SD 割与 h 无关）。
+于是每个证书都附带一句比「本节点 NO」更强的话：
 
-这就是 ALC（Anytime Lazy Certificate）。它没有改 SD 割的数学，只改了证书的生命周期。
+  LP(D∖E) 不可行。
 
-## 四、实验结果
+对整数调度取逆否：**每个可行调度都至少在某个任务上把开始时间落在 E_i 里**。这就是一条全局约束（一个 clause）。三种用法：
 
-141 例 NO（h=OPT−1）：
+1. **剪枝**：任何节点，只要它的 forbid 集包含 E，就已经是 NO，不必再解 LP。
+2. **强制域**：如果 E 只落在一个任务 i 上，clause 退化成「s_i∈E_i」，直接把 D_i 收缩到 E_i。这是全局有效的，而且单调。
+3. **空交**：如果同一个任务上有两个证书分别强制 s_i∈E、s_i∈E'，且 E∩E'=∅，则根层 NO。这是两个 quorum 的「共识失败」——它们对任务 i 该从哪里开始无法达成一致。
 
-- 141/141 NO，141/141 证书验证通过（145 次提取，含 4 次分支重复）。
-- 135/141 在**第 1 次 LP** 就闭合；k=1/2/3/7/8 的累计闭合数是 135/138/139/140/141。
-- 总 159 次 LP、149 个 DFS 节点、35 条割（全在 holdout 的 6 例）。
-- 判定-only 0.632 s；带证书 1.099 s；证书提取 0.465 s（42%）。
-- v6.0 full：判定 1.089 s + 证书 1.135 s = 2.224 s；lazy：0.829 s（无证书）。
-- holdout 下界剖面：从 EPC LB 逐 h 探测，55 次调用 / 73 LP / 0.233 s，LB=OPT 50/50；ECC 的 root 二分要 147 个 LP。
+idx 5 正好是第 3 种：QNC 树上两个叶子给出 E1={7:22,23}、E2={7:17,18,19,20,21}（v6.1 原树上的第一个叶子只缩到 {21,22,23}），交集为空。基线要 5 节点 / 8 LP，现在是一条 **2 证书链**：两个 quorum 不相交，所以 NO。idx 47 只触发第 2 种（force s_11=32），不足以再省 LP。
 
-有一个负结果必须写下来：我原本以为 lazy 证书会更稀疏。逐例对比 139 个根层 NO 证书：ALC 更小 20 例、相同 102 例、更大 17 例；中位数 7 vs 8，最大 91 vs 89。**稀疏性不是 lazy 的必然收益**；容量-only 的对偶可能更分散。ALC 的真正收益是同步性和成本，不是证书尺寸。
+这里「共识算法」不是比喻：E 就是一次冲突里活下来的 quorum；单任务 E 是把 quorum 写进域；两个 quorum 不相交就是拒绝。Raft 里 quorum 不相交保证安全，这里 quorum 不相交直接给出不可行。
 
-还有两个成本/风险数据：
+还有一个结构性推论，回答了 Q1 的一半：
 
-- 证书 scale 中位数 9，最大 2000（holdout idx 7，β=91），而 DENS 上限是 10000；离上限只差 5×。
-- 2 个分支例（5/47）仍需 5 个节点、7–8 次 LP；根层没有闭合。
+> 若当前割集下根层 LP 可行，则任何后代证书的 E 都非空。否则 E=∅ 的证书会直接证明根 LP 不可行，矛盾。
 
-## 五、这一轮学到的东西
+所以 idx 5/47 **不可能**用单个无条件 Farkas 证书在根层闭合；它们本质上需要「多个证书 + 覆盖」的证明对象。这不是割不够强，是对象不够表达。
 
-不是「更强的割」，而是「证书的状态管理」。v6.0 已经证明 SD 割够强；本轮证明的是：
+## 四、算法：QNC-ALC
 
-- 证书一旦存在就永久有效，所以 anytime 的核心是**单调状态**，不是更快的单次求解；
-- 证书不是免费的：v6.0 里证书占 51% 的时间，ALC 里占 42%；应该做成可选输出；
-- lazy 不保证证书更小；不要用「稀疏性」作为 lazy 的卖点。
+状态从 v6.1 的 (C, Φ, B, LB) 扩成
 
-## 六、一句话最大风险
+  S = (C, Q, F, L, B)
 
-**ALC 的 1-LP 闭合率（135/141）主要来自 capacity-only start-time LP 的强度，而不是 dominance 割；如果新实例需要大量 SD 割，anytime 曲线会迅速变平，42% 的证书成本会吞掉判定优势。**
+- C：SD 割集，只增；
+- Q：quorum clause 集合，只增；
+- F：每个任务的强制域（forced domain），只缩；
+- L：已认证的叶子 (F_j, E_j, Φ_j)，只增；
+- B：已用 LP 数。
+
+主循环：
+
+1. **零 LP 前检**：若某个 D_i=∅（est_i+p_i+q_i>h），直接 NO。这一步在 v6.1 里要花 1 次 LP，本轮 10 例因此 0 LP 闭合。
+2. 解 LP(C)（带当前强制域，按需分离 SD 割）。不可行 → 提取整数证书，算 E，记叶子，加 clause；若 E 单任务，收缩 D_i。
+3. 可行且整数 → YES；可行但分数 → 沿用 v6.1 的中位数分支。
+4. 节点入口先做两件事：应用强制域；检查是否有 clause E⊆forbid。命中就直接 NO，不解 LP。
+
+关键工程选择是**不做根层重启**：强制域是全局有效的，直接在当前 DFS 里就地收缩，兄弟节点入口自动继承。这样没有「重启一次根 LP」的额外成本。实测 idx 5 从 8 LP / 5 节点降到 6 LP / 3 节点，idx 47 保持 7 LP / 5 节点不退。
+
+## 五、实验结果（先给结论）
+
+141 例 NO：
+
+| 方法 | NO | LP | 节点 | 墙钟 |
+|---|---:|---:|---:|---:|
+| v6.1 ALC | 141 | 159 | 149 | 1.46 s |
+| 只加零 LP 前检 | 141 | 149 | 139 | 1.39 s |
+| QNC 完整 | 141 | 147 | 137 | 1.39 s |
+
+quorum 本身只再省 2 LP / 2 节点（全在 idx 5），前检省 10 LP / 10 节点。
+
+但我另做了 60 个「残例扰动」实例（对 idx 5/47 随机改一个 p_i，重新求 OPT），其中 5 例需要分支：
+
+- 分支子集 7 例（2 原始 + 5 扰动）：ALC 52 LP / 35 节点 → QNC 46 LP / 29 节点；
+- 3 例改善、4 例持平、0 例退化；
+- 18 个叶子的 |F| 总和 96 → |E| 总和 59，**scope 缩小 38.5%**。
+
+anytime（201 例，按 LP 预算）：
+
+| 预算 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 已判 NO | 10 | 164 | 186 | 194 | 194 | 195 | 198 | 200 | 200 | 201 |
+
+曲线在预算 1 就到 164/201，预算 7 到 200/201；每一步的 NO 都通过 audit。
+
+两个负结果也要写：
+
+- **clause 剪枝在 201 例上一次都没命中**。真正起作用的是「零 LP 前检」和「单任务 force」，不是 clause 剪枝。
+- **idx 47 和 3 个扰动例没有收益**。quorum 存在（如 E={11:32}），但兄弟分支的区域与它不相交的情况没有出现；force 只是把域缩小，没有省掉 LP。
+
+## 六、这一轮学到的东西
+
+1. 证书的语义是「子立方体」，不是「节点」。v6.1 把证书绑在节点上，丢掉了它本来能证明的更大区域。
+2. 方向很重要：删 E 证明的是「补区域空」，所以 E 是 forced，不是 banned。搞反会把 feasible 当 closed。
+3. 「根层不可行」和「根层可证」是两件事。idx 5/47 的根 LP 可行，所以单证书闭合在数学上不可能；要么加强割，要么接受多证书证明。
+4. 最好的收益来自最笨的前检（0 LP 判空域），而不是最漂亮的理论；quorum 的实际收益被「根层太强」这个数据分布压住了。
+
+## 七、一句话最大风险
+
+**QNC 的收益与「需要分支的节点数」成正比，而这批数据 139/141 根层就闭合；quorum 只在 2/141 上被真正触发，所以本轮测到的加速很小，换到 LP 更弱、分支更深的实例上才可能显现——但也可能被 force 的额外重放成本吃掉。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
 ## 0. 版本关系与本轮增量
 
-本轮产物是 **v6.1 ALC（Anytime Lazy Certificate）**，建立在 v6.0 SD-ECC 的三件既有产物上：
+本轮产物是 **v7.1 QNC-ALC（Quorum-Certified Nogood ALC）**，直接建立在 v6.1 ALC 之上：不改 v6.0 的 SD 割数学，不改 v6.1 的中位数分支规则和 anytime 接口形状，只在状态里增加 Q（clause）、force（强制域）、L（叶子证书）。
 
-- `sdecc.py`：带随机占优（SD）割的 start-time LP；
-- `lazy.py`：按需分离 SD 割的 lazy 版；
-- `cert.py`：整数 Farkas 证书的提取与精确重放。
+编号 v7.1 是为了避开工作区已占用的 `exp/v62`（PSS）与 `exp/v70`（DCS）目录；本轮内容不依赖那两条 proof-tree 线。QNC 的 quorum 层与 proof-tree 层正交：proof tree 决定「怎么切」，quorum 决定「切完之后证书还能证明什么」。
 
-v6.1 不改 SD 割的数学，也不改 v5/v6 的开始时间分支规则；它增加的是四件事：
+本轮增加四件事：
 
-1. **证书束（cut sheaf）**：割集单调增长，旧证书对新割永久有效；
-2. **判定与证书同步的 anytime 状态机**；
-3. **两档输出**：verdict-only（只要判定）与 audit（判定 + 可审计证书）；
-4. **下界剖面**：从 EPC 下界开始逐 h 探测，割集和证书跨 h 复用。
+1. **quorum 引理**：一个叶证书的有效 scope 可以严格小于节点的 forbid 集 F，缩到 E={c∈F: 列松弛<0}；
+2. **quorum clause**：E 是一条全局约束「至少一个任务的开始落在 E 里」，可用于剪枝；
+3. **强制域（force）**：单任务 E 直接给出 s_i∈E_i，把 D_i 永久收缩（单调）；
+4. **零 LP 前检**：D_i=∅ 时 0 次 LP 直接 NO。
 
-推荐用法：
+另加一个可审计对象：每个叶子记录 (F,E,Φ)，独立重放 `verify(Φ, forbid=E)`；全部叶子通过才算 audited。
 
-    ALC_ANYTIME(inst, budget) -> (LB, UB, verdict, certificate, cutset)
+推荐接口：
 
-预算可以是 LP 次数、割数或墙钟；超预算返回 UNKNOWN，但已证的 NO 与证书不回退。
+    QNC(inst, h, use_quorum=True, use_empty=True)
+    .decide(budget, nodecap, max_rounds, topk) -> (verdict, state)
+    .audit() -> bool
 
 ## 1. 符号
 
-- n：任务数；m：机器数；p_i：任务 i 的加工时间。
-- pred(i)、succ(i)、elig(i)：前驱、后继、可用机器。
-- h：待判定的 makespan 上界（NO 基准取 h = OPT−1）。
-- est_i、q_i：优先序头部/尾部；d_i = h − q_i 是最晚完成时间。
-- T = h：时间索引上界。
-- z_{i,t} ∈ [0,1]：全资格时任务 i 在 t 开始的分数指示；异构资格时 z_{i,k,t}。
-- F_i(t) = Σ_{s≤t} z_{i,s}：任务 i 在 t 前开始的累计概率/质量。
-- E：优先序边集；e = (i→j)。
-- C ⊆ E × {t}：已分离的 SD 割集；C_k 表示第 k 轮后的割集。
-- LP(C)：在割集 C 下的 start-time LP。
-- y = (α, β, λ)：LP(C) 的 Farkas 对偶；β_t 是时间容量价格，λ_{ij,t} 是 SD 割价格，α_i 是任务价格。
-- Φ = (α, β, λ, scale)：整数化后的 Farkas 证书；`verify(Φ)=true` 表示精确重放通过。
-- δ(C)：归一化 Farkas 目标，δ(C) > 0 ⇔ LP(C) 不可行 ⇔ NO。
-- B：已用 LP 次数；K：已用割数；N_nodes：DFS 节点数。
-- LB、UB：已证 makespan 下界与已构造可行调度的上界。
+- n：任务数；m：机器数；p_i：加工时间；pred(i)、succ(i)、elig(i)。
+- h：待判定的 makespan 上界（NO 基准 h=OPT−1）。
+- est_i、q_i：优先序头/尾；D_i = {est_i, …, h−q_i−p_i}，任务 i 的可行开始时间域。
+- T=h；列 c=(i,t)，t∈D_i；异构资格时列是 c=(i,k,t)。
+- z_{i,t}∈[0,1]：开始时间分数指示；F_i(t)=Σ_{s≤t} z_{i,s}。
+- C：已分离的 SD 割集；LP(S) 表示把列集 S 删掉后的 start-time LP。
+- Φ=(α,β,λ,scale)：整数 Farkas 证书；α 是 assignment 等式的自由对偶，β_t、λ_{ij,t} 是容量/SD 不等式的非负对偶。
+- A：LP 的约束矩阵（行=assignment/容量/SD，列=z）；b：右端。
+- σ_c=(A^T y)_c：列 c 的松弛。
+- E(Φ,F)：证书 Φ 在 forbid 集 F 下的 **essential scope**。
+- Q：quorum clause 集合（每个是列的集合 E）；F_i^force：任务 i 的强制域。
+- L：已认证叶子列表，元素为 (F_j,E_j,Φ_j)。
+- B：已用 LP 数；N_nodes：DFS 节点数。
 
 ## 2. 形式定义
 
-### 2.1 SD start-time LP
+### 2.1 带删除列的 start-time LP
 
-全资格时变量 z_{i,t}，t ∈ [est_i, h−q_i−p_i]：
+对 S⊆∪_i D_i，LP(S) 的变量是 {z_c : c∈(∪D_i)∖S}：
 
-    Σ_t z_{i,t} = 1                                   ∀i
-    Σ_i Σ_{s≤t<s+p_i} z_{i,s} ≤ m                     ∀t
-    F_i(t) ≥ F_j(t+p_i)                               ∀(i→j), ∀t
-    0 ≤ z_{i,t} ≤ 1
+    Σ_{t∈D_i∖S} z_{i,t} = 1                         ∀i
+    Σ_{i} Σ_{s≤t<s+p_i, (i,s)∉S} z_{i,s} ≤ m          ∀t
+    F_i(t) ≥ F_j(t+p_i)                              ∀(i→j),∀t
+    0 ≤ z ≤ 1
 
-最后一行是 v6.0 的 SD 割；它比 v5.0 的期望行 E[s_i]+p_i ≤ E[s_j] 强，因为它是整个开始时间分布的随机占优：
+最后一行是 v6.0 的 SD 行，F 用未删除的列计算。LP(∅) 是根层 LP；LP(F) 是 forbid 集 F 的节点 LP。
 
-    若 s_j ≤ t+p_i，则 s_i+p_i ≤ s_j ≤ t+p_i ⇒ s_i ≤ t,
+### 2.2 证书与 essential scope
 
-所以事件 {s_j ≤ t+p_i} 蕴含 {s_i ≤ t}，累计质量满足 F_i(t) ≥ F_j(t+p_i)。
+Φ=(α,β,λ) 是 LP(S) 的整数 Farkas 证书，若
 
-异构资格时把 z_{i,t} 细化为 z_{i,k,t}，容量行变成每台机器每时刻 ≤1；SD 行对每个任务对成立（对机器求和）。
+    (A_S)^T y ≥ 0（对每个未删除列），   b^T y < 0，   β,λ ≥ 0，α 自由。
 
-**lazy 版本**：先只建分配行 + 容量行，得到 LP(∅)；解出 z 后，对每条边 i→j 扫描 t，若 F_j(t+p_i) − F_i(t) > tol，则割 (i,j,t) 违反；按违反量排序，加入 top-k 条。每个加入的割都是有效不等式，所以 LP(C) 不可行时，原问题不可行。
+`verify(Φ, forbid=S)` 就是逐列重放这个条件，并检查 b^T y<0。
 
-### 2.2 整数 Farkas 证书
+对节点 forbid 集 F，定义
 
-对 LP(C) 的矩阵 A、右端 b，Farkas 证书是 y 满足：
+    E(Φ,F) = { c∈F : σ_c < 0 }.
 
-    A^T y ≥ 0,   b^T y < 0,   y 在不等式行上 ≥ 0.
+σ_c 用全矩阵 A（不删列）算，所以对 c∉F 有 σ_c≥0（Φ 已经证明 LP(F) 不可行）。
 
-证书的整数化：解归一化 Farkas LP 得到分数 y*，对密度 D ∈ DENS 取 y = round(D·y*)，然后精确重放：
+### 2.3 quorum clause 与强制域
 
-    A^T y ≥ 0 且 b^T y < 0.
+由 2.2 得到一条比「本节点 NO」更强的话：
 
-第一个重放通过的 D 就是证书的 scale。v6.0 的 DENS 是 1..200 加上 240, 300, ..., 10000。当前 141/141 成功，scale 中位数 9，最大 2000。
+> LP(D∖E) 不可行。
 
-`verify` 逐任务、逐可能开始时间检查 α_i + B_i(t) + 割的势差 ≥ 0，并检查目标 < 0；它不依赖浮点 LP 的可行性状态。
+对整数调度取逆否：**每个可行调度都存在任务 i，使 s_i∈E_i**。这就是 quorum clause。
 
-### 2.3 证书束与单调性
+- **剪枝**：节点 forbid 集 F' 若满足 E⊆F'，则该节点是 NO（不用 LP）。
+- **强制域**：若 E 只涉及一个任务 i，clause 退化为 s_i∈E_i，于是可把 D_i 永久收缩到 E_i（与已有强制域取交）。
+- **空交**：若同一任务 i 有两个已证强制 s_i∈E、s_i∈E' 且 E∩E'=∅，则根层 NO。
 
-定义割束为嵌套序列：
+### 2.4 anytime 状态
 
-    C_1 ⊆ C_2 ⊆ ... ⊆ C_k ⊆ E × [0,T).
+    S = (C, Q, F^force, L, B)
 
-每个 C_k 对应 LP(C_k)。若 LP(C_k) 不可行，则存在整数 Farkas 证书 Φ_k。关键性质是：
+不变式：
 
-> Φ_k 对所有 LP(C_{k'})，k' ≥ k，仍然有效。
+- C 只增（SD 割是有效不等式）；
+- Q 只增（每条 clause 都有证书）；
+- F_i^force 只缩（每次与新的 E_i 取交）；
+- L 只增（叶子证书只追加）。
 
-理由：LP(C_{k'}) 的约束矩阵 A' 是在 A 上追加 SD 割行；这些新行在证书里的对偶系数取 0，所以 (A')^T y = A^T y ≥ 0，而 b' 的新增分量是 0，b'^T y = b^T y < 0。
-
-因此 anytime 状态可以写成：
-
-    S = (C, Φ, B, LB, UB)
-
-其中 C 只增，Φ 一旦非空就永久有效，LB 只在 NO 后增加。预算增加时，S 只会变强。
-
-### 2.4 anytime 接口
-
-一个 anytime 认证器在预算 b 下返回：
-
-    ALC(inst, b) = (status, LB, UB, Φ, C, effort)
-
-- status ∈ {NO, YES, UNKNOWN}；
-- 若 status=NO，则 Φ 非空且 verify(Φ)=true，LB ≥ h+1；
-- 若 status=YES，则存在整数开始时间赋值，UB ≤ h；
-- 若 status=UNKNOWN，则 LB/UB/Φ/C 是当前已证的部分结果；
-- 单调性：b_2 ≥ b_1 ⇒ LB(b_2) ≥ LB(b_1)，UB(b_2) ≤ UB(b_1)，且若 status(b_1)=NO 则 status(b_2)=NO；
-- soundness：NO 只在有验证证书时返回；YES 只在有整数解时返回。
+预算 b 增加时，S 是 b 时刻状态的扩展；所以已证的 NO 不回退，已收缩的域不回退。新的进度量是「被强制域删掉的开始时间质量」和「quorum 数」，不是只看 LB。
 
 ## 3. 算法
 
-### 3.1 ALC 状态机
+### 3.1 主过程
 
-    function ALC_CERTIFY(inst, h, budget, C):
-        while lp_solves < budget:
-            res = solve(LP(C))
-            if res == INFEASIBLE:
-                Φ = integer_farkas(C)          # DENS grid + exact replay
-                if verify(Φ): return (NO, Φ, C)
-                return (NO, NULL, C)           # sound, unaudited
-            if res != OPTIMAL: return (UNKNOWN, NULL, C)
-            V = separate(res.z)                # violated SD cuts, sorted
-            if V == empty: return (UNKNOWN, NULL, C)
-            C = C ∪ top_k(V)
-        return (UNKNOWN, NULL, C)
+    function QNC_DECIDE(inst, h, budget):
+        C = ∅; Q = ∅; force = {}; L = []
+        if ∃i: D_i = ∅: return NO            # 零 LP 前检（CP 界）
+        v = DFS(root_bounds())
+        return v, state
 
-    function ALC_DECIDE(inst, h, budget, nodecap):
-        C = ∅; Φ = NULL
-        v, Φ, C = ALC_CERTIFY(inst, h, budget, C)
-        if v == NO: return (NO, Φ, C)
-        if v == UNKNOWN and LP(C) is feasible and has fractional z:
-            (i, mid) = pick_fractional_start(z)   # same rule as v6.0
-            left  = bounds with z[i,t]=0 for t > mid
-            right = bounds with z[i,t]=0 for t ≤ mid
-            # C is shared by both children; cuts are global valid inequalities
-            a = ALC_DECIDE(inst, h, budget, nodecap, C, left)
-            if a != NO: return a
-            return ALC_DECIDE(inst, h, budget, nodecap, C, right)
-        return (v, Φ, C)
+    function DFS(bounds):
+        bounds = apply_force(bounds)
+        if ∃i: all columns of i forbidden: return NO      # 空域
+        F = forbids(bounds)
+        for E in Q:
+            if E ⊆ F: return NO                           # clause 剪枝
+        res = solve_with_lazy_SD(bounds, C)               # 计 1 次 LP
+        if res == INFEASIBLE:
+            Φ = integer_farkas(F)                         # DENS + 精确重放
+            E = { c∈F : σ_c(Φ) < 0 }
+            L.append((F, E, Φ))
+            if E != ∅: Q.add(E)
+            if |jobs(E)| == 1:
+                i = the job;  force[i] = force.get(i, D_i) ∩ E_i
+            return NO
+        if res has integral z: return YES
+        (i, mid) = median_branch(z)                       # v6.1 规则
+        a = DFS(bounds with t>mid forbidden for job i)
+        if a != NO: return a
+        return DFS(bounds with t≤mid forbidden for job i)
 
-分支的 mid 规则沿用 v6.0：取分数质量中位数；若 mid 落在最后一个可能开始时间，则 mid 减一，保证左右两支都真正删除正质量，避免 v5.0 在可行 h 上出现「左支无进展」的深递归。
+### 3.2 证书提取
 
-### 3.2 分离与割预算
-
-`separate(z)` 一次扫描所有边和 t：
-
-    F_i(t) = Σ_{s≤t} z_{i,s}                     # 前缀和，O(nT)
-    viol(i,j,t) = F_j(t+p_i) − F_i(t)            # 正数即违反
-    按 viol 降序取 top-k
-
-每轮加 top-k 条割；top-k 是 anytime 的粒度旋钮：
-
-- top-k 大：LP 次数少，但单次 LP 更大，证书可能更稠密；
-- top-k 小：LP 次数多，但每步更细，证书可能更稀疏。
-
-### 3.3 证书提取
-
-    function integer_farkas(C):
-        y* = solve_normalized_farkas_lp(C)        # 变量 α,β,λ
+    function integer_farkas(F):
+        A, hi = lp.matrix()                     # base + 当前 SD 割
+        present = [c : c ∉ F]
+        y* = argmin Σα_i + Σ m·β_t
+             s.t. (A^T y)_c ≥ 0  ∀c∈present,  Σ_{ineq} y = 1,  y_ineq ≥ 0
         for D in DENS:
-            y = round(D * y*)
-            if A_C^T y ≥ 0 and b_C^T y < 0:
-                return (α, β, λ, D)
-        return NULL
+            y = round(D·y*)
+            if (A^T y)_c ≥ 0 ∀c∈present and b^T y < 0:
+                return y
+        return None
 
-分支节点的证书额外带 forbid 集：把在该节点被置 0 的开始时间从 LP 列中删除，再做 Farkas；`verify` 重放时跳过 forbid 中的 (i,t)。这正是 v6.0 处理 idx 5/47 的方式，ALC 把它纳入同一状态机。
+与 v6.1 的区别只在 `present`：v6.1 的分支叶会重建完整 SDLP 再解 Farkas LP；这里直接在 lazy LP 的矩阵上删列，省掉重建。DENS 网格与精确重放不变。
 
-### 3.4 下界剖面
+### 3.3 审计
 
-    function ALC_ANYTIME(inst, budget):
-        LB = EPC_LB(inst); UB = heuristic_UB(inst)
-        C = ∅; Φ = NULL
-        while budget > 0 and LB < UB:
-            v, Φ, C = ALC_CERTIFY(inst, LB, budget, C)
-            if v == NO: LB = LB + 1
-            elif v == UNKNOWN: break
-        return (LB, UB, Φ, C)
+    function AUDIT(L):
+        for (F,E,Φ) in L:
+            if not E ⊆ F: return False
+            if not verify(Φ, forbid=E): return False
+        return True
 
-- EPC_LB 用 v3.0 的区间能量检查；它通常比 OPT 小 0–2。
-- 每证一个 h，LB 加一；不需要对 h 二分，因为 ALC 的 1-LP 闭合率很高。
-- SD 割与 h 无关，C 可以跨 h 复用；β 行与 h 有关，证书跨 h 需要重新提取。
+注意 `forbid=E` 比 `forbid=F` 更强：它要求证书在 F∖E 这些列上也满足 A^T y≥0。这正好复验了 essential scope 的定义，不需要额外信息。
 
-### 3.5 两档输出
+### 3.4 预算
 
-- **verdict-only**：`cert_on=False`，不可行时直接返回 NO，不提取证书；成本最低。
-- **audit**：`cert_on=True`，每个不可行节点提取并验证证书；成本增加，但输出可独立审计。
+- `budget` 计 LP 次数；超预算返回 UNKNOWN，保留 C/Q/force/L。
+- `nodecap` 计 DFS 节点；同样返回 UNKNOWN。
+- 判定只在有证书（或整数解）时给出；UNKNOWN 不产生判决。
 
 ## 4. 定理与证明
 
-### 4.1 引理 1（SD 割有效）
+### 4.1 quorum 引理
 
-设 s 是任意满足优先序的非抢占调度。对边 i→j 和任意 t，若 s_j ≤ t+p_i，则
+设 Φ 证明 LP(F) 不可行，E={c∈F:σ_c<0}。则 Φ 证明 LP(E) 不可行。
 
-    s_i + p_i ≤ s_j ≤ t + p_i  ⇒  s_i ≤ t.
+**证明**：LP(E) 的列是 (D∖F)∪(F∖E)。对 c∈D∖F，Φ 对 LP(F) 有效 ⇒ σ_c≥0；对 c∈F∖E，由 E 的定义 σ_c≥0。所以 (A_E)^T y≥0。b 没有变化，b^T y<0。∎
 
-所以 {s_j ≤ t+p_i} ⊆ {s_i ≤ t}；对指示变量求和得到 F_i(t) ≥ F_j(t+p_i)。∎
+### 4.2 最小性
 
-**推论**：LP(C) 是原问题的松弛；LP(C) 不可行 ⇒ 原问题不可行。
+对每个 c∈E 有 σ_c<0，所以把 c 加回 present 会破坏 A^T y≥0。因此 E 是 **对这个 y** 唯一的最小 scope。注意这不等于全局最小：换一个对偶解 y 可能得到更小的 E。
 
-### 4.2 引理 2（证书跨割单调）
+### 4.3 lifting
 
-设 C ⊆ C'，y 是 LP(C) 的 Farkas 证书：A_C^T y ≥ 0，b_C^T y < 0，且 y 在不等式行上 ≥ 0。LP(C') 的矩阵 A_{C'} 在 A_C 上追加 SD 行 g_e(z) ≤ 0。把这些新行的对偶系数取 0，得到 y'。则
+若 E⊆F'，则 Φ 也证明 LP(F') 不可行。因为 LP(F') 的列 ⊆ LP(E) 的列，而 LP(E) 已经不可行。这就是「节点入口 clause 检查」的正确性。
 
-    A_{C'}^T y' = A_C^T y ≥ 0,
-    b_{C'}^T y' = b_C^T y + 0 < 0.
+### 4.4 clause 与 force 的可靠性
 
-所以 Φ 对 LP(C') 仍然有效。∎
+设 s 是任一可行整数调度。若对所有 i 都有 s_i∉E_i，则 s 的 z 在 LP(E) 上可行（只用 D∖E 的列，且满足容量/SD），与 4.1 矛盾。所以 ∃i: s_i∈E_i。
 
-### 4.3 引理 3（δ 单调）
+若 E 只涉及任务 i，则上式就是 s_i∈E_i，故收缩 D_i 可靠。
 
-定义 δ(C) = max { b_C^T y : A_C^T y ≥ 0, y 在不等式行 ≥ 0, ||y||_1 ≤ 1 }。若 C ⊆ C'，LP(C') 的对偶可行域包含 LP(C) 的对偶可行域（新行对偶取 0），所以 δ(C') ≥ δ(C)。∎
+### 4.5 空交
 
-**用途**：δ 是一个单调的「证书进度」。当前实现不显式算 δ（那需要每次解 Farkas LP）；用整数证书的 scale 和 |b^T y| 作为代理。
+若同一任务 i 有两条已证强制 s_i∈E、s_i∈E'，且 E∩E'=∅，则不存在可行调度。∎
 
-### 4.4 定理 1（ALC soundness）
+### 4.6 单证书不可能性
 
-- ALC 返回 NO 时，LP(C) 不可行，且 `integer_farkas` 返回并 `verify` 通过的整数 Farkas 证书满足 A_C^T y ≥ 0、b_C^T y < 0；由 Farkas 引理，LP(C) 不可行；由引理 1，原问题不可行。
-- ALC 返回 YES 时，LP(C) 有整数解：每个任务恰好一个开始（分配行），每时刻容量 ≤m（容量行）。对整数解取 t=s_j−p_i，由 SD 行 F_i(t) ≥ F_j(s_j)=1 得 s_i ≤ s_j−p_i，即优先序成立，所以是一个合法非抢占调度。
-- UNKNOWN 不产生判决。
-∎
+若当前割集 C 下根层 LP(∅) 可行，则任何后代证书的 E 都非空。
 
-### 4.5 定理 2（anytime 单调）
+**证明**：若 E=∅，由 4.1，Φ 证明 LP(∅) 不可行，与根层可行矛盾。∎
 
-ALC 的 cutset 只增（`cutset` 去重）；证书一旦验证，由引理 2 永久有效；LB 只在 NO 后加一。因此对 b_2 ≥ b_1：
+**推论**：idx 5/47 的根 LP 可行，所以它们不可能用单个无条件 Farkas 证书在根层闭合。要闭合，要么加强割使根 LP 不可行，要么给出多证书证明。idx 5 的两条 quorum 空交就是后者。
+
+### 4.7 单调性
+
+C、Q、L 只增，force 只缩，且每一层都是原问题的有效蕴含。设预算 b_2≥b_1，则 b_1 时刻的状态是 b_2 时刻状态的子集（DFS 顺序固定），所以：
 
 - status(b_1)=NO ⇒ status(b_2)=NO；
-- LB(b_2) ≥ LB(b_1)，UB(b_2) ≤ UB(b_1)；
-- 已提取的 Φ 仍满足 verify。
+- force(b_2) ⊆ force(b_1)（每个域更小）；
+- Q(b_1) ⊆ Q(b_2)，L(b_1) ⊆ L(b_2)；
+- 已审计的叶子仍然审计通过。
 
-∎
+### 4.8 复杂度
 
-### 4.6 命题（复杂度与预算终止）
-
-- LP(C) 变量 O(nmT)，约束 O(mT + n + |C|)；|C| ≤ |E|T。
-- 分离一次 O(nT + |E|T)。
-- 整数舍入 O(|DENS|·(n + |C|))，|DENS| ≈ 215；最坏 O(215·|E|T)。
-- 每个 DFS 节点最多 max_rounds 次 LP；总 LP ≤ budget，总节点 ≤ nodecap；超预算返回 UNKNOWN。
-- 空间 O(nmT + |C|)。
-
-∎
+- LP：变量 O(nmT)，约束 O(mT+n+|C|)，|C|≤|E|T。
+- 一次分离 O(nT+|E|T)。
+- 一次 essential scope 计算 O(nnz(A))；一次 clause 检查 O(|Q|·|E|)。
+- 整数舍入 O(|DENS|·nnz(A))，|DENS|≈215。
+- 总 LP ≤ budget，总节点 ≤ nodecap；空间 O(nmT+|C|+|Q|+nT)。
 
 ## 5. 实验
 
 ### 5.1 设置
 
-- 数据：141 例 NO 基准，h = OPT−1；holdout 50、synth2_45、large_a 8、large_b 10、large_het 8、hard3 12、deep 8。
-- 实现：Python 3.12 + SciPy 1.18.1（HiGHS），单线程；`exp/v61/alc.py`。
-- 预算：每节点 max_rounds=60，总 nodecap=5000；实测远低于上限。
-- 证书：DENS 网格，scale 最大 10000；每例提取一次，分支重复提取。
-- 判定：h=OPT−1，141 例应全部 NO。
+- 数据：141 例 NO 基准（holdout 50、synth2_45、large_a 8、large_b 10、large_het 8、hard3 12、deep 8），h=OPT−1。
+- 扰动集：对 holdout idx 5/47 随机改一个 p_i（±1），重新求 OPT，得 60 例，其中 5 例在 h=OPT−1 需要分支。
+- 环境：Python 3.12、NumPy 2.5.4、SciPy 1.18.1（HiGHS），单线程；实现 `exp/v71/qnc.py`。
+- 预算：每节点 max_rounds=60，nodecap=5000；实测远低于上限。
+- 判定：141+60 例都应 NO。
 
-### 5.2 主结果
+### 5.2 主结果（141 例）
 
-| 数据集 | N | NO | 证书验证 | LP 次数 | DFS 节点 | 割 | 1-LP 闭合 | 时间(s) | 证书时间(s) |
+| 方法 | NO | LP | DFS 节点 | 墙钟(s) |
+|---|---:|---:|---:|---:|
+| v6.1 ALC | 141 | 159 | 149 | 1.46 |
+| QNC，仅零 LP 前检 | 141 | 149 | 139 | 1.39 |
+| QNC 完整（前检+quorum） | 141 | 147 | 137 | 1.39 |
+
+- 前检省 10 LP / 10 节点：10 例的某个 D_i=∅（est_i+p_i+q_i>h），v6.1 要解 1 次不可行 LP，QNC 在 0 LP 判 NO。
+- quorum 再省 2 LP / 2 节点，全部来自 idx 5。
+- 其余 129 例两者完全一致（1 LP / 1 节点）。
+- 证书：131 例有 Farkas 叶子，共 134 个叶子；10 例由空域关闭（无 Farkas 证书）。134/134 在 E 上重放通过，0 次提取失败；scale 中位数 9，最大 2000（large_het idx 7）。202 次提取（含扰动集）0 失败。
+
+### 5.3 分支子集（7 例）
+
+| 实例 | ALC LP/节点 | QNC LP/节点 | 叶子 | 强制域 | 说明 |
+|---|---|---:|---:|---|---|
+| holdout 5 | 8 / 5 | **6 / 3** | 2 | {7:∅} | 两个 quorum {22,23}、{17..21} 空交 |
+| holdout 47 | 7 / 5 | 7 / 5 | 3 | {11:[32]} | quorum 未与兄弟域空交 |
+| h5-6 | 8 / 5 | **6 / 3** | 2 | {7:∅} | 同 idx 5 |
+| h5-16 | 8 / 5 | **6 / 3** | 2 | {7:∅} | 同 idx 5 |
+| h47-6 | 5 / 3 | 5 / 3 | 2 | {3:∅} | 空交，但发现于最后一个叶子，无 LP 收益 |
+| h47-18 | 7 / 5 | 7 / 5 | 3 | {11:[31]} | 无收益 |
+| h47-26 | 9 / 7 | 9 / 7 | 4 | {} | 4 个叶子，E 均跨任务 |
+| **合计** | **52 / 35** | **46 / 29** | 18 | | 3 改善、4 持平、0 退化 |
+
+LP −11.5%，节点 −17.1%。收益全部来自「单任务 force + 兄弟域空交」；跨任务的 E 只进 clause，没有触发过剪枝。
+
+### 5.4 scope 压缩
+
+上表 18 个叶子：
+
+- Σ|F| = 96，Σ|E| = 59，**scope 缩小 38.5%**；
+- 18 个叶子里 11 个严格 |E|<|F|（例如 17→7、8→4、7→3、5→2），7 个 E=F（例如 5→5、7→7）；
+- 根层叶子 F=E=∅（本来就没有 forbid）。所以压缩只发生在需要分支的实例上。
+
+这不是「证书更小」：β、dom 的系数没变，变的是证书被允许的有效区域更大。同一个 Φ 现在证明 LP(E) 不可行，而 LP(E) 的可行域比 LP(F) 大。
+
+### 5.5 anytime
+
+按 LP 预算 k 重跑（每个 k 从零开始；因为 DFS 顺序固定，k 时刻的状态是 k+1 时刻的前缀）：
+
+201 例（141 基准 + 60 扰动）：
+
+| k | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 已判 NO | 10 | 164 | 186 | 194 | 194 | 195 | 198 | 200 | 200 | 201 |
+| 其中 audit 通过 | 10* | 164 | 186 | 194 | 194 | 195 | 198 | 200 | 200 | 201 |
+| 已生成叶子 | 0 | 154 | 176 | 184 | 187 | 192 | 198 | 200 | 201 | 202 |
+| 强制域事件 | 0 | 0 | 0 | 0 | 3 | 6 | 6 | 6 | 6 | 6 |
+
+\* k=0 的 10 例是空域关闭，`audit()` 为空真；其余行为 Farkas 叶子重放。
+
+141 基准单独看：
+
+| k | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| holdout 50 | 50 | 50 | 50 | 68 | 58 | 35 | 44 | 0.394 | 0.175 |
-| synth2_45 | 45 | 45 | 45 | 45 | 45 | 0 | 45 | 0.218 | 0.109 |
-| large_a | 8 | 8 | 8 | 8 | 8 | 0 | 8 | 0.067 | 0.024 |
-| large_b | 10 | 10 | 10 | 10 | 10 | 0 | 10 | 0.121 | 0.040 |
-| large_het | 8 | 8 | 8 | 8 | 8 | 0 | 8 | 0.169 | 0.058 |
-| hard3 | 12 | 12 | 12 | 12 | 12 | 0 | 12 | 0.082 | 0.037 |
-| deep | 8 | 8 | 8 | 8 | 8 | 0 | 8 | 0.048 | 0.021 |
-| **总计** | **141** | **141** | **141** | **159** | **149** | **35** | **135** | **1.099** | **0.465** |
+| 已判 NO | 10 | 135 | 138 | 139 | 139 | 139 | 140 | 141 | 141 |
 
-关键点：
+与 v6.1 的 135/138/139/139/139/139/140/141 相比：曲线整体左移 1 个 LP（在 k=6 就到 140、k=7 到 141），并多出 k=0 的 10 例。
 
-- 141/141 NO，141/141 证书验证；145 次提取（141 例 + 4 次分支重复），0 失败。
-- 135/141 在第 1 次 LP 就闭合；只有 holdout 的 6 例需要割，2 例需要分支。
-- 35 条割全部在 holdout；其他 91 例一条割都不需要。
+### 5.6 负结果
 
-### 5.3 anytime 曲线
+1. **clause 剪枝 0 次命中**（201 例）。所有 E⊆F 的检查都没触发；真正起作用的是零 LP 前检（10 例）和单任务 force（6 次）。clause 目前只是一个正确但未兑现的机制。
+2. **idx 47 无收益**。E={11:32} 是单任务，force 生效，但兄弟分支的区域与 {32} 不空交；额外只多了 3 个 clause，LP/节点不变。
+3. **空交发现太晚**。4 个「force 变空」的实例里，有 3 个是在最后一个叶子才发现空交（h47-6 也是 2 叶子才空交），此时搜索已经结束，省不到 LP。空交是证明对象的收益（2 证书链），不是搜索的收益。
+4. **扰动集的 5 个分支例里只有 2 个改善**，样本很小，不能当作统计结论。
+5. **零 LP 前检是主要收益，但它不新**：v6.1 的 `integer_certificate` 本来就有 est+p+q>h 的 CP 分支，只是放在 LP 之后；本轮把它提到 LP 之前。
 
-预算 = 完成判定所需的 LP 次数；`lp <= k` 表示在 k 次 LP 内闭合。
+### 5.7 正确性检查
 
-| k | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 已判 NO | 135 | 138 | 139 | 139 | 139 | 139 | 140 | 141 |
-
-用时分布：135 例 1 LP；3 例 2 LP；1 例 3 LP；1 例 7 LP；1 例 8 LP。曲线在 k=1 就到 95.7%，k=8 到 100%。
-
-### 5.4 与 v6.0 对比
-
-| 方法 | 判定(s) | 证书(s) | 总(s) | DFS 节点 | 割 | 证书数 |
-|---|---:|---:|---:|---:|---:|---:|
-| v6.0 full SDLP | 1.089 | 1.135 | 2.224 | 145 | 全量 SD 行 | 143 |
-| v6.0 lazy | 0.829 | — | 0.829 | 149 | 35 | — |
-| v6.1 ALC verdict-only | 0.632 | — | 0.632 | 149 | 35 | — |
-| v6.1 ALC audit | 0.632 | 0.465 | 1.099 | 149 | 35 | 141 |
-
-解读：
-
-- ALC 的 audit 模式比 v6.0 full 快 2.0×（1.10 s vs 2.22 s），证书提取成本从 1.135 s 降到 0.465 s（因为 lazy 的 Farkas LP 更小）。
-- ALC 的 verdict-only 与 v6.0 lazy 同量级甚至略快；差异部分来自实现/测量，不作为主结论。
-- ALC 的节点数与 lazy 相同（149）；代价是每节点多轮 LP（159 次）。
-
-### 5.5 证书统计与成本
-
-- 131 个 packing 证书 + 10 个 critical-path 证书；145 次提取，0 失败。
-- β 中位数 8，最大 91；dom 中位数 0，最大 3；scale 中位数 9，最大 2000。
-- 证书提取总时间 0.465 s，平均 3.2 ms/次；v6.0 full 的证书提取 1.135 s，平均约 7.9 ms/次。
-- 最大 scale 出现在 holdout idx 7（capacity-only 证书，β=91，scale=2000）；DENS 上限 10000，余量只有 5×。
-
-### 5.6 证书规模对比（负结果）
-
-对 139 个根层 NO 实例，逐例比较 ALC 的 lazy 证书与 v6.0 full SDLP 证书（cuts = |β| + |dom|）：
-
-| 关系 | 例数 |
-|---|---:|
-| ALC 更小 | 20 |
-| 相等 | 102 |
-| ALC 更大 | 17 |
-
-- 中位数：ALC 7，full 8；最大：ALC 91，full 89；scale 中位数都是 8。
-- full 证书提取时间中位数 4 ms，均值 5.9 ms。
-
-结论：**lazy 不保证证书更稀疏**。ALC 的优势是同步性、成本、预算接口，不是证书尺寸。
-
-### 5.7 top-k 消融
-
-对 holdout 的 6 个需要割的实例，改变每轮加入的割数：
-
-| idx | topk=1 | topk=2 | topk=4 | topk=8 | topk=100 |
-|---|---|---|---|---|---|
-| 5 | 12 LP / 5 节点 / 7 割 / 0.044 s | **6 / 3 / 5 / 0.024** | 8 / 5 / 7 / 0.032 | 8 / 5 / 7 / 0.035 | 8 / 5 / 7 / 0.033 |
-| 47 | **7 / 3 / 4 / 0.035** | 16 / 11 / 7 / 0.079 | 8 / 5 / 7 / 0.043 | 7 / 5 / 7 / 0.038 | 7 / 5 / 7 / 0.038 |
-| 21 | 2 / 1 / 1 / 0.010 | 2 / 1 / 2 / 0.010 | 2 / 1 / 4 / 0.010 | 2 / 1 / 5 / 0.011 | 2 / 1 / 5 / 0.011 |
-| 32 | 3 / 1 / 2 / 0.013 | 3 / 1 / 4 / 0.014 | 3 / 1 / 7 / 0.013 | 3 / 1 / 8 / 0.013 | 3 / 1 / 8 / 0.013 |
-| 39 | 3 / 1 / 2 / 0.015 | 3 / 1 / 3 / 0.016 | **2 / 1 / 3 / 0.012** | 2 / 1 / 3 / 0.012 | 2 / 1 / 3 / 0.013 |
-| 42 | 3 / 1 / 2 / 0.014 | 3 / 1 / 4 / 0.014 | **2 / 1 / 4 / 0.011** | 2 / 1 / 5 / 0.011 | 2 / 1 / 5 / 0.011 |
-
-观察：
-
-- idx 5 的甜蜜点是 topk=2（6 LP / 3 节点），比 topk=100 少 2 次 LP；但证书从 5β+1dom/scale 7 变成 9β+4dom/scale 22。
-- idx 47 的 topk=1 节点最少（3），但证书 18β+0dom/scale 35；topk=8 是 15β+3dom/scale 39。
-- 细粒度不总是更快：topk=1 在 idx 5 上反而 12 LP。
-- 证书规模和判定速度之间存在 trade-off，没有一个 topk 全面占优。
-
-### 5.8 下界剖面
-
-holdout 50，从 EPC LB 逐 h 探测到 OPT−1（verdict-only）：
-
-- 55 次 ALC 调用，73 次 LP，63 个 DFS 节点，0.233 s；
-- LB = OPT 50/50，平均 gap 0；
-- 对比 ECC：root 二分 147 个 LP，root LB 精确 47/50；full ECC 自身再用 157 个 LP 节点才到 50/50。本实验把 root 与 full 分开跑，合计约 1.49 s。
-- ALC 的 LP 是 capacity-only/少量割，单次规模更小；73 个 LP 的成本低于 ECC 的 147 个 start-time LP。
-
-这是本轮 anytime 性质的直接收益：预算从 0 增加时，LB 逐 h 上升；每次调用都有证书（verdict-only 模式下无证书，但判定 sound）。
-
-### 5.9 负结果：连续对偶上升
-
-对 5 个残例跑 ADA 2000 步（归一化次梯度，步长 1/√k）：
-
-| idx | 21 | 32 | 42 | 5 | 47 |
-|---|---:|---:|---:|---:|---:|
-| best D | −0.345 | −0.306 | −0.421 | −0.563 | −0.235 |
-
-全部 < 0。即使 LP 根层不可行的 21/32/42，连续上升也没有找到 Farkas 证书。修正后的归一化 Farkas LP 目标只有 0.001–0.026，说明证书裕度极薄；这解释了为什么必须做整数舍入，而不是连续爬山。
-
-### 5.10 正确性检查
-
-- 141 例都是已知 NO（h=OPT−1），ALC 全部返回 NO，无误判 YES。
-- 141/141 证书 `verify` 通过；分支例的证书带 forbid，重放通过。
-- 下界剖面 LB=OPT 50/50，没有出现 LB > OPT 的越界。
-- 未系统测试 YES 侧；ALC 的 YES 判定依赖整数 LP 解或分支，分支规则沿用 v6.0 的 mid 修正（mid 落在最后一个时间时减一），避免 v5.0 的深递归。
-- 证书提取失败时 ALC 仍可返回 NO（sound，但 unaudited）；本轮没有出现这种情况。
+- 201/201 返回 NO（h=OPT−1 已知 NO），无误判 YES。
+- 202 个叶子证书全部 `verify(Φ,forbid=E)` 通过；0 次提取失败；10 个空域例不产生 Farkas 证书。
+- 6 次强制域事件：4 次收缩到空集（→ NO），2 次收缩到单元集（{11:32}、{11:31}）。
+- 强制域只做交集，不会重新放大；`apply_force` 在每个节点入口执行，所以兄弟节点继承。
+- 未系统测试 YES 侧：扰动集的 OPT 是用 ALC 扫描得到的（YES 来自整数 LP 解，未用独立调度检查器复验）。这是本轮的一个实验缺口。
+- 未测 n>24 的实例；最大规模仍是 holdout/large 系列。
 
 ## 6. 风险与下一步
 
-### 6.1 风险
+### 6.1 已知风险
 
-1. **收益来源**：135/141 的 1-LP 闭合率主要来自 capacity-only start-time LP，而不是 SD 割。若新实例需要大量 SD 割，anytime 曲线会变平，ALC 退化为 lazy 的逐割搜索。
-2. **证书成本**：audit 模式比 verdict-only 慢 74%（1.099 s vs 0.632 s）；证书占总时间 42%。在大规模实例上，Farkas LP + 舍入可能成为瓶颈。
-3. **数值薄度**：证书 scale 中位数 9，最大 2000，DENS 上限 10000；更大实例可能需要 >10000 的分母，导致舍入失败（当前 141/141 成功，但没有压力测试）。
-4. **根层残例**：idx 5/47 仍需 5 个节点、7–8 次 LP；SD 割没有在根层闭合它们。
-5. **YES 侧**：没有系统测试；分支最坏指数；ALC 的 anytime 只保证 NO 侧单调。
-6. **下界剖面**：成本与 EPC gap 线性相关；如果 EPC 下界很松（gap 很大），逐 h 探测会退化。
-7. **证书尺寸**：lazy 证书不一定更小（20 更小 / 102 相等 / 17 更大）；不要用稀疏性作为卖点。
+1. **数据分布风险（最大）**：139/141 根层 1 LP 闭合，quorum 只在 2/141 上触发。任何「搜索期收益」都会被这个分布压成小数字。换到 LP 更弱、需要大量分支的实例上，收益可能放大，也可能被 force 的重放成本抵消。
+2. **主要收益不新**：159→147 的 12 个 LP 里，10 个来自零 LP 前检（一个预处理技巧），2 个来自 quorum。把前检拿掉，quorum 的净收益只有 2 LP / 2 节点。
+3. **clause 剪枝未兑现**：0/201 命中。clause 的正确性没问题，但它和「阈值分支」的形状不匹配：分支一次禁掉半个域，很少正好包含一个小 E。
+4. **空交发现太晚**：force 变空时搜索往往已经结束；没有「提前预测空交」的机制。
+5. **证明覆盖未独立检查**：`audit()` 逐叶重放，但「叶子覆盖整个域」是由 DFS 构造保证的，没有独立的树检查器。要作为可交付证明，还差一个 proof-tree 序列化 + 覆盖检查。
+6. **数值**：DENS 上限 10000，本轮最大 scale 2000，余量 5×；更大实例可能舍入失败。
+7. **扰动集太小**：5 个分支例、2 个改善，不能支撑统计结论；只能说明机制是通的。
+8. **YES 侧未系统测**：分支最坏指数；QNC 的 anytime 只保证 NO 侧单调。
 
 ### 6.2 下一步
 
-1. **增量证书**：用可行 LP 的对偶边际预测 δ(C)，只在 δ 接近 0 时解 Farkas LP；目标是把证书成本从 42% 降到 <15%。
-2. **证书引导的割选择**：当前 top-k 按违反量排序；可以按对偶价格/证书势差加权，减少 idx 5/47 的节点数。
-3. **跨 h 复用**：当前接口保留 C，但 141 例上没有系统测；在 EPC gap 大的实例上测复用率。
-4. **更大规模**：n>20、h>80 的舍入失败率、DENS 上限、LP 时间。
-5. **端到端级联**：把 ALC 接到 v6.0 的 root 级联（ICC → SD root → ALC branch），用同一套 141 例测中位数。
-6. **YES 侧 anytime**：把 ALC 与可行调度构造器（列表调度/WOS）结合，维护 [LB, UB] 双界。
+1. **proof-tree 序列化**：把 DFS 的 split 也记录下来，写一个独立 checker：叶子 `verify(Φ,E)` + split 覆盖 + force 链；这是把 audit 从「逐叶」升级为「整树」的关键。
+2. **提前触发 quorum**：不要等 DFS 走到叶子。用可行 LP 的对偶价格预测「哪个任务的域最可能被一张证书压小」，优先分支它；或者在根层对每个任务试一个候选 E（来自分数解的支撑），直接解 LP(E)，把「找 quorum」变成主动搜索。
+3. **clause 与分支形状对齐**：当前阈值分支一次禁半个域。若改成「按 E 的形状分支」（先禁 E 的补集），clause 才可能命中。
+4. **空交短路**：force 一变成空就立刻终止整棵树，不再探索；本轮 4 个空交里 3 个发生在最后，短路可省掉后续节点（虽然本轮已经是最后）。
+5. **弱 LP 家族**：构造 LP 更弱但整数仍 NO 的实例族（例如加长链、减少机器），系统测 quorum 的收益曲线。
+6. **与 proof-tree 线合并**：QNC 的 E 可以直接作为 DCS/PSS 的叶子 scope，减少 proof tree 的叶子数；这是正交组合，不是替代。
+7. **证书成本**：lazy Farkas + 增量 warmth；目标把 42% 的证书成本压到 20% 以下。
 
 ## 7. 复现文件
 
-- `exp/v60/sdecc.py`：SD start-time LP + `sdecc_no`。
-- `exp/v60/lazy.py`：lazy SD 分离 + `lazy_no`。
-- `exp/v60/cert.py`：整数 Farkas 证书提取、DENS 舍入、`verify`。
-- `exp/v60/final_stats.py`、`final_stats.json`：v6.0 full 基线。
-- `exp/v60/bench_lazy.py`、`lazy_bench.json`：v6.0 lazy 基线。
-- `exp/v61/alc.py`：ALC 状态机、证书同步、两档输出。
-- `exp/v61/bench_alc.py`、`alc_stats.json`：141 例主结果与 anytime 分布。
-- `exp/v61/lb_alc.py`、`lb_alc_holdout.json`：holdout 下界剖面。
-- `exp/v61/topk_ablation.json`：top-k 消融。
-- `exp/v61/cert_compare.json`：ALC vs full 证书规模对比。
-- `exp/v61/ada.py`、`farkas_lp.py`：连续对偶上升与归一化 Farkas LP 的诊断实现（负结果）。
-- `exp/v61/anytime_lb.py`、`exp/v60/lb_*.json`：ECC 下界剖面基线。
+- `exp/v71/qnc.py`：QNC 状态机、essential scope、clause、force、audit、`farkas_int`。
+- `exp/v71/bench_ablation.py`、`ablation.json`：141 基准 + 60 扰动的 ALC / 仅前检 / QNC 三档对比。
+- `exp/v71/bench_anytime.py`、`anytime.json`、`anytime_corpus.json`：LP 预算 anytime 曲线。
+- `exp/v71/bench_qnc.py`、`qnc_stats.json`：141 例主结果的早期版本（含逐例明细）。
+- `exp/v71/perturb60.pkl`：60 个扰动实例（inst, opt, 基线节点数）。
+- 依赖：`exp/v61/alc.py`（v6.1 基线）、`exp/v60/lazy.py`（lazy SD）、`exp/v60/cert.py`（DENS/verify/_row_meta）、`exp/v13/po.py`（heads_tails）。
 - 数据：`exp/v20/holdout_cases50.pkl`、`exp/v28/synth2_45.pkl`、`exp/v14/{large_a,large_b,large_het}.pkl`、`exp/v13/hard3.pkl`、`exp/v18/deep.pkl`。
-- 运行环境：Python 3.12、SciPy 1.18.1（HiGHS）；工作目录 `/home/runner/work/xuen/xuen/workspace`。
+- 运行环境：Python 3.12、NumPy 2.5.4、SciPy 1.18.1（HiGHS）；工作目录 `/home/runner/work/xuen/xuen/workspace`。
+
+## 8. 一句话最大风险
+
+**QNC 的收益与「需要分支的节点数」成正比，而这批数据 139/141 根层就闭合；quorum 只在 2/141 上被真正触发，所以本轮测到的加速很小，换到 LP 更弱、分支更深的实例上才可能显现——但也可能被 force 的额外重放成本吃掉。**
 <!-- ARTIFACT:END -->

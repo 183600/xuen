@@ -1,0 +1,22 @@
+{
+ "UCP": {
+  "lp": 38,
+  "nodes": 7,
+  "hits": 7
+ },
+ "RankID": {
+  "lp": 53,
+  "nodes": 29,
+  "hits": 0
+ },
+ "RankMass": {
+  "lp": 52,
+  "nodes": 27,
+  "hits": 1
+ },
+ "RankRand": {
+  "lp": 52,
+  "nodes": 27,
+  "hits": 1
+ }
+}

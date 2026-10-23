@@ -1,0 +1,1409 @@
+[
+ {
+  "k": 0,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 1,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 2,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   7,
+   5
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    6
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 3,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   9,
+   7
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 4,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   9,
+   7
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 5,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 6,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   6,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    8
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 7,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   9,
+   7
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 8,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   7,
+   5
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   7,
+   4
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "14": [
+    31
+   ],
+   "3": [
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 9,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   7,
+   3
+  ],
+  "c": [
+   6,
+   2
+  ],
+  "a": [
+   6,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 10,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 11,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   12,
+   9
+  ],
+  "c": [
+   12,
+   9
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 12,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 13,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   5,
+   3
+  ],
+  "a": [
+   6,
+   3
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": []
+  },
+  "cover_root": true
+ },
+ {
+  "k": 14,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 15,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 16,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 17,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   10,
+   7
+  ],
+  "c": [
+   9,
+   6
+  ],
+  "a": [
+   4,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": []
+  },
+  "cover_root": true
+ },
+ {
+  "k": 18,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   7,
+   5
+  ],
+  "c": [
+   5,
+   3
+  ],
+  "a": [
+   7,
+   2
+  ],
+  "probes": 2,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ],
+   "8": [
+    20
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 19,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 20,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 21,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   7,
+   3
+  ],
+  "c": [
+   7,
+   3
+  ],
+  "a": [
+   7,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": []
+  },
+  "cover_root": true
+ },
+ {
+  "k": 22,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 23,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 24,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   5,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": []
+  },
+  "cover_root": true
+ },
+ {
+  "k": 25,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 26,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 27,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 28,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   18,
+   14
+  ],
+  "c": [
+   18,
+   14
+  ],
+  "a": [
+   19,
+   14
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "no",
+  "audit": true,
+  "force": {},
+  "cover_root": false
+ },
+ {
+  "k": 29,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 30,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   10,
+   7
+  ],
+  "c": [
+   10,
+   7
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 31,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 32,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   3,
+   3
+  ],
+  "c": [
+   2,
+   2
+  ],
+  "a": [
+   2,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "5": [
+    14
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 33,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   5,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 34,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 35,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 36,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   4,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    16,
+    17,
+    18,
+    20,
+    21
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 37,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   8,
+   3
+  ],
+  "c": [
+   7,
+   2
+  ],
+  "a": [
+   8,
+   2
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 38,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    13
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 39,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   9,
+   7
+  ],
+  "c": [
+   8,
+   6
+  ],
+  "a": [
+   9,
+   6
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    9,
+    10
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 40,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   6,
+   2
+  ],
+  "probes": 2,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ],
+   "9": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 41,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 42,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   5,
+   3
+  ],
+  "a": [
+   6,
+   3
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": []
+  },
+  "cover_root": true
+ },
+ {
+  "k": 43,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   9,
+   3
+  ],
+  "probes": 3,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    6
+   ],
+   "4": [
+    11
+   ],
+   "8": [
+    20
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 44,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "3": [
+    10
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 45,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   6,
+   3
+  ],
+  "c": [
+   5,
+   2
+  ],
+  "a": [
+   5,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 46,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   5,
+   3
+  ],
+  "c": [
+   4,
+   2
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 47,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 48,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 49,
+  "src": "holdout50",
+  "idx": 47,
+  "q": [
+   7,
+   5
+  ],
+  "c": [
+   6,
+   4
+  ],
+  "a": [
+   4,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "4": [
+    11
+   ]
+  },
+  "cover_root": true
+ },
+ {
+  "k": 50,
+  "src": "holdout50",
+  "idx": 5,
+  "q": [
+   4,
+   3
+  ],
+  "c": [
+   3,
+   2
+  ],
+  "a": [
+   3,
+   1
+  ],
+  "probes": 1,
+  "pairs": 0,
+  "why": "cover-root",
+  "audit": true,
+  "force": {
+   "6": [
+    12
+   ]
+  },
+  "cover_root": true
+ }
+]

@@ -1,0 +1,138 @@
+[
+ {
+  "name": "h5",
+  "cuts": 7,
+  "supp": 12,
+  "forced": 8,
+  "frac": 0.667,
+  "top_job": 6,
+  "top_inc": 2,
+  "top_atoms": [
+   12,
+   17
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   6,
+   8
+  ]
+ },
+ {
+  "name": "h47",
+  "cuts": 7,
+  "supp": 18,
+  "forced": 9,
+  "frac": 0.5,
+  "top_job": 3,
+  "top_inc": 2,
+  "top_atoms": [
+   6,
+   8
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   3,
+   4,
+   7,
+   8
+  ]
+ },
+ {
+  "name": "h5-6",
+  "cuts": 7,
+  "supp": 12,
+  "forced": 8,
+  "frac": 0.667,
+  "top_job": 6,
+  "top_inc": 2,
+  "top_atoms": [
+   13,
+   18
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   6,
+   8
+  ]
+ },
+ {
+  "name": "h5-16",
+  "cuts": 7,
+  "supp": 12,
+  "forced": 8,
+  "frac": 0.667,
+  "top_job": 6,
+  "top_inc": 2,
+  "top_atoms": [
+   13,
+   18
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   6,
+   8
+  ]
+ },
+ {
+  "name": "h47-6",
+  "cuts": 2,
+  "supp": 18,
+  "forced": 13,
+  "frac": 0.722,
+  "top_job": 4,
+  "top_inc": 2,
+  "top_atoms": [
+   11,
+   13
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   3,
+   4,
+   6,
+   7,
+   8,
+   9
+  ]
+ },
+ {
+  "name": "h47-18",
+  "cuts": 7,
+  "supp": 18,
+  "forced": 9,
+  "frac": 0.5,
+  "top_job": 3,
+  "top_inc": 2,
+  "top_atoms": [
+   5,
+   7
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   3,
+   4,
+   7,
+   8
+  ]
+ },
+ {
+  "name": "h47-26",
+  "cuts": 5,
+  "supp": 14,
+  "forced": 9,
+  "frac": 0.643,
+  "top_job": 4,
+  "top_inc": 4,
+  "top_atoms": [
+   11,
+   13
+  ],
+  "top_both": true,
+  "jobs_with_pair": [
+   3,
+   4,
+   7,
+   8
+  ]
+ }
+]
