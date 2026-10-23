@@ -126,45 +126,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install AI harnesses (dsh primary, opencode fallback)
+      - name: Install opencode
         run: |
           set +e
-          npm i -g @deepseek-ai/dsh@0.2.1-rc.2
-          if command -v dsh >/dev/null 2>&1; then
-            dsh --version
-          else
-            echo "[warn] dsh 安装失败，将使用 opencode 兜底"
-          fi
           npm i -g opencode-ai
           if command -v opencode >/dev/null 2>&1; then
             opencode --version
           else
-            echo "[warn] opencode 安装失败"
-          fi
-          if ! command -v dsh >/dev/null 2>&1 && ! command -v opencode >/dev/null 2>&1; then
-            echo "[error] dsh 与 opencode 均不可用" >&2
+            echo "[error] opencode 安装失败" >&2
             exit 1
           fi
-
-      - name: Configure AI harnesses (dsh primary, opencode fallback)
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          set +e
-          mkdir -p ~/.config/opencode
-          if [ -n "$DEEPSEEK_API_KEY" ]; then
-            echo "[info] DEEPSEEK_API_KEY 已配置（dsh 使用）"
-          else
-            echo "[warn] DEEPSEEK_API_KEY 未配置：dsh 不可用，将走 opencode 免费模型"
-          fi
-          if command -v dsh >/dev/null 2>&1; then
-            echo "[info] dsh $(dsh --version) | provider=deepseek-official | model=deepseek-flash"
-          fi
-          if command -v opencode >/dev/null 2>&1; then
-            echo "[info] opencode $(opencode --version) | fallback ready"
-          fi
-
-      - name: Configure opencode permissions (fallback)
+      - name: Configure opencode permissions
         run: |
           mkdir -p ~/.config/opencode
           cat > ~/.config/opencode/opencode.json <<'EOF'
@@ -206,155 +178,45 @@ jobs:
           git config i18n.commitEncoding utf-8
           git config core.quotepath false
 
-      # ================= harness：dsh 主用，opencode 兜底 =================
-      # 首选 DeepSeek Harness；dsh 无法安装/执行/冒烟失败时，自动改用
-      # opencode（调用方式与 2026-10-22 备份中的 `opencode run -m ...` 一致）。
-      - name: Select harness (dsh primary, opencode fallback)
+      - name: Select harness (opencode only)
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           set +e
-          # ================= harness: dsh 主用，opencode 兜底 =================
-          # 首选 DeepSeek Harness（dsh + DeepSeek 官方 API）；当 dsh 无法安装、
-          # 无法执行、启动冒烟失败或阶段调用失败时，自动切换到 opencode。
-          # opencode 的调用方式与 2026-10-22 备份中的旧 workflow 完全一致：
-          #     opencode run -m "$SELECTED_MODEL" [--variant ...] "$prompt"
-          DSH_MODEL="deepseek-official/deepseek-flash"
-          HARNESS=""
+          # 一律使用 opencode 的 Zen 免费模型（不安装额外 harness、不读官方 key）
           SELECTED_MODEL=""
-          SELECTED_PROVIDER=""
           SELECTED_VARIANT=""
-          CURRENT_MODEL=""
-          CURRENT_PROVIDER=""
-          OC_BROKEN=""
-
-          oc_mark_broken() {
-            [ -n "$1" ] || return 0
-            case ",$OC_BROKEN," in *",$1,"*) ;; *) OC_BROKEN="$OC_BROKEN${OC_BROKEN:+,}$1" ;; esac
-          }
-          oc_is_broken() {
-            case ",$OC_BROKEN," in *",$1,"*) return 0 ;; *) return 1 ;; esac
-          }
-
-          opencode_smoke() {
+          smoke() {
             local m="$1" v="$2" extra=""
             [ -n "$v" ] && extra="--variant $v"
             # shellcheck disable=SC2086
             timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_test.log 2>&1
           }
-
-          opencode_detect() {
-            local cand v
-            # 与备份一致：优先 DeepSeek 官方 API（若该仓库原本支持），
-            # 然后走 opencode Zen 免费池 deepseek-v4.1-flash-free → big-pickle。
-            if declare -F probe_deepseek >/dev/null 2>&1 \
-               && declare -F switch_provider >/dev/null 2>&1 \
-               && [ -n "${DEEPSEEK_API_KEY:-}" ]; then
-              if probe_deepseek; then
-                switch_provider deepseek
-                if opencode_smoke "deepseek/$DEEPSEEK_MODEL" ""; then
-                  SELECTED_MODEL="deepseek/$DEEPSEEK_MODEL"
-                  SELECTED_PROVIDER="deepseek"
-                  SELECTED_VARIANT=""
-                  CURRENT_MODEL="$SELECTED_MODEL"
-                  CURRENT_PROVIDER="$SELECTED_PROVIDER"
-                  export SELECTED_MODEL SELECTED_PROVIDER SELECTED_VARIANT
-                  echo "[provider] opencode 兜底选定 $SELECTED_MODEL（DeepSeek 官方 API）"
-                  return 0
-                fi
-              fi
+          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/big-pickle|"; do
+            [ -n "$SELECTED_MODEL" ] && break
+            m="${spec%%|*}"; v="${spec#*|}"
+            if smoke "$m" "$v"; then
+              SELECTED_MODEL="$m"; SELECTED_VARIANT="$v"
             fi
-            for cand in opencode/deepseek-v4.1-flash-free opencode/big-pickle; do
-              oc_is_broken "$cand" && continue
-              if [ "$cand" = "opencode/big-pickle" ]; then
-                if opencode_smoke "$cand" ""; then
-                  SELECTED_MODEL="$cand"
-                  SELECTED_PROVIDER="$cand"
-                  SELECTED_VARIANT=""
-                  CURRENT_MODEL="$SELECTED_MODEL"
-                  CURRENT_PROVIDER="$SELECTED_PROVIDER"
-                  export SELECTED_MODEL SELECTED_PROVIDER SELECTED_VARIANT
-                  echo "[provider] opencode 兜底选定 $cand"
-                  return 0
-                fi
-              else
-                for v in max high ""; do
-                  if opencode_smoke "$cand" "$v"; then
-                    SELECTED_MODEL="$cand"
-                    SELECTED_PROVIDER="$cand"
-                    SELECTED_VARIANT="$v"
-                    CURRENT_MODEL="$SELECTED_MODEL"
-                    CURRENT_PROVIDER="$SELECTED_PROVIDER"
-                    export SELECTED_MODEL SELECTED_PROVIDER SELECTED_VARIANT
-                    echo "[provider] opencode 兜底选定 $cand${v:+ (variant=$v)}"
-                    return 0
-                  fi
-                done
-              fi
-              oc_mark_broken "$cand"
-            done
-            SELECTED_MODEL=""
-            SELECTED_PROVIDER=""
-            SELECTED_VARIANT=""
-            CURRENT_MODEL=""
-            CURRENT_PROVIDER=""
-            export SELECTED_MODEL SELECTED_PROVIDER SELECTED_VARIANT
-            return 1
-          }
+          done
+          if [ -z "$SELECTED_MODEL" ]; then
+            SELECTED_MODEL="opencode/deepseek-v4.1-flash-free"
+            echo "[warn] 冒烟测试未通过，仍按默认模型继续（xuen 内部会重试）"
+          fi
+          echo "[provider] 使用 $SELECTED_MODEL${SELECTED_VARIANT:+ (variant=$SELECTED_VARIANT)}"
+          {
+            echo "HARNESS=opencode"
+            echo "MAIN_MODEL=$SELECTED_MODEL"
+            echo "MAIN_VARIANT=$SELECTED_VARIANT"
+            echo "JUDGE_MODEL=$SELECTED_MODEL"
+            echo "JUDGE_VARIANT=$SELECTED_VARIANT"
+            echo "XUEN_HARNESS=opencode"
+            echo "XUEN_MODEL=$SELECTED_MODEL"
+            echo "XUEN_VARIANT=$SELECTED_VARIANT"
+            echo "XUEN_JUDGE_MODEL=$SELECTED_MODEL"
+            echo "XUEN_JUDGE_VARIANT=$SELECTED_VARIANT"
+          } >> "$GITHUB_ENV"
 
-          use_dsh() {
-            HARNESS="dsh"
-            SELECTED_MODEL="$DSH_MODEL"
-            SELECTED_PROVIDER="deepseek-official"
-            SELECTED_VARIANT=""
-            CURRENT_MODEL="$SELECTED_MODEL"
-            CURRENT_PROVIDER="$SELECTED_PROVIDER"
-            export HARNESS SELECTED_MODEL SELECTED_PROVIDER SELECTED_VARIANT
-            echo "[provider] 主 harness=dsh，模型=$SELECTED_MODEL"
-          }
-
-          switch_to_opencode() {
-            HARNESS="opencode"
-            SELECTED_MODEL=""
-            SELECTED_PROVIDER=""
-            SELECTED_VARIANT=""
-            CURRENT_MODEL=""
-            CURRENT_PROVIDER=""
-            export HARNESS
-            echo "[warn] dsh 不可用，切换到 opencode 兜底（调用方式与 2026-10-22 备份一致）"
-            opencode_detect
-          }
-
-          select_harness_model() {
-            if [ "$HARNESS" = "opencode" ]; then
-              opencode_detect
-              return $?
-            fi
-            if command -v dsh >/dev/null 2>&1; then
-              use_dsh
-              if timeout --kill-after=30 180 dsh --profile headless "只回复两个字：OK" > /tmp/dsh_smoke_test.log 2>&1; then
-                return 0
-              fi
-              echo "[warn] dsh 冒烟测试失败（API key / 网络 / 配额 / 安装）"
-            else
-              echo "[warn] dsh 未安装"
-            fi
-            switch_to_opencode
-          }
-
-          if select_harness_model; then :; else echo "[warn] 启动时未选出可用模型，第一个阶段会再探测一次"; fi
-
-          echo "HARNESS=$HARNESS" >> "$GITHUB_ENV"
-          echo "MAIN_MODEL=$SELECTED_MODEL" >> "$GITHUB_ENV"
-          echo "MAIN_VARIANT=$SELECTED_VARIANT" >> "$GITHUB_ENV"
-          echo "JUDGE_MODEL=$SELECTED_MODEL" >> "$GITHUB_ENV"
-          echo "JUDGE_VARIANT=$SELECTED_VARIANT" >> "$GITHUB_ENV"
-          echo "XUEN_HARNESS=$HARNESS" >> "$GITHUB_ENV"
-          echo "XUEN_MODEL=$SELECTED_MODEL" >> "$GITHUB_ENV"
-          echo "XUEN_VARIANT=$SELECTED_VARIANT" >> "$GITHUB_ENV"
-          echo "XUEN_JUDGE_MODEL=$SELECTED_MODEL" >> "$GITHUB_ENV"
-          echo "XUEN_JUDGE_VARIANT=$SELECTED_VARIANT" >> "$GITHUB_ENV"
       - name: Restore workspace from xuen-loop branch
         run: |
           set -e
@@ -376,12 +238,9 @@ jobs:
           set -e
           cat > /tmp/xuen_agent.sh <<'SHEOF'
           #!/usr/bin/env bash
+          # xuen 的 agent 一律走 opencode（已移除额外 harness / DeepSeek 官方 API）
           role="${1:-main}"
           prompt="${2:-}"
-          if [ "${XUEN_HARNESS:-dsh}" = "dsh" ]; then
-            dsh --profile headless "$prompt" && exit 0
-            echo "[warn] xuen agent: dsh 调用失败，切换 opencode 兜底" >&2
-          fi
           if [ "$role" = "judge" ]; then
             model="${XUEN_JUDGE_MODEL:-${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}}"
             variant="${XUEN_JUDGE_VARIANT:-}"
@@ -389,12 +248,9 @@ jobs:
             model="${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}"
             variant="${XUEN_VARIANT:-}"
           fi
-          # dsh 的模型名不能用于 opencode：兜底时改用 opencode 免费模型
           case "$model" in
-            deepseek-official/*|dsh/*)
-              model="opencode/deepseek-v4.1-flash-free"
-              variant=""
-              ;;
+            opencode/*) ;;
+            *) model="opencode/deepseek-v4.1-flash-free"; variant="" ;;
           esac
           extra=""
           [ -n "$variant" ] && extra="--variant $variant"
@@ -402,7 +258,7 @@ jobs:
           exec opencode run -m "$model" $extra "$prompt"
           SHEOF
           chmod +x /tmp/xuen_agent.sh
-          echo "[loop] HARNESS=${XUEN_HARNESS:-dsh} MAIN=${XUEN_MODEL:-默认} JUDGE=${XUEN_JUDGE_MODEL:-默认}"
+          echo "[loop] MAIN=${XUEN_MODEL:-默认} JUDGE=${XUEN_JUDGE_MODEL:-默认}"
 
           cat > config.yaml <<'EOF'
           # 本文件由 CI 生成：xuen 研究循环配置（任务：设计一个新的算法）
@@ -458,7 +314,6 @@ jobs:
       - name: Run xuen loop (~3h window)
         timeout-minutes: 175
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           set +e
