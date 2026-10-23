@@ -1,0 +1,112 @@
+[
+ {
+  "set": "large_b",
+  "idx": 0,
+  "opt": 38,
+  "epc_lb": 38,
+  "root_lb": 38,
+  "root_solves": 1,
+  "full_lb": 38,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 1,
+  "opt": 40,
+  "epc_lb": 40,
+  "root_lb": 40,
+  "root_solves": 1,
+  "full_lb": 40,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 2,
+  "opt": 60,
+  "epc_lb": 60,
+  "root_lb": 60,
+  "root_solves": 1,
+  "full_lb": 60,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 3,
+  "opt": 34,
+  "epc_lb": 34,
+  "root_lb": 34,
+  "root_solves": 1,
+  "full_lb": 34,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "large_b",
+  "idx": 4,
+  "opt": 45,
+  "epc_lb": 45,
+  "root_lb": 45,
+  "root_solves": 1,
+  "full_lb": 45,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 5,
+  "opt": 53,
+  "epc_lb": 53,
+  "root_lb": 53,
+  "root_solves": 1,
+  "full_lb": 53,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 6,
+  "opt": 53,
+  "epc_lb": 53,
+  "root_lb": 53,
+  "root_solves": 1,
+  "full_lb": 53,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 7,
+  "opt": 42,
+  "epc_lb": 42,
+  "root_lb": 42,
+  "root_solves": 1,
+  "full_lb": 42,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_b",
+  "idx": 8,
+  "opt": 45,
+  "epc_lb": 45,
+  "root_lb": 45,
+  "root_solves": 1,
+  "full_lb": 45,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "large_b",
+  "idx": 9,
+  "opt": 42,
+  "epc_lb": 42,
+  "root_lb": 42,
+  "root_solves": 1,
+  "full_lb": 42,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ }
+]

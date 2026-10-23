@@ -17,9 +17,10 @@ from po import heads_tails
 
 
 class LazySD:
-    def __init__(self, inst, h, use_expect=False, elig_aware=False):
+    def __init__(self, inst, h, use_expect=False, elig_aware=False,
+                 forbid=None):
         self.base = SDLP(inst, h, use_expect=use_expect, use_dom=False,
-                         elig_aware=elig_aware)
+                         elig_aware=elig_aware, forbid=forbid)
         self.inst = inst
         self.h = h
         self.n = inst['n']

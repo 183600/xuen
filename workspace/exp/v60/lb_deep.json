@@ -1,0 +1,90 @@
+[
+ {
+  "set": "deep",
+  "idx": 0,
+  "opt": 28,
+  "epc_lb": 27,
+  "root_lb": 28,
+  "root_solves": 3,
+  "full_lb": 28,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 1,
+  "opt": 37,
+  "epc_lb": 36,
+  "root_lb": 37,
+  "root_solves": 3,
+  "full_lb": 37,
+  "full_nodes": 4,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 2,
+  "opt": 30,
+  "epc_lb": 29,
+  "root_lb": 30,
+  "root_solves": 3,
+  "full_lb": 30,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 3,
+  "opt": 38,
+  "epc_lb": 36,
+  "root_lb": 38,
+  "root_solves": 3,
+  "full_lb": 38,
+  "full_nodes": 4,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 4,
+  "opt": 45,
+  "epc_lb": 43,
+  "root_lb": 45,
+  "root_solves": 3,
+  "full_lb": 45,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 5,
+  "opt": 25,
+  "epc_lb": 24,
+  "root_lb": 25,
+  "root_solves": 3,
+  "full_lb": 25,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 6,
+  "opt": 33,
+  "epc_lb": 32,
+  "root_lb": 33,
+  "root_solves": 3,
+  "full_lb": 33,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "deep",
+  "idx": 7,
+  "opt": 21,
+  "epc_lb": 20,
+  "root_lb": 21,
+  "root_solves": 3,
+  "full_lb": 21,
+  "full_nodes": 4,
+  "full_status": "yes"
+ }
+]

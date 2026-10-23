@@ -1,0 +1,2915 @@
+{
+ "holdout50": {
+  "pss": {
+   "n": 50,
+   "no": 50,
+   "ok": 50,
+   "lp": 65,
+   "nodes": 54,
+   "leaves": 52,
+   "certs": 52,
+   "t": 0.5295307636260986,
+   "cert_t": 0.18080878257751465,
+   "verify_t": 0.07084870338439941,
+   "max_leaves": 2,
+   "max_splits": 1
+  },
+  "alc": {
+   "n": 50,
+   "no": 50,
+   "lp": 68,
+   "nodes": 58,
+   "certs": 54,
+   "t": 0.3982217311859131,
+   "cert_t": 0.1765890121459961
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009183645248413086,
+    "cert_t": 0.0030679702758789062,
+    "verify_t": 0.000789642333984375,
+    "splits": [],
+    "scales": [
+     15
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008130311965942383,
+    "cert_t": 0.0027093887329101562,
+    "verify_t": 0.001148223876953125,
+    "splits": [],
+    "scales": [
+     4
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010654687881469727,
+    "cert_t": 0.003359079360961914,
+    "verify_t": 0.0017600059509277344,
+    "splits": [],
+    "scales": [
+     7
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008296728134155273,
+    "cert_t": 0.0027925968170166016,
+    "verify_t": 0.0012938976287841797,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011229991912841797,
+    "cert_t": 0.003292083740234375,
+    "verify_t": 0.002775907516479492,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 6,
+    "nodes": 3,
+    "leaves": 2,
+    "certs": 2,
+    "time": 0.029335737228393555,
+    "cert_t": 0.009069681167602539,
+    "verify_t": 0.00153350830078125,
+    "splits": [
+     {
+      "i": 8,
+      "mid": 21,
+      "cross": true,
+      "calls": 2,
+      "left_inf": true,
+      "right_inf": true
+     }
+    ],
+    "scales": [
+     23,
+     21
+    ],
+    "support": [
+     14,
+     13
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010237455368041992,
+    "cert_t": 0.002918243408203125,
+    "verify_t": 0.001207113265991211,
+    "splits": [],
+    "scales": [
+     9
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007869720458984375,
+    "cert_t": 0.0028514862060546875,
+    "verify_t": 0.0010857582092285156,
+    "splits": [],
+    "scales": [
+     12
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008437156677246094,
+    "cert_t": 0.0029211044311523438,
+    "verify_t": 0.001233816146850586,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007823467254638672,
+    "cert_t": 0.0026900768280029297,
+    "verify_t": 0.001085519790649414,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009185552597045898,
+    "cert_t": 0.0029075145721435547,
+    "verify_t": 0.001089334487915039,
+    "splits": [],
+    "scales": [
+     7
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00875091552734375,
+    "cert_t": 0.003283977508544922,
+    "verify_t": 0.0014224052429199219,
+    "splits": [],
+    "scales": [
+     15
+    ],
+    "support": [
+     14
+    ]
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008629322052001953,
+    "cert_t": 0.0028870105743408203,
+    "verify_t": 0.0013513565063476562,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010158538818359375,
+    "cert_t": 0.0035257339477539062,
+    "verify_t": 0.0017397403717041016,
+    "splits": [],
+    "scales": [
+     20
+    ],
+    "support": [
+     17
+    ]
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011525869369506836,
+    "cert_t": 0.0034379959106445312,
+    "verify_t": 0.0018277168273925781,
+    "splits": [],
+    "scales": [
+     9
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008420944213867188,
+    "cert_t": 0.0026848316192626953,
+    "verify_t": 0.0011818408966064453,
+    "splits": [],
+    "scales": [
+     4
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00689244270324707,
+    "cert_t": 0.0024938583374023438,
+    "verify_t": 0.000820159912109375,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008369684219360352,
+    "cert_t": 0.002940654754638672,
+    "verify_t": 0.001516580581665039,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00957942008972168,
+    "cert_t": 0.0036122798919677734,
+    "verify_t": 0.0013604164123535156,
+    "splits": [],
+    "scales": [
+     35
+    ],
+    "support": [
+     12
+    ]
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00829315185546875,
+    "cert_t": 0.003035306930541992,
+    "verify_t": 0.0014412403106689453,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009181499481201172,
+    "cert_t": 0.0031685829162597656,
+    "verify_t": 0.001604318618774414,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "ok": true,
+    "lp": 2,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.013115882873535156,
+    "cert_t": 0.0040590763092041016,
+    "verify_t": 0.0014963150024414062,
+    "splits": [],
+    "scales": [
+     33
+    ],
+    "support": [
+     11
+    ]
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009626150131225586,
+    "cert_t": 0.003301382064819336,
+    "verify_t": 0.0014083385467529297,
+    "splits": [],
+    "scales": [
+     14
+    ],
+    "support": [
+     12
+    ]
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009480714797973633,
+    "cert_t": 0.003314971923828125,
+    "verify_t": 0.0016214847564697266,
+    "splits": [],
+    "scales": [
+     6
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011986732482910156,
+    "cert_t": 0.0032837390899658203,
+    "verify_t": 0.0015680789947509766,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00917959213256836,
+    "cert_t": 0.002987384796142578,
+    "verify_t": 0.001405477523803711,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007213115692138672,
+    "cert_t": 0.002582550048828125,
+    "verify_t": 0.0011174678802490234,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011827707290649414,
+    "cert_t": 0.0036818981170654297,
+    "verify_t": 0.0022444725036621094,
+    "splits": [],
+    "scales": [
+     11
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007028818130493164,
+    "cert_t": 0.0026154518127441406,
+    "verify_t": 0.0011074542999267578,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011190414428710938,
+    "cert_t": 0.003048419952392578,
+    "verify_t": 0.0015740394592285156,
+    "splits": [],
+    "scales": [
+     6
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008317947387695312,
+    "cert_t": 0.0029172897338867188,
+    "verify_t": 0.0011341571807861328,
+    "splits": [],
+    "scales": [
+     4
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007848739624023438,
+    "cert_t": 0.0026221275329589844,
+    "verify_t": 0.001104593276977539,
+    "splits": [],
+    "scales": [
+     4
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "ok": true,
+    "lp": 3,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.01600027084350586,
+    "cert_t": 0.0032536983489990234,
+    "verify_t": 0.0018346309661865234,
+    "splits": [],
+    "scales": [
+     7
+    ],
+    "support": [
+     8
+    ]
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010074853897094727,
+    "cert_t": 0.0034356117248535156,
+    "verify_t": 0.0013241767883300781,
+    "splits": [],
+    "scales": [
+     6
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007062435150146484,
+    "cert_t": 0.0025725364685058594,
+    "verify_t": 0.0011050701141357422,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.012235879898071289,
+    "cert_t": 0.00379180908203125,
+    "verify_t": 0.002146482467651367,
+    "splits": [],
+    "scales": [
+     11
+    ],
+    "support": [
+     9
+    ]
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010591506958007812,
+    "cert_t": 0.00347900390625,
+    "verify_t": 0.0017626285552978516,
+    "splits": [],
+    "scales": [
+     13
+    ],
+    "support": [
+     8
+    ]
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.006295680999755859,
+    "cert_t": 0.0026280879974365234,
+    "verify_t": 0.0008852481842041016,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009091377258300781,
+    "cert_t": 0.0030117034912109375,
+    "verify_t": 0.0013082027435302734,
+    "splits": [],
+    "scales": [
+     10
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "ok": true,
+    "lp": 2,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.015543222427368164,
+    "cert_t": 0.004743099212646484,
+    "verify_t": 0.0019354820251464844,
+    "splits": [],
+    "scales": [
+     63
+    ],
+    "support": [
+     22
+    ]
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011050224304199219,
+    "cert_t": 0.003723621368408203,
+    "verify_t": 0.0016705989837646484,
+    "splits": [],
+    "scales": [
+     16
+    ],
+    "support": [
+     14
+    ]
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008022546768188477,
+    "cert_t": 0.002655029296875,
+    "verify_t": 0.0010306835174560547,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "ok": true,
+    "lp": 2,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.015258073806762695,
+    "cert_t": 0.003579854965209961,
+    "verify_t": 0.0017251968383789062,
+    "splits": [],
+    "scales": [
+     11
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009392499923706055,
+    "cert_t": 0.0035610198974609375,
+    "verify_t": 0.0017938613891601562,
+    "splits": [],
+    "scales": [
+     16
+    ],
+    "support": [
+     13
+    ]
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00830531120300293,
+    "cert_t": 0.002973794937133789,
+    "verify_t": 0.0010526180267333984,
+    "splits": [],
+    "scales": [
+     16
+    ],
+    "support": [
+     10
+    ]
+   },
+   {
+    "idx": 45,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008928060531616211,
+    "cert_t": 0.002918243408203125,
+    "verify_t": 0.0011563301086425781,
+    "splits": [],
+    "scales": [
+     7
+    ],
+    "support": [
+     5
+    ]
+   },
+   {
+    "idx": 46,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007559299468994141,
+    "cert_t": 0.0027675628662109375,
+    "verify_t": 0.00104522705078125,
+    "splits": [],
+    "scales": [
+     10
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "ok": true,
+    "lp": 6,
+    "nodes": 3,
+    "leaves": 2,
+    "certs": 2,
+    "time": 0.045014381408691406,
+    "cert_t": 0.022687673568725586,
+    "verify_t": 0.0021905899047851562,
+    "splits": [
+     {
+      "i": 4,
+      "mid": 11,
+      "cross": true,
+      "calls": 3,
+      "left_inf": true,
+      "right_inf": true
+     }
+    ],
+    "scales": [
+     39,
+     56
+    ],
+    "support": [
+     16,
+     15
+    ]
+   },
+   {
+    "idx": 48,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00594019889831543,
+    "cert_t": 0.0024175643920898438,
+    "verify_t": 0.0008270740509033203,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 49,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.006162881851196289,
+    "cert_t": 0.0025451183319091797,
+    "verify_t": 0.0010042190551757812,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   }
+  ]
+ },
+ "synth45": {
+  "pss": {
+   "n": 45,
+   "no": 45,
+   "ok": 45,
+   "lp": 0,
+   "nodes": 45,
+   "leaves": 45,
+   "certs": 0,
+   "t": 0.06256318092346191,
+   "cert_t": 0.0,
+   "verify_t": 0.024222850799560547,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 45,
+   "no": 45,
+   "lp": 45,
+   "nodes": 45,
+   "certs": 45,
+   "t": 0.21815824508666992,
+   "cert_t": 0.11005735397338867
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016100406646728516,
+    "cert_t": 0.0,
+    "verify_t": 0.0004553794860839844,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0007407665252685547,
+    "cert_t": 0.0,
+    "verify_t": 0.00032806396484375,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001199960708618164,
+    "cert_t": 0.0,
+    "verify_t": 0.0004601478576660156,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0011129379272460938,
+    "cert_t": 0.0,
+    "verify_t": 0.0003218650817871094,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016655921936035156,
+    "cert_t": 0.0,
+    "verify_t": 0.0006744861602783203,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016598701477050781,
+    "cert_t": 0.0,
+    "verify_t": 0.0005447864532470703,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.002061128616333008,
+    "cert_t": 0.0,
+    "verify_t": 0.0008356571197509766,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001039743423461914,
+    "cert_t": 0.0,
+    "verify_t": 0.0004055500030517578,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001954317092895508,
+    "cert_t": 0.0,
+    "verify_t": 0.0007550716400146484,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0007693767547607422,
+    "cert_t": 0.0,
+    "verify_t": 0.00036835670471191406,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016634464263916016,
+    "cert_t": 0.0,
+    "verify_t": 0.0007557868957519531,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0017354488372802734,
+    "cert_t": 0.0,
+    "verify_t": 0.00044727325439453125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0013041496276855469,
+    "cert_t": 0.0,
+    "verify_t": 0.0005292892456054688,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0019600391387939453,
+    "cert_t": 0.0,
+    "verify_t": 0.0006535053253173828,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0008754730224609375,
+    "cert_t": 0.0,
+    "verify_t": 0.00034809112548828125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001650094985961914,
+    "cert_t": 0.0,
+    "verify_t": 0.0007808208465576172,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001965761184692383,
+    "cert_t": 0.0,
+    "verify_t": 0.0006606578826904297,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0011255741119384766,
+    "cert_t": 0.0,
+    "verify_t": 0.0005307197570800781,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0017726421356201172,
+    "cert_t": 0.0,
+    "verify_t": 0.0007522106170654297,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0023365020751953125,
+    "cert_t": 0.0,
+    "verify_t": 0.0008816719055175781,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0010306835174560547,
+    "cert_t": 0.0,
+    "verify_t": 0.000423431396484375,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0010619163513183594,
+    "cert_t": 0.0,
+    "verify_t": 0.00048351287841796875,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001302480697631836,
+    "cert_t": 0.0,
+    "verify_t": 0.0006513595581054688,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.002008199691772461,
+    "cert_t": 0.0,
+    "verify_t": 0.0005435943603515625,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0011341571807861328,
+    "cert_t": 0.0,
+    "verify_t": 0.00045871734619140625,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0009942054748535156,
+    "cert_t": 0.0,
+    "verify_t": 0.0005006790161132812,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0013401508331298828,
+    "cert_t": 0.0,
+    "verify_t": 0.0005297660827636719,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0008089542388916016,
+    "cert_t": 0.0,
+    "verify_t": 0.0002791881561279297,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016925334930419922,
+    "cert_t": 0.0,
+    "verify_t": 0.0006344318389892578,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.002565622329711914,
+    "cert_t": 0.0,
+    "verify_t": 0.000865936279296875,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0017468929290771484,
+    "cert_t": 0.0,
+    "verify_t": 0.0006275177001953125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0009274482727050781,
+    "cert_t": 0.0,
+    "verify_t": 0.0004150867462158203,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0008578300476074219,
+    "cert_t": 0.0,
+    "verify_t": 0.0004458427429199219,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0015745162963867188,
+    "cert_t": 0.0,
+    "verify_t": 0.0005190372467041016,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0010001659393310547,
+    "cert_t": 0.0,
+    "verify_t": 0.0003895759582519531,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0011777877807617188,
+    "cert_t": 0.0,
+    "verify_t": 0.0005114078521728516,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0012366771697998047,
+    "cert_t": 0.0,
+    "verify_t": 0.0005900859832763672,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.00031185150146484375,
+    "cert_t": 0.0,
+    "verify_t": 0.00022411346435546875,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0013518333435058594,
+    "cert_t": 0.0,
+    "verify_t": 0.00047135353088378906,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.001894235610961914,
+    "cert_t": 0.0,
+    "verify_t": 0.000675201416015625,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016515254974365234,
+    "cert_t": 0.0,
+    "verify_t": 0.0007393360137939453,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0009105205535888672,
+    "cert_t": 0.0,
+    "verify_t": 0.00032639503479003906,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0010390281677246094,
+    "cert_t": 0.0,
+    "verify_t": 0.000385284423828125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016605854034423828,
+    "cert_t": 0.0,
+    "verify_t": 0.0005402565002441406,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0010805130004882812,
+    "cert_t": 0.0,
+    "verify_t": 0.0005023479461669922,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   }
+  ]
+ },
+ "large_a": {
+  "pss": {
+   "n": 8,
+   "no": 8,
+   "ok": 8,
+   "lp": 1,
+   "nodes": 8,
+   "leaves": 8,
+   "certs": 1,
+   "t": 0.047408342361450195,
+   "cert_t": 0.003729581832885742,
+   "verify_t": 0.01778244972229004,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 8,
+   "no": 8,
+   "lp": 8,
+   "nodes": 8,
+   "certs": 8,
+   "t": 0.06708836555480957,
+   "cert_t": 0.024415016174316406
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.007231235504150391,
+    "cert_t": 0.0,
+    "verify_t": 0.0019867420196533203,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0020170211791992188,
+    "cert_t": 0.0,
+    "verify_t": 0.001932382583618164,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0025064945220947266,
+    "cert_t": 0.0,
+    "verify_t": 0.002412080764770508,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0023343563079833984,
+    "cert_t": 0.0,
+    "verify_t": 0.0022649765014648438,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.005831241607666016,
+    "cert_t": 0.0,
+    "verify_t": 0.003040313720703125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.005596160888671875,
+    "cert_t": 0.0,
+    "verify_t": 0.0016086101531982422,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.014135122299194336,
+    "cert_t": 0.003729581832885742,
+    "verify_t": 0.0018432140350341797,
+    "splits": [],
+    "scales": [
+     11
+    ],
+    "support": [
+     8
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.007756710052490234,
+    "cert_t": 0.0,
+    "verify_t": 0.0026941299438476562,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   }
+  ]
+ },
+ "large_b": {
+  "pss": {
+   "n": 10,
+   "no": 10,
+   "ok": 10,
+   "lp": 0,
+   "nodes": 10,
+   "leaves": 10,
+   "certs": 0,
+   "t": 0.07883071899414062,
+   "cert_t": 0.0,
+   "verify_t": 0.04356884956359863,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 10,
+   "no": 10,
+   "lp": 10,
+   "nodes": 10,
+   "certs": 10,
+   "t": 0.12140536308288574,
+   "cert_t": 0.04118180274963379
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.01171112060546875,
+    "cert_t": 0.0,
+    "verify_t": 0.005006313323974609,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.009357690811157227,
+    "cert_t": 0.0,
+    "verify_t": 0.003843545913696289,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.004906892776489258,
+    "cert_t": 0.0,
+    "verify_t": 0.004807710647583008,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.006731510162353516,
+    "cert_t": 0.0,
+    "verify_t": 0.0025420188903808594,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.013329029083251953,
+    "cert_t": 0.0,
+    "verify_t": 0.006369829177856445,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0049686431884765625,
+    "cert_t": 0.0,
+    "verify_t": 0.004754781723022461,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0045011043548583984,
+    "cert_t": 0.0,
+    "verify_t": 0.0043392181396484375,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.011969566345214844,
+    "cert_t": 0.0,
+    "verify_t": 0.005837917327880859,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.008487939834594727,
+    "cert_t": 0.0,
+    "verify_t": 0.0033338069915771484,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0028672218322753906,
+    "cert_t": 0.0,
+    "verify_t": 0.0027337074279785156,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   }
+  ]
+ },
+ "large_het": {
+  "pss": {
+   "n": 8,
+   "no": 8,
+   "ok": 8,
+   "lp": 1,
+   "nodes": 8,
+   "leaves": 8,
+   "certs": 1,
+   "t": 0.081878662109375,
+   "cert_t": 0.006241798400878906,
+   "verify_t": 0.04828023910522461,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 8,
+   "no": 8,
+   "lp": 8,
+   "nodes": 8,
+   "certs": 8,
+   "t": 0.16876602172851562,
+   "cert_t": 0.05925178527832031
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.01213979721069336,
+    "cert_t": 0.0,
+    "verify_t": 0.007902383804321289,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.019370079040527344,
+    "cert_t": 0.006241798400878906,
+    "verify_t": 0.004814624786376953,
+    "splits": [],
+    "scales": [
+     17
+    ],
+    "support": [
+     14
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0038182735443115234,
+    "cert_t": 0.0,
+    "verify_t": 0.003665447235107422,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.01368403434753418,
+    "cert_t": 0.0,
+    "verify_t": 0.009560585021972656,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0030355453491210938,
+    "cert_t": 0.0,
+    "verify_t": 0.002852916717529297,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.011581182479858398,
+    "cert_t": 0.0,
+    "verify_t": 0.007019758224487305,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0048978328704833984,
+    "cert_t": 0.0,
+    "verify_t": 0.004796504974365234,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.013351917266845703,
+    "cert_t": 0.0,
+    "verify_t": 0.007668018341064453,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   }
+  ]
+ },
+ "hard3": {
+  "pss": {
+   "n": 12,
+   "no": 12,
+   "ok": 12,
+   "lp": 4,
+   "nodes": 12,
+   "leaves": 12,
+   "certs": 4,
+   "t": 0.06896543502807617,
+   "cert_t": 0.011427640914916992,
+   "verify_t": 0.01793956756591797,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 12,
+   "no": 12,
+   "lp": 12,
+   "nodes": 12,
+   "certs": 12,
+   "t": 0.08263421058654785,
+   "cert_t": 0.03745698928833008
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.004687786102294922,
+    "cert_t": 0.0,
+    "verify_t": 0.0013208389282226562,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0037479400634765625,
+    "cert_t": 0.0,
+    "verify_t": 0.0012466907501220703,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.006361484527587891,
+    "cert_t": 0.0025877952575683594,
+    "verify_t": 0.0009138584136962891,
+    "splits": [],
+    "scales": [
+     8
+    ],
+    "support": [
+     6
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.00858926773071289,
+    "cert_t": 0.0026292800903320312,
+    "verify_t": 0.0013632774353027344,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0065844058990478516,
+    "cert_t": 0.0,
+    "verify_t": 0.002948760986328125,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.010605335235595703,
+    "cert_t": 0.0034477710723876953,
+    "verify_t": 0.001497030258178711,
+    "splits": [],
+    "scales": [
+     8
+    ],
+    "support": [
+     7
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.003215789794921875,
+    "cert_t": 0.0,
+    "verify_t": 0.0013861656188964844,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0016636848449707031,
+    "cert_t": 0.0,
+    "verify_t": 0.0014345645904541016,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0045201778411865234,
+    "cert_t": 0.0,
+    "verify_t": 0.0014200210571289062,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.0029294490814208984,
+    "cert_t": 0.0,
+    "verify_t": 0.0009028911590576172,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011727333068847656,
+    "cert_t": 0.0027627944946289062,
+    "verify_t": 0.0016837120056152344,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "ok": true,
+    "lp": 0,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 0,
+    "time": 0.004332780838012695,
+    "cert_t": 0.0,
+    "verify_t": 0.001821756362915039,
+    "splits": [],
+    "scales": [
+     null
+    ],
+    "support": [
+     0
+    ]
+   }
+  ]
+ },
+ "deep8": {
+  "pss": {
+   "n": 8,
+   "no": 8,
+   "ok": 8,
+   "lp": 8,
+   "nodes": 8,
+   "leaves": 8,
+   "certs": 8,
+   "t": 0.0663003921508789,
+   "cert_t": 0.021625518798828125,
+   "verify_t": 0.01105809211730957,
+   "max_leaves": 1,
+   "max_splits": 0
+  },
+  "alc": {
+   "n": 8,
+   "no": 8,
+   "lp": 8,
+   "nodes": 8,
+   "certs": 8,
+   "t": 0.048075199127197266,
+   "cert_t": 0.02157735824584961
+  },
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007802009582519531,
+    "cert_t": 0.002819538116455078,
+    "verify_t": 0.0013818740844726562,
+    "splits": [],
+    "scales": [
+     8
+    ],
+    "support": [
+     9
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008570671081542969,
+    "cert_t": 0.002850770950317383,
+    "verify_t": 0.0017583370208740234,
+    "splits": [],
+    "scales": [
+     5
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.006747245788574219,
+    "cert_t": 0.0023298263549804688,
+    "verify_t": 0.0009882450103759766,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.011159658432006836,
+    "cert_t": 0.003228425979614258,
+    "verify_t": 0.002365589141845703,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     3
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.009966373443603516,
+    "cert_t": 0.002843618392944336,
+    "verify_t": 0.0014743804931640625,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.008313894271850586,
+    "cert_t": 0.002458810806274414,
+    "verify_t": 0.0009472370147705078,
+    "splits": [],
+    "scales": [
+     3
+    ],
+    "support": [
+     4
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.007063388824462891,
+    "cert_t": 0.002576589584350586,
+    "verify_t": 0.0011110305786132812,
+    "splits": [],
+    "scales": [
+     2
+    ],
+    "support": [
+     2
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "ok": true,
+    "lp": 1,
+    "nodes": 1,
+    "leaves": 1,
+    "certs": 1,
+    "time": 0.006677150726318359,
+    "cert_t": 0.0025179386138916016,
+    "verify_t": 0.0010313987731933594,
+    "splits": [],
+    "scales": [
+     4
+    ],
+    "support": [
+     5
+    ]
+   }
+  ]
+ },
+ "_total": {
+  "pss": {
+   "n": 141,
+   "no": 141,
+   "ok": 141,
+   "lp": 79,
+   "nodes": 145,
+   "leaves": 143,
+   "certs": 66,
+   "t": 0.9354774951934814,
+   "cert_t": 0.22383332252502441,
+   "verify_t": 0.23370075225830078
+  },
+  "alc": {
+   "n": 141,
+   "no": 141,
+   "lp": 159,
+   "nodes": 149,
+   "certs": 145,
+   "t": 1.104349136352539,
+   "cert_t": 0.47052931785583496
+  }
+ }
+}

@@ -1,0 +1,134 @@
+[
+ {
+  "set": "hard3",
+  "idx": 0,
+  "opt": 28,
+  "epc_lb": 28,
+  "root_lb": 28,
+  "root_solves": 1,
+  "full_lb": 28,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 1,
+  "opt": 36,
+  "epc_lb": 36,
+  "root_lb": 36,
+  "root_solves": 1,
+  "full_lb": 36,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 2,
+  "opt": 29,
+  "epc_lb": 28,
+  "root_lb": 29,
+  "root_solves": 3,
+  "full_lb": 29,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 3,
+  "opt": 37,
+  "epc_lb": 36,
+  "root_lb": 37,
+  "root_solves": 3,
+  "full_lb": 37,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 4,
+  "opt": 38,
+  "epc_lb": 38,
+  "root_lb": 38,
+  "root_solves": 1,
+  "full_lb": 38,
+  "full_nodes": 1,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 5,
+  "opt": 39,
+  "epc_lb": 37,
+  "root_lb": 39,
+  "root_solves": 3,
+  "full_lb": 39,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 6,
+  "opt": 33,
+  "epc_lb": 33,
+  "root_lb": 33,
+  "root_solves": 1,
+  "full_lb": 33,
+  "full_nodes": 4,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 7,
+  "opt": 48,
+  "epc_lb": 48,
+  "root_lb": 48,
+  "root_solves": 1,
+  "full_lb": 48,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 8,
+  "opt": 31,
+  "epc_lb": 31,
+  "root_lb": 31,
+  "root_solves": 1,
+  "full_lb": 31,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 9,
+  "opt": 27,
+  "epc_lb": 27,
+  "root_lb": 27,
+  "root_solves": 1,
+  "full_lb": 27,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 10,
+  "opt": 42,
+  "epc_lb": 41,
+  "root_lb": 42,
+  "root_solves": 3,
+  "full_lb": 42,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "hard3",
+  "idx": 11,
+  "opt": 35,
+  "epc_lb": 35,
+  "root_lb": 35,
+  "root_solves": 1,
+  "full_lb": 35,
+  "full_nodes": 4,
+  "full_status": "yes"
+ }
+]
