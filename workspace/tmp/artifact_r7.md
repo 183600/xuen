@@ -1,39 +1,40 @@
-# 产物区 · v2.5：X-DUB/PACE-ΠA-BBX
+# 产物区 · v3.0：X-DUB/PACE-ΠA-WOS
 
-> **BBX = Branch-and-Bound eXtra**。v2.4 的 `ICC`、`CC` 级联、`PACE`、可选 `CPS` 全部保留；本轮只替换级联里的 **OS 内核**：
-> `OS`（tuple 状态、无节点级剪枝）→ **`OS-RSI`**（Ready-Set Infeasibility 剪枝 + 打包状态 BPK + 增量 ready 集）。
-> 级联顺序与门不变：`ICC → OS-RSI(B=10k) → PACE`；`os_gate = full ∧ n≤16 ∧ 0≤S≤4`。
-> 状态：设计稿 + 可运行实现 + **held-out 50 例 0.5465→0.2877 s（1.90×）** + **5 残例 0.04982→0.02396 s（2.08×）** + **hard3 12 例 1.41×** + **deep 8 例 1.34×** + **38 核心 1.09×** + **141 合计 1.63×** + **50/50 例节点下降（80,463→57,236）** + **1,080 组暴力 0 不一致** + **600 个 A≠0 状态 0 不一致** + **70+45 张 YES 排程验证** + **53 张 ICC witness 重算** + **146/146 与 v2.4 同判决**。未接 PSPLIB，未做 Coq/Lean。
+> **WOS = Word-level OS**。v2.4 的 `ICC`、级联、`PACE`、可选 `CPS` 全部保留；v2.5 的 `RSI` 与打包状态全部保留。本轮只替换级联里的 **OS 内核**，并**恢复**一条被 v2.5 否掉的规则：
+> `OS-RSI`（packed + RSI） → **`WOS`**（word 状态 + 无借位 PLACE + SWAR 位图 + 倍增 run + 入口 forcing fixpoint + memo 前置）。
+> 级联顺序与门不变：`ICC → WOS(B=10k) → PACE`；`os_gate = full ∧ n≤16 ∧ 0≤S≤4`。
+> 状态：设计稿 + 可运行实现 + **held-out 50 例 0.2206→0.1230 s（1.79×，节点 −34.7%）** + **5 残例 1.78×（节点 −46.7%）** + **hard3 1.58×** + **deep 1.38×** + **141 合计 1.47×（OS 主导三集 1.73×）** + **内核相对 v2.5 2.00×、相对 v2.4 4.11×** + **1,260 组暴力 0 不一致** + **400 个 A≠0 状态 0 不一致** + **70+45 张 YES 排程验证（8/8 m=4）** + **146/146 与 v2.5 同判决**。未接 PSPLIB，未做 Coq/Lean。
 
 ---
 
 ## 0. 版本关系与本轮增量
 
-v2.4 的资产全部保留：
+v2.5 的资产全部保留：
 
 - `ICC`：区间容量证书，只返回有 witness 的 NO；`icc-full` + `icc-mand`；45/45 synth、8/12 hard3、0/50 held-out。
-- `CC`：`ICC → OS(10k) → PACE`；ICC/OS 都 UNKNOWN 才进 PACE；每层 sound，UNKNOWN 往下走。
-- `OS`：全资格下对优先序做 DFS，SGS 把顺序传播成最早可行起点；active schedule 定理保证 `NO ⇔ 不可行`（未撞 cap）。
-- `CPS`：链 placement + residual 精确回溯；本轮默认 `probe=0`，只保留 `probe>0` 开关。
+- `RSI`：`Ready(σ)` 中某任务在当前容量剖面里没有任何可行起点 ⇒ σ 不可行。50 个 held-out 上剪掉 28.9% 节点。
+- `BPK`：容量剖面 `CP`、释放向量 `RP`、前驱计数 `PC`、可用槽位图 `AV`、ready 位集 `RDY`。
 - `PACE`：v2.2 配置的完整后备；`n>16`、异资格、`S>4` 仍由它兜底。
+- 级联：`ICC → OS(B=10k) → PACE`；门 `full ∧ n≤16 ∧ 0≤S≤4`。
 
 本轮增量只有四件事：
 
-1. **RSI 剪枝**：在 OS 节点入口检查 `Ready(σ)`；若某个 ready 任务在当前容量里没有任何可行起点，立即 NO。这是节点级 fail-first，不是分支顺序。
-2. **打包状态 BPK**：容量剖面 `CP`、释放向量 `RP`、前驱计数 `PC`、可用槽位图 `AV` 全部压进整数；memo key 是 `(mask, CP, RP)`；`EARLIEST` 用连续 1 的位运算；ready 集增量维护。
-3. **序不变性定理**：NO + 精确 memo + 无 dominance 时，OS 节点数与兄弟顺序无关。顺序只在 YES 上影响早停。
-4. **HPO 成本模型 + 负结果**：`N1(c0+ce) < N0 c0`；dominance/EDF/RICC/ATPF/forcing 都是「节点更少、时间更慢」；forcing 的阈值是 2.29 µs 额外常数；反向 OS 的 oracle 只比单向少 20%，doubling race 是 3× 更差。另做极小核心实验：核心平均只小 7.6%，序树小 30.3%，但提取成本 2.5×，只能离线用。
+1. **word 状态**：`PLACE` 变成一次大整数减法（逐字段减 1、无借位）；`AV` 不再存储，由 `CP` 用 SWAR 导出；`EARLIEST` 用倍增找连续 1；memo key 合成一个整数。
+2. **入口 forcing fixpoint**：ready 任务若 `es = d_i − p_i`（唯一可行起点），直接提交，不进分支；循环到不动点。
+3. **memo 前置**：memo key 在 fixpoint 的**每一次迭代顶部**检查，而不是在扫描之后。这是 forcing 从「输 10%」变成「赢 22%」的关键。
+4. **三条否证 + 一条翻盘**：精确商（4/57,236 节点）、EPC（0/57,236）、深度门控 adaptivity（单调，无收益）被否；forcing 在低成本核心里翻盘（`ce` 1.56→0.44 µs，阈值 1.18 µs）。
 
 退化关系：
 
 ```text
-rsi=False                         → v2.4 OS 的语义 + 打包常数（80,463 节点，1.50×）
-order=lpt/edd/spt                 → NO 节点数完全不变（定理 3）；YES 早停受影响
-probe>0                           → 级联里加回可选 CPS 守卫（v2.4 语义）
-n>16 ∨ ¬full ∨ S∉[0,4]           → PACE（与 v2.4 相同）
+force=False                       → 纯 WOS（57,236 节点，0.1265 s；= v2.5 的树 + 2.21 µs 常数）
+fdep=K                            → 只在 dep<K 开 forcing；K=12 与全开打平，无收益
+hull 商 / EPC                     → 死代码，不进生产路径（§5）
+order=lpt/edd/spt                 → NO 节点数不变（v2.5 定理 3）；只影响 YES 早停
+n>16 ∨ ¬full ∨ S∉[0,4]           → PACE（与 v2.5 相同）
 ```
 
-本轮**没有**新增分布相关的门；`m` 和 `h` 不再需要门：BPK 的字段宽由 `bit_length(m)` 与 `bit_length(max(h,max est))` 动态决定。v2.4 的数据 `m∈{3,4}`、`h∈[7,45]`；`m=4` 的 8 个 synth YES 由 BPK 正常处理（见 §5.10 的回退记录）。
+本轮**没有**新增分布相关的门；`m`、`h` 仍由动态字段宽 `cw=bit_length(m)`、`rw=bit_length(max(h,max est))` 处理。
 
 ---
 
@@ -45,18 +46,21 @@ n>16 ∨ ¬full ∨ S∉[0,4]           → PACE（与 v2.4 相同）
 | `σ=(R,A,est)` | 状态：未调度集、机器可用时刻、最早释放 |
 | `full(σ)` | 全资格：`∀i∈R, E_i={0..m−1}` |
 | `r_i,d_i` | `r_i=est_i`，`d_i=h−q_i(R)`，`q_i` 是不含 `p_i` 的最长尾 |
-| `c_σ(t)` | `t` 时刻可用机器数 `|{k:A_k≤t}|`；全资格下是精确聚合容量 |
+| `c_σ(t)` | `t` 时刻可用机器数 `card({k:A_k≤t})`；全资格下是精确聚合容量 |
 | `Ready(σ)` | `{i∈R : pred(i)∩R=∅}` |
-| `slot_σ(i)` | `{t : r_i≤t≤d_i−p_i, c_σ(u)≥1 ∀u∈[t,t+p_i)}` |
-| `es_σ(i)` | `min slot_σ(i)`，空则为 `⊥` |
+| `es_σ(i)` | `min{t : r_i≤t≤d_i−p_i, c_σ(u)≥1 ∀u∈[t,t+p_i)}`，空为 `⊥` |
 | `S(σ)` | 链松弛 `h−cp(σ)`，`cp(σ)=max_i(r_i+p_i+q_i)` |
-| `E` | OS 展开的节点数（≤ active 排程数） |
+| `E` | WOS 展开的状态数（= memo key 数） |
 | `B` | OS 节点预算，默认 10,000 |
 | `N_P` | PACE 节点预算，默认 3,000,000 |
 | `cw,cmask` | 容量字段宽 / 掩码：`cw=max(1,bit_length(m))`，`cmask=2^cw−1` |
 | `rw,rmask` | 释放字段宽 / 掩码：`rw=max(1,bit_length(max(h,max est)))` |
-| `CP,RP,PC,AV,RDY` | 打包容量、释放、前驱计数、可用槽位图、ready 位集 |
-| `c0,ce` | 基础每节点成本、剪枝带来的额外每节点成本 |
+| `CP,RP,PC,RDY` | 打包容量、释放、前驱计数、ready 位集 |
+| `ONES` | `Σ_{t<h} 2^{cw·t}`，每个容量字段的最低位置 1 |
+| `rep[p]` | `Σ_{j<p} 2^{cw·j}`，长度 p 的字段全 1 常数 |
+| `AV` | 由 `CP` 导出的可用槽位图，bit `cw·t` = 1 ⇔ `c(t)>0` |
+| `K(σ)` | 单整数 memo key |
+| `c0,ce,c1` | 基础每节点成本、剪枝额外成本、剪枝后每节点成本 `c0+ce` |
 | `N0,N1` | 不剪枝 / 剪枝的节点数 |
 
 ---
@@ -65,591 +69,435 @@ n>16 ∨ ¬full ∨ S∉[0,4]           → PACE（与 v2.4 相同）
 
 ### 2.1 状态、ready、可行起点
 
-沿用 v2.2/v2.3。给定 `σ=(R,A,est)` 与 `h`：
+沿用 v2.2/v2.3/v2.5。给定 `σ=(R,A,est)` 与 `h`：
 
 ```text
-r_i = est_i ,        d_i = h − q_i(R) ,        c_σ(t) = |{k : A_k ≤ t}| .
+r_i = est_i ,   d_i = h − q_i(R) ,   c_σ(t) = |{k : A_k ≤ t}| .
+Ready(σ) = { i∈R : pred(i)∩R = ∅ } .
+es_σ(i) = min{ t : r_i ≤ t ≤ d_i − p_i ,  c_σ(u) ≥ 1 ∀u∈[t,t+p_i) } .
 ```
 
-全资格时 `(r,d,c_σ,≺)` 精确刻画剩余问题（v2.2 引理 2）。`q_i(R)` 只依赖 i 的后继；若 i 仍在 R 中，它的所有后继也必在 R 中（否则 i 应先被调度），所以根层算出的 `q_i` 对每个剩余 i 仍然精确。
+全资格时 `(r,d,c_σ,≺)` 精确刻画剩余问题。`q_i(R)` 只依赖 i 的后继；若 i 仍在 R 中，它的所有后继也必在 R 中，所以根层算出的 `q_i` 对每个剩余 i 仍然精确。
 
-**定义 1（Ready 与 slot）**。
+**引理 0（NO 实例的每个可达节点都不可行）**。若根 `σ0` 不可行，且 `σ` 由 `σ0` 经一串合法放置到达，则 `σ` 不可行。证明：把 `σ` 的一个完成接在那串放置之后，就是 `σ0` 的一个完成。∎
 
-```text
-Ready(σ) = { i∈R : pred(i)∩R=∅ } ,
-slot_σ(i) = { t : r_i ≤ t ≤ d_i−p_i ,  c_σ(u)≥1  ∀u∈[t,t+p_i) } .
-```
+这条看似显然的引理决定了本轮的实验设计：在任何 NO 实例上，**所有可达节点都是不可行的**，所以任何可靠的必要条件在可达节点上都不会误报，只会「太晚才报」。一个局部条件的价值 = 它平均在多高的位置报死，而不是它的命中率。
 
-**定义 2（RSI）**。若存在 `i∈Ready(σ)` 使 `slot_σ(i)=∅`，则 `σ` 不可行；OS 在节点入口直接返回 NO。
-
-### 2.2 打包状态 BPK
-
-n≤16 是 OS 门的一部分；因此任务索引用 4 bits 足够。容量和释放的字段宽动态选择：
+### 2.2 word 编码
 
 ```text
-cw   = max(1, bit_length(m)) ,                 cmask = 2^cw − 1
-rw   = max(1, bit_length(max(h, max_i est_i))) , rmask = 2^rw − 1
-CP   = Σ_{t=0}^{h−1} c(t) · 2^{cw·t}
-RP   = Σ_{i∈R} r_i · 2^{rw·i}
-PC   = Σ_{i∈R} pred_R(i) · 2^{4i}
-AV   = Σ_{t=0}^{h−1} [c(t)>0] · 2^t
-RDY  = Σ_{i∈R, pred_R(i)=0} 2^i
+CP  = Σ_{t=0}^{h−1} c(t) · 2^{cw·t}          cw = max(1, bit_length(m))
+RP  = Σ_{i∈R} r_i · 2^{rw·i}                rw = max(1, bit_length(max(h, max est)))
+PC  = Σ_{i∈R} pred_R(i) · 2^{4i}             4 bits 足够，因为 n≤16
+RDY = Σ_{i∈R, pred_R(i)=0} 2^i
+ONES= Σ_{t=0}^{h−1} 2^{cw·t}
+rep[p] = Σ_{j=0}^{p−1} 2^{cw·j}
+K   = CP | (RP << cw·h) | (mask << (cw·h + rw·n))
 ```
 
 **不变量**：
 
 ```text
-(I1) 0 ≤ c(t) ≤ m ≤ cmask
-(I2) 0 ≤ r_i ≤ rmask；i∉R 的 RP 字段为 0
-(I3) 0 ≤ pred_R(i) ≤ n−1 ≤ 15（4 bits）
-(I4) AV 的第 t 位 = 1 ⇔ c(t)>0
-(I5) RDY 的第 i 位 = 1 ⇔ i∈R ∧ pred_R(i)=0
+(I1) 0 ≤ c(t) ≤ m ≤ 2^cw − 1
+(I2) 0 ≤ r_i ≤ 2^rw − 1；i∉R 的 RP 字段为 0
+(I3) 0 ≤ pred_R(i) ≤ n−1 ≤ 15
+(I4) AV 的 bit cw·t = 1 ⇔ c(t) > 0
+(I5) RDY 的 bit i = 1 ⇔ i∈R ∧ pred_R(i)=0
+(I6) K 的三个字段互不重叠，K 是 (mask,CP,RP) 的单射编码
 ```
 
-**memo key** 是 `(mask, CP, RP)`。`PC`、`RDY`、`AV` 都是 `(mask, CP, RP)` 与固定优先图的函数，所以 key 是精确的，不是哈希近似。
-
-### 2.3 OS-RSI
+### 2.3 WOS 转移
 
 ```text
-OS-RSI(σ; B):
-  (CP,AV,RP,PC,RDY) ← ENCODE(σ)
-  seen ← ∅ ; nodes ← 0
-  dfs(M, CP, AV, RP, PC, RDY):
-    nodes += 1
-    if nodes > B: return UNKNOWN
-    if M = 0: return YES
-    key ← (M, CP, RP)
-    if key ∈ seen: return NO
-    cand ← []
-    for i ∈ bits(RDY):
-        t ← EARLIEST(AV, r_i, p_i, d_i)
-        if t = ⊥:
-            seen.add(key); return NO          # RSI
-        cand.append((i,t))
-    if cand = ∅:
-        seen.add(key); return NO
-    for (i,t) in ORDER(cand):                 # NO 上 ORDER 不影响节点数
-        (CP',AV') ← PLACE(CP,AV,t,p_i)
-        (RP',PC',RDY') ← ADVANCE(RP,PC,RDY,i,t)
-        if dfs(M\{i}, CP',AV',RP',PC',RDY') = YES: return YES
-    seen.add(key); return NO
+AV(CP) = ( CP | CP>>1 | … | CP>>(cw−1) ) & ONES
+
+EARLIEST(CP, r, p, d):
+  last ← d − p
+  if last < r: return ⊥
+  x ← AV(CP) >> (cw·r)
+  if x = 0: return ⊥
+  rr ← x ; L ← 1
+  while 2L ≤ p:
+      rr ← rr & (rr >> (cw·L))
+      if rr = 0: return ⊥
+      L ← 2L
+  if L < p: rr ← rr & (rr >> (cw·(p−L)))
+  if rr = 0: return ⊥
+  t ← r + ctz(rr)/cw
+  return t if t ≤ last else ⊥
+
+PLACE(CP, t, p)  =  CP − (rep[p] << (cw·t))          # 一次减法
+
+ADVANCE(RP,PC,RDY,i,t): 与 v2.5 §3.3 逐字相同
 ```
 
-`ORDER` 默认 LPT（按 `−p_i, d_i`）；这只影响 YES 的早停。
+`PLACE` 与 `v2.5` 的逐槽循环**在语义上完全相同**，只是用一次无借位减法实现（引理 2）。`AV` 与 `v2.5` 维护的位图**在语义上完全相同**，只是每次由 `CP` 导出（引理 3）。
 
-### 2.4 级联与门
+### 2.4 forcing fixpoint 与 memo 顺序
 
 ```text
-BB(σ,h):
+WOS-NODE(σ):
+  loop:
+     if R = ∅: return YES
+     key ← K(σ)
+     if key ∈ seen: return NO                  # ← 前置
+     av ← AV(CP)
+     scan ready: for i∈Ready(σ):
+         t_i ← EARLIEST(...)
+         if t_i = ⊥: seen.add(key); return NO  # RSI
+         if t_i = d_i − p_i: forced ← i; break  # 唯一起点
+     if forcing ∧ forced ≠ ∅:
+         commit forced; continue
+     break
+  branch over the scanned candidates
+```
+
+**注意** `key` 必须在循环顶部算：fixpoint 会改 `(mask,CP,RP)`，而每个中间状态也都应该被 memo 覆盖。
+
+### 2.5 级联与门
+
+```text
+WOS-CASCADE(σ,h):
   1  if full(σ):
-        v ← ICC(σ,h)
-        if v=NO: return v
+        v ← ICC(σ,h); if v=NO: return v
   2  if full(σ) ∧ |R|≤16 ∧ 0≤S(σ)≤4:
-        v ← OS-RSI(σ; B=10000)
-        if v≠UNKNOWN: return v
+        v ← WOS(σ; B=10000); if v≠UNKNOWN: return v
   3  return PACE(σ,h)
-```
 
-门：
-
-```text
 icc_gate(σ) = full(σ)
 os_gate(σ)  = full(σ) ∧ |R|≤16 ∧ 0≤S(σ)≤4
 ```
 
-`B` 和 `N_P` 是预算，不是正确性参数。门关掉只少剪，不会多剪。
-
-### 2.5 HPO 成本模型
-
-对一个候选剪枝（或 forcing、dominance、EDF 等）：
-
-```text
-T0 = N0 · c0                 # 不剪枝
-T1 = N1 · (c0 + ce)          # 剪枝
-值得做 ⇔ T1 < T0 ⇔ N1/N0 < c0/(c0+ce) .
-```
-
-节点数最小不是目标；目标是 `T1<T0`。本文用它解释为什么 forcing / EDF / RICC / dominance 在 Python 里输。
+`B`、`N_P` 是预算，不是正确性参数。门关掉只少剪，不会多剪。
 
 ---
 
 ## 3. 算法
 
-### 3.1 ICC（v2.4，原样）
-
-在根状态上枚举窗口 `[a,b]`，用 `icc-full`（整任务包含）和 `icc-mand`（强制重叠）两种容量不等式返回 NO witness；否则 UNKNOWN。细节与证明见 v2.4 产物区 §2.2、§4.1–4.3。本轮不改。
-
-### 3.2 EARLIEST / PLACE
-
 ```text
-EARLIEST(AV, t0, p, hi):
-  last ← hi − p
-  if last < t0: return ⊥
-  x ← AV >> t0
-  c ← x
-  for k in 1..p−1:
-      c ← c & (x >> k)
-      if c = 0: return ⊥
-  s ← ctz(c)                       # c 的最低 set bit
-  if t0+s > last: return ⊥
-  return t0+s
-
-PLACE(CP, AV, t, p):
-  CP' ← CP ; AV' ← AV
-  for u in t..t+p−1:
-      v ← ((CP' >> (cw·u)) & cmask) − 1
-      CP' ← CP' − (1 << (cw·u))
-      if v = 0: AV' ← AV' & ~(1 << u)
-  return CP', AV'
+WOS(σ; B):
+  (CP,RP,PC,RDY) ← ENCODE(σ)
+  seen ← ∅ ; nodes ← 0
+  dfs(mask, CP, RP, PC, RDY):
+    nodes += 1 ; if nodes > B: return UNKNOWN
+    while True:
+        if mask = 0: return YES
+        key ← CP | (RP << cw·h) | (mask << (cw·h+rw·n))
+        if key ∈ seen: return NO
+        av ← AV(CP)
+        cand ← [] ; fi ← ⊥
+        for i ∈ bits(RDY):
+            t ← EARLIEST(CP, r_i, p_i, d_i)          # r_i 从 RP 取
+            if t = ⊥: seen.add(key); return NO       # RSI
+            cand.append((i,t))
+            if force ∧ t = d_i − p_i: fi ← i; break
+        if ¬force ∨ fi = ⊥: break
+        CP ← CP − (rep[p_fi] << cw·(d_fi − p_fi))    # 唯一位置
+        (RP,PC,RDY) ← ADVANCE(RP,PC,RDY,fi,·)
+        if any successor j has new_r_j + p_j > d_j: seen.add(key); return NO
+        mask ← mask \ {fi}
+    if cand = ∅: seen.add(key); return NO
+    for (i,t) ∈ ORDER(cand):                          # 默认 LPT，只影响 YES 早停
+        (CP',RP',PC',RDY') ← PLACE+ADVANCE
+        if successor deadline violated: continue
+        if dfs(mask\{i}, CP',RP',PC',RDY') = YES: return YES
+    seen.add(key); return NO
 ```
 
-`EARLIEST` 的位运算含义：`c` 的第 s 位为 1 ⇔ `AV` 在 `[t0+s, t0+s+p)` 全为 1。取最低位就是最早可行起点；最后检查起点不超过 `hi−p`。
-
-### 3.3 ADVANCE（释放与前驱计数）
-
-```text
-ADVANCE(RP, PC, RDY, i, t):
-  RP' ← RP & ~(rmask << (rw·i))          # 清掉已调度 i 的字段
-  PC' ← PC ; RDY' ← RDY & ~(1 << i)
-  for j in succ(i) ∩ M:
-      old ← (RP' >> (rw·j)) & rmask
-      new ← max(old, t+p_i)
-      if new > old: RP' ← RP' + ((new−old) << (rw·j))
-      v ← ((PC' >> (4·j)) & 15) − 1
-      PC' ← PC' − (1 << (4·j))
-      if v = 0: RDY' ← RDY' | (1 << j)
-  return RP', PC', RDY'
-```
-
-### 3.4 级联
-
-```text
-BB(σ,h):
-  if full(σ):
-     v ← ICC(σ,h); if v=NO: return v
-  if full(σ) ∧ |R|≤16 ∧ 0≤S≤4:
-     v ← OS-RSI(σ; B=10000); if v≠UNKNOWN: return v
-  return PACE(σ,h)
-```
-
-### 3.5 PACE 后备
-
-PACE 使用 v2.2 配置（`cps_on=True` 等），逐字保留：
-
-```text
-PACE(σ,h):
-  ... v2.2 的 DEAD / NORM / MAP / window / MINT / PACK-SET / SOP /
-      DHD / DCD / HPACK / CPS / 分支 ...
-```
-
-`BB` 的第 3 步只在 ICC 和 OS-RSI 都 UNKNOWN 时执行。若 OS-RSI 在根门已经跑过，PACE 内部可能重复一次 CPS；不影响 soundness。
-
-### 3.6 证书格式与检查
-
-**ICC-NO**：`('icc-full'|'icc-mand', a, b, payload, demand, cap)`；检查器重算 `r,d,c,C`，不信任 payload；`O(n+h)`。
-
-**OS-RSI-NO**：v2.3 的序树；内部节点 `(π_prefix,(mask,cap,rel),verdict)`，叶子 dead；检查器重放 SGS，重算子节点集合。大小 = 展开状态数。
-
-**OS-RSI-YES**：`π` + 起点向量；检查器验证优先序、`r≤t`、`t+p≤d`、任意时刻活跃数 `≤c_σ`；全资格下用区间图贪心染色到机器。大小 `O(n)`。
-
-**PACE-NO**：v2.1/v2.2 的见证（能量、clique、subset、MINT、PACK-SET、SOP、MAP、CPS residual 树等）。
-
-### 3.7 复杂度
-
-设 `r=|R|`，`E` 为展开状态数，`p_max=max p_i`，`h` 期限。
-
-```text
-EARLIEST:  O(p_i) 个大整数按位操作（每个数 O(h·cw/w) 字）
-PLACE:     O(p_i)
-ADVANCE:   O(outdeg(i))
-节点:      O(|Ready|·p_max + Σ outdeg)  ≈ O(n·p_max + n^2)
-OS-RSI:    O(E·(n·p_max + n^2)) 时间；O(E) 个 3-int key
-ICC:       O(n^3+n·h)
-PACE:      不变，节点上限 N_P
-BB:        T_ICC + 1_{ICC=UNKNOWN}·B·O(n·p_max+n^2) + 1_{OS=UNKNOWN}·T_PACE
-```
-
-n≤16、h≤45 的实际数据上，`p_max≤10`，打包后的状态是 2–4 个 Python int；最坏情况仍是指数，BBX 没有打破 NP-hard。
+调度重建：`sched[i]=t` 在每次放置时写入；失败分支的 `del sched[i]` 只删当前分支任务，forcing 在子节点里写入的条目可能残留，但每个任务在成功路径上会被重新写入一次，最终 `dict` 对全部任务正确（正确性测试以 `sgs.validate` 独立验证）。
 
 ---
 
 ## 4. 定理与证明
 
-### 4.1 引理 1（RSI 可靠性）
+### 4.1 引理 1（PLACE 无借位）
 
-**引理 1**。若存在 `i∈Ready(σ)` 使 `slot_σ(i)=∅`，则 `σ` 不可行。
-
-**证明**。反设存在从 σ 出发的可行完成，i 在某个 `t` 开始。由优先序 `t≥r_i`，由期限 `t+p_i≤d_i`，所以 `t∈[r_i,d_i−p_i]`。在 `[t,t+p_i)` 内 i 占用一台机器，因此在每个 `u∈[t,t+p_i)` 都有 `c_σ(u)≥1`。于是 `t∈slot_σ(i)`，与空集矛盾。∎
-
-注意：证明没有用「容量以后只会更少」；它只用「i 自己的区间必须是当前容量的一个槽」。因此 RSI 对任意 `A,est,q` 都成立，只要 `r_i` 是合法下界、`d_i` 是合法上界。
-
-### 4.2 引理 2（打包精确性）
-
-**引理 2**。在 `n≤16`、`cw=max(1,bit_length(m))`、`rw=max(1,bit_length(max(h,max est)))` 下，编码 `(M,CP,RP)` 是单射；`PLACE`/`ADVANCE` 保持不变量 (I1)–(I5)。因此 `(M,CP,RP)` 精确决定 `(R,cap,rel)`，两个同 key 状态有相同的未来。
-
-**证明**。
-
-- 字段宽：`c(t)≤m≤cmask`，`r_i≤max(h,max est)≤rmask`，`pred_R(i)≤n−1≤15`；所以每个字段不会溢出，也不会串到相邻字段。
-- `PLACE` 只在 `c(u)≥1` 的槽减 1（`EARLIEST` 保证），所以 (I1) 不破；减到 0 时清 `AV` 位，否则保留，故 (I4) 保持。
-- `ADVANCE` 清掉 i 的 `RP` 字段；对每个后继 j，`new=max(old,t+p_i)`，字段值不减且 ≤h≤rmask；`PC` 只在 `pred_R(j)≥1` 时减 1，减到 0 时加 `RDY` 位，故 (I2)(I3)(I5) 保持。
-- 每个字段位置唯一，编码是单射。`PC` 由 M 和固定优先图决定；`RDY`、`AV` 由 `PC`、`CP` 决定。∎
-
-### 4.3 引理 3（EARLIEST 正确性）
-
-**引理 3**。`EARLIEST(AV,t0,p,hi)` 返回 `min{t≥t0 : t+p≤hi, AV[u]=1 ∀u∈[t,t+p)}`，不存在则 `⊥`。
-
-**证明**。`x=AV>>t0`；`c=x & (x>>1) & … & (x>>(p−1))` 的第 s 位为 1 当且仅当 `x` 的第 s..s+p−1 位全为 1，即 `AV` 在 `[t0+s,t0+s+p)` 全为 1。`ctz(c)` 取最小 s；检查 `t0+s≤hi−p` 保证不越界。∎
-
-### 4.4 定理 1（OS-RSI 的 soundness）
-
-**定理 1**。对任意状态 σ，若 `OS-RSI(σ;B)=YES`，则返回的排程是 σ 的可行完成；若返回 NO，则 σ 不可行（在未撞 B 时）。
-
-**证明**。
-
-- YES：只有 `M=0` 的叶子返回 YES；每个任务恰好被调度一次；`EARLIEST` 保证 `r_i≤t`、`t+p_i≤d_i`、`c(u)≥1`；`ADVANCE` 保证优先序；`d_i=h−q_i` 保证最长后继链能在 h 前完成。全资格下由区间图贪心染色到机器。
-- NO：搜索树穷尽；每个内部节点要么 RSI 死（引理 1），要么所有候选子节点都失败；memo 只记录已经证明失败的 key（引理 2 保证 key 相同则未来相同）。所以不存在可行完成。∎
-
-### 4.5 定理 2（门内的 completeness）
-
-**定理 2**。设 `os_gate(σ)` 成立，且 OS-RSI 没有撞 `B`。则 `OS-RSI(σ)=YES` 当且仅当 σ 可行。
-
-**证明**。若 σ 可行，由 active schedule 定理存在一个 active 可行排程；串行 SGS 按某个拓扑序生成所有 active 排程（v2.3 定理 1）。OS-RSI 枚举所有 ready 顺序，RSI 只删除不可行状态（引理 1），所以一定到达某个 YES 叶子。若 σ 不可行，由定理 1 只能返回 NO。∎
-
-### 4.6 定理 3（NO 的序不变性）
-
-**定理 3**。固定精确 memo、不使用 dominance。若 σ 不可行，则 `OS-RSI` 的节点数与 `ORDER` 无关；它的调用数等于 1 加上根可达状态图（状态为 `(M,CP,RP)`）的边数；展开的状态数等于图的节点数。
-
-**证明**。`M` 每层严格减小，所以可达状态图无环。σ 不可行 ⇒ 每个可达状态都失败；DFS 第一次进入某状态时把它完整展开并加入 `seen`，之后每次从别的父状态进入都是 memo 命中。每个可达父状态都会被展开一次（失败不会早停），展开时枚举所有候选子节点，所以可达状态图的每条边恰好被调用一次。`ORDER` 只改变边的遍历次序，不改变集合。RSI 是状态局部判定（引理 1），也不依赖顺序。∎
-
-**注**：dominance 会破坏这个定理，因为「哪些失败状态先被存进 frontier」依赖顺序；这也是本轮不用 dominance 的原因之一。
-
-### 4.7 定理 4（级联的 soundness）
-
-**定理 4**。`BB(σ,h)=YES ⇒ σ 可行`；`BB=NO ⇒ σ 不可行`。
-
-**证明**。分三支：
-
-- ICC 返回 NO：v2.4 引理 1/2。
-- OS-RSI 返回 YES/NO：定理 1。
-- PACE 返回 YES/NO：v2.1/v2.2 的 soundness。
-
-顺序组合 `E1; if UNKNOWN then E2` 保持 sound（v2.4 定理 1）。∎
-
-### 4.8 定理 5（条件 completeness）
-
-**定理 5**。设 σ 在门内（`full ∧ |R|≤16 ∧ 0≤S≤4`），且 BB 没有撞 OS 的 `B` 或 PACE 的 `N_P`。则 BB 返回 YES 当且仅当 σ 可行。
-
-**证明**。若 σ 不可行：ICC 不返回 NO（引理 1/2 的逆否）；OS-RSI 在门内是判决过程（定理 2），返回 NO；若 OS 撞 cap，PACE 在未撞 `N_P` 时也是判决过程，返回 NO。若 σ 可行：ICC 不会返回 NO；OS-RSI 返回 YES；若 OS 撞 cap，PACE 返回 YES。两个方向都不会在可行时返回 NO，或不可行时返回 YES（定理 4）。∎
-
-### 4.9 定理 6（终止与预算）
-
-**定理 6**。`BB` 对任意有限输入终止；总工作量上界为
+**引理 1**。设 `CP = Σ_u c(u) 2^{cw·u}`，`0 ≤ c(u) < 2^cw`，`rep[p]=Σ_{j<p}2^{cw·j}`。若 `c(u) ≥ 1` 对所有 `u∈[t,t+p)`，则
 
 ```text
-T_BB ≤ T_ICC + 1_{ICC=UNKNOWN}·B·O(n·p_max+n^2) + 1_{OS=UNKNOWN}·T_PACE .
+CP − (rep[p] << cw·t) = Σ_u c'(u) 2^{cw·u} ,   c'(u) = c(u)−1 (u∈[t,t+p)) , 否则 c(u) ,
 ```
 
-**证明**。ICC 枚举有限窗口；OS-RSI 每次递归 `M` 严格减小，且节点数超过 `B` 立即返回 UNKNOWN；PACE 有 `N_P` 节点上限；递归有限。∎
+且所有 `c'(u) ≥ 0`。
+
+**证明**。减数是 `Σ_{u∈[t,t+p)} 2^{cw·u}`，即在每个目标字段的最低位置 1、其余位 0。逐字段减去 1 得到的 `c'(u)` 全部非负，其加权和恰好等于 `CP` 减去减数；因为没有任何字段需要向高位借位，逐字段差就是整体差。∎
+
+**推论**：`PLACE` 是 O(1) 次大整数减法，而不是 O(p) 次字段循环；且 `c'(u)` 仍满足 (I1)。
+
+### 4.2 引理 2（SWAR 位图）
+
+**引理 2**。`AV = (OR_{k=0}^{cw−1} (CP >> k)) & ONES` 满足：bit `cw·u` 为 1 当且仅当 `c(u) > 0`。
+
+**证明**。`CP>>k` 的 bit `cw·u` 是 `CP` 的 bit `cw·u+k`；因 `0≤k<cw`，它落在字段 u 内。对 k 取 OR 得到字段 u 的 cw 个位的 OR，即「字段非零」。`& ONES` 只保留每个字段的最低位置，滤掉移位带进来的高位（它们落在非 `cw` 倍数或字段内部高位，均不在 `ONES` 中）。∎
+
+### 4.3 引理 3（倍增 run）
+
+**引理 3**。`EARLIEST` 的循环结束时，`rr` 的 bit `cw·s` 为 1 当且仅当 `AV` 在 `[s, s+p)` 全为 1；因此 `ctz(rr)/cw` 是最早可行起点。
+
+**证明**。循环不变式：处理完长度 L 后，bit `cw·s` 为 1 ⇔ `AV[s,s+L)` 全 1。基 L=1。步：`rr & (rr>>cw·L)` 的 bit s = run(s,L) ∧ run(s+L,L) = run(s,2L)。退出时 L 是满足 `2L>p` 的最大 2 的幂（或 L=p），故 `L ≥ p−L`；末尾再与 `rr>>cw·(p−L)` 得 `run(s,L) ∧ run(s+p−L,L)`，两个长度 L 的窗口重叠且并集为 `[s,s+p)`。∎
+
+`p−L < L` 由 `2L>p` 保证；p=1 时循环不进、末尾不补，L=1=p。
+
+### 4.4 引理 4（forcing 可靠）
+
+**引理 4**。若 `i∈Ready(σ)` 且 `es_σ(i) = d_i − p_i`，则 σ 的每个可行完成都把 i 排在 `es_σ(i)` 开工；因此提交 i 保持可行性/不可行性。
+
+**证明**。任何完成必须让 i 在某个 `t` 开工，`es_σ(i) ≤ t ≤ d_i − p_i`（下界由定义，上界由期限）。两端相等，故 `t = es_σ(i)`。提交唯一可能的动作不会丢掉任何完成；若提交后子问题是 NO，则 σ 也是 NO（因为每个完成都必须走这一步）。∎
+
+### 4.5 引理 5（memo 前置可靠且必要）
+
+**引理 5**。`seen` 只包含已被证明不可行的状态 key。因此对 fixpoint 顶部（提交任何 forced 任务之前）的 `K(σ)` 做 `∈ seen` 检查是可靠的。并且，把检查放在扫描之前，使一次 memo 命中只花 O(1) 次字操作；放在扫描之后，每次命中都要付一次完整 ready 扫描。
+
+**证明**。可靠性：`seen` 的每次写入都紧跟在「该状态已被 RSI/后继期限/穷尽分支证明为 NO」之后；由引理 0 与 RSI 可靠性，这些状态确实不可行；同 key 状态由 (I6) 有相同未来。必要性：在 forcing 树上，37,364 个节点对应 17,869 个 key，约 19,000 次命中；扫描代价与命中次数成正比，实测把 `ce` 从 1.56 µs 抬到 0.44 µs 的反面（§6.5）。∎
+
+### 4.6 定理 1（WOS 的 soundness）
+
+**定理 1**。对任意状态 σ，若 `WOS(σ;B)=YES`，返回的排程是 σ 的可行完成；若返回 NO，则 σ 不可行（未撞 B 时）。
+
+**证明**。
+
+- YES：只有 `mask=0` 返回 YES；每个任务恰好放置一次；`EARLIEST` 保证 `r_i≤t`、`t+p_i≤d_i`、`c(u)≥1`（引理 3）；`ADVANCE` 保证优先序；`d_i=h−q_i` 保证最长后继链在 h 前完成；全资格下由区间图贪心染色到机器。forcing 提交的是唯一可行位置（引理 4），不改变可行性。
+- NO：搜索树穷尽；每个内部节点要么 RSI 死、要么后继期限死、要么所有候选子节点失败；memo 只记录已证明失败的 key（引理 5 + 引理 1/2 保证 key 精确）。forcing 的提交是强制的（引理 4），不会漏掉完成。所以不存在可行完成。∎
+
+### 4.7 定理 2（门内 completeness）
+
+**定理 2**。设 `os_gate(σ)` 成立且未撞 `B`。则 `WOS(σ)=YES` 当且仅当 σ 可行。
+
+**证明**。若 σ 可行，由 active schedule 定理存在 active 可行排程，串行 SGS 按某个拓扑序生成所有 active 排程；WOS 枚举所有 ready 顺序（forcing 只提交唯一位置，不删可行解），RSI 只删不可行状态，故必达某个 YES 叶子。若 σ 不可行，由定理 1 只能返回 NO。∎
+
+### 4.8 定理 3（终止与预算）
+
+**定理 3**。`WOS` 对任意有限输入终止；总工作量上界
+
+```text
+T ≤ B · O( (cw·h + rw·n)/W + |Ready|·log p_max·h/W + outdeg )
+```
+
+其中 W 是机器字长。每次递归 `mask` 严格减小；forcing 每轮也严格减小 `mask`；节点数超过 B 立即返回 UNKNOWN。∎
 
 **系（Hoare 三元组）**：
 
 ```text
-{ true } BB { (YES⇒可行) ∧ (NO⇒不可行) }  且  BB 终止 .
+{ true } WOS-CASCADE { (YES⇒可行) ∧ (NO⇒不可行) }  且  WOS-CASCADE 终止 .
 ```
 
 后置条件不保证 `≠UNKNOWN`；这是 partial correctness 的精确表述。
 
-### 4.10 命题 1（剪枝的成本阈值）
+### 4.9 命题 1（剪枝的成本阈值）
 
 **命题 1**。对任意剪枝，设不剪枝为 `N0` 节点、每节点 `c0`；剪枝为 `N1` 节点、每节点 `c0+ce`。则剪枝值得做当且仅当
 
 ```text
-N1/N0 < c0/(c0+ce) .
+N1/N0 < c0/(c0+ce)   ⇔   ce < ce* = c0·(N0/N1 − 1) .
 ```
 
-**证明**。`T1<N0c0` 即 `N1(c0+ce)<N0c0`，两边除以 `N0(c0+ce)`。∎
+**证明**。`N1(c0+ce) < N0·c0` 即 `ce < c0(N0/N1 − 1)`。∎
 
-**实测（forcing）**：`N0=57,236`，`N1=37,364`，`N1/N0=0.653`；`c0=0.246/57,236=4.30 µs`；`0.299/37,364=8.00 µs`，所以 `ce=3.70 µs`；阈值 `ce*=c0(N0/N1−1)=2.29 µs`。3.70>2.29，Python 里 forcing 输；若内核换成 C 把 `ce` 降到 0.5 µs，它会赢。
+本轮实测（held-out 50，同一进程、交错 3 次取中位数）：
 
-### 4.11 命题 2（没有普遍支配，实测）
+```text
+N0 = 57,236 , N1 = 37,364 , N1/N0 = 0.6528
+c0 = 2.21 µs , c1 = 2.65 µs , ce = 0.44 µs
+ce* = 2.21 × (1/0.6528 − 1) = 1.18 µs
+0.44 < 1.18  ⇒  forcing 赢
+```
 
-**命题 2（实测，非定理）**。
-
-- ICC 在 50 个 held-out 上 0 命中；50 个 NO 仍是全局序约束。
-- RSI 在 50 个 held-out 上剪掉 28.9% 节点；但它是分布相关的：如果 ready 任务总能放下，RSI 不触发，只剩打包常数。
-- dominance 在 v2.4 内核上少 7.7% 节点、慢 3.4×（相对本轮则多 29.8% 节点、慢 6.95×）；EDF 相对本轮少 3.0% 节点、慢 3.04×；RICC 少 10.9%、慢 2.69×；ATPF 少 2.1%、慢 1.87×；forcing 少 34.7%、慢 1.22×。
-- 反向 OS 少 16.4% 节点、快 1.6%，但 oracle 只比单向少 20%，且没有便宜的实例级选择器；doubling race 是 3× 更差。
-- 38 核心仍由 16 个 PACE 主导（large_het 8 个 + large_a/b 各 4 个），BBX 对异资格/大 n 没有收益。
-
-所以不存在「RSI 支配一切」或「打包支配一切」；本轮主张的是：**在 n≤16、全资格、S≤4 的门内，RSI+打包是 Pareto 改进；门外 PACE 仍是唯一完整后备。**
+同一个 forcing，在「memo 在扫描之后」的核心里 `ce = 1.56 µs > 1.21 µs`，输。**`ce` 不是规则的属性。**
 
 ---
 
-## 5. 实验
+## 5. 三条否证：为什么这一轮不是「再加一个剪枝」
 
-### 5.1 实验设计与设置
+### 5.1 精确商：4/57,236
+
+`hull(σ) = [min_{i∈R} r_i, max_{i∈R} d_i)`。hull 之外的容量对剩余任务永远无用，所以 `(mask, CP & hull, RP)` 是精确 key。实测：
+
+| key | 节点 | memo |
+|---|---:|---:|
+| `(mask,CP,RP)` | 57,236 | 27,277 |
+| `(mask,CP&hull,RP)` | **57,232** | 27,270 |
+
+只合并 4 个节点。**结论：这批数据上 `(mask,RP)` 已几乎决定 `CP` 在有用区间上的值；精确商饱和。**
+
+### 5.2 EPC：0/57,236，且根层 slack 恰好为 0
+
+对每个期限阈值 b：`S_b={i: d_i≤b}`，必要条件 `Σ_{i∈S_b} p_i ≤ C(min r(S_b), b)`。在 RSI 之前跑遍 57,236 个节点：**命中 0 次**。
+
+直接量根层松弛：
+
+```text
+slack(b) = C(min r(S_b), b) − Σ_{i∈S_b} p_i
+```
+
+50 个根上 `min_b slack(b) = 0`，无一个为负。**能量不等式是紧的，不是破的。** 这些 NO 是纯整数性间隙：连续松弛可行且几乎饱和，不可行性来自不可拆分与机器离散性。任何单窗口容量不等式（ICC / EPC / EDF 预松弛 / Hall 割）都只能看到连续松弛，根层全部失效。
+
+在已展开状态上统计（不剪枝，只数违反）：
+
+| 条件 | 违反 / 57,236 |
+|---|---:|
+| ATPF（全任务可放置） | 547（0.96%） |
+| RWE（ready 窗口能量） | 23 |
+| ready 集聚合能量 | 16 |
+| EPC | **0** |
+
+与 v2.5 的消融一致（ATPF −2.1% 节点、+87% 时间）。**局部容量条件在这批数据上是死维度。**
+
+### 5.3 深度门控 adaptivity：单调，无收益
+
+| 门 `dep<K` | 节点 | 时间 |
+|---|---:|---:|
+| 2 | 52,455 | 0.1235 s |
+| 4 | 51,863 | 0.1214 s |
+| 6 | 48,433 | 0.1143 s |
+| 8 | 45,007 | 0.1080 s |
+| 10 | 40,499 | 0.1013 s |
+| 12 | 37,905 | 0.0995 s |
+| 全开 | 37,364 | 0.0998 s |
+
+曲线单调，全开最好（K=12 与全开在噪声内打平）。「省下的子树」与「扫描代价」都正比于同一子树规模，比值与深度无关。**adaptivity 在这里是伪维度**，与 v2.5 的「NO 上顺序是死维度」同构。
+
+---
+
+## 6. 实验
+
+### 6.1 设置
 
 **假设**：
 
-- H1（RSI）：ready 集上的单任务不可放置性能剪掉可观的 NO 子树，且不改变判决。
-- H2（打包）：在同样节点数下，打包状态的每节点常数显著低于 tuple/list 状态。
-- H3（序不变）：NO 上换 order 不改变节点数；YES 上 order 只影响早停。
-- H4（HPO）：dominance/EDF/RICC/ATPF/forcing 的节点收益不足以抵消每节点额外常数。
-- H5（方向）：forward/backward 的 oracle 收益存在，但没有便宜的实例级选择器；racing 不划算。
-- H6（核心）：NO 的极小核心只比原实例小一点，证书压缩不能变成在线加速。
+- H1（商）：`(mask,CP,RP)` 还能精确商掉可观的状态。→ 否，4/57,236。
+- H2（剪）：更强的局部容量条件能在节点入口更早报死。→ 否，0/57,236，根层 slack=0。
+- H3（机器）：节点可以压成常数条字操作。→ 是，2.21 µs/节点，57,236 节点不变。
+- H4（翻盘）：机器常数下降会让 v2.5 否掉的 forcing 重新划算。→ 是，`ce` 0.44 < 1.18 µs。
+- H5（adaptivity）：把 forcing 门控到浅层更划算。→ 否，单调。
 
-**控制**：同一批实例、同一 PACE 配置、同一 Python 进程、单线程；对每个集合分别跑 v2.4 与 v2.5；判决逐例比对；ICC witness 全部独立重算；YES 排程全部独立验证；另用 1,080 组随机小实例做暴力对拍。时间为中位数：小集合 7 次，held-out/38 核心 3 次；复跑波动约 ±3%。
+**控制**：同一批实例、同一 PACE 配置、同一 Python 进程、单线程；v2.5 与 v3.0 交错跑 3 次取中位数；逐例判决比对；YES 排程独立验证；1,260 组随机小实例暴力对拍；400 个随机状态与 v2.5 差分。
 
-Python 3.12，4 vCPU，单线程。数据与 v2.4 逐字相同：
+Python 3.12，4 vCPU，单线程。数据与 v2.5 逐字相同：
 
 ```text
 exp/v13/hard3.pkl（12）
 exp/v14/{large_a,large_b,large_het}.pkl（8+10+8）
 exp/v18/deep.pkl（8）
 exp/v20/holdout_cases50.pkl（50）
-exp/v28/synth2_45.pkl（45，按 bench_synth2 的 RNG=99 重建）
+exp/v28/synth2_45.pkl（45）
 ```
 
-主配置：
+主配置与 v2.5 相同：`mode='pot', nodecap=3,000,000, ... ICC on (full only), pmax=16, tau=4, B=10000, probe=0, rsi=True, order='lpt'`；本轮新增 `force=True`。
+
+代码：`exp/v30/wos.py`（生产内核）、`exp/v30/wos_no.py`（无 forcing 消融）、`exp/v30/wos_fdep.py`（深度门）、`exp/v30/root_v30.py`（级联）、`exp/v30/bench_wos.py`（主实验）、`exp/v30/test_wos.py`（正确性）、`exp/v30/tm_os.py`（EPC 探针）、`exp/v30/diag.py`（局部条件统计）。结果：`exp/v30/res_wos.json`、`res_e2e.json`、`res_test.json`。
+
+### 6.2 内核消融（held-out 50，h=OPT−1）
+
+| 内核 | 节点 | 时间 | µs/节点 | 相对 v2.5 |
+|---|---:|---:|---:|---:|
+| v2.4 tuple OS | 80,463 | 0.4069 s | 5.06 | 2.06× 慢 |
+| v2.5 packed（RSI） | 57,236 | 0.1976 s | 3.45 | 1.00 |
+| WOS，无 forcing | 57,236 | 0.1265 s | 2.21 | 1.56× |
+| **WOS（生产）** | **37,364** | **0.0990 s** | **2.65** | **2.00×** |
+
+分解：
 
 ```text
-mode='pot', nodecap=3,000,000, mint_on=True, mint_depth=0,
-packset_on=True, packset_depth=0, sop_on=True, sop_nodecap=200000,
-dhd=True, dcd=True, hpack_on=True, odom=False,
-omd=full, map_on=True, map_tau=4, map_ncap=16,
-cps_on=True, cps_tau=4, cps_depth=0, cps_ncap=16,
-cps_nodecap=300000, cps_gate_fan=0,
-ICC on (full only), pmax=16, tau=4, B=10000, probe=0, rsi=True, order='lpt'.
+v2.4 → v2.5 : 节点 80,463→57,236（RSI，−28.9%）× 每节点 5.06→3.45 µs（打包，1.47×）
+v2.5 → WOS  : 节点不变，每节点 3.45→2.21 µs（word，1.56×）
+WOS  → WOS+F: 节点 57,236→37,364（−34.7%），每节点 2.21→2.65 µs（+20%），净 1.28×
 ```
 
-代码：`exp/v29/icc.py`（ICC）、`exp/v29/os_pack.py`（OS-RSI/BPK）、`exp/v29/root_bb.py`（BB 级联）、`exp/v29/bench_bb.py`（主实验）、`exp/v29/bench_ablate.py`（消融）、`exp/v29/bench_repeat.py`（稳定计时）、`exp/v29/bench_dir.py`（方向）、`exp/v29/bench_rsi.py`（RSI 计数）、`exp/v29/test_bb.py`（正确性）、`exp/v29/test_core.py` / `test_core2.py`（核心）。结果：`exp/v29/res_bb.json`、`res_ablate.json`、`res_repeat.json`、`res_bb_valid.json`、`res_rsi.json`、`res_dir.json`、`res_core.json`、`res_core2.json`。
+对 v2.4 的内核总加速 4.11×。
 
-### 5.2 主表
+### 6.3 端到端（h=OPT−1，交错 3 次中位数）
 
-稳定计时（同进程、同数据、v2.4 与 v2.5 各跑 3–7 次取中位数）：
-
-| 集合 | 数量 | v2.4 | **v2.5** | 加速 | v2.5 判决分布（ICC/OS/PACE） |
-|---|---:|---:|---:|---:|---|
-| held-out 50 | 50 | 0.5465 s | **0.2877 s** | **1.90×** | 0 / 50 / 0 |
-| hard3 | 12 | 0.02154 s | **0.01525 s** | **1.41×** | 8 / 4 / 0 |
-| deep 8 | 8 | 0.04248 s | **0.03164 s** | **1.34×** | 0 / 7 / 1 |
-| 5 残例 | 5 | 0.04982 s | **0.02396 s** | **2.08×** | 0 / 5 / 0 |
-| large_a | 8 | 0.00859 s | 0.00858 s | 1.00× | 4 / 0 / 4 |
-| large_b | 10 | 0.00615 s | 0.00625 s | 0.98× | 6 / 0 / 4 |
-| large_het | 8 | 0.08348 s | 0.08377 s | 1.00× | 0 / 0 / 8 |
-| synth45（NO） | 45 | 0.00273 s | 0.00271 s | 1.01× | 45 / 0 / 0 |
-| 38 核心 | 38 | 0.1244 s | **0.1136 s** | **1.09×** | 18 / 4 / 16 |
-| **141 合计** | **141** | **0.7115 s** | **0.4359 s** | **1.63×** | — |
+| 集合 | 数量 | v2.5 | **v3.0** | 加速 | 节点 |
+|---|---:|---:|---:|---:|---:|
+| held-out 50 | 50 | 0.2206 s | **0.1230 s** | **1.79×** | 57,236→37,364（−34.7%） |
+| 5 残例 | 5 | 0.0184 s | **0.0103 s** | **1.78×** | 4,080→2,176（−46.7%） |
+| hard3 | 12 | 0.0117 s | **0.0074 s** | **1.58×** | 2,148→1,332（−38.0%） |
+| deep 8 | 8 | 0.0242 s | **0.0175 s** | **1.38×** | 5,473→4,903（−10.4%） |
+| large_a | 8 | 0.0073 s | 0.0069 s | 1.05× | 0 |
+| large_b | 10 | 0.0051 s | 0.0051 s | 1.00× | 0 |
+| large_het | 8 | 0.0695 s | 0.0695 s | 1.00× | 0（PACE） |
+| synth45（NO） | 45 | 0.0023 s | 0.0022 s | 1.01× | 0（ICC） |
+| **141 合计** | **141** | **0.3406 s** | **0.2318 s** | **1.47×** | — |
+| OS 主导三集 | 70 | 0.2565 s | 0.1479 s | **1.73×** | — |
 
 说明：
 
 - 141 = held-out 50 + hard3 12 + deep 8 + large_a 8 + large_b 10 + large_het 8 + synth45 45；不含 5 残例（它是 held-out 的子集）。
-- 38 核心的专门跑是 0.1244→0.1136（1.09×）；按各集合中位数相加是 0.1198→0.1139（1.05×），差异在 ±3% 波动内。
-- v2.4 的数值是在同一进程里重跑的 `root_pc`，不是从 v2.4 产物区抄的；所以和 v2.4 表里的 0.552/0.0492 有少量差异。
+- 141 的 1.47× 被 large_het（8 个 PACE，0.0695 s，占 30%）拖住；只看 OS 主导的 held-out+hard3+deep 是 1.73×，内核是 2.00×。
+- 对 v2.4 的端到端估计：v2.5 相对 v2.4 是 1.63×，本轮相对 v2.5 是 1.47×，合计约 2.4×（粗估，因为两次测量的机器不同）。
 
-### 5.3 held-out：节点 −28.9%，时间 −47.4%
-
-| 版本 | OS 节点 | 引擎时间 | 每节点 |
-|---|---:|---:|---:|
-| v2.4 OS（tuple memo） | 80,463 | 0.508 s | 6.31 µs |
-| **v2.5 OS-RSI（打包）** | **57,236** | **0.246 s** | **4.30 µs** |
-| 变化 | **−28.9%** | **−51.6%** | **−31.9%** |
-
-（这张表是 §5.6 的 OS 内核消融，不含 ICC 与每例函数调用；端到端的 v2.4/v2.5 是 0.5465/0.2877 s。）
-
-逐例：
-
-- **50/50 个例子的节点都下降**；节点比 min/median/max = 1.07 / 1.35 / 4.14。
-- 单例时间 min 0.00098 s，median 0.00346 s，max 0.0294 s；没有单例退化到 PACE。
-- 节点最少 158，中位 629.5，最多 6,660（v2.4 最坏 9,225）。
-- RSI 在 10,533 个节点上触发；memo 27,277 个 key。
-- 单例最大节省：idx 43（n=13）9,225→6,660 节点；idx 35（n=16）6,485→4,337；idx 36（n=14）6,220→4,417。
-
-**分解**：
-
-```text
-v2.4                         80,463 节点 / 0.508 s / 6.31 µs
-打包，无 RSI                 80,463 节点 / 0.339 s / 4.21 µs   ← 1.50× 常数
-打包 + RSI                   57,236 节点 / 0.246 s / 4.30 µs   ← 1.38× 节点
-```
-
-打包把每节点从 6.31 降到 4.21 µs（1.50×）；RSI 只增加 2% 的每节点开销，却砍掉 28.9% 节点。两个因子相乘约 2.07×（ablation 口径）；端到端 1.90×，差额来自 ICC、每例函数调用和 PACE 兜底。
-
-### 5.4 hard3 / deep / 残例
-
-**hard3（12 例，h=OPT−1）**：
-
-- 8 例 ICC：6 `icc-mand`、2 `icc-full`；与 v2.4 相同。
-- 4 例 OS：390 / 605 / 447 / 706 节点；v2.4 是 504 / 630 / 557 / 941；合计 2,148 vs 2,632（−18.4%）。
-- 时间 0.01525 s vs 0.02154 s（1.41×）。
-- `hard3#4`（`S=5`）仍由 ICC 直接关闭，不需要 OS。
-
-**deep（8 例）**：
-
-- 7 例 OS：709 / 441 / 320 / 2,668 / 407 / 470 / 458 节点，合计 5,473；v2.4 是 6,039。
-- 1 例 PACE：`S=5`，出门；0.0078 s 左右。
-- 时间 0.03164 s vs 0.04248 s（1.34×）。
-
-**5 个残例**：
-
-| idx | n | L | S | ICC | OS 节点（v2.4→v2.5） | 时间（v2.5） |
-|---|---:|---:|---:|---|---:|---:|
-| 5 | 15 | 6 | 1 | miss | 788 → 507 | 0.00314 |
-| 21 | 13 | 4 | 2 | miss | 1,327 → 648 | 0.00353 |
-| 32 | 15 | 5 | 2 | miss | 959 → 488 | 0.00343 |
-| 42 | 16 | 5 | 3 | miss | 1,592 → 1,083 | 0.00646 |
-| 47 | 15 | 6 | 1 | miss | 2,136 → 1,354 | 0.00761 |
-| **合计** | | | | **0/5** | **6,802 → 4,080（−40.0%）** | **0.02396** |
-
-这 5 例是「全局 NO」的核心：ICC 全 miss，RSI 仍然有效，因为树在深处出现 ready 任务放不下的死结点。
-
-### 5.5 YES 侧
-
-| 集合 | 数量 | 结果 | v2.5 判决 | 时间 |
-|---|---:|---|---|---:|
-| held-out 50（h=OPT） | 50 | 50/50 YES，排程全验证 | 49 OS / 1 PACE | 0.0636 s |
-| hard3（h=OPT） | 12 | 12/12 YES | 10 OS / 2 PACE | 0.2528 s |
-| deep 8（h=OPT） | 8 | 8/8 YES | 6 OS / 2 PACE | 0.0158 s |
-| 5 残例（h=OPT） | 5 | 5/5 YES | 5 OS | 0.0056 s |
-| synth45（h=OPT） | 45 | 45/45 YES，含 8 个 m=4 | 43 OS / 2 PACE | 0.1159 s |
-
-70 个 hard3/deep/held-out 的 YES 排程全部通过 `sgs.validate`；synth45 的 45 个 YES 也全部通过（8/8 m=4）。**YES 侧没有用 RSI 的剪枝收益，反而暴露了一个回归**：第一版打包只支持 m≤3，8 个 m=4 的 synth YES 被推给 PACE，synth YES 从 v2.4 的 0.171 s 掉到 1.31 s；把容量字段改成 `cw=bit_length(m)` 后回到 0.116 s。详见 §5.10。
-
-### 5.6 消融 / HPO 景观（held-out 50）
-
-| 配置 | 节点 | 时间 | 相对本轮 | 说明 |
-|---|---:|---:|---:|---|
-| v2.4 OS（tuple memo） | 80,463 | 0.508 s | 2.07× | 基线 |
-| 打包，无 RSI | 80,463 | 0.339 s | 1.38× | H2：纯常数 |
-| **打包 + RSI（本轮）** | **57,236** | **0.246 s** | **1.00×** | 默认 |
-| 打包 + RSI，order=edd | 57,236 | 0.247 s | 1.00× | H3：NO 节点完全不变 |
-| 打包 + RSI，order=spt | 57,236 | 0.246 s | 1.00× | 同上 |
-| v2.4 OS + dominance | 74,301 | 1.709 s | 6.95× | 相对 v2.4 −7.7% 节点 / +236% 时间；相对本轮 +29.8% 节点 |
-| 打包 + RSI + ATPF | 56,015 | 0.459 s | 1.87× | −2.1% 节点，+87% 时间 |
-| 打包 + RSI + EDF(d≤10) | 55,512 | 0.747 s | 3.04× | −3.0% 节点，+204% 时间 |
-| 打包 + RSI + RICC(ready≤4) | 50,979 | 0.662 s | 2.69× | −10.9% 节点，+169% 时间 |
-| 打包 + RSI + forcing | 37,364 | 0.299 s | 1.22× | −34.7% 节点，+22% 时间 |
-| 打包 + RSI，反向 OS | 47,822 | 0.242 s | 0.98× | −16.4% 节点，−1.6% 时间 |
-
-读法：
-
-- **只有 RSI 和打包是 Pareto 改进**。dominance 的 7.7% 节点收益抵不过 Pareto 前沿的逐项比较；EDF/RICC/ATPF 的节点收益更小、每节点更贵。
-- **forcing 是「节点最优、时间不最优」的典型**：按命题 1，`N1/N0=0.653`，`c0=4.30 µs`，`ce=3.70 µs`，阈值 `ce*=2.29 µs`；Python 的常数让它输。若把内核换成 C，forcing 可能重新划算。
-- **反向 OS** 是唯一比正向快的配置（1.6%），但它是分布相关的；oracle 只比反向少 20%，没有便宜的实例级选择器，doubling race 是 3× 更差（§5.7）。所以本轮默认正向。
-
-### 5.7 方向 portfolio 的负结果
-
-时间反演：`t ↦ h−t`，交换 `pred/succ`，`est'=q`、`q'=est`；根状态 `A=0` 时机器可用性不变。所以正向 OS 与反向 OS 都是精确判决过程。
-
-| 指标 | 节点 |
-|---|---:|
-| 正向 OS | 57,236 |
-| 反向 OS | 47,822 |
-| 逐例 oracle `min(fwd,bwd)` | 38,441 |
-| 最好单阈值规则（sumq≤171） | 46,276 |
-| doubling race（64,128,256,… 交替） | **169,728** |
-
-- 反向赢 27/50，正向赢 23/50；逐例比值 `bwd/fwd` 从 0.19 到 5.52，双峰很明显。
-- oracle 只比反向少 20%，说明方向选择的上限不高；最好单阈值规则已经是在这 50 例上挑的，换数据会过拟合。
-- doubling race 的总成本是单向的 3 倍：NO 需要把两个方向中的一个跑完，而另一个方向的预算全部浪费。
-
-**结论**：不做方向 portfolio；把反向 OS 作为未启用的开关记录在案。
-
-### 5.8 极小不可行核心（证书压缩）
-
-对每个 held-out NO，贪心删除任务：删掉后仍在 h 上不可行，就保留删除；直到不能删。核心上的序树就是原实例的证书（加任务不会让不可行变可行）。
-
-| 指标 | 数值 |
-|---|---:|
-| 单删不可约 | 20/50 |
-| 删除数分布 | 0:20, 1:15, 2:9, 3:4, 4:1, 5:1 |
-| 平均核心大小 | **13.2 / 14.28**（−7.6%） |
-| 核心大小 min/max | 10 / 16 |
-| 核心序树节点 | **39,915**（原 57,236，−30.3%） |
-| 提取时间（50 例） | 0.716 s |
-| 判决时间（50 例） | 0.288 s |
-| 所有核心仍 NO | 50/50 |
-
-**结论**：核心压缩能把证书缩 30%，但提取成本是判决的 2.5×；它是离线证书工具，不是在线加速。更重要的是，20/50 单删就变可行，平均只删 1.08 个任务——**这些 NO 在任务层面几乎不可约**。v2.4 的 8 万节点不是实现懒，是实例本身需要这么多序区分。
-
-### 5.9 正确性
+### 6.4 正确性
 
 | 测试 | 规模 | 结果 |
 |---|---|---|
-| OS-RSI vs 暴力枚举（n=3–7、m≤4、h=3–11） | 1,080 组（475 可行） | **0 不一致**（pack / bit / rsi 三条路径都比） |
-| 打包 vs list 状态，随机 A≠0、est/q 随机 | 600 个状态（111 YES） | **0 不一致**，节点数完全相同 |
-| YES 排程独立验证（hard3/deep/held-out） | 70 | **70/70 通过** |
-| synth45 YES（含 8 个 m=4） | 45 | **45/45 通过，8/8 m=4** |
-| ICC witness 独立重算 | 53 张（8 hard3 + 45 synth） | **0 失败** |
-| v2.5 vs v2.4 判决（8 个集合） | 146 | **146/146 相同** |
-| 随机 m=4（含在暴力组里） | 1,080 组中的 m=4 子集 | 0 不一致；不再因打包门回退 |
+| WOS vs 暴力枚举（n=3–7、m≤4、h=3–11），force 与 no-force 两条路径 | 1,260 组（604 可行） | **0 不一致**；YES 排程全部验证 |
+| 随机状态差分 vs v2.5（A≠0、子集 rem） | 400 | **0 不一致** |
+| YES 排程独立验证（hard3/deep/held-out） | 70 | **70/70** |
+| synth45 YES（含 8 个 m=4） | 45 | **45/45，8/8 m=4** |
+| 8 个集合判决 vs v2.5 | 146 | **146/146 相同** |
+| 暴力/差分里 m=4 子集 | 含在 1,260 + 400 中 | 0 不一致 |
 
-暴力枚举：枚举所有满足优先序的整数起点向量，再用容量计数判可行；专门检查「会不会把可行状态误判成 NO」。1,080 组中 475 个可行，0 个误判。600 个随机状态用 `A≠0`、随机 `est/q`，打包与 list 两条独立实现逐例比对，节点数完全相同。
+暴力枚举：枚举所有满足优先序的整数起点向量，再用容量计数判可行；专门检查「会不会把可行状态误判成 NO」。604/1,260 可行，0 误判。
 
-### 5.10 实现陷阱与回退记录
+### 6.5 HPO：一次翻盘
 
-1. **EARLIEST 截断 bug（假 NO）**：第一版把 `AV>>r_i` 先截到 `d_i−p_i` 再找连续 1，50 个 held-out 只用 53 个节点就全判 NO。原因是「起点在窗口末端、加工区间伸到窗口外」的槽被截掉，很多本可放下的任务被判死。修正是先在整个 `AV>>r_i` 上找连续 1，得到 s 后再检查 `r_i+s≤d_i−p_i`；节点回到 57,236。**证书便宜到不合理时，先怀疑检查器。**
-2. **m=4 的 YES 回退**：第一版 BPK 假设 `m≤3`，把 8 个 m=4 的 synth YES 全部推给 PACE；synth YES 从 0.171 s 变成 1.31 s（10 个 PACE）。改成 `cw=bit_length(m)` 后回到 0.116 s（43 OS / 2 PACE）。**只在 NO 上验收集成，会漏掉 YES 侧的退化。**
-3. **`rw` 必须包含 `max est`**：只按 h 选释放字段宽会在 `est_i>h` 的不可行状态上溢出；代码用 `max(h,max est)`。
-4. **`PC` 4 bits 依赖 n≤16**：这是 `os_gate` 的 `n≤16` 的真正原因；m/h 不需要门。
-5. **顺序在 YES 上是活的**：50 个 held-out YES 上 LPT 4,601 节点、EDD 4,617、SPT 8,755；NO 上三者完全相同。不要把 NO 的序不变性误用到 YES。
+| 内核（同一批 50 例） | 节点 | 时间 | ce |
+|---|---:|---:|---:|
+| 无 forcing，memo 在扫描前 | 57,236 | 0.1302 s | — |
+| forcing，memo 在扫描后 | 37,364 | 0.1431 s | 1.56 µs |
+| **forcing，memo 在扫描前** | 37,364 | **0.0990 s** | **0.44 µs** |
 
-### 5.11 负结果
+读法：
 
-1. **RSI 只剪 28.9% 节点**：没有新的可证明下界；树仍是指数。
-2. **ICC 在 held-out 上 0/50**：本轮的 1.90× 与 ICC 无关，全部来自 OS 内核。
-3. **dominance/EDF/RICC/ATPF 都不划算**：节点更少、时间更慢；在 Python 常数下是负收益。
-4. **forcing 节点最优但时间不最优**：阈值 2.29 µs；C 实现可能反转。
-5. **反向 OS 没有可用的选择器**：oracle 只少 20%，race 3× 更差。
-6. **核心压缩不能在线化**：提取 2.5× 判决时间，核心只小 7.6%。
-7. **PACE 主导的集合没有收益**：large_a/b/het 约 1.00×；异资格仍只有 PACE。
-8. **m=4 的 YES 回退**已修复，但说明打包字段宽必须按 m 动态选。
-9. **没有 Coq/Lean**：定理 1–6 是纸面证明 + 可重放内核；RSI 的算术由 1,080 组暴力、600 个 A≠0 状态、70+45 张 YES 排程支撑。
+- 第一版把 `key` 放在扫描之后（因为 fixpoint 会改状态，直觉上 key 该最后算）。这时 forcing 比最好的无 forcing 内核慢 10%：`ce=1.56 > ce*=1.21`。
+- 把 `key` 提到 fixpoint 顶部后，约 19,000 次 memo 命中不再付扫描；`ce=0.44 < 1.18`，forcing 净赢 22%。
+- **同一个 forcing 规则、同一棵树（37,364 节点），只差一次 memo 检查的位置。** 这是 v2.5 命题 1 的加强版：`ce` 是 (规则, 核心, 检查顺序) 的函数。
+
+### 6.6 统计
+
+50 个 held-out NO：37,364 次调用 / 17,869 个 memo key（calls/key = 2.09）、7,064 次 RSI 命中、5,055 次 forced 提交（0.135/节点）。内存仍是 O(E) 个整数。
 
 ---
 
-## 6. 与 v2.3/v2.4 的差异
+## 7. 与 v2.4/v2.5 的差异
 
-| 项 | v2.3 | v2.4 | **v2.5** |
+| 项 | v2.4 | v2.5 | **v3.0** |
 |---|---|---|---|
-| 入口 | PACE 先跑；tier 0.15 才 HY | ICC 先跑；OS 第二；PACE 后备 | **同 v2.4** |
-| OS 内核 | tuple 状态，无节点剪枝 | 同 v2.3 | **RSI + 打包 BPK + 增量 ready** |
-| OS 节点（held-out 50） | 8,307（HY，5 例） | 80,463 | **57,236** |
-| held-out 50 | 1.552 s | 0.552 s | **0.288 s** |
-| 5 残例 | 0.0825 s | 0.0492 s | **0.0240 s** |
-| hard3 | 0.114 s | 0.0207 s | **0.0153 s** |
-| deep 8 | 0.303 s | 0.0456 s | **0.0316 s** |
-| 38 核心 | 0.113 s | 0.120 s | **0.1136 s** |
-| synth45（NO） | CPS 427 节点 | 45/45 ICC | **45/45 ICC** |
-| 切平面 | 无根层 ICC | `icc-full` + `icc-mand` | **同 v2.4** |
-| CPS 探针 | 固定 300 | 默认删除 | **同 v2.4**（可选） |
-| 新定理 | active 复现、序不变性、上集支配、组合可靠性 | + ICC 可靠性、检查器、组合、条件 completeness、预算终止 | **+ RSI 可靠性、打包精确性、EARLIEST 正确性、NO 序不变性、成本阈值** |
-| 新负结果 | OS 不支配 CPS、探针非定理 | ICC 0/50、38 例 +6%、探针负收益 | **HPO 景观、forcing 阈值、方向 race、核心压缩、m=4 YES 回退** |
-| 代价 | `C(S+L,L)` × residual 或 `E` | `O(n^3)` ICC + `E` OS + PACE | **`O(n^3)` ICC + `E·(n·p_max+n^2)` OS-RSI + PACE** |
+| OS 状态 | tuple(cap,rel) | packed `(mask,CP,RP)` | **同 v2.5（word）** |
+| 容量位图 | 维护 list | 维护 `AV` | **由 `CP` SWAR 导出，不存** |
+| PLACE | O(p) 循环 | O(p) 字段循环 | **一次无借位减法** |
+| EARLIEST | O(p) 循环 | O(p) 位移 | **倍增 run，O(log p)** |
+| memo key | tuple | 3-tuple | **一个整数** |
+| 节点级剪枝 | 无 | RSI | **RSI + forcing fixpoint** |
+| memo 位置 | 入口 | 入口 | **fixpoint 每次迭代顶部** |
+| held-out 内核 | 0.4069 s / 80,463 | 0.1976 s / 57,236 | **0.0990 s / 37,364** |
+| held-out 端到端 | （v2.5 记录 0.5465） | 0.2206 s | **0.1230 s** |
+| 新定理 | — | RSI、打包、序不变 | **无借位、SWAR、倍增 run、forcing、memo 前置、阈值翻盘** |
+| 新负结果 | — | HPO 景观、方向 race | **精确商 4/57,236、EPC 0/57,236、根层 slack=0、深度门控无收益** |
+| 代价 | `E` | `E·(n·p_max+n²)` | **`E·((cw·h+rw·n)/W + |Ready|·log p_max·h/W + outdeg)`** |
 
 ---
 
-## 7. 已知风险
+## 8. 已知风险
 
-1. **常数因子，不是渐近改进**：held-out 1.90× 来自 −28.9% 节点和 −32% 每节点；最坏情况仍是指数。没有新的可证明下界。
-2. **RSI 是分布相关的**：如果 ready 任务总能找到槽，RSI 不触发，只剩打包的 1.50×。5 个残例上 RSI 很强（−40%），50 个 held-out 上 −28.9%；换分布可能更弱。
-3. **每节点常数依赖 Python**：forcing 的阈值是 2.29 µs；C 实现会把最优配置从「RSI+打包」改成「RSI+打包+forcing」。本文的 HPO 结论是**常数相关**的，不是普适的。
-4. **n≤16 的门**：`PC` 4 bits 和 `os_gate` 都依赖 n≤16；n>16 回 PACE，收益不覆盖。m/h 已通过动态字段宽支持，但非常大的 m/h 会让打包整数变宽，生产版应加 `m≤64,h≤4096` 之类的实用门。
-5. **RSI 依赖 `est/q` 的合法性**：`est_i` 必须是合法释放下界，`q_i` 必须是合法尾下界；高估 q 会缩小 d_i，可能假 NO。继承 v2.2/v2.3 的规格。
-6. **序不变性只在 NO + 精确 memo + 无 dominance 下成立**：YES 上顺序影响早停（SPT 比 LPT 多 90% 节点）；dominance 会破坏定理。
-7. **反向 OS 未启用**：它比正向快 1.6%，但分布相关；没有便宜选择器，race 3× 更差。
-8. **核心压缩只能离线**：提取 2.5× 判决时间；核心只小 7.6%，序树小 30.3%。
-9. **PACE 主导的集合无收益**：large_a/b/het 约 1.00×；异资格仍只有 PACE；38 核心的 16 个 PACE 没有变快。
-10. **m=4 的 YES 回退已修复，但字段宽是活的**：`cw=bit_length(m)`、`rw=bit_length(max(h,max est))`；任何未来字段宽改动都必须在 NO 和 YES 两侧同时验证。
-11. **`pmax=16,tau=4,B=10k` 未调**：这些是 v2.4 的经验门；HPO 只调了 OS 内核的剪枝/表示，没有调门。门本身可能是下一轮的收益点。
-12. **内存**：memo 27,277 个 key（held-out 50），单例最大约 6,660 节点；n=16 的更坏实例可能指数增长。没有做内存上限。
-13. **没有形式化验证**：定理 1–6 是纸面证明 + 可重放内核；测试是 1,080 组暴力、600 个 A≠0 状态、70+45 张 YES 排程、53 张 ICC witness。
-14. **时间测量单机**：4 vCPU 单线程，Python 3.12；±3%；节点数不能直接当时间。
-15. **公共期限**：各自期限 `d_i` 的路径未实现；ICC/OS 的窗口定义依赖公共 `h`。
-16. **极端 h/m 的打包宽度**：`CP` 是 `h·cw` 位的大整数；h 很大时 `EARLIEST` 的位运算仍是 O(p) 次大整数操作，但单次操作变贵；生产版应加上限。
+1. **常数，不是渐近**：2.00× 内核 = 1.56× word 常数 × 1.28× forcing。最坏情况仍是指数；没有新的可证明下界。
+2. **收益只在 OS 门内**：large_a/b/het、synth45 约 1.00×；38 核心里的 16 个 PACE 一点没变快。141 的 1.47× 有 30% 时间在 large_het 的 PACE 上。
+3. **forcing 的可靠性依赖 `es` 与 `d` 的精确性**：`es` 高估或 `q` 高估都会给出假 NO。继承 v2.2/v2.3 的规格；测试只覆盖 n≤7 的暴力与 400 个随机状态。
+4. **阈值结论是机器相关的**：`ce=0.44`、`ce*=1.18` 是 Python 3.12 的数字。换 C 后 `c0` 与 `ce` 会一起缩小，forcing 的相对位置可能再次翻转；本文的 HPO 结论不是普适的。
+5. **n≤16 的门**：`PC` 4 bits 与 `os_gate` 都依赖 n≤16；n>16 回 PACE，收益不覆盖。
+6. **forcing 在 YES 上改变搜索顺序**：held-out YES 节点 4,581→3,743，hard3 YES 869→779；仍然 sound，但 YES 的早停行为与 v2.5 不同，不能把 NO 的节点数结论直接搬到 YES。
+7. **精确商已饱和**：4/57,236 说明这批数据上 `(mask,RP)` 几乎决定 `CP`；换分布可能出现更多可合并状态，也可能更少。
+8. **EPC 的 0 命中是分布相关的**：根层 slack=0 是这 50 例的性质；若换到松弛更大的分布，EPC 可能有用。不要把它当成普适死维度。
+9. **深度门控无收益**：不要加这个门；它只增加代码路径。
+10. **memo 前置的正确性依赖「seen 只存已证 NO」**：任何未来把 dominance / 启发式失败写进 `seen` 的改动都会破坏引理 5。
+11. **`rep` 表与字段宽**：`cw=bit_length(m)`、`rw=bit_length(max(h,max est))`；m=4 时 cw=3，已验证 8/8。任何字段宽改动都要在 NO 与 YES 两侧同时验证。
+12. **h 很大时 CP 变宽**：`CP` 是 `h·cw` 位的大整数，`AV`/`PLACE` 的单次操作变贵；生产版应加 `m≤64, h≤4096` 之类的实用门。
+13. **没有形式化验证**：定理 1–3 是纸面证明 + 可重放内核；测试是 1,260 组暴力、400 个 A≠0 状态、70+45 张 YES 排程。
+14. **时间测量单机**：4 vCPU 单线程，Python 3.12；交错 3 次中位数，±3%；节点数不能直接当时间。
+15. **公共期限**：各自期限 `d_i` 的路径未实现；ICC/WOS 的窗口定义依赖公共 `h`。
 
 ---
 
-## 8. 一句话最大风险
+## 9. 一句话最大风险
 
-**这一轮的 1.9× 全部来自「同一棵指数搜索树被剪掉 28.9%、每个节点便宜 1.50×」这两个常数，而不是任何新的可证明下界；一旦分布让 RSI 不触发（或 n>16 出门），剩下的就只有打包的 1.50×，而最坏情况的指数上界一点没动。**
+**这一轮的 2.00× 里，真正算「算法」的只有 forcing 的 34.7% 节点，其余全是把 Python 字段循环换成大整数位运算；一旦换到 C，`c0` 与 `ce` 会一起缩小，forcing 的阈值关系可能再次翻转，而最坏情况的指数上界仍然一点没动。**
