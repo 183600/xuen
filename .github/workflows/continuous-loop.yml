@@ -5,7 +5,9 @@ on:
   schedule:
     - cron: '*/15 * * * *'
 
-# ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）
+# ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）。
+#   每个 run 内含两个并行工作 job：run-xuen（设计一个新的算法）与
+#   run-xuen-unibot（寻找参加 UniBot 的创新点），各自独立工作区/分支。
 # 上一个 run 一结束，队列里的下一个立刻开始 → "上一个结束立刻触发下一个"
 concurrency:
   group: continuous-loop
@@ -374,13 +376,297 @@ jobs:
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
           git push gitee "HEAD:${GITHUB_REF_NAME}" || echo "[warn] push to Gitee failed"
 
+  # ⭐ 并行任务 2：UniBot 参赛创新点研究（与 run-xuen 在同一 run 内并行执行）。
+  # 独立 runner、独立工作区分支（xuen-loop-unibot）；与主任务同样使用
+  # opencode harness（内置 websearch / webfetch 联网工具，实测免费可用），
+  # 队列派发仍由 run-xuen 开头的步骤 + 收尾 next-run job 负责（next-run 已
+  # needs 两个工作 job，两个任务都收尾后才派发后继 run）。
+  run-xuen-unibot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python (pip cache)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
+
+      - name: Install xuen dependencies
+        run: |
+          set -e
+          python -m pip install --upgrade pip || echo "[warn] pip upgrade failed (non-fatal)"
+          python -m pip install -r requirements.txt
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+          key: ${{ runner.os }}-xuen-npm-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-xuen-npm-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install opencode
+        run: |
+          set -e
+          npm i -g opencode-ai
+          if ! command -v opencode >/dev/null 2>&1; then
+            echo "[error] opencode 安装失败" >&2
+            exit 1
+          fi
+          opencode --version
+
+      - name: Configure opencode permissions
+        run: |
+          mkdir -p ~/.config/opencode
+          cat > ~/.config/opencode/opencode.json <<'EOF'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": {
+              "*": "allow",
+              "edit": {
+                "*": "allow",
+                ".github/**": "deny",
+                "**/.github/**": "deny",
+                "LICENSE": "deny",
+                "**/LICENSE": "deny",
+                "**/LICENSE.*": "deny"
+              },
+              "bash": {
+                "*": "allow",
+                "rm -rf .github*": "deny",
+                "rm -r .github*": "deny",
+                "rm .github*": "deny",
+                "mv .github*": "deny",
+                "git rm -r .github*": "deny",
+                "rm *LICENSE*": "deny",
+                "mv *LICENSE*": "deny",
+                "cp *LICENSE*": "deny",
+                "git rm *LICENSE*": "deny",
+                "git push*": "deny"
+              }
+            },
+            "model": "opencode/deepseek-v4.1-flash-free"
+          }
+          EOF
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config i18n.commitEncoding utf-8
+          git config core.quotepath false
+
+      - name: Select model (opencode, websearch-capable)
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set +e
+          # UniBot 调研依赖联网搜索：与主任务一致，一律使用 opencode Zen 免费模型
+          SELECTED_MODEL=""
+          SELECTED_VARIANT=""
+          smoke() {
+            local m="$1" v="$2" extra=""
+            [ -n "$v" ] && extra="--variant $v"
+            # shellcheck disable=SC2086
+            timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_unibot.log 2>&1
+          }
+          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/big-pickle|"; do
+            [ -n "$SELECTED_MODEL" ] && break
+            m="${spec%%|*}"; v="${spec#*|}"
+            if smoke "$m" "$v"; then
+              SELECTED_MODEL="$m"; SELECTED_VARIANT="$v"
+            fi
+          done
+          if [ -z "$SELECTED_MODEL" ]; then
+            SELECTED_MODEL="opencode/deepseek-v4.1-flash-free"
+            echo "[unibot][warn] 冒烟测试未通过，仍按默认模型继续（xuen 内部会重试）"
+          fi
+          echo "[unibot][provider] 使用 $SELECTED_MODEL${SELECTED_VARIANT:+ (variant=$SELECTED_VARIANT)}"
+          {
+            echo "HARNESS=opencode"
+            echo "MAIN_MODEL=$SELECTED_MODEL"
+            echo "MAIN_VARIANT=$SELECTED_VARIANT"
+            echo "JUDGE_MODEL=$SELECTED_MODEL"
+            echo "JUDGE_VARIANT=$SELECTED_VARIANT"
+            echo "XUEN_HARNESS=opencode"
+            echo "XUEN_MODEL=$SELECTED_MODEL"
+            echo "XUEN_VARIANT=$SELECTED_VARIANT"
+            echo "XUEN_JUDGE_MODEL=$SELECTED_MODEL"
+            echo "XUEN_JUDGE_VARIANT=$SELECTED_VARIANT"
+          } >> "$GITHUB_ENV"
+
+      - name: Restore workspace from xuen-loop-unibot branch
+        run: |
+          set -e
+          if git ls-remote --exit-code --heads origin xuen-loop-unibot >/dev/null 2>&1; then
+            git fetch origin xuen-loop-unibot --depth=1
+            git checkout FETCH_HEAD -- workspace
+            echo "[unibot] 已从 xuen-loop-unibot 分支恢复工作区（上次的 research.md / words.txt / rounds/）"
+            ls -la workspace 2>/dev/null || true
+            [ -f workspace/rounds/best.json ] \
+              && cat workspace/rounds/best.json \
+              || echo "[unibot] 尚无最佳（首次运行）"
+          else
+            echo "[unibot] xuen-loop-unibot 分支不存在：首次运行，从空工作区开始"
+          fi
+
+      - name: Write xuen config
+        run: |
+          set -e
+          cat > /tmp/xuen_agent.sh <<'SHEOF'
+          #!/usr/bin/env bash
+          # xuen 的 agent 一律走 opencode（与主任务一致，含模型名防护）
+          role="${1:-main}"
+          prompt="${2:-}"
+          if [ "$role" = "judge" ]; then
+            model="${XUEN_JUDGE_MODEL:-${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}}"
+            variant="${XUEN_JUDGE_VARIANT:-}"
+          else
+            model="${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}"
+            variant="${XUEN_VARIANT:-}"
+          fi
+          case "$model" in
+            opencode/*) ;;
+            *) model="opencode/deepseek-v4.1-flash-free"; variant="" ;;
+          esac
+          extra=""
+          [ -n "$variant" ] && extra="--variant $variant"
+          # shellcheck disable=SC2086
+          exec opencode run -m "$model" $extra "$prompt"
+          SHEOF
+          chmod +x /tmp/xuen_agent.sh
+          echo "[unibot] MAIN=${XUEN_MODEL:-默认} JUDGE=${XUEN_JUDGE_MODEL:-默认}"
+
+          cat > config.yaml <<'EOF'
+          # 本文件由 CI 生成：xuen 研究循环配置（任务：寻找参加 UniBot 的创新点）
+          agent:
+            command: '/tmp/xuen_agent.sh main "$prompt"'
+            timeout: 1800
+
+          extra_notes: |
+            请像一位严谨的参赛策略研究员一样思考；
+            你拥有联网工具（websearch 网页搜索、webfetch 抓取网页、bash 里可用 curl），
+            请主动使用它们获取真实信息，不要只凭记忆作答；
+            UniBot 优先按「宇树科技 UniBot 世界挑战赛」（unibot.unitree.com）理解：
+            基于 Unitree G1 人形机器人平台的具身智能泛化操作评测——32 项桌面任务
+            （抓取/放置/双手协调）、5 类泛化场景（位置/干扰物/背景/未见物品/人为干扰）、
+            通才模型赛道（单模型完成全部任务，按平均成功率与步骤分排名）、
+            选手自行部署模型并以标准化 API 远程接入；
+            每轮先搜索核实赛事最新信息（规则、任务清单、排行榜、数据集
+            HuggingFace unitreerobotics/unibot-v1-challenge、github
+            unitreerobotics/unibot_submission），再推进研究；
+            重点分析榜单头部方案的做法与瓶颈（榜首成功率也不到 30%），
+            思考在数据、模型架构（VLA / World Model / 混合）、训练策略、
+            接口工程等维度上可能的创新切入点；
+            若搜索发现用户所指更可能是其他 UniBot，请先说明再按最可能的展开；
+            产物区维护一份持续迭代的创新点清单：每个点包含动机、与现有方案的差异、
+            技术可行性、所需资源（数据/算力/接口）、落地步骤与风险；
+            每轮迭代优先深化与修剪清单，而不是推倒重来；
+            所有外部信息注明来源链接与检索日期；
+            每轮结尾用一句话指出当前最值得押注的创新点。
+
+          prompt:
+            max_state_chars: 60000
+
+          words:
+            count: 300
+            batch: 100
+            pick: 3
+            reuse: true
+
+          loop:
+            iterations: inf
+
+          rounds:
+            enabled: true
+            dir: rounds
+            verify: ai
+            fallback: ai
+            adopt_score: 7
+            verify_timeout: 600
+            repo: ""
+            judge_command: '/tmp/xuen_agent.sh judge "$prompt"'
+            judge_timeout: 600
+
+          tui: false
+          color: false
+          workspace: ./workspace
+          EOF
+
+          echo "=== config.yaml (unibot) ==="
+          cat config.yaml
+
+      - name: Run xuen loop (unibot, ~3h window)
+        timeout-minutes: 175
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set +e
+          WORK_SECONDS=9900        # 工作窗口：165 分钟
+          echo "[unibot] 任务：寻找参加UniBot的创新点｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
+          timeout --signal=INT --kill-after=60s "$WORK_SECONDS" \
+            python3 main.py --no-tui --no-color "寻找参加UniBot的创新点" -c config.yaml
+          RC=$?
+          case "$RC" in
+            0)   echo "[unibot] xuen 正常结束（进度已按轮持久化）" ;;
+            124|137|143)
+                 echo "[unibot] 工作窗口到点，xuen 被截断（退出码 $RC；每轮进度已落盘）" ;;
+            130) echo "[unibot] xuen 收到中断信号，已优雅收尾（进度已持久化）" ;;
+            *)   echo "::warning::[unibot] xuen 退出码 $RC（进度不丢；下个 run 自动从最佳继续）" ;;
+          esac
+          exit 0
+
+      - name: Checkpoint workspace to xuen-loop-unibot
+        if: ${{ !cancelled() }}
+        run: |
+          set -e
+          # 防御：外部 agent 若动过 .github / 遗留临时清单，先恢复原状
+          git checkout HEAD -- .github 2>/dev/null || true
+          git clean -fdq .github 2>/dev/null || true
+          rm -f .opencode_issues.md
+          if [ ! -d workspace ]; then
+            echo "[unibot] 工作区不存在（本轮未产生任何进度），跳过 checkpoint"
+            exit 0
+          fi
+          find workspace -type d -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+          git add -f workspace
+          if git rev-parse --verify -q origin/xuen-loop-unibot >/dev/null; then
+            PARENT="$(git rev-parse origin/xuen-loop-unibot)"
+          else
+            PARENT="$(git rev-parse HEAD)"
+          fi
+          TREE="$(git write-tree)"
+          COMMIT="$(git commit-tree "$TREE" -p "$PARENT" \
+            -m "chore(xuen-unibot): workspace checkpoint (run ${GITHUB_RUN_ID})")"
+          git push origin "$COMMIT:refs/heads/xuen-loop-unibot"
+          git reset -q   # 只清索引，工作区文件保留
+          echo "[unibot] 工作区已 checkpoint 到 xuen-loop-unibot 分支：${COMMIT:0:12}"
+
   # ⭐ 立刻续跑（下）：独立的收尾 job。
-  # needs + if: always()：工作 job 无论成功、失败、超时被取消，这个 job 都会
+  # needs + if: always()：两个工作 job（run-xuen 算法设计 + run-xuen-unibot
+  # UniBot 调研）无论成功、失败、超时被取消，这个 job 都会在它们全部收尾后
   # 紧接着启动。这里无条件派发一个新的后继 run：它在组内排队，本 run 退出
   # 的一瞬间就被调度。万一这个 job 连启动都没机会（整个 run 被强杀），
   # */15 心跳会兜底。
   next-run:
-    needs: [run-xuen]
+    needs: [run-xuen, run-xuen-unibot]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 15
