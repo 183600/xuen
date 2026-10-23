@@ -5,190 +5,214 @@
 <!-- IDEA:START -->
 ## 0. 本轮结论
 
-> 最值得押注的不是“再训一个更大的端到端 VLA”，而是给开源 VLA 加一层竞赛层：把官方评分点编译成可验证的阶段进度，用已校正的双目做物体中心 3D，把示范里几乎不动的 pivot 变成受平衡保护约束的腰部/底盘/高度补偿，再用检查点条件化的离线 RL/优势加权把关键过渡学出来。简称 **RUBICON**（RUBric-conditioned, Object-centric, BalanCe-aware）。
+> 上一轮的 RUBICON 方向成立，但“物体中心 3D”还缺一块：真正的问题不是“物体在哪”，而是**所有位姿在运动中都可能失效**——腰部一动，头部双目外参变了；底盘一动，桌面平面和 3D 子目标变了；人手一进工作区，绝对轨迹就危险。本轮把 RUBICON 升级为 **RUBICON 2.0**，在原有“评分点→阶段进度”的骨架上加三个端口：
+>
+> - **EcoPort（能耗优化）**：把“能耗”拆成算力、延迟、物理动作三种预算；运输/接近走便宜路径，接触/恢复走全量 VLA；pivot 默认不动，动则计入能量代价。
+> - **PosePort（姿态估计）**：维护一张全身姿态图 `base → torso → head_stereo → object → gripper → target → human`；运输用绝对位姿，接触用相对位姿，腰部运动后重投影，人手进入时降速/暂停。
+> - **SERB（伦理审查）**：Safety / Evaluation integrity / Reproducibility / Bio-legal 四类可执行门禁，把“不撞人、不违规、可复现”变成运行时和提交前的检查。
+>
+> 底座选 **UnifoLM-WLA-1.0-Base（Apache-2.0，6B，G1，约 2500h，64 任务）**，不再从零训大模型；UnifoLM-VLA-0 的许可证在 HF/GitHub 上未见明确文件，不把它当默认底座。
 
-三条随机词的落点：
+## 1. 本轮新增/修正的事实
 
-- **数据标注**：把 32k 条示范自动拆成“阶段 + 物体 3D + 接触 + 检查点进度 + 语言”，这是所有后续模块的燃料。
-- **平衡控制**：不直接学步态；把 pivot 与操作策略解耦，用“安全先验 + 平衡 shield + 小范围腰部/底盘/高度补偿”扩展可达空间，默认保持示范中的稳定站姿。
-- **强化学习**：不做真机在线 RL；做“检查点条件化的离线 RL/优势加权 + 仿真残差技能”，把 RL 用在关键接触阶段和恢复上。
+- **语言不是没有，而是被忽略了**：每个任务的 `meta/tasks.parquet` 有 **5 条英文复述**（用 `@` 分隔）。例如 HangCup 是 5 条 “Hang/Hook the cup…”；ArrangePlates 明确 “from right to left in the order of red, green, and blue”；PaperCupStacking 明确 “two on the bottom and one on top”；SpellRobot 明确拼 “robot”。上一轮“数据集没有语言、需要 LLM 生成”的判断需要修正：语言可直接用，重点转为**复述鲁棒性 + 语言约束解析**。
+- **pivot 语义基本坐实**：在 OrganizeTools 的单文件 parquet（113 episodes / 122,499 帧）上，`pivot_3 ≈ waist yaw`（r≈0.73，slope 0.307，R²=0.532），`pivot_4 ≈ waist pitch`（r≈0.86，slope 0.6497，R²=0.737），`pivot_5` 全 0（很可能是 waist roll）；`angle_z=±0.8` 只占 0.018% 帧，疑为哨兵/伪影。**腰部是真实连续控制通道，不是噪声。**
+- **pivot 使用高度任务相关**：OrganizeTools 持续用 waist yaw+pitch（std_p3=0.147，std_p4=0.118，p3∈[-0.516,0.569]，p4∈[0,0.627]）；StorePaddle/FoldTowel 的 p4 是回合级偏移（0→0.15）；PaperCupStacking/PickOutBatteries/Unlock 是 height 回合级偏移；OrganizeBookshelf/ZipUp 偶发 base 位移；多数任务近静态（p3=0，p4=0.15，height≈0.737）。**不能全局假设 pivot 常数，也不能全局假设它会动。**
+- **头部相机/腰部本身也在动**：数据集同时有 `state_d435`/`action_d435`（头部 D435 的 6D 位姿）、`state_torso`/`action_torso`、`waist_state_joint`/`action.waist_action_joint`。OrganizeTools 的 D435 pitch std≈0.093、yaw std≈0.081，HangCup 也有 std≈0.014–0.019。**“固定头部双目”的假设不成立**；姿态图必须含 neck/head 动态。
+- **标定不是全局统一**：32 任务至少 **10 组**不同头部双目标定；`fx` 186.03–296.15，基线（norm T）46.716–64.864mm，`cx` 左 302.45–365.43 / 右 315.98–384.27。`rectified=true` 不能直接信；必须按任务读 `camera_params` 并做极线/重投影验证。
+- **时长差异大**：6.2s（HangCup）到 37.6s（ToolboxStorage）；StorePaddle 34.1s、SpellRobot 31.2s、PackPhone 29.2s、FoldTowel 25.8s、OrganizeTools 25.0s。长任务对 chunk/latency/阶段推进更敏感。
+- **公开榜仍是占位**：`leaderboard.html` 的内联脚本自述 “The real, randomly-generated leaderboard is rendered here purely to sit (blurred) behind the … overlay”；搜索索引到的 GigaBrain-0/DM0/DreamZero/PI-0.5/WALL-OSS/MolmoAct2 详情页是合成演示，不是真实排名。**不能据此分析榜首。**
+- **底座许可证**：数据集 Apache-2.0；UnifoLM-WLA-1.0-Base 的 HF/GitHub 明确 Apache-2.0，6B、约 2500h、64 任务、12.5GB、单卡 24GB 可微调/LoRA；UnifoLM-VLA-0 的 HF/GitHub 未见明确 license 文件（上一轮记录为 CC BY-NC-SA 4.0，需复核）。默认选 WLA-1.0。
+- **规则仍未核实**：Feishu 不可读；评分权重、trial 数、外部数据/模型、任务特定逻辑、base/waist 限制、单任务时限、N 未知。
 
-## 1. 评分表告诉我们的策略事实
+## 2. 竞争格局与“最可能强基线”的推断
 
-- 32 个任务，12 Easy / 12 Medium / 8 Hard；检查点数 2–5 个。
-- 首检查点平均 **35.47 分**；11 个 2 检查点任务的首点就是 **50 分**。
-- 排行榜按“平均成功率 + 步骤分”综合排序（官网原文）；公开榜截至 2026-10-23 仍为 Coming Soon，“榜首 <30%”只能作为工作假设。
-- 推论：
-  1. 成功率仍是主战场，不能只刷首点；但首点高、检查点少的任务（T01/T02/T03/T05/T08/T14/T19/T23/T24/T30/T32）是“高地板”，应优先保证稳定拿到。
-  2. 对 3–5 检查点任务，阶段推进、防 premature stop、失败重试比“多训一点”更值钱。
-  3. 官方 `score_steps` 是公开的稠密监督，不用它等于把最便宜的竞赛信息扔掉。
+- 真实榜首不可见；以下是对“最可能强基线”的分析，不是对排名的断言。公开榜的“GigaBrain-0 / DM0 / DreamZero / PI-0.5 / WALL-OSS / MolmoAct2”是随机占位，不是真实提交。
+- **最强基线**：UnifoLM-WLA-1.0 微调（G1/2500h/64 任务/全身动作 token，Apache-2.0）；GigaBrain-0（world-model 数据、RGBD、CoT，3.5B/4B）；π0.5 / GR00T / OpenVLA-OFT。它们都可能用多视角、action chunk、5 条语言复述、外部数据和较大模型。
+- 它们大概率仍会输在：
+  1. 接触密集/小公差（插头、网线、锁、拉链、药瓶）最后几毫米；
+  2. 长程 2–5 检查点的阶段推进、premature stop、失败重试；
+  3. 人为干扰后的“暂停-重定位-恢复”；
+  4. 腰部/头部运动导致的相机外参失效与平衡风险；
+  5. 延迟/抖动/动作规律性；
+  6. 许可证与可复现性（非商用权重、外部数据、硬编码）。
+- 因此边际收益不在“再大一点的 VLA”，而在**竞赛层**：评分点/语言→阶段约束，姿态图→精密伺服，阶段化算力/能量预算，SERB 安全门禁。
+- 没有真机时，先建 **Local Proxy Leaderboard（LPL）**：按 `info.json` 的 `unseen_object_3/human_1/human_4` 备注做留出扰动，离线看动作/进度/姿态，真机调试名额优先做单任务闭环。不要把公开榜当迭代信号。
 
-## 2. 创新点排序（按落地顺序，不是按重要性）
+## 3. 三条灵感词的落点
+
+### 3.1 能耗优化 → EcoPort
+
+- 评测环境是长任务（25–37s）、4 路视频、30fps、N 台机器人可能并发。全程跑最大 VLA 既慢又抖，且多机器人会互相拖延迟。
+- **算力能量**：按阶段分配预算——运输/接近用缓存 chunk/小策略/检索；接触/恢复用全量 VLA + 多视角 + 相对位姿。`action_chunk_size` 可调：运输长、接触短。
+- **物理能量**：pivot 默认保持示范中的稳定值；只有目标超出可达/视角/高度时才小范围动 waist/base；动作代价 `λ_v|v| + λ_ω|ω| + λ_h|Δh| + λ_w|Δwaist| + λ_a|Δa|²`。
+- **多机器人**：N 个端口共享后端，按阶段优先级批处理；接触阶段优先；保持 p99 延迟 < chunk 时长，避免抖动。
+- 指标：VLA calls/episode、p50/p95/p99 latency、jitter、energy per success、steps/episode。即使官方不计“能耗”，这些也直接影响完成率和稳定性。
+
+### 3.2 姿态估计 → PosePort
+
+- 不是“再加一个 6D pose 模型”，而是**一张运行时姿态图**：
+  `base → torso → head_stereo → object → gripper → target → human`。
+- 运输：绝对位姿（双目 + 任务标定 + 桌面平面）。
+- 接触：相对位姿（腕部相机 + 夹爪 FK + 目标几何/关键点），对绝对标定误差不敏感。
+- 腰部/头部一动：用 `waist_state_joint`/`state_torso`/`state_d435` 更新 head 相机位姿，重投影 3D 子目标；若重投影误差超阈值，暂停/重观测。
+- 人手：RTMW/RTMW3D 关键点 → 人手-机器人最小距离 → SSM 降速/暂停。
+- 语言：把 “right to left / red, green, blue / two on bottom, one on top / spell robot” 解析成**约束图**（顺序、颜色、数量、方向、空间关系），作为进度验证器的一部分。
+- 精度直觉：桌面 1m 处 stereo 0.1px 视差≈6.2mm；0.5m≈1.5mm；腕部近景 + 相对位姿把接触误差压到毫米级。
+
+### 3.3 伦理审查 → SERB
+
+- 不做形式化 IRB；做**可执行的四类门禁**：
+  - **S**afety：工作空间/速度/关节/腰部限位、平衡包络、人机分离、急停、watchdog、NaN/超限检查。
+  - **E**valuation integrity：不硬编码任务坐标/轨迹；不针对评分表作弊；进度用学习头；披露所有外部数据/模型/人工干预。
+  - **R**eproducibility：seed、config、模型卡、数据版本、审计日志、失败回放。
+  - **B**io-legal：数据集 Apache-2.0、底座 Apache-2.0、第三方 NOTICE、人脸/人手隐私、非商用权重禁用。
+- 运行时：人手进入工作区 → SSM 降速/暂停；离开 → 重定位 → 恢复；全程记录事件。
+- 提交前：许可证清单、红队报告、安全案例、审计回放；缺一项不放行。
+
+## 4. 创新点排序
 
 | 顺序 | 创新点 | 价值 | 风险 | 依赖 |
 |---|---|---|---|---|
-| P0 | Rubric Compiler + Progress Verifier | 高 | 低 | `info.json` |
-| P0 | DemoCompiler 自动标注引擎 | 高 | 中 | 数据集 + 开源视觉模型 |
-| P0 | 阶段重试 + 干扰感知恢复 | 高 | 低 | 进度头/检测器 |
-| P1 | Pivot 解耦的全身控制 + Balance Shield | 高 | 中 | 调试探针 |
-| P1 | 双目 3D 物体中心 VLA | 高 | 中 | 标定/立体匹配 |
-| P1 | 检查点条件化离线 RL / 优势加权 BC | 中高 | 中 | 自动标注 |
-| P2 | 精密技能库（插入/拉链/倾倒） | 高（硬任务） | 中 | 3D/视觉伺服 |
-| P2 | 检索增强动作先验 | 中 | 低 | 标注/索引 |
-| P2 | 3D 场景重组增广 | 中 | 中 | 分割/深度 |
+| P0 | Rubric Compiler 2.0（score_steps + 语言约束）+ Progress Verifier | 高 | 低 | `info.json` + `tasks.parquet` |
+| P0 | PoseGraph（全身/相机/物体/夹爪/人手） | 高 | 中 | 标定 + 双目/腕部 |
+| P0 | SERB 安全/伦理门禁 + 人机 SSM | 高 | 低 | 规则 + 姿态 |
+| P0 | Waist/Pivot Controller + Balance Shield | 高 | 中 | pivot 探针 |
+| P1 | EcoScheduler（阶段化算力/能量 + 多机器人） | 高 | 中 | latency 预算 |
+| P1 | 接触阶段相对位姿伺服（插/拉链/倒） | 高 | 中 | 腕部 + 技能 |
+| P1 | 人为干扰恢复（暂停-重定位-重试） | 高 | 低 | 人手/位移检测 |
+| P2 | 检查点条件化离线 RL / 优势加权 BC | 中高 | 中 | 阶段标签 |
+| P2 | 语言复述鲁棒性 + 任务匹配 | 中 | 低 | 5 条复述 |
+| P2 | 3D/世界模型增广 | 中 | 中 | 分割/深度/生成 |
 | P3 | 仿真残差/恢复 RL | 中高 | 高 | 仿真资产 |
 
-## 3. 核心押注 RUBICON
+## 5. 核心押注 RUBICON 2.0
 
-### 3.1 Rubric Compiler + Progress Verifier（P0）
+### 5.1 Rubric Compiler 2.0（P0）
 
-- **动机**：32 个任务、2–5 个检查点，长程任务需要知道“现在在哪个阶段、何时该停/该重试”。评测只给一句语言，不给阶段；纯 BC 容易提前停或错过检查点。官方评分点公开且精确，是最便宜的稠密监督。
-- **做法**：离线把每个任务的 `score_steps` 编译成结构化阶段：`{phase_id, instruction, target_object, target_location, success_predicate, max_steps, retry_policy}`。训练时把“任务 + 阶段 + 检查点”拼进 prompt，并加辅助头（阶段分类、进度回归）。测试时用语言 + 首帧做任务匹配，进度头推进阶段；停滞触发重试/恢复。
-- **差异**：多数队伍只用评测给的语言；我们把公开评分表变成训练信号和运行时监视器，既提高完整成功率，也保住步骤分。
-- **可行性/资源**：离线 LLM 编译 + 小头；无需运行时 LLM API；1 张 GPU、3–5 天。模糊步骤（“摆正”“整理好”）需要 VLM/人工抽查定义谓词。
-- **落地步骤**：① 抓取 32 个 `info.json`；② 定义阶段 schema；③ 用示范自动对齐阶段；④ 训练阶段/进度头；⑤ 接入策略循环；⑥ 单任务调试校准阈值。
-- **风险**：评分点歧义、过拟合评分表、规则不允许任务特定逻辑。缓解：用学习到的进度头而非硬编码状态机；任务逻辑只做 prompt/阶段，不硬编码坐标；先读规则。
+- **动机**：`score_steps` 是公开稠密监督；语言里还有顺序/颜色/数量/方向约束。两者结合，能同时提高完整成功率和步骤分。
+- **做法**：离线把每个任务编译成 `{phase_id, instruction, constraint_graph, success_predicate, max_steps, retry_policy}`；`constraint_graph` 从语言解析（顺序、颜色、计数、方向、空间关系），`success_predicate` 尽量用可观测变量（物体在架/在盒/在杯、夹爪状态、相对位姿）。
+- **差异**：多数队伍只用一句语言；我们把评分表 + 5 条复述 + 约束图变成训练信号和运行时验证器。
+- **资源**：离线 LLM/规则 + 小分类头；1 张 GPU、3–5 天。
+- **风险**：评分点歧义、规则禁止任务特定逻辑。缓解：学习进度头为主，约束图只做 prompt/验证；先读规则。
 
-### 3.2 DemoCompiler 自动标注引擎（P0）
+### 5.2 PoseGraph（P0）
 
-- **动机**：数据集有 4 路视频、proprio、action，但**没有语言字段**，也没有阶段、物体框/3D、接触、检查点进度、失败样本。原始 BC 只用了数据的一小部分信息。
-- **做法**：统一 32 个 LeRobot v3 数据集；从 `info.json` 生成中英语言与复述；用双目深度 + SAM2/GroundingDINO 做物体掩码与 3D 跟踪；用夹爪开合、EE 速度、物体运动做阶段切分；用 LLM/VLM 对齐到评分点；输出阶段、物体 3D、接触、检查点时间、抓取/放置位姿；再做背景/位置/干扰物/人手合成增广。
-- **差异**：别人“喂原始轨迹”，我们“喂结构化轨迹”。同一份数据可同时用于辅助损失、进度头、离线 RL、检索和定向增广。
-- **可行性/资源**：169 小时、32k episodes；标注时降采样到 5–10fps，用跟踪传播；4–8 张 GPU、1–2 周；存储数 TB。抓取/放置位姿可直接用示范 EE 位姿，减少物体标注成本。
-- **落地步骤**：① 统一数据集与 task ID；② 生成语言；③ 双目深度；④ 物体跟踪；⑤ 阶段/检查点；⑥ 增广；⑦ 导出 WebDataset/parquet。
-- **风险**：标注噪声、计算量大、合成数据不真实。缓解：置信度加权、VLM 抽检、只用高置信标签做 RL、增广与真实数据混合。
+- **动机**：腰部/头部运动使 head 相机外参失效；每任务标定不同；接触需要毫米级相对位姿；人手需要安全距离。
+- **做法**：节点 base/torso/head/object/gripper/target/human；静态边来自 `camera_params`，动态边来自 `waist_state_joint`/`state_torso`/`state_d435`/FK；视觉边来自 stereo/SAM2/6D pose/RTMW；每步更新并检查重投影/极线一致性；运输用绝对位姿，接触用相对位姿。
+- **差异**：把“物体中心 3D”升级为“全身姿态一致性”；腰部/头部一动就重投影，而不是让策略在错误坐标系里硬做。
+- **资源**：双目/腕部 + 开源模型；2 周；1–2 张 GPU 推理。
+- **风险**：透明/反光物体深度空洞、标定漂移、人手遮挡。缓解：多视角、置信度门控、单目深度兜底、腕部近景。
 
-### 3.3 Pivot 解耦的全身控制 + Balance Shield（P1）
+### 5.3 Waist/Pivot Controller + Balance Shield（P0/P1）
 
-- **动机**：提交接口的下半身只有 `action.pivot[7]`，示范里 base 几乎静止、`pivot_4` 恒为 0.15、height 基本 0.738；多数队伍会直接输出零/常数。这个通道可以用来扩展可达空间、适配桌面高度、在人为干扰后重新对准，也可以用来防止摔倒——但用不好会摔。
-- **做法**：**把 pivot 从 VLA 里解耦**。VLA 只出双臂 + 夹爪；单独的 Pivot Controller 输出 base/waist/height：默认安全先验；目标超出可达时小范围转 base/waist；桌面过高/过低时调 height；检测到 lower_body 偏离站姿时进入 Balance Shield，清零 base 速度、回中性 waist、保持 height、暂停手臂，稳定后恢复。若 pivot 的 3 个未知维确实是 waist，则用它们做腰部辅助；否则只用 base/height。
-- **差异**：示范是静态的，所以这是 OOD，但也是被忽视的自由度。解耦后不需要重训 VLA 就能获得全身适应，且比让 VLA 直接学 base 动作安全。
-- **可行性/资源**：先用不计分单任务调试做小步探针（每维 ±0.02–0.05），确认语义/符号/限位；规则式/MPC 即可；1 周；无额外硬件。
-- **落地步骤**：① 探针确认 `pivot[3:6]` 语义；② 安全先验；③ Balance Shield；④ 可达/高度补偿；⑤ 与 VLA 动作合并；⑥ 调试。
-- **风险**：base 运动可能被规则禁止/危险；腰部映射未知；摔倒。缓解：默认静态、保守限幅、先探针、急停、人在环。
+- **动机**：pivot 不是常数；OrganizeTools 已证明 p3/p4≈waist yaw/pitch。用得好扩展可达/视角/高度；用不好摔。
+- **做法**：VLA 只出双臂+夹爪；独立控制器出 waist/base/height。默认保持示范稳定值；目标超出可达/视角/高度时小范围动；能量代价 + 限幅 + 速率限制；平衡 shield 检测 lower_body/torso 偏移 → 清零 base、回中性 waist、保持 height、暂停手臂。
+- **差异**：示范里几乎静态，所以这是 OOD，但也是被忽视的自由度；解耦后不用重训 VLA。
+- **资源**：不计分单任务探针（每维 ±0.02–0.05）；1 周。
+- **风险**：base 运动可能被规则禁止；腰部映射未官方确认；摔倒。缓解：默认静态、保守限幅、先探针、急停。
 
-### 3.4 双目 3D 物体中心 VLA（P1）
+### 5.4 EcoScheduler（P1）
 
-- **动机**：头部双目已校正，基线约 58.25mm、`fx≈282.37`，可算真实深度；多数队伍只用 RGB。任务需要精确抓取/放置/插入，评测又考位置、背景、未见物体，3D 比 2D 外观更稳。
-- **做法**：亚像素立体匹配（FoundationStereo/RAFT-Stereo）得到深度；用 SAM2/GroundingDINO 得到目标物体掩码并提升到 3D；跟踪物体 3D 位姿；从示范 EE 轨迹提取抓取/放置 affordance；把 3D token/深度图/目标 3D 子目标喂给 VLA；腕部相机做近距离验证。
-- **差异**：度量 3D + 物体中心，而不是纯 RGB 端到端；对背景/位置/遮挡更稳，对插入/挂杯/拉链更准。
-- **可行性/资源**：数据集自带相机内参/外参；立体匹配开源；1m 处 0.1px 视差约 6mm 深度误差，0.5m 处约 1.5mm（需亚像素）；4–8 张 GPU、2 周。
-- **落地步骤**：① 验证校正/极线；② 深度管线；③ 物体跟踪；④ 抓取/放置位姿；⑤ 3D 条件训练；⑥ 在位置/背景/未见物体上评测。
-- **风险**：透明/反光物体（杯子、瓶子）深度空洞；评测相机标定漂移；算力。缓解：多视角、置信度门控、单目深度兜底、腕部近景。
+- **动机**：长任务 + 多机器人并发使延迟/抖动成为工程约束；全程大 VLA 会抖、会慢。
+- **做法**：阶段预算表；运输/接近走缓存 chunk/小策略/检索；接触/恢复走全量 VLA；自适应 chunk（运输长、接触短）；多机器人按阶段优先级批处理；p99 延迟守门；能量/调用次数日志。
+- **差异**：把“能耗优化”从模型压缩扩展到**运行时调度**；与 PoseGraph/阶段控制器共享信号。
+- **资源**：1 周；无需重训。
+- **风险**：模式切换抖动、缓存错配。缓解：滞回、固定调度、只在低风险阶段走便宜路径。
 
-### 3.5 阶段重试 + 干扰感知恢复（P0/P1）
+### 5.5 SERB（P0）
 
-- **动机**：BC 没有恢复行为；评测会移动物体、拿走物体、打开/关上已完成的部件；一次抓空/滑落就整任务失败。`info.json` 甚至公开了 `human_1/human_4` 的扰动方向，可直接做定向测试。
-- **做法**：进度头停滞/下降 → 开夹爪、沿接近方向退、重新观测、换抓取位姿重试；人手/物体位移检测 → 暂停、等待稳定、重定位、更新目标、继续；用合成人手/物体瞬移训练恢复模式；按任务备注建立扰动测试集。
-- **差异**：把“恢复”当一等行为，而不是指望 VLA 从成功示范里学会；直接打人为干扰这一评分轴。
-- **可行性/资源**：检测器 + 规则/检索恢复；1 周；无需额外数据。
-- **落地步骤**：① 枚举 32 任务扰动备注；② 人手/位移检测；③ 暂停-重定位-恢复脚本；④ 合成增广；⑤ 调试。
-- **风险**：误检导致停顿；时间预算。缓解：滞回、超时、只在高置信时暂停。
+- **动机**：人机干扰是评分轴；许可证/外部数据/硬编码可能直接取消资格；可信度也重要。
+- **做法**：四类门禁 + 运行时 monitor + 提交前 checklist；人手 SSM；审计日志；模型/数据许可证清单；红队测试。
+- **差异**：把伦理/安全从“文档”变成“运行时 + 提交门禁”，既防事故也防 disqualification。
+- **资源**：1 周；规则式。
+- **风险**：误检导致停顿；规则不允许额外监控。缓解：高置信才停、超时恢复、只用机载相机。
 
-### 3.6 检查点条件化离线 RL / 优势加权 BC（P1/P2）
+### 5.6 接触阶段相对位姿伺服（P1）
 
-- **动机**：示范全是成功轨迹，BC 对所有帧等权；真正难的是抓取、插入、拉链、放置这些关键过渡。评分点提供了天然的分段目标。
-- **做法**：用自动标注得到每个检查点达成时间；训练 goal-conditioned value `V(s, g_i)` 或进度分类器；把帧按“距下一个检查点”重标注；用优势加权 BC（`w=exp(β·(V(s',g)-V(s,g)))`）强调推进关键帧；进度头用于阶段推进/恢复；有余力再做 best-of-N 或仿真残差。
-- **差异**：不是真机在线 RL，而是“评分点即回报”的离线 RL-lite；不需要失败数据也能用，风险和算力可控。
-- **可行性/资源**：离线；2–4 张 GPU、1–2 周；仿真残差另算。
-- **落地步骤**：① 检查点标签；② 训练 value/progress；③ 加权 BC；④ 评测；⑤ 可选仿真残差。
-- **风险**：全成功数据限制 RL 上限；value 校准差；过拟合。缓解：以监督进度 + 加权 BC 为主，纯 RL 为辅；留出任务/回合验证。
+- **动机**：Hard 任务的最后几毫米是纯 RGB 端到端的短板；没有力/触觉。
+- **做法**：VLA 接近；腕部相机估计 gripper-target 相对位姿（插头-插座、拉链头-齿、瓶盖-瓶身、钥匙-锁）；小步伺服 + 微搜索 + 完成验证；失败回退到 VLA 重试。
+- **差异**：混合式“VLA 接近 + 相对位姿精调”，比纯端到端稳。
+- **资源**：先做 2–3 个技能；2 周。
+- **风险**：任务特定、规则限制。缓解：技能保持通用（插入/对位/拉链），先确认规则。
 
-### 3.7 精密技能库（P2）
+### 5.7 人为干扰恢复（P1）
 
-- **动机**：Hard 任务多为接触密集/变形/小公差：拔插网线、插插头、开锁、拧药瓶、叠毛巾、装耳机、装手机、拉拉链。没有力/触觉，只能靠视觉伺服。
-- **做法**：VLA 负责接近，技能负责最后几厘米：腕部/头部双目估计插头-插座、拉链头-齿、瓶盖-瓶身的相对位姿；小步伺服；检测位姿停滞/图像接触；微搜索（wiggle）或重试；完成后验证。
-- **差异**：混合式“VLA 接近 + 经典视觉伺服精调”，比纯端到端更容易在硬任务上拿到检查点。
-- **可行性/资源**：先做 2–3 个技能（插入、拉链、倾倒）；2 周；任务特定风险。
-- **落地步骤**：选任务；实现技能；接入阶段控制器；评测。
-- **风险**：任务特定、规则限制、鲁棒性。缓解：技能保持通用（插入/拉链/对位），用学习残差增强，先确认规则。
+- **动机**：`human_1/human_4` 会移动/拿走/打开已完成部件；BC 没有恢复样本。
+- **做法**：人手/物体位移检测 → 暂停 → 重观测 → 更新姿态图 → 重定位 → 重试；用合成人手/瞬移增广；按备注建扰动测试集。
+- **差异**：把恢复当一等行为；直接打人为干扰评分轴。
+- **资源**：1 周；检测器 + 规则。
+- **风险**：误检、时间预算。缓解：滞回、超时、只在高置信时暂停。
 
-### 3.8 检索增强动作先验（P2）
+## 6. 修剪/暂缓
 
-- **动机**：32k 示范是现成的非参数记忆；OOD 状态下参数模型可能不如“找相似示范”。
-- **做法**：用物体中心特征建索引；测试时检索相似帧/动作块；与 VLA 动作融合或作为低置信度兜底；恢复时检索“从相似状态回到任务”的示范片段。
-- **差异**：非参数、数据效率高；与 VLA 互补。
-- **可行性/资源**：向量库 + 轻量特征；1 周；注意延迟。
-- **落地步骤**：索引；检索；融合；评测。
-- **风险**：检索错配、延迟、背景偏移。缓解：物体中心特征、置信度门控、只在关键阶段用。
+- **从零训练大模型**：不划算；WLA-1.0/GigaBrain-0 已开源。
+- **真机在线 RL**：样本效率/安全/时间都不允许。
+- **运行时 LLM/VLM API**：延迟/网络/规则风险；离线编译。
+- **任务特定硬编码轨迹**：泛化差，可能违规；用约束图 + 学习进度头。
+- **激进 pivot**：未探针前默认静态；平衡优先。
+- **完整仿真 RL**：P3；规则/资产/时间不确定，先不做。
+- **大规模 3D 生成增广**：P2；先把真实数据 + 轻量增广做好。
+- **“再大一点的 VLA”**：不是本轮边际收益所在。
 
-### 3.9 3D 场景重组增广（P2）
-
-- **动机**：评测考位置/背景/干扰物/未见物体，而示范视觉多样性有限。
-- **做法**：分割 + 深度 + 扩散修补/3D 重渲染；替换背景、移动物体、加干扰物、叠人手；保持深度/掩码/时序一致；与真实数据混合训练。
-- **差异**：针对评分轴的定向增广，而不是通用颜色抖动。
-- **可行性/资源**：2 周；可能有合成痕迹。
-- **落地步骤**：管线；增广；训练；评测。
-- **风险**：不真实、sim-to-real gap。缓解：小比例混合、一致性损失、真实数据优先。
-
-### 3.10 仿真残差/恢复 RL（P3）
-
-- **动机**：接触密集技能和平衡恢复在真实数据里覆盖不足；仿真可以生成失败和扰动。
-- **做法**：Isaac Lab/MuJoCo 搭简化桌面任务；检查点奖励；域随机化；训练残差/恢复；蒸馏回 VLA 或作为技能。
-- **差异**：用仿真补真实数据缺口，而不是在真机在线试错。
-- **可行性/资源**：资产/对齐成本高；2–4 周；高风险。
-- **落地步骤**：先做 1–2 个硬任务；验证 sim-to-real；再扩展。
-- **风险**：仿真不真实、资产不匹配、时间不够。缓解：只做残差/恢复，不做全任务从零 RL；作为 P3。
-
-## 4. 不建议/暂缓
-
-- **从零训练大模型**：资源打不过 Unitree，且竞赛瓶颈不在参数量。
-- **真机在线 RL**：样本效率、安全、评测时间都不允许。
-- **依赖运行时 LLM/VLM API**：延迟、网络、规则风险；所有 rubric 编译离线完成。
-- **额外传感器/硬件**：接口只给 4 路 RGB + proprio；不要假设有力/触觉。
-- **任务特定硬编码轨迹**：泛化差，且可能违反“单模型/通用”精神；用阶段 prompt + 学习进度头替代。
-- **激进使用 pivot**：未探针前默认静态；平衡优先于炫技。
-
-## 5. 8 周执行顺序
+## 7. 8 周执行顺序
 
 | 周 | 目标 | 交付 |
 |---|---|---|
-| 1 | 规则/接口/基线；rubric compiler；pivot 探针 | 可跑 baseline、32 任务 rubric JSON、pivot 语义报告 |
-| 2 | DemoCompiler v1：语言、阶段、检查点 | 结构化标注 v1、数据加载器 |
-| 3 | VLA 微调：多视角 + proprio + rubric prompt；joint vs EE | 首个可评测 checkpoint |
-| 4 | 进度头、阶段控制器、重试；干扰检测 | 闭环策略 v1 |
-| 5 | pivot/balance shield；双目 3D；精密技能 | 全身/3D/硬任务增强 |
-| 6 | 离线 RL/优势加权；增广；消融 | 策略 v2 + 消融报告 |
-| 7 | 单任务调试 + 计分多任务提交 | 首个榜单成绩 |
-| 8 | 迭代/latency/credibility；可选仿真 RL | 最终提交 |
+| 1 | 规则/接口/基线；Rubric 2.0；pivot 探针；许可证审计 | 可跑 baseline、32 任务 rubric JSON、pivot 报告、SERB checklist |
+| 2 | PoseGraph + 标定验证；语言约束解析；数据加载器 | 姿态图 v1、10 组标定表、约束图 |
+| 3 | WLA-1.0/GigaBrain-0 微调（多视角+proprio+语言） | 首个可评测 checkpoint |
+| 4 | 进度头 + 阶段控制器 + 重试；人手 SSM；SERB runtime | 闭环策略 v1 |
+| 5 | Waist/Pivot + Balance Shield；EcoScheduler；接触技能 | 全身/能效/硬任务增强 |
+| 6 | 相对位姿伺服；干扰恢复；消融 | 策略 v2 + 消融报告 |
+| 7 | 单任务调试 + 计分多任务；latency/energy profiling | 首个榜单成绩 |
+| 8 | 迭代；最终提交；审计/复现 | 最终提交包 |
 
-## 6. 必须先解决的问题
+## 8. 必须先解决的问题
 
-1. **Feishu 参赛手册**（当前不可读）：评分公式权重、每任务 trial 数、是否允许外部数据/预训练模型、是否允许任务特定逻辑、base/waist 运动限制、单任务时间限制、N 台机器人。
-2. **pivot 语义与安全限位**：`pivot[3:6]` 到底是什么；base 运动是否允许；height 范围。
-3. **评测语言分布**：是否与数据集/任务描述一致；不一致时任务匹配要更鲁棒。
-4. **调试名额**：不计分单任务调试每任务几次；优先测 T01/T04/T10/T16/T24/T30。
-5. **仿真资产**：是否有 G1 + 桌面物体；没有就砍掉 P3。
-6. **截止日期**：<4 周只做 P0 + pivot shield；4–6 周加双目/干扰/技能；>6 周再加 RL/增广。
+1. Feishu 规则（不可读）：评分权重、trial 数、外部数据/模型、任务特定逻辑、base/waist 限制、单任务时限、N。
+2. `pivot[3:6]` 提交端语义：数据集映射已强，但需不计分探针确认符号/限位。
+3. 评测语言：是否用同样 5 条复述，还是未见复述/中文；决定语言增强强度。
+4. 评测相机：是否与数据集同一标定；10 组差异如何处理。
+5. 榜单口径：平均成功率/步骤分权重；是否按任务归一化。
+6. 人机干扰：脚本化还是自适应；是否允许主动暂停。
+7. 底座许可：WLA-1.0 Apache-2.0 是否被规则允许；第三方 NOTICE。
+8. 调试名额：优先 T01/T04/T10/T15/T16/T24/T30。
 
-## 7. 一句话押注
+## 9. 一句话押注
 
-**把官方评分点编译成可验证的阶段进度，用已校正双目做物体中心 3D，并把 pivot 从示范里的常数变成受平衡 shield 约束的腰部/底盘/高度补偿——即 RUBICON：Rubric 条件化、物体中心、平衡感知的全身 VLA 竞赛层；先做 Rubric + 重试 + 平衡 shield，再加立体 3D 与离线 RL。**
+**以 Apache-2.0 的 UnifoLM-WLA-1.0 为底座，叠加 RUBICON 2.0 竞赛层：评分点/语言→阶段约束，全身姿态图→精密伺服，阶段化算力/能量预算，SERB 安全门禁——不再从零训更大的端到端 VLA。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
 ## A. 结论
 
-本轮最值得做的不是“再训一个更大的 VLA”，而是给现有开源 VLA 加一层**竞赛层**：官方评分点 → 可验证阶段进度；已校正双目 → 物体中心 3D；示范里几乎不动的 `pivot` → 受平衡保护约束的腰部/底盘/高度补偿；检查点 → 离线 RL/优势加权与恢复信号。核心方案代号 **RUBICON**。下面所有事实、评分表、架构、实验与风险均以 2026-10-23 可访问的公开页面/文件为准。
+本轮把上一轮的 **RUBICON**（Rubric 条件化、物体中心、平衡感知）升级为 **RUBICON 2.0**：保留“官方评分点 → 可验证阶段进度”的骨架，新增三条与随机灵感词对应的工程线：
 
-## B. 已核实事实（检索日期 2026-10-23）
+1. **EcoPort（能耗优化）**：把能耗拆成算力、延迟、物理动作三种预算；按阶段调度 VLA/缓存/小策略，pivot 默认静态、动则计成本。
+2. **PosePort（姿态估计）**：维护 `base → torso → head_stereo → object → gripper → target → human` 的运行时姿态图；运输用绝对位姿，接触用相对位姿，腰部/头部运动后重投影。
+3. **SERB（伦理审查）**：Safety / Evaluation integrity / Reproducibility / Bio-legal 四类门禁；人手进入工作区时 SSM 降速/暂停，提交前做许可证/红队/审计检查。
+
+底座优先 **UnifoLM-WLA-1.0-Base（Apache-2.0，6B，G1，约 2500h，64 任务）**；不再从零训更大的端到端 VLA。以下所有事实、表格、架构、实验与风险均以 2026-10-23 可访问的公开页面/文件为准；无法核实的地方明确标注“未核实”。
+
+## B. 本轮新增/修正事实（检索日期 2026-10-23）
 
 | # | 事实 | 证据/来源 |
 |---|---|---|
-| 1 | 32 个真实桌面任务、32000 条示范、169 小时；4 路相机（头部双目 + 左右腕），480×640×3，30fps | 挑战赛页 `challenges.html`；HF 数据集 README |
-| 2 | 头部双目为 rectified；左右腕为单目彩色；HangCup 标定：`fx_left≈282.369`、`fx_right≈281.874`，基线 `T≈[-58.25,-0.17,0.58] mm`；深度近似 `Z(m)≈16.44/disparity(px)` | `G1_Dex1_HangCup/meta/info.json` 的 `camera_params` |
-| 3 | 数据为 LeRobot v3.0；`lower_body[15]` = 双腿 6+6 + 腰 3；`action.pivot[7]`；**特征里没有 language 字段**，只有 `task_index`；每个任务一个 HF 数据集 | `meta/info.json`；数据集 README |
-| 4 | HangCup 的 `action.pivot` 统计：`vx/vy≈0`，`angle_z∈[-0.8,0.8]`（均值≈0），`pivot_3=0`，`pivot_4=0.15`，`pivot_5=0`，`height∈[0.654,0.740]`（均值 0.738）；腰部 yaw/roll 很小，pitch 约 0.096–0.204 | `meta/stats.json` |
-| 5 | 提交接口：obs 含 4 图、双臂 7+7、EE pose 6+6、夹爪 1+1、`lower_body[15]`、language 字符串；action 为 `joint` 或 `ee` 二选一，双臂/夹爪 + `action.pivot[7]`；metadata 含 `control_space/obs_delta_indices/image_resize/action_chunk_size/token`；N 台机器人 → N 个连续端口；评测记录延迟并检查动作规律性 | `unibot_submission` README、`example_policy.py` |
-| 6 | 评测两种模式：① 计分多任务覆盖全部 32 任务；② 不计分单任务调试只测 1 个任务。排行榜按“平均成功率 + 步骤分”综合排序；截至 2026-10-23 公开榜仍为 Coming Soon | `profile.html`、`leaderboard.html` |
-| 7 | 32 任务评分表已抓全；首检查点平均 35.47 分；检查点数 11×2、14×3、5×4、2×5；难度 12 Easy/12 Medium/8 Hard | `tasks_v2/<slug>/info.json?v=2026-07` |
-| 8 | 基线：UnifoLM-WLA-1.0 为 6B、约 2500h 真机数据、64 任务；UnifoLM-VLA-0 开源（Qwen2.5-VL 系，训练/推理/权重，12 类任务）；UnifoLM-ER-1-4B 基于 Qwen3-VL-4B | 项目页、GitHub README |
-| 9 | 参赛手册为飞书文档，curl/webfetch 均拿不到正文；评分权重、trial 数、外部数据/预训练模型、任务特定逻辑、base/waist 运动、时间限制均**未核实** | 飞书链接（见 K） |
-| 10 | “榜首成功率 <30%”为用户提供的工作假设；公开榜 Coming Soon，无法验证 | 用户输入；`leaderboard.html` |
+| 1 | 每个任务的 `meta/tasks.parquet` 含 **5 条英文复述**（`@` 分隔），不是“没有语言” | `G1_Dex1_HangCup/meta/tasks.parquet`、`OrganizeTools`、`FoldTowel`、`PlugCharger` 等 32 个数据集逐一抽取 |
+| 2 | `pivot_3 ≈ waist yaw`、`pivot_4 ≈ waist pitch`、`pivot_5` 全 0；OrganizeTools 单文件 113 episodes/122,499 帧上 r≈0.73/0.86，R²=0.532/0.737 | `G1_Dex1_OrganizeTools/data/chunk-000/file-000.parquet` 的 `action.pivot` 与 `observation.state.waist_state_joint` 回归 |
+| 3 | pivot 使用高度任务相关：OrganizeTools 连续用 waist；StorePaddle/FoldTowel 用 p4 回合级偏移；PaperCupStacking/PickOutBatteries/Unlock 用 height 偏移；OrganizeBookshelf/ZipUp 偶发 base | 32 个 `meta/stats.json` 的 `action.pivot` min/max/std/q01/q99 |
+| 4 | 头部相机本身在动：`state_d435`/`action_d435` 存在，OrganizeTools 的 D435 pitch std≈0.093、yaw std≈0.081；HangCup 也有 0.014–0.019 | `meta/info.json` 特征表；各任务 `stats.json` |
+| 5 | 32 任务至少 **10 组**不同头部双目标定；`fx` 186.03–296.15，基线 norm(T) 46.716–64.864mm，`cx` 左 302.45–365.43 / 右 315.98–384.27 | 32 个 `meta/info.json` 的 `camera_params.head_stereo` |
+| 6 | Episode 时长 6.2s（HangCup）–37.6s（ToolboxStorage）；长任务还有 StorePaddle 34.1s、SpellRobot 31.2s、PackPhone 29.2s、FoldTowel 25.8s、OrganizeTools 25.0s | `frame_index.count` / `episode_index` / fps=30 |
+| 7 | 公开榜仍是 Coming Soon；`leaderboard.html` 内联脚本自述 “The real, randomly-generated leaderboard is rendered here purely to sit (blurred) behind the … overlay” | `https://unibot.unitree.com/leaderboard.html`（2026-10-23，Chrome UA 抓取 12,226 字节） |
+| 8 | 搜索索引到的 GigaBrain-0/DM0/DreamZero/PI-0.5/WALL-OSS/MolmoAct2 详情页是合成演示，不能当真实排名 | 榜单占位脚本 + 详情页无真实提交数据（2026-10-23） |
+| 9 | 数据集 license 为 Apache-2.0；UnifoLM-WLA-1.0-Base 为 Apache-2.0（6B，约 2500h，64 任务，12.5GB，单卡 24GB 可微调/LoRA）；UnifoLM-VLA-0 的 HF/GitHub 未见明确 license 文件 | HF dataset card；`github.com/unitreerobotics/unifolm-wla`；`huggingface.co/unitreerobotics/UnifoLM-WLA-1.0-Base`；`unitreerobotics/UnifoLM-VLA-Base` |
+| 10 | GigaBrain-0.7-3.5B-Base 的 HF 标注为 Apache-2.0 | `huggingface.co/open-gigaai/GigaBrain-0.7-3.5B-Base` |
+| 11 | 数据集约 1k episodes/任务（HangCup 1043、ArrangePlates 1069、ArrangeTestTubes 1004、ConveyorSorting 1049、OrganizeStationery 1028、FoldTowel 1053、PlugCharger 1022、ToolboxStorage 1064），30fps；官方页称 32k/169h，按 32 个 `stats.json` 求和为 **33,276 episodes / 169.3h**（ColorArrangement 1533 是 outlier） | 各任务 `meta/info.json`/`stats.json`；HF 数据集 README；挑战赛页 |
+| 12 | Feishu 规则正文仍不可读；评分权重、trial 数、外部数据/模型、任务特定逻辑、base/waist 限制、单任务时限、N 均未核实 | 飞书链接（见 Q）；curl/webfetch 失败 |
 
-**标定注意**：`camera_params.head_stereo.rectified=true`，但左右 `cx` 相差约 18.4px（311.5 vs 330.0），不能直接假设已完全校正；使用前用 `stereoRectify`/极线误差/已知物体尺寸验证，必要时重投影。深度公式按 `fx≈282.12`、`B≈58.26mm` 估算。
-
-**明确未核实**：`pivot[3:6]` 的真实语义；评测用的语言字符串分布；每任务 trial 数；计分公式中成功率/步骤分的权重；是否允许外部数据或任务特定逻辑；是否允许 base/waist 运动；单任务时间限制；N 的具体值；HangCup 以外任务的相机标定是否一致；评测端 `cam_left_high/cam_right_high` 是否与数据集 `head_stereo_left/right` 完全同一对双目（名称不同，需调试确认）；评测端相机分辨率/校正是否与数据集一致。
+**关键修正**：上一轮把“数据集没有语言”当作核心瓶颈，这是不准确的。数据特征里确实没有 language 字段，但 `meta/tasks.parquet` 提供了 5 条复述。真正的问题是**评测语言是否使用同样 5 条、是否留出未见复述、是否出现中文**，以及如何把语言里的顺序/颜色/数量/方向约束变成运行时验证器。
 
 ## C. 32 任务评分表
 
@@ -233,102 +257,242 @@
 - **检查点数**：2 个 11 任务；3 个 14 任务；4 个 5 任务；5 个 2 任务。
 - **首检查点**：2 检查点任务首点 50；3 检查点 30；4 检查点 25；5 检查点 20。总和 1135，平均 **35.47**。
 - **高地板任务**（首点 50）：T01/T02/T03/T05/T08/T14/T19/T23/T24/T30/T32。优先保证“抓住/拿起/摆正/放进”这一步稳定。
-- **硬骨头**：T05 拔网线、T09 工具箱锁、T10 插插头、T12 开锁、T14 拧药瓶、T16 叠毛巾、T28 装耳机、T29 装手机。接触密集/变形/小公差，适合精密技能 + 离线 RL。
+- **硬骨头**：T05 拔网线、T09 工具箱锁、T10 插插头、T12 开锁、T14 拧药瓶、T16 叠毛巾、T28 装耳机、T29 装手机。接触密集/变形/小公差，适合相对位姿 + 精密技能 + 离线 RL。
 - **注意**：步骤分是“平均成功率 + 步骤分”综合排序的一部分，权重未知；不能为了首点牺牲完整成功率。
-- **期望分示例**：2 检查点任务若 `P(首点)=0.9`、`P(完整|首点)=0.3`，期望 ≈ `0.9×50 + 0.27×50 = 58.5`；3 检查点任务若 `0.8/0.5/0.3`，期望 ≈ `0.8×30 + 0.4×30 + 0.12×40 = 40.8`。这说明：高地板任务先稳首点，硬任务冲“第二/第三点”的边际收益更大。
+- **期望分示例**：2 检查点任务若 `P(首点)=0.9`、`P(完整|首点)=0.3`，期望 ≈ `0.9×50 + 0.27×50 = 58.5`；3 检查点任务若 `0.8/0.5/0.3`，期望 ≈ `0.8×30 + 0.4×30 + 0.12×40 = 40.8`。高地板任务先稳首点，硬任务冲“第二/第三点”的边际收益更大。
 
-### C.2 泛化备注（`info.json` 公开部分）
+### C.2 时长与 pivot 活动度（按 avg episode 时长降序）
 
-> 这些备注只覆盖 `unseen_object_3`、`human_1`、`human_4`，不代表全部评测变体；但足以做定向测试与增广。原文照录/略缩。
+| 任务 | avg s | episodes | pivot 模式 |
+|---|---:|---:|---|
+| ToolboxStorage | 37.6 | 1064 | 近静态（p4=0.15, h≈0.736） |
+| StorePaddle | 34.1 | 1047 | p4 回合级偏移（0→0.15） |
+| SpellRobot | 31.2 | 1018 | 近静态（p4=0.15, h≈0.739） |
+| PackPhone | 29.2 | 1016 | 近静态（p4=0.15, h≈0.737） |
+| FoldTowel | 25.8 | 1053 | p4 回合级偏移（0→0.15） |
+| OrganizeTools | 25.0 | 1032 | **连续 waist yaw+pitch**（p3∈[-0.516,0.569], p4∈[0,0.627]） |
+| StoreEarphones | 24.1 | 982 | 近静态（p4=0.15, h≈0.740） |
+| OrganizeStationery | 23.9 | 1028 | 近静态（p4=0.15, h≈0.740） |
+| PourOutMedicine | 21.8 | 979 | 近静态（p4=0.15, h≈0.740） |
+| ArrangePlates | 21.3 | 1069 | 近静态（p4=0.15, h≈0.737） |
+| OrganizePencilCase | 20.5 | 1024 | 近静态（p4=0.15, h≈0.738） |
+| StoreCups | 19.8 | 1025 | 近静态（p4=0.15, h≈0.740） |
+| PackDoll | 19.6 | 1060 | 近静态（p4=0.15, h≈0.737） |
+| RemovePinnedNote | 19.6 | 1026 | 近静态（p4=0.15, h≈0.740） |
+| ArrangeTestTubes | 17.8 | 1004 | 近静态（p4=0.15, h≈0.738） |
+| PlugInEthernet | 16.4 | 1009 | 近静态（p4=0.15, h≈0.738） |
+| PickOutBatteries | 16.1 | 993 | height 回合级偏移（h≈0.729） |
+| SyringeWaterTransfer | 15.3 | 1034 | 近静态（p4=0.15, h≈0.738） |
+| PlugCharger | 15.1 | 1022 | 近静态（p4=0.15, h≈0.740） |
+| PackBag | 15.1 | 1067 | 近静态（p4=0.15, h≈0.740） |
+| Unlock | 14.5 | 970 | height 回合级偏移（h≈0.733） |
+| ZipUp | 14.1 | 1006 | 偶发 base（vx/vy 极值 0.2–0.37） |
+| PaperCupStacking | 13.9 | 969 | height 回合级偏移（h≈0.727） |
+| ColorArrangement | 13.6 | 1533 | 近静态（p4=0.15, h≈0.738） |
+| ConveyorSorting | 12.2 | 1049 | 近静态（p4=0.15, h≈0.739） |
+| PlacePhotoFrame | 11.2 | 1041 | 近静态（p4=0.15, h≈0.736） |
+| FruitCollection | 10.8 | 1050 | 近静态（p4=0.15, h≈0.739） |
+| FruitSorting | 10.7 | 1032 | 近静态（p4=0.15, h≈0.731） |
+| DisconnectEthernet | 10.5 | 1025 | 近静态（p4=0.15, h≈0.739） |
+| OrganizeBookshelf | 10.3 | 1027 | 偶发 base（vx/vy 极值 0.2–0.37） |
+| StackBowls | 10.1 | 979 | 近静态（p4=0.15, h≈0.740） |
+| HangCup | 6.2 | 1043 | 近静态（p4=0.15, h≈0.738） |
 
-| ID | unseen_object_3 | human_1 | human_4 |
+> 结论：**pivot 不是全局常数，也不是全局活动**。OrganizeTools 是唯一持续使用 waist yaw+pitch 的任务；StorePaddle/FoldTowel 用 p4 回合级偏移；PickOutBatteries/Unlock/PaperCupStacking 用 height 偏移；ZipUp/OrganizeBookshelf 偶发 base；其余近静态。控制器必须**按任务配置**，不能一刀切。
+
+### C.3 头部双目标定分组（32 任务，10 组）
+
+| 组 | fx | fy | cxL | cxR | baseline norm(T) mm | 任务 |
+|---|---:|---:|---:|---:|---:|---|
+| G1 | 282.37 | 282.75 | 311.53 | 329.96 | 58.26 | ArrangePlates, ArrangeTestTubes, ConveyorSorting, FruitCollection, FruitSorting, HangCup, OrganizePencilCase, OrganizeTools, PackPhone, PickOutBatteries |
+| G2 | 263.38 | 262.78 | 314.70 | 342.33 | 56.51 | ColorArrangement, OrganizeStationery, PackBag, PourOutMedicine |
+| G3 | 227.74 | 235.07 | 331.68 | 371.73 | 61.50 | DisconnectEthernet, PlacePhotoFrame, PlugInEthernet, RemovePinnedNote, SpellRobot |
+| G4 | 276.00 | 275.47 | 310.45 | 322.51 | 57.06 | FoldTowel |
+| G5 | 186.03 | 186.50 | 361.87 | 375.01 | 54.88 | OrganizeBookshelf, StackBowls, ZipUp |
+| G6 | 296.15 | 264.05 | 304.06 | 326.39 | 64.86 | PackDoll, PaperCupStacking, StoreEarphones, ToolboxStorage, Unlock |
+| G7 | 238.56 | 244.50 | 302.45 | 315.98 | 46.72 | PlugCharger |
+| G8 | 273.66 | 273.88 | 338.23 | 384.27 | 58.86 | StoreCups |
+| G9 | 279.22 | 278.91 | 339.91 | 336.73 | 58.63 | StorePaddle |
+| G10 | 275.52 | 278.12 | 365.43 | 373.30 | 52.56 | SyringeWaterTransfer |
+
+> 影响：`fx` 相差 1.6×，baseline 相差 1.39×，`cx` 相差 80+px。单一“已校正双目”模型不能跨任务硬套；必须按任务读 `camera_params`，并做极线/重投影验证。G5/G7 的 `fB` 最小，1m 处 0.1px 视差约 9–10mm；G1 约 6.1mm；0.5m 处分别约 2.4mm 和 1.5mm。
+
+## D. 数据集与语言
+
+- LeRobot v3.0；32 个任务各一个 HF 数据集；`lower_body[15]` = 双腿 6+6 + 腰 3；`action.pivot[7]`；4 路相机（头部双目 + 左右腕），480×640×3，30fps；约 33.3k episodes / 169.3h（官方页称 32k/169h）。
+- `meta/tasks.parquet` 每个任务 1 行，`task_index=0`，`task` 字段是 5 条英文复述用 `@` 分隔。32 个数据集逐一确认均为 5 条。
+- 语言示例（首条）：
+  - HangCup: “Hang the cup on the marked spot on the cup rack.”
+  - ArrangePlates: “Place the plates on the rack from right to left in the order of red, green, and blue.”
+  - PaperCupStacking: “Stack the paper cups in front of you with two on the bottom and one on top.”
+  - SpellRobot: “Arrange the letter blocks to spell "robot".”
+  - ConveyorSorting: “Pick up the food items moving on the conveyor belt and sort them onto the rack on the right by category.”
+  - ToolboxStorage: “Store all the tools on the table in the toolbox and lock the toolbox.”
+- 训练用途：① 5 条复述全用，做语言条件；② 留一法（leave-one-paraphrase-out）验证；③ 用 LLM 离线解析顺序/颜色/数量/方向/空间关系，生成 `constraint_graph`；④ 评测若出现中文/未见复述，用翻译/复述增广兜底（是否允许外部数据需先读规则）。
+- 注意：数据特征表里没有 `language` 列，只有 `task_index`；提交接口的 `observation.language` 是字符串。训练时需要把 `task_index → task.parquet` 的复述映射进来，不要只喂 task id。
+
+## E. Pivot 语义分析
+
+### E.1 数据与方法
+
+- 文件：`G1_Dex1_OrganizeTools/data/chunk-000/file-000.parquet`（约 100MB，122,499 行，113 episodes；**不是全量 1032 episodes**）。
+- 列：`action.pivot[7]`、`observation.state.waist_state_joint[3]`（yaw, roll, pitch）、`observation.state.state_torso[6]`、`observation.state.state_d435[6]`。
+- 方法：逐帧对齐，计算 Pearson r、线性回归 `pivot_i ~ waist_j`；检查 p5、angle_z、height。
+- 结果：
+  - `pivot_3` vs waist yaw：r≈0.73，slope 0.307，intercept -0.0219，R²=0.532。
+  - `pivot_4` vs waist pitch：r≈0.86，slope 0.6497，intercept 0.1042，R²=0.737。
+  - `pivot_5` 全 0（很可能是 waist roll，但数据里没有变化，无法回归确认）。
+  - `angle_z=±0.8` 只占 0.0253%（>0.5）/0.018%（±0.8）帧，疑为哨兵/伪影；不要把它当真实转向指令。
+  - `height` 0.6946–0.740；与 torso/D435 z 弱相关（r≈0.25–0.27），更像独立的升降通道。
+- 解释：`pivot_3/4/5` 很可能是 waist yaw/pitch/roll 的缩放目标；`pivot_0/1/2` 是 base vx/vy/angle_z；`pivot_6` 是 height。提交端 README 只写 “Lower-body / pivot target”，没有逐维文档；**数据集证据强，但官方语义仍需不计分探针确认**。
+
+### E.2 任务相关模式
+
+| 模式 | 任务 | 证据 | 控制建议 |
 |---|---|---|---|
-| T01 | 缺少红色杯子和塑料架子 | 杯子向后 | 杯子向右 |
-| T02 | 缺少不同果篮 | 水果向前 | 水果向右 |
-| T03 | 缺少绿色和紫色娃娃 | 娃娃向前 | 娃娃向右 |
-| T04 | 缺少其他款式的盘子 | 橘色盘子向左移动 | 把梨往右移动 |
-| T05 | 缺少其他颜色的短网线 | 把网线另一头也插上 | 移动道具手握网口 |
-| T06 | 没有其他积木，只有塑料积木 | 绿色积木向右移动 | 红色积木向前移动 |
-| T07 | 只有一种相框 | 相框向上移动 | 相框向上移动 |
-| T08 | — | 抓到书后挪动架子 | 书向右 |
-| T09 | — | 胶带向后移动 | 胶带向右移动 |
-| T10 | 缺少其他颜色的插排 | 抓插头前进行移动 | 将插头拔起 |
-| T11 | 缺少黑色电池 | 抓取电池之前动底座 | 抓电池之后动绿色盒子 |
-| T12 | 缺少一把绿色锁 | 锁向左移动 | 中途把锁拿走 |
-| T13 | 不同类型的试管 | 试管向右移动 | 试管向左移动 |
-| T14 | 缺少不同颜色的药品收纳盒 | 拧开盖子之后拧动回来 | 把瓶子向左移动 |
-| T15 | — | 钳子向左移动 | 螺丝刀向右移动 |
-| T16 | — | 将叠完的毛巾翻开 | 将叠完的毛巾翻开 |
-| T17 | 缺少黑色的文件盒 | 荧光笔向后 | 笔盒合上之后手动打开 |
-| T18 | 缺少其他颜色的文具盒 | 把文具盒向上移动 | 把书包向左移动 |
-| T19 | — | 把包向左边移动 | 拉上拉链之后拉开 |
-| T20 | 缺少不同类型纸杯 | 把左边的纸杯向上移动 | 把右上角的纸杯向右移动 |
-| T21 | 缺少不同类型的盘子 | 把盘子向前移动 | 把架子向左边移动 |
-| T22 | 缺少不同颜色的字母 | 字母上移动 | 字母向左边移动 |
-| T23 | 缺少不同的球拍套装 | 球拍向前移动 | 球拍向左移动 |
-| T24 | 缺少不同的零食 | 可乐快到了然后放回传送带起点 | 薯片快到了然后放回传送带起点 |
-| T25 | 缺少不同颜色的纸杯 | 把纸杯向左移动 | 放了第一个马上放第二个挪一下底座 |
-| T26 | 不同的网线跟端口 | 把网线移开 | 把插口移开 |
-| T27 | 除了塑料类型 | 把粉色碗向下移动 | 叠了第二个之后拿下第二个 |
-| T28 | 缺少不同的收纳盒以及耳机托盘 | 把黄色盒子的耳机向前移动 | 把红盒子的耳机向右移动 |
-| T29 | — | 手机向上移动 | 外壳盖移开 |
-| T30 | — | 把黄色钉子移到中间 | 把绿色钉子向下移动 |
-| T31 | — | — | — |
-| T32 | — | — | — |
+| 连续 waist yaw+pitch | OrganizeTools | p3 std 0.147，p4 std 0.118；p3∈[-0.516,0.569]，p4∈[0,0.627]；113/113 回合内变化 | 用 waist 跟随工具架左右/上下；小步、限速、平衡 shield |
+| p4 回合级偏移 | StorePaddle, FoldTowel | p4 q50 0.1132/0.1198，max 0.15，min 0，q01–q99 很窄 | 回合开始设定一次 waist pitch，过程保持 |
+| height 回合级偏移 | PaperCupStacking, PickOutBatteries, Unlock | height std 0.019–0.025，q01–q99 很窄；均值 0.727/0.729/0.733 | 回合开始升降一次，过程保持 |
+| 偶发 base | OrganizeBookshelf, ZipUp | vx/vy 极值 0.2–0.37，q01–q99 很窄 | 默认静态；仅在够不到时短脉冲 |
+| 近静态 | 其余 26 任务 | p3=0，p4=0.15，height≈0.736–0.740 | 默认保持示范值；不要为了“用上 pivot”而乱动 |
 
-**用法**：① 按备注在仿真/真机调试中复现扰动；② 生成定向增广（物体位移、拿走、开合、人手入镜）；③ 训练“暂停-重定位-恢复”策略；④ 评估时按扰动类型分桶，而不是只看总分。
+### E.3 提交端探针建议
 
-## D. 瓶颈诊断
+1. 选 HangCup（近静态）和 OrganizeTools（连续 waist）各一个不计分单任务。
+2. 逐维小步测试 `pivot[3]`、`pivot[4]`、`pivot[5]`：±0.02、±0.05，观察 `waist_state_joint`/`state_torso`/`state_d435` 的响应符号、限位、延迟。
+3. 测试 `pivot[0/1/2]` 的 base 响应；确认是否被规则允许、是否触发安全限制。
+4. 测试 `pivot[6]` height 的范围/速率；确认 0.6946–0.740 是否安全。
+5. 记录“命令→状态”的延迟/死区/饱和；把结果写进控制器配置，不要用默认假设。
+6. 若 base/waist 被禁止，退回“静态 pivot + 双臂 + 相对位姿”方案；RUBICON 2.0 仍成立。
 
-1. **数据是“成功且静态”的**：32k episodes / 169h，每任务约 1000 条；HangCup 1043 条、194,564 帧、约 6.2s/episode。示范 base 几乎静止、`pivot_4` 恒定；没有失败、滑落、抓空、人为干扰后的恢复样本。纯 BC 会遇到分布漂移。
-2. **没有语言标签**：数据集特征没有 language，只有 `task_index`；提交接口却给语言。必须从 `info.json` 生成指令/复述，否则训练/评测语言分布不一致。
-3. **没有阶段/物体/检查点标签**：原始轨迹只有状态-动作；评分点、物体 3D、接触、检查点时间都没有。BC 对所有帧等权，长程信用分配差。
-4. **长程 + 多检查点**：2–5 个检查点；T16/T17 有 5 个；T09/T15/T18/T22/T28 有 4 个。提前停、漏检查点、失败后不重试都会丢分。
-5. **接触密集/变形/小公差**：拔插网线、插头、开锁、拧瓶盖、拉链、叠毛巾、装耳机、针管。没有力/触觉，只有 4 路 RGB + proprio；RGB 端到端很难稳定过最后几毫米。
-6. **人为干扰是评分轴**：`human_1/human_4` 会移动物体、拿走物体、打开已完成部件；BC 没有“暂停-重定位-恢复”的行为。
-7. **平衡/全身自由度被浪费**：`action.pivot[7]` 含 base 速度、height、3 个未知维；示范几乎不动。多数队伍会输出零/常数。用得好可以扩展可达/适配高度/抗扰动；用不好会摔。
-8. **接口/部署约束**：N 台机器人 → N 个连续端口；共享后端要并发、状态隔离；记录延迟并检查动作规律性；action chunk 要覆盖推理时间。
-9. **评分结构**：成功率 + 步骤分；首点平均 35.47，2 检查点任务首点 50。高地板任务要稳，硬任务要冲完整成功；权重未知，不能偏科。
+## F. 头部姿态与标定审计
 
-## E. RUBICON 架构
+### F.1 头部相机在动
 
-### E.1 离线
+`action_d435`/`state_d435` 是 6D 头部相机位姿。统计（std，xyz+rpy）：
+
+| 任务 | σx | σy | σz | σroll | σpitch | σyaw |
+|---|---:|---:|---:|---:|---:|---:|
+| HangCup | 0.007 | 0.003 | 0.002 | 0.014 | 0.018 | 0.019 |
+| OrganizeTools | 0.038 | 0.013 | 0.015 | 0.035 | 0.093 | 0.081 |
+| FoldTowel | 0.021 | 0.004 | 0.005 | 0.018 | 0.050 | 0.037 |
+| ConveyorSorting | 0.009 | 0.003 | 0.003 | 0.012 | 0.022 | 0.024 |
+
+> 即使 HangCup 这种 6.2s 的“近静态”任务，头部也有 1–2cm/1–2° 的运动；OrganizeTools 的 pitch/yaw 达 5–9°。**固定外参假设会让 3D 子目标在长任务里漂移。**
+
+### F.2 深度误差
+
+`Z = fB/d`，`dZ/dd = -Z²/(fB)`。对 G1（f≈282.37px，B≈58.26mm，fB≈16.45 m·px）：
+
+- Z=1.0m：0.1px 视差 ≈ 6.1mm 深度误差；Z=0.5m：≈1.5mm。
+- G5（f≈186.03，B≈54.88mm，fB≈10.21）：Z=1.0m ≈ 9.8mm/0.1px；Z=0.5m ≈ 2.5mm。
+- G7（f≈238.56，B≈46.72mm，fB≈11.15）：Z=1.0m ≈ 9.0mm/0.1px；Z=0.5m ≈ 2.2mm。
+
+> 结论：桌面 0.5–1m 的头部双目只能给“厘米级”粗定位；接触最后几毫米必须靠腕部近景 + 相对位姿，不能只靠头部 stereo。
+
+### F.3 处理策略
+
+- 按任务读 `camera_params`，不要用全局常量；`rectified=true` 也要检查极线误差。
+- 双目只用于**粗定位/物体中心/桌面平面**；接触用**腕部相对位姿**。
+- 腰部/头部运动后，用 `state_torso`/`state_d435`/`waist_state_joint` 更新 `T_base_head`，重投影 3D 子目标；重投影误差 > 阈值就暂停/重观测。
+- 透明/反光物体（杯子、瓶子、药瓶）深度空洞：用多视角、单目深度兜底、腕部近景、轮廓/关键点。
+- 评测相机若与数据集不同，先在调试任务上做一次外参/尺度校验；不要假设同名相机就是同一标定。
+
+## G. 榜单审计与竞争分析
+
+### G.1 公开榜仍是占位
+
+- `https://unibot.unitree.com/leaderboard.html`（2026-10-23）仍显示 “排行榜即将公开 / Coming Soon”。
+- 页面内联脚本原文：*“The real, randomly-generated leaderboard is rendered here purely to sit (blurred) behind the "排行榜即将公开" overlay. The board container is blurred + inert via inline style in the markup, so it is masked from the first frame — this script only fills it in; it never unmasks anything.”*
+- 因此：榜单上的名字/分数是随机生成的背景，不是真实提交；搜索索引里的 GigaBrain-0/xembody、DM0/Embodied AI Institute、DreamZero/World Model Lab、PI-0.5/RoboReasoner、WALL-OSS-0.5/Generalist Robotics、MolmoAct2/DexHacker 详情页是合成演示。**不要据此做“榜首方案分析”。**
+
+### G.2 最可能强基线（推断，不是排名）
+
+| 基线 | 优势 | 可能短板 | 许可证 |
+|---|---|---|---|
+| UnifoLM-WLA-1.0-Base 微调 | G1/2500h/64 任务/全身动作 token；Apache-2.0；单卡 24GB 可微调 | 无公开成功率；服务器默认只支持两指夹爪格式；挑战 32 任务需再微调 | Apache-2.0 |
+| GigaBrain-0 / 0.7 微调 | world-model 数据、RGBD、CoT、real2real/human/view/sim2real | 3.5B/4B 推理成本；挑战数据分布不同；需核实动作接口 | 0.7-3.5B-Base 为 Apache-2.0 |
+| π0.5 / GR00T / OpenVLA-OFT | 强通用 VLA、action chunk、多视角 | 非 G1 专用；接触精度/腰部控制弱；许可证各异 | 需逐个核实 |
+| 从零/大小模型 | 可定制 | 数据/算力打不过 Unitree；泛化差 | — |
+
+### G.3 他们大概率仍会输的地方
+
+1. **接触密集/小公差**：T05/T10/T12/T14/T16/T19/T28/T29 的最后几毫米。
+2. **长程检查点**：T09/T15/T16/T17/T18/T22/T28 的 4–5 检查点；premature stop、漏点、失败不重试。
+3. **人为干扰**：`human_1/human_4` 移动/拿走/打开已完成部件；BC 没有恢复样本。
+4. **腰部/头部运动**：外参失效、3D 子目标漂移、平衡风险。
+5. **延迟/抖动/多机器人并发**：长任务 + 4 路视频 + N 端口。
+6. **许可证/可复现性**：非商用权重、外部数据、硬编码、审计缺失。
+
+### G.4 Local Proxy Leaderboard（LPL）
+
+公开榜不可用，先建本地代理榜：
+
+- **离线**：留出 episode（每任务 10–20%），看动作 L1/DTW、阶段分类、进度回归、物体 3D/相对位姿误差。
+- **半离线**：用 `info.json` 的 `unseen_object_3/human_1/human_4` 备注，构造留出扰动（物体位移、拿走、开合、人手入镜），在仿真或真机调试中跑。
+- **真机**：优先 T01/T04/T10/T15/T16/T24/T30；每任务 5–10 trials；记录成功率、检查点、恢复率、延迟。
+- **语言**：5 条复述留一法；若允许，加中文/同义复述。
+- **报告**：按难度、接触密度、时长、pivot 模式、扰动类型分桶；不要只看总分。
+
+## H. 底座与许可证审计
+
+| 资产 | 许可证 | 证据 | 用法 |
+|---|---|---|---|
+| UniBot 数据集 | Apache-2.0 | HF dataset card | 可商用/可改；保留 NOTICE |
+| UnifoLM-WLA-1.0-Base | Apache-2.0 | GitHub README、HF card；12.5GB/24GB 来自 2026-10-10 二手报道，需以官方为准 | **默认底座**；6B/2500h/64 任务；单卡 24GB 可微调/LoRA（待官方复核） |
+| UnifoLM-VLA-0 | 未见明确 license（上一轮记录 CC BY-NC-SA 4.0，需复核） | HF `unitreerobotics/UnifoLM-VLA-Base` 无 license 字段；GitHub 无 LICENSE | 不默认使用；若用，先书面确认 |
+| GigaBrain-0.7-3.5B-Base | Apache-2.0 | HF API | 可选底座/数据生成；需核实动作接口 |
+| Qwen2.5-VL | Apache-2.0 | 公开模型卡 | 可作为 VLM backbone |
+| Qwen3-VL | 需核实 | 公开模型卡 | WLA-1.0 的 ER 底座；以官方为准 |
+| 第三方组件 | 各自许可证 | `NOTICE`/`THIRD_PARTY_LICENSES.md` | 提交前逐项核对 |
+
+> 结论：**优先 WLA-1.0-Base**。它同时满足 G1、全身动作、Apache-2.0、单卡可微调四点；UnifoLM-VLA-0 的许可证不清晰，不作为默认底座。若规则允许外部预训练模型，WLA-1.0 是最干净的起点；若不允许，则用挑战数据从头微调一个小模型，RUBICON 2.0 的竞赛层仍然适用。
+
+## I. RUBICON 2.0 架构
+
+### I.1 离线
 
 ```text
-32 × LeRobot v3 数据集
+32 × LeRobot v3 数据集（32k episodes / 169h）
         │
-        ├─ 语言生成（info.json 名称/描述/评分点 → 指令 + 复述）
+        ├─ 语言：meta/tasks.parquet 的 5 条复述
+        ├─ Rubric Compiler 2.0：score_steps + 语言约束 → phase/constraint_graph
         ├─ DemoCompiler：双目深度 + SAM2/GroundingDINO + 阶段切分 + 检查点标签
-        ├─ 增广：背景/位置/干扰物/人手/物体瞬移
+        ├─ 姿态监督：state_torso / state_d435 / waist_state_joint / EE pose
+        ├─ 增广：背景/位置/干扰物/人手/物体瞬移（规则允许时）
         ▼
-结构化数据集（阶段、物体 3D、接触、检查点、抓取/放置位姿）
+结构化数据集（阶段、约束图、物体 3D、接触、检查点、抓取/放置位姿）
         │
-        ├─ VLA 微调（多视角 + proprio + rubric prompt + 3D token）
-        ├─ 辅助头：阶段分类 / 进度回归 / 深度/关键点
-        ├─ 离线 RL：goal-conditioned value + 优势加权 BC
-        └─ 检索索引：物体中心帧/动作块
+        ├─ VLA 微调（WLA-1.0/GigaBrain-0；多视角 + proprio + 语言 + 3D token）
+        ├─ 辅助头：阶段分类 / 进度回归 / 深度/关键点 / 相对位姿
+        ├─ 离线 RL：goal-conditioned value + 优势加权 BC（P2）
+        ├─ 检索索引：物体中心帧/动作块（EcoPort 的便宜路径）
+        └─ 审计：数据版本、许可证、seed、config
         ▼
-策略包：VLA + 进度头 + 物体跟踪 + rubric DB + pivot controller + skills
+策略包：VLA + 进度头 + 姿态图 + rubric DB + pivot controller + skills + SERB
 ```
 
-### E.2 在线
+### I.2 在线
 
 ```text
 obs（4 图 + proprio + language）
         │
         ├─ 感知：双目深度、物体 3D、桌面平面、人手/位移检测
         ├─ 任务匹配：language + 首帧 → 32 任务之一
-        ├─ Rubric/阶段：当前 phase 的 instruction/target/predicate
+        ├─ Rubric/阶段：当前 phase 的 instruction/constraint/predicate
+        ├─ PoseGraph：base→torso→head→object→gripper→target→human
         ├─ VLA：多视角 + proprio + phase prompt → 双臂/夹爪动作
-        ├─ 精密技能：插入/拉链/倾倒的最后几厘米
-        ├─ Pivot Controller：安全先验 + 可达/高度补偿
+        ├─ EcoScheduler：按 phase 选 VLA/缓存/小策略；自适应 chunk
+        ├─ 精密技能：插入/拉链/倾倒的最后几厘米（相对位姿）
+        ├─ Pivot Controller：安全先验 + 可达/高度补偿 + 能量代价
         ├─ Balance Shield：风险时清零 base、回中性 waist、保持 height、暂停手臂
         ├─ 进度头：推进 phase / 触发重试 / 触发恢复
+        ├─ SERB：关节/速度/工作空间/人机距离/NaN/watchdog/审计
         ▼
 action（joint 或 ee + grippers + pivot + meta.token）
 ```
 
-### E.3 伪代码
+### I.3 伪代码
 
 ```python
 class RubiconPolicy:
@@ -336,11 +500,14 @@ class RubiconPolicy:
         self.token = os.environ["UNIBOT_SUBMISSION_TOKEN"]
         self.control_space = "joint"          # 或 "ee"，由实验决定
         self.chunk = 8
-        self.vla = load_vla(...)
+        self.vla = load_vla("UnifoLM-WLA-1.0-Base")
         self.progress = load_progress_head(...)
         self.perception = Perception(...)     # stereo, SAM2, human detector
+        self.pose_graph = PoseGraph(...)
         self.rubrics = load_rubrics("rubrics.json")
         self.pivot = PivotController(...)
+        self.eco = EcoScheduler(...)
+        self.serb = SERBMonitor(...)
         self.skills = SkillLibrary(...)
 
     def reset(self):
@@ -348,326 +515,375 @@ class RubiconPolicy:
         self.memory = SceneMemory()
         self.retry = 0
         self.mode = "NORMAL"                  # NORMAL / WAIT / RECOVER
+        self.pose_graph.reset()
+        self.eco.reset()
+        self.serb.reset()
 
     def get_action(self, obs):
         task = match_task(obs["observation.language"], obs)
         rubric = self.rubrics[task]
         scene = self.perception.update(obs)
-        self.memory.update(scene)
+        self.pose_graph.update(obs, scene)
+        self.serb.update(obs, scene)
 
-        if scene.human_in_workspace or self.memory.object_moved():
+        if self.serb.human_in_workspace():
             self.mode = "WAIT"
             return self.hold_action(obs, scene)
 
-        if self.pivot.balance_risk(obs):
+        if self.mode == "WAIT" and self.serb.human_clear():
             self.mode = "RECOVER"
-            return self.hold_action(obs, scene)
+            self.pose_graph.reobserve()
 
-        self.mode = "NORMAL"
+        if self.mode == "RECOVER":
+            action = self.skills.recover(obs, scene, self.pose_graph)
+            if action is not None:
+                self.mode = "NORMAL"
+                return self.pack(action, obs)
+
         phase = rubric.phases[self.phase]
-        prompt = compose_prompt(task, phase)
-        action = self.vla.act(obs, scene.tokens, prompt)
-        action = self.skills[phase.skill].refine(action, scene, phase)
-        action["action.pivot"] = self.pivot.command(scene, phase, obs)
-        action = smooth_and_clip(action)
+        plan = self.eco.plan(phase, scene, self.vla)
+        if plan.use_cache:
+            action = plan.cached_action
+        else:
+            action = self.vla.act(obs, scene, phase, self.pose_graph)
+        action = self.skills.refine(phase, action, scene, self.pose_graph)
+        action = self.pivot.control(phase, action, scene, self.pose_graph)
+        action = self.serb.clamp(action, obs)
 
-        p = self.progress.done(obs, phase)
-        if p > 0.8:
+        progress = self.progress.step(obs, scene, phase)
+        if progress.done:
             self.phase = min(self.phase + 1, len(rubric.phases) - 1)
             self.retry = 0
-        elif self.progress.stalled(obs, phase):
+        elif progress.stuck:
             self.retry += 1
-            self.recover_or_retry(scene, phase)
+            if self.retry >= rubric.retry_policy.max_retries:
+                self.mode = "RECOVER"
+                self.retry = 0
 
-        action["meta.token"] = self.token
+        self.serb.log(obs, action, scene, progress)
+        return self.pack(action, obs)
+```
+
+> `pack` 按提交 README 拼 `action.left_arm/right_arm/left_gripper/right_gripper/pivot`（joint）或 `action.*_ee_pose_gripper_base`（ee），并带 `meta.token`；每个动作数组保留 `T_a` 时间轴。
+
+## J. Rubric Compiler 2.0
+
+### J.1 Schema
+
+```json
+{
+  "task_id": "T21",
+  "name": "ArrangePlates",
+  "instruction": "Place the plates on the rack from right to left in the order of red, green, and blue.",
+  "constraints": {
+    "order": ["red", "green", "blue"],
+    "direction": "right_to_left",
+    "target": "plate_rack",
+    "count": 3,
+    "spatial": ["on_rack"]
+  },
+  "phases": [
+    {"id": 0, "predicate": "red_plate_on_rack", "score": 30, "max_steps": 900},
+    {"id": 1, "predicate": "green_plate_on_rack", "score": 30, "max_steps": 900},
+    {"id": 2, "predicate": "blue_plate_on_rack", "score": 40, "max_steps": 900}
+  ],
+  "retry_policy": {"max_retries": 2, "on_stuck": "reobserve_and_retry"}
+}
+```
+
+> `phases` 与 `score_steps` 的 1:1 对齐需离线校准；语言顺序是强先验，但不能假设评分点一定按颜色切。对 `ConveyorSorting` 这类动态任务，phase 应按“类别/物体”而不是固定时间切。
+
+### J.2 语言约束示例
+
+| 任务 | 语言约束 | 运行时验证 |
+|---|---|---|
+| ArrangePlates | 顺序 red→green→blue；方向 right→left；目标 rack | 检测三种颜色盘子在 rack 上的相对位置/顺序 |
+| ColorArrangement | 顺序 red→green→yellow；right→left | 检测积木颜色序列 |
+| PaperCupStacking | 2 个在下、1 个在上；在身前 | 检测杯子堆叠拓扑/数量 |
+| SpellRobot | 拼 “robot” | 检测字母块序列/OCR |
+| FruitSorting | 按颜色匹配盘子 | 检测水果-盘子颜色配对 |
+| ConveyorSorting | 按类别放到右侧 rack；物体在动 | 跟踪传送带物体、类别、放置位置 |
+| ToolboxStorage | 所有工具进工具箱并上锁 | 检测工具在箱内、锁扣状态 |
+| FoldTowel | 叠好并放到旁边 | 检测毛巾折叠次数/最终位姿 |
+| PackDoll | 所有娃娃进包，包直立 | 检测包内物体、包姿态 |
+| StoreCups | 纸杯逐个上架 | 检测杯子在架、顺序 |
+
+### J.3 Progress Verifier
+
+- **输入**：当前 4 图、物体检测/3D、夹爪状态、EE pose、phase。
+- **输出**：`done`、`progress∈[0,1]`、`stuck`、`phase_confidence`。
+- **训练**：用 `score_steps` + 语言约束自动对齐 phase 标签；小 Transformer/MLP 在物体中心特征上训练；辅助损失（phase 分类、进度回归、物体在目标区域二分类）。
+- **运行时**：置信度阈值 + 滞回 + 最小 dwell time；`stuck` 触发重试/恢复；不要用硬编码坐标。
+- **防作弊**：不针对评分表写死状态机；约束图只做 prompt/验证；所有阈值在留出任务上校准。
+
+## K. PoseGraph
+
+### K.1 节点与边
+
+| 节点 | 来源 | 频率 |
+|---|---|---|
+| base | 机器人基座（固定） | — |
+| torso | `state_torso` / `action_torso` | 30Hz |
+| head | `state_d435` / `action_d435` + 标定 | 30Hz |
+| object_i | stereo + SAM2/GroundingDINO + 6D pose | 10–30Hz |
+| gripper_l/r | FK + `*_ee_pose_gripper_torso/base` | 30Hz |
+| target_j | 任务约束图 + 物体检测 | 按需 |
+| human_k | RTMW/RTMW3D + depth | 10–30Hz |
+
+| 边 | 来源 | 备注 |
+|---|---|---|
+| `T_base_torso` | `state_torso` | 腰部/底盘运动后更新 |
+| `T_torso_head` | `state_d435` | 头部/颈部运动后更新 |
+| `T_head_object` | stereo/SAM2/6D pose | 绝对粗定位 |
+| `T_torso_gripper` | FK/EE pose | 双臂 |
+| `T_gripper_target` | 腕部相对位姿 | 接触精调 |
+| `T_base_human` | RTMW + depth | 安全距离 |
+
+### K.2 一致性检查
+
+```text
+T_base_object = T_base_torso * T_torso_head * T_head_object
+T_base_target = T_base_torso * T_torso_head * T_head_target
+T_gripper_target = inv(T_base_gripper) * T_base_target
+```
+
+- 每步重投影物体 3D 点，检查像素误差；> 阈值（如 8–12px）→ 降置信度/重观测。
+- 腰部/头部运动后，`T_base_torso`/`T_torso_head` 变化，必须重算 `T_base_object`；不能缓存旧 3D 子目标。
+- 运输用 `T_base_object`（绝对）；接触用 `T_gripper_target`（相对）；人手移动物体后，重新估计 `T_base_object` 并更新 phase 目标。
+- 透明/反光物体：立体匹配置信度低 → 用单目深度/轮廓/腕部；相对位姿优先。
+- 标定：按任务 `camera_params`；`rectified=true` 仍做极线检查；必要时 `stereoRectify` 或自标定。
+
+### K.3 人手与 SSM
+
+- RTMW/RTMW3D 输出 133 关键点（含手/脸/脚）；取双手/前臂/头部。
+- 计算人手到机器人 EE/前臂/躯干的最小距离 `d_min`；估计人手速度 `v_h`。
+- SSM：`v_robot ≤ (d_min - d_safe) / T_reaction`；低于阈值 → 降速；进入工作区 → 暂停；离开 → 重定位 → 恢复。
+- 记录事件：时间、距离、速度、动作、恢复时间；用于审计和红队。
+
+## L. EcoScheduler
+
+### L.1 阶段预算（示例，按实测调整）
+
+| 阶段 | 策略 | 视角 | chunk | 目标延迟 |
+|---|---|---|---:|---:|
+| Transport | 缓存 chunk / 小策略 / 检索 | 1 head + 1 wrist | 16–32 | 10–20ms |
+| Approach | VLA | 2 head + 2 wrist | 8–16 | 30–50ms |
+| Contact | VLA + 相对位姿 | 2 wrist + head | 4–8 | 50–80ms |
+| Recovery | VLA + PoseGraph | all | 4–8 | 80–120ms |
+
+### L.2 自适应 chunk
+
+- 运输/远离接触：长 chunk（16–32），减少 VLA 调用；用缓存/插值。
+- 接近/接触：短 chunk（4–8），提高反应；接触阶段必须短。
+- 触发全量 VLA 的条件：phase=contact、夹爪状态变化、物体距离 < 阈值、姿态图一致性低、人手进入、进度停滞。
+- 滞回：模式切换加冷却时间，避免抖动；chunk 长度渐变。
+
+### L.3 多机器人
+
+```python
+def schedule(requests, batch_size=8):
+    # 接触/恢复优先；同阶段按 deadline 排序
+    requests.sort(key=lambda r: (r.phase not in ("CONTACT", "RECOVERY"), r.deadline))
+    batch = requests[:batch_size]
+    return model_server.infer_batch(batch)
+```
+
+- 每个端口独立状态（`reset()` 清空）；模型 server 无状态、可批处理。
+- 保持 p99 延迟 < 当前 chunk 时长；否则降级到缓存/小策略。
+- 记录每端口 VLA calls、延迟、jitter；用于容量规划。
+
+### L.4 指标
+
+- VLA calls/episode、p50/p95/p99 latency、jitter、energy per success、steps/episode。
+- 物理能量代理：`Σ(|vx|+|vy|+|ω|+|Δh|+|Δwaist|+|Δa|²)`；与成功率一起看，避免“省电但做不成”。
+
+## M. SERB
+
+### M.1 四类门禁
+
+| 门禁 | 检查项 | 证据/工具 |
+|---|---|---|
+| Safety | 关节/速度/工作空间/腰部限位；平衡包络；人机分离；急停；watchdog；NaN/超限 | 运行时 monitor + 日志 |
+| Evaluation integrity | 不硬编码任务坐标/轨迹；不针对评分表作弊；进度用学习头；披露外部数据/模型/人工干预 | 代码审计 + 模型卡 |
+| Reproducibility | seed、config、数据版本、模型版本、审计日志、失败回放 | 提交包 |
+| Bio-legal | 数据集/底座/第三方许可证；人脸/人手隐私；非商用权重禁用 | 许可证矩阵 + NOTICE |
+
+### M.2 运行时 monitor
+
+```python
+class SERBMonitor:
+    def update(self, obs, scene):
+        self.check_nan(obs)
+        self.check_joint_limits(obs)
+        self.check_workspace(scene)
+        self.check_balance(obs)
+        self.check_human(scene)
+        self.check_watchdog()
+
+    def clamp(self, action, obs):
+        action = clip_joint_velocity(action)
+        action = clip_workspace(action)
+        action = scale_for_human(action, self.human_distance)
         return action
 ```
 
-### E.4 模块规格
+### M.3 审计日志 schema
 
-| 模块 | 输入 | 输出 | 频率/算力 | 备注 |
+```json
+{
+  "ts": "2026-10-23T12:34:56.789Z",
+  "episode": 42,
+  "task": "T21",
+  "phase": 1,
+  "model_version": "wla-1.0-ft-20261020",
+  "data_version": "unibot-v1-20260911",
+  "action": [0.1, 0.2, 0.3],
+  "ee_pose": [0.4, 0.0, 0.2, 0.0, 0.0, 0.0],
+  "human_distance_m": 0.85,
+  "latency_ms": 38,
+  "safety_event": null,
+  "progress": 0.62
+}
+```
+
+### M.4 提交前 checklist
+
+- [ ] 数据集/底座/第三方许可证清单 + NOTICE
+- [ ] 模型卡（训练数据、版本、已知失败）
+- [ ] 数据卡（来源、许可、隐私处理）
+- [ ] 红队报告（人手干扰、物体位移、抓空、滑落、碰撞）
+- [ ] 安全案例（限位、SSM、急停、watchdog、恢复）
+- [ ] 可复现配置（seed、config、依赖、硬件）
+- [ ] 审计回放（至少 3 个任务的成功/失败样例）
+- [ ] 规则合规声明（外部数据/模型、任务特定逻辑、base/waist 运动）
+
+## N. 实验设计 B0–B9
+
+| 编号 | 变量 | 假设 | 主要指标 | 成本 |
 |---|---|---|---|---|
-| 双目深度 | head L/R | 度量深度 | 30fps 可选 10fps | 亚像素；透明/反光有空洞 |
-| 物体跟踪 | 4 图 + 深度 | 物体 mask/3D/位姿 | 5–10fps | 目标物体优先，非全场景 |
-| 任务匹配 | language + 首帧 | task_id | 一次/回合 | embedding + 关键词兜底 |
-| Rubric/阶段 | task_id + 进度 | phase instruction | 每步 | 离线 JSON，无 API |
-| VLA | 多视角 + proprio + prompt | 双臂/夹爪 chunk | 5–15Hz | 8B 级，LoRA |
-| 进度头 | VLA 特征 + proprio | 阶段完成概率 | 30Hz | 小 MLP/Transformer |
-| Pivot Controller | 物体 3D + 相位 + 平衡状态 | pivot[7] | 30Hz | 规则/MPC，可解耦 |
-| Balance Shield | lower_body + pivot | 安全 pivot/暂停 | 30Hz | 状态机 |
-| 精密技能 | 腕部/头部近景 | 残差动作 | 30Hz | 插入/拉链/倾倒 |
-| 服务层 | N 端口 | 动作/延迟 | 并发 | 共享后端 + 状态隔离 |
+| B0 | WLA-1.0 微调（多视角+proprio+5 复述） | 强基线 | 成功率/检查点 | 3–5 天 |
+| B1 | + 语言约束 prompt / 留一复述 | 语言约束提升长程顺序 | 顺序正确率/完整成功 | +2 天 |
+| B2 | + Rubric/Progress + 重试 | 阶段推进减少 premature stop | 检查点分/完整成功 | +3 天 |
+| B3 | + PoseGraph 绝对（stereo/object 3D） | 3D 提升位置/背景泛化 | 抓取/放置成功率 | +4 天 |
+| B4 | + PoseGraph 相对（腕部接触） | 相对位姿提升硬任务 | T05/T10/T12/T19/T29 | +5 天 |
+| B5 | + waist/pivot + Balance Shield | 腰部扩展可达且不摔 | pivot 任务成功率/平衡事件 | +3 天 |
+| B6 | + EcoScheduler | 阶段化算力降延迟/抖动 | p99/jitter/VLA calls | +2 天 |
+| B7 | + 人手 SSM/恢复 | 干扰后恢复 | human_1/4 成功率 | +3 天 |
+| B8 | + 离线 RL/优势加权 | 关键过渡提升 | 硬任务检查点 | +4 天 |
+| B9 | + 增广/世界模型 | 外观/位置/视角泛化 | unseen 分桶 | +5 天 |
 
-### E.5 控制空间：joint vs EE
+> 顺序原则：先 B0–B2（低成本、高确定性），再 B3–B5（核心差异化），最后 B6–B9。若规则不允许外部模型/数据，B0 改为“挑战数据从头微调小模型”，其余不变。
 
-- `metadata.control_space` 在握手时固定，**不能按任务/阶段运行时切换**；必须二选一。
-- **joint**：输出 7+7 关节目标 + 夹爪 + pivot。与示范同空间，最容易复现；限位/平滑好做；缺点是可能过拟合关节配置，跨物体泛化弱。
-- **ee**：输出 6+6 base-frame EE 位姿 + 夹爪 + pivot。更适合物体中心 3D 子目标/视觉伺服；缺点是要依赖评测端 IK，且 waist/base 动了以后 base-frame 目标必须补偿（内部用 torso-frame 再转 base-frame）。
-- **建议**：离线同时训练两个头，单任务调试各测一次；若评测端 IK 延迟/精度未知，默认 joint；若 3D 精密技能是核心，选 ee。无论选哪个，pivot 都由独立控制器输出，不交给 VLA 学。
+### N.1 任务分桶
 
-## F. DemoCompiler 数据标注引擎
+- **高地板/短任务**：T01/T02/T03/T08/T21/T24/T30/T32。
+- **接触密集**：T05/T10/T12/T14/T19/T26/T29。
+- **变形/长程**：T16/T17/T18/T28/T31。
+- **pivot 活动**：T15（连续 waist）、T23/T16（p4 偏移）、T20/T11/T12（height 偏移）。
+- **动态/顺序**：T24（传送带）、T04/T06/T21/T27（颜色/顺序）、T22（拼写）。
+- **人为干扰**：所有有 `human_1/human_4` 备注的任务。
 
-### F.1 管线
+### N.2 Local Proxy Leaderboard 评分
 
-1. **统一数据集**：32 个 HF 数据集，统一 schema；建立 `global_task_id`；读取 `meta/info.json`、`meta/stats.json`、parquet、视频。
-2. **语言生成**：从 `info.json` 的 `zh_name/en_name/zh_desc/en_desc/scoring_points` 生成指令与 5–10 条复述；把评分点作为阶段描述；训练时随机拼接。
-3. **双目深度**：用 `camera_params` 做校正/校验；亚像素立体匹配；输出深度图与置信度；对透明/反光做空洞填充/多视角融合。
-4. **物体跟踪**：GroundingDINO 开词检测 + SAM2 分割；用深度提升到 3D；用光流/卡尔曼跟踪；抓取后物体位姿 = 夹爪位姿 + 偏移。
-5. **阶段切分**：夹爪开合事件 + EE 速度/加速度 + 物体运动 + 变化点检测（ruptures）；得到 reach/grasp/lift/transport/place/open/close/insert/zip/pour 等阶段。
-6. **Rubric 对齐**：用 LLM 把阶段序列对齐到 `score_steps`；用 VLM 抽检关键帧；得到每个检查点的完成时间与谓词。
-7. **抓取/放置位姿**：抓取时刻的 EE 位姿（相对物体）作为正样本；放置/释放时刻的 EE 位姿（相对目标区域）作为正样本；训练 affordance head。
-8. **增广**：背景替换、物体位移、干扰物、人手合成、光照/颜色/相机抖动、物体瞬移；保持深度/掩码/时序一致。
-9. **导出**：WebDataset/parquet + 标签 JSON；训练/验证按 episode 切分，避免帧泄漏。
+- 每个任务 5–10 trials；记录 `first_checkpoint`、`full_success`、`checkpoint_score`、`steps`、`latency`、`recovery`。
+- 分桶报告；用 bootstrap 置信区间；不要用单次最好成绩。
+- 离线代理：动作 L1/DTW、phase 分类 F1、进度 MAE、物体 3D 误差、相对位姿误差、重投影误差。
+- 真机代理：成功率、检查点、干扰恢复率、平衡事件、碰撞/急停次数。
 
-### F.2 标签 schema
+## O. 指标
 
-```text
-episode_id, task_id, t, images[4], state, action, language,
-phase_id, phase_name, checkpoint_id, progress,
-objects: [{id, name, mask, xyz, rpy, bbox, visibility, contact}],
-grasp: {left/right, object_id, pose},
-target: {object_id, region, pose},
-disturbance: {type, human_bbox, object_id, t}
-```
-
-### F.3 阶段切分启发式
-
-- 夹爪 `5.5→0` 为闭合，`0→5.5` 为打开；闭合且物体随夹爪运动 = grasp；闭合且物体不动 = 抓空/滑落候选。
-- EE 线速度高 + 夹爪打开 = reach；EE 低速 + 夹爪闭合 = lift/transport；EE 低速 + 夹爪打开 = place/release。
-- 物体 mask 与夹爪 mask 重叠 + 物体 3D 位移 = contact；重叠消失 + 物体仍在 = slip。
-- 变化点检测在 `left_arm/right_arm/EE pose/gripper` 上做，再用视觉特征校验；阶段数应与 rubric 检查点数一致或可合并。
-- 对 4/5 检查点任务，允许“一个 rubric 步骤 = 多个动作阶段”，对齐时用动态规划/LLM。
-
-### F.4 语言生成
-
-- 训练集没有 language；必须生成。模板：
-  - `"Put all the fruits into the fruit basket."`
-  - `"Task: fruit collection. Step 1/2: grab fruit 1 and put it into the basket."`
-  - `"当前子任务：抓住水果1放入果篮。"`
-- 每条轨迹 5–10 条复述；随机拼接任务描述 + 当前阶段 + 评分点；避免模型只记住一种句式。
-- 评测语言可能更短/更泛；用任务匹配（embedding + 关键词 + 首帧物体检测）兜底。
-
-### F.5 增广
-
-- **背景**：分割桌面/物体，扩散修补或换背景；保持阴影/深度一致。
-- **位置**：物体在桌面平面内平移/旋转；用深度重投影；避免越界/碰撞。
-- **干扰物**：随机加非目标物体；确保不遮挡目标抓取点。
-- **人手**：合成手/手臂入镜、移动/拿走物体；训练干扰检测与恢复。
-- **瞬移**：在关键帧把物体移到新位置；模拟 human_1/human_4。
-- **一致性**：深度/分割/时序一致性损失；合成比例 ≤30%，真实数据优先。
-
-### F.6 算力/规模
-
-- 169h、32k episodes；标注降采样到 5–10fps；物体跟踪只跑头部双目 + 关键帧腕部。
-- 32k × ~200 帧 × 2 头 = ~12.8M 帧；SAM2 批处理 + 跟踪传播，4–8 张 A100/H100，1–2 周。
-- 存储：原始 AV1 数 TB；标签/索引 GB 级；不要重复编码视频。
-
-## G. 平衡/全身控制
-
-### G.1 接口事实
-
-- 提交 action 只暴露 `action.pivot[7]` 作为下半身/ pivot 目标；没有 `lower_body` 或 `waist_action_joint` 动作键。
-- `pivot` 命名：`[vx, vy, angle_z, pivot_3, pivot_4, pivot_5, height]`；`pivot_3..5` 语义未公开。
-- 观测 `lower_body[15]` = 双腿 12 + 腰 3（yaw, roll, pitch），可用于平衡监视。
-- 示范统计：base 几乎静止；`pivot_4=0.15` 恒定；height 均值 0.738；腰部 pitch 约 0.16–0.20。说明 pivot 的大部分维度在示范中未被使用。
-- 注意：数据集里 `action.waist_action_joint` 与 `action.lower_body[12:15]` 一致，是另一套通道；`action.pivot` 是独立通道，不能因为 `pivot_4=0.15` 就把它直接当 waist pitch（实际 waist pitch 约 0.18）。这正是必须做探针的原因。
-
-### G.2 Pivot 统计（HangCup）
-
-| 维度 | 范围 | 均值 | 解读 |
-|---|---|---|---|
-| vx | ≈0 | ≈0 | 示范不走 |
-| vy | ≈0 | ≈0 | 示范不横移 |
-| angle_z | -0.8 – 0.8 | ≈0 | 可能可转，但示范不用 |
-| pivot_3 | 0 | 0 | 未知 |
-| pivot_4 | 0.15 | 0.15 | 恒定；可能是腰部/俯仰偏置 |
-| pivot_5 | 0 | 0 | 未知 |
-| height | 0.654 – 0.740 | 0.738 | 示范基本固定 |
-
-### G.3 探针协议（必须先做）
-
-1. 只用**不计分单任务调试**；机器人站稳、桌面清空、急停可用、无人在侧。
-2. 默认输出安全先验：`pivot=[0,0,0,0,0.15,0,0.738]`。
-3. 一维一维试：`vx=+0.02`、`vy=+0.02`、`angle_z=+0.05`、`pivot_3=±0.05`、`pivot_4=0.15±0.05`、`pivot_5=±0.05`、`height=0.738±0.01`；每步保持 1–2s，记录 base/waist/height 响应。
-4. 观察：机器人是否移动/转腰/升降/前倾；是否触发保护；是否摔倒趋势。
-5. 重复 2–3 次确认符号/限位；再在有空物体的情况下试。
-6. 如果 `pivot_3..5` 不是 waist，就只使用 base/height；不要硬猜。
-
-### G.4 安全先验 + Balance Shield
-
-- **安全先验**：`[0,0,0,0,0.15,0,0.738]`；所有 pivot 输出先过限幅（如 `|vx|,|vy|≤0.05`、`|angle_z|≤0.1`、height ±0.01、未知维 ±0.05，具体以探针为准）。
-- **风险判据**：lower_body 关节偏离站姿均值超过阈值；腰部 tilt/roll 超阈值；连续多帧 base 速度指令与姿态不一致；EE 位姿相对 base 突变。
-- **Shield 状态机**：`NORMAL → CAUTION（限幅/减速）→ RECOVER（base 清零、waist 中性、height 标称、手臂保持、等待稳定）→ NORMAL`。
-- **恢复后**：重新观测物体，更新目标；不要直接继续原动作块。
-
-### G.5 可达/高度补偿
-
-- **可达**：目标 3D 在双臂工作空间边缘时，小范围 `angle_z` 转向 + `vx/vy` 靠近；一次只动一点，动完重新感知。
-- **高度**：用双目估计桌面/目标高度；height 调整到舒适区间；不要大幅升降。
-- **腰部**：若 `pivot_3..5` 确认为 waist，优先用 waist yaw/pitch 做近场微调；base 只做粗定位。
-- **桌面边缘/传送带**：T24 传送带可能需要沿带移动；先用调试确认 base 运动允许且安全。
-
-### G.6 Torso-frame EE
-
-- 提交只给 base-frame EE 位姿；如果 waist/base 动了，base-frame 目标要补偿。
-- 内部用 torso-frame 目标（数据集有 `*_ee_pose_gripper_torso` 和 waist 角），再转 base-frame 输出；避免“腰动了但手没跟上”。
-- 需要 G1 腰部正运动学；可从数据集/URDF 获取。
-
-### G.7 安全
-
-- 默认静态 pivot；只在探针通过后启用。
-- 人在工作区时零 base 速度；等待人离开。
-- 任何异常（NaN、超限、通信延迟）→ 安全先验 + 保持。
-- 不要在评测中做大幅度 base 运动；优先 waist/height 小补偿。
-
-## H. 强化学习
-
-### H.1 形式化
-
-- 检查点 `g_i`（i=1..K）；`p_t = max{i: checkpoint i achieved by t}`。
-- 训练 `V(s_t, g_i) ≈ P(checkpoint i 在 H 步内达成)` 或“距检查点还差多少步”。
-- 对每条示范，t 在 `g_i` 之前为正样本，之后为负样本；可为不同 `g_i` 重复标注（goal relabeling）。
-- 进度头输出 `p̂_t`；阶段推进/重试/恢复都用它。
-
-### H.2 优势加权 BC
-
-```text
-w_t = clip(exp(β * (V(s_{t+1}, g_i) - V(s_t, g_i))), 0.1, 10)
-L = E[ w_t * ||π(s_t) - a_t||^2 ] + λ1 * L_phase + λ2 * L_progress + λ3 * L_smooth
-```
-
-- `β` 从小到大调；权重裁剪防止爆炸。
-- 全成功示范下，优势多为正；重点是让“关键过渡帧”权重更高。
-- 不做纯 CQL/IQL 也能获益；如果做，先用小网络验证。
-
-### H.3 测试时
-
-- **阶段推进**：`V(s_t,g_i)>τ` 连续 N 帧 → 进入下一阶段；滞回避免抖动。
-- **重试**：`V` 停滞/下降 K 步 → 重试当前阶段；抓空则换抓取位姿。
-- **Best-of-N（可选）**：采样 K 个动作块，用 action-conditioned Q/一步动力学 + V + 平滑度选优；没有可靠 Q 就不要做，避免延迟。
-- **集成不确定性**：多视角/多 seed 的 action chunk 方差大时，减速/重观测；比盲目 best-of-N 稳。
-
-### H.4 仿真残差（P3）
-
-- Isaac Lab/MuJoCo 搭 1–2 个硬任务（插入/拉链）；检查点奖励 + 域随机化；训练残差/恢复；蒸馏回 VLA。
-- 只做残差/恢复，不做全任务从零 RL；资产不匹配就砍掉。
-
-### H.5 不要做
-
-- 真机在线 RL；评测时间/安全都不允许。
-- 从零训练大模型；打不过 Unitree 的 2500h/6B 基线。
-- 用 RL 替代 BC；示范仍是主监督，RL 只做加权/残差/恢复。
-
-## I. 实验设计
-
-### I.1 基线
-
-| 编号 | 基线 | 目的 |
+| 类别 | 指标 | 目标/说明 |
 |---|---|---|
-| B0 | 零样本开源 VLA（UnifoLM-VLA-0 / π0 / GR00T） | 下限 |
-| B1 | B0 + 32k 示范全量微调（RGB + proprio，pivot 零） | 主基线 |
-| B2 | B1 + 多视角 + 语言复述 | 语言/视角增益 |
-| B3 | B2 + rubric prompt + 阶段/进度头 | 核心增益 |
-| B4 | B3 + 双目 3D/物体中心 | 3D 增益 |
-| B5 | B4 + pivot controller/balance shield | 全身/平衡增益 |
-| B6 | B5 + 干扰检测/恢复 | 人为干扰增益 |
-| B7 | B6 + 离线 RL/优势加权 | RL 增益 |
+| 任务 | full success rate | 主指标；按 32 任务平均 |
+| 任务 | checkpoint score | 官方步骤分；按任务归一化 |
+| 任务 | first-checkpoint rate | 高地板任务优先 |
+| 任务 | full success given first | 衡量长程推进 |
+| 恢复 | recovery rate after human/object move | `human_1/4` 分桶 |
+| 精度 | object 3D error (mm) | 头部 stereo 粗定位 |
+| 精度 | relative pose error (mm/deg) | 腕部接触 |
+| 精度 | reprojection error (px) | 姿态图一致性 |
+| 效率 | p50/p95/p99 latency (ms) | 按阶段 |
+| 效率 | jitter (ms) | 延迟标准差/尾延迟 |
+| 效率 | VLA calls/episode | EcoScheduler |
+| 效率 | energy per success (proxy) | 计算+物理动作 |
+| 安全 | safety violations / e-stops | 目标 0 |
+| 可信 | audit completeness | 提交 checklist 100% |
 
-### I.2 消融
+## P. 风险与缓解
 
-- 双目 vs 单目；有/无深度 token；有/无物体跟踪。
-- rubric prompt vs 仅语言；阶段头 vs 无；进度阈值。
-- pivot 静态 vs 主动；shield 开/关；height/waist 分别消融。
-- 干扰检测开/关；重试开/关；恢复策略。
-- 优势加权 vs 普通 BC；β；是否加仿真残差。
-- 增广开/关；增广类型逐项。
+| 风险 | 影响 | 缓解 |
+|---|---|---|
+| 规则不可读（Feishu） | 可能做错方向/违规 | 先发邮件 `challenge_support@unitree.com`；做“规则无关”的 P0（PoseGraph/SERB/进度）；保留静态 pivot 回退 |
+| pivot 提交语义未官方确认 | 腰部动作错误/摔倒 | 不计分单任务探针；默认静态；限幅/限速/平衡 shield |
+| 标定 10 组差异 | 3D 漂移 | 按任务读 `camera_params`；极线/重投影检查；腕部相对位姿 |
+| 透明/反光物体深度空洞 | 抓取/插入失败 | 多视角、单目深度兜底、轮廓/关键点、腕部近景 |
+| 人手检测误报 | 停顿/超时 | 高置信才停；滞回；超时恢复；只用机载相机 |
+| 延迟/抖动 | 完成率下降 | 阶段化 chunk；p99 守门；缓存/小策略；多机器人批处理 |
+| 许可证不清晰 | 取消资格 | 默认 WLA-1.0 Apache-2.0；VLA-0 先书面确认；NOTICE |
+| 过拟合评分表 | 泛化差/违规 | 学习进度头为主；约束图只做 prompt；留出任务验证 |
+| 算力不足 | 训不动 6B | LoRA/单卡 24GB；先小模型验证竞赛层；WLA-1.0 微调 |
+| 时间不够 | 做不完 | 4 周只做 B0–B2+B5；6 周加 B3/B4/B7；8 周再加 B6/B8/B9 |
 
-### I.3 指标
+## Q. 来源（检索日期 2026-10-23）
 
-- 全任务成功率；按难度/泛化轴分桶（位置、背景、未见物体、干扰物、人为干扰）。
-- 步骤分；首检查点达成率；检查点推进准确率；平均完成时间。
-- 抓取成功率、滑落率、重试成功率、恢复成功率、摔倒率。
-- 延迟 p50/p95；动作平滑度；NaN/超限率；token/握手成功率。
-- 离线：阶段分类准确率、进度校准（ECE）、物体 3D 误差、抓取/放置位姿误差。
+**挑战赛/提交**
 
-### I.4 调试任务优先级
-
-- T01（Easy，2 检查点，高地板）——验证基本闭环。
-- T04（Easy，3 检查点）——验证多阶段。
-- T10（Hard，插入）——验证精密技能。
-- T16（Hard，5 检查点，变形）——验证长程/重试。
-- T24（Medium，传送带）——验证动态/位置。
-- T30（Medium，细钉）——验证小物体/干扰。
-- 若每任务只有 1 次调试，优先这 6 个；其余用离线/仿真。
-
-### I.5 算力/时间
-
-- 数据引擎：4–8×A100/H100，1–2 周；存储数 TB。
-- VLA 微调：8×A100/H100（LoRA/部分解冻），1–2 周；全量微调 2–4 周。
-- 双目/物体跟踪：1–2 张 GPU 常驻；训练 2–3 天。
-- 离线 RL/进度头：2–4 张 GPU，1–2 周。
-- 仿真残差：2–4 周（可选）。
-- 总：6–8 周；<4 周只做 P0 + pivot shield。
-
-### I.6 时间不够时的决策树
-
-- **<4 周**：B1/B2 + rubric prompt + 进度头 + 重试 + pivot shield。砍掉双目/RL/增广。
-- **4–6 周**：加双目 3D/物体中心 + 干扰检测/恢复 + 1–2 个精密技能。
-- **>6 周**：加离线 RL/优势加权 + 3D 增广 + 仿真残差。
-- **任何情况下**：先读规则、先探针 pivot、先跑通 baseline；不要先训大模型。
-
-## J. 风险登记
-
-| 风险 | 概率 | 影响 | 缓解 |
-|---|---|---|---|
-| 规则禁止任务特定逻辑/外部数据 | 中 | 高 | 先读手册；用学习进度头/阶段 prompt；只用挑战数据 + 开源权重；保留纯端到端回退 |
-| `pivot[3:6]` 语义不明/不安全 | 高 | 高 | 先探针；默认静态；保守限幅；shield；只启用确认维度 |
-| base 运动被禁止/导致摔倒 | 中 | 高 | 默认零 base；优先 waist/height；急停；人在环 |
-| 无真机/调试名额少 | 中 | 高 | 离线 + 仿真；优先代表任务；用单任务调试做探针 |
-| 双目标定/透明反光 | 中 | 中 | 校验极线；亚像素；多视角；单目兜底；腕部近景 |
-| 标注噪声 | 高 | 中 | 置信度加权；VLM 抽检；只用高置信标签做 RL |
-| 延迟/算力 | 中 | 高 | 轻量头；action chunk；共享后端；异步；p95 监控 |
-| 检测误报导致停顿 | 中 | 中 | 滞回；超时；高置信才暂停 |
-| 仿真到现实差距 | 高 | 中 | 真实数据微调；域随机化；只做残差 |
-| 过拟合评分表/任务 | 中 | 中 | 留出任务/回合；学习头；不硬编码坐标 |
-| 评测方差 | 高 | 中 | 多次 trial；稳健动作；重试；置信区间 |
-| 动作规律性/可信度被标记 | 低 | 高 | 平滑/限幅；延迟稳定；避免常数动作；token 正确 |
-| 语言分布不一致 | 中 | 中 | 复述训练；任务匹配；首帧视觉兜底 |
-
-## K. 来源
-
-**赛事/接口**
-
-- https://unibot.unitree.com/index.html
 - https://unibot.unitree.com/challenges.html
 - https://unibot.unitree.com/leaderboard.html
+- https://unibot.unitree.com/runs.html
 - https://unibot.unitree.com/profile.html
 - https://github.com/unitreerobotics/unibot_submission
 - https://raw.githubusercontent.com/unitreerobotics/unibot_submission/main/README.md
-- https://raw.githubusercontent.com/unitreerobotics/unibot_submission/main/example/example_policy.py
-- 任务 JSON 模式：`https://unibot.unitree.com/tasks_v2/<slug>/info.json?v=2026-07`（32 个 slug 见 C 表）
-
-**数据/标定**
-
 - https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
+- 飞书参赛手册（正文不可读）：https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh
+- 支持邮箱：challenge_support@unitree.com
+
+**数据集**
+
 - https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup
-- https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup/raw/main/meta/info.json
-- https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup/raw/main/meta/stats.json
+- https://huggingface.co/datasets/unitreerobotics/G1_Dex1_OrganizeTools
+- https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
+- https://huggingface.co/datasets/unitreerobotics/G1_Dex1_PlugCharger
+- `meta/info.json`、`meta/stats.json`、`meta/tasks.parquet`、`data/chunk-000/file-000.parquet`
 
-**基线/相关工作**
+**底座/模型**
 
+- https://github.com/unitreerobotics/unifolm-wla
 - https://unigen-x.github.io/unifolm-wla.github.io/
+- https://huggingface.co/unitreerobotics/UnifoLM-WLA-1.0-Base
 - https://github.com/unitreerobotics/unifolm-vla
-- https://arxiv.org/abs/2511.14759（π*0.6 / RECAP：advantage-conditioned RL；硬任务吞吐翻倍、失败率约减半）
-- https://arxiv.org/abs/2512.21970（StereoVLA：GeoSem 编码器；真实世界绝对成功率 +33.4%）
-- https://arxiv.org/abs/2501.15830（SpatialVLA：Ego3D 位置编码；空间泛化）
-- https://huggingface.co/docs/lerobot/en/unitree_g1（LeRobot G1 文档）
+- https://unigen-x.github.io/unifolm-vla.github.io/
+- https://huggingface.co/unitreerobotics/UnifoLM-VLA-Base
+- https://gigabrain0.github.io/
+- https://huggingface.co/open-gigaai/GigaBrain-0.7-3.5B-Base
 
-**规则（正文不可读，需登录/JS）**
+**论文/技术**
 
-- 中文：https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh
-- 英文：https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh
-- 赛事支持：challenge_support@unitree.com
+- GigaBrain-0: https://gigabrain0.github.io/
+- Adaptive Action Chunking: arXiv 2604.04161v2
+- EcoVLA: arXiv 2608.15502v1
+- ActTune: arXiv 2610.08444
+- Realtime-VLA FLASH: arXiv 2605.13778
+- VLA-Cache: NeurIPS 2025
+- PICES: arXiv 2610.19656
+- VLA-ULAP: arXiv 2609.18663
+- MAPRPose: arXiv 2604.20650
+- BOP 6D pose leaderboard: https://bop.felk.cvut.cz/leaderboards/
+- RTMW: arXiv 2407.08634
+- EmbodiedGovBench: arXiv 2604.11174
+- SafeStage: arXiv 2609.21223
+- ManiGuard: arXiv 2608.17386
+- SSM survey: Robotics 2025, 14, 41
+- ISO 10218-2:2025; ISO/TS 15066
 
-**备注**：公开榜 Coming Soon；“榜首 <30%”未验证；Feishu 规则未读到正文；以上未知项应在第一周内通过邮件/规则页/调试探针解决。
+## R. 开放问题
+
+1. Feishu 规则的评分权重、trial 数、外部数据/模型、任务特定逻辑、base/waist 限制、单任务时限、N 分别是什么？
+2. 提交端 `pivot[3:6]` 是否就是 waist yaw/pitch/roll？符号/限位/死区如何？
+3. 评测语言是否使用同样 5 条复述？是否留出未见复述/中文？
+4. 评测相机是否与数据集同一标定？10 组差异如何处理？
+5. 公开榜何时开放？榜单按平均成功率、步骤分还是归一化综合？
+6. 人为干扰是脚本化还是自适应？是否允许机器人主动暂停/等待？
+7. WLA-1.0/GigaBrain-0 等外部预训练模型是否被允许？许可证如何申报？
+8. 不计分单任务调试每任务几次？能否用于 pivot/相机/延迟探针？
 <!-- ARTIFACT:END -->
