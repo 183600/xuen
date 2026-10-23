@@ -399,3 +399,6 @@
 {"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-10-23 03:41:35"}
 {"event": "skipped", "round": 2, "reason": "退出码 1", "ts": "2026-10-23 03:41:37"}
 {"event": "skipped", "round": 3, "reason": "退出码 1", "ts": "2026-10-23 03:41:40"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-10-23 03:42:59"}
+{"event": "skipped", "round": 2, "reason": "退出码 1", "ts": "2026-10-23 03:43:01"}
+{"event": "skipped", "round": 3, "reason": "退出码 1", "ts": "2026-10-23 03:43:04"}
