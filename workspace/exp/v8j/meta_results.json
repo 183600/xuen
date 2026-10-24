@@ -1,0 +1,974 @@
+{
+ "probes": 105,
+ "yes": 47,
+ "learned": {
+  "name": "learned-0.5",
+  "n": 105,
+  "acc": 0.8,
+  "tp": 54,
+  "fp": 17,
+  "fn": 4,
+  "nodes": 441,
+  "cert": 142,
+  "unknown": 0
+ },
+ "always_no": {
+  "nodes": 442,
+  "cert": 150
+ },
+ "always_yes": {
+  "nodes": 418,
+  "cert": 130
+ },
+ "always_base": {
+  "nodes": 418,
+  "cert": 130
+ },
+ "rows": [
+  {
+   "uid": 5,
+   "true": "NO",
+   "prob": 0.6831864081769589,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 11,
+   "true": "YES",
+   "prob": 0.5350110704367509,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 13,
+   "true": "YES",
+   "prob": 0.16987656381702496,
+   "pred": "YES",
+   "nodes": 6,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 20,
+   "true": "YES",
+   "prob": 0.013363744958083047,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 21,
+   "true": "YES",
+   "prob": 0.019886597480580512,
+   "pred": "YES",
+   "nodes": 5,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 27,
+   "true": "YES",
+   "prob": 0.03672029149136811,
+   "pred": "YES",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 32,
+   "true": "YES",
+   "prob": 0.010722234053819647,
+   "pred": "YES",
+   "nodes": 1,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 35,
+   "true": "YES",
+   "prob": 0.0012700611480131463,
+   "pred": "YES",
+   "nodes": 1,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 36,
+   "true": "YES",
+   "prob": 0.545944610667251,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 39,
+   "true": "YES",
+   "prob": 0.7157190055432258,
+   "pred": "NO",
+   "nodes": 38,
+   "cert": 16,
+   "verdict": true
+  },
+  {
+   "uid": 47,
+   "true": "NO",
+   "prob": 0.5297304335507106,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 48,
+   "true": "YES",
+   "prob": 0.6746135167131208,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 50,
+   "true": "YES",
+   "prob": 1.0396007456460922e-06,
+   "pred": "YES",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 57,
+   "true": "YES",
+   "prob": 2.621377769869098e-07,
+   "pred": "YES",
+   "nodes": 1,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 99,
+   "true": "YES",
+   "prob": 0.0860424038423359,
+   "pred": "YES",
+   "nodes": 7,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 100,
+   "true": "YES",
+   "prob": 0.04343631669230461,
+   "pred": "YES",
+   "nodes": 7,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 103,
+   "true": "YES",
+   "prob": 1.1768129401028045e-05,
+   "pred": "YES",
+   "nodes": 18,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 104,
+   "true": "YES",
+   "prob": 0.0019432116539953028,
+   "pred": "YES",
+   "nodes": 18,
+   "cert": 1,
+   "verdict": true
+  },
+  {
+   "uid": 113,
+   "true": "YES",
+   "prob": 0.15532435162322952,
+   "pred": "YES",
+   "nodes": 6,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 116,
+   "true": "YES",
+   "prob": 0.07651561374124163,
+   "pred": "YES",
+   "nodes": 16,
+   "cert": 1,
+   "verdict": true
+  },
+  {
+   "uid": 118,
+   "true": "YES",
+   "prob": 0.000690106163859553,
+   "pred": "YES",
+   "nodes": 16,
+   "cert": 1,
+   "verdict": true
+  },
+  {
+   "uid": 120,
+   "true": "YES",
+   "prob": 0.0005840441611089274,
+   "pred": "YES",
+   "nodes": 14,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 120,
+   "true": "YES",
+   "prob": 0.0038557954230749544,
+   "pred": "YES",
+   "nodes": 10,
+   "cert": 1,
+   "verdict": true
+  },
+  {
+   "uid": 125,
+   "true": "YES",
+   "prob": 0.04294603018237813,
+   "pred": "YES",
+   "nodes": 6,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 140,
+   "true": "YES",
+   "prob": 1.316914658526507e-06,
+   "pred": "YES",
+   "nodes": 5,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 142,
+   "true": "YES",
+   "prob": 0.718634518676595,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 144,
+   "true": "YES",
+   "prob": 0.3645188370390969,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 145,
+   "true": "YES",
+   "prob": 0.5524882398763813,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 147,
+   "true": "NO",
+   "prob": 0.6925696138657512,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 148,
+   "true": "YES",
+   "prob": 0.718634518676572,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 151,
+   "true": "YES",
+   "prob": 0.718634518676572,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 154,
+   "true": "YES",
+   "prob": 0.451206751650564,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 155,
+   "true": "YES",
+   "prob": 0.33571431952502484,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 157,
+   "true": "NO",
+   "prob": 0.6925696138657523,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 158,
+   "true": "YES",
+   "prob": 0.2782794898542957,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 159,
+   "true": "YES",
+   "prob": 0.2782794898542957,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 161,
+   "true": "YES",
+   "prob": 0.5513324515089884,
+   "pred": "NO",
+   "nodes": 6,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 163,
+   "true": "YES",
+   "prob": 0.3645188370391558,
+   "pred": "YES",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 165,
+   "true": "YES",
+   "prob": 0.5211908859822983,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 168,
+   "true": "YES",
+   "prob": 0.7170034212556221,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 169,
+   "true": "YES",
+   "prob": 0.5524882398757869,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 170,
+   "true": "YES",
+   "prob": 0.3198645433143401,
+   "pred": "YES",
+   "nodes": 1,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 172,
+   "true": "YES",
+   "prob": 0.7680713903425813,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 173,
+   "true": "YES",
+   "prob": 0.6718191860740457,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 174,
+   "true": "YES",
+   "prob": 0.6718191860740457,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 175,
+   "true": "YES",
+   "prob": 0.19189084109338297,
+   "pred": "YES",
+   "nodes": 4,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 177,
+   "true": "NO",
+   "prob": 0.9562765163432001,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 186,
+   "true": "YES",
+   "prob": 0.6718191860740738,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 189,
+   "true": "NO",
+   "prob": 0.6955780204106862,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 190,
+   "true": "YES",
+   "prob": 0.19189084109337026,
+   "pred": "YES",
+   "nodes": 4,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 191,
+   "true": "YES",
+   "prob": 0.22856975433292234,
+   "pred": "YES",
+   "nodes": 5,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 193,
+   "true": "YES",
+   "prob": 0.19189084109338214,
+   "pred": "YES",
+   "nodes": 4,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 197,
+   "true": "NO",
+   "prob": 0.8471903998116092,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 200,
+   "true": "YES",
+   "prob": 0.5576344617462,
+   "pred": "NO",
+   "nodes": 2,
+   "cert": 0,
+   "verdict": true
+  },
+  {
+   "uid": 201,
+   "true": "NO",
+   "prob": 0.9562765163432572,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 202,
+   "true": "NO",
+   "prob": 0.6831864081765103,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 203,
+   "true": "NO",
+   "prob": 0.5297304335507114,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 204,
+   "true": "NO",
+   "prob": 0.8471903998116084,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 205,
+   "true": "NO",
+   "prob": 0.8604068619989319,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 206,
+   "true": "NO",
+   "prob": 0.970418264074624,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 207,
+   "true": "NO",
+   "prob": 0.7882457005691369,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 208,
+   "true": "NO",
+   "prob": 0.9921456690746575,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 209,
+   "true": "NO",
+   "prob": 0.8151040582862795,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 210,
+   "true": "NO",
+   "prob": 0.8183097595281745,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 211,
+   "true": "NO",
+   "prob": 0.6518522574809046,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 212,
+   "true": "NO",
+   "prob": 0.8233118415352818,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 213,
+   "true": "NO",
+   "prob": 0.7800189276975001,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 214,
+   "true": "NO",
+   "prob": 0.9906557880272203,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 215,
+   "true": "NO",
+   "prob": 0.8040846070354489,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 216,
+   "true": "NO",
+   "prob": 0.845583511315968,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 217,
+   "true": "NO",
+   "prob": 0.6331254243069098,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 218,
+   "true": "NO",
+   "prob": 0.6197585025742844,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 219,
+   "true": "NO",
+   "prob": 0.9702680274558668,
+   "pred": "NO",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 220,
+   "true": "NO",
+   "prob": 0.9054556582102686,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 221,
+   "true": "NO",
+   "prob": 0.7864928563787952,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 222,
+   "true": "NO",
+   "prob": 0.39905294457557844,
+   "pred": "YES",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 223,
+   "true": "NO",
+   "prob": 0.6614346937510416,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 224,
+   "true": "NO",
+   "prob": 0.7379139337034689,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 225,
+   "true": "NO",
+   "prob": 0.6376562494376665,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 226,
+   "true": "NO",
+   "prob": 0.8564815543084379,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 227,
+   "true": "NO",
+   "prob": 0.8307233993344596,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 228,
+   "true": "NO",
+   "prob": 0.9946542576124714,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 229,
+   "true": "NO",
+   "prob": 0.7163931695892813,
+   "pred": "NO",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 230,
+   "true": "NO",
+   "prob": 0.9710749075576874,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 231,
+   "true": "NO",
+   "prob": 0.7765138561496067,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 232,
+   "true": "NO",
+   "prob": 0.9558218186983192,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 233,
+   "true": "NO",
+   "prob": 0.9198058778869764,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 234,
+   "true": "NO",
+   "prob": 0.5331924380683394,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 235,
+   "true": "NO",
+   "prob": 0.7101121643771652,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 236,
+   "true": "NO",
+   "prob": 0.9679280488319505,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 237,
+   "true": "NO",
+   "prob": 0.6872946397322824,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 238,
+   "true": "NO",
+   "prob": 0.6499715867150705,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 239,
+   "true": "NO",
+   "prob": 0.4015502914620085,
+   "pred": "YES",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 240,
+   "true": "NO",
+   "prob": 0.5461753704591035,
+   "pred": "NO",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 241,
+   "true": "NO",
+   "prob": 0.5489975748317916,
+   "pred": "NO",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 242,
+   "true": "NO",
+   "prob": 0.9689610356395577,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 243,
+   "true": "NO",
+   "prob": 0.8538913670563106,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 244,
+   "true": "NO",
+   "prob": 0.904831620676674,
+   "pred": "NO",
+   "nodes": 5,
+   "cert": 3,
+   "verdict": false
+  },
+  {
+   "uid": 245,
+   "true": "NO",
+   "prob": 0.9650487824311684,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 246,
+   "true": "NO",
+   "prob": 0.9374452223142816,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 247,
+   "true": "NO",
+   "prob": 0.6348329618777164,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 248,
+   "true": "NO",
+   "prob": 0.9714645800089545,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 249,
+   "true": "NO",
+   "prob": 0.9029240021710185,
+   "pred": "NO",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 250,
+   "true": "NO",
+   "prob": 0.4884408752215281,
+   "pred": "YES",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  },
+  {
+   "uid": 251,
+   "true": "NO",
+   "prob": 0.4952992912654694,
+   "pred": "YES",
+   "nodes": 3,
+   "cert": 2,
+   "verdict": false
+  }
+ ]
+}

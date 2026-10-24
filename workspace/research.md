@@ -3,919 +3,853 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-## 一、上一轮留下的不是「不够强」，而是「不知道离最优多远」
+# 想法区 · 第 2 轮（承接 v8.7 APEX-ALC）：把「谁来证明 NO」变成可执行的分支树
 
-v8.0 BRC-ALC 已经把固定 $h$ 的双向归约做得很完整：NO 侧有 QSP 探针、Farkas 证书、row-core 恢复和 fail-stop 分裂；YES 侧有根 LP 分布采样、串行 SGS、有界 DFS 和独立重放，141/141 个 YES 全部闭合。它真正的缺口不在某一个方向，而在**两个方向之间没有共同的度量**：
+**灵感词**：self-stabilizing algorithm / genetic algorithm / linear programming  
+**起点**：v8.7 APEX-ALC 在 252 例上做到 252/252 认证，$Q=105$、LP $=874$、YES 节点 $=60001$、同 runner 复跑 11.82 s。上一轮把「近似比」变成了整数间隙 $g=\mathrm{OPT}-L^*$，并且证明 $g\in\{0,1\}$；但 APEX 仍然把最后的闭合压在 CHD oracle 上：58 个 $g=1$ 实例各要一次 NO，46 个 $g=0$ 实例各要一次 YES 构造，另有一个 $Q=2$ 的尾例。
 
-- NO 证明回答「$h$ 不可行」；
-- YES 构造回答「$h$ 可行」；
-- 但没有人回答「当前这个上界离 $\mathrm{OPT}$ 还有多远」。
+## 一、先把 105 次查询按「证明义务」重新分类
 
-v8.0 的已知风险也正好落在这里：YES 构造器是随机化、有界节点的，60k 节点之外不保证找到调度；NO 侧仍依赖 SD 割，根 LP 的 lazy 分离若耗尽预算就只能返回 UNKNOWN。换句话说，算法知道自己「证明了什么」，但不知道「还差多少」。
+APEX 的查询分布看起来很干净：148 例 0 次、103 例 1 次、1 例 2 次。但把它按证明义务拆开，问题立刻变了：
 
-本轮灵感词是 **竞争比 / 凸包 / preprocessing**。我第一反应不是再加强某一条割，而是把这三个词接到同一个对象上：
+1. **58 次是「在 $L^*$ 上证 NO」。** 这些实例的 incumbent 已经是 $\mathrm{OPT}=L^*+1$，下界证明也把 $\mathrm{LB}$ 抬到了 $L^*$。唯一缺的是一张 $\mathrm{NO}(L^*)$。APEX 让 CHD 去做这件事，而 CHD 是一个 YES-first 的约束搜索；它最坏会在 YES 侧烧掉 60k 节点，stress 的那一例就是这样。
+2. **46 次是「在 $L^*=\mathrm{OPT}$ 上造 YES」。** 这些实例的 LP 在 $L^*$ 可行，但解是分数的；APEX 的 `lp_schedule` 舍入失败，LNS 在 $\mathrm{UB}-\mathrm{LB}=1$ 时不触发，于是只能问 CHD 要一张 $C_{\max}=L^*$ 的调度。
+3. **1 次是尾部扫描。** base 的 `large_het 7` 在二分后还做了一次线性扫描；它说明 $Q\le2$ 只是经验事实，不是定理。
 
-> 可行 makespan 的集合是 $[\mathrm{OPT},\infty)$。它的凸包下端点就是 $\mathrm{OPT}$。  
-> 我们用一个证书区间 $[\mathrm{LB},\mathrm{UB}]$ 包住这个端点；  
-> **竞争比** $\rho=\mathrm{UB}/\mathrm{LB}$ 就是这个区间有多宽；  
-> **preprocessing** 就是把这个区间压窄；  
-> **凸包** 则是「用什么几何对象去压」的问题。
+所以本轮的第一句话是：
 
-于是本轮算法叫 **CRISP-ALC（Competitive-Ratio Interval Shrinking Preprocessing）**：它不替代 v8.0 的固定 $h$ oracle，而是在 oracle 外面加一层「证书区间 + 预处理收缩 + 二分调用」的外壳。
+> **105 次查询不是 105 个「搜索深度」问题，而是 58 个 NO 证明、46 个 YES 构造和 1 个尾部；把这三类义务分开，才能分别用 LP、遗传搜索和证明代数去消掉。**
 
-## 二、第一次试错：高维 LP 投影盒太松
+## 二、三个灵感词分别落在哪一层
 
-我最初把「凸包」理解成 LP 可行域的坐标投影：
+- **self-stabilizing algorithm**：自稳定算法从任意初始状态出发，只靠局部修复规则收敛到合法状态，不依赖外部初始化。APEX 的 proof store 其实已经是一个「判断集合」，但它没有闭包算子；APEX 的 bracket 也已经是一个「区间状态」，但它没有稳定化规则。我们可以把两者都写成自稳定系统：LP-BRANCH 从根 LP 的分数状态出发，局部地切分不稳定的叶子，直到每个叶子要么是整数调度、要么是 Farkas 不可行；STAB 从任意证明集合出发，反复应用 subsumption，直到判断集合闭合。两者都有有限的 ranking function，因此终止；判断闭包是单调规则的最小不动点，所以最终判断与插入顺序无关。
+- **genetic algorithm**：上界侧不应该只用一个 LNS 邻域。把调度看成「优先级排列 → 串行 SGS 解码」的基因组，用种群、交叉（OX）、变异、精英保留和单调局部修复去搜索；每个接受个体都必须过 `check_schedule`。它不是证明器，但它是上界侧的构造器，正好补 LP-BRANCH 只会证 NO、不会造 YES 的空缺。
+- **linear programming**：LP 不再只是「下界机」。固定 $h$ 的 SD LP 如果分数可行，就继续分支；如果不可行，叶子上的 Farkas 对偶就是一张可重放的 $\mathrm{NO}(h)$ 证明。换句话说，**LP 本身可以是一个 proof-producing decision procedure**，而不是只能给出一个数值下界。
 
-\[
-P(h)=\{z\ge 0: Az\le b,\ Ez=\mathbf 1\},\qquad
-\pi_i(P(h))=[\mathrm{lo}_i(h),\mathrm{hi}_i(h)].
-\]
+## 三、第一次试错：把 `sdecc_no` 当黑箱 oracle，NO 很快，但证明不可重放
 
-因为每个整数可行调度都是 LP 可行的，所以它的开始时间向量必在盒
+工作区里已经有 `exp/v60/sdecc.py` 的 `sdecc_no`：它在固定 $h$ 上做 LP 分支，分数变量按开始时间切成两半。直接拿它当 oracle，stress 的 NO 在 3–7 个 LP 节点内就返回，60k YES 节点瞬间消失。这个实验说明「LP 分支是 NO 侧的强引擎」。
 
-\[
-H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]
-\]
+但它不能直接进 APEX：
 
-里。这个盒子是**严格可靠**的：用它做域收缩不会删掉任何可行调度；如果 $\mathrm{lo}_i=\mathrm{hi}_i$，还可以把 $s_i$ 固定。理论上它应该能减少 SGS 的分支。
+- `sdecc_no` 只返回 `False/True/None`，没有留下可重放的证明树；把它塞进 `no_states` 会破坏 APEX 的 soundness 叙事。
+- 分支用 `bounds` 数组零掉列，和 `verify` 的 `forbid` 语义没有对齐；如果不把「路径上的禁止开始时刻」显式记录下来，检查器无法独立重放。
+- 递归实现会在大实例上撞 Python 递归深度；必须显式加 nodecap/depthcap，并在超限时退回 CHD。
 
-我在 `exp/v8c/chip.py` 里实现了 `hull_projection`，对 7 个 hard YES 做了投影盒 + 有界 LDS 的试验。结果是负的：
+结论：**LP 分支是必要的，但「一个 verdict」不是证明；必须把分支路径和叶子 Farkas 一起变成一等证明项。**
 
-| 实例 | 盒宽 $\sum_i(\mathrm{hi}_i-\mathrm{lo}_i)$ | 盒 LDS 节点 | 结果 |
-|---|---:|---:|---|
-| holdout 35 | 100.0 | 65,411 | 找到 |
-| large_a 5 | 135.3 | 70,659 | 4 层差异内失败 |
-| large_het 0 | 179.5 | 718 | 找到 |
-| large_het 3 | 261.0 | 12,634 | 找到 |
-| large_het 7 | 250.3 | 98,491 | 4 层差异内失败 |
-| hard3 4 | 185.6 | 33 | 找到 |
-| large_b 1 | 251.8 | 681 | 找到 |
+## 四、第二次试错：只做遗传上界，YES 能造，但 NO 侧仍是 60 次
 
-盒宽在 100–261 个时间单位之间，远大于实例的 $h$（30–41）。原因很朴素：LP 允许大量「分数拼接」的开始时间，坐标投影把这些分数可能性全都包进来，盒子自然很宽。盒 LDS 在 2/7 个 hard 实例上失败，而 CHD 在同一批实例上全部闭合（10–28 次 LP）。
+第二个实验只做上界：把 4 个启发式顺序和随机排列作为初始种群，用 OX 交叉、交换/插入变异、精英保留，再做「只接受严格改进」的局部交换修复。它在独立的 46 个 $g=0$ 原型上能全部找到 $C_{\max}=L^*$ 的调度；集成到 SAGE 的 `no_bb` 变体后，GA 造出了 45 张 YES，但：
 
-这是一个有用的负结果：**LP 投影盒是可靠的，但不是紧的；把凸包当硬域约束，收益不足以抵消投影的 $2n$ 次 LP。**
+- $Q=60$：58 个 $g=1$ 实例仍然要 CHD 的 NO，另 2 个 $g=0$ 实例 GA 没找到；
+- YES 节点回到 $60001$，stress 仍然是 60k；
+- 时间反而升到 24.65 s，因为 GA 在 $g=1$ 的不可行 $h$ 上会把预算跑满。
 
-## 三、第二次试错：投影尾界也太弱
+结论：**GA 是必要的上界补件，但不是下界证明器；它不能替代 $\mathrm{NO}(L^*)$。**
 
-退一步，不把投影盒当域，而是把它当**下界**。对任意 LP 可行解，$s_i\ge \mathrm{lo}_i$；再沿优先序的尾长 $q_i$，得到
+## 五、合流：SAGE-ALC
 
-\[
-\mathrm{LB}_{\mathrm{hull}}(h)=\max_i\bigl(\mathrm{lo}_i(h)+p_i+q_i\bigr).
-\]
+把两次试错接起来，就得到本轮算法 **SAGE-ALC（Self-stabilizing proof Algebra with Genetic upper-side Evolution）**：
 
-这是严格下界：任取最优调度 $s^\ast$，它在 $h=\mathrm{UB}$ 处 LP 可行，所以 $s_i^\ast\ge \mathrm{lo}_i$，于是 $\mathrm{OPT}\ge s_i^\ast+p_i+q_i\ge \mathrm{lo}_i+p_i+q_i$。
+1. **LP-BRANCH（下界 / NO 侧）**：在 $h$ 上建 SD LP；分数可行就选一个分数任务，在它的允许开始时间上做二分；LP 不可行的叶子用 `integer_certificate(..., forbid=F)` 生成 Farkas 证书；整数叶子直接给出调度。所有叶子按 $F$ 分区，内部节点记录 $(i,m)$，整棵树就是 $\mathrm{NO}(h)$ 的证明。nodecap $=96$、depthcap $=24$，超限返回 UNKNOWN 并退回 GA/CHD。
+2. **GENETIC-UB（上界 / YES 侧）**：种群 $40$、代数 $60$、预算 $4000$ 次 SGS 评估；基因组是任务排列，解码器是 `_greedy_rank`，适应度是 $(\text{makespan},\sum C_i)$；OX 交叉、交换/插入变异、精英保留、局部交换修复；只有过 `check_schedule` 的调度才被接受。
+3. **STAB（证明代数）**：把 $\mathrm{NO}(h)$、$\mathrm{LB}(v)$、$\mathrm{UB}(s)$、$\mathrm{EXACT}(v)$ 写成单调规则；从任意 proof store 出发反复应用
+   \[
+   \mathrm{NO}(h)\Rightarrow \mathrm{LB}(h+1),\qquad
+   \mathrm{LB}(v)\land h<v\Rightarrow \mathrm{NO}(h),
+   \]
+   直到不动点。最终 $\mathrm{LB}=\mathrm{UB}=v$ 时，只要 proof store 里有 $\mathrm{LB}(v)$（等价地，有 $v-1$ 的 NO），就直接 `MEET`，不再补问 $v-1$。
+4. **外层**：仍是 APEX 的 bracket + LP pin + LP 舍入 + LNS + CHD fallback；只是每个 probe 先问 LP-BRANCH，再问 GENETIC-UB，最后才问 CHD。CHD 调用才计入 $Q$。
 
-我在 141 个 base 实例上、$h=\mathrm{UB}$ 处算了这个界：只有 4/141 个实例把 LB 抬高 1，0 个超过已知 OPT；12 个实例上它等于 OPT，但在其余实例上普遍弱于既有的 critical-path + eligibility-load 下界。也就是说，**投影尾界没有提供新的容量信息**；它只是把 critical path 的 $s_i\ge \mathrm{est}_i$ 换成了 $s_i\ge \mathrm{lo}_i$，而 $\mathrm{lo}_i$ 往往只比 $\mathrm{est}_i$ 大一点点。
+252 例的结果是：
 
-两次负结果指向同一个结论：**高维凸包在这个问题上的信息密度太低。真正值得维护的凸包是一维的。**
-
-## 四、把凸包降到一维：证书区间
-
-可行 makespan 集合的凸包是 $[\mathrm{OPT},\infty)$。我们不需要知道高维开始时间向量的形状，只需要维护一个证书区间
-
-\[
-\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
-\]
-
-- $\mathrm{LB}$ 由两类东西支撑：critical path / eligibility load，或在 $h=\mathrm{LB}$ 处的一张可重放的 NO 证书（window 或 energy）。
-- $\mathrm{UB}$ 由一张通过 `check_schedule` 的调度支撑。
-- 竞争比定义为 $\rho=\mathrm{UB}/\mathrm{LB}$。它不是在线算法的竞争比，而是**当前 incumbent 相对证书下界的近似比**；$\rho=1$ 时 incumbent 被证明最优。
-
-这个一维凸包有一个很好的性质：**它是可操作的**。每次在 $h$ 处得到一个 NO，就把 $\mathrm{LB}$ 推到 $h+1$；每次得到一个 YES，就把 $\mathrm{UB}$ 压到该调度的实际 makespan。二分搜索每次把区间宽度减半，于是
-
-\[
-W_t\le \left\lceil \frac{W_0}{2^t}\right\rceil,\qquad
-\rho_t\le 1+\frac{W_0}{2^t\,\mathrm{LB}_0}.
-\]
-
-这就是本轮的「竞争比」：不是事后评价，而是**预算分配和终止条件的坐标**。
-
-## 五、preprocessing：两个算子，一个耦合
-
-一维区间要靠 preprocessing 压窄。我用了两个算子，都很便宜：
-
-### 5.1 UB drop：多订单 greedy
-
-CAB 原来只用 est 顺序做一次 greedy。我改成 4 个确定性订单：
-
-- `est`：最早开始；
-- `latest`：最晚开始；
-- `tail`：按尾长 $-q_i$；
-- `mixed`：$\mathrm{est}_i-0.5q_i$。
-
-每个订单跑一次串行 SGS，得到调度后立刻用 `check_schedule` 重放；只有重放通过且 makespan 更小才更新 UB。252 个实例中，201 个实例的 UB 被至少一个订单压低。
-
-### 5.2 LB lift：energy / window NO
-
-在 $h=\mathrm{LB}$ 处跑 SCALE 的 window 和 energy 过滤：
-
-- window：$\mathrm{est}_i>\mathrm{latest}_i$；
-- energy：对机器子集 $M$ 和时间区间 $[a,b)$，所有只能落在 $M$ 上的任务的强制重叠之和超过 $|M|(b-a)$。
-
-一旦命中，就用 `verify_prep` 重放证书；验证通过才 $\mathrm{LB}\leftarrow h+1$。252 个实例上共触发 174 次 LB lift，全部证书验证通过。
-
-### 5.3 顺序很重要
-
-我先 UB drop，再 LB lift。原因是 LB lift 的循环上界是 UB：
-
-- 先降 UB，LB 可以多爬几步；
-- 先升 LB，UB 没变，energy 循环会更早停下。
-
-消融实验（252 例，预测二分深度）很清楚地显示了这种耦合：
-
-| 变体 | 区间宽度和 | $\rho=1$ 实例 | 预测二分深度 |
-|---|---:|---:|---:|
-| 无预处理 | 1069 | 11 | 558 |
-| 只 LB lift | 895 | 11 | 538 |
-| 只 UB drop | 478 | 50 | 303 |
-| **两者** | **304** | **58** | **254** |
-
-UB drop 是主驱动；LB lift 单独几乎不减少查询（558→538），但和 UB drop 合起来额外减少 49 次（303→254）。这就是「竞争比」的耦合：**下界提升只有在 上界已经被压低时才会兑现**。
-
-## 六、实验：252 例上把区间压到 1/3
-
-数据与 v8.0 相同：141 个 base YES/NO + 60 个扰动 + 51 个压力集，共 252 例；NO 取 $h=\mathrm{OPT}-1$，YES 取 $h=\mathrm{OPT}$。外层用 CAB 的 certified anytime bracket，内层分别用 CAB oracle 和 CHD oracle。
-
-| 方法 | 认证 | 查询 | LP | YES 节点 | Markov | 墙钟 |
-|---|---:|---:|---:|---:|---:|---:|
-| CAB v9.0 | 252 | 560 | 3119 | 65,558 | 12,300 | 21.27 s |
-| CRISP bounds + CAB | 252 | 336 | 1324 | 64,504 | 5,900 | 6.32 s |
-| **CRISP + CHD** | **252** | **337** | **1403** | **64,039** | **0** | **7.27 s** |
-
-查询减少 40%，LP 减少 55%，墙钟减少 66%。`64k` 的 YES 节点主要由压力集的一个 60k 上限实例贡献；只看 base+pert，YES 节点从 5,188 降到 4,038（−22%）。
-
-区间本身：
-
-| 语料 | $\mathrm{LB}_0$ | $\mathrm{UB}_0$ | $W_0$ | $\rho_0$ 均值 | $\mathrm{LB}$ | $\mathrm{UB}$ | $W$ | $\rho$ 均值 | $\rho=1$ |
+| 语料 | $n$ | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 | 认证 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| base 141 | 3902 | 4388 | 486 | 1.129 | 4003 | 4144 | 141 | 1.032 | 55 |
-| pert 60 | 1924 | 2249 | 325 | 1.168 | 1955 | 2045 | 90 | 1.046 | 3 |
-| stress 51 | 1625 | 1883 | 258 | 1.158 | 1667 | 1740 | 73 | 1.044 | 0 |
-| **总** | **7451** | **8520** | **1069** | **1.144** | **7625** | **7929** | **304** | **1.038** | **58** |
+| base | 141 | 0 | 0 | 120 | 191 | 15 | 0 | 5.51 s | 141 |
+| pert | 60 | 0 | 0 | 81 | 78 | 10 | 0 | 1.03 s | 60 |
+| stress | 51 | 0 | 0 | 72 | 173 | 112 | 0 | 3.08 s | 51 |
+| **合计** | **252** | **0** | **0** | **273** | **442** | **137** | **0** | **9.62 s** | **252** |
 
-最大竞争比从 1.333 降到 1.122。58 个实例在调用任何 oracle 之前就已经 $\mathrm{LB}=\mathrm{UB}=\mathrm{OPT}$。
+对照同 runner 的 APEX：$Q=105\to0$，LP$_{\rm CHD}=874\to0$，YES $=60001\to0$，时间 $11.82\to9.62$ s；总计数 LP（pin + CHD + BB + cert）从 $1147$ 降到 $852$。最终证明分布是：58 张 `branch`（正好替换 APEX 的 58 张 `oracle`）、110 张 Farkas、60 张 bound、24 张 energy；$g=0$ 的 194 例最终证明与 APEX 完全一致，$g=1$ 的 58 例从 `oracle` 变成 `branch`。
 
-正确性方面：174 张 energy 证书全部通过 `verify_prep`；252/252 个区间满足 $\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$；252/252 个最终结果通过 `audit` 和 `proof_complete`，且 $h_{\mathrm{cert}}=\mathrm{OPT}-1$。没有出现「无证书的 NO」或「未重放的 YES」。
+消融把三件东西的贡献分得很清楚：
 
-## 七、凸包到底留下了什么
+| 变体 | $Q$ | LP$_{\rm CHD}$ | YES 节点 | 时间 | 读法 |
+|---|---:|---:|---:|---:|---|
+| **SAGE full** | **0** | **0** | **0** | **9.62 s** | 58 NO + 46 YES + 1 UNKNOWN→GA |
+| `no_ga` | 1 | 13 | 0 | 9.71 s | B&B 的 1 个 UNKNOWN 退回 CHD |
+| `bb_no_only` | 2 | 24 | 0 | 13.21 s | B&B 只证 NO；GA 造 45 个 YES，漏 2 个 |
+| `no_bb` | 60 | 412 | 60001 | 24.65 s | GA 造 45 个 YES，但 58 个 NO 仍靠 CHD |
 
-我没有把高维凸包完全扔掉，而是把它降级为**顺序 oracle**：
+这不是「APEX 加了一个更快的 oracle」：`branch` 是一等判断，`STAB` 是它的闭合算子，`GENETIC-UB` 是上界补件。三者缺一不可，但贡献最大的是 LP-BRANCH：它把「NO 证明」从 CHD 的 YES 搜索里独立出来，60k YES 节点因此归零。
 
-- `hull_projection` 仍然保留，默认关闭；
-- CHD 的 `hull:lo` 仍然是 phase B1 的一个候选顺序；
-- 在 141 个 YES 上，CHD 的 full 配置只有 16 次 hull LP、1 次 hull 闭包；`no_hull` 也能 141/141，只是多 1 次 random fallback。`hull_only` 则要 719 次 hull LP、449,813 个 LDS 节点、13.72 s。
+## 六、当前方案最大的风险
 
-所以本轮的判断是：**高维凸包是一个可靠的 fallback，不是主引擎；一维证书区间才是主引擎。** 这比强行说「凸包带来了提升」更诚实，也更符合实验。
-
-## 八、这一轮学到的东西
-
-1. **竞争比可以不是评价指标，而是坐标系**：一旦把 $\mathrm{UB}/\mathrm{LB}$ 当成状态，预处理的目标就从「找更强的割」变成「把区间压窄」，预算分配也有了明确的对象。
-2. **凸包要选对维度**：高维 LP 投影盒可靠但太松；一维 makespan 区间才是信息密度最高的凸包。
-3. **预处理算子之间有耦合**：UB drop 和 LB lift 不是两个独立开关；先降 UB 再升 LB，才能把 energy 过滤的潜力兑现。
-4. **负结果可以保留为组件**：投影盒和投影尾界都没有带来主收益，但它们的代码和消融保留了，后续如果换更大的实例或更强的割，可以重新评估。
-5. **认证边界不变**：区间只是搜索的导航；最终 YES 仍由 `check_schedule` 确认，NO 仍由 Farkas/clause/energy 证书确认。CRISP 不把「区间里的点」当成证据。
-
-## 九、一句话最大风险
-
-**CRISP 的收益完全取决于预处理能否在预算内把 $[\mathrm{LB},\mathrm{UB}]$ 压窄；如果 energy/window 规则打不中，且 4 个 greedy 订单都找不到更优上界，区间仍然会很宽，后续 oracle 调用数会退化到 CAB 水平甚至更多。**
+**$Q=0$ 不是免费的：它把 CHD 换成了最坏指数级的 LP-BRANCH；如果新语料上分支树或叶子 Farkas 证书爆炸，SAGE 会同时失去 APEX 的查询数优势和墙钟优势。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 版本关系与本轮增量
+# 产物区 · v8.8 SAGE-ALC：自稳定证明代数 + 遗传上界 + LP 分支证明
 
-本轮产物是 **v8.1 CRISP-ALC（Competitive-Ratio Interval Shrinking Preprocessing）**，它建立在 v8.0 BRC-ALC 之上，但不修改 v8.0 的固定 $h$ 判定器：
+## 0. 本轮产物与一句话结论
 
-- **v8.0 BRC-ALC**：给定 $h$，用 QSP 探针、Farkas 证书、row-core 恢复、fail-stop 分裂和随机化 YES 构造器回答「$h$ 是否可行」。它的证书语义和 `check_schedule` 语义是本轮的地基。
-- **v9.0 CAB-MC**：在 v8.0 外面加 certified anytime bracket，用 archive/Markov 构造器闭合 YES 侧；这是本轮的直接对照基线。
-- **v9.1 CHD**：确定性 LDS 判定器，用 phase A（根 LP 的整数解）、cheap 顺序和 hull 顺序替代随机构造器；这是 CRISP 的默认内层 oracle。
-- **v8.1 CRISP-ALC**：在 CAB 的外层 bracket 之前再加一层预处理，用可重放的 window/energy NO 证书抬升 LB、用 4 个 greedy 订单压低 UB，把 $[\mathrm{LB},\mathrm{UB}]$ 压窄后再调用内层 oracle。
+**SAGE-ALC**（Self-stabilizing proof Algebra with Genetic upper-side Evolution）是 v8.7 APEX-ALC 的子类：保留 bracket、LP pin、LP 舍入、LNS 与 CHD fallback，新增
 
-因此本轮不是「替换 v8.0」，而是「给 v8.0/v9.0 换一个更窄的搜索区间」。`CRISP` 只继承并覆盖 `CABOpt` 的两个钩子：
+1. **LP-BRANCH**：固定 $h$ 的 SD LP 分支，分数叶子继续分裂，不可行叶子给出可重放的 Farkas 证书，整数叶子给出调度；整棵树是 $\mathrm{NO}(h)$ 的一等证明。
+2. **GENETIC-UB**：排列基因组 + 串行 SGS + OX 交叉 + 变异 + 精英保留 + 单调局部修复，专门补上界侧的 YES 构造。
+3. **STAB**：把 $\mathrm{NO}$、$\mathrm{LB}$、$\mathrm{UB}$、$\mathrm{EXACT}$ 写成单调判断，按需做 subsumption 闭包，最终用 $\mathrm{MEET}$ 消除 $\mathrm{OPT}-1$ 的 oracle。
 
-```python
-class CRISP(CABOpt):
-    def initial_bounds(self): ...   # 返回预处理后的 LB, UB, schedule, machine
-    def _decide(self, h): ...       # 返回 CHD 的 YES/NO/UNKNOWN
-```
+在 252 例上：**252/252 认证，$Q=0$，LP$_{\rm CHD}=0$，YES 节点 $=0$，9.62 s**；同 runner 的 v8.7 APEX 为 $Q=105$、LP$_{\rm CHD}=874$、YES 节点 $=60001$、11.82 s。58 个原本要 CHD 证 NO 的实例全部换成 58 张 `branch` 证明，60k YES 节点归零。
 
-`optimize()`、`_result()`、`audit`、`proof_complete`、`check_schedule` 全部继承，因此外层 bracket 的正确性论证与 v9.0 相同，新增的只有预处理部分的可靠性。
+但这不是免费的：LP-BRANCH 最坏是指数级，$Q=0$ 只是当前语料上的结果，不是定理。
 
-复用模块：
+---
 
-- `exp/v8a/rdf.py`：`RDF`、`check_schedule`；
-- `exp/v76/qsp.py`：`QSP`；
-- `exp/v9b/chd.py`：`CHD`；
-- `exp/v9c/scale.py`：`energy_cert`、`windows`、`verify_prep`；
-- `exp/v9d/cab.py`：`CABOpt`、`CAB`、`_greedy_rank`；
-- `exp/v8a/lazy.py`：`LazySD`（仅用于可选的 hull projection）。
+## 1. 产物清单
 
-新增文件：
-
-- `exp/v8c/chip.py`：本轮的 CRISP-ALC 实现；
-- `exp/v8c/bench_chip.py`：三组语料的主实验；
-- `exp/v8c/bench_bounds.py`：bracket 统计、消融、证书验证；
-- `exp/v8c/bench_chip.json`、`exp/v8c/bench_bounds.json`：原始结果。
-
-## 1. 符号
-
-| 符号 | 含义 |
+| 路径 | 内容 |
 |---|---|
-| $I=(J,M,E,p,q,\mathrm{elig})$ | 调度实例 |
-| $n,m$ | 任务数、机器数 |
-| $p_i$ | 任务 $i$ 的加工时间 |
-| $q_i$ | 任务 $i$ 的尾长（交付时间） |
-| $\mathrm{est}_i$ | 任务 $i$ 的最早开始时间（heads） |
-| $\mathrm{latest}_i(h)=h-q_i-p_i$ | 在 makespan $\le h$ 的调度中 $i$ 的最晚开始时间 |
-| $s_i,C_i=s_i+p_i$ | 开始时间、完成时间 |
-| $C_{\max}(s)=\max_i(s_i+p_i+q_i)$ | 调度 $s$ 的 makespan |
-| $\mathrm{OPT}$ | 最优 makespan |
-| $h$ | 候选 makespan |
-| $P(h)$ | 固定 $h$ 的 LP 松弛 |
-| $\mathrm{lo}_i(h),\mathrm{hi}_i(h)$ | $P(h)$ 在坐标 $s_i$ 上的投影端点 |
-| $H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]$ | LP 投影盒 |
-| $\mathrm{LB}_0,\mathrm{UB}_0$ | 预处理前的初始下界、上界 |
-| $\mathrm{LB},\mathrm{UB}$ | 预处理后的证书区间 |
-| $W=\mathrm{UB}-\mathrm{LB}$ | 区间宽度 |
-| $\rho=\mathrm{UB}/\mathrm{LB}$ | 证书区间的竞争比（近似比上界） |
-| $Q$ | 外层 oracle 调用次数（查询数） |
-| $\mathrm{predq}$ | 精确 oracle 下二分搜索的理想深度，不含最终 $\mathrm{OPT}-1$ 证明 |
-| $\mathrm{cert}$ | 可重放的 NO 证书（window / energy / Farkas） |
-| $\mathrm{sched},\mathrm{mach}$ | 通过 `check_schedule` 的调度与机器分配 |
+| `exp/v8i/sage.py` | SAGE-ALC 实现：`BranchProof`、`SubsumptionProof`、`lp_branch_decide`、`ga_schedule`、`SAGE(APEX)` |
+| `exp/v8i/bench_sage.py` | 252 例主实验与 `no_ga`、`no_bb`、`bb_no_only` 三组消融 |
+| `exp/v8i/bench_sage_full.json` | full 原始结果，252 行 |
+| `exp/v8i/bench_sage_no_ga.json` | 关闭 GA 的结果 |
+| `exp/v8i/bench_sage_no_bb.json` | 关闭 LP-BRANCH 的结果 |
+| `exp/v8i/bench_sage_bb_no_only.json` | 只用 LP-BRANCH 证 NO、禁用 B&B YES 的结果 |
+| `exp/v8h/apex.py` | v8.7 APEX 基类；SAGE 直接继承 |
+| `exp/v8h/bench_apex_full.json` | APEX 基线（本轮同 runner 复跑） |
+| `exp/v60/sdecc.py` | `SDLP` 与 `sdecc_no`，LP-BRANCH 的底层 |
+| `exp/v60/cert.py` | `verify`、`integer_certificate`，叶子 Farkas 证书 |
+| `exp/v8a/rdf.py` | `check_schedule` 与 CHD/RDF 接口 |
 
-注意：代码里的 `q` 有时指查询数，有时指尾长 `q[i]`。本文用 $Q$ 表示查询数，用 $q_i$ 表示尾长，避免混淆。
+---
 
-## 2. 形式化对象
+## 2. 与 v8.7 APEX-ALC 的版本关系
 
-### 2.1 实例与可行调度
+| 层 | v8.7 APEX-ALC | v8.8 SAGE-ALC | 关系 |
+|---|---|---|---|
+| 初始 bracket | LP pin + chip bound + LP 舍入 + LNS | 原样继承 | 不变 |
+| 下界 | LP pin；NO 由 CHD 给 | LP pin + LP-BRANCH | 新增可证明 NO |
+| 上界 | LP 舍入 + LNS + CHD YES | 继承 + GENETIC-UB | 新增遗传构造 |
+| 证明代数 | 判断集合 + subsumption | STAB：单调规则按需闭包 | 扩展为分支证明 |
+| 最终闭合 | `MEET` | `MEET`，但 $\mathrm{OPT}-1$ 由 `BranchProof` 提供 | 消除 oracle |
+| fallback | CHD | CHD，仍保留 | 仅在 B&B/GA 都失败时调用 |
 
-实例是一个带优先约束的无关并行机调度：
+实现上 `SAGE` 只覆盖三处：
 
-- 每个任务 $i$ 必须在其所有前驱完成后开始；
-- 任务 $i$ 只能放在 $\mathrm{elig}_i\subseteq M$ 中的一台机器上；
-- 机器上的任务区间不重叠；
-- 目标是最小化 $C_{\max}(s)=\max_i(s_i+p_i+q_i)$，其中 $q_i$ 是交付尾长。
+- `_probe(h)`：先 LP-BRANCH，再 GA，最后 CHD；
+- `optimize()`：沿用 APEX 的 bracket，但记录 B&B/GA 归因；
+- `_ensure_lb_proof(value)`：先找精确的 $\mathrm{NO}(value-1)$，找不到再从更强的 $\mathrm{NO}(h')$ 做 subsumption。
 
-一个调度是二元组 $(s,\mathrm{mach})$，$s_i\in\mathbb Z_{\ge 0}$，$\mathrm{mach}_i\in\mathrm{elig}_i$，满足优先约束和机器容量约束。`check_schedule(inst,h,start,mach)` 做独立重放：检查每个任务在 $[0,h]$ 内、机器合法、优先约束、机器不重叠。只有通过重放的调度才被接受。
+其余 `initial_bounds`、`_decide`、`_absorb`、`_record`、`_result`、`_final_proof` 全部继承 APEX。
 
-记
+---
 
+## 3. 问题、符号与判断
+
+### 3.1 实例
+
+一个实例为
 \[
-\mathcal M(I)=\{C_{\max}(s): (s,\mathrm{mach})\text{ 可行}\},
-\qquad
-\mathrm{OPT}=\min \mathcal M(I).
+I=(J,M,E,p,q,\mathrm{elig}),
+\]
+其中 $J$ 是任务集，$M$ 是机器集，$E\subseteq J\times J$ 是先后约束，$p_i$ 是加工时间，$q_i$ 是尾延迟，$\mathrm{elig}_i\subseteq M$ 是允许机器集。调度 $s:J\to\mathbb Z_{\ge0}$ 可行当且仅当：
+
+1. $s_i\in\mathrm{elig}_i$ 对应的机器可用；
+2. 对每条 $i\to j$，$s_j\ge s_i+p_i$；
+3. 每台机器上的任务区间 $[s_i,s_i+p_i)$ 不重叠。
+
+令
+\[
+C_{\max}(s)=\max_{i\in J}(s_i+p_i).
 \]
 
-### 2.2 LP 松弛与投影
+### 3.2 固定 horizon 与禁止集
 
-固定 $h$，记 $P(h)$ 为 v7.6/QSP 的 LP 松弛（实际实现用 `LazySD` 的 start-time-indexed 形式）。概念上：
-
+固定 $h$，任务 $i$ 的最早/最晚开始时间为
 \[
-P(h)=\left\{s\in\mathbb R_{\ge 0}^n:
-\begin{array}{l}
-s_i\ge \mathrm{est}_i,\\
-s_j\ge s_i+p_i \quad ((i,j)\in E),\\
-s_i+p_i+q_i\le h,\\
-\text{机器容量约束的 LP 松弛成立}
-\end{array}
-\right\}.
+\mathrm{est}_i(h)=\mathrm{head}_i,\qquad
+\mathrm{lst}_i(h)=h-q_i-p_i,
+\]
+其域为
+\[
+D_i(h)=[\mathrm{est}_i(h),\mathrm{lst}_i(h)]\cap\mathbb Z_{\ge0}.
+\]
+禁止集 $F\subseteq J\times\mathbb Z_{\ge0}$ 表示「任务 $i$ 不允许在时刻 $t$ 开始」。记
+\[
+D_i(h,F)=D_i(h)\setminus\{t:(i,t)\in F\}.
+\]
+若调度 $s$ 满足 $s_i\in D_i(h,F)$ 对所有 $i$ 成立，则称 $s$ 是 $F$-允许的。
+
+**判断**：
+\[
+\mathrm{NO}(h\mid F):=\text{不存在 }F\text{-允许的可行调度 }s\text{ 使 }C_{\max}(s)\le h.
+\]
+当 $F=\varnothing$ 时简写为 $\mathrm{NO}(h)$。
+
+### 3.3 proof store 与四个判断
+
+proof store $\mathcal P$ 保存已证明的判断：
+\[
+\mathrm{NO}(h),\quad \mathrm{LB}(v),\quad \mathrm{UB}(s),\quad \mathrm{EXACT}(v).
+\]
+语义是：
+
+- $\mathrm{NO}(h)$：$\mathrm{OPT}>h$；
+- $\mathrm{LB}(v)$：$\mathrm{OPT}\ge v$；
+- $\mathrm{UB}(s)$：$s$ 可行且 $\mathrm{OPT}\le C_{\max}(s)$；
+- $\mathrm{EXACT}(v)$：$\mathrm{OPT}=v$ 且附带一张 $C_{\max}=v$ 的调度。
+
+APEX 的整数间隙是
+\[
+g=\mathrm{OPT}-L^*,
+\]
+其中 $L^*$ 是 LP pin 得到的最好下界。上一轮已经在这 252 例上验证 $g\in\{0,1\}$。
+
+### 3.4 查询 $Q$ 的精确定义
+
+$Q$ 只统计 **CHD oracle 调用次数**。LP-BRANCH 的 LP 次数、GA 的 SGS 次数、LP pin 的次数都不计入 $Q$，但计入时间与 LP 计数。因此「$Q=0$」的准确含义是：
+
+> **没有再向 CHD 问任何一次 YES/NO；所有判断都由 LP-BRANCH、LP pin、LNS 或 GA 给出。**
+
+这不是「零计算」，也不是「零 LP」。
+
+---
+
+## 4. 形式化规则
+
+### 4.1 LP-BRANCH 的分支规则
+
+设固定 $h$ 和禁止集 $F$，选任务 $i$ 和分割点 $m$。定义
+\[
+F_{\le m}=F\cup\{(i,t):t>m\},\qquad
+F_{>m}=F\cup\{(i,t):t\le m\}.
+\]
+直观上：
+
+- $F_{\le m}$ 禁止 $i$ 在 $m$ 之后开始，所以 $i$ 只能落在 $\le m$ 一侧；
+- $F_{>m}$ 禁止 $i$ 在 $m$ 或之前开始，所以 $i$ 只能落在 $>m$ 一侧。
+
+规则为
+\[
+\frac{
+  \mathrm{NO}(h\mid F_{\le m})
+  \qquad
+  \mathrm{NO}(h\mid F_{>m})
+}{
+  \mathrm{NO}(h\mid F)
+}
+\tag{Branch}
+\]
+前提是两个子域都非空；若某个子域为空，该子域是平凡 $\mathrm{NO}$，父判断等价于另一子域。当前实现为避免假分支直接返回 UNKNOWN，并交给 GA/CHD。
+
+**穷尽性**：任何 $F$-允许的调度，$s_i$ 要么 $\le m$，要么 $>m$，二者必居其一。因此两个子域覆盖了父域的所有可能；两个子域都不可行，则父域不可行。
+
+### 4.2 叶子规则
+
+LP-BRANCH 的叶子有三类：
+
+**(L1) Farkas 叶子。** 若固定 $h,F$ 的 SD LP 不可行，且 `integer_certificate(inst,h,forbid=F)` 返回证书 $\Phi$，并且
+\[
+\mathtt{verify}(I,h,\Phi,\mathrm{forbid}=F)=1,
+\]
+则
+\[
+\frac{\mathtt{verify}(I,h,\Phi,\mathrm{forbid}=F)=1}
+{\mathrm{NO}(h\mid F)}.
+\tag{Farkas}
+\]
+$\Phi$ 是对偶证书；`verify` 独立重放，不信任求解器的 `status`。
+
+**(L2) 空域叶子。** 若存在任务 $i$ 使 $D_i(h,F)=\varnothing$，则不存在 $F$-允许的完整调度，直接得 $\mathrm{NO}(h\mid F)$。
+
+**(L3) 整数叶子。** 若某个 LP 解 $z$ 是整数，且舍入/解码得到调度 $s$，并通过
+\[
+\mathtt{check\_schedule}(I,h,s,\mathrm{machine})=1,
+\]
+则得到 $\mathrm{UB}(s)$，同时这条分支以 YES 结束；它不是 NO 证明，但会缩小上界。
+
+### 4.3 `BranchProof` 数据类型
+
+概念上的证明树为
+\[
+\pi ::= \mathrm{Leaf}(F,\Phi)\mid \mathrm{Empty}(F,i)\mid
+\mathrm{Node}(i,m,F,\pi_L,\pi_R).
+\]
+实现中的元组形式是：
+
+- `('leaf', F, cert)`；
+- `('empty', F, i)`；
+- `('node', i, m, F, left, right)`。
+
+检查器 `BranchProof._check(node,F)` 做四件事：
+
+1. 父节点记录的 $F$ 必须与当前 $F$ 一致；
+2. 分支点 $(i,m)$ 必须真的把当前允许域切成两个非空部分；
+3. 左子节点的禁止集必须是 $F\cup\{(i,t):t>m\}$，右子节点必须是 $F\cup\{(i,t):t\le m\}$；
+4. 叶子证书必须通过 `verify(..., forbid=F)`，或空域检查成立。
+
+根调用是 `_check(tree, frozenset())`。因此 `BranchProof` 是自包含的：不依赖 APEX 的 `no_states`，也不依赖生成它的 LP 求解器。
+
+### 4.4 STAB：单调判断闭包
+
+STAB 的规则是
+\[
+\frac{\mathrm{NO}(h)}{\mathrm{LB}(h+1)}
+\tag{NO-LB}
+\]
+\[
+\frac{\mathrm{LB}(v)\qquad h<v}{\mathrm{NO}(h)}
+\tag{LB-NO}
+\]
+\[
+\frac{\mathrm{LB}(v)\qquad \mathrm{UB}(s)\qquad C_{\max}(s)=v}
+{\mathrm{EXACT}(v)}
+\tag{MEET}
+\]
+以及
+\[
+\frac{\mathrm{LB}(v)\qquad \mathrm{UB}(s)}
+{\mathrm{RATIO}(C_{\max}(s)/v)}.
+\tag{RATIO}
 \]
 
-它不是整数规划；它允许分数开始时间和分数机器分配。但每个整数可行调度都满足这些约束，所以
+这些规则都是单调的：前提中的判断一旦进入 proof store，结论就可以加入。对固定实例，可能的 $h$、$v$ 和已构造的调度集合是有限的，因此从任意初始 proof store 出发，反复应用规则必然在有限步到达最小不动点，且到达的判断与规则应用顺序无关。
 
+实现上不做全局全量闭包，而是 **按需闭包**：`_ensure_lb_proof(value)` 先尝试精确的 $\mathrm{NO}(value-1)$；若没有，就在 proof store 中找最小的 $h\ge value-1$，用
 \[
-(s,\mathrm{mach})\text{ 可行},\ C_{\max}(s)\le h
-\;\Longrightarrow\;
-s\in P(h).
+\mathrm{NO}(h)\Rightarrow \mathrm{NO}(value-1)
 \]
+做一次 subsumption，生成 `SubsumptionProof`。这等价于在需要的点上取闭包，避免为所有 $h$ 预生成证明。
 
-坐标投影定义为
+### 4.5 `MEET` 的最终闭合
 
+当外层满足 $\mathrm{LB}=\mathrm{UB}=v$ 时，APEX 调用 `_final_proof()`。SAGE 的 `_ensure_lb_proof(v)` 返回：
+
+- 精确的 $\mathrm{NO}(v-1)$（通常就是 `BranchProof`），或
+- 从更强的 $\mathrm{NO}(h')$ 得到的 `SubsumptionProof`。
+
+于是最终证明是
 \[
-\mathrm{lo}_i(h)=\min_{s\in P(h)} s_i,\qquad
-\mathrm{hi}_i(h)=\max_{s\in P(h)} s_i.
+\mathrm{LB}(v)\quad+\quad \mathrm{UB}(s)\quad+\quad C_{\max}(s)=v
+\quad\Longrightarrow\quad
+\mathrm{EXACT}(v).
 \]
+这里不再需要向 CHD 追问 $v-1$，因为 $v-1$ 的 NO 已经在证明树里。
 
-由可行性，任意整数可行调度的 $s_i$ 都落在 $[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]$，因此投影盒
+---
 
-\[
-H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]
-\]
+## 5. 算法
 
-是整数可行集的外包盒。它是**可靠的**，但不一定是**紧的**；第 6.6 节的负结果会量化这一点。
+### 5.1 外层 `optimize`
 
-### 2.3 证书区间
-
-一个证书区间是一对整数 $(\mathrm{LB},\mathrm{UB})$，满足
-
-\[
-\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
-\]
-
-- $\mathrm{LB}$ 由下界论证或「在 $h=\mathrm{LB}$ 处存在可重放的 NO 证书」支撑；
-- $\mathrm{UB}$ 由一张通过 `check_schedule` 的调度支撑；
-- 若 $\mathrm{LB}=\mathrm{UB}$，则 incumbent 被证明最优。
-
-定义宽度 $W=\mathrm{UB}-\mathrm{LB}$ 和竞争比
-
-\[
-\rho=\frac{\mathrm{UB}}{\mathrm{LB}}.
-\]
-
-这里的 $\rho$ 不是在线算法的竞争比，而是**当前 incumbent 相对证书下界的近似比**：
-
-\[
-\frac{C_{\max}(\text{incumbent})}{\mathrm{OPT}}
-\le \frac{\mathrm{UB}}{\mathrm{LB}}=\rho.
-\]
-
-因为 incumbent 的 makespan 不超过 $\mathrm{UB}$，而 $\mathrm{OPT}\ge\mathrm{LB}$。$\rho=1$ 等价于 $\mathrm{LB}=\mathrm{UB}$，即已证明最优。
-
-### 2.4 NO 证书
-
-本轮使用两类 NO 证书，均由 `exp/v9c/scale.py` 提供并可重放：
-
-**Window 证书。** 对任务 $i$，若
-
-\[
-\mathrm{est}_i+p_i+q_i>h,
-\]
-
-则任何 makespan $\le h$ 的调度都不存在。等价地 $\mathrm{est}_i>\mathrm{latest}_i(h)$。
-
-**Energy 证书。** 对机器子集 $M'\subseteq M$ 和时间区间 $[a,b)$，令
-
-\[
-J(M')=\{i:\mathrm{elig}_i\subseteq M'\},
-\]
-
-\[
-\mathrm{ov}_i(a,b)=\max\bigl(0,\ p_i-\max(0,a-\mathrm{est}_i)
--\max(0,\mathrm{latest}_i(h)+p_i-b)\bigr).
-\]
-
-$\mathrm{ov}_i(a,b)$ 是任务 $i$ 在 $[a,b)$ 内**无论怎样调度都必须重叠**的最小加工量。若
-
-\[
-\sum_{i\in J(M')}\mathrm{ov}_i(a,b) > |M'|(b-a),
-\]
-
-则这组任务在 $[a,b)$ 内无法全部塞进 $M'$ 的机器容量，故 $h$ 不可行。证书记录 $(M',a,b,J,\text{demand})$，`verify_prep(inst,h,cert)` 用整数算术重放这个不等式。
-
-**Farkas 证书。** v8.0 的 LP 不可行性证书；本轮不直接生成它，但 `CHD`/`CAB` 的 NO 路径仍会产生，并由 `audit_rdf` 检查。
-
-本轮只把 window/energy 用于**预处理阶段的 LB 抬升**；最终 $\mathrm{OPT}-1$ 的 NO 仍由内层 oracle 的完整证书负责。
-
-### 2.5 UB 证书
-
-任何通过 `check_schedule(inst,Cmax,start,mach)` 的调度都是 UB 证书：
-
-\[
-\mathrm{OPT}\le C_{\max}(s).
-\]
-
-`check_schedule` 检查所有任务在 $[0,C_{\max}]$ 内、机器合法、优先约束、机器不重叠。`chip_bounds` 在每次 UB 更新前都调用它，因此 UB 不依赖启发式的自述。
-
-### 2.6 凸包：从高维到一维
-
-可行 makespan 集合 $\mathcal M(I)$ 的凸包是区间 $[\mathrm{OPT},\max\mathcal M(I)]$。我们不需要知道高维开始时间向量的凸包；真正要维护的是这个一维凸包的下端点，即 $\mathrm{OPT}$。
-
-证书区间 $[\mathrm{LB},\mathrm{UB}]$ 是 $[\mathrm{OPT},\infty)$ 的一个外区间：
-
-\[
-[\mathrm{OPT},\infty)\subseteq[\mathrm{LB},\mathrm{UB}].
-\]
-
-预处理的目标就是把这个外区间压到接近 $[\mathrm{OPT},\infty)$ 的下端。高维投影盒 $H(h)$ 是另一个外近似，但它通常远宽于整数可行集；第 6.6 节会看到，把 $H(h)$ 当硬域并不划算。**本轮最终选择的是低维凸包（一维区间），高维凸包只保留为可选的顺序 oracle。**
-
-## 3. 算法
-
-### 3.1 总览
-
-CRISP 分三个阶段：
-
-1. **初始界**：critical path + eligibility load 给 $\mathrm{LB}_0$，est 顺序 greedy 给 $\mathrm{UB}_0$；
-2. **预处理**：先 UB drop（4 个 greedy 订单），再 LB lift（energy/window NO 证书），得到 $[\mathrm{LB},\mathrm{UB}]\subseteq[\mathrm{LB}_0,\mathrm{UB}_0]$；
-3. **区间搜索**：在 $[\mathrm{LB},\mathrm{UB}]$ 上二分调用内层 oracle；NO 抬 LB，YES 压 UB；最后在 $\mathrm{OPT}-1$ 补一张 NO 证明，在 $\mathrm{OPT}$ 保留可重放调度。
-
-### 3.2 初始界：`base_bounds`
-
-Critical path 下界：
-
-\[
-\mathrm{LB}_{\mathrm{cp}}
-=\max_i\bigl(\mathrm{est}_i+p_i+q_i\bigr).
-\]
-
-Eligibility load 下界：对每个非空机器子集 $M'\subseteq M$，只能放在 $M'$ 上的任务必须在 $|M'|$ 台机器上完成：
-
-\[
-\mathrm{LB}_{\mathrm{load}}
-=\max_{\emptyset\ne M'\subseteq M}
-\left\lceil
-\frac{\sum_{i:\mathrm{elig}_i\subseteq M'}p_i}{|M'|}
-\right\rceil.
-\]
-
-于是
-
-\[
-\mathrm{LB}_0=\max(\mathrm{LB}_{\mathrm{cp}},\mathrm{LB}_{\mathrm{load}}).
-\]
-
-$\mathrm{UB}_0$ 由 est 顺序的串行 SGS 给出，并用 `check_schedule` 重放。若 greedy 失败（DAG 异常），返回 `ok=False`，不做任何虚假声明。
-
-复杂度：$O(2^m n+n\log n+\text{SGS})$。本语料 $m\le 4$，$2^m\le 16$，可忽略。
-
-### 3.3 UB drop：4 个确定性订单
-
-`order_portfolio(inst,est,q,ub)` 返回 4 个优先序：
-
-| 名称 | 排序键 | 直觉 |
-|---|---|---|
-| `est` | $\mathrm{est}_i+i\cdot10^{-9}$ | 最早开始优先 |
-| `latest` | $\mathrm{latest}_i+i\cdot10^{-9}$ | 最晚开始优先，给紧任务让路 |
-| `tail` | $-q_i+i\cdot10^{-9}$ | 长尾优先 |
-| `mixed` | $\mathrm{est}_i-0.5q_i+i\cdot10^{-9}$ | 头尾折中 |
-
-每个订单跑一次 `_greedy_rank`（串行 SGS），得到 $(s,\mathrm{mach},C_{\max})$。只有当
-
-\[
-C_{\max}<\mathrm{UB}
-\quad\text{且}\quad
-\texttt{check\_schedule}(I,C_{\max},s,\mathrm{mach})
-\]
-
-时才更新 $\mathrm{UB}$。因此 UB drop 只会让上界更紧，不会引入未验证的调度。
-
-252 个实例中，201 个实例的 UB 被至少一个订单压低（base 95/141、pert 60/60、stress 46/51）。成功的订单更新次数（含同一实例多次更新）为 base 101、pert 60、stress 46。
-
-### 3.4 LB lift：energy / window 循环
-
-在 $h=\mathrm{LB}$ 处：
-
-1. 调 `energy_cert(inst,LB,64,20000)`；若返回证书，验证后 $\mathrm{LB}\leftarrow\mathrm{LB}+1$；
-2. 若没有 energy 证书，调 `windows(inst,LB)`；若存在 $\mathrm{est}_i>\mathrm{latest}_i$，构造 window 证书，验证后 $\mathrm{LB}\leftarrow\mathrm{LB}+1$；
-3. 若两者都没有，停止；
-4. 若验证失败，记录 `cert_bad` 并停止，不抬 LB。
-
-循环条件是 $\mathrm{LB}<\mathrm{UB}$，因为 $\mathrm{LB}=\mathrm{UB}$ 时区间已经精确，不需要再抬。
-
-252 个实例共触发 174 次 LB lift（base 101、pert 31、stress 42），全部证书通过 `verify_prep`，`cert_bad=0`。
-
-### 3.5 顺序：先 UB 后 LB
-
-这个顺序不是随意的。LB lift 的循环上界是当前 $\mathrm{UB}$；先降 UB 可以让 LB 多爬几步，先升 LB 则 energy 循环会更早停下。第 6.5 节的消融显示：
-
-- UB drop 单独把预测二分深度从 558 降到 303；
-- LB lift 单独只从 558 降到 538；
-- 两者合起来降到 254。
-
-也就是说，**LB lift 的收益需要 UB drop 先创造空间**。这是本轮对「竞争比」最重要的结构性观察：上下界不是两个独立算子，而是一个耦合系统。
-
-### 3.6 外层搜索：`CRISPBounds` 与 `CRISP`
-
-`CRISPBounds` 和 `CRISP` 都继承 `CABOpt`，只在 `initial_bounds` 中调用 `chip_bounds`：
-
-```python
-def initial_bounds(self):
-    b = chip_bounds(self.inst)
-    self.chip = b
-    return b['lb'], b['ub'], b['schedule'], b['machine']
-```
-
-区别在内层 oracle：
-
-- `CRISPBounds._decide` 继承 `CABOpt`，用 `CAB`（archive + Markov）；
-- `CRISP._decide` 覆盖为
-
-```python
-def _decide(self, h):
-    rdf = CHD(self.inst, h, yes_scan=True, cheap_disc=2,
-              hull_disc=4, hull_on=True)
-    v, st = rdf.decide(budget=self.per_query_lp,
-                       nodecap=self.per_query_nodes)
-    return v, st, rdf
-```
-
-`CABOpt.optimize` 的循环不变式是
-
-\[
-\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
-\]
-
-每次 `_decide(h)`：
-
-- `v=True`：用返回调度的实际 $C_{\max}$ 更新 $\mathrm{UB}$（不会变大）；
-- `v=False`：$\mathrm{LB}\leftarrow\max(\mathrm{LB},h+1)$，保存 NO 证明；
-- `v=None`：UNKNOWN，`_recover_unknown` 在 $h$ 或 $h-1$ 重试，不把 UNKNOWN 当 NO。
-
-当 $\mathrm{LB}=\mathrm{UB}$ 时，`optimize` 检查 $\mathrm{OPT}-1$ 是否已有 NO 证明；若没有，补一次 `_decide(OPT-1)`。只有这次返回 NO，`certified=True`。
-
-### 3.7 伪代码
-
-```
-function CRISP(inst):
-    (LB0, UB0, sched, mach, est, q) = base_bounds(inst)
-    if UB0 is None or not check_schedule(inst, UB0, sched, mach):
-        return UNKNOWN
-
-    LB, UB = LB0, UB0
-    for order in [est, latest, tail, mixed]:
-        g = greedy_SGS(order)
-        if g and g.Cmax < UB and check_schedule(inst, g.Cmax, g.starts, g.machs):
-            UB, sched, mach = g.Cmax, g.starts, g.machs
-
-    while LB < UB:
-        cert = energy_cert(inst, LB)
-        if cert is None:
-            if no window violation at LB:
-                break
-            cert = window_cert(inst, LB)
-        if not verify_prep(inst, LB, cert):
-            break
-        LB += 1
-
-    Q = 0
-    while LB < UB and Q < Qmax:
-        h = floor((LB + UB) / 2)
-        v, st = oracle(inst, h)
-        Q += 1
-        if v == YES:
-            UB = min(UB, Cmax(st.schedule))
-            sched, mach = st.schedule, st.machine
-        elif v == NO:
-            LB = h + 1
-            no_states[h] = st
-        else:
-            retry(h), retry(max(LB, h - 1))
-
-    if LB == UB:
-        if (UB - 1) not in no_states:
-            v = oracle(inst, UB - 1)
-            Q += 1
-            if v != NO:
-                return UNKNOWN
-        certified = True
+```text
+lb, ub, s, mach = initial_bounds()
+if ub is None: return unknown
+while lb < ub and queries < max_queries:
+    if ub - lb <= scan_cap:
+        h = lb                    # 尾部线性扫描
     else:
-        certified = False
-
-    return (UB, sched, mach, LB, Q, certified)
+        h = floor((lb + ub) / 2)  # 二分
+    v, payload = probe(h)
+    if v == YES:
+        if Cmax(payload) < ub and check_schedule(...):
+            ub, s, mach = Cmax(payload), payload.schedule, payload.machine
+    elif v == NO:
+        lb = max(lb, h + 1)
+        record_proof(payload)
+    else:
+        recover_unknown(h)
+if lb == ub:
+    final_proof()
+return result()
 ```
 
-### 3.8 查询记账
-
-`Q` 包含：
-
-- 二分搜索的每次 `_decide`；
-- UNKNOWN 的每次重试；
-- 最终的 $\mathrm{OPT}-1$ 证明（若搜索中没查过）。
-
-`bench_bounds.py` 的 `predq` 只计算理想二分深度，不含最终证明。因此：
-
-- 252 例的 `predq` 总和是 254；
-- 58 个在预处理后已经 $\mathrm{LB}=\mathrm{UB}$ 的实例，每个需要一次 $\mathrm{OPT}-1$ 证明，贡献 58；
-- 其余 194 个非精确实例中，有 25 个的 $\mathrm{OPT}-1$ 不在搜索轨迹里，需要补证明；
-- 所以实际 $Q=254+58+25=337$。
-
-这个记账解释很重要：**CRISP 的查询下降不是在「少证明」；恰恰相反，它在 58 个实例上完全跳过了搜索，只补一张最终 NO 证明。**
-
-## 4. 正确性
-
-### 4.1 引理 1（初始界可靠）
-
-`base_bounds` 返回的 $\mathrm{LB}_0,\mathrm{UB}_0$ 满足
-
-\[
-\mathrm{LB}_0\le\mathrm{OPT}\le\mathrm{UB}_0.
-\]
-
-证明：critical path 下界和 eligibility load 下界都是标准松弛；$\mathrm{UB}_0$ 由 `check_schedule` 重放的可行调度给出。若 greedy 失败，函数返回 `ok=False`，不产生区间。$\square$
-
-### 4.2 引理 2（UB drop 可靠）
-
-每次 UB 更新都要求新调度通过 `check_schedule`；因此新值仍是可行调度的 makespan，满足 $\mathrm{OPT}\le C_{\max}$。取多个订单的最小值只会更紧，不会低于 $\mathrm{OPT}$。$\square$
-
-### 4.3 引理 3（NO 证书可靠）
-
-- Window：若 $\mathrm{est}_i+p_i+q_i>h$，任务 $i$ 即使最早开始也无法在 $h$ 内完成并交付，故 $h$ 不可行。
-- Energy：$\mathrm{ov}_i(a,b)$ 是任务 $i$ 在 $[a,b)$ 内的强制重叠下界；若这些强制重叠之和超过 $|M'|(b-a)$，则 $M'$ 的容量不足以容纳它们，故 $h$ 不可行。
-- `verify_prep` 用整数算术重放上述不等式；验证失败则不抬 LB。
-
-因此，若 `chip_bounds` 在 $h$ 处接受了一张证书并令 $\mathrm{LB}=h+1$，则
-
-\[
-\mathrm{OPT}\ge h+1=\mathrm{LB}.
-\]
-
-$\square$
-
-### 4.4 引理 4（LB lift 保持下界）
-
-归纳：初始 $\mathrm{LB}_0\le\mathrm{OPT}$。每次抬升前，在 $h=\mathrm{LB}$ 处有已验证的 NO 证书，故 $\mathrm{OPT}\ge h+1$；抬升后仍成立。若循环因无证书或验证失败而停止，$\mathrm{LB}$ 不变，仍满足 $\mathrm{LB}\le\mathrm{OPT}$。$\square$
-
-### 4.5 引理 5（区间不变式）
-
-在 `chip_bounds` 返回时，
-
-\[
-\mathrm{LB}_0\le\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}\le\mathrm{UB}_0.
-\]
-
-证明：引理 1 给初始；引理 2 给 $\mathrm{UB}$ 不降到 $\mathrm{OPT}$ 以下；引理 3–4 给 $\mathrm{LB}$ 不升到 $\mathrm{OPT}$ 以上。传递性给出链。$\square$
-
-### 4.6 定理 1（最终答案可靠）
-
-若 `optimize` 返回 `certified=True`，则 `opt` $=\mathrm{OPT}$，且：
-
-- `schedule` 在 `opt` 处通过 `check_schedule`；
-- `no_states[opt-1]` 是一张通过 `audit_rdf`/`proof_complete` 的 NO 证明；
-- `cert_h=opt-1`。
-
-证明：`certified=True` 要求 $\mathrm{LB}=\mathrm{UB}=\mathrm{opt}$，且 $\mathrm{opt}-1$ 有 NO 证明。由引理 5，$\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$，故 $\mathrm{OPT}=\mathrm{opt}$。调度和 NO 证明分别由 `check_schedule` 与 `audit_rdf`/`proof_complete` 独立检查。$\square$
-
-若 `certified=False`，`opt` 仍是可行调度的 makespan，因此 $\mathrm{opt}\ge\mathrm{OPT}$；$\mathrm{LB}\le\mathrm{OPT}$ 仍成立。此时返回的是**有效的 anytime 区间**，不是「已证明最优」。
-
-### 4.7 定理 2（竞争比与二分收缩）
-
-设内层 oracle 精确（不返回 UNKNOWN），预处理后区间为 $[\mathrm{LB}_0,\mathrm{UB}_0]$，宽度 $W_0$。第 $t$ 次二分后，
-
-\[
-W_t\le\left\lceil\frac{W_0}{2^t}\right\rceil,
-\qquad
-\rho_t\le 1+\frac{W_0}{2^t\,\mathrm{LB}_0}.
-\]
-
-证明：每次二分把当前宽度 $W$ 分成 $\lfloor W/2\rfloor$ 和 $\lceil W/2\rceil$；最坏取 $\lceil W/2\rceil$。竞争比由 $\rho_t=\mathrm{UB}_t/\mathrm{LB}_t=1+W_t/\mathrm{LB}_t\le1+W_t/\mathrm{LB}_0$ 得到。$\square$
-
-因此精确 oracle 下的查询上界是
-
-\[
-Q=O\bigl(\log(W_0+1)\bigr).
-\]
-
-预处理的作用是同时降低 $W_0$ 和 $\rho_0$；本轮把 252 例的总 $W_0$ 从 1069 压到 304，把平均 $\rho_0$ 从 1.144 压到 1.038。
-
-### 4.8 UNKNOWN 的语义
-
-`_decide` 返回 `None` 时，`optimize` 不改变 $\mathrm{LB}/\mathrm{UB}$ 的可靠性，只增加查询数并重试。若重试后仍 UNKNOWN，可能因 `max_queries` 提前结束，此时 `certified=False`。CRISP 从不把 UNKNOWN 解释为 NO 或 YES。$\square$
-
-## 5. 复杂度
-
-### 5.1 预处理
-
-- `base_bounds`：$O(2^m n+n\log n+\text{SGS})$；本语料 $m\le4$。
-- UB drop：4 次 SGS，$O(4(n\log n+nm))$。
-- LB lift：最多 $W_0$ 次；每次 `energy_cert` 枚举 $\le64$ 个机器子集、$\le20{,}000$ 个区间，最坏 $O(W_0\cdot(64\cdot20{,}000+n))$。实际 252 例共 174 次 lift，预处理总墙钟约 0.36 s。
-- 可选 hull projection：$2n$ 次 LP；本语料 $n\le21$，但默认关闭。
-
-### 5.2 搜索
-
-- 二分深度 $O(\log W_0)$；实际 252 例 `predq` 总和 254。
-- 每次 `CHD` 调用受 `per_query_lp=80`、`per_query_nodes=5000` 约束；`max_queries=40`。
-- 最终 $\mathrm{OPT}-1$ 证明最多一次额外调用。
-- 实际总查询 337，总 LP 1403，总 YES 节点 64,039，总墙钟 7.27 s。
-
-### 5.3 内存
-
-- `chip_bounds` 保存 174 张证书（每张只含子集/区间/需求，整数），可忽略。
-- `no_states` 最多保存 `max_queries` 个 NO oracle 状态；每个状态是 `RDF`/`CHD` 实例，大小与 LP 规模同阶。
-- `trace` 保存每次查询的摘要，$O(Q)$。
-
-### 5.4 实际开销
-
-预处理不是瓶颈；内层 LP 和 LDS 仍是主要成本。CRISP 的 7.27 s 中，`bench_bounds` 测得的纯预处理约 0.36 s，其余是 337 次 oracle 调用。也就是说，**本轮的主要收益来自「少调用 oracle」，而不是「每次调用更快」**。
-
-## 6. 实验
-
-### 6.1 设置
-
-- **base 141**：7 个族，`holdout` 50、`synth` 45、`large_a` 8、`large_b` 10、`large_het` 8、`hard3` 12、`deep` 8。
-- **pert 60**：`exp/v71/perturb60.pkl`，在 base 上做扰动后的 NO 集。
-- **stress 51**：`exp/v81/h5h47_branch.pkl`，`h=opt-1` 的压力集。
-- 共 252 例；NO 取 $h=\mathrm{OPT}-1$，YES 取 $h=\mathrm{OPT}$。
-- 基线：`exp/v9d/bench_opt.json` 的 CAB v9.0。
-- `CRISPBounds`：CRISP 预处理 + 原 CAB oracle。
-- `CRISP`：CRISP 预处理 + CHD oracle。
-- 环境：`.venv`，HiGHS LP，确定性 CHD；CAB 基线保留其原始随机种子。
-
-### 6.2 主结果
-
-| 方法 | 认证 | 查询 | LP | YES 节点 | Markov | 墙钟 |
-|---|---:|---:|---:|---:|---:|---:|
-| CAB v9.0 | 252/252 | 560 | 3119 | 65,558 | 12,300 | 21.27 s |
-| CRISP bounds + CAB | 252/252 | 336 | 1324 | 64,504 | 5,900 | 6.32 s |
-| **CRISP + CHD** | **252/252** | **337** | **1403** | **64,039** | **0** | **7.27 s** |
-
-相对 CAB：
-
-- 查询 −39.8%；
-- LP −55.0%；
-- YES 节点 −2.3%（总量被 stress 的 60k 上限实例主导；只看 base+pert，从 5,188 降到 4,038，−22.2%）；
-- Markov 评估 12,300→0；
-- 墙钟 −65.8%。
-
-### 6.3 分语料
-
-| 语料 | 方法 | 查询 | LP | YES 节点 | Markov | 墙钟 |
-|---|---|---:|---:|---:|---:|---:|
-| base 141 | CAB | 300 | 1358 | 4,900 | 6,300 | 11.56 s |
-| base 141 | bounds+CAB | 190 | 548 | 4,358 | 3,100 | 3.39 s |
-| base 141 | **CRISP+CHD** | **191** | **612** | **4,038** | **0** | **4.15 s** |
-| pert 60 | CAB | 147 | 882 | 288 | 1,800 | 4.45 s |
-| pert 60 | bounds+CAB | 90 | 388 | 96 | 600 | 1.27 s |
-| pert 60 | **CRISP+CHD** | **90** | **388** | **0** | **0** | **1.23 s** |
-| stress 51 | CAB | 113 | 879 | 60,370 | 4,200 | 5.26 s |
-| stress 51 | bounds+CAB | 56 | 388 | 60,050 | 2,200 | 1.66 s |
-| stress 51 | **CRISP+CHD** | **56** | **403** | **60,001** | **0** | **1.89 s** |
-
-CHD 在 base 上比 CAB oracle 多 64 次 LP、慢 0.76 s，但少 320 个 YES 节点；在 pert 上把 96 个 YES 节点降到 0。整体上，**区间收缩是主收益，oracle 替换是次收益**。
-
-### 6.4 Bracket 压缩
-
-| 语料 | $\mathrm{LB}_0$ | $\mathrm{UB}_0$ | $W_0$ | $\rho_0$ 均值 | $\mathrm{LB}$ | $\mathrm{UB}$ | $W$ | $\rho$ 均值 | $\rho=1$ | LB lift | UB drop 实例 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| base 141 | 3902 | 4388 | 486 | 1.1292 | 4003 | 4144 | 141 | 1.0318 | 55 | 101 | 95 |
-| pert 60 | 1924 | 2249 | 325 | 1.1681 | 1955 | 2045 | 90 | 1.0460 | 3 | 31 | 60 |
-| stress 51 | 1625 | 1883 | 258 | 1.1579 | 1667 | 1740 | 73 | 1.0437 | 0 | 42 | 46 |
-| **总** | **7451** | **8520** | **1069** | **1.1443** | **7625** | **7929** | **304** | **1.0376** | **58** | **174** | **201** |
-
-最大竞争比：
-
-- base：1.3333→1.1220；
-- pert：1.2500→1.0909；
-- stress：1.2500→1.0909。
-
-总宽度 −71.6%，平均竞争比 −9.3%，58 个实例在 oracle 调用前已经精确。
-
-### 6.5 消融
-
-| 变体 | 区间宽度和 | $\rho=1$ 实例 | 预测二分深度 |
-|---|---:|---:|---:|
-| 无预处理 | 1069 | 11 | 558 |
-| 只 LB lift | 895 | 11 | 538 |
-| 只 UB drop | 478 | 50 | 303 |
-| **两者** | **304** | **58** | **254** |
-
-解读：
-
-- UB drop 是主驱动（558→303，−45.7%）；
-- LB lift 单独几乎不减少查询（558→538，−3.6%）；
-- 两者合起来（558→254，−54.5%）超过各自贡献之和，说明 **LB lift 的收益依赖 UB 已被压低**；
-- 58 个 $\rho=1$ 实例全部来自两者合用；只 UB drop 是 50 个，只 LB lift 是 11 个。
-
-### 6.6 负结果：高维凸包太松
-
-对 7 个 hard YES，计算 $h=\mathrm{OPT}$ 处的 LP 投影盒宽度：
-
-| 实例 | 盒宽 $\sum_i(\mathrm{hi}_i-\mathrm{lo}_i)$ | 盒 LDS 节点 | 盒 LDS 结果 | CHD 结果 |
-|---|---:|---:|---|---|
-| holdout 35 | 100.0 | 65,411 | 找到 | hull:lo，28 LP / 16,381 LDS |
-| large_a 5 | 135.3 | 70,659 | 4 层差异内失败 | phase A，10 LP / 0 LDS |
-| large_het 0 | 179.5 | 718 | 找到 | cheap:mean，12 LP / 340 LDS |
-| large_het 3 | 261.0 | 12,634 | 找到 | cheap:mean，12 LP / 3,745 LDS |
-| large_het 7 | 250.3 | 98,491 | 4 层差异内失败 | cheap:mean，13 LP / 1,535 LDS |
-| hard3 4 | 185.6 | 33 | 找到 | cheap:mean，12 LP / 173 LDS |
-| large_b 1 | 251.8 | 681 | 找到 | cheap:mean，13 LP / 1,387 LDS |
-
-盒宽 100–261，远大于实例的 $h$（30–41）。盒 LDS 在 2/7 上失败，而 CHD 在同一批实例上全部闭合（10–28 LP）。因此：
-
-- **投影盒是可靠的，但不是紧的；**
-- **把高维凸包当硬域约束，收益不足以抵消 $2n$ 次 LP；**
-- 高维凸包只保留为可选的顺序 oracle（`hull_projection` 默认关闭）。
-
-第二个负结果：投影尾界
-
-\[
-\mathrm{LB}_{\mathrm{hull}}(h)=\max_i\bigl(\mathrm{lo}_i(h)+p_i+q_i\bigr).
-\]
-
-在 141 个 base 实例上、$h=\mathrm{UB}$ 处：
-
-- 只有 4 个实例把 LB 抬高 1；
-- 0 个实例超过已知 OPT；
-- 12 个实例等于 OPT；
-- 其余普遍弱于 critical path + eligibility load。
-
-因此它没有进入最终算法。
-
-第三个负结果：hull 顺序消融（141 个 YES，来自 v9.1 CHD）：
-
-| 变体 | YES | hull LP | LDS 节点 | random fallback | 墙钟 |
-|---|---:|---:|---:|---:|---:|
-| full | 141/141 | 16 | 39,420 | 0 | 7.17 s |
-| no_hull | 141/141 | 0 | 39,403 | 1 | 7.25 s |
-| hull_only | 141/141 | 719 | 449,813 | 3 | 13.72 s |
-
-`no_hull` 只多 1 次 random fallback；`hull_only` 则要 719 次 hull LP 和 449,813 个 LDS 节点。结论：**hull 顺序是一个安全网，不是主引擎。**
-
-### 6.7 证书与最终审计
-
-| 检查 | 结果 |
-|---|---|
-| energy NO 证书 | 174 张，`verify_prep=True` 174/174，`cert_bad=0` |
-| 区间可靠性 | 252/252 满足 $\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$ |
-| CRISP 最终审计 | 252/252 `certified=True`、`audit=True`、`proof=True` |
-| `cert_h` | 252/252 等于 $\mathrm{OPT}-1$ |
-| UNKNOWN | 0（bound 与 crisp 都是 0） |
-| 基线 CAB | 252/252 认证 |
-
-`ok` 的定义是
-
-```python
-certified and opt == known and audit and proof and cert_h == known - 1
+与 APEX 的差别只在 `probe` 和 `final_proof` 的证明来源；bracket 本身不变。
+
+### 5.2 `probe(h)`
+
+```text
+if use_bb:
+    r = lp_branch_decide(inst, h, nodecap=96, depthcap=24)
+    if r.verdict == NO:
+        bb_no += 1
+        record_proof(r.proof)
+        return NO, r.proof
+    if r.verdict == YES and bb_yes:
+        if check_schedule(inst, h, r.schedule, r.machine):
+            bb_yes += 1
+            return YES, (r.schedule, r.machine, Cmax(r.schedule))
+    if r.verdict == YES and not bb_yes:
+        bb_yes_ignored += 1
+    if r.verdict is None:
+        bb_unknown += 1
+
+if use_ga:
+    got, st = ga_schedule(inst, h, pop=40, gens=60, budget=4000)
+    if got is not None and check_schedule(inst, h, got):
+        ga_yes += 1
+        return YES, (got.schedule, got.machine, Cmax(got.schedule))
+    ga_no += 1
+
+chd_fallback += 1
+queries += 1
+v, st, rdf = CHD(h)
+absorb(st); record(h, v, st)
+return v, rdf
 ```
 
-252/252 为真。没有出现「无证书的 NO」或「未重放的 YES」。
+关键点：
 
-### 6.8 oracle 选择
+- LP-BRANCH 的 YES 只在 `bb_yes=True` 时立即接受；`bb_no_only` 故意忽略它，用来测 GA 的上界能力。
+- GA 的返回必须过 `check_schedule`；不过就当作没有。
+- 只有最后的 CHD 分支增加 $Q$。
 
-| 对比 | 结论 |
-|---|---|
-| CRISP+CAB vs CRISP+CHD | CHD 少 12,300 次 Markov 评估、少 465 个 YES 节点；多 79 次 LP、多 0.95 s |
-| CRISP+CAB vs CAB | 查询 560→336，LP 3119→1324，墙钟 21.27→6.32 s |
-| CRISP+CHD vs CAB | 查询 560→337，LP 3119→1403，墙钟 21.27→7.27 s |
+### 5.3 `lp_branch_decide` 的自稳定细化
 
-因此：
+```text
+root = SDLP(inst, h, est, q, use_dom=True, elig_aware=True)
+dfs(bounds, F, depth):
+    if depth > depthcap: return UNKNOWN
+    solve(bounds)
+    if infeasible:
+        cert = integer_certificate(inst, h, forbid=F)
+        if verify(cert, forbid=F): return Leaf(F, cert)
+        if exists empty D_i(h,F): return Empty(F, i)
+        return UNKNOWN
+    if integral(z):
+        s, m = decode(z)
+        if check_schedule(inst, h, s, m): return Yes(s, m)
+        return UNKNOWN
+    i, mid = choose_fractional_job(z, bounds)
+    if none: return UNKNOWN
+    low  = dfs(bounds with i <= mid, F ∪ {(i,t): t > mid}, depth+1)
+    high = dfs(bounds with i > mid, F ∪ {(i,t): t <= mid}, depth+1)
+    if low is UNKNOWN: return UNKNOWN
+    if low is Yes: return low
+    if high is UNKNOWN: return UNKNOWN
+    if high is Yes: return high
+    return Node(i, mid, F, low, high)
+```
 
-- 预处理本身（CRISP+CAB）已经拿到大部分收益；
-- CHD 把随机构造器彻底移除，代价是少量额外 LP；
-- 若目标是「无随机、可复现」，CRISP+CHD 更合适；若目标是「最小 LP」，CRISP+CAB 更合适。
+`choose_fractional_job` 只在「质量分数且允许时间数 $>1$」的候选里选；默认按任务质量、尾延迟、后继数、下标排序。`mid` 取累计质量首次超过一半的时间点；若退化，取中位时间。`nodecap=96`、`depthcap=24` 是硬上限；超限返回 UNKNOWN，外层退回 GA/CHD。
 
-### 6.9 威胁与边界
+这里就是「self-stabilizing」的具体落点：每个叶子是一个局部状态，LP 可行且分数就继续细化，LP 不可行或整数就稳定；细化只依赖当前域的局部信息，不需要全局初始化，也不会撤销已经稳定的叶子。
 
-- 语料只有 252 例，$n\le21$、$m\le4$；不能外推到大规模。
-- 墙钟是单次运行、共享 runner、Python 环境；应看相对比例，不看绝对秒数。
-- CAB 基线含随机种子；CHD 是确定性的。基线的 YES 节点/Markov 可能随种子波动。
-- `predq` 是理想二分深度；实际 `Q` 含最终证明和重试，比较时必须用同一记账。
-- energy 过滤的预算（64 子集 / 20k 区间）是人为上限；更大的预算可能抬更多 LB，但预处理会变慢。
-- `chip_bounds` 的 UB drop 只用 4 个订单；这不是 2-近似算法，只是便宜的上界组合。
-- 高维凸包的负结果只覆盖 7 个 hard YES 和 141 base 的尾界实验；换语料可能不同。
-- 竞争的语义是「证书区间比」，不是在线竞争比；不要把它和在线算法的 competitive ratio 混用。
+### 5.4 `ga_schedule` 的遗传上界
 
-## 7. 复现
+```text
+seeds = 4 个启发式排列（est、latest、-q、est-0.5q）
+P = seeds + 36 个随机排列
+cache = 评估 P 中每个基因组：SGS 解码 -> (makespan, sum C)
+for gen in 1..60:
+    if best <= h or evals >= 4000: break
+    P = 按 fitness 排序
+    new = P[:4]                     # 精英保留
+    while len(new) < 40:
+        a, b = tournament(P[:20])
+        child = OX(a, b)
+        if rand < 0.7: child = mutate(child)
+        if rand < 0.15: child = local_repair(child, cap=120)
+        new.append(child)
+    P = new
+best = local_repair(best, cap=2000)
+return best if check_schedule(inst, h, best) else None
+```
 
-### 7.1 文件
+- 基因组：任务排列；
+- 解码器：串行 SGS，把排列依次塞进最早可用机器；
+- 适应度：$(\text{makespan},\sum_i C_i)$，字典序；
+- OX 交叉：保序交叉；
+- 变异：交换/插入；
+- 局部修复：只接受严格改进的交换，每个子代最多 120 次，末轮最多 2000 次；
+- 预算：4000 次唯一 SGS 评估，种群 40，代数 60。
 
-| 文件 | 作用 |
-|---|---|
-| `exp/v8c/chip.py` | CRISP-ALC：`base_bounds`、`order_portfolio`、`hull_projection`、`chip_bounds`、`CRISPBounds`、`CRISP`、`simulate_queries` |
-| `exp/v8c/bench_chip.py` | 主实验：CAB / bounds+CAB / CRISP+CHD，写 `bench_chip.json` |
-| `exp/v8c/bench_bounds.py` | bracket 统计、消融、证书验证，写 `bench_bounds.json` |
-| `exp/v9d/cab.py` | `CABOpt`、`CAB`、`_greedy_rank` |
-| `exp/v9b/chd.py` | `CHD` |
-| `exp/v9c/scale.py` | `energy_cert`、`windows`、`verify_prep` |
-| `exp/v8a/rdf.py` | `RDF`、`check_schedule` |
-| `exp/v9d/bench_opt.json` | CAB 基线结果 |
-| `exp/v71/perturb60.pkl` | 60 个扰动实例 |
-| `exp/v81/h5h47_branch.pkl` | 51 个压力实例 |
+GA 不产生 NO、不产生下界；它只产生通过 `check_schedule` 的上界调度。它的正确性门槛是 `check_schedule`，而不是适应度值。
 
-### 7.2 命令
+### 5.5 STAB 的实现
+
+```text
+_ensure_lb_proof(value):
+    p = APEX._ensure_lb_proof(value)      # 精确 NO(value-1)
+    if p is not None: return p
+    best = min {h : NO(h) in proofs and h >= value-1}
+    if best exists:
+        return record(SubsumptionProof(inst, value-1, proofs[best]))
+    return None
+```
+
+`SubsumptionProof` 的检查器要求 `source.h >= self.h` 且 `source` 自身通过 audit；因此它不能把更弱的 NO 伪装成更强的 NO。
+
+---
+
+## 6. 正确性论证
+
+### 6.1 叶子可靠性
+
+- **Farkas 叶子**：`verify` 独立检查证书；若 $P_h(F)$ 不可行，则任何 $F$-允许的整数调度都不存在，故 $\mathrm{NO}(h\mid F)$。
+- **空域叶子**：若 $D_i(h,F)=\varnothing$，任务 $i$ 没有任何允许开始时刻，故不存在完整调度。
+- **整数叶子**：`check_schedule` 检查优先级、机器、容量、eligibility 与 $C_{\max}\le h$；通过则给出真实 YES 调度。
+
+### 6.2 分支可靠性
+
+设节点 $\mathrm{Node}(i,m,F,\pi_L,\pi_R)$ 的两个子节点分别证明了
+\[
+\mathrm{NO}(h\mid F_{\le m}),\qquad
+\mathrm{NO}(h\mid F_{>m}).
+\]
+任取一个 $F$-允许的调度 $s$。由于 $s_i\le m$ 或 $s_i>m$ 必居其一：
+
+- 若 $s_i\le m$，则 $s$ 是 $F_{\le m}$-允许的，与左子判断矛盾；
+- 若 $s_i>m$，则 $s$ 是 $F_{>m}$-允许的，与右子判断矛盾。
+
+故不存在这样的 $s$，即 $\mathrm{NO}(h\mid F)$。对树高归纳，所有 `BranchProof` 的根判断可靠。
+
+### 6.3 `BranchProof` 检查器的可靠性
+
+`_check` 逐层验证：
+
+1. 父 $F$ 与当前 $F$ 一致，防止跨层偷换禁止集；
+2. 分割点确实把当前允许域分成两个非空部分，防止「假分支」；
+3. 子 $F$ 恰好是父 $F$ 加上对应半区的禁止，防止遗漏或重复；
+4. 叶子证书通过 `verify` 或空域检查。
+
+因此 `audit_rdf()=True` 蕴含根判断 $\mathrm{NO}(h\mid\varnothing)$。篡改 `alpha`/`beta` 会破坏 `verify`；篡改 `mid` 会破坏子 $F$ 的分区检查；两者都被实验拒绝。
+
+### 6.4 GA 的可靠性
+
+`ga_schedule` 只在最后调用 `check_schedule`；只有通过才返回调度。因此 GA 不会制造假 YES。它可能失败（返回 `None`），这不影响可靠性，只影响完整性。
+
+### 6.5 STAB 的可靠性
+
+`NO-LB`、`LB-NO`、`MEET`、`RATIO` 都是语义上显然的单调规则：
+
+- $\mathrm{NO}(h)$ 即 $\mathrm{OPT}>h$，所以 $\mathrm{OPT}\ge h+1$；
+- $\mathrm{LB}(v)$ 且 $h<v$ 时，$\mathrm{OPT}\ge v>h$，所以 $\mathrm{NO}(h)$；
+- 下界与同值上界相遇即精确最优。
+
+`SubsumptionProof` 额外检查 `source.h >= self.h`，因此 $\mathrm{NO}(h')\Rightarrow\mathrm{NO}(h)$ 只在 $h'\ge h$ 时成立，方向不会反。
+
+### 6.6 最终认证的可靠性
+
+当外层以 $\mathrm{LB}=\mathrm{UB}=v$ 退出时：
+
+- `UB` 附带一张通过 `check_schedule` 的调度 $s$，且 $C_{\max}(s)=v$；
+- `LB` 附带一张通过 `BranchProof.audit_rdf()` 的 $\mathrm{NO}(v-1)$（或通过 subsumption 的等价证明）。
+
+于是 $\mathrm{OPT}\ge v$ 且 $\mathrm{OPT}\le v$，故 $\mathrm{OPT}=v$，且 $s$ 达到 $v$。`_result` 的 `certified`、`audit`、`proof`、`cert_h` 都由这些对象产生，不依赖 `known`。
+
+### 6.7 基准中的 `ok`
+
+基准额外用已知最优值 `known` 做校验：
+\[
+\mathtt{ok}=\mathtt{certified}\land \mathtt{opt}=\mathtt{known}\land
+\mathtt{audit}\land\mathtt{proof}\land \mathtt{cert\_h}=\mathtt{known}-1.
+\]
+`known` 只用于离线验收，不参与算法。生产环境应看 `certified`、`audit`、`proof`。
+
+### 6.8 完备性的边界
+
+SAGE 的完备性依赖两个引擎至少一个成功：
+
+- LP-BRANCH 在 caps 内给出 NO/YES；或
+- GA 找到 YES；或
+- CHD fallback 给出答案。
+
+如果三者都失败，外层会走 APEX 的 `_recover_unknown`，最终可能 `certified=False`。因此 SAGE 不是「无条件多项式时间精确算法」；它是「在当前语料上把 105 次 CHD 全部消掉」的工程化精确算法。
+
+---
+
+## 7. 复杂度
+
+### 7.1 LP 规模
+
+固定 $h$ 的 SD LP 有 $O(nT)$ 个开始时间变量和 $O(mT+|E|+n)$ 条约束，其中 $T=h+1$ 是 horizon 长度。单次 LP 由 HiGHS 求解；时间对 $(n,m,T)$ 超线性，但在本语料上单次是毫秒级。
+
+### 7.2 LP-BRANCH 的最坏情况
+
+最坏情况下，每个任务都可能被分裂到每个允许开始时刻，叶子数可达
+\[
+\prod_{i\in J}|D_i(h)|,
+\]
+因此是指数级。实现的硬上限是 `nodecap=96`、`depthcap=24`；超限返回 UNKNOWN。这个上限是「查询数换时间」的阀门：上限越松，NO 越可能被证明，但最坏时间越大。
+
+### 7.3 本轮实际分支规模
+
+58 张最终 `branch` 证明合计：
+
+| 指标 | 总和 | 单例最大 |
+|---|---:|---:|
+| LP 节点 | 194 | 9 |
+| 叶子 | 126 | 5 |
+| 深度（边） | — | 3 |
+| 叶子证书 LP | 126 | 5 |
+
+最坏一例是 `stress` 的 idx 47、$h=34$：9 个 LP 节点、5 个叶子、深度 3。也就是说，在这个语料上 LP-BRANCH 远没有接近 96/24 的上限；但这是经验事实，不是最坏情况保证。
+
+全量 `LP_BB=442` 的构成是：58 张最终 branch 的 194 个节点，加上 46 次 YES 探测和 1 次 UNKNOWN 探测的 248 个节点。全量 `LP_cert=137` 中，126 次来自最终 branch 的叶子，11 次来自未成为最终证明的探测。
+
+### 7.4 GA 复杂度
+
+一次 SGS 解码是 $O(n^2)$（每个任务扫描机器和已有区间），一次 GA 调用的上界是 $O(Bn^2)$，$B=4000$。本轮 full 只调用 GA 一次：
+
+- `evals=2248`，`gens=3`，`t=0.14 s`，`best=41`；
+- 该实例是 base 的 `large_het 7`，B&B 返回 UNKNOWN，GA 在 3 代内找到 $C_{\max}=41$ 的调度。
+
+`no_bb` 中 GA 成功 45 次、失败 60 次，总 GA 时间约 16.04 s；失败调用在 $g=1$ 的不可行 $h$ 上会跑满预算。
+
+### 7.5 STAB 复杂度
+
+`_record_proof` 是字典插入；`_ensure_lb_proof` 最多扫描当前 proof store 的键，$O(|\mathcal P|)$，而 $|\mathcal P|\le$ 探测次数（本语料 $\le105$）。`SubsumptionProof` 的 audit 只递归一层 source，成本可忽略。
+
+---
+
+## 8. 实验设计
+
+### 8.1 语料
+
+沿用 v8.1 的三组语料，共 252 例：
+
+| 语料 | $n$ | 说明 |
+|---|---:|---|
+| base | 141 | 基础族，覆盖多种结构 |
+| pert | 60 | 扰动族，LP 分数/舍入边界更多 |
+| stress | 51 | 压力族，CHD 的 YES 搜索最坏 |
+
+约束规模为 $n\le21$、$m\le4$、$T\le68$；252 例的整数间隙全在 $\{0,1\}$。每例都有已知最优值 `known`，用于离线验收，不参与算法。
+
+### 8.2 指标
+
+- `certified`：算法是否给出精确认证；
+- `opt` / `gap` / `ratio`：与 `known` 的差距；
+- `Q`：CHD 调用次数；
+- `LP_CHD`：CHD 内部 LP 次数；
+- `LP_pin`：LP pin 次数；
+- `LP_BB`：LP-BRANCH 节点 LP 次数；
+- `LP_cert`：叶子 Farkas 证书 LP 次数；
+- `YES_nodes`：CHD 的 YES 侧节点数；
+- `time`：单例墙钟，包含 LP、GA、CHD、audit；
+- `proof_kind`：最终下界证明类型；
+- `audit` / `proof`：独立重放与证明完整性。
+
+### 8.3 对照与消融
+
+- **APEX**：v8.7 原算法，同 runner 复跑；
+- **SAGE full**：LP-BRANCH + GA + STAB；
+- **`no_ga`**：关闭 GA；
+- **`no_bb`**：关闭 LP-BRANCH；
+- **`bb_no_only`**：LP-BRANCH 只接受 NO，禁用 B&B YES，让 GA 负责所有 YES。
+
+所有变体使用同一语料、同一 Python 进程、无并行；时间是单次运行，不含置信区间。
+
+### 8.4 复现
 
 ```bash
 cd /home/runner/work/xuen/xuen/workspace
-.venv/bin/python exp/v8c/bench_bounds.py
-.venv/bin/python exp/v8c/bench_chip.py
+.venv/bin/python exp/v8i/bench_sage.py      # full + 三组消融
+.venv/bin/python exp/v8h/bench_apex.py      # APEX full + 三组消融
 ```
 
-### 7.3 预期输出
+`bench_sage.py` 会把 full / no_ga / no_bb / bb_no_only 写入 `exp/v8i/bench_sage_*.json`；`bench_apex.py` 的第一个块就是 full。
 
-`bench_bounds.py` 应打印：
+---
 
-```
-base ... span0 486 span 141
-pert ... span0 325 span 90
-stress ... span0 258 span 73
-none   span 1069 exact 11 predq 558
-lb     span 895 exact 11 predq 538
-ub     span 478 exact 50 predq 303
-both   span 304 exact 58 predq 254
-```
+## 9. 主实验结果
 
-`bench_chip.py` 应打印总表：
+### 9.1 APEX vs SAGE
 
-```
-cab   {'n': 252, 'cert': 252, 'q': 560, 'lp': 3119, 'yn': 65558, 'mc': 12300, 't': 21.27}
-bound {'n': 252, 'cert': 252, 'q': 336, 'lp': 1324, 'yn': 64504, 'mc': 5900, 't': 6.32}
-crisp {'n': 252, 'cert': 252, 'q': 337, 'lp': 1403, 'yn': 64039, 'mc': 0, 't': 7.27}
-```
+| 指标 | v8.7 APEX | v8.8 SAGE | 变化 |
+|---|---:|---:|---|
+| 认证 | 252/252 | 252/252 | 不变 |
+| $Q$ | 105 | **0** | −105 |
+| LP$_{\rm CHD}$ | 874 | **0** | −874 |
+| LP$_{\rm pin}$ | 273 | 273 | 不变 |
+| LP$_{\rm BB}$ | 0 | 442 | +442 |
+| LP$_{\rm cert}$ | 0 | 137 | +137 |
+| LP 总计 | 1147 | **852** | −295 |
+| YES 节点 | 60001 | **0** | −60001 |
+| 时间 | 11.82 s | **9.62 s** | −2.20 s |
 
-秒数会因机器负载略有波动；查询、LP、YES 节点、Markov 是确定性的（CAB 基线的随机部分除外）。
+同 runner 的 APEX 复跑是 11.82 s；仓库里 `bench_apex_full.json` 记录的是先前 11.86 s 的运行，差异来自机器漂移。SAGE 的 9.62 s 是 252 例 `t` 之和，wall 为 9.63 s。
 
-## 8. 已知风险
+### 9.2 分语料
 
-1. **预处理覆盖不足。** energy 过滤只枚举 64 个子集、20k 个区间；在更大的 $m$ 或更长的时间域上可能漏掉 overload，导致 LB lift 为 0、区间仍然很宽。证伪方式：构造一个 $m\ge6$ 的语料，其中 energy 证书命中率显著下降，CRISP 退化到 CAB。
-2. **UB 组合太窄。** 只有 4 个 greedy 订单；如果它们都不优于初始 est 调度，UB 不会下降。证伪方式：找一批实例，4 个订单的 $C_{\max}$ 都等于初始 UB，但 OPT 更低。
-3. **下界证书类型有限。** 只用 window/energy；优先约束和整数性造成的 gap（例如 hard3#2）不会被这两类证书捕捉。证伪方式：找一批 integrality gap 大、但 energy 证书打不中的实例，观察 LB lift 是否接近 0。
-4. **高维凸包负结果不可外推。** 7 个 hard YES 的盒宽 100–261；换语料可能更紧。证伪方式：找一个族，$H(h)$ 的宽度接近 0，且 box-LDS 明显优于 CHD。
-5. **竞争比语义。** $\rho=\mathrm{UB}/\mathrm{LB}$ 是证书区间比，不是在线竞争比；$O(\log W_0)$ 的查询界假设 oracle 精确且不返回 UNKNOWN。证伪方式：在在线/对抗设置中使用，或让 oracle 频繁 UNKNOWN。
-6. **oracle 完整性。** CHD/CAB 仍是 NP-hard 判定器，最坏情况会 UNKNOWN；本语料 0 UNKNOWN，不代表一般情况。CRISP 遇到 UNKNOWN 会重试，不会给假答案。
-7. **规模。** $2^m$ 的 eligibility load 枚举和 energy 子集枚举不适合大 $m$；本语料 $m\le4$。证伪方式：$m\ge10$ 的实例。
-8. **最终证明依赖 $\mathrm{OPT}-1$。** 若 oracle 无法在 $\mathrm{OPT}-1$ 给出 NO，`certified=False`；incumbent 可能仍最优，但未被证明。
-9. **计时与基线。** 单次运行、共享 runner、Python 开销；CAB 基线含随机种子。应看相对比例。
-10. **接口风险。** `CRISP` 依赖 `CABOpt.initial_bounds` 的返回约定和 `_result` 的 `lb0/ub0` 语义；若基类改变，bracket 统计可能被误读。复现时以 `bench_bounds.json` 的原始字段为准。
+| 语料 | $n$ | 认证 | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 141 | 141 | 0 | 0 | 120 | 191 | 15 | 0 | 5.51 s |
+| pert | 60 | 60 | 0 | 0 | 81 | 78 | 10 | 0 | 1.03 s |
+| stress | 51 | 51 | 0 | 0 | 72 | 173 | 112 | 0 | 3.08 s |
+| **合计** | **252** | **252** | **0** | **0** | **273** | **442** | **137** | **0** | **9.62 s** |
 
-## 9. 一句话最大风险
+stress 是变化最大的一组：APEX 的 60k YES 节点主要来自这里；SAGE 用 173 个 LP-BRANCH 节点 + 112 次叶子证书替代，YES 节点归零。
 
-**CRISP 的收益完全取决于预处理能否在预算内把 $[\mathrm{LB},\mathrm{UB}]$ 压窄；如果 energy/window 规则打不中，且 4 个 greedy 订单都找不到更优上界，区间仍然会很宽，后续 oracle 调用数会退化到 CAB 水平甚至更多。**
+### 9.3 证明类型
+
+| 类型 | 数量 | 含义 |
+|---|---:|---|
+| `branch` | 58 | LP-BRANCH 的 $\mathrm{NO}(L^*)$ 树 |
+| `farkas` | 110 | 单张 Farkas 下界证明 |
+| `bound` | 60 | 结构/容量下界 |
+| `energy` | 24 | 能量/不等式下界 |
+| **合计** | **252** | |
+
+APEX 的 58 张 `oracle` 在 SAGE 中全部变成 `branch`；其余 194 张（110 `farkas` + 60 `bound` + 24 `energy`）与 APEX 完全一致。也就是说，SAGE 没有改变 $g=0$ 的证明形态，只替换了 $g=1$ 的 NO 来源。
+
+### 9.4 引擎归因
+
+SAGE full 的 105 次 probe 分布：
+
+| 引擎 | 结果 | 次数 |
+|---|---|---:|
+| LP-BRANCH | NO（带 `BranchProof`） | 58 |
+| LP-BRANCH | YES | 46 |
+| LP-BRANCH | UNKNOWN | 1 |
+| GA | YES | 1 |
+| GA | NO | 0 |
+| CHD fallback | 任意 | 0 |
+
+那 1 次 UNKNOWN 是 base 的 `large_het 7`；GA 用 2248 次唯一 SGS 评估、3 代、0.14 s 找到 $C_{\max}=41$。因此 full 的 $Q=0$ 不是「所有 probe 都一次成功」，而是「唯一失败的那次被 GA 接住了」。
+
+---
+
+## 10. 消融
+
+| 变体 | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 | GA yes/no | CHD 调用 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **SAGE full** | **0** | **0** | 273 | 442 | 137 | 0 | **9.62 s** | 1/0 | 0 |
+| `no_ga` | 1 | 13 | 273 | 442 | 137 | 0 | 9.71 s | 0/0 | 1 |
+| `bb_no_only` | 2 | 24 | 273 | 442 | 137 | 0 | 13.21 s | 45/2 | 2 |
+| `no_bb` | 60 | 412 | 273 | 0 | 0 | 60001 | 24.65 s | 45/60 | 60 |
+
+### 10.1 `no_ga`
+
+关闭 GA 后，base `large_het 7` 的 B&B UNKNOWN 没有上界补件，退回 CHD：
+
+- $Q=1$，CHD 内部 13 次 LP；
+- 时间 9.71 s（比 full 多 0.09 s）；
+- 证明类型不变（58 `branch`），说明 GA 只负责那 1 个 YES。
+
+这是最轻的消融，说明 GA 在当前语料上不是主力，但它是 $Q=0$ 的最后一根钉子。
+
+### 10.2 `bb_no_only`
+
+LP-BRANCH 只证 NO，禁用 B&B 的 YES，让 GA 负责所有 YES：
+
+- $Q=2$，CHD 24 次 LP，时间 13.21 s；
+- GA 成功 45 次、失败 2 次；
+- 两个失败是 base `large_het 3` 与 `large_het 5`（都是 $g=0$），最终退回 CHD；
+- 58 个 $g=1$ 仍然全部由 `branch` 证明，$Q$ 只剩这两个 YES 尾例。
+
+这说明 LP-BRANCH 的 NO 侧可以独立承担 58 个实例；没有 B&B YES 时，GA 的上界能力差两个尾例。
+
+### 10.3 `no_bb`
+
+关闭 LP-BRANCH：
+
+- $Q=60$，CHD 412 次 LP，YES 节点回到 60001，时间 24.65 s；
+- GA 成功 45 次、失败 60 次；
+- 58 个 $g=1$ 全部退回 CHD（`oracle` 证明），2 个 $g=0$ 也退回 CHD；
+- 最终证明类型变为 `oracle=58`、`farkas=110`、`bound=60`、`energy=24`。
+
+这个变体看起来 LP 总数只有 $273+412=685$，比 full 的 852 少，但时间从 9.62 s 涨到 24.65 s，YES 节点从 0 涨到 60001。**LP 计数不是目标函数；CHD 的 YES 搜索才是墙钟杀手。** 这也是为什么 SAGE 用 LP-BRANCH 换掉 CHD，而不是用 GA 换掉 CHD。
+
+### 10.4 贡献排序
+
+1. **LP-BRANCH 是主贡献**：没有它，$Q=60$、YES=60001、时间 24.65 s；有它，58 个 NO 全部变成 3–9 节点的证书树，YES 归零。
+2. **GA 是补件**：只消除 1 次 CHD，但它是 full 达到 $Q=0$ 的必要条件；没有它，$Q=1$。
+3. **STAB 是闭合器**：它不直接减少查询，但把 $\mathrm{NO}(L^*)$ 接到 $\mathrm{LB}(L^*+1)$，让最终 `MEET` 不再补问；没有它，`branch` 证明无法转成最终下界。
+
+---
+
+## 11. 证明审计与篡改测试
+
+### 11.1 独立重放
+
+`BranchProof.audit_rdf()` 从根开始，用空 $F$ 重放整棵树：
+
+- 每个内部节点检查 $(i,m)$ 是否把当前允许域切成两个非空部分；
+- 每个子节点检查 $F$ 是否恰好是父 $F$ 加对应半区；
+- 每个叶子调用 `verify(inst, h, cert, forbid=F)` 或检查空域；
+- 不读取生成时的 LP 状态、bounds 或 `no_states`。
+
+因此 `audit_rdf()` 是证明对象的自包含检查，不是「信任生成器」。
+
+### 11.2 篡改
+
+手工修改证明对象后：
+
+- 修改叶子 `alpha` 或 `beta` 的某个分量 → `verify` 返回 False → `audit_rdf()` 返回 False；
+- 修改内部节点的 `mid` → 子 $F$ 与重新计算的分区不一致 → `audit_rdf()` 返回 False；
+- 删除/替换某个叶子证书 → 检查失败或叶子数不匹配。
+
+这些测试只针对证明对象，不针对 LP 求解器；它们说明 `BranchProof` 的检查器确实在做结构性校验，而不是只查一个布尔标志。
+
+### 11.3 `SubsumptionProof`
+
+`SubsumptionProof.audit_rdf()` 检查：
+
+\[
+\mathtt{source}\ne\mathtt{None}\quad\land\quad
+\mathtt{source.h}\ge\mathtt{self.h}\quad\land\quad
+\mathtt{source.audit\_rdf()}.
+\]
+因此它只能把更强的 NO 传给更弱的 $h$，不能反向。
+
+### 11.4 `ok` 与 `certified`
+
+full 的 252 例全部 `ok=True`、`certified=True`、`audit=True`、`proof=True`，且 `cert_h=known-1`。`ok` 使用 `known` 做离线验收；`certified`/`audit`/`proof` 不依赖 `known`。
+
+---
+
+## 12. 讨论
+
+### 12.1 为什么不是「APEX + 更快的 oracle」
+
+如果只是把 `sdecc_no` 当黑箱 oracle，能消掉 YES 节点，但证明不可重放，且会破坏 APEX 的 soundness 叙事。SAGE 的 `branch` 是一等判断：
+
+- 它携带完整的 $F$ 分区；
+- 它能在不运行 LP 的情况下被 `audit_rdf` 重放；
+- 它能被 `SubsumptionProof` 接到最终下界；
+- 它能被 `STAB` 的 `NO-LB` 规则消费。
+
+因此 $Q=0$ 不是「oracle 变快了」，而是「NO 从搜索副产品变成了证明对象」。
+
+### 12.2 为什么不是「GA 替换 CHD」
+
+`no_bb` 已经给出反例：GA 能造 45 张 YES，但 58 个 $g=1$ 仍要 CHD，$Q=60$、YES=60001、24.65 s。GA 是上界构造器，不是下界证明器；它无法证明「不存在 $C_{\max}\le h$ 的调度」。
+
+### 12.3 为什么 `Q=0` 仍可能变慢
+
+`Q` 只数 CHD 调用。LP-BRANCH 的 LP 次数、GA 的 SGS 次数、证明 audit 都不计入 $Q$。在 full 中这些成本低于 APEX 的 CHD，所以时间也降了；但在更难的实例上，LP-BRANCH 可能指数爆炸，GA 可能跑满预算，`Q=0` 可能伴随更长的时间。**查询数与墙钟不是同一个目标。**
+
+### 12.4 STAB 的边界
+
+STAB 的抽象是单调闭包，但实现是「按需闭包」：只为最终需要的 $v-1$ 找证明，不预生成所有 $h$。这样做省时间，但也意味着 `proof store` 不是全局最小不动点；如果未来要在交互式证明里查询任意 $h$，需要显式跑全量闭包。
+
+---
+
+## 13. 已知风险与限制
+
+1. **最坏指数级**：LP-BRANCH 的叶子数最坏是 $\prod_i|D_i(h)|$。本语料最大只有 9 个节点/5 个叶子，但新语料可能完全不同；caps 触发时 $Q$ 会回来。
+2. **Farkas 证书的数值稳定性**：`verify` 用浮点与容差；若 LP 退化或证书系数病态，可能出现 `verify` 失败，LP-BRANCH 返回 UNKNOWN，退回 CHD。
+3. **GA 无完备性**：`no_bb` 中 GA 失败 60 次；`bb_no_only` 中 GA 漏 2 个 $g=0$。GA 的成功依赖预算、种子和实例结构。
+4. **语料小**：$n\le21$、$m\le4$、$T\le68$，且所有 $g\in\{0,1\}$；没有 PSPLIB、没有更大规模、没有多峰分布。$Q=0$ 不能外推到一般实例。
+5. **单次运行**：时间是单次共享 runner 的墙钟，没有置信区间；APEX 与 SAGE 同 runner 复跑只能降低机器漂移，不能消除。
+6. **`known` 的使用**：`ok` 用 `known` 验收；生产环境没有 `known`，必须依赖 `certified`/`audit`/`proof`。
+7. **STAB 是按需闭包**：不是全局最小不动点；若未来需要任意 $h$ 的查询，要补全量闭包。
+8. **LP-BRANCH 的完备性依赖 caps**：caps 越松越完备，但越慢；当前 96/24 是本语料的经验选择，没有理论最优性。
+9. **没有形式化验证**：正确性论证是纸面 + 运行时 audit，没有 Coq/Lean/Isabelle 机器证明；`verify` 和 `check_schedule` 本身也是 Python 代码。
+10. **GA 预算与时间**：full 只有 1 次 GA（0.14 s），但 `no_bb` 的 GA 总时间约 16.04 s；如果新语料有大量 B&B UNKNOWN，GA 会成为新的墙钟瓶颈。
+
+---
+
+## 14. 最大风险（一句话）
+
+**$Q=0$ 不是免费的：它把 CHD 换成了最坏指数级的 LP-BRANCH；如果新语料上分支树或叶子 Farkas 证书爆炸，SAGE 会同时失去 APEX 的查询数优势和墙钟优势。**
+
+---
+
+## 15. 本轮结论（一句话）
+
+**SAGE-ALC 用「LP-BRANCH 证 NO + GA 造 YES + STAB 闭合」把 APEX 的 105 次 CHD 全部消掉，在 252 例上做到 $Q=0$、YES 节点 0、9.62 s 且 252/252 认证；代价是 NO 侧变成最坏指数级的分支证明，必须用 caps 和 fallback 控制风险。**
 <!-- ARTIFACT:END -->

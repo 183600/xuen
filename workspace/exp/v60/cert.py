@@ -28,8 +28,19 @@ def _farkas_lp(lp):
 
 
 def _row_meta(lp):
-    """Return a list describing rows after the assignment block."""
+    """Return the rows actually present after the assignment block.
+
+    SDLP drops a dominance row when it has no column with a nonzero
+    coefficient.  The certificate vector is indexed by present rows, so
+    the metadata must drop exactly the same rows; otherwise a restricted
+    branch box can shift every later multiplier by one.
+    """
     n = lp.n
+    mins = {}
+    for key in lp.cols:
+        i, t = key[0], key[-1]
+        if i not in mins or t < mins[i]:
+            mins[i] = t
     meta = []
     if lp.elig_aware:
         for k in range(lp.m):
@@ -48,7 +59,9 @@ def _row_meta(lp):
             for j in lp.inst['succ'][i]:
                 tlo = max(0, lp.est[j] - lp.p[i])
                 for t in range(tlo, last[i]):
-                    meta.append(('dom', i, j, t))
+                    if (mins.get(i, 10 ** 18) <= t
+                            or mins.get(j, 10 ** 18) <= t + lp.p[i]):
+                        meta.append(('dom', i, j, t))
     return meta
 
 
