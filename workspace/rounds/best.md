@@ -3,428 +3,919 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-## 一、上一轮留下的不对称
+## 一、上一轮留下的不是「不够强」，而是「不知道离最优多远」
 
-v7.2 QUC 在 NO 侧已经很强：141 个基准 + 60 个扰动全部在 $h=\mathrm{OPT}-1$ 判 NO，201/201 通过审计；7 个「根 LP 可行但分数」的实例每例只需 2 次单列探针，根层就闭合了。但它留下了一个很不对称的局面：
+v8.0 BRC-ALC 已经把固定 $h$ 的双向归约做得很完整：NO 侧有 QSP 探针、Farkas 证书、row-core 恢复和 fail-stop 分裂；YES 侧有根 LP 分布采样、串行 SGS、有界 DFS 和独立重放，141/141 个 YES 全部闭合。它真正的缺口不在某一个方向，而在**两个方向之间没有共同的度量**：
 
-- NO 侧：根层 2 次探针，知道「必须用哪个开始时间」；
-- YES 侧：预算 6 时 93/141 仍是 UNKNOWN，因为 QUC 只会继续做 NO 搜索，不会主动构造一个调度。
+- NO 证明回答「$h$ 不可行」；
+- YES 构造回答「$h$ 可行」；
+- 但没有人回答「当前这个上界离 $\mathrm{OPT}$ 还有多远」。
 
-本轮灵感词是 **convex optimization / 归约 / fault-tolerant algorithm**。我第一反应不是再加强 SD 割，而是问：同一个 LP，除了给出「删掉某列后不可行」的 Farkas 证书，还能不能给出「怎样排才可行」的信息？
+v8.0 的已知风险也正好落在这里：YES 构造器是随机化、有界节点的，60k 节点之外不保证找到调度；NO 侧仍依赖 SD 割，根 LP 的 lazy 分离若耗尽预算就只能返回 UNKNOWN。换句话说，算法知道自己「证明了什么」，但不知道「还差多少」。
 
-答案是能，但两种信息的方向相反：
+本轮灵感词是 **竞争比 / 凸包 / preprocessing**。我第一反应不是再加强某一条割，而是把这三个词接到同一个对象上：
 
-- **向下归约（NO）**：删列 → 解 LP → 不可行 → Farkas 证书 → 强制/陷阱；
-- **向上归约（YES）**：同一个 LP 的分数解 → 开始时间分布 → 采样优先级 → 串行调度 → 独立重放。
+> 可行 makespan 的集合是 $[\mathrm{OPT},\infty)$。它的凸包下端点就是 $\mathrm{OPT}$。  
+> 我们用一个证书区间 $[\mathrm{LB},\mathrm{UB}]$ 包住这个端点；  
+> **竞争比** $\rho=\mathrm{UB}/\mathrm{LB}$ 就是这个区间有多宽；  
+> **preprocessing** 就是把这个区间压窄；  
+> **凸包** 则是「用什么几何对象去压」的问题。
 
-于是本轮算法叫 **BRC-ALC（Bidirectional Reduction-Certified ALC）**：把 NO 的「删」和 YES 的「造」放在同一个 LP 上，用证书和调度分别封口。
+于是本轮算法叫 **CRISP-ALC（Competitive-Ratio Interval Shrinking Preprocessing）**：它不替代 v8.0 的固定 $h$ oracle，而是在 oracle 外面加一层「证书区间 + 预处理收缩 + 二分调用」的外壳。
 
-## 二、先试错：凸优化不等于构造器
+## 二、第一次试错：高维 LP 投影盒太松
 
-我最初想沿「凸优化」走 cover LP：把单元证书、支持集证书和容量割放进一个混合证书 LP，求一个最小的证书覆盖。v8.0 的原型 `exp/v80/qcm.py` 确实跑通了，但在 252 个 NO 上只触发了 3 次 cover LP，收益几乎为零。原因是 v7.2 的单元陷阱已经把根层矛盾压到 2 个单点，cover LP 没有新的矛盾可组合。
+我最初把「凸包」理解成 LP 可行域的坐标投影：
 
-这是一个有用的负结果：**凸优化在这个问题上的价值不在「求更强的界」，而在「给出一个可采样的分布」**。根 LP 的分数解 $z$ 同时是：
+\[
+P(h)=\{z\ge 0: Az\le b,\ Ez=\mathbf 1\},\qquad
+\pi_i(P(h))=[\mathrm{lo}_i(h),\mathrm{hi}_i(h)].
+\]
 
-- NO 侧 support 引理的载体：可认证的单元必在 $S_i(z)$ 中；
-- YES 侧构造器的指南：$z_{i,t}$ 是「任务 $i$ 在 $t$ 开始」的松驰权重。
+因为每个整数可行调度都是 LP 可行的，所以它的开始时间向量必在盒
 
-## 三、向上归约的三次原型
+\[
+H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]
+\]
 
-我把 YES 侧当成一个独立的构造问题，先不看 NO 证明，只要求在 $h=\mathrm{OPT}$ 上造出可行调度。三次原型的数字很清楚地指出了方向：
+里。这个盒子是**严格可靠**的：用它做域收缩不会删掉任何可行调度；如果 $\mathrm{lo}_i=\mathrm{hi}_i$，还可以把 $s_i$ 固定。理论上它应该能减少 SGS 的分支。
 
-| 构造器 | 141 个 YES 中闭合 | 观察 |
-|---|---:|---|
-| 期望开始时间排序 + 串行 SGS | 104 | 快，但把分数解「四舍五入」成单一顺序，丢掉了并行的灵活性 |
-| 根 LP 分布随机舍入 + SGS | 134 | 采样恢复了多样性，仍有 7 个 hard 实例 |
-| 分布采样 + 有界 DFS SGS | 141 | 7 个 hard 实例分别需要 0–16 次重启 |
+我在 `exp/v8c/chip.py` 里实现了 `hull_projection`，对 7 个 hard YES 做了投影盒 + 有界 LDS 的试验。结果是负的：
 
-7 个 hard 实例的分布很说明问题：`large_a` 的 idx 5 需要第 16 次重启；`large_het` 的 0/3/7 在 0/2/8 次重启闭合；`hard3` 的 4 在 0 次闭合；`large_het` 的 2/4 根 LP 本身就是整数，直接返回。也就是说，**LP 分布已经把「可能的开始时间」压得很小，剩下的是在几个等价好顺序之间做有界搜索**。
+| 实例 | 盒宽 $\sum_i(\mathrm{hi}_i-\mathrm{lo}_i)$ | 盒 LDS 节点 | 结果 |
+|---|---:|---:|---|
+| holdout 35 | 100.0 | 65,411 | 找到 |
+| large_a 5 | 135.3 | 70,659 | 4 层差异内失败 |
+| large_het 0 | 179.5 | 718 | 找到 |
+| large_het 3 | 261.0 | 12,634 | 找到 |
+| large_het 7 | 250.3 | 98,491 | 4 层差异内失败 |
+| hard3 4 | 185.6 | 33 | 找到 |
+| large_b 1 | 251.8 | 681 | 找到 |
 
-因此 v8.0 的 YES 构造器是：从根 LP 分布独立采样每个任务的开始时间，得到一个优先级键；用这个键驱动串行 SGS；如果 SGS 走死，就在「当前可开工任务 × 可选机器」上做有界 DFS 回溯。构造器只相信最后的 `check_schedule`，不相信自己的启发式。
+盒宽在 100–261 个时间单位之间，远大于实例的 $h$（30–41）。原因很朴素：LP 允许大量「分数拼接」的开始时间，坐标投影把这些分数可能性全都包进来，盒子自然很宽。盒 LDS 在 2/7 个 hard 实例上失败，而 CHD 在同一批实例上全部闭合（10–28 次 LP）。
 
-## 四、向下归约：不重写 QSP，只加容错
+这是一个有用的负结果：**LP 投影盒是可靠的，但不是紧的；把凸包当硬域约束，收益不足以抵消投影的 $2n$ 次 LP。**
 
-NO 侧我没有另起炉灶，而是直接继承 v7.6 QSP：单列探针、支持集探针、force 递归、单元陷阱、跨任务共识、span-first 顺序。原因是 QSP 在 252 个 NO 上已经做到 577 LP / 283 节点，比 QNC 的 585/415 好；再改搜索顺序只会引入新的过拟合。
+## 三、第二次试错：投影尾界也太弱
 
-我真正加的是**容错层**。动机来自两次具体的失败：
+退一步，不把投影盒当域，而是把它当**下界**。对任意 LP 可行解，$s_i\ge \mathrm{lo}_i$；再沿优先序的尾长 $q_i$，得到
 
-1. v7.2 的 `audit_quc` 跨任务字段错位：`self.cross` 是 `('prec', i, t, j, u)`，代码却按 `cross[:4]` 解包，201 个基准没触发，51 个压力集里第 24 例触发。这说明「证书存在」不等于「证书被正确重放」。
-2. 两阶段搜索在压力集 idx 47 上从根重启，根 LP 因为已加割而改变，导致重复探针：QSP 20 LP/14 节点，最初的 RDF 38 LP/30 节点。修法是：纯 NO 模式只跑一遍 QSP 等价搜索；YES 模式如果 phase A 没拿到 `root_z`，就对当前有效割集直接解一次 LP 取一个构造器见证，而不是重新走整个 lazy 分离。
+\[
+\mathrm{LB}_{\mathrm{hull}}(h)=\max_i\bigl(\mathrm{lo}_i(h)+p_i+q_i\bigr).
+\]
 
-容错层的四条规则：
+这是严格下界：任取最优调度 $s^\ast$，它在 $h=\mathrm{UB}$ 处 LP 可行，所以 $s_i^\ast\ge \mathrm{lo}_i$，于是 $\mathrm{OPT}\ge s_i^\ast+p_i+q_i\ge \mathrm{lo}_i+p_i+q_i$。
 
-- **证书先验证再使用**：任何 Farkas 证书都过 `verify`；损坏证书被抓住后走恢复，不进入证明。
-- **dual row-core 恢复**：对偶 LP 解出来后丢掉零对偶值的行，在剩余行上重解；行核上的证书把丢掉的行补零就得到全 LP 的证书，所以这是归约而不是放松。
-- **fail-stop 域分裂**：叶证书提取失败时，不返回无证书的 NO，而是按最大剩余域分裂成两个子问题；只有两个子问题都有证书，父节点才成立；预算耗尽就返回 UNKNOWN。
-- **调度独立重放**：YES 只由 `check_schedule` 确认；构造器的任何中间状态都不算证据。
+我在 141 个 base 实例上、$h=\mathrm{UB}$ 处算了这个界：只有 4/141 个实例把 LB 抬高 1，0 个超过已知 OPT；12 个实例上它等于 OPT，但在其余实例上普遍弱于既有的 critical-path + eligibility-load 下界。也就是说，**投影尾界没有提供新的容量信息**；它只是把 critical path 的 $s_i\ge \mathrm{est}_i$ 换成了 $s_i\ge \mathrm{lo}_i$，而 $\mathrm{lo}_i$ 往往只比 $\mathrm{est}_i$ 大一点点。
 
-## 五、两阶段决定：把预算花在能闭合的地方
+两次负结果指向同一个结论：**高维凸包在这个问题上的信息密度太低。真正值得维护的凸包是一维的。**
 
-一个统一的 `decide` 如果对每个实例都先跑构造器，NO 侧会被大量无效的 SGS 拖慢。因此 v8.0 用两阶段：
+## 四、把凸包降到一维：证书区间
 
-1. **phase A**：小预算 NO 搜索（12 LP / 200 节点）。大多数 NO 在这一步就闭合；如果根 LP 分数且拿到 `root_z`，进入 YES 构造。
-2. **phase B1**：8 次采样、每次 500 个 SGS 节点。大多数 YES 在这里闭合。
-3. **phase B2**：48 次采样、每次 4000 个 SGS 节点，全局 60k 节点上限。处理 7 个 hard YES。
-4. **phase C**：如果仍未决，用剩余全预算回到 QSP 搜索。
+可行 makespan 集合的凸包是 $[\mathrm{OPT},\infty)$。我们不需要知道高维开始时间向量的形状，只需要维护一个证书区间
 
-实测这个顺序把 NO 的额外成本压得很低：252 个 NO 在统一模式下是 595 LP / 299 节点 / 4.95 s，只比纯 NO 模式多 18 LP / 16 节点；只有压力集的一个实例触发构造器，且被 60k 节点上限截住。YES 侧则从 QUC6 的 48/141 提升到 141/141。
+\[
+\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
+\]
 
-## 六、这一轮学到的东西
+- $\mathrm{LB}$ 由两类东西支撑：critical path / eligibility load，或在 $h=\mathrm{LB}$ 处的一张可重放的 NO 证书（window 或 energy）。
+- $\mathrm{UB}$ 由一张通过 `check_schedule` 的调度支撑。
+- 竞争比定义为 $\rho=\mathrm{UB}/\mathrm{LB}$。它不是在线算法的竞争比，而是**当前 incumbent 相对证书下界的近似比**；$\rho=1$ 时 incumbent 被证明最优。
 
-1. **同一个 LP 可以同时服务两个方向**：support 引理把 NO 的候选压到 support，分布采样把 YES 的候选压到 support 的权重；两者不是两个算法，而是同一个凸松弛的两种读法。
-2. **向上归约的瓶颈不是「采样」而是「回溯」**：纯随机舍入 134/141，剩下 7 个需要的是有界 DFS，而不是更多样本。于是全局节点预算比「更多 trials」更有效。
-3. **容错必须可观测**：`corrupt_caught`、`corrupt_missed`、`leaf_missing`、`ft_splits`、`ft_stuck`、`proof_complete` 这些计数器让「算法返回了 NO」和「算法有完整证明」变成两个可分别检查的命题。故障注入中 `corrupt_missed=0`，说明损坏证书没有蒙混过关。
-4. **负结果同样重要**：cover LP 只触发 3 次，说明本轮不需要更复杂的凸组合证书；压力集 idx 47 的重复探针说明重启不是免费的，纯 NO 模式必须单遍。
-5. **YES 构造器不是完备算法**：它是有界随机搜索，60k 节点之外不保证找到调度；它的价值是把 93 个 QUC6 UNKNOWN 中的 93 个全部闭合，而不是证明「所有 YES 都能被它闭合」。
+这个一维凸包有一个很好的性质：**它是可操作的**。每次在 $h$ 处得到一个 NO，就把 $\mathrm{LB}$ 推到 $h+1$；每次得到一个 YES，就把 $\mathrm{UB}$ 压到该调度的实际 makespan。二分搜索每次把区间宽度减半，于是
 
-## 七、一句话最大风险
+\[
+W_t\le \left\lceil \frac{W_0}{2^t}\right\rceil,\qquad
+\rho_t\le 1+\frac{W_0}{2^t\,\mathrm{LB}_0}.
+\]
 
-**YES 侧是随机化、有界节点的构造器，60k 节点和 48 次采样之外不保证找到调度；NO 侧仍依赖 SD 割的强度，若根 LP 的 lazy 分离本身耗尽预算，BRC 会诚实地返回 UNKNOWN，而不是一个没有证书的 NO。**
+这就是本轮的「竞争比」：不是事后评价，而是**预算分配和终止条件的坐标**。
+
+## 五、preprocessing：两个算子，一个耦合
+
+一维区间要靠 preprocessing 压窄。我用了两个算子，都很便宜：
+
+### 5.1 UB drop：多订单 greedy
+
+CAB 原来只用 est 顺序做一次 greedy。我改成 4 个确定性订单：
+
+- `est`：最早开始；
+- `latest`：最晚开始；
+- `tail`：按尾长 $-q_i$；
+- `mixed`：$\mathrm{est}_i-0.5q_i$。
+
+每个订单跑一次串行 SGS，得到调度后立刻用 `check_schedule` 重放；只有重放通过且 makespan 更小才更新 UB。252 个实例中，201 个实例的 UB 被至少一个订单压低。
+
+### 5.2 LB lift：energy / window NO
+
+在 $h=\mathrm{LB}$ 处跑 SCALE 的 window 和 energy 过滤：
+
+- window：$\mathrm{est}_i>\mathrm{latest}_i$；
+- energy：对机器子集 $M$ 和时间区间 $[a,b)$，所有只能落在 $M$ 上的任务的强制重叠之和超过 $|M|(b-a)$。
+
+一旦命中，就用 `verify_prep` 重放证书；验证通过才 $\mathrm{LB}\leftarrow h+1$。252 个实例上共触发 174 次 LB lift，全部证书验证通过。
+
+### 5.3 顺序很重要
+
+我先 UB drop，再 LB lift。原因是 LB lift 的循环上界是 UB：
+
+- 先降 UB，LB 可以多爬几步；
+- 先升 LB，UB 没变，energy 循环会更早停下。
+
+消融实验（252 例，预测二分深度）很清楚地显示了这种耦合：
+
+| 变体 | 区间宽度和 | $\rho=1$ 实例 | 预测二分深度 |
+|---|---:|---:|---:|
+| 无预处理 | 1069 | 11 | 558 |
+| 只 LB lift | 895 | 11 | 538 |
+| 只 UB drop | 478 | 50 | 303 |
+| **两者** | **304** | **58** | **254** |
+
+UB drop 是主驱动；LB lift 单独几乎不减少查询（558→538），但和 UB drop 合起来额外减少 49 次（303→254）。这就是「竞争比」的耦合：**下界提升只有在 上界已经被压低时才会兑现**。
+
+## 六、实验：252 例上把区间压到 1/3
+
+数据与 v8.0 相同：141 个 base YES/NO + 60 个扰动 + 51 个压力集，共 252 例；NO 取 $h=\mathrm{OPT}-1$，YES 取 $h=\mathrm{OPT}$。外层用 CAB 的 certified anytime bracket，内层分别用 CAB oracle 和 CHD oracle。
+
+| 方法 | 认证 | 查询 | LP | YES 节点 | Markov | 墙钟 |
+|---|---:|---:|---:|---:|---:|---:|
+| CAB v9.0 | 252 | 560 | 3119 | 65,558 | 12,300 | 21.27 s |
+| CRISP bounds + CAB | 252 | 336 | 1324 | 64,504 | 5,900 | 6.32 s |
+| **CRISP + CHD** | **252** | **337** | **1403** | **64,039** | **0** | **7.27 s** |
+
+查询减少 40%，LP 减少 55%，墙钟减少 66%。`64k` 的 YES 节点主要由压力集的一个 60k 上限实例贡献；只看 base+pert，YES 节点从 5,188 降到 4,038（−22%）。
+
+区间本身：
+
+| 语料 | $\mathrm{LB}_0$ | $\mathrm{UB}_0$ | $W_0$ | $\rho_0$ 均值 | $\mathrm{LB}$ | $\mathrm{UB}$ | $W$ | $\rho$ 均值 | $\rho=1$ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base 141 | 3902 | 4388 | 486 | 1.129 | 4003 | 4144 | 141 | 1.032 | 55 |
+| pert 60 | 1924 | 2249 | 325 | 1.168 | 1955 | 2045 | 90 | 1.046 | 3 |
+| stress 51 | 1625 | 1883 | 258 | 1.158 | 1667 | 1740 | 73 | 1.044 | 0 |
+| **总** | **7451** | **8520** | **1069** | **1.144** | **7625** | **7929** | **304** | **1.038** | **58** |
+
+最大竞争比从 1.333 降到 1.122。58 个实例在调用任何 oracle 之前就已经 $\mathrm{LB}=\mathrm{UB}=\mathrm{OPT}$。
+
+正确性方面：174 张 energy 证书全部通过 `verify_prep`；252/252 个区间满足 $\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$；252/252 个最终结果通过 `audit` 和 `proof_complete`，且 $h_{\mathrm{cert}}=\mathrm{OPT}-1$。没有出现「无证书的 NO」或「未重放的 YES」。
+
+## 七、凸包到底留下了什么
+
+我没有把高维凸包完全扔掉，而是把它降级为**顺序 oracle**：
+
+- `hull_projection` 仍然保留，默认关闭；
+- CHD 的 `hull:lo` 仍然是 phase B1 的一个候选顺序；
+- 在 141 个 YES 上，CHD 的 full 配置只有 16 次 hull LP、1 次 hull 闭包；`no_hull` 也能 141/141，只是多 1 次 random fallback。`hull_only` 则要 719 次 hull LP、449,813 个 LDS 节点、13.72 s。
+
+所以本轮的判断是：**高维凸包是一个可靠的 fallback，不是主引擎；一维证书区间才是主引擎。** 这比强行说「凸包带来了提升」更诚实，也更符合实验。
+
+## 八、这一轮学到的东西
+
+1. **竞争比可以不是评价指标，而是坐标系**：一旦把 $\mathrm{UB}/\mathrm{LB}$ 当成状态，预处理的目标就从「找更强的割」变成「把区间压窄」，预算分配也有了明确的对象。
+2. **凸包要选对维度**：高维 LP 投影盒可靠但太松；一维 makespan 区间才是信息密度最高的凸包。
+3. **预处理算子之间有耦合**：UB drop 和 LB lift 不是两个独立开关；先降 UB 再升 LB，才能把 energy 过滤的潜力兑现。
+4. **负结果可以保留为组件**：投影盒和投影尾界都没有带来主收益，但它们的代码和消融保留了，后续如果换更大的实例或更强的割，可以重新评估。
+5. **认证边界不变**：区间只是搜索的导航；最终 YES 仍由 `check_schedule` 确认，NO 仍由 Farkas/clause/energy 证书确认。CRISP 不把「区间里的点」当成证据。
+
+## 九、一句话最大风险
+
+**CRISP 的收益完全取决于预处理能否在预算内把 $[\mathrm{LB},\mathrm{UB}]$ 压窄；如果 energy/window 规则打不中，且 4 个 greedy 订单都找不到更优上界，区间仍然会很宽，后续 oracle 调用数会退化到 CAB 水平甚至更多。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
 ## 0. 版本关系与本轮增量
 
-本轮产物是 **v8.0 BRC-ALC（Bidirectional Reduction-Certified ALC）**。它不是对 v7.2 的替代，而是把上一轮的两个半成品接起来：
+本轮产物是 **v8.1 CRISP-ALC（Competitive-Ratio Interval Shrinking Preprocessing）**，它建立在 v8.0 BRC-ALC 之上，但不修改 v8.0 的固定 $h$ 判定器：
 
-- **向下归约**直接继承 v7.6 QSP：单列探针、支持集探针、force 递归、单元陷阱、跨任务共识、span-first 顺序；QSP 又包含 v7.2 QUC 的单元证书和 v7.1 QNC 的 DFS/clause/叶子证书层。
-- **向上归约**是本轮新增：用同一个根 LP 的分数解做开始时间分布，采样优先级，串行 SGS + 有界 DFS 构造调度，最后独立重放。
-- **容错层**是本轮新增：所有证书先验证；提取失败走 dual row-core 恢复；叶证书缺失走 fail-stop 域分裂；YES 只由 `check_schedule` 确认。
-- **两阶段预算**是本轮新增：小预算 NO 搜索 → 小构造器 → 大构造器 → 全预算 NO 搜索。若调用者明确只要 NO，可用 `yes_scan=False` 走单遍 QSP 等价路径。
+- **v8.0 BRC-ALC**：给定 $h$，用 QSP 探针、Farkas 证书、row-core 恢复、fail-stop 分裂和随机化 YES 构造器回答「$h$ 是否可行」。它的证书语义和 `check_schedule` 语义是本轮的地基。
+- **v9.0 CAB-MC**：在 v8.0 外面加 certified anytime bracket，用 archive/Markov 构造器闭合 YES 侧；这是本轮的直接对照基线。
+- **v9.1 CHD**：确定性 LDS 判定器，用 phase A（根 LP 的整数解）、cheap 顺序和 hull 顺序替代随机构造器；这是 CRISP 的默认内层 oracle。
+- **v8.1 CRISP-ALC**：在 CAB 的外层 bracket 之前再加一层预处理，用可重放的 window/energy NO 证书抬升 LB、用 4 个 greedy 订单压低 UB，把 $[\mathrm{LB},\mathrm{UB}]$ 压窄后再调用内层 oracle。
 
-另修正了两个上一轮遗留问题：
+因此本轮不是「替换 v8.0」，而是「给 v8.0/v9.0 换一个更窄的搜索区间」。`CRISP` 只继承并覆盖 `CABOpt` 的两个钩子：
 
-1. v7.2 `audit_quc` 的跨任务字段错位（`cross[:4]` 丢掉 kind，导致字段整体移位）；QSP 的 `audit_qsp` 用 `cross[:5]` 修复，BRC 继承该修复。
-2. 两阶段搜索从根重启时会因新割改变根 LP，从而重复探针；纯 NO 模式改为单遍，YES 模式在 phase A 未取得 `root_z` 时只对当前有效割集直接解一次 LP 取构造器见证。
+```python
+class CRISP(CABOpt):
+    def initial_bounds(self): ...   # 返回预处理后的 LB, UB, schedule, machine
+    def _decide(self, h): ...       # 返回 CHD 的 YES/NO/UNKNOWN
+```
 
-推荐接口：
+`optimize()`、`_result()`、`audit`、`proof_complete`、`check_schedule` 全部继承，因此外层 bracket 的正确性论证与 v9.0 相同，新增的只有预处理部分的可靠性。
 
-    RDF(inst, h, yes_scan=True, small_budget=12, small_nodes=200,
-        yes_trials1=8, yes_nodecap1=500,
-        yes_trials2=48, yes_nodecap2=4000,
-        yes_node_budget=60000, ft_on=True, recover=True,
-        fail_calls=0, corrupt_calls=0, ft_budget=64)
-    .decide(budget=100000, nodecap=5000) -> (verdict, state)
-    .audit_rdf() -> bool
-    .proof_complete() -> bool
+复用模块：
 
-`verdict ∈ {True, False, None}`；`True` 必带一个通过 `check_schedule` 的调度，`False` 必带完整 Farkas/clause 证明（`proof_complete=True`），`None` 表示预算耗尽或 fail-stop。
+- `exp/v8a/rdf.py`：`RDF`、`check_schedule`；
+- `exp/v76/qsp.py`：`QSP`；
+- `exp/v9b/chd.py`：`CHD`；
+- `exp/v9c/scale.py`：`energy_cert`、`windows`、`verify_prep`；
+- `exp/v9d/cab.py`：`CABOpt`、`CAB`、`_greedy_rank`；
+- `exp/v8a/lazy.py`：`LazySD`（仅用于可选的 hull projection）。
+
+新增文件：
+
+- `exp/v8c/chip.py`：本轮的 CRISP-ALC 实现；
+- `exp/v8c/bench_chip.py`：三组语料的主实验；
+- `exp/v8c/bench_bounds.py`：bracket 统计、消融、证书验证；
+- `exp/v8c/bench_chip.json`、`exp/v8c/bench_bounds.json`：原始结果。
 
 ## 1. 符号
 
-- \(n\)：任务数；\(m\)：机器数；\(p_i\)：加工时间；\(\mathrm{pred}(i)\)、\(\mathrm{succ}(i)\)、\(\mathrm{elig}(i)\)。
-- \(h\)：待判定的 makespan 上界；NO 基准 \(h=\mathrm{OPT}-1\)，YES 基准 \(h=\mathrm{OPT}\)。
-- \(D_i=\{\mathrm{est}_i,\dots,h-q_i-p_i\}\)：任务 \(i\) 的可行开始时间域。
-- \(C\)：已分离的 SD 割集；\(\mathrm{LP}(C)\) 是带割集的 start-time LP；\(\mathrm{LP}(C,E)\) 是把列集 \(E\) 删掉后的 LP。
-- 列 \(c=(i,t)\)；资格感知时 \(c=(i,k,t)\)。\(z_{i,t}\) 是开始时间分数（资格感知时对机器求和）。
-- \(S_i(z)=\{t:z_{i,t}>0\}\)：任务 \(i\) 在可行解 \(z\) 中的 support。
-- \(\Phi\)：整数 Farkas 证书；\(\mathrm{verify}(\Phi,\mathrm{forbid}=E)\) 逐列重放 \((A_E)^T y\ge0\)、\(b^T y<0\)。
-- \(E\)：证书的 essential scope；\(F\)：当前被禁止的列集合。
-- \(d_i(t)=z_{i,t}/\sum_u z_{i,u}\)：构造器用的开始时间分布。
-- \(N_{\mathrm{yes}}\)：构造器全局 SGS 节点上限（默认 60,000）。
-- \(T_{\mathrm{SGS}}\)：串行调度生成树；\(B_1,B_2\)：两批构造器的 trials/nodecap。
+| 符号 | 含义 |
+|---|---|
+| $I=(J,M,E,p,q,\mathrm{elig})$ | 调度实例 |
+| $n,m$ | 任务数、机器数 |
+| $p_i$ | 任务 $i$ 的加工时间 |
+| $q_i$ | 任务 $i$ 的尾长（交付时间） |
+| $\mathrm{est}_i$ | 任务 $i$ 的最早开始时间（heads） |
+| $\mathrm{latest}_i(h)=h-q_i-p_i$ | 在 makespan $\le h$ 的调度中 $i$ 的最晚开始时间 |
+| $s_i,C_i=s_i+p_i$ | 开始时间、完成时间 |
+| $C_{\max}(s)=\max_i(s_i+p_i+q_i)$ | 调度 $s$ 的 makespan |
+| $\mathrm{OPT}$ | 最优 makespan |
+| $h$ | 候选 makespan |
+| $P(h)$ | 固定 $h$ 的 LP 松弛 |
+| $\mathrm{lo}_i(h),\mathrm{hi}_i(h)$ | $P(h)$ 在坐标 $s_i$ 上的投影端点 |
+| $H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]$ | LP 投影盒 |
+| $\mathrm{LB}_0,\mathrm{UB}_0$ | 预处理前的初始下界、上界 |
+| $\mathrm{LB},\mathrm{UB}$ | 预处理后的证书区间 |
+| $W=\mathrm{UB}-\mathrm{LB}$ | 区间宽度 |
+| $\rho=\mathrm{UB}/\mathrm{LB}$ | 证书区间的竞争比（近似比上界） |
+| $Q$ | 外层 oracle 调用次数（查询数） |
+| $\mathrm{predq}$ | 精确 oracle 下二分搜索的理想深度，不含最终 $\mathrm{OPT}-1$ 证明 |
+| $\mathrm{cert}$ | 可重放的 NO 证书（window / energy / Farkas） |
+| $\mathrm{sched},\mathrm{mach}$ | 通过 `check_schedule` 的调度与机器分配 |
 
-## 2. 向下归约：NO 侧
+注意：代码里的 `q` 有时指查询数，有时指尾长 `q[i]`。本文用 $Q$ 表示查询数，用 $q_i$ 表示尾长，避免混淆。
 
-### 2.1 单列探测与 force 方向
+## 2. 形式化对象
 
-设 \(p=(i,t)\)。若
+### 2.1 实例与可行调度
 
-\[
-\mathrm{LP}(C,\{p\})\ \text{不可行},
-\]
+实例是一个带优先约束的无关并行机调度：
 
-则由 `verify(Φ_p, forbid={p})` 得到有效证书，并称 \(p\) 是 **forced unit**，结论是
+- 每个任务 $i$ 必须在其所有前驱完成后开始；
+- 任务 $i$ 只能放在 $\mathrm{elig}_i\subseteq M$ 中的一台机器上；
+- 机器上的任务区间不重叠；
+- 目标是最小化 $C_{\max}(s)=\max_i(s_i+p_i+q_i)$，其中 $q_i$ 是交付尾长。
 
-\[
-s_i=t.
-\]
+一个调度是二元组 $(s,\mathrm{mach})$，$s_i\in\mathbb Z_{\ge 0}$，$\mathrm{mach}_i\in\mathrm{elig}_i$，满足优先约束和机器容量约束。`check_schedule(inst,h,start,mach)` 做独立重放：检查每个任务在 $[0,h]$ 内、机器合法、优先约束、机器不重叠。只有通过重放的调度才被接受。
 
-方向必须写死：\(\{p\}\) 是**被删掉的列**，但结论是「必须用 \(p\)」。两个 forced unit 给出 \(s_i=t\)、\(s_i=u\) 且 \(t\ne u\) 时才是矛盾。
-
-### 2.2 支持引理
-
-设 \(z\) 是 \(\mathrm{LP}(C)\) 的任意可行解。若 \(\mathrm{LP}(C,\{p\})\) 不可行，则
-
-\[
-z_p>0.
-\]
-
-**证明**：若 \(z_p=0\)，删掉 \(p\) 不会删掉 \(z\) 的任何正分量，\(z\) 仍是 \(\mathrm{LP}(C,\{p\})\) 的可行解，矛盾。∎
-
-**推论**：所有可认证的单元都落在当前解的 support 中，\(U_i\subseteq S_i(z)\)。因此固定 \(z\) 和 \(C\) 时，扫描 \(S_i(z)\) 对同任务单列陷阱是完备的；不会漏掉任何一对可认证的 \(t,u\)。
-
-### 2.3 支持集探测、force 与陷阱
-
-对任务 \(i\) 删除整个 \(S_i(z)\) 后解一次 LP。若不可行，取证书的 essential scope \(E\)：
-
-- 若 \(E\) 只含一个任务 \(j\)，则 \(s_j\in E_j\) 是**集合 force**；
-- 若 \(E\) 含两个任务且与已有 force 不相容，则是 **cross** 冲突；
-- 若 \(E\) 跨多个任务，则加入 clause \(E\)（禁止同时落在 \(E\) 中）。
-
-同任务出现两个不相交的 force（单元陷阱或集合陷阱）直接 NO；跨任务的 force 违反优先序边或容量时刻也直接 NO。以上规则和 span-first 顺序均继承 QSP。
-
-### 2.4 纯 NO 模式
-
-`yes_scan=False` 时，`decide` 只跑一遍 QSP 等价搜索：
-
-    self.budget = budget
-    self.nodecap = nodecap
-    v, why = self._search([(0,1)] * N, 0)
-
-这条路径在 252 个 NO 上与 QSP **逐例**给出相同的 LP 数、节点数和 probe 数（聚合 577 LP / 283 节点 / 74 probes），因为 `_farkas` 先走 `farkas_int`，只有失败才进入 row-core 恢复，不改变原来的力/陷阱行为。
-
-## 3. 向上归约：YES 侧
-
-### 3.1 从 LP 分布到优先级
-
-根 LP 的分数解给出
+记
 
 \[
-d_i(t)=\frac{z_{i,t}}{\sum_{u\in D_i} z_{i,u}}.
+\mathcal M(I)=\{C_{\max}(s): (s,\mathrm{mach})\text{ 可行}\},
+\qquad
+\mathrm{OPT}=\min \mathcal M(I).
 \]
 
-独立采样 \(t_i\sim d_i\)，令
+### 2.2 LP 松弛与投影
+
+固定 $h$，记 $P(h)$ 为 v7.6/QSP 的 LP 松弛（实际实现用 `LazySD` 的 start-time-indexed 形式）。概念上：
 
 \[
-\mathrm{rank}_i=t_i+\varepsilon_i,\qquad \varepsilon_i\sim U(0,10^{-6}),
+P(h)=\left\{s\in\mathbb R_{\ge 0}^n:
+\begin{array}{l}
+s_i\ge \mathrm{est}_i,\\
+s_j\ge s_i+p_i \quad ((i,j)\in E),\\
+s_i+p_i+q_i\le h,\\
+\text{机器容量约束的 LP 松弛成立}
+\end{array}
+\right\}.
 \]
 
-用 \(\mathrm{rank}\) 排序可开工任务。\(\varepsilon\) 只用于打破相同开始时间的平局，不改变时间语义。
-
-### 3.2 串行 SGS + 有界 DFS
-
-`_sgs_dfs(rank, nodecap)` 的每一步：
-
-1. 取所有前驱已完成的任务（available）；
-2. 按 \(\mathrm{rank}\) 升序尝试；
-3. 对每个任务、每台 eligible 机器，算最早可行开始 \(t\)（满足优先序、机器空闲、\(t\le \mathrm{latest}_i\)）；
-4. 递归；若整棵子树失败则回溯，换下一个任务/机器。
-
-这是**活动调度**（active schedule）生成器。经典串行 SGS 定理：若存在可行调度，则存在一个活动可行调度，且每个活动调度都可由某个优先级表生成。因此固定优先级表时，DFS 对「任务 × 机器」的离散选择是完备的；不确定性只来自优先级表。构造器用随机采样生成不同的表，用有界 DFS 在表附近做修正。
-
-### 3.3 调度重放
-
-`_schedule_from_z` 处理 LP 顶点已经整数的情况：从 \(z\) 读出每个任务的开始时间；非资格感知时按开始时间贪心分配机器；最后调用
-
-    check_schedule(inst, h, start, mach)
-
-逐项检查：
-
-- 每个任务只开始一次，\(0\le s_i\)，\(s_i+p_i\le h\)；
-- 机器在 \(\mathrm{elig}(i)\) 中；
-- 每条优先序边 \(s_j\ge s_i+p_i\)；
-- 每台机器上的任务区间不重叠。
-
-**YES 只由重放确认**；构造器的中间状态、LP 的整性、采样分布都不算证据。
-
-## 4. 容错层
-
-### 4.1 证书先验证
-
-`_farkas(lp, forbid)` 的顺序：
-
-1. 若注入了 `fail_calls`，直接走恢复；
-2. 先调 `farkas_int`（v7.x 路径）；
-3. 失败则调 `farkas_core`（dual row-core）；
-4. 若注入了 `corrupt_calls`，故意改坏证书的第一个 \(\alpha\) 系数；`verify` 必须抓住；
-5. 只有通过验证的证书才返回。
-
-`corrupt_missed` 统计「改坏后仍通过验证」的次数，故障注入实验中为 0。
-
-### 4.2 dual row-core 恢复
-
-对偶 LP 是
+它不是整数规划；它允许分数开始时间和分数机器分配。但每个整数可行调度都满足这些约束，所以
 
 \[
-\max\ 0\quad\text{s.t.}\quad A_E^T y\ge0,\quad b^T y=-1.
+(s,\mathrm{mach})\text{ 可行},\ C_{\max}(s)\le h
+\;\Longrightarrow\;
+s\in P(h).
 \]
 
-解出 \(y\) 后丢掉 \(y_r=0\) 的行，在剩余行上重解；行核上的证书把丢掉的行补零，就得到全 LP 的证书。因此这是**归约**（把对偶行数变小），不是放松。它只改变证书的表示，不改变「不可行」这一事实。
+坐标投影定义为
 
-### 4.3 fail-stop 域分裂
+\[
+\mathrm{lo}_i(h)=\min_{s\in P(h)} s_i,\qquad
+\mathrm{hi}_i(h)=\max_{s\in P(h)} s_i.
+\]
 
-叶 LP 不可行但证书提取失败时，不返回无证书的 NO。`_ft_split`：
+由可行性，任意整数可行调度的 $s_i$ 都落在 $[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]$，因此投影盒
 
-1. 找当前 live 域最大的任务 \(i\)；
-2. 取其中位时间 \(m\)；
-3. 分成 \(D_i^{\le m}\) 和 \(D_i^{>m}\) 两支；
-4. 分别递归证明；两支都 NO 才返回 NO；
-5. 若分裂预算 `ft_budget` 耗尽，返回 `(None, 'ft-budget')`，即 UNKNOWN。
+\[
+H(h)=\prod_i[\mathrm{lo}_i(h),\mathrm{hi}_i(h)]
+\]
 
-`proof_complete()` 的条件：
+是整数可行集的外包盒。它是**可靠的**，但不一定是**紧的**；第 6.6 节的负结果会量化这一点。
 
-    ft_stuck == 0 and leaf_missing <= ft_splits
+### 2.3 证书区间
 
-即每个缺失证书要么被恢复、要么被一个已证明的分裂替代；如果有 stuck/budget/FT-off 的缺失，证明不完整。`audit_rdf()` 在 `audit_qsp()` 之上再检查：
+一个证书区间是一对整数 $(\mathrm{LB},\mathrm{UB})$，满足
 
-- 所有单元/force 证书逐条 `verify`；
-- 若 `yes_ok=True`，必须有 `schedule` 且通过 `check_schedule`。
+\[
+\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
+\]
 
-## 5. 决定过程
+- $\mathrm{LB}$ 由下界论证或「在 $h=\mathrm{LB}$ 处存在可重放的 NO 证书」支撑；
+- $\mathrm{UB}$ 由一张通过 `check_schedule` 的调度支撑；
+- 若 $\mathrm{LB}=\mathrm{UB}$，则 incumbent 被证明最优。
 
-    def decide(budget, nodecap):
-        if not yes_scan:
-            return qsp_search(budget, nodecap)          # 单遍 NO
-        # phase A: 小预算 NO
-        budget = min(budget, 12); nodecap = min(nodecap, 200)
-        v, why = search(root)
-        # 根 lazy 分离可能先耗尽小预算；直接解当前割集取见证
-        if v is None and root_z is None:
-            res = LP(C).solve()
-            if res.status == infeasible: return NO, 'root-core'
-            if res.status == feasible:  root_z = res.x
-        # phase B1: 小构造器
-        if v is None and root_z is not None:
-            v = construct(root_z, trials=8, nodecap=500)
-        # phase B2: 大构造器（全局 60k 节点）
-        if v is None and root_z is not None and yes_nodes < 60000:
-            v = construct(root_z, trials=48, nodecap=4000)
-        # phase C: 全预算 NO
-        if v is None:
-            budget = budget_full; nodecap = nodes + nodecap_full
-            v, why = search(root)
-        return v, stats(why)
+定义宽度 $W=\mathrm{UB}-\mathrm{LB}$ 和竞争比
 
-预算语义：
+\[
+\rho=\frac{\mathrm{UB}}{\mathrm{LB}}.
+\]
 
-- `lp_solves` 统计所有 LP，包括 phase A、probe、恢复和 root_z fallback；
-- 构造器的 SGS 节点单独计入 `yes_nodes`，不占 LP 预算；
-- phase C 重置为完整 `budget`（不是剩余预算），所以总 LP 可能比单遍 QSP 多出 phase A 的至多 12 次；这是 anytime 的取舍。
-- `yes_scan=False` 不做 phase A/B，因此没有这个额外开销。
+这里的 $\rho$ 不是在线算法的竞争比，而是**当前 incumbent 相对证书下界的近似比**：
 
-## 6. 正确性
+\[
+\frac{C_{\max}(\text{incumbent})}{\mathrm{OPT}}
+\le \frac{\mathrm{UB}}{\mathrm{LB}}=\rho.
+\]
 
-### 6.1 向下可靠性
+因为 incumbent 的 makespan 不超过 $\mathrm{UB}$，而 $\mathrm{OPT}\ge\mathrm{LB}$。$\rho=1$ 等价于 $\mathrm{LB}=\mathrm{UB}$，即已证明最优。
 
-**定理 1（NO 可靠性）**：若 `_search` 返回 `False`，则不存在满足 \(h\) 的可行调度。
+### 2.4 NO 证书
 
-证明沿用 v7.1/v7.2 的归纳：每个返回 NO 的节点是以下之一：
+本轮使用两类 NO 证书，均由 `exp/v9c/scale.py` 提供并可重放：
 
-- LP 不可行，且有 `verify` 通过的 Farkas 证书；
-- 空域/空任务，由 `_empty_job` 检测；
-- 某个 clause \(E\subseteq F\)，而 \(E\) 是之前叶证书的 essential scope；
-- 同任务两个不相交 force，或跨任务 force 违反硬约束；
-- FT 分裂的两个子节点都返回 NO。
+**Window 证书。** 对任务 $i$，若
 
-这些情况覆盖了当前节点的整个域；每个分支要么有证书，要么被已证明的 clause/force 排除。归纳到根，所有可行调度都被排除。∎
+\[
+\mathrm{est}_i+p_i+q_i>h,
+\]
 
-### 6.2 向上可靠性
+则任何 makespan $\le h$ 的调度都不存在。等价地 $\mathrm{est}_i>\mathrm{latest}_i(h)$。
 
-**定理 2（YES 可靠性）**：若 `_search`/`_yes_construct` 返回 `True`，则 `check_schedule` 通过，因此调度可行且 makespan \(\le h\)。
+**Energy 证书。** 对机器子集 $M'\subseteq M$ 和时间区间 $[a,b)$，令
 
-证明是直接的：YES 只在两种情况下产生：
+\[
+J(M')=\{i:\mathrm{elig}_i\subseteq M'\},
+\]
 
-1. LP 顶点整数，`_schedule_from_z` 读出调度并通过 `check_schedule`；
-2. 构造器 `_sgs_dfs` 返回一个完整调度，并通过同一个 `check_schedule`。
+\[
+\mathrm{ov}_i(a,b)=\max\bigl(0,\ p_i-\max(0,a-\mathrm{est}_i)
+-\max(0,\mathrm{latest}_i(h)+p_i-b)\bigr).
+\]
 
-`check_schedule` 独立于构造过程，逐项检查域、优先序、资格和机器不重叠。∎
+$\mathrm{ov}_i(a,b)$ 是任务 $i$ 在 $[a,b)$ 内**无论怎样调度都必须重叠**的最小加工量。若
 
-### 6.3 容错保证
+\[
+\sum_{i\in J(M')}\mathrm{ov}_i(a,b) > |M'|(b-a),
+\]
 
-**定理 3（容错）**：
+则这组任务在 $[a,b)$ 内无法全部塞进 $M'$ 的机器容量，故 $h$ 不可行。证书记录 $(M',a,b,J,\text{demand})$，`verify_prep(inst,h,cert)` 用整数算术重放这个不等式。
 
-- 损坏证书若不能通过 `verify`，不会被用于证明；`corrupt_missed=0` 是这一条的可观测证据。
-- 证书提取失败时，`_farkas` 先尝试 row-core 恢复；恢复失败且 `ft_on=True` 时，`_ft_split` 把该叶替换成两个子问题；只有两个子问题都 NO 才向上返回 NO。
-- 若分裂预算耗尽，返回 UNKNOWN；不会出现「无证书的 NO」。
-- `audit_rdf=True` 且 `proof_complete=True` 时，所有 NO 证书和 YES 调度都可独立重放。
+**Farkas 证书。** v8.0 的 LP 不可行性证书；本轮不直接生成它，但 `CHD`/`CAB` 的 NO 路径仍会产生，并由 `audit_rdf` 检查。
 
-### 6.4 相对完备性
+本轮只把 window/energy 用于**预处理阶段的 LB 抬升**；最终 $\mathrm{OPT}-1$ 的 NO 仍由内层 oracle 的完整证书负责。
 
-**定理 4（不丢 NO）**：在相同 LP 割集和相同预算下，BRC 的 phase A/C 搜索树与 QSP 的搜索树相同；构造器只增加 YES 出口，不删除任何 NO 分支。因此：
+### 2.5 UB 证书
 
-- 若 QSP 在预算内证明 NO，BRC 也证明 NO（除非构造器先找到一个通过重放的 YES；但若 QSP 的 NO 证明正确，这种情况不可能发生）；
-- 若 BRC 返回 UNKNOWN，可能是 phase A 小预算、构造器节点上限或 FT 分裂上限导致的；`yes_scan=False` 可消除 phase A/B 的影响。
+任何通过 `check_schedule(inst,Cmax,start,mach)` 的调度都是 UB 证书：
 
-注意：phase C 重置完整预算，所以「相同预算」应理解为「单遍 QSP 的预算」；BRC 的总 LP 可能多出 phase A 的至多 12 次。
+\[
+\mathrm{OPT}\le C_{\max}(s).
+\]
 
-## 7. 复杂度
+`check_schedule` 检查所有任务在 $[0,C_{\max}]$ 内、机器合法、优先约束、机器不重叠。`chip_bounds` 在每次 UB 更新前都调用它，因此 UB 不依赖启发式的自述。
 
-- **NO 搜索**：每个节点 1 次 LP，加至多 `topk` 次分离 LP；每个 probe 1 次 LP。最坏情况仍是指数级（NP-hard 问题的必然），实测 252 个 NO 共 577 LP / 283 节点。
-- **YES 构造**：最多 56 次采样；每次 SGS DFS 至多 `nodecap` 个节点；全局 60k 节点。每个 SGS 节点做一次 available 排序和至多 \(n\cdot m\) 个机器选择；回溯要恢复 `busy`、`predfin`、`rem`。实测 84 trials / 35,711 节点。
-- **空间**：LP 列数 \(O(n\cdot T\cdot|\mathrm{elig}|)\)；证书规模与 LP 行数同阶；SGS 状态 \(O(n+m)\)。
+### 2.6 凸包：从高维到一维
 
-## 8. 实验结果
+可行 makespan 集合 $\mathcal M(I)$ 的凸包是区间 $[\mathrm{OPT},\max\mathcal M(I)]$。我们不需要知道高维开始时间向量的凸包；真正要维护的是这个一维凸包的下端点，即 $\mathrm{OPT}$。
 
-数据：
+证书区间 $[\mathrm{LB},\mathrm{UB}]$ 是 $[\mathrm{OPT},\infty)$ 的一个外区间：
 
-- 141 个 NO 基准：`exp/v20/holdout_cases50.pkl`、`exp/v28/synth2_45.pkl`、`exp/v14/{large_a,large_b,large_het}.pkl`、`exp/v13/hard3.pkl`、`exp/v18/deep.pkl`，均取 \(h=\mathrm{OPT}-1\)；
-- 60 个扰动：`exp/v71/perturb60.pkl`，\(h=\mathrm{OPT}-1\)；
-- 51 个压力集：`exp/v81/h5h47_branch.pkl`，全部 NO；
-- 141 个 YES：同一批基准文件取 \(h=\mathrm{OPT}\)。
-- 规模：\(n=11\ldots21\)，\(m\) 随实例；本机 Python 3.12 / SciPy 1.18.1 HiGHS。
+\[
+[\mathrm{OPT},\infty)\subseteq[\mathrm{LB},\mathrm{UB}].
+\]
 
-### 8.1 NO：252 例
+预处理的目标就是把这个外区间压到接近 $[\mathrm{OPT},\infty)$ 的下端。高维投影盒 $H(h)$ 是另一个外近似，但它通常远宽于整数可行集；第 6.6 节会看到，把 $H(h)$ 当硬域并不划算。**本轮最终选择的是低维凸包（一维区间），高维凸包只保留为可选的顺序 oracle。**
 
-| 方法 | NO | LP | 节点 | probes | audit | proof | 墙钟 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| QNC v7.1 | 252 | 585 | 415 | 0 | 252 | — | 4.03 s |
-| QUC v7.2 | 252 | 636 | 286 | 0 | 252 | — | 4.30 s |
-| QSP v7.6 | 252 | 577 | 283 | 74 | 252 | — | 3.97 s |
-| **BRC 纯 NO** | **252** | **577** | **283** | **74** | **252** | **252** | **4.05 s** |
-| BRC 统一模式 | 252 | 595 | 299 | — | 252 | 252 | 4.89 s |
+## 3. 算法
 
-- 纯 NO 模式与 QSP **逐例**相同（LP、节点、probes 全部一致），但额外提供 `proof_complete` 和容错层；墙钟多约 0.08 s，来自证书验证。
-- 统一模式只多 18 LP / 16 节点 / 0.84 s；252 例中只有压力集的一个实例触发构造器，且被 60k 节点上限截住。
-- 分族：141 基准 QSP/BRC 145 LP / 131 节点；60 扰动 115/60；51 压力 317/92。QNC 为 147/137、121/76、317/202；QUC 为 145/131、115/60、376/95。
-- 7 个「根 LP 可行但分数」的实例仍由 QSP 的单元/支持探针在根层闭合，每例 2 次 probe；BRC 没有破坏这一性质。
+### 3.1 总览
 
-### 8.2 YES：141 例
+CRISP 分三个阶段：
 
-| 方法 | YES | UNKNOWN | NO | LP | 节点 | 构造调用/trials | SGS 节点 | 验证调度 | 墙钟 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| QUC6 v7.2 | 48 | 93 | 0 | 712 | 141 | — | — | — | 3.96 s |
-| **BRC** | **141** | **0** | **0** | **1102** | **326** | **45 / 84** | **35,711** | **141** | **7.30 s** |
+1. **初始界**：critical path + eligibility load 给 $\mathrm{LB}_0$，est 顺序 greedy 给 $\mathrm{UB}_0$；
+2. **预处理**：先 UB drop（4 个 greedy 订单），再 LB lift（energy/window NO 证书），得到 $[\mathrm{LB},\mathrm{UB}]\subseteq[\mathrm{LB}_0,\mathrm{UB}_0]$；
+3. **区间搜索**：在 $[\mathrm{LB},\mathrm{UB}]$ 上二分调用内层 oracle；NO 抬 LB，YES 压 UB；最后在 $\mathrm{OPT}-1$ 补一张 NO 证明，在 $\mathrm{OPT}$ 保留可重放调度。
 
-- 97 例在 phase A 的 12 LP 内直接由整数 LP 顶点闭合（`_schedule_from_z` + `check_schedule`）；
-- 43 例由 phase B1（8 trials / 500 nodes）闭合；
-- 1 例（holdout 35）phase B1 失败，phase B2 用 5 次额外 trial 闭合；该例总计 2 次调用、13 trials、20,029 SGS 节点、0.209 s；
-- 141/141 `audit_rdf` 通过，141/141 调度通过独立重放；
-- 相对 QUC6：YES 覆盖 48→141，LP 712→1102（+55%），墙钟 3.96→7.30 s（+84%）。这就是「把 93 个 UNKNOWN 全部闭合」的代价。
+### 3.2 初始界：`base_bounds`
 
-### 8.3 故障注入：7 个 hard NO
+Critical path 下界：
 
-对象：`holdout:5,47`、`large_a:5`、`large_het:0,3,7`、`hard3:4`，均 \(h=\mathrm{OPT}-1\)。
+\[
+\mathrm{LB}_{\mathrm{cp}}
+=\max_i\bigl(\mathrm{est}_i+p_i+q_i\bigr).
+\]
 
-| 模式 | NO | UNKNOWN | recovered | forced_fail | caught | missed | missing | splits | stuck | audit | proof |
+Eligibility load 下界：对每个非空机器子集 $M'\subseteq M$，只能放在 $M'$ 上的任务必须在 $|M'|$ 台机器上完成：
+
+\[
+\mathrm{LB}_{\mathrm{load}}
+=\max_{\emptyset\ne M'\subseteq M}
+\left\lceil
+\frac{\sum_{i:\mathrm{elig}_i\subseteq M'}p_i}{|M'|}
+\right\rceil.
+\]
+
+于是
+
+\[
+\mathrm{LB}_0=\max(\mathrm{LB}_{\mathrm{cp}},\mathrm{LB}_{\mathrm{load}}).
+\]
+
+$\mathrm{UB}_0$ 由 est 顺序的串行 SGS 给出，并用 `check_schedule` 重放。若 greedy 失败（DAG 异常），返回 `ok=False`，不做任何虚假声明。
+
+复杂度：$O(2^m n+n\log n+\text{SGS})$。本语料 $m\le 4$，$2^m\le 16$，可忽略。
+
+### 3.3 UB drop：4 个确定性订单
+
+`order_portfolio(inst,est,q,ub)` 返回 4 个优先序：
+
+| 名称 | 排序键 | 直觉 |
+|---|---|---|
+| `est` | $\mathrm{est}_i+i\cdot10^{-9}$ | 最早开始优先 |
+| `latest` | $\mathrm{latest}_i+i\cdot10^{-9}$ | 最晚开始优先，给紧任务让路 |
+| `tail` | $-q_i+i\cdot10^{-9}$ | 长尾优先 |
+| `mixed` | $\mathrm{est}_i-0.5q_i+i\cdot10^{-9}$ | 头尾折中 |
+
+每个订单跑一次 `_greedy_rank`（串行 SGS），得到 $(s,\mathrm{mach},C_{\max})$。只有当
+
+\[
+C_{\max}<\mathrm{UB}
+\quad\text{且}\quad
+\texttt{check\_schedule}(I,C_{\max},s,\mathrm{mach})
+\]
+
+时才更新 $\mathrm{UB}$。因此 UB drop 只会让上界更紧，不会引入未验证的调度。
+
+252 个实例中，201 个实例的 UB 被至少一个订单压低（base 95/141、pert 60/60、stress 46/51）。成功的订单更新次数（含同一实例多次更新）为 base 101、pert 60、stress 46。
+
+### 3.4 LB lift：energy / window 循环
+
+在 $h=\mathrm{LB}$ 处：
+
+1. 调 `energy_cert(inst,LB,64,20000)`；若返回证书，验证后 $\mathrm{LB}\leftarrow\mathrm{LB}+1$；
+2. 若没有 energy 证书，调 `windows(inst,LB)`；若存在 $\mathrm{est}_i>\mathrm{latest}_i$，构造 window 证书，验证后 $\mathrm{LB}\leftarrow\mathrm{LB}+1$；
+3. 若两者都没有，停止；
+4. 若验证失败，记录 `cert_bad` 并停止，不抬 LB。
+
+循环条件是 $\mathrm{LB}<\mathrm{UB}$，因为 $\mathrm{LB}=\mathrm{UB}$ 时区间已经精确，不需要再抬。
+
+252 个实例共触发 174 次 LB lift（base 101、pert 31、stress 42），全部证书通过 `verify_prep`，`cert_bad=0`。
+
+### 3.5 顺序：先 UB 后 LB
+
+这个顺序不是随意的。LB lift 的循环上界是当前 $\mathrm{UB}$；先降 UB 可以让 LB 多爬几步，先升 LB 则 energy 循环会更早停下。第 6.5 节的消融显示：
+
+- UB drop 单独把预测二分深度从 558 降到 303；
+- LB lift 单独只从 558 降到 538；
+- 两者合起来降到 254。
+
+也就是说，**LB lift 的收益需要 UB drop 先创造空间**。这是本轮对「竞争比」最重要的结构性观察：上下界不是两个独立算子，而是一个耦合系统。
+
+### 3.6 外层搜索：`CRISPBounds` 与 `CRISP`
+
+`CRISPBounds` 和 `CRISP` 都继承 `CABOpt`，只在 `initial_bounds` 中调用 `chip_bounds`：
+
+```python
+def initial_bounds(self):
+    b = chip_bounds(self.inst)
+    self.chip = b
+    return b['lb'], b['ub'], b['schedule'], b['machine']
+```
+
+区别在内层 oracle：
+
+- `CRISPBounds._decide` 继承 `CABOpt`，用 `CAB`（archive + Markov）；
+- `CRISP._decide` 覆盖为
+
+```python
+def _decide(self, h):
+    rdf = CHD(self.inst, h, yes_scan=True, cheap_disc=2,
+              hull_disc=4, hull_on=True)
+    v, st = rdf.decide(budget=self.per_query_lp,
+                       nodecap=self.per_query_nodes)
+    return v, st, rdf
+```
+
+`CABOpt.optimize` 的循环不变式是
+
+\[
+\mathrm{LB}\le \mathrm{OPT}\le \mathrm{UB}.
+\]
+
+每次 `_decide(h)`：
+
+- `v=True`：用返回调度的实际 $C_{\max}$ 更新 $\mathrm{UB}$（不会变大）；
+- `v=False`：$\mathrm{LB}\leftarrow\max(\mathrm{LB},h+1)$，保存 NO 证明；
+- `v=None`：UNKNOWN，`_recover_unknown` 在 $h$ 或 $h-1$ 重试，不把 UNKNOWN 当 NO。
+
+当 $\mathrm{LB}=\mathrm{UB}$ 时，`optimize` 检查 $\mathrm{OPT}-1$ 是否已有 NO 证明；若没有，补一次 `_decide(OPT-1)`。只有这次返回 NO，`certified=True`。
+
+### 3.7 伪代码
+
+```
+function CRISP(inst):
+    (LB0, UB0, sched, mach, est, q) = base_bounds(inst)
+    if UB0 is None or not check_schedule(inst, UB0, sched, mach):
+        return UNKNOWN
+
+    LB, UB = LB0, UB0
+    for order in [est, latest, tail, mixed]:
+        g = greedy_SGS(order)
+        if g and g.Cmax < UB and check_schedule(inst, g.Cmax, g.starts, g.machs):
+            UB, sched, mach = g.Cmax, g.starts, g.machs
+
+    while LB < UB:
+        cert = energy_cert(inst, LB)
+        if cert is None:
+            if no window violation at LB:
+                break
+            cert = window_cert(inst, LB)
+        if not verify_prep(inst, LB, cert):
+            break
+        LB += 1
+
+    Q = 0
+    while LB < UB and Q < Qmax:
+        h = floor((LB + UB) / 2)
+        v, st = oracle(inst, h)
+        Q += 1
+        if v == YES:
+            UB = min(UB, Cmax(st.schedule))
+            sched, mach = st.schedule, st.machine
+        elif v == NO:
+            LB = h + 1
+            no_states[h] = st
+        else:
+            retry(h), retry(max(LB, h - 1))
+
+    if LB == UB:
+        if (UB - 1) not in no_states:
+            v = oracle(inst, UB - 1)
+            Q += 1
+            if v != NO:
+                return UNKNOWN
+        certified = True
+    else:
+        certified = False
+
+    return (UB, sched, mach, LB, Q, certified)
+```
+
+### 3.8 查询记账
+
+`Q` 包含：
+
+- 二分搜索的每次 `_decide`；
+- UNKNOWN 的每次重试；
+- 最终的 $\mathrm{OPT}-1$ 证明（若搜索中没查过）。
+
+`bench_bounds.py` 的 `predq` 只计算理想二分深度，不含最终证明。因此：
+
+- 252 例的 `predq` 总和是 254；
+- 58 个在预处理后已经 $\mathrm{LB}=\mathrm{UB}$ 的实例，每个需要一次 $\mathrm{OPT}-1$ 证明，贡献 58；
+- 其余 194 个非精确实例中，有 25 个的 $\mathrm{OPT}-1$ 不在搜索轨迹里，需要补证明；
+- 所以实际 $Q=254+58+25=337$。
+
+这个记账解释很重要：**CRISP 的查询下降不是在「少证明」；恰恰相反，它在 58 个实例上完全跳过了搜索，只补一张最终 NO 证明。**
+
+## 4. 正确性
+
+### 4.1 引理 1（初始界可靠）
+
+`base_bounds` 返回的 $\mathrm{LB}_0,\mathrm{UB}_0$ 满足
+
+\[
+\mathrm{LB}_0\le\mathrm{OPT}\le\mathrm{UB}_0.
+\]
+
+证明：critical path 下界和 eligibility load 下界都是标准松弛；$\mathrm{UB}_0$ 由 `check_schedule` 重放的可行调度给出。若 greedy 失败，函数返回 `ok=False`，不产生区间。$\square$
+
+### 4.2 引理 2（UB drop 可靠）
+
+每次 UB 更新都要求新调度通过 `check_schedule`；因此新值仍是可行调度的 makespan，满足 $\mathrm{OPT}\le C_{\max}$。取多个订单的最小值只会更紧，不会低于 $\mathrm{OPT}$。$\square$
+
+### 4.3 引理 3（NO 证书可靠）
+
+- Window：若 $\mathrm{est}_i+p_i+q_i>h$，任务 $i$ 即使最早开始也无法在 $h$ 内完成并交付，故 $h$ 不可行。
+- Energy：$\mathrm{ov}_i(a,b)$ 是任务 $i$ 在 $[a,b)$ 内的强制重叠下界；若这些强制重叠之和超过 $|M'|(b-a)$，则 $M'$ 的容量不足以容纳它们，故 $h$ 不可行。
+- `verify_prep` 用整数算术重放上述不等式；验证失败则不抬 LB。
+
+因此，若 `chip_bounds` 在 $h$ 处接受了一张证书并令 $\mathrm{LB}=h+1$，则
+
+\[
+\mathrm{OPT}\ge h+1=\mathrm{LB}.
+\]
+
+$\square$
+
+### 4.4 引理 4（LB lift 保持下界）
+
+归纳：初始 $\mathrm{LB}_0\le\mathrm{OPT}$。每次抬升前，在 $h=\mathrm{LB}$ 处有已验证的 NO 证书，故 $\mathrm{OPT}\ge h+1$；抬升后仍成立。若循环因无证书或验证失败而停止，$\mathrm{LB}$ 不变，仍满足 $\mathrm{LB}\le\mathrm{OPT}$。$\square$
+
+### 4.5 引理 5（区间不变式）
+
+在 `chip_bounds` 返回时，
+
+\[
+\mathrm{LB}_0\le\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}\le\mathrm{UB}_0.
+\]
+
+证明：引理 1 给初始；引理 2 给 $\mathrm{UB}$ 不降到 $\mathrm{OPT}$ 以下；引理 3–4 给 $\mathrm{LB}$ 不升到 $\mathrm{OPT}$ 以上。传递性给出链。$\square$
+
+### 4.6 定理 1（最终答案可靠）
+
+若 `optimize` 返回 `certified=True`，则 `opt` $=\mathrm{OPT}$，且：
+
+- `schedule` 在 `opt` 处通过 `check_schedule`；
+- `no_states[opt-1]` 是一张通过 `audit_rdf`/`proof_complete` 的 NO 证明；
+- `cert_h=opt-1`。
+
+证明：`certified=True` 要求 $\mathrm{LB}=\mathrm{UB}=\mathrm{opt}$，且 $\mathrm{opt}-1$ 有 NO 证明。由引理 5，$\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$，故 $\mathrm{OPT}=\mathrm{opt}$。调度和 NO 证明分别由 `check_schedule` 与 `audit_rdf`/`proof_complete` 独立检查。$\square$
+
+若 `certified=False`，`opt` 仍是可行调度的 makespan，因此 $\mathrm{opt}\ge\mathrm{OPT}$；$\mathrm{LB}\le\mathrm{OPT}$ 仍成立。此时返回的是**有效的 anytime 区间**，不是「已证明最优」。
+
+### 4.7 定理 2（竞争比与二分收缩）
+
+设内层 oracle 精确（不返回 UNKNOWN），预处理后区间为 $[\mathrm{LB}_0,\mathrm{UB}_0]$，宽度 $W_0$。第 $t$ 次二分后，
+
+\[
+W_t\le\left\lceil\frac{W_0}{2^t}\right\rceil,
+\qquad
+\rho_t\le 1+\frac{W_0}{2^t\,\mathrm{LB}_0}.
+\]
+
+证明：每次二分把当前宽度 $W$ 分成 $\lfloor W/2\rfloor$ 和 $\lceil W/2\rceil$；最坏取 $\lceil W/2\rceil$。竞争比由 $\rho_t=\mathrm{UB}_t/\mathrm{LB}_t=1+W_t/\mathrm{LB}_t\le1+W_t/\mathrm{LB}_0$ 得到。$\square$
+
+因此精确 oracle 下的查询上界是
+
+\[
+Q=O\bigl(\log(W_0+1)\bigr).
+\]
+
+预处理的作用是同时降低 $W_0$ 和 $\rho_0$；本轮把 252 例的总 $W_0$ 从 1069 压到 304，把平均 $\rho_0$ 从 1.144 压到 1.038。
+
+### 4.8 UNKNOWN 的语义
+
+`_decide` 返回 `None` 时，`optimize` 不改变 $\mathrm{LB}/\mathrm{UB}$ 的可靠性，只增加查询数并重试。若重试后仍 UNKNOWN，可能因 `max_queries` 提前结束，此时 `certified=False`。CRISP 从不把 UNKNOWN 解释为 NO 或 YES。$\square$
+
+## 5. 复杂度
+
+### 5.1 预处理
+
+- `base_bounds`：$O(2^m n+n\log n+\text{SGS})$；本语料 $m\le4$。
+- UB drop：4 次 SGS，$O(4(n\log n+nm))$。
+- LB lift：最多 $W_0$ 次；每次 `energy_cert` 枚举 $\le64$ 个机器子集、$\le20{,}000$ 个区间，最坏 $O(W_0\cdot(64\cdot20{,}000+n))$。实际 252 例共 174 次 lift，预处理总墙钟约 0.36 s。
+- 可选 hull projection：$2n$ 次 LP；本语料 $n\le21$，但默认关闭。
+
+### 5.2 搜索
+
+- 二分深度 $O(\log W_0)$；实际 252 例 `predq` 总和 254。
+- 每次 `CHD` 调用受 `per_query_lp=80`、`per_query_nodes=5000` 约束；`max_queries=40`。
+- 最终 $\mathrm{OPT}-1$ 证明最多一次额外调用。
+- 实际总查询 337，总 LP 1403，总 YES 节点 64,039，总墙钟 7.27 s。
+
+### 5.3 内存
+
+- `chip_bounds` 保存 174 张证书（每张只含子集/区间/需求，整数），可忽略。
+- `no_states` 最多保存 `max_queries` 个 NO oracle 状态；每个状态是 `RDF`/`CHD` 实例，大小与 LP 规模同阶。
+- `trace` 保存每次查询的摘要，$O(Q)$。
+
+### 5.4 实际开销
+
+预处理不是瓶颈；内层 LP 和 LDS 仍是主要成本。CRISP 的 7.27 s 中，`bench_bounds` 测得的纯预处理约 0.36 s，其余是 337 次 oracle 调用。也就是说，**本轮的主要收益来自「少调用 oracle」，而不是「每次调用更快」**。
+
+## 6. 实验
+
+### 6.1 设置
+
+- **base 141**：7 个族，`holdout` 50、`synth` 45、`large_a` 8、`large_b` 10、`large_het` 8、`hard3` 12、`deep` 8。
+- **pert 60**：`exp/v71/perturb60.pkl`，在 base 上做扰动后的 NO 集。
+- **stress 51**：`exp/v81/h5h47_branch.pkl`，`h=opt-1` 的压力集。
+- 共 252 例；NO 取 $h=\mathrm{OPT}-1$，YES 取 $h=\mathrm{OPT}$。
+- 基线：`exp/v9d/bench_opt.json` 的 CAB v9.0。
+- `CRISPBounds`：CRISP 预处理 + 原 CAB oracle。
+- `CRISP`：CRISP 预处理 + CHD oracle。
+- 环境：`.venv`，HiGHS LP，确定性 CHD；CAB 基线保留其原始随机种子。
+
+### 6.2 主结果
+
+| 方法 | 认证 | 查询 | LP | YES 节点 | Markov | 墙钟 |
+|---|---:|---:|---:|---:|---:|---:|
+| CAB v9.0 | 252/252 | 560 | 3119 | 65,558 | 12,300 | 21.27 s |
+| CRISP bounds + CAB | 252/252 | 336 | 1324 | 64,504 | 5,900 | 6.32 s |
+| **CRISP + CHD** | **252/252** | **337** | **1403** | **64,039** | **0** | **7.27 s** |
+
+相对 CAB：
+
+- 查询 −39.8%；
+- LP −55.0%；
+- YES 节点 −2.3%（总量被 stress 的 60k 上限实例主导；只看 base+pert，从 5,188 降到 4,038，−22.2%）；
+- Markov 评估 12,300→0；
+- 墙钟 −65.8%。
+
+### 6.3 分语料
+
+| 语料 | 方法 | 查询 | LP | YES 节点 | Markov | 墙钟 |
+|---|---|---:|---:|---:|---:|---:|
+| base 141 | CAB | 300 | 1358 | 4,900 | 6,300 | 11.56 s |
+| base 141 | bounds+CAB | 190 | 548 | 4,358 | 3,100 | 3.39 s |
+| base 141 | **CRISP+CHD** | **191** | **612** | **4,038** | **0** | **4.15 s** |
+| pert 60 | CAB | 147 | 882 | 288 | 1,800 | 4.45 s |
+| pert 60 | bounds+CAB | 90 | 388 | 96 | 600 | 1.27 s |
+| pert 60 | **CRISP+CHD** | **90** | **388** | **0** | **0** | **1.23 s** |
+| stress 51 | CAB | 113 | 879 | 60,370 | 4,200 | 5.26 s |
+| stress 51 | bounds+CAB | 56 | 388 | 60,050 | 2,200 | 1.66 s |
+| stress 51 | **CRISP+CHD** | **56** | **403** | **60,001** | **0** | **1.89 s** |
+
+CHD 在 base 上比 CAB oracle 多 64 次 LP、慢 0.76 s，但少 320 个 YES 节点；在 pert 上把 96 个 YES 节点降到 0。整体上，**区间收缩是主收益，oracle 替换是次收益**。
+
+### 6.4 Bracket 压缩
+
+| 语料 | $\mathrm{LB}_0$ | $\mathrm{UB}_0$ | $W_0$ | $\rho_0$ 均值 | $\mathrm{LB}$ | $\mathrm{UB}$ | $W$ | $\rho$ 均值 | $\rho=1$ | LB lift | UB drop 实例 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| clean | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 7 | 7 |
-| corrupt1 | 7 | 0 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 7 | 7 |
-| fail1 | 7 | 0 | 7 | 7 | 0 | 0 | 0 | 0 | 0 | 7 | 7 |
-| corrupt1 + no-recover | 7 | 0 | 0 | 0 | 7 | 0 | 6 | 6 | 0 | 7 | 7 |
-| fail1 + no-recover | 7 | 0 | 0 | 7 | 0 | 0 | 6 | 6 | 0 | 7 | 7 |
-| fail-all + no-recover | 0 | 7 | 0 | 459 | 0 | 0 | 455 | 448 | 7 | 7 | 0 |
+| base 141 | 3902 | 4388 | 486 | 1.1292 | 4003 | 4144 | 141 | 1.0318 | 55 | 101 | 95 |
+| pert 60 | 1924 | 2249 | 325 | 1.1681 | 1955 | 2045 | 90 | 1.0460 | 3 | 31 | 60 |
+| stress 51 | 1625 | 1883 | 258 | 1.1579 | 1667 | 1740 | 73 | 1.0437 | 0 | 42 | 46 |
+| **总** | **7451** | **8520** | **1069** | **1.1443** | **7625** | **7929** | **304** | **1.0376** | **58** | **174** | **201** |
 
-- `corrupt1`：7 个损坏证书全部被 `verify` 抓住，7 个都由 row-core 恢复；`missed=0`。
-- `fail1`：7 个强制失败全部由 row-core 恢复，判决不变。
-- 关闭恢复后，6 个叶证书缺失触发 6 次域分裂，两个子问题都成功证明，判决仍为 7/7 NO；第 7 个损坏发生在 probe 而非叶子，所以没有 `leaf_missing`。
-- 全部失败且关闭恢复：7 个实例都 fail-stop 成 UNKNOWN，`ft_stuck=7`、`proof_complete=False`；没有任何无证书的 NO。这正是容错层想要的行为。
+最大竞争比：
 
-## 9. 复现文件
+- base：1.3333→1.1220；
+- pert：1.2500→1.0909；
+- stress：1.2500→1.0909。
 
-- `exp/v8a/rdf.py`：BRC-ALC 实现（`RDF` 类，含 `_farkas`、`farkas_core`、`_ft_split`、`_schedule_from_z`、`_sgs_dfs`、`decide`、`audit_rdf`、`proof_complete`）。
-- `exp/v8a/bench_rdf.py`：NO 252（QNC/QUC/QSP/BRC 纯 NO）+ YES 141（QUC6/BRC）；输出 `exp/v8a/bench_rdf.json`。
-- `exp/v8a/bench_ft.py`：故障注入；输出 `exp/v8a/bench_ft.json`。
-- `exp/v8a/bench_unified.py`：BRC 统一模式在 252 个 NO 上的开销；输出 `exp/v8a/bench_unified_no.json`。
-- 依赖：`exp/v76/qsp.py`（向下引擎）、`exp/v76/smc.py`（`farkas_obj`）、`exp/v72/quc.py`、`exp/v71/qnc.py`、`exp/v60/cert.py`、`exp/v90/grsc.py`（`check_schedule` 参考）。
+总宽度 −71.6%，平均竞争比 −9.3%，58 个实例在 oracle 调用前已经精确。
 
-复现命令（工作目录 `/home/runner/work/xuen/xuen/workspace`）：
+### 6.5 消融
 
-    .venv/bin/python exp/v8a/bench_rdf.py
-    .venv/bin/python exp/v8a/bench_ft.py
-    .venv/bin/python exp/v8a/bench_unified.py
+| 变体 | 区间宽度和 | $\rho=1$ 实例 | 预测二分深度 |
+|---|---:|---:|---:|
+| 无预处理 | 1069 | 11 | 558 |
+| 只 LB lift | 895 | 11 | 538 |
+| 只 UB drop | 478 | 50 | 303 |
+| **两者** | **304** | **58** | **254** |
 
-## 10. 已知风险与边界
+解读：
 
-1. **YES 构造器是随机化、有界节点的**：60k SGS 节点和 48 次采样之外不保证找到调度；在本数据上 141/141，但不能外推成「所有 YES 都能闭合」。更大的实例可能需要提高 `yes_node_budget`，或换确定性 DFS/CP。
-2. **采样只用一个根 LP 解**：\(d_i(t)\) 来自一个可行 \(z\)，不是所有可行解的凸组合；它可能错过只在另一个等价 LP 顶点才显现的好顺序。这是启发式，不是完备性来源。
-3. **NO 侧仍依赖 SD 割**：若根 LP 的 lazy 分离本身在预算内无法收敛，BRC 会返回 UNKNOWN（`roundcap`）而不是 NO；phase A 的 root_z fallback 只帮助 YES 构造器，不帮助 NO 证明。
-4. **容错注入是合成的**：只模拟证书提取失败/损坏，不模拟 LP 求解器数值失败、内存不足或对抗性割。`farkas_core` 在严重数值问题下也可能失败，此时只能 fail-stop 成 UNKNOWN。
-5. **统一模式在少数 NO 上有构造器开销**：压力集 idx 47 的 60k SGS 节点是实测最坏情况；若已知目标为 NO，应使用 `yes_scan=False`。
-6. **规模与基线**：\(n\le21\)，未与 CP/SAT 或商业调度器对比；墙钟受 Python/HiGHS 影响，LP 数比墙钟更可移植。
-7. **审计修复的边界**：`audit_qsp` 修了 v7.2 的 cross 字段错位，但审计只覆盖已记录的对象；未触发的规则（例如跨任务共识在本数据上 0 次命中）仍缺少数据验证。
+- UB drop 是主驱动（558→303，−45.7%）；
+- LB lift 单独几乎不减少查询（558→538，−3.6%）；
+- 两者合起来（558→254，−54.5%）超过各自贡献之和，说明 **LB lift 的收益依赖 UB 已被压低**；
+- 58 个 $\rho=1$ 实例全部来自两者合用；只 UB drop 是 50 个，只 LB lift 是 11 个。
 
-## 11. 一句话最大风险
+### 6.6 负结果：高维凸包太松
 
-**YES 侧是随机化、有界节点的构造器，60k 节点和 48 次采样之外不保证找到调度；NO 侧仍依赖 SD 割的强度，若根 LP 的 lazy 分离本身耗尽预算，BRC 会诚实地返回 UNKNOWN，而不是一个没有证书的 NO。**
+对 7 个 hard YES，计算 $h=\mathrm{OPT}$ 处的 LP 投影盒宽度：
+
+| 实例 | 盒宽 $\sum_i(\mathrm{hi}_i-\mathrm{lo}_i)$ | 盒 LDS 节点 | 盒 LDS 结果 | CHD 结果 |
+|---|---:|---:|---|---|
+| holdout 35 | 100.0 | 65,411 | 找到 | hull:lo，28 LP / 16,381 LDS |
+| large_a 5 | 135.3 | 70,659 | 4 层差异内失败 | phase A，10 LP / 0 LDS |
+| large_het 0 | 179.5 | 718 | 找到 | cheap:mean，12 LP / 340 LDS |
+| large_het 3 | 261.0 | 12,634 | 找到 | cheap:mean，12 LP / 3,745 LDS |
+| large_het 7 | 250.3 | 98,491 | 4 层差异内失败 | cheap:mean，13 LP / 1,535 LDS |
+| hard3 4 | 185.6 | 33 | 找到 | cheap:mean，12 LP / 173 LDS |
+| large_b 1 | 251.8 | 681 | 找到 | cheap:mean，13 LP / 1,387 LDS |
+
+盒宽 100–261，远大于实例的 $h$（30–41）。盒 LDS 在 2/7 上失败，而 CHD 在同一批实例上全部闭合（10–28 LP）。因此：
+
+- **投影盒是可靠的，但不是紧的；**
+- **把高维凸包当硬域约束，收益不足以抵消 $2n$ 次 LP；**
+- 高维凸包只保留为可选的顺序 oracle（`hull_projection` 默认关闭）。
+
+第二个负结果：投影尾界
+
+\[
+\mathrm{LB}_{\mathrm{hull}}(h)=\max_i\bigl(\mathrm{lo}_i(h)+p_i+q_i\bigr).
+\]
+
+在 141 个 base 实例上、$h=\mathrm{UB}$ 处：
+
+- 只有 4 个实例把 LB 抬高 1；
+- 0 个实例超过已知 OPT；
+- 12 个实例等于 OPT；
+- 其余普遍弱于 critical path + eligibility load。
+
+因此它没有进入最终算法。
+
+第三个负结果：hull 顺序消融（141 个 YES，来自 v9.1 CHD）：
+
+| 变体 | YES | hull LP | LDS 节点 | random fallback | 墙钟 |
+|---|---:|---:|---:|---:|---:|
+| full | 141/141 | 16 | 39,420 | 0 | 7.17 s |
+| no_hull | 141/141 | 0 | 39,403 | 1 | 7.25 s |
+| hull_only | 141/141 | 719 | 449,813 | 3 | 13.72 s |
+
+`no_hull` 只多 1 次 random fallback；`hull_only` 则要 719 次 hull LP 和 449,813 个 LDS 节点。结论：**hull 顺序是一个安全网，不是主引擎。**
+
+### 6.7 证书与最终审计
+
+| 检查 | 结果 |
+|---|---|
+| energy NO 证书 | 174 张，`verify_prep=True` 174/174，`cert_bad=0` |
+| 区间可靠性 | 252/252 满足 $\mathrm{LB}\le\mathrm{OPT}\le\mathrm{UB}$ |
+| CRISP 最终审计 | 252/252 `certified=True`、`audit=True`、`proof=True` |
+| `cert_h` | 252/252 等于 $\mathrm{OPT}-1$ |
+| UNKNOWN | 0（bound 与 crisp 都是 0） |
+| 基线 CAB | 252/252 认证 |
+
+`ok` 的定义是
+
+```python
+certified and opt == known and audit and proof and cert_h == known - 1
+```
+
+252/252 为真。没有出现「无证书的 NO」或「未重放的 YES」。
+
+### 6.8 oracle 选择
+
+| 对比 | 结论 |
+|---|---|
+| CRISP+CAB vs CRISP+CHD | CHD 少 12,300 次 Markov 评估、少 465 个 YES 节点；多 79 次 LP、多 0.95 s |
+| CRISP+CAB vs CAB | 查询 560→336，LP 3119→1324，墙钟 21.27→6.32 s |
+| CRISP+CHD vs CAB | 查询 560→337，LP 3119→1403，墙钟 21.27→7.27 s |
+
+因此：
+
+- 预处理本身（CRISP+CAB）已经拿到大部分收益；
+- CHD 把随机构造器彻底移除，代价是少量额外 LP；
+- 若目标是「无随机、可复现」，CRISP+CHD 更合适；若目标是「最小 LP」，CRISP+CAB 更合适。
+
+### 6.9 威胁与边界
+
+- 语料只有 252 例，$n\le21$、$m\le4$；不能外推到大规模。
+- 墙钟是单次运行、共享 runner、Python 环境；应看相对比例，不看绝对秒数。
+- CAB 基线含随机种子；CHD 是确定性的。基线的 YES 节点/Markov 可能随种子波动。
+- `predq` 是理想二分深度；实际 `Q` 含最终证明和重试，比较时必须用同一记账。
+- energy 过滤的预算（64 子集 / 20k 区间）是人为上限；更大的预算可能抬更多 LB，但预处理会变慢。
+- `chip_bounds` 的 UB drop 只用 4 个订单；这不是 2-近似算法，只是便宜的上界组合。
+- 高维凸包的负结果只覆盖 7 个 hard YES 和 141 base 的尾界实验；换语料可能不同。
+- 竞争的语义是「证书区间比」，不是在线竞争比；不要把它和在线算法的 competitive ratio 混用。
+
+## 7. 复现
+
+### 7.1 文件
+
+| 文件 | 作用 |
+|---|---|
+| `exp/v8c/chip.py` | CRISP-ALC：`base_bounds`、`order_portfolio`、`hull_projection`、`chip_bounds`、`CRISPBounds`、`CRISP`、`simulate_queries` |
+| `exp/v8c/bench_chip.py` | 主实验：CAB / bounds+CAB / CRISP+CHD，写 `bench_chip.json` |
+| `exp/v8c/bench_bounds.py` | bracket 统计、消融、证书验证，写 `bench_bounds.json` |
+| `exp/v9d/cab.py` | `CABOpt`、`CAB`、`_greedy_rank` |
+| `exp/v9b/chd.py` | `CHD` |
+| `exp/v9c/scale.py` | `energy_cert`、`windows`、`verify_prep` |
+| `exp/v8a/rdf.py` | `RDF`、`check_schedule` |
+| `exp/v9d/bench_opt.json` | CAB 基线结果 |
+| `exp/v71/perturb60.pkl` | 60 个扰动实例 |
+| `exp/v81/h5h47_branch.pkl` | 51 个压力实例 |
+
+### 7.2 命令
+
+```bash
+cd /home/runner/work/xuen/xuen/workspace
+.venv/bin/python exp/v8c/bench_bounds.py
+.venv/bin/python exp/v8c/bench_chip.py
+```
+
+### 7.3 预期输出
+
+`bench_bounds.py` 应打印：
+
+```
+base ... span0 486 span 141
+pert ... span0 325 span 90
+stress ... span0 258 span 73
+none   span 1069 exact 11 predq 558
+lb     span 895 exact 11 predq 538
+ub     span 478 exact 50 predq 303
+both   span 304 exact 58 predq 254
+```
+
+`bench_chip.py` 应打印总表：
+
+```
+cab   {'n': 252, 'cert': 252, 'q': 560, 'lp': 3119, 'yn': 65558, 'mc': 12300, 't': 21.27}
+bound {'n': 252, 'cert': 252, 'q': 336, 'lp': 1324, 'yn': 64504, 'mc': 5900, 't': 6.32}
+crisp {'n': 252, 'cert': 252, 'q': 337, 'lp': 1403, 'yn': 64039, 'mc': 0, 't': 7.27}
+```
+
+秒数会因机器负载略有波动；查询、LP、YES 节点、Markov 是确定性的（CAB 基线的随机部分除外）。
+
+## 8. 已知风险
+
+1. **预处理覆盖不足。** energy 过滤只枚举 64 个子集、20k 个区间；在更大的 $m$ 或更长的时间域上可能漏掉 overload，导致 LB lift 为 0、区间仍然很宽。证伪方式：构造一个 $m\ge6$ 的语料，其中 energy 证书命中率显著下降，CRISP 退化到 CAB。
+2. **UB 组合太窄。** 只有 4 个 greedy 订单；如果它们都不优于初始 est 调度，UB 不会下降。证伪方式：找一批实例，4 个订单的 $C_{\max}$ 都等于初始 UB，但 OPT 更低。
+3. **下界证书类型有限。** 只用 window/energy；优先约束和整数性造成的 gap（例如 hard3#2）不会被这两类证书捕捉。证伪方式：找一批 integrality gap 大、但 energy 证书打不中的实例，观察 LB lift 是否接近 0。
+4. **高维凸包负结果不可外推。** 7 个 hard YES 的盒宽 100–261；换语料可能更紧。证伪方式：找一个族，$H(h)$ 的宽度接近 0，且 box-LDS 明显优于 CHD。
+5. **竞争比语义。** $\rho=\mathrm{UB}/\mathrm{LB}$ 是证书区间比，不是在线竞争比；$O(\log W_0)$ 的查询界假设 oracle 精确且不返回 UNKNOWN。证伪方式：在在线/对抗设置中使用，或让 oracle 频繁 UNKNOWN。
+6. **oracle 完整性。** CHD/CAB 仍是 NP-hard 判定器，最坏情况会 UNKNOWN；本语料 0 UNKNOWN，不代表一般情况。CRISP 遇到 UNKNOWN 会重试，不会给假答案。
+7. **规模。** $2^m$ 的 eligibility load 枚举和 energy 子集枚举不适合大 $m$；本语料 $m\le4$。证伪方式：$m\ge10$ 的实例。
+8. **最终证明依赖 $\mathrm{OPT}-1$。** 若 oracle 无法在 $\mathrm{OPT}-1$ 给出 NO，`certified=False`；incumbent 可能仍最优，但未被证明。
+9. **计时与基线。** 单次运行、共享 runner、Python 开销；CAB 基线含随机种子。应看相对比例。
+10. **接口风险。** `CRISP` 依赖 `CABOpt.initial_bounds` 的返回约定和 `_result` 的 `lb0/ub0` 语义；若基类改变，bracket 统计可能被误读。复现时以 `bench_bounds.json` 的原始字段为准。
+
+## 9. 一句话最大风险
+
+**CRISP 的收益完全取决于预处理能否在预算内把 $[\mathrm{LB},\mathrm{UB}]$ 压窄；如果 energy/window 规则打不中，且 4 个 greedy 订单都找不到更优上界，区间仍然会很宽，后续 oracle 调用数会退化到 CAB 水平甚至更多。**
 <!-- ARTIFACT:END -->
