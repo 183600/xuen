@@ -1,0 +1,1412 @@
+[
+ {
+  "case": "holdout",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021808862686157227,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 1,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02325749397277832,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 2,
+  "v": true,
+  "lp": 4,
+  "nodes": 1,
+  "t": 0.01881098747253418,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 3,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02201390266418457,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 4,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.014426946640014648,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 5,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.007987737655639648,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 6,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.008445978164672852,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02197408676147461,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 8,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.019291162490844727,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 9,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02127814292907715,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 10,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.020462751388549805,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 11,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.025707483291625977,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 12,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02419304847717285,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 13,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.03583550453186035,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 14,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.026553869247436523,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 15,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.022192001342773438,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 16,
+  "v": true,
+  "lp": 4,
+  "nodes": 1,
+  "t": 0.01273202896118164,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 17,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.022377967834472656,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 18,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.0229339599609375,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 19,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02353048324584961,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 20,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.013298273086547852,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 21,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.021943092346191406,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 22,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.030476093292236328,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 23,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.024256229400634766,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 24,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02494359016418457,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 25,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.024569272994995117,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 26,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.019875288009643555,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 27,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.030159950256347656,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 28,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01957559585571289,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 29,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02479243278503418,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 30,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.008678913116455078,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 31,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.004735231399536133,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 32,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02933049201965332,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 33,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.023777008056640625,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 34,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.004632711410522461,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 35,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.03248906135559082,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 36,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.029433727264404297,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 37,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.007260322570800781,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 38,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02268815040588379,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 39,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02643418312072754,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 40,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.027239084243774414,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 41,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.007579326629638672,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 42,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.030693531036376953,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 43,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.029866933822631836,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 44,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0045926570892333984,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 45,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021509170532226562,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 46,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021083831787109375,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 47,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.026734113693237305,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 48,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.019080638885498047,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "holdout",
+  "idx": 49,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.0075876712799072266,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.017183780670166016,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 1,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.016346216201782227,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 2,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01727294921875,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 3,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0031304359436035156,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 4,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021622419357299805,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.023066043853759766,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 6,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.026093482971191406,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.017297744750976562,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 8,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02353501319885254,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 9,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.003320455551147461,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 10,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.020998716354370117,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 11,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.020407676696777344,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 12,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01850438117980957,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 13,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.022619962692260742,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 14,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0031919479370117188,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 15,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02204298973083496,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 16,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.022045612335205078,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 17,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01914501190185547,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 18,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021518468856811523,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 19,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.025697708129882812,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 20,
+  "v": true,
+  "lp": 4,
+  "nodes": 1,
+  "t": 0.01176762580871582,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 21,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.017856359481811523,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 22,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.019756078720092773,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 23,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021027326583862305,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 24,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01745891571044922,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 25,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.017084836959838867,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 26,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01869821548461914,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 27,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0030701160430908203,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 28,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.019065380096435547,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 29,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02668595314025879,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 30,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.023903608322143555,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 31,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01807236671447754,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 32,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.016788721084594727,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 33,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.009816408157348633,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 34,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.003284931182861328,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 35,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01799488067626953,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 36,
+  "v": true,
+  "lp": 4,
+  "nodes": 1,
+  "t": 0.013270854949951172,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 37,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0027701854705810547,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 38,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01936054229736328,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 39,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.022363901138305664,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 40,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02173137664794922,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 41,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.003124713897705078,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 42,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.01833486557006836,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 43,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.021575212478637695,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "synth",
+  "idx": 44,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.016965389251708984,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.03178858757019043,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 1,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.034924983978271484,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 2,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.008133172988891602,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 3,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.040287017822265625,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 4,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.05795621871948242,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.037687063217163086,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 6,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.024487972259521484,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_a",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.04513287544250488,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.08802413940429688,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 1,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.0665585994720459,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 2,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.060312509536743164,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 3,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.03515219688415527,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 4,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.0956721305847168,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.06366229057312012,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 6,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.06124448776245117,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.10902905464172363,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 8,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.04857683181762695,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_b",
+  "idx": 9,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.042362213134765625,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.10413312911987305,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 1,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.030712604522705078,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 2,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.04768514633178711,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 3,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.14698576927185059,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 4,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.053415536880493164,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.14628195762634277,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 6,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.04797196388244629,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "large_het",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.1188347339630127,
+  "gap": true,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 0,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.024962663650512695,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 1,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.012659549713134766,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 2,
+  "v": true,
+  "lp": 1,
+  "nodes": 1,
+  "t": 0.0041980743408203125,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 3,
+  "v": true,
+  "lp": 2,
+  "nodes": 1,
+  "t": 0.00853419303894043,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 4,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.04182600975036621,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02328968048095703,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 6,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.012813806533813477,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 7,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.024361848831176758,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 8,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02875232696533203,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 9,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.020581960678100586,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 10,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.014163970947265625,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "hard3",
+  "idx": 11,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02918267250061035,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 0,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.011716127395629883,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 1,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.028423309326171875,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 2,
+  "v": true,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02041482925415039,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 3,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.01646137237548828,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 4,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.0201265811920166,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 5,
+  "v": null,
+  "lp": 6,
+  "nodes": 1,
+  "t": 0.02254319190979004,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 6,
+  "v": true,
+  "lp": 3,
+  "nodes": 1,
+  "t": 0.011035919189453125,
+  "gap": false,
+  "audit": true
+ },
+ {
+  "case": "deep",
+  "idx": 7,
+  "v": true,
+  "lp": 5,
+  "nodes": 1,
+  "t": 0.01847696304321289,
+  "gap": false,
+  "audit": true
+ }
+]
