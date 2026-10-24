@@ -110,3 +110,13 @@
 {"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-24 12:01:41"}
 {"event": "skipped", "round": 6, "reason": "超时", "ts": "2026-10-24 12:31:41"}
 {"event": "skipped", "round": 7, "reason": "超时", "ts": "2026-10-24 13:01:41"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-24 13:32:17"}
+{"event": "candidate", "id": "20261024-134556-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-10-24 13:45:56"}
+{"event": "verdict", "id": "20261024-134556-r2", "round": 2, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-24 13:45:56"}
+{"event": "restored", "round": 2, "why": "候选待评分", "best": "20261024-005613-r7", "changed": ["idea", "artifact"], "ts": "2026-10-24 13:45:56"}
+{"event": "candidate", "id": "20261024-141245-r3", "round": 3, "changed": ["idea", "artifact"], "ts": "2026-10-24 14:12:45"}
+{"event": "verdict", "id": "20261024-141245-r3", "round": 3, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-24 14:12:45"}
+{"event": "restored", "round": 3, "why": "候选待评分", "best": "20261024-005613-r7", "changed": ["idea", "artifact"], "ts": "2026-10-24 14:12:45"}
+{"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-24 14:42:45"}
+{"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-24 15:12:45"}
+{"event": "skipped", "round": 6, "reason": "超时", "ts": "2026-10-24 15:42:45"}
