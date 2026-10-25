@@ -107,7 +107,7 @@ def _singleton_leaf(inst, h, F, lp, bounds):
 
 # --------------------------------------------------- depth-parameterized
 def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
-                seed=0):
+                seed=0, root_lp=None, root_res=None):
     """Three-valued fixed-h decision procedure.
 
     Returns dict(verdict, proof, schedule, machine, nodes, leaves,
@@ -121,10 +121,14 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     n, m, p = inst['n'], inst['m'], inst['p']
     elig = _elig_aware(inst)
     est, q = heads_tails(inst, 0, [0] * n)
-    lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
+    if (root_lp is not None and root_res is not None
+            and root_lp.inst is inst and root_lp.T == h):
+        lp = root_lp
+    else:
+        lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
     base = [(0, 1)] * lp.N
     stats = dict(nodes=0, leaves=0, depth=0, lp_solves=0, cert_lp=0,
-                 unknown=False, holes=0, branch_jobs=[])
+                 unknown=False, holes=0, branch_jobs=[], root_reused=0)
     policy = policy or {}
 
     def solve(bounds, depth):
@@ -132,6 +136,9 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             stats['unknown'] = True
             return None
         stats['nodes'] += 1
+        if (depth == 0 and root_res is not None and bounds == base):
+            stats['root_reused'] += 1
+            return root_res
         stats['lp_solves'] += 1
         return lp.solve(bounds)
 
