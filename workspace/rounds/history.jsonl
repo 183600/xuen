@@ -665,3 +665,7 @@
 {"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-25 08:28:25"}
 {"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-25 08:53:25"}
 {"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-25 09:18:25"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-25 10:52:10"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261025-000801-r3", "changed": ["idea", "artifact"], "ts": "2026-10-25 10:52:10"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-25 11:17:10"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-25 11:42:10"}
