@@ -154,12 +154,45 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             frac = sum(v for _, v in dist if 1e-7 < v < 1 - 1e-7)
             if frac <= 1e-7:
                 continue
-            cand.append(((sum(v for _, v in dist), q[i],
-                          len(inst['succ'][i]), -i), i, dist))
+            mass = sum(v for _, v in dist)
+            peak = max(v for _, v in dist)
+            ent = -sum(v * math.log(v) for _, v in dist if v > 1e-12)
+            mean_t = sum(tt * v for tt, v in dist) / max(mass, 1e-12)
+            var_t = sum(v * (tt - mean_t) ** 2 for tt, v in dist) / max(mass, 1e-12)
+            feats = dict(
+                frac=frac, mass=mass, q=float(q[i]), p=float(p[i]),
+                succ=float(len(inst['succ'][i])),
+                pred=float(len(inst['pred'][i])),
+                slack=float(h - q[i] - p[i] - est[i]),
+                width=float(len(times)), peak=peak, entropy=ent,
+                spread=math.sqrt(var_t),
+                lo=float(times[0]), hi=float(times[-1]))
+            cand.append((i, dist, feats))
         if not cand:
             return None, None
-        cand.sort(reverse=True)
-        _, i, dist = cand[0]
+        weights = policy.get('weights')
+        if weights:
+            names = list(cand[0][2])
+            lo = {k: min(c[2][k] for c in cand) for k in names}
+            hi = {k: max(c[2][k] for c in cand) for k in names}
+            scored = []
+            for i, dist, feats in cand:
+                sc = 0.0
+                for k in names:
+                    w = weights.get(k, 0.0)
+                    if not w:
+                        continue
+                    span = hi[k] - lo[k]
+                    val = 0.5 if span <= 1e-12 else (feats[k] - lo[k]) / span
+                    sc += w * val
+                scored.append(((sc, -i), i, dist))
+            scored.sort(reverse=True)
+            _, i, dist = scored[0]
+        else:
+            cand = [((c[2]['mass'], q[c[0]], len(inst['succ'][c[0]]), -c[0]),
+                     c[0], c[1]) for c in cand]
+            cand.sort(reverse=True)
+            _, i, dist = cand[0]
         total = sum(v for _, v in dist)
         split = policy.get('split', 0.5)
         acc = 0.0
