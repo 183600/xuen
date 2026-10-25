@@ -107,7 +107,7 @@ def _singleton_leaf(inst, h, F, lp, bounds):
 
 # --------------------------------------------------- depth-parameterized
 def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
-                seed=0, root_lp=None, root_res=None):
+                seed=0, root_lp=None, root_res=None, branch_jobs=None):
     """Three-valued fixed-h decision procedure.
 
     Returns dict(verdict, proof, schedule, machine, nodes, leaves,
@@ -116,6 +116,10 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     A hole is local: siblings are still explored.  A NO node is emitted
     only when both children are NO; one UNKNOWN child makes the parent
     UNKNOWN.
+
+    If branch_jobs is not None, only jobs in that set may be used as
+    branching variables.  A fractional LP with no allowed fractional
+    job is reported as stats['insufficient'] = True (a special hole).
     """
     t0 = time.time()
     n, m, p = inst['n'], inst['m'], inst['p']
@@ -129,8 +133,10 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     base = [(0, 1)] * lp.N
     stats = dict(nodes=0, leaves=0, depth=0, yes_depth=None,
                  lp_solves=0, cert_lp=0,
-                 unknown=False, holes=0, branch_jobs=[], root_reused=0)
+                 unknown=False, holes=0, branch_jobs=[], root_reused=0,
+                 insufficient=False)
     policy = policy or {}
+    allowed = None if branch_jobs is None else set(branch_jobs)
 
     def solve(bounds, depth):
         if nodecap is not None and stats['nodes'] >= nodecap:
@@ -150,6 +156,8 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     def choose(z, bounds):
         cand = []
         for i in range(n):
+            if allowed is not None and i not in allowed:
+                continue
             times = allowed_times(i, bounds)
             if len(times) <= 1:
                 continue
@@ -282,18 +290,24 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             i = None
             mid = None
             for j in range(n):
+                if allowed is not None and j not in allowed:
+                    continue
                 times = allowed_times(j, bounds)
                 if len(times) > 1:
                     i = j
                     mid = times[len(times) // 2 - 1]
                     break
             if i is None:
+                if allowed is not None:
+                    stats['insufficient'] = True
                 stats['unknown'] = True
                 stats['holes'] += 1
                 return None
         else:
             i, mid = choose(z, bounds)
             if i is None:
+                if allowed is not None:
+                    stats['insufficient'] = True
                 stats['unknown'] = True
                 stats['holes'] += 1
                 return None
