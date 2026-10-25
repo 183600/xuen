@@ -195,3 +195,9 @@
 {"event": "restored", "round": 3, "why": "轮次失败（超时）", "best": "20261024-005613-r7", "changed": ["idea", "artifact"], "ts": "2026-10-25 04:50:49"}
 {"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-25 05:20:49"}
 {"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-25 05:50:49"}
+{"event": "candidate", "id": "20261025-061033-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-25 06:10:33"}
+{"event": "verdict", "id": "20261025-061033-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-25 06:10:33"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261024-005613-r7", "changed": ["idea", "artifact"], "ts": "2026-10-25 06:10:33"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-25 06:40:33"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-25 07:10:33"}
+{"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-25 07:40:34"}
