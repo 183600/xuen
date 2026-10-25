@@ -59,10 +59,11 @@ class BranchProof(Proof):
 
     kind = 'branch'
 
-    def __init__(self, inst, h, tree, stats=None):
+    def __init__(self, inst, h, tree, stats=None, forbid0=None):
         super().__init__(inst, h)
         self.tree = tree
         self.stats = stats or {}
+        self.forbid0 = frozenset(forbid0 or ())
 
     def _allowed(self, i, F):
         lo, hi = _domain(self.inst, self.h, i)
@@ -93,7 +94,7 @@ class BranchProof(Proof):
 
     def audit_rdf(self):
         try:
-            return self._check(self.tree, frozenset())
+            return self._check(self.tree, self.forbid0)
         except Exception:
             return False
 

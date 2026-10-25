@@ -107,7 +107,8 @@ def _singleton_leaf(inst, h, F, lp, bounds):
 
 # --------------------------------------------------- depth-parameterized
 def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
-                seed=0, root_lp=None, root_res=None, branch_jobs=None):
+                seed=0, root_lp=None, root_res=None, branch_jobs=None,
+                forbid0=None):
     """Three-valued fixed-h decision procedure.
 
     Returns dict(verdict, proof, schedule, machine, nodes, leaves,
@@ -129,7 +130,8 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             and root_lp.inst is inst and root_lp.T == h):
         lp = root_lp
     else:
-        lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
+        lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig,
+                  forbid=forbid0)
     base = [(0, 1)] * lp.N
     stats = dict(nodes=0, leaves=0, depth=0, yes_depth=None,
                  lp_solves=0, cert_lp=0,
@@ -332,7 +334,9 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             return None
         return ('node', i, mid, frozenset(F), lo, hi)
 
-    tree = dfs(base, frozenset(), 0)
+    F0 = frozenset(forbid0 or ())
+    stats['forbid0'] = len(F0)
+    tree = dfs(base, F0, 0)
     stats['t'] = round(time.time() - t0, 5)
     if tree is None:
         return dict(verdict=None, proof=None, schedule=None, machine=None,
@@ -340,7 +344,7 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     if tree[0] == 'yes':
         return dict(verdict=True, proof=None, schedule=tree[1],
                     machine=tree[2], **stats)
-    proof = BranchProof(inst, h, tree, stats)
+    proof = BranchProof(inst, h, tree, stats, forbid0=F0)
     if not proof.audit_rdf():
         stats['unknown'] = True
         return dict(verdict=None, proof=None, schedule=None, machine=None,
