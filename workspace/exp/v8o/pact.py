@@ -108,7 +108,7 @@ def _singleton_leaf(inst, h, F, lp, bounds):
 # --------------------------------------------------- depth-parameterized
 def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
                 seed=0, root_lp=None, root_res=None, branch_jobs=None,
-                forbid0=None):
+                forbid0=None, timelimit=None):
     """Three-valued fixed-h decision procedure.
 
     Returns dict(verdict, proof, schedule, machine, nodes, leaves,
@@ -141,6 +141,10 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     allowed = None if branch_jobs is None else set(branch_jobs)
 
     def solve(bounds, depth):
+        if timelimit is not None and time.time() - t0 > timelimit:
+            stats['unknown'] = True
+            stats['timeout'] = True
+            return None
         if nodecap is not None and stats['nodes'] >= nodecap:
             stats['unknown'] = True
             return None
