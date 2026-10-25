@@ -1,0 +1,930 @@
+[
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 0.07
+ },
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 0.309
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 6,
+  "h": 33,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   11
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 1.18
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 16,
+  "h": 33,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   11
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 1.253
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 6,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.364
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 18,
+  "h": 33,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   5
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.449
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 26,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 1.496
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.542
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 1.582
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.612
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 1.623
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 1.636
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 1.647
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.678
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 1.691
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 16,
+  "root_status": 0,
+  "t": 1.801
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 9,
+  "root_status": 0,
+  "t": 1.858
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 8,
+  "root_status": 0,
+  "t": 1.904
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 1.935
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 8,
+  "root_status": 0,
+  "t": 1.983
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   5
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.036
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.077
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 2.1
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.139
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.179
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   7,
+   20
+  ],
+  "tried": 26,
+  "root_status": 0,
+  "t": 2.347
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.389
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.429
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   7
+  ],
+  "tried": 5,
+  "root_status": 0,
+  "t": 2.468
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 10,
+  "root_status": 0,
+  "t": 2.529
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.582
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.621
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 5,
+  "root_status": 0,
+  "t": 2.65
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 10,
+  "root_status": 0,
+  "t": 2.71
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 2.723
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   7
+  ],
+  "tried": 5,
+  "root_status": 0,
+  "t": 2.765
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 2.798
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 2.829
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 2.842
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   5,
+   13
+  ],
+  "tried": 6,
+  "root_status": 0,
+  "t": 2.884
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 2.926
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 6,
+  "root_status": 0,
+  "t": 2.961
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 13,
+  "root_status": 0,
+  "t": 3.044
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   9
+  ],
+  "tried": 10,
+  "root_status": 0,
+  "t": 3.106
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 9,
+  "root_status": 0,
+  "t": 3.16
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 9,
+  "root_status": 0,
+  "t": 3.213
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   7
+  ],
+  "tried": 5,
+  "root_status": 0,
+  "t": 3.252
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   6,
+   2
+  ],
+  "tried": 9,
+  "root_status": 0,
+  "t": 3.312
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 3.323
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 3.355
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   7,
+   20
+  ],
+  "tried": 26,
+  "root_status": 0,
+  "t": 3.527
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 10,
+  "root_status": 0,
+  "t": 3.586
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 11,
+  "root_status": 0,
+  "t": 3.653
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 3.685
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 8,
+  "root_status": 0,
+  "t": 3.732
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 1,
+  "root_status": 0,
+  "t": 3.748
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   6
+  ],
+  "tried": 4,
+  "root_status": 0,
+  "t": 3.78
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "n": 15,
+  "m": 3,
+  "height1": true,
+  "split": [
+   3,
+   10
+  ],
+  "tried": 7,
+  "root_status": 0,
+  "t": 3.82
+ }
+]
