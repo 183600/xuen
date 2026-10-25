@@ -213,7 +213,8 @@ class AIDAProof(Proof):
 # --------------------------------------------------------------- decision
 def aida_branch_decide(inst, h, policies=None, spacecap=512, lpcap=4000,
                        depthcap=24, use_memo=True, use_sub=True,
-                       closure=False, cert_dens=BIG, seed=0):
+                       closure=False, cert_dens=BIG, seed=0, root_lp=None,
+                       arena=None):
     """Memoized box branch, with a portfolio of evaluation orders.
 
     Returns dict(verdict, proof, schedule, machine, nodes, leaves, depth,
@@ -240,12 +241,19 @@ def aida_branch_decide(inst, h, policies=None, spacecap=512, lpcap=4000,
         return dict(verdict=False, proof=proof, schedule=None,
                     machine=None, **stats)
 
-    lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
+    lp = root_lp if root_lp is not None else SDLP(
+        inst, h, est, q, use_dom=True, elig_aware=elig)
     base = [(0, 1)] * lp.N
-    nodes = []
-    memo = {}
-    no_boxes = []          # maximal NO boxes: [(box, node_id)]
-    yes_box = None         # (box, schedule, machine)
+    if arena is None:
+        nodes = []
+        memo = {}
+        no_boxes = []      # maximal NO boxes: [(box, node_id)]
+        yes_box = None     # (box, schedule, machine)
+    else:
+        nodes = arena.setdefault('nodes', [])
+        memo = arena.setdefault('memo', {})
+        no_boxes = arena.setdefault('no_boxes', [])
+        yes_box = arena.get('yes_box')
 
     def new_node(tag, box, **kw):
         nd = dict(tag=tag, box=box, **kw)
