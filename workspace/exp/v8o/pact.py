@@ -127,7 +127,8 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
     else:
         lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
     base = [(0, 1)] * lp.N
-    stats = dict(nodes=0, leaves=0, depth=0, lp_solves=0, cert_lp=0,
+    stats = dict(nodes=0, leaves=0, depth=0, yes_depth=None,
+                 lp_solves=0, cert_lp=0,
                  unknown=False, holes=0, branch_jobs=[], root_reused=0)
     policy = policy or {}
 
@@ -270,9 +271,11 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
         if not frac:
             got = _integral_schedule(inst, lp, z, elig)
             if got is not None:
+                stats['yes_depth'] = depth
                 return ('yes', got[0], got[1])
             singleton = _singleton_leaf(inst, h, F, lp, bounds)
             if singleton is not None:
+                stats['yes_depth'] = depth
                 return singleton
             # all starts may still be ambiguous; choose any job with
             # multiple allowed times as a branching variable.
