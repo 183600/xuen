@@ -3,106 +3,110 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 想法区 · 第 2 轮（承接 v8.7 APEX-ALC）：把「谁来证明 NO」变成可执行的分支树
+# 想法区 · 第 3 轮（承接 v8.8 SAGE-ALC）：把「指数级」压进一个可测的参数 k
 
-**灵感词**：self-stabilizing algorithm / genetic algorithm / linear programming  
-**起点**：v8.7 APEX-ALC 在 252 例上做到 252/252 认证，$Q=105$、LP $=874$、YES 节点 $=60001$、同 runner 复跑 11.82 s。上一轮把「近似比」变成了整数间隙 $g=\mathrm{OPT}-L^*$，并且证明 $g\in\{0,1\}$；但 APEX 仍然把最后的闭合压在 CHD oracle 上：58 个 $g=1$ 实例各要一次 NO，46 个 $g=0$ 实例各要一次 YES 构造，另有一个 $Q=2$ 的尾例。
+**灵感词**：parameterized algorithm / total correctness / complexity analysis  
+**起点**：v8.8 SAGE-ALC 在 252 例上做到 252/252 认证、$Q=0$、LP$_{\rm CHD}=0$、YES 节点 $=0$、9.62 s。它把 APEX 的 105 次 CHD 全部消掉，但代价写在上一轮的最后一句：LP-BRANCH 最坏是 $\prod_i |D_i(h)|$ 个叶子，`nodecap=96`、`depthcap=24` 只是经验阀门；一旦新语料把阀门顶开，$Q=0$ 和墙钟优势会一起消失。本轮不打算再找一个更快的 oracle，而是想把这句话变成一个**参数化定理**：先找到真正控制指数的参数，再给出全正确性（终止 + 可靠 + 完备）的论证，最后用复杂度分析和 252 例实验说明这个参数在当前语料上有多小。
 
-## 一、先把 105 次查询按「证明义务」重新分类
+## 一、先看数据：58 个 NO 并没有用满 96 个节点
 
-APEX 的查询分布看起来很干净：148 例 0 次、103 例 1 次、1 例 2 次。但把它按证明义务拆开，问题立刻变了：
+上一轮把 105 次查询拆成 58 个 NO、46 个 YES 和 1 个尾部。本轮我把这 58 个 NO 在 $h=\mathrm{OPT}-1$ 上重新跑了一遍完整搜索，得到的分支统计非常不「指数」：
 
-1. **58 次是「在 $L^*$ 上证 NO」。** 这些实例的 incumbent 已经是 $\mathrm{OPT}=L^*+1$，下界证明也把 $\mathrm{LB}$ 抬到了 $L^*$。唯一缺的是一张 $\mathrm{NO}(L^*)$。APEX 让 CHD 去做这件事，而 CHD 是一个 YES-first 的约束搜索；它最坏会在 YES 侧烧掉 60k 节点，stress 的那一例就是这样。
-2. **46 次是「在 $L^*=\mathrm{OPT}$ 上造 YES」。** 这些实例的 LP 在 $L^*$ 可行，但解是分数的；APEX 的 `lp_schedule` 舍入失败，LNS 在 $\mathrm{UB}-\mathrm{LB}=1$ 时不触发，于是只能问 CHD 要一张 $C_{\max}=L^*$ 的调度。
-3. **1 次是尾部扫描。** base 的 `large_het 7` 在二分后还做了一次线性扫描；它说明 $Q\le2$ 只是经验事实，不是定理。
+| 证明高度 $k$ | 实例数 | 节点数/例 | 叶子数/例 | 读法 |
+|---:|---:|---:|---:|---|
+| 0 | 194 | 1 | 1 | 根 LP 直接不可行，单张 Farkas 证书 |
+| 1 | 50 | 3 | 2 | 根节点切一刀，两个叶子都不可行 |
+| 2 | 7 | 5 | 3 | 一侧再切一刀 |
+| 4 | 1 | 9 | 5 | 最深的一条「毛毛虫」 |
 
-所以本轮的第一句话是：
-
-> **105 次查询不是 105 个「搜索深度」问题，而是 58 个 NO 证明、46 个 YES 构造和 1 个尾部；把这三类义务分开，才能分别用 LP、遗传搜索和证明代数去消掉。**
+58 个 $g=1$ 的 NO 证明合计只有 194 个 LP 节点、126 张叶子证书；最深一例 9 个节点，离 `nodecap=96` 很远。换句话说，SAGE 的指数上界是真的，但**这批实例的证明树高度 $k$ 最大只有 4**。如果指数真的由 $k$ 控制，那么最坏情况 $2^{k+1}-1$ 在这一批上最多是 31 个节点，实际最大 9 个。这个观察就是本轮的起点。
 
 ## 二、三个灵感词分别落在哪一层
 
-- **self-stabilizing algorithm**：自稳定算法从任意初始状态出发，只靠局部修复规则收敛到合法状态，不依赖外部初始化。APEX 的 proof store 其实已经是一个「判断集合」，但它没有闭包算子；APEX 的 bracket 也已经是一个「区间状态」，但它没有稳定化规则。我们可以把两者都写成自稳定系统：LP-BRANCH 从根 LP 的分数状态出发，局部地切分不稳定的叶子，直到每个叶子要么是整数调度、要么是 Farkas 不可行；STAB 从任意证明集合出发，反复应用 subsumption，直到判断集合闭合。两者都有有限的 ranking function，因此终止；判断闭包是单调规则的最小不动点，所以最终判断与插入顺序无关。
-- **genetic algorithm**：上界侧不应该只用一个 LNS 邻域。把调度看成「优先级排列 → 串行 SGS 解码」的基因组，用种群、交叉（OX）、变异、精英保留和单调局部修复去搜索；每个接受个体都必须过 `check_schedule`。它不是证明器，但它是上界侧的构造器，正好补 LP-BRANCH 只会证 NO、不会造 YES 的空缺。
-- **linear programming**：LP 不再只是「下界机」。固定 $h$ 的 SD LP 如果分数可行，就继续分支；如果不可行，叶子上的 Farkas 对偶就是一张可重放的 $\mathrm{NO}(h)$ 证明。换句话说，**LP 本身可以是一个 proof-producing decision procedure**，而不是只能给出一个数值下界。
+- **parameterized algorithm**：不是把 $n$、$T$、$\delta$ 当参数，而是把「证明树高度 $k$」当参数。先做核化：单点域（$|D_i(h)|=1$）的任务永不分支，零松弛关键路径上的任务自动是单点域；搜索只在一组自由任务上切分。然后做有界搜索：`Search(k)` 只允许高度 $\le k$ 的证明，找到就返回，找不到就报告 UNKNOWN。参数化算法要回答的不是「能不能多项式」，而是「$f(k)\cdot \mathrm{poly}$ 里的 $k$ 是什么、有多大」。
+- **total correctness**：SAGE 只证了「每个被接受的证明是可靠的」（soundness），没有证「搜索一定终止并给出答案」（completeness/termination）。本轮补三件事：第一，定义势函数 $\mu(F)=\sum_i |D_i(h,F)|$，证明每次非平凡切分都严格减小 $\mu$，所以完整搜索一定终止；第二，证明叶子规则和分支规则覆盖了所有调度，所以完整搜索是完备的；第三，做一个**总轨迹证书**，把初始上下界、每一次 probe、最终 NO($v-1$) 和 $C_{\max}=v$ 的调度一起重放，而不是只审计最后一张 NO 树。
+- **complexity analysis**：把一次 probe 的代价写成 $O(2^k(L+C))$，其中 $L$ 是一次 SDLP 求解、$C$ 是一次证书 LP；把外层写成 $O(2^k\log\Delta(L+C))$；把最坏情况写成 $k\le \mu(\varnothing)\le n(T+1)$；再用 252 例测出 $k$ 的真实分布。复杂度分析在这里不是装饰，它直接解释了为什么 NO 侧可以完整搜索，而 YES 侧不能。
 
-## 三、第一次试错：把 `sdecc_no` 当黑箱 oracle，NO 很快，但证明不可重放
+## 三、第一次试错：把「分数支撑 $\delta$」当参数，NO 反而更慢
 
-工作区里已经有 `exp/v60/sdecc.py` 的 `sdecc_no`：它在固定 $h$ 上做 LP 分支，分数变量按开始时间切成两半。直接拿它当 oracle，stress 的 NO 在 3–7 个 LP 节点内就返回，60k YES 节点瞬间消失。这个实验说明「LP 分支是 NO 侧的强引擎」。
+最自然的参数是根 LP 的分数变量数 $\delta$。工作区里已经有 `exp/v8n/core.py` 的 DCA 原型：它先求根 LP，取分数支撑 $S$，枚举 $S$ 中任务的开始时刻，把剩余任务留给 LP。这个思路听起来很参数化：$|S|$ 小，枚举就小。
 
-但它不能直接进 APEX：
+实测不是这样。$h=\mathrm{OPT}-1$ 上，stress 的根 LP 分数支撑平均 7.31、最大 13；base 最大 11，pert 最大 11。DCA 在 58 个 $g=1$ 的 NO 上用了 **1586 个 LP 节点、最大 56 个/例、13.41 s**；同一批实例，SAGE 风格的完整分支只用 **194 个节点**。DCA 的 `core_sizes` 常见是 6–10，但每个 core 里的任务有多个开始时刻，组合数很快膨胀；分数支撑描述的是「LP 顶点有多少个分数坐标」，不是「整数冲突需要切几刀」。结论：**$\delta$ 不是好参数，它高估了整数侧的证明复杂度。**
 
-- `sdecc_no` 只返回 `False/True/None`，没有留下可重放的证明树；把它塞进 `no_states` 会破坏 APEX 的 soundness 叙事。
-- 分支用 `bounds` 数组零掉列，和 `verify` 的 `forbid` 语义没有对齐；如果不把「路径上的禁止开始时刻」显式记录下来，检查器无法独立重放。
-- 递归实现会在大实例上撞 Python 递归深度；必须显式加 nodecap/depthcap，并在超限时退回 CHD。
+## 四、第二次试错：域熵和核大小也都太松
 
-结论：**LP 分支是必要的，但「一个 verdict」不是证明；必须把分支路径和叶子 Farkas 一起变成一等证明项。**
+第二个候选是域熵
+\[
+k_{\rm ent}=\sum_{i:|D_i|>1}\log_2|D_i(h)|.
+\]
+它在 base 上最大 89.9，stress 上最大 39.3；即使把单点域和零松弛任务全部核化掉，58 个 $g=1$ 的 NO 里仍有 57 个的自由任务数 $n_f=15$（另一个是 9）。$n_f=15$ 意味着最坏 $2^{15}$ 个叶子，和实际 3–9 个节点差了两个数量级。原因是 LP 在每一层都在剪枝：绝大多数域组合在根或第一层就被 Farkas 证书排除了。结论：**域熵和核大小是「搜索空间的体积」，不是「证明的深度」；它们都不是好参数。**
 
-## 四、第二次试错：只做遗传上界，YES 能造，但 NO 侧仍是 60 次
+## 五、第三次成功：$k$ = 证明树高度，NO 浅、YES 深
 
-第二个实验只做上界：把 4 个启发式顺序和随机排列作为初始种群，用 OX 交叉、交换/插入变异、精英保留，再做「只接受严格改进」的局部交换修复。它在独立的 46 个 $g=0$ 原型上能全部找到 $C_{\max}=L^*$ 的调度；集成到 SAGE 的 `no_bb` 变体后，GA 造出了 45 张 YES，但：
+把证明树的高度 $k$ 作为参数后，252 例的 $h=\mathrm{OPT}-1$（NO）分布是：
 
-- $Q=60$：58 个 $g=1$ 实例仍然要 CHD 的 NO，另 2 个 $g=0$ 实例 GA 没找到；
-- YES 节点回到 $60001$，stress 仍然是 60k；
-- 时间反而升到 24.65 s，因为 GA 在 $g=1$ 的不可行 $h$ 上会把预算跑满。
+```text
+k=0: 194 例    k=1: 50 例    k=2: 7 例    k=4: 1 例
+```
 
-结论：**GA 是必要的上界补件，但不是下界证明器；它不能替代 $\mathrm{NO}(L^*)$。**
+而 $h=\mathrm{OPT}$（YES）的分布是另一条曲线：
 
-## 五、合流：SAGE-ALC
+```text
+k=0: 55 例   k=1: 44 例   k=2: 54 例   k=3: 30 例
+k=4: 23 例   k=5: 18 例   ...           k=29: 1 例
+```
 
-把两次试错接起来，就得到本轮算法 **SAGE-ALC（Self-stabilizing proof Algebra with Genetic upper-side Evolution）**：
+这不是「同一个参数在两边都小」，而是一个**不对称性**：
 
-1. **LP-BRANCH（下界 / NO 侧）**：在 $h$ 上建 SD LP；分数可行就选一个分数任务，在它的允许开始时间上做二分；LP 不可行的叶子用 `integer_certificate(..., forbid=F)` 生成 Farkas 证书；整数叶子直接给出调度。所有叶子按 $F$ 分区，内部节点记录 $(i,m)$，整棵树就是 $\mathrm{NO}(h)$ 的证明。nodecap $=96$、depthcap $=24$，超限返回 UNKNOWN 并退回 GA/CHD。
-2. **GENETIC-UB（上界 / YES 侧）**：种群 $40$、代数 $60$、预算 $4000$ 次 SGS 评估；基因组是任务排列，解码器是 `_greedy_rank`，适应度是 $(\text{makespan},\sum C_i)$；OX 交叉、交换/插入变异、精英保留、局部交换修复；只有过 `check_schedule` 的调度才被接受。
-3. **STAB（证明代数）**：把 $\mathrm{NO}(h)$、$\mathrm{LB}(v)$、$\mathrm{UB}(s)$、$\mathrm{EXACT}(v)$ 写成单调规则；从任意 proof store 出发反复应用
+> **NO 证明只需要在 LP 上制造不可行，切一两刀就够；YES 构造需要在 LP 上把分数解变成整数调度，可能要走很深。SAGE 的经验成功，本质上是因为它把 LP-BRANCH 用在了 NO 侧、把 GA 用在了 YES 侧；一个统一的深度参数是错的。**
+
+这也是本轮算法设计的核心：PACT 不再用一个深度上限去卡所有 probe，而是把 NO 侧做成参数化完整搜索，把 YES 侧继续交给 GA/完整搜索的混合；同时用总轨迹证书把整条 bracket 路径固定下来。
+
+## 六、PACT-ALC：参数化证书树 + 全正确性 + 总轨迹
+
+本轮算法叫 **PACT-ALC**（Parameterized Certificate Trees with ALC），是 v8.8 SAGE-ALC 的子类，保留 bracket、LP pin、LP 舍入、LNS、STAB 和 GA，新增：
+
+1. **PACT-SEARCH**：三值、高度参数化的固定 $h$ 判定器
    \[
-   \mathrm{NO}(h)\Rightarrow \mathrm{LB}(h+1),\qquad
-   \mathrm{LB}(v)\land h<v\Rightarrow \mathrm{NO}(h),
+   \mathrm{Search}(h,d)\in\{\mathrm{NO}(\pi),\mathrm{YES}(s,m),\mathrm{UNKNOWN}\}.
    \]
-   直到不动点。最终 $\mathrm{LB}=\mathrm{UB}=v$ 时，只要 proof store 里有 $\mathrm{LB}(v)$（等价地，有 $v-1$ 的 NO），就直接 `MEET`，不再补问 $v-1$。
-4. **外层**：仍是 APEX 的 bracket + LP pin + LP 舍入 + LNS + CHD fallback；只是每个 probe 先问 LP-BRANCH，再问 GENETIC-UB，最后才问 CHD。CHD 调用才计入 $Q$。
+   每个节点先解 SDLP：不可行 → Farkas 叶子；整数 → `check_schedule` 的 YES；分数 → 按策略切一刀，递归到 $d-1$。只有两个子节点都是 NO 才返回 NO；一个 UNKNOWN 会让父节点 UNKNOWN。这样「洞」是局部的，不会像 SAGE 的 `depthcap` 那样一刀砍掉整个兄弟分支。
+2. **核化**：$|D_i(h)|=1$ 的任务和零松弛关键路径任务不参与分支；搜索只在 $n_f$ 个自由任务上切。核化是可靠的：零松弛任务满足 $est_i+p_i+q_i=h$，任何 $C_{\max}\le h$ 的调度都有 $s_i=est_i$；单点域更直接。
+3. **完整模式**：把 $d$ 设为 $\infty$，用势函数 $\mu(F)$ 保证终止；这就是全正确性的搜索侧。完整模式在 252 例上只用 450 个搜索 LP + 138 个证书 LP，10.59 s，$Q=0$，总审计 252/252。
+4. **快速模式（closing）**：bracketing probe 仍用 SAGE 的 caps + GA，只有 $ub-lb=1$ 的 closing probe 用完整搜索。它在 252 例上 11.43 s、总 LP 852（和 SAGE 完全一样，只是从 BB 重新分配到了 complete），总审计 252/252，$Q=0$。
+5. **TOTAL-TRACE**：一个新的总证书对象，重放初始 LB/UB、每次 probe 的 NO 证明或 YES 调度、最终 NO($v-1$) 和 $C_{\max}=v$ 的调度；它不信任 `certified` 标志，只信 `audit_rdf` 和 `check_schedule`。
 
-252 例的结果是：
+复杂度上，一次高度为 $k$ 的完整搜索最多 $2^{k+1}-1$ 个节点，时间 $O(2^k(L+C))$；外层最多 $O(\log\Delta)$ 次 probe，总计 $O(2^k\log\Delta(L+C))$。最坏情况 $k\le n(T+1)$，所以它不是多项式算法；但在 252 例上，NO 侧 $k\le4$，实际最大 9 个节点，参数化上界是 31，证明这个指数在当前语料上被 $k$ 压住了。
 
-| 语料 | $n$ | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 | 认证 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| base | 141 | 0 | 0 | 120 | 191 | 15 | 0 | 5.51 s | 141 |
-| pert | 60 | 0 | 0 | 81 | 78 | 10 | 0 | 1.03 s | 60 |
-| stress | 51 | 0 | 0 | 72 | 173 | 112 | 0 | 3.08 s | 51 |
-| **合计** | **252** | **0** | **0** | **273** | **442** | **137** | **0** | **9.62 s** | **252** |
+## 七、当前方案最大的风险
 
-对照同 runner 的 APEX：$Q=105\to0$，LP$_{\rm CHD}=874\to0$，YES $=60001\to0$，时间 $11.82\to9.62$ s；总计数 LP（pin + CHD + BB + cert）从 $1147$ 降到 $852$。最终证明分布是：58 张 `branch`（正好替换 APEX 的 58 张 `oracle`）、110 张 Farkas、60 张 bound、24 张 energy；$g=0$ 的 194 例最终证明与 APEX 完全一致，$g=1$ 的 58 例从 `oracle` 变成 `branch`。
-
-消融把三件东西的贡献分得很清楚：
-
-| 变体 | $Q$ | LP$_{\rm CHD}$ | YES 节点 | 时间 | 读法 |
-|---|---:|---:|---:|---:|---|
-| **SAGE full** | **0** | **0** | **0** | **9.62 s** | 58 NO + 46 YES + 1 UNKNOWN→GA |
-| `no_ga` | 1 | 13 | 0 | 9.71 s | B&B 的 1 个 UNKNOWN 退回 CHD |
-| `bb_no_only` | 2 | 24 | 0 | 13.21 s | B&B 只证 NO；GA 造 45 个 YES，漏 2 个 |
-| `no_bb` | 60 | 412 | 60001 | 24.65 s | GA 造 45 个 YES，但 58 个 NO 仍靠 CHD |
-
-这不是「APEX 加了一个更快的 oracle」：`branch` 是一等判断，`STAB` 是它的闭合算子，`GENETIC-UB` 是上界补件。三者缺一不可，但贡献最大的是 LP-BRANCH：它把「NO 证明」从 CHD 的 YES 搜索里独立出来，60k YES 节点因此归零。
-
-## 六、当前方案最大的风险
-
-**$Q=0$ 不是免费的：它把 CHD 换成了最坏指数级的 LP-BRANCH；如果新语料上分支树或叶子 Farkas 证书爆炸，SAGE 会同时失去 APEX 的查询数优势和墙钟优势。**
+**$k\le4$ 只是这 252 例的经验事实：如果新语料上 NO 证明高度变大，完整搜索会指数爆炸；而退回 SAGE 的 caps 又会把 $Q=0$ 和总证书一起丢掉——所以 PACT 的全正确性和它的性能保证，仍然绑在同一个未经证明的小参数上。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 产物区 · v8.8 SAGE-ALC：自稳定证明代数 + 遗传上界 + LP 分支证明
+# 产物区 · v8.9 PACT-ALC：参数化证书树、全正确性与总轨迹
 
 ## 0. 本轮产物与一句话结论
 
-**SAGE-ALC**（Self-stabilizing proof Algebra with Genetic upper-side Evolution）是 v8.7 APEX-ALC 的子类：保留 bracket、LP pin、LP 舍入、LNS 与 CHD fallback，新增
+**PACT-ALC**（Parameterized Certificate Trees with ALC）是 v8.8 SAGE-ALC 的子类：保留 APEX 的 bracket、LP pin、LP 舍入、LNS、STAB 和 GENETIC-UB，新增
 
-1. **LP-BRANCH**：固定 $h$ 的 SD LP 分支，分数叶子继续分裂，不可行叶子给出可重放的 Farkas 证书，整数叶子给出调度；整棵树是 $\mathrm{NO}(h)$ 的一等证明。
-2. **GENETIC-UB**：排列基因组 + 串行 SGS + OX 交叉 + 变异 + 精英保留 + 单调局部修复，专门补上界侧的 YES 构造。
-3. **STAB**：把 $\mathrm{NO}$、$\mathrm{LB}$、$\mathrm{UB}$、$\mathrm{EXACT}$ 写成单调判断，按需做 subsumption 闭包，最终用 $\mathrm{MEET}$ 消除 $\mathrm{OPT}-1$ 的 oracle。
+1. **PACT-SEARCH**：固定 $h$ 的三值、高度参数化判定器
+   \[
+   \mathrm{Search}(h,d)\in\{\mathrm{NO}(\pi),\mathrm{YES}(s,m),\mathrm{UNKNOWN}\}.
+   \]
+   只有两个子节点都返回 NO 才生成一个 NO 节点；一个 UNKNOWN 会让父节点 UNKNOWN，但不会像 SAGE 的 `depthcap` 那样直接砍掉兄弟分支。洞是局部的。
+2. **KERNEL-1**：单点域任务和零松弛关键路径任务不参与分支；搜索只在自由任务集 $K=\{i:|D_i(h)|>1\}$ 上切分。零松弛规则是可靠的：$est_i+p_i+q_i=h$ 时任何 $C_{\max}\le h$ 的调度都满足 $s_i=est_i$。
+3. **COMPLETE 模式**：令 $d=\infty$，用势函数 $\mu(F)=\sum_i|D_i(h,F)|$ 保证终止。它是全正确性的搜索侧。
+4. **TOTAL-TRACE**：一个总证书，重放初始 LB/UB、每次 probe 的 NO 证明或 YES 调度、最终 $\mathrm{NO}(v-1)$ 与 $C_{\max}=v$ 的调度；检查器不信任生成器的 `certified` 标志。
 
-在 252 例上：**252/252 认证，$Q=0$，LP$_{\rm CHD}=0$，YES 节点 $=0$，9.62 s**；同 runner 的 v8.7 APEX 为 $Q=105$、LP$_{\rm CHD}=874$、YES 节点 $=60001$、11.82 s。58 个原本要 CHD 证 NO 的实例全部换成 58 张 `branch` 证明，60k YES 节点归零。
+在 252 例上：
 
-但这不是免费的：LP-BRANCH 最坏是指数级，$Q=0$ 只是当前语料上的结果，不是定理。
+- **PACT-C（complete，默认）**：252/252 认证，$Q=0$，273 次 pin LP + 450 次搜索 LP + 138 次证书 LP，总审计 252/252，10.59 s。
+- **PACT-F（closing，快速）**：252/252 认证，$Q=0$，总 LP 852（与 SAGE 完全相同，只是从 BB 重新分配到 complete），总审计 252/252，11.43 s。
+- **SAGE v8.8（同 runner 复跑）**：252/252 认证，$Q=0$，442 次 BB LP + 137 次证书 LP，11.62 s，但没有总轨迹审计。
+- **参数**：58 个 $g=1$ 的 NO 证明高度分布为 $50\times k=1$、$7\times k=2$、$1\times k=4$；252 个 NO probe 中 194 个在 $k=0$ 就由根 LP 的 Farkas 证书闭合。YES 侧的高度重尾，最大 $k=29$，这正是 GA 仍然必要的原因。
+
+结论：PACT 把 SAGE 的「capped 分支」升级为「按证书高度 $k$ 参数化的完整搜索」，并在 252 例上给出了 252 张可重放的总证书；但它没有把 $k$ 变成定理，$k\le4$ 仍然只是当前语料的经验事实。
 
 ---
 
@@ -110,52 +114,60 @@ APEX 的查询分布看起来很干净：148 例 0 次、103 例 1 次、1 例 2
 
 | 路径 | 内容 |
 |---|---|
-| `exp/v8i/sage.py` | SAGE-ALC 实现：`BranchProof`、`SubsumptionProof`、`lp_branch_decide`、`ga_schedule`、`SAGE(APEX)` |
-| `exp/v8i/bench_sage.py` | 252 例主实验与 `no_ga`、`no_bb`、`bb_no_only` 三组消融 |
-| `exp/v8i/bench_sage_full.json` | full 原始结果，252 行 |
-| `exp/v8i/bench_sage_no_ga.json` | 关闭 GA 的结果 |
-| `exp/v8i/bench_sage_no_bb.json` | 关闭 LP-BRANCH 的结果 |
-| `exp/v8i/bench_sage_bb_no_only.json` | 只用 LP-BRANCH 证 NO、禁用 B&B YES 的结果 |
-| `exp/v8h/apex.py` | v8.7 APEX 基类；SAGE 直接继承 |
-| `exp/v8h/bench_apex_full.json` | APEX 基线（本轮同 runner 复跑） |
-| `exp/v60/sdecc.py` | `SDLP` 与 `sdecc_no`，LP-BRANCH 的底层 |
-| `exp/v60/cert.py` | `verify`、`integer_certificate`，叶子 Farkas 证书 |
+| `exp/v8o/pact.py` | PACT-ALC 实现：`pact_decide`、`TotalTrace`、`PACT(SAGE)`、`run_pact` |
+| `exp/v8o/bench_pact.py` | 252 例主实验与 8 组消融 |
+| `exp/v8o/bench_pact_complete.json` | PACT-C 原始结果，252 行 |
+| `exp/v8o/bench_pact_closing.json` | PACT-F（closing）原始结果 |
+| `exp/v8o/bench_pact_single3.json` | 单次深度 3 + GA + complete 的结果 |
+| `exp/v8o/bench_pact_single1.json` | 单次深度 1 + GA + complete 的结果 |
+| `exp/v8o/bench_pact_d1.json` | 迭代加深到 1 的结果 |
+| `exp/v8o/bench_pact_d0.json` | 只允许 $k=0$ 的结果 |
+| `exp/v8o/bench_pact_no_complete.json` | 关闭 complete fallback、保留 CHD 的结果 |
+| `exp/v8o/bench_pact_no_ga.json` | 关闭 GA、complete 负责所有 YES 的结果 |
+| `exp/v8o/pact_depth.json` | 252 例在 $h=\mathrm{OPT}-1$ 与 $h=\mathrm{OPT}$ 上的完整搜索参数（504 行） |
+| `exp/v8o/param_rows.json` | 252 例在 $h=\mathrm{OPT}-1$ 上的域、分数支撑、自由任务数诊断 |
+| `exp/v8i/sage.py` | v8.8 SAGE 基类；PACT 直接继承 |
+| `exp/v8i/bench_sage_full.json` | SAGE 基线（本轮同 runner 复跑） |
+| `exp/v60/sdecc.py` | `SDLP`，固定 $h$ 的 SD 线性规划 |
+| `exp/v60/cert.py` | `integer_certificate`、`verify`，叶子 Farkas 证书 |
 | `exp/v8a/rdf.py` | `check_schedule` 与 CHD/RDF 接口 |
 
 ---
 
-## 2. 与 v8.7 APEX-ALC 的版本关系
+## 2. 与 v8.8 SAGE-ALC 的版本关系
 
-| 层 | v8.7 APEX-ALC | v8.8 SAGE-ALC | 关系 |
+| 层 | v8.8 SAGE-ALC | v8.9 PACT-ALC | 关系 |
 |---|---|---|---|
 | 初始 bracket | LP pin + chip bound + LP 舍入 + LNS | 原样继承 | 不变 |
-| 下界 | LP pin；NO 由 CHD 给 | LP pin + LP-BRANCH | 新增可证明 NO |
-| 上界 | LP 舍入 + LNS + CHD YES | 继承 + GENETIC-UB | 新增遗传构造 |
-| 证明代数 | 判断集合 + subsumption | STAB：单调规则按需闭包 | 扩展为分支证明 |
-| 最终闭合 | `MEET` | `MEET`，但 $\mathrm{OPT}-1$ 由 `BranchProof` 提供 | 消除 oracle |
-| fallback | CHD | CHD，仍保留 | 仅在 B&B/GA 都失败时调用 |
+| 下界 | LP pin；NO 由 LP-BRANCH 给 | LP pin + PACT-SEARCH | 新增高度参数化 |
+| 上界 | LP 舍入 + LNS + CHD YES | 继承 + GENETIC-UB | 不变 |
+| NO 搜索 | 单次 DFS，`nodecap=96`、`depthcap=24` | `Search(h,d)`，洞局部化，完整模式无 cap | 语义升级 |
+| 证明代数 | 判断集合 + subsumption | STAB 原样复用 | 不变 |
+| 最终闭合 | `MEET`，NO($v-1$) 来自 BranchProof | `MEET`，NO($v-1$) 来自 PACT 树 | 不变 |
+| 审计 | 只审计最后一张 NO 树 | `TotalTrace` 重放整条 bracket | 新增 |
+| fallback | CHD | CHD，仍保留 | 不变 |
 
-实现上 `SAGE` 只覆盖三处：
+实现上 `PACT` 只覆盖三处：
 
-- `_probe(h)`：先 LP-BRANCH，再 GA，最后 CHD；
-- `optimize()`：沿用 APEX 的 bracket，但记录 B&B/GA 归因；
-- `_ensure_lb_proof(value)`：先找精确的 $\mathrm{NO}(value-1)$，找不到再从更强的 $\mathrm{NO}(h')$ 做 subsumption。
+- `_probe(h)`：先做参数化搜索，再 GA，再完整搜索，最后 CHD；
+- `optimize()`：沿用 APEX/SAGE 的 bracket，但记录每一步到 `self.steps`；
+- `_build_total()`：在最终 `lb=ub` 后构造 `TotalTrace` 并审计。
 
-其余 `initial_bounds`、`_decide`、`_absorb`、`_record`、`_result`、`_final_proof` 全部继承 APEX。
+其余 `initial_bounds`、`_decide`、`_absorb`、`_record`、`_result`、`_final_proof` 全部继承。
 
 ---
 
 ## 3. 问题、符号与判断
 
-### 3.1 实例
+### 3.1 实例与调度
 
 一个实例为
 \[
 I=(J,M,E,p,q,\mathrm{elig}),
 \]
-其中 $J$ 是任务集，$M$ 是机器集，$E\subseteq J\times J$ 是先后约束，$p_i$ 是加工时间，$q_i$ 是尾延迟，$\mathrm{elig}_i\subseteq M$ 是允许机器集。调度 $s:J\to\mathbb Z_{\ge0}$ 可行当且仅当：
+其中 $J$ 是任务集，$|J|=n$；$M$ 是机器集，$|M|=m$；$E\subseteq J\times J$ 是先后约束；$p_i$ 是加工时间；$q_i$ 是尾延迟；$\mathrm{elig}_i\subseteq M$ 是允许机器集。调度 $s:J\to\mathbb Z_{\ge0}$ 可行当且仅当：
 
-1. $s_i\in\mathrm{elig}_i$ 对应的机器可用；
+1. 每个 $s_i$ 落在 $\mathrm{elig}_i$ 对应的机器可用时间上；
 2. 对每条 $i\to j$，$s_j\ge s_i+p_i$；
 3. 每台机器上的任务区间 $[s_i,s_i+p_i)$ 不重叠。
 
@@ -164,92 +176,105 @@ I=(J,M,E,p,q,\mathrm{elig}),
 C_{\max}(s)=\max_{i\in J}(s_i+p_i).
 \]
 
-### 3.2 固定 horizon 与禁止集
+### 3.2 固定 horizon、域与禁止集
 
-固定 $h$，任务 $i$ 的最早/最晚开始时间为
+固定 $h$。用 `heads_tails` 计算最长头 $est_i$ 与最长尾 $q_i$：
 \[
-\mathrm{est}_i(h)=\mathrm{head}_i,\qquad
-\mathrm{lst}_i(h)=h-q_i-p_i,
+est_i=\max_{P\leadsto i}\sum_{k\in P}p_k,\qquad
+q_i=\max_{i\leadsto P}\sum_{k\in P\setminus\{i\}}p_k.
 \]
-其域为
+任务 $i$ 的域为
 \[
-D_i(h)=[\mathrm{est}_i(h),\mathrm{lst}_i(h)]\cap\mathbb Z_{\ge0}.
+D_i(h)=[est_i,\;h-q_i-p_i]\cap\mathbb Z_{\ge0}.
 \]
-禁止集 $F\subseteq J\times\mathbb Z_{\ge0}$ 表示「任务 $i$ 不允许在时刻 $t$ 开始」。记
+禁止集 $F\subseteq J\times\mathbb Z_{\ge0}$ 表示「任务 $i$ 不允许在 $t$ 开始」。记
 \[
 D_i(h,F)=D_i(h)\setminus\{t:(i,t)\in F\}.
 \]
-若调度 $s$ 满足 $s_i\in D_i(h,F)$ 对所有 $i$ 成立，则称 $s$ 是 $F$-允许的。
-
-**判断**：
+判断
 \[
 \mathrm{NO}(h\mid F):=\text{不存在 }F\text{-允许的可行调度 }s\text{ 使 }C_{\max}(s)\le h.
 \]
 当 $F=\varnothing$ 时简写为 $\mathrm{NO}(h)$。
 
-### 3.3 proof store 与四个判断
+### 3.3 证明树
 
-proof store $\mathcal P$ 保存已证明的判断：
+PACT 的证明树为
+\[
+\pi ::= \mathrm{Leaf}(F,\Phi)\mid \mathrm{Empty}(F,i)\mid
+\mathrm{Yes}(s,m)\mid \mathrm{Node}(i,t,F,\pi_L,\pi_R).
+\]
+语义：
+
+- $\mathrm{Leaf}(F,\Phi)$：$\mathtt{verify}(I,h,\Phi,\mathrm{forbid}=F)=1$，证明 $\mathrm{NO}(h\mid F)$；
+- $\mathrm{Empty}(F,i)$：$D_i(h,F)=\varnothing$，证明 $\mathrm{NO}(h\mid F)$；
+- $\mathrm{Yes}(s,m)$：$\mathtt{check\_schedule}(I,h,s,m)=1$，给出 YES；
+- $\mathrm{Node}(i,t,F,\pi_L,\pi_R)$：令
+  \[
+  F_L=F\cup\{(i,u):u>t\},\qquad
+  F_R=F\cup\{(i,u):u\le t\},
+  \]
+  两个子域都非空，$\pi_L$ 证明 $\mathrm{NO}(h\mid F_L)$，$\pi_R$ 证明 $\mathrm{NO}(h\mid F_R)$，则节点证明 $\mathrm{NO}(h\mid F)$。
+
+### 3.4 高度、大小与势函数
+
+定义高度
+\[
+\mathrm{ht}(\mathrm{Leaf})=\mathrm{ht}(\mathrm{Empty})=\mathrm{ht}(\mathrm{Yes})=0,
+\]
+\[
+\mathrm{ht}(\mathrm{Node}(i,t,F,\pi_L,\pi_R))
+=1+\max(\mathrm{ht}(\pi_L),\mathrm{ht}(\pi_R)).
+\]
+定义大小
+\[
+|\mathrm{Leaf}|=|\mathrm{Empty}|=|\mathrm{Yes}|=1,\qquad
+|\mathrm{Node}|=1+|\pi_L|+|\pi_R|.
+\]
+定义势函数
+\[
+\mu(F)=\sum_{i\in J}|D_i(h,F)|.
+\]
+一次非平凡切分 $(i,t)$ 满足两侧都非空，因此
+\[
+\mu(F_L)<\mu(F),\qquad \mu(F_R)<\mu(F).
+\]
+
+### 3.5 核化
+
+**单点域规则**：若 $|D_i(h)|=1$，则任务 $i$ 的开始时刻在根盒中唯一，不需要分支。
+
+**零松弛规则**：若 $est_i+p_i+q_i=h$，则
+\[
+D_i(h)=\{est_i\},
+\]
+因为 $h-q_i-p_i=est_i$。更强地，对任意可行 $s$ 且 $C_{\max}(s)\le h$，
+\[
+est_i\le s_i,\qquad s_i+p_i+q_i\le C_{\max}(s)\le h=est_i+p_i+q_i,
+\]
+所以 $s_i=est_i$。这类任务在搜索中不参与分支。
+
+定义自由核
+\[
+K=\{i\in J:|D_i(h)|>1\}.
+\]
+搜索只在 $K$ 上切分。核化不改变可行调度集：单点域和零松弛任务只是把「必须取的值」从搜索变量里去掉。实现中 LP 仍保留这些任务的单列（便于证书直接重放），但 `choose` 不会选它们。
+
+### 3.6 proof store 与查询 $Q$
+
+proof store $\mathcal P$ 保存
 \[
 \mathrm{NO}(h),\quad \mathrm{LB}(v),\quad \mathrm{UB}(s),\quad \mathrm{EXACT}(v).
 \]
-语义是：
-
-- $\mathrm{NO}(h)$：$\mathrm{OPT}>h$；
-- $\mathrm{LB}(v)$：$\mathrm{OPT}\ge v$；
-- $\mathrm{UB}(s)$：$s$ 可行且 $\mathrm{OPT}\le C_{\max}(s)$；
-- $\mathrm{EXACT}(v)$：$\mathrm{OPT}=v$ 且附带一张 $C_{\max}=v$ 的调度。
-
-APEX 的整数间隙是
-\[
-g=\mathrm{OPT}-L^*,
-\]
-其中 $L^*$ 是 LP pin 得到的最好下界。上一轮已经在这 252 例上验证 $g\in\{0,1\}$。
-
-### 3.4 查询 $Q$ 的精确定义
-
-$Q$ 只统计 **CHD oracle 调用次数**。LP-BRANCH 的 LP 次数、GA 的 SGS 次数、LP pin 的次数都不计入 $Q$，但计入时间与 LP 计数。因此「$Q=0$」的准确含义是：
-
-> **没有再向 CHD 问任何一次 YES/NO；所有判断都由 LP-BRANCH、LP pin、LNS 或 GA 给出。**
-
-这不是「零计算」，也不是「零 LP」。
+$Q$ 只统计 **CHD oracle 调用次数**；PACT 的 LP、证书 LP、GA 的 SGS 次数都不计入 $Q$。因此 $Q=0$ 的准确含义是：没有再向 CHD 问任何一次 YES/NO，而不是零计算。
 
 ---
 
 ## 4. 形式化规则
 
-### 4.1 LP-BRANCH 的分支规则
+### 4.1 叶子规则
 
-设固定 $h$ 和禁止集 $F$，选任务 $i$ 和分割点 $m$。定义
-\[
-F_{\le m}=F\cup\{(i,t):t>m\},\qquad
-F_{>m}=F\cup\{(i,t):t\le m\}.
-\]
-直观上：
-
-- $F_{\le m}$ 禁止 $i$ 在 $m$ 之后开始，所以 $i$ 只能落在 $\le m$ 一侧；
-- $F_{>m}$ 禁止 $i$ 在 $m$ 或之前开始，所以 $i$ 只能落在 $>m$ 一侧。
-
-规则为
-\[
-\frac{
-  \mathrm{NO}(h\mid F_{\le m})
-  \qquad
-  \mathrm{NO}(h\mid F_{>m})
-}{
-  \mathrm{NO}(h\mid F)
-}
-\tag{Branch}
-\]
-前提是两个子域都非空；若某个子域为空，该子域是平凡 $\mathrm{NO}$，父判断等价于另一子域。当前实现为避免假分支直接返回 UNKNOWN，并交给 GA/CHD。
-
-**穷尽性**：任何 $F$-允许的调度，$s_i$ 要么 $\le m$，要么 $>m$，二者必居其一。因此两个子域覆盖了父域的所有可能；两个子域都不可行，则父域不可行。
-
-### 4.2 叶子规则
-
-LP-BRANCH 的叶子有三类：
-
-**(L1) Farkas 叶子。** 若固定 $h,F$ 的 SD LP 不可行，且 `integer_certificate(inst,h,forbid=F)` 返回证书 $\Phi$，并且
+**(L1) Farkas 叶子。** 若固定 $h,F$ 的 SDLP 不可行，且
 \[
 \mathtt{verify}(I,h,\Phi,\mathrm{forbid}=F)=1,
 \]
@@ -259,83 +284,111 @@ LP-BRANCH 的叶子有三类：
 {\mathrm{NO}(h\mid F)}.
 \tag{Farkas}
 \]
-$\Phi$ 是对偶证书；`verify` 独立重放，不信任求解器的 `status`。
 
-**(L2) 空域叶子。** 若存在任务 $i$ 使 $D_i(h,F)=\varnothing$，则不存在 $F$-允许的完整调度，直接得 $\mathrm{NO}(h\mid F)$。
-
-**(L3) 整数叶子。** 若某个 LP 解 $z$ 是整数，且舍入/解码得到调度 $s$，并通过
+**(L2) 空域叶子。** 若存在 $i$ 使 $D_i(h,F)=\varnothing$，则
 \[
-\mathtt{check\_schedule}(I,h,s,\mathrm{machine})=1,
-\]
-则得到 $\mathrm{UB}(s)$，同时这条分支以 YES 结束；它不是 NO 证明，但会缩小上界。
-
-### 4.3 `BranchProof` 数据类型
-
-概念上的证明树为
-\[
-\pi ::= \mathrm{Leaf}(F,\Phi)\mid \mathrm{Empty}(F,i)\mid
-\mathrm{Node}(i,m,F,\pi_L,\pi_R).
-\]
-实现中的元组形式是：
-
-- `('leaf', F, cert)`；
-- `('empty', F, i)`；
-- `('node', i, m, F, left, right)`。
-
-检查器 `BranchProof._check(node,F)` 做四件事：
-
-1. 父节点记录的 $F$ 必须与当前 $F$ 一致；
-2. 分支点 $(i,m)$ 必须真的把当前允许域切成两个非空部分；
-3. 左子节点的禁止集必须是 $F\cup\{(i,t):t>m\}$，右子节点必须是 $F\cup\{(i,t):t\le m\}$；
-4. 叶子证书必须通过 `verify(..., forbid=F)`，或空域检查成立。
-
-根调用是 `_check(tree, frozenset())`。因此 `BranchProof` 是自包含的：不依赖 APEX 的 `no_states`，也不依赖生成它的 LP 求解器。
-
-### 4.4 STAB：单调判断闭包
-
-STAB 的规则是
-\[
-\frac{\mathrm{NO}(h)}{\mathrm{LB}(h+1)}
-\tag{NO-LB}
-\]
-\[
-\frac{\mathrm{LB}(v)\qquad h<v}{\mathrm{NO}(h)}
-\tag{LB-NO}
-\]
-\[
-\frac{\mathrm{LB}(v)\qquad \mathrm{UB}(s)\qquad C_{\max}(s)=v}
-{\mathrm{EXACT}(v)}
-\tag{MEET}
-\]
-以及
-\[
-\frac{\mathrm{LB}(v)\qquad \mathrm{UB}(s)}
-{\mathrm{RATIO}(C_{\max}(s)/v)}.
-\tag{RATIO}
+\frac{D_i(h,F)=\varnothing}{\mathrm{NO}(h\mid F)}.
+\tag{Empty}
 \]
 
-这些规则都是单调的：前提中的判断一旦进入 proof store，结论就可以加入。对固定实例，可能的 $h$、$v$ 和已构造的调度集合是有限的，因此从任意初始 proof store 出发，反复应用规则必然在有限步到达最小不动点，且到达的判断与规则应用顺序无关。
-
-实现上不做全局全量闭包，而是 **按需闭包**：`_ensure_lb_proof(value)` 先尝试精确的 $\mathrm{NO}(value-1)$；若没有，就在 proof store 中找最小的 $h\ge value-1$，用
+**(L3) 整数叶子。** 若 LP 解 $z$ 是整数，解码得到 $(s,m)$，且
 \[
-\mathrm{NO}(h)\Rightarrow \mathrm{NO}(value-1)
+\mathtt{check\_schedule}(I,h,s,m)=1,
 \]
-做一次 subsumption，生成 `SubsumptionProof`。这等价于在需要的点上取闭包，避免为所有 $h$ 预生成证明。
+则返回 YES。它不是 NO 证明，但会缩小上界。
 
-### 4.5 `MEET` 的最终闭合
+**(L4) 匹配叶子（规格）。** 若所有开始时刻都已固定，`_assign_machines` 做精确的机器分配回溯；若失败，该叶子是 NO。当前实现把这种情况标为 UNKNOWN 并交给 CHD；252 例中未触发。全正确性定理把这一条列为假设 C3。
 
-当外层满足 $\mathrm{LB}=\mathrm{UB}=v$ 时，APEX 调用 `_final_proof()`。SAGE 的 `_ensure_lb_proof(v)` 返回：
+### 4.2 分支规则
 
-- 精确的 $\mathrm{NO}(v-1)$（通常就是 `BranchProof`），或
-- 从更强的 $\mathrm{NO}(h')$ 得到的 `SubsumptionProof`。
-
-于是最终证明是
 \[
-\mathrm{LB}(v)\quad+\quad \mathrm{UB}(s)\quad+\quad C_{\max}(s)=v
-\quad\Longrightarrow\quad
-\mathrm{EXACT}(v).
+\frac{
+  \mathrm{NO}(h\mid F_L)
+  \qquad
+  \mathrm{NO}(h\mid F_R)
+}{
+  \mathrm{NO}(h\mid F)
+}
+\tag{Branch}
 \]
-这里不再需要向 CHD 追问 $v-1$，因为 $v-1$ 的 NO 已经在证明树里。
+其中
+\[
+F_L=F\cup\{(i,u):u>t\},\qquad
+F_R=F\cup\{(i,u):u\le t\},
+\]
+且两个子域都非空。穷尽性：任何 $F$-允许的调度，$s_i$ 要么 $\le t$，要么 $>t$，二者必居其一；两个子域都不可行，则父域不可行。
+
+### 4.3 `Search(h,d)` 的三值语义
+
+```text
+Search(bounds, F, d):
+    if d < 0: return UNKNOWN
+    solve SDLP(bounds)
+    if infeasible:
+        cert = integer_certificate(..., forbid=F)
+        if verify(cert): return Leaf(F, cert)
+        if exists i with D_i(h,F)=empty: return Empty(F, i)
+        return UNKNOWN
+    if integral:
+        (s, m) = decode(z)
+        if check_schedule(s, m): return Yes(s, m)
+        if singleton_leaf finds (s, m): return Yes(s, m)
+        choose a job with multiple allowed times; if none: return UNKNOWN
+    else:
+        (i, t) = choose_fractional_job(z, bounds)
+    left  = Search(bounds_L, F_L, d-1)
+    if left is Yes: return left
+    right = Search(bounds_R, F_R, d-1)
+    if right is Yes: return right
+    if left is NO and right is NO:
+        return Node(i, t, F, left, right)
+    return UNKNOWN
+```
+
+关键点：
+
+- 一个 UNKNOWN 子节点不会阻止另一个子节点的探索；这与 SAGE 的 `depthcap` 不同，后者在深度超限时直接返回 None，可能丢掉另一侧的 YES。
+- 只有两个子节点都 NO 才生成 NO 节点；否则父节点是 UNKNOWN。
+- `d=\infty` 时没有深度检查，完整搜索由 $\mu$ 保证终止。
+
+### 4.4 核化规则的形式化
+
+**引理 1（零松弛钉死）**：若 $est_i+p_i+q_i=h$，则任意可行 $s$ 且 $C_{\max}(s)\le h$ 都有 $s_i=est_i$。
+
+**证明**：$s_i\ge est_i$，且 $s_i+p_i+q_i\le C_{\max}(s)\le h=est_i+p_i+q_i$，故 $s_i\le est_i$，于是 $s_i=est_i$。$\square$
+
+**引理 2（核化保持可行集）**：把单点域和零松弛任务从分支变量中移除，不改变根盒内可行调度的集合。
+
+**证明**：这些任务的开始时刻在根盒中唯一；移除它们只是去掉没有选择的分支，不会删除任何可行调度。$\square$
+
+### 4.5 总轨迹
+
+一个总轨迹为
+\[
+T=(lb_0,ub_0,\pi_0,s_0,m_0,\;
+[(h_j,v_j,\pi_j,s_j,m_j)]_{j=1}^q,\;
+\pi^*,s^*,m^*).
+\]
+审计条件：
+
+1. $\pi_0$ 证明 $\mathrm{LB}(lb_0)$，或 `bound_lb(I)=lb0`；$s_0$ 是 $C_{\max}\le ub_0$ 的调度。
+2. 对每个 step $j$：$lb_{j-1}\le h_j<ub_{j-1}$。
+   - 若 $v_j=\mathrm{NO}$，$\pi_j$ 证明 $\mathrm{NO}(h_j)$，$lb_j=h_j+1$，$ub_j=ub_{j-1}$；
+   - 若 $v_j=\mathrm{YES}$，$s_j$ 满足 $C_{\max}\le h_j$，$ub_j=\min(ub_{j-1},C_{\max}(s_j))$，$lb_j=lb_{j-1}$。
+3. 最终 $lb_q=ub_q=v$，$\pi^*$ 证明 $\mathrm{NO}(v-1)$，$s^*$ 满足 $C_{\max}=v$。
+4. 结论：$\mathrm{OPT}=v$。
+
+实现中的 `TotalTrace.audit_rdf()` 逐条检查上述条件；它不读取生成器的 `certified`、`proof` 或 `ok`。
+
+### 4.6 STAB 复用
+
+STAB 的单调规则原样保留：
+\[
+\frac{\mathrm{NO}(h)}{\mathrm{LB}(h+1)},\qquad
+\frac{\mathrm{LB}(v)\qquad h<v}{\mathrm{NO}(h)},\qquad
+\frac{\mathrm{LB}(v)\qquad \mathrm{UB}(s)\qquad C_{\max}(s)=v}{\mathrm{EXACT}(v)}.
+\]
+PACT 只在 `_ensure_lb_proof(value)` 里按需闭包：先找精确的 $\mathrm{NO}(value-1)$，找不到就从更强的 $\mathrm{NO}(h')$ 做 `SubsumptionProof`。这与 SAGE 完全一致。
 
 ---
 
@@ -346,140 +399,130 @@ STAB 的规则是
 ```text
 lb, ub, s, mach = initial_bounds()
 if ub is None: return unknown
-while lb < ub and queries < max_queries:
+steps = []
+while lb < ub:
     if ub - lb <= scan_cap:
-        h = lb                    # 尾部线性扫描
+        h = lb
     else:
-        h = floor((lb + ub) / 2)  # 二分
+        h = floor((lb + ub) / 2)
     v, payload = probe(h)
     if v == YES:
         if Cmax(payload) < ub and check_schedule(...):
             ub, s, mach = Cmax(payload), payload.schedule, payload.machine
+            steps.append((h, YES, payload))
     elif v == NO:
         lb = max(lb, h + 1)
         record_proof(payload)
+        steps.append((h, NO, payload))
     else:
         recover_unknown(h)
 if lb == ub:
-    final_proof()
+    final_proof()          # NO(lb-1)
+    build_total_trace()    # 初始界 + steps + final NO + schedule
 return result()
 ```
 
-与 APEX 的差别只在 `probe` 和 `final_proof` 的证明来源；bracket 本身不变。
+与 SAGE 的差别只在 `probe`、`final_proof` 的证明来源和 `build_total_trace`；bracket 本身不变。
 
 ### 5.2 `probe(h)`
 
 ```text
-if use_bb:
-    r = lp_branch_decide(inst, h, nodecap=96, depthcap=24)
-    if r.verdict == NO:
-        bb_no += 1
-        record_proof(r.proof)
-        return NO, r.proof
-    if r.verdict == YES and bb_yes:
-        if check_schedule(inst, h, r.schedule, r.machine):
-            bb_yes += 1
-            return YES, (r.schedule, r.machine, Cmax(r.schedule))
-    if r.verdict == YES and not bb_yes:
-        bb_yes_ignored += 1
-    if r.verdict is None:
-        bb_unknown += 1
+# PACT-C: complete first
+if mode == 'complete':
+    r = pact_decide(inst, h, depthcap=None, nodecap=None)
+    if r.verdict == NO: return NO, r.proof
+    if r.verdict == YES: return YES, (r.schedule, r.machine, Cmax)
+    return CHD(h)
 
-if use_ga:
-    got, st = ga_schedule(inst, h, pop=40, gens=60, budget=4000)
-    if got is not None and check_schedule(inst, h, got):
-        ga_yes += 1
-        return YES, (got.schedule, got.machine, Cmax(got.schedule))
-    ga_no += 1
+# PACT-F: closing hybrid
+if mode == 'closing' and ub - lb > 1:
+    return SAGE._probe(h)          # capped BB + GA + CHD
+if mode == 'closing' and ub - lb == 1:
+    r = pact_decide(inst, h, depthcap=None, nodecap=None)
+    if r.verdict == NO: return NO, r.proof
+    if r.verdict == YES: return YES, (r.schedule, r.machine, Cmax)
 
-chd_fallback += 1
-queries += 1
-v, st, rdf = CHD(h)
-absorb(st); record(h, v, st)
-return v, rdf
+# PACT-P: parameterized NO-first
+for d in 0..pact_depth:
+    r = pact_decide(inst, h, depthcap=d, nodecap=pact_nodecap)
+    if r.verdict == NO: return NO, r.proof
+    if r.verdict == YES: return YES, (r.schedule, r.machine, Cmax)
+got = ga_schedule(inst, h, ...)
+if got is not None and check_schedule(...): return YES, got
+r = pact_decide(inst, h, depthcap=None, nodecap=None)
+if r.verdict == NO: return NO, r.proof
+if r.verdict == YES: return YES, ...
+return CHD(h)
 ```
 
 关键点：
 
-- LP-BRANCH 的 YES 只在 `bb_yes=True` 时立即接受；`bb_no_only` 故意忽略它，用来测 GA 的上界能力。
-- GA 的返回必须过 `check_schedule`；不过就当作没有。
-- 只有最后的 CHD 分支增加 $Q$。
+- PACT-C 不调用 GA、不调用 CHD；所有 probe 由完整搜索解决。
+- PACT-F 的 bracketing probe 仍用 SAGE 的 capped BB；只有 closing probe 用完整搜索。
+- PACT-P 的深度循环是「参数化 NO-first」：它先找浅证明，找不到再让 GA 和完整搜索接手。252 例上 PACT-P 比 PACT-C 慢，因为它在 YES probe 上重复做了完整搜索；它的价值是给出「$k\le3$ 时全部 58 个 NO 都能闭合」的证据。
 
-### 5.3 `lp_branch_decide` 的自稳定细化
+### 5.3 `pact_decide` 的细节
 
 ```text
-root = SDLP(inst, h, est, q, use_dom=True, elig_aware=True)
-dfs(bounds, F, depth):
-    if depth > depthcap: return UNKNOWN
-    solve(bounds)
-    if infeasible:
+root = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig)
+dfs(bounds, F, d):
+    if d < 0: return UNKNOWN
+    res = lp.solve(bounds)
+    if res infeasible:
         cert = integer_certificate(inst, h, forbid=F)
-        if verify(cert, forbid=F): return Leaf(F, cert)
-        if exists empty D_i(h,F): return Empty(F, i)
+        if verify(cert): return Leaf(F, cert)
+        if empty domain: return Empty(F, i)
         return UNKNOWN
-    if integral(z):
-        s, m = decode(z)
-        if check_schedule(inst, h, s, m): return Yes(s, m)
-        return UNKNOWN
-    i, mid = choose_fractional_job(z, bounds)
-    if none: return UNKNOWN
-    low  = dfs(bounds with i <= mid, F ∪ {(i,t): t > mid}, depth+1)
-    high = dfs(bounds with i > mid, F ∪ {(i,t): t <= mid}, depth+1)
-    if low is UNKNOWN: return UNKNOWN
-    if low is Yes: return low
-    if high is UNKNOWN: return UNKNOWN
-    if high is Yes: return high
-    return Node(i, mid, F, low, high)
+    if res integral:
+        s, m = decode(res.x)
+        if check_schedule(s, m): return Yes(s, m)
+        s, m = singleton_leaf(...)
+        if s is not None: return Yes(s, m)
+        pick any job with >1 allowed time; if none: return UNKNOWN
+    else:
+        i, mid = choose_fractional_job(res.x, bounds)
+        if i is None: return UNKNOWN
+    F_L = F ∪ {(i, u): u > mid}
+    F_R = F ∪ {(i, u): u ≤ mid}
+    left = dfs(bounds_L, F_L, d-1)
+    if left is Yes: return left
+    right = dfs(bounds_R, F_R, d-1)
+    if right is Yes: return right
+    if left is NO and right is NO:
+        return Node(i, mid, F, left, right)
+    return UNKNOWN
 ```
 
-`choose_fractional_job` 只在「质量分数且允许时间数 $>1$」的候选里选；默认按任务质量、尾延迟、后继数、下标排序。`mid` 取累计质量首次超过一半的时间点；若退化，取中位时间。`nodecap=96`、`depthcap=24` 是硬上限；超限返回 UNKNOWN，外层退回 GA/CHD。
+`choose_fractional_job` 的选择与 SAGE 一致：按任务质量、尾延迟、后继数、下标排序，取累计质量首次超过 50% 的时间点作为 `mid`；退化时取中位时间。这个策略只影响树的形状，不影响分区性质。
 
-这里就是「self-stabilizing」的具体落点：每个叶子是一个局部状态，LP 可行且分数就继续细化，LP 不可行或整数就稳定；细化只依赖当前域的局部信息，不需要全局初始化，也不会撤销已经稳定的叶子。
-
-### 5.4 `ga_schedule` 的遗传上界
+### 5.4 `TotalTrace`
 
 ```text
-seeds = 4 个启发式排列（est、latest、-q、est-0.5q）
-P = seeds + 36 个随机排列
-cache = 评估 P 中每个基因组：SGS 解码 -> (makespan, sum C)
-for gen in 1..60:
-    if best <= h or evals >= 4000: break
-    P = 按 fitness 排序
-    new = P[:4]                     # 精英保留
-    while len(new) < 40:
-        a, b = tournament(P[:20])
-        child = OX(a, b)
-        if rand < 0.7: child = mutate(child)
-        if rand < 0.15: child = local_repair(child, cap=120)
-        new.append(child)
-    P = new
-best = local_repair(best, cap=2000)
-return best if check_schedule(inst, h, best) else None
+TotalTrace(inst, opt, lb0, ub0, init_lb_proof, init_bound,
+           init_schedule, init_machine, steps, final_lb_proof,
+           final_schedule, final_machine):
+    audit:
+        check final_lb_proof.h == opt-1 and final_lb_proof.audit_rdf()
+        check final_schedule is feasible with Cmax == opt
+        check init_schedule is feasible with Cmax <= ub0
+        check init_lb_proof (or bound_lb == lb0)
+        lb, ub = lb0, ub0
+        for (h, v, payload) in steps:
+            assert lb <= h < ub
+            if v == NO:
+                assert payload.h == h and payload.audit_rdf()
+                lb = max(lb, h+1)
+            elif v == YES:
+                assert check_schedule(payload, h)
+                ub = min(ub, Cmax(payload))
+            else:
+                return False
+        return lb == ub == opt
 ```
 
-- 基因组：任务排列；
-- 解码器：串行 SGS，把排列依次塞进最早可用机器；
-- 适应度：$(\text{makespan},\sum_i C_i)$，字典序；
-- OX 交叉：保序交叉；
-- 变异：交换/插入；
-- 局部修复：只接受严格改进的交换，每个子代最多 120 次，末轮最多 2000 次；
-- 预算：4000 次唯一 SGS 评估，种群 40，代数 60。
+### 5.5 GENETIC-UB
 
-GA 不产生 NO、不产生下界；它只产生通过 `check_schedule` 的上界调度。它的正确性门槛是 `check_schedule`，而不是适应度值。
-
-### 5.5 STAB 的实现
-
-```text
-_ensure_lb_proof(value):
-    p = APEX._ensure_lb_proof(value)      # 精确 NO(value-1)
-    if p is not None: return p
-    best = min {h : NO(h) in proofs and h >= value-1}
-    if best exists:
-        return record(SubsumptionProof(inst, value-1, proofs[best]))
-    return None
-```
-
-`SubsumptionProof` 的检查器要求 `source.h >= self.h` 且 `source` 自身通过 audit；因此它不能把更弱的 NO 伪装成更强的 NO。
+GA 原样继承 SAGE：基因组是任务排列，解码器是串行 SGS，适应度是 $(\text{makespan},\sum C_i)$，OX 交叉、交换/插入变异、精英保留、单调局部修复；只有通过 `check_schedule` 的调度才被接受。PACT-C 不用 GA；PACT-F 只在 bracketing probe 的 BB 返回 UNKNOWN 时用一次 GA。
 
 ---
 
@@ -487,76 +530,92 @@ _ensure_lb_proof(value):
 
 ### 6.1 叶子可靠性
 
-- **Farkas 叶子**：`verify` 独立检查证书；若 $P_h(F)$ 不可行，则任何 $F$-允许的整数调度都不存在，故 $\mathrm{NO}(h\mid F)$。
-- **空域叶子**：若 $D_i(h,F)=\varnothing$，任务 $i$ 没有任何允许开始时刻，故不存在完整调度。
-- **整数叶子**：`check_schedule` 检查优先级、机器、容量、eligibility 与 $C_{\max}\le h$；通过则给出真实 YES 调度。
+- **Farkas 叶子**：`verify` 独立重放整数证书；若 SDLP 不可行，则不存在 $F$-允许的整数调度，故 $\mathrm{NO}(h\mid F)$。
+- **空域叶子**：若 $D_i(h,F)=\varnothing$，任务 $i$ 没有允许开始时刻，故不存在完整调度。
+- **整数叶子**：`check_schedule` 检查优先、机器、容量、eligibility 与 $C_{\max}\le h$；通过则给出真实 YES。
+- **匹配叶子**：`_assign_machines` 是固定开始时刻上的精确回溯；失败则不存在机器分配。当前实现把失败标为 UNKNOWN，交给 CHD；这是全正确性定理的假设 C3。
 
 ### 6.2 分支可靠性
 
-设节点 $\mathrm{Node}(i,m,F,\pi_L,\pi_R)$ 的两个子节点分别证明了
+设节点 $\mathrm{Node}(i,t,F,\pi_L,\pi_R)$ 的两个子节点分别证明了
 \[
-\mathrm{NO}(h\mid F_{\le m}),\qquad
-\mathrm{NO}(h\mid F_{>m}).
+\mathrm{NO}(h\mid F_L),\qquad \mathrm{NO}(h\mid F_R).
 \]
-任取一个 $F$-允许的调度 $s$。由于 $s_i\le m$ 或 $s_i>m$ 必居其一：
+任取一个 $F$-允许的调度 $s$。由于 $s_i\le t$ 或 $s_i>t$ 必居其一：
 
-- 若 $s_i\le m$，则 $s$ 是 $F_{\le m}$-允许的，与左子判断矛盾；
-- 若 $s_i>m$，则 $s$ 是 $F_{>m}$-允许的，与右子判断矛盾。
+- 若 $s_i\le t$，则 $s$ 是 $F_R$-允许的，与右子判断矛盾；
+- 若 $s_i>t$，则 $s$ 是 $F_L$-允许的，与左子判断矛盾。
 
 故不存在这样的 $s$，即 $\mathrm{NO}(h\mid F)$。对树高归纳，所有 `BranchProof` 的根判断可靠。
 
-### 6.3 `BranchProof` 检查器的可靠性
+### 6.3 终止性
 
-`_check` 逐层验证：
-
-1. 父 $F$ 与当前 $F$ 一致，防止跨层偷换禁止集；
-2. 分割点确实把当前允许域分成两个非空部分，防止「假分支」；
-3. 子 $F$ 恰好是父 $F$ 加上对应半区的禁止，防止遗漏或重复；
-4. 叶子证书通过 `verify` 或空域检查。
-
-因此 `audit_rdf()=True` 蕴含根判断 $\mathrm{NO}(h\mid\varnothing)$。篡改 `alpha`/`beta` 会破坏 `verify`；篡改 `mid` 会破坏子 $F$ 的分区检查；两者都被实验拒绝。
-
-### 6.4 GA 的可靠性
-
-`ga_schedule` 只在最后调用 `check_schedule`；只有通过才返回调度。因此 GA 不会制造假 YES。它可能失败（返回 `None`），这不影响可靠性，只影响完整性。
-
-### 6.5 STAB 的可靠性
-
-`NO-LB`、`LB-NO`、`MEET`、`RATIO` 都是语义上显然的单调规则：
-
-- $\mathrm{NO}(h)$ 即 $\mathrm{OPT}>h$，所以 $\mathrm{OPT}\ge h+1$；
-- $\mathrm{LB}(v)$ 且 $h<v$ 时，$\mathrm{OPT}\ge v>h$，所以 $\mathrm{NO}(h)$；
-- 下界与同值上界相遇即精确最优。
-
-`SubsumptionProof` 额外检查 `source.h >= self.h`，因此 $\mathrm{NO}(h')\Rightarrow\mathrm{NO}(h)$ 只在 $h'\ge h$ 时成立，方向不会反。
-
-### 6.6 最终认证的可靠性
-
-当外层以 $\mathrm{LB}=\mathrm{UB}=v$ 退出时：
-
-- `UB` 附带一张通过 `check_schedule` 的调度 $s$，且 $C_{\max}(s)=v$；
-- `LB` 附带一张通过 `BranchProof.audit_rdf()` 的 $\mathrm{NO}(v-1)$（或通过 subsumption 的等价证明）。
-
-于是 $\mathrm{OPT}\ge v$ 且 $\mathrm{OPT}\le v$，故 $\mathrm{OPT}=v$，且 $s$ 达到 $v$。`_result` 的 `certified`、`audit`、`proof`、`cert_h` 都由这些对象产生，不依赖 `known`。
-
-### 6.7 基准中的 `ok`
-
-基准额外用已知最优值 `known` 做校验：
+**引理 3（势函数严格下降）**：若切分 $(i,t)$ 把当前允许域分成两个非空部分，则
 \[
-\mathtt{ok}=\mathtt{certified}\land \mathtt{opt}=\mathtt{known}\land
-\mathtt{audit}\land\mathtt{proof}\land \mathtt{cert\_h}=\mathtt{known}-1.
+\mu(F_L)<\mu(F),\qquad \mu(F_R)<\mu(F).
 \]
-`known` 只用于离线验收，不参与算法。生产环境应看 `certified`、`audit`、`proof`。
 
-### 6.8 完备性的边界
+**证明**：$F_L$ 和 $F_R$ 都是 $F$ 的真超集，且各自至少禁止了当前允许域中的一个时刻；只有任务 $i$ 的域发生变化，其他任务的域不变，故 $\mu$ 至少减少 1。$\square$
 
-SAGE 的完备性依赖两个引擎至少一个成功：
+**定理 1（完整搜索终止）**：`Search(h,\infty)` 在有限步内终止，且递归深度不超过 $\mu(\varnothing)\le n(T+1)$。
 
-- LP-BRANCH 在 caps 内给出 NO/YES；或
-- GA 找到 YES；或
-- CHD fallback 给出答案。
+**证明**：每次递归调用都在严格更小的 $\mu$ 上进行；$\mu$ 是非负整数，故良基。$\square$
 
-如果三者都失败，外层会走 APEX 的 `_recover_unknown`，最终可能 `certified=False`。因此 SAGE 不是「无条件多项式时间精确算法」；它是「在当前语料上把 105 次 CHD 全部消掉」的工程化精确算法。
+### 6.4 完备性
+
+**引理 4（分区覆盖）**：固定策略 $\pi$ 的搜索树是一棵二叉分区树：每个内部节点把当前盒按任务 $i$ 的开始时刻切成 $s_i\le t$ 与 $s_i>t$ 两半，两个子盒不交且并集为父盒。
+
+**证明**：切分只修改任务 $i$ 的允许域，且两个子域互补；其他任务域不变。$\square$
+
+**引理 5（完整搜索的判定正确性）**：若匹配叶子被正确关闭，则 `Search(h,\infty)` 返回 YES 当且仅当存在可行调度 $s$ 使 $C_{\max}(s)\le h$；否则返回 NO。
+
+**证明**：
+
+- 若存在可行 $s$，由引理 4，$s$ 落入某个叶子。该叶子的 LP 可行；若 LP 整数，`check_schedule` 接受；若 LP 分数，搜索继续切分；若所有开始时刻已固定，`_assign_machines` 找到机器分配。故不会返回 NO。
+- 若不存在可行 $s$，每个叶子的 LP 不可行或空域，Farkas/Empty 叶子闭合；所有叶子闭合后，根返回 NO。
+- 若某个叶子既不能闭合也不能给出 YES，`Search` 返回 UNKNOWN，而不是错误的 NO/YES。
+
+因此，在证书原语完备的前提下，完整搜索是可靠且完备的。$\square$
+
+### 6.5 全正确性定理
+
+**定理 2（PACT-C 的全正确性）**：假设
+
+- **C1**：`verify` 对 Farkas 证书是可靠的；
+- **C2**：`check_schedule` 对调度是可靠的；
+- **C3**：每个不可行叶子都能由整数/有理 Farkas 证书或匹配叶子关闭；
+- **C4**：`initial_bounds` 返回的 $lb_0,ub_0$ 满足 $lb_0\le\mathrm{OPT}\le ub_0$，且附带有效的下界证明或组合界、以及通过检查的上界调度。
+
+则 PACT-C 终止，返回 $\mathrm{OPT}$，且 `TotalTrace.audit_rdf()` 为真。
+
+**证明**：
+
+1. **终止**：外层每轮要么把 $lb$ 抬高（NO），要么把 $ub$ 压低（YES）；$ub-lb$ 是有限非负整数，故外层最多 $ub_0-lb_0+1$ 轮。每轮 `Search(h,\infty)` 由定理 1 终止；`_ensure_lb_proof` 只在有限 proof store 上扫描。故总终止。
+2. **不变式**：初始 $lb_0\le\mathrm{OPT}\le ub_0$ 由 C4。NO 步把 $lb$ 抬到 $h+1\le\mathrm{OPT}$；YES 步把 $ub$ 压到 $C_{\max}(s)\ge\mathrm{OPT}$。故每步后不变式成立。
+3. **闭合**：循环退出时 $lb=ub=v$。由不变式 $\mathrm{OPT}=v$。
+4. **证书**：`_ensure_lb_proof(v)` 给出 $\mathrm{NO}(v-1)$（或等价 subsumption），最终调度 $s^*$ 满足 $C_{\max}=v$。`TotalTrace` 逐条重放初始界、每个 step、最终 NO 和调度；由 C1、C2、引理 5，审计通过。
+
+$\square$
+
+### 6.6 总轨迹的可靠性
+
+`TotalTrace.audit_rdf()` 不信任生成器；它独立检查：
+
+- 初始下界证明（或 `bound_lb` 等式）和初始调度；
+- 每个 step 的 $h$ 在当前 bracket 内；
+- 每个 NO 证明的 $h$ 匹配且 `audit_rdf` 通过；
+- 每个 YES 调度的 $C_{\max}\le h$ 且 `check_schedule` 通过；
+- 最终 $\mathrm{NO}(v-1)$ 和 $C_{\max}=v$ 的调度。
+
+因此，`total_audit=True` 蕴含 $\mathrm{OPT}=v$，且整条 bracket 路径可重放。篡改测试见第 11 节。
+
+### 6.7 快速模式
+
+PACT-F 在 bracketing probe 上仍用 SAGE 的 capped BB/GA/CHD。若某个 bracketing probe 返回 UNKNOWN，CHD 会被调用，$Q>0$；此时总轨迹仍可审计（CHD 的 RDF 被包成 `OracleProof`），但 $Q=0$ 不再是定理。252 例上 PACT-F 的 bracketing probe 只有 2 个：一个 BB YES，一个 BB UNKNOWN 被 GA 接住；因此 $Q=0$ 且总审计 252/252。
+
+### 6.8 为什么没有多项式核
+
+`SCHED(I,h)` 是 NP 完全的：取 $m=2$、无优先约束、全 eligibility，判定是否存在 $C_{\max}\le h$ 的调度就是 PARTITION。若 PACT 对某个由 $n$ 多项式界定的参数给出多项式核，就会推出 P$\ne$NP 下的矛盾。因此本轮**不声称**多项式核；$k$ 是证书高度参数，最坏 $k\le n(T+1)$，可能是线性于 $nT$ 的。$k\le4$ 只是 252 例的经验事实，不是结构性定理。
 
 ---
 
@@ -564,43 +623,83 @@ SAGE 的完备性依赖两个引擎至少一个成功：
 
 ### 7.1 LP 规模
 
-固定 $h$ 的 SD LP 有 $O(nT)$ 个开始时间变量和 $O(mT+|E|+n)$ 条约束，其中 $T=h+1$ 是 horizon 长度。单次 LP 由 HiGHS 求解；时间对 $(n,m,T)$ 超线性，但在本语料上单次是毫秒级。
-
-### 7.2 LP-BRANCH 的最坏情况
-
-最坏情况下，每个任务都可能被分裂到每个允许开始时刻，叶子数可达
+固定 $h$ 的 SDLP 有
 \[
-\prod_{i\in J}|D_i(h)|,
+O(nT)\ \text{个变量},\qquad
+O(mT+|E|T+n)\ \text{条约束},
 \]
-因此是指数级。实现的硬上限是 `nodecap=96`、`depthcap=24`；超限返回 UNKNOWN。这个上限是「查询数换时间」的阀门：上限越松，NO 越可能被证明，但最坏时间越大。
+其中 $T=h+1$ 是 horizon 长度。单次 LP 的代价记为 $L(n,m,T)$；证书 LP 的代价记为 $C(n,m,T)$。在 252 例上单次是毫秒级。
 
-### 7.3 本轮实际分支规模
+### 7.2 搜索树
 
-58 张最终 `branch` 证明合计：
+高度为 $k$ 的完整二叉搜索树最多有
+\[
+2^{k+1}-1\ \text{个节点},\qquad 2^k\ \text{个叶子}.
+\]
+每个内部节点一次 LP；每个 NO 叶子一次证书 LP。因此
+\[
+T_{\rm probe}(k)=O\bigl(2^k(L+C)\bigr).
+\]
+完整模式 $k\le\mu(\varnothing)\le n(T+1)$，最坏
+\[
+O\bigl(2^{n(T+1)}(L+C)\bigr),
+\]
+是有限但指数的。这个上界是诚实的：PACT 不是多项式算法。
 
-| 指标 | 总和 | 单例最大 |
-|---|---:|---:|
-| LP 节点 | 194 | 9 |
-| 叶子 | 126 | 5 |
-| 深度（边） | — | 3 |
-| 叶子证书 LP | 126 | 5 |
+### 7.3 外层
 
-最坏一例是 `stress` 的 idx 47、$h=34$：9 个 LP 节点、5 个叶子、深度 3。也就是说，在这个语料上 LP-BRANCH 远没有接近 96/24 的上限；但这是经验事实，不是最坏情况保证。
+外层最多
+\[
+O(\log(ub_0-lb_0)+\mathrm{scan\_cap})
+\]
+次 probe；总时间
+\[
+O\bigl(2^k\log\Delta\,(L+C)+T_{\rm init}\bigr),
+\]
+其中 $\Delta=ub_0-lb_0$。在 252 例上 $\Delta$ 很小，scan_cap=4，实际 probe 总数 105。
 
-全量 `LP_BB=442` 的构成是：58 张最终 branch 的 194 个节点，加上 46 次 YES 探测和 1 次 UNKNOWN 探测的 248 个节点。全量 `LP_cert=137` 中，126 次来自最终 branch 的叶子，11 次来自未成为最终证明的探测。
+### 7.4 空间
 
-### 7.4 GA 复杂度
+当前实现把每个节点的 $F$ 存成 `frozenset`，所以最坏空间
+\[
+O(2^k\cdot nT)
+\]
+（证明树）或 $O(k\cdot nT)$（DFS 栈）。252 例的最大证明只有 9 个节点，空间可忽略。若未来要支持大 $k$，应把 $F$ 换成区间盒（每个任务一个 $[lo_i,hi_i]$），空间降到 $O(2^k n)$；这是 PRISM 方向的改进，本轮未实现。
 
-一次 SGS 解码是 $O(n^2)$（每个任务扫描机器和已有区间），一次 GA 调用的上界是 $O(Bn^2)$，$B=4000$。本轮 full 只调用 GA 一次：
+### 7.5 实测参数 $k$
 
-- `evals=2248`，`gens=3`，`t=0.14 s`，`best=41`；
-- 该实例是 base 的 `large_het 7`，B&B 返回 UNKNOWN，GA 在 3 代内找到 $C_{\max}=41$ 的调度。
+**NO 侧（$h=\mathrm{OPT}-1$）**：
 
-`no_bb` 中 GA 成功 45 次、失败 60 次，总 GA 时间约 16.04 s；失败调用在 $g=1$ 的不可行 $h$ 上会跑满预算。
+| 语料 | $n$ | $k=0$ | $k=1$ | $k=2$ | $k=4$ | 最大 $k$ | 节点 | 证书 LP | 时间 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 141 | 139 | 2 | 0 | 0 | 1 | 145 | 143 | 2.41 s |
+| pert | 60 | 55 | 5 | 0 | 0 | 1 | 70 | 65 | 0.81 s |
+| stress | 51 | 0 | 43 | 7 | 1 | 4 | 173 | 112 | 1.67 s |
+| **合计** | **252** | **194** | **50** | **7** | **1** | **4** | **388** | **320** | **4.89 s** |
 
-### 7.5 STAB 复杂度
+**YES 侧（$h=\mathrm{OPT}$）**：
 
-`_record_proof` 是字典插入；`_ensure_lb_proof` 最多扫描当前 proof store 的键，$O(|\mathcal P|)$，而 $|\mathcal P|\le$ 探测次数（本语料 $\le105$）。`SubsumptionProof` 的 audit 只递归一层 source，成本可忽略。
+| 语料 | $n$ | $k=0$ | $k=1$ | $k=2$ | $k\ge3$ | 最大 $k$ | 节点 | 时间 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 141 | 45 | 19 | 21 | 56 | 29 | 597 | 5.99 s |
+| pert | 60 | 4 | 21 | 22 | 13 | 9 | 178 | 0.87 s |
+| stress | 51 | 6 | 4 | 11 | 30 | 7 | 206 | 1.05 s |
+| **合计** | **252** | **55** | **44** | **54** | **99** | **29** | **981** | **7.90 s** |
+
+58 个 $g=1$ 的 NO 证明子集：
+
+| 高度 $k$ | 实例数 | 节点/例 | 叶子/例 | 总节点 | 总证书 |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 50 | 3 | 2 | 150 | 100 |
+| 2 | 7 | 5 | 3 | 35 | 21 |
+| 4 | 1 | 9 | 5 | 9 | 5 |
+| **合计** | **58** | — | — | **194** | **126** |
+
+这张表是本轮最重要的实验结果：**NO 侧的高度被压到 4，实际节点数 9；而 YES 侧的高度可以到 29。** 同一个深度参数不能同时服务两边。
+
+### 7.6 YES 侧与 GA
+
+YES 侧的完整搜索在 252 例上用 981 个 LP 节点，最大高度 29；如果用一个固定的深度上限，会漏掉大量 YES。GENETIC-UB 的代价是一次 SGS 解码 $O(n^2)$，预算 $B=4000$，一次 GA 调用上界 $O(Bn^2)$。PACT-C 完全不用 GA；PACT-F 只用 1 次；PACT-P（深度 3）用 7 次成功 + 3 次失败，说明 GA 是 YES 侧的性能补件，而不是 NO 侧的证明器。
 
 ---
 
@@ -612,152 +711,167 @@ SAGE 的完备性依赖两个引擎至少一个成功：
 
 | 语料 | $n$ | 说明 |
 |---|---:|---|
-| base | 141 | 基础族，覆盖多种结构 |
+| base | 141 | 基础族，覆盖多种结构；8 例有 eligibility 限制（`large_het`） |
 | pert | 60 | 扰动族，LP 分数/舍入边界更多 |
-| stress | 51 | 压力族，CHD 的 YES 搜索最坏 |
+| stress | 51 | 压力族，根 LP 在 $\mathrm{OPT}-1$ 上仍然可行 |
 
-约束规模为 $n\le21$、$m\le4$、$T\le68$；252 例的整数间隙全在 $\{0,1\}$。每例都有已知最优值 `known`，用于离线验收，不参与算法。
+约束规模为 $n\le21$、$m\le4$、$T\le68$；每例都有已知最优值 `known`，仅用于离线验收，不参与算法。
 
 ### 8.2 指标
 
 - `certified`：算法是否给出精确认证；
-- `opt` / `gap` / `ratio`：与 `known` 的差距；
+- `ok`：`certified` + `opt=known` + `audit` + `proof` + `cert_h=known-1`；PACT 还要求 `total_audit`；
 - `Q`：CHD 调用次数；
-- `LP_CHD`：CHD 内部 LP 次数；
-- `LP_pin`：LP pin 次数；
-- `LP_BB`：LP-BRANCH 节点 LP 次数；
-- `LP_cert`：叶子 Farkas 证书 LP 次数；
-- `YES_nodes`：CHD 的 YES 侧节点数；
-- `time`：单例墙钟，包含 LP、GA、CHD、audit；
-- `proof_kind`：最终下界证明类型；
-- `audit` / `proof`：独立重放与证明完整性。
+- `pin_lp`：LP pin 次数；
+- `bb_lp`：SAGE LP-BRANCH 节点 LP 次数；
+- `cert_lp`：SAGE 叶子证书 LP 次数；
+- `pact_lp`：PACT 搜索 LP 次数；
+- `pact_cert_lp`：PACT 叶子证书 LP 次数；
+- `pact_nodes`：PACT 搜索树节点数；
+- `total_audit`：`TotalTrace.audit_rdf()` 是否通过；
+- `time`：单例墙钟，包含 LP、GA、证书、总审计。
 
-### 8.3 对照与消融
+### 8.3 变体
 
-- **APEX**：v8.7 原算法，同 runner 复跑；
-- **SAGE full**：LP-BRANCH + GA + STAB；
-- **`no_ga`**：关闭 GA；
-- **`no_bb`**：关闭 LP-BRANCH；
-- **`bb_no_only`**：LP-BRANCH 只接受 NO，禁用 B&B YES，让 GA 负责所有 YES。
-
-所有变体使用同一语料、同一 Python 进程、无并行；时间是单次运行，不含置信区间。
+- **SAGE v8.8**：同 runner 复跑，作为基线；
+- **PACT-C**：complete first，所有 probe 由完整搜索解决，不用 GA/CHD；
+- **PACT-F**：closing hybrid，bracketing 用 SAGE，closing 用完整搜索；
+- **PACT-P（single3）**：单次深度 3 + GA + complete；
+- **PACT-d1**：迭代加深到 1；
+- **PACT-d0**：只允许 $k=0$；
+- **PACT-no-complete**：关闭 complete fallback，保留 CHD；
+- **PACT-no-ga**：关闭 GA，complete 负责所有 YES。
 
 ### 8.4 复现
 
 ```bash
 cd /home/runner/work/xuen/xuen/workspace
-.venv/bin/python exp/v8i/bench_sage.py      # full + 三组消融
-.venv/bin/python exp/v8h/bench_apex.py      # APEX full + 三组消融
+.venv/bin/python exp/v8o/bench_pact.py      # PACT 全部变体
+.venv/bin/python exp/v8i/bench_sage.py      # SAGE 基线
 ```
 
-`bench_sage.py` 会把 full / no_ga / no_bb / bb_no_only 写入 `exp/v8i/bench_sage_*.json`；`bench_apex.py` 的第一个块就是 full。
+`bench_pact.py` 会写入 `exp/v8o/bench_pact_*.json`；`bench_sage.py` 会写入 `exp/v8i/bench_sage_full.json`。所有变体在同一 Python 进程、同一 runner、无并行；时间是单次运行，不含置信区间。
 
 ---
 
 ## 9. 主实验结果
 
-### 9.1 APEX vs SAGE
+### 9.1 SAGE vs PACT
 
-| 指标 | v8.7 APEX | v8.8 SAGE | 变化 |
-|---|---:|---:|---|
-| 认证 | 252/252 | 252/252 | 不变 |
-| $Q$ | 105 | **0** | −105 |
-| LP$_{\rm CHD}$ | 874 | **0** | −874 |
-| LP$_{\rm pin}$ | 273 | 273 | 不变 |
-| LP$_{\rm BB}$ | 0 | 442 | +442 |
-| LP$_{\rm cert}$ | 0 | 137 | +137 |
-| LP 总计 | 1147 | **852** | −295 |
-| YES 节点 | 60001 | **0** | −60001 |
-| 时间 | 11.82 s | **9.62 s** | −2.20 s |
+| 指标 | SAGE v8.8 | PACT-C | PACT-F |
+|---|---:|---:|---:|
+| 认证 | 252/252 | 252/252 | 252/252 |
+| $Q$ | 0 | **0** | **0** |
+| LP pin | 273 | 273 | 273 |
+| 搜索 LP | 442（BB） | **450（complete）** | 30（BB）+ 412（complete） |
+| 证书 LP | 137 | **138** | 6 + 131 |
+| LP 总计 | 852 | **861** | **852** |
+| YES 节点 | 0 | 0 | 0 |
+| 总审计 | 无 | **252/252** | **252/252** |
+| 时间 | 11.62 s | **10.59 s** | 11.43 s |
 
-同 runner 的 APEX 复跑是 11.82 s；仓库里 `bench_apex_full.json` 记录的是先前 11.86 s 的运行，差异来自机器漂移。SAGE 的 9.62 s 是 252 例 `t` 之和，wall 为 9.63 s。
+PACT-C 的总 LP 比 SAGE 多 9 次，但墙钟反而略低；这是单次运行，不应解读为稳定的速度优势。真正的差别是：PACT-C 没有 caps、没有 GA、没有 CHD，并且 252 张总证书全部通过独立重放。
 
 ### 9.2 分语料
 
-| 语料 | $n$ | 认证 | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| base | 141 | 141 | 0 | 0 | 120 | 191 | 15 | 0 | 5.51 s |
-| pert | 60 | 60 | 0 | 0 | 81 | 78 | 10 | 0 | 1.03 s |
-| stress | 51 | 51 | 0 | 0 | 72 | 173 | 112 | 0 | 3.08 s |
-| **合计** | **252** | **252** | **0** | **0** | **273** | **442** | **137** | **0** | **9.62 s** |
+| 语料 | $n$ | SAGE 时间 | PACT-C 时间 | PACT-C 搜索 LP | PACT-C 证书 LP | PACT-C 总审计 |
+|---|---:|---:|---:|---:|---:|---:|
+| base | 141 | 6.64 s | 6.08 s | 199 | 16 | 141 |
+| pert | 60 | 1.31 s | 1.15 s | 78 | 0 | 60 |
+| stress | 51 | 3.67 s | 3.36 s | 173 | 122 | 51 |
+| **合计** | **252** | **11.62 s** | **10.59 s** | **450** | **138** | **252** |
 
-stress 是变化最大的一组：APEX 的 60k YES 节点主要来自这里；SAGE 用 173 个 LP-BRANCH 节点 + 112 次叶子证书替代，YES 节点归零。
+stress 的证书 LP 是 122，占 138 的绝大多数；这与 stress 的根 LP 在 $\mathrm{OPT}-1$ 上仍然可行一致：NO 证明必须切到 Farkas 叶子，而 base/pert 的 194 个 NO 里大多数在根就不可行。
 
-### 9.3 证明类型
+### 9.3 引擎归因
 
-| 类型 | 数量 | 含义 |
-|---|---:|---|
-| `branch` | 58 | LP-BRANCH 的 $\mathrm{NO}(L^*)$ 树 |
-| `farkas` | 110 | 单张 Farkas 下界证明 |
-| `bound` | 60 | 结构/容量下界 |
-| `energy` | 24 | 能量/不等式下界 |
-| **合计** | **252** | |
+| 变体 | complete NO | complete YES | GA YES | BB YES | CHD | 未决 |
+|---|---:|---:|---:|---:|---:|---:|
+| PACT-C | 58 | 47 | 0 | 0 | 0 | 0 |
+| PACT-F | 58 | 45 | 1 | 1 | 0 | 0 |
+| PACT-single3 | 58 | 40 | 7 | 0 | 0 | 10 个 probe 进入 GA/complete |
+| PACT-d1 | 58 | 26 | 21 | 0 | 0 | 31 个 probe 进入 GA/complete |
+| PACT-d0 | 58 | 6 | 41 | 0 | 0 | 60 个 probe 进入 GA/complete |
+| PACT-no-complete | 57 | 38 | 7 | 0 | 3 | 0 |
+| PACT-no-ga | 58 | 47 | 0 | 0 | 0 | 10 个 probe 进入 complete |
 
-APEX 的 58 张 `oracle` 在 SAGE 中全部变成 `branch`；其余 194 张（110 `farkas` + 60 `bound` + 24 `energy`）与 APEX 完全一致。也就是说，SAGE 没有改变 $g=0$ 的证明形态，只替换了 $g=1$ 的 NO 来源。
+PACT-single3 是一个关键对照：深度 3 足以闭合全部 58 个 NO（与参数表一致），但只闭合 40/47 个 YES；剩下的 7 个由 GA 接住，3 个由完整搜索接住。**NO 侧浅、YES 侧深**，这不是调参问题，而是两侧证明义务不同。
 
-### 9.4 引擎归因
+### 9.4 证明类型
 
-SAGE full 的 105 次 probe 分布：
+| 类型 | SAGE | PACT-C | PACT-F | PACT-no-complete |
+|---|---:|---:|---:|---:|
+| `branch` | 58 | 58 | 58 | 57 |
+| `farkas` | 110 | 110 | 110 | 110 |
+| `bound` | 60 | 60 | 60 | 60 |
+| `energy` | 24 | 24 | 24 | 24 |
+| `oracle` | 0 | 0 | 0 | 1 |
+| **合计** | **252** | **252** | **252** | **252** |
 
-| 引擎 | 结果 | 次数 |
-|---|---|---:|
-| LP-BRANCH | NO（带 `BranchProof`） | 58 |
-| LP-BRANCH | YES | 46 |
-| LP-BRANCH | UNKNOWN | 1 |
-| GA | YES | 1 |
-| GA | NO | 0 |
-| CHD fallback | 任意 | 0 |
+PACT-C/F 的最终证明形态与 SAGE 完全一致：58 张 `branch`、110 张 Farkas、60 张 bound、24 张 energy；区别在 `branch` 的搜索过程和总轨迹。PACT-no-complete 把 1 张 `branch` 退回 `oracle`，同时 $Q=3$，这说明完整 fallback 是消除最后一个 oracle 的关键。
 
-那 1 次 UNKNOWN 是 base 的 `large_het 7`；GA 用 2248 次唯一 SGS 评估、3 代、0.14 s 找到 $C_{\max}=41$。因此 full 的 $Q=0$ 不是「所有 probe 都一次成功」，而是「唯一失败的那次被 GA 接住了」。
+### 9.5 时间与 LP 分解
+
+PACT-C 的 10.59 s 包含：
+
+- LP pin：273 次；
+- 完整搜索：450 次；
+- 叶子证书：138 次；
+- 总轨迹审计：252 次（每次重放该例的证明与调度）；
+- GA/CHD：0 次。
+
+PACT-F 的 11.43 s 包含：
+
+- LP pin：273 次；
+- BB：30 次；
+- complete closing：412 次；
+- 证书：6 + 131 次；
+- GA：1 次；
+- 总轨迹审计：252 次。
+
+两者的 LP 总量都是 852，但 PACT-F 多了一次 GA 和 bracketing BB 的开销；PACT-C 把所有 probe 统一成 complete，代码路径更简单，审计也更容易解释。
 
 ---
 
 ## 10. 消融
 
-| 变体 | $Q$ | LP$_{\rm CHD}$ | LP$_{\rm pin}$ | LP$_{\rm BB}$ | LP$_{\rm cert}$ | YES 节点 | 时间 | GA yes/no | CHD 调用 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| **SAGE full** | **0** | **0** | 273 | 442 | 137 | 0 | **9.62 s** | 1/0 | 0 |
-| `no_ga` | 1 | 13 | 273 | 442 | 137 | 0 | 9.71 s | 0/0 | 1 |
-| `bb_no_only` | 2 | 24 | 273 | 442 | 137 | 0 | 13.21 s | 45/2 | 2 |
-| `no_bb` | 60 | 412 | 273 | 0 | 0 | 60001 | 24.65 s | 45/60 | 60 |
+| 变体 | $Q$ | 搜索 LP | 证书 LP | LP 总计 | 总审计 | 时间 | 读法 |
+|---|---:|---:|---:|---:|---:|---:|---|
+| **PACT-C** | **0** | **450** | **138** | **861** | **252** | **10.59 s** | 完整搜索，无 GA/CHD |
+| **PACT-F** | **0** | 30 + 412 | 6 + 131 | **852** | **252** | 11.43 s | closing 完整，bracketing 用 SAGE |
+| PACT-single3 | 0 | 484 | 140 | 897 | 252 | 14.18 s | 深度 3 后 GA/complete |
+| PACT-d1 | 0 | 471 | 139 | 883 | 252 | 14.89 s | 深度 1 后 GA/complete |
+| PACT-d0 | 0 | 334 | 129 | 736 | 252 | 27.54 s | 只允许根节点切分 |
+| PACT-no-complete | **3** | 719 | 148 | 1140 | 252 | 16.71 s | 关闭 complete，CHD 回来 |
+| PACT-no-ga | 0 | 868 | 165 | 1306 | 252 | 17.07 s | 关闭 GA，complete 负责 YES |
 
-### 10.1 `no_ga`
+### 10.1 深度消融
 
-关闭 GA 后，base `large_het 7` 的 B&B UNKNOWN 没有上界补件，退回 CHD：
+- **d0**：只允许根节点切分。58 个 NO 仍然全部闭合（因为多数 NO 在根或一刀内闭合），但 41 个 YES 要 GA、60 个要 complete；时间 27.54 s，说明 YES 侧不能被深度 0 卡住。
+- **d1**：26 个 YES 在深度 1 内闭合，21 个靠 GA，10 个靠 complete；14.89 s。
+- **single3**：58 个 NO 全部闭合，40 个 YES 在深度 3 内闭合，7 个靠 GA，3 个靠 complete；14.18 s。它比 PACT-C 慢，因为它在 YES probe 上先做了一次注定失败的深度 3 搜索。
+- **PACT-C**：不做深度尝试，直接完整搜索；10.59 s。这说明在 252 例上，**参数化深度优先不是运行时策略，而是证明复杂度的度量**。
 
-- $Q=1$，CHD 内部 13 次 LP；
-- 时间 9.71 s（比 full 多 0.09 s）；
-- 证明类型不变（58 `branch`），说明 GA 只负责那 1 个 YES。
+### 10.2 关闭 complete
 
-这是最轻的消融，说明 GA 在当前语料上不是主力，但它是 $Q=0$ 的最后一根钉子。
+`PACT-no-complete` 把最后 3 个 probe 退回 CHD：
 
-### 10.2 `bb_no_only`
+- $Q=3$，LP$_{\rm CHD}$ 不在本表（CHD 内部 LP 另计）；
+- 时间 16.71 s，比 PACT-C 多 6.12 s；
+- 最终证明出现 1 张 `oracle`；
+- 总审计仍然 252/252，因为 CHD 的 RDF 被包成 `OracleProof`，`TotalTrace` 可以重放它。
 
-LP-BRANCH 只证 NO，禁用 B&B 的 YES，让 GA 负责所有 YES：
+这说明：**总正确性不要求 $Q=0$；$Q=0$ 是 PACT-C 把 CHD 完全替换掉之后的额外结果。**
 
-- $Q=2$，CHD 24 次 LP，时间 13.21 s；
-- GA 成功 45 次、失败 2 次；
-- 两个失败是 base `large_het 3` 与 `large_het 5`（都是 $g=0$），最终退回 CHD；
-- 58 个 $g=1$ 仍然全部由 `branch` 证明，$Q$ 只剩这两个 YES 尾例。
+### 10.3 关闭 GA
 
-这说明 LP-BRANCH 的 NO 侧可以独立承担 58 个实例；没有 B&B YES 时，GA 的上界能力差两个尾例。
+`PACT-no-ga` 用完整搜索负责所有 YES：
 
-### 10.3 `no_bb`
+- $Q=0$，总审计 252/252；
+- 搜索 LP 868，证书 LP 165，总计 1306，时间 17.07 s；
+- 比 PACT-C 多 6.48 s。
 
-关闭 LP-BRANCH：
-
-- $Q=60$，CHD 412 次 LP，YES 节点回到 60001，时间 24.65 s；
-- GA 成功 45 次、失败 60 次；
-- 58 个 $g=1$ 全部退回 CHD（`oracle` 证明），2 个 $g=0$ 也退回 CHD；
-- 最终证明类型变为 `oracle=58`、`farkas=110`、`bound=60`、`energy=24`。
-
-这个变体看起来 LP 总数只有 $273+412=685$，比 full 的 852 少，但时间从 9.62 s 涨到 24.65 s，YES 节点从 0 涨到 60001。**LP 计数不是目标函数；CHD 的 YES 搜索才是墙钟杀手。** 这也是为什么 SAGE 用 LP-BRANCH 换掉 CHD，而不是用 GA 换掉 CHD。
-
-### 10.4 贡献排序
-
-1. **LP-BRANCH 是主贡献**：没有它，$Q=60$、YES=60001、时间 24.65 s；有它，58 个 NO 全部变成 3–9 节点的证书树，YES 归零。
-2. **GA 是补件**：只消除 1 次 CHD，但它是 full 达到 $Q=0$ 的必要条件；没有它，$Q=1$。
-3. **STAB 是闭合器**：它不直接减少查询，但把 $\mathrm{NO}(L^*)$ 接到 $\mathrm{LB}(L^*+1)$，让最终 `MEET` 不再补问；没有它，`branch` 证明无法转成最终下界。
+GA 不是正确性必需，但它是 YES 侧的性能补件；在 PACT-C 中，完整搜索已经足够快，所以 GA 可以被完全省掉。这是一个有趣的结论：**当完整搜索的 YES 高度在 29 以内时，GA 的边际收益是负的（至少在这批语料上）；但 PACT-C 的成功依赖于完整搜索能承受 981 个 YES 节点。**
 
 ---
 
@@ -765,91 +879,98 @@ LP-BRANCH 只证 NO，禁用 B&B 的 YES，让 GA 负责所有 YES：
 
 ### 11.1 独立重放
 
-`BranchProof.audit_rdf()` 从根开始，用空 $F$ 重放整棵树：
+`TotalTrace.audit_rdf()` 从初始界开始，按步骤重放：
 
-- 每个内部节点检查 $(i,m)$ 是否把当前允许域切成两个非空部分；
-- 每个子节点检查 $F$ 是否恰好是父 $F$ 加对应半区；
-- 每个叶子调用 `verify(inst, h, cert, forbid=F)` 或检查空域；
-- 不读取生成时的 LP 状态、bounds 或 `no_states`。
+- 初始下界：`init_lb_proof.audit_rdf()` 或 `bound_lb(I)=lb0`；
+- 初始上界：`check_schedule(init_schedule, ub0)`；
+- 每个 step：$h$ 在当前 bracket 内，NO 证明的 $h$ 匹配且 `audit_rdf` 通过，YES 调度的 $C_{\max}\le h$ 且 `check_schedule` 通过；
+- 最终：`final_lb_proof.h=opt-1` 且 `audit_rdf` 通过，`final_schedule` 的 $C_{\max}=opt$。
 
-因此 `audit_rdf()` 是证明对象的自包含检查，不是「信任生成器」。
+它不读取生成时的 LP 状态、bounds、`certified` 或 `ok`。
 
-### 11.2 篡改
+### 11.2 篡改测试
 
-手工修改证明对象后：
+在 `stress 47`（$h=34$，OPT=35）上手工修改 `TotalTrace`：
 
-- 修改叶子 `alpha` 或 `beta` 的某个分量 → `verify` 返回 False → `audit_rdf()` 返回 False；
-- 修改内部节点的 `mid` → 子 $F$ 与重新计算的分区不一致 → `audit_rdf()` 返回 False；
-- 删除/替换某个叶子证书 → 检查失败或叶子数不匹配。
+| 篡改 | `audit_rdf()` |
+|---|---|
+| 删除最后一个 step | False |
+| 把某个 step 的 $h$ 改成 $ub_0+1$ | False |
+| 把最终调度的某个开始时刻 +1 | False |
+| 把最终 NO 证明的 $h$ +1 | False |
+| 原始对象 | True |
 
-这些测试只针对证明对象，不针对 LP 求解器；它们说明 `BranchProof` 的检查器确实在做结构性校验，而不是只查一个布尔标志。
+这些测试只针对证书对象，不针对 LP 求解器；它们说明 `TotalTrace` 在做结构性校验，而不是只查一个布尔标志。
 
-### 11.3 `SubsumptionProof`
+### 11.3 证明对象
 
-`SubsumptionProof.audit_rdf()` 检查：
+PACT-C/F 的最终证明对象与 SAGE 相同：
 
-\[
-\mathtt{source}\ne\mathtt{None}\quad\land\quad
-\mathtt{source.h}\ge\mathtt{self.h}\quad\land\quad
-\mathtt{source.audit\_rdf()}.
-\]
-因此它只能把更强的 NO 传给更弱的 $h$，不能反向。
+- `BranchProof`：逐层检查 $F$ 分区、子 $F$ 恰好是父 $F$ 加对应半区、叶子 `verify` 或空域；
+- `SubsumptionProof`：检查 `source.h >= self.h` 且 source 自身 audit；
+- `TotalTrace`：检查整条 bracket。
 
-### 11.4 `ok` 与 `certified`
-
-full 的 252 例全部 `ok=True`、`certified=True`、`audit=True`、`proof=True`，且 `cert_h=known-1`。`ok` 使用 `known` 做离线验收；`certified`/`audit`/`proof` 不依赖 `known`。
+`pact_decide` 在返回 NO 前会先 `proof.audit_rdf()`；如果失败，返回 UNKNOWN，不会把坏证明交给外层。
 
 ---
 
 ## 12. 讨论
 
-### 12.1 为什么不是「APEX + 更快的 oracle」
+### 12.1 为什么 NO 浅、YES 深
 
-如果只是把 `sdecc_no` 当黑箱 oracle，能消掉 YES 节点，但证明不可重放，且会破坏 APEX 的 soundness 叙事。SAGE 的 `branch` 是一等判断：
+NO 证明只需要展示「不存在」：LP 在根或切一刀后不可行，Farkas 证书就闭合了。YES 证明需要构造一个整数调度：LP 的分数解可能在很多任务上都有质量，搜索要逐层把分数质量挤到整数点；每层只切一个任务，所以高度可能很大。252 例的分布正是这样：NO 最大高度 4，YES 最大高度 29。
 
-- 它携带完整的 $F$ 分区；
-- 它能在不运行 LP 的情况下被 `audit_rdf` 重放；
-- 它能被 `SubsumptionProof` 接到最终下界；
-- 它能被 `STAB` 的 `NO-LB` 规则消费。
+这不是 PACT 的缺陷，而是问题结构：**不可行性证明可以是局部的，可行性构造可以是全局的。** SAGE 把 LP-BRANCH 用在 NO 侧、把 GA 用在 YES 侧，正好对应这个不对称性。
 
-因此 $Q=0$ 不是「oracle 变快了」，而是「NO 从搜索副产品变成了证明对象」。
+### 12.2 为什么参数化深度优先不是运行时策略
 
-### 12.2 为什么不是「GA 替换 CHD」
+PACT-single3 在 252 例上比 PACT-C 慢 3.59 s：它在每个 YES probe 上先做一次深度 3 的搜索，失败后再 GA/complete。深度 3 对 NO 足够，对 YES 不够；重复的根 LP 和失败的搜索是纯开销。因此本轮的结论不是「用深度 3 替换 SAGE」，而是：
 
-`no_bb` 已经给出反例：GA 能造 45 张 YES，但 58 个 $g=1$ 仍要 CHD，$Q=60$、YES=60001、24.65 s。GA 是上界构造器，不是下界证明器；它无法证明「不存在 $C_{\max}\le h$ 的调度」。
+> **用 $k$ 解释 SAGE 的 NO 侧为什么便宜，用完整搜索替换 NO 侧的 caps；运行时仍然让 YES 侧走它擅长的引擎。**
 
-### 12.3 为什么 `Q=0` 仍可能变慢
+PACT-C 选择「完整搜索统一处理两侧」，是因为在这批语料上完整搜索的 YES 代价可以接受（981 个节点、7.90 s）；如果新语料的 YES 更深，PACT-F/PACT-P 的混合模式更合适。
 
-`Q` 只数 CHD 调用。LP-BRANCH 的 LP 次数、GA 的 SGS 次数、证明 audit 都不计入 $Q$。在 full 中这些成本低于 APEX 的 CHD，所以时间也降了；但在更难的实例上，LP-BRANCH 可能指数爆炸，GA 可能跑满预算，`Q=0` 可能伴随更长的时间。**查询数与墙钟不是同一个目标。**
+### 12.3 为什么不是「APEX + 更快的 oracle」
 
-### 12.4 STAB 的边界
+PACT 的 `branch` 是一等证明：它携带完整的 $F$ 分区，能在不运行 LP 的情况下被 `audit_rdf` 重放，能被 `SubsumptionProof` 接到最终下界，能被 `TotalTrace` 纳入整条 bracket。$Q=0$ 不是「oracle 变快了」，而是「NO 从搜索副产品变成了证明对象」。
 
-STAB 的抽象是单调闭包，但实现是「按需闭包」：只为最终需要的 $v-1$ 找证明，不预生成所有 $h$。这样做省时间，但也意味着 `proof store` 不是全局最小不动点；如果未来要在交互式证明里查询任意 $h$，需要显式跑全量闭包。
+### 12.4 与 SAGE 的关系
+
+PACT-C 不是 SAGE 的替代品，而是它的「证明侧升级」：
+
+- 搜索策略相同（LP 引导的分数任务切分）；
+- 叶子规则相同（Farkas/Empty/YES）；
+- 外层 bracket 相同；
+- 新增的是三值语义、完整模式、总轨迹和参数分析。
+
+在 252 例上，PACT-C 的 LP 总数只比 SAGE 多 9 次，但总审计从「最后一张 NO 树」升级为「整条 bracket + 上下界 + 最终调度」。这是本轮的主要收益。
 
 ---
 
 ## 13. 已知风险与限制
 
-1. **最坏指数级**：LP-BRANCH 的叶子数最坏是 $\prod_i|D_i(h)|$。本语料最大只有 9 个节点/5 个叶子，但新语料可能完全不同；caps 触发时 $Q$ 会回来。
-2. **Farkas 证书的数值稳定性**：`verify` 用浮点与容差；若 LP 退化或证书系数病态，可能出现 `verify` 失败，LP-BRANCH 返回 UNKNOWN，退回 CHD。
-3. **GA 无完备性**：`no_bb` 中 GA 失败 60 次；`bb_no_only` 中 GA 漏 2 个 $g=0$。GA 的成功依赖预算、种子和实例结构。
-4. **语料小**：$n\le21$、$m\le4$、$T\le68$，且所有 $g\in\{0,1\}$；没有 PSPLIB、没有更大规模、没有多峰分布。$Q=0$ 不能外推到一般实例。
-5. **单次运行**：时间是单次共享 runner 的墙钟，没有置信区间；APEX 与 SAGE 同 runner 复跑只能降低机器漂移，不能消除。
-6. **`known` 的使用**：`ok` 用 `known` 验收；生产环境没有 `known`，必须依赖 `certified`/`audit`/`proof`。
-7. **STAB 是按需闭包**：不是全局最小不动点；若未来需要任意 $h$ 的查询，要补全量闭包。
-8. **LP-BRANCH 的完备性依赖 caps**：caps 越松越完备，但越慢；当前 96/24 是本语料的经验选择，没有理论最优性。
-9. **没有形式化验证**：正确性论证是纸面 + 运行时 audit，没有 Coq/Lean/Isabelle 机器证明；`verify` 和 `check_schedule` 本身也是 Python 代码。
-10. **GA 预算与时间**：full 只有 1 次 GA（0.14 s），但 `no_bb` 的 GA 总时间约 16.04 s；如果新语料有大量 B&B UNKNOWN，GA 会成为新的墙钟瓶颈。
+1. **$k$ 是经验参数，不是定理**：252 例上 NO 侧 $k\le4$，但最坏 $k\le n(T+1)$；新语料可能完全不同。完整搜索的 $2^k$ 上界仍然是指数。
+2. **没有多项式核**：`SCHED` 是 NP 完全的；本轮不声称多项式核，也不声称 FPT 于 $n$ 或 $T$。$k$ 是证书高度参数，依赖具体实例和切分策略。
+3. **YES 侧重尾**：YES 高度最大 29；完整搜索在 YES 侧用 981 个节点。如果新语料的 YES 更深，PACT-C 会变慢，GA 仍然是必要的性能补件。
+4. **Farkas 证书的数值稳定性**：实现使用 `integer_certificate` 的整数缩放；252 例的 138 张证书全部通过 `verify`，但没有实现精确有理 Farkas 的完整回退。若新语料出现病态 LP，`pact_decide` 会返回 UNKNOWN，退回 CHD。
+5. **匹配叶子未完全证书化**：8 个 `large_het` 实例有 eligibility 限制；`_assign_machines` 是精确回溯，但失败时当前实现返回 UNKNOWN 而不是 NO 证明。全正确性定理把这一点列为假设 C3；252 例未触发。
+6. **总轨迹的成本**：`TotalTrace` 会重新审计每个 step 的证明和调度；时间已计入 10.59 s，但证明规模增大时，审计成本会线性增长。
+7. **单次运行**：时间是同一 runner 的单次墙钟，没有置信区间；SAGE 与 PACT 的 1 s 差异不应被过度解读。
+8. **语料小**：$n\le21$、$m\le4$、$T\le68$；没有 PSPLIB、没有更大规模、没有多峰分布。$k\le4$ 不能外推。
+9. **切分策略未针对高度优化**：`choose_fractional_job` 沿用 SAGE 的质量/尾延迟/后继数排序；不同的切分顺序可能得到更矮的证明树。本轮没有做策略搜索。
+10. **`known` 的使用**：`ok` 用 `known` 做离线验收；生产环境应看 `certified`、`audit`、`proof`、`total_audit`。
+11. **快速模式仍用 caps**：PACT-F 的 bracketing probe 仍可能返回 UNKNOWN；$Q=0$ 是 252 例的结果，不是定理。
+12. **总轨迹的 CHD 包装**：如果某个 step 由 CHD 给出，`TotalTrace` 用 `OracleProof` 包装 RDF；它的可靠性依赖 RDF 的 `audit_rdf`，而不是 PACT 自己的检查器。
 
 ---
 
 ## 14. 最大风险（一句话）
 
-**$Q=0$ 不是免费的：它把 CHD 换成了最坏指数级的 LP-BRANCH；如果新语料上分支树或叶子 Farkas 证书爆炸，SAGE 会同时失去 APEX 的查询数优势和墙钟优势。**
+**PACT 的全正确性只在 $k$ 小的时候便宜：如果新语料上 NO 证明高度 $k$ 变大，完整搜索会指数爆炸；而退回 SAGE 的 caps 又会把 $Q=0$ 和总证书一起丢掉——所以本轮最大的风险是「$k\le4$ 只是这 252 例的经验事实，不是定理」。**
 
 ---
 
 ## 15. 本轮结论（一句话）
 
-**SAGE-ALC 用「LP-BRANCH 证 NO + GA 造 YES + STAB 闭合」把 APEX 的 105 次 CHD 全部消掉，在 252 例上做到 $Q=0$、YES 节点 0、9.62 s 且 252/252 认证；代价是 NO 侧变成最坏指数级的分支证明，必须用 caps 和 fallback 控制风险。**
+**PACT-ALC 把 SAGE 的 NO 证明从「capped 搜索」变成「按证书高度 $k$ 参数化的完整搜索」：在 252 例上 252/252 认证、$Q=0$、总审计 252/252、10.59 s，58 个 $g=1$ 的 NO 证明高度分布为 $50\times1$、$7\times2$、$1\times4$；代价是 $k$ 的最坏情况仍是 $n(T+1)$，全正确性不能自动变成多项式时间。**
 <!-- ARTIFACT:END -->

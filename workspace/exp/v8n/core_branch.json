@@ -1,0 +1,1015 @@
+[
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12248
+ },
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   9
+  ],
+  "t": 0.34795
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 6,
+  "known": 34,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12207
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 16,
+  "known": 34,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12158
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 6,
+  "known": 35,
+  "verdict": false,
+  "nodes": 13,
+  "leaves": 12,
+  "lp": 13,
+  "cert": 12,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   10
+  ],
+  "t": 0.12614
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 18,
+  "known": 34,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   9
+  ],
+  "t": 0.34708
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 26,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   8
+  ],
+  "t": 0.31437
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 13,
+  "leaves": 12,
+  "lp": 13,
+  "cert": 12,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   10
+  ],
+  "t": 0.12546
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12171
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   9
+  ],
+  "t": 0.35788
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   8
+  ],
+  "t": 0.31298
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   8
+  ],
+  "t": 0.31362
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 41,
+  "leaves": 39,
+  "lp": 41,
+  "cert": 39,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   7
+  ],
+  "t": 0.33721
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 41,
+  "leaves": 39,
+  "lp": 41,
+  "cert": 39,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   9,
+   7
+  ],
+  "t": 0.35033
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   8
+  ],
+  "t": 0.31655
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 15,
+  "leaves": 14,
+  "lp": 15,
+  "cert": 14,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.15809
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.14321
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.12563
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   8
+  ],
+  "t": 0.34746
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.13312
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 28,
+  "leaves": 27,
+  "lp": 28,
+  "cert": 27,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.25672
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.1247
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.11027
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 18,
+  "leaves": 17,
+  "lp": 18,
+  "cert": 17,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   5
+  ],
+  "t": 0.1259
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   5
+  ],
+  "t": 0.12791
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 56,
+  "leaves": 53,
+  "lp": 56,
+  "cert": 53,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   7,
+   7
+  ],
+  "t": 0.49167
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.13336
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 16,
+  "leaves": 15,
+  "lp": 16,
+  "cert": 15,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.11613
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 39,
+  "leaves": 37,
+  "lp": 39,
+  "cert": 37,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   10,
+   8
+  ],
+  "t": 0.34704
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   8
+  ],
+  "t": 0.14499
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 14,
+  "leaves": 13,
+  "lp": 14,
+  "cert": 13,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   8
+  ],
+  "t": 0.14871
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 19,
+  "leaves": 18,
+  "lp": 19,
+  "cert": 18,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.13127
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.11618
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.13911
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 56,
+  "leaves": 53,
+  "lp": 56,
+  "cert": 53,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   6,
+   7,
+   7
+  ],
+  "t": 0.46707
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 37,
+  "leaves": 35,
+  "lp": 37,
+  "cert": 35,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   8,
+   9
+  ],
+  "t": 0.42257
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 56,
+  "leaves": 53,
+  "lp": 56,
+  "cert": 53,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   8,
+   8,
+   7
+  ],
+  "t": 0.49667
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   6,
+   7
+  ],
+  "t": 0.33931
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 41,
+  "leaves": 39,
+  "lp": 41,
+  "cert": 39,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   7
+  ],
+  "t": 0.34003
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 28,
+  "leaves": 27,
+  "lp": 28,
+  "cert": 27,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.23713
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 16,
+  "leaves": 15,
+  "lp": 16,
+  "cert": 15,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12501
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.11966
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 14,
+  "leaves": 13,
+  "lp": 14,
+  "cert": 13,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.13699
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 18,
+  "leaves": 17,
+  "lp": 18,
+  "cert": 17,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   8
+  ],
+  "t": 0.15589
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.1394
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   5
+  ],
+  "t": 0.13163
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 38,
+  "leaves": 36,
+  "lp": 38,
+  "cert": 36,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   9,
+   7
+  ],
+  "t": 0.37312
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 28,
+  "leaves": 27,
+  "lp": 28,
+  "cert": 27,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   8
+  ],
+  "t": 0.259
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 13,
+  "leaves": 12,
+  "lp": 13,
+  "cert": 12,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.11534
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 54,
+  "leaves": 51,
+  "lp": 54,
+  "cert": 51,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   8,
+   8,
+   7
+  ],
+  "t": 0.46931
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 42,
+  "leaves": 40,
+  "lp": 42,
+  "cert": 40,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   8,
+   8
+  ],
+  "t": 0.37619
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 14,
+  "leaves": 13,
+  "lp": 14,
+  "cert": 13,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.11432
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   7
+  ],
+  "t": 0.14248
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   7
+  ],
+  "t": 0.35697
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 14,
+  "leaves": 13,
+  "lp": 14,
+  "cert": 13,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.11045
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 41,
+  "leaves": 39,
+  "lp": 41,
+  "cert": 39,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   7,
+   7
+  ],
+  "t": 0.33731
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "verdict": false,
+  "nodes": 40,
+  "leaves": 38,
+  "lp": 40,
+  "cert": 38,
+  "depth": 2,
+  "unknown": false,
+  "core_sizes": [
+   6,
+   7
+  ],
+  "t": 0.36741
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "verdict": false,
+  "nodes": 17,
+  "leaves": 16,
+  "lp": 17,
+  "cert": 16,
+  "depth": 1,
+  "unknown": false,
+  "core_sizes": [
+   6
+  ],
+  "t": 0.12192
+ }
+]
