@@ -70,10 +70,23 @@ jobs:
               --jq '.workflows[] | [.id, .path, .state, .name] | @tsv'
           )"
           DISABLED=0
+          declare -A EXCLUDED_WF=()
           while IFS=$'\t' read -r id path state name; do
             [ -n "$id" ] || continue
-            [ "$id" = "$CURRENT_WF_ID" ] && continue
-            [ "$path" = "$CURRENT_WF_PATH" ] && continue
+            if [ "$id" = "$CURRENT_WF_ID" ] || [ "$path" = "$CURRENT_WF_PATH" ]; then
+              EXCLUDED_WF[$id]=1
+              continue
+            fi
+            case "$path" in
+              .github/workflows/*) ;;
+              *)
+                # GitHub 托管的 dynamic workflow（例如 Dependabot update graph）
+                # 不是仓库里的普通 workflow，disable/cancel 可能失败，直接跳过。
+                EXCLUDED_WF[$id]=1
+                echo "[suspend] skip GitHub-managed workflow ${name} (${path})"
+                continue
+                ;;
+            esac
             [ "$state" = "active" ] || continue
 
             if gh workflow disable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null; then
@@ -94,18 +107,18 @@ jobs:
           declare -A SEEN_CANCELED=()
           DEADLINE=$((SECONDS + 180))
           while :; do
-            ACTIVE_IDS="$(
+            ACTIVE_RUNS="$(
               gh run list --repo "$GITHUB_REPOSITORY" --limit 200 \
                 --json databaseId,workflowDatabaseId,status \
-              | jq -r --argjson current "$CURRENT_WF_ID" \
-                '.[] | select(.status != "completed" and .workflowDatabaseId != $current) | .databaseId'
+              | jq -r '.[] | select(.status != "completed") | [.databaseId, .workflowDatabaseId] | @tsv'
             )"
-            if [ -z "$ACTIVE_IDS" ]; then
-              break
-            fi
-
-            while IFS= read -r run_id; do
+            PENDING=0
+            while IFS=$'\t' read -r run_id wf_id; do
               [ -n "$run_id" ] || continue
+              if [ -n "$wf_id" ] && [ -n "${EXCLUDED_WF[$wf_id]:-}" ]; then
+                continue
+              fi
+              PENDING=$((PENDING + 1))
               if gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
                 if [ -z "${SEEN_CANCELED[$run_id]:-}" ]; then
                   SEEN_CANCELED[$run_id]=1
@@ -116,8 +129,11 @@ jobs:
                   echo "[suspend] cancel requested for run ${run_id}"
                 fi
               fi
-            done <<< "$ACTIVE_IDS"
+            done <<< "$ACTIVE_RUNS"
 
+            if [ "$PENDING" -eq 0 ]; then
+              break
+            fi
             if [ "$SECONDS" -ge "$DEADLINE" ]; then
               echo "[suspend][error] 等待其他 workflow runs 停止超时" >&2
               gh run list --repo "$GITHUB_REPOSITORY" --limit 20 \
