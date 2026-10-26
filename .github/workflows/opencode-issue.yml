@@ -14,6 +14,12 @@ permissions:
   issues: write
   pull-requests: write
 
+# 使用仓库自带的 GITHUB_TOKEN 推送分支/创建 PR。GitHub 不会为 GITHUB_TOKEN
+# 产生的事件启动新的 workflow，因此不会触发 CI、auto-merge、sync-to-gitee 等；
+# 本 workflow 也不会推送默认分支，避免和 continuous-loop / iflow 的默认分支推送竞争。
+
+# 独立并发组：不与 continuous-loop / sync-to-gitee / ci-* 共用。
+# cancel-in-progress=false，不会取消其他工作流或同一 issue 的排队任务。
 concurrency:
   group: opencode-issue-${{ github.event.issue.number }}
   cancel-in-progress: false
@@ -30,7 +36,9 @@ env:
 
 jobs:
   opencode:
-    if: github.event.issue.user.login == '183600'
+    # actor 校验确保只有 183600 本人新建/重新打开 issue 才会运行，
+    # 避免其他人重新打开旧 issue 时误触发。
+    if: github.actor == '183600' && github.event.issue.user.login == '183600'
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -221,7 +229,8 @@ jobs:
             exit 0
           fi
 
-          BRANCH="opencode/issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}"
+          # run id + attempt 保证重跑（Re-run）时不会撞上已存在的分支。
+          BRANCH="opencode/issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT:-1}"
           git switch -c "$BRANCH"
 
           if [ -n "$DIRTY" ]; then
