@@ -13,7 +13,6 @@ on:
     workflows:
       - 'CI'
       - 'Continuous Loop'
-      - '.github/workflows/sync-to-gitee.yml'
     types: [completed]
 concurrency:
   group: sync-to-gitee
