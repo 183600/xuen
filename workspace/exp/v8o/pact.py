@@ -216,15 +216,19 @@ def pact_decide(inst, h, depthcap=None, nodecap=None, policy=None,
             cand.sort(reverse=True)
             _, i, dist = cand[0]
         total = sum(v for _, v in dist)
-        split = policy.get('split', 0.5)
-        acc = 0.0
-        mid = dist[0][0]
-        for tt, v in dist:
-            acc += v
-            if acc >= split * total:
-                mid = tt
-                break
         times = [tt for tt, _ in dist]
+        split_mode = policy.get('split_mode', 'mass')
+        if split_mode == 'time':
+            mid = times[max(0, (len(times) - 1) // 2)]
+        else:
+            split = policy.get('split', 0.5)
+            acc = 0.0
+            mid = dist[0][0]
+            for tt, v in dist:
+                acc += v
+                if acc >= split * total:
+                    mid = tt
+                    break
         lo_t = [tt for tt in times if tt > mid]
         hi_t = [tt for tt in times if tt <= mid]
         if not lo_t or not hi_t:
