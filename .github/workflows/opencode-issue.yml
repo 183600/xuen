@@ -1,0 +1,347 @@
+name: OpenCode Issue
+
+# 用法：由仓库所有者 183600 新建（或重新打开）一个 issue。
+# issue 的标题和正文就是 prompt，OpenCode 会在新分支修改代码并提交 PR。
+# 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free；
+# 不可用时回退到 big-pickle；再不可用则随机选择一个免费模型。
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: opencode-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  NO_COLOR: '1'
+  FORCE_COLOR: '0'
+  TERM: dumb
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: '1'
+  OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+
+jobs:
+  opencode:
+    if: github.event.issue.user.login == '183600'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-opencode-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-opencode-
+
+      - name: Install OpenCode
+        shell: bash
+        run: npm i -g opencode-ai
+
+      - name: Select a free OpenCode model
+        id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 读取当前可用的 opencode 模型。目录读取失败时不阻塞，后面有已知候选兜底。
+          AVAILABLE=()
+          while IFS= read -r line; do
+            case "$line" in
+              opencode/*) AVAILABLE+=("$line") ;;
+            esac
+          done < <(opencode models 2>/dev/null || true)
+
+          KNOWN_FREE=(
+            "opencode/beam-free"
+            "opencode/flint-40b-free"
+            "opencode/glm-5.3-flash-free"
+            "opencode/mimo-v2.6-flash-free"
+            "opencode/nemotron-3-ultra-free"
+            "opencode/nemotron-3.5-lightning-free"
+            "opencode/nemotron-3.5-super-vl-free"
+          )
+
+          has_available() {
+            local wanted="$1" m
+            for m in "${AVAILABLE[@]:-}"; do
+              [ "$m" = "$wanted" ] && return 0
+            done
+            return 1
+          }
+
+          add_candidate() {
+            local m="$1" existing
+            for existing in "${CANDIDATES[@]:-}"; do
+              [ "$existing" = "$m" ] && return 0
+            done
+            CANDIDATES+=("$m")
+          }
+
+          CANDIDATES=()
+          PREFERRED_DEEPSEEK="opencode/deepseek-v4.1-flash-free"
+          PREFERRED_PICKLE="opencode/big-pickle"
+
+          if [ "${#AVAILABLE[@]}" -eq 0 ]; then
+            echo "[model] 无法读取模型目录，按已知候选依次尝试"
+            add_candidate "$PREFERRED_DEEPSEEK"
+            add_candidate "$PREFERRED_PICKLE"
+            RANDOM_POOL=("${KNOWN_FREE[@]}")
+          else
+            if has_available "$PREFERRED_DEEPSEEK"; then add_candidate "$PREFERRED_DEEPSEEK"; fi
+            if has_available "$PREFERRED_PICKLE"; then add_candidate "$PREFERRED_PICKLE"; fi
+            RANDOM_POOL=()
+            for m in "${AVAILABLE[@]}"; do
+              case "$m" in
+                "$PREFERRED_DEEPSEEK"|"$PREFERRED_PICKLE") continue ;;
+                opencode/*-free) RANDOM_POOL+=("$m") ;;
+              esac
+            done
+          fi
+
+          # 去重并随机打乱兜底池。
+          if [ "${#RANDOM_POOL[@]}" -gt 0 ]; then
+            mapfile -t RANDOM_POOL < <(printf '%s\n' "${RANDOM_POOL[@]}" | awk 'NF && !seen[$0]++' | shuf)
+            for m in "${RANDOM_POOL[@]}"; do add_candidate "$m"; done
+          fi
+
+          if [ "${#CANDIDATES[@]}" -eq 0 ]; then
+            echo "[model][error] 没有任何候选免费模型" >&2
+            exit 1
+          fi
+
+          echo "[model] 候选顺序：${CANDIDATES[*]}"
+
+          SMOKE_DIR="$RUNNER_TEMP/opencode-smoke"
+          mkdir -p "$SMOKE_DIR"
+          SELECTED=""
+          for m in "${CANDIDATES[@]}"; do
+            echo "[model] 测试 $m ..."
+            # 每个候选都做一次真实冒烟调用，避免选中目录里存在但实际不可用的模型。
+            if ( cd "$SMOKE_DIR" && timeout --kill-after=30 180 opencode run --auto -m "$m" "只回复两个字：OK" ) > "$SMOKE_DIR/smoke.log" 2>&1; then
+              echo "[model] 可用：$m"
+              SELECTED="$m"
+              break
+            fi
+            echo "[model] 不可用：$m"
+            tail -n 20 "$SMOKE_DIR/smoke.log" 2>/dev/null || true
+          done
+
+          if [ -z "$SELECTED" ]; then
+            echo "[model][error] 所有候选免费模型均不可用" >&2
+            exit 1
+          fi
+
+          echo "model=$SELECTED" >> "$GITHUB_OUTPUT"
+          echo "[model] 最终选择：$SELECTED"
+
+      - name: Run OpenCode on issue
+        id: run
+        continue-on-error: true
+        shell: bash
+        timeout-minutes: 95
+        env:
+          MODEL: ${{ steps.select.outputs.model }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set +e
+          set -o pipefail
+          LOG=/tmp/opencode-run.log
+
+          {
+            echo "你正在 GitHub Actions 中处理仓库 ${GITHUB_REPOSITORY} 的 issue #${ISSUE_NUMBER}。"
+            echo
+            echo "Issue 标题：${ISSUE_TITLE}"
+            echo
+            echo "Issue 正文："
+            printf '%s\n' "${ISSUE_BODY}"
+            echo
+            echo "要求："
+            echo "1. 严格按照 issue 中的要求修改当前仓库的代码。"
+            echo "2. 可以运行必要的测试或命令来验证修改。"
+            echo "3. 不要执行 git commit / git push，也不要创建 Pull Request；这些由工作流完成。"
+            echo "4. 除非 issue 明确要求，不要删除或修改 .github/workflows/ 下的 CI 配置。"
+            echo "5. 完成后用简短中文总结你做的修改和验证结果。"
+          } > /tmp/opencode-prompt.txt
+
+          PROMPT="$(cat /tmp/opencode-prompt.txt)"
+          echo "[opencode] model=$MODEL issue=#$ISSUE_NUMBER"
+          timeout --kill-after=60 5400 opencode run --auto -m "$MODEL" "$PROMPT" 2>&1 | tee "$LOG"
+          EC=${PIPESTATUS[0]}
+          echo "exit_code=$EC" >> "$GITHUB_OUTPUT"
+          echo "[opencode] exit=$EC"
+          exit 0
+
+      - name: Commit changes and open PR
+        id: publish
+        if: steps.run.outputs.exit_code == '0'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODEL: ${{ steps.select.outputs.model }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config i18n.commitEncoding utf-8
+          git config core.quotepath false
+
+          AHEAD="$(git rev-list --count "origin/${BASE_BRANCH}..HEAD")"
+          DIRTY="$(git status --porcelain)"
+
+          if [ "$AHEAD" -eq 0 ] && [ -z "$DIRTY" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "[publish] OpenCode 没有产生代码修改"
+            exit 0
+          fi
+
+          BRANCH="opencode/issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}"
+          git switch -c "$BRANCH"
+
+          if [ -n "$DIRTY" ]; then
+            SAFE_TITLE="${ISSUE_TITLE//$'\n'/ }"
+            SAFE_TITLE="${SAFE_TITLE:0:80}"
+            git add -A
+            git commit -m "opencode: issue #${ISSUE_NUMBER} ${SAFE_TITLE}" \
+                       -m "Model: ${MODEL}" \
+                       -m "Generated by OpenCode in GitHub Actions."
+          fi
+
+          git push -u origin "$BRANCH"
+
+          {
+            echo "Closes #${ISSUE_NUMBER}"
+            echo
+            echo "由 OpenCode 在 GitHub Actions 中自动生成。"
+            echo
+            echo "- 模型：\`${MODEL}\`"
+            echo "- Issue：#${ISSUE_NUMBER}"
+            echo
+            echo "## 变更概览"
+            echo
+            echo '```'
+            git diff --stat "origin/${BASE_BRANCH}...HEAD"
+            echo '```'
+          } > /tmp/opencode-pr-body.md
+
+          TITLE="opencode: ${ISSUE_TITLE}"
+          TITLE="${TITLE:0:200}"
+          PR_URL="$(gh pr create --base "$BASE_BRANCH" --head "$BRANCH" --title "$TITLE" --body-file /tmp/opencode-pr-body.md)"
+          printf '%s\n' "$PR_URL" > /tmp/opencode-pr-url.txt
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "[publish] 已创建 PR：$PR_URL"
+
+      - name: Upload OpenCode log
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-issue-${{ github.event.issue.number }}-${{ github.run_id }}
+          path: |
+            /tmp/opencode-run.log
+            /tmp/opencode-prompt.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Comment result on issue
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          SELECT_OUTCOME: ${{ steps.select.outcome }}
+          SELECT_MODEL: ${{ steps.select.outputs.model }}
+          RUN_OUTCOME: ${{ steps.run.outcome }}
+          RUN_EXIT: ${{ steps.run.outputs.exit_code }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+          PUBLISH_CHANGED: ${{ steps.publish.outputs.changed }}
+          PR_URL: ${{ steps.publish.outputs.pr_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          COMMENT=/tmp/opencode-comment.md
+
+          {
+            echo "## OpenCode 运行结果"
+            echo
+            echo "- 模型：\`${SELECT_MODEL:-未选择}\`"
+            echo "- Actions 日志：${RUN_URL}"
+            echo
+
+            if [ "$SELECT_OUTCOME" != "success" ]; then
+              echo "❌ 模型选择失败：没有找到可用的免费模型。"
+            elif [ "$RUN_OUTCOME" != "success" ] || [ "${RUN_EXIT:-}" != "0" ]; then
+              echo "❌ OpenCode 执行失败（exit=${RUN_EXIT:-unknown}）。"
+            elif [ "$PUBLISH_OUTCOME" != "success" ]; then
+              echo "❌ OpenCode 已执行，但提交代码或创建 PR 失败。"
+            elif [ "$PUBLISH_CHANGED" = "true" ] && [ -n "${PR_URL:-}" ]; then
+              echo "✅ 已创建 PR：${PR_URL}"
+            elif [ "$PUBLISH_CHANGED" = "true" ]; then
+              echo "✅ 已创建分支并推送，但未能获取 PR 链接，请查看 Actions 日志。"
+            else
+              echo "ℹ️ OpenCode 已执行，但没有产生代码修改。"
+            fi
+
+            echo
+            if [ -s /tmp/opencode-run.log ]; then
+              echo "<details><summary>OpenCode 输出（末尾 120 行）</summary>"
+              echo
+              echo '````text'
+              tail -n 120 /tmp/opencode-run.log | head -c 50000
+              echo
+              echo '````'
+              echo
+              echo "</details>"
+            fi
+          } > "$COMMENT"
+
+          # GitHub issue 评论最多 65536 字符；按字符安全截断，避免切断 UTF-8。
+          python3 - "$COMMENT" <<'PY'
+          import sys
+          path = sys.argv[1]
+          text = open(path, encoding="utf-8", errors="replace").read()
+          open(path, "w", encoding="utf-8").write(text[:60000])
+          PY
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$COMMENT"
+
+      - name: Fail job if OpenCode failed
+        if: |
+          always() && (
+            steps.select.outcome != 'success' ||
+            steps.run.outcome != 'success' ||
+            steps.run.outputs.exit_code != '0' ||
+            steps.publish.outcome == 'failure'
+          )
+        shell: bash
+        run: |
+          echo "OpenCode issue workflow failed; see the issue comment and Actions log."
+          exit 1
