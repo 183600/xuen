@@ -16,13 +16,13 @@ on:
     types: [completed]
 concurrency:
   group: sync-to-gitee
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   sync-to-gitee:
     name: Mirror push to Gitee
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Mirror push to Gitee
         run: |
