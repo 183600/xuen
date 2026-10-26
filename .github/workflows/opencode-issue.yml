@@ -1,7 +1,8 @@
 name: OpenCode Issue
 
 # 用法：由仓库所有者 183600 新建（或重新打开）一个 issue。
-# issue 的标题和正文就是 prompt，OpenCode 会在新分支修改代码并提交 PR。
+# issue 的标题和正文就是 prompt，OpenCode 会直接修改默认分支并推送（不建 PR）。
+# 开始前会取消其他 workflow 的运行并临时禁用它们，结束后重新启用。
 # 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free；
 # 不可用时回退到 big-pickle；再不可用则随机选择一个免费模型。
 
@@ -9,19 +10,17 @@ on:
   issues:
     types: [opened, reopened]
 
+# 使用 GITHUB_TOKEN 直接推默认分支，不建 PR。
+# actions: write 用于暂停/恢复其他 workflow；issues: write 用于评论和关闭 issue。
 permissions:
   contents: write
   issues: write
-  pull-requests: write
+  actions: write
 
-# 使用仓库自带的 GITHUB_TOKEN 推送分支/创建 PR。GitHub 不会为 GITHUB_TOKEN
-# 产生的事件启动新的 workflow，因此不会触发 CI、auto-merge、sync-to-gitee 等；
-# 本 workflow 也不会推送默认分支，避免和 continuous-loop / iflow 的默认分支推送竞争。
-
-# 独立并发组：不与 continuous-loop / sync-to-gitee / ci-* 共用。
-# cancel-in-progress=false，不会取消其他工作流或同一 issue 的排队任务。
+# 全局串行：一次只跑一个 issue，避免多个任务同时直接推默认分支。
+# cancel-in-progress=false：不会取消正在运行的 issue 任务。
 concurrency:
-  group: opencode-issue-${{ github.event.issue.number }}
+  group: opencode-issue
   cancel-in-progress: false
 
 env:
@@ -40,12 +39,103 @@ jobs:
     # 避免其他人重新打开旧 issue 时误触发。
     if: github.actor == '183600' && github.event.issue.user.login == '183600'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
 
     steps:
-      - name: Checkout
+      - name: Suspend other workflows
+        id: suspend
+        shell: bash
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          STATE_FILE=/tmp/opencode-suspended-workflows.json
+          echo '{"disabled":[],"canceled":[]}' > "$STATE_FILE"
+
+          CURRENT_WF_PATH=".github/workflows/opencode-issue.yml"
+          CURRENT_WF_ID="$(gh api \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/opencode-issue.yml" \
+            --jq '.id')"
+          if [ -z "$CURRENT_WF_ID" ]; then
+            echo "[suspend][error] 无法确定当前 workflow 的 id" >&2
+            exit 1
+          fi
+
+          # 先禁用其他 active workflow，阻止它们在本次任务期间启动新 run。
+          WORKFLOWS_TSV="$(
+            gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/workflows" \
+              --jq '.workflows[] | [.id, .path, .state, .name] | @tsv'
+          )"
+          DISABLED=0
+          while IFS=$'\t' read -r id path state name; do
+            [ -n "$id" ] || continue
+            [ "$id" = "$CURRENT_WF_ID" ] && continue
+            [ "$path" = "$CURRENT_WF_PATH" ] && continue
+            [ "$state" = "active" ] || continue
+
+            if gh workflow disable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null; then
+              DISABLED=$((DISABLED + 1))
+              jq --arg id "$id" --arg name "$name" --arg path "$path" \
+                '.disabled += [{"id": $id, "name": $name, "path": $path}]' \
+                "$STATE_FILE" > "$STATE_FILE.tmp"
+              mv "$STATE_FILE.tmp" "$STATE_FILE"
+              echo "[suspend] disabled ${name} (${path})"
+            else
+              echo "[suspend][error] 禁用 ${name} (${path}) 失败" >&2
+              exit 1
+            fi
+          done <<< "$WORKFLOWS_TSV"
+
+          # 取消其他 workflow 正在运行/排队的 run，并等待它们真正停止。
+          CANCELED=0
+          declare -A SEEN_CANCELED=()
+          DEADLINE=$((SECONDS + 180))
+          while :; do
+            ACTIVE_IDS="$(
+              gh run list --repo "$GITHUB_REPOSITORY" --limit 200 \
+                --json databaseId,workflowDatabaseId,status \
+              | jq -r --argjson current "$CURRENT_WF_ID" \
+                '.[] | select(.status != "completed" and .workflowDatabaseId != $current) | .databaseId'
+            )"
+            if [ -z "$ACTIVE_IDS" ]; then
+              break
+            fi
+
+            while IFS= read -r run_id; do
+              [ -n "$run_id" ] || continue
+              if gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                if [ -z "${SEEN_CANCELED[$run_id]:-}" ]; then
+                  SEEN_CANCELED[$run_id]=1
+                  CANCELED=$((CANCELED + 1))
+                  jq --arg id "$run_id" '.canceled += [{"id": $id}]' \
+                    "$STATE_FILE" > "$STATE_FILE.tmp"
+                  mv "$STATE_FILE.tmp" "$STATE_FILE"
+                  echo "[suspend] cancel requested for run ${run_id}"
+                fi
+              fi
+            done <<< "$ACTIVE_IDS"
+
+            if [ "$SECONDS" -ge "$DEADLINE" ]; then
+              echo "[suspend][error] 等待其他 workflow runs 停止超时" >&2
+              gh run list --repo "$GITHUB_REPOSITORY" --limit 20 \
+                --json databaseId,status,workflowName,workflowDatabaseId,url \
+              | jq -r '.[] | select(.status != "completed")' >&2 || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "disabled=$DISABLED" >> "$GITHUB_OUTPUT"
+          echo "canceled=$CANCELED" >> "$GITHUB_OUTPUT"
+          echo "[suspend] done: disabled=${DISABLED}, canceled=${CANCELED}"
+
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -69,6 +159,7 @@ jobs:
       - name: Select a free OpenCode model
         id: select
         shell: bash
+        timeout-minutes: 30
         run: |
           set -euo pipefail
 
@@ -114,7 +205,8 @@ jobs:
             echo "[model] 无法读取模型目录，按已知候选依次尝试"
             add_candidate "$PREFERRED_DEEPSEEK"
             add_candidate "$PREFERRED_PICKLE"
-            RANDOM_POOL=("${KNOWN_FREE[@]}")
+            # 兜底池最多取 6 个，避免冒烟测试把 30 分钟配额耗尽。
+            RANDOM_POOL=("${KNOWN_FREE[@]:0:6}")
           else
             if has_available "$PREFERRED_DEEPSEEK"; then add_candidate "$PREFERRED_DEEPSEEK"; fi
             if has_available "$PREFERRED_PICKLE"; then add_candidate "$PREFERRED_PICKLE"; fi
@@ -130,7 +222,8 @@ jobs:
           # 去重并随机打乱兜底池。
           if [ "${#RANDOM_POOL[@]}" -gt 0 ]; then
             mapfile -t RANDOM_POOL < <(printf '%s\n' "${RANDOM_POOL[@]}" | awk 'NF && !seen[$0]++' | shuf)
-            for m in "${RANDOM_POOL[@]}"; do add_candidate "$m"; done
+            # 只取随机池前 6 个，避免候选太多导致冒烟测试超时。
+            for m in "${RANDOM_POOL[@]:0:6}"; do add_candidate "$m"; done
           fi
 
           if [ "${#CANDIDATES[@]}" -eq 0 ]; then
@@ -189,9 +282,10 @@ jobs:
             echo "要求："
             echo "1. 严格按照 issue 中的要求修改当前仓库的代码。"
             echo "2. 可以运行必要的测试或命令来验证修改。"
-            echo "3. 不要执行 git commit / git push，也不要创建 Pull Request；这些由工作流完成。"
-            echo "4. 除非 issue 明确要求，不要删除或修改 .github/workflows/ 下的 CI 配置。"
-            echo "5. 完成后用简短中文总结你做的修改和验证结果。"
+            echo "3. 不要执行 git commit / git push；工作流会直接把修改提交并推送到默认分支。"
+            echo "4. 不要操作 GitHub Actions 的 workflow/run（不要启用、禁用、取消或触发其他 workflow）；这些由工作流完成。"
+            echo "5. 除非 issue 明确要求，不要删除或修改 .github/workflows/ 下的 CI 配置。"
+            echo "6. 完成后用简短中文总结你做的修改和验证结果。"
           } > /tmp/opencode-prompt.txt
 
           PROMPT="$(cat /tmp/opencode-prompt.txt)"
@@ -202,16 +296,18 @@ jobs:
           echo "[opencode] exit=$EC"
           exit 0
 
-      - name: Commit changes and open PR
+      - name: Commit and push to default branch
         id: publish
         if: steps.run.outputs.exit_code == '0'
         shell: bash
+        timeout-minutes: 15
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODEL: ${{ steps.select.outputs.model }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          GIT_TERMINAL_PROMPT: '0'
         run: |
           set -euo pipefail
 
@@ -229,10 +325,6 @@ jobs:
             exit 0
           fi
 
-          # run id + attempt 保证重跑（Re-run）时不会撞上已存在的分支。
-          BRANCH="opencode/issue-${ISSUE_NUMBER}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT:-1}"
-          git switch -c "$BRANCH"
-
           if [ -n "$DIRTY" ]; then
             SAFE_TITLE="${ISSUE_TITLE//$'\n'/ }"
             SAFE_TITLE="${SAFE_TITLE:0:80}"
@@ -242,47 +334,81 @@ jobs:
                        -m "Generated by OpenCode in GitHub Actions."
           fi
 
-          git push -u origin "$BRANCH"
+          # 把修改 rebase 到最新默认分支，避免任务期间别人推送导致非快进。
+          git fetch origin "$BASE_BRANCH"
+          if ! git merge-base --is-ancestor "origin/${BASE_BRANCH}" HEAD; then
+            if ! git rebase "origin/${BASE_BRANCH}"; then
+              git rebase --abort || true
+              echo "[publish][error] rebase onto origin/${BASE_BRANCH} 失败" >&2
+              exit 1
+            fi
+          fi
 
-          {
-            echo "Closes #${ISSUE_NUMBER}"
-            echo
-            echo "由 OpenCode 在 GitHub Actions 中自动生成。"
-            echo
-            echo "- 模型：\`${MODEL}\`"
-            echo "- Issue：#${ISSUE_NUMBER}"
-            echo
-            echo "## 变更概览"
-            echo
-            echo '```'
-            git diff --stat "origin/${BASE_BRANCH}...HEAD"
-            echo '```'
-          } > /tmp/opencode-pr-body.md
-
-          TITLE="opencode: ${ISSUE_TITLE}"
-          TITLE="${TITLE:0:200}"
-          PR_URL="$(gh pr create --base "$BASE_BRANCH" --head "$BRANCH" --title "$TITLE" --body-file /tmp/opencode-pr-body.md)"
-          printf '%s\n' "$PR_URL" > /tmp/opencode-pr-url.txt
-          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          git push origin "HEAD:${BASE_BRANCH}"
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "branch=$BASE_BRANCH" >> "$GITHUB_OUTPUT"
           echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "[publish] 已创建 PR：$PR_URL"
+          echo "[publish] 已推送到 ${BASE_BRANCH}: $COMMIT_SHA"
 
       - name: Upload OpenCode log
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-issue-${{ github.event.issue.number }}-${{ github.run_id }}
+          name: opencode-issue-${{ github.event.issue.number }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             /tmp/opencode-run.log
             /tmp/opencode-prompt.txt
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Comment result on issue
+      - name: Resume other workflows
+        id: resume
         if: always()
         shell: bash
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          STATE_FILE=/tmp/opencode-suspended-workflows.json
+          if [ ! -f "$STATE_FILE" ]; then
+            echo "reenabled=0" >> "$GITHUB_OUTPUT"
+            echo "failed=0" >> "$GITHUB_OUTPUT"
+            echo "[resume] 没有需要恢复的 workflow"
+            exit 0
+          fi
+
+          DISABLED_TSV="$(jq -r '.disabled[] | [.id, .name, .path] | @tsv' "$STATE_FILE")"
+          REENABLED=0
+          FAILED=0
+          while IFS=$'\t' read -r id name path; do
+            [ -n "$id" ] || continue
+            if gh workflow enable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null; then
+              REENABLED=$((REENABLED + 1))
+              echo "[resume] enabled ${name} (${path})"
+            else
+              FAILED=$((FAILED + 1))
+              echo "[resume][error] 启用 ${name} (${path}) 失败" >&2
+            fi
+          done <<< "$DISABLED_TSV"
+
+          echo "reenabled=$REENABLED" >> "$GITHUB_OUTPUT"
+          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
+          echo "[resume] done: reenabled=${REENABLED}, failed=${FAILED}"
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Comment result on issue
+        id: comment
+        if: always()
+        shell: bash
+        timeout-minutes: 10
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -292,7 +418,14 @@ jobs:
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
           PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
           PUBLISH_CHANGED: ${{ steps.publish.outputs.changed }}
-          PR_URL: ${{ steps.publish.outputs.pr_url }}
+          COMMIT_SHA: ${{ steps.publish.outputs.commit_sha }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          SUSPEND_OUTCOME: ${{ steps.suspend.outcome }}
+          DISABLED_COUNT: ${{ steps.suspend.outputs.disabled }}
+          CANCELED_COUNT: ${{ steps.suspend.outputs.canceled }}
+          RESUME_OUTCOME: ${{ steps.resume.outcome }}
+          REENABLED_COUNT: ${{ steps.resume.outputs.reenabled }}
+          RESUME_FAILED: ${{ steps.resume.outputs.failed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -310,13 +443,30 @@ jobs:
             elif [ "$RUN_OUTCOME" != "success" ] || [ "${RUN_EXIT:-}" != "0" ]; then
               echo "❌ OpenCode 执行失败（exit=${RUN_EXIT:-unknown}）。"
             elif [ "$PUBLISH_OUTCOME" != "success" ]; then
-              echo "❌ OpenCode 已执行，但提交代码或创建 PR 失败。"
-            elif [ "$PUBLISH_CHANGED" = "true" ] && [ -n "${PR_URL:-}" ]; then
-              echo "✅ 已创建 PR：${PR_URL}"
+              echo "❌ OpenCode 已执行，但提交或推送失败。"
+            elif [ "$PUBLISH_CHANGED" = "true" ] && [ -n "${COMMIT_SHA:-}" ]; then
+              echo "✅ 已直接推送到 \`${BASE_BRANCH}\`："
+              echo
+              echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${COMMIT_SHA}"
             elif [ "$PUBLISH_CHANGED" = "true" ]; then
-              echo "✅ 已创建分支并推送，但未能获取 PR 链接，请查看 Actions 日志。"
+              echo "✅ 已推送到 \`${BASE_BRANCH}\`，但未能获取 commit SHA，请查看 Actions 日志。"
             else
               echo "ℹ️ OpenCode 已执行，但没有产生代码修改。"
+            fi
+
+            echo
+            echo "### 其他 workflow"
+            echo
+            if [ "$SUSPEND_OUTCOME" = "success" ]; then
+              echo "- 开始前：取消 ${CANCELED_COUNT:-0} 个运行，临时禁用 ${DISABLED_COUNT:-0} 个 workflow。"
+            else
+              echo "- ⚠️ 开始前暂停其他 workflow 失败，详见 Actions 日志。"
+            fi
+
+            if [ "$RESUME_OUTCOME" = "success" ]; then
+              echo "- 结束后：已重新启用 ${REENABLED_COUNT:-0} 个 workflow。"
+            else
+              echo "- ⚠️ 结束后恢复 workflow 失败（${RESUME_FAILED:-unknown} 个），请手动启用。"
             fi
 
             echo
@@ -334,21 +484,52 @@ jobs:
 
           # GitHub issue 评论最多 65536 字符；按字符安全截断，避免切断 UTF-8。
           python3 - "$COMMENT" <<'PY'
+          import re
           import sys
           path = sys.argv[1]
           text = open(path, encoding="utf-8", errors="replace").read()
+          # 去掉 OpenCode 输出里的 ANSI 颜色控制码，避免 issue 评论出现乱码。
+          text = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", text)
           open(path, "w", encoding="utf-8").write(text[:60000])
           PY
 
           gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$COMMENT"
 
+      - name: Close issue on success
+        id: close
+        if: |
+          always() &&
+          steps.select.outcome == 'success' &&
+          steps.run.outcome == 'success' &&
+          steps.run.outputs.exit_code == '0' &&
+          steps.publish.outcome == 'success' &&
+          steps.publish.outputs.changed == 'true'
+        shell: bash
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          STATE="$(gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --json state --jq '.state')"
+          if [ "$STATE" = "OPEN" ]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --reason completed
+            echo "[close] issue #${ISSUE_NUMBER} closed"
+          else
+            echo "[close] issue #${ISSUE_NUMBER} is already ${STATE}"
+          fi
+
       - name: Fail job if OpenCode failed
         if: |
           always() && (
+            steps.suspend.outcome != 'success' ||
             steps.select.outcome != 'success' ||
             steps.run.outcome != 'success' ||
             steps.run.outputs.exit_code != '0' ||
-            steps.publish.outcome == 'failure'
+            steps.publish.outcome == 'failure' ||
+            steps.resume.outcome != 'success' ||
+            steps.comment.outcome == 'failure' ||
+            steps.close.outcome == 'failure'
           )
         shell: bash
         run: |
