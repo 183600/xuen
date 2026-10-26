@@ -9,7 +9,13 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
-@@WF_RUN_BLOCK@@concurrency:
+  workflow_run:
+    workflows:
+      - 'CI'
+      - 'Continuous Loop'
+      - '.github/workflows/sync-to-gitee.yml'
+    types: [completed]
+concurrency:
   group: sync-to-gitee
   cancel-in-progress: true
 
@@ -25,7 +31,7 @@ jobs:
           export GIT_TERMINAL_PROMPT=0
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
           GH_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
-          GITEE_URL="https://qwe12345678:${{ secrets.GITEE_TOKEN }}gitee.com/qwe12345678/${REPO_NAME}.git"
+          GITEE_URL="https://qwe12345678:${{ secrets.GITEE_TOKEN }}@gitee.com/qwe12345678/${REPO_NAME}.git"
           GH_REFS=$(git ls-remote "$GH_URL" | grep -E 'refs/(heads|tags)/' | sort || true)
           GITEE_REFS=$(git ls-remote "$GITEE_URL" | grep -E 'refs/(heads|tags)/' | sort || true)
           if [ -n "$GH_REFS" ] && [ "$GH_REFS" = "$GITEE_REFS" ]; then
