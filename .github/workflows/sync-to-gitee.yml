@@ -1,0 +1,38 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+@@WF_RUN_BLOCK@@concurrency:
+  group: sync-to-gitee
+  cancel-in-progress: true
+
+jobs:
+  sync-to-gitee:
+    name: Mirror push to Gitee
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Mirror push to Gitee
+        run: |
+          set -euo pipefail
+          export GIT_TERMINAL_PROMPT=0
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          GH_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
+          GITEE_URL="https://qwe12345678:${{ secrets.GITEE_TOKEN }}gitee.com/qwe12345678/${REPO_NAME}.git"
+          GH_REFS=$(git ls-remote "$GH_URL" | grep -E 'refs/(heads|tags)/' | sort || true)
+          GITEE_REFS=$(git ls-remote "$GITEE_URL" | grep -E 'refs/(heads|tags)/' | sort || true)
+          if [ -n "$GH_REFS" ] && [ "$GH_REFS" = "$GITEE_REFS" ]; then
+            echo "Already in sync with Gitee - nothing to push."
+            exit 0
+          fi
+          git clone --mirror "$GH_URL" repo.git
+          cd repo.git
+          git push --prune --force "$GITEE_URL" 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+          echo "Mirror push to Gitee completed."
