@@ -260,7 +260,7 @@ def _choose_h(policy, L, U, first):
 
 
 def run_icf(inst, known, name, idx, policy='lower-first', max_probes=64,
-            use_pact_init=True, initial=None):
+            use_pact_init=True, initial=None, collect_proof=False):
     """Run the one-leaf ICF loop and return a benchmark row."""
     t0 = time.time()
     if initial is not None:
@@ -372,6 +372,9 @@ def run_icf(inst, known, name, idx, policy='lower-first', max_probes=64,
                     getattr(lb_proof, 'kind', None)),
         total_audit=final_ok,
         t=round(dt, 4),
+        schedule=list(sched) if sched is not None else None,
+        machine=list(mach) if mach is not None else None,
+        lb_proof=(lb_proof if collect_proof else None),
         ok=bool(L == U and U == known and final_ok and
                 partial_fail == 0 and partial_ok_final),
     )
