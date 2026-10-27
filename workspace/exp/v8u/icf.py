@@ -251,27 +251,39 @@ def _choose_h(policy, L, U, first):
         return L if U - L <= 4 else (L + U) // 2
     if policy == 'lower-then-binary':
         return L if first else (L + U) // 2
+    if policy.startswith('gap:'):
+        thr = int(policy.split(':')[1])
+        if U - L <= thr:
+            return L if first else (L + U) // 2
+        return (L + U) // 2
     raise ValueError('unknown policy %r' % (policy,))
 
 
 def run_icf(inst, known, name, idx, policy='lower-first', max_probes=64,
-            use_pact_init=True):
+            use_pact_init=True, initial=None):
     """Run the one-leaf ICF loop and return a benchmark row."""
     t0 = time.time()
-    co = PACT(inst, pact_mode='complete', use_ga=False)
-    lb, ub, sched, mach = co.initial_bounds()
-    if ub is None:
-        return dict(name=name, idx=idx, known=known, policy=policy,
-                    ok=False, error='no-initial-ub', t=0.0)
+    if initial is not None:
+        L, U, sched, mach, lb_proof = initial
+        L, U = int(L), int(U)
+        sched = list(sched) if sched is not None else None
+        mach = list(mach) if mach is not None else None
+        co = None
+    else:
+        co = PACT(inst, pact_mode='complete', use_ga=False)
+        lb, ub, sched, mach = co.initial_bounds()
+        if ub is None:
+            return dict(name=name, idx=idx, known=known, policy=policy,
+                        ok=False, error='no-initial-ub', t=0.0)
 
-    L, U = int(lb), int(ub)
-    sched = list(sched) if sched is not None else None
-    mach = list(mach) if mach is not None else None
-    lb_proof = co._ensure_lb_proof(L)
-    if lb_proof is None:
-        r = pact_decide(inst, L - 1, depthcap=None, nodecap=None)
-        if r['verdict'] is False:
-            lb_proof = r['proof']
+        L, U = int(lb), int(ub)
+        sched = list(sched) if sched is not None else None
+        mach = list(mach) if mach is not None else None
+        lb_proof = co._ensure_lb_proof(L)
+        if lb_proof is None:
+            r = pact_decide(inst, L - 1, depthcap=None, nodecap=None)
+            if r['verdict'] is False:
+                lb_proof = r['proof']
     if lb_proof is None:
         return dict(name=name, idx=idx, known=known, policy=policy,
                     ok=False, error='no-lb-proof', t=0.0)
@@ -312,7 +324,8 @@ def run_icf(inst, known, name, idx, policy='lower-first', max_probes=64,
             proof = r['proof']
             L = h + 1
             lb_proof = proof
-            co._record_proof(proof)
+            if co is not None:
+                co._record_proof(proof)
             steps.append(dict(h=h, v=False, kind=proof.kind,
                               lp=r.get('lp_solves', 0),
                               nodes=r.get('nodes', 0),
