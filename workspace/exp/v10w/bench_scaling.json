@@ -1,0 +1,86 @@
+[
+ {
+  "k": 1,
+  "n": 10,
+  "m": 2,
+  "comps": 1,
+  "opt": 57,
+  "pact": {
+   "verdict": false,
+   "nodes": 267,
+   "lp": 267,
+   "cert_lp": 134,
+   "timeout": false,
+   "proof_nodes": 267,
+   "t": 9.067
+  },
+  "dc": {
+   "ok": true,
+   "states": 673,
+   "t": 0.031
+  }
+ },
+ {
+  "k": 2,
+  "n": 20,
+  "m": 4,
+  "comps": 2,
+  "opt": 57,
+  "pact": {
+   "verdict": null,
+   "nodes": 123,
+   "lp": 123,
+   "cert_lp": 58,
+   "timeout": true,
+   "proof_nodes": 0,
+   "t": 10.078
+  },
+  "dc": {
+   "ok": true,
+   "states": 1346,
+   "t": 0.054
+  }
+ },
+ {
+  "k": 3,
+  "n": 30,
+  "m": 6,
+  "comps": 3,
+  "opt": 57,
+  "pact": {
+   "verdict": null,
+   "nodes": 70,
+   "lp": 70,
+   "cert_lp": 30,
+   "timeout": true,
+   "proof_nodes": 0,
+   "t": 10.193
+  },
+  "dc": {
+   "ok": true,
+   "states": 2019,
+   "t": 0.077
+  }
+ },
+ {
+  "k": 4,
+  "n": 40,
+  "m": 8,
+  "comps": 4,
+  "opt": 57,
+  "pact": {
+   "verdict": null,
+   "nodes": 52,
+   "lp": 52,
+   "cert_lp": 17,
+   "timeout": true,
+   "proof_nodes": 0,
+   "t": 10.101
+  },
+  "dc": {
+   "ok": true,
+   "states": 2692,
+   "t": 0.099
+  }
+ }
+]
