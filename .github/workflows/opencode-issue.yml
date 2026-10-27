@@ -2,16 +2,19 @@ name: OpenCode Issue
 
 # 用法：由仓库所有者 183600 新建（或重新打开）一个 issue。
 # issue 的正文就是 prompt（标题不提供给模型，仅用于人工索引和 commit message），OpenCode 会直接修改默认分支并推送（不建 PR）。
-# 开始前会取消其他 workflow 的运行并临时禁用它们，结束后重新启用。
-# 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free；
-# 不可用时回退到 big-pickle；再不可用则随机选择一个免费模型。
+# 开始前会取消其他 workflow 的运行并临时禁用它们；结束后（无论本次运行成功还是失败）
+# 会重新启用它们，并立即重新触发（workflow_dispatch）支持手动触发的 workflow。
+# 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free：
+# 若模型列表中暂时找不到它，会刷新模型目录后反复重试，最多 5 次；
+# 5 次后仍没有 deepseek-v4.1-flash-free 但找到其他免费模型时，改用其他免费模型
+# （big-pickle 优先，再次为随机免费模型）；任何时候都优先 deepseek-v4.1-flash-free。
 
 on:
   issues:
     types: [opened, reopened]
 
 # 使用 GITHUB_TOKEN 直接推默认分支，不建 PR。
-# actions: write 用于暂停/恢复其他 workflow；issues: write 用于评论和关闭 issue。
+# actions: write 用于暂停/恢复/重新触发其他 workflow；issues: write 用于评论和关闭 issue。
 permissions:
   contents: write
   issues: write
@@ -38,6 +41,10 @@ jobs:
     # actor 校验确保只有 183600 本人新建/重新打开 issue 才会运行，
     # 避免其他人重新打开旧 issue 时误触发。
     if: github.actor == '183600' && github.event.issue.user.login == '183600'
+    # 把 suspend 步骤记录的「被暂停 workflow 清单」传给 resume-workflows 兜底 job，
+    # 保证本 job 被取消/超时之后恢复动作仍能完成。
+    outputs:
+      suspended_workflows: ${{ steps.suspend.outputs.suspended }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
 
@@ -61,6 +68,8 @@ jobs:
             --jq '.id')"
           if [ -z "$CURRENT_WF_ID" ]; then
             echo "[suspend][error] 无法确定当前 workflow 的 id" >&2
+            # 失败前也要把（空）清单写进 output，兜底 job 不会误走扫描分支
+            echo "suspended=$(jq -c '{disabled: .disabled}' "$STATE_FILE")" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -98,9 +107,16 @@ jobs:
               echo "[suspend] disabled ${name} (${path})"
             else
               echo "[suspend][error] 禁用 ${name} (${path}) 失败" >&2
+              # 失败前把已禁用清单写进 output，兜底 job 可以据此恢复
+              echo "suspended=$(jq -c '{disabled: .disabled}' "$STATE_FILE")" >> "$GITHUB_OUTPUT"
               exit 1
             fi
           done <<< "$WORKFLOWS_TSV"
+
+          # 已禁用清单写入 step output（紧凑 JSON），供 resume-workflows 兜底 job 使用。
+          # 写在这里：即使后面「等待其他 runs 停止」超时导致本步骤失败，
+          # 这份清单也已经记录在案。
+          echo "suspended=$(jq -c '{disabled: .disabled}' "$STATE_FILE")" >> "$GITHUB_OUTPUT"
 
           # 取消其他 workflow 正在运行/排队的 run，并等待它们真正停止。
           CANCELED=0
@@ -175,17 +191,12 @@ jobs:
       - name: Select a free OpenCode model
         id: select
         shell: bash
-        timeout-minutes: 30
+        timeout-minutes: 40
         run: |
           set -euo pipefail
 
-          # 读取当前可用的 opencode 模型。目录读取失败时不阻塞，后面有已知候选兜底。
-          AVAILABLE=()
-          while IFS= read -r line; do
-            case "$line" in
-              opencode/*) AVAILABLE+=("$line") ;;
-            esac
-          done < <(opencode models 2>/dev/null || true)
+          PREFERRED_DEEPSEEK="opencode/deepseek-v4.1-flash-free"
+          PREFERRED_PICKLE="opencode/big-pickle"
 
           KNOWN_FREE=(
             "opencode/beam-free"
@@ -197,6 +208,42 @@ jobs:
             "opencode/nemotron-3.5-super-vl-free"
           )
 
+          # ---------- 阶段 1：在模型列表中查找 deepseek-v4.1-flash-free，最多重试 5 次 ----------
+          # 模型目录可能瞬时抖动（缓存未刷新 / 网关暂时摘下该模型）。
+          # 找不到首选模型时不立即放弃：每次先刷新 opencode 的模型目录缓存再读取列表，
+          # 间隔 60s 重试，最多 5 次；一旦找到立即进入候选构建。
+          MAX_LIST_ATTEMPTS=5
+          RETRY_INTERVAL=60
+          AVAILABLE=()
+          DEEPSEEK_FOUND=0
+
+          for attempt in $(seq 1 "$MAX_LIST_ATTEMPTS"); do
+            timeout 60 opencode models opencode --refresh >/dev/null 2>&1 || true
+            AVAILABLE=()
+            while IFS= read -r m; do
+              [ -n "$m" ] && AVAILABLE+=("$m")
+            done < <(timeout 60 opencode models 2>/dev/null | awk '/^[[:space:]]*opencode\//{print $1}')
+
+            for m in "${AVAILABLE[@]:-}"; do
+              if [ "$m" = "$PREFERRED_DEEPSEEK" ]; then
+                DEEPSEEK_FOUND=1
+                break
+              fi
+            done
+
+            if [ "$DEEPSEEK_FOUND" -eq 1 ]; then
+              echo "[model] 第 ${attempt}/${MAX_LIST_ATTEMPTS} 次查找：在模型列表中找到 ${PREFERRED_DEEPSEEK}（列表共 ${#AVAILABLE[@]} 个模型）"
+              break
+            fi
+
+            echo "[model] 第 ${attempt}/${MAX_LIST_ATTEMPTS} 次查找：模型列表中没有 ${PREFERRED_DEEPSEEK}（列表共 ${#AVAILABLE[@]} 个模型）"
+            if [ "$attempt" -lt "$MAX_LIST_ATTEMPTS" ]; then
+              echo "[model] ${RETRY_INTERVAL}s 后刷新模型目录并重试..."
+              sleep "$RETRY_INTERVAL"
+            fi
+          done
+
+          # ---------- 阶段 2：按优先级构建候选列表 ----------
           has_available() {
             local wanted="$1" m
             for m in "${AVAILABLE[@]:-}"; do
@@ -214,25 +261,45 @@ jobs:
           }
 
           CANDIDATES=()
-          PREFERRED_DEEPSEEK="opencode/deepseek-v4.1-flash-free"
-          PREFERRED_PICKLE="opencode/big-pickle"
+          RANDOM_POOL=()
 
-          if [ "${#AVAILABLE[@]}" -eq 0 ]; then
-            echo "[model] 无法读取模型目录，按已知候选依次尝试"
+          if [ "$DEEPSEEK_FOUND" -eq 1 ]; then
+            # 首选模型在列表中：deepseek 排第一，其余免费模型仅作冒烟后备。
             add_candidate "$PREFERRED_DEEPSEEK"
-            add_candidate "$PREFERRED_PICKLE"
-            # 兜底池最多取 6 个，避免冒烟测试把 30 分钟配额耗尽。
-            RANDOM_POOL=("${KNOWN_FREE[@]:0:6}")
-          else
-            if has_available "$PREFERRED_DEEPSEEK"; then add_candidate "$PREFERRED_DEEPSEEK"; fi
             if has_available "$PREFERRED_PICKLE"; then add_candidate "$PREFERRED_PICKLE"; fi
-            RANDOM_POOL=()
-            for m in "${AVAILABLE[@]}"; do
+            for m in "${AVAILABLE[@]:-}"; do
               case "$m" in
                 "$PREFERRED_DEEPSEEK"|"$PREFERRED_PICKLE") continue ;;
                 opencode/*-free) RANDOM_POOL+=("$m") ;;
               esac
             done
+          elif [ "${#AVAILABLE[@]}" -eq 0 ]; then
+            # 重试 5 次后模型列表仍读不到：无法确认首选是否真的下线，
+            # 按已知候选依次冒烟（deepseek 仍排第一，符合「优先 deepseek」策略）。
+            echo "[model] 模型列表不可读（已重试 ${MAX_LIST_ATTEMPTS} 次），按已知候选依次尝试"
+            add_candidate "$PREFERRED_DEEPSEEK"
+            add_candidate "$PREFERRED_PICKLE"
+            RANDOM_POOL=("${KNOWN_FREE[@]:0:6}")
+          else
+            # 重试 5 次后确认列表里没有 deepseek-v4.1-flash-free：
+            # 改用其他免费模型（big-pickle 优先，其次随机其他免费模型）。
+            echo "[model] 已重试 ${MAX_LIST_ATTEMPTS} 次仍未找到 ${PREFERRED_DEEPSEEK}，回退到其他免费模型"
+            if has_available "$PREFERRED_PICKLE"; then
+              add_candidate "$PREFERRED_PICKLE"
+            else
+              echo "[model] 模型列表中没有 ${PREFERRED_PICKLE}，跳过"
+            fi
+            for m in "${AVAILABLE[@]:-}"; do
+              case "$m" in
+                "$PREFERRED_DEEPSEEK"|"$PREFERRED_PICKLE") continue ;;
+                opencode/*-free) RANDOM_POOL+=("$m") ;;
+              esac
+            done
+            # 列表里连一个免费候选都没有时，用已知免费模型池兜底。
+            if [ "${#RANDOM_POOL[@]}" -eq 0 ] && [ "${#CANDIDATES[@]}" -eq 0 ]; then
+              echo "[model] 列表中没有其他免费模型，使用已知免费模型池兜底"
+              RANDOM_POOL=("${KNOWN_FREE[@]:0:6}")
+            fi
           fi
 
           # 去重并随机打乱兜底池。
@@ -376,44 +443,124 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Resume other workflows
+      - name: Resume and retrigger other workflows
         id: resume
         if: always()
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 15
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
 
           STATE_FILE=/tmp/opencode-suspended-workflows.json
+          REENABLED=0
+          ENABLE_FAILED=0
+          TRIGGERED=0
+          TRIGGER_FAILED=0
+          TRIGGER_SKIPPED=0
+
+          write_outputs() {
+            echo "reenabled=$REENABLED" >> "$GITHUB_OUTPUT"
+            echo "failed=$ENABLE_FAILED" >> "$GITHUB_OUTPUT"
+            echo "triggered=$TRIGGERED" >> "$GITHUB_OUTPUT"
+            echo "trigger_failed=$TRIGGER_FAILED" >> "$GITHUB_OUTPUT"
+            echo "trigger_skipped=$TRIGGER_SKIPPED" >> "$GITHUB_OUTPUT"
+            echo "[resume] done: reenabled=${REENABLED}, enable_failed=${ENABLE_FAILED}, triggered=${TRIGGERED}, trigger_failed=${TRIGGER_FAILED}, trigger_skipped=${TRIGGER_SKIPPED}"
+          }
+
           if [ ! -f "$STATE_FILE" ]; then
-            echo "reenabled=0" >> "$GITHUB_OUTPUT"
-            echo "failed=0" >> "$GITHUB_OUTPUT"
+            write_outputs
             echo "[resume] 没有需要恢复的 workflow"
             exit 0
           fi
 
+          # workflow 文件是否带 workflow_dispatch 触发器。
+          # 读取远程默认分支上的文件内容判断，避免被本地（OpenCode 的）改动干扰。
+          supports_dispatch() {
+            local path="$1" content
+            content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${DEFAULT_BRANCH}" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || true)"
+            [ -n "$content" ] && printf '%s' "$content" | grep -q 'workflow_dispatch'
+          }
+
+          # 该 workflow 是否已有排队中/运行中的 run，或 5 分钟内刚创建过 run
+          #（避免与兜底 job / 刚完成的触发重复派发）。
+          has_recent_run() {
+            local file="$1" n
+            n="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${file}/runs?per_page=10" \
+              --jq '[.workflow_runs[] | select(.status != "completed" or ((now - (.created_at | fromdateiso8601)) < 300))] | length' 2>/dev/null || true)"
+            case "$n" in ''|*[!0-9]*) n=0 ;; esac
+            [ "$n" -gt 0 ]
+          }
+
+          # 重新启用一个 workflow（最多重试 5 次）。
+          enable_workflow() {
+            local id="$1" attempt
+            for attempt in 1 2 3 4 5; do
+              if gh workflow enable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                return 0
+              fi
+              echo "[resume][warn] 启用 workflow ${id} 失败（attempt ${attempt}/5），10s 后重试" >&2
+              sleep 10
+            done
+            return 1
+          }
+
+          # 重新触发一个 workflow：workflow_dispatch 到默认分支（最多重试 5 次）。
+          trigger_workflow() {
+            local file="$1" attempt
+            for attempt in 1 2 3 4 5; do
+              if gh workflow run "$file" --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" >/dev/null 2>&1; then
+                return 0
+              fi
+              echo "[resume][warn] 触发 ${file} 失败（attempt ${attempt}/5），10s 后重试" >&2
+              sleep 10
+            done
+            return 1
+          }
+
           DISABLED_TSV="$(jq -r '.disabled[] | [.id, .name, .path] | @tsv' "$STATE_FILE")"
-          REENABLED=0
-          FAILED=0
           while IFS=$'\t' read -r id name path; do
             [ -n "$id" ] || continue
-            if gh workflow enable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null; then
+            file="${path##*/}"
+
+            if enable_workflow "$id"; then
               REENABLED=$((REENABLED + 1))
-              echo "[resume] enabled ${name} (${path})"
+              echo "[resume] re-enabled ${name} (${path})"
             else
-              FAILED=$((FAILED + 1))
-              echo "[resume][error] 启用 ${name} (${path}) 失败" >&2
+              ENABLE_FAILED=$((ENABLE_FAILED + 1))
+              echo "[resume][error] 启用 ${name} (${path}) 失败（已重试 5 次）" >&2
+              continue
+            fi
+
+            # 重新启用之后立即重新触发（workflow_dispatch），
+            # 让被中断的 workflow（例如 Continuous Loop）马上恢复运转，
+            # 不必等到下一个 cron 周期。
+            if ! supports_dispatch "$path"; then
+              echo "[resume] ${name} 没有 workflow_dispatch 触发器，已重新启用，等待其自身事件/计划触发"
+              TRIGGER_SKIPPED=$((TRIGGER_SKIPPED + 1))
+              continue
+            fi
+            if has_recent_run "$file"; then
+              echo "[resume] ${name} 已有排队中/运行中/刚创建的 run，无需重复触发"
+              TRIGGER_SKIPPED=$((TRIGGER_SKIPPED + 1))
+              continue
+            fi
+            if trigger_workflow "$file"; then
+              TRIGGERED=$((TRIGGERED + 1))
+              echo "[resume] re-triggered ${name} (${path}) on ${DEFAULT_BRANCH}"
+            else
+              TRIGGER_FAILED=$((TRIGGER_FAILED + 1))
+              echo "[resume][error] 触发 ${name} (${path}) 失败（已重试 5 次）" >&2
             fi
           done <<< "$DISABLED_TSV"
 
-          echo "reenabled=$REENABLED" >> "$GITHUB_OUTPUT"
-          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
-          echo "[resume] done: reenabled=${REENABLED}, failed=${FAILED}"
+          write_outputs
 
-          if [ "$FAILED" -ne 0 ]; then
+          if [ "$ENABLE_FAILED" -ne 0 ] || [ "$TRIGGER_FAILED" -ne 0 ]; then
             exit 1
           fi
 
@@ -438,6 +585,7 @@ jobs:
           CANCELED_COUNT: ${{ steps.suspend.outputs.canceled }}
           RESUME_OUTCOME: ${{ steps.resume.outcome }}
           REENABLED_COUNT: ${{ steps.resume.outputs.reenabled }}
+          TRIGGERED_COUNT: ${{ steps.resume.outputs.triggered }}
           RESUME_FAILED: ${{ steps.resume.outputs.failed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -477,7 +625,7 @@ jobs:
             fi
 
             if [ "$RESUME_OUTCOME" = "success" ]; then
-              echo "- 结束后：已重新启用 ${REENABLED_COUNT:-0} 个 workflow。"
+              echo "- 结束后：已重新启用 ${REENABLED_COUNT:-0} 个 workflow，并重新触发 ${TRIGGERED_COUNT:-0} 个。"
             else
               echo "- ⚠️ 结束后恢复 workflow 失败（${RESUME_FAILED:-unknown} 个），请手动启用。"
             fi
@@ -548,3 +696,127 @@ jobs:
         run: |
           echo "OpenCode issue workflow failed; see the issue comment and Actions log."
           exit 1
+
+  resume-workflows:
+    # 兜底保障：opencode job 无论成功、失败、被取消还是超时（runner 宕机），
+    # 这个 job 都会紧接着启动（needs + if: always()，与 Continuous Loop 的
+    # next-run job 相同的已验证模式），确保被暂停的其他 workflow 一定被
+    # 重新启用并重新触发——不依赖 opencode job 内的收尾步骤是否执行。
+    # 正常情况下 opencode job 末尾的 Resume 步骤已完成恢复，这里的操作都是
+    # 幂等的（重复启用无副作用，重复触发会被「已有排队/运行中 run」检查挡住）。
+    needs: [opencode]
+    if: always() && github.actor == '183600' && github.event.issue.user.login == '183600'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      SUSPENDED_JSON: ${{ needs.opencode.outputs.suspended_workflows }}
+    steps:
+      - name: Ensure suspended workflows are re-enabled and retriggered
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # 与 opencode job 末尾的 Resume 步骤逻辑保持一致（幂等）。
+
+          supports_dispatch() {
+            local path="$1" content
+            content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${DEFAULT_BRANCH}" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || true)"
+            [ -n "$content" ] && printf '%s' "$content" | grep -q 'workflow_dispatch'
+          }
+
+          has_recent_run() {
+            local file="$1" n
+            n="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${file}/runs?per_page=10" \
+              --jq '[.workflow_runs[] | select(.status != "completed" or ((now - (.created_at | fromdateiso8601)) < 300))] | length' 2>/dev/null || true)"
+            case "$n" in ''|*[!0-9]*) n=0 ;; esac
+            [ "$n" -gt 0 ]
+          }
+
+          enable_workflow() {
+            local id="$1" attempt
+            for attempt in 1 2 3 4 5; do
+              if gh workflow enable "$id" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                return 0
+              fi
+              echo "[ensure][warn] 启用 workflow ${id} 失败（attempt ${attempt}/5），10s 后重试" >&2
+              sleep 10
+            done
+            return 1
+          }
+
+          trigger_workflow() {
+            local file="$1" attempt
+            for attempt in 1 2 3 4 5; do
+              if gh workflow run "$file" --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" >/dev/null 2>&1; then
+                return 0
+              fi
+              echo "[ensure][warn] 触发 ${file} 失败（attempt ${attempt}/5），10s 后重试" >&2
+              sleep 10
+            done
+            return 1
+          }
+
+          TARGETS_TSV=""
+          SUSPENDED_TRIMMED="$(printf '%s' "${SUSPENDED_JSON:-}" | tr -d '[:space:]')"
+          if [ -n "$SUSPENDED_TRIMMED" ] && printf '%s' "${SUSPENDED_JSON:-}" | jq -e 'type == "object"' >/dev/null 2>&1; then
+            echo "[ensure] 使用 opencode job 记录的被暂停 workflow 清单"
+            TARGETS_TSV="$(printf '%s' "${SUSPENDED_JSON}" | jq -r '.disabled[]? | [.id, .name, .path] | @tsv' 2>/dev/null || true)"
+          else
+            # 拿不到清单：opencode job 可能在 suspend 步骤中途被硬取消。
+            # 扫描仓库中当前被禁用的 workflow 兜底恢复（排除本 workflow 自身）。
+            echo "[ensure][warn] 没有被暂停清单（opencode job 可能在暂停步骤中途被取消），扫描仓库中被禁用的 workflow 兜底"
+            TARGETS_TSV="$(gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/workflows" \
+              --jq '.workflows[] | select(.path | startswith(".github/workflows/")) | select(.path != ".github/workflows/opencode-issue.yml") | select(.state != "active") | [.id, .name, .path] | @tsv' 2>/dev/null || true)"
+            if [ -n "$TARGETS_TSV" ]; then
+              echo "[ensure][warn] 兜底扫描无法区分「本次运行禁用」与「此前手动禁用」的 workflow，以下将全部恢复："
+              printf '%s\n' "$TARGETS_TSV" | awk -F '\t' '{print "  - " $2 " (" $3 ")"}'
+            fi
+          fi
+
+          REENABLED=0
+          ENABLE_FAILED=0
+          TRIGGERED=0
+          TRIGGER_FAILED=0
+          TRIGGER_SKIPPED=0
+
+          while IFS=$'\t' read -r id name path; do
+            [ -n "$id" ] || continue
+            file="${path##*/}"
+
+            if enable_workflow "$id"; then
+              REENABLED=$((REENABLED + 1))
+              echo "[ensure] re-enabled ${name} (${path})"
+            else
+              ENABLE_FAILED=$((ENABLE_FAILED + 1))
+              echo "[ensure][error] 启用 ${name} (${path}) 失败（已重试 5 次）" >&2
+              continue
+            fi
+
+            if ! supports_dispatch "$path"; then
+              echo "[ensure] ${name} 没有 workflow_dispatch 触发器，已重新启用，等待其自身事件/计划触发"
+              TRIGGER_SKIPPED=$((TRIGGER_SKIPPED + 1))
+              continue
+            fi
+            if has_recent_run "$file"; then
+              echo "[ensure] ${name} 已有排队中/运行中/刚创建的 run，无需重复触发"
+              TRIGGER_SKIPPED=$((TRIGGER_SKIPPED + 1))
+              continue
+            fi
+            if trigger_workflow "$file"; then
+              TRIGGERED=$((TRIGGERED + 1))
+              echo "[ensure] re-triggered ${name} (${path}) on ${DEFAULT_BRANCH}"
+            else
+              TRIGGER_FAILED=$((TRIGGER_FAILED + 1))
+              echo "[ensure][error] 触发 ${name} (${path}) 失败（已重试 5 次）" >&2
+            fi
+          done <<< "$TARGETS_TSV"
+
+          echo "[ensure] done: reenabled=${REENABLED}, enable_failed=${ENABLE_FAILED}, triggered=${TRIGGERED}, trigger_failed=${TRIGGER_FAILED}, trigger_skipped=${TRIGGER_SKIPPED}"
+
+          if [ "$ENABLE_FAILED" -ne 0 ] || [ "$TRIGGER_FAILED" -ne 0 ]; then
+            exit 1
+          fi
