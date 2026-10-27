@@ -444,6 +444,7 @@ def _choose_split(inst, leaf, H, r, split_mode):
 def run_tamo(inst, known, name, idx, B=1, policy='lower',
              split_mode='oracle', max_probes=200000,
              initial=None, audit_every=True, include_tree=False,
+             cut_lift=False, cut_tries=4,
              debug=False):
     """Run TAMO.  ``initial`` is None for PACT bounds, or a tuple
     (L, U, s, m, proof)."""
@@ -474,6 +475,8 @@ def run_tamo(inst, known, name, idx, B=1, policy='lower',
     probes = splits = closes_lift = closes_empty = 0
     yes = no = unknown = 0
     lp = nodes = cert_lp = 0
+    cut_lp = cut_lift_tries = 0
+    cut_lift_ok = False
     max_leaves = len(leaves)
     rank_checks = rank_fail = 0
     partial_checks = partial_fail = 0
@@ -527,6 +530,27 @@ def run_tamo(inst, known, name, idx, B=1, policy='lower',
 
         if r['verdict'] is False:
             no += 1
+            if cut_lift and h == U - 1 and cut_lift_tries < cut_tries:
+                from gac import candidate_cuts, CutProof
+                cuts = candidate_cuts(inst, h, r['proof'])
+                if cuts:
+                    cp = CutProof(inst, h, cuts)
+                    ok = cp.audit_rdf()
+                    cut_lp += cp.audit_lp
+                    cut_lift_tries += 1
+                    if ok:
+                        # One global NO(U-1) cut proof replaces the whole
+                        # frontier; the leaf certs inside it are retained.
+                        root = Leaf(frozenset(), U, cp, Mmax)
+                        root.closed = True
+                        root.h = U - 1
+                        holder[0] = root
+                        live.clear()
+                        byid.clear()
+                        heap.clear()
+                        cut_lift_ok = True
+                        kind = 'cut-lift'
+                        break
             leaf.proof = r['proof']
             leaf.L = h + 1
             kind = 'probe-no'
@@ -633,6 +657,8 @@ def run_tamo(inst, known, name, idx, B=1, policy='lower',
         yes=yes, no=no, unknown=unknown,
         closes_lift=closes_lift, closes_empty=closes_empty,
         lp=lp, nodes=nodes, cert_lp=cert_lp,
+        cut_lp=cut_lp, cut_lift_tries=cut_lift_tries,
+        cut_lift_ok=cut_lift_ok,
         leaves=len(leaves), open=sum(1 for x in leaves if not x.closed),
         max_leaves=max_leaves, depth=tree_depth(holder[0]),
         rank_checks=rank_checks, rank_fail=rank_fail,
