@@ -142,7 +142,9 @@ def _empty_proof(inst, h, F, lo, hi):
 class BAM:
     def __init__(self, inst, W=8, memory_mode='stop', policy='lower',
                  use_aco=True, aco_ants=8, aco_gens=3, aco_seed=7,
-                 aco_gamma=0.35, max_probes=4000, max_splits=4000,
+                 aco_gamma=0.35, selector='astar', amp_beta=1.0,
+                 amp_eta=0.05, amp_gamma=0.2, amp_seed=11,
+                 aco_gate='always', max_probes=4000, max_splits=4000,
                  max_contract=0, max_time=None, verbose=False):
         self.inst = inst
         self.W = int(W)
@@ -153,6 +155,12 @@ class BAM:
         self.aco_gens = int(aco_gens)
         self.aco_seed = int(aco_seed)
         self.aco_gamma = float(aco_gamma)
+        self.selector = selector
+        self.amp_beta = float(amp_beta)
+        self.amp_eta = float(amp_eta)
+        self.amp_gamma = float(amp_gamma)
+        self.amp_seed = int(amp_seed)
+        self.aco_gate = aco_gate
         self.max_probes = int(max_probes)
         self.max_splits = int(max_splits)
         self.max_contract = int(max_contract)
@@ -244,7 +252,6 @@ class BAM:
         if best is not None:
             self.stats['aco_best'] = best[2]
             if best[2] < U:
-                self.stats['aco_impr'] += 1
                 return best
         return None
 
@@ -315,6 +322,10 @@ class BAM:
         if not any(t > mid for t in ts) or not any(t <= mid for t in ts):
             return None, None
         return i, mid
+
+    def _select_leaf(self, openf):
+        """Default deterministic A*: smallest local bound."""
+        return min(openf, key=lambda x: (x.L, -x.depth, -x.created))
 
     def _probe(self, f):
         """One LP/Farkas probe of a leaf at h; returns (status, payload)."""
@@ -505,8 +516,11 @@ class BAM:
         init_sched = list(sched)
         init_mach = list(mach)
         # ACO before the search: only feasible schedules, checked below
-        if self.use_aco:
-            got = self._seed_aco(U, sched, mach)
+        if self.use_aco and self.aco_gate != 'never':
+            if self.aco_gate == 'gap1' and U - L != 1:
+                got = None
+            else:
+                got = self._seed_aco(U, sched, mach)
             if got is not None:
                 s2, m2, c2 = got
                 if c2 < U and check_schedule(inst, c2, s2, m2):
@@ -541,7 +555,7 @@ class BAM:
             if probes >= self.max_probes or self.stats['splits'] >= self.max_splits:
                 break
             # A*: smallest local lower bound; tie: deepest / ant-promise
-            f = min(openf, key=lambda x: (x.L, -x.depth, -x.created))
+            f = self._select_leaf(openf)
             # probe height policy
             if self.policy == 'lower':
                 h = f.L
@@ -640,7 +654,8 @@ class BAM:
             total_lp=(st['lp'] + st['cert_lp'] + st['pin_lp']),
             probe_count=probes, queries=probes,
             aco=bool(self.use_aco), W=self.W, memory_mode=self.memory_mode,
-            policy=self.policy, final=bool(L == U),
+            policy=self.policy, selector=self.selector,
+            aco_gate=self.aco_gate, final=bool(L == U),
             init_schedule=list(init_sched),
             init_machine=list(init_mach),
             best_schedule=list(best_sched), best_machine=list(best_mach),
