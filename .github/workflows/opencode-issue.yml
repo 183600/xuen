@@ -1,7 +1,7 @@
 name: OpenCode Issue
 
 # 用法：由仓库所有者 183600 新建（或重新打开）一个 issue。
-# issue 的标题和正文就是 prompt，OpenCode 会直接修改默认分支并推送（不建 PR）。
+# issue 的正文就是 prompt（标题不提供给模型，仅用于人工索引和 commit message），OpenCode 会直接修改默认分支并推送（不建 PR）。
 # 开始前会取消其他 workflow 的运行并临时禁用它们，结束后重新启用。
 # 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free；
 # 不可用时回退到 big-pickle；再不可用则随机选择一个免费模型。
@@ -280,7 +280,6 @@ jobs:
         env:
           MODEL: ${{ steps.select.outputs.model }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           set +e
@@ -289,8 +288,6 @@ jobs:
 
           {
             echo "你正在 GitHub Actions 中处理仓库 ${GITHUB_REPOSITORY} 的 issue #${ISSUE_NUMBER}。"
-            echo
-            echo "Issue 标题：${ISSUE_TITLE}"
             echo
             echo "Issue 正文："
             printf '%s\n' "${ISSUE_BODY}"
