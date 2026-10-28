@@ -1,10 +1,10 @@
 # xuen
 
-一个"随机灵感词 × 外部 agent 模拟人类研究者"的 **TUI** 循环。
+一个“随机灵感词 × 外部 agent 模拟人类研究者”的 **TUI** 循环。
 
 xuen **只调用外部 agent**（如 opencode）来完成所有思考：首次运行让外部 agent
 生成领域词库；每轮从词库**纯随机**抽取灵感词（此步绝不调任何模型），把
-「任务 + 灵感词 + 当前想法区/产物区 + 用户输入」拼成提示词交给外部 agent，
+「任务 + 灵感词 + 用户输入 + 当前想法区/产物区」拼成提示词交给外部 agent，
 由它覆盖「想法区 / 产物区」。
 
 ## 界面（TUI）
@@ -46,7 +46,7 @@ python main.py "任务"
           1. 纯随机抽词：random.sample 抽 n 个灵感词（此步绝不调任何模型）
           2. 取出底部输入框中积累的用户输入
           3. 拼提示词：extra_notes + 任务 + 轮次 + 灵感词
-             + 当前想法区/产物区内容 + 用户输入 + 覆盖区块的写入指令
+             + 用户输入 + 当前想法区/产物区内容 + 覆盖区块的写入指令
           4. 调用外部 agent（如 opencode run "$prompt"）：
              思考过程实时打到输出日志；经 write_section.py 整体覆盖想法区/产物区
           5. 重读 research.md 做 diff：哪个区块被改了，
@@ -88,7 +88,7 @@ python main.py "任务"
 **⑤ 词库生成**（`xuen/words.py`）
 - 分批向外部 agent 请求「为研究方向列出 N 个术语/关键词」，程序只负责解析、清洗、去重
   （剥序号/引号/冒号解释等），原子写入 `words.txt`；
-- 词表不再增长则提前结束；生成失败时回退复用磁盘上的旧词库；
+- 词表不再增长则提前结束；生成失败时，若未禁用复用则回退复用磁盘上的旧词库；
   `words.pick=0` 时跳过词库，循环中不给灵感词。
 
 **⑥ 研究循环**（`xuen/runner.py`）
@@ -102,7 +102,8 @@ python main.py "任务"
 **⑦ 退出与持久化**
 - 所有状态都落在工作区文件里（`research.md` / `words.txt` / `write_section.py` /
   `rounds/`），中断后重跑自动续上；
-- 退出码：`0` 正常结束；`1` 所有轮次均执行失败；`2` 配置/参数错误；`130` 被 Ctrl+C 中断。
+- 退出码：`0` 正常结束；`1` 循环中止（所有轮次均执行失败、提示词过长，或 TUI 启动失败）；
+  `2` 配置/参数错误；`130` 被 Ctrl+C 中断。
 
 ## 轮次守卫：把「防丢失 + 防倒退」做成独立卖点
 
@@ -130,7 +131,8 @@ stateDiagram-v2
     Cand --> Best: 被拒绝 → 还原最佳（下一轮永远从最佳出发）
     Cand --> Pend: 无结论（评审失败 / verify=user）→ 还原最佳
     Pend --> Best: 补分 ≥ 阈值 → 渐进翻案（快照写回 research.md）
-    Pend --> Pend: 补分 < 阈值或解析不出 → 保持挂起
+    Pend --> Best: 补分 < 阈值 → 记为拒绝（保留当前最佳）
+    Pend --> Pend: 解析不出 → 保持挂起
 ```
 
 终端友好版（与实现一一对应）：
@@ -174,10 +176,10 @@ stateDiagram-v2
 候选一旦补分达到 `adopt_score`，就被**前进式晋升**为最佳并写回
 `research.md`——等价于回滚到它，但 `history.jsonl` 不改写一行（审计
 日志只增不改，翻案本身也是一条新事件）。补分低于阈值则记为拒绝；
-下一轮永远从当前最佳继续。评分通道对各种脏数据免疫：未知候选 id、
-打错字的分数、快照被删的候选，都只是保持挂起并提示一次，绝不锁死、
-绝不误杀。这套协议天然兼容 CI / 后台循环——verdicts.txt 持久化在
-工作区里，跨会话、跨 run 都能兑现。
+下一轮永远从当前最佳继续。评分通道对各种脏数据免疫：未知候选 id 只提示
+一次并忽略，打错字的分数、快照被删的候选保持挂起，绝不锁死、绝不误杀。
+这套协议天然兼容 CI / 后台循环——verdicts.txt 持久化在工作区里，跨会话、
+跨 run 都能兑现。
 
 ### 卖点二：`judge_command`——用便宜模型当评审员
 
@@ -201,9 +203,10 @@ rounds:
 
 ### 卖点三：进度永不丢失
 
-所有状态都落在工作区文件里，没有任何内存态：`research.md`（当前状态）、
-`words.txt`（词库）、`rounds/cand-*.md`（每轮快照，`O_EXCL` 原子创建，
-并发实例也不会互相覆盖）、`rounds/best.md|best.json`（当前最佳，tmp +
+所有持久状态都落在工作区文件里，不依赖任何必须常驻的内存态：
+`research.md`（当前状态）、`words.txt`（词库）、
+`rounds/cand-*.md`（每轮快照，`O_EXCL` 原子创建，并发实例也不会互相
+覆盖）、`rounds/best.md|best.json`（当前最佳，tmp +
 `os.replace` 原子写）、`rounds/history.jsonl`（追加式审计日志）。恢复
 链按可靠性逐级回退：`best.json` → `history.jsonl` 的采纳事件 → 候选
 快照（内容权威：每个晋升过的最佳都有内容完全相同的快照）→ `best.md`
@@ -224,12 +227,13 @@ rounds:
 Makefile 分支只做存在性检查，「是否真的定义了 test 目标」（写在
 ifeq 分支里、include 进来、eval 生成、模式规则、grouped targets……）
 由 GNU make 在运行时回答：`make: No rule to make target 'test'` 与
-`Nothing to be done for 'test'` 都按「套件不可用」处理，转兜底评分，
-而不是误判成测试失败。
+`Nothing to be done for 'test'` 都按「套件不可用」处理（auto 模式转
+兜底评分，tests 模式挂起），而不是误判成测试失败。
 
 要点：
 
-- **每轮保存快照**：任何一轮的产物都落在 `rounds/cand-<id>.md`，永不丢失；
+- **每轮有改动都保存快照**：任何有改动轮次的产物都落在
+  `rounds/cand-<id>.md`，永不丢失；
 - **候选与最佳分离**：`best.md` / `best.json` 只保存「当前最佳」；候选
   必须通过验证（或拿到高分）才晋升；
 - **避免下一轮覆盖更好方案**：被拒绝/待评分的候选立即还原最佳——即使
@@ -264,29 +268,33 @@ python main.py "设计一个新的优化器" --no-rounds   # 退回旧行为：�
 
 ## 在 CI 里无人值守长跑
 
-`.github/workflows/continuous-loop.yml` 把整套研究循环搬进 GitHub Actions：
-任务「**设计一个新的算法**」交给 xuen 跑（约 3 小时工作窗口，窗口到点发
-SIGINT 优雅收尾），`rounds.verify: ai` + `rounds.judge_command` 用更快的
-免费模型当评审员，主模型从动态模型池里选（优先 deepseek-v4.1-flash-free，
-其次 big-pickle，再其次池内随机，带冒烟测试与失效剔除）。
+`.github/workflows/continuous-loop.yml` 把整套研究循环搬进 GitHub Actions，
+同一 run 内并行执行两个任务：「**设计一个新的算法**」和「**寻找参加 UniBot
+的创新点**」（后者使用 opencode 的联网搜索工具做赛事调研）。两个 job 各有
+约 3 小时工作窗口（165 分钟），窗口到点发 SIGINT 优雅收尾；均配置
+`rounds.verify: ai` + `rounds.judge_command` 用同一个免费模型当评审员，
+主模型依次尝试 `opencode/deepseek-v4.1-flash-free` 的 max / high / 默认
+档位，再尝试 `opencode/big-pickle`，每次先跑冒烟测试，全部失败则回落默认
+模型。
 
-工作区（`research.md` / `words.txt` / `rounds/`）经专用的 `xuen-loop` 分支
-跨 run 保存：每次 run 开头恢复、结尾 checkpoint（不动 master，仓库卫生
-不受影响）。配合每轮落盘的守卫快照，任何一次 run 中途挂掉，下一次也能
-从最近的已验证进展继续——这就是「进度会保存」的完整闭环。
+两个任务的工作区（`research.md` / `words.txt` / `rounds/`）分别经专用的
+`xuen-loop` 与 `xuen-loop-unibot` 分支跨 run 保存：每次 run 开头恢复、
+结尾 checkpoint（不动 master，仓库卫生不受影响）。配合每轮落盘的守卫
+快照，任何一次 run 中途挂掉，下一次也能从最近的已验证进展继续——这就是
+「进度会保存」的完整闭环。
 
 ## 目录结构
 
 ```
 xuen/
 ├── main.py                    # 入口
-├── requirements.txt           # 运行时依赖（PyYAML / textual）
+├── requirements.txt           # 运行时依赖（PyYAML / textual / rich）
 ├── requirements-ci.txt        # CI 固定版本依赖（含 pytest / rich）
 ├── pyproject.toml             # 包元数据；pip install -e . / .[dev]
 ├── config.example.yaml        # 复制为 config.yaml 使用
 ├── scripts/check_file_size.py # 3,000 行体量门禁（CI 独立 step）
-├── .github/workflows/         # CI（pytest）/ xuen 自动研究循环（continuous-loop）
-├── tests/                     # pytest：守卫、shell 渲染、TUI 降级、仓库卫生、冒烟
+├── .github/workflows/         # CI（pytest）/ 自动研究循环 / issue 处理 / Gitee 同步
+├── tests/                     # pytest：守卫、shell 渲染、词库、TUI、配置、仓库卫生、体量门禁、冒烟
 └── xuen/
     ├── cli.py                 # 命令行（TUI 导入失败时降级到纯终端）
     ├── config.py              # 配置（含 rounds 与 prompt 预算段）
@@ -308,14 +316,14 @@ xuen/
 权威源是候选快照（best.md 只是镜像）。工作区的运行期状态
 （`.rounds/`、`research.md`、`words.txt`、`write_section.py`、`rounds/`）
 都在 `.gitignore` 中，不进入版本库；CI 自动循环的工作区进度经专用的
-`xuen-loop` 分支保存，master 保持干净。
+`xuen-loop` / `xuen-loop-unibot` 分支保存，master 保持干净。
 
 ## 代码体量纪律
 
 **3,000 行是单文件红线。** `scripts/check_file_size.py` 扫描仓库内所有
 手写 `.py` 文件（排除 `pkg.generated*`、缓存目录与虚拟环境），任何文件
-超过 3,000 行都会打印路径并以非零码退出；CI 在 push / PR 时把它作为
-独立 step 执行。生成物不计入，但人工维护的源码没有例外。
+超过 3,000 行都会打印路径并以非零码退出；CI 在 push 到 master 与 PR 时
+把它作为独立 step 执行。生成物不计入，但人工维护的源码没有例外。
 
 这条红线来自一次真实的自纠：`xuen/rounds.py` 曾膨胀到 7,704 行，随后
 被全面重写压缩到 1,473 行。重写的关键不是「拆函数」，而是**删掉不必要的
@@ -366,13 +374,13 @@ pytest -q
 pytest --cov=xuen --cov-report=term-missing
 ```
 
-测试覆盖轮次守卫、shell 提示词渲染/注入防护、TUI 降级路径、仓库卫生
-（运行产物不得被跟踪）、CLI 与冒烟流程。CI 使用 `requirements-ci.txt`
-的固定版本依赖；本地 `requirements.txt` 与 `pyproject.toml` 的运行时依赖
-保持同步。
+测试覆盖轮次守卫、shell 提示词渲染/注入防护、词库、配置、TUI 输入/降级/
+退出、仓库卫生（运行产物不得被跟踪）、日志清洗、体量门禁、CLI 与冒烟流程。
+测试 CI（`ci.yml`）使用 `requirements-ci.txt` 的固定版本依赖；本地
+`requirements.txt` 与 `pyproject.toml` 的运行时依赖保持同步。
 
-默认分支是 `master`。其它 MoonBit 仓库使用 `main`；本仓库暂保留 `master`
-以避免打断已有 CI/外部链接，迁移时会单独做一次带历史的重命名。
+默认分支是 `master`。本仓库暂保留 `master` 以避免打断已有 CI/外部链接，
+迁移到 `main` 时会单独做一次带历史的重命名。
 
 ## 需求对照
 
@@ -385,12 +393,12 @@ pytest --cov=xuen --cov-report=term-missing
 | 修改产物区显示 `[修改产物区]<写入产物区的内容>` | 「修改产物区」面板：产物区被覆盖后显示标记 + 新内容 |
 | 底部输入框，内容下次调用 agent 时带给 agent | 输入入队 → 下一轮提示词中带「【用户输入】」段落 |
 | 想法区+产物区持久化 | `research.md`（标记区块），重跑自动续上；写入前校验标记结构并原子替换 |
-| 每轮保存快照，区分候选与当前最佳 | `rounds/cand-<id>.md` 候选快照 + `rounds/best.md|best.json` 当前最佳 + `history.jsonl` 审计日志 |
-| 能用测试验证的就运行测试 | `rounds.repo`（默认自动探测 git 根）：pytest → make → npm → go 级联 |
+| 每轮保存快照，区分候选与当前最佳 | `rounds/cand-<id>.md` 候选快照 + `rounds/best.md` / `rounds/best.json` 当前最佳 + `history.jsonl` 审计日志 |
+| 能用测试验证的就运行测试 | `rounds.repo`（默认自动探测工作区所在 git 根，非 git 环境退化为工作区）：pytest → make → npm → go 级联 |
 | 不能测试验证的：用户评分 / AI 评分 | `verdicts.txt` 异步补分（可翻案旧候选） / 复用外部 agent 当评审员打分 |
 | 避免下一轮覆盖更好方案 | 候选失败/挂起即还原最佳；下一轮永远从最佳出发；采纳旧快照用前进式晋升、不改写历史 |
 | 提示词不随轮次无限增长 | `prompt.max_state_chars` 首尾截断 + 截断提示；完整内容保留在状态文件 |
-| CI 自动循环调用 xuen 且进度可续 | `continuous-loop.yml`：任务「设计一个新的算法」，verify=ai + 便宜模型评审员；工作区经 `xuen-loop` 分支跨 run 保存 |
+| CI 自动循环调用 xuen 且进度可续 | `continuous-loop.yml`：并行运行「设计一个新的算法」与 UniBot 调研两个任务，均 verify=ai + 免费模型评审员；工作区分别经 `xuen-loop` / `xuen-loop-unibot` 分支跨 run 保存 |
 
 **注意事项**：所有状态都在工作区文件里（`research.md` / `words.txt` / `rounds/`），中断后重跑自动继续；
 `agent.timeout` 控制单次外部调用超时。仓库根目录的 `.rounds/` 是运行期产物，
