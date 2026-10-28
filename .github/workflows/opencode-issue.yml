@@ -580,7 +580,7 @@ jobs:
           has_recent_run() {
             local file="$1" n
             n="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${file}/runs?per_page=10" \
-              --jq '[.workflow_runs[] | select(.status != "completed" or ((now - (.created_at | fromdateiso8601)) < 300))] | length' 2>/dev/null || true)"
+              --jq '[.workflow_runs[] | select(((.status != "completed") and ((.status != "queued") or ((now - (.created_at | fromdateiso8601)) < 1800))) or (((now - (.created_at | fromdateiso8601)) < 300)))] | length' 2>/dev/null || true)"
             case "$n" in ''|*[!0-9]*) n=0 ;; esac
             [ "$n" -gt 0 ]
           }
@@ -827,7 +827,7 @@ jobs:
           has_recent_run() {
             local file="$1" n
             n="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${file}/runs?per_page=10" \
-              --jq '[.workflow_runs[] | select(.status != "completed" or ((now - (.created_at | fromdateiso8601)) < 300))] | length' 2>/dev/null || true)"
+              --jq '[.workflow_runs[] | select(((.status != "completed") and ((.status != "queued") or ((now - (.created_at | fromdateiso8601)) < 1800))) or (((now - (.created_at | fromdateiso8601)) < 300)))] | length' 2>/dev/null || true)"
             case "$n" in ''|*[!0-9]*) n=0 ;; esac
             [ "$n" -gt 0 ]
           }
