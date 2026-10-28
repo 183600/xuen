@@ -55,12 +55,12 @@ rounds:
   # 候选验证方式：
   #   auto  有可运行的测试套件就跑测试（pytest → make test → npm test →
   #         go test 级联探测）；没有则用 fallback 指定的评分者
-  #   tests 只跑测试；没有套件时候选挂起，等待用户在 verdicts.txt 评分
+  #   tests 只跑测试；没有套件时，候选挂起，等待用户在 verdicts.txt 评分
   #   user  只用用户评分：在 <workspace>/rounds/verdicts.txt 追加
   #         「<候选id> <0-10分> [评语]」；守卫在每轮开始/结束时兑现，
   #         给旧候选补高分可前进式翻案（内容写回 research.md）
   #   ai    只用 AI 评分：复用外部 agent 当评审员对比候选与最佳打分
-  #   off   不验证：快照照存，最新即最佳（退化为"防丢失"模式）
+  #   off   不验证：快照照存，最新即最佳（退化为「防丢失」模式）
   verify: auto
   fallback: ai           # auto 模式无测试可用时的兜底评分者：user / ai
   adopt_score: 7         # 评分达到该阈值才采纳候选为最佳（0-10）

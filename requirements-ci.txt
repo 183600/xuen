@@ -1,7 +1,7 @@
-# CI-only dependency set (Python 3.12).
+# CI-only dependency set (Python 3.9 / 3.12).
 #
 # 与 requirements.txt / pyproject.toml 的依赖保持一致并固定版本，只用于 CI：
-#   - continuous-loop.yml 的「Install Python test deps (cached)」里预热一次；
+#   - ci.yml 的「Install test dependencies」里安装；
 #   - 作为 actions/setup-python 的 pip 缓存键（cache-dependency-path）。
 # 这样 pip 缓存有稳定的依赖文件可 hash，也避免 CI 每次去解析 requirements.txt
 # 的宽版本范围（PyYAML>=6.0、textual>=1.0）导致缓存频繁失效。
