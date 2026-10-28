@@ -565,7 +565,14 @@ jobs:
             local path="$1" content
             content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${DEFAULT_BRANCH}" \
               --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || true)"
-            [ -n "$content" ] && printf '%s' "$content" | grep -q 'workflow_dispatch'
+            # fix: 用 case 模式匹配替代 printf|grep -q 管道。
+            # 大文件时 grep -q 提前退出触发 SIGPIPE，在 bash -e -o pipefail 下
+            # 管道整体退出码变非零，导致支持 workflow_dispatch 的 workflow
+            # （如 Continuous Loop）被误判为不支持，resume 后不再派发、心跳停摆。
+            case "$content" in
+              *workflow_dispatch*) return 0 ;;
+              *) return 1 ;;
+            esac
           }
 
           # 该 workflow 是否已有排队中/运行中的 run，或 5 分钟内刚创建过 run
@@ -807,7 +814,14 @@ jobs:
             local path="$1" content
             content="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${DEFAULT_BRANCH}" \
               --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || true)"
-            [ -n "$content" ] && printf '%s' "$content" | grep -q 'workflow_dispatch'
+            # fix: 用 case 模式匹配替代 printf|grep -q 管道。
+            # 大文件时 grep -q 提前退出触发 SIGPIPE，在 bash -e -o pipefail 下
+            # 管道整体退出码变非零，导致支持 workflow_dispatch 的 workflow
+            # （如 Continuous Loop）被误判为不支持，resume 后不再派发、心跳停摆。
+            case "$content" in
+              *workflow_dispatch*) return 0 ;;
+              *) return 1 ;;
+            esac
           }
 
           has_recent_run() {
