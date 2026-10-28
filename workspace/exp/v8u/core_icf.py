@@ -276,22 +276,30 @@ class CoreCertificate:
 
 # --------------------------------------------------------------- outer loop
 def run_core_icf(inst, known, name, idx, policy='lower-first',
-                 max_probes=64, collect_cert=True, core_override=None):
+                 max_probes=64, collect_cert=True, core_override=None,
+                 initial=None):
     t0 = time.time()
-    co = PACT(inst, pact_mode='complete', use_ga=False)
-    lb, ub, sched, mach = co.initial_bounds()
-    if ub is None:
-        return dict(name=name, idx=idx, known=known, policy=policy,
-                    ok=False, error='no-initial-ub', t=0.0)
+    if initial is not None:
+        L, U, sched, mach, lb_proof = initial
+        L, U = int(L), int(U)
+        sched = list(sched) if sched is not None else None
+        mach = list(mach) if mach is not None else None
+        co = None
+    else:
+        co = PACT(inst, pact_mode='complete', use_ga=False)
+        lb, ub, sched, mach = co.initial_bounds()
+        if ub is None:
+            return dict(name=name, idx=idx, known=known, policy=policy,
+                        ok=False, error='no-initial-ub', t=0.0)
 
-    L, U = int(lb), int(ub)
-    sched = list(sched) if sched is not None else None
-    mach = list(mach) if mach is not None else None
-    lb_proof = co._ensure_lb_proof(L)
-    if lb_proof is None:
-        r = pact_decide(inst, L - 1, depthcap=None, nodecap=None)
-        if r['verdict'] is False:
-            lb_proof = r['proof']
+        L, U = int(lb), int(ub)
+        sched = list(sched) if sched is not None else None
+        mach = list(mach) if mach is not None else None
+        lb_proof = co._ensure_lb_proof(L)
+        if lb_proof is None:
+            r = pact_decide(inst, L - 1, depthcap=None, nodecap=None)
+            if r['verdict'] is False:
+                lb_proof = r['proof']
     if lb_proof is None:
         return dict(name=name, idx=idx, known=known, policy=policy,
                     ok=False, error='no-lb-proof', t=0.0)
@@ -340,7 +348,8 @@ def run_core_icf(inst, known, name, idx, policy='lower-first',
             proof = r['proof']
             L = h + 1
             lb_proof = proof
-            co._record_proof(proof)
+            if co is not None:
+                co._record_proof(proof)
             if collect_cert:
                 last_no_root = root
             steps.append(dict(h=h, v=False, kind=proof.kind,

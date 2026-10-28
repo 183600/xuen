@@ -1,0 +1,473 @@
+[
+ {
+  "name": "h0",
+  "idx": 0,
+  "known": 37,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "search-exact",
+  "regime": "X",
+  "L": 37,
+  "U": 37,
+  "lb0": 37,
+  "ub0": 40,
+  "probes": 1,
+  "lp_solves": 67,
+  "cert_lp": 25,
+  "partial_ok": 2,
+  "partial_fail": 0,
+  "partial_final": true,
+  "ratio": 1.0,
+  "steps": [
+   {
+    "h": 37,
+    "v": true,
+    "cmax": 37,
+    "lp": 67,
+    "L0": 37,
+    "U0": 40,
+    "L1": 37,
+    "U1": 37
+   }
+  ],
+  "t": 5.6368,
+  "triage_profile": {
+   "k": 20,
+   "g": 0.08108108108108109,
+   "delta": 0.24324324324324326,
+   "lp_status": "fractional",
+   "h": 37
+  },
+  "triage_grid": [
+   0.0,
+   0.001266891891891892,
+   0.002533783783783784,
+   0.005067567567567568,
+   0.010135135135135136,
+   0.02027027027027027,
+   0.04054054054054054,
+   0.08108108108108109
+  ],
+  "triage_tests": 3,
+  "triage_work": 3,
+  "triage_trace": [
+   {
+    "eps": 0.005067567567567568,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   },
+   {
+    "eps": 0.001266891891891892,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   },
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   }
+  ],
+  "triage_t": 17.4313,
+  "exact_baseline_t": 3.139
+ },
+ {
+  "name": "h1",
+  "idx": 1,
+  "known": 33,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "search-exact",
+  "regime": "X",
+  "L": 33,
+  "U": 33,
+  "lb0": 33,
+  "ub0": 40,
+  "probes": 1,
+  "lp_solves": 9,
+  "cert_lp": 0,
+  "partial_ok": 2,
+  "partial_fail": 0,
+  "partial_final": true,
+  "ratio": 1.0,
+  "steps": [
+   {
+    "h": 33,
+    "v": true,
+    "cmax": 33,
+    "lp": 9,
+    "L0": 33,
+    "U0": 40,
+    "L1": 33,
+    "U1": 33
+   }
+  ],
+  "t": 0.8829,
+  "triage_profile": {
+   "k": 20,
+   "g": 0.21212121212121213,
+   "delta": 0.2727272727272727,
+   "lp_status": "fractional",
+   "h": 33
+  },
+  "triage_grid": [
+   0.0,
+   0.0016571969696969697,
+   0.0033143939393939395,
+   0.006628787878787879,
+   0.013257575757575758,
+   0.026515151515151516,
+   0.05303030303030303,
+   0.10606060606060606,
+   0.21212121212121213
+  ],
+  "triage_tests": 3,
+  "triage_work": 3,
+  "triage_trace": [
+   {
+    "eps": 0.013257575757575758,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   },
+   {
+    "eps": 0.0016571969696969697,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   },
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   }
+  ],
+  "triage_t": 3.1227,
+  "exact_baseline_t": 0.488
+ },
+ {
+  "name": "h2",
+  "idx": 2,
+  "known": 39,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "search-exact",
+  "regime": "X",
+  "L": 39,
+  "U": 39,
+  "lb0": 39,
+  "ub0": 44,
+  "probes": 1,
+  "lp_solves": 17,
+  "cert_lp": 2,
+  "partial_ok": 2,
+  "partial_fail": 0,
+  "partial_final": true,
+  "ratio": 1.0,
+  "steps": [
+   {
+    "h": 39,
+    "v": true,
+    "cmax": 39,
+    "lp": 17,
+    "L0": 39,
+    "U0": 44,
+    "L1": 39,
+    "U1": 39
+   }
+  ],
+  "t": 2.0209,
+  "triage_profile": {
+   "k": 20,
+   "g": 0.1282051282051282,
+   "delta": 0.23076923076923078,
+   "lp_status": "fractional",
+   "h": 39
+  },
+  "triage_grid": [
+   0.0,
+   0.001001602564102564,
+   0.002003205128205128,
+   0.004006410256410256,
+   0.008012820512820512,
+   0.016025641025641024,
+   0.03205128205128205,
+   0.0641025641025641,
+   0.1282051282051282
+  ],
+  "triage_tests": 3,
+  "triage_work": 3,
+  "triage_trace": [
+   {
+    "eps": 0.008012820512820512,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 39,
+    "U": 39,
+    "probes": 1
+   },
+   {
+    "eps": 0.001001602564102564,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 39,
+    "U": 39,
+    "probes": 1
+   },
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 39,
+    "U": 39,
+    "probes": 1
+   }
+  ],
+  "triage_t": 6.7201,
+  "exact_baseline_t": 1.1292
+ },
+ {
+  "name": "h3",
+  "idx": 3,
+  "known": 37,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "search-exact",
+  "regime": "X",
+  "L": 37,
+  "U": 37,
+  "lb0": 36,
+  "ub0": 40,
+  "probes": 1,
+  "lp_solves": 11,
+  "cert_lp": 2,
+  "partial_ok": 2,
+  "partial_fail": 0,
+  "partial_final": true,
+  "ratio": 1.0,
+  "steps": [
+   {
+    "h": 37,
+    "v": true,
+    "cmax": 37,
+    "lp": 11,
+    "L0": 37,
+    "U0": 40,
+    "L1": 37,
+    "U1": 37
+   }
+  ],
+  "t": 1.3163,
+  "triage_profile": {
+   "k": 15,
+   "g": 0.08108108108108109,
+   "delta": 0.24324324324324326,
+   "lp_status": "fractional",
+   "h": 37
+  },
+  "triage_grid": [
+   0.0,
+   0.001266891891891892,
+   0.002533783783783784,
+   0.005067567567567568,
+   0.010135135135135136,
+   0.02027027027027027,
+   0.04054054054054054,
+   0.08108108108108109
+  ],
+  "triage_tests": 3,
+  "triage_work": 3,
+  "triage_trace": [
+   {
+    "eps": 0.005067567567567568,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   },
+   {
+    "eps": 0.001266891891891892,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   },
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 37,
+    "U": 37,
+    "probes": 1
+   }
+  ],
+  "triage_t": 4.4194,
+  "exact_baseline_t": 0.7023
+ },
+ {
+  "name": "h4",
+  "idx": 4,
+  "known": 33,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "search-exact",
+  "regime": "X",
+  "L": 33,
+  "U": 33,
+  "lb0": 31,
+  "ub0": 37,
+  "probes": 1,
+  "lp_solves": 4,
+  "cert_lp": 0,
+  "partial_ok": 2,
+  "partial_fail": 0,
+  "partial_final": true,
+  "ratio": 1.0,
+  "steps": [
+   {
+    "h": 33,
+    "v": true,
+    "cmax": 33,
+    "lp": 4,
+    "L0": 33,
+    "U0": 37,
+    "L1": 33,
+    "U1": 33
+   }
+  ],
+  "t": 0.7488,
+  "triage_profile": {
+   "k": 20,
+   "g": 0.12121212121212122,
+   "delta": 0.2727272727272727,
+   "lp_status": "fractional",
+   "h": 33
+  },
+  "triage_grid": [
+   0.0,
+   0.001893939393939394,
+   0.003787878787878788,
+   0.007575757575757576,
+   0.015151515151515152,
+   0.030303030303030304,
+   0.06060606060606061,
+   0.12121212121212122
+  ],
+  "triage_tests": 3,
+  "triage_work": 3,
+  "triage_trace": [
+   {
+    "eps": 0.007575757575757576,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   },
+   {
+    "eps": 0.001893939393939394,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   },
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "search-exact",
+    "L": 33,
+    "U": 33,
+    "probes": 1
+   }
+  ],
+  "triage_t": 2.7791,
+  "exact_baseline_t": 0.3981
+ },
+ {
+  "name": "h7",
+  "idx": 7,
+  "known": 38,
+  "eps": 0.0,
+  "mode": "approx",
+  "ok": true,
+  "certified": true,
+  "known_exact": true,
+  "audit": true,
+  "stage": "lp-exact",
+  "regime": "P",
+  "L": 38,
+  "U": 38,
+  "lb0": 31,
+  "ub0": 38,
+  "probes": 0,
+  "lp_solves": 0,
+  "cert_lp": 0,
+  "partial_ok": 1,
+  "partial_fail": 0,
+  "partial_final": true,
+  "steps": [],
+  "t": 0.3346,
+  "triage_profile": {
+   "k": 0,
+   "g": 0.0,
+   "delta": 0.23684210526315788,
+   "lp_status": "infeasible",
+   "h": 37
+  },
+  "triage_grid": [
+   0.0
+  ],
+  "triage_tests": 1,
+  "triage_work": 0,
+  "triage_trace": [
+   {
+    "eps": 0.0,
+    "certified": true,
+    "stage": "lp-exact",
+    "L": 38,
+    "U": 38,
+    "probes": 0
+   }
+  ],
+  "triage_t": 0.8174,
+  "exact_baseline_t": 0.1731
+ }
+]

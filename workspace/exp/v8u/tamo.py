@@ -516,7 +516,12 @@ def run_tamo(inst, known, name, idx, B=1, policy='lower',
             break
         if probes >= max_probes:
             break
-        h = leaf.L if policy == 'lower' else (leaf.L + U) // 2
+        if policy == 'lower':
+            h = leaf.L
+        elif policy in ('upper', 'target'):
+            h = U - 1
+        else:
+            h = (leaf.L + U) // 2
         if h >= U:
             h = U - 1
         r = pact_decide(inst, h, depthcap=None, nodecap=B,
