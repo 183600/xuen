@@ -128,19 +128,30 @@ jobs:
           echo "suspended=$(jq -c '{disabled: .disabled}' "$STATE_FILE")" >> "$GITHUB_OUTPUT"
 
           # 取消其他 workflow 正在运行/排队的 run，并等待它们真正停止。
+          # 僵尸 run 容忍：GitHub 偶发产生无 job、无法 cancel（409 "not been queued yet"）
+          # 也无法删除的幽灵记录；对其连续 cancel 失败 3 次且创建超过 30 分钟的，
+          # 视为僵尸跳过等待，避免本步骤被永久卡死。
           CANCELED=0
           declare -A SEEN_CANCELED=()
+          declare -A CANCEL_FAILED=()
           DEADLINE=$((SECONDS + 180))
           while :; do
             ACTIVE_RUNS="$(
               gh run list --repo "$GITHUB_REPOSITORY" --limit 200 \
-                --json databaseId,workflowDatabaseId,status \
-              | jq -r '.[] | select(.status != "completed") | [.databaseId, .workflowDatabaseId] | @tsv'
+                --json databaseId,workflowDatabaseId,status,createdAt \
+              | jq -r '.[] | select(.status != "completed") | [.databaseId, .workflowDatabaseId, ((.createdAt | fromdateiso8601) | floor)] | @tsv'
             )"
             PENDING=0
-            while IFS=$'\t' read -r run_id wf_id; do
+            NOW_TS="$(date -u +%s)"
+            while IFS=$'\t' read -r run_id wf_id created_ts; do
               [ -n "$run_id" ] || continue
               if [ -n "$wf_id" ] && [ -n "${EXCLUDED_WF[$wf_id]:-}" ]; then
+                continue
+              fi
+              if [ "${CANCEL_FAILED[$run_id]:-0}" -ge 3 ] \
+                 && [ -n "${created_ts:-}" ] \
+                 && [ "$((NOW_TS - created_ts))" -ge 1800 ]; then
+                echo "[suspend] skip zombie run ${run_id} (cancel failed 3+, older than 30min)" >&2
                 continue
               fi
               PENDING=$((PENDING + 1))
@@ -153,6 +164,8 @@ jobs:
                   mv "$STATE_FILE.tmp" "$STATE_FILE"
                   echo "[suspend] cancel requested for run ${run_id}"
                 fi
+              else
+                CANCEL_FAILED[$run_id]=$(( ${CANCEL_FAILED[$run_id]:-0} + 1 ))
               fi
             done <<< "$ACTIVE_RUNS"
 
