@@ -778,3 +778,6 @@
 {"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-28 02:23:30"}
 {"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-28 02:48:30"}
 {"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-28 03:13:30"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-28 10:18:42"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-28 10:43:43"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-28 11:08:43"}
