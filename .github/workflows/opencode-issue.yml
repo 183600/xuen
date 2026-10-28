@@ -46,7 +46,8 @@ jobs:
     outputs:
       suspended_workflows: ${{ steps.suspend.outputs.suspended }}
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    # GitHub 托管 runner 单 job 硬上限 360 分钟，取满。
+    timeout-minutes: 360
 
     steps:
       - name: Suspend other workflows
@@ -343,7 +344,9 @@ jobs:
         id: run
         continue-on-error: true
         shell: bash
-        timeout-minutes: 95
+        # 步骤预算 290 分钟：suspend(10) + select(40) + run(290) = 340 ≤ job 上限 360，
+        # 给 publish/resume/comment/close 等收尾步骤留约 20 分钟。
+        timeout-minutes: 290
         env:
           MODEL: ${{ steps.select.outputs.model }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -370,7 +373,9 @@ jobs:
 
           PROMPT="$(cat /tmp/opencode-prompt.txt)"
           echo "[opencode] model=$MODEL issue=#$ISSUE_NUMBER"
-          timeout --kill-after=60 5400 opencode run --auto -m "$MODEL" "$PROMPT" 2>&1 | tee "$LOG"
+          # 280 分钟（16800s）硬超时：比步骤上限 290 分钟留 10 分钟余量；
+          # --kill-after=120 给 opencode 更充分的优雅退出时间。
+          timeout --kill-after=120 16800 opencode run --auto -m "$MODEL" "$PROMPT" 2>&1 | tee "$LOG"
           EC=${PIPESTATUS[0]}
           echo "exit_code=$EC" >> "$GITHUB_OUTPUT"
           echo "[opencode] exit=$EC"
