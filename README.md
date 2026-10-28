@@ -284,6 +284,7 @@ xuen/
 ├── requirements-ci.txt        # CI 固定版本依赖（含 pytest / rich）
 ├── pyproject.toml             # 包元数据；pip install -e . / .[dev]
 ├── config.example.yaml        # 复制为 config.yaml 使用
+├── scripts/check_file_size.py # 3,000 行体量门禁（CI 独立 step）
 ├── .github/workflows/         # CI（pytest）/ xuen 自动研究循环（continuous-loop）
 ├── tests/                     # pytest：守卫、shell 渲染、TUI 降级、仓库卫生、冒烟
 └── xuen/
@@ -308,6 +309,34 @@ xuen/
 （`.rounds/`、`research.md`、`words.txt`、`write_section.py`、`rounds/`）
 都在 `.gitignore` 中，不进入版本库；CI 自动循环的工作区进度经专用的
 `xuen-loop` 分支保存，master 保持干净。
+
+## 代码体量纪律
+
+**3,000 行是单文件红线。** `scripts/check_file_size.py` 扫描仓库内所有
+手写 `.py` 文件（排除 `pkg.generated*`、缓存目录与虚拟环境），任何文件
+超过 3,000 行都会打印路径并以非零码退出；CI 在 push / PR 时把它作为
+独立 step 执行。生成物不计入，但人工维护的源码没有例外。
+
+这条红线来自一次真实的自纠：`xuen/rounds.py` 曾膨胀到 7,704 行，随后
+被全面重写压缩到 1,473 行。重写的关键不是「拆函数」，而是**删掉不必要的
+实现**——不再静态解析 Makefile 的数千行结构，改由 GNU make 在运行时回答
+「是否定义了 test 目标」；最佳内容的权威源收敛到候选快照，避免多份状态
+互相镜像、各自膨胀。经验是：体量失控往往源于重复职责和防御性追加，而
+不是缺少抽象。
+
+因此修改代码时遵循：
+
+- **优先删减，而非追加。** 能删掉的旧路径、重复状态、无效兼容层优先
+  删除；新增逻辑前先确认现有实现不能收拢复用。
+- **按职责拆分，而不是按行数切块。** 单文件接近红线时，先识别可独立的
+  渲染、解析、提示词组装等职责，再迁到同包模块；测试按被测功能拆分。
+- **拆分只做物理重组。** 移动代码不改变逻辑、不削弱断言；现有测试必须
+  保持全绿。当前 `tests/test_agents_render*.py` 已按 heredoc/命令替换、
+  复杂展开、Windows 引号与提示词文件生命周期拆成三组，每组均低于
+  1,500 行。
+- `xuen/agents.py` 目前把 shell 模板扫描、占位符边界与进程生命周期
+  耦合在 `ShellAgent` 上，暂不强拆；文件头已标注红线，若继续增长应优先
+  迁出纯渲染/扫描辅助逻辑。
 
 ## 提示词预算
 
