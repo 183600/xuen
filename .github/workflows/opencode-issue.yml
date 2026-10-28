@@ -476,6 +476,9 @@ jobs:
           if [ "${WF_TOUCHED:-0}" -gt 0 ]; then
             if [ -n "${PUSH_TOKEN:-}" ]; then
               echo "[publish] 提交涉及 .github/workflows/ 下的 ${WF_TOUCHED} 个文件，使用 PUSH_TOKEN（PAT）推送"
+              # actions/checkout 注入的 GITHUB_TOKEN extraheader 会覆盖 URL 内嵌凭据：
+              #不移除它的话，实际发送的仍是 GITHUB_TOKEN（无 workflows 权限），PAT 形同虚设。
+              git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
               if ! git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${BASE_BRANCH}"; then
                 echo "[publish][error] PUSH_TOKEN 推送失败：请检查仓库 secret PUSH_TOKEN 是否为有效且带 repo+workflow scope 的 PAT" >&2
                 exit 1
@@ -492,6 +495,7 @@ jobs:
             if ! git push origin "HEAD:${BASE_BRANCH}"; then
               if [ -n "${PUSH_TOKEN:-}" ]; then
                 echo "[publish][warn] GITHUB_TOKEN 推送失败，改用 PUSH_TOKEN 重试" >&2
+                git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
                 if ! git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${BASE_BRANCH}"; then
                   echo "[publish][error] PUSH_TOKEN 推送也失败，请检查网络与凭据" >&2
                   exit 1
