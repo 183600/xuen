@@ -266,6 +266,21 @@ python main.py "设计一个新的优化器" --no-rounds   # 退回旧行为：�
 # 测试套件自动验证（pytest/make/npm/go 级联探测）
 ```
 
+## 最小示例：无需安装外部 agent
+
+想先不配置 opencode、也不联网，直接看一轮完整流程，可以运行：
+
+```bash
+python examples/minimal_demo.py
+```
+
+示例用 `examples/mock_agent.py` 扮演外部 agent，在临时目录里演示
+「随机灵感词 → 提示词渲染 → 轮次守卫（候选快照 / 候选与最佳分离 /
+自动验证）→ 终端报告」。它只依赖 Python：有 `make` 时用临时仓库的
+`make test` 自动验证，没有时回落到 mock 评审员打分；运行结束后默认
+清理临时工作区，`--keep` 可保留查看 `research.md`、`rounds/cand-*.md`、
+`rounds/best.md` 等产物。详见 `examples/README.md`。
+
 ## 在 CI 里无人值守长跑
 
 `.github/workflows/continuous-loop.yml` 把整套研究循环搬进 GitHub Actions，
@@ -292,6 +307,7 @@ xuen/
 ├── requirements-ci.txt        # CI 固定版本依赖（含 pytest / rich）
 ├── pyproject.toml             # 包元数据；pip install -e . / .[dev]
 ├── config.example.yaml        # 复制为 config.yaml 使用
+├── examples/                  # 最小可运行示例（mock agent，无需外部可执行文件）
 ├── scripts/check_file_size.py # 3,000 行体量门禁（CI 独立 step）
 ├── .github/workflows/         # CI（pytest）/ 自动研究循环 / issue 处理 / Gitee 同步
 ├── tests/                     # pytest：守卫、shell 渲染、词库、TUI、配置、仓库卫生、体量门禁、冒烟
