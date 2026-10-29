@@ -547,3 +547,18 @@
 {"event": "restored", "round": 3, "why": "轮次失败（超时）", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-29 10:26:58"}
 {"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-29 10:56:59"}
 {"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-29 11:26:59"}
+{"event": "candidate", "id": "20261029-114235-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-29 11:42:35"}
+{"event": "verdict", "id": "20261029-114235-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-29 11:42:35"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-29 11:42:35"}
+{"event": "candidate", "id": "20261029-115634-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-10-29 11:56:34"}
+{"event": "verdict", "id": "20261029-115634-r2", "round": 2, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-29 11:56:34"}
+{"event": "restored", "round": 2, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-29 11:56:34"}
+{"event": "candidate", "id": "20261029-121321-r3", "round": 3, "changed": ["idea", "artifact"], "ts": "2026-10-29 12:13:21"}
+{"event": "verdict", "id": "20261029-121321-r3", "round": 3, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-29 12:13:21"}
+{"event": "restored", "round": 3, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-29 12:13:21"}
+{"event": "candidate", "id": "20261029-122922-r4", "round": 4, "changed": ["idea", "artifact"], "ts": "2026-10-29 12:29:22"}
+{"event": "verdict", "id": "20261029-122922-r4", "round": 4, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-29 12:29:22"}
+{"event": "restored", "round": 4, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-29 12:29:22"}
+{"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-29 12:59:22"}
+{"event": "skipped", "round": 6, "reason": "超时", "ts": "2026-10-29 13:29:22"}
+{"event": "skipped", "round": 7, "reason": "超时", "ts": "2026-10-29 13:59:22"}
