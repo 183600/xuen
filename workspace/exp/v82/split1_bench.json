@@ -1,0 +1,47 @@
+{
+ "agg": {
+  "cases": 201,
+  "root_no": 194,
+  "split": 7,
+  "all_no": 5,
+  "multi": 0,
+  "mine_feas": 0,
+  "certfail": 0,
+  "lp": 223,
+  "wall": 0.7406024932861328
+ },
+ "rows": [
+  {
+   "kind": "root-no",
+   "lp": 1,
+   "name": "holdout50",
+   "idx": 0
+  },
+  {
+   "kind": "root-no",
+   "lp": 1,
+   "name": "holdout50",
+   "idx": 1
+  },
+  {
+   "kind": "root-no",
+   "lp": 1,
+   "name": "holdout50",
+   "idx": 2
+  },
+  {
+   "kind": "root-no",
+   "lp": 1,
+   "name": "holdout50",
+   "idx": 3
+  },
+  {
+   "kind": "root-no",
+   "lp": 1,
+   "name": "holdout50",
+   "idx": 4
+  },
+  {
+   "kind": "split",
+   "lp": 4,
+   "E": 

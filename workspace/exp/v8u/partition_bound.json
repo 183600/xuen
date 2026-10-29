@@ -1,0 +1,1766 @@
+[
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 0,
+  "known": 32,
+  "part": 23
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 1,
+  "known": 29,
+  "part": 25
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 2,
+  "known": 41,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 3,
+  "known": 36,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 4,
+  "known": 40,
+  "part": 30
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 6,
+  "known": 35,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 7,
+  "known": 30,
+  "part": 24
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 8,
+  "known": 35,
+  "part": 25
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 9,
+  "known": 31,
+  "part": 23
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 10,
+  "known": 32,
+  "part": 25
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 11,
+  "known": 37,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 12,
+  "known": 40,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 13,
+  "known": 39,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 14,
+  "known": 50,
+  "part": 38
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 15,
+  "known": 36,
+  "part": 30
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 16,
+  "known": 29,
+  "part": 23
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 17,
+  "known": 32,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 18,
+  "known": 32,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 19,
+  "known": 32,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 20,
+  "known": 34,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 21,
+  "known": 30,
+  "part": 26
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 22,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 23,
+  "known": 42,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 24,
+  "known": 43,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 25,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 26,
+  "known": 35,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 27,
+  "known": 43,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 28,
+  "known": 31,
+  "part": 23
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 29,
+  "known": 35,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 30,
+  "known": 43,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 31,
+  "known": 32,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 32,
+  "known": 37,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 33,
+  "known": 37,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 34,
+  "known": 34,
+  "part": 25
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 35,
+  "known": 41,
+  "part": 34
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 36,
+  "known": 32,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 37,
+  "known": 38,
+  "part": 24
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 38,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 39,
+  "known": 39,
+  "part": 34
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 40,
+  "known": 42,
+  "part": 34
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 41,
+  "known": 28,
+  "part": 24
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 42,
+  "known": 39,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 43,
+  "known": 34,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 44,
+  "known": 25,
+  "part": 22
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 45,
+  "known": 35,
+  "part": 28
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 46,
+  "known": 31,
+  "part": 22
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 48,
+  "known": 27,
+  "part": 22
+ },
+ {
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 49,
+  "known": 39,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 0,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 1,
+  "known": 7,
+  "part": 7
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 2,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 3,
+  "known": 13,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 4,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 5,
+  "known": 12,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 6,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 7,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 8,
+  "known": 14,
+  "part": 14
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 9,
+  "known": 8,
+  "part": 8
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 10,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 11,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 12,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 13,
+  "known": 16,
+  "part": 16
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 14,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 15,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 16,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 17,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 18,
+  "known": 12,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 19,
+  "known": 14,
+  "part": 14
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 20,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 21,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 22,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 23,
+  "known": 14,
+  "part": 14
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 24,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 25,
+  "known": 9,
+  "part": 9
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 26,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 27,
+  "known": 8,
+  "part": 8
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 28,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 29,
+  "known": 15,
+  "part": 15
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 30,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 31,
+  "known": 9,
+  "part": 9
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 32,
+  "known": 9,
+  "part": 9
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 33,
+  "known": 12,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 34,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 35,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 36,
+  "known": 11,
+  "part": 11
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 37,
+  "known": 13,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 38,
+  "known": 12,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 39,
+  "known": 14,
+  "part": 14
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 40,
+  "known": 12,
+  "part": 12
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 41,
+  "known": 12,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 42,
+  "known": 9,
+  "part": 9
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 43,
+  "known": 13,
+  "part": 13
+ },
+ {
+  "corpus": "base",
+  "name": "synth",
+  "idx": 44,
+  "known": 10,
+  "part": 10
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 0,
+  "known": 46,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 1,
+  "known": 43,
+  "part": 38
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 2,
+  "known": 68,
+  "part": 36
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 3,
+  "known": 49,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 4,
+  "known": 33,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 5,
+  "known": 30,
+  "part": 30
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 6,
+  "known": 61,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 7,
+  "known": 42,
+  "part": 38
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 0,
+  "known": 38,
+  "part": 38
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 1,
+  "known": 40,
+  "part": 40
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 2,
+  "known": 60,
+  "part": 49
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 3,
+  "known": 34,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 4,
+  "known": 45,
+  "part": 45
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 5,
+  "known": 53,
+  "part": 46
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 6,
+  "known": 53,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 7,
+  "known": 42,
+  "part": 42
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 8,
+  "known": 45,
+  "part": 43
+ },
+ {
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 9,
+  "known": 42,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 0,
+  "known": 37,
+  "part": 35
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 1,
+  "known": 40,
+  "part": 35
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 2,
+  "known": 42,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 3,
+  "known": 31,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 4,
+  "known": 44,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 5,
+  "known": 32,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 6,
+  "known": 42,
+  "part": 28
+ },
+ {
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 7,
+  "known": 41,
+  "part": 39
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 0,
+  "known": 28,
+  "part": 26
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 1,
+  "known": 36,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 2,
+  "known": 29,
+  "part": 22
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 3,
+  "known": 37,
+  "part": 35
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 4,
+  "known": 38,
+  "part": 37
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 5,
+  "known": 39,
+  "part": 30
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 6,
+  "known": 33,
+  "part": 28
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 7,
+  "known": 48,
+  "part": 33
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 8,
+  "known": 31,
+  "part": 29
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 9,
+  "known": 27,
+  "part": 23
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 10,
+  "known": 42,
+  "part": 35
+ },
+ {
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 11,
+  "known": 35,
+  "part": 31
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 0,
+  "known": 28,
+  "part": 25
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 1,
+  "known": 37,
+  "part": 27
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 2,
+  "known": 30,
+  "part": 21
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 3,
+  "known": 38,
+  "part": 32
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 4,
+  "known": 45,
+  "part": 35
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 5,
+  "known": 25,
+  "part": 21
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 6,
+  "known": 33,
+  "part": 28
+ },
+ {
+  "corpus": "base",
+  "name": "deep",
+  "idx": 7,
+  "known": 21,
+  "part": 17
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 0,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 1,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 2,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 3,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 4,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 5,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 6,
+  "known": 34,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 7,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 8,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 9,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 10,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 11,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 12,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 13,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 14,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 15,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 16,
+  "known": 34,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 17,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 18,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 19,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 20,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 21,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 22,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 23,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 24,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 25,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 26,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 27,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 28,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 29,
+  "known": 32,
+  "part": 26
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 0,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 1,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 2,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 3,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 4,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 5,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 6,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 7,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 8,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 9,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 10,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 11,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 12,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 13,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 14,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 15,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 16,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 17,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 18,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 19,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 20,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 21,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 22,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 23,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 24,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 25,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 26,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 27,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 28,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 29,
+  "known": 34,
+  "part": 31
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 27
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "part": 32
+ },
+ {
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "part": 26
+ }
+]

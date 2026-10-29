@@ -1,0 +1,377 @@
+hard17 0 n 10 m 2 orig 302
+  opt 46
+    plain False 1457 0.017
+    canon False 733 0.0114
+    front False 733 0.0111
+    sub False 481 0.0085
+    ladder False 1457 0.022
+    ladder_front False 733 0.0139
+hard17 1 n 9 m 2 orig 132
+  opt 29
+    plain False 1497 0.0155
+    canon False 755 0.009
+    front False 755 0.0092
+    sub False 447 0.0067
+    ladder False 1497 0.0151
+    ladder_front False 755 0.0103
+hard17 2 n 10 m 2 orig 87
+  opt 39
+    plain False 777 0.0075
+    canon False 392 0.0054
+    front False 392 0.0054
+    sub False 308 0.0047
+    ladder False 777 0.009
+    ladder_front False 392 0.0061
+hard17 3 n 10 m 2 orig 60
+  opt 60
+    plain False 3049 0.0307
+    canon False 1527 0.0207
+    front False 1527 0.0191
+    sub False 912 0.0139
+    ladder False 3049 0.0399
+    ladder_front False 1527 0.022
+hard17 4 n 10 m 2 orig 54
+  opt 56
+    plain False 525 0.0048
+    canon False 266 0.0035
+    front False 266 0.0042
+    sub False 152 0.0024
+    ladder False 525 0.0064
+    ladder_front False 266 0.0042
+hard17 5 n 10 m 2 orig 45
+  opt 60
+    plain False 741 0.0076
+    canon False 374 0.0053
+    front False 374 0.0051
+    sub False 315 0.005
+    ladder False 741 0.0114
+    ladder_front False 374 0.0072
+hard17 6 n 10 m 2 orig 34
+  opt 68
+    plain False 391 0.0041
+    canon False 198 0.0029
+    front False 198 0.0031
+    sub False 190 0.0031
+    ladder False 391 0.0055
+    ladder_front False 198 0.0038
+hard17 7 n 10 m 2 orig 34
+  opt 29
+    plain False 739 0.0077
+    canon False 376 0.0054
+    front False 376 0.0054
+    sub False 295 0.0049
+    ladder False 739 0.0092
+    ladder_front False 376 0.006
+hard17 8 n 9 m 2 orig 31
+  opt 38
+    plain False 209 0.0022
+    canon False 108 0.0017
+    front False 108 0.0017
+    sub False 108 0.0017
+    ladder False 209 0.0031
+    ladder_front False 108 0.0021
+hard17 9 n 10 m 2 orig 23
+  opt 38
+    plain False 251 0.0035
+    canon False 128 0.002
+    front False 128 0.002
+    sub False 128 0.0022
+    ladder False 251 0.0039
+    ladder_front False 128 0.0028
+hard17 10 n 9 m 2 orig 21
+  opt 52
+    plain False 229 0.0022
+    canon False 116 0.0016
+    front False 116 0.0018
+    sub False 115 0.0018
+    ladder False 229 0.0024
+    ladder_front False 116 0.0019
+hard17 11 n 10 m 2 orig 18
+  opt 53
+    plain False 145 0.002
+    canon False 75 0.0014
+    front False 75 0.0015
+    sub False 68 0.0013
+    ladder False 145 0.0029
+    ladder_front False 75 0.0018
+hard17 12 n 9 m 2 orig 17
+  opt 37
+    plain False 507 0.004
+    canon False 255 0.0029
+    front False 255 0.003
+    sub False 109 0.0015
+    ladder False 507 0.005
+    ladder_front False 255 0.0031
+hard17 13 n 9 m 2 orig 16
+  opt 30
+    plain False 107 0.0021
+    canon False 57 0.0017
+    front False 57 0.0013
+    sub False 57 0.0012
+    ladder False 107 0.0025
+    ladder_front False 57 0.0017
+hard17 14 n 9 m 2 orig 14
+  opt 33
+    plain False 313 0.0027
+    canon False 158 0.002
+    front False 158 0.0022
+    sub False 90 0.0014
+    ladder False 313 0.0033
+    ladder_front False 158 0.0025
+hard17 15 n 9 m 2 orig 13
+  opt 39
+    plain False 93 0.0012
+    canon False 50 0.0009
+    front False 50 0.001
+    sub False 50 0.0011
+    ladder False 93 0.002
+    ladder_front False 50 0.0013
+hard17 16 n 9 m 2 orig 12
+  opt 59
+    plain False 491 0.005
+    canon False 249 0.0035
+    front False 249 0.0036
+    sub False 130 0.0024
+    ladder False 491 0.0057
+    ladder_front False 249 0.004
+pool30 0 n 9 m 2 orig 39101
+  opt 15
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 1 n 9 m 2 orig 57332
+  opt 17
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 2 n 10 m 2 orig 45966
+  opt 18
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 3 n 9 m 2 orig 49752
+  opt 17
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 4 n 9 m 2 orig 693
+  opt 30
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 5 n 9 m 2 orig 64185
+  opt 19
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 6 n 10 m 2 orig 41324
+  opt 22
+    plain False 173 0.0019
+    canon False 89 0.0015
+    front False 89 0.0016
+    sub False 75 0.0013
+    ladder False 173 0.0021
+    ladder_front False 89 0.0016
+pool30 7 n 10 m 2 orig 136732
+  opt 32
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 8 n 9 m 2 orig 72026
+  opt 23
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 9 n 10 m 2 orig 79413
+  opt 17
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 10 n 10 m 2 orig 23509
+  opt 25
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 11 n 10 m 2 orig 3856
+  opt 41
+    plain False 575 0.0052
+    canon False 289 0.0036
+    front False 289 0.0038
+    sub False 157 0.0023
+    ladder False 575 0.006
+    ladder_front False 289 0.0041
+pool30 12 n 9 m 2 orig 24277
+  opt 23
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 13 n 9 m 2 orig 9111
+  opt 27
+    plain False 109 0.0014
+    canon False 58 0.0011
+    front False 58 0.0012
+    sub False 54 0.0013
+    ladder False 109 0.0017
+    ladder_front False 58 0.0013
+pool30 14 n 9 m 2 orig 3605
+  opt 18
+    plain False 81 0.0009
+    canon False 42 0.0014
+    front False 42 0.0007
+    sub False 40 0.0007
+    ladder False 81 0.0011
+    ladder_front False 42 0.0008
+pool30 15 n 10 m 2 orig 179372
+  opt 20
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0002
+pool30 16 n 10 m 2 orig 256881
+  opt 29
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 17 n 10 m 2 orig 345391
+  opt 23
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 18 n 10 m 2 orig 44230
+  opt 25
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 19 n 10 m 2 orig 20703
+  opt 32
+    plain False 305 0.0031
+    canon False 155 0.0024
+    front False 155 0.0022
+    sub False 112 0.0018
+    ladder False 305 0.0036
+    ladder_front False 155 0.0024
+pool30 20 n 10 m 2 orig 41722
+  opt 29
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 21 n 10 m 2 orig 318751
+  opt 22
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 22 n 9 m 2 orig 29863
+  opt 21
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 23 n 9 m 2 orig 37501
+  opt 16
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 24 n 10 m 2 orig 75349
+  opt 19
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 25 n 10 m 2 orig 81477
+  opt 21
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 26 n 9 m 2 orig 9442
+  opt 17
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 27 n 10 m 2 orig 33353
+  opt 21
+    plain False 471 0.0046
+    canon False 238 0.0035
+    front False 238 0.0033
+    sub False 159 0.0026
+    ladder False 471 0.005
+    ladder_front False 238 0.0042
+pool30 28 n 9 m 2 orig 5652
+  opt 24
+    plain False 1 0.0
+    canon False 1 0.0
+    front False 1 0.0
+    sub False 1 0.0
+    ladder False 1 0.0
+    ladder_front False 1 0.0
+pool30 29 n 10 m 2 orig 89450
+  opt 35
+    plain False 1515 0.0148
+    canon False 760 0.0094
+    front False 760 0.0097
+    sub False 414 0.006
+    ladder False 1515 0.0157
+    ladder_front False 760 0.0102
+saved

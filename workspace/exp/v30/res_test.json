@@ -1,0 +1,24 @@
+{
+ "brute": {
+  "trials": 1260,
+  "feasible": 604,
+  "force": 0,
+  "noforce": 0,
+  "diff": 0
+ },
+ "states": {
+  "same": 400,
+  "diff": 0
+ },
+ "yes70": {
+  "valid": 70,
+  "bad": 0,
+  "nodes": 5101
+ },
+ "synth_yes": {
+  "valid": 45,
+  "bad": 0,
+  "m4": 8,
+  "m4_valid": 8
+ }
+}

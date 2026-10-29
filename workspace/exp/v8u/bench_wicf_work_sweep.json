@@ -1,0 +1,98 @@
+[
+ {
+  "B": 0,
+  "n": 160,
+  "ok": 5,
+  "cert": 5,
+  "partial_final": 99,
+  "probes": 0,
+  "lp": 0,
+  "repair_iters": 160,
+  "partial_fail": 0,
+  "t": 0.08
+ },
+ {
+  "B": 1,
+  "n": 160,
+  "ok": 17,
+  "cert": 17,
+  "partial_final": 99,
+  "probes": 155,
+  "lp": 574,
+  "repair_iters": 160,
+  "partial_fail": 0,
+  "t": 4.53
+ },
+ {
+  "B": 2,
+  "n": 160,
+  "ok": 56,
+  "cert": 56,
+  "partial_final": 100,
+  "probes": 298,
+  "lp": 1021,
+  "repair_iters": 160,
+  "partial_fail": 0,
+  "t": 7.99
+ },
+ {
+  "B": 4,
+  "n": 160,
+  "ok": 136,
+  "cert": 136,
+  "partial_final": 136,
+  "probes": 388,
+  "lp": 1338,
+  "repair_iters": 320,
+  "partial_fail": 0,
+  "t": 10.69
+ },
+ {
+  "B": 8,
+  "n": 160,
+  "ok": 159,
+  "cert": 159,
+  "partial_final": 159,
+  "probes": 387,
+  "lp": 1384,
+  "repair_iters": 630,
+  "partial_fail": 0,
+  "t": 11.3
+ },
+ {
+  "B": 16,
+  "n": 160,
+  "ok": 159,
+  "cert": 159,
+  "partial_final": 159,
+  "probes": 323,
+  "lp": 1097,
+  "repair_iters": 1250,
+  "partial_fail": 0,
+  "t": 9.39
+ },
+ {
+  "B": 32,
+  "n": 160,
+  "ok": 159,
+  "cert": 159,
+  "partial_final": 159,
+  "probes": 288,
+  "lp": 963,
+  "repair_iters": 2490,
+  "partial_fail": 0,
+  "t": 9.98
+ },
+ {
+  "B": 64,
+  "n": 160,
+  "ok": 159,
+  "cert": 159,
+  "partial_final": 159,
+  "probes": 286,
+  "lp": 916,
+  "repair_iters": 4970,
+  "partial_fail": 0,
+  "t": 13.41
+ }
+]

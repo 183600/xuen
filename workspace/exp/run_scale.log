@@ -1,0 +1,8 @@
+{'n': 12, 'ep': 0.22, 'bf_nodes': 1, 'bf_cap': False, 'bf_t': 0.0, 'bf_U': 41, 'aco_gap0': 0, 'aco_t': 0.005, 'idb_exp': 1, 'idb_t': 0.0, 'U': 41, 'check': True, 'total_t': 0.005}
+{'n': 13, 'ep': 0.22, 'bf_nodes': 1, 'bf_cap': False, 'bf_t': 0.0, 'bf_U': 27, 'aco_gap0': 0, 'aco_t': 0.008, 'idb_exp': 1, 'idb_t': 0.0, 'U': 27, 'check': True, 'total_t': 0.008}
+{'n': 13, 'ep': 0.26, 'bf_nodes': 1, 'bf_cap': False, 'bf_t': 0.0, 'bf_U': 36, 'aco_gap0': 0, 'aco_t': 0.006, 'idb_exp': 1, 'idb_t': 0.0, 'U': 36, 'check': True, 'total_t': 0.006}
+{'n': 12, 'ep': 0.18, 'bf_nodes': 8277, 'bf_cap': False, 'bf_t': 1.121, 'bf_U': 32, 'aco_gap0': 1, 'aco_t': 0.007, 'idb_exp': 109, 'idb_t': 0.024, 'U': 32, 'check': True, 'total_t': 0.031}
+{'n': 13, 'ep': 0.26, 'bf_nodes': 1, 'bf_cap': False, 'bf_t': 0.0, 'bf_U': 38, 'aco_gap0': 0, 'aco_t': 0.008, 'idb_exp': 1, 'idb_t': 0.0, 'U': 38, 'check': True, 'total_t': 0.008}
+{'n': 12, 'ep': 0.26, 'bf_nodes': 214, 'bf_cap': False, 'bf_t': 0.02, 'bf_U': 31, 'aco_gap0': 0, 'aco_t': 0.005, 'idb_exp': 520, 'idb_t': 0.086, 'U': 31, 'check': True, 'total_t': 0.091}
+{'n': 12, 'ep': 0.26, 'bf_nodes': 1, 'bf_cap': False, 'bf_t': 0.0, 'bf_U': 34, 'aco_gap0': 0, 'aco_t': 0.005, 'idb_exp': 1, 'idb_t': 0.0, 'U': 34, 'check': True, 'total_t': 0.005}
+{'n': 12, 'ep': 0.18, 'bf_nodes': 2750, 'bf_cap': False, 'bf_t': 0.293, 'bf_U': 28, 'aco_gap0': 1, 'aco_t': 0.006, 'idb_exp': 91, 'idb_t': 0.024, 'U': 28, 'check': True, 'total_t': 0.029}

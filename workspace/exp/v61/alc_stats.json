@@ -1,0 +1,4317 @@
+{
+ "holdout50": {
+  "n": 50,
+  "no": 50,
+  "unknown": 0,
+  "cert_ok": 50,
+  "lp": 68,
+  "nodes": 58,
+  "cuts": 35,
+  "first_inf_1": 44,
+  "t": 0.5263521671295166,
+  "cert_t": 0.23875021934509277,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 15,
+    "cert_ok": true,
+    "cert_t": 0.004242897033691406,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008757829666137695,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 4,
+    "cert_ok": true,
+    "cert_t": 0.0036334991455078125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007537364959716797,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.004467964172363281,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009682416915893555,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.0037026405334472656,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007813453674316406,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0042612552642822266,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009542703628540039,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 8,
+    "nodes": 5,
+    "cuts": 7,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 1,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0171201229095459,
+    "cert_calls": 3,
+    "first_inf": 5,
+    "t": 0.04317045211791992,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       12,
+       14,
+       23
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       7,
+       16
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "feasible",
+      "cuts": 2,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       8,
+       16
+      ],
+      "cuts": 3,
+      "lp": 2
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 2,
+      "status": "feasible",
+      "cuts": 3,
+      "lp": 3
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       9,
+       10,
+       24
+      ],
+      "cuts": 4,
+      "lp": 3
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       9,
+       10,
+       23
+      ],
+      "cuts": 5,
+      "lp": 3
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       5,
+       8
+      ],
+      "cuts": 6,
+      "lp": 3
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       5,
+       7
+      ],
+      "cuts": 7,
+      "lp": 3
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 3,
+      "status": "feasible",
+      "cuts": 7,
+      "lp": 4
+     },
+     {
+      "kind": "lp",
+      "node": 2,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 5
+     },
+     {
+      "kind": "lp",
+      "node": 3,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 7,
+      "lp": 6
+     },
+     {
+      "kind": "lp",
+      "node": 4,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 7
+     },
+     {
+      "kind": "lp",
+      "node": 5,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 8
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.00391077995300293,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007930517196655273,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 12,
+    "cert_ok": true,
+    "cert_t": 0.00407719612121582,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008083343505859375,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.004457712173461914,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009234189987182617,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.0036551952362060547,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007929086685180664,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0037822723388671875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007750272750854492,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 14,
+    "cert_dom": 0,
+    "cert_scale": 15,
+    "cert_ok": true,
+    "cert_t": 0.004406452178955078,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00912928581237793,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.003786325454711914,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008022069931030273,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 17,
+    "cert_dom": 0,
+    "cert_scale": 20,
+    "cert_ok": true,
+    "cert_t": 0.004924774169921875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.010093927383422852,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.004472017288208008,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00968027114868164,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 4,
+    "cert_ok": true,
+    "cert_t": 0.003621339797973633,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007661104202270508,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.0034313201904296875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006704568862915039,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0038776397705078125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008417844772338867,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 35,
+    "cert_ok": true,
+    "cert_t": 0.005170106887817383,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009664058685302734,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.003946781158447266,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008436918258666992,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.004122257232666016,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008869171142578125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "lp": 2,
+    "nodes": 1,
+    "cuts": 5,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 1,
+    "cert_scale": 33,
+    "cert_ok": true,
+    "cert_t": 0.005669355392456055,
+    "cert_calls": 1,
+    "first_inf": 2,
+    "t": 0.014108419418334961,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       3,
+       10
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       3,
+       9
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       3,
+       8
+      ],
+      "cuts": 3,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       3,
+       7
+      ],
+      "cuts": 4,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       3,
+       11
+      ],
+      "cuts": 5,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "infeasible",
+      "cuts": 5,
+      "lp": 2
+     }
+    ]
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 14,
+    "cert_ok": true,
+    "cert_t": 0.004385709762573242,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008980751037597656,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 6,
+    "cert_ok": true,
+    "cert_t": 0.004105806350708008,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008735418319702148,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.003943204879760742,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008498907089233398,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.003765583038330078,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008035659790039062,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0033545494079589844,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007094860076904297,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.004905223846435547,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011119604110717773,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.003497600555419922,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00728607177734375,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 6,
+    "cert_ok": true,
+    "cert_t": 0.004117250442504883,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008855581283569336,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 4,
+    "cert_ok": true,
+    "cert_t": 0.0036973953247070312,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0075070858001708984,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 4,
+    "cert_ok": true,
+    "cert_t": 0.003572225570678711,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007532358169555664,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "lp": 3,
+    "nodes": 1,
+    "cuts": 8,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 3,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0043735504150390625,
+    "cert_calls": 1,
+    "first_inf": 3,
+    "t": 0.017228364944458008,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       5,
+       16
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       5,
+       15
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       5,
+       14
+      ],
+      "cuts": 3,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "feasible",
+      "cuts": 3,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       5,
+       13
+      ],
+      "cuts": 4,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       5,
+       12
+      ],
+      "cuts": 5,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       1,
+       4,
+       9
+      ],
+      "cuts": 6,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       1,
+       4,
+       8
+      ],
+      "cuts": 7,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       1,
+       4,
+       7
+      ],
+      "cuts": 8,
+      "lp": 2
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 2,
+      "status": "infeasible",
+      "cuts": 8,
+      "lp": 3
+     }
+    ]
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 6,
+    "cert_ok": true,
+    "cert_t": 0.003856658935546875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008131027221679688,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0034055709838867188,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0073108673095703125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.005088090896606445,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.01097416877746582,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 8,
+    "cert_dom": 0,
+    "cert_scale": 13,
+    "cert_ok": true,
+    "cert_t": 0.004738569259643555,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009887218475341797,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0033266544342041016,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006743192672729492,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.004071235656738281,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008455276489257812,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "lp": 2,
+    "nodes": 1,
+    "cuts": 3,
+    "cert_kind": "packing",
+    "cert_beta": 21,
+    "cert_dom": 1,
+    "cert_scale": 63,
+    "cert_ok": true,
+    "cert_t": 0.0069811344146728516,
+    "cert_calls": 1,
+    "first_inf": 2,
+    "t": 0.01656961441040039,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       7,
+       12,
+       15
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       7,
+       12,
+       14
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       3,
+       9,
+       10
+      ],
+      "cuts": 3,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "infeasible",
+      "cuts": 3,
+      "lp": 2
+     }
+    ]
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 14,
+    "cert_dom": 0,
+    "cert_scale": 16,
+    "cert_ok": true,
+    "cert_t": 0.004815816879272461,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009769439697265625,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0033791065216064453,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006986379623413086,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "lp": 2,
+    "nodes": 1,
+    "cuts": 5,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 1,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.004822254180908203,
+    "cert_calls": 1,
+    "first_inf": 2,
+    "t": 0.014000892639160156,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       7,
+       13
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       7,
+       12
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       7,
+       11
+      ],
+      "cuts": 3,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       5,
+       11
+      ],
+      "cuts": 4,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       2,
+       5,
+       10
+      ],
+      "cuts": 5,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "infeasible",
+      "cuts": 5,
+      "lp": 2
+     }
+    ]
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 13,
+    "cert_dom": 0,
+    "cert_scale": 16,
+    "cert_ok": true,
+    "cert_t": 0.005069255828857422,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.010370969772338867,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 16,
+    "cert_ok": true,
+    "cert_t": 0.004162788391113281,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008079290390014648,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 45,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.003818988800048828,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0077435970306396484,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 46,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.003732919692993164,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007508277893066406,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "lp": 7,
+    "nodes": 5,
+    "cuts": 7,
+    "cert_kind": "packing",
+    "cert_beta": 15,
+    "cert_dom": 3,
+    "cert_scale": 39,
+    "cert_ok": true,
+    "cert_t": 0.02234506607055664,
+    "cert_calls": 3,
+    "first_inf": 4,
+    "t": 0.04981255531311035,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 0,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       3,
+       4,
+       7
+      ],
+      "cuts": 1,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       3,
+       4,
+       6
+      ],
+      "cuts": 2,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       9,
+       10,
+       12
+      ],
+      "cuts": 3,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       8,
+       11,
+       25
+      ],
+      "cuts": 4,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       6,
+       12,
+       12
+      ],
+      "cuts": 5,
+      "lp": 1
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       12,
+       12
+      ],
+      "cuts": 6,
+      "lp": 1
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 1,
+      "status": "feasible",
+      "cuts": 6,
+      "lp": 2
+     },
+     {
+      "kind": "cut",
+      "node": 1,
+      "cut": [
+       4,
+       8,
+       12
+      ],
+      "cuts": 7,
+      "lp": 2
+     },
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 2,
+      "status": "feasible",
+      "cuts": 7,
+      "lp": 3
+     },
+     {
+      "kind": "lp",
+      "node": 2,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 4
+     },
+     {
+      "kind": "lp",
+      "node": 3,
+      "round": 0,
+      "status": "feasible",
+      "cuts": 7,
+      "lp": 5
+     },
+     {
+      "kind": "lp",
+      "node": 4,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 6
+     },
+     {
+      "kind": "lp",
+      "node": 5,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 7,
+      "lp": 7
+     }
+    ]
+   },
+   {
+    "idx": 48,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0032672882080078125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006639242172241211,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 49,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.003410816192626953,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00702357292175293,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "synth45": {
+  "n": 45,
+  "no": 45,
+  "unknown": 0,
+  "cert_ok": 45,
+  "lp": 45,
+  "nodes": 45,
+  "cuts": 0,
+  "first_inf_1": 45,
+  "t": 0.2948942184448242,
+  "cert_t": 0.15040254592895508,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0028839111328125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005652427673339844,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.003111124038696289,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005788564682006836,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.0032324790954589844,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0064239501953125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0031402111053466797,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005793094635009766,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 11,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.003555774688720703,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0071718692779541016,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 11,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.0034759044647216797,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006783008575439453,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.0038013458251953125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007543802261352539,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.003204822540283203,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006057262420654297,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 13,
+    "cert_dom": 0,
+    "cert_scale": 12,
+    "cert_ok": true,
+    "cert_t": 0.003803730010986328,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0076978206634521484,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 6,
+    "cert_ok": true,
+    "cert_t": 0.003072977066040039,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005886077880859375,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.0034821033477783203,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0071430206298828125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.0034859180450439453,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0064923763275146484,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003329753875732422,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006516218185424805,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 13,
+    "cert_ok": true,
+    "cert_t": 0.0038139820098876953,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007182598114013672,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0028939247131347656,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005591630935668945,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003528118133544922,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007353544235229492,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.003734588623046875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0071756839752197266,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003431558609008789,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00663447380065918,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 11,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.003563404083251953,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007372379302978516,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 13,
+    "cert_dom": 0,
+    "cert_scale": 12,
+    "cert_ok": true,
+    "cert_t": 0.003895998001098633,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00795292854309082,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003377676010131836,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0065460205078125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.003202199935913086,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006282806396484375,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.0033440589904785156,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006530046463012695,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 13,
+    "cert_dom": 0,
+    "cert_scale": 12,
+    "cert_ok": true,
+    "cert_t": 0.003491640090942383,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0066754817962646484,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0031752586364746094,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00617527961730957,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 8,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0031158924102783203,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006153583526611328,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0034177303314208984,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00655817985534668,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.003040313720703125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005578041076660156,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.003525972366333008,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0069293975830078125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 14,
+    "cert_dom": 0,
+    "cert_scale": 13,
+    "cert_ok": true,
+    "cert_t": 0.0038459300994873047,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007922172546386719,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.003574371337890625,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007073879241943359,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 8,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0031585693359375,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006186962127685547,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0029344558715820312,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005826711654663086,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 11,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.0034775733947753906,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0066509246826171875,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003314495086669922,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006110668182373047,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.002956867218017578,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006056070327758789,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 10,
+    "cert_dom": 0,
+    "cert_scale": 9,
+    "cert_ok": true,
+    "cert_t": 0.003392457962036133,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006666660308837891,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 1,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.002689361572265625,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00491642951965332,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.0033452510833740234,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00642848014831543,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.0033884048461914062,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00690913200378418,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 11,
+    "cert_dom": 0,
+    "cert_scale": 10,
+    "cert_ok": true,
+    "cert_t": 0.003536224365234375,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007161617279052734,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0028333663940429688,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.005314826965332031,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 8,
+    "cert_dom": 0,
+    "cert_scale": 7,
+    "cert_ok": true,
+    "cert_t": 0.0031440258026123047,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00605010986328125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.0034897327423095703,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006878376007080078,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0031890869140625,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006185054779052734,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "large_a": {
+  "n": 8,
+  "no": 8,
+  "unknown": 0,
+  "cert_ok": 8,
+  "lp": 8,
+  "nodes": 8,
+  "cuts": 0,
+  "first_inf_1": 8,
+  "t": 0.08770465850830078,
+  "cert_t": 0.03312230110168457,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 12,
+    "cert_dom": 0,
+    "cert_scale": 15,
+    "cert_ok": true,
+    "cert_t": 0.005425214767456055,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011642217636108398,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0007617473602294922,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0058400630950927734,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0009717941284179688,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007043361663818359,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0008330345153808594,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006488800048828125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 30,
+    "cert_dom": 0,
+    "cert_scale": 31,
+    "cert_ok": true,
+    "cert_t": 0.006548643112182617,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.01857161521911621,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 22,
+    "cert_dom": 0,
+    "cert_scale": 27,
+    "cert_ok": true,
+    "cert_t": 0.005310535430908203,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011397123336791992,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 8,
+    "cert_dom": 0,
+    "cert_scale": 11,
+    "cert_ok": true,
+    "cert_t": 0.004953622817993164,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.010497093200683594,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 30,
+    "cert_dom": 0,
+    "cert_scale": 69,
+    "cert_ok": true,
+    "cert_t": 0.008317708969116211,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.015937328338623047,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "large_b": {
+  "n": 10,
+  "no": 10,
+  "unknown": 0,
+  "cert_ok": 10,
+  "lp": 10,
+  "nodes": 10,
+  "cuts": 0,
+  "first_inf_1": 10,
+  "t": 0.1572709083557129,
+  "cert_t": 0.053192138671875,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 33,
+    "cert_dom": 0,
+    "cert_scale": 35,
+    "cert_ok": true,
+    "cert_t": 0.008497476577758789,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.021233797073364258,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 29,
+    "cert_dom": 0,
+    "cert_scale": 32,
+    "cert_ok": true,
+    "cert_t": 0.007407426834106445,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.017598390579223633,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0013692378997802734,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011273860931396484,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 22,
+    "cert_dom": 0,
+    "cert_scale": 23,
+    "cert_ok": true,
+    "cert_t": 0.0059931278228759766,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.013249635696411133,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 41,
+    "cert_dom": 0,
+    "cert_scale": 42,
+    "cert_ok": true,
+    "cert_t": 0.010350465774536133,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.026242971420288086,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0013265609741210938,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011136293411254883,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0013799667358398438,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.010726451873779297,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 40,
+    "cert_dom": 0,
+    "cert_scale": 39,
+    "cert_ok": true,
+    "cert_t": 0.009198427200317383,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.02237701416015625,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 25,
+    "cert_dom": 0,
+    "cert_scale": 25,
+    "cert_ok": true,
+    "cert_t": 0.006734609603881836,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.015726804733276367,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0009348392486572266,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007422685623168945,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "large_het": {
+  "n": 8,
+  "no": 8,
+  "unknown": 0,
+  "cert_ok": 8,
+  "lp": 8,
+  "nodes": 8,
+  "cuts": 0,
+  "first_inf_1": 8,
+  "t": 0.22034764289855957,
+  "cert_t": 0.08121013641357422,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 84,
+    "cert_dom": 0,
+    "cert_scale": 92,
+    "cert_ok": true,
+    "cert_t": 0.015920162200927734,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.03778409957885742,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 14,
+    "cert_dom": 0,
+    "cert_scale": 17,
+    "cert_ok": true,
+    "cert_t": 0.008135795593261719,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.019881725311279297,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0015532970428466797,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.01021575927734375,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 86,
+    "cert_dom": 0,
+    "cert_scale": 86,
+    "cert_ok": true,
+    "cert_t": 0.016873598098754883,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.04110574722290039,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.001377105712890625,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008605241775512695,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 83,
+    "cert_dom": 0,
+    "cert_scale": 88,
+    "cert_ok": true,
+    "cert_t": 0.014256954193115234,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.047368764877319336,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "cp",
+    "cert_beta": 0,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0019545555114746094,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.012414932250976562,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 91,
+    "cert_dom": 0,
+    "cert_scale": 2000,
+    "cert_ok": true,
+    "cert_t": 0.021138668060302734,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0426938533782959,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "hard3": {
+  "n": 12,
+  "no": 12,
+  "unknown": 0,
+  "cert_ok": 12,
+  "lp": 12,
+  "nodes": 12,
+  "cuts": 0,
+  "first_inf_1": 12,
+  "t": 0.10983991622924805,
+  "cert_t": 0.050617218017578125,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 21,
+    "cert_dom": 0,
+    "cert_scale": 22,
+    "cert_ok": true,
+    "cert_t": 0.004602670669555664,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00969076156616211,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0037186145782470703,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008126258850097656,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 6,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0035958290100097656,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007157325744628906,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.003473997116088867,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0077288150787353516,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 25,
+    "cert_dom": 0,
+    "cert_scale": 32,
+    "cert_ok": true,
+    "cert_t": 0.006541728973388672,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.014606475830078125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 7,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.004151582717895508,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008684158325195312,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0034897327423095703,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008110761642456055,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 1,
+    "cert_dom": 0,
+    "cert_scale": 1,
+    "cert_ok": true,
+    "cert_t": 0.0038182735443115234,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008579492568969727,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 18,
+    "cert_dom": 0,
+    "cert_scale": 26,
+    "cert_ok": true,
+    "cert_t": 0.004953861236572266,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.009951114654541016,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0032775402069091797,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007078886032104492,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0037119388580322266,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008497238159179688,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 15,
+    "cert_dom": 0,
+    "cert_scale": 24,
+    "cert_ok": true,
+    "cert_t": 0.0052814483642578125,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.011336803436279297,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "deep8": {
+  "n": 8,
+  "no": 8,
+  "unknown": 0,
+  "cert_ok": 8,
+  "lp": 8,
+  "nodes": 8,
+  "cuts": 0,
+  "first_inf_1": 8,
+  "t": 0.06353592872619629,
+  "cert_t": 0.028978586196899414,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 9,
+    "cert_dom": 0,
+    "cert_scale": 8,
+    "cert_ok": true,
+    "cert_t": 0.0038852691650390625,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.0081329345703125,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 5,
+    "cert_ok": true,
+    "cert_t": 0.003763437271118164,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008651971817016602,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.003140687942504883,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.00676417350769043,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 3,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0042476654052734375,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.010251522064208984,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.0037517547607421875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.008018732070922852,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 4,
+    "cert_dom": 0,
+    "cert_scale": 3,
+    "cert_ok": true,
+    "cert_t": 0.0032787322998046875,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.006875038146972656,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 2,
+    "cert_dom": 0,
+    "cert_scale": 2,
+    "cert_ok": true,
+    "cert_t": 0.003439188003540039,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007205486297607422,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "lp": 1,
+    "nodes": 1,
+    "cuts": 0,
+    "cert_kind": "packing",
+    "cert_beta": 5,
+    "cert_dom": 0,
+    "cert_scale": 4,
+    "cert_ok": true,
+    "cert_t": 0.003471851348876953,
+    "cert_calls": 1,
+    "first_inf": 1,
+    "t": 0.007424592971801758,
+    "events": [
+     {
+      "kind": "lp",
+      "node": 1,
+      "round": 0,
+      "status": "infeasible",
+      "cuts": 0,
+      "lp": 1
+     }
+    ]
+   }
+  ]
+ },
+ "_total": {
+  "n": 141,
+  "no": 141,
+  "unknown": 0,
+  "cert_ok": 141,
+  "lp": 159,
+  "nodes": 149,
+  "cuts": 35,
+  "first_inf_1": 135,
+  "t": 1.4599454402923584
+ },
+ "_cert_stats": {
+  "packings": 131,
+  "beta_median": 8,
+  "beta_max": 91,
+  "dom_median": 0,
+  "dom_max": 3,
+  "scale_median": 9,
+  "cuts_median": 0,
+  "cuts_max": 8
+ },
+ "_wall": 1.4603815078735352
+}

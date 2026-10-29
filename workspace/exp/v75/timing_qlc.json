@@ -1,0 +1,72 @@
+{
+ "corpus201": {
+  "qnc": {
+   "solve_t": 1.118,
+   "audit_t": 0.032,
+   "total_t": 1.15,
+   "lp": 268,
+   "nodes": 213,
+   "cover": 0,
+   "total_lp": 268,
+   "audit_ok": 201,
+   "n": 201
+  },
+  "qcc": {
+   "solve_t": 1.1,
+   "audit_t": 0.742,
+   "total_t": 1.842,
+   "lp": 259,
+   "nodes": 204,
+   "cover": 10,
+   "total_lp": 269,
+   "audit_ok": 201,
+   "n": 201
+  },
+  "qlc": {
+   "solve_t": 1.08,
+   "audit_t": 0.743,
+   "total_t": 1.823,
+   "lp": 255,
+   "nodes": 200,
+   "cover": 8,
+   "total_lp": 263,
+   "audit_ok": 201,
+   "n": 201
+  }
+ },
+ "branch51": {
+  "qnc": {
+   "solve_t": 1.085,
+   "audit_t": 0.02,
+   "total_t": 1.105,
+   "lp": 317,
+   "nodes": 202,
+   "cover": 0,
+   "total_lp": 317,
+   "audit_ok": 51,
+   "n": 51
+  },
+  "qcc": {
+   "solve_t": 1.002,
+   "audit_t": 5.357,
+   "total_t": 6.359,
+   "lp": 256,
+   "nodes": 141,
+   "cover": 72,
+   "total_lp": 328,
+   "audit_ok": 51,
+   "n": 51
+  },
+  "qlc": {
+   "solve_t": 0.874,
+   "audit_t": 5.307,
+   "total_t": 6.181,
+   "lp": 233,
+   "nodes": 120,
+   "cover": 61,
+   "total_lp": 294,
+   "audit_ok": 51,
+   "n": 51
+  }
+ }
+}

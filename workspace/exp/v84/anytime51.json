@@ -1,0 +1,178 @@
+{
+ "0": {
+  "qnc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 0,
+   "nodes": 51
+  },
+  "qrc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 0,
+   "nodes": 51
+  }
+ },
+ "1": {
+  "qnc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 51,
+   "nodes": 54
+  },
+  "qrc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 51,
+   "nodes": 54
+  }
+ },
+ "2": {
+  "qnc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 102,
+   "nodes": 68
+  },
+  "qrc": {
+   "no": 0,
+   "audit": 0,
+   "coreaudit": 0,
+   "lp": 102,
+   "nodes": 68
+  }
+ },
+ "3": {
+  "qnc": {
+   "no": 1,
+   "audit": 1,
+   "coreaudit": 0,
+   "lp": 153,
+   "nodes": 97
+  },
+  "qrc": {
+   "no": 1,
+   "audit": 1,
+   "coreaudit": 1,
+   "lp": 153,
+   "nodes": 97
+  }
+ },
+ "4": {
+  "qnc": {
+   "no": 10,
+   "audit": 10,
+   "coreaudit": 0,
+   "lp": 203,
+   "nodes": 134
+  },
+  "qrc": {
+   "no": 10,
+   "audit": 10,
+   "coreaudit": 10,
+   "lp": 203,
+   "nodes": 134
+  }
+ },
+ "5": {
+  "qnc": {
+   "no": 24,
+   "audit": 24,
+   "coreaudit": 0,
+   "lp": 244,
+   "nodes": 159
+  },
+  "qrc": {
+   "no": 24,
+   "audit": 24,
+   "coreaudit": 24,
+   "lp": 244,
+   "nodes": 159
+  }
+ },
+ "6": {
+  "qnc": {
+   "no": 36,
+   "audit": 36,
+   "coreaudit": 0,
+   "lp": 271,
+   "nodes": 171
+  },
+  "qrc": {
+   "no": 36,
+   "audit": 36,
+   "coreaudit": 36,
+   "lp": 271,
+   "nodes": 171
+  }
+ },
+ "7": {
+  "qnc": {
+   "no": 42,
+   "audit": 42,
+   "coreaudit": 0,
+   "lp": 286,
+   "nodes": 180
+  },
+  "qrc": {
+   "no": 45,
+   "audit": 45,
+   "coreaudit": 45,
+   "lp": 286,
+   "nodes": 177
+  }
+ },
+ "8": {
+  "qnc": {
+   "no": 43,
+   "audit": 43,
+   "coreaudit": 0,
+   "lp": 295,
+   "nodes": 188
+  },
+  "qrc": {
+   "no": 46,
+   "audit": 46,
+   "coreaudit": 46,
+   "lp": 292,
+   "nodes": 182
+  }
+ },
+ "9": {
+  "qnc": {
+   "no": 47,
+   "audit": 47,
+   "coreaudit": 0,
+   "lp": 303,
+   "nodes": 192
+  },
+  "qrc": {
+   "no": 47,
+   "audit": 47,
+   "coreaudit": 47,
+   "lp": 297,
+   "nodes": 186
+  }
+ },
+ "10": {
+  "qnc": {
+   "no": 49,
+   "audit": 49,
+   "coreaudit": 0,
+   "lp": 307,
+   "nodes": 194
+  },
+  "qrc": {
+   "no": 50,
+   "audit": 50,
+   "coreaudit": 50,
+   "lp": 301,
+   "nodes": 187
+  }
+ }
+}

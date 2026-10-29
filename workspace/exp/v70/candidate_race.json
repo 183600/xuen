@@ -1,0 +1,62 @@
+{
+ "5": {
+  "N": 36,
+  "closing": 17,
+  "crit_rank": 1,
+  "alc_split": [
+   7,
+   18
+  ],
+  "alc_close": false,
+  "random_expected_rank": 2.0447,
+  "random_theory": 2.0555555555555554,
+  "waves": {
+   "1": {
+    "mean_waves": 2.0447,
+    "mean_candidates": 2.0447
+   },
+   "2": {
+    "mean_waves": 1.34935,
+    "mean_candidates": 2.6987
+   },
+   "4": {
+    "mean_waves": 1.06735,
+    "mean_candidates": 4.2694
+   },
+   "8": {
+    "mean_waves": 1.00205,
+    "mean_candidates": 8.0164
+   }
+  }
+ },
+ "47": {
+  "N": 56,
+  "closing": 17,
+  "crit_rank": 1,
+  "alc_split": [
+   8,
+   21
+  ],
+  "alc_close": true,
+  "random_expected_rank": 3.1658,
+  "random_theory": 3.1666666666666665,
+  "waves": {
+   "1": {
+    "mean_waves": 3.1658,
+    "mean_candidates": 3.1658
+   },
+   "2": {
+    "mean_waves": 1.87765,
+    "mean_candidates": 3.7553
+   },
+   "4": {
+    "mean_waves": 1.2724,
+    "mean_candidates": 5.0896
+   },
+   "8": {
+    "mean_waves": 1.04385,
+    "mean_candidates": 8.3508
+   }
+  }
+ }
+}

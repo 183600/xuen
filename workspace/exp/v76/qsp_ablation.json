@@ -1,0 +1,1470 @@
+{
+ "quc_u6": {
+  "all": {
+   "lp": 636,
+   "nodes": 286,
+   "probes": 181,
+   "events": 0,
+   "multi": 0,
+   "audit": 251,
+   "n": 252,
+   "t": 4.35
+  },
+  "stress": {
+   "lp": 376,
+   "nodes": 95,
+   "probes": 167,
+   "events": 0,
+   "multi": 0,
+   "audit": 50,
+   "n": 51,
+   "t": 2.18
+  }
+ },
+ "qsp_units_r4i1": {
+  "all": {
+   "lp": 594,
+   "nodes": 269,
+   "probes": 99,
+   "events": 57,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.24
+  },
+  "stress": {
+   "lp": 334,
+   "nodes": 78,
+   "probes": 92,
+   "events": 50,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.97
+  }
+ },
+ "qsp_units_r4i0": {
+  "all": {
+   "lp": 585,
+   "nodes": 271,
+   "probes": 89,
+   "events": 56,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.21
+  },
+  "stress": {
+   "lp": 325,
+   "nodes": 80,
+   "probes": 82,
+   "events": 49,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.96
+  }
+ },
+ "qsp_units_r2i0": {
+  "all": {
+   "lp": 577,
+   "nodes": 283,
+   "probes": 74,
+   "events": 51,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.14
+  },
+  "stress": {
+   "lp": 317,
+   "nodes": 92,
+   "probes": 67,
+   "events": 44,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.92
+  }
+ },
+ "qsp_units_r2i1": {
+  "all": {
+   "lp": 583,
+   "nodes": 276,
+   "probes": 85,
+   "events": 53,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.18
+  },
+  "stress": {
+   "lp": 323,
+   "nodes": 85,
+   "probes": 78,
+   "events": 46,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.93
+  }
+ },
+ "qsp_units_r4i2": {
+  "all": {
+   "lp": 602,
+   "nodes": 267,
+   "probes": 108,
+   "events": 58,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.24
+  },
+  "stress": {
+   "lp": 342,
+   "nodes": 76,
+   "probes": 101,
+   "events": 51,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 2.01
+  }
+ },
+ "qsp_sets_r4i1": {
+  "all": {
+   "lp": 777,
+   "nodes": 333,
+   "probes": 203,
+   "events": 67,
+   "multi": 26,
+   "audit": 252,
+   "n": 252,
+   "t": 5.11
+  },
+  "stress": {
+   "lp": 487,
+   "nodes": 130,
+   "probes": 180,
+   "events": 59,
+   "multi": 23,
+   "audit": 51,
+   "n": 51,
+   "t": 2.71
+  }
+ },
+ "qsp_mixed_r4i1": {
+  "all": {
+   "lp": 677,
+   "nodes": 273,
+   "probes": 147,
+   "events": 82,
+   "multi": 25,
+   "audit": 252,
+   "n": 252,
+   "t": 4.58
+  },
+  "stress": {
+   "lp": 405,
+   "nodes": 82,
+   "probes": 133,
+   "events": 71,
+   "multi": 22,
+   "audit": 51,
+   "n": 51,
+   "t": 2.32
+  }
+ },
+ "qsp_units_pb6": {
+  "all": {
+   "lp": 590,
+   "nodes": 269,
+   "probes": 95,
+   "events": 57,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.11
+  },
+  "stress": {
+   "lp": 330,
+   "nodes": 78,
+   "probes": 88,
+   "events": 50,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.92
+  }
+ },
+ "qsp_units_pb12": {
+  "all": {
+   "lp": 594,
+   "nodes": 269,
+   "probes": 99,
+   "events": 57,
+   "multi": 1,
+   "audit": 252,
+   "n": 252,
+   "t": 4.15
+  },
+  "stress": {
+   "lp": 334,
+   "nodes": 78,
+   "probes": 92,
+   "events": 50,
+   "multi": 1,
+   "audit": 51,
+   "n": 51,
+   "t": 1.95
+  }
+ },
+ "qsp_nounit_r4i1": {
+  "all": {
+   "lp": 837,
+   "nodes": 321,
+   "probes": 264,
+   "events": 74,
+   "multi": 34,
+   "audit": 252,
+   "n": 252,
+   "t": 5.39
+  },
+  "stress": {
+   "lp": 548,
+   "nodes": 122,
+   "probes": 239,
+   "events": 65,
+   "multi": 31,
+   "audit": 51,
+   "n": 51,
+   "t": 3.04
+  }
+ },
+ "per_stress": [
+  {
+   "idx": 0,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 1,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 2,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 13,
+    "nodes": 3,
+    "probes": 6,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 3,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 15,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 4,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 15,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 5,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 10,
+    "nodes": 3,
+    "probes": 5,
+    "events": 1,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 6,
+   "quc": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 3,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 10,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 7,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 15,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 8,
+   "quc": {
+    "lp": 10,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 2,
+    "events": 2,
+    "multi": 1
+   },
+   "sets": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 3,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 9,
+   "quc": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 10,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 11,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 12,
+    "nodes": 3,
+    "probes": 5,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 12,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 13,
+    "nodes": 1,
+    "probes": 5,
+    "events": 3,
+    "multi": 2
+   }
+  },
+  {
+   "idx": 13,
+   "quc": {
+    "lp": 10,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 14,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 15,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 16,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 3,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 17,
+   "quc": {
+    "lp": 17,
+    "nodes": 8,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 15,
+    "nodes": 5,
+    "probes": 6,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 12,
+    "nodes": 1,
+    "probes": 6,
+    "events": 3,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 18,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 12,
+    "nodes": 5,
+    "probes": 5,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 19,
+   "quc": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 20,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 21,
+   "quc": {
+    "lp": 12,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 2,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 17,
+    "nodes": 5,
+    "probes": 6,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 22,
+   "quc": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 12,
+    "nodes": 1,
+    "probes": 4,
+    "events": 4,
+    "multi": 3
+   }
+  },
+  {
+   "idx": 23,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 24,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 3,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 25,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 3,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 26,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 3,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 27,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 11,
+    "nodes": 3,
+    "probes": 5,
+    "events": 1,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 28,
+   "quc": {
+    "lp": 25,
+    "nodes": 15,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 28,
+    "nodes": 14,
+    "probes": 10,
+    "events": 0,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 28,
+    "nodes": 14,
+    "probes": 10,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 29,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 8,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 30,
+   "quc": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 3,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 16,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 31,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 10,
+    "nodes": 3,
+    "probes": 5,
+    "events": 1,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 32,
+   "quc": {
+    "lp": 3,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 3,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 3,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 33,
+   "quc": {
+    "lp": 12,
+    "nodes": 4,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 9,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 9,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 34,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 8,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 35,
+   "quc": {
+    "lp": 11,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 36,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 37,
+   "quc": {
+    "lp": 14,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 2,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 13,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 38,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 11,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 39,
+   "quc": {
+    "lp": 16,
+    "nodes": 8,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 15,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 15,
+    "nodes": 7,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 40,
+   "quc": {
+    "lp": 12,
+    "nodes": 4,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 41,
+   "quc": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 2,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 42,
+   "quc": {
+    "lp": 12,
+    "nodes": 4,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 9,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 12,
+    "nodes": 3,
+    "probes": 5,
+    "events": 1,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 43,
+   "quc": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 10,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 44,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 45,
+   "quc": {
+    "lp": 10,
+    "nodes": 1,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 7,
+    "nodes": 1,
+    "probes": 2,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 46,
+   "quc": {
+    "lp": 10,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 9,
+    "nodes": 1,
+    "probes": 4,
+    "events": 2,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 10,
+    "nodes": 1,
+    "probes": 5,
+    "events": 2,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 47,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 6,
+    "nodes": 1,
+    "probes": 2,
+    "events": 2,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 48,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 8,
+    "nodes": 3,
+    "probes": 4,
+    "events": 0,
+    "multi": 0
+   }
+  },
+  {
+   "idx": 49,
+   "quc": {
+    "lp": 10,
+    "nodes": 2,
+    "probes": 6,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 5,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 17,
+    "nodes": 7,
+    "probes": 7,
+    "events": 1,
+    "multi": 1
+   }
+  },
+  {
+   "idx": 50,
+   "quc": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 2,
+    "events": 0,
+    "multi": 0
+   },
+   "units": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   },
+   "sets": {
+    "lp": 4,
+    "nodes": 1,
+    "probes": 1,
+    "events": 1,
+    "multi": 0
+   }
+  }
+ ]
+}

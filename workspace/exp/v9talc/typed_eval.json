@@ -1,0 +1,21 @@
+{
+ "init": [
+  252,
+  0
+ ],
+ "transitions": [
+  49,
+  0
+ ],
+ "mutation": [
+  280,
+  280,
+  240
+ ],
+ "valid_alt": 40,
+ "noop": 40,
+ "stream_mutation": [
+  121,
+  119
+ ]
+}

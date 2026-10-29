@@ -1,0 +1,15 @@
+{
+ "N": 3000,
+ "seed": 2026,
+ "het": false,
+ "yes": 833,
+ "bad": 0,
+ "pi_prunes": 4,
+ "cbc_prunes": 0,
+ "nodes": {
+  "v20": 9309,
+  "v23": 9241
+ },
+ "ratio": 1.0074,
+ "time": 5.79
+}

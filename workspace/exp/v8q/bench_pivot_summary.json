@@ -1,0 +1,70 @@
+{
+ "base": {
+  "wall": 6.53,
+  "ok": 252,
+  "q": 0,
+  "pin": 273,
+  "pact_lp": 450,
+  "pact_nodes": 450,
+  "cert_lp": 138,
+  "total": 252,
+  "t": 6.52,
+  "pivot": {
+   "calls": 0,
+   "pivots": 0,
+   "success": 0,
+   "fallback": 0
+  }
+ },
+ "static": {
+  "wall": 6.49,
+  "ok": 252,
+  "q": 0,
+  "pin": 273,
+  "pact_lp": 456,
+  "pact_nodes": 456,
+  "cert_lp": 141,
+  "total": 252,
+  "t": 6.48,
+  "pivot": {
+   "calls": 58,
+   "pivots": 68,
+   "success": 58,
+   "fallback": 0
+  }
+ },
+ "learned": {
+  "wall": 6.45,
+  "ok": 252,
+  "q": 0,
+  "pin": 273,
+  "pact_lp": 458,
+  "pact_nodes": 458,
+  "cert_lp": 142,
+  "total": 252,
+  "t": 6.44,
+  "pivot": {
+   "calls": 58,
+   "pivots": 63,
+   "success": 58,
+   "fallback": 0
+  }
+ },
+ "loo": {
+  "wall": 6.44,
+  "ok": 252,
+  "q": 0,
+  "pin": 273,
+  "pact_lp": 458,
+  "pact_nodes": 458,
+  "cert_lp": 142,
+  "total": 252,
+  "t": 6.43,
+  "pivot": {
+   "calls": 58,
+   "pivots": 63,
+   "success": 58,
+   "fallback": 0
+  }
+ }
+}

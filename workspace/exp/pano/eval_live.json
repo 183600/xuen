@@ -1,0 +1,46 @@
+[
+ {
+  "seed": 10,
+  "arm": "single-geometric",
+  "cost": 7,
+  "exact": true,
+  "audit": true,
+  "archive": 4,
+  "known": 21,
+  "L": 21,
+  "U": 21
+ },
+ {
+  "seed": 55,
+  "arm": "single-lower-always",
+  "cost": 16,
+  "exact": true,
+  "audit": true,
+  "archive": 3,
+  "known": 31,
+  "L": 31,
+  "U": 31
+ },
+ {
+  "seed": 57,
+  "arm": "single-lower-always",
+  "cost": 20,
+  "exact": true,
+  "audit": true,
+  "archive": 2,
+  "known": 33,
+  "L": 33,
+  "U": 33
+ },
+ {
+  "seed": 202,
+  "arm": "single-binary",
+  "cost": 33,
+  "exact": true,
+  "audit": true,
+  "archive": 5,
+  "known": 27,
+  "L": 27,
+  "U": 27
+ }
+]

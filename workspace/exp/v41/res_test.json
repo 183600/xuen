@@ -1,0 +1,20 @@
+{
+ "brute": {
+  "trials": 1440,
+  "feasible": 689,
+  "mismatches": 0
+ },
+ "mpc_sound": {
+  "trials": 4854,
+  "certificates": 1060,
+  "unsound": 0
+ },
+ "fallback": {
+  "tested": 1077,
+  "diff": 0
+ },
+ "yes": {
+  "valid": 115,
+  "bad": 0
+ }
+}

@@ -1,0 +1,146 @@
+[
+ {
+  "n": 18,
+  "opt": 42,
+  "bench": {
+   "sub": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ },
+ {
+  "n": 18,
+  "opt": 36,
+  "bench": {
+   "sub": {
+    "nodes": 22557,
+    "t": 0.414,
+    "tables": 3429,
+    "packfh": 454,
+    "subfh": 534,
+    "fmax": 6,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 187270,
+    "t": 2.723,
+    "tables": 34087,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ },
+ {
+  "n": 20,
+  "opt": 29,
+  "bench": {
+   "sub": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ },
+ {
+  "n": 20,
+  "opt": 41,
+  "bench": {
+   "sub": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ },
+ {
+  "n": 22,
+  "opt": 42,
+  "bench": {
+   "sub": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ },
+ {
+  "n": 22,
+  "opt": 48,
+  "bench": {
+   "sub": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   },
+   "plain": {
+    "nodes": 1,
+    "t": 0.0,
+    "tables": 0,
+    "packfh": 0,
+    "subfh": 0,
+    "fmax": 0,
+    "timeout": false
+   }
+  }
+ }
+]

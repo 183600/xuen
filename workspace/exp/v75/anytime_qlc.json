@@ -1,0 +1,408 @@
+{
+ "corpus201": {
+  "qnc": [
+   {
+    "budget": 0,
+    "no": 10,
+    "unk": 191
+   },
+   {
+    "budget": 1,
+    "no": 164,
+    "unk": 37
+   },
+   {
+    "budget": 2,
+    "no": 186,
+    "unk": 15
+   },
+   {
+    "budget": 3,
+    "no": 194,
+    "unk": 7
+   },
+   {
+    "budget": 4,
+    "no": 194,
+    "unk": 7
+   },
+   {
+    "budget": 5,
+    "no": 195,
+    "unk": 6
+   },
+   {
+    "budget": 6,
+    "no": 198,
+    "unk": 3
+   },
+   {
+    "budget": 7,
+    "no": 200,
+    "unk": 1
+   },
+   {
+    "budget": 8,
+    "no": 200,
+    "unk": 1
+   },
+   {
+    "budget": 9,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 10,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 11,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 12,
+    "no": 201,
+    "unk": 0
+   }
+  ],
+  "qcc": [
+   {
+    "budget": 0,
+    "no": 10,
+    "unk": 191
+   },
+   {
+    "budget": 1,
+    "no": 10,
+    "unk": 191
+   },
+   {
+    "budget": 2,
+    "no": 164,
+    "unk": 37
+   },
+   {
+    "budget": 3,
+    "no": 186,
+    "unk": 15
+   },
+   {
+    "budget": 4,
+    "no": 194,
+    "unk": 7
+   },
+   {
+    "budget": 5,
+    "no": 195,
+    "unk": 6
+   },
+   {
+    "budget": 6,
+    "no": 198,
+    "unk": 3
+   },
+   {
+    "budget": 7,
+    "no": 198,
+    "unk": 3
+   },
+   {
+    "budget": 8,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 9,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 10,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 11,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 12,
+    "no": 201,
+    "unk": 0
+   }
+  ],
+  "qlc": [
+   {
+    "budget": 0,
+    "no": 10,
+    "unk": 191
+   },
+   {
+    "budget": 1,
+    "no": 10,
+    "unk": 191
+   },
+   {
+    "budget": 2,
+    "no": 164,
+    "unk": 37
+   },
+   {
+    "budget": 3,
+    "no": 186,
+    "unk": 15
+   },
+   {
+    "budget": 4,
+    "no": 194,
+    "unk": 7
+   },
+   {
+    "budget": 5,
+    "no": 197,
+    "unk": 4
+   },
+   {
+    "budget": 6,
+    "no": 200,
+    "unk": 1
+   },
+   {
+    "budget": 7,
+    "no": 200,
+    "unk": 1
+   },
+   {
+    "budget": 8,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 9,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 10,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 11,
+    "no": 201,
+    "unk": 0
+   },
+   {
+    "budget": 12,
+    "no": 201,
+    "unk": 0
+   }
+  ]
+ },
+ "branch51": {
+  "qnc": [
+   {
+    "budget": 0,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 1,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 2,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 3,
+    "no": 1,
+    "unk": 50
+   },
+   {
+    "budget": 4,
+    "no": 10,
+    "unk": 41
+   },
+   {
+    "budget": 5,
+    "no": 24,
+    "unk": 27
+   },
+   {
+    "budget": 6,
+    "no": 36,
+    "unk": 15
+   },
+   {
+    "budget": 7,
+    "no": 42,
+    "unk": 9
+   },
+   {
+    "budget": 8,
+    "no": 43,
+    "unk": 8
+   },
+   {
+    "budget": 9,
+    "no": 47,
+    "unk": 4
+   },
+   {
+    "budget": 10,
+    "no": 49,
+    "unk": 2
+   },
+   {
+    "budget": 11,
+    "no": 49,
+    "unk": 2
+   },
+   {
+    "budget": 12,
+    "no": 50,
+    "unk": 1
+   }
+  ],
+  "qcc": [
+   {
+    "budget": 0,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 1,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 2,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 3,
+    "no": 1,
+    "unk": 50
+   },
+   {
+    "budget": 4,
+    "no": 10,
+    "unk": 41
+   },
+   {
+    "budget": 5,
+    "no": 22,
+    "unk": 29
+   },
+   {
+    "budget": 6,
+    "no": 35,
+    "unk": 16
+   },
+   {
+    "budget": 7,
+    "no": 38,
+    "unk": 13
+   },
+   {
+    "budget": 8,
+    "no": 45,
+    "unk": 6
+   },
+   {
+    "budget": 9,
+    "no": 46,
+    "unk": 5
+   },
+   {
+    "budget": 10,
+    "no": 46,
+    "unk": 5
+   },
+   {
+    "budget": 11,
+    "no": 47,
+    "unk": 4
+   },
+   {
+    "budget": 12,
+    "no": 49,
+    "unk": 2
+   }
+  ],
+  "qlc": [
+   {
+    "budget": 0,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 1,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 2,
+    "no": 0,
+    "unk": 51
+   },
+   {
+    "budget": 3,
+    "no": 1,
+    "unk": 50
+   },
+   {
+    "budget": 4,
+    "no": 11,
+    "unk": 40
+   },
+   {
+    "budget": 5,
+    "no": 24,
+    "unk": 27
+   },
+   {
+    "budget": 6,
+    "no": 40,
+    "unk": 11
+   },
+   {
+    "budget": 7,
+    "no": 43,
+    "unk": 8
+   },
+   {
+    "budget": 8,
+    "no": 49,
+    "unk": 2
+   },
+   {
+    "budget": 9,
+    "no": 50,
+    "unk": 1
+   },
+   {
+    "budget": 10,
+    "no": 50,
+    "unk": 1
+   },
+   {
+    "budget": 11,
+    "no": 50,
+    "unk": 1
+   },
+   {
+    "budget": 12,
+    "no": 51,
+    "unk": 0
+   }
+  ]
+ }
+}

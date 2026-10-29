@@ -1,0 +1,159 @@
+[
+ {
+  "idx": 0,
+  "n": 18,
+  "m": 3,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 134336,
+  "t": 0.9382,
+  "exact": false
+ },
+ {
+  "idx": 0,
+  "n": 18,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 638,
+  "t": 0.0051,
+  "valid": false
+ },
+ {
+  "idx": 1,
+  "n": 15,
+  "m": 3,
+  "tag": "hM1",
+  "v": true,
+  "nodes": 148,
+  "t": 0.001,
+  "valid": false
+ },
+ {
+  "idx": 1,
+  "n": 15,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 96,
+  "t": 0.0007,
+  "valid": false
+ },
+ {
+  "idx": 2,
+  "n": 15,
+  "m": 3,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 1,
+  "t": 0.0001,
+  "exact": false
+ },
+ {
+  "idx": 2,
+  "n": 15,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "t": 0.0003,
+  "valid": true
+ },
+ {
+  "idx": 3,
+  "n": 17,
+  "m": 3,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001,
+  "t": 1.2785
+ },
+ {
+  "idx": 3,
+  "n": 17,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 60,
+  "t": 0.0007,
+  "valid": false
+ },
+ {
+  "idx": 4,
+  "n": 15,
+  "m": 3,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 2,
+  "t": 0.0001,
+  "exact": false
+ },
+ {
+  "idx": 4,
+  "n": 15,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "t": 0.0002,
+  "valid": false
+ },
+ {
+  "idx": 5,
+  "n": 19,
+  "m": 3,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001,
+  "t": 1.2875
+ },
+ {
+  "idx": 5,
+  "n": 19,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 73,
+  "t": 0.0007,
+  "valid": false
+ },
+ {
+  "idx": 6,
+  "n": 15,
+  "m": 3,
+  "tag": "hM1",
+  "v": false,
+  "nodes": 21,
+  "t": 0.0002,
+  "exact": false
+ },
+ {
+  "idx": 6,
+  "n": 15,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 16,
+  "t": 0.0002,
+  "valid": true
+ },
+ {
+  "idx": 7,
+  "n": 19,
+  "m": 3,
+  "tag": "hM1",
+  "v": null,
+  "nodes": 200001,
+  "t": 1.3185
+ },
+ {
+  "idx": 7,
+  "n": 19,
+  "m": 3,
+  "tag": "h0",
+  "v": true,
+  "nodes": 332,
+  "t": 0.0023,
+  "valid": false
+ }
+]

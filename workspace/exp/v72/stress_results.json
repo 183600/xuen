@@ -1,0 +1,42 @@
+[
+ {
+  "src": "holdout_cases50",
+  "idx": 5,
+  "job": 0,
+  "p_new": 5,
+  "h": 30,
+  "ucp": {
+   "v": false,
+   "lp": 6,
+   "nodes": 1,
+   "probes": 2,
+   "pair": [
+    6,
+    10,
+    15
+   ]
+  },
+  "qnc": {
+   "lp": 6,
+   "nodes": 3
+  }
+ },
+ {
+  "src": "holdout_cases50",
+  "idx": 36,
+  "job": 12,
+  "p_new": 7,
+  "h": 31,
+  "ucp": {
+   "v": false,
+   "lp": 17,
+   "nodes": 11,
+   "probes": 1,
+   "pair": null
+  },
+  "qnc": {
+   "lp": 16,
+   "nodes": 11
+  }
+ }
+]

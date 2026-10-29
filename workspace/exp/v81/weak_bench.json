@@ -1,0 +1,3668 @@
+[
+ {
+  "name": "holdout50",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 2,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 5,
+  "w": [
+   false,
+   6,
+   4,
+   "empty"
+  ],
+  "c": [
+   false,
+   5,
+   2,
+   "cover-root"
+  ],
+  "a": [
+   false,
+   6,
+   1,
+   "pair"
+  ],
+  "probes": 2,
+  "pairs": 1,
+  "covers": 1,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 6,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 8,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 9,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 10,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 11,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 12,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 13,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 14,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 15,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 16,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 17,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 18,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 19,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 20,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 21,
+  "w": [
+   false,
+   5,
+   4,
+   "empty"
+  ],
+  "c": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 22,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 23,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 24,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 25,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 26,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 27,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 28,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 29,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 30,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 31,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 32,
+  "w": [
+   false,
+   3,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   3,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   3,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 33,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 34,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 35,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 36,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 37,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 38,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 39,
+  "w": [
+   false,
+   3,
+   3,
+   "no"
+  ],
+  "c": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 40,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 41,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 42,
+  "w": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   2,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 43,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 44,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 45,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 46,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 47,
+  "w": [
+   false,
+   9,
+   7,
+   "no"
+  ],
+  "c": [
+   false,
+   6,
+   4,
+   "cover-root"
+  ],
+  "a": [
+   false,
+   5,
+   1,
+   "pair"
+  ],
+  "probes": 2,
+  "pairs": 1,
+  "covers": 2,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 48,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "holdout50",
+  "idx": 49,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 2,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 5,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 6,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 8,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 9,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 10,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 11,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 12,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 13,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 14,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 15,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 16,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 17,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 18,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 19,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 20,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 21,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 22,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 23,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 24,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 25,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 26,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 27,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 28,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 29,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 30,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 31,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 32,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 33,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 34,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 35,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 36,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 37,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 38,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 39,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 40,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 41,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 42,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 43,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "synth45",
+  "idx": 44,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 1,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 2,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 3,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 5,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 6,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_a",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 2,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 5,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 6,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 8,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_b",
+  "idx": 9,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 2,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 4,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 5,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 6,
+  "w": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "c": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "a": [
+   false,
+   0,
+   0,
+   "empty"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "large_het",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 2,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 5,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 6,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 8,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 9,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 10,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "hard3",
+  "idx": 11,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 0,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 1,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 2,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 3,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 4,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 5,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 6,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ },
+ {
+  "name": "deep8",
+  "idx": 7,
+  "w": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "c": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "a": [
+   false,
+   1,
+   1,
+   "no"
+  ],
+  "probes": 0,
+  "pairs": 0,
+  "covers": 0,
+  "audit": true
+ }
+]

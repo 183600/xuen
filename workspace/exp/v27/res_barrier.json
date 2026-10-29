@@ -1,0 +1,92 @@
+[
+ {
+  "L": 3,
+  "h": 19,
+  "big": 10,
+  "clique": false,
+  "verdict": "NO",
+  "nodes": 20,
+  "cut": 10,
+  "plc": 10,
+  "levels": [
+   1,
+   10
+  ],
+  "t": 0.0
+ },
+ {
+  "L": 3,
+  "h": 19,
+  "big": 10,
+  "clique": true,
+  "verdict": "NO",
+  "nodes": 20,
+  "cut": 10,
+  "plc": 10,
+  "levels": [
+   1,
+   10
+  ],
+  "t": 0.0
+ },
+ {
+  "L": 4,
+  "h": 20,
+  "big": 11,
+  "clique": false,
+  "verdict": "NO",
+  "nodes": 20,
+  "cut": 10,
+  "plc": 10,
+  "levels": [
+   1,
+   10
+  ],
+  "t": 0.0
+ },
+ {
+  "L": 4,
+  "h": 20,
+  "big": 11,
+  "clique": true,
+  "verdict": "NO",
+  "nodes": 20,
+  "cut": 10,
+  "plc": 10,
+  "levels": [
+   1,
+   10
+  ],
+  "t": 0.0
+ },
+ {
+  "L": 5,
+  "h": 21,
+  "big": 11,
+  "clique": false,
+  "verdict": "NO",
+  "nodes": 22,
+  "cut": 11,
+  "plc": 11,
+  "levels": [
+   1,
+   11
+  ],
+  "t": 0.01
+ },
+ {
+  "L": 5,
+  "h": 21,
+  "big": 11,
+  "clique": true,
+  "verdict": "NO",
+  "nodes": 22,
+  "cut": 11,
+  "plc": 11,
+  "levels": [
+   1,
+   11
+  ],
+  "t": 0.01
+ }
+]

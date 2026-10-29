@@ -1,0 +1,66 @@
+=== DECOMP ===
+{'family': 'random', 'r1': 33, 'r2': 2, 'r3plus': 5, 'mean_freedom': 0.5578156565656566}
+{'n': 9, 'nblocks': 6, 'opt': 35, 'sum_opt': 35, 'ok': True, 'L0': 33, 'Lser': 35, 'known': 35}
+{'n': 9, 'nblocks': 5, 'opt': 22, 'sum_opt': 22, 'ok': True, 'L0': 19, 'Lser': 22, 'known': 22}
+{'n': 8, 'nblocks': 5, 'opt': 30, 'sum_opt': 30, 'ok': True, 'L0': 28, 'Lser': 29, 'known': 30}
+{'n': 9, 'nblocks': 4, 'opt': 18, 'sum_opt': 18, 'ok': True, 'L0': 14, 'Lser': 18, 'known': 18}
+{'n': 11, 'nblocks': 7, 'opt': 53, 'sum_opt': 53, 'ok': True, 'L0': 47, 'Lser': 51, 'known': 53}
+{'n': 8, 'nblocks': 4, 'opt': 20, 'sum_opt': 20, 'ok': True, 'L0': 16, 'Lser': 20, 'known': 20}
+chain-wide exact ok: 20 / 20
+fork-join sizes: [[1, 16, 1], [1, 8, 1], [1, 9, 1], [1, 4, 1], [1, 6, 1]]
+
+=== LB ===
+mean L0 26.25  mean Lser 31.83  strict 22/24
+{'n': 10, 'c': 5, 'w': 5, 'L0': 19, 'Lser': 23, 'opt': 23, 'parts': [(1, 1), (1, 2), (1, 2), (1, 6), (1, 1), (5, 11)]}
+{'n': 8, 'c': 3, 'w': 5, 'L0': 15, 'Lser': 17, 'opt': 17, 'parts': [(1, 5), (1, 4), (1, 1), (5, 7)]}
+{'n': 10, 'c': 6, 'w': 4, 'L0': 22, 'Lser': 24, 'opt': 25, 'parts': [(1, 1), (1, 5), (1, 2), (1, 3), (1, 4), (1, 2), (4, 7)]}
+{'n': 8, 'c': 4, 'w': 4, 'L0': 32, 'Lser': 33, 'opt': 33, 'parts': [(1, 10), (1, 4), (1, 6), (1, 2), (4, 11)]}
+{'n': 11, 'c': 4, 'w': 7, 'L0': 40, 'Lser': 50, 'opt': 50, 'parts': [(1, 9), (1, 7), (1, 6), (1, 8), (7, 20)]}
+{'n': 11, 'c': 3, 'w': 8, 'L0': 30, 'Lser': 40, 'opt': 40, 'parts': [(1, 8), (1, 6), (1, 8), (8, 18)]}
+
+=== ACO WIDE ===
+greedy hit 17/20  aco30 hit 20/20
+mean greedy 36.50  mean aco30 36.35  mean opt 36.35
+
+=== FOCAL ===
+[focal 00] n=9 OPT=35 U0cp=41 Uaco30=36 | best 155 | greedy 126 | wg 126 | wa 12 | wb 7
+[focal 01] n=10 OPT=45 U0cp=48 Uaco30=46 | best 127 | greedy 120 | wg 120 | wa 4 | wb 4
+[focal 02] n=10 OPT=30 U0cp=35 Uaco30=30 | best 100 | greedy 109 | wg 109 | wa 2 | wb 2
+[focal 03] n=9 OPT=32 U0cp=36 Uaco30=34 | best 111 | greedy 76 | wg 44 | wa 5 | wb 5
+[focal 04] n=10 OPT=35 U0cp=38 Uaco30=35 | best 144 | greedy 63 | wg 63 | wa 0 | wb 0
+[focal 05] n=9 OPT=37 U0cp=40 Uaco30=37 | best 211 | greedy 61 | wg 61 | wa 3 | wb 3
+[focal 06] n=10 OPT=40 U0cp=42 Uaco30=40 | best 64 | greedy 60 | wg 60 | wa 51 | wb 55
+[focal 07] n=9 OPT=30 U0cp=36 Uaco30=30 | best 70 | greedy 57 | wg 57 | wa 57 | wb 57
+[focal 08] n=10 OPT=33 U0cp=37 Uaco30=33 | best 98 | greedy 49 | wg 0 | wa 0 | wb 0
+[focal 09] n=10 OPT=29 U0cp=32 Uaco30=29 | best 60 | greedy 43 | wg 39 | wa 39 | wb 39
+[focal 10] n=10 OPT=33 U0cp=34 Uaco30=34 | best 30 | greedy 37 | wg 37 | wa 5 | wb 3
+[focal 11] n=9 OPT=40 U0cp=40 Uaco30=40 | best 36 | greedy 36 | wg 36 | wa 36 | wb 36
+[focal 12] n=9 OPT=41 U0cp=48 Uaco30=41 | best 58 | greedy 34 | wg 34 | wa 28 | wb 28
+[focal 13] n=10 OPT=47 U0cp=48 Uaco30=48 | best 33 | greedy 34 | wg 34 | wa 31 | wb 32
+[focal 14] n=9 OPT=33 U0cp=39 Uaco30=34 | best 189 | greedy 34 | wg 34 | wa 2 | wb 2
+[focal 15] n=10 OPT=46 U0cp=50 Uaco30=49 | best 42 | greedy 33 | wg 33 | wa 31 | wb 31
+best steps 1528 U 586 time 0.52 ants 0
+greedy steps 972 U 586 time 1.22 ants 0
+warm_greedy steps 887 U 586 time 1.09 ants 0
+warm_aco_u steps 328 U 586 time 0.35 ants 4424
+warm_aco_g steps 1075 U 586 time 2.09 ants 29386
+warm_aco steps 306 U 586 time 0.34 ants 4372
+warm_both steps 304 U 586 time 0.35 ants 4750
+greedy_nodom steps 2429 U 586 time 2.72 ants 0
+
+=== ANYTIME (mean U-OPT) ===
+budget 5 best:2.06/2 | greedy:1.00/4 | warm_greedy:0.75/6 | warm_aco_u:0.12/14 | warm_aco_g:1.00/6 | warm_aco:0.06/15 | warm_both:0.12/14
+budget 10 best:1.19/3 | greedy:0.75/6 | warm_greedy:0.62/7 | warm_aco_u:0.06/15 | warm_aco_g:0.62/9 | warm_aco:0.06/15 | warm_both:0.06/15
+budget 20 best:1.06/5 | greedy:0.69/7 | warm_greedy:0.56/8 | warm_aco_u:0.06/15 | warm_aco_g:0.50/9 | warm_aco:0.00/16 | warm_both:0.00/16
+budget 40 best:0.69/8 | greedy:0.50/9 | warm_greedy:0.38/10 | warm_aco_u:0.00/16 | warm_aco_g:0.44/10 | warm_aco:0.00/16 | warm_both:0.00/16
+budget 80 best:0.62/8 | greedy:0.19/13 | warm_greedy:0.19/13 | warm_aco_u:0.00/16 | warm_aco_g:0.31/11 | warm_aco:0.00/16 | warm_both:0.00/16
+
+=== SCALING ===
+[scale r=4 b=5 n=20] OPT=81 L0=67 Lser=76 | mono U/L 81/73 220st 1.0s | warm U/L 81/81 33st 0.2s | decomp 0.00s
+[scale r=4 b=5 n=20] OPT=74 L0=72 Lser=73 | mono U/L 74/74 162st 0.8s | warm U/L 74/74 159st 0.9s | decomp 0.00s
+[scale r=6 b=6 n=36] OPT=152 L0=150 Lser=152 | mono U/L 152/152 22st 0.3s | warm U/L 152/152 22st 0.4s | decomp 0.00s
+[scale r=6 b=6 n=36] OPT=96 L0=90 Lser=96 | mono U/L 100/90 220st 6.0s | warm U/L 99/90 220st 7.2s | decomp 0.01s
+[scale r=8 b=5 n=40] OPT=117 L0=108 Lser=117 | mono U/L 124/108 220st 7.0s | warm U/L 118/109 220st 7.9s | decomp 0.00s
+[scale r=8 b=5 n=40] OPT=118 L0=115 Lser=117 | mono U/L 123/115 220st 6.5s | warm U/L 119/115 220st 8.2s | decomp 0.00s
+decomp exact 6 / 6 | mono certified 2 | warm certified 3
+total 82.17 s

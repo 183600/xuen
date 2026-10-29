@@ -1,0 +1,16 @@
+{
+  "bench38": {
+    "nodes": {"v20": 88, "v24": 38, "v25": 38},
+    "tables": {"v20": 23, "v24": 2, "v25": 2},
+    "time": {"v20": 0.0321, "v24": 0.1127, "v25": 0.1125},
+    "changed_v24_v25": [],
+    "note": "CPS not called: MAP closes hard3#5 and large_het#1; the other 36 are root-closed before CPS"
+  },
+  "deep": {
+    "nodes": {"v20": 223, "v24": 8, "v25": 8},
+    "tables": {"v20": 115, "v24": 6, "v25": 6},
+    "time": {"v20": 0.0795, "v24": 0.303, "v25": 0.3026},
+    "changed_v24_v25": [],
+    "note": "6 MAP root closures + 2 v2.0 root closures; CPS not called"
+  }
+}

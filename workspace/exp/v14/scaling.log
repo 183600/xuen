@@ -1,0 +1,7 @@
+n,instances,ms_per_check,intervals,closed
+20 12 0.653 ~ 1600 closed 0
+40 12 2.603 ~ 6400 closed 0
+60 12 5.611 ~ 14400 closed 0
+80 12 9.071 ~ 25600 closed 0
+120 12 17.887 ~ 57600 closed 0
+160 12 27.403 ~ 102400 closed 0

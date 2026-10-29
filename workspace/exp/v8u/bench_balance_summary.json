@@ -1,0 +1,583 @@
+{
+ "weak": {
+  "lower-first": {
+   "n": 252,
+   "probes": 420,
+   "lp": 853,
+   "cert_lp": 418,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 672,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "upper-first": {
+   "n": 252,
+   "probes": 284,
+   "lp": 847,
+   "cert_lp": 282,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 0,
+   "partial_ok": 536,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "upper-once": {
+   "n": 252,
+   "probes": 292,
+   "lp": 810,
+   "cert_lp": 290,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 0,
+   "partial_ok": 544,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "binary": {
+   "n": 252,
+   "probes": 303,
+   "lp": 735,
+   "cert_lp": 302,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 0,
+   "partial_ok": 555,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "pact": {
+   "n": 252,
+   "probes": 446,
+   "lp": 852,
+   "cert_lp": 448,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 698,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes": {
+   "n": 252,
+   "probes": 293,
+   "lp": 761,
+   "cert_lp": 292,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 545,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-cap:2": {
+   "n": 252,
+   "probes": 289,
+   "lp": 717,
+   "cert_lp": 285,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 541,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-cap:3": {
+   "n": 252,
+   "probes": 289,
+   "lp": 717,
+   "cert_lp": 285,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 541,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-cap:4": {
+   "n": 252,
+   "probes": 289,
+   "lp": 717,
+   "cert_lp": 285,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 541,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes:l1": {
+   "n": 252,
+   "probes": 312,
+   "lp": 772,
+   "cert_lp": 313,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 564,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes:l2": {
+   "n": 252,
+   "probes": 391,
+   "lp": 823,
+   "cert_lp": 392,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 643,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-wrong": {
+   "n": 252,
+   "probes": 334,
+   "lp": 783,
+   "cert_lp": 336,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 586,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-uniform": {
+   "n": 252,
+   "probes": 387,
+   "lp": 800,
+   "cert_lp": 388,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 0,
+   "partial_ok": 639,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-cap:3:f0.05": {
+   "n": 252,
+   "probes": 289,
+   "lp": 717,
+   "cert_lp": 285,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 541,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes:f0.05": {
+   "n": 252,
+   "probes": 293,
+   "lp": 761,
+   "cert_lp": 292,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 1,
+   "partial_ok": 545,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  },
+  "bayes-oracle": {
+   "n": 252,
+   "probes": 279,
+   "lp": 687,
+   "cert_lp": 277,
+   "init_lp": 252,
+   "init_cert": 252,
+   "unknown": 0,
+   "partial_ok": 531,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 269
+  }
+ },
+ "pact": {
+  "lower-first": {
+   "n": 252,
+   "probes": 104,
+   "lp": 429,
+   "cert_lp": 135,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 356,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  },
+  "binary": {
+   "n": 252,
+   "probes": 106,
+   "lp": 468,
+   "cert_lp": 140,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 358,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  },
+  "bayes": {
+   "n": 252,
+   "probes": 104,
+   "lp": 429,
+   "cert_lp": 135,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 356,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  },
+  "bayes-cap:3": {
+   "n": 252,
+   "probes": 104,
+   "lp": 429,
+   "cert_lp": 135,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 356,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  },
+  "bayes-wrong": {
+   "n": 252,
+   "probes": 107,
+   "lp": 486,
+   "cert_lp": 140,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 359,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  },
+  "upper-first": {
+   "n": 252,
+   "probes": 108,
+   "lp": 507,
+   "cert_lp": 143,
+   "init_lp": 0,
+   "init_cert": 0,
+   "unknown": 0,
+   "partial_ok": 360,
+   "partial_fail": 0,
+   "certified": 252,
+   "ok": 252,
+   "oracle_probes": 104
+  }
+ },
+ "fair_weak": {
+  "lower-first": {
+   "probes": 420,
+   "lp": 853,
+   "t": 11.6576,
+   "ok": 252
+  },
+  "upper-first": {
+   "probes": 284,
+   "lp": 847,
+   "t": 12.7113,
+   "ok": 252
+  },
+  "binary": {
+   "probes": 303,
+   "lp": 735,
+   "t": 10.3005,
+   "ok": 252
+  },
+  "bayes-cap:3": {
+   "probes": 279,
+   "lp": 687,
+   "t": 9.5083,
+   "ok": 252
+  },
+  "bayes-cap:3-cv": {
+   "probes": 289,
+   "lp": 717,
+   "t": 9.8704,
+   "ok": 252
+  }
+ },
+ "fair_pact": {
+  "lower-first": {
+   "probes": 104,
+   "lp": 429,
+   "t": 10.1937,
+   "ok": 252
+  },
+  "upper-first": {
+   "probes": 108,
+   "lp": 507,
+   "t": 12.2295,
+   "ok": 252
+  },
+  "binary": {
+   "probes": 106,
+   "lp": 468,
+   "t": 11.1818,
+   "ok": 252
+  },
+  "bayes-cap:3": {
+   "probes": 104,
+   "lp": 429,
+   "t": 10.1779,
+   "ok": 252
+  },
+  "bayes-cap:3-cv": {
+   "probes": 104,
+   "lp": 429,
+   "t": 10.1944,
+   "ok": 252
+  }
+ },
+ "oracle_weak": {
+  "n": 252,
+  "probes": 269,
+  "lp": 658,
+  "cert_lp": 270,
+  "init_lp": 504,
+  "total_lp": 1432,
+  "by_tag": {
+   "base": [
+    123,
+    306
+   ],
+   "pert": [
+    90,
+    151
+   ],
+   "stress": [
+    56,
+    201
+   ]
+  }
+ },
+ "lns": {
+  "probe": {
+   "n": 45,
+   "probes": 45,
+   "lp": 218,
+   "cert_lp": 5,
+   "lns_used": 0,
+   "lns_ok": 0,
+   "lns_checks": 0,
+   "lns_t": 0.0,
+   "t": 1.9183
+  },
+  "gated": {
+   "n": 45,
+   "probes": 39,
+   "lp": 154,
+   "cert_lp": 2,
+   "lns_used": 9,
+   "lns_ok": 6,
+   "lns_checks": 66,
+   "lns_t": 1.1851,
+   "t": 2.0644
+  },
+  "lns": {
+   "n": 45,
+   "probes": 4,
+   "lp": 91,
+   "cert_lp": 2,
+   "lns_used": 45,
+   "lns_ok": 41,
+   "lns_checks": 383,
+   "lns_t": 5.6081,
+   "t": 6.2478
+  },
+  "greedy": {
+   "n": 45,
+   "success": 0,
+   "checks": 450,
+   "lns_t": 0.037
+  },
+  "w_dist": {
+   "1": 34,
+   "2": 6,
+   "4": 2,
+   "3": 2,
+   "6": 1
+  },
+  "w_success": {
+   "1": [
+    34,
+    34
+   ],
+   "2": [
+    6,
+    5
+   ],
+   "3": [
+    2,
+    1
+   ],
+   "4": [
+    2,
+    1
+   ],
+   "6": [
+    1,
+    0
+   ]
+  }
+ },
+ "priors": {
+  "weak": {
+   "g": {
+    "2": 89,
+    "4": 20,
+    "3": 43,
+    "1": 41,
+    "7": 2,
+    "5": 6,
+    "0": 50,
+    "6": 1
+   },
+   "d": {
+    "2": 93,
+    "4": 9,
+    "3": 27,
+    "1": 58,
+    "5": 5,
+    "0": 60
+   },
+   "e": {
+    "0": 175,
+    "1": 67,
+    "3": 2,
+    "2": 7,
+    "5": 1
+   },
+   "oracle": {
+    "1": 135,
+    "2": 67,
+    "0": 50
+   },
+   "joint": {
+    "(0, 0, 0)": 50,
+    "(1, 0, 1)": 10,
+    "(1, 1, 0)": 31,
+    "(2, 1, 1)": 24,
+    "(2, 2, 0)": 65,
+    "(3, 1, 2)": 2,
+    "(3, 2, 1)": 23,
+    "(3, 3, 0)": 18,
+    "(4, 1, 3)": 1,
+    "(4, 2, 2)": 4,
+    "(4, 3, 1)": 9,
+    "(4, 4, 0)": 6,
+    "(5, 4, 1)": 1,
+    "(5, 5, 0)": 5,
+    "(6, 4, 2)": 1,
+    "(7, 2, 5)": 1,
+    "(7, 4, 3)": 1
+   },
+   "logloss": {
+    "base": {
+     "cv": 1.3188,
+     "wrong": 1.3484,
+     "oracle": 0.8919
+    },
+    "pert": {
+     "cv": 0.9414,
+     "wrong": 1.0524,
+     "oracle": 0.6655
+    },
+    "stress": {
+     "cv": 0.601,
+     "wrong": 1.1388,
+     "oracle": 0.4561
+    }
+   }
+  },
+  "pact": {
+   "g": {
+    "0": 148,
+    "1": 103,
+    "5": 1
+   },
+   "d": {
+    "0": 194,
+    "1": 58
+   },
+   "e": {
+    "0": 206,
+    "1": 45,
+    "5": 1
+   },
+   "oracle": {
+    "0": 148,
+    "1": 104
+   },
+   "joint": {
+    "(0, 0, 0)": 148,
+    "(1, 0, 1)": 45,
+    "(1, 1, 0)": 58,
+    "(5, 0, 5)": 1
+   },
+   "logloss": {
+    "base": {
+     "cv": 1.1072,
+     "wrong": 1.3574,
+     "oracle": 0.8122
+    },
+    "pert": {
+     "cv": 1.0923,
+     "wrong": 1.1969,
+     "oracle": 0.7833
+    },
+    "stress": {
+     "cv": 1.9554,
+     "wrong": 0.2877,
+     "oracle": 0.5754
+    }
+   }
+  }
+ }
+}

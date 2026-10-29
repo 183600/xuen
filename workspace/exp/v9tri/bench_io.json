@@ -1,0 +1,37 @@
+{
+ "valid_audit": true,
+ "tamper_rejected": 6,
+ "tamper_total": 6,
+ "bus_rejected": 3,
+ "bus_total": 3,
+ "tests": [
+  {
+   "label": "valid",
+   "audit": true
+  },
+  {
+   "label": "wrong_L",
+   "audit": false
+  },
+  {
+   "label": "wrong_U",
+   "audit": false
+  },
+  {
+   "label": "shifted_NO_h",
+   "audit": false
+  },
+  {
+   "label": "bad_schedule",
+   "audit": false
+  },
+  {
+   "label": "bad_scope",
+   "audit": false
+  },
+  {
+   "label": "UNK_at_L",
+   "audit": false
+  }
+ ]
+}

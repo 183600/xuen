@@ -1,0 +1,1231 @@
+{
+ "rows": [
+  {
+   "base": "holdout50",
+   "idx": 5,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 5,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 5,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 5,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 5,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 47,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 47,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 47,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 6,
+    "nodes": 1,
+    "trap": true,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 6,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 1,
+    "events": 1,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 6,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 1,
+    "events": 1,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 47,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "holdout50",
+   "idx": 47,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 6,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 6,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 6,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 6,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 6,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 16,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 16,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 16,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 16,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h5",
+   "idx": 16,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 5,
+    "nodes": 1,
+    "trap": true,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 5,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 1,
+    "events": 1,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 5,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 1,
+    "events": 1,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 6,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 6,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 6,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 6,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 6,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 18,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 18,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 18,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 18,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 2,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 18,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 3,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 26,
+   "variant": 0,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 26,
+   "variant": 1,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 26,
+   "variant": 2,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 26,
+   "variant": 3,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  },
+  {
+   "base": "h47",
+   "idx": 26,
+   "variant": 4,
+   "quc": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "trap": false,
+    "audit": true
+   },
+   "qsp2": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   },
+   "qsp4": {
+    "val": false,
+    "lp": 1,
+    "nodes": 1,
+    "root_frac": false,
+    "probes": 0,
+    "events": 0,
+    "mine_fail": 0,
+    "why": "no",
+    "audit": true
+   }
+  }
+ ],
+ "quc": {
+  "n": 35,
+  "no": 35,
+  "unk": 0,
+  "lp": 58,
+  "nodes": 35,
+  "probes": 0,
+  "events": 0,
+  "mine_fail": 0,
+  "root_frac": 0,
+  "audit": 35
+ },
+ "qsp2": {
+  "n": 35,
+  "no": 35,
+  "unk": 0,
+  "lp": 58,
+  "nodes": 35,
+  "probes": 2,
+  "events": 2,
+  "mine_fail": 0,
+  "root_frac": 0,
+  "audit": 35
+ },
+ "qsp4": {
+  "n": 35,
+  "no": 35,
+  "unk": 0,
+  "lp": 58,
+  "nodes": 35,
+  "probes": 2,
+  "events": 2,
+  "mine_fail": 0,
+  "root_frac": 0,
+  "audit": 35
+ },
+ "wall": 2.2863690853118896
+}

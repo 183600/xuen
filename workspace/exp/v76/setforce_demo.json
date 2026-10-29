@@ -1,0 +1,280 @@
+{
+ "stress": [],
+ "base": [],
+ "sets_first": [
+  {
+   "sec": "stress",
+   "idx": "2",
+   "strict": [
+    {
+     "job": 6,
+     "allowed": [
+      2,
+      8
+     ],
+     "E": [
+      [
+       6,
+       2
+      ],
+      [
+       6,
+       8
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       8,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 13,
+   "qsp_nodes": 3,
+   "quc_lp": 5,
+   "quc_nodes": 1
+  },
+  {
+   "sec": "stress",
+   "idx": "5",
+   "strict": [
+    {
+     "job": 14,
+     "allowed": [
+      2,
+      3
+     ],
+     "E": [
+      [
+       14,
+       2
+      ],
+      [
+       14,
+       3
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       3,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 10,
+   "qsp_nodes": 3,
+   "quc_lp": 4,
+   "quc_nodes": 1
+  },
+  {
+   "sec": "stress",
+   "idx": "27",
+   "strict": [
+    {
+     "job": 6,
+     "allowed": [
+      2,
+      8
+     ],
+     "E": [
+      [
+       6,
+       2
+      ],
+      [
+       6,
+       8
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       8,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 11,
+   "qsp_nodes": 3,
+   "quc_lp": 5,
+   "quc_nodes": 1
+  },
+  {
+   "sec": "stress",
+   "idx": "31",
+   "strict": [
+    {
+     "job": 14,
+     "allowed": [
+      2,
+      3
+     ],
+     "E": [
+      [
+       14,
+       2
+      ],
+      [
+       14,
+       3
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       3,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 10,
+   "qsp_nodes": 3,
+   "quc_lp": 4,
+   "quc_nodes": 1
+  },
+  {
+   "sec": "stress",
+   "idx": "42",
+   "strict": [
+    {
+     "job": 14,
+     "allowed": [
+      2,
+      3
+     ],
+     "E": [
+      [
+       14,
+       2
+      ],
+      [
+       14,
+       3
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       3,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 12,
+   "qsp_nodes": 3,
+   "quc_lp": 12,
+   "quc_nodes": 4
+  },
+  {
+   "sec": "stress",
+   "idx": "49",
+   "strict": [
+    {
+     "job": 6,
+     "allowed": [
+      2,
+      8
+     ],
+     "E": [
+      [
+       6,
+       2
+      ],
+      [
+       6,
+       8
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       8,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 1
+    }
+   ],
+   "qsp_lp": 17,
+   "qsp_nodes": 7,
+   "quc_lp": 10,
+   "quc_nodes": 2
+  },
+  {
+   "sec": "base",
+   "idx": "holdout50:47",
+   "strict": [
+    {
+     "job": 6,
+     "allowed": [
+      2,
+      8
+     ],
+     "E": [
+      [
+       6,
+       2
+      ],
+      [
+       6,
+       8
+      ]
+     ],
+     "singletons": [
+      [
+       2,
+       false
+      ],
+      [
+       8,
+       false
+      ]
+     ],
+     "E_size": 2,
+     "depth": 0
+    }
+   ],
+   "qsp_lp": 13,
+   "qsp_nodes": 3,
+   "quc_lp": 5,
+   "quc_nodes": 1
+  }
+ ],
+ "units_first": []
+}

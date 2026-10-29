@@ -1,0 +1,302 @@
+[
+ {
+  "k": 0,
+  "opt": 15,
+  "L0": 15,
+  "U": 15,
+  "oldfam": 15,
+  "full": 15,
+  "wins": 29,
+  "fullwins": 42
+ },
+ {
+  "k": 1,
+  "opt": 17,
+  "L0": 17,
+  "U": 18,
+  "oldfam": 17,
+  "full": 17,
+  "wins": 29,
+  "fullwins": 72
+ },
+ {
+  "k": 2,
+  "opt": 18,
+  "L0": 18,
+  "U": 19,
+  "oldfam": 18,
+  "full": 18,
+  "wins": 34,
+  "fullwins": 67
+ },
+ {
+  "k": 3,
+  "opt": 17,
+  "L0": 17,
+  "U": 19,
+  "oldfam": 17,
+  "full": 17,
+  "wins": 30,
+  "fullwins": 66
+ },
+ {
+  "k": 4,
+  "opt": 30,
+  "L0": 30,
+  "U": 31,
+  "oldfam": 30,
+  "full": 30,
+  "wins": 35,
+  "fullwins": 46
+ },
+ {
+  "k": 5,
+  "opt": 19,
+  "L0": 19,
+  "U": 20,
+  "oldfam": 19,
+  "full": 19,
+  "wins": 31,
+  "fullwins": 90
+ },
+ {
+  "k": 6,
+  "opt": 22,
+  "L0": 21,
+  "U": 23,
+  "oldfam": 22,
+  "full": 22,
+  "wins": 43,
+  "fullwins": 80
+ },
+ {
+  "k": 7,
+  "opt": 32,
+  "L0": 32,
+  "U": 33,
+  "oldfam": 32,
+  "full": 32,
+  "wins": 42,
+  "fullwins": 85
+ },
+ {
+  "k": 8,
+  "opt": 23,
+  "L0": 23,
+  "U": 26,
+  "oldfam": 23,
+  "full": 23,
+  "wins": 20,
+  "fullwins": 79
+ },
+ {
+  "k": 9,
+  "opt": 17,
+  "L0": 17,
+  "U": 20,
+  "oldfam": 17,
+  "full": 17,
+  "wins": 42,
+  "fullwins": 86
+ },
+ {
+  "k": 10,
+  "opt": 25,
+  "L0": 25,
+  "U": 29,
+  "oldfam": 25,
+  "full": 25,
+  "wins": 54,
+  "fullwins": 91
+ },
+ {
+  "k": 11,
+  "opt": 41,
+  "L0": 38,
+  "U": 42,
+  "oldfam": 41,
+  "full": 41,
+  "wins": 57,
+  "fullwins": 85
+ },
+ {
+  "k": 12,
+  "opt": 23,
+  "L0": 23,
+  "U": 25,
+  "oldfam": 23,
+  "full": 23,
+  "wins": 39,
+  "fullwins": 69
+ },
+ {
+  "k": 13,
+  "opt": 27,
+  "L0": 26,
+  "U": 27,
+  "oldfam": 27,
+  "full": 27,
+  "wins": 23,
+  "fullwins": 38
+ },
+ {
+  "k": 14,
+  "opt": 18,
+  "L0": 17,
+  "U": 20,
+  "oldfam": 18,
+  "full": 18,
+  "wins": 37,
+  "fullwins": 52
+ },
+ {
+  "k": 15,
+  "opt": 20,
+  "L0": 20,
+  "U": 22,
+  "oldfam": 20,
+  "full": 20,
+  "wins": 30,
+  "fullwins": 78
+ },
+ {
+  "k": 16,
+  "opt": 29,
+  "L0": 29,
+  "U": 30,
+  "oldfam": 29,
+  "full": 29,
+  "wins": 47,
+  "fullwins": 111
+ },
+ {
+  "k": 17,
+  "opt": 23,
+  "L0": 23,
+  "U": 24,
+  "oldfam": 23,
+  "full": 23,
+  "wins": 45,
+  "fullwins": 83
+ },
+ {
+  "k": 18,
+  "opt": 25,
+  "L0": 25,
+  "U": 28,
+  "oldfam": 25,
+  "full": 25,
+  "wins": 56,
+  "fullwins": 86
+ },
+ {
+  "k": 19,
+  "opt": 32,
+  "L0": 29,
+  "U": 33,
+  "oldfam": 32,
+  "full": 32,
+  "wins": 54,
+  "fullwins": 95
+ },
+ {
+  "k": 20,
+  "opt": 29,
+  "L0": 29,
+  "U": 31,
+  "oldfam": 29,
+  "full": 29,
+  "wins": 43,
+  "fullwins": 85
+ },
+ {
+  "k": 21,
+  "opt": 22,
+  "L0": 22,
+  "U": 24,
+  "oldfam": 22,
+  "full": 22,
+  "wins": 30,
+  "fullwins": 105
+ },
+ {
+  "k": 22,
+  "opt": 21,
+  "L0": 21,
+  "U": 22,
+  "oldfam": 21,
+  "full": 21,
+  "wins": 57,
+  "fullwins": 82
+ },
+ {
+  "k": 23,
+  "opt": 16,
+  "L0": 16,
+  "U": 18,
+  "oldfam": 16,
+  "full": 16,
+  "wins": 29,
+  "fullwins": 72
+ },
+ {
+  "k": 24,
+  "opt": 19,
+  "L0": 19,
+  "U": 19,
+  "oldfam": 19,
+  "full": 19,
+  "wins": 33,
+  "fullwins": 56
+ },
+ {
+  "k": 25,
+  "opt": 21,
+  "L0": 21,
+  "U": 22,
+  "oldfam": 21,
+  "full": 21,
+  "wins": 37,
+  "fullwins": 76
+ },
+ {
+  "k": 26,
+  "opt": 17,
+  "L0": 17,
+  "U": 19,
+  "oldfam": 17,
+  "full": 17,
+  "wins": 31,
+  "fullwins": 50
+ },
+ {
+  "k": 27,
+  "opt": 21,
+  "L0": 19,
+  "U": 22,
+  "oldfam": 20,
+  "full": 21,
+  "wins": 50,
+  "fullwins": 98
+ },
+ {
+  "k": 28,
+  "opt": 24,
+  "L0": 24,
+  "U": 28,
+  "oldfam": 24,
+  "full": 24,
+  "wins": 39,
+  "fullwins": 76
+ },
+ {
+  "k": 29,
+  "opt": 35,
+  "L0": 31,
+  "U": 38,
+  "oldfam": 33,
+  "full": 34,
+  "wins": 38,
+  "fullwins": 92
+ }
+]

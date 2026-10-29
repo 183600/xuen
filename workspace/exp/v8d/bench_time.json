@@ -1,0 +1,30 @@
+{
+ "note": "same-process timing on the 252-instance corpus; single run, shared runner",
+ "crisp": {
+  "n": 252,
+  "cert": 252,
+  "q": 337,
+  "free": 0,
+  "lp": 1403,
+  "yn": 64039,
+  "t": 12.63
+ },
+ "orders_promote": {
+  "n": 252,
+  "cert": 252,
+  "q": 253,
+  "free": 84,
+  "lp": 1329,
+  "yn": 64039,
+  "t": 11.75
+ },
+ "eager512": {
+  "n": 252,
+  "cert": 252,
+  "q": 187,
+  "free": 84,
+  "lp": 742,
+  "yn": 60001,
+  "t": 9.38
+ }
+}

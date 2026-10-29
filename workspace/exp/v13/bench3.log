@@ -1,0 +1,73 @@
+inst 0 n 13 opt 28 base_nodes 22894
+   plain False 22894 0.243 pf 0 sf 0 tab 4210
+   canon False 3981 0.055 pf 0 sf 0 tab 738
+   front False 3981 0.057 pf 43 sf 0 tab 695
+   sub False 2763 0.043 pf 10 sf 105 tab 468
+   ladder_front False 3981 0.054 pf 43 sf 0 tab 31
+inst 1 n 12 opt 36 base_nodes 3481
+   plain False 3481 0.055 pf 0 sf 0 tab 1231
+   canon False 641 0.012 pf 0 sf 0 tab 221
+   front False 641 0.012 pf 7 sf 0 tab 214
+   sub False 478 0.009 pf 0 sf 52 tab 148
+   ladder_front False 641 0.014 pf 7 sf 0 tab 52
+inst 2 n 12 opt 29 base_nodes 13864
+   plain False 13864 0.145 pf 0 sf 0 tab 3211
+   canon False 2443 0.036 pf 0 sf 0 tab 567
+   front False 2443 0.036 pf 4 sf 0 tab 563
+   sub False 961 0.016 pf 0 sf 64 tab 249
+   ladder_front False 2443 0.037 pf 4 sf 0 tab 104
+inst 3 n 15 opt 37 base_nodes 6187
+   plain False 6187 0.099 pf 0 sf 0 tab 1768
+   canon False 1132 0.023 pf 0 sf 0 tab 311
+   front False 1132 0.023 pf 15 sf 0 tab 296
+   sub False 892 0.022 pf 1 sf 48 tab 216
+   ladder_front False 1132 0.025 pf 15 sf 0 tab 72
+inst 4 n 16 opt 38 base_nodes 346306
+   plain False 346306 4.307 pf 0 sf 0 tab 66550
+   canon False 59860 0.939 pf 0 sf 0 tab 11482
+   front False 59860 0.865 pf 2722 sf 0 tab 8760
+   sub False 32939 0.556 pf 1015 sf 2051 tab 4634
+   ladder_front False 59860 0.934 pf 2722 sf 0 tab 2377
+inst 5 n 14 opt 39 base_nodes 91693
+   plain False 91693 1.023 pf 0 sf 0 tab 21322
+   canon False 15576 0.218 pf 0 sf 0 tab 3638
+   front False 15576 0.244 pf 393 sf 0 tab 3245
+   sub False 3077 0.05 pf 37 sf 524 tab 716
+   ladder_front False 15576 0.223 pf 393 sf 0 tab 341
+inst 6 n 12 opt 33 base_nodes 61486
+   plain False 61486 0.633 pf 0 sf 0 tab 18069
+   canon False 10750 0.143 pf 0 sf 0 tab 3165
+   front False 10750 0.149 pf 746 sf 0 tab 2419
+   sub False 3290 0.051 pf 164 sf 407 tab 784
+   ladder_front False 10750 0.153 pf 746 sf 0 tab 438
+inst 7 n 16 opt 48 base_nodes 35899
+   plain False 35899 0.517 pf 0 sf 0 tab 13170
+   canon False 6117 0.113 pf 0 sf 0 tab 2293
+   front False 6117 0.112 pf 634 sf 0 tab 1659
+   sub False 1652 0.037 pf 92 sf 326 tab 608
+   ladder_front False 6117 0.109 pf 634 sf 0 tab 2
+inst 8 n 14 opt 31 base_nodes 13468
+   plain False 13468 0.171 pf 0 sf 0 tab 2974
+   canon False 2385 0.038 pf 0 sf 0 tab 523
+   front False 2385 0.038 pf 64 sf 0 tab 459
+   sub False 1835 0.035 pf 35 sf 26 tab 373
+   ladder_front False 2385 0.041 pf 64 sf 0 tab 112
+inst 9 n 12 opt 27 base_nodes 112552
+   plain False 112552 1.057 pf 0 sf 0 tab 25495
+   canon False 19332 0.242 pf 0 sf 0 tab 4380
+   front False 19332 0.243 pf 739 sf 0 tab 3641
+   sub False 8226 0.114 pf 137 sf 560 tab 1659
+   ladder_front False 19332 0.252 pf 739 sf 0 tab 465
+inst 10 n 16 opt 42 base_nodes 271297
+   plain False 271297 3.196 pf 0 sf 0 tab 51944
+   canon False 46328 0.684 pf 0 sf 0 tab 8914
+   front False 46328 0.667 pf 696 sf 0 tab 8218
+   sub False 4647 0.097 pf 46 sf 690 tab 1063
+   ladder_front False 46328 0.669 pf 696 sf 0 tab 524
+inst 11 n 15 opt 35 base_nodes 76630
+   plain False 76630 0.952 pf 0 sf 0 tab 15016
+   canon False 13363 0.213 pf 0 sf 0 tab 2605
+   front False 13363 0.207 pf 280 sf 0 tab 2325
+   sub False 8930 0.152 pf 145 sf 406 tab 1546
+   ladder_front False 13363 0.219 pf 280 sf 0 tab 393
+saved

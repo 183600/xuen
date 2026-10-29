@@ -1,0 +1,730 @@
+[
+ {
+  "name": "gap",
+  "idx": 0,
+  "known": 22,
+  "mode": "binary",
+  "opt": 22,
+  "lb": 22,
+  "lb0": 20,
+  "ub0": 22,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 21,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 83,
+  "cert_lp": 42,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     21
+    ],
+    "L": 22,
+    "U": 22,
+    "lp": 83,
+    "cert_lp": 42,
+    "t": 1,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.5993,
+  "ok": true,
+  "seed": 149
+ },
+ {
+  "name": "gap",
+  "idx": 1,
+  "known": 57,
+  "mode": "binary",
+  "opt": 57,
+  "lb": 57,
+  "lb0": 55,
+  "ub0": 57,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 56,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 267,
+  "cert_lp": 134,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     56
+    ],
+    "L": 57,
+    "U": 57,
+    "lp": 267,
+    "cert_lp": 134,
+    "t": 10,
+    "cancelled": 0
+   }
+  ],
+  "t": 10.8954,
+  "ok": true,
+  "seed": 191
+ },
+ {
+  "name": "gap",
+  "idx": 2,
+  "known": 58,
+  "mode": "binary",
+  "opt": 58,
+  "lb": 58,
+  "lb0": 52,
+  "ub0": 58,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 57,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 14,
+  "cert_lp": 8,
+  "pin_lp": 3,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     55
+    ],
+    "L": 56,
+    "U": 58,
+    "lp": 7,
+    "cert_lp": 4,
+    "t": 0,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     57
+    ],
+    "L": 58,
+    "U": 58,
+    "lp": 7,
+    "cert_lp": 4,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.2829,
+  "ok": true,
+  "seed": 414
+ },
+ {
+  "name": "gap",
+  "idx": 3,
+  "known": 39,
+  "mode": "binary",
+  "opt": 39,
+  "lb": 39,
+  "lb0": 35,
+  "ub0": 39,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 38,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 142,
+  "cert_lp": 72,
+  "pin_lp": 3,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     37
+    ],
+    "L": 38,
+    "U": 39,
+    "lp": 3,
+    "cert_lp": 2,
+    "t": 0,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     38
+    ],
+    "L": 39,
+    "U": 39,
+    "lp": 139,
+    "cert_lp": 70,
+    "t": 1,
+    "cancelled": 0
+   }
+  ],
+  "t": 1.5907,
+  "ok": true,
+  "seed": 426
+ },
+ {
+  "name": "gap",
+  "idx": 4,
+  "known": 26,
+  "mode": "binary",
+  "opt": 26,
+  "lb": 26,
+  "lb0": 24,
+  "ub0": 26,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 25,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 25,
+  "cert_lp": 13,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     25
+    ],
+    "L": 26,
+    "U": 26,
+    "lp": 25,
+    "cert_lp": 13,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.456,
+  "ok": true,
+  "seed": 1011
+ },
+ {
+  "name": "gap",
+  "idx": 5,
+  "known": 24,
+  "mode": "binary",
+  "opt": 24,
+  "lb": 24,
+  "lb0": 22,
+  "ub0": 24,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 23,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 41,
+  "cert_lp": 21,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     23
+    ],
+    "L": 24,
+    "U": 24,
+    "lp": 41,
+    "cert_lp": 21,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.2881,
+  "ok": true,
+  "seed": 1308
+ },
+ {
+  "name": "gap",
+  "idx": 6,
+  "known": 39,
+  "mode": "binary",
+  "opt": 39,
+  "lb": 39,
+  "lb0": 37,
+  "ub0": 39,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 38,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 37,
+  "cert_lp": 19,
+  "pin_lp": 3,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     38
+    ],
+    "L": 39,
+    "U": 39,
+    "lp": 37,
+    "cert_lp": 19,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.575,
+  "ok": true,
+  "seed": 1373
+ },
+ {
+  "name": "gap",
+  "idx": 7,
+  "known": 42,
+  "mode": "binary",
+  "opt": 42,
+  "lb": 42,
+  "lb0": 40,
+  "ub0": 42,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 41,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 5,
+  "cert_lp": 3,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     41
+    ],
+    "L": 42,
+    "U": 42,
+    "lp": 5,
+    "cert_lp": 3,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.1865,
+  "ok": true,
+  "seed": 2647
+ },
+ {
+  "name": "gap",
+  "idx": 8,
+  "known": 30,
+  "mode": "binary",
+  "opt": 30,
+  "lb": 30,
+  "lb0": 28,
+  "ub0": 30,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 29,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 3,
+  "cert_lp": 2,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     29
+    ],
+    "L": 30,
+    "U": 30,
+    "lp": 3,
+    "cert_lp": 2,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.0547,
+  "ok": true,
+  "seed": 2911
+ },
+ {
+  "name": "gap",
+  "idx": 9,
+  "known": 32,
+  "mode": "binary",
+  "opt": 32,
+  "lb": 32,
+  "lb0": 29,
+  "ub0": 32,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 31,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 518,
+  "cert_lp": 260,
+  "pin_lp": 2,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     30
+    ],
+    "L": 31,
+    "U": 32,
+    "lp": 31,
+    "cert_lp": 16,
+    "t": 0,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     31
+    ],
+    "L": 32,
+    "U": 32,
+    "lp": 487,
+    "cert_lp": 244,
+    "t": 5,
+    "cancelled": 0
+   }
+  ],
+  "t": 5.5419,
+  "ok": true,
+  "seed": 3173
+ },
+ {
+  "name": "gap",
+  "idx": 10,
+  "known": 54,
+  "mode": "binary",
+  "opt": 54,
+  "lb": 54,
+  "lb0": 51,
+  "ub0": 54,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 53,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 634,
+  "cert_lp": 318,
+  "pin_lp": 3,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     52
+    ],
+    "L": 53,
+    "U": 54,
+    "lp": 197,
+    "cert_lp": 99,
+    "t": 2,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     53
+    ],
+    "L": 54,
+    "U": 54,
+    "lp": 437,
+    "cert_lp": 219,
+    "t": 5,
+    "cancelled": 0
+   }
+  ],
+  "t": 7.4811,
+  "ok": true,
+  "seed": 3603
+ },
+ {
+  "name": "gap",
+  "idx": 11,
+  "known": 56,
+  "mode": "binary",
+  "opt": 56,
+  "lb": 56,
+  "lb0": 53,
+  "ub0": 56,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 55,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 84,
+  "cert_lp": 43,
+  "pin_lp": 4,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     54
+    ],
+    "L": 55,
+    "U": 56,
+    "lp": 7,
+    "cert_lp": 4,
+    "t": 0,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     55
+    ],
+    "L": 56,
+    "U": 56,
+    "lp": 77,
+    "cert_lp": 39,
+    "t": 1,
+    "cancelled": 0
+   }
+  ],
+  "t": 1.186,
+  "ok": true,
+  "seed": 3609
+ },
+ {
+  "name": "gap",
+  "idx": 12,
+  "known": 65,
+  "mode": "binary",
+  "opt": 65,
+  "lb": 65,
+  "lb0": 61,
+  "ub0": 65,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 64,
+  "rounds": 2,
+  "probes": 2,
+  "lp": 70,
+  "cert_lp": 36,
+  "pin_lp": 4,
+  "audit_ok": 4,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     63
+    ],
+    "L": 64,
+    "U": 65,
+    "lp": 25,
+    "cert_lp": 13,
+    "t": 1,
+    "cancelled": 0
+   },
+   {
+    "round": 1,
+    "horizons": [
+     64
+    ],
+    "L": 65,
+    "U": 65,
+    "lp": 45,
+    "cert_lp": 23,
+    "t": 2,
+    "cancelled": 0
+   }
+  ],
+  "t": 3.6538,
+  "ok": true,
+  "seed": 3779
+ },
+ {
+  "name": "gap",
+  "idx": 13,
+  "known": 27,
+  "mode": "binary",
+  "opt": 27,
+  "lb": 27,
+  "lb0": 25,
+  "ub0": 27,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 26,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 85,
+  "cert_lp": 43,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     26
+    ],
+    "L": 27,
+    "U": 27,
+    "lp": 85,
+    "cert_lp": 43,
+    "t": 1,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.6887,
+  "ok": true,
+  "seed": 3794
+ },
+ {
+  "name": "gap",
+  "idx": 14,
+  "known": 21,
+  "mode": "binary",
+  "opt": 21,
+  "lb": 21,
+  "lb0": 19,
+  "ub0": 21,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 20,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 9,
+  "cert_lp": 5,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     20
+    ],
+    "L": 21,
+    "U": 21,
+    "lp": 9,
+    "cert_lp": 5,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.0914,
+  "ok": true,
+  "seed": 4353
+ },
+ {
+  "name": "gap",
+  "idx": 15,
+  "known": 28,
+  "mode": "binary",
+  "opt": 28,
+  "lb": 28,
+  "lb0": 26,
+  "ub0": 28,
+  "certified": true,
+  "audit": true,
+  "partial_final": true,
+  "cert_h": 27,
+  "rounds": 1,
+  "probes": 1,
+  "lp": 3,
+  "cert_lp": 2,
+  "pin_lp": 2,
+  "audit_ok": 2,
+  "audit_fail": 0,
+  "unknown": 0,
+  "cancelled": 0,
+  "neural_used": false,
+  "trace": [
+   {
+    "round": 0,
+    "horizons": [
+     27
+    ],
+    "L": 28,
+    "U": 28,
+    "lp": 3,
+    "cert_lp": 2,
+    "t": 0,
+    "cancelled": 0
+   }
+  ],
+  "t": 0.1467,
+  "ok": true,
+  "seed": 5096
+ }
+]

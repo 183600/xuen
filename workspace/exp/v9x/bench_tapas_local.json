@@ -1,0 +1,11711 @@
+[
+ {
+  "rid": 110,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 7,
+  "label": "YES",
+  "h": 42,
+  "known": 42,
+  "base_nodes": 31,
+  "base_rank": 29,
+  "base_t": 0.47775,
+  "best_nodes": 9,
+  "best_rank": 8,
+  "best_t": 0.15675,
+  "tune_t": 6.50622,
+  "evals": 29,
+  "full": 5,
+  "policy": {
+   "weights": {
+    "frac": 0.28245989387178283,
+    "mass": -0.7301788333214363,
+    "q": -0.6094120705327702,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.4197027360719433,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": -1.6237566604299654,
+    "entropy": 1.9553047859141994,
+    "spread": 0.8578100378778013,
+    "lo": -0.8493631149972646,
+    "hi": 0.0
+   },
+   "split": 0.21598226671757456
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 41.0,
+    "verdict": true,
+    "nodes": 15,
+    "depth": 13,
+    "why": "best",
+    "key": [
+     20,
+     26
+    ]
+   },
+   {
+    "it": 2,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     20,
+     26
+    ]
+   },
+   {
+    "it": 3,
+    "E": 34.0,
+    "verdict": true,
+    "nodes": 12,
+    "depth": 11,
+    "why": "best",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 4,
+    "E": 34.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 17,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 19,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     3
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 103,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 0,
+  "label": "YES",
+  "h": 38,
+  "known": 38,
+  "base_nodes": 24,
+  "base_rank": 22,
+  "base_t": 0.34862,
+  "best_nodes": 10,
+  "best_rank": 9,
+  "best_t": 0.14295,
+  "tune_t": 5.3882,
+  "evals": 29,
+  "full": 4,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": -2.3302654470603157,
+    "q": 1.1311467494907907,
+    "p": 0.43415775792731787,
+    "succ": 0.0,
+    "pred": 0.42357299132139725,
+    "slack": 0.0,
+    "width": -1.4948188253963937,
+    "peak": -0.5160047492470231,
+    "entropy": -1.2357521159938591,
+    "spread": -0.2270402354000894,
+    "lo": 1.0009577008829316,
+    "hi": 0.5682267494587341
+   },
+   "split": 0.465486127986819
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 34.0,
+    "verdict": true,
+    "nodes": 12,
+    "depth": 11,
+    "why": "best",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 5,
+    "E": 31.0,
+    "verdict": true,
+    "nodes": 11,
+    "depth": 10,
+    "why": "best",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     18,
+     27
+    ]
+   },
+   {
+    "it": 29,
+    "E": 28.0,
+    "verdict": true,
+    "nodes": 10,
+    "depth": 9,
+    "why": "best",
+    "key": [
+     18,
+     19
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 107,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 4,
+  "label": "YES",
+  "h": 45,
+  "known": 45,
+  "base_nodes": 21,
+  "base_rank": 20,
+  "base_t": 0.37046,
+  "best_nodes": 8,
+  "best_rank": 7,
+  "best_t": 0.17177,
+  "tune_t": 6.76535,
+  "evals": 29,
+  "full": 2,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": -1.348980820942197,
+    "succ": 0.0,
+    "pred": 1.8221252500077378,
+    "slack": 0.6002940964297172,
+    "width": 0.21004463771083584,
+    "peak": 0.39263216217196933,
+    "entropy": -0.1276036818405989,
+    "spread": 1.0484085498624747,
+    "lo": 0.8449190440016054,
+    "hi": 0.0
+   },
+   "split": 0.5034963054415972
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 4,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 15,
+    "E": 22.0,
+    "verdict": true,
+    "nodes": 8,
+    "depth": 7,
+    "why": "best",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 21,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     29
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 118,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 5,
+  "label": "YES",
+  "h": 32,
+  "known": 32,
+  "base_nodes": 21,
+  "base_rank": 18,
+  "base_t": 0.42503,
+  "best_nodes": 8,
+  "best_rank": 7,
+  "best_t": 0.1677,
+  "tune_t": 6.8687,
+  "evals": 29,
+  "full": 6,
+  "policy": {
+   "weights": {
+    "frac": 0.6066125787285456,
+    "mass": -0.2228566483260223,
+    "q": 0.6766152053874112,
+    "p": -1.0951241705104608,
+    "succ": 0.3613364141580534,
+    "pred": 0.0,
+    "slack": -0.5642977962009892,
+    "width": -1.701655446060059,
+    "peak": -0.11044906621241596,
+    "entropy": 1.1582615401266243,
+    "spread": -2.1811994769646867,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.41732979080395805
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 41.0,
+    "verdict": true,
+    "nodes": 15,
+    "depth": 13,
+    "why": "best",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 2,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 3,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 4,
+    "E": 38.0,
+    "verdict": true,
+    "nodes": 14,
+    "depth": 12,
+    "why": "best",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 6,
+    "E": 26.0,
+    "verdict": true,
+    "nodes": 10,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 8,
+    "E": 26.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 13,
+    "E": 22.0,
+    "verdict": true,
+    "nodes": 8,
+    "depth": 7,
+    "why": "best",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 14,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 15,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 17,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 21,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 28,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 29,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     9
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 104,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 1,
+  "label": "YES",
+  "h": 40,
+  "known": 40,
+  "base_nodes": 20,
+  "base_rank": 18,
+  "base_t": 0.21682,
+  "best_nodes": 8,
+  "best_rank": 7,
+  "best_t": 0.08029,
+  "tune_t": 2.90152,
+  "evals": 29,
+  "full": 7,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.613477284646145,
+    "q": 0.0,
+    "p": -0.04961208845484933,
+    "succ": -0.027769784698135645,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 1.3301590808138912,
+    "peak": -0.16858398439147218,
+    "entropy": 0.21717628730878744,
+    "spread": 1.4259177085449741,
+    "lo": 0.6417181819554039,
+    "hi": -0.0034163731156204896
+   },
+   "split": 0.5525854909473473
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 47.0,
+    "verdict": true,
+    "nodes": 17,
+    "depth": 15,
+    "why": "best",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 2,
+    "E": 38.0,
+    "verdict": true,
+    "nodes": 14,
+    "depth": 12,
+    "why": "best",
+    "key": [
+     16,
+     0
+    ]
+   },
+   {
+    "it": 3,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 4,
+    "E": 22.0,
+    "verdict": true,
+    "nodes": 8,
+    "depth": 7,
+    "why": "best",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 6,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     6,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     17
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 120,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 7,
+  "label": "YES",
+  "h": 41,
+  "known": 41,
+  "base_nodes": 17,
+  "base_rank": 9,
+  "base_t": 0.5268,
+  "best_nodes": 4,
+  "best_rank": 3,
+  "best_t": 0.08207,
+  "tune_t": 4.6355,
+  "evals": 29,
+  "full": 5,
+  "policy": {
+   "weights": {
+    "frac": 0.7781997167107583,
+    "mass": 1.4080014058274533,
+    "q": -0.06590090782516216,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.7914331571951206,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": -1.2715827265749802,
+    "entropy": 0.0,
+    "spread": 0.9320872557863514,
+    "lo": 0.0,
+    "hi": -2.581705305921431
+   },
+   "split": 0.4863928019742034
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 17.0,
+    "verdict": true,
+    "nodes": 7,
+    "depth": 5,
+    "why": "best",
+    "key": [
+     17,
+     13
+    ]
+   },
+   {
+    "it": 4,
+    "E": 17.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     13
+    ]
+   },
+   {
+    "it": 8,
+    "E": 16.0,
+    "verdict": true,
+    "nodes": 6,
+    "depth": 5,
+    "why": "best",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 15,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 21,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 116,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 3,
+  "label": "YES",
+  "h": 31,
+  "known": 31,
+  "base_nodes": 14,
+  "base_rank": 12,
+  "base_t": 0.40392,
+  "best_nodes": 9,
+  "best_rank": 7,
+  "best_t": 0.26483,
+  "tune_t": 9.16909,
+  "evals": 29,
+  "full": 8,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": -0.12100591174826528,
+    "p": -0.700182892177618,
+    "succ": -1.3400352944141534,
+    "pred": -0.6184759109811748,
+    "slack": 0.2211712308641725,
+    "width": 1.9188053710451567,
+    "peak": 0.0,
+    "entropy": 0.7412796074708584,
+    "spread": 1.2636742330631086,
+    "lo": 0.0,
+    "hi": 2.7871553348092775
+   },
+   "split": 0.23557408693320894
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 5,
+    "E": 31.0,
+    "verdict": true,
+    "nodes": 11,
+    "depth": 10,
+    "why": "best",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 16,
+    "E": 28.0,
+    "verdict": true,
+    "nodes": 10,
+    "depth": 9,
+    "why": "best",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 21,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     12,
+     0
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 23,
+    "E": 23.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 7,
+    "why": "best",
+    "key": [
+     4,
+     12
+    ]
+   },
+   {
+    "it": 24,
+    "E": 25.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     12,
+     0
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 99,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 4,
+  "label": "YES",
+  "h": 33,
+  "known": 33,
+  "base_nodes": 12,
+  "base_rank": 11,
+  "base_t": 0.09787,
+  "best_nodes": 5,
+  "best_rank": 4,
+  "best_t": 0.04019,
+  "tune_t": 1.76545,
+  "evals": 29,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 1.4583052885795682,
+    "mass": 0.6232435499711069,
+    "q": -0.6156151647669341,
+    "p": 0.9388926857193881,
+    "succ": -0.42290238809417124,
+    "pred": 2.7252153153850784,
+    "slack": -0.2922934964306283,
+    "width": -1.4183447488675958,
+    "peak": 0.3982487645188116,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": -1.6774779231292696,
+    "hi": 0.0
+   },
+   "split": 0.5566149778226082
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 3,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 10,
+    "E": 22.0,
+    "verdict": true,
+    "nodes": 8,
+    "depth": 7,
+    "why": "best",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 11,
+    "E": 13.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 12,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 14,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 15,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 19,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 20,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 23,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     18
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 27,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   },
+   {
+    "it": 29,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     17,
+     17
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 100,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 5,
+  "label": "YES",
+  "h": 30,
+  "known": 30,
+  "base_nodes": 12,
+  "base_rank": 11,
+  "base_t": 0.0633,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00613,
+  "tune_t": 0.57607,
+  "evals": 29,
+  "full": 24,
+  "policy": {
+   "weights": {
+    "frac": -1.0910622235276632,
+    "mass": 1.2188041165016235,
+    "q": -1.3430721209005332,
+    "p": -1.2226765746251156,
+    "succ": 0.47834239459256983,
+    "pred": -0.21631585903496275,
+    "slack": -1.6709509631974335,
+    "width": -0.34651403406957537,
+    "peak": 0.35142912378672053,
+    "entropy": -0.264398561762172,
+    "spread": 0.8344231822992262,
+    "lo": 2.1748926269774422,
+    "hi": -1.157753642915504
+   },
+   "split": 0.2
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 2,
+    "E": 14.0,
+    "verdict": true,
+    "nodes": 6,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     10,
+     12
+    ]
+   },
+   {
+    "it": 3,
+    "E": 13.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 4,
+    "E": 11.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     14,
+     17
+    ]
+   },
+   {
+    "it": 5,
+    "E": 11.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     17
+    ]
+   },
+   {
+    "it": 9,
+    "E": 11.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     17
+    ]
+   },
+   {
+    "it": 10,
+    "E": 8.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     14,
+     17
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     10,
+     12
+    ]
+   },
+   {
+    "it": 14,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 16,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 17,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 18,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 19,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 21,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 22,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 23,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 24,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 26,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 27,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   },
+   {
+    "it": 29,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 55,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 5,
+  "label": "YES",
+  "h": 12,
+  "known": 12,
+  "base_nodes": 11,
+  "base_rank": 10,
+  "base_t": 0.03452,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00389,
+  "tune_t": 0.29839,
+  "evals": 29,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": -0.6226155641464391,
+    "mass": 0.0,
+    "q": 0.5679990761324079,
+    "p": 1.5460505943233551,
+    "succ": -2.605421042214602,
+    "pred": -0.04542361694124067,
+    "slack": -0.21582720328014426,
+    "width": 0.0,
+    "peak": -1.556153968021178,
+    "entropy": 0.0,
+    "spread": -0.5303849742675896,
+    "lo": -0.7356297673575655,
+    "hi": -0.18500536059384518
+   },
+   "split": 0.8
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 11.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 6,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     4,
+     0
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     0
+    ]
+   },
+   {
+    "it": 10,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     0
+    ]
+   },
+   {
+    "it": 14,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 15,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 16,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 20,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 22,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     6
+    ]
+   },
+   {
+    "it": 23,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 24,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 56,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 6,
+  "label": "YES",
+  "h": 13,
+  "known": 13,
+  "base_nodes": 11,
+  "base_rank": 10,
+  "base_t": 0.03891,
+  "best_nodes": 5,
+  "best_rank": 4,
+  "best_t": 0.01584,
+  "tune_t": 0.53526,
+  "evals": 29,
+  "full": 4,
+  "policy": {
+   "weights": {
+    "frac": 0.6099868890424774,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.7346035815119095,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5409578856264989
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 13.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     4,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 58,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 8,
+  "label": "YES",
+  "h": 14,
+  "known": 14,
+  "base_nodes": 10,
+  "base_rank": 9,
+  "base_t": 0.03139,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00378,
+  "tune_t": 0.32953,
+  "evals": 29,
+  "full": 13,
+  "policy": {
+   "weights": {
+    "frac": 0.016869728853427413,
+    "mass": 0.9538474745766744,
+    "q": 0.22038661245398933,
+    "p": 1.637261935421696,
+    "succ": 0.7204921262267797,
+    "pred": 0.0,
+    "slack": -0.7321282786070895,
+    "width": 0.0,
+    "peak": -0.903383876228654,
+    "entropy": -1.1203316052387051,
+    "spread": -1.4618229167583903,
+    "lo": -0.3173361393115377,
+    "hi": 0.0
+   },
+   "split": 0.6781000453972872
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 25.0,
+    "verdict": true,
+    "nodes": 9,
+    "depth": 8,
+    "why": "best",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 2,
+    "E": 25.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": 25.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 6,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 14,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 15,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     12,
+     9
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     12,
+     9
+    ]
+   },
+   {
+    "it": 21,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     12,
+     9
+    ]
+   },
+   {
+    "it": 22,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     12,
+     9
+    ]
+   },
+   {
+    "it": 28,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     12,
+     9
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 86,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 36,
+  "label": "YES",
+  "h": 11,
+  "known": 11,
+  "base_nodes": 10,
+  "base_rank": 9,
+  "base_t": 0.02697,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.00624,
+  "tune_t": 0.2395,
+  "evals": 29,
+  "full": 9,
+  "policy": {
+   "weights": {
+    "frac": 1.1658115936070432,
+    "mass": 0.0,
+    "q": 0.036145409466360044,
+    "p": 1.525981965705605,
+    "succ": 0.906687602847441,
+    "pred": 0.0,
+    "slack": 1.0125457262197697,
+    "width": -1.25824813481277,
+    "peak": -0.39960054047334714,
+    "entropy": 0.0,
+    "spread": 0.31793702262569096,
+    "lo": 0.5313158510989765,
+    "hi": -2.15835905513276
+   },
+   "split": 0.3799098994497195
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     0,
+     6
+    ]
+   },
+   {
+    "it": 2,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 6,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 9,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 10,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     2
+    ]
+   },
+   {
+    "it": 14,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     7,
+     0
+    ]
+   },
+   {
+    "it": 15,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     7,
+     0
+    ]
+   },
+   {
+    "it": 16,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     7,
+     0
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     7,
+     0
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     7,
+     0
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 111,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 8,
+  "label": "YES",
+  "h": 45,
+  "known": 45,
+  "base_nodes": 10,
+  "base_rank": 9,
+  "base_t": 0.07356,
+  "best_nodes": 4,
+  "best_rank": 3,
+  "best_t": 0.02546,
+  "tune_t": 0.96127,
+  "evals": 29,
+  "full": 5,
+  "policy": {
+   "weights": {
+    "frac": -1.1926390426581464,
+    "mass": 2.6072272995622936,
+    "q": 0.0,
+    "p": -0.565766313275438,
+    "succ": 0.7778337122235894,
+    "pred": 0.26304399633385367,
+    "slack": 0.0,
+    "width": 0.5565147470811633,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.08816001002432733
+   },
+   "split": 0.4854693181121896
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 13.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     5,
+     26
+    ]
+   },
+   {
+    "it": 3,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     2,
+     17
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     17
+    ]
+   },
+   {
+    "it": 6,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     2,
+     17
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     17
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     27
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     26
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 176,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 5,
+  "label": "YES",
+  "h": 35,
+  "known": 35,
+  "base_nodes": 10,
+  "base_rank": 9,
+  "base_t": 0.03406,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00407,
+  "tune_t": 0.27335,
+  "evals": 29,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.9574820390225298,
+    "mass": 1.125134805497954,
+    "q": 3.083135327500157,
+    "p": -2.0567452324089373,
+    "succ": -2.039068548183458,
+    "pred": 0.4379486164761546,
+    "slack": -2.226690923515002,
+    "width": 0.0,
+    "peak": -0.871213832116436,
+    "entropy": 1.6862568573769494,
+    "spread": 0.0,
+    "lo": -1.9925122719763821,
+    "hi": 0.0
+   },
+   "split": 0.7006439209145545
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 28.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 4,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 5,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 6,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 7,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 13,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 14,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 17,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 18,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 19,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 24,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   },
+   {
+    "it": 28,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     29
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 69,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 19,
+  "label": "YES",
+  "h": 14,
+  "known": 14,
+  "base_nodes": 9,
+  "base_rank": 8,
+  "base_t": 0.03382,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00437,
+  "tune_t": 0.17895,
+  "evals": 29,
+  "full": 20,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.8346798568841671,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": -1.3143804405399877,
+    "pred": -0.2279606044876185,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.8750867957464926,
+    "entropy": 0.0,
+    "spread": -0.3817424699865528,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5353985494150179
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 6,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 7,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 10,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 12,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 15,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 16,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 17,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 18,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 19,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 21,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 22,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 23,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 24,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 27,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 28,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   },
+   {
+    "it": 29,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     15,
+     9
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 229,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "YES",
+  "h": 35,
+  "known": 35,
+  "base_nodes": 9,
+  "base_rank": 7,
+  "base_t": 0.04216,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.00874,
+  "tune_t": 0.32185,
+  "evals": 29,
+  "full": 20,
+  "policy": {
+   "weights": {
+    "frac": 1.1869233190745425,
+    "mass": -0.24577331455009793,
+    "q": 0.0,
+    "p": 0.09858912257838995,
+    "succ": 0.5577946486162321,
+    "pred": 0.0,
+    "slack": 1.542090376076227,
+    "width": -0.29089797156656716,
+    "peak": 0.0,
+    "entropy": 0.23138127345238982,
+    "spread": 1.682879355242503,
+    "lo": 0.10331683786914671,
+    "hi": -1.260105526605984
+   },
+   "split": 0.4663398513342344
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     4,
+     9
+    ]
+   },
+   {
+    "it": 2,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 3,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 5,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 6,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 7,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 9,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 10,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 14,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 15,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 17,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 18,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 19,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 21,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 22,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 23,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 24,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 27,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 28,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 43,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 43,
+  "label": "YES",
+  "h": 34,
+  "known": 34,
+  "base_nodes": 8,
+  "base_rank": 7,
+  "base_t": 0.03302,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00507,
+  "tune_t": 0.25294,
+  "evals": 29,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.45536232552670936,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.22230512943985428,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.29671275654287066,
+    "spread": 0.767702251385633,
+    "lo": 0.0,
+    "hi": -0.13020085133930437
+   },
+   "split": 0.2863544444445718
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 19.0,
+    "verdict": true,
+    "nodes": 7,
+    "depth": 6,
+    "why": "best",
+    "key": [
+     2,
+     9
+    ]
+   },
+   {
+    "it": 2,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     9
+    ]
+   },
+   {
+    "it": 3,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 4,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     9
+    ]
+   },
+   {
+    "it": 6,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 10,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 16,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 18,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 19,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 22,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   },
+   {
+    "it": 23,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 108,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 5,
+  "label": "YES",
+  "h": 53,
+  "known": 53,
+  "base_nodes": 8,
+  "base_rank": 7,
+  "base_t": 0.08475,
+  "best_nodes": 5,
+  "best_rank": 4,
+  "best_t": 0.05025,
+  "tune_t": 1.98018,
+  "evals": 29,
+  "full": 7,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.3742802587125462,
+    "p": 0.0,
+    "succ": 0.6244847832643816,
+    "pred": -0.7477092339050022,
+    "slack": 0.6216717363895992,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.8917181241865688,
+    "spread": 0.0,
+    "lo": 0.6656042522583479,
+    "hi": 0.0
+   },
+   "split": 0.49482752693572374
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 19.0,
+    "verdict": true,
+    "nodes": 7,
+    "depth": 6,
+    "why": "best",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 2,
+    "E": 19.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 3,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 4,
+    "E": 19.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 5,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 6,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 7,
+    "E": 19.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     2,
+     19
+    ]
+   },
+   {
+    "it": 15,
+    "E": 13.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 20,
+    "E": 13.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     16
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 112,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 9,
+  "label": "YES",
+  "h": 42,
+  "known": 42,
+  "base_nodes": 8,
+  "base_rank": 7,
+  "base_t": 0.05076,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.01526,
+  "tune_t": 0.69167,
+  "evals": 29,
+  "full": 8,
+  "policy": {
+   "weights": {
+    "frac": -0.08294877109153664,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": -1.2820334096270354,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": -1.6217693909465676,
+    "peak": 0.08070174473352201,
+    "entropy": -0.1685600461901089,
+    "spread": 0.0,
+    "lo": -0.7151033569416508,
+    "hi": 0.0
+   },
+   "split": 0.4912440287936812
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 5,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 7,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     16,
+     1
+    ]
+   },
+   {
+    "it": 12,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     14,
+     36
+    ]
+   },
+   {
+    "it": 19,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     36
+    ]
+   },
+   {
+    "it": 20,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     36
+    ]
+   },
+   {
+    "it": 24,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     14,
+     36
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 121,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 0,
+  "label": "YES",
+  "h": 28,
+  "known": 28,
+  "base_nodes": 8,
+  "base_rank": 7,
+  "base_t": 0.02597,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.00777,
+  "tune_t": 0.36133,
+  "evals": 29,
+  "full": 18,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.6433817563647439,
+    "p": 1.851476688491076,
+    "succ": -0.30915998333180555,
+    "pred": 0.0,
+    "slack": -0.5467335354640596,
+    "width": 0.0,
+    "peak": -0.7612622607892576,
+    "entropy": 0.8731923545355508,
+    "spread": 0.0,
+    "lo": -1.4744958873844902,
+    "hi": 0.0
+   },
+   "split": 0.20270364832864676
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 17.0,
+    "verdict": true,
+    "nodes": 7,
+    "depth": 5,
+    "why": "best",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 2,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 3,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     0,
+     0
+    ]
+   },
+   {
+    "it": 4,
+    "E": 11.0,
+    "verdict": true,
+    "nodes": 5,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 5,
+    "E": 11.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 6,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 7,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 8,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 9,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 10,
+    "E": 10.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 11,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     5,
+     4
+    ]
+   },
+   {
+    "it": 15,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 19,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 21,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 22,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 23,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   },
+   {
+    "it": 24,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 42,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 42,
+  "label": "YES",
+  "h": 39,
+  "known": 39,
+  "base_nodes": 7,
+  "base_rank": 6,
+  "base_t": 0.0288,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.00999,
+  "tune_t": 0.36011,
+  "evals": 29,
+  "full": 13,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": -0.7856346594274352,
+    "q": 0.9447190656035565,
+    "p": -0.23250800902559915,
+    "succ": -2.296484409370042,
+    "pred": -1.5456249222643585,
+    "slack": 0.0,
+    "width": 1.4782404502578952,
+    "peak": 0.07775156481363839,
+    "entropy": 0.9385463207036794,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.36818433338532647
+   },
+   "split": 0.35213413845694175
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 3,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 6,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 11,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 15,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 16,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 17,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 18,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 19,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 20,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 21,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 27,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     28
+    ]
+   },
+   {
+    "it": 29,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     11,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 63,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 13,
+  "label": "YES",
+  "h": 16,
+  "known": 16,
+  "base_nodes": 7,
+  "base_rank": 6,
+  "base_t": 0.02163,
+  "best_nodes": 3,
+  "best_rank": 2,
+  "best_t": 0.0073,
+  "tune_t": 0.30892,
+  "evals": 29,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 1.11298832463205,
+    "mass": -0.13653282333850267,
+    "q": 1.1123505408483176,
+    "p": 0.12313615588883552,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.68298411435363,
+    "entropy": 1.7663292322851405,
+    "spread": -1.8481035768307774,
+    "lo": 0.0,
+    "hi": 0.2228928857475697
+   },
+   "split": 0.4841356437774855
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 14.0,
+    "verdict": true,
+    "nodes": 6,
+    "depth": 4,
+    "why": "best",
+    "key": [
+     4,
+     1
+    ]
+   },
+   {
+    "it": 2,
+    "E": 14.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     4,
+     1
+    ]
+   },
+   {
+    "it": 3,
+    "E": 10.0,
+    "verdict": true,
+    "nodes": 4,
+    "depth": 3,
+    "why": "best",
+    "key": [
+     4,
+     1
+    ]
+   },
+   {
+    "it": 4,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     1
+    ]
+   },
+   {
+    "it": 5,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 6,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 7,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 8,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 9,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 10,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 12,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     4,
+     1
+    ]
+   },
+   {
+    "it": 14,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 15,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 16,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 17,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 18,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 20,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 21,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 22,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 23,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 24,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   },
+   {
+    "it": 28,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     6,
+     4
+    ]
+   },
+   {
+    "it": 29,
+    "E": 7.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     3,
+     0
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 65,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 15,
+  "label": "YES",
+  "h": 11,
+  "known": 11,
+  "base_nodes": 7,
+  "base_rank": 6,
+  "base_t": 0.02044,
+  "best_nodes": 2,
+  "best_rank": 1,
+  "best_t": 0.00362,
+  "tune_t": 0.14584,
+  "evals": 29,
+  "full": 24,
+  "policy": {
+   "weights": {
+    "frac": 0.7256773744960083,
+    "mass": -1.2324924496734984,
+    "q": -1.849948298701896,
+    "p": -0.023320019534171843,
+    "succ": -0.3995193930630017,
+    "pred": 0.0,
+    "slack": -0.6296423557675354,
+    "width": 0.6740911542269717,
+    "peak": 0.0,
+    "entropy": -0.8205472039305366,
+    "spread": 0.0,
+    "lo": -1.0052285768170657,
+    "hi": 1.2596516074532604
+   },
+   "split": 0.4796202406813751
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 7.0,
+    "verdict": true,
+    "nodes": 3,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     7,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     7,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 4.0,
+    "verdict": true,
+    "nodes": 2,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 6,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 7,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 8,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 9,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 10,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 11,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 15,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 18,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 19,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 20,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 21,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 22,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 23,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 24,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   },
+   {
+    "it": 27,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 28,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     13,
+     4
+    ]
+   },
+   {
+    "it": 29,
+    "E": 4.0,
+    "verdict": true,
+    "why": "tabu",
+    "key": [
+     11,
+     0
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 5,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01724,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01724,
+  "tune_t": 0.32243,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 47,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02425,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02425,
+  "tune_t": 0.38221,
+  "evals": 19,
+  "full": 8,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 147,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 6,
+  "label": "NO",
+  "h": 33,
+  "known": 34,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01729,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01729,
+  "tune_t": 0.29724,
+  "evals": 19,
+  "full": 8,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     27
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     15
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 157,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 16,
+  "label": "NO",
+  "h": 33,
+  "known": 34,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01735,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01735,
+  "tune_t": 0.34358,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     11
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     11
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     11
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     27
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     27
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     27
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 177,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 6,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02283,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02283,
+  "tune_t": 0.42905,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 189,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 18,
+  "label": "NO",
+  "h": 33,
+  "known": 34,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02441,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02441,
+  "tune_t": 0.35074,
+  "evals": 19,
+  "full": 6,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     5
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     5
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 197,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 26,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02159,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02159,
+  "tune_t": 0.42057,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 201,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02299,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02299,
+  "tune_t": 0.40749,
+  "evals": 19,
+  "full": 11,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 202,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01739,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01739,
+  "tune_t": 0.34705,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 203,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02495,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02495,
+  "tune_t": 0.42251,
+  "evals": 19,
+  "full": 11,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 204,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02232,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02232,
+  "tune_t": 0.43913,
+  "evals": 19,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 205,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02177,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02177,
+  "tune_t": 0.39141,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 206,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02202,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02202,
+  "tune_t": 0.37248,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 207,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.0246,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.0246,
+  "tune_t": 0.34168,
+  "evals": 19,
+  "full": 4,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 208,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02149,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02149,
+  "tune_t": 0.42277,
+  "evals": 19,
+  "full": 16,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 209,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02388,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02388,
+  "tune_t": 0.37909,
+  "evals": 19,
+  "full": 5,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 210,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02049,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02049,
+  "tune_t": 0.37164,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 211,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01865,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01865,
+  "tune_t": 0.36772,
+  "evals": 19,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 212,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02373,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02373,
+  "tune_t": 0.39851,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 213,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02317,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02317,
+  "tune_t": 0.34544,
+  "evals": 19,
+  "full": 11,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 214,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02401,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02401,
+  "tune_t": 0.35771,
+  "evals": 19,
+  "full": 7,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 215,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01869,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01869,
+  "tune_t": 0.368,
+  "evals": 19,
+  "full": 19,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     25
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 216,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01692,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01692,
+  "tune_t": 0.33594,
+  "evals": 19,
+  "full": 16,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     24
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     24
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     24
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     24
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 217,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01828,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01828,
+  "tune_t": 0.34241,
+  "evals": 19,
+  "full": 16,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     24
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 218,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01768,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01768,
+  "tune_t": 0.31485,
+  "evals": 19,
+  "full": 10,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 219,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.04028,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.0214,
+  "tune_t": 0.42825,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": -0.814629752962998,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": -0.5404084800979652,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5856828801831496
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 220,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01969,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01969,
+  "tune_t": 0.32807,
+  "evals": 19,
+  "full": 9,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 221,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01702,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01702,
+  "tune_t": 0.30217,
+  "evals": 19,
+  "full": 10,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 222,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.03726,
+  "best_nodes": 5,
+  "best_rank": 2,
+  "best_t": 0.03726,
+  "tune_t": 0.63357,
+  "evals": 19,
+  "full": 3,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": []
+ },
+ {
+  "rid": 223,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01978,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01978,
+  "tune_t": 0.37776,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     19
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     19
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     19
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     17
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 224,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02331,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02331,
+  "tune_t": 0.41074,
+  "evals": 19,
+  "full": 10,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     11
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 225,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01751,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01751,
+  "tune_t": 0.33914,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     13
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 226,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01696,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01696,
+  "tune_t": 0.33025,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 227,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02149,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02149,
+  "tune_t": 0.38142,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 228,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02293,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02293,
+  "tune_t": 0.446,
+  "evals": 19,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 229,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.04178,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02825,
+  "tune_t": 0.57824,
+  "evals": 19,
+  "full": 7,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.4047542950429771,
+    "p": -0.4780801603072235,
+    "succ": -0.6575947945589697,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": -1.649118894445344,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.49714482667296916
+   },
+   "split": 0.6370361773664137
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 230,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02429,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02429,
+  "tune_t": 0.42076,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 231,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02611,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02611,
+  "tune_t": 0.43534,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 232,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02195,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02195,
+  "tune_t": 0.39145,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 233,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02322,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02322,
+  "tune_t": 0.4207,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     30
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 234,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.02938,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01882,
+  "tune_t": 0.35493,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": -0.7002647229392991,
+    "hi": 0.0
+   },
+   "split": 0.5253071939051922
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 235,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01783,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01783,
+  "tune_t": 0.33166,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     26
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     11,
+     26
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 236,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02237,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02237,
+  "tune_t": 0.40346,
+  "evals": 19,
+  "full": 14,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 237,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.03235,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02026,
+  "tune_t": 0.42733,
+  "evals": 19,
+  "full": 18,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.7672125190468697,
+    "p": -0.4364815280820531,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": -1.0844196380338162
+   },
+   "split": 0.43168308233428465
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     6,
+     11
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     11
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     11
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     22
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     22
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     12,
+     23
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     12,
+     23
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 238,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01972,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01972,
+  "tune_t": 0.35669,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     17
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 239,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01967,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01967,
+  "tune_t": 0.35562,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 240,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.03939,
+  "best_nodes": 5,
+  "best_rank": 2,
+  "best_t": 0.03939,
+  "tune_t": 0.63334,
+  "evals": 19,
+  "full": 2,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 8,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     14,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 241,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 5,
+  "base_rank": 2,
+  "base_t": 0.03735,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02298,
+  "tune_t": 0.45378,
+  "evals": 19,
+  "full": 15,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": -0.5624356468879864,
+    "q": 0.2518966891034172,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 2.1856250469307144,
+    "peak": 0.0,
+    "entropy": 0.3654064368202762,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": -0.2906277805687968
+   },
+   "split": 0.3347880319149813
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 1,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     11
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     11
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     14,
+     2
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 242,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.0215,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.0215,
+  "tune_t": 0.37933,
+  "evals": 19,
+  "full": 13,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     9,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     2
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 243,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02441,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02441,
+  "tune_t": 0.43365,
+  "evals": 19,
+  "full": 16,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     22
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     7
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     7
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 244,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 9,
+  "base_rank": 4,
+  "base_t": 0.06768,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02209,
+  "tune_t": 0.58443,
+  "evals": 19,
+  "full": 13,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": -0.9215132373864985,
+    "succ": -1.134655945394467,
+    "pred": 0.26961229800308667,
+    "slack": 0.0,
+    "width": -0.10377957123838108,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5089587764983117
+  },
+  "audit_ok": true,
+  "improved": true,
+  "trace": [
+   {
+    "it": 2,
+    "E": 9.0,
+    "verdict": false,
+    "nodes": 5,
+    "depth": 2,
+    "why": "best",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 3,
+    "E": 9.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 5,
+    "E": 9.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 6,
+    "E": 9.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "nodes": 3,
+    "depth": 1,
+    "why": "best",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 10,
+    "E": null,
+    "verdict": null,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     23
+    ]
+   },
+   {
+    "it": 19,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 245,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01804,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01804,
+  "tune_t": 0.34389,
+  "evals": 19,
+  "full": 12,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     18
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     21
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 246,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02352,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02352,
+  "tune_t": 0.36923,
+  "evals": 19,
+  "full": 10,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     6,
+     12
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 247,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.0237,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.0237,
+  "tune_t": 0.30674,
+  "evals": 19,
+  "full": 3,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 248,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.019,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.019,
+  "tune_t": 0.32754,
+  "evals": 19,
+  "full": 11,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 249,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02436,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02436,
+  "tune_t": 0.42219,
+  "evals": 19,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 7,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 9,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     8,
+     20
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     20
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 250,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "label": "NO",
+  "h": 34,
+  "known": 35,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.02568,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.02568,
+  "tune_t": 0.37334,
+  "evals": 19,
+  "full": 6,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     4,
+     11
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     6
+    ]
+   }
+  ]
+ },
+ {
+  "rid": 251,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "label": "NO",
+  "h": 32,
+  "known": 33,
+  "base_nodes": 3,
+  "base_rank": 1,
+  "base_t": 0.01727,
+  "best_nodes": 3,
+  "best_rank": 1,
+  "best_t": 0.01727,
+  "tune_t": 0.33802,
+  "evals": 19,
+  "full": 17,
+  "policy": {
+   "weights": {
+    "frac": 0.0,
+    "mass": 0.0,
+    "q": 0.0,
+    "p": 0.0,
+    "succ": 0.0,
+    "pred": 0.0,
+    "slack": 0.0,
+    "width": 0.0,
+    "peak": 0.0,
+    "entropy": 0.0,
+    "spread": 0.0,
+    "lo": 0.0,
+    "hi": 0.0
+   },
+   "split": 0.5
+  },
+  "audit_ok": true,
+  "improved": false,
+  "trace": [
+   {
+    "it": 2,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 3,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 4,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 5,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 6,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 8,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 10,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 11,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 12,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     7,
+     21
+    ]
+   },
+   {
+    "it": 14,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 15,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 16,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 17,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   },
+   {
+    "it": 18,
+    "E": 5.0,
+    "verdict": false,
+    "why": "tabu",
+    "key": [
+     3,
+     10
+    ]
+   }
+  ]
+ }
+]

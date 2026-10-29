@@ -1,0 +1,28 @@
+{
+ "brute": {
+  "trials": 1080,
+  "feasible": 475,
+  "mis_pack": 0,
+  "mis_bit": 0,
+  "mis_rsi": 0
+ },
+ "yes70": {
+  "valid": 70,
+  "bad": 0,
+  "nodes": 6096
+ },
+ "synth_yes": {
+  "valid": 45,
+  "bad": 0,
+  "m4": 8,
+  "m4_valid": 8
+ },
+ "icc_witness": {
+  "checked": 53,
+  "bad": 0
+ },
+ "vs_v24": {
+  "same": 146,
+  "diff": 0
+ }
+}

@@ -1,0 +1,74 @@
+{
+ "exact": {
+  "total": 6802,
+  "t": 0.048,
+  "rows": [
+   {
+    "idx": 5,
+    "v": false,
+    "n": 788,
+    "t": null
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "n": 1327,
+    "t": null
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "n": 959,
+    "t": null
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "n": 1592,
+    "t": null
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "n": 2136,
+    "t": null
+   }
+  ]
+ },
+ "dom": {
+  "total": 6496,
+  "t": 0.078,
+  "rows": [
+   {
+    "idx": 5,
+    "v": false,
+    "n": 766,
+    "t": null
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "n": 1294,
+    "t": null
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "n": 903,
+    "t": null
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "n": 1747,
+    "t": null
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "n": 1786,
+    "t": null
+   }
+  ]
+ }
+}

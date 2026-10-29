@@ -1,0 +1,18 @@
+{
+ "all_eligible": {
+  "cases": 6000,
+  "mismatch": 0,
+  "seconds": 11.6
+ },
+ "heterogeneous": {
+  "cases": 1600,
+  "gated_mismatch": 0,
+  "forced_omd_mismatch": 0,
+  "seconds": 4.2
+ },
+ "brute_force": {
+  "cases": 798,
+  "mismatch": 0,
+  "seconds": 128.2
+ }
+}

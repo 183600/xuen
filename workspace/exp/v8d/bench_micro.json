@@ -1,0 +1,50 @@
+{
+ "stress47": {
+  "h": 34,
+  "known": 35,
+  "chd": {
+   "v": false,
+   "phase": "C",
+   "lp": 53,
+   "yn": 60001,
+   "lds": 97071,
+   "tt_states": null,
+   "tt_hits": null,
+   "t": 1.1485
+  },
+  "hsc": {
+   "v": false,
+   "phase": "C",
+   "lp": 53,
+   "yn": 0,
+   "lds": 57021,
+   "tt_states": 8578,
+   "tt_hits": 5742,
+   "t": 1.07
+  }
+ },
+ "large_het7": {
+  "h": 43,
+  "known": 41,
+  "chd": {
+   "v": true,
+   "phase": "hull:lo",
+   "lp": 32,
+   "yn": 0,
+   "lds": 31490,
+   "tt_states": null,
+   "tt_hits": null,
+   "t": 0.8006
+  },
+  "hsc": {
+   "v": true,
+   "phase": "cheap:latest",
+   "lp": 13,
+   "yn": 0,
+   "lds": 7738,
+   "tt_states": 887,
+   "tt_hits": 511,
+   "t": 0.4187
+  }
+ }
+}

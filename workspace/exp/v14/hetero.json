@@ -1,0 +1,140 @@
+[
+ {
+  "t": 0,
+  "n": 12,
+  "opt": 29,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.01,
+   "nodes": 532,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.009,
+   "nodes": 532,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.008,
+   "nodes": null,
+   "labels": 389
+  }
+ },
+ {
+  "t": 1,
+  "n": 10,
+  "opt": 27,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": null,
+   "labels": 1
+  }
+ },
+ {
+  "t": 2,
+  "n": 11,
+  "opt": 29,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.005,
+   "nodes": 271,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.005,
+   "nodes": 271,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.002,
+   "nodes": null,
+   "labels": 90
+  }
+ },
+ {
+  "t": 3,
+  "n": 11,
+  "opt": 46,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": null,
+   "labels": 1
+  }
+ },
+ {
+  "t": 4,
+  "n": 11,
+  "opt": 29,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": 1,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": null,
+   "labels": 1
+  }
+ },
+ {
+  "t": 5,
+  "n": 10,
+  "opt": 35,
+  "dfs_fixed": {
+   "ok": false,
+   "t": 0.001,
+   "nodes": 25,
+   "labels": null
+  },
+  "dfs_buggy": {
+   "ok": false,
+   "t": 0.001,
+   "nodes": 25,
+   "labels": null
+  },
+  "lls": {
+   "ok": false,
+   "t": 0.0,
+   "nodes": null,
+   "labels": 17
+  }
+ }
+]

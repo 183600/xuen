@@ -1,0 +1,62 @@
+{
+ "v2.4 OS (tuple memo)": {
+  "nodes": 80463,
+  "t": 0.511,
+  "bad": 0
+ },
+ "v2.4 OS dom=True": {
+  "nodes": 74301,
+  "t": 1.713,
+  "bad": 0
+ },
+ "os_pack rsi=False": {
+  "nodes": 80463,
+  "t": 0.351,
+  "bad": 0
+ },
+ "os_pack rsi=True": {
+  "nodes": 57236,
+  "t": 0.256,
+  "bad": 0
+ },
+ "os_pack order=edd": {
+  "nodes": 57236,
+  "t": 0.253,
+  "bad": 0
+ },
+ "os_pack order=spt": {
+  "nodes": 57236,
+  "t": 0.254,
+  "bad": 0
+ },
+ "os_bit rsi=True": {
+  "nodes": 57236,
+  "t": 0.41,
+  "bad": 0
+ },
+ "os_bit + atpf": {
+  "nodes": 56015,
+  "t": 0.462,
+  "bad": 0
+ },
+ "os_bit + EDF(d<=10)": {
+  "nodes": 55512,
+  "t": 0.75,
+  "bad": 0
+ },
+ "os_bit + RICC(ready<=4)": {
+  "nodes": 50979,
+  "t": 0.654,
+  "bad": 0
+ },
+ "os_prop + forcing": {
+  "nodes": 37364,
+  "t": 0.304,
+  "bad": 0
+ },
+ "os_pack backward": {
+  "nodes": 47822,
+  "t": 0.248,
+  "bad": 0
+ }
+}

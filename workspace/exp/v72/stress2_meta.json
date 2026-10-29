@@ -1,0 +1,26 @@
+[
+ {
+  "src": "holdout_cases50",
+  "idx": 5,
+  "job": 0,
+  "p_new": 5,
+  "opt": 31,
+  "h": 30,
+  "lp": 6,
+  "nodes": 3,
+  "n": 15,
+  "m": 3
+ },
+ {
+  "src": "holdout_cases50",
+  "idx": 36,
+  "job": 12,
+  "p_new": 7,
+  "opt": 32,
+  "h": 31,
+  "lp": 16,
+  "nodes": 11,
+  "n": 14,
+  "m": 3
+ }
+]

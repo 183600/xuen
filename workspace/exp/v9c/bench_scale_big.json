@@ -1,0 +1,536 @@
+{
+ "yes_rep": [
+  {
+   "R": 1,
+   "n": 16,
+   "m": 3,
+   "h": 41,
+   "rdf": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.1857,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20029,
+    "trials": 13,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "yes-lp"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.2011,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 0,
+    "iso": 0,
+    "iso_saved": 0,
+    "why": "yes-lp"
+   },
+   "scale_noiso": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.2001,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 0,
+    "iso": 0,
+    "iso_saved": 0,
+    "why": "yes-lp"
+   }
+  },
+  {
+   "R": 2,
+   "n": 32,
+   "m": 6,
+   "h": 41,
+   "rdf": {
+    "v": true,
+    "lp": 12,
+    "nodes": 4,
+    "t": 0.5612,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20045,
+    "trials": 13,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "yes-lp"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.2298,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 2,
+    "iso": 1,
+    "iso_saved": 1,
+    "why": "component-yes"
+   },
+   "scale_noiso": {
+    "v": true,
+    "lp": 24,
+    "nodes": 4,
+    "t": 0.4237,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 41934,
+    "trials": 32,
+    "comps": 2,
+    "iso": 2,
+    "iso_saved": 0,
+    "why": "component-yes"
+   }
+  },
+  {
+   "R": 3,
+   "n": 48,
+   "m": 9,
+   "h": 41,
+   "rdf": {
+    "v": null,
+    "lp": 100,
+    "nodes": 86,
+    "t": 8.4675,
+    "audit": true,
+    "pc": true,
+    "sched": false,
+    "ynodes": 60001,
+    "trials": 22,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "budget"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.2393,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 3,
+    "iso": 1,
+    "iso_saved": 2,
+    "why": "component-yes"
+   },
+   "scale_noiso": {
+    "v": true,
+    "lp": 40,
+    "nodes": 8,
+    "t": 0.6466,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 60001,
+    "trials": 47,
+    "comps": 3,
+    "iso": 3,
+    "iso_saved": 0,
+    "why": "component-yes"
+   }
+  },
+  {
+   "R": 4,
+   "n": 64,
+   "m": 12,
+   "h": 41,
+   "rdf": {
+    "v": null,
+    "lp": 100,
+    "nodes": 80,
+    "t": 10.6344,
+    "audit": true,
+    "pc": true,
+    "sched": false,
+    "ynodes": 60001,
+    "trials": 22,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "budget"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.2713,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 4,
+    "iso": 1,
+    "iso_saved": 3,
+    "why": "component-yes"
+   },
+   "scale_noiso": {
+    "v": true,
+    "lp": 56,
+    "nodes": 12,
+    "t": 0.761,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 60001,
+    "trials": 47,
+    "comps": 4,
+    "iso": 4,
+    "iso_saved": 0,
+    "why": "component-yes"
+   }
+  },
+  {
+   "R": 6,
+   "n": 96,
+   "m": 18,
+   "h": 41,
+   "rdf": {
+    "v": null,
+    "lp": 100,
+    "nodes": 86,
+    "t": 20.0314,
+    "audit": true,
+    "pc": true,
+    "sched": false,
+    "ynodes": 60001,
+    "trials": 22,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "budget"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.3195,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 6,
+    "iso": 1,
+    "iso_saved": 5,
+    "why": "component-yes"
+   },
+   "scale_noiso": {
+    "v": true,
+    "lp": 88,
+    "nodes": 20,
+    "t": 1.0133,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 60001,
+    "trials": 47,
+    "comps": 6,
+    "iso": 6,
+    "iso_saved": 0,
+    "why": "component-yes"
+   }
+  },
+  {
+   "R": 8,
+   "n": 128,
+   "m": 24,
+   "h": 41,
+   "rdf": {
+    "v": null,
+    "lp": 100,
+    "nodes": 80,
+    "t": 33.0055,
+    "audit": true,
+    "pc": true,
+    "sched": false,
+    "ynodes": 60001,
+    "trials": 22,
+    "comps": null,
+    "iso": null,
+    "iso_saved": null,
+    "why": "budget"
+   },
+   "scale": {
+    "v": true,
+    "lp": 12,
+    "nodes": 2,
+    "t": 0.4078,
+    "audit": true,
+    "pc": true,
+    "sched": true,
+    "ynodes": 20967,
+    "trials": 16,
+    "comps": 8,
+    "iso": 1,
+    "iso_saved": 7,
+    "why": "component-yes"
+   },
+   "scale_noiso": {
+    "v": null,
+    "lp": 100,
+    "nodes": 23,
+    "t": 1.1674,
+    "audit": true,
+    "pc": true,
+    "sched": false,
+    "ynodes": 60001,
+    "trials": 47,
+    "comps": 8,
+    "iso": 8,
+    "iso_saved": 0,
+    "why": "component-unknown"
+   }
+  }
+ ],
+ "no_rep": [
+  {
+   "R": 1,
+   "n": 15,
+   "m": 3,
+   "h": 32,
+   "rdf": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.033,
+    "audit": true,
+    "pc": true,
+    "comps": null,
+    "iso_saved": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.0328,
+    "audit": true,
+    "pc": true,
+    "comps": 0,
+    "iso_saved": 0
+   }
+  },
+  {
+   "R": 2,
+   "n": 30,
+   "m": 6,
+   "h": 32,
+   "rdf": {
+    "v": false,
+    "lp": 7,
+    "nodes": 1,
+    "t": 0.1364,
+    "audit": true,
+    "pc": true,
+    "comps": null,
+    "iso_saved": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.0411,
+    "audit": true,
+    "pc": true,
+    "comps": 2,
+    "iso_saved": 1
+   }
+  },
+  {
+   "R": 4,
+   "n": 60,
+   "m": 12,
+   "h": 32,
+   "rdf": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.2672,
+    "audit": true,
+    "pc": true,
+    "comps": null,
+    "iso_saved": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.0564,
+    "audit": true,
+    "pc": true,
+    "comps": 4,
+    "iso_saved": 3
+   }
+  },
+  {
+   "R": 8,
+   "n": 120,
+   "m": 24,
+   "h": 32,
+   "rdf": {
+    "v": false,
+    "lp": 7,
+    "nodes": 1,
+    "t": 0.911,
+    "audit": true,
+    "pc": true,
+    "comps": null,
+    "iso_saved": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.1037,
+    "audit": true,
+    "pc": true,
+    "comps": 8,
+    "iso_saved": 7
+   }
+  },
+  {
+   "R": 16,
+   "n": 240,
+   "m": 48,
+   "h": 32,
+   "rdf": {
+    "v": false,
+    "lp": 7,
+    "nodes": 1,
+    "t": 2.8699,
+    "audit": true,
+    "pc": true,
+    "comps": null,
+    "iso_saved": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 6,
+    "nodes": 1,
+    "t": 0.3021,
+    "audit": true,
+    "pc": true,
+    "comps": 16,
+    "iso_saved": 15
+   }
+  }
+ ],
+ "energy": [
+  {
+   "n": 50,
+   "m": 10,
+   "h": 13,
+   "rdf": {
+    "v": false,
+    "lp": 1,
+    "t": 0.0212,
+    "audit": true,
+    "pc": true,
+    "prep": false,
+    "kind": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 0,
+    "t": 0.0059,
+    "audit": true,
+    "pc": true,
+    "prep": true,
+    "kind": "energy"
+   }
+  },
+  {
+   "n": 100,
+   "m": 10,
+   "h": 30,
+   "rdf": {
+    "v": false,
+    "lp": 1,
+    "t": 0.2067,
+    "audit": true,
+    "pc": true,
+    "prep": false,
+    "kind": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 0,
+    "t": 0.0391,
+    "audit": true,
+    "pc": true,
+    "prep": true,
+    "kind": "energy"
+   }
+  },
+  {
+   "n": 200,
+   "m": 10,
+   "h": 61,
+   "rdf": {
+    "v": false,
+    "lp": 1,
+    "t": 0.9971,
+    "audit": true,
+    "pc": true,
+    "prep": false,
+    "kind": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 0,
+    "t": 0.2112,
+    "audit": true,
+    "pc": true,
+    "prep": true,
+    "kind": "energy"
+   }
+  },
+  {
+   "n": 400,
+   "m": 20,
+   "h": 59,
+   "rdf": {
+    "v": false,
+    "lp": 1,
+    "t": 13.3072,
+    "audit": true,
+    "pc": true,
+    "prep": false,
+    "kind": null
+   },
+   "scale": {
+    "v": false,
+    "lp": 0,
+    "t": 0.547,
+    "audit": true,
+    "pc": true,
+    "prep": true,
+    "kind": "energy"
+   }
+  }
+ ]
+}

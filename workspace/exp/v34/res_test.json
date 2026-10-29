@@ -1,0 +1,11 @@
+{
+ "brute": {
+  "trials": 1260,
+  "feasible": 649,
+  "mismatch": 0
+ },
+ "bench": {
+  "cases": 100,
+  "mismatch": 0
+ }
+}
