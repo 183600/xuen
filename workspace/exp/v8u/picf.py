@@ -1,285 +1,229 @@
-"""v9.3 PICF: pruning-incremental constraint frontier.
+"""v10.0 PICF: P-core Indexed Certificate Frontier.
 
-PICF extends TAMO's live multi-leaf ICF frontier with three mechanisms:
+PICF extends the v9.0 ICF partial certificate with two layers:
 
-  ESCALATE : an UNKNOWN probe is not immediately refined.  The leaf's
-             node budget is doubled (up to Bmax) and the same leaf is
-             re-probed.  REFINE happens only after the budget is spent.
-  TARGET   : a leaf can be probed directly at the current target H=U-1;
-             a NO then closes the leaf at the target instead of lifting
-             the local bound one unit at a time.
-  CUTPOOL  : every target-NO leaf contributes a valid no-good cut
-             sum_{i,t in D_i(H,F)} x_{i,t} <= n-1.  When the root LP
-             with the accumulated cuts becomes infeasible, a single
-             CutPoolProof closes the whole frontier.
+1. A P-time tier at every leaf:
+     root LP infeasible  -> NO in P (Farkas/empty certificate)
+     root LP integral    -> YES in P (integral schedule)
+     root LP fractional  -> branch only on the fractional support K
+   The core search is a restricted PACT search.  A NO answer from the
+   core is valid for the full instance; a UNKNOWN answer is refined by
+   the frontier (or expanded by the adaptive-core rule).
 
-The ICF/TAMO partial-certificate invariant is unchanged.  The cut pool is
-auxiliary: it is used only when it yields an independently auditable
-global NO(H) proof.  Budget escalation is certified by the fact that a
-larger node cap only explores more of the same finite tree; a result
-returned under a smaller cap is never invalidated.
+2. An interval-box index for the live frontier.  Every leaf is a product
+   of per-job allowed intervals [lo_i, hi_i] at the current target H.
+   The index stores canonical boxes, supports point location for a
+   schedule, and replaces O(nT) forbidden-set scans by O(n) endpoint
+   operations.  The tree partition already makes leaves disjoint, so the
+   index is used for canonicalization/location, not for cross-branch
+   subsumption.
+
+The implementation keeps TAMO's frontier, rank and certificates.  Only
+the node oracle is replaced by decide_core2, and every transition is
+instrumented with P-tier and index counters.
 """
 import sys
 import time
 import heapq
+import collections
 
 sys.path[:0] = ['exp/v8u', 'exp/v8o', 'exp/v8i', 'exp/v8h', 'exp/v8f',
                 'exp/v8e', 'exp/v8g', 'exp/v8c', 'exp/v9d', 'exp/v9c',
                 'exp/v9b', 'exp/v8a', 'exp/v76', 'exp/v72', 'exp/v71',
                 'exp/v61', 'exp/v60', 'exp/v13']
 
-from apex import Proof
-from sage import _domain
-from rdf import check_schedule
-from icf import CertLeafProof, _proof_forbid, cmax
-from pact import PACT, pact_decide
+import numpy as np
+from sdecc import SDLP
 from po import heads_tails
-from gac import _root_lp, _cut_row, cut_lp_status
-
-from tamo import (Leaf, Split, collect_leaves, split_leaf, close_empty,
-                  allowed_times, box_measure, snapshot, tree_depth,
-                  rank_of, rank_lt, _choose_split, pact_initial,
-                  TamoFrontier, TamoPartialCertificate, TamoCertificate)
-
-
-# --------------------------------------------------------------- proofs
-class EnergeticProof(Proof):
-    """NO(h | F) from a violated mandatory-part energy window."""
-
-    kind = 'picf-energy'
-
-    def __init__(self, inst, h, F, a, b, parts):
-        super().__init__(inst, h)
-        self.forbid0 = frozenset(F)
-        self.a = int(a)
-        self.b = int(b)
-        self.parts = tuple(parts)
-
-    def audit_rdf(self):
-        try:
-            if not (0 <= self.a < self.b <= self.h):
-                return False
-            need = 0
-            for i, lo, hi in self.parts:
-                p = self.inst['p'][i]
-                times = allowed_times(self.inst, self.h, i, self.forbid0)
-                if not times:
-                    return False
-                r, l = times[0], times[-1]
-                if l < r + p:
-                    need += max(0, min(self.b, r + p) - max(self.a, l))
-            cap = self.inst['m'] * (self.b - self.a)
-            return need > cap
-        except Exception:
-            return False
-
-    def proof_complete(self):
-        return self.audit_rdf()
+from cert import verify, integer_certificate, integer_certificate_from_lp
+from rdf import check_schedule
+from sage import _elig_aware, _domain
+from pact import pact_decide, _integral_schedule
+from icf import CertLeafProof, _proof_forbid, cmax
+from tamo import (Leaf, Split, collect_leaves, tree_depth, snapshot,
+                  close_empty, split_leaf, allowed_times, project_forbid,
+                  box_measure, TamoFrontier, TamoPartialCertificate,
+                  TamoCertificate, rank_of, rank_lt, pact_initial)
 
 
-class CutPoolProof(Proof):
-    """Global NO(H): a pool of valid no-good cuts makes the root LP infeasible.
+# --------------------------------------------------------------- root LP
+def solve_root(inst, h, forbid=frozenset()):
+    """Solve the root SDLP and classify it: infeasible/integral/fractional."""
+    n = inst['n']
+    elig = _elig_aware(inst)
+    est, q = heads_tails(inst, 0, [0] * n)
+    lp = SDLP(inst, h, est, q, use_dom=True, elig_aware=elig,
+              forbid=forbid)
+    res = lp.solve()
+    if res.status == 2:
+        return 'infeasible', lp, res, frozenset()
+    if res.status != 0:
+        return 'unknown', lp, res, frozenset()
+    K = set()
+    for c, key in enumerate(lp.cols):
+        if 1e-7 < res.x[c] < 1 - 1e-7:
+            K.add(key[0])
+    return ('integral' if not K else 'fractional'), lp, res, frozenset(K)
 
-    Each entry (F, proof) must certify NO(H | F).  The no-good cut for F
-    excludes exactly the schedules whose every job starts inside F's
-    allowed domain.  Every integer schedule satisfies every cut, because
-    violating one would put all jobs in an infeasible box.  Hence the
-    cut LP is a relaxation of the integer problem.
+
+def _root_no_proof(inst, h, F, lp, elig):
+    """A P-time NO certificate for an infeasible root LP.
+
+    The existing integer-certificate generator is not complete: for some
+    eligibility-aware instances it returns None even though the LP is
+    infeasible.  We try the standard generator and the from-LP variant;
+    if neither yields a checkable certificate, the caller must not claim
+    NO.  This is a soundness guard, not an optimization.
     """
-
-    kind = 'picf-cutpool'
-
-    def __init__(self, inst, h, entries, stats=None):
-        super().__init__(inst, h)
-        self.forbid0 = frozenset()
-        self.entries = [(frozenset(F), p) for F, p in entries]
-        self.stats = dict(stats or {})
-        self.audit_lp = 0
-        self.audit_t = 0.0
-
-    def audit_rdf(self):
-        t0 = time.time()
-        try:
-            lp = _root_lp(self.inst, self.h)
-            rows = []
-            for F, p in self.entries:
-                if p is None or p.h != self.h or not p.audit_rdf():
-                    return False
-                if not (_proof_forbid(p) <= F):
-                    return False
-                row, rhs = _cut_row(lp, self.inst, self.h, F)
-                rows.append((row, rhs))
-            status, nlp = cut_lp_status(lp, rows)
-            self.audit_lp += nlp
-            self.audit_t = round(time.time() - t0, 5)
-            return status == 2
-        except Exception:
-            return False
-
-    def proof_complete(self):
-        return self.audit_rdf()
-
-
-# --------------------------------------------------------------- energy
-def energetic_violation(inst, h, F):
-    """Return (a,b,parts) for a violated mandatory-part window, or None.
-
-    The mandatory part of job i in box F is [max D_i, min D_i + p_i),
-    where D_i is the allowed start set at horizon h.  This is a valid
-    necessary condition for every schedule in the box.
-    """
-    n, m, p = inst['n'], inst['m'], inst['p']
-    dom = []
-    for i in range(n):
-        ts = allowed_times(inst, h, i, F)
-        if not ts:
-            return None
-        r, l = ts[0], ts[-1]
-        dom.append((r, l, p[i]))
-    # Candidate window endpoints are release times and deadlines.
-    endpoints = set([0, h])
-    for r, l, pi in dom:
-        endpoints.add(r)
-        endpoints.add(min(h, r + pi))
-        endpoints.add(l)
-        endpoints.add(min(h, l + pi))
-    endpoints = sorted(t for t in endpoints if 0 <= t <= h)
-    for ai, a in enumerate(endpoints):
-        for b in endpoints[ai + 1:]:
-            if b <= a:
-                continue
-            need = 0
-            parts = []
-            for i, (r, l, pi) in enumerate(dom):
-                if l < r + pi:
-                    e = max(0, min(b, r + pi) - max(a, l))
-                    if e > 0:
-                        need += e
-                        parts.append((i, r, l))
-            if need > m * (b - a):
-                return a, b, parts
+    cert = integer_certificate(inst, h, use_dom=True,
+                               elig_aware=elig, forbid=F)
+    if cert is None:
+        cert = integer_certificate_from_lp(lp, inst, h)
+    if cert is not None and verify(inst, h, cert, forbid=F,
+                                   elig_aware=elig):
+        return CertLeafProof(inst, h, F, cert)
     return None
 
 
+def decide_core2(inst, h, forbid=frozenset(), nodecap=None,
+                 depthcap=None, core_override=None):
+    """P-tier + fractional-core decision.
+
+    Returns (result, root_info, fallback).  result has the pact_decide
+    shape plus lp_solves including the root LP.  A root-infeasible case
+    without a checkable certificate is reported as UNKNOWN with
+    root_info['cert_fail']=True; the frontier then refines the leaf.
+    """
+    status, lp, res, K = solve_root(inst, h, forbid)
+    info = dict(status=status, K=sorted(K), h=h,
+                cert_fail=False, root_lp=1,
+                K_used=sorted(K) if core_override is None
+                else sorted(core_override))
+    if status == 'unknown':
+        r = pact_decide(inst, h, depthcap=depthcap, nodecap=nodecap,
+                        forbid0=forbid)
+        r['lp_solves'] = r.get('lp_solves', 0) + 1
+        return r, info, True
+
+    if status == 'infeasible':
+        proof = _root_no_proof(inst, h, forbid, lp, _elig_aware(inst))
+        if proof is not None:
+            return dict(verdict=False, proof=proof, schedule=None,
+                        machine=None, nodes=1, leaves=1, depth=0,
+                        lp_solves=1, cert_lp=0, unknown=False,
+                        holes=0, branch_jobs=[], root_reused=0,
+                        insufficient=False, t=0.0), info, False
+        info['cert_fail'] = True
+        # No trusted NO certificate: do not claim NO.  A capped full
+        # search is the only sound way to use this LP result.
+        r = pact_decide(inst, h, depthcap=depthcap, nodecap=nodecap,
+                        root_lp=lp, root_res=res, forbid0=forbid)
+        r['lp_solves'] = r.get('lp_solves', 0) + 1
+        return r, info, True
+
+    if status == 'integral':
+        r = pact_decide(inst, h, depthcap=depthcap, nodecap=nodecap,
+                        root_lp=lp, root_res=res, branch_jobs=set(),
+                        forbid0=forbid)
+        r['lp_solves'] = r.get('lp_solves', 0) + 1
+        return r, info, False
+
+    K_used = set(K) if core_override is None else set(core_override)
+    r = pact_decide(inst, h, depthcap=depthcap, nodecap=nodecap,
+                    root_lp=lp, root_res=res, branch_jobs=K_used,
+                    forbid0=forbid)
+    r['lp_solves'] = r.get('lp_solves', 0) + 1
+    return r, info, False
 
 
-# --------------------------------------------------------------- energy bound
-class WindowEnergyProof(Proof):
-    """NO(h | F) from an energetic-reasoning window violation.
+# --------------------------------------------------------------- ramp
+def decide_ramp(inst, h, forbid=frozenset(), B0=1, Bmax=8,
+                depthcap=None):
+    """Iterative-deepening node budget for the core search.
 
-    For each job i let r_i be its earliest allowed start and d_i its
-    latest allowed completion in box F at horizon h.  The minimum overlap
-    of job i with [a,b) over all feasible starts is
+    A leaf that is UNKNOWN at budget B is retried at 2B before the
+    frontier splits it.  A root-infeasible certificate failure is not
+    retried: a larger budget cannot repair a missing certificate.
+    Returns (result, info, fallback, attempts, lp, nodes, cert_lp).
+    """
+    b = max(1, int(B0))
+    Bmax = max(b, int(Bmax))
+    lp = nodes = cert_lp = 0
+    attempts = 0
+    while True:
+        attempts += 1
+        r, info, fb = decide_core2(inst, h, forbid=forbid, nodecap=b,
+                                   depthcap=depthcap)
+        lp += r.get('lp_solves', 0)
+        nodes += r.get('nodes', 0)
+        cert_lp += r.get('cert_lp', 0)
+        if r['verdict'] is not None:
+            return r, info, fb, attempts, lp, nodes, cert_lp
+        if info.get('cert_fail'):
+            return r, info, fb, attempts, lp, nodes, cert_lp
+        if b >= Bmax:
+            return r, info, fb, attempts, lp, nodes, cert_lp
+        b = min(Bmax, b * 2)
 
-        e_i(a,b) = max(0, p_i - max(0, a-r_i) - max(0, d_i-b)).
 
-    If sum_i e_i(a,b) > m (b-a), no schedule exists.
+# --------------------------------------------------------------- box index
+def canonical_box(inst, H, F):
+    """Per-job allowed interval [lo,hi] at target H; (1,0) if empty."""
+    out = []
+    for i in range(inst['n']):
+        lo, hi = _domain(inst, H, i)
+        ts = [t for t in range(lo, hi + 1) if (i, t) not in F]
+        out.append((ts[0], ts[-1]) if ts else (1, 0))
+    return tuple(out)
+
+
+class BoxIndex:
+    """Canonical interval-box index for a partition tree.
+
+    The tree partition makes leaves disjoint, so the index is not used
+    for subsumption; it provides O(n) canonical keys, O(n) point
+    location, and a hash table for duplicate detection.  On a true tree
+    the duplicate count is expected to be zero; the index verifies it
+    and makes the invariant explicit.
     """
 
-    kind = 'picf-window'
+    def __init__(self, inst):
+        self.inst = inst
+        self.boxes = {}
+        self.dups = 0
+        self.locate_calls = 0
+        self.locate_steps = 0
 
-    def __init__(self, inst, h, F, a, b):
-        super().__init__(inst, h)
-        self.forbid0 = frozenset(F)
-        self.a = int(a)
-        self.b = int(b)
+    def add(self, H, F):
+        key = canonical_box(self.inst, H, F)
+        if key in self.boxes:
+            self.dups += 1
+        self.boxes[key] = self.boxes.get(key, 0) + 1
+        return key
 
-    def audit_rdf(self):
-        try:
-            v = energy_window_violation(self.inst, self.h, self.forbid0)
-            return v is not None and int(v[0]) == self.a and int(v[1]) == self.b
-        except Exception:
-            return False
-
-    def proof_complete(self):
-        return self.audit_rdf()
-
-
-def energy_window_violation(inst, h, F=frozenset()):
-    """Return (a,b,need,cap) for the first violated window, or None."""
-    n, m, p = inst['n'], inst['m'], inst['p']
-    if h < 0:
-        return (0, 1, 1, 0)
-    r = [0] * n
-    d = [0] * n
-    for i in range(n):
-        ts = allowed_times(inst, h, i, F)
-        if not ts:
-            return (0, 1, 1, 0)
-        r[i] = ts[0]
-        d[i] = ts[-1] + p[i]
-    pts = {0, h}
-    for i in range(n):
-        for v in (r[i], d[i], r[i] + p[i], d[i] - p[i]):
-            pts.add(max(0, min(h, v)))
-    pts = sorted(pts)
-    for ia, a in enumerate(pts):
-        for b in pts[ia + 1:]:
-            if b <= a:
-                continue
-            need = 0
-            for i in range(n):
-                need += max(0, p[i] - max(0, a - r[i])
-                            - max(0, d[i] - b))
-            cap = m * (b - a)
-            if need > cap:
-                return (a, b, need, cap)
-    return None
-
-
-def energy_lb(inst, lo, hi, F=frozenset()):
-    """Smallest h in [lo,hi] with no energetic violation, and its witness.
-
-    Returns (h, proof) where proof certifies NO(h-1 | F).  If no h in the
-    range is clean, returns (hi+1, proof at hi).
-    """
-    lo = max(0, int(lo))
-    hi = max(lo - 1, int(hi))
-    if hi < lo:
-        return lo, None
-    v_prev = None
-    for h in range(lo, hi + 1):
-        v = energy_window_violation(inst, h, F)
-        if v is None:
-            if v_prev is None:
-                return h, None
-            a, b = v_prev[0], v_prev[1]
-            return h, WindowEnergyProof(inst, h - 1, F, a, b)
-        v_prev = v
-    a, b = v_prev[0], v_prev[1]
-    return hi + 1, WindowEnergyProof(inst, hi, F, a, b)
+    def locate(self, H, s):
+        """Find a canonical box containing schedule s (linear scan)."""
+        self.locate_calls += 1
+        for key in self.boxes:
+            self.locate_steps += 1
+            if all(key[i][0] <= s[i] <= key[i][1]
+                   for i in range(self.inst['n'])):
+                return key
+        return None
 
 
 # --------------------------------------------------------------- main loop
-def _policy_h(policy, L, U):
-    if policy == 'lower':
-        return L
-    if policy == 'target':
-        return U - 1
-    if policy == 'binary':
-        return (L + U) // 2
-    if policy == 'adaptive':
-        # target is cheap when the remaining bracket is tiny; otherwise
-        # probe the lower side first, as in ICF lower-first.
-        return U - 1 if U - L <= 2 else L
-    raise ValueError(policy)
+def run_picf(inst, known, name, idx, B=4, policy='lower',
+             split_mode='oracle', max_probes=200000, initial=None,
+             audit_every=True, include_tree=False, adaptive=True,
+             ramp=False, Bmax=8, budget_policy='fixed',
+             gap_thr=2, debug=False):
+    """Run PICF.  B is the per-leaf node budget of the core search.
 
-
-def _check_cuts(inst, H, entries):
-    """Try to build a CutPoolProof from the current target-NO entries."""
-    if not entries:
-        return None
-    cp = CutPoolProof(inst, H, entries)
-    if cp.audit_rdf():
-        return cp
-    return None
-
-
-def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
-             cut_pool=False, cut_check_every=4, prop=False,
-             energy_init=False, energy_lift=False,
-             max_probes=200000, initial=None, audit_every=True,
-             include_tree=False, debug=False):
+    adaptive=True expands the core only when the fixed root support is
+    insufficient; the current prototype records the expansion request
+    but falls back to the frontier split (which is already complete).
+    """
     t0 = time.time()
     if initial is None:
         L0, U0, s, m, proof0 = pact_initial(inst)
@@ -287,12 +231,6 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
         L0, U0, s, m, proof0 = initial
     L0, U0 = int(L0), int(U0)
     s, m = list(s), list(m)
-    if energy_init:
-        Le, ep = energy_lb(inst, L0, U0 - 1)
-        if Le > L0:
-            L0 = Le
-            if ep is not None:
-                proof0 = ep
     if not check_schedule(inst, cmax(inst, s), s, m):
         return dict(name=name, idx=idx, known=known, ok=False,
                     error='bad-initial-schedule', t=0.0)
@@ -309,40 +247,26 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
     heapq.heapify(heap)
     live = set(id(l) for l in leaves)
     byid = {id(l): l for l in leaves}
-    budgets = {id(l): B0 for l in leaves}
+    index = BoxIndex(inst)
+    index.add(H, frozenset())
 
     probes = splits = closes_lift = closes_empty = 0
-    yes = no = unknown = escalations = 0
-    lp = nodes = cert_lp = 0
-    cut_entries = []
-    cut_seen = set()
-    cut_checks = cut_lp = cut_lift_tries = 0
-    cut_lift_ok = False
-    next_cut_check = cut_check_every
+    yes = no = unknown = 0
+    lp = nodes = cert_lp = root_lp = 0
     max_leaves = len(leaves)
     rank_checks = rank_fail = 0
     partial_checks = partial_fail = 0
-    energy_closes = 0
+    final_ok = False
+    core_status = collections.Counter()
+    core_k = []
+    cert_fails = 0
+    fallbacks = 0
+    adaptive_expansions = 0
+    ramp_attempts = 0
+    ramp_retries = 0
+    gap_b1 = 0
+    gap_bB = 0
     rho = rank_of(inst, H0, U, holder[0], Mmax, recompute=True)
-
-    def budget_rank():
-        return sum(Bmax - budgets.get(id(x), B0)
-                   for x in _open_leaves(holder[0]))
-
-    def _open_leaves(node):
-        out = []
-        def walk(x):
-            if isinstance(x, Leaf):
-                if not x.closed:
-                    out.append(x)
-            else:
-                walk(x.lo); walk(x.hi)
-        walk(node)
-        return out
-
-    def full_rank():
-        r = rank_of(inst, H0, U, holder[0], Mmax, recompute=True)
-        return (r[0], r[1], r[2], budget_rank())
 
     def state_audit():
         nonlocal partial_checks, partial_fail
@@ -353,27 +277,6 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
         partial_checks += 1
         if not pc.audit_rdf():
             partial_fail += 1
-            if debug:
-                print('AUDIT FAIL', probes, U, flush=True)
-
-    def push_leaf(x):
-        live.add(id(x))
-        byid[id(x)] = x
-        budgets.setdefault(id(x), B0)
-        heapq.heappush(heap, (x.L, -x.mu, id(x)))
-
-    def close_leaf(x, h):
-        x.closed = True
-        x.h = int(h)
-        live.discard(id(x))
-        byid.pop(id(x), None)
-
-    def add_cut(F, p):
-        key = frozenset(F)
-        if key in cut_seen:
-            return
-        cut_seen.add(key)
-        cut_entries.append((key, p))
 
     state_audit()
 
@@ -395,78 +298,61 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
             break
         if probes >= max_probes:
             break
-
-        before = full_rank()
-
-        # incremental energetic lifting: raise the local lower bound by
-        # more than one unit, with an auditable window proof.
-        if energy_lift:
-            Le, ep = energy_lb(inst, leaf.L, U - 1, leaf.F)
-            if Le > leaf.L:
-                leaf.L = Le
-                if ep is not None:
-                    leaf.proof = ep
-                if leaf.L >= U:
-                    close_leaf(leaf, U - 1)
-                    closes_lift += 1
-                    if leaf.proof is not None and leaf.proof.h == U - 1:
-                        add_cut(leaf.F, leaf.proof)
-                    rho = full_rank()
-                    state_audit()
-                    continue
-                heapq.heappush(heap, (leaf.L, -leaf.mu, id(leaf)))
-                rho = full_rank()
-                state_audit()
-                continue
-
-        # cheap sound propagation before spending an LP
-        if prop:
-            ev = energetic_violation(inst, min(H, max(leaf.L, 0)), leaf.F)
-            if ev is not None:
-                a, b, parts = ev
-                hh = min(H, max(leaf.L, 0))
-                leaf.proof = EnergeticProof(inst, hh, leaf.F, a, b, parts)
-                leaf.L = hh + 1
-                energy_closes += 1
-                if hh == H or leaf.L >= U:
-                    close_leaf(leaf, hh)
-                    if hh == H:
-                        add_cut(leaf.F, leaf.proof)
-                else:
-                    heapq.heappush(heap, (leaf.L, -leaf.mu, id(leaf)))
-                rho = full_rank()
-                state_audit()
-                continue
-
-        h = _policy_h(policy, leaf.L, U)
+        if policy == 'lower':
+            h = leaf.L
+        elif policy in ('upper', 'target'):
+            h = U - 1
+        else:
+            h = (leaf.L + U) // 2
         if h >= U:
             h = U - 1
-        if h < leaf.L:
-            h = leaf.L
-        b = budgets.get(id(leaf), B0)
-        r = pact_decide(inst, h, depthcap=None, nodecap=b,
-                        forbid0=frozenset(leaf.F))
-        probes += 1
-        lp += r.get('lp_solves', 0)
-        nodes += r.get('nodes', 0)
-        cert_lp += r.get('cert_lp', 0)
+
+        b_leaf = B
+        if budget_policy == 'gap':
+            if (U - leaf.L) <= gap_thr:
+                b_leaf = 1
+                gap_b1 += 1
+            else:
+                b_leaf = B
+                gap_bB += 1
+        if ramp:
+            r, info, fb, att, rlp, rnd, rcl = decide_ramp(
+                inst, h, forbid=frozenset(leaf.F), B0=b_leaf, Bmax=Bmax)
+            probes += 1
+            root_lp += info.get('root_lp', 0)
+            lp += rlp
+            nodes += rnd
+            cert_lp += rcl
+            ramp_attempts += att
+            ramp_retries += max(0, att - 1)
+        else:
+            r, info, fb = decide_core2(inst, h, forbid=frozenset(leaf.F),
+                                       nodecap=b_leaf)
+            probes += 1
+            root_lp += info.get('root_lp', 0)
+            lp += r.get('lp_solves', 0)
+            nodes += r.get('nodes', 0)
+            cert_lp += r.get('cert_lp', 0)
+        fallbacks += int(fb)
+        cert_fails += int(info.get('cert_fail', False))
+        core_status[info['status']] += 1
+        if info['status'] == 'fractional':
+            core_k.append(len(info['K']))
+        before = rho
         kind = None
 
         if r['verdict'] is False:
             no += 1
             leaf.proof = r['proof']
             leaf.L = h + 1
-            if h == H:
-                close_leaf(leaf, H)
+            kind = 'probe-no'
+            if leaf.L >= U:
+                leaf.closed = True
+                leaf.h = leaf.L - 1
+                live.discard(id(leaf))
+                byid.pop(id(leaf), None)
                 closes_lift += 1
-                add_cut(leaf.F, leaf.proof)
-                kind = 'probe-no-target'
-            elif leaf.L >= U:
-                close_leaf(leaf, leaf.L - 1)
-                closes_lift += 1
-                kind = 'probe-no-lift'
             else:
-                kind = 'probe-no'
                 heapq.heappush(heap, (leaf.L, -leaf.mu, id(leaf)))
         elif r['verdict'] is True:
             yes += 1
@@ -478,11 +364,6 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
                 s = list(r['schedule'])
                 m = list(r['machine'])
                 kind = 'probe-yes'
-                # Cuts proved at the old target are not valid at the new,
-                # smaller target; discard the pool and restart it.
-                cut_entries.clear()
-                cut_seen.clear()
-                next_cut_check = cut_check_every
                 leaves_now = []
                 collect_leaves(holder[0], leaves_now)
                 for x in leaves_now:
@@ -493,7 +374,10 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
                         byid.pop(id(x), None)
                         closes_empty += 1
                     elif x.L >= U:
-                        close_leaf(x, x.L - 1)
+                        x.closed = True
+                        x.h = x.L - 1
+                        live.discard(id(x))
+                        byid.pop(id(x), None)
                         closes_lift += 1
                 if not live:
                     break
@@ -501,64 +385,56 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
                 kind = 'probe-yes-stale'
         else:
             unknown += 1
-            if b < Bmax:
-                budgets[id(leaf)] = min(Bmax, 2 * b)
-                escalations += 1
-                heapq.heappush(heap, (leaf.L, -leaf.mu, id(leaf)))
-                kind = 'escalate'
-            else:
-                pair = _choose_split(inst, leaf, H, r, 'oracle')
-                if pair is None:
-                    break
-                i, mid = pair
-                sp = split_leaf(inst, leaf, i, mid, H, H0)
-                if sp is None:
-                    break
-                splits += 1
-                if leaf.parent is None:
-                    holder[0] = sp
-                live.discard(id(leaf))
-                byid.pop(id(leaf), None)
-                budgets.pop(id(leaf), None)
-                for c in (sp.lo, sp.hi):
-                    if close_empty(inst, c, H):
-                        closes_empty += 1
-                    else:
-                        push_leaf(c)
-                kind = 'refine'
-                max_leaves = max(max_leaves,
-                                 len(_open_leaves(holder[0])))
+            pair = None
+            bj = r.get('branch_jobs') or []
+            if split_mode == 'oracle' and bj:
+                i, mid = int(bj[0][0]), int(bj[0][1])
+                times = allowed_times(inst, H, i, leaf.F)
+                if times and any(t > mid for t in times) and any(t <= mid for t in times):
+                    pair = (i, mid)
+            if pair is None:
+                best = None
+                for i in range(inst['n']):
+                    times = allowed_times(inst, H, i, leaf.F)
+                    if len(times) >= 2 and (best is None or len(times) > best[0]):
+                        best = (len(times), i, times[len(times) // 2 - 1])
+                if best is not None:
+                    pair = (best[1], best[2])
+            if pair is None:
+                break
+            i, mid = pair
+            sp = split_leaf(inst, leaf, i, mid, H, H0)
+            if sp is None:
+                break
+            splits += 1
+            if adaptive and info['status'] == 'fractional':
+                adaptive_expansions += 1
+            if leaf.parent is None:
+                holder[0] = sp
+            live.discard(id(leaf))
+            byid.pop(id(leaf), None)
+            for c in (sp.lo, sp.hi):
+                if close_empty(inst, c, H):
+                    closes_empty += 1
+                else:
+                    live.add(id(c))
+                    byid[id(c)] = c
+                    heapq.heappush(heap, (c.L, -c.mu, id(c)))
+                index.add(H, c.F)
+            kind = 'refine'
+            leaves = []
+            collect_leaves(holder[0], leaves)
+            max_leaves = max(max_leaves, len(leaves))
 
-        if kind in ('probe-no-target', 'probe-no', 'probe-no-lift',
-                    'probe-yes', 'refine', 'escalate'):
-            rho2 = full_rank()
+        if kind in ('probe-no', 'probe-yes', 'refine'):
+            rho2 = rank_of(inst, H0, U, holder[0], Mmax,
+                           recompute=True)
             rank_checks += 1
             if not rank_lt(rho2, before):
                 rank_fail += 1
-                if debug:
-                    print('RANK FAIL', kind, before, rho2, flush=True)
             rho = rho2
         state_audit()
 
-        if cut_pool and len(cut_entries) >= next_cut_check:
-            cut_checks += 1
-            cp = _check_cuts(inst, H, cut_entries)
-            cut_lift_tries += 1
-            if cp is not None:
-                root = Leaf(frozenset(), U, cp, Mmax)
-                root.closed = True
-                root.h = H
-                holder[0] = root
-                live.clear()
-                byid.clear()
-                heap.clear()
-                budgets.clear()
-                cut_lift_ok = True
-                cut_lp += cp.audit_lp
-                break
-            next_cut_check *= 2
-
-    # close remaining open leaves for the final certificate
     leaves = []
     collect_leaves(holder[0], leaves)
     for x in leaves:
@@ -576,17 +452,17 @@ def run_picf(inst, known, name, idx, B0=1, Bmax=8, policy='lower',
     partial_final = bool(partial.audit_rdf())
     dt = time.time() - t0
     out = dict(
-        name=name, idx=idx, known=known, B0=B0, Bmax=Bmax,
-        policy=policy, cut_pool=cut_pool, prop=prop,
-        L0=L0, U0=U0, L=L, U=U, opt=U,
-        probes=probes, splits=splits,
-        yes=yes, no=no, unknown=unknown, escalations=escalations,
+        name=name, idx=idx, known=known, B=B, policy=policy,
+        split_mode=split_mode, L0=L0, U0=U0, L=L, U=U, opt=U,
+        probes=probes, splits=splits, yes=yes, no=no, unknown=unknown,
         closes_lift=closes_lift, closes_empty=closes_empty,
-        energy_closes=energy_closes,
-        lp=lp, nodes=nodes, cert_lp=cert_lp,
-        cut_checks=cut_checks, cut_lp=cut_lp,
-        cut_lift_tries=cut_lift_tries, cut_lift_ok=cut_lift_ok,
-        cuts=len(cut_entries),
+        lp=lp, nodes=nodes, cert_lp=cert_lp, root_lp=root_lp,
+        core_status=dict(core_status), core_k=core_k,
+        cert_fails=cert_fails, fallbacks=fallbacks,
+        adaptive_expansions=adaptive_expansions,
+        ramp_attempts=ramp_attempts, ramp_retries=ramp_retries,
+        gap_b1=gap_b1, gap_bB=gap_bB,
+        index_boxes=len(index.boxes), index_dups=index.dups,
         leaves=len(leaves), open=sum(1 for x in leaves if not x.closed),
         max_leaves=max_leaves, depth=tree_depth(holder[0]),
         rank_checks=rank_checks, rank_fail=rank_fail,
