@@ -1,0 +1,42 @@
+{
+ "order": {
+  "probes": 21,
+  "zero": 0,
+  "one": 19,
+  "ea_hits": 0,
+  "route_hits": 0,
+  "ok": 20,
+  "t": 0.37,
+  "work": 0
+ },
+ "ea": {
+  "probes": 10,
+  "zero": 10,
+  "one": 10,
+  "ea_hits": 11,
+  "route_hits": 0,
+  "ok": 20,
+  "t": 0.32,
+  "work": 7954
+ },
+ "route": {
+  "probes": 1,
+  "zero": 19,
+  "one": 1,
+  "ea_hits": 0,
+  "route_hits": 20,
+  "ok": 20,
+  "t": 0.25,
+  "work": 11875
+ },
+ "both": {
+  "probes": 1,
+  "zero": 19,
+  "one": 1,
+  "ea_hits": 11,
+  "route_hits": 9,
+  "ok": 20,
+  "t": 0.29,
+  "work": 13592
+ }
+}

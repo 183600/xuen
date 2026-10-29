@@ -801,3 +801,9 @@
 {"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-10-29 08:29:35"}
 {"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-29 08:54:35"}
 {"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-29 09:19:35"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-29 09:49:11"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261028-232751-r3", "changed": ["idea"], "ts": "2026-10-29 09:49:11"}
+{"event": "heartbeat", "round": 2, "ts": "2026-10-29 09:58:46"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-10-29 10:23:46"}
+{"event": "skipped", "round": 4, "reason": "超时", "ts": "2026-10-29 10:48:46"}
+{"event": "skipped", "round": 5, "reason": "超时", "ts": "2026-10-29 11:13:46"}
