@@ -1,0 +1,18 @@
+{
+ "brute": {
+  "n": 400,
+  "feasible": 159,
+  "icc_hits": 226,
+  "mis_icc": 0,
+  "mis_pipe": 0
+ },
+ "yes70": {
+  "valid": 70,
+  "bad": 0,
+  "nodes": 8961
+ },
+ "icc_witness": {
+  "checked": 53,
+  "bad": 0
+ }
+}

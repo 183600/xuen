@@ -1,0 +1,52 @@
+[
+ {
+  "target": "closed",
+  "mutation": "none",
+  "result": true
+ },
+ {
+  "target": "closed",
+  "mutation": "height",
+  "result": false
+ },
+ {
+  "target": "closed",
+  "mutation": "nodes",
+  "result": false
+ },
+ {
+  "target": "closed",
+  "mutation": "lp",
+  "result": false
+ },
+ {
+  "target": "closed",
+  "mutation": "cert_lp",
+  "result": false
+ },
+ {
+  "target": "closed",
+  "mutation": "open_leaves",
+  "result": false
+ },
+ {
+  "target": "residual",
+  "mutation": "none",
+  "result": true
+ },
+ {
+  "target": "residual",
+  "mutation": "bad-reason",
+  "result": false
+ },
+ {
+  "target": "residual",
+  "mutation": "open-to-leaf",
+  "result": false
+ },
+ {
+  "target": "residual",
+  "mutation": "restored",
+  "result": true
+ }
+]

@@ -1,0 +1,268 @@
+{
+ "icf": {
+  "n": 252,
+  "ok": 252,
+  "probes": 104,
+  "lp": 429,
+  "cert_lp": 135,
+  "nodes": 429,
+  "states": 356,
+  "state_audits": 356,
+  "state_fail": 0,
+  "unsupported": 0,
+  "wall": 10.92
+ },
+ "frontier": {
+  "n": 16,
+  "ok": 16,
+  "certified": 16,
+  "leaves": 940,
+  "lp": 1864,
+  "cert_lp": 940,
+  "probes": 1864,
+  "splits": 924,
+  "audits": 16,
+  "audit_fail": 0,
+  "unsupported": 0,
+  "wall": 48.86
+ },
+ "archive": {
+  "certs": 1066,
+  "original": 35612,
+  "stored": 31030,
+  "refs": 663,
+  "matches": 7637,
+  "ratio": 0.8713,
+  "build": 0.26712,
+  "reconstruct_bad": 0,
+  "wall": 0.29
+ },
+ "corruption": {
+  "total": 252,
+  "detected": 251,
+  "missed": 1,
+  "restore_ok": 252,
+  "restore_bad": 0,
+  "byte_total": 252,
+  "byte_fail": 233
+ },
+ "tiny_hash": {
+  "commits": 120,
+  "hits": 0,
+  "collisions": 33,
+  "exact_lookups": 120
+ },
+ "resume": {
+  "n": 16,
+  "ok": 16,
+  "saved": 19,
+  "base_probes": 35,
+  "resume_probes": 16,
+  "rows": [
+   {
+    "idx": 0,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 1,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 2,
+    "base_probes": 3,
+    "resume_probes": 1,
+    "saved": 2,
+    "ok": true
+   },
+   {
+    "idx": 3,
+    "base_probes": 3,
+    "resume_probes": 1,
+    "saved": 2,
+    "ok": true
+   },
+   {
+    "idx": 4,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 5,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 6,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 7,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 8,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 9,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 10,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 11,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 12,
+    "base_probes": 3,
+    "resume_probes": 1,
+    "saved": 2,
+    "ok": true
+   },
+   {
+    "idx": 13,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 14,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   },
+   {
+    "idx": 15,
+    "base_probes": 2,
+    "resume_probes": 1,
+    "saved": 1,
+    "ok": true
+   }
+  ]
+ },
+ "index": {
+  "total": {
+   "base": 141,
+   "pert": 60,
+   "stress": 51
+  },
+  "family_hits": {
+   "base": 2,
+   "pert": 57,
+   "stress": 49
+  },
+  "n": 252,
+  "sa_len": 59715,
+  "gap_singletons": 16
+ },
+ "summary": {
+  "icf": {
+   "n": 252,
+   "ok": 252,
+   "probes": 104,
+   "lp": 429,
+   "cert_lp": 135,
+   "nodes": 429,
+   "states": 356,
+   "state_audits": 356,
+   "state_fail": 0,
+   "unsupported": 0,
+   "wall": 10.92
+  },
+  "frontier": {
+   "n": 16,
+   "ok": 16,
+   "certified": 16,
+   "leaves": 940,
+   "lp": 1864,
+   "cert_lp": 940,
+   "probes": 1864,
+   "splits": 924,
+   "audits": 16,
+   "audit_fail": 0,
+   "unsupported": 0,
+   "wall": 48.86
+  },
+  "archive": {
+   "certs": 1066,
+   "original": 35612,
+   "stored": 31030,
+   "refs": 663,
+   "matches": 7637,
+   "ratio": 0.8713,
+   "build": 0.26712,
+   "reconstruct_bad": 0,
+   "wall": 0.29
+  },
+  "corruption": {
+   "total": 252,
+   "detected": 251,
+   "missed": 1,
+   "restore_ok": 252,
+   "restore_bad": 0,
+   "byte_total": 252,
+   "byte_fail": 233
+  },
+  "tiny_hash": {
+   "commits": 120,
+   "hits": 0,
+   "collisions": 33,
+   "exact_lookups": 120
+  },
+  "resume": {
+   "n": 16,
+   "ok": 16,
+   "saved": 19,
+   "base_probes": 35,
+   "resume_probes": 16
+  },
+  "index": {
+   "total": {
+    "base": 141,
+    "pert": 60,
+    "stress": 51
+   },
+   "family_hits": {
+    "base": 2,
+    "pert": 57,
+    "stress": 49
+   },
+   "n": 252,
+   "sa_len": 59715,
+   "gap_singletons": 16
+  }
+ }
+}

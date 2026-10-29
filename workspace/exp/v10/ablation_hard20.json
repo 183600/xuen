@@ -1,0 +1,64 @@
+[
+ {
+  "mode": "mixed",
+  "p": 0.7,
+  "hits": 13,
+  "n": 13,
+  "mean_dec": 2777,
+  "fails": [],
+  "t": 4.33
+ },
+ {
+  "mode": "flat",
+  "p": 0.7,
+  "hits": 12,
+  "n": 13,
+  "mean_dec": 2580,
+  "fails": [
+   3
+  ],
+  "t": 3.94
+ },
+ {
+  "mode": "time",
+  "p": 0.7,
+  "hits": 12,
+  "n": 13,
+  "mean_dec": 2354,
+  "fails": [
+   3
+  ],
+  "t": 3.68
+ },
+ {
+  "mode": "rank",
+  "p": 0.7,
+  "hits": 13,
+  "n": 13,
+  "mean_dec": 1978,
+  "fails": [],
+  "t": 3.03
+ },
+ {
+  "mode": "mixed",
+  "p": 0.5,
+  "hits": 12,
+  "n": 13,
+  "mean_dec": 2852,
+  "fails": [
+   3
+  ],
+  "t": 4.44
+ },
+ {
+  "mode": "mixed",
+  "p": 0.9,
+  "hits": 12,
+  "n": 13,
+  "mean_dec": 4252,
+  "fails": [
+   3
+  ],
+  "t": 6.49
+ }
+]

@@ -1,0 +1,161 @@
+[
+ {
+  "s": 1,
+  "opt": 18,
+  "S": 8,
+  "L": 3,
+  "v": "YES",
+  "plc": 165,
+  "nodes": 220,
+  "cut": 0,
+  "levels": [
+   1,
+   9,
+   45,
+   165
+  ]
+ },
+ {
+  "s": 6,
+  "opt": 14,
+  "S": 1,
+  "L": 3,
+  "v": "NO-root-er",
+  "plc": 4,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ },
+ {
+  "s": 9,
+  "opt": 17,
+  "S": 4,
+  "L": 4,
+  "v": "NO-root-er",
+  "plc": 70,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ },
+ {
+  "s": 12,
+  "opt": 18,
+  "S": -3,
+  "L": 6,
+  "v": null,
+  "plc": null,
+  "nodes": null,
+  "cut": null,
+  "levels": null
+ },
+ {
+  "s": 14,
+  "opt": 16,
+  "S": 2,
+  "L": 5,
+  "v": "NO-root-er",
+  "plc": 21,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ },
+ {
+  "s": 20,
+  "opt": 16,
+  "S": 5,
+  "L": 3,
+  "v": "NO-root-er",
+  "plc": 56,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ },
+ {
+  "s": 21,
+  "opt": 18,
+  "S": 7,
+  "L": 4,
+  "v": "YES",
+  "plc": 330,
+  "nodes": 495,
+  "cut": 0,
+  "levels": [
+   1,
+   8,
+   36,
+   120,
+   330
+  ]
+ },
+ {
+  "s": 24,
+  "opt": 14,
+  "S": 5,
+  "L": 3,
+  "v": "YES",
+  "plc": 56,
+  "nodes": 84,
+  "cut": 0,
+  "levels": [
+   1,
+   6,
+   21,
+   56
+  ]
+ },
+ {
+  "s": 26,
+  "opt": 17,
+  "S": 7,
+  "L": 3,
+  "v": "NO-root-er",
+  "plc": 120,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ },
+ {
+  "s": 27,
+  "opt": 19,
+  "S": 7,
+  "L": 3,
+  "v": "YES",
+  "plc": 120,
+  "nodes": 165,
+  "cut": 0,
+  "levels": [
+   1,
+   8,
+   36,
+   120
+  ]
+ },
+ {
+  "s": 30,
+  "opt": 16,
+  "S": 4,
+  "L": 4,
+  "v": "YES",
+  "plc": 70,
+  "nodes": 126,
+  "cut": 1,
+  "levels": [
+   1,
+   5,
+   15,
+   35,
+   69
+  ]
+ },
+ {
+  "s": 37,
+  "opt": 15,
+  "S": 3,
+  "L": 3,
+  "v": "NO-root-er",
+  "plc": 20,
+  "nodes": 1,
+  "cut": 1,
+  "levels": null
+ }
+]

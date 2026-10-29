@@ -1,0 +1,3319 @@
+[
+ {
+  "uid": 0,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 0,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 1,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 1,
+  "known": 29,
+  "opt": 29,
+  "probes": []
+ },
+ {
+  "uid": 2,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 2,
+  "known": 41,
+  "opt": 41,
+  "probes": []
+ },
+ {
+  "uid": 3,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 3,
+  "known": 36,
+  "opt": 36,
+  "probes": []
+ },
+ {
+  "uid": 4,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 4,
+  "known": 40,
+  "opt": 40,
+  "probes": []
+ },
+ {
+  "uid": 5,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01932,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 6,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 6,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 7,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 7,
+  "known": 30,
+  "opt": 30,
+  "probes": []
+ },
+ {
+  "uid": 8,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 8,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 9,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 9,
+  "known": 31,
+  "opt": 31,
+  "probes": []
+ },
+ {
+  "uid": 10,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 10,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 11,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 11,
+  "known": 37,
+  "opt": 37,
+  "probes": [
+   {
+    "h": 37,
+    "v": "YES",
+    "nodes": 4,
+    "cert": 0,
+    "lp": 4,
+    "t": 0.01693,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 12,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 12,
+  "known": 40,
+  "opt": 40,
+  "probes": []
+ },
+ {
+  "uid": 13,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 13,
+  "known": 39,
+  "opt": 39,
+  "probes": [
+   {
+    "h": 39,
+    "v": "YES",
+    "nodes": 6,
+    "cert": 0,
+    "lp": 6,
+    "t": 0.02891,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 14,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 14,
+  "known": 50,
+  "opt": 50,
+  "probes": []
+ },
+ {
+  "uid": 15,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 15,
+  "known": 36,
+  "opt": 36,
+  "probes": []
+ },
+ {
+  "uid": 16,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 16,
+  "known": 29,
+  "opt": 29,
+  "probes": []
+ },
+ {
+  "uid": 17,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 17,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 18,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 18,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 19,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 19,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 20,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 20,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00989,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 21,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 21,
+  "known": 30,
+  "opt": 30,
+  "probes": [
+   {
+    "h": 30,
+    "v": "YES",
+    "nodes": 5,
+    "cert": 0,
+    "lp": 5,
+    "t": 0.02076,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 22,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 22,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 23,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 23,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 24,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 24,
+  "known": 43,
+  "opt": 43,
+  "probes": []
+ },
+ {
+  "uid": 25,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 25,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 26,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 26,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 27,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 27,
+  "known": 43,
+  "opt": 43,
+  "probes": [
+   {
+    "h": 43,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.01653,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 28,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 28,
+  "known": 31,
+  "opt": 31,
+  "probes": []
+ },
+ {
+  "uid": 29,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 29,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 30,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 30,
+  "known": 43,
+  "opt": 43,
+  "probes": []
+ },
+ {
+  "uid": 31,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 31,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 32,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 32,
+  "known": 37,
+  "opt": 37,
+  "probes": [
+   {
+    "h": 37,
+    "v": "YES",
+    "nodes": 1,
+    "cert": 0,
+    "lp": 1,
+    "t": 0.00729,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 33,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 33,
+  "known": 37,
+  "opt": 37,
+  "probes": []
+ },
+ {
+  "uid": 34,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 34,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 35,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 35,
+  "known": 41,
+  "opt": 41,
+  "probes": [
+   {
+    "h": 41,
+    "v": "YES",
+    "nodes": 1,
+    "cert": 0,
+    "lp": 1,
+    "t": 0.00878,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 36,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 36,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 4,
+    "cert": 0,
+    "lp": 4,
+    "t": 0.02021,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 37,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 37,
+  "known": 38,
+  "opt": 38,
+  "probes": []
+ },
+ {
+  "uid": 38,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 38,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 39,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 39,
+  "known": 39,
+  "opt": 39,
+  "probes": [
+   {
+    "h": 39,
+    "v": "YES",
+    "nodes": 5,
+    "cert": 0,
+    "lp": 5,
+    "t": 0.02037,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 40,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 40,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 41,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 41,
+  "known": 28,
+  "opt": 28,
+  "probes": []
+ },
+ {
+  "uid": 42,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 42,
+  "known": 39,
+  "opt": 39,
+  "probes": []
+ },
+ {
+  "uid": 43,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 43,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 44,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 44,
+  "known": 25,
+  "opt": 25,
+  "probes": []
+ },
+ {
+  "uid": 45,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 45,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 46,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 46,
+  "known": 31,
+  "opt": 31,
+  "probes": []
+ },
+ {
+  "uid": 47,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02556,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 48,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 48,
+  "known": 27,
+  "opt": 27,
+  "probes": [
+   {
+    "h": 27,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.00918,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 49,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 49,
+  "known": 39,
+  "opt": 39,
+  "probes": []
+ },
+ {
+  "uid": 50,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 0,
+  "known": 10,
+  "opt": 10,
+  "probes": [
+   {
+    "h": 10,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.00856,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 51,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 1,
+  "known": 7,
+  "opt": 7,
+  "probes": []
+ },
+ {
+  "uid": 52,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 2,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 53,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 3,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 54,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 4,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 55,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 5,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 56,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 6,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 57,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 7,
+  "known": 10,
+  "opt": 10,
+  "probes": [
+   {
+    "h": 10,
+    "v": "YES",
+    "nodes": 1,
+    "cert": 0,
+    "lp": 1,
+    "t": 0.00315,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 58,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 8,
+  "known": 14,
+  "opt": 14,
+  "probes": []
+ },
+ {
+  "uid": 59,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 9,
+  "known": 8,
+  "opt": 8,
+  "probes": []
+ },
+ {
+  "uid": 60,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 10,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 61,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 11,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 62,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 12,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 63,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 13,
+  "known": 16,
+  "opt": 16,
+  "probes": []
+ },
+ {
+  "uid": 64,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 14,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 65,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 15,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 66,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 16,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 67,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 17,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 68,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 18,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 69,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 19,
+  "known": 14,
+  "opt": 14,
+  "probes": []
+ },
+ {
+  "uid": 70,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 20,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 71,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 21,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 72,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 22,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 73,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 23,
+  "known": 14,
+  "opt": 14,
+  "probes": []
+ },
+ {
+  "uid": 74,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 24,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 75,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 25,
+  "known": 9,
+  "opt": 9,
+  "probes": []
+ },
+ {
+  "uid": 76,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 26,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 77,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 27,
+  "known": 8,
+  "opt": 8,
+  "probes": []
+ },
+ {
+  "uid": 78,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 28,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 79,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 29,
+  "known": 15,
+  "opt": 15,
+  "probes": []
+ },
+ {
+  "uid": 80,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 30,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 81,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 31,
+  "known": 9,
+  "opt": 9,
+  "probes": []
+ },
+ {
+  "uid": 82,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 32,
+  "known": 9,
+  "opt": 9,
+  "probes": []
+ },
+ {
+  "uid": 83,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 33,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 84,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 34,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 85,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 35,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 86,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 36,
+  "known": 11,
+  "opt": 11,
+  "probes": []
+ },
+ {
+  "uid": 87,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 37,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 88,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 38,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 89,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 39,
+  "known": 14,
+  "opt": 14,
+  "probes": []
+ },
+ {
+  "uid": 90,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 40,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 91,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 41,
+  "known": 12,
+  "opt": 12,
+  "probes": []
+ },
+ {
+  "uid": 92,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 42,
+  "known": 9,
+  "opt": 9,
+  "probes": []
+ },
+ {
+  "uid": 93,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 43,
+  "known": 13,
+  "opt": 13,
+  "probes": []
+ },
+ {
+  "uid": 94,
+  "corpus": "base",
+  "name": "synth",
+  "idx": 44,
+  "known": 10,
+  "opt": 10,
+  "probes": []
+ },
+ {
+  "uid": 95,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 0,
+  "known": 46,
+  "opt": 46,
+  "probes": []
+ },
+ {
+  "uid": 96,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 1,
+  "known": 43,
+  "opt": 43,
+  "probes": []
+ },
+ {
+  "uid": 97,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 2,
+  "known": 68,
+  "opt": 68,
+  "probes": []
+ },
+ {
+  "uid": 98,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 3,
+  "known": 49,
+  "opt": 49,
+  "probes": []
+ },
+ {
+  "uid": 99,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 4,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 33,
+    "v": "YES",
+    "nodes": 9,
+    "cert": 0,
+    "lp": 9,
+    "t": 0.08213,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 100,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 5,
+  "known": 30,
+  "opt": 30,
+  "probes": [
+   {
+    "h": 30,
+    "v": "YES",
+    "nodes": 7,
+    "cert": 0,
+    "lp": 7,
+    "t": 0.03906,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 101,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 6,
+  "known": 61,
+  "opt": 61,
+  "probes": []
+ },
+ {
+  "uid": 102,
+  "corpus": "base",
+  "name": "large_a",
+  "idx": 7,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 103,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 0,
+  "known": 38,
+  "opt": 38,
+  "probes": [
+   {
+    "h": 38,
+    "v": "YES",
+    "nodes": 18,
+    "cert": 0,
+    "lp": 18,
+    "t": 0.24463,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 104,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 1,
+  "known": 40,
+  "opt": 40,
+  "probes": [
+   {
+    "h": 40,
+    "v": "YES",
+    "nodes": 18,
+    "cert": 1,
+    "lp": 18,
+    "t": 0.19227,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 105,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 2,
+  "known": 60,
+  "opt": 60,
+  "probes": []
+ },
+ {
+  "uid": 106,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 3,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 107,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 4,
+  "known": 45,
+  "opt": 45,
+  "probes": []
+ },
+ {
+  "uid": 108,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 5,
+  "known": 53,
+  "opt": 53,
+  "probes": []
+ },
+ {
+  "uid": 109,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 6,
+  "known": 53,
+  "opt": 53,
+  "probes": []
+ },
+ {
+  "uid": 110,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 7,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 111,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 8,
+  "known": 45,
+  "opt": 45,
+  "probes": []
+ },
+ {
+  "uid": 112,
+  "corpus": "base",
+  "name": "large_b",
+  "idx": 9,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 113,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 0,
+  "known": 37,
+  "opt": 37,
+  "probes": [
+   {
+    "h": 37,
+    "v": "YES",
+    "nodes": 6,
+    "cert": 0,
+    "lp": 6,
+    "t": 0.12008,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 114,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 1,
+  "known": 40,
+  "opt": 40,
+  "probes": []
+ },
+ {
+  "uid": 115,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 2,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 116,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 3,
+  "known": 31,
+  "opt": 31,
+  "probes": [
+   {
+    "h": 31,
+    "v": "YES",
+    "nodes": 16,
+    "cert": 1,
+    "lp": 16,
+    "t": 0.42944,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 117,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 4,
+  "known": 44,
+  "opt": 44,
+  "probes": []
+ },
+ {
+  "uid": 118,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 5,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 16,
+    "cert": 1,
+    "lp": 16,
+    "t": 0.33031,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 119,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 6,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 120,
+  "corpus": "base",
+  "name": "large_het",
+  "idx": 7,
+  "known": 41,
+  "opt": 41,
+  "probes": [
+   {
+    "h": 43,
+    "v": "YES",
+    "nodes": 14,
+    "cert": 0,
+    "lp": 14,
+    "t": 0.27674,
+    "verdict": true
+   },
+   {
+    "h": 41,
+    "v": "YES",
+    "nodes": 10,
+    "cert": 1,
+    "lp": 10,
+    "t": 0.25471,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 121,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 0,
+  "known": 28,
+  "opt": 28,
+  "probes": []
+ },
+ {
+  "uid": 122,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 1,
+  "known": 36,
+  "opt": 36,
+  "probes": []
+ },
+ {
+  "uid": 123,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 2,
+  "known": 29,
+  "opt": 29,
+  "probes": []
+ },
+ {
+  "uid": 124,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 3,
+  "known": 37,
+  "opt": 37,
+  "probes": []
+ },
+ {
+  "uid": 125,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 4,
+  "known": 38,
+  "opt": 38,
+  "probes": [
+   {
+    "h": 38,
+    "v": "YES",
+    "nodes": 6,
+    "cert": 0,
+    "lp": 6,
+    "t": 0.04458,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 126,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 5,
+  "known": 39,
+  "opt": 39,
+  "probes": []
+ },
+ {
+  "uid": 127,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 6,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 128,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 7,
+  "known": 48,
+  "opt": 48,
+  "probes": []
+ },
+ {
+  "uid": 129,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 8,
+  "known": 31,
+  "opt": 31,
+  "probes": []
+ },
+ {
+  "uid": 130,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 9,
+  "known": 27,
+  "opt": 27,
+  "probes": []
+ },
+ {
+  "uid": 131,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 10,
+  "known": 42,
+  "opt": 42,
+  "probes": []
+ },
+ {
+  "uid": 132,
+  "corpus": "base",
+  "name": "hard3",
+  "idx": 11,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 133,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 0,
+  "known": 28,
+  "opt": 28,
+  "probes": []
+ },
+ {
+  "uid": 134,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 1,
+  "known": 37,
+  "opt": 37,
+  "probes": []
+ },
+ {
+  "uid": 135,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 2,
+  "known": 30,
+  "opt": 30,
+  "probes": []
+ },
+ {
+  "uid": 136,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 3,
+  "known": 38,
+  "opt": 38,
+  "probes": []
+ },
+ {
+  "uid": 137,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 4,
+  "known": 45,
+  "opt": 45,
+  "probes": []
+ },
+ {
+  "uid": 138,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 5,
+  "known": 25,
+  "opt": 25,
+  "probes": []
+ },
+ {
+  "uid": 139,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 6,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 140,
+  "corpus": "base",
+  "name": "deep",
+  "idx": 7,
+  "known": 21,
+  "opt": 21,
+  "probes": [
+   {
+    "h": 21,
+    "v": "YES",
+    "nodes": 5,
+    "cert": 0,
+    "lp": 5,
+    "t": 0.01865,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 141,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 0,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 142,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 1,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00735,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 143,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 2,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 144,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 3,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 33,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00828,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 145,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 4,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.0078,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 146,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 147,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 6,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 33,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01973,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 148,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 7,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.0073,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 149,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 8,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 150,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 9,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 151,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 10,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00734,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 152,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 11,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 153,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 12,
+  "known": 32,
+  "opt": 32,
+  "probes": []
+ },
+ {
+  "uid": 154,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 13,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00715,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 155,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 14,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00746,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 156,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 15,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 157,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 16,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 33,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01939,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 158,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 17,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00768,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 159,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 18,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00765,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 160,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 19,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 161,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 20,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 33,
+    "v": "YES",
+    "nodes": 6,
+    "cert": 0,
+    "lp": 6,
+    "t": 0.02059,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 162,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 21,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 163,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 22,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 33,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.008,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 164,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 23,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 165,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 24,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00795,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 166,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 25,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 167,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 26,
+  "known": 33,
+  "opt": 33,
+  "probes": []
+ },
+ {
+  "uid": 168,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 27,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 33,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00769,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 169,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 28,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00778,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 170,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 29,
+  "known": 32,
+  "opt": 32,
+  "probes": [
+   {
+    "h": 32,
+    "v": "YES",
+    "nodes": 1,
+    "cert": 0,
+    "lp": 1,
+    "t": 0.00427,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 171,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 0,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 172,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 1,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 35,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.0104,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 173,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 2,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.01234,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 174,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 3,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.01207,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 175,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 4,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 35,
+    "v": "YES",
+    "nodes": 4,
+    "cert": 0,
+    "lp": 4,
+    "t": 0.01708,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 176,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 5,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 177,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 6,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02469,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 178,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 7,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 179,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 8,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 180,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 9,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 181,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 10,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 182,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 11,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 183,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 12,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 184,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 13,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 185,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 14,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 186,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 15,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 3,
+    "cert": 0,
+    "lp": 3,
+    "t": 0.01224,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 187,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 16,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 188,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 17,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 189,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 18,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 33,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02548,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 190,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 19,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 35,
+    "v": "YES",
+    "nodes": 4,
+    "cert": 0,
+    "lp": 4,
+    "t": 0.01719,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 191,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 20,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 5,
+    "cert": 0,
+    "lp": 5,
+    "t": 0.01954,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 192,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 21,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 193,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 22,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 35,
+    "v": "YES",
+    "nodes": 4,
+    "cert": 0,
+    "lp": 4,
+    "t": 0.01733,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 194,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 23,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 195,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 24,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 196,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 25,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 197,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 26,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02343,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 198,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 27,
+  "known": 34,
+  "opt": 34,
+  "probes": []
+ },
+ {
+  "uid": 199,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 28,
+  "known": 35,
+  "opt": 35,
+  "probes": []
+ },
+ {
+  "uid": 200,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 29,
+  "known": 34,
+  "opt": 34,
+  "probes": [
+   {
+    "h": 34,
+    "v": "YES",
+    "nodes": 2,
+    "cert": 0,
+    "lp": 2,
+    "t": 0.00896,
+    "verdict": true
+   }
+  ]
+ },
+ {
+  "uid": 201,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0247,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 202,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01952,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 203,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02524,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 204,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02367,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 205,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02346,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 206,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02459,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 207,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02591,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 208,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02332,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 209,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02706,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 210,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02333,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 211,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0232,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 212,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0254,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 213,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02143,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 214,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02745,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 215,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02028,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 216,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01853,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 217,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02021,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 218,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0198,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 219,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.0408,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 220,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02195,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 221,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01952,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 222,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.03823,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 223,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02188,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 224,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02648,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 225,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01931,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 226,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01901,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 227,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02251,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 228,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02499,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 229,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.04247,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 230,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02636,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 231,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02606,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 232,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.024,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 233,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02515,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 234,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.03002,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 235,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01949,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 236,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02503,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 237,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.03334,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 238,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02191,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 239,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02192,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 240,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.0395,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 241,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 5,
+    "cert": 3,
+    "lp": 5,
+    "t": 0.03765,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 242,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02327,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 243,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02604,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 244,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 9,
+    "cert": 5,
+    "lp": 9,
+    "t": 0.07776,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 245,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02097,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 246,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02326,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 247,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0258,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 248,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02098,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 249,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.0243,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 250,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "opt": 35,
+  "probes": [
+   {
+    "h": 34,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.02744,
+    "verdict": false
+   }
+  ]
+ },
+ {
+  "uid": 251,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "opt": 33,
+  "probes": [
+   {
+    "h": 32,
+    "v": "NO",
+    "nodes": 3,
+    "cert": 2,
+    "lp": 3,
+    "t": 0.01964,
+    "verdict": false
+   }
+  ]
+ }
+]

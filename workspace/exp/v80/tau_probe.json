@@ -1,0 +1,2753 @@
+[
+ {
+  "name": "holdout50",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 2,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 5,
+  "verdict": false,
+  "lp": 6,
+  "nodes": 3,
+  "leaves": 2,
+  "log": [
+   [
+    5,
+    2,
+    5,
+    2
+   ],
+   [
+    6,
+    3,
+    5,
+    5
+   ]
+  ],
+  "taus": [
+   0.5,
+   0.5000000000000003
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 6,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 8,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 9,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 10,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 11,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 12,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 13,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 14,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 15,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 16,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 17,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 18,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 19,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 20,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 21,
+  "verdict": false,
+  "lp": 2,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    2,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 22,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 23,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 24,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 25,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 26,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 27,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 28,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 29,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 30,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 31,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 32,
+  "verdict": false,
+  "lp": 3,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    3,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 33,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 34,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 35,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 36,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 37,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 38,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 39,
+  "verdict": false,
+  "lp": 2,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    2,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 40,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 41,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 42,
+  "verdict": false,
+  "lp": 2,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    2,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 43,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 44,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 45,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 46,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 47,
+  "verdict": false,
+  "lp": 7,
+  "nodes": 5,
+  "leaves": 3,
+  "log": [
+   [
+    4,
+    2,
+    1,
+    1
+   ],
+   [
+    6,
+    4,
+    8,
+    4
+   ],
+   [
+    7,
+    5,
+    7,
+    3
+   ]
+  ],
+  "taus": [
+   1.0,
+   0.75,
+   0.75
+  ],
+  "stop": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 48,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 49,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 2,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 5,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 6,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 8,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 9,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 10,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 11,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 12,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 13,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 14,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 15,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 16,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 17,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 18,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 19,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 20,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 21,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 22,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 23,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 24,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 25,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 26,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 27,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 28,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 29,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 30,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 31,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 32,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 33,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 34,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 35,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 36,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 37,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 38,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 39,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 40,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 41,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 42,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 43,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 44,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 1,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_a",
+  "idx": 2,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_a",
+  "idx": 3,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_a",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 5,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 6,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 2,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_b",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 5,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_b",
+  "idx": 6,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_b",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 8,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 9,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_het",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 2,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_het",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 4,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_het",
+  "idx": 5,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 6,
+  "verdict": false,
+  "lp": 0,
+  "nodes": 0,
+  "leaves": 0,
+  "log": [],
+  "taus": [],
+  "stop": null
+ },
+ {
+  "name": "large_het",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 2,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 5,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 6,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 8,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 9,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 10,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 11,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 0,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 1,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 2,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 3,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 4,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 5,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 6,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 7,
+  "verdict": false,
+  "lp": 1,
+  "nodes": 1,
+  "leaves": 1,
+  "log": [
+   [
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "taus": [
+   0.0
+  ],
+  "stop": 1
+ }
+]

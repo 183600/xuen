@@ -1,0 +1,78 @@
+{
+ "audit": [
+  {
+   "cap_lines": 8,
+   "bfs": 1309,
+   "veb": 1309,
+   "ratio": 1.0
+  },
+  {
+   "cap_lines": 32,
+   "bfs": 1075,
+   "veb": 1075,
+   "ratio": 1.0
+  },
+  {
+   "cap_lines": 128,
+   "bfs": 1041,
+   "veb": 1041,
+   "ratio": 1.0
+  },
+  {
+   "cap_lines": 512,
+   "bfs": 1033,
+   "veb": 1033,
+   "ratio": 1.0
+  }
+ ],
+ "moves": [
+  {
+   "cap_lines": 8,
+   "mode": "flat",
+   "accesses": 8000,
+   "touched": 8000,
+   "miss": 7948,
+   "miss_per_access": 0.994
+  },
+  {
+   "cap_lines": 8,
+   "mode": "dyadic",
+   "accesses": 6962,
+   "touched": 6962,
+   "miss": 4698,
+   "miss_per_access": 0.675
+  },
+  {
+   "cap_lines": 32,
+   "mode": "flat",
+   "accesses": 8000,
+   "touched": 8000,
+   "miss": 7754,
+   "miss_per_access": 0.969
+  },
+  {
+   "cap_lines": 32,
+   "mode": "dyadic",
+   "accesses": 6962,
+   "touched": 6962,
+   "miss": 4574,
+   "miss_per_access": 0.657
+  },
+  {
+   "cap_lines": 128,
+   "mode": "flat",
+   "accesses": 8000,
+   "touched": 8000,
+   "miss": 6986,
+   "miss_per_access": 0.873
+  },
+  {
+   "cap_lines": 128,
+   "mode": "dyadic",
+   "accesses": 6962,
+   "touched": 6962,
+   "miss": 4136,
+   "miss_per_access": 0.594
+  }
+ ]
+}

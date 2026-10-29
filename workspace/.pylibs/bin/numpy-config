@@ -1,0 +1,6 @@
+#!/opt/hostedtoolcache/Python/3.12.15/x64/bin/python
+import sys
+from numpy._configtool import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

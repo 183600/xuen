@@ -1,0 +1,15 @@
+{
+ "N": 2000,
+ "seed": 31337,
+ "mode": "plain",
+ "het": false,
+ "hpack": false,
+ "yes": 811,
+ "bad": 0,
+ "nodes": {
+  "v19": 8864,
+  "v20": 8640
+ },
+ "ratio": 1.0259,
+ "time": 0.66
+}

@@ -1,0 +1,46 @@
+{
+ "1": {
+  "ok": 252,
+  "audit": 252,
+  "lp": 426,
+  "leaves": 339,
+  "splits": 87,
+  "sub": 0,
+  "maxleaves": 7,
+  "multi": 58,
+  "t": 6.039
+ },
+ "2": {
+  "ok": 252,
+  "audit": 252,
+  "lp": 513,
+  "leaves": 339,
+  "splits": 87,
+  "sub": 0,
+  "maxleaves": 7,
+  "multi": 58,
+  "t": 6.919
+ },
+ "4": {
+  "ok": 252,
+  "audit": 252,
+  "lp": 435,
+  "leaves": 265,
+  "splits": 13,
+  "sub": 0,
+  "maxleaves": 5,
+  "multi": 8,
+  "t": 5.38
+ },
+ "8": {
+  "ok": 252,
+  "audit": 252,
+  "lp": 395,
+  "leaves": 253,
+  "splits": 1,
+  "sub": 0,
+  "maxleaves": 2,
+  "multi": 1,
+  "t": 4.884
+ }
+}

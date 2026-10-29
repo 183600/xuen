@@ -1,0 +1,29 @@
+{
+ "found": [
+  {
+   "idx": 24,
+   "cross": [
+    "prec",
+    6,
+    15,
+    8,
+    21
+   ],
+   "verdict": false,
+   "why": "unit_cross",
+   "audit_quc": false,
+   "audit_qsc": false,
+   "fixed": true,
+   "units": [
+    [
+     6,
+     15
+    ],
+    [
+     8,
+     21
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+ "inst": 40,
+ "states": 118,
+ "claims": 118,
+ "bad": 0,
+ "thresh_ok": 40,
+ "thresh_n": 40,
+ "root_new_ge_old": 40,
+ "root_new_gt_old": 0
+}

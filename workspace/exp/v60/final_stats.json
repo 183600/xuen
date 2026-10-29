@@ -1,0 +1,1523 @@
+{
+ "holdout50": {
+  "n": 50,
+  "root_no": 48,
+  "branch_cases": 2,
+  "branch_nodes": 4,
+  "nodes": 54,
+  "t": 0.6155033111572266,
+  "certs": 52,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00444793701171875,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004831790924072266,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007467031478881836,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003652811050415039,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.006535053253173828,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "feasible",
+    "nodes": 3,
+    "t": 0.009111404418945312,
+    "certs": 2,
+    "cert_ok": true,
+    "branch": [
+     [
+      3,
+      10,
+      0
+     ]
+    ]
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005410194396972656,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0043909549713134766,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004456281661987305,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004111766815185547,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0040853023529052734,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0055201053619384766,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00556635856628418,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0076847076416015625,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00702977180480957,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003980398178100586,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0030214786529541016,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.006669044494628906,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004549741744995117,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005212068557739258,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005631208419799805,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005642414093017578,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.006421327590942383,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005408525466918945,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005317211151123047,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004990816116333008,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0033066272735595703,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007152080535888672,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004378318786621094,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005709648132324219,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003907680511474609,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003518819808959961,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0065555572509765625,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005148172378540039,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003941059112548828,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.008143424987792969,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007049560546875,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0031986236572265625,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0051991939544677734,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005131244659423828,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.006371498107910156,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0040760040283203125,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007163524627685547,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.008105278015136719,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004438877105712891,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 45,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004401445388793945,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 46,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003728151321411133,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 47,
+    "v": false,
+    "root": "feasible",
+    "nodes": 3,
+    "t": 0.011996984481811523,
+    "certs": 2,
+    "cert_ok": true,
+    "branch": [
+     [
+      3,
+      6,
+      0
+     ]
+    ]
+   },
+   {
+    "idx": 48,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0032889842987060547,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 49,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003915071487426758,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "synth45": {
+  "n": 45,
+  "root_no": 45,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 45,
+  "t": 0.34592604637145996,
+  "certs": 45,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002937793731689453,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002529621124267578,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0027065277099609375,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0023109912872314453,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003910064697265625,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004088640213012695,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004999637603759766,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0024480819702148438,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004057884216308594,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002582550048828125,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0036759376525878906,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003254413604736328,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 12,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0031614303588867188,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 13,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004479408264160156,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 14,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002375364303588867,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 15,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003831624984741211,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 16,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004095792770385742,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 17,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003138303756713867,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 18,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004043102264404297,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 19,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00485539436340332,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 20,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002744436264038086,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 21,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0028562545776367188,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 22,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0034072399139404297,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 23,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003098726272583008,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 24,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0029571056365966797,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 25,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0026395320892333984,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 26,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0031347274780273438,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 27,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002193927764892578,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 28,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0032837390899658203,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 29,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004766225814819336,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 30,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004384040832519531,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 31,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002724170684814453,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 32,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0026178359985351562,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 33,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002796173095703125,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 34,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002712726593017578,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 35,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0027806758880615234,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 36,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003103017807006836,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 37,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002075672149658203,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 38,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003230571746826172,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 39,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003936052322387695,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 40,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003773212432861328,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 41,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0022094249725341797,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 42,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002764463424682617,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 43,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0035669803619384766,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 44,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.002951383590698242,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "large_a": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "t": 0.1543288230895996,
+  "certs": 8,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.010290145874023438,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007234096527099609,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.009295463562011719,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.010613203048706055,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.015671491622924805,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00873112678527832,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.008768320083618164,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.013914823532104492,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "large_b": {
+  "n": 10,
+  "root_no": 10,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 10,
+  "t": 0.4149904251098633,
+  "certs": 10,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.030399322509765625,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.021262407302856445,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.013993501663208008,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.010188102722167969,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.051526784896850586,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.02201700210571289,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.02389049530029297,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.04073500633239746,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.014159440994262695,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.011733293533325195,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "large_het": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "t": 0.43607568740844727,
+  "certs": 8,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.03485369682312012,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.011531829833984375,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.015175580978393555,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.05681300163269043,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.013979673385620117,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.03774285316467285,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.012596845626831055,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.04771876335144043,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "hard3": {
+  "n": 12,
+  "root_no": 12,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 12,
+  "t": 0.15780901908874512,
+  "certs": 12,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.00627446174621582,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005026578903198242,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0033104419708251953,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004250764846801758,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.013985157012939453,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004759073257446289,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005546092987060547,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004880666732788086,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 8,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.007315635681152344,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 9,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.003484964370727539,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 10,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0059125423431396484,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 11,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.008295536041259766,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "deep8": {
+  "n": 8,
+  "root_no": 8,
+  "branch_cases": 0,
+  "branch_nodes": 0,
+  "nodes": 8,
+  "t": 0.09561371803283691,
+  "certs": 8,
+  "cert_fail": 0,
+  "rows": [
+   {
+    "idx": 0,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.005494356155395508,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 1,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.0073354244232177734,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 2,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004037380218505859,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 3,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.008110761642456055,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 4,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004995584487915039,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 5,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004511833190917969,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 6,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004655361175537109,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   },
+   {
+    "idx": 7,
+    "v": false,
+    "root": "infeasible",
+    "nodes": 1,
+    "t": 0.004990816116333008,
+    "certs": 1,
+    "cert_ok": true,
+    "branch": []
+   }
+  ]
+ },
+ "_stats": {
+  "total_certs": 143,
+  "packings": 133,
+  "cp": 10,
+  "scale_max": 720,
+  "scale_median": 9,
+  "scale_mean": 18.6,
+  "cuts_max": 89,
+  "cuts_median": 8,
+  "cuts_mean": 11.9,
+  "beta_max": 87,
+  "dom_max": 4,
+  "dom_median": 0
+ },
+ "_wall": 2.22403883934021
+}

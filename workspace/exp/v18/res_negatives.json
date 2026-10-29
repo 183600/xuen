@@ -1,0 +1,82 @@
+{
+ "por_n5": {
+  "base": true,
+  "base_nodes": 11,
+  "base_out": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    2,
+    0,
+    2
+   ],
+   [
+    1,
+    1,
+    2
+   ],
+   [
+    3,
+    0,
+    4
+   ],
+   [
+    4,
+    1,
+    9
+   ]
+  ],
+  "por": false,
+  "por_nodes": 5,
+  "p": [
+   2,
+   7,
+   2,
+   9,
+   6
+  ],
+  "pred": [
+   [],
+   [
+    0
+   ],
+   [
+    0
+   ],
+   [
+    0
+   ],
+   [
+    2
+   ]
+  ],
+  "h": 15
+ },
+ "por_hard3": {
+  "base": false,
+  "base_nodes": 216,
+  "por": false,
+  "por_nodes": 150
+ },
+ "sdom_hard3": {
+  "h38": {
+   "base": false,
+   "base_nodes": 216,
+   "sdom": false,
+   "sdom_nodes": 40
+  },
+  "h39": {
+   "base": true,
+   "base_nodes": 35,
+   "sdom": false,
+   "sdom_nodes": 45
+  }
+ },
+ "tsym_hard3": {
+  "base_nodes": 216,
+  "tsym_nodes": 216
+ }
+}

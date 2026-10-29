@@ -1,0 +1,221 @@
+{
+ "default": {
+  "holdout": {
+   "t": 0.5416,
+   "nodes": 80463,
+   "vs": {
+    "OS": 50
+   }
+  },
+  "hard3": {
+   "t": 0.0206,
+   "nodes": 2632,
+   "vs": {
+    "ICC": 8,
+    "OS": 4
+   }
+  },
+  "residual": {
+   "t": 0.0488,
+   "nodes": 6802,
+   "vs": {
+    "OS": 5
+   }
+  },
+  "synth": {
+   "t": 0.003,
+   "nodes": 0,
+   "vs": {
+    "ICC": 45
+   }
+  }
+ },
+ "no_icc": {
+  "holdout": {
+   "t": 0.5124,
+   "nodes": 80463,
+   "vs": {
+    "OS": 50
+   }
+  },
+  "hard3": {
+   "t": 0.0678,
+   "nodes": 10437,
+   "vs": {
+    "OS": 10,
+    "PACE": 2
+   }
+  },
+  "residual": {
+   "t": 0.0458,
+   "nodes": 6802,
+   "vs": {
+    "OS": 5
+   }
+  },
+  "synth": {
+   "t": 1.9119,
+   "nodes": 359969,
+   "vs": {
+    "OS": 16,
+    "PACE": 29
+   }
+  }
+ },
+ "no_probe": {
+  "holdout": {
+   "t": 0.5482,
+   "nodes": 80463,
+   "vs": {
+    "OS": 50
+   }
+  },
+  "hard3": {
+   "t": 0.0206,
+   "nodes": 2632,
+   "vs": {
+    "ICC": 8,
+    "OS": 4
+   }
+  },
+  "residual": {
+   "t": 0.0497,
+   "nodes": 6802,
+   "vs": {
+    "OS": 5
+   }
+  },
+  "synth": {
+   "t": 0.003,
+   "nodes": 0,
+   "vs": {
+    "ICC": 45
+   }
+  }
+ },
+ "probe64": {
+  "holdout": {
+   "t": 0.6161,
+   "nodes": 82794,
+   "vs": {
+    "OS": 48,
+    "CPS": 2
+   }
+  },
+  "hard3": {
+   "t": 0.0274,
+   "nodes": 2892,
+   "vs": {
+    "ICC": 8,
+    "OS": 4
+   }
+  },
+  "residual": {
+   "t": 0.0571,
+   "nodes": 7127,
+   "vs": {
+    "OS": 5
+   }
+  },
+  "synth": {
+   "t": 0.0031,
+   "nodes": 0,
+   "vs": {
+    "ICC": 45
+   }
+  }
+ },
+ "probe300": {
+  "holdout": {
+   "t": 0.7848,
+   "nodes": 87354,
+   "vs": {
+    "OS": 43,
+    "CPS": 7
+   }
+  },
+  "hard3": {
+   "t": 0.0488,
+   "nodes": 3836,
+   "vs": {
+    "ICC": 8,
+    "OS": 4
+   }
+  },
+  "residual": {
+   "t": 0.0893,
+   "nodes": 8307,
+   "vs": {
+    "OS": 5
+   }
+  },
+  "synth": {
+   "t": 0.0029,
+   "nodes": 0,
+   "vs": {
+    "ICC": 45
+   }
+  }
+ },
+ "no_os": {
+  "holdout": {
+   "t": 3.5153,
+   "nodes": 100,
+   "vs": {
+    "PACE": 50
+   }
+  },
+  "hard3": {
+   "t": 0.0263,
+   "nodes": 8,
+   "vs": {
+    "ICC": 8,
+    "PACE": 4
+   }
+  },
+  "residual": {
+   "t": 2.1832,
+   "nodes": 10,
+   "vs": {
+    "PACE": 5
+   }
+  },
+  "synth": {
+   "t": 0.0029,
+   "nodes": 0,
+   "vs": {
+    "ICC": 45
+   }
+  }
+ },
+ "pace_only": {
+  "holdout": {
+   "t": 3.482,
+   "nodes": 50,
+   "vs": {
+    "PACE": 50
+   }
+  },
+  "hard3": {
+   "t": 0.0233,
+   "nodes": 12,
+   "vs": {
+    "PACE": 12
+   }
+  },
+  "residual": {
+   "t": 2.1779,
+   "nodes": 5,
+   "vs": {
+    "PACE": 5
+   }
+  },
+  "synth": {
+   "t": 0.0041,
+   "nodes": 45,
+   "vs": {
+    "PACE": 45
+   }
+  }
+ }
+}

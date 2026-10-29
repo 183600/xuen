@@ -1,0 +1,930 @@
+[
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02334
+ },
+ {
+  "tag": "base",
+  "name": "holdout",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03049
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 6,
+  "h": 33,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02122
+ },
+ {
+  "tag": "pert",
+  "name": "h5",
+  "idx": 16,
+  "h": 33,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02133
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 6,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02834
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 18,
+  "h": 33,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02971
+ },
+ {
+  "tag": "pert",
+  "name": "h47",
+  "idx": 26,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02652
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02795
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02126
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03011
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02652
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02634
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02737
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02998
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02785
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03009
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02552
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03612
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02867
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.0244
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03013
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02299
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02076
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02179
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02165
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.04564
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02444
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02149
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.04299
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02457
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02927
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02169
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02086
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02509
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02829
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.04803
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03017
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03041
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.0276
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02906
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.03322
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02186
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02833
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.03693
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02463
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02411
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.04498
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 5,
+  "leaves": 3,
+  "rat": 0,
+  "tree": {
+   "nodes": 5,
+   "leaves": 3,
+   "rat_leaves": 0
+  },
+  "t": 0.04271
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02653
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02979
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 9,
+  "leaves": 5,
+  "rat": 0,
+  "tree": {
+   "nodes": 9,
+   "leaves": 5,
+   "rat_leaves": 0
+  },
+  "t": 0.07322
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02259
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02613
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02952
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02299
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02733
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 47,
+  "h": 34,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.03158
+ },
+ {
+  "tag": "stress",
+  "name": "stress",
+  "idx": 5,
+  "h": 32,
+  "verdict": false,
+  "nodes": 3,
+  "leaves": 2,
+  "rat": 0,
+  "tree": {
+   "nodes": 3,
+   "leaves": 2,
+   "rat_leaves": 0
+  },
+  "t": 0.02142
+ }
+]

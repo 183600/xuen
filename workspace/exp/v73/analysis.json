@@ -1,0 +1,50 @@
+{
+ "branch_cover_hits": 51,
+ "tau": {
+  "n": 51,
+  "min": 0.4999999999999999,
+  "median": 0.5,
+  "max": 0.8,
+  "counts": {
+   "0.5": 43,
+   "0.75": 3,
+   "0.8": 4,
+   "0.667": 1
+  }
+ },
+ "clauses_at_cover": {
+  "min": 1,
+  "median": 1,
+  "max": 4,
+  "counts": {
+   "1": 37,
+   "2": 9,
+   "3": 3,
+   "4": 2
+  }
+ },
+ "literal_sizes": {
+  "min": 1,
+  "median": 4.0,
+  "max": 11
+ },
+ "first_clause_jobs": {
+  "counts": {
+   "1": 43,
+   "2": 8
+  }
+ },
+ "root_first_clause": {
+  "n": 51,
+  "infeasible": 37,
+  "tau_counts": {
+   "0.5": 36,
+   "1.0": 14,
+   "0.8": 1
+  }
+ },
+ "holdout_idx": {
+  "5": 0.4999999999999999,
+  "47": 1.0
+ }
+}

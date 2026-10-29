@@ -1,0 +1,532 @@
+{
+ "hard17": [
+  {
+   "n": 10,
+   "edges": 8,
+   "opt": 46,
+   "L0": 44,
+   "ag_steps": 302,
+   "roll": 46,
+   "roll_hit": true,
+   "roll_sec": 0.0017547607421875,
+   "base_steps": 302,
+   "pv_steps": 302,
+   "base_gap0": 0,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 11,
+   "opt": 29,
+   "L0": 25,
+   "ag_steps": 132,
+   "roll": 29,
+   "roll_hit": true,
+   "roll_sec": 0.001150369644165039,
+   "base_steps": 132,
+   "pv_steps": 1,
+   "base_gap0": 2,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 12,
+   "opt": 39,
+   "L0": 37,
+   "ag_steps": 87,
+   "roll": 39,
+   "roll_hit": true,
+   "roll_sec": 0.0011413097381591797,
+   "base_steps": 86,
+   "pv_steps": 86,
+   "base_gap0": 5,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 14,
+   "opt": 60,
+   "L0": 57,
+   "ag_steps": 60,
+   "roll": 61,
+   "roll_hit": false,
+   "roll_sec": 0.0010123252868652344,
+   "base_steps": 66,
+   "pv_steps": 65,
+   "base_gap0": 3,
+   "pv_gap0": 1
+  },
+  {
+   "n": 10,
+   "edges": 18,
+   "opt": 56,
+   "L0": 53,
+   "ag_steps": 54,
+   "roll": 56,
+   "roll_hit": true,
+   "roll_sec": 0.0010881423950195312,
+   "base_steps": 54,
+   "pv_steps": 49,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 9,
+   "opt": 60,
+   "L0": 59,
+   "ag_steps": 45,
+   "roll": 60,
+   "roll_hit": true,
+   "roll_sec": 0.00170135498046875,
+   "base_steps": 39,
+   "pv_steps": 36,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 12,
+   "opt": 68,
+   "L0": 66,
+   "ag_steps": 34,
+   "roll": 68,
+   "roll_hit": true,
+   "roll_sec": 0.0012600421905517578,
+   "base_steps": 33,
+   "pv_steps": 33,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 17,
+   "opt": 29,
+   "L0": 27,
+   "ag_steps": 34,
+   "roll": 29,
+   "roll_hit": true,
+   "roll_sec": 0.0011584758758544922,
+   "base_steps": 32,
+   "pv_steps": 1,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 14,
+   "opt": 38,
+   "L0": 37,
+   "ag_steps": 31,
+   "roll": 38,
+   "roll_hit": true,
+   "roll_sec": 0.0011866092681884766,
+   "base_steps": 17,
+   "pv_steps": 17,
+   "base_gap0": 0,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 14,
+   "opt": 38,
+   "L0": 37,
+   "ag_steps": 23,
+   "roll": 38,
+   "roll_hit": true,
+   "roll_sec": 0.0010755062103271484,
+   "base_steps": 12,
+   "pv_steps": 1,
+   "base_gap0": 2,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 15,
+   "opt": 52,
+   "L0": 46,
+   "ag_steps": 21,
+   "roll": 52,
+   "roll_hit": true,
+   "roll_sec": 0.0009698867797851562,
+   "base_steps": 11,
+   "pv_steps": 1,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 10,
+   "edges": 14,
+   "opt": 53,
+   "L0": 51,
+   "ag_steps": 18,
+   "roll": 53,
+   "roll_hit": true,
+   "roll_sec": 0.0008938312530517578,
+   "base_steps": 11,
+   "pv_steps": 11,
+   "base_gap0": 0,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 14,
+   "opt": 37,
+   "L0": 34,
+   "ag_steps": 17,
+   "roll": 37,
+   "roll_hit": true,
+   "roll_sec": 0.0010478496551513672,
+   "base_steps": 5,
+   "pv_steps": 1,
+   "base_gap0": 1,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 9,
+   "opt": 30,
+   "L0": 29,
+   "ag_steps": 16,
+   "roll": 30,
+   "roll_hit": true,
+   "roll_sec": 0.0009615421295166016,
+   "base_steps": 15,
+   "pv_steps": 15,
+   "base_gap0": 4,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 13,
+   "opt": 33,
+   "L0": 30,
+   "ag_steps": 14,
+   "roll": 33,
+   "roll_hit": true,
+   "roll_sec": 0.0007309913635253906,
+   "base_steps": 14,
+   "pv_steps": 1,
+   "base_gap0": 3,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 9,
+   "opt": 39,
+   "L0": 38,
+   "ag_steps": 13,
+   "roll": 39,
+   "roll_hit": true,
+   "roll_sec": 0.0009076595306396484,
+   "base_steps": 13,
+   "pv_steps": 13,
+   "base_gap0": 0,
+   "pv_gap0": 0
+  },
+  {
+   "n": 9,
+   "edges": 11,
+   "opt": 59,
+   "L0": 55,
+   "ag_steps": 12,
+   "roll": 59,
+   "roll_hit": true,
+   "roll_sec": 0.001020669937133789,
+   "base_steps": 12,
+   "pv_steps": 1,
+   "base_gap0": 2,
+   "pv_gap0": 0
+  }
+ ],
+ "broad": [
+  {
+   "n": 10,
+   "opt": 36,
+   "L0": 35,
+   "roll": 36,
+   "base": 240,
+   "pv": 238
+  },
+  {
+   "n": 10,
+   "opt": 39,
+   "L0": 38,
+   "roll": 39,
+   "base": 79,
+   "pv": 79
+  },
+  {
+   "n": 9,
+   "opt": 22,
+   "L0": 21,
+   "roll": 22,
+   "base": 23,
+   "pv": 23
+  },
+  {
+   "n": 8,
+   "opt": 22,
+   "L0": 20,
+   "roll": 22,
+   "base": 18,
+   "pv": 18
+  },
+  {
+   "n": 9,
+   "opt": 29,
+   "L0": 28,
+   "roll": 29,
+   "base": 1,
+   "pv": 1
+  },
+  {
+   "n": 9,
+   "opt": 43,
+   "L0": 42,
+   "roll": 43,
+   "base": 6,
+   "pv": 1
+  },
+  {
+   "n": 9,
+   "opt": 54,
+   "L0": 54,
+   "roll": 54,
+   "base": 1,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 58,
+   "L0": 58,
+   "roll": 58,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 43,
+   "L0": 43,
+   "roll": 43,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 8,
+   "opt": 22,
+   "L0": 22,
+   "roll": 22,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 9,
+   "opt": 24,
+   "L0": 24,
+   "roll": 24,
+   "base": 1,
+   "pv": 0
+  },
+  {
+   "n": 8,
+   "opt": 29,
+   "L0": 29,
+   "roll": 30,
+   "base": 0,
+   "pv": 1
+  },
+  {
+   "n": 10,
+   "opt": 18,
+   "L0": 18,
+   "roll": 18,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 9,
+   "opt": 40,
+   "L0": 40,
+   "roll": 40,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 29,
+   "L0": 29,
+   "roll": 29,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 27,
+   "L0": 27,
+   "roll": 27,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 28,
+   "L0": 28,
+   "roll": 28,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 8,
+   "opt": 56,
+   "L0": 56,
+   "roll": 56,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 8,
+   "opt": 36,
+   "L0": 36,
+   "roll": 36,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 82,
+   "L0": 73,
+   "roll": 82,
+   "base": 1,
+   "pv": 1
+  },
+  {
+   "n": 8,
+   "opt": 53,
+   "L0": 53,
+   "roll": 53,
+   "base": 1,
+   "pv": 0
+  },
+  {
+   "n": 9,
+   "opt": 40,
+   "L0": 36,
+   "roll": 40,
+   "base": 1,
+   "pv": 1
+  },
+  {
+   "n": 9,
+   "opt": 25,
+   "L0": 25,
+   "roll": 25,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 9,
+   "opt": 41,
+   "L0": 41,
+   "roll": 41,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 8,
+   "opt": 30,
+   "L0": 30,
+   "roll": 30,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 22,
+   "L0": 22,
+   "roll": 22,
+   "base": 0,
+   "pv": 0
+  },
+  {
+   "n": 10,
+   "opt": 25,
+   "L0": 25,
+   "roll": 26,
+   "base": 0,
+   "pv": 1
+  },
+  {
+   "n": 8,
+   "opt": 19,
+   "L0": 19,
+   "roll": 19,
+   "base": 0,
+   "pv": 0
+  }
+ ],
+ "scaling": [
+  {
+   "delta": 1,
+   "same_opt": 0,
+   "n": 17,
+   "mean_drop": 4.294117647058823
+  },
+  {
+   "delta": 2,
+   "same_opt": 0,
+   "n": 17,
+   "mean_drop": 7.470588235294118
+  },
+  {
+   "delta": 3,
+   "same_opt": 0,
+   "n": 17,
+   "mean_drop": 7.235294117647059
+  },
+  {
+   "delta": 4,
+   "same_opt": 0,
+   "n": 17,
+   "mean_drop": 10.470588235294118
+  }
+ ],
+ "negatives": {},
+ "hard17_totals": {
+  "base": 854,
+  "pv": 634,
+  "roll_excess": 1
+ },
+ "broad_totals": {
+  "n": 28,
+  "roll_hits": 26,
+  "roll_excess": 2,
+  "base": 372,
+  "pv": 364,
+  "wins": 5,
+  "ties": 21,
+  "losses": 2,
+  "gap_base": {
+   "0": 0.32142857142857145,
+   "1": 0.32142857142857145,
+   "2": 0.14285714285714285,
+   "5": 0.0,
+   "10": 0.0,
+   "20": 0.0
+  },
+  "gap_pv": {
+   "0": 0.07142857142857142,
+   "1": 0.0,
+   "2": 0.0,
+   "5": 0.0,
+   "10": 0.0,
+   "20": 0.0
+  }
+ },
+ "cr": {
+  "greater_than_L0": 0,
+  "n": 17,
+  "mean_slack": -12.235294117647058
+ },
+ "wall": 8.980580568313599
+}

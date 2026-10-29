@@ -1,0 +1,1130 @@
+[
+ {
+  "name": "holdout50",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 4,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 6,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 7,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 8,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 9,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 10,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 11,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 12,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 13,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 7
+ },
+ {
+  "name": "holdout50",
+  "idx": 14,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 15,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "holdout50",
+  "idx": 16,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 17,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 18,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 19,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 20,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 21,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 22,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 23,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "holdout50",
+  "idx": 24,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 25,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 26,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 27,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 28,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 29,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 6
+ },
+ {
+  "name": "holdout50",
+  "idx": 30,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 31,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 32,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 33,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 34,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 35,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 36,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "holdout50",
+  "idx": 37,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 38,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "holdout50",
+  "idx": 39,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "holdout50",
+  "idx": 40,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 41,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 42,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 9
+ },
+ {
+  "name": "holdout50",
+  "idx": 43,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 44,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 45,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "holdout50",
+  "idx": 46,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "holdout50",
+  "idx": 47,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "holdout50",
+  "idx": 48,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "holdout50",
+  "idx": 49,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "synth45",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "synth45",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 4,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 9
+ },
+ {
+  "name": "synth45",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 6,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "synth45",
+  "idx": 7,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 8,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "synth45",
+  "idx": 9,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 10,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 11,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 6
+ },
+ {
+  "name": "synth45",
+  "idx": 12,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 9
+ },
+ {
+  "name": "synth45",
+  "idx": 13,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 14,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 15,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 14
+ },
+ {
+  "name": "synth45",
+  "idx": 16,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 17,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "synth45",
+  "idx": 18,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 9
+ },
+ {
+  "name": "synth45",
+  "idx": 19,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 20,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 21,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 22,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 7
+ },
+ {
+  "name": "synth45",
+  "idx": 23,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 7
+ },
+ {
+  "name": "synth45",
+  "idx": 24,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 7
+ },
+ {
+  "name": "synth45",
+  "idx": 25,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 26,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 9
+ },
+ {
+  "name": "synth45",
+  "idx": 27,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 28,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 29,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "synth45",
+  "idx": 30,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 31,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 32,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 33,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 34,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 35,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 5
+ },
+ {
+  "name": "synth45",
+  "idx": 36,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 37,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 38,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "synth45",
+  "idx": 39,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 14
+ },
+ {
+  "name": "synth45",
+  "idx": 40,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "synth45",
+  "idx": 41,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 42,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "synth45",
+  "idx": 43,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "synth45",
+  "idx": 44,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "large_a",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "large_a",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "large_a",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "large_a",
+  "idx": 4,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 12
+ },
+ {
+  "name": "large_a",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "large_a",
+  "idx": 6,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "large_a",
+  "idx": 7,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 10
+ },
+ {
+  "name": "large_b",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 20
+ },
+ {
+  "name": "large_b",
+  "idx": 1,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_b",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 7
+ },
+ {
+  "name": "large_b",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "large_b",
+  "idx": 4,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_b",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 16
+ },
+ {
+  "name": "large_b",
+  "idx": 6,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "large_b",
+  "idx": 7,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_b",
+  "idx": 8,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "large_b",
+  "idx": 9,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 4
+ },
+ {
+  "name": "large_het",
+  "idx": 0,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_het",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "large_het",
+  "idx": 3,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_het",
+  "idx": 4,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_het",
+  "idx": 5,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_het",
+  "idx": 6,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "large_het",
+  "idx": 7,
+  "v": null,
+  "why": "budget",
+  "cover": 0,
+  "nodes": 31
+ },
+ {
+  "name": "hard3",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "hard3",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 4,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 10
+ },
+ {
+  "name": "hard3",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 6
+ },
+ {
+  "name": "hard3",
+  "idx": 6,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 7,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "hard3",
+  "idx": 8,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 9,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "hard3",
+  "idx": 10,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "hard3",
+  "idx": 11,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 2
+ },
+ {
+  "name": "deep8",
+  "idx": 0,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 1,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 2,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 3,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 4,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 5,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 3
+ },
+ {
+  "name": "deep8",
+  "idx": 6,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ },
+ {
+  "name": "deep8",
+  "idx": 7,
+  "v": true,
+  "why": "yes",
+  "cover": 0,
+  "nodes": 1
+ }
+]

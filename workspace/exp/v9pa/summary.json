@@ -1,0 +1,454 @@
+{
+ "generated": "2026-10-27",
+ "corpus": {
+  "corpus252": 252,
+  "synth80": 80,
+  "hard20": 20
+ },
+ "icf252": {
+  "n": 252,
+  "certified": 252,
+  "exact": 252,
+  "probes": 104,
+  "search_lp": 429,
+  "cert_lp": 135,
+  "pin_lp": 273,
+  "total_lp": 837,
+  "partial_fail": 0,
+  "time_s": 6.2417
+ },
+ "icf_s80": {
+  "n": 80,
+  "certified": 80,
+  "exact": 80,
+  "probes": 14,
+  "search_lp": 58,
+  "cert_lp": 5,
+  "pin_lp": 160,
+  "total_lp": 223,
+  "partial_fail": 2,
+  "time_s": 4.8765
+ },
+ "pace_poly_252": {
+  "exact": {
+   "n": 252,
+   "certified": 252,
+   "exact": 252,
+   "approx": 0,
+   "partial": 0,
+   "probes": 114,
+   "search_lp": 486,
+   "cert_lp": 136,
+   "audit_fail": 0,
+   "stages": {
+    "lp-exact": 85,
+    "search-exact": 109,
+    "chip-exact": 58
+   },
+   "regimes": {
+    "P": 143,
+    "X": 109
+   },
+   "time_s": 5.1914
+  },
+  "approx_eps015": {
+   "n": 252,
+   "certified": 252,
+   "exact": 58,
+   "approx": 194,
+   "partial": 0,
+   "probes": 0,
+   "search_lp": 0,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "chip-approx": 194,
+    "chip-exact": 58
+   },
+   "regimes": {
+    "A": 194,
+    "P": 58
+   },
+   "time_s": 0.2246
+  },
+  "approx_eps010": {
+   "n": 252,
+   "certified": 252,
+   "exact": 61,
+   "approx": 191,
+   "partial": 0,
+   "probes": 1,
+   "search_lp": 17,
+   "cert_lp": 4,
+   "audit_fail": 0,
+   "stages": {
+    "chip-approx": 190,
+    "chip-exact": 58,
+    "lp-exact": 2,
+    "search-exact": 1,
+    "lp-approx": 1
+   },
+   "regimes": {
+    "A": 191,
+    "P": 60,
+    "X": 1
+   },
+   "time_s": 0.664
+  },
+  "approx_eps005": {
+   "n": 252,
+   "certified": 252,
+   "exact": 101,
+   "approx": 151,
+   "partial": 0,
+   "probes": 15,
+   "search_lp": 73,
+   "cert_lp": 15,
+   "audit_fail": 0,
+   "stages": {
+    "chip-approx": 102,
+    "lp-exact": 33,
+    "lp-approx": 44,
+    "search-exact": 10,
+    "chip-exact": 58,
+    "search-approx": 5
+   },
+   "regimes": {
+    "A": 151,
+    "P": 91,
+    "X": 10
+   },
+   "time_s": 1.9315
+  },
+  "approx_eps001": {
+   "n": 252,
+   "certified": 252,
+   "exact": 252,
+   "approx": 0,
+   "partial": 0,
+   "probes": 114,
+   "search_lp": 486,
+   "cert_lp": 136,
+   "audit_fail": 0,
+   "stages": {
+    "lp-exact": 85,
+    "search-exact": 109,
+    "chip-exact": 58
+   },
+   "regimes": {
+    "P": 143,
+    "X": 109
+   },
+   "time_s": 5.2874
+  }
+ },
+ "pace_pact_252": {
+  "exact": {
+   "n": 252,
+   "certified": 252,
+   "exact": 252,
+   "approx": 0,
+   "partial": 0,
+   "probes": 104,
+   "search_lp": 429,
+   "cert_lp": 135,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 148,
+    "search-exact": 104
+   },
+   "regimes": {
+    "P": 148,
+    "X": 104
+   },
+   "time_s": 6.1786
+  },
+  "approx_eps010": {
+   "n": 252,
+   "certified": 252,
+   "exact": 149,
+   "approx": 103,
+   "partial": 0,
+   "probes": 1,
+   "search_lp": 17,
+   "cert_lp": 4,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 251,
+    "search-exact": 1
+   },
+   "regimes": {
+    "P": 148,
+    "A": 103,
+    "X": 1
+   },
+   "time_s": 3.6764
+  },
+  "approx_eps020": {
+   "n": 252,
+   "certified": 252,
+   "exact": 148,
+   "approx": 104,
+   "partial": 0,
+   "probes": 0,
+   "search_lp": 0,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 252
+   },
+   "regimes": {
+    "P": 148,
+    "A": 104
+   },
+   "time_s": 3.3009
+  },
+  "approx_eps005": {
+   "n": 252,
+   "certified": 252,
+   "exact": 151,
+   "approx": 101,
+   "partial": 0,
+   "probes": 3,
+   "search_lp": 21,
+   "cert_lp": 4,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 249,
+    "search-exact": 3
+   },
+   "regimes": {
+    "P": 148,
+    "A": 101,
+    "X": 3
+   },
+   "time_s": 3.682
+  }
+ },
+ "pace_poly_s80": {
+  "exact": {
+   "n": 80,
+   "certified": 80,
+   "exact": 80,
+   "approx": 0,
+   "partial": 0,
+   "probes": 29,
+   "search_lp": 167,
+   "cert_lp": 16,
+   "audit_fail": 0,
+   "stages": {
+    "chip-exact": 13,
+    "search-exact": 27,
+    "lp-exact": 40
+   },
+   "regimes": {
+    "P": 53,
+    "X": 27
+   },
+   "time_s": 4.1991
+  },
+  "approx_eps020": {
+   "n": 80,
+   "certified": 80,
+   "exact": 43,
+   "approx": 37,
+   "partial": 0,
+   "probes": 2,
+   "search_lp": 4,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "chip-exact": 13,
+    "chip-approx": 32,
+    "search-exact": 2,
+    "lp-exact": 28,
+    "lp-approx": 5
+   },
+   "regimes": {
+    "P": 41,
+    "A": 37,
+    "X": 2
+   },
+   "time_s": 1.9946
+  },
+  "approx_eps030": {
+   "n": 80,
+   "certified": 80,
+   "exact": 34,
+   "approx": 46,
+   "partial": 0,
+   "probes": 1,
+   "search_lp": 3,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "chip-exact": 13,
+    "chip-approx": 44,
+    "lp-exact": 20,
+    "lp-approx": 2,
+    "search-exact": 1
+   },
+   "regimes": {
+    "P": 33,
+    "A": 46,
+    "X": 1
+   },
+   "time_s": 1.486
+  },
+  "approx_eps050": {
+   "n": 80,
+   "certified": 80,
+   "exact": 19,
+   "approx": 61,
+   "partial": 0,
+   "probes": 0,
+   "search_lp": 0,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "chip-exact": 13,
+    "chip-approx": 61,
+    "lp-exact": 6
+   },
+   "regimes": {
+    "P": 19,
+    "A": 61
+   },
+   "time_s": 0.4617
+  }
+ },
+ "pace_pact_s80": {
+  "exact": {
+   "n": 80,
+   "certified": 80,
+   "exact": 80,
+   "approx": 0,
+   "partial": 0,
+   "probes": 14,
+   "search_lp": 58,
+   "cert_lp": 5,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 66,
+    "search-exact": 14
+   },
+   "regimes": {
+    "P": 66,
+    "X": 14
+   },
+   "time_s": 4.9485
+  },
+  "approx_eps010": {
+   "n": 80,
+   "certified": 80,
+   "exact": 67,
+   "approx": 13,
+   "partial": 0,
+   "probes": 1,
+   "search_lp": 3,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 79,
+    "search-exact": 1
+   },
+   "regimes": {
+    "P": 66,
+    "A": 13,
+    "X": 1
+   },
+   "time_s": 4.3098
+  },
+  "approx_eps020": {
+   "n": 80,
+   "certified": 80,
+   "exact": 66,
+   "approx": 14,
+   "partial": 0,
+   "probes": 0,
+   "search_lp": 0,
+   "cert_lp": 0,
+   "audit_fail": 0,
+   "stages": {
+    "pact-init": 80
+   },
+   "regimes": {
+    "P": 66,
+    "A": 14
+   },
+   "time_s": 4.2924
+  }
+ },
+ "hard20": {
+  "exact": {
+   "n": 20,
+   "certified": 20,
+   "exact": 20,
+   "probes": 14,
+   "time_s": 72.4571,
+   "stages": {
+    "search-exact": 14,
+    "lp-exact": 6
+   }
+  },
+  "approx_eps010": {
+   "n": 20,
+   "certified": 14,
+   "exact": 5,
+   "approx": 9,
+   "partial": 6,
+   "probes": 0,
+   "time_s": 3.8175,
+   "stages": {
+    "chip-approx": 4,
+    "partial": 6,
+    "lp-approx": 5,
+    "lp-exact": 5
+   }
+  },
+  "approx_eps020": {
+   "n": 20,
+   "certified": 18,
+   "exact": 4,
+   "approx": 14,
+   "partial": 2,
+   "probes": 0,
+   "time_s": 2.5148,
+   "stages": {
+    "chip-approx": 11,
+    "partial": 2,
+    "lp-exact": 4,
+    "lp-approx": 3
+   }
+  },
+  "approx_eps030": {
+   "n": 20,
+   "certified": 20,
+   "exact": 1,
+   "approx": 19,
+   "partial": 0,
+   "probes": 0,
+   "time_s": 1.1212,
+   "stages": {
+    "chip-approx": 17,
+    "lp-approx": 2,
+    "lp-exact": 1
+   }
+  },
+  "fallback_eps020": {
+   "n": 20,
+   "certified": 20,
+   "exact": 6,
+   "approx": 14,
+   "partial": 0,
+   "probes": 2,
+   "time_s": 3.9207,
+   "stages": {
+    "chip-approx": 11,
+    "search-exact": 2,
+    "lp-exact": 4,
+    "lp-approx": 3
+   }
+  }
+ }
+}

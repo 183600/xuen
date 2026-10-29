@@ -1,0 +1,17 @@
+{
+ "engine_diff": {
+  "tests": 1500,
+  "bad": 0,
+  "yes": 986,
+  "sec": 4.5,
+  "note": "v2.0 vs v2.1, full/heterogeneous eligibility, all YES schedules independently validated"
+ },
+ "map_brute": {
+  "states": 3000,
+  "bad": 0,
+  "exact": 2746,
+  "exact_ratio": 0.9153,
+  "sec": 0.4,
+  "note": "MAP=0 vs exact brute force; 0 false NO; MAP=1 may be a relaxation"
+ }
+}

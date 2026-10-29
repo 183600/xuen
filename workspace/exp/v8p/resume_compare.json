@@ -1,0 +1,1472 @@
+[
+ {
+  "uid": 5,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0305,
+  "resume_t": 0.0257
+ },
+ {
+  "uid": 47,
+  "corpus": "base",
+  "name": "holdout",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.041,
+  "resume_t": 0.0383
+ },
+ {
+  "uid": 147,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 6,
+  "known": 34,
+  "h": 33,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0297,
+  "resume_t": 0.0291
+ },
+ {
+  "uid": 157,
+  "corpus": "pert",
+  "name": "h5",
+  "idx": 16,
+  "known": 34,
+  "h": 33,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.03,
+  "resume_t": 0.0261
+ },
+ {
+  "uid": 177,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 6,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0376,
+  "resume_t": 0.035
+ },
+ {
+  "uid": 189,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 18,
+  "known": 34,
+  "h": 33,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0409,
+  "resume_t": 0.0399
+ },
+ {
+  "uid": 197,
+  "corpus": "pert",
+  "name": "h47",
+  "idx": 26,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0372,
+  "resume_t": 0.0346
+ },
+ {
+  "uid": 201,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0432,
+  "resume_t": 0.0369
+ },
+ {
+  "uid": 202,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0302,
+  "resume_t": 0.0259
+ },
+ {
+  "uid": 203,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0403,
+  "resume_t": 0.0372
+ },
+ {
+  "uid": 204,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0383,
+  "resume_t": 0.034
+ },
+ {
+  "uid": 205,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0358,
+  "resume_t": 0.0345
+ },
+ {
+  "uid": 206,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0373,
+  "resume_t": 0.0378
+ },
+ {
+  "uid": 207,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.042,
+  "resume_t": 0.0408
+ },
+ {
+  "uid": 208,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0388,
+  "resume_t": 0.0341
+ },
+ {
+  "uid": 209,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0426,
+  "resume_t": 0.039
+ },
+ {
+  "uid": 210,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0365,
+  "resume_t": 0.0311
+ },
+ {
+  "uid": 211,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.032,
+  "resume_t": 0.0274
+ },
+ {
+  "uid": 212,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0416,
+  "resume_t": 0.0346
+ },
+ {
+  "uid": 213,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0324,
+  "resume_t": 0.031
+ },
+ {
+  "uid": 214,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0397,
+  "resume_t": 0.0367
+ },
+ {
+  "uid": 215,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0297,
+  "resume_t": 0.0299
+ },
+ {
+  "uid": 216,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.027,
+  "resume_t": 0.0246
+ },
+ {
+  "uid": 217,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0301,
+  "resume_t": 0.0257
+ },
+ {
+  "uid": 218,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0317,
+  "resume_t": 0.0255
+ },
+ {
+  "uid": 219,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0829,
+  "resume_t": 0.0593
+ },
+ {
+  "uid": 220,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0333,
+  "resume_t": 0.0288
+ },
+ {
+  "uid": 221,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0279,
+  "resume_t": 0.0247
+ },
+ {
+  "uid": 222,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0791,
+  "resume_t": 0.0554
+ },
+ {
+  "uid": 223,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0343,
+  "resume_t": 0.0305
+ },
+ {
+  "uid": 224,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0412,
+  "resume_t": 0.037
+ },
+ {
+  "uid": 225,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0305,
+  "resume_t": 0.0254
+ },
+ {
+  "uid": 226,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0274,
+  "resume_t": 0.0245
+ },
+ {
+  "uid": 227,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0331,
+  "resume_t": 0.0301
+ },
+ {
+  "uid": 228,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0372,
+  "resume_t": 0.0342
+ },
+ {
+  "uid": 229,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0838,
+  "resume_t": 0.0624
+ },
+ {
+  "uid": 230,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0408,
+  "resume_t": 0.039
+ },
+ {
+  "uid": 231,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.04,
+  "resume_t": 0.0364
+ },
+ {
+  "uid": 232,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0376,
+  "resume_t": 0.0331
+ },
+ {
+  "uid": 233,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0392,
+  "resume_t": 0.0349
+ },
+ {
+  "uid": 234,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0581,
+  "resume_t": 0.0437
+ },
+ {
+  "uid": 235,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0287,
+  "resume_t": 0.0257
+ },
+ {
+  "uid": 236,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0373,
+  "resume_t": 0.0334
+ },
+ {
+  "uid": 237,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0657,
+  "resume_t": 0.0461
+ },
+ {
+  "uid": 238,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0363,
+  "resume_t": 0.0308
+ },
+ {
+  "uid": 239,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0326,
+  "resume_t": 0.0289
+ },
+ {
+  "uid": 240,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0829,
+  "resume_t": 0.0576
+ },
+ {
+  "uid": 241,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 2,
+  "restart_lp": 9,
+  "restart_nodes": [
+   1,
+   3,
+   5
+  ],
+  "resume_lp": 5,
+  "resume_nodes": [
+   1,
+   2,
+   2
+  ],
+  "restart_steps": 3,
+  "resume_steps": 3,
+  "ok": true,
+  "restart_t": 0.0799,
+  "resume_t": 0.0542
+ },
+ {
+  "uid": 242,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0353,
+  "resume_t": 0.0523
+ },
+ {
+  "uid": 243,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0407,
+  "resume_t": 0.0374
+ },
+ {
+  "uid": 244,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 4,
+  "restart_lp": 25,
+  "restart_nodes": [
+   1,
+   3,
+   5,
+   7,
+   9
+  ],
+  "resume_lp": 9,
+  "resume_nodes": [
+   1,
+   2,
+   2,
+   2,
+   2
+  ],
+  "restart_steps": 5,
+  "resume_steps": 5,
+  "ok": true,
+  "restart_t": 0.2071,
+  "resume_t": 0.0966
+ },
+ {
+  "uid": 245,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0302,
+  "resume_t": 0.0274
+ },
+ {
+  "uid": 246,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0346,
+  "resume_t": 0.0316
+ },
+ {
+  "uid": 247,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0388,
+  "resume_t": 0.0351
+ },
+ {
+  "uid": 248,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0303,
+  "resume_t": 0.0271
+ },
+ {
+  "uid": 249,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0357,
+  "resume_t": 0.0327
+ },
+ {
+  "uid": 250,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 47,
+  "known": 35,
+  "h": 34,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0411,
+  "resume_t": 0.0368
+ },
+ {
+  "uid": 251,
+  "corpus": "stress",
+  "name": "stress",
+  "idx": 5,
+  "known": 33,
+  "h": 32,
+  "engine": "residual",
+  "closed_depth": 1,
+  "restart_lp": 4,
+  "restart_nodes": [
+   1,
+   3
+  ],
+  "resume_lp": 3,
+  "resume_nodes": [
+   1,
+   2
+  ],
+  "restart_steps": 2,
+  "resume_steps": 2,
+  "ok": true,
+  "restart_t": 0.0281,
+  "resume_t": 0.0253
+ }
+]

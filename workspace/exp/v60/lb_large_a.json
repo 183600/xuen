@@ -1,0 +1,90 @@
+[
+ {
+  "set": "large_a",
+  "idx": 0,
+  "opt": 46,
+  "epc_lb": 46,
+  "root_lb": 46,
+  "root_solves": 1,
+  "full_lb": 46,
+  "full_nodes": 4,
+  "full_status": "yes"
+ },
+ {
+  "set": "large_a",
+  "idx": 1,
+  "opt": 43,
+  "epc_lb": 43,
+  "root_lb": 43,
+  "root_solves": 1,
+  "full_lb": 43,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_a",
+  "idx": 2,
+  "opt": 68,
+  "epc_lb": 68,
+  "root_lb": 68,
+  "root_solves": 1,
+  "full_lb": 68,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_a",
+  "idx": 3,
+  "opt": 49,
+  "epc_lb": 49,
+  "root_lb": 49,
+  "root_solves": 1,
+  "full_lb": 49,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_a",
+  "idx": 4,
+  "opt": 33,
+  "epc_lb": 33,
+  "root_lb": 33,
+  "root_solves": 1,
+  "full_lb": 33,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_a",
+  "idx": 5,
+  "opt": 30,
+  "epc_lb": 30,
+  "root_lb": 30,
+  "root_solves": 1,
+  "full_lb": 30,
+  "full_nodes": 0,
+  "full_status": "trivial"
+ },
+ {
+  "set": "large_a",
+  "idx": 6,
+  "opt": 61,
+  "epc_lb": 59,
+  "root_lb": 61,
+  "root_solves": 3,
+  "full_lb": 61,
+  "full_nodes": 3,
+  "full_status": "yes"
+ },
+ {
+  "set": "large_a",
+  "idx": 7,
+  "opt": 42,
+  "epc_lb": 42,
+  "root_lb": 42,
+  "root_solves": 1,
+  "full_lb": 42,
+  "full_nodes": 3,
+  "full_status": "yes"
+ }
+]

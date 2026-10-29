@@ -1,0 +1,802 @@
+[
+ {
+  "name": "holdout",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "holdout",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "h5",
+  "idx": 6,
+  "n": 15,
+  "opt": 34,
+  "L0": 32,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 33,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "h5",
+  "idx": 16,
+  "n": 15,
+  "opt": 34,
+  "L0": 32,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 33,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "h47",
+  "idx": 6,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "h47",
+  "idx": 18,
+  "n": 15,
+  "opt": 34,
+  "L0": 32,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 33,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "h47",
+  "idx": 26,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 28,
+  "gap": 5,
+  "lift": {
+   "ok": true,
+   "lp": 6,
+   "calls": 4,
+   "h": 32,
+   "audits": 1
+  },
+  "step": {
+   "ok": true,
+   "lp": 7,
+   "calls": 5
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 30,
+  "gap": 3,
+  "lift": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 30,
+  "gap": 3,
+  "lift": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 32,
+  "gap": 3,
+  "lift": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 30,
+  "gap": 3,
+  "lift": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 32,
+  "gap": 3,
+  "lift": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 5,
+   "calls": 3
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 5,
+  "n": 15,
+  "opt": 33,
+  "L0": 31,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 32,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 6,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 34,
+  "gap": 1,
+  "lift": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 3,
+   "calls": 1
+  }
+ },
+ {
+  "name": "stress",
+  "idx": 47,
+  "n": 15,
+  "opt": 35,
+  "L0": 33,
+  "gap": 2,
+  "lift": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2,
+   "h": 34,
+   "audits": 0
+  },
+  "step": {
+   "ok": true,
+   "lp": 4,
+   "calls": 2
+  }
+ }
+]

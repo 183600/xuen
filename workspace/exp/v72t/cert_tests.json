@@ -1,0 +1,62 @@
+[
+ {
+  "name": "base_no_proof",
+  "got": "NO",
+  "want": "NO",
+  "pass_": true
+ },
+ {
+  "name": "base_yes_schedule",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "no_leaf_alpha",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "no_leaf_beta",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "force_times",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "missing_child",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "yes_shift",
+  "got": false,
+  "want": false,
+  "pass_": true
+ },
+ {
+  "name": "yes_drop",
+  "got": false,
+  "want": false,
+  "pass_": true
+ },
+ {
+  "name": "no_proof_at_opt",
+  "got": true,
+  "want": true,
+  "pass_": true
+ },
+ {
+  "name": "yes_schedule_at_opt_minus_1",
+  "got": false,
+  "want": false,
+  "pass_": true
+ }
+]

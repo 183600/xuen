@@ -1,0 +1,52 @@
+{
+ "default": {
+  "nodes": 388,
+  "lp": 388,
+  "leaves": 320,
+  "maxnodes": 9,
+  "maxlp": 9,
+  "ok": 252,
+  "fail": 0,
+  "t": 4.586528301239014
+ },
+ "mass_q": {
+  "nodes": 382,
+  "lp": 382,
+  "leaves": 317,
+  "maxnodes": 5,
+  "maxlp": 5,
+  "ok": 252,
+  "fail": 0,
+  "t": 4.503114700317383
+ },
+ "match25": {
+  "nodes": 380,
+  "lp": 380,
+  "leaves": 316,
+  "maxnodes": 5,
+  "maxlp": 5,
+  "ok": 252,
+  "fail": 0,
+  "t": 4.4996397495269775
+ },
+ "match35": {
+  "nodes": 382,
+  "lp": 382,
+  "leaves": 317,
+  "maxnodes": 5,
+  "maxlp": 5,
+  "ok": 252,
+  "fail": 0,
+  "t": 4.513866424560547
+ },
+ "match50": {
+  "nodes": 388,
+  "lp": 388,
+  "leaves": 320,
+  "maxnodes": 9,
+  "maxlp": 9,
+  "ok": 252,
+  "fail": 0,
+  "t": 4.535779237747192
+ }
+}

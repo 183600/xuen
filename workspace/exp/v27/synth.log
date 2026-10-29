@@ -1,0 +1,12 @@
+{"s": 1, "opt": 18, "S": 5, "L": 4, "bfs": "NO", "plc": 126, "nodes": 6, "cut": 6, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 6, "opt": 14, "S": 6, "L": 2, "bfs": "NO", "plc": 28, "nodes": 7, "cut": 7, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 9, "opt": 17, "S": 5, "L": 4, "bfs": "NO", "plc": 126, "nodes": 6, "cut": 6, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 12, "opt": 18, "S": 9, "L": 3, "bfs": "NO", "plc": 220, "nodes": 10, "cut": 10, "levels": [1], "status": "ok", "time": 0.001}
+{"s": 14, "opt": 16, "S": 6, "L": 3, "bfs": "NO", "plc": 84, "nodes": 7, "cut": 7, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 20, "opt": 16, "S": 7, "L": 3, "bfs": "NO", "plc": 120, "nodes": 8, "cut": 8, "levels": [1], "status": "ok", "time": 0.001}
+{"s": 21, "opt": 18, "S": 7, "L": 3, "bfs": "NO", "plc": 120, "nodes": 8, "cut": 8, "levels": [1], "status": "ok", "time": 0.001}
+{"s": 24, "opt": 14, "S": 5, "L": 2, "bfs": "NO", "plc": 21, "nodes": 6, "cut": 6, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 26, "opt": 17, "S": 5, "L": 3, "bfs": "NO", "plc": 56, "nodes": 6, "cut": 6, "levels": [1], "status": "ok", "time": 0.0}
+{"s": 27, "opt": 19, "S": 9, "L": 3, "bfs": "NO", "plc": 220, "nodes": 10, "cut": 10, "levels": [1], "status": "ok", "time": 0.001}
+{"s": 30, "opt": 16, "S": 8, "L": 2, "bfs": "NO", "plc": 45, "nodes": 9, "cut": 9, "levels": [1], "status": "ok", "time": 0.001}
+{"s": 37, "opt": 15, "S": 5, "L": 3, "bfs": "NO", "plc": 56, "nodes": 6, "cut": 6, "levels": [1], "status": "ok", "time": 0.0}

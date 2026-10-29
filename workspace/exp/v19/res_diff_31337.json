@@ -1,0 +1,15 @@
+{
+ "N": 3000,
+ "seed": 31337,
+ "mode": "plain",
+ "het": false,
+ "hpack": false,
+ "yes": 1218,
+ "bad": 0,
+ "nodes": {
+  "base": 14890,
+  "dcd": 14058
+ },
+ "node_ratio": 1.059,
+ "time": 0.869
+}

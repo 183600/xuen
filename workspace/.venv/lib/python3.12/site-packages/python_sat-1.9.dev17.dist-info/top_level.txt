@@ -1,0 +1,4 @@
+pycard
+pyformula
+pysat
+pysolvers

@@ -1,0 +1,1265 @@
+{
+ "rows": [
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 1,
+   "known": 29,
+   "L0": 13,
+   "U0": 29,
+   "pred": 26.88638752827934,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 13,
+   "known": 39,
+   "L0": 23,
+   "U0": 39,
+   "pred": 38.14637754238856,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 7,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 10,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 30,
+   "known": 43,
+   "L0": 27,
+   "U0": 43,
+   "pred": 42.24183456105193,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 39,
+   "known": 39,
+   "L0": 23,
+   "U0": 39,
+   "pred": 38.425103123768615,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 9,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 40,
+   "known": 42,
+   "L0": 26,
+   "U0": 42,
+   "pred": 38.44711903246397,
+   "seq": {
+    "probes": 3,
+    "rounds": 3,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 43,
+   "known": 34,
+   "L0": 18,
+   "U0": 34,
+   "pred": 30.570918622376848,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 44,
+   "known": 25,
+   "L0": 9,
+   "U0": 25,
+   "pred": 23.34049890884953,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 46,
+   "known": 31,
+   "L0": 15,
+   "U0": 31,
+   "pred": 29.63113971772739,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "holdout",
+   "idx": 49,
+   "known": 39,
+   "L0": 23,
+   "U0": 39,
+   "pred": 38.36591968985654,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 1,
+   "known": 7,
+   "L0": 1,
+   "U0": 7,
+   "pred": 6.075207935232259,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 3,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 3,
+   "known": 13,
+   "L0": 1,
+   "U0": 13,
+   "pred": 12.284682172244148,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 7,
+   "known": 10,
+   "L0": 1,
+   "U0": 10,
+   "pred": 9.379008683602896,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 8,
+   "known": 14,
+   "L0": 1,
+   "U0": 14,
+   "pred": 13.22553628318026,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 9,
+   "known": 8,
+   "L0": 1,
+   "U0": 8,
+   "pred": 7.249029978549387,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 13,
+   "known": 16,
+   "L0": 1,
+   "U0": 16,
+   "pred": 15.904328652155835,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 15,
+   "known": 11,
+   "L0": 1,
+   "U0": 11,
+   "pred": 9.736774016867376,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 19,
+   "known": 14,
+   "L0": 1,
+   "U0": 14,
+   "pred": 12.546117417277456,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 21,
+   "known": 10,
+   "L0": 1,
+   "U0": 10,
+   "pred": 8.899521855852084,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 38,
+   "known": 12,
+   "L0": 1,
+   "U0": 12,
+   "pred": 11.368156408387618,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "synth",
+   "idx": 44,
+   "known": 10,
+   "L0": 1,
+   "U0": 10,
+   "pred": 9.022150812705897,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "large_a",
+   "idx": 1,
+   "known": 43,
+   "L0": 27,
+   "U0": 43,
+   "pred": 43.364255153975726,
+   "seq": {
+    "probes": 4,
+    "rounds": 4,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "large_b",
+   "idx": 2,
+   "known": 60,
+   "L0": 44,
+   "U0": 60,
+   "pred": 59.46950247405236,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "large_b",
+   "idx": 7,
+   "known": 42,
+   "L0": 26,
+   "U0": 42,
+   "pred": 40.95307925262822,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "large_b",
+   "idx": 9,
+   "known": 42,
+   "L0": 26,
+   "U0": 42,
+   "pred": 41.541736914935605,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "large_het",
+   "idx": 3,
+   "known": 31,
+   "L0": 15,
+   "U0": 31,
+   "pred": 30.041400629425894,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 15,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 18,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "hard3",
+   "idx": 6,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 30.47821731724954,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "hard3",
+   "idx": 10,
+   "known": 42,
+   "L0": 26,
+   "U0": 42,
+   "pred": 40.58866845517916,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "hard3",
+   "idx": 11,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 32.27002493936221,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "base",
+   "name": "deep",
+   "idx": 2,
+   "known": 30,
+   "L0": 14,
+   "U0": 30,
+   "pred": 28.82657964766521,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h5",
+   "idx": 1,
+   "known": 32,
+   "L0": 16,
+   "U0": 32,
+   "pred": 31.914287142933297,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 7,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h5",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 33.06757763605012,
+   "seq": {
+    "probes": 4,
+    "rounds": 4,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h5",
+   "idx": 25,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 31.992031218284783,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h5",
+   "idx": 28,
+   "known": 32,
+   "L0": 16,
+   "U0": 32,
+   "pred": 31.115420605775302,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h5",
+   "idx": 29,
+   "known": 32,
+   "L0": 16,
+   "U0": 32,
+   "pred": 31.914287142933297,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 2,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 5,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 34.961722618106556,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 7,
+   "known": 34,
+   "L0": 18,
+   "U0": 34,
+   "pred": 33.89770909876652,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 17,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 34.961722618106556,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 18,
+   "known": 34,
+   "L0": 18,
+   "U0": 34,
+   "pred": 32.849596878122235,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 20,
+   "known": 34,
+   "L0": 18,
+   "U0": 34,
+   "pred": 33.920593479700564,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 10,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "pert",
+   "name": "h47",
+   "idx": 21,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 34.871254004149115,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 1,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 28.929025758005825,
+   "seq": {
+    "probes": 3,
+    "rounds": 3,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 6,
+    "rounds": 2,
+    "lp": 8,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 30.885919425856635,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 7,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 32.04340017852361,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 32.04340017852361,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 32.06688377908252,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 47,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 33.89240270260421,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 8,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 31.059599755462504,
+   "seq": {
+    "probes": 2,
+    "rounds": 2,
+    "lp": 4,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 5,
+    "rounds": 2,
+    "lp": 7,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 47,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 33.682829222108694,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 8,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 47,
+   "known": 35,
+   "L0": 19,
+   "U0": 35,
+   "pred": 34.07637965114313,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 3,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 6,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  },
+  {
+   "corpus": "stress",
+   "name": "stress",
+   "idx": 5,
+   "known": 33,
+   "L0": 17,
+   "U0": 33,
+   "pred": 31.952407328081613,
+   "seq": {
+    "probes": 1,
+    "rounds": 1,
+    "lp": 5,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   },
+   "batch": {
+    "probes": 4,
+    "rounds": 1,
+    "lp": 8,
+    "gap": 0,
+    "certified": true,
+    "final_audit": true
+   }
+  }
+ ],
+ "summary": {
+  "n": 50,
+  "seq_probes": 75,
+  "batch_probes": 224,
+  "seq_rounds": 75,
+  "batch_rounds": 67,
+  "seq_lp": 131,
+  "batch_lp": 277,
+  "seq_cert": 50,
+  "batch_cert": 50
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "large_het 7",
+ "known": 41,
+ "h": 40,
+ "sage": {
+  "verdict": false,
+  "nodes": 1,
+  "leaves": 1,
+  "branch_jobs": [],
+  "unknown": false
+ },
+ "stride": {
+  "verdict": "open",
+  "nodes": 1,
+  "leaves": 1,
+  "branch_jobs": [],
+  "holes": []
+ }
+}

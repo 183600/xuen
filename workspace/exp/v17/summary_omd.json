@@ -1,0 +1,36 @@
+{
+ "nodes": {
+  "v15": 1393,
+  "base": 1393,
+  "omd": 273
+ },
+ "tables": {
+  "v15": 191,
+  "base": 191,
+  "omd": 69
+ },
+ "time": {
+  "base": 0.0926,
+  "omd": 0.0452
+ },
+ "node_ratio": 5.103,
+ "time_ratio": 2.046,
+ "false_no_at_opt": [],
+ "changed": [
+  {
+   "tag": "hard3",
+   "idx": 5,
+   "n": 14,
+   "m": 3,
+   "full_elig": true,
+   "opt": 39,
+   "v15_nodes": 1336,
+   "base_nodes": 1336,
+   "omd_nodes": 216,
+   "base_tables": 183,
+   "omd_tables": 61,
+   "base_time": 0.06692,
+   "omd_time": 0.01976
+  }
+ ]
+}

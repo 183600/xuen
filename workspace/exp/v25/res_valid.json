@@ -1,0 +1,8 @@
+{
+  "cps_vs_exact_A0": {"states": 1430, "mismatch": 0, "note": "n=5..8, m=2..3, A=0, all DAGs random, h in [lb,lb+4]"},
+  "cps_vs_exact_randA": {"states": 1977, "mismatch": 0, "note": "full eligibility, A_k random in 0..3, n=5..8, h in [lb,lb+3]"},
+  "cps_het_sound": {"states": 1977, "certified_NO": 150, "false_NO": 0, "note": "heterogeneous eligibility; CPS=NO implies exact engine NO"},
+  "holdout_OPT": {"cases": 50, "CPS_YES": 49, "CPS_UNKNOWN": 1, "CPS_NO": 0},
+  "holdout_OPT_minus_1": {"cases": 50, "v22_closed_root": 50, "note": "MAP first, CPS on the 5 MAP=1 residues; all 1 node"},
+  "schedule_validation": {"cases": 50, "valid": 50, "note": "each h=OPT YES schedule checked independently: every task once, precedence, machine non-overlap, eligibility, h"}
+}

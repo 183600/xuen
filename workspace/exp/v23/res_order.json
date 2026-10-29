@@ -1,0 +1,30 @@
+{
+ "no": {
+  "slack": {
+   "nodes": 66,
+   "time": 0.1485
+  },
+  "late": {
+   "nodes": 66,
+   "time": 0.1471
+  },
+  "loss": {
+   "nodes": 66,
+   "time": 0.1475
+  }
+ },
+ "yes": {
+  "slack": {
+   "nodes": 1905,
+   "time": 0.7552
+  },
+  "late": {
+   "nodes": 1953,
+   "time": 0.761
+  },
+  "loss": {
+   "nodes": 1511,
+   "time": 0.7377
+  }
+ }
+}

@@ -1,0 +1,147 @@
+{
+ "3": {
+  "cap": 3,
+  "s252": {
+   "n": 252,
+   "certified": 252,
+   "ok": 252,
+   "partial_fail": 0,
+   "probes": 104,
+   "search": 495,
+   "cert": 148,
+   "pin": 273,
+   "total": 916,
+   "t": 6.14
+  },
+  "sgap": {
+   "n": 29,
+   "certified": 29,
+   "ok": 29,
+   "partial_fail": 0,
+   "probes": 65,
+   "search": 1556,
+   "cert": 753,
+   "pin": 78,
+   "total": 2387,
+   "t": 17.34
+  },
+  "wall252": 6.15,
+  "wallgap": 17.34
+ },
+ "4": {
+  "cap": 4,
+  "s252": {
+   "n": 252,
+   "certified": 252,
+   "ok": 252,
+   "partial_fail": 0,
+   "probes": 104,
+   "search": 495,
+   "cert": 153,
+   "pin": 273,
+   "total": 921,
+   "t": 6.28
+  },
+  "sgap": {
+   "n": 29,
+   "certified": 29,
+   "ok": 29,
+   "partial_fail": 0,
+   "probes": 65,
+   "search": 1612,
+   "cert": 780,
+   "pin": 78,
+   "total": 2470,
+   "t": 17.52
+  },
+  "wall252": 6.29,
+  "wallgap": 17.53
+ },
+ "5": {
+  "cap": 5,
+  "s252": {
+   "n": 252,
+   "certified": 252,
+   "ok": 252,
+   "partial_fail": 0,
+   "probes": 104,
+   "search": 454,
+   "cert": 135,
+   "pin": 273,
+   "total": 862,
+   "t": 6.06
+  },
+  "sgap": {
+   "n": 29,
+   "certified": 29,
+   "ok": 29,
+   "partial_fail": 0,
+   "probes": 65,
+   "search": 1567,
+   "cert": 748,
+   "pin": 78,
+   "total": 2393,
+   "t": 17.19
+  },
+  "wall252": 6.07,
+  "wallgap": 17.2
+ },
+ "6": {
+  "cap": 6,
+  "s252": {
+   "n": 252,
+   "certified": 252,
+   "ok": 252,
+   "partial_fail": 0,
+   "probes": 104,
+   "search": 445,
+   "cert": 136,
+   "pin": 273,
+   "total": 854,
+   "t": 6.03
+  },
+  "sgap": {
+   "n": 29,
+   "certified": 29,
+   "ok": 29,
+   "partial_fail": 0,
+   "probes": 65,
+   "search": 1618,
+   "cert": 770,
+   "pin": 78,
+   "total": 2466,
+   "t": 17.58
+  },
+  "wall252": 6.03,
+  "wallgap": 17.58
+ },
+ "8": {
+  "cap": 8,
+  "s252": {
+   "n": 252,
+   "certified": 252,
+   "ok": 252,
+   "partial_fail": 0,
+   "probes": 104,
+   "search": 461,
+   "cert": 139,
+   "pin": 273,
+   "total": 873,
+   "t": 6.24
+  },
+  "sgap": {
+   "n": 29,
+   "certified": 29,
+   "ok": 29,
+   "partial_fail": 0,
+   "probes": 65,
+   "search": 1692,
+   "cert": 801,
+   "pin": 78,
+   "total": 2571,
+   "t": 18.09
+  },
+  "wall252": 6.25,
+  "wallgap": 18.1
+ }
+}

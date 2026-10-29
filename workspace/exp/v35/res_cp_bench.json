@@ -1,0 +1,51 @@
+{
+ "holdout50": {
+  "n": 50,
+  "no": 48,
+  "time_no": 0.189,
+  "falseno_at_opt": 0,
+  "time_yes": 0.912
+ },
+ "hard3": {
+  "n": 12,
+  "no": 12,
+  "time_no": 0.035,
+  "falseno_at_opt": 0,
+  "time_yes": 0.232
+ },
+ "deep8": {
+  "n": 8,
+  "no": 8,
+  "time_no": 0.021,
+  "falseno_at_opt": 0,
+  "time_yes": 0.184
+ },
+ "large_a": {
+  "n": 8,
+  "no": 8,
+  "time_no": 0.024,
+  "falseno_at_opt": 0,
+  "time_yes": 0.316
+ },
+ "large_b": {
+  "n": 10,
+  "no": 10,
+  "time_no": 0.031,
+  "falseno_at_opt": 0,
+  "time_yes": 0.691
+ },
+ "large_het": {
+  "n": 8,
+  "no": 7,
+  "time_no": 0.023,
+  "falseno_at_opt": 0,
+  "time_yes": 0.462
+ },
+ "synth45": {
+  "n": 45,
+  "no": 45,
+  "time_no": 0.104,
+  "falseno_at_opt": 0,
+  "time_yes": 0.583
+ }
+}

@@ -1,0 +1,807 @@
+{
+ "rounds": [
+  {
+   "size": 32,
+   "scored": [
+    {
+     "score": [
+      0,
+      110,
+      33,
+      0.889
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 110,
+      "cert": 33,
+      "t": 0.8888
+     }
+    },
+    {
+     "score": [
+      0,
+      110,
+      33,
+      0.903
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 110,
+      "cert": 33,
+      "t": 0.90272
+     }
+    },
+    {
+     "score": [
+      0,
+      110,
+      33,
+      0.929
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "mass",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 110,
+      "cert": 33,
+      "t": 0.92929
+     }
+    },
+    {
+     "score": [
+      0,
+      113,
+      33,
+      0.946
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 113,
+      "cert": 33,
+      "t": 0.94576
+     }
+    },
+    {
+     "score": [
+      0,
+      117,
+      33,
+      0.962
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 117,
+      "cert": 33,
+      "t": 0.9624499999999997
+     }
+    },
+    {
+     "score": [
+      0,
+      117,
+      33,
+      0.975
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 117,
+      "cert": 33,
+      "t": 0.97522
+     }
+    },
+    {
+     "score": [
+      0,
+      120,
+      34,
+      1.084
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 120,
+      "cert": 34,
+      "t": 1.08413
+     }
+    },
+    {
+     "score": [
+      0,
+      120,
+      34,
+      1.084
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 120,
+      "cert": 34,
+      "t": 1.08447
+     }
+    },
+    {
+     "score": [
+      0,
+      127,
+      42,
+      1.026
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 127,
+      "cert": 42,
+      "t": 1.0259800000000001
+     }
+    },
+    {
+     "score": [
+      0,
+      127,
+      42,
+      1.029
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 127,
+      "cert": 42,
+      "t": 1.02871
+     }
+    },
+    {
+     "score": [
+      0,
+      131,
+      38,
+      1.462
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "left",
+      "closure": false
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 131,
+      "cert": 38,
+      "t": 1.46158
+     }
+    },
+    {
+     "score": [
+      0,
+      131,
+      39,
+      1.376
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 131,
+      "cert": 39,
+      "t": 1.3760400000000002
+     }
+    },
+    {
+     "score": [
+      0,
+      132,
+      38,
+      1.352
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.35,
+      "side": "left",
+      "closure": false
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 132,
+      "cert": 38,
+      "t": 1.3515399999999997
+     }
+    },
+    {
+     "score": [
+      0,
+      134,
+      33,
+      1.075
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 134,
+      "cert": 33,
+      "t": 1.07545
+     }
+    },
+    {
+     "score": [
+      0,
+      139,
+      43,
+      1.787
+     ],
+     "cfg": {
+      "heur": "tail",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 139,
+      "cert": 43,
+      "t": 1.7870399999999997
+     }
+    },
+    {
+     "score": [
+      0,
+      143,
+      40,
+      1.601
+     ],
+     "cfg": {
+      "heur": "tail",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 143,
+      "cert": 40,
+      "t": 1.6010100000000003
+     }
+    },
+    {
+     "score": [
+      0,
+      143,
+      44,
+      1.812
+     ],
+     "cfg": {
+      "heur": "tail",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 143,
+      "cert": 44,
+      "t": 1.81167
+     }
+    },
+    {
+     "score": [
+      0,
+      165,
+      52,
+      1.928
+     ],
+     "cfg": {
+      "heur": "tail",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 165,
+      "cert": 52,
+      "t": 1.9281100000000002
+     }
+    },
+    {
+     "score": [
+      0,
+      174,
+      47,
+      1.669
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 174,
+      "cert": 47,
+      "t": 1.66939
+     }
+    },
+    {
+     "score": [
+      0,
+      234,
+      97,
+      4.387
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "right",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 234,
+      "cert": 97,
+      "t": 4.3868
+     }
+    }
+   ]
+  },
+  {
+   "size": 64,
+   "scored": [
+    {
+     "score": [
+      0,
+      265,
+      79,
+      2.867
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 265,
+      "cert": 79,
+      "t": 2.86664
+     }
+    },
+    {
+     "score": [
+      0,
+      266,
+      79,
+      2.82
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 266,
+      "cert": 79,
+      "t": 2.8198499999999997
+     }
+    },
+    {
+     "score": [
+      0,
+      267,
+      83,
+      2.877
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 267,
+      "cert": 83,
+      "t": 2.8765300000000003
+     }
+    },
+    {
+     "score": [
+      0,
+      268,
+      79,
+      2.849
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 268,
+      "cert": 79,
+      "t": 2.8485799999999997
+     }
+    },
+    {
+     "score": [
+      0,
+      268,
+      84,
+      2.858
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 268,
+      "cert": 84,
+      "t": 2.8580000000000005
+     }
+    },
+    {
+     "score": [
+      0,
+      283,
+      87,
+      3.091
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "mass",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 283,
+      "cert": 87,
+      "t": 3.0914700000000006
+     }
+    },
+    {
+     "score": [
+      0,
+      291,
+      98,
+      3.525
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 291,
+      "cert": 98,
+      "t": 3.52522
+     }
+    },
+    {
+     "score": [
+      0,
+      294,
+      101,
+      3.588
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 294,
+      "cert": 101,
+      "t": 3.5883100000000008
+     }
+    },
+    {
+     "score": [
+      0,
+      334,
+      108,
+      3.754
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 334,
+      "cert": 108,
+      "t": 3.7538699999999996
+     }
+    },
+    {
+     "score": [
+      0,
+      351,
+      117,
+      4.289
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.65,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 351,
+      "cert": 117,
+      "t": 4.288720000000001
+     }
+    }
+   ]
+  },
+  {
+   "size": 105,
+   "scored": [
+    {
+     "score": [
+      0,
+      418,
+      130,
+      3.925
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 418,
+      "cert": 130,
+      "t": 3.9246899999999996
+     }
+    },
+    {
+     "score": [
+      0,
+      420,
+      130,
+      3.937
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.5,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 420,
+      "cert": 130,
+      "t": 3.937170000000001
+     }
+    },
+    {
+     "score": [
+      0,
+      423,
+      130,
+      4.023
+     ],
+     "cfg": {
+      "heur": "succ",
+      "split": 0.35,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 423,
+      "cert": 130,
+      "t": 4.0226299999999995
+     }
+    },
+    {
+     "score": [
+      0,
+      441,
+      149,
+      4.2
+     ],
+     "cfg": {
+      "heur": "mass",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 441,
+      "cert": 149,
+      "t": 4.1998000000000015
+     }
+    },
+    {
+     "score": [
+      0,
+      442,
+      150,
+      4.212
+     ],
+     "cfg": {
+      "heur": "frac",
+      "split": 0.25,
+      "side": "left",
+      "closure": true
+     },
+     "tot": {
+      "unknown": 0,
+      "nodes": 442,
+      "cert": 150,
+      "t": 4.211970000000001
+     }
+    }
+   ]
+  }
+ ],
+ "selected": {
+  "heur": "frac",
+  "split": 0.5,
+  "side": "left",
+  "closure": true
+ },
+ "cv": [
+  {
+   "fold": 0,
+   "n": 21,
+   "a": {
+    "unknown": 0,
+    "nodes": 83,
+    "cert": 27,
+    "t": 0.7585800000000001
+   },
+   "b": {
+    "unknown": 0,
+    "nodes": 83,
+    "cert": 27,
+    "t": 0.7546800000000001
+   }
+  },
+  {
+   "fold": 1,
+   "n": 21,
+   "a": {
+    "unknown": 0,
+    "nodes": 88,
+    "cert": 22,
+    "t": 0.8697599999999999
+   },
+   "b": {
+    "unknown": 0,
+    "nodes": 88,
+    "cert": 22,
+    "t": 0.8696000000000002
+   }
+  },
+  {
+   "fold": 2,
+   "n": 21,
+   "a": {
+    "unknown": 0,
+    "nodes": 94,
+    "cert": 30,
+    "t": 0.89156
+   },
+   "b": {
+    "unknown": 0,
+    "nodes": 94,
+    "cert": 30,
+    "t": 0.8942300000000002
+   }
+  },
+  {
+   "fold": 3,
+   "n": 21,
+   "a": {
+    "unknown": 0,
+    "nodes": 67,
+    "cert": 27,
+    "t": 0.5339400000000001
+   },
+   "b": {
+    "unknown": 0,
+    "nodes": 67,
+    "cert": 27,
+    "t": 0.53264
+   }
+  },
+  {
+   "fold": 4,
+   "n": 21,
+   "a": {
+    "unknown": 0,
+    "nodes": 86,
+    "cert": 24,
+    "t": 0.8653299999999999
+   },
+   "b": {
+    "unknown": 0,
+    "nodes": 88,
+    "cert": 24,
+    "t": 0.88428
+   }
+  }
+ ]
+}
