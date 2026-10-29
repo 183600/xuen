@@ -345,6 +345,46 @@ jobs:
           echo "model=$SELECTED" >> "$GITHUB_OUTPUT"
           echo "[model] 最终选择：$SELECTED"
 
+      - name: Pre-OpenCode test gate
+        id: pretest
+        shell: bash
+        timeout-minutes: 40
+        run: |
+          set +e
+          cat > /tmp/pretest_run.sh <<'PTGEOF'
+          set +e
+          [ -f pyproject.toml ] || exit 42
+          python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
+          python3 -m pytest -q
+          exit $?
+          PTGEOF
+          echo "=========== PRE-OPENCODE TEST GATE ==========="
+          EC=0
+          timeout --kill-after=60 2400 bash /tmp/pretest_run.sh > /tmp/pretest_gate.log 2>&1 || EC=$?
+          tail -30 /tmp/pretest_gate.log 2>/dev/null || true
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+          if [ "$EC" -eq 0 ]; then
+            echo "[pre-test] 测试通过"
+            exit 0
+          fi
+          case "$EC" in
+            42) echo "[pre-test] 无可识别测试(42)，放行"; exit 0 ;;
+            43) echo "[pre-test] 测试依赖环境不可用(43)，放行"; exit 0 ;;
+            124|137|143) echo "[pre-test] 测试超时($EC)，结果不确定，放行"; exit 0 ;;
+          esac
+          echo "failed=true" >> "$GITHUB_OUTPUT"
+          echo "[pre-test] 测试失败(exit=$EC) → 推送当前状态并提前结束本 job（不运行 agent）"
+          git add -A 2>/dev/null
+          if ! git diff --cached --quiet 2>/dev/null; then
+            git commit -m "ci: pre-agent test gate failed (exit=$EC)" 2>/dev/null || true
+            BB="${{ github.event.repository.default_branch }}"
+            git pull --rebase origin "$BB" 2>/dev/null || git rebase --abort 2>/dev/null || true
+            git push origin "HEAD:$BB" 2>/dev/null || echo "[pre-test] [warn] push 失败"
+          else
+            echo "[pre-test] 没有需要推送的新内容"
+          fi
+          exit 1
+
       - name: Run OpenCode on issue
         id: run
         continue-on-error: true
@@ -591,6 +631,7 @@ jobs:
           REENABLED_COUNT: ${{ steps.resume.outputs.reenabled }}
           RESUME_FAILED: ${{ steps.resume.outputs.failed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PRETEST_FAILED: ${{ steps.pretest.outputs.failed }}
         run: |
           set -euo pipefail
           COMMENT=/tmp/opencode-comment.md
@@ -602,7 +643,9 @@ jobs:
             echo "- Actions 日志：${RUN_URL}"
             echo
 
-            if [ "$SELECT_OUTCOME" != "success" ]; then
+            if [ "${PRETEST_FAILED:-}" = "true" ]; then
+              echo "❌ Pre-test 失败：仓库测试未通过，本 job 已按策略提前结束（agent 未运行）。"
+            elif [ "$SELECT_OUTCOME" != "success" ]; then
               echo "❌ 模型选择失败：没有找到可用的免费模型。"
             elif [ "$RUN_OUTCOME" != "success" ] || [ "${RUN_EXIT:-}" != "0" ]; then
               echo "❌ OpenCode 执行失败（exit=${RUN_EXIT:-unknown}）。"

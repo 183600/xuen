@@ -320,6 +320,35 @@ jobs:
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
+          # ⭐ 前置测试门：本窗口内 xuen 会反复调用 opencode（agent.command）；
+          # 窗口启动前先跑一遍本仓库测试（python -m pytest -q，与 ci.yml 一致）。
+          # 失败 → 推送当前状态并以 exit 86 提前结束本 job；后继 run 已在队列中，数秒内自动接续。
+          cat > /tmp/pretest_run.sh <<'PTGEOF'
+          set +e
+          [ -f pyproject.toml ] || exit 42
+          python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
+          python3 -m pytest -q
+          exit $?
+          PTGEOF
+          echo "=========== PRE-OPENCODE TEST GATE ==========="
+          PTEC=0
+          timeout --kill-after=60 1500 bash /tmp/pretest_run.sh > /tmp/pretest_gate.log 2>&1 || PTEC=$?
+          tail -25 /tmp/pretest_gate.log 2>/dev/null || true
+          case "$PTEC" in
+            0|42|43|124|137|143)
+              echo "[pre-test] exit=$PTEC（通过/无可识别测试/依赖不可用/超时），放行" ;;
+            *)
+              echo "[pre-test] 测试失败(exit=$PTEC) → 推送当前状态并提前结束本 job"
+              git add -A
+              git commit -m "auto: pre-opencode test gate failed (exit=$PTEC)" \
+                || echo "[pre-test] 没有新内容可提交"
+              BRANCH_PT="${GITHUB_REF_NAME:-master}"
+              git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
+              git push origin "HEAD:$BRANCH_PT" \
+                || echo "[pre-test] [warn] push 失败"
+              exit 86 ;;
+          esac
+
           echo "[loop] 任务：设计一个新的算法｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
           timeout --signal=INT --kill-after=60s "$WORK_SECONDS" \
             python3 main.py --no-tui --no-color "设计一个新的算法" -c config.yaml
@@ -384,6 +413,34 @@ jobs:
           VARIANT="${XUEN_VARIANT:-}"
           EXTRA=""
           [ -n "$VARIANT" ] && EXTRA="--variant $VARIANT"
+          # ⭐ 前置测试门：opencode 调用前先跑一遍本仓库测试（python -m pytest -q）。
+          # 失败 → 推送当前状态并以 exit 86 提前结束本 job；后继 run 已在队列中，数秒内自动接续。
+          cat > /tmp/pretest_run.sh <<'PTGEOF'
+          set +e
+          [ -f pyproject.toml ] || exit 42
+          python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
+          python3 -m pytest -q
+          exit $?
+          PTGEOF
+          echo "=========== PRE-OPENCODE TEST GATE (docs) ==========="
+          PTEC=0
+          timeout --kill-after=60 1500 bash /tmp/pretest_run.sh > /tmp/pretest_gate.log 2>&1 || PTEC=$?
+          tail -25 /tmp/pretest_gate.log 2>/dev/null || true
+          case "$PTEC" in
+            0|42|43|124|137|143)
+              echo "[pre-test] exit=$PTEC（通过/无可识别测试/依赖不可用/超时），放行" ;;
+            *)
+              echo "[pre-test] 测试失败(exit=$PTEC) → 推送当前状态并提前结束本 job"
+              git add -A
+              git commit -m "auto: pre-opencode test gate failed (docs, exit=$PTEC)" \
+                || echo "[pre-test] 没有新内容可提交"
+              BRANCH_PT="${GITHUB_REF_NAME:-master}"
+              git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
+              git push origin "HEAD:$BRANCH_PT" \
+                || echo "[pre-test] [warn] push 失败"
+              exit 86 ;;
+          esac
+
           # shellcheck disable=SC2086
           timeout --kill-after=60 480 opencode run -m "$MODEL" $EXTRA "$PROMPT_DOCS" 2>&1 | tee /tmp/oc_docs_opt.log
           RC=${PIPESTATUS[0]}
@@ -665,6 +722,35 @@ jobs:
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
+          # ⭐ 前置测试门：本窗口内 xuen 会反复调用 opencode（agent.command）；
+          # 窗口启动前先跑一遍本仓库测试（python -m pytest -q，与 ci.yml 一致）。
+          # 失败 → 推送当前状态并以 exit 86 提前结束本 job；后继 run 已在队列中，数秒内自动接续。
+          cat > /tmp/pretest_run.sh <<'PTGEOF'
+          set +e
+          [ -f pyproject.toml ] || exit 42
+          python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
+          python3 -m pytest -q
+          exit $?
+          PTGEOF
+          echo "=========== PRE-OPENCODE TEST GATE ==========="
+          PTEC=0
+          timeout --kill-after=60 1500 bash /tmp/pretest_run.sh > /tmp/pretest_gate.log 2>&1 || PTEC=$?
+          tail -25 /tmp/pretest_gate.log 2>/dev/null || true
+          case "$PTEC" in
+            0|42|43|124|137|143)
+              echo "[pre-test] exit=$PTEC（通过/无可识别测试/依赖不可用/超时），放行" ;;
+            *)
+              echo "[pre-test] 测试失败(exit=$PTEC) → 推送当前状态并提前结束本 job"
+              git add -A
+              git commit -m "auto: pre-opencode test gate failed (exit=$PTEC)" \
+                || echo "[pre-test] 没有新内容可提交"
+              BRANCH_PT="${GITHUB_REF_NAME:-master}"
+              git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
+              git push origin "HEAD:$BRANCH_PT" \
+                || echo "[pre-test] [warn] push 失败"
+              exit 86 ;;
+          esac
+
           echo "[unibot] 任务：寻找参加UniBot的创新点｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
           timeout --signal=INT --kill-after=60s "$WORK_SECONDS" \
             python3 main.py --no-tui --no-color "寻找参加UniBot的创新点" -c config.yaml
