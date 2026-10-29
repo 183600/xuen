@@ -362,6 +362,51 @@ jobs:
           git reset -q   # 只清索引，工作区文件保留
           echo "[loop] 工作区已 checkpoint 到 xuen-loop 分支：${COMMIT:0:12}"
 
+      # ⭐ 新增：「优化代码和文档」步骤（每次循环 1/10 概率执行）。
+      #   本 workflow 的「循环」= 持续自续跑的每个 run；每个 run 掷一次骰子，
+      #   1/10 概率命中才调用 opencode 优化本仓库自身的代码与文档。
+      #   放在 workspace checkpoint 之后执行：即使本步骤被 job 硬超时截断，
+      #   工作区进度也已先落盘，不会影响研究循环的连续性。
+      - name: Optimize repo code & docs (1/10 chance)
+        if: ${{ !cancelled() }}
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+        run: |
+          set +e
+          DOCS_ROLL=$(( RANDOM % 10 ))
+          if [ "$DOCS_ROLL" -ne 0 ]; then
+            echo "[docs] 未命中 1/10 概率（roll=$DOCS_ROLL），本轮跳过"
+            exit 0
+          fi
+          echo "[docs] 命中 1/10 概率（roll=0），本轮优化仓库代码与文档"
+          PROMPT_DOCS='优化 xuen（随机灵感词 × 外部 agent 研究循环）项目的代码和文档。代码方面：只做不改变功能语义的重构（命名、注释、消除重复、结构清晰），保持模块接口、TUI 行为与配置格式完全不变。文档方面：改进 README.md 与 config.example.yaml 注释的表述、结构与示例，让说明更准确易读；可以修改内容，但不得删除或移动文件，也不得添加关于修复了哪些bug、优化或改进了哪些内容的记录。改动后若依赖可用则运行 python -m pytest -q 自检，不通过就自己修好。不要输出或写入“优化了哪些内容”的报告。另外，.github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；LICENSE、README.md、main.py、pyproject.toml 与 tests/ 同样绝对不能删除或移动。'
+          MODEL="${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}"
+          VARIANT="${XUEN_VARIANT:-}"
+          EXTRA=""
+          [ -n "$VARIANT" ] && EXTRA="--variant $VARIANT"
+          # shellcheck disable=SC2086
+          timeout --kill-after=60 480 opencode run -m "$MODEL" $EXTRA "$PROMPT_DOCS" 2>&1 | tee /tmp/oc_docs_opt.log
+          RC=${PIPESTATUS[0]}
+          case "$RC" in
+            0)           echo "[docs] 优化调用完成" ;;
+            124|137|143) echo "[docs] 超时/被杀（exit=$RC），已完成的改动仍会提交" ;;
+            *)           echo "[warn][docs] 调用失败（exit=$RC），仍尝试提交已完成改动" ;;
+          esac
+          # 防御性恢复 .github，然后沿用既有提交路径提交推送
+          git checkout HEAD -- .github 2>/dev/null || true
+          git clean -fdq .github 2>/dev/null || true
+          rm -f .opencode_issues.md
+          git add -A || true
+          if git diff --cached --quiet; then
+            echo "[docs] 没有可提交的改动"
+            exit 0
+          fi
+          git commit -m "auto: docs & code polish (1/10 roll hit)" || true
+          BRANCH="${GITHUB_REF_NAME:-master}"
+          git pull --rebase origin "$BRANCH" || git rebase --abort || true
+          git push origin "HEAD:${BRANCH}" || echo "[warn][docs] push 失败（下轮会继续）"
+          exit 0
+
       - name: Push to Gitee
         if: ${{ !cancelled() }}
         env:
