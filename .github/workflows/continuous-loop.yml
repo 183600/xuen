@@ -351,7 +351,10 @@ jobs:
           set +e
           [ -f pyproject.toml ] || exit 42
           python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
-          python3 -m pytest -q
+          # workspace/ 是研究工作区（含 agent 生成的实验脚本，非仓库代码，已被 .gitignore
+          # 覆盖、只经 xuen-loop 分支恢复）：与 ci.yml 的干净 checkout 口径对齐，不参与收集，
+          # 否则实验脚本的收集错误会一直触发 exit 86 活锁（2026-10-30 01:44 起已发生）。
+          python3 -m pytest -q --ignore=workspace
           exit $?
           PTGEOF
           echo "=========== PRE-OPENCODE TEST GATE ==========="
@@ -448,7 +451,10 @@ jobs:
           set +e
           [ -f pyproject.toml ] || exit 42
           python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
-          python3 -m pytest -q
+          # workspace/ 是研究工作区（含 agent 生成的实验脚本，非仓库代码，已被 .gitignore
+          # 覆盖、只经 xuen-loop 分支恢复）：与 ci.yml 的干净 checkout 口径对齐，不参与收集，
+          # 否则实验脚本的收集错误会一直触发 exit 86 活锁（2026-10-30 01:44 起已发生）。
+          python3 -m pytest -q --ignore=workspace
           exit $?
           PTGEOF
           echo "=========== PRE-OPENCODE TEST GATE (docs) ==========="
@@ -771,7 +777,10 @@ jobs:
           set +e
           [ -f pyproject.toml ] || exit 42
           python3 -m pip install --quiet -r requirements-ci.txt >/dev/null 2>&1 || exit 43
-          python3 -m pytest -q
+          # workspace/ 是研究工作区（含 agent 生成的实验脚本，非仓库代码，已被 .gitignore
+          # 覆盖、只经 xuen-loop 分支恢复）：与 ci.yml 的干净 checkout 口径对齐，不参与收集，
+          # 否则实验脚本的收集错误会一直触发 exit 86 活锁（2026-10-30 01:44 起已发生）。
+          python3 -m pytest -q --ignore=workspace
           exit $?
           PTGEOF
           echo "=========== PRE-OPENCODE TEST GATE ==========="
