@@ -194,7 +194,7 @@ jobs:
             # shellcheck disable=SC2086
             timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_test.log 2>&1
           }
-          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/big-pickle|"; do
+          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
             if smoke "$m" "$v"; then
@@ -624,7 +624,7 @@ jobs:
             # shellcheck disable=SC2086
             timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_unibot.log 2>&1
           }
-          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/big-pickle|"; do
+          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
             if smoke "$m" "$v"; then
