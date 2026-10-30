@@ -35,6 +35,10 @@ EXCLUDED_DIRS = {
     "dist",
     "node_modules",
     "site-packages",
+    # workspace/ 是研究工作区（含 vendored numpy/scipy 与 agent 实验
+    # 脚本，非人工维护的仓库源码）：与 continuous-loop 前置测试门的
+    # --ignore=workspace 口径对齐，不参与体量检查。
+    "workspace",
 }
 
 EXCLUDED_DIR_PATTERNS = ("pkg.generated*",)
