@@ -285,7 +285,9 @@ jobs:
             reuse: true
 
           loop:
-            iterations: inf
+            # ⭐ 单次调用约束：每个 job 只做一轮研究迭代
+            # （一次主 agent 调用 + 一次轮次评审；评审属验证，不受单次调用限制）
+            iterations: 1
 
           # 轮次守卫：每轮快照 → 候选 → AI 评审（便宜模型当评审员）→ 晋升/还原。
           # 没有测试套件可跑（研究型任务），verify=ai 直接走评审员；
@@ -320,6 +322,28 @@ jobs:
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
+
+          # ⭐ 远端同步：后继 run 在本 run 开始时派发的，workflow_dispatch 在事件创建时解析
+          # ref → SHA，排队中的 run 其 checkout 可能停在旧 commit；这里强制对齐远端最新提交。
+          BRANCH_SYNC="${GITHUB_REF_NAME:-master}"
+          git fetch origin "$BRANCH_SYNC" --prune >/dev/null 2>&1 || true
+          if git rev-parse --verify -q "origin/${BRANCH_SYNC}" >/dev/null 2>&1; then
+            if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/${BRANCH_SYNC}")" ]; then
+              echo "[sync] 工作区落后于 origin/${BRANCH_SYNC}，重置到最新提交"
+              git reset --hard "origin/${BRANCH_SYNC}" >/dev/null 2>&1 || true
+            fi
+          fi
+
+          # ⭐ 单次调用约束：本 job 只做一次 opencode 工作调用。
+          # 掷骰子决定本 job 的唯一任务：1/10 概率做「优化代码和文档」，否则做一轮 xuen
+          # 研究迭代（iterations:1）；两者互斥，绝不在同一 job 内出现两次工作调用。
+          DOCS_THIS_RUN=$(( RANDOM % 10 ))
+          if [ "$DOCS_THIS_RUN" -eq 0 ]; then
+            echo "[job-plan] 本 job 轮到 docs 优化（1/10 命中）——跳过 xuen 研究窗口，由后续 docs 步骤执行"
+            echo "XUEN_DOCS_ONLY=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "[job-plan] 本 job 执行一轮 xuen 研究迭代（docs 未命中）"
           # ⭐ 前置测试门：本窗口内 xuen 会反复调用 opencode（agent.command）；
           # 窗口启动前先跑一遍本仓库测试（python -m pytest -q，与 ci.yml 一致）。
           # 失败 → 推送当前状态并以 exit 86 提前结束本 job；后继 run 已在队列中，数秒内自动接续。
@@ -370,6 +394,11 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           set -e
+          # docs-only 的 job 没有跑 xuen 研究窗口，工作区无新进度，跳过 checkpoint
+          if [ "${XUEN_DOCS_ONLY:-0}" = "1" ]; then
+            echo "[checkpoint] 本 job 为 docs-only，跳过 xuen-loop checkpoint"
+            exit 0
+          fi
           # 防御：外部 agent 若动过 .github / 遗留临时清单，先恢复原状
           git checkout HEAD -- .github 2>/dev/null || true
           git clean -fdq .github 2>/dev/null || true
@@ -402,12 +431,12 @@ jobs:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           set +e
-          DOCS_ROLL=$(( RANDOM % 10 ))
-          if [ "$DOCS_ROLL" -ne 0 ]; then
-            echo "[docs] 未命中 1/10 概率（roll=$DOCS_ROLL），本轮跳过"
+          # ⭐ 单次调用约束：docs 与 xuen 研究迭代互斥（决策在「Run xuen loop」步骤开头）
+          if [ "${XUEN_DOCS_ONLY:-0}" != "1" ]; then
+            echo "[docs] 本 job 已执行 xuen 研究迭代（单次调用约束），docs 跳过"
             exit 0
           fi
-          echo "[docs] 命中 1/10 概率（roll=0），本轮优化仓库代码与文档"
+          echo "[docs] 本 job 轮到 docs 优化（1/10 命中），执行代码与文档优化"
           PROMPT_DOCS='优化 xuen（随机灵感词 × 外部 agent 研究循环）项目的代码和文档。代码方面：只做不改变功能语义的重构（命名、注释、消除重复、结构清晰），保持模块接口、TUI 行为与配置格式完全不变。文档方面：改进 README.md 与 config.example.yaml 注释的表述、结构与示例，让说明更准确易读；可以修改内容，但不得删除或移动文件，也不得添加关于修复了哪些bug、优化或改进了哪些内容的记录。改动后若依赖可用则运行 python -m pytest -q 自检，不通过就自己修好。不要输出或写入“优化了哪些内容”的报告。另外，.github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；LICENSE、README.md、main.py、pyproject.toml 与 tests/ 同样绝对不能删除或移动。'
           MODEL="${XUEN_MODEL:-opencode/deepseek-v4.1-flash-free}"
           VARIANT="${XUEN_VARIANT:-}"
@@ -694,7 +723,9 @@ jobs:
             reuse: true
 
           loop:
-            iterations: inf
+            # ⭐ 单次调用约束：每个 job 只做一轮研究迭代
+            # （一次主 agent 调用 + 一次轮次评审；评审属验证，不受单次调用限制）
+            iterations: 1
 
           rounds:
             enabled: true
@@ -722,6 +753,17 @@ jobs:
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
+
+          # ⭐ 远端同步：后继 run 在本 run 开始时派发的，workflow_dispatch 在事件创建时解析
+          # ref → SHA，排队中的 run 其 checkout 可能停在旧 commit；这里强制对齐远端最新提交。
+          BRANCH_SYNC="${GITHUB_REF_NAME:-master}"
+          git fetch origin "$BRANCH_SYNC" --prune >/dev/null 2>&1 || true
+          if git rev-parse --verify -q "origin/${BRANCH_SYNC}" >/dev/null 2>&1; then
+            if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/${BRANCH_SYNC}")" ]; then
+              echo "[sync] 工作区落后于 origin/${BRANCH_SYNC}，重置到最新提交"
+              git reset --hard "origin/${BRANCH_SYNC}" >/dev/null 2>&1 || true
+            fi
+          fi
           # ⭐ 前置测试门：本窗口内 xuen 会反复调用 opencode（agent.command）；
           # 窗口启动前先跑一遍本仓库测试（python -m pytest -q，与 ci.yml 一致）。
           # 失败 → 推送当前状态并以 exit 86 提前结束本 job；后继 run 已在队列中，数秒内自动接续。
