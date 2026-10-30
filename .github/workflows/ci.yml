@@ -37,4 +37,7 @@ jobs:
         run: python -m pip install -r requirements-ci.txt
 
       - name: Run test suite
-        run: python -m pytest -q
+        # workspace/ 是研究工作区（agent 生成的实验脚本 + vendored 依赖，
+        # 非仓库代码）：与 continuous-loop 前置测试门口径对齐，不参与
+        # 收集，否则破损实验脚本的收集错误会让 CI 持续红。
+        run: python -m pytest -q --ignore=workspace
