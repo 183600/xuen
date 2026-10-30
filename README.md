@@ -289,7 +289,7 @@ python examples/minimal_demo.py
 约 3 小时工作窗口（165 分钟），窗口到点发 SIGINT 优雅收尾；均配置
 `rounds.verify: ai` + `rounds.judge_command` 用同一个免费模型当评审员，
 主模型依次尝试 `opencode/deepseek-v4.1-flash-free` 的 max / high / 默认
-档位，再尝试 `opencode/big-pickle`，每次先跑冒烟测试，全部失败则回落默认
+档位，再尝试 `opencode/glm-5.3-flash-free`，然后 `opencode/big-pickle`，每次先跑冒烟测试，全部失败则回落默认
 模型。
 
 两个任务的工作区（`research.md` / `words.txt` / `rounds/`）分别经专用的

@@ -7,7 +7,7 @@ name: OpenCode Issue
 # 模型优先使用 OpenCode 自带的免费 deepseek-v4.1-flash-free：
 # 若模型列表中暂时找不到它，会刷新模型目录后反复重试，最多 5 次；
 # 5 次后仍没有 deepseek-v4.1-flash-free 但找到其他免费模型时，改用其他免费模型
-# （big-pickle 优先，再次为随机免费模型）；任何时候都优先 deepseek-v4.1-flash-free。
+# （glm-5.3-flash-free 优先，其次 big-pickle，再次为随机免费模型）；任何时候都优先 deepseek-v4.1-flash-free。
 #
 # 推送凭据说明（重要）：
 # GITHUB_TOKEN 没有 workflows 权限，一旦本次提交改动/新增 .github/workflows/ 下的文件，
@@ -202,6 +202,7 @@ jobs:
           set -euo pipefail
 
           PREFERRED_DEEPSEEK="opencode/deepseek-v4.1-flash-free"
+          PREFERRED_GLM="opencode/glm-5.3-flash-free"
           PREFERRED_PICKLE="opencode/big-pickle"
 
           KNOWN_FREE=(
@@ -272,10 +273,11 @@ jobs:
           if [ "$DEEPSEEK_FOUND" -eq 1 ]; then
             # 首选模型在列表中：deepseek 排第一，其余免费模型仅作冒烟后备。
             add_candidate "$PREFERRED_DEEPSEEK"
+            if has_available "$PREFERRED_GLM"; then add_candidate "$PREFERRED_GLM"; fi
             if has_available "$PREFERRED_PICKLE"; then add_candidate "$PREFERRED_PICKLE"; fi
             for m in "${AVAILABLE[@]:-}"; do
               case "$m" in
-                "$PREFERRED_DEEPSEEK"|"$PREFERRED_PICKLE") continue ;;
+                "$PREFERRED_DEEPSEEK"|"$PREFERRED_GLM"|"$PREFERRED_PICKLE") continue ;;
                 opencode/*-free) RANDOM_POOL+=("$m") ;;
               esac
             done
@@ -284,12 +286,18 @@ jobs:
             # 按已知候选依次冒烟（deepseek 仍排第一，符合「优先 deepseek」策略）。
             echo "[model] 模型列表不可读（已重试 ${MAX_LIST_ATTEMPTS} 次），按已知候选依次尝试"
             add_candidate "$PREFERRED_DEEPSEEK"
+            add_candidate "$PREFERRED_GLM"
             add_candidate "$PREFERRED_PICKLE"
             RANDOM_POOL=("${KNOWN_FREE[@]:0:6}")
           else
             # 重试 5 次后确认列表里没有 deepseek-v4.1-flash-free：
-            # 改用其他免费模型（big-pickle 优先，其次随机其他免费模型）。
+            # 改用其他免费模型（glm-5.3-flash-free 优先，其次 big-pickle，再次随机其他免费模型）。
             echo "[model] 已重试 ${MAX_LIST_ATTEMPTS} 次仍未找到 ${PREFERRED_DEEPSEEK}，回退到其他免费模型"
+            if has_available "$PREFERRED_GLM"; then
+              add_candidate "$PREFERRED_GLM"
+            else
+              echo "[model] 模型列表中没有 ${PREFERRED_GLM}，跳过"
+            fi
             if has_available "$PREFERRED_PICKLE"; then
               add_candidate "$PREFERRED_PICKLE"
             else
@@ -297,7 +305,7 @@ jobs:
             fi
             for m in "${AVAILABLE[@]:-}"; do
               case "$m" in
-                "$PREFERRED_DEEPSEEK"|"$PREFERRED_PICKLE") continue ;;
+                "$PREFERRED_DEEPSEEK"|"$PREFERRED_GLM"|"$PREFERRED_PICKLE") continue ;;
                 opencode/*-free) RANDOM_POOL+=("$m") ;;
               esac
             done
