@@ -1,6 +1,6 @@
 # xuen
 
-一个用「随机灵感词 × 外部 agent」模拟人类研究者持续演进想法的 **TUI** 循环。
+用「随机灵感词 × 外部 agent」模拟人类研究者持续演进想法的 **TUI** 循环。
 
 xuen 自身不调用模型，也不内置研究工具。它负责组织循环、维护状态、展示变化并保存进度；
 真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 把任务、
@@ -55,13 +55,17 @@ xuen "设计一个新的优化器"
 ```
 
 未用 `-c/--config` 指定时，程序依次查找当前目录的 `config.yaml`、`config.yml`、
-`xuen.yaml`。`agent.command` 必须包含一个会被实际替换的提示词占位符：
+`xuen.yaml`。除 `agent.command` 外，其余配置均可省略并使用默认值。
+
+`agent.command` 必须包含一个会被实际替换的提示词占位符。跨平台场景推荐
+`$prompt_file`，它只向命令传递文件路径，不受命令行长度限制：
 
 ```yaml
 agent:
-  command: 'opencode run "$prompt"'
-  # 跨平台推荐：命令只接收提示词文件路径
-  # command: 'opencode run "$prompt_file"'
+  # 推荐：提示词写入工作区内的临时文件，命令只接收路径
+  command: 'opencode run "$prompt_file"'
+  # 也可以直接传入整段提示词（受系统单参数长度限制）
+  # command: 'opencode run "$prompt"'
 ```
 
 常用命令：
@@ -76,6 +80,9 @@ python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守
 python main.py "设计一个新的优化器" -c my-config.yaml
 python main.py --help                                 # 查看所有参数
 ```
+
+任务可以是位置参数，也可以用 `--task-file` 从 UTF-8 文件读取（兼容 BOM）；两者
+不能同时使用。未提供任务且 stdin 可用时，程序会交互询问。
 
 想先不配置外部 agent，可以直接运行最小示例：
 
@@ -120,7 +127,7 @@ python main.py "任务"
 - 任务可来自位置参数、`--task-file`，或未提供时的交互输入；
 - 配置文件默认依次查找当前目录的 `config.yaml`、`config.yml`、`xuen.yaml`，
   也可用 `-c/--config` 指定；
-- CLI 参数覆盖同名配置后会重新校验，避免绕过路径、轮数等约束；
+- 命令行参数覆盖同名配置后会重新校验，避免绕过路径、轮数等约束；
 - 完整字段与默认值见下文「配置参考」，可复制 `config.example.yaml` 作为起点。
 
 ### 状态文件与写入助手
@@ -159,7 +166,7 @@ python write_section.py show
 
 - 按 `words.batch` 分批请求外部 agent 列出术语/关键词；
 - 程序只做解析、清洗、去重（去除序号、引号、冒号解释等）并原子写入 `words.txt`；
-- 词表不再增长时提前结束；生成失败时可回退复用磁盘上的旧词库；
+- 词表不再增长时提前结束；生成结果为空且允许复用时回退到磁盘上的旧词库；
 - `words.pick=0` 时跳过词库，循环中不提供灵感词；
 - 每轮抽样使用 `random.sample`，不调用任何模型。
 
@@ -212,15 +219,15 @@ prompt:
 ```mermaid
 stateDiagram-v2
     direction TB
-    Best: 当前最佳（best.md / best.json）
-    Cand: 候选快照（rounds/cand-编号.md）
+    Best: 当前最佳（内容权威为候选快照）
+    Cand: 候选快照（rounds/cand-<id>.md）
     Pend: 挂起（等待 verdicts.txt 补分）
 
     [*] --> Best: 启动时建立或恢复基线
     Best --> Cand: 本轮有改动，先落盘快照
-    Cand --> Best: 验证通过 → 晋升
-    Cand --> Best: 验证失败或无结论 → 拒绝并还原最佳
-    Cand --> Pend: 等待用户评分 → 先还原最佳
+    Cand --> Best: 验证通过 → 前进式晋升
+    Cand --> Best: 验证失败 → 拒绝并还原最佳
+    Cand --> Pend: 无结论或待评分 → 先还原最佳
     Pend --> Best: 补分达到阈值 → 前进式晋升
     Pend --> Best: 补分低于阈值 → 记为拒绝
     Pend --> Pend: 评分无法解析 → 保持挂起
@@ -244,7 +251,7 @@ stateDiagram-v2
   │        │
   │        ├─ ③ 通过 → 前进式晋升为最佳
   │        │    rounds/best.md + best.json 更新（不改写历史）
-  │        └─ ③ 失败 / 挂起 → research.md 还原为当前最佳
+  │        └─ ③ 失败 / 无结论 → research.md 还原为当前最佳
   │             —— 下一轮永远从最佳出发
   │
   ├─ 挂起候选可在 rounds/verdicts.txt 追加评分
@@ -308,10 +315,11 @@ rounds:
 - `rounds/history.jsonl`：追加式审计日志；
 - `rounds/verdicts.txt`：用户评分。
 
-候选快照是最佳内容的权威来源，`best.md` 只是镜像。启动时按
-`best.json` → `history.jsonl` 采纳事件 → 候选快照 → `best.md` 镜像 → 基线
-的顺序恢复，并把 `research.md` 拨回最近的最佳状态。进程被中断或中途退出后，
-重跑会从已验证的进展继续。
+候选快照是最佳内容的权威来源，`best.md` 只是便于查看和 diff 的镜像。启动时先读取
+`best.json` 元数据，缺失或损坏时从 `history.jsonl` 的基线/采纳事件恢复；内容优先
+取对应候选快照，快照不可用才回退到 `best.md`，两者都没有时以当前状态建立基线。
+随后守卫会把 `research.md` 拨回最近的最佳状态。进程被中断或中途退出后，重跑会从
+已验证的进展继续。
 
 ### 快捷参数
 
@@ -346,6 +354,7 @@ rounds:
 | `color` | `true` | 纯终端输出是否使用颜色 |
 | `workspace` | `./workspace` | `research.md`、`words.txt`、`rounds/` 等所在目录 |
 
+`workspace` 等路径按启动时的当前目录解析；`rounds.dir` 则相对 `workspace`。
 当 `rounds.repo` 留空时，守卫会从工作区向上查找 git 仓库根；非 git 环境使用
 工作区本身。要打磨某个代码仓库时，把 `rounds.repo` 指向它，候选改动会被该仓库
 的测试套件自动验证。

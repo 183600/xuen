@@ -60,8 +60,12 @@ Screen {
 }
 """
 
-_LEVEL_STYLE = {"info": "cyan", "ok": "green", "warn": "yellow", "err": "red"}
-_LEVEL_PREFIX = {"info": "· ", "ok": "✔ ", "warn": "⚠ ", "err": "✘ "}
+_LEVEL_FORMAT = {
+    "info": ("· ", "cyan"),
+    "ok": ("✔ ", "green"),
+    "warn": ("⚠ ", "yellow"),
+    "err": ("✘ ", "red"),
+}
 
 
 class _InputBox(Input):
@@ -92,17 +96,21 @@ class TuiSink(Sink):
     def _log(self, text: str, style: str = "") -> None:
         self.app.post_log(text, style)
 
+    def _level_log(self, level: str, text: str) -> None:
+        prefix, style = _LEVEL_FORMAT[level]
+        self._log(prefix + text, style)
+
     def info(self, text: str) -> None:
-        self._log(_LEVEL_PREFIX["info"] + text, _LEVEL_STYLE["info"])
+        self._level_log("info", text)
 
     def ok(self, text: str) -> None:
-        self._log(_LEVEL_PREFIX["ok"] + text, _LEVEL_STYLE["ok"])
+        self._level_log("ok", text)
 
     def warn(self, text: str) -> None:
-        self._log(_LEVEL_PREFIX["warn"] + text, _LEVEL_STYLE["warn"])
+        self._level_log("warn", text)
 
     def err(self, text: str) -> None:
-        self._log(_LEVEL_PREFIX["err"] + text, _LEVEL_STYLE["err"])
+        self._level_log("err", text)
 
     def round_header(self, index: int, label: str) -> None:
         title = f"第 {index} 轮 · 灵感词：{label}"
