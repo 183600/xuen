@@ -973,10 +973,12 @@ class RoundGuard:
         cid = self._snapshot_candidate(round_no, text)
         self.stats.candidates += 1
         self._round_cid = cid
-        changed = [n for n, (c, b) in {
-            "idea": (cand_idea, best_idea),
-            "artifact": (cand_artifact, best_artifact),
-        }.items() if c != b]
+        changed = [
+            name for name, current, best in (
+                ("idea", cand_idea, best_idea),
+                ("artifact", cand_artifact, best_artifact),
+            ) if current != best
+        ]
         self._append_event_safe({"event": "candidate", "id": cid,
                                  "round": round_no, "changed": changed})
         self.sink.info(f"候选快照：{CAND_PREFIX}{cid}.md"

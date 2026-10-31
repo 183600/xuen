@@ -26,6 +26,11 @@ SECTION_TITLE = {
 }
 
 
+def round_title(index: int, label: str) -> str:
+    """轮次标题：纯终端与 TUI 共用同一措辞。"""
+    return f"第 {index} 轮 · 灵感词：{label}"
+
+
 class Sink:
     """runner 的展示/交互接口。"""
 
@@ -74,7 +79,7 @@ class ConsoleSink(Sink):
     def err(self, text: str) -> None: ui.err(text)
 
     def round_header(self, index: int, label: str) -> None:
-        ui.rule(f"第 {index} 轮 · 灵感词：{label}")
+        ui.rule(round_title(index, label))
 
     def agent_output(self, line: str) -> None:
         ui.raw(line)
