@@ -38,6 +38,7 @@ def _is_dot_term(w: str) -> bool:
     return (len(w) > 1 and w[0] == '.'
             and w[1].isascii() and (w[1].isalpha() or w[1] == '_'))
 
+
 def _strip_leading_edges(w: str) -> str:
     """逐个剥词首边缘字符，但保留语义前导点（见 _is_dot_term）。
 
@@ -109,6 +110,7 @@ def _strip_pairs(w: str) -> str:
         changed = w != before
     return w
 
+
 def _unwrap_pair(w: str) -> str:
     """剥掉成对装饰符：先剥词头（含被后续解释挡住的收尾符），
     再剥词中任意位置的完整成对（_strip_pairs）。
@@ -151,6 +153,7 @@ def _unwrap_pair(w: str) -> str:
 
 _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 _CJK_INDEX = re.compile("^[" + _CJK_NUMERALS + "]+$")
+
 
 def _is_plain_index(t: str) -> bool:
     """词段是否只是整数/汉字数字序号（小数除外）。
@@ -226,9 +229,7 @@ def _unwrap_segments(w: str) -> str:
     is_index = [_is_plain_index(t) for t in cleaned]
     has_word = any(t.strip() and not idx
                    for t, idx in zip(cleaned, is_index))
-    index_only = all(
-        t.strip() and _is_plain_index(t) for t in cleaned if t.strip()
-    )
+    index_only = all(idx for t, idx in zip(cleaned, is_index) if t.strip())
     list_format = all(
         _is_list_index_sep(parts, i)
         for i in range(0, len(parts), 2)
@@ -263,7 +264,6 @@ def _is_invalid_word(w: str) -> bool:
         not w or len(w) > 60
         or w.startswith(("#", ">", "|", "="))
         or _is_plain_index(w)
-        or _CJK_INDEX.match(w) is not None
         or _HAS_WORD_CHAR.search(w) is None
     )
 

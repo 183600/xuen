@@ -42,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _fail(message: str) -> int:
+    """把用户可见的错误写到 stderr，并返回统一的参数错误退出码。"""
+    print(message, file=sys.stderr)
+    return 2
+
+
 def _resolve_task(args) -> str:
     task = " ".join(args.task).strip()
     if args.task_file:
@@ -115,13 +121,11 @@ def main(argv=None) -> int:
     if args.workspace is not None:
         workspace = args.workspace.strip()
         if not workspace:
-            print("--workspace 不能为空", file=sys.stderr)
-            return 2
+            return _fail("--workspace 不能为空")
         cfg.workspace = workspace
     if args.pick is not None:
         if args.pick < 0:
-            print("--pick 必须 >= 0", file=sys.stderr)
-            return 2
+            return _fail("--pick 必须 >= 0")
         cfg.words.pick = args.pick
     if args.iterations is not None:
         v = args.iterations.strip().lower()
@@ -133,8 +137,8 @@ def main(argv=None) -> int:
                 if cfg.loop.iterations < 1:
                     raise ValueError
             except ValueError:
-                print(f"--iterations 无效：{args.iterations!r}（应为整数或 inf）", file=sys.stderr)
-                return 2
+                return _fail(f"--iterations 无效：{args.iterations!r}"
+                             "（应为整数或 inf）")
 
     # CLI 覆盖发生在 load_config 的校验之后，须对覆盖结果重新校验：
     # --workspace 可绕过 Windows cmd 元字符检查，--iterations 的巨大整数
@@ -152,8 +156,7 @@ def main(argv=None) -> int:
         need_revalidate = True
     if args.rounds_score is not None:
         if not (0.0 <= args.rounds_score <= 10.0):
-            print("--rounds-score 必须在 0-10 之间", file=sys.stderr)
-            return 2
+            return _fail("--rounds-score 必须在 0-10 之间")
         cfg.rounds.adopt_score = args.rounds_score
         need_revalidate = True
 
@@ -161,8 +164,7 @@ def main(argv=None) -> int:
         try:
             _validate(cfg)
         except ValueError as e:
-            print(f"参数覆盖无效：{e}", file=sys.stderr)
-            return 2
+            return _fail(f"参数覆盖无效：{e}")
 
     try:
         task = _resolve_task(args)

@@ -9,7 +9,7 @@ import itertools
 import os
 import shlex
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from . import state, words
 from .agents import PromptTooLongError, ShellAgent
@@ -20,6 +20,10 @@ from .sink import SECTION_ARTIFACT, SECTION_IDEA, ConsoleSink, Sink
 
 def run(cfg: Config, task: str, *, regen_words: bool = False,
         sink: Optional[Sink] = None) -> None:
+    """执行完整的「词库 → 研究循环」流程。
+
+    展示与用户交互全部经 ``sink``；未传入时使用纯终端输出。
+    """
     sink = sink or ConsoleSink()
 
     # resolve 成绝对路径：外部 agent 的工作目录不一定是 xuen 的 cwd，
@@ -195,7 +199,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
     counter = (itertools.count(1) if cfg.loop.iterations is None
                else range(1, cfg.loop.iterations + 1))
-    rounds = failures = consecutive_failures = 0
+    completed_rounds = failures = consecutive_failures = 0
     # KeyboardInterrupt 处理器也要用轮次号记账：中断若发生在第一轮取号前，
     # round_no 尚未绑定，先初始化避免处理器自身抛 NameError
     round_no = 0
@@ -210,14 +214,14 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             sink.round_header(round_no, label)
             # 底部输入框的内容：在下次调用 agent 时带给 agent
             user_notes = sink.drain_user_input()
-            rounds += 1
+            completed_rounds += 1
             try:
                 agent.run(_shell_prompt(cfg, task, round_no, inspiration,
                                         state_path, helper, user_notes))
             except PromptTooLongError as e:
                 # 提示词随区块内容只增不减，同模板重试必然同样失败：
                 # 不再空转 3 轮，立即中止并给出可操作的建议。
-                # 该轮已在上面计入 rounds，中止前必须与其它失败轮次
+                # 该轮已在上面计入 completed_rounds，中止前必须与其它失败轮次
                 # 同口径向守卫记账（skipped），否则守卫汇总的轮次数/
                 # 跳过数与主循环对不上、history 里缺这一轮的记录；
                 # agent 从未启动、research.md 未改动，还原是空操作
@@ -308,8 +312,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
     _finish_loop(guard, sink, state_path)
     # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
-    # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。
-    if rounds and failures == rounds and not sink.should_stop():
+    # 若只是用户提前停止（completed_rounds == 0）或至少成功一轮，则不算整体失败。
+    if completed_rounds and failures == completed_rounds and not sink.should_stop():
         # sink.should_stop() 为真 = 用户主动请求停止（TUI 按 q 会先杀掉
         # 正在运行的 agent，该轮计入 failures）：这是正常退出，不能误报
         # 为「所有轮次均执行失败」，否则 TUI 会把用户退出记成失败退出码
@@ -360,7 +364,8 @@ def _guard_round_failed(guard: Optional[RoundGuard], round_no: int,
 
 
 def _report_changed_sections(sink: Sink, state_path: Path,
-                             prev_idea: str, prev_artifact: str) -> tuple:
+                             prev_idea: str,
+                             prev_artifact: str) -> Tuple[str, str]:
     """读取两个区块，仅把内容有变化的区块上报给 sink。"""
     idea, artifact = _read_sections(state_path)
     if idea != prev_idea:
@@ -370,7 +375,7 @@ def _report_changed_sections(sink: Sink, state_path: Path,
     return idea, artifact
 
 
-def _read_sections(state_path: Path) -> tuple:
+def _read_sections(state_path: Path) -> Tuple[str, str]:
     try:
         # 与 state 模块其它读路径同一自愈口径：非法 UTF-8 降级为替换符并
         # 回写修复。若直接严格解码后按空处理，一个坏字节就会让提示词里的
@@ -398,7 +403,7 @@ def _shell_path(path: Path) -> str:
     return shlex.quote(text)
 
 
-def _clip_section(text: str, limit: int) -> tuple:
+def _clip_section(text: str, limit: int) -> Tuple[str, int]:
     """按字符预算保留 ``text`` 的首尾，返回 ``(clipped, omitted)``。
 
     只影响拼进提示词的副本；工作区文件保持完整。截断标记明确告诉 agent
@@ -419,7 +424,8 @@ def _clip_section(text: str, limit: int) -> tuple:
     return text[:head_len] + marker + tail, omitted
 
 
-def _clip_state_sections(idea: str, artifact: str, budget: int) -> tuple:
+def _clip_state_sections(idea: str, artifact: str,
+                         budget: int) -> Tuple[str, str, int]:
     """把想法区/产物区压进 ``budget`` 字符的提示词预算。
 
     ``budget <= 0``（或内容本来就没超）时原样返回。产物区通常更长，默认
@@ -448,8 +454,8 @@ def _clip_state_sections(idea: str, artifact: str, budget: int) -> tuple:
     return clipped_idea, clipped_artifact, idea_omitted + artifact_omitted
 
 
-def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
-                  state_path: Path, helper: Path,
+def _shell_prompt(cfg: Config, task: str, round_no: int,
+                  inspiration: List[str], state_path: Path, helper: Path,
                   user_notes: List[str]) -> str:
     notes = cfg.extra_notes.strip()
     idea, artifact = _read_sections(state_path)
@@ -482,7 +488,7 @@ def _shell_prompt(cfg: Config, task: str, i: int, inspiration: List[str],
 
 【任务】{task}
 
-你正在参加一场「灵感驱动研究循环」的第 {i} 轮，请模拟一位人类研究者的思考过程。
+你正在参加一场「灵感驱动研究循环」的第 {round_no} 轮，请模拟一位人类研究者的思考过程。
 本轮随机灵感词：{ins}
 {truncation_note}{user_part}
 状态文件 {state_q} 中有两个跨轮保留的区块，当前内容：
