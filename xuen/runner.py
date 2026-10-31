@@ -326,6 +326,14 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
 
 
 # ----------------------------------------------------------------------
+def _warn_guard_failure(guard: RoundGuard, message: str) -> None:
+    """守卫自身异常时尽量告警；连 sink 都不可用就静默忽略。"""
+    try:
+        guard.sink.warn(message)
+    except Exception:
+        pass
+
+
 def _guard_finish(guard: Optional[RoundGuard]) -> None:
     """守卫收尾（应用待决用户评分 + 汇总）；守卫自身异常不外溅。"""
     if guard is None:
@@ -333,10 +341,7 @@ def _guard_finish(guard: Optional[RoundGuard]) -> None:
     try:
         guard.finish()
     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-        try:
-            guard.sink.warn(f"轮次守卫收尾异常（忽略）：{e}")
-        except Exception:
-            pass
+        _warn_guard_failure(guard, f"轮次守卫收尾异常（忽略）：{e}")
 
 
 def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> None:
@@ -346,10 +351,7 @@ def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> Non
     try:
         guard.on_round_failed(i, reason)
     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-        try:
-            guard.sink.warn(f"轮次守卫记账异常（忽略）：{e}")
-        except Exception:
-            pass
+        _warn_guard_failure(guard, f"轮次守卫记账异常（忽略）：{e}")
 
 
 def _report_changed_sections(sink: Sink, state_path: Path,

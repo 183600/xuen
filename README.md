@@ -1,32 +1,32 @@
 # xuen
 
-一个“随机灵感词 × 外部 agent 模拟人类研究者”的 **TUI** 循环。
+一个用「随机灵感词 × 外部 agent」模拟人类研究者持续演进想法的 **TUI** 循环。
 
-xuen 本身不调用模型，也不内置研究工具。它把任务、随机灵感词、当前想法区/产物区
-拼成提示词，交给外部 agent（如 opencode、claude、aider）完成思考与写作；程序只
-负责组织循环、维护状态、展示变化并保存进度。
+xuen 自身不调用模型，也不内置研究工具。它负责组织循环、维护状态、展示变化并保存进度；
+真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 把任务、
+随机灵感词、当前想法区/产物区和写入说明拼成提示词，外部 agent 完成后覆盖对应区块。
 
 ## 核心概念
 
 | 概念 | 说明 |
 |---|---|
-| 任务 | 本轮研究的总目标，由命令行参数、`--task-file` 或交互输入提供 |
+| 任务 | 本轮研究的总目标，可来自命令行参数、`--task-file` 或交互输入 |
 | 灵感词 | 每轮从领域词库中**纯随机**抽取的术语，抽样不调用任何模型 |
 | 想法区 | `research.md` 中跨轮保留的 `IDEA` 区块，记录研究思路 |
 | 产物区 | `research.md` 中跨轮保留的 `ARTIFACT` 区块，记录方案、伪代码、推导或实验设计 |
 | 外部 agent | 由 `agent.command` 指定的 shell 命令，负责每轮的实际思考与区块写入 |
-| 轮次守卫 | 可选的进度保护层：快照每轮产物，验证通过后才晋升为“当前最佳” |
+| 轮次守卫 | 可选的进度保护层：快照每轮产物，验证通过后才晋升为「当前最佳」 |
 
 ## 快速开始
 
 ```bash
-# 安装运行时依赖
+# 1. 安装运行时依赖
 python -m pip install -r requirements.txt
 
-# 复制示例配置并按需修改 agent.command
+# 2. 复制示例配置，并按需修改 agent.command
 cp config.example.yaml config.yaml
 
-# 启动 TUI（默认）
+# 3. 启动 TUI（默认）
 python main.py "设计一个新的优化器"
 ```
 
@@ -37,12 +37,13 @@ python -m pip install -e .
 xuen "设计一个新的优化器"
 ```
 
-配置 `agent.command` 时至少保留一个占位符：
+`agent.command` 必须包含一个会被实际替换的提示词占位符：
 
 ```yaml
 agent:
   command: 'opencode run "$prompt"'
-  # 或跨平台推荐写法：'opencode run "$prompt_file"'
+  # 跨平台推荐：命令只接收提示词文件路径
+  # command: 'opencode run "$prompt_file"'
 ```
 
 常用命令：
@@ -54,6 +55,7 @@ python main.py "设计一个新的优化器" --regen-words     # 忽略旧词库
 python main.py --task-file task.md --no-tui
 python main.py "设计一个新的优化器" --rounds-verify ai --rounds-score 8
 python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守卫
+python main.py "设计一个新的优化器" -c my-config.yaml
 ```
 
 想先不配置外部 agent，可以直接运行最小示例：
@@ -62,8 +64,8 @@ python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守
 python examples/minimal_demo.py
 ```
 
-示例使用 `examples/mock_agent.py` 扮演外部 agent，在临时目录中演示“随机抽词 →
-提示词渲染 → 候选快照 → 验证 → 晋升最佳”的完整流程。默认结束后清理临时工作区，
+示例用 `examples/mock_agent.py` 扮演外部 agent，在临时目录中演示「随机抽词 →
+提示词渲染 → 候选快照 → 验证 → 晋升最佳」的完整流程。默认结束后清理临时工作区，
 `--keep` 可保留 `research.md`、`rounds/cand-*.md`、`rounds/best.md` 等文件。
 详见 `examples/README.md`。
 
@@ -72,15 +74,16 @@ python examples/minimal_demo.py
 ```text
 python main.py "任务"
    │
-   ├─ ① 解析命令行 ──► 读取 config.yaml ──► CLI 覆盖同名配置 ──► 校验
+   ├─ ① 解析命令行 → 读取配置文件 → 应用 CLI 覆盖 → 校验
    ├─ ② 准备工作区：research.md（想法区/产物区）+ write_section.py 写入助手
    ├─ ③ 构建外部 agent：ShellAgent（按 agent.command 模板调用）
+   ├─ ④ 启动轮次守卫（可选）：建立/恢复最佳基线，兑现待决用户评分
    │
-   ├─ ④ 领域词库（仅 words.pick > 0 时）
+   ├─ ⑤ 领域词库（仅 words.pick > 0 时）
    │      words.txt 已存在且 reuse=true ──► 直接复用（--regen-words 强制重建）
    │      否则 ──► 外部 agent 分批生成 ──► 解析/清洗/去重 ──► 原子保存
    │
-   └─ ⑤ 研究循环 × N 轮（loop.iterations，支持 inf）
+   └─ ⑥ 研究循环 × N 轮（loop.iterations，支持 inf）
           1. 纯随机抽词：从词库抽取 n 个灵感词（不调用任何模型）
           2. 收集底部输入框中积累的用户输入
           3. 拼提示词：extra_notes + 任务 + 轮次 + 灵感词 + 用户输入
@@ -98,7 +101,8 @@ python main.py "任务"
 - 任务可来自位置参数、`--task-file`，或未提供时的交互输入；
 - 配置文件默认依次查找当前目录的 `config.yaml`、`config.yml`、`xuen.yaml`，
   也可用 `-c/--config` 指定；
-- CLI 参数覆盖同名配置后，需要时会重新校验，避免绕过路径、轮数等约束。
+- CLI 参数覆盖同名配置后会重新校验，避免绕过路径、轮数等约束；
+- 完整字段与默认值见下文「配置参考」，可复制 `config.example.yaml` 作为起点。
 
 ### 状态文件与写入助手
 
@@ -140,6 +144,19 @@ python write_section.py show
 - `words.pick=0` 时跳过词库，循环中不提供灵感词；
 - 每轮抽样使用 `random.sample`，不调用任何模型。
 
+### 提示词预算
+
+每轮提示词都会附带完整的想法区/产物区，轮次增加后会单调增长。`prompt.max_state_chars`
+为两区总字符数设置上限：
+
+```yaml
+prompt:
+  max_state_chars: 60000   # 0 = 不限制
+```
+
+超出时只截断**提示词副本**：保留首尾，中间标注省略字符数，并提示完整内容仍在
+`research.md`；工作区文件本身不会被裁剪。
+
 ## TUI
 
 默认界面从上到下分为：
@@ -156,11 +173,11 @@ python write_section.py show
 │ 与循环消息（滚动）           │
 ├────────────────────────────┤
 │ 状态栏                     │
-└ 输入框 ⌨                   ┘
+└ 输入框                     ┘
   输入内容会在下次调用 agent 时带给 agent
 ```
 
-- 底部输入框回车提交后进入队列，下一轮调用 agent 时以“【用户输入】”段落拼进提示词；
+- 底部输入框回车提交后进入队列，下一轮调用 agent 时以「【用户输入】」段落拼进提示词；
 - 输入框为空时按 `q` 退出，`Ctrl+C` 中断退出（两者都会先终止正在运行的外部 agent）；
 - 未安装 `textual`、stdin/stdout 不是终端，或指定 `--no-tui` 时，自动降级为纯终端输出。
 
@@ -168,7 +185,7 @@ python write_section.py show
 
 外部 agent 每轮会**整体覆盖**想法区/产物区。若某轮产出更差的内容，直接继承最新
 状态会让更好的前一轮结果被覆盖。轮次守卫（`xuen/rounds.py`，配置段 `rounds:`）
-把“每轮快照、候选/最佳分离、自动验证、渐进翻案”组合起来，保证进度可回退到最近
+把「每轮快照、候选/最佳分离、自动验证、渐进翻案」组合起来，保证进度可回退到最近
 的已验证内容。
 
 ### 候选生命周期
@@ -178,15 +195,15 @@ stateDiagram-v2
     direction TB
     Best: 当前最佳（best.md / best.json）
     Cand: 候选快照（rounds/cand-编号.md）
-    Pend: 挂起（等待 verdicts.txt 或后续补分）
+    Pend: 挂起（等待 verdicts.txt 补分）
 
-    [*] --> Best: 启动时固化基线
-    Best --> Cand: 一轮有改动 → 先落盘快照
-    Cand --> Best: 通过验证（测试全绿 / 评分 ≥ adopt_score）
-    Cand --> Best: 被拒绝 → 还原最佳
-    Cand --> Pend: 无结论（评审失败 / verify=user）→ 还原最佳
-    Pend --> Best: 补分 ≥ 阈值 → 前进式翻案
-    Pend --> Best: 补分 < 阈值 → 记为拒绝
+    [*] --> Best: 启动时建立或恢复基线
+    Best --> Cand: 本轮有改动，先落盘快照
+    Cand --> Best: 验证通过 → 晋升
+    Cand --> Best: 验证失败或无结论 → 拒绝并还原最佳
+    Cand --> Pend: 等待用户评分 → 先还原最佳
+    Pend --> Best: 补分达到阈值 → 前进式晋升
+    Pend --> Best: 补分低于阈值 → 记为拒绝
     Pend --> Pend: 评分无法解析 → 保持挂起
 ```
 
@@ -195,7 +212,7 @@ stateDiagram-v2
 ```text
 每轮结束
   │
-  ├─ 无改动 → 记“心跳”，不产生候选
+  ├─ 无改动 → 记「心跳」，不产生候选
   ├─ 区块标记损坏 → 守卫直接拒绝，还原最佳
   ├─ 有改动 → ① 快照为 rounds/cand-<id>.md（候选 ≠ 最佳）
   │        │
@@ -204,7 +221,7 @@ stateDiagram-v2
   │        │    tests 只跑测试（pytest → make → npm → go 级联）
   │        │    user  只认 verdicts.txt 用户评分
   │        │    ai    复用外部 agent 当评审员（judge_command 可配便宜模型）
-  │        │    off   不验证，最新即最佳（仅“防丢失”模式）
+  │        │    off   不验证，最新即最佳（仅「防丢失」模式）
   │        │
   │        ├─ ③ 通过 → 前进式晋升为最佳
   │        │    rounds/best.md + best.json 更新（不改写历史）
@@ -226,9 +243,9 @@ stateDiagram-v2
 | `ai` | 只用 AI 评分（`judge_command` 可单独配置评审模型） |
 | `off` | 不验证：快照照存，最新即最佳 |
 
-Makefile 只做文件存在性探测；“是否定义了 test 目标”由 GNU make 在运行时回答。
+Makefile 只做文件存在性探测；是否定义了 `test` 目标由 GNU make 在运行时回答。
 `No rule to make target 'test'`、`Nothing to be done for 'test'`、pytest 退出码 5、
-go 的 `matched no packages` / 全部 `[no test files]` 都按“套件不可用”处理，
+go 的 `matched no packages` / 全部 `[no test files]` 都按「套件不可用」处理，
 而不是测试失败。
 
 ### 用户评分与渐进翻案
@@ -240,8 +257,8 @@ go 的 `matched no packages` / 全部 `[no test files]` 都按“套件不可用
 例如：20261017-031037-r5 8 想法区更有深度，产物区伪代码可落地
 ```
 
-守卫会在每轮结束、启动和收尾时兑现待决评分。达到 `adopt_score` 的旧候选会被
-“前进式晋升”为最佳并写回 `research.md`；低于阈值则记为拒绝。未知候选 id、
+守卫会在启动时、每轮结束和收尾时兑现待决评分。达到 `adopt_score` 的旧候选会被
+「前进式晋升」为最佳并写回 `research.md`；低于阈值则记为拒绝。未知候选 id、
 无法解析的分数、缺失的快照都不会锁死循环：能忽略的忽略，无法判断的保持挂起。
 
 ### AI 评审
@@ -313,19 +330,6 @@ rounds:
 工作区本身。要打磨某个代码仓库时，把 `rounds.repo` 指向它，候选改动会被该仓库
 的测试套件自动验证。
 
-## 提示词预算
-
-每轮提示词都会附带完整的想法区/产物区，轮次增加后会单调增长。`prompt.max_state_chars`
-为两区总字符数设置上限：
-
-```yaml
-prompt:
-  max_state_chars: 60000   # 0 = 不限制
-```
-
-超出时只截断**提示词副本**：保留首尾，中间标注省略字符数，并提示完整内容仍在
-`research.md`；工作区文件本身不会被裁剪。
-
 ## 退出码
 
 | 退出码 | 含义 |
@@ -370,7 +374,7 @@ CI 长跑则通过专用 checkpoint 分支保存进度。
 ## 在 CI 中无人值守长跑
 
 `.github/workflows/continuous-loop.yml` 把研究循环搬进 GitHub Actions，并行运行
-“设计一个新的算法”和“寻找参加 UniBot 的创新点”两个任务。两个 job 各有约
+「设计一个新的算法」和「寻找参加 UniBot 的创新点」两个任务。两个 job 各有约
 3 小时工作窗口，窗口结束前发送 SIGINT 优雅收尾；均使用 `rounds.verify: ai` 与
 独立的 `rounds.judge_command` 评审配置。
 
@@ -422,7 +426,7 @@ python -m pytest --cov=xuen --cov-report=term-missing
 | 配置 shell 命令调用外部 agent | `agent.command` + `$prompt` / `$prompt_file` |
 | TUI | `textual` 实现，默认启用；不可用时自动降级 |
 | 想法区/产物区变化展示 | TUI 面板显示 `[修改想法区]<内容>` / `[修改产物区]<内容>` |
-| 底部输入框 | 输入入队，下一轮提示词中以“【用户输入】”段落带给 agent |
+| 底部输入框 | 输入入队，下一轮提示词中以「【用户输入】」段落带给 agent |
 | 状态持久化 | `research.md` 标记区块；重跑自动续用 |
 | 候选与最佳分离 | `rounds/cand-*.md` + `best.md` / `best.json` + `history.jsonl` |
 | 自动验证 | `rounds.repo` 目标目录的 pytest → make → npm → go 级联 |
