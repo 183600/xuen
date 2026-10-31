@@ -6,6 +6,21 @@ xuen 自身不调用模型，也不内置研究工具。它负责组织循环、
 真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 把任务、
 随机灵感词、当前想法区/产物区和写入说明拼成提示词，外部 agent 完成后覆盖对应区块。
 
+## 目录
+
+- [核心概念](#核心概念)
+- [快速开始](#快速开始)
+- [工作流程](#工作流程)
+- [TUI](#tui)
+- [轮次守卫](#轮次守卫)
+- [配置参考](#配置参考)
+- [退出码](#退出码)
+- [目录结构](#目录结构)
+- [在 CI 中无人值守长跑](#在-ci-中无人值守长跑)
+- [开发与测试](#开发与测试)
+- [代码体量纪律](#代码体量纪律)
+- [功能对照](#功能对照)
+
 ## 核心概念
 
 | 概念 | 说明 |
@@ -19,6 +34,8 @@ xuen 自身不调用模型，也不内置研究工具。它负责组织循环、
 
 ## 快速开始
 
+需要 Python 3.9 或更高版本。
+
 ```bash
 # 1. 安装运行时依赖
 python -m pip install -r requirements.txt
@@ -30,14 +47,15 @@ cp config.example.yaml config.yaml
 python main.py "设计一个新的优化器"
 ```
 
-也可以安装为命令：
+也可以安装为命令；安装后可用 `xuen --help` 查看全部参数：
 
 ```bash
 python -m pip install -e .
 xuen "设计一个新的优化器"
 ```
 
-`agent.command` 必须包含一个会被实际替换的提示词占位符：
+未用 `-c/--config` 指定时，程序依次查找当前目录的 `config.yaml`、`config.yml`、
+`xuen.yaml`。`agent.command` 必须包含一个会被实际替换的提示词占位符：
 
 ```yaml
 agent:
@@ -56,6 +74,7 @@ python main.py --task-file task.md --no-tui
 python main.py "设计一个新的优化器" --rounds-verify ai --rounds-score 8
 python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守卫
 python main.py "设计一个新的优化器" -c my-config.yaml
+python main.py --help                                 # 查看所有参数
 ```
 
 想先不配置外部 agent，可以直接运行最小示例：
@@ -250,11 +269,12 @@ go 的 `matched no packages` / 全部 `[no test files]` 都按「套件不可用
 
 ### 用户评分与渐进翻案
 
-在 `<workspace>/rounds/verdicts.txt` 中追加一行：
+每行一个评分，格式为 `<候选id> <0-10分> [评语]`，追加到
+`<workspace>/rounds/verdicts.txt`：
 
 ```text
-<候选id> <0-10分> [评语]
-例如：20261017-031037-r5 8 想法区更有深度，产物区伪代码可落地
+20261017-031037-r5 8 想法区更有深度，产物区伪代码可落地
+20261018-014512-r12 6
 ```
 
 守卫会在启动时、每轮结束和收尾时兑现待决评分。达到 `adopt_score` 的旧候选会被
