@@ -73,10 +73,8 @@ def read_state_file(path: Path) -> str:
                 # 或 CRLF（Windows），与 update_section_file 已修复的同类
                 # 问题一致。返回值仍按普通读取路径规整为 \n，调用方看到的
                 # 文本语义不变。
-                with open(path, encoding="utf-8", errors="replace",
-                          newline="") as f:
-                    raw_text = f.read()
-                text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+                raw_text = _read_replacing_errors(path)
+                text = _normalize_newlines(raw_text)
                 # 写盘失败或中断时由 _atomic_write_text 清掉半成品临时
                 # 文件；OSError 照常抛给调用方（此时目录不可写，helper
                 # 也建不出来）。
@@ -105,6 +103,17 @@ def _first_span(text: str, name: str) -> tuple[int, int] | None:
     return None
 
 
+def _normalize_newlines(text: str) -> str:
+    """把 CRLF / CR 统一为 LF，供区块内容与读回文本使用。"""
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _read_replacing_errors(path: Path) -> str:
+    """按 UTF-8 读取，坏字节降级为替换符；保留原始换行便于原样回写。"""
+    with open(path, encoding="utf-8", errors="replace", newline="") as f:
+        return f.read()
+
+
 def _first_section(text: str, name: str) -> str | None:
     """第一个有效区块的内容；无有效区块返回 None。
 
@@ -120,7 +129,7 @@ def _first_section(text: str, name: str) -> str | None:
     a, b = span
     s, e = start_marker(name), end_marker(name)
     content = text[a + len(s): b - len(e)]
-    content = content.replace("\r\n", "\n").replace("\r", "\n")
+    content = _normalize_newlines(content)
     # 标记行允许带首尾空白/BOM（见 _SECTION_MARKER）；这些属于
     # 标记行本身，不能算进区块内容，否则读出的内容会混入杂质
     return content.strip(" \t\n\ufeff")
@@ -150,6 +159,32 @@ _SECTION_MARKER = re.compile(
 )
 
 
+def _section_marks(text: str) -> list:
+    """按出现顺序返回标记元组 (标记开始, 标记结束, 区块名, 是否 START)。"""
+    marks = [
+        (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
+        for m in _SECTION_MARKER.finditer(text)
+    ]
+    marks.sort(key=lambda m: m[0])
+    return marks
+
+
+def _drop_nested_starts(candidates: list) -> list:
+    """剔除被同一区块的其他候选完整包含的 START/END 配对。
+
+    两个同名 START 之间若又出现 START，内层只是内容字面量，不是嵌套
+    区块；保留它会让同一段正文被重复识别成候选。
+    """
+    return [
+        candidate for candidate in candidates
+        if not any(
+            other != candidate and other[0] == candidate[0]
+            and other[1] < candidate[1] < other[2]
+            for other in candidates
+        )
+    ]
+
+
 def _section_spans(text: str) -> list:
     """所有有效区块（END 在 START 之后配对）的 (start, end) 区间，text 坐标。
 
@@ -157,12 +192,7 @@ def _section_spans(text: str) -> list:
     恰好有同名 END 标记时，若直接按位置配对，替换外层区块就会把相邻区块
     一起删除。因此这里先收集候选，再剔除「完整包含另一候选区块」的伪配对。
     """
-    marks = [  # (标记开始, 标记结束, 区块名, 是否START)
-        (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
-        for m in _SECTION_MARKER.finditer(text)
-    ]
-    marks.sort(key=lambda m: m[0])
-
+    marks = _section_marks(text)
     candidates = []  # (区块名, start, end)
     for pos, _, nm, is_start in marks:
         if not is_start:
@@ -172,15 +202,7 @@ def _section_spans(text: str) -> list:
         if match is not None:
             candidates.append((nm, pos, match[1]))
 
-    # 同一个 START/END 之间的重复 START 只是内容字面量，不是嵌套区块
-    candidates = [
-        candidate for candidate in candidates
-        if not any(
-            other != candidate and other[0] == candidate[0]
-            and other[1] < candidate[1] < other[2]
-            for other in candidates
-        )
-    ]
+    candidates = _drop_nested_starts(candidates)
     # 区块不允许包含另一个完整区块：这通常说明外层候选的 END 落在相邻
     # 区块内容里（典型场景是外层真实 END 被删除），优先保留内层的真实
     # 相邻区块。若内层同名区块在外层候选之外（此前或此后）已有一个完整
@@ -213,11 +235,7 @@ def _paired_spans(text: str, name: str) -> list:
     _preserve_other_section 仍须保护它的标记行，否则更新另一区块时会把
     它的内容整体清掉。
     """
-    marks = [
-        (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
-        for m in _SECTION_MARKER.finditer(text)
-    ]
-    marks.sort(key=lambda m: m[0])
+    marks = _section_marks(text)
     candidates = []
     for pos, _, nm, is_start in marks:
         if nm != name or not is_start:
@@ -225,10 +243,8 @@ def _paired_spans(text: str, name: str) -> list:
         match = next((m for m in marks if m[0] > pos and m[2] == nm
                       and not m[3]), None)
         if match is not None:
-            candidates.append((pos, match[1]))
-    return [candidate for candidate in candidates
-            if not any(other != candidate and other[0] < candidate[0] < other[1]
-                       for other in candidates)]
+            candidates.append((nm, pos, match[1]))
+    return [(a, b) for _, a, b in _drop_nested_starts(candidates)]
 
 
 def _strip_stray_markers(segment: str, spans: list, seg_start: int,
@@ -380,6 +396,21 @@ def sanitize_section_content(content: str) -> str:
     ).strip(" \t\n\ufeff")
 
 
+def _read_back_section(candidate: str, name: str) -> str | None:
+    """按 get_section 的规则回读 candidate 中指定区块，供写盘后校验。
+
+    返回 None 表示区块缺失或交叉失效（区别于写入空内容）。
+    """
+    s, e = start_marker(name), end_marker(name)
+    back = next(
+        (candidate[a + len(s): b - len(e)].strip("\r\n")
+         for a, b in _section_spans(candidate)
+         if candidate.startswith(s, a)),
+        None,
+    )
+    return None if back is None else _normalize_newlines(back)
+
+
 def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
     with _locked_state(path):
@@ -395,9 +426,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 # 严格解码会让本函数与生成的助手脚本永久无法修复该文件——
                 # 每轮还原都失败、区块永远读不出来，研究循环卡死。按替换符
                 # 降级读取后照常写回，本次更新即把坏字节修复成 U+FFFD
-                with open(path, encoding="utf-8", errors="replace",
-                          newline="") as f:
-                    original = f.read()
+                original = _read_replacing_errors(path)
         text = original
         old = get_section(text, name)
 
@@ -426,14 +455,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
             # 区块立即读不出来、且相邻区块一并失效。校验失败则在文件开头
             # 重建干净的区块（见下），绝不整段清除本区块标记。
-            back = next(
-                (candidate[a + len(s): b - len(e)].strip("\r\n")
-                 for a, b in _section_spans(candidate)
-                 if candidate.startswith(s, a)),
-                None,
-            )
-            if back is not None:
-                back = back.replace("\r\n", "\n").replace("\r", "\n")
+            back = _read_back_section(candidate, name)
             if back != new:
                 # 不回退到「清除本区块所有标记再重建」：回读校验失败时本区块
                 # 与另一区块会交叉失效，此时清除本区块标记会把另一区块区间
@@ -466,14 +488,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 candidate = text.rstrip("\r\n") + nl + nl + block + nl
             # 回读校验必须用 None 哨兵：get_section 在区块缺失/交叉失效时
             # 返回 ''，与「写入空内容」无法区分，会漏掉需要修复的场景
-            back = next(
-                (candidate[a + len(s): b - len(e)].strip("\r\n")
-                 for a, b in _section_spans(candidate)
-                 if candidate.startswith(s, a)),
-                None,
-            )
-            if back is not None:
-                back = back.replace("\r\n", "\n").replace("\r", "\n")
+            back = _read_back_section(candidate, name)
             if back != new:
                 # 极端场景：其他有效区块内部「受保护」的同名孤立 START（本身
                 # 无配对 END，是损坏残留）会抢先与新插入的 END 交叉配对，
