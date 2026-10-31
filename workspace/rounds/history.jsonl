@@ -697,3 +697,16 @@
 {"event": "verdict", "id": "20261031-125017-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-31 12:50:17"}
 {"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-31 12:50:17"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-10-31 13:38:07"}
+{"event": "candidate", "id": "20261031-142547-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-31 14:25:47"}
+{"event": "verdict", "id": "20261031-142547-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-31 14:25:47"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-31 14:25:47"}
+{"event": "candidate", "id": "20261031-144503-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-31 14:45:03"}
+{"event": "verdict", "id": "20261031-144503-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-31 14:45:03"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-31 14:45:03"}
+{"event": "candidate", "id": "20261031-150119-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-31 15:01:19"}
+{"event": "verdict", "id": "20261031-150119-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-31 15:01:19"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-31 15:01:19"}
+{"event": "heartbeat", "round": 1, "ts": "2026-10-31 15:11:01"}
+{"event": "candidate", "id": "20261031-153528-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-10-31 15:35:28"}
+{"event": "verdict", "id": "20261031-153528-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-10-31 15:35:28"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261028-125312-r2", "changed": ["idea", "artifact"], "ts": "2026-10-31 15:35:28"}

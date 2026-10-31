@@ -174,17 +174,25 @@ def _is_plain_index(t: str) -> bool:
 _HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
 _SEGMENT_SEP = re.compile(r"([、,，;；])")
 
-def _clean_segment_head(core: str) -> str:
-    """剥掉词段开头的成对装饰与序号/列表符号（不动点循环）。
+def _strip_head_decorations(text: str) -> str:
+    """单次剥掉词首的成对装饰与列表符号：先解包装饰，再剥序号。
 
-    顺序与 _clean_once 一致：先按成对装饰剥（"**词**" -> "词"），再剥
-    序号（"2. **词**" -> "**词**" -> "词"），反复到不动点。顺序反过来
-    会让 _BULLET 的列表符先吃掉装饰头的一个 "*"（"**词**" -> "*词**"，
-    收尾符失去配对成为残片）。
+    两步顺序不能反：_BULLET 的列表符会先吃掉装饰头的一个 "*"
+    （"**词**" -> "*词**"），使收尾符失去配对而残留。
+    """
+    text = _unwrap_pair(text)
+    return _unwrap_pair(_BULLET.sub("", text).strip())
+
+
+def _clean_segment_head(core: str) -> str:
+    """反复剥掉词段开头的装饰与序号，直到不再变化。
+
+    同一顺序会被 _clean_once 复用（见 _strip_head_decorations）：先按
+    成对装饰剥（"**词**" -> "词"），再剥序号（"2. **词**" -> "**词**"
+    -> "词"），因此两种清洗入口得到一致结果。
     """
     while True:
-        nxt = _unwrap_pair(core)
-        nxt = _unwrap_pair(_BULLET.sub('', nxt).strip())
+        nxt = _strip_head_decorations(core)
         if nxt == core:
             return core
         core = nxt
@@ -269,8 +277,7 @@ def _is_invalid_word(w: str) -> bool:
 
 
 def _clean_once(line: str) -> str | None:
-    w = _unwrap_pair(line.strip())
-    w = _unwrap_pair(_BULLET.sub("", w).strip())
+    w = _strip_head_decorations(line.strip())
     while w and w[0] in _EDGE_CHARS:
         if _is_dot_term(w):
             break

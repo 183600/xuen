@@ -1,7 +1,8 @@
 """配置加载与校验。
 
-xuen 只通过外部 agent（如 opencode）工作，不再内置直连 LLM 的模式，
-因此配置项也大幅简化：核心就是 agent.command（外部 agent 命令模板）。
+xuen 的思考与写作全部交给外部 agent（如 opencode、claude、aider），
+因此核心配置是 agent.command（命令模板）；其余字段均为可选，
+可按需调整词库、循环、轮次守卫、提示词预算与界面行为。
 """
 from __future__ import annotations
 
