@@ -251,13 +251,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
             else:
                 consecutive_failures = 0
             # 读取状态文件：哪个区块被覆盖了就上报哪个（屏幕显示 [修改xx区]<内容>）
-            idea, artifact = _read_sections(state_path)
-            if idea != prev_idea:
-                prev_idea = idea
-                sink.section(SECTION_IDEA, idea or "（空）")
-            if artifact != prev_artifact:
-                prev_artifact = artifact
-                sink.section(SECTION_ARTIFACT, artifact or "（空）")
+            idea, artifact = _report_changed_sections(
+                sink, state_path, prev_idea, prev_artifact)
+            prev_idea, prev_artifact = idea, artifact
             # 轮次守卫：快照 → 验证 → 晋升/还原。守卫自身异常一律降级跳过，
             # 绝不阻断研究循环（但还原后的区块变化要重读并上报给用户）
             if guard is not None:
@@ -287,13 +283,9 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                         # 只补做还原、不重复记账（见 rounds.RoundGuard）
                         _guard_round_failed(guard, i, f"守卫处理异常：{e}")
                 # 守卫可能改写了区块（还原最佳 / 晋升候选）：重读并上报
-                idea, artifact = _read_sections(state_path)
-                if idea != prev_idea:
-                    prev_idea = idea
-                    sink.section(SECTION_IDEA, idea or "（空）")
-                if artifact != prev_artifact:
-                    prev_artifact = artifact
-                    sink.section(SECTION_ARTIFACT, artifact or "（空）")
+                idea, artifact = _report_changed_sections(
+                    sink, state_path, prev_idea, prev_artifact)
+                prev_idea, prev_artifact = idea, artifact
     except SystemExit:
         # 连续失败等「提前中止」路径也要先收尾（打印最终区块状态 /
         # 通知 TUI 循环结束），与正常结束、键盘中断路径保持一致
@@ -358,6 +350,17 @@ def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> Non
             guard.sink.warn(f"轮次守卫记账异常（忽略）：{e}")
         except Exception:
             pass
+
+
+def _report_changed_sections(sink: Sink, state_path: Path,
+                             prev_idea: str, prev_artifact: str) -> tuple:
+    """读取两个区块，仅把内容有变化的区块上报给 sink。"""
+    idea, artifact = _read_sections(state_path)
+    if idea != prev_idea:
+        sink.section(SECTION_IDEA, idea or "（空）")
+    if artifact != prev_artifact:
+        sink.section(SECTION_ARTIFACT, artifact or "（空）")
+    return idea, artifact
 
 
 def _read_sections(state_path: Path) -> tuple:

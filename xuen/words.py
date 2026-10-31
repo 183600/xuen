@@ -1,15 +1,31 @@
-"""领域词库：由外部 agent 生成、解析、持久化、随机抽样（抽样这一步绝不调用任何 LLM）。"""
+"""领域词库：由外部 agent 生成、解析、持久化、随机抽样。
+
+抽样只使用 random.sample，不调用任何 LLM。
+"""
 from __future__ import annotations
+
 import os
 import random
 import re
 from pathlib import Path
 from typing import Callable, List, Optional
+
 from .ui import ui
-_CJK_NUMERALS = '一二三四五六七八九十百千万亿零〇两'
-_NUMERAL_MARKS = '①-⑳⓪⑴-⒇⒈-⒛㈠-㈩㊀-㊉'
-_BULLET = re.compile('^(?:\\d+\\s*[\\.\\．](?!\\d)\\s*|\\d+\\s*[、）)]\\s*|（\\d+）\\s*|\\(\\d+\\)\\s*|\\[\\d+\\]\\s*|[-*•·](?!\\d)\\s*|[' + _CJK_NUMERALS + ']+\\s*[、）)]\\s*|（[' + _CJK_NUMERALS + ']+）\\s*|[' + _NUMERAL_MARKS + ']\\s*)')
-_EDGE_CHARS = '`*_^~\'"“”‘’「」『』《》〈〉【】〔〕〖〗.、 \ufeff'
+
+_CJK_NUMERALS = "一二三四五六七八九十百千万亿零〇两"
+_NUMERAL_MARKS = "①-⑳⓪⑴-⒇⒈-⒛㈠-㈩㊀-㊉"
+_BULLET = re.compile(
+    r"^(?:\d+\s*[\.\．](?!\d)\s*"
+    r"|\d+\s*[、）)]\s*"
+    r"|（\d+）\s*"
+    r"|\(\d+\)\s*"
+    r"|\[\d+\]\s*"
+    r"|[-*•·](?!\d)\s*"
+    r"|[" + _CJK_NUMERALS + r"]+\s*[、）)]\s*"
+    r"|（[" + _CJK_NUMERALS + r"]+）\s*"
+    r"|[" + _NUMERAL_MARKS + r"]\s*)"
+)
+_EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.、 \ufeff"
 
 def _is_dot_term(w: str) -> bool:
     """词首的点是否是术语本身的一部分（如 ".NET" / ".env" / ".gitignore"）。
@@ -32,29 +48,46 @@ def _strip_leading_edges(w: str) -> str:
             break
         w = w[1:]
     return w
-_EMPHASIS_PAIR = re.compile('^([*~`]{1,3})(?=\\S)(.+?)\\1')
-_UNDERSCORE_PAIR = re.compile('^(_+)(?=\\S)(.+?)\\1(?=$|[^\\w])')
-_UNDERSCORE_CLOSE = re.compile('_(?=$|[^\\w])')
-_QUOTE_PAIRS = (('"', '"'), ("'", "'"), ('“', '”'), ('‘', '’'), ('「', '」'), ('『', '』'), ('《', '》'), ('〈', '〉'), ('【', '】'), ('〔', '〕'), ('〖', '〗'))
-_ANY_EMPHASIS_PAIR = re.compile('(?<![*~`])([*~`]{1,3})(?=\\S)(.+?)\\1(?![*~`])')
+_EMPHASIS_PAIR = re.compile(r"^([*~`]{1,3})(?=\S)(.+?)\1")
+_UNDERSCORE_PAIR = re.compile(r"^(_+)(?=\S)(.+?)\1(?=$|[^\w])")
+_UNDERSCORE_CLOSE = re.compile(r"_(?=$|[^\w])")
+_QUOTE_PAIRS = (
+    ('"', '"'), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"),
+    ("『", "』"), ("《", "》"), ("〈", "〉"), ("【", "】"), ("〔", "〕"),
+    ("〖", "〗"),
+)
+_ANY_EMPHASIS_PAIR = re.compile(r"(?<![*~`])([*~`]{1,3})(?=\S)(.+?)\1(?![*~`])")
 
-def _quote_pair_re(open_ch: str, close_ch: str) -> 're.Pattern':
-    content = '(\\S(?:[^' + re.escape(close_ch) + ']*[^\\s' + re.escape(close_ch) + '])?)'
+
+def _quote_pair_re(open_ch: str, close_ch: str) -> "re.Pattern":
+    content = (r"(\S(?:[^" + re.escape(close_ch) + r"]*[^\s"
+               + re.escape(close_ch) + r"])?)")
     return re.compile(re.escape(open_ch) + content + re.escape(close_ch))
-_QUOTE_PAIR_RES = tuple(((open_ch, close_ch, _quote_pair_re(open_ch, close_ch)) for open_ch, close_ch in _QUOTE_PAIRS))
-_EMPHASIS_CHARS = frozenset('*~`')
-_ASCII_WORD_CHAR = re.compile('[0-9A-Za-z]')
-_WORD_CHAR = re.compile('\\w')
-_PAIR_OPENERS = frozenset('*~`_' + ''.join((open_ch for open_ch, _ in _QUOTE_PAIRS)))
-_PAIR_PARTICIPANTS = frozenset('*~`_' + ''.join((close_ch for _, close_ch in _QUOTE_PAIRS)))
 
-def _emph_repl(m: 're.Match') -> str:
-    if m.group(1) == '*' and m.start() > 0 and _WORD_CHAR.match(m.string[m.start() - 1]):
+
+_QUOTE_PAIR_RES = tuple(
+    (open_ch, close_ch, _quote_pair_re(open_ch, close_ch))
+    for open_ch, close_ch in _QUOTE_PAIRS
+)
+_EMPHASIS_CHARS = frozenset("*~`")
+_ASCII_WORD_CHAR = re.compile(r"[0-9A-Za-z]")
+_WORD_CHAR = re.compile(r"\w")
+_PAIR_OPENERS = frozenset("*~`_" + "".join(open_ch for open_ch, _ in _QUOTE_PAIRS))
+_PAIR_PARTICIPANTS = frozenset(
+    "*~`_" + "".join(close_ch for _, close_ch in _QUOTE_PAIRS)
+)
+
+
+def _emph_repl(m: "re.Match") -> str:
+    if (m.group(1) == "*" and m.start() > 0
+            and _WORD_CHAR.match(m.string[m.start() - 1])):
         return m.group(0)
     return m.group(2)
 
-def _quote_repl(m: 're.Match', open_ch: str) -> str:
-    if open_ch in '"\'' and m.start() > 0 and _ASCII_WORD_CHAR.match(m.string[m.start() - 1]):
+
+def _quote_repl(m: "re.Match", open_ch: str) -> str:
+    if (open_ch in "\"'" and m.start() > 0
+            and _ASCII_WORD_CHAR.match(m.string[m.start() - 1])):
         return m.group(0)
     return m.group(1)
 
@@ -110,8 +143,8 @@ def _unwrap_pair(w: str) -> str:
             if stripped == w:
                 return w
             w = stripped
-_PURE_NUMBER = re.compile('^[+-]?\\d+(?:[.．]\\d+)?$')
-_CJK_INDEX = re.compile('^[' + _CJK_NUMERALS + ']+$')
+_PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
+_CJK_INDEX = re.compile("^[" + _CJK_NUMERALS + "]+$")
 
 def _is_index_segment(t: str) -> bool:
     """词段是否只是列表序号（阿拉伯整数或汉字数字），不是术语。
@@ -134,9 +167,11 @@ def _is_plain_index(t: str) -> bool:
         return False
     if _CJK_INDEX.match(t):
         return True
-    return bool(_PURE_NUMBER.match(t)) and '.' not in t and ('．' not in t)
-_HAS_WORD_CHAR = re.compile('[^\\W_]', re.UNICODE)
-_SEGMENT_SEP = re.compile('([、,，;；])')
+    return bool(_PURE_NUMBER.match(t)) and "." not in t and "．" not in t
+
+
+_HAS_WORD_CHAR = re.compile(r"[^\W_]", re.UNICODE)
+_SEGMENT_SEP = re.compile(r"([、,，;；])")
 
 def _clean_segment_head(core: str) -> str:
     """剥掉词段开头的成对装饰与序号/列表符号（不动点循环）。
@@ -165,9 +200,9 @@ def _is_list_index_sep(parts: List[str], i: int) -> bool:
         sep, after = (parts[i + 1], parts[i + 2])
     else:
         sep, after = (parts[i - 1], parts[i])
-    if sep in '、；，':
+    if sep in "、；，":
         return True
-    return sep in ',;' and after[:1].isspace()
+    return sep in ",;" and after[:1].isspace()
 
 def _unwrap_segments(w: str) -> str:
     """对分隔符分开的每一段分别剥词头装饰/序号并清理两端。"""
@@ -189,9 +224,18 @@ def _unwrap_segments(w: str) -> str:
         core = core.rstrip(_EDGE_CHARS).strip()
         cleaned.append(lead + core + trail)
     is_index = [_is_index_segment(t) for t in cleaned]
-    has_word = any((t.strip() and (not idx) for t, idx in zip(cleaned, is_index)))
-    if not has_word and all((t.strip() and _is_plain_index(t) for t in cleaned if t.strip())) and all((_is_list_index_sep(parts, i) for i in range(0, len(parts), 2) if cleaned[i // 2].strip())):
-        return ''
+    has_word = any(t.strip() and not idx
+                   for t, idx in zip(cleaned, is_index))
+    index_only = all(
+        t.strip() and _is_plain_index(t) for t in cleaned if t.strip()
+    )
+    list_format = all(
+        _is_list_index_sep(parts, i)
+        for i in range(0, len(parts), 2)
+        if cleaned[i // 2].strip()
+    )
+    if not has_word and index_only and list_format:
+        return ""
     out = []
     i = 0
     while i < len(parts):
@@ -210,11 +254,23 @@ def _unwrap_segments(w: str) -> str:
             continue
         out.append(t if i % 2 == 0 else parts[i])
         i += 1
-    return ''.join(out)
+    return "".join(out)
+
+
+def _is_invalid_word(w: str) -> bool:
+    """词是否为空、过长或明显不是术语（标题符/序号/无文字字符）。"""
+    return (
+        not w or len(w) > 60
+        or w.startswith(("#", ">", "|", "="))
+        or _is_plain_index(w)
+        or _CJK_INDEX.match(w) is not None
+        or _HAS_WORD_CHAR.search(w) is None
+    )
+
 
 def _clean_once(line: str) -> str | None:
     w = _unwrap_pair(line.strip())
-    w = _unwrap_pair(_BULLET.sub('', w).strip())
+    w = _unwrap_pair(_BULLET.sub("", w).strip())
     while w and w[0] in _EDGE_CHARS:
         if _is_dot_term(w):
             break
@@ -225,14 +281,12 @@ def _clean_once(line: str) -> str | None:
         w = _unwrap_pair(rest)
     w = _unwrap_segments(w)
     w = w.rstrip(_EDGE_CHARS).strip()
-    if not w or len(w) > 60:
+    if _is_invalid_word(w):
         return None
-    if w.startswith(('#', '>', '|', '=')) or _is_plain_index(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
+    if "://" in w or "：//" in w:
         return None
-    if '://' in w or '：//' in w:
-        return None
-    while '：' in w or ':' in w:
-        for sep in ('：', ':'):
+    while "：" in w or ":" in w:
+        for sep in ("：", ":"):
             if sep in w:
                 head, _, _ = w.partition(sep)
                 head = head.strip()
@@ -242,13 +296,13 @@ def _clean_once(line: str) -> str | None:
                 break
         else:
             return None
-    w = w.rstrip('.。,，;；!！?？ ')
+    w = w.rstrip(".。,，;；!！?？ ")
     w = _strip_leading_edges(w).rstrip(_EDGE_CHARS).strip()
-    if not w or len(w) > 60:
-        return None
-    if w.startswith(('#', '>', '|', '=')) or _is_plain_index(w) or _CJK_INDEX.match(w) or (not _HAS_WORD_CHAR.search(w)):
+    if _is_invalid_word(w):
         return None
     return w
+
+
 _MAX_CLEAN_LEN = 256
 _LINE_SPLIT = re.compile(r"\r\n|\r|\n")
 
@@ -270,30 +324,33 @@ def _clean_line(line: str) -> Optional[str]:
         w = nxt
     return w
 
+
 def parse_word_lines(text: str) -> List[str]:
     out: List[str] = []
     seen = set()
-    for ln in _LINE_SPLIT.split(text):
-        w = _clean_line(ln)
-        if not w:
+    for line in _LINE_SPLIT.split(text):
+        word = _clean_line(line)
+        if not word:
             continue
-        key = w.casefold()
+        key = word.casefold()
         if key in seen:
             continue
         seen.add(key)
-        out.append(w)
+        out.append(word)
     return out
+
 
 def load_words(path: Path) -> List[str]:
     if not path.exists():
         return []
-    return parse_word_lines(path.read_text(encoding='utf-8-sig'))
+    return parse_word_lines(path.read_text(encoding="utf-8-sig"))
+
 
 def save_words(path: Path, wlist: List[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + f'.{os.getpid()}.tmp')
+    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
     try:
-        tmp.write_text('\n'.join(wlist) + '\n', encoding='utf-8')
+        tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
         os.replace(tmp, path)
     except BaseException:
         # 不止 OSError：写盘被 Ctrl+C / SystemExit 中断时同样要清掉
@@ -305,13 +362,23 @@ def save_words(path: Path, wlist: List[str]) -> None:
             pass
         raise
 
+
 def sample_words(wlist: List[str], n: int) -> List[str]:
     """纯随机抽样，不调用 LLM。"""
     if n <= 0 or not wlist:
         return []
     return random.sample(wlist, min(n, len(wlist)))
 
-def generate_words_shell(shell_agent, task: str, count: int, batch: int, info: Callable[[str], None]=ui.info, warn: Callable[[str], None]=ui.warn, stop: Optional[Callable[[], bool]]=None) -> List[str]:
+
+def generate_words_shell(
+    shell_agent,
+    task: str,
+    count: int,
+    batch: int,
+    info: Callable[[str], None] = ui.info,
+    warn: Callable[[str], None] = ui.warn,
+    stop: Optional[Callable[[], bool]] = None,
+) -> List[str]:
     """通过外部 agent（如 opencode）分批生成领域词库。
 
     stop：可选的停止回调（如 TUI 按 q）。当前批次的 agent 会被外部
@@ -324,25 +391,30 @@ def generate_words_shell(shell_agent, task: str, count: int, batch: int, info: C
         if len(wlist) >= count:
             break
         if stop is not None and stop():
-            info('收到停止请求，中断词库生成')
+            info("收到停止请求，中断词库生成")
             break
         ask = min(batch, count - len(wlist) + 20)
-        info(f'通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）')
-        prompt = f'请为研究方向「{task}」列出 {ask} 个紧密相关的术语/关键词。\n要求：每行一个词；不要编号、不要解释、不要输出任何多余内容；只输出词表本身。'
-        out = shell_agent.run(prompt) or ''
-        if getattr(shell_agent, 'timed_out', False) or getattr(shell_agent, 'returncode', 0):
+        info(f"通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）")
+        prompt = (
+            f"请为研究方向「{task}」列出 {ask} 个紧密相关的术语/关键词。\n"
+            "要求：每行一个词；不要编号、不要解释、不要输出任何多余内容；"
+            "只输出词表本身。"
+        )
+        out = shell_agent.run(prompt) or ""
+        if (getattr(shell_agent, "timed_out", False)
+                or getattr(shell_agent, "returncode", 0)):
             if stop is not None and stop():
                 break
-            warn('词库生成批次执行失败（超时或非零退出），停止生成')
+            warn("词库生成批次执行失败（超时或非零退出），停止生成")
             break
         fresh = 0
-        for w in parse_word_lines(out):
-            key = w.casefold()
+        for word in parse_word_lines(out):
+            key = word.casefold()
             if key not in seen:
                 seen.add(key)
-                wlist.append(w)
+                wlist.append(word)
                 fresh += 1
         if fresh == 0:
-            warn('词表不再增长，提前结束收集')
+            warn("词表不再增长，提前结束收集")
             break
     return wlist[:count]

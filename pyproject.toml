@@ -35,3 +35,6 @@ xuen = "xuen.cli:main"
 
 [tool.setuptools]
 packages = ["xuen"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

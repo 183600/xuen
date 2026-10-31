@@ -255,11 +255,12 @@ def load_config(path: Optional[str] = None) -> Config:
     )
 
     rounds = _mapping_section(raw, "rounds")
-    verify = _mode_str(_config_value(rounds, "verify", cfg.rounds.verify)) \
-        or cfg.rounds.verify
-    fallback = _mode_str(_config_value(rounds, "fallback",
-                                       cfg.rounds.fallback)) \
+    verify = (_mode_str(_config_value(rounds, "verify", cfg.rounds.verify))
+              or cfg.rounds.verify)
+    fallback = (
+        _mode_str(_config_value(rounds, "fallback", cfg.rounds.fallback))
         or cfg.rounds.fallback
+    )
     cfg.rounds = RoundsConfig(
         enabled=_parse_bool(_config_value(rounds, "enabled", cfg.rounds.enabled),
                             "rounds.enabled"),
