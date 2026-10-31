@@ -27,6 +27,7 @@ _BULLET = re.compile(
 )
 _EDGE_CHARS = "`*_^~'\"“”‘’「」『』《》〈〉【】〔〕〖〗.、 \ufeff"
 
+
 def _is_dot_term(w: str) -> bool:
     """词首的点是否是术语本身的一部分（如 ".NET" / ".env" / ".gitignore"）。
 
@@ -48,6 +49,8 @@ def _strip_leading_edges(w: str) -> str:
             break
         w = w[1:]
     return w
+
+
 _EMPHASIS_PAIR = re.compile(r"^([*~`]{1,3})(?=\S)(.+?)\1")
 _UNDERSCORE_PAIR = re.compile(r"^(_+)(?=\S)(.+?)\1(?=$|[^\w])")
 _UNDERSCORE_CLOSE = re.compile(r"_(?=$|[^\w])")
@@ -90,6 +93,7 @@ def _quote_repl(m: "re.Match", open_ch: str) -> str:
             and _ASCII_WORD_CHAR.match(m.string[m.start() - 1])):
         return m.group(0)
     return m.group(1)
+
 
 def _strip_pairs(w: str) -> str:
     """剥掉词中任意位置完整成对的装饰符（循环到不动点）。"""
@@ -143,6 +147,8 @@ def _unwrap_pair(w: str) -> str:
             if stripped == w:
                 return w
             w = stripped
+
+
 _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 _CJK_INDEX = re.compile("^[" + _CJK_NUMERALS + "]+$")
 
@@ -180,6 +186,7 @@ def _clean_segment_head(core: str) -> str:
             return core
         core = nxt
 
+
 def _is_list_index_sep(parts: List[str], i: int) -> bool:
     """序号段（parts[i]，纯数字或汉字数字）的相邻分隔符是否把它标记为列表序号。
 
@@ -195,6 +202,7 @@ def _is_list_index_sep(parts: List[str], i: int) -> bool:
     if sep in "、；，":
         return True
     return sep in ",;" and after[:1].isspace()
+
 
 def _unwrap_segments(w: str) -> str:
     """对分隔符分开的每一段分别剥词头装饰/序号并清理两端。"""
@@ -297,6 +305,7 @@ def _clean_once(line: str) -> str | None:
 
 _MAX_CLEAN_LEN = 256
 _LINE_SPLIT = re.compile(r"\r\n|\r|\n")
+
 
 def _clean_line(line: str) -> Optional[str]:
     """清洗到不动点：单次清洗剥掉边缘字符后可能暴露出新的序号/标点/分隔符

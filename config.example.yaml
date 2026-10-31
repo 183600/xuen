@@ -5,12 +5,16 @@
 #   1. cp config.example.yaml config.yaml
 #   2. 按需修改下面各字段，尤其是 agent.command
 #
+# 除 agent.command 外，所有字段都可省略并使用默认值。命令行参数优先于
+# 配置文件（如 --iterations / --pick / --no-rounds / --workspace）。
+#
 # xuen 本身不调用模型，只负责组织循环与维护状态。程序会把任务、灵感词
 # 和当前想法区/产物区拼成提示词，交给外部 agent；agent 通过工作区中的
 # write_section.py 或直接编辑 research.md 来覆盖「想法区 / 产物区」。
 #
-# 配置文件可用 -c 指定；workspace 等路径按启动时的当前目录解析，
-# rounds.dir 则相对 workspace。
+# 配置文件可用 -c 指定；未指定时依次查找当前目录的 config.yaml、
+# config.yml、xuen.yaml。workspace 等路径按启动时的当前目录解析，
+# rounds.dir 则相对 workspace。完整字段说明见 README「配置参考」。
 # ============================================================
 
 # ---- 外部 agent（必填）----
@@ -22,11 +26,14 @@ agent:
   #
   # $prompt 受系统单参数长度限制，且提示词会随轮次增长；长循环或跨平台
   # 场景更推荐 $prompt_file。
+  #
+  # 占位符必须位于会被实际执行的位置；被 shell 转义、写在注释/heredoc
+  # 正文里，或落在无法安全解析的展开语境中时，配置校验会直接报错。
   command: 'opencode run "$prompt"'
   # command: 'opencode run "$prompt_file"'
   # command: 'claude -p "$prompt"'
   # command: 'aider --message-file $prompt_file'
-  timeout: 1800      # 单次外部调用超时（秒）；超时后终止整个进程树
+  timeout: 1800      # 单次外部调用超时（秒，须为正数）；超时后终止整个进程树
 
 # ---- 给外部 agent 的额外说明 ----
 # 会拼进每轮提示词开头，适合写研究风格、输出要求或长期约束。
@@ -47,14 +54,14 @@ prompt:
 # 首次运行由外部 agent 分批生成，并持久化到 <workspace>/words.txt。
 # words.pick=0 时完全跳过词库，循环中不提供灵感词。
 words:
-  count: 1000     # 目标词数
-  batch: 100      # 每批向外部 agent 请求的词数
+  count: 1000     # 目标词数（正整数）
+  batch: 100      # 每批向外部 agent 请求的词数（正整数）
   pick: 2         # 每轮随机抽取的灵感词数量 n（>= 0；0 = 不使用灵感词）
   reuse: true     # words.txt 已存在时直接复用（--regen-words 可强制重建）
 
 # ---- 循环 ----
 loop:
-  iterations: 5   # 轮数；写 inf 表示无限循环（输入框为空时按 q 结束）
+  iterations: 5   # 轮数（正整数）；写 inf 表示无限循环（输入框为空时按 q 结束）
 
 # ---- 轮次守卫 ----
 # 外部 agent 每轮会整体覆盖想法区/产物区。守卫在覆盖后保存候选快照，
@@ -74,20 +81,22 @@ rounds:
   #   user  只用用户评分：在 <workspace>/rounds/verdicts.txt 追加
   #         「<候选id> <0-10分> [评语]」；守卫在启动、每轮结束与收尾时
   #         兑现评分，给旧候选补高分可前进式翻案（内容写回 research.md）
-  #   ai    只用 AI 评分：复用外部 agent 当评审员，对比候选与最佳打分
+  #   ai    只用 AI 评分：复用外部 agent 当评审员，对比候选与最佳打分；
+  #         可通过下面的 judge_command 单独指定更便宜/更快的评审模型
   #   off   不验证：快照照存，最新即最佳（仅「防丢失」模式）
   verify: auto
   fallback: ai           # auto 模式无测试可用时的兜底评分者：user / ai
   adopt_score: 7         # 评分达到该阈值才采纳候选为最佳（0-10）
-  verify_timeout: 600    # 单次测试套件运行超时（秒）
+  verify_timeout: 600    # 单次测试套件运行超时（秒，tests/auto 用）
   # 测试验证的目标目录；留空 = 自动探测（从工作区向上查找 git 仓库根，
   # 非 git 环境退化为工作区本身）。要打磨某个代码仓库时指向它，
   # 候选改动就会被该仓库的测试套件自动验证。
   repo: ""
   # AI 评审命令模板；留空 = 复用 agent.command。占位符同 agent.command
-  # （$prompt / $prompt_file），可在这里配置更便宜或更快的评审模型。
+  # （$prompt / $prompt_file），可在这里配置更便宜或更快的评审模型：
+  #   judge_command: 'opencode run -m opencode/deepseek-v4.1-flash-free "$prompt_file"'
   judge_command: ""
-  judge_timeout: 600     # AI 评审单次调用超时（秒）
+  judge_timeout: 600     # AI 评审单次调用超时（秒，须为正数）
 
 # ---- 界面 ----
 tui: true         # 启用 TUI：想法区/产物区面板 + 输出日志 + 底部输入框；--no-tui 可关闭
