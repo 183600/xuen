@@ -22,8 +22,8 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Input, RichLog, Static
 
 from .config import Config
-from .sink import (SECTION_ARTIFACT, SECTION_IDEA, SECTION_TAG, SECTION_TITLE,
-                   Sink, round_title)
+from .sink import (SECTION_ARTIFACT, SECTION_IDEA, Sink, round_title,
+                   section_tag, section_title)
 
 _CSS = """
 Screen {
@@ -74,6 +74,11 @@ _SECTION_WIDGETS = {
 }
 
 
+def _separator(title: str) -> str:
+    """日志中的分节标题线。"""
+    return "─" * 12 + f" {title} " + "─" * 12
+
+
 class _InputBox(Input):
     """底部输入框：为空时按 q 退出；已有内容时 q 作为普通字符输入。
 
@@ -120,7 +125,7 @@ class TuiSink(Sink):
 
     def round_header(self, index: int, label: str) -> None:
         title = round_title(index, label)
-        self._log("─" * 12 + f" {title} " + "─" * 12, "bold magenta")
+        self._log(_separator(title), "bold magenta")
         self.app.post_status(f"进行中：{title}")
 
     def agent_output(self, line: str) -> None:
@@ -140,7 +145,7 @@ class TuiSink(Sink):
 
     def finish(self, idea: str, artifact: str) -> None:
         self.app.post_finished()  # 先阻断新输入并丢弃无法再投递的排队内容
-        self._log("─" * 12 + " 研究循环结束 " + "─" * 12, "bold green")
+        self._log(_separator("研究循环结束"), "bold green")
         self.section(SECTION_IDEA, idea)
         self.section(SECTION_ARTIFACT, artifact)
         self.app.post_status("已结束（按 q 或 Ctrl+C 退出）")
@@ -188,8 +193,9 @@ class XuangenApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#idea-box").border_title = SECTION_TITLE[SECTION_IDEA]
-        self.query_one("#artifact-box").border_title = SECTION_TITLE[SECTION_ARTIFACT]
+        self.query_one("#idea-box").border_title = section_title(SECTION_IDEA)
+        self.query_one("#artifact-box").border_title = section_title(
+            SECTION_ARTIFACT)
         self.query_one("#log-box").border_title = "输出日志"
         self.query_one("#user-input", Input).focus()
         self._worker = threading.Thread(target=self._run_loop, daemon=True)
@@ -249,7 +255,7 @@ class XuangenApp(App):
     def post_section(self, name: str, content: str) -> None:
         # 显式映射：未知的区块名直接报错，不能静默写进产物区面板
         widget_id = _SECTION_WIDGETS[name]
-        tag = SECTION_TAG.get(name, f"[{name}]")
+        tag = section_tag(name)
 
         def _update() -> None:
             view = self.query_one(widget_id, RichLog)
