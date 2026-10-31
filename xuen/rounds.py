@@ -159,7 +159,7 @@ def parse_score(text: str) -> Optional[float]:
     """从评审输出里解析 0-10 分；解析不出返回 None（调用方按挂起处理）。"""
     if not text:
         return None
-    best: Tuple[int, float] = None  # type: ignore[assignment]
+    best: Optional[Tuple[int, float]] = None
     for pat in _SCORE_PATTERNS:
         for m in pat.finditer(text):
             try:
@@ -706,6 +706,10 @@ class RoundGuard:
             return best
         return None
 
+    def _candidate_path(self, cid: object) -> Path:
+        """候选快照路径（调用方保证 cid 已通过 _valid_cid）。"""
+        return self.dir / f"{CAND_PREFIX}{cid}.md"
+
     def _snapshot_text(self, cid: object) -> Optional[str]:
         """候选快照内容；id 非法 / 不可读 / 结构损坏返回 None。
 
@@ -714,8 +718,7 @@ class RoundGuard:
         if not _valid_cid(cid):
             return None
         try:
-            text = (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
-                encoding="utf-8")
+            text = self._candidate_path(cid).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             return None
         return text if _structure_intact(text) else None
@@ -775,7 +778,7 @@ class RoundGuard:
         base = f"{time.strftime('%Y%m%d-%H%M%S')}-r{round_no}"
         cid, seq = base, 2
         while True:
-            path = self.dir / f"{CAND_PREFIX}{cid}.md"
+            path = self._candidate_path(cid)
             try:
                 created = open(path, "x", encoding="utf-8")
             except FileExistsError:
@@ -1150,8 +1153,7 @@ class RoundGuard:
         验证期间被删除/损坏时，调用方按「待评分」挂起，绝不能拿未验证
         的实时状态顶替。"""
         try:
-            return (self.dir / f"{CAND_PREFIX}{cid}.md").read_text(
-                encoding="utf-8")
+            return self._candidate_path(cid).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as e:
             raise OSError(f"候选快照 {cid} 不可读：{e}") from e
 
@@ -1224,27 +1226,37 @@ class RoundGuard:
         self.sink.ok(f"第 {round_no} 轮候选通过验证（{verdesc(verdict)}），"
                      f"晋升为最佳（{cid}）")
 
-    def _restore_best(self, round_no: int, why: str) -> List[str]:
-        """把 research.md 的两个区块还原为当前最佳内容（前进式还原：
-        不删任何文件、不改写历史，只把循环的「当前状态」拨回最佳）。
-        返回实际被改回的区块名列表（无变化返回空表，不产生事件噪音）。"""
-        best_text = self._best_content()
+    def _sync_sections(self, source_text: str) -> Tuple[List[str], List[Tuple[str, str, Exception]]]:
+        """把 research.md 的两个区块同步为 source_text 的内容。
+
+        返回 ``(changed, failures)``：changed 为实际改动的区块键；
+        failures 为 ``(键, 区块名, 异常)``，供调用方按场景告警。内容一致
+        的区块不写盘。"""
         cur = self._read_state_text()
         changed: List[str] = []
+        failures: List[Tuple[str, str, Exception]] = []
         for name, key in ((state.SECTION_IDEA, "idea"),
                           (state.SECTION_ARTIFACT, "artifact")):
-            want = _readable_section(best_text, name)
+            want = _readable_section(source_text, name)
             if want is None:
                 # 最佳内容自身损坏时按「空内容」处理，但结构仍要修复回来
                 want = ""
-            have = _readable_section(cur, name)
-            if want == have:
+            if want == _readable_section(cur, name):
                 continue
             try:
                 state.update_section_file(self.state_path, name, want)
                 changed.append(key)
             except (OSError, ValueError) as e:
-                self.sink.warn(f"还原最佳区块 {key} 失败（忽略）：{e}")
+                failures.append((key, name, e))
+        return changed, failures
+
+    def _restore_best(self, round_no: int, why: str) -> List[str]:
+        """把 research.md 的两个区块还原为当前最佳内容（前进式还原：
+        不删任何文件、不改写历史，只把循环的「当前状态」拨回最佳）。
+        返回实际被改回的区块名列表（无变化返回空表，不产生事件噪音）。"""
+        changed, failures = self._sync_sections(self._best_content())
+        for key, _, error in failures:
+            self.sink.warn(f"还原最佳区块 {key} 失败（忽略）：{error}")
         if not changed:
             return changed
         self.stats.restored += 1
@@ -1421,20 +1433,9 @@ class RoundGuard:
     def _write_back(self, text: str, round_no: int) -> None:
         """把晋升内容写回 research.md（与 restored 事件保持 1:1；无区块
         变化（状态文件已与快照一致）时不产生事件、不虚增统计）。"""
-        cur = self._read_state_text()
-        changed: List[str] = []
-        for name, key in ((state.SECTION_IDEA, "idea"),
-                          (state.SECTION_ARTIFACT, "artifact")):
-            want = _readable_section(text, name)
-            if want is None:
-                want = ""
-            have = _readable_section(cur, name)
-            if want != have:
-                try:
-                    state.update_section_file(self.state_path, name, want)
-                    changed.append(key)
-                except (OSError, ValueError) as e:
-                    self.sink.warn(f"写回区块失败（{name}）：{e}")
+        changed, failures = self._sync_sections(text)
+        for _, name, error in failures:
+            self.sink.warn(f"写回区块失败（{name}）：{error}")
         if changed:
             self.stats.restored += 1
             self._append_event_safe({"event": "restored", "round": round_no,
