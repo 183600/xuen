@@ -1,8 +1,8 @@
-"""外部 agent 执行器：通过 shell 命令调用 opencode / claude / aider 等外部 agent。
+"""外部 agent 执行器：通过 shell 命令调用 opencode / claude / aider 等。
 
-xuen 不再内置直连 LLM 的模式 —— 所有的"研究者思考"都由外部 agent 完成：
-程序把任务/灵感词/当前状态拼成提示词交给外部 agent，agent 通过
-workspace/write_section.py 直接写文件来"覆盖想法区 / 产物区"。
+所有"研究者思考"都由外部 agent 完成：xuen 把任务、灵感词与当前状态
+拼成提示词交给外部 agent，agent 再通过 workspace/write_section.py
+或直接编辑 research.md 来覆盖想法区 / 产物区。
 
 体量红线：仓库对单文件设 3,000 行门禁（scripts/check_file_size.py），
 本文件目前低于该上限。shell 模板扫描、占位符边界与 ShellAgent 的进程

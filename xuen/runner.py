@@ -209,8 +209,8 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 break
             # 第一步：纯随机抽词（不调用任何 LLM）
             inspiration = words.sample_words(word_list, cfg.words.pick)
-            label = ("、".join(f"「{w}」" for w in inspiration)
-                     if inspiration else "（无灵感词，自由发挥）")
+            label = _format_inspiration(
+                inspiration, "（无灵感词，自由发挥）")
             sink.round_header(round_no, label)
             # 底部输入框的内容：在下次调用 agent 时带给 agent
             user_notes = sink.drain_user_input()
@@ -389,6 +389,13 @@ def _read_sections(state_path: Path) -> Tuple[str, str]:
             state.get_section(text, state.SECTION_ARTIFACT))
 
 
+def _format_inspiration(inspiration: List[str], empty_text: str) -> str:
+    """把抽到的灵感词排成展示文本；无词时使用调用方给的占位句。"""
+    if not inspiration:
+        return empty_text
+    return "、".join(f"「{w}」" for w in inspiration)
+
+
 def _shell_path(path: Path) -> str:
     """把路径安全地嵌入提示词，供外部 agent 的 shell 直接执行。
 
@@ -470,8 +477,8 @@ def _shell_prompt(cfg: Config, task: str, round_no: int,
             f"下方只保留首尾（已省略 {omitted} 字符），完整内容仍在状态文件 "
             f"{state_path} 中。\n"
         )
-    ins = ("、".join(f"「{w}」" for w in inspiration)
-           if inspiration else "（本轮没有随机灵感词，请自由发挥）")
+    ins = _format_inspiration(
+        inspiration, "（本轮没有随机灵感词，请自由发挥）")
     # 提示词会被外部 agent 按 shell 复制执行：路径必须按当前平台的 shell
     # 规则转义后再拼进去（简单路径下 shlex.quote 原样返回、不影响可读性）
     state_q, helper_q = _shell_path(state_path), _shell_path(helper)

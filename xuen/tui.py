@@ -22,7 +22,8 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Input, RichLog, Static
 
 from .config import Config
-from .sink import SECTION_ARTIFACT, SECTION_IDEA, SECTION_TAG, SECTION_TITLE, Sink
+from .sink import (SECTION_ARTIFACT, SECTION_IDEA, SECTION_TAG, SECTION_TITLE,
+                   Sink, round_title)
 
 _CSS = """
 Screen {
@@ -65,6 +66,11 @@ _LEVEL_FORMAT = {
     "ok": ("✔ ", "green"),
     "warn": ("⚠ ", "yellow"),
     "err": ("✘ ", "red"),
+}
+
+_SECTION_WIDGETS = {
+    SECTION_IDEA: "#idea",
+    SECTION_ARTIFACT: "#artifact",
 }
 
 
@@ -113,7 +119,7 @@ class TuiSink(Sink):
         self._level_log("err", text)
 
     def round_header(self, index: int, label: str) -> None:
-        title = f"第 {index} 轮 · 灵感词：{label}"
+        title = round_title(index, label)
         self._log("─" * 12 + f" {title} " + "─" * 12, "bold magenta")
         self.app.post_status(f"进行中：{title}")
 
@@ -242,7 +248,7 @@ class XuangenApp(App):
 
     def post_section(self, name: str, content: str) -> None:
         # 显式映射：未知的区块名直接报错，不能静默写进产物区面板
-        widget_id = {SECTION_IDEA: "#idea", SECTION_ARTIFACT: "#artifact"}[name]
+        widget_id = _SECTION_WIDGETS[name]
         tag = SECTION_TAG.get(name, f"[{name}]")
 
         def _update() -> None:
