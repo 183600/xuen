@@ -413,8 +413,8 @@ def _read_back_section(candidate: str, name: str) -> str | None:
 
 def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
     """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
+    # _locked_state 会先建好父目录；这里无需重复 mkdir。
     with _locked_state(path):
-        path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             original = scaffold("")
         else:

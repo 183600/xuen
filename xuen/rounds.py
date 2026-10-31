@@ -777,11 +777,10 @@ class RoundGuard:
 
     def _sections(self, text: str) -> Tuple[str, str]:
         # 取「写入规整形态」：心跳/改动判定必须与 update_section_file
-        # 落盘后的可读内容一致（见 _readable_section）
-        return (state.sanitize_section_content(
-                    state.get_section(text, state.SECTION_IDEA)),
-                state.sanitize_section_content(
-                    state.get_section(text, state.SECTION_ARTIFACT)))
+        # 落盘后的可读内容一致（见 _readable_section）；不可读区块按空内容
+        # 参与比较，结构问题由 _structure_intact 单独把关。
+        return (_readable_section(text, state.SECTION_IDEA) or "",
+                _readable_section(text, state.SECTION_ARTIFACT) or "")
 
     def _snapshot_candidate(self, round_no: int, text: str) -> str:
         """原子创建候选快照，返回实际占用的 id（撞车自动追加序号）。
