@@ -48,6 +48,13 @@ def _fail(message: str) -> int:
     return 2
 
 
+def _interrupted() -> int:
+    """统一的 Ctrl+C 退出处理：换行、提示并返回中断退出码。"""
+    print()
+    ui.warn("已中断")
+    return 130
+
+
 def _resolve_task(args) -> str:
     task = " ".join(args.task).strip()
     if args.task_file:
@@ -171,9 +178,7 @@ def main(argv=None) -> int:
     except KeyboardInterrupt:
         # 交互式询问任务时按 Ctrl+C：与运行期中断同一约定（130），
         # 不能被 _resolve_task 吞成「未提供任务」（退出码 2 + 误导性报错）
-        print()
-        ui.warn("已中断")
-        return 130
+        return _interrupted()
     except SystemExit as e:
         # _resolve_task 已把具体原因打印到 stderr，这里只把退出码转成
         # main() 的返回值：main() 的契约是返回 int（入口 sys.exit(main())），
@@ -200,9 +205,7 @@ def main(argv=None) -> int:
             try:
                 return run_tui(cfg, task, regen_words=args.regen_words)
             except KeyboardInterrupt:
-                print()
-                ui.warn("已中断")
-                return 130
+                return _interrupted()
             except Exception as e:
                 # textual 在应用启动阶段失败时（如终端能力不足）后台线程的
                 # 异常兜底尚未接管；在这里统一降级为友好错误与退出码 1
@@ -227,7 +230,5 @@ def main(argv=None) -> int:
             return 2
         return e.code
     except KeyboardInterrupt:
-        print()
-        ui.warn("已中断")
-        return 130
+        return _interrupted()
     return 0

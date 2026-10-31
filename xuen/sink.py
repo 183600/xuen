@@ -15,15 +15,25 @@ from .ui import ui
 SECTION_IDEA = "idea"
 SECTION_ARTIFACT = "artifact"
 
-SECTION_TAG = {
-    SECTION_IDEA: "[修改想法区]",
-    SECTION_ARTIFACT: "[修改产物区]",
+_SECTION_DISPLAY = {
+    SECTION_IDEA: ("[修改想法区]", "修改想法区"),
+    SECTION_ARTIFACT: ("[修改产物区]", "修改产物区"),
 }
 
+SECTION_TAG = {name: tag for name, (tag, _) in _SECTION_DISPLAY.items()}
 SECTION_TITLE = {
-    SECTION_IDEA: "修改想法区",
-    SECTION_ARTIFACT: "修改产物区",
+    name: title for name, (_, title) in _SECTION_DISPLAY.items()
 }
+
+
+def section_tag(name: str) -> str:
+    """区块展示标签；未知区块回退为 ``[name]``。"""
+    return SECTION_TAG.get(name, f"[{name}]")
+
+
+def section_title(name: str) -> str:
+    """区块面板标题；未知区块回退为原名。"""
+    return SECTION_TITLE.get(name, name)
 
 
 def round_title(index: int, label: str) -> str:
@@ -88,9 +98,8 @@ class ConsoleSink(Sink):
         ui.dim("│ " + line.rstrip("\n"))
 
     def section(self, name: str, content: str) -> None:
-        tag = SECTION_TAG.get(name, f"[{name}]")
-        ui.rule(SECTION_TITLE.get(name, name))
-        ui.raw(f"{tag}\n{content}\n")
+        ui.rule(section_title(name))
+        ui.raw(f"{section_tag(name)}\n{content}\n")
 
     def finish(self, idea: str, artifact: str) -> None:
         ui.rule("研究循环结束 · 最终状态")
