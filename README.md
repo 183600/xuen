@@ -454,3 +454,6 @@ python -m pytest --cov=xuen --cov-report=term-missing
 | 避免覆盖更好方案 | 失败或挂起即还原最佳；下一轮从最佳出发 |
 | 提示词不无限增长 | `prompt.max_state_chars` 首尾截断 + 截断提示 |
 | CI 自动循环且进度可续 | `continuous-loop.yml` + 专用 checkpoint 分支 |
+
+## 友链
+[LINUX DO](https://linux.do/)
