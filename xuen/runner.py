@@ -95,7 +95,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     if sink.should_stop():
         sink.stop_agent()
 
-    # 4) 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分。
+    # 2) 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分。
     #    启用失败（目录不可写等）一律降级为无守卫模式，不阻断研究循环。
     #    词库生成阶段（外部 agent 可能跑很久）与守卫创建一起放在 try 里：
     #    这里的 Ctrl+C / 预检失败 SystemExit 没有轮次循环的收尾处理器兜底，
@@ -113,7 +113,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 sink.warn(f"轮次守卫启用失败，本轮循环降级为无守卫模式：{e}")
                 guard = None
 
-        # 2) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
+        # 3) 领域词库（持久化到 words.txt；已存在则复用；一律由外部 agent 生成）
         disk_words: List[str] = []
         if cfg.words.pick > 0:
             try:
@@ -188,7 +188,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
         _guard_finish(guard)
         raise
 
-    # 3) 循环
+    # 4) 循环
     prev_idea, prev_artifact = _read_sections(state_path)
     sink.section(SECTION_IDEA, prev_idea or "（空）")
     sink.section(SECTION_ARTIFACT, prev_artifact or "（空）")
@@ -197,22 +197,22 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                else range(1, cfg.loop.iterations + 1))
     rounds = failures = consecutive_failures = 0
     # KeyboardInterrupt 处理器也要用轮次号记账：中断若发生在第一轮取号前，
-    # i 尚未绑定，先初始化避免处理器自身抛 NameError
-    i = 0
+    # round_no 尚未绑定，先初始化避免处理器自身抛 NameError
+    round_no = 0
     try:
-        for i in counter:
+        for round_no in counter:
             if sink.should_stop():
                 break
             # 第一步：纯随机抽词（不调用任何 LLM）
             inspiration = words.sample_words(word_list, cfg.words.pick)
             label = ("、".join(f"「{w}」" for w in inspiration)
                      if inspiration else "（无灵感词，自由发挥）")
-            sink.round_header(i, label)
+            sink.round_header(round_no, label)
             # 底部输入框的内容：在下次调用 agent 时带给 agent
             user_notes = sink.drain_user_input()
             rounds += 1
             try:
-                agent.run(_shell_prompt(cfg, task, i, inspiration,
+                agent.run(_shell_prompt(cfg, task, round_no, inspiration,
                                         state_path, helper, user_notes))
             except PromptTooLongError as e:
                 # 提示词随区块内容只增不减，同模板重试必然同样失败：
@@ -223,7 +223,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 # agent 从未启动、research.md 未改动，还原是空操作
                 sink.err(str(e))
                 sink.err("重试不会成功，已中止循环")
-                _guard_round_failed(guard, i, "提示词过长，轮次未完成")
+                _guard_round_failed(guard, round_no, "提示词过长，轮次未完成")
                 raise SystemExit(1)
             except (OSError, ValueError) as e:
                 # ValueError：提示词含 NUL 字节时 Popen 抛 embedded null byte，
@@ -231,7 +231,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 failures += 1
                 consecutive_failures += 1
                 sink.err(f"本轮失败：{e}")
-                _guard_round_failed(guard, i, f"启动失败：{e}")
+                _guard_round_failed(guard, round_no, f"启动失败：{e}")
                 if consecutive_failures >= 3 and not sink.should_stop():
                     # 运行期失败用退出码 1（消息走 sink.err），与预检错误的
                     # 字符串 SystemExit（退出码 2）区分，见 cli.main 注释
@@ -242,7 +242,7 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                 failures += 1
                 consecutive_failures += 1
                 _guard_round_failed(
-                    guard, i,
+                    guard, round_no,
                     "超时" if agent.timed_out
                     else f"退出码 {agent.returncode}")
                 if consecutive_failures >= 3 and not sink.should_stop():
@@ -271,17 +271,17 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
                     # 的起点；按失败轮次还原最佳，但不计入 agent 失败统计
                     # （用户停止不是 agent 失败）。还原会改回区块内容，下方
                     # 统一重读上报，屏幕不能停在未验证的半截候选上
-                    _guard_round_failed(guard, i, "被用户终止，轮次未完成")
+                    _guard_round_failed(guard, round_no, "被用户终止，轮次未完成")
                 elif round_completed:
                     try:
-                        guard.on_round_end(i)
+                        guard.on_round_end(round_no)
                     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
                         sink.warn(f"轮次守卫本轮异常（已降级跳过）：{e}")
                         # 异常可能发生在验证/晋升途中（如 best.md 写盘
                         # 失败）：未验证的候选仍留在 research.md，不能
                         # 成为下一轮的起点。on_round_failed 对已处理轮次
                         # 只补做还原、不重复记账（见 rounds.RoundGuard）
-                        _guard_round_failed(guard, i, f"守卫处理异常：{e}")
+                        _guard_round_failed(guard, round_no, f"守卫处理异常：{e}")
                 # 守卫可能改写了区块（还原最佳 / 晋升候选）：重读并上报
                 idea, artifact = _report_changed_sections(
                     sink, state_path, prev_idea, prev_artifact)
@@ -289,32 +289,24 @@ def run(cfg: Config, task: str, *, regen_words: bool = False,
     except SystemExit:
         # 连续失败等「提前中止」路径也要先收尾（打印最终区块状态 /
         # 通知 TUI 循环结束），与正常结束、键盘中断路径保持一致
-        _guard_finish(guard)
-        prev_idea, prev_artifact = _read_sections(state_path)
-        sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+        _finish_loop(guard, sink, state_path)
         raise
     except KeyboardInterrupt:
         sink.warn("收到中断信号，结束循环（所有状态均已持久化）")
         # 中断可能落在 agent 运行中（agent 已被杀，区块可能只写了一半）：
         # 与失败轮次同样还原最佳，确保重跑时从已验证内容继续，而不是把
         # 未验证的半截内容当成下一轮的起点。
-        # i == 0 表示首轮取号前就中断了（还没开始任何一轮）：没有「未完成
-        # 的轮次」可记，交给守卫记账会凭空多出一轮 skipped，汇总的轮次数
-        # 与主循环口径对不上
-        if i:
-            _guard_round_failed(guard, i, "被中断，轮次未完成")
-        _guard_finish(guard)
-        prev_idea, prev_artifact = _read_sections(state_path)
-        sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+        # round_no == 0 表示首轮取号前就中断了（还没开始任何一轮）：没有
+        # 「未完成的轮次」可记，交给守卫记账会凭空多出一轮 skipped，汇总的
+        # 轮次数与主循环口径对不上
+        if round_no:
+            _guard_round_failed(guard, round_no, "被中断，轮次未完成")
+        _finish_loop(guard, sink, state_path)
         # 向上传播中断，让 cli 以 130 退出；若在此吞掉，
         # 进程会以 0 退出且 cli 的 KeyboardInterrupt 分支成为死代码
         raise
 
-    _guard_finish(guard)
-    # guard.finish() 可能兑现循环期间补交的用户评分并写回区块：
-    # 最终展示必须重读状态文件，否则屏幕会停在已被替换的旧内容上
-    prev_idea, prev_artifact = _read_sections(state_path)
-    sink.finish(prev_idea or "（空）", prev_artifact or "（空）")
+    _finish_loop(guard, sink, state_path)
     # 外部 agent 每轮都失败，对自动化调用者必须体现为非零退出码；
     # 若只是用户提前停止（rounds == 0）或至少成功一轮，则不算整体失败。
     if rounds and failures == rounds and not sink.should_stop():
@@ -344,12 +336,25 @@ def _guard_finish(guard: Optional[RoundGuard]) -> None:
         _warn_guard_failure(guard, f"轮次守卫收尾异常（忽略）：{e}")
 
 
-def _guard_round_failed(guard: Optional[RoundGuard], i: int, reason: str) -> None:
+def _finish_loop(guard: Optional[RoundGuard], sink: Sink,
+                 state_path: Path) -> None:
+    """收尾守卫并展示最终状态。
+
+    guard.finish() 可能兑现循环期间补交的用户评分并写回区块，因此必须在
+    收尾之后重读状态文件，否则屏幕会停在已被替换的旧内容上。
+    """
+    _guard_finish(guard)
+    idea, artifact = _read_sections(state_path)
+    sink.finish(idea or "（空）", artifact or "（空）")
+
+
+def _guard_round_failed(guard: Optional[RoundGuard], round_no: int,
+                        reason: str) -> None:
     """agent 失败的轮次：不留候选（半截产物不可信），仅记账。"""
     if guard is None:
         return
     try:
-        guard.on_round_failed(i, reason)
+        guard.on_round_failed(round_no, reason)
     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
         _warn_guard_failure(guard, f"轮次守卫记账异常（忽略）：{e}")
 

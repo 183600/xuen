@@ -60,7 +60,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import state
 from .agents import ShellAgent
@@ -177,6 +177,11 @@ def _valid_best(data: object) -> bool:
     return True
 
 
+def _clamp_score(score: float) -> float:
+    """把有限评分夹到 0-10；nan/inf 由调用方在此之前排除。"""
+    return max(0.0, min(10.0, score))
+
+
 def parse_score(text: str) -> Optional[float]:
     """从评审输出里解析 0-10 分；解析不出返回 None（调用方按挂起处理）。"""
     if not text:
@@ -192,7 +197,7 @@ def parse_score(text: str) -> Optional[float]:
                 best = (m.start(), v)
     if best is None:
         return None
-    return max(0.0, min(10.0, best[1]))
+    return _clamp_score(best[1])
 
 
 def _readable_section(text: str, name: str) -> Optional[str]:
@@ -913,10 +918,11 @@ class RoundGuard:
             # runner——未计入结论桶的候选会让汇总自相矛盾
             cid = self._round_cid
             if cid is not None:
+                pending = Verdict(
+                    verifier="guard", result="pending",
+                    reason=f"验证或晋升失败（{e}），候选挂起等待重试")
                 self._append_event_safe(
-                    {"event": "verdict", "id": cid, "round": round_no,
-                     "verifier": "guard", "result": "pending", "score": None,
-                     "reason": f"验证或晋升失败（{e}），候选挂起等待重试"})
+                    _verdict_event(cid, round_no, pending))
                 self._pend(round_no, cid, "验证或晋升失败，候选挂起")
             else:
                 self.stats.skipped += 1
@@ -949,9 +955,7 @@ class RoundGuard:
                               reason="区块标记缺失或损坏，无法安全读取")
             self._append_event_safe({"event": "candidate", "id": cid,
                                      "round": round_no, "corrupt": True})
-            self._append_event_safe({"event": "verdict", "id": cid,
-                                     "round": round_no,
-                                     **_verdict_fields(verdict)})
+            self._append_event_safe(_verdict_event(cid, round_no, verdict))
             self._applied.add(cid)
             self.stats.rejected += 1
             self.sink.err(f"候选 {cid} 被守卫拒绝：{verdict.reason}，已还原最佳")
@@ -989,12 +993,9 @@ class RoundGuard:
             self._adopt(cid, round_no, verdict)
             self._round_cid = None
             self._applied.add(cid)
-            self._append_event_safe({"event": "verdict", "id": cid,
-                                     "round": round_no,
-                                     **_verdict_fields(verdict)})
+            self._append_event_safe(_verdict_event(cid, round_no, verdict))
             return "adopted"
-        self._append_event_safe({"event": "verdict", "id": cid,
-                                 "round": round_no, **_verdict_fields(verdict)})
+        self._append_event_safe(_verdict_event(cid, round_no, verdict))
         if verdict.result == "rejected":
             self._round_cid = None
             self._applied.add(cid)
@@ -1226,9 +1227,8 @@ class RoundGuard:
         text = self._read_candidate_text(cid)
         if not _structure_intact(text):
             raise OSError("候选快照区块标记损坏，无法晋升为最佳")
-        best = {"id": cid, "round": round_no, "verifier": verdict.verifier,
-                "score": verdict.score, "ts": _ts(),
-                "reason": verdict.reason}
+        best = _best_record(cid, round_no, verdict.verifier,
+                            verdict.score, verdict.reason)
         # 两个文件都写盘成功后才提交内存状态与统计
         self._commit_best(text, best)
         self.best = best
@@ -1312,7 +1312,7 @@ class RoundGuard:
                 if not math.isfinite(score):
                     score = None
                 else:
-                    score = max(0.0, min(10.0, score))
+                    score = _clamp_score(score)
             if score is None and cid in out and out[cid][0] is not None:
                 # 同一候选写了两行、后一行分数打错时，不能让坏行覆盖
                 # 前面已解析出的有效评分；后一行有效评分仍按最后一条
@@ -1396,9 +1396,9 @@ class RoundGuard:
                     self.sink.warn(f"采纳旧候选 {cid} 失败（快照不可读或结构"
                                    "损坏，保持挂起）")
                     continue
-                best = {"id": cid, "round": round_no, "verifier": "user",
-                        "score": score, "ts": _ts(), "late": True,
-                        "reason": f"用户补评分 {score:g}"}
+                best = _best_record(
+                    cid, round_no, "user", score, f"用户补评分 {score:g}",
+                    late=True)
                 try:
                     self._commit_best(text, best)
                 except OSError as e:
@@ -1409,9 +1409,8 @@ class RoundGuard:
                               result="adopted" if adopted else "rejected",
                               reason=f"用户补评分 {score:g}",
                               comment=comment)
-            self._append_event_safe({"event": "verdict", "id": cid,
-                                     "round": round_no, "late": True,
-                                     **_verdict_fields(verdict)})
+            self._append_event_safe(
+                _verdict_event(cid, round_no, verdict, late=True))
             self._applied.add(cid)
             # 统计与改判同步：采纳/拒绝是「本次运行兑现的判定」的计数
             # （跨会话旧候选也计入，否则汇总会一边宣布晋升、一边报
@@ -1450,6 +1449,23 @@ class RoundGuard:
 def _verdict_fields(v: Verdict) -> Dict:
     return {"verifier": v.verifier, "score": v.score, "result": v.result,
             "reason": v.reason}
+
+
+def _verdict_event(cid: str, round_no: int, v: Verdict, **extra: Any) -> Dict:
+    event = {"event": "verdict", "id": cid, "round": round_no,
+             **_verdict_fields(v)}
+    event.update(extra)
+    return event
+
+
+def _best_record(cid: str, round_no: int, verifier: str,
+                 score: Optional[float], reason: str,
+                 **extra: Any) -> Dict:
+    record = {"id": cid, "round": round_no, "verifier": verifier,
+              "score": score, "ts": _ts()}
+    record.update(extra)
+    record["reason"] = reason
+    return record
 
 
 def verdesc(v: Verdict) -> str:

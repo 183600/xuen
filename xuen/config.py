@@ -216,6 +216,74 @@ def _mode_str(value: Any) -> str:
     return str(value).strip().lower()
 
 
+def _parse_words_config(section: dict, defaults: WordsConfig) -> WordsConfig:
+    return WordsConfig(
+        count=_parse_int(_config_value(section, "count", defaults.count),
+                         "words.count"),
+        batch=_parse_int(_config_value(section, "batch", defaults.batch),
+                         "words.batch"),
+        pick=_parse_int(_config_value(section, "pick", defaults.pick),
+                        "words.pick"),
+        reuse=_parse_bool(_config_value(section, "reuse", defaults.reuse),
+                          "words.reuse"),
+    )
+
+
+def _parse_loop_config(section: dict) -> LoopConfig:
+    return LoopConfig(
+        iterations=_parse_iterations(section.get("iterations", 5)),
+    )
+
+
+def _parse_agent_config(section: dict, defaults: AgentConfig) -> AgentConfig:
+    return AgentConfig(
+        command=_parse_str(_config_value(section, "command", ""),
+                           "agent.command"),
+        timeout=_parse_float(
+            _config_value(section, "timeout", defaults.timeout),
+            "agent.timeout",
+        ),
+    )
+
+
+def _parse_rounds_config(section: dict, defaults: RoundsConfig) -> RoundsConfig:
+    verify = (_mode_str(_config_value(section, "verify", defaults.verify))
+              or defaults.verify)
+    fallback = (_mode_str(_config_value(section, "fallback", defaults.fallback))
+                or defaults.fallback)
+    return RoundsConfig(
+        enabled=_parse_bool(_config_value(section, "enabled", defaults.enabled),
+                            "rounds.enabled"),
+        dir=_parse_str(_config_value(section, "dir", defaults.dir),
+                       "rounds.dir") or "rounds",
+        verify=verify,
+        fallback=fallback,
+        adopt_score=_parse_float(
+            _config_value(section, "adopt_score", defaults.adopt_score),
+            "rounds.adopt_score"),
+        verify_timeout=_parse_float(
+            _config_value(section, "verify_timeout", defaults.verify_timeout),
+            "rounds.verify_timeout"),
+        repo=_parse_str(_config_value(section, "repo", defaults.repo),
+                        "rounds.repo") or "",
+        judge_command=_parse_str(
+            _config_value(section, "judge_command", defaults.judge_command),
+            "rounds.judge_command") or "",
+        judge_timeout=_parse_float(
+            _config_value(section, "judge_timeout", defaults.judge_timeout),
+            "rounds.judge_timeout"),
+    )
+
+
+def _parse_prompt_config(section: dict, defaults: PromptConfig) -> PromptConfig:
+    return PromptConfig(
+        max_state_chars=_parse_int(
+            _config_value(section, "max_state_chars", defaults.max_state_chars),
+            "prompt.max_state_chars",
+        ),
+    )
+
+
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
     with open(real_path, encoding="utf-8") as f:
@@ -228,70 +296,13 @@ def load_config(path: Optional[str] = None) -> Config:
     cfg = Config()
     cfg.extra_notes = _parse_str(_config_value(raw, "extra_notes", ""),
                                  "extra_notes")
-
-    words = _mapping_section(raw, "words")
-    cfg.words = WordsConfig(
-        count=_parse_int(_config_value(words, "count", cfg.words.count),
-                         "words.count"),
-        batch=_parse_int(_config_value(words, "batch", cfg.words.batch),
-                         "words.batch"),
-        pick=_parse_int(_config_value(words, "pick", cfg.words.pick),
-                        "words.pick"),
-        reuse=_parse_bool(_config_value(words, "reuse", cfg.words.reuse),
-                          "words.reuse"),
-    )
-
-    loop = _mapping_section(raw, "loop")
-    cfg.loop = LoopConfig(iterations=_parse_iterations(loop.get("iterations", 5)))
-
-    agent = _mapping_section(raw, "agent")
-    cfg.agent = AgentConfig(
-        command=_parse_str(_config_value(agent, "command", ""),
-                           "agent.command"),
-        timeout=_parse_float(
-            _config_value(agent, "timeout", cfg.agent.timeout),
-            "agent.timeout",
-        ),
-    )
-
-    rounds = _mapping_section(raw, "rounds")
-    verify = (_mode_str(_config_value(rounds, "verify", cfg.rounds.verify))
-              or cfg.rounds.verify)
-    fallback = (
-        _mode_str(_config_value(rounds, "fallback", cfg.rounds.fallback))
-        or cfg.rounds.fallback
-    )
-    cfg.rounds = RoundsConfig(
-        enabled=_parse_bool(_config_value(rounds, "enabled", cfg.rounds.enabled),
-                            "rounds.enabled"),
-        dir=_parse_str(_config_value(rounds, "dir", cfg.rounds.dir),
-                       "rounds.dir") or "rounds",
-        verify=verify,
-        fallback=fallback,
-        adopt_score=_parse_float(
-            _config_value(rounds, "adopt_score", cfg.rounds.adopt_score),
-            "rounds.adopt_score"),
-        verify_timeout=_parse_float(
-            _config_value(rounds, "verify_timeout", cfg.rounds.verify_timeout),
-            "rounds.verify_timeout"),
-        repo=_parse_str(_config_value(rounds, "repo", cfg.rounds.repo),
-                        "rounds.repo") or "",
-        judge_command=_parse_str(
-            _config_value(rounds, "judge_command", cfg.rounds.judge_command),
-            "rounds.judge_command") or "",
-        judge_timeout=_parse_float(
-            _config_value(rounds, "judge_timeout", cfg.rounds.judge_timeout),
-            "rounds.judge_timeout"),
-    )
-
-    prompt = _mapping_section(raw, "prompt")
-    cfg.prompt = PromptConfig(
-        max_state_chars=_parse_int(
-            _config_value(prompt, "max_state_chars",
-                          cfg.prompt.max_state_chars),
-            "prompt.max_state_chars",
-        ),
-    )
+    cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
+    cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"))
+    cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
+    cfg.rounds = _parse_rounds_config(
+        _mapping_section(raw, "rounds"), cfg.rounds)
+    cfg.prompt = _parse_prompt_config(
+        _mapping_section(raw, "prompt"), cfg.prompt)
 
     # workspace 显式写成 null/空 时不能变成字面目录 "None"
     workspace = raw.get("workspace")
@@ -377,6 +388,52 @@ def _is_finite_number(value: Any) -> bool:
         return False
 
 
+_JUDGE_PLACEHOLDER_HINT = "（被转义的 \\$prompt 不会被替换）"
+
+_AGENT_PLACEHOLDER_HINT = (
+    "（被转义的 \\$prompt、shell 注释、"
+    "heredoc 正文、反引号命令替换、算术语境（$[...]、"
+    "((...))）与 ${...} 参数展开（含数组下标/子串展开等算术"
+    "语境和 ${x:-word} 等词语境）内的占位符都不会被替换；"
+    "$[...] 区域内词首的 # 在 dash 下是注释、会吞掉同行后续"
+    "（含结束符 ] 与提示词引号，bash 则在算术区报错），"
+    "这类模板同样整体拒绝；"
+    "命令替换（$(...)）内的 case 语句因 pattern 以裸 ) 结束、"
+    "无法安全配对括号，其后的占位符同样不会被替换；"
+    "裸 >&word 重定向词（bash 按 &>word 处理、展开不遵守"
+    "引号规则，单引号里的 $(...)/`...` 仍会被执行）内的占位符"
+    "不会被替换；紧跟在未转义 $ 后面的占位符（如 $$prompt，"
+    "shell 把 $$ 当 PID、prompt 只是字面量）也不会被替换；"
+    "用续行（反斜杠-换行）拆开操作符/展开头的模板（如 > 后"
+    "换行再 & 拼成 >&、$ 后换行再 ( 拼成 $(，续行在 shell"
+    "分词前会被删除、两侧字符实际拼成一个操作符）会整体拒绝；"
+    "ANSI-C 引用（$'...'）的语义随系统 /bin/sh 方言（bash/"
+    "dash）变化、无法安全替换，这类模板也会被拒绝；bash 数组"
+    "赋值（NAME=(...)）不是 POSIX 语法（dash 下无法运行），"
+    "且 bash 在数组内语法错误时会把后续行当命令执行（提示词"
+    "注入），这类模板同样被拒绝），否则提示词无法传给外部 "
+    "agent"
+)
+
+
+def _require_prompt_placeholder(name: str, command: str, hint: str) -> None:
+    """空命令不在此处理；否则要求模板含会被实际兑现的提示词占位符。
+
+    判断复用 ShellAgent 的真实渲染逻辑，而不是正则近似匹配 "$prompt"
+    子串：被 shell 转义的 \\$prompt（或 "$prompt"）虽然包含子串，渲染时
+    并不会替换，恰好会漏掉本条校验要拦的场景。延迟导入避免 --help 等
+    路径也背上 agents 的依赖。
+    """
+    if not command.strip():
+        return
+    from .agents import command_receives_prompt
+    if command_receives_prompt(command):
+        return
+    raise ValueError(
+        f"{name} 必须包含会被实际替换的 $prompt 或 $prompt_file 占位符{hint}"
+    )
+
+
 def _validate(cfg: Config) -> None:
     # 程序化构造 Config 时字符串字段可能被写成 None/list 等：先给出带
     # 字段名的 ValueError，避免后面的 .strip()/正则/Path() 抛 AttributeError
@@ -456,46 +513,11 @@ def _validate(cfg: Config) -> None:
     jcmd = cfg.rounds.judge_command
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
     # AI 评分会静默拿不到候选内容而永远解析不出分数
-    if jcmd.strip():
-        from .agents import command_receives_prompt
-        if not command_receives_prompt(jcmd):
-            raise ValueError(
-                "rounds.judge_command 必须包含会被实际替换的 $prompt 或 "
-                "$prompt_file 占位符（被转义的 \\$prompt 不会被替换）")
+    _require_prompt_placeholder("rounds.judge_command", jcmd,
+                                _JUDGE_PLACEHOLDER_HINT)
     cmd = cfg.agent.command
-    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转。
-    # 判断必须复用 ShellAgent 的实际渲染逻辑，不能用正则近似匹配
-    # "$prompt" 子串：被 shell 转义的 \$prompt（或 "$prompt"）虽然包含
-    # 子串，渲染时并不会替换，恰好会漏掉本条校验要拦的场景。
-    # 延迟导入：避免 --help 等路径也背上 agents 的依赖
-    if cmd.strip():
-        from .agents import command_receives_prompt
-        if not command_receives_prompt(cmd):
-            raise ValueError(
-                "agent.command 必须包含会被实际替换的 $prompt 或 "
-                "$prompt_file 占位符（被转义的 \\$prompt、shell 注释、"
-                "heredoc 正文、反引号命令替换、算术语境（$[...]、"
-                "((...))）与 ${...} 参数展开（含数组下标/子串展开等算术"
-                "语境和 ${x:-word} 等词语境）内的占位符都不会被替换；"
-                "$[...] 区域内词首的 # 在 dash 下是注释、会吞掉同行后续"
-                "（含结束符 ] 与提示词引号，bash 则在算术区报错），"
-                "这类模板同样整体拒绝；"
-                "命令替换（$(...)）内的 case 语句因 pattern 以裸 ) 结束、"
-                "无法安全配对括号，其后的占位符同样不会被替换；"
-                "裸 >&word 重定向词（bash 按 &>word 处理、展开不遵守"
-                "引号规则，单引号里的 $(...)/`...` 仍会被执行）内的占位符"
-                "不会被替换；紧跟在未转义 $ 后面的占位符（如 $$prompt，"
-                "shell 把 $$ 当 PID、prompt 只是字面量）也不会被替换；"
-                "用续行（反斜杠-换行）拆开操作符/展开头的模板（如 > 后"
-                "换行再 & 拼成 >&、$ 后换行再 ( 拼成 $(，续行在 shell"
-                "分词前会被删除、两侧字符实际拼成一个操作符）会整体拒绝；"
-                "ANSI-C 引用（$'...'）的语义随系统 /bin/sh 方言（bash/"
-                "dash）变化、无法安全替换，这类模板也会被拒绝；bash 数组"
-                "赋值（NAME=(...)）不是 POSIX 语法（dash 下无法运行），"
-                "且 bash 在数组内语法错误时会把后续行当命令执行（提示词"
-                "注入），这类模板同样被拒绝），否则提示词无法传给外部 "
-                "agent"
-            )
+    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
+    _require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
