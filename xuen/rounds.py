@@ -109,6 +109,28 @@ def _atomic_write(path: Path, text: str) -> None:
         raise
 
 
+def _read_utf8(path: Path) -> Optional[str]:
+    """读取 UTF-8 文本；文件缺失、不可读或编码损坏时返回 None。"""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _nonempty_lines(raw: bytes) -> List[str]:
+    """把审计/评分文件切成非空行（去掉 BOM 与首尾空白）。
+
+    只按 ASCII 换行切分：str.splitlines 还会在 U+2028 等 Unicode 行
+    分隔符处切开，任务名/评语里含这些字符时一条合法记录会被拆成两半。
+    utf-8-sig 剥离文件头 BOM；errors="replace" 保证个别坏字节不会让
+    整份文件不可读——关键字段都是 ASCII，坏字节只会落在评语里。
+    """
+    text = raw.decode("utf-8-sig", errors="replace")
+    lines = (line.strip().lstrip("\ufeff").strip()
+             for line in re.split(r"\r\n|\r|\n", text))
+    return [line for line in lines if line]
+
+
 def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -659,14 +681,8 @@ class RoundGuard:
         except OSError:
             return events
         # 坏行跳过（写盘中途被杀/磁盘满留下的半截行）：审计日志绝不因为
-        # 个别损坏行整体不可读。只按 ASCII 换行切分（str.splitlines 还会
-        # 在 U+2028 等 Unicode 行分隔符处切开，任务名/评语里含这些字符
-        # 时一条合法 JSON 事件会被拆成两半并整体丢失）。
-        for line in re.split(r"\r\n|\r|\n",
-                             raw.decode("utf-8-sig", errors="replace")):
-            line = line.strip().lstrip("\ufeff").strip()
-            if not line:
-                continue
+        # 个别损坏行整体不可读。
+        for line in _nonempty_lines(raw):
             try:
                 ev = json.loads(line)
             except ValueError:
@@ -717,19 +733,13 @@ class RoundGuard:
         是同一份被验证内容）——快照是最佳内容的权威来源。"""
         if not _valid_cid(cid):
             return None
-        try:
-            text = self._candidate_path(cid).read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            return None
-        return text if _structure_intact(text) else None
+        text = _read_utf8(self._candidate_path(cid))
+        return text if text is not None and _structure_intact(text) else None
 
     def _mirror_text(self) -> Optional[str]:
         """best.md 镜像内容；缺失/损坏返回 None（绝不把损坏内容当最佳）。"""
-        try:
-            text = self.best_md.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            return None
-        return text if _structure_intact(text) else None
+        text = _read_utf8(self.best_md)
+        return text if text is not None and _structure_intact(text) else None
 
     def _best_content(self) -> str:
         """当前最佳内容（心跳比较 / 还原 / 评审提示词）。
@@ -1284,17 +1294,8 @@ class RoundGuard:
             raw = self.verdicts_path.read_bytes()
         except OSError:
             return out
-        # utf-8-sig：带 BOM 的首行若不剥，cid 会变成 "\ufeff<cid>"，用户
-        # 评分被静默忽略。errors="replace"：个别坏字节不能让整份评分文件
-        # 静默失效——cid 与分数列都是 ASCII，坏字节只会出现在评语里
-        text = raw.decode("utf-8-sig", errors="replace")
-        # 只按 ASCII 换行切分（与 _read_events 同口径）：str.splitlines
-        # 还会在 U+2028 等 Unicode 行分隔符处切开，评语里含这些字符时
-        # 一行评分会被拆成两行——后半段若恰好以「cid 分数」开头，就会
-        # 被解析成一条凭空出现的伪评分
-        for line in re.split(r"\r\n|\r|\n", text):
-            line = line.strip().lstrip("\ufeff").strip()
-            if not line or line.startswith("#"):
+        for line in _nonempty_lines(raw):
+            if line.startswith("#"):
                 continue
             parts = line.split(None, 2)
             if len(parts) < 2:

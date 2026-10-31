@@ -146,21 +146,13 @@ def _unwrap_pair(w: str) -> str:
 _PURE_NUMBER = re.compile(r"^[+-]?\d+(?:[.．]\d+)?$")
 _CJK_INDEX = re.compile("^[" + _CJK_NUMERALS + "]+$")
 
-def _is_index_segment(t: str) -> bool:
-    """词段是否只是列表序号（阿拉伯整数或汉字数字），不是术语。
-
-    小数不算序号：_PURE_NUMBER 也匹配 "3.14" / "2.5"，若直接复用会把
-    混在术语列表里的真实小数术语当序号丢弃（"卷积、3.14、池化" ->
-    "卷积、池化"），与 _is_plain_index 的判定口径（"3.14、2.718" 是
-    真实术语列表）自相矛盾。段级判定必须用 _is_plain_index 排除小数。
-    """
-    return _is_plain_index(t)
-
 def _is_plain_index(t: str) -> bool:
-    """段是否只是整数/汉字数字序号（小数除外）。
+    """词段是否只是整数/汉字数字序号（小数除外）。
 
-    "3.14、2.718" 这类纯小数列表是真实术语列表（已被测试锁住），
-    不是编号列表，不能被整行丢弃规则误伤。
+    "_PURE_NUMBER" 也会匹配 "3.14" / "2.5"：混在术语列表里的真实小数
+    术语不能被当序号丢弃（"卷积、3.14、池化" -> "卷积、池化"），
+    "3.14、2.718" 这类纯小数列表同样是真实术语列表，不能被整行丢弃
+    规则误伤。因此段级与整行判定统一排除含小数点的值。
     """
     t = t.strip()
     if not t:
@@ -223,7 +215,7 @@ def _unwrap_segments(w: str) -> str:
             core = _clean_segment_head(core[1:])
         core = core.rstrip(_EDGE_CHARS).strip()
         cleaned.append(lead + core + trail)
-    is_index = [_is_index_segment(t) for t in cleaned]
+    is_index = [_is_plain_index(t) for t in cleaned]
     has_word = any(t.strip() and not idx
                    for t, idx in zip(cleaned, is_index))
     index_only = all(

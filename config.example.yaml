@@ -2,41 +2,50 @@
 # xuen 配置示例
 #
 # 使用方法：
-#   cp config.example.yaml config.yaml
-#   然后按需修改下面的字段（尤其是 agent.command）
+#   1. cp config.example.yaml config.yaml
+#   2. 按需修改下面各字段，尤其是 agent.command
 #
-# xuen 只通过外部 agent（如 opencode）工作：程序把任务、灵感词与当前
-# 状态拼成提示词交给 agent；agent 通过工作区中的 write_section.py 或
-# 直接编辑 research.md 来覆盖「想法区 / 产物区」。
+# xuen 本身不调用模型，只负责组织循环与维护状态。程序会把任务、灵感词
+# 和当前想法区/产物区拼成提示词，交给外部 agent；agent 通过工作区中的
+# write_section.py 或直接编辑 research.md 来覆盖「想法区 / 产物区」。
+#
+# 配置文件可用 -c 指定；workspace 等路径按启动时的当前目录解析，
+# rounds.dir 则相对 workspace。
 # ============================================================
 
 # ---- 外部 agent（必填）----
 agent:
-  # 命令模板，必须包含会被实际替换的 $prompt 或 $prompt_file 占位符。
+  # 命令模板必须包含一个会被实际替换的提示词占位符：
   #   $prompt       整段提示词（按所在 shell 语境转义后替换）
   #   $prompt_file  提示词写入工作区内本次运行唯一的 .prompt.XXXXXX.md，
-  #                 占位符替换为该文件路径（跨平台推荐；运行后自动清理）
+  #                 占位符替换为该文件路径（运行结束后自动清理）
+  #
+  # $prompt 受系统单参数长度限制，且提示词会随轮次增长；长循环或跨平台
+  # 场景更推荐 $prompt_file。
   command: 'opencode run "$prompt"'
   # command: 'opencode run "$prompt_file"'
   # command: 'claude -p "$prompt"'
   # command: 'aider --message-file $prompt_file'
-  timeout: 1800      # 单次外部调用超时（秒）
+  timeout: 1800      # 单次外部调用超时（秒）；超时后终止整个进程树
 
-# ---- 给外部 agent 的额外说明（拼进每轮提示词开头）----
+# ---- 给外部 agent 的额外说明 ----
+# 会拼进每轮提示词开头，适合写研究风格、输出要求或长期约束。
 extra_notes: |
   请像一位严谨的跨学科研究者一样思考；
   先给直觉解释再给严谨定义；
   每轮结尾用一句话指出当前方案最大的风险。
 
 # ---- 提示词预算（可选）----
-# 每轮会把完整的想法区/产物区拼进提示词，轮次多了会单调增长，最终可能
+# 每轮都会把完整的想法区/产物区拼进提示词，轮次多了会单调增长，最终可能
 # 超过外部 agent 的上下文上限。超过 max_state_chars 时只截断提示词副本
-# （保留首尾，中间标注省略字符数），工作区文件保持完整。0 = 不限制。
+# （保留首尾，中间标注省略字符数），工作区文件保持完整。
+# 0 = 不限制。
 prompt:
   max_state_chars: 60000
 
 # ---- 领域词库 ----
 # 首次运行由外部 agent 分批生成，并持久化到 <workspace>/words.txt。
+# words.pick=0 时完全跳过词库，循环中不提供灵感词。
 words:
   count: 1000     # 目标词数
   batch: 100      # 每批向外部 agent 请求的词数
@@ -45,7 +54,7 @@ words:
 
 # ---- 循环 ----
 loop:
-  iterations: 5   # 轮数；写 inf 表示无限循环（TUI 中按 q 结束）
+  iterations: 5   # 轮数；写 inf 表示无限循环（输入框为空时按 q 结束）
 
 # ---- 轮次守卫 ----
 # 外部 agent 每轮会整体覆盖想法区/产物区。守卫在覆盖后保存候选快照，
@@ -63,15 +72,15 @@ rounds:
   #         go test 级联探测）；没有则使用 fallback 指定的评分者
   #   tests 只跑测试；没有套件或套件无法运行时，候选挂起等待用户评分
   #   user  只用用户评分：在 <workspace>/rounds/verdicts.txt 追加
-  #         「<候选id> <0-10分> [评语]」；守卫在每轮开始/结束时兑现，
-  #         给旧候选补高分可前进式翻案（内容写回 research.md）
+  #         「<候选id> <0-10分> [评语]」；守卫在启动、每轮结束与收尾时
+  #         兑现评分，给旧候选补高分可前进式翻案（内容写回 research.md）
   #   ai    只用 AI 评分：复用外部 agent 当评审员，对比候选与最佳打分
   #   off   不验证：快照照存，最新即最佳（仅「防丢失」模式）
   verify: auto
   fallback: ai           # auto 模式无测试可用时的兜底评分者：user / ai
   adopt_score: 7         # 评分达到该阈值才采纳候选为最佳（0-10）
   verify_timeout: 600    # 单次测试套件运行超时（秒）
-  # 测试验证的目标目录；留空 = 自动探测（工作区所在 git 仓库根，
+  # 测试验证的目标目录；留空 = 自动探测（从工作区向上查找 git 仓库根，
   # 非 git 环境退化为工作区本身）。要打磨某个代码仓库时指向它，
   # 候选改动就会被该仓库的测试套件自动验证。
   repo: ""
@@ -81,8 +90,9 @@ rounds:
   judge_timeout: 600     # AI 评审单次调用超时（秒）
 
 # ---- 界面 ----
-tui: true         # TUI：修改想法区 / 修改产物区 / 输出日志 / 底部输入框；--no-tui 可关闭
+tui: true         # 启用 TUI：想法区/产物区面板 + 输出日志 + 底部输入框；--no-tui 可关闭
 color: true       # 纯终端输出（--no-tui）时的颜色
 
-# ---- 工作区（research.md / words.txt / write_section.py / rounds/ 所在目录）----
+# ---- 工作区 ----
+# research.md、words.txt、write_section.py 与 rounds/ 都放在这里。
 workspace: ./workspace
