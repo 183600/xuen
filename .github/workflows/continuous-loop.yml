@@ -377,11 +377,64 @@ jobs:
           esac
 
           echo "[loop] 任务：设计一个新的算法｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
-          timeout --signal=INT --kill-after=60s "$WORK_SECONDS" \
-            python3 main.py --no-tui --no-color "设计一个新的算法" -c config.yaml
-          RC=$?
+          # ⭐ 停滞看门狗阈值：窗口输出连续无增长的容忍秒数（20 分钟；
+          #    agent 单次调用自带 1500s 超时，正常流式输出远短于此）。
+          STALL_TIMEOUT=1200
+          # ⭐ 停滞看门狗：xuen 窗口改后台执行+tee，前台轮询日志大小；
+          #    停滞 → 终止窗口（RC=75），已完成的每轮进度由后续 checkpoint
+          #    步骤(!cancelled)保存到 xuen-loop 分支，后继 run 自动恢复继续。
+          echo "[watchdog] 停滞看门狗已启用（输出 ${STALL_TIMEOUT}s 无增长即终止本次研究窗口）"
+          rm -f /tmp/.oc_exit_code
+          setsid bash -c '
+            timeout --signal=INT --kill-after=60s "$1" python3 main.py --no-tui --no-color "$2" -c config.yaml 2>&1 | tee "$3"
+            echo "${PIPESTATUS[0]}" > /tmp/.oc_exit_code
+          ' _ "$WORK_SECONDS" "设计一个新的算法" /tmp/xuen_loop_main.log &
+          OC_BG=$!
+          _sz=-1; _ts=$(date +%s); _stalled=0
+          while kill -0 "$OC_BG" 2>/dev/null; do
+            sleep 20
+            _nsz=$(stat -c %s "/tmp/xuen_loop_main.log" 2>/dev/null || echo 0)
+            if [ "$_nsz" != "$_sz" ]; then
+              _sz="$_nsz"; _ts=$(date +%s)
+            elif [ $(( $(date +%s) - _ts )) -ge "$STALL_TIMEOUT" ]; then
+              _stalled=1; break
+            fi
+          done
+          if [ "$_stalled" -eq 1 ]; then
+            echo "[watchdog] xuen 窗口输出已 ${STALL_TIMEOUT}s 无增长（/tmp/xuen_loop_main.log 停在 ${_sz}B）→ 判定停滞，终止本次窗口；每轮进度已落盘，checkpoint 步骤将保存，后继 run 继续"
+              # 先 TERM 优雅退出，60s 后升级 KILL。注意 GNU timeout 默认把子进程
+              # 放进独立进程组（其子进程都在该组），包装进程的组信号够不到它；
+              # 因此对每个 cmdline 匹配的进程，向其所在进程组逐一发信号，
+              # 包装组 + timeout 子组全覆盖，不留仍持有输出管道的孤儿进程。
+              for _pid in $(pgrep -f "python3 main.py|opencode run" 2>/dev/null); do
+                _pgid="$(ps -o pgid= -p "$_pid" 2>/dev/null | tr -d '[:space:]')"
+                [ -n "$_pgid" ] && kill -TERM -- "-$_pgid" 2>/dev/null
+              done
+              kill -TERM -- "-$OC_BG" 2>/dev/null
+              pkill -TERM -f "python3 main.py|opencode run" 2>/dev/null
+              kill -TERM "$OC_BG" 2>/dev/null
+              for _w in 1 2 3; do
+                sleep 20
+                kill -0 "$OC_BG" 2>/dev/null || break
+              done
+              for _pid in $(pgrep -f "python3 main.py|opencode run" 2>/dev/null); do
+                _pgid="$(ps -o pgid= -p "$_pid" 2>/dev/null | tr -d '[:space:]')"
+                [ -n "$_pgid" ] && kill -KILL -- "-$_pgid" 2>/dev/null
+              done
+              kill -KILL -- "-$OC_BG" 2>/dev/null
+              pkill -KILL -f "python3 main.py|opencode run" 2>/dev/null
+              kill -KILL "$OC_BG" 2>/dev/null
+              wait "$OC_BG" 2>/dev/null
+            RC=75
+          else
+            wait "$OC_BG" 2>/dev/null
+            RC=124
+            [ -s /tmp/.oc_exit_code ] && RC=$(cat /tmp/.oc_exit_code)
+          fi
           case "$RC" in
             0)   echo "[loop] xuen 正常结束（进度已按轮持久化）" ;;
+            75)  echo "[watchdog] 研究窗口因停滞被终止（进度已按轮持久化；后继 run 从最佳继续）" ;;
+            75)  echo "[watchdog] 研究窗口因停滞被终止（进度已按轮持久化；后继 run 从最佳继续）" ;;
             124|137|143)
                  echo "[loop] 工作窗口到点，xuen 被截断（退出码 $RC；每轮进度已落盘）" ;;
             130) echo "[loop] xuen 收到中断信号，已优雅收尾（进度已持久化）" ;;
@@ -803,9 +856,60 @@ jobs:
           esac
 
           echo "[unibot] 任务：寻找参加UniBot的创新点｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
-          timeout --signal=INT --kill-after=60s "$WORK_SECONDS" \
-            python3 main.py --no-tui --no-color "寻找参加UniBot的创新点" -c config.yaml
-          RC=$?
+          # ⭐ 停滞看门狗阈值：窗口输出连续无增长的容忍秒数（20 分钟；
+          #    agent 单次调用自带 1500s 超时，正常流式输出远短于此）。
+          STALL_TIMEOUT=1200
+          # ⭐ 停滞看门狗：xuen 窗口改后台执行+tee，前台轮询日志大小；
+          #    停滞 → 终止窗口（RC=75），已完成的每轮进度由后续 checkpoint
+          #    步骤(!cancelled)保存到 xuen-loop 分支，后继 run 自动恢复继续。
+          echo "[watchdog] 停滞看门狗已启用（输出 ${STALL_TIMEOUT}s 无增长即终止本次研究窗口）"
+          rm -f /tmp/.oc_exit_code
+          setsid bash -c '
+            timeout --signal=INT --kill-after=60s "$1" python3 main.py --no-tui --no-color "$2" -c config.yaml 2>&1 | tee "$3"
+            echo "${PIPESTATUS[0]}" > /tmp/.oc_exit_code
+          ' _ "$WORK_SECONDS" "寻找参加UniBot的创新点" /tmp/xuen_loop_unibot.log &
+          OC_BG=$!
+          _sz=-1; _ts=$(date +%s); _stalled=0
+          while kill -0 "$OC_BG" 2>/dev/null; do
+            sleep 20
+            _nsz=$(stat -c %s "/tmp/xuen_loop_unibot.log" 2>/dev/null || echo 0)
+            if [ "$_nsz" != "$_sz" ]; then
+              _sz="$_nsz"; _ts=$(date +%s)
+            elif [ $(( $(date +%s) - _ts )) -ge "$STALL_TIMEOUT" ]; then
+              _stalled=1; break
+            fi
+          done
+          if [ "$_stalled" -eq 1 ]; then
+            echo "[watchdog] xuen 窗口输出已 ${STALL_TIMEOUT}s 无增长（/tmp/xuen_loop_unibot.log 停在 ${_sz}B）→ 判定停滞，终止本次窗口；每轮进度已落盘，checkpoint 步骤将保存，后继 run 继续"
+              # 先 TERM 优雅退出，60s 后升级 KILL。注意 GNU timeout 默认把子进程
+              # 放进独立进程组（其子进程都在该组），包装进程的组信号够不到它；
+              # 因此对每个 cmdline 匹配的进程，向其所在进程组逐一发信号，
+              # 包装组 + timeout 子组全覆盖，不留仍持有输出管道的孤儿进程。
+              for _pid in $(pgrep -f "python3 main.py|opencode run" 2>/dev/null); do
+                _pgid="$(ps -o pgid= -p "$_pid" 2>/dev/null | tr -d '[:space:]')"
+                [ -n "$_pgid" ] && kill -TERM -- "-$_pgid" 2>/dev/null
+              done
+              kill -TERM -- "-$OC_BG" 2>/dev/null
+              pkill -TERM -f "python3 main.py|opencode run" 2>/dev/null
+              kill -TERM "$OC_BG" 2>/dev/null
+              for _w in 1 2 3; do
+                sleep 20
+                kill -0 "$OC_BG" 2>/dev/null || break
+              done
+              for _pid in $(pgrep -f "python3 main.py|opencode run" 2>/dev/null); do
+                _pgid="$(ps -o pgid= -p "$_pid" 2>/dev/null | tr -d '[:space:]')"
+                [ -n "$_pgid" ] && kill -KILL -- "-$_pgid" 2>/dev/null
+              done
+              kill -KILL -- "-$OC_BG" 2>/dev/null
+              pkill -KILL -f "python3 main.py|opencode run" 2>/dev/null
+              kill -KILL "$OC_BG" 2>/dev/null
+              wait "$OC_BG" 2>/dev/null
+            RC=75
+          else
+            wait "$OC_BG" 2>/dev/null
+            RC=124
+            [ -s /tmp/.oc_exit_code ] && RC=$(cat /tmp/.oc_exit_code)
+          fi
           case "$RC" in
             0)   echo "[unibot] xuen 正常结束（进度已按轮持久化）" ;;
             124|137|143)
