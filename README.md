@@ -34,7 +34,7 @@ xuen 自身不调用模型，也不内置研究工具。它负责组织循环、
 
 ## 快速开始
 
-需要 Python 3.9 或更高版本。
+需要 Python 3.9 或更高版本，以及一个可用的外部 agent 命令。
 
 ```bash
 # 1. 安装运行时依赖
@@ -55,7 +55,10 @@ xuen "设计一个新的优化器"
 ```
 
 未用 `-c/--config` 指定时，程序依次查找当前目录的 `config.yaml`、`config.yml`、
-`xuen.yaml`。除 `agent.command` 外，其余配置均可省略并使用默认值。
+`xuen.yaml`。除 `agent.command` 外，其余配置均可省略并使用默认值。命令行参数
+优先于配置文件；命令行覆盖后仍会重新校验，避免绕过路径、轮数等约束。
+
+### 提示词占位符
 
 `agent.command` 必须包含一个会被实际替换的提示词占位符。跨平台场景推荐
 `$prompt_file`，它只向命令传递文件路径，不受命令行长度限制：
@@ -68,7 +71,10 @@ agent:
   # command: 'opencode run "$prompt"'
 ```
 
-常用命令：
+占位符必须位于会被实际执行的位置。写在 shell 注释、heredoc 正文、命令替换或
+无法安全解析的展开语境中时，配置校验会直接报错。
+
+### 常用命令
 
 ```bash
 python main.py "设计一个新的优化器" --no-tui          # 纯终端输出
@@ -81,8 +87,10 @@ python main.py "设计一个新的优化器" -c my-config.yaml
 python main.py --help                                 # 查看所有参数
 ```
 
-任务可以是位置参数，也可以用 `--task-file` 从 UTF-8 文件读取（兼容 BOM）；两者
-不能同时使用。未提供任务且 stdin 可用时，程序会交互询问。
+任务可以是位置参数，也可以用 `--task-file` 从 UTF-8 文件读取（兼容 BOM）；
+两者不能同时使用。未提供任务且 stdin 可用时，程序会交互询问。
+
+### 最小示例
 
 想先不配置外部 agent，可以直接运行最小示例：
 
@@ -105,7 +113,7 @@ python main.py "任务"
    ├─ ③ 构建外部 agent：ShellAgent（按 agent.command 模板调用）
    ├─ ④ 启动轮次守卫（可选）：建立/恢复最佳基线，兑现待决用户评分
    │
-   ├─ ⑤ 领域词库（仅 words.pick > 0 时）
+   ├─ ⑤ 准备领域词库（仅 words.pick > 0 时）
    │      words.txt 已存在且 reuse=true ──► 直接复用（--regen-words 强制重建）
    │      否则 ──► 外部 agent 分批生成 ──► 解析/清洗/去重 ──► 原子保存
    │
@@ -127,8 +135,7 @@ python main.py "任务"
 - 任务可来自位置参数、`--task-file`，或未提供时的交互输入；
 - 配置文件默认依次查找当前目录的 `config.yaml`、`config.yml`、`xuen.yaml`，
   也可用 `-c/--config` 指定；
-- 生效优先级为「命令行参数 > 配置文件 > 内置默认值」；命令行覆盖同名配置后
-  会重新校验，避免绕过路径、轮数等约束；
+- 生效优先级为「命令行参数 > 配置文件 > 内置默认值」；
 - 完整字段与默认值见下文「配置参考」，可复制 `config.example.yaml` 作为起点。
 
 ### 状态文件与写入助手
@@ -168,6 +175,8 @@ python write_section.py show
 - 按 `words.batch` 分批请求外部 agent 列出术语/关键词；
 - 程序只做解析、清洗、去重（去除序号、引号、冒号解释等）并原子写入 `words.txt`；
 - 词表不再增长时提前结束；生成结果为空且允许复用时回退到磁盘上的旧词库；
+- `--regen-words` 或 `words.reuse: false` 会拒绝回退到旧词库，必要时在本次循环
+  临时使用未完成的生成结果；
 - `words.pick=0` 时跳过词库，循环中不提供灵感词；
 - 每轮抽样使用 `random.sample`，不调用任何模型。
 
@@ -186,7 +195,7 @@ prompt:
 
 ## TUI
 
-默认界面从上到下分为四个区域：
+默认界面从上到下依次为：
 
 ```text
 ┌─ 修改想法区 ──────────────────────────────┐
@@ -202,6 +211,8 @@ prompt:
 │ 状态栏                                    │
 ├───────────────────────────────────────────┤
 │ 输入框                                    │
+├───────────────────────────────────────────┤
+│ 快捷键栏（q / Ctrl+C）                    │
 └───────────────────────────────────────────┘
 ```
 
@@ -331,7 +342,9 @@ rounds:
 
 ## 配置参考
 
-完整示例见 `config.example.yaml`。主要字段：
+完整示例见 `config.example.yaml`。以下默认值也是程序的内置默认值。
+
+### agent 与提示词
 
 | 字段 | 默认值 | 说明 |
 |---|---|---|
@@ -339,20 +352,35 @@ rounds:
 | `agent.timeout` | `1800` | 单次外部调用超时（秒，须为有限正数） |
 | `extra_notes` | 空 | 拼进每轮提示词开头的额外说明 |
 | `prompt.max_state_chars` | `60000` | 想法区/产物区拼进提示词的字符预算；`0` 表示不限制 |
+
+### 词库与循环
+
+| 字段 | 默认值 | 说明 |
+|---|---|---|
 | `words.count` | `1000` | 目标词数（正整数） |
 | `words.batch` | `100` | 每批请求的词数（正整数） |
 | `words.pick` | `2` | 每轮随机抽取的灵感词数量；`0` 表示不抽词 |
 | `words.reuse` | `true` | `words.txt` 已存在时是否直接复用 |
 | `loop.iterations` | `5` | 循环轮数（正整数）；`inf` 表示无限循环 |
+
+### 轮次守卫
+
+| 字段 | 默认值 | 说明 |
+|---|---|---|
 | `rounds.enabled` | `true` | 是否启用轮次守卫 |
 | `rounds.dir` | `rounds` | 守卫目录（相对工作区） |
 | `rounds.verify` | `auto` | 候选验证方式：`auto` / `tests` / `user` / `ai` / `off` |
-| `rounds.fallback` | `ai` | `auto` 模式无测试可用时的兜底评分者 |
+| `rounds.fallback` | `ai` | `auto` 模式无测试可用时的兜底评分者：`user` / `ai` |
 | `rounds.adopt_score` | `7` | 采纳候选的最低评分（0-10） |
 | `rounds.verify_timeout` | `600` | 单次测试套件运行超时（秒，须为有限正数） |
 | `rounds.repo` | 空 | 测试验证的目标目录；留空时自动探测 |
 | `rounds.judge_command` | 空 | AI 评审命令模板；留空复用 `agent.command` |
 | `rounds.judge_timeout` | `600` | AI 评审超时（秒，须为有限正数） |
+
+### 界面与路径
+
+| 字段 | 默认值 | 说明 |
+|---|---|---|
 | `tui` | `true` | 是否启用 TUI |
 | `color` | `true` | 纯终端输出是否使用颜色 |
 | `workspace` | `./workspace` | `research.md`、`words.txt`、`rounds/` 等所在目录 |
@@ -386,6 +414,8 @@ xuen/
 ├── .github/workflows/         # CI / 自动研究循环 / issue 处理 / Gitee 同步
 ├── tests/                     # pytest：守卫、shell 渲染、词库、TUI、配置、仓库卫生等
 └── xuen/
+    ├── __init__.py            # 包版本
+    ├── __main__.py            # python -m xuen
     ├── cli.py                 # 命令行（TUI 导入失败时降级到纯终端）
     ├── config.py              # 配置加载与校验
     ├── tui.py                 # TUI（textual）：区块面板 + 日志 + 底部输入框
@@ -405,14 +435,16 @@ CI 长跑则通过专用 checkpoint 分支保存进度。
 
 ## 在 CI 中无人值守长跑
 
-`.github/workflows/continuous-loop.yml` 把研究循环搬进 GitHub Actions，并行运行
-「设计一个新的算法」和「寻找参加 UniBot 的创新点」两个任务。两个 job 各有约
-3 小时工作窗口，窗口结束前发送 SIGINT 优雅收尾；均使用 `rounds.verify: ai` 与
-独立的 `rounds.judge_command` 评审配置。
+`.github/workflows/continuous-loop.yml` 把研究循环搬进 GitHub Actions，定期并行运行
+「设计一个新的算法」和「寻找参加 UniBot 的创新点」两个任务。每个工作 job 硬超时
+200 分钟，其中 xuen 的工作窗口约 165 分钟；窗口结束前发送 SIGINT 优雅收尾。两个
+任务均使用 `rounds.verify: ai` 与独立的 `rounds.judge_command` 评审配置。
 
-两个任务的工作区分别通过专用的 `xuen-loop` / `xuen-loop-unibot` 分支跨 run
-保存：每次运行开头恢复、结尾 checkpoint，不改动 `master`。配合每轮落盘的候选
-快照，即使某次运行中途失败，下一次也能从最近的已验证进展继续。
+两个任务的工作区分别通过专用的 `xuen-loop` / `xuen-loop-unibot` 分支跨 run 保存：
+每次运行开头恢复、结尾 checkpoint，不改动 `master`。run 开始时会把后继 run 排入
+队列；输出长时间没有增长时，看门狗会终止当前阶段，由后继 run 从最近的 checkpoint
+继续。配合每轮落盘的候选快照，即使某次运行中途失败，下一次也能从最近的已验证进展
+继续。
 
 ## 开发与测试
 

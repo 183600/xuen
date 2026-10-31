@@ -1261,6 +1261,14 @@ class RoundGuard:
                 failures.append((key, name, e))
         return changed, failures
 
+    def _record_restore(self, round_no: int, why: str,
+                        changed: List[str]) -> None:
+        """记录一次实际发生的区块还原（统计 + 审计事件）。"""
+        self.stats.restored += 1
+        self._append_event_safe({"event": "restored", "round": round_no,
+                                 "why": why, "best": self.best.get("id"),
+                                 "changed": changed})
+
     def _restore_best(self, round_no: int, why: str) -> List[str]:
         """把 research.md 的两个区块还原为当前最佳内容（前进式还原：
         不删任何文件、不改写历史，只把循环的「当前状态」拨回最佳）。
@@ -1270,10 +1278,7 @@ class RoundGuard:
             self.sink.warn(f"还原最佳区块 {key} 失败（忽略）：{error}")
         if not changed:
             return changed
-        self.stats.restored += 1
-        self._append_event_safe({"event": "restored", "round": round_no,
-                                 "why": why, "best": self.best.get("id"),
-                                 "changed": changed})
+        self._record_restore(round_no, why, changed)
         self.sink.warn(f"已还原为当前最佳 {self.best.get('id', '?')}"
                        f"（{why}；改动区块：{'、'.join(changed)}）；"
                        "下一轮将从最佳继续，更差的候选不会污染后续轮次")
@@ -1438,11 +1443,7 @@ class RoundGuard:
         for _, name, error in failures:
             self.sink.warn(f"写回区块失败（{name}）：{error}")
         if changed:
-            self.stats.restored += 1
-            self._append_event_safe({"event": "restored", "round": round_no,
-                                     "why": "旧候选被补评采纳",
-                                     "best": self.best.get("id"),
-                                     "changed": changed})
+            self._record_restore(round_no, "旧候选被补评采纳", changed)
 
 
 # ----------------------------------------------------------------------
