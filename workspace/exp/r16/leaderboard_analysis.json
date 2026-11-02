@@ -23,8 +23,8 @@
     "max_abs_diff": 0.0009375000000027001
   },
   "variance_decomposition": {
-    "task_effect_frac": 5.262494415634917,
-    "model_effect_frac": 1.8652934985679708,
+    "task_effect_frac": 0.16445295048859115,
+    "model_effect_frac": 0.23316168732099635,
     "interaction_resid_frac": 0.6023853621904125,
     "comment": "task difficulty explains far more than model identity; the residual is model x task interaction (polarization)"
   },
