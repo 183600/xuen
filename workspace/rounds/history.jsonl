@@ -769,3 +769,6 @@
 {"event": "verdict", "id": "20261102-043813-r1", "round": 1, "verifier": "ai", "score": 7.0, "result": "adopted", "reason": "AI 评分 7（阈值 7）", "ts": "2026-11-02 04:38:23"}
 {"event": "candidate", "id": "20261102-050423-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-02 05:04:23"}
 {"event": "verdict", "id": "20261102-050423-r1", "round": 1, "verifier": "ai", "score": 8.0, "result": "adopted", "reason": "AI 评分 8（阈值 7）", "ts": "2026-11-02 05:04:35"}
+{"event": "candidate", "id": "20261102-051413-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-02 05:14:13"}
+{"event": "verdict", "id": "20261102-051413-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-11-02 05:14:13"}
+{"event": "restored", "round": 1, "why": "候选待评分", "best": "20261102-050423-r1", "changed": ["idea", "artifact"], "ts": "2026-11-02 05:14:14"}
