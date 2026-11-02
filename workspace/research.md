@@ -3,383 +3,464 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 14 轮（研究线累计；本轮灵感循环第 1 轮）· VOI-MAP：把「语音指令」变成语义地图上的目标分布，用「价值信息/成本」决定何时调用 VLA、何时主动看一眼、何时直接伺服
+# 第 15 轮（研究线累计；本轮灵感循环第 1 轮）· ZEST-VLA：把「自监督」搬到推理期，用风险受控的信任门决定何时不信 VLA、何时退回几何原语
 
-> 检索/复核日期：**2026-11-02（UTC）**。赛事身份不变：宇树 **UniBot 世界挑战赛**（unibot.unitree.com），G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API。本轮三个词是「语音交互」「成本控制」「语义地图」。**不推倒**第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO、第 13 轮 WAVE-SERVO；VOI-MAP 是它们之上的**元认知层**：它不改变「怎么动」，只决定「动哪个目标、值不值得再花一次计算」。
+> 检索/复核日期：**2026-11-02（UTC）**。赛事身份不变：宇树 **UniBot 世界挑战赛**（unibot.unitree.com），G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API。本轮三个词是「创新点」「自监督学习」「零样本泛化」。**不推倒**第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO、第 13 轮 WAVE-SERVO、第 14 轮 VOI-MAP；ZEST-VLA 是 VOI-MAP 之上的**胜任力层**：VOI-MAP 决定「动哪个目标、值不值得再算」，ZEST 决定「这个 VLA 动作块到底该不该信」。
 
-## 0. 先给直觉：第 13 轮把「手」稳住了，但「眼睛和耳朵」还没有预算
+## 0. 先给直觉：第 14 轮学会了「买信息」，但还没学会「不信任自己」
 
-第 13 轮 WAVE-SERVO 解决的是：给定目标位姿，5 步块内的视觉伺服在可变 RTT 下不振荡。它有一个隐含前提：**目标是对的，且值得一直算**。这两个前提在真实评测里都不成立。
+第 14 轮 VOI-MAP 把目标从「一个位姿」升级为「语义地图上的分布」，把计算从「常开」升级为「按边际信息增益/成本分配」。它解决的是**目标不确定性**和**预算不确定性**，但留下了一个更深的假设：
 
-1. **抓错物体，伺服再稳也没用。** 32 个桌面任务由语言指令指定目标；一旦把「杯子」听成「帽子」、或把「左边的碗」指到「右边的碗」，TD-PC 只会把你稳定地带到错误的位置。第 10–13 轮一直在优化「最后 3 厘米」，但失败也可能发生在「第 0 厘米」——目标选择。
-2. **语言是一个有噪声的信道。** 评测接口给的是语言（很可能是文本）；但赛题面向真实部署，语音才是最终交互形态。即使评测给文本，「口语化、同音词、近音词、改写」的鲁棒性仍是低成本高回报的。用一个精确字符串匹配的解析器，等于假设信道无噪；更糟的是，一旦解析错，系统会自信地执行错。
-3. **计算是预算，不是免费资源。** 每次 VLA 调用有延迟、有算力、有 API 风险；每个 5 步块也是一次机会成本。第 12/13 轮把 `H_c=5` 写成常数，第 13 轮把伺服做成常开；这在「目标明确」时是对的，但在「目标不确定」时，把预算花在伺服上可能不如花在「再看一眼」或「重新 grounding」上。**该优化的是每单位成本的成功率，不是单步精度。**
+> **只要目标对了、预算够了，VLA 给出的动作块就是胜任的。**
 
-所以本轮的直觉是：**在 WAVE-SERVO 之上加一个「语义地图 + 价值信息」的决策层。** 语义地图是主端与从端共享的工作记忆；语言 grounding 把指令变成地图节点上的一个概率分布；预算调度器在 {直接伺服, 主动看一眼, 调用 VLA, 提交} 之间，按「边际成功增益 / 成本」选动作。
+这个假设在零样本评测里最危险。32 个任务里只要出现没见过的物体颜色、没见过的空间关系、没见过的容器位姿，VLA 就可能**自信地**输出一个几何上平滑、语义上错误的动作。此时：
+
+1. **没有标签。** 评测不给「这一步对不对」的监督；等 episode 结束才知道失败，已经晚了。
+2. **没有第二个模型。** 单模型规则不允许再训练一个失败检测器；而且失败检测器本身也要在未见任务上泛化，等于把零样本问题复制了一遍。
+3. **VLA 的置信度不可信。** 确定性 WLA 没有校准方差；随机采样的方差衡量的是 epistemic uncertainty，不是「动作在环境中对不对」。一个自信的错误动作可以有很低的方差。
+
+所以本轮的直觉是：**把自监督从训练阶段搬到推理阶段。** 不训练任何新参数，而是把「机器人执行动作后，环境实际发生了什么」当作免费的监督信号：
+
+> **commanded action 是预测，下一帧观测是标签。预测和观测之间的残差，就是无需人工标注的「这一步是否胜任」的证据。**
 
 一句话先给押注：
 
-> **把「语音指令」解析成语义地图上的目标分布，而不是一个硬标签；用地图的不确定性和剩余预算共同决定下一次计算买什么——目标清楚就直接伺服，目标含糊就先花小钱看一眼，看一眼还不够才调用昂贵的大模型；每次计算都要能说清楚它买到了多少成功概率。**
+> **第 14 轮用「目标分布 + 预算」决定买什么信息；本轮用「动作-观测一致性」决定信不信当前策略：把时序一致性、几何一致性、目标进度一致性做成三个自监督残差，用 self-normalized conformal + CUSUM 把残差变成有假警报控制的信任门；一旦不信任，就在 VOI-MAP 的动作集里禁用 SERVO，退回手工几何原语或要求重新规划。零样本泛化不是「VLA 一定成功」，而是「VLA 失败时系统能受控降级，而不是自信地错下去」。**
 
 三个可验证创新点：
 
-1. **语音鲁棒 grounding**：语音/文本 → 任务 schema → 地图候选分布；用音素编辑距离 + 同音词表处理 ASR 噪声，且**不硬提交**，把歧义传给调度器。用 G10 验证「grounding MAP 准确率 / 校准」。
-2. **语义地图作为共享信念**：对象级地图（位姿、协方差、存在置信、颜色/类别）由经典立体视觉 + 数据关联维护，**不引入第二个学习模型**；地图不确定性直接驱动「看一眼」的价值。用 G12 验证「位姿误差 / 关联切换」。
-3. **价值信息预算调度**：把每 episode 的 VLA 调用、LOOK、伺服步数建模成带成本的序列决策；用边际增益/成本贪心选择，并在预算紧张时自动退化为 CHUNK-SERVO。用 G11 + 合成实验验证「成功率/成本」。
+1. **推理期自监督（self-supervised inference）**：三个残差全部来自机器人自己的观测与动作，不需要成功标签、不需要第二个学习模型、不更新任何权重；用 G13 验证「残差能否区分 ID/OOD」。
+2. **风险受控的信任门**：self-normalized conformal 校准 + CUSUM 变点检测 + 滞回/复检；给出 ID 假警报控制、OOD 检测延迟、安全降级的命题；用 G13/G14 验证。
+3. **胜任力门控的零样本降级**：把 VOI-MAP 的动作集扩展为 `SERVO / LOOK / VLA / FALLBACK / COMMIT`，其中 `FALLBACK` 是手工几何原语语法；用 G14 验证「未见任务/物体上的受控降级」，并明确它不解决语义不可检测的 OOD-G。
 
 三个词怎么落地：
 
 | 词 | 落地 | 不做什么 |
 |---|---|---|
-| **语音交互** | ASR 噪声下的 schema 解析；同音/近音编辑距离；歧义不硬提交；用「主动看一眼」代替向人追问；模块间的符号 backchannel | 不训练 ASR/TTS；不做真人对话；不把 VLA 伪装成语言模型 |
-| **成本控制** | VLA 调用、LOOK、伺服步数的统一成本；边际增益/成本；预算紧张自动降级；预注册成本指标 | 不把「省算力」当唯一目标；不在正式评测上做预算 A/B |
-| **语义地图** | 对象级地图 + 协方差 + 存在置信；语言→地图节点；地图不确定性驱动计算 | 不引入第二个检测/分割模型；不假设腕部有内参；不假设有深度 |
+| **创新点** | 不是新网络/新损失，而是新的**决策层**：把自监督残差变成风险受控的信任信号；三层不确定性（目标/预算/胜任力）形成层级 | 不堆模型；不把「更复杂」当创新；H4 失败就剪枝 |
+| **自监督学习** | 推理期自监督：动作条件预测误差、时序一致性、目标进度；conformal/CUSUM 只学习一维阈值，不学习高维策略 | 不做自监督预训练；不做 test-time weight update；不训练失败检测器 |
+| **零样本泛化** | 系统级零样本：未见任务用几何原语语法组合；VLA 仍负责语义子目标；信任门决定何时切换 | 不承诺 VLA 在未见任务上一定成功；不覆盖语义不可检测的 OOD-G |
 
-## 1. 研究日志：为什么是现在、为什么是这一层
+## 1. 研究日志：为什么是这一层
 
-### 1.1 第 10–13 轮留下的三个「未付费假设」
+### 1.1 第 14 轮留下的三个「未付费假设」
 
 ```text
-A1. 目标位姿是对的：grounding 被当成上游已解决。
-A2. 计算预算是无限的：默认每个 5 步块都能算伺服、都能调用 VLA。
-A3. 语言是干净文本：没有同音词、没有改写、没有口语省略。
+A1. 执行者胜任：给定目标，VLA 的 30 步块在分布外仍然可用。
+A2. 目标分布正确：语义地图的 p(o|u,M) 已经把「抓哪个」建模对了。
+A3. 失败可见：如果执行错了，语义地图/视觉伺服能看出来。
 ```
 
-A1 是最大的漏洞。WAVE-SERVO 的 TD-PC 能证明「视觉误差回路不振荡」，但证明不了「误差定义在一个正确的目标上」。A2 在单端口、低延迟时可以近似成立；在多端口、跨城、API 限流时不成立。A3 在评测文本上可能成立，但和真实产品形态不一致，而且文本指令也会有人类写的省略和指代。
+A1 是本轮要付的账。A2 是第 14 轮的最大风险，本轮只能部分覆盖：`r_goal` 可以检测「地图目标对、VLA 动作错」，但检测不了「地图目标本身错」。A3 在 OOD-G 下不成立：VLA 和地图可能共享同一个错误先验。
 
-### 1.2 三个会改变方案的新判断
+### 1.2 三个新判断
 
-1. **语义地图不需要第二个学习模型，也可以是「够用的」。** 第 10–13 轮反复担心「第二个模型违规」。但桌面场景是刚体、静态、对象少；用头双目立体 + 颜色/深度不连续分割 + 匈牙利数据关联 + 卡尔曼滤波，就能维护对象级地图。类别标签不用检测器，直接用指令里的名词本体，加上颜色/空间关系消歧。这是确定性几何，不是学习模型。**代价**：它会在透明、反光、遮挡、纯色桌面上退化；所以它必须输出协方差，而不是假装自己很准。
-2. **「看一眼」比「问一句」更适合这个评测。** 没有真人在环里，主动问「你说的是哪个杯子」不可行。但机器人可以主动改变视角：左右平移、抬高、倾斜，去获取一个能区分候选目标的新观测。这是**主动感知**，也是「语音交互」在自动评测里的可落地版本：用感知动作回答语言歧义。成本远低于一次 VLA 调用。
-3. **固定的 30/5 调度在「歧义」面前是错的。** 如果目标不确定，先执行 5 步伺服可能是在错误的物体上浪费 5 步；如果目标很确定，再调用 VLA 是浪费一次昂贵的规划。正确的调度应该同时看**语义不确定性**和**几何执行不确定性**，而不是只看时间。
+1. **自监督可以是推理期的，不必是训练期的。** 传统自监督学习用 pretext task 训练表征；本轮把 pretext task 换成「动作是否解释了观测变化」，用它来校准一个一维信任阈值。这不是表征学习，但它是合法的自监督：监督信号来自数据本身，不需要人工标签。**我们学习的是一个阈值，不是一套权重。**
+2. **零样本泛化不是一个问题，而是三个失败模式。** 必须区分：
+   - **OOD-E（执行）**：VLA 动作在几何/动力学上不一致；`r_tmp, r_geo` 高。
+   - **OOD-S（语义）**：动作几何一致但语义错；`r_tmp, r_geo` 低，`r_goal` 高（若地图目标对）。
+   - **OOD-G（grounding）**：VLA 和地图目标一起错；所有残差都像 ID，**自监督不可检测**。
+   这个分类决定了本轮的承诺边界：ZEST 能处理 E 和 S（地图对时），不能处理 G。
+3. **正确的目标不是「更准」，而是「风险受控」。** 一个固定阈值门在残差尺度漂移时会误报；一个永久 fallback 在瞬态失败后会过度保守；一个 Beta 后验下界在合成实验里没有超过简单 CUSUM+复检。本轮用 conformal 控制 ID 假警报、用 CUSUM 检测持续 OOD、用复检恢复瞬态失败，并把「复杂度是否值得」写成可证伪假设。
 
-### 1.3 为什么是「地图 + 价值信息」而不是「更强的语言模型」
+### 1.3 与第 14 轮的关系
 
-一个自然的反应是：上一个更大的 VLM，把指令理解得更好。但这有三个问题：
-
-- **单模型规则**：引入第二个学习模型做 grounding，直接踩线。
-- **成本**：每次不确定都调用大模型，延迟和算力都不可接受；而很多歧义用一次「看一眼」就能解决。
-- **可解释性/可证伪性**：地图上的目标分布是一个显式的概率对象，可以检查、可以校准、可以在仿真里复现；黑盒 VLM 的 grounding 很难做因果消融。
-
-所以 VOI-MAP 的立场是：**语言理解不一定要更大的模型，可以用「地图 + 主动感知 + 预算」把一个小模型的歧义消化掉。** 这也是「成本控制」真正的含义：不是省钱，是把计算花在信息增益最大的地方。
-
-### 1.4 与第 13 轮的关系
-
-| 层 | 第 13 轮 | 第 14 轮 VOI-MAP |
+| 层 | 第 14 轮 VOI-MAP | 第 15 轮 ZEST-VLA |
 |---|---|---|
-| 语义/目标 | 假设给定 | 输出目标分布 `p(o|u,M)`；歧义显式化 |
-| 地图 | 单目标相对位姿 | 对象级地图 + 协方差 + 存在置信 |
-| 调度 | 固定 30 步规划 / 5 步伺服 | 按 `Δsuccess/Δcost` 选 SERVO / LOOK / VLA / COMMIT |
-| 语言 | 文本条件 | 音素编辑距离 + 同音词 + 不硬提交 |
-| 安全 | TD-PC + 限幅 | 继承；新层不新增执行通路 |
-| 统计 | 预注册 A/B | 继承；新增「成功率/成本」主端点 |
+| 不确定性 | 目标 `p(o\|u,M)`、预算 `B_t` | 执行者胜任力 `c_t`、OOD 模式 |
+| 自监督 | 无 | 动作-观测残差三元组（推理期，无训练） |
+| 调度 | `SERVO/LOOK/VLA/COMMIT` | 加 `FALLBACK/HOLD`；信任门是硬约束 |
+| 零样本 | 语言/地图 grounding | 几何原语语法 + 胜任力门控降级 |
+| 安全 | WAVE-SERVO + 限幅 | 继承；门只删动作，不新增执行通路 |
+| 统计 | 预注册 A/B | 继承；新增 OOD 检测/假警报/恢复端点 |
 
-**保留**：FACT-VLA 的相位化 BC、GEO-RESIDUAL 的几何残差与编辑检测、CHUNK-SERVO 的 30/5 双频、WAVE-SERVO 的 TD-PC 与相位阻抗表、单模型合规、预注册统计纪律。
-**升级**：目标从「一个位姿」升级为「地图上的分布」；调度从「固定频率」升级为「预算感知」；语言从「精确匹配」升级为「噪声信道下的分布」。
-**剪枝**：不做第二个检测/分割/语言模型；不做真人对话；不把「省算力」当成唯一目标；不在正式 320 trials 上做未验证的预算 A/B。
+**保留**：FACT-VLA 的相位化 BC、GEO-RESIDUAL 的几何残差与编辑检测、CHUNK-SERVO 的 30/5 双频、WAVE-SERVO 的 TD-PC 与相位阻抗表、VOI-MAP 的语义地图/语音 grounding/预算调度、单模型合规、预注册统计纪律。
+**升级**：从「目标不确定性」升级到「执行者胜任力不确定性」；从「固定调度」升级到「带硬约束的信任门 + 软 VoI」；从「模型级零样本」升级到「系统级零样本降级」。
+**剪枝**：不做自监督预训练；不做 test-time weight update；不训练失败检测器；不引入第二个学习模型；Beta 后验下界经合成实验证伪后从主门控中移除。
 
-## 2. 机制草图（先给直觉，形式化见产物区）
+## 2. 机制草图（形式化见产物区）
 
-### 2.1 语义地图：不是重建，是「够用的对象账本」
+### 2.1 三个自监督残差：动作是预测，下一帧是标签
 
-```text
-M_t = { o_i = (id_i, label_i, μ_i, Σ_i, ν_i) } ∪ F_t
-```
-
-- `μ_i, Σ_i`：对象在桌面坐标系的位置与协方差（头双目三角化 + 卡尔曼）；
-- `label_i`：来自指令名词本体 + 颜色/关系属性，不是检测器；
-- `ν_i`：存在/可见置信，用于出生/死亡与「要不要再看一眼」；
-- `F_t`：自由空间栅格，用于碰撞与可达性检查。
-
-关键设计：**地图必须输出不确定性**。如果地图假装 `Σ=0`，调度器就永远不会选择 LOOK，整个预算层退化成固定调度。
-
-### 2.2 语音 grounding：从字符串到分布
+在每一个 5 步块结束后，计算：
 
 ```text
-u (ASR 文本) → 规范化 → schema σ(u) = (verb, target, reference, relation, constraints)
-            → 候选集 C = {o_i : label_i ≈ target}
-            → 打分 s_i = w_l·sim(label_i,target) + w_c·color + w_g·geometry + w_p·phonetic
-            → p(o_i|u,M) = softmax(s_i / T)
+r_tmp  : 新计划与旧计划在重叠时域上的动作差异（时序一致性）
+r_geo  : commanded Cartesian motion 与 observed end-effector/target motion 的差异
+         + predicted optical flow 与 observed flow 的差异（动作条件几何一致性）
+r_goal : predicted progress 与 measured progress 的差异（目标进度一致性）
+r_dyn  : 关节速度/加速度限幅违反量（确定性安全检查）
 ```
 
-三个细节：
+关键点：
 
-1. **音素编辑距离**：`cup→cub` 能被纠正，`cup→cap` 不能（真同音）。所以不能承诺「语音鲁棒」，只能承诺「近音鲁棒 + 同音交给地图/主动感知」。
-2. **不硬提交**：如果 top-2 的后验差小于阈值，保留分布，交给调度器。硬 argmax 会把一个可恢复的歧义变成一个不可恢复的错误。
-3. **几何先验**：`left of the bowl` 不是字符串匹配，是地图上的一个区域势函数；这比纯语言模型更准，也更便宜。
+- `r_tmp` 只在有重叠计划时有效；没有重叠时置零并降权。
+- `r_geo` 用头双目 + 正运动学，不假设腕部内参、不假设深度图；透明/反光时降权。
+- `r_goal` 在 APPROACH/PRECONTACT 用目标距离进度；在 CONTACT/CARRY 复用第 11 轮的 edit/slip 信号。
+- `r_dyn` 是硬信号，权重高；它不需要学习。
 
-### 2.3 预算调度：买信息，不买「更多计算」
+### 2.2 从残差到信任：self-normalized conformal + CUSUM
 
-每个决策点，候选动作：
+```text
+z_k = r_k / σ_k          # σ_k 用滑动 MAD 估计，消除尺度漂移
+s_t = Σ w_k z_k          # 固定权重，不做学习
+q_α = Quantile_{1-α}(s | ID calibration)   # split conformal
+e_t = 1[s_t > q_α]       # surprise indicator
+S_t = max(0, S_{t-1} + e_t - α - k)        # CUSUM
+trigger: S_t > h
+```
 
-| 动作 | 成本 | 作用 |
-|---|---|---|
-| `SERVO` | 1 个 5 步块 | 降低几何误差，不改变目标信念 |
-| `LOOK` | ≈1–2 个块（小幅视角移动） | 降低目标熵；对近音/遮挡有效，对真同音可能无效 |
-| `VLA` | 5 个块（含延迟） | 重新规划/重新 grounding；对长程和多阶段任务价值更大 |
-| `COMMIT` | 0 | 停止收集信息，执行当前 MAP 目标 |
+- **为什么 conformal**：它给 ID 假警报一个分布无关的边际保证；不需要假设残差高斯。
+- **为什么 CUSUM**：单步阈值对持续 OOD 不敏感；CUSUM 累积证据，检测延迟随 OOD 严重度下降。
+- **为什么 self-normalized**：残差尺度会随物体/光照/遮挡漂移；除以滑动 MAD 后，固定 `q_α` 更稳。
+- **为什么不用 Beta 后验**：我原本想用 Beta 下界做「胜任力概率」，但合成实验里它和 CUSUM+复检的行为完全一致（H4 失败）。所以主门控只保留 CUSUM+滞回+复检；Beta 只作为可解释的诊断量。
 
-规则：`a* = argmax_a ΔE[success|a] / cost(a)`，只有当边际收益超过机会成本时才买。预算紧张时，`SERVO` 自然占优；目标很清楚时，`COMMIT` 自然占优；目标含糊且看一眼便宜时，`LOOK` 自然占优。**这不是一个固定的状态机，是一个可解释的分配器。**
+### 2.3 信任门 + VOI-MAP：门是硬约束，VoI 是软分配
 
-### 2.4 「对话」在哪里
+```text
+TRUST    : {SERVO, LOOK, VLA, COMMIT}
+FALLBACK : {FALLBACK, LOOK, VLA, HOLD}   # SERVO 被禁用（复检探针除外）
+HOLD     : {HOLD}
+```
 
-- **外部对话**：人说一句 → 系统解析成分布 → 系统用「看一眼」来问场景，而不是向人追问；
-- **内部对话**：VLA 的计划被抽象成符号子目标（`approach(target)`、`grasp(target)`、`place(target, ref)`），执行器回传状态符号（`APPROACHED`、`CONTACT`、`SLIP`、`OCCLUDED`）。这些符号是确定性地从几何/夹爪状态派生的，不是第二个模型。它们让「慢规划器」和「快伺服」有一个低带宽、可解释的接口。
+- 门只**删除**动作，不新增执行通路；所有动作仍经过 WAVE-SERVO。
+- `c_t`（近期非惊讶率）进入 VOI 的成功模型：`P_succ(SERVO) ≈ c_t · b_max · f(p+δ)`。
+- `FALLBACK` 只在域检查通过时可用：任务可分解、目标在图中、原语历史成功率足够、当前相位安全。
+- 若 `c_t` 低且 `FALLBACK` 不可用，选 `VLA` 重规划或 `HOLD`，绝不执行不可信的 SERVO。
 
-这个「符号 backchannel」是「语音交互」在系统内部的类比：**用离散符号交换意图和状态，而不是每步都传高维动作。**
+### 2.4 零样本泛化：手工几何原语语法
 
-## 3. 可证伪的假设
+```text
+pick(X)     := REACH(X) → GRASP → LIFT
+place(X,Y)  := REACH(Y) → PLACE(X,Y) → RELEASE
+insert(X,Y) := REACH(Y) → ALIGN(axis) → INSERT(depth)
+hang(X,Y)   := REACH(Y) → ALIGN → HOOK → RELEASE
+open(X)     := REACH(handle) → GRASP → PULL
+...
+```
+
+- 语法是手写的，不是学习的；每个原语是确定性的几何/阻抗控制器，参数来自语义地图。
+- `dom(σ(u))` 做确定性域检查：只对几何可分解的任务开放 `FALLBACK`；语义任务（FoldTowel、ZipUp 等）仍交给 VLA。
+- 这是**系统级零样本**：不承诺 VLA 在未见任务上成功，只承诺在几何可分解的未见任务上有一条不依赖任务特定训练的降级路径。
+
+### 2.5 早期中止：一个坏块的成本上限
+
+30 步计划按 5 步块执行。信任门在**第一个块结束后**就能触发：
+
+```text
+坏计划的最坏执行成本 = 1 个块（而不是 6 个块）
+省下的执行成本 ≤ 5 个块
+```
+
+VLA 调用成本已经花掉，无法收回；但执行成本可以。这把「自信地错 30 步」变成「错 5 步就停」。
+
+## 3. 可证伪假设
 
 | 编号 | 假设 | 证伪条件 | 级别 |
 |---|---|---|---|
-| H1 | 音素编辑距离 + 不硬提交，在高 ASR 噪声下提升 grounding MAP 准确率 | 相对精确匹配无提升，或校准更差 | 主 |
-| H2 | 预算调度在相同成功率下降低平均成本（或相同成本下提升成功率） | 相对固定 5 步无成本/成功率优势 | 主 |
-| H3 | 预算紧张时调度器自动退化为 SERVO，不出现「为了消歧把预算花光」 | 紧预算下显著差于纯 SERVO | 主（安全性） |
-| H4 | 完整 VoI 贪心显著优于「置信度门控的 LOOK」这一简单启发式 | 两者差值的 CI 跨 0 | 次（证伪性） |
+| H1 | 残差三元组能区分 OOD-E/OOD-S（地图对时），AUROC ≥0.8 | AUROC <0.65 或 ID 假警报 >10% | 主 |
+| H2 | ZEST 在 OOD 上提升成功率 ≥5pp，ID 不回归 >2pp，成本开销 ≤3% | 相对 VLA-only 无提升或 ID 回归 | 主 |
+| H3 | 复检/滞回在瞬态 OOD 上显著优于永久 fallback | 复检不优于永久 fallback | 主（恢复） |
+| H4 | Beta 胜任力后验下界显著优于 CUSUM+复检 | 差值 CI 跨 0 | 次（证伪性；合成实验已失败，故剪枝） |
+| H5 | 几何原语语法在几何可分解的未见任务上提升成功率；在语义任务上不误用 | 域检查失效或语义任务回归 | 主（零样本） |
 
-H4 是刻意写成「可能失败」的：如果完整 VoI 不比一个简单门控好，就应该砍掉复杂度，只保留门控。**一个不能证伪自己复杂度的方案，不值得工程化。**
+H4 是刻意写成「可能失败」的：如果 Beta 后验不比简单门控好，就应该砍掉复杂度。**一个不能证伪自己复杂度的方案，不值得工程化。** 本轮合成实验已经给出 H4 的负面结果，因此主算法只保留 CUSUM+复检。
 
 ## 4. 什么情况下放弃这条线
 
-- 语义地图在真实桌面上的位姿误差 > 2cm，且 LOOK 不能降低关联歧义 → 地图不可用，退回「任务级固定目标 + WAVE-SERVO」。
-- 语言指令在评测中几乎无歧义（每个任务只有唯一目标且措辞固定）→ VOI-MAP 的 grounding 部分价值下降，只保留预算调度。
-- 预算调度的收益 < 5% 成本节省，且 H4 失败 → 砍掉调度器，保留「置信度门控」。
-- 真实延迟下 LOOK 的移动本身触发超时 → LOOK 只在 APPROACH 早期允许，CONTACT 段禁用。
+- 残差在真实桌面上 AUROC <0.65，或 ID 假警报 >10% → 信任门不可用，退回 VLA-only + VOI-MAP。
+- 静默语义 OOD（OOD-G）占失败 >30%，且残差无法检测 → 自监督门控的收益上限太低；把资源转向 grounding/语言一致性，而不是继续调残差。
+- `FALLBACK` 的成功率/成本不优于 VLA，或域检查频繁误判 → 砍掉 fallback，只保留信任门作为监控。
+- 复检在 CONTACT/CARRY 阶段引入碰撞/超时 → 复检只在 APPROACH/PRECONTACT 或原语边界允许。
+- 真机 p99 >150ms 或门控抖动导致动作不平滑 → 把残差计算移出关键路径/降采样，或退回固定阈值门。
 
 ## 5. 一句话押注
 
-**第 13 轮证明了「给定目标时手是稳的」；本轮押注「目标本身是一个分布，计算是一种预算」：用语义地图承载这个分布，用音素编辑距离消化语音噪声，用边际信息增益/成本决定下一次计算买什么——目标清楚就伺服，含糊就先看一眼，看一眼不够才调用大模型。**
+**第 14 轮用「目标分布 + 预算」决定买什么信息；本轮用「动作-观测一致性」决定信不信当前策略：三个自监督残差 + conformal/CUSUM 信任门 + 几何原语降级，让零样本失败从「自信地错下去」变成「受控地退一步」。**
 
 ## 6. 本轮最大的风险
 
-**语义地图的观测前端（无第二个学习模型、腕部无内参、无主动深度，头双目在透明/反光/弱纹理上不可靠）可能太弱，导致目标后验本身就是错的；此时再精细的 VoI 调度也只是在一个错误的后验上做最优分配，整个元认知层会变成「用更聪明的方式分配预算去执行错误的目标」。**
+**OOD-G：如果 VLA 和语义地图共享同一个错误先验（例如都把透明杯子 ground 成旁边的盘子），三个残差都会像 ID，信任门不会触发，系统会以受控的方式执行一个错误的目标。** 这是自监督的盲区，不是调参能解决的；本轮只能检测 OOD-E 和「地图对、VLA 错」的 OOD-S，检测不了「地图和 VLA 一起错」的 OOD-G。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 14 轮产物 · VOI-MAP 技术报告
+# 第 15 轮产物 · ZEST-VLA 技术报告
 
-> 检索/复核日期：**2026-11-02（UTC）**。对象：宇树 **UniBot 世界挑战赛**（G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API）。本报告是研究线累计第 14 轮、也是新一轮灵感循环第 1 轮「语音交互 / 成本控制 / 语义地图」的工程化产物。它在第 13 轮 **WAVE-SERVO** 之上加一个**元认知层**，不替换第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO。
+> 检索/复核日期：**2026-11-02（UTC）**。对象：宇树 **UniBot 世界挑战赛**（G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API）。本报告是研究线累计第 15 轮、也是新一轮灵感循环第 1 轮「创新点 / 自监督学习 / 零样本泛化」的工程化产物。它在第 14 轮 **VOI-MAP** 之上加一个**胜任力层**，不替换第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO、第 13 轮 WAVE-SERVO。
 
 ## 0. 结论与边界
 
 ### 0.1 一句话结论
 
-第 13 轮证明了「给定目标时，5 步块内的视觉伺服在可变时延下可以保持虚拟端口无源」；本轮把问题往前推一步：**目标本身不是给定的，而是一个由语言和语义地图产生的分布；计算也不是免费的，而是一个有限预算。** VOI-MAP 用语义地图承载目标分布，用音素编辑距离消化语音噪声，用「边际成功增益 / 成本」在 `SERVO / LOOK / VLA / COMMIT` 之间分配预算。它不改变执行层，只决定「动哪个目标、值不值得再花一次计算」。
+第 14 轮把「目标」建模成分布、把「计算」建模成预算；本轮把「执行者是否胜任」也建模成一个可观测、可校准、可行动的量。ZEST-VLA 不训练任何新参数、不引入第二个学习模型：它把 VLA 自己的动作当作预测、把执行后的观测当作标签，构造时序/几何/目标进度三个自监督残差；用 self-normalized conformal 校准 + CUSUM 变点检测得到一个风险受控的信任门；一旦不信任，就在 VOI-MAP 的动作集里禁用 `SERVO`，退回手工几何原语或重新规划。零样本泛化在本轮不是一个模型承诺，而是一个**系统级降级承诺**：VLA 失败时，系统能以受控方式退一步，而不是自信地错下去。
 
 ### 0.2 证据等级
 
 | 等级 | 含义 | 本报告中的例子 |
 |---|---|---|
 | A | 官方文档、提交模板、数据集元数据、经典文献直接核实 | 规则/API、32 任务、33,276 eps、WLA `chunk_size=30`、无 depth/force |
-| B | 本轮在公开数据/公式/合成实验上做的分析，可复现 | 合成预算实验、grounding 准确率、复杂度估算 |
-| C | 设计假设，需 G0–G12 验证 | 真实桌面上的地图精度、LOOK 的信息增益、VoI 在真机上的收益 |
-| U | 未核验，不得进入论证链 | 第 10–13 轮中形如 `2609.xxxxx` 的异常 arXiv 编号 |
+| B | 本轮在公式/合成实验上做的分析，可复现 | `exp/zest_sim.py` 的静态 OOD、瞬态恢复、残差消融、灵敏度 |
+| C | 设计假设，需 G0–G16 验证 | 真实桌面残差分布、几何原语覆盖率、真机零样本收益 |
+| U | 未核验，不得进入论证链 | 第 10–14 轮中形如 `2609.xxxxx` 的异常 arXiv 编号 |
 
 ### 0.3 本轮不做什么
 
-- 不训练第二个检测/分割/语言/ASR 模型；语义地图用经典立体视觉 + 数据关联，标签来自指令名词本体。
+- 不训练第二个检测/分割/语言/失败检测模型；残差、融合、门控全是确定性函数与在线一维统计。
+- 不做 test-time weight update；不微调 VLA；不做自监督预训练。
 - 不做真人实时对话/追问；评测是自动 `get_action`，没有人在环里。
 - 不假设腕部相机有内参、不假设有深度图、不假设有 F/T 或触觉。
 - 不把合成实验当作真机证据；不把 5 次 A/B 当显著性结论。
-- 不依赖不可核验的 arXiv 编号。
+- 不承诺解决 OOD-G（VLA 和地图一起错）；本报告把 OOD-G 明确写成不可检测边界。
 
-## 1. 承接：第 13 轮解决了什么、没解决什么
+## 1. 承接：第 14 轮解决了什么、没解决什么
 
 ### 1.1 已解决
 
-- 第 12 轮：30 步开环 → 5 步闭环，降低反馈周期；DG-KEYFRAME 相对目标。
-- 第 13 轮：把 5 步块内的修正从「PD + 增益调度」升级为「虚拟力 + TD-PC」；给出离散时延裕度 `a < 2 sin(π/(2(2d+1)))`，并证明虚拟端口的累计能量 `E_obs ≥ 0`。
-- 结论：**在执行层，给定目标位姿，系统有稳定性论证和确定性回退。**
+- 第 10 轮：FACT-VLA 把单模型 BC 相位化，降低长程漂移。
+- 第 11 轮：GEO-RESIDUAL 用几何残差 + 编辑检测识别执行中的异常。
+- 第 12 轮：30 步开环 → 5 步闭环；DG-KEYFRAME 相对目标。
+- 第 13 轮：WAVE-SERVO 用虚拟力 + TD-PC 给出离散时延下的无源性与限幅。
+- 第 14 轮：VOI-MAP 把语言 grounding 成地图上的目标分布，用边际信息增益/成本在 `SERVO/LOOK/VLA/COMMIT` 间分配预算。
+- 结论：**在「目标分布 + 预算 + 执行控制」这三层，系统已经有形式化对象和确定性回退。**
 
 ### 1.2 未解决
 
-| 问题 | 第 13 轮的隐含假设 | 本轮的处理 |
+| 问题 | 第 14 轮的隐含假设 | 本轮的处理 |
 |---|---|---|
-| 目标选错 | 目标位姿由上游给定且正确 | 目标变成地图上的分布 `p(o|u,M)`；歧义显式化 |
-| 语言噪声 | 文本干净、精确匹配 | 音素编辑距离 + 同音词表 + 不硬提交 |
-| 计算预算 | 每个 5 步块都算伺服/可调 VLA | 统一成本模型 + 边际增益/成本调度 |
-| 地图 | 单目标相对位姿 | 对象级地图 + 协方差 + 存在置信 |
-| 主动感知 | 无 | `LOOK`：用视角移动换取信息增益 |
+| 执行者不胜任 | 给定目标，VLA 块总是可用 | 用自监督残差在线估计胜任力；不可信时禁用 `SERVO` |
+| 零样本失败 | 语言/地图 grounding 能把目标找对 | 区分 OOD-E/OOD-S/OOD-G；前两者可降级，后者不可检测 |
+| 失败检测 | 没有标签也能知道错 | 把「动作-观测一致性」当免费标签；不训练检测器 |
+| 过度保守 | 一旦 fallback 就回不来 | CUSUM + 滞回 + 定期复检；瞬态 OOD 可恢复 |
+| 复杂度 | 越复杂越好 | H4 验证 Beta 后验；失败即剪枝 |
 
 ### 1.3 本轮的三个新判断
 
-1. **Grounding 错误是不可伺服的。** 抓错物体时，TD-PC 的稳定性反而会让错误执行得更稳、更彻底。目标选择必须在执行前/执行中被显式建模为不确定性。
-2. **语言鲁棒性有上限，必须承认。** 音素编辑距离能修 `cup→cub`，修不了 `cup→cap` 这种真同音；真同音要靠地图几何、颜色、或主动看一眼。**不承诺「语音鲁棒」，只承诺「近音鲁棒 + 同音可检测 + 歧义可行动」。**
-3. **固定调度在歧义面前是错的。** 「总是 5 步伺服」在目标明确时最优，在目标含糊时会把预算花在错误物体上；「不确定就调用 VLA」在长程任务上可能对，但成本高、延迟大。正确对象是**边际信息增益/成本**。
+1. **Self-supervision 可以在推理期发生。** 传统自监督学习训练表征；ZEST 用「执行动作后观测到的变化」作为免费监督，只校准一个一维阈值。它不更新权重，因此不违反单模型规则，也不引入训练/部署分布不一致。
+2. **零样本泛化要按失败模式拆开。** OOD-E（执行不一致）和 OOD-S（语义错但地图目标对）有可观测残差；OOD-G（VLA 和地图一起错）在残差空间中与 ID 不可分。把三者混为一谈，会得出「方法无效」或「方法万能」两种错误结论。
+3. **正确对象是风险，不是准确率。** 一个固定阈值门在残差尺度漂移时会误报；一个永久 fallback 在瞬态失败后会过度保守；一个 Beta 后验下界在合成实验中没有超过简单 CUSUM+复检。ZEST 用 conformal 控制 ID 假警报、用 CUSUM 检测持续 OOD、用复检恢复瞬态失败，并把「复杂度是否值得」写成可证伪假设。
+
+### 1.4 与第 14 轮的分层关系
+
+```text
+L4  ZEST-VLA 胜任力层（本轮）
+      残差三元组 → conformal/CUSUM 信任门 → 禁用/恢复 SERVO
+      输出：TRUST / FALLBACK / HOLD + 软胜任力 c_t
+L3  VOI-MAP 元认知层（第 14 轮）
+      语义地图 + 语言 grounding + 预算调度
+      输出：SERVO / LOOK / VLA / COMMIT + 目标分布 b_t
+L2  WAVE-SERVO（第 13 轮）
+      TD-PC + 虚拟力 + 5 步块 + 限幅
+L1  VLA server（唯一学习模型，冻结）
+      UnifoLM-WLA-1.0，30 步计划
+```
+
+ZEST 只决定「L3 的动作能不能执行」；它不改变 L2 的控制律，也不直接产生关节指令。所有执行仍经过 WAVE-SERVO 的 TD-PC 与限幅。
 
 ## 2. 符号与形式化
 
-### 2.1 语义地图
+### 2.1 冻结的 VLA 与执行层
 
-设桌面坐标系为 `W`。时刻 `t` 的语义地图：
+设 VLA 为 `π_θ`，`θ` 冻结。给定观测 `o_t` 和指令 `u`，它输出 30 步动作块 `A_t = (a_{t,0},...,a_{t,29})`。执行层按 5 步块执行，块索引 `b=0,...,5`。第 13 轮的 WAVE-SERVO 把每个块映射为安全的关节/末端轨迹；本轮不改变这个映射。
 
-```math
-M_t = \bigl(\{o_i\}_{i=1}^{N_t},\; F_t\bigr),\qquad
-o_i = (\mathrm{id}_i,\ \ell_i,\ \mu_i,\ \Sigma_i,\ \nu_i)
-```
+### 2.2 自监督残差向量
 
-- `\mu_i \in \mathbb R^3`：对象位置（本方案先做位置，姿态按任务需要再做）；
-- `\Sigma_i \in \mathbb R^{3\times3}`：位置协方差；
-- `\ell_i`：标签（来自指令名词本体 + 颜色/关系属性）；
-- `\nu_i \in [0,1]`：存在/可见置信；
-- `F_t`：桌面自由空间栅格（用于碰撞/可达性检查）。
+在块 `b` 结束后，令 `o_b` 为观测（头双目 RGB、关节编码器、夹爪状态），`x_b` 为正向运动学得到的末端位姿，`M_b` 为第 14 轮的语义地图，`A_{b-1}` 为上一计划。定义四个残差：
 
-**观测前端（无第二个学习模型）**：
-
-```text
-头双目校正图像 → 视差 → 桌面点云 P_t（下采样到 ~2k 点）
-              → 深度/颜色不连续分割 → 区域 R_t = {r_j}
-              → 区域质心 z_j、协方差 R_j、颜色直方图
-```
-
-不使用的：腕部相机做米制（无内参）、任何学习型检测/分割器、任何深度网络。
-
-### 2.2 地图更新：门控 + 匈牙利 + 卡尔曼
-
-对每个已有对象 `i`，预测：
+**时序残差（temporal）**
 
 ```math
-\mu_i^- = \mu_i^{t-1},\qquad \Sigma_i^- = \Sigma_i^{t-1} + Q
+r^{\mathrm{tmp}}_b =
+\frac{1}{H_o d}\sum_{k=1}^{H_o}\sum_{j=1}^{d}
+\frac{|a_{b,k,j}-a_{b-1,k+\Delta,j}|}
+{|a_{b,k,j}|+|a_{b-1,k+\Delta,j}|+\epsilon}
 ```
 
-对每个观测区域 `j`，马氏距离：
+其中 `H_o` 是重叠时域，`Δ` 是时间对齐偏移，`d` 是动作维度。若没有重叠（例如首次调用），置 `r^tmp=0` 并降权。
+
+**几何残差（geometric）**
 
 ```math
-d_{ij}^2 = (z_j-\mu_i^-)^\top(\Sigma_i^-+R_j)^{-1}(z_j-\mu_i^-)
+r^{\mathrm{geo}}_b =
+\frac{\|\Delta x^{\mathrm{obs}}_b-\Delta x^{\mathrm{cmd}}_b\|}
+{\|\Delta x^{\mathrm{cmd}}_b\|+\epsilon}
++\lambda_f\,
+\frac{\|\mathrm{flow}^{\mathrm{obs}}_b-\mathrm{flow}^{\mathrm{pred}}_b(\Delta x^{\mathrm{cmd}}_b,D_b)\|}
+{\sigma_{\mathrm{flow}}}
 ```
 
-只保留 `d_{ij}^2 \le \gamma^2` 的边，用匈牙利算法最大化总似然。匹配上的做卡尔曼更新：
+第一项是 commanded Cartesian motion 与 observed end-effector motion 的差；第二项是用头双目深度 `D_b` 预测的目标图像位移与实测光流的差。无深度/目标不可见时，`λ_f=0`，只保留第一项。透明/反光区域根据图像梯度与视差置信度降权。
+
+**目标进度残差（goal-progress）**
+
+在 APPROACH/PRECONTACT：
 
 ```math
-K_i = \Sigma_i^-(\Sigma_i^-+R_j)^{-1},\quad
-\mu_i = \mu_i^- + K_i(z_j-\mu_i^-),\quad
-\Sigma_i = (I-K_i)\Sigma_i^-
+r^{\mathrm{goal}}_b =
+\frac{\max(0,\ |\Delta d^{\mathrm{obs}}_b-\Delta d^{\mathrm{cmd}}_b|-\delta)}
+{|\Delta d^{\mathrm{cmd}}_b|+\delta}
 ```
 
-未匹配区域：若点数足够且能对应指令名词，则新建对象（大方差）；未匹配对象：`\nu_i` 衰减，超过 `\tau_{out}` 帧后保留但增大 `\Sigma_i`（不立即删除，避免遮挡导致的身份丢失）。
+其中 `d_b = ||x_b - μ_{i^*}(b)||` 是末端到当前目标 `i^*` 的距离。在 CONTACT/CARRY，复用第 11 轮的 edit/slip 分数作为 `r^goal`；它同样是无标签的几何信号。
 
-**关键设计**：`\Sigma_i` 必须真实反映不确定性。若地图假装 `\Sigma_i=0`，调度器永远不会选择 `LOOK`，预算层退化为固定调度。
-
-### 2.3 语言 schema 与 grounding 后验
-
-指令 `u` 先规范化为 schema：
+**动力学残差（dynamic）**
 
 ```math
-\sigma(u) = (\mathrm{verb},\ \mathrm{target},\ \mathrm{reference},\ \mathrm{relation},\ \mathrm{constraints})
+r^{\mathrm{dyn}}_b =
+\max_j\left(
+\frac{|\dot q_j|}{\dot q^{\max}_j},
+\frac{|\ddot q_j|}{\ddot q^{\max}_j}
+\right)-1
 ```
 
-候选集：
+只保留正值（限幅违反量）。这是硬安全信号，权重最高。
+
+**归一化与融合**
+
+每个通道用滑动 MAD 估计尺度：
 
 ```math
-C_t(\tau) = \{o_i : \ell_i \in \mathrm{syn}(\tau)\ \text{或颜色/关系匹配}\}
+\sigma_{k,b}=1.4826\cdot \mathrm{MAD}(\{r^k_{b-W+1},...,r^k_b\})+\epsilon_k
 ```
-
-打分：
 
 ```math
-s_i = w_\ell\,\mathbb 1[\ell_i\in\mathrm{syn}(\tau)]
-    + w_c\,\mathbb 1[\mathrm{color}_i\in C]
-    + w_g\,\phi_{\mathrm{rel}}(\mu_i;\rho,r)
-    - w_p\,d_{\mathrm{phon}}(\tau_{\mathrm{asr}},\ell_i)
+z^k_b = r^k_b/\sigma_{k,b},\qquad
+s_b = \sum_k w_k z^k_b
 ```
 
-其中 `\phi_{\mathrm{rel}}` 是几何关系势函数。例如 `left of the bowl`：
+固定权重，例如 `w_dyn=3`，`w_tmp=w_geo=w_goal=1`。固定权重不是训练出来的；它们可以在一个小的验证集上手工选择，且必须在正式评测前冻结。
+
+### 2.3 自归一化与 conformal 校准
+
+用一个 ID 校准集（例如 5 个已知任务 × 10 episodes）收集 `s_b`，取 `(1-α)` 经验分位数：
 
 ```math
-\phi_{\mathrm{left}}(x_i;x_\rho) =
--\frac{1}{2\sigma_x^2}\bigl((x_i-x_\rho)+\delta\bigr)^2
--\lambda\,\mathbb 1[x_i>x_\rho]
+q_\alpha = \mathrm{Quantile}_{1-\alpha}\{s_b^{\mathrm{cal}}\}
 ```
 
-后验：
+对测试块定义惊讶指示：
 
 ```math
-p(o_i\mid u,M_t) = \frac{\exp(s_i/T)}{\sum_{j\in C_t}\exp(s_j/T)}
+e_b = \mathbb 1[s_b>q_\alpha]
 ```
 
-**音素距离**（确定性、无学习）：
+在 ID 与测试残差可交换的假设下，split conformal 给出边际保证：
 
 ```math
-d_{\mathrm{phon}}(a,b) = \min\bigl(\mathrm{Lev}(a,b),\ \mathrm{Lev}(\mathrm{sk}(a),\mathrm{sk}(b))+0.5\bigr)
+\Pr(s_{B+1}>q_\alpha)\le \alpha
 ```
 
-`Lev` 是 Levenshtein 编辑距离，`sk` 是一个小的确定性音素骨架映射（去元音、合并清浊）。同音词表单独维护，用于标记「真同音」——这类歧义不靠编辑距离解决，交给 `LOOK`/几何。
+这是边际保证，不是条件保证；它不保证每个任务/每个物体都 ≤α。若校准集与测试分布不可交换（真实 OOD），保证失效，此时靠 CUSUM 和在线尺度估计兜底。
 
-**不硬提交**：若
+### 2.4 CUSUM 信任门与滞回/复检
+
+定义 CUSUM：
 
 ```math
-\frac{p_{(1)}}{p_{(2)}} < \rho_{\mathrm{amb}}
+S_b=\max(0,\ S_{b-1}+e_b-\alpha-k),\qquad S_0=0
 ```
 
-则保留分布，调度器看到高熵，选择 `LOOK` 或 `VLA`，而不是 argmax 后直接执行。
+当 `S_b>h` 时触发 OOD，进入 `FALLBACK` 模式。`k` 是漂移容忍量，`h` 是阈值。触发后：
 
-### 2.4 预算化决策过程
+- 在 `FALLBACK` 模式中禁用 `SERVO`（复检探针除外）；
+- 每 `r` 个块执行一次 `SERVO` 探针；若探针不惊讶，则 `S_b←0`，回到 `TRUST`；
+- 若连续 `r` 次探针都惊讶，保持 `FALLBACK`；
+- 复检只在 APPROACH/PRECONTACT 或几何原语的边界允许，CONTACT/CARRY 禁止，避免破坏接触。
+
+软胜任力用于 VOI 的成功模型，不用于触发：
+
+```math
+c_b = 1-\frac{1}{W}\sum_{i=0}^{W-1} e_{b-i}
+```
+
+### 2.5 胜任力感知的 VOI 调度
 
 状态：
 
 ```math
-x_t = (b_t,\ p_t,\ \phi_t,\ B_t,\ M_t)
+x_b=(b_b,\ p_b,\ \phi_b,\ B_b,\ M_b,\ c_b,\ S_b)
 ```
-
-- `b_t`：目标后验（由 §2.3 得到，随 LOOK/VLA 更新）；
-- `p_t`：执行进度（已执行的伺服步数/块数）；
-- `\phi_t`：相位（APPROACH / PRECONTACT / CONTACT / CARRY）；
-- `B_t`：剩余预算（归一化成本单位）；
-- `M_t`：语义地图。
 
 动作与成本：
 
-| 动作 | 成本 | 对信念/进度的影响 |
-|---|---|---|
-| `SERVO` | `c_s` | `p \leftarrow p+\delta`；`b` 不变 |
-| `LOOK` | `c_l` | 以概率 `q_l` 把 `b` 收敛到真值；否则不变；`p` 不变 |
-| `VLA` | `c_v` | 以概率 `q_v` 把 `b` 收敛到真值；并可重规划（长程任务额外收益） |
-| `COMMIT` | 0 | 停止收集信息，执行当前 MAP 目标 |
+| 动作 | 成本 | 作用 | 门控约束 |
+|---|---|---|---|
+| `SERVO` | `c_s` | 执行当前 VLA 块 | 仅 `TRUST`；`FALLBACK` 中仅复检探针 |
+| `LOOK` | `c_l` | 主动视角，降低目标熵 | 两模式都可用；CONTACT 禁用 |
+| `VLA` | `c_v` | 重新规划 / 重新 grounding | 两模式都可用；异步 |
+| `FALLBACK` | `c_f` | 执行几何原语 | 仅域检查通过 |
+| `COMMIT` | 0 | 停止收集信息，执行当前 MAP 目标 | `TRUST` |
+| `HOLD` | 0 | 安全停止 | 无 fallback/预算耗尽 |
 
 成功模型（MAP 近似）：
 
 ```math
-P_{\mathrm{succ}}(b,p) \approx \Bigl(\max_i b_i\Bigr)\cdot f(p),\qquad
-f(p)=1-e^{-p/p_0}
-```
-
-更一般的写法是 `\sum_i b_i f_i(p)`；本报告为可解释性使用 MAP 近似，并在 §5.5 说明它偏向「只抓一个目标」的任务。
-
-**一步边际增益**：
-
-```math
-\Delta_{\mathrm{servo}} = c\,[f(p+\delta)-f(p)],\qquad c=\max_i b_i
+P_{\mathrm{succ}}(\mathrm{SERVO}) \approx c_b\, b_{\max}\, f(p_b+\delta)
 ```
 
 ```math
-\Delta_{\mathrm{look}} = (c'_l-c)\,f(p),\qquad c'_l = q_l\cdot 1 + (1-q_l)\,c
+P_{\mathrm{succ}}(\mathrm{FALLBACK}) \approx b_{\max}\, g_{\mathrm{prim}}\, f_{\mathrm{geo}}(p_b)
 ```
 
 ```math
-\Delta_{\mathrm{vla}} = (c'_v-c)\,f(p) + \Delta_{\mathrm{plan}},\qquad c'_v = q_v\cdot 1 + (1-q_v)\,c
+P_{\mathrm{succ}}(\mathrm{VLA}) \approx
+\bigl(c_b+(1-c_b)q_v\bigr)b_{\max}f(p_b)+\Delta_{\mathrm{plan}}
 ```
 
-其中 `\Delta_{\mathrm{plan}}` 是 VLA 的重新规划收益（本轮合成实验设为 0，因此实验对 VLA 是**保守的**）。
-
-**调度规则**：
+其中 `b_max = max_i b_i` 是目标后验的 MAP 质量，`f(p)=1-e^{-p/p_0}` 是执行进度饱和曲线，`g_prim` 是原语的历史成功率（或保守先验），`q_v` 是重规划恢复胜任力的概率，`Δ_plan` 是长程重规划收益。调度规则：
 
 ```math
-a^\star = \arg\max_{a\in\{\mathrm{SERVO},\mathrm{LOOK},\mathrm{VLA}\}}
+a^\star=\arg\max_{a\in\mathcal A_{\mathrm{adm}}(S_b)}
 \frac{\Delta_a}{c_a}
-\quad\text{s.t.}\quad c_a\le B_t
+\quad\text{s.t.}\quad c_a\le B_b
 ```
 
-若最大比值低于机会成本阈值 `\lambda`，或 `c\ge c_{\mathrm{stop}}` 且 `p\ge p_{\mathrm{stop}}`，则 `COMMIT`。
+其中 `A_adm(S_b)` 是信任门允许的动作集。若最大比值低于机会成本阈值 `λ`，或预算耗尽，则 `COMMIT`/`HOLD`。
 
-### 2.5 与 POMDP 的关系
+### 2.6 零样本几何原语语法
 
-严格的问题是有限时域 POMDP：
+原语库（手工、确定性、无学习）：
 
-```math
-\max_\pi\ \mathbb E\Bigl[\sum_t \mathrm{success}_t - \eta\sum_t \mathrm{cost}_t\Bigr]
+| 原语 | 参数 | 控制器 | 覆盖的典型任务 |
+|---|---|---|---|
+| `REACH` | 目标位姿、接近轴 | 笛卡尔阻抗 / PBVS | 所有抓取/放置的接近段 |
+| `GRASP` | 宽度、力阈值（若有） | 闭合夹爪直到宽度/电流阈值 | Pick、Hang、Open |
+| `LIFT` | 高度、速度 | 垂直笛卡尔运动 | Pick、Stack |
+| `PLACE` | 目标位姿、释放高度 | 移动到目标、下降、张开 | Stack、Place、Hang |
+| `INSERT` | 插座位姿、轴、深度 | 对齐轴 + 柔顺插入 | PlugInEthernet、Insert |
+| `PUSH/PULL` | 接触位姿、方向、距离 | 力/位置控制 | Open/Close drawer |
+| `PRESS` | 接触位姿、力/时长 | 接触后保持 | Button、Switch |
+| `SWEEP` | 路径、压力 | 笛卡尔路径 + 柔顺 | Wipe、Clean |
+| `RELEASE` | — | 张开夹爪 | 所有放置 |
+
+语法示例：
+
+```text
+pick(X)     := REACH(X) → GRASP → LIFT
+place(X,Y)  := REACH(Y) → PLACE(X,Y) → RELEASE
+insert(X,Y) := REACH(Y) → ALIGN(axis) → INSERT(depth)
+hang(X,Y)   := REACH(Y) → ALIGN → HOOK → RELEASE
+open(X)     := REACH(handle) → GRASP → PULL
+close(X)    := REACH(handle) → GRASP → PUSH
 ```
 
-上述规则是**一步贪心**，忽略了「现在买的信息会影响未来动作」的期权价值。它便宜、可解释、可在 CPU 上实时算；但它是近似，不是最优。第 6 节会把这个近似本身作为一个可证伪假设（H4）。
+域检查 `dom(σ(u))`：
+
+- `geometric`：语法能匹配，且所有对象在 `M` 中有足够置信的存在与位姿；
+- `semantic`：语法不能匹配或任务涉及变形/精细语义（FoldTowel、ZipUp、PackDoll 等）；
+- `unknown`：指令 schema 不完整或地图缺对象。
+
+只有 `geometric` 允许 `FALLBACK`；`semantic/unknown` 仍走 VLA/LOOK/HOLD。域检查是确定性的，不是第二个学习模型。
+
+### 2.7 失败模式分类与可检测性边界
+
+| 模式 | VLA | 地图目标 | `r_tmp` | `r_geo` | `r_goal` | 可检测？ | 处理 |
+|---|---|---|---|---|---|---|---|
+| OOD-E 执行 | 错 | 对 | 高 | 高 | 中/高 | 是 | `FALLBACK` 或 `VLA` |
+| OOD-S 语义（地图对） | 错 | 对 | 低 | 低 | 高 | 是（靠 goal） | `FALLBACK` |
+| OOD-G grounding | 错 | 错 | 低 | 低 | 低 | **否** | 只能 `HOLD`/外部信息 |
+| ID | 对 | 对 | 低 | 低 | 低 | — | `SERVO` |
+
+这个表是本报告的核心：它把「零样本泛化」拆成可检测与不可检测两部分，避免用一个笼统的成功率掩盖边界。
 
 ## 3. 算法
 
@@ -395,358 +476,540 @@ a^\star = \arg\max_{a\in\{\mathrm{SERVO},\mathrm{LOOK},\mathrm{VLA}\}}
         │ Per-port PolicyService (CPU)                             │
         │                                                          │
         │  ┌────────────────────────────────────────────────────┐  │
-        │  │ L3  VOI-MAP 元认知层（本轮新增）                    │  │
-        │  │  semantic map M_t                                   │  │
-        │  │  grounding p(o|u,M_t)                               │  │
-        │  │  budget scheduler: SERVO / LOOK / VLA / COMMIT      │  │
+        │  │ L4  ZEST-VLA 胜任力层（本轮新增）                   │  │
+        │  │  residual triad → conformal/CUSUM → trust gate      │  │
+        │  │  TRUST / FALLBACK / HOLD + soft competence c_b      │  │
+        │  └───────────────────────┬────────────────────────────┘  │
+        │                          │ allowed action set           │
+        │  ┌───────────────────────▼────────────────────────────┐  │
+        │  │ L3  VOI-MAP（第 14 轮）                             │  │
+        │  │  semantic map, grounding, budget scheduler          │  │
         │  └───────────────────────┬────────────────────────────┘  │
         │                          │ selected action              │
         │  ┌───────────────────────▼────────────────────────────┐  │
         │  │ L2  WAVE-SERVO（第 13 轮）                          │  │
-        │  │  virtual force F̂, TD-PC, phase impedance table      │  │
-        │  │  5-step correction, delay estimate, clamps          │  │
+        │  │  virtual force, TD-PC, phase impedance, clamps      │  │
         │  └───────────────────────┬────────────────────────────┘  │
-        │                          │ 30/5 chunk                 │
+        │                          │ 30/5 chunk                   │
         │  ┌───────────────────────▼────────────────────────────┐  │
-        │  │ L1  VLA server（唯一学习模型，GPU，~1Hz）            │  │
+        │  │ L1  VLA server（唯一学习模型，冻结）                 │  │
         │  │  UnifoLM-WLA-1.0, 30-step plan                      │  │
         │  └────────────────────────────────────────────────────┘  │
         └──────────────────────────────────────────────────────────┘
 ```
 
-VOI-MAP 只决定「调用哪一层、什么时候调用、目标是谁」；它不直接产生关节/末端动作；所有执行仍经过 L2 的 TD-PC 和限幅。
+**算法步骤（总览）**
 
-### 3.2 地图更新伪代码
+1. **离线校准（无标签）**：在 5 个已知 ID 任务上执行 VLA，收集残差分数 `s_b`，取 `q_α`；冻结 `α,k,h,W,r`。
+2. **每块执行前**：信任门给出允许动作集 `A_adm`；`TRUST` 允许 `SERVO`，`FALLBACK` 禁用 `SERVO`。
+3. **每块执行后**：计算 `r_tmp, r_geo, r_goal, r_dyn`；归一化融合为 `s_b`。
+4. **更新门控**：`e_b=1[s_b>q_α]`；`S_b=max(0,S_{b-1}+e_b-α-k)`；`S_b>h` 则切到 `FALLBACK`。
+5. **软胜任力**：`c_b=1-` 近期惊讶率；只进入 VOI 的成功模型，不直接触发门控。
+6. **调度**：在 `A_adm` 上按 `Δ/cost` 选动作；`TRUST` 走 VOI-MAP，`FALLBACK` 走几何语法。
+7. **复检**：`FALLBACK` 每 `r` 块做一次 `SERVO` 探针；不惊讶则回 `TRUST`，否则保持。
+8. **记录**：每个块记录残差、`S_b`、模式、动作、成本、延迟；用于 G13–G16 的预注册分析。
 
-```python
-def update_map(M, stereo_rgb, instruction, dt):
-    P = stereo_pointcloud(stereo_rgb)          # head stereo, table frame
-    regions = segment_depth_color(P, stereo_rgb)
-    preds = [predict(o, dt) for o in M.objects]  # static: mu^- = mu, Sigma^- = Sigma + Q
-    edges = []
-    for i, o in enumerate(preds):
-        for j, r in enumerate(regions):
-            d2 = mahalanobis(r.centroid, o.mu, o.Sigma + r.cov)
-            if d2 <= GATE2:
-                edges.append((i, j, d2))
-    matches = hungarian_max_likelihood(edges)
-    for i, j in matches:
-        M.objects[i] = kalman_update(preds[i], regions[j])
-    for j in unmatched(regions):
-        if region_is_object(regions[j]) and label_compatible(instruction, regions[j]):
-            M.objects.append(birth(regions[j]))   # large Sigma
-    for o in unmatched(M.objects):
-        o.nu *= DECAY
-        o.Sigma += Q_LOST                      # keep identity, inflate uncertainty
-    M.free_space = update_occupancy(M.free_space, P)
-    return M
-```
-
-### 3.3 Grounding 伪代码
+### 3.2 主循环伪代码
 
 ```python
-def ground(instruction, M):
-    schema = canonicalize(instruction)          # verb/target/reference/relation/constraints
-    cands = [o for o in M.objects if label_match(o.label, schema.target)]
-    if not cands:
-        return None, 1.0                    # high entropy -> scheduler will LOOK/VLA
-    scores = []
-    for o in cands:
-        s = W_L * label_score(o.label, schema.target)
-        s += W_C * color_score(o.color, schema.constraints)
-        s += W_G * relation_potential(o.mu, schema)
-        s -= W_P * phonetic_distance(schema.target_asr, o.label)
-        scores.append(s)
-    p = softmax(scores, T)
-    return p, entropy(p)
-
-def should_commit(p, ratio_thresh):
-    p_sorted = sorted(p, reverse=True)
-    return len(p) == 1 or (p_sorted[0] / max(p_sorted[1], 1e-9) >= ratio_thresh)
-```
-
-### 3.4 LOOK：用视角换信息
-
-`LOOK` 不是任意移动。候选是有限个**小幅、可逆、限速**的视角动作：
-
-```text
-{left 3cm, right 3cm, up 3cm, tilt_left 5°, tilt_right 5°}
-```
-
-选择规则：对每个候选视角 `v`，用当前地图与分割模型预测「哪些候选对象会变得可区分」，得到期望熵减 `\Delta H(v)`；选
-
-```math
-v^\star = \arg\max_v \frac{\Delta H(v)}{c_{\mathrm{look}}(v)}
-```
-
-实现上不训练新模型：用几何遮挡关系 + 颜色直方图 + 当前 `\Sigma_i` 做一个确定性的代理。若 `\Delta H(v^\star) < \epsilon`（看一眼也分不清），则不浪费预算，转而选择 `VLA` 或按几何先验 `COMMIT`。
-
-**相位约束**：`LOOK` 只在 APPROACH/PRECONTACT 允许；CONTACT/CARRY 禁止（会破坏接触/抓取）。
-
-### 3.5 预算调度伪代码
-
-```python
-def schedule(belief, progress, phase, budget, M, cfg):
-    c = max(belief)
-    f = lambda p: 1.0 - math.exp(-p / cfg.p0)
-
-    # COMMIT if confident enough and execution far enough
-    if c >= cfg.c_stop and progress >= cfg.p_stop:
-        return COMMIT
-
-    opts = []
-    if budget >= cfg.c_servo:
-        opts.append((SERVO, c * (f(progress + cfg.delta) - f(progress)), cfg.c_servo))
-    if phase in (APPROACH, PRECONTACT) and budget >= cfg.c_look and cfg.looks < cfg.max_looks:
-        c_after = cfg.q_look + (1 - cfg.q_look) * c
-        opts.append((LOOK, (c_after - c) * f(progress), cfg.c_look))
-    if budget >= cfg.c_vla and cfg.vlas < cfg.max_vla:
-        c_after = cfg.q_vla + (1 - cfg.q_vla) * c
-        opts.append((VLA, (c_after - c) * f(progress) + cfg.delta_plan, cfg.c_vla))
-    if not opts:
-        return COMMIT
-
-    act, gain, cost = max(opts, key=lambda o: o[1] / o[2])
-    if gain / cost < cfg.lambda_opportunity:
-        return COMMIT
-    return act
-```
-
-### 3.6 与 WAVE-SERVO 的接口
-
-- `SERVO`：调用第 13 轮的 5 步块；虚拟力、TD-PC、相位阻抗表、限幅全部不变。
-- `VLA`：异步请求 30 步计划；拿到后缓存，按 5 步切片；不阻塞当前伺服。
-- `LOOK`：小幅视角动作，不经过 VLA；动作本身仍受关节限位/速度限幅。
-- `COMMIT`：停止收集信息，执行当前 MAP 目标；若执行中编辑检测触发（第 11 轮），回到 `LOOK`/`VLA`。
-- **安全继承**：VOI-MAP 不新增执行通路；所有动作仍是第 13 轮安全集的子集。
-
-### 3.7 `get_action` 伪代码
-
-```python
-class VoiMapPolicy:
-    def __init__(self):
-        self.M = SemanticMap()
+class ZestPolicy:
+    def __init__(self, calib_scores):
+        self.M = SemanticMap()              # round 14
         self.plan = None
-        self.belief = None
-        self.progress = 0
+        self.prev_plan = None
+        self.mode = "TRUST"                 # TRUST / FALLBACK / HOLD
+        self.cusum = 0.0
+        self.q_alpha = conformal_quantile(calib_scores, alpha=0.12)
+        self.surprise_window = deque(maxlen=W)
+        self.fallback_dwell = 0
         self.phase = "APPROACH"
         self.budget = BUDGET0
-        self.looks = 0
-        self.vlas = 0
+        self.primitive_queue = []
+        self.g_prim = {}                    # historical success per primitive
 
     def get_action(self, obs):
-        self.M = update_map(self.M, obs.stereo, obs.instruction, obs.dt)
-        self.phase = observe_phase(self.M, obs)          # round 11/12
+        # 1. update map / phase / edit detector (rounds 11/14)
+        self.M = update_map(self.M, obs, self.plan)
+        self.phase = observe_phase(self.M, obs)
         if edit_detected(obs):
             self.phase = "RECOVER"
 
-        belief, H = ground(obs.instruction, self.M)
-        if belief is None or H > H_MAX:
-            act = LOOK if self._look_worth_it() else VLA
-        else:
-            act = schedule(belief, self.progress, self.phase, self.budget, self.M, CFG)
+        # 2. execute one 5-step block of the currently allowed action
+        act = self.select_action(obs)
 
-        if act == SERVO:
-            self.progress += 1
-            self.budget -= CFG.c_servo
-            return self._wave_servo_chunk(obs, self._map_target(belief))
-        if act == LOOK:
-            self.looks += 1
-            self.budget -= CFG.c_look
+        if act == "SERVO":
+            chunk = self._wave_servo_chunk(obs, self.plan)
+            self._record_pending_residual_check(obs, chunk)
+            return chunk
+
+        if act == "FALLBACK":
+            chunk = self._execute_next_primitive(obs)
+            self._record_pending_residual_check(obs, chunk, fallback=True)
+            return chunk
+
+        if act == "LOOK":
             return self._look_action(obs)
-        if act == VLA:
-            self.vlas += 1
-            self.budget -= CFG.c_vla
+
+        if act == "VLA":
             self._request_plan_async(obs)
             return self._safe_hold_or_last_chunk()
-        return self._commit_action(obs, belief)          # COMMIT
+
+        if act == "HOLD":
+            return self._safe_hold()
+
+        return self._commit_action(obs)
+
+    def on_block_finished(self, obs_before, obs_after, executed):
+        # 3. self-supervised residuals (only SERVO blocks are diagnostic)
+        if executed == "SERVO":
+            r = compute_residuals(obs_before, obs_after, self.plan,
+                                  self.prev_plan, self.M, self.phase)
+            s = self._normalized_score(r)
+            surprise = int(s > self.q_alpha)
+            self.surprise_window.append(surprise)
+            self.cusum = max(0.0, self.cusum + surprise - ALPHA - K)
+            self._update_mode(surprise)
+        elif self.mode == "FALLBACK" and executed == "PROBE":
+            r = compute_residuals(obs_before, obs_after, self.plan,
+                                  self.prev_plan, self.M, self.phase)
+            s = self._normalized_score(r)
+            surprise = int(s > self.q_alpha)
+            self._recheck(surprise)
 ```
 
-规则：
+### 3.3 残差计算伪代码
 
-- 任何异常 → 返回上一合法 chunk 或安全 hold；绝不返回 NaN/错误形状。
-- 每个端口独立维护地图、信念、预算、计数。
-- `VLA` 除冷启动外不阻塞；plan 过期时用旧 plan + 伺服。
+```python
+def compute_residuals(obs0, obs1, plan, prev_plan, M, phase):
+    r = {}
+    # temporal: only if a previous plan overlaps
+    if prev_plan is not None and plan is not None:
+        r["tmp"] = normalized_action_diff(plan, prev_plan)
+    else:
+        r["tmp"] = 0.0
 
-### 3.8 状态机
+    # geometric: FK + head stereo tracking + optional flow
+    dx_obs = fk(obs1.q) - fk(obs0.q)
+    dx_cmd = planned_cartesian_delta(plan, obs0)
+    r["geo"] = norm(dx_obs - dx_cmd) / (norm(dx_cmd) + EPS)
+    if obs1.depth is not None and target_visible(M, obs1):
+        flow_pred = project_motion(dx_cmd, obs1.depth, obs1.camera)
+        r["geo"] += LAMBDA_F * norm(obs1.flow - flow_pred) / SIGMA_FLOW
+
+    # goal: distance progress in approach; edit/slip in contact
+    if phase in ("APPROACH", "PRECONTACT"):
+        d0 = distance(fk(obs0.q), M.target_pose)
+        d1 = distance(fk(obs1.q), M.target_pose)
+        r["goal"] = goal_residual(d0, d1, planned_distance_delta(plan))
+    else:
+        r["goal"] = edit_score(obs0, obs1)   # round 11
+
+    # dynamic: hard limits
+    r["dyn"] = max(0.0, max_ratio(obs1.qdot, obs1.qddot) - 1.0)
+    return r
+
+def normalized_score(r, scales):
+    z = {k: r[k] / (scales[k] + EPS) for k in r}
+    return 3.0 * z["dyn"] + z["tmp"] + z["geo"] + z["goal"]
+```
+
+### 3.4 信任门伪代码
+
+```python
+def _update_mode(self, surprise):
+    if self.mode == "TRUST":
+        if self.cusum > H:
+            self.mode = "FALLBACK"
+            self.fallback_dwell = 0
+    elif self.mode == "FALLBACK":
+        self.fallback_dwell += 1
+        if self.fallback_dwell >= RECHECK_EVERY:
+            self.mode = "PROBE"
+            self.fallback_dwell = 0
+    elif self.mode == "PROBE":
+        if not surprise:
+            self.mode = "TRUST"
+            self.cusum = 0.0
+        else:
+            self.mode = "FALLBACK"
+            self.fallback_dwell = 0
+
+def _recheck(self, surprise):
+    if not surprise:
+        self.mode = "TRUST"
+        self.cusum = 0.0
+    else:
+        self.mode = "FALLBACK"
+        self.fallback_dwell = 0
+```
+
+### 3.5 调度器伪代码
+
+```python
+def select_action(self, obs):
+    allowed = self._allowed_actions()      # gate as hard constraint
+    if not allowed:
+        return "HOLD"
+
+    b = self.target_belief                 # round 14
+    p = self.progress
+    c = self.soft_competence()             # 1 - surprise rate
+    bmax = max(b)
+
+    opts = []
+    if "SERVO" in allowed:
+        gain = c * bmax * (f(p + DELTA) - f(p))
+        opts.append(("SERVO", gain, C_SERVO))
+    if "LOOK" in allowed and self.phase in ("APPROACH", "PRECONTACT"):
+        gain = look_gain(b, self.M, self.phase)   # round 14
+        opts.append(("LOOK", gain, C_LOOK))
+    if "VLA" in allowed and self.budget >= C_VLA:
+        c_after = c + (1 - c) * Q_VLA
+        gain = (c_after - c) * bmax * f(p) + DELTA_PLAN
+        opts.append(("VLA", gain, C_VLA))
+    if "FALLBACK" in allowed:
+        g = self.g_prim.get(self.current_primitive, G_PRIOR)
+        gain = bmax * g * (f_geo(p + DELTA) - f_geo(p))
+        opts.append(("FALLBACK", gain, C_FALLBACK))
+
+    if not opts:
+        return "HOLD"
+    act, gain, cost = max(opts, key=lambda o: o[1] / o[2])
+    if gain / cost < LAMBDA_OPPORTUNITY:
+        return "COMMIT" if "COMMIT" in allowed else "HOLD"
+    return act
+
+def _allowed_actions(self):
+    if self.mode == "TRUST":
+        return {"SERVO", "LOOK", "VLA", "COMMIT"}
+    if self.mode == "FALLBACK":
+        acts = {"LOOK", "VLA", "HOLD"}
+        if self.domain_check(self.instruction) == "geometric":
+            acts.add("FALLBACK")
+        return acts
+    return {"HOLD"}
+```
+
+### 3.5.1 语法规划与域检查伪代码
+
+```python
+def domain_check(schema, M):
+    if schema.task not in GRAMMAR:
+        return "semantic" if schema.task in SEMANTIC_TASKS else "unknown"
+    if not all(obj_in_map(M, x) for x in schema.objects):
+        return "unknown"
+    if not all(precondition(x, M) for x in schema.objects):
+        return "unknown"
+    return "geometric"
+
+def plan_primitives(schema, M):
+    rule = GRAMMAR[schema.task]
+    seq = []
+    for prim, args in rule:
+        bound = bind(args, schema, M)
+        if bound is None:
+            return None
+        seq.append((prim, bound))
+    return seq
+```
+
+规划器是确定性的：没有学习、没有大模型搜索；规则来自 32 个任务描述的手工分解。`precondition` 检查目标可见/可达、夹爪空闲、自由空间足够；任一失败则 `FALLBACK` 不可用。
+
+### 3.6 与 WAVE-SERVO / VOI-MAP 的接口
+
+- `SERVO`：调用第 13 轮 5 步块；虚拟力、TD-PC、相位阻抗表、限幅全部不变。
+- `VLA`：异步请求 30 步计划；拿到后缓存，按 5 步切片；不阻塞当前伺服。
+- `LOOK`：小幅视角动作，受关节限位/速度限幅；只在 APPROACH/PRECONTACT。
+- `FALLBACK`：几何原语通过同一 WAVE-SERVO 执行；原语的笛卡尔目标来自语义地图。
+- `COMMIT`/`HOLD`：保持或安全停止。
+- **安全继承**：ZEST 不新增执行通路；它只删除动作。所有动作仍是第 13 轮安全集的子集。
+
+### 3.7 状态机
 
 ```text
-INIT → GROUND → {SERVO | LOOK | VLA | COMMIT}
-                  │        │       │
-                  │        │       └─→ PLAN → APPROACH → ...
-                  │        └─→ 更新地图/信念 → GROUND
-                  └─→ APPROACH → PRECONTACT → CONTACT → CARRY → DONE
+INIT → GROUND → TRUST ⇄ FALLBACK → (PROBE) → TRUST
+                  │        │
+                  │        └─→ primitive queue → WAVE-SERVO
+                  └─→ VOI-MAP: SERVO / LOOK / VLA / COMMIT
                                          │
                                          └─ edit_score>θ_e → RECOVER → GROUND
 ```
 
-与第 13 轮的状态机相比，新增 `GROUND` 和 `LOOK` 两个节点；`RECOVER` 回到 `GROUND` 而不是直接重规划，这样「目标错了」和「目标对了但执行失败」被区分开。
+与第 14 轮相比，新增 `FALLBACK` 和 `PROBE` 两个节点；`RECOVER` 仍然回到 `GROUND`，这样「目标错」和「执行错」被区分开。
+
+### 3.8 `get_action` 的异常与并发规则
+
+- 任何异常 → 返回上一合法 chunk 或安全 hold；绝不返回 NaN/错误形状。
+- 每个端口独立维护地图、信念、预算、CUSUM、模式；无跨端口共享状态。
+- `VLA` 除冷启动外不阻塞；plan 过期时用旧 plan + 伺服。
+- `FALLBACK` 的原语队列为空时自动回到 `TRUST` 或 `HOLD`，不空转。
+- `PROBE` 只在原语边界/APPROACH 触发；CONTACT/CARRY 不探针。
 
 ## 4. 性质、复杂度与正确性
 
-### 4.1 Grounding 的 Bayes 解释
+### 4.1 标签无关性
 
-**命题 1（模型内最优）**：把 §2.3 中除音素项以外的打分写成先验能量
+**命题 1（无监督信号）**：残差 `r_tmp, r_geo, r_goal, r_dyn` 只是 `(o_b, A_b, M_b, A_{b-1})` 的确定性函数；conformal 分位数与 CUSUM 只使用残差序列，不使用成功标签 `y`。因此 ZEST 不训练监督模型，也不更新 VLA 权重。
 
+**证明**：由构造，所有函数只读取观测、动作、地图和上一计划；`q_α` 是校准残差的经验分位数；`S_b` 是 `e_b` 的确定性递推；`e_b` 是 `s_b` 与 `q_α` 的比较。没有任何一步读取 `y`。∎
+
+**边界**：这不等于「无信息泄漏」；校准集来自已知任务，若校准集与测试分布不可交换，conformal 保证失效（见 4.2）。
+
+### 4.2 ID 假警报控制
+
+**命题 2（split conformal 边际保证）**：设校准残差 `s_1,...,s_n` 与测试残差 `s_{n+1}` 在 ID 下可交换，`q_α` 取校准集的第 `⌈(n+1)(1-α)⌉` 个次序统计量（若超出 `n` 则取 `+∞`），则
 ```math
-p(o_i)\ \propto\ \exp\!\Bigl(\frac{w_\ell \mathbb 1[\ell_i\in\mathrm{syn}]+w_c\mathbb 1[\mathrm{color}_i\in C]+w_g\phi_{\mathrm{rel}}}{T}\Bigr),
+\Pr(s_{n+1}>q_\alpha)\le \alpha.
 ```
 
-把音素项写成似然
+**证明**：标准 split conformal 结论（Vovk et al., 2005；Angelopoulos & Bates, 2023）。∎
 
+**CUSUM 假警报**：若 ID 下 `e_b` 独立同分布 `Bernoulli(α)`，则 `S_b` 是一个带负漂移 `-(α+k)` 的随机游走；阈值 `h` 越大，假警报的平均运行长度（ARL）越长，近似随 `h` 指数增长（Page, 1954；Lorden, 1971）。本报告不给出精确 ARL 公式，因为它依赖 `α,k,h` 的具体取值和 `e_b` 的相关结构；正式评测前用校准集模拟 ARL。
+
+**边界**：这是边际保证，不是条件保证；对每个任务/每个物体不保证 ≤α。若真实 OOD 破坏可交换性，`q_α` 可能过松或过紧；self-normalization 和 CUSUM 是工程兜底，不是理论保证。
+
+### 4.3 OOD 检测延迟
+
+**命题 3（CUSUM 延迟，标准近似）**：若 OOD 下 `e_b` 独立同分布 `Bernoulli(α')`，且 `α'>α+k`，则 CUSUM 从 0 到 `h` 的期望检测延迟近似为
 ```math
-p(z\mid o_i)\ \propto\ \exp\!\Bigl(-\frac{w_p\,d_{\mathrm{phon}}(z,\ell_i)}{T}\Bigr),
+\mathbb E[\tau]\approx \frac{h}{\alpha'-\alpha-k}+O(1).
 ```
 
-则 `p(o_i|z) ∝ p(z|o_i)p(o_i)` 正好是 §2.3 的 softmax；MAP 选择最小化 0-1 损失。
+**证明**：带正漂移 `α'-α-k` 的随机游走首次越过 `h` 的期望时间；标准 CUSUM 结果（Lorden, 1971）。∎
 
-**证明**：由 Bayes 公式，`p(o_i|z) ∝ p(z|o_i)p(o_i)`；指数相加即得 softmax；0-1 损失的贝叶斯最优决策是后验众数。∎
+**读法**：OOD 越严重（`α'` 越大），检测越快；`h` 越大越保守但越慢。本轮合成实验用 `α=0.12, k=0.05, h=2.5`，在 OOD-E 上通常在 2–3 个块内触发。
 
-**边界**：这证明的是「在假设的噪声模型下最优」，不是「在真实 ASR 下最优」。若真实噪声不同（例如同音词不是对称替换），后验会 misspecified；必须用 G10 的 ECE 校准来检验，而不是把命题 1 当现实保证。
+**边界**：若 OOD 是瞬态的、持续时间短于检测延迟，CUSUM 可能不触发；这正是需要复检/滞回的原因（见 4.5）。
 
-### 4.2 调度器的一步最优性与多步缺口
+### 4.4 安全降级
 
-**命题 2（一步分数背包）**：在单步决策、成本可加、动作互斥的设定下，`\arg\max_a \Delta_a/c_a` 是「单位成本成功增益」最大的动作。
+**命题 4（门只删动作）**：ZEST 的输出动作集是第 13/14 轮安全动作集的子集；`FALLBACK` 原语通过同一 WAVE-SERVO 执行。因此 ZEST 不破坏虚拟端口无源性、限幅和相位阻抗表。
 
-**证明**：对任意两个动作 `a,b`，比较 `\Delta_a/c_a` 与 `\Delta_b/c_b`；比值大者在固定成本下增益更大，或在固定增益下成本更低。单步可行域是离散的，逐项比较即得。∎
+**证明**：由构造，`TRUST` 的动作集是 VOI-MAP 的子集；`FALLBACK` 的动作集是 `{LOOK, VLA, FALLBACK, HOLD}`，其中 `FALLBACK` 由 WAVE-SERVO 执行；`HOLD` 是安全停止。ZEST 不直接写关节/末端指令。安全集对子集封闭。∎
 
-**多步缺口**：真正的目标是有限时域 POMDP；一步贪心忽略了「信息影响未来」的期权价值。若把「购买的信息」看成集合函数，且期望成功对购买集合是单调自适应次模的、成本可加，则自适应贪心有一常数近似（Golovin & Krause, 2011）。**但本方案没有证明自己的成功模型满足自适应次模性**，所以只声明「一步局部最优 + 经验有效」，不声明全局近似比。这是本轮刻意保留的理论缺口。
+**边界**：这保证「控制器安全」，不保证「任务安全」。如果几何原语选错目标或碰撞，门控不负责；需要语义地图的自由空间检查和原语前置条件。
 
-### 4.3 非退化与安全继承
+### 4.5 ID 非退化与瞬态恢复
 
-**命题 3（极限退化）**：
+**命题 5（ID 非退化）**：若 VLA 胜任且残差是 ID，则以概率至少 `1-α` 每步 `e_b=0`；由于 `0-α-k<0`，CUSUM 保持在 0，门保持在 `TRUST`，调度退化为 VOI-MAP。唯一的额外成本是残差计算和假警报触发的 fallback。
 
-- 若目标唯一（`|C|=1`）且预算充足，则 `c=1`，`LOOK/VLA` 的边际增益为 0，调度器选择 `SERVO` 直到 `p≥p_stop`，再 `COMMIT`；行为退化为 WAVE-SERVO。
-- 若预算只够 `SERVO`（`B<c_l` 且 `B<c_v`），动作集只剩 `SERVO/COMMIT`；行为退化为 CHUNK-SERVO。
-- 若预算为 0，返回安全 hold/上一 chunk；行为退化为开环 VLA。
+**证明**：由命题 2 和 CUSUM 递推直接得到。∎
 
-**证明**：逐条检查动作集与 `\Delta/c` 的符号即可。∎
+**瞬态恢复**：若 OOD 是短暂的，CUSUM 触发后进入 `FALLBACK`；复检探针在 OOD 消失后得到 `e=0`，`S_b←0`，回到 `TRUST`。这避免「一次误报永久 fallback」。本轮的瞬态实验（§5.4）显示：永久 fallback 的成功率 .433，复检 .891，VLA-only .951；复检把损失从 51.8pp 降到 6.0pp。
 
-**命题 4（安全继承）**：VOI-MAP 的输出是 `{SERVO, LOOK, VLA, COMMIT}` 之一；`SERVO`/`VLA` 产生的动作经过第 13 轮的 TD-PC 与限幅；`LOOK` 是头部/躯干限速、限位、可逆的小幅视角动作；`COMMIT` 是保持/停止。故 VOI-MAP 的可达动作集是第 13 轮安全集的子集，虚拟端口的无源性保证不被破坏。
+**边界**：复检本身有成本；若 OOD 频繁但短暂，探针会浪费预算。需要用滞回/最小驻留时间控制。
 
-**证明**：由构造，VOI-MAP 不直接写关节/末端指令，只选择已有安全动作；安全集对子集封闭。∎
+### 4.6 零样本组合的条件保证
 
-**边界**：这仍然只保证「虚拟端口无源」和「动作在限幅内」，**不保证物理接触不撞坏**——这是第 13 轮的最大风险，本轮没有消除。
+**命题 6（语法组合，条件性）**：假设指令 `u` 被域检查判为 `geometric`，规划器得到 `L` 个原语，每个原语在目标位姿正确时成功概率至少 `g`，且原语间错误独立。则组合策略的成功概率至少 `g^L`。
 
-### 4.4 复杂度
+**证明**：独立事件交的概率下界。∎
 
-| 模块 | 复杂度 | 典型值（N≤20, P≤2k, |u|≤20） |
+**边界**：`g^L` 是保守下界；真实原语不独立，误差会累积。更重要的是，若地图目标错（OOD-G），`g` 的前提不成立，组合保证失效。这个命题只覆盖「地图对、VLA 错」的几何可分解任务。
+
+### 4.7 OOD-G 不可检测性
+
+**命题 7（不可检测边界）**：设 ID 下残差分布为 `P_ID`，OOD-G 下为 `P_G`。若 `P_G=P_ID`（或全变差距离 `TV(P_ID,P_G)=ε`），则任何只依赖残差的检测器 `d(r)` 满足
+```math
+\mathrm{FPR}+\mathrm{FNR}\ge 1-\epsilon,
+```
+等价地，AUC 至多 `1/2+ε/2`。
+
+**证明**：Neyman–Pearson/全变差下界；两个相同分布的任何检验都不优于随机。∎
+
+**读法**：如果 VLA 和地图共享同一个错误先验，残差看起来和 ID 一样，ZEST 无法检测。这不是残差工程做得不够，而是信息论边界。要突破它，需要独立于 VLA/地图的信号（人类反馈、第二模态、跨指令一致性、任务清单约束），本轮不做。
+
+### 4.8 早期中止的成本上界
+
+**命题 8（坏块成本）**：30 步计划按 6 个 5 步块执行。若信任门在第 `b` 个块后触发，则浪费的执行成本至多 `b c_s`；相比执行完整坏计划的 `6 c_s`，节省 `(6-b)c_s`。VLA 调用成本 `c_v` 是沉没成本，门控无法收回。
+
+**证明**：由执行结构直接得到。∎
+
+**读法**：`b` 的期望由命题 3 的检测延迟控制。若 OOD 严重，`b` 很小，节省接近 `5c_s`；若 OOD 轻微，`b` 可能接近 6，节省消失。这也是为什么门控对「严重但短暂」的失败最有价值。
+
+### 4.9 复杂度
+
+| 模块 | 复杂度 | 典型值（H=30, d=14, P≈100, N≤20） |
 |---|---|---|
-| 点云/分割 | `O(P)` | ~0.5 ms |
-| 数据关联 | `O(N^3)`（匈牙利） | N=20 → <0.2 ms |
-| 卡尔曼 | `O(N)` | <0.05 ms |
-| Grounding | `O(|C|\cdot|u|\cdot L)` | <0.1 ms |
-| 调度 | `O(|A|)=4` | <0.01 ms |
-| **总计（CPU 开销）** | — | **<2 ms / get_action** |
+| 时序残差 | `O(Hd)` | <0.05 ms |
+| 几何残差 | `O(P)` | <0.3 ms |
+| 目标进度 | `O(N)` | <0.02 ms |
+| 动力学残差 | `O(Hd)` | <0.05 ms |
+| MAD/融合 | `O(W)` | <0.02 ms |
+| conformal 分位数 | `O(log W)`（有序窗口） | <0.01 ms |
+| CUSUM/门控 | `O(1)` | <0.001 ms |
+| 语法规划 | `O(|P|N)` | <0.1 ms |
+| **总计（CPU）** | — | **<0.6 ms / block** |
 
-总延迟仍由 VLA 推理与网络主导；VOI-MAP 的 CPU 开销相对可忽略。内存 `O(N + |F_t|)`，单端口 <50 MB。
-
-### 4.5 为什么不是「总是调用 VLA」或「总是伺服」
-
-- **总是 VLA**：每次 `c_v` 高；在 32×10 的评测里，延迟和限流会直接变成 timeout；而且 VLA 对「最后 3 厘米」的几何精度不如 5 步伺服（第 12 轮已论证）。合成实验里 `always_vla` 在所有预算档都被支配（§5.3）。
-- **总是伺服**：目标错时，伺服越稳越糟；没有机制去获取新信息。
-- **固定 LOOK-first**：在简单任务上浪费一次 LOOK；在预算紧张时挤掉执行步。合成实验里 `look_first` 的平均 succ/cost 低于 `look_gate` 和 VOI（§5.3）。
-- **VOI-MAP**：把「要不要买信息」变成显式决策；预算紧时自动退化为伺服，目标清楚时自动跳过 LOOK。
+总延迟仍由 VLA 推理与网络主导；ZEST 的 CPU 开销相对可忽略。内存 `O(N+W+H)`，单端口 <10 MB。
 
 ## 5. 本轮合成实验（实跑，B 级证据）
 
 ### 5.1 这不是基准证据
 
-这是一个**合成机制检查**，只回答一个问题：在「指令噪声 + 候选歧义 + 硬预算」的玩具模型里，VoI 调度是否比固定调度更省/更准。它不证明真机收益，也不证明地图在真实桌面可用。脚本：`exp/voi_map_sim.py`；结果：`exp/voi_map_results.json`。
+这是一个**合成机制检查**，只回答一个问题：在「冻结 VLA 在 ID 胜任、在 OOD 不胜任；残差有噪声；fallback 有成功率/成本」的玩具模型里，自监督信任门是否比固定策略更省/更准，以及它的边界在哪里。它不证明真机收益，也不证明残差在真实桌面上可用。脚本：`exp/zest_sim.py`；结果：`exp/zest_results.json`。
 
 ### 5.2 生成模型（全部声明，不拟合）
 
 ```text
-- episode 为 50/50 混合：
-    simple:    k=1，无歧义；
-    ambiguous: k∈{2,3,4}，ASR 错误率 e。
-- ASR：以概率 e 污染标签；其中一半是真同音（音素编辑距离修不了），
-  一半是近音（编辑距离能修）。
-- grounding 前端：exact-match vs 音素编辑距离。
-- 动作成本：SERVO=1（+1 执行进度），LOOK=2（q=0.8 解决目标，最多 2 次），
-  VLA=5（q=0.95，最多 1 次）。
-- 成功 = 提交目标正确 且 Bernoulli(1-exp(-progress/2.5))。
-- 预算 B ∈ {5,8,11,14}；每个格子 5000 episodes；固定种子。
+- episode 类型：
+    ID           p = 1-π
+    OOD-E 执行    p = π(1-ρ)
+    OOD-S 语义    p = πρ，其中地图目标对的比例 mapok
+    OOD-G 静默    p = πρ(1-mapok)
+- ID 中 15% 是 noisy-ID：VLA 仍胜任，但残差噪声更大（模拟透明/反光）。
+- SERVO 每步进度 ~ Bernoulli(c_true·0.9)；
+  FALLBACK 每步进度 ~ Bernoulli(g_true·0.8)。
+- 成功 = 在预算 B 内累计进度 ≥ p_need。
+- 成本：SERVO=1，FALLBACK=1.2；静态 B=10、p_need=3；瞬态 B=12、p_need=4。
+- 残差三元组是类型的含噪视图；OOD-G 的残差分布与 ID 相同（静默）。
+- 门控只使用 SERVO 块的残差；FALLBACK 残差不诊断 VLA（反事实）。
+- 参数：α=0.12, k=0.05, h=2.5, W=5, 复检每 3 个 fallback 块。
+- 校准：在 ID 混合（含 noisy-ID）上取 s 的 90% 分位，q_z=4.211。
+- 主表每个格子 12,000 episodes；灵敏度每个格子 8,000；瞬态 12,000；固定种子。
+- Oracle 是使用真实 `c_true/g_true` 的一步期望进度贪心，忽略预算与长期影响；它不是 POMDP 最优，只作为参考上界。
 ```
 
-**重要简化**：VLA 在玩具里只是一个「消歧器」，没有建模它的重规划/长程价值；因此实验**对 VLA 保守**，不能据此否定 VLA 在长程任务上的作用。
+**重要简化**：VLA 在玩具里只是一个「每步成功概率」，没有建模 30 步块内的时序结构、长程重规划、真实图像/深度；因此实验对 VLA 是**保守的**，不能据此否定 VLA 的长程价值。残差也是标量代理，不是真实几何前端；合成实验只用了三个软残差（temporal/geometric/goal），没有建模 `r_dyn`。
 
-### 5.3 结果
+### 5.3 静态 OOD 结果
 
-**Grounding MAP 准确率**（混合 simple/ambiguous）：
+**ρ=0（所有 OOD 都可检测）**
 
-| ASR 错误率 `e` | exact-match | 音素编辑距离 + 不硬提交 |
-|---:|---:|---:|
-| 0.10 | 0.969 | **0.994** |
-| 0.25 | 0.919 | **0.986** |
-| 0.40 | 0.872 | **0.980** |
+| 策略 | 成功率 | 平均成本 | 成功率/成本 | ID fallback | OOD fallback | AUROC |
+|---|---:|---:|---:|---:|---:|---:|
+| VLA-only | .830 | 5.67 | .146 | .000 | .000 | — |
+| Always-FALLBACK | .792 | 7.75 | .102 | 1.000 | 1.000 | — |
+| Fixed gate | .889 | 5.65 | .157 | .001 | .866 | .994 |
+| Conformal（不复检） | .910 | 5.55 | .164 | .001 | .915 | .994 |
+| **CUSUM+recheck（ZEST）** | **.915** | **5.68** | **.161** | **.001** | **.913** | **.994** |
+| Oracle | .952 | 5.25 | .181 | .000 | .984 | — |
 
-**预算调度**（对 `e∈{0.10,0.25,0.40}`、`k∈{2,4}` 取平均；格式：成功率 / 平均成本 / 成功率每成本）：
+**ρ=0.25（25% 静默语义 OOD）**
 
-| 预算 B | SERVO | LOOK-first | LOOK-gate | Always-VLA | VOI-MAP |
-|---:|---|---|---|---|---|
-| 5 | **.852 / 5.00 / .170** | .700 / 5.00 / .140 | .812 / 5.00 / .163 | .000 / 5.00 / .000 | .842 / 5.00 / .168 |
-| 8 | **.946 / 8.00 / .118** | .905 / 8.00 / .113 | .939 / 8.00 / .117 | .702 / 8.00 / .088 | .936 / 8.00 / .117 |
-| 11 | .956 / 9.16 / .104 | .957 / 10.08 / .095 | .958 / 8.90 / **.108** | .908 / 11.00 / .083 | .957 / 8.85 / **.108** |
-| 14 | .960 / 10.32 / .093 | .957 / 10.31 / .093 | .961 / 9.29 / .103 | .958 / 13.02 / .074 | .959 / 8.96 / **.107** |
+| 策略 | 成功率 | 平均成本 | 成功率/成本 | ID fallback | OOD fallback | AUROC |
+|---|---:|---:|---:|---:|---:|---:|
+| VLA-only | .827 | 5.73 | .144 | .000 | .000 | — |
+| Always-FALLBACK | .772 | 7.83 | .099 | 1.000 | 1.000 | — |
+| Fixed gate | .876 | 5.66 | .155 | .001 | .701 | .925 |
+| Conformal（不复检） | .898 | 5.58 | .161 | .001 | .762 | .929 |
+| **CUSUM+recheck（ZEST）** | **.899** | **5.69** | **.158** | **.002** | **.769** | **.927** |
+| Oracle | .940 | 5.28 | .178 | .001 | .916 | — |
 
-**高歧义代表行**（`B=11, e=0.40, k=4`）：
+**ρ=0.50（一半 OOD 静默）**
 
-| 策略 | 成功率 | 平均成本 | 成功率/成本 |
+| 策略 | 成功率 | 平均成本 | 成功率/成本 | ID fallback | OOD fallback | AUROC |
+|---|---:|---:|---:|---:|---:|---:|
+| VLA-only | .832 | 5.71 | .146 | .000 | .000 | — |
+| Always-FALLBACK | .744 | 8.01 | .093 | 1.000 | 1.000 | — |
+| Fixed gate | .863 | 5.68 | .152 | .001 | .537 | .860 |
+| Conformal（不复检） | .885 | 5.59 | .158 | .002 | .626 | .858 |
+| **CUSUM+recheck（ZEST）** | **.883** | **5.68** | **.155** | **.001** | **.620** | **.859** |
+| Oracle | .927 | 5.37 | .173 | .001 | .832 | — |
+
+### 5.4 瞬态 OOD / 恢复结果
+
+场景：前 5 个动作 VLA 不胜任，之后恢复；门控若永久 fallback，会错过恢复后的执行机会。
+
+| 策略 | 成功率 | 平均成本 | 成功率/成本 | fallback 率 |
+|---|---:|---:|---:|---:|
+| VLA-only | .951 | 9.22 | .103 | .000 |
+| Always-FALLBACK | .509 | 10.58 | .048 | 1.000 |
+| Fixed gate | .814 | 10.97 | .074 | .991 |
+| Conformal（不复检） | .433 | 11.32 | .038 | .942 |
+| **CUSUM+recheck（ZEST）** | **.891** | **10.44** | **.085** | **.945** |
+| Oracle | .957 | 8.93 | .107 | .969 |
+
+**读法**：永久 fallback 把一次瞬态失败变成整段失败（.433）；复检把损失从 51.8pp 降到 6.0pp（相对 VLA-only .951）。ZEST 仍略低于 VLA-only，因为它保守地先 fallback 了 3 个块；但这 6pp 是「风险控制的价格」。若瞬态失败更长，VLA-only 会掉得更快，ZEST 的相对优势会扩大。
+
+### 5.5 残差通道消融（AUROC）
+
+| 残差通道 | OOD-E vs ID | OOD-S（地图对）vs ID | OOD-G（静默）vs ID |
 |---|---:|---:|---:|
-| SERVO | .943 | 9.5 | .099 |
-| LOOK-first | .957 | 10.1 | .095 |
-| LOOK-gate | .953 | 9.1 | .105 |
-| Always-VLA | .901 | 11.0 | .082 |
-| VOI-MAP | **.959** | 9.1 | **.106** |
+| 时序 `r_tmp` | .923 | .506 | .508 |
+| 几何 `r_geo` | .922 | .498 | .505 |
+| 目标进度 `r_goal` | .803 | .956 | .499 |
+| 等权融合 | **.984** | **.869** | **.505** |
 
-### 5.4 读法：哪些假设被支持，哪些没有
+**读法**：
+
+- 时序/几何残差对 OOD-E 很强（.92），但对 OOD-S 几乎无效（≈.50）。
+- 目标进度残差对 OOD-S 很强（.956），但对 OOD-E 较弱（.803）。
+- 等权融合在 OOD-E 上超过任一单通道（.984），但在 OOD-S 上被两个无信息通道稀释（goal 单通道 .956 → 融合 .869）。这说明固定等权不是最优：三元组的价值在于**不需要预知 OOD 类型**，但融合权重应按通道可靠性调整。本轮为可解释性保留等权，并把固定加权融合（仍不学习）列为 G13 的消融；若真机上加权显著更好，就升级权重，而不是引入学习。
+- OOD-G 上所有通道都≈.50；这是命题 7 的合成验证：静默语义失败在残差空间中不可检测。
+
+### 5.6 灵敏度：fallback 质量/成本
+
+固定 ρ=0.25、π=0.35；`g_scale` 缩放原语成功率，`fb_cost` 是 FALLBACK 每步成本。VLA-only 成功率恒为 .828（它不使用 fallback）。
+
+| g_scale | fb_cost | VLA succ/cost | ZEST succ/cost | Δ成功率 |
+|---:|---:|---:|---:|---:|
+| 0.75 | 1.0 | .145 | .154 | +3.61pp |
+| 0.75 | 1.2 | .145 | .149 | +3.61pp |
+| 0.75 | 1.5 | .145 | **.142** | +1.04pp |
+| 1.00 | 1.0 | .145 | .163 | +6.91pp |
+| 1.00 | 1.2 | .145 | .158 | +6.91pp |
+| 1.00 | 1.5 | .145 | .152 | +4.97pp |
+| 1.25 | 1.0 | .145 | .173 | +9.95pp |
+| 1.25 | 1.2 | .145 | .168 | +9.95pp |
+| 1.25 | 1.5 | .145 | .160 | +8.13pp |
+
+**读法**：ZEST 的收益随 fallback 质量上升、随 fallback 成本下降。当 `g_scale=0.75, fb_cost=1.5` 时，ZEST 的 succ/cost（.142）略低于 VLA-only（.145），说明**弱且贵的 fallback 不值得用**。完整调度器的 `Δ_fallback/c_f` 比较应该避免这个区域；本实验的简化门控没有估计 `g_prim`，所以在该角落会过度 fallback。这是下一轮要补的：用历史成功率或保守先验做 fallback 可用性判断。
+
+### 5.7 读法：哪些假设被支持，哪些没有
 
 **被支持**：
 
-- **F1（H1）**：音素编辑距离在高噪声下显著提升 grounding MAP；`e=0.40` 时 .872→.980。近音错误是主要可修部分；真同音仍会失败，这符合预期。
-- **F3（H3）**：预算 `B=5` 时，VOI-MAP 自动退化为近似 SERVO（.842 vs .852，差距 ≤1pp，本轮未做显著性检验），没有出现「为了消歧把预算花光」。这是安全性/鲁棒性证据。
-- **F2（H2，弱）**：`B≥11` 时，VOI/LOOK-gate 的成功率每成本高于 SERVO 和 LOOK-first；VOI 在成功率与 SERVO 持平的情况下把平均成本从 9.16 降到 8.85（约 3.4%）。收益是**成本效率**，不是大幅涨点。
+- **H1（部分）**：残差三元组在 OOD-E 上融合最强（.984），在 OOD-S（地图对）上 goal 单通道最强（.956），等权融合 .869 仍远高于 temporal/geometric 的 ≈.50；OOD-G 上所有通道≈.50，符合理论边界。**“融合优于单通道”只在 OOD-E 成立，OOD-S 不成立**；这支持「多通道必要」，但不支持「等权最优」。
+- **H2**：静态 OOD 成功率相对 VLA-only 提升 +8.5pp（ρ=0）、+7.2pp（ρ=.25）、+5.1pp（ρ=.5）；succ/cost 提升 +10.3%、+9.7%、+6.2%；ID fallback 率仅 .1–.2%。
+- **H3**：瞬态 OOD 上，复检 .891 vs 永久 fallback .433；复检显著更重要。
+- **H5（部分）**：fallback 在 `g_scale≥1.0`、`fb_cost≤1.2` 时带来正收益；在弱/贵角落不成立，需要准入判断。
 
-**没有被支持**：
+**没有被支持 / 被证伪**：
 
-- **F4（H4 失败）**：完整 VoI 贪心并没有显著优于「置信度门控的 LOOK」。`VOI - LOOK-gate` 的成功率/成本均值 `+0.0025`，范围 `[-0.001, +0.010]`，跨 0。**结论：在这个玩具里，收益主要来自「门控 + 成本感知」，而不是 VoI 公式本身。** 下一轮应把 LOOK-gate 作为强基线；若真机也不能显著超过它，就砍掉完整 VoI。
-- **Always-VLA 被支配**：所有预算档的成功率/成本都最低；`B=14` 时成功率追平 SERVO（.958 vs .960），但平均成本高约 26%。把大模型当万能修复在成本上不成立。
-- **低预算下不能靠消歧**：`B=5` 时 SERVO 最好；这提醒我们，VOI-MAP 的价值区间是「预算中等以上 + 歧义非平凡」，不是所有场景。
+- **H4 失败**：在完整结果 JSON 中，`zest` 与 `recheck`（无 Beta 后验）逐格相同（静态和瞬态）；Beta 下界没有改变行为。**结论：从主算法中移除 Beta 后验；只保留 CUSUM+滞回+复检。** 这是本轮相对初稿的主动剪枝。
+- **OOD-G 不可检测**：ρ=.5 时 AUROC .859，OOD fallback 率 .620；剩下 38% 的 OOD 是静默的，门控无法触发。这不是调参问题，是命题 7 的边界。
+- **Always-FALLBACK 被支配**：ID 和静态 OOD 都差于 ZEST；它不能替代门控。
+- **Fixed gate 是强基线**：静态 OOD 上 .889 vs ZEST .915（+2.6pp）；瞬态上 .814 vs .891（+7.7pp）。ZEST 的主要优势在瞬态恢复和校准，不是静态 OOD 的大幅涨点。如果真机上瞬态失败很少，固定阈值门可能足够；这是 G13/G14 要回答的。
 
-### 5.5 效度威胁
+### 5.8 效度威胁
 
 | 威胁 | 影响 | 下一轮怎么补 |
 |---|---|---|
-| 地图被假设为完美 | **没有测试最大风险**（地图前端误差/关联错误） | G12：真实/半真实桌面，注入位姿噪声与遮挡 |
-| VLA 只建模为消歧器 | 低估 VLA 的长程价值 | 加入多阶段任务与 `Δ_plan` |
-| ASR 噪声是合成的 | 真实同音/改写分布未知 | 用任务指令做人工同音/改写集，测 ECE |
-| 候选数 ≤4 | 真实桌面可能更多 | 扩到 8–10 个对象 |
-| 成本是归一化的 | 真实延迟/限流不同 | 用单任务通道实测 `c_v,c_l,c_s` |
-| 无真机 | 不能证明物理接触安全 | 保留第 13 轮的限幅/重试；真机 A/B |
+| 残差是标量代理 | 没测试真实几何前端（视差、光流、透明/反光） | G13：真实/半真实桌面，注入位姿噪声与遮挡 |
+| fallback 成功率是类型设定的 | 可能高估零样本收益 | G14：按原语统计真实成功率；弱/贵角落不启用 |
+| VLA 只建模为每步成功概率 | 低估长程重规划/时序结构 | 加入 30 步块、重叠计划、真实延迟 |
+| 静默 OOD 是精确静默 | 真实 OOD-G 可能有弱信号 | 注入弱信号，测 AUROC 随信号强度变化 |
+| 瞬态是单次切换 | 真实失败可能间歇/渐变 | 加入间歇/渐变 OOD，测复检/滞回 |
+| 成本是归一化的 | 真实 VLA 延迟/限流不同 | 实测 `c_v,c_f,c_s`，用预算硬上限 |
+| 无真机 | 不能证明物理接触安全 | 保留第 13 轮限幅/重试；G15 真机 A/B |
+| 无人类基线 | 不能证明「受控降级」比「问人」好 | 评测无人，故不比较；只比较自动策略 |
+| Fixed gate 阈值未调优 | `q_raw=0.42` 是单一手工值，可能低估固定门 | 在验证集上调 `q_raw`，再与 ZEST 比 |
 
 ## 6. 实验设计与门
 
-### 6.1 继承第 13 轮的门
+### 6.1 继承门
 
-G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢复、延迟、32 任务稳定、消融、无源、可复现）。本报告只列新增/修改的门。
+G0–G12 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢复、延迟、32 任务稳定、消融、无源、可复现、grounding、预算、语义地图）。本报告只列新增/修改的门。
 
-### 6.2 新增门 G10–G12
+### 6.2 新增门 G13–G16
 
 | 门 | 问题 | 通过标准 | 失败动作 |
 |---|---|---|---|
-| **G10** | 语音/文本 grounding 是否鲁棒且校准？ | `e=0.25` 时 MAP ≥0.90；ECE ≤0.10；top-2 歧义不硬提交率 ≥95% | 回退精确匹配 + 任务级固定目标；砍掉语音层 |
-| **G11** | 预算调度是否真的省成本？ | `B=11` 时在成功率不低 0.5pp 的前提下平均成本 ≤ SERVO 的 0.97×；`B=14` 时成功率/成本 ≥ SERVO 的 1.10×；`B≤8` 时成功率不低 2pp；LOOK-gate 作为强基线 | 若不能超过 LOOK-gate，砍掉完整 VoI，只保留门控 |
-| **G12** | 语义地图是否够用？ | 中位位置误差 ≤1.5cm；关联切换 ≤1 次/episode；归一化 NEES（除以 3）∈ [0.5,1.5] | 只用头双目 PBVS；或退回任务级固定目标 |
+| **G13** | 残差是否校准且可区分？ | ID 惊讶率 ≤0.15（α=0.1）；OOD-E/OOD-S AUROC ≥0.8；ID 假 fallback ≤5%；中位检测延迟 ≤2 块 | 砍掉 CUSUM/门控，退回固定阈值或 VLA-only |
+| **G14** | ZEST 是否提升零样本成功率且不伤 ID？ | ≥3/5 几何 OOD 任务 +10pp；ID 回归 ≤2pp；成本开销 ≤3%；OOD-G 不冒充成功 | 砍掉 fallback 或门控，只保留监控 |
+| **G15** | 是否安全/省成本？ | 碰撞/超时率不升；p99 ≤150ms；关节限幅从不违反；fallback 率有界 | fallback 限制在 APPROACH；残差移出关键路径 |
+| **G16** | 域检查是否可靠？ | 语义任务 100% 排除；几何任务 ≥90% 准入；无危险原语 | 缩小语法；人工白名单 |
 
 ### 6.3 预注册假设
 
 | 编号 | 假设 | 主/次 | 证伪条件 |
 |---|---|---|---|
-| H1 | 音素编辑距离 + 不硬提交提升 grounding MAP | 主 | 相对精确匹配无提升或校准更差 |
-| H2 | 预算调度在同等成功率下降低平均成本 | 主 | 相对固定 5 步无成本优势 |
-| H3 | 紧预算下自动退化为 SERVO，不出现预算耗尽 | 主（安全） | 紧预算下显著差于纯 SERVO |
-| H4 | 完整 VoI 显著优于置信度门控 LOOK | 次（证伪性） | 差值 CI 跨 0 → 砍复杂度 |
+| H1 | 残差三元组区分 OOD-E/OOD-S（地图对） | 主 | AUROC <0.65 或 ID 假警报 >10% |
+| H2 | ZEST 在 OOD 上 +5pp，ID 不回归，成本 ≤3% | 主 | 相对 VLA-only 无提升或 ID 回归 |
+| H3 | 复检/滞回优于永久 fallback | 主（恢复） | 复检不优于永久 fallback |
+| H4 | Beta 后验下界优于 CUSUM+复检 | 次（证伪性） | 差值 CI 跨 0（合成实验已失败，故剪枝） |
+| H5 | 几何语法在几何未见任务上有效，语义任务不误用 | 主（零样本） | 域检查失效或语义任务回归 |
 
 **预注册内容**：假设、主/次端点、分析计划、停止规则、排除标准，必须在正式评测前写入仓库并打时间戳。
 
@@ -754,12 +1017,12 @@ G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢
 
 | 项 | 设计 |
 |---|---|
-| 任务 | PlugInEthernet、HangCup、ZipUp、StackBowls、FoldTowel |
-| 次数 | 每任务 5 次，配对：SERVO-only vs VOI-MAP，同初始条件 |
-| 主端点 | 成功率/成本（成本 = VLA 调用 + LOOK + 伺服步的加权和，权重由实测延迟定） |
-| 次端点 | 成功率、p99、timeout、恢复率、grounding 错误率 |
+| 任务 | PlugInEthernet、HangCup、StackBowls、OpenDrawer、FoldTowel（覆盖插入/挂/叠/开/变形） |
+| 次数 | 每任务 5 次，配对：VLA-only vs ZEST，同初始条件 |
+| 主端点 | 成功率；次端点：成功率/成本、OOD 检测延迟、恢复率、fallback 率、p99 |
 | 统计 | 配对差值 + bootstrap 95% CI；pilot 不宣称显著性 |
-| 门 | G3：≥3/5 任务 +10pp；FoldTowel 不回归 >5pp |
+| 门 | G14：≥3/5 几何任务 +10pp；FoldTowel 不回归 >5pp |
+| 注意 | FoldTowel 是语义/变形任务，域检查应判为 `semantic`，不启用 fallback；它用于验证「不误用」而不是「零样本成功」 |
 
 ### 6.5 全量
 
@@ -767,8 +1030,23 @@ G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢
 |---|---|
 | 任务 | 32×10 |
 | 端口 | N 个连续端口，独立 reset |
-| 指标 | 总成功率、步骤分、p99、timeout、平均 VLA 调用数、平均 LOOK 次数 |
+| 指标 | 总成功率、步骤分、p99、timeout、平均 VLA 调用数、fallback 率、OOD 检测率 |
 | 门 | G6：无端口串扰；reset 干净；内存不涨；p99 ≤150ms |
+
+### 6.6 消融与阴性对照
+
+| 消融 | 目的 | 预期 |
+|---|---|---|
+| 去掉 `r_tmp` | 时序是否有用 | OOD-E AUROC 下降 |
+| 去掉 `r_geo` | 几何是否有用 | OOD-E AUROC 下降 |
+| 去掉 `r_goal` | 语义进度是否有用 | OOD-S AUROC 大幅下降 |
+| 去掉 CUSUM（固定阈值） | 变点检测是否值得 | 瞬态/漂移下变差 |
+| 去掉复检 | 滞回是否值得 | 瞬态 OOD 大幅变差 |
+| 去掉 fallback | 降级路径是否值得 | OOD 成功率下降，ID 不变 |
+| 随机残差 | 阴性对照 | 不应提升 |
+| 打乱残差 | 阴性对照 | 不应提升 |
+| 门常开 | 过保守对照 | ID 成功率下降 |
+| 门常关 | VLA-only 对照 | OOD 成功率下降 |
 
 ## 7. 风险与合规
 
@@ -776,28 +1054,43 @@ G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢
 
 | 模式 | 做法 | 风险 | 建议 |
 |---|---|---|---|
-| C1 确定性几何 | 地图用立体视觉 + 分割 + 匈牙利 + 卡尔曼 | 最低 | 主推 |
-| C2 符号 backchannel | 状态符号由几何/夹爪派生 | 低 | 主推 |
-| C3 同 checkpoint 特征 | 若关联需要强描述子，用 VLA encoder | 低–中 | 需要时用，写清 |
-| 禁止 | 第二个学习检测/分割/语言模型；在线学习残差 | 高 | 不做 |
+| C1 确定性几何 | 残差、融合、conformal/CUSUM、几何原语 | 最低 | 主推 |
+| C2 符号 backchannel | 相位/子目标符号由几何/夹爪派生 | 低 | 主推 |
+| C3 同 checkpoint 特征 | 若需要视觉跟踪描述子，用 VLA encoder | 低–中 | 需要时用，写清 |
+| 禁止 | 第二个学习检测/分割/语言模型；在线学习残差；训练失败检测器 | 高 | 不做 |
+
+**关键声明**：ZEST 不训练任何新参数；conformal 分位数和 CUSUM 是**一维在线统计**，不是学习模型。几何原语语法是**手工控制器**，不是第二个策略网络。若评审认为「在线更新分位数」也算学习，可退化为**固定校准分位数 + 固定 CUSUM 参数**，牺牲对尺度漂移的适应性，保持合规。
 
 ### 7.2 风险表
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| **地图前端太弱** | 目标后验本身错；VoI 在错误后验上做最优分配 | G12；输出协方差；低置信回退固定目标/PBVS；透明/反光只用头双目 |
-| 真同音无法消歧 | `cup/cap` 被听错且看一眼也分不清 | 同音词表 + 颜色/几何先验；必要时 VLA；不承诺语音全鲁棒 |
-| LOOK 触发超时/遮挡 | 预算反而更紧 | 只在 APPROACH/PRECONTACT；限速限位；`ΔH` 不够就不看 |
-| VoI 成功模型 misspecified | 调度选错动作 | 用 LOOK-gate 强基线；G11 直接比较；失败就砍复杂度 |
-| VLA 成本被低估 | 调度过度调用 | 用实测延迟/限流更新 `c_v`；预算硬上限 |
-| 地图关联切换 | 目标身份跳变 | 马氏门控 + 匈牙利 + `ν` 衰减；`Σ` 膨胀触发 LOOK |
+| **OOD-G 不可检测** | 目标错时系统自信执行 | 命题 7 明确边界；独立语义检查/任务清单/复检；不承诺解决 |
+| 残差前端太弱 | 透明/反光/遮挡导致误报/漏报 | 多通道、鲁棒尺度、降权、LOOK；G13 直接测 |
+| fallback 弱且贵 | ZEST 反而降低 succ/cost | 域检查 + 历史成功率 + `Δ/c` 比较；弱/贵角落不启用 |
+| 复检破坏接触 | CONTACT 中探针导致碰撞/滑落 | 只在 APPROACH/PRECONTACT/原语边界复检 |
+| 残差尺度漂移 | conformal 假警报上升 | self-normalization；周期性重校准；监控惊讶率 |
+| 门控抖动 | 动作不平滑/超时 | 滞回、最小驻留、WAVE-SERVO 平滑过渡 |
+| VLA 成本/延迟 | 探针/重规划挤占预算 | 异步、预算硬上限、探针频率限制 |
+| 地图目标错 | `r_goal` 本身错 | 归入 OOD-G；LOOK/VOI；不假装能检测 |
 | 统计假阳性 | 把噪声当涨点 | 预注册、配对、分层、Holm、阴性台账 |
 | 引用污染 | 假文献支撑真结论 | 引用审计；`UNVERIFIED` 排除 |
-| 单模型解释 | 被判第二个模型 | 写清地图/调度无学习权重；C1/C2 为主 |
+| 单模型解释 | 被判第二个模型 | 写清无学习权重；C1/C2 为主；可退化固定阈值 |
+
+### 7.3 已知失效模式
+
+| 场景 | 会发生什么 | 门控行为 | 结果 |
+|---|---|---|---|
+| 透明杯子（OOD-G） | 立体视觉失败，地图 ground 到旁边盘子；VLA 也抓盘子 | 残差像 ID，不触发 | **自信地抓错**；只能靠外部语义检查 |
+| 未见物体颜色（OOD-E） | VLA 动作不匹配外观 | `r_tmp/r_geo` 高，触发 fallback | 几何原语 reach/grasp；可能成功 |
+| 未见空间关系（OOD-S，地图对） | VLA 语义错，但地图目标对 | `r_goal` 高，触发 fallback | 几何原语 place；可能成功 |
+| 变形任务 FoldTowel（语义） | 语法不覆盖 | 域检查判 `semantic`，不启用 fallback | VLA 或 HOLD；不盲目降级 |
+| 瞬态执行失败 | VLA 短暂不一致，随后恢复 | CUSUM 触发，复检后恢复 | 少量 fallback 成本，避免永久保守 |
+| 传感器噪声尖峰 | 残差尺度瞬变 | self-normalized 抑制；CUSUM 需持续证据 | 不误触发 |
 
 ## 8. 来源
 
-官方/数据（检索日期 2026-11-02，沿用第 13 轮已核实）：
+官方/数据（检索日期 2026-11-02，沿用第 14 轮已核实）：
 
 - UniBot 世界挑战赛官网：<https://unibot.unitree.com/>
 - 赛事页：<https://unibot.unitree.com/challenges.html>
@@ -812,23 +1105,28 @@ G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢
 
 经典/方法（作者-年份，未在本轮逐篇复核；复现包需补 DOI）：
 
-- Horvitz, E. (1988). Reasoning under varying and uncertain resource constraints. *AAAI*.
-- Russell, S., & Wefald, E. (1991). Principles of metareasoning. *Artificial Intelligence*.
-- Golovin, D., & Krause, A. (2011). Adaptive submodularity: Theory and applications in active learning and stochastic optimization. *Journal of Artificial Intelligence Research*.
+- Page, E. S. (1954). Continuous inspection schemes. *Biometrika*.
+- Lorden, G. (1971). Procedures for reacting to a change in distribution. *Annals of Mathematical Statistics*.
+- Vovk, V., Gammerman, A., & Shafer, G. (2005). *Algorithmic Learning in a Random World*. Springer.
+- Angelopoulos, A. N., & Bates, S. (2023). Conformal prediction: A gentle introduction. *Foundations and Trends in Machine Learning*.
+- Gibbs, I., & Candès, E. J. (2021). Adaptive conformal inference under distribution shift. *NeurIPS*.
 - Bajcsy, R. (1988). Active perception. *Proceedings of the IEEE*.
-- Kaelbling, L. P., Littman, M. L., & Cassandra, A. R. (1998). Planning and acting in partially observable stochastic domains. *Artificial Intelligence*.
-- Levenshtein, V. I. (1966). Binary codes capable of correcting deletions, insertions, and reversals. *Soviet Physics Doklady*.
 - Thrun, S., Burgard, W., & Fox, D. (2005). *Probabilistic Robotics*. MIT Press.
 - Chaumette, F., & Hutchinson, S. (2006/2007). Visual servo control, Parts I–II. *IEEE Robotics & Automation Magazine*.
-- Jurafsky, D., & Martin, J. H. *Speech and Language Processing*（ASR 混淆/编辑距离背景）.
+- Levenshtein, V. I. (1966). Binary codes capable of correcting deletions, insertions, and reversals. *Soviet Physics Doklady*.
+- Jurafsky, D., & Martin, J. H. *Speech and Language Processing*.
+- Doersch, C., Gupta, A., & Efros, A. A. (2015). Unsupervised visual representation learning by context prediction. *ICCV*.
+- He, K., Fan, H., Wu, Y., Xie, S., & Girshick, R. (2020). Momentum contrast for unsupervised visual representation learning. *CVPR*.
+- Sun, Y., Wang, X., Liu, Z., Miller, J., Efros, A. A., & Hardt, M. (2020). Test-time training with self-supervision for generalization under distribution shifts. *ICML*.
+- Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., & Zhou, D. (2022). Self-consistency improves chain of thought reasoning in language models. *ICLR*.
 
-**UNVERIFIED（不得进入论证链）**：第 10–13 轮中形如 `2609.xxxxx`、`2608.xxxxx` 的 arXiv 编号，年份前缀异常，本轮不采用。
+**UNVERIFIED（不得进入论证链）**：第 10–14 轮中形如 `2609.xxxxx`、`2608.xxxxx` 的 arXiv 编号，年份前缀异常，本轮不采用。
 
 ## 9. 一句话押注
 
-**第 13 轮证明了「给定目标时手是稳的」；本轮押注「目标本身是一个分布，计算是一种预算」：用语义地图承载这个分布，用音素编辑距离消化语音噪声，用边际信息增益/成本决定下一次计算买什么——目标清楚就伺服，含糊就先看一眼，看一眼不够才调用大模型。**
+**第 14 轮用「目标分布 + 预算」决定买什么信息；本轮用「动作-观测一致性」决定信不信当前策略：三个自监督残差 + conformal/CUSUM 信任门 + 几何原语降级，让零样本失败从「自信地错下去」变成「受控地退一步」。**
 
 ## 10. 本轮最大的风险
 
-**语义地图的观测前端（无第二个学习模型、腕部无内参、无主动深度，头双目在透明/反光/弱纹理上不可靠）可能太弱，导致目标后验本身就是错的；此时再精细的 VoI 调度也只是在一个错误的后验上做最优分配，整个元认知层会变成「用更聪明的方式分配预算去执行错误的目标」。** 本轮合成实验刻意假设地图完美，因此这个最大风险还没有被数据触碰。
+**OOD-G：如果 VLA 和语义地图共享同一个错误先验（例如都把透明杯子 ground 成旁边的盘子），三个残差都会像 ID，信任门不会触发，系统会以受控的方式执行一个错误的目标。** 本轮合成实验刻意把 OOD-G 设为「残差与 ID 同分布」，因此这个最大风险已经被数据触碰，并给出了一个负面但清晰的结论：自监督残差在 OOD-G 上没有信息，必须靠独立于 VLA/地图的语义信号才能突破。
 <!-- ARTIFACT:END -->
