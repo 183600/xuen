@@ -3,828 +3,801 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 13 轮 · WAVE-SERVO：把「增益调度」升级为「遥操作波变量 + 能量有界闭环」，并用论文级预注册检验它
+# 第 14 轮（研究线累计；本轮灵感循环第 1 轮）· VOI-MAP：把「语音指令」变成语义地图上的目标分布，用「价值信息/成本」决定何时调用 VLA、何时主动看一眼、何时直接伺服
 
-> 检索/复核日期：**2026-10-28（UTC）**。赛事身份不变：宇树 **UniBot 世界挑战赛**（unibot.unitree.com），G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API。本轮是**新一轮灵感循环的第 1 轮**，三个词是「遥操作」「论文发表」「闭环控制」。本轮不推倒第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO，而是给 CHUNK-SERVO 最薄弱的**伺服层**补上理论保证：把「VLA 规划器—远程 API—机器人」显式建模成一个**带可变时延的双边遥操作回路**，用波变量/时域无源性（TD-PC）替代拍脑袋的增益调度；把 33k 条遥操作演示当作「人类操作者的阻抗先验」生成相位相关的增益表；把竞赛评测当成一次**可预注册、可复现、可证伪**的论文实验。
+> 检索/复核日期：**2026-11-02（UTC）**。赛事身份不变：宇树 **UniBot 世界挑战赛**（unibot.unitree.com），G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API。本轮三个词是「语音交互」「成本控制」「语义地图」。**不推倒**第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO、第 13 轮 WAVE-SERVO；VOI-MAP 是它们之上的**元认知层**：它不改变「怎么动」，只决定「动哪个目标、值不值得再花一次计算」。
 
-## 0. 先给结论：CHUNK-SERVO 的方向对，但它的伺服层缺一个稳定性证明
+## 0. 先给直觉：第 13 轮把「手」稳住了，但「眼睛和耳朵」还没有预算
 
-第 12 轮已经论证：榜单头部全部卡在「1 秒开环 chunk + 最后 3 厘米接触」。本轮不重复那部分取证，只补三个新判断：
+第 13 轮 WAVE-SERVO 解决的是：给定目标位姿，5 步块内的视觉伺服在可变 RTT 下不振荡。它有一个隐含前提：**目标是对的，且值得一直算**。这两个前提在真实评测里都不成立。
 
-1. **远程评测在控制论上就是双边遥操作**。主端是 VLA（慢、语义、30 步规划），从端是机器人与环境（快、接触、30Hz），通信通道是官方 websocket，带 10–150ms 甚至更抖的 RTT。双边遥操作的核心难题不是「看得更准」，而是**时延下闭环不振荡**。第 12 轮的 `K_eff = K_0/(1+τ/τ_0)` 是启发式，不是保证；可变时延下它仍可能失稳。
-2. **可变时延会向视觉伺服环路注入能量**。无延迟时 `v = -ΛF̂` 使功率恒 ≤0；一旦用 `e_{k-d}` 计算速度，功率 `-ΛF̂_{k-d}ᵀF̂_k` 可正可负。正的部分就是能量注入，表现为超调、极限环、接触抖动。**这不是调参能根治的，是结构问题。**
-3. **10 trials/任务是发表级统计的陷阱**。单任务 SE 约 0.14，任何 +1–2pp 都不可信。要发表，必须预注册、配对、分层收缩、报告效应量与区间，并公开阴性结果。**「论文发表」在本轮不是修辞，是方法的一部分。**
+1. **抓错物体，伺服再稳也没用。** 32 个桌面任务由语言指令指定目标；一旦把「杯子」听成「帽子」、或把「左边的碗」指到「右边的碗」，TD-PC 只会把你稳定地带到错误的位置。第 10–13 轮一直在优化「最后 3 厘米」，但失败也可能发生在「第 0 厘米」——目标选择。
+2. **语言是一个有噪声的信道。** 评测接口给的是语言（很可能是文本）；但赛题面向真实部署，语音才是最终交互形态。即使评测给文本，「口语化、同音词、近音词、改写」的鲁棒性仍是低成本高回报的。用一个精确字符串匹配的解析器，等于假设信道无噪；更糟的是，一旦解析错，系统会自信地执行错。
+3. **计算是预算，不是免费资源。** 每次 VLA 调用有延迟、有算力、有 API 风险；每个 5 步块也是一次机会成本。第 12/13 轮把 `H_c=5` 写成常数，第 13 轮把伺服做成常开；这在「目标明确」时是对的，但在「目标不确定」时，把预算花在伺服上可能不如花在「再看一眼」或「重新 grounding」上。**该优化的是每单位成本的成功率，不是单步精度。**
 
-所以本轮的押注是 **WAVE-SERVO**：
+所以本轮的直觉是：**在 WAVE-SERVO 之上加一个「语义地图 + 价值信息」的决策层。** 语义地图是主端与从端共享的工作记忆；语言 grounding 把指令变成地图节点上的一个概率分布；预算调度器在 {直接伺服, 主动看一眼, 调用 VLA, 提交} 之间，按「边际成功增益 / 成本」选动作。
 
-> 保留 CHUNK-SERVO 的「30 步规划 + 5 步执行 + 演示相对目标 + 单模型确定性控制器」；把 5 步块内的修正从「PD + 增益调度」升级为「虚拟力 + 时域无源性 TD-PC + 遥操作演示导出的相位阻抗表」；用波变量作为时延通道的分析语言与高延迟回退模式；用预注册的分层贝叶斯实验协议判定它到底有没有用。
+一句话先给押注：
 
-一句话：**把「按 RTT 降增益」改成「监测虚拟端口能量、在能量注入时主动耗散」，从而在任意可变时延下让视觉伺服回路保持无源；再用预注册实验诚实地判断这是不是真涨点。**
+> **把「语音指令」解析成语义地图上的目标分布，而不是一个硬标签；用地图的不确定性和剩余预算共同决定下一次计算买什么——目标清楚就直接伺服，目标含糊就先花小钱看一眼，看一眼还不够才调用昂贵的大模型；每次计算都要能说清楚它买到了多少成功概率。**
 
 三个可验证创新点：
 
-1. **WAVE 层**：虚拟力 `F̂` + Passivity Observer/Controller，替代启发式增益调度；给出离散时延裕度 `a < 2 sin(π/(2(2d+1)))` 与 TD-PC 的耗散推导。用 G2/G8 验证「无源性、无极限环、接触不抖」。
-2. **遥操作阻抗先验**：从 33k 演示统计每个任务/相位的接近速度、横向修正幅度、接触驻留时间，生成确定性 `K_p(φ), D(φ)` 查表；不用第二个学习模型。用 G1/G3 验证「相位阻抗 > 固定增益」。
-3. **论文级协议**：预注册 H1–H4 与证伪条件；配对 A/B；分层 Beta-Binomial/Logistic 收缩；Holm 多重比较；阴性结果台账；引用卫生审计。用 G9 验证「结论可复现、不靠榜单噪声」。
+1. **语音鲁棒 grounding**：语音/文本 → 任务 schema → 地图候选分布；用音素编辑距离 + 同音词表处理 ASR 噪声，且**不硬提交**，把歧义传给调度器。用 G10 验证「grounding MAP 准确率 / 校准」。
+2. **语义地图作为共享信念**：对象级地图（位姿、协方差、存在置信、颜色/类别）由经典立体视觉 + 数据关联维护，**不引入第二个学习模型**；地图不确定性直接驱动「看一眼」的价值。用 G12 验证「位姿误差 / 关联切换」。
+3. **价值信息预算调度**：把每 episode 的 VLA 调用、LOOK、伺服步数建模成带成本的序列决策；用边际增益/成本贪心选择，并在预算紧张时自动退化为 CHUNK-SERVO。用 G11 + 合成实验验证「成功率/成本」。
 
-三个灵感词怎么落到方案里：
+三个词怎么落地：
 
-| 灵感词 | 落到哪里 | 不做什么 |
+| 词 | 落地 | 不做什么 |
 |---|---|---|
-| **遥操作** | 把 VLA→API→机器人建模为主从遥操作；波变量分析时延通道；TD-PC 保证虚拟端口无源；演示即「人类操作者的阻抗先验」 | 不做真人实时遥操作接管（规则/延迟不允许）；不做物理力反馈（无 F/T） |
-| **论文发表** | 预注册假设与证伪条件；配对/分层贝叶斯/效应量；阴性结果台账；引用与复现审计 | 不把预览榜单当 SOTA；不把 +1–2pp 当结论；不编造引用 |
-| **闭环控制** | 5 步块内能量有界反馈；虚拟力观测；时延估计与预测；接触段法向耗散 | 不做 30Hz 广域网高增益伺服；不做第二个学习残差 |
+| **语音交互** | ASR 噪声下的 schema 解析；同音/近音编辑距离；歧义不硬提交；用「主动看一眼」代替向人追问；模块间的符号 backchannel | 不训练 ASR/TTS；不做真人对话；不把 VLA 伪装成语言模型 |
+| **成本控制** | VLA 调用、LOOK、伺服步数的统一成本；边际增益/成本；预算紧张自动降级；预注册成本指标 | 不把「省算力」当唯一目标；不在正式评测上做预算 A/B |
+| **语义地图** | 对象级地图 + 协方差 + 存在置信；语言→地图节点；地图不确定性驱动计算 | 不引入第二个检测/分割模型；不假设腕部有内参；不假设有深度 |
 
-## 1. 本轮新增/复核的事实（只列会改变方案的）
+## 1. 研究日志：为什么是现在、为什么是这一层
 
-### 1.1 结构事实：这就是一个带时延的主从遥操作回路（A 级：官方 API）
-
-- 提交端每次 `get_action` 返回固定 `action_chunk_size` 的动作，evaluator 顺序执行，chunk 内无新观测、无打断（第 12 轮已核实）。
-- 观测四路 RGB、EE 位姿、夹爪、下身体、语言；**没有 depth / camera_info / force / tactile**。
-- 评测端逐调用记录延迟、波动、动作统计，作为结果可信度的一部分。
-- 评测跨 N 台机器人，每端口独立 `reset()`。
-
-**推论**：主端（VLA）与从端（机器人）之间只有「延迟的位置/速度指令 + 延迟的图像」这一个通道，且没有力反馈。这正是**位置-位置（position-position）双边遥操作**的设定。无源性理论可以直接搬，但只能作用在「视觉误差 ↔ 指令速度」这个虚拟端口上。
-
-### 1.2 数据事实：33k 演示是遥操作轨迹，不是纯专家策略（A 级：数据元数据 + 结构推断）
-
-- 32 任务 33,276 episodes / 18.28M frames / 169.28h / 30fps；单任务 969–1,533 episodes。
-- 四路视频 480×640；头双目有内参、畸变、R/T、基线 58.2526mm、已校正；腕部相机无内参。
-- 每条 episode 的 EE 位姿、夹爪、下身体逐帧可得。
-
-**新用法**：把每条演示看成「人类遥操作者的一条闭环轨迹」，从中提取**相位相关的速度/刚度统计**（接近速度、横向修正幅度、接触驻留、夹爪闭合时序），作为确定性阻抗表。这不是训练第二个模型，是统计先验。
-
-### 1.3 理论事实：时延下无源性是成熟的（A 级：经典结果，非本轮新证）
-
-- Anderson & Spong (1989)：时延双边遥操作的无源性与散射变换。
-- Niemeyer & Slotine (1991)：波变量，使通信通道在任意常值时延下无源。
-- Hannaford & Ryu (2002)：时域无源性控制（TD-PC），用 Passivity Observer/Controller 在线耗散，鲁棒于可变时延与模型误差。
-- Smith (1957)：死区预测器，需要精确模型与常值时延，对可变时延脆弱。
-
-**推论**：第 12 轮的 Smith 预测只能做前馈补偿，不能作为稳定性保证；TD-PC 才是在线安全网。两者可叠加：Smith 提性能，TD-PC 保底。
-
-### 1.4 统计事实：10 trials/任务的估计噪声（B 级：本轮计算）
-
-- 若 `p≈0.25`，单任务 10 次的 SE ≈ `sqrt(0.25×0.75/10) ≈ 0.137`（13.7pp）。
-- 32 任务合并的 SE ≈ `sqrt(0.25×0.75/320) ≈ 2.42pp`。
-- 配对设计可降低方差，但只有在同一初始条件、同一任务内配对时才成立；不能把「不同任务平均」当配对。
-
-**推论**：单任务通道的 5 次 A/B 只能做 go/no-go 方向判断，不能做显著性结论；正式结论必须来自 32×10 或明确的重复实验，并用分层模型借力。
-
-### 1.5 引用卫生（本轮新增的「论文发表」约束）
-
-第 10–12 轮产物中引用了若干 arXiv 编号（如 `2609.xxxxx`）。其中年份前缀 `2609` 不合常理（超过当前年份），**本轮一律不依赖这些编号**，只依赖可核验的官方仓库/文档与经典作者-年份文献。复现包中每条引用必须带「可打开链接或 DOI」，否则标为 `UNVERIFIED` 并排除出论证链。这是发表级工作的最低要求，也是防止「用假引用支撑真结论」的必要措施。
-
-## 2. 诊断：CHUNK-SERVO 的三个未证假设
-
-第 12 轮把「30 步 → 5 步」做对了，但它隐含了三个未证假设：
+### 1.1 第 10–13 轮留下的三个「未付费假设」
 
 ```text
-A1. 增益调度 K_eff = K_0/(1+τ/τ_0) 在 τ 抖动时仍稳定。
-A2. 延迟补偿 e_{t+τ} ≈ e_t + J_v v τ 足够准。
-A3. 接触段「法向缩幅/低通」不会引入持续抖动或极限环。
+A1. 目标位姿是对的：grounding 被当成上游已解决。
+A2. 计算预算是无限的：默认每个 5 步块都能算伺服、都能调用 VLA。
+A3. 语言是干净文本：没有同音词、没有改写、没有口语省略。
 ```
 
-这三个都不是错的，而是**没有证明**。可变 RTT 下：
+A1 是最大的漏洞。WAVE-SERVO 的 TD-PC 能证明「视觉误差回路不振荡」，但证明不了「误差定义在一个正确的目标上」。A2 在单端口、低延迟时可以近似成立；在多端口、跨城、API 限流时不成立。A3 在评测文本上可能成立，但和真实产品形态不一致，而且文本指令也会有人类写的省略和指代。
 
-- A1：`τ` 从 20ms 跳到 150ms 时，等效离散延迟 `d = τ/Ts` 从 0 跳到 4–5；无源裕度骤降，启发式可能来不及降增益。
-- A2：`J_v` 依赖深度与位姿估计；透明/反光时 `J_v` 误差大，预测反而注入能量。
-- A3：低通 + 缩幅改变的是增益，不是能量结构；若延迟项本身在注入能量，缩幅只是把振荡频率压低。
+### 1.2 三个会改变方案的新判断
 
-**统一诊断**：问题不在「增益大小」，而在「延迟反馈项是否向环路注入能量」。正确的工具是**无源性/能量监测**，不是继续调 `K`。
+1. **语义地图不需要第二个学习模型，也可以是「够用的」。** 第 10–13 轮反复担心「第二个模型违规」。但桌面场景是刚体、静态、对象少；用头双目立体 + 颜色/深度不连续分割 + 匈牙利数据关联 + 卡尔曼滤波，就能维护对象级地图。类别标签不用检测器，直接用指令里的名词本体，加上颜色/空间关系消歧。这是确定性几何，不是学习模型。**代价**：它会在透明、反光、遮挡、纯色桌面上退化；所以它必须输出协方差，而不是假装自己很准。
+2. **「看一眼」比「问一句」更适合这个评测。** 没有真人在环里，主动问「你说的是哪个杯子」不可行。但机器人可以主动改变视角：左右平移、抬高、倾斜，去获取一个能区分候选目标的新观测。这是**主动感知**，也是「语音交互」在自动评测里的可落地版本：用感知动作回答语言歧义。成本远低于一次 VLA 调用。
+3. **固定的 30/5 调度在「歧义」面前是错的。** 如果目标不确定，先执行 5 步伺服可能是在错误的物体上浪费 5 步；如果目标很确定，再调用 VLA 是浪费一次昂贵的规划。正确的调度应该同时看**语义不确定性**和**几何执行不确定性**，而不是只看时间。
 
-## 3. 方法：WAVE-SERVO
+### 1.3 为什么是「地图 + 价值信息」而不是「更强的语言模型」
 
-### 3.1 总架构（在 CHUNK-SERVO 上增量）
+一个自然的反应是：上一个更大的 VLM，把指令理解得更好。但这有三个问题：
+
+- **单模型规则**：引入第二个学习模型做 grounding，直接踩线。
+- **成本**：每次不确定都调用大模型，延迟和算力都不可接受；而很多歧义用一次「看一眼」就能解决。
+- **可解释性/可证伪性**：地图上的目标分布是一个显式的概率对象，可以检查、可以校准、可以在仿真里复现；黑盒 VLM 的 grounding 很难做因果消融。
+
+所以 VOI-MAP 的立场是：**语言理解不一定要更大的模型，可以用「地图 + 主动感知 + 预算」把一个小模型的歧义消化掉。** 这也是「成本控制」真正的含义：不是省钱，是把计算花在信息增益最大的地方。
+
+### 1.4 与第 13 轮的关系
+
+| 层 | 第 13 轮 | 第 14 轮 VOI-MAP |
+|---|---|---|
+| 语义/目标 | 假设给定 | 输出目标分布 `p(o|u,M)`；歧义显式化 |
+| 地图 | 单目标相对位姿 | 对象级地图 + 协方差 + 存在置信 |
+| 调度 | 固定 30 步规划 / 5 步伺服 | 按 `Δsuccess/Δcost` 选 SERVO / LOOK / VLA / COMMIT |
+| 语言 | 文本条件 | 音素编辑距离 + 同音词 + 不硬提交 |
+| 安全 | TD-PC + 限幅 | 继承；新层不新增执行通路 |
+| 统计 | 预注册 A/B | 继承；新增「成功率/成本」主端点 |
+
+**保留**：FACT-VLA 的相位化 BC、GEO-RESIDUAL 的几何残差与编辑检测、CHUNK-SERVO 的 30/5 双频、WAVE-SERVO 的 TD-PC 与相位阻抗表、单模型合规、预注册统计纪律。
+**升级**：目标从「一个位姿」升级为「地图上的分布」；调度从「固定频率」升级为「预算感知」；语言从「精确匹配」升级为「噪声信道下的分布」。
+**剪枝**：不做第二个检测/分割/语言模型；不做真人对话；不把「省算力」当成唯一目标；不在正式 320 trials 上做未验证的预算 A/B。
+
+## 2. 机制草图（先给直觉，形式化见产物区）
+
+### 2.1 语义地图：不是重建，是「够用的对象账本」
 
 ```text
-                 ┌──────────────────────────────────────────────┐
-                 │ Evaluator (N ports 8765..8765+N-1)           │
-                 └───────────────┬──────────────────────────────┘
-                                 │ websocket: obs / action chunk (delayed)
-                                 ▼
-                 ┌──────────────────────────────────────────────┐
-                 │ Per-port PolicyService (CPU)                  │
-                 │ ├─ phase/edit observer (GEO-RESIDUAL)         │
-                 │ ├─ goal retrieval (demo library, DG-KEYFRAME) │
-                 │ ├─ teleop-impedance table K(φ),D(φ)           │
-                 │ ├─ virtual force F̂ + TD-PC (WAVE layer)       │
-                 │ ├─ delay estimator τ̂, d̂                       │
-                 │ ├─ plan cache (30-step VLA plan)              │
-                 │ └─ action adapter (WLA 54D → API 21D)         │
-                 └───────────────┬──────────────────────────────┘
-                                 │ async, batched
-                                 ▼
-                 ┌──────────────────────────────────────────────┐
-                 │ Shared VLA server (GPU, 唯一学习模型)         │
-                 │ UnifoLM-WLA-1.0, 30-step chunk                │
-                 └──────────────────────────────────────────────┘
+M_t = { o_i = (id_i, label_i, μ_i, Σ_i, ν_i) } ∪ F_t
 ```
 
-唯一学习模型仍是 VLA；WAVE 层、阻抗表、TD-PC 全部是确定性控制器/统计表，**不违反单模型规则**。
+- `μ_i, Σ_i`：对象在桌面坐标系的位置与协方差（头双目三角化 + 卡尔曼）；
+- `label_i`：来自指令名词本体 + 颜色/关系属性，不是检测器；
+- `ν_i`：存在/可见置信，用于出生/死亡与「要不要再看一眼」；
+- `F_t`：自由空间栅格，用于碰撞与可达性检查。
 
-### 3.2 双层闭环：主端慢环 + 从端快环
+关键设计：**地图必须输出不确定性**。如果地图假装 `Σ=0`，调度器就永远不会选择 LOOK，整个预算层退化成固定调度。
 
-- **主端慢环（VLA，~1Hz）**：产出 30 步语义规划 `a_ff`。它只决定「往哪去、做什么」，不负责毫米级。
-- **从端快环（WAVE-SERVO，6Hz 修正）**：每个 5 步块用最新图像算 `e`、`F̂`，经 TD-PC 得到有界修正 `Δ`，叠加到 `a_ff`。
-- 两层之间用**相对目标**（第 12 轮 DG-KEYFRAME）连接，避免绝对动作在时延下失配。
-
-### 3.3 虚拟力与无源性（本轮核心）
-
-定义视觉伺服误差 `e ∈ R^6`（EE 系 twist）：
-
-```math
-e = \log\!\left(T_{ee}^{-1} T_{ee}^{d}\right),\qquad
-T_{ee}^{d} = T_{base,target}\,T_{target,ee}^{*}.
-```
-
-定义虚拟力（目标对夹爪的弹簧-阻尼代理）：
-
-```math
-\hat F_k = K_e\,e_k + D_e\,\dot e_k .
-```
-
-定义指令速度（无延迟理想律）：
-
-```math
-v_k^{d} = -\Lambda\,\hat F_k,\qquad \Lambda \succ 0 .
-```
-
-功率：
-
-```math
-P_k = v_k^{\top}\hat F_k
-    = -\hat F_k^{\top}\Lambda \hat F_k \le 0 .
-```
-
-**无延迟时回路天然耗散**。有延迟 `d` 时用 `\hat F_{k-d}` 计算速度：
-
-```math
-P_k = -\hat F_{k-d}^{\top}\Lambda \hat F_k ,
-```
-
-当 `\hat F_{k-d}` 与 `\hat F_k` 反号（目标被扰动/时延错位）时 `P_k > 0`，即**能量注入**。
-
-**TD-PC**：
-
-```math
-E_{obs}(k) = E_{obs}(k-1) + T_s\, v_k^{\top}\hat F_k ,
-```
-
-若 `E_{obs}(k) < 0`（控制器在产能），加阻尼：
-
-```math
-\beta_k = \frac{-E_{obs}(k)}{T_s\,\|\hat F_k\|^2 + \varepsilon},\qquad
-v_k \leftarrow v_k - \beta_k \hat F_k,
-```
-
-使 `T_s\,\beta_k\|\hat F_k\|^2 = -E_{obs}(k)`，`E_{obs}(k) \to 0`。此后 `E_{obs} \ge 0`，虚拟端口无源。
-
-**诚实边界**：无源性是对**虚拟端口** `(v, F̂)` 的，不是对真实物理接触力的。它保证「视觉误差回路不产生能量」，不保证「物理上不撞坏」。真实接触的安全性仍靠限幅/限速/最大重试。
-
-### 3.4 波变量作为分析语言与高延迟回退
-
-对虚拟端口定义波变量（`b>0` 为波阻抗）：
-
-```math
-u_k = \frac{1}{\sqrt{2b}}\left(\hat F_k + b\,v_k\right),\qquad
-w_k = \frac{1}{\sqrt{2b}}\left(\hat F_k - b\,v_k\right).
-```
-
-功率分解：
-
-```math
-\hat F_k^{\top} v_k = \tfrac12\left(u_k^{\top}u_k - w_k^{\top}w_k\right).
-```
-
-通道对 `u` 延迟 `T_f`、对 `w` 延迟 `T_b`；延迟线存储能量有界，故常值时延下通道无源。**可变时延下波变量不保证无源**，因此：
-
-- 主模式：TD-PC（对可变时延鲁棒）；
-- 高延迟/高抖动回退：波变量编码 + 更低带宽，牺牲响应换稳定。
-
-### 3.5 从遥操作演示导出相位阻抗表
-
-对每个任务 `t`、每个相位 `φ`（接近/预接触/接触/搬运）：
+### 2.2 语音 grounding：从字符串到分布
 
 ```text
-从成功演示统计：
-  ṽ(φ)   = 接近速度中位数
-  σ⊥(φ) = 横向修正幅度（垂直于接近轴）
-  τc(φ) = 接触驻留时间
-  g(φ)   = 夹爪闭合时序
-阻抗表：
-  K_p(φ) = K_0 · (1 + α·z_speed(φ)) / (1 + α·z_lateral(φ))
-  D(φ)   = D_0 · (1 + β·z_lateral(φ))
+u (ASR 文本) → 规范化 → schema σ(u) = (verb, target, reference, relation, constraints)
+            → 候选集 C = {o_i : label_i ≈ target}
+            → 打分 s_i = w_l·sim(label_i,target) + w_c·color + w_g·geometry + w_p·phonetic
+            → p(o_i|u,M) = softmax(s_i / T)
 ```
 
-只用中位数/分位数/z-score，**无学习权重**。物理直觉：人类遥操作者在接近段快、在接触段慢且硬；把这种「相位相关的柔顺」抄进控制器。
+三个细节：
 
-### 3.6 时延估计与预测
+1. **音素编辑距离**：`cup→cub` 能被纠正，`cup→cap` 不能（真同音）。所以不能承诺「语音鲁棒」，只能承诺「近音鲁棒 + 同音交给地图/主动感知」。
+2. **不硬提交**：如果 top-2 的后验差小于阈值，保留分布，交给调度器。硬 argmax 会把一个可恢复的歧义变成一个不可恢复的错误。
+3. **几何先验**：`left of the bowl` 不是字符串匹配，是地图上的一个区域势函数；这比纯语言模型更准，也更便宜。
 
-```text
-τ̂_k = median(last W RTT samples)          # 抗抖动
-d̂_k = round(τ̂_k / T_s)
-jitter_k = IQR(last W RTT samples)
-若 jitter_k 大：提高基础阻尼、降低 K_p；TD-PC 自动兜底
-Smith 前馈：e_{k+d̂} ≈ e_k + J_v v_k τ̂_k   # 只提性能，不做保证
-```
+### 2.3 预算调度：买信息，不买「更多计算」
 
-### 3.7 状态机（在 CHUNK-SERVO 上加密）
+每个决策点，候选动作：
 
-```text
-INIT → PLAN → APPROACH(PBVS) → PRECONTACT(PBVS+IBVS)
-     → CONTACT(TD-PC + 法向耗散) → CARRY → DONE
-                     │
-                     └─ edit_score>θ_e → RECOVER（停/重定位/重规划）
-```
+| 动作 | 成本 | 作用 |
+|---|---|---|
+| `SERVO` | 1 个 5 步块 | 降低几何误差，不改变目标信念 |
+| `LOOK` | ≈1–2 个块（小幅视角移动） | 降低目标熵；对近音/遮挡有效，对真同音可能无效 |
+| `VLA` | 5 个块（含延迟） | 重新规划/重新 grounding；对长程和多阶段任务价值更大 |
+| `COMMIT` | 0 | 停止收集信息，执行当前 MAP 目标 |
 
-`CONTACT` 态强制启用 TD-PC；`APPROACH` 态可只用 Smith 前馈以保响应。
+规则：`a* = argmax_a ΔE[success|a] / cost(a)`，只有当边际收益超过机会成本时才买。预算紧张时，`SERVO` 自然占优；目标很清楚时，`COMMIT` 自然占优；目标含糊且看一眼便宜时，`LOOK` 自然占优。**这不是一个固定的状态机，是一个可解释的分配器。**
 
-## 4. 与第 10/11/12 轮的关系：保留、升级、剪枝
+### 2.4 「对话」在哪里
 
-**保留**：
+- **外部对话**：人说一句 → 系统解析成分布 → 系统用「看一眼」来问场景，而不是向人追问；
+- **内部对话**：VLA 的计划被抽象成符号子目标（`approach(target)`、`grasp(target)`、`place(target, ref)`），执行器回传状态符号（`APPROACHED`、`CONTACT`、`SLIP`、`OCCLUDED`）。这些符号是确定性地从几何/夹爪状态派生的，不是第二个模型。它们让「慢规划器」和「快伺服」有一个低带宽、可解释的接口。
 
-- FACT-VLA 相位化 BC、CAC 柔顺、EGP 门控；
-- GEO-RESIDUAL 动作条件化残差、米制表面距离、编辑检测；
-- CHUNK-SERVO 的 30/5 双频、DG-KEYFRAME 相对目标、单模型合规、竞赛组合；
-- 官方 WLA 基座、33k 演示、单任务通道。
+这个「符号 backchannel」是「语音交互」在系统内部的类比：**用离散符号交换意图和状态，而不是每步都传高维动作。**
 
-**升级**：
+## 3. 可证伪的假设
 
-- 增益调度 → **TD-PC 能量有界闭环**（本轮核心）；
-- 固定相位置信 → **遥操作统计阻抗表**；
-- Smith 预测从「稳定手段」降级为「性能前馈」；
-- 评测从「跑分」升级为「预注册论文实验」。
-
-**剪枝**：
-
-- 不再把「调 `K`/`H_c`」当稳定性方案；
-- 不做物理力反馈（API 没有）；
-- 不做第二个学习残差/阻抗网络；
-- 不依赖任何不可核验的 arXiv 编号；
-- 不把 5 次 A/B 当显著性结论。
-
-## 5. 实验门 G0–G9（新增 G8 无源、G9 可复现）
-
-| 门 | 问题 | 通过标准 | 失败动作 |
+| 编号 | 假设 | 证伪条件 | 级别 |
 |---|---|---|---|
-| G0 | 腕部相机能否标定？ | 重投影 ≤5px；头双目 ROI 有效 ≥70% | 只用头双目 PBVS |
-| G1 | 演示检索/阻抗表是否可信？ | top-5 几何有效 ≥80%；相对位姿 ≤5mm/2°；阻抗表分相位可分 | 改用任务级固定目标/固定增益 |
-| G2 | 仿真伺服是否收敛？ | 横向 ≤2mm、深度 ≤3mm、2s ≥95%；RTT 0–150ms 稳定 | 降增益/加 chunk；只做 PBVS |
-| G3 | 真机单任务是否涨点？ | 3/5 任务 +10pp；FoldTowel 不回归 | 不提交 servo 版本 |
-| G4 | 人为干扰能否恢复？ | 检测 ≤200ms；仿真恢复 ≥70% | 只做离线标注 |
-| G5 | 延迟是否可接受？ | p99 ≤150ms；timeout 不升 | 加 chunk/降分辨率/关伺服 |
-| G6 | 32 任务干跑是否稳定？ | N 端口隔离、reset 干净、内存不涨 | 回退基线 |
-| G7 | 消融是否支持因果？ | 相对目标>绝对；5 步>30 步；伺服>无伺服 | 保留有效部分，砍无效部分 |
-| **G8** | **无源性/无极限环？** | `E_obs≥0`；仿真无持续极限环；接触抖动 RMS 不升 | 关 TD-PC，回退纯 PD + 限幅 |
-| **G9** | **论文级可复现？** | 预注册先写；代码/种子/配置/区间齐全；每条引用可打开 | 论文主张降级为工程报告 |
+| H1 | 音素编辑距离 + 不硬提交，在高 ASR 噪声下提升 grounding MAP 准确率 | 相对精确匹配无提升，或校准更差 | 主 |
+| H2 | 预算调度在相同成功率下降低平均成本（或相同成本下提升成功率） | 相对固定 5 步无成本/成功率优势 | 主 |
+| H3 | 预算紧张时调度器自动退化为 SERVO，不出现「为了消歧把预算花光」 | 紧预算下显著差于纯 SERVO | 主（安全性） |
+| H4 | 完整 VoI 贪心显著优于「置信度门控的 LOOK」这一简单启发式 | 两者差值的 CI 跨 0 | 次（证伪性） |
 
-## 6. 风险（本轮更新）
+H4 是刻意写成「可能失败」的：如果完整 VoI 不比一个简单门控好，就应该砍掉复杂度，只保留门控。**一个不能证伪自己复杂度的方案，不值得工程化。**
 
-| 风险 | 影响 | 缓解 |
-|---|---|---|
-| **虚拟力≠物理力** | 无源只保证视觉回路，不保证接触安全 | 限幅/限速/最大重试；接触段额外电流/位置滞止代理 |
-| 过度保守 | TD-PC 耗散过多，伺服变慢，任务超时 | 只在 `E_obs<0` 时耗散；APPROACH 态旁路；G3 判收益 |
-| 增益表过拟合演示分布 | 新物体/新位置失效 | 只用中位数/z-score；按 session 分组验证；置信度低回退 |
-| 可变时延被低估 | `d̂` 错，预测反注能 | TD-PC 兜底；jitter 大时降带宽；G5 |
-| 单模型解释 | 被判第二个模型 | 确定性控制器 + 统计表；写清无学习权重 |
-| 统计假阳性 | 把噪声当涨点 | 预注册、配对、分层、Holm、阴性台账；G9 |
-| 引用污染 | 用假文献支撑真结论 | 引用审计；`UNVERIFIED` 排除出论证链 |
+## 4. 什么情况下放弃这条线
 
-## 7. 一句话押注
+- 语义地图在真实桌面上的位姿误差 > 2cm，且 LOOK 不能降低关联歧义 → 地图不可用，退回「任务级固定目标 + WAVE-SERVO」。
+- 语言指令在评测中几乎无歧义（每个任务只有唯一目标且措辞固定）→ VOI-MAP 的 grounding 部分价值下降，只保留预算调度。
+- 预算调度的收益 < 5% 成本节省，且 H4 失败 → 砍掉调度器，保留「置信度门控」。
+- 真实延迟下 LOOK 的移动本身触发超时 → LOOK 只在 APPROACH 早期允许，CONTACT 段禁用。
 
-**保留 CHUNK-SERVO 的双频执行与演示相对目标，但把它的伺服层从「按 RTT 调增益」升级为「虚拟力 + 时域无源性」：监测视觉伺服虚拟端口的能量，在可变时延注入能量时主动耗散，并用遥操作演示导出的相位阻抗表设置基线增益；最后用预注册的分层贝叶斯实验诚实地判定它是否真涨点——因为一个没有稳定性证明的闭环，和一个没有统计纪律的涨点，都不值得发表。**
+## 5. 一句话押注
 
-**本轮最大风险**：虚拟力不是真实接触力，基于虚拟端口的无源性只能证明「视觉误差回路不振荡」，不能证明「物理接触不撞坏」；若真实接触的摩擦/非线性主导，这套理论可能既保守又不对症。
+**第 13 轮证明了「给定目标时手是稳的」；本轮押注「目标本身是一个分布，计算是一种预算」：用语义地图承载这个分布，用音素编辑距离消化语音噪声，用边际信息增益/成本决定下一次计算买什么——目标清楚就伺服，含糊就先看一眼，看一眼不够才调用大模型。**
+
+## 6. 本轮最大的风险
+
+**语义地图的观测前端（无第二个学习模型、腕部无内参、无主动深度，头双目在透明/反光/弱纹理上不可靠）可能太弱，导致目标后验本身就是错的；此时再精细的 VoI 调度也只是在一个错误的后验上做最优分配，整个元认知层会变成「用更聪明的方式分配预算去执行错误的目标」。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 13 轮产物 · WAVE-SERVO 技术报告
+# 第 14 轮产物 · VOI-MAP 技术报告
 
-> 检索/复核日期：**2026-10-28（UTC）**。对象：宇树 **UniBot 世界挑战赛**（G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API）。本报告是新一轮灵感循环第 1 轮「遥操作 / 论文发表 / 闭环控制」的工程化产物；它在第 12 轮 **CHUNK-SERVO** 之上做控制层增量，不替换第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL。
+> 检索/复核日期：**2026-11-02（UTC）**。对象：宇树 **UniBot 世界挑战赛**（G1 + Dex1，32 项桌面任务，通才单模型赛道，选手自部署 + 官方远程真机 API）。本报告是研究线累计第 14 轮、也是新一轮灵感循环第 1 轮「语音交互 / 成本控制 / 语义地图」的工程化产物。它在第 13 轮 **WAVE-SERVO** 之上加一个**元认知层**，不替换第 10 轮 FACT-VLA、第 11 轮 GEO-RESIDUAL、第 12 轮 CHUNK-SERVO。
 
 ## 0. 结论与边界
 
 ### 0.1 一句话结论
 
-CHUNK-SERVO 的「30 步规划 + 5 步执行」方向正确，但其伺服层是 PD + 启发式增益调度，在**可变 RTT** 下没有稳定性保证。本报告把「VLA—远程 API—机器人」显式建模为**带时延的主从（位置-位置）遥操作回路**，用**虚拟力 + 时域无源性控制（TD-PC）** 在视觉伺服虚拟端口上监测并耗散延迟注入的能量，用**遥操作演示导出的相位阻抗表**设定基线增益，用**预注册分层贝叶斯实验**判定它是否真涨点。唯一学习模型仍是 VLA；其余全部是确定性控制器与统计表。
+第 13 轮证明了「给定目标时，5 步块内的视觉伺服在可变时延下可以保持虚拟端口无源」；本轮把问题往前推一步：**目标本身不是给定的，而是一个由语言和语义地图产生的分布；计算也不是免费的，而是一个有限预算。** VOI-MAP 用语义地图承载目标分布，用音素编辑距离消化语音噪声，用「边际成功增益 / 成本」在 `SERVO / LOOK / VLA / COMMIT` 之间分配预算。它不改变执行层，只决定「动哪个目标、值不值得再花一次计算」。
 
 ### 0.2 证据等级
 
 | 等级 | 含义 | 本报告中的例子 |
 |---|---|---|
-| A | 官方文档、提交模板、数据集元数据、经典文献直接核实 | 规则/API、33,276 eps、WLA `chunk_size=30`、时延裕度公式 |
-| B | 我们在公开数据/网页/公式上做的分析，可复现 | 单任务 SE≈13.7pp、延迟裕度表、能量推导 |
-| C | 设计假设，需 G0–G9 验证 | TD-PC 在真机接触段的有效性、阻抗表收益 |
-| U | 未核验，不得进入论证链 | 第 10–12 轮中形如 `2609.xxxxx` 的 arXiv 编号 |
+| A | 官方文档、提交模板、数据集元数据、经典文献直接核实 | 规则/API、32 任务、33,276 eps、WLA `chunk_size=30`、无 depth/force |
+| B | 本轮在公开数据/公式/合成实验上做的分析，可复现 | 合成预算实验、grounding 准确率、复杂度估算 |
+| C | 设计假设，需 G0–G12 验证 | 真实桌面上的地图精度、LOOK 的信息增益、VoI 在真机上的收益 |
+| U | 未核验，不得进入论证链 | 第 10–13 轮中形如 `2609.xxxxx` 的异常 arXiv 编号 |
 
 ### 0.3 本轮不做什么
 
-- 不做物理力反馈/触觉闭环（API 没有 F/T、tactile）。
-- 不做真人实时遥操作接管（评测是自动 `get_action`，且 RTT 不允许）。
-- 不做第二个学习模型/残差网络/阻抗网络；TD-PC 与阻抗表均无学习权重。
+- 不训练第二个检测/分割/语言/ASR 模型；语义地图用经典立体视觉 + 数据关联，标签来自指令名词本体。
+- 不做真人实时对话/追问；评测是自动 `get_action`，没有人在环里。
+- 不假设腕部相机有内参、不假设有深度图、不假设有 F/T 或触觉。
+- 不把合成实验当作真机证据；不把 5 次 A/B 当显著性结论。
 - 不依赖不可核验的 arXiv 编号。
-- 不把 5 次 A/B 当显著性结论；不把预览榜单当 SOTA。
 
-## 1. 事实核对（只列会改变方案的）
+## 1. 承接：第 13 轮解决了什么、没解决什么
 
-### 1.1 接口时间模型（A）
+### 1.1 已解决
 
-一次 `get_action` 后，evaluator 顺序执行 `H_c` 个动作，chunk 内无新观测、无打断。设：
+- 第 12 轮：30 步开环 → 5 步闭环，降低反馈周期；DG-KEYFRAME 相对目标。
+- 第 13 轮：把 5 步块内的修正从「PD + 增益调度」升级为「虚拟力 + TD-PC」；给出离散时延裕度 `a < 2 sin(π/(2(2d+1)))`，并证明虚拟端口的累计能量 `E_obs ≥ 0`。
+- 结论：**在执行层，给定目标位姿，系统有稳定性论证和确定性回退。**
 
-- `f_c`：evaluator 控制频率（假设 30Hz，必须实测）；
-- `T_s = 1/f_c`；
-- `H_c`：提交的 `action_chunk_size`；
-- `τ`：RTT + 推理 + 图像传输的等效延迟；
-- `d = round(τ/T_s)`：等效离散延迟步数。
+### 1.2 未解决
 
-反馈周期：
+| 问题 | 第 13 轮的隐含假设 | 本轮的处理 |
+|---|---|---|
+| 目标选错 | 目标位姿由上游给定且正确 | 目标变成地图上的分布 `p(o|u,M)`；歧义显式化 |
+| 语言噪声 | 文本干净、精确匹配 | 音素编辑距离 + 同音词表 + 不硬提交 |
+| 计算预算 | 每个 5 步块都算伺服/可调 VLA | 统一成本模型 + 边际增益/成本调度 |
+| 地图 | 单目标相对位姿 | 对象级地图 + 协方差 + 存在置信 |
+| 主动感知 | 无 | `LOOK`：用视角移动换取信息增益 |
 
-```math
-T_{fb} \approx \frac{H_c}{f_c} + \tau .
-```
+### 1.3 本轮的三个新判断
 
-| 场景 | `H_c` | `f_c` | `τ` | `T_fb` |
-|---|---:|---:|---:|---:|
-| WLA 默认 | 30 | 30 | 50ms | 1050ms |
-| 本轮保守 | 5 | 30 | 50ms | 217ms |
-| 本轮高延迟 | 5 | 30 | 150ms | 317ms |
-| 低控制频率 | 5 | 10 | 50ms | 550ms |
+1. **Grounding 错误是不可伺服的。** 抓错物体时，TD-PC 的稳定性反而会让错误执行得更稳、更彻底。目标选择必须在执行前/执行中被显式建模为不确定性。
+2. **语言鲁棒性有上限，必须承认。** 音素编辑距离能修 `cup→cub`，修不了 `cup→cap` 这种真同音；真同音要靠地图几何、颜色、或主动看一眼。**不承诺「语音鲁棒」，只承诺「近音鲁棒 + 同音可检测 + 歧义可行动」。**
+3. **固定调度在歧义面前是错的。** 「总是 5 步伺服」在目标明确时最优，在目标含糊时会把预算花在错误物体上；「不确定就调用 VLA」在长程任务上可能对，但成本高、延迟大。正确对象是**边际信息增益/成本**。
 
-### 1.2 离散时延裕度（A：可推导）
+## 2. 符号与形式化
 
-标量误差回路（每轴独立）：
+### 2.1 语义地图
 
-```math
-e_{k+1} = e_k - a\,e_{k-d},\qquad a = K T_s .
-```
-
-特征方程 `z^{d+1} - z^d + a = 0`。在单位圆 `z=e^{iθ}` 上，由 `e^{idθ}(e^{iθ}-1) = -a` 得：
-
-- 幅值条件 `2|sin(θ/2)| = a`；
-- 相位条件 `θ = π/(2d+1)`（取最小正根）。
-
-故稳定域：
+设桌面坐标系为 `W`。时刻 `t` 的语义地图：
 
 ```math
-\boxed{\,0 < a < a_{\max}(d) = 2\sin\!\left(\frac{\pi}{2(2d+1)}\right)\,}
+M_t = \bigl(\{o_i\}_{i=1}^{N_t},\; F_t\bigr),\qquad
+o_i = (\mathrm{id}_i,\ \ell_i,\ \mu_i,\ \Sigma_i,\ \nu_i)
 ```
 
-| `d` | 0 | 1 | 2 | 3 | 4 | 5 |
-|---|---:|---:|---:|---:|---:|---:|
-| `a_max` | 2.000 | 1.000 | 0.618 | 0.445 | 0.347 | 0.284 |
-| `K_max` @30Hz (1/s) | 60.0 | 30.0 | 18.5 | 13.3 | 10.4 | 8.5 |
+- `\mu_i \in \mathbb R^3`：对象位置（本方案先做位置，姿态按任务需要再做）；
+- `\Sigma_i \in \mathbb R^{3\times3}`：位置协方差；
+- `\ell_i`：标签（来自指令名词本体 + 颜色/关系属性）；
+- `\nu_i \in [0,1]`：存在/可见置信；
+- `F_t`：桌面自由空间栅格（用于碰撞/可达性检查）。
 
-**含义**：τ 从 20ms 跳到 150ms（d≈0→5），允许增益下降约 **7 倍**。启发式 `K_0/(1+τ/τ_0)` 很难在抖动中始终落在域内；这是本轮引入 TD-PC 的直接动机。
+**观测前端（无第二个学习模型）**：
 
-### 1.3 数据与遥操作先验（A+C）
+```text
+头双目校正图像 → 视差 → 桌面点云 P_t（下采样到 ~2k 点）
+              → 深度/颜色不连续分割 → 区域 R_t = {r_j}
+              → 区域质心 z_j、协方差 R_j、颜色直方图
+```
 
-- 32 任务 / 33,276 episodes / 18.28M frames / 169.28h / 30fps；单任务 969–1,533 eps。
-- 头双目已校正（基线 58.2526mm，fx≈282px）；腕部相机无内参。
-- 每条 episode 提供逐帧 EE 位姿、夹爪、下身体，可提取相位速度/刚度统计（C 级用法，需 G1 验证）。
+不使用的：腕部相机做米制（无内参）、任何学习型检测/分割器、任何深度网络。
 
-### 1.4 榜单与统计纪律（B）
+### 2.2 地图更新：门控 + 匈牙利 + 卡尔曼
 
-榜单是赛事方预览，`step~success` 高度线性（`R²>0.999999`），任务级成功率不是 10% 整数倍，跨模型任务相关仅约 0.098。使用它只能当「难度先验」，不能当实测分布。10 trials/任务单任务 SE≈13.7pp；32 任务合并 SE≈2.42pp。
-
-### 1.5 引用卫生（本轮新增）
-
-第 10–12 轮出现的 `2609.xxxxx` 形 arXiv 编号年份异常，本报告标为 `U` 级，不进入论证链。所有引用在复现包中必须可打开；不可打开者标 `UNVERIFIED` 并从论证中移除。
-
-## 2. 问题形式化
-
-### 2.1 主从遥操作模型
-
-把系统写成两端口网络：
-
-- **主端（leader）**：VLA 规划器，输出 30 步前馈 `a_ff`；
-- **从端（follower）**：机器人 + 环境，状态 `x = (T_{ee}, v, gripper)`；
-- **通道**：延迟 `τ_k`（可变、未知、上界 `τ_max`），传输「指令」与「图像/状态」。
-
-位置-位置架构：主端发期望位姿，从端回观测位姿；无力反馈。控制目标是：
+对每个已有对象 `i`，预测：
 
 ```math
-\min\ \|e_k\|^2 \quad \text{s.t.}\quad \text{闭环在 } \tau_k \in [0,\tau_{\max}] \text{ 下有界、无持续振荡}.
+\mu_i^- = \mu_i^{t-1},\qquad \Sigma_i^- = \Sigma_i^{t-1} + Q
 ```
 
-### 2.2 视觉伺服误差与相对目标
+对每个观测区域 `j`，马氏距离：
 
 ```math
-e_k = \log\!\left(T_{ee,k}^{-1}\,T_{ee,k}^{d}\right) \in \mathbb R^6,\qquad
-T_{ee,k}^{d} = T_{base,target}(t_k)\,T_{target,ee}^{*}.
+d_{ij}^2 = (z_j-\mu_i^-)^\top(\Sigma_i^-+R_j)^{-1}(z_j-\mu_i^-)
 ```
 
-`T_{target,ee}^{*}` 来自第 12 轮演示检索（DG-KEYFRAME）；`T_{base,target}(t)` 在线用头双目 + 第 11 轮几何估计。
-
-### 2.3 虚拟端口
-
-真实功率端口需要力，API 没有。定义**虚拟力**：
+只保留 `d_{ij}^2 \le \gamma^2` 的边，用匈牙利算法最大化总似然。匹配上的做卡尔曼更新：
 
 ```math
-\hat F_k = K_e(\phi_k)\,e_k + D_e(\phi_k)\,\dot e_k \in \mathbb R^6,
+K_i = \Sigma_i^-(\Sigma_i^-+R_j)^{-1},\quad
+\mu_i = \mu_i^- + K_i(z_j-\mu_i^-),\quad
+\Sigma_i = (I-K_i)\Sigma_i^-
 ```
 
-其中 `φ_k` 是相位（接近/预接触/接触/搬运），`K_e(\phi), D_e(\phi)` 来自遥操作演示统计（§4）。定义指令速度与虚拟端口功率：
+未匹配区域：若点数足够且能对应指令名词，则新建对象（大方差）；未匹配对象：`\nu_i` 衰减，超过 `\tau_{out}` 帧后保留但增大 `\Sigma_i`（不立即删除，避免遮挡导致的身份丢失）。
+
+**关键设计**：`\Sigma_i` 必须真实反映不确定性。若地图假装 `\Sigma_i=0`，调度器永远不会选择 `LOOK`，预算层退化为固定调度。
+
+### 2.3 语言 schema 与 grounding 后验
+
+指令 `u` 先规范化为 schema：
 
 ```math
-v_k^{d} = -\Lambda\,\hat F_k,\qquad
-P_k = v_k^{\top}\hat F_k = -\hat F_k^{\top}\Lambda\hat F_k \le 0 \quad(\tau=0).
+\sigma(u) = (\mathrm{verb},\ \mathrm{target},\ \mathrm{reference},\ \mathrm{relation},\ \mathrm{constraints})
 ```
 
-**边界声明**：`\hat F` 是视觉误差的弹簧-阻尼代理，不是物理接触力。下文的「无源」均指**虚拟端口无源**。
+候选集：
 
-### 2.4 可辨识性条件（沿用第 12 轮）
+```math
+C_t(\tau) = \{o_i : \ell_i \in \mathrm{syn}(\tau)\ \text{或颜色/关系匹配}\}
+```
 
-伺服仅在以下同时满足时启用：目标在视野内；深度/视差有效（双目 ROI≥70% 或腕部 inlier≥15）；标定误差在门限内（重投影≤5px）；目标位姿协方差低于阈值；任务属刚体接触类。任一不满足 → 回退 VLA 开环/PBVS 粗对齐。
+打分：
 
-## 3. WAVE-SERVO 设计
+```math
+s_i = w_\ell\,\mathbb 1[\ell_i\in\mathrm{syn}(\tau)]
+    + w_c\,\mathbb 1[\mathrm{color}_i\in C]
+    + w_g\,\phi_{\mathrm{rel}}(\mu_i;\rho,r)
+    - w_p\,d_{\mathrm{phon}}(\tau_{\mathrm{asr}},\ell_i)
+```
+
+其中 `\phi_{\mathrm{rel}}` 是几何关系势函数。例如 `left of the bowl`：
+
+```math
+\phi_{\mathrm{left}}(x_i;x_\rho) =
+-\frac{1}{2\sigma_x^2}\bigl((x_i-x_\rho)+\delta\bigr)^2
+-\lambda\,\mathbb 1[x_i>x_\rho]
+```
+
+后验：
+
+```math
+p(o_i\mid u,M_t) = \frac{\exp(s_i/T)}{\sum_{j\in C_t}\exp(s_j/T)}
+```
+
+**音素距离**（确定性、无学习）：
+
+```math
+d_{\mathrm{phon}}(a,b) = \min\bigl(\mathrm{Lev}(a,b),\ \mathrm{Lev}(\mathrm{sk}(a),\mathrm{sk}(b))+0.5\bigr)
+```
+
+`Lev` 是 Levenshtein 编辑距离，`sk` 是一个小的确定性音素骨架映射（去元音、合并清浊）。同音词表单独维护，用于标记「真同音」——这类歧义不靠编辑距离解决，交给 `LOOK`/几何。
+
+**不硬提交**：若
+
+```math
+\frac{p_{(1)}}{p_{(2)}} < \rho_{\mathrm{amb}}
+```
+
+则保留分布，调度器看到高熵，选择 `LOOK` 或 `VLA`，而不是 argmax 后直接执行。
+
+### 2.4 预算化决策过程
+
+状态：
+
+```math
+x_t = (b_t,\ p_t,\ \phi_t,\ B_t,\ M_t)
+```
+
+- `b_t`：目标后验（由 §2.3 得到，随 LOOK/VLA 更新）；
+- `p_t`：执行进度（已执行的伺服步数/块数）；
+- `\phi_t`：相位（APPROACH / PRECONTACT / CONTACT / CARRY）；
+- `B_t`：剩余预算（归一化成本单位）；
+- `M_t`：语义地图。
+
+动作与成本：
+
+| 动作 | 成本 | 对信念/进度的影响 |
+|---|---|---|
+| `SERVO` | `c_s` | `p \leftarrow p+\delta`；`b` 不变 |
+| `LOOK` | `c_l` | 以概率 `q_l` 把 `b` 收敛到真值；否则不变；`p` 不变 |
+| `VLA` | `c_v` | 以概率 `q_v` 把 `b` 收敛到真值；并可重规划（长程任务额外收益） |
+| `COMMIT` | 0 | 停止收集信息，执行当前 MAP 目标 |
+
+成功模型（MAP 近似）：
+
+```math
+P_{\mathrm{succ}}(b,p) \approx \Bigl(\max_i b_i\Bigr)\cdot f(p),\qquad
+f(p)=1-e^{-p/p_0}
+```
+
+更一般的写法是 `\sum_i b_i f_i(p)`；本报告为可解释性使用 MAP 近似，并在 §5.5 说明它偏向「只抓一个目标」的任务。
+
+**一步边际增益**：
+
+```math
+\Delta_{\mathrm{servo}} = c\,[f(p+\delta)-f(p)],\qquad c=\max_i b_i
+```
+
+```math
+\Delta_{\mathrm{look}} = (c'_l-c)\,f(p),\qquad c'_l = q_l\cdot 1 + (1-q_l)\,c
+```
+
+```math
+\Delta_{\mathrm{vla}} = (c'_v-c)\,f(p) + \Delta_{\mathrm{plan}},\qquad c'_v = q_v\cdot 1 + (1-q_v)\,c
+```
+
+其中 `\Delta_{\mathrm{plan}}` 是 VLA 的重新规划收益（本轮合成实验设为 0，因此实验对 VLA 是**保守的**）。
+
+**调度规则**：
+
+```math
+a^\star = \arg\max_{a\in\{\mathrm{SERVO},\mathrm{LOOK},\mathrm{VLA}\}}
+\frac{\Delta_a}{c_a}
+\quad\text{s.t.}\quad c_a\le B_t
+```
+
+若最大比值低于机会成本阈值 `\lambda`，或 `c\ge c_{\mathrm{stop}}` 且 `p\ge p_{\mathrm{stop}}`，则 `COMMIT`。
+
+### 2.5 与 POMDP 的关系
+
+严格的问题是有限时域 POMDP：
+
+```math
+\max_\pi\ \mathbb E\Bigl[\sum_t \mathrm{success}_t - \eta\sum_t \mathrm{cost}_t\Bigr]
+```
+
+上述规则是**一步贪心**，忽略了「现在买的信息会影响未来动作」的期权价值。它便宜、可解释、可在 CPU 上实时算；但它是近似，不是最优。第 6 节会把这个近似本身作为一个可证伪假设（H4）。
+
+## 3. 算法
 
 ### 3.1 分层结构
 
 ```text
-Leader (VLA, GPU, ~1Hz):
-    a_ff[0:30] = VLA(obs)                  # 语义规划，不含毫米级
-                 │  async, plan cache
-                 ▼
-Follower (CPU, 6Hz correction):
-    phase φ, goal retrieval
-    e_k, ė_k
-    F̂_k = K_e(φ)e_k + D_e(φ)ė_k
-    v_k = -Λ F̂_{k-d̂}                      # 延迟反馈
-    TD-PC: E_obs, β_k  (仅在 E_obs<0 时耗散)
-    Δ_k = clip(T_s v_k, ±δ_p, ±δ_r)
-    a_cmd = a_ff[chunk] ∘ exp(Δ_k)
-                 │  5-step chunk
-                 ▼
-Evaluator (remote, delayed)
+                    ┌─────────────────────────────────────────────┐
+                    │ Evaluator (N ports, delayed websocket)      │
+                    └──────────────────┬──────────────────────────┘
+                                       │ obs / action chunk
+                                       ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │ Per-port PolicyService (CPU)                             │
+        │                                                          │
+        │  ┌────────────────────────────────────────────────────┐  │
+        │  │ L3  VOI-MAP 元认知层（本轮新增）                    │  │
+        │  │  semantic map M_t                                   │  │
+        │  │  grounding p(o|u,M_t)                               │  │
+        │  │  budget scheduler: SERVO / LOOK / VLA / COMMIT      │  │
+        │  └───────────────────────┬────────────────────────────┘  │
+        │                          │ selected action              │
+        │  ┌───────────────────────▼────────────────────────────┐  │
+        │  │ L2  WAVE-SERVO（第 13 轮）                          │  │
+        │  │  virtual force F̂, TD-PC, phase impedance table      │  │
+        │  │  5-step correction, delay estimate, clamps          │  │
+        │  └───────────────────────┬────────────────────────────┘  │
+        │                          │ 30/5 chunk                 │
+        │  ┌───────────────────────▼────────────────────────────┐  │
+        │  │ L1  VLA server（唯一学习模型，GPU，~1Hz）            │  │
+        │  │  UnifoLM-WLA-1.0, 30-step plan                      │  │
+        │  └────────────────────────────────────────────────────┘  │
+        └──────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 TD-PC 精确步骤
+VOI-MAP 只决定「调用哪一层、什么时候调用、目标是谁」；它不直接产生关节/末端动作；所有执行仍经过 L2 的 TD-PC 和限幅。
 
-记 `Ts` 为控制周期，`F̂_k` 为当前虚拟力，`v_k` 为当前指令速度（由延迟力 `F̂_{k-d̂}` 计算）。
-
-```text
-1. E_obs(k) = E_obs(k-1) + Ts * (v_k · F̂_k)
-2. if E_obs(k) < 0:
-       β_k = -E_obs(k) / (Ts * ||F̂_k||^2 + ε)
-       v_k = v_k - β_k * F̂_k
-       E_obs(k) = 0
-3. Δ_k = clip(Ts * v_k, ±δ_p, ±δ_r)      # δ_p=1cm, δ_r=0.05rad
-```
-
-性质：
-
-- `E_obs(k) ≥ 0` 对所有权 `k`（归纳：负则归零，正则不减）。
-- 耗散量恰好抵消累计产能：`Ts β_k ‖F̂_k‖² = -E_obs_old(k)`。
-- 当 `τ=0` 时 `E_obs` 单调不增（因为 `P_k≤0`），TD-PC 不触发，**不影响无延迟性能**。
-- `β_k` 只在能量注入时非零，故是「按需耗散」而非全局降增益。
-
-### 3.3 波变量（分析 + 高延迟回退）
-
-```math
-u_k = \frac{1}{\sqrt{2b}}(\hat F_k + b v_k),\qquad
-w_k = \frac{1}{\sqrt{2b}}(\hat F_k - b v_k),
-```
-
-```math
-\hat F_k^{\top} v_k = \tfrac12\left(u_k^{\top}u_k - w_k^{\top}w_k\right).
-```
-
-- 常值时延：延迟线储能 `\int (u^2+w^2)` 有界 ⇒ 通道无源 ⇒ 与无源主/从端互联稳定。
-- 可变时延：波变量本身不保证无源；因此只作为**分析语言**和 `τ_max` 很大时的**低带宽回退**，主模式仍是 TD-PC。
-- 与 Smith 预测的关系：Smith 需要精确模型与常值时延，作为**性能前馈**保留；TD-PC 作为**稳定性安全网**，两者不冲突。
-
-### 3.4 时延估计
-
-```text
-τ̂_k = median(RTT[k-W+1 : k])          # 抗抖动
-d̂_k = round(τ̂_k / Ts)
-jitter_k = IQR(RTT[k-W+1 : k])
-if jitter_k > J0:  基线下调 K_e, 上调 D_e
-Smith 前馈: e_{k+d̂} ≈ e_k + J_v v_k τ̂_k
-```
-
-`W` 取 10–20；`J0` 由单任务通道标定。所有量逐端口独立。
-
-### 3.5 相位阻抗表（遥操作演示先验）
-
-对任务 `t`、相位 `φ`，从成功演示统计：
-
-```text
-ṽ(φ)   = median approach speed
-σ⊥(φ) = median lateral correction magnitude
-τc(φ) = contact dwell time
-```
-
-构造：
-
-```math
-K_e(\phi) = K_0\,\frac{1+\alpha\,z_{v}(\phi)}{1+\alpha\,z_{\perp}(\phi)},\qquad
-D_e(\phi) = D_0\,\bigl(1+\beta\,z_{\perp}(\phi)\bigr),
-```
-
-`z` 为按任务归一化的 z-score，`α,β` 由 G1/G2 标定。物理直觉：人类遥操作者接近快、接触慢且刚；把「相位相关柔顺」编码进增益表，而不是全局常数。
-
-### 3.6 `get_action` 伪代码
+### 3.2 地图更新伪代码
 
 ```python
-class WaveServoPolicy:
-    Ts = 1.0 / 30.0
-    Hc = 5
+def update_map(M, stereo_rgb, instruction, dt):
+    P = stereo_pointcloud(stereo_rgb)          # head stereo, table frame
+    regions = segment_depth_color(P, stereo_rgb)
+    preds = [predict(o, dt) for o in M.objects]  # static: mu^- = mu, Sigma^- = Sigma + Q
+    edges = []
+    for i, o in enumerate(preds):
+        for j, r in enumerate(regions):
+            d2 = mahalanobis(r.centroid, o.mu, o.Sigma + r.cov)
+            if d2 <= GATE2:
+                edges.append((i, j, d2))
+    matches = hungarian_max_likelihood(edges)
+    for i, j in matches:
+        M.objects[i] = kalman_update(preds[i], regions[j])
+    for j in unmatched(regions):
+        if region_is_object(regions[j]) and label_compatible(instruction, regions[j]):
+            M.objects.append(birth(regions[j]))   # large Sigma
+    for o in unmatched(M.objects):
+        o.nu *= DECAY
+        o.Sigma += Q_LOST                      # keep identity, inflate uncertainty
+    M.free_space = update_occupancy(M.free_space, P)
+    return M
+```
 
+### 3.3 Grounding 伪代码
+
+```python
+def ground(instruction, M):
+    schema = canonicalize(instruction)          # verb/target/reference/relation/constraints
+    cands = [o for o in M.objects if label_match(o.label, schema.target)]
+    if not cands:
+        return None, 1.0                    # high entropy -> scheduler will LOOK/VLA
+    scores = []
+    for o in cands:
+        s = W_L * label_score(o.label, schema.target)
+        s += W_C * color_score(o.color, schema.constraints)
+        s += W_G * relation_potential(o.mu, schema)
+        s -= W_P * phonetic_distance(schema.target_asr, o.label)
+        scores.append(s)
+    p = softmax(scores, T)
+    return p, entropy(p)
+
+def should_commit(p, ratio_thresh):
+    p_sorted = sorted(p, reverse=True)
+    return len(p) == 1 or (p_sorted[0] / max(p_sorted[1], 1e-9) >= ratio_thresh)
+```
+
+### 3.4 LOOK：用视角换信息
+
+`LOOK` 不是任意移动。候选是有限个**小幅、可逆、限速**的视角动作：
+
+```text
+{left 3cm, right 3cm, up 3cm, tilt_left 5°, tilt_right 5°}
+```
+
+选择规则：对每个候选视角 `v`，用当前地图与分割模型预测「哪些候选对象会变得可区分」，得到期望熵减 `\Delta H(v)`；选
+
+```math
+v^\star = \arg\max_v \frac{\Delta H(v)}{c_{\mathrm{look}}(v)}
+```
+
+实现上不训练新模型：用几何遮挡关系 + 颜色直方图 + 当前 `\Sigma_i` 做一个确定性的代理。若 `\Delta H(v^\star) < \epsilon`（看一眼也分不清），则不浪费预算，转而选择 `VLA` 或按几何先验 `COMMIT`。
+
+**相位约束**：`LOOK` 只在 APPROACH/PRECONTACT 允许；CONTACT/CARRY 禁止（会破坏接触/抓取）。
+
+### 3.5 预算调度伪代码
+
+```python
+def schedule(belief, progress, phase, budget, M, cfg):
+    c = max(belief)
+    f = lambda p: 1.0 - math.exp(-p / cfg.p0)
+
+    # COMMIT if confident enough and execution far enough
+    if c >= cfg.c_stop and progress >= cfg.p_stop:
+        return COMMIT
+
+    opts = []
+    if budget >= cfg.c_servo:
+        opts.append((SERVO, c * (f(progress + cfg.delta) - f(progress)), cfg.c_servo))
+    if phase in (APPROACH, PRECONTACT) and budget >= cfg.c_look and cfg.looks < cfg.max_looks:
+        c_after = cfg.q_look + (1 - cfg.q_look) * c
+        opts.append((LOOK, (c_after - c) * f(progress), cfg.c_look))
+    if budget >= cfg.c_vla and cfg.vlas < cfg.max_vla:
+        c_after = cfg.q_vla + (1 - cfg.q_vla) * c
+        opts.append((VLA, (c_after - c) * f(progress) + cfg.delta_plan, cfg.c_vla))
+    if not opts:
+        return COMMIT
+
+    act, gain, cost = max(opts, key=lambda o: o[1] / o[2])
+    if gain / cost < cfg.lambda_opportunity:
+        return COMMIT
+    return act
+```
+
+### 3.6 与 WAVE-SERVO 的接口
+
+- `SERVO`：调用第 13 轮的 5 步块；虚拟力、TD-PC、相位阻抗表、限幅全部不变。
+- `VLA`：异步请求 30 步计划；拿到后缓存，按 5 步切片；不阻塞当前伺服。
+- `LOOK`：小幅视角动作，不经过 VLA；动作本身仍受关节限位/速度限幅。
+- `COMMIT`：停止收集信息，执行当前 MAP 目标；若执行中编辑检测触发（第 11 轮），回到 `LOOK`/`VLA`。
+- **安全继承**：VOI-MAP 不新增执行通路；所有动作仍是第 13 轮安全集的子集。
+
+### 3.7 `get_action` 伪代码
+
+```python
+class VoiMapPolicy:
     def __init__(self):
-        self.E_obs = 0.0
-        self.F_hist = deque(maxlen=32)   # 延迟力环形缓冲
+        self.M = SemanticMap()
         self.plan = None
-        self.plan_idx = 0
+        self.belief = None
+        self.progress = 0
         self.phase = "APPROACH"
+        self.budget = BUDGET0
+        self.looks = 0
+        self.vlas = 0
 
     def get_action(self, obs):
-        self._tick(obs)                       # 相位/编辑检测（第 11/12 轮）
-        tau = self._estimate_delay(obs)       # median RTT
-        d = max(0, round(tau / self.Ts))
-        self._maybe_request_plan(obs)         # 异步 VLA，不阻塞
+        self.M = update_map(self.M, obs.stereo, obs.instruction, obs.dt)
+        self.phase = observe_phase(self.M, obs)          # round 11/12
+        if edit_detected(obs):
+            self.phase = "RECOVER"
 
-        goal = self._retrieve_goal(obs)       # DG-KEYFRAME，可返回 None
-        if self.plan is None or goal is None:
-            return self._safe_chunk(obs)      # 合法 hold / 上一 chunk
+        belief, H = ground(obs.instruction, self.M)
+        if belief is None or H > H_MAX:
+            act = LOOK if self._look_worth_it() else VLA
+        else:
+            act = schedule(belief, self.progress, self.phase, self.budget, self.M, CFG)
 
-        e = self._servo_error(obs, goal)      # 6D twist
-        de = (e - self._e_prev) / self.Ts
-        F = self._impedance(self.phase) * e + self._damping(self.phase) * de
-        self.F_hist.append(F)
-
-        F_delayed = self.F_hist[-1 - d] if len(self.F_hist) > d else F
-        v = -self.Lambda @ F_delayed          # 延迟反馈
-
-        # ---- TD-PC ----
-        self.E_obs += self.Ts * float(v @ F)
-        if self.E_obs < 0.0:
-            beta = -self.E_obs / (self.Ts * float(F @ F) + 1e-9)
-            v = v - beta * F
-            self.E_obs = 0.0
-
-        delta = self._clip(v * self.Ts, dp=0.01, dr=0.05)
-        a_ff = self._plan_slice(self.Hc)      # 30 步计划切 5 步
-        a_cmd = compose_relative(a_ff, delta) # EE 局部系右乘
-        return self._adapter(a_cmd, obs)      # WLA 54D -> API 21D
+        if act == SERVO:
+            self.progress += 1
+            self.budget -= CFG.c_servo
+            return self._wave_servo_chunk(obs, self._map_target(belief))
+        if act == LOOK:
+            self.looks += 1
+            self.budget -= CFG.c_look
+            return self._look_action(obs)
+        if act == VLA:
+            self.vlas += 1
+            self.budget -= CFG.c_vla
+            self._request_plan_async(obs)
+            return self._safe_hold_or_last_chunk()
+        return self._commit_action(obs, belief)          # COMMIT
 ```
 
 规则：
 
-- VLA 除冷启动外不阻塞；plan 过期用旧 plan + 伺服。
-- 伺服任何异常 → 返回上一组合法 chunk 或安全 hold；绝不返回 NaN/错误形状。
-- 每端口独立 `E_obs`、`F_hist`、`phase`、`plan`、`goal`。
-
-### 3.7 动作适配（沿用第 12 轮，保留关键风险）
-
-WLA 54D → API 21D：`left/right EE 相对 → 绝对`（先整体 compose 再切 5 步，避免锚点错位）；gripper 直通；`pivot` 从 base/waist/height 组合。`pivot` 7 维语义未逐维定义，第一验证项是 `example_env.py` + 单任务通道；不匹配时先返回零 pivot，只验证双臂。
+- 任何异常 → 返回上一合法 chunk 或安全 hold；绝不返回 NaN/错误形状。
+- 每个端口独立维护地图、信念、预算、计数。
+- `VLA` 除冷启动外不阻塞；plan 过期时用旧 plan + 伺服。
 
 ### 3.8 状态机
 
 ```text
-INIT → PLAN → APPROACH(PBVS) → PRECONTACT(PBVS+IBVS)
-     → CONTACT(TD-PC + 法向耗散) → CARRY → DONE
-                     │
-                     └─ edit_score>θ_e → RECOVER（停/重定位/重规划）
+INIT → GROUND → {SERVO | LOOK | VLA | COMMIT}
+                  │        │       │
+                  │        │       └─→ PLAN → APPROACH → ...
+                  │        └─→ 更新地图/信念 → GROUND
+                  └─→ APPROACH → PRECONTACT → CONTACT → CARRY → DONE
+                                         │
+                                         └─ edit_score>θ_e → RECOVER → GROUND
 ```
 
-- `APPROACH`：可旁路 TD-PC，只用 Smith 前馈，保响应。
-- `CONTACT`：强制 TD-PC；法向分量额外乘 0.3–0.5 并低通；切向保留。
-- `RECOVER`：编辑检测触发；先停，再重定位；目标不可见则 VLA 重规划。
+与第 13 轮的状态机相比，新增 `GROUND` 和 `LOOK` 两个节点；`RECOVER` 回到 `GROUND` 而不是直接重规划，这样「目标错了」和「目标对了但执行失败」被区分开。
 
-## 4. 推导与性质
+## 4. 性质、复杂度与正确性
 
-### 4.1 为什么启发式增益调度不够
+### 4.1 Grounding 的 Bayes 解释
 
-带宽/稳定裕度随时延下降（§1.2）。若 `d` 在 0–5 间抖动，固定 `K` 必须满足最坏 `d=5`，即 `K<K_max(5)≈8.5/s`。但这会让 `d=0` 时过慢。启发式在线调 `K` 需要准确知道 `d` 且切换平滑；一旦估计滞后或抖动，可能瞬时越界。TD-PC 不依赖精确 `d`：它只看「实际能量流」，越界时自动耗散。
-
-### 4.2 能量有界性
-
-定义累计虚拟能量：
+**命题 1（模型内最优）**：把 §2.3 中除音素项以外的打分写成先验能量
 
 ```math
-E_{obs}(k) = T_s \sum_{i=1}^{k} v_i^{\top}\hat F_i .
+p(o_i)\ \propto\ \exp\!\Bigl(\frac{w_\ell \mathbb 1[\ell_i\in\mathrm{syn}]+w_c\mathbb 1[\mathrm{color}_i\in C]+w_g\phi_{\mathrm{rel}}}{T}\Bigr),
 ```
 
-TD-PC 步骤保证 `E_obs(k) ≥ 0`。当 `E_obs(k) < 0` 时，`β_k` 使本次耗散恰为 `-E_obs(k)`，故新值归零。于是对所有 `k`：
+把音素项写成似然
 
 ```math
-T_s \sum_{i=1}^{k} v_i^{\top}\hat F_i \ge 0 .
+p(z\mid o_i)\ \propto\ \exp\!\Bigl(-\frac{w_p\,d_{\mathrm{phon}}(z,\ell_i)}{T}\Bigr),
 ```
 
-即虚拟端口从控制器角度看是「耗散/无源」的。对无源系统，负反馈互联的 `L_2` 稳定性由无源性定理给出（在虚拟端口意义下）。
+则 `p(o_i|z) ∝ p(z|o_i)p(o_i)` 正好是 §2.3 的 softmax；MAP 选择最小化 0-1 损失。
 
-### 4.3 无延迟不退化
+**证明**：由 Bayes 公式，`p(o_i|z) ∝ p(z|o_i)p(o_i)`；指数相加即得 softmax；0-1 损失的贝叶斯最优决策是后验众数。∎
 
-`τ=0 ⇒ d=0 ⇒ v_k = -ΛF̂_k ⇒ P_k = -F̂_k^TΛF̂_k ≤ 0 ⇒ E_obs` 单调不增，TD-PC 不触发。故 TD-PC 是「只在需要时介入」的安全层，不牺牲标称性能。
+**边界**：这证明的是「在假设的噪声模型下最优」，不是「在真实 ASR 下最优」。若真实噪声不同（例如同音词不是对称替换），后验会 misspecified；必须用 G10 的 ECE 校准来检验，而不是把命题 1 当现实保证。
 
-### 4.4 接触段的法向/切向分解
+### 4.2 调度器的一步最优性与多步缺口
 
-令接触法向 `n_k`，投影 `P_n = n n^T`，`P_t = I - P_n`：
+**命题 2（一步分数背包）**：在单步决策、成本可加、动作互斥的设定下，`\arg\max_a \Delta_a/c_a` 是「单位成本成功增益」最大的动作。
 
-```math
-\Delta_k = P_n \Delta_k^{n} + P_t \Delta_k^{t},\qquad
-\Delta_k^{n} \leftarrow \gamma_n\,\mathrm{LPF}(\Delta_k^{n}),\quad \gamma_n\in[0.3,0.5].
+**证明**：对任意两个动作 `a,b`，比较 `\Delta_a/c_a` 与 `\Delta_b/c_b`；比值大者在固定成本下增益更大，或在固定增益下成本更低。单步可行域是离散的，逐项比较即得。∎
+
+**多步缺口**：真正的目标是有限时域 POMDP；一步贪心忽略了「信息影响未来」的期权价值。若把「购买的信息」看成集合函数，且期望成功对购买集合是单调自适应次模的、成本可加，则自适应贪心有一常数近似（Golovin & Krause, 2011）。**但本方案没有证明自己的成功模型满足自适应次模性**，所以只声明「一步局部最优 + 经验有效」，不声明全局近似比。这是本轮刻意保留的理论缺口。
+
+### 4.3 非退化与安全继承
+
+**命题 3（极限退化）**：
+
+- 若目标唯一（`|C|=1`）且预算充足，则 `c=1`，`LOOK/VLA` 的边际增益为 0，调度器选择 `SERVO` 直到 `p≥p_stop`，再 `COMMIT`；行为退化为 WAVE-SERVO。
+- 若预算只够 `SERVO`（`B<c_l` 且 `B<c_v`），动作集只剩 `SERVO/COMMIT`；行为退化为 CHUNK-SERVO。
+- 若预算为 0，返回安全 hold/上一 chunk；行为退化为开环 VLA。
+
+**证明**：逐条检查动作集与 `\Delta/c` 的符号即可。∎
+
+**命题 4（安全继承）**：VOI-MAP 的输出是 `{SERVO, LOOK, VLA, COMMIT}` 之一；`SERVO`/`VLA` 产生的动作经过第 13 轮的 TD-PC 与限幅；`LOOK` 是头部/躯干限速、限位、可逆的小幅视角动作；`COMMIT` 是保持/停止。故 VOI-MAP 的可达动作集是第 13 轮安全集的子集，虚拟端口的无源性保证不被破坏。
+
+**证明**：由构造，VOI-MAP 不直接写关节/末端指令，只选择已有安全动作；安全集对子集封闭。∎
+
+**边界**：这仍然只保证「虚拟端口无源」和「动作在限幅内」，**不保证物理接触不撞坏**——这是第 13 轮的最大风险，本轮没有消除。
+
+### 4.4 复杂度
+
+| 模块 | 复杂度 | 典型值（N≤20, P≤2k, |u|≤20） |
+|---|---|---|
+| 点云/分割 | `O(P)` | ~0.5 ms |
+| 数据关联 | `O(N^3)`（匈牙利） | N=20 → <0.2 ms |
+| 卡尔曼 | `O(N)` | <0.05 ms |
+| Grounding | `O(|C|\cdot|u|\cdot L)` | <0.1 ms |
+| 调度 | `O(|A|)=4` | <0.01 ms |
+| **总计（CPU 开销）** | — | **<2 ms / get_action** |
+
+总延迟仍由 VLA 推理与网络主导；VOI-MAP 的 CPU 开销相对可忽略。内存 `O(N + |F_t|)`，单端口 <50 MB。
+
+### 4.5 为什么不是「总是调用 VLA」或「总是伺服」
+
+- **总是 VLA**：每次 `c_v` 高；在 32×10 的评测里，延迟和限流会直接变成 timeout；而且 VLA 对「最后 3 厘米」的几何精度不如 5 步伺服（第 12 轮已论证）。合成实验里 `always_vla` 在所有预算档都被支配（§5.3）。
+- **总是伺服**：目标错时，伺服越稳越糟；没有机制去获取新信息。
+- **固定 LOOK-first**：在简单任务上浪费一次 LOOK；在预算紧张时挤掉执行步。合成实验里 `look_first` 的平均 succ/cost 低于 `look_gate` 和 VOI（§5.3）。
+- **VOI-MAP**：把「要不要买信息」变成显式决策；预算紧时自动退化为伺服，目标清楚时自动跳过 LOOK。
+
+## 5. 本轮合成实验（实跑，B 级证据）
+
+### 5.1 这不是基准证据
+
+这是一个**合成机制检查**，只回答一个问题：在「指令噪声 + 候选歧义 + 硬预算」的玩具模型里，VoI 调度是否比固定调度更省/更准。它不证明真机收益，也不证明地图在真实桌面可用。脚本：`exp/voi_map_sim.py`；结果：`exp/voi_map_results.json`。
+
+### 5.2 生成模型（全部声明，不拟合）
+
+```text
+- episode 为 50/50 混合：
+    simple:    k=1，无歧义；
+    ambiguous: k∈{2,3,4}，ASR 错误率 e。
+- ASR：以概率 e 污染标签；其中一半是真同音（音素编辑距离修不了），
+  一半是近音（编辑距离能修）。
+- grounding 前端：exact-match vs 音素编辑距离。
+- 动作成本：SERVO=1（+1 执行进度），LOOK=2（q=0.8 解决目标，最多 2 次），
+  VLA=5（q=0.95，最多 1 次）。
+- 成功 = 提交目标正确 且 Bernoulli(1-exp(-progress/2.5))。
+- 预算 B ∈ {5,8,11,14}；每个格子 5000 episodes；固定种子。
 ```
 
-TD-PC 作用在整体 `Δ_k` 上；法向额外缩幅用于防止硬接触冲击。滑移检测（`r_grasp` 突变）时冻结切向、加大夹持。
+**重要简化**：VLA 在玩具里只是一个「消歧器」，没有建模它的重规划/长程价值；因此实验**对 VLA 保守**，不能据此否定 VLA 在长程任务上的作用。
 
-### 4.5 与波变量的关系
+### 5.3 结果
 
-波变量把通道功率分解为前向/后向行波，延迟线储能 `E_delay = 1/2∫(u²+w²)` 有界，故常值时延通道无源。TD-PC 可看作「在端口处直接观测能量并耗散」，对可变时延更直接。两者数学上可统一到「端口哈密顿/无源性」框架：波变量是坐标变换，TD-PC 是端口耗散注入。
+**Grounding MAP 准确率**（混合 simple/ambiguous）：
 
-## 5. 预注册实验协议（论文发表层）
+| ASR 错误率 `e` | exact-match | 音素编辑距离 + 不硬提交 |
+|---:|---:|---:|
+| 0.10 | 0.969 | **0.994** |
+| 0.25 | 0.919 | **0.986** |
+| 0.40 | 0.872 | **0.980** |
 
-### 5.1 先写假设，再做实验
+**预算调度**（对 `e∈{0.10,0.25,0.40}`、`k∈{2,4}` 取平均；格式：成功率 / 平均成本 / 成功率每成本）：
 
-| 编号 | 假设 | 证伪条件 | 主/次 |
-|---|---|---|---|
-| H1 | 高时延（τ≥100ms）下，TD-PC 降低成功率方差与接触抖动 | 方差不变或变大；抖动 RMS 上升 | 主 |
-| H2 | 相位阻抗表在 A 档接触任务优于固定增益 | 配对差值 CI 跨 0 且方向为负 | 主 |
-| H3 | 5 步 chunk 优于 30 步（复现第 12 轮） | 5 步 ≤ 30 步 | 次 |
-| H4 | 低时延（τ<30ms）下 TD-PC 无平均收益 | 低时延下反而显著更差 → 应旁路 | 次（证伪性） |
+| 预算 B | SERVO | LOOK-first | LOOK-gate | Always-VLA | VOI-MAP |
+|---:|---|---|---|---|---|
+| 5 | **.852 / 5.00 / .170** | .700 / 5.00 / .140 | .812 / 5.00 / .163 | .000 / 5.00 / .000 | .842 / 5.00 / .168 |
+| 8 | **.946 / 8.00 / .118** | .905 / 8.00 / .113 | .939 / 8.00 / .117 | .702 / 8.00 / .088 | .936 / 8.00 / .117 |
+| 11 | .956 / 9.16 / .104 | .957 / 10.08 / .095 | .958 / 8.90 / **.108** | .908 / 11.00 / .083 | .957 / 8.85 / **.108** |
+| 14 | .960 / 10.32 / .093 | .957 / 10.31 / .093 | .961 / 9.29 / .103 | .958 / 13.02 / .074 | .959 / 8.96 / **.107** |
 
-**预注册内容**：上述假设、主/次端点、分析计划、停止规则、排除标准，必须在正式评测前写入仓库并打时间戳。
+**高歧义代表行**（`B=11, e=0.40, k=4`）：
 
-### 5.2 分层贝叶斯模型
+| 策略 | 成功率 | 平均成本 | 成功率/成本 |
+|---|---:|---:|---:|
+| SERVO | .943 | 9.5 | .099 |
+| LOOK-first | .957 | 10.1 | .095 |
+| LOOK-gate | .953 | 9.1 | .105 |
+| Always-VLA | .901 | 11.0 | .082 |
+| VOI-MAP | **.959** | 9.1 | **.106** |
 
-对任务 `t`、trial `j`、处理臂 `c∈{off,on}`：
+### 5.4 读法：哪些假设被支持，哪些没有
 
-```math
-y_{t,j} \sim \mathrm{Bernoulli}(p_{t,c(j)}),
-```
+**被支持**：
 
-```math
-\mathrm{logit}(p_{t,c}) = \alpha_t + \delta\,\mathbb 1[c=\text{on}] + \gamma\,\mathbb 1[\text{human}] + \eta\,\mathbb 1[c=\text{on}]\mathbb 1[\text{human}],
-```
+- **F1（H1）**：音素编辑距离在高噪声下显著提升 grounding MAP；`e=0.40` 时 .872→.980。近音错误是主要可修部分；真同音仍会失败，这符合预期。
+- **F3（H3）**：预算 `B=5` 时，VOI-MAP 自动退化为近似 SERVO（.842 vs .852，差距 ≤1pp，本轮未做显著性检验），没有出现「为了消歧把预算花光」。这是安全性/鲁棒性证据。
+- **F2（H2，弱）**：`B≥11` 时，VOI/LOOK-gate 的成功率每成本高于 SERVO 和 LOOK-first；VOI 在成功率与 SERVO 持平的情况下把平均成本从 9.16 降到 8.85（约 3.4%）。收益是**成本效率**，不是大幅涨点。
 
-```math
-\alpha_t \sim \mathcal N(\mu_\alpha, \sigma_\alpha^2),\quad
-\delta \sim \mathcal N(0, 0.5^2),\quad
-\mu_\alpha,\sigma_\alpha \text{ 用弱信息先验}.
-```
+**没有被支持**：
 
-- `δ` 是伺服的平均对数几率效应；`η` 是人为干扰轴的额外效应。
-- 分层结构对 32 个任务做部分池化，缓解单任务 10 次的高方差。
-- 全局效应：
+- **F4（H4 失败）**：完整 VoI 贪心并没有显著优于「置信度门控的 LOOK」。`VOI - LOOK-gate` 的成功率/成本均值 `+0.0025`，范围 `[-0.001, +0.010]`，跨 0。**结论：在这个玩具里，收益主要来自「门控 + 成本感知」，而不是 VoI 公式本身。** 下一轮应把 LOOK-gate 作为强基线；若真机也不能显著超过它，就砍掉完整 VoI。
+- **Always-VLA 被支配**：所有预算档的成功率/成本都最低；`B=14` 时成功率追平 SERVO（.958 vs .960），但平均成本高约 26%。把大模型当万能修复在成本上不成立。
+- **低预算下不能靠消歧**：`B=5` 时 SERVO 最好；这提醒我们，VOI-MAP 的价值区间是「预算中等以上 + 歧义非平凡」，不是所有场景。
 
-```math
-\Delta S = \frac{1}{32}\sum_{t=1}^{32}\left(p_{t,\text{on}} - p_{t,\text{off}}\right).
-```
+### 5.5 效度威胁
 
-报告 `ΔS` 的后验均值、95% 可信区间、`P(ΔS>0)`。**不报单一 p 值作为唯一证据**。
-
-### 5.3 功效与停止规则
-
-- 正式评测 32×10：合并 SE≈2.42pp；配对可降方差，但不要假设降到 0。
-- 单任务通道 5×5 仅用于 go/no-go，**不做显著性结论**；预注册中明确写「pilot not powered」。
-- 停止规则：若 G3 的 3/5 任务未达 +10pp，停止，不烧正式提交。
-
-### 5.4 多重比较
-
-主端点族预注册为「5 个 A 档任务 + human 轴」，用 Holm–Bonferroni 控制族错误率；其余 27 个任务为探索性，报告时明确标注，不作确证性主张。
-
-### 5.5 阴性结果台账
-
-每个门（G0–G9）记录：通过/失败、样本量、点估计、区间、失败原因。**失败的门必须保留在论文/报告中**，不得只报通过项。这是「论文发表」灵感在本轮的硬约束。
-
-### 5.6 引用与复现审计
-
-- 每条引用：标题、作者、年份、可打开链接/DOI；打不开 → `UNVERIFIED`，移出论证链。
-- 复现包：代码、随机种子、配置文件、标定参数、硬件型号、软件版本。
-- 不包含：评测端私有数据、官方 token。
-- 明确区分「A 级官方事实」「B 级自算」「C 级设计假设」。
+| 威胁 | 影响 | 下一轮怎么补 |
+|---|---|---|
+| 地图被假设为完美 | **没有测试最大风险**（地图前端误差/关联错误） | G12：真实/半真实桌面，注入位姿噪声与遮挡 |
+| VLA 只建模为消歧器 | 低估 VLA 的长程价值 | 加入多阶段任务与 `Δ_plan` |
+| ASR 噪声是合成的 | 真实同音/改写分布未知 | 用任务指令做人工同音/改写集，测 ECE |
+| 候选数 ≤4 | 真实桌面可能更多 | 扩到 8–10 个对象 |
+| 成本是归一化的 | 真实延迟/限流不同 | 用单任务通道实测 `c_v,c_l,c_s` |
+| 无真机 | 不能证明物理接触安全 | 保留第 13 轮的限幅/重试；真机 A/B |
 
 ## 6. 实验设计与门
 
-### 6.1 离线
+### 6.1 继承第 13 轮的门
 
-| 实验 | 数据 | 指标 | 门 |
+G0–G9 继续有效（标定、检索、仿真收敛、真机涨点、干扰恢复、延迟、32 任务稳定、消融、无源、可复现）。本报告只列新增/修改的门。
+
+### 6.2 新增门 G10–G12
+
+| 门 | 问题 | 通过标准 | 失败动作 |
 |---|---|---|---|
-| 目标检索 | 32 任务演示，按 session 分组 | top-5 几何有效 ≥80%；相对位姿 ≤5mm/2° | G1 |
-| 阻抗表可分性 | 相位标注子集 | 相间速度/横向幅度差异显著（效应量） | G1 |
-| 编辑检测 | 合成编辑 + 正常 | AUROC ≥0.85；误报 ≤5% | G4 |
+| **G10** | 语音/文本 grounding 是否鲁棒且校准？ | `e=0.25` 时 MAP ≥0.90；ECE ≤0.10；top-2 歧义不硬提交率 ≥95% | 回退精确匹配 + 任务级固定目标；砍掉语音层 |
+| **G11** | 预算调度是否真的省成本？ | `B=11` 时在成功率不低 0.5pp 的前提下平均成本 ≤ SERVO 的 0.97×；`B=14` 时成功率/成本 ≥ SERVO 的 1.10×；`B≤8` 时成功率不低 2pp；LOOK-gate 作为强基线 | 若不能超过 LOOK-gate，砍掉完整 VoI，只保留门控 |
+| **G12** | 语义地图是否够用？ | 中位位置误差 ≤1.5cm；关联切换 ≤1 次/episode；归一化 NEES（除以 3）∈ [0.5,1.5] | 只用头双目 PBVS；或退回任务级固定目标 |
 
-### 6.2 仿真
+### 6.3 预注册假设
 
-| 实验 | 变量 | 指标 | 门 |
+| 编号 | 假设 | 主/次 | 证伪条件 |
 |---|---|---|---|
-| 收敛 | `H_c`/`K`/`τ` | 横向 ≤2mm、深度 ≤3mm、2s ≥95% | G2 |
-| 时延 | τ ∈ {0,30,60,100,150}ms，含抖动 | 超调、极限环、稳定域 | G2/G8 |
-| 无源性 | TD-PC on/off | `E_obs≥0`；接触抖动 RMS | G8 |
-| 扰动 | 位置/遮挡/背景/目标移动/人手 | 恢复率、检测延迟 | G4 |
-| 消融 | 相对/绝对；5/30；PD/TD-PC；阻抗表/固定 | 成功率、误差、方差 | G7 |
+| H1 | 音素编辑距离 + 不硬提交提升 grounding MAP | 主 | 相对精确匹配无提升或校准更差 |
+| H2 | 预算调度在同等成功率下降低平均成本 | 主 | 相对固定 5 步无成本优势 |
+| H3 | 紧预算下自动退化为 SERVO，不出现预算耗尽 | 主（安全） | 紧预算下显著差于纯 SERVO |
+| H4 | 完整 VoI 显著优于置信度门控 LOOK | 次（证伪性） | 差值 CI 跨 0 → 砍复杂度 |
 
-### 6.3 真机单任务
+**预注册内容**：假设、主/次端点、分析计划、停止规则、排除标准，必须在正式评测前写入仓库并打时间戳。
+
+### 6.4 真机单任务 A/B
 
 | 项 | 设计 |
 |---|---|
 | 任务 | PlugInEthernet、HangCup、ZipUp、StackBowls、FoldTowel |
-| 次数 | 每任务 5 次 A/B（servo off/on），同初始条件 |
-| 指标 | 成功、步骤分、耗时、p99、恢复、抖动 |
+| 次数 | 每任务 5 次，配对：SERVO-only vs VOI-MAP，同初始条件 |
+| 主端点 | 成功率/成本（成本 = VLA 调用 + LOOK + 伺服步的加权和，权重由实测延迟定） |
+| 次端点 | 成功率、p99、timeout、恢复率、grounding 错误率 |
 | 统计 | 配对差值 + bootstrap 95% CI；pilot 不宣称显著性 |
-| 门 | ≥3/5 +10pp；FoldTowel 不回归 >5pp |
+| 门 | G3：≥3/5 任务 +10pp；FoldTowel 不回归 >5pp |
 
-### 6.4 全量
+### 6.5 全量
 
 | 项 | 设计 |
 |---|---|
 | 任务 | 32×10 |
 | 端口 | N 个连续端口，独立 reset |
-| 指标 | 总平均成功率、步骤分、p99、timeout、内存 |
-| 门 | 无端口串扰；reset 干净；内存不涨；p99 ≤150ms |
+| 指标 | 总成功率、步骤分、p99、timeout、平均 VLA 调用数、平均 LOOK 次数 |
+| 门 | G6：无端口串扰；reset 干净；内存不涨；p99 ≤150ms |
 
-### 6.5 门 G0–G9
+## 7. 风险与合规
 
-| 门 | 问题 | 通过标准 | 失败动作 |
-|---|---|---|---|
-| G0 | 腕部标定？ | 重投影 ≤5px；双目 ROI ≥70% | 只用头双目 PBVS |
-| G1 | 检索/阻抗表可信？ | top-5 ≥80%；相对位姿 ≤5mm/2°；相位可分 | 任务级固定目标/固定增益 |
-| G2 | 仿真收敛？ | 横向 ≤2mm、深度 ≤3mm、2s ≥95%；τ 0–150ms 稳定 | 降增益/加 chunk；只做 PBVS |
-| G3 | 真机涨点？ | 3/5 任务 +10pp；FoldTowel 不回归 | 不提交 servo 版本 |
-| G4 | 人为干扰恢复？ | 检测 ≤200ms；仿真恢复 ≥70% | 只做离线标注 |
-| G5 | 延迟可接受？ | p99 ≤150ms；timeout 不升 | 加 chunk/降分辨率/关伺服 |
-| G6 | 32 任务稳定？ | N 端口隔离、reset 干净、内存不涨 | 回退基线 |
-| G7 | 消融支持因果？ | 相对>绝对；5>30；伺服>无伺服 | 保留有效部分，砍无效部分 |
-| G8 | 无源/无极限环？ | `E_obs≥0`；无持续极限环；接触抖动 RMS 不升 | 关 TD-PC，回退 PD + 限幅 |
-| G9 | 可复现？ | 预注册先写；代码/种子/配置/区间齐全；引用可打开 | 降级为工程报告 |
-
-## 7. 竞赛策略（沿用第 12 轮，加时延分层）
-
-### 7.1 时延分层
-
-| 时延档 | 判定 | 策略 |
-|---|---|---|
-| 低（τ<30ms） | 本地/同城 | TD-PC 旁路，Smith 前馈 + 正常增益；保响应 |
-| 中（30–100ms） | 常规远程 | TD-PC 启用；5 步 chunk |
-| 高（>100ms） | 跨城/抖动 | TD-PC + 降带宽；必要时波变量回退；chunk 5–8 |
-
-### 7.2 任务组合
-
-沿用第 12 轮 A/B/C 分档（A 档 19 个伺服优先，B 档 13 个 VLA 优先，C 档观察），优先级：
-
-```text
-priority_t = q_t * Δ_t / cost_t
-```
-
-`q_t` 为「失败发生在最后 3 厘米」的先验比例，`Δ_t` 由单任务通道更新，`cost_t` 为工程/评测成本。先做 A 档中 `q_t` 高、`cost_t` 低的 3–5 个。
-
-### 7.3 提交节奏
-
-1. W0：WLA + adapter + chunk 30 基线，单任务通道验证 token/`pivot`。
-2. W1：安全基线提交（若允许多次），锁 tie-break。
-3. W2–W4：标定、目标库、阻抗表、TD-PC、仿真。
-4. W5：单任务 A/B、延迟/增益扫描、全量干跑。
-5. W6：最终提交，保留回滚开关。
-
-若只允许一次提交：跳过 W1，W5 后再交；不要用正式 320 trials 做未验证 A/B。
-
-## 8. 资源与时间表
-
-| 阶段 | 时间 | 交付 | 退出条件 |
-|---|---:|---|---|
-| P0 基线/接口 | 1 周 | WLA + adapter；token/`pivot` 验证；chunk 30 基线 | 单任务通道 1 任务跑通 |
-| P1 标定/目标库/阻抗表 | 2 周 | 腕部标定；目标库；相位阻抗表；检索评测 | G0/G1 |
-| P2 WAVE/仿真 | 2 周 | 虚拟力；TD-PC；波变量回退；τ 扫描；扰动套件 | G2/G4/G8 |
-| P3 集成/单任务 | 2 周 | 双频执行；状态机；5 任务 A/B | G3/G5 |
-| P4 全量干跑 | 1 周 | 32×10 干跑；N 端口；p99/内存 | G6 |
-| P5 提交/论文 | 1 周 | 提交包、合规说明、预注册报告、复现包 | G7/G9 |
-
-**算力**：1×24GB GPU（WLA 推理/微调）；可选 1×40/80GB 多端口；16–32 CPU 核；存储视频 1–2TB（可只缓存关键帧降至 <100GB）。
-**人员**：1 人伺服/几何；1 人 WLA/部署；1 人评测/统计；共 9–11 周。
-
-## 9. 风险与合规
-
-### 9.1 单模型合规
+### 7.1 单模型合规
 
 | 模式 | 做法 | 风险 | 建议 |
 |---|---|---|---|
-| C1 离线标注 | GEO-RESIDUAL 只离线生成相位/接触标签 | 最低 | 保守首选 |
-| C2 确定性控制器 | TD-PC/波变量/阻抗表均无学习权重 | 低 | 主推 |
-| C3 同 checkpoint 特征 | 目标描述子用同一 VLA encoder | 低–中 | 需要强描述子时用 |
+| C1 确定性几何 | 地图用立体视觉 + 分割 + 匈牙利 + 卡尔曼 | 最低 | 主推 |
+| C2 符号 backchannel | 状态符号由几何/夹爪派生 | 低 | 主推 |
+| C3 同 checkpoint 特征 | 若关联需要强描述子，用 VLA encoder | 低–中 | 需要时用，写清 |
+| 禁止 | 第二个学习检测/分割/语言模型；在线学习残差 | 高 | 不做 |
 
-禁止：在线加载第二个学习策略/残差网络/独立视觉编码器做决策。
-
-### 9.2 风险表
+### 7.2 风险表
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| **虚拟力≠物理力** | 无源只保证视觉回路，不保证接触安全 | 限幅/限速/最大重试；接触段电流/滞止代理 |
-| 过度保守 | TD-PC 耗散过多，超时 | 只在 `E_obs<0` 耗散；APPROACH 旁路；G3 |
-| 时延被低估 | 预测反注能 | TD-PC 兜底；jitter 大降带宽；G5 |
-| 阻抗表过拟合演示 | 新物体失效 | 中位数/z-score；按 session 分组；置信度低回退 |
-| 目标检索 mismatch | 错误目标 | 任务/相位过滤；top-k 重打分；低置信回退 |
-| 透明/反光/变形 | 深度/特征失败 | 只对刚体启用；腕部 2D + 滞止兜底 |
-| 标定漂移/换机器人 | 残差变大 | 每机器人重投影校准；误差大关伺服 |
-| `pivot` 语义不一致 | 动作被拒/不动 | `example_env.py`/单任务通道先验；零 pivot 回退 |
-| 统计假阳性 | 噪声当涨点 | 预注册、配对、分层、Holm、阴性台账 |
+| **地图前端太弱** | 目标后验本身错；VoI 在错误后验上做最优分配 | G12；输出协方差；低置信回退固定目标/PBVS；透明/反光只用头双目 |
+| 真同音无法消歧 | `cup/cap` 被听错且看一眼也分不清 | 同音词表 + 颜色/几何先验；必要时 VLA；不承诺语音全鲁棒 |
+| LOOK 触发超时/遮挡 | 预算反而更紧 | 只在 APPROACH/PRECONTACT；限速限位；`ΔH` 不够就不看 |
+| VoI 成功模型 misspecified | 调度选错动作 | 用 LOOK-gate 强基线；G11 直接比较；失败就砍复杂度 |
+| VLA 成本被低估 | 调度过度调用 | 用实测延迟/限流更新 `c_v`；预算硬上限 |
+| 地图关联切换 | 目标身份跳变 | 马氏门控 + 匈牙利 + `ν` 衰减；`Σ` 膨胀触发 LOOK |
+| 统计假阳性 | 把噪声当涨点 | 预注册、配对、分层、Holm、阴性台账 |
 | 引用污染 | 假文献支撑真结论 | 引用审计；`UNVERIFIED` 排除 |
-| 提交次数限制 | 无法多次 A/B | 邮件确认；单任务通道先验；一次则保守 |
+| 单模型解释 | 被判第二个模型 | 写清地图/调度无学习权重；C1/C2 为主 |
 
-## 10. 来源
+## 8. 来源
 
-官方/数据（检索日期 2026-10-28，沿用第 12 轮已核实）：
+官方/数据（检索日期 2026-11-02，沿用第 13 轮已核实）：
 
 - UniBot 世界挑战赛官网：<https://unibot.unitree.com/>
 - 赛事页：<https://unibot.unitree.com/challenges.html>
@@ -834,27 +807,28 @@ priority_t = q_t * Δ_t / cost_t
 - 数据集集合：<https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset>
 - WLA 仓库：<https://github.com/unitreerobotics/unifolm-wla>
 - WLA 动作/状态规范：<https://github.com/unitreerobotics/unifolm-wla/blob/main/docs/robot_action_state_processing_en.md>
-- WLA 微调文档：<https://github.com/unitreerobotics/unifolm-wla/blob/main/docs/train_action_expert_en.md>
 - 官方仿真：<https://github.com/unitreerobotics/unitree_sim_isaaclab>、<https://github.com/unitreerobotics/unitree_mujoco>
 - 提交示例：<https://github.com/unitreerobotics/unibot_submission/blob/main/example/example_policy.py>、<https://github.com/unitreerobotics/unibot_submission/blob/main/example/example_env.py>
 
-经典/控制理论（作者-年份，未附链接，复现包需补 DOI）：
+经典/方法（作者-年份，未在本轮逐篇复核；复现包需补 DOI）：
 
-- Anderson, R. J., & Spong, M. W. (1989). Bilateral control of teleoperators with time delay. *IEEE Transactions on Automatic Control*.
-- Niemeyer, G., & Slotine, J.-J. E. (1991). Stable adaptive teleoperation. *IEEE Journal of Oceanic Engineering*.
-- Hannaford, B., & Ryu, J.-H. (2002). Time-domain passivity control of haptic interfaces. *IEEE Transactions on Robotics and Automation*.
-- Artigas, J., et al. (2002). A novel theory for sampled data system passivity. *IEEE/RSJ IROS*.
-- Smith, O. J. M. (1957). Closer control of loops with dead time. *Chemical Engineering Progress*.
+- Horvitz, E. (1988). Reasoning under varying and uncertain resource constraints. *AAAI*.
+- Russell, S., & Wefald, E. (1991). Principles of metareasoning. *Artificial Intelligence*.
+- Golovin, D., & Krause, A. (2011). Adaptive submodularity: Theory and applications in active learning and stochastic optimization. *Journal of Artificial Intelligence Research*.
+- Bajcsy, R. (1988). Active perception. *Proceedings of the IEEE*.
+- Kaelbling, L. P., Littman, M. L., & Cassandra, A. R. (1998). Planning and acting in partially observable stochastic domains. *Artificial Intelligence*.
+- Levenshtein, V. I. (1966). Binary codes capable of correcting deletions, insertions, and reversals. *Soviet Physics Doklady*.
+- Thrun, S., Burgard, W., & Fox, D. (2005). *Probabilistic Robotics*. MIT Press.
 - Chaumette, F., & Hutchinson, S. (2006/2007). Visual servo control, Parts I–II. *IEEE Robotics & Automation Magazine*.
-- Siciliano, B., et al. (2009). *Robotics: Modelling, Planning and Control*. Springer.
+- Jurafsky, D., & Martin, J. H. *Speech and Language Processing*（ASR 混淆/编辑距离背景）.
 
-**UNVERIFIED（不得进入论证链）**：第 10–12 轮中形如 `2609.xxxxx`、`2608.xxxxx` 的 arXiv 编号，年份前缀异常，本轮不采用。
+**UNVERIFIED（不得进入论证链）**：第 10–13 轮中形如 `2609.xxxxx`、`2608.xxxxx` 的 arXiv 编号，年份前缀异常，本轮不采用。
 
-## 11. 一句话押注
+## 9. 一句话押注
 
-**保留 CHUNK-SERVO 的双频执行与演示相对目标，把伺服层从「按 RTT 调增益」升级为「虚拟力 + 时域无源性」：监测视觉伺服虚拟端口的能量，在可变时延注入能量时按需耗散，用遥操作演示导出的相位阻抗表设定基线增益，用预注册的分层贝叶斯实验判定它是否真涨点——因为一个没有稳定性证明的闭环，和一个没有统计纪律的涨点，都不值得发表。**
+**第 13 轮证明了「给定目标时手是稳的」；本轮押注「目标本身是一个分布，计算是一种预算」：用语义地图承载这个分布，用音素编辑距离消化语音噪声，用边际信息增益/成本决定下一次计算买什么——目标清楚就伺服，含糊就先看一眼，看一眼不够才调用大模型。**
 
-## 12. 本轮最大的风险
+## 10. 本轮最大的风险
 
-**虚拟力不是真实接触力，基于虚拟端口的无源性只能证明「视觉误差回路不振荡」，不能证明「物理接触不撞坏」；若真实接触的摩擦/非线性主导，这套理论可能既保守又不对症。**
+**语义地图的观测前端（无第二个学习模型、腕部无内参、无主动深度，头双目在透明/反光/弱纹理上不可靠）可能太弱，导致目标后验本身就是错的；此时再精细的 VoI 调度也只是在一个错误的后验上做最优分配，整个元认知层会变成「用更聪明的方式分配预算去执行错误的目标」。** 本轮合成实验刻意假设地图完美，因此这个最大风险还没有被数据触碰。
 <!-- ARTIFACT:END -->
