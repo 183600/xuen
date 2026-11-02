@@ -64,6 +64,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import state
 from .agents import ShellAgent
+from .atomic_io import atomic_write_text
 from .config import Config
 from .procs import kill_process_tree, popen_kwargs
 from .sink import Sink
@@ -92,21 +93,8 @@ _SCORE_PATTERNS = (
 # ----------------------------------------------------------------------
 # 小工具
 def _atomic_write(path: Path, text: str) -> None:
-    """tmp + os.replace 原子写：读端永远不会看到半截文件。
-
-    tmp 名带 PID：同一 workspace 并发运行两个 xuen 实例时，固定名 .tmp
-    会被两边交错写入，os.replace 随后把撕裂内容发布成有效的
-    best.json / best.md。"""
-    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
-    try:
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
-    except BaseException:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+    """tmp + os.replace 原子写：读端永远不会看到半截文件。"""
+    atomic_write_text(path, text)
 
 
 def _read_utf8(path: Path) -> Optional[str]:

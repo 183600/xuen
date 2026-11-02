@@ -2,9 +2,12 @@
 
 用「随机灵感词 × 外部 agent」模拟人类研究者持续演进想法的 **TUI** 循环。
 
-xuen 本身不调用模型，也不内置研究工具。它负责组织循环、维护状态、展示变化并保存进度；
+xuen 本身不调用模型，也不内置研究工具；它只负责组织循环、维护状态、展示变化和保存进度。
 真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 把任务、
-随机灵感词、当前想法区/产物区和写入说明拼成提示词，外部 agent 完成后覆盖对应区块。
+随机灵感词、当前想法区/产物区和写入说明拼成提示词；外部 agent 执行后覆盖对应区块，
+xuen 再展示变化并（可选地）验证本轮结果。
+
+适合需要让 agent 围绕同一目标长期迭代、又希望每轮产物可追溯、可回退的场景。
 
 ## 目录
 
@@ -26,12 +29,15 @@ xuen 本身不调用模型，也不内置研究工具。它负责组织循环、
 
 | 概念 | 说明 |
 |---|---|
-| 任务 | 本轮研究的总目标，可来自位置参数、`--task-file` 或交互输入 |
+| 任务 | 整轮研究的总目标，可来自位置参数、`--task-file` 或交互输入 |
 | 灵感词 | 每轮从领域词库中**纯随机**抽取的术语；抽样过程不调用任何模型 |
 | 想法区 | `research.md` 中跨轮保留的 `IDEA` 区块，记录研究思路 |
-| 产物区 | `research.md` 中跨轮保留的 `ARTIFACT` 区块，记录方案、伪代码、推导或实验设计 |
+| 产物区 | `research.md` 中跨轮保留的 `ARTIFACT` 区块，记录方案、伪代码、推导、实验设计等 |
 | 外部 agent | 由 `agent.command` 指定的 shell 命令，负责每轮的实际思考与区块写入 |
-| 轮次守卫 | 可选的进度保护层：快照每轮产物，验证通过后才晋升为「当前最佳」 |
+| 轮次守卫 | 可选的进度保护层：每轮先保存候选快照，验证通过后才晋升为「当前最佳」 |
+
+`research.md` 是跨轮记忆的载体。外部 agent 每轮覆盖区块，xuen 只负责定位区块、
+保证写入原子性，并在内容变化时刷新界面。
 
 ## 快速开始
 
@@ -41,7 +47,7 @@ xuen 本身不调用模型，也不内置研究工具。它负责组织循环、
 # 1. 安装运行时依赖
 python -m pip install -r requirements.txt
 
-# 2. 复制示例配置，并按需修改 agent.command
+# 2. 从示例复制配置，至少把 agent.command 改成你实际使用的命令
 cp config.example.yaml config.yaml
 
 # 3. 启动 TUI（默认）
@@ -55,20 +61,25 @@ python -m pip install -e .
 xuen "设计一个新的优化器"
 ```
 
+也可以不安装包，直接用 `python -m xuen "任务"` 运行。默认界面是 TUI；
+在管道、重定向或没有安装 `textual` 的环境中会自动降级为纯终端输出。
+
 ### 配置文件与优先级
 
 未用 `-c/--config` 指定时，程序依次查找当前目录的 `config.yaml`、`config.yml`、
-`xuen.yaml`。除 `agent.command` 外，其余配置都可以省略并使用默认值。
+`xuen.yaml`。配置文件本身必须存在；除 `agent.command` 外，其余字段都可以省略并使用内置默认值。
 
-生效优先级为「命令行参数 > 配置文件 > 内置默认值」。命令行覆盖后仍会重新校验，
-避免通过 `--workspace`、`--iterations` 等参数绕过路径、轮数或命令模板约束。
+生效优先级为「命令行参数 > 配置文件 > 内置默认值」。命令行覆盖后会重新校验，
+因此 `--workspace`、`--iterations` 等参数同样不能绕过路径、轮数或命令模板约束。
 
-最小可用配置只需要一行 agent 命令，其余字段都会使用默认值：
+最小可用配置只需要一条 agent 命令：
 
 ```yaml
 agent:
   command: 'opencode run "$prompt_file"'
 ```
+
+完整字段、默认值与可复制注释见 `config.example.yaml`，下文「配置参考」提供对照表。
 
 ### 提示词占位符
 
@@ -83,8 +94,9 @@ agent:
   # command: 'opencode run "$prompt"'
 ```
 
-占位符必须位于会被实际执行的位置。写在 shell 注释、heredoc 正文、命令替换或
-无法安全解析的展开语境中时，配置校验会直接报错，而不是在运行期静默丢弃提示词。
+占位符必须位于会被实际执行的位置。若只写在 shell 注释、heredoc 正文、命令替换
+或其他无法安全解析的展开语境中，配置校验会直接报错，而不是在运行期静默丢弃提示词。
+这也是为什么模板应尽量简单：把提示词作为命令的普通参数传入即可。
 
 ### 常用命令
 
@@ -92,7 +104,7 @@ agent:
 python main.py "设计一个新的优化器" --no-tui          # 纯终端输出
 python main.py "设计一个新的优化器" --iterations inf --pick 3
 python main.py "设计一个新的优化器" --regen-words     # 忽略旧词库并重建
-python main.py --task-file task.md --no-tui
+python main.py --task-file task.md --no-tui           # 从文件读取任务
 python main.py "设计一个新的优化器" --rounds-verify ai --rounds-score 8
 python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守卫
 python main.py "设计一个新的优化器" -c my-config.yaml
@@ -100,7 +112,8 @@ python main.py --help                                 # 查看所有参数
 ```
 
 任务可以是位置参数，也可以用 `--task-file` 从 UTF-8 文件读取（兼容 BOM）；
-两者不能同时使用。未提供任务且 stdin 可用时，程序会交互询问。
+两者不能同时使用。未提供任务时会尝试从 stdin 交互询问；stdin 已关闭或
+不是终端时按「未提供任务」处理。
 
 ### 最小示例
 
@@ -126,8 +139,10 @@ python main.py "任务"
    ├─ ④ 启动轮次守卫（可选）：建立/恢复最佳基线，兑现待决用户评分
    │
    ├─ ⑤ 准备领域词库（仅 words.pick > 0 时）
-   │      words.txt 已存在且 reuse=true ──► 直接复用（--regen-words 强制重建）
+   │      words.txt 已存在且 reuse=true、且未指定 --regen-words
+   │        ──► 直接复用
    │      否则 ──► 外部 agent 分批生成 ──► 解析/清洗/去重 ──► 原子保存
+   │                （生成不完整时按 reuse / --regen-words 决定是否回退旧词库）
    │
    └─ ⑥ 研究循环 × N 轮（loop.iterations，支持 inf）
           1. 纯随机抽词：从词库抽取 n 个灵感词（不调用任何模型）
@@ -185,11 +200,13 @@ python write_section.py show
 `xuen/words.py` 负责词库的生成、解析、持久化与抽样：
 
 - 按 `words.batch` 分批请求外部 agent 列出术语/关键词；
-- 程序只做解析、清洗、去重（去除序号、引号、冒号解释等）并原子写入 `words.txt`；
-- 词表不再增长时提前结束；生成结果为空且允许复用时回退到磁盘上的旧词库；
-- `--regen-words` 或 `words.reuse: false` 会拒绝回退到旧词库，必要时在本次循环
-  临时使用未完成的生成结果；
-- `words.pick=0` 时跳过词库，循环中不提供灵感词；
+- 程序只做解析、清洗、去重（去掉序号、引号、冒号解释等）并原子写入 `words.txt`；
+- 某一批没有带来新词时提前结束；生成失败或结果为空时，若允许复用则回退到
+  磁盘上的旧词库；
+- 生成结果不完整且少于旧词库时，默认保留更完整的旧词库；不会用残缺词表覆盖它；
+- `--regen-words` 或 `words.reuse: false` 表示明确拒绝旧词库，此时即使生成失败
+  也不会绕回复用；必要时本次循环临时使用未完成的生成结果；
+- `words.pick=0` 时完全跳过词库，循环中不提供灵感词；
 - 每轮抽样使用 `random.sample`，不调用任何模型。
 
 ### 提示词预算
@@ -355,13 +372,14 @@ rounds:
 
 ## 配置参考
 
-完整示例见 `config.example.yaml`。以下默认值也是程序的内置默认值。
+完整示例见 `config.example.yaml`。下表默认值也是程序的内置默认值；示例中的
+注释更适合直接复制后修改。
 
 ### agent 与提示词
 
 | 字段 | 默认值 | 说明 |
 |---|---|---|
-| `agent.command` | 空 | 外部 agent 命令模板，必须包含 `$prompt` 或 `$prompt_file` |
+| `agent.command` | 空（必填） | 外部 agent 命令模板，必须包含 `$prompt` 或 `$prompt_file` |
 | `agent.timeout` | `1800` | 单次外部调用超时（秒，须为有限正数） |
 | `extra_notes` | 空 | 拼进每轮提示词开头的额外说明 |
 | `prompt.max_state_chars` | `60000` | 想法区/产物区拼进提示词的字符预算；`0` 表示不限制 |
@@ -372,8 +390,8 @@ rounds:
 |---|---|---|
 | `words.count` | `1000` | 目标词数（正整数） |
 | `words.batch` | `100` | 每批请求的词数（正整数） |
-| `words.pick` | `2` | 每轮随机抽取的灵感词数量；`0` 表示不抽词 |
-| `words.reuse` | `true` | `words.txt` 已存在时是否直接复用 |
+| `words.pick` | `2` | 每轮随机抽取的灵感词数量；`0` 表示完全跳过词库 |
+| `words.reuse` | `true` | `words.txt` 已存在时是否直接复用；`false` 强制重新生成 |
 | `loop.iterations` | `5` | 循环轮数（正整数）；`inf` 表示无限循环 |
 
 ### 轮次守卫
@@ -398,10 +416,10 @@ rounds:
 | `color` | `true` | 纯终端输出是否使用颜色 |
 | `workspace` | `./workspace` | `research.md`、`words.txt`、`rounds/` 等所在目录 |
 
-`workspace` 等路径按启动时的当前目录解析；`rounds.dir` 则相对 `workspace`。
-当 `rounds.repo` 留空时，守卫会从工作区向上查找 git 仓库根；非 git 环境使用
-工作区本身。要打磨某个代码仓库时，把 `rounds.repo` 指向它，候选改动会被该仓库
-的测试套件自动验证。
+`workspace`、`rounds.repo` 的显式路径按启动时的当前目录解析；`rounds.dir`
+相对 `workspace`。当 `rounds.repo` 留空时，守卫会从工作区向上查找 git 仓库根；
+非 git 环境则使用工作区本身。要打磨某个代码仓库时，把 `rounds.repo` 指向它，
+候选改动就会被该仓库的测试套件自动验证。
 
 ## 退出码
 
@@ -434,6 +452,7 @@ xuen/
     ├── tui.py                 # TUI（textual）：区块面板 + 日志 + 底部输入框
     ├── sink.py                # 输出通道抽象（控制台 / TUI 共用）
     ├── ui.py                  # 纯终端输出（--no-tui）
+    ├── atomic_io.py           # 状态/词库/守卫共用的原子写文件
     ├── state.py               # research.md（想法区/产物区）+ 写入助手脚本
     ├── words.py               # 词库：外部 agent 生成 / 解析 / 抽样
     ├── procs.py               # 跨平台进程工具
