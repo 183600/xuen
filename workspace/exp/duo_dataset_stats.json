@@ -1,0 +1,174 @@
+{
+  "HangCup": {
+    "frames": 3000,
+    "episodes": 18,
+    "frac_both_active": 0.9616538846282094,
+    "frac_one_active": 0.03267755918639546,
+    "frac_none_active": 0.0056685561853951315,
+    "frac_left_only": 0.0030010003334444814,
+    "frac_right_only": 0.029676558852950983,
+    "frac_hold_and_act": 0.0,
+    "frac_holdL_actR": 0.0,
+    "frac_holdR_actL": 0.0,
+    "frac_gripper_closed_L": 0.0,
+    "frac_gripper_closed_R": 0.42247415805268423,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.31324126493612514,
+    "mean_arm_activity_L": 0.032306958378849115,
+    "mean_arm_activity_R": 0.07094237515912073,
+    "asym_activity_ratio": 0.4553971987967527
+  },
+  "Unlock": {
+    "frames": 3000,
+    "episodes": 4,
+    "frac_both_active": 0.9029676558852952,
+    "frac_one_active": 0.09469823274424809,
+    "frac_none_active": 0.002334111370456819,
+    "frac_left_only": 0.03867955985328443,
+    "frac_right_only": 0.056018672890963656,
+    "frac_hold_and_act": 0.0853617872624208,
+    "frac_holdL_actR": 0.05535178392797599,
+    "frac_holdR_actL": 0.030010003334444816,
+    "frac_gripper_closed_L": 0.5775258419473158,
+    "frac_gripper_closed_R": 0.6908969656552184,
+    "lead_lag_frames": 7,
+    "max_activity_corr": 0.013615915494374336,
+    "mean_arm_activity_L": 0.032934142166469386,
+    "mean_arm_activity_R": 0.028176368377982753,
+    "asym_activity_ratio": 1.1688568787788678
+  },
+  "DisconnectEthernet": {
+    "frames": 3000,
+    "episodes": 8,
+    "frac_both_active": 0.9696565521840613,
+    "frac_one_active": 0.028009336445481828,
+    "frac_none_active": 0.002334111370456819,
+    "frac_left_only": 0.0020006668889629878,
+    "frac_right_only": 0.02600866955651884,
+    "frac_hold_and_act": 0.02434144714904968,
+    "frac_holdL_actR": 0.02400800266755585,
+    "frac_holdR_actL": 0.00033344448149383126,
+    "frac_gripper_closed_L": 0.5238412804268089,
+    "frac_gripper_closed_R": 0.37712570856952315,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.20282444528420676,
+    "mean_arm_activity_L": 0.037252985208927863,
+    "mean_arm_activity_R": 0.062013014923395296,
+    "asym_activity_ratio": 0.6007285027863585
+  },
+  "PlugInEthernet": {
+    "frames": 3000,
+    "episodes": 4,
+    "frac_both_active": 0.9653217739246416,
+    "frac_one_active": 0.032010670223407804,
+    "frac_none_active": 0.00266755585195065,
+    "frac_left_only": 0.007002334111370457,
+    "frac_right_only": 0.025008336112037347,
+    "frac_hold_and_act": 0.02600866955651884,
+    "frac_holdL_actR": 0.02334111370456819,
+    "frac_holdR_actL": 0.00266755585195065,
+    "frac_gripper_closed_L": 0.37445815271757255,
+    "frac_gripper_closed_R": 0.48916305435145047,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.14950028596189865,
+    "mean_arm_activity_L": 0.05753432821871222,
+    "mean_arm_activity_R": 0.048428004443125006,
+    "asym_activity_ratio": 1.1880383817640785
+  },
+  "PlugCharger": {
+    "frames": 3000,
+    "episodes": 6,
+    "frac_both_active": 0.9629876625541848,
+    "frac_one_active": 0.035345115038346114,
+    "frac_none_active": 0.0016672224074691564,
+    "frac_left_only": 0.002334111370456819,
+    "frac_right_only": 0.033011003667889297,
+    "frac_hold_and_act": 0.0,
+    "frac_holdL_actR": 0.0,
+    "frac_holdR_actL": 0.0,
+    "frac_gripper_closed_L": 0.009336445481827277,
+    "frac_gripper_closed_R": 0.0,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.13233013168063043,
+    "mean_arm_activity_L": 0.02631726818890244,
+    "mean_arm_activity_R": 0.04167594880148009,
+    "asym_activity_ratio": 0.6314737711860812
+  },
+  "PourOutMedicine": {
+    "frames": 3000,
+    "episodes": 4,
+    "frac_both_active": 0.8632877625875292,
+    "frac_one_active": 0.13504501500500168,
+    "frac_none_active": 0.0016672224074691564,
+    "frac_left_only": 0.002334111370456819,
+    "frac_right_only": 0.13271090363454485,
+    "frac_hold_and_act": 0.0,
+    "frac_holdL_actR": 0.0,
+    "frac_holdR_actL": 0.0,
+    "frac_gripper_closed_L": 0.0,
+    "frac_gripper_closed_R": 0.0,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.05246115632282075,
+    "mean_arm_activity_L": 0.03761672661009733,
+    "mean_arm_activity_R": 0.03212219332222942,
+    "asym_activity_ratio": 1.1710509946098404
+  },
+  "SyringeWaterTransfer": {
+    "frames": 3000,
+    "episodes": 5,
+    "frac_both_active": 0.9813271090363455,
+    "frac_one_active": 0.0160053351117039,
+    "frac_none_active": 0.00266755585195065,
+    "frac_left_only": 0.010003334444814937,
+    "frac_right_only": 0.006002000666888963,
+    "frac_hold_and_act": 0.0016672224074691564,
+    "frac_holdL_actR": 0.001333777925975325,
+    "frac_holdR_actL": 0.00033344448149383126,
+    "frac_gripper_closed_L": 0.10736912304101368,
+    "frac_gripper_closed_R": 0.16705568522840947,
+    "lead_lag_frames": 0,
+    "max_activity_corr": 0.2466653963025394,
+    "mean_arm_activity_L": 0.05313584930593413,
+    "mean_arm_activity_R": 0.06057597813654533,
+    "asym_activity_ratio": 0.877176911761669
+  },
+  "RemovePinnedNote": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "FoldTowel": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "PlacePhotoFrame": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "OrganizeStationery": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "FruitSorting": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "OrganizeTools": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "ToolboxStorage": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "PackDoll": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "StackBowls": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "SpellRobot": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "PickOutBatteries": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "StoreEarphones": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  },
+  "ArrangeTestTubes": {
+    "error": "<HTTPError 429: 'Too Many Requests'>"
+  }
+}
