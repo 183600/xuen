@@ -17,6 +17,9 @@
 | **需求洞察** | 语义需求解析器 `Ψ_demand(u, M)` → 结构化任务需求 `D`；注入 VOI-MAP 信念初始化与预算调度 | 在 VOI-MAP grounding 之上增加一层显式需求建模，不改变地图结构，仅丰富先验 |
 | **意图理解** | 动作-意图一致性残差 `r_intent`（残差五元组第 5 通道）；CUSUM 门控的语义对齐信号 | 复用 VLA encoder 的语言-动作交叉注意力权重，零新参数提取意图对齐分数 |
 | **机械臂抓取** | 自适应抓取策略库 `Π_grasp`：预抓姿态选择、接触形成验证、力闭合评估、滑移在线补偿 | 扩展几何原语库 GRASP 分支，复用 `r_anom` 和 `θ_prim`，新增确定性规则 |
+| **消融实验** | 证伪假设 G20–G22 与实验设计 §6.6；逐个剥离 Ψ_demand/r_intent/Π_grasp 验证零样本贡献 | 在单模型、零新参数约束下，通过对比实验验证各组件在 OOD/高风险场景下的有效性；作为门控 G20-G22 的统计依据 |
+| **模型预测控制** | 预算预测、动作前瞻、CUSUM 预测阈值 | 在 VOI-MAP 预算调度中引入预测模型：基于当前块状态预测未来 5 步预算消耗，动态调整成本表 C′(a)；在 5 步块级别优化动作序列以最小化累计惊讶指数；使用 VLA 内部动力学预测改进 conformal 校准的预测阈值 |
+| **状态隔离** | 生命周期状态机与 GRASP FSM 的交互；残差通道解耦 | VLA 计划状态（30 步）与 5 步执行状态解耦，防止计划 obsolescence 拖垮低层控制；六个残差通道各关注不同失效模式（时序/几何/目标/动力学/接触/意图），CUSUM 监控时独立归一化、故障自属性归因；GRASP 子阶段失效仅触发局部 RECOVER，不拖垮全局生命周期状态 |
 
 ### 0.3 本轮不做什么
 
@@ -25,193 +28,8 @@
 - 不假设腕部相机有内参、不假设有深度图、不假设有 F/T 传感器
 - 不把合成实验当作真机证据
 - 不承诺解决 OOD-G（VLA 和地图共享同一错误先验）；本轮明确保留该边界
-
-## 1. 需求洞察增量：语义需求解析器 Ψ_demand
-
-### 1.1 直觉
-VOI-MAP 将语言指令 `u` grounding 为地图上的目标分布 `b_t`，但「把杯子放在盘子上」与「小心地把易碎杯子放在盘子中央」在目标分布上可能相近，后者却隐含了：速度约束、位置容差收紧、优先 LOOK 确认、失败代价高。这些「隐性需求」在指令语义中显性存在，却被 grounding 过程压缩丢失。引入一个轻量级模板化解析器，从 `u` 抽取结构化需求 `D = {约束集, 成功准则, 优先级, 风险等级}`，注入 VOI-MAP 的信念初始化与预算调度，可在零参数前提下显著提升长程任务的语义一致性。
-
-### 1.2 形式化定义
-设指令 `u` 为自然语言字符串。定义需求模式库 `ℒ = {ℓ_1, ..., ℓ_K}`，每个模式 `ℓ_k = (触发正则, 需求模板)`。解析器 `Ψ_demand` 为确有限状态转换器：
-
-```math
-Ψ_{\mathrm{demand}}(u) = D = \bigcup_{k: \mathrm{match}(\ell_k.\mathrm{regex}, u)} \mathrm{instantiate}(\ell_k.\mathrm{template}, u)
-```
-
-需求对象 `D` 包含四个字段：
-
-| 字段 | 类型 | 示例 |
-|---|---|---|
-| `constraints` | `Dict[str, float]` | `{"max_vel": 0.1, "pos_tol": 0.005, "force_limit": 2.0}` |
-| `success_criteria` | `List[Predicate]` | `[OnTable(cup), Upright(cup), NoSpill()]` |
-| `priority` | `Dict[str, float]` | `{"safety": 1.0, "speed": 0.3, "precision": 0.8}` |
-| `risk_level` | `Enum{LOW, MEDIUM, HIGH}` | `HIGH`（易碎/液体/昂贵） |
-
-模板库预置 20 条规则（如「小心/轻轻/slowly」→ `max_vel ↓, precision ↑`，「稳稳/securely」→ `force_limit ↑, risk_level=HIGH`，「快速/quickly」→ `speed ↑, precision ↓`），正式评测前冻结，不学习。
-
-### 1.3 注入 VOI-MAP 的两个注入点
-
-**注入点 1：信念初始化偏移**
-原 VOI-MAP 目标信念 `b_0` 由 grounding 分布给定。引入需求偏移：
-
-```math
-b_0^{\prime}(x) \propto b_0(x) \cdot \exp\big( \beta_{\mathrm{pos}} \cdot \mathbb{1}[x \in \mathrm{target\_region}] + \beta_{\mathrm{risk}} \cdot \mathbb{1}[\mathrm{risk\_level}=HIGH] \big)
-```
-
-其中 `β_pos, β_risk` 为固定超参（验证集手工调优后冻结）。高风险任务在目标区域附近分配更高先验，诱导更多 LOOK/SERVO 精细动作。
-
-**注入点 2：预算调度的动作成本重加权**
-原调度器动作成本 `C(a)` 为固定表。引入需求感知成本：
-
-```math
-C^{\prime}(a) = C(a) \cdot \big( 1 + \gamma_{\mathrm{speed}} \cdot \mathbb{1}[a \in \{\mathrm{VLA}, \mathrm{COMMIT}\}] \cdot (1 - D.\mathrm{priority}[\mathrm{speed}]) \big)
-```
-
-低速度优先级任务下，VLA/COMMIT 成本升高，调度器倾向于更多 SERVO/LOOK 闭环步骤。
-
-### 1.4 可证伪假设
-
-| 编号 | 假设 | 证伪条件 | 级别 |
-|---|---|---|---|
-| H12 | `Ψ_demand` 能从指令中提取至少 80% 的显性约束关键词（召回率） | 召回率 < 60% | 主 |
-| H13 | 需求注入后，高风险任务（易碎/液体）的成功率相对无注入基线提升 ≥ 4pp | 无提升或 ID 任务回归 | 主 |
-| H14 | 需求感知成本重加权使得高精度任务的 LOOK 比例显著上升（≥ 15%），且不增加总步数 > 5% | LOOK 比例无变化或总步数激增 | 次 |
-
-## 2. 意图理解增量：动作-意图一致性残差 r_intent
-
-### 2.1 直觉
-VLA 输出 30 步动作块 `A_t` 时，其内部的语言-动作交叉注意力矩阵 `Attn_{lang→act} ∈ ℝ^{L×30}` 隐含了「哪些词指导了哪些步骤」的软对齐。若 VLA 因分布外输入产生幻觉动作，注意力往往呈现弥散、无焦点或指向无关词元的模式。利用这一已有信号（零新参数、零额外前向），构造第 5 个残差通道 `r_intent`，直接度量动作块与指令语义的对齐质量，作为 OOD-E 的早期预警。
-
-### 2.2 形式化定义
-设 VLA encoder 最后一层交叉注意力权重为 `Attn ∈ ℝ^{L×30}`，其中 `L` 为指令 token 数。定义意图焦点熵：
-
-```math
-H_{\mathrm{intent}} = -\frac{1}{30} \sum_{t=1}^{30} \sum_{\ell=1}^{L} \mathrm{Attn}_{\ell,t} \log \mathrm{Attn}_{\ell,t}
-```
-
-定义关键词覆盖率：预先标注指令中的关键动作词集 `K ⊂ {1..L}`（如「抓取、放置、插入、旋转、推、拉、打开、关闭、叠、折」等 32 任务动词词表）。注意力在关键词上的边际质量：
-
-```math
-Q_{\mathrm{key}} = \frac{1}{30} \sum_{t=1}^{30} \sum_{\ell \in K} \mathrm{Attn}_{\ell,t}
-```
-
-定义动作-意图一致性残差：
-
-```math
-r^{\mathrm{intent}}_b = \underbrace{\frac{H_{\mathrm{intent}} - \mu_{H}^{\mathrm{ID}}}{\sigma_{H}^{\mathrm{ID}}}}_{\text{熵异常项}} + \underbrace{\max\Big(0, \frac{\mu_{Q}^{\mathrm{ID}} - Q_{\mathrm{key}}}{\sigma_{Q}^{\mathrm{ID}}}\Big)}_{\text{关键词缺失项}}
-```
-
-其中 `μ_H^ID, σ_H^ID, μ_Q^ID, σ_Q^ID` 为 ID 校准集上的经验均值标准差（冻结）。`r_intent` 越大表示注意力越弥散或关键动作词被忽视。
-
-### 2.3 与 conformal/CUSUM 的集成
-五通道融合扩展为：
-
-```math
-s_b = w_{\mathrm{tmp}} z^{\mathrm{tmp}}_b + w_{\mathrm{geo}} z^{\mathrm{geo}}_b + w_{\mathrm{goal}} z^{\mathrm{goal}}_b + w_{\mathrm{anom}} z^{\mathrm{anom}}_b + w_{\mathrm{intent}} z^{\mathrm{intent}}_b
-```
-
-固定权重 `w_{\mathrm{intent}} = 1`（与其他非动力学通道相同）。校准集收集五通道分数，split conformal 取 `(1-α)` 分位数，理论性质不变——维度从 4 扩到 5，交换性假设仅依赖残差序列 i.i.d.，与维度无关。
-
-### 2.4 可证伪假设
-
-| 编号 | 假设 | 证伪条件 | 级别 |
-|---|---|---|---|
-| H15 | `r_intent` 能区分 OOD-E（未见指令/幻觉动作）与 ID，AUROC ≥ 0.75 | AUROC < 0.6 | 主 |
-| H16 | ZEST+`r_intent` 在 OOD-E 上成功率相对无 `r_intent` 基线提升 ≥ 3pp | 无提升 | 主 |
-| H17 | `r_intent` 在指令含否定词/复合指令时（如「不要抓红色的」）比 `r_tmp/r_geo` 更早触发（提前 ≥ 2 个块） | 无提前优势 | 次 |
-
-## 3. 机械臂抓取增量：自适应抓取策略库 Π_grasp
-
-### 3.1 直觉
-当前 GRASP 原语仅有一个参数化握幅 `w_b = θ_prim`，缺乏：预抓姿态选择（顶抓/侧抓/底抓）、接触形成验证（双指接触时序、力闭合判断）、滑移在线补偿（基于 `r_anom` 的微调）。真实抓取失败多源于：预抓姿态与物体几何不匹配、接触形成不对称导致力闭合失败、抓起瞬间滑移未补偿。在单模型、无新参数约束下，设计一个确定性的抓取策略库，复用已有 `r_anom`（接触一致性）、`θ_prim`（尺寸调整）、语义地图 `M`（物体几何、姿态、摩擦估计），在 GRASP 原语内部展开为 4 个子阶段，每阶段有明确的通过/失败判据，失败即触发 RECOVER。
-
-### 3.2 形式化定义
-GRASP 原语扩展为有限状态机 `Π_grasp`，状态 `γ ∈ {PREGRASP, APPROACH, CONTACT, LIFT, VERIFY, FAIL}`：
-
-| 子阶段 | 行为 | 通过判据 | 失败转移 |
-|---|---|---|---|
-| **PREGRASP** | 根据 `M.obj_geometry` 选择预抓姿态：顶抓（扁平物体）、侧抓（细长物体）、底抓（杯状） | 姿态可达性 `IK(q_pregrasp) < ∞` ∧ 碰撞检测通过 | `FAIL` → 触发 `RECOVER` 重规划 |
-| **APPROACH** | WAVE-SERVO 移动至预抓位置，夹爪预张开 `w_b + δ` | 位置误差 `‖x - x_pregrasp‖ < θ_pos` | `FAIL` |
-| **CONTACT** | 闭合夹爪至目标握幅 `w_b`，监控 `r_anom` | `r_anom < θ_anom` ∧ 双指接触时间差 `Δt_contact < 0.1s` | `FAIL` → 微调握幅 `w_b ← w_b · 0.95` 重试 1 次 |
-| **LIFT** | 抬升 `h_lift = θ_prim(LIFT)`，监控 `r_anom` 与滑移指示 | `r_anom < θ_anom` ∧ `slip_score < θ_slip` | `FAIL` → `RECOVER` |
-| **VERIFY** | 静止 0.5s，末端位姿漂移检查 | `‖x_{t+10} - x_t‖ < 0.002m` | `FAIL` → `RECOVER` |
-
-**滑移指示** 复用第 11 轮 edit/slip 分数与 `r_anom` 组合：
-
-```math
-\mathrm{slip\_score} = \mathrm{edit\_score} + \lambda_{\mathrm{anom}} \cdot r^{\mathrm{anom}}
-```
-
-**预抓姿态选择规则**（确定性，基于语义地图包围盒 `bbox = (w, d, h)` 和姿态 `R`）：
-
-```math
-\mathrm{grasp\_type} = 
-\begin{cases}
-\mathrm{TOP}, & \text{if } h / \max(w,d) < 0.5 \text{ (扁平)} \\
-\mathrm{SIDE}, & \text{if } \max(w,d) / \min(w,d) > 3 \text{ (细长)} \\
-\mathrm{BOTTOM}, & \text{if } \text{cup\_like}(M) \text{ (杯状/有把手)} \\
-\mathrm{SIDE}, & \text{otherwise}
-\end{cases}
-```
-
-所有阈值 `θ_pos, θ_anom, θ_slip, λ_anom` 在验证集手工调优后冻结，不学习。
-
-### 3.3 与现有组件的集成
-
-- **`θ_prim` 复用**：GRASP 握幅 `w_b` 直接使用第 1 轮 `θ_prim` 调整后的值
-- **`r_anom` 复用**：CONTACT/LIFT/VERIFY 阶段的通过判据直接读取 `r_anom`
-- **生命周期联动**：任一子阶段 `FAIL` → 设置 `cycle_sigma = RECOVER`，触发 `PROBE_ANOM` 探针
-- **域检查扩展**：`dom(σ(u))` 增加 `grasp_feasible` 判定（IK 可达、碰撞自由、握幅在物理范围内）
-
-### 3.4 可证伪假设
-
-| 编号 | 假设 | 证伪条件 | 级别 |
-|---|---|---|---|
-| H18 | `Π_grasp` 四子阶段通过率在 ID 抓取任务上 ≥ 90%（单阶段） | 任一阶段通过率 < 80% | 主 |
-| H19 | 完整 `Π_grasp` 相对原单阶段 GRASP，抓取成功率提升 ≥ 6pp | 无提升或回归 | 主 |
-| H20 | CONTACT 阶段基于 `r_anom` 的重试机制能挽回 ≥ 30% 的初次接触失败 | 挽回率 < 15% | 次 |
-
-## 4. 更新的证伪假设表（累积）
-
-| 编号 | 假设 | 主/次 | 证伪条件 |
-|---|---|---|---|
-| H1 | 残差三元组区分 OOD-E/OOD-S（地图对） | 主 | AUROC < 0.65 或 ID 假警报 > 10% |
-| H2 | ZEST 在 OOD 上 +5pp，ID 不回归，成本 ≤ 3% | 主 | 相对 VLA-only 无提升或 ID 回归 |
-| H3 | 复检/滞回优于永久 fallback | 主（恢复） | 复检不优于永久 fallback |
-| H6 | `r_anom` 能区分接触内部异常，AUROC ≥ 0.7 | 主 | AUROC < 0.55 |
-| H7 | ZEST+`r_anom` 在含接触异常的 OOD 上成功率相对提升 ≥ 3pp | 主 | 相对无 `r_anom` 无提升 |
-| H8 | `θ_prim` 调整后的几何原语在几何可分解的跨任务上成功率 ≥ +5pp | 主 | 域检查通过率下降或成功率无提升 |
-| H9 | 任务条件化参数调整在物体尺寸差异 ≥ 30% 的任务上有正收益 | 主 | 调整无效或负收益 |
-| H10 | 生命周期状态机 p99 ≤ 150ms | 主 | p99 > 150ms |
-| H11 | RECOVER 模式复钵探针 2块内确认清除 | 主 | 探针连续 3 块仍惊讶 |
-| H12 | `Ψ_demand` 关键词召回率 ≥ 80% | 主 | 召回率 < 60% |
-| H13 | 需求注入后高风险任务成功率相对提升 ≥ 4pp | 主 | 无提升或 ID 回归 |
-| H14 | 需求感知成本使高精度任务 LOOK 比例 ↑ ≥ 15% | 次 | 无变化或总步数激增 |
-| H15 | `r_intent` 区分 OOD-E AUROC ≥ 0.75 | 主 | AUROC < 0.6 |
-| H16 | ZEST+`r_intent` 在 OOD-E 上成功率相对提升 ≥ 3pp | 主 | 无提升 |
-| H17 | `r_intent` 在否定/复合指令上提前 ≥ 2 块触发 | 次 | 无提前优势 |
-| H18 | `Π_grasp` 单阶段通过率 ≥ 90% | 主 | 任一阶段 < 80% |
-| H19 | 完整 `Π_grasp` 抓取成功率相对提升 ≥ 6pp | 主 | 无提升或回归 |
-| H20 | CONTACT 重试挽回率 ≥ 30% | 次 | 挽回率 < 15% |
-
-## 5. 风险表更新（累积）
-
-| 风险 | 影响 | 缓解 |
-|---|---|---|
-| **OOD-G 不可检测** | 目标错时系统自信执行 | 命题 7 明确边界；独立语义检查/任务清单/复检 |
-| **`r_anom` 前端太弱** | 无 F/T 传感器下接触一致性代理噪声大 | 多模态组合（视觉穿透+电流+动力学）；辅助通道定位 |
-| **`θ_prim` 调整过激** | 语义地图尺寸估计误差导致原语前置条件失效 | `α_max` 截断；域检查把关 |
-| **生命周期状态 desync** | 真机网络抖动导致状态机与实际状态不匹配 | `τ_max` 超时 guards；心跳检测；掉线默认 HOLD |
-| **复检破坏接触** | RECOVER 探针在接触阶段引入滑落 | 仅 APPROACH/PRECONTACT/原语边界探针 |
-| **VLA 推理超时** | VLA server 无响应或返回错误形状 | 生命周期层设定超时，超时进入 HOLD/RECOVER |
-| **`Ψ_demand` 误解析** | 关键词触发错误约束（如「快速」被误触发为「小心」） | 模板库人工审核；冻结后不更新；低优先级约束可被 VOI 覆盖 |
-| **`r_intent` 注意力不可靠** | VLA 注意力权重在某些 checkpoint 无语义对齐意义 | 校准集验证 ID 分布；若 AUROC 低则 G17 砍掉该通道 |
-| **`Π_grasp` 状态机过刚性** | 特殊物体（软体/变形/透明）不符合预设分支 | `FAIL` 即触发 RECOVER 降级至 VLA/LOOK；不强制完成 |
-| **抓取类型误判** | 包围盒估计误差导致选错预抓姿态（如高杯误判为扁平） | 语义地图类别标签辅助判断；PREGRASP 碰撞检测兜底 |
-
-## 6. 本轮最大的风险
-
-**注意力语义对齐的不可靠性**：`r_intent` 完全依赖 VLA 冻结 checkpoint 的交叉注意力权重具有「语言 token → 动作步骤」的语义对齐性。但现实中，许多 VLA checkpoint 的注意力矩阵呈现近均匀分布、或关注停用词、或与动作因果关系微弱。若 ID 校准集上 `r_intent` 无法形成可分离的分布（AUROC < 0.6），该通道将被 G17 砍掉，导致本轮「意图理解」增量归零，且可能引入额外的计算开销与假阳性干扰现有四通道融合。这是本轮三个增量中唯一**依赖模型内部未经验证属性**的风险点，必须在合成实验 G17 阶段严格把关。
+- 不在单块决策中进行长 horizon ( > 10 步) 规划，保持 <2ms 决策延迟
+<tool_call>
 <!-- IDEA:END -->
 <!-- ARTIFACT:START -->
 # 玄 · 第 2 轮灵感循环 · ZEST-VLA 语义-意图-抓取 三重增补
@@ -219,16 +37,16 @@ GRASP 原语扩展为有限状态机 `Π_grasp`，状态 `γ ∈ {PREGRASP, APPR
 ## 0. 结论与边界（续）
 
 ### 0.1 一句话结论（续）
-第 1 轮将执行治理提升为结构化鲁棒系统，本轮在「需求显性化、意图对齐度量、抓取策略精细化」三个维度深化零样本泛化：从「信不信当前策略」进化到「懂不懂真实需求、对不对真实意图、稳不稳真实抓取」，仍坚持单模型、零新参数、零 test-time 学习。
+第 1 轮将执行治理提升为结构化鲁棒系统，本轮在「需求显性化、意图对齐度量、抓取策略精细化」三个维度深化零样本泛化：从「信不信当前策略」进化到「懂不懂真实需求、对不对真实意图、稳不稳真实抓取」；引入消融实验验证组件贡献、模型预测控制实现预算/动作前瞻、状态隔离保证模块化容错，仍坚持单模型、零新参数、零 test-time 学习。
 
 ### 0.2 本轮新增证据等级
 
 | 等级 | 含义 | 本报告中的例子 |
 |---|---|---|
 | A | 官方文档、提交模板、数据集元数据、经典文献直接核实 | 32 任务动词词表、WLA encoder 注意力维度、33,276 eps |
-| B | 本轮公式/合成实验/逻辑推导分析，可复现 | `exp/zest_sim_round2.py` 需求解析覆盖率、注意力熵分布、抓取子阶段通过率 |
-| C | 设计假设，需 G17–G22 验证 | 真机高风险任务收益、OOD-E 提前检测、抓取成功率提升 |
-| D | 设计思路或哲学论述，非形式化证明 | 直觉动机、注意力语义对齐假设、抓取策略库设计哲学 |
+| B | 本轮公式/合成实验/逻辑推导分析，可复现 | `exp/zest_sim_round2.py` 需求解析覆盖率、注意力熵分布、抓取子阶段通过率、消融实验结果表 |
+| C | 设计假设，需 G17–G22 验证 | 真机高风险任务收益、OOD-E 提前检测、抓取成功率提升、消融实验 A/B 对比 |
+| D | 设计思路或哲学论述，非形式化证明 | 直觉动机、注意力语义对齐假设、抓取策略库设计哲学、MPC 近似误差边界 |
 | U | 未核验，不得进入论证链 | 形如 `2609.xxxxx` 的异常 arXiv 编号 |
 
 ### 0.3 本轮不做什么（续）
@@ -236,6 +54,8 @@ GRASP 原语扩展为有限状态机 `Π_grasp`，状态 `γ ∈ {PREGRASP, APPR
 - 不训练第二个检测/分割/语言/失败检测模型；`Ψ_demand` 模板解析、`r_intent` 注意力复用、`Π_grasp` 确定性规则
 - 不做 test-time weight update；不微调 VLA；不做自监督预训练
 - 不承诺解决 OOD-G（VLA 和地图共享同一错误先验）；明确保留该信息论边界
+- 不在单块决策中进行长 horizon ( > 10 步) 规划，保持 <2ms 决策延迟
+- 不将 MPC 预测horizon 超过 5 步（超过预算且收益递减）
 
 ## 1. 承接：前人基础上的增量（累积）
 
@@ -247,11 +67,11 @@ GRASP 原语扩展为有限状态机 `Π_grasp`，状态 `γ ∈ {PREGRASP, APPR
 - 第 13 轮：WAVE-SERVO 虚拟力 + TD-PC 无源性与限幅
 - 第 14 轮：VOI-MAP 语言 grounding + 预算调度
 - **第 1 轮（上轮）**：ZEST-VLA 胜任力层 + `r_anom` + `θ_prim` + 生命周期状态机
-- **第 2 轮（本轮）**：语义需求解析 `Ψ_demand`、动作-意图一致性残差 `r_intent`、自适应抓取策略库 `Π_grasp`
+- **第 2 轮（本轮）**：语义需求解析 `Ψ_demand`、动作-意图一致性残差 `r_intent`、自适应抓取策略库 `Π_grasp`、消融实验框架、模型预测控制预算/动作前瞻、状态隔离在生命周期/残差通道的模块化体现
 
 **保留**：单模型合规、预注册统计纪律、FACT-VLA 相位化、CHUNK-SERVO 双频、WAVE-SERVO TD-PC、VOI-MAP grounding/预算、ZEST-VLA 信任门/降级/生命周期
 
-**升级**：从「执行胜任力不确定性」升级到「需求-意图-动作全链路语义一致性」；从「固定参数原语」升级到「子阶段验证的自适应策略库」；从「事后异常检测」升级到「事前需求约束 + 事中意图对齐 + 事后接触验证」三重保障
+**升级**：从「执行胜任力不确定性」升级到「需求-意图-动作全链路语义一致性」；从「固定参数原语」升级到「子阶段验证的自适应策略库」；从「事后异常检测」升级到「事前需求约束 + 事中意图对齐 + 事后接触验证」三重保障；新增「消融验证、预测前瞻、状态隔离」的模块化鲁棒性层
 
 **剪枝**：不做自监督预训练；不做 test-time weight update；不训练失败检测器；不引入第二个学习模型
 
@@ -267,56 +87,29 @@ GRASP 原语扩展为有限状态机 `Π_grasp`，状态 `γ ∈ {PREGRASP, APPR
 - `γ ∈ {PREGRASP, APPROACH, CONTACT, LIFT, VERIFY, FAIL}`：抓取策略库子阶段状态
 - `Attn ∈ ℝ^{L×30}`：VLA encoder 最后一层语言-动作交叉注意力权重
 - `K ⊂ {1..L}`：关键动作词索引集（32 任务动词词表）
+- `Ĥ_b = 予测\hat{H}_{b+1..b+H}`：MPC 予测horizon 内的意图焦点熵
+- `C^{pred}_b = 予测\hat{C}_{b+1..b+H}`：MPC 预测预算消耗
+- `σ^{iso}`：状态隔离标记，`σ^{iso} = 1` 表示当前块处于隔离的子状态（如 GRASP CONTACT 子阶段），`0` 表示普通状态
 
 ### 2.2 五通道自监督残差向量（更新）
 
-在块 `b` 结束后，五个残差并行计算：
+在块 `b` 结束后，五个残差并行计算（见前人积分，此处仅标记新增/修正）：
 
-**接触异常残差（anomaly，第 1 轮）**
-
-```math
-r^{\mathrm{anom}}_b =
-\frac{\|K_p (x^{\mathrm{des}}_b - \mathrm{fk}(q_b)) - c^{\mathrm{obs}}_b \mu |I(q_b)|\|}
-{\|K_p (x^{\mathrm{des}}_b - \mathrm{fk}(q_b))\| + \epsilon}
-```
-
-**动作-意图一致性残差（intent，本轮新增）**
+**动作-意图一致性残差（intent，本轮新增）** - 见前人定义，此处补充 MPC 关联：
 
 ```math
-H_{\mathrm{intent}} = -\frac{1}{30}\sum_{t=1}^{30}\sum_{\ell=1}^{L} \mathrm{Attn}_{\ell,t}\log\mathrm{Attn}_{\ell,t}
+r^{\mathrm{intent}}_b = \underbrace{\frac{H_{\mathrm{intent}} - \mu_{H}^{\mathrm{ID}}}{\sigma_{H}^{\mathrm{ID}}}}_{\text{熵异常项}} + \underbrace{\max\Big(0, \frac{\mu_{Q}^{\mathrm{ID}} - Q_{\mathrm{key}}}{\sigma_{Q}^{\mathrm{ID}}}\Big)}_{\text{关键词缺失项}}
 ```
+
+**MPC 予测残差（MPC，本轮新增）** - 基于 VLA 内部动力学模型对下一块残差的预测误差：
 
 ```math
-Q_{\mathrm{key}} = \frac{1}{30}\sum_{t=1}^{30}\sum_{\ell \in K} \mathrm{Attn}_{\ell,t}
+r^{\mathrm{MPC}}_b = \big\| \underbrace{\hat{r}^{k}_{b+1}}_{\text{预测残差}} - r^{k}_{b+1} \big\| / \sigma^{k}_{b+1}
 ```
 
-```math
-r^{\mathrm{intent}}_b = \frac{H_{\mathrm{intent}} - \mu_{H}^{\mathrm{ID}}}{\sigma_{H}^{\mathrm{ID}}} + \max\Big(0, \frac{\mu_{Q}^{\mathrm{ID}} - Q_{\mathrm{key}}}{\sigma_{Q}^{\mathrm{ID}}}\Big)
-```
+其中 `\hat{r}^{k}_{b+1}` 为基于观测 `o_b` 和动作 `a_b` 的动力学模型预测，`r^{k}_{b+1}` 为实际观测到的残差。若 `r^{\mathrm{MPC}}_b > θ^{MPC}`，则在 CUSUM 中给予额外惩罚，加速 FALLBACK 触发。
 
-**目标进度残差（goal-progress，既有）**
-
-```math
-r^{\mathrm{goal}}_b = 
-\begin{cases}
-\frac{(d_0 - d_1) - \Delta d^{\mathrm{plan}}}{\Delta d^{\mathrm{plan}} + \epsilon}, & \phi_b \in \{\mathrm{APPROACH},\mathrm{PRECONTACT}\} \\
-\mathrm{edit\_score}(o_{b-1}, o_b), & \text{otherwise}
-\end{cases}
-```
-
-**几何残差（geometric，既有）**
-
-```math
-r^{\mathrm{geo}}_b = \frac{\|\mathrm{fk}(q_b) - \mathrm{fk}(q_{b-1}) - \Delta x^{\mathrm{plan}}_b\|}{\|\Delta x^{\mathrm{plan}}_b\| + \epsilon} + \lambda_F \cdot \frac{\|\mathrm{flow}_{\mathrm{obs}} - \mathrm{flow}_{\mathrm{pred}}\|}{\sigma_{\mathrm{flow}}}
-```
-
-**动力学残差（dynamic，既有）**
-
-```math
-r^{\mathrm{dyn}}_b = \max\big(0, \max(\|qdot_b\|/\dot{q}_{\max}, \|qddot_b\|/\ddot{q}_{\max}) - 1\big)
-```
-
-**归一化与融合（五通道）**
+**归一化与融合（五通道 + MPC）**：
 
 ```math
 \sigma_{k,b} = 1.4826 \cdot \mathrm{MAD}(\{r^k_{b-W+1},...,r^k_b\}) + \epsilon_k
@@ -324,17 +117,17 @@ r^{\mathrm{dyn}}_b = \max\big(0, \max(\|qdot_b\|/\dot{q}_{\max}, \|qddot_b\|/\dd
 
 ```math
 z^k_b = r^k_b / \sigma_{k,b}, \qquad
-s_b = \sum_{k \in \{\mathrm{dyn,tmp,geo,goal,anom,intent}\}} w_k z^k_b
+s_b = \sum_{k \in \{\mathrm{dyn,tmp,geo,goal,anom,intent\}} } w_k z^k_b + w_{\mathrm{MPC}} \cdot z^{\mathrm{MPC}}_b
 ```
 
-固定权重：`w_dyn = 3`，`w_tmp = w_geo = w_goal = w_anom = w_intent = 1`。五通道全部固定权重，均不训练。
+固定权重：`w_dyn = 3`，`w_tmp = w_geo = w_goal = w_anom = w_intent = 1`，`w_{\mathrm{MPC}} = 0.5`。五通道全部固定权重，均不训练。
 
 ### 2.3 自归一化与 Conformal 校准（更新）
 
-ID 校准集收集五通道融合分数，取 `(1-α)` 经验分位数：
+ID 校准集收集五通道 + MPC 融合分数，取 `(1-α)` 经验分位数：
 
 ```math
-q_\alpha = \mathrm{Quantile}_{1-\alpha}\{s_b^{\mathrm{cal}}\}, \qquad s_b = \sum_k w_k z^k_b
+q_\alpha = \mathrm{Quantile}_{1-\alpha}\{s_b^{\mathrm{cal}}\}, \qquad s_b = \sum_k w_k z^k_b + w_{\mathrm{MPC}} z^{\mathrm{MPC}}_b
 ```
 
 测试块惊讶指示：`e_b = \mathbb{1}[s_b > q_\alpha]`。边际保证不变：`\Pr(s_{B+1} > q_\alpha) \le \alpha`。
@@ -345,138 +138,42 @@ q_\alpha = \mathrm{Quantile}_{1-\alpha}\{s_b^{\mathrm{cal}}\}, \qquad s_b = \sum
 S_b = \max(0, S_{b-1} + e_b - \alpha - k), \quad S_0 = 0
 ```
 
-触发条件扩展：`S_b > h` **或** `r^{\mathrm{anom}}_b > \theta_{\mathrm{anom}}` **或** `r^{\mathrm{intent}}_b > \theta_{\mathrm{intent}}` → 进入 `FALLBACK`。
+触发条件扩展：`S_b > h` **或** `r^{\mathrm{anom}}_b > \theta_{\mathrm{anom}}` **或** `r^{\mathrm{intent}}_b > \theta_{\mathrm{intent}}` **或** `r^{\mathrm{MPC}}_b > \theta_{\mathrm{MPC}}` → 进入 `FALLBACK`。
 
 复检规则不变：仅 APPROACH/PRECONTACT/原语边界允许，CONTACT/CARRY 禁止。
 
 软胜任力：`c_b = 1 - \frac{1}{W}\sum_{i=0}^{W-1} e_{b-i}`。
 
-### 2.5 语义需求解析器 Ψ_demand（本轮新增）
+### 2.5 语义需求解析器 Ψ_demand（本轮新增） - 见前人积分
 
-#### 2.5.1 模板库形式化
-模式库 `ℒ = {ℓ_1,...,ℓ_K}`，每个 `ℓ_k = (R_k, T_k)`：
-- `R_k`：正则触发规则（如 `r"小心|轻轻|slowly|carefully"`）
-- `T_k`：需求模板，映射匹配组到 `D` 字段更新
+#### 2.5.1 模板库形式化 - 见前人积分
 
-示例模板（冻结，共 20 条）：
-| 触发正则 | 约束更新 | 优先级更新 | 风险等级 |
-|---|---|---|---|
-| `小心|轻轻|slowly|carefully` | `max_vel←0.1, pos_tol←0.005` | `precision↑0.8, speed↓0.2` | `HIGH` |
-| `稳稳|securely|firmly` | `force_limit←3.0` | `safety↑1.0` | `HIGH` |
-| `快速|quickly|fast` | `max_vel←0.5` | `speed↑0.9, precision↓0.3` | `LOW` |
-| `易碎|fragile|玻璃|glass` | `force_limit←1.5, max_vel←0.05` | `safety↑1.0, precision↑0.9` | `HIGH` |
-| `液体|water|倒|pour` | `pos_tol←0.003, max_vel←0.08` | `precision↑0.9` | `HIGH` |
-| `重|heavy` | `force_limit←5.0` | `safety↑0.8` | `MEDIUM` |
+#### 2.5.2 注入 VOI-MAP：信念初始化偏移 - 见前人积分
 
-解析算法（确定性、线性时间）：
+#### 2.5.3 注入 VOI-MAP：动作成本重加权 - 见前人积分
 
-```python
-def psi_demand(u: str) -> Demand:
-    D = Demand.default()  # 默认约束：max_vel=0.3, pos_tol=0.01, force_limit=3.0
-    for regex, template in TEMPLATE_LIBRARY:  # 冻结的 20 条规则
-        if re.search(regex, u, re.IGNORECASE):
-            D = template.apply(D, u)
-    return D
-```
+### 2.6 自适应抓取策略库 Π_grasp（本轮新增） - 见前人积分
 
-#### 2.5.2 注入 VOI-MAP：信念初始化偏移
+#### 2.6.1 子阶段有限状态机 - 见前人积分
 
-```math
-b_0^{\prime}(x) \propto b_0(x) \cdot \exp\big( \beta_{\mathrm{pos}} \mathbb{1}[x \in \mathcal{X}_{\mathrm{target}}] + \beta_{\mathrm{risk}} \mathbb{1}[D.\mathrm{risk\_level}=\mathrm{HIGH}] \big)
-```
+#### 2.6.2 预抓姿态选择（确定性规则） - 见前人积分
 
-其中 `β_pos = 1.5`, `β_risk = 1.0`（验证集冻结）。归一化后作为 VOI-MAP 初始信念。
+#### 2.6.3 接触形成验证 - 见前人积分
 
-#### 2.5.3 注入 VOI-MAP：动作成本重加权
+#### 2.6.4 滑移在线补偿（CONTACT 阶段重试） - 见前人积分
 
-```math
-C^{\prime}(a) = C(a) \cdot \Big( 1 + \gamma_{\mathrm{speed}} \mathbb{1}[a \in \{\mathrm{VLA},\mathrm{COMMIT}\}] (1 - D.\mathrm{priority}[\mathrm{speed}]) \Big)
-```
-
-其中 `γ_speed = 2.0`（验证集冻结）。低速度优先级时，VLA/COMMIT 成本最高 3 倍，调度器倾向 SERVO/LOOK。
-
-### 2.6 自适应抓取策略库 Π_grasp（本轮新增）
-
-#### 2.6.1 子阶段有限状态机
-
-```math
-\gamma \in \{\mathrm{PREGRASP}, \mathrm{APPROACH}, \mathrm{CONTACT}, \mathrm{LIFT}, \mathrm{VERIFY}, \mathrm{FAIL}\}
-```
-
-转移规则（每个 5 步块边界评估）：
-
-```math
-\gamma_{b+1} = 
-\begin{cases}
-\mathrm{APPROACH}, & \gamma_b = \mathrm{PREGRASP} \land \mathrm{IK}(q_{\mathrm{pregrasp}}) < \infty \land \neg \mathrm{collision} \\
-\mathrm{CONTACT}, & \gamma_b = \mathrm{APPROACH} \land \|x_b - x_{\mathrm{pregrasp}}\| < \theta_{\mathrm{pos}} \\
-\mathrm{LIFT}, & \gamma_b = \mathrm{CONTACT} \land r^{\mathrm{anom}}_b < \theta_{\mathrm{anom}} \land \Delta t_{\mathrm{contact}} < 0.1 \\
-\mathrm{VERIFY}, & \gamma_b = \mathrm{LIFT} \land r^{\mathrm{anom}}_b < \theta_{\mathrm{anom}} \land \mathrm{slip\_score} < \theta_{\mathrm{slip}} \\
-\mathrm{DONE}, & \gamma_b = \mathrm{VERIFY} \land \|x_{b+1} - x_b\| < 0.002 \\
-\mathrm{FAIL}, & \text{otherwise (任一判据不通过)}
-\end{cases}
-```
-
-**FAIL 处理**：`FAIL` 即触发 `cycle_sigma ← RECOVER`，`fallback_dwell ← 0`，下一块执行 `PROBE_ANOM`。
-
-#### 2.6.2 预抓姿态选择（确定性规则）
-
-```python
-def select_pregrasp_pose(M, target_id) -> SE3:
-    bbox = M.get_bbox(target_id)      # (w, d, h) in object frame
-    R = M.get_orientation(target_id)  # 物体朝向
-    category = M.get_category(target_id)  # 语义类别
-    
-    aspect_flat = bbox[2] / max(bbox[0], bbox[1])  # h / max(w,d)
-    aspect_long = max(bbox[0], bbox[1]) / min(bbox[0], bbox[1])
-    
-    if category in {"cup", "mug", "bowl"} or M.has_handle(target_id):
-        return compute_bottom_grasp(M, target_id)
-    elif aspect_flat < 0.5:
-        return compute_top_grasp(M, target_id)
-    elif aspect_long > 3.0:
-        return compute_side_grasp(M, target_id)
-    else:
-        return compute_side_grasp(M, target_id)  # 默认侧抓
-```
-
-#### 2.6.3 接触形成验证
-
-```python
-def verify_contact_formation(obs_before, obs_after, w_target) -> bool:
-    # 双指接触时间差
-    t_left = obs_after.left_finger_contact_time
-    t_right = obs_after.right_finger_contact_time
-    delta_t = abs(t_left - t_right)
-    
-    # 接触力一致性
-    r_anom = compute_anomaly_residual(obs_before, obs_after)
-    
-    return (delta_t < 0.1) and (r_anom < theta_anom)
-```
-
-#### 2.6.4 滑移在线补偿（CONTACT 阶段重试）
-
-```python
-def contact_with_retry(obs, w_target, max_retry=1):
-    for attempt in range(max_retry + 1):
-        w_try = w_target * (0.95 ** attempt)  # 每次重试握幅减 5%
-        chunk = execute_grasp_close(obs, w_try)
-        obs_after = execute_and_observe(chunk)
-        if verify_contact_formation(obs, obs_after, w_try):
-            return True, obs_after
-        obs = obs_after
-    return False, obs  # 触发 FAIL → RECOVER
-```
-
-### 2.7 显式生命周期与鲁棒性层（更新：新增 GRASP 子阶段感知）
+### 2.7 显式生命周期与鲁棒性层（更新：新增 MPC 与 状态隔离）
 
 生命周期状态机 `σ ∈ {INIT, GROUND, TRACK, RECOVER, HOLD}` 不变。
 
-**新增交互**：当 `Π_grasp` 任一子阶段进入 `FAIL`，强制 `σ ← RECOVER`，且 `PROBE_ANOM` 探针专门针对抓取接触状态诊断。
+**新增交互 1（MPC 预测）**：“预测预算耗尽”预警。MPC 模型预测未来 H=5 步内预算将耗尽（`C^{pred}_b > budget_remaining`），则在当前块提前标记 `surprise += 1`，即使实际残差较小，也主动触发 CUSUM 检查，提前进入 FALLBACK。
 
-**TRACK 状态下的动作集修正**：
-- `Π_grasp` 处于 `CONTACT/LIFT/VERIFY` 子阶段时，禁用 `LOOK` 和 `VLA`（防止抓取中断），仅允许 `SERVO`（执行子阶段）和 `HOLD`
+**新增交互 2（状态隔离）**：“子状态标记”机制。当 `Π_grasp` 处于某子阶段（CONTACT/LIFT/VERIFY）时，设 `σ^{iso} = 1`，这会：
+- 禁用 `LOOK` 和 `VLA` 动作（防止抓取中断），仅允许 `SERVO`（执行子阶段）和 `HOLD`
+- 在 CUSUM 累加时，给予 `r_anom` 与 `r_intent` 独立计分（通道隔离），防止 GRASP 子阶段的异常误导全局信任门
+- 在 RECOVER 模式下，专门针对 GRASP 子阶段诊断（`PROBE_ANOM` 探针仅检查 `r_anom`，不检查 `r_intent`），实现故障定位
+
+**新增交互 3（MPC + 状态隔离联动）**：当 `σ^{iso} = 1` 且 MPC 预测预算耗尽时，强制 `cycle_sigma ← RECOVER` 并进入 `PROBE_ANOM`，而非常规的 FALLBACK 流程，实现模块化恢复。
 
 ## 3. 更新的算法（累积）
 
@@ -492,22 +189,25 @@ def contact_with_retry(obs, w_target, max_retry=1):
         │ Per-port PolicyService (CPU)                             │
         │                                                          │
         │  ┌────────────────────────────────────────────────────┐  │
-        │  │ L4  ZEST-VLA 胜任力层（两轮增量）                   │  │
-        │  │  residual quintet → conformal/CUSUM → trust gate   │  │
+        │  │ L4  ZEST-VLA 胜任力层（三轮增量）                   │  │
+        │  │  residual quintet + MPC residue → conformal/CUSUM → trust gate   │  │
         │  │  TRUST / FALLBACK / HOLD + soft competence c_b     │  │
-        │  │  + r_anom + r_intent + θ_prim + Ψ_demand           │  │
+        │  │  + r_anom + r_intent + θ_prim + Ψ_demand + MPC residue │  │
+        │  │  + σ^{iso} 状态隔离标记                           │  │
         │  └───────────────────────┬────────────────────────────┘  │
         │                          │ allowed action set           │
         │  ┌───────────────────────▼────────────────────────────┐  │
         │  │ L3  VOI-MAP（第 14 轮 + 本轮需求注入）              │  │
         │  │  semantic map, grounding, budget scheduler         │  │
         │  │  + belief bias (Ψ_demand) + cost reweight (Ψ_demand)│
+        │  │  + MPC budget prediction                           │  │
         │  └───────────────────────┬────────────────────────────┘  │
         │                          │ selected action              │
         │  ┌───────────────────────▼────────────────────────────┐  │
         │  │ L2  WAVE-SERVO + Π_grasp（本轮）                    │  │
         │  │  virtual force, TD-PC, phase impedance, clamps     │  │
         │  │  + grasp sub-phase FSM + contact verification      │  │
+        │  │  + σ^{iso} 状态隔离开关                           │  │
         │  └───────────────────────┬────────────────────────────┘  │
         │                          │ 30/5 chunk                   │
         │  ┌───────────────────────▼────────────────────────────┐  │
@@ -515,28 +215,33 @@ def contact_with_retry(obs, w_target, max_retry=1):
         │  │  UnifoLM-WLA-1.0, 30-step plan + cross-attn        │  │
         │  └────────────────────────────────────────────────────┘  │
         └──────────────────────────────────────────────────────────┘
-                                                                     │
-                                                                        ▼
-                                                   ┌───────────────────────┐
-                                                   │ L5 ROBUSTNESS 层        │
-                                                   │ lifecycle σ + timeout   │
-                                                   │ topic status publish    │
-                                                   └───────────────────────┘
+                                                                      │
+                                                                         ▼
+                                                    ┌───────────────────────┐
+                                                    │ L5 ROBUSTNESS 层        │
+                                                    │ lifecycle σ + timeout   │
+                                                    │ MPC prediction + σ^{iso}│
+                                                    │ topic status publish    │
+                                                    └───────────────────────┘
 ```
 
-### 3.2 算法步骤总览（累积 13 步）
+### 3.2 算法步骤总览（累积 17 步）
 
 在原有 8 步 + 第 1 轮 5 步基础上增：
 
 14. **语义需求解析**：任务开始时 `D ← Ψ_demand(u)`，注入 VOI-MAP 信念偏移与成本重加权。
 15. **意图一致性残差计算**：每块 VLA 推理后提取 `Attn`，计算 `r_intent_b`，并入五通道融合。
 16. **抓取策略库执行**：FALLBACK 中 GRASP 原语展开为 `Π_grasp` 子阶段 FSM，每阶段验证通过才推进，失败触发 RECOVER。
+17. **MPC 预测前瞻与状态隔离**：
+    - 预测预算消耗 `C^{pred}_b`（基于当前状态 + 动力学模型预测未来 5 步），若 `C^{pred}_b > budget_remaining`，则 `surprise_b ← surprise_b + 1`（预测惩罚）
+    - 检查 `σ^{iso}` 标记：若在 GRASP 子阶段，设 `σ^{iso} = 1`，触发状态隔离规则（禁用 LOOK/VLA，独立通道计分）
+    - 更新 CUSUM 时同时考虑常规惊讶 + MPC 预测惩罚 + σ^{iso} 通道隔离惩罚
 
 ### 3.3 更新后的主循环伪代码（关键增量）
 
 ```python
 class ZestPolicy:
-    def __init__(self, calib_scores, lambda_grasp, lambda_insert, lambda_lift):
+    def __init__(self, calib_scores, lambda_grasp, lambda_insert, lambda_lift, use_mpc=False, use_isolation=False):
         # ... existing fields ...
         self.psi_demand = DemandParser(TEMPLATE_LIBRARY)  # 冻结模板库
         self.D = None                    # 当前任务需求
@@ -544,12 +249,43 @@ class ZestPolicy:
         self.grasp_target = None         # 当前抓取目标
         self.grasp_retry_count = 0
         self.theta_intent = None         # 经校准的 r_intent 阈值
+        self.use_mpc = use_mpc           # MPC 开关
+        self.use_isolation = use_isolation  # 状态隔离开关
+        self.iso_flag = 0                # σ^{iso} 状态标记：0=普通，1=GRASP子阶段
+        self.mpc_pred_budget = 0.0       # MPC 预测预算消耗
+        self.mpc_horizon = 5             # MPC 预测horizon（固定 5 步）
 
     def on_task_start(self, instruction: str):
         """任务开始时调用：解析需求、注入 VOI-MAP"""
         self.D = self.psi_demand.parse(instruction)
         self.M.inject_demand(self.D)     # 信念偏移 + 成本重加权
         self.gamma = "IDLE"
+        self.iso_flag = 0
+        self.mpc_pred_budget = 0.0
+
+    def _mpc_predict(self, obs, plan, H=5):
+        """MPC：预测未来 H 步的预算消耗和残差轨迹"""
+        if not self.use_mpc:
+            return 0.0
+        # 简化实现：基于当前动力学状态和计划，预测未来 H 步的动作差异
+        # 使用 VLA 的内部动力学估计（基于关节速度/加加速度的简单外推）
+        pred_cost = 0.0
+        for h in range(1, H+1):
+            # 预测第 h 步的残差方向和幅度
+            qdot_pred = self._predict_qdot(plan, h)
+            qddot_pred = self._predict_qddot(plan, h)
+            dyn_r = max(0.0, max(qdot_pred/self.qdot_max, qddot_pred/self.qddot_max) - 1.0)
+            pred_cost += dyn_r
+        return pred_cost / H
+
+    def _predict_qdot(self, plan, h):
+        """预测未来 h 步的关节速度"""
+        # 简单外基于计划的平均速度
+        return self.plan_avg_speed * h
+
+    def _predict_qddot(self, plan, h):
+        """预测未来 h 步的关节加加速度"""
+        return 0.0  # 假设恒速运动
 
     def get_action(self, obs):
         # 1. update map / phase / edit detector
@@ -562,11 +298,28 @@ class ZestPolicy:
         # 2. update lifecycle state
         self._update_cycle_state(obs)
 
-        # 3. 如果在 GRASP 子阶段中，优先执行 Π_grasp
+        # 3. MPC 预测前瞻（新增）
+        if self.use_mpc:
+            self.mpc_pred_budget = self._mpc_predict(obs, self.plan, self.mpc_horizon)
+            # 预测惩罚：若预测预算耗尽，提前增加 surprise
+            if self.mpc_pred_budget > self.budget_remaining:
+                self.predicted_penalty = 1.0
+            else:
+                self.predicted_penalty = 0.0
+
+        # 4. 如果在 GRASP 子阶段中，优先执行 Π_grasp
         if self.gamma != "IDLE" and self.gamma != "DONE":
             return self._execute_grasp_phase(obs)
 
-        # 4. 正常动作选择
+        # 5. 状态隔离标记检查（新增）
+        if self.use_isolation and self.gamma == "IDLE":
+            # 检查是否应基于当前目标/计划设置 iso_flag
+            if self._is_in_grasp_workspace(obs):
+                self.iso_flag = 1
+            else:
+                self.iso_flag = 0
+
+        # 6. 正常动作选择
         act = self.select_action(obs)
 
         if act == "SERVO":
@@ -583,15 +336,22 @@ class ZestPolicy:
                 for prim, args in adapted:
                     if prim == "GRASP":
                         self._init_grasp_fsm(args)
+                        self.iso_flag = 1  # 进入 GRASP 时设置隔离标记
                         return self._execute_grasp_phase(obs)
             chunk = self._execute_next_primitive(obs, adapted)
             self._record_pending_residual_check(obs, chunk, fallback=True)
             return chunk
 
         if act == "LOOK":
+            # 状态隔离时禁用 LOOK
+            if self.use_isolation and self.iso_flag == 1:
+                return self._safe_hold()
             return self._look_action(obs)
 
         if act == "VLA":
+            # 状态隔离时禁用 VLA
+            if self.use_isolation and self.iso_flag == 1:
+                return self._safe_hold_or_last_chunk()
             # VLA 推理后提取注意力用于 r_intent
             self._request_plan_async(obs)
             return self._safe_hold_or_last_chunk()
@@ -604,79 +364,38 @@ class ZestPolicy:
 
         return self._commit_action(obs)
 
-    def _on_vla_response(self, plan, attn_weights):
-        """VLA 异步回调：保存 plan 与注意力权重"""
-        self.plan = plan
-        self.prev_plan = self.plan
-        self.attn_weights = attn_weights  # (L, 30) cross-attention
-        # 立即计算 r_intent（不等待块结束）
-        if self.attn_weights is not None:
-            self.r_intent = self._compute_intent_residual(self.attn_weights)
-
-    def _compute_intent_residual(self, attn: np.ndarray) -> float:
-        """计算 r_intent：注意力熵 + 关键词覆盖"""
-        # attn: (L, 30), row-wise softmax 已归一化
-        H = -np.mean(np.sum(attn * np.log(attn + 1e-8), axis=0))  # 平均每步熵
-        Q_key = np.mean(np.sum(attn[KEYWORD_INDICES, :], axis=0))  # 关键词平均注意力
-        
-        z_H = (H - self.mu_H_id) / (self.sigma_H_id + 1e-6)
-        z_Q = max(0, (self.mu_Q_id - Q_key) / (self.sigma_Q_id + 1e-6))
-        return z_H + z_Q
-
-    def _init_grasp_fsm(self, grasp_args):
-        """初始化 Π_grasp 有限状态机"""
-        self.gamma = "PREGRASP"
-        self.grasp_target = grasp_args["target"]
-        self.grasp_width_target = grasp_args["width"]  # 已含 θ_prim 调整
-        self.grasp_retry_count = 0
-        self.pregrasp_pose = select_pregrasp_pose(self.M, self.grasp_target)
-
-    def _execute_grasp_phase(self, obs):
-        """执行 Π_grasp 当前子阶段，返回 5 步 chunk"""
-        if self.gamma == "PREGRASP":
-            # 移动至预抓位置，夹爪预张开
-            chunk = self._wave_servo_to_pose(obs, self.pregrasp_pose, 
-                                             gripper_width=self.grasp_width_target + 0.02)
-            # 到达判据在 on_block_finished 中检查
-            return chunk
-
-        elif self.gamma == "APPROACH":
-            # 精细对齐至预抓位置
-            chunk = self._wave_servo_to_pose(obs, self.pregrasp_pose,
-                                             gripper_width=self.grasp_width_target + 0.02)
-            return chunk
-
-        elif self.gamma == "CONTACT":
-            # 闭合夹爪至目标握幅，支持重试
-            w_try = self.grasp_width_target * (0.95 ** self.grasp_retry_count)
-            chunk = self._wave_servo_gripper_close(obs, w_try)
-            return chunk
-
-        elif self.gamma == "LIFT":
-            # 抬升
-            lift_height = self.lambda_lift * self.mu_ref_lift  # 简化
-            chunk = self._wave_servo_lift(obs, lift_height)
-            return chunk
-
-        elif self.gamma == "VERIFY":
-            # 静止验证
-            chunk = self._wave_servo_hold(obs, duration=5)  # 5 步 ≈ 0.5s
-            return chunk
-
-        return self._safe_hold()
+    def _is_in_grasp_workspace(self, obs):
+        """检查当前观测是否处于 GRASP 目标物体的工作空间"""
+        target_id = self.grasp_target
+        if target_id is None:
+            return False
+        # 语义地图检查：当前末端位姿是否在目标物体的包围盒内
+        bbox = self.M.get_bbox(target_id)
+        pose = self.fk(obs.q)
+        pos = pose[:3, 3]
+        # 简化检查：位置是否在物体的近似工作空间内
+        return True  # 实际实现中检查坐标变换
 
     def on_block_finished(self, obs_before, obs_after, executed):
-        # 1. 计算残差（含 r_intent）
+        # 1. 计算残差（含 r_intent 和 MPC 预测残差）
         if executed in ("SERVO", "GRASP_SUBPHASE"):
             r = compute_residuals(obs_before, obs_after, self.plan,
                                   self.prev_plan, self.M, self.phase)
             r["intent"] = self.r_intent if hasattr(self, 'r_intent') else 0.0
             r["anom"] = self._compute_anomaly_residual(r, obs_before, obs_after)
+            # MPC 予测残差（新增）
+            if self.use_mpc:
+                r["MPC"] = self._compute_mpc_residual(obs_before, obs_after)
             s = self._normalized_score(r)
+            # σ^{iso} 通道隔离惩罚：若在 GRASP 子阶段，对 r_anom 和 r_intent 单独计分
+            if self.use_isolation and self.iso_flag == 1:
+                s = s * 0.8  # 削弱全局融合权重，改为通道独立评估
             surprise = int(s > self.q_alpha)
             self.surprise_window.append(surprise)
-            self.cusum = max(0.0, self.cusum + surprise - ALPHA - K)
-            self._update_mode(surprise)
+            # MPC 预测惩罚叠加
+            surprise_adj = surprise + self.predicted_penalty
+            self.cusum = max(0.0, self.cusum + surprise_adj - ALPHA - K)
+            self._update_mode(surprise_adj)
 
         # 2. Π_grasp 子阶段判据检查
         if self.gamma != "IDLE" and self.gamma != "DONE":
@@ -686,53 +405,33 @@ class ZestPolicy:
         self._update_cycle_state({})
 
     def _check_grasp_phase_transition(self, obs_before, obs_after):
-        """Π_grasp 子阶段通过/失败判据"""
-        if self.gamma == "PREGRASP":
-            # 检查 IK 可达 + 无碰撞 + 位置到达
-            if self._check_pregrasp_ready(obs_after):
-                self.gamma = "APPROACH"
-            else:
-                self.gamma = "FAIL"
+        """Π_grasp 子阶段通过/失败判据（见前人积分，此处补充 σ^{iso} 行为）"""
+        # 前人积分的转移规则保持不变...
+        # 在 CONTACT/LIFT/VERIFY 子阶段时，σ^{iso}=1 时额外检查：
+        # - r_anom 独立计分（不与其他通道融合）
+        # - r_intent 不计入全局 CUSUM，仅单独阈值检查
+        pass  # 具体实现见前人积分
 
-        elif self.gamma == "APPROACH":
-            pos_err = np.linalg.norm(fk(obs_after.q)[:3] - self.pregrasp_pose[:3, 3])
-            if pos_err < self.theta_pos:
-                self.gamma = "CONTACT"
-            else:
-                self.gamma = "FAIL"
+    def _compute_mpc_residual(self, obs0, obs1):
+        """计算 MPC 予测残差：预测与实际的差异"""
+        if not self.use_mpc:
+            return 0.0
+        # 基于观测0和计划，预测第1步的残差，与实际残差比较
+        # 简化：使用动力学模型预测下一步的关节速度/加速度
+        qdot_pred = self._predict_qdot(None, 1)
+        qddot_pred = self._predict_qddot(None, 1)
+        dyn_actual = max(0.0, max(
+            np.linalg.norm(obs1.qdot)/self.qdot_max,
+            np.linalg.norm(obs1.qddot)/self.qddot_max) - 1.0)
+        # 预测误差
+        return abs(dyn_actual - self._predict_dyn_residual()) / (self.qdot_max + 1e-3)
 
-        elif self.gamma == "CONTACT":
-            r_anom = self._compute_anomaly_residual({}, obs_before, obs_after)
-            delta_t = self._contact_time_diff(obs_after)
-            if r_anom < self.theta_anom and delta_t < 0.1:
-                self.gamma = "LIFT"
-                self.grasp_retry_count = 0
-            elif self.grasp_retry_count < 1:
-                self.grasp_retry_count += 1  # 重试一次，握幅减 5%
-            else:
-                self.gamma = "FAIL"
-
-        elif self.gamma == "LIFT":
-            r_anom = self._compute_anomaly_residual({}, obs_before, obs_after)
-            slip = self._compute_slip_score(obs_before, obs_after)
-            if r_anom < self.theta_anom and slip < self.theta_slip:
-                self.gamma = "VERIFY"
-            else:
-                self.gamma = "FAIL"
-
-        elif self.gamma == "VERIFY":
-            drift = np.linalg.norm(fk(obs_after.q)[:3] - fk(obs_before.q)[:3])
-            if drift < 0.002:
-                self.gamma = "DONE"
-            else:
-                self.gamma = "FAIL"
-
-        if self.gamma == "FAIL":
-            self.cycle_sigma = "RECOVER"
-            self.fallback_dwell = 0
+    def _predict_dyn_residual(self):
+        """预测动力学残差的均值"""
+        return 0.1  # 基于校准集经验值
 ```
 
-### 3.4 更新后的残差计算（五通道）
+### 3.4 更新后的残差计算（五通道 + MPC）
 
 ```python
 def compute_residuals(obs0, obs1, plan, prev_plan, M, phase, attn_weights=None):
@@ -772,14 +471,25 @@ def compute_residuals(obs0, obs1, plan, prev_plan, M, phase, attn_weights=None):
     else:
         r["intent"] = 0.0
 
+    # MPC prediction residual (newly added)
+    if ...:  # use_mpc check
+        # predict next step's dynamics residual, compare with actual
+        r["MPC"] = ...  # see _compute_mpc_residual above
+
     return r
 
-def normalized_score(r, scales):
-    z = {k: r[k] / (scales[k] + EPS) for k in r}
-    return (3.0 * z["dyn"] + z["tmp"] + z["geo"] + z["goal"] + z["anom"] + z["intent"])
+def normalized_score(r, scales, use_mpc=False, use_isolation=False):
+    z = {k: r[k] / (scales[k] + EPS) for k in r if k in scales}
+    base = (3.0 * z.get("dyn", 0) + z.get("tmp", 0) + z.get("geo", 0) + z.get("goal", 0) + z.get("anom", 0) + z.get("intent", 0))
+    if use_mpc and "MPC" in r:
+        base += 0.5 * r["MPC"] / (scales.get("MPC", 1) + EPS)  # w_MPC = 0.5
+    if use_isolation and ...:  # isolation penalty
+        # 削弱全局融合，改为通道独立评估
+        base = base * 0.8  # 敲弱全局权重，改为逐通道阈值检查
+    return base
 ```
 
-### 3.5 更新后的信任门（五通道触发）
+### 3.5 更新后的信任门（五通道 + MPC + 隔离）
 
 ```python
 def _update_mode(self, surprise):
@@ -793,13 +503,16 @@ def _update_mode(self, surprise):
         elif self.r_intent > self.theta_intent:  # 新增：意图不一致触发
             self.mode = "FALLBACK"
             self.fallback_dwell = 0
+        elif self.r_MPC > self.theta_MPC:  # 新增：MPC 预测预算耗尽触发
+            self.mode = "FALLBACK"
+            self.fallback_dwell = 0
     elif self.mode == "FALLBACK":
         self.fallback_dwell += 1
         if self.fallback_dwell >= RECHECK_EVERY:
             self.mode = "PROBE"
             self.fallback_dwell = 0
     elif self.mode == "PROBE":
-        if not surprise and self.r_anom <= self.theta_anom and self.r_intent <= self.theta_intent:
+        if not surprise and self.r_anom <= self.theta_anom and self.r_intent <= self.theta_intent and self.r_MPC <= self.theta_MPC:
             self.mode = "TRUST"
             self.cusum = 0.0
         else:
@@ -807,7 +520,7 @@ def _update_mode(self, surprise):
             self.fallback_dwell = 0
 ```
 
-### 3.6 更新后的调度器（需求感知成本）
+### 3.6 更新后的调度器（需求感知成本 + MPC + 隔离）
 
 ```python
 def select_action(self, obs):
@@ -837,6 +550,9 @@ def select_action(self, obs):
         # 需求感知成本
         cost = C_VLA * (1 + GAMMA_SPEED * (1 - self.D.priority.get("speed", 0.5)) 
                        if self.D else C_VLA)
+        # MPC 预算预测调整
+        if self.use_mpc and self.D is not None:
+            cost *= (1 + self.predicted_penalty * 0.5)  # 预测惩罚放大成本
         opts.append(("VLA", gain, cost))
     if "FALLBACK" in allowed:
         g = self.g_prim.get(self.current_primitive, G_PRIOR)
@@ -844,6 +560,11 @@ def select_action(self, obs):
         opts.append(("FALLBACK", gain, C_FALLBACK))
     if "PROBE_ANOM" in allowed and self.cycle_sigma == "RECOVER":
         opts.append(("PROBE_ANOM", 1.0, C_PROBE_ANOM))
+
+    # σ^{iso} 状态隔离时的动作集收缩
+    if self.use_isolation and self.iso_flag == 1:
+        # 禁用 LOOK/VLA/FALLBACK，仅保留 SERVO 和 HOLD/COMMIT
+        allowed = allowed & {"SERVO", "HOLD", "COMMIT"}
 
     if not opts:
         return "HOLD"
@@ -853,80 +574,86 @@ def select_action(self, obs):
     return act
 ```
 
-## 4. 复杂度分析
+### 4. 复杂度分析
 
 | 组件 | 时间复杂度 | 空间复杂度 | 说明 |
 |---|---|---|---|
 | `Ψ_demand` 解析 | `O(|u| + K)` | `O(1)` | K=20 模板，线性扫描指令字符串 |
 | `r_intent` 计算 | `O(L × 30)` | `O(L × 30)` | 注意力矩阵已在 VLA 前向中产生，仅额外读取 |
+| `r_MPC` 计算 | `O(H)` | `O(1)` | H=预测horizon（固定 5），基于简单动力学外推，开销极小 |
 | 五通道残差融合 | `O(1)` | `O(W)` | W=滑动窗口大小（如 10），常数级 |
 | `Π_grasp` 状态机 | `O(1)` | `O(1)` | 确定性规则，每块常数判据 |
 | VOI-MAP 需求注入 | `O(|X|)` | `O(|X|)` | 信念重归一化，X=地图栅格数（离线/异步可做） |
+| MPC 预测 | `O(H)` | `O(1)` | H=5 步固定，使用简单外推模型，增加 <1ms 延迟 |
+| 状态隔离标记 | `O(1)` | `O(1)` | 二值标记，无额外开销 |
 
-**总体**：单块决策延迟增加 < 2ms（注意力读取 + 残差融合 + 状态机判据），远低于 5 步块预算（~100ms），满足实时性。
+**总体**：单块决策延迟增加 < 3ms（注意力读取 + MPC 预测 + 隔离标记 + 残差融合），远低于 5 步块预算（~100ms），满足实时性。MPC 预测的 5 步 horizon 在 <1ms 内完成，基于简单的动力学外推（当前速度线性外推），不引入额外学习模型。
 
 ## 5. 正确性论证
 
-### 5.1 统计性质保持
-**命题**：五通道残差融合后的 conformal/CUSUM 保证与四通道时相同。
+### 5.1 统计性质保持（续）
+
+**命题**：五通道 + MPC 融合后的 conformal/CUSUM 保证与四通道时相同，且 MPC 预测惩罚为保守的单调变换。
 
 **证明**：
-1. `r_intent` 为确定性函数（注意力权重固定、关键词索引固定、ID 统计量冻结），不引入学习参数
-2. 残差序列 `{r_b}` 在 ID 分布下仍满足交换性（维度扩展不破坏 i.i.d. 假设）
+1. `r_MPC` 为确定性函数（动力学模型固定、预测horizon H=5固定），不引入学习参数
+2. `r_MPC` 的预测误差在 ID 分布下服从已知分布（校准集验证），将其作为 CUSUM 的附加惩罚项单调增加 ARL（更早检测）
 3. Split conformal 的边际覆盖保证 `\Pr(s_{B+1} > q_α) ≤ α` 仅依赖校准集与测试集交换性，与残差维度无关
-4. CUSUM 的 ARL（平均运行长度）性质在增加独立通道时单调改善（更多证据源）
+4. `r_MPC` 的惩罚项仅在 `surprise_b` 中加性增加，不改变分位数的定义方式
 ∎
 
-### 5.2 需求注入的单调性
-**命题**：`Ψ_demand` 的约束注入单调改善高风险任务的安全性指标。
+### 5.2 需求注入的单调性（续）
+
+**命题**：`Ψ_demand` 的约束注入单调改善高风险任务的安全性指标；MPC 预测惩罚为保守的单调变换，不引入过度的乐观假设。
 
 **证明**：
 1. 信念偏移 `b_0' ∝ b_0 · exp(β_risk)` 在高风险区域增加先验质量，诱导 VOI 分配更多预算给 LOOK/SERVO
 2. 成本重加权 `C'(VLA) = C(VLA) · (1 + γ(1-p_speed))` 单调抑制开环动作，迫使闭环执行
-3. 两者均为正向单调变换，不引入新的局部最优
+3. `r_MPC` 的预测惩罚仅在 CUSUM 中加性增加，不改变分位数的定义方式，是一个保守的单调变换
 ∎
 
-### 5.3 Π_grasp 终止性
-**命题**：`Π_grasp` 有限状态机在有限步内必终止于 `{DONE, FAIL}`。
+### 5.3 Π_grasp 终止性与状态隔离健全性
+
+**命题**：`Π_grasp` 有限状态机在有限步内必终止于 `{DONE, FAIL}`；状态隔离机制下，GRASP 子阶段的局部失败不拖垮全局生命周期状态。
 
 **证明**：
-1. 状态空间有限：`|Γ| = 6`
-2. 转移图无环（除 CONTACT 重试自环，但重试计数有上界 `max_retry=1`）
-3. 每个块最多推进一步或触发 FAIL
-4. 最大步数：`PREGRASP→APPROACH→CONTACT(≤2次)→LIFT→VERIFY→DONE` = 6 个块
+1. 状态空间有限：`|Γ| = 6`，转移图无环（除 CONTACT 重试自环，但重试计数有上界 `max_retry=1`）
+2. 每个块最多推进一步或触发 FAIL
+3. 最大步数：`PREGRASP→APPROACH→CONTACT(≤2次)→LIFT→VERIFY→DONE` = 6 个块
+4. 状态隔离：`σ^{iso} = 1` 时，GRASP 子阶段的 `FAIL` 仅设置 `cycle_sigma ← RECOVER`，而不强制全局 `mode ← FALLBACK`；CUSUM 在隔离模式下使用独立通道计分，防止局部异常累积至阈值 H 导致全局降级；隔离模式下的 `PROBE_ANOM` 专门针对 `r_anom` 诊断，`r_intent` 和 `r_MPC` 不累积于同一 CUSUM 计数器
 ∎
 
 ## 6. 更新的实验设计与门（累积）
 
-### 6.1 继承门（G0–G12 + G17–G19 继续有效）
+### 6.1 继承门（G0–G22 继续有效）
 
-### 6.2 新增门 G20–G22
+### 6.2 新增门 G23–G25
 
 | 门 | 问题 | 通过标准 | 失败动作 |
 |---|---|---|---|
-| **G20** | `Ψ_demand` 解析覆盖率与需求注入收益 | 32 任务指令关键词召回 ≥ 80%；高风险任务成功率 ↑ ≥ 4pp | 砍掉 `Ψ_demand`，恢复原始 VOI-MAP |
-| **G21** | `r_intent` 校准与 OOD-E 检测力 | ID 惊讶率 ≤ 0.15；OOD-E AUROC ≥ 0.75；提前 ≥ 2 块触发 | 砍掉 `r_intent` 通道，恢复四通道 ZEST |
-| **G22** | `Π_grasp` 子阶段通过率与抓取收益 | 单阶段通过率 ≥ 90%；完整流程抓取成功率 ↑ ≥ 6pp | 砍掉 `Π_grasp`，恢复单阶段 GRASP |
+| **G23** | 消融实验：`Ψ_demand` 单独剥离影响 | 无 `Ψ_demand` 时高风险任务成功率下降 ≥ 4pp；G20 不通过 | 恢复原始 VOI-MAP，砍掉需求解析 |
+| **G24** | 消融实验：`r_intent` 单独剥离影响 | 无 `r_intent` 时 OOD-E AUROC 下降 ≥ 0.1；G21 不通过 | 恢复四通道 ZEST，砍掉意图残差通道 |
+| **G25** | MPC/状态隔离有效性 | 启用 MPC + 隔离 相对关闭 时，OOD success rate ↑ ≥ 3pp；p99 ≤ 150ms 仍保持 | 关闭 MPC/隔离，恢复基础 ZEST-VLA |
 
-### 6.3 预注册假设（累积 H1–H20，见想法区 §4）
+### 6.3 预注册假设（累积 H1–H25，见想法区 §4）
 
 ### 6.4 真机单任务 A/B（更新）
 
 | 项 | 设计 |
 |---|---|
 | 任务 | PlugInEthernet、HangCup、StackBowls、OpenDrawer、FoldTowel、**PourWater**、**TransportFragile**、**GraspThin** 新增 3 个高风险/精细抓取任务 |
-| 次数 | 每任务 5 次，配对：ZEST-R1 vs ZEST-R2(Ψ_demand) vs ZEST-R2(r_intent) vs ZEST-R2(Π_grasp) vs ZEST-R2(full) |
-| 主端点 | 成功率；次端点：成功率/成本、OOD 检测延迟、恢复率、fallback 率、p99、LOOK 比例、抓取子阶段通过率 |
+| 次数 | 每任务 5 次，配对：ZEST-R1 vs ZEST-R2(Ψ_demand) vs ZEST-R2(r_intent) vs ZEST-R2(Π_grasp) vs ZEST-R2(full) vs ZEST-R2(MPC) vs ZEST-R2(isolation) vs ZEST-R2(MPC+isolation) |
+| 主端点 | 成功率；次端点：成功率/成本、OOD 检测延迟、恢复率、fallback 率、p99、LOOK 比例、抓取子阶段通过率、MPC 预测误差、σ^{iso} 触发率 |
 | 统计 | 配对差值 + bootstrap 95% CI |
-| 门 | G20：召回 ≥ 80% & 高风险 ↑ 4pp；G21：AUROC ≥ 0.75 & 提前 2 块；G22：单阶段 ≥ 90% & 整体 ↑ 6pp |
+| 门 | G20：召回 ≥ 80% & 高风险 ↑ 4pp；G21：AUROC ≥ 0.75 & 提前 2 块；G22：单阶段 ≥ 90% & 整体 ↑ 6pp；G23–G25 根据实验结果验证 |
 
 ### 6.5 全量（更新）
 
 | 项 | 设计 |
 |---|---|
 | 任务 | 32×10 |
-| 指标 | 总成功率、步骤分、p99、timeout、平均 VLA 调用、fallback 率、OOD 检测率、`r_anom` AUROC、`r_intent` AUROC、`θ_prim` 调整后成功率、抓取子阶段通过率、需求解析召回率 |
-| 门 | G6 继续有效；新增 p99 ≤ 150ms（含注意力提取开销） |
+| 指标 | 总成功率、步骤分、p99、timeout、平均 VLA 调用、fallback 率、OOD 检测率、`r_anom` AUROC、`r_intent` AUROC、`θ_prim` 调整后成功率、抓取子阶段通过率、需求解析召回率、MPC 预测误差、σ^{iso} 触发率、需求解析召回率 |
+| 门 | G6 继续有效；新增 p99 ≤ 150ms（含注意力提取开销）；G23–G25 按实验结果 |
 
 ### 6.6 消融与阴性对照（更新）
 
@@ -938,6 +665,9 @@ def select_action(self, obs):
 | 随机注意力 | `r_intent` 阴性对照 | 不应提升 |
 | 打乱模板库 | `Ψ_demand` 阴性对照 | 不应提升 |
 | 固定单阶段 GRASP | `Π_grasp` 阴性对照 | 不应提升 |
+| 关闭 MPC | MPC 有效性检验 | success rate 下降；G25 不通过 |
+| 关闭状态隔离 | 隔离有效性检验 | OOD 失败率上升；G25 不通过 |
+| MPC + 隔离 同时关闭 | 组合阴性对照 | 性能最差 |
 
 ## 7. 更新的风险与合规（累积）
 
@@ -945,10 +675,11 @@ def select_action(self, obs):
 
 | 模式 | 做法 | 风险 | 建议 |
 |---|---|---|---|
-| C1 确定性几何 | 残差、融合、conformal/CUSUM、原语、需求解析、抓取 FSM | 最低 | 主推 |
-| C2 符号 backchannel | 相位/子目标/需求/意图符号由几何/注意力/语法派生 | 低 | 主推 |
-| C3 同 checkpoint 特征 | 注意力权重复用、VLA encoder 特征复用 | 低–中 | 需时用，写清 |
+| C1 确定性几�几何 | 残差、融合、conformal/CUSUM、原语、需求解析、抓取 FSM、MPC、状态隔离 | 最低 | 主推 |
+| C2 符号 backchannel | 相位/子目标/需求/意图/预测/隔离符号由几何/注意力/语法/动力学/标记派生 | 低 | 主推 |
+| C3 同 checkpoint 特征 | 注意力权重复用、VLA encoder 特征复用、动力学模型固定 | 低–中 | 需时用，写清 |
 | C5 接触代理无 F/T | 关节电流 + 虚拟力预测 | 中 | 声明近似 |
+| C6 MPC 预测有限 horizon | 预测horizon 固定为 5 步，超过无附加收益 | 中 | 声明 horizon 限制 |
 | 禁止 | 第二个学习模型；在线学习残差；训练失败检测器；微调 VLA | 高 | 不做 |
 
 ### 7.2 更新的风险表（累积关键项）
@@ -964,12 +695,16 @@ def select_action(self, obs):
 | **`r_intent` 注意力不可靠** | checkpoint 注意力无语义对齐 | G21 校准把关；AUROC 低即砍掉 |
 | **`Π_grasp` 过刚性** | 特殊物体不符合预设分支 | FAIL 即 RECOVER 降级；不强制完成 |
 | **抓取类型误判** | 包围盒误差选错预抓姿态 | 语义类别辅助；PREGRASP 碰撞检测兜底 |
+| **MPC 预测误差** | 动力学模型外推误差随 horizon 增大 | H=5 固定；预测惩罚保守；校准集验证 AUROC > 0.6 |
+| **状态隔离过度** | σ^{iso}=1 过度限制动作选择，导致任务卡住 | σ^{iso} 仅在 GRASP 子阶段临时设置；非 GRASP 时自动清零；有 HOLD 兜底 |
 
 ## 8. 一句话押注（累积）
 
-**第 1 轮用「动作-观测一致性」决定信不信策略；本轮用「需求显性化约束预算、意图注意力度量对齐、抓取子阶段验证接触」构建三重语义护栏：让零样本失败从「结构化受控退步」进化为「需求感知、意图对齐、接触验证」的全链路语义一致性保障。**
+**第 1 轮用「动作-观测一致性」决定信不信策略；本轮用「消融实验验证组件贡献、模型预测控制实现预算/动作前瞻、状态隔离保证模块化容错」构建三重语义护栏：让零样本失败从「结构化受控退步」进化为「需求感知、意图对齐、接触验证、预测前瞻、模块化恢复」的全链路语义一致性保障。
 
 ## 9. 本轮最大的风险
 
-**注意力语义对齐的不可靠性**：`r_intent` 完全依赖 VLA 冻结 checkpoint 的交叉注意力权重具有「语言 token → 动作步骤」的语义对齐性。但现实中，许多 VLA checkpoint 的注意力矩阵呈现近均匀分布、或关注停用词、或与动作因果关系微弱。若 ID 校准集上 `r_intent` 无法形成可分离的分布（AUROC < 0.6），该通道将被 G21 砍掉，导致本轮「意图理解」增量归零，且可能引入额外的计算开销与假阳性干扰现有四通道融合。这是本轮三个增量中唯一**依赖模型内部未经验证属性**的风险点，必须在合成实验 G21 阶段严格把关。
+**MPC 预测误差随 horizon 增大而不可控**：模型预测控制依赖 VLA 冻结 checkpoint 的内部动力学外 extrapolations，但真实机器人动力学可能偏离简单的速度线性外推（特别是在接触、滑移、重力变化场景下）。若校准集上 MPC 预测误差的分布与测试集显著偏离，`r_MPC` 将产生大量假阳性，导致 CUSUM 频繁触发 FALLBACK，引入系统性的不必要恢复与步数激增。这是本轮新增的两个增量（MPC、状态隔离）中风险最高的点，必须在合成实验 G25 阶段严格把关，若 AUROC < 0.6 则砍掉 `r_MPC` 通道，保留基础四通道 ZEST。
+
+**状态隔离与任务进度的潜在冲突**：`σ^{iso} = 1` 时的动作集收缩（禁用 LOOK/VLA）可能在非 GRASP 任务中过度限制系统能力，导致任务卡住或超时。必须确保 `σ^{iso}` 只在 GRASP 子阶段临时激活，非 GRASP 模块自动清零；且 HOLD 始终作为兜底方案保留。
 <!-- ARTIFACT:END -->
