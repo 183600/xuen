@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Callable, List, Optional
 
+from .atomic_io import atomic_write_text
 from .ui import ui
 
 _CJK_NUMERALS = "一二三四五六七八九十百千万亿零〇两"
@@ -356,19 +357,7 @@ def load_words(path: Path) -> List[str]:
 
 def save_words(path: Path, wlist: List[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
-    try:
-        tmp.write_text("\n".join(wlist) + "\n", encoding="utf-8")
-        os.replace(tmp, path)
-    except BaseException:
-        # 不止 OSError：写盘被 Ctrl+C / SystemExit 中断时同样要清掉
-        # 带 PID 的半成品临时文件（与 state / rounds 的原子写口径一致），
-        # 否则中断一次就在工作区留下一个只增不减的垃圾文件
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+    atomic_write_text(path, "\n".join(wlist) + "\n")
 
 
 def sample_words(wlist: List[str], n: int) -> List[str]:

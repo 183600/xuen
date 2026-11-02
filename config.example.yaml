@@ -9,15 +9,16 @@
 # 查找顺序：
 #   -c/--config 指定的路径 → ./config.yaml → ./config.yml → ./xuen.yaml
 #
-# 除 agent.command 外，所有字段都可省略；省略时使用 README「配置参考」
-# 中的默认值。命令行参数优先于配置文件，覆盖后仍会重新校验。
+# 配置文件本身需要存在；除 agent.command 外，其余字段都可省略，省略时
+# 使用 README「配置参考」中的默认值。命令行参数优先于配置文件，覆盖后
+# 仍会重新校验。
 #
 # xuen 自身不调用模型，只负责组织循环、维护状态与保存进度。每轮把任务、
 # 灵感词、当前想法区/产物区和写入说明拼成提示词交给外部 agent；agent 通过
 # 工作区中的 write_section.py 或直接编辑 research.md 覆盖对应区块。
 #
-# 路径解析：workspace 等路径按启动时的当前目录解析；rounds.dir 相对
-# workspace；rounds.repo 的显式路径同样按启动目录解析。
+# 路径解析：workspace 与 rounds.repo 的显式路径按启动时的当前目录解析；
+# rounds.dir 相对 workspace。
 # ============================================================
 
 
@@ -37,14 +38,15 @@ agent:
   #   - 提示词随轮次增长时更稳定；
   #   - Windows / macOS / Linux 行为一致。
   #
-  # 占位符必须位于会被实际执行的位置。写在注释、heredoc 正文里，或落在
-  # 无法安全解析的展开语境中时，配置校验会直接报错。
+  # 占位符必须位于会被实际执行的位置。若只写在注释、heredoc 正文里，
+  # 或落在无法安全解析的展开语境中，配置校验会直接报错，而不是静默丢掉
+  # 提示词。
   command: 'opencode run "$prompt_file"'
 
   # 其他常见 agent 的示例（取消注释后只保留一条 command）：
   # command: 'opencode run "$prompt"'
   # command: 'claude -p "$prompt"'
-  # command: 'aider --message-file $prompt_file'
+  # command: 'aider --message-file "$prompt_file"'
 
   # 单次外部调用超时（秒，须为有限正数）。
   # 超时后终止整个进程树；TUI 中按 q / Ctrl+C 也会先终止 agent。
@@ -77,10 +79,11 @@ prompt:
 # 每轮从词库中纯随机抽词，抽样不调用任何模型。
 # words.pick=0 时完全跳过词库，循环中不提供灵感词。
 words:
-  count: 1000     # 目标词数（正整数）
+  count: 1000     # 目标词数（正整数）；实际数量取决于生成结果
   batch: 100      # 每批向外部 agent 请求的词数（正整数）
   pick: 2         # 每轮抽取的灵感词数量（>= 0；0 = 不使用灵感词）
-  reuse: true     # words.txt 已存在时直接复用；--regen-words 可强制重建
+  reuse: true     # words.txt 已存在时直接复用；false 强制重新生成
+                  # （--regen-words 同样会忽略旧词库）
 
 loop:
   # 循环轮数（正整数）；写 inf 表示无限循环。
