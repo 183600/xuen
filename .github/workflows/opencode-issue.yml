@@ -268,11 +268,31 @@ jobs:
             CANDIDATES+=("$m")
           }
 
+          # ⭐ 模型策略（2026-11-02 diag v7b 对 NVIDIA 85 模型 + opencode 免费 130 模型全量实测）：
+          #   1) 优先 z-ai/glm-5.3-flash（实测可用：冒烟 43s/工具 136s，波动大偶尔慢，由看门狗兜底）；
+          #   2) 8 个验证池模型（60s 冒烟+工具调用双通过）每次 run 随机轮换（"所有模型随机"策略）；
+          #   3) opencode 免费网关 130 个模型已全部实测失败，仅留 deepseek/glm/pickle 三席兜底（若复活自动可用）。
+          # deepseek-ai/deepseek-v4.1-flash 三次实测挂死（303s 空响应 / 300s / 240s 超时），永久排除。
+          NV_FIRST="nvidia/z-ai/glm-5.3-flash"
+          NV_POOL=(
+            "nvidia/poolside/laguna-xs-2.1"
+            "nvidia/nvidia/nemotron-3.5-lightning-30b-a3b"
+            "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
+            "nvidia/nvidia/nemotron-3-ultra-550b-a55b"
+            "nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
+            "nvidia/minimaxai/minimax-m3.1-flash"
+            "nvidia/meta/muse-glimmer-30b"
+            "nvidia/meta/llama-3.2-90b-vision-instruct"
+          )
+
           CANDIDATES=()
           RANDOM_POOL=()
 
           # 主力：NVIDIA NIM 模型链（指定顺序），优先于免费池
-          for m in "nvidia/deepseek-ai/deepseek-v4.1-flash" "nvidia/z-ai/glm-5.3-flash" "nvidia/z-ai/glm-5.3" "nvidia/minimaxai/minimax-m3.1-flash" "nvidia/stepfun-ai/step-5-preview"; do
+          # ⭐ glm 优先 + 验证池随机轮换（每次 run 打乱，实现所有可用模型随机）
+          add_candidate "$NV_FIRST"
+          mapfile -t NV_SHUF < <(printf '%s\n' "${NV_POOL[@]}" | shuf)
+          for m in "${NV_SHUF[@]}"; do
             add_candidate "$m"
           done
 
@@ -342,7 +362,7 @@ jobs:
           for m in "${CANDIDATES[@]}"; do
             echo "[model] 测试 $m ..."
             # 每个候选都做一次真实冒烟调用，避免选中目录里存在但实际不可用的模型。
-            SMK_T=180; case "$m" in nvidia/*) SMK_T=300 ;; esac
+            SMK_T=180; case "$m" in nvidia/*) SMK_T=75 ;; esac
             if ( cd "$SMOKE_DIR" && timeout --kill-after=30 $SMK_T opencode run --auto -m "$m" "只回复两个字：OK" ) > "$SMOKE_DIR/smoke.log" 2>&1; then
               echo "[model] 可用：$m"
               SELECTED="$m"
