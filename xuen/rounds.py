@@ -64,6 +64,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import state
 from .agents import ShellAgent
+from .atomic_io import atomic_write_text
 from .config import Config
 from .procs import kill_process_tree, popen_kwargs
 from .sink import Sink
@@ -92,21 +93,8 @@ _SCORE_PATTERNS = (
 # ----------------------------------------------------------------------
 # 小工具
 def _atomic_write(path: Path, text: str) -> None:
-    """tmp + os.replace 原子写：读端永远不会看到半截文件。
-
-    tmp 名带 PID：同一 workspace 并发运行两个 xuen 实例时，固定名 .tmp
-    会被两边交错写入，os.replace 随后把撕裂内容发布成有效的
-    best.json / best.md。"""
-    tmp = path.with_name(path.name + f".{os.getpid()}.tmp")
-    try:
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
-    except BaseException:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+    """tmp + os.replace 原子写：读端永远不会看到半截文件。"""
+    atomic_write_text(path, text)
 
 
 def _read_utf8(path: Path) -> Optional[str]:
@@ -129,6 +117,11 @@ def _nonempty_lines(raw: bytes) -> List[str]:
     lines = (line.strip().lstrip("\ufeff").strip()
              for line in re.split(r"\r\n|\r|\n", text))
     return [line for line in lines if line]
+
+
+def _last_lines(text: str, count: int) -> str:
+    """取文本末尾 ``count`` 行（用于错误摘要与展示）。"""
+    return "\n".join(text.splitlines()[-count:])
 
 
 def _ts() -> str:
@@ -533,7 +526,7 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
                                reason="make test 没有执行任何测试（目标无事可做）",
                                detail=detail)
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
-    tail = "\n".join(detail.splitlines()[-15:])
+    tail = _last_lines(detail, 15)
     if proc.returncode == 5 and _is_pytest_run(argv):
         return SuiteResult(available=False, ok=False,
                            reason="pytest 未收集到测试（退出码 5）",
@@ -1480,7 +1473,7 @@ def verdesc(v: Verdict) -> str:
 
 
 def detail_field(res: SuiteResult) -> str:
-    tail = "\n".join((res.detail or "").splitlines()[-5:])
+    tail = _last_lines(res.detail or "", 5)
     return (res.reason + (f"｜输出尾部：{tail}" if tail else "")).strip()[:500]
 
 

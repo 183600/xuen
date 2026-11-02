@@ -230,9 +230,10 @@ def _parse_words_config(section: dict, defaults: WordsConfig) -> WordsConfig:
     )
 
 
-def _parse_loop_config(section: dict) -> LoopConfig:
+def _parse_loop_config(section: dict, defaults: LoopConfig) -> LoopConfig:
     return LoopConfig(
-        iterations=_parse_iterations(section.get("iterations", 5)),
+        iterations=_parse_iterations(
+            _config_value(section, "iterations", defaults.iterations)),
     )
 
 
@@ -298,7 +299,7 @@ def load_config(path: Optional[str] = None) -> Config:
     cfg.extra_notes = _parse_str(_config_value(raw, "extra_notes", ""),
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
-    cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"))
+    cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
     cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
     cfg.rounds = _parse_rounds_config(
         _mapping_section(raw, "rounds"), cfg.rounds)
@@ -435,7 +436,7 @@ def _require_prompt_placeholder(name: str, command: str, hint: str) -> None:
     )
 
 
-def _validate(cfg: Config) -> None:
+def _require_string_fields(cfg: Config) -> None:
     # 程序化构造 Config 时字符串字段可能被写成 None/list 等：先给出带
     # 字段名的 ValueError，避免后面的 .strip()/正则/Path() 抛 AttributeError
     # 或 TypeError（与 _parse_str 对 YAML 非字符串字段的口径一致）。
@@ -449,6 +450,9 @@ def _validate(cfg: Config) -> None:
     ):
         if not isinstance(value, str):
             raise ValueError(f"{name} 必须是字符串，收到: {value!r}")
+
+
+def _require_bool_fields(cfg: Config) -> None:
     # 布尔字段同样要拒绝程序化传入的 "false"/0/None：下游用 `if cfg.x:`
     # 判断时非空字符串会静默启用/关闭错误的功能（如 rounds.enabled）。
     for name, value in (
@@ -459,6 +463,11 @@ def _validate(cfg: Config) -> None:
     ):
         if not isinstance(value, bool):
             raise ValueError(f"{name} 必须是布尔值，收到: {value!r}")
+
+
+def _validate(cfg: Config) -> None:
+    _require_string_fields(cfg)
+    _require_bool_fields(cfg)
     if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
         raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:

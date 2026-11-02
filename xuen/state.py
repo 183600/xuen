@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Tuple
 
+from .atomic_io import atomic_write_text
+
 SECTION_IDEA = "IDEA"
 SECTION_ARTIFACT = "ARTIFACT"
 
@@ -15,17 +17,7 @@ HELPER_NAME = "write_section.py"
 
 def _atomic_write_text(path: Path, text: str, *, newline=None) -> None:
     """写入 UTF-8 文本并原子替换目标；任何中断都不留临时半成品。"""
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        with open(tmp, "w", encoding="utf-8", newline=newline) as f:
-            f.write(text)
-        os.replace(tmp, path)
-    except BaseException:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+    atomic_write_text(path, text, newline=newline)
 
 
 def start_marker(name: str) -> str:
