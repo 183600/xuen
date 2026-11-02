@@ -1,0 +1,890 @@
+[
+  {
+    "budget": 5.0,
+    "asr_error": 0.1,
+    "k_ambig": 2,
+    "map_acc_exact": 0.973,
+    "map_acc_phonetic": 0.997,
+    "oracle": {
+      "succ": 0.867,
+      "cost": 5.0,
+      "succ_per_cost": 0.173
+    },
+    "servo": {
+      "succ": 0.866,
+      "cost": 5.0,
+      "succ_per_cost": 0.173
+    },
+    "look_first": {
+      "succ": 0.695,
+      "cost": 5.0,
+      "succ_per_cost": 0.139
+    },
+    "look_gate": {
+      "succ": 0.856,
+      "cost": 5.0,
+      "succ_per_cost": 0.171
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.861,
+      "cost": 5.0,
+      "succ_per_cost": 0.172
+    }
+  },
+  {
+    "budget": 5.0,
+    "asr_error": 0.1,
+    "k_ambig": 4,
+    "map_acc_exact": 0.967,
+    "map_acc_phonetic": 0.993,
+    "oracle": {
+      "succ": 0.861,
+      "cost": 5.0,
+      "succ_per_cost": 0.172
+    },
+    "servo": {
+      "succ": 0.858,
+      "cost": 5.0,
+      "succ_per_cost": 0.172
+    },
+    "look_first": {
+      "succ": 0.708,
+      "cost": 5.0,
+      "succ_per_cost": 0.142
+    },
+    "look_gate": {
+      "succ": 0.788,
+      "cost": 5.0,
+      "succ_per_cost": 0.158
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.839,
+      "cost": 5.0,
+      "succ_per_cost": 0.168
+    }
+  },
+  {
+    "budget": 5.0,
+    "asr_error": 0.25,
+    "k_ambig": 2,
+    "map_acc_exact": 0.937,
+    "map_acc_phonetic": 0.994,
+    "oracle": {
+      "succ": 0.87,
+      "cost": 5.0,
+      "succ_per_cost": 0.174
+    },
+    "servo": {
+      "succ": 0.859,
+      "cost": 5.0,
+      "succ_per_cost": 0.172
+    },
+    "look_first": {
+      "succ": 0.696,
+      "cost": 5.0,
+      "succ_per_cost": 0.139
+    },
+    "look_gate": {
+      "succ": 0.839,
+      "cost": 5.0,
+      "succ_per_cost": 0.168
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.865,
+      "cost": 5.0,
+      "succ_per_cost": 0.173
+    }
+  },
+  {
+    "budget": 5.0,
+    "asr_error": 0.25,
+    "k_ambig": 4,
+    "map_acc_exact": 0.904,
+    "map_acc_phonetic": 0.98,
+    "oracle": {
+      "succ": 0.865,
+      "cost": 5.0,
+      "succ_per_cost": 0.173
+    },
+    "servo": {
+      "succ": 0.847,
+      "cost": 5.0,
+      "succ_per_cost": 0.169
+    },
+    "look_first": {
+      "succ": 0.698,
+      "cost": 5.0,
+      "succ_per_cost": 0.14
+    },
+    "look_gate": {
+      "succ": 0.779,
+      "cost": 5.0,
+      "succ_per_cost": 0.156
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.825,
+      "cost": 5.0,
+      "succ_per_cost": 0.165
+    }
+  },
+  {
+    "budget": 5.0,
+    "asr_error": 0.4,
+    "k_ambig": 2,
+    "map_acc_exact": 0.898,
+    "map_acc_phonetic": 0.992,
+    "oracle": {
+      "succ": 0.87,
+      "cost": 5.0,
+      "succ_per_cost": 0.174
+    },
+    "servo": {
+      "succ": 0.854,
+      "cost": 5.0,
+      "succ_per_cost": 0.171
+    },
+    "look_first": {
+      "succ": 0.71,
+      "cost": 5.0,
+      "succ_per_cost": 0.142
+    },
+    "look_gate": {
+      "succ": 0.83,
+      "cost": 5.0,
+      "succ_per_cost": 0.166
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.853,
+      "cost": 5.0,
+      "succ_per_cost": 0.171
+    }
+  },
+  {
+    "budget": 5.0,
+    "asr_error": 0.4,
+    "k_ambig": 4,
+    "map_acc_exact": 0.847,
+    "map_acc_phonetic": 0.969,
+    "oracle": {
+      "succ": 0.866,
+      "cost": 5.0,
+      "succ_per_cost": 0.173
+    },
+    "servo": {
+      "succ": 0.83,
+      "cost": 5.0,
+      "succ_per_cost": 0.166
+    },
+    "look_first": {
+      "succ": 0.695,
+      "cost": 5.0,
+      "succ_per_cost": 0.139
+    },
+    "look_gate": {
+      "succ": 0.779,
+      "cost": 5.0,
+      "succ_per_cost": 0.156
+    },
+    "always_vla": {
+      "succ": 0,
+      "cost": 5.0,
+      "succ_per_cost": 0.0
+    },
+    "voi": {
+      "succ": 0.806,
+      "cost": 5.0,
+      "succ_per_cost": 0.161
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.1,
+    "k_ambig": 2,
+    "map_acc_exact": 0.975,
+    "map_acc_phonetic": 0.997,
+    "oracle": {
+      "succ": 0.958,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.957,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "look_first": {
+      "succ": 0.906,
+      "cost": 8.0,
+      "succ_per_cost": 0.113
+    },
+    "look_gate": {
+      "succ": 0.956,
+      "cost": 8.0,
+      "succ_per_cost": 0.119
+    },
+    "always_vla": {
+      "succ": 0.712,
+      "cost": 8.0,
+      "succ_per_cost": 0.089
+    },
+    "voi": {
+      "succ": 0.946,
+      "cost": 8.0,
+      "succ_per_cost": 0.118
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.1,
+    "k_ambig": 4,
+    "map_acc_exact": 0.961,
+    "map_acc_phonetic": 0.992,
+    "oracle": {
+      "succ": 0.958,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.948,
+      "cost": 8.0,
+      "succ_per_cost": 0.118
+    },
+    "look_first": {
+      "succ": 0.911,
+      "cost": 8.0,
+      "succ_per_cost": 0.114
+    },
+    "look_gate": {
+      "succ": 0.934,
+      "cost": 8.0,
+      "succ_per_cost": 0.117
+    },
+    "always_vla": {
+      "succ": 0.7,
+      "cost": 8.0,
+      "succ_per_cost": 0.088
+    },
+    "voi": {
+      "succ": 0.936,
+      "cost": 8.0,
+      "succ_per_cost": 0.117
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.25,
+    "k_ambig": 2,
+    "map_acc_exact": 0.941,
+    "map_acc_phonetic": 0.993,
+    "oracle": {
+      "succ": 0.96,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.954,
+      "cost": 8.0,
+      "succ_per_cost": 0.119
+    },
+    "look_first": {
+      "succ": 0.906,
+      "cost": 8.0,
+      "succ_per_cost": 0.113
+    },
+    "look_gate": {
+      "succ": 0.942,
+      "cost": 8.0,
+      "succ_per_cost": 0.118
+    },
+    "always_vla": {
+      "succ": 0.696,
+      "cost": 8.0,
+      "succ_per_cost": 0.087
+    },
+    "voi": {
+      "succ": 0.95,
+      "cost": 8.0,
+      "succ_per_cost": 0.119
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.25,
+    "k_ambig": 4,
+    "map_acc_exact": 0.907,
+    "map_acc_phonetic": 0.98,
+    "oracle": {
+      "succ": 0.961,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.936,
+      "cost": 8.0,
+      "succ_per_cost": 0.117
+    },
+    "look_first": {
+      "succ": 0.9,
+      "cost": 8.0,
+      "succ_per_cost": 0.112
+    },
+    "look_gate": {
+      "succ": 0.932,
+      "cost": 8.0,
+      "succ_per_cost": 0.116
+    },
+    "always_vla": {
+      "succ": 0.695,
+      "cost": 8.0,
+      "succ_per_cost": 0.087
+    },
+    "voi": {
+      "succ": 0.922,
+      "cost": 8.0,
+      "succ_per_cost": 0.115
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.4,
+    "k_ambig": 2,
+    "map_acc_exact": 0.894,
+    "map_acc_phonetic": 0.99,
+    "oracle": {
+      "succ": 0.959,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.95,
+      "cost": 8.0,
+      "succ_per_cost": 0.119
+    },
+    "look_first": {
+      "succ": 0.901,
+      "cost": 8.0,
+      "succ_per_cost": 0.113
+    },
+    "look_gate": {
+      "succ": 0.944,
+      "cost": 8.0,
+      "succ_per_cost": 0.118
+    },
+    "always_vla": {
+      "succ": 0.706,
+      "cost": 8.0,
+      "succ_per_cost": 0.088
+    },
+    "voi": {
+      "succ": 0.944,
+      "cost": 8.0,
+      "succ_per_cost": 0.118
+    }
+  },
+  {
+    "budget": 8.0,
+    "asr_error": 0.4,
+    "k_ambig": 4,
+    "map_acc_exact": 0.84,
+    "map_acc_phonetic": 0.968,
+    "oracle": {
+      "succ": 0.959,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.928,
+      "cost": 8.0,
+      "succ_per_cost": 0.116
+    },
+    "look_first": {
+      "succ": 0.909,
+      "cost": 8.0,
+      "succ_per_cost": 0.114
+    },
+    "look_gate": {
+      "succ": 0.924,
+      "cost": 8.0,
+      "succ_per_cost": 0.116
+    },
+    "always_vla": {
+      "succ": 0.705,
+      "cost": 8.0,
+      "succ_per_cost": 0.088
+    },
+    "voi": {
+      "succ": 0.92,
+      "cost": 8.0,
+      "succ_per_cost": 0.115
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.1,
+    "k_ambig": 2,
+    "map_acc_exact": 0.976,
+    "map_acc_phonetic": 0.995,
+    "oracle": {
+      "succ": 0.962,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.956,
+      "cost": 8.7,
+      "succ_per_cost": 0.11
+    },
+    "look_first": {
+      "succ": 0.957,
+      "cost": 10.05,
+      "succ_per_cost": 0.095
+    },
+    "look_gate": {
+      "succ": 0.962,
+      "cost": 8.64,
+      "succ_per_cost": 0.111
+    },
+    "always_vla": {
+      "succ": 0.908,
+      "cost": 11.0,
+      "succ_per_cost": 0.083
+    },
+    "voi": {
+      "succ": 0.955,
+      "cost": 8.51,
+      "succ_per_cost": 0.112
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.1,
+    "k_ambig": 4,
+    "map_acc_exact": 0.963,
+    "map_acc_phonetic": 0.994,
+    "oracle": {
+      "succ": 0.959,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.966,
+      "cost": 9.51,
+      "succ_per_cost": 0.101
+    },
+    "look_first": {
+      "succ": 0.961,
+      "cost": 10.1,
+      "succ_per_cost": 0.095
+    },
+    "look_gate": {
+      "succ": 0.957,
+      "cost": 9.11,
+      "succ_per_cost": 0.105
+    },
+    "always_vla": {
+      "succ": 0.911,
+      "cost": 11.0,
+      "succ_per_cost": 0.083
+    },
+    "voi": {
+      "succ": 0.953,
+      "cost": 9.11,
+      "succ_per_cost": 0.105
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.25,
+    "k_ambig": 2,
+    "map_acc_exact": 0.935,
+    "map_acc_phonetic": 0.994,
+    "oracle": {
+      "succ": 0.959,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.962,
+      "cost": 8.83,
+      "succ_per_cost": 0.109
+    },
+    "look_first": {
+      "succ": 0.96,
+      "cost": 10.06,
+      "succ_per_cost": 0.095
+    },
+    "look_gate": {
+      "succ": 0.961,
+      "cost": 8.71,
+      "succ_per_cost": 0.11
+    },
+    "always_vla": {
+      "succ": 0.907,
+      "cost": 11.0,
+      "succ_per_cost": 0.082
+    },
+    "voi": {
+      "succ": 0.957,
+      "cost": 8.61,
+      "succ_per_cost": 0.111
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.25,
+    "k_ambig": 4,
+    "map_acc_exact": 0.897,
+    "map_acc_phonetic": 0.978,
+    "oracle": {
+      "succ": 0.958,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.954,
+      "cost": 9.51,
+      "succ_per_cost": 0.1
+    },
+    "look_first": {
+      "succ": 0.951,
+      "cost": 10.1,
+      "succ_per_cost": 0.094
+    },
+    "look_gate": {
+      "succ": 0.953,
+      "cost": 9.11,
+      "succ_per_cost": 0.105
+    },
+    "always_vla": {
+      "succ": 0.913,
+      "cost": 11.0,
+      "succ_per_cost": 0.083
+    },
+    "voi": {
+      "succ": 0.963,
+      "cost": 9.1,
+      "succ_per_cost": 0.106
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.4,
+    "k_ambig": 2,
+    "map_acc_exact": 0.905,
+    "map_acc_phonetic": 0.99,
+    "oracle": {
+      "succ": 0.962,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.957,
+      "cost": 8.93,
+      "succ_per_cost": 0.107
+    },
+    "look_first": {
+      "succ": 0.955,
+      "cost": 10.06,
+      "succ_per_cost": 0.095
+    },
+    "look_gate": {
+      "succ": 0.96,
+      "cost": 8.76,
+      "succ_per_cost": 0.11
+    },
+    "always_vla": {
+      "succ": 0.909,
+      "cost": 11.0,
+      "succ_per_cost": 0.083
+    },
+    "voi": {
+      "succ": 0.954,
+      "cost": 8.68,
+      "succ_per_cost": 0.11
+    }
+  },
+  {
+    "budget": 11.0,
+    "asr_error": 0.4,
+    "k_ambig": 4,
+    "map_acc_exact": 0.841,
+    "map_acc_phonetic": 0.973,
+    "oracle": {
+      "succ": 0.956,
+      "cost": 8.0,
+      "succ_per_cost": 0.119
+    },
+    "servo": {
+      "succ": 0.943,
+      "cost": 9.49,
+      "succ_per_cost": 0.099
+    },
+    "look_first": {
+      "succ": 0.957,
+      "cost": 10.1,
+      "succ_per_cost": 0.095
+    },
+    "look_gate": {
+      "succ": 0.953,
+      "cost": 9.09,
+      "succ_per_cost": 0.105
+    },
+    "always_vla": {
+      "succ": 0.901,
+      "cost": 11.0,
+      "succ_per_cost": 0.082
+    },
+    "voi": {
+      "succ": 0.959,
+      "cost": 9.09,
+      "succ_per_cost": 0.106
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.1,
+    "k_ambig": 2,
+    "map_acc_exact": 0.975,
+    "map_acc_phonetic": 0.996,
+    "oracle": {
+      "succ": 0.965,
+      "cost": 8.0,
+      "succ_per_cost": 0.121
+    },
+    "servo": {
+      "succ": 0.963,
+      "cost": 9.37,
+      "succ_per_cost": 0.103
+    },
+    "look_first": {
+      "succ": 0.962,
+      "cost": 10.18,
+      "succ_per_cost": 0.094
+    },
+    "look_gate": {
+      "succ": 0.961,
+      "cost": 9.11,
+      "succ_per_cost": 0.105
+    },
+    "always_vla": {
+      "succ": 0.957,
+      "cost": 13.01,
+      "succ_per_cost": 0.074
+    },
+    "voi": {
+      "succ": 0.958,
+      "cost": 8.56,
+      "succ_per_cost": 0.112
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.1,
+    "k_ambig": 4,
+    "map_acc_exact": 0.961,
+    "map_acc_phonetic": 0.991,
+    "oracle": {
+      "succ": 0.964,
+      "cost": 8.0,
+      "succ_per_cost": 0.121
+    },
+    "servo": {
+      "succ": 0.968,
+      "cost": 11.02,
+      "succ_per_cost": 0.088
+    },
+    "look_first": {
+      "succ": 0.958,
+      "cost": 10.43,
+      "succ_per_cost": 0.092
+    },
+    "look_gate": {
+      "succ": 0.961,
+      "cost": 9.41,
+      "succ_per_cost": 0.102
+    },
+    "always_vla": {
+      "succ": 0.957,
+      "cost": 13.03,
+      "succ_per_cost": 0.073
+    },
+    "voi": {
+      "succ": 0.953,
+      "cost": 9.26,
+      "succ_per_cost": 0.103
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.25,
+    "k_ambig": 2,
+    "map_acc_exact": 0.931,
+    "map_acc_phonetic": 0.994,
+    "oracle": {
+      "succ": 0.957,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.96,
+      "cost": 9.67,
+      "succ_per_cost": 0.099
+    },
+    "look_first": {
+      "succ": 0.954,
+      "cost": 10.22,
+      "succ_per_cost": 0.093
+    },
+    "look_gate": {
+      "succ": 0.965,
+      "cost": 9.18,
+      "succ_per_cost": 0.105
+    },
+    "always_vla": {
+      "succ": 0.959,
+      "cost": 13.01,
+      "succ_per_cost": 0.074
+    },
+    "voi": {
+      "succ": 0.966,
+      "cost": 8.7,
+      "succ_per_cost": 0.111
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.25,
+    "k_ambig": 4,
+    "map_acc_exact": 0.904,
+    "map_acc_phonetic": 0.979,
+    "oracle": {
+      "succ": 0.958,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.957,
+      "cost": 10.99,
+      "succ_per_cost": 0.087
+    },
+    "look_first": {
+      "succ": 0.959,
+      "cost": 10.41,
+      "succ_per_cost": 0.092
+    },
+    "look_gate": {
+      "succ": 0.957,
+      "cost": 9.39,
+      "succ_per_cost": 0.102
+    },
+    "always_vla": {
+      "succ": 0.956,
+      "cost": 13.03,
+      "succ_per_cost": 0.073
+    },
+    "voi": {
+      "succ": 0.96,
+      "cost": 9.24,
+      "succ_per_cost": 0.104
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.4,
+    "k_ambig": 2,
+    "map_acc_exact": 0.903,
+    "map_acc_phonetic": 0.991,
+    "oracle": {
+      "succ": 0.96,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.962,
+      "cost": 9.9,
+      "succ_per_cost": 0.097
+    },
+    "look_first": {
+      "succ": 0.956,
+      "cost": 10.26,
+      "succ_per_cost": 0.093
+    },
+    "look_gate": {
+      "succ": 0.961,
+      "cost": 9.21,
+      "succ_per_cost": 0.104
+    },
+    "always_vla": {
+      "succ": 0.96,
+      "cost": 13.02,
+      "succ_per_cost": 0.074
+    },
+    "voi": {
+      "succ": 0.959,
+      "cost": 8.78,
+      "succ_per_cost": 0.109
+    }
+  },
+  {
+    "budget": 14.0,
+    "asr_error": 0.4,
+    "k_ambig": 4,
+    "map_acc_exact": 0.85,
+    "map_acc_phonetic": 0.971,
+    "oracle": {
+      "succ": 0.959,
+      "cost": 8.0,
+      "succ_per_cost": 0.12
+    },
+    "servo": {
+      "succ": 0.951,
+      "cost": 10.98,
+      "succ_per_cost": 0.087
+    },
+    "look_first": {
+      "succ": 0.952,
+      "cost": 10.38,
+      "succ_per_cost": 0.092
+    },
+    "look_gate": {
+      "succ": 0.96,
+      "cost": 9.42,
+      "succ_per_cost": 0.102
+    },
+    "always_vla": {
+      "succ": 0.96,
+      "cost": 13.03,
+      "succ_per_cost": 0.074
+    },
+    "voi": {
+      "succ": 0.959,
+      "cost": 9.23,
+      "succ_per_cost": 0.104
+    }
+  }
+]

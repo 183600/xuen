@@ -9,7 +9,7 @@ import itertools
 import os
 import shlex
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from . import state, words
 from .agents import PromptTooLongError, ShellAgent
@@ -346,14 +346,21 @@ def _warn_guard_failure(guard: RoundGuard, message: str) -> None:
         pass
 
 
-def _guard_finish(guard: Optional[RoundGuard]) -> None:
-    """守卫收尾（应用待决用户评分 + 汇总）；守卫自身异常不外溅。"""
+def _guard_call(guard: Optional[RoundGuard],
+                action: Callable[[RoundGuard], None],
+                warning: str) -> None:
+    """执行守卫操作；守卫缺失或自身异常一律降级，不阻断研究循环。"""
     if guard is None:
         return
     try:
-        guard.finish()
+        action(guard)
     except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-        _warn_guard_failure(guard, f"轮次守卫收尾异常（忽略）：{e}")
+        _warn_guard_failure(guard, f"{warning}{e}")
+
+
+def _guard_finish(guard: Optional[RoundGuard]) -> None:
+    """守卫收尾（应用待决用户评分 + 汇总）；守卫自身异常不外溅。"""
+    _guard_call(guard, lambda g: g.finish(), "轮次守卫收尾异常（忽略）：")
 
 
 def _finish_loop(guard: Optional[RoundGuard], sink: Sink,
@@ -371,12 +378,8 @@ def _finish_loop(guard: Optional[RoundGuard], sink: Sink,
 def _guard_round_failed(guard: Optional[RoundGuard], round_no: int,
                         reason: str) -> None:
     """agent 失败的轮次：不留候选（半截产物不可信），仅记账。"""
-    if guard is None:
-        return
-    try:
-        guard.on_round_failed(round_no, reason)
-    except Exception as e:  # noqa: BLE001 —— 守卫降级原则
-        _warn_guard_failure(guard, f"轮次守卫记账异常（忽略）：{e}")
+    _guard_call(guard, lambda g: g.on_round_failed(round_no, reason),
+                "轮次守卫记账异常（忽略）：")
 
 
 def _report_changed_sections(sink: Sink, state_path: Path,

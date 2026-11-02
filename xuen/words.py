@@ -392,19 +392,20 @@ def generate_words_shell(
     stop：可选的停止回调（如 TUI 按 q）。当前批次的 agent 会被外部
     kill，但若不检查停止标志，循环仍会为剩余批次继续拉起新 agent 进程。
     """
-    wlist: List[str] = []
+    word_list: List[str] = []
     seen = set()
     max_batches = max(2, count // max(batch, 1) + 3)
-    for i in range(max_batches):
-        if len(wlist) >= count:
+    for batch_no in range(max_batches):
+        if len(word_list) >= count:
             break
         if stop is not None and stop():
             info("收到停止请求，中断词库生成")
             break
-        ask = min(batch, count - len(wlist) + 20)
-        info(f"通过外部 agent 生成词库 {len(wlist)}/{count}（第 {i + 1} 批）")
+        request_count = min(batch, count - len(word_list) + 20)
+        info(f"通过外部 agent 生成词库 {len(word_list)}/{count}"
+             f"（第 {batch_no + 1} 批）")
         prompt = (
-            f"请为研究方向「{task}」列出 {ask} 个紧密相关的术语/关键词。\n"
+            f"请为研究方向「{task}」列出 {request_count} 个紧密相关的术语/关键词。\n"
             "要求：每行一个词；不要编号、不要解释、不要输出任何多余内容；"
             "只输出词表本身。"
         )
@@ -415,14 +416,14 @@ def generate_words_shell(
                 break
             warn("词库生成批次执行失败（超时或非零退出），停止生成")
             break
-        fresh = 0
+        added = 0
         for word in parse_word_lines(out):
             key = word.casefold()
             if key not in seen:
                 seen.add(key)
-                wlist.append(word)
-                fresh += 1
-        if fresh == 0:
+                word_list.append(word)
+                added += 1
+        if added == 0:
             warn("词表不再增长，提前结束收集")
             break
-    return wlist[:count]
+    return word_list[:count]
