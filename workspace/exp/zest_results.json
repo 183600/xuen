@@ -1,0 +1,418 @@
+{
+  "calibration_qz": 4.211204137639593,
+  "rows": [
+    {
+      "succ": 0.8298333333333333,
+      "cost": 5.6705,
+      "spc": 0.14634218028980397,
+      "fb_id": 0,
+      "fb_ood": 0,
+      "auroc": 0.993303827612598,
+      "policy": "vla",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.7921666666666667,
+      "cost": 7.7535,
+      "spc": 0.10216891296403775,
+      "fb_id": 1,
+      "fb_ood": 1,
+      "auroc": 0.5,
+      "policy": "fallback",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.889,
+      "cost": 5.654133333333333,
+      "spc": 0.15723010894684714,
+      "fb_id": 0.0014138817480719794,
+      "fb_ood": 0.8658767772511848,
+      "auroc": 0.9941090291061051,
+      "policy": "fixed",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.9103333333333333,
+      "cost": 5.549083333333334,
+      "spc": 0.16405111955428073,
+      "fb_id": 0.000639877143588431,
+      "fb_ood": 0.9149546106067845,
+      "auroc": 0.9937264830627913,
+      "policy": "conformal",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.91525,
+      "cost": 5.6764833333333335,
+      "spc": 0.16123538928150938,
+      "fb_id": 0.001032258064516129,
+      "fb_ood": 0.9127058823529411,
+      "auroc": 0.9944823377609108,
+      "policy": "recheck",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.91525,
+      "cost": 5.6764833333333335,
+      "spc": 0.16123538928150938,
+      "fb_id": 0.001032258064516129,
+      "fb_ood": 0.9127058823529411,
+      "auroc": 0.9944823377609108,
+      "policy": "zest",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.9519166666666666,
+      "cost": 5.25475,
+      "spc": 0.18115355947793269,
+      "fb_id": 0.00025703637064644646,
+      "fb_ood": 0.9836454136051197,
+      "auroc": 0.01809303930703872,
+      "policy": "oracle",
+      "rho": 0.0,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8265833333333333,
+      "cost": 5.729583333333333,
+      "spc": 0.14426587157297652,
+      "fb_id": 0,
+      "fb_ood": 0,
+      "auroc": 0.9252838765923352,
+      "policy": "vla",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.7721666666666667,
+      "cost": 7.832999999999999,
+      "spc": 0.09857866292182647,
+      "fb_id": 1,
+      "fb_ood": 1,
+      "auroc": 0.5,
+      "policy": "fallback",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8764166666666666,
+      "cost": 5.66155,
+      "spc": 0.1548015413917861,
+      "fb_id": 0.001287995878413189,
+      "fb_ood": 0.7006610009442871,
+      "auroc": 0.9254560222989912,
+      "policy": "fixed",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.89825,
+      "cost": 5.578316666666667,
+      "spc": 0.16102527943017456,
+      "fb_id": 0.0011557724412482341,
+      "fb_ood": 0.7616900071208165,
+      "auroc": 0.9294713925364662,
+      "policy": "conformal",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8990833333333333,
+      "cost": 5.690783333333333,
+      "spc": 0.15798938048950498,
+      "fb_id": 0.0020671834625322996,
+      "fb_ood": 0.7692488262910798,
+      "auroc": 0.9270875944729532,
+      "policy": "recheck",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8990833333333333,
+      "cost": 5.690783333333333,
+      "spc": 0.15798938048950498,
+      "fb_id": 0.0020671834625322996,
+      "fb_ood": 0.7692488262910798,
+      "auroc": 0.9270875944729532,
+      "policy": "zest",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.93975,
+      "cost": 5.278033333333333,
+      "spc": 0.17804927340360363,
+      "fb_id": 0.0006346788525006347,
+      "fb_ood": 0.91581756428918,
+      "auroc": 0.0482490654731132,
+      "policy": "oracle",
+      "rho": 0.25,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8323333333333334,
+      "cost": 5.707916666666667,
+      "spc": 0.14582086283670342,
+      "fb_id": 0,
+      "fb_ood": 0,
+      "auroc": 0.8597324590733254,
+      "policy": "vla",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.7444166666666666,
+      "cost": 8.0117,
+      "spc": 0.09291619340048513,
+      "fb_id": 1,
+      "fb_ood": 1,
+      "auroc": 0.5,
+      "policy": "fallback",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8629166666666667,
+      "cost": 5.6771,
+      "spc": 0.15199955376277793,
+      "fb_id": 0.0007739938080495357,
+      "fb_ood": 0.5374293785310734,
+      "auroc": 0.8599171114823172,
+      "policy": "fixed",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8846666666666667,
+      "cost": 5.58925,
+      "spc": 0.1582800316082957,
+      "fb_id": 0.002429046279723856,
+      "fb_ood": 0.6256582096696984,
+      "auroc": 0.8576365969043873,
+      "policy": "conformal",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8833333333333333,
+      "cost": 5.68215,
+      "spc": 0.15545758794353076,
+      "fb_id": 0.001423579655752556,
+      "fb_ood": 0.6204072080505499,
+      "auroc": 0.8594819088354768,
+      "policy": "recheck",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.8833333333333333,
+      "cost": 5.68215,
+      "spc": 0.15545758794353076,
+      "fb_id": 0.001423579655752556,
+      "fb_ood": 0.6204072080505499,
+      "auroc": 0.8594819088354768,
+      "policy": "zest",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.9268333333333333,
+      "cost": 5.3689,
+      "spc": 0.17263002353058043,
+      "fb_id": 0.0006434178355424012,
+      "fb_ood": 0.8316386852683849,
+      "auroc": 0.09111815917442173,
+      "policy": "oracle",
+      "rho": 0.5,
+      "scenario": "static"
+    },
+    {
+      "succ": 0.9510833333333333,
+      "cost": 9.21825,
+      "spc": 0.10317395745757962,
+      "fb_id": 0.0,
+      "fb_ood": 0,
+      "auroc": 0.0,
+      "policy": "vla",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.5093333333333333,
+      "cost": 10.5841,
+      "spc": 0.0481224982127279,
+      "fb_id": 0.0,
+      "fb_ood": 1,
+      "auroc": 0.0,
+      "policy": "fallback",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.8144166666666667,
+      "cost": 10.971516666666666,
+      "spc": 0.07423008973235241,
+      "fb_id": 0.0,
+      "fb_ood": 0.99125,
+      "auroc": 0.0,
+      "policy": "fixed",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.43291666666666667,
+      "cost": 11.317116666666665,
+      "spc": 0.03825326533407361,
+      "fb_id": 0.0,
+      "fb_ood": 0.94175,
+      "auroc": 0.0,
+      "policy": "conformal",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.89075,
+      "cost": 10.439983333333334,
+      "spc": 0.08532101743457444,
+      "fb_id": 0.0,
+      "fb_ood": 0.94525,
+      "auroc": 0.0,
+      "policy": "recheck",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.89075,
+      "cost": 10.439983333333334,
+      "spc": 0.08532101743457444,
+      "fb_id": 0.0,
+      "fb_ood": 0.94525,
+      "auroc": 0.0,
+      "policy": "zest",
+      "rho": null,
+      "scenario": "transient"
+    },
+    {
+      "succ": 0.9568333333333333,
+      "cost": 8.931866666666666,
+      "spc": 0.10712579677260446,
+      "fb_id": 0.0,
+      "fb_ood": 0.9688333333333333,
+      "auroc": 0.0,
+      "policy": "oracle",
+      "rho": null,
+      "scenario": "transient"
+    }
+  ],
+  "sensitivity": [
+    {
+      "g_scale": 0.75,
+      "fb_cost": 1.0,
+      "vla_succ": 0.828,
+      "zest_succ": 0.864,
+      "delta_pp": 3.61,
+      "vla_spc": 0.145,
+      "zest_spc": 0.154
+    },
+    {
+      "g_scale": 0.75,
+      "fb_cost": 1.2,
+      "vla_succ": 0.828,
+      "zest_succ": 0.864,
+      "delta_pp": 3.61,
+      "vla_spc": 0.145,
+      "zest_spc": 0.149
+    },
+    {
+      "g_scale": 0.75,
+      "fb_cost": 1.5,
+      "vla_succ": 0.828,
+      "zest_succ": 0.839,
+      "delta_pp": 1.04,
+      "vla_spc": 0.145,
+      "zest_spc": 0.142
+    },
+    {
+      "g_scale": 1.0,
+      "fb_cost": 1.0,
+      "vla_succ": 0.828,
+      "zest_succ": 0.897,
+      "delta_pp": 6.91,
+      "vla_spc": 0.145,
+      "zest_spc": 0.163
+    },
+    {
+      "g_scale": 1.0,
+      "fb_cost": 1.2,
+      "vla_succ": 0.828,
+      "zest_succ": 0.897,
+      "delta_pp": 6.91,
+      "vla_spc": 0.145,
+      "zest_spc": 0.158
+    },
+    {
+      "g_scale": 1.0,
+      "fb_cost": 1.5,
+      "vla_succ": 0.828,
+      "zest_succ": 0.878,
+      "delta_pp": 4.97,
+      "vla_spc": 0.145,
+      "zest_spc": 0.152
+    },
+    {
+      "g_scale": 1.25,
+      "fb_cost": 1.0,
+      "vla_succ": 0.828,
+      "zest_succ": 0.928,
+      "delta_pp": 9.95,
+      "vla_spc": 0.145,
+      "zest_spc": 0.173
+    },
+    {
+      "g_scale": 1.25,
+      "fb_cost": 1.2,
+      "vla_succ": 0.828,
+      "zest_succ": 0.928,
+      "delta_pp": 9.95,
+      "vla_spc": 0.145,
+      "zest_spc": 0.168
+    },
+    {
+      "g_scale": 1.25,
+      "fb_cost": 1.5,
+      "vla_succ": 0.828,
+      "zest_succ": 0.909,
+      "delta_pp": 8.13,
+      "vla_spc": 0.145,
+      "zest_spc": 0.16
+    }
+  ],
+  "ablation": {
+    "temporal": {
+      "exec_vs_id": 0.923,
+      "mapok_vs_id": 0.506,
+      "silent_vs_id": 0.508
+    },
+    "geometric": {
+      "exec_vs_id": 0.922,
+      "mapok_vs_id": 0.498,
+      "silent_vs_id": 0.505
+    },
+    "goal": {
+      "exec_vs_id": 0.803,
+      "mapok_vs_id": 0.956,
+      "silent_vs_id": 0.499
+    },
+    "combined_equal": {
+      "exec_vs_id": 0.984,
+      "mapok_vs_id": 0.869,
+      "silent_vs_id": 0.505
+    }
+  }
+}

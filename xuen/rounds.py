@@ -131,6 +131,11 @@ def _nonempty_lines(raw: bytes) -> List[str]:
     return [line for line in lines if line]
 
 
+def _last_lines(text: str, count: int) -> str:
+    """取文本末尾 ``count`` 行（用于错误摘要与展示）。"""
+    return "\n".join(text.splitlines()[-count:])
+
+
 def _ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -533,7 +538,7 @@ def run_suite(argv: List[str], repo: Path, timeout: float,
                                reason="make test 没有执行任何测试（目标无事可做）",
                                detail=detail)
         return SuiteResult(available=True, ok=True, reason="exit 0", detail=detail)
-    tail = "\n".join(detail.splitlines()[-15:])
+    tail = _last_lines(detail, 15)
     if proc.returncode == 5 and _is_pytest_run(argv):
         return SuiteResult(available=False, ok=False,
                            reason="pytest 未收集到测试（退出码 5）",
@@ -1480,7 +1485,7 @@ def verdesc(v: Verdict) -> str:
 
 
 def detail_field(res: SuiteResult) -> str:
-    tail = "\n".join((res.detail or "").splitlines()[-5:])
+    tail = _last_lines(res.detail or "", 5)
     return (res.reason + (f"｜输出尾部：{tail}" if tail else "")).strip()[:500]
 
 

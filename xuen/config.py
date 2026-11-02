@@ -230,9 +230,10 @@ def _parse_words_config(section: dict, defaults: WordsConfig) -> WordsConfig:
     )
 
 
-def _parse_loop_config(section: dict) -> LoopConfig:
+def _parse_loop_config(section: dict, defaults: LoopConfig) -> LoopConfig:
     return LoopConfig(
-        iterations=_parse_iterations(section.get("iterations", 5)),
+        iterations=_parse_iterations(
+            _config_value(section, "iterations", defaults.iterations)),
     )
 
 
@@ -298,7 +299,7 @@ def load_config(path: Optional[str] = None) -> Config:
     cfg.extra_notes = _parse_str(_config_value(raw, "extra_notes", ""),
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
-    cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"))
+    cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
     cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
     cfg.rounds = _parse_rounds_config(
         _mapping_section(raw, "rounds"), cfg.rounds)
