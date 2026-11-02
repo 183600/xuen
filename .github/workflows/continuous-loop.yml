@@ -139,6 +139,10 @@ jobs:
             exit 1
           fi
       - name: Configure opencode permissions
+        env:
+          # DeepSeek 官方 API：主力 provider（免费池对长流式请求大面积挂起），
+          # 鉴权走该环境变量；未配置时不合并 provider，行为与原先一致。
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           mkdir -p ~/.config/opencode
           cat > ~/.config/opencode/opencode.json <<'EOF'
@@ -171,6 +175,38 @@ jobs:
             "model": "opencode/deepseek-v4.1-flash-free"
           }
           EOF
+          if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+            python3 - <<'PYMERGE'
+          import json, os
+          p = os.path.expanduser('~/.config/opencode/opencode.json')
+          try:
+              with open(p) as f:
+                  cfg = json.load(f)
+          except Exception:
+              cfg = {}
+          cfg['$schema'] = 'https://opencode.ai/config.json'
+          cfg.setdefault('provider', {})
+          cfg['provider']['deepseek'] = {
+              'npm': '@ai-sdk/openai-compatible',
+              'name': 'DeepSeek (official API)',
+              'options': {
+                  'baseURL': 'https://api.deepseek.com/v1',
+                  'apiKey': '{env:DEEPSEEK_API_KEY}',
+              },
+              'models': {
+                  'deepseek-flash': {'name': 'DeepSeek Flash'},
+                  'deepseek-chat': {'name': 'DeepSeek Chat'},
+                  'deepseek-reasoner': {'name': 'DeepSeek Reasoner'},
+              },
+          }
+          os.makedirs(os.path.dirname(p), exist_ok=True)
+          with open(p, 'w') as f:
+              json.dump(cfg, f, indent=2, ensure_ascii=False)
+          PYMERGE
+            echo "[info] DEEPSEEK_API_KEY 已配置：DeepSeek 官方 API provider 已合并进 opencode 配置"
+          else
+            echo "[warn] DEEPSEEK_API_KEY 未配置：只用 Zen 免费池"
+          fi
 
       - name: Configure git
         run: |
@@ -183,9 +219,12 @@ jobs:
       - name: Select harness (opencode only)
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
-          # 一律使用 opencode 的 Zen 免费模型（不安装额外 harness、不读官方 key）
+          # DeepSeek 官方 API 优先：Zen 免费网关自 2026-11-01 起对长流式请求大面积挂起
+          # （冒烟能过但 3h 研究窗口在 ~82KB 输出处停滞，看门狗连杀 16+ 小时零产出）；
+          # 官方 key 未配置时自动只用免费池，行为与原先一致。
           SELECTED_MODEL=""
           SELECTED_VARIANT=""
           smoke() {
@@ -194,7 +233,7 @@ jobs:
             # shellcheck disable=SC2086
             timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_test.log 2>&1
           }
-          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
+          for spec in "deepseek/deepseek-flash|" "deepseek/deepseek-chat|" "deepseek/deepseek-reasoner|" "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
             if smoke "$m" "$v"; then
@@ -240,7 +279,7 @@ jobs:
           set -e
           cat > /tmp/xuen_agent.sh <<'SHEOF'
           #!/usr/bin/env bash
-          # xuen 的 agent 一律走 opencode（已移除额外 harness / DeepSeek 官方 API）
+          # xuen 的 agent 一律走 opencode；DeepSeek 官方 API 为主力，Zen 免费池兜底
           role="${1:-main}"
           prompt="${2:-}"
           if [ "$role" = "judge" ]; then
@@ -252,6 +291,7 @@ jobs:
           fi
           case "$model" in
             opencode/*) ;;
+            deepseek/*) variant="" ;;
             *) model="opencode/deepseek-v4.1-flash-free"; variant="" ;;
           esac
           extra=""
@@ -319,6 +359,7 @@ jobs:
         timeout-minutes: 175
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
@@ -485,6 +526,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
           # ⭐ 单次调用约束：docs 与 xuen 研究迭代互斥（决策在「Run xuen loop」步骤开头）
@@ -623,6 +665,10 @@ jobs:
           opencode --version
 
       - name: Configure opencode permissions
+        env:
+          # DeepSeek 官方 API：主力 provider（免费池对长流式请求大面积挂起），
+          # 鉴权走该环境变量；未配置时不合并 provider，行为与原先一致。
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           mkdir -p ~/.config/opencode
           cat > ~/.config/opencode/opencode.json <<'EOF'
@@ -655,6 +701,38 @@ jobs:
             "model": "opencode/deepseek-v4.1-flash-free"
           }
           EOF
+          if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+            python3 - <<'PYMERGE'
+          import json, os
+          p = os.path.expanduser('~/.config/opencode/opencode.json')
+          try:
+              with open(p) as f:
+                  cfg = json.load(f)
+          except Exception:
+              cfg = {}
+          cfg['$schema'] = 'https://opencode.ai/config.json'
+          cfg.setdefault('provider', {})
+          cfg['provider']['deepseek'] = {
+              'npm': '@ai-sdk/openai-compatible',
+              'name': 'DeepSeek (official API)',
+              'options': {
+                  'baseURL': 'https://api.deepseek.com/v1',
+                  'apiKey': '{env:DEEPSEEK_API_KEY}',
+              },
+              'models': {
+                  'deepseek-flash': {'name': 'DeepSeek Flash'},
+                  'deepseek-chat': {'name': 'DeepSeek Chat'},
+                  'deepseek-reasoner': {'name': 'DeepSeek Reasoner'},
+              },
+          }
+          os.makedirs(os.path.dirname(p), exist_ok=True)
+          with open(p, 'w') as f:
+              json.dump(cfg, f, indent=2, ensure_ascii=False)
+          PYMERGE
+            echo "[info] DEEPSEEK_API_KEY 已配置：DeepSeek 官方 API provider 已合并进 opencode 配置"
+          else
+            echo "[warn] DEEPSEEK_API_KEY 未配置：只用 Zen 免费池"
+          fi
 
       - name: Configure git
         run: |
@@ -666,9 +744,12 @@ jobs:
       - name: Select model (opencode, websearch-capable)
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
-          # UniBot 调研依赖联网搜索：与主任务一致，一律使用 opencode Zen 免费模型
+          # UniBot 调研依赖联网搜索；Zen 免费网关对长流式请求大面积挂起，
+          # 故 DeepSeek 官方 API 优先（webfetch/curl 仍可用，websearch 工具降级由 agent 自行
+          # 用 webfetch+curl 替代），免费池作为官方 key 未配置或官方异常时的兜底。
           SELECTED_MODEL=""
           SELECTED_VARIANT=""
           smoke() {
@@ -677,7 +758,7 @@ jobs:
             # shellcheck disable=SC2086
             timeout --kill-after=30 120 opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_unibot.log 2>&1
           }
-          for spec in "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
+          for spec in "deepseek/deepseek-flash|" "deepseek/deepseek-chat|" "deepseek/deepseek-reasoner|" "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
             if smoke "$m" "$v"; then
@@ -734,6 +815,7 @@ jobs:
           fi
           case "$model" in
             opencode/*) ;;
+            deepseek/*) variant="" ;;
             *) model="opencode/deepseek-v4.1-flash-free"; variant="" ;;
           esac
           extra=""
@@ -809,6 +891,7 @@ jobs:
         timeout-minutes: 175
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           set +e
           WORK_SECONDS=9900        # 工作窗口：165 分钟
