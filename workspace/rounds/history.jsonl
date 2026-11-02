@@ -800,3 +800,5 @@
 {"event": "heartbeat", "round": 1, "ts": "2026-11-02 17:24:54"}
 {"event": "candidate", "id": "20261102-174818-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-02 17:48:18"}
 {"event": "verdict", "id": "20261102-174818-r1", "round": 1, "verifier": "ai", "score": 7.0, "result": "adopted", "reason": "AI 评分 7（阈值 7）", "ts": "2026-11-02 17:49:17"}
+{"event": "candidate", "id": "20261102-182417-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-02 18:24:17"}
+{"event": "verdict", "id": "20261102-182417-r1", "round": 1, "verifier": "ai", "score": 8.0, "result": "adopted", "reason": "AI 评分 8（阈值 7）", "ts": "2026-11-02 18:24:53"}
