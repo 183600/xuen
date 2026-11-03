@@ -1,0 +1,9 @@
+{
+  "field_avg_spread_pp": 9.2,
+  "mean_per_task_range_pp": 17.93125,
+  "mean_of_task_means": 25.1708984375,
+  "mean_of_task_maxima": 33.958125,
+  "routing_headroom_pp": 8.787226562500003,
+  "mean_failed_episode_credit_pts": 11.551517751769033,
+  "corr_avg_success_min_task": 0.8823860776866571
+}
