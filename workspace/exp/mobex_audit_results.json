@@ -1,0 +1,890 @@
+{
+ "G1_Dex1_MountCamera_Dataset": {
+  "repo": "unitreerobotics/G1_Dex1_MountCamera_Dataset",
+  "ok": true,
+  "total_episodes": null,
+  "files": 36,
+  "sampled_rows": 389708,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_StackRygBlock_Dataset_Sim": {
+  "repo": "unitreerobotics/G1_Dex1_StackRygBlock_Dataset_Sim",
+  "ok": true,
+  "total_episodes": null,
+  "files": 22,
+  "sampled_rows": 493366,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PickPlaceCylinder_Dataset_Sim": {
+  "repo": "unitreerobotics/G1_Dex1_PickPlaceCylinder_Dataset_Sim",
+  "ok": true,
+  "total_episodes": null,
+  "files": 822,
+  "sampled_rows": 1154,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_PickPlaceRedBlock_Dataset_Sim": {
+  "repo": "unitreerobotics/G1_Dex1_PickPlaceRedBlock_Dataset_Sim",
+  "ok": true,
+  "total_episodes": null,
+  "files": 13,
+  "sampled_rows": 163330,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_MountCameraRedGripper_Dataset": {
+  "repo": "unitreerobotics/G1_Dex1_MountCameraRedGripper_Dataset",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1011,
+  "sampled_rows": 985,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_DualRobot_Clean_Table": {
+  "repo": "unitreerobotics/G1_Dex1_DualRobot_Clean_Table",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 946,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Erase_Board": {
+  "repo": "unitreerobotics/G1_Dex1_Erase_Board",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 674,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Fold_Towel": {
+  "repo": "unitreerobotics/G1_Dex1_Fold_Towel",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 1358,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Organize_Tools": {
+  "repo": "unitreerobotics/G1_Dex1_Organize_Tools",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 985,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Pack_PencilBox": {
+  "repo": "unitreerobotics/G1_Dex1_Pack_PencilBox",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 795,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Pack_PingPong": {
+  "repo": "unitreerobotics/G1_Dex1_Pack_PingPong",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 835,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Prepare_Fruit": {
+  "repo": "unitreerobotics/G1_Dex1_Prepare_Fruit",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 632,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Stack_Block": {
+  "repo": "unitreerobotics/G1_Dex1_Stack_Block",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1084,
+  "sampled_rows": 490,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Wipe_Table": {
+  "repo": "unitreerobotics/G1_Dex1_Wipe_Table",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1090,
+  "sampled_rows": 370,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Bag_Insert": {
+  "repo": "unitreerobotics/G1_Dex1_Bag_Insert",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 595,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_Pour_Medicine": {
+  "repo": "unitreerobotics/G1_Dex1_Pour_Medicine",
+  "ok": true,
+  "total_episodes": null,
+  "files": 1006,
+  "sampled_rows": 905,
+  "file": "data/chunk-000/episode_000000.parquet"
+ },
+ "G1_Dex1_DiverseManip_SingleArm_256x256": {
+  "repo": "unitreerobotics/G1_Dex1_DiverseManip_SingleArm_256x256",
+  "ok": true,
+  "total_episodes": null,
+  "files": 15,
+  "sampled_rows": 331555,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_DiverseManip_SingleArm_128x128": {
+  "repo": "unitreerobotics/G1_Dex1_DiverseManip_SingleArm_128x128",
+  "ok": true,
+  "total_episodes": null,
+  "files": 13,
+  "sampled_rows": 331555,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_DiverseManip_DualArm_256x256": {
+  "repo": "unitreerobotics/G1_Dex1_DiverseManip_DualArm_256x256",
+  "ok": true,
+  "total_episodes": null,
+  "files": 17,
+  "sampled_rows": 413538,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_DiverseManip_DualArm_128x128": {
+  "repo": "unitreerobotics/G1_Dex1_DiverseManip_DualArm_128x128",
+  "ok": true,
+  "total_episodes": null,
+  "files": 15,
+  "sampled_rows": 413538,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_HangCup": {
+  "repo": "unitreerobotics/G1_Dex1_HangCup",
+  "ok": true,
+  "total_episodes": null,
+  "files": 52,
+  "sampled_rows": 913955,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ArrangePlates": {
+  "repo": "unitreerobotics/G1_Dex1_ArrangePlates",
+  "ok": true,
+  "total_episodes": null,
+  "files": 127,
+  "sampled_rows": 944034,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ArrangeTestTubes": {
+  "repo": "unitreerobotics/G1_Dex1_ArrangeTestTubes",
+  "ok": true,
+  "total_episodes": null,
+  "files": 119,
+  "sampled_rows": 934381,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ZipUp": {
+  "repo": "unitreerobotics/G1_Dex1_ZipUp",
+  "ok": true,
+  "total_episodes": null,
+  "files": 92,
+  "sampled_rows": 923804,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Unlock": {
+  "repo": "unitreerobotics/G1_Dex1_Unlock",
+  "ok": true,
+  "total_episodes": null,
+  "files": 97,
+  "sampled_rows": 971880,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ColorArrangement": {
+  "repo": "unitreerobotics/G1_Dex1_ColorArrangement",
+  "ok": true,
+  "total_episodes": null,
+  "files": 115,
+  "sampled_rows": 878920,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ConveyorSorting": {
+  "repo": "unitreerobotics/G1_Dex1_ConveyorSorting",
+  "ok": true,
+  "total_episodes": null,
+  "files": 168,
+  "sampled_rows": 974393,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_DisconnectEthernet": {
+  "repo": "unitreerobotics/G1_Dex1_DisconnectEthernet",
+  "ok": true,
+  "total_episodes": null,
+  "files": 78,
+  "sampled_rows": 962353,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_FoldTowel": {
+  "repo": "unitreerobotics/G1_Dex1_FoldTowel",
+  "ok": true,
+  "total_episodes": null,
+  "files": 151,
+  "sampled_rows": 873229,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_FruitCollection": {
+  "repo": "unitreerobotics/G1_Dex1_FruitCollection",
+  "ok": true,
+  "total_episodes": null,
+  "files": 87,
+  "sampled_rows": 888839,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_FruitSorting": {
+  "repo": "unitreerobotics/G1_Dex1_FruitSorting",
+  "ok": true,
+  "total_episodes": null,
+  "files": 72,
+  "sampled_rows": 910987,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_OrganizeBookshelf": {
+  "repo": "unitreerobotics/G1_Dex1_OrganizeBookshelf",
+  "ok": true,
+  "total_episodes": null,
+  "files": 90,
+  "sampled_rows": 889140,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_OrganizePencilCase": {
+  "repo": "unitreerobotics/G1_Dex1_OrganizePencilCase",
+  "ok": true,
+  "total_episodes": null,
+  "files": 157,
+  "sampled_rows": 933107,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_SpellRobot": {
+  "repo": "unitreerobotics/G1_Dex1_SpellRobot",
+  "ok": true,
+  "total_episodes": null,
+  "files": 180,
+  "sampled_rows": 976283,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_OrganizeStationery": {
+  "repo": "unitreerobotics/G1_Dex1_OrganizeStationery",
+  "ok": true,
+  "total_episodes": null,
+  "files": 129,
+  "sampled_rows": 921144,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_StackBowls": {
+  "repo": "unitreerobotics/G1_Dex1_StackBowls",
+  "ok": true,
+  "total_episodes": null,
+  "files": 55,
+  "sampled_rows": 893557,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_StoreCups": {
+  "repo": "unitreerobotics/G1_Dex1_StoreCups",
+  "ok": true,
+  "total_episodes": null,
+  "files": 114,
+  "sampled_rows": 909741,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_OrganizeTools": {
+  "repo": "unitreerobotics/G1_Dex1_OrganizeTools",
+  "ok": true,
+  "total_episodes": null,
+  "files": 272,
+  "sampled_rows": 857493,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PackBag": {
+  "repo": "unitreerobotics/G1_Dex1_PackBag",
+  "ok": true,
+  "total_episodes": null,
+  "files": 99,
+  "sampled_rows": 909363,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_StoreEarphones": {
+  "repo": "unitreerobotics/G1_Dex1_StoreEarphones",
+  "ok": true,
+  "total_episodes": null,
+  "files": 142,
+  "sampled_rows": 945490,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PackDoll": {
+  "repo": "unitreerobotics/G1_Dex1_PackDoll",
+  "ok": true,
+  "total_episodes": null,
+  "files": 169,
+  "sampled_rows": 913150,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PackPhone": {
+  "repo": "unitreerobotics/G1_Dex1_PackPhone",
+  "ok": true,
+  "total_episodes": null,
+  "files": 154,
+  "sampled_rows": 903126,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_StorePaddle": {
+  "repo": "unitreerobotics/G1_Dex1_StorePaddle",
+  "ok": true,
+  "total_episodes": null,
+  "files": 212,
+  "sampled_rows": 887915,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_ToolboxStorage": {
+  "repo": "unitreerobotics/G1_Dex1_ToolboxStorage",
+  "ok": true,
+  "total_episodes": null,
+  "files": 355,
+  "sampled_rows": 868560,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PaperCupStacking": {
+  "repo": "unitreerobotics/G1_Dex1_PaperCupStacking",
+  "ok": true,
+  "total_episodes": null,
+  "files": 111,
+  "sampled_rows": 927780,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PickOutBatteries": {
+  "repo": "unitreerobotics/G1_Dex1_PickOutBatteries",
+  "ok": true,
+  "total_episodes": null,
+  "files": 164,
+  "sampled_rows": 918386,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_SyringeWaterTransfer": {
+  "repo": "unitreerobotics/G1_Dex1_SyringeWaterTransfer",
+  "ok": true,
+  "total_episodes": null,
+  "files": 142,
+  "sampled_rows": 945763,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PlugCharger": {
+  "repo": "unitreerobotics/G1_Dex1_PlugCharger",
+  "ok": true,
+  "total_episodes": null,
+  "files": 73,
+  "sampled_rows": 916706,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PlacePhotoFrame": {
+  "repo": "unitreerobotics/G1_Dex1_PlacePhotoFrame",
+  "ok": true,
+  "total_episodes": null,
+  "files": 78,
+  "sampled_rows": 911036,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PlugInEthernet": {
+  "repo": "unitreerobotics/G1_Dex1_PlugInEthernet",
+  "ok": true,
+  "total_episodes": null,
+  "files": 112,
+  "sampled_rows": 904904,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_PourOutMedicine": {
+  "repo": "unitreerobotics/G1_Dex1_PourOutMedicine",
+  "ok": true,
+  "total_episodes": null,
+  "files": 131,
+  "sampled_rows": 956536,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_RemovePinnedNote": {
+  "repo": "unitreerobotics/G1_Dex1_RemovePinnedNote",
+  "ok": true,
+  "total_episodes": null,
+  "files": 185,
+  "sampled_rows": 978544,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Arrange_Flowers": {
+  "repo": "unitreerobotics/G1_Dex1_Arrange_Flowers",
+  "ok": true,
+  "total_episodes": null,
+  "files": 138,
+  "sampled_rows": 949242,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Collect_Eggs": {
+  "repo": "unitreerobotics/G1_Dex1_Collect_Eggs",
+  "ok": true,
+  "total_episodes": null,
+  "files": 138,
+  "sampled_rows": 651525,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Color_Category": {
+  "repo": "unitreerobotics/G1_Dex1_Color_Category",
+  "ok": true,
+  "total_episodes": null,
+  "files": 98,
+  "sampled_rows": 875385,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Conveyor_Color_Classification": {
+  "repo": "unitreerobotics/G1_Dex1_Conveyor_Color_Classification",
+  "ok": true,
+  "total_episodes": null,
+  "files": 48,
+  "sampled_rows": 270830,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Fetch_Object_Bag": {
+  "repo": "unitreerobotics/G1_Dex1_Fetch_Object_Bag",
+  "ok": true,
+  "total_episodes": null,
+  "files": 80,
+  "sampled_rows": 968625,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Find_Green_Blocks": {
+  "repo": "unitreerobotics/G1_Dex1_Find_Green_Blocks",
+  "ok": true,
+  "total_episodes": null,
+  "files": 55,
+  "sampled_rows": 879795,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Hang_Hat": {
+  "repo": "unitreerobotics/G1_Dex1_Hang_Hat",
+  "ok": true,
+  "total_episodes": null,
+  "files": 59,
+  "sampled_rows": 908362,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Load_Shoes_On_Conveyor": {
+  "repo": "unitreerobotics/G1_Dex1_Load_Shoes_On_Conveyor",
+  "ok": true,
+  "total_episodes": null,
+  "files": 161,
+  "sampled_rows": 910469,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Organize_Desk": {
+  "repo": "unitreerobotics/G1_Dex1_Organize_Desk",
+  "ok": true,
+  "total_episodes": null,
+  "files": 286,
+  "sampled_rows": 896924,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Play_Football": {
+  "repo": "unitreerobotics/G1_Dex1_Play_Football",
+  "ok": true,
+  "total_episodes": null,
+  "files": 48,
+  "sampled_rows": 737807,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Pull_Lollipop": {
+  "repo": "unitreerobotics/G1_Dex1_Pull_Lollipop",
+  "ok": true,
+  "total_episodes": null,
+  "files": 75,
+  "sampled_rows": 895937,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Food_In_Oven": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Food_In_Oven",
+  "ok": true,
+  "total_episodes": null,
+  "files": 70,
+  "sampled_rows": 873474,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Fruit_On_Plate": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Fruit_On_Plate",
+  "ok": true,
+  "total_episodes": null,
+  "files": 41,
+  "sampled_rows": 653870,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Items_Into_Cabinet": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Items_Into_Cabinet",
+  "ok": true,
+  "total_episodes": null,
+  "files": 91,
+  "sampled_rows": 854553,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Store_Cola": {
+  "repo": "unitreerobotics/G1_Dex1_Store_Cola",
+  "ok": true,
+  "total_episodes": null,
+  "files": 126,
+  "sampled_rows": 901117,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Switch_Lamp_On": {
+  "repo": "unitreerobotics/G1_Dex1_Switch_Lamp_On",
+  "ok": true,
+  "total_episodes": null,
+  "files": 51,
+  "sampled_rows": 854378,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Tableware_Storage": {
+  "repo": "unitreerobotics/G1_Dex1_Tableware_Storage",
+  "ok": true,
+  "total_episodes": null,
+  "files": 102,
+  "sampled_rows": 895783,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Take_Food_Out_Oven": {
+  "repo": "unitreerobotics/G1_Dex1_Take_Food_Out_Oven",
+  "ok": true,
+  "total_episodes": null,
+  "files": 104,
+  "sampled_rows": 887936,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Wipe_Board": {
+  "repo": "unitreerobotics/G1_Dex1_Wipe_Board",
+  "ok": true,
+  "total_episodes": null,
+  "files": 180,
+  "sampled_rows": 915747,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Arrange_Toiletries_Neatly": {
+  "repo": "unitreerobotics/G1_Dex1_Arrange_Toiletries_Neatly",
+  "ok": true,
+  "total_episodes": null,
+  "files": 35,
+  "sampled_rows": 676368,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Assemble_Hat_Stand": {
+  "repo": "unitreerobotics/G1_Dex1_Assemble_Hat_Stand",
+  "ok": true,
+  "total_episodes": null,
+  "files": 40,
+  "sampled_rows": 722232,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Assembling_Motor": {
+  "repo": "unitreerobotics/G1_Dex1_Assembling_Motor",
+  "ok": true,
+  "total_episodes": null,
+  "files": 690,
+  "sampled_rows": 965223,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Cap_The_Pen": {
+  "repo": "unitreerobotics/G1_Dex1_Cap_The_Pen",
+  "ok": true,
+  "total_episodes": null,
+  "files": 55,
+  "sampled_rows": 970900,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Connect_The_Network_Port": {
+  "repo": "unitreerobotics/G1_Dex1_Connect_The_Network_Port",
+  "ok": true,
+  "total_episodes": null,
+  "files": 57,
+  "sampled_rows": 907060,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Cover_The_Tool_Box": {
+  "repo": "unitreerobotics/G1_Dex1_Cover_The_Tool_Box",
+  "ok": true,
+  "total_episodes": null,
+  "files": 76,
+  "sampled_rows": 972293,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Cup_Storage": {
+  "repo": "unitreerobotics/G1_Dex1_Cup_Storage",
+  "ok": true,
+  "total_episodes": null,
+  "files": 69,
+  "sampled_rows": 972874,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Drawstring_Bag_For_Supplies": {
+  "repo": "unitreerobotics/G1_Dex1_Drawstring_Bag_For_Supplies",
+  "ok": true,
+  "total_episodes": null,
+  "files": 65,
+  "sampled_rows": 972650,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Drawstring_Bag_Towel_Storage": {
+  "repo": "unitreerobotics/G1_Dex1_Drawstring_Bag_Towel_Storage",
+  "ok": true,
+  "total_episodes": null,
+  "files": 83,
+  "sampled_rows": 972881,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Fill_Basket": {
+  "repo": "unitreerobotics/G1_Dex1_Fill_Basket",
+  "ok": true,
+  "total_episodes": null,
+  "files": 47,
+  "sampled_rows": 774235,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Guess_Ball": {
+  "repo": "unitreerobotics/G1_Dex1_Guess_Ball",
+  "ok": true,
+  "total_episodes": null,
+  "files": 27,
+  "sampled_rows": 500990,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Hang_Keys": {
+  "repo": "unitreerobotics/G1_Dex1_Hang_Keys",
+  "ok": true,
+  "total_episodes": null,
+  "files": 31,
+  "sampled_rows": 439943,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Hang_Pants": {
+  "repo": "unitreerobotics/G1_Dex1_Hang_Pants",
+  "ok": true,
+  "total_episodes": null,
+  "files": 424,
+  "sampled_rows": 970949,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Install_Screw_Head": {
+  "repo": "unitreerobotics/G1_Dex1_Install_Screw_Head",
+  "ok": true,
+  "total_episodes": null,
+  "files": 52,
+  "sampled_rows": 913934,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Open_Bottle_Cap": {
+  "repo": "unitreerobotics/G1_Dex1_Open_Bottle_Cap",
+  "ok": true,
+  "total_episodes": null,
+  "files": 131,
+  "sampled_rows": 970515,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Open_Box": {
+  "repo": "unitreerobotics/G1_Dex1_Open_Box",
+  "ok": true,
+  "total_episodes": null,
+  "files": 130,
+  "sampled_rows": 965650,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Packaged_Bread": {
+  "repo": "unitreerobotics/G1_Dex1_Packaged_Bread",
+  "ok": true,
+  "total_episodes": null,
+  "files": 75,
+  "sampled_rows": 971831,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Plastic_Bag_Storage": {
+  "repo": "unitreerobotics/G1_Dex1_Plastic_Bag_Storage",
+  "ok": true,
+  "total_episodes": null,
+  "files": 63,
+  "sampled_rows": 972552,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Pour_Drink": {
+  "repo": "unitreerobotics/G1_Dex1_Pour_Drink",
+  "ok": true,
+  "total_episodes": null,
+  "files": 291,
+  "sampled_rows": 963788,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Pour_From_Bottle": {
+  "repo": "unitreerobotics/G1_Dex1_Pour_From_Bottle",
+  "ok": true,
+  "total_episodes": null,
+  "files": 74,
+  "sampled_rows": 972293,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Dolls_Conveyor": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Dolls_Conveyor",
+  "ok": true,
+  "total_episodes": null,
+  "files": 39,
+  "sampled_rows": 573258,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Fruit_Into_Juicer": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Fruit_Into_Juicer",
+  "ok": true,
+  "total_episodes": null,
+  "files": 89,
+  "sampled_rows": 898016,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Motor_Rotor_Into_Box": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Motor_Rotor_Into_Box",
+  "ok": true,
+  "total_episodes": null,
+  "files": 316,
+  "sampled_rows": 970480,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Pens_In_Box": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Pens_In_Box",
+  "ok": true,
+  "total_episodes": null,
+  "files": 45,
+  "sampled_rows": 728532,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Put_Phone_Case": {
+  "repo": "unitreerobotics/G1_Dex1_Put_Phone_Case",
+  "ok": true,
+  "total_episodes": null,
+  "files": 79,
+  "sampled_rows": 972825,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Remove_Trousers_From_Storage_Bag": {
+  "repo": "unitreerobotics/G1_Dex1_Remove_Trousers_From_Storage_Bag",
+  "ok": true,
+  "total_episodes": null,
+  "files": 71,
+  "sampled_rows": 970662,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Spread_Bread": {
+  "repo": "unitreerobotics/G1_Dex1_Spread_Bread",
+  "ok": true,
+  "total_episodes": null,
+  "files": 83,
+  "sampled_rows": 969843,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Squeeze_Dish_Soap": {
+  "repo": "unitreerobotics/G1_Dex1_Squeeze_Dish_Soap",
+  "ok": true,
+  "total_episodes": null,
+  "files": 32,
+  "sampled_rows": 552468,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Store_Camera": {
+  "repo": "unitreerobotics/G1_Dex1_Store_Camera",
+  "ok": true,
+  "total_episodes": null,
+  "files": 69,
+  "sampled_rows": 970550,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Store_Coins": {
+  "repo": "unitreerobotics/G1_Dex1_Store_Coins",
+  "ok": true,
+  "total_episodes": null,
+  "files": 56,
+  "sampled_rows": 740173,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Store_Hexagonal_Wrenches": {
+  "repo": "unitreerobotics/G1_Dex1_Store_Hexagonal_Wrenches",
+  "ok": true,
+  "total_episodes": null,
+  "files": 65,
+  "sampled_rows": 971607,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Store_Socks": {
+  "repo": "unitreerobotics/G1_Dex1_Store_Socks",
+  "ok": true,
+  "total_episodes": null,
+  "files": 73,
+  "sampled_rows": 968562,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Take_Out_Hat": {
+  "repo": "unitreerobotics/G1_Dex1_Take_Out_Hat",
+  "ok": true,
+  "total_episodes": null,
+  "files": 64,
+  "sampled_rows": 663915,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Take_Out_Oatmeal": {
+  "repo": "unitreerobotics/G1_Dex1_Take_Out_Oatmeal",
+  "ok": true,
+  "total_episodes": null,
+  "files": 62,
+  "sampled_rows": 970032,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Take_Shoes_Out_Shoes_Box": {
+  "repo": "unitreerobotics/G1_Dex1_Take_Shoes_Out_Shoes_Box",
+  "ok": true,
+  "total_episodes": null,
+  "files": 85,
+  "sampled_rows": 970627,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Take_Stationery": {
+  "repo": "unitreerobotics/G1_Dex1_Take_Stationery",
+  "ok": true,
+  "total_episodes": null,
+  "files": 85,
+  "sampled_rows": 972447,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Thread_Sausages": {
+  "repo": "unitreerobotics/G1_Dex1_Thread_Sausages",
+  "ok": true,
+  "total_episodes": null,
+  "files": 85,
+  "sampled_rows": 972307,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Two_Robot_Clean_Table_Left": {
+  "repo": "unitreerobotics/G1_Dex1_Two_Robot_Clean_Table_Left",
+  "ok": true,
+  "total_episodes": null,
+  "files": 62,
+  "sampled_rows": 877184,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Two_Robot_Clean_Table_Right": {
+  "repo": "unitreerobotics/G1_Dex1_Two_Robot_Clean_Table_Right",
+  "ok": true,
+  "total_episodes": null,
+  "files": 73,
+  "sampled_rows": 917728,
+  "file": "data/chunk-000/file-000.parquet"
+ },
+ "G1_Dex1_Unzip": {
+  "repo": "unitreerobotics/G1_Dex1_Unzip",
+  "ok": true,
+  "total_episodes": null,
+  "files": 45,
+  "sampled_rows": 590254,
+  "file": "data/chunk-000/file-000.parquet"
+ }
+}

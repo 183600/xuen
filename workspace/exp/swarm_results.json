@@ -1,0 +1,959 @@
+{
+  "note": "synthetic mechanism check; not benchmark evidence; magnitudes not calibrated",
+  "n_per_cell": 10000,
+  "headline_n": 20000,
+  "defaults": {
+    "p_good": 0.5,
+    "p_succ_good": 0.8,
+    "p_succ_bad": 0.1,
+    "p_succ_shared": 0.05,
+    "rho_oodg": 0.25,
+    "wrist_vis": 0.5,
+    "wrist_se": 0.6,
+    "probe_fix": 0.3,
+    "p_persist": 0.8,
+    "p_persist_shared": 0.95,
+    "stuck_scale": 0.05,
+    "human_rate": 0.2,
+    "yield_detect": 0.75,
+    "yield_recover": 0.6,
+    "p_disturb_fail": 0.8,
+    "K": 5,
+    "c_cand": 0.4,
+    "c_ver": 0.1,
+    "t_attempt": 8.0,
+    "t_probe": 3.0,
+    "t_wait": 4.0,
+    "T_policy": 60.0,
+    "score_thr": 0.5,
+    "max_attempts": 2
+  },
+  "headline": {
+    "base": {
+      "success": 0.2937,
+      "time": 10.0,
+      "probes_per_ep": 0.0,
+      "attempts_per_ep": 1.0
+    },
+    "retry": {
+      "success": 0.32425,
+      "time": 17.117,
+      "probes_per_ep": 0.0,
+      "attempts_per_ep": 1.7117
+    },
+    "kmedoid": {
+      "success": 0.41015,
+      "time": 10.0,
+      "probes_per_ep": 0.0,
+      "attempts_per_ep": 1.0
+    },
+    "kmedoid_retry": {
+      "success": 0.4424,
+      "time": 15.923,
+      "probes_per_ep": 0.0,
+      "attempts_per_ep": 1.5923
+    },
+    "kverify": {
+      "success": 0.43365,
+      "time": 11.1415,
+      "probes_per_ep": 0.1283,
+      "attempts_per_ep": 1.0
+    },
+    "kverify_retry": {
+      "success": 0.48205,
+      "time": 17.579925,
+      "probes_per_ep": 0.22455,
+      "attempts_per_ep": 1.56735
+    },
+    "kverify_retry_yield": {
+      "success": 0.5108,
+      "time": 18.388825,
+      "probes_per_ep": 0.22625,
+      "attempts_per_ep": 1.54255
+    }
+  },
+  "grid": [
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.0,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.4408,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.5048,
+          "time": 15.446,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5446
+        },
+        "kmedoid": {
+          "success": 0.6265,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.6751,
+          "time": 13.74,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.374
+        },
+        "kverify": {
+          "success": 0.6399,
+          "time": 10.66,
+          "probes_per_ep": 0.032,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.6902,
+          "time": 14.48635,
+          "probes_per_ep": 0.0419,
+          "attempts_per_ep": 1.3597
+        },
+        "kverify_retry_yield": {
+          "success": 0.6904,
+          "time": 14.4287,
+          "probes_per_ep": 0.0394,
+          "attempts_per_ep": 1.3554
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.0,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.3659,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.4149,
+          "time": 16.295,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6295
+        },
+        "kmedoid": {
+          "success": 0.5237,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.566,
+          "time": 14.784,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.4784
+        },
+        "kverify": {
+          "success": 0.5365,
+          "time": 10.675,
+          "probes_per_ep": 0.035,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5834,
+          "time": 15.5715,
+          "probes_per_ep": 0.0441,
+          "attempts_per_ep": 1.462
+        },
+        "kverify_retry_yield": {
+          "success": 0.6233,
+          "time": 16.26335,
+          "probes_per_ep": 0.0449,
+          "attempts_per_ep": 1.4277
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.6,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.4466,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.4979,
+          "time": 15.564,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5564
+        },
+        "kmedoid": {
+          "success": 0.6365,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.6793,
+          "time": 13.722,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.3722
+        },
+        "kverify": {
+          "success": 0.6445,
+          "time": 10.66,
+          "probes_per_ep": 0.032,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.6944,
+          "time": 14.43785,
+          "probes_per_ep": 0.0385,
+          "attempts_per_ep": 1.3567
+        },
+        "kverify_retry_yield": {
+          "success": 0.6897,
+          "time": 14.54705,
+          "probes_per_ep": 0.0406,
+          "attempts_per_ep": 1.3661
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.6,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.3797,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.4244,
+          "time": 16.227,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6227
+        },
+        "kmedoid": {
+          "success": 0.5311,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.5638,
+          "time": 14.836,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.4836
+        },
+        "kverify": {
+          "success": 0.5317,
+          "time": 10.663,
+          "probes_per_ep": 0.0326,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5805,
+          "time": 15.6057,
+          "probes_per_ep": 0.0438,
+          "attempts_per_ep": 1.4654
+        },
+        "kverify_retry_yield": {
+          "success": 0.622,
+          "time": 16.19985,
+          "probes_per_ep": 0.0415,
+          "attempts_per_ep": 1.4283
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.9,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.4536,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.5063,
+          "time": 15.485,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5485
+        },
+        "kmedoid": {
+          "success": 0.6248,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.676,
+          "time": 13.775,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.3775
+        },
+        "kverify": {
+          "success": 0.6377,
+          "time": 10.6515,
+          "probes_per_ep": 0.0303,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.685,
+          "time": 14.51685,
+          "probes_per_ep": 0.0417,
+          "attempts_per_ep": 1.3627
+        },
+        "kverify_retry_yield": {
+          "success": 0.6963,
+          "time": 14.4478,
+          "probes_per_ep": 0.0428,
+          "attempts_per_ep": 1.3556
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.0,
+      "wrist_vis": 0.9,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.3787,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.428,
+          "time": 16.16,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.616
+        },
+        "kmedoid": {
+          "success": 0.5247,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.5702,
+          "time": 14.76,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.476
+        },
+        "kverify": {
+          "success": 0.537,
+          "time": 10.6585,
+          "probes_per_ep": 0.0317,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5884,
+          "time": 15.4929,
+          "probes_per_ep": 0.0435,
+          "attempts_per_ep": 1.4548
+        },
+        "kverify_retry_yield": {
+          "success": 0.638,
+          "time": 16.029,
+          "probes_per_ep": 0.0431,
+          "attempts_per_ep": 1.415
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.0,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.3457,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3893,
+          "time": 16.516,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6516
+        },
+        "kmedoid": {
+          "success": 0.476,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.5214,
+          "time": 15.157,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5157
+        },
+        "kverify": {
+          "success": 0.5001,
+          "time": 10.8105,
+          "probes_per_ep": 0.0621,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5431,
+          "time": 16.3135,
+          "probes_per_ep": 0.1064,
+          "attempts_per_ep": 1.503
+        },
+        "kverify_retry_yield": {
+          "success": 0.5498,
+          "time": 16.22915,
+          "probes_per_ep": 0.1078,
+          "attempts_per_ep": 1.4943
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.0,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2841,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3265,
+          "time": 17.095,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7095
+        },
+        "kmedoid": {
+          "success": 0.4013,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.4386,
+          "time": 15.933,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5933
+        },
+        "kverify": {
+          "success": 0.4267,
+          "time": 10.8135,
+          "probes_per_ep": 0.0627,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.4604,
+          "time": 17.112,
+          "probes_per_ep": 0.1065,
+          "attempts_per_ep": 1.579
+        },
+        "kverify_retry_yield": {
+          "success": 0.4977,
+          "time": 17.86655,
+          "probes_per_ep": 0.1097,
+          "attempts_per_ep": 1.5501
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.6,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.3483,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3843,
+          "time": 16.541,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6541
+        },
+        "kmedoid": {
+          "success": 0.4779,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.5114,
+          "time": 15.279,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5279
+        },
+        "kverify": {
+          "success": 0.5118,
+          "time": 11.206,
+          "probes_per_ep": 0.1412,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5709,
+          "time": 16.79365,
+          "probes_per_ep": 0.2417,
+          "attempts_per_ep": 1.4843
+        },
+        "kverify_retry_yield": {
+          "success": 0.5644,
+          "time": 16.9122,
+          "probes_per_ep": 0.2442,
+          "attempts_per_ep": 1.4944
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.6,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2922,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3225,
+          "time": 17.132,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7132
+        },
+        "kmedoid": {
+          "success": 0.4054,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.4482,
+          "time": 15.872,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5872
+        },
+        "kverify": {
+          "success": 0.4386,
+          "time": 11.179,
+          "probes_per_ep": 0.1358,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.4797,
+          "time": 17.7205,
+          "probes_per_ep": 0.2471,
+          "attempts_per_ep": 1.57
+        },
+        "kverify_retry_yield": {
+          "success": 0.5152,
+          "time": 18.4375,
+          "probes_per_ep": 0.2463,
+          "attempts_per_ep": 1.5416
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.9,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.3472,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3878,
+          "time": 16.519,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6519
+        },
+        "kmedoid": {
+          "success": 0.4742,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.5231,
+          "time": 15.134,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.5134
+        },
+        "kverify": {
+          "success": 0.5269,
+          "time": 11.3865,
+          "probes_per_ep": 0.1773,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.5862,
+          "time": 16.99235,
+          "probes_per_ep": 0.2995,
+          "attempts_per_ep": 1.4757
+        },
+        "kverify_retry_yield": {
+          "success": 0.5793,
+          "time": 17.041,
+          "probes_per_ep": 0.2981,
+          "attempts_per_ep": 1.481
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.25,
+      "wrist_vis": 0.9,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2948,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.3157,
+          "time": 17.173,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7173
+        },
+        "kmedoid": {
+          "success": 0.3947,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.4335,
+          "time": 16.005,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6005
+        },
+        "kverify": {
+          "success": 0.4287,
+          "time": 11.386,
+          "probes_per_ep": 0.1772,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.4959,
+          "time": 17.9973,
+          "probes_per_ep": 0.3096,
+          "attempts_per_ep": 1.5666
+        },
+        "kverify_retry_yield": {
+          "success": 0.5267,
+          "time": 18.6476,
+          "probes_per_ep": 0.3053,
+          "attempts_per_ep": 1.531
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.0,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.2515,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.2828,
+          "time": 17.48,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.748
+        },
+        "kmedoid": {
+          "success": 0.3298,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.3712,
+          "time": 16.547,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6547
+        },
+        "kverify": {
+          "success": 0.359,
+          "time": 10.9475,
+          "probes_per_ep": 0.0895,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.3878,
+          "time": 18.16515,
+          "probes_per_ep": 0.1674,
+          "attempts_per_ep": 1.6503
+        },
+        "kverify_retry_yield": {
+          "success": 0.3986,
+          "time": 18.08685,
+          "probes_per_ep": 0.1719,
+          "attempts_per_ep": 1.6407
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.0,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2103,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.2333,
+          "time": 17.904,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7904
+        },
+        "kmedoid": {
+          "success": 0.2835,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.3101,
+          "time": 17.156,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7156
+        },
+        "kverify": {
+          "success": 0.3007,
+          "time": 10.9765,
+          "probes_per_ep": 0.0953,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.3341,
+          "time": 18.7367,
+          "probes_per_ep": 0.1744,
+          "attempts_per_ep": 1.7014
+        },
+        "kverify_retry_yield": {
+          "success": 0.3598,
+          "time": 19.54625,
+          "probes_per_ep": 0.1686,
+          "attempts_per_ep": 1.6781
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.6,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.2596,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.2743,
+          "time": 17.511,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7511
+        },
+        "kmedoid": {
+          "success": 0.3417,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.3717,
+          "time": 16.56,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.656
+        },
+        "kverify": {
+          "success": 0.3791,
+          "time": 11.711,
+          "probes_per_ep": 0.2422,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.4439,
+          "time": 19.0906,
+          "probes_per_ep": 0.4283,
+          "attempts_per_ep": 1.6142
+        },
+        "kverify_retry_yield": {
+          "success": 0.4401,
+          "time": 19.2634,
+          "probes_per_ep": 0.4469,
+          "attempts_per_ep": 1.6218
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.6,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2134,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.236,
+          "time": 17.905,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7905
+        },
+        "kmedoid": {
+          "success": 0.2893,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.3113,
+          "time": 17.145,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7145
+        },
+        "kverify": {
+          "success": 0.3265,
+          "time": 11.7665,
+          "probes_per_ep": 0.2533,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.3788,
+          "time": 19.78355,
+          "probes_per_ep": 0.4411,
+          "attempts_per_ep": 1.6741
+        },
+        "kverify_retry_yield": {
+          "success": 0.4016,
+          "time": 20.72095,
+          "probes_per_ep": 0.4493,
+          "attempts_per_ep": 1.6573
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.9,
+      "human_rate": 0.0,
+      "policies": {
+        "base": {
+          "success": 0.2517,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.2775,
+          "time": 17.525,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7525
+        },
+        "kmedoid": {
+          "success": 0.338,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.362,
+          "time": 16.652,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.6652
+        },
+        "kverify": {
+          "success": 0.4008,
+          "time": 12.0645,
+          "probes_per_ep": 0.3129,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.4703,
+          "time": 19.55255,
+          "probes_per_ep": 0.5566,
+          "attempts_per_ep": 1.5971
+        },
+        "kverify_retry_yield": {
+          "success": 0.4621,
+          "time": 19.63735,
+          "probes_per_ep": 0.5576,
+          "attempts_per_ep": 1.6047
+        }
+      }
+    },
+    {
+      "rho_oodg": 0.5,
+      "wrist_vis": 0.9,
+      "human_rate": 0.2,
+      "policies": {
+        "base": {
+          "success": 0.2121,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "retry": {
+          "success": 0.2423,
+          "time": 17.846,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7846
+        },
+        "kmedoid": {
+          "success": 0.2801,
+          "time": 10.0,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.0
+        },
+        "kmedoid_retry": {
+          "success": 0.301,
+          "time": 17.237,
+          "probes_per_ep": 0.0,
+          "attempts_per_ep": 1.7237
+        },
+        "kverify": {
+          "success": 0.3397,
+          "time": 12.105,
+          "probes_per_ep": 0.321,
+          "attempts_per_ep": 1.0
+        },
+        "kverify_retry": {
+          "success": 0.3938,
+          "time": 20.38045,
+          "probes_per_ep": 0.5777,
+          "attempts_per_ep": 1.6659
+        },
+        "kverify_retry_yield": {
+          "success": 0.4333,
+          "time": 20.95755,
+          "probes_per_ep": 0.5522,
+          "attempts_per_ep": 1.6319
+        }
+      }
+    }
+  ]
+}
