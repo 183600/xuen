@@ -1,0 +1,130 @@
+{
+ "meta": {
+  "date": "2026-11-03",
+  "seed": 20261103,
+  "n_eps": 20000,
+  "note": "declared generative toy; not a benchmark result"
+ },
+ "exp1_value_alignment": [
+  {
+   "scenario": "ID",
+   "monotone_uniform": {
+    "step": 40.333,
+    "succ": 0.2523,
+    "attempts": 1.9119
+   },
+   "recover_uniform": {
+    "step": 40.333,
+    "succ": 0.2523,
+    "attempts": 1.9119
+   },
+   "recover_value": {
+    "step": 57.1765,
+    "succ": 0.46745,
+    "attempts": 2.66015
+   },
+   "recover_cond": {
+    "step": 57.1765,
+    "succ": 0.46745,
+    "attempts": 2.66015
+   }
+  },
+  {
+   "scenario": "MILD_OOD",
+   "monotone_uniform": {
+    "step": 20.757,
+    "succ": 0.08545,
+    "attempts": 1.4979
+   },
+   "recover_uniform": {
+    "step": 20.757,
+    "succ": 0.08545,
+    "attempts": 1.4979
+   },
+   "recover_value": {
+    "step": 32.84575,
+    "succ": 0.21275,
+    "attempts": 2.28085
+   },
+   "recover_cond": {
+    "step": 59.4635,
+    "succ": 0.482,
+    "attempts": 4.5384
+   }
+  },
+  {
+   "scenario": "FULL_OOD",
+   "monotone_uniform": {
+    "step": 17.17275,
+    "succ": 0.06315,
+    "attempts": 1.4172
+   },
+   "recover_uniform": {
+    "step": 17.3555,
+    "succ": 0.06285,
+    "attempts": 1.43695
+   },
+   "recover_value": {
+    "step": 28.9895,
+    "succ": 0.1786,
+    "attempts": 2.23325
+   },
+   "recover_cond": {
+    "step": 58.4135,
+    "succ": 0.4702,
+    "attempts": 5.15905
+   }
+  }
+ ],
+ "exp2_detection_sweep": [
+  {
+   "detect": 0.0,
+   "step": 48.2375,
+   "succ": 0.3772
+  },
+  {
+   "detect": 0.3,
+   "step": 48.75075,
+   "succ": 0.38275
+  },
+  {
+   "detect": 0.6,
+   "step": 49.55775,
+   "succ": 0.3896
+  },
+  {
+   "detect": 0.9,
+   "step": 49.84075,
+   "succ": 0.3937
+  },
+  {
+   "detect": 1.0,
+   "step": 50.0885,
+   "succ": 0.3956
+  }
+ ],
+ "exp3_budget_matched": {
+  "cap_attempts_per_episode": 5.5625,
+  "uniform": {
+   "step": 25.2945,
+   "succ": 0.137,
+   "attempts": 1.947
+  },
+  "value": {
+   "step": 25.837,
+   "succ": 0.14875,
+   "attempts": 1.97825
+  },
+  "scenario_conditioned": {
+   "step": 25.837,
+   "succ": 0.14875,
+   "attempts": 1.97825
+  }
+ },
+ "data_fact_step_vs_success": {
+  "pearson_r": 0.9977363672917393,
+  "slope": 1.3374072419899898,
+  "intercept": 0.0929220752243442,
+  "mean_step_over_success": 1.3414513933453578
+ }
+}
