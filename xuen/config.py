@@ -465,9 +465,18 @@ def _require_bool_fields(cfg: Config) -> None:
             raise ValueError(f"{name} 必须是布尔值，收到: {value!r}")
 
 
-def _validate(cfg: Config) -> None:
+def _validate_string_fields(cfg: Config) -> None:
+    """检查必须为字符串的配置字段。"""  # noqa: TID251
     _require_string_fields(cfg)
+
+
+def _validate_bool_fields(cfg: Config) -> None:
+    """检查必须为布尔值的配置字段。"""  # noqa: TID251
     _require_bool_fields(cfg)
+
+
+def _validate_words_config(cfg: Config) -> None:
+    """检查词库相关配置。"""  # noqa: TID251
     if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
         raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:
@@ -495,9 +504,16 @@ def _validate(cfg: Config) -> None:
             raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
         if cfg.loop.iterations > sys.maxsize:
             raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
+
+
+def _validate_agent_config(cfg: Config) -> None:
+    """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
-    # ---- 轮次守卫 ----
+
+
+def _validate_rounds_config(cfg: Config) -> None:
+    """检查轮次守卫配置。"""  # noqa: TID251
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
     if cfg.rounds.verify not in VERIFY_MODES:
@@ -531,5 +547,39 @@ def _validate(cfg: Config) -> None:
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    _validate_windows_command("agent.command", cmd, cfg.workspace)
-    _validate_windows_command("rounds.judge_command", jcmd, cfg.workspace)
+    _validate_windows_command_dual("agent.command", cmd, cfg.workspace)
+    _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
+
+
+def _validate_windows_command_dual(name: str, template: str,
+                                  workspace: str) -> None:
+    """同口径校验 agent.command 与 rounds.judge_command 在 Windows 下的命令安全性。"""  # noqa: TID251
+    from .config import _validate_windows_command
+    _validate_windows_command(name, template, workspace)
+
+
+def _validate_loop_config(cfg: Config) -> None:
+    """检查循环轮数配置。"""  # noqa: TID251
+    if cfg.loop.iterations is not None:
+        if (not isinstance(cfg.loop.iterations, int)
+                or isinstance(cfg.loop.iterations, bool)):
+            raise ValueError(
+                f"loop.iterations 必须是整数或 inf(-1)，收到: "
+                f"{cfg.loop.iterations!r}")
+        if cfg.loop.iterations < 1:
+            raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
+        if cfg.loop.iterations > sys.maxsize:
+            raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
+
+
+# _validate_words_config 已在前面定义（第 478 行），此处不再重复
+
+
+# 公开的校验入口，供测试和 CLI 直接调用
+def _validate(cfg: Config) -> None:
+    _validate_string_fields(cfg)
+    _validate_bool_fields(cfg)
+    _validate_words_config(cfg)
+    _validate_loop_config(cfg)
+    _validate_agent_config(cfg)
+    _validate_rounds_config(cfg)
