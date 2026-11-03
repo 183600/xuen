@@ -1,0 +1,290 @@
+{
+  "meta": {
+    "purpose": "synthetic mechanism check, NOT benchmark evidence",
+    "episode_cap_s": 180.0,
+    "leaderboard_mean_success_used_for_calibration": 0.2517,
+    "n_ep_per_cell": 20000,
+    "seeds": "fixed"
+  },
+  "calibration": {
+    "sigma_pos_star_mm": 3.196
+  },
+  "baseline_vla_only": {
+    "success_rate": 0.24915,
+    "avg_step_score": 59.29,
+    "avg_seconds": 44.02,
+    "avg_probes": 0,
+    "avg_attempts": 1,
+    "timeout_frac": 0.0,
+    "causes": {
+      "SUCCESS": 4983,
+      "SEMANTIC": 5303,
+      "PRECISION": 6843,
+      "PATH": 2351,
+      "COORD": 520
+    }
+  },
+  "ablation": {
+    "VLA-only": {
+      "success_rate": 0.24915,
+      "avg_step_score": 59.29,
+      "avg_seconds": 44.02,
+      "avg_probes": 0,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 4983,
+        "SEMANTIC": 5303,
+        "PRECISION": 6843,
+        "PATH": 2351,
+        "COORD": 520
+      }
+    },
+    "+retry": {
+      "success_rate": 0.63885,
+      "avg_step_score": 79.0475,
+      "avg_seconds": 122.166505,
+      "avg_probes": 0,
+      "avg_attempts": 2.77525,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 12777,
+        "PRECISION": 3458,
+        "SEMANTIC": 2482,
+        "PATH": 1001,
+        "COORD": 282
+      }
+    },
+    "+AFFORD-6D": {
+      "success_rate": 0.4401,
+      "avg_step_score": 69.772,
+      "avg_seconds": 44.02,
+      "avg_probes": 0,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 8802,
+        "SEMANTIC": 5269,
+        "PRECISION": 3040,
+        "COORD": 483,
+        "PATH": 2406
+      }
+    },
+    "+TRAJ-OPT": {
+      "success_rate": 0.2753,
+      "avg_step_score": 60.591,
+      "avg_seconds": 44.02,
+      "avg_probes": 0,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 5506,
+        "SEMANTIC": 5331,
+        "PRECISION": 7593,
+        "PATH": 999,
+        "COORD": 571
+      }
+    },
+    "+BI-COUPLE": {
+      "success_rate": 0.2534,
+      "avg_step_score": 59.54,
+      "avg_seconds": 44.02,
+      "avg_probes": 0,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 5068,
+        "SEMANTIC": 5312,
+        "PRECISION": 7052,
+        "PATH": 2425,
+        "COORD": 143
+      }
+    },
+    "+LOCAL-SEARCH": {
+      "success_rate": 0.39445,
+      "avg_step_score": 67.265,
+      "avg_seconds": 46.69984,
+      "avg_probes": 2.2332,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 4937,
+        "SEMANTIC": 5640,
+        "PRECISION": 3549,
+        "PRECISION_FIXED": 2952,
+        "PATH": 2401,
+        "COORD": 521
+      }
+    },
+    "A+O+C": {
+      "success_rate": 0.5062,
+      "avg_step_score": 73.11416666666666,
+      "avg_seconds": 44.02,
+      "avg_probes": 0,
+      "avg_attempts": 1,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 10124,
+        "SEMANTIC": 5261,
+        "PRECISION": 3435,
+        "PATH": 1002,
+        "COORD": 178
+      }
+    },
+    "FULL": {
+      "success_rate": 0.9446,
+      "avg_step_score": 96.79583333333333,
+      "avg_seconds": 72.965056,
+      "avg_probes": 1.9348,
+      "avg_attempts": 1.6048,
+      "timeout_frac": 0.0,
+      "causes": {
+        "SUCCESS": 16065,
+        "SEMANTIC": 630,
+        "PRECISION_FIXED": 2827,
+        "PATH": 70,
+        "PRECISION": 392,
+        "COORD": 16
+      }
+    }
+  },
+  "break_even_sweep": [
+    {
+      "semantic_failure_share": 0.0,
+      "sigma_pos_mm": 4.5664224326610565,
+      "vla_only": 0.25266666666666665,
+      "full": 0.9791666666666666,
+      "delta_pp": 72.64999999999999,
+      "full_seconds": 58.496320000000004
+    },
+    {
+      "semantic_failure_share": 0.15,
+      "sigma_pos_mm": 4.010382980108261,
+      "vla_only": 0.25225,
+      "full": 0.9636666666666667,
+      "delta_pp": 71.14166666666667,
+      "full_seconds": 65.24994000000001
+    },
+    {
+      "semantic_failure_share": 0.3,
+      "sigma_pos_mm": 3.258110374212265,
+      "vla_only": 0.249,
+      "full": 0.9435833333333333,
+      "delta_pp": 69.45833333333333,
+      "full_seconds": 73.33194666666667
+    },
+    {
+      "semantic_failure_share": 0.45,
+      "sigma_pos_mm": 1.5846146047115326,
+      "vla_only": 0.24758333333333332,
+      "full": 0.904,
+      "delta_pp": 65.64166666666667,
+      "full_seconds": 83.53074000000001
+    },
+    {
+      "semantic_failure_share": 0.6,
+      "sigma_pos_mm": 1.0000023543834686,
+      "vla_only": 0.19775,
+      "full": 0.8321666666666667,
+      "delta_pp": 63.44166666666668,
+      "full_seconds": 96.62177666666668
+    },
+    {
+      "semantic_failure_share": 0.75,
+      "sigma_pos_mm": 1.0000023543834686,
+      "vla_only": 0.14216666666666666,
+      "full": 0.6900833333333334,
+      "delta_pp": 54.79166666666667,
+      "full_seconds": 115.81411000000001
+    },
+    {
+      "semantic_failure_share": 0.9,
+      "sigma_pos_mm": 1.0000023543834686,
+      "vla_only": 0.08425,
+      "full": 0.4801666666666667,
+      "delta_pp": 39.59166666666667,
+      "full_seconds": 137.6142
+    }
+  ],
+  "sigma_sensitivity": [
+    {
+      "sigma_pos_mm": 6,
+      "vla_only": 0.13016666666666668,
+      "full": 0.9176666666666666,
+      "delta_pp": 78.75
+    },
+    {
+      "sigma_pos_mm": 9,
+      "vla_only": 0.058,
+      "full": 0.8835,
+      "delta_pp": 82.54999999999998
+    },
+    {
+      "sigma_pos_mm": 12,
+      "vla_only": 0.02825,
+      "full": 0.8500833333333333,
+      "delta_pp": 82.18333333333334
+    },
+    {
+      "sigma_pos_mm": 17,
+      "vla_only": 0.011083333333333334,
+      "full": 0.792,
+      "delta_pp": 78.09166666666667
+    },
+    {
+      "sigma_pos_mm": 24,
+      "vla_only": 0.00425,
+      "full": 0.7030833333333333,
+      "delta_pp": 69.88333333333333
+    },
+    {
+      "sigma_pos_mm": 32,
+      "vla_only": 0.0019166666666666666,
+      "full": 0.61125,
+      "delta_pp": 60.93333333333333
+    },
+    {
+      "sigma_pos_mm": 45,
+      "vla_only": 0.0003333333333333333,
+      "full": 0.4415,
+      "delta_pp": 44.11666666666667
+    }
+  ],
+  "stereo_confidence_sensitivity": [
+    {
+      "stereo_conf": 0.4,
+      "full": 0.904
+    },
+    {
+      "stereo_conf": 0.55,
+      "full": 0.9204166666666667
+    },
+    {
+      "stereo_conf": 0.72,
+      "full": 0.9445
+    },
+    {
+      "stereo_conf": 0.85,
+      "full": 0.95825
+    },
+    {
+      "stereo_conf": 0.95,
+      "full": 0.965
+    }
+  ],
+  "triage": {
+    "auc": 0.9870414372935642,
+    "n": 20000,
+    "feat_noise": 0.18
+  },
+  "budget": {
+    "added_p99_latency_ms": {
+      "stereo_sgbm_240x320": 12.0,
+      "local_frame_fit": 4.0,
+      "se3_trajopt_10iter": 18.0,
+      "bimanual_coupling": 3.0,
+      "total": 37.0
+    },
+    "note": "CPU only; off the VLA critical path except the first 5-step block"
+  }
+}
