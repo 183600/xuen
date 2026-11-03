@@ -1,0 +1,117 @@
+{
+ "provenance": "webfetch 2026-11-03 UTC; direct curl WAF-blocked (HTTP 567)",
+ "url": "https://unibot.unitree.com/leaderboard_data.json",
+ "generalist": [
+  {
+   "rank": 1,
+   "model": "MolmoAct2",
+   "user": "DexHacker",
+   "succ": 29.7,
+   "step": 39.0
+  },
+  {
+   "rank": 2,
+   "model": "WALL-OSS-0.5",
+   "user": "Generalist Robotics",
+   "succ": 28.5,
+   "step": 38.9
+  },
+  {
+   "rank": 3,
+   "model": "DreamZero",
+   "user": "World Model Lab",
+   "succ": 27.9,
+   "step": 37.9
+  },
+  {
+   "rank": 4,
+   "model": "Spirit-v1.5",
+   "user": "VLAGO",
+   "succ": 25.9,
+   "step": 34.4
+  },
+  {
+   "rank": 5,
+   "model": "DM0",
+   "user": "Embodied AI Institute",
+   "succ": 23.5,
+   "step": 31.7
+  },
+  {
+   "rank": 6,
+   "model": "PI-0.5",
+   "user": "RoboReasoner",
+   "succ": 22.8,
+   "step": 30.6
+  },
+  {
+   "rank": 7,
+   "model": "GigaBrain-0",
+   "user": "xembody",
+   "succ": 22.6,
+   "step": 29.5
+  },
+  {
+   "rank": 8,
+   "model": "GR00T N1.5",
+   "user": "Humanoid Dynamics",
+   "succ": 20.5,
+   "step": 28.1
+  }
+ ],
+ "mean_succ": 25.18,
+ "spread_succ": 9.2,
+ "step_over_succ_ratio": [
+  1.313,
+  1.365,
+  1.358,
+  1.328,
+  1.349,
+  1.342,
+  1.305,
+  1.371
+ ],
+ "weakest_cells_examples": [
+  [
+   "Unlock",
+   "GR00T N1.5",
+   6.3
+  ],
+  [
+   "Hang the Cup",
+   "Spirit-v1.5",
+   9.03
+  ],
+  [
+   "Organize Stationery",
+   "DM0",
+   9.09
+  ],
+  [
+   "Plug In Ethernet",
+   "PI-0.5",
+   9.23
+  ],
+  [
+   "Stack Bowls",
+   "PI-0.5",
+   11.33
+  ],
+  [
+   "Color Arrangement",
+   "GR00T N1.5",
+   11.38
+  ],
+  [
+   "Open Pill Bottle",
+   "Spirit-v1.5",
+   11.68
+  ],
+  [
+   "Plug In Ethernet",
+   "DM0",
+   12.87
+  ]
+ ],
+ "note": "step_score/success ≈ 1.30–1.37 across all 8 models → step score rewards partial progress; precision-insertion (Plug In Ethernet / Disconnect Ethernet / Unlock) and HangCup are cross-model weak cells"
+}

@@ -1,0 +1,444 @@
+{
+ "config": {
+  "seed": 20261103,
+  "n_static": 10000,
+  "n_int": 10000,
+  "n_transient": 8000,
+  "n_diag": 8000,
+  "n_calib": 4000,
+  "B_static": 10.0,
+  "p_need_static": 3,
+  "B_int": 12.0,
+  "p_need_int": 4,
+  "pi": 0.4,
+  "pE": 0.45,
+  "mapok": 0.4,
+  "noisy_id_frac": 0.15,
+  "gamma_main": 0.4,
+  "c": {
+   "ID": 0.9,
+   "nID": 0.9,
+   "E": 0.35,
+   "S": 0.4,
+   "G": 0.3,
+   "REC": 0.72,
+   "STALE": 0.25,
+   "REFOUN": 0.75
+  },
+  "g": {
+   "ID": 0.85,
+   "E": 0.7,
+   "S": 0.7,
+   "G": 0.15,
+   "REC": 0.85,
+   "STALE": 0.15,
+   "REFOUN": 0.85
+  },
+  "rmean": {
+   "ID": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "nID": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "E": [
+    1.6,
+    1.5,
+    0.5
+   ],
+   "S": [
+    0.15,
+    0.15,
+    1.8
+   ],
+   "G": [
+    0.1,
+    0.1,
+    0.05
+   ],
+   "REC": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "noise": {
+   "nID": 2.5,
+   "REC": 1.3
+  },
+  "gate": {
+   "alpha": 0.12,
+   "k": 0.05,
+   "h": 2.5,
+   "cal_alpha": 0.1
+  },
+  "probe": {
+   "cost": 2.5,
+   "sigma_iv": 0.5,
+   "base_iv": 0.1,
+   "vd_iv": 1.4,
+   "recov": 0.55,
+   "lgcc_tp": 0.6,
+   "lgcc_fp_id": 0.04,
+   "lgcc_fp_ood": 0.1,
+   "conf_tp": 0.5,
+   "conf_fp": 0.08,
+   "false_switch_penalty": 0.1
+  },
+  "cost": {
+   "SERVO": 1.0,
+   "FB": 1.2,
+   "HOLD": 0.2
+  },
+  "int": {
+   "hover": 0.4,
+   "block": 0.3,
+   "push": 0.3,
+   "t0_lo": 2,
+   "t0_hi": 8,
+   "det_sens": 0.8,
+   "p_col": 0.25,
+   "watch_push_detect": 0.85,
+   "unwatch_push_detect": 0.4,
+   "reground_cost": 2.0,
+   "reground_ok": 0.85,
+   "naive_pause": 4,
+   "zn_dwell": 2,
+   "affect": {
+    "col_scale": 0.5,
+    "resume_arousal": 0.35,
+    "vigil": 0.07,
+    "ema": 0.35,
+    "theta": 0.35
+   }
+  }
+ },
+ "prereg": {
+  "H1": "civic-zest >= +2.0pp (gamma=0.4); ID reg <=1.5pp; probe rate <=20%; vd uplift >= +20pp",
+  "H2": "AUROC(iv|Gvd vs ID) >= 0.85 @ sigma_iv=0.5; AUROC(iv|Gvi vs ID) in [0.45,0.60]",
+  "H3": "civic_n - zest >= +15pp (int arm); col(civic_n) <= 0.5*col(noguard); clean reg <=1pp",
+  "H4p": "civic_na >= civic_n + 1.5pp succ/cost (int arm); else prune affect",
+  "H5": "EV-gated probe >= probe-always on succ/cost (main mix gamma=0.4)",
+  "H6": "civic_n - naive >= +8pp on push subset"
+ },
+ "calibration": {
+  "sigma": 2.3567,
+  "q_z": 1.0997,
+  "tau_iv": 0.7373
+ },
+ "E1_static": {
+  "vla": {
+   "n": 10000,
+   "succ": 0.8581,
+   "cost": 5.393,
+   "succ_se": 0.0035,
+   "succ_per_cost": 0.1591,
+   "probed_rate": 0.0,
+   "recovered_rate": 0.0,
+   "fb_frac_mean": 0.0
+  },
+  "zest": {
+   "n": 10000,
+   "succ": 0.8874,
+   "cost": 5.377,
+   "succ_se": 0.0032,
+   "succ_per_cost": 0.165,
+   "probed_rate": 0.0,
+   "recovered_rate": 0.0,
+   "fb_frac_mean": 0.0402
+  },
+  "civic_by_gamma": {
+   "0.0": {
+    "n": 10000,
+    "succ": 0.8662,
+    "cost": 5.843,
+    "succ_se": 0.0034,
+    "succ_per_cost": 0.1482,
+    "probed_rate": 0.3183,
+    "recovered_rate": 0.0515,
+    "fb_frac_mean": 0.0357
+   },
+   "0.4": {
+    "n": 10000,
+    "succ": 0.8522,
+    "cost": 5.902,
+    "succ_se": 0.0035,
+    "succ_per_cost": 0.1444,
+    "probed_rate": 0.3183,
+    "recovered_rate": 0.0313,
+    "fb_frac_mean": 0.0357
+   },
+   "0.7": {
+    "n": 10000,
+    "succ": 0.8438,
+    "cost": 5.947,
+    "succ_se": 0.0036,
+    "succ_per_cost": 0.1419,
+    "probed_rate": 0.3183,
+    "recovered_rate": 0.0144,
+    "fb_frac_mean": 0.0357
+   },
+   "1.0": {
+    "n": 10000,
+    "succ": 0.8343,
+    "cost": 5.985,
+    "succ_se": 0.0037,
+    "succ_per_cost": 0.1394,
+    "probed_rate": 0.3183,
+    "recovered_rate": 0.0,
+    "fb_frac_mean": 0.0357
+   }
+  },
+  "civic_per_type_g04": {
+   "ID": {
+    "n": 3000,
+    "succ": 1.0,
+    "cost": 4.017,
+    "succ_se": 0.0,
+    "succ_per_cost": 0.249,
+    "probed_rate": 0.1197,
+    "recovered_rate": 0.0,
+    "fb_frac_mean": 0.0
+   },
+   "nID": {
+    "n": 889,
+    "succ": 0.9989,
+    "cost": 3.93,
+    "succ_se": 0.0011,
+    "succ_per_cost": 0.2542,
+    "probed_rate": 0.1024,
+    "recovered_rate": 0.0,
+    "fb_frac_mean": 0.0002
+   },
+   "E": {
+    "n": 1751,
+    "succ": 0.6922,
+    "cost": 8.884,
+    "succ_se": 0.011,
+    "succ_per_cost": 0.0779,
+    "probed_rate": 0.5465,
+    "recovered_rate": 0.0,
+    "fb_frac_mean": 0.1833
+   },
+   "S": {
+    "n": 863,
+    "succ": 0.6605,
+    "cost": 8.558,
+    "succ_se": 0.0161,
+    "succ_per_cost": 0.0772,
+    "probed_rate": 0.5423,
+    "recovered_rate": 0.0,
+    "fb_frac_mean": 0.0412
+   },
+   "G": {
+    "n": 1321,
+    "succ": 0.5125,
+    "cost": 8.948,
+    "succ_se": 0.0138,
+    "succ_per_cost": 0.0573,
+    "probed_rate": 0.7986,
+    "recovered_rate": 0.2369,
+    "fb_frac_mean": 0.0005
+   }
+  },
+  "civic_probealways_g04": {
+   "n": 10000,
+   "succ": 0.8287,
+   "cost": 7.513,
+   "succ_se": 0.0038,
+   "succ_per_cost": 0.1103,
+   "probed_rate": 1.0,
+   "recovered_rate": 0.0396,
+   "fb_frac_mean": 0.0319
+  }
+ },
+ "E2_interference": {
+  "noguard": {
+   "n": 10000,
+   "succ": 0.6623,
+   "cost": 5.576,
+   "succ_se": 0.0047,
+   "succ_per_cost": 0.1188,
+   "collided_rate": 0.308,
+   "stale_rate": 0.066
+  },
+  "noguard_push": {
+   "n": 3000,
+   "succ": 0.6377,
+   "cost": 5.644,
+   "succ_se": 0.0088,
+   "succ_per_cost": 0.113,
+   "collided_rate": 0.2913,
+   "stale_rate": 0.22
+  },
+  "noguard_hover": {
+   "n": 4009,
+   "succ": 0.6999,
+   "cost": 5.539,
+   "succ_se": 0.0072,
+   "succ_per_cost": 0.1264,
+   "collided_rate": 0.2933,
+   "stale_rate": 0.0
+  },
+  "noguard_block": {
+   "n": 2991,
+   "succ": 0.6366,
+   "cost": 5.558,
+   "succ_se": 0.0088,
+   "succ_per_cost": 0.1145,
+   "collided_rate": 0.3444,
+   "stale_rate": 0.0
+  },
+  "naive": {
+   "n": 10000,
+   "succ": 0.8586,
+   "cost": 5.79,
+   "succ_se": 0.0035,
+   "succ_per_cost": 0.1483,
+   "collided_rate": 0.1102,
+   "stale_rate": 0.1145
+  },
+  "naive_push": {
+   "n": 3000,
+   "succ": 0.8083,
+   "cost": 6.442,
+   "succ_se": 0.0072,
+   "succ_per_cost": 0.1255,
+   "collided_rate": 0.088,
+   "stale_rate": 0.3817
+  },
+  "naive_hover": {
+   "n": 4009,
+   "succ": 0.9139,
+   "cost": 5.447,
+   "succ_se": 0.0044,
+   "succ_per_cost": 0.1678,
+   "collided_rate": 0.0861,
+   "stale_rate": 0.0
+  },
+  "naive_block": {
+   "n": 2991,
+   "succ": 0.8348,
+   "cost": 5.595,
+   "succ_se": 0.0068,
+   "succ_per_cost": 0.1492,
+   "collided_rate": 0.1648,
+   "stale_rate": 0.0
+  },
+  "civic_n": {
+   "n": 10000,
+   "succ": 0.9652,
+   "cost": 5.737,
+   "succ_se": 0.0018,
+   "succ_per_cost": 0.1682,
+   "collided_rate": 0.0222,
+   "stale_rate": 0.0158
+  },
+  "civic_n_push": {
+   "n": 3000,
+   "succ": 0.9377,
+   "cost": 6.353,
+   "succ_se": 0.0044,
+   "succ_per_cost": 0.1476,
+   "collided_rate": 0.021,
+   "stale_rate": 0.0527
+  },
+  "civic_n_hover": {
+   "n": 4009,
+   "succ": 0.9753,
+   "cost": 5.427,
+   "succ_se": 0.0025,
+   "succ_per_cost": 0.1797,
+   "collided_rate": 0.0242,
+   "stale_rate": 0.0
+  },
+  "civic_n_block": {
+   "n": 2991,
+   "succ": 0.9793,
+   "cost": 5.534,
+   "succ_se": 0.0026,
+   "succ_per_cost": 0.1769,
+   "collided_rate": 0.0207,
+   "stale_rate": 0.0
+  },
+  "civic_na": {
+   "n": 10000,
+   "succ": 0.9682,
+   "cost": 5.785,
+   "succ_se": 0.0018,
+   "succ_per_cost": 0.1674,
+   "collided_rate": 0.0208,
+   "stale_rate": 0.008
+  },
+  "civic_na_push": {
+   "n": 3000,
+   "succ": 0.9437,
+   "cost": 6.381,
+   "succ_se": 0.0042,
+   "succ_per_cost": 0.1479,
+   "collided_rate": 0.0203,
+   "stale_rate": 0.0267
+  },
+  "civic_na_hover": {
+   "n": 4009,
+   "succ": 0.9771,
+   "cost": 5.472,
+   "succ_se": 0.0024,
+   "succ_per_cost": 0.1785,
+   "collided_rate": 0.0224,
+   "stale_rate": 0.0
+  },
+  "civic_na_block": {
+   "n": 2991,
+   "succ": 0.9809,
+   "cost": 5.605,
+   "succ_se": 0.0025,
+   "succ_per_cost": 0.175,
+   "collided_rate": 0.0191,
+   "stale_rate": 0.0
+  }
+ },
+ "E3_transient": {
+  "vla": {
+   "n": 8000,
+   "succ": 0.9979,
+   "cost": 7.388,
+   "succ_se": 0.0005,
+   "succ_per_cost": 0.1351,
+   "probed_rate": 0.0
+  },
+  "zest": {
+   "n": 8000,
+   "succ": 0.9971,
+   "cost": 7.603,
+   "succ_se": 0.0006,
+   "succ_per_cost": 0.1312,
+   "probed_rate": 0.0
+  },
+  "civic": {
+   "n": 8000,
+   "succ": 0.9951,
+   "cost": 8.149,
+   "succ_se": 0.0008,
+   "succ_per_cost": 0.1221,
+   "probed_rate": 0.3207
+  }
+ },
+ "E4_diag": {
+  "auroc": {
+   "auroc_vd_vs_ID": 0.9655,
+   "auroc_vi_vs_ID": 0.5003,
+   "auroc_S_vs_ID": 0.4962,
+   "auroc_E_vs_ID": 0.5008
+  },
+  "sigma_iv_sweep_vd": {
+   "0.25": 0.9998,
+   "0.5": 0.9665,
+   "1.0": 0.8257
+  }
+ }
+}
