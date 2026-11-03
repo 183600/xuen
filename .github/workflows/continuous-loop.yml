@@ -392,15 +392,50 @@ jobs:
             0|42|43|124|137|143)
               echo "[pre-test] exit=$PTEC（通过/无可识别测试/依赖不可用/超时），放行" ;;
             *)
-              echo "[pre-test] 测试失败(exit=$PTEC) → 推送当前状态并提前结束本 job"
-              git add -A
-              git commit -m "auto: pre-opencode test gate failed (exit=$PTEC)" \
-                || echo "[pre-test] 没有新内容可提交"
-              BRANCH_PT="${GITHUB_REF_NAME:-master}"
-              git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
-              git push origin "HEAD:$BRANCH_PT" \
-                || echo "[pre-test] [warn] push 失败"
-              exit 86 ;;
+              echo "[pre-test] 测试失败(exit=$PTEC) → 先安排一次测试修复（testfix）"
+              # ⭐ 门禁自愈（2026-11-03）：不再直接 exit 86——后继 run 会撞上同一道门，
+              # 永远轮不到修复，循环死锁（2026-10-30 收集错误与 2026-11-03 ImportError
+              # 均已实际发生）。先用已选模型安排一次 opencode 测试修复，复跑门禁；
+              # 仍失败才推送当前状态并退出（后继 run 会再次尝试修复）。
+              PTF_MODEL="${XUEN_MODEL:-${MAIN_MODEL:-opencode/deepseek-v4.1-flash-free}}"
+              PTF_VARIANT="${XUEN_VARIANT:-}"
+              case "$PTF_MODEL" in nvidia/*) PTF_VARIANT="" ;; esac
+              PTF_EXTRA=""
+              [ -n "$PTF_VARIANT" ] && PTF_EXTRA="--variant $PTF_VARIANT"
+              {
+                echo '本仓库的测试跑不通，请修复。复现方式：在仓库根目录运行 python3 -m pytest -q（依赖见 requirements-ci.txt）。'
+                echo
+                echo '失败日志（最后 80 行）：'
+                tail -80 /tmp/pretest_gate.log 2>/dev/null
+                echo
+                echo '要求：'
+                echo '1. 只修复导致测试失败的问题，不得削弱、跳过或删除测试，不得修改门禁脚本让断言失效；'
+                echo '2. 不要借修复之名重写无关代码，保持模块接口、TUI 行为与配置格式完全不变；'
+                echo '3. .github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；LICENSE、README.md、main.py、pyproject.toml 与 tests/ 同样不能删除或移动；'
+                echo '4. 修复后必须自行运行 python3 -m pytest -q 并确认完全通过。'
+              } > /tmp/ptf_fix_prompt.txt
+              # shellcheck disable=SC2086
+              timeout --kill-after=60 2400 opencode run -m "$PTF_MODEL" $PTF_EXTRA "$(cat /tmp/ptf_fix_prompt.txt)" \
+                > /tmp/ptf_fix_run.log 2>&1 || echo "[pre-test] testfix 调用失败/超时，保留现场"
+              PTEC2=0
+              timeout --kill-after=60 1500 bash /tmp/pretest_run.sh > /tmp/pretest_gate2.log 2>&1 || PTEC2=$?
+              if [ "$PTEC2" -eq 0 ]; then
+                echo "[pre-test] testfix 修复后门禁通过，继续本窗口"
+                git add -A
+                git commit -m "auto: pre-gate testfix (exit=$PTEC)" \
+                  || echo "[pre-test] 没有新内容可提交"
+              else
+                echo "[pre-test] testfix 修复后门禁仍未通过(exit=$PTEC2) → 推送当前状态并提前结束本 job（后继 run 会再次尝试修复）"
+                tail -25 /tmp/pretest_gate2.log 2>/dev/null || true
+                git add -A
+                git commit -m "auto: pre-opencode test gate failed (exit=$PTEC2, testfix attempted)" \
+                  || echo "[pre-test] 没有新内容可提交"
+                BRANCH_PT="${GITHUB_REF_NAME:-master}"
+                git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
+                git push origin "HEAD:$BRANCH_PT" \
+                  || echo "[pre-test] [warn] push 失败"
+                exit 86
+              fi ;;
           esac
 
           echo "[loop] 任务：设计一个新的算法｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
@@ -878,15 +913,50 @@ jobs:
             0|42|43|124|137|143)
               echo "[pre-test] exit=$PTEC（通过/无可识别测试/依赖不可用/超时），放行" ;;
             *)
-              echo "[pre-test] 测试失败(exit=$PTEC) → 推送当前状态并提前结束本 job"
-              git add -A
-              git commit -m "auto: pre-opencode test gate failed (exit=$PTEC)" \
-                || echo "[pre-test] 没有新内容可提交"
-              BRANCH_PT="${GITHUB_REF_NAME:-master}"
-              git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
-              git push origin "HEAD:$BRANCH_PT" \
-                || echo "[pre-test] [warn] push 失败"
-              exit 86 ;;
+              echo "[pre-test] 测试失败(exit=$PTEC) → 先安排一次测试修复（testfix）"
+              # ⭐ 门禁自愈（2026-11-03）：不再直接 exit 86——后继 run 会撞上同一道门，
+              # 永远轮不到修复，循环死锁（2026-10-30 收集错误与 2026-11-03 ImportError
+              # 均已实际发生）。先用已选模型安排一次 opencode 测试修复，复跑门禁；
+              # 仍失败才推送当前状态并退出（后继 run 会再次尝试修复）。
+              PTF_MODEL="${XUEN_MODEL:-${MAIN_MODEL:-opencode/deepseek-v4.1-flash-free}}"
+              PTF_VARIANT="${XUEN_VARIANT:-}"
+              case "$PTF_MODEL" in nvidia/*) PTF_VARIANT="" ;; esac
+              PTF_EXTRA=""
+              [ -n "$PTF_VARIANT" ] && PTF_EXTRA="--variant $PTF_VARIANT"
+              {
+                echo '本仓库的测试跑不通，请修复。复现方式：在仓库根目录运行 python3 -m pytest -q（依赖见 requirements-ci.txt）。'
+                echo
+                echo '失败日志（最后 80 行）：'
+                tail -80 /tmp/pretest_gate.log 2>/dev/null
+                echo
+                echo '要求：'
+                echo '1. 只修复导致测试失败的问题，不得削弱、跳过或删除测试，不得修改门禁脚本让断言失效；'
+                echo '2. 不要借修复之名重写无关代码，保持模块接口、TUI 行为与配置格式完全不变；'
+                echo '3. .github 目录是 CI 配置，绝对不要删除、修改或移动其中任何文件；LICENSE、README.md、main.py、pyproject.toml 与 tests/ 同样不能删除或移动；'
+                echo '4. 修复后必须自行运行 python3 -m pytest -q 并确认完全通过。'
+              } > /tmp/ptf_fix_prompt.txt
+              # shellcheck disable=SC2086
+              timeout --kill-after=60 2400 opencode run -m "$PTF_MODEL" $PTF_EXTRA "$(cat /tmp/ptf_fix_prompt.txt)" \
+                > /tmp/ptf_fix_run.log 2>&1 || echo "[pre-test] testfix 调用失败/超时，保留现场"
+              PTEC2=0
+              timeout --kill-after=60 1500 bash /tmp/pretest_run.sh > /tmp/pretest_gate2.log 2>&1 || PTEC2=$?
+              if [ "$PTEC2" -eq 0 ]; then
+                echo "[pre-test] testfix 修复后门禁通过，继续本窗口"
+                git add -A
+                git commit -m "auto: pre-gate testfix (exit=$PTEC)" \
+                  || echo "[pre-test] 没有新内容可提交"
+              else
+                echo "[pre-test] testfix 修复后门禁仍未通过(exit=$PTEC2) → 推送当前状态并提前结束本 job（后继 run 会再次尝试修复）"
+                tail -25 /tmp/pretest_gate2.log 2>/dev/null || true
+                git add -A
+                git commit -m "auto: pre-opencode test gate failed (exit=$PTEC2, testfix attempted)" \
+                  || echo "[pre-test] 没有新内容可提交"
+                BRANCH_PT="${GITHUB_REF_NAME:-master}"
+                git pull --rebase origin "$BRANCH_PT" 2>/dev/null || git rebase --abort 2>/dev/null || true
+                git push origin "HEAD:$BRANCH_PT" \
+                  || echo "[pre-test] [warn] push 失败"
+                exit 86
+              fi ;;
           esac
 
           echo "[unibot] 任务：寻找参加UniBot的创新点｜窗口 ${WORK_SECONDS}s｜模型：${MAIN_MODEL:-默认}"
