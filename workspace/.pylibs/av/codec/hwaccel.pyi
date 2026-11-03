@@ -1,0 +1,76 @@
+from enum import IntEnum
+from typing import cast
+
+from av.codec.codec import Codec
+from av.video.format import VideoFormat
+
+class HWDeviceType(IntEnum):
+    none = cast(int, ...)
+    vdpau = cast(int, ...)
+    cuda = cast(int, ...)
+    vaapi = cast(int, ...)
+    dxva2 = cast(int, ...)
+    qsv = cast(int, ...)
+    videotoolbox = cast(int, ...)
+    d3d11va = cast(int, ...)
+    drm = cast(int, ...)
+    opencl = cast(int, ...)
+    mediacodec = cast(int, ...)
+    vulkan = cast(int, ...)
+    d3d12va = cast(int, ...)
+    amf = cast(int, ...)
+    ohcodec = cast(int, ...)
+
+class HWConfigMethod(IntEnum):
+    none = cast(int, ...)
+    hw_device_ctx = cast(int, ...)
+    hw_frame_ctx = cast(int, ...)
+    internal = cast(int, ...)
+    ad_hoc = cast(int, ...)
+
+class HWConfig:
+    @property
+    def device_type(self) -> HWDeviceType: ...
+    @property
+    def format(self) -> VideoFormat | None: ...
+    @property
+    def methods(self) -> HWConfigMethod: ...
+    @property
+    def is_supported(self) -> bool: ...
+
+class HWDevice:
+    options: dict[str, object]
+    flags: int
+
+    def __init__(
+        self,
+        device_type: str | int | HWDeviceType,
+        device: str | int | None = None,
+        options: dict[str, object] | None = None,
+        flags: int | None = None,
+    ) -> None: ...
+    @property
+    def device_type(self) -> HWDeviceType: ...
+
+class HWAccel:
+    options: dict[str, object]
+    flags: int
+    allow_software_fallback: bool
+    config: HWConfig | None
+
+    @property
+    def is_hw_owned(self) -> bool: ...
+    @property
+    def device_id(self) -> int: ...
+    def __init__(
+        self,
+        device_type: str | int | HWDeviceType,
+        device: str | int | None = None,
+        allow_software_fallback: bool = True,
+        options: dict[str, object] | None = None,
+        flags: int | None = None,
+        is_hw_owned: bool = False,
+    ) -> None: ...
+    def create(self, codec: Codec, for_encoding: bool = False) -> HWAccel: ...
+
+def hwdevices_available() -> list[str]: ...

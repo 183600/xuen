@@ -1,4 +1,4 @@
-#!/opt/hostedtoolcache/Python/3.12.15/x64/bin/python
+#!/opt/hostedtoolcache/Python/3.12.15/x64/bin/python3
 import sys
 from numpy.f2py.f2py2e import main
 if __name__ == '__main__':

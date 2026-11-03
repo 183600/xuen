@@ -1,0 +1,872 @@
+import os
+
+import cython
+from cython.cimports import libav as lib
+from cython.cimports.av.bitstream import BitStreamFilterContext
+from cython.cimports.av.codec.codec import Codec
+from cython.cimports.av.codec.context import CodecContext, wrap_codec_context
+from cython.cimports.av.codec.hwaccel import HWAccel
+from cython.cimports.av.container.streams import StreamContainer
+from cython.cimports.av.dictionary import Dictionary
+from cython.cimports.av.error import err_check
+from cython.cimports.av.packet import Packet
+from cython.cimports.av.stream import Stream, wrap_stream
+from cython.cimports.av.utils import dict_to_avdict, to_avrational
+from cython.cimports.libc.stdint import int64_t, uint8_t
+from cython.cimports.libc.string import memcpy, memset
+
+
+@cython.cfunc
+def _set_codecpar_extradata(
+    stream: cython.pointer[lib.AVStream],
+    data: cython.pointer[uint8_t],
+    size: cython.int,
+) -> cython.void:
+    buf: cython.p_uchar = cython.cast(
+        cython.p_uchar, lib.av_malloc(size + lib.AV_INPUT_BUFFER_PADDING_SIZE)
+    )
+    if buf == cython.NULL:
+        raise MemoryError("Could not allocate extradata")
+
+    memcpy(buf, data, size)
+    memset(buf + size, 0, lib.AV_INPUT_BUFFER_PADDING_SIZE)
+
+    lib.av_freep(cython.address(stream.codecpar.extradata))
+    stream.codecpar.extradata = buf
+    stream.codecpar.extradata_size = size
+
+
+@cython.cfunc
+def arm_write_timeout(self: OutputContainer) -> cython.void:
+    """Start the write deadline, unless the output is a seekable file.
+
+    FFmpeg checks the interrupt callback before every write, local files
+    included, and a file's write time scales with its size: with
+    ``movflags=faststart`` the trailer rewrites the whole thing. A deadline
+    sized for a stalled peer would abandon a large file part-written rather
+    than protect it, so only unseekable outputs, which are the ones that can
+    stall indefinitely, get one.
+    """
+    if self.ptr.pb == cython.NULL or self.ptr.pb.seekable & lib.AVIO_SEEKABLE_NORMAL:
+        return
+    self.set_timeout(self.read_timeout)
+    self.start_timeout()
+
+
+@cython.cfunc
+def close_output(self: OutputContainer) -> cython.void:
+    if self.ptr == cython.NULL:
+        return  # Already closed.
+
+    if self.packet_ptr != cython.NULL and self._buffered_packets:
+        buffered: list[Packet] = self._buffered_packets
+        self._buffered_packets = []
+        packet: Packet
+        for packet in buffered:
+            self._mux_one(packet)
+
+    self.streams = StreamContainer()
+    self._blocking_depth += 1
+    try:
+        if self._myflag & 12 == 4:  # enum.started and not enum.done
+            # If the underlying Python IO file was already closed (e.g. during
+            # GC finalization where cycle ordering is undefined), skip the
+            # trailer.
+            if self.file is not None and getattr(self.file.file, "closed", False):
+                self._myflag |= 8  # enum.done = True
+                return
+            # We must only ever call av_write_trailer *once*, otherwise we get a
+            # segmentation fault. Therefore no matter whether it succeeds or not
+            # we must absolutely set enum.done.
+            ret: cython.int
+            try:
+                arm_write_timeout(self)
+                with cython.nogil:
+                    ret = lib.av_write_trailer(self.ptr)
+                self.err_check(ret)
+            finally:
+                if self.file is None and not (
+                    self.ptr.oformat.flags & lib.AVFMT_NOFILE
+                ):
+                    # No fresh deadline: the trailer and this flush share one,
+                    # so closing cannot outlast the timeout. The point here is
+                    # to stop the flush hanging, not to report on it, so its
+                    # return goes unchecked as it always has.
+                    with cython.nogil:
+                        lib.avio_closep(cython.address(self.ptr.pb))
+                self.set_timeout(None)
+                self._myflag |= 8  # enum.done = True
+    finally:
+        # Drop the context so a closed output reports itself as closed:
+        # Container._assert_open() tests for a NULL ptr, which demuxing gets
+        # for free from avformat_close_input(). Muxing has no such call, and
+        # without this every accessor kept working on a finished file.
+        with cython.nogil:
+            lib.avformat_free_context(self.ptr)
+            self.ptr = cython.NULL
+        self._blocking_depth -= 1
+
+
+@cython.final
+@cython.cclass
+class OutputContainer(Container):
+    def __cinit__(self, *args, **kwargs):
+        self.streams = StreamContainer()
+        self._extradata_bsfs = {}
+        self._buffered_packets = []
+        with cython.nogil:
+            self.packet_ptr = lib.av_packet_alloc()
+        if self.packet_ptr == cython.NULL:
+            raise MemoryError("Could not allocate packet")
+
+    def __del__(self):
+        close_output(self)
+
+    def __dealloc__(self):
+        with cython.nogil:
+            lib.av_packet_free(cython.address(self.packet_ptr))
+
+    def add_stream(
+        self,
+        codec_name,
+        rate=None,
+        options: dict | None = None,
+        hwaccel: HWAccel | None = None,
+        **kwargs,
+    ):
+        """add_stream(codec_name, rate=None, *, hwaccel=None)
+
+        Creates a new stream from a codec name and returns it.
+        Supports video, audio, and subtitle streams.
+
+        :param codec_name: The name of a codec.
+        :type codec_name: str
+        :param dict options: Stream options.
+        :param HWAccel hwaccel: Optional settings for hardware-accelerated encoding.
+            Only applies to video streams (e.g. ``h264_vaapi``); software frames
+            passed to :meth:`~av.codec.context.CodecContext.encode` are uploaded to
+            the device automatically.
+        :param \\**kwargs: Set attributes for the stream.
+        :rtype: The new :class:`~av.stream.Stream`.
+
+        .. warning::
+
+            Configure every output stream before muxing the first packet. Writing
+            the file header opens all stream codec contexts, after which structural
+            properties such as format, dimensions, layout, and rate cannot change.
+
+        """
+
+        self._assert_open()
+
+        codec_obj: Codec = Codec(codec_name, "w")
+        codec: cython.pointer[cython.const[lib.AVCodec]] = codec_obj.ptr
+
+        # Assert that this format supports the requested codec.
+        if not lib.avformat_query_codec(
+            self.ptr.oformat, codec.id, lib.FF_COMPLIANCE_NORMAL
+        ):
+            raise ValueError(
+                f"{self.format.name!r} format does not support {codec_obj.name!r} codec"
+            )
+
+        c_time_base: lib.AVRational
+        c_framerate: lib.AVRational
+        has_time_base: cython.bint = "time_base" in kwargs
+        if has_time_base:
+            to_avrational(kwargs.pop("time_base"), cython.address(c_time_base))
+
+        c_width: cython.int = 0
+        c_height: cython.int = 0
+        c_bit_rate: int64_t = 0
+        c_bit_rate_tolerance: cython.int = 0
+        if codec.type == lib.AVMEDIA_TYPE_VIDEO:
+            to_avrational(rate or 24, cython.address(c_framerate))
+            c_width = kwargs.pop("width", 640)
+            c_height = kwargs.pop("height", 480)
+            c_bit_rate = kwargs.pop("bit_rate", 0)
+            c_bit_rate_tolerance = kwargs.pop("bit_rate_tolerance", 128000)
+        elif codec.type == lib.AVMEDIA_TYPE_AUDIO:
+            if not (rate is None or type(rate) is int):
+                raise TypeError("audio stream `rate` must be: int | None")
+            c_bit_rate = kwargs.pop("bit_rate", 0)
+            c_bit_rate_tolerance = kwargs.pop("bit_rate_tolerance", 32000)
+
+        # Create new stream in the AVFormatContext, set AVCodecContext values.
+        ctx: cython.pointer[lib.AVCodecContext] = lib.avcodec_alloc_context3(codec)
+        if ctx == cython.NULL:
+            raise MemoryError("Could not allocate codec context")
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(self.ptr, codec)
+        if stream == cython.NULL:
+            lib.avcodec_free_context(cython.address(ctx))
+            raise MemoryError("Could not allocate stream")
+
+        if has_time_base:
+            ctx.time_base = c_time_base
+
+        # Now let's set some more sane video defaults
+        if codec.type == lib.AVMEDIA_TYPE_VIDEO:
+            ctx.pix_fmt = lib.AV_PIX_FMT_YUV420P
+            ctx.width = c_width
+            ctx.height = c_height
+            ctx.bit_rate = c_bit_rate
+            ctx.bit_rate_tolerance = c_bit_rate_tolerance
+            ctx.framerate = c_framerate
+
+            stream.avg_frame_rate = ctx.framerate
+            stream.time_base = ctx.time_base
+
+        # Some sane audio defaults
+        elif codec.type == lib.AVMEDIA_TYPE_AUDIO:
+            out: cython.pointer[cython.const[cython.void]] = cython.NULL
+            lib.avcodec_get_supported_config(
+                cython.NULL,
+                codec,
+                lib.AV_CODEC_CONFIG_SAMPLE_FORMAT,
+                0,
+                cython.address(out),
+                cython.NULL,
+            )
+            if out:
+                ctx.sample_fmt = cython.cast(cython.pointer[lib.AVSampleFormat], out)[0]
+            ctx.bit_rate = c_bit_rate
+            ctx.bit_rate_tolerance = c_bit_rate_tolerance
+            ctx.sample_rate = 48000 if rate is None else rate
+            stream.time_base = ctx.time_base
+            lib.av_channel_layout_default(cython.address(ctx.ch_layout), 2)
+
+        # Some formats want stream headers to be separate
+        if self.ptr.oformat.flags & lib.AVFMT_GLOBALHEADER:
+            ctx.flags |= lib.AV_CODEC_FLAG_GLOBAL_HEADER
+
+        # Initialise stream codec parameters to populate the codec type.
+        #
+        # Subsequent changes to the codec context will be applied just before
+        # encoding starts in `start_encoding()`.
+        try:
+            err_check(lib.avcodec_parameters_from_context(stream.codecpar, ctx))
+        except Exception:
+            lib.avcodec_free_context(cython.address(ctx))
+            raise
+
+        # Construct the user-land stream, which takes ownership of ctx.
+        py_codec_context: CodecContext = wrap_codec_context(ctx, codec, hwaccel)
+        py_stream: Stream = wrap_stream(self, stream, py_codec_context)
+        self.streams.add_stream(py_stream)
+
+        if options:
+            py_stream.options.update(options)
+
+        for k, v in kwargs.items():
+            setattr(py_stream, k, v)
+
+        return py_stream
+
+    def add_mux_stream(self, codec_name: str, rate=None, **kwargs) -> Stream:
+        """add_mux_stream(codec_name, rate=None)
+
+        Creates a new stream for muxing pre-encoded data without creating a
+        :class:`.CodecContext`. Use this when you want to mux packets that were
+        already encoded externally and no encoding/decoding is needed.
+
+        :param codec_name: The name of a codec.
+        :type codec_name: str
+        :param \\**kwargs: Set attributes for the stream (e.g. ``width``, ``height``,
+            ``time_base``).
+        :rtype: The new :class:`~av.stream.Stream`.
+
+        """
+        self._assert_open()
+
+        # Find the codec to get its id and type (try encoder first, then decoder).
+        codec_name_bytes: bytes = codec_name.encode()
+        codec: cython.pointer[cython.const[lib.AVCodec]] = (
+            lib.avcodec_find_encoder_by_name(codec_name_bytes)
+        )
+        codec_descriptor: cython.pointer[cython.const[lib.AVCodecDescriptor]] = (
+            cython.NULL
+        )
+        if codec == cython.NULL:
+            codec = lib.avcodec_find_decoder_by_name(codec_name_bytes)
+        if codec == cython.NULL:
+            codec_descriptor = lib.avcodec_descriptor_get_by_name(codec_name_bytes)
+            if codec_descriptor == cython.NULL:
+                raise ValueError(f"Unknown codec: {codec_name!r}")
+
+        codec_id: lib.AVCodecID
+        codec_type: lib.AVMediaType
+        if codec != cython.NULL:
+            codec_id = codec.id
+            codec_type = codec.type
+        else:
+            codec_id = codec_descriptor.id
+            codec_type = codec_descriptor.type
+
+        # Assert that this format supports the requested codec.
+        if not lib.avformat_query_codec(
+            self.ptr.oformat, codec_id, lib.FF_COMPLIANCE_NORMAL
+        ):
+            raise ValueError(
+                f"{self.format.name!r} format does not support {codec_name!r} codec"
+            )
+
+        c_rate: lib.AVRational
+        c_width: cython.int = 0
+        c_height: cython.int = 0
+        if codec_type == lib.AVMEDIA_TYPE_VIDEO:
+            if rate is not None:
+                to_avrational(rate, cython.address(c_rate))
+            c_width = kwargs.pop("width", 0)
+            c_height = kwargs.pop("height", 0)
+        elif codec_type == lib.AVMEDIA_TYPE_AUDIO:
+            if rate is not None and type(rate) is not int:
+                raise TypeError("audio stream `rate` must be: int | None")
+
+        # Create stream with no codec context.
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(
+            self.ptr, cython.NULL
+        )
+        if stream == cython.NULL:
+            raise MemoryError("Could not allocate stream")
+
+        stream.codecpar.codec_id = codec_id
+        stream.codecpar.codec_type = codec_type
+
+        if codec_type == lib.AVMEDIA_TYPE_VIDEO:
+            stream.codecpar.width = c_width
+            stream.codecpar.height = c_height
+            if rate is not None:
+                stream.avg_frame_rate = c_rate
+        elif codec_type == lib.AVMEDIA_TYPE_AUDIO and rate is not None:
+            stream.codecpar.sample_rate = rate
+
+        # Construct the user-land stream (no codec context).
+        py_stream: Stream = wrap_stream(self, stream, None)
+        self.streams.add_stream(py_stream)
+
+        for k, v in kwargs.items():
+            setattr(py_stream, k, v)
+
+        return py_stream
+
+    def add_stream_from_template(
+        self, template: Stream, opaque: bool | None = None, **kwargs
+    ):
+        """
+        Creates a new stream from a template. Supports video, audio, subtitle, data and attachment streams.
+
+        :param template: Copy codec from another :class:`~av.stream.Stream` instance.
+        :param opaque: If True, copy opaque data from the template's codec context.
+        :param \\**kwargs: Set attributes for the stream.
+        :rtype: The new :class:`~av.stream.Stream`.
+        """
+        self._assert_open()
+        template.container._assert_open()
+
+        if opaque is None:
+            opaque = template.type != "video"
+
+        if template.codec_context is None:
+            return self._add_stream_without_codec_from_template(template, **kwargs)
+
+        codec_obj: Codec
+        if opaque:  # Copy ctx from template.
+            codec_obj = template.codec_context.codec
+        else:  # Construct new codec object.
+            codec_obj = Codec(template.codec_context.codec.name, "w")
+
+        codec: cython.pointer[cython.const[lib.AVCodec]] = codec_obj.ptr
+
+        # Assert that this format supports the requested codec.
+        if not lib.avformat_query_codec(
+            self.ptr.oformat, codec.id, lib.FF_COMPLIANCE_NORMAL
+        ):
+            raise ValueError(
+                f"{self.format.name!r} format does not support {codec_obj.name!r} codec"
+            )
+
+        # Create new stream in the AVFormatContext, set AVCodecContext values.
+        ctx: cython.pointer[lib.AVCodecContext] = lib.avcodec_alloc_context3(codec)
+        if ctx == cython.NULL:
+            raise MemoryError("Could not allocate codec context")
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(self.ptr, codec)
+        if stream == cython.NULL:
+            lib.avcodec_free_context(cython.address(ctx))
+            raise MemoryError("Could not allocate stream")
+
+        try:
+            err_check(lib.avcodec_parameters_to_context(ctx, template.ptr.codecpar))
+            # Reset the codec tag assuming we are remuxing.
+            ctx.codec_tag = 0
+
+            # Copy the template's stream time_base
+            stream.time_base = template.ptr.time_base
+            ctx.time_base = template.ptr.time_base
+
+            # Some formats want stream headers to be separate
+            if self.ptr.oformat.flags & lib.AVFMT_GLOBALHEADER:
+                ctx.flags |= lib.AV_CODEC_FLAG_GLOBAL_HEADER
+
+            # Copy flags If we're creating a new codec object. This fixes some
+            # muxing issues. Overwriting the flag set just above is intentional.
+            if not opaque:
+                ctx.flags = template.codec_context.flags
+
+            # Initialize stream codec parameters to populate the codec type.
+            # Subsequent changes to the codec context will be applied just
+            # before encoding starts in `start_encoding()`.
+            err_check(lib.avcodec_parameters_from_context(stream.codecpar, ctx))
+        except Exception:
+            # Nothing owns ctx until wrap_codec_context() below.
+            lib.avcodec_free_context(cython.address(ctx))
+            raise
+
+        # Construct the user-land stream, which takes ownership of ctx.
+        py_codec_context: CodecContext = wrap_codec_context(ctx, codec, None)
+        py_codec_context._ctxflags |= 1  # _template_initialized = True
+        py_stream: Stream = wrap_stream(self, stream, py_codec_context)
+        self.streams.add_stream(py_stream)
+
+        for k, v in kwargs.items():
+            setattr(py_stream, k, v)
+
+        return py_stream
+
+    def _add_stream_without_codec_from_template(
+        self, template: Stream, **kwargs
+    ) -> Stream:
+        codec_type: cython.int = template.ptr.codecpar.codec_type
+        if codec_type not in {lib.AVMEDIA_TYPE_ATTACHMENT, lib.AVMEDIA_TYPE_DATA}:
+            raise ValueError(
+                f"template stream of type {template.type} has no codec context"
+            )
+
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(
+            self.ptr, cython.NULL
+        )
+        if stream == cython.NULL:
+            raise MemoryError("Could not allocate stream")
+
+        err_check(lib.avcodec_parameters_copy(stream.codecpar, template.ptr.codecpar))
+
+        # Mirror basic properties that are not derived from a codec context.
+        stream.time_base = template.ptr.time_base
+        stream.start_time = template.ptr.start_time
+        stream.duration = template.ptr.duration
+        stream.disposition = template.ptr.disposition
+
+        py_stream: Stream = wrap_stream(self, stream, None)
+        self.streams.add_stream(py_stream)
+
+        py_stream.metadata = dict(template.metadata)
+
+        for k, v in kwargs.items():
+            setattr(py_stream, k, v)
+
+        return py_stream
+
+    def add_attachment(self, name: str, mimetype: str, data: bytes):
+        """
+        Create an attachment stream and embed its payload into the container header.
+
+        - Only supported by formats that support attachments (e.g. Matroska).
+        - No per-packet muxing is required; attachments are written at header time.
+        """
+        self._assert_open()
+
+        # Create stream with no codec (attachments are codec-less).
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(
+            self.ptr, cython.NULL
+        )
+        if stream == cython.NULL:
+            raise MemoryError("Could not allocate stream")
+
+        stream.codecpar.codec_type = lib.AVMEDIA_TYPE_ATTACHMENT
+        stream.codecpar.codec_id = lib.AV_CODEC_ID_NONE
+
+        # Allocate and copy payload into codecpar.extradata.
+        payload_size: cython.size_t = len(data)
+        if payload_size:
+            buf = cython.cast(cython.p_uchar, lib.av_malloc(payload_size + 1))
+            if buf == cython.NULL:
+                raise MemoryError("Could not allocate attachment data")
+            # Copy bytes.
+            for i in range(payload_size):
+                buf[i] = data[i]
+            buf[payload_size] = 0
+            stream.codecpar.extradata = cython.cast(cython.p_uchar, buf)
+            stream.codecpar.extradata_size = cython.cast(cython.int, payload_size)
+
+        # Wrap as user-land stream.
+        meta_ptr = cython.address(stream.metadata)
+        err_check(lib.av_dict_set(meta_ptr, b"filename", name.encode(), 0))
+        mime_bytes = mimetype.encode()
+        err_check(lib.av_dict_set(meta_ptr, b"mimetype", mime_bytes, 0))
+
+        py_stream: Stream = wrap_stream(self, stream, None)
+        self.streams.add_stream(py_stream)
+        return py_stream
+
+    def add_data_stream(self, codec_name=None, options: dict | None = None):
+        """add_data_stream(codec_name=None)
+
+        Creates a new data stream and returns it.
+
+        :param codec_name: Optional name of the data codec (e.g. 'klv')
+        :type codec_name: str | None
+        :param dict options: Stream options.
+        :rtype: The new :class:`~av.data.stream.DataStream`.
+        """
+        self._assert_open()
+
+        codec: cython.pointer[cython.const[lib.AVCodec]] = cython.NULL
+        codec_descriptor: cython.pointer[cython.const[lib.AVCodecDescriptor]] = (
+            cython.NULL
+        )
+
+        if codec_name is not None:
+            codec_name_bytes: bytes = codec_name.encode()
+            codec = lib.avcodec_find_encoder_by_name(codec_name_bytes)
+            if codec == cython.NULL:
+                codec = lib.avcodec_find_decoder_by_name(codec_name_bytes)
+            if codec == cython.NULL:
+                codec_descriptor = lib.avcodec_descriptor_get_by_name(codec_name_bytes)
+                if codec_descriptor == cython.NULL:
+                    raise ValueError(f"Unknown data codec: {codec_name}")
+
+            # Verify format supports this codec
+            codec_id = codec.id if codec != cython.NULL else codec_descriptor.id
+            if not lib.avformat_query_codec(
+                self.ptr.oformat, codec_id, lib.FF_COMPLIANCE_NORMAL
+            ):
+                raise ValueError(
+                    f"{self.format.name!r} format does not support {codec_name!r} codec"
+                )
+
+        # The context first, so a failure here does not orphan a stream.
+        ctx: cython.pointer[lib.AVCodecContext] = cython.NULL
+        if codec != cython.NULL:
+            ctx = lib.avcodec_alloc_context3(codec)
+            if ctx == cython.NULL:
+                raise MemoryError("Could not allocate codec context")
+
+        # Create new stream in the AVFormatContext
+        stream: cython.pointer[lib.AVStream] = lib.avformat_new_stream(self.ptr, codec)
+        if stream == cython.NULL:
+            if ctx != cython.NULL:
+                lib.avcodec_free_context(cython.address(ctx))
+            raise MemoryError("Could not allocate stream")
+
+        if codec != cython.NULL:
+            # Some formats want stream headers to be separate
+            if self.ptr.oformat.flags & lib.AVFMT_GLOBALHEADER:
+                ctx.flags |= lib.AV_CODEC_FLAG_GLOBAL_HEADER
+
+            # Initialize stream codec parameters
+            try:
+                err_check(lib.avcodec_parameters_from_context(stream.codecpar, ctx))
+            except Exception:
+                # Nothing owns ctx until wrap_codec_context() below.
+                lib.avcodec_free_context(cython.address(ctx))
+                raise
+        else:
+            # No codec available - set basic parameters for data stream
+            stream.codecpar.codec_type = lib.AVMEDIA_TYPE_DATA
+            if codec_descriptor != cython.NULL:
+                stream.codecpar.codec_id = codec_descriptor.id
+
+        # Construct the user-land stream
+        py_codec_context: CodecContext | None = None
+        if ctx != cython.NULL:
+            py_codec_context = wrap_codec_context(ctx, codec, None)
+
+        py_stream: Stream = wrap_stream(self, stream, py_codec_context)
+        self.streams.add_stream(py_stream)
+
+        if options:
+            py_stream.options.update(options)
+
+        return py_stream
+
+    @cython.ccall
+    def start_encoding(self):
+        """Write the file header! Called automatically."""
+        self._assert_open()
+        if self._myflag & 4:  # started
+            return
+
+        # TODO: This does NOT handle options coming from 3 sources.
+        # This is only a rough approximation of what would be cool to do.
+        used_options: set[str] = set()
+        stream: Stream
+
+        # Finalize and open all streams.
+        for stream in self.streams:
+            ctx = stream.codec_context
+            if ctx is not None and not ctx.is_open:
+                for k, v in self.options.items():
+                    ctx.options.setdefault(k, v)
+
+                if not (ctx._ctxflags & 1):  # template_initialized
+                    ctx.open()
+
+                    # Track option consumption.
+                    for k in self.options:
+                        if k not in ctx.options:
+                            used_options.add(k)
+
+            stream._finalize_for_output()
+
+        # Open the output file, if needed.
+        name_obj: bytes = os.fsencode(self.name if self.file is None else "")
+        name: cython.p_char = name_obj
+        ret: cython.int
+        opened_pb: cython.bint = False
+        all_options: Dictionary
+        options: Dictionary
+        options_ptr: cython.pointer[cython.pointer[lib.AVDictionary]]
+
+        self.set_timeout(self.open_timeout)
+        self.start_timeout()
+        self._blocking_depth += 1
+        try:
+            all_options = Dictionary(self.options, self.container_options)
+            options = all_options.copy()
+            options_ptr = cython.address(options.ptr)
+            if (
+                self.ptr.pb == cython.NULL
+                and not self.ptr.oformat.flags & lib.AVFMT_NOFILE
+            ):
+                # avio_open() would pass the protocol a NULL interrupt
+                # callback, so a stalled connect could never be timed out.
+                with cython.nogil:
+                    ret = lib.avio_open2(
+                        cython.address(self.ptr.pb),
+                        name,
+                        lib.AVIO_FLAG_WRITE,
+                        cython.address(self.ptr.interrupt_callback),
+                        options_ptr,
+                    )
+                err_check(ret)
+                opened_pb = True
+
+            # Copy the metadata dict.
+            dict_to_avdict(cython.address(self.ptr.metadata), self.metadata)
+
+            with cython.nogil:
+                ret = lib.avformat_write_header(self.ptr, options_ptr)
+            try:
+                self.err_check(ret)
+            except Exception:
+                # started is never set, so close_output() will not close pb.
+                # Nothing else will either, and a stalled header write is an
+                # expected path now that it can time out.
+                if opened_pb:
+                    with cython.nogil:
+                        lib.avio_closep(cython.address(self.ptr.pb))
+                raise
+        finally:
+            self._blocking_depth -= 1
+            self.set_timeout(None)
+
+        # Track option usage...
+        for k in all_options:
+            if k not in options:
+                used_options.add(k)
+
+        # ... and warn if any weren't used.
+        unused_options = {
+            k: v for k, v in self.options.items() if k not in used_options
+        }
+        if unused_options:
+            import logging
+
+            log = logging.getLogger(__name__)
+            log.warning(f"Some options were not used: {unused_options}")
+
+        self._myflag |= 4
+
+    @property
+    def supported_codecs(self):
+        """
+        Returns a set of all codecs this format supports.
+        """
+        self._assert_open()
+
+        result: set[str] = set()
+        codec: cython.pointer[cython.const[lib.AVCodec]] = cython.NULL
+        opaque: cython.p_void = cython.NULL
+
+        while True:
+            codec = lib.av_codec_iterate(cython.address(opaque))
+            if codec == cython.NULL:
+                break
+
+            if (
+                lib.avformat_query_codec(
+                    self.ptr.oformat, codec.id, lib.FF_COMPLIANCE_NORMAL
+                )
+                == 1
+            ):
+                result.add(codec.name)
+
+        return result
+
+    @property
+    def default_video_codec(self):
+        """
+        Returns the default video codec this container recommends.
+        """
+        return lib.avcodec_get_name(self.format.optr.video_codec)
+
+    @property
+    def default_audio_codec(self):
+        """
+        Returns the default audio codec this container recommends.
+        """
+        return lib.avcodec_get_name(self.format.optr.audio_codec)
+
+    @property
+    def default_subtitle_codec(self):
+        """
+        Returns the default subtitle codec this container recommends.
+        """
+        return lib.avcodec_get_name(self.format.optr.subtitle_codec)
+
+    def close(self):
+        if self._blocking_depth:
+            # Another thread is inside libav without the GIL, so freeing the
+            # context here would be a use-after-free. Pass ``timeout`` to
+            # :func:`av.open` to give up on an open that never connects.
+            raise RuntimeError(
+                "Cannot close an OutputContainer while another thread is writing to it"
+            )
+        close_output(self)
+
+    def mux(self, packets):
+        # We accept either a Packet, or a sequence of packets. This should smooth out
+        # the transition to the new encode API which returns a sequence of packets.
+        if isinstance(packets, Packet):
+            self.mux_one(packets)
+        else:
+            for packet in packets:
+                self.mux_one(packet)
+
+    def mux_one(self, packet: Packet):
+        self._assert_open()
+        if not (self._myflag & 4) and self._buffer_for_extradata(packet):
+            return
+
+        self._mux_one(packet)
+
+    @cython.cfunc
+    def _mux_one(self, packet: Packet) -> cython.void:
+        self.start_encoding()
+
+        # Assert the packet is in stream time.
+        if (
+            packet.ptr.stream_index < 0
+            or cython.cast(cython.uint, packet.ptr.stream_index) >= self.ptr.nb_streams
+        ):
+            raise ValueError("Bad Packet stream_index.")
+
+        stream: cython.pointer[lib.AVStream] = self.ptr.streams[packet.ptr.stream_index]
+        packet._rebase_time(stream.time_base)
+
+        # Make another reference to the packet, as `av_interleaved_write_frame()`
+        # takes ownership of the reference.
+        self.err_check(lib.av_packet_ref(self.packet_ptr, packet.ptr))
+
+        ret: cython.int
+        arm_write_timeout(self)
+        self._blocking_depth += 1
+        try:
+            with cython.nogil:
+                ret = lib.av_interleaved_write_frame(self.ptr, self.packet_ptr)
+        finally:
+            self._blocking_depth -= 1
+            self.set_timeout(None)
+        self.err_check(ret)
+
+    @cython.cfunc
+    def _buffer_for_extradata(self, packet: Packet):
+        """Buffer ``packet`` until extradata is known for all mux streams that
+        need it. Returns True if the packet was buffered (caller should stop)."""
+        if not (self._myflag & 16):  # extradata_planned
+            self._myflag |= 16
+            if self.ptr.oformat.flags & lib.AVFMT_GLOBALHEADER:
+                stream: Stream
+                for stream in self.streams:
+                    if (
+                        stream.codec_context is not None
+                        or stream.ptr.codecpar.extradata != cython.NULL
+                    ):
+                        continue
+                    try:
+                        bsf = BitStreamFilterContext(
+                            "extract_extradata", in_stream=stream
+                        )
+                    except Exception:
+                        continue  # Codec does not support extradata extraction.
+                    self._extradata_bsfs[stream.ptr.index] = bsf
+
+        if not self._extradata_bsfs:
+            return False  # Nothing to wait for; mux normally.
+
+        self._try_extract_extradata(packet)
+        self._buffered_packets.append(packet)
+        if self._extradata_bsfs:
+            return True  # Still waiting on some stream's extradata.
+
+        # All extradata is resolved: write the header and flush buffered packets.
+        buffered: list[Packet] = self._buffered_packets
+        self._buffered_packets = []
+        buffered_packet: Packet
+        for buffered_packet in buffered:
+            self._mux_one(buffered_packet)
+        return True
+
+    @cython.cfunc
+    def _try_extract_extradata(self, packet: Packet) -> cython.void:
+        idx: cython.int = packet.ptr.stream_index
+        if idx not in self._extradata_bsfs:
+            return
+
+        bsf_wrapper: BitStreamFilterContext = self._extradata_bsfs[idx]
+        bsf: cython.pointer[lib.AVBSFContext] = bsf_wrapper.ptr
+
+        tmp: cython.pointer[lib.AVPacket] = lib.av_packet_alloc()
+        if tmp == cython.NULL:
+            raise MemoryError("Could not allocate packet")
+
+        size: cython.size_t = 0
+        sd: cython.pointer[uint8_t]
+        try:
+            # Clone the packet so the filter does not consume the caller's data.
+            if lib.av_packet_ref(tmp, packet.ptr) < 0:
+                return
+
+            if lib.av_bsf_send_packet(bsf, tmp) < 0:
+                lib.av_packet_unref(tmp)  # send failed; we still own the ref
+                return
+
+            # The filter rejects packets that are already length-prefixed rather
+            # than annex-b, returning an error here; treat that and EOF/EAGAIN
+            # alike as "no in-band extradata".
+            while lib.av_bsf_receive_packet(bsf, tmp) == 0:
+                sd = lib.av_packet_get_side_data(
+                    tmp, lib.AV_PKT_DATA_NEW_EXTRADATA, cython.address(size)
+                )
+                if sd != cython.NULL and size > 0:
+                    _set_codecpar_extradata(
+                        self.ptr.streams[idx], sd, cython.cast(cython.int, size)
+                    )
+                    lib.av_packet_unref(tmp)
+                    break
+                lib.av_packet_unref(tmp)
+        finally:
+            lib.av_packet_free(cython.address(tmp))
+            # A stream's first packet is the only reliable place to find in-band
+            # parameter sets, so stop waiting on this stream regardless of the
+            # result, falling back to the muxer's default behavior.
+            del self._extradata_bsfs[idx]

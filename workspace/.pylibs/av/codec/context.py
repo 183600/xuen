@@ -1,0 +1,1241 @@
+from dataclasses import dataclass
+from enum import Flag, IntEnum, IntFlag
+
+import cython
+from cython.cimports import libav as lib
+from cython.cimports.av.buffer import ByteSource, bytesource
+from cython.cimports.av.codec.codec import Codec, wrap_codec
+from cython.cimports.av.dictionary import Dictionary
+from cython.cimports.av.error import err_check
+from cython.cimports.av.packet import Packet
+from cython.cimports.av.rational import from_avrational
+from cython.cimports.av.utils import to_avrational
+from cython.cimports.cpython.bytes import (
+    PyBytes_FromString,
+    PyBytes_FromStringAndSize,
+)
+from cython.cimports.libc.errno import EAGAIN
+from cython.cimports.libc.stdint import uint8_t
+from cython.cimports.libc.string import memcpy, strcmp
+
+from av.error import InvalidDataError
+from av.packet import packet_sidedata_type_to_literal
+
+_cinit_sentinel = cython.declare(object, object())
+
+
+@cython.cfunc
+def _to_bytes(data: cython.pointer[uint8_t], size: cython.size_t) -> bytes:
+    return PyBytes_FromStringAndSize(cython.cast(cython.p_char, data), size)
+
+
+@cython.cfunc
+def wrap_codec_context(
+    c_ctx: cython.pointer[lib.AVCodecContext],
+    c_codec: cython.pointer[cython.const[lib.AVCodec]],
+    hwaccel: HWAccel,
+) -> CodecContext:
+    """Build an bv.CodecContext for an existing AVCodecContext."""
+    py_ctx: CodecContext
+
+    if c_ctx.codec_type == lib.AVMEDIA_TYPE_VIDEO:
+        from av.video.codeccontext import VideoCodecContext
+
+        py_ctx = VideoCodecContext(_cinit_sentinel)
+    elif c_ctx.codec_type == lib.AVMEDIA_TYPE_AUDIO:
+        from av.audio.codeccontext import AudioCodecContext
+
+        py_ctx = AudioCodecContext(_cinit_sentinel)
+    elif c_ctx.codec_type == lib.AVMEDIA_TYPE_SUBTITLE:
+        from av.subtitles.codeccontext import SubtitleCodecContext
+
+        py_ctx = SubtitleCodecContext(_cinit_sentinel)
+    else:
+        py_ctx = CodecContext(_cinit_sentinel)
+
+    py_ctx._init(c_ctx, c_codec, hwaccel)
+
+    return py_ctx
+
+
+class ThreadType(Flag):
+    NONE = 0
+    FRAME: "Decode more than one frame at once" = lib.FF_THREAD_FRAME
+    SLICE: "Decode more than one part of a single frame at once" = lib.FF_THREAD_SLICE
+    AUTO: "Decode using both FRAME and SLICE methods." = (
+        lib.FF_THREAD_SLICE | lib.FF_THREAD_FRAME
+    )
+
+
+class Flags(IntEnum):
+    unaligned = lib.AV_CODEC_FLAG_UNALIGNED
+    qscale = lib.AV_CODEC_FLAG_QSCALE
+    four_mv = lib.AV_CODEC_FLAG_4MV
+    output_corrupt = lib.AV_CODEC_FLAG_OUTPUT_CORRUPT
+    qpel = lib.AV_CODEC_FLAG_QPEL
+    recon_frame = lib.AV_CODEC_FLAG_RECON_FRAME
+    copy_opaque = lib.AV_CODEC_FLAG_COPY_OPAQUE
+    frame_duration = lib.AV_CODEC_FLAG_FRAME_DURATION
+    pass1 = lib.AV_CODEC_FLAG_PASS1
+    pass2 = lib.AV_CODEC_FLAG_PASS2
+    loop_filter = lib.AV_CODEC_FLAG_LOOP_FILTER
+    gray = lib.AV_CODEC_FLAG_GRAY
+    psnr = lib.AV_CODEC_FLAG_PSNR
+    interlaced_dct = lib.AV_CODEC_FLAG_INTERLACED_DCT
+    low_delay = lib.AV_CODEC_FLAG_LOW_DELAY
+    global_header = lib.AV_CODEC_FLAG_GLOBAL_HEADER
+    bitexact = lib.AV_CODEC_FLAG_BITEXACT
+    ac_pred = lib.AV_CODEC_FLAG_AC_PRED
+    interlaced_me = lib.AV_CODEC_FLAG_INTERLACED_ME
+    closed_gop = lib.AV_CODEC_FLAG_CLOSED_GOP
+
+
+class Flags2(IntEnum):
+    fast = lib.AV_CODEC_FLAG2_FAST
+    no_output = lib.AV_CODEC_FLAG2_NO_OUTPUT
+    local_header = lib.AV_CODEC_FLAG2_LOCAL_HEADER
+    chunks = lib.AV_CODEC_FLAG2_CHUNKS
+    ignore_crop = lib.AV_CODEC_FLAG2_IGNORE_CROP
+    show_all = lib.AV_CODEC_FLAG2_SHOW_ALL
+    export_mvs = lib.AV_CODEC_FLAG2_EXPORT_MVS
+    skip_manual = lib.AV_CODEC_FLAG2_SKIP_MANUAL
+    ro_flush_noop = lib.AV_CODEC_FLAG2_RO_FLUSH_NOOP
+    icc_profiles = lib.AV_CODEC_FLAG2_ICC_PROFILES
+
+
+class OptionType(IntEnum):
+    FLAGS = lib.AV_OPT_TYPE_FLAGS
+    INT = lib.AV_OPT_TYPE_INT
+    INT64 = lib.AV_OPT_TYPE_INT64
+    DOUBLE = lib.AV_OPT_TYPE_DOUBLE
+    FLOAT = lib.AV_OPT_TYPE_FLOAT
+    STRING = lib.AV_OPT_TYPE_STRING
+    RATIONAL = lib.AV_OPT_TYPE_RATIONAL
+    BINARY = lib.AV_OPT_TYPE_BINARY
+    DICT = lib.AV_OPT_TYPE_DICT
+    UINT64 = lib.AV_OPT_TYPE_UINT64
+    CONST = lib.AV_OPT_TYPE_CONST
+    IMAGE_SIZE = lib.AV_OPT_TYPE_IMAGE_SIZE
+    PIXEL_FMT = lib.AV_OPT_TYPE_PIXEL_FMT
+    SAMPLE_FMT = lib.AV_OPT_TYPE_SAMPLE_FMT
+    VIDEO_RATE = lib.AV_OPT_TYPE_VIDEO_RATE
+    DURATION = lib.AV_OPT_TYPE_DURATION
+    COLOR = lib.AV_OPT_TYPE_COLOR
+    CHANNEL_LAYOUT = lib.AV_OPT_TYPE_CHLAYOUT
+    BOOL = lib.AV_OPT_TYPE_BOOL
+    UINT = lib.AV_OPT_TYPE_UINT
+
+
+class OptionFlags(IntFlag):
+    ENCODING_PARAM = lib.AV_OPT_FLAG_ENCODING_PARAM
+    DECODING_PARAM = lib.AV_OPT_FLAG_DECODING_PARAM
+    AUDIO_PARAM = lib.AV_OPT_FLAG_AUDIO_PARAM
+    VIDEO_PARAM = lib.AV_OPT_FLAG_VIDEO_PARAM
+    SUBTITLE_PARAM = lib.AV_OPT_FLAG_SUBTITLE_PARAM
+    EXPORT = lib.AV_OPT_FLAG_EXPORT
+    READONLY = lib.AV_OPT_FLAG_READONLY
+    BITSTREAM_FILTER_PARAM = lib.AV_OPT_FLAG_BSF_PARAM
+    RUNTIME_PARAM = lib.AV_OPT_FLAG_RUNTIME_PARAM
+    FILTERING_PARAM = lib.AV_OPT_FLAG_FILTERING_PARAM
+    DEPRECATED = lib.AV_OPT_FLAG_DEPRECATED
+    CHILD_CONSTS = lib.AV_OPT_FLAG_CHILD_CONSTS
+
+
+@dataclass(frozen=True, slots=True)
+class CodecOptionChoice:
+    """A named value accepted by a codec option."""
+
+    name: str
+    help: str
+
+
+@dataclass(frozen=True, slots=True)
+class CodecOption:
+    """Description of a generic or codec-specific option."""
+
+    name: str
+    help: str
+    type: OptionType | int
+    is_array: bool
+    default: str | None
+    min: float
+    max: float
+    flags: OptionFlags
+    choices: tuple[CodecOptionChoice, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CodecOptionSet:
+    """Generic and codec-specific options supported by a codec context."""
+
+    generic: tuple[CodecOption, ...]
+    private: tuple[CodecOption, ...]
+
+
+@cython.cfunc
+def _get_option_default(
+    obj: cython.p_void, name: cython.pointer[cython.const[cython.char]]
+):
+    value: cython.pointer[uint8_t] = cython.NULL
+    if lib.av_opt_get(obj, name, 0, cython.address(value)) < 0:
+        return None
+    try:
+        return cython.cast(cython.p_char, value) if value != cython.NULL else None
+    finally:
+        lib.av_free(value)
+
+
+@cython.cfunc
+def _get_supported_options(obj: cython.p_void):
+    options: list[CodecOption] = []
+    ptr: cython.pointer[cython.const[lib.AVOption]] = lib.av_opt_next(obj, cython.NULL)
+    choice_ptr: cython.pointer[cython.const[lib.AVOption]]
+    option_type: object
+
+    while ptr != cython.NULL:
+        if ptr.type != lib.AV_OPT_TYPE_CONST:
+            choices: list[CodecOptionChoice] = []
+            if ptr.unit != cython.NULL:
+                choice_ptr = lib.av_opt_next(obj, cython.NULL)
+                while choice_ptr != cython.NULL:
+                    if (
+                        choice_ptr.type == lib.AV_OPT_TYPE_CONST
+                        and choice_ptr.unit != cython.NULL
+                        and strcmp(choice_ptr.unit, ptr.unit) == 0
+                    ):
+                        choices.append(
+                            CodecOptionChoice(
+                                choice_ptr.name,
+                                choice_ptr.help
+                                if choice_ptr.help != cython.NULL
+                                else "",
+                            )
+                        )
+                    choice_ptr = lib.av_opt_next(obj, choice_ptr)
+
+            raw_type = cython.cast(cython.int, ptr.type)
+            is_array = bool(raw_type & lib.AV_OPT_TYPE_FLAG_ARRAY)
+            raw_type &= ~lib.AV_OPT_TYPE_FLAG_ARRAY
+            try:
+                option_type = OptionType(raw_type)
+            except ValueError:
+                option_type = raw_type
+
+            options.append(
+                CodecOption(
+                    ptr.name,
+                    ptr.help if ptr.help != cython.NULL else "",
+                    option_type,
+                    is_array,
+                    _get_option_default(obj, ptr.name),
+                    ptr.min,
+                    ptr.max,
+                    OptionFlags(ptr.flags),
+                    tuple(choices),
+                )
+            )
+        ptr = lib.av_opt_next(obj, ptr)
+
+    return tuple(options)
+
+
+@cython.cclass
+class CodecContext:
+    @staticmethod
+    def create(codec, mode=None, hwaccel=None):
+        cy_codec: Codec = codec if isinstance(codec, Codec) else Codec(codec, mode)
+        c_ctx: cython.pointer[lib.AVCodecContext] = lib.avcodec_alloc_context3(
+            cy_codec.ptr
+        )
+        return wrap_codec_context(c_ctx, cy_codec.ptr, hwaccel)
+
+    def __cinit__(self, sentinel=None, *args, **kwargs):
+        if sentinel is not _cinit_sentinel:
+            raise RuntimeError("Cannot instantiate CodecContext")
+
+        self.options = {}
+
+    @property
+    def supported_options(self):
+        """Options supported by this codec context.
+
+        ``generic`` contains options provided by :ffmpeg:`AVCodecContext`, while
+        ``private`` contains options provided by the selected codec. Values are
+        descriptors only; set options through :attr:`options`.
+        """
+        ctx: cython.pointer[lib.AVCodecContext] = lib.avcodec_alloc_context3(
+            self.ptr.codec
+        )
+        child: cython.p_void
+        private: list[CodecOption] = []
+        if ctx == cython.NULL:
+            raise MemoryError("Cannot allocate codec context")
+        try:
+            generic = _get_supported_options(ctx)
+            child = lib.av_opt_child_next(ctx, cython.NULL)
+            while child != cython.NULL:
+                private.extend(_get_supported_options(child))
+                child = lib.av_opt_child_next(ctx, child)
+            return CodecOptionSet(generic, tuple(private))
+        finally:
+            lib.avcodec_free_context(cython.address(ctx))
+
+    @cython.cfunc
+    def _init(
+        self,
+        ptr: cython.pointer[lib.AVCodecContext],
+        codec: cython.pointer[cython.const[lib.AVCodec]],
+        hwaccel: HWAccel,
+    ) -> cython.void:
+        self.ptr = ptr
+        if self.ptr.codec and codec and self.ptr.codec != codec:
+            raise RuntimeError("Wrapping CodecContext with mismatched codec.")
+
+        # Set reasonable threading defaults.
+        self.ptr.thread_count = 0  # use as many threads as there are CPUs.
+        self.ptr.thread_type = 0x02  # thread within a frame. Does not change the API.
+
+    @cython.cfunc
+    def _assert_not_open(self, name) -> cython.void:
+        if lib.avcodec_is_open(self.ptr):
+            raise RuntimeError(f"Cannot change {name} after codec is open.")
+
+    @property
+    def flags(self):
+        """
+        Get and set the flags bitmask of CodecContext.
+
+        :rtype: int
+        """
+        return self.ptr.flags
+
+    @flags.setter
+    def flags(self, value: cython.int):
+        self.ptr.flags = value
+
+    @property
+    def qscale(self):
+        """
+        Use fixed qscale.
+
+        :rtype: bool
+        """
+        return bool(self.ptr.flags & lib.AV_CODEC_FLAG_QSCALE)
+
+    @qscale.setter
+    def qscale(self, value):
+        if value:
+            self.ptr.flags |= lib.AV_CODEC_FLAG_QSCALE
+        else:
+            self.ptr.flags &= ~lib.AV_CODEC_FLAG_QSCALE
+
+    @property
+    def copy_opaque(self):
+        return bool(self.ptr.flags & lib.AV_CODEC_FLAG_COPY_OPAQUE)
+
+    @copy_opaque.setter
+    def copy_opaque(self, value):
+        if value:
+            self.ptr.flags |= lib.AV_CODEC_FLAG_COPY_OPAQUE
+        else:
+            self.ptr.flags &= ~lib.AV_CODEC_FLAG_COPY_OPAQUE
+
+    @property
+    def flags2(self):
+        """
+        Get and set the flags2 bitmask of CodecContext.
+
+        :rtype: int
+        """
+        return self.ptr.flags2
+
+    @flags2.setter
+    def flags2(self, value: cython.int):
+        self.ptr.flags2 = value
+
+    @property
+    def extradata(self):
+        if self.ptr is cython.NULL:
+            return None
+        if self.ptr.extradata_size > 0:
+            return cython.cast(
+                bytes,
+                cython.cast(cython.pointer[uint8_t], self.ptr.extradata)[
+                    : self.ptr.extradata_size
+                ],
+            )
+        return None
+
+    @extradata.setter
+    def extradata(self, data):
+        if data is None:
+            lib.av_freep(cython.address(self.ptr.extradata))
+            self.ptr.extradata_size = 0
+        else:
+            source = bytesource(data)
+            self.ptr.extradata = cython.cast(
+                cython.pointer[uint8_t],
+                lib.av_realloc(
+                    self.ptr.extradata, source.length + lib.AV_INPUT_BUFFER_PADDING_SIZE
+                ),
+            )
+            if not self.ptr.extradata:
+                raise MemoryError("Cannot allocate extradata")
+            memcpy(self.ptr.extradata, source.ptr, source.length)
+            self.ptr.extradata_size = cython.cast(cython.int, source.length)
+
+    @property
+    def extradata_size(self):
+        return self.ptr.extradata_size
+
+    @property
+    def is_encoder(self):
+        if self.ptr is cython.NULL:
+            return False
+        return lib.av_codec_is_encoder(self.ptr.codec)
+
+    @property
+    def is_decoder(self):
+        if self.ptr is cython.NULL:
+            return False
+        return lib.av_codec_is_decoder(self.ptr.codec)
+
+    @property
+    def codec(self):
+        return wrap_codec(self.ptr.codec)
+
+    @property
+    def is_open(self):
+        if self.ptr is cython.NULL:
+            return False
+        return bool(lib.avcodec_is_open(self.ptr))
+
+    @cython.ccall
+    def open(self, strict: cython.bint = True):
+        if lib.avcodec_is_open(self.ptr):
+            if strict:
+                raise ValueError("CodecContext is already open.")
+            return
+
+        options: Dictionary = Dictionary()
+        options.update(self.options or {})
+
+        if not self.ptr.time_base.num and self.is_encoder:
+            if self.type == "video":
+                self.ptr.time_base.num = self.ptr.framerate.den or 1
+                self.ptr.time_base.den = self.ptr.framerate.num or lib.AV_TIME_BASE
+            elif self.type == "audio":
+                self.ptr.time_base.num = 1
+                self.ptr.time_base.den = self.ptr.sample_rate
+            else:
+                self.ptr.time_base.num = 1
+                self.ptr.time_base.den = lib.AV_TIME_BASE
+
+        self._setup_encode_hwframes()
+
+        err_check(
+            lib.avcodec_open2(self.ptr, self.ptr.codec, cython.address(options.ptr)),
+            f'avcodec_open2("{self.ptr.codec.name}", {self.options})',
+        )
+        self.options = dict(options)
+
+    def __dealloc__(self):
+        if self.ptr:
+            lib.av_freep(cython.address(self.ptr.extradata))
+            lib.avcodec_free_context(cython.address(self.ptr))
+        if self.parser:
+            lib.av_parser_close(self.parser)
+
+    def __repr__(self):
+        _type = self.type or "<notype>"
+        name = self.name or "<nocodec>"
+        return f"<av.{self.__class__.__name__} {_type}/{name} at 0x{id(self):x}>"
+
+    def parse(self, raw_input=None):
+        """Split up a byte stream into list of :class:`.Packet`.
+
+        This is only effectively splitting up a byte stream, and does no
+        actual interpretation of the data.
+
+        It will return all packets that are fully contained within the given
+        input, and will buffer partial packets until they are complete.
+
+        Any timing information the parser is able to infer (``pts``, ``dts``,
+        ``duration``, ``pos`` and the keyframe flag) is assigned onto the
+        returned packets. Fields the parser cannot determine are left unset.
+
+        :param ByteSource raw_input: A chunk of a byte-stream to process.
+            Anything that can be turned into a :class:`.ByteSource` is fine.
+            ``None`` or empty inputs will flush the parser's buffers.
+
+        :return: ``list`` of :class:`.Packet` newly available.
+
+        """
+
+        if not self.parser:
+            self.parser = lib.av_parser_init(self.ptr.codec.id)
+            if not self.parser:
+                raise ValueError(f"No parser for {self.ptr.codec.name}")
+
+        source: ByteSource = bytesource(raw_input, allow_none=True)
+
+        in_data: cython.p_uchar = source.ptr if source is not None else cython.NULL
+        in_size: cython.int = (
+            cython.cast(cython.int, source.length) if source is not None else 0
+        )
+
+        out_data: cython.p_uchar
+        out_size: cython.int
+        consumed: cython.int
+        packet: Packet = None
+        packets: list[Packet] = []
+
+        while True:
+            with cython.nogil:
+                consumed = lib.av_parser_parse2(
+                    self.parser,
+                    self.ptr,
+                    cython.address(out_data),
+                    cython.address(out_size),
+                    in_data,
+                    in_size,
+                    lib.AV_NOPTS_VALUE,
+                    lib.AV_NOPTS_VALUE,
+                    0,
+                )
+            err_check(consumed)
+
+            if out_size:
+                # We copy the data immediately, as we have yet to figure out
+                # the expected lifetime of the buffer we get back. All of the
+                # examples decode it immediately.
+                #
+                # We've also tried:
+                #   packet = Packet()
+                #   packet.data = out_data
+                #   packet.size = out_size
+                #   packet.source = source
+                #
+                # ... but this results in corruption.
+
+                packet = Packet(out_size)
+                memcpy(packet.ptr.data, out_data, out_size)
+
+                # Propagate the timing information the parser inferred for
+                # this frame onto the packet (mirrors FFmpeg's parse_packet).
+                packet.ptr.pts = self.parser.pts
+                packet.ptr.dts = self.parser.dts
+                packet.ptr.pos = self.parser.pos
+                if self.parser.duration:
+                    packet.ptr.duration = self.parser.duration
+                if self.parser.key_frame == 1:
+                    packet.ptr.flags |= lib.AV_PKT_FLAG_KEY
+
+                packets.append(packet)
+
+            if not in_size:
+                # This was a flush. Only one packet should ever be returned.
+                break
+
+            in_data += consumed
+            in_size -= consumed
+
+            if not in_size:
+                break
+
+        return packets
+
+    @property
+    def is_hwaccel(self):
+        """
+        Returns ``True`` if this codec context is hardware accelerated, ``False`` otherwise.
+        """
+        return self.hwaccel_ctx is not None
+
+    def _send_frame_and_recv(self, frame: Frame | None):
+        packet: Packet
+        res: cython.int
+        with cython.nogil:
+            res = lib.avcodec_send_frame(
+                self.ptr, frame.ptr if frame is not None else cython.NULL
+            )
+        err_check(res, "avcodec_send_frame()")
+
+        packet = self._recv_packet()
+        while packet:
+            yield packet
+            packet = self._recv_packet()
+
+    @cython.cfunc
+    def _setup_encode_hwframes(self) -> cython.void:
+        # Build the hardware frames context for hardware-accelerated encoding.
+        #
+        # Unlike the device context (attached at construction time), the frames
+        # context depends on the final width/height/pixel format, which the user
+        # sets after add_stream(). We therefore defer it until just before the
+        # codec is opened.
+        if self.hwaccel_ctx is None or not self.is_encoder:
+            return
+        if self.ptr.hw_frames_ctx:
+            return  # Already set up.
+
+        hw_format: lib.AVPixelFormat = self.hwaccel_ctx.config.ptr.pix_fmt
+        sw_format: lib.AVPixelFormat = cython.cast(
+            lib.AVPixelFormat, self.ptr.sw_pix_fmt
+        )
+
+        # The codec context's sw_pix_fmt holds the software format the user
+        # wants the hardware frames context to use. Fall back to pix_fmt to
+        # preserve the existing stream.pix_fmt configuration path.
+        if sw_format == lib.AV_PIX_FMT_NONE:
+            sw_format = cython.cast(lib.AVPixelFormat, self.ptr.pix_fmt)
+
+        # If they left it as the hardware format (or unset), pick a sane default.
+        if sw_format == hw_format or sw_format == lib.AV_PIX_FMT_NONE:
+            sw_format = lib.av_get_pix_fmt(b"nv12")
+
+        frames_ref: cython.pointer[lib.AVBufferRef] = lib.av_hwframe_ctx_alloc(
+            self.hwaccel_ctx.ptr
+        )
+        if frames_ref == cython.NULL:
+            raise MemoryError("av_hwframe_ctx_alloc() failed")
+
+        try:
+            frames_ctx: cython.pointer[lib.AVHWFramesContext] = cython.cast(
+                cython.pointer[lib.AVHWFramesContext], frames_ref.data
+            )
+            frames_ctx.format = hw_format
+            frames_ctx.sw_format = sw_format
+            frames_ctx.width = self.ptr.width
+            frames_ctx.height = self.ptr.height
+            frames_ctx.initial_pool_size = 32
+            err_check(lib.av_hwframe_ctx_init(frames_ref))
+        except Exception:
+            lib.av_buffer_unref(cython.address(frames_ref))
+            raise
+
+        # Ownership of frames_ref transfers to the codec context.
+        self.ptr.hw_frames_ctx = frames_ref
+        self.ptr.sw_pix_fmt = sw_format
+        self.ptr.pix_fmt = hw_format
+
+    @cython.cfunc
+    def _prepare_frames_for_encode(self, frame: Frame | None) -> list[Frame | None]:
+        return [frame]
+
+    @cython.cfunc
+    def _alloc_next_frame(self) -> Frame:
+        raise NotImplementedError("Base CodecContext cannot decode.")
+
+    @cython.cfunc
+    def _recv_frame(self):
+        if not self._next_frame:
+            self._next_frame = self._alloc_next_frame()
+
+        frame: Frame = self._next_frame
+        res: cython.int
+
+        with cython.nogil:
+            res = lib.avcodec_receive_frame(self.ptr, frame.ptr)
+
+        if res == -EAGAIN or res == lib.AVERROR_EOF:
+            return
+
+        err_check(res, "avcodec_receive_frame()")
+        frame = self._transfer_hwframe(frame)
+
+        if not res:
+            self._next_frame = None
+            return frame
+
+    @cython.cfunc
+    def _transfer_hwframe(self, frame: Frame):
+        return frame
+
+    @cython.cfunc
+    def _recv_packet(self):
+        packet: Packet = Packet()
+        res: cython.int
+
+        with cython.nogil:
+            res = lib.avcodec_receive_packet(self.ptr, packet.ptr)
+
+        if res == -EAGAIN or res == lib.AVERROR_EOF:
+            return
+
+        err_check(res, "avcodec_receive_packet()")
+        if not res:
+            return packet
+
+    @cython.cfunc
+    def _prepare_and_time_rebase_frames_for_encode(self, frame: Frame):
+        if self.ptr.codec_type not in [lib.AVMEDIA_TYPE_VIDEO, lib.AVMEDIA_TYPE_AUDIO]:
+            raise NotImplementedError("Encoding is only supported for audio and video.")
+
+        # A hardware frame (e.g. a CUDA frame from DLPack) carries its own frames
+        # context. Encoders like h264_nvenc require hw_frames_ctx to be set before
+        # avcodec_open2, so adopt the frame's if we don't already have one.
+        if (
+            not lib.avcodec_is_open(self.ptr)
+            and frame is not None
+            and frame.ptr.hw_frames_ctx != cython.NULL
+            and self.ptr.hw_frames_ctx == cython.NULL
+        ):
+            self.ptr.hw_frames_ctx = lib.av_buffer_ref(frame.ptr.hw_frames_ctx)
+
+        self.open(strict=False)
+
+        frames = self._prepare_frames_for_encode(frame)
+
+        # Assert the frames are in our time base.
+        # TODO: Don't mutate time.
+        for frame in frames:
+            if frame is not None:
+                frame._rebase_time(self.ptr.time_base)
+
+        return frames
+
+    @cython.ccall
+    def encode(self, frame: Frame | None = None):
+        """Encode a list of :class:`.Packet` from the given :class:`.Frame`."""
+        res = []
+        for frame in self._prepare_and_time_rebase_frames_for_encode(frame):
+            for packet in self._send_frame_and_recv(frame):
+                self._setup_encoded_packet(packet)
+                res.append(packet)
+        return res
+
+    def encode_lazy(self, frame: Frame | None = None):
+        for frame in self._prepare_and_time_rebase_frames_for_encode(frame):
+            for packet in self._send_frame_and_recv(frame):
+                self._setup_encoded_packet(packet)
+                yield packet
+
+    @cython.cfunc
+    def _setup_encoded_packet(self, packet: Packet) -> cython.void:
+        # We coerced the frame's time_base into the CodecContext's during encoding,
+        # and FFmpeg copied the frame's pts/dts to the packet, so keep track of
+        # this time_base in case the frame needs to be muxed to a container with
+        # a different time_base.
+        #
+        # NOTE: if the CodecContext's time_base is altered during encoding, all bets
+        # are off!
+        packet.ptr.time_base = self.ptr.time_base
+
+    @cython.ccall
+    def decode(self, packet: Packet | None = None):
+        """Decode a list of :class:`.Frame` from the given :class:`.Packet`.
+
+        If the packet is None, the buffers will be flushed. This is useful if
+        you do not want the library to automatically re-order frames for you
+        (if they are encoded with a codec that has B-frames).
+
+        .. warning::
+
+            This method is **not thread-safe**. Calling :meth:`decode` concurrently
+            from multiple threads on the same :class:`CodecContext` will corrupt
+            internal FFmpeg state and likely cause a crash (segfault). FFmpeg 8.1
+            enforces this more strictly than earlier releases. If you need to decode
+            from multiple threads, give each thread its own :class:`CodecContext`.
+
+        """
+        return self._decode(packet)
+
+    @cython.cfunc
+    def _decode(self, packet: Packet | None):
+        if not self.ptr.codec:
+            raise ValueError("cannot decode unknown codec")
+
+        self.open(strict=False)
+
+        res: cython.int
+        with cython.nogil:
+            res = lib.avcodec_send_packet(
+                self.ptr, packet.ptr if packet is not None else cython.NULL
+            )
+        err_check(res, "avcodec_send_packet()")
+
+        out: list[Frame] = []
+        while True:
+            try:
+                frame = self._recv_frame()
+            except InvalidDataError:
+                if out:
+                    break
+                raise
+            if frame is None:
+                break
+            self._setup_decoded_frame(frame, packet)
+            out.append(frame)
+        return out
+
+    @cython.ccall
+    def flush_buffers(self):
+        """Reset the internal codec state and discard all internal buffers.
+
+        Should be called before you start decoding from a new position e.g.
+        when seeking or when switching to a different stream.
+
+        """
+        if lib.avcodec_is_open(self.ptr):
+            with cython.nogil:
+                lib.avcodec_flush_buffers(self.ptr)
+
+    @cython.cfunc
+    def _setup_decoded_frame(self, frame: Frame, packet: Packet | None) -> cython.void:
+        # Propagate our manual times.
+        # While decoding, frame times are in stream time_base, which PyAV
+        # is carrying around. `packet` is None when flushing directly with
+        # `decode()`, so fall back to the time base the container set on the
+        # context; `demux()`'s flush packets carry it themselves.
+        if packet is not None:
+            frame._time_base = packet.ptr.time_base
+        else:
+            frame._time_base = self.ptr.pkt_timebase
+
+    @property
+    def name(self):
+        return self.ptr.codec.name or ""
+
+    @property
+    def type(self):
+        return self.codec.type
+
+    @property
+    def profiles(self):
+        """
+        List the available profiles for this stream.
+
+        :type: list[str]
+        """
+        ret: list[str] = []
+        desc: cython.pointer[cython.const[lib.AVCodecDescriptor]] = (
+            lib.avcodec_descriptor_get(self.ptr.codec_id)
+        )
+        if not self.ptr.codec or desc == cython.NULL or not desc.profiles:
+            return ret
+
+        i: cython.int = 0
+        while desc.profiles[i].profile != lib.AV_PROFILE_UNKNOWN:
+            ret.append(desc.profiles[i].name)
+            i += 1
+
+        return ret
+
+    @property
+    def profile(self):
+        desc: cython.pointer[cython.const[lib.AVCodecDescriptor]] = (
+            lib.avcodec_descriptor_get(self.ptr.codec_id)
+        )
+        if not self.ptr.codec or desc == cython.NULL or not desc.profiles:
+            return
+
+        i: cython.int = 0
+        while desc.profiles[i].profile != lib.AV_PROFILE_UNKNOWN:
+            if desc.profiles[i].profile == self.ptr.profile:
+                return desc.profiles[i].name
+            i += 1
+
+    @profile.setter
+    def profile(self, value):
+        desc: cython.pointer[cython.const[lib.AVCodecDescriptor]] = (
+            lib.avcodec_descriptor_get(self.ptr.codec_id)
+        )
+        if not self.ptr.codec or desc == cython.NULL or not desc.profiles:
+            return
+
+        i: cython.int = 0
+        while desc.profiles[i].profile != lib.AV_PROFILE_UNKNOWN:
+            if desc.profiles[i].name == value:
+                self.ptr.profile = desc.profiles[i].profile
+                return
+            i += 1
+
+    @property
+    def level(self):
+        """Codec level.
+
+        Wraps :ffmpeg:`AVCodecContext.level`.
+
+        """
+        return self.ptr.level
+
+    @level.setter
+    def level(self, value: cython.int):
+        self.ptr.level = value
+
+    @property
+    def time_base(self):
+        if self.is_decoder:
+            raise RuntimeError("Cannot access 'time_base' as a decoder")
+        return from_avrational(self.ptr.time_base)
+
+    @time_base.setter
+    def time_base(self, value):
+        if self.is_decoder:
+            raise RuntimeError("Cannot access 'time_base' as a decoder")
+        to_avrational(value, cython.address(self.ptr.time_base))
+
+    @property
+    def codec_tag(self):
+        return self.ptr.codec_tag.to_bytes(4, byteorder="little", signed=False).decode(
+            encoding="ascii"
+        )
+
+    @codec_tag.setter
+    def codec_tag(self, value):
+        if isinstance(value, str) and len(value) == 4:
+            self.ptr.codec_tag = int.from_bytes(
+                value.encode(encoding="ascii"), byteorder="little", signed=False
+            )
+        else:
+            raise ValueError("Codec tag should be a 4 character string.")
+
+    @property
+    @cython.cdivision(True)
+    def global_quality(self):
+        """Global quality for codecs which cannot change it per frame.
+
+        Stored internally in lambda units; this property converts to/from
+        QP units using ``FF_QP2LAMBDA``.
+
+        Wraps :ffmpeg:`AVCodecContext.global_quality`.
+
+        """
+        return self.ptr.global_quality // lib.FF_QP2LAMBDA
+
+    @global_quality.setter
+    def global_quality(self, value: cython.int):
+        self.ptr.global_quality = value * lib.FF_QP2LAMBDA
+
+    @property
+    def bit_rate(self):
+        return self.ptr.bit_rate if self.ptr.bit_rate > 0 else None
+
+    @bit_rate.setter
+    def bit_rate(self, value: cython.longlong):
+        self.ptr.bit_rate = value
+
+    @property
+    def max_bit_rate(self):
+        """Maximum bitrate, or ``None`` if unset.
+
+        Wraps :ffmpeg:`AVCodecContext.rc_max_rate`.
+        """
+        if self.ptr.rc_max_rate > 0:
+            return self.ptr.rc_max_rate
+        else:
+            return None
+
+    @max_bit_rate.setter
+    def max_bit_rate(self, value: cython.longlong):
+        self.ptr.rc_max_rate = value
+
+    @property
+    def min_bit_rate(self):
+        """Minimum bitrate, or ``None`` if unset.
+
+        Wraps :ffmpeg:`AVCodecContext.rc_min_rate`.
+        """
+        if self.ptr.rc_min_rate > 0:
+            return self.ptr.rc_min_rate
+        else:
+            return None
+
+    @min_bit_rate.setter
+    def min_bit_rate(self, value: cython.longlong):
+        self.ptr.rc_min_rate = value
+
+    @property
+    def rc_buffer_size(self):
+        """Decoder bitstream buffer size (VBV), in bits.
+
+        Wraps :ffmpeg:`AVCodecContext.rc_buffer_size`.
+        """
+        return self.ptr.rc_buffer_size
+
+    @rc_buffer_size.setter
+    def rc_buffer_size(self, value: cython.int):
+        self.ptr.rc_buffer_size = value
+
+    @property
+    def compression_level(self):
+        """Codec-defined compression level; ``-1`` means default.
+
+        Wraps :ffmpeg:`AVCodecContext.compression_level`.
+        """
+        return self.ptr.compression_level
+
+    @compression_level.setter
+    def compression_level(self, value: cython.int):
+        self.ptr.compression_level = value
+
+    @property
+    def bit_rate_tolerance(self):
+        return self.ptr.bit_rate_tolerance
+
+    @bit_rate_tolerance.setter
+    def bit_rate_tolerance(self, value: cython.int):
+        self.ptr.bit_rate_tolerance = value
+
+    @property
+    def thread_count(self):
+        """How many threads to use; 0 means auto.
+
+        Wraps :ffmpeg:`AVCodecContext.thread_count`.
+
+        """
+        return self.ptr.thread_count
+
+    @thread_count.setter
+    def thread_count(self, value: cython.int):
+        if lib.avcodec_is_open(self.ptr):
+            raise RuntimeError("Cannot change thread_count after codec is open.")
+        self.ptr.thread_count = value
+
+    @property
+    def thread_type(self):
+        """One of :class:`.ThreadType`.
+
+        Wraps :ffmpeg:`AVCodecContext.thread_type`.
+
+        """
+        return ThreadType(self.ptr.thread_type)
+
+    @thread_type.setter
+    def thread_type(self, value):
+        if lib.avcodec_is_open(self.ptr):
+            raise RuntimeError("Cannot change thread_type after codec is open.")
+        if type(value) is int:
+            self.ptr.thread_type = value
+        elif type(value) is str:
+            self.ptr.thread_type = ThreadType[value].value
+        else:
+            self.ptr.thread_type = value.value
+
+    @property
+    def active_thread_type(self):
+        """The threading actually in use, which may differ from
+        :attr:`thread_type` once the codec is open.
+
+        Wraps :ffmpeg:`AVCodecContext.active_thread_type`.
+        """
+        return ThreadType(self.ptr.active_thread_type)
+
+    @property
+    def skip_frame(self):
+        """Returns one of the following str literals:
+
+        "NONE" Discard nothing
+        "DEFAULT" Discard useless packets like 0 size packets in AVI
+        "NONREF" Discard all non reference
+        "BIDIR" Discard all bidirectional frames
+        "NONINTRA" Discard all non intra frames
+        "NONKEY Discard all frames except keyframes
+        "ALL" Discard all
+
+        Wraps :ffmpeg:`AVCodecContext.skip_frame`.
+        """
+        value = self.ptr.skip_frame
+        if value == lib.AVDISCARD_NONE:
+            return "NONE"
+        if value == lib.AVDISCARD_DEFAULT:
+            return "DEFAULT"
+        if value == lib.AVDISCARD_NONREF:
+            return "NONREF"
+        if value == lib.AVDISCARD_BIDIR:
+            return "BIDIR"
+        if value == lib.AVDISCARD_NONINTRA:
+            return "NONINTRA"
+        if value == lib.AVDISCARD_NONKEY:
+            return "NONKEY"
+        if value == lib.AVDISCARD_ALL:
+            return "ALL"
+        return f"{value}"
+
+    @skip_frame.setter
+    def skip_frame(self, value):
+        if value == "NONE":
+            self.ptr.skip_frame = lib.AVDISCARD_NONE
+        elif value == "DEFAULT":
+            self.ptr.skip_frame = lib.AVDISCARD_DEFAULT
+        elif value == "NONREF":
+            self.ptr.skip_frame = lib.AVDISCARD_NONREF
+        elif value == "BIDIR":
+            self.ptr.skip_frame = lib.AVDISCARD_BIDIR
+        elif value == "NONINTRA":
+            self.ptr.skip_frame = lib.AVDISCARD_NONINTRA
+        elif value == "NONKEY":
+            self.ptr.skip_frame = lib.AVDISCARD_NONKEY
+        elif value == "ALL":
+            self.ptr.skip_frame = lib.AVDISCARD_ALL
+        else:
+            raise ValueError("Invalid skip_frame type")
+
+    @property
+    def delay(self):
+        """Codec delay.
+
+        Wraps :ffmpeg:`AVCodecContext.delay`.
+
+        """
+        return self.ptr.delay
+
+    @property
+    def pkt_timebase(self):
+        """Timebase of the packets fed to this context.
+
+        Decoders use it to set :attr:`.Frame.time_base`. Containers set it for
+        you; set it yourself when driving a bare CodecContext.
+
+        Wraps :ffmpeg:`AVCodecContext.pkt_timebase`.
+        """
+        return from_avrational(self.ptr.pkt_timebase)
+
+    @pkt_timebase.setter
+    def pkt_timebase(self, value):
+        to_avrational(value, cython.address(self.ptr.pkt_timebase))
+
+    @property
+    def frame_num(self):
+        """Number of frames passed to/from this context so far.
+
+        Wraps :ffmpeg:`AVCodecContext.frame_num`.
+        """
+        return self.ptr.frame_num
+
+    @property
+    def bits_per_raw_sample(self):
+        """Bit depth of the samples/components before encoding, e.g. ``10`` for
+        10-bit video. ``0`` when unknown.
+
+        This is the real bit depth; :attr:`.VideoCodecContext.bits_per_coded_sample`
+        is how many bits the bitstream spends on it.
+
+        Wraps :ffmpeg:`AVCodecContext.bits_per_raw_sample`.
+        """
+        return self.ptr.bits_per_raw_sample
+
+    @bits_per_raw_sample.setter
+    def bits_per_raw_sample(self, value: cython.int):
+        self.ptr.bits_per_raw_sample = value
+
+    @property
+    def initial_padding(self):
+        """Audio only. Priming samples the encoder inserted at the start of the
+        stream, which must be discarded to recover the original audio. Needed
+        for gapless playback.
+
+        Set by libavcodec when encoding, and taken from the stream parameters
+        when decoding.
+
+        Wraps :ffmpeg:`AVCodecContext.initial_padding`.
+        """
+        return self.ptr.initial_padding
+
+    @property
+    def trailing_padding(self):
+        """Audio only. Padding samples appended by the encoder, which must be
+        discarded from the end of the stream to recover the original audio.
+
+        libavcodec neither sets nor acts on this; it only travels between the
+        context and the container's stream parameters.
+
+        Wraps :ffmpeg:`AVCodecContext.trailing_padding`.
+        """
+        return self.ptr.trailing_padding
+
+    @trailing_padding.setter
+    def trailing_padding(self, value: cython.int):
+        self.ptr.trailing_padding = value
+
+    @property
+    def seek_preroll(self):
+        """Audio only. Number of samples to skip after a discontinuity, such as
+        a seek, before the decoded output is correct.
+
+        Wraps :ffmpeg:`AVCodecContext.seek_preroll`.
+        """
+        return self.ptr.seek_preroll
+
+    @property
+    def stats_out(self):
+        """Pass-one statistics produced by the encoder, or ``None``.
+
+        Concatenate this after every :meth:`encode` call of the first pass and
+        feed the result back as :attr:`stats_in` on the second.
+
+        Wraps :ffmpeg:`AVCodecContext.stats_out`.
+        """
+        if self.ptr.stats_out == cython.NULL:
+            return None
+        return PyBytes_FromString(self.ptr.stats_out).decode("utf-8", "replace")
+
+    @property
+    def stats_in(self):
+        """Pass-one statistics to feed the second pass of a two-pass encode.
+
+        Must be set before :meth:`open`.
+
+        Wraps :ffmpeg:`AVCodecContext.stats_in`.
+        """
+        if self.ptr.stats_in == cython.NULL:
+            return None
+        return PyBytes_FromString(self.ptr.stats_in).decode("utf-8", "replace")
+
+    @stats_in.setter
+    def stats_in(self, value):
+        self._assert_not_open("stats_in")
+        if value is None:
+            self._stats_in = None
+            self.ptr.stats_in = cython.NULL
+            return
+
+        if type(value) is str:
+            value = value.encode("utf-8")
+        elif not isinstance(value, (bytes, bytearray)):
+            raise TypeError("stats_in must be str, bytes, or None")
+
+        # libavcodec never frees stats_in, so we keep the bytes alive ourselves.
+        self._stats_in = bytes(value)
+        self.ptr.stats_in = self._stats_in
+
+    @property
+    def coded_side_data(self):
+        """Global side data attached to the coded bitstream, as a
+        ``dict`` of packet side data name to ``bytes``.
+
+        Wraps :ffmpeg:`AVCodecContext.coded_side_data`.
+        """
+        i: cython.int
+        out = {}
+        for i in range(self.ptr.nb_coded_side_data):
+            try:
+                key = packet_sidedata_type_to_literal(self.ptr.coded_side_data[i].type)
+            except IndexError:
+                continue
+            out[key] = _to_bytes(
+                self.ptr.coded_side_data[i].data, self.ptr.coded_side_data[i].size
+            )
+        return out
+
+    @property
+    def decoded_side_data(self):
+        """Global side data produced by the decoder, as a ``dict`` of
+        :class:`av.sidedata.sidedata.Type` to ``bytes``.
+
+        This is where stream-wide HDR metadata (mastering display, content
+        light level) shows up after the first frame is decoded.
+
+        Wraps :ffmpeg:`AVCodecContext.decoded_side_data`.
+        """
+        from av.sidedata.sidedata import Type
+
+        i: cython.int
+        out = {}
+        for i in range(self.ptr.nb_decoded_side_data):
+            key = Type(self.ptr.decoded_side_data[i].type)
+            out[key] = _to_bytes(
+                self.ptr.decoded_side_data[i].data, self.ptr.decoded_side_data[i].size
+            )
+        return out
