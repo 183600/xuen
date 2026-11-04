@@ -1,3 +1,0 @@
-from av.plane import Plane
-
-class AudioPlane(Plane): ...
