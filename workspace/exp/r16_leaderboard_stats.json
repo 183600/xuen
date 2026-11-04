@@ -1,0 +1,768 @@
+{
+ "retrieved": "2026-11-04",
+ "n_models": 8,
+ "n_tasks": 32,
+ "models": [
+  {
+   "model": "MolmoAct2",
+   "user": "DexHacker",
+   "avg_success_rate": 29.7,
+   "avg_step_score": 39.0,
+   "avg_duration_sec": 44.02,
+   "step_per_success": 1.313
+  },
+  {
+   "model": "WALL-OSS-0.5",
+   "user": "Generalist Robotics",
+   "avg_success_rate": 28.5,
+   "avg_step_score": 38.9,
+   "avg_duration_sec": 43.74,
+   "step_per_success": 1.365
+  },
+  {
+   "model": "DreamZero",
+   "user": "World Model Lab",
+   "avg_success_rate": 27.9,
+   "avg_step_score": 37.9,
+   "avg_duration_sec": 44.59,
+   "step_per_success": 1.358
+  },
+  {
+   "model": "Spirit-v1.5",
+   "user": "VLAGO",
+   "avg_success_rate": 25.9,
+   "avg_step_score": 34.4,
+   "avg_duration_sec": 45.19,
+   "step_per_success": 1.328
+  },
+  {
+   "model": "DM0",
+   "user": "Embodied AI Institute",
+   "avg_success_rate": 23.5,
+   "avg_step_score": 31.7,
+   "avg_duration_sec": 45.11,
+   "step_per_success": 1.349
+  },
+  {
+   "model": "PI-0.5",
+   "user": "RoboReasoner",
+   "avg_success_rate": 22.8,
+   "avg_step_score": 30.6,
+   "avg_duration_sec": 43.88,
+   "step_per_success": 1.342
+  },
+  {
+   "model": "GigaBrain-0",
+   "user": "xembody",
+   "avg_success_rate": 22.6,
+   "avg_step_score": 29.5,
+   "avg_duration_sec": 43.76,
+   "step_per_success": 1.305
+  },
+  {
+   "model": "GR00T N1.5",
+   "user": "Humanoid Dynamics",
+   "avg_success_rate": 20.5,
+   "avg_step_score": 28.1,
+   "avg_duration_sec": 44.71,
+   "step_per_success": 1.371
+  }
+ ],
+ "model_level_fit": {
+  "formula": "step = 0.510 + 1.321 * success",
+  "intercept": 0.51,
+  "slope": 1.321,
+  "r2": 0.9814
+ },
+ "per_task": [
+  {
+   "id": "T01",
+   "task": "Hang the Cup",
+   "slug": "hang_the_cup",
+   "difficulty": "Easy",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -0.281,
+   "b": 1.354,
+   "r2": 0.9981,
+   "min": 9.03,
+   "mean": 22.95,
+   "max": 38.43,
+   "best_model": "DreamZero",
+   "spread": 29.4
+  },
+  {
+   "id": "T02",
+   "task": "Fruit Basket Collection",
+   "slug": "fruit_basket_collection",
+   "difficulty": "Easy",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -1.212,
+   "b": 1.386,
+   "r2": 0.9808,
+   "min": 23.56,
+   "mean": 27.79,
+   "max": 32.38,
+   "best_model": "DM0",
+   "spread": 8.82
+  },
+  {
+   "id": "T03",
+   "task": "Pack the Doll",
+   "slug": "pack_the_doll",
+   "difficulty": "Easy",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": 0.857,
+   "b": 1.308,
+   "r2": 0.9959,
+   "min": 15.29,
+   "mean": 26.14,
+   "max": 37.01,
+   "best_model": "MolmoAct2",
+   "spread": 21.72
+  },
+  {
+   "id": "T04",
+   "task": "Fruit Sorting",
+   "slug": "sort_fruit",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.12,
+   "b": 1.337,
+   "r2": 0.9946,
+   "min": 18.23,
+   "mean": 27.01,
+   "max": 35.5,
+   "best_model": "DreamZero",
+   "spread": 17.27
+  },
+  {
+   "id": "T05",
+   "task": "Disconnect Ethernet",
+   "slug": "disconnect_ethernet",
+   "difficulty": "Hard",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -0.536,
+   "b": 1.362,
+   "r2": 0.9898,
+   "min": 21.29,
+   "mean": 26.81,
+   "max": 33.44,
+   "best_model": "Spirit-v1.5",
+   "spread": 12.15
+  },
+  {
+   "id": "T06",
+   "task": "Color Arrangement",
+   "slug": "color_arrangement",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.647,
+   "b": 1.315,
+   "r2": 0.9961,
+   "min": 11.38,
+   "mean": 27.12,
+   "max": 37.32,
+   "best_model": "MolmoAct2",
+   "spread": 25.94
+  },
+  {
+   "id": "T07",
+   "task": "Place Photo Frames",
+   "slug": "place_photo_frames",
+   "difficulty": "Medium",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.157,
+   "b": 1.335,
+   "r2": 0.9962,
+   "min": 17.57,
+   "mean": 27.98,
+   "max": 42.0,
+   "best_model": "DreamZero",
+   "spread": 24.43
+  },
+  {
+   "id": "T08",
+   "task": "Organize Bookshelf",
+   "slug": "organize_bookshelf",
+   "difficulty": "Easy",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": 1.821,
+   "b": 1.271,
+   "r2": 0.9892,
+   "min": 19.78,
+   "mean": 26.62,
+   "max": 33.02,
+   "best_model": "MolmoAct2",
+   "spread": 13.24
+  },
+  {
+   "id": "T09",
+   "task": "Toolbox Storage",
+   "slug": "toolbox_storage",
+   "difficulty": "Hard",
+   "rubric_steps": 4,
+   "rubric_weights": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "a": 3.868,
+   "b": 1.19,
+   "r2": 0.9741,
+   "min": 22.76,
+   "mean": 25.82,
+   "max": 30.71,
+   "best_model": "MolmoAct2",
+   "spread": 7.95
+  },
+  {
+   "id": "T10",
+   "task": "Plug Charger",
+   "slug": "plug_charger",
+   "difficulty": "Hard",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": -0.639,
+   "b": 1.368,
+   "r2": 0.9971,
+   "min": 16.47,
+   "mean": 25.57,
+   "max": 38.17,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 21.7
+  },
+  {
+   "id": "T11",
+   "task": "Pick Out Battery",
+   "slug": "pick_out_battery",
+   "difficulty": "Medium",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.807,
+   "b": 1.306,
+   "r2": 0.988,
+   "min": 16.17,
+   "mean": 23.31,
+   "max": 30.03,
+   "best_model": "Spirit-v1.5",
+   "spread": 13.86
+  },
+  {
+   "id": "T12",
+   "task": "Unlock",
+   "slug": "unlock",
+   "difficulty": "Hard",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.043,
+   "b": 1.338,
+   "r2": 0.9978,
+   "min": 6.3,
+   "mean": 20.11,
+   "max": 28.17,
+   "best_model": "PI-0.5",
+   "spread": 21.87
+  },
+  {
+   "id": "T13",
+   "task": "Arrange Test Tubes",
+   "slug": "organize_test_cube",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": -0.036,
+   "b": 1.342,
+   "r2": 0.9962,
+   "min": 14.67,
+   "mean": 24.15,
+   "max": 34.38,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 19.71
+  },
+  {
+   "id": "T14",
+   "task": "Open Pill Bottle",
+   "slug": "open_pill_bottle",
+   "difficulty": "Hard",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -0.177,
+   "b": 1.35,
+   "r2": 0.9961,
+   "min": 11.68,
+   "mean": 22.73,
+   "max": 30.09,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 18.41
+  },
+  {
+   "id": "T15",
+   "task": "Organize Tools",
+   "slug": "organize_tools",
+   "difficulty": "Medium",
+   "rubric_steps": 4,
+   "rubric_weights": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "a": 1.471,
+   "b": 1.283,
+   "r2": 0.9932,
+   "min": 19.15,
+   "mean": 25.94,
+   "max": 37.2,
+   "best_model": "MolmoAct2",
+   "spread": 18.05
+  },
+  {
+   "id": "T16",
+   "task": "Fold Towel",
+   "slug": "fold_towel",
+   "difficulty": "Hard",
+   "rubric_steps": 5,
+   "rubric_weights": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "a": -0.463,
+   "b": 1.361,
+   "r2": 0.994,
+   "min": 16.71,
+   "mean": 24.08,
+   "max": 32.15,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 15.44
+  },
+  {
+   "id": "T17",
+   "task": "Organize Stationery",
+   "slug": "organize_stationery",
+   "difficulty": "Easy",
+   "rubric_steps": 5,
+   "rubric_weights": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "a": 0.232,
+   "b": 1.329,
+   "r2": 0.9968,
+   "min": 9.09,
+   "mean": 22.47,
+   "max": 33.06,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 23.97
+  },
+  {
+   "id": "T18",
+   "task": "Pack Bag",
+   "slug": "pack_bag",
+   "difficulty": "Medium",
+   "rubric_steps": 4,
+   "rubric_weights": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "a": -0.11,
+   "b": 1.346,
+   "r2": 0.9923,
+   "min": 16.35,
+   "mean": 25.28,
+   "max": 31.38,
+   "best_model": "DM0",
+   "spread": 15.03
+  },
+  {
+   "id": "T19",
+   "task": "Zip Up",
+   "slug": "zip_up",
+   "difficulty": "Medium",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": 0.557,
+   "b": 1.315,
+   "r2": 0.9969,
+   "min": 13.58,
+   "mean": 23.39,
+   "max": 33.42,
+   "best_model": "MolmoAct2",
+   "spread": 19.84
+  },
+  {
+   "id": "T20",
+   "task": "Paper Cup Stacking",
+   "slug": "paper_cup_stacking",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 1.03,
+   "b": 1.303,
+   "r2": 0.996,
+   "min": 18.04,
+   "mean": 28.05,
+   "max": 35.28,
+   "best_model": "MolmoAct2",
+   "spread": 17.24
+  },
+  {
+   "id": "T21",
+   "task": "Clear Plates",
+   "slug": "clear_plates",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": -0.519,
+   "b": 1.362,
+   "r2": 0.9916,
+   "min": 18.05,
+   "mean": 25.9,
+   "max": 34.36,
+   "best_model": "GR00T N1.5",
+   "spread": 16.31
+  },
+  {
+   "id": "T22",
+   "task": "Spell robot",
+   "slug": "spell_robot",
+   "difficulty": "Medium",
+   "rubric_steps": 4,
+   "rubric_weights": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "a": -0.444,
+   "b": 1.363,
+   "r2": 0.9965,
+   "min": 14.37,
+   "mean": 21.82,
+   "max": 33.99,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 19.62
+  },
+  {
+   "id": "T23",
+   "task": "Store Racket",
+   "slug": "store_racket",
+   "difficulty": "Medium",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -1.461,
+   "b": 1.4,
+   "r2": 0.993,
+   "min": 20.33,
+   "mean": 25.57,
+   "max": 34.23,
+   "best_model": "DreamZero",
+   "spread": 13.9
+  },
+  {
+   "id": "T24",
+   "task": "Conveyor Food Sorting",
+   "slug": "sort_food_conveyor",
+   "difficulty": "Medium",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": 1.489,
+   "b": 1.288,
+   "r2": 0.9943,
+   "min": 17.09,
+   "mean": 29.12,
+   "max": 37.55,
+   "best_model": "GigaBrain-0",
+   "spread": 20.46
+  },
+  {
+   "id": "T25",
+   "task": "Stack Cups",
+   "slug": "stack_cups",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.825,
+   "b": 1.313,
+   "r2": 0.9884,
+   "min": 19.87,
+   "mean": 30.32,
+   "max": 35.48,
+   "best_model": "Spirit-v1.5",
+   "spread": 15.61
+  },
+  {
+   "id": "T26",
+   "task": "Plug In Ethernet",
+   "slug": "plug_in_ethernet",
+   "difficulty": "Medium",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.589,
+   "b": 1.305,
+   "r2": 0.9965,
+   "min": 9.23,
+   "mean": 17.73,
+   "max": 27.54,
+   "best_model": "MolmoAct2",
+   "spread": 18.31
+  },
+  {
+   "id": "T27",
+   "task": "Stack Bowls",
+   "slug": "stack_bowls_three",
+   "difficulty": "Easy",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": 0.244,
+   "b": 1.331,
+   "r2": 0.9974,
+   "min": 11.33,
+   "mean": 24.11,
+   "max": 36.28,
+   "best_model": "Spirit-v1.5",
+   "spread": 24.95
+  },
+  {
+   "id": "T28",
+   "task": "Store Earphones",
+   "slug": "store_earphones",
+   "difficulty": "Hard",
+   "rubric_steps": 4,
+   "rubric_weights": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "a": -1.051,
+   "b": 1.38,
+   "r2": 0.9715,
+   "min": 23.3,
+   "mean": 27.88,
+   "max": 32.3,
+   "best_model": "Spirit-v1.5",
+   "spread": 9.0
+  },
+  {
+   "id": "T29",
+   "task": "Pack Phone",
+   "slug": "pack_iphone",
+   "difficulty": "Hard",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": -0.926,
+   "b": 1.382,
+   "r2": 0.9929,
+   "min": 16.94,
+   "mean": 23.88,
+   "max": 31.86,
+   "best_model": "DreamZero",
+   "spread": 14.92
+  },
+  {
+   "id": "T30",
+   "task": "Remove Pinned Note",
+   "slug": "remove_pinned_note",
+   "difficulty": "Medium",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": -0.606,
+   "b": 1.366,
+   "r2": 0.9971,
+   "min": 13.31,
+   "mean": 27.3,
+   "max": 40.28,
+   "best_model": "WALL-OSS-0.5",
+   "spread": 26.97
+  },
+  {
+   "id": "T31",
+   "task": "Organize Pencil Case",
+   "slug": "pencil_case",
+   "difficulty": "Medium",
+   "rubric_steps": 3,
+   "rubric_weights": [
+    30,
+    30,
+    40
+   ],
+   "a": -1.336,
+   "b": 1.4,
+   "r2": 0.9967,
+   "min": 12.94,
+   "mean": 24.08,
+   "max": 30.3,
+   "best_model": "DreamZero",
+   "spread": 17.36
+  },
+  {
+   "id": "T32",
+   "task": "Syringe Water Transfer",
+   "slug": "syring_water",
+   "difficulty": "Medium",
+   "rubric_steps": 2,
+   "rubric_weights": [
+    50,
+    50
+   ],
+   "a": 0.823,
+   "b": 1.307,
+   "r2": 0.9843,
+   "min": 19.0,
+   "mean": 24.57,
+   "max": 29.35,
+   "best_model": "PI-0.5",
+   "spread": 10.35
+  }
+ ],
+ "violations_step_ge_success": 0,
+ "per_task_fit_summary": {
+  "mean_b": 1.334,
+  "min_b": 1.19,
+  "max_b": 1.4,
+  "mean_r2": 0.9925,
+  "min_r2": 0.9715,
+  "mean_a": 0.181,
+  "oracle_per_task_routing_avg": 33.96,
+  "per_task_mean_avg": 25.18,
+  "mean_spread": 17.93
+ },
+ "best_model_task_counts": {
+  "DreamZero": 6,
+  "DM0": 2,
+  "MolmoAct2": 8,
+  "Spirit-v1.5": 5,
+  "WALL-OSS-0.5": 7,
+  "PI-0.5": 2,
+  "GR00T N1.5": 1,
+  "GigaBrain-0": 1
+ },
+ "rubric_step_histogram": {
+  "2": 11,
+  "3": 14,
+  "4": 5,
+  "5": 2
+ },
+ "difficulty_groups": {
+  "Easy": {
+   "n": 12,
+   "mean_success": 26.05
+  },
+  "Hard": {
+   "n": 8,
+   "mean_success": 24.61
+  },
+  "Medium": {
+   "n": 12,
+   "mean_success": 24.67
+  }
+ },
+ "corr_steps_vs_success": -0.178,
+ "corr_difficulty_vs_success": -0.232,
+ "dataset": {
+  "episodes_total": 33276,
+  "episodes_min": 969,
+  "episodes_max": 1533,
+  "tasks_with_unseen_object_note": 23,
+  "tasks_with_human_notes": 30
+ }
+}
