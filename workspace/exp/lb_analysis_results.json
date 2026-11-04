@@ -1,0 +1,865 @@
+{
+  "source": "https://unibot.unitree.com/leaderboard_data.json (fetched 2026-11-04 via webfetch; curl later blocked by EdgeOne)",
+  "transcription_checksum": {
+    "max_abs_err": 0.33062500000000483,
+    "per_model": [
+      {
+        "model": "MolmoAct2",
+        "published": 29.7,
+        "recomputed_mean": 29.6996875,
+        "abs_err": 0.0003124999999997158
+      },
+      {
+        "model": "WALL-OSS-0.5",
+        "published": 28.5,
+        "recomputed_mean": 28.5,
+        "abs_err": 0.0
+      },
+      {
+        "model": "DreamZero",
+        "published": 27.9,
+        "recomputed_mean": 27.899375,
+        "abs_err": 0.0006249999999994316
+      },
+      {
+        "model": "Spirit-v1.5",
+        "published": 25.9,
+        "recomputed_mean": 25.8990625,
+        "abs_err": 0.0009374999999991473
+      },
+      {
+        "model": "DM0",
+        "published": 23.5,
+        "recomputed_mean": 23.4996875,
+        "abs_err": 0.0003124999999997158
+      },
+      {
+        "model": "PI-0.5",
+        "published": 22.8,
+        "recomputed_mean": 22.769687500000003,
+        "abs_err": 0.0303124999999973
+      },
+      {
+        "model": "GigaBrain-0",
+        "published": 22.6,
+        "recomputed_mean": 22.269374999999997,
+        "abs_err": 0.33062500000000483
+      },
+      {
+        "model": "GR00T N1.5",
+        "published": 20.5,
+        "recomputed_mean": 20.5384375,
+        "abs_err": 0.03843750000000057
+      }
+    ],
+    "verified": false
+  },
+  "headline": {
+    "best_single_model": 29.7,
+    "mean_single_model": 25.18,
+    "per_task_oracle_router": 33.89,
+    "routing_headroom_pp": 4.19,
+    "best_model": "MolmoAct2"
+  },
+  "task_difficulty": [
+    {
+      "task": "Hang the Cup",
+      "mean": 22.95,
+      "best": 38.43,
+      "worst": 9.03,
+      "std": 10.15,
+      "winner": "DreamZero",
+      "top1_model_rate": 27.29
+    },
+    {
+      "task": "Fruit Basket Collection",
+      "mean": 27.79,
+      "best": 32.38,
+      "worst": 23.56,
+      "std": 3.36,
+      "winner": "DM0",
+      "top1_model_rate": 27.85
+    },
+    {
+      "task": "Pack the Doll",
+      "mean": 26.14,
+      "best": 37.01,
+      "worst": 15.29,
+      "std": 6.8,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 37.01
+    },
+    {
+      "task": "Fruit Sorting",
+      "mean": 27.01,
+      "best": 35.5,
+      "worst": 18.23,
+      "std": 6.15,
+      "winner": "DreamZero",
+      "top1_model_rate": 31.76
+    },
+    {
+      "task": "Disconnect Ethernet",
+      "mean": 26.81,
+      "best": 33.44,
+      "worst": 21.29,
+      "std": 4.42,
+      "winner": "Spirit-v1.5",
+      "top1_model_rate": 21.29
+    },
+    {
+      "task": "Color Arrangement",
+      "mean": 27.12,
+      "best": 37.32,
+      "worst": 11.38,
+      "std": 7.55,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 37.32
+    },
+    {
+      "task": "Place Photo Frames",
+      "mean": 27.98,
+      "best": 42.0,
+      "worst": 17.57,
+      "std": 8.34,
+      "winner": "DreamZero",
+      "top1_model_rate": 24.33
+    },
+    {
+      "task": "Organize Bookshelf",
+      "mean": 26.62,
+      "best": 33.02,
+      "worst": 19.78,
+      "std": 4.28,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 33.02
+    },
+    {
+      "task": "Toolbox Storage",
+      "mean": 25.82,
+      "best": 30.71,
+      "worst": 22.76,
+      "std": 2.68,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 30.71
+    },
+    {
+      "task": "Plug Charger",
+      "mean": 25.57,
+      "best": 38.17,
+      "worst": 16.47,
+      "std": 8.06,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 30.51
+    },
+    {
+      "task": "Pick Out Battery",
+      "mean": 23.31,
+      "best": 30.03,
+      "worst": 16.17,
+      "std": 3.87,
+      "winner": "Spirit-v1.5",
+      "top1_model_rate": 23.46
+    },
+    {
+      "task": "Unlock",
+      "mean": 20.11,
+      "best": 28.17,
+      "worst": 6.3,
+      "std": 6.84,
+      "winner": "PI-0.5",
+      "top1_model_rate": 23.52
+    },
+    {
+      "task": "Arrange Test Tubes",
+      "mean": 24.15,
+      "best": 34.38,
+      "worst": 14.67,
+      "std": 6.83,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 28.93
+    },
+    {
+      "task": "Open Pill Bottle",
+      "mean": 22.73,
+      "best": 30.09,
+      "worst": 11.68,
+      "std": 6.69,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 28.57
+    },
+    {
+      "task": "Organize Tools",
+      "mean": 25.94,
+      "best": 37.2,
+      "worst": 19.15,
+      "std": 5.56,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 37.2
+    },
+    {
+      "task": "Fold Towel",
+      "mean": 24.08,
+      "best": 32.15,
+      "worst": 16.71,
+      "std": 5.44,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 27.19
+    },
+    {
+      "task": "Organize Stationery",
+      "mean": 22.47,
+      "best": 33.06,
+      "worst": 9.09,
+      "std": 8.24,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 30.9
+    },
+    {
+      "task": "Pack Bag",
+      "mean": 25.28,
+      "best": 31.38,
+      "worst": 16.35,
+      "std": 4.81,
+      "winner": "DM0",
+      "top1_model_rate": 28.77
+    },
+    {
+      "task": "Zip Up",
+      "mean": 23.39,
+      "best": 33.42,
+      "worst": 13.58,
+      "std": 7.45,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 33.42
+    },
+    {
+      "task": "Paper Cup Stacking",
+      "mean": 28.05,
+      "best": 35.28,
+      "worst": 18.04,
+      "std": 6.69,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 35.28
+    },
+    {
+      "task": "Clear Plates",
+      "mean": 24.96,
+      "best": 34.36,
+      "worst": 17.03,
+      "std": 6.29,
+      "winner": "GR00T N1.5",
+      "top1_model_rate": 32.72
+    },
+    {
+      "task": "Spell robot",
+      "mean": 22.34,
+      "best": 33.99,
+      "worst": 14.37,
+      "std": 6.29,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 28.62
+    },
+    {
+      "task": "Store Racket",
+      "mean": 25.57,
+      "best": 34.23,
+      "worst": 20.33,
+      "std": 4.62,
+      "winner": "DreamZero",
+      "top1_model_rate": 28.49
+    },
+    {
+      "task": "Conveyor Food Sorting",
+      "mean": 28.23,
+      "best": 35.38,
+      "worst": 17.09,
+      "std": 6.14,
+      "winner": "DreamZero",
+      "top1_model_rate": 32.26
+    },
+    {
+      "task": "Stack Cups",
+      "mean": 30.32,
+      "best": 35.48,
+      "worst": 19.87,
+      "std": 5.16,
+      "winner": "Spirit-v1.5",
+      "top1_model_rate": 31.44
+    },
+    {
+      "task": "Plug In Ethernet",
+      "mean": 17.73,
+      "best": 27.54,
+      "worst": 9.23,
+      "std": 5.79,
+      "winner": "MolmoAct2",
+      "top1_model_rate": 27.54
+    },
+    {
+      "task": "Stack Bowls",
+      "mean": 24.11,
+      "best": 36.28,
+      "worst": 11.33,
+      "std": 8.1,
+      "winner": "Spirit-v1.5",
+      "top1_model_rate": 29.28
+    },
+    {
+      "task": "Store Earphones",
+      "mean": 27.88,
+      "best": 32.3,
+      "worst": 23.3,
+      "std": 2.68,
+      "winner": "Spirit-v1.5",
+      "top1_model_rate": 27.73
+    },
+    {
+      "task": "Pack Phone",
+      "mean": 23.88,
+      "best": 31.86,
+      "worst": 16.94,
+      "std": 4.5,
+      "winner": "DreamZero",
+      "top1_model_rate": 27.39
+    },
+    {
+      "task": "Remove Pinned Note",
+      "mean": 27.18,
+      "best": 40.28,
+      "worst": 13.31,
+      "std": 8.64,
+      "winner": "WALL-OSS-0.5",
+      "top1_model_rate": 33.75
+    },
+    {
+      "task": "Organize Pencil Case",
+      "mean": 24.23,
+      "best": 30.3,
+      "worst": 12.94,
+      "std": 5.33,
+      "winner": "DreamZero",
+      "top1_model_rate": 24.95
+    },
+    {
+      "task": "Syringe Water Transfer",
+      "mean": 24.57,
+      "best": 29.35,
+      "worst": 19.0,
+      "std": 3.35,
+      "winner": "PI-0.5",
+      "top1_model_rate": 27.89
+    }
+  ],
+  "difficulty_ranking_by_best_known": [
+    {
+      "task": "Place Photo Frames",
+      "best_known": 42.0,
+      "mean": 27.98
+    },
+    {
+      "task": "Remove Pinned Note",
+      "best_known": 40.28,
+      "mean": 27.18
+    },
+    {
+      "task": "Hang the Cup",
+      "best_known": 38.43,
+      "mean": 22.95
+    },
+    {
+      "task": "Plug Charger",
+      "best_known": 38.17,
+      "mean": 25.57
+    },
+    {
+      "task": "Color Arrangement",
+      "best_known": 37.32,
+      "mean": 27.12
+    },
+    {
+      "task": "Organize Tools",
+      "best_known": 37.2,
+      "mean": 25.94
+    },
+    {
+      "task": "Pack the Doll",
+      "best_known": 37.01,
+      "mean": 26.14
+    },
+    {
+      "task": "Stack Bowls",
+      "best_known": 36.28,
+      "mean": 24.11
+    },
+    {
+      "task": "Fruit Sorting",
+      "best_known": 35.5,
+      "mean": 27.01
+    },
+    {
+      "task": "Stack Cups",
+      "best_known": 35.48,
+      "mean": 30.32
+    },
+    {
+      "task": "Conveyor Food Sorting",
+      "best_known": 35.38,
+      "mean": 28.23
+    },
+    {
+      "task": "Paper Cup Stacking",
+      "best_known": 35.28,
+      "mean": 28.05
+    },
+    {
+      "task": "Arrange Test Tubes",
+      "best_known": 34.38,
+      "mean": 24.15
+    },
+    {
+      "task": "Clear Plates",
+      "best_known": 34.36,
+      "mean": 24.96
+    },
+    {
+      "task": "Store Racket",
+      "best_known": 34.23,
+      "mean": 25.57
+    },
+    {
+      "task": "Spell robot",
+      "best_known": 33.99,
+      "mean": 22.34
+    },
+    {
+      "task": "Disconnect Ethernet",
+      "best_known": 33.44,
+      "mean": 26.81
+    },
+    {
+      "task": "Zip Up",
+      "best_known": 33.42,
+      "mean": 23.39
+    },
+    {
+      "task": "Organize Stationery",
+      "best_known": 33.06,
+      "mean": 22.47
+    },
+    {
+      "task": "Organize Bookshelf",
+      "best_known": 33.02,
+      "mean": 26.62
+    },
+    {
+      "task": "Fruit Basket Collection",
+      "best_known": 32.38,
+      "mean": 27.79
+    },
+    {
+      "task": "Store Earphones",
+      "best_known": 32.3,
+      "mean": 27.88
+    },
+    {
+      "task": "Fold Towel",
+      "best_known": 32.15,
+      "mean": 24.08
+    },
+    {
+      "task": "Pack Phone",
+      "best_known": 31.86,
+      "mean": 23.88
+    },
+    {
+      "task": "Pack Bag",
+      "best_known": 31.38,
+      "mean": 25.28
+    },
+    {
+      "task": "Toolbox Storage",
+      "best_known": 30.71,
+      "mean": 25.82
+    },
+    {
+      "task": "Organize Pencil Case",
+      "best_known": 30.3,
+      "mean": 24.23
+    },
+    {
+      "task": "Open Pill Bottle",
+      "best_known": 30.09,
+      "mean": 22.73
+    },
+    {
+      "task": "Pick Out Battery",
+      "best_known": 30.03,
+      "mean": 23.31
+    },
+    {
+      "task": "Syringe Water Transfer",
+      "best_known": 29.35,
+      "mean": 24.57
+    },
+    {
+      "task": "Unlock",
+      "best_known": 28.17,
+      "mean": 20.11
+    },
+    {
+      "task": "Plug In Ethernet",
+      "best_known": 27.54,
+      "mean": 17.73
+    }
+  ],
+  "difficulty_ranking_by_mean": [
+    {
+      "task": "Plug In Ethernet",
+      "mean": 17.73
+    },
+    {
+      "task": "Unlock",
+      "mean": 20.11
+    },
+    {
+      "task": "Spell robot",
+      "mean": 22.34
+    },
+    {
+      "task": "Organize Stationery",
+      "mean": 22.47
+    },
+    {
+      "task": "Open Pill Bottle",
+      "mean": 22.73
+    },
+    {
+      "task": "Hang the Cup",
+      "mean": 22.95
+    },
+    {
+      "task": "Pick Out Battery",
+      "mean": 23.31
+    },
+    {
+      "task": "Zip Up",
+      "mean": 23.39
+    },
+    {
+      "task": "Pack Phone",
+      "mean": 23.88
+    },
+    {
+      "task": "Fold Towel",
+      "mean": 24.08
+    },
+    {
+      "task": "Stack Bowls",
+      "mean": 24.11
+    },
+    {
+      "task": "Arrange Test Tubes",
+      "mean": 24.15
+    },
+    {
+      "task": "Organize Pencil Case",
+      "mean": 24.23
+    },
+    {
+      "task": "Syringe Water Transfer",
+      "mean": 24.57
+    },
+    {
+      "task": "Clear Plates",
+      "mean": 24.96
+    },
+    {
+      "task": "Pack Bag",
+      "mean": 25.28
+    },
+    {
+      "task": "Plug Charger",
+      "mean": 25.57
+    },
+    {
+      "task": "Store Racket",
+      "mean": 25.57
+    },
+    {
+      "task": "Toolbox Storage",
+      "mean": 25.82
+    },
+    {
+      "task": "Organize Tools",
+      "mean": 25.94
+    },
+    {
+      "task": "Pack the Doll",
+      "mean": 26.14
+    },
+    {
+      "task": "Organize Bookshelf",
+      "mean": 26.62
+    },
+    {
+      "task": "Disconnect Ethernet",
+      "mean": 26.81
+    },
+    {
+      "task": "Fruit Sorting",
+      "mean": 27.01
+    },
+    {
+      "task": "Color Arrangement",
+      "mean": 27.12
+    },
+    {
+      "task": "Remove Pinned Note",
+      "mean": 27.18
+    },
+    {
+      "task": "Fruit Basket Collection",
+      "mean": 27.79
+    },
+    {
+      "task": "Store Earphones",
+      "mean": 27.88
+    },
+    {
+      "task": "Place Photo Frames",
+      "mean": 27.98
+    },
+    {
+      "task": "Paper Cup Stacking",
+      "mean": 28.05
+    },
+    {
+      "task": "Conveyor Food Sorting",
+      "mean": 28.23
+    },
+    {
+      "task": "Stack Cups",
+      "mean": 30.32
+    }
+  ],
+  "agreement": {
+    "pairwise_spearman_mean": 0.094,
+    "pairwise_spearman_min": -0.15,
+    "pairwise_spearman_max": 0.285,
+    "interpretation": "high correlation => task difficulty is a property of the task/scene, not of the model"
+  },
+  "winner_histogram": {
+    "MolmoAct2": 8,
+    "WALL-OSS-0.5": 7,
+    "DreamZero": 7,
+    "Spirit-v1.5": 5,
+    "DM0": 2,
+    "PI-0.5": 2,
+    "GigaBrain-0": 0,
+    "GR00T N1.5": 1
+  },
+  "counts": {
+    "tasks_best_known_below_25": 0,
+    "tasks_best_known_below_20": 0,
+    "tasks_best_known_above_35": 12,
+    "tasks_top1_below_25": 5,
+    "tasks_top1_below_20": 0,
+    "tasks_spread_gt_15pp": 23,
+    "tasks_spread_gt_20pp": 9
+  },
+  "top1_model_profile": [
+    {
+      "task": "Hang the Cup",
+      "rate": 27.29,
+      "best_known": 38.43,
+      "deficit_pp": 11.14
+    },
+    {
+      "task": "Fruit Basket Collection",
+      "rate": 27.85,
+      "best_known": 32.38,
+      "deficit_pp": 4.53
+    },
+    {
+      "task": "Pack the Doll",
+      "rate": 37.01,
+      "best_known": 37.01,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Fruit Sorting",
+      "rate": 31.76,
+      "best_known": 35.5,
+      "deficit_pp": 3.74
+    },
+    {
+      "task": "Disconnect Ethernet",
+      "rate": 21.29,
+      "best_known": 33.44,
+      "deficit_pp": 12.15
+    },
+    {
+      "task": "Color Arrangement",
+      "rate": 37.32,
+      "best_known": 37.32,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Place Photo Frames",
+      "rate": 24.33,
+      "best_known": 42.0,
+      "deficit_pp": 17.67
+    },
+    {
+      "task": "Organize Bookshelf",
+      "rate": 33.02,
+      "best_known": 33.02,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Toolbox Storage",
+      "rate": 30.71,
+      "best_known": 30.71,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Plug Charger",
+      "rate": 30.51,
+      "best_known": 38.17,
+      "deficit_pp": 7.66
+    },
+    {
+      "task": "Pick Out Battery",
+      "rate": 23.46,
+      "best_known": 30.03,
+      "deficit_pp": 6.57
+    },
+    {
+      "task": "Unlock",
+      "rate": 23.52,
+      "best_known": 28.17,
+      "deficit_pp": 4.65
+    },
+    {
+      "task": "Arrange Test Tubes",
+      "rate": 28.93,
+      "best_known": 34.38,
+      "deficit_pp": 5.45
+    },
+    {
+      "task": "Open Pill Bottle",
+      "rate": 28.57,
+      "best_known": 30.09,
+      "deficit_pp": 1.52
+    },
+    {
+      "task": "Organize Tools",
+      "rate": 37.2,
+      "best_known": 37.2,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Fold Towel",
+      "rate": 27.19,
+      "best_known": 32.15,
+      "deficit_pp": 4.96
+    },
+    {
+      "task": "Organize Stationery",
+      "rate": 30.9,
+      "best_known": 33.06,
+      "deficit_pp": 2.16
+    },
+    {
+      "task": "Pack Bag",
+      "rate": 28.77,
+      "best_known": 31.38,
+      "deficit_pp": 2.61
+    },
+    {
+      "task": "Zip Up",
+      "rate": 33.42,
+      "best_known": 33.42,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Paper Cup Stacking",
+      "rate": 35.28,
+      "best_known": 35.28,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Clear Plates",
+      "rate": 32.72,
+      "best_known": 34.36,
+      "deficit_pp": 1.64
+    },
+    {
+      "task": "Spell robot",
+      "rate": 28.62,
+      "best_known": 33.99,
+      "deficit_pp": 5.37
+    },
+    {
+      "task": "Store Racket",
+      "rate": 28.49,
+      "best_known": 34.23,
+      "deficit_pp": 5.74
+    },
+    {
+      "task": "Conveyor Food Sorting",
+      "rate": 32.26,
+      "best_known": 35.38,
+      "deficit_pp": 3.12
+    },
+    {
+      "task": "Stack Cups",
+      "rate": 31.44,
+      "best_known": 35.48,
+      "deficit_pp": 4.04
+    },
+    {
+      "task": "Plug In Ethernet",
+      "rate": 27.54,
+      "best_known": 27.54,
+      "deficit_pp": 0.0
+    },
+    {
+      "task": "Stack Bowls",
+      "rate": 29.28,
+      "best_known": 36.28,
+      "deficit_pp": 7.0
+    },
+    {
+      "task": "Store Earphones",
+      "rate": 27.73,
+      "best_known": 32.3,
+      "deficit_pp": 4.57
+    },
+    {
+      "task": "Pack Phone",
+      "rate": 27.39,
+      "best_known": 31.86,
+      "deficit_pp": 4.47
+    },
+    {
+      "task": "Remove Pinned Note",
+      "rate": 33.75,
+      "best_known": 40.28,
+      "deficit_pp": 6.53
+    },
+    {
+      "task": "Organize Pencil Case",
+      "rate": 24.95,
+      "best_known": 30.3,
+      "deficit_pp": 5.35
+    },
+    {
+      "task": "Syringe Water Transfer",
+      "rate": 27.89,
+      "best_known": 29.35,
+      "deficit_pp": 1.46
+    }
+  ]
+}
