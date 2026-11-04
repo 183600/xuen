@@ -363,13 +363,32 @@ jobs:
             echo "[model] 测试 $m ..."
             # 每个候选都做一次真实冒烟调用，避免选中目录里存在但实际不可用的模型。
             SMK_T=180; case "$m" in nvidia/*) SMK_T=75 ;; esac
-            if ( cd "$SMOKE_DIR" && timeout --kill-after=30 $SMK_T opencode run --auto -m "$m" "只回复两个字：OK" ) > "$SMOKE_DIR/smoke.log" 2>&1; then
-              echo "[model] 可用：$m"
-              SELECTED="$m"
+            _ok=0; _try=0
+            while :; do
+              if ( cd "$SMOKE_DIR" && timeout --kill-after=30 $SMK_T opencode run --auto -m "$m" "只回复两个字：OK" ) > "$SMOKE_DIR/smoke.log" 2>&1; then
+                _ok=1
+                break
+              fi
+              if grep -qiE "too many requests|rate.?limit|status.{0,3}429|FreeTierError|free tier" "$SMOKE_DIR/smoke.log" 2>/dev/null; then
+                if [ "$_try" -ge 4 ]; then
+                  echo "[model][error] $m 持续 429/限流（已退避重试 4 次）：不换模型，中止本次选择；稍后可重新触发"
+                  exit 1
+                fi
+                _try=$((_try+1))
+                echo "[model] $m 撞 429/限流（第 ${_try}/4 次）：不换模型，$((45*_try))s 后同模型重试"
+                sleep $((45*_try))
+                continue
+              fi
               break
+            done
+            if [ "$_ok" -ne 1 ]; then
+              echo "[model] 不可用：$m"
+              tail -n 20 "$SMOKE_DIR/smoke.log" 2>/dev/null || true
+              continue
             fi
-            echo "[model] 不可用：$m"
-            tail -n 20 "$SMOKE_DIR/smoke.log" 2>/dev/null || true
+            echo "[model] 可用：$m"
+            SELECTED="$m"
+            break
           done
 
           if [ -z "$SELECTED" ]; then
@@ -464,13 +483,17 @@ jobs:
           #    停滞，终止本次调用并返回 75：已完成的改动由后续 publish 步骤
           #    提交推送（停滞也推送，不丢进度）。
           echo "[watchdog] 停滞看门狗已启用（输出 ${STALL_TIMEOUT}s 无增长即终止本次调用）"
+          _429_tries=0
+          OC_CALL_BUDGET=16800
+          # ⭐ 429/限流不换模型：同模型原地退避重试（60/120/180/240s，最多 4 次）
+          while :; do
           rm -f /tmp/.oc_exit_code
           # setsid：独立进程组（包装/timeout/tee 一个组），与主脚本隔离，
           # 停滞时可整组终止；timeout 的子进程组在下方 kill 时单独覆盖
           setsid bash -c '
             timeout --kill-after=120 "$1" opencode run --auto -m "$2" "$3" < /dev/null 2>&1 | tee "$4"
             echo "${PIPESTATUS[0]}" > /tmp/.oc_exit_code
-          ' _ 16800 "$MODEL" "$PROMPT" "$LOG" &
+          ' _ "$OC_CALL_BUDGET" "$MODEL" "$PROMPT" "$LOG" &
           OC_BG=$!
           _sz=-1; _ts=$(date +%s); _stalled=0
           while kill -0 "$OC_BG" 2>/dev/null; do
@@ -513,6 +536,27 @@ jobs:
             EC=124
             [ -s /tmp/.oc_exit_code ] && EC=$(cat /tmp/.oc_exit_code)
           fi
+          if [ "$EC" -eq 0 ] || [ "$EC" -eq 124 ] || [ "$EC" -eq 137 ] || [ "$EC" -eq 143 ] || [ "$EC" -eq 75 ]; then
+            break
+          fi
+          # ⭐ 429/限流：同一模型原地退避重试，绝不换模型（2026-11-04）
+          if tail -40 "$LOG" | grep -qiE "too many requests|rate.?limit|status.{0,3}429|FreeTierError|free tier"; then
+            if [ "$_429_tries" -lt 4 ]; then
+              _429_tries=$((_429_tries+1))
+              _w=$((60*_429_tries))
+              echo "[429-retry] opencode 撞限流（$MODEL，exit=$EC）：不换模型，${_w}s 后同模型重试（$_429_tries/4）"
+              sleep "$_w"
+              OC_CALL_BUDGET=$(( 16800 - SECONDS - 600 ))
+              if [ "$OC_CALL_BUDGET" -le 600 ]; then
+                echo "[429-retry] 剩余时间不足，放弃重试"
+                break
+              fi
+              continue
+            fi
+            echo "[warn] 持续限流（$MODEL，已同模型重试 4 次）：不换模型，本 run 结束；可重新打开 issue 再次触发"
+          fi
+          break
+          done
           echo "exit_code=$EC" >> "$GITHUB_OUTPUT"
           echo "[opencode] exit=$EC"
           exit 0
