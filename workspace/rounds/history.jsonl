@@ -865,3 +865,4 @@
 {"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261102-050423-r1", "changed": ["idea"], "ts": "2026-11-04 13:41:21"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-04 14:48:07"}
 {"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-04 14:59:59"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-04 15:10:01"}
