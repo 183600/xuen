@@ -859,8 +859,9 @@
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 08:42:58"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 10:05:58"}
 {"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261102-050423-r1", "changed": ["idea"], "ts": "2026-11-04 10:05:58"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 11:13:20"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 11:50:55"}
-{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-04 12:34:52"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 13:12:45"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 13:50:55"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 12:24:56"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-04 12:29:48"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 13:41:21"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261102-050423-r1", "changed": ["idea"], "ts": "2026-11-04 13:41:21"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-04 14:48:07"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-04 14:59:59"}
