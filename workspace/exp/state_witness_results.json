@@ -1,0 +1,769 @@
+{
+  "source": "unitreerobotics/G1_Dex1_* on HF (datasets-server rows API), fetched 2026-11-04",
+  "notes": "state_d435/state_torso/waist_state_joint are dataset-only channels; the challenge API exposes lower_body(15) which contains waist yaw/roll/pitch",
+  "tasks": {
+    "G1_Dex1_ArrangeTestTubes": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.021115387126337738,
+          "std": 0.001328260366860085,
+          "max_abs": 0.00388997819973156
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8302500554546713,
+          "std": 6.550583809399426e-05,
+          "max_abs": 0.00017997536808256331
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.039567666595758055,
+          "std": 0.0025199630664444433,
+          "max_abs": 0.0073477174173604
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 1.0613843159335526e-05,
+        "p95": 1.988503615610942e-05
+      },
+      "E2_ee_span_m": 0.27034338284283876,
+      "E2_median_frame_step_m": 0.0012210156424904304,
+      "E3_gripper_range": {
+        "o_open": 4.478909492492676,
+        "o_closed": 1.2946645021438599,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "open": 0.2913,
+        "close": 0.3937,
+        "idle_open": 0.1787,
+        "reach": 0.02,
+        "hold_closed": 0.085,
+        "carry": 0.0312
+      },
+      "E3_stall_width_n": 342,
+      "E3_stall_width_median": 4.423892974853516,
+      "E3_stall_width_quantiles": {
+        "0.1": 1.329248070716858,
+        "0.25": 1.379311442375183,
+        "0.5": 4.423892974853516,
+        "0.75": 4.4785871505737305,
+        "0.9": 4.478856086730957
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.009705915473569016
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.1692037084698677,
+        "p95": 0.49986743927001953
+      }
+    },
+    "G1_Dex1_ConveyorSorting": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 2,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.01019233991508372,
+          "std": 0.0017229566142437504,
+          "max_abs": 0.005633803409291432
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8306558953784406,
+          "std": 4.38569917596461e-05,
+          "max_abs": 0.00016684105619790834
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.018894616383404353,
+          "std": 0.0032358071260659427,
+          "max_abs": 0.010574654807060144
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 1.6158340321371795e-05,
+        "p95": 2.7249981721079605e-05
+      },
+      "E2_ee_span_m": 0.2763129994273186,
+      "E2_median_frame_step_m": 0.0022904873170182956,
+      "E3_gripper_range": {
+        "o_open": 4.46584764957428,
+        "o_closed": 0.025049906224012375,
+        "do_threshold_per_s": 2.5587212853133676e-05
+      },
+      "E3_label_mix_left": {
+        "open": 0.3675,
+        "idle_open": 0.165,
+        "close": 0.36,
+        "reach": 0.0138,
+        "hold_closed": 0.0375,
+        "carry": 0.0537,
+        "unknown": 0.0025
+      },
+      "E3_stall_width_n": 323,
+      "E3_stall_width_median": 4.46580171585083,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.04121806100010872,
+        "0.25": 4.144068241119385,
+        "0.5": 4.46580171585083,
+        "0.75": 4.490138053894043,
+        "0.9": 4.490145683288574
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 1,
+        "median": 0.012883904756120517,
+        "within_episode_p99_m": 0.010603097320931686
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.03640541784707239,
+        "p95": 0.23593605067580906
+      }
+    },
+    "G1_Dex1_FoldTowel": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.010314775248989463,
+          "std": 0.0013443897277190218,
+          "max_abs": 0.005539304027333856
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8305755574814975,
+          "std": 5.783097900492711e-05,
+          "max_abs": 0.0002763439528643552
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.021891177444485946,
+          "std": 0.002854016478822013,
+          "max_abs": 0.011962366477819161
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 1.1254901346730727e-05,
+        "p95": 1.588199613781987e-05
+      },
+      "E2_ee_span_m": 0.32136840373277664,
+      "E2_median_frame_step_m": 0.002315414668197197,
+      "E3_gripper_range": {
+        "o_open": 3.232481002807617,
+        "o_closed": 0.08968418836593628,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "close": 0.3187,
+        "partial_hold": 0.0625,
+        "open": 0.3625,
+        "partial_motion": 0.0163,
+        "idle_open": 0.1212,
+        "carry": 0.0675,
+        "hold_closed": 0.035,
+        "reach": 0.0163
+      },
+      "E3_stall_width_n": 270,
+      "E3_stall_width_median": 2.8622241020202637,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.0907733142375946,
+        "0.25": 0.11885283142328262,
+        "0.5": 2.8622241020202637,
+        "0.75": 3.1098392009735107,
+        "0.9": 4.481080055236816
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.014064016572754672
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.04363235942495521,
+        "p95": 0.20358119700103983
+      }
+    },
+    "G1_Dex1_HangCup": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 5,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.005933856193505563,
+          "std": 0.004776451611447107,
+          "max_abs": 0.00790109804592248
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8307202299498022,
+          "std": 6.023126865688788e-05,
+          "max_abs": 0.00012893876060848797
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.010596754745042744,
+          "std": 0.008508561346354927,
+          "max_abs": 0.014054433658325252
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 7.53633646150938e-05,
+        "p95": 0.00011616788730362513
+      },
+      "E2_ee_span_m": 0.24166280403733253,
+      "E2_median_frame_step_m": 0.0011424787398714067,
+      "E3_gripper_range": {
+        "o_open": 4.506904602050781,
+        "o_closed": 4.506804943084717,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "close": 0.3113,
+        "open": 0.3088,
+        "hold_closed": 0.3075,
+        "carry": 0.0625,
+        "unknown": 0.01
+      },
+      "E3_stall_width_n": 316,
+      "E3_stall_width_median": 4.506804943084717,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.1406276822090149,
+        "0.25": 1.7378717064857483,
+        "0.5": 4.506804943084717,
+        "0.75": 4.5068583488464355,
+        "0.9": 4.506889343261719
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 4,
+        "median": 0.05628969666915576,
+        "within_episode_p99_m": 0.015830378304969566
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.006854253411293029,
+        "p95": 0.00689697265625
+      }
+    },
+    "G1_Dex1_OrganizeTools": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.011423162502178457,
+          "std": 0.004398348758431215,
+          "max_abs": 0.01027576314198086
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.830616612918675,
+          "std": 0.0001231872483073896,
+          "max_abs": 0.0002645449712872505
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.02068339695938903,
+          "std": 0.008395680644564491,
+          "max_abs": 0.016922126060994743
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 0.0001915163939402313,
+        "p95": 0.00028905289536094824
+      },
+      "E2_ee_span_m": 0.3375509902834892,
+      "E2_median_frame_step_m": 0.0023718809081837555,
+      "E3_gripper_range": {
+        "o_open": 4.468931198120117,
+        "o_closed": 0.6064285463094712,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "open": 0.3513,
+        "idle_open": 0.2213,
+        "close": 0.3275,
+        "reach": 0.0537,
+        "hold_closed": 0.0288,
+        "carry": 0.0175
+      },
+      "E3_stall_width_n": 306,
+      "E3_stall_width_median": 4.4688849449157715,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.6064286231994629,
+        "0.25": 4.449940204620361,
+        "0.5": 4.4688849449157715,
+        "0.75": 4.470806241035461,
+        "0.9": 4.484255313873291
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.009203956412319681
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.07938600298017263,
+        "p95": 0.3500100076198578
+      }
+    },
+    "G1_Dex1_PackDoll": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.01139329610276036,
+          "std": 0.002212272860063677,
+          "max_abs": 0.004196162765147164
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8306188481859863,
+          "std": 6.203146472033406e-05,
+          "max_abs": 0.00012670932337643936
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.02132725771400146,
+          "std": 0.004147613608786117,
+          "max_abs": 0.007850214281352238
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 1.4531265961439692e-05,
+        "p95": 2.3092756903453436e-05
+      },
+      "E2_ee_span_m": 0.16337789222598076,
+      "E2_median_frame_step_m": 0.0009992517954027754,
+      "E3_gripper_range": {
+        "o_open": 4.4331583976745605,
+        "o_closed": 0.06995711997151374,
+        "do_threshold_per_s": 2.5574785843491553e-05
+      },
+      "E3_label_mix_left": {
+        "idle_open": 0.0525,
+        "close": 0.3287,
+        "open": 0.3025,
+        "reach": 0.0025,
+        "hold_closed": 0.2625,
+        "carry": 0.015,
+        "partial_motion": 0.0088,
+        "partial_hold": 0.0275
+      },
+      "E3_stall_width_n": 277,
+      "E3_stall_width_median": 0.09323535114526749,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.06996486335992813,
+        "0.25": 0.07257263362407684,
+        "0.5": 0.09323535114526749,
+        "0.75": 4.343198299407959,
+        "0.9": 4.479311180114746
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.009023596380255851
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.06553324658656492,
+        "p95": 0.07261864840984344
+      }
+    },
+    "G1_Dex1_PlugInEthernet": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.027000578760635108,
+          "std": 0.0014106808103651848,
+          "max_abs": 0.004375862597953528
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8300161115080118,
+          "std": 8.060333887935738e-05,
+          "max_abs": 0.00023301921784879553
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.04899899969132889,
+          "std": 0.0026119165286079766,
+          "max_abs": 0.008039930185994991
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 1.8398939317743354e-05,
+        "p95": 3.131861281744407e-05
+      },
+      "E2_ee_span_m": 0.39371135644614697,
+      "E2_median_frame_step_m": 0.0008831226902489134,
+      "E3_gripper_range": {
+        "o_open": 4.485344486236572,
+        "o_closed": 0.588688058257103,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "open": 0.2775,
+        "idle_open": 0.13,
+        "close": 0.3875,
+        "reach": 0.0325,
+        "hold_closed": 0.1412,
+        "carry": 0.0312
+      },
+      "E3_stall_width_n": 253,
+      "E3_stall_width_median": 4.453276634216309,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.3859971046447754,
+        "0.25": 1.1445643901824951,
+        "0.5": 4.453276634216309,
+        "0.75": 4.482751846313477,
+        "0.9": 4.4853291511535645
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.019873561703846663
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.18632747827097773,
+        "p95": 0.34998479038476943
+      }
+    },
+    "G1_Dex1_SpellRobot": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.016609300583368167,
+          "std": 0.002671884443379164,
+          "max_abs": 0.0050462701322976505
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.830470100287348,
+          "std": 0.0001066367057662398,
+          "max_abs": 0.00020778203383087224
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.03044443603780337,
+          "std": 0.004996415180577165,
+          "max_abs": 0.00939837071869306
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 2.0944282154874343e-05,
+        "p95": 3.333312149560242e-05
+      },
+      "E2_ee_span_m": 0.18188674189150333,
+      "E2_median_frame_step_m": 0.0007066547551954718,
+      "E3_gripper_range": {
+        "o_open": 4.4924235343933105,
+        "o_closed": 3.747530460357666,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "idle_open": 0.3262,
+        "close": 0.2875,
+        "open": 0.31,
+        "reach": 0.04,
+        "hold_closed": 0.035,
+        "carry": 0.0013
+      },
+      "E3_stall_width_n": 273,
+      "E3_stall_width_median": 4.492400646209717,
+      "E3_stall_width_quantiles": {
+        "0.1": 1.8621530532836914,
+        "0.25": 4.438304901123047,
+        "0.5": 4.492400646209717,
+        "0.75": 4.492408275604248,
+        "0.9": 4.506130218505859
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.0070831812774054
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.04025629639625549,
+        "p95": 0.34999775886535645
+      }
+    },
+    "G1_Dex1_StackBowls": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 2,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.008313252214907151,
+          "std": 0.004460985671845985,
+          "max_abs": 0.010926886085985642
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8306853630393743,
+          "std": 7.114407741560151e-05,
+          "max_abs": 0.00016114197671412978
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.015024817625526338,
+          "std": 0.008083693059326625,
+          "max_abs": 0.019716180006507784
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 3.7368112800648005e-05,
+        "p95": 7.361602900159471e-05
+      },
+      "E2_ee_span_m": 0.2672620862722397,
+      "E2_median_frame_step_m": 0.002444370524194585,
+      "E3_gripper_range": {
+        "o_open": 4.496112823486328,
+        "o_closed": 0.1180704214423895,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "close": 0.3538,
+        "idle_open": 0.155,
+        "open": 0.3063,
+        "reach": 0.0325,
+        "hold_closed": 0.0575,
+        "carry": 0.0625,
+        "unknown": 0.0025,
+        "partial_motion": 0.0063,
+        "partial_hold": 0.0238
+      },
+      "E3_stall_width_n": 280,
+      "E3_stall_width_median": 3.6299431324005127,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.31572239100933075,
+        "0.25": 3.1436119079589844,
+        "0.5": 3.6299431324005127,
+        "0.75": 4.443075656890869,
+        "0.9": 4.482223796844482
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 1,
+        "median": 0.059265051944510254,
+        "within_episode_p99_m": 0.017580007214967015
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.08900722862221301,
+        "p95": 0.438157856464386
+      }
+    },
+    "G1_Dex1_ToolboxStorage": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.03364840508438647,
+          "std": 0.0016677328497087095,
+          "max_abs": 0.005766742071136831
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.829481667932123,
+          "std": 0.0001290015129456299,
+          "max_abs": 0.0004419899545610173
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.06255268566543236,
+          "std": 0.0030922373057273157,
+          "max_abs": 0.010334705186542129
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 3.299481714212719e-05,
+        "p95": 5.3123620931563646e-05
+      },
+      "E2_ee_span_m": 0.3288295045495033,
+      "E2_median_frame_step_m": 0.0013363246646791473,
+      "E3_gripper_range": {
+        "o_open": 4.483887734413147,
+        "o_closed": 0.030104372650384903,
+        "do_threshold_per_s": 2.5587212853133676e-05
+      },
+      "E3_label_mix_left": {
+        "close": 0.4263,
+        "open": 0.325,
+        "idle_open": 0.0838,
+        "reach": 0.0213,
+        "partial_motion": 0.0138,
+        "partial_hold": 0.0563,
+        "hold_closed": 0.0675,
+        "carry": 0.0063
+      },
+      "E3_stall_width_n": 295,
+      "E3_stall_width_median": 4.479369640350342,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.03570953905582429,
+        "0.25": 1.3855681419372559,
+        "0.5": 4.479369640350342,
+        "0.75": 4.495419025421143,
+        "0.9": 4.495422840118408
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.017511586634508917
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.19678047236287965,
+        "p95": 0.4999409317970276
+      }
+    },
+    "G1_Dex1_Unlock": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 1,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.02478267122292891,
+          "std": 0.0010391945276829978,
+          "max_abs": 0.001616549307946115
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8301514520123601,
+          "std": 5.222871263670024e-05,
+          "max_abs": 8.052747696640772e-05
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.044704315529961604,
+          "std": 0.001874655900399337,
+          "max_abs": 0.002928325252432841
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 8.43373302103886e-06,
+        "p95": 1.6672001313185853e-05
+      },
+      "E2_ee_span_m": 0.162597868591547,
+      "E2_median_frame_step_m": 0.0005205049866191633,
+      "E3_gripper_range": {
+        "o_open": 4.482491097450256,
+        "o_closed": 0.21029342710971832,
+        "do_threshold_per_s": 2.5450515747070307e-05
+      },
+      "E3_label_mix_left": {
+        "close": 0.4387,
+        "idle_open": 0.045,
+        "open": 0.2675,
+        "reach": 0.01,
+        "partial_hold": 0.195,
+        "partial_motion": 0.01,
+        "hold_closed": 0.0338
+      },
+      "E3_stall_width_n": 289,
+      "E3_stall_width_median": 1.267980933189392,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.2103087604045868,
+        "0.25": 1.2635936737060547,
+        "0.5": 1.267980933189392,
+        "0.75": 4.4823760986328125,
+        "0.9": 4.487269401550293
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 0,
+        "median": null,
+        "within_episode_p99_m": 0.008278133346900318
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.29378617484122516,
+        "p95": 0.4999638795852661
+      }
+    },
+    "G1_Dex1_ZipUp": {
+      "frames_contig": 800,
+      "frames_random": 1000,
+      "n_episodes_in_contig": 2,
+      "E1_camera_angle_offset": {
+        "roll_minus_waist_roll": {
+          "mean": -0.012359256038907916,
+          "std": 0.0019815217606168212,
+          "max_abs": 0.00306343391770497
+        },
+        "pitch_minus_waist_pitch": {
+          "mean": 0.8305681734811514,
+          "std": 6.494312657929573e-05,
+          "max_abs": 0.00010141129605467647
+        },
+        "yaw_minus_waist_yaw": {
+          "mean": -0.023926591862400527,
+          "std": 0.003875030056062868,
+          "max_abs": 0.005986633141001219
+        }
+      },
+      "E1_camera_translation_residual_m": {
+        "rmse": 8.759728598360222e-06,
+        "p95": 1.5965608497752535e-05
+      },
+      "E2_ee_span_m": 0.16176367551088333,
+      "E2_median_frame_step_m": 0.0018221731569396196,
+      "E3_gripper_range": {
+        "o_open": 4.509980201721191,
+        "o_closed": 0.06989583373069763,
+        "do_threshold_per_s": 2.6245844364166256e-05
+      },
+      "E3_label_mix_left": {
+        "idle_open": 0.065,
+        "open": 0.3175,
+        "close": 0.4487,
+        "reach": 0.005,
+        "hold_closed": 0.035,
+        "partial_hold": 0.0838,
+        "partial_motion": 0.0338,
+        "carry": 0.0088,
+        "unknown": 0.0025
+      },
+      "E3_stall_width_n": 238,
+      "E3_stall_width_median": 2.350618362426758,
+      "E3_stall_width_quantiles": {
+        "0.1": 0.09816250205039978,
+        "0.25": 0.21235471218824387,
+        "0.5": 2.350618362426758,
+        "0.75": 4.391700744628906,
+        "0.9": 4.498920440673828
+      },
+      "E4_boundary_ee_jump_m": {
+        "n": 1,
+        "median": 0.03882193123084348,
+        "within_episode_p99_m": 0.011527654259821335
+      },
+      "E5_cmd_meas_gripper_gap": {
+        "mean": 0.10046334017577464,
+        "p95": 0.4397887587547302
+      }
+    }
+  },
+  "aggregate": {
+    "n_tasks": 12,
+    "gesture_label_mix_mean_over_tasks": {
+      "carry": 0.0298,
+      "close": 0.3652,
+      "hold_closed": 0.0939,
+      "idle_open": 0.1286,
+      "open": 0.3156,
+      "partial_hold": 0.0374,
+      "partial_motion": 0.0074,
+      "reach": 0.0206,
+      "unknown": 0.0015
+    },
+    "gesture_label_mix_std_over_tasks": {
+      "carry": 0.0245,
+      "close": 0.0512,
+      "hold_closed": 0.0912,
+      "idle_open": 0.0854,
+      "open": 0.0302,
+      "partial_hold": 0.0553,
+      "partial_motion": 0.0098,
+      "reach": 0.0156,
+      "unknown": 0.0028
+    },
+    "stall_width_count": 3462,
+    "stall_width_hist": {
+      "0.00-0.50": 663,
+      "0.50-1.00": 119,
+      "1.00-1.50": 242,
+      "1.50-2.00": 69,
+      "2.00-2.50": 102,
+      "2.50-3.00": 69,
+      "3.00-3.50": 174,
+      "3.50-4.00": 66,
+      "4.00-4.50": 1705,
+      "4.50-5.00": 253,
+      "5.00-5.50": 0,
+      "5.50-6.00": 0
+    },
+    "camera_translation_rmse_m_max_over_tasks": 0.0001915163939402313,
+    "camera_angle_offset_max_std_rad": 0.008508561346354927
+  }
+}
