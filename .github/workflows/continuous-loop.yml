@@ -213,7 +213,25 @@ jobs:
             [ -n "$v" ] && extra="--variant $v"
             case "$m" in nvidia/*) st=75 ;; esac
             # shellcheck disable=SC2086
-            timeout --kill-after=30 $st opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_test.log 2>&1
+            # ⭐ 429/限流不换模型：冒烟撞限流时同模型退避重试（45/90/135/180s，共 4 次）；
+            #    4 次仍限流 → 返回 2（调用方据此中止选择，绝不因 429 换模型）
+            local _sm_try=0
+            while ! timeout --kill-after=30 $st opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_test.log 2>&1; do
+              if ! grep -qiE "too many requests|rate.?limit|status.{0,3}429|FreeTierError|free tier" /tmp/oc_smoke_test.log 2>/dev/null; then
+                echo "[smoke] $m 冒烟失败（非限流），日志末尾："
+                tail -c 600 /tmp/oc_smoke_test.log 2>/dev/null || true
+                return 1
+              fi
+              if [ "$_sm_try" -ge 4 ]; then
+                echo "[smoke] $m 持续 429/限流（已退避重试 4 次）：不换模型，返回限流信号"
+                return 2
+              fi
+              _sm_try=$((_sm_try+1))
+              echo "[smoke] $m 撞 429/限流（第 ${_sm_try}/4 次）：不换模型，$((45*_sm_try))s 后同模型重试"
+              sleep $((45*_sm_try))
+            done
+            return 0
+
           }
           mapfile -t NV_SHUF < <(printf '%s\n' "${NV_POOL[@]}" | shuf)
           SPECS=("$NV_FIRST|")
@@ -222,7 +240,12 @@ jobs:
           for spec in "${SPECS[@]}"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
-            if smoke "$m" "$v"; then
+            smoke "$m" "$v"; __rc=$?
+            if [ "$__rc" -eq 2 ]; then
+              echo "[provider] $m 持续 429/限流：不换模型，本 run 放弃，后继 run 自动重试"
+              exit 1
+            fi
+            if [ "$__rc" -eq 0 ]; then
               SELECTED_MODEL="$m"; SELECTED_VARIANT="$v"
             fi
           done
@@ -742,12 +765,35 @@ jobs:
             [ -n "$v" ] && extra="--variant $v"
             case "$m" in nvidia/*) st=75 ;; esac
             # shellcheck disable=SC2086
-            timeout --kill-after=30 $st opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_unibot.log 2>&1
+            # ⭐ 429/限流不换模型：冒烟撞限流时同模型退避重试（45/90/135/180s，共 4 次）；
+            #    4 次仍限流 → 返回 2（调用方据此中止选择，绝不因 429 换模型）
+            local _sm_try=0
+            while ! timeout --kill-after=30 $st opencode run -m "$m" $extra "只回复两个字：OK" > /tmp/oc_smoke_unibot.log 2>&1; do
+              if ! grep -qiE "too many requests|rate.?limit|status.{0,3}429|FreeTierError|free tier" /tmp/oc_smoke_unibot.log 2>/dev/null; then
+                echo "[smoke] $m 冒烟失败（非限流），日志末尾："
+                tail -c 600 /tmp/oc_smoke_unibot.log 2>/dev/null || true
+                return 1
+              fi
+              if [ "$_sm_try" -ge 4 ]; then
+                echo "[smoke] $m 持续 429/限流（已退避重试 4 次）：不换模型，返回限流信号"
+                return 2
+              fi
+              _sm_try=$((_sm_try+1))
+              echo "[smoke] $m 撞 429/限流（第 ${_sm_try}/4 次）：不换模型，$((45*_sm_try))s 后同模型重试"
+              sleep $((45*_sm_try))
+            done
+            return 0
+
           }
           for spec in "nvidia/deepseek-ai/deepseek-v4.1-flash|" "nvidia/z-ai/glm-5.3-flash|" "nvidia/z-ai/glm-5.3|" "nvidia/minimaxai/minimax-m3.1-flash|" "nvidia/stepfun-ai/step-5-preview|" "opencode/deepseek-v4.1-flash-free|max"                       "opencode/deepseek-v4.1-flash-free|high"                       "opencode/deepseek-v4.1-flash-free|"                       "opencode/glm-5.3-flash-free|"                       "opencode/big-pickle|"; do
             [ -n "$SELECTED_MODEL" ] && break
             m="${spec%%|*}"; v="${spec#*|}"
-            if smoke "$m" "$v"; then
+            smoke "$m" "$v"; __rc=$?
+            if [ "$__rc" -eq 2 ]; then
+              echo "[provider] $m 持续 429/限流：不换模型，本 run 放弃，后继 run 自动重试"
+              exit 1
+            fi
+            if [ "$__rc" -eq 0 ]; then
               SELECTED_MODEL="$m"; SELECTED_VARIANT="$v"
             fi
           done
