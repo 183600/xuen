@@ -1,0 +1,260 @@
+{
+ "partA_leaderboard": {
+  "source": "https://unibot.unitree.com/leaderboard_data.json (fetched 2026-11-04 via webfetch; curl later blocked by EdgeOne)",
+  "retrieved": "2026-11-04",
+  "top8": [
+   [
+    "MolmoAct2",
+    29.7
+   ],
+   [
+    "WALL-OSS-0.5",
+    28.5
+   ],
+   [
+    "DreamZero",
+    27.9
+   ],
+   [
+    "Spirit-v1.5",
+    25.9
+   ],
+   [
+    "DM0",
+    23.5
+   ],
+   [
+    "PI-0.5",
+    22.8
+   ],
+   [
+    "GigaBrain-0",
+    22.6
+   ],
+   [
+    "GR00T N1.5",
+    20.5
+   ]
+  ],
+  "family_rows": [
+   {
+    "team": "MolmoAct2",
+    "avg": 29.7,
+    "insert": 25.814999999999998,
+    "contact": 30.5625,
+    "rest": 30.602272727272734,
+    "contact_gap": 0.03977272727273373,
+    "insert_gap": 4.787272727272736
+   },
+   {
+    "team": "WALL-OSS-0.5",
+    "avg": 28.5,
+    "insert": 27.646666666666672,
+    "contact": 31.7975,
+    "rest": 28.133181818181825,
+    "contact_gap": -3.6643181818181745,
+    "insert_gap": 0.4865151515151531
+   },
+   {
+    "team": "DreamZero",
+    "avg": 27.9,
+    "insert": 24.24,
+    "contact": 25.5075,
+    "rest": 29.332272727272724,
+    "contact_gap": 3.824772727272723,
+    "insert_gap": 5.092272727272725
+   },
+   {
+    "team": "Spirit-v1.5",
+    "avg": 25.9,
+    "insert": 22.941666666666666,
+    "contact": 24.8025,
+    "rest": 26.904999999999998,
+    "contact_gap": 2.102499999999999,
+    "insert_gap": 3.963333333333331
+   },
+   {
+    "team": "DM0",
+    "avg": 23.5,
+    "insert": 20.971666666666668,
+    "contact": 21.317500000000003,
+    "rest": 24.58590909090909,
+    "contact_gap": 3.2684090909090884,
+    "insert_gap": 3.6142424242424234
+   },
+   {
+    "team": "PI-0.5",
+    "avg": 22.8,
+    "insert": 21.77333333333333,
+    "contact": 24.2775,
+    "rest": 22.767272727272726,
+    "contact_gap": -1.510227272727274,
+    "insert_gap": 0.9939393939393959
+   },
+   {
+    "team": "GigaBrain-0",
+    "avg": 22.6,
+    "insert": 20.996666666666666,
+    "contact": 20.7525,
+    "rest": 22.892272727272726,
+    "contact_gap": 2.1397727272727245,
+    "insert_gap": 1.8956060606060596
+   },
+   {
+    "team": "GR00T N1.5",
+    "avg": 20.5,
+    "insert": 17.278333333333332,
+    "contact": 19.4075,
+    "rest": 21.633181818181814,
+    "contact_gap": 2.2256818181818154,
+    "insert_gap": 4.354848484848482
+   }
+  ],
+  "pooled": {
+   "insert_pooled": 22.70791666666667,
+   "contact_pooled": 24.803125,
+   "rest_pooled": 25.856420454545457,
+   "insert_gap": 3.148503787878788,
+   "contact_gap": 1.0532954545454558
+  },
+  "rank1_worst5": [
+   [
+    "Disconnect Ethernet",
+    21.29
+   ],
+   [
+    "Pick Out Battery",
+    23.46
+   ],
+   [
+    "Unlock",
+    23.52
+   ],
+   [
+    "Place Photo Frames",
+    24.33
+   ],
+   [
+    "Organize Pencil Case",
+    24.95
+   ]
+  ],
+  "best_per_task_family_means": {
+   "insert": 31.24,
+   "contact": 33.8,
+   "rest": 34.62954545454545
+  }
+ },
+ "partB_E1_crosshead": [
+  {
+   "s_g": 0.15,
+   "phi": 0.1,
+   "tau": 1.105,
+   "auroc_OODG": 0.86,
+   "id_false_alarm": 0.048,
+   "oodg_detect_at_tau": 0.332,
+   "succ_P0": 0.791,
+   "succ_P1": 0.845,
+   "succ_P2": 0.95,
+   "gain_P1_vs_P0_pp": 5.43
+  },
+  {
+   "s_g": 0.15,
+   "phi": 0.25,
+   "tau": 1.211,
+   "auroc_OODG": 0.712,
+   "id_false_alarm": 0.076,
+   "oodg_detect_at_tau": 0.18,
+   "succ_P0": 0.789,
+   "succ_P1": 0.812,
+   "succ_P2": 0.925,
+   "gain_P1_vs_P0_pp": 2.26
+  },
+  {
+   "s_g": 0.3,
+   "phi": 0.1,
+   "tau": 1.148,
+   "auroc_OODG": 0.819,
+   "id_false_alarm": 0.052,
+   "oodg_detect_at_tau": 0.318,
+   "succ_P0": 0.785,
+   "succ_P1": 0.838,
+   "succ_P2": 0.949,
+   "gain_P1_vs_P0_pp": 5.33
+  },
+  {
+   "s_g": 0.3,
+   "phi": 0.25,
+   "tau": 1.263,
+   "auroc_OODG": 0.693,
+   "id_false_alarm": 0.079,
+   "oodg_detect_at_tau": 0.209,
+   "succ_P0": 0.79,
+   "succ_P1": 0.819,
+   "succ_P2": 0.925,
+   "gain_P1_vs_P0_pp": 2.82
+  },
+  {
+   "s_g": 0.45,
+   "phi": 0.1,
+   "tau": 1.247,
+   "auroc_OODG": 0.759,
+   "id_false_alarm": 0.058,
+   "oodg_detect_at_tau": 0.284,
+   "succ_P0": 0.789,
+   "succ_P1": 0.835,
+   "succ_P2": 0.95,
+   "gain_P1_vs_P0_pp": 4.59
+  },
+  {
+   "s_g": 0.45,
+   "phi": 0.25,
+   "tau": 1.357,
+   "auroc_OODG": 0.662,
+   "id_false_alarm": 0.077,
+   "oodg_detect_at_tau": 0.197,
+   "succ_P0": 0.785,
+   "succ_P1": 0.811,
+   "succ_P2": 0.923,
+   "gain_P1_vs_P0_pp": 2.59
+  }
+ ],
+ "partC_E2_contact_admittance": [
+  {
+   "policy": "blind_P0",
+   "succ": 0.399,
+   "damage": 0.538,
+   "timeout": 0.063
+  },
+  {
+   "policy": "head_q0.6",
+   "succ": 0.363,
+   "damage": 0.039,
+   "timeout": 0.598
+  },
+  {
+   "policy": "head_q0.7",
+   "succ": 0.283,
+   "damage": 0.021,
+   "timeout": 0.696
+  },
+  {
+   "policy": "head_q0.8",
+   "succ": 0.194,
+   "damage": 0.007,
+   "timeout": 0.799
+  },
+  {
+   "policy": "head_q0.9",
+   "succ": 0.092,
+   "damage": 0.002,
+   "timeout": 0.906
+  },
+  {
+   "policy": "head_q1.0",
+   "succ": 0.0,
+   "damage": 0.0,
+   "timeout": 1.0
+  }
+ ]
+}
