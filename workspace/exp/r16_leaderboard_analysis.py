@@ -1,242 +1,153 @@
-"""第 16 轮：UniBot 排行榜结构分析（可复现，B 级证据）
+#!/usr/bin/env python3
+"""Round-16 leaderboard analysis for the UniBot-V1 Challenge (generalist track).
 
-输入：unibot.unitree.com/leaderboard_data.json（2026-11-02 抓取）
-输出：exp/r16_leaderboard_stats.json + 控制台表格
+Inputs (both fetched 2026-11-04):
+  * r16_leaderboard_data.json : https://unibot.unitree.com/leaderboard_data.json
+  * r16_task_profile.json      : per-task official rubric (scoring_points), difficulty,
+                                 generalization notes, dataset episode counts
+                                 (https://unibot.unitree.com/tasks_v2/<slug>/info.json,
+                                  https://huggingface.co/api/collections/unitreerobotics/unibot-v1-challenge-dataset)
 
-分析问题
-  Q1 任务难度是否由「共同难度因子」主导？  -> 双因素方差分解 + 模型间相关
-  Q2 模型之间是否存在互补专长？            -> 模型×任务交互项占比 + oracle 路由上界
-  Q3 步骤分是否只是成功率的线性变换？      -> step_score / success 比值与时长的关系
-  Q4 哪些任务对所有模型都难？              -> 跨模型均值与离散度
-  Q5 长任务是否更难（多子目标/多阶段）？   -> 任务平均时长 vs 成功率的组间比较
+Outputs r16_leaderboard_stats.json and prints the numbers quoted in the report.
+All statements here are arithmetic on public data; no modelling assumptions.
 """
 import json
-import itertools
 import math
 import os
 import statistics as st
+from collections import Counter, defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(HERE, "r16_leaderboard_raw.json")
-OUT = os.path.join(HERE, "r16_leaderboard_stats.json")
+lb = json.load(open(os.path.join(HERE, "r16_leaderboard_data.json")))
+prof = json.load(open(os.path.join(HERE, "r16_task_profile.json")))
 
-with open(SRC, encoding="utf-8") as f:
-    data = json.load(f)
+tasks = lb["tasks"]
+models = lb["models"]
+name2id = {
+    "Hang the Cup": "T01", "Fruit Basket Collection": "T02", "Pack the Doll": "T03",
+    "Fruit Sorting": "T04", "Disconnect Ethernet": "T05", "Color Arrangement": "T06",
+    "Place Photo Frames": "T07", "Organize Bookshelf": "T08", "Toolbox Storage": "T09",
+    "Plug Charger": "T10", "Pick Out Battery": "T11", "Unlock": "T12",
+    "Arrange Test Tubes": "T13", "Open Pill Bottle": "T14", "Organize Tools": "T15",
+    "Fold Towel": "T16", "Organize Stationery": "T17", "Pack Bag": "T18", "Zip Up": "T19",
+    "Paper Cup Stacking": "T20", "Clear Plates": "T21", "Spell robot": "T22",
+    "Store Racket": "T23", "Conveyor Food Sorting": "T24", "Stack Cups": "T25",
+    "Plug In Ethernet": "T26", "Stack Bowls": "T27", "Store Earphones": "T28",
+    "Pack Phone": "T29", "Remove Pinned Note": "T30", "Organize Pencil Case": "T31",
+    "Syringe Water Transfer": "T32",
+}
 
-tasks = data["tasks"]
-models = data["models"]
-names = [m["model_name"] for m in models]
-S = {m["model_name"]: {t["task"]: t["success_rate"] for t in m["task_metrics"]} for m in models}
-D = {m["model_name"]: {t["task"]: t["avg_duration_sec"] for t in m["task_metrics"]} for m in models}
-K = {m["model_name"]: {t["task"]: t["step_score"] for t in m["task_metrics"]} for m in models}
+succ = {m["model_name"]: {t["task"]: t["success_rate"] for t in m["task_metrics"]} for m in models}
+step = {m["model_name"]: {t["task"]: t["step_score"] for t in m["task_metrics"]} for m in models}
 
-report = {}
+out = {"retrieved": "2026-11-04", "n_models": len(models), "n_tasks": len(tasks)}
 
-# ---------- Q3: step_score 与 success_rate 的关系 ----------
-ratios = []
+# ---- M1 model-level summary -------------------------------------------------
+msum = []
 for m in models:
-    for t in m["task_metrics"]:
-        if t["success_rate"] > 0:
-            ratios.append((m["model_name"], t["task"], t["step_score"] / t["success_rate"],
-                           t["avg_duration_sec"], t["success_rate"]))
-allr = [x[2] for x in ratios]
-# 每个模型整体比值
-model_ratio = {m["model_name"]: round(m["avg_step_score"] / m["avg_success_rate"], 4) for m in models}
-# 比值与时长的相关（Pearson）
-def pearson(x, y):
-    n = len(x)
-    mx, my = sum(x) / n, sum(y) / n
-    sx = math.sqrt(sum((a - mx) ** 2 for a in x))
-    sy = math.sqrt(sum((b - my) ** 2 for b in y))
-    if sx == 0 or sy == 0:
-        return float("nan")
-    return sum((a - mx) * (b - my) for a, b in zip(x, y)) / (sx * sy)
-
-ratio_vs_dur = pearson([x[3] for x in ratios], [x[2] for x in ratios])
-ratio_vs_succ = pearson([x[4] for x in ratios], [x[2] for x in ratios])
-
-report["Q3_step_score_relation"] = {
-    "ratio_mean": round(sum(allr) / len(allr), 4),
-    "ratio_std": round(st.pstdev(allr), 4),
-    "ratio_min": round(min(allr), 4),
-    "ratio_max": round(max(allr), 4),
-    "ratio_p05": round(sorted(allr)[int(0.05 * len(allr))], 4),
-    "ratio_p95": round(sorted(allr)[int(0.95 * len(allr))], 4),
-    "model_level_ratio": model_ratio,
-    "corr_ratio_vs_duration": round(ratio_vs_dur, 4),
-    "corr_ratio_vs_success": round(ratio_vs_succ, 4),
-    "n_pairs": len(allr),
-}
-
-# ---------- Q1/Q2: 双因素方差分解 ----------
-grand = sum(S[n][t] for n in names for t in tasks) / (len(names) * len(tasks))
-row_mean = {n: sum(S[n][t] for t in tasks) / len(tasks) for n in names}
-col_mean = {t: sum(S[n][t] for n in names) / len(names) for t in tasks}
-ss_tot = sum((S[n][t] - grand) ** 2 for n in names for t in tasks)
-ss_task = len(names) * sum((col_mean[t] - grand) ** 2 for t in tasks)
-ss_model = len(tasks) * sum((row_mean[n] - grand) ** 2 for n in names)
-ss_int = ss_tot - ss_task - ss_model
-df_tot, df_task, df_model, df_int = (len(names) * len(tasks) - 1, len(tasks) - 1, len(names) - 1,
-                                      (len(names) - 1) * (len(tasks) - 1))
-ms_task, ms_model, ms_int = ss_task / df_task, ss_model / df_model, ss_int / df_int
-report["Q1_Q2_variance_decomposition"] = {
-    "grand_mean_success": round(grand, 3),
-    "ss_total": round(ss_tot, 2),
-    "share_task_effect": round(ss_task / ss_tot, 4),
-    "share_model_effect": round(ss_model / ss_tot, 4),
-    "share_interaction": round(ss_int / ss_tot, 4),
-    "F_task": round(ms_task / ms_int, 3),
-    "F_model": round(ms_model / ms_int, 3),
-    "F_interaction": 1.0,
-}
-
-# 模型两两相关（跨 32 任务）
-def corr(a, b):
-    xa = [S[a][t] for t in tasks]
-    xb = [S[b][t] for t in tasks]
-    return pearson(xa, xb)
-
-corr_pairs = []
-for a, b in itertools.combinations(names, 2):
-    corr_pairs.append((a, b, round(corr(a, b), 3)))
-mean_corr = sum(c[2] for c in corr_pairs) / len(corr_pairs)
-# 平均相关矩阵的最小/最大特征值（标准化后的 PCA）
-import numpy as np
-M = np.array([[S[n][t] for t in tasks] for n in names], dtype=float)
-Mc = M - M.mean(axis=1, keepdims=True)
-C = np.corrcoef(Mc)
-ev = np.linalg.eigvalsh(C)
-report["Q1_Q2_variance_decomposition"]["model_pair_corr"] = {
-    "pairs": corr_pairs,
-    "mean_pairwise_corr": round(mean_corr, 3),
-    "corr_matrix_eigenvalues": [round(float(v), 3) for v in ev],
-    "first_eig_share": round(float(ev[-1] / ev.sum()), 3),
-}
-
-# ---------- Q2: oracle 路由上界 ----------
-oracle = sum(max(S[n][t] for n in names) for t in tasks) / len(tasks)
-# 随机选一个模型的期望（即榜单平均）
-random_pick = grand
-# top-2 oracle（两个模型取 max 的平均）
-top2 = {}
-oracle2 = 0.0
-for t in tasks:
-    vals = sorted((S[n][t] for n in names), reverse=True)
-    oracle2 += (vals[0] + vals[1]) / 2
-oracle2 /= len(tasks)
-# 每个模型与 oracle 的差距
-gap = {n: round(oracle - row_mean[n], 2) for n in names}
-report["Q2_oracle_router"] = {
-    "leader_avg": round(row_mean[names[0]], 2),
-    "oracle_best_per_task": round(oracle, 2),
-    "oracle_top2_per_task": round(oracle2, 2),
-    "random_pick_expectation": round(random_pick, 2),
-    "headroom_vs_leader_pp": round(oracle - row_mean[names[0]], 2),
-    "per_model_gap_to_oracle_pp": gap,
-}
-
-# ---------- Q4: 任务难度谱 ----------
-task_stats = []
-for t in tasks:
-    vals = [S[n][t] for n in names]
-    durs = [D[n][t] for n in names]
-    best = max(names, key=lambda n: S[n][t])
-    worst = min(names, key=lambda n: S[n][t])
-    task_stats.append({
-        "task": t,
-        "mean": round(sum(vals) / len(vals), 2),
-        "min": round(min(vals), 2),
-        "max": round(max(vals), 2),
-        "spread": round(max(vals) - min(vals), 2),
-        "std": round(st.pstdev(vals), 2),
-        "mean_duration": round(sum(durs) / len(durs), 1),
-        "best_model": best,
-        "best_score": round(max(vals), 2),
-        "leader_score": round(S[names[0]][t], 2),
+    msum.append({
+        "model": m["model_name"], "user": m["user_name"],
+        "avg_success_rate": m["avg_success_rate"], "avg_step_score": m["avg_step_score"],
+        "avg_duration_sec": m["avg_duration_sec"],
+        "step_per_success": round(m["avg_step_score"] / m["avg_success_rate"], 3),
     })
-task_stats.sort(key=lambda x: x["mean"])
-report["Q4_task_difficulty"] = {
-    "all": task_stats,
-    "universally_hard_mean_lt20": [x["task"] for x in task_stats if x["mean"] < 20],
-    "leader_weakest": sorted(
-        [{"task": t, "leader": S[names[0]][t]} for t in tasks], key=lambda x: x["leader"])[:8],
-    "leader_strongest": sorted(
-        [{"task": t, "leader": S[names[0]][t]} for t in tasks], key=lambda x: -x["leader"])[:8],
+out["models"] = msum
+
+xs = [m["avg_success_rate"] for m in models]
+ys = [m["avg_step_score"] for m in models]
+mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+b1 = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sum((x - mx) ** 2 for x in xs)
+b0 = my - b1 * mx
+r2 = 1 - sum((y - (b0 + b1 * x)) ** 2 for x, y in zip(xs, ys)) / sum((y - my) ** 2 for y in ys)
+out["model_level_fit"] = {"formula": f"step = {b0:.3f} + {b1:.3f} * success",
+                           "intercept": round(b0, 3),
+                           "slope": round(b1, 3), "r2": round(r2, 4)}
+
+# ---- M2 per-task affine fit + oracle routing bound --------------------------
+per_task = []
+viol = 0
+for t in tasks:
+    tid = name2id[t]
+    sx = [succ[m["model_name"]][t] for m in models]
+    sy = [step[m["model_name"]][t] for m in models]
+    for a, b in zip(sx, sy):
+        if b + 1e-9 < a:
+            viol += 1
+    ax, ay = sum(sx) / len(sx), sum(sy) / len(sy)
+    den = sum((x - ax) ** 2 for x in sx)
+    bb = sum((x - ax) * (y - ay) for x, y in zip(sx, sy)) / den if den > 1e-9 else 0.0
+    aa = ay - bb * ax
+    resid = sum((y - (aa + bb * x)) ** 2 for x, y in zip(sx, sy))
+    sst = sum((y - ay) ** 2 for y in sy)
+    best = max(sx)
+    best_model = [m["model_name"] for m in models if succ[m["model_name"]][t] == best][0]
+    per_task.append({
+        "id": tid, "task": t, "slug": prof["tasks"][tid]["slug"], "difficulty": prof["tasks"][tid]["diff"],
+        "rubric_steps": len(prof["tasks"][tid]["w"]), "rubric_weights": prof["tasks"][tid]["w"],
+        "a": round(aa, 3), "b": round(bb, 3), "r2": round(1 - resid / sst, 4),
+        "min": min(sx), "mean": round(sum(sx) / len(sx), 2), "max": max(sx), "best_model": best_model,
+        "spread": round(max(sx) - min(sx), 2),
+    })
+out["per_task"] = per_task
+out["violations_step_ge_success"] = viol
+out["per_task_fit_summary"] = {
+    "mean_b": round(sum(p["b"] for p in per_task) / len(per_task), 3),
+    "min_b": min(p["b"] for p in per_task), "max_b": max(p["b"] for p in per_task),
+    "mean_r2": round(sum(p["r2"] for p in per_task) / len(per_task), 4),
+    "min_r2": min(p["r2"] for p in per_task),
+    "mean_a": round(sum(p["a"] for p in per_task) / len(per_task), 3),
+    "oracle_per_task_routing_avg": round(sum(p["max"] for p in per_task) / len(per_task), 2),
+    "per_task_mean_avg": round(sum(p["mean"] for p in per_task) / len(per_task), 2),
+    "mean_spread": round(sum(p["spread"] for p in per_task) / len(per_task), 2),
+}
+out["best_model_task_counts"] = dict(Counter(p["best_model"] for p in per_task))
+
+# ---- M3 rubric / difficulty structure --------------------------------------
+out["rubric_step_histogram"] = dict(Counter(len(prof["tasks"][t]["w"]) for t in prof["tasks"]))
+by_diff = defaultdict(list)
+for p in per_task:
+    by_diff[p["difficulty"]].append(p["mean"])
+out["difficulty_groups"] = {k: {"n": len(v), "mean_success": round(sum(v) / len(v), 2)}
+                            for k, v in by_diff.items()}
+
+
+def corr(a, b):
+    ma, mb = sum(a) / len(a), sum(b) / len(b)
+    num = sum((x - ma) * (y - mb) for x, y in zip(a, b))
+    den = math.sqrt(sum((x - ma) ** 2 for x in a) * sum((y - mb) ** 2 for y in b))
+    return round(num / den, 3) if den > 1e-12 else 0.0
+
+
+out["corr_steps_vs_success"] = corr([p["rubric_steps"] for p in per_task], [p["mean"] for p in per_task])
+out["corr_difficulty_vs_success"] = corr(
+    [{"Easy": 0, "Medium": 0.5, "Hard": 1}[p["difficulty"]] for p in per_task],
+    [p["mean"] for p in per_task])
+
+# ---- M4 dataset geometry ----------------------------------------------------
+out["dataset"] = {
+    "episodes_total": sum(v["eps"] for v in prof["tasks"].values()),
+    "episodes_min": min(v["eps"] for v in prof["tasks"].values()),
+    "episodes_max": max(v["eps"] for v in prof["tasks"].values()),
+    "tasks_with_unseen_object_note": sum(1 for v in prof["tasks"].values() if v.get("unseen")),
+    "tasks_with_human_notes": sum(1 for v in prof["tasks"].values() if v.get("h1") or v.get("h4")),
 }
 
-# ---------- Q5: 时长与成功率 ----------
-long_tasks = [x for x in task_stats if x["mean_duration"] >= 48]
-short_tasks = [x for x in task_stats if x["mean_duration"] < 38]
-report["Q5_duration"] = {
-    "long_task_count": len(long_tasks),
-    "long_task_mean_success": round(sum(x["mean"] for x in long_tasks) / max(1, len(long_tasks)), 2),
-    "short_task_count": len(short_tasks),
-    "short_task_mean_success": round(sum(x["mean"] for x in short_tasks) / max(1, len(short_tasks)), 2),
-    "corr_task_mean_duration_vs_task_mean_success": round(
-        pearson([x["mean_duration"] for x in task_stats], [x["mean"] for x in task_stats]), 3),
-    "per_task": [{"task": x["task"], "dur": x["mean_duration"], "succ": x["mean"]} for x in task_stats],
-}
+json.dump(out, open(os.path.join(HERE, "r16_leaderboard_stats.json"), "w"), indent=1)
 
-# ---------- 榜单一致性：排行榜均值 vs 32 任务均值 ----------
-recompute = {}
-for m in models:
-    recompute[m["model_name"]] = round(
-        sum(t["success_rate"] for t in m["task_metrics"]) / len(m["task_metrics"]), 3)
-report["Q0_integrity"] = {
-    "reported_vs_recomputed_avg_success": {
-        m["model_name"]: [m["avg_success_rate"], recompute[m["model_name"]]] for m in models},
-    "rank_by_reported": [g["model_name"] for g in data["generalist"]],
-    "rank_by_recomputed": sorted(recompute, key=lambda n: -recompute[n]),
-    "generalist_vs_specialist_counts": {"generalist": len(data["generalist"]),
-                                        "specialist": len(data["specialist"])},
-    "note": "step_score = k * success_rate 的比例常数在模型间仅 1.30-1.37 波动",
-}
-
-with open(OUT, "w", encoding="utf-8") as f:
-    json.dump(report, f, ensure_ascii=False, indent=2)
-
-# ---------------- 控制台摘要 ----------------
-print("== Q0 榜单一致性 ==")
-for n, (rep, rec) in report["Q0_integrity"]["reported_vs_recomputed_avg_success"].items():
-    print(f"  {n:16s} reported={rep:5.1f} recomputed={rec:6.3f}")
-print("  rank reported   :", report["Q0_integrity"]["rank_by_reported"])
-print("  rank recomputed :", report["Q0_integrity"]["rank_by_recomputed"])
-
-print("\n== Q1/Q2 方差分解（成功率的 32×8 矩阵）==")
-v = report["Q1_Q2_variance_decomposition"]
-print(f"  总均值 {v['grand_mean_success']}%  任务效应 {v['share_task_effect']:.1%}  "
-      f"模型效应 {v['share_model_effect']:.1%}  交互项 {v['share_interaction']:.1%}")
-print(f"  模型两两相关均值 {v['model_pair_corr']['mean_pairwise_corr']}  "
-      f"相关矩阵特征值 {v['model_pair_corr']['corr_matrix_eigenvalues']}  "
-      f"首特征占比 {v['model_pair_corr']['first_eig_share']}")
-
-print("\n== Q2 oracle 路由上界 ==")
-o = report["Q2_oracle_router"]
-print(f"  榜首均值 {o['leader_avg']}%  逐任务取最优 {o['oracle_best_per_task']}%  "
-      f"top2 平均 {o['oracle_top2_per_task']}%  随机取一模型 {o['random_pick_expectation']}%")
-print(f"  相对榜首的专长空间：+{o['headroom_vs_leader_pp']}pp")
-
-print("\n== Q3 步骤分结构 ==")
-q3 = report["Q3_step_score_relation"]
-print(f"  step/success 比值：mean {q3['ratio_mean']}  std {q3['ratio_std']}  "
-      f"[{q3['ratio_min']}, {q3['ratio_max']}]  p05 {q3['ratio_p05']} p95 {q3['ratio_p95']}")
-print(f"  corr(比值, 时长) = {q3['corr_ratio_vs_duration']}   corr(比值, 成功率) = {q3['corr_ratio_vs_success']}")
-print("  模型级比值：", q3["model_level_ratio"])
-
-print("\n== Q4 任务难度（按 8 模型均值升序，前 8 / 后 5）==")
-for x in task_stats[:8]:
-    print(f"  {x['task']:26s} mean {x['mean']:5.2f}  spread {x['spread']:5.2f}  "
-          f"dur {x['mean_duration']:5.1f}s  best={x['best_model']} {x['best_score']}")
-print("  ...")
-for x in task_stats[-5:]:
-    print(f"  {x['task']:26s} mean {x['mean']:5.2f}  spread {x['spread']:5.2f}  "
-          f"dur {x['mean_duration']:5.1f}s  best={x['best_model']} {x['best_score']}")
-print("  全模型均值 <20% 的任务：", report["Q4_task_difficulty"]["universally_hard_mean_lt20"])
-
-print("\n== Q5 时长 ==")
-q5 = report["Q5_duration"]
-print(f"  长任务(>=48s, n={q5['long_task_count']}) 均值成功 {q5['long_task_mean_success']}%   "
-      f"短任务(<38s, n={q5['short_task_count']}) 均值成功 {q5['short_task_mean_success']}%   "
-      f"corr(dur, succ) = {q5['corr_task_mean_duration_vs_task_mean_success']}")
-
-print(f"\n写出：{OUT}")
+print("== models ==")
+for m in msum:
+    print(f"  {m['model']:16s} succ {m['avg_success_rate']:5.1f}  step {m['avg_step_score']:5.1f} "
+          f" ratio {m['step_per_success']:.3f}  dur {m['avg_duration_sec']:5.2f}s")
+print(f"\nmodel-level fit: step = {out['model_level_fit']['intercept']} + "
+      f"{out['model_level_fit']['slope']}*success  (R2={out['model_level_fit']['r2']})")
+s = out["per_task_fit_summary"]
+print(f"per-task fit: mean b={s['mean_b']} (min {s['min_b']}, max {s['max_b']}), "
+      f"mean R2={s['mean_r2']} (min {s['min_r2']}), mean a={s['mean_a']}")
+print(f"violations of step>=success over 256 cells: {viol}")
+print(f"oracle per-task routing {s['oracle_per_task_routing_avg']}% vs best single model "
+      f"{max(m['avg_success_rate'] for m in msum)}% vs per-task mean {s['per_task_mean_avg']}%")
+print(f"mean per-task spread {s['mean_spread']}pp; best-model counts {out['best_model_task_counts']}")
+print(f"rubric step histogram {out['rubric_step_histogram']}; difficulty {out['difficulty_groups']}")
+print(f"corr(rubric_steps, success)={out['corr_steps_vs_success']}  "
+      f"corr(difficulty, success)={out['corr_difficulty_vs_success']}")
+print(f"dataset {out['dataset']}")
