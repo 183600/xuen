@@ -1,0 +1,324 @@
+{
+ "persona": {
+  "Hang the Cup": {
+   "mean_sr": 22.955,
+   "spread": 29.4,
+   "sd": 9.495677964210875,
+   "demo_s": 6.22,
+   "frames": 186.5,
+   "eps": 1043,
+   "rank1": 27.29,
+   "best": 38.43
+  },
+  "Fruit Basket Collection": {
+   "mean_sr": 27.79375,
+   "spread": 8.820000000000004,
+   "sd": 3.143139105655364,
+   "demo_s": 10.82,
+   "frames": 324.5,
+   "eps": 1050,
+   "rank1": 27.85,
+   "best": 32.38
+  },
+  "Pack the Doll": {
+   "mean_sr": 26.13625,
+   "spread": 21.72,
+   "sd": 6.360514793434569,
+   "demo_s": 19.64,
+   "frames": 589.1,
+   "eps": 1060,
+   "rank1": 37.01,
+   "best": 37.01
+  },
+  "Fruit Sorting": {
+   "mean_sr": 27.0125,
+   "spread": 17.27,
+   "sd": 5.756873608999941,
+   "demo_s": 10.66,
+   "frames": 319.8,
+   "eps": 1032,
+   "rank1": 31.76,
+   "best": 35.5
+  },
+  "Disconnect Ethernet": {
+   "mean_sr": 26.814999999999998,
+   "spread": 12.149999999999999,
+   "sd": 4.130157381989214,
+   "demo_s": 10.53,
+   "frames": 316.0,
+   "eps": 1025,
+   "rank1": 21.29,
+   "best": 33.44
+  },
+  "Color Arrangement": {
+   "mean_sr": 27.11625,
+   "spread": 25.939999999999998,
+   "sd": 7.062984386043905,
+   "demo_s": 13.61,
+   "frames": 408.2,
+   "eps": 1533,
+   "rank1": 37.32,
+   "best": 37.32
+  },
+  "Place Photo Frames": {
+   "mean_sr": 27.9775,
+   "spread": 24.43,
+   "sd": 7.801198225272833,
+   "demo_s": 11.16,
+   "frames": 334.7,
+   "eps": 1041,
+   "rank1": 24.33,
+   "best": 42.0
+  },
+  "Organize Bookshelf": {
+   "mean_sr": 26.61875,
+   "spread": 13.240000000000002,
+   "sd": 4.008015211735105,
+   "demo_s": 10.28,
+   "frames": 308.3,
+   "eps": 1027,
+   "rank1": 33.02,
+   "best": 33.02
+  },
+  "Toolbox Storage": {
+   "mean_sr": 25.81875,
+   "spread": 7.949999999999999,
+   "sd": 2.5080841169107546,
+   "demo_s": 37.57,
+   "frames": 1127.0,
+   "eps": 1064,
+   "rank1": 30.71,
+   "best": 30.71
+  },
+  "Plug Charger": {
+   "mean_sr": 25.57,
+   "spread": 21.700000000000003,
+   "sd": 7.542454839109082,
+   "demo_s": 15.12,
+   "frames": 453.5,
+   "eps": 1022,
+   "rank1": 30.51,
+   "best": 38.17
+  },
+  "Pick Out Battery": {
+   "mean_sr": 23.30625,
+   "spread": 13.86,
+   "sd": 3.6236892026634955,
+   "demo_s": 16.11,
+   "frames": 483.3,
+   "eps": 993,
+   "rank1": 23.46,
+   "best": 30.03
+  },
+  "Unlock": {
+   "mean_sr": 20.105,
+   "spread": 21.87,
+   "sd": 6.4001152333376,
+   "demo_s": 14.45,
+   "frames": 433.5,
+   "eps": 970,
+   "rank1": 23.52,
+   "best": 28.17
+  },
+  "Arrange Test Tubes": {
+   "mean_sr": 24.15,
+   "spread": 19.71,
+   "sd": 6.385945505561412,
+   "demo_s": 17.77,
+   "frames": 533.0,
+   "eps": 1004,
+   "rank1": 28.93,
+   "best": 34.38
+  },
+  "Open Pill Bottle": {
+   "mean_sr": 22.72625,
+   "spread": 18.41,
+   "sd": 6.261111996882024,
+   "demo_s": 21.82,
+   "frames": 654.7,
+   "eps": 979,
+   "rank1": 28.57,
+   "best": 30.09
+  },
+  "Organize Tools": {
+   "mean_sr": 25.93625,
+   "spread": 18.050000000000004,
+   "sd": 5.205232793785501,
+   "demo_s": 25.01,
+   "frames": 750.3,
+   "eps": 1032,
+   "rank1": 37.2,
+   "best": 37.2
+  },
+  "Fold Towel": {
+   "mean_sr": 24.08125,
+   "spread": 15.439999999999998,
+   "sd": 5.092898088269585,
+   "demo_s": 25.78,
+   "frames": 773.4,
+   "eps": 1053,
+   "rank1": 27.19,
+   "best": 32.15
+  },
+  "Organize Stationery": {
+   "mean_sr": 22.4675,
+   "spread": 23.970000000000002,
+   "sd": 7.705427875854786,
+   "demo_s": 23.94,
+   "frames": 718.3,
+   "eps": 1028,
+   "rank1": 30.9,
+   "best": 33.06
+  },
+  "Pack Bag": {
+   "mean_sr": 25.28375,
+   "spread": 15.029999999999998,
+   "sd": 4.5020715717878135,
+   "demo_s": 15.11,
+   "frames": 453.4,
+   "eps": 1067,
+   "rank1": 28.77,
+   "best": 31.38
+  },
+  "Zip Up": {
+   "mean_sr": 23.3875,
+   "spread": 19.840000000000003,
+   "sd": 6.970347462644886,
+   "demo_s": 14.13,
+   "frames": 424.0,
+   "eps": 1006,
+   "rank1": 33.42,
+   "best": 33.42
+  },
+  "Paper Cup Stacking": {
+   "mean_sr": 28.048750000000002,
+   "spread": 17.240000000000002,
+   "sd": 6.261793747601402,
+   "demo_s": 13.85,
+   "frames": 415.5,
+   "eps": 969,
+   "rank1": 35.28,
+   "best": 35.28
+  },
+  "Clear Plates": {
+   "mean_sr": 25.89625,
+   "spread": 16.31,
+   "sd": 5.089064102317831,
+   "demo_s": 21.32,
+   "frames": 639.7,
+   "eps": 1069,
+   "rank1": 32.72,
+   "best": 34.36
+  },
+  "Spell robot": {
+   "mean_sr": 21.82375,
+   "spread": 19.620000000000005,
+   "sd": 6.135376796701244,
+   "demo_s": 31.17,
+   "frames": 935.1,
+   "eps": 1018,
+   "rank1": 28.62,
+   "best": 33.99
+  },
+  "Store Racket": {
+   "mean_sr": 25.57125,
+   "spread": 13.899999999999999,
+   "sd": 4.320443951436009,
+   "demo_s": 34.14,
+   "frames": 1024.3,
+   "eps": 1047,
+   "rank1": 28.49,
+   "best": 34.23
+  },
+  "Conveyor Food Sorting": {
+   "mean_sr": 29.12375,
+   "spread": 20.459999999999997,
+   "sd": 6.517493646909063,
+   "demo_s": 12.19,
+   "frames": 365.8,
+   "eps": 1049,
+   "rank1": 32.26,
+   "best": 37.55
+  },
+  "Stack Cups": {
+   "mean_sr": 30.32,
+   "spread": 15.609999999999996,
+   "sd": 4.828928452565848,
+   "demo_s": 19.82,
+   "frames": 594.5,
+   "eps": 1025,
+   "rank1": 31.44,
+   "best": 35.48
+  },
+  "Plug In Ethernet": {
+   "mean_sr": 17.725,
+   "spread": 18.31,
+   "sd": 5.419125852017094,
+   "demo_s": 16.39,
+   "frames": 491.6,
+   "eps": 1009,
+   "rank1": 27.54,
+   "best": 27.54
+  },
+  "Stack Bowls": {
+   "mean_sr": 24.111250000000002,
+   "spread": 24.950000000000003,
+   "sd": 7.577183575544412,
+   "demo_s": 10.06,
+   "frames": 301.9,
+   "eps": 979,
+   "rank1": 29.28,
+   "best": 36.28
+  },
+  "Store Earphones": {
+   "mean_sr": 27.8825,
+   "spread": 8.999999999999996,
+   "sd": 2.5107257416930264,
+   "demo_s": 24.07,
+   "frames": 722.1,
+   "eps": 982,
+   "rank1": 27.73,
+   "best": 32.3
+  },
+  "Pack Phone": {
+   "mean_sr": 23.88375,
+   "spread": 14.919999999999998,
+   "sd": 4.212736454788027,
+   "demo_s": 29.16,
+   "frames": 874.9,
+   "eps": 1016,
+   "rank1": 27.39,
+   "best": 31.86
+  },
+  "Remove Pinned Note": {
+   "mean_sr": 27.3025,
+   "spread": 26.97,
+   "sd": 8.149797160052513,
+   "demo_s": 19.58,
+   "frames": 587.3,
+   "eps": 1026,
+   "rank1": 33.75,
+   "best": 40.28
+  },
+  "Organize Pencil Case": {
+   "mean_sr": 24.08,
+   "spread": 17.36,
+   "sd": 4.994727219778874,
+   "demo_s": 20.52,
+   "frames": 615.7,
+   "eps": 1024,
+   "rank1": 24.95,
+   "best": 30.3
+  },
+  "Syringe Water Transfer": {
+   "mean_sr": 24.56625,
+   "spread": 10.350000000000001,
+   "sd": 3.1334363624461887,
+   "demo_s": 15.29,
+   "frames": 458.8,
+   "eps": 1034,
+   "rank1": 27.89,
+   "best": 29.35
+  }
+ }
+}

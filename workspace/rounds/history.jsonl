@@ -843,3 +843,4 @@
 {"event": "heartbeat", "round": 1, "ts": "2026-11-03 23:48:04"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 02:22:30"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 04:21:27"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-04 05:13:22"}
