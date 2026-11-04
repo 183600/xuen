@@ -879,3 +879,4 @@
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261102-050423-r1", "changed": ["idea", "artifact"], "ts": "2026-11-04 20:05:10"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-04 20:48:37"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-04 21:30:09"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-04 23:11:25"}
