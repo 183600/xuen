@@ -1,0 +1,768 @@
+{
+ "meta": {
+  "source": "unibot.unitree.com/leaderboard_data.json + tasks_v2/*/info.json",
+  "retrieved": "2026-11-04",
+  "leaderboard_avg_success_top1": 29.7,
+  "leaderboard_avg_success_8models": 25.175,
+  "leaderboard_avg_step_top1": 39.0,
+  "protocol": {
+   "runs_per_task": 10,
+   "axes": 5,
+   "axis_repeats": 2,
+   "episode_timeout_s": 180,
+   "chunk": 30,
+   "fps": 30
+  }
+ },
+ "tasks": [
+  {
+   "id": "T01",
+   "name": "HangCup",
+   "slug": "hang_the_cup",
+   "difficulty": "Easy",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Grab the cup handle",
+    "Hang it on the marked spot on the rack"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少红色杯子和塑料架子",
+    "human_1_note": "杯子向后",
+    "human_4_note": "杯子向右"
+   },
+   "succ_avg8": 22.95,
+   "dur_avg8": 29.33,
+   "step_avg8": 30.81
+  },
+  {
+   "id": "T02",
+   "name": "FruitCollection",
+   "slug": "fruit_basket_collection",
+   "difficulty": "Easy",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Grab fruit 1 and put it into the basket",
+    "Grab fruit 2 and put it into the basket"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同果篮",
+    "human_1_note": "水果向前",
+    "human_4_note": "水果向右"
+   },
+   "succ_avg8": 27.79,
+   "dur_avg8": 42.14,
+   "step_avg8": 37.3
+  },
+  {
+   "id": "T03",
+   "name": "PackDoll",
+   "slug": "pack_the_doll",
+   "difficulty": "Easy",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Pack all the dolls into the bag.",
+    "Place the bag upright in front of you."
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少绿色和紫色娃娃",
+    "human_1_note": "娃娃向前",
+    "human_4_note": "娃娃向右"
+   },
+   "succ_avg8": 26.14,
+   "dur_avg8": 55.72,
+   "step_avg8": 35.05
+  },
+  {
+   "id": "T04",
+   "name": "FruitSorting",
+   "slug": "sort_fruit",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Grab fruit 1 and place it onto the plate with the matching color",
+    "Grab fruit 2 and place it onto the plate with the matching color",
+    "Grab fruit 3 and place it onto the plate with the matching color"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他款式的盘子",
+    "human_1_note": "橘色盘子向左移动移动",
+    "human_4_note": "把梨往右移动"
+   },
+   "succ_avg8": 27.01,
+   "dur_avg8": 34.98,
+   "step_avg8": 36.23
+  },
+  {
+   "id": "T05",
+   "name": "DisconnectEthernet",
+   "slug": "disconnect_ethernet",
+   "difficulty": "Hard",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Hold the network port, then grip the Ethernet cable",
+    "Unplug the Ethernet cable"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的短网线",
+    "human_1_note": "把网线另一头也插上",
+    "human_4_note": "移动道具手握网口"
+   },
+   "succ_avg8": 26.81,
+   "dur_avg8": 47.27,
+   "step_avg8": 35.99
+  },
+  {
+   "id": "T06",
+   "name": "ColorArrangement",
+   "slug": "color_arrangement",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place the red block in the rightmost position",
+    "Place the green block in the middle position",
+    "Place the yellow block in the leftmost position"
+   ],
+   "generalization": {
+    "unseen_object_3": "没有其他积木 只有塑料积木",
+    "human_1_note": "绿色积木向右移动",
+    "human_4_note": "红色积木向前移动"
+   },
+   "succ_avg8": 27.12,
+   "dur_avg8": 59.7,
+   "step_avg8": 36.3
+  },
+  {
+   "id": "T07",
+   "name": "PlacePhotoFrame",
+   "slug": "place_photo_frames",
+   "difficulty": "Medium",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Grab the photo frame",
+    "Open the frame stand",
+    "Straighten the photo frame"
+   ],
+   "generalization": {
+    "unseen_object_3": "只有一种相框",
+    "human_1_note": "相框向上移动",
+    "human_4_note": "相框向上移动"
+   },
+   "succ_avg8": 27.98,
+   "dur_avg8": 38.56,
+   "step_avg8": 37.49
+  },
+  {
+   "id": "T08",
+   "name": "OrganizeBookshelf",
+   "slug": "organize_bookshelf",
+   "difficulty": "Easy",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Grab the book and pick it up",
+    "Place it on the bookshelf"
+   ],
+   "generalization": {
+    "human_1_note": "抓到书后挪动架子",
+    "human_4_note": "书向右"
+   },
+   "succ_avg8": 26.62,
+   "dur_avg8": 50.49,
+   "step_avg8": 35.66
+  },
+  {
+   "id": "T09",
+   "name": "ToolboxStorage",
+   "slug": "toolbox_storage",
+   "difficulty": "Hard",
+   "pts": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "steps": [
+    "Store two tools in the toolbox.",
+    "Store all the remaining tools in the toolbox.",
+    "Close the toolbox lid.",
+    "Lock the toolbox."
+   ],
+   "generalization": {
+    "human_1_note": "胶带向后移动",
+    "human_4_note": "胶带向右移动"
+   },
+   "succ_avg8": 25.82,
+   "dur_avg8": 31.05,
+   "step_avg8": 34.6
+  },
+  {
+   "id": "T10",
+   "name": "PlugCharger",
+   "slug": "plug_charger",
+   "difficulty": "Hard",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Grab the power strip",
+    "Grab the plug",
+    "Plug it into the power strip"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的插排",
+    "human_1_note": "抓插头前进行移动",
+    "human_4_note": "将插头拔起"
+   },
+   "succ_avg8": 25.57,
+   "dur_avg8": 44.31,
+   "step_avg8": 34.33
+  },
+  {
+   "id": "T11",
+   "name": "PickOutBatteries",
+   "slug": "pick_out_battery",
+   "difficulty": "Medium",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Pick out battery 1 (without grabbing any block)",
+    "Pick out battery 2 (without grabbing any block)",
+    "Pick out battery 3 (without grabbing any block)"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少黑色电池",
+    "human_1_note": "抓取电池之前动底座",
+    "human_4_note": "抓电池之后动绿色盒子"
+   },
+   "succ_avg8": 23.31,
+   "dur_avg8": 56.5,
+   "step_avg8": 31.25
+  },
+  {
+   "id": "T12",
+   "name": "Unlock",
+   "slug": "unlock",
+   "difficulty": "Hard",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Pick up the lock",
+    "Turn the key",
+    "Flip the metal ring"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少一把绿色锁",
+    "human_1_note": "锁向左移动",
+    "human_4_note": "中途把锁拿走"
+   },
+   "succ_avg8": 20.11,
+   "dur_avg8": 39.0,
+   "step_avg8": 26.94
+  },
+  {
+   "id": "T13",
+   "name": "ArrangeTestTubes",
+   "slug": "organize_test_cube",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Pick up test tube 1 and return it to its designated spot in the rack",
+    "Pick up test tube 2 and return it to its designated spot in the rack",
+    "Pick up test tube 3 and return it to its designated spot in the rack"
+   ],
+   "generalization": {
+    "unseen_object_3": "不同类型的试管",
+    "human_1_note": "试管向右移动",
+    "human_4_note": "试管向左移动"
+   },
+   "succ_avg8": 24.15,
+   "dur_avg8": 49.67,
+   "step_avg8": 32.38
+  },
+  {
+   "id": "T14",
+   "name": "PourOutMedicine",
+   "slug": "open_pill_bottle",
+   "difficulty": "Hard",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Open the pill bottle cap",
+    "Pour out the medicine"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的药品收纳盒",
+    "human_1_note": "拧开盖子之后拧动回来",
+    "human_4_note": "把瓶子向左移动"
+   },
+   "succ_avg8": 22.73,
+   "dur_avg8": 29.86,
+   "step_avg8": 30.5
+  },
+  {
+   "id": "T15",
+   "name": "OrganizeTools",
+   "slug": "organize_tools",
+   "difficulty": "Medium",
+   "pts": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "steps": [
+    "Grab tool 1 and return it to the rack",
+    "Grab tool 2 and return it to the rack",
+    "Grab tool 3 and return it to the rack",
+    "Grab tool 4 and return it to the rack"
+   ],
+   "generalization": {
+    "human_1_note": "钳子向左移动",
+    "human_4_note": "螺丝刀向右移动"
+   },
+   "succ_avg8": 25.94,
+   "dur_avg8": 40.39,
+   "step_avg8": 34.74
+  },
+  {
+   "id": "T16",
+   "name": "FoldTowel",
+   "slug": "fold_towel",
+   "difficulty": "Hard",
+   "pts": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "steps": [
+    "Straighten the towel",
+    "Fold it in half top to bottom once",
+    "Grab the left side and fold once",
+    "Grab the right side and fold once",
+    "Fold and set it aside"
+   ],
+   "generalization": {
+    "human_1_note": "将叠完的毛巾翻开",
+    "human_4_note": "将叠完的毛巾翻开"
+   },
+   "succ_avg8": 24.08,
+   "dur_avg8": 54.28,
+   "step_avg8": 32.31
+  },
+  {
+   "id": "T17",
+   "name": "OrganizeStationery",
+   "slug": "organize_stationery",
+   "difficulty": "Easy",
+   "pts": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "steps": [
+    "Straighten the pencil case",
+    "Put stationery 1 into the case",
+    "Put stationery 2 into the case",
+    "Put stationery 3 into the case",
+    "Close the pencil case"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少黑色的文件盒",
+    "human_1_note": "荧光笔向后",
+    "human_4_note": "笔盒合上之后手动打开"
+   },
+   "succ_avg8": 22.47,
+   "dur_avg8": 33.7,
+   "step_avg8": 30.1
+  },
+  {
+   "id": "T18",
+   "name": "PackBag",
+   "slug": "pack_bag",
+   "difficulty": "Medium",
+   "pts": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "steps": [
+    "Grab the pencil case",
+    "Grab the backpack and pull it over",
+    "Put the pencil case into the backpack",
+    "Zip up the backpack"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的文具盒",
+    "human_1_note": "把文具盒向上移动",
+    "human_4_note": "把书包向左移动"
+   },
+   "succ_avg8": 25.28,
+   "dur_avg8": 49.26,
+   "step_avg8": 33.91
+  },
+  {
+   "id": "T19",
+   "name": "ZipUp",
+   "slug": "zip_up",
+   "difficulty": "Medium",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Straighten the pouch",
+    "Zip up the pouch"
+   ],
+   "generalization": {
+    "human_1_note": "把包向左边移动",
+    "human_4_note": "拉上拉链之后拉开"
+   },
+   "succ_avg8": 23.39,
+   "dur_avg8": 59.24,
+   "step_avg8": 31.32
+  },
+  {
+   "id": "T20",
+   "name": "PaperCupStacking",
+   "slug": "paper_cup_stacking",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place paper cup 1 in the middle",
+    "Place paper cup 2 next to cup 1",
+    "Place paper cup 3 on top of cups 1 and 2"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同类型纸杯",
+    "human_1_note": "把左边的纸杯向上移动",
+    "human_4_note": "把右上角的纸杯向右移动"
+   },
+   "succ_avg8": 28.05,
+   "dur_avg8": 37.83,
+   "step_avg8": 37.57
+  },
+  {
+   "id": "T21",
+   "name": "ArrangePlates",
+   "slug": "clear_plates",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place plate 1 into the rack",
+    "Place plate 2 into the rack",
+    "Place plate 3 into the rack"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同类型的盘子",
+    "human_1_note": "把盘子向前移动",
+    "human_4_note": "把架子向左边移动"
+   },
+   "succ_avg8": 25.9,
+   "dur_avg8": 50.97,
+   "step_avg8": 34.76
+  },
+  {
+   "id": "T22",
+   "name": "SpellRobot",
+   "slug": "spell_robot",
+   "difficulty": "Medium",
+   "pts": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "steps": [
+    "Grab the spelling board",
+    "Place letter b onto the board",
+    "Place letter o onto the board",
+    "Place letter t onto the board"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的字母",
+    "human_1_note": "字母上移动",
+    "human_4_note": "字母向左边移动"
+   },
+   "succ_avg8": 21.82,
+   "dur_avg8": 31.94,
+   "step_avg8": 29.31
+  },
+  {
+   "id": "T23",
+   "name": "StorePaddle",
+   "slug": "store_racket",
+   "difficulty": "Medium",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Put the paddle into the case",
+    "Zip up the paddle case"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的球拍套装",
+    "human_1_note": "球拍向前移动",
+    "human_4_note": "球拍向左移动"
+   },
+   "succ_avg8": 25.57,
+   "dur_avg8": 42.89,
+   "step_avg8": 34.35
+  },
+  {
+   "id": "T24",
+   "name": "ConveyorSorting",
+   "slug": "sort_food_conveyor",
+   "difficulty": "Medium",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Grab the food item on the conveyor belt",
+    "Place it at the position corresponding to its category on the rack"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的零食",
+    "human_1_note": "可乐快到了然后放回传送带起点",
+    "human_4_note": "薯片快到了然后放回传送带起点"
+   },
+   "succ_avg8": 29.12,
+   "dur_avg8": 58.19,
+   "step_avg8": 38.99
+  },
+  {
+   "id": "T25",
+   "name": "StoreCups",
+   "slug": "stack_cups",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place paper cup 1 into the rack",
+    "Place paper cup 2 into the rack",
+    "Place paper cup 3 into the rack"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的纸杯",
+    "human_1_note": "把纸杯向左移动",
+    "human_4_note": "放了第一个马上放第二个挪一下底座"
+   },
+   "succ_avg8": 30.32,
+   "dur_avg8": 37.0,
+   "step_avg8": 40.65
+  },
+  {
+   "id": "T26",
+   "name": "PlugInEthernet",
+   "slug": "plug_in_ethernet",
+   "difficulty": "Medium",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Grab the ethernet cable",
+    "Hold the network port",
+    "Plug the cable into the network port"
+   ],
+   "generalization": {
+    "unseen_object_3": "不同的网线跟端口",
+    "human_1_note": "把网线移开",
+    "human_4_note": "把插口移开"
+   },
+   "succ_avg8": 17.73,
+   "dur_avg8": 48.93,
+   "step_avg8": 23.73
+  },
+  {
+   "id": "T27",
+   "name": "StackBowls",
+   "slug": "stack_bowls_three",
+   "difficulty": "Easy",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place bowl 1 in the middle",
+    "Stack bowl 2 onto bowl 1",
+    "Stack bowl 3 onto bowl 2"
+   ],
+   "generalization": {
+    "unseen_object_3": "除了塑料类型",
+    "human_1_note": "把粉色碗向下移动",
+    "human_4_note": "叠了第二个之后拿下第二个"
+   },
+   "succ_avg8": 24.11,
+   "dur_avg8": 29.68,
+   "step_avg8": 32.34
+  },
+  {
+   "id": "T28",
+   "name": "StoreEarphones",
+   "slug": "store_earphones",
+   "difficulty": "Hard",
+   "pts": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "steps": [
+    "Grab the earphone case",
+    "Put the left earphone into the case",
+    "Put the right earphone into the case",
+    "Close the earphone case lid and put the case into the storage box"
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的收纳盒以及耳机托盘",
+    "human_1_note": "把黄色盒子的耳机向前移动",
+    "human_4_note": "把红盒子的耳机向右移动"
+   },
+   "succ_avg8": 27.88,
+   "dur_avg8": 42.42,
+   "step_avg8": 37.42
+  },
+  {
+   "id": "T29",
+   "name": "PackPhone",
+   "slug": "pack_iphone",
+   "difficulty": "Hard",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Place the tray into the box",
+    "Put the phone onto the tray",
+    "Close the box"
+   ],
+   "generalization": {
+    "human_1_note": "手机向上移动",
+    "human_4_note": "外壳盖移开"
+   },
+   "succ_avg8": 23.88,
+   "dur_avg8": 55.7,
+   "step_avg8": 32.07
+  },
+  {
+   "id": "T30",
+   "name": "RemovePinnedNote",
+   "slug": "remove_pinned_note",
+   "difficulty": "Medium",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Pull out all the push pins and place them into the storage box",
+    "Put the note back into the storage box"
+   ],
+   "generalization": {
+    "human_1_note": "把把黄色钉子移到中间",
+    "human_4_note": "把绿色钉子向下移动"
+   },
+   "succ_avg8": 27.3,
+   "dur_avg8": 32.57,
+   "step_avg8": 36.68
+  },
+  {
+   "id": "T31",
+   "name": "OrganizePencilCase",
+   "slug": "pencil_case",
+   "difficulty": "Medium",
+   "pts": [
+    30,
+    30,
+    40
+   ],
+   "steps": [
+    "Open the pencil case zipper",
+    "Put all stationery items into the pencil case",
+    "Close the zipper"
+   ],
+   "generalization": {},
+   "succ_avg8": 24.08,
+   "dur_avg8": 47.07,
+   "step_avg8": 32.38
+  },
+  {
+   "id": "T32",
+   "name": "SyringeWaterTransfer",
+   "slug": "syring_water",
+   "difficulty": "Medium",
+   "pts": [
+    50,
+    50
+   ],
+   "steps": [
+    "Draw water from the large cup using the syringe",
+    "Inject the water into the small cup"
+   ],
+   "generalization": {},
+   "succ_avg8": 24.57,
+   "dur_avg8": 59.39,
+   "step_avg8": 32.94
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+G1_Dex1_HangCup: cached
+G1_Dex1_PlugInEthernet: cached
+G1_Dex1_StackBowls: cached
+G1_Dex1_FoldTowel: cached
+G1_Dex1_Unlock: cached
+G1_Dex1_ArrangeTestTubes: total_rows=535169 random=1000 contig=800
+G1_Dex1_ToolboxStorage: total_rows=1199136 random=1000 contig=800
+G1_Dex1_SpellRobot: total_rows=951972 random=1000 contig=800
+G1_Dex1_ConveyorSorting: total_rows=383721 random=400 contig=0
+G1_Dex1_ZipUp: total_rows=200000 random=1000 contig=800
+G1_Dex1_PackDoll: total_rows=624447 random=1000 contig=800
+G1_Dex1_OrganizeTools: total_rows=774261 random=1000 contig=800
