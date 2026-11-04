@@ -1,0 +1,484 @@
+{
+ "source": "https://unibot.unitree.com/tasks_v2/<slug>/info.json (retrieved 2026-11-04)",
+ "notes": "task_id, rubric weights, difficulty, generalization notes verified per task; dataset slugs/episodes from HF collection API",
+ "tasks": {
+  "T01": {
+   "slug": "hang_the_cup",
+   "name": "HangCup",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_HangCup",
+   "eps": 1043,
+   "unseen": "缺少红色杯子和塑料架子",
+   "h1": "杯子向后",
+   "h4": "杯子向右"
+  },
+  "T02": {
+   "slug": "fruit_basket_collection",
+   "name": "FruitCollection",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_FruitCollection",
+   "eps": 1050,
+   "unseen": "缺少不同果篮",
+   "h1": "水果向前",
+   "h4": "水果向右"
+  },
+  "T03": {
+   "slug": "pack_the_doll",
+   "name": "PackDoll",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_PackDoll",
+   "eps": 1060,
+   "unseen": "缺少绿色和紫色娃娃",
+   "h1": "娃娃向前",
+   "h4": "娃娃向右"
+  },
+  "T04": {
+   "slug": "sort_fruit",
+   "name": "FruitSorting",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_FruitSorting",
+   "eps": 1032,
+   "unseen": "缺少其他款式的盘子",
+   "h1": "橘色盘子向左移动",
+   "h4": "把梨往右移动"
+  },
+  "T05": {
+   "slug": "disconnect_ethernet",
+   "name": "DisconnectEthernet",
+   "diff": "Hard",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_DisconnectEthernet",
+   "eps": 1025,
+   "unseen": "缺少其他颜色的短网线",
+   "h1": "把网线另一头也插上",
+   "h4": "移动道具手握网口"
+  },
+  "T06": {
+   "slug": "color_arrangement",
+   "name": "ColorArrangement",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_ColorArrangement",
+   "eps": 1533,
+   "unseen": "只有塑料积木",
+   "h1": "绿色积木向右移动",
+   "h4": "红色积木向前移动"
+  },
+  "T07": {
+   "slug": "place_photo_frames",
+   "name": "PlacePhotoFrame",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PlacePhotoFrame",
+   "eps": 1041,
+   "unseen": "只有一种相框",
+   "h1": "相框向上移动",
+   "h4": "相框向上移动"
+  },
+  "T08": {
+   "slug": "organize_bookshelf",
+   "name": "OrganizeBookshelf",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_OrganizeBookshelf",
+   "eps": 1027,
+   "unseen": null,
+   "h1": "抓到书后挪动架子",
+   "h4": "书向右"
+  },
+  "T09": {
+   "slug": "toolbox_storage",
+   "name": "ToolboxStorage",
+   "diff": "Hard",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "hf": "G1_Dex1_ToolboxStorage",
+   "eps": 1064,
+   "unseen": null,
+   "h1": "胶带向后移动",
+   "h4": "胶带向右移动"
+  },
+  "T10": {
+   "slug": "plug_charger",
+   "name": "PlugCharger",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PlugCharger",
+   "eps": 1022,
+   "unseen": "缺少其他颜色的插排",
+   "h1": "抓插头前进行移动",
+   "h4": "将插头拔起"
+  },
+  "T11": {
+   "slug": "pick_out_battery",
+   "name": "PickOutBatteries",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PickOutBatteries",
+   "eps": 993,
+   "unseen": "缺少黑色电池",
+   "h1": "抓取电池之前动底座",
+   "h4": "抓电池之后动绿色盒子"
+  },
+  "T12": {
+   "slug": "unlock",
+   "name": "Unlock",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_Unlock",
+   "eps": 970,
+   "unseen": "缺少一把绿色锁",
+   "h1": "锁向左移动",
+   "h4": "中途把锁拿走"
+  },
+  "T13": {
+   "slug": "organize_test_cube",
+   "name": "ArrangeTestTubes",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_ArrangeTestTubes",
+   "eps": 1004,
+   "unseen": "不同类型的试管",
+   "h1": "试管向右移动",
+   "h4": "试管向左移动"
+  },
+  "T14": {
+   "slug": "open_pill_bottle",
+   "name": "PourOutMedicine",
+   "diff": "Hard",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_PourOutMedicine",
+   "eps": 979,
+   "unseen": "缺少不同颜色的药品收纳盒",
+   "h1": "拧开盖子之后拧动回来",
+   "h4": "把瓶子向左移动"
+  },
+  "T15": {
+   "slug": "organize_tools",
+   "name": "OrganizeTools",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "hf": "G1_Dex1_OrganizeTools",
+   "eps": 1032,
+   "unseen": null,
+   "h1": "钳子向左移动",
+   "h4": "螺丝刀向右移动"
+  },
+  "T16": {
+   "slug": "fold_towel",
+   "name": "FoldTowel",
+   "diff": "Hard",
+   "w": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "hf": "G1_Dex1_FoldTowel",
+   "eps": 1053,
+   "unseen": null,
+   "h1": "将叠完的毛巾翻开",
+   "h4": "将叠完的毛巾翻开"
+  },
+  "T17": {
+   "slug": "organize_stationery",
+   "name": "OrganizeStationery",
+   "diff": "Easy",
+   "w": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "hf": "G1_Dex1_OrganizeStationery",
+   "eps": 1028,
+   "unseen": "缺少黑色的文件盒",
+   "h1": "荧光笔向后",
+   "h4": "笔盒合上之后手动打开"
+  },
+  "T18": {
+   "slug": "pack_bag",
+   "name": "PackBag",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "hf": "G1_Dex1_PackBag",
+   "eps": 1067,
+   "unseen": "缺少其他颜色的文具盒",
+   "h1": "把文具盒向上移动",
+   "h4": "把书包向左移动"
+  },
+  "T19": {
+   "slug": "zip_up",
+   "name": "ZipUp",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_ZipUp",
+   "eps": 1006,
+   "unseen": null,
+   "h1": "把包向左边移动",
+   "h4": "拉上拉链之后拉开"
+  },
+  "T20": {
+   "slug": "paper_cup_stacking",
+   "name": "PaperCupStacking",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PaperCupStacking",
+   "eps": 969,
+   "unseen": "缺少不同类型纸杯",
+   "h1": "把左边的纸杯向上移动",
+   "h4": "把右上角的纸杯向右移动"
+  },
+  "T21": {
+   "slug": "clear_plates",
+   "name": "ArrangePlates",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_ArrangePlates",
+   "eps": 1069,
+   "unseen": "缺少不同类型的盘子",
+   "h1": "把盘子向前移动",
+   "h4": "把架子向左边移动"
+  },
+  "T22": {
+   "slug": "spell_robot",
+   "name": "SpellRobot",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "hf": "G1_Dex1_SpellRobot",
+   "eps": 1018,
+   "unseen": "缺少不同颜色的字母",
+   "h1": "字母上移动",
+   "h4": "字母向左边移动"
+  },
+  "T23": {
+   "slug": "store_racket",
+   "name": "StorePaddle",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_StorePaddle",
+   "eps": 1047,
+   "unseen": "缺少不同的球拍套装",
+   "h1": "球拍向前移动",
+   "h4": "球拍向左移动"
+  },
+  "T24": {
+   "slug": "sort_food_conveyor",
+   "name": "ConveyorSorting",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_ConveyorSorting",
+   "eps": 1049,
+   "unseen": "缺少不同的零食",
+   "h1": "可乐快到了然后放回传送带起点",
+   "h4": "薯片快到了然后放回传送带起点"
+  },
+  "T25": {
+   "slug": "stack_cups",
+   "name": "StoreCups",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_StoreCups",
+   "eps": 1025,
+   "unseen": "缺少不同颜色的纸杯",
+   "h1": "把纸杯向左移动",
+   "h4": "放了第一个马上放第二个挪一下底座"
+  },
+  "T26": {
+   "slug": "plug_in_ethernet",
+   "name": "PlugInEthernet",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PlugInEthernet",
+   "eps": 1009,
+   "unseen": "不同的网线跟端口",
+   "h1": "把网线移开",
+   "h4": "把插口移开"
+  },
+  "T27": {
+   "slug": "stack_bowls_three",
+   "name": "StackBowls",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_StackBowls",
+   "eps": 979,
+   "unseen": "除了塑料类型",
+   "h1": "把粉色碗向下移动",
+   "h4": "叠了第二个之后拿下第二个"
+  },
+  "T28": {
+   "slug": "store_earphones",
+   "name": "StoreEarphones",
+   "diff": "Hard",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "hf": "G1_Dex1_StoreEarphones",
+   "eps": 982,
+   "unseen": "缺少不同的收纳盒以及耳机托盘",
+   "h1": "把黄色盒子的耳机向前移动",
+   "h4": "把红盒子的耳机向右移动"
+  },
+  "T29": {
+   "slug": "pack_iphone",
+   "name": "PackPhone",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_PackPhone",
+   "eps": 1016,
+   "unseen": null,
+   "h1": "手机向上移动",
+   "h4": "外壳盖移开"
+  },
+  "T30": {
+   "slug": "remove_pinned_note",
+   "name": "RemovePinnedNote",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_RemovePinnedNote",
+   "eps": 1026,
+   "unseen": null,
+   "h1": "把黄色钉子移到中间",
+   "h4": "把绿色钉子向下移动"
+  },
+  "T31": {
+   "slug": "pencil_case",
+   "name": "OrganizePencilCase",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "hf": "G1_Dex1_OrganizePencilCase",
+   "eps": 1024,
+   "unseen": null,
+   "h1": null,
+   "h4": null
+  },
+  "T32": {
+   "slug": "syring_water",
+   "name": "SyringeWaterTransfer",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "hf": "G1_Dex1_SyringeWaterTransfer",
+   "eps": 1034,
+   "unseen": null,
+   "h1": null,
+   "h4": null
+  }
+ }
+}
