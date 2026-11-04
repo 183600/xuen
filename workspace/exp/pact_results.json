@@ -1,130 +1,783 @@
 {
-  "part_a_dyna_id": [
-    {
-      "m_true": 0.4,
-      "mu_true": 0.25,
-      "m_hat": 0.4158,
-      "m_rel_err": 0.039,
-      "mu_hat": 0.2566,
-      "mu_rel_err": 0.026
+  "round": 16,
+  "name": "PACT-VLA",
+  "date": "2026-11-02",
+  "E0_leaderboard": {
+    "n_tasks": 32,
+    "n_models": 8,
+    "leader": {
+      "model": "MolmoAct2",
+      "succ": 29.7,
+      "step": 39.0
     },
-    {
-      "m_true": 0.8,
-      "mu_true": 0.25,
-      "m_hat": 0.8123,
-      "m_rel_err": 0.015,
-      "mu_hat": 0.2534,
-      "mu_rel_err": 0.014
+    "per_task_sorted": [
+      {
+        "task": "Plug In Ethernet",
+        "mean_succ": 17.73,
+        "max_succ": 27.54,
+        "std_succ": 5.42,
+        "mean_dur": 48.9,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Unlock",
+        "mean_succ": 20.11,
+        "max_succ": 28.17,
+        "std_succ": 6.4,
+        "mean_dur": 39.0,
+        "best_model": "PI-0.5"
+      },
+      {
+        "task": "Spell robot",
+        "mean_succ": 21.82,
+        "max_succ": 33.99,
+        "std_succ": 6.14,
+        "mean_dur": 31.9,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Organize Stationery",
+        "mean_succ": 22.47,
+        "max_succ": 33.06,
+        "std_succ": 7.71,
+        "mean_dur": 33.7,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Open Pill Bottle",
+        "mean_succ": 22.73,
+        "max_succ": 30.09,
+        "std_succ": 6.26,
+        "mean_dur": 29.9,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Hang the Cup",
+        "mean_succ": 22.95,
+        "max_succ": 38.43,
+        "std_succ": 9.5,
+        "mean_dur": 29.3,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Pick Out Battery",
+        "mean_succ": 23.31,
+        "max_succ": 30.03,
+        "std_succ": 3.62,
+        "mean_dur": 56.5,
+        "best_model": "Spirit-v1.5"
+      },
+      {
+        "task": "Zip Up",
+        "mean_succ": 23.39,
+        "max_succ": 33.42,
+        "std_succ": 6.97,
+        "mean_dur": 59.2,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Pack Phone",
+        "mean_succ": 23.88,
+        "max_succ": 31.86,
+        "std_succ": 4.21,
+        "mean_dur": 55.7,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Fold Towel",
+        "mean_succ": 24.08,
+        "max_succ": 32.15,
+        "std_succ": 5.09,
+        "mean_dur": 54.3,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Organize Pencil Case",
+        "mean_succ": 24.08,
+        "max_succ": 30.3,
+        "std_succ": 4.99,
+        "mean_dur": 47.1,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Stack Bowls",
+        "mean_succ": 24.11,
+        "max_succ": 36.28,
+        "std_succ": 7.58,
+        "mean_dur": 29.7,
+        "best_model": "Spirit-v1.5"
+      },
+      {
+        "task": "Arrange Test Tubes",
+        "mean_succ": 24.15,
+        "max_succ": 34.38,
+        "std_succ": 6.39,
+        "mean_dur": 49.7,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Syringe Water Transfer",
+        "mean_succ": 24.57,
+        "max_succ": 29.35,
+        "std_succ": 3.13,
+        "mean_dur": 59.4,
+        "best_model": "PI-0.5"
+      },
+      {
+        "task": "Pack Bag",
+        "mean_succ": 25.28,
+        "max_succ": 31.38,
+        "std_succ": 4.5,
+        "mean_dur": 49.3,
+        "best_model": "DM0"
+      },
+      {
+        "task": "Plug Charger",
+        "mean_succ": 25.57,
+        "max_succ": 38.17,
+        "std_succ": 7.54,
+        "mean_dur": 44.3,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Store Racket",
+        "mean_succ": 25.57,
+        "max_succ": 34.23,
+        "std_succ": 4.32,
+        "mean_dur": 42.9,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Toolbox Storage",
+        "mean_succ": 25.82,
+        "max_succ": 30.71,
+        "std_succ": 2.51,
+        "mean_dur": 31.0,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Clear Plates",
+        "mean_succ": 25.9,
+        "max_succ": 34.36,
+        "std_succ": 5.09,
+        "mean_dur": 51.0,
+        "best_model": "GR00T N1.5"
+      },
+      {
+        "task": "Organize Tools",
+        "mean_succ": 25.94,
+        "max_succ": 37.2,
+        "std_succ": 5.21,
+        "mean_dur": 40.4,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Pack the Doll",
+        "mean_succ": 26.14,
+        "max_succ": 37.01,
+        "std_succ": 6.36,
+        "mean_dur": 55.7,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Organize Bookshelf",
+        "mean_succ": 26.62,
+        "max_succ": 33.02,
+        "std_succ": 4.01,
+        "mean_dur": 50.5,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Disconnect Ethernet",
+        "mean_succ": 26.81,
+        "max_succ": 33.44,
+        "std_succ": 4.13,
+        "mean_dur": 47.3,
+        "best_model": "Spirit-v1.5"
+      },
+      {
+        "task": "Fruit Sorting",
+        "mean_succ": 27.01,
+        "max_succ": 35.5,
+        "std_succ": 5.76,
+        "mean_dur": 35.0,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Color Arrangement",
+        "mean_succ": 27.12,
+        "max_succ": 37.32,
+        "std_succ": 7.06,
+        "mean_dur": 59.7,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Remove Pinned Note",
+        "mean_succ": 27.3,
+        "max_succ": 40.28,
+        "std_succ": 8.15,
+        "mean_dur": 32.6,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Fruit Basket Collection",
+        "mean_succ": 27.79,
+        "max_succ": 32.38,
+        "std_succ": 3.14,
+        "mean_dur": 42.1,
+        "best_model": "DM0"
+      },
+      {
+        "task": "Store Earphones",
+        "mean_succ": 27.88,
+        "max_succ": 32.3,
+        "std_succ": 2.51,
+        "mean_dur": 42.4,
+        "best_model": "Spirit-v1.5"
+      },
+      {
+        "task": "Place Photo Frames",
+        "mean_succ": 27.98,
+        "max_succ": 42.0,
+        "std_succ": 7.8,
+        "mean_dur": 38.6,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Paper Cup Stacking",
+        "mean_succ": 28.05,
+        "max_succ": 35.28,
+        "std_succ": 6.26,
+        "mean_dur": 37.8,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Conveyor Food Sorting",
+        "mean_succ": 29.12,
+        "max_succ": 37.55,
+        "std_succ": 6.52,
+        "mean_dur": 58.2,
+        "best_model": "GigaBrain-0"
+      },
+      {
+        "task": "Stack Cups",
+        "mean_succ": 30.32,
+        "max_succ": 35.48,
+        "std_succ": 4.83,
+        "mean_dur": 37.0,
+        "best_model": "Spirit-v1.5"
+      }
+    ],
+    "hardest5": [
+      {
+        "task": "Plug In Ethernet",
+        "mean_succ": 17.73,
+        "max_succ": 27.54,
+        "std_succ": 5.42,
+        "mean_dur": 48.9,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Unlock",
+        "mean_succ": 20.11,
+        "max_succ": 28.17,
+        "std_succ": 6.4,
+        "mean_dur": 39.0,
+        "best_model": "PI-0.5"
+      },
+      {
+        "task": "Spell robot",
+        "mean_succ": 21.82,
+        "max_succ": 33.99,
+        "std_succ": 6.14,
+        "mean_dur": 31.9,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Organize Stationery",
+        "mean_succ": 22.47,
+        "max_succ": 33.06,
+        "std_succ": 7.71,
+        "mean_dur": 33.7,
+        "best_model": "WALL-OSS-0.5"
+      },
+      {
+        "task": "Open Pill Bottle",
+        "mean_succ": 22.73,
+        "max_succ": 30.09,
+        "std_succ": 6.26,
+        "mean_dur": 29.9,
+        "best_model": "WALL-OSS-0.5"
+      }
+    ],
+    "easiest5": [
+      {
+        "task": "Store Earphones",
+        "mean_succ": 27.88,
+        "max_succ": 32.3,
+        "std_succ": 2.51,
+        "mean_dur": 42.4,
+        "best_model": "Spirit-v1.5"
+      },
+      {
+        "task": "Place Photo Frames",
+        "mean_succ": 27.98,
+        "max_succ": 42.0,
+        "std_succ": 7.8,
+        "mean_dur": 38.6,
+        "best_model": "DreamZero"
+      },
+      {
+        "task": "Paper Cup Stacking",
+        "mean_succ": 28.05,
+        "max_succ": 35.28,
+        "std_succ": 6.26,
+        "mean_dur": 37.8,
+        "best_model": "MolmoAct2"
+      },
+      {
+        "task": "Conveyor Food Sorting",
+        "mean_succ": 29.12,
+        "max_succ": 37.55,
+        "std_succ": 6.52,
+        "mean_dur": 58.2,
+        "best_model": "GigaBrain-0"
+      },
+      {
+        "task": "Stack Cups",
+        "mean_succ": 30.32,
+        "max_succ": 35.48,
+        "std_succ": 4.83,
+        "mean_dur": 37.0,
+        "best_model": "Spirit-v1.5"
+      }
+    ],
+    "mean_inter_task_corr_of_model_profiles": 0.246,
+    "oracle_routing_ceiling": 33.96,
+    "best_single_model": {
+      "model": "MolmoAct2",
+      "succ": 29.7
     },
-    {
-      "m_true": 0.8,
-      "mu_true": 0.55,
-      "m_hat": 0.8116,
-      "m_rel_err": 0.014,
-      "mu_hat": 0.5573,
-      "mu_rel_err": 0.013
-    },
-    {
-      "m_true": 1.5,
-      "mu_true": 0.55,
-      "m_hat": 1.5128,
-      "m_rel_err": 0.009,
-      "mu_hat": 0.5539,
-      "mu_rel_err": 0.007
-    }
-  ],
-  "part_a2_impedance": [
-    {
-      "mass": 0.4,
-      "damage_fixed": 0.0,
-      "damage_id": 0.0,
-      "slip_fixed": 0.0,
-      "slip_id": 0.0,
-      "fail_fixed": 0.0,
-      "fail_id": 0.0
-    },
-    {
-      "mass": 0.8,
-      "damage_fixed": 0.0,
-      "damage_id": 0.0,
-      "slip_fixed": 0.0,
-      "slip_id": 0.0,
-      "fail_fixed": 0.0,
-      "fail_id": 0.0
-    },
-    {
-      "mass": 1.5,
-      "damage_fixed": 0.935,
-      "damage_id": 0.0,
-      "slip_fixed": 1.0,
-      "slip_id": 0.0,
-      "fail_fixed": 1.0,
-      "fail_id": 0.0
-    }
-  ],
-  "part_b_shield": {
-    "violation_unshielded": 0.0945,
-    "violation_shielded": 0.0,
-    "fail_unshielded": 0.1512,
-    "fail_shielded": 0.1307,
-    "loss_of_control_removed": 0.136
+    "routing_headroom_pp": 4.26,
+    "step_over_success_ratio": 1.341,
+    "contact_group_mean_succ": 22.92,
+    "all_group_mean_succ": 25.17,
+    "contact_tasks": [
+      "Plug In Ethernet",
+      "Disconnect Ethernet",
+      "Unlock",
+      "Open Pill Bottle",
+      "Plug Charger",
+      "Hang the Cup",
+      "Syringe Water Transfer"
+    ]
   },
-  "part_c_scheduler": [
-    {
-      "policy": "vla_only",
-      "success": 0.7767,
-      "cost": 1.02,
-      "spc": 0.7614,
-      "vla_calls_per_ep": 1.0,
-      "prim_calls_per_ep": 0.0
+  "E1_concurrency": {
+    "dt": 0.033,
+    "t_heavy_ms": 55.0,
+    "t_wm_ms": 8.0,
+    "n_ports": 5,
+    "policies": {
+      "A_per_port_copies_c8": {
+        "chunk_steps": 8,
+        "spec_every": 1,
+        "batch": 1,
+        "p50_latency_ms": 55.0,
+        "p99_latency_ms": 55.0,
+        "mean_age_ms": 187.0,
+        "wm_quality": 1.0,
+        "success": 0.2268,
+        "gpu_cost": 0.2085,
+        "success_per_cost": 1.09,
+        "gpu_cost_rel": 1.0
+      },
+      "B_shared_serial_c8": {
+        "chunk_steps": 8,
+        "spec_every": 1,
+        "batch": 1,
+        "p50_latency_ms": 2662.0,
+        "p99_latency_ms": 5137.0,
+        "mean_age_ms": 2794.0,
+        "wm_quality": 1.0,
+        "success": 0.0,
+        "gpu_cost": 0.2085,
+        "success_per_cost": 0.0,
+        "gpu_cost_rel": 1.0
+      },
+      "C_shared_batch4_c8": {
+        "chunk_steps": 8,
+        "spec_every": 1,
+        "batch": 4,
+        "p50_latency_ms": 55.0,
+        "p99_latency_ms": 110.0,
+        "mean_age_ms": 198.0,
+        "wm_quality": 1.0,
+        "success": 0.2192,
+        "gpu_cost": 0.0834,
+        "success_per_cost": 2.63,
+        "gpu_cost_rel": 0.4
+      },
+      "D_shared_batch4_c4": {
+        "chunk_steps": 4,
+        "spec_every": 1,
+        "batch": 4,
+        "p50_latency_ms": 55.0,
+        "p99_latency_ms": 110.0,
+        "mean_age_ms": 132.0,
+        "wm_quality": 1.0,
+        "success": 0.261,
+        "gpu_cost": 0.1668,
+        "success_per_cost": 1.56,
+        "gpu_cost_rel": 0.8
+      },
+      "E_spec_batch4_c4_R4": {
+        "chunk_steps": 4,
+        "spec_every": 4,
+        "batch": 4,
+        "p50_latency_ms": 8.0,
+        "p99_latency_ms": 110.0,
+        "mean_age_ms": 89.7,
+        "wm_quality": 0.922,
+        "success": 0.2593,
+        "gpu_cost": 0.06,
+        "success_per_cost": 4.32,
+        "gpu_cost_rel": 0.288
+      },
+      "F_spec_batch4_c8_R3": {
+        "chunk_steps": 8,
+        "spec_every": 3,
+        "batch": 4,
+        "p50_latency_ms": 8.0,
+        "p99_latency_ms": 110.0,
+        "mean_age_ms": 160.4,
+        "wm_quality": 0.948,
+        "success": 0.2316,
+        "gpu_cost": 0.0359,
+        "success_per_cost": 6.44,
+        "gpu_cost_rel": 0.172
+      },
+      "G_spec_batch4_c2_R3": {
+        "chunk_steps": 2,
+        "spec_every": 3,
+        "batch": 4,
+        "p50_latency_ms": 52.0,
+        "p99_latency_ms": 110.0,
+        "mean_age_ms": 76.1,
+        "wm_quality": 0.948,
+        "success": 0.2716,
+        "gpu_cost": 0.1436,
+        "success_per_cost": 1.89,
+        "gpu_cost_rel": 0.689
+      }
     },
-    {
-      "policy": "primitive_only",
-      "success": 0.7128,
-      "cost": 0.4999,
-      "spc": 1.4259,
-      "vla_calls_per_ep": 0.35,
-      "prim_calls_per_ep": 0.65
-    },
-    {
-      "policy": "pact",
-      "success": 0.8035,
-      "cost": 0.6494,
-      "spc": 1.2373,
-      "vla_calls_per_ep": 0.537,
-      "prim_calls_per_ep": 0.463
+    "scaling": {
+      "3": {
+        "serial_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 110.0,
+          "p99_latency_ms": 165.0,
+          "mean_age_ms": 242.0,
+          "wm_quality": 1.0,
+          "success": 0.1878,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 0.9
+        },
+        "copies_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 187.0,
+          "wm_quality": 1.0,
+          "success": 0.2268,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 1.09
+        },
+        "batch4_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 4,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 187.0,
+          "wm_quality": 1.0,
+          "success": 0.2268,
+          "gpu_cost": 0.0695,
+          "success_per_cost": 3.26
+        },
+        "spec_batch4_c4_R4": {
+          "chunk_steps": 4,
+          "spec_every": 4,
+          "batch": 4,
+          "p50_latency_ms": 8.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 85.8,
+          "wm_quality": 0.922,
+          "success": 0.2608,
+          "gpu_cost": 0.05,
+          "success_per_cost": 5.22
+        }
+      },
+      "5": {
+        "serial_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 2662.0,
+          "p99_latency_ms": 5137.0,
+          "mean_age_ms": 2794.0,
+          "wm_quality": 1.0,
+          "success": 0.0,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 0.0
+        },
+        "copies_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 187.0,
+          "wm_quality": 1.0,
+          "success": 0.2268,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 1.09
+        },
+        "batch4_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 4,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 110.0,
+          "mean_age_ms": 198.0,
+          "wm_quality": 1.0,
+          "success": 0.2192,
+          "gpu_cost": 0.0834,
+          "success_per_cost": 2.63
+        },
+        "spec_batch4_c4_R4": {
+          "chunk_steps": 4,
+          "spec_every": 4,
+          "batch": 4,
+          "p50_latency_ms": 8.0,
+          "p99_latency_ms": 110.0,
+          "mean_age_ms": 89.7,
+          "wm_quality": 0.922,
+          "success": 0.2593,
+          "gpu_cost": 0.06,
+          "success_per_cost": 4.32
+        }
+      },
+      "8": {
+        "serial_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 40199.5,
+          "p99_latency_ms": 79420.0,
+          "mean_age_ms": 40331.5,
+          "wm_quality": 1.0,
+          "success": 0.0,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 0.0
+        },
+        "copies_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 187.0,
+          "wm_quality": 1.0,
+          "success": 0.2268,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 1.09
+        },
+        "batch4_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 4,
+          "p50_latency_ms": 82.5,
+          "p99_latency_ms": 110.0,
+          "mean_age_ms": 214.5,
+          "wm_quality": 1.0,
+          "success": 0.2076,
+          "gpu_cost": 0.0521,
+          "success_per_cost": 3.98
+        },
+        "spec_batch4_c4_R4": {
+          "chunk_steps": 4,
+          "spec_every": 4,
+          "batch": 4,
+          "p50_latency_ms": 16.0,
+          "p99_latency_ms": 110.0,
+          "mean_age_ms": 95.7,
+          "wm_quality": 0.922,
+          "success": 0.2571,
+          "gpu_cost": 0.0375,
+          "success_per_cost": 6.86
+        }
+      },
+      "12": {
+        "serial_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 90249.5,
+          "p99_latency_ms": 178475.0,
+          "mean_age_ms": 90381.5,
+          "wm_quality": 1.0,
+          "success": 0.0,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 0.0
+        },
+        "copies_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 1,
+          "p50_latency_ms": 55.0,
+          "p99_latency_ms": 55.0,
+          "mean_age_ms": 187.0,
+          "wm_quality": 1.0,
+          "success": 0.2268,
+          "gpu_cost": 0.2085,
+          "success_per_cost": 1.09
+        },
+        "batch4_c8": {
+          "chunk_steps": 8,
+          "spec_every": 1,
+          "batch": 4,
+          "p50_latency_ms": 110.0,
+          "p99_latency_ms": 165.0,
+          "mean_age_ms": 242.0,
+          "wm_quality": 1.0,
+          "success": 0.1878,
+          "gpu_cost": 0.0521,
+          "success_per_cost": 3.6
+        },
+        "spec_batch4_c4_R4": {
+          "chunk_steps": 4,
+          "spec_every": 4,
+          "batch": 4,
+          "p50_latency_ms": 41.0,
+          "p99_latency_ms": 165.0,
+          "mean_age_ms": 113.8,
+          "wm_quality": 0.922,
+          "success": 0.2493,
+          "gpu_cost": 0.0375,
+          "success_per_cost": 6.65
+        }
+      }
     }
-  ],
-  "part_c2_sensitivity": [
-    {
-      "g_prim": 0.5,
-      "success": 0.811,
-      "cost": 0.8258,
-      "spc": 0.9822
+  },
+  "E2_torque": {
+    "sigma_oob": 0.7,
+    "tau": 0.7,
+    "tau_hi": 1.1,
+    "sigma_est": 0.35,
+    "by_rho": {
+      "0.0": {
+        "success": 0.6285,
+        "overstiff_violation": 0.0796,
+        "stall": 0.1862
+      },
+      "0.25": {
+        "success": 0.7377,
+        "overstiff_violation": 0.039,
+        "stall": 0.1319
+      },
+      "0.5": {
+        "success": 0.8689,
+        "overstiff_violation": 0.009,
+        "stall": 0.0651
+      },
+      "0.75": {
+        "success": 0.9843,
+        "overstiff_violation": 0.0001,
+        "stall": 0.0077
+      },
+      "0.9": {
+        "success": 0.9999,
+        "overstiff_violation": 0.0,
+        "stall": 0.0
+      },
+      "1.0": {
+        "success": 1.0,
+        "overstiff_violation": 0.0,
+        "stall": 0.0
+      }
     },
-    {
-      "g_prim": 0.6,
-      "success": 0.8177,
-      "cost": 0.7596,
-      "spc": 1.0766
-    },
-    {
-      "g_prim": 0.7,
-      "success": 0.8243,
-      "cost": 0.696,
-      "spc": 1.1844
-    },
-    {
-      "g_prim": 0.8,
-      "success": 0.831,
-      "cost": 0.6294,
-      "spc": 1.3202
-    },
-    {
-      "g_prim": 0.9,
-      "success": 0.837,
-      "cost": 0.5651,
-      "spc": 1.4811
+    "ood_width_sweep": {
+      "0.2": {
+        "fixed_success": 0.9163,
+        "oracle_success": 1.0,
+        "fixed_violation": 0.003,
+        "oracle_violation": 0.0
+      },
+      "0.4": {
+        "fixed_success": 0.811,
+        "oracle_success": 1.0,
+        "fixed_violation": 0.02,
+        "oracle_violation": 0.0
+      },
+      "0.7": {
+        "fixed_success": 0.6304,
+        "oracle_success": 1.0,
+        "fixed_violation": 0.0801,
+        "oracle_violation": 0.0
+      },
+      "1.0": {
+        "fixed_success": 0.492,
+        "oracle_success": 1.0,
+        "fixed_violation": 0.149,
+        "oracle_violation": 0.0
+      },
+      "1.3": {
+        "fixed_success": 0.3969,
+        "oracle_success": 1.0,
+        "fixed_violation": 0.2052,
+        "oracle_violation": 0.0
+      }
     }
-  ]
+  },
+  "E3_pretraining": {
+    "rho0": 0.2,
+    "rho_max": 0.92,
+    "H0_hours": 900.0,
+    "by_pretrain_hours": {
+      "0": {
+        "rho": 0.2,
+        "contact_task_success": 0.7159
+      },
+      "169": {
+        "rho": 0.323,
+        "contact_task_success": 0.7761
+      },
+      "500": {
+        "rho": 0.507,
+        "contact_task_success": 0.8721
+      },
+      "1000": {
+        "rho": 0.683,
+        "contact_task_success": 0.9534
+      },
+      "1500": {
+        "rho": 0.784,
+        "contact_task_success": 0.9878
+      },
+      "2500": {
+        "rho": 0.875,
+        "contact_task_success": 0.9973
+      },
+      "4000": {
+        "rho": 0.912,
+        "contact_task_success": 0.9999
+      }
+    },
+    "gain_169h_to_2500h_pp": 22.1,
+    "note": "169h=挑战集单独; 2500h=官方WLA-1.0基座量级; 含 G1_Dex1/WBT/R1 同类数据"
+  }
 }

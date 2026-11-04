@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "source": "https://unibot.unitree.com/leaderboard_data.json",
+    "retrieved": "2026-11-04",
+    "note": "manual transcription of the official leaderboard JSON (per-task success_rate and step_score); validated by recomputing per-model averages against the official avg_success_rate / avg_step_score fields.",
+    "task_order": "as in official JSON 'tasks' array"
+  },
+  "models": [
+    {"model_name": "MolmoAct2", "user_name": "DexHacker", "official_avg_success_rate": 29.7, "official_avg_step_score": 39.0,
+     "per_task": [
+      ["Hang the Cup", 27.29, 35.84], ["Fruit Basket Collection", 27.85, 36.57], ["Pack the Doll", 37.01, 48.6], ["Fruit Sorting", 31.76, 41.71],
+      ["Disconnect Ethernet", 21.29, 27.96], ["Color Arrangement", 37.32, 49.01], ["Place Photo Frames", 24.33, 31.95], ["Organize Bookshelf", 33.02, 43.36],
+      ["Toolbox Storage", 30.71, 40.33], ["Plug Charger", 30.51, 40.06], ["Pick Out Battery", 23.46, 30.81], ["Unlock", 23.52, 30.88],
+      ["Arrange Test Tubes", 28.93, 37.99], ["Open Pill Bottle", 28.57, 37.52], ["Organize Tools", 37.2, 48.85], ["Fold Towel", 27.19, 35.7],
+      ["Organize Stationery", 30.9, 40.58], ["Pack Bag", 28.77, 37.78], ["Zip Up", 33.42, 43.88], ["Paper Cup Stacking", 35.28, 46.33],
+      ["Clear Plates", 32.72, 42.97], ["Spell robot", 28.62, 37.58], ["Store Racket", 28.49, 37.41], ["Conveyor Food Sorting", 32.26, 42.36],
+      ["Stack Cups", 31.44, 41.28], ["Plug In Ethernet", 27.54, 36.16], ["Stack Bowls", 29.28, 38.45], ["Store Earphones", 27.73, 36.41],
+      ["Pack Phone", 27.39, 35.97], ["Remove Pinned Note", 33.75, 44.32], ["Organize Pencil Case", 24.95, 32.76], ["Syringe Water Transfer", 27.89, 36.62]
+     ]},
+    {"model_name": "WALL-OSS-0.5", "user_name": "Generalist Robotics", "official_avg_success_rate": 28.5, "official_avg_step_score": 38.9,
+     "per_task": [
+      ["Hang the Cup", 32.89, 44.89], ["Fruit Basket Collection", 30.91, 42.19], ["Pack the Doll", 25.82, 35.24], ["Fruit Sorting", 25.95, 35.42],
+      ["Disconnect Ethernet", 30.09, 41.07], ["Color Arrangement", 29.1, 39.72], ["Place Photo Frames", 26.71, 36.46], ["Organize Bookshelf", 30.0, 40.95],
+      ["Toolbox Storage", 23.96, 32.7], ["Plug Charger", 38.17, 52.1], ["Pick Out Battery", 21.45, 29.28], ["Unlock", 23.18, 31.64],
+      ["Arrange Test Tubes", 34.38, 46.93], ["Open Pill Bottle", 30.09, 41.07], ["Organize Tools", 20.92, 28.55], ["Fold Towel", 32.15, 43.88],
+      ["Organize Stationery", 33.06, 45.12], ["Pack Bag", 27.3, 37.26], ["Zip Up", 30.95, 36.46], ["Paper Cup Stacking", 23.65, 32.28],
+      ["Clear Plates", 27.52, 37.56], ["Spell robot", 33.99, 46.39], ["Store Racket", 28.02, 38.24], ["Conveyor Food Sorting", 27.03, 36.89],
+      ["Stack Cups", 34.59, 47.21], ["Plug In Ethernet", 22.9, 31.26], ["Stack Bowls", 24.59, 33.56], ["Store Earphones", 28.35, 38.7],
+      ["Pack Phone", 21.49, 30.3], ["Remove Pinned Note", 40.28, 54.98], ["Organize Pencil Case", 28.7, 39.17], ["Syringe Water Transfer", 23.81, 32.5]
+     ]},
+    {"model_name": "DreamZero", "user_name": "World Model Lab", "official_avg_success_rate": 27.9, "official_avg_step_score": 37.9,
+     "per_task": [
+      ["Hang the Cup", 38.43, 52.2], ["Fruit Basket Collection", 30.77, 41.8], ["Pack the Doll", 28.41, 38.59], ["Fruit Sorting", 35.5, 48.22],
+      ["Disconnect Ethernet", 22.83, 31.01], ["Color Arrangement", 32.78, 44.53], ["Place Photo Frames", 42.0, 57.05], ["Organize Bookshelf", 25.04, 34.01],
+      ["Toolbox Storage", 25.56, 34.72], ["Plug Charger", 34.5, 46.87], ["Pick Out Battery", 22.57, 30.66], ["Unlock", 20.54, 27.9],
+      ["Arrange Test Tubes", 19.53, 26.53], ["Open Pill Bottle", 28.06, 38.12], ["Organize Tools", 23.43, 31.83], ["Fold Towel", 23.25, 31.58],
+      ["Organize Stationery", 21.51, 30.22], ["Pack Bag", 28.52, 38.74], ["Zip Up", 21.26, 28.88], ["Paper Cup Stacking", 25.92, 35.21],
+      ["Clear Plates", 23.54, 31.98], ["Spell robot", 22.94, 31.16], ["Store Racket", 34.23, 46.5], ["Conveyor Food Sorting", 35.38, 48.06],
+      ["Stack Cups", 31.48, 42.76], ["Plug In Ethernet", 16.94, 23.01], ["Stack Bowls", 29.66, 38.45], ["Store Earphones", 28.52, 38.74],
+      ["Pack Phone", 31.86, 43.28], ["Remove Pinned Note", 30.66, 37.56], ["Organize Pencil Case", 30.3, 41.16], ["Syringe Water Transfer", 26.86, 36.49]
+     ]},
+    {"model_name": "Spirit-v1.5", "user_name": "VLAGO", "official_avg_success_rate": 25.9, "official_avg_step_score": 34.4,
+     "per_task": [
+      ["Hang the Cup", 9.03, 11.99], ["Fruit Basket Collection", 24.53, 32.58], ["Pack the Doll", 33.37, 44.32], ["Fruit Sorting", 32.24, 42.82],
+      ["Disconnect Ethernet", 33.44, 44.41], ["Color Arrangement", 25.72, 36.16], ["Place Photo Frames", 34.22, 45.45], ["Organize Bookshelf", 30.05, 39.91],
+      ["Toolbox Storage", 23.62, 24.77], ["Plug Charger", 19.4, 25.77], ["Pick Out Battery", 30.03, 39.89], ["Unlock", 24.35, 29.08],
+      ["Arrange Test Tubes", 30.65, 40.32], ["Open Pill Bottle", 11.68, 15.51], ["Organize Tools", 25.35, 32.37], ["Fold Towel", 21.61, 28.7],
+      ["Organize Stationery", 26.3, 34.93], ["Pack Bag", 24.17, 32.1], ["Zip Up", 31.36, 43.65], ["Paper Cup Stacking", 34.03, 45.2],
+      ["Clear Plates", 21.98, 31.58], ["Spell robot", 14.37, 19.09], ["Store Racket", 20.45, 27.16], ["Conveyor Food Sorting", 34.36, 45.64],
+      ["Stack Cups", 35.48, 47.12], ["Plug In Ethernet", 18.75, 24.9], ["Stack Bowls", 36.28, 48.19], ["Store Earphones", 32.3, 42.9],
+      ["Pack Phone", 22.25, 29.55], ["Remove Pinned Note", 23.17, 30.77], ["Organize Pencil Case", 21.16, 28.1], ["Syringe Water Transfer", 23.07, 30.64]
+     ]},
+    {"model_name": "DM0", "user_name": "Embodied AI Institute", "official_avg_success_rate": 23.5, "official_avg_step_score": 31.7,
+     "per_task": [
+      ["Hang the Cup", 22.12, 29.84], ["Fruit Basket Collection", 32.38, 43.68], ["Pack the Doll", 23.91, 32.25], ["Fruit Sorting", 28.78, 38.82],
+      ["Disconnect Ethernet", 31.73, 42.8], ["Color Arrangement", 25.1, 33.86], ["Place Photo Frames", 27.42, 36.99], ["Organize Bookshelf", 22.96, 30.97],
+      ["Toolbox Storage", 25.14, 33.91], ["Plug Charger", 18.53, 25.0], ["Pick Out Battery", 16.17, 21.81], ["Unlock", 20.39, 31.57],
+      ["Arrange Test Tubes", 23.74, 34.35], ["Open Pill Bottle", 26.14, 37.15], ["Organize Tools", 19.15, 30.5], ["Fold Towel", 30.54, 41.2],
+      ["Organize Stationery", 9.09, 12.26], ["Pack Bag", 31.38, 42.33], ["Zip Up", 17.09, 23.05], ["Paper Cup Stacking", 32.47, 43.8],
+      ["Clear Plates", 24.47, 32.12], ["Spell robot", 21.17, 28.56], ["Store Racket", 23.35, 30.6], ["Conveyor Food Sorting", 17.09, 23.05],
+      ["Stack Cups", 31.8, 42.9], ["Plug In Ethernet", 12.87, 17.36], ["Stack Bowls", 26.2, 34.5], ["Store Earphones", 25.61, 34.55],
+      ["Pack Phone", 21.23, 28.64], ["Remove Pinned Note", 13.31, 17.95], ["Organize Pencil Case", 26.33, 33.52], ["Syringe Water Transfer", 24.33, 32.82]
+     ]},
+    {"model_name": "PI-0.5", "user_name": "RoboReasoner", "official_avg_success_rate": 22.8, "official_avg_step_score": 30.6,
+     "per_task": [
+      ["Hang the Cup", 15.46, 20.75], ["Fruit Basket Collection", 23.56, 31.62], ["Pack the Doll", 23.26, 31.22], ["Fruit Sorting", 23.81, 31.96],
+      ["Disconnect Ethernet", 23.95, 32.14], ["Color Arrangement", 29.26, 39.27], ["Place Photo Frames", 18.1, 24.29], ["Organize Bookshelf", 26.77, 35.93],
+      ["Toolbox Storage", 22.76, 30.55], ["Plug Charger", 26.05, 34.96], ["Pick Out Battery", 23.45, 31.47], ["Unlock", 28.17, 37.81],
+      ["Arrange Test Tubes", 23.86, 32.02], ["Open Pill Bottle", 19.79, 26.56], ["Organize Tools", 26.69, 31.82], ["Fold Towel", 16.71, 22.43],
+      ["Organize Stationery", 13.34, 17.9], ["Pack Bag", 24.59, 33.06], ["Zip Up", 19.79, 26.56], ["Paper Cup Stacking", 33.88, 45.47],
+      ["Clear Plates", 18.05, 24.23], ["Spell robot", 18.93, 24.04], ["Store Racket", 24.56, 32.96], ["Conveyor Food Sorting", 23.36, 30.18],
+      ["Stack Cups", 19.87, 27.57], ["Plug In Ethernet", 9.23, 12.39], ["Stack Bowls", 11.33, 15.21], ["Store Earphones", 29.85, 40.06],
+      ["Pack Phone", 24.72, 31.48], ["Remove Pinned Note", 32.26, 43.3], ["Organize Pencil Case", 24.87, 35.24], ["Syringe Water Transfer", 29.35, 39.39]
+     ]},
+    {"model_name": "GigaBrain-0", "user_name": "xembody", "official_avg_success_rate": 22.6, "official_avg_step_score": 29.5,
+     "per_task": [
+      ["Hang the Cup", 25.75, 33.61], ["Fruit Basket Collection", 27.85, 36.35], ["Pack the Doll", 15.29, 19.96], ["Fruit Sorting", 19.83, 25.88],
+      ["Disconnect Ethernet", 25.37, 38.14], ["Color Arrangement", 26.27, 35.68], ["Place Photo Frames", 33.47, 43.69], ["Organize Bookshelf", 25.33, 33.06],
+      ["Toolbox Storage", 28.67, 38.15], ["Plug Charger", 20.93, 27.29], ["Pick Out Battery", 23.88, 31.17], ["Unlock", 14.39, 18.78],
+      ["Arrange Test Tubes", 17.44, 22.76], ["Open Pill Bottle", 22.11, 28.86], ["Organize Tools", 25.46, 34.05], ["Fold Towel", 22.28, 28.7],
+      ["Organize Stationery", 25.38, 38.13], ["Pack Bag", 19.65, 27.66], ["Zip Up", 19.65, 26.65], ["Paper Cup Stacking", 21.12, 27.57],
+      ["Clear Plates", 24.53, 32.47], ["Spell robot", 17.03, 22.23], ["Store Racket", 20.33, 26.54], ["Conveyor Food Sorting", 37.55, 49.01],
+      ["Stack Cups", 32.41, 39.97], ["Plug In Ethernet", 19.3, 26.19], ["Stack Bowls", 16.12, 21.04], ["Store Earphones", 23.3, 32.41],
+      ["Pack Phone", 16.94, 22.11], ["Remove Pinned Note", 18.86, 25.44], ["Organize Pencil Case", 12.94, 16.89], ["Syringe Water Transfer", 22.22, 30.41]
+     ]},
+    {"model_name": "GR00T N1.5", "user_name": "Humanoid Dynamics", "official_avg_success_rate": 20.5, "official_avg_step_score": 28.1,
+     "per_task": [
+      ["Hang the Cup", 12.67, 17.37], ["Fruit Basket Collection", 24.5, 33.58], ["Pack the Doll", 22.02, 30.18], ["Fruit Sorting", 18.23, 24.99],
+      ["Disconnect Ethernet", 25.82, 35.39], ["Color Arrangement", 11.38, 15.6], ["Place Photo Frames", 17.57, 24.08], ["Organize Bookshelf", 19.78, 27.11],
+      ["Toolbox Storage", 26.13, 37.59], ["Plug Charger", 16.47, 21.58], ["Pick Out Battery", 25.44, 34.87], ["Unlock", 6.3, 8.64],
+      ["Arrange Test Tubes", 14.67, 20.11], ["Open Pill Bottle", 15.37, 22.56], ["Organize Tools", 29.29, 40.15], ["Fold Towel", 18.92, 25.93],
+      ["Organize Stationery", 20.16, 31.89], ["Pack Bag", 16.35, 23.41], ["Zip Up", 13.58, 18.61], ["Paper Cup Stacking", 18.04, 20.73],
+      ["Clear Plates", 34.36, 47.1], ["Spell robot", 17.54, 24.04], ["Store Racket", 25.14, 27.41], ["Conveyor Food Sorting", 25.96, 35.58],
+      ["Stack Cups", 25.49, 34.94], ["Plug In Ethernet", 14.27, 20.61], ["Stack Bowls", 19.43, 26.63], ["Store Earphones", 27.4, 37.56],
+      ["Pack Phone", 25.19, 32.22], ["Remove Pinned Note", 26.13, 35.82], ["Organize Pencil Case", 23.39, 28.99], ["Syringe Water Transfer", 19.0, 30.87]
+     ]}
+  ]
+}
