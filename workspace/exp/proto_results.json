@@ -1,0 +1,671 @@
+{
+ "calibration_scale": 0.7798,
+ "lat_median_s": 0.5,
+ "target_success": 29.7,
+ "configs": {
+  "base": {
+   "avg_success": 0.3240625,
+   "avg_step_score": 49.6453125,
+   "timeout_rate": 0.3371875,
+   "avg_attempts": 1.7009375
+  },
+  "axis_compiler": {
+   "avg_success": 0.3440625,
+   "avg_step_score": 51.1375,
+   "timeout_rate": 0.3165625,
+   "avg_attempts": 1.684375
+  },
+  "perturb_recovery": {
+   "avg_success": 0.3328125,
+   "avg_step_score": 49.625,
+   "timeout_rate": 0.3434375,
+   "avg_attempts": 1.675625
+  },
+  "rubric_aware_stop": {
+   "avg_success": 0.29812500000000003,
+   "avg_step_score": 46.7578125,
+   "timeout_rate": 0.295625,
+   "avg_attempts": 1.5109375
+  },
+  "cloud_edge_N3": {
+   "avg_success": 0.3809375,
+   "avg_step_score": 50.0640625,
+   "timeout_rate": 0.0915625,
+   "avg_attempts": 1.7646875
+  },
+  "all": {
+   "avg_success": 0.396875,
+   "avg_step_score": 51.6265625,
+   "timeout_rate": 0.08375,
+   "avg_attempts": 1.541875
+  }
+ },
+ "sweep": {
+  "lat_0.2_ports_1": {
+   "base": {
+    "avg_success": 0.3269,
+    "avg_step_score": 47.91,
+    "timeout_rate": 0.2512,
+    "avg_attempts": 1.745
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.3937,
+    "avg_step_score": 51.33,
+    "timeout_rate": 0.1075,
+    "avg_attempts": 1.771
+   },
+   "all": {
+    "avg_success": 0.3981,
+    "avg_step_score": 51.67,
+    "timeout_rate": 0.0862,
+    "avg_attempts": 1.543
+   }
+  },
+  "lat_0.2_ports_3": {
+   "base": {
+    "avg_success": 0.3412,
+    "avg_step_score": 48.64,
+    "timeout_rate": 0.245,
+    "avg_attempts": 1.728
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.4037,
+    "avg_step_score": 50.91,
+    "timeout_rate": 0.0169,
+    "avg_attempts": 1.764
+   },
+   "all": {
+    "avg_success": 0.4388,
+    "avg_step_score": 55.09,
+    "timeout_rate": 0.0206,
+    "avg_attempts": 1.543
+   }
+  },
+  "lat_0.5_ports_1": {
+   "base": {
+    "avg_success": 0.3075,
+    "avg_step_score": 48.41,
+    "timeout_rate": 0.3344,
+    "avg_attempts": 1.699
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.365,
+    "avg_step_score": 48.93,
+    "timeout_rate": 0.1894,
+    "avg_attempts": 1.747
+   },
+   "all": {
+    "avg_success": 0.3812,
+    "avg_step_score": 50.16,
+    "timeout_rate": 0.155,
+    "avg_attempts": 1.539
+   }
+  },
+  "lat_0.5_ports_3": {
+   "base": {
+    "avg_success": 0.315,
+    "avg_step_score": 49.38,
+    "timeout_rate": 0.3337,
+    "avg_attempts": 1.696
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.3869,
+    "avg_step_score": 50.83,
+    "timeout_rate": 0.0963,
+    "avg_attempts": 1.769
+   },
+   "all": {
+    "avg_success": 0.4156,
+    "avg_step_score": 52.48,
+    "timeout_rate": 0.0862,
+    "avg_attempts": 1.531
+   }
+  },
+  "lat_1.0_ports_1": {
+   "base": {
+    "avg_success": 0.2475,
+    "avg_step_score": 45.25,
+    "timeout_rate": 0.4988,
+    "avg_attempts": 1.656
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.3206,
+    "avg_step_score": 48.91,
+    "timeout_rate": 0.3256,
+    "avg_attempts": 1.704
+   },
+   "all": {
+    "avg_success": 0.35,
+    "avg_step_score": 50.24,
+    "timeout_rate": 0.2787,
+    "avg_attempts": 1.471
+   }
+  },
+  "lat_1.0_ports_3": {
+   "base": {
+    "avg_success": 0.255,
+    "avg_step_score": 45.93,
+    "timeout_rate": 0.4913,
+    "avg_attempts": 1.647
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.36,
+    "avg_step_score": 49.66,
+    "timeout_rate": 0.2156,
+    "avg_attempts": 1.734
+   },
+   "all": {
+    "avg_success": 0.3494,
+    "avg_step_score": 49.59,
+    "timeout_rate": 0.2231,
+    "avg_attempts": 1.522
+   }
+  },
+  "lat_2.0_ports_1": {
+   "base": {
+    "avg_success": 0.1181,
+    "avg_step_score": 38.66,
+    "timeout_rate": 0.7325,
+    "avg_attempts": 1.574
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.1844,
+    "avg_step_score": 41.98,
+    "timeout_rate": 0.6038,
+    "avg_attempts": 1.627
+   },
+   "all": {
+    "avg_success": 0.1906,
+    "avg_step_score": 43.91,
+    "timeout_rate": 0.54,
+    "avg_attempts": 1.411
+   }
+  },
+  "lat_2.0_ports_3": {
+   "base": {
+    "avg_success": 0.1163,
+    "avg_step_score": 38.62,
+    "timeout_rate": 0.7488,
+    "avg_attempts": 1.586
+   },
+   "cloud_edge_N3": {
+    "avg_success": 0.2475,
+    "avg_step_score": 45.22,
+    "timeout_rate": 0.5025,
+    "avg_attempts": 1.643
+   },
+   "all": {
+    "avg_success": 0.2213,
+    "avg_step_score": 44.16,
+    "timeout_rate": 0.4656,
+    "avg_attempts": 1.454
+   }
+  }
+ },
+ "sensitivity": {
+  "sim2real_discount_0.3": {
+   "avg_success": 0.3937,
+   "avg_step_score": 49.35
+  },
+  "sim2real_discount_0.6": {
+   "avg_success": 0.4125,
+   "avg_step_score": 51.81
+  },
+  "sim2real_discount_0.9": {
+   "avg_success": 0.4075,
+   "avg_step_score": 53.24
+  }
+ },
+ "per_task_base": [
+  {
+   "id": "T01",
+   "name": "HangCup",
+   "success": 0.72,
+   "step_score": 77.0,
+   "attempts": 1.57
+  },
+  {
+   "id": "T02",
+   "name": "FruitCollection",
+   "success": 0.59,
+   "step_score": 70.0,
+   "attempts": 1.58
+  },
+  {
+   "id": "T03",
+   "name": "PackDoll",
+   "success": 0.43,
+   "step_score": 63.0,
+   "attempts": 1.38
+  },
+  {
+   "id": "T04",
+   "name": "FruitSorting",
+   "success": 0.35,
+   "step_score": 51.2,
+   "attempts": 1.78
+  },
+  {
+   "id": "T05",
+   "name": "DisconnectEthernet",
+   "success": 0.28,
+   "step_score": 42.5,
+   "attempts": 1.71
+  },
+  {
+   "id": "T06",
+   "name": "ColorArrangement",
+   "success": 0.26,
+   "step_score": 53.6,
+   "attempts": 1.61
+  },
+  {
+   "id": "T07",
+   "name": "PlacePhotoFrame",
+   "success": 0.42,
+   "step_score": 53.1,
+   "attempts": 1.71
+  },
+  {
+   "id": "T08",
+   "name": "OrganizeBookshelf",
+   "success": 0.43,
+   "step_score": 63.5,
+   "attempts": 1.37
+  },
+  {
+   "id": "T09",
+   "name": "ToolboxStorage",
+   "success": 0.15,
+   "step_score": 34.75,
+   "attempts": 1.91
+  },
+  {
+   "id": "T10",
+   "name": "PlugCharger",
+   "success": 0.16,
+   "step_score": 31.3,
+   "attempts": 1.89
+  },
+  {
+   "id": "T11",
+   "name": "PickOutBatteries",
+   "success": 0.2,
+   "step_score": 46.4,
+   "attempts": 1.65
+  },
+  {
+   "id": "T12",
+   "name": "Unlock",
+   "success": 0.31,
+   "step_score": 42.7,
+   "attempts": 1.84
+  },
+  {
+   "id": "T13",
+   "name": "ArrangeTestTubes",
+   "success": 0.31,
+   "step_score": 55.0,
+   "attempts": 1.6
+  },
+  {
+   "id": "T14",
+   "name": "PourOutMedicine",
+   "success": 0.42,
+   "step_score": 51.0,
+   "attempts": 1.82
+  },
+  {
+   "id": "T15",
+   "name": "OrganizeTools",
+   "success": 0.24,
+   "step_score": 41.5,
+   "attempts": 1.87
+  },
+  {
+   "id": "T16",
+   "name": "FoldTowel",
+   "success": 0.06,
+   "step_score": 25.0,
+   "attempts": 1.92
+  },
+  {
+   "id": "T17",
+   "name": "OrganizeStationery",
+   "success": 0.24,
+   "step_score": 43.6,
+   "attempts": 1.92
+  },
+  {
+   "id": "T18",
+   "name": "PackBag",
+   "success": 0.15,
+   "step_score": 37.25,
+   "attempts": 1.87
+  },
+  {
+   "id": "T19",
+   "name": "ZipUp",
+   "success": 0.35,
+   "step_score": 56.0,
+   "attempts": 1.44
+  },
+  {
+   "id": "T20",
+   "name": "PaperCupStacking",
+   "success": 0.41,
+   "step_score": 55.4,
+   "attempts": 1.7
+  },
+  {
+   "id": "T21",
+   "name": "ArrangePlates",
+   "success": 0.32,
+   "step_score": 53.3,
+   "attempts": 1.62
+  },
+  {
+   "id": "T22",
+   "name": "SpellRobot",
+   "success": 0.18,
+   "step_score": 36.25,
+   "attempts": 1.91
+  },
+  {
+   "id": "T23",
+   "name": "StorePaddle",
+   "success": 0.45,
+   "step_score": 54.0,
+   "attempts": 1.62
+  },
+  {
+   "id": "T24",
+   "name": "ConveyorSorting",
+   "success": 0.21,
+   "step_score": 44.5,
+   "attempts": 1.59
+  },
+  {
+   "id": "T25",
+   "name": "StoreCups",
+   "success": 0.37,
+   "step_score": 52.0,
+   "attempts": 1.77
+  },
+  {
+   "id": "T26",
+   "name": "PlugInEthernet",
+   "success": 0.31,
+   "step_score": 51.7,
+   "attempts": 1.66
+  },
+  {
+   "id": "T27",
+   "name": "StackBowls",
+   "success": 0.52,
+   "step_score": 63.7,
+   "attempts": 1.67
+  },
+  {
+   "id": "T28",
+   "name": "StoreEarphones",
+   "success": 0.12,
+   "step_score": 31.0,
+   "attempts": 1.93
+  },
+  {
+   "id": "T29",
+   "name": "PackPhone",
+   "success": 0.11,
+   "step_score": 32.9,
+   "attempts": 1.77
+  },
+  {
+   "id": "T30",
+   "name": "RemovePinnedNote",
+   "success": 0.56,
+   "step_score": 62.5,
+   "attempts": 1.62
+  },
+  {
+   "id": "T31",
+   "name": "OrganizePencilCase",
+   "success": 0.32,
+   "step_score": 51.5,
+   "attempts": 1.75
+  },
+  {
+   "id": "T32",
+   "name": "SyringeWaterTransfer",
+   "success": 0.42,
+   "step_score": 61.5,
+   "attempts": 1.38
+  }
+ ],
+ "per_task_all": [
+  {
+   "id": "T01",
+   "name": "HangCup",
+   "success": 0.67,
+   "step_score": 69.0,
+   "attempts": 1.57
+  },
+  {
+   "id": "T02",
+   "name": "FruitCollection",
+   "success": 0.69,
+   "step_score": 73.5,
+   "attempts": 1.55
+  },
+  {
+   "id": "T03",
+   "name": "PackDoll",
+   "success": 0.54,
+   "step_score": 63.5,
+   "attempts": 1.6
+  },
+  {
+   "id": "T04",
+   "name": "FruitSorting",
+   "success": 0.47,
+   "step_score": 55.1,
+   "attempts": 1.65
+  },
+  {
+   "id": "T05",
+   "name": "DisconnectEthernet",
+   "success": 0.48,
+   "step_score": 52.0,
+   "attempts": 1.75
+  },
+  {
+   "id": "T06",
+   "name": "ColorArrangement",
+   "success": 0.35,
+   "step_score": 52.7,
+   "attempts": 1.76
+  },
+  {
+   "id": "T07",
+   "name": "PlacePhotoFrame",
+   "success": 0.48,
+   "step_score": 57.6,
+   "attempts": 1.74
+  },
+  {
+   "id": "T08",
+   "name": "OrganizeBookshelf",
+   "success": 0.71,
+   "step_score": 75.0,
+   "attempts": 1.47
+  },
+  {
+   "id": "T09",
+   "name": "ToolboxStorage",
+   "success": 0.04,
+   "step_score": 26.0,
+   "attempts": 1.0
+  },
+  {
+   "id": "T10",
+   "name": "PlugCharger",
+   "success": 0.27,
+   "step_score": 37.8,
+   "attempts": 1.85
+  },
+  {
+   "id": "T11",
+   "name": "PickOutBatteries",
+   "success": 0.33,
+   "step_score": 50.7,
+   "attempts": 1.82
+  },
+  {
+   "id": "T12",
+   "name": "Unlock",
+   "success": 0.3,
+   "step_score": 40.5,
+   "attempts": 1.84
+  },
+  {
+   "id": "T13",
+   "name": "ArrangeTestTubes",
+   "success": 0.47,
+   "step_score": 58.1,
+   "attempts": 1.7
+  },
+  {
+   "id": "T14",
+   "name": "PourOutMedicine",
+   "success": 0.55,
+   "step_score": 60.5,
+   "attempts": 1.68
+  },
+  {
+   "id": "T15",
+   "name": "OrganizeTools",
+   "success": 0.18,
+   "step_score": 32.25,
+   "attempts": 1.0
+  },
+  {
+   "id": "T16",
+   "name": "FoldTowel",
+   "success": 0.07,
+   "step_score": 25.6,
+   "attempts": 1.0
+  },
+  {
+   "id": "T17",
+   "name": "OrganizeStationery",
+   "success": 0.09,
+   "step_score": 32.4,
+   "attempts": 1.0
+  },
+  {
+   "id": "T18",
+   "name": "PackBag",
+   "success": 0.13,
+   "step_score": 34.5,
+   "attempts": 1.0
+  },
+  {
+   "id": "T19",
+   "name": "ZipUp",
+   "success": 0.53,
+   "step_score": 63.5,
+   "attempts": 1.56
+  },
+  {
+   "id": "T20",
+   "name": "PaperCupStacking",
+   "success": 0.49,
+   "step_score": 60.4,
+   "attempts": 1.69
+  },
+  {
+   "id": "T21",
+   "name": "ArrangePlates",
+   "success": 0.56,
+   "step_score": 65.6,
+   "attempts": 1.68
+  },
+  {
+   "id": "T22",
+   "name": "SpellRobot",
+   "success": 0.06,
+   "step_score": 27.0,
+   "attempts": 1.0
+  },
+  {
+   "id": "T23",
+   "name": "StorePaddle",
+   "success": 0.53,
+   "step_score": 62.0,
+   "attempts": 1.7
+  },
+  {
+   "id": "T24",
+   "name": "ConveyorSorting",
+   "success": 0.6,
+   "step_score": 70.0,
+   "attempts": 1.53
+  },
+  {
+   "id": "T25",
+   "name": "StoreCups",
+   "success": 0.59,
+   "step_score": 66.8,
+   "attempts": 1.67
+  },
+  {
+   "id": "T26",
+   "name": "PlugInEthernet",
+   "success": 0.31,
+   "step_score": 45.1,
+   "attempts": 1.83
+  },
+  {
+   "id": "T27",
+   "name": "StackBowls",
+   "success": 0.53,
+   "step_score": 62.3,
+   "attempts": 1.66
+  },
+  {
+   "id": "T28",
+   "name": "StoreEarphones",
+   "success": 0.06,
+   "step_score": 26.0,
+   "attempts": 1.0
+  },
+  {
+   "id": "T29",
+   "name": "PackPhone",
+   "success": 0.24,
+   "step_score": 39.6,
+   "attempts": 1.87
+  },
+  {
+   "id": "T30",
+   "name": "RemovePinnedNote",
+   "success": 0.55,
+   "step_score": 62.0,
+   "attempts": 1.68
+  },
+  {
+   "id": "T31",
+   "name": "OrganizePencilCase",
+   "success": 0.36,
+   "step_score": 48.0,
+   "attempts": 1.82
+  },
+  {
+   "id": "T32",
+   "name": "SyringeWaterTransfer",
+   "success": 0.47,
+   "step_score": 57.0,
+   "attempts": 1.67
+  }
+ ]
+}
