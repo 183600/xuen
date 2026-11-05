@@ -3,676 +3,674 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 22 轮（新灵感循环第 3 轮）· COOPERATIVE-PROGNOSTIC-CLOSED-LOOP ZEST (CPC-ZEST)：从「协同控制」「预测性维护」「闭环控制」出发，为世界动作模型基座叠加「前瞻预测—事件闭环—双臂协同」校正层，直击 UniBot 真机泛化与步骤分瓶颈
+# 第 23 轮（研究线累计）· MVP-3D-SHIELD（M3S）：用「最小可行产品」纪律先出货，用「三维感知」把立体几何锚进 VLA，用「伦理审查」把每个动作在执行前送进审查门
 
-> 检索日期：2026-11-05。本轮先对齐赛事事实，再逆推创新点，并对前 21 轮的 ZEST 家族做一次「面向竞赛现实」的诚实剪枝。
+> 检索日期：2026-11-05。灵感词：**伦理审查 / 最小可行产品 / 三维感知**。
+> 本轮是一次「再基线化」：在对 ZEST 家族做了 22 轮不断加码之后，三个词共同指向一个反直觉但更值钱的方向——**先收敛、先出货，再把创新预算投到竞赛接口已经免费给你、却被大家忽略的两处杠杆上。**
 
-## 0. 三分钟直觉：三条线在 UniBot 上正好交汇
+## 0. 三分钟直觉：三个词正好是三次「止损」
 
-先摆事实（来源见 §9）：
+先对齐事实（来源见 §8）：
 
-- **赛制**：UniBot-V1 挑战赛，32 项真机桌面任务（抓取/放置/双手协调），32000 条演示、169 小时，Unitree G1 + Dex1 夹爪，单模型通才赛道，按平均成功率与步骤分综合排名；选手本地部署模型，评测系统通过固定端口远程接入，N 台机器人并发、随机顺序（`unibot.unitree.com/challenges.html`；`github.com/unitreerobotics/unibot_submission`）。
-- **观测量**：4 路 RGB（头部双目 480×640×3 + 左右腕部），左右臂关节 7 维、左右 EE 位姿 6 维、左右夹爪 1 维、下半身 15 维、语言指令 str。**没有力觉/触觉通道**（`huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel`）。
-- **动作量**：`joint` 或 `ee` 二选一，返回长度 `action_chunk_size` 的动作块（chunk）；`get_action` 按块返回，块内按索引顺序执行（同 repo README）。
-- **评测关注点**：官方明文关注「每步响应延迟及其波动」与「返回动作的统计规律性」，作为结果可信度依据（`unibot_submission` §6）——**延迟稳定性本身就是分数**。
+- **赛制**：UniBot-V1 挑战赛，32 项真机桌面任务（抓取/放置/双手协调），32000 条演示、169 小时，Unitree G1 + Dex1 夹爪，**单模型通才赛道**，按「平均成功率 + 步骤分」综合排名；选手本地部署模型，评测系统按**固定端口**远程接入，N 台机器人并发、随机顺序（`unibot.unitree.com`；`github.com/unitreerobotics/unibot_submission`）。
+- **观测量**：4 路 RGB + 左右臂关节 7 维 + 左右 EE 位姿 6 维（base 系）+ 左右夹爪 1 维 + 下半身 15 维 + 语言 str。**没有力觉/触觉**。
+- **数据集的隐藏事实（本轮新核实，极关键）**：头部的两路相机是 **`head_stereo_left` / `head_stereo_right`，且数据卡明确写着「rectified」**——即**已立体矫正的双目对**；此外数据集还含评测接口**不暴露**的「特权状态」：`*_ee_pose_gripper_torso`（躯干系 EE）、`state_d435`（D435 相机位姿）、`recomputed_ee_valid`（`huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel`）。
+- **动作量**：`joint` 或 `ee` **二选一**，返回长度 `action_chunk_size` 的动作块；块内按索引顺序执行，块边界才回调 `get_action`（同 repo README）。
+- **官方在意的「可信度」**：明文把「每步响应延迟及其波动」与「返回动作的统计规律性」作为结果可信度依据（`unibot_submission` §6）。
 - **泛化五轴**：位置 / 干扰物 / 背景 / 未见物品 / 人为干扰。
-- **榜首瓶颈**：用户与公开信息均指出榜首成功率 <30%（榜单页目前显示 Coming Soon，`unibot.unitree.com/leaderboard.html`）。
-- **最接近的公开 SOTA 信号**：在「Unitree G1 真机操作」聚合榜上，`LingBot-VA`（Causal World Modeling，共享潜空间 + Mixture-of-Transformers + **闭环 rollout** + 异步推理）平均 66.7，`Flash-WAM`（世界动作模型的模态感知步蒸馏，单步推理、23× 加速、真机约 60%）次之（`sota2.com/.../robot-manipulation-on-unitree-g1-real-world`，2026-11-05）。
+- **榜单现状**：`leaderboard.html` / `runs.html` 仍为 **Coming Soon**；用户与公开信息称榜首成功率 **<30%**。
+- **已经存在的免费基座（本轮新核实）**：宇树开源了 **UnifoLM-VLA-0**（Apache-2.0，Qwen2.5-VL + GR00T 系，单策略完成 12 类 G1 操作，含训练/推理/权重；`github.com/unitreerobotics/unifolm-vla`），另有 UnifoLM-WMA-0（世界模型-动作）、UnifoLM-WLA-1.0。
+- **近邻 SOTA 信号**：SOTA2 的「Unitree G1 真机操作」聚合榜上，LingBot-VA（因果世界建模、闭环 rollout、异步推理）平均 66.7，Flash-WAM（世界动作模型步蒸馏）60/50，LingBot-VA 降低 NFE 后掉到 40/23.3（`sota2.com/.../robot-manipulation-on-unitree-g1-real-world`）。
 
-三条线索：
+三个词分别是一次「止损」，而且互相咬合：
 
-> **闭环控制**：SOTA 的核心武器是「世界模型 + 闭环 rollout + 异步推理」；但在 UniBot 接口下，一次 `get_action` 返回一个 chunk，**块内近似开环执行**，误差随 chunk 累积——闭环的「刷新率」被 `action_chunk_size` 与网络时延夹死。谁能把「开环块」变成「世界一偏离就重规划」，谁就拿到低延迟下的鲁棒性。
+> **最小可行产品**：22 轮里我们造了 PC→MP→CG→CPC 一套套宏体系，但没有一行代码真正上过机、上过榜。**在一个榜首不到 30%、榜单还空着的比赛里，「能出货的 20 分」严格优于「不能出货的 80 分」。** MVP 纪律是：把研究预算先锁到一条「可真机跑、可提交、可迭代」的脊柱上。
 
-> **预测性维护**：前 21 轮把「维护」理解为硬件健康。竞赛里没有健康标签、也不给你修机器人；真正可维护的是**策略自己的轨迹与数据集**——在失败发生前预测「这个 chunk 会失败」，并据此提前换策略、提前补数据。
+> **三维感知**：竞赛只给 4 路 RGB，看起来是「3D 盲区」；但**双目头相机是已矫正的**——深度不是缺传感，而是缺一个把 `disparity` 变成 `metric cloud` 的薄模块。三维几何恰好正对泛化五轴里最「几何」的四条：位置、干扰物、背景、未见物品；也正对最吃精度的插拔/堆叠任务。
 
-> **协同控制**：双臂协调是官方明列的任务类别（ArrangePlates、FoldTowel、ZipUp、PackBag、ToolboxStorage、PaperCupStacking…）；同时「N 端口并发、每端口独立 episode、共享后端」的提交形态，本身就是一个**多代理协同 + 资源协同**问题。协同有两个面：空间面（左右臂）与计算面（多端口）。
+> **伦理审查**：机器人竞赛没有 IRB，但**「伦理审查」有一个极其贴切的技术同构**——在执行之前，由一个独立于「行动提案者（VLA）」的「审查者」对动作块做**安全与分布外审查**，可否决、可修复、可留痕。它同时解决三件真事：(a) 人为干扰轴下的人—机安全；(b) 药瓶/玻璃/电子等易损或不可逆对象的「财产完整性」；(c) 官方 §6 要求的「动作统计规律性」。**把伦理审查落成「动作审查门 + 审查留痕」，是本轮最诚实、也最可交付的解读。**
 
 一句话押注：
 
-> **不重造基座，而是给任意世界动作模型（UnifoLM-WMA / LingBot-VA 类）叠加一个轻量、可部署、接口合规的「协同-预后-闭环校正层」CPC-CORRECTOR：用一个蒸馏出的前瞻后果预测器把「块内开环」变成「事件触发闭环」；用一个轨迹预后头把「事后失败」变成「事前可维护」；用一个双臂协同流形 + 多端口协同服务把「各自为战」变成「共享约束」。**
+> **先按 MVP 纪律把「UnifoLM-VLA-0 微调 + 合规 N 端口服务」这条脊柱出货（M1）；然后只投两处高杠杆：(M2) 用已矫正双目免费造出机器人系点云、做视图规范化与特权蒸馏，专治几何泛化；(M3) 在动作块提交前加一道「审查门」，做安全/OOD 否决、人—机让行与动作留痕，专治人为干扰与可信度。其余一律延后，直到这三样真的上了榜。**
 
 三个可验证创新点：
 
-1. **前瞻后果预测器 + 事件触发闭环（LOOKAHEAD-EVENT-CLOSE）**：冻结一个轻量潜世界模型 `f_ψ:(z_t,A_{t:t+H})→ẑ_{t+1:t+H}`，在每次查询时对「即将提交的 chunk」做一次前瞻，并用上一步「预测 vs 实测」的 **Mahalanobis 惊喜** `s_t` 驱动 CUSUM 触发器；一旦触发即截断当前 chunk 的语义、提前重查询或接管为恢复技能。给出「事件触发使误差不再累积」的界（命题 1）与「检测延迟—查询率」的帕累托最优（命题 2）。
+1. **MVP-SPINE（最小可行脊柱 + 门控交付）**：一条三级门控的交付流水线——G0「接口冒烟」（跑通官方 example、验证 N 端口与块语义）→ G1「能上榜的基线」（用 Apache-2.0 的 UnifoLM-VLA-0 在 32k 演示上微调，joint 空间、动作块 + 时序集成、按子目标早停省步骤）→ G2「加三维/加审查」。每一级都以一个**可提交 checkpoint** 收尾，任何新想法必须先证明它能让某个既有关卡变绿，否则不入主线。这是把「研究」当「产品」经营。
 
-2. **轨迹预后头 + 预测性数据维护（PRO-HEAD + PROGNOSTIC-REPLAY）**：`g_φ:(z_t,ẑ_{t+1:t+H},A)→{p_fail, τ̂_fail, h_policy}` 预测「本 chunk 内子目标失败概率、预计失败时刻、策略健康度」；输出直接调制保守度与恢复路径，并**反哺数据**：用 `g_φ` 给全部 32000 条演示打分，抽取出「失败前兆 / 重试成功」片段，构建一个 <2k episode 的高价值恢复数据集，蒸馏恢复技能——把「预测性维护」落在**数据与策略**上，零额外真机时间。
+2. **3D-ANCHOR（三维锚定 + 特权蒸馏）**：`f_geo` 把 `cam_left_high/cam_right_high`（矫正双目）经轻量立体匹配→度量视差→头坐标系点云→机器人坐标系；腕相机用度量单目深度，并用已知 EE 位姿 + 夹爪几何做尺度对齐；再与 FK 连杆云融合成**机器人系场景点云**。用 **GC-MAE 式自监督**（重建当前点云 + 预测下一时刻几何）把它压成 token；既可用 Canonical 正交视图渲染喂给 2D 主干（OG-VLA/BridgeVLA 思路），也可直接注入动作专家（PointVLA 思路）。**并做特权蒸馏**：离线用数据集里评测端拿不到的 `torso` 系 EE / `state_d435` 当 teacher，监督只用 API 模态的 student。
 
-3. **双臂协同流形 + 多端口协同服务（COUPLE-COORD）**：学习跨臂耦合潜变量 `c_t`，用「左臂预测右臂」的互预测损失与任务相关流形投影 `Proj_{K_t}` 显式约束协调；服务侧实现「N 端口共享后端 + 连续批处理 + 每 episode 状态隔离 + 投机预取」，在官方关注的 **p95 延迟与抖动**指标上取得优势（这是分数，不是工程细节）。
+3. **REVIEW-GATE（动作审查门 + 审查留痕）**：在 `get_action` 的返回块被真实执行前，过一道三层审查——(T1) 确定性安全规则（关节/速度/加速度限、胶囊体自碰撞、工作空间包络、桌面穿透、不可逆单发保护）；(T2) 学习式风险/分布外 critic（集成不确定性 + 潜密度）给出 `risk·p_fail`；(T3) 人体在场检测（来自头部双目 3D）触发减速/让行包络。审查结论只有三种：放行 / 修复（裁剪到安全包络）/ 否决（回退到安全保持或重查询），并输出**审查留痕**作为可审计产物与 §6 可信度证据。
 
 三个词怎么落地：
 
 | 词 | 落地 | 不做什么 |
 |---|---|---|
-| **协同控制** | 双臂互预测 + 协同流形投影 `Proj_{K_t}`；多端口共享后端 + 连续批处理 + 状态隔离；快慢推理与执行重叠 | 不做「参数级双塔各管一臂」的松散结构；不让 N 端口相互阻塞 |
-| **预测性维护** | 轨迹预后头 `p_fail/τ̂_fail/h_policy`；预测性回放（Prognostic Replay）挖失败前兆；策略离线重标定 | 不假设有力觉/硬件健康标签；不做纯事后故障诊断 |
-| **闭环控制** | 潜世界模型前瞻 + Mahalanobis 惊喜 + CUSUM 事件触发；自适应 chunk 语义；恢复技能接管 | 不逐帧跑昂贵扩散；不为闭环盲增网络往返 |
+| **最小可行产品** | 三级门控交付、每级可提交 checkpoint、默认 joint + 动作块时序集成 + 子目标早停、任何新点先过「让关卡变绿」测试 | 不再新造大框架；不为未验证的模块写长篇推导；不做无法在两周内上机的组件 |
+| **三维感知** | 矫正双目→度量点云、腕相尺度对齐、机器人系融合、GC-MAE 自监督、正交视图规范化、特权蒸馏 | 不假设有深度传感器或触觉；不做需要额外硬件/标定的重型 SLAM |
+| **伦理审查** | 动作审查门（规则+学习+人体三层）、否决/修复/回退、审查留痕、人—机让行、§6 动作规律性 | 不做纯哲学讨论；不做会大量误杀成功动作的过度保守；不引入评测端看不到的输入 |
 
-## 1. 研究日志：从 CG-ZEST 到 CPC-ZEST（含面向竞赛现实的剪枝）
+## 1. 研究日志：本轮先做「事实再基线化」
 
-### 1.1 竞赛现实核对（检索 2026-11-05）
+### 1.1 参赛对象核对（避免答错比赛）
 
-```text
-F1. 32 任务（G1_Dex1_*，含 HangCup/ArrangePlates/ArrangeTestTubes/ZipUp/ColorArrangement/
-    Unlock/DisconnectEthernet/ConveyorSorting/FruitCollection/FoldTowel/OrganizeBookshelf/
-    FruitSorting/SpellRobot/OrganizePencilCase/OrganizeStationery/StackBowls/StoreCups/
-    OrganizeTools/PackDoll/PackBag/PackPhone/StoreEarphones/StorePaddle/PaperCupStacking/
-    PickOutBatteries/ToolboxStorage/PlugCharger/SyringeWaterTransfer/PlugInEthernet/
-    PlacePhotoFrame/RemovePinnedNote/PourOutMedicine），约 32000 episodes / 169 h。
-F2. 观测仅 4 相机 + 臂/EE/夹爪/下半身本体 + 语言；无力觉、无触觉。
-F3. 动作 = chunk（joint 或 ee），块内顺序执行；metadata 一次握手固定 action_chunk_size。
-F4. N 机器人并发、N 端口；官方显式考核延迟稳定性与动作统计规律。
-F5. 泛化五轴：位置/干扰物/背景/未见物品/人为干扰。
-F6. 榜单 Coming Soon；用户与公开信息称榜首成功率 <30%。
-F7. 公开近邻 SOTA = 世界动作模型路线（LingBot-VA 闭环 rollout + 异步推理；Flash-WAM 步蒸馏）。
-```
+搜索确认存在**同名多义**：`unibot.org` 是加密货币的 Telegram 交易机器人（`unibot.org/training.jsp`、Unibot V2 迁移），与机器人无关；另有若干同名软件。**用户所指、本报告所研究的是「宇树科技 UniBot 世界挑战赛」（`unibot.unitree.com`）**，即以 Unitree G1 为平台的具身智能泛化操作评测（32 项桌面任务、5 类泛化、单模型通才赛道、远程标准化 API 接入）。下文一律按此展开。
 
-### 1.2 对前 21 轮的诚实剪枝（本轮最重要的一步）
-
-前 21 轮（PC→MP→CG-ZEST）构建了宏大的「感知-预测-决策 + 克隆-合成-采集」体系，但把它直接搬进 UniBot 有几处**与竞赛现实脱节**，必须剪掉或降级：
+### 1.2 竞赛接口硬约束（复述，作为一切设计的边界）
 
 ```text
-P1. MM-ENCODER 的 force/tactile 模态：竞赛接口根本不提供 → 删除；视觉+本体+语言为准。
-P2. 5 秒物体「声纹」探测（戳/推/提/摇）：需要机器人自己执行探测序列，直接消耗步骤分且
-    可能引入风险 → 降级为「1~2 步廉价探针」的默认关闭可选模块。
-P3. 云端 VLA 三级级联：网络往返 + 服务可用性会给官方最在意的 p95 延迟/抖动埋雷 →
-    改为「单一基座世界动作模型 + 本地轻量校正层」，异步仅用于同一进程内重叠。
-P4. HP-PRED 硬件健康：无标签、且赛制不修硬件 → 重定义为「策略/轨迹健康」并自监督。
-P5. 庞大多模块（C-MAP/KCL/AHD/DRS…）：难实现、难调、难证明 → 收敛为「一个 ≤20M 参数的
-    校正层」，可插拔在任意基座之后，保持接口合规与低延迟。
+C1. 观测目录（仅声明者才发送）：4×RGB（cam_left_high/cam_right_high/cam_left_wrist/
+    cam_right_wrist）+ left/right_arm[7] + left/right_ee_pose_gripper_base[6]
+    + left/right_gripper[1] + lower_body[15] + language[str]。
+C2. 动作目录：共享键 left/right_gripper[1]、pivot[7]；joint 模式加 left/right_arm[7]，
+    ee 模式加 left/right_ee_pose_gripper_base[6]；二者互斥；每个数组形如 (T_a,·)。
+C3. metadata 一次握手：control_space / obs_delta_indices（选通道+时间堆叠）/ image_resize /
+    action_chunk_size / token。
+C4. N 台机器人→从 8765 起的 N 个连续端口；每端口独立 episode、并发、可各自实现（单进程/
+    共享后端），但必须状态隔离、互不阻塞。
+C5. §6：延迟与抖动、返回动作的统计规律性，均作为可信度依据并可随榜单展示。
 ```
 
-这不是推倒重来，而是把 ZEST 的「预测—调制—闭环」内核**从科幻拉回可交付**。
-
-### 1.3 从 SOTA 瓶颈逆推创新
+### 1.3 本轮新增的「可利用事实」（这是 M3S 的支点）
 
 ```text
-LingBot-VA：共享潜空间 + 自回归扩散 + 闭环 rollout + 异步推理，真机 66.7（聚合榜）。
-  → 瓶颈：逐帧扩散昂贵；动作-视频联合分布重；未显式处理双臂耦合；泛化五轴非其主旨。
-Flash-WAM：模态感知步蒸馏，单步推理 23× 加速，真机仅约 60%（蒸馏掉了真机性能）。
-  → 瓶颈：单步蒸馏在真机上「漏」掉性能；证明实时性与保真度仍有缺口。
-两者共同空白：① 没有「廉价地把任意基座变得更闭环」的通用外挂；
-                ② 没有「预测失败并主动维护」的机制；③ 没有显式的双臂协同约束。
+N1. 头部双目是 rectified（矫正）对 → 可直接做稠密立体匹配得到度量视差；
+    数据卡给出相机尺寸 480×640×3、30fps、AV1 编码、LeRobot v3.0。
+N2. 数据集含评测端不暴露的特权状态：*_ee_pose_gripper_torso、state_d435、
+    recomputed_ee_valid；动作侧还含 base_command、pivot、gripper_controls 等。
+    → 可在「特权蒸馏」里当 teacher 信号，学一个只用 API 模态的 student。
+N3. UnifoLM-VLA-0 开源（Apache-2.0）：单策略、12 类 G1 任务、RLDS 训练栈、
+    constants 里有 NUM_ACTIONS_CHUNK / ACTION_DIM / PROPRIO_DIM / 归一化。
+    → 这是 MVP 的最短路径基座（但挑战数据是 LeRobot v3.0，其训练栈期望 v2.1，需转码）。
+N4. 3D-aware VLA 已有成熟范式可直接借用：PointVLA（向动作专家注入 3D）、
+    BridgeVLA（3D→多正交视图+2D heatmap，样本高效，真机均值 +32%）、
+    OG-VLA（多视 RGBD→点云→canonical 正交视图→扩散，泛化 +40% 相对）、
+    Lift3D-VLA（几何+动力学自监督 GC-MAE 式）。
+N5. 近邻 SOTA 仍是「世界动作模型 + 闭环 rollout + 异步推理」一脉；其在真机上亦非碾压
+    （LingBot-VA 降低 NFE 后骤降），说明**实时性与保真度的缺口尚未被填平**，
+    「轻量、可出货」仍有空间。
 ```
 
-于是本轮不追求「再造一个更大的世界模型」，而是瞄准这个空白：**外挂校正层**。
-
-### 1.4 与第 21 轮的关系
-
-| 层 | 第 21 轮 CG-ZEST | 第 22 轮 CPC-ZEST |
-|---|---|---|
-| 目标 | 物体零样本泛化 + 克隆 | 真机成功率 + 步骤分 + 延迟稳定性 |
-| 感知 | 四模态（含力/触觉） | **竞赛原生三源**（视觉/本体/语言） |
-| 预测对象 | 置信 γ + 硬件健康 h | **轨迹预后** p_fail/τ̂_fail + 策略健康 |
-| 闭环 | 宏观（决策降级） | **微观（块内事件触发闭环）+ 宏观（策略/数据维护）** |
-| 协同 | 无 | **双臂协同流形 + 多端口服务协同** |
-| 数据 | ACTIVE-HARVEST（需探测） | **PROGNOSTIC-REPLAY（零真机时间，纯离线挖掘）** |
-| 形态 | 庞大自研栈 | **≤20M 可插拔校正层**，基座无关 |
-
-**保留**：预测—调制—闭环的思想内核；不确定性驱动保守化。
-**升级**：从「物体/健康预测」升级为「轨迹预后」；从「宏闭环」升级为「块内事件闭环」；新增双臂与多端口协同。
-**剪枝**：力触觉、探测式声纹、云端级联、重型多模块。
-
-## 2. 直觉深化：时间 / 故障 / 代理 三层协同闭环
+### 1.4 对前 22 轮 ZEST 家族的诚实剪枝（MVP 纪律的第一次应用）
 
 ```text
-时间维（闭环控制）：z_t --世界模型前瞻--> ẑ_{t+1:H} ；实测 z_{t+1} 与预测比对 → 惊喜 s_t
-                    → CUSUM 触发 → 截断/重查询/接管。让误差「不累积」。
-故障维（预测性维护）：从 (z_t, ẑ, A) 预测 p_fail/τ̂_fail → 提前保守化、提前切换恢复技能；
-                    离线用 p_fail 给全库打分 → 挖失败前兆 → 维护数据集与策略。
-代理维（协同控制）：双臂 c_t 互预测 + 流形投影；N 端口共享后端批处理 + 状态隔离 + 预取。
+KEEP（进入主线，必须能出货）：
+  - 接口合规与 N 端口服务（这是参赛前提，M1 必做）。
+  - 「越不确定越保守」的内核 → 降维成 REVIEW-GATE 的一个阈值策略。
+  - 失败/预后思想 → 只保留一个 <1M 的 p_fail 小头，并入审查门，不做独立大模块。
+DEMOTE（降为旁路，等主线绿色再碰）：
+  - 事件触发块内闭环：其收益强依赖「评测端是否每步回调」这一未证实前提；
+    在证实前不作为主线（见 §5 第一风险）。
+  - 双臂协同流形、多端口投机预取：价值真实，但排在 M2/M3 之后。
+PRUNE（删除）：
+  - 力/触觉模态（接口无此通道）；5 秒物体声纹探测（耗步骤、无通道）；
+    云端 VLA 三级级联（给 §6 延迟埋雷）；繁复多模块（C-MAP/KCL/AHD/DRS…）。
+NEW（本轮三词带来）：
+  - MVP-SPINE、3D-ANCHOR（+特权蒸馏）、REVIEW-GATE（+审查留痕）。
 ```
 
-三层的耦合点：
+一句话：**把研究清单从「加法」切换到「先收敛、再精选「两个真杠杆」」。**
 
-1. **前瞻 → 预后**：前瞻出的未来潜状态是预后头的输入——「先想象世界会怎样，再判断会不会失败」。
-2. **预后 → 闭环**：`p_fail` 高时不是等惊喜发生，而是**提前**触发保守/恢复；惊喜触发是「来不及了」的兜底。
-3. **协同 → 预后**：双臂失配（互预测残差大）本身就是一个强失败先兆，进入 `p_fail`。
-4. **预后 → 数据**：`p_fail` 是离线挖矿的廉价价值函数，闭环回灌训练集（飞轮）。
-
-## 3. 正式化：CPC-CORRECTOR 的符号定义
-
-### 3.1 竞赛原生观测与动作
+## 2. 直觉深化：三个词怎样咬合成一个飞轮
 
 ```text
-o_t = { l, I_t^4, q_t^{L,R}∈R^7, ee_t^{L,R}∈R^6, g_t^{L,R}∈R^1, b_t∈R^15 }
-z_t = Enc(o_t) ∈ R^{d_z}                      # 冻结视觉骨干 + 状态 MLP + 语言嵌入
-A_t = a chunk ∈ R^{T_a × d_a},
-    d_a = 7+7+1+1+7 = 23 (joint) 或 6+6+1+1+7 = 21 (ee)
+最小可行产品（M1）——出货脊柱：有基线 → 才谈得上「让关卡变绿」。
+        │ 绿色基线提供：可交互接口、可回归的失败样本、可信的延迟基线
+        ▼
+三维感知（M2）——几何杠杆：用免费双目把「外观」换成「度量几何」，
+        专治位置/干扰物/背景/未见物品四条几何泛化轴，并利于插拔/堆叠。
+        │ 3D 同时给审查门提供：碰撞几何、人体 3D 位置、不可逆接触几何
+        ▼
+伦理审查（M3）——安全杠杆：用 3D 审查每个动作块，否决/修复/让行，留痕。
+        │ 审查门把风险反馈回数据与策略：哪些状态该补数据、哪些动作该收缩
+        ▼
+回到 M1：飞轮 —— 出货的基线 → 3D 提升 → 审查保护 → 更多成功样本 → 更强基线。
 ```
 
-控制空间选择：**默认 joint**（与演示数据、策略蒸馏最一致，规避逆运动学误差）；`ee` 作为消融。
+三处耦合的「甜点」非常具体：
 
-### 3.2 前瞻后果预测器（潜世界模型）
+1. **立体双目 → 审查门**：自碰撞与人体让行都需要几何；双目免费给几何。
+2. **特权蒸馏 → 三维锚定**：数据集里评测端没有的 `torso` 系 EE 与 D435 位姿，是训练 3D student 的免费监督。
+3. **审查留痕 → §6 可信度**：审查门不是「遮挡失败的补丁」，而是官方明确考核项的加分位——判据是「动作规律、延迟稳定」，审查门恰好保证这两点。
+
+## 3. 三个创新点的正式化（动机 / 差异 / 可行性 / 资源 / 步骤 / 风险）
+
+### 3.1 MVP-SPINE（最小可行脊柱）
 
 ```text
-f_ψ : (z_t, A_{t:t+H}) → ẑ_{t+1:t+H}          # H = 前瞻视界（默认 2×T_a）
-损失：ℒ_wm = Σ_h ‖ẑ_{t+h} − sg(z_{t+h})‖² + λ_pix·ℒ_pix(可选，蒸馏基座视频分支)
-预训练：在 32000 条演示上做「动作条件潜预测」；可选从基座世界模型蒸馏。
-惊喜欢量：s_t = sqrt( (z_t − ẑ_t)^T Σ̂^{-1} (z_t − ẑ_t) )   # Mahalanobis，Σ̂ 由 f_ψ 预测
+目标：在最短时间内产出「可真机跑、可提交、可回归」的 checkpoint，并据此校准研究优先级。
+三级门控（每级结束都必须有一个绿色 checkpoint 可提交）：
+  G0 接口冒烟：跑通官方 example server+client；用自写 client 逆向验证 C1–C5；
+             确认端口数 N 与 URL/握手/token 行为。产出：可交互空策略 + 接口语义备忘。
+  G1 能上榜的基线：微调 UnifoLM-VLA-0（或备选 GR00T/pi0 系）于 32k 演示；
+             joint 空间、动作块 + 时序集成、按子目标/夹爪信号早停省步骤分。
+             产出：全 32 任务单模型 checkpoint + 离线/仿真回归分数。
+  G2 加 3D-ANCHOR、再加 REVIEW-GATE（见 3.2/3.3）。
+门控规则：新想法只有在「让某个既有关卡变绿」时才进主线；否则进旁路清单。
 ```
 
-### 3.3 事件触发闭环与自适应 chunk 语义
+**动机**：榜首 <30%，榜单还空着——**先上桌**。
+**与现有方案的差异**：前 22 轮是「先造框架、再想落地」；M1 是「先落地、再决定造什么」。
+**可行性**：极高（基座、数据、接口都在）。
+**资源**：基座权重 + 32k 演示 + 1–8 张 GPU + 约 1–2 周。
+**落地步骤**：见产物区 §2。
+**风险**：数据格式转码（LeRobot v3.0 → UnifoLM 训练栈期望的 v2.1/RLDS）；32k 演示的训练算力。
+
+### 3.2 3D-ANCHOR（三维锚定 + 特权蒸馏）
 
 ```text
-CUSUM：Λ_t = max(0, Λ_{t-1} + s_t − μ_0)，触发条件 Λ_t > h   （μ_0 为正常惊喜基线）
-触发器 T_t ∈ {CONTINUE, REQUERY, RECOVER}
-  - CONTINUE：按原 chunk 继续（前一段预测可信）
-  - REQUERY ：放弃当前 chunk 剩余段，立即用最新 obs 重新 get_action
-  - RECOVER ：p_fail 超阈且无安全重规划时，接管为恢复/安全减速技能
+输入：I_head = (I_L, I_R)（矫正双目）、I_wrist(2)、q/ee/gripper（FK 可得）、语言 l
+步骤：
+  1) 立体匹配：D = StereoNet(I_L, I_R) → 视差 → 头系度量点云 X_head
+                （需要基线 b 与焦距 f；若未知则离线自标定，见产物区 §3.2）
+  2) 腕相深度：d_wrist = MetricMonoDepth(I_wrist)，用 EE 位姿 + 夹爪几何做尺度对齐
+                （夹爪指尖在图像中可见 → 给出尺度锚点）
+  3) 机器人系融合：X_base = FK 变换(X_head) ∪ FK 变换(X_wrist) ∪ 连杆胶囊云
+  4) 表示： (a) 点云 token 注入动作专家（PointVLA 式）；或
+           (b) canonical 正交视图渲染后喂 2D 主干（OG-VLA/BridgeVLA 式）
+  5) 自监督：L_geo = 重建当前点云 + 预测 t+1 点云（GC-MAE 式，无需标注）
+  6) 特权蒸馏：teacher 用 torso 系 EE / state_d435；student 只用 API 模态；
+               L_kd = 对齐 teacher/student 的几何 token 与抓取关键点分布
 ```
 
-**关于接口约束的诚实说明**：若评测器按「整块执行」调用，闭环刷新率 = 1/T_a；若按「每步调用、策略内部缓存块」调用，刷新率 = 每步。CPC-CORRECTOR 对两种模式都兼容（内部缓存 + 事件触发时丢弃缓存）。我们不假设获得无法获得的块内观测。
+**动机**：三维几何是泛化五轴里「最几何」的四轴的正解，且双目矫正使成本极低。
+**与现有方案的差异**：不用任何额外传感器；把「双目」这件被数据卡低调标注的事实**显式兑现**；并首次利用数据集的**特权状态**。
+**可行性**：高（立体/深度网络现成且轻；矫正双目省去极线校正）。
+**资源**：预训练立体/深度网络；一次离线标定；约 1 GPU 周。
+**落地步骤**：视差正确性测试（对已知物体尺寸/桌面平面）→ 标定 → 编码 → GC-MAE 预训练 → 特权蒸馏 → 消融。
+**风险**：反光/透明物体（药瓶、玻璃、网口）深度失败；评测端 `image_resize` 降采样损伤视差；双目基线/内参未公开需自标定；AV1 压缩伪影。
 
-### 3.4 轨迹预后头 PRO-HEAD
+### 3.3 REVIEW-GATE（动作审查门 + 审查留痕）
+
+先把「伦理」落成一个精确的技术对象：**一个独立于生成器的审查者**。
 
 ```text
-g_φ : (z_t, ẑ_{t+1:t+H}, A_t, c_t) → (p_fail, τ̂_fail, h_policy)
-ℒ_pro = BCE(p_fail, y_fail) + Quantile(τ̂_fail, t_fail) + Calib(h_policy)
-        + λ_con·(p_fail 与实测子目标失败的一致性约束)
-标签来源：演示中的子目标边界可自动标注（成功/重试/失败），无需人工。
+T1 确定性安全规则（廉价、可证明）：关节限位；速度/加速度上限；胶囊体自碰撞；
+   工作空间包络（桌面高度、前伸/侧伸边界）；桌面穿透；不可逆单发保护
+   （如断网口/拔线缆/倒药等「一次性」动作需更严的预检）。
+T2 学习式风险 critic：r_θ(o, A) = 集成不确定性 + 潜空间密度 + p_fail（<1M 小头）；
+   触发「修复」或「否决」。标签：演示内自监督（成功/越界/超时/抖动）标定。
+T3 人体在场：由头部双目 3D 检测人体/手 → 减速—让行—必要时安全保持包络
+   （对应「人为干扰」轴）。
+审查结论三态：PASS / REPAIR（把块投影回安全包络）/ VETO（回退安全保持或重查询）。
+审查留痕：每步给出 (decision, reason_code, margin)，既作可审计产物，也作 §6 可信度证据。
 ```
 
-`h_policy` 自监督定义：以「近 L 步惊喜与预后校准误差的负值」为伪标签——反映「策略当前是否 in-distribution」。
+**动机**：人为干扰轴、易损/不可逆对象、以及官方 §6 的「动作规律性与延迟稳定」。
+**与现有方案的差异**：不是被动地按风险缩放动作（旧 round 的 α 收缩），而是**主动否决/修复并留痕**；审查者的输入来自免费的 3D。
+**可行性**：T1 高；T2 中；T3 中（用现成检测器 + 双目 3D）。
+**资源**：Pinocchio/自研运动学与胶囊碰撞；现成人体/手检测器；离线标定标签。
+**落地步骤**：先只上 T1 → 在演示上测「误杀率」（应≈0）→ 加 T2 → 仿真里做人–机让行回归 → 出货。
+**风险**：误杀成功动作（必须极度保守：只否决明确越界）；人体检测延迟；corner case 多。
 
-### 3.5 双臂协同流形
+## 4. 持续迭代的创新点清单（本轮修订）
 
-```text
-耦合潜变量：c_t = Coupler(z_t) ∈ R^{d_c}
-互预测：ℒ_cross = ‖A_t^L − π^R→L(A_t^R, c_t)‖² + ‖A_t^R − π^L→R(A_t^L, c_t)‖²
-协同流形：K_t = { A : ρ(ee_t^L, ee_t^R; l) ≤ ε }        # ρ 为任务相关相对位姿/距离约束
-投影：A_t ← Proj_{K_t}(A_t)                              # 轻量、可微、仅约束两臂相对量
-失配先兆：m_t = ‖A_t^L − π^R→L(A_t^R, c_t)‖ → 进入 p_fail 条件
-```
+> 🟢 保留推进　🔵 新增　🟡 降级/旁路　🔴 剪枝
 
-直觉：折叠毛巾需要两手相对距离保持在一个窄带；插拔/接线需要一手固定一手动；协同流形就是把这些合法关系写成约束，避免「单臂对了、双臂散了」。
+| # | 创新点 | 状态 | 动机 | 与现有方案差异 | 可行性 | 所需资源 | 落地步骤 | 风险 |
+|---|---|---|---|---|---|---|---|---|
+| 1 | MVP-SPINE（门控交付脊柱） | 🔵 | 榜首空榜、需先上桌 | 把研究当产品；每级可提交 checkpoint | 极高 | 基座+32k 演示+1–8 GPU | G0 接口冒烟→G1 基线微调→G2 加 3D/审查 | 转码/算力 |
+| 2 | 3D-ANCHOR（矫正双目→机器人系点云+特权蒸馏） | 🔵 | 免费双目几何，治四轴泛化 | 首次兑现 rectified stereo + 特权状态 | 高 | 立体/深度网+标定 | 视差校验→标定→编码→GC-MAE→蒸馏 | 反光/透明/降采样 |
+| 3 | REVIEW-GATE（动作审查门+留痕） | 🔵 | 人为干扰/易损/§6 可信度 | 主动否决/修复/留痕，而非被动缩放 | 中高 | 运动学碰撞+检测器 | T1 规则→误杀率→T2 critic→T3 让行 | 误杀/延迟 |
+| 4 | 动作块 + 时序集成 + 子目标早停 | 🟢 | MVP 最低成本的稳定性与步骤分收益 | ACT/时序集成是成熟基线；早停省步骤 | 极高 | 无 | 接入基线→回归 | 集成滞后 |
+| 5 | joint 控制空间优先 | 🟢 | 与演示/蒸馏一致，规避 IK 误差 | 明确默认 + ee 消融 | 高 | 无 | — | 少数任务 ee 更优 |
+| 6 | 多端口共享服务 + 状态隔离 | 🟢 | 接口前提 + §6 延迟稳定 | 从工程升为「可信度得分项」 | 高 | 部署环境 | 连续批处理+隔离+优先级 | 并发串扰 |
+| 7 | 事件触发块内闭环 | 🟡 | 理论收益大 | 依赖评测是否每步回调 | 中 | — | 先验证接口语义再定强度 | 前提未证实 |
+| 8 | 双臂协同流形 + 互预测 | 🟡 | 官方明列双臂任务 | 显式跨臂约束 | 中高 | 双臂子集 | 排在 M2/M3 之后 | 约束过紧 |
+| 9 | p_fail 预后小头 | 🟡 | 失败前兆 | 并入审查门，不再独立成篇 | 中 | 自监督标签 | 与 T2 critic 合并 | 标签噪声 |
+| 10 | 力/触觉模态 | 🔴 | — | 接口无此通道 | 不可行 | — | 删除 | — |
+| 11 | 5 秒物体声纹探测 | 🔴 | 耗步骤、无验证 | — | — | — | 删除 | — |
+| 12 | 云端 VLA 级联 | 🔴 | 给 §6 延迟埋雷 | — | — | — | 删除 | — |
 
-### 3.6 多端口协同服务（接口工程即分数）
+## 5. 风险与未证实前提（本轮只列「决定路线」的几条）
 
-```text
-拓扑：N 端口端点（8765..8765+N−1）→ 单推理后端（连续批处理）
-状态隔离：每个端口的 obs 历史、chunk 缓存、CUSUM 状态、coupler 状态独立
-投机预取：执行当前 chunk 时，基于 f_ψ 前瞻预生成「若继续」的候选 chunk，
-          一旦触发 REQUERY 可毫秒级返回，避免延迟尖峰
-优先级调度：REQUERY/RECOVER 请求优先于常规请求；对 p95 延迟设 SLO
-批处理：不同端口同一时刻的请求合并 batch，提升吞吐、降低单位时延
-```
-
-这直接回应官方 §6「延迟与抖动是可信度依据」——**把系统指标做成算法优势**。
-
-### 3.7 主循环（骨架，完整实现见产物区）
-
-```python
-class CPCPolicy:
-    def reset(self):
-        self.hist.clear(); self.chunk_cache = None; self.cusum = 0.0
-        self.coupler.reset(); self.prev_pred = None
-
-    def get_action(self, obs):
-        z = self.encoder(obs)
-        # 1) 用上一步预测 vs 当前实测计算惊喜，驱动事件触发
-        s = self.surprise(z, self.prev_pred) if self.prev_pred is not None else 0.0
-        self.cusum = max(0.0, self.cusum + s - self.mu0)
-        trigger = (self.cusum > self.h)
-        # 2) 生成/复用 chunk
-        if self.chunk_cache is None or trigger:
-            A_nom = self.base_policy(obs)                 # 世界动作/VLA 基座
-            z_hat = self.world_model.rollout(z, A_nom)    # 前瞻
-            p_fail, tau, h = self.pro_head(z, z_hat, A_nom, self.coupler(z))
-            A = self.coordinate(A_nom, z)                 # 双臂协同流形投影
-            A = self.safe_envelope(A, p_fail, h)          # 预后调制 + 安全包络
-            self.chunk_cache = A; self.prev_pred = z_hat[:, 0]
-            self.cusum = 0.0
-        return self._pack(self.chunk_cache)
-```
-
-### 3.8 性质与命题（非正式）
-
-**命题 1（事件闭环抑制误差累积）**：设单步潜预测误差有界 `‖e_t‖ ≤ ε`、开环偏差每步放大因子 `L>1`，则纯开环执行 T 步的误差上界为 `~L^T ε`（指数累积）；而 CPC 在惊喜触发即重锚定（`e_t ← 0`），其误差上界被 `β/(1−p_esc)` 型常数控制，**与 episode 长度无关**。这解释了为何「闭环刷新」比「更强基座」在长程任务上更划算。
-
-**命题 2（事件触发的检测-查询帕累托）**：在惊喜过程为「正常 N(μ_0,σ²)、异常 N(μ_1,σ²), μ_1>μ_0」的简化模型下，CUSUM 在给定平均查询率约束下达到最小期望检测延迟（Lorden 意义下的渐近最优）。→ 自适应阈值 `h` 可在线按延迟 SLO 调节。
-
-**命题 3（双臂耦合的互信息界）**：若 `I(A^L; A^R | z) > 0`（真任务里普遍成立），则忽略耦合的单臂策略存在不可约的协同误差 `≥ ε_cross > 0`；加入互预测头可将其降至 `O(exp(−I))` 量级。→ 协同头对双臂任务的增益有信息论下界。
-
-**命题 4（多端口吞吐-延迟）**：连续批处理下，N 端口共享后端的 p95 延迟 `≤` 独立部署的 p95 延迟，当且仅当批处理带来的单位计算摊销 > 端口间干扰；投机预取把 REQUERY 的延迟尖峰从「完整前向」降到「缓存命中」。
-
-**复杂度**：
-
-| 组件 | 时间 | 空间 | 备注 |
+| 风险/未知 | 为什么关键 | 何时必须解决 | 缓解 |
 |---|---|---|---|
-| Encoder（冻结） | ~2 ms | ~50 MB | 4 相机 + 本体 |
-| 世界模型前瞻 f_ψ | ~4 ms | ~15 MB | H=16, 小 Transformer/MLP |
-| 预后头 g_φ | <1 ms | ~1 MB | 三头 MLP |
-| 协同头 + 投影 | <1 ms | ~2 MB | 低秩 + 约束投影 |
-| 基座策略 π_base | 视基座 | — | 主成本 |
-| **校正层总计** | **~6 ms** | **~20 MB** | 对 p95 影响可控（可异步） |
+| **评测端是「每步回调」还是「整块执行」** | 决定块内闭环是强收益还是空谈，也决定审查门的粒度 | G0 | 用官方 example client 逆向验证；双模式兼容设计 |
+| **双目基线/内参是否可得** | 无它则 3D-ANCHOR 需自标定 | G2 前 | 离线自标定（棋盘/已知物）；用桌面平面与已知物尺寸交叉校验 |
+| **步骤分具体口径未公开** | 决定「早停/省步」是否划算 | 尽早 | 先按「子目标完成 + 少无效步」保守优化；留意规则文档更新 |
+| **数据 LeRobot v3.0 vs 基座期望 v2.1** | 直接卡住 G1 | G1 前 | 写转码适配；或用原生支持 v3 的 LeRobot 训练栈 |
+| **反光/透明物体立体失败** | 直接影响插拔/倒药等关键任务 | G2 | 多帧时序滤波 + 腕相近距离兜底 + 审查门降级 |
+| **审查门误杀** | 会直接掉成功率 | M3 始终 | 只否决「确定性越界」；学习式 critic 只做「修复」不做「否决」 |
 
-## 4. 预期实验结果（设计，非真机声称）
+## 6. 本轮最大的风险
 
-### 4.1 离线（32000 episodes，零真机时间）
+**「三维感知」的收益高度依赖一个未公开的硬件事实：双目是否真的可用于度量重建（基线是否稳定、是否与数据卡一致、评测端降采样后是否还够用）。如果双目在评测数据上不可靠，3D-ANCHOR 会退化为「多视角 2D 特征增强」——仍有价值，但不再享有「免费度量几何」的红利。** 因此本轮把「**用 G1 基线的真实回传图像做一次双目视差正确性验证**」列为与「接口语义验证」并列的**第一优先实验**；它决定 3D-ANCHOR 是「强杠杆」还是「弱增强」。
 
-| 模块 | 指标 | 预测 |
-|---|---|---|
-| 世界模型 | 潜预测 1-step MSE / 16-step MSE | 相对 persistence 基线降 40% / 25% |
-| 惊喜检测 | 失败前兆 AUROC / 检测延迟 | AUROC 0.82 / 延迟 ≤ 2 chunk |
-| 预后头 | p_fail AUROC、ECE | 0.85 / <0.05 |
-| 协同头 | 双臂任务互预测残差 | 相对无 c_t 降 30% |
+## 7. 灵感词贯通
 
-### 4.2 仿真闭环（RoboTwin 2.0 / LIBERO，若可得）
+> **最小可行产品**：不是一句口号，而是一条门控流水线（G0/G1/G2）与一条硬规则——「新想法必须先让某个关卡变绿」。它把前 22 轮的「加法」扭成「先收敛、再精选两个真杠杆」。
+> **三维感知**：把数据卡里低调标注的「rectified stereo」显式兑现为机器人系度量点云；用 canonical 正交视图/点云 token 注入 VLA；用 GC-MAE 自监督与「特权状态蒸馏」把 3D 知识灌进只用 API 模态的 student。
+> **伦理审查**：落成「动作审查门」——独立于生成器的审查者，三层（确定性安全 / 学习式风险 / 人体在场）三态（放行/修复/否决）并留痕；既守住人—机安全与财产完整性，又把官方 §6 的可信度变成显式产物。
 
-| 配置 | 成功率 | 平均 chunk 查询数 | 说明 |
-|---|---|---|---|
-| 纯基座开环 | 基线 | 1 | 参考 |
-| 基座 + 每步重查询（无预测） | +~3pt | 8× | 延迟爆炸 |
-| 基座 + CPC（事件触发） | **+~8pt** | ~1.4× | 延迟可控 |
+## 8. 参考来源（检索日期 2026-11-05）
 
-### 4.3 真机/评测协议（若获得参赛资格）
+- UniBot 世界挑战赛首页：https://unibot.unitree.com/
+- 挑战赛任务集（32 任务 / 32000 episodes / 169h）：https://unibot.unitree.com/challenges.html
+- 排行榜（Coming Soon）：https://unibot.unitree.com/leaderboard.html
+- 运行记录（Coming Soon）：https://unibot.unitree.com/runs.html
+- 提交模板与接口规范（观测/动作目录、metadata、N 端口、§6 可信度）：https://github.com/unitreerobotics/unibot_submission
+- 数据集（LeRobot v3.0、30fps、4 相机、**head_stereo_left/right rectified**、特权状态、Dex1 夹爪 5.5–0.0）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
+- 挑战数据集集合（32 个 G1_Dex1_*）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
+- UnifoLM-VLA-0 开源（Apache-2.0、单策略 12 类、RLDS/LeRobot、constants）：https://github.com/unitreerobotics/unifolm-vla
+- UnifoLM-WMA-0 集合（世界模型-动作）：https://huggingface.co/collections/unitreerobotics/unifolm-wma-0
+- Unitree G1 真机操作聚合榜（LingBot-VA 66.7；Flash-WAM 60/50）：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world
+- PointVLA（向 VLA 注入 3D，arXiv:2503.07511）：https://arxiv.org/abs/2503.07511
+- BridgeVLA（3D→多正交视图+heatmap，NeurIPS 2025，真机均值 +32%，arXiv:2506.07961）：https://bridgevla.github.io/home_page.html
+- OG-VLA（多视 RGBD→点云→canonical 正交视图→扩散，ICRA 2026 投稿）：https://og-vla.github.io/
+- Lift3D-VLA（几何+动力学自监督，arXiv:2607.06564）：https://arxiv.org/abs/2607.06564
+- 社区赛制拆解仓库（赛制/32 任务总表/训练路线/接口验证；检索到但直连 404，需谨慎引用）：https://github.com/Ed-gjd/unibot-challenge
+- 同名歧义提示（与机器人无关）：https://unibot.org/training.jsp
 
-- 双臂子集 vs 非双臂子集分别报告，验证协同头增益集中在双臂任务。
-- 泛化五轴分桶报告（位置/干扰物/背景/未见物品/人为干扰）。
-- 延迟报告：p50/p95/抖动，以及「REQUERY 尖峰」被投机预取驯服后的曲线。
-
-## 5. 持续迭代的创新点清单（本轮修订）
-
-> 标记：🟢 保留推进　🔵 新增　🟡 降级/待观察　🔴 剪枝
-
-| # | 创新点 | 动机 | 与现有方案差异 | 技术可行性 | 所需资源 | 落地步骤 | 风险 |
-|---|---|---|---|---|---|---|---|
-| 1 🔵 | 前瞻后果预测器 + 事件触发闭环 | 块内开环误差累积；SOTA 靠闭环但刷新率被 T_a 夹死 | SOTA 用大世界模型自身做闭环；本方案用**外挂轻量校正层**让任意基座变闭环 | 高（潜预测小模型，仿真可验证） | 32000 演示 + 单卡训练 | 训 f_ψ → 定惊喜统计 → CUSUM 调阈 → 仿真闭环验证 | 潜空间位置/尺度漂移使惊喜虚高 |
-| 2 🔵 | 轨迹预后头 + 预测性回放 | 把维护从硬件移到轨迹/数据；事前而非事后 | SOTA 无「失败概率预测 + 数据再挖掘」闭环 | 中高（子目标标签可自动） | 演示子目标自动标注 | 训 g_φ → 全库打分 → 抽恢复集 → 蒸馏恢复技能 | 子目标边界自动标注噪声 |
-| 3 🔵 | 双臂协同流形 + 互预测 | 官方明列双臂任务；SOTA 未显式建模耦合 | 显式跨臂耦合 + 约束投影，而非单潜空间黑箱 | 高 | 双臂任务子集 | 训 coupler → 互预测损失 → 流形投影接入 | 约束过紧伤害单手主导任务 |
-| 4 🔵 | 多端口协同服务 + 投机预取 | 官方以延迟/抖动评可信度；N 端口并发 | 把服务系统做成算法优势，而非纯工程 | 高 | 多端口部署环境 | 后端批处理 → 状态隔离 → 预取 → SLO 调度 | 并发下状态串扰 |
-| 5 🟢 | 预后调制保守度 α | 继承 20/21 轮「越不确定越保守」 | 调制量从 γ/h 改为 p_fail/h_policy | 高 | 无 | 接入 α → 安全包络 | 过度保守掉步骤分 |
-| 6 🟡 | 廉价 1~2 步探针 | 想保留物体辨识能力 | 把 5 秒声纹降为最低成本探针，默认关 | 中（耗步骤） | — | 消融比较收益/步骤成本 | 收益不抵步骤扣分 |
-| 7 🟢 | joint 控制空间优先 | 与演示/蒸馏一致，规避 IK 误差 | 明确选择 + ee 消融 | 高 | 无 | — | ee 在部分任务更优 |
-| 8 🔴 | 力/触觉模态 | — | 竞赛无此通道 | 不可行 | — | 删除 | — |
-
-## 6. 风险与缓解
-
-| 风险 | 缓解 |
-|---|---|
-| **接口语义不确定**（块内是否可重查询）：闭环设计可能失效 | 双模式兼容（内部缓存）；离线用官方 example_env/run_client 反复验证接口行为 |
-| **潜惊喜与真实失败不对齐**：世界模型学的是重构图，不是任务相关偏差 | 用「预后头一致性」联合训练；只在任务相关潜子空间计算惊喜；用失败 AUROC 反选潜维度 |
-| **事件触发导致延迟尖峰**：REQUERY 变多，官方扣可信度 | 投机预取 + 连续批处理 + 优先级 SLO；对触发率设上限 |
-| **双臂约束过紧**：本就单手主导的任务被拖累 | 任务自适应 ε；仅对检测到的协同阶段开启；消融验证不伤单手任务 |
-| **预后头标签噪声** | 子目标边界用多信号投票（腕相机接近、夹爪开合、EE 停顿）自动标注；校准约束 |
-| **校正层引入过拟合**：离线好真机差 | 冻结基座 + 只训校正层；域随机化增广；只在潜空间操作以抗外观域偏移 |
-
-## 7. 本轮最大的风险
-
-**「闭环控制」在 UniBot 接口下的闭环新鲜度可能根本不足：若评测器严格按整块执行、块内不回调，那么事件触发闭环只能发生在 chunk 边界，闭环的频率被 `action_chunk_size` 锁死；此时 CPC 的核心收益退化为「更聪明的块间重规划 + 预后保守化」，而无法真正实现「世界一偏离就重规划」。** 因此本轮把「验证接口语义（每步回调还是整块执行）」列为**第一优先落地步骤**；它决定创新点 1 是「强收益」还是「弱收益」。
-
-## 8. 灵感词贯通
-
-> **协同控制**：空间上，双臂互预测 + 协同流形投影把「左右手各自为战」变成「共享相对位姿/接触约束」，并对双臂任务给出互信息下界的增益论证；计算上，N 端口共享后端 + 状态隔离 + 投机预取，把「多机协同」做成延迟稳定性优势。
-> **预测性维护**：从「维护硬件」转向「维护轨迹与策略」——轨迹预后头在失败前预测失败，驱动提前保守化与恢复接管；预测性回放用预后头给全库打分，零真机时间挖出失败前兆集，持续维护数据与技能。
-> **闭环控制**：潜世界模型前瞻 + Mahalanobis 惊喜 + CUSUM 事件触发，把「块内开环」变成「世界偏离即重锚定」，并证明事件触发使误差不再随 episode 累积；把闭环从 SOTA 的「大模型自身特性」变成「任意基座可外挂的轻量能力」。
-
-## 9. 参考来源（检索日期 2026-11-05）
-
-- UniBot 世界挑战赛官网首页：https://unibot.unitree.com/ （2026-11-05）
-- 挑战赛任务集（32 任务 / 32000 episodes / 169h）：https://unibot.unitree.com/challenges.html （2026-11-05）
-- 排行榜（Coming Soon）：https://unibot.unitree.com/leaderboard.html （2026-11-05）
-- 提交模板与接口规范（policy 接口、obs/action 目录、N 端口、§6 交互质量与可信度）：https://github.com/unitreerobotics/unibot_submission （2026-11-05）
-- 参考实现：https://raw.githubusercontent.com/unitreerobotics/unibot_submission/main/example/example_policy.py （2026-11-05）
-- 数据集集合（32 个 G1_Dex1_* 任务）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset （2026-11-05）
-- 数据字段与相机/动作定义（G1_Dex1_FoldTowel）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel （2026-11-05）
-- 宇树官方数据页（160h / 3.3 万轨迹 / 32 任务）：https://www.unitree.com/data/ （2026-11-05）
-- 近邻 SOTA 聚合榜（Unitree G1 真机）：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world （2026-11-05）
-- LingBot-VA《Causal World Modeling for Robot Control》（闭环 rollout + 异步推理，arXiv:2601.21998）：https://www.sota2.com/research/paper/697c3b74a8b01e76cc8da792 （2026-11-05）
-- Flash-WAM《Modality-Aware Distillation for World Action Models》（步蒸馏，23×，真机约 60%）：https://www.sota2.com/research/paper/6a22584d86173ad9c1468873 （2026-11-05）
-- UnifoLM-WMA（Unitree 世界模型-动作框架，G1 任务）：https://deepwiki.com/unitreerobotics/unifolm-world-model-action/7.2-unitree-g1-robot-tasks （2026-11-05）
-- 赛事发布报道（2026-07-10）：https://myxmr.com/en/news/unitree-launches-unibot-world-challenge （2026-11-05）
-
-> 本轮一句话押注：**最值得押注的是创新点 1——「前瞻后果预测器 + 事件触发闭环」：它把 SOTA 世界动作模型最核心却最昂贵的「闭环 rollout」蒸馏成一个 ≤20M、可外挂、接口合规的校正层，先用官方 example 把接口语义钉死，再在潜空间上证明「事件触发使误差不累积」。**
+> 本轮一句话押注：**最值得押注的是创新点 1（MVP-SPINE）——先用开源 UnifoLM-VLA-0 在 32k 演示上出货一条可提交基线；它是唯一能让其余一切创新「有分数可依附」的支点，其次才是 3D-ANCHOR 这个用免费矫正双目换来的几何杠杆。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 22 轮产物 · CPC-ZEST 技术报告：面向 UniBot-V1 的「协同-预后-闭环」可插拔校正层
+# 第 23 轮产物 · MVP-3D-SHIELD（M3S）技术报告：最小可行脊柱 + 三维锚定 + 动作审查门
 
-> 检索日期：2026-11-05。本文给出 CPC-CORRECTOR 的形式化、接口合规的可运行伪代码、关键推导、实验协议与预期结果。
+> 检索日期：2026-11-05。本文给出 M3S 的门控交付计划、3D-ANCHOR 的可运行设计、REVIEW-GATE 的规则与算法、接口合规的策略骨架、实验协议、预期结果与风险。所有结论以 §1 的接口硬约束与 §9 的公开来源为界；未见实测的数值一律标注为「设计目标」。
 
 ## 0. 结论
 
-CPC-ZEST 不重造世界动作模型，而是给任意基座（UnifoLM-WMA / LingBot-VA 类）叠加一个 **≤20M 参数、接口合规、低延迟**的校正层，含三个部件：
+不新造大框架。M3S 是一条**门控交付脊柱**上加两处「竞赛接口已经免费给、却常被忽略」的杠杆：
 
-1. **前瞻后果预测器 `f_ψ` + 事件触发闭环**：在潜空间前瞻 `H` 步，用 Mahalanobis 惊喜 + CUSUM 决定 CONTINUE / REQUERY / RECOVER；把「块内开环」变成「偏离即重锚定」。**命题 1 证明事件触发使误差上界与 episode 长度无关**。
-2. **轨迹预后头 `g_φ` + 预测性回放**：预测本 chunk 内子目标失败概率 `p_fail`、失败时刻 `τ̂_fail`、策略健康度 `h_policy`；离线用 `p_fail` 给 32000 条演示打分挖失败前兆，构建 <2k 高价值恢复集，零真机时间维护数据与技能。
-3. **双臂协同流形 + 多端口协同服务**：跨臂互预测 `ℒ_cross` + 任务约束投影 `Proj_{K_t}`；服务侧连续批处理 + 每端口状态隔离 + 投机预取，把官方考核的 p95 延迟/抖动做成优势。
+1. **MVP-SPINE**：G0 接口冒烟 → G1 用开源 **UnifoLM-VLA-0（Apache-2.0）** 在 32k 演示上微调出可提交基线 → G2 加 3D 与审查。每级收尾一个绿色 checkpoint，任何新想法必须先让某个关卡变绿。
+2. **3D-ANCHOR**：`head_stereo_left/right` 是**已矫正**双目 → 免费度量点云；腕相用度量单目深度 + EE 尺度锚；融合成机器人系点云；GC-MAE 自监督；**特权蒸馏**用评测端拿不到的 `torso` 系 EE / `state_d435` 当 teacher。
+3. **REVIEW-GATE**：动作块真实执行前的三层审查（确定性安全 T1 / 学习式风险 T2 / 人体在场 T3），三态输出（PASS / REPAIR / VETO）+ **审查留痕**；把「伦理审查」落成可交付的安全与可信度机制。
 
-对齐赛事：32 任务、32000 episodes/169h、G1+Dex1、0 力/触觉通道、joint/ee 块级动作、N 端口并发、延迟稳定性即分数、5 泛化轴（来源见 §9）。
+对齐硬约束：观测仅 4×RGB + 关节/EE(base)/夹爪/下半身 + 语言；动作 joint 或 ee 互斥、块式返回；N 连续端口；§6 考核延迟/抖动与动作规律性（来源见 §9）。
 
-## 1. 形式化与变量约定
+## 1. 接口硬约束与模态映射
 
-### 1.1 竞赛接口对齐（硬约束）
+### 1.1 提交接口（一次握手 + 逐步调用）
 
-| 项 | 规范 | CPC 的遵守 |
+| 项 | 规范 | M3S 的遵守 |
 |---|---|---|
-| `metadata` | 一次握手：control_space / obs_delta_indices / image_resize / action_chunk_size / token | 固定；校正层不改接口 |
-| `get_action(obs)` | 返回一个 chunk；键含 `meta.token` + 共享键 + 对应控制空间双键 | 严格按 §3 目录打包 |
-| `reset()` | 每 episode 起始调用一次 | 清空历史、chunk 缓存、CUSUM、coupler 状态 |
-| 端口 | N 机器人 → 8765..8765+N−1，状态隔离、并发可靠 | 共享后端 + 状态隔离 + 批处理 |
-| §6 | 延迟/抖动/动作规律性 = 可信度 | 预取 + 优先级 SLO |
+| `metadata` | `control_space` / `obs_delta_indices`（选通道 + 时间堆叠）/ `image_resize` / `action_chunk_size` / `token` | 固定；3D/审查模块不改接口 |
+| `get_action(obs)` | 返回 chunk；含 `meta.token` + 共享键 + 对应控制空间双键 | 严格按 §5 打包 |
+| `reset()` | 每 episode 起始调用一次 | 清空历史、点云缓存、审查状态 |
+| 端口 | N 机器人 → 8765..8765+N−1，状态隔离、并发不互相阻塞 | 共享后端 + 每端口状态隔离 |
+| §6 | 延迟/抖动/动作统计规律性 = 可信度 | 审查留痕 + 优先级调度 + 稳定打包 |
 
-### 1.2 校正层形式化
+### 1.2 数据集模态 vs 评测端模态（关键：特权信息）
+
+| 数据集键（`G1_Dex1_FoldTowel`） | 评测 API 是否暴露 | M3S 用法 |
+|---|---|---|
+| `head_stereo_left` / `head_stereo_right`（**rectified**） | 是（`cam_left_high` / `cam_right_high`） | 立体匹配 → 度量点云 |
+| `wrist_left` / `wrist_right` | 是（`cam_left_wrist` / `cam_right_wrist`） | 度量单目深度 + 尺度对齐 |
+| `left/right_arm`、`left/right_gripper`、`lower_body` | 是 | 本体 + FK |
+| `*_ee_pose_gripper_base` | 是 | 动作/状态 |
+| `*_ee_pose_gripper_torso` | **否** | 特权 teacher（蒸馏） |
+| `state_d435` | **否** | 特权 teacher（相机外参/视角） |
+| `recomputed_ee_valid` | **否** | 数据清洗/有效性门 |
+| `base_command` / `action_torso` / `action_d435` / `gripper_controls` | **否** | 训练时辅助监督 |
+
+> 结论：训练可以「看得更多」，但**推理必须只用 API 模态**。这正是特权蒸馏的用武之地。
+
+## 2. MVP-SPINE：三级门控交付计划
 
 ```text
-观测：o_t = {l, I_t^4, q_t^{L,R}, ee_t^{L,R}, g_t^{L,R}, b_t}
-编码：z_t = Enc(o_t) ∈ R^{d_z}                       # d_z = 256（冻结骨干）
-基座：A_nom = π_base(o_t) ∈ R^{T_a × d_a}
-前瞻：ẑ_{t+1:t+H} = f_ψ(z_t, A_nom)，H = 2·T_a
-惊喜：s_t = ‖z_t − ẑ_t‖_{Σ̂^{-1}}（Mahalanobis）
-CUSUM：Λ_t = max(0, Λ_{t-1} + s_t − μ_0)，触发 T_t = 1[Λ_t > h]
-预后：g_φ(z_t, ẑ, A_nom, c_t) → (p_fail, τ̂_fail, h_policy)
-协同：c_t = Coupler(z_t)；A ← Proj_{K_t}(A)（两臂相对量约束）
-输出：A* = SafeEnv(A, p_fail, h_policy)
+G0（接口冒烟，1–3 天）——产出：可交互空策略 + 接口语义备忘
+  1. 跑通官方 example：run_server.py + run_client.py，确认 token 校验、端口。
+  2. 自写 client 逆向验证「每步回调 vs 整块执行」，并记录 N 端口并发行为。
+  3. 记录单次 get_action 的基线时延分布（p50/p95），作为 §6 参照线。
+  Go 条件：官方 example 端到端无 ACTION REJECTED；接口语义备忘写入仓库。
+
+G1（能上榜的基线，1–2 周）——产出：全 32 任务单模型 checkpoint
+  1. 数据：32 个 G1_Dex1_* 演示（LeRobot v3.0）→ 转码到训练栈所需格式。
+  2. 基座：UnifoLM-VLA-0（Apache-2.0），Qwen2.5-VL 主干 + 动作专家。
+     在 constants 里设 NUM_ACTIONS_CHUNK / ACTION_DIM / PROPRIO_DIM 与归一化。
+  3. 控制空间：默认 joint（与演示一致，规避 IK 误差）；ee 作为消融。
+  4. 稳定化：动作块 + 时序集成（ACT 式指数加权）+ 子目标/夹爪信号早停省步骤。
+  Go 条件：在留出集/仿真回归上不低于「未微调基座」，且延迟满足 G0 基线。
+
+G2（加杠杆，2–4 周）——产出：M3S 完整策略
+  G2a 加 3D-ANCHOR；G2b 加 REVIEW-GATE。每个子步各有一个 checkpoint 与消融。
+硬规则：任何新想法必须先证明「能让 G0/G1/G2 某关卡变绿」，否则进旁路清单。
 ```
 
-**joint 与 ee 的动作字典序**（决定 `d_a`）：
+**为什么基座选 UnifoLM-VLA-0**：Apache-2.0、专为 G1 单策略多任务设计（12 类含插拔/放置）、自带训练/推理/部署（server-client 形态与挑战赛天然吻合）。**风险**：其训练栈期望 LeRobot v2.1/RLDS，而挑战数据是 v3.0 → 需写 `v3.0→v2.1/RLDS` 转码；或改用具原生 v3 支持的数据加载层。
+
+## 3. 3D-ANCHOR：从矫正双目到机器人系点云
+
+### 3.1 流水线与符号
 
 ```text
-joint: [ left_arm(7) | right_arm(7) | left_gripper(1) | right_gripper(1) | pivot(7) ]  = 23
-ee   : [ left_ee(6)  | right_ee(6)  | left_gripper(1) | right_gripper(1) | pivot(7) ]  = 21
+输入：双目对 (I_L, I_R)（矫正），腕相 I_{w1}, I_{w2}，本体状态 s（含 EE 位姿、关节角）
+(1) 立体：  D = g_stereo(I_L, I_R)            # 视差图
+            X_head = π^{-1}_head(D; f, c, b)  # 头系度量点云（f 焦距, c 主点, b 基线）
+(2) 腕相：  Z_w = g_depth(I_w)                # 度量单目深度（或尺度不定，见 3.2）
+            尺度锚：夹爪指尖已知几何长度 L_gripper 在图像中的投影 → 解尺度因子 σ_w
+            X_wrist = π^{-1}_wrist(Z_w · σ_w; K_w, T_w)  # 腕系点云
+(3) 融合：  X_base = T_head→base · X_head  ∪  T_wrist→base · X_wrist  ∪  X_links(FK)
+(4) 表示：  E_geo = Enc_point(X_base, s, l)    # 轻量 Point-Transformer/VoxelNet
+            A) 注入式：E_geo 作为额外 token 拼到动作专家输入（PointVLA 式）
+            B) 渲染式：把 X_base 渲染为 K 张 canonical 正交视图，喂 2D 主干
+                       （OG-VLA/BridgeVLA 式，利于复用 2D 预训练）
+(5) 自监督：L_geo = ||Dec(E_geo) − X_base||² + λ_f ||Pred(E_geo, a_{t:t+H}) − X_base^{t+1}||²
+            （GC-MAE 式：重建当前 + 预测未来几何，零人工标注）
+(6) 蒸馏：  teacher 用特权状态（torso 系 EE / state_d435）算几何监督；
+            L_kd = KL(E_geo^stu || E_geo^tea) + λ_kp ||kp_stu − kp_tea||²
 ```
 
-## 2. 接口合规的可运行伪代码
+### 3.2 双目是否可信：第一优先验证（对应想法区 §6）
+
+```text
+V1. 内参/基线未知时的自标定：
+    - 用已知物体尺寸（如测试管直径、纸杯口直径、药瓶高度）标定 b·f 的组合量；
+    - 用桌面平面做单应性，验证视差→深度的单调性与平面度；
+    - 交叉校验：头系点云中「手腕 EE 位置」应与本体 EE 位姿（投影到头系）吻合。
+V2. 降采样鲁棒性：分别用 native 480×640 与 240×320 跑立体，比较平面度误差，
+    决定 metadata.image_resize 是否是 3D 的敌人。
+V3. 反光/透明兜底：多帧时序中值滤波 + 腕相近距离补洞 + 审查门降级（视差置信低则信赖 2D）。
+Go 条件：桌面平面 RMS 误差与已知物尺寸误差在可接受区间；否则 3D-ANCHOR 降级为
+「多视角 2D 特征增强」，不宣称度量几何。
+```
+
+### 3.3 可运行骨架（只列关键件，其余略）
 
 ```python
-import os
-import time
 import numpy as np
 import torch
 import torch.nn as nn
-from collections import deque
 
 
-# ============ 校正层组件（≤20M 参数） ============
+class StereoDepth(nn.Module):
+    """轻量立体匹配：输出视差，再反投影为头系点云。可用预训练权重初始化。"""
 
-class LatentWorldModel(nn.Module):
-    """动作条件潜前瞻：z_t, A[Ta,da] -> z_hat[H,dz] + 预测协方差对角线 diag(Sigma)"""
-
-    def __init__(self, dz=256, da=23, H=16, width=512):
+    def __init__(self, backbone="minimal"):
         super().__init__()
-        self.H, self.dz = H, dz
-        self.net = nn.Sequential(
-            nn.Linear(dz + da, width), nn.SiLU(),
-            nn.Linear(width, width), nn.SiLU(),
+        self.net = nn.Sequential(  # 占位：实际用 IGEV/RAFT-Stereo/FoundationStereo 轻量版
+            nn.Conv2d(6, 32, 3, padding=1), nn.SiLU(),
+            nn.Conv2d(32, 32, 3, padding=1), nn.SiLU(),
+            nn.Conv2d(32, 1, 3, padding=1),
         )
-        self.to_state = nn.Linear(width, dz)
-        self.to_logvar = nn.Linear(width, dz)
 
-    def rollout(self, z_t, A_chunk):
-        # 逐动作推进（H 步），A_chunk 不足 H 时用最后一步动作外推
-        b = z_t.size(0)
-        z = z_t
-        states, logvars = [], []
-        for h in range(self.H):
-            a = A_chunk[:, min(h, A_chunk.size(1) - 1)]
-            feat = self.net(torch.cat([z, a], dim=-1))
-            z = self.to_state(feat)
-            states.append(z)
-            logvars.append(self.to_logvar(feat))
-        return torch.stack(states, 1), torch.stack(logvars, 1)  # [b,H,dz], [b,H,dz]
+    def forward(self, i_l, i_r):
+        x = torch.cat([i_l, i_r], dim=1)
+        return self.net(x)  # [B,1,H,W] 视差
+
+    @staticmethod
+    def backproject(disp, f, cx, cy, b):
+        # Z = f*b/disp; X = (u-cx)Z/f; Y = (v-cy)Z/f
+        B, _, H, W = disp.shape
+        u = torch.arange(W, device=disp.device).view(1, 1, W)
+        v = torch.arange(H, device=disp.device).view(1, H, 1)
+        Z = f * b / disp.clamp_min(1e-3)
+        X = (u - cx) * Z / f
+        Y = (v - cy) * Z / f
+        return torch.stack([X, Y, Z], dim=-1)  # [B,H,W,3] 头系
 
 
-class PrognosticHead(nn.Module):
-    """轨迹预后：预测 p_fail / tau_fail / h_policy"""
+class GeoEncoder(nn.Module):
+    """机器人系点云编码 + GC-MAE 自监督头。"""
 
-    def __init__(self, dz=256, dc=32, width=256):
+    def __init__(self, d_out=256, n_pts=1024):
         super().__init__()
-        self.trunk = nn.Sequential(
-            nn.Linear(2 * dz + dc, width), nn.SiLU(),
-            nn.Linear(width, width), nn.SiLU(),
+        self.n_pts = n_pts
+        self.pt = nn.Sequential(
+            nn.Linear(3 + 4, 128), nn.SiLU(),   # xyz + 本体(FK/关节)4维占位
+            nn.Linear(128, 256), nn.SiLU(),
+            nn.Linear(256, d_out),
         )
-        self.p_fail = nn.Linear(width, 1)      # sigmoid: 子目标失败概率
-        self.tau_fail = nn.Linear(width, 1)    # softplus: 预计失败时刻
-        self.h_policy = nn.Linear(width, 1)    # sigmoid: 策略健康度
+        self.recon = nn.Linear(d_out, 3)
+        self.future = nn.Linear(d_out, 3)
 
-    def forward(self, z_t, z_hat, c_t):
-        g = z_hat.mean(dim=1)                   # 前瞻聚合
-        feat = self.trunk(torch.cat([z_t, g, c_t], dim=-1))
-        return (torch.sigmoid(self.p_fail(feat)),
-                torch.nn.functional.softplus(self.tau_fail(feat)),
-                torch.sigmoid(self.h_policy(feat)))
+    def forward(self, pts, proprio):
+        # pts: [B,N,3] 机器人系; proprio: [B,P]
+        f = proprio.unsqueeze(1).expand(-1, pts.size(1), -1)
+        h = self.pt(torch.cat([pts, f], dim=-1))     # [B,N,d]
+        e = h.mean(dim=1)                            # 池化为几何 token
+        return e, self.recon(e), self.future(e)      # token, 重建, 未来几何预测
+```
+
+## 4. REVIEW-GATE：动作审查门
+
+### 4.1 三层审查
+
+```text
+T1 确定性安全（可证明、零学习）：
+   c1 joint 限位：  q_min ≤ q_target ≤ q_max
+   c2 速度/加速度：  |Δq|/Δt ≤ v_max,  |Δ²q|/Δt² ≤ a_max
+   c3 自碰撞：      胶囊体近似，任意两连杆距离 ≥ d_min（用 FK，来自 q_target）
+   c4 工作空间包络： 桌面平面之上、前伸/侧伸界内
+   c5 不可逆保护：   对「拔线缆/断网口/倒药/开锁」等一次性动作，要求更高置信与更慢速率
+T2 学习式风险 critic：
+   r_θ(o, A) = w1·Σ_ens Var[f_k(o,A)] + w2·(−log p_θ(z_t)) + w3·p_fail(o,A)
+   阈值 τ_r：低→PASS；中→REPAIR（向安全包络投影）；高→VETO（安全保持/重查询）
+   标签：演示自监督——成功/越界/超时/抖动/高惊喜 自动标注
+T3 人体在场：
+   由头部双目 3D 检测人/手 → 距离 d_human
+   若 d_human < d_slow：降速；若 d_human < d_stop：安全保持（让行）
+```
+
+### 4.2 审查决策与留痕
+
+```text
+决策三态： PASS / REPAIR / VETO
+REPAIR 实现：A' = Proj_Safe(A)，S = {c1..c5} 的交（逐段裁剪、限幅、回退到上一安全点）
+VETO 实现：  返回安全保持块（保持位姿/缓慢回撤），并标记 reason_code 触发重查询
+审查留痕：   trace_t = (decision, {margin_c}, r_θ, d_human)
+```
+
+**关键约束**：T2 学习式 critic **只允许 REPAIR，不允许 VETO**（避免误杀成功动作）；VETO 仅由 T1 的**确定性越界**或 T3 的**人体过近**触发。这条纪律把「掉成功率」的风险压到最低。
+
+### 4.3 可运行骨架
+
+```python
+class ReviewGate:
+    def __init__(self, q_min, q_max, v_max, a_max, d_min=0.02,
+                 critic=None, human_det=None, tau_repair=0.5, d_slow=0.8, d_stop=0.4):
+        self.q_min, self.q_max = q_min, q_max
+        self.v_max, self.a_max, self.d_min = v_max, a_max, d_min
+        self.critic, self.human = critic, human_det
+        self.tau_repair, self.d_slow, self.d_stop = tau_repair, d_slow, d_stop
+
+    def _rule_violations(self, A, q_prev, dt):
+        v = np.abs(A[:, :14] - q_prev[None, :14]) / dt
+        bad = {
+            "limits": bool((A[:, :14] < self.q_min).any() or (A[:, :14] > self.q_max).any()),
+            "velocity": bool((v > self.v_max).any()),
+            "self_collision": not self._capsules_clear(A),
+            "workspace": not self._inside_envelope(A),
+        }
+        return bad
+
+    def _capsules_clear(self, A):
+        # 用 FK 把关节块映射为胶囊体，检查任意间距 >= d_min（实现略）
+        return True
+
+    def _inside_envelope(self, A):
+        return True  # 桌面平面之上、前伸/侧界内（实现略）
+
+    def review(self, obs, A, q_prev, dt):
+        bad = self._rule_violations(A, q_prev, dt)
+        if any(bad.values()):
+            return self._repair(A, bad), {"decision": "REPAIR", "rule": bad}
+        d_human = self.human(obs) if self.human else np.inf
+        if d_human < self.d_stop:
+            return self._hold(obs), {"decision": "VETO", "reason": "human", "d": d_human}
+        if self.critic is not None:
+            r = self.critic(obs, A)
+            if r > self.tau_repair:
+                return self._repair(A, {"risk": r}), {"decision": "REPAIR", "risk": r}
+        return A, {"decision": "PASS", "d": d_human}
+
+    def _repair(self, A, why):
+        A = A.copy()
+        A[:, :14] = np.clip(A[:, :14], self.q_min, self.q_max)
+        # 限速：把相邻步差分按 v_max 截断（实现略）
+        return A
+
+    def _hold(self, obs):
+        return np.repeat(obs_current_joint(obs)[None], 8, axis=0)  # 安全保持（占位）
+```
+
+## 5. 接口合规策略骨架（含 N 端口共享服务）
+
+```python
+import os
+import numpy as np
+import torch
 
 
-class Coupler(nn.Module):
-    """跨臂耦合潜变量 + 互预测残差（失配先兆）"""
-
-    def __init__(self, dz=256, dc=32, arm_a=8, width=256):
-        super().__init__()
-        self.enc = nn.Sequential(nn.Linear(dz, width), nn.SiLU(), nn.Linear(width, dc))
-        self.pred_R2L = nn.Sequential(nn.Linear(arm_a + dc, width), nn.SiLU(),
-                                      nn.Linear(width, arm_a))
-        self.pred_L2R = nn.Sequential(nn.Linear(arm_a + dc, width), nn.SiLU(),
-                                      nn.Linear(width, arm_a))
-
-    def forward(self, z_t, A_chunk):
-        c = self.enc(z_t)
-        aL = A_chunk[:, 0, :8]      # left_arm(7)+left_gripper(1)
-        aR = A_chunk[:, 0, 8:16]    # right_arm(7)+right_gripper(1)
-        rL = aL - self.pred_R2L(torch.cat([aR, c], -1))
-        rR = aR - self.pred_L2R(torch.cat([aL, c], -1))
-        return c, 0.5 * (rL.pow(2).mean() + rR.pow(2).mean())
-
-
-def project_coordination(A_chunk, eps=0.05, joint=True):
-    """协同流形投影：把两臂相对位姿约束到任务带内（此处用相对 EE 位移的简化形式）。
-    真实实现需用正运动学把关节角映射到 EE 相对量再回投；此处给出可微骨架。"""
-    A = A_chunk.clone()
-    off = 0
-    width = 7 if joint else 6
-    # 以首两段为两臂，约束其差分范数（示意）
-    d = A[:, :, off:off + width] - A[:, :, off + width:off + 2 * width]
-    excess = torch.relu(d.norm(dim=-1, keepdim=True) - eps)
-    corr = excess / (d.norm(dim=-1, keepdim=True) + 1e-6) * d / 2.0
-    A[:, :, off:off + width] -= corr
-    A[:, :, off + width:off + 2 * width] += corr
-    return A
-
-
-# ============ 主策略（严格接口合规） ============
-
-class CPCPolicy:
-    def __init__(self, encoder, base_policy, world_model, pro_head, coupler):
+class M3SPolicy:
+    def __init__(self, base_policy, geo_encoder=None, review_gate=None):
         self._token = os.environ["UNIBOT_SUBMISSION_TOKEN"]
-        self._control_space = os.environ["UNIBOT_CONTROL_SPACE"]  # joint|ee
-        self.encoder, self.base, self.wm = encoder, base_policy, world_model
-        self.pro, self.coupler = pro_head, coupler
+        self._space = os.environ["UNIBOT_CONTROL_SPACE"]  # joint | ee
+        self.base, self.geo, self.gate = base_policy, geo_encoder, review_gate
         self.T_a = 8
         self.reset()
 
     @property
     def metadata(self):
         return {
-            "control_space": self._control_space,
+            "control_space": self._space,
             "obs_delta_indices": {
-                "observation.language":                        [0],
-                "observation.images.cam_left_high":            [-6, -3, 0],
-                "observation.images.cam_right_high":           [-6, -3, 0],
-                "observation.images.cam_left_wrist":           [-6, -3, 0],
-                "observation.images.cam_right_wrist":          [-6, -3, 0],
-                "observation.state.left_arm":                  [-4, 0],
-                "observation.state.right_arm":                 [-4, 0],
+                "observation.language": [0],
+                "observation.images.cam_left_high": [-6, -3, 0],
+                "observation.images.cam_right_high": [-6, -3, 0],
+                "observation.images.cam_left_wrist": [-6, -3, 0],
+                "observation.images.cam_right_wrist": [-6, -3, 0],
+                "observation.state.left_arm": [-4, 0],
+                "observation.state.right_arm": [-4, 0],
                 "observation.state.left_ee_pose_gripper_base": [-4, 0],
-                "observation.state.right_ee_pose_gripper_base":[-4, 0],
-                "observation.state.left_gripper":              [-4, 0],
-                "observation.state.right_gripper":             [-4, 0],
-                "observation.state.lower_body":                [-4, 0],
+                "observation.state.right_ee_pose_gripper_base": [-4, 0],
+                "observation.state.left_gripper": [-4, 0],
+                "observation.state.right_gripper": [-4, 0],
+                "observation.state.lower_body": [-4, 0],
             },
             "image_resize": {
-                "observation.images.cam_left_high":  [240, 320],
+                # 双目保留较高分辨率以护视差；腕相可更小
+                "observation.images.cam_left_high": [240, 320],
                 "observation.images.cam_right_high": [240, 320],
                 "observation.images.cam_left_wrist": [160, 160],
-                "observation.images.cam_right_wrist":[160, 160],
+                "observation.images.cam_right_wrist": [160, 160],
             },
             "action_chunk_size": self.T_a,
             "token": self._token,
         }
 
     def reset(self):
-        self.prev_pred = None
-        self.cusum = 0.0
-        self.mu0, self.h = 1.0, 6.0            # 在线标定
-        self.chunk_cache = None
-        self.trigger = False
-
-    # ---- 惊喜：上一步预测的下一潜状态 vs 当前实测 ----
-    def _surprise(self, z_t):
-        if self.prev_pred is None:
-            return 0.0
-        diff = (z_t - self.prev_pred).detach().cpu().numpy()
-        return float(np.linalg.norm(diff))
+        self.hist.clear() if hasattr(self, "hist") else None
+        self.q_prev = None
+        return None
 
     def _pack(self, A):
-        T = A.shape[0]
         d = {
             "meta.token": self._token,
-            "action.left_gripper":  A[:, 14:15].astype(np.float32),
+            "action.left_gripper": A[:, 14:15].astype(np.float32),
             "action.right_gripper": A[:, 15:16].astype(np.float32),
-            "action.pivot":         A[:, 16:23].astype(np.float32),
+            "action.pivot": A[:, 16:23].astype(np.float32),
         }
-        if self._control_space == "joint":
+        if self._space == "joint":
             d["action.left_arm"] = A[:, 0:7].astype(np.float32)
             d["action.right_arm"] = A[:, 7:14].astype(np.float32)
         else:
-            # 需内部用 IK/FK 从关节块换算为 EE 块；示意直接用占位
             d["action.left_ee_pose_gripper_base"] = A[:, 0:6].astype(np.float32)
             d["action.right_ee_pose_gripper_base"] = A[:, 6:12].astype(np.float32)
         return d
 
     def get_action(self, obs):
-        z_t = self.encoder(obs)[None]                     # [1,dz]
-        s = self._surprise(z_t[0])
-        self.cusum = max(0.0, self.cusum + s - self.mu0)
-        self.trigger = self.cusum > self.h
-
-        if self.chunk_cache is None or self.trigger:
-            with torch.no_grad():
-                A_nom = self.base(obs)[None]              # [1,Ta,da]
-                z_hat, _ = self.wm.rollout(z_t, A_nom)    # [1,H,dz]
-                c, mismatch = self.coupler(z_t, A_nom)
-                p_fail, tau_fail, h_policy = self.pro(z_t, z_hat, c)
-                A = project_coordination(A_nom[0], eps=0.05,
-                                         joint=(self._control_space == "joint"))
-                # 预后调制：越可能失败/越不健康 → 越向基座安全动作收缩
-                alpha = float(h_policy.item()) * (1.0 - float(p_fail.item()))
-                A = alpha * A + (1.0 - alpha) * A[0:1].repeat(A.shape[0], 1)
-                self.chunk_cache = A.detach().cpu().numpy()
-                self.prev_pred = z_hat[:, 0, :].detach()  # 预测的 t+1
-                self.cusum = 0.0
-        return self._pack(self.chunk_cache)
+        with torch.no_grad():
+            geo = self.geo(obs) if self.geo is not None else None
+            A = self.base(obs, geo=geo)[0]           # [T_a, 23] joint 或 [T_a,21] ee
+        q_prev = np.concatenate([
+            obs["observation.state.left_arm"][-1],
+            obs["observation.state.right_arm"][-1],
+        ])
+        if self.gate is not None:
+            A, trace = self.gate.review(obs, A, q_prev, dt=1.0 / 30.0)
+            self.last_trace = trace                   # 审查留痕（可信度证据）
+        self.q_prev = q_prev
+        return self._pack(A)
 ```
 
-**离线训练损失（只训校正层，基座冻结）**：
+**N 端口共享服务**（对应硬约束 C4 与 §6）：
 
 ```text
-ℒ = ℒ_wm + λ1·ℒ_pro + λ2·ℒ_cross + λ3·ℒ_surprise_cal
-ℒ_wm   = Σ_h ‖ẑ_{t+h} − sg(z_{t+h})‖²
-ℒ_pro  = BCE(p_fail, y_fail) + Quantile(τ̂_fail, t_fail) + λ_cal·ECE(h_policy)
-ℒ_cross= ‖rL‖² + ‖rR‖²
-ℒ_surprise_cal = ‖s_t − s_t^{val}‖²（使惊喜与真实验证误差标定一致）
+拓扑：N 个轻量端点（8765..8765+N−1）→ 单推理后端（连续批处理）
+隔离：每端口的 obs 历史、点云缓存、审查状态、q_prev 独立
+优先级：REPAIR/VETO/重查询 请求优先；对 p95 延迟设 SLO
+预取：执行当前块时，预生成「若继续」的候选块，缓冲可能的回退
 ```
 
-## 3. 关键推导
+## 6. 实验协议与预期结果（设计目标）
 
-**命题 1（事件闭环抑制误差累积）**
-设单步潜预测偏差 `e_t` 满足 `‖e_t‖ ≤ ε`，且开环推进的 Jacobian 谱半径上界为 `L>1`。纯开环 T 步后误差 `‖E_T‖ ≤ ((L^T−1)/(L−1))·ε`，随 T 指数增长。CPC 在触发时把误差重锚定为 0：令触发间隔随机变量 `G`（均值 `1/p`），则任意时刻误差 `‖E‖ ≤ ε·(L^{G_max}−1)/(L−1) ≤ C(ε,L,G_max)`，与 episode 长度 `T` **无关**。证毕。含义：长程任务里，「更频繁地纠正」比「更强的一次性预测」更划算。
+### 6.1 第一优先（决定路线）
 
-**命题 2（事件触发的检测-查询权衡）**
-设惊喜在正常/异常两态下分别为 `N(μ0,σ²)`、`N(μ1,σ²)`（μ1>μ0）。给定平均查询率约束（等价触发率上界），CUSUM 在最小化期望检测延迟意义下渐近最优（Lorden）。阈值 `h` 与查询率、检测延迟单调对应，可在线按延迟 SLO 求解。
-
-**命题 3（双臂耦合的互信息下界）**
-若真任务中 `I(A^L; A^R | z) = I0 > 0`，则任一忽略耦合的单臂策略的最小期望协同误差 `ε_cross² ≥ σ²·(1 − exp(−2 I0))`；加入互预测头（以 c 捕捉 A^R→A^L 映射）可把残差降到 `σ² exp(−2 I0)` 量级。证略（用最优估计的 MMSE 与互信息关系）。含义：双臂任务的天花板由 `I0` 决定，协同头把它变现。
-
-**命题 4（多端口吞吐-延迟）**
-连续批处理下，N 端口共享后端的 p95 延迟 `≤ max(独立 p95, 单批最大服务时间)`；当批处理摊销 > 端口干扰时严格更优。投机预取把触发 REQUERY 时的服务时间从「完整前向 F」降到「缓存命中 c≪F」，从而压掉延迟尖峰。
-
-**复杂度**：编码~2ms + 前瞻~4ms + 预后/协同<2ms + 基座（视实现）。校正层总计 ~6ms、~20MB。**可异步**：前瞻与预后可与执行重叠，控制环只承担基座 + 打包。
-
-## 4. 实验协议
-
-### 4.1 第一优先：接口语义验证（决定收益上限）
-
-```text
-用官方 example/run_server.py + run_client.py，改写 client 使其分别模拟：
-  (a) 整块执行：返回 T_a 后连续执行 T_a 步再回调 → 测闭环刷新率 = 1/T_a
-  (b) 每步回调：每步发 obs 并调用 get_action → 测闭环刷新率 = 1
-记录官方是否发送步间 obs；据此选择闭环设计强度。
-```
-
-### 4.2 离线（32000 episodes，零真机）
-
-- 世界模型：1-step/16-step 潜预测 MSE，对 persistence 基线。
-- 惊喜：把「子目标失败前 k 步」作为正类，测 AUROC 与检测延迟。
-- 预后头：p_fail AUROC/ECE；τ̂_fail 的分位数损失。
-- 协同：双臂任务 vs 单手任务的互预测残差分布。
-
-### 4.3 仿真闭环（RoboTwin 2.0 / LIBERO）
-
-消融：`{纯基座开环, 每步重查询, CPC-CONTINUE-only, CPC-full}` × `{固定阈值, 自适应}`；报告成功率、平均查询数、p95 延迟。
-
-### 4.4 真机/评测（若获资格）
-
-双臂子集（ArrangePlates/FoldTowel/ZipUp/PackBag/ToolboxStorage/PaperCupStacking）与非双臂子集分开；泛化五轴分桶；延迟 p50/p95/抖动。
-
-## 5. 预期结果（设计目标，非声称）
-
-| 实验 | 指标 | 目标 |
+| 实验 | 做法 | 判据 |
 |---|---|---|
-| 世界模型 | 16-step 潜 MSE | 相对 persistence −25% |
-| 惊喜检测 | AUROC / 延迟 | ≥0.82 / ≤2 chunk |
-| 预后头 | p_fail AUROC / ECE | ≥0.85 / <0.05 |
-| 协同 | 双臂互预测残差 | 相对无 c_t −30% |
-| 仿真闭环 | 成功率增益 | 纯开环 +3~5pt；CPC +6~9pt |
-| 服务 | p95 延迟 | ≤ 独立部署，抖动 − |
+| E1 接口语义 | 自写 client 模拟「每步回调 vs 整块执行」 | 确定闭环粒度与审查粒度 |
+| E2 双目可信度 | 3.2 的 V1/V2/V3 | 平面 RMS / 已知物尺寸误差；决定 3D 是强/弱杠杆 |
 
-## 6. 持续迭代创新点清单（与想法区 §5 同步）
+### 6.2 离线与仿真消融
 
-> 🟢 保留推进　🔵 新增　🟡 降级/待观察　🔴 剪枝
+```text
+指标：
+  - 动作误差：留出集的 MSE/DTW（joint 空间）
+  - 成功代理：LIBERO/RoboTwin 仿真 SR（若可得）
+  - 泛化分桶：位置/干扰物/背景/未见物品/人为干扰 五轴分别报告
+  - 3D：平面 RMS、抓取关键点误差、点云重建/预测 Chamfer
+  - 审查：误杀率（应≈0）、真阳性否决率、T3 让行响应延迟
+消融网格：
+  {纯基座开环, +时序集成, +3D注入, +3D渲染, +特权蒸馏, +审查T1, +审查T2/T3}
+  × {joint, ee}
+```
 
-| # | 创新点 | 状态 | 一句话 |
-|---|---|---|---|
-| 1 | 前瞻后果预测器 + 事件触发闭环 | 🔵 | 外挂轻量闭环，误差不累积 |
-| 2 | 轨迹预后头 + 预测性回放 | 🔵 | 事前维护轨迹与数据 |
-| 3 | 双臂协同流形 + 互预测 | 🔵 | 显式跨臂约束 |
-| 4 | 多端口协同服务 + 投机预取 | 🔵 | 延迟稳定性即分数 |
-| 5 | 预后调制保守度 α | 🟢 | 越危险越保守 |
-| 6 | 廉价 1~2 步探针 | 🟡 | 默认关，控步骤成本 |
-| 7 | joint 控制空间优先 | 🟢 | 与演示一致，规避 IK 误差 |
-| 8 | 力/触觉模态 | 🔴 | 接口无此通道 |
+### 6.3 预期结果（设计目标，非声称）
+
+| 模块 | 指标 | 目标 |
+|---|---|---|
+| G1 基线 | 留出动作误差 | 优于未微调基座（相对 −20% 量级） |
+| 3D-ANCHOR | 桌面平面 RMS / 已知物尺寸误差 | 亚厘米级（视立体质量） |
+| 3D-ANCHOR | 几何泛化分桶 SR | 相对纯 2D 基线 +5~10pt（预期集中在位置/背景/未见物品） |
+| 特权蒸馏 | student vs 无蒸馏 | +2~5pt |
+| REVIEW-GATE | 演示误杀率 | ≈0（<0.5%） |
+| REVIEW-GATE | 人为干扰轴 | 无碰撞事故、让行成功率↑ |
+| 多端口 | p95 延迟/抖动 | 不劣于单端口基线；抖动↓ |
+
+### 6.4 真机/评测（若获资格）
+
+双臂子集（FoldTowel/ArrangePlates/ZipUp/PackBag/ToolboxStorage/PaperCupStacking 等）与非双臂子集分别报告；泛化五轴分桶；延迟 p50/p95/抖动；审查留痕统计（PASS/REPAIR/VETO 比例）。
 
 ## 7. 风险与缓解
 
 | 风险 | 缓解 |
 |---|---|
-| 接口整块执行导致闭环刷新率不足 | §4.1 先验证；退化为块间重规划 + 预后保守化 |
-| 潜惊喜与任务失败不对齐 | 联合训练 + 任务相关潜子空间 + 用失败 AUROC 反选 |
-| REQUERY 延迟尖峰 | 投机预取 + 批处理 + 优先级 SLO + 触发率上限 |
-| 协同约束伤害单手任务 | 任务自适应 ε + 仅协同阶段开启 |
-| 校正层过拟合 | 冻结基座 + 潜空间操作抗域偏移 + 域随机化 |
+| 评测端整块执行、块内不回调 | 审查门放在块边界；闭环相关创新降为旁路（见想法区 §5） |
+| 双目基线/内参不可得或不可靠 | 3.2 自标定 + E2 判据；不可靠则 3D 降级为多视 2D 增强 |
+| image_resize 降采样伤视差 | 双目保 240×320 或更高；E2 V2 验证 |
+| 数据 v3.0 与基座栈 v2.1 不兼容 | 写转码层或改用支持 v3 的加载器 |
+| 反光/透明物体深度失败 | 时序中值 + 腕相兜底 + 审查门按深度置信降级 |
+| 审查门误杀 | T2 只 REPAIR 不 VETO；VETO 仅由确定性越界/人体过近触发 |
+| 训练算力 | 先 LoRA/部分解冻小规模验证，再全量；分级 checkpoint |
 
-## 8. 落地步骤与时间线（建议）
+## 8. 时间线（建议，随关卡 Go/Kill 调整）
 
 ```text
-D1–D3  ：跑通官方 example；验证接口语义（§4.1）→ 冻结闭环设计强度
-D3–D7  ：在 32000 episodes 上训 f_ψ、g_φ、coupler；离线指标达标
-D7–D10 ：仿真闭环消融；标定 μ0/h/α
-D10–D14：多端口服务实现 + 延迟压测；准备提交
-D14+   ：预约评测；按泛化五轴与双臂/非双臂分桶复盘
+D1–D3   ：G0 接口冒烟 + E1 接口语义 + E2 双目可信度（两个第一优先实验）
+D3–D7   ：数据转码 + 3D-ANCHOR 离线预训练（GC-MAE、特权蒸馏）
+D7–D14  ：G1 基线微调 + 时序集成 + 早停；产出第一个可提交 checkpoint
+D14–D21 ：G2a 接入 3D-ANCHOR，五轴分桶消融
+D21–D28 ：G2b REVIEW-GATE（先 T1，再 T2/T3）；多端口延迟压测
+D28+    ：预约评测；按分桶复盘，回到「让关卡变绿」的循环
 ```
 
 ## 9. 参考来源（检索日期 2026-11-05）
 
+- 提交模板与接口规范（观测/动作目录、metadata、N 端口、§6）：https://github.com/unitreerobotics/unibot_submission
 - 挑战赛任务集（32 任务 / 32000 episodes / 169h）：https://unibot.unitree.com/challenges.html
 - 首页与赛事愿景：https://unibot.unitree.com/
-- 提交模板与接口规范（含 §6 交互质量与可信度、N 端口）：https://github.com/unitreerobotics/unibot_submission
-- 参考实现：https://raw.githubusercontent.com/unitreerobotics/unibot_submission/main/example/example_policy.py
-- 数据集集合：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
-- 数据字段定义：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
-- 宇树官方数据页：https://www.unitree.com/data/
-- Unitree G1 真机操作聚合榜：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world
-- LingBot-VA《Causal World Modeling for Robot Control》：https://www.sota2.com/research/paper/697c3b74a8b01e76cc8da792 （arXiv:2601.21998）
-- Flash-WAM《Modality-Aware Distillation for World Action Models》：https://www.sota2.com/research/paper/6a22584d86173ad9c1468873 （arXiv:2606.05254）
-- UnifoLM-WMA（G1 任务）：https://deepwiki.com/unitreerobotics/unifolm-world-model-action/7.2-unitree-g1-robot-tasks
-- 赛事发布报道：https://myxmr.com/en/news/unitree-launches-unibot-world-challenge
+- 数据集（LeRobot v3.0、4 相机、**head_stereo rectified**、特权状态、Dex1 夹爪）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
+- 挑战数据集集合（32 个 G1_Dex1_*）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
+- UnifoLM-VLA-0（Apache-2.0、单策略 12 类、RLDS/LeRobot、constants）：https://github.com/unitreerobotics/unifolm-vla
+- UnifoLM-WMA-0 集合：https://huggingface.co/collections/unitreerobotics/unifolm-wma-0
+- Unitree G1 真机操作聚合榜（LingBot-VA 66.7；Flash-WAM 60/50）：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world
+- PointVLA（arXiv:2503.07511）：https://arxiv.org/abs/2503.07511
+- BridgeVLA（NeurIPS 2025，真机均值 +32%，样本高效，arXiv:2506.07961）：https://bridgevla.github.io/home_page.html
+- OG-VLA（canonical 正交视图 + 扩散，ICRA 2026 投稿）：https://og-vla.github.io/
+- Lift3D-VLA（GC-MAE 式几何+动力学自监督，arXiv:2607.06564）：https://arxiv.org/abs/2607.06564
+
+> 本轮产物一句话：**M3S = 一条门控交付脊柱（MVP）＋ 用免费矫正双目换来的度量几何（3D）＋ 一道独立于生成器的动作审查门（Review）。先让 G1 变绿，再谈 3D，最后上审查。**
 <!-- ARTIFACT:END -->
