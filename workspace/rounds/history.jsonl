@@ -885,3 +885,7 @@
 {"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-05 00:43:25"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-05 01:24:38"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-05 02:03:48"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-05 03:00:25"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-05 03:08:50"}
+{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-05 03:24:48"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-05 04:04:05"}
