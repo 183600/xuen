@@ -537,7 +537,7 @@ def _validate_rounds_config(cfg: Config) -> None:
         if not _is_finite_number(v) or v <= 0:
             raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
     jcmd = cfg.rounds.judge_command
-    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     # AI 评分会静默拿不到候选内容而永远解析不出分数
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
