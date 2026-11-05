@@ -17,7 +17,7 @@
 
 一句话先给押注：
 
-> **第 17 轮把「置信」统计化为后验分布；本轮在 γ 估计上引入「延迟感知贝叶斯校准」(Latency-Aware Bayesian Calibration, LA-BFC)，把 VLA 推理延迟建模为随机变量 L，定义「延迟感知置信」γ_latent = E[γ'(s_{t+L}) | s_t]，并引入「任意时分层调度」(Any-time Hierarchical Dispatch, AHD)：快策略「托底」、慢策略「修正」，实现「推理中也能动、推理完再精调」。**
+> **第 17 轮把「置信」统计化为后验分布；本轮在 γ 估计上引入「延迟感知贝叶斯校准」(Latency-Aware Bayesian Calibration, LA-BFC)，把 VLA 推理延迟建模为随机变量 L，定义「延迟感知置信」γ_latent = E[γ'(s_{t+L}) | s_t]，并引入「任意时分层调度」(Any-time Hierarchical Dispatch, AHD)：快策略「托底」、慢策略「修正」，实现「推理中也能动、推理完再精调」。
 
 三个可验证创新点：
 
@@ -89,6 +89,14 @@ D3. 状态静态化：γ_lower 是对「当前状态 s_t」的置信，而非「
 **保留**：DRS、DRAW、SCC、FACT-VLA、GEO-RESIDUAL、CHUNK-SERVO、WAVE-SERVO、VOI-MAP、ZEST-VLA 的核心；BFC 的 Beta 后验结构；CID 的方差惩罚思想。
 **升级**：从「即时 VLA」升级为「延迟感知 VLA」；从「当前 γ」升级为「未来 γ_latent」；从「单一动作选择」升级为「快慢分层融合」。
 **剪枝**：去掉「VLA 即时可用」的隐性假设；不做 VLA 模型压缩/蒸馏。
+
+### 1.4 灵感词贯通：泛化能力、人机协作、多模态融合
+
+> **泛化能力**：LA-BFC 的联合后验 `p(β, μ_L, σ_L | y_{1:t}, L_{1:t})` 使系统能够跨场景泛化。μ_L 和 σ_L 的在线学习意味着系统自动适配不同 VLA 规模（从 7B 到 70B）、不同硬件平台（边缘 GPU vs 服务器 GPU）以及不同负载条件下的延迟分布变化。γ_latent 的积分形式 `E[γ'(s_{t+L})]` 本质上是一个状态分布期望，而非单点预测，这赋予了系统在遇到新机器人平台或新任务类型时的泛化能力——只需要少量的过渡数据即可重新校准延迟参数。
+
+> **人机协作**：AHD 的快慢分离 `a_exec = a_fast + α_blend·Δa_slow` 从根本上重构了人机协作模式。快策略对应人类的「System 1」直觉反应（1-5ms），慢策略对应人类的「System 2」深度思考（100-500ms）。融合系数 α_blend = E[γ_latent]·(1 - κ·√Var[γ_latent]) 充当「协作信任门」——当系统高度自信时（α ≈ 0.7-1.0），它主动交出控制权给 VLA 的语义规划；当系统不确定时（α ≈ 0.1-0.3），它自动保持快策略的接管。这种可自适应的信任调节正是健康人机协作的数学模型。
+
+> **多模态融合**：现有的 AHD 已经在融合快（视觉运动）和慢（语义规划）两个动作流。我们将其形式化为多模态融合：每个模态 m 提供其自身的 γ_latent^{(m)} 和融合系数 α^{(m)}。 AHD 进行跨模态信任加权：`α_blend = Σ_m w_m · α^{(m)}`，其中 `w_m = γ_latent^{(m)} / Σ_k γ_latent^{(k)}` 是模态 m 的相对置信权重。这使得力度图、力传感、深度相机等额外模态可以自然接入，无需改变 VLA 或控制器核心——只需要提供对应的置信校准接口。
 
 ## 2. 直觉深化：延迟感知的置信推断
 
@@ -598,298 +606,6 @@ class AnyTimeHierarchicalDispatch:
 ## 7. 本轮最大的风险
 
 **动力学预测器的「模型偏差」风险：轻量 MLP `f_dyn` 在分布外状态（OOD-S/OOD-G）下的预测误差可能导致 `γ_latent` 系统性偏离真实值。若 `f_dyn` 过度乐观（预测状态比实际更安全），`γ_latent` 会虚高，AHD 给出过大的 `α_blend`，导致融合动作在物理执行时不稳定。** 这需要通过「集合动力学预测」「残差修正」或「分布外检测降级」来缓解。
-
---- 产物区 ---
-# 第 18 轮产物 · LATENCY-ADAPTIVE-ZEST 技术报告
-
-## 0. 结论：从「可解释软置信」到「延迟感知具身置信」
-
-LATENCY-ADAPTIVE-ZEST 基于第 17 轮 ADAPTIVE-ZEST，引入「延迟感知贝叶斯校准」(LA-BFC) 与「任意时分层调度」(AHD)，解决「具身智能大模型推理延迟」与「机器人实时控制」的时空错位：
-
-- **延迟建模**：VLA 推理延迟 L ~ LogNormal(μ_L, σ_L)，联合后验在线学习，无需人工设定超时。
-- **未来置信**：γ_latent = E[γ'(s_{t+L})]，用轻量动力学预测器积分，保证「推理完成时刻的置信度」。
-- **快慢分离**：AHD 输出 `a_fast + α·Δa_slow`，快策略（≤5ms）托底安全，慢策略（100-500ms）提供语义修正，融合系数 α 自适应置信。
-
-这是一个「时空耦合层面的升级」：所有新增只在「决策-控制接口层」完成，不改变 VLA、WAVE-SERVO、SCC、BFC 的核心。
-
-## 1. 形式化符号
-
-### 1.1 变量约定
-
-- L ~ LogNormal(μ_L, σ_L) ：VLA 推理延迟分布
-- q(β, μ_L, σ_L) = Beta(a,b) · N(m,v) · ... ：变分后验
-- s_{t+L} = f_dyn(s_t, a_hold, L) ：轻量动力学预测
-- γ_latent = E_L[γ'(s_{t+L})] ：延迟感知置信
-- α_blend = E[γ_latent]·(1 - κ·√Var[γ_latent])·𝟙[L < L_max] ：融合系数
-- a_exec = a_fast + α_blend·(a_slow - a_fast) ：融合执行动作
-
-### 1.2 LA-BFC 迭代公式
-
-先验（层次，避免保守偏差）：
-```
-β ~ Beta(3, 7)
-μ_L ~ N(ln(0.2), 0.5²)
-σ_L ~ HalfCauchy(1.0)
-```
-
-变分近似更新（每块 O(1)）：
-```
-a ← a + E[γ']·y
-b ← b + E[γ']·(1-y)
-m ← 0.9·m + 0.1·ln(L_obs)
-v ← 0.9·v + 0.1·(ln(L_obs) - m)²
-```
-
-后验均值：
-```
-β = a/(a+b),  μ_L = m,  σ_L = √v
-```
-
-### 1.3 γ_latent 蒙特卡洛积分
-
-```
-L⁽ᵏ⁾ ~ LogNormal(μ_L, σ_L),  k=1..K (K=10)
-s⁽ᵏ⁾ = f_dyn(s_t, a_hold, L⁽ᵏ⁾)
-γ'⁽ᵏ⁾ = γ(s⁽ᵏ⁾)·(1 - β·H(S(s⁽ᵏ⁾)-h))
-E[γ_latent] = mean(γ'⁽¹⁾..γ'⁽ᴷ⁾)
-Var[γ_latent] = var(γ'⁽¹⁾..γ'⁽ᴷ⁾)
-CI_lower = percentile(γ'⁽¹⁾..γ'⁽ᴷ⁾, 5%)
-```
-
-### 1.4 AHD 融合调度
-
-允许快策略集合：
-```
-A_fast = {SERVO, CHUNK, LOOK, HOLD}  （CI_lower ≥ 0.6 时 +VLA_async）
-```
-
-快策略收益：
-```
-P_fast(SERVO) = E[γ]·0.9
-P_fast(CHUNK) = E[γ]·0.85
-P_fast(LOOK)  = 0.1 + E[γ]·0.05
-P_fast(HOLD)  = 0.05
-```
-
-慢策略边际增益：
-```
-P_slow = E[γ]·0.7 - κ·√Var[γ]
-```
-
-融合系数：
-```
-α = E[γ]·(1 - κ·√Var[γ])·𝟙[elapsed < L_max]
-```
-
-执行动作：
-```
-a_exec = a_fast + α·(a_slow - a_fast)
-```
-
-## 2. Python 实现
-
-```python
-import numpy as np, time
-from collections import deque
-from scipy.stats import lognorm
-
-class LatencyAdaptiveZestPolicy:
-    def __init__(self, node_id, drs_client, dyn_predictor):
-        self.node_id = node_id
-        self.drs = drs_client
-        self.dyn = dyn_predictor
-        self.M_local = LocalSubMap()
-        
-        # LA-BFC
-        self.beta_a, self.beta_b = 3.0, 7.0
-        self.mu_L = np.log(0.2)   # log(200ms)
-        self.var_L = 0.25
-        self.kappa = 1.0
-        self.L_max = 0.3
-        
-        # SCC
-        self.gamma = 1.0
-        self.cusum = 0.0
-        self.surprise_window = deque(maxlen=5)
-        self.gamma_hist = deque(maxlen=10)
-        
-        # AHD
-        self.vla_future = None
-        self.vla_start = 0.0
-        self.vla_input = None
-        self.a_fast = "HOLD"
-        self.alpha = 0.0
-        self.K = 10
-    
-    def get_action(self, obs):
-        self.M_local.update(obs)
-        _ = self.drs.get_weights()
-        self._update_gamma()
-        
-        g_mean, g_var, g_lower = self._compute_gamma_latent(obs)
-        a_fast, alpha, launch = self._ahd_select(g_mean, g_var, g_lower)
-        self.a_fast, self.alpha = a_fast, alpha
-        
-        if launch:
-            self._launch_vla_async(obs)
-        
-        return self._execute_blended(obs, a_fast, alpha)
-    
-    def _update_gamma(self):
-        raw = 1.0 - np.mean(list(self.surprise_window))
-        beta = self.beta_a / (self.beta_a + self.beta_b)
-        self.gamma = raw * (1 - beta * (self.cusum > 2.5))
-        self.gamma_hist.append(self.gamma)
-    
-    def _compute_gamma_latent(self, obs):
-        Ls = lognorm.rvs(s=np.sqrt(self.var_L), scale=np.exp(self.mu_L), size=self.K)
-        a_hold = self._act2vec(self.a_fast)
-        s_t = self._obs2state(obs)
-        beta = self.beta_a / (self.beta_a + self.beta_b)
-        
-        gammas = []
-        for L in Ls:
-            s_fut = self.dyn.predict(s_t, a_hold, L)
-            sur = self._surprise(s_fut)
-            cusum_f = max(0.0, self.cusum + sur - 0.15)
-            g = (1-sur) * (1 - beta * (cusum_f > 2.5))
-            gammas.append(g)
-        
-        gs = np.array(gammas)
-        return gs.mean(), gs.var(), np.percentile(gs, 5)
-    
-    def _ahd_select(self, g_m, g_v, g_l):
-        if g_l < 0.3: allowed = ["LOOK", "HOLD"]
-        elif g_l < 0.6: allowed = ["SERVO", "CHUNK", "LOOK", "HOLD"]
-        else: allowed = ["SERVO", "CHUNK", "LOOK", "VLA_async", "HOLD"]
-        
-        alpha = g_m * (1 - self.kappa * np.sqrt(g_v))
-        alpha = np.clip(alpha, 0, 1)
-        
-        # 超时检查
-        if self.vla_future and time.time() - self.vla_start > self.L_max:
-            alpha = 0
-            self.vla_future = None
-        
-        scores = {}
-        for a in allowed:
-            if a == "VLA_async": continue
-            p_f = self._p_fast(a, g_m)
-            p_s = self._p_slow(g_m, g_v) if "VLA_async" in allowed else 0
-            scores[a] = (p_f + alpha * p_s) / self._cost(a)
-        
-        a_fast = max(scores, key=scores.get)
-        launch = ("VLA_async" in allowed) and (self.vla_future is None)
-        return a_fast, alpha, launch
-    
-    def _p_fast(self, a, g):
-        return {"SERVO": g*0.9, "CHUNK": g*0.85, "LOOK": 0.1+g*0.05, "HOLD": 0.05}.get(a, 0)
-    
-    def _p_slow(self, g, v):
-        return g*0.7 - self.kappa*np.sqrt(v)
-    
-    def _cost(self, a):
-        return {"SERVO": 1, "CHUNK": 2, "LOOK": 5, "HOLD": 0.5}.get(a, 1)
-    
-    def _launch_vla_async(self, obs):
-        self.vla_input = self._obs2state(obs)
-        self.vla_start = time.time()
-        self.vla_future = "pending"  # 实际提交线程池
-    
-    def _execute_blended(self, obs, a_fast, alpha):
-        a_f = self._act2vec(a_fast)
-        a_s = None
-        
-        if self.vla_future and self.vla_future != "pending":
-            a_s = self.vla_future
-            self.vla_future = None
-        elif self.vla_future == "pending" and np.random.rand() < 0.1:
-            self.vla_future = np.random.randn(18)*0.1  # 模拟完成
-            a_s = self.vla_future
-        
-        if a_s is not None and alpha > 0:
-            return a_f + alpha * (a_s - a_f)
-        return a_f
-    
-    def on_block_finished(self, success, vla_latency=None):
-        g_prev = self.gamma_hist[-1] if self.gamma_hist else 1.0
-        self.beta_a += g_prev * success
-        self.beta_b += g_prev * (1 - success)
-        
-        if vla_latency and vla_latency > 0:
-            lnL = np.log(vla_latency)
-            self.mu_L = 0.9*self.mu_L + 0.1*lnL
-            self.var_L = 0.9*self.var_L + 0.1*(lnL - self.mu_L)**2
-        
-        e = int(self.surprise_window[-1]) if self.surprise_window else 0
-        self.cusum = max(0.0, self.cusum + e - 0.15)
-    
-    def _act2vec(self, a): return np.zeros(18)  # 占位
-    def _obs2state(self, obs): return np.zeros(27)
-    def _surprise(self, s): return 0.1
-```
-
-## 3. 预期实验结果
-
-### 3.1 LA-BFC 收敛
-
-| 块数 | μ_L (log) | 真实 μ* | σ_L | 真实 σ* | β |
-|---|---|---|---|---|---|
-| 10 | -1.55 | -1.61 | 0.38 | 0.45 | 0.28 |
-| 50 | -1.60 | -1.61 | 0.43 | 0.45 | 0.30 |
-| 100 | -1.61 | -1.61 | 0.45 | 0.45 | 0.30 |
-
-- 延迟分布后验在 50 块内收敛到真实值 ±0.05；
-- β 稳定在 [0.28, 0.32]，避免了第 17 轮的保守偏差。
-
-### 3.2 γ_latent 可靠性
-
-| CI_lower 区间 | VLA 实际成功率 | 样本数 |
-|---|---|---|
-| [0.85, 1.0] | 92% | 1200 |
-| [0.70, 0.85] | 78% | 800 |
-| [0.50, 0.70] | 61% | 400 |
-| < 0.50 | 35% | 200 |
-
-- γ_latent 下界与实际成功率高度校准（ECE < 0.03）。
-
-### 3.3 AHD 实时性与成功率
-
-| 指标 | ADAPTIVE-ZEST | LATENCY-ADAPTIVE-ZEST | 提升 |
-|---|---|---|---|
-| 控制回路延迟 p99 | 5ms (无VLA) / 200ms (有VLA) | **5ms (恒定)** | 硬实时 |
-| VLA 超时丢弃率 | N/A | **3.2%** | 可用 |
-| 融合系数 α 平均 | N/A | 0.68 (高置信) / 0.12 (低置信) | 自适应 |
-| 整体任务成功率 | 87% | **91%** | +4pp |
-| OOD-G 成功率 | 72% | **83%** | +11pp |
-
-- 快策略托底保证控制回路 **恒定 ≤5ms**；
-- 在高置信时大量使用 VLA 修正（α>0.7），低置信自动回退；
-- OOD-G 场景下，延迟感知置信避免了「算得准但用得晚」的灾难性失败。
-
-### 3.4 动力学预测器精度
-
-| 场景 | 位置误差 (cm) | 姿态误差 (deg) | 推理时间 |
-|---|---|---|---|
-| ID | 1.2 | 0.8 | 0.3ms |
-| OOD-E | 2.1 | 1.5 | 0.3ms |
-| OOD-S | 4.5 | 3.2 | 0.3ms |
-| OOD-G | 8.7 | 6.1 | 0.3ms |
-
-- OOD-G 下误差较大，但 γ_latent 的方差项会自动放大，AHD 降低 α，规避风险。
-
-## 4. 风险与缓解
-
-| 风险 | 缓解方案 |
-|---|---|
-| **动力学预测器 OOD 偏差** | ① 集合预测（5个种子 MLP 取中位数）；② 残差修正器（在线学习预测残差）；③ OOD 检测触发纯快策略 |
-| **LA-BFC 变分近似偏差** | ① 增加 K=20 采样校准；② 定期离线用 MCMC 校正先验 |
-| **VLA 异步调度竞态** | ① 双缓冲机制；② 版本号标记输入状态，丢弃过期推理 |
-| **融合动作不连续** | ① α 平滑滤波（EMA, τ=0.1）；② 动作空间插值而非向量加法 |
-
-## 5. 本轮最大的风险
-
-**动力学预测器的「模型偏差」风险：轻量 MLP `f_dyn` 在分布外状态（OOD-S/OOD-G）下的预测误差可能导致 `γ_latent` 系统性偏离真实值。若 `f_dyn` 过度乐观（预测状态比实际更安全），`γ_latent` 会虚高，AHD 给出过大的 `α_blend`，导致融合动作在物理执行时不稳定。** 缓解：集合动力学预测、残差修正、分布外检测降级。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
@@ -1183,4 +899,12 @@ class LatencyAdaptiveZestPolicy:
 ## 5. 本轮最大的风险
 
 **动力学预测器的「模型偏差」风险：轻量 MLP `f_dyn` 在分布外状态（OOD-S/OOD-G）下的预测误差可能导致 `γ_latent` 系统性偏离真实值。若 `f_dyn` 过度乐观（预测状态比实际更安全），`γ_latent` 会虚高，AHD 给出过大的 `α_blend`，导致融合动作在物理执行时不稳定。** 缓解：集合动力学预测、残差修正、分布外检测降级。
+
+## 6. 灵感词贯通：泛化能力、人机协作、多模态融合
+
+> **泛化能力**：LA-BFC 的联合后验 `p(β, μ_L, σ_L | y_{1:t}, L_{1:t})` 使系统能够跨场景泛化。μ_L 和 σ_L 的在线学习意味着系统自动适配不同 VLA 规模（从 7B 到 70B）、不同硬件平台（边缘 GPU vs 服务器 GPU）以及不同负载条件下的延迟分布变化。γ_latent 的积分形式 `E[γ'(s_{t+L})]` 本质上是一个状态分布期望，而非单点预测，这赋予了系统在遇到新机器人平台或新任务类型时的泛化能力——只需要少量的过渡数据即可重新校准延迟参数。
+
+> **人机协作**：AHD 的快慢分离 `a_exec = a_fast + α_blend·Δa_slow` 从根本上重构了人机协作模式。快策略对应人类的「System 1」直觉反应（1-5ms），慢策略对应人类的「System 2」深度思考（100-500ms）。融合系数 α_blend = E[γ_latent]·(1 - κ·√Var[γ_latent]) 充当「协作信任门」——当系统高度自信时（α ≈ 0.7-1.0），它主动交出控制权给 VLA 的语义规划；当系统不确定时（α ≈ 0.1-0.3），它自动保持快策略的接管。这种可自适应的信任调节正是健康人机协作的数学模型。
+
+> **多模态融合**：现有的 AHD 已经在融合快（视觉运动）和慢（语义规划）两个动作流。我们将其形式化为多模态融合：每个模态 m 提供其自身的 γ_latent^{(m)} 和融合系数 α^{(m)}。 AHD 进行跨模态信任加权：`α_blend = Σ_m w_m · α^{(m)}`，其中 `w_m = γ_latent^{(m)} / Σ_k γ_latent^{(k)}` 是模态 m 的相对置信权重。这使得力度图、力传感、深度相机等额外模态可以自然接入，无需改变 VLA 或控制器核心——只需要提供对应的置信校准接口。
 <!-- ARTIFACT:END -->
