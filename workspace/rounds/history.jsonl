@@ -913,3 +913,5 @@
 {"event": "verdict", "id": "20261105-154930-r1", "round": 1, "verifier": "ai", "score": 6.5, "result": "rejected", "reason": "AI 评分 6.5（阈值 7）", "ts": "2026-11-05 15:52:30"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261105-141919-r1", "changed": ["idea", "artifact"], "ts": "2026-11-05 15:52:30"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-05 16:22:30"}
+{"event": "candidate", "id": "20261105-181200-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-05 18:12:00"}
+{"event": "verdict", "id": "20261105-181200-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-05 18:12:31"}
