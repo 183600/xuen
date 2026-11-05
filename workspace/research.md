@@ -3,558 +3,521 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 24 轮（研究线累计）· PLAN-GATE（规划门）：用「路径规划」给伦理审查装上执行引擎，用「子目标抽象」把泛化从记忆搬到规划
+# 第 25 轮（研究线累计；灵感循环第 1 轮）· OPEN-IMITATE-DEPLOY（OID）：用「模仿学习」换更好的动作表示、用「场景落地」换一个执行层、用「开源生态」换一个已经练好的基座——把 PLAN-GATE 从「规划重」修剪成「学习 + 部署 + 组合」
 
-> 检索日期：2026-11-05。灵感词：**伦理审查 / 泛化能力 / 路径规划**。
-> 本轮是对第 23 轮 M3S 的**深化与修剪**，不是推倒重来。上一轮立了三根柱子（MVP-SPINE / 3D-ANCHOR / REVIEW-GATE），但 REVIEW-GATE 只有一个「裁剪器」，缺一个真正的**执行引擎**；而「泛化能力」这一竞赛核心，还没被定义成可测量的账本。本轮三个词正好补齐：**路径规划**给审查门装引擎，**伦理审查**给不可逆/人机安全装上「可逆性证书」，**泛化能力**把五轴变成账本，并接上一条由审查留痕驱动的数据飞轮。
+> 检索日期：2026-11-05。灵感词：**模仿学习 / 场景落地 / 开源生态**。本轮是对第 24 轮 PLAN-GATE 的**深化与修剪**：保留 MVP-SPINE、GEN-LEDGER、ETHIC-SHIELD 三块；把「手搓运动规划（MOTION-SHIELD）」这条最重的主干**降级为薄安全回退**；让三个新词各自补上一块上一轮缺、且今天已有**公开可复用组件**的短板。切题判断：`unibot.unitree.com` 的 UniBot = 宇树 G1 桌面操作泛化评测，与本座研究线一致，无需换题。
 
-## 0. 三分钟直觉：上一轮的门缺一个引擎
+## 0. 三分钟直觉：上一轮把杠杆压在了「最贵、最不确定」的一端
 
-先对齐本轮新核实的事实（来源见 §7；⚠ = 本轮新增或更正）：
+先用本轮**新核实**的事实重新给第 24 轮做一次诚实定价（来源见 §5；⚠=本轮新增或更正）：
 
-- ⚠ **官方接口细节复核**（`unibot_submission` README）：观测原生分辨率 `[480,640,3]`；`obs_delta_indices` 同时决定**发哪些通道**与**时间堆叠**；`image_resize` 由评测端 `cv2.resize` 预缩后再发；`action_chunk_size=T_a`、动作数组形如 `(T_a,·)`、**index 0 先执行**；N 端口从 8765 起、N 另行公布；§6 明确记录**每步时延与波动 + 返回动作的统计规律性**。
-- ⚠ **UnifoLM-VLA-0 训练栈确切路径**：要求 **LeRobot V2.1** → 先 `convert_lerobot_to_hdf5.py` → 再 `tfds build` 成 **RLDS**；基座 `UnifoLM-VLM-Base` / `UnifoLM-VLA-Base` / `UnifoLM-VLA-LIBERO` 均已开源。挑战数据是 **LeRobot v3.0** → 转码是 G1 的现实工作量；但 Agent 还给了现成的 **LIBERO 仿真评测脚本**（可当泛化的离线代理）。
-- ⚠ **规则正文在飞书（Feishu）文档**：本轮抓到页面壳，但正文为 JS 动态渲染/需登录（中文 `Uz7OdFBcDo...` / 英文 `ZNHIdaGx...`），**未能机读**。所以「步骤分」细则仍属未证实口径，设计上保持「少无效步 + 子目标完成即停」的保守假设。
-- ⚠ **数据集特权状态复核**：`*_ee_pose_gripper_torso`、`state_d435`、`recomputed_ee_valid`、`state_torso`、`waist_state_joint` 都在数据集里、评测 API 不暴露 → 仍是「特权蒸馏」的免费监督。
-- ⚠ **决定本轮优先级的硬证据（新增）**：
-  - **MPVI（Georgia Tech, 2026）**：把「经典运动规划 + VLA」交错（interleaving），在 **BEHAVIOR-1K** 上相对最强端到端 VLA **任务进度 +109%**，且**无需额外训练**。论文明确点出：即便任务在演示分布内、数据再多也会失败——失败**不是数据不够**，而是长程执行误差累积。
-  - **MoManipVLA（CVPR 2025）**：VLA 只生成 **EE 路点**，再用**双层运动规划**（基座 + 机械臂）优化轨迹可行性；真实世界 **+4.2% SR**，部署仅需约 50 次真机成本，靠的是「VLA 泛化 + 规划保证可行性」。
-  - **Shielding（AAAI 2018）**：给出「审查者」的严格形式化——挂在决策器之后，对**违反时序逻辑规范的动作**才纠正（correct only if violation），并讨论保持收敛性的条件。这正是「伦理审查」的技术同构。
+- ⚠ **任务集是「DAPTO 2」套件**：官方/媒体口径一致——Unitree G1 为统一平台，**32 项真实桌面操作**，**约 32,000 条演示、约 169 小时**真机数据，覆盖**位置变化 / 干扰物 / 桌面背景 / 未见物品 / 人为干扰**五类泛化；**单模型通才**，按**平均成功率 + 平均步骤分**综合排序。（myxmr / zhizaozx 报道，2026-07-10 启动）
+- ⚠ **五轴数据齐备**：HF 集合 `unibot-v1-challenge-dataset` 确为 **32 个 `G1_Dex1_*` 数据集**，每个约 1,000 条 episode（合计约 3.2–3.3 万条）；单集 README 确认 LeRobot **v3.0**、4 相机 480×640×3 @30fps、Dex1 夹爪 5.5–0.0（open→close）。（HF API，2026-11-05）
+- ⚠ **排行榜/运行记录仍不可机读**：`leaderboard.html` 是 SPA，`runs.html` 只有字段壳（Model / Model-User / **Success** / **Step Score**），服务端正文被 Tencent EdgeOne 安全策略拦截（HTTP 567）。所以「榜首 <30%」仍是**用户口径/未独立复核**；但字段证实了排序维度。
+- ⚠ **决定性新事实：开源生态里已经有一个「练好在 UniBot 上」的基座。** HuggingFace `ezhoureal/lingbot-vla-v2-unibot-lora`（2026-08-02）：**LingBot-VLA 2.0**（6.3B = Qwen3-VL-4B 骨干 + Qwen2 MoE action expert）在 **UniBot G1_Dex1 全 32 任务、33,276 episodes** 上做 LoRA（rank 64 / alpha 32，`q_proj/v_proj/o_proj`，65M 可训练），**单张 RTX 4090、10K 步**，最终 `val/loss=0.085`；joint 空间、臂动作为相对状态增量。→ **G1（能上榜的基线）被这笔开源资产大幅去风险。**
+- ⚠ **官方相邻基线**：UnifoLM-VLA-0（Apache-2.0，flow-matching action head，单策略 12 类任务）仍是正式开源参照；LIBERO 评测脚本与日志齐全。
+- ⚠ **规模化的「免费数据」已经有开源配方**：**Open-HumanScale** 公开 50,000 小时 egocentric 人类视频与「从零到 50k 小时」的完整配方，并给出 **预训练小时数 → 下游成功率 的对数线性 scaling law**。
+- ⚠ **三条「比手搓规划更便宜、更该先买」的公开组件**：
+  - **PTS（Path-preserving Time Scaling，2611.01390）**：面向**冻结的 action-chunking 策略**的**免训练执行层**；它同时消掉两种与模型能力无关的浪费——「等下一块推理的停顿」与「学得像慢动作的谨慎速度」——原理是「运动 = 参考路径的时间重参数化，路径只随新观测改变」。**这几乎正是第 24 轮 P0「reproject」想做的一切，而且是已发表、可直接用。**
+  - **Route-Guided CBF-QP Repair（2611.01713）**：**事后**安全修复模块，用 VLA 的短时 action chunk 探测被挡住的标称轨迹，生成绕障的「入-出-回」引导，作为软约束加进 CBF-QP，且**能重新并回任务轨迹**。**这几乎正是第 24 轮 P1「replan」想要的，且保持任务语义。**
+  - **Serving Agentic Robot Fleets（2611.01404）**：把「机器人 agent 舰队」的瓶颈测清楚——大脑 KV-cache 反复重放、上下文达 **215k tokens**、Astra 请求中位 **7.78s**，而 VLA 还要在**严格控制 deadline** 下执行动作块；提出 **admission control**。**这正对着官方 N 端口 + §6（逐步时延与波动、动作规律性）的评分口径。**
+- ⚠ **另外两个「模仿学习」侧的新杠杆**：**ODE Policy（2611.01729）**——不学动作值而学**动作的动力学**（神经 ODE 学动作向量场，部署时由上一动作积分出下一动作，**轨迹构造上连续**，附多样性头刻画多模态）；**ELA（2611.05571）**——端到端从**无动作标注的视频**里学「潜在动作」，且潜在动作被**联合优化**以利下游控制与解码。
+- ⚠ **失败是可以被「复利」的**：**Compounding Physical RSI（2611.06654）** 指出任务完成度近似「各阶段通过率的乘积」，因此递归自改进的收益会**跨代相乘**，并点出物理环境里三个障碍（终点反馈难以定位是哪一阶段崩的等）。
 
-一个反直觉但更值钱的判断：
+**反直觉但更值钱的判断：**
 
-> **上一轮的 REVIEW-GATE 只会「裁剪到安全包络」（clip），这不是修复，是阉割——clip 后的轨迹往往仍不可达、仍碰撞，只是把失败藏起来。而「路径规划」是让它变成真修复的唯一引擎：给一个目标，规划器能在碰撞约束下造出一条**可行**轨迹。更妙的是，规划器同时是**泛化杠杆**：把 VLA 的输出从「关节轨迹」改成「子目标」，OOD 位姿就不再需要记忆，而变成一个可求解的规划问题（MPVI / MoManipVLA 已证）。**
+> **第 24 轮把主注押在「经典运动规划」上，理由是它确定性、无需数据、有 +109%/+4.2% 的强近邻。但本轮的开源生态证据翻案了：这个杠杆的 80% 收益，今天可以用两个已发表的免训练模块（PTS 执行层 + CBF-QP 事后修复）以近乎零成本买到；真正没被开源生态覆盖、因而才是差异化的，是「动作表示（模仿学习）」与「N 端口执行层（场景落地）」。继续手搓规划器是在重复造一个更差的轮子。**
 
 一句话押注：
 
-> **把 REVIEW-GATE 升级为 PLAN-GATE：VLA（含 3D-ANCHOR）只负责提出「子目标」；一个轻量关节空间运动规划器负责把子目标变成可行、平滑、碰撞自由的执行轨迹（reproject / replan / recover）；伦理审查负责在**不可逆动作前**要求规划器给出一张「可逆性恢复证书」，并把每一步审查留痕，作为泛化五轴的**数据飞轮燃料**与 §6 可信度证据。**
+> **OID = 站在开源基座（LingBot-VLA 2.0 的 UniBot LoRA / UnifoLM-VLA-0）上，做三件开源生态**还没**替你做完的事：(A) 把动作 chunk 从「离散动作回归」换成「动作动力学 / flow（ODE Policy 式）」以**构造上连续**、消掉块边界抖动；(B) 用 **PTS + CBF-QP Repair** 组成**免训练执行层**，并以 **FLEET-SERVE**（KV-cache 隔离 + admission control + 异步 chunk 预取）扛住 N 端口与 §6；(C) 用 **HUMAN-SCALE（ELA + Open-HumanScale）** 与 **STEP-SCORE-IMITATION + FAIL-RSI** 把「免费视频 + 七成失败」变成数据飞轮。规划器退成薄回退，不再是主干。**
 
-## 1. 为什么「路径规划」是「泛化能力」的正解，而不是又一个补丁
-
-竞赛的口号就是「真实世界泛化性不足」，五轴 = 位置 / 干扰物 / 背景 / 未见物品 / 人为干扰。这五轴里，真正几何/动力学硬的是四条；而端到端 VLA 的失效模式（MPVI 已实证）不是「没见过」，而是：
+## 1. 三个词各自对第 24 轮做的一次「修剪」
 
 ```text
-F1 长程误差累积：块与块之间即使每步误差很小，几十步后偏离可行域 → 碰撞/漏抓。
-F2 位姿泛化脆弱：训练分布内的新位置也会失败（数据再多也不解决）。
-F3 不可行动作：VLA 输出的是「像演示」的关节序列，不是「物理可行」的轨迹
-   （自碰撞、桌面穿透、超速、双臂互撞）。
-F4 人为干扰：人进入工作空间后，VLA 没有「让行」这一动作类别。
-F5 §6 可信度：抖动、突跳、块边界不连续 → 被判为「动作异常」。
-```
+模仿学习 → 修剪「用轨迹记忆代替可求解性」这一诊断的落点：
+  F1 长程累积 / F5 抖动 的根因，不只是「没有规划」，而是「动作被当成离散值来学」。
+  → 动作表示升级：ODE 动作动力学 / flow matching（连续、按构造）；潜在动作视频预训练（ELA）。
+  → 数据规模升级：human egocentric 50k h（Open-HumanScale）+ 合成臂演示（ScheduleGen）。
+  → 目标升级：不止成功率，还要步骤分 → 效率模仿（学「最快成功轨迹」的时间重参数化 + 子目标早停）。
 
-**路径规划同时命中 F1–F5**：
+场景落地 → 修剪「把规划当执行」：
+  上一轮 MOTION-SHIELD 把「规划修复」与「执行」混在一起，且默认 get_action 阻塞。
+  → 执行层独立且免训练：PTS（消停顿 + 消慢动作，保路径）；异步 chunk 预取。
+  → 安全修复独立且免训练：CBF-QP Repair（绕障并回任务轨迹）。
+  → 服务层独立且面向评分：FLEET-SERVE（N 端口、KV/状态隔离、admission control、p95 时延与规律性 = §6）。
 
-- 对 F2/F3/F4：把输出接口从「关节块」降维为「子目标（SE(3) 抓取/放置位姿 + 少量关键点约束）」。语义泛化交给 VLA，运动实现交给规划器——**泛化不再靠记忆，而靠可求解性**。
-  - 这正是 **ReKep** 的思路：用「关系关键点约束」表达任务，再用现成求解器实时优化出 EE 轨迹；VLM 负责从语言 + RGB-D 生成约束，无需任务专用数据。
-  - 也是 **MoManipVLA** 的思路：VLA 出 waypoint、运动规划保可行性；/ 以及 **VoxPoser**：VLM 组合 3D value map，再用 model-based planning 合成闭环轨迹。
-- 对 F1：规划器在**每个块边界**把当前真实状态接上目标，误差**不跨块累积**（MPVI 的 core claim）。
-- 对 F5：规划输出天然平滑（shortcut + 时间参数化），直接提升 §6 的「统计规律性」，且**不改变接口**（仍返回 `(T_a,·)` 关节块）。
-
-一句话：**规划器是「审查门的引擎」，也是「泛化的减维器」，还是「§6 的平滑器」——一份投入，三处收益，且全是经典算法、无需额外数据、可离线在 LIBERO 里验证。**
-
-## 2. 研究日志：本轮的事实再基线化与「修剪」
-
-### 2.1 对第 23 轮三柱的诚实修剪（PLAN-GATE 纪律的第一次应用）
-
-```text
-KEEP（主线不动的脊柱）：
-  - MVP-SPINE 三级门控：G0 接口冒烟 → G1 UnifoLM-VLA-0 微调出可提交基线 → G2 加杠杆。
-  - 3D-ANCHOR：保留，但本轮从「G2a 首发」下调为「G2b」（原因：收益依赖未证实的双目
-    基线/内参；而规划器不依赖任何未公开硬件事实）。
-  - joint 控制空间优先、动作块 + 时序集成 + 子目标早停、多端口共享服务。
-PROMOTE（本轮新证据带来的升格）：
-  - 路径规划（MOTION-SHIELD）升为 G2a 首发：有 MPVI +109% / MoManipVLA +4.2% 的近邻
-    证据、纯经典、无额外数据、离线可在 LIBERO 验证、且直接利好 §6。
-DEMOTE（保留但降级/合并）：
-  - REVIEW-GATE 原「clip 式修复」合并进 MOTION-SHIELD 的 reproject 步骤；
-    原 T2 学习式 critic 继续只做「触发修复」，不独立成篇。
-  - 事件触发块内闭环：仍为旁路，依赖「评测端是否每步回调」这一未证实前提。
-MAJORIZE（本轮新定义）：
-  - 子目标抽象接口（SUBGOAL）：泛化的减维器，替代「端到端关节块」的默认输出。
-  - 可逆性证书（REVERSIBILITY CERT）：伦理审查从「安全」升到「可逆/知情」。
-  - 泛化五轴账本 + 审查留痕数据飞轮（GEN-LEDGER）：让「泛化能力」可测量、可运营。
-```
-
-### 2.2 三个词如何咬合成一个新飞轮
-
-```text
-泛化能力（GEN-LEDGER）——定义与度量：五轴账本 + 子目标抽象
-        │ 账本指出「哪条轴在漏分」；子目标接口把泛化从记忆搬到规划
-        ▼
-路径规划（MOTION-SHIELD）——执行引擎：reproject / replan / recover
-        │ 保证每个子目标都有可行解；误差不跨块累积；动作平滑（§6）
-        ▼
-伦理审查（SHIELD + REVERSIBILITY）——把关：物理合法 / 可逆性 / 人体在场
-        │ 审查留痕 → 标记 OOD 与「规划失败态」→ 回灌数据/增强/补毕业场景
-        ▼
-回到 GEN-LEDGER：漏分轴被定位 → 定向补数据/增强 → 下一轮泛化账本上升
+开源生态 → 修剪「从零训一个 VLA」：
+  「能上榜的基线」已有现成资产（LingBot UniBot LoRA / UnifoLM-VLA-0 / Open-HumanScale / MESA / RoboScope）。
+  → 差异化从「复现基线」前移到「表示 + 执行 + 效率 + 失败恢复 + 服务」五个开源未覆盖处。
 ```
 
 三处「甜点」很具体：
 
-1. **规划失败 = 泛化的探针**：规划器给出的是**确定性可行性**判据；某个子目标若规划失败，说明它几何上不可达/碰撞，而不是模型「不确定」。这比学习式 OOD 分数**更干净**，是账本的理想信号源。
-2. **可逆性证书 = 伦理审查的可证明内核**：在 R2（不可逆）动作提交前，要求规划器在「当前场景 + 扰动集」下造出一条回到安全态的恢复路径；造不出就不许提交。这是把「知情同意 / 可撤销」落成算法。
-3. **审查留痕 = §6 可信度产物 + 数据飞轮**：留痕同时是官方考核证据与下一轮定向补数据的清单。
+1. **动作动力学是「规划器」的免费替代品**：ODE Policy 的积分链**按构造**连续，直接消掉 F5（块边界不连续/抖动），且比运动规划更轻、无需场景几何。这与上一轮想用规划换平滑的目标重叠——所以规划器的必要性被**证伪了一半**。
+2. **PTS 与 CBF-QP 都是「post-hoc、免训练、保任务语义」的**：正好满足第 24 轮给自己钉的「能不动就不动、只在越界时接管」（Shielding 式最小改动）。**买现成的比自己写贵不了、还好得多。**
+3. **「步骤分」是被系统性忽视的一半分数**：所有人都在刷成功率，几乎没人把「省步」当成一个可学习的模仿目标（学演示里最快的那条时间参数化 + 学何时该停）。这是低竞争、高性价比的切口。
 
-## 3. 四个创新点的正式化（动机 / 差异 / 可行性 / 资源 / 步骤 / 风险）
-
-### 3.1 SUBGOAL（子目标抽象接口）
+## 2. 研究日志：本轮的事实再基线化与修剪纪律
 
 ```text
-思想：VLA 不直接回归 T_a×d 的关节块，而是输出一个低维「子目标」：
-      s* = { left/right 夹爪目标位姿 (SE(3))，可选的关键点约束 K（ReKep 式），
-             夹爪开合，是否双臂协同 }。
-      运动实现由 MOTION-SHIELD 规划。两种实现梯度：
-      (a) 零重训版：把基座 VLA 的块「末位 waypoint」当作隐式子目标（A[-1] 的 EE 位姿）。
-      (b) 训练版：在基座上挂一个 <5M 的子目标头，监督用数据集里的
-          *_ee_pose_gripper_torso / 关键点（特权状态，评测端看不到）。
-动机：F1/F2/F3 都源于「用轨迹记忆代替可求解性」；减维接口把语义与运动解耦。
-差异：与纯端到端动作块相比，本方案显式承认「VLA 管 what、规划器管 how」；
-      与纯 VLM+规划器（VoxPoser/ReKep）相比，本方案保留 VLA 作为数据驱动的子目标先验，
-      因而能吃到 32k 演示的分布，而不是只靠零样本 VLM。
-可行性：高。零重训版今天就能接；训练版只加小头。
-资源：数据集特权状态（已有）+ 1 次小规模训练。
-步骤：零重训接 plan → 离线比较「块末位 vs 全块」的可达率 → 再训子目标头。
-风险：块末位在演示中可能有抖动/噪声；训练版需防止子目标头过拟合训练位姿。
+KEEP（脊柱不动）：
+  - MVP-SPINE 门控：G0 接口冒烟 → G1 可提交基线 → G2 加杠杆（G1 的基座来源本轮更换，见 PROMOTE）。
+  - GEN-LEDGER（泛化五轴账本 + 审查留痕数据飞轮）：保留，但评测代理从「自建」改为对齐公开的 MESA/RoboScope。
+  - ETHIC-SHIELD 的「可逆性证书」思想：保留为薄差异点（只对 R2），不再自建可行性求解器。
+  - joint 控制空间优先、动作块 + 时序集成 + 子目标早停、多端口共享服务。
+PROMOTE（新证据升格）：
+  - OPEN-BASE：G1 基座由「自训 UnifoLM-VLA-0」升为「优先直接用 LingBot-VLA 2.0 UniBot LoRA（已练在 32 任务上），UnifoLM 作对照」。
+  - ACTION-DYNAMICS（IDA）：动作表示升级为公开验证的 ODE/flow 方向，作为本轮第一技术创新点。
+  - PTS-EXEC + FLEET-SERVE：免训练执行层 + N 端口服务，升为 G2a 首发（替代原 MOTION-SHIELD P0/P1）。
+  - STEP-SCORE-IMITATION 与 FAIL-RSI：步骤分与失败恢复正式立项。
+DEMOTE（降级/合并）：
+  - MOTION-SHIELD 的 P0 reproject → 被 PTS 取代；P1 replan → 被 CBF-QP Repair 取代；仅保留 P2（可逆性恢复）作为 ETHIC-SHIELD 的薄组件。
+  - 3D-ANCHOR：继续顺延（双目基线/内参仍未证实），但 Open-HumanScale/LingBot-Depth 提供免标定的几何先验，可作替代路径。
+  - 自建 5 轴评测 → 对齐 MESA（ID + 4 轴），唯一自建项是「人为干扰」轴（MESA 未覆盖）。
+MAJORIZE（本轮新定义）：
+  - STEP-SCORE-IMITATION（SSI）：把「步骤分」变成一个显式模仿目标。
+  - FAIL-RSI：把「七成失败」变成定向补数据与恢复演示（呼应 Compounding Physical RSI 的乘性收益）。
 ```
 
-### 3.2 MOTION-SHIELD（规划即审查引擎）
+三词咬合成的新飞轮：
 
 ```text
-输入：当前关节 q0（左右臂 14 维，waist 固定/锁）、子目标 s*、场景几何 S、
-      扰动集 D（人体/干扰物可能出现的区域）
-三档处理（由廉价到昂贵，逐级升级）：
-  (P0) reproject（重投影）：把 VLA 关节块按「速度/加速度/加加速度限」时间参数化
-       （time-optimal retiming）+ shortcut 平滑；若全程无碰撞 → 放行。解决 F5、F3(超速)。
-  (P1) replan（重规划）：P0 失败或不可达 → 以 s* 为目标，在关节空间跑
-       BiRRT-Connect（碰撞模型 = FK 胶囊连杆 ∪ 场景点云/桌面先验），
-       再 shortcut + 时间参数化，重采样为 T_a。解决 F1、F2、F3(碰撞)。
-  (P2) recover（恢复）：R2 不可逆动作提交前，规划一条「逆动作回到安全态」的路径；
-       若在扰动集 D 下无恢复路径 → 不许提交（升级为安全保持，联机重询问）。
-碰撞与可行性：胶囊体自碰撞 + 左右臂互撞 + 桌面/物体穿透 + 关节限位 + 工作空间包络。
-输出：恰好一个 (T_a, d) 关节块 + 一份 (mode∈{P0,P1,P2,fallback}, 证书, margin)。
-目标函数：min  代价 = w_t·轨迹时长 + w_j·加加速度积分(平滑) + w_s·到 s* 的距离
-        s.t. 碰撞(轨迹, 场景) = ∅, 关节限位, 速度/加速度/加加速度限。
+模仿学习（表示 + 数据 + 效率）
+   │ 动作动力学消 F5；人类视频扩分布；效率模仿拿步骤分
+   ▼
+场景落地（执行层 + 服务层）
+   │ PTS 消停顿/慢动作；CBF-QP 保安全；FLEET-SERVE 保 N 端口与 §6
+   ▼
+开源生态（基座 + 配方 + 评测）
+   │ LingBot/UnifoLM 给基线；Open-HumanScale 给数据预算；MESA/RoboScope 给账本
+   ▼
+回到 GEN-LEDGER：按轴定位漏分 → FAIL-RSI 定向补恢复演示 → 下一轮账本上升
 ```
 
-**动机**：这是 REVIEW-GATE 缺的引擎（对 F1–F5 全命中），也是唯一有强近邻证据（MPVI / MoManipVLA）、且不依赖未公开硬件事实的 G2 杠杆。
-**与现有方案的差异**：不是「给动作乘一个保守系数」，而是**在可行域内重新求解**；不是「独立于 VLA 的新策略」，而是**夹在 VLA 与执行之间的门**，因此对任何基线都即插即用。
-**可行性**：高（BiRRT-Connect / STOMP / TOP 全是成熟件；碰撞用胶囊近似足够）。
-**资源**：CPU 规划器（可多核）+ FK/碰撞模型；无需训练、无需新数据。
-**落地步骤**：G0 里先测单次规划时延 → 在 32k 演示上做「块末位可达率」离线统计 → 接进三档 → 在 LIBERO 回归 → 真机。
-**风险**：规划时延撞 §6（必须**异步**：在执行上一块时预算下一块，规划未完成则退回 P0 fallback，绝不阻塞）；胶囊碰撞模型与真机有偏差；透明/反光物体的场景几何缺失（可退化为「桌面先验 + 检测框凸包」）。
+## 3. 持续迭代的创新点清单（本轮修订）
 
-### 3.3 ETHIC-SHIELD（伦理审查：物理合法 / 可逆性 / 人体在场）
+> 🟢 保留推进　🔵 新增　🟡 降级/合并　🔴 剪枝　⬆️ 升格　⬇️ 降格
 
-```text
-把「伦理」落成一个独立于生成器的审查者（Shielding 的形式化）：
-  A. 物理合法性（零学习，可证明）：关节/速度/加速度/加加速度限、自碰撞、桌面穿透、
-     工作空间包络 —— 直接复用 MOTION-SHIELD 的可行性判定。
-  B. 可逆性审查（本轮新增，最有「伦理」味）：给每个原子动作标一个可逆性等级
-     R0 完全可逆 / R1 有代价可逆 / R2 不可逆（断网口、拔线、倒药、开锁、推倒堆叠）。
-     仅对 R2：要求 MOTION-SHIELD 出具「恢复证书」——存在一条在扰动集 D 下
-     回到上一安全态的可行路径，且置信裕度 ≥ τ。否则允许的结论只有：
-     安全保持 / 重新询问（重抽样）/ 降速靠近再复核。
-  C. 人体在场：头部双目 3D 检测人/手 → 距离 d_human；d_human<d_slow 降速、
-     d_human<d_stop 触发 P2 让行（规划退避路径），对「人为干扰」轴。
-结论三态：PASS / REPAIR（由 MOTION-SHIELD 规划修复，而非 clip）/ HOLD（安全保持+重询问）。
-留痕：trace_t = (decision, mode, reason_code, {margin_c}, recovery_cert, d_human)。
-```
-
-**动机**：伦理审查的诚实技术同构；同时命中「人为干扰」轴与易损/不可逆对象的财产完整性，并把 §6 可信度变成显式产物。
-**与现有方案的差异**：上一轮是「风险缩放 + clip」；本轮是**可证明的可行性 + 可逆性证书 + 规划修复**；审查者不再只是否决者，而是**修复提案者**。
-**可行性**：A 极高；B 高（规划器已在）；C 中（现成检测器 + 双目 3D）。
-**资源**：动作可逆性标注（32 任务，人工 1 天）；规划器；检测器。
-**落地步骤**：先 A → 演示上测误杀率（应≈0）→ B（只对 R2）→ C 让行回归。
-**风险**：R2 判定错误会误伤成功；恢复证书在杂乱场景可能造不出→过度 HOLD；人体检测延迟。
-
-### 3.4 GEN-LEDGER（泛化五轴账本 + 审查留痕数据飞轮）
-
-```text
-账本：对 5 轴分别建「留出评测协议」并各记一列：
-  位置 | 干扰物 | 背景 | 未见物品 | 人为干扰
-  每列记：SR、步骤分、规划失败率(P1/P2)、PASS/REPAIR/HOLD 比例、恢复证书成功率。
-训练侧：轴定向增强 —— 位置轴做目标位姿/物体位姿抖动；干扰物轴在场景点云里
-        注入虚拟障碍；背景轴做表观替换；未见物品轴用检测框凸包做陌生几何。
-推理侧：对 OOD 子目标做「最近演示检索」给出候选备选位姿，规划器选可行者。
-飞轮：规划失败(P1/P2) 与 HOLD 的留痕 → 汇总成「补数据清单」→ 定向增强/补采 →
-      下一轮账本复测。
-```
-
-**动机**：竞赛就是评泛化；没有账本，所有改进都是盲调。
-**与现有方案的差异**：把「泛化」从口号变成**分轴、可归因、可与规划失败挂钩**的量表；审查留痕同时是数据飞轮的入口。
-**可行性**：高（离线即可做；LIBERO 可做部分代理）。
-**资源**：评估脚本 + 增强管线 + 少量标注。
-**落地步骤**：先建 5 轴留出协议 → 记 G1 基线 → 逐轴归因 → 定向增强 → 复测。
-**风险**：离线账本与真机分布有差距；增强可能引入伪相关。
-
-## 4. 持续迭代的创新点清单（本轮修订）
-
-> 🟢 保留推进　🔵 新增　🟡 降级/旁路　🔴 剪枝　⬆️ 升格
-
-| # | 创新点 | 状态 | 动机 | 与现有方案差异 | 可行性 | 所需资源 | 落地步骤 | 风险 |
+| # | 创新点 | 状态 | 动机（对应瓶颈） | 与现有方案差异 | 可行性 | 所需资源 | 落地步骤 | 风险 |
 |---|---|---|---|---|---|---|---|---|
 | 1 | MVP-SPINE（门控交付脊柱） | 🟢 | 先上桌 | 每级可提交 checkpoint | 极高 | 基座+32k+1–8 GPU | G0→G1→G2 | 转码/算力 |
-| 2 | **MOTION-SHIELD（规划即审查引擎）** | 🔵⬆️ | F1–F5 全命中，近邻 +109% | 在可行域重求解，非 clip | 高 | CPU 规划器+FK/碰撞 | P0 reproject→P1 replan→P2 recover | 时延/碰撞模型偏差 |
-| 3 | **SUBGOAL（子目标抽象接口）** | 🔵 | 泛化减维：what 与 how 解耦 | VLA 出子目标而非轨迹 | 高 | 特权状态+小头 | 零重训块末位→训练头 | 末位噪声 |
-| 4 | **GEN-LEDGER（五轴账本+数据飞轮）** | 🔵 | 让泛化可测量可运营 | 分轴归因 + 规划失败探针 | 高 | 评估脚本+增强 | 协议→基线→归因→增强→复测 | 离线-真机 gap |
-| 5 | **ETHIC-SHIELD（可逆性审查+留痕）** | 🔵（由 REVIEW-GATE 升级） | 伦理同构/人机安全/§6 | 可行性+可逆性证书+规划修复 | 中高 | 可逆性标注+检测器 | A→B(R2)→C 让行 | R2 误判/HOLD 过度 |
-| 6 | 3D-ANCHOR（矫正双目→点云+特权蒸馏） | ⬇️🟢 | 几何泛化 | 首次兑现 rectified stereo | 高 | 立体/深度网+标定 | 视差校验→编码→蒸馏 | 反光/透明/降参 |
-| 7 | joint 空间优先 + 动作块 + 时序集成 + 子目标早停 | 🟢 | 稳定与步骤分 | 成熟基线 | 极高 | 无 | 接入→回归 | 集成滞后 |
-| 8 | 多端口共享服务 + 状态隔离 + 异步规划预算 | 🟢 | 接口前提+§6 | 规划异步化保 p95 | 高 | 部署环境 | 连续批处理+优先级 | 并发串扰 |
-| 9 | 事件触发块内闭环 | 🟡 | 理论收益大 | 依赖每步回调前提 | 中 | — | 先验证接口语义 | 前提未证实 |
-| 10 | 双臂协同流形 + 互预测 | 🟡 | 双臂任务 | 与规划器 P0/P1 部分重叠 | 中高 | 双臂子集 | 排在规划之后 | 约束过紧 |
-| 11 | 学习式 p_fail / OOD critic | 🟡 | 触发修复 | 并入 ETHIC-SHIELD，规划失败优先 | 中 | 自监督标签 | 与审查合并 | 标签噪声 |
-| 12 | 力/触觉 / 声纹 / 云端级联 | 🔴 | — | 无通道/耗步/坏时延 | 不可行 | — | 删除 | — |
+| 2 | **OPEN-BASE（站在已练好的 UniBot LoRA 上）** | 🔵⬆️ | G1 去风险 | 复用 32 任务/33k episodes 的公开 LoRA，而非自训 | 极高 | 6.3B 权重 1 张 4090 可跑 | 拉权重→接接口→复测 | LoRA 过拟合/许可 |
+| 3 | **ACTION-DYNAMICS（IDA，动作动力学表示）** | 🔵⬆️ | F5 抖动 + 块边界不连续 + 多模态 | 学动作向量场/flow，而非离散动作值；积分链按构造连续 | 高 | 基座+小头训练 | 头替换→离线连续性/多模态测→真机 | 积分步长/误差累积 |
+| 4 | **PTS-EXEC（免训练执行层）** | 🔵⬆️ | 全场等块停顿 + 学得慢（步骤分） | 时间重参数化参考路径，路径只随观测改；免训练 | 极高 | 官方实现/自实现 ~数百行 | 冻策略上直接接→测步骤分/时延 | 与低层限速耦合 |
+| 5 | **FLEET-SERVE（N 端口共享模型 + §6 服务）** | 🔵⬆️ | 官方 N 端口 + §6 时延/波动 | KV/状态隔离 + admission control + 异步 chunk 预取 | 高 | 服务框架+vLLM 式调度 | 单端口→共享批处理→压测 | 并发串扰/KV 抖动 |
+| 6 | **HUMAN-SCALE（ELA 潜在动作 + Open-HumanScale 数据）** | 🔵 | 分布外泛化、数据规模 | 用无动作标注人类视频扩先验，附 scaling law 定预算 | 中高 | 50k h 视频+预训练算力 | 拉配方→潜在动作预训练→微调 | 域鸿沟/算力 |
+| 7 | **STEP-SCORE-IMITATION（SSI，效率模仿）** | 🔵 | 步骤分=半张成绩单 | 把「最快成功轨迹的时间参数化 + 子目标早停」当模仿目标 | 高 | 演示中位时长统计 | 统计→加权/重时序增强→回归 | 学过头变鲁莽 |
+| 8 | **FAIL-RSI（失败恢复数据飞轮）** | 🔵 | 成功率<30%，七成步在失败 | 定向生成恢复演示；乘性收益 | 中高 | 离线 rollout+ScheduleGen | 失败聚类→合成恢复→回灌 | 仿真-真机 gap |
+| 9 | SAFE-REPAIR（CBF-QP 事后修复） | 🔵⬆️ | 干扰物/人为干扰安全 | 绕障后**并回任务轨迹**；免训练 | 高 | 官方实现 | 接 chunk→障碍注入回归 | 保守过度/误杀 |
+| 10 | **GEN-LEDGER ↔ MESA/RoboScope** | 🟢 | 让泛化可测 | 五轴对齐 MESA 四轴 + 自建人为干扰轴 | 高 | 评测套件 | 建协议→基线→归因 | 离线-真机 gap |
+| 11 | ETHIC-SHIELD（仅保留可逆性证书） | 🟡 | R2 不可逆/人机安全 | 只对 R2 要求恢复证书 | 中 | 可逆性标注 1 天 | A 物理合法→B 仅 R2 | R2 误判/HOLD 过度 |
+| 12 | MOTION-SHIELD（手搓规划） | ⬇️🟡 | 原 G2a 主干 | **被 #3/#4/#9 覆盖** | 中 | — | 退为 fallback | 投入产出比差 |
+| 13 | 3D-ANCHOR（双目几何/特权蒸馏） | 🟡 | 几何泛化 | LingBot-Depth 可替代自标定 | 中 | 立体/深度网 | 顺延，先验证 | 反光/透明 |
+| 14 | 力/触觉 / 声纹 / 云端级联 | 🔴 | — | 无通道/耗步/坏时延 | 不可行 | — | 删除 | — |
 
-## 5. 风险与未证实前提（只列决定路线者）
+## 4. 事实/前提与来源（决定路线者，检索日期 2026-11-05）
 
-| 风险/未知 | 为什么关键 | 何时解决 | 缓解 |
+| 事实/未知 | 为什么关键 | 何时解决 | 来源 |
 |---|---|---|---|
-| **评测端「每步回调」还是「整块执行」** | 决定块边界能否重规划/让行 | G0 | 自写 client 逆向；双模式兼容 |
-| **规划时延 vs §6** | 规划重了会拖垮 p95/抖动 | G0 起 | 异步预算（执行中算下一块）+ P0 fallback，绝不阻塞 |
-| **碰撞模型与真机偏差** | 直接影响修复是否真安全 | G2a | 保守胶囊膨胀 + 桌面先验 + 真机小样本校准 |
-| **子目标（块末位）噪声** | 训练分布内末位可能抖 | G2a | 中值滤波 + 最近演示检索 + 规划器容差 |
-| **双目基线/内参不可得** | 3D-ANCHOR 需自标定 | G2b | 自标定 + E2 判据；否则降级为多视 2D |
-| **步骤分口径未公开（飞书正文不可机读）** | 决定早停/省步是否划算 | 尽早 | 保守优化「子目标完成 + 少无效步」；人工查阅飞书 |
-| **数据 v3.0 vs 基座期望 v2.1** | 卡 G1 | G1 前 | 写转码层（lerobot→hdf5→RLDS）或原生 v3 加载器 |
+| LingBot-VLA 2.0 UniBot LoRA 存在且已练 32 任务 | 直接决定 G1 起点 | 立刻 | https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora |
+| PTS 免训练执行层细节 | 决定 #4 能否即插即用 | G0 | https://arxiv.org/abs/2611.01390 |
+| CBF-QP Repair 细节 | 决定 #9 替代手搓规划 | G0 | https://arxiv.org/abs/2611.01713 |
+| N 端口/§6 的真实调用模式 | 决定 #5 架构 | G0 | https://github.com/unitreerobotics/unibot_submission |
+| Open-HumanScale scaling law 系数 | 决定 #6 数据预算 | G2 | https://arxiv.org/abs/2611.06817 |
+| ODE Policy 在 action-chunking 上的定义 | 决定 #3 头替换方式 | G1 | https://arxiv.org/abs/2611.01729 |
+| 榜首实测成功率与步骤分 | 决定竞争强度 | 尽早 | 排行榜未机读（EdgeOne 567），以上线为准 |
 
-## 6. 本轮最大的风险
-
-**规划器把「动作分布」改变了。** §6 明确把「返回动作的统计规律性」当可信度依据；规划器输出的轨迹可能**比 VLA 更平滑但更「不像演示」**（例如大幅绕行）。需要证明：规划后轨迹的统计量（步长、连续块边界差、加加速度）**落在演示分布的合理范围内**，否则可能被判异常。缓解：在 P0 reproject 里尽量贴近 VLA 原块（最小改动原则，与 Shielding 的「仅在违反时纠正」一致）；规划轨迹做分布对齐（限幅到演示的步长/加加速度分位）。**这把「伦理审查」的正确姿势钉死为：能不动就不动，只在越界/不可逆/人体在场时才接管。**
-
-## 7. 参考来源（检索日期 2026-11-05）
+## 5. 参考来源（检索日期 2026-11-05）
 
 - 提交模板与接口规范（观测/动作目录、metadata、N 端口、§6）：https://github.com/unitreerobotics/unibot_submission
-- 挑战赛任务集（32 任务 / 32000 episodes / 169h）与参赛方式：https://unibot.unitree.com/challenges.html
-- 首页（榜单「Coming Soon」、按平均成功率与步骤分排序）：https://unibot.unitree.com/
-- 排行榜（Coming Soon）：https://unibot.unitree.com/leaderboard.html
-- 运行记录（Coming Soon）：https://unibot.unitree.com/runs.html
-- 参赛规则（飞书，本轮抓到页面壳、正文 JS 渲染/需登录，未机读）：https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh
-- 数据集（LeRobot v3.0、4 相机、**head_stereo rectified**、特权状态、Dex1 5.5–0.0）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
-- 挑战数据集集合（32 个 G1_Dex1_*）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
-- UnifoLM-VLA-0（Apache-2.0、单策略 12 类、LeRobot v2.1→HDF5→RLDS、LIBERO 评测脚本）：https://github.com/unitreerobotics/unifolm-vla
-- UnifoLM-WMA-0 / UnifoLM 集合：https://huggingface.co/collections/unitreerobotics/unifolm-wma-0
-- MPVI：Make Your VLA More Robust Without More Data By Interleaving Motion Planning（Georgia Tech, 2026；BEHAVIOR-1K 进度 +109%）：https://robotdangerlab.me.gatech.edu/projects/vla-motion-planning/
-- MoManipVLA（CVPR 2025，VLA waypoint + 双层运动规划，真机 +4.2% SR，arXiv:2503.13446）：https://arxiv.org/abs/2503.13446
-- VoxPoser（VLM 组合 3D value map + model-based planning，arXiv:2307.05973）：https://arxiv.org/abs/2307.05973
-- ReKep（关系关键点约束 + 分层优化出 EE 轨迹，arXiv:2409.01652）：https://arxiv.org/abs/2409.01652
-- Safe RL via Shielding（审查者的形式化，AAAI 2018，arXiv:1708.08611）：https://arxiv.org/abs/1708.08611
-- Unitree G1 真机操作聚合榜（LingBot-VA 66.7；Flash-WAM 60/50）：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world
-- 3D-aware VLA 参照：PointVLA https://arxiv.org/abs/2503.07511 ；BridgeVLA https://bridgevla.github.io/home_page.html ；OG-VLA https://og-vla.github.io/
+- 挑战赛首页 / 任务集 / 排行榜 / 运行记录：https://unibot.unitree.com/ ；https://unibot.unitree.com/challenges.html ；https://unibot.unitree.com/leaderboard.html ；https://unibot.unitree.com/runs.html
+- 赛事启动报道（32 任务 / 32,000 样本 / 169h / 五轴 / 平均成功率 + 步骤分 / DAPTO 2）：https://myxmr.com/en/news/unitree-launches-unibot-world-challenge ；https://myxmr.com/news/unitree-launches-unibot-world-challenge
+- 挑战数据集合（32 个 G1_Dex1_*）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；单集 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
+- LingBot-VLA 2.0（6.3B、Qwen3-VL-4B、MoE action expert、55 维统一动作、双查询蒸馏）：https://github.com/Robbyant/lingbot-vla-v2 ；权重 https://huggingface.co/robbyant/lingbot-vla-v2-6b
+- UniBot LoRA：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora
+- UnifoLM-VLA-0（Apache-2.0、flow matching、LIBERO 脚本）：https://github.com/unitreerobotics/unifolm-vla
+- ODE Policy（动作动力学，2611.01729）：https://arxiv.org/abs/2611.01729
+- PTS（免训练时间缩放执行层，2611.01390）：https://arxiv.org/abs/2611.01390
+- Route-Guided CBF-QP Repair（2611.01713）：https://arxiv.org/abs/2611.01713
+- Serving Agentic Robot Fleets（KV-cache 抖动 / admission control，2611.01404）：https://arxiv.org/abs/2611.01404
+- Open-HumanScale（50k h / scaling law，2611.06817）：https://arxiv.org/abs/2611.06817
+- ELA（潜在动作视频模仿，2611.05571）：https://arxiv.org/abs/2611.05571
+- ScheduleGen（多臂演示合成，2610.39429）：https://arxiv.org/abs/2610.39429
+- Compounding Physical RSI（2611.06654）：https://arxiv.org/abs/2611.06654
+- RL Enables Scaling Generalist Robot Policy（2611.06905）：https://arxiv.org/abs/2611.06905
+- MESA（成分/语义/空间泛化评测，2611.05567）：https://arxiv.org/abs/2611.05567
+- RoboScope Kit（统一评测接口，2611.03850）：https://arxiv.org/abs/2611.03850
 
-> 本轮一句话押注：**最值得押注的是创新点 2（MOTION-SHIELD 路径规划引擎）——它有 MPVI（+109%）/ MoManipVLA（+4.2%）的强近邻证据、纯经典、无需新数据、可用现成 LIBERO 离线验证，并且一份投入同时解决长程累积、位姿泛化、不可行动作、人为干扰与 §6 平滑；它也是让创新点 5（伦理审查）从「否决者」变成「修复者」的前提。3D-ANCHOR 顺延为第二杠杆。**
+> 本轮一句话押注：**最值得押注的是创新点 3+4 的组合（ACTION-DYNAMICS 动作动力学表示 + PTS 免训练执行层）——它用「开源生态已发表的两个组件」替换了第 24 轮最昂贵的手搓规划器，同时直接命中块边界抖动（§6）、等待停顿与步骤分；OPEN-BASE（#2）把 G1 的起点从零变成 33k episodes 的现成 LoRA，让整套方案第一周就能产出可提交 checkpoint。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 24 轮产物 · PLAN-GATE 技术报告：子目标抽象 + 规划即审查引擎 + 可逆性伦理审查 + 泛化五轴账本
+# 第 25 轮产物 · OPEN-IMITATE-DEPLOY（OID）技术报告：动作动力学表示 + 免训练执行/修复层 + N 端口服务 + 人类视频与步骤分模仿 + 失败飞轮
 
-> 检索日期：2026-11-05。本文是 M3S（第 23 轮）的演进版：保留「门控交付脊柱」，把 REVIEW-GATE 的「clip」替换为真正的**运动规划引擎**，并新增**子目标抽象**、**可逆性证书**与**泛化账本**。所有数值目标标注为「设计目标」；未见实测的结论均以接口硬约束与 §10 公开来源为界。
+> 检索日期：2026-11-05。本文是第 24 轮 PLAN-GATE 的演进版：**保留门控脊柱、泛化账本与可逆性审查思想**，把「手搓运动规划」降级为薄回退，改为**站在开源基座上**，用三块公开可复用组件（动作动力学、PTS、CBF-QP Repair）补齐「模仿学习 / 场景落地 / 开源生态」三个维度。所有数值目标均标注为「设计目标」；未见实测的结论以官方接口硬约束与 §8 公开来源为界。
 
 ## 0. 结论
 
-不新造大框架。PLAN-GATE = 一条门控交付脊柱 + 一个夹在 VLA 与执行之间的**规划门** + 一套把泛化做成账本的评测/数据闭环：
+不新造大框架。OID = 一条门控交付脊柱 + 一个已练好的开源基座 + 一个「连续动作表示」的学习层 + 一个「免训练」的执行/修复/服务层 + 一个把失败与步骤分当目标的数据飞轮：
 
-1. **MVP-SPINE（保留）**：G0 接口冒烟 → G1 UnifoLM-VLA-0 微调出可提交基线 → G2 加杠杆。
-2. **SUBGOAL（新增）**：VLA 输出低维子目标（SE(3) 抓取/放置位姿 + 关键点约束 + 夹爪 + 是否双臂），运动实现交给规划器。零重训版用「块末位 waypoint」即可上线。
-3. **MOTION-SHIELD（新增，G2a 首发）**：三档规划——P0 reproject（时间参数化+shortcut）/ P1 replan（BiRRT-Connect 到子目标）/ P2 recover（可逆性恢复路径）。
-4. **ETHIC-SHIELD（升级 REVIEW-GATE）**：物理合法（可证明）+ 可逆性审查（R2 需恢复证书）+ 人体在场（双目 3D 让行）；结论三态 PASS / REPAIR / HOLD；全程留痕。
-5. **GEN-LEDGER（新增）**：泛化五轴分账 + 以「规划失败率 / HOLD 率」为探针的数据飞轮。
+1. **MVP-SPINE（保留）**：G0 接口冒烟 → G1 可提交基线 → G2 加杠杆 → G3 自改进。
+2. **OPEN-BASE（新增，替换 G1 来源）**：优先直接使用 **LingBot-VLA 2.0 UniBot LoRA**（6.3B，已在 32 任务 / 33,276 episodes 上 LoRA 微调，单 4090 可训练），UnifoLM-VLA-0 作对照。
+3. **ACTION-DYNAMICS / IDA（新增，G2a）**：把动作头从「离散动作值回归」换成「动作动力学 / flow」（ODE Policy 式），部署时由上一动作积分出下一动作，**轨迹按构造连续**，并带多样性头刻画多模态。
+4. **PTS-EXEC + FLEET-SERVE（新增，G2a）**：免训练执行层（时间重参数化参考路径，消停顿 + 消慢动作）+ N 端口共享模型服务（KV/状态隔离 + admission control + 异步 chunk 预取），直接对准 §6 与步骤分。
+5. **SAFE-REPAIR + ETHIC-SHIELD-lite（新增/合并，G2b）**：CBF-QP 事后修复（绕障并回任务轨迹）+ 仅对不可逆动作（R2）要求恢复证书。
+6. **HUMAN-SCALE + SSI + FAIL-RSI（新增，G2c）**：ELA 潜在动作 + Open-HumanScale 人类视频扩先验；STEP-SCORE-IMITATION 把「省步」当模仿目标；FAIL-RSI 把七成失败变成定向恢复数据。
+7. **GEN-LEDGER（保留，改为对齐公开评测）**：五轴账本对齐 **MESA**（ID + 4 轴）与 **RoboScope Kit**，自建仅「人为干扰」轴。
 
-对齐硬约束：观测仅 4×RGB + 关节/EE(base)/夹爪/下半身 + 语言；动作 joint 或 ee 互斥、块式 `(T_a,·)`；N 连续端口；§6 考核延迟/抖动与动作规律性（来源见 §10）。
+对齐硬约束：观测仅 4×RGB + 关节/EE(base)/夹爪/下半身 + 语言；动作 joint 或 ee 互斥、块式 `(T_a,·)`、index 0 先执行；N 连续端口 8765..；§6 考核逐步时延/波动与动作统计规律性（来源见 §8）。
 
-## 1. 接口复核与模态映射
+## 1. 系统总览（一次 get_action 的数据流）
 
-### 1.1 提交接口（本轮从官方 README 逐条复核）
+```text
+         evaluator (N robots, N ports 8765+)
+                     │  obs: 4×RGB + state + language
+                     ▼
+   ┌──────────────────────── FLEET-SERVE ────────────────────────┐
+   │ 每端口独立会话/KV/状态隔离   admission control（deadline 感知）│
+   │ 连续批处理共享 6.3B 骨干     异步 chunk 预取（执行中算下一块） │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   ▼
+   ┌────────────── OPEN-BASE (LingBot-VLA 2.0 UniBot LoRA) ──────┐
+   │  Qwen3-VL-4B 视觉语言骨干  +  Qwen2 MoE action expert        │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   ▼
+   ┌────────────── ACTION-DYNAMICS (IDA) ────────────────────────┐
+   │  dq/dt = f_θ(q, h, z)   （z = 多样性潜变量；h = 观测嵌入）    │
+   │  由上一动作积分出 T_a 步  →  块内/块间按构造连续、多模态       │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   ▼
+   ┌────────────── PTS-EXEC （免训练执行层） ────────────────────┐
+   │  运动 = 参考路径的时间重参数化；路径只随新观测改变             │
+   │  消「等下一块推理」的停顿 + 消「学得慢」的谨慎速度            │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   ▼
+   ┌────────────── SAFE-REPAIR (CBF-QP) + ETHIC-lite ───────────┐
+   │  探测被挡标称轨迹 → 生成入-出-回引导 → 并回任务轨迹           │
+   │  仅 R2（不可逆）动作要求「恢复证书」，否则 HOLD/重抽样        │
+   └───────────────────────────────┬─────────────────────────────┘
+                                   ▼
+        trace_t → GEN-LEDGER（五轴账本 ↔ MESA/RoboScope）→ FAIL-RSI
+```
 
-| 项 | 官方规范（复核） | PLAN-GATE 遵守 |
-|---|---|---|
-| `metadata` | `control_space` / `obs_delta_indices`（选通道+堆叠）/ `image_resize` / `action_chunk_size` / `token` | 固定；规划/审查不改接口 |
-| `obs_delta_indices` | 键决定**发哪些通道**，值是**帧偏移列表**（旧→新，须严格递增、≤0） | 只声明必要通道 |
-| `image_resize` | 评测端 `cv2.resize(frame,(w,h))` 预缩后再发 | 双目保留较高分辨率以护后续 3D |
-| `get_action` | 返回 `(T_a,·)`，**index 0 先执行**，块边界才再次回调 | 规划输出重采样为恰好 `T_a` 帧 |
-| 端口 | N 端口 8765..8765+N−1，状态隔离、并发不互阻 | 异步规划预算 + 每端口隔离 |
-| §6 | 记录每步时延与波动、动作统计规律性 | 计划：异步规划 + 最小改动 + 分布对齐 |
+## 2. OPEN-BASE：把 G1 的起点从「从零训」改成「复用已练好的 LoRA」
 
-### 1.2 数据模态 vs 评测模态（特权信息复核）
+```text
+事实（2026-08-02, HF）：
+  ezhoureal/lingbot-vla-v2-unibot-lora
+  - 骨干 LingBot-VLA 2.0：6.3B = Qwen3-VL-4B-Instruct + Qwen2 action expert (MoE)
+  - LoRA：rank 64, alpha 32, 目标 q_proj/v_proj/o_proj（65M 可训练 / 6.3B 总）
+  - 数据：UniBot G1_Dex1 全 32 任务、33,276 episodes
+  - 训练：10K 步, bf16 模型 + fp32 LoRA, 单张 RTX 4090, val/loss 0.085
+  - 控制：joint 空间（臂 14 / 夹爪 2 / waist 4 / base 3），臂动作=相对状态增量
+  - 开环校验（G1_Dex1_ArrangePlates）：MSE 0.229 / MAE 0.176，~0.35s/50-step chunk@4090
+```
 
-| 数据集键 | 评测 API | PLAN-GATE 用法 |
-|---|---|---|
-| `head_stereo_left/right`（**rectified**） | 是（`cam_left_high/right_high`） | 3D-ANCHOR 立体 → 场景几何 |
-| `wrist_left/right` | 是 | 腕相深度 + 尺度锚 |
-| `left/right_arm`、gripper、`lower_body` | 是 | 本体 + FK |
-| `*_ee_pose_gripper_base` | 是 | 状态/动作 |
-| `*_ee_pose_gripper_torso`、`state_d435`、`state_torso`、`recomputed_ee_valid` | **否** | 特权 teacher（子目标头/3D 蒸馏） |
-| `base_command`、`action_torso`、`pivot`、`gripper_controls` | **否** | 训练辅助监督 |
+**动机**：官方相邻基线 UnifoLM-VLA-0 需自训；而开源生态里已有一个恰好练在比赛 32 任务上的 LoRA。**第一周的目标从「复现基线」变为「把现成基线接进 N 端口并测账本」**，把省下的算力投到 #3/#4/#7/#8 四个开源未覆盖处。
+**落地步骤**：拉权重 → 接 `example_policy` 接口（joint 空间，注意 `action_chunk_size` 与相对增量）→ 用 LIBERO/离线留出集回归 → 真机烟测。
+**风险**：该 LoRA 是第三方产物，需核对许可（Apache-2.0）与训练/评测分布是否一致；若离线 MSE 尚可但真机差，退 UnifoLM-VLA-0。
 
-> 结论不变：**训练可多看，推理只用 API 模态**。
+## 3. ACTION-DYNAMICS（IDA）：让动作「按构造连续」，消掉块边界抖动与多模态塌缩
 
-## 2. 门控交付计划（本轮修订）
+**核心命题**：第 24 轮把「块边界不连续/抖动（F5）」寄希望于运动规划平滑。但 ODE Policy 给出更便宜的正解——**不学动作值，而学动作的时间导数（向量场），动作由积分产生**：
+
+```text
+监督：在 IL 的短 chunk 上匹配 ∫ f_θ dt ≈ 目标动作；RL 单步同理。
+部署：a_{t+1} = a_t + ∫_t^{t+1} f_θ(q(τ), h, z) dτ
+      → 相邻步/相邻块在构造上连续；抖动不再是「被平滑掉」，而是「不可能出现」。
+多模态：轻量多样性头随机化场方向 z，可采多条合理轨迹 → 对「未见物品/位置」提供候选。
+```
+
+```python
+import numpy as np
+
+class ActionDynamicsHead:
+    """ODEPolicy 式的动作动力学头；可作为 VLA/WAM 的动作头替换件。
+    约定：输入观测嵌入 h（来自骨干）与当前关节 q_prev，输出 (T_a, d) 连续动作块。"""
+    def __init__(self, field, integrator, n_steps=8, dt=1 / 30.0, n_samples=4):
+        self.field = field          # f_θ(q, h, z) -> dq/dt,  (~5M 参数的小网)
+        self.integ = integrator     # 例如 RK4 或显式欧拉
+        self.n_steps, self.dt = n_steps, dt
+        self.n_samples = n_samples  # 采多条候选（多模态）
+
+    def chunk(self, h, q_prev, z=None):
+        out = np.zeros((self.n_steps, q_prev.shape[-1]), dtype=np.float32)
+        q = q_prev.astype(np.float32).copy()
+        for k in range(self.n_steps):
+            dq = self.field(q, h, z) if z is not None else self.field(q, h)
+            q = self.integ.step(q, dq, self.dt)   # 连续性由积分保证
+            out[k] = q
+        return out
+
+    def candidates(self, h, q_prev):
+        """返回若干可行候选，供 SAFE-REPAIR/账本按代价挑选。"""
+        return [self.chunk(h, q_prev, z=np.random.randn(8)) for _ in range(self.n_samples)]
+
+
+def field_loss(candidates, demo_chunk):
+    """短 chunk 上的匹配损失（L2 或对时间加权的 L2）。"""
+    return min(float(np.mean((c - demo_chunk) ** 2)) for c in candidates)  # winner-take-all
+```
+
+**与现有方案的差异**：不是「离散动作块 + 事后平滑」，而是把连续性写进归纳偏置。既服务 §6（动作规律性），又服务多模态（候选集给修复层与账本用），还天然是一个**连续子目标接口**（块末位 = 积分终点），可与第 24 轮 SUBGOAL 无缝对接。
+**资源**：只需在冻结骨干上训练 ~5M 小头（LoRA 级别成本）。
+**风险**：积分步长与误差累积；需限制每步 `|dq|` 并做时间参数化（与 PTS 协同）。
+
+## 4. PTS-EXEC + FLEET-SERVE：把「执行」和「服务」变成独立的、可测量的层
+
+### 4.1 PTS-EXEC（免训练执行层）
+
+```text
+公开事实（2611.01390）：冻结的 action-chunking 策略在部署时有两种「与模型能力无关」的浪费：
+  (i) 推理下一块时机器人停顿；(ii) 学得像谨慎慢动作而速度偏慢。
+  已有方法各去一种、叠加会失败，因为二者都改变了「计划进度 ↔ 实际运动」的对应。
+PTS 原理：机器人运动 = 参考路径的时间重参数化；路径只在收到新观测时改变。
+  → 于是可以「一边异步推进下一块、一边把当前路径跑快」，两类损失同时消掉。
+```
+
+```python
+class PTSExec:
+    """对齐当前动作块与上一块的重叠尾部，构造参考路径，再时间重参数化。
+    免训练；作为 frozen policy 的输出后处理。"""
+    def __init__(self, dt=1 / 30.0, speed_cap=1.8, causal=True):
+        self.dt, self.speed_cap, self.causal = dt, speed_cap, causal
+
+    def path_from_chunks(self, prev_chunk, new_chunk, overlap):
+        """用重叠步同步相位，拼接出参考路径（关节空间）。"""
+        return np.vstack([prev_chunk[:-overlap], new_chunk])  # 保持路径不变，只延展
+
+    def retime(self, path, obs_changed):
+        """时间重参数化：按曲率/限速分配时间；路径本身不改（除非观测变）。"""
+        if obs_changed:
+            return path, self.dt / max(1.0, self.speed_cap)   # 新观测 → 允许换路径
+        # 直道/低曲率段加速，逼近 speed_cap；保持起点相位连续
+        return path, self.dt / max(1.0, self.speed_cap)
+```
+
+**与第 24 轮 P0/reproject 的差异**：P0 是「重时序 + shortcut + 最小改动」的自研近似；PTS 是**已发表、面向 action-chunking、同时处理异步与加速、且保持参考路径**的完整执行层。**直接采用。**
+**收益**：步骤分（更快完成 → 更少步）、§6（消除块边界停顿造成的不连续）、成功率（不在推理时停住）。
+
+### 4.2 FLEET-SERVE（N 端口 + §6 服务）
+
+```text
+公开事实（2611.01404）：agentic robot 舰队有两类耦合资源约束——
+  大脑反复重放增长中的 KV-cache（上下文达 215k tokens，Astra 中位 7.78s）；
+  VLA 需在严格 deadline 下执行动作块。提出 admission control。
+官方约束（unibot_submission）：必须有 N 个连续端口（8765..），状态隔离、并发不互阻；
+  §6 记录逐步时延与波动、返回动作的统计规律性。
+```
+
+```text
+FLEET-SERVE 设计（Approach 2 共享模型，压住 6.3B 的显存）：
+  1. N 个轻量端点，各自持有「端口 ↔ episode 会话」（状态/KV/历史严格隔离）。
+  2. 一个共享 6.3B 推理后端，连续批处理（continuous batching），避免相互阻塞。
+  3. 执行层预算：机器人执行当前块的 T_a·dt 期间，异步预取下一块；PTS 保证不停顿。
+  4. admission control：按 deadline 与队列水位决定「立即算 / 延期 / 退回上一块时间外推」。
+  5. 遥测：每端口记录 p50/p95 时延、抖动、动作规律性分位 —— 直接作为 §6 证据。
+```
+
+**差异**：官方示例给了两种部署范式（N 进程 vs 共享模型），但**没有**给出「如何在共享模型下满足 §6 的时延/规律性」。FLEET-SERVE 把 KV 抖动与 deadline 纳入一等公民，是本轮的接口工程差异点。
+
+## 5. SAFE-REPAIR + ETHIC-SHIELD-lite：规划器退为薄回退
+
+```text
+公开事实（2611.01713）：CBF-QP 局部把不安全动作投影到安全集，可能把机器人推离任务轨迹、
+  让策略失去可靠恢复方向。Route-Guided 用 VLA 的短时 chunk 探测被挡标称轨迹，
+  生成绕障的「入-出-回」引导，作为软项加入 CBF-QP，并保持安全约束。
+→ 结论：这正是第 24 轮 P1「replan」想要的效果（绕障 + 并回任务轨迹），且免训练、已发表。
+```
+
+```text
+SAFE-REPAIR 的三态（沿用 Shielding 的「仅在越界时纠正」）：
+  PASS  ：chunk 经 PTS 重时序后无碰撞 → 原样放行（最小改动）。
+  REPAIR：探测到被挡 → CBF-QP 引导绕行并回任务轨迹（替代 BiRRT replan）。
+  HOLD  ：仅当动作为 R2（不可逆）且无法给出恢复证书 → 安全保持 / 重抽样 / 降速复核。
+ETHIC-SHIELD-lite 只保留：
+  A 物理合法（限位/速度/加速度/加加速度，零学习）；
+  B 可逆性等级 R0/R1/R2（人工标注 32 任务，约 1 天），仅 R2 要求恢复证书；
+  C 人体在场：双目 3D 检测人手距离 → 降速/让行（对「人为干扰」轴）。
+MOTION-SHIELD 的 BiRRT/TOP 自研件全部退为「CBF-QP 不可用时的离线 fallback」，不再进实时路径。
+```
+
+## 6. HUMAN-SCALE + STEP-SCORE-IMITATION + FAIL-RSI：把「免费视频、省步、失败」都变成数据
+
+### 6.1 HUMAN-SCALE（ELA + Open-HumanScale）
+
+```text
+公开事实：
+  - Open-HumanScale（2611.06817）：50,000 小时 egocentric 人类视频 + 完整配方；
+    给出预训练小时数 → 下游成功率 的对数线性 scaling law。
+  - ELA（2611.05571）：从无动作标注视频学「潜在动作」，且潜在动作被联合优化以利控制与解码；
+    仅需少量有动作标注的机器人演示。
+做法：
+  1. 用 ELA 式潜在动作在人类视频上做自监督预训练（扩分布：未见物品/背景）。
+  2. 按 Open-HumanScale 的 scaling law 估算「多加 X 小时 → 预期 +Y 成功率」，给数据预算以依据。
+  3. 采少量有动作标注的 G1 演示做对齐微调。
+```
+
+### 6.2 STEP-SCORE-IMITATION（SSI）：把步骤分当模仿目标
+
+**动机**：排名 = 平均成功率 **+** 步骤分。所有人刷成功率，几乎没人显式学「省步」。步骤分可由两处拿：
+```text
+(1) 时间维省步：学「最快成功演示」的时间参数化 —— 对同一参考路径取演示时长分布的下分位，
+    并与 PTS 的速度上限对齐。
+(2) 决策维省步：子目标完成即停 —— 用特权状态（*_ee_pose_gripper_torso / recomputed_ee_valid）
+    离线标注每个 demo 的「子目标达成帧」，训一个 stop head，达成即触发切换/结束。
+```
+
+```python
+def ssi_weights(episode_lengths, demo_times, k=0.25):
+    """按演示时长给样本加权：越快成功，权重越高（鼓励学省步）。"""
+    t = np.asarray(demo_times, dtype=np.float64)
+    w = np.exp(-(t - np.quantile(t, k)) / (np.std(t) + 1e-6))
+    return w / w.mean()
+
+
+def stop_head_target(ee_traj, goal_ee_pose, tol=0.02):
+    """子目标达成帧：EE 到位且稳定的最早帧。"""
+    d = np.linalg.norm(ee_traj - goal_ee_pose[None, :], axis=-1)
+    stable = d < tol
+    return int(np.argmax(stable)) if stable.any() else len(ee_traj) - 1
+```
+
+**差异**：把「步骤分」从一个被动指标，变成**主动的模仿/早停目标**。低竞争、低风险、直接换分。
+
+### 6.3 FAIL-RSI（失败恢复数据飞轮）
+
+```text
+公开事实：Compounding Physical RSI（2611.06654）——任务完成度≈各阶段通过率之乘积，
+  递归自改进收益跨代相乘；难点在「终点反馈难定位崩在哪一阶段」。
+做法（离线为主、训练无关优先）：
+  1. 用冻结策略在留出/仿真（LIBERO/MESA）大量 rollout，收集失败态。
+  2. 用特权状态与子目标标注对失败**定位到阶段**（哪一步 EE/夹爪偏离）。
+  3. 用 ScheduleGen（2610.39429，多臂约束下的演示合成）生成「从失败态回到正确阶段」的恢复演示。
+  4. 回灌训练 → 复测账本。
+  5. （可选 G3）在真机用 RL Enables Scaling（2611.06905）式迭代自改进。
+```
+
+## 7. GEN-LEDGER ↔ 公开评测（本轮修订）
+
+```text
+五轴 → 公开评测映射：
+  位置变化     → MESA spatial 轴（2611.05567）
+  干扰物       → MESA compositional 轴
+  背景差异     → MESA semantic/appearance 轴
+  未见物品     → MESA semantic/open-vocab 轴
+  人为干扰     → 自建（MESA 未覆盖）：双目 3D 检测移动人手，注入退避回归
+离线代理：RoboScope Kit（2611.03850，统一 Policy/adapter，加速评测；其 profiling 显示仿真吃 CPU、GPU 仅 14.3% 利用）
+每轴指标：SR、步骤分代理、PTS 加速比、REPAIR/HOLD 比例、恢复证书成功率、块边界不连续度（§6 代理）
+飞轮：失败/HOLD 留痕 → FAIL-RSI 定向合成恢复演示 → 回灌 → 复测
+```
+
+## 8. 门控交付计划（本轮修订）
 
 ```text
 G0（接口冒烟，1–3 天）
   1. 跑通 example server/client；自写 client 验证「每步回调 vs 整块执行」、N 端口行为。
   2. 记录单次 get_action 时延 p50/p95/抖动，作为 §6 参照线。
-  3. 新增：测「单次 BiRRT-Connect 从 q0 到块末位的时延与成功率」（决定 P1 是否可达实时）。
-  Go：官方 example 无 ACTION REJECTED；规划时延预算表成形。
+  3. 拉 LingBot-VLA 2.0 UniBot LoRA，量测 1 块/多块推理时延与显存（决定 FLEET-SERVE 批大小）。
+  Go：官方 example 无 ACTION REJECTED；服务预算表成形。
 
-G1（能上榜的基线，1–2 周）
-  1. 数据：32×G1_Dex1_*（LeRobot v3.0）→（转码）HDF5 → RLDS。
-  2. 基座：UnifoLM-VLA-0（Apache-2.0；base=UnifoLM-VLM-Base）。
-  3. joint 空间 + 动作块 + 时序集成 + 子目标/夹爪早停。
-  Go：离线回归不低于未微调基座；延迟达标。
+G1（能上榜的基线，3–7 天；因 OPEN-BASE 而大幅缩短）
+  1. 接 LoRA 到 joint 空间接口；核对相对增量与 action_chunk_size。
+  2. 离线留出回归（对齐 LoRA 卡片 MSE 0.229 量级）+ LIBERO 回归。
+  3. 加 PTS-EXEC，测步骤分代理与块边界不连续度。
+  Go：离线不低于 LoRA 未改动的开环指标；时延达标。
 
-G2a（规划门，1–2 周；本轮首发）—— 产出：带 MOTION-SHIELD 的策略
-  P0 reproject → P1 replan → P2 recover；先离线统计「块末位可达率」，再接入。
-G2b（3D-ANCHOR，1–2 周）—— 为规划提供场景几何与人体 3D。
-G2c（SUBGOAL 头 + GEN-LEDGER，1–2 周）—— 子目标训练版 + 五轴账本日报。
+G2a（表示 + 执行，1–2 周）
+  ACTION-DYNAMICS 小头替换 + 多模态候选；PTS-EXEC + FLEET-SERVE 压测（N=3）。
+G2b（安全，1 周）
+  SAFE-REPAIR(CBF-QP) + ETHIC-lite（仅 R2 恢复证书）；人为干扰轴回归。
+G2c（数据，1–2 周）
+  HUMAN-SCALE（ELA/Open-HumanScale）+ SSI + FAIL-RSI；MESA/RoboScope 账本日报。
+G3（自改进，可选）
+  真机 RSI / RL 迭代（2611.06905 / 2611.06654）。
 硬规则：任何新想法先证明「能让某关卡变绿」，否则进旁路清单。
 ```
 
-> **为什么把规划排在 3D 前面（本轮关键调度判断）**：规划不依赖任何未公开的硬件事实（双目基线/内参是否可得），且已有强近邻证据（MPVI +109% / MoManipVLA +4.2%）与现成 LIBERO 离线验证栈；3D-ANCHOR 仍受制于「双目是否可用于度量重建」这一未证实前提。**先用确定性杠杆换分，再赌几何红利。**
+## 9. 实验协议
 
-## 3. SUBGOAL：子目标抽象接口
-
-```text
-两种实现梯度（先零重训、再训练）：
-  (a) 零重训：s* := EE 位姿(A[-1], 由 q 经 FK 得到)  ← 把基座块的末位当隐式子目标
-  (b) 训练版：s* := Head(h_VLA, proprio)  ← <5M 小头，监督用特权状态
-      监督：left/right_ee_pose_gripper_torso（评测端拿不到）+ 关键点检测
-表示：s* = { p_L, p_R ∈ SE(3), g_L, g_R ∈ [0,1], k ∈ R^{K×3}(可选关键点), bimanual∈{0,1} }
-```
-
-```python
-import numpy as np
-
-
-def subgoal_from_chunk(chunk, fk, mode="terminal"):
-    """零重训子目标：取关节块的末位 waypoint 的 EE 位姿。"""
-    q_T = chunk[-1, :14]
-    p_L, p_R = fk.left_ee(q_T[:7]), fk.right_ee(q_T[7:14])
-    g_L, g_R = chunk[-1, 14], chunk[-1, 15]
-    return {"p_L": p_L, "p_R": p_R, "g_L": g_L, "g_R": g_R,
-            "bimanual": float((np.linalg.norm(p_L - p_R) < 0.35))}
-```
-
-**泛化论证**：子目标空间维数远低于关节轨迹空间，且语义（往哪抓/放）比运动（怎么绕）更跨位姿稳定；运动不确定性由规划器在**每个块边界**重新消解，故误差不跨块累积。
-
-## 4. MOTION-SHIELD：规划即审查引擎（核心）
-
-### 4.1 三档处理与目标函数
-
-```text
-输入：q0（14 维双臂，waist 锁）、s*、场景几何 S、扰动集 D、VLA 原块 A
-(P0) reproject：对 A 做 time-optimal retiming + shortcut，检查无碰撞 → 放行
-(P1) replan  ：以 s* 为目标跑 BiRRT-Connect → shortcut → 时间参数化 → 重采样 T_a
-(P2) recover ：为 R2 动作规划「逆动作回到安全态」的路径（扰动集 D 下）
-目标：min  w_t·T(轨迹) + w_j·∫|d³q/dt³|² + w_s·d(轨迹末端, s*)
- s.t. 胶囊自碰撞=∅、臂-臂=∅、桌面/物体穿透=∅、关节限位、v/a/jerk 限、轨迹⊂工作空间
-```
-
-### 4.2 可运行骨架
-
-```python
-import numpy as np
-
-
-class MotionShield:
-    def __init__(self, fk, collision, q_min, q_max, v_max, a_max, j_max,
-                 ta=8, dt=1 / 30.0, dev_max=0.15, tau_cert=0.6):
-        self.fk, self.coll, self.q_min, self.q_max = fk, collision, q_min, q_max
-        self.v_max, self.a_max, self.j_max = v_max, a_max, j_max
-        self.ta, self.dt = ta, dt
-        self.dev_max = dev_max          # 允许偏离 VLA 原块的最大步长（最小改动原则）
-        self.tau_cert = tau_cert        # 恢复证书裕度
-
-    def feasible(self, Q, S):
-        if (Q < self.q_min).any() or (Q > self.q_max).any():
-            return False
-        for t in range(1, len(Q)):
-            v = (Q[t] - Q[t - 1]) / self.dt
-            if (np.abs(v) > self.v_max).any():
-                return False
-        for q in Q:
-            if not self.coll.clear(self.fk.capsules(q), S):   # 自碰撞 + 臂臂 + 场景
-                return False
-        return True
-
-    def reproject(self, A, q0, S):
-        Q = np.vstack([q0, A[:, :14]])                     # P0：以原块为参照
-        Q = self.retime(Q)                                 # 满足 v/a/jerk（TOP）
-        Q = self.shortcut(Q, S)                            # 无碰撞捷径平滑
-        Q = self.limit_deviation(Q, A)                     # 最小改动：贴回原块
-        return Q
-
-    def replan(self, s_star, q0, S):
-        goal = self.fk.ik(s_star)                          # 子目标 → 关节目标
-        if goal is None or not self.coll.clear(self.fk.capsules(goal), S):
-            return None                                    # 子目标本身不可达/碰撞
-        Q = self.birrt_connect(q0, goal, S)                # P1
-        if Q is None:
-            return None
-        Q = self.shortcut(self.retime(Q), S)
-        return self.resample(Q, self.ta)
-
-    def recover(self, q_now, q_safe, S, D):
-        """P2：在扰动集 D 下，是否存在回到安全态的可行路径 → 恢复证书。"""
-        for obstacle in D.samples():
-            Q = self.birrt_connect(q_now, q_safe, S.union(obstacle))
-            if Q is None or not self.feasible(Q, S.union(obstacle)):
-                return None
-        return {"to": q_safe, "margin": self.min_clearance(q_now, S)}  # 证书
-
-    def gate(self, A, s_star, q0, S, reversibility, human_d, D):
-        # 最小改动优先（Shielding：仅在违反时纠正）
-        if human_d < self.dev_max and not self.would_collide(A, S):
-            pass                                           # 人体近？交给上层 HOLD
-        Q = self.reproject(A, q0, S)
-        if self.feasible(Q, S) and self.max_dev(Q, A) <= self.dev_max:
-            return self.pack(Q, A), {"mode": "P0"}
-        Q = self.replan(s_star, q0, S)
-        if Q is not None:
-            cert = None
-            if reversibility == "R2":
-                cert = self.recover(Q[-1], q0, S, D)
-                if cert is None:
-                    return self.hold(q0), {"mode": "HOLD", "reason": "no_recovery_cert"}
-            return self.pack(Q, A), {"mode": "P1", "recovery_cert": cert}
-        return self.hold(q0), {"mode": "HOLD", "reason": "no_plan"}
-
-    # --- 以下为占位，工程实现用现成库 ---
-    def retime(self, Q): return Q
-    def shortcut(self, Q, S): return Q
-    def limit_deviation(self, Q, A): return Q
-    def resample(self, Q, n): return Q[:n]
-    def birrt_connect(self, q0, goal, S): return np.vstack([q0, goal])
-    def min_clearance(self, q, S): return 0.05
-    def max_dev(self, Q, A): return 0.0
-    def would_collide(self, A, S): return False
-    def pack(self, Q, A):
-        out = A.copy()
-        out[:, :14] = Q                                          # 只改双臂关节，其余沿用
-        return out
-    def hold(self, q0):
-        return np.tile(np.concatenate([q0, [0, 0], np.zeros(1)]), (self.ta, 1))
-```
-
-### 4.3 时延预算（保护 §6 的硬约束）
-
-```text
-关键：规划绝不阻塞 get_action。
-  1. get_action(t) 立即返回「已预算好的」块；
-  2. 在机器人执行该块的 T_a·dt 期间，异步为 t+1 规划下一个块；
-  3. 规划未在 deadline 前完成 → 退回 P0/上一块的时间外推（fallback），
-     并记录 mode=fallback 供账本统计。
-预算目标（设计）：单块 P1 规划 ≤ T_a·dt（≈0.27s @T_a=8,30fps）的 80%；否则降用 P0。
-```
-
-## 5. ETHIC-SHIELD：可逆性伦理审查
-
-### 5.1 三层与可逆性等级
-
-```text
-A 物理合法（零学习，可证明）：直接复用 MOTION-SHIELD.feasible（限位/速度/加速度/加加速度/
-  自碰撞/臂臂/桌面/工作空间）。
-B 可逆性审查（伦理内核）：原子动作等级
-    R0 完全可逆（自由空间移动、开合夹爪）
-    R1 有代价可逆（抓取/放置；掉落后可重试）
-    R2 不可逆（断网口、拔线缆、倒药、开锁、推倒堆叠、液体倾洒）
-  仅对 R2：要求 MotionShield.recover 出具恢复证书（存在回安全态的可行路径，
-  且在扰动集 D 下 margin ≥ τ_cert）。无证书 → 只允许 {安全保持 / 重抽样 / 降速靠近再复核}。
-C 人体在场：头部双目 3D 检测人/手 → d_human；<d_slow 降速、<d_stop 触发 P2 让行。
-结论：PASS / REPAIR（规划修复）/ HOLD（安全保持+重询问）。
-留痕：trace_t=(decision, mode, reason_code, {margin}, recovery_cert, d_human, latency)。
-```
-
-**与上一轮 REVIEW-GATE 的关键差异**：REPAIR 从「clip 到包络」（可能造出不可达轨迹）变为「规划出可行轨迹」；VETO 从「凭学习式 critic 否决」变为「凭确定性可行性 + 可逆性证书 HOLD」，误杀风险大幅下降。
-
-## 6. GEN-LEDGER：泛化五轴账本 + 数据飞轮
-
-```text
-五轴留出协议（离线可做，LIBERO 可做部分代理）：
-  位置 | 干扰物 | 背景 | 未见物品 | 人为干扰
-每轴指标：
-  SR、步骤分代理（子目标完成步数）、P1/P2 规划失败率、PASS/REPAIR/HOLD 比例、
-  恢复证书成功率、块边界不连续度（§6 代理）。
-训练侧轴定向增强：
-  位置轴→目标/物体位姿抖动；干扰物轴→点云注入虚拟障碍；背景轴→表观替换；
-  未见物品轴→检测框凸包当陌生几何；人为干扰轴→仿真里注入移动人手。
-推理侧：OOD 子目标 → 最近演示检索出候选位姿集 → 规划器选可行者（bounded fallback）。
-飞轮：规划失败/HOLD 留痕 → 补数据清单 → 定向增强 → 下一轮账本复测。
-```
-
-## 7. 实验协议
-
-### 7.1 第一优先（决定路线）
+### 9.1 第一优先（决定路线）
 
 | 实验 | 做法 | 判据 |
 |---|---|---|
-| E1 接口语义 | 自写 client 模拟每步回调 vs 整块执行 | 确定规划/让行粒度 |
-| E2 双目可信度（承上轮） | 桌面平面单应 + 已知物尺寸 + EE 交叉校验 | 决定 3D 是强/弱杠杆 |
-| **E3 规划时延/可达（本轮新增）** | 32k 演示上统计「q0→块末位」BiRRT 成功率与 p95 时延 | 决定 P1 是否实时可用 |
-| **E4 子目标 vs 全块（本轮新增）** | 同一基座，块输出 vs 子目标+规划，比较五轴 SR | 「减维接口」是否提升泛化 |
+| E1 接口语义 | 自写 client 模拟每步回调 vs 整块执行 | 确定执行层/让行粒度 |
+| E2 OPEN-BASE 复现 | LoRA 在留出/LIBERO 上开环 + 闭环 | 能否直接当 G1 |
+| **E3 PTS 收益（新）** | 冻结策略 ± PTS，测步骤分代理、边界不连续度、时延抖动 | 是否免训练直接换分 |
+| **E4 动作表示对比（新）** | 离散头 vs ODE/flow 头：连续性、多模态、留出误差 | #3 是否成立 |
+| **E5 FLEET-SERVE 压测（新）** | N=3 共享模型，测 p95/抖动/串扰 | 是否满足 §6 |
+| E6 SSI/FAIL-RSI | ± 时长加权/早停/恢复演示 | 步骤分与 SR 增量 |
 
-### 7.2 消融网格与指标
+### 9.2 消融网格与指标
 
 ```text
-消融：{纯基座开环, +P0, +P1, +P2, +子目标(零重训), +子目标(训练头),
-       +3D-ANCHOR, +ETHIC-SHIELD B/C} × {joint, ee}
-指标：留出动作误差(MSE/DTW)、五轴 SR、步骤分代理、规划失败率、恢复证书成功率、
-      误杀率（应≈0）、p50/p95 时延与抖动、块边界不连续度、加加速度分位。
+消融：{LoRA 开环, +PTS, +ACTION-DYNAMICS, +SAFE-REPAIR, +FLEET-SERVE,
+       +SSI, +FAIL-RSI, +HUMAN-SCALE} × {joint, ee}
+指标：留出动作误差(MSE/DTW)、五轴 SR、步骤分代理、块边界不连续度、加加速度分位、
+      PTS 加速比、REPAIR/HOLD 比例、恢复证书成功率、误杀率(≈0)、
+      p50/p95 时延与抖动、N 端口串扰。
 ```
 
-### 7.3 预期结果（设计目标，非声称）
+### 9.3 预期结果（设计目标，非声称）
 
 | 模块 | 目标 |
 |---|---|
-| G1 基线 | 留出动作误差优于未微调基座（相对 −20% 量级） |
-| P0 reproject | 块边界不连续度与加加速度下降（§6 受益），误改率低 |
-| P1 replan | 长程/新位置任务 SR 相对纯端到端提升（对齐 MPVI/ MoManipVLA 方向） |
-| SUBGOAL | 位置/未见物品轴 SR 提升（泛化减维） |
-| ETHIC-SHIELD | 演示误杀率 ≈0；R2 动作零事故 |
-| 多端口 | p95 延迟与抖动不劣于单端口；异步规划不阻塞 |
+| OPEN-BASE | G1 可在数天内产出可提交 checkpoint |
+| PTS-EXEC | 步骤分代理提升；块边界不连续度与抖动下降；误改率低 |
+| ACTION-DYNAMICS | 留出连续性/多模态优于离散头；块边界差显著下降 |
+| FLEET-SERVE | N=3 时 p95 与抖动不劣于单端口；无串扰 |
+| SSI | 步骤分提升而 SR 不降 |
+| FAIL-RSI | 在失败高发轴上 SR 有可归因增量 |
+| SAFE-REPAIR | 障碍注入下零碰撞；误杀率≈0 |
 
-## 8. 风险与缓解
+## 10. 时间线（建议，随关卡 Go/Kill 调整）
+
+```text
+D1–D3   ：G0 接口冒烟 + E1 接口语义 + 拉 LoRA + E5 时延预算
+D4–D7   ：G1 接 LoRA + PTS-EXEC + E3 步骤分
+D8–D14  ：G2a ACTION-DYNAMICS 头 + FLEET-SERVE 压测 + MESA/RoboScope 账本
+D14–D18 ：G2b SAFE-REPAIR + ETHIC-lite + 人为干扰轴
+D18–D24 ：G2c HUMAN-SCALE + SSI + FAIL-RSI + 分轴复盘
+D24–D30 ：G3（可选）真机 RSI；预约评测
+```
+
+## 11. 风险与缓解
 
 | 风险 | 缓解 |
 |---|---|
-| 规划时延撞 §6 | 异步预算 + deadline fallback + P0 优先；p95 SLO |
-| 规划改变动作分布 | 最小改动原则（Shielding 式仅在违反时纠正）+ 分布对齐限幅 |
-| 碰撞模型与真机偏差 | 保守胶囊膨胀 + 桌面先验 + 真机小样本校准 |
-| 块末位子目标噪声 | 中值滤波 + 最近演示检索 + 规划器容差 |
-| 透明/反光物几何缺失 | 检测框凸包兜底；3D 置信低则退 2D 先验 |
-| R2 误判 / HOLD 过度 | 可逆性人工审核（32 任务 1 天）+ 只对 R2 用证书 |
-| 数据 v3.0→v2.1/RLDS 转码 | 复用仓库 prepare_data 脚本改适配；或原生 v3 加载器 |
-| 训练算力 | LoRA/部分解冻先验证，分级 checkpoint |
+| LoRA 许可/分布不一致 | 核对 Apache-2.0 与数据版本；退 UnifoLM-VLA-0 |
+| ODE 积分误差累积 | 限步长 `|dq|` + 时间参数化（PTS 协同）+ 候选集重选 |
+| PTS 与低层限速耦合 | 速度上限取下层可达域；真机小样本标定 |
+| FLEET-SERVE 的 KV 抖动 | admission control + 会话隔离 + 连续批处理；p95 SLO |
+| CBF-QP 保守过度 | 仅在探测到阻挡时触发；软引导项权重可调 |
+| HUMAN-SCALE 域鸿沟 | 少量 G1 对齐微调；先用 scaling law 估收益再投算力 |
+| R2 误判 / HOLD 过度 | 人工审核 32 任务的可逆性；只对 R2 用证书 |
+| 步骤分口径未公开 | 保守优化「快 + 子目标完成即停」；人工查飞书规则 |
 
-## 9. 时间线（建议，随关卡 Go/Kill 调整）
-
-```text
-D1–D3   ：G0 接口冒烟 + E1 接口语义 + E3 规划时延/可达
-D4–D7   ：数据转码；P0/P1 规划器接入（离线在演示/LIBERO 回归）
-D8–D14  ：G1 基线微调 + 时序集成 + 早停 → 第一个可提交 checkpoint
-D14–D18 ：G2a MOTION-SHIELD 三档 + E4 子目标对比 + 五轴账本首测
-D18–D24 ：G2b 3D-ANCHOR（先 E2 验证双目）+ 场景几何
-D24–D30 ：G2c SUBGOAL 训练头 + ETHIC-SHIELD B/C + 多端口压测
-D30+    ：预约评测；按账本分轴复盘，回到「让关卡变绿」的循环
-```
-
-## 10. 参考来源（检索日期 2026-11-05）
+## 12. 参考来源（检索日期 2026-11-05）
 
 - 提交模板与接口规范：https://github.com/unitreerobotics/unibot_submission
-- 挑战赛任务集与参赛方式：https://unibot.unitree.com/challenges.html
-- 首页 / 排行榜 / 运行记录（榜单 Coming Soon）：https://unibot.unitree.com/ ；https://unibot.unitree.com/leaderboard.html ；https://unibot.unitree.com/runs.html
-- 参赛规则（飞书，正文 JS 渲染/需登录，未机读）：https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh
-- 数据集（LeRobot v3.0、stereo rectified、特权状态、Dex1 5.5–0.0）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
-- 挑战数据集集合：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
-- UnifoLM-VLA-0（训练/推理/权重、V2.1→HDF5→RLDS、LIBERO 评测）：https://github.com/unitreerobotics/unifolm-vla
-- MPVI：Interleaving Motion Planning with VLA（Georgia Tech 2026，BEHAVIOR-1K 进度 +109%）：https://robotdangerlab.me.gatech.edu/projects/vla-motion-planning/
-- MoManipVLA（CVPR 2025，waypoint + 双层运动规划，arXiv:2503.13446）：https://arxiv.org/abs/2503.13446
-- VoxPoser（arXiv:2307.05973）：https://arxiv.org/abs/2307.05973
-- ReKep（arXiv:2409.01652）：https://arxiv.org/abs/2409.01652
-- Safe RL via Shielding（arXiv:1708.08611）：https://arxiv.org/abs/1708.08611
-- Unitree G1 真机操作聚合榜：https://www.sota2.com/research/sota/robot-manipulation-on-unitree-g1-real-world
-- PointVLA https://arxiv.org/abs/2503.07511 ；BridgeVLA https://bridgevla.github.io/home_page.html ；OG-VLA https://og-vla.github.io/
+- 挑战赛首页 / 任务集 / 排行榜 / 运行记录：https://unibot.unitree.com/ ；https://unibot.unitree.com/challenges.html ；https://unibot.unitree.com/leaderboard.html ；https://unibot.unitree.com/runs.html
+- 赛事启动报道（32 任务 / 32,000 样本 / 169h / 五轴 / 平均成功率 + 步骤分 / DAPTO 2）：https://myxmr.com/en/news/unitree-launches-unibot-world-challenge ；https://myxmr.com/news/unitree-launches-unibot-world-challenge
+- 挑战数据集集合（32 个 G1_Dex1_*）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；单集 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_FoldTowel
+- LingBot-VLA 2.0：https://github.com/Robbyant/lingbot-vla-v2 ；权重 https://huggingface.co/robbyant/lingbot-vla-v2-6b
+- UniBot LoRA：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora
+- UnifoLM-VLA-0：https://github.com/unitreerobotics/unifolm-vla
+- ODE Policy（2611.01729）：https://arxiv.org/abs/2611.01729
+- PTS（2611.01390）：https://arxiv.org/abs/2611.01390
+- Route-Guided CBF-QP Repair（2611.01713）：https://arxiv.org/abs/2611.01713
+- Serving Agentic Robot Fleets（2611.01404）：https://arxiv.org/abs/2611.01404
+- Open-HumanScale（2611.06817）：https://arxiv.org/abs/2611.06817
+- ELA（2611.05571）：https://arxiv.org/abs/2611.05571
+- ScheduleGen（2610.39429）：https://arxiv.org/abs/2610.39429
+- Compounding Physical RSI（2611.06654）：https://arxiv.org/abs/2611.06654
+- RL Enables Scaling Generalist Robot Policy（2611.06905）：https://arxiv.org/abs/2611.06905
+- MESA（2611.05567）：https://arxiv.org/abs/2611.05567
+- RoboScope Kit（2611.03850）：https://arxiv.org/abs/2611.03850
 
-> 本轮产物一句话：**PLAN-GATE = 「VLA 提子目标 + 运动规划保证可行执行 + 可逆性证书守住不可逆动作 + 五轴账本运营泛化」；上一轮的 REVIEW-GATE 缺的正是这个规划引擎。**
+> 本轮产物一句话：**OID = 「开源已练好的 UniBot 基座 + 动作动力学表示 + PTS/CBF-QP 免训练执行与修复 + FLEET-SERVE 的 N 端口服务 + 人类视频/步骤分/失败三源数据飞轮」；第 24 轮缺的不是规划引擎，而是对『模仿学习的表示』与『部署执行层』的正面进攻——本轮把重资产规划器换成了便宜且已验证的公开组件。**
 <!-- ARTIFACT:END -->
