@@ -7,16 +7,16 @@ on:
     tags:
       - '**'
   workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_run:
     workflows:
       - 'CI'
       - 'Continuous Loop'
     types: [completed]
 concurrency:
+  # 连发触发（push / workflow_run）时只保留最新一次同步，排队中的旧任务直接被替换，
+  # 不再串行堆一串重复的镜像 job（镜像推送幂等，取消旧的没有副作用）。
   group: sync-to-gitee
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   sync-to-gitee:

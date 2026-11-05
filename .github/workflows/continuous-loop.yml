@@ -3,7 +3,7 @@ name: Continuous Loop
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '31 * * * *'
 
 # ⭐ 关键 1：同一时间只允许一个 run，新的排队等待（不取消旧的）。
 #   每个 run 内含两个并行工作 job：run-xuen（设计一个新的算法）与
@@ -90,7 +90,7 @@ jobs:
             fi
             sleep 10
           done
-          echo "[loop][warn] 未能确认后继 run；收尾的 next-run job 与 */15 心跳会补位"
+          echo "[loop][warn] 未能确认后继 run；收尾的 next-run job 与每小时心跳会补位"
           exit 0
 
       - name: Checkout
@@ -1100,7 +1100,7 @@ jobs:
   # UniBot 调研）无论成功、失败、超时被取消，这个 job 都会在它们全部收尾后
   # 紧接着启动。这里无条件派发一个新的后继 run：它在组内排队，本 run 退出
   # 的一瞬间就被调度。万一这个 job 连启动都没机会（整个 run 被强杀），
-  # */15 心跳会兜底。
+  # 每小时心跳会兜底。
   next-run:
     needs: [run-xuen, run-xuen-unibot]
     if: always()
@@ -1124,6 +1124,21 @@ jobs:
             *) WF_FILE="continuous-loop.yml" ;;
           esac
           echo "[loop] repo=${GH_REPO} workflow=${WF_FILE} branch=${BRANCH} run=${RUN_ID}"
+          # 防重派：若队列中已有后继 run（含心跳排队的），不再重复 dispatch，
+          # 避免并发组不断产生被替换/取消的多余 run 记录。
+          pending_other() {
+            gh api "repos/${GH_REPO}/actions/workflows/${WF_FILE}/runs?per_page=30" \
+              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' \
+              2>/dev/null
+          }
+          Q="$(pending_other)"
+          # 查询失败按 0 处理：宁可多派一个（会被队列合并），也绝不能漏派而断链
+          case "$Q" in ''|*[!0-9]*) Q=0 ;; esac
+          echo "[loop] queued successors before dispatch: ${Q}"
+          if [ "$Q" != "0" ]; then
+            echo "[loop] 后继 run 已在队列中，无需重复派发"
+            exit 0
+          fi
           for attempt in 1 2 3 4 5; do
             if gh workflow run "$WF_FILE" --ref "$BRANCH"; then
               echo "[loop] 已派发后继 run（attempt ${attempt}）——本 run 结束后立刻起跑"
@@ -1132,5 +1147,5 @@ jobs:
             echo "[loop][warn] 派发失败（attempt ${attempt}）10s 后重试"
             sleep 10
           done
-          echo "[loop][warn] 派发失败；下一次 */15 心跳会补位"
+          echo "[loop][warn] 派发失败；下一次每小时心跳会补位"
           exit 0
