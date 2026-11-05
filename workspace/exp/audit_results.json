@@ -1,0 +1,487 @@
+{
+ "config": {
+  "N_main": 12000,
+  "N_sens": 8000,
+  "pi": 0.35,
+  "mix": {
+   "ood_exec": 0.4,
+   "ood_sem": 0.2,
+   "ood_gc": 0.25,
+   "ood_gs": 0.15
+  },
+  "B": 10,
+  "p_need": 3,
+  "params": {
+   "id": [
+    0.72,
+    0.03,
+    0.005
+   ],
+   "id_noisy": [
+    0.72,
+    0.1,
+    0.015
+   ],
+   "ood_exec": [
+    0.27,
+    0.75,
+    0.02
+   ],
+   "ood_sem": [
+    0.18,
+    0.65,
+    0.3
+   ],
+   "ood_gc": [
+    0.05,
+    0.03,
+    0.35
+   ],
+   "ood_gs": [
+    0.05,
+    0.03,
+    0.01
+   ]
+  },
+  "probe_confirm": {
+   "ood_gc": 0.95,
+   "ood_gs": 0.5
+  },
+  "reground_fix": {
+   "ood_gc": 0.8,
+   "ood_gs": 0.35
+  },
+  "c_restore": {
+   "ood_gc": 0.6,
+   "ood_gs": 0.5
+  },
+  "q_ff_id": 0.02,
+  "noprobe": {
+   "flip": 0.25,
+   "fix_gc": 0.55
+  },
+  "seeds": {
+   "main": 1601,
+   "sens_qrg": 2601,
+   "sens_qff": 2602,
+   "transient": 3601
+  },
+  "date": "2026-11-05"
+ },
+ "main": [
+  {
+   "policy": "vla_only",
+   "success": 0.8113333333333334,
+   "cost": 10.147716666666945,
+   "succ_per_cost": 0.07995230454141353,
+   "vla_calls": 0.0,
+   "ood_exec_succ": 0.8181299885974914,
+   "ood_sem_succ": 0.6372549019607843,
+   "ood_gc_succ": 0.011352885525070956,
+   "ood_gc_detect": 0.0,
+   "ood_gs_succ": 0.018121911037891267,
+   "id_succ": 0.9989698686582539,
+   "id_false_repair": 0.0,
+   "id_cost": 10.00043780582024
+  },
+  {
+   "policy": "zest15",
+   "success": 0.8113333333333334,
+   "cost": 10.147716666666945,
+   "succ_per_cost": 0.07995230454141353,
+   "vla_calls": 0.0,
+   "ood_exec_succ": 0.8181299885974914,
+   "ood_sem_succ": 0.6372549019607843,
+   "ood_gc_succ": 0.011352885525070956,
+   "ood_gc_detect": 0.0,
+   "ood_gs_succ": 0.018121911037891267,
+   "id_succ": 0.9989698686582539,
+   "id_false_repair": 0.0,
+   "id_cost": 10.00043780582024
+  },
+  {
+   "policy": "audit",
+   "success": 0.8620833333333333,
+   "cost": 10.22317500000019,
+   "succ_per_cost": 0.08432637936192204,
+   "vla_calls": 0.3784166666666667,
+   "ood_exec_succ": 0.8129933211900425,
+   "ood_sem_succ": 0.8152941176470588,
+   "ood_gc_succ": 0.4474187380497132,
+   "ood_gc_detect": 0.9703632887189293,
+   "ood_gs_succ": 0.009884678747940691,
+   "id_succ": 0.9985987261146497,
+   "id_false_repair": 0.0016560509554140127,
+   "id_cost": 10.032318471337579
+  },
+  {
+   "policy": "audit_noprobe",
+   "success": 0.82725,
+   "cost": 9.649400000000146,
+   "succ_per_cost": 0.08573071900843447,
+   "vla_calls": 0.21458333333333332,
+   "ood_exec_succ": 0.7710843373493976,
+   "ood_sem_succ": 0.43937575030012005,
+   "ood_gc_succ": 0.4394230769230769,
+   "ood_gc_detect": 0.0,
+   "ood_gs_succ": 0.01694915254237288,
+   "id_succ": 0.9943546317680267,
+   "id_false_repair": 0.014498332050295099,
+   "id_cost": 10.000205286117527
+  },
+  {
+   "policy": "probe_always",
+   "success": 0.8593333333333333,
+   "cost": 10.540516666666823,
+   "succ_per_cost": 0.08152668038094153,
+   "vla_calls": 1.2574166666666666,
+   "ood_exec_succ": 0.7055109070034443,
+   "ood_sem_succ": 0.8985507246376812,
+   "ood_gc_succ": 0.6,
+   "ood_gc_detect": 0.9980676328502416,
+   "ood_gs_succ": 0.125,
+   "id_succ": 0.9875824602250679,
+   "id_false_repair": 0.020437200879575734,
+   "id_cost": 10.534626827059887
+  },
+  {
+   "policy": "audit_rand",
+   "success": 0.8131666666666667,
+   "cost": 10.324283333333577,
+   "succ_per_cost": 0.07876252911824203,
+   "vla_calls": 0.4725,
+   "ood_exec_succ": 0.7657864523536165,
+   "ood_sem_succ": 0.6729323308270677,
+   "ood_gc_succ": 0.12278978388998035,
+   "ood_gc_detect": 0.3379174852652259,
+   "ood_gs_succ": 0.010638297872340425,
+   "id_succ": 0.9962744090441932,
+   "id_false_repair": 0.007836587872559095,
+   "id_cost": 10.224409044193218
+  },
+  {
+   "policy": "oracle",
+   "success": 0.9424166666666667,
+   "cost": 10.059133333333776,
+   "succ_per_cost": 0.09368766030207624,
+   "vla_calls": 0.13441666666666666,
+   "ood_exec_succ": 0.9708454810495627,
+   "ood_sem_succ": 0.9660606060606061,
+   "ood_gc_succ": 0.8348258706467662,
+   "ood_gc_detect": 0.0,
+   "ood_gs_succ": 0.2779605263157895,
+   "id_succ": 0.9989805021027144,
+   "id_false_repair": 0.0,
+   "id_cost": 10.0007136485281
+  }
+ ],
+ "sens_qrg": [
+  {
+   "q_rg": 0.6,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.8125,
+    "cost": 10.13910000000008,
+    "succ_per_cost": 0.0801353177303699,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8151875571820677,
+    "ood_sem_succ": 0.6648148148148149,
+    "ood_gc_succ": 0.0029717682020802376,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.011135857461024499,
+    "id_succ": 0.9996186844613918,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000190657769304
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.848125,
+    "cost": 10.122425000000066,
+    "succ_per_cost": 0.08378674082544396,
+    "vla_calls": 0.3505,
+    "ood_exec_succ": 0.7922932330827067,
+    "ood_sem_succ": 0.7835820895522388,
+    "ood_gc_succ": 0.3372093023255814,
+    "ood_gc_detect": 0.9694767441860465,
+    "ood_gs_succ": 0.014354066985645933,
+    "id_succ": 0.9981110691348697,
+    "id_false_repair": 0.0005666792595391009,
+    "id_cost": 10.028881752927841
+   },
+   "oracle": {
+    "policy": "oracle",
+    "success": 0.941625,
+    "cost": 10.040850000000034,
+    "succ_per_cost": 0.09377941110563318,
+    "vla_calls": 0.133625,
+    "ood_exec_succ": 0.9753199268738574,
+    "ood_sem_succ": 0.9560229445506692,
+    "ood_gc_succ": 0.8192592592592592,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.26649746192893403,
+    "id_succ": 0.9988709070380128,
+    "id_false_repair": 0.0,
+    "id_cost": 10.0001129092962
+   }
+  },
+  {
+   "q_rg": 0.8,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.8125,
+    "cost": 10.13910000000008,
+    "succ_per_cost": 0.0801353177303699,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8151875571820677,
+    "ood_sem_succ": 0.6648148148148149,
+    "ood_gc_succ": 0.0029717682020802376,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.011135857461024499,
+    "id_succ": 0.9996186844613918,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000190657769304
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.8565,
+    "cost": 10.209987500000068,
+    "succ_per_cost": 0.08388844746381857,
+    "vla_calls": 0.36775,
+    "ood_exec_succ": 0.7881040892193308,
+    "ood_sem_succ": 0.8043087971274686,
+    "ood_gc_succ": 0.45066273932253315,
+    "ood_gc_detect": 0.9749631811487481,
+    "ood_gs_succ": 0.01152073732718894,
+    "id_succ": 0.99828701941378,
+    "id_false_repair": 0.0013323182337266844,
+    "id_cost": 10.02904453749524
+   },
+   "oracle": {
+    "policy": "oracle",
+    "success": 0.941625,
+    "cost": 10.040850000000034,
+    "succ_per_cost": 0.09377941110563318,
+    "vla_calls": 0.133625,
+    "ood_exec_succ": 0.9753199268738574,
+    "ood_sem_succ": 0.9560229445506692,
+    "ood_gc_succ": 0.8192592592592592,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.26649746192893403,
+    "id_succ": 0.9988709070380128,
+    "id_false_repair": 0.0,
+    "id_cost": 10.0001129092962
+   }
+  },
+  {
+   "q_rg": 0.9,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.8125,
+    "cost": 10.13910000000008,
+    "succ_per_cost": 0.0801353177303699,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8151875571820677,
+    "ood_sem_succ": 0.6648148148148149,
+    "ood_gc_succ": 0.0029717682020802376,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.011135857461024499,
+    "id_succ": 0.9996186844613918,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000190657769304
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.862125,
+    "cost": 10.269375000000062,
+    "succ_per_cost": 0.08395106810297558,
+    "vla_calls": 0.37375,
+    "ood_exec_succ": 0.7987364620938628,
+    "ood_sem_succ": 0.8163992869875223,
+    "ood_gc_succ": 0.5133136094674556,
+    "ood_gc_detect": 0.9822485207100592,
+    "ood_gs_succ": 0.01348314606741573,
+    "id_succ": 0.9982725527831094,
+    "id_false_repair": 0.001343570057581574,
+    "id_cost": 10.028502879078696
+   },
+   "oracle": {
+    "policy": "oracle",
+    "success": 0.941625,
+    "cost": 10.040850000000034,
+    "succ_per_cost": 0.09377941110563318,
+    "vla_calls": 0.133625,
+    "ood_exec_succ": 0.9753199268738574,
+    "ood_sem_succ": 0.9560229445506692,
+    "ood_gc_succ": 0.8192592592592592,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.26649746192893403,
+    "id_succ": 0.9988709070380128,
+    "id_false_repair": 0.0,
+    "id_cost": 10.0001129092962
+   }
+  }
+ ],
+ "sens_qff": [
+  {
+   "q_ff_id": 0.01,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.812625,
+    "cost": 10.144400000000077,
+    "succ_per_cost": 0.08010577264303398,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8281786941580757,
+    "ood_sem_succ": 0.6191369606003753,
+    "ood_gc_succ": 0.011695906432748537,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.009592326139088728,
+    "id_succ": 0.9986543637062668,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000153787004997
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.855375,
+    "cost": 10.22205000000006,
+    "succ_per_cost": 0.0836793989463948,
+    "vla_calls": 0.386625,
+    "ood_exec_succ": 0.8037135278514589,
+    "ood_sem_succ": 0.815442561205273,
+    "ood_gc_succ": 0.45850340136054424,
+    "ood_gc_detect": 0.9687074829931973,
+    "ood_gs_succ": 0.011363636363636364,
+    "id_succ": 0.9992252566337401,
+    "id_false_repair": 0.0007747433662599264,
+    "id_cost": 10.030331202789075
+   }
+  },
+  {
+   "q_ff_id": 0.02,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.812625,
+    "cost": 10.144400000000077,
+    "succ_per_cost": 0.08010577264303398,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8281786941580757,
+    "ood_sem_succ": 0.6191369606003753,
+    "ood_gc_succ": 0.011695906432748537,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.009592326139088728,
+    "id_succ": 0.9986543637062668,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000153787004997
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.85575,
+    "cost": 10.22207500000006,
+    "succ_per_cost": 0.08371587960370032,
+    "vla_calls": 0.386125,
+    "ood_exec_succ": 0.8045977011494253,
+    "ood_sem_succ": 0.815442561205273,
+    "ood_gc_succ": 0.4583901773533424,
+    "ood_gc_detect": 0.9686221009549796,
+    "ood_gs_succ": 0.011389521640091117,
+    "id_succ": 0.9992257065427798,
+    "id_false_repair": 0.0013550135501355014,
+    "id_cost": 10.030507162214478
+   }
+  },
+  {
+   "q_ff_id": 0.05,
+   "vla_only": {
+    "policy": "vla_only",
+    "success": 0.812625,
+    "cost": 10.144400000000077,
+    "succ_per_cost": 0.08010577264303398,
+    "vla_calls": 0.0,
+    "ood_exec_succ": 0.8281786941580757,
+    "ood_sem_succ": 0.6191369606003753,
+    "ood_gc_succ": 0.011695906432748537,
+    "ood_gc_detect": 0.0,
+    "ood_gs_succ": 0.009592326139088728,
+    "id_succ": 0.9986543637062668,
+    "id_false_repair": 0.0,
+    "id_cost": 10.000153787004997
+   },
+   "audit": {
+    "policy": "audit",
+    "success": 0.85325,
+    "cost": 10.229387500000058,
+    "succ_per_cost": 0.08341164121507716,
+    "vla_calls": 0.384375,
+    "ood_exec_succ": 0.8,
+    "ood_sem_succ": 0.8082706766917294,
+    "ood_gc_succ": 0.4625,
+    "ood_gc_detect": 0.9680555555555556,
+    "ood_gs_succ": 0.01098901098901099,
+    "id_succ": 0.9990278047832004,
+    "id_false_repair": 0.00349990278047832,
+    "id_cost": 10.03181022749368
+   }
+  }
+ ],
+ "transient": [
+  {
+   "policy": "vla_only",
+   "success": 0.32475,
+   "cost": 12.0,
+   "succ_per_cost": 0.0270625,
+   "vla_calls": 0.0,
+   "ood_exec_succ": null,
+   "ood_sem_succ": null,
+   "ood_gc_succ": null,
+   "ood_gc_detect": null,
+   "ood_gs_succ": null,
+   "id_succ": null,
+   "id_false_repair": null,
+   "id_cost": null
+  },
+  {
+   "policy": "zest15",
+   "success": 0.32475,
+   "cost": 12.0,
+   "succ_per_cost": 0.0270625,
+   "vla_calls": 0.0,
+   "ood_exec_succ": null,
+   "ood_sem_succ": null,
+   "ood_gc_succ": null,
+   "ood_gc_detect": null,
+   "ood_gs_succ": null,
+   "id_succ": null,
+   "id_false_repair": null,
+   "id_cost": null
+  },
+  {
+   "policy": "audit",
+   "success": 0.521,
+   "cost": 12.2465,
+   "succ_per_cost": 0.042542767321275474,
+   "vla_calls": 2.29475,
+   "ood_exec_succ": null,
+   "ood_sem_succ": null,
+   "ood_gc_succ": null,
+   "ood_gc_detect": null,
+   "ood_gs_succ": null,
+   "id_succ": null,
+   "id_false_repair": null,
+   "id_cost": null
+  },
+  {
+   "policy": "oracle",
+   "success": 0.32475,
+   "cost": 12.0,
+   "succ_per_cost": 0.0270625,
+   "vla_calls": 0.0,
+   "ood_exec_succ": null,
+   "ood_sem_succ": null,
+   "ood_gc_succ": null,
+   "ood_gc_detect": null,
+   "ood_gs_succ": null,
+   "id_succ": null,
+   "id_false_repair": null,
+   "id_cost": null
+  }
+ ]
+}
