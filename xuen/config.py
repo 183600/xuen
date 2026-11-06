@@ -536,7 +536,7 @@ def _validate_rounds_config(cfg: Config) -> None:
     for name in ("verify_timeout", "judge_timeout"):
         v = getattr(cfg.rounds, name)
         if not _is_finite_number(v) or v <= 0:
-            raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
+            raise ValueError(f"rounds.{name} 必须是有限的正数（秒）")
     cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
     _require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
