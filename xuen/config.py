@@ -523,8 +523,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    # 两个超时都是秒数：负值/0 会让 subprocess 超时立即触发，程序化传入的
-    # 超大整数会让 math.isfinite 抛 OverflowError——统一按有限正数校验。
     for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
                         ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
         if not _is_finite_number(value) or value <= 0:
