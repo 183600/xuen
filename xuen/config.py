@@ -523,13 +523,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    # 超时必须是有限正数：负数/零会让测试套件或评审调用立刻超时，
-    # 非有限值（程序化 Config 里的超大整数）会让下游算术崩掉；
-    # 与 agent.timeout 同一口径，字段名要带在消息里。
-    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
-                        ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
-        if not _is_finite_number(value) or value <= 0:
-            raise ValueError(f"{name} 必须为有限的正数（秒）")
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
@@ -538,6 +531,15 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    # 两个超时都必须是有限的正数（秒）：负数/零会让套件运行或评审立刻超时，
+    # 超出 float 范围的巨大整数（程序化 Config 可绕过 _parse_float）不能让
+    # math.isfinite 抛 OverflowError，与 agent.timeout 同一口径带字段名报错。
+    for name, value in (
+        ("rounds.verify_timeout", cfg.rounds.verify_timeout),
+        ("rounds.judge_timeout", cfg.rounds.judge_timeout),
+    ):
+        if not _is_finite_number(value) or value <= 0:
+            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
