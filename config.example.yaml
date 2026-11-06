@@ -137,7 +137,7 @@ rounds:
   # 评分达到该阈值才采纳候选为最佳（0-10）。
   adopt_score: 7
 
-  # 单次测试套件运行超时（秒，tests / auto 使用）。
+  # 单次测试套件运行超时（秒，tests / auto 使用，须为有限正数）。
   verify_timeout: 600
 
   # 测试验证的目标目录（tests / auto 使用）。
