@@ -935,3 +935,4 @@
 {"event": "verdict", "id": "20261106-044811-r1", "round": 1, "verifier": "ai", "score": null, "result": "pending", "reason": "评审员运行失败（超时或非零退出），等待用户评分", "ts": "2026-11-06 04:48:11"}
 {"event": "restored", "round": 1, "why": "候选待评分", "best": "20261105-184325-r1", "changed": ["idea", "artifact"], "ts": "2026-11-06 04:48:11"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 06:39:32"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 07:48:09"}
