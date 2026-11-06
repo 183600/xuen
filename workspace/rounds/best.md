@@ -269,6 +269,33 @@ P_{t+1} = (1/λ)(P_t - P_t φ φᵀ P_t / (λ + φᵀ P_t φ))
 > **力控**：混合力位状态机 + 阻抗控制器 + 触觉地图前馈，让力控成为导航内生能力。
 > **评测基准**：FORCE-NAV-BENCH 5×3 任务矩阵 + 双轨指标 + 标准化仿真真机协议，建立领域首个「接触感知导航」统一度量。
 > **自主导航**：SE(2)×ℝ³ 混合规划 + TACTILE-MAP + 接触感知状态机，从「避开接触」进化为「主动利用接触」。
+
+## 9. 三灵感词综合贯通（本轮核心）
+
+### 9.1 技术融合：统一状态-行动-代价三元组
+本轮核心创新是将「接触」作为一等公民，融入导航的每一个环节。定义融合三元组：
+
+- **State** `s = [q; p_c; f_c] ∈ 𝒮 ⊂ SE(2)×SE(3)×ℝ⁶` 作为全局共享状态，被感知模块（触觉/力/视觉）、规划模块（MPPI 代价函数中的 `C_geo`, `V_stab`）和控制模块（阻抗控制器的 `K_d, D_d, f_d`）同时引用。
+- **Action** `a = [v, ω; f_cmd, τ_cmd] ∈ 𝒜 ⊂ ℝ²×ℝ⁶` 由几何速度和力指令组合而成，MPPI 在 SE(2)×ℝ³ 空间直接采样，无需模块间转换。
+- **Cost** `J(τ) = ∑_t [w_geo·C_geo(q_t) + w_force·‖f_t - f_d,t‖² + w_stab·V_stab(s_t)] + w_term·C_term(q_H)` 是贯穿始终的统一代价，几何项惩罚碰触，力项惩罚力跟踪误差，稳定性项惩罚通量不等式违规。
+
+**融合耦合点**：TACTILE-MAP 查询结果出现在三处：(1) MPPI 中作为 `f_d,t = TACTILE-MAP.query(p_c,t).f_prior` 的预期力先验；(2) 阻抗控制器作为 `K_d ← K_d + K_ff(k_est), D_d ← D_d + D_ff(c_est), f_d ← f_d + f_ff(μ_est)` 的前馈增强；(3) 稳定性裕度计算中的 `λ_min(K_d)·δ_max - ‖f_ext‖`。这三处共享同一组 `(μ, k, c)` 参数，实现了「一图多用」的技术融合。
+
+### 9.2 云边协同：分布式智能分层
+将计算任务根据实时性要求分层：边缘负责 1kHz 内环阻抗控制、10Hz MPPI 规划（N=200 经验 reduced）和事件驱动的 TACTILE-MAP 更新；云端负责全局 CONTACT-DR 后验池的维护、MPPI 超参数 (`w_geo, w_force, w_stab, temp`) 的批量优化、材质分类器的离线重训练以及基准结果的聚合报告。同步协议每 100 控制周期进行一次：边缘压缩 TACTILE-MAP 更新发送至云端，云端使用 RLS 指数移动平均 fusion 全局后验，随后广播更新后的随机化分布 `(μ ~ Beta, k ~ LogNormal, c ~ LogNormal)` 回所有边缘。这保证了 fleet-wide 知识累积（云端）与 real-time 安全保证（边缘）的双重目标。
+
+### 9.3 ROS 2 系统集成
+将所有算法模块封装为 ROS 2 nodes，通过 DDS 话题实现解耦与分布式执行。关键话题包括：`/tactile_map` (TactileGridArray, 10Hz) 传触觉增强地图信息；`/material_class` (String, 5Hz) 传多模态材质分类结果；`/cmd_vel` (geometry_msgs/Twist, 100Hz) 输出速度指令；`/contact_params` (ContactRandomization, 每100步) 从云端广播随机化参数；`/trajectory_record` (custom/TrajectoryLog, episode结束) 记录完整轨迹用于评测。服务包括 `switch_task` (重置任务) 和 `get_map` (获取当前地图状态)。所有话题使用 `RELIABLE` QoS 用于力/力矩数据（需可靠传输），`BEST_EFFORT` 用于里程计等非关键数据。节点间通过 `ros2 run` 或 Docker Compose 启动，支持单机多进程与跨机器分布两种部署模式。
+
+## 10. 本轮目标与预期突破
+- **技术融合目标**：证明单一TACTILE-MAP可同时服务于MPPI规划、阻抗控制前馈和稳定性监控，无冲突；实验证明代价函数中各项权重共享时，整体导航效率提升 15% 而非单一模块优化。
+- **云边协同目标**：在 10 台机器人 fleet 上跑 1 个月，云端累积的全局后验误差比单机独立运行降低 40%，且边缘实时决策延迟始终保持在 5ms 以内。
+- **ROS 2 目标**：验证从代码到部署的全链路闭环：编写 ROS 2 节点、配置 Docker 镜像、在 Jetson Nano / x86 开发板上实测 1kHz 控制环实现；完成从“离线 Python 脚本”到 “ROS 2 系统” 的无缝迁移。
+
+> **本轮最大的风险**：**技术融合假象**：若TACTILE-MAP参数 `(μ, k, c)` 在三个消费路径（MPPI预测、阻抗前馈、稳定性监控）中的更新频率、质量不一致，可能导致「参数滞后致动」或「权重冲突」，使得融合看似统一实则产生微妙的正反馈循环，表现为看似平滑实则隐蔽发散的接触力轨迹。缓解需在每条路径上加入独立的参数校验门限与平滑滤波。
+
+## 11. 下一轮展望（第 2 轮灵感：任务规划、学习-based 控制）
+下一轮将引入「任务规划」灵感，探索如何将高层语义任序（如『推开门并放置物体』）分解为低层力位子任务，并结合 imitation learning 与模型预测控制的 hybrid 方法。同时开启「云边协同」的 fleet-level 元学习：利用云端汇总的全局经验，快速适配新机器人或新环境。ROS 2 的可视化工具 (rviz2) 将被用于实时展示 TACTILE-MAP 与状态机状态的耦合情况，便于直观调试。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
@@ -1109,4 +1136,50 @@ class ForceNavSystem:
 - `configs/sim_standard.yaml` `configs/real_standard.yaml` 标准化协议
 - `benchmarks/results_baseline.csv` 基线算法在 5×3×20 实验上的完整结果
 - `docs/reproduction_guide.md` 复现指南（Docker 镜像、硬件清单、标定步骤）
+
+## 7. 新增交付物（本轮技术融合、云边协同、ROS 2 集成）
+
+### 7.1 ROS 2 节点规范
+- `force_nav_ros2/minimal_node.py`：主节点，包含 1kHz 控制循环、10Hz 规划循环、TACTILE-MAP 更新、RLS 辨识、云端同步回调
+- `force_nav_ros2/tactile_map_publisher.py`：将内部 TactileMap 发布为 `/tactile_map` topic (custom msg `TactileGridArray`)，包含每个栅格的 `(occ, mu, k, c)` 及方差信息
+- `force_nav_ros2/mpplanner_node.py`：MPPI 规划节点，订阅 `/target_pose`，发布 `/cmd_vel`，内部使用 CUDA GPU 并行进行 N=1000 采样（或边缘降级为 N=200）
+- `force_nav_ros2/contact_dr_node.py`：RLS 辨识节点，订阅 `/wrench` (力传感器)，每 100 步向 `/contact_params` 广播当前 `(k_est, c_est, mu_est)` 并同步至云端
+- `force_nav_ros2/benchmark_node.py`：评测节点，订阅 `/trajectory_record`，计算双轨指标 `(navigation + force_control)` 并累积至 `/benchmark_results`
+
+### 7.2 云边同步协议规范 (protobuf)
+```protobuf
+message CloudEdgeSync {
+  repeated GridUpdate tactile_updates = 1;  // 仅更新的栅格，压缩后 typically < 50KB
+  RandomizationParams randomization = 2;   // μ ~ Beta, k ~ LogNormal, c ~ LogNormal
+  int64 sync_timestamp = 3;                // 单调递增，用于检测丢包
+  int32 edge_id = 4;                       // 标识发送该同步包的边缘ID
+}
+message GridUpdate {
+  int32 i = 1;  // 栅格行索引
+  int32 j = 2;  // 栅格列索引
+  float32 occ = 3;  // 占用概率
+  float32 mu = 4;   // 摩擦系数后验均值
+  float32 k = 5;    // 接触刚度后验均值 (线性化)
+  float32 c = 6;    // 阻尼后验均值 (线性化)
+  float32 mu_var = 7;  // 方差
+  float32 k_var = 8;
+  float32 c_var = 9;
+}
+```
+同步流程：边缘每 100 步（约 0.1s）将增量更新打包后通过 DDS 发送至云端；云端收到后使用 `θ_cloud = (1-α)·θ_cloud + α·θ_edge` (α=0.1) 更新全局后验；随后广播 `ContactRandomization` msg 回所有边缘；边缘收到后将全局参数写入 TACTILE-MAP 先验。
+
+### 7.3 云端批量优化脚本
+- `scripts/cloud_optimize.py`：每 epoch 结束后运行，从云端下载最近 N=1000 条 episode 的 `(s, a, f_c, f_d, τ)` 数据，计算 MPPI 超参数的梯度下降更新：`w ← w - η·∇_w J_batch`，其中 `J_batch` 是一批 rollout 的总代价；同时更新 CONTACT-DR 的全局后验参数 `(α_μ^pool, β_μ^pool, μ_k^pool, σ_k^pool, μ_c^pool, σ_c^pool)`，使用 Empirical Bayes：`α_post = α_prior + Σ μ_obs, β_post = β_prior + N`。
+
+### 7.4 ROS 2 部署配置
+- `Dockerfile.jetson`：基于 NVIDIA CUDA 12.2 + ROS 2 Galactic，预装 `force_nav_bench` 所有模块、TensorRT 加速的材质分类器、MPPI CUDA 内核
+- `docker-compose.yml`：定义 4 个服务：`edge1` (Jetson Nano, 1kHz control), `edge2` (x86 laptop, 高精度仿真), `cloud` (GPU server, batch optimization), `rviz2` (可视化展示)
+- `launch/force_nav.launch.py`：启动所有 ROS 2 节点，参数服务器加载 `(map_size, resolution, N, H, weights)` 等配置
+- `config/ros2_params.yaml`：关键参数声明：`control_dt: 0.001, planning_dt: 0.01, mppi_N: 200, mppi_H: 20, sync_interval: 100`
+
+## 8. 更新后的实验交付物
+- `benchmarks/results_with_ros2.csv`：ROS 2 部署版本的完整实验结果，对比原原生 Python 版本的决策延迟与指标
+- `benchmarks/results_cloud_sync.csv`：云边同步实验结果，展示全局后验随 fleet 规模增长的收敛曲线（误差随机器人数减小的趋势）
+- `benchmarks/results_fusion_ablation.csv`：技术融合消融实验，分别关闭 MPPI 前馈、阻抗前馈、稳定性监控三者对综合得分的单独贡献
+
 <!-- ARTIFACT:END -->
