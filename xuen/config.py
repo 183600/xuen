@@ -533,28 +533,22 @@ def _validate_rounds_config(cfg: Config) -> None:
                          f"收到: {cfg.rounds.adopt_score!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
+    for name in ("verify_timeout", "judge_timeout"):
         v = getattr(cfg.rounds, name)
         if not _is_finite_number(v) or v <= 0:
             raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
-540     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
-541     # AI 评分会静默拿不到候选内容而永远解析不出分数
-_require_prompt_placeholder("rounds.judge_command", jcmd,
-_JUDGE_PLACEHOLDER_HINT)
-cmd = cfg.agent.command
-_require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
-# （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-_validate_windows_command_dual("agent.command", cmd, cfg.workspace)
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     # AI 评分会静默拿不到候选内容而永远解析不出分数
-_require_prompt_placeholder("rounds.judge_command", jcmd,
+    _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
-cmd = cfg.agent.command
+    cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-_require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
+    _require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-_validate_windows_command_dual("agent.command", cmd, cfg.workspace)
-_validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
+    _validate_windows_command_dual("agent.command", cmd, cfg.workspace)
+    _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
 
 
 def _validate_windows_command_dual(name: str, template: str,
