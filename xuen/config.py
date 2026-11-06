@@ -516,6 +516,9 @@ def _validate_rounds_config(cfg: Config) -> None:
     """检查轮次守卫配置。"""  # noqa: TID251
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
+    if (not _is_finite_number(cfg.rounds.verify_timeout)
+            or cfg.rounds.verify_timeout <= 0):
+        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
     jcmd = cfg.rounds.judge_command
     if cfg.rounds.verify not in VERIFY_MODES:
         raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
@@ -523,10 +526,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
-                        ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
-        if not _is_finite_number(value) or value <= 0:
-            raise ValueError(f"{name} 必须为有限的正数（秒）")
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
