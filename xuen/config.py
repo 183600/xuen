@@ -523,10 +523,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
-                        ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
-        if not _is_finite_number(value) or value <= 0:
-            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
@@ -535,6 +531,13 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    # 超时字段与 agent.timeout 同口径：程序化构造 Config 绕过 _parse_float
+    # 时，负数或超大整数既没有意义，也会让下游 subprocess 超时计算出错。
+    for timeout_name in ("verify_timeout", "judge_timeout"):
+        timeout_value = getattr(cfg.rounds, timeout_name)
+        if not _is_finite_number(timeout_value) or timeout_value <= 0:
+            raise ValueError(
+                f"rounds.{timeout_name} 必须为有限的正数（秒）")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
