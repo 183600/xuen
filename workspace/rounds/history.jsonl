@@ -956,3 +956,4 @@
 {"event": "candidate", "id": "20261106-204939-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-06 20:49:39"}
 {"event": "verdict", "id": "20261106-204939-r1", "round": 1, "verifier": "ai", "score": 6.5, "result": "rejected", "reason": "AI 评分 6.5（阈值 7）", "ts": "2026-11-06 20:53:07"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261105-184325-r1", "changed": ["idea", "artifact"], "ts": "2026-11-06 20:53:07"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 21:33:25"}
