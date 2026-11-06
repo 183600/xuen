@@ -533,11 +533,9 @@ def _validate_rounds_config(cfg: Config) -> None:
                          f"收到: {cfg.rounds.adopt_score!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
+    # 验证 verify_timeout 为有限的正数
     if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
         raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    if not _is_finite_number(cfg.rounds.judge_timeout) or cfg.rounds.judge_timeout <= 0:
-        raise ValueError("rounds.judge_timeout 必须为有限的正数（秒）")
-    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
     cmd = cfg.agent.command

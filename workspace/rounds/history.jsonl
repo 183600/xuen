@@ -940,3 +940,4 @@
 {"event": "verdict", "id": "20261106-085143-r1", "round": 1, "verifier": "ai", "score": 7.5, "result": "adopted", "reason": "AI 评分 7.5（阈值 7）", "ts": "2026-11-06 08:54:22"}
 {"event": "candidate", "id": "20261106-091756-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-06 09:17:56"}
 {"event": "verdict", "id": "20261106-091756-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-06 09:18:22"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-06 10:48:20"}
