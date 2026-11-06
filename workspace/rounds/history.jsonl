@@ -952,3 +952,4 @@
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 19:08:13"}
 {"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261105-184325-r1", "changed": ["idea", "artifact"], "ts": "2026-11-06 19:08:13"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 19:47:59"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-06 20:25:40"}
