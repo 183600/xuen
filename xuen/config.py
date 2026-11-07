@@ -390,6 +390,19 @@ def _is_finite_number(value: Any) -> bool:
         return False
 
 
+def _require_positive_seconds(name: str, value: Any) -> None:
+    """超时（秒）必须为有限的正数。
+
+    NaN/inf/非数值/超大整数/非正值都要拒绝：这些值传给子进程超时后会
+    立刻终止或形同永不超时，配置阶段报错比运行期静默出错更安全。
+    程序化构造 Config 绕过 load_config 时，值可能是字符串或超大整数，
+    math.isfinite 会抛 TypeError/OverflowError，必须先转成带字段名的
+    ValueError（与 _parse_float 的口径一致）。
+    """
+    if not _is_finite_number(value) or value <= 0:
+        raise ValueError(f"{name} 必须为有限的正数（秒）")
+
+
 _JUDGE_PLACEHOLDER_HINT = "（被转义的 \\$prompt 不会被替换）"
 
 _AGENT_PLACEHOLDER_HINT = (
@@ -508,8 +521,7 @@ def _validate_words_config(cfg: Config) -> None:
 
 def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
-    if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
-        raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    _require_positive_seconds("agent.timeout", cfg.agent.timeout)
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -531,13 +543,12 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    # 与 agent.timeout 同口径：超时必须为有限的正数；超大整数经
-    # _is_finite_number 转成带字段名的 ValueError，不能漏出 OverflowError
-    for timeout_name in ("verify_timeout", "judge_timeout"):
-        timeout_value = getattr(cfg.rounds, timeout_name)
-        if not (_is_finite_number(timeout_value) and timeout_value > 0):
-            raise ValueError(f"rounds.{timeout_name} 必须为有限的正数（秒），"
-                             f"收到: {timeout_value!r}")
+    # 超时同样要有限的正数：负数/0 会让测试套件或评审立刻被判超时，
+    # inf/NaN/超大整数则让超时形同失效（README 约定同为「有限正数」）
+    _require_positive_seconds("rounds.verify_timeout",
+                               cfg.rounds.verify_timeout)
+    _require_positive_seconds("rounds.judge_timeout",
+                               cfg.rounds.judge_timeout)
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
