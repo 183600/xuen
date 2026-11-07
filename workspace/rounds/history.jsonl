@@ -991,3 +991,4 @@
 {"event": "verdict", "id": "20261107-121336-r1", "round": 1, "verifier": "ai", "score": 8.9, "result": "adopted", "reason": "AI 评分 8.9（阈值 7）", "ts": "2026-11-07 12:15:56"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 12:48:44"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 13:39:09"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-07 13:43:30"}
