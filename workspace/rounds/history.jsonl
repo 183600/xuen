@@ -985,13 +985,11 @@
 {"event": "verdict", "id": "20261107-080825-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-07 08:11:45"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 09:30:53"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 10:07:12"}
-{"event": "candidate", "id": "20261107-112943-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 11:29:43"}
-{"event": "verdict", "id": "20261107-112943-r1", "round": 1, "verifier": "ai", "score": 8.6, "result": "adopted", "reason": "AI 评分 8.6（阈值 7）", "ts": "2026-11-07 11:31:13"}
-{"event": "skipped", "round": 1, "reason": "退出码 1", "ts": "2026-11-07 11:41:43"}
-{"event": "candidate", "id": "20261107-121042-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 12:10:42"}
-{"event": "verdict", "id": "20261107-121042-r1", "round": 1, "verifier": "ai", "score": 8.7, "result": "adopted", "reason": "AI 评分 8.7（阈值 7）", "ts": "2026-11-07 12:13:09"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 12:58:22"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 13:34:59"}
-{"event": "candidate", "id": "20261107-140235-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 14:02:35"}
-{"event": "verdict", "id": "20261107-140235-r1", "round": 1, "verifier": "ai", "score": 8.8, "result": "adopted", "reason": "AI 评分 8.8（阈值 7）", "ts": "2026-11-07 14:05:06"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 14:43:07"}
+{"event": "candidate", "id": "20261107-114032-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 11:40:32"}
+{"event": "verdict", "id": "20261107-114032-r1", "round": 1, "verifier": "ai", "score": 8.8, "result": "adopted", "reason": "AI 评分 8.8（阈值 7）", "ts": "2026-11-07 11:40:58"}
+{"event": "candidate", "id": "20261107-121336-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 12:13:36"}
+{"event": "verdict", "id": "20261107-121336-r1", "round": 1, "verifier": "ai", "score": 8.9, "result": "adopted", "reason": "AI 评分 8.9（阈值 7）", "ts": "2026-11-07 12:15:56"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 12:48:44"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 13:39:09"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-07 13:43:30"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 15:41:08"}
