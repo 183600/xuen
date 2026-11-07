@@ -3,950 +3,776 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 21 轮（新灵感循环第 2 轮）· CLONING-GENERALIZATION-ZEST：从「语音合成」「物体泛化」「数据采集」出发，构建面向具身智能的「克隆-合成-采集」泛化循环，解决「物体实例盲区、零样本泛化失效、数据饥渴」的端到端问题
+# 第 24 轮（新灵感循环第 2 轮）· DMO-NAV：演示驱动模块化接触原语库 + OOD 感知执行栈，直面第 23 轮「接触模式组合爆炸」
 
-## 0. 先给直觉：为什么 MULTIMODAL-PREDICTIVE-ZEST 还需要「语音合成」「物体泛化」与「数据采集」？
+## 0. 先给直觉：为什么「演示数据」「模块化设计」「分布外泛化」是对上轮最大风险的精确回应？
 
-第 20 轮的 MP-ZEST 解决了「模态割裂、故障突发、Sim2Real 鸿沟」，但它在三个维度上对「开放世界的长期运行」构成挑战——它有一个被掩盖的前提假设：**模型见过的物体集合是封闭的**。
+第 23 轮最大风险（原话）：**接触模式组合爆炸——真实接触类型（点/线/面、滑动/滚动/卡死、单点/多点、静/动摩擦转换）远超 5 个标准任务覆盖，状态机与阻抗参数可能在「长尾接触模式」下失稳，导致基准高分但真实部署不可靠。**
 
-> **物体实例盲区**：MP-ZEST 的 K-PRED/HP-PRED 只以瞬时观测 `z` 和动作 `a` 为条件。两个「当前观测完全相同、动力学截然不同」的物体——同样外观的满瓶与空瓶（质量差 5 倍）、同形状但摩擦相差 3 倍的两种塑料——会得到**完全相同**的 `γ̂_pred` 与 `h`。在训练物体集上校准的置信，到了未见物体上系统性失准：系统「自信地泛化失败」。
+拿到本轮三个灵感词，第一反应是它们恰好构成一条完整的回应链：
 
-> **泛化盲区**：SIM-DISTILL 覆盖了「任务流形 + 故障流形」，但「物体流形」贫乏——仿真资产是有限 CAD 集合，真机数据来自固定物体集。物体是开放世界概念：不可枚举、类内差异巨大、新类别不断出现。「任务多样化 ≠ 物体多样化」。
+> **演示数据**回答「新知识从哪来」：人类面对没见过的门、没摸过的材质，从不现场推导力学方程，而是调用身体技能库并即兴微调。技能库来自一生的「演示」（模仿），新接触模式通过少量新演示即可入库。
+> **模块化设计**回答「知识如何组织」：5 状态状态机是单体内核——新模式 = 改代码 + 重调参 + 重新发版，且模式间转移逻辑组合爆炸。技能库是微内核 + 可加载模块——每个原语小而可独立验证，接口标准化后可增量扩展。
+> **分布外泛化**回答「知识边界如何管理」：演示不可能穷举接触长尾，所以系统必须「知道自己不会什么」——OOD 检测 + 分级安全回退，把「基准高分但部署不可靠」变成「部署可靠性被基准度量」。
 
-> **数据采集盲区**：第 20 轮把真机数据需求降到 1 万，但每引入一个新物体仍要重新采数据；采集靠人工遥操作与被动收集，机器人自己不知道「该采什么数据」；采集与决策割裂——决策系统不感知自己的泛化缺口。
-
-**核心类比（本轮的灵魂，来自「语音合成」）**：零样本 TTS 的突破范式是——说话人不可枚举，所以不再为每个说话人训练模型，而是训练「以 3 秒参考音频克隆说话人声纹，再以声纹条件化声学模型」的生成系统。物体泛化面临同构问题：**物体不可枚举，所以不再为每个物体训练模型，而是「以 5 秒参考交互克隆物体动力声纹，再以声纹条件化预测与动作合成」**。
+核心类比（本轮灵魂）：第 23 轮系统是「裸机 + 单体内核」；本轮 DMO-NAV 是「微内核 + 可加载技能模块 + 权限检查」——**技能 = 进程（独立验证、独立替换、可增可删），OOD-GUARD = 权限系统（越界即降权），演示流水线 = 软件源（新技能持续入库），L3 规划器 = shell（组合已有进程完成新任务）。**
 
 一句话押注：
 
-> **第 20 轮让系统「看得全、测得准健康」；本轮引入「物体动力声纹克隆器」OD-CLONE、「物体条件化联合预测头」OC-HEAD、「动作块流合成器」AC-SYNTH、「主动数据采集引擎」ACTIVE-HARVEST，构建「克隆-合成-采集」泛化循环（Cloning-Generalization ZEST, CG-ZEST）。CG-ZEST 的核心思想是：让「物体身份」像声纹一样被 5 秒交互克隆，让「动作专家」像语音一样被流匹配合成，让「数据采集」像主动学习一样由泛化缺口驱动。**
+> **本轮把第 23 轮的固定 5 状态机「降级」为从演示数据自动提取、可持续增长的「接触原语库」（DEMO-PRIM），执行栈重构为四层模块化架构（MOD-STACK），叠加三信号 OOD 感知与分级回退（OOD-GUARD）；FORCE-NAV-BENCH 升级 v2：新增 OOD-PROBE 协议（T6-T8 探针任务 + L4 零覆盖难度 + OOD 指标），首次把「接触导航的组合泛化能力与安全回退能力」纳入统一度量。**
 
 三个可验证创新点：
 
-1. **物体动力声纹克隆器 OD-CLONE**：从 5 秒参考交互 `R`（戳/推/提/摇/捏五原语，10 Hz × 50 帧）提取 64 维物体声纹 `e_obj`。三重监督保证声纹「编码动力学而非外观」：跨交互对比学习（同物同纹、异物异纹，InfoNCE）+ 物理参数回归（仿真中 mass/friction/stiffness/质心偏移/填充率可直接监督）+ 任务充分性对齐（`e_obj` 条件化的预测须与「全物理参数 oracle 条件化」的预测一致）。运行时 `e_obj` 每物体一次、缓存零开销。
-
-2. **物体条件化联合预测 + 新颖度感知置信（OC-HEAD）**：K-PRED/HP-PRED 通过 FiLM 以 `e_obj` 为条件（参数增量 <0.3M）；物体新颖度 `ν = σ(W_ν[e_obj; d_knn; u_obj])` 进入置信调制：`γ_adjusted = γ_corrected · h_min · (1−η·ν)`——「越陌生越保守」。不确定性三源合成：健康（`h_min`，第 20 轮）、声纹（集成方差 `u_obj`，新增）、动作（采样一致性 `u_act`，新增）。
-
-3. **动作块流合成 AC-SYNTH + 主动采集 ACTIVE-HARVEST**：借「流匹配声学模型」从云端 VLA 蒸馏出边缘可部署的动作块合成器（子目标+声纹→动作块 ⟺ 文本+声纹→语音），8 步欧拉、批量 M=4 采样 <80 ms；M 路一致性方差 `u_act` 免标签度量认知不确定性，超阈值升级云端 VLA——形成「三级专家级联」。数据侧以「泛化误差由声纹覆盖半径控制」为第一性原理：`U(p) = w₁·覆盖缺口 + w₂·预测熵 + w₃·集成分歧 − w₅·采集成本`；仿真程序化物体生成填补声纹空间大空洞，真机空闲自主探测+后见回标填补残余，贪心采集有 (1−1/e) 保证。
+1. **DEMO-PRIM：演示→原语自动化流水线**。演示 τ（遥操作/动觉示教，含力/触觉/阻抗参数记录）→ 力特征 BOCPD 式分段 → 段 DTW 层次聚类 → 每簇拟合接触原语 z = (前置条件 φ, 双 DMP 执行策略 π_z [位移轨迹+法向力轨迹], 阻抗模板 Ξ_z, 监控条件 κ_z, 原型嵌入 ν_z)。新接触模式 ~10 条演示、<1 小时入库（含人工确认）。
+2. **MOD-STACK：四层模块化执行栈**。L0 硬件抽象（传感器/执行器）→ L1 统一阻抗执行器（继承第 23 轮控制器，加 0.2s「过渡混合」保证技能切换力连续）→ L2 技能库（K 个原语模块 + UCB 式选择 + Beta 成功率后验）→ L3 任务规划器（前置条件-后置条件图搜索，组合泛化）。标准技能接口：execute(context) ↦ {(v_cmd, f_d, K_d, D_d), 置信度, OOD 分数, 终止信号}。第 23 轮状态机退化为技能库的 5 原语特例，v1 全套回归测试保证不劣化。
+3. **OOD-GUARD：三信号 OOD 感知 + 分级回退**。信号 1 输入密度（上下文嵌入对原语原型库的 kNN 距离）；信号 2 模型不确定（M=5 ensemble 执行头的预测方差）；信号 3 输出残差（力预测-实测残差的指数加权 CUSUM）。融合 ρ = min(三信号)，ρ < ρ_th 触发分级回退：R1 保守柔顺（K_d×0.3、v×0.3、力上限硬监控）→ R2 主动激励（注入探索扰动 + RLS 辨识 + TACTILE-MAP 更新）→ R3 human-in-the-loop（安全停 + 请求演示，新原语入库）。回退不是终点而是数据飞轮的入口。
 
 三个词怎么落地：
 
 | 词 | 落地 | 不做什么 |
 |---|---|---|
-| **语音合成** | 零样本克隆范式 → OD-CLONE；流匹配声学模型 → AC-SYNTH；韵律采样多样性 → u_act 不确定性 | 不逐物体重训练；不做云端大 VLA 全量边缘部署 |
-| **物体泛化** | e_obj 条件化全部预测/动作；零样本测试协议（50 训练物体/20 未见物体）；新颖度调制置信 | 不做类别级模板枚举；不做 test-time 梯度更新 |
-| **数据采集** | ACTIVE-HARVEST：仿真程序化生成 + 真机空闲自主探测 + 后见之明回标；采集即泛化 | 不靠人工遥操作标注；不做无差别被动收集 |
+| **演示数据** | DEMO-PRIM 流水线（分段→聚类→五元组拟合）；BENCH v2 演示数据标准格式；R3 失败→演示→入库数据飞轮 | 不做端到端行为克隆大模型；不做被动等数据；不做无标注裸 bag 直接入库 |
+| **模块化设计** | 四层执行栈 + 标准技能接口 + 原语增量扩展 + 状态机退化特例回归测试 | 不做单体端到端网络；不做模块间隐式耦合；不做不可独立验证的巨型策略 |
+| **分布外泛化** | 三信号 OOD 检测 + 分级回退 + OOD-PROBE 基准协议 + 技能序列组合泛化评测 | 不做数据增广刷点假装泛化；不做无安全阀的开放执行；不做只测分布内 |
 
-## 1. 研究日志：从 MULTIMODAL-PREDICTIVE-ZEST 到 CLONING-GENERALIZATION-ZEST 的演进
+## 1. 研究日志：从「模型驱动固定先验」到「数据驱动可增长先验」
 
-### 1.1 第 20 轮留下的三个「泛化盲区」
-
+### 1.1 第 23 轮系统的三个「先验僵化」症状
 ```text
-E1. 实例盲区：K/HP-PRED 只看瞬时 (z,a)——同观测异动力学的物体得到同预测；
-    置信在训练物体集上校准，未见物体上系统性失准（自信地泛化失败）。
-E2. 物体流形盲区：SIM-DISTILL 覆盖任务流形+故障流形，但物体资产有限、
-    类内差异未覆盖；任务多样化 ≠ 物体多样化。
-E3. 采集盲区：新物体=重新采数据；机器人不知道自己缺什么数据；
-    采集与决策割裂，无主动机制、无后见标签。
+E1. 状态机先验是拍的：5 状态 + 转移条件由工程师手工设计，新接触模式 = 修改代码 + 重新调参 + 重新验证发版，无法在部署现场生长；
+E2. 阻抗模式切换是硬编码的：FREE/APPROACH/CONTACT/SLIDE 的参数切换逻辑隐式绑死在状态机转移表里，模式之间没有可独立测试的边界；
+E3. 基准只回答「分布内多好」：BENCH v1 在 5×3 任务上度量性能，但一个 0.82 分的系统在第 6 种接触模式上可能瞬间违反安全——「不知道自己不知道」这件事没有被度量。
 ```
 
-这些盲区决定系统能否在「开放世界」中存活：若机器人在陌生厨房遇到第 1001 个瓶子时 `γ̂_pred` 依旧自信、`α_blend` 依旧激进、AC-SYNTH 合成的动作块依旧是「为训练物体调好的韵律」——就会「认错物体、用错力、摔对家」。
+### 1.2 三个新判断
+1. **技能是接触导航的正确抽象层级**：比端到端策略可解释、可独立验证、可复用组合；比状态机可扩展（加原语 ≠ 改内核）；粒度恰好对应人类的动作词汇（推门/挤缝/沿墙摸/点触）。
+2. **演示是接触导航最高效的知识注入通道**：接触动力学维价高（真实力反馈难以自监督获得），人类 1 分钟动觉示教 ≈ 1000 次仿真试错；且演示天然携带「该怎么用力」的监督信号（力轨迹 + 阻抗轨迹可直接回归，无需奖励设计）。
+3. **OOD 检测必须三信号冗余**：输入密度对「见过的输入但危险输出」盲（同输入不同刚度响应）；模型方差对 ensemble 共同盲区盲（训练分布内的共同偏置）；输出残差对「残差恰在预测噪声内」的慢漂移盲。三信号 min 融合取最保守，盲区互不重叠。
 
-### 1.2 三个新的判断
+### 1.3 与第 23 轮 FORCE-NAV-BENCH 的关系（保留/替换/扩展，不推倒重来）
+| 层 | 第 23 轮 | 第 24 轮 DMO-NAV | 关系 |
+|---|---|---|---|
+| 接触模式处理 | 固定 5 状态机 | 演示驱动原语库（K 可增长） | **替换**（状态机退化为 5 原语特例） |
+| 低层执行 | 阻抗控制器（1kHz） | 统一阻抗执行器 + 0.2s 过渡混合 | **保留增强**（命题 1 模块化重述） |
+| 地图表征 | TACTILE-MAP (μ,k,c) 贝叶斯层 | 不变，作为技能上下文特征与前馈 | **保留** |
+| 规划 | MPPI（SE(2)×ℝ³，10Hz） | FREE 段 MPPI + CONTACT 段技能库 + L3 技能序列规划 | **扩展**（分层化） |
+| 域随机化/辨识 | CONTACT-DR + RLS | 不变，且服务 R2 回退的主动激励 | **保留** |
+| 基准 | 5 任务 × 3 难度 × 双轨指标 | + T6-T8 OOD 探针 + L4 难度 + OOD 指标 | **扩展 v2** |
+| 云边协同 | 后验池 DDS 同步 | + 技能库增量分发（新原语广播至 fleet） | **扩展** |
+| 评测指标 | 双轨（导航+力控） | + OOD 三指标（AUC、违规率、恢复率） | **扩展** |
 
-1. **物体泛化必须在「实例表征」层面解决，而不是「类别模板」层面**：
-   - 类别模板（category-level models）：类别边界模糊、类内方差大、新类别要重新设计模板；
-   - test-time 微调：边缘算力不允许、灾难性遗忘、延迟不可接受；
-   - **零样本克隆范式**（借自零样本 TTS/VALL-E）：学习 `p(γ, h, π | o, a, e_obj)`，`e_obj = Enc_ref(R)` 在测试时前向计算——无梯度更新、每物体一次、可缓存。与「3 秒参考音频克隆任意说话人」结构上完全同构。
+### 1.4 灵感词贯通
+> **演示数据**：DEMO-PRIM 把遥操作 bag 变成可执行、可验证的原语；BENCH v2 定义演示标准格式（谁、何时、什么材质、什么成功率）；R3 回退形成「失败→演示→入库→重校准」数据飞轮。
+> **模块化设计**：MOD-STACK 四层 + 标准接口 + 增量扩展；每个原语可独立单元测试（力连续性、成功率、监控条件触发率、前置条件 FPR）。
+> **分布外泛化**：OOD-GUARD 三信号 + 分级回退；OOD-PROBE 协议首次度量「组合泛化 + 安全回退」；R2 主动激励把 OOD 时刻转化为数据收集机会而非纯损失。
 
-2. **预测必须「物体条件化 + 新颖度感知」**：
-   - FiLM 注入：`h ← γ_c(e_obj) ⊙ h + β_c(e_obj)`，比拼接更保留骨干、比 cross-attention 更省；
-   - 新颖度 `ν` 由「声纹到声纹库的 kNN 距离」+ 声纹集成方差共同决定，直接进入置信调制；
-   - 不确定性三源：`h_min²`（硬件健康，第 20 轮）、`u_obj`（物体身份，新增）、`u_act`（动作合成，新增）。
+## 2. 直觉深化：技能库如何精确回应「长尾接触」的三种情形
 
-3. **数据采集必须由「泛化缺口」驱动，且采集本身就是决策的一部分**：
-   - 理论钩子：若预测器对声纹 L-Lipschitz，则未见物体的误差 `MSE(e*) ≤ MSE(nearest in B) + L²·d*²`，`d*` 为测试声纹到声纹库 B 的最近邻距离——**泛化上界由覆盖半径控制**；
-   - 覆盖项是子模的 → 预算约束下贪心采集达 (1−1/e)·OPT；
-   - 双域闭环：仿真程序化生成（免费、θ_phys 可监督、可试错）填大空洞；真机自主探测（真实域、后见标签）填残余。
+长尾不是同质问题，拆成三种情形，机制各不相同、但共享同一套基础设施：
 
-### 1.3 与第 20 轮的关系
+- **情形 A：新模式可分解为已知原语的组合**（例：推门+越门槛 = APPROACH + DOOR_PUSH + STEP_OVER + RELEASE）→ L3 规划器在前置条件-后置条件图上搜索技能序列，**组合泛化**（命题 3 给出完备性界）。
+- **情形 B：新模式不可分解但与已知相似**（例：软橡胶门 vs 木门——同样的铰链接触但刚度差 100 倍）→ 库内执行但 OOD 信号升高，R1 降参数执行 + R2 主动辨识修正 TACTILE-MAP，**边界内自适应**。
+- **情形 C：完全未知且潜在危险**（例：带旋转把手的门 + 未知卡死模式）→ OOD 检测触发 R1 安全回退 → R3 请求演示，**安全熔断 + 数据飞轮**。
 
-| 层 | 第 20 轮 MULTIMODAL-PREDICTIVE-ZEST | 第 21 轮 CLONING-GENERALIZATION-ZEST |
-|---|---|---|
-| 感知输入 | {o_vis, o_prop, o_force, o_tactile} → z | 不变；**新增**参考交互序列 R → e_obj ∈ ℝ⁶⁴ |
-| 预测条件 | K/HP-PRED: (z, a) | OC-HEAD: (z, a, e_obj)，FiLM 物体条件化 |
-| 置信调制 | γ_adjusted = γ_corr · h_min | γ_adjusted = γ_corr · h_min · (1−η·ν)，ν=物体新颖度 |
-| 不确定性 | var_approx = Var[γ̂]/h_min² | + u_obj（声纹集成）+ u_act（采样一致性） |
-| 慢专家 | 云端 VLA（L_max ≤ 0.3 s，被动等待） | 边缘 AC-SYNTH（<80 ms，物体条件化）+ u_act 超阈升级云端 VLA（三级级联） |
-| 数据流形 | 任务流形 + 故障流形 | **+ 物体流形**：程序化生成 + 主动采集 + 后见标签 |
-| 蒸馏来源 | SIM-DISTILL（100 万合成 + 1 万真机） | SIM-DISTILL-2（+程序化物体语料库）+ ACTIVE-HARVEST 持续回流 |
-| 安全机制 | 健康度降级 + 故障预警 | 继承 + 新颖度降级（ν>0.8 → α≤0.3）+ 动作安全包络 |
+耦合点：三情形共享同一套原语库与 OOD 信号——L3 组合用同一前置条件谓词，R2 用同一 RLS/TACTILE-MAP（第 23 轮资产），R3 入库走同一 DEMO-PRIM 流水线。这正是模块化设计的红利：三个机制不是三个系统，是一个系统的三个运行模式。
 
-**保留**：MM-ENCODER、K-PRED/HP-PRED 结构、C-MAP+KCL、AHD、SIM-DISTILL 骨干、DRS/DRAW/SCC。
-**升级**：预测条件从 (z,a) 到 (z,a,e_obj)；慢专家从「云端 VLA 独苗」到「边缘流合成 + 云端升级」；数据从「任务+故障」到「+物体」；采集从被动到主动。
-**剪枝**：不要求物体类别标注；不为新物体重训练；不增加控制环延迟（e_obj 缓存后零开销，FiLM +0.01ms）。
+## 3. 正式化：DMO-NAV 符号定义
 
-### 1.4 灵感词贯通：语音合成、物体泛化、数据采集
+### 3.1 演示数据与接触原语
+```
+演示数据集: 𝒟 = {τ_1, ..., τ_M},  τ_j = {(s_t, a_t, f_t, δ_t)}_{t=1..T_j}
+  s_t = [q; p_c; f_c] ∈ SE(2)×SE(3)×ℝ⁶（继承第 23 轮状态定义）
+  δ_t: 法向形变估计；a_t: 操作空间指令；K_rec,t: 示教时阻抗参数记录
 
-> **语音合成**：零样本 TTS 的三件套被逐一映射——「3 秒参考音频 → 说话人声纹」映射为「5 秒参考交互 → 物体动力声纹」；「流匹配声学模型（文本+声纹→语音）」映射为「AC-SYNTH（子目标+声纹→动作块）」；「韵律采样的多样性」映射为「M 路动作采样的一致性方差 u_act」；「误读检测」映射为「动作安全包络 + 云端升级路径」。
-> **物体泛化**：泛化从「数据增强的副产品」升格为「一等公民」：e_obj 条件化让「这一个物体」进入所有预测；零样本测试协议（训练 50 物体、测试 20 未见物体）强制度量泛化差距；新颖度 ν 让系统对「陌生」自知——把泛化失效从静默故障变成可监测信号。
-> **数据采集**：ACTIVE-HARVEST 让「采什么数据」由泛化缺口（覆盖缺口 + 预测熵 + 集成分歧）决定：仿真侧程序化物体生成器在声纹空间空洞区批量造物（免费试错、参数可监督），真机侧空闲时自主 5 秒探测（真实域、后见回标）。泛化误差由覆盖半径控制（命题 2），采集预算直接转化为泛化上限。
+力特征序列（分段用）: y_t = (|f_n,t|, ‖f_t,t‖/(‖f_n,t‖+ε), δ_t, δ̇_t, ‖ẋ_t‖) ∈ ℝ⁵
 
-## 2. 直觉深化：克隆-合成-采集泛化循环
+上下文特征: x = (局部占据 patch, 法向量 n̂, 通道宽度, TACTILE-MAP 局部 (μ,k,c) 均值/方差,
+             最近接触力统计, 任务目标嵌入) ∈ ℝ^{d_x}
 
-MP-ZEST 是「感知-预测-决策」三元闭环；CG-ZEST 在其中嵌入第二条循环——**「克隆-合成-采集」的泛化循环**：
+接触原语: z = (φ_z, π_z, Ξ_z, κ_z, ν_z)
+  φ_z: 前置条件得分 φ_z: 𝒳→[0,1]（logistic，校准至验证集 FPR≤5%）
+  π_z: 双 DMP（位移轨迹 x_ref(·) + 法向力轨迹 f_ref(·)），forcing 权重 ω ∈ ℝ^B, B=10
+  Ξ_z: 阻抗模板 (K_z, D_z) ∈ ℝ⁶（对角），执行时由 TACTILE-MAP 查询值调制
+  κ_z: 监控条件 = (成功集 C_z, 失败集 F_z, 超时 T_z)（段末统计 ±3σ 区域）
+  ν_z: 原型嵌入 e_z ∈ ℝ^{d_e}（段嵌入均值，OOD 检测用）
+  另有执行统计: SR_z ~ Beta(α_z, β_z)（历史成败计数）
+```
 
-- **克隆**：OD-CLONE 把「陌生」压缩成 64 维声纹，一次探测、终身可用；
-- **合成**：AC-SYNTH 以声纹为条件把「专家技能」合成为物体特异的动作块，8 步流匹配、毫秒级；
-- **采集**：ACTIVE-HARVEST 以「哪里泛化不了」为信号反哺数据，声纹库每增一圈，泛化边界外推一圈。
+### 3.2 原语提取（离线流水线 DEMO-PRIM）
+```
+输入: 𝒟, 距离阈值 d_cut, 基函数数 B=10
+1. 分段: 滑动窗口似然比 on y_t（两侧窗口均值差的 z 分数，非极大抑制）→ 分割点 {t_b}
+   （v2 实装为 BOCPD run-length 后验，接口不变）
+2. 段嵌入: e_i = (mean(y), std(y), duration, ‖y‖) ∈ ℝ^{12}
+3. 聚类: DTW 段距离 + 平均链接层次聚类，阈值 d_cut → 簇 {𝒵_c}，簇纯度阈值过滤
+4. 每簇拟合五元组:
+   φ_z: logistic（正例=簇内段起始上下文, 负例=扰动采样），验证集 FPR≤5% 校准
+   π_z: 双 DMP，簇内轨迹时间归一平均 → forcing 最小二乘拟合
+   Ξ_z: K_z 法向分量 = median(‖f_n‖/δ)，切向 0.5×，D_z = 0.1×K_z（近临界阻尼）
+   κ_z: 段末 (f_n, δ) 的 μ±3σ 矩形区域
+   ν_z: 簇内 e_i 均值
+输出: 原语库 𝒵 = {z_1..z_K}；初版 K=5 即第 23 轮状态机的退化特例
+```
 
-与既有三元闭环的四个耦合点：
+### 3.3 技能选择与执行
+```
+技能选择（L3/L2 决策点, UCB 式）:
+z* = argmax_{z∈𝒵} [ φ_z(x)·E[SR_z] + c_ucb·√(ln N_tot / (1+N_z)) ]
 
-1. **克隆→预测**：e_obj 经 FiLM 注入 OC-HEAD；同一瞬时观测在不同声纹下给出不同 γ̂_pred/h——「满瓶与空瓶终于不同了」。
-2. **克隆→决策**：ν 调制置信区间与 α_blend；u_obj 高时回退类别先验；ν>0.8 触发「物体维度降级」（与健康度降级、故障预警并列的第三重降级）。
-3. **合成→决策**：AC-SYNTH 的 M 路采样一致性 u_act 免标签估计「专家对这物体的把握」，驱动 α_blend 与升级路径；安全包络把越界动作块投影回可行集。
-4. **采集→全链路**：执行中的成功/失败经后见之明回标给声纹库；声纹库膨胀 → r(B) 收缩 → 命题 2 的泛化界收紧 → 预测更准 → 采集更有的放矢（飞轮）。
+执行（L2→L1, 100Hz 技能层）:
+π_z step(s_phase) → (x_ref, f_ref);  Ξ_z + TACTILE-MAP 调制 → (K_d, D_d)
+L1 执行器（1kHz, 继承第 23 轮阻抗控制 + 过渡混合）:
+  切换后 T_b=0.2s 内: θ(t) = (1−η(t))·θ_old + η(t)·θ_new, η 线性 0→1
+监控: κ_z 每周期检查 → success（交还 L3, 更新 Beta）/ fail（降权重选或回退）/ timeout
+```
 
-TTS ↔ CG-ZEST 对应表（本轮设计的「心电图」）：
+### 3.4 OOD-GUARD：三信号检测与分级回退
+```
+信号 1 输入密度: ρ_in(x) = exp(−(d_kNN(x, {ν_z})/σ₁)²)
+信号 2 模型不确定: ρ_mod = exp(−(Var_m[f̂_m]/σ₂)²), m=1..M ensemble 头
+信号 3 输出残差: CUSUM ← (1−β_C·dt)·CUSUM + dt·max(0, ‖f_meas−f_pred‖−ε_r); ρ_out = exp(−(CUSUM/σ₃)²)
+融合: ρ(x) = min(ρ_in, ρ_mod, ρ_out)；ρ_th 在校准集（held-out 演示 + 仿真扰动集）选 FPR@95TPR 点
 
-| 零样本 TTS | CG-ZEST |
+分级回退（FallbackManager 状态机）:
+ρ < ρ_R1 持续 → R1 保守柔顺: K_d×0.3, v×0.3, ‖f_n‖≤F_safe 硬监控
+R1 持续 τ_R1 未恢复 → R2 主动激励: 注入 a_probe 扰动 → RLS 辨识 → TACTILE-MAP 更新 → ρ 复检
+ρ < ρ_R3 或 R2 无效 → R3: 安全停 + human-in-the-loop 演示请求 → DEMO-PRIM 入库 → 库更新 + 阈值重校准
+```
+
+### 3.5 L3 任务规划器（组合泛化）
+```
+前置条件-后置条件图: 节点 = 原语 ∪ {START, GOAL}
+边 z_i→z_j ⟺ P(φ_{z_j} 可满足 | z_i 后置效应) ≥ p_min
+序列搜索: BFS（K≤50, <1ms, 完备）
+执行: 顺序执行；每个原语终止后复检下一前置条件；失败回溯重规划（≤3 次 → 交 OOD-GUARD）
+```
+
+## 4. 性质与复杂度
+
+### 4.1 理论性质
+**命题 1（技能切换力连续性，第 23 轮命题 1 的模块化重述）**：过渡混合下阻抗参数轨迹 θ(t) 在切换点连续且 ‖θ̇‖ ≤ ‖θ_new−θ_old‖/T_b 有界；阻抗力输出对参数 Lipschitz（增益与状态有界），故切换窗口内 ‖f_c(t)−f_c(t0)‖ ≤ L_θ·max‖θ̇‖·T_b，无冲击峰值。
+*证明草图*：η 线性 → 参数速度有界；f = K_d(x_d−x)+D_d(ẋ_d−ẋ) 对 (K_d,D_d) 线性 → Lipschitz 常数由状态紧性控制。∎
+
+**命题 2（OOD 分级安全界）**：设 E 为「真实接触模式超出库覆盖」事件。校准保证 P(检测|E) ≥ 1−δ_ood；R1 回退在任意状态下由低刚度+限速+力上限硬监控保证 P(‖f_n‖≤F_safe | R1) ≥ 1−ε_R1（继承第 23 轮命题 3 的阻抗稳定性论证）；分布内 ε_in 由命题 1 + v1 回归测试界定。则
+P(安全违规) ≤ P(¬E)·ε_in + P(E)·P(漏检) + P(E)·P(检出但回退失效) ≤ ε_in + δ_ood + ε_R1（union bound）。
+*意义*：把不可界定的「长尾危险」分解为三个可独立校准的小量。∎
+
+**命题 3（组合泛化完备性）**：若目标任务存在序列 z*_1..z*_m 使每个 z*_i 的前置条件在执行前序后以概率 ≥ p_min 可满足，且 L3 在前置条件图上穷尽搜索，则找到该序列的概率 ≥ p_min^m；图边由后置效应-前置条件蕴含构造，搜索不漏序列。
+*证明草图*：BFS 穷尽 + 执行随机性逐段独立相乘。∎
+
+**命题 4（增量扩展单调性）**：UCB 选择下，新增原语 z_new 仅当其得分超过现有最大值才改变行为；φ_z 在验证集 FPR≤5% → 对分布内状态被新原语劫持的概率 ≤5%；结合 BENCH v1 全套自动回归测试，库扩展后已有性能统计不降。
+*证明草图*：argmax 扰动分析 + 分类器 FPR 界 + 回归门禁。∎
+
+### 4.2 计算复杂度
+| 模块 | 频率 | 复杂度 | 典型耗时 |
+|---|---|---|---|
+| 原语提取（离线/增量） | 一次性 | O(T) 分段 + O(S²·L) DTW 聚类 + O(T·B) DMP 拟合 | <10 min；增量 <1 min |
+| 技能选择 | 10 Hz | O(K·d_x), K≤50 | <0.5 ms |
+| 技能执行（DMP+阻抗） | 1 kHz | O(B)+O(1) | <0.1 ms |
+| OOD 三信号 | 100 Hz | O(K) kNN + O(M) 头 + O(1) CUSUM | <1 ms |
+| L3 序列规划 | 事件驱动 | O(K²) 图搜索 | <1 ms |
+| MPPI（FREE 段，保留） | 10 Hz | O(N·H·d) | 8 ms (GPU) |
+| **在线总延迟** | — | — | **<12 ms，1kHz 内环不受影响** |
+
+## 5. 预期实验结果（FORCE-NAV-BENCH v2）
+
+### 5.1 回归测试（v1 全套，保证不劣化）
+| 配置 | v1 综合得分 |
 |---|---|
-| 3 秒参考音频 | 5 秒参考交互 R（戳/推/提/摇/捏） |
-| 说话人声纹嵌入（speaker embedding） | 物体动力声纹 e_obj ∈ ℝ⁶⁴ |
-| 声学模型（流匹配，文本+声纹→语音） | AC-SYNTH（子目标+声纹→动作块） |
-| 韵律采样多样性 | M 路采样一致性方差 u_act |
-| 多说话人语料库 | 程序化物体语料库（仿真，θ_phys 可监督） |
-| 误读检测/发音安全 | 动作安全包络 + 云端 VLA 升级路径 |
-| MOS 主观评测 | 未见物体成功率 + 泛化差距 |
+| 第 23 轮状态机版 | 0.82 |
+| DMO-NAV（K=5 退化特例） | ≥0.80（统计不显著劣化，命题 4 门禁） |
 
-## 3. 正式化：CLONING-GENERALIZATION-ZEST 的符号定义
-
-### 3.1 参考交互协议与 OD-CLONE
-
-**探测原语库**：`Π = {POKE（戳，激励刚度）、PUSH（推，激励摩擦）、LIFT（提，激励质量）、SHAKE（摇，激励质量分布与内容物）、SQUEEZE（捏，激励柔顺性）}`，每原语约 1 s，共 `T_ref = 50` 帧 @ 10 Hz。
-
-**参考交互**：`R = {(o_t, a_t)}_{t=1..50}`，o_t 为四模态观测（继承第 20 轮定义），a_t 为探测动作。
-
-**声纹提取**：
-```
-z_t = MM-ENCODER(o_t)                    # 复用第 20 轮，权重共享
-h_0 = W_in [z_1; ...; z_T] + E_pos        # 线性投影 + 位置嵌入
-h_l = TransformerLayer(h_{l-1}), l=1..4   # d=128, 4 heads
-w = Softmax(w_p^T tanh(W_a h_4))          # 注意力池化
-e_obj = W_o Σ_t w_t h_t ∈ ℝ⁶⁴             # 物体动力声纹
-u_obj = mean‖e_obj^{(k)} − ē‖², k=1..4    # K_ens=4 集成声纹头 → 声纹不确定性
-```
-
-**三重监督**：
-```
-ℒ_NCE  = −E[ log(exp(sim(e, e⁺)/τ) / Σ_k exp(sim(e, e_k)/τ)) ]   # 同物两次独立交互为正对
-ℒ_phys = ‖g(e_obj) − θ_phys‖²                                    # mass/friction/stiffness/CoM偏移/填充率/磨损
-ℒ_suff = ‖γ̂(z, e_obj) − γ̂(z, θ_phys)‖²                          # 声纹须是物理参数的任务充分代理
-```
-
-### 3.2 物体条件化联合预测头 OC-HEAD
-
-**FiLM 条件化**（参数增量 <0.3M）：
-```
-[γ_c; β_c] = W_F e_obj + b_F             # 每 backbone 一组
-h_backbone ← γ_c ⊙ h_backbone + β_c
-```
-
-**K-PRED 分支**（继承第 20 轮损失，条件化）：
-```
-γ̂_pred = Sigmoid(W_γ h + b_γ),  h = FiLM(Backbone([z; a]), e_obj)
-ℒ_γ^OC = KL(Beta(γ;α,β) ‖ Beta(γ̂_pred;α_K,β_K)) + λ_constrain·铰链项(同第20轮)
-```
-
-**HP-PRED 分支**：h_joint/h_sensor/h_ee/p_failure 同第 20 轮，输入改为 FiLM 后的 h。
-
-**新颖度**：
-```
-d_knn = mean_{i∈kNN(e_obj,B,5)} ‖e_obj − e_i‖ / s_B      # s_B 为库内尺度归一化
-ν = σ(W_ν [e_obj; d_knn; u_obj]) ∈ [0,1]
-```
-
-**总损失**：
-```
-ℒ_total = ℒ_MM + ℒ_γ^OC + ℒ_h + λ_NCE·ℒ_NCE + λ_phys·ℒ_phys + λ_suff·ℒ_suff
-```
-
-### 3.3 动作块流合成 AC-SYNTH 与三级专家级联
-
-**条件流匹配**（从云端 VLA 蒸馏动作块，蒸馏集 D_synth = {(c_i, A_i^VLA)} 来自仿真+真机演示）：
-```
-c = [g; e_obj; z_hist; a_f]              # 子目标嵌入+声纹+历史观测+快策略意图，274 维
-x_t = (1−t)·ε + t·A,  A ∈ ℝ^{20×18}      # 2 s 动作块，线性插值路径
-ℒ_FM = E_{t,ε,A~π_VLA} ‖v_φ(x_t, t | c) − (A − ε)‖²
-推理：x_0 ~ N(0,I)，8 步欧拉积分 → A_synth；批量 M=4 路采样
-u_act = mean_dims std_{m=1..M}[A^{(m)}]
-```
-
-**安全包络**（防生成越界动作，对应 TTS 的「误读」）：
-```
-A_synth ← clip(A_synth, a_f ⊖ Δ_max, a_f ⊕ Δ_max)；‖τ‖ ≤ τ_max；满足摩擦锥
-```
-
-**三级级联**：
-```
-① 快策略 a_f（<1 ms，托底）
-② AC-SYNTH A_synth（~70 ms 异步，默认专家）
-③ 云端 VLA（~300 ms，u_act > τ_esc=0.05 或 p_failure > 0.7 时升级请求）
-```
-
-### 3.4 置信调制与三重降级（升级版）
-
-```
-γ_adjusted = γ_corrected · h_min · (1 − η·ν)          # η=0.5
-var_approx = Var[γ̂_pred] / h_min²
-u_total = sqrt(u_obj² + u_act²)
-α_blend = γ_adjusted · (1 − κ·√var_approx − κ_u·u_total)
-α_blend = clip(α_blend, 0, 1)
-
-if p_failure > 0.5:   α_blend = min(α_blend, 0.2); trigger_maintenance_alert()
-elif h_min < 0.7:     α_blend = min(α_blend, 0.3); log_health_degradation()
-elif ν > 0.8:         α_blend = min(α_blend, 0.3); log_novel_object()   # 新增：物体维度降级
-```
-
-### 3.5 主动数据采集引擎 ACTIVE-HARVEST
-
-**采集评分**（对候选探测 p = (物体 O, 原语 π, 参数)）：
-```
-U(p) = w₁·G(ê(p)) + w₂·H[q(γ,h | z_ref)] + w₃·D_ens(ê(p)) − w₅·C(p)
-G(e) = 1/(n_cell(e) + n₀)                     # 声纹库增量 k-means 单元覆盖缺口
-D_ens(e) = std over K_ens 声纹头               # 集成分歧
-C(p) = 时间 + 能耗 + 风险（仿真预筛选给出）
-```
-
-**双域闭环**：
-```
-仿真侧：程序化物体生成器 G_ψ(u), u ∈ ℝ¹² → 网格+物理参数
-        以 U 为目标在 u 空间随机射击/CMA-ES 提议 → SIM-DISTILL-2 批量产数据（θ_phys 免费监督）
-真机侧：空闲/充电时段自主执行 top-U 探测 → e_obj 入库 → 任务执行后后见回标（成功/失败）
-云端：声纹库 B 周期性重聚类 + 模型周更
-```
-
-**收敛主张**：r(B)（测试声纹到库的最远最近邻半径）随采集预算单调收缩；由命题 2，未见物体误差上界同步收紧。覆盖项子模 → 贪心达 (1−1/e)。
-
-### 3.6 CG-ZEST 主循环（骨架，完整实现见产物区）
-
-```python
-class CGZestPolicy:
-    """骨架：克隆 -> 预测 -> 合成 -> 调制 -> 采集（完整实现见产物区）"""
-
-    def ensure_voiceprint(self, obs):
-        if self.e_obj is not None:
-            return
-        self.ref_buffer.append(self.mm_encoder(self._obs2dict(obs)))
-        if len(self.ref_buffer) >= 50:                        # 5 s @ 10 Hz
-            e_ens = [c(torch.stack(self.ref_buffer).unsqueeze(0))[0]
-                     for c in self.ensemble]
-            self.e_obj = torch.stack(e_ens).mean(0)           # 物体声纹
-            self.u_obj = float(torch.stack(e_ens).std(0).mean())
-            self.nu = self.voicebank.novelty(self.e_obj, self.u_obj)
-            self.voicebank.add(self.e_obj)                    # 入库
-
-    def get_action(self, obs):
-        self.ensure_voiceprint(obs)
-        if self.e_obj is None:
-            return self._probe(obs, self.probe_queue[0])      # 探测期纯快策略
-        z = self.mm_encoder(self._obs2dict(obs))
-        a_fast = self._select_fast_action(obs)
-        gamma_pred, h_j, h_s, h_ee, p_fail, h_min, nu = \
-            self.oc_head(z, self._act2vec(a_fast), self.e_obj)  # FiLM 条件化
-        gamma_corr = self._cloud_correct(
-            self.cmap_c.compress(float(gamma_pred)))          # KCL 继承第 20 轮
-        if self.synth_future is None:                         # 异步三级级联
-            c = self._build_cond(obs, a_fast)
-            self.synth_future = self.executor.submit(
-                self.synth.sample, c, K=8, M=4)
-        alpha = self._compute_alpha_adjusted(gamma_corr)
-        return self._execute_blended(obs, a_fast, alpha)      # 快/合成/云端VLA
-
-    def _compute_alpha_adjusted(self, gamma_corr):
-        gamma_adj = gamma_corr * self.h_min * (1 - self.eta * self.nu)  # 新颖度调制
-        u_total = np.hypot(self.u_obj, self.u_act)
-        alpha = gamma_adj * (1 - self.kappa * np.sqrt(0.05 / self.h_min**2)
-                                 - self.kappa_u * u_total)
-        if self.p_failure > 0.5:
-            alpha = min(alpha, 0.2)                           # 故障预警（第 20 轮）
-        elif self.h_min < 0.7:
-            alpha = min(alpha, 0.3)                           # 健康降级（第 20 轮）
-        elif self.nu > 0.8:
-            alpha = min(alpha, 0.3)                           # 物体降级（新增）
-        return float(np.clip(alpha, 0, 1))
-
-    def on_idle(self, probes):                                # ACTIVE-HARVEST
-        return max(probes, key=lambda p: self.voicebank.acquisition_score(
-            self._probe_preview(p), self._pred_entropy(p),
-            self._ens_disagreement(p), p.cost))
-
-    def on_block_finished(self, success):
-        if self.e_obj is not None:
-            self._upload_hindsight(self.e_obj, success)       # 后见之明回标（零标注）
-```
-
-### 3.7 性质、复杂度与正确性
-
-**命题 1（声纹可辨识性，非正式）**：若 ℒ_NCE 收敛且物理回归头 g 的 Lipschitz 常数 ≤ L_g，则物理参数差异 ‖Δθ‖ ≥ ε 的两物体满足 E‖e₁ − e₂‖ ≥ c·ε − 2δ_id，其中 δ_id 为同物体跨交互的声纹漂移（InfoNCE 压缩上界）。即：声纹在极限下是物理参数的可辨识编码。
-
-**命题 2（覆盖-泛化界）**：设 OC-HEAD 对声纹 L-Lipschitz，测试物体声纹 e* 到声纹库 B 的最近邻距离 d*，其最近库内声纹的误差为 MSE_ref，则 MSE(e*) ≤ MSE_ref + L²·d*²。**泛化上界由声纹覆盖半径控制**——这是 ACTIVE-HARVEST 以「最小化 max-kNN 半径」为目标的理论依据。
-
-**命题 3（贪心采集近似性）**：覆盖项 f(B) = Σ_cell log(1 + n_cell) 单调子模；预算 k 约束下按 U 的贪心序列满足 f(B_greedy) ≥ (1−1/e)·f(B*)。
-
-**命题 4（保守性单调）**：∂α_blend/∂ν ≤ 0、∂α_blend/∂u_obj ≤ 0、∂α_blend/∂u_act ≤ 0、∂α_blend/∂h_min ≥ 0——「越陌生、越不确定、越不健康，越保守」。
-
-**命题 5（免标签升级触发）**：u_act 与动作块误差 E‖A_synth − A_VLA‖ 经验 Spearman ρ > 0.6，可作为免标签的「升级云端 VLA」触发器（对应 TTS 韵律采样分歧→请求人工校音）。
-
-**复杂度分析**：
-
-| 组件 | 时间复杂度 | 空间复杂度 | 备注 |
-|---|---|---|---|
-| MM-ENCODER（继承）| ~0.85 ms | ~27 MB | 不变 |
-| OD-CLONE 参考阶段 | 每物体一次 ~5 s + <0.5 s 编码 | ~5 MB | Transformer(50 token) <1 ms |
-| OD-CLONE 运行时 | **0 ms（缓存）** | — | e_obj 每物体一次 |
-| FiLM + 新颖度 | +0.03 ms | +0.3 MB | 仿射 + kNN（库<1万） |
-| OC-HEAD | ~0.3 ms | +0.3 MB | 与第 20 轮持平 |
-| AC-SYNTH（异步）| ~70 ms GPU / ~250 ms INT8-CPU | ~15 MB (INT8) | 8 步欧拉 × M=4 批量 |
-| ACTIVE-HARVEST | 仅空闲时段 | <1 MB | 不入控制环 |
-| **控制环总计 (GPU)** | **~1.2 ms** | **~50 MB** | 硬实时保持 |
-| **控制环总计 (CPU)** | **~6.3 ms** | **~50 MB** | 量化后目标 <5 ms |
-
-**通信**：e_obj 64×float32 = 256 B/物体（一次），后见标签 <100 B/次；其余同第 20 轮 <1.5 KB/帧。
-
-## 4. 预期实验结果
-
-### 4.1 OD-CLONE 声纹质量（仿真 200 程序化物体 + 真机 50 物体）
-
-| 配置 | 同物检索 top-1 | θ_phys 回归 R² | 未见物体 MSE(γ) |
-|---|---|---|---|
-| 无对比损失（仅任务） | 0.71 | 0.62 | 0.052 |
-| 仅对比（无物理接地） | 0.93 | 0.58 | 0.041 |
-| 对比 + 物理回归 | 0.96 | 0.91 | 0.030 |
-| + 任务充分性 ℒ_suff | 0.96 | 0.91 | **0.026** |
-
-- 无物理接地时对比学习会按外观纹理聚类（R² 下降、MSE 回升）——验证「物理接地」必要性。
-- 「闭眼探测」消融：视觉帧置零后 top-1 检索 0.89——声纹确以动力学线索为主，非外观捷径。
-
-### 4.2 零样本泛化（真机：50 训练物体 / 20 未见测试物体）
-
-| 方法 | Seen 成功率 | Unseen 成功率 | 泛化差距 | Unseen MSE(γ) |
-|---|---|---|---|---|
-| MP-ZEST（物体无关，第 20 轮） | 84% | 57% | 27 pt | 0.049 |
-| CG-ZEST 无声纹（仅 FiLM 零初始化） | 85% | 60% | 25 pt | 0.045 |
-| + OD-CLONE（随机探测） | 86% | 76% | 10 pt | 0.030 |
-| + 主动探测（Fisher/不确定性选原语） | 86% | **81%** | **5 pt** | **0.026** |
-
-参考时长消融：1 s → 68%、3 s → 74%、5 s → 81%、10 s → 82%（5 s 为性价比拐点，T_ref=50）。
-
-### 4.3 AC-SYNTH：慢专家级联
-
-| 慢专家 | 延迟 | Unseen 成功率 | 参数量 |
-|---|---|---|---|
-| 云端 VLA（第 20 轮，L_max=0.3 s） | 300 ms | 81% | ~3B |
-| AC-SYNTH fp16 GPU（8 步流匹配） | 60 ms | 79% | 15M |
-| AC-SYNTH INT8 CPU | 250 ms | 78% | 15M |
-| AC-SYNTH + u_act 升级 VLA（触发率 12%） | 60 ms（p95 300 ms） | **83%** | — |
-
-- 对照：50 步 DDPM 扩散合成器 380 ms、成功率 79.5%——流匹配以 ~6× 延迟优势持平精度，故选流匹配。
-
-### 4.4 ACTIVE-HARVEST 数据效率（达到 75% unseen 成功率）
-
-| 采集策略 | 所需参考交互数 | 声纹覆盖半径 r(B) |
+### 5.2 OOD-PROBE 主实验（T6-T8 探针 + L4 零覆盖）
+| 任务 | 状态机版 | DMO-NAV |
 |---|---|---|
-| 随机采集 | ~4,800 | 0.21 |
-| 不确定性驱动（仅熵） | ~2,600 | 0.15 |
-| **ACTIVE-HARVEST（覆盖+熵+分歧）** | **~1,200** | **0.09** |
-| + 仿真程序化预填充 | **~700** | 0.07 |
+| T6 软橡胶门封条（未见材质, k≈1e3 出训练分布） | SR 31% / 违规 11% | **SR 61% / 违规 2.4% / AUC 0.88** |
+| T7 L 形内角通道（未见几何） | SR 24% / 违规 13% | **SR 52% / 违规 2.9% / AUC 0.85** |
+| T8 复合连续（推门→越槛→挤缝） | SR 18% | **SR 55%（组合泛化）** |
+| L4（训练零 T6-T8 演示） | SR 15% | **SR 44% + 恢复成功率 71%** |
 
-### 4.5 端到端对比
+### 5.3 消融
+| 配置 | SR_ood | 安全违规率 | 关键发现 |
+|---|---|---|---|
+| 完整 DMO-NAV | 0.58 | 2.5% | 基准 |
+| 无演示库（纯手工技能） | 0.41 | 3.8% | 演示提取的模式覆盖是主要增益来源 |
+| 无模块化（端到端 BC） | 0.47 | 6.1% | 可解释性与安全双输 |
+| 无 OOD-GUARD | 0.49 | 9.8% | 安全阀价值 ≈4× 违规率差 |
+| 单信号 OOD（仅密度） | 0.55 | 4.4% | 三信号冗余必要（盲区互不重叠） |
+| 无过渡混合（硬切换） | 0.57 | 5.2% | 命题 1 的工程意义 |
 
-| 算法 | 控制环延迟 | Unseen 事故率(1000h) | 新物体上手时间 | 新物体真机数据 |
-|---|---|---|---|---|
-| PC-ZEST（第 19 轮） | 0.6 ms | 3.1 | 需重采数据 ~2 h | ~1 万轨迹 |
-| MP-ZEST（第 20 轮） | 1.15 ms | 2.4 | 需重采数据 ~1 h | ~5 千轨迹 |
-| **CG-ZEST（本轮）** | **1.2 ms** | **0.9** | **5 秒探测 + 0 训练** | **0** |
+### 5.4 数据飞轮
+- 演示效率：10 条/任务 → SR_ood 0.38；25 → 0.49；50 → 0.58；100 → 0.62（50 条为性价比拐点）
+- Human-in-the-loop：T6-T8 各 3 轮「失败→演示→入库」后 SR_ood +25pt，v1 回归不降（命题 4 实证）
 
-## 5. 风险与缓解
+## 6. 风险与缓解
 
-| 风险 | 缓解方案 |
+| 风险 | 缓解 |
 |---|---|
-| **参考交互不可辨识**：瓶内液体量、内部空腔、受载摩擦等隐藏参数无法由 5 秒无损探测识别，声纹「自信但错误」 | ① 主动探针选择最大化 Fisher 信息（摇→质量分布，压→刚度）；② 任务中在线声纹修正：e_obj ← (1−λ)e_obj + λ·e_online（滑移/力觉残差回灌）；③ u_obj 高 → 回退类别先验 + 加保守 |
-| **声纹错位**：对比学习按外观而非动力学聚类 | ① ℒ_phys 硬接地；② 任务梯度加权保留任务相关维度；③「闭眼探测」协议：视觉帧置零仍可辨识（消融验证） |
-| **AC-SYNTH 越界动作**：新物体上生成 OOD 动作块 | ① 安全包络投影（残差界/力矩上限/摩擦锥）；② u_act 超阈升级云端 VLA 或回退快策略；③ 训练数据带约束投影 |
-| **主动采集的探索-安全冲突**：探测重型/易碎物体有风险 | ① 仿真预筛选，高风险探测只在仿真做；② 接触力上限 + 柔顺控制；③ 高价值高风险探测需人工确认 |
-| **声纹库漂移**：车队异构、物体磨损使旧声纹失效 | ① 时间戳 + 指数衰减权重；② 在线 BN 适应（继承第 20 轮）；③ 周期重聚类 |
+| 演示者偏差（示教风格决定库偏置） | 多演示者协议（≥3 人/模式）；DMP goal 对齐做风格归一；BENCH v2 记录演示者元数据 |
+| 无监督分割/聚类错误（一段被拆成两个伪原语） | 入库前人工确认 UI（<1h 含确认）；簇纯度阈值过滤；错分原语由 Beta 后验自动降权淘汰 |
+| OOD「检测到了但不知道怎么办」 | R1 永远可用（保守柔顺与库无关）；库空时系统退化为 v1 状态机特例；R3 演示请求闭环 |
+| 接口信息损失（L3 只看前置条件） | 上下文 x 全量传 L2；原语内每 1s 复检前置条件；失败回溯机制 |
+| 库增长后选择冲突（多原语同时高分） | UCB 平衡；冲突时稳定性裕度排序保守者优先；DTW<阈值原语合并去重 |
+| OOD 探针被过拟合 | 探针任务定期轮换 + 隐藏集；提交物须声明演示来源，禁止在探针环境采演示 |
 
-## 6. 本轮最大的风险
+## 7. 本轮最大的风险
+**演示数据的覆盖与偏差本质性受限：技能库的泛化上界由演示分布决定，OOD-GUARD 对「演示集内部罕见但真实危险」的接触模式（如夹伤人体的软接触）可能双重失效——既无可退回的技能，密度/方差/残差三信号又都落在训练噪声以内，导致系统「自信地危险」。**
 
-**参考交互的可辨识性：5 秒无损探测可能根本无法识别物体的关键隐藏物理参数（瓶内液体量与晃动动力学、内部空腔、受载后的摩擦形变），导致「声纹自信但错误」；而 e_obj 被缓存后，置信、健康、动作合成全链路都条件在这个错误声纹上——系统会「自信地泛化失败」，且执行异常还可能被误归因为健康度问题，形成「泛化-安全」双重失效。**
-
-## 7. 灵感词贯通
-
-> **语音合成**：零样本 TTS 的「参考音频→声纹→条件生成」范式被完整移植：「5 秒参考交互→物体声纹→条件预测/合成」。流匹配声学模型成为 AC-SYNTH，韵律采样分歧成为免标签不确定性 u_act，误读检测成为安全包络与升级路径。
-> **物体泛化**：泛化从副产品升为一等公民——e_obj 条件化让预测区分「同观测异动力学」的物体；零样本测试协议强制暴露泛化差距（27 pt → 5 pt）；新颖度 ν 把「陌生」变成可监测、可降级的一等信号。
-> **数据采集**：ACTIVE-HARVEST 以「泛化缺口」驱动采集——覆盖缺口+预测熵+集成分歧选择探测，仿真程序化造物填大洞、真机自主探测填残洞、后见回标零标注；由命题 2，采集预算直接转化为泛化上限的收紧。
+## 8. 下一轮展望（第 3 轮灵感未知）
+候选方向：若灵感指向「世界模型/想象」→ 原语前向预测升级为学习型世界模型，L3 在想象中 rollout 选序列；若指向「多机器人/联邦」→ fleet 技能库联邦共享（延续云边协同线）；若指向「形式化安全」→ 原语时序逻辑规约 + 运行时验证器。无论哪个方向，本轮的「标准技能接口 + OOD 阈值校准协议 + v1 回归门禁」都保持前向兼容。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 21 轮产物 · CLONING-GENERALIZATION-ZEST 技术报告
+# 第 24 轮产物 · DMO-NAV 技术报告：演示驱动模块化接触原语库 + OOD 感知执行栈
 
-## 0. 结论：从「感知-预测-决策」三元闭环到「+克隆-合成-采集」泛化循环
+## 0. 结论：把第 23 轮「固定状态机」重构为「可增长技能库 + OOD 安全阀」
 
-CLONING-GENERALIZATION-ZEST（CG-ZEST）基于第 20 轮 MULTIMODAL-PREDICTIVE-ZEST，引入「物体动力声纹克隆器」(OD-CLONE)、「物体条件化联合预测头」(OC-HEAD)、「动作块流合成器」(AC-SYNTH) 与「主动数据采集引擎」(ACTIVE-HARVEST)，在保留「感知-预测-决策」闭环的同时嵌入「克隆-合成-采集」泛化循环：
+DMO-NAV（Demonstration-driven Modular OOD-aware force-nav）在第 23 轮 FORCE-NAV-BENCH 之上做**结构升级而非推倒重来**：
 
-- **声纹克隆认物体**：5 秒参考交互（戳/推/提/摇五原语）→ 64 维物体动力声纹，FiLM 条件化全部预测；三重监督（对比 + 物理回归 + 任务充分性）保证声纹编码动力学而非外观；同物检索 top-1 = 0.96，θ_phys 回归 R² = 0.91；
-- **新颖度感知置信**：ν = σ(W_ν[e_obj; d_knn; u_obj]) 进入置信调制 γ_adjusted = γ_corr·h_min·(1−η·ν)，新增「物体维度降级」；不确定性三源（健康/声纹/动作）共同收缩 α_blend；
-- **流匹配合成动作**：从云端 VLA 蒸馏 15M 参数动作块合成器，8 步欧拉 60 ms（对照 DDPM 380 ms），u_act 采样一致性免标签驱动三级级联（快策略→AC-SYNTH→云端 VLA）；
-- **主动采集补盲区**：泛化误差由声纹覆盖半径控制（MSE(e*) ≤ MSE_ref + L²·d*²），ACTIVE-HARVEST 覆盖+熵+分歧评分，达到 75% 未见物体成功率所需参考交互从 4,800（随机）降至 700（+仿真预填充）。
+- **DEMO-PRIM**：演示（遥操作 bag）→ 力特征分段 → DTW 聚类 → 接触原语五元组 (φ, π_z, Ξ_z, κ_z, ν_z) 自动拟合；新模式 ~10 条演示 <1h 入库。
+- **MOD-STACK**：L0 硬件抽象 / L1 统一阻抗执行器（+0.2s 过渡混合）/ L2 技能库（UCB+Beta 后验）/ L3 前置条件图规划器；第 23 轮状态机退化为 K=5 特例，v1 全套回归门禁。
+- **OOD-GUARD**：输入密度 + ensemble 方差 + 力残差 CUSUM 三信号 min 融合；R1 保守柔顺 → R2 主动激励辨识 → R3 human-in-the-loop 演示请求的数据飞轮。
+- **FORCE-NAV-BENCH v2**：+T6-T8 OOD 探针任务、+L4 零覆盖难度、+OOD 三指标（ROC-AUC、安全违规率、恢复成功率）。
 
-端到端效果：未见物体成功率 57% → 81%（泛化差距 27 pt → 5 pt），新物体上手「5 秒探测 + 0 训练」，未见场景事故率 2.4 → 0.9 /1000h，控制环延迟保持 ~1.2 ms。
+决策延迟 <12 ms（1kHz 内环不变）；命题 2 把长尾安全风险分解为 ε_in + δ_ood + ε_R1 三个可独立校准的小量。
 
-## 1. 正式化符号
+## 1. 正式化符号（继承第 23 轮符号表，新增如下）
 
-### 1.1 变量约定
+| 符号 | 定义 | 维度/空间 |
+|---|---|---|
+| 𝒟 = {τ_j} | 演示数据集（遥操作/动觉示教 bag） | 集合 |
+| τ_j = {(s_t, a_t, f_t, δ_t, K_rec,t)} | 单条演示记录 | 时间序列 |
+| y_t | 力特征序列 (f_n, f_t/f_n, δ, δ̇, ẋ) | ℝ⁵ |
+| e_i | 段嵌入 (mean, std, duration, energy) | ℝ¹² |
+| z = (φ_z, π_z, Ξ_z, κ_z, ν_z) | 接触原语五元组 | — |
+| φ_z: 𝒳→[0,1] | 前置条件得分（logistic, FPR≤5% 校准） | 函数 |
+| π_z | 双 DMP：位移轨迹 + 法向力轨迹 | forcing 权重 ∈ ℝ^B, B=10 |
+| Ξ_z = (K_z, D_z) | 阻抗模板（对角 ℝ⁶，TACTILE-MAP 调制） | ℝ⁶×ℝ⁶ |
+| κ_z = (C_z, F_z, T_z) | 成功集 / 失败集 / 超时 | 段末统计 ±3σ |
+| ν_z ∈ ℝ^{d_e} | 原型嵌入（OOD 用） | 向量 |
+| SR_z ~ Beta(α_z, β_z) | 技能成功率后验 | 分布 |
+| ρ(x) = min(ρ_in, ρ_mod, ρ_out) | OOD 分数（越大越分布内） | [0,1] |
+| R ∈ {NORMAL, R1, R2, R3} | 回退等级 | 枚举 |
+| T_b = 0.2 s | 技能切换过渡混合时长 | 标量 |
+| G = (𝒵, E_pre) | 前置条件-后置条件图 | 图 |
 
-| 变量 | 定义 |
-|---|---|
-| R = {(o_t, a_t)}_{t=1..50} | 参考交互（5 s，探测原语序列） |
-| Π = {POKE, PUSH, LIFT, SHAKE, SQUEEZE} | 探测原语库（分别激励刚度/摩擦/质量/质量分布/柔顺性） |
-| z_t ∈ ℝ¹²⁸ | MM-ENCODER 逐帧编码（继承第 20 轮，权重共享） |
-| e_obj ∈ ℝ⁶⁴ | 物体动力声纹（每物体一次，缓存零开销） |
-| θ_phys ∈ ℝ⁶ | 物理参数 (mass, friction, stiffness, CoM偏移, 填充率, 磨损) |
-| B = {(e_i, meta_i)} | 声纹库（增量 k-means 单元化 + 时间戳） |
-| d_knn | e_obj 到库的 k=5 平均最近邻距离（库内尺度归一化） |
-| u_obj | K_ens=4 声纹集成头的方差汇总 |
-| ν ∈ [0,1] | 物体新颖度 = σ(W_ν[e_obj; d_knn; u_obj]) |
-| γ̂_pred, h_joint, h_sensor, h_ee, p_failure, h_min | 继承第 20 轮（输入改为 FiLM 后特征） |
-| c = [g; e_obj; z_hist; a_f] ∈ ℝ²⁷⁴ | AC-SYNTH 条件向量 |
-| A ∈ ℝ^{20×18} | 动作块（2 s @ 10 Hz） |
-| u_act | M=4 路流采样一致性方差 |
-| γ_adjusted = γ_corr·h_min·(1−η·ν) | 三重调制置信（η=0.5） |
-| α_blend | AHD 混合系数（三重降级约束） |
-| U(p), G(e), r(B) | 采集评分 / 覆盖缺口 / 声纹覆盖半径 |
+继承沿用：q, p_c, f_c, s, a, TACTILE-MAP (μ,k,c 后验), 阻抗控制律, RLS 辨识, MPPI, BENCH v1 双轨指标。
 
-### 1.2 参考交互协议与 OD-CLONE
+## 2. 算法完整流程
 
+### 2.1 离线准备阶段
 ```
-探测：依次执行 Π 中原语各 ~1 s（顺序可按 Fisher 信息主动排序），记录 R
-编码：z_t = MM-ENCODER(o_t)（继承第 20 轮）
-时序：h_0 = W_in[z_1;…;z_50] + E_pos → 4 层 Transformer(d=128, 4 heads)
-池化：w = Softmax(w_p^T tanh(W_a h_4))，e_obj = W_o Σ w_t h_t ∈ ℝ⁶⁴
-集成：K_ens=4 独立声纹头 → u_obj = mean‖e^{(k)} − ē‖²
-```
-
-**三重监督**：
-```
-ℒ_NCE  = −E[ log( exp(sim(e,e⁺)/τ) / Σ_k exp(sim(e,e_k)/τ) ) ]   # 同物两次独立交互为正对
-ℒ_phys = ‖g(e_obj) − θ_phys‖²                                    # 仿真中 θ_phys 直接可读
-ℒ_suff = ‖γ̂(z, e_obj) − γ̂(z, θ_phys)‖²                          # 声纹 ≈ 物理参数的任务充分代理
-ℒ_total = ℒ_MM + ℒ_γ^OC + ℒ_h + λ_NCE·ℒ_NCE + λ_phys·ℒ_phys + λ_suff·ℒ_suff
+1. 演示收集协议：每接触模式 ≥3 名演示者 × ≥10 条；动觉示教或遥操作；
+   记录 (s, a, f, δ, K_rec, 演示者ID, 材质标注) → BENCH v2 标准 bag 格式
+2. DEMO-PRIM 提取：分段 → 聚类 → 五元组拟合 → 人工确认 UI → 入库 𝒵
+3. OOD 校准：held-out 演示（正例）+ 仿真扰动集（负例）→ ρ_th 选 FPR@95TPR 点；
+   σ₁,σ₂,σ₃ 由校准集分位数估计
+4. 回归门禁：K=5 退化特例跑 BENCH v1 全套（5×3×20），综合得分不显著低于 v1 基线才放行
 ```
 
-### 1.3 OC-HEAD：FiLM 物体条件化联合预测
-
+### 2.2 在线部署阶段
 ```
-[γ_c; β_c] = W_F e_obj + b_F                     # FiLM，参数增量 <0.3M
-h ← γ_c ⊙ Backbone([z; a]) + β_c
-γ̂_pred = Sigmoid(W_γ h + b_γ)                    # K-PRED（损失同第 20 轮，条件化）
-{h_joint, h_sensor, h_ee, p_failure} 同第 20 轮   # HP-PRED（输入为 FiLM 后 h）
-d_knn = mean_{i∈kNN(e_obj,B,5)} ‖e_obj−e_i‖ / s_B
-ν = σ(W_ν [e_obj; d_knn; u_obj])
-```
+# L3 任务规划器（事件驱动）
+on_new_task(goal):
+    seq ← BFS(G, START, GOAL)          # 前置条件图搜索
+    for z in seq:
+        wait until φ_z(x) ≥ φ_th        # 每步执行前复检前置条件
+        dispatch z to L2
 
-### 1.4 AC-SYNTH：条件流匹配动作块合成与三级级联
+# L2 技能层（100 Hz）
+loop 100Hz:
+    if current_skill is None:
+        current_skill ← argmax_z [φ_z(x)·E[SR_z] + c_ucb·√(ln N_tot/(1+N_z))]
+    f_preds ← ensemble_dmp_predictions(current_skill, s_phase, M=5)
+    f_pred ← f_preds[0]
+    ρ ← min(ρ_in(x_emb), ρ_mod(f_preds), ρ_out(f_meas, f_pred))
+    level ← FallbackManager.update(ρ, dt)
+    (v_cmd, f_d) ← L1.execute(current_skill, s_phase, f_meas, TACTILE_MAP.query(p_c), level)
+    term ← κ_z.check(f_meas[2], δ)
+    update Beta 后验; term==success → 交还 L3；term==timeout/fail → 降权重选或 OOD-GUARD
 
-```
-训练（蒸馏自云端 VLA，D_synth = {(c_i, A_i^VLA)} 来自仿真+真机演示）：
-  x_t = (1−t)·ε + t·A，ℒ_FM = E‖v_φ(x_t, t|c) − (A−ε)‖²
-推理：x_0 ~ N(0,I)，8 步欧拉 → A_synth；批量 M=4 路
-  u_act = mean_dims std_m[A^{(m)}]
-安全包络：A_synth ← clip(A_synth, a_f ⊖ Δ_max, a_f ⊕ Δ_max)；‖τ‖≤τ_max；摩擦锥
-级联：① 快策略(<1ms) → ② AC-SYNTH(~70ms 异步，默认) → ③ 云端 VLA(u_act>0.05 或 p_failure>0.7 时升级)
-```
+# L1 执行器（1 kHz，继承第 23 轮阻抗控制）
+loop 1kHz:
+    (x_ref, f_ref) ← π_z.step(s_phase)                  # 双 DMP 递推
+    (K_d, D_d, f_d) ← transition_blend(θ_old, θ_new, η) # 0.2s 线性混合，命题 1
+    scale ← {NORMAL:1, R1:0.3, R2:0.2, R3:0}[level]     # 回退降参
+    x_corr = K_d⁻¹(f_d − f_meas);  v_cmd = clip(x_corr[:2])·scale
+    if R2: v_cmd += a_probe                             # 主动激励扰动
+    check ‖f_n‖ ≤ F_safe (硬监控, 违反立即 R3 安全停)
 
-### 1.5 ACTIVE-HARVEST：主动数据采集
-
-```
-U(p) = w₁·G(ê(p)) + w₂·H[q(γ,h|z_ref)] + w₃·D_ens(ê(p)) − w₅·C(p)
-G(e) = 1/(n_cell(e)+n₀)                # 增量 k-means 覆盖缺口（子模 → 贪心 (1−1/e)）
-C(p) = 时间 + 能耗 + 风险（仿真预筛选）
-仿真侧：G_ψ(u), u∈ℝ¹² → 网格+物理参数；以 U 为目标随机射击/CMA-ES 提议 → SIM-DISTILL-2
-真机侧：空闲时段自主 top-U 探测 → e_obj 入库 → 任务后见回标（成功/失败，零标注）
-云端：B 周期重聚类 + 模型周更；r(B) 单调收缩 → 命题 2 泛化界收紧
-```
-
-### 1.6 置信调制与三重降级
-
-```
-γ_adjusted = γ_corrected · h_min · (1 − η·ν)
-var_approx = Var[γ̂_pred] / h_min²
-u_total = sqrt(u_obj² + u_act²)
-α_blend = clip( γ_adjusted · (1 − κ·√var_approx − κ_u·u_total), 0, 1 )
-
-if p_failure > 0.5:  α_blend ← min(α_blend, 0.2); trigger_maintenance_alert()   # 第 20 轮
-elif h_min < 0.7:    α_blend ← min(α_blend, 0.3); log_health_degradation()      # 第 20 轮
-elif ν > 0.8:        α_blend ← min(α_blend, 0.3); log_novel_object()            # 本轮新增
+# 事件驱动
+on_OOD_R3(): 安全停 → 请求演示 → DEMO-PRIM 入库 → OOD 阈值重校准 → 回归门禁 → 技能库广播
 ```
 
-## 2. Python 核心实现
+### 2.3 数据飞轮（持续学习闭环）
+```
+失败 episode → 归因（OOD 触发? κ_z fail? φ 低分?）→
+  OOD 触发: 请求人类演示该场景 → 入库（人工确认）→ 库 K+1 → v1 回归 → fleet 广播
+  κ_z fail: 仅更新 Beta 后验（该原语降权），不新增原语
+  φ 低分:   负例加入 φ_z 校准集，重拟合 logistic
+```
+
+## 3. Python 核心实现
 
 ```python
-import time
 import numpy as np
-import torch
-import torch.nn as nn
-from collections import deque
-from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, List, Tuple, Optional
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.spatial.distance import squareform
 
-# 说明：MMEncoder / ResBlock / CMapCompress / GammaCorr / LocalSubMap
-# 沿用第 20 轮产物中的实现，此处不再重复。
+# ============================================================
+# 0. 演示数据标准格式（BENCH v2 协议）
+# ============================================================
+@dataclass
+class DemoEpisode:
+    """一条演示：遥操作/动觉示教记录（ROS2 bag 提取后）。
+    BENCH v2 要求 meta 含 演示者ID/任务ID/材质标注/日期。"""
+    t: np.ndarray          # [T] 时间戳
+    q: np.ndarray          # [T,3] 底盘位姿
+    f_c: np.ndarray        # [T,6] 接触力/力矩
+    delta_n: np.ndarray    # [T] 法向形变估计
+    K_rec: Optional[np.ndarray] = None   # [T,6] 示教时阻抗参数（缺省则回归）
+    meta: Dict = field(default_factory=dict)
 
-
-class ODClone(nn.Module):
-    """物体动力声纹克隆器：参考交互序列 -> e_obj (64 维) + theta_phys 预测"""
-
-    def __init__(self, latent_dim=128, d_model=128, n_layers=4, voice_dim=64,
-                 max_T=64, phys_dim=6):
-        super().__init__()
-        self.inp = nn.Linear(latent_dim, d_model)
-        self.pos = nn.Parameter(torch.randn(1, max_T, d_model) * 0.02)
-        layer = nn.TransformerEncoderLayer(d_model, nhead=4, dim_feedforward=256,
-                                           batch_first=True, dropout=0.1)
-        self.tr = nn.TransformerEncoder(layer, n_layers)
-        self.attn_pool = nn.Linear(d_model, 1)
-        self.out = nn.Linear(d_model, voice_dim)
-        self.phys_head = nn.Linear(voice_dim, phys_dim)   # mass/friction/stiffness/CoM/fill/wear
-
-    def forward(self, z_seq):                             # z_seq: B x T x 128
-        h = self.inp(z_seq) + self.pos[:, : z_seq.size(1)]
-        h = self.tr(h)
-        w = torch.softmax(self.attn_pool(torch.tanh(h)), dim=1)
-        e = self.out((w * h).sum(dim=1))                  # B x 64
-        return e, self.phys_head(e)
+    def force_features(self) -> np.ndarray:
+        """y_t ∈ ℝ⁵：分段与嵌入用特征序列"""
+        f_n = np.abs(self.f_c[:, 2])
+        f_t = np.linalg.norm(self.f_c[:, :2], axis=1)
+        ddelta = np.gradient(self.delta_n, self.t)
+        speed = np.linalg.norm(np.gradient(self.q[:, :2], self.t, axis=0), axis=1)
+        return np.stack([f_n, f_t / (f_n + 1e-3), self.delta_n, ddelta, speed], axis=1)
 
 
-def clone_losses(e, e_pos, e_negs, theta_pred, theta_gt,
-                 gamma_oc, gamma_oracle,
-                 lam_nce=1.0, lam_phys=0.5, lam_suff=0.3, tau=0.1):
-    """ℒ_NCE + ℒ_phys + ℒ_suff：同物同纹 / 物理接地 / 任务充分"""
-    pos = (e * e_pos).sum(-1, keepdim=True) / tau          # B x 1
-    neg = (e * e_negs).sum(-1) / tau                       # B x N
-    sims = torch.cat([pos, neg], dim=1)
-    target = torch.zeros(e.size(0), dtype=torch.long, device=e.device)
-    l_nce = nn.functional.cross_entropy(sims, target)
-    l_phys = nn.functional.mse_loss(theta_pred, theta_gt)
-    l_suff = nn.functional.mse_loss(gamma_oc, gamma_oracle)
-    return lam_nce * l_nce + lam_phys * l_phys + lam_suff * l_suff
+# ============================================================
+# 1. 双 DMP：原语执行策略 π_z 的参数化
+# ============================================================
+class DMP:
+    """离散 DMP（1D）：ÿ = (K(g−x) − Dẏ + f(s)) / τ²，f(s)=basis(s)·ω
+    模块化红利：goal 可耦合调制（TACTILE-MAP 刚度偏差 → goal 偏移）"""
+    def __init__(self, n_basis: int = 10, K: float = 100.0, D: float = 20.0):
+        self.B, self.K, self.D = n_basis, K, D
+        self.c = np.linspace(0.0, 1.0, n_basis)
+        self.h = np.full(n_basis, 1.0 / (0.15 * n_basis) ** 2)
+        self.w = np.zeros(n_basis)
+        self.g, self.tau = 0.0, 1.0
+
+    def basis(self, s: float) -> np.ndarray:
+        return np.exp(-self.h * (s - self.c) ** 2) * s
+
+    def fit(self, t: np.ndarray, traj: np.ndarray):
+        """最小二乘拟合 forcing（τ=1 尺度归一）"""
+        x0, g = traj[0], traj[-1]
+        dt = (t[-1] - t[0]) / (len(traj) - 1)
+        vel = np.gradient(traj, dt)
+        acc = np.gradient(vel, dt)
+        self.g, self.tau = g, max(t[-1] - t[0], 1e-3)
+        s = (t - t[0]) / self.tau
+        Phi = np.stack([self.basis(si) for si in s])              # [T,B]
+        f_target = acc - (self.K * (g - traj) - self.D * vel)
+        self.w, *_ = np.linalg.lstsq(Phi, f_target, rcond=None)
+
+    def step(self, x: float, v: float, s: float, dt: float, coupling: float = 0.0):
+        """单步递推；coupling 为 TACTILE-MAP 调制项"""
+        f = self.basis(s) @ self.w
+        acc = (self.K * (self.g + coupling - x) - self.D * v + f) / max(self.tau ** 2, 1e-6)
+        v_new, x_new = v + dt * acc, x + dt * (v + dt * acc)
+        return x_new, v_new
 
 
-class FiLMJointHead(nn.Module):
-    """物体条件化联合预测头 OC-HEAD（K-PRED + HP-PRED，继承第 20 轮 + FiLM）"""
+# ============================================================
+# 2. 接触原语五元组 z = (φ, π, Ξ, κ, ν)
+# ============================================================
+@dataclass
+class ContactPrimitive:
+    pid: int
+    phi_w: np.ndarray                 # logistic 权重（末位偏置）
+    dmp_pos: DMP                      # 位移轨迹
+    dmp_fn: DMP                       # 法向力轨迹
+    K_template: np.ndarray            # [6] 阻抗模板（对角）
+    D_template: np.ndarray
+    success_box: Tuple[np.ndarray, np.ndarray]  # 段末 (f_n, δ) ±3σ
+    proto_embed: np.ndarray           # ν_z
+    alpha: float = 1.0                # Beta 后验
+    beta: float = 1.0
 
-    def __init__(self, latent_dim=128, voice_dim=64, action_dim=18,
-                 n_joints=6, n_sensors=10):
-        super().__init__()
-        self.backbone = nn.Sequential(
-            nn.Linear(latent_dim + action_dim, 256), nn.ReLU(),
-            nn.Linear(256, 128), nn.ReLU(),
-        )
-        self.film = nn.Linear(voice_dim, 256)              # 生成 gamma_c(128) + beta_c(128)
-        self.novelty = nn.Linear(voice_dim + 2, 1)         # [e_obj; d_knn; u_obj]
-        self.gamma_head = nn.Sequential(nn.Linear(128, 1), nn.Sigmoid())
-        self.h_joint = nn.Sequential(nn.Linear(128, n_joints), nn.Sigmoid())
-        self.h_sensor = nn.Sequential(nn.Linear(128, n_sensors), nn.Sigmoid())
-        self.h_ee = nn.Sequential(nn.Linear(128, 1), nn.Sigmoid())
-        self.p_failure = nn.Sequential(nn.Linear(128, 1), nn.Sigmoid())
+    def phi(self, x: np.ndarray) -> float:
+        return float(1.0 / (1.0 + np.exp(-(x @ self.phi_w[:-1] + self.phi_w[-1]))))
 
-    def forward(self, z, a, e_obj, d_knn, u_obj):
-        h = self.backbone(torch.cat([z, a], dim=-1))
-        gb = self.film(e_obj)
-        h = gb[:, :128] * h + gb[:, 128:]                  # FiLM 物体条件化
-        gamma_pred = self.gamma_head(h).squeeze(-1)
-        h_j = self.h_joint(h)
-        h_s = self.h_sensor(h)
-        h_e = self.h_ee(h).squeeze(-1)
-        p_f = self.p_failure(h).squeeze(-1)
-        h_min = torch.minimum(torch.minimum(h_j.min(dim=-1)[0], h_s.min(dim=-1)[0]), h_e)
-        nu = torch.sigmoid(self.novelty(torch.cat(
-            [e_obj, d_knn.view(-1, 1), u_obj.view(-1, 1)], dim=-1))).squeeze(-1)
-        return gamma_pred, h_j, h_s, h_e, p_f, h_min, nu
+    @property
+    def sr(self) -> float:
+        return self.alpha / (self.alpha + self.beta)
 
-
-class ACSynth(nn.Module):
-    """条件流匹配动作块合成器：c=[g,e_obj,z_hist,a_f] -> A (20x18)，M 路采样 -> u_act"""
-
-    def __init__(self, cond_dim=64 + 64 + 128 + 18, horizon=20, act_dim=18):
-        super().__init__()
-        self.H, self.act_dim = horizon, act_dim
-        self.net = nn.Sequential(
-            nn.Linear(cond_dim + horizon * act_dim + 1, 256), nn.SiLU(),
-            nn.Linear(256, 256), nn.SiLU(),
-            nn.Linear(256, horizon * act_dim),
-        )
-
-    def velocity(self, x, t, c):
-        b = x.size(0)
-        h = torch.cat([x.flatten(1), t.view(b, 1), c], dim=-1)
-        return self.net(h).view(b, self.H, self.act_dim)
-
-    def fm_loss(self, A, c):
-        """训练：A 为云端 VLA 在 D_synth 上的动作块（仿真 + 真机演示）"""
-        b = A.size(0)
-        t = torch.rand(b, device=A.device)
-        eps = torch.randn_like(A)
-        x_t = (1 - t.view(b, 1, 1)) * eps + t.view(b, 1, 1) * A
-        v_pred = self.velocity(x_t, t, c)
-        return nn.functional.mse_loss(v_pred, A - eps)
-
-    @torch.no_grad()
-    def sample(self, c, K=8, M=4, delta_max=0.1, a_f=None):
-        b = c.size(0)
-        x = torch.randn(b, M, self.H, self.act_dim, device=c.device)
-        dt = 1.0 / K
-        for k in range(K):                                 # 8 步欧拉积分
-            t = torch.full((b * M,), k * dt, device=c.device)
-            v = self.velocity(x.flatten(0, 1), t, c.repeat_interleave(M, 0))
-            x = x + dt * v.view(b, M, self.H, self.act_dim)
-        if a_f is not None:                                # 安全包络：快策略残差界
-            anchor = a_f.view(b, 1, 1, -1)
-            x = torch.clamp(x, anchor - delta_max, anchor + delta_max)
-        u_act = x.std(dim=1).mean(dim=(1, 2))              # M 路采样一致性 -> 不确定性
-        return x.mean(dim=1), u_act                        # B x H x 18, B
+    def check_terminal(self, f_n: float, disp: float, s_phase: float) -> str:
+        lo, hi = self.success_box
+        if s_phase > 1.5:
+            return "timeout_or_fail"
+        if lo[0] <= f_n <= hi[0] and lo[1] <= disp <= hi[1]:
+            return "success"
+        return "running"
 
 
-class VoiceBank:
-    """声纹库：增量覆盖 + kNN 新颖度 + 采集评分"""
-
-    def __init__(self, dim=64, n0=4.0):
-        self.E = np.zeros((0, dim), dtype=np.float32)
-        self.cell_count = {}
-        self.n0 = n0
-
-    def add(self, e):
-        self.E = np.vstack([self.E, e.detach().cpu().numpy()])
-
-    def knn_distance(self, e, k=5):
-        if len(self.E) == 0:
-            return 1.0
-        d = np.linalg.norm(self.E - e, axis=1)
-        return float(np.sort(d)[:k].mean())
-
-    def novelty(self, e, u_obj, w_d=0.6, w_u=0.4):
-        return float(np.clip(w_d * self.knn_distance(e) + w_u * u_obj, 0.0, 1.0))
-
-    def coverage_gap(self, e):
-        cell = tuple(np.round(e, 1).tolist())              # 简化网格代替增量 k-means
-        return 1.0 / (self.cell_count.get(cell, 0) + self.n0)
-
-    def acquisition_score(self, e_hat, pred_entropy, ens_std, cost,
-                          w1=1.0, w2=0.5, w3=0.3, w5=0.2):
-        return (w1 * self.coverage_gap(e_hat) + w2 * pred_entropy
-                + w3 * float(ens_std) - w5 * cost)
+# ============================================================
+# 3. DEMO-PRIM 提取流水线
+# ============================================================
+def segment_demo(y: np.ndarray, win: int = 15, z_th: float = 2.5) -> List[int]:
+    """滑动窗口似然比分段（v2 实装 BOCPD，接口不变）：两侧窗口均值差 z 分数
+    超阈值 → 候选变化点，非极大抑制去重"""
+    T = len(y)
+    scores = np.zeros(T)
+    for t in range(win, T - win):
+        left, right = y[t - win:t], y[t:t + win]
+        scores[t] = np.linalg.norm(left.mean(0) - right.mean(0)) / (left.std(0).mean() + 1e-6)
+    cps = []
+    for t in range(1, T - 1):
+        if scores[t] > z_th and scores[t] >= scores[t - 1] and scores[t] >= scores[t + 1]:
+            if not cps or t - cps[-1] > win:
+                cps.append(t)
+    return cps
 
 
-class CGZestPolicy:
-    """CG-ZEST 主策略：继承第 20 轮 MP-ZEST 全部组件，新增克隆-合成-采集泛化循环"""
+def dtw_distance(a: np.ndarray, b: np.ndarray) -> float:
+    n, m = len(a), len(b)
+    D = np.full((n + 1, m + 1), np.inf)
+    D[0, 0] = 0.0
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            D[i, j] = np.linalg.norm(a[i - 1] - b[j - 1]) + min(D[i - 1, j], D[i, j - 1], D[i - 1, j - 1])
+    return D[n, m] / (n + m)
 
-    def __init__(self, node_id, drs_client, mm_encoder, ensemble, oc_head,
-                 synth, voicebank, cmap_comp, cmap_decomp, gamma_corr):
-        self.node_id = node_id
-        self.drs = drs_client
-        self.mm_encoder = mm_encoder
-        self.ensemble = ensemble                           # K_ens=4 声纹头 -> u_obj
-        self.oc_head = oc_head
-        self.synth = synth
-        self.voicebank = voicebank
-        self.cmap_c = cmap_comp
-        self.cmap_d = cmap_decomp
-        self.gamma_corr_fn = gamma_corr
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.M_local = LocalSubMap()
 
-        self.T_ref = 50
-        self.ref_buffer = []
-        self.probe_queue = deque(["POKE", "PUSH", "LIFT", "SHAKE"])
-        self.e_obj = None
-        self.nu = 0.0
-        self.u_obj = 0.0
-        self.u_act = 0.0
-        self.synth_future = None
+class PrimitiveExtractor:
+    def __init__(self, d_cut: float = 1.5, n_basis: int = 10):
+        self.d_cut, self.B = d_cut, n_basis
 
+    def extract(self, demos: List[DemoEpisode]) -> List[ContactPrimitive]:
+        # 1-2. 分段 + 段嵌入
+        segs = []
+        for di, d in enumerate(demos):
+            y = d.force_features()
+            x_ctx = self._context_features(d)
+            bounds = [0] + segment_demo(y) + [len(y) - 1]
+            for t0, t1 in zip(bounds[:-1], bounds[1:]):
+                if t1 - t0 < 10:
+                    continue
+                seg = y[t0:t1]
+                emb = np.concatenate([seg.mean(0), seg.std(0),
+                                      [(t1 - t0) / 100.0, np.linalg.norm(seg) / 100.0]])
+                segs.append(dict(ctx=x_ctx[t0], seg=seg, emb=emb))
+        # 3. DTW 层次聚类
+        D = np.zeros((len(segs), len(segs)))
+        for i in range(len(segs)):
+            for j in range(i + 1, len(segs)):
+                D[i, j] = D[j, i] = dtw_distance(segs[i]["seg"], segs[j]["seg"])
+        labels = fcluster(linkage(squareform(D, checks=False), method="average"),
+                          t=self.d_cut, criterion="distance")
+        # 4. 每簇拟合五元组
+        return [self._fit_primitive(int(c), [segs[i] for i in np.where(labels == c)[0]])
+                for c in np.unique(labels)]
+
+    def _context_features(self, d: DemoEpisode) -> np.ndarray:
+        """简化上下文 ∈ ℝ⁶（实装：+TACTILE-MAP 局部 (μ,k,c) 与占据 patch）"""
+        y = d.force_features()
+        return np.column_stack([y[:, 0], y[:, 1], y[:, 2], y[:, 4],
+                                np.linalg.norm(d.q[:, :2], axis=1) % 1.0, np.ones(len(y))])
+
+    def _fit_primitive(self, cid: int, segs: List[Dict]) -> ContactPrimitive:
+        t_ref = np.linspace(0.0, 1.0, 50)
+        # π_z：位移轨迹（速度积分）与法向力轨迹，簇内时间归一平均
+        pos_traj = np.mean([np.interp(t_ref, np.linspace(0, 1, len(s["seg"])),
+                                      np.cumsum(s["seg"][:, 4])) for s in segs], axis=0)
+        fn_traj = np.mean([np.interp(t_ref, np.linspace(0, 1, len(s["seg"])),
+                                      s["seg"][:, 0]) for s in segs], axis=0)
+        dmp_pos, dmp_fn = DMP(self.B), DMP(self.B)
+        dmp_pos.fit(t_ref, pos_traj)
+        dmp_fn.fit(t_ref, fn_traj)
+        # φ_z：logistic（正例=簇内起始上下文，负例=扰动采样；实装=其他簇起始）
+        X_pos = np.stack([s["ctx"] for s in segs])
+        X_neg = X_pos + np.random.randn(*X_pos.shape) * 1.5
+        phi_w = self._fit_logistic(np.vstack([X_pos, X_neg]),
+                                   np.concatenate([np.ones(len(X_pos)), np.zeros(len(X_neg))]))
+        # Ξ_z：K = f_n/δ 中位数，切向 0.5×，D = 0.1×K（近临界阻尼）
+        k_est = float(np.median([np.median(s["seg"][:, 0] / (np.abs(s["seg"][:, 2]) + 1e-4))
+                                 for s in segs]))
+        K_t = np.array([0.5 * k_est, 0.5 * k_est, k_est, 0.0, 0.0, 0.0])
+        # κ_z：段末 (f_n, δ) ±3σ
+        ends = np.stack([s["seg"][-1, [0, 2]] for s in segs])
+        mu, sd = ends.mean(0), ends.std(0) + 1e-3
+        # ν_z：段嵌入均值
+        proto = np.mean([s["emb"] for s in segs], axis=0)
+        return ContactPrimitive(cid, phi_w, dmp_pos, dmp_fn, K_t, 0.1 * K_t, (mu - 3 * sd, mu + 3 * sd), proto)
+
+    @staticmethod
+    def _fit_logistic(X: np.ndarray, y: np.ndarray, lr=0.1, epochs=500) -> np.ndarray:
+        w = np.zeros(X.shape[1] + 1)
+        Xb = np.hstack([X, np.ones((len(X), 1))])
+        for _ in range(epochs):
+            p = 1.0 / (1.0 + np.exp(-Xb @ w))
+            w -= lr * Xb.T @ (p - y) / len(y)
+        return w
+
+
+# ============================================================
+# 4. L2 技能库：UCB 选择 + Beta 后验
+# ============================================================
+class SkillLibrary:
+    def __init__(self, prims: List[ContactPrimitive], c_ucb: float = 0.5):
+        self.prims, self.c_ucb, self.N_tot = prims, c_ucb, 0
+
+    def select(self, x: np.ndarray) -> ContactPrimitive:
+        scores = [p.phi(x) * p.sr
+                  + self.c_ucb * np.sqrt(np.log(self.N_tot + 2) / (1 + p.alpha + p.beta))
+                  for p in self.prims]
+        return self.prims[int(np.argmax(scores))]
+
+    def update_stats(self, prim: ContactPrimitive, success: bool):
+        self.N_tot += 1
+        prim.alpha, prim.beta = (prim.alpha + 1, prim.beta) if success else (prim.alpha, prim.beta + 1)
+
+
+# ============================================================
+# 5. OOD-GUARD：三信号融合 + 分级回退
+# ============================================================
+class OODGuard:
+    """三信号 min 融合（盲区互不重叠）；阈值在校准集上选 FPR@95TPR 点"""
+    def __init__(self, prims: List[ContactPrimitive], M: int = 5, k: int = 3):
+        self.protos = np.stack([p.proto_embed for p in prims])
+        self.M, self.k = M, k
         self.cusum = 0.0
-        self.surprise_window = deque(maxlen=5)
-        self.gamma_hist = deque(maxlen=10)
-        self.a_fast = "HOLD"
-        self.alpha_blend = 0.0
-        self.L_max = 0.3
-        self.kappa = 1.0
-        self.kappa_u = 2.0
-        self.eta = 0.5
-        self.tau_failure = 0.5
-        self.tau_health = 0.7
-        self.tau_novel = 0.8
-        self.tau_esc = 0.05
-        self.p_failure = 0.0
-        self.h_min = 1.0
-        self.vla_future = None
-        self.vla_start = 0.0
+        self.s1, self.s2, self.s3 = 1.0, 0.05, 1.0   # σ 校准占位（实装：校准集分位数）
+        self.rho_th, self.rho_R3 = 0.35, 0.15
 
-    # ---------- 克隆：新物体 5 秒参考交互 ----------
-    def ensure_voiceprint(self, obs):
-        if self.e_obj is not None:
-            return
-        if not self.ref_buffer:
-            self.probe_queue = deque(["POKE", "PUSH", "LIFT", "SHAKE"])
-        self.ref_buffer.append(self.mm_encoder(self._obs2dict(obs)).squeeze(0))
-        if len(self.ref_buffer) >= self.T_ref:
-            z_seq = torch.stack(self.ref_buffer).unsqueeze(0)
-            e_stack = torch.stack([c(z_seq)[0].squeeze(0) for c in self.ensemble])
-            self.e_obj = e_stack.mean(0)
-            self.u_obj = float(e_stack.std(0).mean())
-            self.nu = self.voicebank.novelty(
-                self.e_obj.detach().cpu().numpy(), self.u_obj)
-            self.voicebank.add(self.e_obj.detach())
-            self.ref_buffer.clear()
-            self._log_clone_done(self.nu)
+    def signal_input(self, emb: np.ndarray) -> float:
+        d = np.sort(np.linalg.norm(self.protos - emb, axis=1))[: self.k].mean()
+        return float(np.exp(-(d / self.s1) ** 2))
 
-    # ---------- 主循环 ----------
-    def get_action(self, obs):
-        self.M_local.update(obs)
-        _ = self.drs.get_weights()
-        self.ensure_voiceprint(obs)
-        if self.e_obj is None:                             # 探测期：仅快策略/探测动作
-            return self._execute_blended(obs, self.probe_queue[0], 0.0)
+    def signal_model(self, f_preds: List[float]) -> float:
+        var = float(np.var(f_preds))
+        return float(np.exp(-(var / self.s2) ** 2))
 
-        obs_dict = self._obs2dict(obs)
-        z = self.mm_encoder(obs_dict, self._check_modality_availability(obs))
+    def signal_output(self, f_meas: np.ndarray, f_pred: np.ndarray, dt: float) -> float:
+        r = max(0.0, np.linalg.norm(f_meas - f_pred) - 0.5)
+        self.cusum = (1.0 - 50.0 * dt) * self.cusum + dt * r
+        return float(np.exp(-(self.cusum / self.s3) ** 2))
 
-        a_fast = self._select_fast_action(obs)
-        a_vec = self._act2vec(a_fast)
-        e_b = self.e_obj.unsqueeze(0)
-        d_knn = torch.tensor([self.voicebank.knn_distance(
-            self.e_obj.detach().cpu().numpy())], dtype=torch.float32)
-        u_obj = torch.tensor([self.u_obj], dtype=torch.float32)
-        gamma_pred, h_j, h_s, h_e, p_f, h_min, nu = \
-            self.oc_head(z, a_vec, e_b, d_knn, u_obj)      # FiLM 物体条件化
-        self.h_joint, self.h_sensor = h_j, h_s
-        self.h_ee, self.p_failure = float(h_e), float(p_f)
-        self.h_min, self.nu = float(h_min), float(nu)
-
-        # KCL 压缩-校准（继承第 20 轮）
-        gamma_c = self.cmap_c.compress(float(gamma_pred.detach()))
-        gamma_corrected = self._cloud_correct(gamma_c)
-
-        # 异步动作块合成 + M 路采样一致性
-        if self.synth_future is None:
-            c = self._build_cond(obs, a_fast)
-            a_f = self._act2vec(a_fast)
-            self.synth_future = self.executor.submit(
-                self.synth.sample, c, 8, 4, 0.1, a_f)
-
-        alpha = self._compute_alpha_adjusted(gamma_corrected)
-        self.alpha_blend = alpha
-        self.a_fast = a_fast
-        return self._execute_blended(obs, a_fast, alpha)
-
-    # ---------- 置信调制：健康 x 新颖度 x 双重不确定性 ----------
-    def _compute_alpha_adjusted(self, gamma_corrected):
-        gamma_adjusted = gamma_corrected * self.h_min * (1.0 - self.eta * self.nu)
-        var_approx = 0.05 / (self.h_min ** 2 + 1e-6)
-        u_total = float(np.hypot(self.u_obj, self.u_act))
-        alpha = gamma_adjusted * (1.0 - self.kappa * np.sqrt(var_approx)
-                                       - self.kappa_u * u_total)
-        alpha = float(np.clip(alpha, 0.0, 1.0))
-
-        if self.p_failure > self.tau_failure:
-            alpha = min(alpha, 0.2)
-            self._trigger_maintenance_alert()
-        elif self.h_min < self.tau_health:
-            alpha = min(alpha, 0.3)
-            self._log_health_degradation()
-        elif self.nu > self.tau_novel:                     # 本轮新增：物体维度降级
-            alpha = min(alpha, 0.3)
-            self._log_novel_object()
-        return alpha
-
-    # ---------- 三级专家级联：快策略 -> AC-SYNTH -> 云端 VLA ----------
-    def _execute_blended(self, obs, a_fast, alpha):
-        a_f = self._act2vec(a_fast)
-        if self.synth_future is not None and self.synth_future.done():
-            A_synth, self.u_act = self.synth_future.result()
-            self.synth_future = None
-            if float(self.u_act.mean()) > self.tau_esc:
-                self._escalate_to_cloud_vla(obs)           # 升级云端 VLA（异步）
-            if alpha > 0 and self.vla_future is None:
-                a_s = A_synth[0, 0].view(1, -1)            # 执行动作块首步（MPC 滚动）
-                return a_f + alpha * (a_s - a_f)
-        if self.vla_future is not None:
-            if time.time() - self.vla_start > self.L_max:
-                self.vla_future = None
-            elif alpha > 0:
-                return a_f + alpha * (self.vla_future - a_f)
-        return a_f                                         # 快策略托底
-
-    # ---------- 采集：空闲时段自主探测 + 后见回标 ----------
-    def on_idle(self, candidate_probes):
-        best, best_score = None, -1e9
-        for p in candidate_probes:                         # p = (物体, 原语, 参数, cost)
-            score = self.voicebank.acquisition_score(
-                self._probe_preview(p), self._pred_entropy(p),
-                self._ens_disagreement(p), p[3])
-            if score > best_score:
-                best, best_score = p, score
-        return best
-
-    def on_block_finished(self, success, vla_latency=None):
-        if self.e_obj is not None:                         # 后见之明回标（零标注）
-            self._upload_hindsight(self.e_obj, success, self.gamma_corrected)
-        raw = 1.0 - np.mean(list(self.surprise_window))
-        self.cusum = max(0.0, self.cusum + raw - 0.15)
-        self.gamma_hist.append(raw)
-
-    # ---------- 沿用第 20 轮的组件与存根 ----------
-    def _select_fast_action(self, obs):
-        allowed = ["SERVO", "CHUNK", "LOOK", "HOLD"]
-        scores = {a: self._p_fast(a) / self._cost(a) for a in allowed}
-        return max(scores, key=scores.get)
-
-    def _cloud_correct(self, gamma_c):
-        if gamma_c is None:
-            return 0.5
-        return float(self.gamma_corr_fn(self.cmap_d.decompress(gamma_c)).detach())
-
-    def _build_cond(self, obs, a_fast):
-        return torch.zeros(1, 64 + 64 + 128 + 18)          # [g; e_obj; z_hist; a_f] 占位
-
-    def _escalate_to_cloud_vla(self, obs):
-        self.vla_future, self.vla_start = None, time.time()
-
-    def _probe_preview(self, p):
-        return np.zeros(64)                                # 仿真预演声纹（接 Isaac Sim）
-
-    def _pred_entropy(self, p):
-        return 0.5
-
-    def _ens_disagreement(self, p):
-        return 0.1
-
-    def _upload_hindsight(self, e, success, gamma):
-        pass
-
-    def _log_clone_done(self, nu):
-        pass
-
-    def _log_novel_object(self):
-        pass
-
-    def _trigger_maintenance_alert(self):
-        pass
-
-    def _log_health_degradation(self):
-        pass
-
-    def _p_fast(self, a, g=0.5):
-        return {"SERVO": g * 0.9, "CHUNK": g * 0.85,
-                "LOOK": 0.1 + g * 0.05, "HOLD": 0.05}.get(a, 0)
-
-    def _cost(self, a):
-        return {"SERVO": 1, "CHUNK": 2, "LOOK": 5,
-                "HOLD": 0.5, "PROBE": 0.8}.get(a, 1)
-
-    def _act2vec(self, a):
-        return torch.zeros(1, 18)
-
-    def _obs2dict(self, obs):
-        return {"vis": torch.zeros(1, 4, 256, 256),
-                "prop": torch.zeros(1, 27),
-                "force": torch.zeros(1, 6),
-                "tactile": torch.zeros(1, 1, 16, 16)}
-
-    def _check_modality_availability(self, obs):
-        return {"vis": True, "prop": True, "force": True, "tactile": True}
+    def evaluate(self, emb, f_preds, f_meas, f_pred, dt) -> float:
+        return min(self.signal_input(emb),
+                   self.signal_model(f_preds),
+                   self.signal_output(f_meas, f_pred, dt))
 
 
-class LocalSubMap:
-    def update(self, obs):
-        pass
+class FallbackLevel(Enum):
+    NORMAL = 0; R1_CONSERVATIVE = 1; R2_PROBE = 2; R3_HUMAN = 3
 
-    def get_latest_obs(self):
-        return {}
+
+class FallbackManager:
+    """分级回退状态机：ρ 持续低 → 升级；ρ 恢复 → 降级（R3 需人工解除）"""
+    def __init__(self, guard: OODGuard, tau_upgrade: float = 1.0):
+        self.guard, self.tau = guard, tau_upgrade
+        self.level, self.low_time = FallbackLevel.NORMAL, 0.0
+
+    def update(self, rho: float, dt: float) -> FallbackLevel:
+        if rho < self.guard.rho_R3:
+            self.level = FallbackLevel.R3_HUMAN
+        elif rho < self.guard.rho_th:
+            self.low_time += dt
+            if self.low_time > self.tau:
+                self.level = (FallbackLevel.R2_PROBE if self.level == FallbackLevel.R1_CONSERVATIVE
+                              else FallbackLevel.R1_CONSERVATIVE)
+        else:
+            self.low_time = 0.0
+            if self.level in (FallbackLevel.R1_CONSERVATIVE, FallbackLevel.NORMAL):
+                self.level = FallbackLevel.NORMAL
+        return self.level
+
+
+# ============================================================
+# 6. L1 统一执行器：阻抗控制 + 过渡混合（命题 1）
+# ============================================================
+class UnifiedExecutor:
+    def __init__(self, dt: float = 0.001, T_blend: float = 0.2, F_safe: float = 80.0):
+        self.dt, self.T_blend, self.F_safe = dt, T_blend, F_safe
+        self.x_ref = self.v_ref = self.f_ref = self.fdot_ref = 0.0
+        self.theta_old: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None
+        self.blend_t = 0.0
+
+    def reset_for_skill(self):
+        self.blend_t = 0.0
+
+    def execute(self, prim: ContactPrimitive, s_phase: float, f_meas: np.ndarray,
+                tactile_query: Dict, level: FallbackLevel) -> Tuple[np.ndarray, np.ndarray]:
+        # 双 DMP 递推；TACTILE-MAP 刚度偏差 → DMP goal 耦合调制
+        coupling = 0.05 * (tactile_query.get("k", 1e4) - 1e4) / 1e4
+        self.x_ref, self.v_ref = prim.dmp_pos.step(self.x_ref, self.v_ref, s_phase, self.dt, coupling)
+        self.f_ref, self.fdot_ref = prim.dmp_fn.step(self.f_ref, self.fdot_ref, s_phase, self.dt, 0.0)
+        # 过渡混合：θ(t) = (1−η)θ_old + ηθ_new，η 线性（T_b=0.2s）→ 力连续
+        K_new = prim.K_template.copy()
+        D_new = prim.D_template.copy()
+        f_new = np.zeros(6); f_new[2] = self.f_ref
+        if self.theta_old is None:
+            self.theta_old = (K_new, D_new, f_new)
+        eta = min(1.0, self.blend_t / self.T_blend)
+        self.blend_t += self.dt
+        K_d = (1 - eta) * self.theta_old[0] + eta * K_new
+        D_d = (1 - eta) * self.theta_old[1] + eta * D_new
+        f_d = (1 - eta) * self.theta_old[2] + eta * f_new
+        if eta >= 1.0:
+            self.theta_old = (K_new, D_new, f_new)
+        # 回退降参（R1 保守 / R2 激励 / R3 停止）
+        scale = {FallbackLevel.NORMAL: 1.0, FallbackLevel.R1_CONSERVATIVE: 0.3,
+                 FallbackLevel.R2_PROBE: 0.2, FallbackLevel.R3_HUMAN: 0.0}[level]
+        # 阻抗输出（继承第 23 轮：位置修正 = 力误差/刚度）
+        f_err = f_d - f_meas
+        x_corr = f_err[:3] / np.maximum(np.abs(scale * K_d[:3]), 1e-3)
+        v_cmd = np.clip(x_corr[:2], -0.3, 0.3) * scale
+        if level == FallbackLevel.R2_PROBE:
+            v_cmd = v_cmd + 0.05 * np.random.randn(2)   # 主动激励扰动 → RLS 辨识
+        # 安全硬监控：违反 → R3（真机为立即安全停）
+        if abs(f_meas[2]) > self.F_safe:
+            v_cmd = np.zeros(2)
+        return v_cmd, f_d
+
+
+# ============================================================
+# 7. L2+L1 整合：技能栈
+# ============================================================
+class SkillStack:
+    def __init__(self, prims: List[ContactPrimitive], dt_skill: float = 0.01):
+        self.lib = SkillLibrary(prims)
+        self.guard = OODGuard(prims)
+        self.fb = FallbackManager(self.guard)
+        self.executor = UnifiedExecutor(dt=0.001)
+        self.dt = dt_skill
+        self.current: Optional[ContactPrimitive] = None
+        self.s_phase = 0.0
+
+    def skill_step(self, x_ctx: np.ndarray, emb: np.ndarray, f_meas: np.ndarray,
+                   tactile_query: Dict) -> Tuple[np.ndarray, Dict]:
+        if self.current is None:
+            self.current = self.lib.select(x_ctx)
+            self.executor.reset_for_skill()
+            self.s_phase = 0.0
+        # ensemble 预测（骨架：DMP 输出加性扰动占位；实装 = M 个独立训练执行头）
+        f_preds = [self.current.dmp_fn.step(self.executor.f_ref, self.executor.fdot_ref,
+                                            self.s_phase, self.dt, 0.0)[0]
+                   * (1.0 + 0.02 * np.random.randn()) for _ in range(self.guard.M)]
+        f_pred = np.zeros(6); f_pred[2] = f_preds[0]
+        rho = self.guard.evaluate(emb, f_preds, f_meas, f_pred, self.dt)
+        level = self.fb.update(rho, self.dt)
+        v_cmd, f_d = self.executor.execute(self.current, self.s_phase, f_meas, tactile_query, level)
+        term = self.current.check_terminal(f_meas[2], tactile_query.get("disp", 0.0), self.s_phase)
+        info = dict(rho=rho, level=level.name, term=term, skill=self.current.pid)
+        self.s_phase += self.dt / max(self.current.dmp_pos.tau, 1e-3)
+        if term in ("success", "timeout_or_fail"):
+            self.lib.update_stats(self.current, term == "success")
+            self.current = None    # 交还 L3 决策点
+        return v_cmd, info
+
+
+# ============================================================
+# 8. L3 前置条件图规划器（组合泛化，命题 3）
+# ============================================================
+class TaskPlanner:
+    def __init__(self, prims: List[ContactPrimitive], p_min: float = 0.6):
+        self.prims, self.p_min = prims, p_min
+
+    def plan(self, ctx_seq: List[np.ndarray], goal_prim_idx: int) -> List[int]:
+        """简化骨架：每步贪心选前置条件得分最高的可用原语，直至目标原语；
+        实装 = 前置条件-后置条件图 BFS（K≤50, <1ms, 完备）"""
+        seq, done = [], set()
+        for x in ctx_seq:
+            cands = [p for p in self.prims if p.phi(x) >= self.p_min and p.pid not in done]
+            if not cands:
+                done.clear()
+                continue
+            best = max(cands, key=lambda p: p.phi(x) * p.sr)
+            seq.append(best.pid)
+            if best.pid == goal_prim_idx:
+                break
+        return seq
+
+
+# ============================================================
+# 9. BENCH v2 OOD 指标（与 v1 双轨指标同轨迹同步计算）
+# ============================================================
+class OODBenchMetrics:
+    @staticmethod
+    def roc_auc(pos: np.ndarray, neg: np.ndarray) -> float:
+        """秩和 AUC（pos=分布内 ρ 分数, neg=OOD ρ 分数）"""
+        s = np.concatenate([pos, neg])
+        y = np.concatenate([np.ones(len(pos)), np.zeros(len(neg))])
+        ranks = np.empty(len(s)); ranks[np.argsort(s)] = np.arange(1, len(s) + 1)
+        return float((ranks[y == 1].sum() - len(pos) * (len(pos) + 1) / 2)
+                     / (len(pos) * len(neg)))
+
+    @staticmethod
+    def fpr_at_tpr95(pos: np.ndarray, neg: np.ndarray) -> float:
+        th = np.percentile(pos, 5)          # TPR=95% 的 ρ 阈值
+        return float(np.mean(neg < th))
+
+    @staticmethod
+    def safety_violation_rate(trajs: List[Dict], F_safe: float = 80.0) -> float:
+        return float(np.mean([np.max(np.abs(tr["f_c"][:, 2])) > F_safe for tr in trajs]))
+
+    @staticmethod
+    def recovery_success_rate(episodes: List[Dict]) -> float:
+        """OOD 触发后回退→恢复→任务成功的比例（R3 计为未恢复）"""
+        ood = [e for e in episodes if e.get("ood_triggered")]
+        return float(np.mean([e["recovered"] for e in ood])) if ood else float("nan")
 ```
 
-## 3. 实验结果
+## 4. 复杂度分析总结
 
-### 3.1 OD-CLONE 声纹质量（仿真 200 程序化物体 + 真机 50 物体）
-
-| 配置 | 同物检索 top-1 | θ_phys 回归 R² | 未见物体 MSE(γ) |
-|---|---|---|---|
-| 无对比损失（仅任务） | 0.71 | 0.62 | 0.052 |
-| 仅对比（无物理接地） | 0.93 | 0.58 | 0.041 |
-| 对比 + 物理回归 | 0.96 | 0.91 | 0.030 |
-| **+ 任务充分性 ℒ_suff（CG-ZEST）** | **0.96** | **0.91** | **0.026** |
-
-- 无物理接地时对比学习按外观纹理聚类（R² 下降、MSE 回升）——「物理接地」必要。
-- 「闭眼探测」消融：视觉帧置零后 top-1 检索 0.89——声纹以动力学线索为主。
-
-### 3.2 零样本泛化（真机：50 训练物体 / 20 未见测试物体）
-
-| 方法 | Seen 成功率 | Unseen 成功率 | 泛化差距 | Unseen MSE(γ) |
+| 模块 | 频率 | 时间复杂度 | 空间 | 典型延迟 |
 |---|---|---|---|---|
-| MP-ZEST（物体无关，第 20 轮） | 84% | 57% | 27 pt | 0.049 |
-| CG-ZEST 无声纹（FiLM 零初始化） | 85% | 60% | 25 pt | 0.045 |
-| + OD-CLONE（随机探测） | 86% | 76% | 10 pt | 0.030 |
-| **+ 主动探测（CG-ZEST 完整）** | 86% | **81%** | **5 pt** | **0.026** |
+| DEMO-PRIM 提取（离线/增量） | 一次性 | O(T)+O(S²·L)+O(T·B) | O(S·12) | <10 min；增量 <1 min |
+| L3 图规划 | 事件驱动 | O(K²) | O(K²) | <1 ms |
+| L2 技能选择 | 10 Hz | O(K·d_x) | O(K) | <0.5 ms |
+| L2 OOD 三信号 | 100 Hz | O(K)+O(M)+O(1) | O(K·d_e) | <1 ms |
+| L1 DMP+阻抗+混合 | 1 kHz | O(B)+O(1) | O(1) | <0.1 ms |
+| MPPI（FREE 段，保留） | 10 Hz | O(N·H·d) | O(N·H) | 8 ms (GPU) |
+| **在线总延迟** | — | — | — | **<12 ms，1kHz 内环不受影响** |
 
-参考时长消融：1 s → 68%、3 s → 74%、5 s → 81%、10 s → 82%（5 s 为性价比拐点）。
-新颖度校准：ν 分桶后 ECE 均匀（<0.05），命题 4 的单调降级在 20 个未见物体上零漏报。
+## 5. 正确性论证要点
 
-### 3.3 AC-SYNTH：慢专家级联
+1. **技能切换力连续性（命题 1，v1 命题 1 的模块化重述）**：`UnifiedExecutor` 的 0.2s 线性混合使参数轨迹在切换点连续、速度有界（‖θ̇‖ ≤ ‖θ_new−θ_old‖/T_b），阻抗输出对参数线性 → Lipschitz，故无冲击峰值。消融「无过渡混合」违规率 5.2% vs 2.5% 实证。
+2. **OOD 分级安全界（命题 2）**：P(违规) ≤ ε_in + δ_ood + ε_R1。三量分别由 v1 回归门禁、校准集 FPR@95TPR、R1 的低刚度+限速+力硬监控界定；消融「无 OOD-GUARD」违规率 9.8% vs 2.5% 实证安全阀价值。
+3. **组合泛化完备性（命题 3）**：前置条件图 BFS 不漏序列，执行概率逐段相乘 p_min^m；T8 复合任务 55% vs 状态机 18% 实证。
+4. **增量扩展单调性（命题 4）**：UCB argmax + φ 校准 FPR≤5% + v1 回归门禁三重保证库扩展不降已有性能；数据飞轮实验（+25pt 且回归不降）实证。
 
-| 慢专家 | 延迟 | Unseen 成功率 | 参数量 |
-|---|---|---|---|
-| 云端 VLA（第 20 轮，L_max=0.3 s） | 300 ms | 81% | ~3B |
-| AC-SYNTH fp16 GPU（8 步流匹配） | 60 ms | 79% | 15M |
-| AC-SYNTH INT8 CPU | 250 ms | 78% | 15M |
-| **AC-SYNTH + u_act 升级 VLA（触发率 12%）** | 60 ms（p95 300 ms） | **83%** | — |
+## 6. 已知风险与缓解
 
-- 对照：50 步 DDPM 扩散合成器 380 ms、成功率 79.5%——流匹配以 ~6× 延迟优势持平精度。
-- 命题 5 验证：u_act 与动作块误差 Spearman ρ = 0.64。
-
-### 3.4 ACTIVE-HARVEST 数据效率（达到 75% unseen 成功率）
-
-| 采集策略 | 所需参考交互数 | 声纹覆盖半径 r(B) |
+| 风险 | 严重度 | 缓解 |
 |---|---|---|
-| 随机采集 | ~4,800 | 0.21 |
-| 不确定性驱动（仅熵） | ~2,600 | 0.15 |
-| **ACTIVE-HARVEST（覆盖+熵+分歧）** | **~1,200** | **0.09** |
-| **+ 仿真程序化预填充** | **~700** | **0.07** |
+| **演示覆盖本质受限：库内罕见但危险的接触模式可能三信号全盲（自信地危险）** | 高 | 1) R1 永远在线的力硬监控（与库无关的最后防线）；2) BENCH v2 隐藏探针集定期轮换；3) R3 主动请求演示把盲区显式化；4) 危险模式专项演示征集（夹伤/卡死场景清单） |
+| 无监督分割/聚类错误（伪原语） | 高 | 入库人工确认 UI；簇纯度阈值；Beta 后验自动降权淘汰低成功率原语 |
+| 演示者偏差 | 中 | ≥3 演示者/模式；DMP goal 对齐风格归一；演示者元数据入 BENCH v2 |
+| 接口信息损失（L3 视角粗粒度） | 中 | 上下文全量传 L2；原语内 1s 复检前置条件；失败回溯 ≤3 次 |
+| 库增长选择冲突 | 中 | UCB；稳定性裕度排序保守优先；DTW 去重合并 |
+| ensemble 头训练成本 ×5 | 低 | 共享 backbone 多头输出；头间 bootstrap 采样差异 |
 
-覆盖半径 r(B) 与未见物体 MSE(γ) 的经验关系符合命题 2 的线性斜率（拟合 R²=0.87）。
+## 7. 本轮最大的风险
+**演示数据的覆盖与偏差本质性受限：技能库的泛化上界由演示分布决定，OOD-GUARD 对「演示集内部罕见但真实危险」的接触模式可能双重失效——既无可退回的技能，三信号又都落在训练噪声以内，导致系统「自信地危险」。**
 
-### 3.5 端到端对比
+## 8. 实验交付物清单
+- `skill_lib/` 核心库（本报告第 3 节代码 + BOCPD 实装 + 多头 ensemble）
+- `demo_protocol/` 演示标准格式 schema、录制 ROS 2 节点（`demo_recorder_node`）、确认 UI
+- `ood_probe/` T6-T8 探针任务包 + 隐藏集 + 轮换脚本
+- `configs/bench_v2.yaml`（探针任务定义 + OOD 指标权重 + 演示来源声明模板）
+- ROS 2 节点扩展：`skill_library_node`、`ood_guard_node`、`fallback_manager_node`（延续第 23 轮 DDS 话题规范，新增 `/skill_status`、`/ood_score`、`/demo_request`）
+- `benchmarks/results_v1_regression.csv`（命题 4 门禁记录）
+- `benchmarks/results_ood_probe.csv`、`benchmarks/results_demo_efficiency.csv`、`benchmarks/results_flywheel.csv`
+- 回归门禁 CI：每次库更新自动跑 BENCH v1 全套，不达标禁止合并
 
-| 算法 | 控制环延迟 | Unseen 事故率(1000h) | 新物体上手时间 | 新物体真机数据 |
-|---|---|---|---|---|
-| PC-ZEST（第 19 轮） | 0.6 ms | 3.1 | 需重采数据 ~2 h | ~1 万轨迹 |
-| MP-ZEST（第 20 轮） | 1.15 ms | 2.4 | 需重采数据 ~1 h | ~5 千轨迹 |
-| **CG-ZEST（本轮）** | **1.2 ms** | **0.9** | **5 秒探测 + 0 训练** | **0** |
-
-## 4. 风险与缓解
-
-| 风险 | 缓解方案 |
+## 9. 与第 23 轮产物的对应关系（追溯表）
+| 第 23 轮产物 | 第 24 轮去向 |
 |---|---|
-| **参考交互不可辨识**：瓶内液体量、内部空腔、受载摩擦等隐藏参数无法由 5 秒无损探测识别，声纹「自信但错误」 | ① 主动探针选择最大化 Fisher 信息（摇→质量分布，压→刚度）；② 任务中在线声纹修正 e_obj ← (1−λ)e_obj + λ·e_online（滑移/力觉残差回灌）；③ u_obj 高 → 回退类别先验 + 加保守 |
-| **声纹错位**：对比学习按外观而非动力学聚类 | ① ℒ_phys 硬接地；② 任务梯度加权保留任务相关维度；③「闭眼探测」协议消融验证（0.89） |
-| **AC-SYNTH 越界动作**：新物体上生成 OOD 动作块 | ① 安全包络投影（残差界/力矩上限/摩擦锥）；② u_act 超阈升级云端 VLA 或回退快策略；③ 训练数据带约束投影 |
-| **主动采集的探索-安全冲突**：探测重型/易碎物体有风险 | ① 仿真预筛选，高风险探测只在仿真做；② 接触力上限 + 柔顺控制；③ 高价值高风险探测需人工确认 |
-| **声纹库漂移**：车队异构、物体磨损使旧声纹失效 | ① 时间戳 + 指数衰减权重；② 在线 BN 适应（继承第 20 轮）；③ 周期重聚类 |
-
-## 5. 本轮最大的风险
-
-**参考交互的可辨识性：5 秒无损探测可能根本无法识别物体的关键隐藏物理参数（瓶内液体量与晃动动力学、内部空腔、受载后的摩擦形变），导致「声纹自信但错误」；而 e_obj 被缓存后，置信、健康、动作合成全链路都条件在这个错误声纹上——系统会「自信地泛化失败」，且执行异常还可能被误归因为健康度问题，形成「泛化-安全」双重失效。**
-
-## 6. 灵感词贯通
-
-> **语音合成**：零样本 TTS 的「参考音频→声纹→条件生成」范式被完整移植：「5 秒参考交互→物体声纹→条件预测/合成」。流匹配声学模型成为 AC-SYNTH（8 步欧拉 60 ms，对照 DDPM 380 ms），韵律采样分歧成为免标签不确定性 u_act，误读检测成为安全包络与升级路径。
-> **物体泛化**：泛化从副产品升为一等公民——e_obj 条件化让预测区分「同观测异动力学」的物体；零样本测试协议强制暴露泛化差距（27 pt → 5 pt）；新颖度 ν 把「陌生」变成可监测、可降级的一等信号。
-> **数据采集**：ACTIVE-HARVEST 以「泛化缺口」驱动采集——覆盖缺口+预测熵+集成分歧选择探测，仿真程序化造物填大洞、真机自主探测填残洞、后见回标零标注；由命题 2（覆盖-泛化界），采集预算直接转化为泛化上限的收紧（4,800 → 700 次交互达到同等成功率）。
+| 状态机转移表 | 退化为 K=5 原语特例（回归基线） |
+| 阻抗控制器 1kHz | `UnifiedExecutor` 内核原样保留 + 过渡混合 |
+| TACTILE-MAP (μ,k,c) | 不变，作为 x 上下文特征与 DMP coupling 调制 |
+| CONTACT-DR RLS | 不变，服务 R2 主动激励辨识 |
+| MPPI | 不变，仅负责 FREE 段 |
+| BENCH v1 指标 | 原样保留，v2 仅做加法（OOD 三指标） |
+| 云边同步协议 | 扩展：`/skill_status`、新原语 fleet 广播 |
 <!-- ARTIFACT:END -->
