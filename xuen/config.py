@@ -516,12 +516,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     """检查轮次守卫配置。"""  # noqa: TID251
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
-    for _name, _value in (
-        ("rounds.verify_timeout", cfg.rounds.verify_timeout),
-        ("rounds.judge_timeout", cfg.rounds.judge_timeout),
-    ):
-        if not _is_finite_number(_value) or _value <= 0:
-            raise ValueError(f"{_name} 必须为有限的正数（秒）")
     jcmd = cfg.rounds.judge_command
     if cfg.rounds.verify not in VERIFY_MODES:
         raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
@@ -537,6 +531,13 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    # 超时必须是有限正数：负数/0 会让测试套件或评审被立刻掐断，inf/NaN
+    # 会让等待永不结束；程序化 Config 里的超大整数也不能让 math.isfinite
+    # 抛 OverflowError（与 agent.timeout 同口径）。
+    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
+                        ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
+        if not _is_finite_number(value) or value <= 0:
+            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
