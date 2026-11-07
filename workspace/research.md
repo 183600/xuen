@@ -3,475 +3,370 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 26 轮（新灵感循环第 4 轮）· TEMPO-NAV：力矩对账 + 热增强想象 + 截止期感知 anytime 规划
+# 第 27 轮（新灵感循环第 5 轮）· ADAPT-REACTIVE：行为树驱动的在线自适应力矩+热觉察
 
-## 0. 先给直觉：为什么「力矩传感、实时性、热管理」恰好是对第 25 轮风险的精准回应？
+## 0. 先给直觉：为何「行为树、在线学习、Isaac Sim」是对第 26 轮最大风险的精准回应？
 
-从第 25 轮最大风险出发：
-> **想象模型的「概念漂移」——σ 误判（过度保守或过度激进），而回退策略依赖「想象即辨识」的假设在真实物理系统上不可靠。**
+第 26 轮最大风险：
+> **「物理对账」依赖的逆动力学/摩擦模型本身也是模型——变速、变温下的摩擦系统偏差会污染 e_τ，审计可能把「动力学模型误差」误判为「世界模型漂移」，造成慢性误回退**
 
 三个灵感词各回答一层：
-- **力矩传感**回答「谁来审计想象」：学习出来的 σ 会漂移，但关节力矩 τ_meas 是 1kHz 直接测量、零学习成分的物理信号。「预测力矩 vs 实测力矩」的对账不依赖任何学习组件的自觉性——**想象可以被物理审计**。
-- **实时性**回答「想象能不能按时交付」：PRISM-NAV 的 O(N^D)×T_MC 规划在边缘 GPU 上延迟长尾，一旦计算热节流，执行器拿到的是 100ms 前的过期想象。实时性要求把规划从「算到最好」改成「截止期内交付最好」。
-- **热管理**回答「想象是否物理可持续」：世界模型只看接触状态，不看电机绕组温度 θ。持续按压任务里，计划在 2s 内完美、30s 后必然触发 τ_lim(θ) 降额而中断——运动学完美、热学自杀。且 GPU 热节流与电机热降额结构同构：一个「热」字串起物理与计算两层资源。
+- **行为树**回答「怎么做决策」：把「被审计的想象服务」作为行为树的节点，动态闭合「观察-规划-执行」的闭环，使漂移检测成为可解释的行为选择；
+- **在线学习**回答「怎么改模型」：把「物理对账」的判决转化为「标签」，用增量贝叶斯/递归最小二乘实时修正摩擦/热参数，避免模型误判；
+- **Isaac Sim**回答「怎么验证」：用可微渲染器/物理引擎从模拟中学习「可解释的偏差源」特征，跨模态蒸馏校准审计的“误报谬误”。
 
-核心灵魂：**把想象从「离线信仰」变成「被物理审计、被截止期约束、被热预算限制的在线服务」**。
+核心灵魂：**把「被审计的想象」从「静态管控」变成「行为决策中的可解释反馈回路」**，用 Isaac Sim 提供的可解释偏差源特征校准器，行为树调度在线学习，从而真正「免疫」摩擦模型本身的误判。
 
 一句话押注：
-> **本轮给每个原语世界模型增广为 μ_z(s, a, θ) → (r, s', θ', τ̂, σ)：力矩头物理锚定（τ̂ = τ_motion + Jᵀf̂），热转移灰箱（一阶 RC，每关节 2 个可辨识参数）；OOD-GUARD 升级为四信号，新增「物理对账」——滑动窗标准化残差 u = e_τ/σ_τ 的 E[u²]≈1 构成 χ² 校准检验，σ 纯尺度漂移被比值自动抵消、真实漂移必打破分布，CUSUM 检出时延 O(M/δ²)；规划器 L3'' 升级为截止期感知 anytime 迭代加深（最坏情况保底深度-1），(D, N, T_MC) 由 p99.9 延迟预算动态分配，GPU 热节流自动降级并切换 500Hz 蒸馏策略；热可行性经闭式投影进入剪枝与终端代价；运行时升级为 1kHz 安全 / 500Hz 反应 / 50Hz 想象三节拍。**
+> **本轮给 TEMPO-NAV 的 μ_z 增广「行为树闭环 + 在线参数自适应 + Isaac Sim 跨模态校准」：行为树节点 B = {IDLE, PLAN, ADAPT, RECOVER}，在线学习用增量贝叶斯更新摩擦系数 μ_f(θ_v, θ_t)，Isaac Sim 提供「摩擦-力矩-温度」的可解释特征 ψ ∈ ℝᵏ，蒸馏到审计判决 ρ，消除「动力学误差误判漂移」的根本症源。**
 
-## 1. 研究日志：从「想象信仰」到「被审计的想象服务」
+## 1. 研究日志：从「静态管控」到「行为树驱动的可解释反馈」
 
-### 1.1 第 25 轮系统的三个症状
-```text
-S1. σ 自我漂移：μ_z 的 σ 由学习组件自评，刚度/材质渐变时 σ 与真实误差同向漂移，
-    校准失效而三信号无感——自评者无法发现自己作弊；
-S2. 想象迟到：O(N^D)·T_MC ≈ 5000 次前向，边缘 GPU p99 延迟 >100ms，
-    计算热节流时更糟——执行器拿到的是过期想象（陈旧计划比无计划更危险）；
-S3. 热盲计划：持续按压 30s 后电机降额 τ_lim(θ) 收缩，任务中途强制中止
-    ——第 25 轮世界模型的状态空间里根本没有 θ。
+### 1.1 第 26 轮的核心失效模式
+
+| 失效模式 | 说明 |
+|---|---|
+| 动力学误差误判 | 摩擦模型 μ_f(v, θ) 受速度/温度影响，τ̂ 偏差污染 e_τ → 虚警 g 增长 |
+| 审计不解释 | CUSUM 只给出「是/否」判决，不说明「哪儿对账失效」 |
+| 参数僵化 | σ_τ、τ_lim(θ) 固定不随实际摩擦演化自适应 |
+
+### 1.2 三个灵感词的技术化实现
+
+#### 行为树：动态闭环调度
+- B(q, τ_meas, e_τ, g) → 动作：IDLE→PLAN→ADAPT→RECOVER
+- ADAPT 节点激活时，打开「在线学习」子进程
+- RECOVER 节点在 g > h 且 τ 传感确认「实际碰撞」时触发，跳过想象直接阻抗
+
+#### 在线学习：增量贝叶斯摩擦校准
+- 状态：β = {μ_f, b_f, C_f, κ_f}（滚动摩擦截距、斜率、功率系数、热耦合）
+- 观测：y_t = τ_meas − τ_motion − Jᵀf̂ + τ_recon（残差）
+- 似然：y_t | β ~ N(βᵀφ_t, σ²)（线性-高斯）
+- 更新：β_{t+1} = β_t + K_t(y_t − βᵀφ_t)，K_t = P_tφ_t/(σ² + φᵀ_t P_t φ_t)
+- 超参数 σ 由「审计判决 ρ」的置信度反向标定：ρ 小 → 增大 σ，减缓更新
+
+#### Isaac Sim：可解释偏差特征蒸馏
+- 从 Isaac Sim 中采样：{v, θ, μ_f, J, τ_theory, τ_sim, e_τ_sim}
+- 特征编码器 ψ_φ(e_τ) → ℝᵏ：通过注意力机捕获「哪个关节、哪个方向」贡献大
+- 蒸馏损失：L_distill = KL(π_sim || π_auditor) + ||ψ_φ − ψ_pred||²
+- 目标：让ψ_φ 在 Isaac Sim 上有经验归一化，上真实机器上 ψ_φ 仍可靠
+
+### 1.3 增量演进：TEMPO-NAV+ADAPT
+
+| 层 | TEMPO-NAV v4 | ADAPT-REACTIVE | 关系 |
+|---|---|---|---|
+| 世界模型 | μ_z(s,a,θ)→(r,s',θ',τ̂,σ) | μ_z(s,a,θ,β)→(r,s',θ',τ̂,σ)：**+ 在线β** | **增广** |
+| OOD 检测 | χ²+CUSUM+g_t | + ψ_θ(e_τ)特征 + 贝叶斯校准 | **解耦** |
+| 规划 | L3'' anytime | L4''：行为树调度 + ADAPT 节点 | **闭环化** |
+| 学习 | 离线 DAgger 蒸馏 | **在线增量贝叶斯 + Isaac Sim蒸馏** | **激活** |
+| 运行时 | 1kHz/500Hz/50Hz | + 300Hz 行为树控制器 | **协同** |
+
+## 2. 直觉深化：为什么「行为树+在线学习+Isaac Sim」能破局？
+
+### 2.1 行为树如何「解释」审计？
+
+```
+                    ┌─────────────┐
+                    │ OBSERVER    │
+                    │ (g, e_τ)    │
+                    └─────┬───────┘
+                          │
+                    ┌─────▼───────┐
+                    │ BEHAVIOR    │
+                    │ TREE        │
+                    ├─────────────┤
+                    │ IDLE: g≈0   │
+                    │ PLAN: g>0   │  
+                    │ ADAPT:      │ ← 打开在线学习
+                    │ RECOVER:    │ ← 强制降级
+                    └─────────────┘
 ```
 
-另修正第 25 轮一处记号瑕疵：2-D 动作空间均匀网格 N 点/维，实际 |𝒜| = N²（非 N），深度 D 穷举为 (N²)^D；本轮引入批量前向与预算分配后该记号问题被 anytime 框架自然吸收。
+- 当 g_t 持续上升时，行为树不再「硬拉低 σ」，而是「查询：是摩擦漂移，还是模型漂移？」
+- ADAPT 节点：激活增量贝叶斯，用最近 M=50 窗的 e_τ 重新拟合 β，**改变 σ 的来源**
 
-### 1.2 三个新判断
-1. **力矩是最难作弊的物理信号**：τ_meas 不经过任何学习组件，1kHz、全域覆盖（腕部 F/T 之外的整臂接触感知）。残差 e_τ = τ_meas − (τ_motion + Jᵀf̂) 同时暴露接触力预测误差与动力学模型误差；标准化比值 u = e_τ/σ_τ 在校准假设下 E[u²]=1、Var[u²]=2（高斯），是**无需真值标签的模型诚实性检验**；
-2. **实时性的本质是延迟分布而非均值**：预算必须按 p99.9 分配，最坏情况要有保底答案（深度-1 + 1kHz 无学习安全层），「平均 5ms」在安全攸关系统里是谎言；
-3. **热要用灰箱不要黑箱**：一阶 RC 模型每关节仅 2 个参数（1/C, κ/C），对 θ̇ 是线性回归、激励充分下可辨识，温区外外推能力远强于黑箱网络；θ 是慢变量（时间常数分钟级），任务级闭式投影即可，不必拖进每步接触想象。
+### 2.2 在线学习如何「免疫」摩擦误差？
 
-### 1.3 与第 25 轮 PRISM-NAV 的关系（增量演进）
+| 传统做法 | ADAPT 的做法 |
+|---|---|
+| 固定 μ_f，g 大则认为模型差 | 把 g 当作「σ 的信号」，同步更新 μ_f |
+| 虚假漂移 → 过度保守 | 真实摩擦漂移 → β 自适应，σ 稳定 |
+| 需要重新标定 | 持续闭环，不离线 |
 
-| 层 | 第 25 轮 | 第 26 轮 TEMPO-NAV | 关系 |
-|---|---|---|---|
-| 世界模型 | μ_z(s,a)→(r,s',σ) | μ_z(s,a,θ)→(r,s',θ',τ̂,σ)：+ 力矩头（物理锚定）+ 灰箱热 | **增广** |
-| OOD 检测 | 三信号 min | 四信号：+ 物理对账（χ² 校准检验 + CUSUM） | **融合** |
-| 规划 | O(N²)^D 穷举 + σ 剪枝 | L3''：截止期 anytime 迭代加深 + 批量前向 + σ/热剪枝 + (D,N,T_MC) 预算分配 | **升级** |
-| 低层执行 | 1kHz 阻抗 + 0.2s 混合 | + 动量观测器碰撞反射（τ 传感，无学习、无 GPU）+ τ_lim(θ) 软饱和 | **增强** |
-| 执行节拍 | 10Hz 规划 | 1kHz 安全 / 500Hz 蒸馏反应 / 50Hz anytime 想象 | **升级** |
-| 基准 | BENCH v3 (T9-T11) | BENCH v4：+ T12 持续按压热任务 / T13 计算热节流 / T14 漂移注入 | **扩展** |
+关键等式：**σ²_τ = σ²_MC + Jᵀ·Σ_f·J + (∂τ̂/∂β·P_β·∂τ̂/∂β)ᵀ**
 
-### 1.4 灵感词贯通
-> **力矩传感**：第四观测模态，与腕部 F/T、触觉图互补（整臂无盲区、免标定漂移）；三个用途——动量观测器 1kHz 碰撞反射、力矩头物理锚定监督、对账审计的测量源。  
-> **实时性**：三节拍架构 + anytime 保底 + p99.9 预算 + 蒸馏短路；安全层刻意做成「零学习、零 GPU」——最坏情况下想象全部失效，安全层仍在转。  
-> **热管理**：两层同构——执行器热（θ 状态增广 + τ_lim(θ) 降额约束 + 任务级闭式投影）与计算热（GPU 节流 → 延迟预算收缩 → 自动降级）。同一套方法论：**把慢变量写进状态，把降额曲线写进约束，把预算写进调度**。
+ADAPT 让 P_β 在线更新，σ²_τ 自动适应「**这一刻的摩擦不确定性**」
 
-## 2. 直觉深化
+### 2.3 Isaac Sim 为什么「不偏」？
 
-### 2.1 为什么「对账」能免疫 σ 自我漂移？
-
-| 漂移模式 | σ 自评 (PRISM-NAV) | 物理对账 (TEMPO-NAV) |
-|---|---|---|
-| σ 整体放大/缩小（尺度漂移） | ρ_in/ρ_mod 同向漂移，误判 | u = e_τ/σ_τ 无量纲，比值抵消，不误报 |
-| 残差真实增大（模型漂移发生） | ρ_out 需绝对残差阈值，阈值本身随工况漂移 | E[u²] 立即 >1，M 窗内检出且量级可知 |
-| 输入密度正常但物理失配 | 三信号都可能「正常」 | 对账直接命中「模型说行、物理说不行」 |
-
-关键洞察：**校准检验是「自指系统」的唯一出口**——不引入外部真值，用「模型声明的不确定性」与「物理观测的残差」互为对偶：二者比值在 H₀ 下有已知分布（χ²），任何一方的谎报都会打破分布。
-
-### 2.2 两个热、一个节拍
-执行器热与计算热结构同构：资源消耗 → 温度上升 → 能力降额 → 必须自适应。前者约束 τ（快失效，秒-分钟级），后者约束推理延迟 ℓ（慢漂移，分钟-小时级）。TEMPO-NAV 用同一套「状态-约束-调度」三件套处理，且降级链完整：GPU 节流 → 想象降深度；GPU 全失效 → CPU 上的动量观测器 + τ_lim(θ) 饱和 + 定增益阻抗仍在转。
+- Isaac Sim 提供「**可微摩擦模型**」的 ground truth β_sim
+- 特征 ψ_φ 训练时对齐 Isaac Sim 的 β_sim → τ_sim 映射，形成「**摩擦-力矩-温度**」的可解释层
+- 上真实机器，ψ_φ 捕获的仍是「残差结构」，但不再依赖固定 μ_f，**用蒸馏知识校准 β 的先验**
 
 ## 3. 形式化定义
 
-### 3.1 增广状态与增广世界模型
-- 增广状态 s⁺ = (s, θ)，θ ∈ ℝⁿ⁺¹（n 关节绕组温度 + 环境温 θ_amb）
-- 动作 a ∈ ℝ²（不变）
-- **世界模型**：μ_z(s, a, θ) → (r, s', θ', τ̂, σ)
-  - r = −‖f̂_n − f_ref‖² − λ_a‖a‖² − λ_θ Σ_j max(0, |τ̂_j| − τ_lim,j(θ_j))²
-  - s' = s + f̂·dt + a·dt（同第 25 轮）
-  - **力矩头（物理锚定，非黑箱）**：τ̂ = τ_motion(q, q̇) + J(q)ᵀ f̂
-  - **热转移（灰箱）**：θ' = θ + dt·( P(τ̂, ω) ⊘ C − κ ⊘ C ⊙ (θ − θ_amb) )，C, κ 可学习
+### 3.1 行为树调度器
+- 状态变量：b ∈ {IDLE, PLAN, ADAPT, RECOVER}
+- 判决规则：
+  - g_t < θ_low → b = IDLE
+  - g_t ∈ [θ_low, θ_high] → b = PLAN
+  - g_t > θ_high 且 ψ_φ(e_τ) > τ_ψ → b = ADAPT
+  - g_t > h 且 τ_meas 突变 → b = RECOVER
 
-### 3.2 物理对账统计量（第四 OOD 信号）
-- 残差：e_τ = τ_meas − τ̂ ∈ ℝⁿ；力矩预测方差经雅可比传播：Σ_τ = Jᵀ Σ_f J + Var_MC[τ̂]，σ_τ = √diag(Σ_τ)
-- 标准化：q_t = ‖e_τ,t ⊘ σ_τ,t‖²，H₀（校准成立）下 E[q]=n，Var[q]=2n
-- 窗口统计：z_t = (q̄_M − n)/√(2n/M)，渐近 N(0,1)
-- CUSUM：g_t = max(0, g_{t−1} + z_t − k)，g_t > h ⇒ 判漂移；ρ_phy = exp(−g_t/σ_phy)
-- h 由目标虚警 ARL₀ 经 Siegmund 近似数值反解
+### 3.2 在线贝叶斯摩擦更新
+- 参数向量：β_t ∈ ℝᵖ（摩擦系数 + 功率-热耦合）
+- 特征：φ_t = [v, |v|, v·θ, ω·θ, sign(ω)·θ] ∈ ℝᵖ
+- 观测：y_t = τ_meas,t − τ_motion,t − Jᵀf̂_t
+- 似然模型：y_t | β_t ~ 𝒩(φᵀ_t β_t, σ²_t)
+- 先验/后验：
+  - β_t | D_{t-1} ~ 𝒩(μ_{t-1}, Σ_{t-1})
+  - μ_t = μ_{t-1} + K_t(y_t − φᵀ_t μ_{t-1})
+  - Σ_t = Σ_{t-1} − K_t φᵀ_t Σ_{t-1}
+  - K_t = Σ_{t-1} φ_t/(σ²_t + φᵀ_t Σ_{t-1} φ_t)
+- σ²_t 由 ρ_t 标定：σ²_t = σ²_base / ρ_t
 
-### 3.3 截止期感知 anytime 规划器 L3''
+### 3.3 Isaac Sim 特征蒸馏
+- 从 Isaac Sim 采样 N_s 个 (v, θ, μ_f, τ_theory) 三元组
+- 训练 ψ_φ: ℝⁿ → ℝᵏ（注意力特征编码器）
+- 蒸馏损失：ℒ = 𝔼_{v,θ} [ KL( π(·|ψ_φ,τ_theory) || π_sim(·|τ_theory) ) + λ||ψ_φ − ψ_sim||² ]
+- 目标 π_ψ: 给定 τ，预测「哪些关节的残差最可疑」
+- 上真实机器：π_ψ(e_τ) 与 CUSUM g 形成「**双信号**」：g 量化漂移大小，π_ψ 定位漂移根因
+
+## 4. 算法完整流程
+
 ```
-plan_anytime(s, θ, ctx, deadline=20ms):
-    cfg = budget_allocate(deadline, ℓ_p99, GPU_temp)      # → (D, N, T_MC)
-    best = evaluate_depth1(cfg)                            # 一次批量前向，必交付（保底）
-    for d in 2 .. cfg.D:
-        if elapsed + est(d, cfg) > deadline: break         # est 由每扩展延迟 EMA+p99 外推
-        cand = batched_dfs(d, cfg, σ_剪枝, 热剪枝)
-        best = better(best, cand)
-    return best.seq, best.depth
-```
-- 批量前向：把 B 个状态 × |𝒜| 个动作全部拼成一个 GPU batch（B·|𝒜|·T_MC 次前向 → 少数次 kernel 调用）
-- **热剪枝的 admissibility**：只删除「经闭式投影到任务结束时程仍违反 τ_lim(θ)」的分支，不删「暂时超限但会冷却恢复」的分支
-- 最坏情况保底：deadline 内必返回深度-1 结果，且其动作仍经 1kHz 安全层执行
+# 0. 初始：TEMPO-NAV 的所有模块，外加
+#    - Isaac Sim 预训练的 ψ_φ
+#    - 贝叶斯摩擦先验 β_0 ~ 𝒩(μ_0, Σ_0)
 
-### 3.4 热的闭式任务级投影
-一阶 RC 下给定力矩调度 P_j(·)，逐步闭式解：
-θ_j(t+Δt) = θ_amb + (θ_j(t) − θ_amb − P_j(t)/κ_j)·e^{−Δt/τ_th,j} + P_j(t)/κ_j
-对候选任务轮廓（原语序列名义力矩调度）做 O(H) 递推检查 max θ_j < θ_crit；违反则在原语层插入冷却片段（低力矩 regrasp / 等待），或抬高该候选的计划代价。
-
-### 3.5 三节拍运行时
-| 节拍 | 内容 | 依赖 | 失效降级 |
-|---|---|---|---|
-| 1kHz | 阻抗 + 动量观测器碰撞反射 + τ_lim(θ) 软饱和 | CPU：τ_meas, q, q̇ | 永不失效（零学习、零 GPU） |
-| 500Hz | 蒸馏策略 π_distill(s⁺) → a（DAgger 蒸馏自 anytime 规划的 (s, seq) 对） | GPU | 降为定增益阻抗 |
-| 50Hz | anytime 想象重规划 + 审计更新 + 预算重分配 | GPU | 降为深度-1 / 冻结上帧计划 |
-
-## 4. 性质与复杂度
-
-### 4.1 理论性质
-**命题 1（anytime 保底与单调改进）**：假设 A1 模型一致（E[s'|s,a] 收敛真值）、A2 剪枝 admissible（σ 阈值剪枝视为风险有界规划的保守化；热剪枝仅删「投影到任务结束仍违规」分支），则最优值 V*_d 关于深度 d 单调不减；算法在 deadline 内必返回深度-1 动作，故最坏情形质量有显式下界；期望质量随时间预算单调不减。
-**命题 2（对账检验的虚警/检出界）**：H₀ 下 q_t 独立同分布、E[q]=n、Var[q]=2n（高斯情形），窗均值 z_t 由 CLT 渐近 N(0,1)；单边 CUSUM（允差 k，门限 h）的 ARL₀ 由 Siegmund 近似给出，可反解到任意目标虚警率；存在校准破坏（均值偏移 δ>1）时平均检出时延为 O(h/δ)，且不受 σ 尺度漂移影响（比值统计量尺度不变）。严格优于第 25 轮依赖绝对残差阈值的 ρ_out（其阈值随工况漂移需重标定）。
-**命题 3（热灰箱可辨识性）**：θ̇ = (1/C)·P − (κ/C)·(θ − θ_amb) 对参数 (1/C, κ/C) 线性；激励充分（P 持续变化）下最小二乘一致估计，2 参数/关节的样本复杂度远低于黑箱；外推偏差被限制在一阶 RC 模型类内。
-
-### 4.2 复杂度与延迟
-| 模块 | 频率 | 复杂度 | 典型延迟 |
-|---|---|---|---|
-| 动量观测器 + 阻抗 | 1kHz | O(n_j) | <10 μs (CPU) |
-| π_distill | 500Hz | O(1) MLP 前向 | <0.2 ms |
-| anytime 规划 | 50Hz，deadline=20ms | ≤ 预算内扩展数；保底 O(|𝒜|·T_MC) | ≤20 ms（硬保证，p99.9 预算） |
-| 闭式热投影 | 任务级，每候选 | O(H) 递推 | <1 ms |
-| 审计 CUSUM | 50Hz | O(M) 增量 | <0.1 ms |
-
-## 5. 风险
-
-**本轮最大风险**：「物理对账」依赖的逆动力学/摩擦模型本身也是模型——变速、变温下的摩擦系统偏差会污染 e_τ，审计可能把「动力学模型误差」误判为「世界模型漂移」，造成慢性误回退；且热参数在线自适应与漂移检测耦合后存在正反馈震荡风险。
-
-次级风险：MC Dropout 少采样（T_MC=2）下方差估计噪声大，可能虚报 σ；蒸馏策略在分布偏移下退化（DAgger 缓解但不消除）；θ 传感器缺失时需从电流/外壳温估计绕组温，引入额外误差源。
-
-## 6. 下一轮展望
-若下轮灵感指向「联邦学习」→ 对账统计量与热参数跨机体联邦校准（审计知识共享）；若指向「可解释性」→ 对账残差做逐关节归因，漂移定位到具体原语/关节；若指向「主动感知」→ 规划器主动注入「探测动作」缩小 σ，把想象变成主动学习的探针。
-<!-- IDEA:END -->
-
-<!-- ARTIFACT:START -->
-# 第 26 轮产物 · TEMPO-NAV 技术报告：力矩对账 + 热增强想象 + 截止期感知 anytime 规划
-
-## 0. 结论：从「想象信仰」到「被审计、被定时、被限热的想象服务」
-
-TEMPO-NAV 在第 25 轮 PRISM-NAV 基础上做**增广与升级**（不推倒）：
-- **μ_z v2**：世界模型增广 θ 状态，新增物理锚定力矩头 τ̂ = τ_motion + Jᵀf̂ 与灰箱热转移
-- **OOD-GUARD v3**：三信号 → 四信号，新增「物理对账」（χ² 校准检验 + CUSUM），免疫 σ 尺度漂移
-- **L3''**：O(N²)^D 穷举 → 截止期感知 anytime 迭代加深，(D, N, T_MC) 由 p99.9 延迟预算分配
-- **运行时 v2**：1kHz 无学习安全层 / 500Hz 蒸馏反应 / 50Hz anytime 想象，降级链完整
-- **BENCH v4**：新增 T12 热任务 / T13 计算热节流 / T14 漂移注入
-
-## 1. 符号表（含沿用与新增）
-
-| 符号 | 含义 | 来源 |
-|---|---|---|
-| s, a, 𝒵, φ_z, π_z | 接触状态、动作、原语库、前置条件、执行策略 | 第 24/25 轮沿用 |
-| θ ∈ ℝⁿ⁺¹ | 关节绕组温度 + 环境温 θ_amb | **新增** |
-| τ_meas ∈ ℝⁿ | 关节力矩传感器测量（1kHz） | **新增** |
-| τ_motion(q, q̇) | 逆动力学（惯量+科氏+重力+摩擦） | **新增** |
-| J(q) ∈ ℝⁿˣ⁶ | 末端雅可比 | **新增** |
-| μ_z(s, a, θ) → (r, s', θ', τ̂, σ) | 增广世界模型 | 第 25 轮 μ_z **增广** |
-| e_τ = τ_meas − τ̂, u = e_τ ⊘ σ_τ | 力矩残差、标准化残差 | **新增** |
-| q_t = ‖u_t‖², z_t, g_t, k, h | 对账统计量、窗统计、CUSUM 状态、允差、门限 | **新增** |
-| τ_lim,j(θ_j) | 热降额力矩上限（单调递减曲线） | **新增** |
-| C_j, κ_j, τ_th,j = C_j/κ_j | 热容、散热系数、热时间常数 | **新增** |
-| ℓ_p99, deadline | 每扩展延迟 p99 分位、规划截止期 | **新增** |
-| π_distill | 蒸馏反应策略（s⁺ → a） | **新增** |
-| D, N, T_MC | 想象深度、动作网格密度、MC 采样数（预算分配对象） | 第 25 轮沿用并预算化 |
-
-## 2. 算法完整流程
-
-### 2.1 离线训练阶段
-```
-for each primitive z in 𝒵:
-    collect dataset 𝒟_z = {(s, a, θ, τ_meas, f_meas, q, q̇, ω, θ_next)} from K_demo 演示
-        # 演示时同步记录关节力矩与温度通道（新增采集协议，向后兼容旧数据）
-    train WorldModelV2 μ_z:
-        ℒ_z = E[ ‖f̂ − f_meas‖² + ‖τ̂ − τ_meas‖²
-               + λ_th ‖θ̂' − θ_meas'‖²
-               + λ_σ KL(σ, σ_mse) ]          # τ̂ 由物理锚定头给出，只需监督 f̂ 即可传播
-        gray-box: (1/C_j, κ_j/C_j) 由 θ̇ 对 [P, θ_amb − θ] 线性回归初始化，
-                  再与网络端到端微调（保持物理结构，防止黑箱退化）
-    calibration gate（新增上线门槛）:
-        held-out 集：E[u²] ∈ [0.8, 1.25] 且 z_t 无 CUSUM 触发 ⇒ 通过
-        未通过 ⇒ 增大 σ_τ 标定系数重训（宁可保守，不可谎报）
-```
-
-### 2.2 在线运行（三节拍）
-```
-# 1kHz 安全层（CPU，零学习零 GPU，永不失效）
+# 1kHz 安全层（沿用）
 every 1ms:
-    collision, r_obs = momentum_observer(q, q̇, τ_meas)     # 无学习碰撞反射
-    if collision: trigger R1 (急停降参) and notify 50Hz 层
-    a_sat = tau_limit_saturation(a_cmd, τ_lim(θ))           # 热降额软饱和
-    impedance_control(a_sat)                                 # 第 24 轮 L1 沿用
+    a_sat = tau_limit_saturation(a_cmd, τ_lim(θ))
+    impedance_control(a_sat)
 
-# 500Hz 反应层（GPU）
+# 300Hz 行为树控制器（新增）
+every 3.33ms:
+    # 读取审计状态
+    _, _, tau_var = μ_z.sample(...)
+    sigma_tau = sqrt(tau_var) + 0.05
+    rho_phy, g = auditor.update(τ_meas, τ̂, sigma_tau)
+    
+    # 行为树判决
+    b = behavior_tree(g, ρ_phy, τ_meas)
+    
+    if b == IDLE:
+        skip_learning()
+    elif b == ADAPT:
+        # 在线贝叶斯更新
+        β ← bayesian_update(τ_meas, τ̂, φ(状态), σ²_base/ρ_phy)
+        σ_τ ← recompute_with_updated_β(β)
+    elif b == RECOVER:
+        trigger_emergency_fall_back()
+
+# 500Hz 蒸馏层（沿用）
 every 2ms:
-    a = π_distill(s, θ)                                      # DAgger 蒸馏自 anytime 规划
+    a = π_distill(s, θ, β)
 
-# 50Hz 想象层（GPU）
+# 50Hz 想象层（沿用）
 every 20ms:
-    cfg = budget.allocate(deadline=20ms, ℓ_p99, gpu_temp)    # p99.9 预算分配
-    seq, depth = plan_anytime(s, θ, ctx, cfg)                # 保底深度-1
-    replay_buffer.append((s, θ, seq))                        # 蒸馏数据（DAgger）
-    rho = ood_guard_v3(σ_μ, σ_ens, CUSUM_f, auditor.g)       # 四信号 min
-    if rho < 0.3: execute(seq, scale=0.3~0.5)                # 保守想象 + 降速
-    else:          distill target 更新为 seq
-    thermal_projection(候选任务轮廓)                          # O(H) 闭式，越界插冷却片段
+    cfg = budget.allocate(...)
+    seq, depth = plan_anytime(s, θ, β, cfg)
+    # ADAPT 判决更新 σ τ_lim
+    sigma_tau_adj = auditor.rho() < 0.5 ? σ_τ * 1.5 : σ_τ
 ```
 
-## 3. Python 核心实现
+## 5. Python 核心实现
 
 ```python
-import time
 import torch
 import torch.nn as nn
 import numpy as np
 from collections import deque
+from scipy.linalg import cho_solve, cho_factor
 
 # ============================================================
-# 0. 增广世界模型 μ_z(s, a, θ) → (r, s', θ', τ̂, σ)
-#    （第 25 轮 WorldModel 的增量改造：+ 力矩头 + 灰箱热）
+# 0. Isaac Sim 特征编码器 ψ_φ（可微渲染特征）
 # ============================================================
-class WorldModelV2(nn.Module):
-    def __init__(self, s_dim: int, a_dim: int, n_joints: int, hidden: int = 128):
+class FrictionFeatureExtractor(nn.Module):
+    """从力矩残差提取「可解释偏差源」特征。
+       自 Isaac Sim 预训练得到，上真实机器蒸馏使用。"""
+    def __init__(self, n_joints: int = 7, feat_dim: int = 16):
         super().__init__()
-        self.n_joints = n_joints
-        self.backbone = nn.Sequential(
-            nn.Linear(s_dim + a_dim + n_joints + 1, hidden),
-            nn.ReLU(),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(),
+        self.attn = nn.MultiheadAttention(n_joints, num_heads=2, dropout=0.1)
+        self.mlp = nn.Sequential(
+            nn.Linear(n_joints * 3, 64), nn.ReLU(),
+            nn.Linear(64, feat_dim), nn.Tanh()
         )
-        self.f_head = nn.Linear(hidden, 6)
-        self.s_next = nn.Linear(hidden, s_dim)
-        self.log_sigma = nn.Linear(hidden, 1)
-        # 灰箱热参数：每关节 2 个可学习标量（物理结构固定，防黑箱退化）
-        self.inv_C = nn.Parameter(torch.full((n_joints,), 1e-2))        # 1/C
-        self.kappa_over_C = nn.Parameter(torch.full((n_joints,), 1e-3)) # κ/C
-
-    def thermal_step(self, theta, tau_hat, omega, theta_amb, dt=0.02, eta=0.05):
-        # P ≈ |τ|·|ω| + η·τ²（铜损，系数可并进 1/C 标定）
-        P = tau_hat.abs() * omega.abs() + eta * tau_hat ** 2
-        dtheta = self.inv_C * P - self.kappa_over_C * (theta - theta_amb)
-        return theta + dt * dtheta
-
-    def forward(self, s, a, theta, theta_amb, tau_motion, JT, omega, dt=0.02):
-        h = self.backbone(torch.cat([s, a, theta, theta_amb], dim=-1))
-        f_pred = self.f_head(h)
-        s_next = self.s_next(h)
-        sigma = torch.exp(self.log_sigma(h))
-        tau_hat = tau_motion + torch.einsum('bjf,bf->bj', JT, f_pred)  # 物理锚定
-        theta_next = self.thermal_step(theta, tau_hat, omega, theta_amb, dt)
-        return f_pred, s_next, tau_hat, theta_next, sigma
-
-
-class MCWorldModelV2(nn.Module):
-    """MC Dropout：T 次采样 → 均值 + MC 方差（供 σ_τ 与审计）"""
-    def __init__(self, base: WorldModelV2, p: float = 0.1):
-        super().__init__()
-        self.base = base
-        self.drop = nn.Dropout(p)
-
-    def sample(self, s, a, theta, theta_amb, tau_motion, JT, omega, T=2, dt=0.02):
-        f_l, s_l, tau_l, th_l, sig_l = [], [], [], [], []
-        for _ in range(T):
-            h = self.drop(self.base.backbone(torch.cat([s, a, theta, theta_amb], -1)))
-            f = self.base.f_head(h); s2 = self.base.s_next(h)
-            sig = torch.exp(self.base.log_sigma(h))
-            tau = tau_motion + torch.einsum('bjf,bf->bj', JT, f)
-            th2 = self.base.thermal_step(theta, tau, omega, theta_amb, dt)
-            f_l.append(f); s_l.append(s2); tau_l.append(tau); th_l.append(th2); sig_l.append(sig)
-        mean = lambda xs: torch.stack(xs).mean(0)
-        f_m, s_m, tau_m, th_m, sig_m = map(mean, (f_l, s_l, tau_l, th_l, sig_l))
-        tau_var = torch.stack(tau_l).var(0)                    # MC 方差 → σ_τ 的一部分
-        return f_m, s_m, tau_m, th_m, sig_m, tau_var
+        
+    def forward(self, e_tau, v, theta):
+        # e_tau: (T, n_joints), v: (T,), theta: (T, n_joints)
+        B, T, n = (*e_tau.shape[:-1], e_tau.shape[-1]) if e_tau.dim() == 3 else (1, *e_tau.shape)
+        e_tau = e_tau.view(B, T, n).permute(1, 0, 2)  # T, B, n
+        keys = torch.stack([e_tau, e_tau * v.unsqueeze(-1), e_tau * theta], -1).flatten(-2, -1)
+        attn_out, _ = self.attn(keys, keys, keys)
+        return self.mlp(attn_out.permute(1, 0, 2).flatten(1, 2))
 
 
 # ============================================================
-# 1. 物理对账审计器（第四 OOD 信号，免疫 σ 尺度漂移）
+# 1. 在线贝叶斯摩擦/热参数更新器
 # ============================================================
-class TorqueAuditor:
-    """q_t = ‖e_τ/σ_τ‖²，H0: E[q]=n, Var[q]=2n；
-       z_t 窗标准化 → CUSUM(k, h)，h 由目标 ARL0 反解；
-       gating：仅在 |τ| 激励充分时更新，防摩擦误差污染。"""
-    def __init__(self, n_joints: int = 7, M: int = 50, k: float = 0.5,
-                 h: float = 8.0, tau_gate: float = 2.0):
-        self.n, self.M, self.k, self.h, self.tau_gate = n_joints, M, k, h, tau_gate
-        self.win = deque(maxlen=M)
-        self.g = 0.0
+class OnlineBayesianFrictionCalibrator:
+    """增量贝叶斯线性回归：y = φᵀβ + ε
+       y = τ_meas - τ_motion - Jᵀf̂
+       φ = [v, |v|, v·θ, ω·θ, sign(ω)·θ]"""
+    def __init__(self, p: int = 5, sigma_base: float = 0.1, 
+                 mu0: np.ndarray = None, Sigma0: np.ndarray = None):
+        self.p = p
+        self.sigma_base = sigma_base
+        if mu0 is None:
+            self.mu = np.zeros(p)
+            self.Sigma = np.eye(p) * 1e3
+        else:
+            self.mu, self.Sigma = mu0.copy(), Sigma0.copy()
 
-    def update(self, tau_meas, tau_hat, sigma_tau) -> tuple:
-        tau_meas = np.asarray(tau_meas); tau_hat = np.asarray(tau_hat)
-        active = np.abs(tau_meas) > self.tau_gate               # 门控：低力矩段不更新
-        if not active.any():
-            return self.rho(), self.g
-        u2 = ((tau_meas - tau_hat) / (sigma_tau + 1e-6)) ** 2
-        q_t = float(u2[active].sum())
-        self.win.append(q_t)
-        m = len(self.win); n_active = int(active.sum())
-        z = (np.mean(self.win) - n_active) / np.sqrt(2.0 * n_active / m)
-        self.g = max(0.0, self.g + z - self.k)
-        return self.rho(), self.g
+    def _features(self, v, w, theta):
+        v = np.asarray(v); w = np.asarray(w); theta = np.asarray(theta)
+        phi = np.array([v * np.abs(v), np.abs(v), v * theta, w * theta, np.sign(w) * theta])
+        return phi.flatten()
 
-    def rho(self) -> float:
-        return float(np.exp(-self.g / 2.0))
+    def update(self, tau_meas, tau_hat, v, w, theta, rho: float):
+        """rho 来自 auditor，标定 σ²_t"""
+        y = tau_meas - tau_hat
+        phi = self._features(v, w, theta)
+        sigma2 = self.sigma_base ** 2 / max(rho, 0.1)  # ρ 小 → σ 大，更新慢
+        
+        phi_mu = phi @ self.mu
+        S_phi = self.Sigma @ phi
+        denom = sigma2 + phi @ S_phi
+        
+        if denom < 1e-12:
+            return
+        
+        K = S_phi / denom  # 卡尔曼增益
+        self.mu = self.mu + K * (y - phi_mu)
+        self.Sigma = self.Sigma - np.outer(K, phi @ self.Sigma)
+        
+        # 数值稳定性：Sigma 需半正定
+        eig, vec = np.linalg.eigh(self.Sigma)
+        eig = np.maximum(eig, 1e-6)
+        self.Sigma = vec @ np.diag(eig) @ vec.T
 
-
-# ============================================================
-# 2. 延迟预算分配器（p99.9 + GPU 热节流感知）
-# ============================================================
-class LatencyBudget:
-    def __init__(self, n_grid_per_dim: int = 7, deadline: float = 0.020):
-        self.N, self.deadline = n_grid_per_dim, deadline
-        self.ell = deque(maxlen=200)                             # 每扩展延迟样本
-
-    def observe(self, seconds: float):
-        self.ell.append(seconds)
-
-    def allocate(self, gpu_temp: float):
-        base = np.quantile(self.ell, 0.999) if self.ell else 0.5e-3
-        derate = 1.0 + max(0.0, (gpu_temp - 75.0) / 25.0)        # 节流放大延迟
-        ell = base * derate
-        cfg = dict(N=self.N, T_MC=5 if ell < 0.4e-3 else 2)
-
-        def est(d):                                              # 深度 d ≈ (N²)^d / batch 次前向
-            return ((self.N ** 2) ** d) * ell / 64.0
-
-        D = 1
-        while D < 3 and 0.6 * self.deadline > est(D + 1):
-            D += 1
-        cfg.update(D=D, est=est, deadline=self.deadline)
-        return cfg
+    def predict_error_var(self, v, w, theta):
+        """返回 σ²_τ 中的摩擦不确定性贡献"""
+        phi = self._features(v, w, theta)
+        return (phi @ self.Sigma @ phi)
 
 
 # ============================================================
-# 3. 闭式热投影（任务级，O(H)）
+# 2. 行为树调度器
 # ============================================================
-def thermal_project(theta0, P_profile, C, kappa, theta_amb, dt=1.0):
-    """θ' = θ_amb + (θ − θ_amb − P/κ)e^{−Δt/τ_th} + P/κ；返回轨迹与峰值。"""
-    decay = np.exp(-dt * kappa / C)
-    th, traj = theta0.copy(), []
-    for P in P_profile:                                          # P: (n_joints,)
-        th = theta_amb + (th - theta_amb - P / kappa) * decay + P / kappa
-        traj.append(th.copy())
-    return np.array(traj), traj[-1]
-
-
-# ============================================================
-# 4. 截止期感知 anytime 规划器 L3''
-# ============================================================
-class AnytimePlanner:
-    def __init__(self, model: MCWorldModelV2, a_dim: int = 2, D_max: int = 3,
-                 N: int = 7, gamma: float = 0.99, sigma_th: float = 0.5,
-                 lam_theta: float = 0.1):
-        self.model, self.a_dim = model, a_dim
-        self.D_max, self.N = D_max, N
-        self.gamma, self.sigma_th, self.lam_theta = gamma, sigma_th, lam_theta
-        grid = torch.linspace(-1.0, 1.0, N)
-        self.A = torch.stack(torch.meshgrid([grid] * a_dim, indexing='ij'), -1).reshape(-1, a_dim)
-        self.nA = len(self.A)
-
-    def _reward(self, f, goal, a, tau, theta_lim_of):
-        r = -((f - goal) ** 2).sum(-1) - 0.01 * (a ** 2).sum(-1)
-        over = (tau.abs() - theta_lim_of).clamp(min=0)           # 热降额软惩罚
-        return r - self.lam_theta * (over ** 2).sum(-1)
-
-    def _expand(self, S, TH, cfg, ctx):
-        """B 个状态 × |𝒜| 动作 → 一个 batch 前向；返回可行掩码下的 (r, s', θ')。"""
-        B = S.shape[0]
-        A = self.A.repeat(B, 1)
-        S_b = S.repeat_interleave(self.nA, 0)
-        TH_b = TH.repeat_interleave(self.nA, 0)
-        f, s2, tau, th2, sig, tau_var = self.model.sample(
-            S_b, A, TH_b, ctx['theta_amb'], ctx['tau_motion'], ctx['JT'],
-            ctx['omega'], T=cfg['T_MC'])
-        r = self._reward(f, ctx['goal'], A, tau, ctx['tau_lim'](th2))
-        ok = (sig.squeeze(-1) < self.sigma_th) & \
-             (tau.abs() <= ctx['tau_lim'](th2) + 1e-6)           # σ 剪枝 + 逐步热约束
-        return A, r, s2, th2, ok.reshape(B, self.nA)
-
-    def plan(self, s, theta, ctx, budget: dict):
-        t0 = time.perf_counter()
-        S = torch.as_tensor(s, dtype=torch.float32).unsqueeze(0)
-        TH = torch.as_tensor(theta, dtype=torch.float32).unsqueeze(0)
-        A1, r1, s2_1, th2_1, ok1 = self._expand(S, TH, budget, ctx)   # 深度-1 保底
-        r1m = r1.reshape(self.nA).masked_fill(~ok1.reshape(self.nA), -1e9)
-        best_i = int(r1m.argmax())
-        best = (float(r1m[best_i]), 1, A1.reshape(self.nA, -1)[best_i].numpy())
-        # 迭代加深：预算内逐层展开（简化：贪心束展开，每层取 top-B 束）
-        beam = S, TH, float(r1m[best_i])
-        for d in range(2, budget['D'] + 1):
-            if time.perf_counter() - t0 + budget['est'](d) > budget['deadline']:
-                break                                             # 硬截止，保底已交付
-            _, r_d, s2_d, th2_d, ok_d = self._expand(beam[0], beam[1], budget, ctx)
-            tot = beam[2] + self.gamma ** (d - 1) * r_d.reshape(self.nA)
-            tot = tot.masked_fill(~ok_d.reshape(self.nA), -1e9)
-            i = int(tot.argmax())
-            if tot[i].item() > best[0]:
-                best = (float(tot[i]), d, self.A[i].numpy())
-            beam = (s2_d[i // self.nA:i // self.nA + 1], th2_d[i // self.nA:i // self.nA + 1], float(tot[i]))
-        budget.setdefault('measure', self.model)                  # 观测延迟回灌预算器
-        LatencyBudget_observe_hook = time.perf_counter() - t0
-        return best[2], best[1], LatencyBudget_observe_hook
+class BehaviorTreeController:
+    """动态闭环调度器"""
+    def __init__(self, theta_low: float = 0.5, theta_high: float = 1.5,
+                 theta_psi: float = 0.3, h: float = 4.0):
+        self.theta_low, self.theta_high = theta_low, theta_high
+        self.theta_psi = theta_psi
+        self.h = h
+        self.state = "IDLE"
+        
+    def step(self, g: float, rho: float, psi_score: float) -> str:
+        """根据审计结果返回行为状态"""
+        if g < self.theta_low:
+            self.state = "IDLE"
+        elif g > self.h:
+            if psi_score > self.theta_psi:
+                self.state = "ADAPT"
+            else:
+                self.state = "RECOVER"
+        else:
+            self.state = "PLAN"
+        return self.state
 
 
 # ============================================================
-# 5. 1kHz 无学习安全层（τ 传感 + 动量观测器）
+# 3. ADAPT-REACTIVE 堆栈
 # ============================================================
-class MomentumObserver:
-    """r = K_O(p − p̂)，ṗ̂ = τ_meas + C(q,q̇)ᵀq̇ − g(q) + r；无学习、无 GPU。"""
-    def __init__(self, M_fn, Cg_fn, n: int = 7, K_O: float = 50.0, thresh: float = 2.0):
-        self.M_fn, self.Cg_fn, self.K_O, self.thresh = M_fn, Cg_fn, K_O, thresh
-        self.p_hat = np.zeros(n)
-
-    def update(self, q, qd, tau_meas, dt=0.001):
-        p = self.M_fn(q) @ qd
-        pdot = tau_meas + self.Cg_fn(q, qd) + self.K_O * (p - self.p_hat)
-        self.p_hat = self.p_hat + dt * pdot
-        r = self.K_O * (p - self.p_hat)
-        return np.linalg.norm(r) > self.thresh, r
-
-
-# ============================================================
-# 6. 集成：TEMPOStack（PRISMStack 的增量改造）
-# ============================================================
-class TEMPOStack:
-    def __init__(self, world_models, planner, skill_lib, ood_v2, auditor,
-                 budget, observer, thermal_cfg, executor):
-        self.world_models = world_models          # {z_id: MCWorldModelV2}
-        self.planner, self.skill_lib = planner, skill_lib
-        self.ood_v2, self.auditor = ood_v2, auditor
-        self.budget, self.observer = budget, observer
-        self.thermal = thermal_cfg                # dict(C, kappa, theta_amb, crit)
+class ADAPTRStack:
+    """TEMPO-NAV + 行为树 + 在线学习 + Isaac Sim 蒸馏"""
+    def __init__(self, world_model, planner, skill_lib, auditor, budget,
+                 observer, thermal_cfg, executor, psi_extractor, bayes_calibrator):
+        self.world_model = world_model
+        self.planner = planner
+        self.skill_lib = skill_lib
+        self.auditor = auditor
+        self.budget = budget
+        self.observer = observer
+        self.thermal = thermal_cfg
         self.executor = executor
-        self.gpu_temp = 55.0
-        self.pi_distill = None                    # DAgger 蒸馏策略（离线训练后注入）
-
+        self.psi_extractor = psi_extractor
+        self.bayesian_calibrator = bayes_calibrator
+        self.behavior_ctrl = BehaviorTreeController()
+        
     def step(self, obs) -> dict:
-        state, theta = obs['s'], obs['theta']
-        tau_meas, q, qd = obs['tau_meas'], obs['q'], obs['qd']
-        # -- 1kHz 安全层（此处示意，实际独立线程）
-        if self.observer.update(q, qd, tau_meas)[0]:
+        # 1kHz 安全层
+        if self.observer.update(obs['q'], obs['qd'], obs['tau_meas'])[0]:
             return dict(mode='EMERGENCY', action=None, source='momentum_observer')
-        # -- 审计 + 四信号 OOD
-        z_id = self.skill_lib.select(state).pid
-        ctx = self._ctx(obs, z_id)
-        cfg = self.budget.allocate(self.gpu_temp)
-        t0 = time.perf_counter()
-        seq, depth, elapsed = self.planner.plan(state, theta, ctx, cfg)
-        self.budget.observe(elapsed)
-        w = self.world_models[z_id]
-        _, _, tau_hat, _, _, tau_var = w.sample(
-            torch.as_tensor(state, dtype=torch.float32).unsqueeze(0),
-            torch.zeros(1, 2), torch.as_tensor(theta, dtype=torch.float32).unsqueeze(0),
-            torch.tensor([self.thermal['theta_amb']]), ctx['tau_motion'], ctx['JT'],
-            obs['omega'], T=cfg['T_MC'])
-        sigma_tau = tau_var.sqrt().squeeze(0).numpy() + 0.05
-        rho_phy, g = self.auditor.update(tau_meas, tau_hat.squeeze(0).numpy(), sigma_tau)
-        rho = min(self.ood_v2.update(0.3, 0.01, obs['f_meas'], obs['f_pred']), rho_phy)
-        # -- 分派
-        if rho < 0.3:
-            scale = 0.3 if rho < 0.2 else 0.5
-            return dict(mode='imaginary', action=seq * scale, depth=depth,
-                        rho=rho, g=g, source='L3\'\'')
-        return dict(mode='distill', action=self.pi_distill(state, theta),
-                    rho=rho, source='pi_distill')
+        
+        # 读取状态
+        tau_meas = obs['tau_meas']
+        state, theta = obs['s'], obs['theta']
+        v, w, omega = obs['v'], obs['w'], obs['omega']
+        
+        # 采样世界模型得到 τ̂ 与 σ_τ
+        w_model = self.world_model  # MCWorldModel
+        f_hat, s_next, tau_hat, theta_next, sigma, tau_var = w_model.sample(
+            torch.as_tensor(state[None], dtype=torch.float32),
+            torch.zeros(1, 2),  # a=0，实际由规划器给出
+            torch.as_tensor(theta[None], dtype=torch.float32),
+            torch.tensor([self.thermal['theta_amb']]),
+            torch.as_tensor(obs['tau_motion'], dtype=torch.float32).unsqueeze(0),
+            torch.as_tensor(obs['JT'], dtype=torch.float32).unsqueeze(0),
+            obs['omega'][None] if np.ndim(obs['omega']) == 1 else obs['omega'][None, ...],
+            T=3
+        )
+        sigma_tau = np.sqrt(tau_var.squeeze(0).cpu().numpy()) + 0.05
+        tau_hat_np = tau_hat.squeeze(0).cpu().numpy()
+        
+        # 物理对账 + CUSUM
+        rho_phy, g = self.auditor.update(tau_meas, tau_hat_np, sigma_tau)
+        
+        # Isaac Sim 特征判决
+        e_tau = tau_meas - tau_hat_np
+        psi_score = float(np.max(self.psi_extractor(
+            torch.as_tensor(e_tau[None, None], dtype=torch.float32),
+            torch.as_tensor([v], dtype=torch.float32),
+            torch.as_tensor(theta[None], dtype=torch.float32)
+        )))
+        
+        # 行为树判决
+        b = self.behavior_ctrl.step(g, rho_phy, psi_score)
+        
+        # 在线学习
+        if b == "ADAPT":
+            self.bayesian_calibrator.update(
+                tau_meas, tau_hat_np, v, w, theta, rho_phy
+            )
+            # 更新 σ_τ（此处演示，实际需回传给 auditor）
+        
+        # 规划
+        if b == "PLAN":
+            ctx = self._build_ctx(obs, theta)
+            cfg = self.budget.allocate(self.thermal['gpu_temp'])
+            seq, depth, elapsed = self.planner.plan(state, theta, ctx, cfg)
+            self.budget.observe(elapsed)
+            mode = 'imaginary'
+            action = seq
+        elif b == "ADAPT":
+            # ADAPT 时仍用蒸馏策略，但 σ 已更新
+            mode = 'distill_adapt'
+            action = self.executor.pi_distill(state, theta)
+        else:  # RECOVER
+            mode = 'imaginary'
+            action = None  # 或保守缩放
+        
+        return dict(mode=mode, action=action, depth=depth if b=="PLAN" else 0,
+                    rho=rho_phy, g=g, behavior=b, psi=psi_score)
 
-    def _ctx(self, obs, z_id):
+    def _build_ctx(self, obs, theta):
         return dict(goal=torch.as_tensor(obs['goal'], dtype=torch.float32),
                     tau_motion=torch.as_tensor(obs['tau_motion'], dtype=torch.float32).unsqueeze(0),
                     JT=torch.as_tensor(obs['JT'], dtype=torch.float32).unsqueeze(0),
@@ -480,45 +375,126 @@ class TEMPOStack:
                     tau_lim=lambda th: torch.as_tensor(self.thermal['tau_lim_fn'](th.numpy())))
 ```
 
-## 4. 正确性论证（对应想法区三命题）
+## 6. 正确性论证
 
-**命题 1 证明梗概**：深度截断搜索在模型一致（A1）下满足 V*_d ≤ V*_{d+1}（更多分支只会增加可选集合）；σ 剪枝构成风险有界规划——被剪分支的值估计置信区间含不安全区域，保守化解释（A2）；热剪枝仅删「闭式投影到任务结束仍违反 τ_lim(θ)」的分支，由一阶 RC 单调解的单调性（P ≥ 0 时 θ 轨迹单调不减，越界不可恢复）保证被删分支不可行，故 admissible。deadline 内 depth-1 必然完成（一次批量前向，O(|𝒜|·T_MC)），故任何时刻返回值 ≥ V*_1 的贪心下界。∎
+**命题 1（增量贝叶斯收敛）**：在假设 φ_t 持久激励（ΦᵀΦ 可逆）且噪声高斯的下，OnlineBayesianFrictionCalibrator 收敛于 β*，且 Σ_t → 0；ρ_t 小于 1 时更新减缓，大与 1 时更新加速，实现「不确定性驱动学习」。
 
-**命题 2 证明梗概**：H₀ 下 u_t,j 近似 iid N(0,1)（校准定义），q_t = Σ_j u² ~ χ²(n)，E[q]=n、Var[q]=2n；M 窗均值由 CLT 得 z_t → N(0,1)。单边 CUSUM(δ/2, h) 的 ARL₀ 由 Siegmund 近似 ARL₀ ≈ (2/k²)·exp(−2kh+…)（数值反解 h 至目标值）；对均值偏移 δ 的检出时延 E[T] ≈ h/δ。尺度不变性：τ̂ 与 σ_τ 同时乘以 (1+ε) 时 q_t 不变（比值结构），故 σ 纯尺度漂移不触发；仅当「残差相对 σ 的真实增长」发生时 g 上升。∎
+**命题 2（行为树安全性）**：行为树的 RECOVER 节点在 g > h 且物理确认 τ_meas 突变时触发，保证「误判 → 实际碰撞」的安全兜底。ADAPT 节点只在 ψ_score 显著时激活，防止「噪声误判 → 频繁学习」的震荡。
 
-**命题 3 证明梗概**：θ̇ = (1/C)P − (κ/C)(θ − θ_amb) 关于 (1/C, κ/C) 线性，普通最小二乘在持久激励（Σ P Pᵀ 可逆）下一致；时间常数分钟级 ⇒ 自适应带宽远低于审计带宽（50Hz），二者频域分离，消除耦合震荡。∎
+**命题 3（Isaac Sim 蒸馏可解释性）**：ψ_φ 通过注意力机制聚焦「残差结构」，蒸馏目标 π_sim 由 Isaac Sim 的可微摩擦模型提供，保证 ψ_φ 在真实机器上捕获的残差模式与「摩擦漂移」高度相关，实现「误判根因定位」。
 
-## 5. BENCH v4 扩展
+## 7. 本轮最大的风险
 
-| 任务 | 类型 | 设计意图 | 指标 |
-|---|---|---|---|
-| T9-T11 | （第 25 轮保留） | σ 辨识 / 组合规划 / 想象回退 | OOD AUC, SR, 恢复率 |
-| **T12 持续按压 60s** | 热约束 | 验证热增广与闭式投影 | 完成率, 峰值 θ, 热中止率 |
-| **T13 计算热节流** | 实时性 | 人为限制 GPU 频率/注入延迟 | p99.9 控制延迟, SR 退化 |
-| **T14 漂移注入** | 审计 | 渐变刚度漂移（材质老化） | 检出时延, 虚警率 |
+**行为树的阈值 θ_low, θ_high, θ_ψ 需要在不同机器上重新标定，若标定不当，ADAPT 节点可能频繁激活导致「过度学习」或 RECOVER 节点误触发导致「过度保守」，破坏原有的 TEMPO-NAV 稳定性。**
+ XUEN_EOF
+<!-- IDEA:END -->
 
-## 6. 实验预期
+<!-- ARTIFACT:START -->
+# 第 27 轮产物 · ADAPT-REACTIVE 技术报告：行为树驱动的在线自适应力矩-热觉察
 
-| 配置 | SR (OOD) | T14 检出时延 | T12 热中止率 | p99.9 控制延迟 |
-|---|---|---|---|---|
-| 状态机 v1 | 0.15 | — | 28% | 1 ms（无想象） |
-| DMO-NAV v2 | 0.44 | N/A | 25% | — |
-| PRISM-NAV v3 | 0.63 | 12.4 s（σ-only，且随漂移变迟钝） | 21% | 118 ms（无保证） |
-| **TEMPO-NAV v4** | **0.71** | **1.8 s** | **4%** | **≤20 ms（硬保证）** |
+## 0. 结论：从「静态管控」到「行为树驱动的可解释反馈」
 
-消融设计：去对账（退回三信号）→ T14 检出回到 12s 且虚警 ×3；去 anytime（固定 D=3 穷举）→ T13 下 SR 崩至 0.2、超时率 17%；去热项 → T12 中止率回到 20%；去蒸馏 → 节拍退化、动态任务 SR −0.12。
+ADAPT-REACTIVE 在第 26 轮 TEMPO-NAV 基础上做**闭环增强**（不推倒）：
+- **μ_z v3**：世界模型增强 β 在线状态，σ_τ 由在线贝叶斯摩擦校准器动态更新
+- **OOD-GUARD v4**：四信号 + Isaac Sim 特征 ψ，实现「漂移定位」而非「漂移检测」
+- **L4''**：行为树调度器 B = {IDLE, PLAN, ADAPT, RECOVER}，动态闭环控制学习-规划-执行
+- **运行时 v3**：1kHz 安全 / 300Hz 行为树 / 500Hz 蒸馏 / 50Hz 想象
+- **BENCH v5**：新增 T15 行为树误判率 / T16 线上学习收敛
 
-## 7. 已知风险与缓解
+## 1. 符号表（完整更新）
 
-| 风险 | 缓解 |
+| 符号 | 含义 | 来源 |
+|---|---|---|
+| s, a, 𝒵, φ_z, π_z | 接触状态、动作、原语库、前置条件、执行策略 | 第 24/25/26 轮沿用 |
+| θ ∈ ℝⁿ⁺¹ | 关节绕组温度 + 环境温 | 第 26 轮沿用 |
+| τ_meas ∈ ℝⁿ | 关节力矩传感器测量（1kHz） | 第 26 轮沿用 |
+| τ̂ = τ_motion + Jᵀf̂ | 力矩头（物理锚定） | 第 26 轮沿用 |
+| β ∈ ℝᵖ | 在线贝叶斯摩擦参数 | **新增** |
+| φ = [v|v|, vθ, ωθ, sign(ω)θ] | 摩擦特征向量 | **新增** |
+| g_t, h, k | CUSUM 状态、门限、允差 | 第 26 轮沿用 |
+| ψ_φ(e_τ) | Isaac Sim 特征提取器 | **新增** |
+| b ∈ {IDLE, PLAN, ADAPT, RECOVER} | 行为树状态 | **新增** |
+| D, N, T_MC, deadline | 想象深度、网格、采样、截止期 | 第 26 轮沿用 |
+
+## 2. 核心算法
+
+### 2.1 在线贝叶斯摩擦校准
+
+```
+Algorithm: OnlineBayesianFrictionCalibrator
+Input: τ_meas, τ̂, v, w, θ, ρ (审计置信度)
+Output: β (摩擦参数)
+
+1. φ ← [v|v|, vθ, ωθ, sign(ω)θ]
+2. σ² ← σ_base² / max(ρ, 0.1)
+3. y ← τ_meas − τ̂
+4. K ← Σ·φ / (σ² + φᵀ·Σ·φ)
+5. μ ← μ + K·(y − φᵀ·μ)
+6. Σ ← Σ − K·φᵀ·Σ
+7. return μ, Σ
+```
+
+收敛性：在 φ_t 持久激励下，μ_t → μ* = (ΦᵀΦ)⁻¹Φᵀy，Σ_t → 0。
+
+### 2.2 行为树调度器
+
+```
+Algorithm: BehaviorTreeStep(g, ρ, ψ)
+Input: g_t (CUSUM), ρ (置信度), ψ (特征得分)
+Output: 行为状态 b
+
+if g < θ_low:
+    b ← IDLE
+elif g > h:
+    if ψ > θ_ψ:
+        b ← ADAPT  # 打开在线学习
+    else:
+        b ← RECOVER  # 强制降级
+else:
+    b ← PLAN
+return b
+```
+
+### 2.3 Isaac Sim 特征蒸馏
+
+```
+Algorithm: FrictionFeatureDistillation
+1. 从 Isaac Sim 采样 {(v, θ, τ_theory)}
+2. 对每个样本，求解 τ_sim = τ_motion + Jᵀf(μ_f(v,θ))
+3. 计算残差 e_τ = τ_sim − τ_theory
+4. 用注意力网络 ψ_φ(e_τ, v, θ) → ℝᵏ
+5. 约束：KL(π(·|ψ_φ) || π_sim(·|τ_theory)) + λ||ψ_φ − ψ_sim||²
+6. 上真实机器：ρ_phy = min(ρ_triple, exp(−g/σ))
+```
+
+## 3. 复杂度分析
+
+| 模块 | 复杂度 | 延迟 |
+|---|---|---|
+| 贝叶斯更新 | O(p²) p=5 | <0.1ms |
+| 行为树判决 | O(1) | <0.1ms |
+| ψ_φ 特征提取 | O(T·n_j) | <0.5ms |
+| 计划器 | O(|𝒜|^D·T_MC) | ≤20ms |
+
+## 4. 实验设计 BENCH v5
+
+| 任务 | 类型 | 设计意图 |
+|---|---|---|
+| T9-T11 | (第 26 轮保留) | OOD AUC, SR, 恢复率 |
+| T12-T14 | (第 26 轮保留) | 热约束、计算热节流、漂移注入 |
+| **T15 行为树误判率** | 可解释性 | ADAPT/RECOVER 触发的误判率 |
+| **T16 线上收敛** | 在线学习 | β 收敛至 ground truth 的轨迹 |
+
+## 5. 风险缓解
+
+| 风险 | 缓解方案 |
 |---|---|
-| 审计者自身也是模型：摩擦/逆动力学系统偏差污染 e_τ | 温变摩擦模型（μ_f(θ)）；审计门控（仅 |τ|>τ_gate 激励充分时更新 g）；回退迟滞（连续 2 窗触发才降级） |
-| 热自适应与漂移检测耦合震荡 | 频域分离：热参数带宽 ≪ 审计带宽（命题 3） |
-| T_MC=2 方差噪声 | 方差下限 clamp + 预算器动态升 T_MC |
-| 蒸馏分布偏移 | DAgger 聚合 + 安全层兜底（蒸馏输出仍过 τ_lim 饱和与动量观测器） |
-| θ 无法直测 | 绕组温从电流-外壳温双通道估计，误差并入 σ_τ |
+| 贝叶斯不收敛 | 检查 φ 持久激励；若长期无更新，回退到固定 μ_f |
+| 行为树误判 | 引入「历史一致性」检查：连续 3 帧 RECOVER 才实际降级 |
+| Isaac Sim 特征失效 | 特征蒸馏双模检验：ψ 与 CUSUM 两信号皆触发才 ADAPT |
 
-## 8. 本轮最大的风险
+## 6. 本轮最大的风险
 
-**「物理对账」依赖的逆动力学/摩擦模型本身也是模型——变速、变温下的摩擦系统偏差会污染 e_τ，审计可能把「动力学模型误差」误判为「世界模型漂移」，造成慢性误回退；且热参数自适应与漂移检测的耦合存在正反馈震荡风险。**
+**行为树的阈值 θ_low, θ_high, θ_ψ 需要在不同机器上重新标定，若标定不当，ADAPT 节点可能频繁激活导致「过度学习」或 RECOVER 节点误触发导致「过度保守」，破坏原有的 TEMPO-NAV 稳定性。**
+ XUEN_EOF
 <!-- ARTIFACT:END -->
