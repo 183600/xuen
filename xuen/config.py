@@ -531,6 +531,9 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    # 超时必须为有限的正数：负数/0 会让 runner 立即超时，inf/NaN 与
+    # 超出 float 范围的巨大整数会让 subprocess 超时或 isfinite 失效。
+    # 与 agent.timeout（_validate_agent_config + _is_finite_number）同口径。
     for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
                         ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
         if not _is_finite_number(value) or value <= 0:
