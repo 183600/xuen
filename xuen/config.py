@@ -391,13 +391,11 @@ def _is_finite_number(value: Any) -> bool:
 
 
 def _require_positive_seconds(name: str, value: Any) -> None:
-    """超时（秒）必须为有限的正数。
+    """超时必须为有限正数（秒）。
 
-    NaN/inf/非数值/超大整数/非正值都要拒绝：这些值传给子进程超时后会
-    立刻终止或形同永不超时，配置阶段报错比运行期静默出错更安全。
-    程序化构造 Config 绕过 load_config 时，值可能是字符串或超大整数，
-    math.isfinite 会抛 TypeError/OverflowError，必须先转成带字段名的
-    ValueError（与 _parse_float 的口径一致）。
+    负数/零会让「立刻超时」，NaN/无穷会让超时判断失效，超大整数（程序化
+    构造 Config 时可绕过 _parse_float）无法转换成浮点——都要在配置阶段
+    报出带字段名的 ValueError，不能等到运行时才出问题。
     """
     if not _is_finite_number(value) or value <= 0:
         raise ValueError(f"{name} 必须为有限的正数（秒）")
@@ -529,6 +527,10 @@ def _validate_rounds_config(cfg: Config) -> None:
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
     jcmd = cfg.rounds.judge_command
+    _require_positive_seconds("rounds.verify_timeout",
+                               cfg.rounds.verify_timeout)
+    _require_positive_seconds("rounds.judge_timeout",
+                               cfg.rounds.judge_timeout)
     if cfg.rounds.verify not in VERIFY_MODES:
         raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
                          f"收到: {cfg.rounds.verify!r}")
@@ -543,12 +545,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    # 超时同样要有限的正数：负数/0 会让测试套件或评审立刻被判超时，
-    # inf/NaN/超大整数则让超时形同失效（README 约定同为「有限正数」）
-    _require_positive_seconds("rounds.verify_timeout",
-                               cfg.rounds.verify_timeout)
-    _require_positive_seconds("rounds.judge_timeout",
-                               cfg.rounds.judge_timeout)
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
