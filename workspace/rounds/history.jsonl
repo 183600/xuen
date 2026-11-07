@@ -979,3 +979,5 @@
 {"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261106-201216-r1", "changed": ["idea"], "ts": "2026-11-07 05:45:02"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 06:21:57"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 06:59:12"}
+{"event": "candidate", "id": "20261107-072920-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 07:29:20"}
+{"event": "verdict", "id": "20261107-072920-r1", "round": 1, "verifier": "ai", "score": 9.0, "result": "adopted", "reason": "AI 评分 9（阈值 7）", "ts": "2026-11-07 07:32:00"}
