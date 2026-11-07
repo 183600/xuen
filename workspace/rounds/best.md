@@ -3,498 +3,330 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 27 轮（新灵感循环第 5 轮）· ADAPT-REACTIVE：行为树驱动的在线自适应力矩+热觉察
+# 第 26 轮 · 「低成本方案 × 群体智能 × SLAM」：SEM-MAP 升级 SLAM 四件套，群体智慧进训练与解码，所有决策上成本账
 
-## 0. 先给直觉：为何「行为树、在线学习、Isaac Sim」是对第 26 轮最大风险的精准回应？
+## 0. 轮次编号与信息核实（先严谨，再发散）
 
-第 26 轮最大风险：
-> **「物理对账」依赖的逆动力学/摩擦模型本身也是模型——变速、变温下的摩擦系统偏差会污染 e_τ，审计可能把「动力学模型误差」误判为「世界模型漂移」，造成慢性误回退**
+**编号说明**：状态文件已保留第 25 轮（上一轮，灵感词：语义地图/机器人竞赛/评测指标）记录；用户消息模板写"第 1 轮"。按本循环「优先深化与修剪、不推倒重来」的元规则，本轮记为**第 26 轮**，把三个新灵感词当作对第 25 轮清单的深化输入，而非新课题。
 
-三个灵感词各回答一层：
-- **行为树**回答「怎么做决策」：把「被审计的想象服务」作为行为树的节点，动态闭合「观察-规划-执行」的闭环，使漂移检测成为可解释的行为选择；
-- **在线学习**回答「怎么改模型」：把「物理对账」的判决转化为「标签」，用增量贝叶斯/递归最小二乘实时修正摩擦/热参数，避免模型误判；
-- **Isaac Sim**回答「怎么验证」：用可微渲染器/物理引擎从模拟中学习「可解释的偏差源」特征，跨模态蒸馏校准审计的“误报谬误”。
+**本轮检索核实（全部检索于 2026-11-07）**：
 
-核心灵魂：**把「被审计的想象」从「静态管控」变成「行为决策中的可解释反馈回路」**，用 Isaac Sim 提供的可解释偏差源特征校准器，行为树调度在线学习，从而真正「免疫」摩擦模型本身的误判。
+- **排行榜与运行记录**：两页均仍显示"Coming Soon"[R1/R2]。但页面文案给出两个上轮没有的承诺：①榜单将"支持按用户、模型、任务筛选"（意味着可做逐任务对手拆解）；②**运行记录详情将附"完整评测视频"**——榜单上线后，所有参赛模型（含我方）的真机运行录像公开可看，对手分析从"按分数猜"升级为"按视频看"（行动项 A3 升级）。
+- **提交流程**（challenges 页确认）：邮箱注册 → 提交模型 → 预约评测时段 → 平台自动连接真机 → 成功率与步骤分自动计算并实时上 leaderboard [R1a]。
+- **接口 README 重读（repo 共 2 commits，规则未变，本轮消化出三个新细节）**[R3]：
+  1. 评测相机键为 `cam_left_high / cam_right_high`（描述"Upper-left/Upper-right camera"），而数据集键为 `head_stereo_left / right` 且卡片明示 **rectified**——两套命名是否同一对物理相机、评测流是否同样立体校正，**未经官方文档确认**。这决定 SLAM-MAP 深度模块能否直接用 SGBM（新增行动项 A4，P0）。
+  2. N 台测试机器人的确切 N「由主办方另行公布」→ 部署拓扑必须 N 可配置。
+  3. **评测动作目录与数据集动作目录键名一致**：共享 {left/right_gripper[1], pivot[7]} + joint{left/right_arm[7]} 或 ee{left/right_ee_pose_gripper_base[6]}；数据集 action.pivot 恰为 7 维（vx,vy,angle_z,pivot_3..5,height）→ 训练可直接以评测动作键为监督目标，上轮未点破的"训练-评测动作空间对齐"补上（对 IP-2/IP-4 是利好）。
+  4. 评测观测目录**不含** state_torso / state_d435 / torso 系 ee pose / 腿部状态（腰含在 lower_body[15] 内）——数据集有 state_torso[6] 与 state_d435[6]（D435 位姿）但评测不下发。头部相机→基座外参在评测时不可直接读取，需自行估计（见 SLAM 四件套之一）。
+- **数据集**：HangCup 卡片确认 1.04k episodes / 194,564 行 / 8.8 GB；collection 32 项、更新于 2026-09-11 [R4]。
+- **文献锚点（arXiv API 逐一核实）**：Model soups [R5a]、Self-Consistency [R5b]、Kimera（动态场景图语义 SLAM）[R5c]、Kimera-Multi（分布式多机器人 SLAM）[R5d]、LiSTA（物体级变化检测）[R5e]、LT-mapper（终身建图）[R5f]、ConceptGraphs（开放词汇 3D 场景图）[R5g]。
+
+**结论**：无与上轮冲突的事实；F7（榜单未开）与 F8（手册未读）仍是最大信息缺口；「榜首 <30%」保持为未核实工作假设。
+
+## 1. 三个灵感词拼出的图（直觉先行）
+
+> **低成本方案**回答「钱从哪省、分从哪来」：竞赛里的钱是三个账户——算力（训练/推理/部署）、数据（自采≫官方=0≫合成≈0）、评测时段（真机预约，最稀缺）。头部都 <30% 的格局下，真正的杠杆不是"更大的模型"，而是"单位成本换最多分的动作"。上轮清单其实已埋了三个低成本动作（伪标注官方数据、视频回放本地评测、量化部署），但没被当作一条路线来管理——本轮收拢为 **IP-10 COST-LADDER：给每个 IP 强制记成本账（三账户+边际分预期），并立"拒绝清单"（不训底座、不买真机、不自采大数据）**。
+> **群体智能**回答「一份算力怎么当三份用」：①训练侧——多种子/多数据序的 LoRA population → model soup 合并 → 蒸馏回单模型（合规：最终交付一个模型；锚点 Model soups）；②推理侧——单模型采样 K 个动作 chunk，离散目标层投票（抓哪个物体/放哪个 slot）+ 连续层择优，LLM self-consistency 的操作版（锚点 Self-Consistency）；③系统侧——官方评测协议本身就是"群体基础设施"：N 台机器人并行、N 个端口、共享后端，结构上就是 Kimera-Multi 式分布式多机器人系统。**合规边界画清：episode 运行中跨端口共享信息=违反状态隔离精神，赛后跨端口失败签名聚类=正当群体分析。群体智慧用于赛后，不用于赛中。**
+> **SLAM**回答「上轮的 SEM-MAP 缺什么」：上轮画的"物体级语义工作区地图"用 SLAM 的眼光看只是个"物体清单"，缺四样成熟件：**在线外参估计**（评测不下发头部相机外参，躯干高度/腰关节一动外参就变——用数据集 state_torso 监督学一个 lower_body→头位姿前向模型）、**重定位**（人为干扰后跟踪丢失：外观描述子×位置先验×马氏距离做匈牙利重关联——长期建图/变化检测的标准问题，锚点 LiSTA/LT-mapper）、**腕-头闭环**（腕部近景经 ee 外参配准回头部地图——loop closure 的桌面版，顺便支撑 IP-6"先看后抓"）、**关键帧+协方差**（全量感知只在关键帧执行=省算力，与低成本联动；slot 带协方差，双目深度误差∝距离²/基线，门控匹配用马氏距离）。
+
+核心类比（本轮灵魂）：**低成本方案是"用最少的复习时间拿最多的分"；群体智能是"一个人刷三遍题不如三个分身各刷一遍再对答案"；SLAM 是"草稿纸（SEM-MAP）不仅要记物体在哪，还要在监考老师把笔挪走之后，重新找到笔在哪"。**
 
 一句话押注：
-> **本轮给 TEMPO-NAV 的 μ_z 增广「行为树闭环 + 在线参数自适应 + Isaac Sim 跨模态校准」：行为树节点 B = {IDLE, PLAN, ADAPT, RECOVER}，在线学习用增量贝叶斯更新摩擦系数 μ_f(θ_v, θ_t)，Isaac Sim 提供「摩擦-力矩-温度」的可解释特征 ψ ∈ ℝᵏ，蒸馏到审计判决 ρ，消除「动力学误差误判漂移」的根本症源。**
 
-## 1. 研究日志：从「静态管控」到「行为树驱动的可解释反馈」
+> **本轮把 IP-1 从 SEM-MAP 升级为 SLAM-MAP（在线外参估计+重定位+腕-头闭环+关键帧协方差四件套），新增 IP-9 SWARM-DECODE（训练侧 soup/蒸馏+推理侧自洽投票）与 IP-10 COST-LADDER（三账户成本纪律+拒绝清单）；最值得押注的单点是 SLAM-MAP 的「重定位」——它是五类泛化场景中「人为干扰」的唯一结构性解法，且组件全部开源、成本近零。**
 
-### 1.1 第 26 轮的核心失效模式
+## 2. 研究日志：三词各自戳中哪个瓶颈（承接第 25 轮四层分解）
 
-| 失效模式 | 说明 |
-|---|---|
-| 动力学误差误判 | 摩擦模型 μ_f(v, θ) 受速度/温度影响，τ̂ 偏差污染 e_τ → 虚警 g 增长 |
-| 审计不解释 | CUSUM 只给出「是/否」判决，不说明「哪儿对账失效」 |
-| 参数僵化 | σ_τ、τ_lim(θ) 固定不随实际摩擦演化自适应 |
-
-### 1.2 三个灵感词的技术化实现
-
-#### 行为树：动态闭环调度
-- B(q, τ_meas, e_τ, g) → 动作：IDLE→PLAN→ADAPT→RECOVER
-- ADAPT 节点激活时，打开「在线学习」子进程
-- RECOVER 节点在 g > h 且 τ 传感确认「实际碰撞」时触发，跳过想象直接阻抗
-
-#### 在线学习：增量贝叶斯摩擦校准
-- 状态：β = {μ_f, b_f, C_f, κ_f}（滚动摩擦截距、斜率、功率系数、热耦合）
-- 观测：y_t = τ_meas − τ_motion − Jᵀf̂ + τ_recon（残差）
-- 似然：y_t | β ~ N(βᵀφ_t, σ²)（线性-高斯）
-- 更新：β_{t+1} = β_t + K_t(y_t − βᵀφ_t)，K_t = P_tφ_t/(σ² + φᵀ_t P_t φ_t)
-- 超参数 σ 由「审计判决 ρ」的置信度反向标定：ρ 小 → 增大 σ，减缓更新
-
-#### Isaac Sim：可解释偏差特征蒸馏
-- 从 Isaac Sim 中采样：{v, θ, μ_f, J, τ_theory, τ_sim, e_τ_sim}
-- 特征编码器 ψ_φ(e_τ) → ℝᵏ：通过注意力机捕获「哪个关节、哪个方向」贡献大
-- 蒸馏损失：L_distill = KL(π_sim || π_auditor) + ||ψ_φ − ψ_pred||²
-- 目标：让ψ_φ 在 Isaac Sim 上有经验归一化，上真实机器上 ψ_φ 仍可靠
-
-### 1.3 增量演进：TEMPO-NAV+ADAPT
-
-| 层 | TEMPO-NAV v4 | ADAPT-REACTIVE | 关系 |
+| 瓶颈层（第 25 轮） | 低成本方案的戳点 | 群体智能的戳点 | SLAM 的戳点 |
 |---|---|---|---|
-| 世界模型 | μ_z(s,a,θ)→(r,s',θ',τ̂,σ) | μ_z(s,a,θ,β)→(r,s',θ',τ̂,σ)：**+ 在线β** | **增广** |
-| OOD 检测 | χ²+CUSUM+g_t | + ψ_θ(e_τ)特征 + 贝叶斯校准 | **解耦** |
-| 规划 | L3'' anytime | L4''：行为树调度 + ADAPT 节点 | **闭环化** |
-| 学习 | 离线 DAgger 蒸馏 | **在线增量贝叶斯 + Isaac Sim蒸馏** | **激活** |
-| 运行时 | 1kHz/500Hz/50Hz | + 300Hz 行为树控制器 | **协同** |
+| 数据层（每任务仅 1k、无失败恢复数据） | 伪标注=零成本把 32k 演示变成物体级标注；合成扰动替代真机补采 | population 训练增加数据视角多样性 ≈ 免费扩充分布 | 重定位让"失败后恢复"变成地图问题而非模仿问题 |
+| 表征层（无深度、结构扰动靠隐式学习） | SGBM/轻量立体匹配替代买深度相机（接口本来也不给） | 多分支投票对冲单次感知错误 | **四件套全打这一层** |
+| 目标函数层（训练-评测错位） | 本地评测机=零真机成本的对齐闭环 | 进度预测器给投票当裁判（IP-2 联动） | — |
+| 工程层（N 端口/延迟/可信度） | 量化+蒸馏+关键帧降频=延迟减半 | N 端口=现成群体基础设施；容错故障转移 | 关键帧降频省感知算力 |
 
-## 2. 直觉深化：为什么「行为树+在线学习+Isaac Sim」能破局？
+观察：三个词都几乎不碰"更大的模型"——全部是**结构、纪律与复用**层面的杠杆。与第 25 轮判断一致（表征层是唯一结构性抓手），且低成本的约束反而逼出更好的工程。
 
-### 2.1 行为树如何「解释」审计？
+## 3. 灵感词交点（组合即创新）
 
-```
-                    ┌─────────────┐
-                    │ OBSERVER    │
-                    │ (g, e_τ)    │
-                    └─────┬───────┘
-                          │
-                    ┌─────▼───────┐
-                    │ BEHAVIOR    │
-                    │ TREE        │
-                    ├─────────────┤
-                    │ IDLE: g≈0   │
-                    │ PLAN: g>0   │  
-                    │ ADAPT:      │ ← 打开在线学习
-                    │ RECOVER:    │ ← 强制降级
-                    └─────────────┘
-```
+- **低成本 × 群体智能 = 群体探针**：本地回放评测机上并行评估 K 个 checkpoint 变体，预算约束下晋级淘汰（轻量 PBT）。评测时段一分不花，先把 model soup 的成分选出来。
+- **群体智能 × SLAM = 分布式地图服务**：N 端口共享后端按 Kimera-Multi 的鲁棒分布式估计思路做容错（端口崩溃→请求转移副本）；赛后跨端口失败签名聚类（任务×chunk 步×扰动类型）→ 定向修复。
+- **SLAM × 低成本 = 关键帧降频感知**：全量感知只在 chunk 首步+关键帧执行，中间步只跑轻量跟踪校验——感知延迟预算省一半。
+- **三词交点**：SLAM-MAP（省算力）+ SWARM-DECODE（batch 并行白嫖投票）+ N 端口共享后端（本来就是群体结构）——三者叠加不新增任何稀缺资源消耗。
 
-- 当 g_t 持续上升时，行为树不再「硬拉低 σ」，而是「查询：是摩擦漂移，还是模型漂移？」
-- ADAPT 节点：激活增量贝叶斯，用最近 M=50 窗的 e_τ 重新拟合 β，**改变 σ 的来源**
+## 4. 与第 25 轮清单的深化/修剪决策
 
-### 2.2 在线学习如何「免疫」摩擦误差？
+| 清单项 | 本轮处置 | 依据 |
+|---|---|---|
+| IP-1 SEM-MAP | **深化 → SLAM-MAP v2**（+外参估计/重定位/腕头闭环/关键帧协方差） | 灵感词 SLAM；接口外参缺口实证（F12） |
+| IP-2 SCORE-ALIGN | 微修订：进度预测器兼任 SWARM-DECODE 投票裁判 | 灵感词 群体智能 |
+| IP-3 LOCAL-EVAL | 深化：明确"零真机迭代闭环"+群体探针（并行 checkpoint 评估） | 低成本 × 群体 |
+| IP-4 SUBMISSION-OPS | 深化：+容错故障转移（Kimera-Multi 类比）+赛后遥测聚合 | 群体智能 |
+| IP-5 DUAL-HEAD | 冻结维持 P2（合规未明，不投入；其监督提取与 IP-1 伪标注共用资产） | F8 未解 |
+| IP-6 UNSEEN-GRASP | 并入 IP-1 腕-头闭环（"先看后抓"=抓取前触发的近景重定位），不再单独展开 | 去重 |
+| IP-7 DISTURB-AUG | 维持；新增产出"干扰前后图像对"作重定位训练集 | 与 IP-1 v2 联动 |
+| IP-8 STEP-EFF | 维持 P1（待手册确认步骤分公式） | F8 未解 |
+| — | **新增 IP-9 SWARM-DECODE** | 群体智能 |
+| — | **新增 IP-10 COST-LADDER** | 低成本方案 |
 
-| 传统做法 | ADAPT 的做法 |
-|---|---|
-| 固定 μ_f，g 大则认为模型差 | 把 g 当作「σ 的信号」，同步更新 μ_f |
-| 虚假漂移 → 过度保守 | 真实摩擦漂移 → β 自适应，σ 稳定 |
-| 需要重新标定 | 持续闭环，不离线 |
+无删除项：v1 尚新，本轮检索未产生否定证据；合并 IP-6 属去重非删除。
 
-关键等式：**σ²_τ = σ²_MC + Jᵀ·Σ_f·J + (∂τ̂/∂β·P_β·∂τ̂/∂β)ᵀ**
+## 5. 风险与本轮最大风险
 
-ADAPT 让 P_β 在线更新，σ²_τ 自动适应「**这一刻的摩擦不确定性**」
+**最大风险：评测相机映射与校正状态未确认（F9）。若 cam_left_high/right_high 不是那对 rectified 立体相机（或评测流未做校正），SLAM-MAP 的深度模块、外参估计、重定位全链路要换方案（单目+平面先验，精度与延迟都劣化）。** 缓解：A4 提为最高优先（拿到评测访问后第一帧数据就验证极线约束）；预研单目备份路径——桌面操作里"物体都在桌面上"是强先验，已知桌面高度即可单目反投影 3D。
 
-### 2.3 Isaac Sim 为什么「不偏」？
+其余新增风险：①self-consistency 的 K 路采样若造成返回动作统计双峰，可能触碰"动作统计规律"可信度条款（缓解：投票只在离散目标层，连续动作单分支输出）；②外参前向模型在躯干大幅运动时漂移（缓解：pivot.height 命令值做有效域门控+协方差放大降权）；③soup/蒸馏在 32 任务小数据上负迁移（缓解：E8 本地探针先行，无增益即弃）。
 
-- Isaac Sim 提供「**可微摩擦模型**」的 ground truth β_sim
-- 特征 ψ_φ 训练时对齐 Isaac Sim 的 β_sim → τ_sim 映射，形成「**摩擦-力矩-温度**」的可解释层
-- 上真实机器，ψ_φ 捕获的仍是「残差结构」，但不再依赖固定 μ_f，**用蒸馏知识校准 β 的先验**
+## 6. 下一轮展望（灵感未知）
 
-## 3. 形式化定义
-
-### 3.1 行为树调度器
-- 状态变量：b ∈ {IDLE, PLAN, ADAPT, RECOVER}
-- 判决规则：
-  - g_t < θ_low → b = IDLE
-  - g_t ∈ [θ_low, θ_high] → b = PLAN
-  - g_t > θ_high 且 ψ_φ(e_τ) > τ_ψ → b = ADAPT
-  - g_t > h 且 τ_meas 突变 → b = RECOVER
-
-### 3.2 在线贝叶斯摩擦更新
-- 参数向量：β_t ∈ ℝᵖ（摩擦系数 + 功率-热耦合）
-- 特征：φ_t = [v, |v|, v·θ, ω·θ, sign(ω)·θ] ∈ ℝᵖ
-- 观测：y_t = τ_meas,t − τ_motion,t − Jᵀf̂_t
-- 似然模型：y_t | β_t ~ 𝒩(φᵀ_t β_t, σ²_t)
-- 先验/后验：
-  - β_t | D_{t-1} ~ 𝒩(μ_{t-1}, Σ_{t-1})
-  - μ_t = μ_{t-1} + K_t(y_t − φᵀ_t μ_{t-1})
-  - Σ_t = Σ_{t-1} − K_t φᵀ_t Σ_{t-1}
-  - K_t = Σ_{t-1} φ_t/(σ²_t + φᵀ_t Σ_{t-1} φ_t)
-- σ²_t 由 ρ_t 标定：σ²_t = σ²_base / ρ_t
-
-### 3.3 Isaac Sim 特征蒸馏
-- 从 Isaac Sim 采样 N_s 个 (v, θ, μ_f, τ_theory) 三元组
-- 训练 ψ_φ: ℝⁿ → ℝᵏ（注意力特征编码器）
-- 蒸馏损失：ℒ = 𝔼_{v,θ} [ KL( π(·|ψ_φ,τ_theory) || π_sim(·|τ_theory) ) + λ||ψ_φ − ψ_sim||² ]
-- 目标 π_ψ: 给定 τ，预测「哪些关节的残差最可疑」
-- 上真实机器：π_ψ(e_τ) 与 CUSUM g 形成「**双信号**」：g 量化漂移大小，π_ψ 定位漂移根因
-
-## 4. 算法完整流程
-
-```
-# 0. 初始：TEMPO-NAV 的所有模块，外加
-#    - Isaac Sim 预训练的 ψ_φ
-#    - 贝叶斯摩擦先验 β_0 ~ 𝒩(μ_0, Σ_0)
-
-# 1kHz 安全层（沿用）
-every 1ms:
-    a_sat = tau_limit_saturation(a_cmd, τ_lim(θ))
-    impedance_control(a_sat)
-
-# 300Hz 行为树控制器（新增）
-every 3.33ms:
-    # 读取审计状态
-    _, _, tau_var = μ_z.sample(...)
-    sigma_tau = sqrt(tau_var) + 0.05
-    rho_phy, g = auditor.update(τ_meas, τ̂, sigma_tau)
-    
-    # 行为树判决
-    b = behavior_tree(g, ρ_phy, τ_meas)
-    
-    if b == IDLE:
-        skip_learning()
-    elif b == ADAPT:
-        # 在线贝叶斯更新
-        β ← bayesian_update(τ_meas, τ̂, φ(状态), σ²_base/ρ_phy)
-        σ_τ ← recompute_with_updated_β(β)
-    elif b == RECOVER:
-        trigger_emergency_fall_back()
-
-# 500Hz 蒸馏层（沿用）
-every 2ms:
-    a = π_distill(s, θ, β)
-
-# 50Hz 想象层（沿用）
-every 20ms:
-    cfg = budget.allocate(...)
-    seq, depth = plan_anytime(s, θ, β, cfg)
-    # ADAPT 判决更新 σ τ_lim
-    sigma_tau_adj = auditor.rho() < 0.5 ? σ_τ * 1.5 : σ_τ
-```
-
-## 5. Python 核心实现
-
-```python
-import torch
-import torch.nn as nn
-import numpy as np
-from collections import deque
-from scipy.linalg import cho_solve, cho_factor
-
-# ============================================================
-# 0. Isaac Sim 特征编码器 ψ_φ（可微渲染特征）
-# ============================================================
-class FrictionFeatureExtractor(nn.Module):
-    """从力矩残差提取「可解释偏差源」特征。
-       自 Isaac Sim 预训练得到，上真实机器蒸馏使用。"""
-    def __init__(self, n_joints: int = 7, feat_dim: int = 16):
-        super().__init__()
-        self.attn = nn.MultiheadAttention(n_joints, num_heads=2, dropout=0.1)
-        self.mlp = nn.Sequential(
-            nn.Linear(n_joints * 3, 64), nn.ReLU(),
-            nn.Linear(64, feat_dim), nn.Tanh()
-        )
-        
-    def forward(self, e_tau, v, theta):
-        # e_tau: (T, n_joints), v: (T,), theta: (T, n_joints)
-        B, T, n = (*e_tau.shape[:-1], e_tau.shape[-1]) if e_tau.dim() == 3 else (1, *e_tau.shape)
-        e_tau = e_tau.view(B, T, n).permute(1, 0, 2)  # T, B, n
-        keys = torch.stack([e_tau, e_tau * v.unsqueeze(-1), e_tau * theta], -1).flatten(-2, -1)
-        attn_out, _ = self.attn(keys, keys, keys)
-        return self.mlp(attn_out.permute(1, 0, 2).flatten(1, 2))
-
-
-# ============================================================
-# 1. 在线贝叶斯摩擦/热参数更新器
-# ============================================================
-class OnlineBayesianFrictionCalibrator:
-    """增量贝叶斯线性回归：y = φᵀβ + ε
-       y = τ_meas - τ_motion - Jᵀf̂
-       φ = [v, |v|, v·θ, ω·θ, sign(ω)·θ]"""
-    def __init__(self, p: int = 5, sigma_base: float = 0.1, 
-                 mu0: np.ndarray = None, Sigma0: np.ndarray = None):
-        self.p = p
-        self.sigma_base = sigma_base
-        if mu0 is None:
-            self.mu = np.zeros(p)
-            self.Sigma = np.eye(p) * 1e3
-        else:
-            self.mu, self.Sigma = mu0.copy(), Sigma0.copy()
-
-    def _features(self, v, w, theta):
-        v = np.asarray(v); w = np.asarray(w); theta = np.asarray(theta)
-        phi = np.array([v * np.abs(v), np.abs(v), v * theta, w * theta, np.sign(w) * theta])
-        return phi.flatten()
-
-    def update(self, tau_meas, tau_hat, v, w, theta, rho: float):
-        """rho 来自 auditor，标定 σ²_t"""
-        y = tau_meas - tau_hat
-        phi = self._features(v, w, theta)
-        sigma2 = self.sigma_base ** 2 / max(rho, 0.1)  # ρ 小 → σ 大，更新慢
-        
-        phi_mu = phi @ self.mu
-        S_phi = self.Sigma @ phi
-        denom = sigma2 + phi @ S_phi
-        
-        if denom < 1e-12:
-            return
-        
-        K = S_phi / denom  # 卡尔曼增益
-        self.mu = self.mu + K * (y - phi_mu)
-        self.Sigma = self.Sigma - np.outer(K, phi @ self.Sigma)
-        
-        # 数值稳定性：Sigma 需半正定
-        eig, vec = np.linalg.eigh(self.Sigma)
-        eig = np.maximum(eig, 1e-6)
-        self.Sigma = vec @ np.diag(eig) @ vec.T
-
-    def predict_error_var(self, v, w, theta):
-        """返回 σ²_τ 中的摩擦不确定性贡献"""
-        phi = self._features(v, w, theta)
-        return (phi @ self.Sigma @ phi)
-
-
-# ============================================================
-# 2. 行为树调度器
-# ============================================================
-class BehaviorTreeController:
-    """动态闭环调度器"""
-    def __init__(self, theta_low: float = 0.5, theta_high: float = 1.5,
-                 theta_psi: float = 0.3, h: float = 4.0):
-        self.theta_low, self.theta_high = theta_low, theta_high
-        self.theta_psi = theta_psi
-        self.h = h
-        self.state = "IDLE"
-        
-    def step(self, g: float, rho: float, psi_score: float) -> str:
-        """根据审计结果返回行为状态"""
-        if g < self.theta_low:
-            self.state = "IDLE"
-        elif g > self.h:
-            if psi_score > self.theta_psi:
-                self.state = "ADAPT"
-            else:
-                self.state = "RECOVER"
-        else:
-            self.state = "PLAN"
-        return self.state
-
-
-# ============================================================
-# 3. ADAPT-REACTIVE 堆栈
-# ============================================================
-class ADAPTRStack:
-    """TEMPO-NAV + 行为树 + 在线学习 + Isaac Sim 蒸馏"""
-    def __init__(self, world_model, planner, skill_lib, auditor, budget,
-                 observer, thermal_cfg, executor, psi_extractor, bayes_calibrator):
-        self.world_model = world_model
-        self.planner = planner
-        self.skill_lib = skill_lib
-        self.auditor = auditor
-        self.budget = budget
-        self.observer = observer
-        self.thermal = thermal_cfg
-        self.executor = executor
-        self.psi_extractor = psi_extractor
-        self.bayesian_calibrator = bayes_calibrator
-        self.behavior_ctrl = BehaviorTreeController()
-        
-    def step(self, obs) -> dict:
-        # 1kHz 安全层
-        if self.observer.update(obs['q'], obs['qd'], obs['tau_meas'])[0]:
-            return dict(mode='EMERGENCY', action=None, source='momentum_observer')
-        
-        # 读取状态
-        tau_meas = obs['tau_meas']
-        state, theta = obs['s'], obs['theta']
-        v, w, omega = obs['v'], obs['w'], obs['omega']
-        
-        # 采样世界模型得到 τ̂ 与 σ_τ
-        w_model = self.world_model  # MCWorldModel
-        f_hat, s_next, tau_hat, theta_next, sigma, tau_var = w_model.sample(
-            torch.as_tensor(state[None], dtype=torch.float32),
-            torch.zeros(1, 2),  # a=0，实际由规划器给出
-            torch.as_tensor(theta[None], dtype=torch.float32),
-            torch.tensor([self.thermal['theta_amb']]),
-            torch.as_tensor(obs['tau_motion'], dtype=torch.float32).unsqueeze(0),
-            torch.as_tensor(obs['JT'], dtype=torch.float32).unsqueeze(0),
-            obs['omega'][None] if np.ndim(obs['omega']) == 1 else obs['omega'][None, ...],
-            T=3
-        )
-        sigma_tau = np.sqrt(tau_var.squeeze(0).cpu().numpy()) + 0.05
-        tau_hat_np = tau_hat.squeeze(0).cpu().numpy()
-        
-        # 物理对账 + CUSUM
-        rho_phy, g = self.auditor.update(tau_meas, tau_hat_np, sigma_tau)
-        
-        # Isaac Sim 特征判决
-        e_tau = tau_meas - tau_hat_np
-        psi_score = float(np.max(self.psi_extractor(
-            torch.as_tensor(e_tau[None, None], dtype=torch.float32),
-            torch.as_tensor([v], dtype=torch.float32),
-            torch.as_tensor(theta[None], dtype=torch.float32)
-        )))
-        
-        # 行为树判决
-        b = self.behavior_ctrl.step(g, rho_phy, psi_score)
-        
-        # 在线学习
-        if b == "ADAPT":
-            self.bayesian_calibrator.update(
-                tau_meas, tau_hat_np, v, w, theta, rho_phy
-            )
-            # 更新 σ_τ（此处演示，实际需回传给 auditor）
-        
-        # 规划
-        if b == "PLAN":
-            ctx = self._build_ctx(obs, theta)
-            cfg = self.budget.allocate(self.thermal['gpu_temp'])
-            seq, depth, elapsed = self.planner.plan(state, theta, ctx, cfg)
-            self.budget.observe(elapsed)
-            mode = 'imaginary'
-            action = seq
-        elif b == "ADAPT":
-            # ADAPT 时仍用蒸馏策略，但 σ 已更新
-            mode = 'distill_adapt'
-            action = self.executor.pi_distill(state, theta)
-        else:  # RECOVER
-            mode = 'imaginary'
-            action = None  # 或保守缩放
-        
-        return dict(mode=mode, action=action, depth=depth if b=="PLAN" else 0,
-                    rho=rho_phy, g=g, behavior=b, psi=psi_score)
-
-    def _build_ctx(self, obs, theta):
-        return dict(goal=torch.as_tensor(obs['goal'], dtype=torch.float32),
-                    tau_motion=torch.as_tensor(obs['tau_motion'], dtype=torch.float32).unsqueeze(0),
-                    JT=torch.as_tensor(obs['JT'], dtype=torch.float32).unsqueeze(0),
-                    omega=torch.as_tensor(obs['omega'], dtype=torch.float32).unsqueeze(0),
-                    theta_amb=torch.tensor([self.thermal['theta_amb']]),
-                    tau_lim=lambda th: torch.as_tensor(self.thermal['tau_lim_fn'](th.numpy())))
-```
-
-## 6. 正确性论证
-
-**命题 1（增量贝叶斯收敛）**：在假设 φ_t 持久激励（ΦᵀΦ 可逆）且噪声高斯的下，OnlineBayesianFrictionCalibrator 收敛于 β*，且 Σ_t → 0；ρ_t 小于 1 时更新减缓，大与 1 时更新加速，实现「不确定性驱动学习」。
-
-**命题 2（行为树安全性）**：行为树的 RECOVER 节点在 g > h 且物理确认 τ_meas 突变时触发，保证「误判 → 实际碰撞」的安全兜底。ADAPT 节点只在 ψ_score 显著时激活，防止「噪声误判 → 频繁学习」的震荡。
-
-**命题 3（Isaac Sim 蒸馏可解释性）**：ψ_φ 通过注意力机制聚焦「残差结构」，蒸馏目标 π_sim 由 Isaac Sim 的可微摩擦模型提供，保证 ψ_φ 在真实机器上捕获的残差模式与「摩擦漂移」高度相关，实现「误判根因定位」。
-
-## 7. 本轮最大的风险
-
-**行为树的阈值 θ_low, θ_high, θ_ψ 需要在不同机器上重新标定，若标定不当，ADAPT 节点可能频繁激活导致「过度学习」或 RECOVER 节点误触发导致「过度保守」，破坏原有的 TEMPO-NAV 稳定性。**
- XUEN_EOF
+- 若灵感指向「世界模型/想象」→ SLAM-MAP 的 slot 协方差天然适合做不确定性传播的物体级前向想象，服务 chunk 间重规划预演与人为干扰预测性避让；
+- 若灵感指向「人因/注意力」→ 深化"人为干扰"的干扰源建模（人手检测→意图预测→让位策略），与重定位状态机串成完整干扰响应链；
+- 若 F7/F8 解除（榜单或手册落地）→ 立即触发清单强制修订：对手运行视频逐任务拆解 + 得分点官方定义回填 IP-2。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 27 轮产物 · ADAPT-REACTIVE 技术报告：行为树驱动的在线自适应力矩-热觉察
+# 第 26 轮产物 · 创新点清单 v2：SLAM-MAP 四件套 / SWARM-DECODE / COST-LADDER
 
-## 0. 结论：从「静态管控」到「行为树驱动的可解释反馈」
+## 0. 结论
 
-ADAPT-REACTIVE 在第 26 轮 TEMPO-NAV 基础上做**闭环增强**（不推倒）：
-- **μ_z v3**：世界模型增强 β 在线状态，σ_τ 由在线贝叶斯摩擦校准器动态更新
-- **OOD-GUARD v4**：四信号 + Isaac Sim 特征 ψ，实现「漂移定位」而非「漂移检测」
-- **L4''**：行为树调度器 B = {IDLE, PLAN, ADAPT, RECOVER}，动态闭环控制学习-规划-执行
-- **运行时 v3**：1kHz 安全 / 300Hz 行为树 / 500Hz 蒸馏 / 50Hz 想象
-- **BENCH v5**：新增 T15 行为树误判率 / T16 线上学习收敛
+第 25 轮清单 v1（8 项）本轮完成一次「深化 + 新增 + 去重」迭代，产出 v2（10 项）：
 
-## 1. 符号表（完整更新）
+- **IP-1 升级 SEM-MAP → SLAM-MAP（P0）**：物体级语义工作区地图补齐 SLAM 四件套——在线外参估计、干扰后重定位、腕-头闭环、关键帧+协方差。每件有开源组件与文献锚点，直接对应五类泛化场景中最难的三类（位置变化/未见物品/人为干扰）。
+- **IP-9 新增 SWARM-DECODE（P1）**：训练侧 LoRA population→model soup→蒸馏（合规单模型）；推理侧离散目标投票+连续动作择优的自洽解码；评测侧 N 端口拓扑的容错与赛后群体分析。
+- **IP-10 新增 COST-LADDER（P0，纪律性）**：算力/数据/评测时段三账户记账，每个 IP 强制标注边际分预期；拒绝清单（不训底座、不买真机、不自采大数据）。
+- 其余七项微修订（§6）；IP-6 并入 IP-1 闭环，无删除项。
 
-| 符号 | 含义 | 来源 |
+路线无关原则不变：IP-2/IP-3/IP-4/IP-10 不依赖语义地图路线成立；IP-1 以可消融的附加 token 源接入，不绑死系统。
+
+## 1. 事实卡更新（检索日期 2026-11-07）
+
+F1-F8 与第 25 轮一致（本轮重验 F7：排行榜/运行记录页仍 Coming Soon [R1/R2]）。新增：
+
+| # | 事实 | 来源 |
 |---|---|---|
-| s, a, 𝒵, φ_z, π_z | 接触状态、动作、原语库、前置条件、执行策略 | 第 24/25/26 轮沿用 |
-| θ ∈ ℝⁿ⁺¹ | 关节绕组温度 + 环境温 | 第 26 轮沿用 |
-| τ_meas ∈ ℝⁿ | 关节力矩传感器测量（1kHz） | 第 26 轮沿用 |
-| τ̂ = τ_motion + Jᵀf̂ | 力矩头（物理锚定） | 第 26 轮沿用 |
-| β ∈ ℝᵖ | 在线贝叶斯摩擦参数 | **新增** |
-| φ = [v|v|, vθ, ωθ, sign(ω)θ] | 摩擦特征向量 | **新增** |
-| g_t, h, k | CUSUM 状态、门限、允差 | 第 26 轮沿用 |
-| ψ_φ(e_τ) | Isaac Sim 特征提取器 | **新增** |
-| b ∈ {IDLE, PLAN, ADAPT, RECOVER} | 行为树状态 | **新增** |
-| D, N, T_MC, deadline | 想象深度、网格、采样、截止期 | 第 26 轮沿用 |
+| F9 | 评测相机键 `cam_left_high/cam_right_high`（README 描述"Upper-left/Upper-right camera"）与数据集键 `head_stereo_left/right`（卡片明示 rectified）映射未确认；评测流是否立体校正未说明 | [R3][R4] |
+| F10 | N 台测试机器人确切数量「由主办方另行公布」→ 部署拓扑须 N 可配置 | [R3] |
+| F11 | 评测动作目录与数据集动作键一一对应：共享{left/right_gripper[1], pivot[7]} + joint{left/right_arm[7]} 或 ee{left/right_ee_pose_gripper_base[6]}；数据集 action.pivot 恰为 7 维 → 训练可直接对齐评测动作空间，无映射猜测 | [R3][R4] |
+| F12 | 评测观测目录不含 state_torso / state_d435 / torso 系 ee pose / 腿部状态（腰在 lower_body[15] 内）；数据集含 state_torso[6] 与 state_d435[6] → 头部相机外参评测时不可直接读取，需自估 | [R3][R4] |
+| F13 | 运行记录页承诺每条运行详情附"完整评测视频"；榜单支持按用户/模型/任务筛选 | [R2] |
+| F14 | HangCup：1.04k episodes / 194,564 行 / 8.8 GB；collection 32 项更新于 2026-09-11 | [R4] |
 
-## 2. 核心算法
+行动项更新：A1 人工查阅飞书参赛手册（不变）；A2 注册流程（不变）；A3 榜单监控**升级**——上线后第一优先扒运行记录评测视频做逐任务×逐场景对手拆解（F13）；**A4（新增，P0）**：取得评测访问后第一时间用真实帧验证 cam_high 双路极线几何（估计 fundamental matrix，残差小=已校正立体对）；A5（新增）：邮件向主办方确认 N（F10）与"单模型"边界表述。
 
-### 2.1 在线贝叶斯摩擦校准
+## 2. 创新点清单 v2 一览
 
-```
-Algorithm: OnlineBayesianFrictionCalibrator
-Input: τ_meas, τ̂, v, w, θ, ρ (审计置信度)
-Output: β (摩擦参数)
+| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
+|---|---|---|---|---|---|---|---|---|
+| IP-1 | SLAM-MAP v2 | 语义地图补齐 SLAM 四件套 | P0 | 无 | SLAM | 算力(轻)+数据(伪标注近零) | 位置/未见/人为干扰三类 +5~15pt | 深化 |
+| IP-2 | SCORE-ALIGN | 得分点→过程奖励+进度裁判 | P0 | 无 | 评测指标(25轮) | 数据(重标注近零) | 步骤分+部分分利用 | 维持 |
+| IP-3 | LOCAL-EVAL | 零真机迭代闭环+群体探针 | P0 | IP-2 | 低成本×群体 | 算力(1 GPU) | 迭代速度=生命线 | 深化 |
+| IP-4 | SUBMISSION-OPS | N端口/延迟/校验/容错 | P1 | 无 | 竞赛×群体 | 算力(部署机) | 免费工程分层 | 深化 |
+| IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | IP-1 | 25轮 | 算力 | 视合规 | 维持 |
+| IP-6 | UNSEEN-GRASP | 开放词汇+先看后抓 | P1 | IP-1 | SLAM(闭环) | 与IP-1共享 | 未见物品场景 | 并入闭环 |
+| IP-7 | DISTURB-AUG | 干扰回放合成+前后图像对 | P1 | 无 | 25轮 | 数据(合成近零) | 人为干扰场景 | 维持 |
+| IP-8 | STEP-EFF | 步骤分效率工程 | P1 | A1 | 25轮 | 零额外 | 步骤分 | 维持 |
+| IP-9 | SWARM-DECODE | population/蒸馏+自洽投票 | P1 | IP-2 | 群体智能 | 算力(LoRA×K, 一次性) | 全场景 +2~5pt | 新增 |
+| IP-10 | COST-LADDER | 三账户记账+拒绝清单 | P0(纪律) | 无 | 低成本方案 | 全账户 | 防负 ROI 投入 | 新增 |
 
-1. φ ← [v|v|, vθ, ωθ, sign(ω)θ]
-2. σ² ← σ_base² / max(ρ, 0.1)
-3. y ← τ_meas − τ̂
-4. K ← Σ·φ / (σ² + φᵀ·Σ·φ)
-5. μ ← μ + K·(y − φᵀ·μ)
-6. Σ ← Σ − K·φᵀ·Σ
-7. return μ, Σ
-```
+## 3. 重点展开一：IP-1 SLAM-MAP v2 技术方案
 
-收敛性：在 φ_t 持久激励下，μ_t → μ* = (ΦᵀΦ)⁻¹Φᵀy，Σ_t → 0。
+### 3.1 四件套与五类场景的对应
 
-### 2.2 行为树调度器
+| SLAM 件 | 桌面化定义 | 服务的泛化场景 | 开源/文献锚点 |
+|---|---|---|---|
+| 在线外参估计 | lower_body[15]+pivot.height → 头部相机位姿前向模型（数据集 state_torso 监督）；每 chunk 首步刷新 | 全部（3D 定位的前提） | 数据集 state_torso/state_d435 作监督 [R4] |
+| 重定位 | 跟踪丢失/突变后：外观描述子×位置先验×马氏距离 → 匈牙利重关联 | 人为干扰、位置变化 | LiSTA [R5e]、LT-mapper [R5f] |
+| 腕-头闭环 | 腕部近景检测 → 经 ee 外参（评测直接下发 *_gripper_base）配准进头部地图 → 高精度更新 | 未见物品（先看后抓）、抓取精度 | Kimera [R5c]、ConceptGraphs [R5g] |
+| 关键帧+协方差 | 全量感知仅 chunk 首步+关键帧；slot 带协方差（深度误差∝d²/b），匹配与门控用马氏距离 | 全部（省算力=IP-10 联动） | Kimera 概率估计 [R5c] |
 
-```
-Algorithm: BehaviorTreeStep(g, ρ, ψ)
-Input: g_t (CUSUM), ρ (置信度), ψ (特征得分)
-Output: 行为状态 b
+### 3.2 在线外参估计：为什么必须做
 
-if g < θ_low:
-    b ← IDLE
-elif g > h:
-    if ψ > θ_ψ:
-        b ← ADAPT  # 打开在线学习
-    else:
-        b ← RECOVER  # 强制降级
-else:
-    b ← PLAN
-return b
-```
+评测 obs 只给 ee pose（gripper_base 系）+ lower_body[15]，不给头部相机位姿（F12），而 G1 头部随躯干升降/腰部转动而动——静态外参假设在躯干高度变化时直接错位。方案：
 
-### 2.3 Isaac Sim 特征蒸馏
+1. 离线：数据集每帧有 state_torso（躯干位姿）+ 头双目图像；回归「lower_body(15) + ee 位姿 → head→base 平移（≈ f(torso height, waist joints)）」的解析式+残差 MLP（残差很小，模型可极轻）。
+2. 在线：评测时 lower_body 可得 + 我方自己下发的 pivot.height 已知 → 前向模型输出头位姿；pivot.height 命令值做有效域门控（超出训练域→协方差放大）。
+3. 验证：本地探针注入躯干运动序列，比较地图 3D 误差（E9）。
+
+### 3.3 重定位状态机（v1→v2 更新）
 
 ```
-Algorithm: FrictionFeatureDistillation
-1. 从 Isaac Sim 采样 {(v, θ, τ_theory)}
-2. 对每个样本，求解 τ_sim = τ_motion + Jᵀf(μ_f(v,θ))
-3. 计算残差 e_τ = τ_sim − τ_theory
-4. 用注意力网络 ψ_φ(e_τ, v, θ) → ℝᵏ
-5. 约束：KL(π(·|ψ_φ) || π_sim(·|τ_theory)) + λ||ψ_φ − ψ_sim||²
-6. 上真实机器：ρ_phy = min(ρ_triple, exp(−g/σ))
+TRACKING ──(突变/丢失/干扰事件)──► LOST
+   ▲                                 │ 每 slot 维护 EMA crop embedding（外观描述子库）
+   │    ┌────────────────────────────┘
+   │    ▼
+   └── RELOC: 匈牙利匹配(代价 = α·外观余弦距离 + β·马氏距离(位置先验))
+        ├─ 匹配成功 → slot 更新(协方差重置放大) → TRACKING
+        ├─ 部分匹配 → 新 slot(appeared) + 旧 slot 标记 vanished(tombstone)
+        └─ 全图重扫兜底(每 T_detect 帧) → RELOC 超时失败 → REMAP
 ```
 
-## 3. 复杂度分析
+与 v1 差异：v1 只有「位置贪心匹配 + 4cm 阈值」，干扰把物体挪 10cm 就误判为"消失+新增"；v2 的外观描述子使重关联在 20cm 级位移下仍成立——这正是"人为干扰"的真实位移量级（第 25 轮 G5 注入器口径 5-10cm）。锚点：LiSTA 的物体级几何变化检测 [R5e]、LT-mapper 的终身建图重映射 [R5f]。
 
-| 模块 | 复杂度 | 延迟 |
+### 3.4 腕-头闭环伪代码
+
+```python
+def wrist_loop_closure(self, wrist_obs, ee_pose, head_frame):
+    dets = open_vocab_detect(wrist_obs)              # 近景检测，精度高于头部远距
+    for d in dets:
+        # 腕部无深度通道 → 桌面平面先验：已知 ee 高度与桌面高度，单目反投影到平面
+        # （SLAM 平面约束单目尺度恢复的桌面特例）
+        p_wrist = backproject_to_plane(d.bbox, plane_z=TABLE_Z, cam=ee_pose @ T_gripper_cam)
+        p_base = ee_pose @ T_gripper_cam @ p_wrist
+        j = hungarian_match(p_base, d.emb, self.slots)   # 配准进头部地图（闭环）
+        if j is not None:
+            self.slots[j].refine(p_base, conf_boost=0.2)  # 高精度位置更新
+        else:
+            self.spawn(d, p_base, src="wrist")            # 头图没见过的物体（未见物品）
+```
+
+IP-6 的"先看后抓"由此实现：抓取前一步状态触发腕部近景重定位，确认目标 slot 后再闭合。
+
+### 3.5 延迟预算更新（对比第 25 轮 v1 表）
+
+| 环节 | v1 预算 | v2 预算 | 手段 |
+|---|---|---|---|
+| 双目深度 | 40ms/首步 | 40ms/关键帧 | 关键帧降频（chunk 首步+RELOC 时才跑） |
+| 外参前向模型 | — | <1ms | 残差 MLP，CPU 可跑 |
+| 检测+跟踪 | 50ms/首步 | 50ms/关键帧 + 8ms/中间步 | 中间步只做轻量跟踪校验，不做检测 |
+| 腕-头闭环 | — | 15ms/抓取前一步 | 仅"即将抓取"状态触发 |
+| VLA 推理 | 150ms | 150ms（K 路采样 batch 并行，见 IP-9） | fp16/int8 + CUDA graph |
+
+### 3.6 地图服务骨架增量（接第 25 轮 3.4 代码）
+
+```python
+@dataclass
+class Slot:   # v2 增量字段
+    emb_ema: np.ndarray          # 外观描述子（crop embedding EMA）
+    cov: np.ndarray              # 3D 位置协方差（深度误差∝d²/b + 检测噪声）
+    src: str = "head"            # 观测来源 head / wrist（闭环标记）
+
+def relocate(self, dets, depth_xyz):
+    """LOST → RELOC：匈牙利匹配（外观余弦 × 马氏位置先验），锚点 LiSTA/LT-mapper"""
+    cost = [[ALPHA * (1 - cos(d.emb, s.emb_ema))
+             + BETA * mahalanobis(depth_xyz[d.bbox].mean(0), s.pos_xyz, s.cov)
+             for s in self.slots] for d in dets]
+    rows, cols = linear_sum_assignment(np.asarray(cost))
+    return [(dets[r], cols) for r, c in zip(rows, cols) if cost[r][c] < RELCO_TH]
+```
+
+## 4. 重点展开二：IP-9 SWARM-DECODE 技术方案
+
+### 4.1 训练侧：population → soup → distill
+
+```
+1. 底座: 社区开源 VLA 3B 级（IP-10 §5.3 决策树）+ LoRA
+2. population: K=8 个 LoRA，差异化 {种子, 数据顺序, 图像增强档位, chunk 长度}
+3. soup: 按逐任务本地探针分做贪心加权合并（Model soups 贪心版 [R5a]；
+   LoRA 同底座同 rank 线性可加）
+4. distill: soup 作教师，在 32k 官方演示上蒸回单一 fp16 权重
+   → 交付物 = 单一 policy 类 + 单一权重文件，满足"单模型"
+成本: LoRA×8 ≈ 单次微调算力的 1/3 倍增量（LoRA 显存小可并行），一次性投入
+```
+
+### 4.2 推理侧：自洽投票（离散目标层投票 + 连续层择优）
+
+```python
+def get_action(obs):
+    cands = model.sample_batch(obs, map_tokens, K=SAMPLE_K)   # K=2~4，batch 维并行
+    # 离散目标层投票：每候选解码 {抓取 slot id, 放置 slot id}（Self-Consistency [R5b] 的操作版）
+    goals = [discretize(c, sem_map.slots) for c in cands]
+    best_goal = majority_vote(goals)          # 平票 → 进度预测器（IP-2）打分破平
+    act = argmax_progress([c for c, g in zip(cands, goals) if g == best_goal])
+    return sanitize(act)
+```
+
+合规与可信度设计（对应 README §6 [R3]）：投票只发生在**离散目标层**，最终连续动作来自**单一选中分支**——返回动作分布不因投票出现多峰混叠，不制造"不规则交互模式"；K 路采样在 batch 维并行，延迟≈单路（E7 验证）。
+
+### 4.3 系统侧：N 端口群体（合规边界）
+
+- **允许（工程）**：端口级容错——某端口进程崩溃，请求由副本接管（Kimera-Multi 鲁棒分布式估计思想 [R5d]；N 端口拓扑在结构上就是分布式多机器人系统）；赛后跨端口遥测聚合：失败签名 = (任务, chunk 步号, 场景特征, 事件序列) 聚类 → 下次提交定向修复。
+- **不做（合规红线）**：episode 运行中跨端口共享任何任务状态/地图信息（状态隔离铁律 [R3]）；用 N 台机器人互喂信息协同解题。
+
+### 4.4 与其他 IP 的接口
+
+进度预测器（IP-2 得分点骨架）= 投票裁判；本地群体探针（IP-3）= soup 成分筛选与 K 值扫描；动作 sanitize 与延迟预算（IP-4）约束 K 的上限。
+
+## 5. 重点展开三：IP-10 COST-LADDER（纪律性 IP）
+
+### 5.1 三账户与记账规则
+
+| 账户 | 单位 | 预算 | 记账规则 |
+|---|---|---|---|
+| 算力-训练 | GPU·天 | ≤ 40（4×A100 级 ×10 天或等价） | 每个 IP 立项申报；超支 20% 需消融证明必要性 |
+| 算力-推理 | 单步延迟 + 显存 | <300ms/步，N 端口共享后端 | 任何 +延迟 的 IP 必须给出省延迟配对项（如关键帧降频） |
+| 数据 | 真机自采小时数 | **0（红线）** | 只允许：官方 32k / 伪标注 / 视频合成 / 公开数据集 |
+| 评测时段 | 预约次数 | 首月 ≤6 次 | 每次提交：过冒烟 CI + 单变量 + 48h 校准报告 |
+
+### 5.2 拒绝清单（本轮明确不做）
+
+1. 不预训练/不大改底座——只做 LoRA 级适配；
+2. 不买/不租真机自采数据——迭代全部走离线闭环（IP-3）；
+3. 不做像素级 3D 重建/全套 SLAM 系统——SLAM 只取四件套思想；
+4. 不用 >3B 底座（除非伪标注流水线证明官方数据信息量不足）；
+5. 不在本地-官方指标相关性 <0.5 的维度上批量调参；
+6. 不部署违反"单模型"精神的运行时外挂（待 A1/A5 澄清）。
+
+### 5.3 底座选择的成本-分数决策树
+
+```
+候选（社区开源 VLA，均支持多路 RGB+语言+动作 chunk）: π0 系(3B) / OpenVLA 系(7B) / GR00T N 系 / RDT(1B)
+规则: ① 显存×N 端口可容纳者优先（低成本×IP-4）→ 3B 级起步
+      ② 双腕相机输入支持好者优先（腕部视角对 32 任务关键）
+      ③ ee 空间动作头现成者优先（与 F11 对齐）
+→ 首选 3B 级；7B 仅在 ① 满足时进入对比
+```
+
+## 6. 其余 IP 修订摘要（v1→v2 增量）
+
+- **IP-2**：进度预测器新增第二消费者——SWARM-DECODE 投票裁判（§4.2）；得分点骨架发现流程不变（待 A1 回填官方定义）。
+- **IP-3**：新增"群体探针"模式：一次视频回放成本评估 K 个 checkpoint（回放与模型解耦）；新增外参标定探针（E9）。
+- **IP-4**：新增容错要求（端口崩溃 <2s 接管，E11）；新增赛后遥测聚合报告模板（失败签名聚类）。
+- **IP-5**：冻结（P2，合规未明）；"参数头监督提取"与 IP-1 伪标注流水线共用资产，不额外投入。
+- **IP-6**：并入 IP-1 腕-头闭环；本条目保留为指针，不再单独展开。
+- **IP-7**：新增产出"干扰前后图像对"（干扰注入前后的双目帧+伪标注），直接作重定位模块训练/验证集。
+- **IP-8**：维持；若手册确认步骤分=完成效率，"关键帧降频+确定性解码"已由 IP-1/IP-9 覆盖大半。
+
+## 7. 实验设计（新增 E7-E11，接第 25 轮 E1-E6）
+
+| 实验 | 设置 | 指标 | 预期 |
+|---|---|---|---|
+| E7 自洽解码 | K∈{1,2,4}；投票层{仅目标层, 目标+动作} | 本地探针成功率 / 延迟 / 返回动作分布熵 | 目标层投票 +2~5pt；延迟增幅 <10%；分布不双峰 |
+| E8 soup/蒸馏 | 单 LoRA vs 8-LoRA-soup vs 蒸馏回单模型 | 本地探针均分/方差 | soup ≥ 单 LoRA +2pt；蒸馏损失 <0.5pt |
+| E9 外参估计 | 静态外参 vs 前向模型，躯干运动序列注入 | 地图 3D 误差 / 成功率 | 躯干运动场景误差 -50% |
+| E10 重定位 | 干扰位移{5,10,20}cm；位置贪心 vs 匈牙利+外观 | 重关联成功率 | 20cm 位移下 +30pt+ |
+| E11 N 端口容错 | 运行中 kill 端口进程 | 其他端口延迟分布 / 接管时间 | 接管 <2s；其他端口 P99 延迟无变化 |
+
+提交纪律不变：冒烟 CI + 单变量 + 48h 校准报告；E7 的分布熵检查纳入冒烟 CI（可信度条款预防）。
+
+## 8. 风险登记簿（增量；第 25 轮其余行继续有效）
+
+| 风险 | 等级 | 缓解 |
 |---|---|---|
-| 贝叶斯更新 | O(p²) p=5 | <0.1ms |
-| 行为树判决 | O(1) | <0.1ms |
-| ψ_φ 特征提取 | O(T·n_j) | <0.5ms |
-| 计划器 | O(|𝒜|^D·T_MC) | ≤20ms |
+| F9 相机映射/校正未确认 → SLAM-MAP 深度链路重来 | **高（本轮最大）** | A4 最高优先；预研桌面平面先验的单目备份路径 |
+| 自洽投票触发"动作统计规律"疑虑（[R3] §6） | 中 | 只在离散目标层投票；连续动作单分支输出；E7 分布熵监控纳入 CI |
+| 外参前向模型漂移（躯干大幅运动） | 中 | pivot.height 命令值门控 + 协方差放大降权 |
+| soup/蒸馏小数据负迁移 | 中 | E8 本地探针先行；无增益即弃（成本已付，不绑架） |
+| 评测时段排期不可预测（F10，N 未公布） | 中 | 拓扑 N 可配置；N=3 与 N=8 两档预案 |
 
-## 4. 实验设计 BENCH v5
+## 9. 来源清单（全部检索于 2026-11-07）
 
-| 任务 | 类型 | 设计意图 |
-|---|---|---|
-| T9-T11 | (第 26 轮保留) | OOD AUC, SR, 恢复率 |
-| T12-T14 | (第 26 轮保留) | 热约束、计算热节流、漂移注入 |
-| **T15 行为树误判率** | 可解释性 | ADAPT/RECOVER 触发的误判率 |
-| **T16 线上收敛** | 在线学习 | β 收敛至 ground truth 的轨迹 |
+- R1 排行榜页（Coming Soon；榜单口径与筛选功能）：https://unibot.unitree.com/leaderboard.html
+- R1a 挑战赛页（32 任务/32000 演示/169h；提交流程七步；得分点 100 分口径）：https://unibot.unitree.com/challenges.html
+- R2 运行记录页（Coming Soon；"完整评测视频"承诺）：https://unibot.unitree.com/runs.html
+- R3 提交接口规范（README §2 观测目录 / §3 动作目录 / §5 N 端口与两种部署方式 / §6 延迟与动作统计可信度条款；repo 共 2 commits）：https://github.com/unitreerobotics/unibot_submission
+- R4 数据集卡片（head_stereo rectified、state_d435、动作键全表、1.04k episodes / 194,564 行 / 8.8 GB）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup ；collection（32 项，更新 2026-09-11）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
+- R5 文献锚点（arXiv API 核实，2026-11-07）：
+  - R5a Model soups: https://arxiv.org/abs/2203.05482
+  - R5b Self-Consistency Improves Chain of Thought: https://arxiv.org/abs/2203.11171
+  - R5c Kimera（语义 SLAM→3D 动态场景图）: https://arxiv.org/abs/2101.06894
+  - R5d Kimera-Multi（分布式多机器人 SLAM）: https://arxiv.org/abs/2011.04087
+  - R5e LiSTA（物体级变化检测）: https://arxiv.org/abs/2403.02175
+  - R5f LT-mapper（终身建图）: https://arxiv.org/abs/2107.07712
+  - R5g ConceptGraphs（开放词汇 3D 场景图）: https://arxiv.org/abs/2309.16650
+- 第 25 轮来源 1/2/3/6/7（赛事启动报道与任务清单佐证）本轮未逐一重抓，口径以第 25 轮记录为准；官方页面重验部分见 R1/R1a/R2/R3/R4。
 
-## 5. 风险缓解
+## 10. 清单迭代规则（增补，继承第 25 轮 §9）
 
-| 风险 | 缓解方案 |
-|---|---|
-| 贝叶斯不收敛 | 检查 φ 持久激励；若长期无更新，回退到固定 μ_f |
-| 行为树误判 | 引入「历史一致性」检查：连续 3 帧 RECOVER 才实际降级 |
-| Isaac Sim 特征失效 | 特征蒸馏双模检验：ψ 与 CUSUM 两信号皆触发才 ADAPT |
-
-## 6. 本轮最大的风险
-
-**行为树的阈值 θ_low, θ_high, θ_ψ 需要在不同机器上重新标定，若标定不当，ADAPT 节点可能频繁激活导致「过度学习」或 RECOVER 节点误触发导致「过度保守」，破坏原有的 TEMPO-NAV 稳定性。**
- XUEN_EOF
+0.（继承）每轮先核对事实卡——本轮新增 F9-F14；F7/F8 任一解除即触发强制修订；
+7.（新增）每个 IP 立项/修订必须过 COST-LADDER 记账：申报主成本账户与边际分预期；连续两轮「高成本低边际分」的项降级或合并；
+8.（新增）榜单上线后的"对手锚定"字段以运行记录评测视频为第一证据源（F13），逐任务×逐场景拆解后全面修订清单。
 <!-- ARTIFACT:END -->
