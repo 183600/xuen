@@ -1005,3 +1005,4 @@
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 22:26:34"}
 {"event": "candidate", "id": "20261107-225323-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 22:53:23"}
 {"event": "verdict", "id": "20261107-225323-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-07 22:55:30"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 23:30:30"}
