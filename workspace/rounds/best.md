@@ -3,360 +3,203 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 30 轮 · 思维深化：SERVO-ADAPT-LITE —— 视觉伺服护盾、有界真机适配与防博弈冻结基准
+# 第 1 轮 · UniBot-V1 通才操作挑战：从「LoRA-SFT 通才」到「闭环进展最大化」
 
-## 直觉锚点与动机链条（承接第 29 轮）
+> 本轮为针对「宇树 UniBot 世界挑战赛」（unibot.unitree.com）的新研究循环第 1 轮（灵感词：**UniBot-V1 / 泛化能力 / 场景理解**），整体覆盖前序循环内容（前序第 30 轮 SERVO-ADAPT-LITE 属另一赛题语境，其"分层评测/回退链"方法论局部复用）。全部赛事事实经联网核实，来源与检索日期见产物区第 9 节。
 
-- **弱点诊断 → 灵感映射**：本轮灵感词「视觉伺服 / 迁移学习 / 评测指标」不是三个孤立装饰，而逐一命中第 29 轮 CULTURA-SIM-LITE 的三个结构性弱点，构成改进链：
-  - 弱点 1（真机感知"开环于标定"）：第 29 轮在 SOC-SIM 内闭环了人类反应，但真机侧的 ξ 与安全层仍全部工作在度量空间——d_max、d_comfort、CBF 约束、硬裁剪都直接或间接依赖外参与深度标定，而 F9（相机映射/校正未确认）自第 26 轮起持续高危未决；ξ 又是瞬时快照，感知时延使威胁演化滞后一个控制周期。"仿真里闭环了，真机上的感知对误差模型仍然开环。" → **「视觉伺服」U1 VS-SHIELD：特征空间安全层**。像平面量对手部检测与相机内参稳健、对外参/深度误差一阶不敏感 [R25, R26]；交互矩阵 L̂_s 滑窗 RLS 在线估计、由渲染器真值热启动（IP-7 v7 提供 s/L_s 标签）；伺服一致性新息 r_vs（机器人运动补偿后的特征跟踪残差）成为第四个回退触发器——κ-free，守住规则 16。π_lite"自信地错"时，输出空间（‖Δu_lite‖）与策略空间（熵）都抓不到，特征空间能。
-  - 弱点 2（sim-to-real 只有"验证+回退"，没有"吸收"）：第 29 轮最大风险（SOC-SIM 保真度）的处置是 E18c 不过就降级——防御有余、进取不足，真实数据进不了管线。而残差网络 Δf_θ 建模的是**动力学**（臂动力学、线缆拖拽、未建模摩擦），由真机自身状态转移 (x_t, u_t, x_{t+1}) 直接可监督——不需要人类模型、不需要专家真值。这是整条管线里唯一"真机自监督可达"的迁移面。→ **「迁移学习」U2 SAFE-ADAPT：信任域微调 + 验证门**。Δf_obs = x_{t+1} − x_t − (A x_t + B u_t) 直接可得；信任域 ‖Δθ‖≤Θ_max、验证门（held-out 真机缓冲上验证误差单调不升）、维护窗口批量执行（复用 IP-12）、θ 与 γ_anom 捆绑原子 OTA（复用 IP-4，CUSUM 回滚）；覆盖指数 C_cov 把真实 (ξ,κ) 分布与课程末段分布的差距反馈给第 29 轮课程采样——评测→训练闭环，同时缓解"课程过拟合于仿真难度轴"。
-  - 弱点 3（评测散点、可博弈、跨轮不可比）：E12–E19 八组实验各自为政；单标量门槛诱发 Goodhart——冻结机器人可刷低 C_social、永不触发可刷低 fallback_rate、调阈值可刷任何"率"；无冻结测试集，跨轮比较被基准漂移污染；无功效分析，"−20%"可能是噪声。→ **「评测指标」U3 FROZEN-BENCH：防博弈冻结基准**。任务进度分层 Pareto 比较（层内消融"冻结收益"）、触发器作为二元分类器评 AUC/PR@工作点/可靠性图、预注册 + bootstrap CI + 配对置换检验 [R28, R29]、版本化冻结 S_bench（dev/hold 双套）——跨轮回归的唯一口径。
+## 0. 直觉锚点与动机链条（三个灵感词各自命中什么）
 
-- **U1 的设计决断——增量约束，不是替代**：图像空间约束 h_img = d_img − ρ_K·r0 以"带松弛的次级约束"并入 CBF-QP（度量约束为硬、图像约束带松弛 s_img 入目标），v6 度量层恒在线作为安全地板；QP 可行性永不因新增约束而破坏（松弛吸收）。特征置信度门（置信 < c_min 或遮挡 > T_occ）→ 特征层整体 abstain，σ_feat=0 时执行器逐位退回 v6。新增触发器与 abstain 判据全部 κ-free。
-- **U2 的设计决断——只动 θ，不动安全**：适配不变性公理（新规则 19）：任何适配/OTA 不得触及 γ_safe、H_max、CBF 约束、硬裁剪；γ_anom 仅允许与 θ 捆绑原子 OTA（离线再标定留痕，线上仍是 κ-free 常数）。冷启动鸡生蛋：semi-real（A6 回放 + 真机日志合成 Δf_obs）先把管线跑通；真机存量 < n_min 时管线空转（安全默认 = 不更新）。
-- **U3 的设计决断——每个指标配"作弊者画像"**：S_bench v1 = {500 固定种子 SOC-SIM episode（held-out κ* 网格）+ 100 真人回放片段（A6）+ 50 对抗场景}，版本冻结；改动必须升版本并重跑历史；hold 集禁止用于任何调参；合并主张必须预注册（假设/指标/检验/n）。诚实条款：无指标族能对抗一切作弊——预注册 + oracle 季度轮换把 Goodhart 从"结构漏洞"降为"需持续审计的残余风险"。
-- **三者耦合**：U1 把真机感知从"开环度量"升级为"标定鲁棒的特征闭环"（把 F9 对安全路径的依赖降为"仅内参"）；U2 给残余 sim-to-real 差距一个有界吸收通道（把第 29 轮"无法采信就废弃"的困境变成"无法采信就在真机上吸收"）；U3 让 U1/U2 的收益声称可证伪、跨轮可比。三者把第 29 轮的"验证条件"升级为"验证 + 吸收 + 审计"三件套。
+- **「UniBot-V1」→ 约束即杠杆**。逐条读提交接口（github.com/unitreerobotics/unibot_submission，2026-11-07 核实，2 commits），别人当"麻烦"的地方恰是差异化杠杆：(a) `action_chunk_size` 是 metadata 静态申报 → chunk 长度选择本身是一个延迟-抗干扰的帕累托决策；(b) `obs_delta_indices` 自选观测键与帧偏移 → 历史堆叠免费提供速度/一致性线索；(c) `action.pivot[7]`（vx,vy,angle_z,…,height）共享动作通道暴露了全身控制，但 SFT 微调惯例是置零 → 全身工作空间被白送、又被白丢；(d) README §6 明确"逐步响应延迟与波动、动作统计规律会被记录并可能随结果公布" → **推理工程是计分项**，不是工程杂务。
+- **「泛化能力」→ 5 类泛化 ≠ 1 种泛化**。位置/背景/干扰物是纯视觉 OOD（增强可解）；未见物品是语义 OOD（VLM backbone 原生可解）；人为干扰是时序 OOD（闭环可解）。三种病因三种药——而均值回归的行为克隆 SFT 一味药都治不了：它在训练分布上插值，而泛化评测考的就是分布外。
+- **「场景理解」→ 几何先于语义**。32 任务数据集里接触丰富/插孔类任务密集：PlugCharger（插充电器）、PlugInEthernet（插网线）、SyringeWaterTransfer（注射器）、ZipUp（拉拉链）、RemovePinnedNote（拔图钉）、Unlock——这类任务成败在毫米级对准，VLA 的 8~10Hz 动作块均值化输出对它结构性无能。关键事实（F7）：**评测接口只发 RGB 四路（无深度），而训练数据含已校正立体相机对** → 单目深度蒸馏是"从数据白捡的几何"，末段视觉伺服是"从几何白捡的成功率"。
 
-## 形式化定义的深化（继承第 29 轮全部符号）
+## 1. 赛事事实卡（2026-11-07 检索，详细引用见产物区）
 
-### 6.1 特征空间与伺服层符号（v7 新增）
-- s_t = (u_t, v_t, ρ_t) ∈ R³：威胁手像平面特征（归一化质心 + log 归一化包围盒面积）；由既有手感知输出算术级导出，零新增感知前向。
-- s*：安全像平面目标/边界带，由 d_comfort(κ_d) 与内参 K 反解；e = s − s*。
-- L_s ∈ R^{3×6}：交互矩阵（ṡ_ee = L_s·v_ee）；L̂_s 滑窗 RLS 在线估计（W_RLS=30，信噪门 ‖v_ee‖>v_min + Huber 鲁棒化，人手自运动作为回归噪声被抑制），渲染真值热启动。
-- d_img = ‖proj_ee − proj_hand‖（仅内参参与投影）；h_img = d_img − r_img，r_img = ρ_K·r0；ρ_K = 1 + c_K·ε_K,max/r0 覆盖内参误差界（c_K 由标定报告推得）。
-- r_vs(t)：机器人运动补偿后的特征跟踪新息，窗口化 Mahalanobis（Σ̂ 滑窗白化），门限 χ²₃(1−α)，持续 n_win=3 步判触发；ŝ_{t+1|t} = s_t + L̂_s·v_ee·δt + 特征级 CV 外推（相机时延 δ_cam 补偿）。
-- c_min、T_occ：特征置信度门。Θ_max、ε_acc、n_min：U2 信任域/验证门裕量/最小样本。
-- G(θ,D) = E_D‖Δf_θ(x,ξ) − Δf_obs‖²；Δ_transfer = G(θ*, D_real,hold) − G(θ*, D_sim,hold)；C_cov = 1 − KL_norm(real (ξ,κ) 直方图 ‖ sim 课程末段直方图) ∈ [0,1]。
+- F1 官网：32 项真实桌面任务（抓取/放置/双手协调）、32,000 episodes、169 小时；评分=平均成功率+步骤分（每任务得分点满分 100）。
+- F2 泛化评测：官网愿景明示"跨任务、跨物品、抗干扰"；5 类泛化（位置/干扰物/背景/未见物品/人为干扰）为用户提供先验，与官网口径一致（规则全文在飞书、需登录，未能核实原文——诚实标注）。
+- F3 接口：PolicyService(websockets+msgpack)；metadata{control_space: joint|ee 互斥、obs_delta_indices、image_resize、action_chunk_size、token}；观测=4×RGB(480×640)+双臂 7-DoF+EE pose(base)+夹爪+lower_body[15]+language；动作=joint(双臂 14)或 ee(EE 6+6)+共享{双夹爪、pivot[7]}；token 双检（握手+每步）。
+- F4 部署：N 台评测机器人→N 个连续端口 8765..8765+N−1（端口数必须精确匹配）；模式 A 每端口独立实例（N 份显存），模式 B 共享后端+并发调度+状态隔离。
+- F5 可信度考核：延迟稳定性与动作统计规律被记录，可能随成绩公布。
+- F6 数据集（HF collection，32 items，LeRobot v3.0，AV1 480×640@30fps，apache-2.0，非 gated）：32 任务名已全部列获；每任务约 0.97k–1.53k episodes（HangCup train=194,564 帧）。
+- F7 数据字段 > 接口字段：数据含 head_stereo_left/right（**已校正**立体对）、torso/d435 位姿、action_torso/action_d435/base_command；评测接口只发 RGB——**数据可训深度、接口不可传深度**。
+- F8 头部方案唯一可证样本：ezhoureal/lingbot-vla-v2-unibot-lora——LingBot-VLA 2.0（Qwen3-VL-4B-Instruct + Qwen2 action expert + MoE，6.3B），LoRA r64 于 q/v/o_proj（65M 可训练），全量 32 任务 33,276 episodes，10K steps，**单卡 RTX 4090**，val/loss 0.085，joint 空间、arm=state-relative delta。
+- F9 生态：LingBot-VLA（arXiv:2601.18692，20k 小时真机预训练，含 Depth 版本、RoboTwin 后训练、RLinf RL 支持）；宇树自家 UnifoLM-VLA / UnifoLM-WMA-0（gated 世界模型）/ UnifoLM-WLA-1.0 / UnifoLM-ER-1。
+- F10 排行榜：官网 leaderboard/runs 均"即将发布"（2026-11-07）；**"榜首成功率 <30%"为用户先验**（榜单未公开、无法直接核实），但与 F8"loss 极低 vs 真机操作成功率"的公开证据链方向一致——按"弱证据、高置信"采用，榜单公开后复核。
 
-### 6.2 伺服项 Lyapunov（诚实版）
-灰区 (0.15 < d_max < γ_safe) 激活 u_vs = −λ L̂⁺e；V = ½‖e‖²，V̇ = −λ eᵀL̂L̂⁺e + 交叉项——L̂ 估计误差使负定性仅在 PE 条件 + 误差界内成立；伺服项永不越过硬裁剪，灰区外禁用。诚实条款入命题 7 失效模式。
+## 2. 头部方案画像与六个结构性瓶颈
 
-### 6.3 新增公理：适配不变性（规则 19）与图像层可弃性
-- 适配不变性：∂(安全层)/∂θ ≡ 0——γ_safe、H_max、CBF 约束、硬裁剪右端不含 θ 与任何可 OTA 量；γ_anom 捆绑再标定但仍是 κ-free 常数。
-- 图像层可弃性：∃σ_feat ∈ {0,1}，σ_feat=0 时执行器逐位等于 v6（由伪代码结构直接可验证，纳入规则 13-1 审计）。
+以可证样本（F8）代表当前主流打法——「开源 VLA + 全量数据 LoRA-SFT + 单卡训练 + 接口直连」：
 
-### 6.4 防博弈分层的最小形式化
-按任务进度分位（四分位）分层，层内比较 C_social 与舒适违规率——层内任务进度同分布，"冻结刷 C_social"在低进度层被 oracle 审计（任务失败）暴露、在高进度层失去比较资格；触发器校准以离线 oracle（后续 K=10 步约束违反或专家分歧）为标签、γ_anom 触发为预测，评 AUC/PR@工作点 + 可靠性图 [R29]。
+- **B1 损失-成功鸿沟**：SFT val/loss 0.085 ≠ 真机成功。行为克隆的复合误差在接触丰富任务上爆炸：8Hz 动作块是对连续伺服行为的低频均值采样。
+- **B2 深度缺失**：RGB-only 接口 + image_resize 下采样进一步抹掉精细视觉特征；插孔对准缺乏几何信息。
+- **B3 全身闲置**：pivot/腰/底盘通道被丢弃 → 工作空间受限 → 远处/低处物品任务直接失格，而这恰是"位置泛化"的部分来源（数据集里下肢+腰的移动就是位置多样性）。
+- **B4 块内开环**：T_a 步内无感知修正；人为干扰/干扰物场景的响应滞后上限=整个 chunk。
+- **B5 任务互扰**：单模型 32 任务参数共享，精细任务（低数据权重、高精度需求）的梯度被淹没；而榜单按平均成功率排序——**短板任务决定名次**。
+- **B6 步骤分无人优化**：所有注意力在终点成功率；得分点是"进展分"——失败 episode 也有分可拿，"把 EE 挪近目标、摆对姿态"本身就是期望得分。
 
-## 算法步骤精炼（离线在 v6 六步上加第 5/6 步；在线六步上加 0.6 步）
+## 3. 策略主线：三条护城河 + 两块地基
 
-- 离线（+0.2 GPU·天一次性）：第 5 步 FROZEN-BENCH 烧录（固定种子 + dev/hold 双套 + 预注册）；第 6 步 SAFE-ADAPT 管线（Δf_obs 监督 → 信任域微调 → 验证门 → γ_anom 再标定 → 捆绑原子 OTA，维护窗口内执行、CUSUM 回滚）。IP-7 渲染即标签 v7：s_t 轨迹、L_s 真值、特征置信模拟（零额外 GPU）。
-- 在线 social_motion_lite_step_v7：v6 全部步骤保留；插入 0.6 特征伺服层（置信度门 → abstain 或 RLS + r_vs + 外推）；双轨表新增两行（r_vs 触发、abstain），均 κ-free；CBF-QP 在 vs_active 时叠加图像约束（次级带松弛）。签名不变；κ 与特征双缺省 → v7→v6→v5 完整退化链。
+- **M1 进展最大化**（打 B6/B1）：从数据集 episode 自动挖掘"得分点阶段结构"，训练轻量进展模型；推理时用于 best-of-n 动作块选择与失败保底。
+- **M2 几何场景理解**（打 B1/B2）：立体对蒸馏单目深度头（策略内部前向，零接口改动）+ ee 空间末段伺服残差修正。
+- **M3 时序闭环**（打 B4）：T_a 帕累托申报 + 块间偏差检测与恢复策略编译进块内。
+- **D1 服务工程地基**（F4/F5）：共享后端、量化、延迟稳定性预算——资格性优先级。
+- **D2 本地评测地基**：步骤分代理 + 5 类泛化变换库——迭代速度即生命线。
 
-## 复杂度分析（相对第 29 轮增量）
-- 在线：RLS O(3×6²)≈0.02ms + r_vs 0.01ms + CBF-QP 图像约束项 0.02ms = +0.05ms；仲裁增量 0.36 → 0.41ms，P99 <0.5ms 维持（规则 14 确界重测）。特征计算复用手感知前向，零新增感知。
-- 离线：训练账户 1.4 → 1.6 GPU·天（适配管线 0.1 + 基准烧录 0.1，一次性）；SAFE-ADAPT 每次执行 0.05 GPU·天（维护账户）；回归评测 0.3 GPU·天/发布（新设评测账户）。全部入 IP-10 记账。
-- LUT 14MB 不变；关键帧总预算 15.3ms 不变。
+## 4. 设计决断（诚实版）
 
-## 正确性论证（命题 7–10 新增，1–6 继承；诚实版）
-- 命题 7（图像约束标定不敏感 + 可弃 + 不可破坏可行性）：内参误差一阶进入且有界（ρ_K 保守化）、外参/深度误差一阶不进入；图像约束为带松弛次级约束 → QP 可行域不变；σ_feat=0 → 逐位 v6。失效：手部"自信地错检" → 图像层收益归零（不倒扣安全）。
-- 命题 8（r_vs 检测力/误报）：设计检出 ≥1−β @ 分歧 δ_div 持续 3 步、FPR ≤ α/h（χ² 分位数 + Σ̂ 白化）；诚实条款：相关噪声使白化残差保守、检出力下降但误报受控；E20b 不过 → 触发器冻结 OFF。
-- 命题 9（适配有界/单调不劣化）：信任域 + 验证门 → G(θ_new, D_val) ≤ G(θ_old, D_val)；SpectralNorm → ‖π(x;θ_new) − π(x;θ_old)‖ ≤ L_π·Θ_max；γ_anom 捆绑再标定保持双轨语义；安全层 ∂/∂θ ≡ 0（规则 19）。失效：验证门拒绝 → 不更新（安全默认）。
-- 命题 10（防博弈分层性，诚实版）：进度分层消解"冻结刷分"，oracle 标签消解"永不触发"；Goodhart 只能降级不能根除——oracle 季度轮换 + hold 禁调参为持续缓解。
+- **单模型合规边界**：所有创新点落在"单权重+内部模块+语言条件化"，不做外部多模型路由（规则细则未读到，保守处理）；内部混哪个模块不改变"单模型"语义。
+- **接口红线**：不新增 obs 键、不改评测方任何行为——深度/几何特征全部在 get_action 内部计算；所有增强层可独立开关（ablation 全保留），关闭即回退基线，无负收益。
+- **pivot 通道**：仅在"手臂工作空间外"门控下启用，低速小步+夹紧，避免躯干运动引发视觉外参漂移这一新失败模式。
+- **合规红线**：进展模型只用于优化我们自己的期望动作选择，得分手仍由评测方计算——不做任何评测操纵。
+- **修正记录**：初版设想"动态 chunk（运行中缩短块长）"与接口 metadata 静态申报 `action_chunk_size` 冲突（评测器按申报形状执行），已在本轮修剪为「T_a 申报扫描 + 块间恢复」——清单迭代原则的第一次自我执行。
 
-## 风险登记簿（继承 + 新增；完整表见产物区）
-新增六项，本轮最大：腕部相机手部特征鲁棒性（遮挡/模糊/光照下"自信地错检"，高）。继承第 29 轮全部九项；其中 SOC-SIM 保真度因 U1/U2/U3 三重新增缓解 高→中（E18c 仍为确认条件）；F9 相机映射因图像层解耦外参依赖，但 A4 仍最高优先；课程过拟合因 C_cov 反馈通道进一步缓解。
+## 5. 本轮最大风险一句话
 
-**本轮最大风险一句话**：腕部相机在遮挡/运动模糊/光照扰动下对威胁手"自信地错检"（置信度门只兜"知道不知道"，不兜"错得自信"），使图像空间约束与 r_vs 触发的收益归零甚至误发——安全由 v6 度量层地板与松弛优先级兜底，但新增层收益可能打折，叠加 U2 真机遥测冷启动的鸡生蛋问题，须以 E20a/b/c 注入式扫描与 E21 semi-real 回放验证后方可采信，任一不过即整层 abstain 冻结退回 v6，无负收益。
+**新增策略内前向（深度头、进展模型、修正器）吃掉延迟稳定性预算（F5 可信度考核）**，且评测端 480×640（可能 resize）输入与训练分布存在偏移——必须以"小模型+量化+固定毫秒预算"落地，每项增强独立可关，E1–E5 本地验证通过后方可合并，任一不过即回退基线，无负收益。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 30 轮产物 · 创新点清单 v7：SERVO-ADAPT-LITE 完整算法设计（伺服×迁移×防博弈评测版）
+# 第 1 轮产物 · UniBot-V1 创新点清单 v1：闭环进展最大化参赛方案
 
 ## 0. 结论
 
-第 29 轮清单 v6（14 项）本轮完成「执行层升级 + 真机适配 + 评测基建」迭代，产出 v7（15 项）：
+新建清单 10 项（IP-1…IP-10），围绕「三条护城河 + 两块地基」：
 
-- **IP-15 SERVO-ADAPT-LITE（P1，新增）**：VS-SHIELD 特征空间安全层（视觉伺服）+ SAFE-ADAPT 信任域真机适配（迁移学习）+ FROZEN-BENCH 防博弈冻结基准（评测指标）；作为 IP-13/14 的执行层升级与评测基建，**在线执行器签名与延迟预算不变**（增量 +0.05ms 内）。
-- **IP-13 SOCIAL-MOTION-LITE 微修订**：执行器 v6 → v7（0.6 特征伺服层 + 第四触发器 r_vs + abstain 门）；双轨 κ-free 扩展；σ_feat=0 逐位退回 v6。
-- **IP-7 DISTURB-AUG 微修订**：渲染即标签 v7——s_t 特征轨迹、L_s 交互矩阵真值、特征置信模拟通道。
-- **IP-2 微修订**：S_bench 指标（进度分层舒适违规率、触发器校准 AUC）进入 p_fail 软通道，严格模式不启用。
-- **IP-3 微修订**：承载 S_bench 烧录与回归执行（dev/hold 分离）。
-- **IP-12 微修订**：维护窗口内执行 SAFE-ADAPT 适配与 OTA。
-- IP-1/4/5/6/8/9/10/11/14 维持（IP-5 冻结），无删除项。
-- 成本变化：一次性训练账户 1.4 → 1.6 GPU·天（IP-10 记账）；SAFE-ADAPT 每次 0.05 GPU·天（维护账户）；回归评测 0.3 GPU·天/发布（新设评测账户）；推理 P99 <0.5ms 维持；关键帧总预算 15.3ms 不变。
+- **默认 backbone**：LingBot-VLA 2.0 (6.3B) LoRA——唯一经证据链核实的参赛打法（F8），先复现再超越。
+- **P0（资格与生命线）**：IP-8 服务工程、IP-9 本地评测自举、IP-4 泛化增强管线。
+- **P1（得分主力）**：IP-2 GEOSERVE（深度蒸馏+末段伺服）、IP-5 块间闭环恢复、IP-1 PROGRESS（进展模型）、IP-6 语言条件化路由、IP-10 失败恢复库。
+- **P2（差异化期权）**：IP-3 全身 pivot 激活、IP-7 RL 后训练。
+- 成本：LoRA 基线复现 1×RTX 4090 可行（F8 佐证）；全部策略内前向预算 ≤25ms/步；无任何接口变更。
+- 修剪记录：初版"动态 chunk"与接口静态申报冲突，已修剪为 IP-5「T_a 扫描 + 块间恢复」（想法区 §4）。
 
-路线无关原则不变：σ_feat=0 即 v6；适配管线空转即 v6；S_bench 只增审计不加风险。冻结即回退 v5/v3 能力，无负收益。
+## 1. 创新点清单 v1 一览
 
-## 1. 事实卡（继承与核实状态）
-
-F1–F15 继承（2026-11-07 检索口径）。本轮新增 **F16（文献级）**：视觉伺服稳定性与标定鲁棒性——IBVS 交互矩阵与 Lyapunov 稳定性 [R25]、2.5D VS 对深度估计误差的鲁棒性 [R26]，用作图像空间安全约束的依据，标注"文献级先验，非真机测量"。**F17（文献级）**：sim-to-real 迁移方法分类（域随机化/域适配/模仿/元学习/蒸馏）[R27] 与深度 RL 统计评测规范（区间估计、显著性检验、预注册）[R28, R29]。行动项：A4 最高优先不变（图像层把 F9 的安全依赖降为"仅内参"，A4 的内参验证部分相对提权）；A6 扩展——真人回放片段作为 S_bench held-out 组成部分与 E21 semi-real 数据源；E12/E13/E17/E18 系列门槛验证为上线前置条件。
-
-## 2. 创新点清单 v7 一览
-
-| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
+| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 资源 | 预期边际 | 风险 |
 |---|---|---|---|---|---|---|---|---|
-| IP-1 | SLAM-MAP v2.1 | 四件套 + 维护窗口调度 | P0 | 无 | SLAM(26轮) | 算力(轻) | 三类 +5~15pt | 维持 |
-| IP-2 | SCORE-ALIGN v2 | +S_bench 指标软通道 + 触发器校准输入 | P0 | 无 | 25/27/30轮 | 数据(近零) | 步骤分 + 仲裁质量 | 微修订 |
-| IP-3 | LOCAL-EVAL | +S_bench 烧录与回归执行（dev/hold 分离） | P0 | IP-2 | 26/28/29/30轮 | 算力(1 GPU) | 迭代速度=生命线 | 微修订 |
-| IP-4 | SUBMISSION-OPS v2 | +CUSUM 预测性故障转移（+OTA 回滚承接适配） | P1 | 无 | 25/27轮 | 算力(部署机) | 掉请求→0 | 维持 |
-| IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | IP-1 | 25轮 | 算力 | 视合规 | 维持 |
-| IP-6 | UNSEEN-GRASP | 指针：并入 IP-1 腕-头闭环 | P1 | IP-1 | 26轮 | 共享 | 未见物品 | 维持 |
-| IP-7 | DISTURB-AUG v3 | 渲染即标签 v7：+s_t/L_s 真值 + 特征置信模拟 | P1 | 无 | 25/28/29/30轮 | 数据(近零) | 人为干扰场景 | 微修订 |
-| IP-8 | STEP-EFF | 步骤分效率工程（含 π_lite 推理记账） | P1 | A1 | 25/27/28轮 | 零额外 | 步骤分 | 维持 |
-| IP-9 | SWARM-DECODE | population/蒸馏+自洽投票；dev 选拔/hold 报告 | P1 | IP-2 | 26/28/30轮 | 算力(一次性) | 全场景 +2~5pt | 维持 |
-| IP-10 | COST-LADDER | 三账户记账（本轮 +0.2 训练 +0.05/适配 +0.3/发布） | P0(纪律) | 无 | 26/28/30轮 | 全账户 | 防负 ROI | 维持 |
-| IP-11 | INTENT-GUARD v2 | 手势感知+意图预测+π_lite 仲裁（执行器换 v7，签名不变） | P1 | IP-1,IP-7,IP-13 | 手势×共享控制×运动×轻量×社会 | 算力(0.7+1.6 GPU·天) | 干扰场景 +5~10pt | 维持 |
-| IP-12 | PREDICT-MAINT | 三级健康+维护窗口（+窗口内执行适配） | P1 | IP-4 | 预测性维护 | 线上 <2ms/步 | 掉请求→0；感知 −30% | 微修订 |
-| IP-13 | SOCIAL-MOTION-LITE | 执行器 v7：0.6 特征伺服层 + 第四触发器 + abstain | P1 | IP-11,IP-14,IP-15 | **运动×轻量×社会** | 算力(复用 IP-15 产物) | 同 v6 + 标定鲁棒 | 微修订 |
-| IP-14 | CULTURA-SIM-LITE | SOC-SIM + 课程蒸馏 + 文化条件化（继承第 29 轮） | P1 | IP-13 | 虚拟仿真×课程×文化 | 算力(1.4 GPU·天，一次性) | 社会分↑、OOD 回退率↓ | 维持 |
-| IP-15 | SERVO-ADAPT-LITE | VS-SHIELD 特征空间安全层 + SAFE-ADAPT 信任域适配 + FROZEN-BENCH 防博弈基准 | P1 | IP-13,IP-14 | **视觉伺服×迁移学习×评测指标** | 算力(0.2 GPU·天一次性 + 0.05/适配 + 0.3/发布) | 标定鲁棒、真机差距吸收、评测可信 | **新增** |
+| IP-8 | SERVE-N | N 端口共享后端+并发调度+量化+延迟稳定性预算 | **P0** | 无 | UniBot-V1 | 1×A100/2×4090 | 可信度口径不掉分、资格保障 | 低 |
+| IP-9 | LOCAL-BENCH | 步骤分代理+5 类泛化变换库+任务难度谱系 | **P0** | IP-1(弱) | UniBot-V1/泛化 | 1 GPU+人工抽检 | 迭代速度=生命线 | 中 |
+| IP-4 | AUG-PANO | 视频级增强×3 病因（视觉 OOD/语义 OOD/EE 重定向） | **P0** | 无 | 泛化能力 | ~0.5 GPU·天 | 3/5 泛化类直接受益 | 中 |
+| IP-2 | GEOSERVE | 立体对蒸馏深度头+ee 末段伺服残差修正 | **P1** | IP-9 | 场景理解 | ~1 GPU·天 | 插孔类任务（≥5 个）成功率主攻 | 中高 |
+| IP-5 | CHUNK-RESCUE | T_a 帕累托申报+块间偏差检测+恢复编译进块 | **P1** | IP-1,IP-9 | UniBot-V1/泛化 | 近零 | 人为干扰/干扰物类受益 | 中 |
+| IP-1 | PROGRESS | 自动挖掘得分点阶段→轻量进展模型→best-of-n | **P1** | IP-9 | UniBot-V1 | ~0.3 GPU·天 | 步骤分+失败保底 | 中 |
+| IP-6 | ROUTE-LANG | 指令→32 任务原型软路由（单权重内部 MoE） | **P1** | IP-4 | 泛化能力/场景理解 | 近零 | 未见物品+任务互扰缓解 | 低 |
+| IP-10 | RESCUE-LIB | 数据集重试片段挖掘+卡住检测+恢复库 | **P1** | IP-1,IP-5 | 泛化能力 | 近零 | 平均成功率短板修复 | 低 |
+| IP-3 | PIVOT-GATE | 全身 pivot 门控激活（工作空间外低速步进） | P2 | IP-9 | UniBot-V1 | 近零 | 远/低处任务解锁 | 中高 |
+| IP-7 | RL-PROG | 进展奖励的 RL/DPO 后训练（RoboTwin/WMA-0） | P2 | IP-1,IP-9 | UniBot-V1/泛化 | 4–8 GPU·天 | SFT→RL 第二级增益 | 高 |
 
-## 3. 重点展开：SERVO-ADAPT-LITE 完整算法设计（IP-15，接第 29 轮 IP-14 骨架）
+## 2. 重点展开 A：IP-2 GEOSERVE（深度蒸馏 + 末段伺服，攻插孔类任务）
 
-### 3.1 符号定义（继承 + v7 新增）
+### 2.1 动机与差异
+- 动机：32 任务中 PlugCharger/PlugInEthernet/SyringeWaterTransfer/ZipUp/RemovePinnedNote/Unlock 为接触丰富任务；行为克隆在毫米级对准上复合误差爆炸（B1）+ RGB 无深度（B2）。这两条决定平均成功率的下限。
+- 与现有方案差异：可证头部方案（F8）直接 LoRA 微调 RGB 策略，无任何几何中间表示；本方案用**数据集自带已校正立体对**（F7）生成深度伪标签蒸馏单目深度头，全部在策略内部前向——接口零改动。
 
-继承第 29 轮全部符号（ξ、κ、Q(ξ,κ)、D(ζ)、p_s、γ_anom(s)、o_t、κ̂_t、μ_c/Δ_κ、K_bin）。
-
-| 符号 | 定义 | 精确性质 |
-|---|---|---|
-| s=(u,v,ρ) ∈ R³ | **威胁手像平面特征**：归一化质心 + log 归一化面积 | 由既有手感知算术导出，零新增前向 |
-| s*, e=s−s* | **伺服目标/误差** | s* 由 d_comfort(κ_d) 与内参 K 反解 |
-| L_s ∈ R^{3×6}，L̂_s | **交互矩阵**（ṡ_ee = L_s·v_ee）与其在线估计 | 滑窗 RLS（W=30）+ 信噪门 + Huber；渲染真值热启动 |
-| d_img, h_img, r_img=ρ_K·r0 | **图像空间裕量/CBF 函数** | 仅内参参与投影；ρ_K = 1 + c_K·ε_K,max/r0 覆盖内参误差界 |
-| r_vs | **伺服一致性新息**（运动补偿后特征跟踪残差） | 窗口 Mahalanobis + Σ̂ 白化；χ²₃(1−α) 门限；n_win=3；**κ-free** |
-| c_min, T_occ | **特征置信度门** | 不过 → σ_feat=0 → 逐位 v6 |
-| Θ_max, ε_acc, n_min | **信任域/验证门裕量/最小样本** | U2 适配三参数；n_min 未达 → 空转 |
-| G(θ,D), Δ_transfer, C_cov | **迁移误差泛函/差距/覆盖指数** | Δf_obs 真机自监督可得；C_cov ∈ [0,1] 馈回课程 |
-| S_bench v1 | **冻结基准**：500 sim 种子 + 100 真人回放 + 50 对抗 | dev/hold 双套；版本化；改动必升版 |
-| y_oracle | **真异常标签**：后续 K=10 步约束违反或专家分歧 | 离线计算；触发器校准用 |
-
-### 3.2 离线算法：FROZEN-BENCH 烧录 + SAFE-ADAPT 管线（+0.2 GPU·天一次性）
-
+### 2.2 训练管线（离线 ~1 GPU·天）
 ```python
-def build_release_v7():   # 在第 29 轮 generate_expert_dataset_v6 产物 (φ*, θ*, K_lut) 之后
-    # 第 5 步：FROZEN-BENCH 烧录（评测指标灵感落地；+0.1 GPU·天）
-    S_bench = freeze_benchmark(
-        sim=sample_seeded(SOC_SIM_eval, n=500, seeds=SEEDS_V1,
-                          kappa_grid=HELD_OUT_KAPPA_GRID),   # held-out κ* 网格
-        real=A6_replay_clips(n=100),                          # 真人回放（A6）
-        adv=adversarial_scenarios(n=50),
-        split=dict(dev=0.5, hold=0.5))                        # 防隐性调参
-    preregister(S_bench.hold, hypotheses=SERVO_INDEX_AXES,
-                stats=dict(ci="bootstrap95", test="paired_permutation",
-                           power=dict(alpha=0.05, beta=0.2)))  # 规则 20
-
-    # 第 6 步：SAFE-ADAPT 适配管线（迁移学习灵感落地；+0.1 GPU·天）
-    def adapt_residual(theta, telemetry):
-        D_fit, D_val = split_real(telemetry, holdout=0.2)
-        if len(D_fit) < N_MIN:                                 # 冷启动安全默认
-            return theta, REJECT("insufficient", n=len(D_fit))
-        # 真机自监督：动力学残差由状态转移直接可得（无需人类模型/专家真值）
-        Δf_obs = [x2 - x1 - (A @ x1 + B @ u)
-                  for (x1, u, x2) in D_fit]                    # (x, ξ, Δf_obs)
-        Δθ = trust_region_solve(
-            loss=Σ‖Δf_θ(x,ξ) − Δf_obs‖² + μ‖Δθ‖², bound=Θ_MAX)  # 信任域
-        θ_new = theta + Δθ
-        if G(θ_new, D_val) <= G(theta, D_val) - EPS_ACC:        # 验证门：单调不升 + 裕量
-            γ_anom_new = recalibrate_anom(θ_new, D_val, SOC_SIM_dev)  # 离线再标定，κ-free
-            return atomic_ota(params=θ_new, gamma_anom=γ_anom_new), ACCEPT  # 捆绑原子更新
-        return theta, REJECT("validation_gate")                 # 拒绝遥测计数（规则 19）
-    # 执行：IP-12 维护窗口内；传输/回滚复用 IP-4（CUSUM 监控适配后异常率漂移）
-
-    # IP-7 渲染即标签 v7（追加，零额外 GPU）
-    for frame in rendered_seq:
-        frame.feature_traj = [(u_t, v_t, ρ_t)]                  # 像平面特征真值
-        frame.interaction_matrix = L_s_truth(p_hand, Z, K)      # 渲染器已知位姿 → 3×6 真值
-        frame.feature_conf = simulate_conf(occlusion, blur, light)  # 置信度门训练/评测
-    return S_bench, adapt_pipeline
+# 步骤 1：立体→深度伪标签（head_stereo 已 rectified，F7）
+for seq in unibot_32tasks():                       # LeRobot v3.0 parquet + AV1 视频
+    D_head = stereo_depth(L, R, method="RAFT-Stereo+SGBM 融合")   # 校正对→稠密深度
+# 步骤 2：腕部深度自举（腕相机无立体对）
+#   head 深度 + 数据集外参链（state_d435 / torso / base 位姿）→ 投影到腕视锥
+#   有效位（recomputed_ee_valid=1 且遮挡率<阈值）入训练集  [开放问题 F-O1：外参待核实]
+# 步骤 3：单目深度头蒸馏
+depth_head = finetune(DepthAnything-V2-S, src=wrist_rgb+head_rgb, tgt=pseudo_depth)
+# 步骤 4：末段伺服残差修正器（ee 控制空间）
+#   样本：每 episode 末段 10 步；标签：Δee* = ee_{t+1} − ee_t（数据真值）
+#   输入：(wrist_rgb, D_wrist, ee_pose, gripper)；输出：Δee 修正
+refine = train_residual_head(policy_features, Δee*, focus="对准段", loss=Huber)
 ```
 
-### 3.3 在线算法：social_motion_lite_step_v7（签名兼容，<0.5ms/步）
-
+### 2.3 推理（get_action 内部，预算 ≤25ms）
 ```python
-def social_motion_lite_step_v7(self, x_ee, a_pol, threat_ctx, t):
-    # 0. ξ 编码（继承 v6；伺服特征与 ξ 共享同一次手感知前向，零新增感知）
-    ξ = self.encode_threat_ctx(threat_ctx)
-    ξ_changed = (‖ξ - ξ_last‖_∞ > ε_ξ) or (self.mode != self.mode_last)
-
-    # 0.5 κ 观测/更新（继承 v6，O(1) 标量，<0.01ms）
-    o = self.observe_implicit_feedback(threat_ctx)
-    self.kappa_hat = self.update_kappa(self.kappa_hat, o)
-    κ = self.kappa_hat
-
-    # 0.6 特征伺服层（新增；全部 κ-free；+0.05ms）
-    s = self.extract_hand_feature(threat_ctx)          # 复用手感知输出，算术级
-    if self.feat_conf(s) < C_MIN or self.occlusion_span > T_OCC:
-        self.vs_active = False                          # abstain：行为逐位退回 v6
-    else:
-        self.vs_active = True
-        if ‖self.v_ee‖ > V_MIN:                         # 信噪门：仅机器人真实运动时更新
-            self.L_hat = rls_update(self.L_hat, s, self.v_ee, huber=True)  # 0.02ms
-        self.s_pred = predict_feature(s, self.L_hat, self.v_ee, δ_cam)  # 时延补偿外推
-
-    # 1. 稀疏重规划 LUT（继承 v6，索引 (ξ, κ-bin)）
-    if (t % T_replan == 0) or ξ_changed or (kappa_bin(κ) != self.k_bin_last):
-        self.K_mpc = self.tvlqr_lut.lookup(ξ, kappa_bin(κ))     # O(1)
-
-    # 2. 蒸馏策略前向（继承 v6，输入 (x, ξ, κ)）
-    Δu_lite = self.π_lite.forward(x_ee, ξ, κ)
-    a_lite = self.K_mpc @ x_ee + Δu_lite
-
-    # 3. 早退出（继承 v6，条件不依赖 κ）
-    if ξ.d_max < 0.15 and ξ.τ_min > 1.0:
-        a_lite = self.early_exit_policy(x_ee, ξ, κ)
-
-    # 4. 双轨安全回退（v6 三触发一字不改 + 第四触发 r_vs；全部 κ-free）
-    is_high_threat = ξ.d_max > γ_safe
-    is_anomaly = (‖Δu_lite‖ > self.gamma_anom) or (self.π_lite.entropy() > H_max)
-    is_servo_diverge = (self.vs_active and
-                        sustained(self.r_vs > chi2_gate, n_win=3))     # 新增，κ-free
-    if is_high_threat or is_anomaly or is_servo_diverge:
-        a_lite = self.cbf_qp_fallback(x_ee, threat_ctx,
-                                      img_constraint=self.vs_active)   # 图像约束叠加
-
-    # 5. 共享控制融合 + 6. 硬安全裁剪（均继承 v5/v6，不引用 κ）
-    a_cmd = (1 - self.u) * a_pol + self.u * a_lite
-    a_cmd = self.hard_safety_clip(a_cmd, x_ee, threat_ctx)
-    return a_cmd
+def get_action(obs):
+    D   = depth_head(obs["wrist"], obs["head"])        # ~12ms（256×320 + 量化）
+    a   = vla.forward(obs, depth_feat=D)               # 基线 VLA（LoRA 后）
+    a_ee = refine(a_ee, obs["wrist"], D, ee_state)     # ~6ms，仅对准段激活（进展模型门控）
+    return format(a, T_a, token)                       # 逐位可关：refine=None → 基线
 ```
 
-κ 缺省 + 特征字段缺省（σ_feat=0）→ 行为精确退化为第 29 轮 v6；再 κ 固定 μ_c → v5。退化链 v7→v6→v5 完整。
+### 2.4 风险
+- 深度头在评测端光照/背景 OOD 下伪标签域差 → 增强（IP-4）同步作用于深度训练集；
+- 外参链不确定（F-O1）→ 腕部自举失败则降级为"仅 head 深度特征条件化"（仍可关）；
+- 延迟 → depth 头 INT8 + 每 k 步复用。
 
-### 3.4 图像空间 CBF 约束与一致性监测构造
+## 3. 重点展开 B：IP-5 CHUNK-RESCUE（块间闭环，攻人为干扰/干扰物）
 
-```python
-def add_image_space_constraint(cbf_qp, s, L_hat, v_ee, r0, c_K, eps_K_max):
-    # 图像约束：h_img = d_img − ρ_K·r0 ≥ 0；ḣ_img ≥ −α_img(h_img)
-    d_img  = ‖proj_hand(s) − proj_ee‖          # 仅内参参与投影（外参/深度误差一阶不进入）
-    ρ_K    = 1 + c_K * eps_K_max / r0          # 内参误差保守因子（标定报告推得）
-    A_img  = ∇d_imgᵀ @ L_hat @ J_x⁺            # 特征误差对 EE 指令的雅可比（伺服标准形式）
-    # 次级带松弛约束：度量约束（v6）为硬，图像约束带松弛 s_img 入目标——
-    # 可行域永不因新增约束而空（松弛吸收），图像层错误最多"约束退化到松弛"
-    cbf_qp.add_soft(A_img @ v_ee ≥ -α_img(d_img - ρ_K*r0) + hand_motion_comp,
-                    slack=s_img, weight=w_img)
-    if cbf_qp.infeasible: drop(s_img_constraint); telemetry.log("img_constraint_dropped")
+### 3.1 设计（接口内合法）
+- **T_a 帕累托申报**：扫描 T_a∈{4,8,16}，权衡 [网络往返延迟方差（F5 可信度）] × [块内开环时长（抗干扰）]；E4 决定。
+- **块间偏差检测**：obs_delta_indices 申报 proprio 历史堆叠（如 [-3,-2,-1,0]），每次调用计算执行偏差 e_t = ‖s_obs − s_pred(上一块)‖ + 视觉流残差 → 干扰信号（κ-free）。
+- **恢复编译进块**：检测到偏差/干扰 → 本块前 2 步注入"减速+重瞄"动作模式（从 IP-10 恢复库检索），后 T_a−2 步交 VLA 正常输出；恢复行为编译在返回的动作块内——**不依赖评测器任何配合**。
 
-def servo_consistency(s, s_pred, Sigma_hat):
-    # r_vs = 运动补偿后的特征跟踪新息（Kalman innovation 等价形式）
-    r = (s - s_pred)ᵀ @ inv(Sigma_hat) @ (s - s_pred)     # Σ̂ 滑窗白化，0.01ms
-    return r                                              # 门限 χ²₃(1−α)，持续 3 步触发
-```
+### 3.2 与现有差异
+F8 方案把 get_action 当纯函数；本方案把每次调用视为"块间闭环点"——所有可感知状态（历史堆叠是免费的）都用于下一块的条件化。人为干扰类评测的本质是"执行中被推一把后能不能回来"。
 
-### 3.5 SAFE-ADAPT 适配管线要点（规则 19 落地）
+## 4. 重点展开 C：IP-1 PROGRESS（进展模型，攻步骤分与失败保底）
 
-| 机制 | 规格 | 失效防护 |
-|---|---|---|
-| 监督信号 | Δf_obs = x_{t+1} − x_t − (A x_t + B u_t)，真机状态日志 | 动力学不文化化（第 29 轮决断）；无需人类模型 |
-| 信任域 | ‖Δθ‖₂ ≤ Θ_max + μ 正则 | SpectralNorm 下 ‖Δπ‖ ≤ L_π·Θ_max |
-| 验证门 | G(θ_new, D_val) ≤ G(θ_old, D_val) − ε_acc | 拒绝即不更新（安全默认）+ 遥测计数 |
-| 最小样本 | n_min（未达 → 空转） | 冷启动鸡生蛋防护；semi-real 先行 |
-| γ_anom 再标定 | θ_new 在 SOC-SIM dev 上重算 ‖Δu‖ P99 | 与 θ 捆绑原子 OTA；κ-free 常数语义不变 |
-| 执行/回滚 | IP-12 维护窗口 + IP-4 OTA/CUSUM | 适配后异常率漂移 → 自动回滚 |
+- **阶段自动挖掘**：每任务 1000 集（F6），用 EE-目标距离曲线拐点 + 进度分位自动切分 ~5 阶段（接近/对准/抓取/搬运/放置），VLM 零样本抽检 50 帧校准（人工预算极小）。
+- **进展模型**：P_φ(阶段, s_t, task) —— 轻量（ViT-S + 状态 MLP），输出"进展期望"。
+- **用途**：(a) best-of-n：VLA（扩散/流动作头）采样 n=4 块，按 P_φ 期望选块；(b) 失败保底：进展持续不涨 → 触发 IP-10 恢复；(c) IP-9 得分点代理与 IP-7 RL 奖励共用同一 P_φ（一份投入三处回收）。
+- 合规：得分手仍由评测方计算，P_φ 只优化我方动作选择。
 
-### 3.6 复杂度与延迟预算表（P99 确界，对比 v3/v5/v6/v7）
+## 5. 其余创新点简表
 
-| 环节 | v3 (CBF-QP) | v5 (SML) | v6 (CSL) | v7 (SAL) | 说明 |
-|---|---|---|---|---|---|
-| 仲裁核心 | ~1.0ms | 0.35ms | 0.36ms（κ 更新 0.01） | **0.41ms**（RLS 0.02 + r_vs 0.01 + 图像约束 0.02） | 特征复用手感知前向 |
-| LUT 内存 | 无（在线求解） | 2.8MB | 14MB | 14MB 不变 | O(1) 查表不变 |
-| 早退出 | 无 | 0.1ms (60%) | 不变 | 不变 | 条件不依赖 κ/特征 |
-| 双轨回退 | 主路径 | <5% | 不变（文化不变） | 不变 + 第四触发 r_vs（κ-free） | 触发语义 κ-free 扩展 |
-| 特征感知 | — | — | — | **0 新增**（复用手感知） | 关键帧预算不变 |
-| **合计仲裁增量** | +1.0ms | +0.3ms | +0.3ms (P99<0.5ms) | **+0.35ms (P99<0.5ms 维持)** | 规则 14 确界重测 |
-| 训练成本 (IP-10) | 0 | 0.3 GPU·天 | 1.4 GPU·天（一次性） | **1.6 GPU·天（一次性）+ 0.05/适配 + 0.3/发布** | 三账户分别入账 |
-
-关键帧总预算不变：15.3ms（手感知不变），仍在 >100ms 余量内。
-
-### 3.7 正确性论证（命题 1–10；1–6 继承第 29 轮，7–10 新增，诚实版）
-
-- **命题 7（图像约束标定不敏感 + 可弃 + 不破坏可行性，新增核心）**：(a) d_img 仅依赖内参与手部检测，内参误差 ε_K → d_img 扰动 ≤ c_K·ε_K（有界，标定报告可推），ρ_K 保守化后图像约束不劣于 v6 度量约束，外参/深度误差一阶不进入；(b) 图像约束为带松弛次级约束 → CBF-QP 可行域不变，松弛吸收图像层错误；(c) σ_feat=0 → 执行器逐位等于 v6。*失效模式*：手部"自信地错检"（假手/错框）→ 图像层收益归零（不倒扣安全，v6 地板恒在）。
-- **命题 8（r_vs 检测力与误报）**：H1（模型/感知分歧 ≥ δ_div 持续 3 步）下检出概率 ≥ 1−β，FPR ≤ α/h（χ²₃ 分位数 + Σ̂ 滑窗白化设计）。*诚实条款*：相关噪声（全局抖动）使白化残差保守、检出力下降但误报受控；E20b 门槛不过 → 触发器冻结 OFF（零侵入）。
-- **命题 9（适配单调不劣化 + 有界影响）**：信任域 + 验证门 → G(θ_new, D_val) ≤ G(θ_old, D_val)；SpectralNorm 结构 → ‖π(x;θ_new) − π(x;θ_old)‖ ≤ L_π·Θ_max；γ_anom 与 θ 捆绑原子再标定 → 双轨语义保持；安全层 ∂/∂θ ≡ 0（规则 19）。*失效模式*：验证门拒绝 → 不更新；OTA 后 CUSUM 漂移 → 自动回滚。
-- **命题 10（评测防博弈分层性，诚实版）**：任务进度分层比较消解"冻结刷 C_social"（层内进度同分布）；oracle 标签（K 步约束违反/专家分歧）消解"永不触发"；预注册 + bootstrap CI + 配对置换检验消解"噪声当收益"[R28, R29]。*诚实条款*：Goodhart 只能降级不能根除——oracle 季度轮换、hold 禁调参、S_bench 版本化是持续缓解而非一次性免疫。
-- **命题 1–6 继承**第 29 轮文本（安全文化不变性 / 实时性 / 课程方差优势 / κ̂ 一致性 / 平滑性 / 可消融）；其中命题 2 的 WCET 组合更新为 0.3 + 0.05 + 0.01 + 0.05 + 0.1(60% 案例) < 0.5ms，按规则 14 重测出具报告；命题 1 的"触发条件不含 κ"扩展为"触发条件不含 κ 与任何可 OTA 量"（规则 16+19 联合）。
-
-### 3.8 双轨安全回退表 v7（文化/适配双不变性标注）
-
-| 触发条件 | 行为 | κ 依赖 | 可 OTA 依赖 | E 门槛关联 |
+| 编号 | 动机 | 与现有差异 | 落地步骤 | 主要风险 |
 |---|---|---|---|---|
-| ξ.d_max > γ_safe=0.8 | cbf_qp_fallback | 无 | 无 | 安全覆盖率 ≥99.5% |
-| ‖Δu_lite‖ > γ_anom | cbf_qp_fallback | 无 | γ_anom 随 θ 原子 OTA（离线再标定留痕） | 异常率 <1% (P99) |
-| π_lite 熵 > H_max | cbf_qp_fallback | 无 | 无 | 熵逸出率 <0.5% |
-| **r_vs > χ²₃ 门 持续 3 步（新增）** | cbf_qp_fallback（vs_active 时叠加图像约束） | **无** | **无** | E20b：AUC≥0.8、FPR≤α/h、检出 ≤3 步 |
-| **特征置信门不过（新增）** | 特征层 abstain → 逐位 v6 + 遥测 | **无** | **无** | E20c：abstain 正确率 ≥99% |
-| 连续 3 步回退 | 遥测 + 模型复审 + OTA | 无 | — | fallback_rate >5% 告警 |
-| κ̂ 越带尝试 | clip 拒绝 + 遥测计数 | 仅 κ | — | 越带次数=0（E19） |
-| **适配验证门拒绝（新增，离线）** | θ/γ_anom 不更新 + 遥测 | 无 | 仅此 | 规则 19 留痕 |
+| IP-8 SERVE-N | F4：N 端口必须精确匹配；F5：延迟稳定性入可信度 | F8 类方案多为单实例思维 | 共享后端（权重共享+连续批处理+CUDA Graph）、W8A8 量化、per-port 状态隔离（reset/KV 隔离）、延迟遥测 | 并发阻塞→延迟方差；吞吐压测 E0 |
+| IP-9 LOCAL-BENCH | 迭代速度=生命线；本地无真机 | 现有方案依赖线上预约评测（高摩擦） | 步骤分代理（P_φ 复用）+5 类泛化变换库（颜色/背景/干扰物 inpainting/贴图替换/合成手部遮挡）+32 任务难度谱系表 | 本地是视觉层代理，物理泛化不可代理——仅作回归信号非上线门槛 |
+| IP-4 AUG-PANO | 5 类泛化中 3 类是视觉 OOD（B 系） | F8 方案原样用数据 | 帧级颜色/剪切/模糊；SAM2+inpainting 干扰物注入；EE 相对坐标重定向（位置泛化，ee 空间下可行性高）；指令同义改写；贴图替换（未见物品） | 增强过强→特征漂移；消融定档 |
+| IP-6 ROUTE-LANG | 32 任务互扰（B5）+未见物品 | F8 单一 LoRA 全任务混训 | 指令嵌入→任务原型库（task_index）→内部软门控（单权重）；未见物品走 VLM 原生语义 | 门控塌缩到高频任务；熵正则 |
+| IP-10 RESCUE-LIB | 失败 episode 也有步骤分；重试行为已在数据中 | SFT 只学成功段 | 挖掘"速度翻转+重接近"重试片段→卡住检测（P_φ 不涨+proprio 振荡）→恢复库（退-重瞄-再进；插孔 wiggle） | 恢复行为误触发→抖振；滞回门限 |
+| IP-3 PIVOT-GATE | pivot[7] 白送工作空间（B3） | SFT 惯例置零 | 先统计 32 任务数据 pivot/腰使用率（数据驱动立项）；门控：目标在工作空间外→低速小步 pivot；外参漂移监测 | 躯干运动引入视觉漂移新失败模式；P2 谨慎 |
+| IP-7 RL-PROG | SFT 天花板（B1）；WMA-0/RoboTwin 可用 | F8 停在 SFT | 奖励=P_φ 进展；RoboTwin(G1) 或申请 UnifoLM-WMA-0 世界模型 rollout；GRPO 在线/离线 DPO（成功-失败对比 1000 集/任务） | 算力 4–8 GPU·天；sim-real 差距；P2 期权 |
 
-### 3.9 与其他 IP 的接口（零破坏性变更清单）
+## 6. 实验设计（本地，接 IP-9）
 
-- **IP-13/IP-11**：执行器 v6 → v7，签名不变；threat_ctx 可选携带特征字段（s、置信度），缺省 → abstain → v6。
-- **IP-7**：渲染管线追加 s_t / L_s / 置信度三通道（§3.2），零额外 GPU。
-- **IP-2**：S_bench 指标（进度分层舒适违规率、触发器校准 AUC）进入 p_fail 软通道，严格模式不启用。
-- **IP-3**：S_bench 烧录与回归执行环境；dev/hold 分离；回归报告版本化落盘。
-- **IP-4/IP-12**：OTA 通道承接 (θ, γ_anom) 捆绑原子更新；CUSUM 监控适配后异常率漂移并自动回滚；维护窗口执行适配。
-- **IP-9**：population 学生在 S_bench dev 上选拔、hold 上报告（防选拔泄漏）。
-- **IP-10**：训练账户 +0.2（一次性）+ 适配 0.05/次（维护账户）+ 回归 0.3/发布（新设评测账户），ROI 复核自动触发。
-
-## 4. IP-7 渲染即标签 v7（特征伺服通道）
-
-```python
-def augment_feature_labels_v7(rendered_seq):
-    for frame in rendered_seq:
-        frame.social_cost = compute_v6_labels(frame)          # 继承第 29 轮 κ 化标签
-        frame.feature_traj.append((u, v, ρ))                  # 像平面特征真值
-        frame.interaction_matrix = L_s_truth(p_hand, Z, K)    # 渲染器已知位姿 → 3×6 真值
-        frame.feature_conf = simulate_conf(occlusion, blur, light)  # 置信度门标定数据
-    return render_with_feature_labels_v7
-```
-
-成本：纯 CPU 算术，~0.5ms/帧，零额外 GPU。
-
-## 5. 实验设计（新增 E20/E21/E22，接 E12–E19）
-
-| 实验 | 设置 | 指标 | 门槛/预期 |
+| 实验 | 设置 | 指标 | 门槛 |
 |---|---|---|---|
-| **E20a 标定误差注入（视觉伺服核心）** | 外参旋转 ±3°、平移 ±30mm、深度尺度 ±15% 全因子扫描（SOC-SIM + IP-7 渲染） | 安全覆盖率、d_img 约束违规率、任务分 vs v6 | 图像层不劣于 v6 且至少一个误差档显著更优（配对置换 p<0.05）；安全事件=0；否则 VS-SHIELD 冻结 |
-| **E20b r_vs 触发器 ROC** | 注入感知攻击/模型失配/正常噪声三类场景 | AUC、PR@工作点、FPR/h、检出时延 | AUC≥0.8、FPR≤α（设计值）、检出 ≤3 步；不过则触发器冻结 OFF |
-| **E20c 特征消融** | 遮挡/模糊/光照扰动轴（IP-7） | abstain 正确率、abstain 后与 v6 逐位一致性 | ≥99%；逐位一致=100% |
-| **E21 适配管线** | semi-real（A6 回放 + 真机日志合成 Δf_obs）→ 信任域微调全流程 | Δ_transfer 前后比、样本效率曲线、验证门拒绝率、γ_anom 再标定后异常率 | 验证误差单调不升；适配后 Δ_transfer ≤0.5×；异常率 <1%（P99）维持；不过则 SAFE-ADAPT 关闭 |
-| **E22 基准与防博弈审计** | 冻结 S_bench v1；三恶意策略（冻结机器人/永不触发/阈值 gaming）审计 | Pareto 报告暴露性、触发器校准可靠性图、预注册 CI/效应量 | 三恶意策略全部被暴露；v7 全轴 ≥ v6（任一轴显著劣化 → 回退审查） |
-| **E17/E18 系列重跑** | S_bench v1 上回归（π_lite v7 + 适配管线） | 同第 28/29 轮 | 同门槛（碰撞=0、P99<0.5ms、社会代价 ≤CBF−15%、回退率<5%、E18c τ≥0.7） |
+| E0 吞吐与延迟 | 3 端口并发 × 满载请求 | P99 延迟与抖动、吞吐 | 抖动 <10ms；无互阻塞 |
+| E1 基线复现 | LingBot-VLA LoRA 于 HangCup+PlugCharger 小规模 | 本地代理成功率、loss 曲线 | 对齐 F8 量级（val/loss≈0.09） |
+| E2 增强消融 | AUG 各轴 on/off × 本地 OOD 集 | 各泛化类代理成功率 | 每轴不劣化、至少 2 轴显著提升 |
+| E3 GEOSERVE | 插孔 5 任务，深度/修正器 on/off 消融 | 末段对准成功率、延迟增量 | 成功率提升显著；延迟 ≤25ms |
+| E4 chunk 扫描 | T_a∈{4,8,16} × E0 延迟 × OOD 干扰集 | 帕累托前沿 | 选定申报值并记录理由 |
+| E5 PROGRESS | P_φ vs 人工标注 50 帧/任务 | 得分点检测 AUC、best-of-n 增益 | AUC≥0.85；best-of-n 增益>0 |
 
-**降级机制**：E20a/c 任一不过 → VS-SHIELD 冻结（σ_feat=0，行为=v6）；E20b 不过 → r_vs 触发器冻结 OFF；E21 不过 → SAFE-ADAPT 关闭（θ* 冻结于 v6，仅离线迭代）；E22 不过 → 相应轴不作为合并门槛并启动基准审查；E17 系列任一不过 → IP-13/14/15 整体冻结，IP-11 回退 CBF-QP。均无负收益。
+降级机制：每项增强独立开关；E2–E5 任一不过 → 对应层关闭，逐位回退基线，无负收益。
 
-## 6. 风险登记簿（完整表）
+## 7. 风险登记簿
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| **腕部相机手部特征鲁棒性（遮挡/模糊/光照下"自信地错检"）——本轮最大** | **高** | 置信度门 + abstain 优雅退化；图像层为增量约束非替代（v6 度量层地板恒在、松弛保证可行性）；oracle 审计捕捉错检；E20c 门禁 |
-| **U2 真机遥测冷启动（鸡生蛋：适配需要真机数据，上线前没有）** | **中高** | semi-real 回放先行；n_min 门（不足即空转）；A6 采集；门拒绝率遥测 |
-| 检测误差污染图像约束（假手/错框） | 中 | 置信度门 + ρ_K 保守因子 + 次级带松弛（可行性不破坏）+ oracle 审计 |
-| r_vs 相关噪声误报（全局抖动） | 中 | Σ̂ 滑窗白化 + χ² 分位数设计 + E20b FPR 门槛 + 触发器可冻结 OFF |
-| S_bench 隐性过拟合（跨轮隐性调参） | 中 | 版本冻结 + dev/hold 双套 + 预注册 + oracle 季度轮换 + hold 禁调参 |
-| θ/γ_anom OTA 版本不一致 | 低 | 捆绑原子更新 + 规则 18/19 审计 + IP-4 CUSUM 回滚 |
-| SOC-SIM 人类反应保真度（继承第 29 轮最大风险） | 中（U1/U2/U3 三重新增缓解；E18c 仍为确认条件） | E18c 三级对照 + 真机适配吸收通道 + 特征层真机闭环 |
-| κ 归因误差（继承） | 中 | 带限 clip + E19 门槛 + κ̂ 冻结机制 |
-| 文化先验表有偏（继承） | 中 | 防刻板印象三条款 + A6 少样本校准 |
-| 课程过拟合于仿真难度轴（继承，进一步缓解） | 中 | **C_cov 反馈通道（新增）** + 课程后期混入真实回放 + E18b 消融 |
-| 蒸馏策略 OOD 安全退化（继承） | 中 | 双轨兜底 + E17 门槛 + 适配通道 |
-| 奖励模型偏差（继承） | 中 | A6 校准 + 双轨兜底 + 分层 DPO |
-| 量化精度损失（继承） | 中 | QAT 校准集扩展 + 确界重测（规则 14） |
-| TV-LQR 线性化误差（继承） | 中 | 残差补偿（不文化化）+ 域边界回退 |
-| 早退出/κ-bin/r_vs 抖振（继承+扩展） | 低 | 滞回 + 低通 + n_win=3 持续判据 |
-| F9 相机映射/校正未确认（继承；**图像层把安全依赖降为"仅内参"**） | 高（A4 仍最高优先） | A4 内参验证相对提权 + 图像层外参不敏感 + E12/E13 |
-| 合成手域差距 + 意图误判（继承） | 高 | 双轨兜底 + B_def + E12/E13 + A6 |
-| LUT 插值误差（继承，κ 维扩展） | 中 | 双线性插值 + 容错带 δ_lut + E17d 扩展 |
+| 策略内新增前向吃延迟稳定性预算（F5） | **高（本轮最大）** | 小模型+量化+固定预算；每层独立开关；E0/E3 门禁 |
+| 榜单未公开，"榜首<30%"为用户先验（F10） | 中 | 以可证样本（F8）+公开证据链设计；榜单公开后复核画像 |
+| 规则细则未读（飞书需登录）：得分点定义、泛化场景官方口径、单模型边界 | 中 | 邮件/ Discord 获取手册；保守合规边界（想法区 §4） |
+| 立体深度自举的外参链不确定（F-O1） | 中 | 降级为 head 深度条件化；E3 消融 |
+| 本地评测与真机物理泛化的代理鸿沟 | 中 | 本地仅回归信号；关键节点线上小规模评测 |
+| 6.3B×3 端口显存/并发 | 中 | 共享后端+量化；E0 压测 |
+| 增强导致特征漂移 | 低 | 强度消融定档（E2） |
+| 单 LoRA 任务互扰残留 | 低 | IP-6 软路由；难度谱系加权采样 |
 
-## 7. 来源清单（检索/核实于 2026-11-07）
+## 8. 开放问题（下轮优先）
 
-- 继承第 27/28/29 轮 R1–R24，口径不变。
-- 本轮新增：
-  - R25 Visual Servo Control. Part I: Basic Approaches / Part II: Advanced Approaches（Chaumette & Hutchinson, IEEE Robotics & Automation Magazine 2006/2007）：经典教程，无 arXiv，如实标注——IBVS 交互矩阵与 Lyapunov 稳定性出处
-  - R26 2 1/2 D Visual Servoing: A New Approach...（Malis, Chaumette, Boudet, IEEE T-RA 1999）：经典论文，无 arXiv，如实标注——对深度估计误差的鲁棒性出处
-  - R27 Sim-to-Real Transfer in Deep Reinforcement Learning for Robotics: a Survey（Zhao, Peña Queralta, Westerlund, IEEE SSCI 2020）: https://arxiv.org/abs/2009.13303 ✓（arXiv API 核实）
-  - R28 Deep Reinforcement Learning that Matters（Henderson et al., AAAI 2018）: https://arxiv.org/abs/1709.06560 ✓（核实）
-  - R29 Deep Reinforcement Learning at the Edge of the Statistical Precipice（Agarwal et al., NeurIPS 2021, rliable）: https://arxiv.org/abs/2108.13264 ✓（核实）
-- **诚实记录**：本轮曾凭记忆引用 arXiv:2006.15364 为 sim-to-real 综述，经 arXiv 页面核实为无关论文（Multiple Chaotic Attractors in Coupled Lorenz Systems），已废弃并经 API 检索换用正确编号 arXiv:2009.13303。R25/R26 为经典文献、无 arXiv 编号，如实标注。
+- F-O1 数据集外参链（head→wrist 投影可行性）——下载样例数据实测。
+- F-O2 官方手册获取：得分点定义、5 类泛化场景官方口径、N 的取值、单模型判定细则。
+- F-O3 T_a 与 image_resize 的联合最优（分辨率↑精度↑延迟↑的权衡）。
 
-## 8. 清单迭代规则（继承 + 第 30 轮增补）
+## 9. 来源清单（全部检索/核实于 2026-11-07）
 
-- 继承第 28/29 轮规则 12–18（双轨上线强制、社会代价可审计、量化确界、fallback 遥测、E17 门槛、P99 确界、LUT 精度、安全层文化不变、κ 带限防刻板印象、课程判据留痕）。
-- **19（新增）：适配不变性**——任何在线/OTA 适配不得触及 γ_safe、H_max、CBF 约束、硬裁剪与回退触发语义；γ_anom 仅允许与 θ 捆绑原子 OTA 且离线再标定留痕；适配更新必须通过验证门并遥测 accept/reject 计数；n_min 未达时管线必须空转。
-- **20（新增）：评测防博弈**——合并主张必须在冻结版 S_bench 上预注册（假设/指标/统计检验/样本量），报告 bootstrap CI 与效应量 [R29]；任何指标修改必须附"作弊者画像"分析；跨轮比较仅在同一 S_bench 版本内有效；hold 集禁止用于任何调参与选拔。
+1. UniBot 官网首页/挑战赛/排行榜/运行记录：https://unibot.unitree.com/ （challenges.html：32 任务、32000 episodes、169 小时、得分点满分 100；leaderboard.html 与 runs.html：均"即将发布"）
+2. 提交模板与接口规范：https://github.com/unitreerobotics/unibot_submission （README：§1–§6 全文核实；obs/action 目录、metadata、N 端口、可信度考核）
+3. 数据集 collection（32 items）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；数据结构样例 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup （README：LeRobot v3.0、AV1 480×640@30、head_stereo 已校正、全身字段；HF API：train=194,564 帧）
+4. 参赛方案可证样本：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora （模型卡：LingBot-VLA 2.0 6.3B、LoRA r64/65M、32 任务 33,276 episodes、10K steps、单卡 RTX 4090、val/loss 0.085、joint 空间）
+5. LingBot-VLA：https://huggingface.co/robbyant/lingbot-vla-4b （README：arXiv:2601.18692，20k 小时真机数据、9 种双臂构型、Depth 变体）
+6. 宇树生态模型：https://huggingface.co/unitreerobotics （UnifoLM-WMA-0-Base/Dual 为 gated；UnifoLM-VLA/WLA/ER 系列，HF API 核实）
+7. 规则文档（未能抓取，需登录）：https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh （中）/ https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh （英）——诚实记录：仅获 JS 壳，内容未核实
+8. "榜首成功率<30%"：用户提供先验；官网榜单未公开无法直接核实（F10，弱证据高置信采用）
 
----
+## 10. 清单迭代规则（第 1 轮设定）
 
-**本轮最大风险一句话**：腕部相机在遮挡/运动模糊/光照扰动下对威胁手"自信地错检"（置信度门只兜"知道不知道"，不兜"错得自信"），使图像空间约束与 r_vs 触发的收益归零甚至误发——安全由 v6 度量层地板与松弛优先级兜底，但新增层收益可能打折，叠加 U2 真机遥测冷启动的鸡生蛋问题，须以 E20a/b/c 注入式扫描与 E21 semi-real 回放验证后方可采信，任一不过即整层 abstain 冻结退回 v6，无负收益。
+1. 每项创新点必含：动机/与现有差异/可行性/资源/落地步骤/风险六要素；
+2. 接口红线：不新增 obs 键、不改评测方行为、所有增强独立可关（逐位回退基线）；
+3. 合规红线：不做评测操纵，进展模型只优化我方期望；
+4. 先证后立：头部方案画像仅基于可证样本与公开文献，推断必须标注；
+5. 修剪优先：每轮先深化/修剪/修正（如本轮动态 chunk→T_a 扫描），再新增。
 <!-- ARTIFACT:END -->
