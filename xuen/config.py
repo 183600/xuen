@@ -532,8 +532,9 @@ def _validate_rounds_config(cfg: Config) -> None:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
     for name, value in (
-            ("rounds.verify_timeout", cfg.rounds.verify_timeout),
-            ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
+        ("rounds.verify_timeout", cfg.rounds.verify_timeout),
+        ("rounds.judge_timeout", cfg.rounds.judge_timeout),
+    ):
         if not _is_finite_number(value) or value <= 0:
             raise ValueError(f"{name} 必须为有限的正数（秒）")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
