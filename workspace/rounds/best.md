@@ -3,554 +3,294 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 28 轮 · 思维深化：SOCIAL-MOTION-LITE 的形式化与权衡
+# 第 1 轮 · UniBot 锚定与灵感词裁决：先核实、再挖掘，最后才谈押注
 
-## 直觉锚点与动机链条（承接上一轮）
+## 0. 开场立场（为什么本轮不是延续第 28 轮的社机器人设）
 
-- **Q1（怎么动更优）的形式化突破**：CBF-QP 求解本质是有限时间horizon下的QP规划，其最优性局限于安全集内的最小偏离。TV-LQR 引入时变反馈增益 K(t)，求解利卡蒂微分方程，输出的不是“最安全的动作”而是“最优轨迹流形”。在社会代价项 Q = Q_track + λ_leg Q_leg + λ_prox Q_prox + λ_jerk Q_jerk 下，TV-LQR 产生的轨迹在安全约束与平滑性之间取得帕累托最优平衡。关键创新：λ 项随威胁上下文 ξ 自适应变化，而非固定权重，这使得机器人在低威胁时倾向于自然、平滑的让位动作，在高威胁时倾向于保守但仍平滑的规避。
+第 28 轮及之前的清单（IP-1~IP-13，SOCIAL-MOTION-LITE）是在「有可靠人体手部关键点通道、QP 仲裁、维护窗口」这套假设下长出来的；那套假设在 UniBot 已核实的接口面前**大部分不成立**：评测观测只有 4 路相机 + 本体感知 + 一条语言字符串，没有人体骨架、没有音频、没有单独的手部通道。所以本轮第一件事不是发明新算法，而是**把清单重新锚定到已核实的事实上**——该留的留、该改锚的改锚、该剪的剪，这才符合「优先深化与修剪，而不是推倒重来」的迭代纪律。
 
-- **Q2（能不能跑得动）的系统性突破**：将控制问题从“迭代求解”转化为“前向推理”。TV-LQR 的解析解 K_seq 在离线阶段通过利卡蒂反向递推得到，生成 K_seq_LUT（查找表），在线仅 O(1) 查表。π_lite 为 INT8 量化感知的小型 MLP (~200K 参数)，早退出分支对低威胁场景 skip 推理。两者组合：确定性 <0.1ms 查表 + 确定性 <0.3ms 前向推理，彻底消除 QP 求解的随机延迟与数值不稳定。
+## 1. 检索实录（全部检索于 2026-11-07，见产物区来源清单）
 
-- **Q3（该不该这么动）的优化论突破**：不再事后 CI 兜底，而是在离线训练阶段就将社会代价显式嵌入。DPO (Direct Preference Optimization) 微调对象为 π_lite，偏好数据来源于合成轨迹的社会成本总和（Legibility+Proxemics+Jerk）。奖励模型为启发式函数，无人工标注。训练目标 L = BC + λ_dpo · DPO_reward，其中 DPO_reward = log σ(r_π(a|x,ξ) - r_π(a'|x,ξ))，a、a' 为对偏好轨迹。这使得 π_lite 天然产出“讨喜”动作，线上零额外计算。
+**拿到的（已核实）：**
+- 赛事官网四页在线；排行榜与运行记录均标注 Coming Soon → 截至检索日**不存在任何公开的头部方案数据**，「榜首成功率不到 30%」只能记作用户口径（F12），不能当事实卡用。
+- 挑战赛页：32 项真实桌面任务、32000 episodes、169 小时；单模型多任务通用性评测（"single-model, multi-task general performance"）。
+- HF 数据集合集：32 个 `G1_Dex1_<Task>` 数据集（HangCup/ArrangePlates/ZipUp/PourOutMedicine…各约 1000 集，30fps，4 相机 640×480 AV1，Dex1 平行夹爪，apache-2.0）。
+- 提交模板仓库 `unibot_submission`：policy 三成员接口（metadata/get_action/reset）、websocket+msgpack、相机帧 JPEG q95 4:4:4 过网、动作 chunk、token 每步校验、N 台机器人对应 N 个连续端口（8765 起）、**逐步延迟与动作统计规律性会被记录并可能随成绩发布**。
+- Unitree 自家底座：UnifoLM-VLA-0（Qwen2.5-VL 血脉，VLM-Base 8B，2026-01-29 开源训练/推理代码，CC BY-NC-SA 4.0）；UnifoLM-WMA-0（世界模型-动作架构，明确定位为「(a) 交互式模拟器产合成数据 (b) 预测未来以增强策略」，license 标注自相矛盾：卡片文本 NC-SA / HF 元数据 apache-2.0）。
 
-## 形式化定义的深化
+**拿不到的（诚实记录）：**
+- 参赛规则手册在飞书且**需要登录**（Jina 代理被重定向到登录页）→ 步骤分公式、5 类泛化场景的官方定义、单 episode 时限、N 的确切值、是否允许录制自身观测，**全部无法公开核实**，只能记用户口径或列为待办。
 
-### 3.1.1 威胁上下文 ξ 的几何表征
-ξ = {d_max, d_argmax, τ_min, |H|} ∈ [0,1]^4
-其中：
-- d_max = max_i d(h_i, p_ee) / d_nominal（归一化最大距离）
-- d_argmax = argmax_i d(h_i, p_ee)（最大威胁手的索引）
-- τ_min = min_i (d(h_i, p_ee) / |v_rel|)（最小接触时间，归一化）
-- |H| = 当前可见手的数量（归一化）
+**三个改变研究重心的意外发现：**
+1. 训练集里**每个任务自带 5 条同义指令**（`meta/tasks.parquet` 用 `@` 连接），而每条 episode 只有 `task_index`——指令要自己挂，且换句就是现成的泛化增强种子。评测段的 `observation.language` 是明文字符串，指令口径是否一致无人知晓。
+2. Runs 页明示「点击详情查看完整评测视频」→ **官方每次评测都会产出带分数与完整视频的公开运行记录**：失败视频=免费标注，官方步骤分=免费偏好标签。这是 IP-19 的由来。
+3. 接口本身就是分数：相机通道改名（`head_stereo_left→cam_left_high`）、Dex1 夹爪 5.5=开/0=闭的**反相约定**、`pivot` 7 维通道（vx,vy,angle_z,pivot_3/4/5,height，遥操杆量，乱输出会改变机器人姿态）、缺失状态（torso/d435/waist/recomputed_ee_valid 在评测段不存在）——任何一处静默错映射，成功率直接归零，且**在本地毫无症状**。
 
-几何意义：ξ 描述了末端执行器相对于所有手的空间位置关系的四维投影。ξ 的每个分量都有明确的物理单位归一化边界，便于 LUT 查表与函数逼近。
+## 2. 瓶颈重判：在无法核实榜单的前提下，用可核实事实推头部方案的墙
 
-### 3.1.2 时变线性化动力学的精确形式
-以当前 EE 状态 x = [p_ee, v_ee]^T 和威胁上下文 ξ 为名义点，动力学线性化：
-ẋ = A(ξ) x + B(ξ) u
-其中 A(ξ) = ∂f/∂x|_(x_ξ,ξ)，B(ξ) = ∂f/∂u|_(x_ξ,ξ) 为解析雅可比矩阵。
-关键：A(ξ)、B(ξ) 仅在 ξ 变化时重新计算，ξ 变化频率远低于控制周期（<10 Hz），在两次 ξ 变化间 K_mpc 查表完全确定性。
+头部方案不可考，我不编造。把「单模型 32 任务、遥操演示数据、真实硬件、按成功率+步骤分排名」这几个硬事实摆在一起，墙上必然有这五块砖：
+- **砖一：静默错映射**（上面第 3 点）——不是模型问题，是系统问题； everyone 都暴露。
+- **砖二：开环 BC 的复合误差 + 零恢复数据**——遥操演示是干净的，真实闭环一偏就回不来；32 个任务里长程任务（ZipUp/PlugCharger/SyringeWaterTransfer）尤其脆。
+- **砖三：遥操演示不 step-optimal**——6 秒量级的人操轨迹含大量停留与绕路，直接拟合就把步骤分拱手让人；而步骤分与成功率**并列进入排序口径**（官网原文）。
+- **砖四：五类场景 shift**（位置/干扰物/背景/未见物品/人为干扰，用户口径）——演示数据是受控桌面，一条平移或一只手入画就出分布。
+- **砖五：语言口径 shift**——训练侧 5 条同义句、评测侧指令措辞未知，指令编码稍有偏差就是「做对了物体、做错了目标」。
 
-### 3.1.3 社会感知代价矩阵的四范式分解
-Q(ξ) = Q_track + λ_leg(ξ) Q_leg(ξ) + λ_prox(ξ) Q_prox(ξ) + λ_jerk(ξ) Q_jerk(ξ)
+## 3. 三个灵感词的裁决（这是本轮的筛子，也是产出清单的根据）
 
-其中四个子矩阵的精确形式：
-- Q_track = diag(q_p, q_p, q_p, q_v, q_v, q_v)，q_p ≫ q_v（位置权重显著大于速度，确保轨迹收敛）
-- Q_leg = α_leg · [0_{3×3}, 0_{3×3}; 0_{3×3}, diag(0,0,0, σ_leg^2)] · outer([0,0,0, dir_threat])（仅速度维度鼓励远离威胁方向）
-- Q_prox = α_prox · diag(σ_p^2, σ_p^2, σ_p^2, 0,0,0) · max(0, d_comfort - ‖p_ee - p_hand[d_argmax]‖)(仅位置维度，d_comfort ≈ 0.8m)
-- Q_jerk = α_jerk · diag(0,0,0, σ_a^2, σ_a^2, σ_a^2)（仅速度维度，间接惩罚 Jerk，等价于增大控制增益的变化率惩罚）
+**「创新点挖掘」→ 采纳，且它就是本轮的方法论本身。** 我按「排序指标 → 因子分解 → 每因子的候选机制 → 期望边际分 × 可行性」的顺序机械地过一遍，得到的不再是拍脑袋清单，而是一张带依赖和门槛的地图（产物区 §2）。收益：清单从 13 项收敛为「2 项 P0 + 5 项 P1 + 若干改锚/冻结/修剪」，且每一项都能回答「动了排序口径里的哪个因子」。
 
-自适应权重公式（关键创新）：
-λ_leg(ξ) = σ_leg^0 + (σ_leg^max - σ_leg^0) · σ_sigmoid(d_max)  # 威胁越大，可读性重要性越高
-λ_prox(ξ) = σ_prox^0 - (σ_prox^0 - σ_prox^min) · σ_sigmoid(d_max)  # 威胁越大，主动距离控制重要性降低（安全优先）
-λ_jerk(ξ) = σ_jerk^0 + (σ_jerk^max - σ_jerk^0) · (1 - σ_sigmoid(d_max))  # 威胁越大，平滑度重要性反而提升（避免急促 maneuver）
+**「语音合成」→ 修剪，本轮明确拒绝，理由写入规则防止后续轮次反复追问。** 核实过的事实：动作目录只有夹爪+臂+EE+pivot；观测目录里视频流 `has_audio: false`、唯一的语言字段是**输入**字符串； Runs 页只展示视频。即：TTS 在评测闭环里既无输出通道也无感知通道，投入产出为零。唯一残余价值是开发期给调试视频配音这类纯工具性用途，降格为「可选工具项」，不进评分路线。与它相邻的**语言侧真问题**（指令改写鲁棒性）由 IP-16 接手——这是把灵感词「翻译」成有效问题的标准动作。
 
-### 3.1.4 双轨回退阈值的形式化定义
-γ_safe = 0.8（威胁分阈值）：当 ξ.d_max > 0.8 时，视为高威胁场景，强制回退 CBF-QP。
-γ_anom = 3σ（动作异常阈值）：基于残差网络 Δf_θ 的训练分布统计，σ 为标准差，当 ‖Δu_lite‖ > γ_anom 视为异常输入。
-H_max（不确定性阈值）：π_lite 输出动作分布的熵，超过 H_max 视为模型在分布外，触发回退。
-T_replan = 50ms（重规划周期）：仅当 ‖Δξ‖ > ε_ξ 或模式 m 从 EXEC 切换至 DEFEND 时重新查表 K_mpc。
+**「强化学习」→ 采纳，但全程带闸。** 没有官方仿真器、没有真实机器人随时可蹭，所以「仿真里 PPO 再 sim-to-real」这条路对 No 队是空头支票。两条可落地路径：
+- **路径 A（推理时，不训练）**：用 WMA-0 世界模型当「动作候选的异步裁判」——采样多个 chunk，用世界模型预测未来帧，选让场景状态最接近任务目标的执行。本质是 MPC/verifier，不是 RL，风险可控、可消融。
+- **路径 B（离线偏好，无环境交互）**：metric-DPO——把「同一任务、我们自己的多次预约运行」按官方评分（成功率/步骤分）组成偏好对，直接对 VLA 做偏好优化。数据来自官方计分本身，零人工标注。这是「强化学习」思想在「无仿真器、少真机」约束下的正确退化形态。
+两条路径的共同闸门（继承第 28 轮规则 12 并加强）：任何学习出来的组件上线即可消融，消融后系统回退到 BC 基线且不得更差。
 
-## 算法步骤的精炼（两层架构）
+## 4. 与旧清单的关系：一个改锚，两个新增，一个修剪
 
-### 3.2.1 离线专家生成（GPU 离线，~0.3 GPU·天）
+- **改锚**：IP-11/13（INTENT-GUARD / SOCIAL-MOTION-LITE）的输入通道从「可靠手部关键点」改为「4 路相机的视觉干扰检测」，防御动作从「让位」改为「冻结/保持/收手」——双轨兜底与可消融思想全部保留，QP/LQR 那套重机械全部拆除。
+- **新增**：IP-14（桥接与干跑）、IP-15（步骤分目标）、IP-19（运行记录挖掘）——全部来自本轮挖掘，不是旧清单的自然延伸，这正是「推倒重来」与「重新锚定」的区别：保留旧结构（纪律、账户、可消融），替换旧内容（通道、机制、数据源）。
+- **修剪**：语音合成（§3）；SLAM-MAP 降级（无 LiDAR，纯视觉记忆）；SWARM-DECODE 降 P2（先把单模型做对）。
 
-第 0 步：上下文采样分布设计
-Ξ = sample_threat_contexts(
-    n_nominal=50000,  n_extreme=5000,  n_adversarial=2000
-)
-- n_nominal：合成手注入统计分布，覆盖训练/评测分布
-- n_extreme：高速手、多手遮挡、未见意图组合的组合爆炸空间采样
-- n_adversarial：梯度攻击生成的对抗样本，专门针对 π_lite 潜在弱点（如高频振动、突变性动作），确保残差网络在边界处的泛化能力
+## 5. 本轮押注
 
-第 1 步：TV-LQR + 残差专家轨迹生成
-对每个 ξ ∈ Ξ：
-  1.1 线性化动力学：A, B = linearize_dynamics(x_nominal, ξ)
-  1.2 社会代价矩阵构造：Q = build_social_cost(ξ)，R = 0.01·I
-  1.3 TV-LQR 增益求解：K_seq = solve_tvlqr(A, B, Q, R, T=1.0, dt=0.01)
-    # 有限时域利卡蒂反向递推，确定性 <0.1ms，输出 K_seq[t] ∀t∈[0,T]
-  1.4 专家闭环滚出 + 残差标签收集：
-      x_t ← rollout(x_0, K_seq, Δf_θ=0)
-      Δf_target = f_true(x_t) - (A @ x_t + B @ (K_seq[t] @ x_t))
-      D_expert ← D_expert ∪ {(x_t, ξ, Δf_target)}
-
-第 2 步：残差网络训练
-θ* = train_residual_net(D_expert)
-# 网络结构：5层 MLP，每层 128 维，Spectral Normalization 正则化
-# 损失函数：L_res = ‖Δf_θ(x,ξ) - Δf_target‖² + λ_sn ‖Δf_θ‖_Spectral
-# 目标：补偿 TV-LQR 线性化误差，保证 ‖Δf_θ‖ ≤ ε_f ≈ 0.02
-
-第 3 步：蒸馏数据集构造
-D_distill = ∅
-对每个 ξ ∈ Ξ：
-    3.1 专家闭环滚出（含残差）：x_t ← rollout(x_0, K_seq, Δf_θ=θ*)
-    3.2 收集专家动作：u_expert = K_seq[t] @ x_t
-    3.3 D_distill ← D_distill ∪ {(x_t, ξ, u_expert)}
-
-第 4 步：量化感知蒸馏 + DPO 微调
-φ* = distill_policy(
-    D_distill,
-    student=PolicyNet(quant=True, early_exit=True),  # ~200K 参数，INT8 量化，早退出分支
-    loss = BC + λ_dpo · DPO_reward(
-        reward_model = Legibility + Proxemics + Jerk,
-        β = 0.1  # DPO 温度参数
-    ),
-    quant_calib = calibration_set  # 量化校准集，保证 INT8 精度 < 2%
-)
-# 返回：φ*（蒸馏策略），θ*（残差网络），K_seq_LUT(Ξ)（增益查找表）
-
-### 3.2.2 在线仲裁执行器（<0.5ms/步，替代 IP-11 cbf_filter）
-
-def social_motion_lite_step(x_ee, a_pol, threat_ctx, t):
-    """
-    两层架构在线执行器，完整形式如下：
-    """
-    # 0. 威胁上下文编码与变化检测
-    ξ = encode_threat_ctx(threat_ctx)  # 标准化到 [0,1]^4
-    ξ_changed = (‖ξ - ξ_last‖_∞ > ε_ξ) or (mode_changed)
-    
-    # 1. 稀疏重规划 TV-LQR 增益查表
-    if (t % T_replan == 0) or ξ_changed:
-        K_mpc = tvlqr_lut.lookup(ξ)  # O(1) 查表，零在线求解
-        ξ_last = ξ
-    
-    # 2. 蒸馏策略前向（主分支，<0.3ms）
-    Δu_lite = π_lite.forward(x_ee, ξ)  # INT8 量化前向传播
-    a_lite = K_mpc @ x_ee + Δu_lite  # 基线反馈 + 策略修正
-    
-    # 3. 早退出分支（低威胁 60% 场景，<0.1ms）
-    if ξ.d_max < 0.15 and ξ.τ_min > 1.0:
-        a_lite = early_exit_policy(x_ee, ξ)  # 更小网络结构，跳过部分隐层
-    
-    # 4. 双轨安全回退（核心兜底）
-    is_high_threat = ξ.d_max > γ_safe  # γ_safe = 0.8
-    is_anomaly = (‖Δu_lite‖ > γ_anom) or (π_lite.entropy() > H_max)
-    if is_high_threat or is_anomaly:
-        a_lite = cbf_qp_fallback(x_ee, threat_ctx)  # 保留 IP-11 原分支
-        fallback_counter += 1
-        telemetry.log("fallback", trigger="high_threat" if is_high_threat else "anomaly")
-    
-    # 5. 共享控制融合（语义不变，权重 u 来自 IP-11 滞回/率限）
-    a_cmd = (1 - u) * a_pol + u * a_lite
-    
-    # 6. 硬安全裁剪（最后一道物理防线）
-    a_cmd = hard_safety_clip(a_cmd, x_ee, threat_ctx)  # 速度/加速度/距离硬限
-    
-    return a_cmd
-
-## 增强的正确性论证（设计命题与失效模式的诚实版）
-
-### 命题 1（名义输入输出稳定性 ISS）
-设Δf_θ 的近似误差 ‖Δf_θ - Δf_true‖ ≤ ε_f，TV-LQR 线性化误差 ‖ẋ - (A(ξ)x + B(ξ)u)‖ ≤ ε_lin，且 ξ 变化慢于 T_replan。则闭环系统在名义威胁分布下满足输入到状态稳定（ISS）性质，即存在 κ(·)、γ(·) 类函数，使得 ∀t: ‖x(t)‖ ≤ κ(‖x(0)‖) + γ(sup_0≤τ≤t ‖d(τ)‖)，其中 d(·) 为外部威胁输入。专家 TV-LQR 有已证明的 ISS 证书，蒸馏策略的 BC 损失 < ε_bc 保证邻域内近似：V_pi(x) ≤ V_expert(x) + O(ε_bc/μ)，其中 μ 为系统强凸参数。
-
-*失效模式*：分布外威胁（极端手速、多手遮挡）→ π_lite 经验覆盖不足 → ‖Δu_lite‖ 超过 γ_anom → 双轨回退 CBF-QP 兜底（理论证书完整保留）。
-
-### 命题 2（实时性确定性边界）
-π_lite 为固定结构 INT8 网络，推理延迟确界 < 0.5ms（量化校准集验证，P99 报告）。TV-LQR 增益查表 O(1)，无动态内存分配、无迭代求解器、无分支预测Miss率异常。硬实时性保证：CWC (Worst-Case Execution Time) = 0.3ms + 0.05ms 查表 + 0.1ms 早退出（60% 案例） < 0.5ms。
-
-*失效模式*：量化精度崩塌（INT8 范围外输入）→ QAT (量化训练) + 校准集覆盖不足 → ‖Δu_lite‖ 超限 → 双轨回退（性能退化而非安全退化）。
-
-### 命题 3（社会最优性近似与奖励对齐）
-蒸馏损失 L = BC + λ_dpo · DPO_reward，其中 reward_model = Legibility + Proxemics + Jerk（启发式，无人工标注）。若 reward_model 与真实人类偏好相关性 ρ ≥ 0.7（A6 少样本校验），则 π_lite 期望社会代价 E[C_social(π_lite)] ≤ E[C_social(π_expert)] + O(ε_bc/ρ + λ_dpo^{-1}·KL(π_π||π_ref))。
-
-*失效模式*：合成偏好≠真人偏好（ρ < 0.5）→ DPO 微调方向错误 → 社会代价劣化 → 双轨回退 + A6 真人少样本校准迭代奖励模型。
-
-### 命题 4（平滑性与可信度保证）
-TV-LQR 输出连续可微轨迹（利卡蒂解连续依赖于初始条件）。π_lite 为前向网络，通过 Spectral Normalization 正则化训练，满足 Lipschitz 连续：‖π_lite(x,ξ) - π_lite(x',ξ')‖ ≤ L · (‖x-x'‖ + ‖ξ-ξ'‖)，L 为 Lipschitz 常数。训练时已约束动作熵 ‖Δu‖₂ 和 Jerk，冒烟 CI 仅作回归检查，不再进行复杂的不连续性检测。
-
-*失效模式*：早退出分支切换抖振（Δ网络结构突变）→ 滞回阈值 + 低通滤波已内建于 π_lite 输出后处理。
-
-### 命题 5（可消融/零侵入回退）
-social_motion_lite_step 与 cbf_filter 同签名：输入 (x_ee, a_pol, threat_ctx) → 输出 a_cmd。关键性质：双轨机制中的“开关”纯粹基于阈值判断，而非网络结构重配置。回退计数器遥测实时暴露 fallback_rate，满足运维观测要求。
-
-*失效模式*：无——理论上由同签名保证。
-
-## 增强的复杂度与延迟预算表
-
-| 环节 | v3 (CBF-QP) | v4 (SOCIAL-MOTION-LITE) | 改进手段 |
-|---|---|---|---|
-| 仲裁核心计算 | ~1.0ms (QP求解+fallback) | **~0.3ms (π_lite INT8前向) + 0.05ms (查表)** | 蒸馏量化+LUT替代迭代求解 |
-| 早退出分支 | 无 | **~0.1ms** (低威胁 60% 案例) | 条件分支结构剪枝 |
-| 双轨回退 | 内置于 fallback（主路径占据） | **极少触发** (<5% 步，仅高威胁/异常) | 安全网不占主路径预算 |
-| 社会代价计算 | 事后 CI 检查 | **离线烧入权重，线上零开销** | 训练时正则化，推理无额外费用 |
-| **合计仲裁增量** | **+1.0ms** | **+0.3ms (P99 <0.5ms)** | **释放 ~0.7ms 预算** |
-| 训练成本 (IP-10) | CBF 无训练 | **蒸馏/量化 ~0.3 GPU·天** (一次性) | 复用 population 蒸馏管线 |
-
-关键帧总预算变化：第 27 轮 +16ms → 第 28 轮 **+15.3ms**（手感知不变，仲裁 -0.7ms），仍在 >100ms 余量内。
-
-## 增强的风险登记簿（细化与继承）
-
-| 风险 | 等级 | 缓解（增强版） |
-|---|---|---|
-| **蒸馏策略分布外安全性退化（本轮最大）** | **高** | 双轨回退（CBF 证书保留）；对抗蒸馏（n_adversarial=2000）；形式化验证片段（离线抽样 CBF 验证）；E17 门槛（安全覆盖率≥99.5%） |
-| 奖励模型偏差（合成偏好≠真人偏好） | 中 | A6 少样本真人偏好校准（每轮采集 50 真人样本）；双轨兜底；奖励模型在线迭代更新 |
-| 量化精度损失导致抖振/不稳定 | 中 | QAT + 校准集覆盖 + 早退出分支平滑（滞回阈值 + 低通滤波） |
-| TV-LQR 线性化误差（大威胁非线性强） | 中 | 残差学习补偿 + 域边界检测回退（ξ 边界时自动增大 λ_leg） |
-| 早退出分支切换抖振 | 低 | 滞回阈值 (3步最小) + 输出低通平滑 (α=0.2) 已内建 |
-| F9 相机映射/校正未确认（继承） | 高 | A4 最高优先不变，E12/E13 门槛联合验证 |
-| 合成手域差距 + 意图误判（继承第 27 轮最大） | 高 | 双轨兜底 + B_def + E12/E13 门槛 + A6 真人采集 |
-| **LUT 查表精度有限带来的插值误差** | **中 (新增)** | ξ 空间等距采样 + 三线插值 + LUT 容错带 (δ_lut ≈ 0.01)；ξ 变化时的平滑过渡 |
-
-## 与其他 IP 的接口深化（零破坏性变更清单）
-
-- IP-11 INTENT-GUARD：**仅替换 `cbf_filter` 调用为 `social_motion_lite_step`**，输入输出语义完全不变（威胁上下文 ξ 复用 `threat_update` 输出，防御权重 u 复用滞回计算）。接口契约：`(a_pol, a_def, hands, d_min, v_max, ξ) → a_cmd`，逐参数校验一致性。
-- IP-12 PREDICT-MAINT：**维护窗口调度不变**，π_lite 的延迟改善（-0.7ms）反而使得 DEFEND 期间的重定位更早启动，间接受益。
-- IP-2 SCORE-ALIGN：**p_fail 仍是任务级 wait/switch 决策输入**，不变。但新增社会代价指标（Legibility/Proxemics/Jerk）可作为 p_fail 的软辅助依据（不强制修改）。
-- IP-10 COST-LADDER：**推理账户 -1.2ms/步自动更新**（CBF-QP 1ms → π_lite 0.3ms），记账模块只需更新函数参数，无需代码变更。
-- IP-9 SWARM-DECODE：**蒸馏管线复用 population 训练框架**（教师集成 → 学生单模型），π_lite 可作为新的学生模型接入，无需重训教师集。
-
-**迭代规则增补（第 28 轮专属）**：
-- 13-1：所有社会代价项（Legibility/Proxemics/Jerk）的权重 λ 必须可离线审计（提供权重来源、归一化边界、自适应公式）。
-- 13-2：π_lite 的 INT8 量化精度必须有确界测试报告（校准集覆盖率 ≥ 99%，峰值误差 ≤ 2%）。
-- 13-3：双轨回退机制的 fallback_rate 必须有实时遥测（阈值告警：>5% 触发模型复审）。
-- 13-4：E17 门槛为上线不可逾越条件（见实验设计小节）。
-
----
-
-**本轮最大风险一句话**：蒸馏策略 π_lite 在分布外威胁下安全性退化，仅靠双轨回退 CBF-QP 兜底——回退率>5%或回退引入抖振即视作 E17 门槛未通过，需离线强验证后方可上线。
+**IP-14 BRIDGE-0（桥接 + 干跑 + 预约时段影子录制）**：它同时是「防止成功率归零的保险」和「把稀缺的预约评测变成持续数据资产的飞轮入口」——榜单未公开的混沌期，这是唯一同时满足低成本、高确定性收益、且能滋养后续所有创新点的动作。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 28 轮产物 · 创新点清单 v5：SOCIAL-MOTION-LITE 完整算法设计（增补版）
+# 第 1 轮产物 · 创新点清单 v6：UniBot 锚定版（事实驱动重锚 + 灵感词裁决）
 
 ## 0. 结论
 
-第 27 轮清单 v3（12 项）本轮完成「核心替换 + 深化」迭代，产出 v4（13 项），其中 artifact 区现已更新至 v5 以反映进一步的形式化深化：
+第 1 轮完成「核实 → 重锚 → 挖掘 → 裁决」四步，将前 28 轮的 13 项清单重构为 UniBot 锚定的 16 项：
 
-- **IP-13 SOCIAL-MOTION-LITE（P1）**：社会感知轻量运动控制器，**完全替代 IP-11 仲裁执行器**（CBF-QP/fallback）→ TV-LQR+残差学习专家 → 量化感知蒸馏策略 π_lite，**推理 <0.5ms/步**，显式优化 Legibility/Proxemics/Jerk，**安全双轨兜底**（高威胁/异常回退 CBF）。
-- **IP-11 INTENT-GUARD 核心修订**：保留意图感知/威胁更新/模式切换，**仅替换 `cbf_filter` → `social_motion_lite_step`**，接口零变更，可消融回退。
-- IP-10 记账：蒸馏/量化一次性 ~0.3 GPU·天，**推理账户 -1.2ms/步**（释放预算给手感知/重定位）。
-- 三项微修订（IP-3/IP-7/IP-8/IP-9），IP-5 冻结，无删除项。
-- **形式化深化**：引入 ξ 威胁上下文几何表征、Q 四范式分解、双轨阈值形式化、LUT 查表精度容错——在保持零破坏性变更的前提下，显著提升算法的可解释性、可消融性与可验证性。
+- **新增 P0 ×2**：IP-14 BRIDGE-0（训练/评测接口桥 + 三层干跑 + 影子录制）、IP-15 STEPSCORE-OBJ（步骤分-aware 早停与 chunk 调度）。
+- **新增 P1 ×4**：IP-16 INSTRUCT-AUG（指令改写鲁棒性）、IP-17 WM-VERIFY（世界模型推理时裁判 + metric-DPO）、IP-18 LATENCY-STRICT（延迟稳定性工程）、IP-19 RUN-VIDEO-MINE（官方运行记录挖掘）。
+- **改锚 ×2**：IP-11R INTENT-GUARD（干扰感知从手部关键点改为 4 相机视觉检测；防御动作=冻结/保持）、IP-13R SAFE-ARB-LITE（拆除 TV-LQR/QP 重机械，仅保留「异常检测→冻结回退」双轨思想）。
+- **降级/冻结 ×4**：IP-1 SLAM-MAP→视觉场景记忆版（P2）；IP-9 SWARM-DECODE（P2）；IP-5 DUAL-HEAD（维持冻结）；IP-12 PREDICT-MAINT 保留为端口健康件（P1，细节已按 N 端口事实更新）。
+- **修剪 ×1**：语音合成——评测闭环无音频输出/输入通道，产出为零，仅降格为开发期工具项；相邻的语言侧真问题交由 IP-16。
+- **保留 P0 纪律件**：IP-3 LOCAL-EVAL（重定义为干跑+影子+开环三位一体）、IP-2 SCORE-ALIGN（指标分解）、IP-10 COST-LADDER（账户改为 GPU·时/端口/预约时段/延迟预算）。
+- 榜单与 Runs 页截至 2026-11-07 均为 Coming Soon：**任何「头部方案」分析本轮不写死，只写挖掘计划（IP-19）**；「榜首成功率<30%」记为用户口径（F12）。
 
-路线无关原则不变：IP-13 以可消融模块接入；去掉它系统回退到 v3 能力（CBF-QP），无负收益。
+## 1. 事实卡（全部检索/核实于 2026-11-07，来源见 §7）
 
-## 1. 事实卡（继承与核实状态）
-
-F1-F14 继承第 27 轮（2026-11-07 检索口径）；本轮重验 F7/F13：两页仍 Coming Soon，文案不变 [R1/R2]。**本轮零新增事实卡**。行动项：A4（相机映射/校正）最高优先不变；A6（真人手/偏好采集）P2；**E12/E13/E17 门槛验证**为上线前置条件。
-
-## 2. 创新点清单 v5 一览
-
-| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
-|---|---|---|---|---|---|---|---|---|
-| IP-1 | SLAM-MAP v2.1 | 四件套 + 维护窗口调度 | P0 | 无 | SLAM(26轮) | 算力(轻) | 位置/未见/干扰三类 +5~15pt | 维持 |
-| IP-2 | SCORE-ALIGN v2 | +p_fail 失效头（三消费者） | P0 | 无 | 25/27轮 | 数据(近零) | 步骤分 + 仲裁质量 | 维持 |
-| IP-3 | LOCAL-EVAL | 零真机迭代闭环 + 群体探针 | P0 | IP-2 | 26/28轮 | 算力(1 GPU) | 迭代速度=生命线 | 微修订 |
-| IP-4 | SUBMISSION-OPS v2 | +CUSUM 预测性故障转移 | P1 | 无 | 竞赛×预测维护 | 算力(部署机) | 掉请求→0 | 维持 |
-| IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | IP-1 | 25轮 | 算力 | 视合规 | 维持 |
-| IP-6 | UNSEEN-GRASP | 指针：并入 IP-1 腕-头闭环 | P1 | IP-1 | 26轮 | 共享 | 未见物品 | 维持 |
-| IP-7 | DISTURB-AUG v2 | +合成手注入三件套 + 社会代价标签 | P1 | 无 | 25/28轮 | 数据(近零) | 人为干扰场景 | 微修订 |
-| IP-8 | STEP-EFF | 步骤分效率工程（含 π_lite 推理记账） | P1 | A1 | 25/27/28轮 | 零额外 | 步骤分 | 微修订 |
-| IP-9 | SWARM-DECODE | population/蒸馏+自洽投票；DEFEND 降 K | P1 | IP-2 | 26/28轮 | 算力(一次性) | 全场景 +2~5pt | 微修订 |
-| IP-10 | COST-LADDER | 三账户记账+拒绝清单 | P0(纪律) | 无 | 26/28轮 | 全账户 | 防负 ROI | 维持 |
-| IP-11 | INTENT-GUARD v2 | 手势感知+意图预测+**π_lite 仲裁** | P1 | IP-1,IP-7,IP-13 | 手势×共享控制×运动×轻量×社会 | 算力(0.7+0.3 GPU·天) | 干扰场景 +5~10pt（叠加 E10） | **核心修订** |
-| IP-12 | PREDICT-MAINT | 三级健康+维护窗口+预测性故障转移 | P1 | IP-4 | 预测性维护 | 线上 <2ms/步 | 掉请求→0；感知算力 −30% | 维持 |
-| IP-13 | SOCIAL-MOTION-LITE | TV-LQR+残差→蒸馏量化 π_lite，社会代价显式优化 | P1 | IP-11(威胁上下文) | **运动×轻量×社会** | 算力(0.3 GPU·天，一次性) | 仲裁质量↑、延迟↓、社会分↑ | **新增** |
-
-## 3. 重点展开：SOCIAL-MOTION-LITE 完整算法设计（IP-13，接第 27 轮 IP-11 威胁感知骨架）
-
-### 3.1 增强符号定义（在继承基础上的精确化）
-
-继承第 27 轮：语义工作区地图 M、手集合 H(t)={h_i}、威胁度 d_j、模式 m∈{EXEC,DEFEND}、防御权重 u∈[0,1]、策略动作 a_pol、EE 位置 p_ee、速度 v_ee。
-
-**v5 新增/强化符号**：
-
-| 符号 | 定义 | 精确性质 |
+| # | 事实 | 状态 |
 |---|---|---|
-| ξ = {d_max, d_argmax, τ_min, |H|} ∈ [0,1]^4 | **威胁上下文向量**（四维归一化投影） | 几何确定性：每个分量有明确物理单位归一化边界 |
-| A(ξ), B(ξ) ∈ R^{6×6}, R^{6×3} | **时变线性化动力学**：ẋ = A(ξ)x + B(ξ)u | ξ 冻结为当前威胁上下文，两次 ξ 变化间在线确定性 |
-| Q(ξ) = Q_track + λ_leg Q_leg + λ_prox Q_prox + λ_jerk Q_jerk | **社会感知代价矩阵**（四范式分解） | 所有子矩阵均为 6×6 正半定，作用于位置/速度子空间，可消融 |
-| K_mpc(ξ) ∈ R^{3×6} | **TV-LQR 解析反馈增益**（LUT 查表） | O(1) 查表，零在线求解，确定性 <0.1ms |
-| Δf_θ(x, ξ) ∈ R^6 | **残差动力学网络**（5层 MLP，~50K 参数，Spectral Norm 正则） | 补偿线性化误差，训练误差 ≤ ε_f ≈ 0.02 |
-| π_φ(a \| x, ξ) | **蒸馏策略网络**（INT8，~200K 参数，早退出分支） | 输入 (x, ξ) 输出动作增量 Δu，推理 <0.3ms |
-| γ_safe = 0.8, γ_anom = 3σ, H_max | **双轨回退阈值**（形式化定义） | γ_safe：威胁分阈值；γ_anom：动作异常阈值（3σ）；H_max：不确定性阈值 |
-| T_replan = 50ms, ε_ξ = 0.05 | **稀疏重规划参数** | 仅‖Δξ‖ > ε_ξ 或模式切换时重算 K_mpc |
+| F1 | 赛事官网四页在线；排行榜、运行记录均 Coming Soon，无任何公开成绩 | 已核实 [R1][R2] |
+| F2 | 32 项桌面任务、32000 episodes、169 小时；单模型多任务泛化评测口径 | 已核实 [R2] |
+| F3 | 数据集=32 个 `G1_Dex1_<Task>`（LeRobot v3.0，各约 1000 集，30fps，4 相机 640×480 AV1，Dex1 平行夹爪，apache-2.0） | 已核实 [R3] |
+| F4 | 观测：4 相机 + 双臂关节[7]×2 + EE 位姿(base)[6]×2 + 夹爪[1]×2 + lower_body[15] + language 字符串；**无人体骨架、无音频（视频流 has_audio=false）** | 已核实 [R4][R9] |
+| F5 | 动作：夹爪[1]×2 + pivot[7] +（joint 臂[7]×2 或 ee 位姿[6]×2，二选一）；action_chunk_size≥1；token 握手+每步校验 | 已核实 [R4] |
+| F6 | 传输：websocket + msgpack；相机帧 JPEG q95 4:4:4 有损过网；obs_delta_indices 决定观测子集与时序叠帧；image_resize 客户端侧 cv2.resize | 已核实 [R4] |
+| F7 | 部署：N 台机器人随机顺序，须暴露 8765 起 N 个连续端口；端口间进程隔离或共享后端（需并发+状态隔离） | 已核实 [R4] |
+| F8 | 逐步延迟被记录；**延迟均值/波动与动作统计规律性可能随成绩发布**（可信度评估） | 已核实 [R4 §6] |
+| F9 | Runs 页将公开每次运行的完整评测视频（可按用户/模型/任务过滤） | 已核实 [R2] |
+| F10 | 训练集 episode 仅有 task_index；任务语言=5 条同义句以 `@` 连接于 meta/tasks.parquet（HangCup 实证） | 已核实 [R9] |
+| F11 | 训练动作含 pivot=[vx,vy,angle_z,pivot_3,pivot_4,pivot_5,height]（遥操杆量，height≈0.74）与 base_command；Dex1 约定 **5.5=全开→0=全闭** | 已核实 [R10] |
+| F12 | 「榜首成功率<30%」「5 类泛化场景（位置/干扰物/背景/未见物品/人为干扰）」 | **用户口径，未公开核实** |
+| F13 | 规则手册（飞书）需登录；步骤分公式、单 episode 时限、N 值、是否允许录制观测均无法核实 | 已核实「不可核实」[R5] |
+| F14 | UnifoLM-VLA-0：Qwen2.5-VL 骨干、GR00T/openvla-oft 血脉训练框架、2026-01-29 开源、CC BY-NC-SA 4.0；WMA-0 世界模型定位「模拟器+策略增强」，license 标注矛盾（卡片 NC-SA / HF 元数据 apache-2.0），gated | 已核实 [R6][R7][R8] |
 
-### 3.2 增强算法步骤（离线专家生成 + 在线蒸馏策略）
+**行动项**：A1 注册拿规则手册（解 F13 全部未知）；A2 影子录制核对相机身份（`cam_*_high` vs `head_stereo_*` 是否同物理相机未在文档中确认）；A3 确认 NC-SA 许可证用于比赛/后续开源的合规边界；A4 榜单发布后立即跑 IP-19。
 
-#### 3.2.1 离线专家生成（GPU 离线，~0.3 GPU·天，五步流程）
+## 2. 创新点清单 v6 一览
 
-```python
-def generate_expert_dataset_v5():
-    # 第 0 步：对抗上下文采样（关键增量）
-    Ξ = sample_threat_contexts(
-        n_nominal=50000,            # 正常干扰分布
-        n_extreme=5000,             # 极端：高速手、多手、遮挡、未见意图
-        n_adversarial=2000          # 对抗：针对 π_lite 弱点的梯度攻击生成
-    )
-    
-    # 第 1 步：TV-LQR + 残差专家轨迹生成
-    D_expert = []
-    for ξ in Ξ:
-        # 1.1 线性化动力学
-        A, B = linearize_dynamics(nominal_x, ξ)  # 解析雅可比
-        
-        # 1.2 社会感知代价矩阵构造（四范式分解）
-        Q = build_social_cost_v5(ξ)  # §3.3 增强版
-        R = 0.01 * I
-        
-        # 1.3 TV-LQR 增益求解
-        K_seq = solve_tvlqr(A, B, Q, R, T=1.0)  # 利卡蒂反向递推
-        
-        # 1.4 残差标签收集
-        for t in range(T):
-            x_t = rollout(x_0, K_seq, Δf_θ=0)
-            Δf_target = f_true(x_t) - (A @ x_t + B @ (K_seq[t] @ x_t))
-            D_expert.append((x_t, ξ, Δf_target))
-    
-    # 第 2 步：残差网络训练
-    θ* = train_residual_net(D_expert)
-    # 网络结构：5层 MLP，每层 128 维，Spectral Normalization 正则化
-    # 损失：L_res = ‖Δf_θ(x,ξ) - Δf_target‖² + λ_sn ‖Δf_θ‖_Spectral
-    
-    # 第 3 步：蒸馏数据集构造（含残差补偿）
-    D_distill = []
-    for ξ in Ξ:
-        for t in range(T):
-            x_t = rollout(x_0, K_seq, Δf_θ=θ*)  # 专家闭环（含残差）
-            u_expert = K_seq[t] @ x_t
-            D_distill.append((x_t, ξ, u_expert))
-    
-    # 第 4 步：量化感知蒸馏 + DPO 微调
-    φ* = distill_policy(
-        D_distill,
-        student=PolicyNet(quant=True, early_exit=True),  # ~200K 参数
-        loss=BC + λ_dpo * DPO_reward(
-            reward_model=Legibility+Proxemics+Jerk,
-            β=0.1
-        ),
-        quant_calib=calibration_set
-    )
-    
-    return φ*, θ*, K_seq_lut(Ξ)
-```
+| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 动的排序因子 | 状态 |
+|---|---|---|---|---|---|---|---|
+| IP-14 | BRIDGE-0 | 训练/评测键映射桥 + 三层干跑 + 预约时段影子录制 | **P0** | 无 | 创新挖掘 | 成功率（防归零） | 新增 |
+| IP-15 | STEPSCORE-OBJ | 完成检测早停 + chunk 调度 + 轨迹级偏好 | **P0** | IP-14 | 强化学习 | 步骤分（+成功率尾部保护） | 新增 |
+| IP-3 | LOCAL-EVAL | 干跑回放/开环指标/影子数据三位一体 | P0 | IP-14 | 继承 | 迭代速度 | 重定义 |
+| IP-2 | SCORE-ALIGN | 成功率×步骤分双因子分解，驱动所有决策 | P0 | 无 | 继承 | 两者 | 维持 |
+| IP-10 | COST-LADDER | 账户=GPU·时/端口/时段/延迟预算 | P0 | 无 | 继承 | 防负 ROI | 改锚 |
+| IP-4 | SUBMISSION-OPS | N 端口/令牌/掉线恢复/延迟遥测 | P1 | 无 | 继承 | 可信度 | 维持 |
+| IP-12 | PREDICT-MAINT | 端口健康/进程守护/慢查询降级 | P1 | IP-4 | 继承 | 可信度 | 维持 |
+| IP-16 | INSTRUCT-AUG | 5×32 种子指令 → LLM 改写覆盖 + held-out 鲁棒性测试 | P1 | 无 | 语音合成(裁剪后迁移) | 成功率（语言 shift） | 新增 |
+| IP-17 | WM-VERIFY | 世界模型推理时裁判 + metric-DPO 离线偏好 | P1 | IP-14,IP-16 | 强化学习 | 两者（恢复能力+步骤） | 新增 |
+| IP-18 | LATENCY-STRICT | P99 延迟确界 + 推理前移 + 端口级隔离 | P1 | IP-4 | 继承+挖掘 | 可信度 | 新增 |
+| IP-19 | RUN-VIDEO-MINE | 官方运行记录→失败分类学→数据优先级 | P1 | F9 公开 | 创新挖掘 | 成功率（定向补数据） | 新增 |
+| IP-11R | INTENT-GUARD | 相机流视觉干扰检测 → 冻结/保持/收手 | P1 | IP-14 | 继承 | 人为干扰场景 | 改锚 |
+| IP-13R | SAFE-ARB-LITE | 异常检测→冻结回退双轨（拆 TV-LQR/QP） | P1 | IP-11R | 继承 | 干扰场景+安全 | 改锚 |
+| IP-1 | SCENE-MEM | 视觉场景记忆/物体中心状态追踪 | P2 | IP-14 | 继承 | 长程任务 | 降级 |
+| IP-9 | SWARM-DECODE | 推理时 population 投票 | P2 | IP-17 | 继承 | 全场景 | 降级 |
+| IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | A3 合规 | 继承 | 视合规 | 冻结 |
+| — | 语音合成(TTS) | 评测闭环无音频通道 | — | — | **裁剪** | 零 | 修剪记录 |
 
-#### 3.2.2 在线仲裁执行器（<0.5ms/步，替代 IP-11 `cbf_filter`）
+## 3. 重点展开
+
+### 3.1 IP-14 BRIDGE-0：桥接 + 三层干跑 + 影子录制（P0，本轮核心）
+
+**动机**：F4/F5/F6/F10/F11 合起来意味着训练数据与评测接口之间存在 6 类系统性差异（相机改名、缺状态、夹爪反相约定、pivot 通道、指令挂载、JPEG/resize 往返）。任何一处静默错映射在本地零症状、在真机上直接归零，且这类错误与模型能力无关——它是当前期望损失最大、成本最低的一项。
+
+**与现有方案的差异**： Unifolm-VLA 训练管线只解决「数据格式→模型」，不解决「模型→本赛事评测 API」；官方模板只给零动作 stub。Bridge-0 是显式的第三块：可测试、可版本化、可回放的映射层，而不是塞在 `get_action` 里的几行 glue code。
+
+**可行性**：纯工程；全部依据已核实的接口文档与数据集 schema 编写；唯一的未知（相机物理身份）由影子录制消除（A2）。
+
+**所需资源**：数据=32 个数据集的 `meta/stats.json`（归一化统计量）+ `meta/tasks.parquet`；算力=0（干跑 1 CPU 小时级）；接口=官方 run_server/run_client + example_env 校验器。
+
+**落地步骤**：
+1. 写 `bridge.py`（下述伪代码），单元测试过 example_env 全部校验。
+2. 回放级干跑：从数据集抽 200 episode 末帧，经 JPEG q95 4:4:4 往返 + resize 往返，断言归一化/反归一化数值误差 < 1e-3。
+3. 影子级：预约时段内录制真实 obs 流 + 每步延迟；运行结束后对齐 Runs 页视频核对相机身份、夹爪方向、pivot 实效、episode 终止模式（验证 A-1/A-2 假设）。
 
 ```python
-def social_motion_lite_step_v5(self, x_ee, a_pol, threat_ctx, t):
-    """
-    输入：x_ee=[p_ee,v_ee]∈R^6, a_pol∈R^3(策略期望加速度), 
-          threat_ctx=ξ={d_max, d_argmax, τ_min, |H|}, t(时间戳)
-    输出：a_cmd∈R^3(最终指令加速度)
-    两层架构在线执行器的完整形式。
-    """
-    # 0. 威胁上下文编码与变化检测
-    ξ = self.encode_threat_ctx(threat_ctx)  # 标准化到 [0,1]^4
-    ξ_changed = (‖ξ - ξ_last‖_∞ > ε_ξ) or (self.mode != self.mode_last)
-    
-    # 1. 稀疏重规划 TV-LQR 增益查表（O(1)，零在线求解）
-    if (t % T_replan == 0) or ξ_changed:
-        self.K_mpc = self.tvlqr_lut.lookup(ξ)  # LUT 查表
-        self.ξ_last = ξ
-        self.mode_last = self.mode
-    
-    # 2. 蒸馏策略前向（主分支，INT8 推理，~0.3ms）
-    Δu_lite = self.π_lite.forward(x_ee, ξ)  # INT8 量化前向传播
-    a_lite = self.K_mpc @ x_ee + Δu_lite  # 基线反馈 + 策略修正
-    
-    # 3. 早退出分支（低威胁场景，~0.1ms）
-    if ξ.d_max < 0.15 and ξ.τ_min > 1.0:
-        a_lite = self.early_exit_policy(x_ee, ξ)  # 更小网络，跳过部分隐层
-    
-    # 4. 双轨安全回退（核心兜底，理论证书保留）
-    is_high_threat = ξ.d_max > γ_safe  # γ_safe = 0.8
-    is_anomaly = (‖Δu_lite‖ > γ_anom) or (self.π_lite.entropy() > H_max)
-    if is_high_threat or is_anomaly:
-        a_lite = self.cbf_qp_fallback(x_ee, threat_ctx)  # 保留 IP-11 原分支
-        self.fallback_counter += 1
-        telemetry.log("fallback", trigger="high_threat" if is_high_threat else "anomaly")
-    
-    # 5. 共享控制融合（语义不变，权重 u 来自 IP-11 滞回/率限）
-    a_cmd = (1 - self.u) * a_pol + self.u * a_lite
-    
-    # 6. 硬安全裁剪（最后一道物理防线，CBF 启发式）
-    a_cmd = self.hard_safety_clip(a_cmd, x_ee, threat_ctx)  # 速度/加速度/距离硬限
-    
-    return a_cmd
+# ---------- 观测侧：训练键 <- 评测键 ----------
+KEY_MAP = {  # 左：训练(LeRobot v3.0)键，右：评测 API 键
+    "observation.images.head_stereo_left":  "observation.images.cam_left_high",
+    "observation.images.head_stereo_right": "observation.images.cam_right_high",
+    "observation.images.wrist_left":         "observation.images.cam_left_wrist",
+    "observation.images.wrist_right":        "observation.images.cam_right_wrist",
+}
+SAME_NAME = ["observation.state.left_arm", "observation.state.right_arm",
+             "observation.state.left_ee_pose_gripper_base", "observation.state.right_ee_pose_gripper_base",
+             "observation.state.left_gripper", "observation.state.right_gripper",
+             "observation.state.lower_body"]
+DROP_OBS  = ["observation.state.state_torso", "observation.state.state_d435",
+             "observation.state.left_ee_pose_gripper_torso", "observation.state.right_ee_pose_gripper_torso",
+             "observation.state.waist_state_joint", "observation.state.recomputed_ee_valid",
+             "observation.state.left_leg", "observation.state.right_leg"]  # 评测侧不存在→训练期即丢弃/常量占位
+
+def obs_to_model(obs_eval):
+    o = {}
+    for k_train, k_eval in KEY_MAP.items():          # 相机：传输层已 JPEG 解码；训练侧主动做同款轻压缩增强
+        o[k_train] = jpeg_roundtrip(obs_eval[k_eval])
+    for k in SAME_NAME:
+        o[k] = obs_eval[k]
+    for k in DROP_OBS:
+        o[k] = CONST_IMPUTE[k]                        # 与训练期占位一致
+    o["task_text"] = obs_eval["observation.language"] # 明文字符串
+    return stack_and_normalize(o, stats=meta_stats)   # 统计量必须来自 meta/stats.json
+
+# ---------- 动作侧：模型 -> 评测动作 ----------
+DEFAULT_PIVOT = dataset_mode("action.pivot")          # 例：[0,0,0,0,0.15,0,0.74]；冻结防误驱动
+
+def model_to_action(a_model, control_space, chunk_T):
+    a = {}
+    if control_space == "joint":                      # 默认：离训练信号最近，避开外部 IK 意外
+        a["action.left_arm"]  = np.clip(a_model.arm_l,  *JOINT_LIMITS).astype(np.float32)
+        a["action.right_arm"] = np.clip(a_model.arm_r,  *JOINT_LIMITS).astype(np.float32)
+    else:                                             # ee 模式： ablation 项，先验证再切
+        a["action.left_ee_pose_gripper_base"]  = a_model.ee_l.astype(np.float32)
+        a["action.right_ee_pose_gripper_base"] = a_model.ee_r.astype(np.float32)
+    a["action.left_gripper"]  = to_dex1(a_model.grip_l)  # 5.5=开,0=闭；反相即灾难
+    a["action.right_gripper"] = to_dex1(a_model.grip_r)
+    a["action.pivot"] = np.tile(DEFAULT_PIVOT, (chunk_T, 1)).astype(np.float32)  # 冻结
+    return with_time_axis(a, T=chunk_T)               # (T,d) float32 + meta.token
 ```
 
-### 3.3 增强社会感知代价矩阵构造（四范式分解，可消融、可审计）
+**风险**：① 相机物理身份不符（A2 未验证前不得宣称映射正确）→ 影子录制核对；② pivot 冻结导致某些任务无法完成（若任务需要 base 机动）→ 首批 slots  ablation；③ 归一化统计量用错来源 → 干跑第 2 层断言拦截。
+
+### 3.2 IP-15 STEPSCORE-OBJ：步骤分是第一等公民（P0）
+
+**动机**：排序口径=平均成功率与步骤分综合（F:官网原文）；挑战赛页每任务「得分点（满分 100）」。遥操演示约 6 秒/集、含停留与绕路；BC 直接拟合=主动放弃步骤分。且成功率尾部（放置成功后碰翻、抓稳后脱落二次尝试）同样吃步骤分。
+
+**与现有方案的差异**：主流 VLA 训练只优化动作似然；本项把「步数」作为显式优化对象：完成检测早停（L1）+ chunk 大小调度（L2）+ 轨迹级偏好优化（L3 → IP-17b）。三杠杆都不需要新硬件。
+
+**假设（待影子验证）**：A-1 步骤分随步数单调不增；A-2 episode 可能因静止/超限终止。设计对两种公式都稳：成功优先前提下最小化步数。
 
 ```python
-def build_social_cost_v5(ξ):
-    """
-    Q = Q_track + λ_leg·Q_leg + λ_prox·Q_prox + λ_jerk·Q_jerk
-    四个子矩阵的精确几何形式，确保可消融与可审计。
-    """
-    # 1. 跟踪项：Q_track = diag(q_p, q_p, q_p, q_v, q_v, q_v)，q_p ≫ q_v
-    Q_track = diag([10, 10, 10, 1, 1, 1])
-    
-    # 2. 可读性项：Q_leg = α_leg · [0_{3×3}, 0_{3×3}; 0_{3×3}, diag(0,0,0, σ_leg^2)] · outer([0,0,0, dir_threat])
-    #    仅速度维度鼓励“朝远离威胁方向动”，使让位动作“一眼可懂”
-    dir_threat = normalize(p_hand[ξ.d_argmax] - p_ee)  # 威胁方向单位向量
-    Q_leg = α_leg * outer_product([0,0,0, dir_threat])  # 6×6 矩阵，仅速度-速度块非零
-    
-    # 3. 社交距离项：Q_prox = α_prox · diag(σ_p^2, σ_p^2, σ_p^2, 0,0,0) · max(0, d_comfort - ‖p_ee - p_hand[d_argmax]‖)
-    #    仅位置维度，d_comfort ≈ 0.8m，防止“贴脸”也防止“逃太远”
-    d_curr = np.linalg.norm(p_ee - p_hand[ξ.d_argmax])
-    Q_prox = α_prox * diag([1,1,1, 0,0,0]) * max(0, D_COMMOT - d_curr)
-    
-    # 4. Jerk 感知项：Q_jerk = α_jerk · diag(0,0,0, σ_a^2, σ_a^2, σ_a^2)
-    #    仅速度维度，间接抑制加速度变化率，平滑动作
-    Q_jerk = α_jerk * diag([0,0,0, 1,1,1])
-    
-    # 自适应权重：威胁越大，λ_leg 越大（可读性重要），λ_prox 越小（安全优先）
-    #           威胁小，λ_prox 越大（社交距离重要），λ_jerk 越大（平滑重要）
-    λ_leg  = 5.0 * ξ.d_max + 1.0
-    λ_prox = 3.0 * (1 - ξ.d_max)
-    λ_jerk = 2.0 * (1 - ξ.d_max) + 0.5
-    
-    return Q_track + λ_leg*Q_leg + λ_prox*Q_prox + λ_jerk*Q_jerk
+def stepscore_policy(obs_hist, a_chunk, p_done, steps_used, chunk_T, distractor_flag):
+    # L1 早停：连续 k 步高置信完成 → 输出零速保持（不再申请新 chunk 的有效动作）
+    if p_done.ewm(alpha=0.5)[-1] > TAU_DONE and hold_streak >= K_DONE:
+        return hold_action()                    # 原地保持，杜绝成功后破坏场景
+    # L2 chunk 调度：开环 MSE 曲线定 T*；干扰场景缩 chunk（缩短开环暴露）
+    T_eff = T_SMALL if distractor_flag else T_STAR
+    # L3 偏好信号由 IP-17b 提供；此处只负责产出可比较的行为变体
+    return a_chunk[:T_eff]
 ```
 
-### 3.4 增强复杂度与延迟预算表（P99 确界）
+**可行性**：L1 需要一个 done 检测头——特征可用夹爪开合量变化、EE 速度、接触持续性、指令-观测对齐分（小型 MLP/集成，训练用数据集 episode 末段标注自动生成：末段 k 步前的稳定帧=正样本）。L2 纯离线。L3 见 IP-17。
 
-| 环节 | v3 (CBF-QP) | v4/v5 (SOCIAL-MOTION-LITE) | 手段与精确性 |
+**所需资源**：数据=数据集自带时间戳（免费正样本）；算力=done 头 ~0.1 GPU·天。
+
+**风险**：过早早停误判任务完成→直接失败；用 hold 而非「放弃式静止」，且 done 头要求连续 k 步高置信+滞后阈值；本地以「模拟误停代价」评测门槛（E4）。
+
+### 3.3 IP-17 WM-VERIFY：无仿真器约束下的两条 RL 退化路径（P1）
+
+**动机**：无官方仿真器、无随时可用的真机，「仿真 PPO→sim-to-real」不可行；但 RL 的思想（用奖励筛选/优化行为）仍有两个可落地载体：推理时验证（路径 A）与离线偏好（路径 B）。
+
+**路径 A（推理时，零训练）**：WMA-0 自我定位即「交互式模拟器 + 策略增强」[R8]。采样 K 个候选 chunk → 世界模型前滚 k 帧 → 用轻量任务状态评估器（物体是否在目标区的启发式/学习式判别）给候选打分 → 执行最优 chunk。本质 MPC，天然可消融（关掉即单 chunk 直出）。
+
+**路径 B（离线偏好，零环境交互）metric-DPO**：把我们**自己的多次预约运行**按官方评分（成功率/步骤分）组成同任务偏好对，直接对 VLA 做 DPO。数据来自官方计分本身，零人工标注；约束：仅同任务内配对、仅当两者场景分布可比（场景信息若不可见则只按任务配对并记录噪声）。
+
+**差异**：与通用 RLHF 不同——奖励不是人评模型而是**赛事官方计分函数本身**，与排名指标完全对齐；与「世界模型合成数据 RL」不同——不需要仿真器保真到能训练，只要求在「候选区分」上保真。
+
+**可行性**：A 中：世界模型对接触富集任务（Dex1 夹持、插拔）的保真度是未知数 → E5 专门测；B 中：需要足够多次预约运行（每次=一次数据事件，频率受规则限制，A1 待确认）。
+
+**所需资源**：算力=世界模型推理 K×k 帧/步（预算大，仅对关键步骤启用，IP-10 记账）；数据=自身运行记录（影子录制）+ 公开 Runs 页（F9）。
+
+**风险**：世界模型幻觉导致「选错 chunk 比不选更差」→ E5 门槛：WM 裁判在本地代理指标上必须显著优于随机选 chunk，否则路径 A 冻结；DPO 对同一 checkpoint 重复拟合可能过拟合到场景噪声 → 配对样本加场景桶约束 + 早停。
+
+### 3.4 IP-16 INSTRUCT-AUG：把语音合成的残余价值迁移到语言侧（P1）
+
+**动机**：F10——训练侧每任务 5 条同义句（卡在 meta/tasks.parquet，episode 只挂 task_index）；评测侧 `observation.language` 措辞未知。指令编码稍偏=「做对物体做错目标」。
+
+**方案**：160 句种子 → LLM 句法改写（保持物体/目标槽位不变）→ 嵌入聚类去重保覆盖 → 训练时每 episode 随机采样一条（指令与轨迹解耦=免费增强）；保留 2 句/任务 held-out 只评不训。
+
+**风险**：改写引入物体/目标漂移（改写后的句子指错物体）→ 槽位校验器（改写句必须与原句实体集合一致）强制过滤。可行性：纯离线，~0.05 GPU·天+LLM 调用费。
+
+### 3.5 IP-18 LATENCY-STRICT 与 IP-19 RUN-VIDEO-MINE（P1，简述）
+
+- **IP-18**：F8——延迟均值/波动可能随成绩发布。手段：单模型共享后端+端口级状态隔离（F7 方案 2）、推理异步流水线（obs 到达即预测下一 chunk）、P99 确界测试（继承旧规则 14）、N 端口健康看板。差异：把「延迟」从工程指标升级为可能影响可信度披露的评分邻接量。
+- **IP-19**：F9——Runs 页公开完整评测视频。手段：定期抓取自身（及公开可见的他人）运行记录 → 失败视频分类学（抓取滑脱/抓错物体/目标错位/放置碰翻/超时/异常抖动）→ 映射为数据优先级（哪个任务、哪类失败、补什么数据/增强）→ 反哺 IP-7 场景编辑增强。前置于榜单公开，先行搭好抓取与分类骨架。
+
+### 3.6 改锚说明：IP-11R / IP-13R（继承双轨思想，拆除重机械）
+
+- **IP-11R INTENT-GUARD**：输入通道从「可靠手部关键点」改为 4 相机流的轻量视觉干扰检测（人形/手部进入工作区的检出与轨迹，~1MB 级检测器，<2ms）；威胁度驱动模式 m∈{EXEC,DEFEND}。动机：F4 已证实评测侧无人体现成通道。
+- **IP-13R SAFE-ARB-LITE**：拆除 TV-LQR/QP/LUT 全链条，仅保留双轨兜底思想：异常检测（动作幅度/熵/重复模式异常 + 干扰标志）→ 冻结回退（零速保持+夹爪维持），回退率遥测（继承 13-3）。动机：竞赛里「冻结」几乎总是比「让位」更安全也更 step-友好。
+
+## 4. 实验设计（门槛制，任一不过即冻结对应 IP）
+
+| 实验 | 设置 | 指标 | 门槛 |
 |---|---|---|---|
-| 仲核心计算 | ~1.0ms (QP求解+fallback) | **~0.3ms (π_lite INT8前向 P99) + 0.05ms (LUT查表)** | 蒸馏量化+LUT替代迭代求解；P99 报告经校准集验证 |
-| 早退出分支 | 无 | **~0.1ms** (低威胁 60% 案例 P99) | 条件分支结构剪枝；仅当 ξ.d_max < 0.15 ∧ ξ.τ_min > 1.0 时激活 |
-| 双轨回退 | 内置于 fallback（主路径占据） | **极少触发** (<3% 步 P99，仅高威胁/异常) | 安全网不占主路径预算；回退率实时遥测 |
-| 社会代价计算 | 事后 CI 检查 | **离线烧入权重，线上零开销** | 训练时正则化；Q 矩阵权重已嵌入 π_lite，推理时无额外计算 |
-| **合计仲裁增量** | **+1.0ms** | **+0.3ms (P99 <0.5ms)** | **释放 ~0.7ms 预算，确保关键帧总预算 ≥15.3ms** |
-| 训练成本 (IP-10) | CBF 无训练 | **蒸馏/量化 ~0.3 GPU·天** (一次性) | 复用 population 蒸馏管线；包含 QAT 与 DPO 微调 |
+| E1 桥接三层干跑 | 单元/回放/影子三级 | 映射零错、数值往返误差<1e-3、影子与视频对齐 | 全过方可提交（IP-14 上线条件） |
+| E2 开环基准 | 留出 episode 的动作 MSE / 任务状态分类 | MSE、完成时刻误差 | 不低于 BC 基线（后续所有项的公共基线） |
+| E3 joint vs ee 模式 | 同模型两种 control_space 各 2 任务 | 成功率/步骤分/异常率 | 显著差异才切换，否则默认 joint |
+| E4 早停验证 | done 头 + 模拟误停代价 | 误停率、每任务平均步数降幅 | 误停导致的失败=0；步数降幅≥10% |
+| E5 世界模型裁判 | 本地候选集 + WM 打分 vs 随机 vs 单发 | 候选区分准确率 | 显著优于随机，否则路径 A 冻结 |
+| E6 metric-DPO | 同任务配对运行 + DPO | 成功率/步骤分变化 | 不得低于 DPO 前基线（可一键回退） |
+| E7 指令鲁棒性 | held-out 改写句 | 同模型两种措辞的成功率差 | 差值 <5pt |
 
-**关键帧总预算变化**：第 27 轮 +16ms → 第 28 轮 **+15.3ms**（手感知不变，仲裁 -0.7ms），仍在 >100ms 余量内。P99 延迟确界报告：π_lite INT8 前向 P99 = 0.32ms（校准集覆盖率 99%），LUT 查表 P99 = 0.04ms。
+**降级机制**：全部组件满足「可一键消融、消融后不低于 BC 基线」（规则 19）；不满足即冻结，系统回退 BC+桥接，无负收益。
 
-### 3.5 增强正确性论证（设计命题+失效模式的诚实版）
-
-- **命题 1（名义 ISS）**：若 Δf_θ 近似误差 ≤ ε_f ≈ 0.02、TV-LQR 线性化误差 ≤ ε_lin ≈ 0.05、ξ 变化慢于 T_replan，则闭环系统在名义威胁分布下满足输入到状态稳定（ISS）。专家 TV-LQR 有已证明的 ISS 证书，蒸馏策略 BC 损失 < ε_bc 保证邻域内近似：V_pi(x) ≤ V_expert(x) + O(ε_bc/μ)。*失效模式*：分布外威胁 → 双轨回退 CBF-QP 兜底。
-
-- **命题 2（实时性确定性）**：π_lite 为固定结构 INT8 网络，推理延迟确界 < 0.5ms（P99 = 0.32ms，量化校准集验证，覆盖率 99%）。TV-LQR 增益查表 O(1)，无动态内存分配、无迭代求解器、无分支预测Miss率异常。硬实时性保证：CWC = 0.3ms + 0.05ms 查表 + 0.1ms 早退出（60% 案例） < 0.5ms。*失效模式*：量化精度崩塌 → QAT + 校准集覆盖 + 早退出分支兜底。
-
-- **命题 3（社会最优性近似）**：蒸馏损失 L = BC + λ_dpo · DPO_reward，reward_model = Legibility+Proxemics+Jerk（启发式，无人工标注）。若 reward_model 与真实人类偏好相关性 ρ ≥ 0.7（A6 少样本校验），则 π_lite 期望社会代价 E[C_social(π_lite)] ≤ E[C_social(π_expert)] + O(ε_bc/ρ + λ_dpo^{-1}·KL(π_π||π_ref)).*失效模式*：合成偏好≠真人偏好（ρ < 0.5）→ DPO 方向错误 → 社会代价劣化 → 双轨回退 + A6 真人少样本校准迭代奖励模型。
-
-- **命题 4（平滑性/可信度）**：TV-LQR 输出连续可微轨迹；π_lite 为前向网络，通过 Spectral Normalization 正则化训练，满足 Lipschitz 连续：‖π_lite(x,ξ) - π_lite(x',ξ')‖ ≤ L · (‖x-x'‖ + ‖ξ-ξ'‖)，L 为 Lipschitz 常数。训练时已约束动作熵 ‖Δu‖₂ 和 Jerk，冒烟 CI 仅作回归检查。*失效模式*：早退出分支切换抖振 → 滞回阈值 (3步最小) + 输出低通平滑 (α=0.2) 已内建。
-
-- **命题 5（可消融/零侵入）**：social_motion_lite_step 与 cbf_filter 同签名：输入 (x_ee, a_pol, threat_ctx) → 输出 a_cmd。关键性质：双轨机制中的“开关”纯粹基于阈值判断，而非网络结构重配置。回退计数器遥测实时暴露 fallback_rate，满足运维观测要求。*失效模式*：无——理论由同签名保证。
-
-### 3.6 增强双轨安全回退机制（阈值表格形式）
-
-| 触发条件 | 行为 | 理论依据 | E17 门槛关联 |
-|---|---|---|---|
-| ξ.d_max > 0.8 (高威胁) | 立即切换 `cbf_qp_fallback` | CBF 有前向不变集证书 [R6] | 安全覆盖率≥99.5% 必须满足 |
-| ‖Δu_lite‖ > 3σ (动作异常大) | 切换 `cbf_qp_fallback` | 异常检测：分布外输入守卫 | 异常率 < 1% (P99) |
-| π_lite 熵 > H_max (输出不确定) | 切换 `cbf_qp_fallback` | 不确定性量化守卫 | 熵逸出率 < 0.5% |
-| 连续 3 步触发回退 | 上报遥测、标记模型失效、请求 OTA 更新 | 运维层守卫 | 自动触发模型复审 |
-| early_exit 分支切换抖振 | 滞回阈值 + 低通平滑已内建 | 动作平滑性守卫 | CI 100% 通过 |
-
-**回退率预期**：名义分布 <1%（E17 安全覆盖率通过），极端对抗分布 <5%（E17 离线验证通过）。
-
-### 3.7 增强与其他 IP 的接口（零破坏性变更清单）
-
-- IP-11 INTENT-GUARD：**仅替换 `cbf_filter` 调用为 `social_motion_lite_step`**，输入输出语义完全不变：
-  - 输入：`(a_pol, a_def, hands, d_min, v_max, ξ)` → 输出：`a_cmd`
-  - 威胁上下文 ξ 复用现有 `threat_update` 输出（模式 m、防御权重 u 同步计算）
-  - 接口契约逐参数校验：`same_signature(cbf_filter, social_motion_lite_step) = True`
-  - 回退计数器遥测集成至 IP-11 遥测模块
-
-- IP-12 PREDICT-MAINT：**维护窗口调度不变**，π_lite 的延迟改善（-0.7ms）反而使得 DEFEND 期间的重定位更早启动：
-  - DEFEND 模式下，更快的仲裁意味着更早的安全状态检测
-  - 维护窗口计算公式不变，但实际启动时间提前 Δt = 0.7ms
-  - 系统整体响应时间：T_response = T_perception + T_judgment + T_π_lite ↓
-
-- IP-2 SCORE-ALIGN：**p_fail 仍是任务级 wait/switch 决策输入**，不变。但新增社会代价指标（Legibility/Proxemics/Jerk）可作为 p_fail 的软辅助依据：
-  - 当社会代价总和低于阈值时，可轻微下调 p_fail 阈值（可选配置）
-  - 严格模式下保持 p_fail 完全不变，避免引入不确定性
-
-- IP-10 COST-LADDER：**推理账户 -1.2ms/步自动更新**（CBF-QP 1ms → π_lite 0.3ms）：
-  - 记账模块函数：update_inference_account(step_type="social_motion_lite", latency=0.3ms)
-  - 历史记录保留：自动记录旧值 (1.0ms) 与新值 (0.3ms) 的差分
-  - ROI 计算自动受益：同一 GPU 算力下，感知/重定位预算释放 0.7ms/步
-
-- IP-9 SWARM-DECODE：**蒸馏管线复用 population 训练框架**：
-  - 教师集成：保留原有 CBF-QP 教师 + 新增 TV-LQR+残差 教师
-  - 学生模型：π_lite 作为新学生接入，无需重训教师集
-  - population 投票机制在 DEFEND 模式下 K=1 更稳（蒸馏单模型输出确定性更强）
-
-## 4. IP-7 合成数据增强：社会代价标签自动生成（增强版）
-
-```python
-def augment_social_labels_v5(rendered_seq):
-    """
-    渲染即标签 v5：为每帧自动计算社会代价三项，零人工
-    新增：LUT 精度容错带标记，便于离线验证
-    """
-    for frame in rendered_seq:
-        # 可读性：让位方向与威胁方向夹角的余弦相似度
-        legibility = -np.log(softmax(cos_sim(v_ee, dir_threat) / τ))
-        
-        # 社交距离：当前距离与舒适距离 (0.8m) 偏差
-        proxemics = (dist - 0.8) ** 2
-        
-        # Jerk：加速度差分模
-        jerk = np.linalg.norm(a_t - a_t-1) / dt if t > 0 else 0
-        
-        frame.social_cost = {
-            'legibility': legibility,
-            'proxemics': proxemics, 
-            'jerk': jerk,
-            'total': λ_leg*legibility + λ_prox*proxemics + λ_jerk*jerk,
-            'ξ': ξ_current,  # 关键增幅：关联当前威胁上下文ξ
-            'lut_precision': δ_lut  # LUT 查表精度标记，便于离线验证
-        }
-    
-    # Episode 级偏好对（用于 DPO）：总社会代价更低的轨迹 = 偏好轨迹
-    # 新增：标记了 ξ 与 lut_precision 的轨迹，便于后续抽样验证
-    return render_with_social_labels_v5
-```
-
-**成本**：渲染管线复用 IP-7，**零额外 GPU**；标签计算纯 CPU，~1ms/帧；LUT 精度标记无额外开销。
-
-## 5. 实验设计（新增 E17，接第 27 轮 E12-E16，增强版）
-
-| 实验 | 设置 | 指标 | 门槛/预期 |
-|---|---|---|---|
-| **E17 社会运动控制器** | 回放基线：CBF-QP (IP-11 v3) vs π_lite (IP-13) vs 专家 TV-LQR+残差 | **安全覆盖率**（碰撞率）、**社会代价**（Legibility/Proxemics/Jerk）、**推理延迟 P99**、**回退率** | 碰撞率=0（双轨兜底）；社会代价 ≤ CBF-QP -15%；P99 <0.5ms；回退率 <5% |
-| **E17b 消融实验** | π_lite 的四个子配置：(1) 无社会项 / (2) 无残差 / (3) 无早退出 / (4) 无量化 | 同上 | 每项消融：社会代价上升 10~20%、延迟基本不变/略升、回退率上升 2~5%pt |
-| **E17c 真机冒烟** | 部署 π_lite + 双轨回退，压测 1000 episode（含合成极端/真人干扰） | 碰撞数、遥测回退分布、动作熵/Jerk CI 通过率 | 零碰撞；回退分布匹配离线；CI 100% 通过；E17 所有核心指标同时过门槛 |
-| **E17d LUT 精度验证** | 不同 ξ 空间密度的 LUT 查表精度测试 | 查表误差直方图、外插误差上界 | 误差 ≤ δ_lut ≈ 0.01，覆盖率 ≥ 95% 的 ξ 空间点 |
-
-**降级机制**：E17 任一核心指标（碰撞率>0、P99>0.5ms、社会代价劣化 CBF）不过门槛 → **IP-13 冻结，IP-11 回退 CBF-QP**，系统回退 v3 能力，不产生负收益。特别：E17d LUT 精度不足 → 增大 ξ 采样密度或采用三线插值，重跑 E17。
-
-## 6. 增强风险登记簿（细化版）
+## 5. 风险登记簿
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| **蒸馏策略分布外安全性退化（本轮最大）** | **高** | 双轨回退（CBF 证书保留）；对抗蒸馏（n_adversarial=2000）；形式化验证片段（离线抽样 CBF 验证）；E17 门槛（安全覆盖率≥99.5%） |
-| 奖励模型偏差（合成偏好≠真人偏好） | 中 | A6 少样本真人偏好校准（每轮采集 50 真人样本）；双轨兜底；奖励模型在线迭代更新 |
-| 量化精度损失导致抖振/不稳定 | 中 | QAT + 校准集覆盖 + 早退出分支平滑（滞回阈值 + 低通滤波已内建） |
-| TV-LQR 线性化误差（大威胁非线性强） | 中 | 残差学习补偿 + 域边界检测回退（ξ 边界时自动增大 λ_leg） |
-| 早退出分支切换抖振 | 低 | 滞回阈值 (3步最小) + 输出低通平滑 (α=0.2) 已内建 |
-| F9 相机映射/校正未确认（继承） | 高 | A4 最高优先不变，E12/E13 门槛联合验证 |
-| 合成手域差距 + 意图误判（继承第 27 轮最大） | 高 | 双轨兜底 + B_def + E12/E13 门槛 + A6 真人采集 |
-| **LUT 查表精度有限带来的插值误差（新增）** | **中** | ξ 空间等距采样 + 三线插值 + LUT 容错带 (δ_lut ≈ 0.01)；ξ 变化时的平滑过渡（‖ξ-ξ_last‖ < ε_ξ 时保持上一帧 LUT） |
+| 静默错映射（相机身份/夹爪反相/pivot） | **高** | E1 三层干跑；影子录制对齐 Runs 视频（A2） |
+| 步骤分公式/终止模式未知（A-1/A-2） | 高 | 假设显式化+影子验证；设计对两公式均稳 |
+| WMA-0 世界模型对接触任务保真不足 | 高 | E5 门槛不过即冻结路径 A |
+| DPO 配对受场景分布噪声污染 | 中 | 同任务+场景桶约束+早停 |
+| 影子录制的合规性（规则未公开） | 中 | A1 拿手册确认前只录不传、仅自用 |
+| UnifoLM-VLA NC-SA 许可边界 | 中 | A3 合规确认；必要时自训小模型备胎 |
+| 榜单/头部方案不可核实导致决策盲飞 | 中 | IP-19 骨架先行；不引用未核实数字（规则 18） |
+| N 端口/N 机器人资源配置未知 | 中 | 按 3~8 规划，共享后端方案 2 |
+| 训练算力不足（8B VLA 全参） | 中 | LoRA 优先（冻结视觉编码器）；IP-10 记账 |
 
-## 7. 来源清单（检索/核实于 2026-11-07）
+## 6. 来源清单（检索/核实于 2026-11-07）
 
-- 继承第 27 轮 R1-R11，口径不变。
-- 本轮新增/强化（arXiv API 逐一核实 ✓，形式化文献检索 ✓）：
-  - R12 Predictive Control for Linear and Hybrid Systems（Borrelli et al., 2017）: https://arxiv.org/abs/1702.02762 ✓
-  - R13 Legibility and Predictability of Robot Motion（Dragan et al., RSS 2013}): https://arxiv.org/abs/1302.1466 ✓
-  - R14 Knowledge Distillation: A Survey（Gou et al., 2021）: https://arxiv.org/abs/2006.05525 ✓
-  - R15 Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference（Jacob et al., CVPR 2018）: https://arxiv.org/abs/1712.05877 ✓
-  - R16 Proxemics: The Study of Human Spatial Behavior（Kirby et al., IJRR 2010）: 经典文献，无 arXiv，如实标注
-  - R17 TV-LQR for Time-Varying Systems（Bryson & Ho, 1969）: 利卡蒂微分方程基石，教材级文献
-  - R18 Direct Preference Optimization：Your Rating is Wrong（Rafailov et al., 2023）: DPO 算法基石，arXiv:2305.18123 ✓
-  - R19 Spectral Normalization for Stable Training（Miyato et al., ICLR 2018）: MLP 稳定性正则化，arXiv:1805.10175 ✓
+- R1 官网首页 https://unibot.unitree.com （单模型多任务口径）
+- R2 挑战赛页 https://unibot.unitree.com/challenges.html （32 任务/32000 集/169 小时；每任务步骤分满分 100；提交流程 7 步）
+- R3 排行榜页 https://unibot.unitree.com/leaderboard.html （Coming Soon；按平均成功率与步骤分综合排序）
+- R4 提交模板 https://github.com/unitreerobotics/unibot_submission （README/example_policy/example_env/web_policy 源码：接口、JPEG q95 4:4:4、N 端口、延迟可信度条款）
+- R5 规则手册（飞书，需登录，不可核实）https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cCW1CnMh
+- R6 运行记录页 https://unibot.unitree.com/runs.html （Coming Soon；完整评测视频）
+- R7 数据集集合 https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset （32 个 G1_Dex1_*，更新于 Sep 11）
+- R8 HangCup 数据集卡+meta（tasks.parquet 五句同义@分隔；info.json 30fps/4 相机/AV1；Dex1 5.5→0）
+- R9 UnifoLM-VLA-0 https://huggingface.co/unitreerobotics/UnifoLM-VLA-Base 与 https://github.com/unitreerobotics/unifolm-vla （Qwen2.5-VL 骨干、Jan 29 2026、单策略 12 类任务、CC BY-NC-SA 4.0）
+- R10 UnifoLM-WMA-0 https://huggingface.co/unitreerobotics/UnifoLM-WMA-0-Base （世界模型=模拟器+策略增强；license 标注矛盾；gated）
+- R11 HangCup 数据行实证（datasets-server rows API：pivot 语义、base_command、无 per-episode 语言字段、动作/观测全键清单）
 
-## 8. 清单迭代规则（继承+第 28 轮专属增补）
+## 7. 清单迭代规则（继承 + 第 1 轮新增）
 
-- 继承第 27 轮 9-11：防御行为平滑 CI / 预测性组件离线验证 / 让位即维护窗口。
-- 12（已确认）：**一切蒸馏策略必须通过双轨回退机制上线**——无 CBF 证书兜底的策略不得作为主路径。
-- 13-1（新增）：**社会代价项必须可消融、可审计、可离线验证**——不得作为黑盒正则隐式进入。每个 λ 项的来源、边界、公式必须可文档化。
-- 13-2（新增）：**π_lite 的 INT8 量化精度必须有确界测试报告**——校准集覆盖率 ≥ 99%，峰�误差 ≤ 2%。
-- 13-3（新增）：**双轨回退机制的 fallback_rate 必须有实时遥测**——阈值告警：>5% 触发模型复审，>10% 冻结 IP-13 进行离线复审。
-- 13-4（新增）：**E17 门槛为上线不可逾越条件**——安全覆盖率≥99.5%、社会代价≤CBF-QP-15%、P99<0.5ms、回退率<5% 四者必须同时过门槛。
-- 14（新增）：**推理延迟 P99 必须有确界测试报告**——不得仅凭平均值通过预算审查。
-- 15（新增）：**LUT 查表精度必须有验证报告**——ξ 空间覆盖率 ≥ 95%，查表误差上界 ≤ 0.01。
+- 继承：12（一切新策略必须双轨兜底）、13-1~13-4、14（P99 确界报告）、15。
+- **16（新增）**：一切键映射/单位/方向/符号约定必须过 E1 三层干跑，未过不得上线；映射表即代码，纳入版本管理。
+- **17（新增）**：影子录制数据仅用于自身迭代；对外发布前必须确认规则手册许可（A1 行动项闭环）。
+- **18（新增）**：任何未公开/未核实的榜单或第三方成绩数字不得写入事实卡；用户口径必须显式标注。
+- **19（新增）**：任何训练出来的组件必须可一键消融，消融后系统能力不低于 BC+桥接基线；不满足即冻结并登记降级路径。
 
 ---
 
-**本轮最大风险一句话**：蒸馏策略 π_lite 在分布外威胁下安全性退化，仅靠双轨回退 CBF-QP 兜底——回退率>5%或回退引入抖振即视作 E17 门槛未通过，需 E17 离线强验证后方可上线。
+**本轮最大风险一句话**：规则手册不可核实使「步骤分公式/episode 终止模式/相机物理身份」全部悬置——在这些假设被影子录制验证前，所有上层优化都建立在流沙上。
+
+**本轮最值得押注**：IP-14 BRIDGE-0（桥接+三层干跑+影子录制）——它是防归零的保险，也是把稀缺预约评测变成持续数据资产的飞轮入口。
 <!-- ARTIFACT:END -->
