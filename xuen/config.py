@@ -523,11 +523,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    # 与 agent.timeout 同口径：负数/非有限的超大整数（程序化构造绕过
-    # _parse_float 时 math.isfinite 会抛 OverflowError）都要带字段名拒绝
-    if (not _is_finite_number(cfg.rounds.verify_timeout)
-            or cfg.rounds.verify_timeout <= 0):
-        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
