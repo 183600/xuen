@@ -514,10 +514,6 @@ def _validate_agent_config(cfg: Config) -> None:
 
 def _validate_rounds_config(cfg: Config) -> None:
     """检查轮次守卫配置。"""  # noqa: TID251
-    if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
-        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    if not _is_finite_number(cfg.rounds.judge_timeout) or cfg.rounds.judge_timeout <= 0:
-        raise ValueError("rounds.judge_timeout 必须为有限的正数（秒）")
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
     jcmd = cfg.rounds.judge_command
@@ -535,6 +531,14 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    # 与 agent.timeout 同口径：负数/0/inf/nan/超大整数都要在此拒绝，
+    # 不能漏给 runner 的 subprocess timeout 抛 OverflowError/挂起
+    if (not _is_finite_number(cfg.rounds.verify_timeout)
+            or cfg.rounds.verify_timeout <= 0):
+        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
+    if (not _is_finite_number(cfg.rounds.judge_timeout)
+            or cfg.rounds.judge_timeout <= 0):
+        raise ValueError("rounds.judge_timeout 必须为有限的正数（秒）")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
