@@ -390,17 +390,6 @@ def _is_finite_number(value: Any) -> bool:
         return False
 
 
-def _require_positive_seconds(name: str, value: Any) -> None:
-    """超时必须为有限正数（秒）。
-
-    负数/零会让「立刻超时」，NaN/无穷会让超时判断失效，超大整数（程序化
-    构造 Config 时可绕过 _parse_float）无法转换成浮点——都要在配置阶段
-    报出带字段名的 ValueError，不能等到运行时才出问题。
-    """
-    if not _is_finite_number(value) or value <= 0:
-        raise ValueError(f"{name} 必须为有限的正数（秒）")
-
-
 _JUDGE_PLACEHOLDER_HINT = "（被转义的 \\$prompt 不会被替换）"
 
 _AGENT_PLACEHOLDER_HINT = (
@@ -519,7 +508,8 @@ def _validate_words_config(cfg: Config) -> None:
 
 def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
-    _require_positive_seconds("agent.timeout", cfg.agent.timeout)
+    if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
+        raise ValueError("agent.timeout 必须为有限的正数（秒）")
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -527,16 +517,22 @@ def _validate_rounds_config(cfg: Config) -> None:
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
     jcmd = cfg.rounds.judge_command
-    _require_positive_seconds("rounds.verify_timeout",
-                               cfg.rounds.verify_timeout)
-    _require_positive_seconds("rounds.judge_timeout",
-                               cfg.rounds.judge_timeout)
     if cfg.rounds.verify not in VERIFY_MODES:
         raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
                          f"收到: {cfg.rounds.verify!r}")
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
+    # 超时必须是有限的正数：非正数会让 subprocess 超时语义失效（0 立即超时、
+    # 负数被当成无超时），inf/NaN 与超大整数则让 math.isfinite 抛
+    # OverflowError（程序化构造 Config 时绕过 load_config 的场景）。
+    # 与 agent.timeout 同口径，用 _is_finite_number 兜住 OverflowError。
+    for name, value in (
+        ("rounds.verify_timeout", cfg.rounds.verify_timeout),
+        ("rounds.judge_timeout", cfg.rounds.judge_timeout),
+    ):
+        if not _is_finite_number(value) or value <= 0:
+            raise ValueError(f"{name} 必须为有限的正数（秒）")
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
