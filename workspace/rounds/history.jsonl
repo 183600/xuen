@@ -993,3 +993,5 @@
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 13:39:09"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-07 13:43:30"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-07 15:28:06"}
+{"event": "candidate", "id": "20261107-154948-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-07 15:49:48"}
+{"event": "verdict", "id": "20261107-154948-r1", "round": 1, "verifier": "ai", "score": 8.2, "result": "adopted", "reason": "AI 评分 8.2（阈值 7）", "ts": "2026-11-07 15:50:23"}
