@@ -3,306 +3,282 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 27 轮 · 「碰撞避免 × 夹爪控制 × 强化学习」：三词全部落在"最后一厘米"——SAFE-FILTER 护盾 / GRIP-GATE 夹爪门控 / GRIP-RL 窄域世界模型优化
+# 第 28 轮 · 「多机器人协作 × 强化学习训练 × 可解释性」：官方把基座和沙盘都开源了——BIMAN-CREW 双臂仲裁 / 沙盘三介质 RL / CALIB-PROBE 校准验证门
 
 ## 0. 轮次编号与信息核实（先严谨，再发散）
 
-**编号说明**：状态文件已保留第 26 轮（灵感词：低成本方案/群体智能/SLAM）；本轮模板仍写"第 1 轮"。按「优先深化与修剪、不推倒重来」元规则，本轮记为**第 27 轮**，三个新灵感词作为对 v2 清单（10 项）的深化输入。
+**编号说明**：状态文件已保留第 27 轮（灵感词：碰撞避免/夹爪控制/强化学习）；本轮模板仍写"第 1 轮"。按「优先深化与修剪、不推倒重来」元规则，本轮记为**第 28 轮**。注意「强化学习」是第 27 轮已消费过的词，本轮只做**深化**不重开战线。
 
 **本轮检索核实（全部检索于 2026-11-07）**：
 
 - **官方三页重验**：排行榜/运行记录仍"Coming Soon"[R1/R2]；challenges 页口径不变（32 任务/32000 演示/169h/得分点 100 分/七步提交流程）[R1a]。F7/F8 未解除。
-- **接口 repo 未变**：仍 2 commits（最新 2026-08-21 "version 2, support observation-based frame-skipping stacking"），README 全文重读 [R3]，消化出三个此前未点破、且**全部利好本轮灵感词**的事实：
-  1. 评测观测含 `observation.state.left_arm/right_arm[7]`（双臂**关节角**，"Left arm joint state"）→ 我方可在评测端做正运动学，双臂胶囊体自碰撞建模完全可行（F15；上两轮只盯 ee pose，漏了关节角这个键）；
-  2. 评测观测含 `observation.state.left_gripper/right_gripper[1]`（描述为"**gripper opening**"，即实测开度）→ 夹爪**闭环**（指令 vs 实开度）与闭合后验证可行（F15）；
-  3. `obs_delta_indices` 的键即传输选择器（只声明才传输），任意**状态键**可做 ≤0 偏移时间堆叠（不足补首帧）→ 速度/加速度特征零成本获取；`image_resize` 由评测端服务侧完成（F17）。
-- **数据集卡片重读**：**Dex1 夹爪为连续行程 5.5（开）→ 0.0（合）**；数据集动作表另有 `gripper_controls[4]`（left/right trigger+squeeze）**但评测动作目录无此键**——评测侧夹爪只有 1 维连续指令，训练监督直接用 `action.left/right_gripper`（F16）。HangCup 规模不变（1.04k episodes/194,564 行/8.8 GB），collection 32 项更新日期仍 2026-09-11 [R4]。
-- **文献锚点（arXiv API 逐一核实，https 修正后全部命中）**：iRe-VLA [R6a]、VLA-RL [R6b]、SimpleVLA-RL [R6c]、RIPT-VLA [R6d]、GRAPE [R6e]、Recovery RL [R6f]、CBF 无碰撞食品操作 [R6g]、双臂全身运动规划（重叠运动链自碰撞）[R6h]、不确定性感知预测 CBF（人机交互）[R6i]、AnyGrasp [R6j]、VILAS（VLA 一体化软抓取架构）[R6k]、未来观测估计抓取成功 [R6l]、TD-MPC2 [R6m]。
+- **接口与数据侧**：repo 仍 2 commits（最新 2026-08-21）[R3]；HF 集合 32 项、lastUpdated 2026-09-11 [R4]；HangCup 元数据 2026-10-14 有更新但规模标签不变（100K<n<1M）[R4]。
+- **F19（本轮最重要新事实）官方 UnifoLM 家族全栈开源**：
+  - **UnifoLM-WLA-1.0-Base**：6B 参数基座（2026-09-28 发布权重），约 2500h 真机数据，单模型协调 64 任务（桌面+全身），支持二指夹爪与多种五指灵巧手；开源含 LoRA 微调代码、动作专家训练、Model Server；**明确把 UniBot-V1 Challenge Dataset 列为配套数据集** [R8c]；
+  - **UnifoLM-WMA-0**：世界模型-动作框架（2025-09-15），世界模型两种用法——(a) 交互式仿真引擎生成合成数据，(b) Policy Enhancement（预测未来交互优化决策）；**存在 WMA-0-Dual 双臂权重**；真机 demo 含双臂叠盒/收铅笔 [R8b]；
+  - UnifoLM-VLA-0（2026-01-29，12 类操作单策略）[R8a]；
+  - **统一动作/状态规范**：54 维动作/60 维状态+有效性掩码、chunk 30 步@30fps≈1s、SE(3) 增量动作、分位归一化 [R8c]——与我们已消化的 F15/F16/F17 观测语义同族，A6 探针结论可复用其规范做交叉验证。
+- **F20 官方沙盘与 RL 工具链**：unitree_sim_isaaclab（G1/H1-2 仿真，**与真机同一 DDS 协议**，定位含数据采集/回放/生成/模型验证，需 RTX 3080-4090）[R9]；unitree_rl_lab（IsaacLab 2.3.0 RL 环境，G1-29dof 等）[R10]；unitree_mujoco。→ **第 27 轮"评测无环境→整策略 RL 进拒绝清单"的前提被部分推翻：官方沙盘存在，但与真机评测的相关性未知（新缺口 F8'）**。
+- **F22 官方 bimanual 资产**：HF 有 Z1_Dual_Dex1_*（叠盒/倒咖啡/叠衣/收铅笔）、G1_Dex1_DualRobot_Clean_Table、WMA-0-Dual 权重、UnifoLM-WBT 数据集集合 [R4][R8b]——双臂协调先验的免费训练数据。
+- **文献锚点（arXiv API 逐一核实，全部命中）**：MAPPO [R7a]、PBT [R7b]、Q-chunking（离线先验+chunk 级 RL）[R7c]、Foresight（动作条件世界模型做长时程失败检测）[R7d]、无失败数据的不确定性运行时失败检测 [R7e]、Conformalized 交互式模仿学习 [R7f]、"Do VLAs Know They Will Fail?"（SAE 表征含结果预测信息，可提前预警失败）[R7g]、BiRoAD（双臂共享+角色自适应表征）[R7h]、PA-BiCoop（主-辅双臂协作分工）[R7i]。
 
-**结论**：无与上轮冲突的事实；F7/F8 仍是最大信息缺口；F15-F17 是本轮三个"白捡"的接口利好，全部直接服务三个灵感词。
+**结论**：无与上轮冲突的事实；F7/F8 仍是最大信息缺口；新增最大缺口 **F8'（SANDBOX-GAP）：两个官方沙盘与真机评测的相关性未知**。F19/F20/F22 三个新事实全部利好本轮三词，且共同指向一个战略判断：**基座与沙盘已成公共物品，竞争重心向"末段细节+扰动泛化+可信交付"迁移——恰是 v3 清单的差异化地带。**
 
 ## 1. 三个灵感词拼出的图（直觉先行）
 
-> **碰撞避免**回答「怎么不输掉整局」：32 任务含双手协调，双臂在头顶共享工作区；VLA 在演示分布内很少自碰，但五类扰动场景把策略推进 OOD，一次双臂互锁或撞翻干扰物=整局归零。<30% 的头部格局下，**尾部风险的结构性保护**比期望值提升更便宜。且碰撞避免不止"自保"：人为干扰场景里人手会伸进工作区——检测人手→预测轨迹→让位缓冲区，正是第 26 轮展望预告的"干扰响应链"的动作端。锚点：CBF 食品操作 [R6g]、双臂重叠运动链规划 [R6h]、预测 CBF-HRI [R6i]、Recovery RL [R6f]。
-> **夹爪控制**回答「最后一厘米」：抓取族任务的失败大多不在"去哪儿"，而在"合拢那一刻"——合早了物体没到位、合晚了碰飞、开度不对夹空或夹飞。**F16 是本轮最大红利：Dex1 是连续行程（5.5→0.0），不是二值开合**——"何时合、合多拢"两个连续决策都可供工程；且观测回报实测开度，闭环验证与失败重抓成为可能。演示数据还送一份免费监督：闭合触达瞬间的指令开度≈物体宽度，(腕图 crop, 开度) 对就是现成的宽度回归训练集——零标注成本。
-> **强化学习**回答「示范没教的部分」：全量 VLA RL（iRe-VLA/VLA-RL/SimpleVLA-RL 路线 [R6a/R6b/R6c]）需要环境与奖励——评测无环境、真机无自采（COST-LADDER 红线），**整策略 RL 进拒绝清单**。但"最后一厘米"恰好是个例外：动作空间极窄（闭合时机偏移+开度+±2cm 修正）、视界 ≤2s、奖励可自监督（抓取成功分类器+IP-2 进度增量+几何碰撞罚）——**用演示+合成扰动训一个结构化（任务级）世界模型，在里面优化这个窄动作空间，再蒸馏回 GRIP-GATE 头**。这是 RL 唯一能过成本账的入场方式。锚点：TD-MPC2 [R6m]、RIPT-VLA [R6d]、GRAPE [R6e]。
+> **多机器人协作**回答「系统里谁是"多个智能体"」：赛制锁死"单 G1+单模型+远程 API"，物理多机器人=拒绝清单。但系统里真实存在一组多智能体——**双臂**。32 任务显式含双手协调，双臂在头顶共享工作区的分工/交接/避让是真实的协调问题；把多智能体文献（MAPPO 的合作训练框架 [R7a]、PA-BiCoop 的主-辅分工 [R7i]、BiRoAD 的角色自适应表征 [R7h]）压缩到"双臂仲裁层"，多机器人协作就有了合法落点。第二落点在训练侧：多个虚拟策略（IP-9 委员会）与沙盘里的多个工人（PBT [R7b]）。
+> **强化学习训练**回答「沙盘解禁了多少」：第 27 轮把 RL 压缩到窄域的前提是"无环境"。本轮 F19/F20 推翻了半个前提——官方送来两个沙盘：WMA-0（外观真、物理近似、可当 rollout 评估器与合成数据引擎）与 Isaac Lab（物理真、渲染域差、与真机同 DDS 协议）。但两个沙盘与真机评测的相关性都未知（F8'），所以不是"RL 解禁"，而是"**训练介质从 1 种变 3 种、验收通道不变**"：Isaac Lab（物理）→ WMA-0（交互先验）→ 自训结构化 WM（最轻），held-out 真演示回放仍是唯一裁判。Q-chunking [R7c] 给了与 action-chunk 接口同构的 RL 形态：critic 只评 chunk 好坏，不改主干。
+> **可解释性**回答「<30% 格局下什么最值钱」：知道为什么失败比多对一个更值钱。三个合法落点：①**表征探针**——VLA 中间层激活含结果预测信息，轻量 probe 即可提前预警失败 [R7g]；②**校准**——无失败数据的运行时失败检测 [R7e] 与 conformal 思路 [R7f] 给 verify/激活阈值提供统计校准，代替手调；③**世界模型偏差监测**——Foresight 式动作条件监控 [R7d] 把 IP-13 的世界模型变成 IP-11/12 的"第六感"。三者合起来既是迭代速度的乘数（IP-3 失败归因），也是提交材料（§6 可信度自证）。
 
-核心类比（本轮灵魂）：**碰撞避免是"考试先保证不涂破答题卡"；夹爪控制是"最后落笔那一格要又准又稳"；强化学习是"没有标准答案的题，先在心里搭一个出题人（世界模型），自己出题自己练，练会了只把手感带进考场"。**
+核心类比（本轮灵魂）：**多机器人协作是"两个工人需要一个班组长"；RL 是"官方现在发了沙盘，可以自己出题自己练——但先要验证沙盘和考场像不像"；可解释性是"错题本+评分标准"——每道错题都写得清错在哪一步、凭什么扣分。**
 
 一句话押注：
 
-> **本轮新增 IP-11 SAFE-FILTER（动作护盾）/ IP-12 GRIP-GATE（夹爪门控）/ IP-13 GRIP-RL（窄域世界模型 RL），三者共享"最后一厘米"微管线；最值得押注 GRIP-GATE——近零成本、不依赖 F9 深度链路、直击抓取族任务与未见物品场景，且 F15/F16 两个接口事实刚刚证实其全部可行性。**
+> **本轮新增 IP-14 BIMAN-CREW（双臂仲裁）/ IP-15 CALIB-PROBE（校准验证门），深化 IP-13 为"沙盘三介质"；最值得押注 IP-15 CALIB-PROBE——把三个词焊在现有押注 IP-12 的 verify 环节上（探针置信度→conformal 校准→世界模型偏差监测→统一触发重抓/让位/仲裁），近零成本、不依赖 F7/F8、直接决定所有"介入式插件"的触发质量。**
 
 ## 2. 研究日志：三词各自戳中哪个瓶颈（承接四层分解）
 
-| 瓶颈层 | 碰撞避免的戳点 | 夹爪控制的戳点 | 强化学习的戳点 |
+| 瓶颈层 | 多机器人协作的戳点 | 强化学习训练的戳点 | 可解释性的戳点 |
 |---|---|---|---|
-| 数据层（无失败恢复数据） | 合成碰撞/人手轨迹=免费尾部数据 | 演示自带 (腕图, 开度) 免费标签；失败重抓可规则化 | 世界模型+CEM 在演示静默区自造经验 |
-| 表征层（无结构化扰动表征） | 地图加碰撞层（keep-out 体积） | 腕图 crop+开度序列=接触态表征 | 结构化世界模型=任务级动力学表征 |
-| 目标函数层（训练-评测错位） | 几何约束不依赖训练分布 | 抓取成功分类器=可验证代理奖励 | 窄域+代理奖励=错位最小化 |
-| 工程层（尾部风险/可信度） | 最小介入投影+delta 限幅+遥测 | 闭环验证+重抓状态机 | 蒸馏回门控头=评测零额外延迟 |
+| 数据层 | 官方 bimanual 资产=免费角色先验（F22） | 沙盘自造经验（Isaac Lab/WMA-0/自训 WM 三介质） | 合成失败样本给探针当免费标签 |
+| 表征层 | 双臂共享+角色自适应表征 [R7h] | chunk 级 Q 表征（critic 只评好坏）[R7c] | backbone 中间层=结果预测信息源 [R7g] |
+| 目标函数层 | 主-辅分工目标（效率×安全）[R7i] | 奖励自监督不变+Q-critic 稀疏奖励缓解 | conformal 覆盖率=可验证的校准目标 [R7e/R7f] |
+| 工程层 | 保守激活：冲突才介入+角色日志 | 沙盘保真度门（A8）先行 | 触发原因全部可读（§6 自证材料） |
 
-观察：三词罕见地汇聚在同一个子系统（approach→grasp→lift→carry→place 的末段），而不是各开一条战线——本轮的"创新密度"来自**把三个词焊在同一条微管线上**，且三个新 IP 全部挂在已有资产（IP-1 地图/IP-2 奖励/IP-4 挂载点/IP-7 扰动合成）上，符合 COST-LADDER。
+观察：上一轮三词焊在"最后一厘米"微管线上；本轮三词焊在"**触发质量**"上——SAFE-FILTER 让位、GRIP-GATE 重抓、BIMAN-CREW 仲裁，全部是"介入式插件"，介入与否、何时介入、介入多深，正是校准与可解释性的主场。本轮创新密度来源=**给所有介入式插件装同一个校准触发器**。
 
 ## 3. 灵感词交点（组合即创新）
 
-- **碰撞避免 × 夹爪控制 = 携行安全**：抓着物体时物体成为手臂的延伸胶囊（held-object capsule）；放置前最后 3cm 降速接近；非目标 slot 全程 keep-out（防撞飞干扰物——干扰物场景可能的隐性扣分点）。
-- **夹爪控制 × 强化学习 = 最后一英寸 RL**：动作空间 (t_close 偏移, 开度, ±2cm 修正) 足够窄，世界模型奖励 (P_grasp+Δprogress) 足够可验证——RL 在这里不是豪赌而是精修。
-- **碰撞避免 × 强化学习 = 安全评论家**：Recovery RL 式 Q_risk(s,a) [R6f] 作解析过滤器的兜底（几何覆盖不了的柔性接触情形），P2 可选不投入主线。
-- **三词交点 = grasp-carry-place 微管线**：GRIP-GATE（何时合/合多拢/失败即重抓）→ SAFE-FILTER（携行穿越共享工作区）→ WM-RL（离线在世界模型里联合优化微决策后蒸馏回门控头）。三者全部离线可训、部署为轻量插件、不新增稀缺资源消耗。
+- **多机器人 × RL = 双臂在沙盘里练**：Isaac Lab 双臂环境的合作训练（MAPPO 框架 [R7a] 压缩为双 agent 特例）；PBT 多工人演化 LoRA [R7b]（观察项，不过成本账不启用）。
+- **RL × 可解释性 = 沙盘验收可解释**：Q-critic 的 chunk 评分、世界模型偏差分数、CEM 最优解的归因——训练产物自带"可读的失败理由"，直接喂给 E 系列实验的失败归因。
+- **多机器人 × 可解释性 = 角色分配日志**：哪只手负责什么、何时交接、为何仲裁——评测视频复盘的天然索引（F7 解除后拆对手双手协调行为的第一把钥匙）。
+- **三词交点 = "可解释的沙盘训练"**：BIMAN-CREW 的每个决策带置信度与理由（IP-15），训练在官方沙盘（IP-13 三介质），交付仍是单模型单权重+轻量插件——三者都不动主模型，全部挂在已有资产上，符合 COST-LADDER。
 
-## 4. 与第 26 轮清单的深化/修剪决策
+## 4. 与第 27 轮清单的深化/修剪决策
 
 | 清单项 | 本轮处置 | 依据 |
 |---|---|---|
-| IP-1 SLAM-MAP | 深化：地图新增**碰撞层**（keep-out 体积：桌面/非目标 slot/人手预测缓冲区），供 SAFE-FILTER 消费 | 灵感词 碰撞避免 |
-| IP-2 SCORE-ALIGN | 深化：进度预测器新增第三消费者——GRIP-RL 奖励项 | 灵感词 RL |
-| IP-3 LOCAL-EVAL | 维持；新增回放验证 FK 胶囊/开度语义的接口探针（A6/E12 前置） | 本轮 F15/F16 |
-| IP-4 SUBMISSION-OPS | 维持；sanitize() 扩展为 SAFE-FILTER 挂载点+delta 遥测 | 灵感词 碰撞避免 |
-| IP-5 DUAL-HEAD | 冻结维持 P2 | F8 未解 |
-| IP-6 UNSEEN-GRASP | 维持指针；GRIP-GATE 承接其"动作端"（先看后抓→合拢验证） | 去重协同 |
-| IP-7 DISTURB-AUG | 深化：合成扰动额外产出**失败邻近状态**（world model 训练集）与安全评论家标签 | 灵感词 RL×碰撞 |
+| IP-1 SLAM-MAP | 维持；外参前向模型继续服务 IP-14 双臂空间关系与 IP-15 人手缓冲 | — |
+| IP-2 SCORE-ALIGN | 深化：进度裁判**第四消费者**=CALIB-PROBE 的失败预警先验 | 灵感词 可解释性 |
+| IP-3 LOCAL-EVAL | 深化：失败归因从"看日志"升级为"探针+校准"；A8 沙盘保真度探针挂载于此 | 灵感词 RL×可解释 |
+| IP-4 SUBMISSION-OPS | 深化：遥测新增角色分配日志+校准分数（§6 自证材料） | 灵感词 可解释性 |
+| IP-5 DUAL-HEAD | 维持 P2（冻结） | F8 未解 |
+| IP-6 UNSEEN-GRASP | 维持指针 | — |
+| IP-7 DISTURB-AUG | 维持；新增产出类型：**合成失败样本**（探针标签，失败率可控） | 灵感词 可解释性 |
 | IP-8 STEP-EFF | 维持 P1 | F8 未解 |
-| IP-9 SWARM-DECODE | 维持 P1 | — |
-| IP-10 COST-LADDER | 深化：拒绝清单新增 #7/#8（§5）；三个新 IP 过记账 | 纪律 |
-| — | **新增 IP-11 SAFE-FILTER** | 碰撞避免 |
-| — | **新增 IP-12 GRIP-GATE** | 夹爪控制 |
-| — | **新增 IP-13 GRIP-RL**（P2，门控） | 强化学习 |
+| IP-9 SWARM-DECODE | 深化：明确"多机器人协作"的合法映射=多策略委员会；单权重交付约束重申 | 灵感词 多机器人 |
+| IP-10 COST-LADDER | 深化：拒绝清单 +1 条 #9；#8 修订为"可复用官方 WMA-0" | 纪律 |
+| IP-11 SAFE-FILTER | 维持 P1；让位激活阈值改由 IP-15 校准分数供给 | 触发质量 |
+| IP-12 GRIP-GATE | 深化：verify 的固定阈值→conformal 校准阈值（IP-15 承接） | 触发质量 |
+| IP-13 GRIP-RL | **深化**：训练介质三选一→三介质分层；CEM 之外加 Q-chunking 式 chunk critic；PBT 观察项；四道闸+第 5 道沙盘保真度门 | 灵感词 RL |
+| — | **新增 IP-14 BIMAN-CREW**（P1） | 多机器人协作 |
+| — | **新增 IP-15 CALIB-PROBE**（P1，本轮押注） | 可解释性 |
 
-无删除项；v2 十项全部保留，本轮净增三项且都挂在已有资产上。
+无删除项；v3 十三项全部保留，本轮净增两项且都挂在已有资产上。
 
 ## 5. 风险与本轮最大风险
 
-**最大风险：IP-13 的「世界模型被利用」——CEM 优化器会精准攻击结构化世界模型的误差（尤其抓取成功分类器的过自信区），离线指标漂亮、真机拉胯；而本地-官方相关性（F8）未验证，无法兜底。** 缓解：①动作空间与视界压到最小（3 维、≤2s、±2cm）；②held-out 真演示回放为唯一验收通道，合成 rollout 分数只作参考；③OOD 动作频次监控（模型利用检测器）；④产出以"蒸馏回 GRIP-GATE 头"为唯一出口，不过阈即整体回退模仿门控（沉没成本封顶 2-4 GPU·天）。
+**最大风险：SANDBOX-GAP——把官方沙盘当真考场。** Isaac Lab 物理保真但渲染/动力学域差，WMA-0 外观保真但物理近似；两者的 rollout 分布与真机评测的相关性完全未知（F8'）。若 RL/协调训练在"像而不真"的沙盘里过拟合，就是第 27 轮 IP-13 最大风险的放大版（离线漂亮、真机拉胯），且这次诱导投入的成本上限更高（仿真基建+双臂环境搭建）。缓解：①**A8 保真度探针先行**——量化沙盘↔真演示回放的分布差异，不过阈不训 RL；②held-out 真演示回放唯一验收通道不变；③训练介质从最便宜的自训结构化 WM 起步，Isaac Lab/WMA-0 只在探针过关后逐级启用；④沉没成本封顶不变。
 
-其余新增风险：④SAFE-FILTER 过保守降低成功率/步骤分（缓解：只约束四类硬约束，目标物接触豁免；delta 限幅+斜坡；E12 消融）；⑤运行时改动作触碰 §6 可信度条款（缓解：delta 平滑限幅+全量遥测+提交材料声明安全模块，待 A1/A5 澄清）；⑥夹爪开度值域语义（评测端是否同样 5.5→0.0）未实测（缓解：A6 用 example_env 桩+数据集回放验证，P1）。
+其余新增风险：⑤IP-14"帮倒忙"——仲裁层推翻主模型的正确分工反而降低成功率（缓解：保守激活，冲突检测触发才介入；conformal 激活阈值；E16 消融验证正常场景零回归）；⑥探针不忠实——saliency/SAE 解释不可靠，且 [R7g] 结论基于 OpenVLA，向 WLA 架构的迁移未验证（缓解：解释只生成调试假设、不自动改动作；多探针交叉验证；E17 验收）；⑦WMA-0-Dual 为 CC BY-NC-SA 许可、竞赛合规需核查（A7 顺带）；⑧官方栈演进快（缓解：锁定 commit 复现，A7 记录版本）。
 
 ## 6. 下一轮展望（灵感未知）
 
-- 若灵感指向「触觉/力控」→ Dex1 无触觉通道，深化"视觉代偿触觉"（腕图微振动/光流滑移检测），与 GRIP-GATE verify 串联成完整接触感知链；
-- 若灵感指向「课程学习/自动课程」→ GRIP-RL 的世界模型天然支持难度课程（扰动幅度递增），与 IP-7 注入器合并成课程化训练；
-- 若 F7/F8 解除 → 立即触发强制修订：榜单+评测视频拆解对手的抓取时机与碰撞行为（对手是否也有安全层，视频里一眼可见）。
+- 若灵感指向「课程学习/自动课程」→ 沙盘三介质天然支持难度课程（Isaac Lab 物理扰动递增→WMA-0 外观变化→真机回放验收），与 IP-7 注入器合并成课程化训练——第 27 轮展望的这条预告本轮已部分落地；
+- 若灵感指向「人机交互/信任」→ 可解释性报告升级为"提交自证包"（delta 遥测+角色日志+校准曲线），人手避让（IP-11/E15）与校准预警（IP-15）串联成完整的干扰响应链；
+- 若 F7/F8 解除 → 立即用运行记录+完整评测视频验证两件事：头部方案是否直接用官方 WLA-1.0 栈（若不是，其基座选择即情报）；末段失败分布是否与 IP-11/12/14 的假设一致——IP-14 的收益届时首次可量化。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 27 轮产物 · 创新点清单 v3：SAFE-FILTER / GRIP-GATE / GRIP-RL——"最后一厘米"微管线
+# 第 28 轮产物 · 创新点清单 v4：BIMAN-CREW / CALIB-PROBE——官方开源栈时代的"差异化插件"策略
 
 ## 0. 结论
 
-第 26 轮清单 v2（10 项）本轮完成「深化 + 净增三项」迭代，产出 v3（13 项）：
+第 27 轮清单 v3（13 项）本轮完成「深化 + 净增两项」迭代，产出 v4（15 项）：
 
-- **IP-11 新增 SAFE-FILTER（P1）**：模型无关的动作护盾——FK 胶囊体自碰撞 + 桌面/非目标 slot/人手预测 keep-out 的 CBF-lite 最小介入投影；CPU <5ms，尾部风险的结构性保护。
-- **IP-12 新增 GRIP-GATE（P0，本轮押注）**：Dex1 连续行程上的三合一夹爪门控——宽度自适应开度 + 闭合时机预测头 + 闭合验证/失败重抓；近零成本，不依赖 F9 深度链路。
-- **IP-13 新增 GRIP-RL（P2，门控）**：窄域世界模型 RL——3 维动作（闭合时机/开度/±2cm 修正）、≤2s 视界、结构化世界模型 + CEM、蒸馏回 GRIP-GATE 头；全策略 RL 进拒绝清单。
-- IP-1 加碰撞层、IP-2 加第三消费者、IP-7 加失败邻近状态、IP-10 拒绝清单 +2 条；无删除项。
+- **IP-14 新增 BIMAN-CREW（P1）**：双臂仲裁层——冲突检测器（保守激活）+ 主-辅角色仲裁头 + 交接门控；多机器人协作在"单机器人赛制"下的合法落点=双臂即多智能体。
+- **IP-15 新增 CALIB-PROBE（P1，本轮押注）**：失败探针 + conformal 校准 + 世界模型偏差监测，统一驱动所有介入式插件（重抓/让位/仲裁）的触发质量；近零成本、不依赖 F7/F8。
+- **IP-13 深化**：训练介质三选一→三介质分层（自训结构化 WM → WMA-0 → Isaac Lab），新增 Q-chunking 式 chunk critic 与第 5 道闸（沙盘保真度门）；PBT 观察项不启用。
+- IP-2 加第四消费者、IP-3 失败归因升级、IP-4 遥测加角色日志与校准分数、IP-7 加合成失败样本、IP-9 明确映射、IP-10 拒绝清单 +1 且 #8 修订、IP-11/12 触发阈值改由 IP-15 供给；无删除项。
 
-三词全部落在"最后一厘米"微管线（approach→grasp→lift→carry→place 末段），三个新 IP 共享资产、互为上下游，是本轮创新密度来源。路线无关原则不变：IP-11/12/13 均以可消融插件接入，不绑死主模型。
+**战略层判断（本轮最重要）**：官方已开源 UnifoLM-WLA-1.0-Base（6B，配套 UniBot-V1 数据）+ WMA-0 世界模型（含 Dual 双臂权重）+ Isaac Lab 仿真（同 DDS 协议）+ RL 工具链——**"基座+沙盘"已成所有参赛队的公共物品**。榜单 <30% 的瓶颈因此更可能落在末段细节与扰动泛化，恰是 IP-11/12/13/14/15 的差异化地带。基座选型从开放问题收敛为：**默认主干=官方栈（A7 跑通基线），插件即护城河**。路线无关原则不变：所有 IP 仍以可消融插件接入。
 
 ## 1. 事实卡更新（检索日期 2026-11-07）
 
-F1-F14 与第 26 轮一致（本轮重验：官方三页仍 Coming Soon [R1/R1a/R2]；repo 仍 2 commits，最新 2026-08-21 [R3]）。新增：
+F1-F18 与第 27 轮一致（本轮重验：官方三页仍 Coming Soon [R1/R1a/R2]；repo 仍 2 commits [R3]；HF 集合 32 项、lastUpdated 2026-09-11 [R4]）。新增：
 
 | # | 事实 | 来源 |
 |---|---|---|
-| F15 | 评测观测含双臂关节角 `observation.state.left_arm/right_arm[7]`（joint state）与夹爪实测开度 `observation.state.left_gripper/right_gripper[1]`（"gripper opening"）→ 评测端 FK 自碰撞建模与夹爪闭环验证可行 | [R3] |
-| F16 | Dex1 夹爪连续行程 5.5（开）→0.0（合）；数据集动作表有 `gripper_controls[4]`（trigger/squeeze）但评测动作目录无此键 → 评测侧仅 1 维连续夹爪指令；训练监督直接用 `action.left/right_gripper` | [R3][R4] |
-| F17 | `obs_delta_indices` 键=传输选择器，任意状态键可做 ≤0 偏移堆叠（不足补首帧）→ 速度特征零成本；`image_resize` 由评测端服务侧完成 | [R3] |
-| F18 | 官方三页重验仍 Coming Soon；repo 仍 2 commits，规则未变；HangCup 规模与 collection 更新日期不变 | [R1/R2/R3][R4] |
+| F19 | 官方 UnifoLM 家族全栈开源：WLA-1.0-Base（6B/2500h 真机数据/64 任务/LoRA 微调代码/Model Server，明确配套 UniBot-V1 数据集）；WMA-0 世界模型（仿真引擎+Policy Enhancement，**有 Dual 双臂权重**，CC BY-NC-SA）；VLA-0；统一规范 54 维动作/60 维状态+掩码、chunk 30@30fps、SE(3) 增量、分位归一化 | [R8a/R8b/R8c] |
+| F20 | 官方沙盘与 RL 工具链：unitree_sim_isaaclab（G1/H1-2，**与真机同一 DDS 协议**，用途含采集/回放/生成/模型验证，需 RTX 3080-4090）；unitree_rl_lab（IsaacLab RL 环境，G1-29dof）；unitree_mujoco → 第 27 轮"无环境"前提被部分推翻 | [R9][R10] |
+| F21 | 官方公开 bimanual 资产：Z1_Dual_Dex1_*（叠盒/倒咖啡/叠衣/收铅笔）、G1_Dex1_DualRobot_Clean_Table、WMA-0-Dual 权重、UnifoLM-WBT 集合 | [R4][R8b] |
+| F8' | **SANDBOX-GAP（新缺口）**：两个官方沙盘的 rollout 分布与真机评测的相关性未知；沙盘指标≠官方得分 | 本轮判定 |
 
-行动项：A1-A5 不变；**A6（新增，P1）**：example_env 桩+数据集回放验证 (a) FK 所用关节角量纲/顺序，(b) 评测开度值域是否同样 5.5→0.0（决定 GRIP-GATE 指令映射）。
+行动项：A1-A6 不变；**A7（新增，P0）**：跑通 UnifoLM-WLA-1.0-Base + 32k 演示 LoRA 微调基线（锁定 commit、记录版本；顺带核查 CC BY-NC-SA 许可对竞赛提交的约束）；**A8（新增，P1）**：沙盘保真度探针——held-out 真演示在三介质中的回放分布差异量化（见 E18），不过阈不训 RL。
 
-## 2. 创新点清单 v3 一览
+## 2. 创新点清单 v4 一览
 
 | 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
 |---|---|---|---|---|---|---|---|---|
-| IP-1 | SLAM-MAP v3 | 四件套+碰撞层（keep-out 体积） | P0 | 无 | SLAM×碰撞 | 算力(轻)+伪标注 | 位置/未见/人为干扰 +5~15pt | 深化 |
-| IP-2 | SCORE-ALIGN | 过程奖励+进度裁判+RL 奖励源 | P0 | 无 | 评测指标 | 重标注近零 | 步骤分+部分分 | 深化 |
-| IP-3 | LOCAL-EVAL | 零真机闭环+群体/接口探针 | P0 | IP-2 | 低成本×群体 | 算力(1 GPU) | 迭代速度=生命线 | 维持 |
-| IP-4 | SUBMISSION-OPS | N端口/延迟/容错+安全挂载点 | P1 | 无 | 竞赛×群体 | 部署机 | 免费工程分层 | 深化 |
+| IP-1 | SLAM-MAP v3 | 四件套+碰撞层 | P0 | 无 | SLAM×碰撞 | 算力(轻)+伪标注 | 位置/未见/人为干扰 +5~15pt | 维持 |
+| IP-2 | SCORE-ALIGN | 过程奖励+进度裁判（四消费者） | P0 | 无 | 评测指标 | 重标注近零 | 步骤分+部分分 | 深化 |
+| IP-3 | LOCAL-EVAL | 零真机闭环+探针归因+沙盘保真度探针 | P0 | IP-2 | 低成本×可解释 | 算力(1 GPU) | 迭代速度=生命线 | 深化 |
+| IP-4 | SUBMISSION-OPS | N端口/延迟/容错+安全挂载点+角色日志 | P1 | 无 | 竞赛×群体 | 部署机 | 免费工程分层 | 深化 |
 | IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | IP-1 | 25轮 | 算力 | 视合规 | 维持 |
-| IP-6 | UNSEEN-GRASP | 先看后抓（闭环+动作端） | 指针 | IP-1/12 | SLAM | 共享 | 未见物品 | 维持 |
-| IP-7 | DISTURB-AUG | 扰动合成+失败邻近状态+安全标签 | P1 | 无 | 25轮×RL | 数据(合成) | 人为干扰 | 深化 |
+| IP-6 | UNSEEN-GRASP | 先看后抓 | 指针 | IP-1/12 | SLAM | 共享 | 未见物品 | 维持 |
+| IP-7 | DISTURB-AUG | 扰动合成+失败邻近状态+**合成失败样本（探针标签）** | P1 | 无 | 25轮×RL | 数据(合成) | 人为干扰 | 深化 |
 | IP-8 | STEP-EFF | 步骤分效率工程 | P1 | A1 | 25轮 | 零 | 步骤分 | 维持 |
-| IP-9 | SWARM-DECODE | soup/蒸馏+自洽投票 | P1 | IP-2 | 群体智能 | LoRA×K 一次性 | +2~5pt | 维持 |
-| IP-10 | COST-LADDER | 三账户+拒绝清单(+2 条) | P0(纪律) | 无 | 低成本 | 全账户 | 防负 ROI | 深化 |
-| IP-11 | SAFE-FILTER | CBF-lite 动作护盾 | P1 | IP-4(+IP-1 部分) | 碰撞避免 | CPU <5ms | 尾部风险保护+人为干扰 | **新增** |
-| IP-12 | GRIP-GATE | 何时合/合多拢/失败重抓 | P0 | 无(IP-1 可选) | 夹爪控制 | 1-2 GPU·天 | 抓取族 +3~8pt | **新增（押注）** |
-| IP-13 | GRIP-RL | 窄域世界模型 RL→蒸馏回门控 | P2(门控) | IP-2/7/12 | 强化学习 | 2-4 GPU·天 | 扰动场景 +2~5pt | **新增** |
+| IP-9 | SWARM-DECODE | soup/蒸馏+自洽投票（多策略委员会，单权重交付） | P1 | IP-2 | 群体×多机器人 | LoRA×K 一次性 | +2~5pt | 深化 |
+| IP-10 | COST-LADDER | 三账户+拒绝清单（#8 修订、+1 条 #9） | P0(纪律) | 无 | 低成本 | 全账户 | 防负 ROI | 深化 |
+| IP-11 | SAFE-FILTER | CBF-lite 动作护盾（让位激活改由 IP-15 校准） | P1 | IP-4(+IP-1) | 碰撞避免 | CPU <5ms | 尾部风险保护 | 维持 |
+| IP-12 | GRIP-GATE | 何时合/合多拢/失败重抓（verify→conformal 校准） | P0 | A6 | 夹爪控制 | 1-2 GPU·天 | 抓取族 +3~8pt | 深化 |
+| IP-13 | GRIP-RL | **沙盘三介质**+chunk critic→蒸馏回门控 | P2(门控) | IP-2/7/12+A8 | 强化学习 | 2-4 GPU·天(封顶) | 扰动场景 +2~5pt | 深化 |
+| IP-14 | BIMAN-CREW | 双臂冲突检测+主辅仲裁+交接门控 | P1 | IP-12/15 | 多机器人协作 | 1-2 GPU·天 | 双手协调 +2~6pt | **新增** |
+| IP-15 | CALIB-PROBE | 失败探针+conformal 校准+WM 偏差监测 | P1 | IP-2/7/13(可选) | 可解释性 | <1 GPU·天 | 全局触发质量+迭代速度 | **新增（押注）** |
 
-## 3. 重点展开一：IP-11 SAFE-FILTER（碰撞避免）
+## 3. 重点展开一：IP-14 BIMAN-CREW（多机器人协作）
 
-### 3.1 约束集合——只管四类硬约束，任务必需接触豁免
+### 3.1 设计——双臂=两个智能体，三组件
 
-| 约束 | 几何建模 | 数据来源（全部评测可得） |
-|---|---|---|
-| 双臂自碰 | 每臂 3 段胶囊（上臂/前臂/手+held-object），FK 由关节角直算，最小间距 d_min≈6cm | F15 关节角 [R3] + 开源 G1 URDF |
-| 臂-桌面 | 胶囊 vs 桌面平面（TABLE_Z 先验） | 任务先验 |
-| 臂-非目标物 | 胶囊 vs slot keep-out 圆柱（半径=slot 半宽+3cm 裕量） | IP-1 碰撞层 |
-| 臂-人手 | 胶囊 vs 人手预测缓冲区（头图检测框经外参反投影 + 匀速外推 300ms） | 头图检测 + IP-1 外参（锚点 [R6i]） |
+1. **冲突检测器（保底信号，决定是否激活）**：双臂目标 slot 相同 / 双臂轨迹胶囊最小间距 < d_min（复用 IP-11 的 FK 胶囊，F15 关节角） / 同 chunk 内双臂同时计划接近同一空间点——任一触发才激活仲裁；否则完全不介入（**保守激活原则**，防"帮倒忙"）。
+2. **主-辅角色仲裁头**：轻量 aux head 输出 {left_lead, right_lead, sync_delay}——主-辅分工思想锚定 PA-BiCoop [R7i]；表征锚定 BiRoAD 的角色自适应先验 [R7h]。训练数据：32k 演示的双手协调子集 + 官方 bimanual 资产（F22：Z1_Dual 系列/G1_DualRobot/WMA-0-Dual，跨体态角色先验迁移，零采集成本）。
+3. **交接门控**：物体交接瞬间（一手递一手接）用 GRIP-GATE 的连续开度信号（F16：指令开度 vs 实测开度）+ IP-15 校准分数决定接手时机与确认条件——交接是双臂任务最典型的失败点。
 
-**目标 slot 的接触不进约束集**——抓取/放置必须接触，过滤器豁免之（防过保守）。
-
-### 3.2 CBF-lite 最小介入投影
-
-对每个约束维持 h_i(x)≥0；动作修正解一阶 CBF 条件的投影：
-
-```
-a' = argmin_a ||a - a_raw||²
-     s.t. h_i(x_{t+1}(a)) + γ·h_i(x_t) ≥ 0   ∀i∈C    （线性化后每约束一条标量不等式）
-```
-
-4-8 个标量不等式的低维 QP，解析/少迭代可解，<5ms CPU。附加两道保险：**delta 限幅**（|a'-a_raw|≤DELTA_MAX）与**斜坡限频**（连续步 delta 变化率受限）——保证返回动作统计平滑，规避 §6 可信度条款（[R3] §6）。锚点：CBF 食品操作 [R6g]（安全集公式与 γ 调法）、双臂重叠运动链 [R6h]（胶囊建模）、Recovery RL [R6f]（安全评论家兜底，P2）。
-
-### 3.3 伪代码
+### 3.2 伪代码
 
 ```python
-def shield(action_chunk, obs, sem_map):
-    q = fk_state(obs.state.arm_l, obs.state.arm_r, obs.state.lower_body)   # F15
-    caps = arm_capsules(q)
-    if sem_map.held is not None:
-        caps += held_object_capsule(obs.state.gripper_l, sem_map.held)     # 携行延伸胶囊
-    hand_zone = predict_hand_zone(obs.images.cam_high, sem_map)            # 人手外推 300ms
-    for t, a in enumerate(action_chunk):
-        q_next = integrate(q, a)                     # joint 模式直积分; ee 模式走增量 IK
-        C = violations(q_next, caps, sem_map.keepout, hand_zone, TABLE_Z)
-        if C:
-            a2 = project_cbf_lite(a, C, step_limit=DELTA_MAX)              # 最小介入
-            a2 = ramp_limit(a2, prev_action)                               # 斜坡限频
-            telemetry.log_delta(a, a2)                                     # §6 遥测
-            a = a2
-        q = q_next
-    return action_chunk
+def biman_crew(chunk_l, chunk_r, obs, calib):
+    conflict = detect_conflict(chunk_l, chunk_r, obs, d_min=0.06)   # F15 FK 胶囊
+    if not conflict:
+        return chunk_l, chunk_r, None                # 保守激活：不触发不介入
+    roles = self.arbiter(obs, calib.p_fail)          # {left_lead, right_lead, sync}
+    chunk_l, chunk_r = enforce_roles(chunk_l, chunk_r, roles)
+    if handover_detected(chunk_l, chunk_r, obs):     # 交接段
+        t_take = calib.gated_release(obs, gripper_state)  # IP-15 校准分数
+        chunk_give, chunk_take = sync_handover(chunk_give, chunk_take, t_take)
+    telemetry.log_roles(roles, conflict)             # 角色分配日志（IP-4/§6）
+    return chunk_l, chunk_r, roles
 ```
 
-### 3.4 成本账（COST-LADDER）
+### 3.3 成本账与合规
 
-算力-推理 +<5ms/步（CPU）；数据 0（几何+地图复用）；评测时段 0。边际分预期：不提升上限、抬高地线——碰撞导致的整局失败→0（E12 验证成功率降幅 <0.5pt），人为干扰场景受益于人手缓冲区。
+- 算力：训练 1-2 GPU·天（LoRA/aux head）；推理 <5ms；数据 0（官方 bimanual 资产免费，F22）。
+- 边际分预期：双手协调类任务 +2~6pt（F7/F8 未知，取保守区间）；碰撞场景与 IP-11 共享收益。
+- 合规：仲裁只改双臂动作序列的时序/角色指派，不改任务语义；触发原因与角色日志全量遥测（IP-4），满足 §6 可信度自证；E16 消融必须证明"正常场景零回归"。
 
-## 4. 重点展开二：IP-12 GRIP-GATE（夹爪控制，本轮押注）
+## 4. 重点展开二：IP-15 CALIB-PROBE（可解释性，本轮押注）
 
 ### 4.1 三组件
 
-1. **宽度估计（免深度，不依赖 F9）**：腕图 bbox 高度 × 标定距离→公制宽度。距离来源：腕相机刚连于 ee，抓取平面距离≈ee 高度−桌面高度（F15 的 ee pose 直得）。**训练集免费**：演示中闭合触达瞬间的指令开度≈物体宽度（F16 连续行程给分辨率），(腕图 crop, 开度) 对即自监督回归标签。锚点：AnyGrasp 的视觉抓取宽度 [R6j]。
-2. **闭合时机头**：轻量 aux head，输入 chunk 内腕图堆叠 + ee/夹爪速度序列（F17 免费堆叠）→ 预测 chunk 内最优闭合步 t*；标签=演示夹爪指令的下降沿（5.5→x 的跳变点），焦点 CE 损失。
-3. **验证-重抓状态机**：闭合后 3 帧检查：实测开度 vs 指令开度差 < 阈（物体真的被夹住）且腕图目标仍在视野；失败→微策略：重开→退 2.5cm→再进（最多 1 次，防步骤分崩坏）。锚点：未来观测估计抓取成功 [R6l]。
+1. **失败探针**：backbone 中间层特征（冻结）+ 线性/SAE 轻量头 → 预测 chunk 级/整局失败概率。标签自监督：演示全为成功 → 用 IP-7 合成扰动 rollout 生成可控比例的失败样本（免人工标注）。锚点：VLA 激活含结果预测信息、可提前预警失败 [R7g]。
+2. **conformal 校准**：在 held-out 真演示+合成失败样本上校准非一致性分数，输出带覆盖率保证的阈值/预测集 [R7e/R7f]，代替所有手调阈值。**校准分数是唯一触发货币**，统一消费于：GRIP-GATE 重抓触发（IP-12 verify 阈值）、SAFE-FILTER 让位激活（IP-11 人手缓冲）、BIMAN-CREW 仲裁激活（IP-14 冲突判定复核）。
+3. **世界模型偏差监测**：动作条件 rollout（自训结构化 WM 为主，A8 过关后可选 WMA-0）与真实下一帧观测比对，偏差超校准分位 → 失败预警。锚点：Foresight 用动作条件世界模型监控长时程操作失败 [R7d]；无失败数据的不确定性失败检测 [R7e]。这是介入式插件的"第六感"，与 IP-11 的几何护盾互补（几何管硬约束，偏差管柔性异常）。
 
 ### 4.2 伪代码
 
 ```python
-class GripGate:
-    def modulate(self, chunk, obs, slot=None):
-        w = self.width_est(obs.images.cam_wrist, obs.state.ee_pose)   # 公制物宽（免深度）
-        ap = clamp(w + MARGIN, lo=AP_MIN, hi=5.5)                     # 目标开度; 0=全闭禁用
-        t_close = self.head(obs.wrist_stack, obs.ee_vel)              # chunk 内最优闭合步
-        for t, a in enumerate(chunk):
-            a.gripper = OPEN_CMD if t < t_close else ap
-        ok = self.verify(obs, slot)          # 实开度≈指令 且 目标仍在腕图
-        if not ok:
-            chunk = self.regrasp(chunk, off=2.5)                      # 重开-退-再进（≤1 次）
-        return chunk
+class CalibProbe:
+    def calibrate(self, heldout_demos, synthetic_failures, alpha=0.1):
+        scores = [self.nc_score(d) for d in heldout_demos + synthetic_failures]
+        self.q_hat = np.quantile(scores, 1 - alpha)   # conformal 分位
+    def watch(self, obs_t, obs_pred=None):
+        p_fail = self.probe(self.backbone_feat(obs_t))          # 探针
+        dev = self.wm_deviation(obs_t, obs_pred) if obs_pred else None  # WM 偏差
+        s = combine(p_fail, dev)                       # 非一致性分数
+        return s > self.q_hat, {"p_fail": p_fail, "dev": dev}   # 触发+可读理由
 ```
 
-### 4.3 边界与合规
+### 4.3 成本账与边界
 
-- **不替换 VLA 的抓取决策**（何时抓哪个由主模型+地图定），只在夹爪通道做窄域调制——与 VILAS 式软抓取 [R6k] 的区别：不引入外部抓取检测器，保持单模型。
-- 连续开度避免"全闭合指令怼进物体"（0.0 指令在未触达时是空合、触达后是推挤）——软抓取行为的免费来源。
-- 训练 1-2 GPU·天（aux head，LoRA 级）；推理 <10ms；数据 0。边际分预期：抓取族任务 +3~8pt，未见物品场景受益于宽度自适应。
-- A6 未验证开度值域前，不进入正式训练队列（迭代规则 9）。
+- 算力：探针 <1 GPU·天；校准是后处理（0）；推理 <2ms；数据 0（复用 IP-7 合成失败样本）。
+- 边际分预期：不直接加分，而是**全局触发质量**——减少误重抓（步骤分保护，联动 IP-8）、减少漏重抓（成功率）、减少误让位/误仲裁（E15/E16 的误报率指标）；同时是 IP-3 失败归因的主工具（迭代速度乘数）。
+- 边界与合规：解释只用于调试假设生成与置信度输出，**不自动改动作**（防不忠实解释造成新风险）；[R7g] 的 SAE 结论基于 OpenVLA，向 WLA 架构迁移需 E17 验收后才进触发链；校准集分布漂移（扰动场景）触发重校准。
 
-## 5. 重点展开三：IP-13 GRIP-RL（强化学习，P2 门控）
+## 5. 重点展开三：IP-13 深化——沙盘三介质 + chunk 级 RL
 
-### 5.1 为什么只有窄域 RL 过成本账
+### 5.1 训练介质分层（v3 的"自训 WM"→三介质，验收通道不变）
 
-```
-全策略 RL:  需要环境(评测无环境/真机红线) + 奖励(官方只给终局) + 算力(>>40 GPU·天)  → 拒绝清单 #7
-窄域 RL:   动作 3 维(t_close 偏移, 开度, ±2cm 修正) + 视界≤2s + 奖励自监督 + 结构化世界模型 → 2-4 GPU·天 ✓
-```
+| 介质 | 保真度 | 成本 | 启用条件 |
+|---|---|---|---|
+| 自训结构化 WM（v3 原案：slot 特征+ee/夹爪运动学+任务嵌入 → P_grasp/Δprogress/collide） | 物理近似、任务贴合 | 2-4 GPU·天 | 默认第一级（已过记账） |
+| WMA-0 官方世界模型（含 Dual 双臂权重） | 外观真、物理近似；**复用不自训** | 推理算力（过账后） | A8 过关 + 许可核查（CC BY-NC-SA，F19） |
+| Isaac Lab 仿真（同 DDS 协议，F20） | 物理真、渲染域差 | GPU 3080-4090 + 环境搭建 | A8 过关且前两级不敷使用 |
 
-### 5.2 结构化世界模型 W（任务级，非像素级）
-
-```
-输入 s_feat = slot 特征(IP-1: 位置/尺寸/外观) + ee/夹爪运动特征(F17 免费堆叠) + 任务嵌入(语言编码)
-输出 Δ = { P_grasp, Δprogress, collide_count }        # 抓取成功概率/进度增量/碰撞计数
-训练集 = 32k 官方演示 + IP-7 合成扰动 rollout（失败邻近状态——演示分布静默区）
-锚点: TD-MPC2 的"在习得模型中规划"思想 [R6m]; 表征为结构化特征而非隐空间像素(拒绝清单 #8)
-```
-
-### 5.3 优化与蒸馏出口
+### 5.2 Q-chunking 式 chunk critic（与 CEM 并列的第二条优化路径）
 
 ```
-a* = CEM(W, R),  R = P_grasp + λ1·Δprogress + λ2·collide_penalty     # CEM 在 3 维动作上极快
-蒸馏: 最优 (t_close, ap, Δee) 决策回归进 GRIP-GATE 头 → 评测时零额外延迟、交付仍是单模型单权重
+离线先验: 32k 演示 → 行为克隆 chunk 策略（已有）
+沙盘在线: 在第一/二级介质中, critic 只输出 chunk 级 Q 值（1 维, 不改主干）
+          探索: chunk 级噪声(时序一致, 优于逐步噪声) [R7c]
+蒸馏:     最优 chunk 决策回归进 GRIP-GATE 头（与 CEM 路径同出口）
+选择:     CEM(3 维动作空间) vs Q-chunking(chunk 评分) —— E14 双路径对比, 取一
 ```
 
-### 5.4 模型利用守则（四道闸，对应本轮最大风险）
+锚点：Q-chunking 面向 offline-to-online、以 chunk 为探索/评估单元，与评测接口的 action chunk 天然同构 [R7c]。
 
-1. held-out 真演示回放为**唯一**验收通道（合成 rollout 分数只作参考）；
-2. OOD 动作频次监控——CEM 解偏离演示动作流形的比例 <1%；
-3. 奖励分量消融——防抓取成功分类器过自信区被利用；
-4. 不过阈即整体回退模仿门控（沉没成本封顶 2-4 GPU·天）。
+### 5.3 PBT 观察项与第 5 道闸
 
-### 5.5 与 RL-VLA 文献的关系
+- PBT（多工人演化 LoRA、定期淘汰/杂交）[R7b]：与"多机器人协作"的隐喻映射（沙盘里的多工人）。**本轮不启用**——只在 A8 过关且 IP-13 主线出效果后评估，成本账不过即永久观察。
+- 四道闸（v3 §5.4）不变，**新增第 5 道**：沙盘保真度门（A8）——任何在沙盘里的训练，先证明沙盘↔真演示的分布差异在阈内。
 
-iRe-VLA/VLA-RL/SimpleVLA-RL/RIPT-VLA [R6a/R6b/R6c/R6d] 证明"RL 后训练提升 VLA"这一方向真实有效，但它们的共同前提是**可交互环境**——本赛制恰好不提供；GRIP-RL 是把该方向压缩到"无环境也能做"的最小子问题上的翻译，GRAPE [R6e] 的偏好对齐思想则保留为未来若获环境后的升级路径。
+## 6. 其余 IP 修订摘要（v3→v4 增量）
 
-## 6. 其余 IP 修订摘要（v2→v3 增量）
+- **IP-2**：进度裁判第四消费者=CALIB-PROBE 的失败预警先验（p_fail 的进度条件化）。
+- **IP-3**：失败归因从"看日志"升级为"探针+校准分数+WM 偏差"三维定位；A8 沙盘保真度探针挂载于此。
+- **IP-4**：遥测新增角色分配日志（哪只手负责什么/何时交接/为何仲裁）与校准分数序列——§6 可信度自证材料再扩容。
+- **IP-7**：注入器新增产出类型：合成失败样本（探针标签，失败率可控、类型可控——比真实失败更均衡）。
+- **IP-9**：明确"多机器人协作"的合法映射=多策略委员会；重申单权重交付约束（通才赛道）。
+- **IP-10**：拒绝清单 **#9 不做物理多机器人/多模型在线 ensemble——一切"多"（多策略/多工人/多角色）必须收敛为单权重单机器人交付**；**#8 修订**：不自训像素级世界模型，但**可复用官方 WMA-0 权重**做评估器（过 A8 与许可账后）。
 
-- **IP-1**：地图服务新增 `register_keepout(volume)` 接口（桌面/非目标 slot/人手缓冲区），SAFE-FILTER 消费；外参前向模型同步服务人手反投影。
-- **IP-2**：进度预测器第三消费者=GRIP-RL 奖励项；代理奖励与官方得分点的一致性继续依赖 A1 回填。
-- **IP-3**：新增接口探针（A6：FK 量纲/开度值域）；群体探针不变。
-- **IP-4**：sanitize() 扩展为 SAFE-FILTER 挂载点；遥测新增 delta 统计（§6 可信度自证材料）。
-- **IP-5/IP-8/IP-9**：维持。
-- **IP-6**："先看后抓"的感知端在 IP-1 腕-头闭环，动作端由 GRIP-GATE 承接（闭合验证即"看"的最后一个消费点）。
-- **IP-7**：注入器新增产出类型——失败邻近状态（供 world model）与约束违反标签（供安全评论家，P2）。
-- **IP-10**：拒绝清单新增 **#7 不做全策略 VLA RL（无环境/无奖励/超预算）——RL 只进"最后一厘米"窄域**；**#8 不做像素级世界模型/视频生成——世界模型只做结构化特征级**。
-
-## 7. 实验设计（新增 E12-E15，接第 26 轮 E1-E11）
+## 7. 实验设计（新增 E16-E18，接第 27 轮 E1-E15）
 
 | 实验 | 设置 | 指标 | 预期 |
 |---|---|---|---|
-| E12 安全过滤器 | 回放评测+注入双臂冲突/越桌/撞非目标物轨迹（合成 OOD chunk） | 碰撞事件率 / 成功率降幅 / delta 分布平滑度 | 碰撞→0；成功率降幅 <0.5pt；delta 分布纳入冒烟 CI |
-| E13 夹爪门控 | 演示回放：固定规则夹爪 vs 宽度自适应+时机头 | 抓取成功代理率（开度-视觉一致性）/ 误闭合率 | 代理成功率 +5pt；误闭合 -50% |
-| E14 世界模型 RL | held-out 真演示+合成扰动 rollout；模仿门控 vs RL 门控（四道闸全开） | 扰动态代理成功率 / OOD 动作频次 / 真演示验收分 | 扰动态 +3pt；OOD 频次 <1%；不过阈即回退 |
-| E15 人手避让 | 合成人手轨迹注入（速度/角度扫频） | 干扰引发失败率 / 让位触发率 / 误让位率 | 干扰失败 -30%；误让位 <5% |
+| E16 双臂仲裁 | 演示回放+合成双臂冲突注入（同 slot/轨迹交叠/交接失败三类）；仲裁 vs 不仲裁 | 协调任务代理成功率 / 误仲裁率 / 正常场景成功率降幅 / 角色日志完整度 | 冲突场景失败 -20%；正常场景降幅 <0.5pt |
+| E17 校准验证门 | held-out 真演示+IP-7 合成失败样本；conformal 校准 vs 固定阈值 verify | ECE/reliability 曲线 / 失败预警提前量（步数）/ 误报率 / 下游重抓正确率 | ECE <5%；预警提前 ≥3 步；误报 <8% |
+| E18 沙盘保真度（A8） | held-out 真演示在自训 WM / WMA-0 / Isaac Lab 中回放 rollout | 状态轨迹分布距离（MMD）/ 视觉距离（FVD）/ 接触事件率差 | 至少一级过阈；据此决定 IP-13 介质阶梯 |
 
-提交纪律不变：冒烟 CI + 单变量 + 48h 校准报告；E12 的 delta 分布与 E13 的开度序列纳入 CI 检查项。
+提交纪律不变：冒烟 CI + 单变量 + 48h 校准报告；E16 的误仲裁率与 E17 的校准曲线纳入 CI 检查项。
 
-## 8. 风险登记簿（增量；第 26 轮其余行继续有效）
+## 8. 风险登记簿（增量；第 27 轮其余行继续有效）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| IP-13 世界模型被利用（离线好真机差） | **高（本轮最大）** | 四道闸（§5.4）+ 沉没成本封顶 + 蒸馏头可整体回退 |
-| SAFE-FILTER 过保守拉低成功率/步骤分 | 中 | 任务必需接触豁免 + delta 限幅 + E12 消融 |
-| 运行时改动作触碰 §6 可信度条款 | 中 | delta 平滑限频 + 全量遥测 + 提交材料声明安全模块（待 A1/A5） |
-| 评测开度值域语义未实测（F16 侧） | 中 | A6 探针；未过验不进训练队列（迭代规则 9） |
-| GRIP-GATE 重抓微策略与步骤分冲突 | 低 | 重抓限 1 次；步骤分公式确认后（IP-8/A1）再定阈值 |
+| SANDBOX-GAP：把官方沙盘当真考场（离线漂亮、真机拉胯） | **高（本轮最大）** | A8 保真度探针先行+介质阶梯（最便宜自训 WM 起步）+真演示回放唯一验收+沉没成本封顶 |
+| IP-14 仲裁"帮倒忙"（推翻正确分工） | 中 | 保守激活（冲突触发才介入）+conformal 激活阈值+E16 正常场景零回归验收 |
+| 探针解释不忠实/跨架构不迁移（[R7g] 基于 OpenVLA） | 中 | 解释不自动改动作；多探针交叉验证；E17 验收后才进触发链 |
+| WMA-0-Dual CC BY-NC-SA 许可与提交合规 | 中 | A7 顺带核查竞赛条款；不过关则 WMA-0 仅用于离线实验 |
+| 校准集分布漂移（扰动场景下 q_hat 失效） | 中 | 分场景校准+漂移监控+触发重校准 |
+| 官方栈演进快（基座/沙盘版本变动） | 低 | A7 锁定 commit 记录版本；插件式架构天然解耦 |
 
 ## 9. 来源清单（全部检索于 2026-11-07）
 
 - R1 排行榜页（重验仍 Coming Soon）：https://unibot.unitree.com/leaderboard.html
 - R1a 挑战赛页（32 任务/32000 演示/169h；七步提交流程）：https://unibot.unitree.com/challenges.html
-- R2 运行记录页（重验仍 Coming Soon；"完整评测视频"承诺）：https://unibot.unitree.com/runs.html
-- R3 提交接口规范（重读：§2 观测目录含 left/right_arm[7] 与 left/right_gripper[1]；§3 动作目录；obs_delta_indices 键=传输选择器；§6 可信度条款；repo 仍 2 commits，最新 2026-08-21）：https://github.com/unitreerobotics/unibot_submission
-- R4 数据集卡片（Dex1 Gripper 行程 5.5→0.0；gripper_controls[4] 仅数据集侧；1.04k/194,564 行/8.8 GB）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup ；collection：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
-- R6 文献锚点（arXiv API 核实，2026-11-07）：
-  - R6a iRe-VLA（在线 RL 改进 VLA）: https://arxiv.org/abs/2501.16664
-  - R6b VLA-RL: https://arxiv.org/abs/2505.18719
-  - R6c SimpleVLA-RL: https://arxiv.org/abs/2509.09674
-  - R6d RIPT-VLA（Interactive Post-Training）: https://arxiv.org/abs/2505.17016
-  - R6e GRAPE（偏好对齐泛化机器人策略）: https://arxiv.org/abs/2411.19309
-  - R6f Recovery RL（学习恢复区）: https://arxiv.org/abs/2010.15920
-  - R6g Safety-Critical Manipulation for Collision-Free Food Preparation（CBF）: https://arxiv.org/abs/2205.01026
-  - R6h Dual-Arm Whole-Body Motion Planning（重叠运动链）: https://arxiv.org/abs/2511.08778
-  - R6i Uncertainty-Aware Predictive CBF（HRI 概率运动预测）: https://arxiv.org/abs/2508.20812
-  - R6j AnyGrasp（时空抓取感知）: https://arxiv.org/abs/2212.08333
-  - R6k VILAS（VLA 一体化低成本软抓取）: https://arxiv.org/abs/2605.02037
-  - R6l 生成未来观测估计抓取成功: https://arxiv.org/abs/2403.07877
-  - R6m TD-MPC2: https://arxiv.org/abs/2310.16828
-- 第 25/26 轮来源（R5a-R5g 等）本轮未逐一重抓，口径以对应轮记录为准。
+- R2 运行记录页（重验仍 Coming Soon）：https://unibot.unitree.com/runs.html
+- R3 提交接口规范（重验：仍 2 commits，最新 2026-08-21）：https://github.com/unitreerobotics/unibot_submission
+- R4 数据集：HangCup 卡片（lastModified 2026-10-14，规模标签不变）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup ；集合（32 项，lastUpdated 2026-09-11）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset
+- R8 UnifoLM 家族（本轮新核）：
+  - R8a UnifoLM-VLA-0：https://github.com/unitreerobotics/unifolm-vla
+  - R8b UnifoLM-WMA-0（世界模型=仿真引擎+Policy Enhancement；Dual 双臂权重 CC BY-NC-SA）：https://github.com/unitreerobotics/unifolm-world-model-action ；模型卡 https://huggingface.co/unitreerobotics/UnifoLM-WMA-0-Dual
+  - R8c UnifoLM-WLA-1.0（6B/2500h/64 任务/LoRA/Model Server；配套 UniBot-V1 数据集；动作/状态规范 54 维/60 维）：https://github.com/unitreerobotics/unifolm-wla ；规范 https://github.com/unitreerobotics/unifolm-wla/blob/main/docs/robot_action_state_processing_en.md ；ER-1 卡片 https://huggingface.co/unitreerobotics/UnifoLM-ER-1
+- R9 unitree_sim_isaaclab（G1/H1-2，同 DDS 协议，数据采集/回放/生成/验证）：https://github.com/unitreerobotics/unitree_sim_isaaclab
+- R10 unitree_rl_lab（IsaacLab RL 环境，G1-29dof）：https://github.com/unitreerobotics/unitree_rl_lab
+- R7 文献锚点（arXiv API 逐一核实，2026-11-07）：
+  - R7a MAPPO: https://arxiv.org/abs/2103.01955
+  - R7b Population Based Training: https://arxiv.org/abs/1711.09846
+  - R7c Q-chunking（RL with Action Chunking）: https://arxiv.org/abs/2507.07969
+  - R7d Foresight（动作条件世界模型失败检测）: https://arxiv.org/abs/2606.23085
+  - R7e 无失败数据的不确定性运行时失败检测: https://arxiv.org/abs/2503.08558
+  - R7f Conformalized Interactive Imitation Learning: https://arxiv.org/abs/2410.08852
+  - R7g Do VLAs Know They Will Fail?（SAE 结果预测表征）: https://arxiv.org/abs/2610.32208
+  - R7h BiRoAD（双臂共享+角色自适应表征）: https://arxiv.org/abs/2609.23445
+  - R7i PA-BiCoop（主-辅双臂协作）: https://arxiv.org/abs/2606.28192
+- 第 25/26/27 轮来源（R5/R6 系列等）本轮未逐一重抓，口径以对应轮记录为准。
 
-## 10. 清单迭代规则（增补，继承第 25/26 轮 §10）
+## 10. 清单迭代规则（增补，继承第 25/26/27 轮 §10）
 
-0-8.（继承）事实卡核对 / COST-LADDER 记账 / 对手视频锚定等规则全部有效；
-9.（新增）**接口事实依赖校验**：新 IP 立项时必须声明所依赖的接口事实（本轮 F15/F16/F17）；该事实被证伪时，相关 IP 24h 内降级或改道；A6 未完成前 GRIP-GATE 不进正式训练队列；
-10.（新增）**窄域原则**：任何"训练类"新 IP 必须先回答"动作空间多窄、视界多短、奖励是否自监督"——三者任一不满足即默认进拒绝清单。
+0-10.（继承）事实卡核对 / COST-LADDER 记账 / 对手视频锚定 / 接口事实依赖校验 / 窄域原则等全部有效；
+11.（新增）**沙盘保真度门**：任何"在沙盘里训练"的 IP 必须先过 A8 探针（沙盘↔真演示回放分布差异量化），不过阈不得投入训练算力——沙盘分数只能排定优先级，不能当验收；
+12.（新增）**公共物品原则**：官方开源资产（基座/世界模型/仿真/RL 工具链）默认优先复用；自训/自建仅当复用不可行或构成差异化需要时立项，且立项书必须包含"为何不用官方对应物"一节。
 <!-- ARTIFACT:END -->
