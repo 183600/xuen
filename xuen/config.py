@@ -512,17 +512,6 @@ def _validate_agent_config(cfg: Config) -> None:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
 
 
-def _require_positive_seconds(name: str, value: Any) -> None:
-    """超时字段必须是有限正数（秒）。
-
-    负数/零会让超时立即触发（验证或评审刚开始就被判超时），非数值会让
-    下游比较抛 TypeError；程序化构造 Config 时传入超大整数还会让
-    math.isfinite 抛 OverflowError——都要在这里拦成带字段名的 ValueError。
-    """
-    if not _is_finite_number(value) or value <= 0:
-        raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
-
-
 def _validate_rounds_config(cfg: Config) -> None:
     """检查轮次守卫配置。"""  # noqa: TID251
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
@@ -534,13 +523,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     if cfg.rounds.fallback not in FALLBACK_SCORERS:
         raise ValueError(f"rounds.fallback 必须是 {'/'.join(FALLBACK_SCORERS)}，"
                          f"收到: {cfg.rounds.fallback!r}")
-    # 超时必须是有限正数：负数/零会让验证或评审刚开始就被判超时，
-    # 非数值与超大整数（程序化构造时绕过 _parse_float）也会在这里
-    # 被拦成带字段名的 ValueError，而不是漏出 TypeError/OverflowError。
-    _require_positive_seconds("rounds.verify_timeout",
-                               cfg.rounds.verify_timeout)
-    _require_positive_seconds("rounds.judge_timeout",
-                               cfg.rounds.judge_timeout)
     try:
         score_valid = (not isinstance(cfg.rounds.adopt_score, bool)
                        and 0.0 <= cfg.rounds.adopt_score <= 10.0)
@@ -549,6 +531,10 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
+                         ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
+        if not _is_finite_number(value) or value <= 0:
+            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
