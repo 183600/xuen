@@ -3,203 +3,291 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 1 轮 · UniBot-V1 通才操作挑战：从「LoRA-SFT 通才」到「闭环进展最大化」
+# 第 1 轮（循环 B）· 力矩传感 × 视觉伺服 × LoRA：把「SFT 通才」改造成「感知—伺服—适配」三层闭环机
 
-> 本轮为针对「宇树 UniBot 世界挑战赛」（unibot.unitree.com）的新研究循环第 1 轮（灵感词：**UniBot-V1 / 泛化能力 / 场景理解**），整体覆盖前序循环内容（前序第 30 轮 SERVO-ADAPT-LITE 属另一赛题语境，其"分层评测/回退链"方法论局部复用）。全部赛事事实经联网核实，来源与检索日期见产物区第 9 节。
+> 新循环第 1 轮（灵感词：**力矩传感 / 视觉伺服 / LoRA**）。前一轮（灵感词 UniBot-V1 / 泛化能力 / 场景理解）的清单 IP-1…IP-10 作为底座**继承并修剪**，本轮不推倒重来：新增 1 项（IP-11 CONTACT-SENSE）、重构 1 项（IP-2 → SERVO-STACK）、降级 1 项（IP-3 → 观察项 O-1）、具体化 2 项（IP-6 → LoRA-ROUTE、IP-7 → LoRA-DPO）、修订 2 项（IP-1 延迟预算、IP-5 多模态检测）。全部新事实 2026-11-07 联网核实，来源见产物区 §9。
 
-## 0. 直觉锚点与动机链条（三个灵感词各自命中什么）
+## 0. 本轮方法论：灵感词先过「事实核查闸」，再进「清单」
 
-- **「UniBot-V1」→ 约束即杠杆**。逐条读提交接口（github.com/unitreerobotics/unibot_submission，2026-11-07 核实，2 commits），别人当"麻烦"的地方恰是差异化杠杆：(a) `action_chunk_size` 是 metadata 静态申报 → chunk 长度选择本身是一个延迟-抗干扰的帕累托决策；(b) `obs_delta_indices` 自选观测键与帧偏移 → 历史堆叠免费提供速度/一致性线索；(c) `action.pivot[7]`（vx,vy,angle_z,…,height）共享动作通道暴露了全身控制，但 SFT 微调惯例是置零 → 全身工作空间被白送、又被白丢；(d) README §6 明确"逐步响应延迟与波动、动作统计规律会被记录并可能随结果公布" → **推理工程是计分项**，不是工程杂务。
-- **「泛化能力」→ 5 类泛化 ≠ 1 种泛化**。位置/背景/干扰物是纯视觉 OOD（增强可解）；未见物品是语义 OOD（VLM backbone 原生可解）；人为干扰是时序 OOD（闭环可解）。三种病因三种药——而均值回归的行为克隆 SFT 一味药都治不了：它在训练分布上插值，而泛化评测考的就是分布外。
-- **「场景理解」→ 几何先于语义**。32 任务数据集里接触丰富/插孔类任务密集：PlugCharger（插充电器）、PlugInEthernet（插网线）、SyringeWaterTransfer（注射器）、ZipUp（拉拉链）、RemovePinnedNote（拔图钉）、Unlock——这类任务成败在毫米级对准，VLA 的 8~10Hz 动作块均值化输出对它结构性无能。关键事实（F7）：**评测接口只发 RGB 四路（无深度），而训练数据含已校正立体相机对** → 单目深度蒸馏是"从数据白捡的几何"，末段视觉伺服是"从几何白捡的成功率"。
+研究者真实流程是：灵感词触发直觉 → 立刻去查这个词在**本赛题的接口/数据约束**下是否成立 → 成立的进清单，不成立的改写为可成立的等价命题。本轮三个词各过了一次闸，且每一次核查都改写了清单：
 
-## 1. 赛事事实卡（2026-11-07 检索，详细引用见产物区）
+- **「力矩传感」→ 字面证伪、本质重构**。接口 obs 目录（unibot_submission README §2，逐键核实）只有 4×RGB + 双臂 7-DoF 位置 + EE pose + 夹爪开度 + lower_body[15] + language——**没有 effort、没有 torque**（F11）；数据集 parquet schema（HF datasets-server API，HangCup 全部 33 特征逐项核对）同样**无力矩字段**（F12）。G1 关节电机本身具备力矩估计（Unitree DDS 遥测惯例，背景知识未单独核实），但评测接口不透传——参赛者在接口内**拿不到任何力读数**。上轮 IP-2 中「数据集 effort 蒸馏力头」的设想随之作废。但「力矩传感」的本质诉求是**接触与外力的早期感知**，而接口里藏着两处免费代理信号：(a) 夹爪指令-观测差——Dex1 夹爪 5.5(开)→0.0(合)，action 与 obs 各有一通道，合拢指令下观测卡住=夹到了东西（F13）；(b) 关节指令-观测跟踪残差——我方返回的动作块是已知的，下次 obs 回来的实际状态与它的偏差=接触/被推的物理证据。灵感词于是重构为 **CONTACT-SENSE：把位置残差当力矩传感器**。
+- **「视觉伺服」→ 价值上调**。F8 模型卡本轮新暴露：`use_length=50`、单块 50 步、4090 上单块推理 0.35s（F14）——头部方案一次开环执行 50 步（30fps 下 ≈1.7s），对毫米级对准任务是结构性暴露；其 ArrangePlates 开环验证 MSE 0.229 / MAE 0.176 再次佐证 B1。接口侧 ee 空间与 joint 空间互斥可二选一、EE pose 观测齐备、G1 臂运动学公开——**解析视觉伺服（IBVS + J⁺）在接口内完全可实现，无需评测方任何配合**。裁决：剪掉上轮 IP-2 的「学习式 Δee 残差修正头」，换成解析伺服定律——**感知用学习（从数据自动伪标签蒸馏），控制用定律（零训练、跨任务同一套数学）**。
+- **「LoRA」→ 从微调技巧升格为架构杠杆**。F8 证明 LoRA(r64) 是唯一被验证能在单卡 4090 上做出 32 任务通才的路线；LoRA 的低秩结构另有两件免费的事：任务组 adapter 的**权重空间插值**（未见物品 = 语义最近任务组的 adapter 内插；机理同源线性模式连通性/model soups——推断，非核实事实）与 **RL 后训练的参数载体**（LoRA-DPO/GRPO 单卡可行）。同时模型卡暴露 canonical space 含 waist(4)+base(3)——**上轮 B3「头部置零全身通道」被部分证伪**，IP-3 PIVOT-GATE 差异化前提削弱，降级（§4）。
 
-- F1 官网：32 项真实桌面任务（抓取/放置/双手协调）、32,000 episodes、169 小时；评分=平均成功率+步骤分（每任务得分点满分 100）。
-- F2 泛化评测：官网愿景明示"跨任务、跨物品、抗干扰"；5 类泛化（位置/干扰物/背景/未见物品/人为干扰）为用户提供先验，与官网口径一致（规则全文在飞书、需登录，未能核实原文——诚实标注）。
-- F3 接口：PolicyService(websockets+msgpack)；metadata{control_space: joint|ee 互斥、obs_delta_indices、image_resize、action_chunk_size、token}；观测=4×RGB(480×640)+双臂 7-DoF+EE pose(base)+夹爪+lower_body[15]+language；动作=joint(双臂 14)或 ee(EE 6+6)+共享{双夹爪、pivot[7]}；token 双检（握手+每步）。
-- F4 部署：N 台评测机器人→N 个连续端口 8765..8765+N−1（端口数必须精确匹配）；模式 A 每端口独立实例（N 份显存），模式 B 共享后端+并发调度+状态隔离。
-- F5 可信度考核：延迟稳定性与动作统计规律被记录，可能随成绩公布。
-- F6 数据集（HF collection，32 items，LeRobot v3.0，AV1 480×640@30fps，apache-2.0，非 gated）：32 任务名已全部列获；每任务约 0.97k–1.53k episodes（HangCup train=194,564 帧）。
-- F7 数据字段 > 接口字段：数据含 head_stereo_left/right（**已校正**立体对）、torso/d435 位姿、action_torso/action_d435/base_command；评测接口只发 RGB——**数据可训深度、接口不可传深度**。
-- F8 头部方案唯一可证样本：ezhoureal/lingbot-vla-v2-unibot-lora——LingBot-VLA 2.0（Qwen3-VL-4B-Instruct + Qwen2 action expert + MoE，6.3B），LoRA r64 于 q/v/o_proj（65M 可训练），全量 32 任务 33,276 episodes，10K steps，**单卡 RTX 4090**，val/loss 0.085，joint 空间、arm=state-relative delta。
-- F9 生态：LingBot-VLA（arXiv:2601.18692，20k 小时真机预训练，含 Depth 版本、RoboTwin 后训练、RLinf RL 支持）；宇树自家 UnifoLM-VLA / UnifoLM-WMA-0（gated 世界模型）/ UnifoLM-WLA-1.0 / UnifoLM-ER-1。
-- F10 排行榜：官网 leaderboard/runs 均"即将发布"（2026-11-07）；**"榜首成功率 <30%"为用户先验**（榜单未公开、无法直接核实），但与 F8"loss 极低 vs 真机操作成功率"的公开证据链方向一致——按"弱证据、高置信"采用，榜单公开后复核。
+## 1. 新事实卡（编号续接前轮 F1–F10；全部 2026-11-07 检索核实）
 
-## 2. 头部方案画像与六个结构性瓶颈
+- **F11 接口无任何力/力矩观测**：obs 目录全表 = 4×RGB(480×640) + left/right_arm[7] + left/right_ee_pose_gripper_base[6] + left/right_gripper[1] + lower_body[15] + language。无 effort/torque/frc 键。
+- **F12 数据集无力矩字段**：HangCup parquet 33 特征逐项核对（state.*：arm/gripper/lower_body/leg/ee_pose base+torso/state_torso/state_d435/waist/recomputed_ee_valid；action.*：arm/gripper/lower_body/pivot/gripper_controls/leg/base_command/ee_pose base+torso/action_torso/action_d435/waist）——无 effort。→ 「力矩白捡」在数据层同样失败，改走动力学残差路线。
+- **F13 夹爪是双通道闭环信号**：action.left/right_gripper（我方指令，shared 键）+ observation.state.left/right_gripper（实际开度）；Dex1 量程 5.5(开)→0.0(合)。指令-观测差 = 免费的接触/抓取确认/滑移检测器——零训练、零接口改动、完全合法。
+- **F14 头部方案画像修正与新暴露面**（模型卡逐条核实）：LoRA r64/α32 于 q/v/o_proj（65M 可训练），**已 merge 成单 safetensors**；canonical space = arms(14) + grippers(2) + **waist(4) + base(3)**，arm 为 state-relative delta；`use_length=50, chunk_ret=True`；4090 单块（50 步）推理 0.35s；ArrangePlates 开环验证 MSE 0.229 / MAE 0.176；模型卡中的参赛 wrapper 外链（github.com/ezhoureal/unibot_submission）**已 404 失效**（GitHub API 核实该账号无此仓库，仅存 lingbot-vla-v2，2026-08-02 推送）。
+- **F15 官方 32 任务清单全部核实**（collection 页面逐项抓取）：ArrangePlates / ArrangeTestTubes / ColorArrangement / ConveyorSorting / DisconnectEthernet / FoldTowel / FruitCollection / FruitSorting / HangCup / OrganizeBookshelf / OrganizePencilCase / OrganizeStationery / OrganizeTools / PackBag / PackDoll / PackPhone / PaperCupStacking / PickOutBatteries / PlacePhotoFrame / PlugCharger / PlugInEthernet / PourOutMedicine / RemovePinnedNote / SpellRobot / StackBowls / StoreCups / StoreEarphones / StorePaddle / SyringeWaterTransfer / ToolboxStorage / Unlock / ZipUp。其中接触丰富/毫米级对准类 **≥11/32 ≈ 34%**（PlugCharger、PlugInEthernet、DisconnectEthernet、ZipUp、Unlock、RemovePinnedNote、SyringeWaterTransfer、PickOutBatteries、StoreEarphones、ArrangeTestTubes、PourOutMedicine）——SERVO-STACK + CONTACT-SENSE 的射程覆盖三分之一赛题，而榜单按平均成功率排序、短板任务决定名次。
+- **F16 排行榜仍 "Coming Soon"**（leaderboard.html 2026-11-07）；「榜首成功率 <30%」仍为用户先验（F10 沿用：弱证据、高置信，榜单公开后复核）。
 
-以可证样本（F8）代表当前主流打法——「开源 VLA + 全量数据 LoRA-SFT + 单卡训练 + 接口直连」：
+## 2. 瓶颈清单修订（v1 → v2）
 
-- **B1 损失-成功鸿沟**：SFT val/loss 0.085 ≠ 真机成功。行为克隆的复合误差在接触丰富任务上爆炸：8Hz 动作块是对连续伺服行为的低频均值采样。
-- **B2 深度缺失**：RGB-only 接口 + image_resize 下采样进一步抹掉精细视觉特征；插孔对准缺乏几何信息。
-- **B3 全身闲置**：pivot/腰/底盘通道被丢弃 → 工作空间受限 → 远处/低处物品任务直接失格，而这恰是"位置泛化"的部分来源（数据集里下肢+腰的移动就是位置多样性）。
-- **B4 块内开环**：T_a 步内无感知修正；人为干扰/干扰物场景的响应滞后上限=整个 chunk。
-- **B5 任务互扰**：单模型 32 任务参数共享，精细任务（低数据权重、高精度需求）的梯度被淹没；而榜单按平均成功率排序——**短板任务决定名次**。
-- **B6 步骤分无人优化**：所有注意力在终点成功率；得分点是"进展分"——失败 episode 也有分可拿，"把 EE 挪近目标、摆对姿态"本身就是期望得分。
+| 瓶颈 | v1 判断 | v2 修订 | 依据 |
+|---|---|---|---|
+| B1 损失-成功鸿沟 | 成立 | **强化**：开环 MAE 0.176 再添证 | F14 |
+| B2 深度缺失 | 成立 | 不变（接口 RGB-only） | F11 |
+| B3 全身闲置 | 头部置零 pivot | **降级**：头部 canonical space 已含 waist4+base3，可能已用 | F14 |
+| B4 块内开环 | 成立 | **强化**：头部 50 步/块 ≈1.7s 开环窗口 | F14 |
+| B5 任务互扰 | 成立 | 不变，但解法落到 LoRA-ROUTE | F8 |
+| B6 步骤分无人优化 | 成立 | 不变 | F1 |
+| **B7 接触盲目（新）** | （v1 未单列） | 接口与数据均无力反馈，头部方案对接触状态无感知通道——抓取确认靠猜、插入推进靠开环蛮进 | F11–F13 |
 
-## 3. 策略主线：三条护城河 + 两块地基
+## 3. 本轮策略结构：三把新刀 + 原有地基
 
-- **M1 进展最大化**（打 B6/B1）：从数据集 episode 自动挖掘"得分点阶段结构"，训练轻量进展模型；推理时用于 best-of-n 动作块选择与失败保底。
-- **M2 几何场景理解**（打 B1/B2）：立体对蒸馏单目深度头（策略内部前向，零接口改动）+ ee 空间末段伺服残差修正。
-- **M3 时序闭环**（打 B4）：T_a 帕累托申报 + 块间偏差检测与恢复策略编译进块内。
-- **D1 服务工程地基**（F4/F5）：共享后端、量化、延迟稳定性预算——资格性优先级。
-- **D2 本地评测地基**：步骤分代理 + 5 类泛化变换库——迭代速度即生命线。
+- **感知层 CONTACT-SENSE（IP-11，新）**：T1 免费信号（夹爪捏合差 + 跟踪残差，零训练）+ T2 学习式动力学残差模型（33k episodes 训练，<2ms）——给全栈装上「力觉」。消费方：IP-5 干扰检测、IP-10 卡死/重试触发、IP-1 进展特征、插入任务的力轮廓（推进-遇阻-横移微调-再推进）。
+- **伺服层 SERVO-STACK（IP-2 重构）**：深度蒸馏保留；学习式残差修正头被解析 IBVS 替换；感知=深度头+任务条件关键点头（全部离线自动伪标签，评测时只跑小头 ≤25ms）；**伺服相位跳过 VLA 前向，单步延迟从 ~350ms 降至 ~25ms——伺服不仅提成功率，还改善 F5 延迟稳定性**。切换由进展模型（IP-1）门控，接触信号（IP-11）裁决插入相位。
+- **适配层 LoRA-ROUTE（IP-6 具体化）+ LoRA-DPO（IP-7 具体化）**：任务组 adapter + 语言条件权重插值（reset 时一次混合，运行时零开销）；未见物品 = 语义最近组插值 + 基座保留系数；RL 后训练以 LoRA 为载体、以数据集自然失败/重试片段为离线偏好对。
+- **地基保留**：IP-8 SERVE-N（F4/F5）、IP-9 LOCAL-BENCH、IP-4 AUG-PANO 原样推进；IP-1 PROGRESS 增加接触特征，并修订 best-of-n 的延迟预算（v1 没算 n 次动作头采样 ≈ n×0.35s 的账——本轮自纠：只在导航/接近相位用、伺服相位禁用）。
 
-## 4. 设计决断（诚实版）
+## 4. 修剪记录（执行「修剪优先」原则）
 
-- **单模型合规边界**：所有创新点落在"单权重+内部模块+语言条件化"，不做外部多模型路由（规则细则未读到，保守处理）；内部混哪个模块不改变"单模型"语义。
-- **接口红线**：不新增 obs 键、不改评测方任何行为——深度/几何特征全部在 get_action 内部计算；所有增强层可独立开关（ablation 全保留），关闭即回退基线，无负收益。
-- **pivot 通道**：仅在"手臂工作空间外"门控下启用，低速小步+夹紧，避免躯干运动引发视觉外参漂移这一新失败模式。
-- **合规红线**：进展模型只用于优化我们自己的期望动作选择，得分手仍由评测方计算——不做任何评测操纵。
-- **修正记录**：初版设想"动态 chunk（运行中缩短块长）"与接口 metadata 静态申报 `action_chunk_size` 冲突（评测器按申报形状执行），已在本轮修剪为「T_a 申报扫描 + 块间恢复」——清单迭代原则的第一次自我执行。
+1. **剪**：v1 IP-2 的学习式 Δee 末段残差修正头 → 换成解析 IBVS。理由：修正头要为 11 个接触任务各学一种修正行为（数据低频、梯度被 B5 淹没），解析定律零训练、跨任务同一套数学、对感知噪声的失败模式可解析（增益衰减而非发散）。
+2. **降级**：IP-3 PIVOT-GATE（P2 → 观察项 O-1）。理由：F14 显示头部 canonical space 已含 waist/base，差异化前提削弱；改为复现时检查 norm_stats 与 deploy 代码中 pivot 映射是否非零（F-O6），数据说话。
+3. **剪**：v1 IP-2 中「数据集 effort 蒸馏力头」步骤 → F12 证伪，替换为动力学残差模型（T2）。
+4. **修订**：IP-1 best-of-n 加相位门控与延迟预算（n 次采样 ≈ n×0.35s 只在非伺服相位使用）。
+5. **沿用**：v1 对「动态 chunk」的修剪（与 metadata 静态申报冲突）继续有效。
 
 ## 5. 本轮最大风险一句话
 
-**新增策略内前向（深度头、进展模型、修正器）吃掉延迟稳定性预算（F5 可信度考核）**，且评测端 480×640（可能 resize）输入与训练分布存在偏移——必须以"小模型+量化+固定毫秒预算"落地，每项增强独立可关，E1–E5 本地验证通过后方可合并，任一不过即回退基线，无负收益。
+伺服栈的三处依赖——腕部相机外参链（F-O1）、关键点伪标签质量、评测端视觉 OOD 下小头（深度/关键点）的稳健性——任何一处塌掉都会把「解析伺服」退化为「更贵的基线」；因此每层独立可关、以 E6/E7 离线验证为合并门槛，而 IBVS 对深度绝对误差的天然鲁棒（Z 估计只缩放收敛增益、不改图像误差下降方向）是整条路线最值得先验证的假设。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 1 轮产物 · UniBot-V1 创新点清单 v1：闭环进展最大化参赛方案
+# 第 1 轮（循环 B）产物 · UniBot 创新点清单 v2：感知—伺服—适配三层闭环
 
 ## 0. 结论
 
-新建清单 10 项（IP-1…IP-10），围绕「三条护城河 + 两块地基」：
+- **v2 = v1 继承 + 1 新增（IP-11）+ 1 重构（IP-2 → SERVO-STACK）+ 1 降级（IP-3 → 观察项 O-1）+ 2 具体化（IP-6 → LoRA-ROUTE、IP-7 → LoRA-DPO）+ 2 修订（IP-1 延迟预算、IP-5 多模态检测）**。
+- 默认 backbone 不变：LingBot-VLA 2.0 (6.3B) LoRA（F8/F14）；复现入口 `github.com/ezhoureal/lingbot-vla-v2`（模型卡里的 wrapper 外链已 404，需自建参赛包装）。
+- 优先级：**P0** = IP-8 SERVE-N、IP-9 LOCAL-BENCH、IP-4 AUG-PANO；**P1** = IP-2 SERVO-STACK、IP-11 CONTACT-SENSE、IP-5 CHUNK-RESCUE、IP-1 PROGRESS、IP-6 LoRA-ROUTE、IP-10 RESCUE-LIB；**P2** = IP-7 LoRA-DPO。
+- 成本不变式：LoRA 基线复现 1×RTX 4090（F8/F14 佐证）；策略内新增前向（深度+关键点+T2 残差模型）合计 ≤25ms/步；接口零改动；每项增强独立可关。
+- **最值得押注（一句话见 §8）**：IP-2 SERVO-STACK——用「解出来的图像雅可比」替换「学出来的动作均值」，以 IP-11 的免费接触信号为眼睛，攻 11/32 的接触对准任务。
 
-- **默认 backbone**：LingBot-VLA 2.0 (6.3B) LoRA——唯一经证据链核实的参赛打法（F8），先复现再超越。
-- **P0（资格与生命线）**：IP-8 服务工程、IP-9 本地评测自举、IP-4 泛化增强管线。
-- **P1（得分主力）**：IP-2 GEOSERVE（深度蒸馏+末段伺服）、IP-5 块间闭环恢复、IP-1 PROGRESS（进展模型）、IP-6 语言条件化路由、IP-10 失败恢复库。
-- **P2（差异化期权）**：IP-3 全身 pivot 激活、IP-7 RL 后训练。
-- 成本：LoRA 基线复现 1×RTX 4090 可行（F8 佐证）；全部策略内前向预算 ≤25ms/步；无任何接口变更。
-- 修剪记录：初版"动态 chunk"与接口静态申报冲突，已修剪为 IP-5「T_a 扫描 + 块间恢复」（想法区 §4）。
+## 1. 清单 v2 总表
 
-## 1. 创新点清单 v1 一览
-
-| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 资源 | 预期边际 | 风险 |
+| 编号 | 名称 | v1→v2 变化 | 一句话 | 优先级 | 依赖 | 灵感词 | 资源 | 风险 |
 |---|---|---|---|---|---|---|---|---|
-| IP-8 | SERVE-N | N 端口共享后端+并发调度+量化+延迟稳定性预算 | **P0** | 无 | UniBot-V1 | 1×A100/2×4090 | 可信度口径不掉分、资格保障 | 低 |
-| IP-9 | LOCAL-BENCH | 步骤分代理+5 类泛化变换库+任务难度谱系 | **P0** | IP-1(弱) | UniBot-V1/泛化 | 1 GPU+人工抽检 | 迭代速度=生命线 | 中 |
-| IP-4 | AUG-PANO | 视频级增强×3 病因（视觉 OOD/语义 OOD/EE 重定向） | **P0** | 无 | 泛化能力 | ~0.5 GPU·天 | 3/5 泛化类直接受益 | 中 |
-| IP-2 | GEOSERVE | 立体对蒸馏深度头+ee 末段伺服残差修正 | **P1** | IP-9 | 场景理解 | ~1 GPU·天 | 插孔类任务（≥5 个）成功率主攻 | 中高 |
-| IP-5 | CHUNK-RESCUE | T_a 帕累托申报+块间偏差检测+恢复编译进块 | **P1** | IP-1,IP-9 | UniBot-V1/泛化 | 近零 | 人为干扰/干扰物类受益 | 中 |
-| IP-1 | PROGRESS | 自动挖掘得分点阶段→轻量进展模型→best-of-n | **P1** | IP-9 | UniBot-V1 | ~0.3 GPU·天 | 步骤分+失败保底 | 中 |
-| IP-6 | ROUTE-LANG | 指令→32 任务原型软路由（单权重内部 MoE） | **P1** | IP-4 | 泛化能力/场景理解 | 近零 | 未见物品+任务互扰缓解 | 低 |
-| IP-10 | RESCUE-LIB | 数据集重试片段挖掘+卡住检测+恢复库 | **P1** | IP-1,IP-5 | 泛化能力 | 近零 | 平均成功率短板修复 | 低 |
-| IP-3 | PIVOT-GATE | 全身 pivot 门控激活（工作空间外低速步进） | P2 | IP-9 | UniBot-V1 | 近零 | 远/低处任务解锁 | 中高 |
-| IP-7 | RL-PROG | 进展奖励的 RL/DPO 后训练（RoboTwin/WMA-0） | P2 | IP-1,IP-9 | UniBot-V1/泛化 | 4–8 GPU·天 | SFT→RL 第二级增益 | 高 |
+| IP-8 | SERVE-N | 保留 | N 端口共享后端+并发调度+量化+延迟稳定性预算 | **P0** | 无 | UniBot-V1 | 1×A100/2×4090 | 低 |
+| IP-9 | LOCAL-BENCH | 保留 | 步骤分代理+5 类泛化变换库+难度谱系 | **P0** | IP-1(弱) | UniBot-V1 | 1 GPU+人工抽检 | 中 |
+| IP-4 | AUG-PANO | 保留 | 视觉 OOD/语义 OOD/EE 重定向三类增强（同步作用于伺服小头训练集） | **P0** | 无 | 泛化能力 | ~0.5 GPU·天 | 中 |
+| **IP-2** | **SERVO-STACK** | **重构** | 蒸馏感知（深度+关键点）+ 解析 IBVS/J⁺ 末段伺服 + 相位切换 | **P1 主力** | IP-9, IP-1 | **视觉伺服** | ~1.5 GPU·天 | 中高 |
+| **IP-11** | **CONTACT-SENSE** | **新增** | 夹爪捏合差+跟踪残差（T1 免费信号）→ 动力学残差模型（T2）= 接口内的「力觉」 | **P1** | IP-9 | **力矩传感** | ~0.2 GPU·天 | 中 |
+| IP-5 | CHUNK-RESCUE | 修订 | T_a 帕累托申报 + 多模态偏差检测（视觉残差×跟踪残差×捏合差）+ 恢复编译进块 | P1 | IP-1, IP-11, IP-9 | UniBot-V1 | 近零 | 中 |
+| IP-1 | PROGRESS | 修订 | 进展模型 P_φ：+接触特征；best-of-n 加相位门控与延迟预算；兼任伺服切换门 | P1 | IP-9 | UniBot-V1 | ~0.3 GPU·天 | 中 |
+| **IP-6** | **LoRA-ROUTE** | **具体化** | K 个任务组 adapter + 语言条件权重插值（reset 时混合）；未见物品=语义插值 | P1 | IP-4 | **LoRA** | ~2 GPU·天 | 中 |
+| IP-10 | RESCUE-LIB | 修订 | 重试片段挖掘 + 卡住检测（P_φ 不涨 + T1 接触信号）+ 恢复库 | P1 | IP-1, IP-11 | 泛化能力 | 近零 | 低 |
+| **IP-7** | **LoRA-DPO** | **具体化** | LoRA 载体的离线偏好优化：数据集自然失败/重试片段为负例、专家段为正例 | P2 | IP-1, IP-9 | LoRA | 1–2 GPU·天 | 高 |
+| IP-3 | PIVOT-GATE | **降级→O-1** | 全身 pivot 差异化前提被 F14 削弱，转为复现时的检查项 | 观察项 | F-O6 | UniBot-V1 | 0 | 低 |
 
-## 2. 重点展开 A：IP-2 GEOSERVE（深度蒸馏 + 末段伺服，攻插孔类任务）
+## 2. 重点展开 A：IP-11 CONTACT-SENSE——把位置残差当力矩传感器
 
 ### 2.1 动机与差异
-- 动机：32 任务中 PlugCharger/PlugInEthernet/SyringeWaterTransfer/ZipUp/RemovePinnedNote/Unlock 为接触丰富任务；行为克隆在毫米级对准上复合误差爆炸（B1）+ RGB 无深度（B2）。这两条决定平均成功率的下限。
-- 与现有方案差异：可证头部方案（F8）直接 LoRA 微调 RGB 策略，无任何几何中间表示；本方案用**数据集自带已校正立体对**（F7）生成深度伪标签蒸馏单目深度头，全部在策略内部前向——接口零改动。
 
-### 2.2 训练管线（离线 ~1 GPU·天）
+- 动机：F11/F12 证明接口与数据都拿不到力/力矩；F13 证明夹爪指令-观测双通道存在；B7 指出头部方案对接触状态完全盲目——抓取是否成功靠视觉复核甚至靠猜、插入是否受阻全靠开环蛮进。接触感知是 11/32 接触任务的公共瓶颈。
+- 与现有差异：F8 类方案只消费 obs 的当前值；本方案把「我方上一块返回的动作」也当作可观测的一部分（客户端自有缓冲），构造**指令-观测残差**这一评测接口内免费的物理信号。无需评测方配合、不新增 obs 键、零接口改动。
+
+### 2.2 信号分层
+
+**T1a 夹爪捏合差（零训练，逐调用可得）**
+
 ```python
-# 步骤 1：立体→深度伪标签（head_stereo 已 rectified，F7）
-for seq in unibot_32tasks():                       # LeRobot v3.0 parquet + AV1 视频
-    D_head = stereo_depth(L, R, method="RAFT-Stereo+SGBM 融合")   # 校正对→稠密深度
-# 步骤 2：腕部深度自举（腕相机无立体对）
-#   head 深度 + 数据集外参链（state_d435 / torso / base 位姿）→ 投影到腕视锥
-#   有效位（recomputed_ee_valid=1 且遮挡率<阈值）入训练集  [开放问题 F-O1：外参待核实]
-# 步骤 3：单目深度头蒸馏
-depth_head = finetune(DepthAnything-V2-S, src=wrist_rgb+head_rgb, tgt=pseudo_depth)
-# 步骤 4：末段伺服残差修正器（ee 控制空间）
-#   样本：每 episode 末段 10 步；标签：Δee* = ee_{t+1} − ee_t（数据真值）
-#   输入：(wrist_rgb, D_wrist, ee_pose, gripper)；输出：Δee 修正
-refine = train_residual_head(policy_features, Δee*, focus="对准段", loss=Huber)
+# Dex1: 5.5(开) -> 0.0(合)；cmd=我方上一块返回值，obs=本轮观测
+pinch[t] = max(0, close_amount(cmd_gripper) - obs_gripper)      # >0 即夹着东西
+width_hold = obs_gripper when cmd≈0                              # 稳态夹持宽度 ≈ 物体尺寸特征
+slide[t]   = d(width_hold)/dt > τ_s while cmd closed             # 宽度回增 = 滑脱前兆
+grasp_ok   = pinch>ε and wrist_img_change_correlates_with_ee_motion   # 夹住后提升，腕图应随动
 ```
 
-### 2.3 推理（get_action 内部，预算 ≤25ms）
+**T1b 关节跟踪残差（零训练，需 F-O4 时序对齐校准）**
+
+```python
+# 我方在第 k 次调用返回了动作块 A_k=(a_0..a_{T_a-1})；第 k+1 次观测 s_{k+1}
+# 自由空间中 G1 位置控制跟踪紧密：预测 ŝ ≈ a_{T_a-1}（或一阶指数趋近模型）
+r_arm[t] = ||s_obs.arms − ŝ(A_k)||        # 接触/被推 → 残差尖峰（逐臂、逐关节可定位）
+r_base[t] = ||s_obs.lower_body − ŝ_lower||  # 躯干/下肢同理，覆盖「人为干扰推身体」
+# 鲁棒化：滚动基线 z-score + 滞回，避免对时序错位 δ（F-O4）敏感
+```
+
+**T2 动力学残差模型（33k episodes 离线训练，<2ms）**
+
+- 输入：(堆叠 proprio 历史，我方动作块 A_k，任务/语言嵌入)；输出：下一观测状态预测 ŝ_{t+T_a} 逐关节 + 三类头 {自由运动 / 物体接触 / 外部扰动}。
+- 弱标签自动挖掘：夹爪合拢窗口=抓取接触；插入类任务的末段=插入接触；其余=自由运动。演示数据以成功为主 → 失败检测按**一类分类**（偏离学习到的成功动力学即为异常），诚实标注此局限（产物区 §6 E6）。
+- 价值：T1 是阈值启发式，T2 把「多大残差算异常」变成数据驱动的逐任务校准，且残差向量带方向（哪个关节、哪个方向被顶住 → 横移微调的方向）。
+
+### 2.3 消费方（一份投入四处回收）
+
+1. **IP-5 干扰检测**：扰动触发条件 = max(视觉流残差, r_arm, r_base, 捏合异常) 越限 + 滞回；
+2. **IP-10 卡死/重试**：r 振荡小幅 + P_φ 不涨 = 卡住；插入类 r 持续横向分量 = 受阻 → 触发「退-横移-再进」恢复库；轴向残差骤降 = 滑入 → 恢复推进；
+3. **IP-1 进展特征**：P_φ 输入加 [pinch, r_stats, width_hold]——抓取确认与插入进度直接可微调；
+4. **插入力轮廓**（本 IP 独有产出）：PlugCharger/PlugInEthernet/ZipUp/Unlock 的「推进-遇阻-横移 wiggle-再推进」行为模板，由 r 的方向/幅值驱动——位置接口上对阻抗控制的最小近似。
+
+### 2.4 实验 E6（离线，先于一切真机投入）
+
+- 数据：32 任务 × 每任务 5 episodes 回放 + 本地 example_env 时序测量（F-O4）。
+- 指标：接触检测 AUC（以自动相位标签为准）；扰动检测 AUC（对 obs 关节状态注入脚本化瞬态偏移合成「被推」信号——诚实标注：这是对信号的仿真不是真机）；捏合宽度与 episode 结局的相关性。
+- 门槛：接触 AUC ≥0.85；r_arm 误报率（自由运动段）<5%；T1 全链路计算 <1ms。
+- 降级：T2 不过 → 只留 T1（仍全程免费）；F-O4 时序不可辨识 → r_arm 改用逐块聚合统计量。
+
+### 2.5 风险
+
+- 演示数据以成功 episode 为主 → 失败/扰动正例稀缺（一类分类的精度上限）；评测端扰动分布未知；
+- obs 与动作的时序对齐 δ 未知（F-O4）→ 鲁棒统计 + 本地 example_env 先校准；
+- 伺服/恢复行为误触发 → 滞回 + P_φ 门控双保险。
+
+## 3. 重点展开 B：IP-2 SERVO-STACK——感知用学习、控制用定律
+
+### 3.1 动机与差异
+
+- 动机：11/32 接触对准任务成败在毫米级；B1（复合误差）+ B2（RGB 无深度）+ F14（头部 50 步开环块 + MAE 0.176）三重证据。
+- 与现有差异：F8 类方案端到端学「观测→动作」，末段精度是均值回归的副产品；本方案把末段拆成「学习感知 + 解析控制」——关键点/深度用数据蒸馏的小头，控制律用图像雅可比，零训练、跨 11 个任务同一套数学。
+
+### 3.2 三层结构
+
+**S1 感知（全部离线伪标签，评测时只跑小头 ≤20ms）**
+
+```python
+# 深度（沿用 v1）：head_stereo 已校正 → RAFT-Stereo+SGBM 融合伪标签 → 蒸馏 DepthAnything-V2-S
+#   腕部视角自举依赖外参链（F-O1），失败则降级 head-only（可关）
+# 关键点（新增）：任务条件 2D 关键点头（~5-10M 参数，~3-5ms）
+#   伪标签全自动：持握物功能点 = EE pose + 夹爪几何常量偏移 → 投影到腕图（需 F-O1 标定）
+#   目标点（孔位/卡槽）= 数据集内多视角三角化（离线全状态可得）→ 投影
+#   评测端文本提示的开放词检测（GroundingDINO 类）只做离线教师，蒸馏到小头——评测时无大模型
+```
+
+**S2 控制（解析，零训练）**
+
+```python
+# IBVS：特征误差 e = [u_hole−u_peg, v_hole−v_peg, z_err]（腕图 + 蒸馏深度）
+# 点特征交互矩阵 L(u,v,Z)，v_cam = −λ L⁺ e；T_base←cam 由外参链给出（F-O1）
+# joint 空间输出：Δq = J⁺(q) · [Δp; Δθ]（G1 臂 URDF 运动学，q 来自 obs）
+# 关键鲁棒性：Z 估计偏差只缩放切向收敛增益、不改变图像误差下降方向；
+#   仅沿轴接近速度调度需要粗对深度 —— 整条路线对 F-O1 的暴露面因此大幅缩小
+```
+
+**S3 切换与门控**
+
+- P_φ（IP-1）判定「接近/对准相位」→ 切换 VLA→伺服；接触信号（IP-11）裁决插入推进/横移/回退；超时或 P_φ 回落 → 交还 VLA（基线兜底）。
+- **异构计算红利**：伺服相位跳过 VLA 前向，单步 ~350ms → ~25ms；回程调用率 = 1/(T_a/30 + 0.025)，T_a=4 时 ≈7.5Hz——伺服响应率足够，且 F5 延迟稳定性同时受益（伺服段延迟更低更稳）。
+
+### 3.3 推理伪代码（get_action 内部，全部可逐位关闭）
+
 ```python
 def get_action(obs):
-    D   = depth_head(obs["wrist"], obs["head"])        # ~12ms（256×320 + 量化）
-    a   = vla.forward(obs, depth_feat=D)               # 基线 VLA（LoRA 后）
-    a_ee = refine(a_ee, obs["wrist"], D, ee_state)     # ~6ms，仅对准段激活（进展模型门控）
-    return format(a, T_a, token)                       # 逐位可关：refine=None → 基线
+    if not servo_enabled or not P_phi.in_phase(obs, task):
+        return vla_chunk(obs)                      # 基线路径（n_samples 按相位预算）
+    K = kpt_head(obs["wrist"], obs["head"], task)  # ~4ms
+    D = depth_head(obs["wrist"])                   # ~12ms（256×320 + 量化，可 k 步复用）
+    if K.conf < τ_conf: return vla_chunk(obs)      # 感知不确定 → 交还基线（安全回退）
+    chunk = []
+    for i in range(T_a):                           # T_a 小块，块内按 S2 递推（开环段内预测）
+        dx = ibvs_step(K, D, ee_state, gains)      # 解析
+        chunk.append(to_joint(dx, q) if space=="joint" else to_ee(dx))
+    return format(chunk, token)
 ```
 
-### 2.4 风险
-- 深度头在评测端光照/背景 OOD 下伪标签域差 → 增强（IP-4）同步作用于深度训练集；
-- 外参链不确定（F-O1）→ 腕部自举失败则降级为"仅 head 深度特征条件化"（仍可关）；
-- 延迟 → depth 头 INT8 + 每 k 步复用。
+### 3.4 实验 E7（离线回放，先于真机）
 
-## 3. 重点展开 B：IP-5 CHUNK-RESCUE（块间闭环，攻人为干扰/干扰物）
+- 关键点头：留出 10% episodes，像素误差 <8px 帧占比 ≥80% 为合并门槛；
+- 深度头：对 RAFT-Stereo 伪标签 AbsRel <0.15；
+- 伺服律回放：留出末段 20 步，从每状态开环执行伺服 Δee，与专家 Δee 的方向余弦 ≥0.8；混合回放（状态按专家动力学推进、动作按伺服）下特征误差单调收敛；
+- 延迟：伺服全链路 P99 ≤25ms（E3 v2）。
 
-### 3.1 设计（接口内合法）
-- **T_a 帕累托申报**：扫描 T_a∈{4,8,16}，权衡 [网络往返延迟方差（F5 可信度）] × [块内开环时长（抗干扰）]；E4 决定。
-- **块间偏差检测**：obs_delta_indices 申报 proprio 历史堆叠（如 [-3,-2,-1,0]），每次调用计算执行偏差 e_t = ‖s_obs − s_pred(上一块)‖ + 视觉流残差 → 干扰信号（κ-free）。
-- **恢复编译进块**：检测到偏差/干扰 → 本块前 2 步注入"减速+重瞄"动作模式（从 IP-10 恢复库检索），后 T_a−2 步交 VLA 正常输出；恢复行为编译在返回的动作块内——**不依赖评测器任何配合**。
+### 3.5 风险
 
-### 3.2 与现有差异
-F8 方案把 get_action 当纯函数；本方案把每次调用视为"块间闭环点"——所有可感知状态（历史堆叠是免费的）都用于下一块的条件化。人为干扰类评测的本质是"执行中被推一把后能不能回来"。
+- 外参链（F-O1）失败 → 降级 head-only 深度条件化（不投影、不做几何伺服），保留 IP-11/恢复库收益；
+- 评测端光照/背景 OOD 下小头漂移 → IP-4 增强同步作用于小头训练集 + S3 置信度门（K.conf 低即回退基线，永不比基线差）；
+- T_a 静态申报与伺服响应率的矛盾 → E4 联合扫描（T_a × image_resize × 相位占比）。
 
-## 4. 重点展开 C：IP-1 PROGRESS（进展模型，攻步骤分与失败保底）
+## 4. 重点展开 C：LoRA-ROUTE（IP-6）与 LoRA-DPO（IP-7）
 
-- **阶段自动挖掘**：每任务 1000 集（F6），用 EE-目标距离曲线拐点 + 进度分位自动切分 ~5 阶段（接近/对准/抓取/搬运/放置），VLM 零样本抽检 50 帧校准（人工预算极小）。
-- **进展模型**：P_φ(阶段, s_t, task) —— 轻量（ViT-S + 状态 MLP），输出"进展期望"。
-- **用途**：(a) best-of-n：VLA（扩散/流动作头）采样 n=4 块，按 P_φ 期望选块；(b) 失败保底：进展持续不涨 → 触发 IP-10 恢复；(c) IP-9 得分点代理与 IP-7 RL 奖励共用同一 P_φ（一份投入三处回收）。
-- 合规：得分手仍由评测方计算，P_φ 只优化我方动作选择。
+### 4.1 LoRA-ROUTE：任务组 adapter + 语言条件插值
 
-## 5. 其余创新点简表
+- **分组**：数据驱动聚类 32 任务（按接触占比/相位结构/难度谱系），K=4 原型组：放置类、接触对准类、双手协调类、小物件精密类。
+- **训练**：共享冻结基座 + 每组 LoRA r=32–64（~65M/组，4 组 ≈260M 增量，bf16 ~0.5GB）——单卡 4090 可行（F8 同量级）。
+- **部署（reset 时混合，运行时零开销）**：新 episode 拿到 language → 语言嵌入 → α = softmax(sim(e_lang, 组锚点)) → 一次性物化 W = W0 + Σ α_k B_k A_k（只触碰 q/v/o_proj 模块，秒级）；整个 episode 用同一组混合权重——是「语言条件化的单模型」，与内部 MoE 语义等价但便宜得多。
+- **未见物品泛化**：语义最近组的插值 + 基座保留系数（α 封顶 ~0.8，保留通才底座能力）——把「零样本任务泛化」变成权重空间插值（机理依据：同基座 LoRA 增量的线性插值良态性，属推断，E8 验证）。
+- **合规边界与回退**：若规则将「单模型」解释为静态权重（F-O2 待确认），回退 = 各组 α 取先验固定的静态合并（损失自适应性，仍优于单全局 LoRA 的组间折中）。
 
-| 编号 | 动机 | 与现有差异 | 落地步骤 | 主要风险 |
-|---|---|---|---|---|
-| IP-8 SERVE-N | F4：N 端口必须精确匹配；F5：延迟稳定性入可信度 | F8 类方案多为单实例思维 | 共享后端（权重共享+连续批处理+CUDA Graph）、W8A8 量化、per-port 状态隔离（reset/KV 隔离）、延迟遥测 | 并发阻塞→延迟方差；吞吐压测 E0 |
-| IP-9 LOCAL-BENCH | 迭代速度=生命线；本地无真机 | 现有方案依赖线上预约评测（高摩擦） | 步骤分代理（P_φ 复用）+5 类泛化变换库（颜色/背景/干扰物 inpainting/贴图替换/合成手部遮挡）+32 任务难度谱系表 | 本地是视觉层代理，物理泛化不可代理——仅作回归信号非上线门槛 |
-| IP-4 AUG-PANO | 5 类泛化中 3 类是视觉 OOD（B 系） | F8 方案原样用数据 | 帧级颜色/剪切/模糊；SAM2+inpainting 干扰物注入；EE 相对坐标重定向（位置泛化，ee 空间下可行性高）；指令同义改写；贴图替换（未见物品） | 增强过强→特征漂移；消融定档 |
-| IP-6 ROUTE-LANG | 32 任务互扰（B5）+未见物品 | F8 单一 LoRA 全任务混训 | 指令嵌入→任务原型库（task_index）→内部软门控（单权重）；未见物品走 VLM 原生语义 | 门控塌缩到高频任务；熵正则 |
-| IP-10 RESCUE-LIB | 失败 episode 也有步骤分；重试行为已在数据中 | SFT 只学成功段 | 挖掘"速度翻转+重接近"重试片段→卡住检测（P_φ 不涨+proprio 振荡）→恢复库（退-重瞄-再进；插孔 wiggle） | 恢复行为误触发→抖振；滞回门限 |
-| IP-3 PIVOT-GATE | pivot[7] 白送工作空间（B3） | SFT 惯例置零 | 先统计 32 任务数据 pivot/腰使用率（数据驱动立项）；门控：目标在工作空间外→低速小步 pivot；外参漂移监测 | 躯干运动引入视觉漂移新失败模式；P2 谨慎 |
-| IP-7 RL-PROG | SFT 天花板（B1）；WMA-0/RoboTwin 可用 | F8 停在 SFT | 奖励=P_φ 进展；RoboTwin(G1) 或申请 UnifoLM-WMA-0 世界模型 rollout；GRPO 在线/离线 DPO（成功-失败对比 1000 集/任务） | 算力 4–8 GPU·天；sim-real 差距；P2 期权 |
+### 4.2 LoRA-DPO：离线偏好对，无需仿真器
 
-## 6. 实验设计（本地，接 IP-9）
+- 正例：数据集专家段；负例三源：(a) 同任务自然失败/重试片段（v1 IP-10 挖掘管线复用）；(b) 当前策略在数据集状态上的采样块（K 个候选，按 P_φ 期望进展排序取低者）；(c) 伺服回退前的失败段。
+- 奖励/标签 = P_φ 进展增量 + 接触轮廓匹配（IP-11）；LoRA-only 更新，参考策略 = 冻结基座+旧 adapter（增量小，显存可行）。
+- 定位：P2 期权——先把 IP-1/2/11 的确定性收益落袋，DPO 作为第二级增益。
+
+### 4.3 实验 E8
+
+- 4 组 adapter vs 单全局 LoRA：逐任务 val loss 对比（接触组预期显著优）；
+- 插值泛化：val 集物体贴图替换（IP-4 管线），插值 α vs 最近组硬路由 vs 单 adapter；
+- reset 时混合开销 <3s/episode（不占调用延迟）。
+
+## 5. 其余条目修订简表
+
+| 编号 | v2 修订点 | 落地步骤 | 风险 |
+|---|---|---|---|
+| IP-1 PROGRESS | P_φ 输入 + [pinch, r_stats, width_hold]；best-of-n 加相位门控（n≤4 仅导航/接近相位，伺服相位禁用——n×0.35s 延迟账）；兼任 S3 切换门 | 同 v1 + 特征拼接 | best-of-n 延迟超预算 → 相位白名单 |
+| IP-5 CHUNK-RESCUE | 检测器 = max(视觉残差, r_arm, r_base, 捏合异常)+滞回；F14 证据：头部 50 步块 ≈1.7s 开环，我方 T_a=4–8 + 检测 = 响应性护城河 | 同 v1 + 接入 IP-11 | 误触发 → 滞回+P_φ 双门 |
+| IP-10 RESCUE-LIB | 卡住检测加 T1 信号；插入类恢复模板由 r 方向驱动（退-横移-再进） | 同 v1 | 恢复抖振 → 滞回 |
+| IP-8 SERVE-N | 不变；伺服相位跳 VLA 反而降低后端负载 | 同 v1 | 并发阻塞 → E0 压测 |
+| IP-9 LOCAL-BENCH | 增加 E6/E7 的离线校验台（example_env 时序测量、关键点/深度精度、伺服回放） | 同 v1 | 代理鸿沟 → 仅回归信号 |
+| IP-4 AUG-PANO | 增强管线同步作用于深度/关键点小头训练集 | 同 v1 | 过强 → E2 消融 |
+| O-1（原 IP-3） | 复现时检查 norm_stats/unibot_full.json 与 deploy 代码中 pivot 映射是否非零（F-O6）；若头部已用且有效 → 无差异化，关闭 | 0.5 天 | 无 |
+
+## 6. 实验设计 v2（E0–E8；E0–E5 同 v1，增量如下）
 
 | 实验 | 设置 | 指标 | 门槛 |
 |---|---|---|---|
-| E0 吞吐与延迟 | 3 端口并发 × 满载请求 | P99 延迟与抖动、吞吐 | 抖动 <10ms；无互阻塞 |
-| E1 基线复现 | LingBot-VLA LoRA 于 HangCup+PlugCharger 小规模 | 本地代理成功率、loss 曲线 | 对齐 F8 量级（val/loss≈0.09） |
-| E2 增强消融 | AUG 各轴 on/off × 本地 OOD 集 | 各泛化类代理成功率 | 每轴不劣化、至少 2 轴显著提升 |
-| E3 GEOSERVE | 插孔 5 任务，深度/修正器 on/off 消融 | 末段对准成功率、延迟增量 | 成功率提升显著；延迟 ≤25ms |
-| E4 chunk 扫描 | T_a∈{4,8,16} × E0 延迟 × OOD 干扰集 | 帕累托前沿 | 选定申报值并记录理由 |
-| E5 PROGRESS | P_φ vs 人工标注 50 帧/任务 | 得分点检测 AUC、best-of-n 增益 | AUC≥0.85；best-of-n 增益>0 |
+| **E6 CONTACT** | 160 episodes 回放 + example_env 时序校准 + 合成扰动 | 接触 AUC、误报率、T1 计算耗时 | AUC≥0.85；自由段误报<5%；<1ms |
+| **E7 SERVO** | 关键点/深度小头训练 + 伺服律开环/混合回放 | 像素误差<8px 占比、AbsRel、Δee 方向余弦、P99 延迟 | ≥80%；<0.15；≥0.8；≤25ms |
+| **E8 LoRA-ROUTE** | 4 组 adapter vs 全局 LoRA + 插值泛化 | 逐任务 val loss、OOD val 成功率代理、reset 混合耗时 | 接触组显著优；混合<3s |
+| E4 v2 | T_a ∈ {2,4,8,16} × image_resize × 相位占比 | 伺服响应率 × 延迟稳定性的帕累托 | 记录申报值与理由 |
 
-降级机制：每项增强独立开关；E2–E5 任一不过 → 对应层关闭，逐位回退基线，无负收益。
+降级机制升级：每项增强独立开关不变；新增**相位级回退**——S1 置信度不足即整段交还基线，SERVO-STACK 与 CONTACT-SENSE 在任何感知失效下都退化为纯基线，无负收益。
 
-## 7. 风险登记簿
+## 7. 风险登记簿 v2（相对 v1 的增量）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 策略内新增前向吃延迟稳定性预算（F5） | **高（本轮最大）** | 小模型+量化+固定预算；每层独立开关；E0/E3 门禁 |
-| 榜单未公开，"榜首<30%"为用户先验（F10） | 中 | 以可证样本（F8）+公开证据链设计；榜单公开后复核画像 |
-| 规则细则未读（飞书需登录）：得分点定义、泛化场景官方口径、单模型边界 | 中 | 邮件/ Discord 获取手册；保守合规边界（想法区 §4） |
-| 立体深度自举的外参链不确定（F-O1） | 中 | 降级为 head 深度条件化；E3 消融 |
-| 本地评测与真机物理泛化的代理鸿沟 | 中 | 本地仅回归信号；关键节点线上小规模评测 |
-| 6.3B×3 端口显存/并发 | 中 | 共享后端+量化；E0 压测 |
-| 增强导致特征漂移 | 低 | 强度消融定档（E2） |
-| 单 LoRA 任务互扰残留 | 低 | IP-6 软路由；难度谱系加权采样 |
+| 伺服栈三依赖（外参 F-O1/伪标签/小头 OOD）任一塌掉 | **高（本轮最大）** | Z 偏差只影响增益不改方向（先验证该假设）；置信度门控回退基线；E7 门槛 |
+| 演示数据以成功为主 → 接触检测正例稀缺 | 中 | 一类分类 + 合成扰动；诚实标注局限 |
+| obs-动作时序对齐 δ 未知（F-O4 新） | 中 | example_env 本地先测；鲁棒统计 |
+| LoRA-ROUTE 与「单模型」细则的解释冲突（F-O2 扩展） | 中 | 回退静态合并；优先邮件/官方渠道确认 |
+| best-of-n 延迟超预算 | 中 | 相位白名单（v1 缺陷本轮已修） |
+| T2 模型输入含我方动作块 → 训练-推理分布差（训练时动作=专家，推理时=自己） | 中 | 用当前策略 rollout 数据回流微调 T2（自举一轮） |
+| （沿用 v1 全部条目） | — | — |
 
-## 8. 开放问题（下轮优先）
+## 8. 一句话押注 + 开放问题
 
-- F-O1 数据集外参链（head→wrist 投影可行性）——下载样例数据实测。
-- F-O2 官方手册获取：得分点定义、5 类泛化场景官方口径、N 的取值、单模型判定细则。
-- F-O3 T_a 与 image_resize 的联合最优（分辨率↑精度↑延迟↑的权衡）。
+**最值得押注**：IP-2 SERVO-STACK——用「解出来的图像雅可比」替换「学出来的动作均值」，攻 11/32 接触对准任务，并以 IP-11 的免费接触信号（夹爪捏合差 + 跟踪残差）为眼睛；两者都在接口内零改动、逐层可关，且伺服相位跳过 VLA 前向后延迟反而更低更稳（F5 受益）。
+
+开放问题（续 F-O1/F-O2/F-O3，新增）：
+- **F-O4**：评测端 obs 返回与动作块执行的时序对齐 δ——用仓库自带 example_env 本地测量，决定 T1b 的统计形式；
+- **F-O5**：lingbot-vla-v2 代码的深度特征注入点（其 Depth 变体接口），决定蒸馏深度以「特征拼接」还是「输入替换」方式接入；
+- **F-O6**：F8 的 pivot/waist/base 通道是否实际非零输出（norm_stats + deploy 代码检查），决定 O-1 关闭或复活。
 
 ## 9. 来源清单（全部检索/核实于 2026-11-07）
 
-1. UniBot 官网首页/挑战赛/排行榜/运行记录：https://unibot.unitree.com/ （challenges.html：32 任务、32000 episodes、169 小时、得分点满分 100；leaderboard.html 与 runs.html：均"即将发布"）
-2. 提交模板与接口规范：https://github.com/unitreerobotics/unibot_submission （README：§1–§6 全文核实；obs/action 目录、metadata、N 端口、可信度考核）
-3. 数据集 collection（32 items）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；数据结构样例 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup （README：LeRobot v3.0、AV1 480×640@30、head_stereo 已校正、全身字段；HF API：train=194,564 帧）
-4. 参赛方案可证样本：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora （模型卡：LingBot-VLA 2.0 6.3B、LoRA r64/65M、32 任务 33,276 episodes、10K steps、单卡 RTX 4090、val/loss 0.085、joint 空间）
-5. LingBot-VLA：https://huggingface.co/robbyant/lingbot-vla-4b （README：arXiv:2601.18692，20k 小时真机数据、9 种双臂构型、Depth 变体）
-6. 宇树生态模型：https://huggingface.co/unitreerobotics （UnifoLM-WMA-0-Base/Dual 为 gated；UnifoLM-VLA/WLA/ER 系列，HF API 核实）
-7. 规则文档（未能抓取，需登录）：https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh （中）/ https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh （英）——诚实记录：仅获 JS 壳，内容未核实
-8. "榜首成功率<30%"：用户提供先验；官网榜单未公开无法直接核实（F10，弱证据高置信采用）
+1. 官网挑战赛页：https://unibot.unitree.com/challenges.html （32 任务 / 32,000 episodes / 169h / 每任务得分点满分 100；任务卡片 JS 动态加载，静态页只见表头）
+2. 官网排行榜页：https://unibot.unitree.com/leaderboard.html （仍"Coming Soon"，F16）
+3. 提交模板 README（逐节核实）：https://github.com/unitreerobotics/unibot_submission —— obs 目录全表（无 effort/torque，F11）、obs_delta_indices/image_resize/action_chunk_size 语义、N 端口规则、§6 可信度考核、example_env 本地验证工具
+4. 数据集 schema（HF datasets-server info API）：https://datasets-server.huggingface.co/info?dataset=unitreerobotics%2FG1_Dex1_HangCup （33 特征逐项核对，无 effort，F12）
+5. 数据集卡：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup （LeRobot v3.0、AV1 480×640@30、head_stereo 已校正、Dex1 夹爪 5.5→0.0、194,564 行 / 1.04k episodes / 8.8GB，F13）
+6. 头部方案模型卡：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora （r64/α32 q/v/o_proj 65M、已 merge 单 safetensors、33,276 episodes、10K steps、单卡 4090、val/loss 0.085、canonical space arms14+grippers2+waist4+base3、use_length=50、0.35s/50 步块、ArrangePlates MSE 0.229/MAE 0.176、wrapper 外链 404，F14）
+7. 官方数据 collection：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset （32 个 G1_Dex1_* 数据集逐项抓取，F15）
+8. GitHub API（ezhoureal 仓库列表）：https://api.github.com/users/ezhoureal/repos （仅 lingbot-vla-v2 存在，2026-08-02 推送；unibot_submission fork 不存在）
+9. 训练/部署代码：https://github.com/ezhoureal/lingbot-vla-v2 （复现入口）
+10. 规则文档（仍未核实，需登录）：https://scnhkkkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh （中）/ https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh （英）——诚实记录：仅获 JS 壳
+11. 「榜首成功率 <30%」：用户先验，官网榜单未公开（F10/F16，弱证据高置信采用）
 
-## 10. 清单迭代规则（第 1 轮设定）
+## 10. 清单迭代规则（v1 五条沿用，追加第 6 条）
 
 1. 每项创新点必含：动机/与现有差异/可行性/资源/落地步骤/风险六要素；
 2. 接口红线：不新增 obs 键、不改评测方行为、所有增强独立可关（逐位回退基线）；
-3. 合规红线：不做评测操纵，进展模型只优化我方期望；
+3. 合规红线：不做评测操纵，进展模型只优化我方期望动作选择；
 4. 先证后立：头部方案画像仅基于可证样本与公开文献，推断必须标注；
-5. 修剪优先：每轮先深化/修剪/修正（如本轮动态 chunk→T_a 扫描），再新增。
+5. 修剪优先：每轮先深化/修剪/修正，再新增（v1：动态 chunk→T_a 扫描；本轮：残差头→解析 IBVS、IP-3 降级、effort 蒸馏→动力学残差）；
+6. **（新）灵感词先过事实核查闸**：词义在本赛题接口/数据约束下不成立时，重构为可成立的等价命题再入清单（本轮：力矩传感→位置残差力觉）。
 <!-- ARTIFACT:END -->
