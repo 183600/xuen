@@ -1038,3 +1038,5 @@
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261108-162906-r1", "changed": ["idea", "artifact"], "ts": "2026-11-08 17:21:17"}
 {"event": "candidate", "id": "20261108-193259-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-08 19:32:59"}
 {"event": "verdict", "id": "20261108-193259-r1", "round": 1, "verifier": "ai", "score": 7.5, "result": "adopted", "reason": "AI 评分 7.5（阈值 7）", "ts": "2026-11-08 19:35:25"}
+{"event": "candidate", "id": "20261108-200650-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-08 20:06:50"}
+{"event": "verdict", "id": "20261108-200650-r1", "round": 1, "verifier": "ai", "score": 8.0, "result": "adopted", "reason": "AI 评分 8（阈值 7）", "ts": "2026-11-08 20:07:41"}
