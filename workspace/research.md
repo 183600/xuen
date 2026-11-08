@@ -3,272 +3,292 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 34 轮 · 三灵感落地：四足先验 × 步骤分最大化 × LoRA 专家银行
+# 第 36 轮 · 三灵感落地 v3：进度守护安全层 × 决策摊销蒸馏 × MuJoCo 离线仲裁
 
-> 承接第 33 轮（v10 现实校准版）。本轮不做推倒重来，而是用新灵感词「四足机器人 / 步骤分 / LoRA」**深化三条主链 + 诚实修剪一条伪线**。
+> 承接第 35 轮（v12：VLM 判别器 × CTC 式进度对齐 × 差异化定位）。本轮灵感词「动态避障 / 创新点提炼 / MuJoCo」三词全部存在词义歧义，逐一排查后各自命中 v12 已登记的一个缺口：动态避障→安全守护层（v12 只登记了"提前切步级联失败"风险，无守护机制）、创新点提炼→决策摊销（IP-28v2 beam 重打分的时延风险第一次有结构性解法而非降级开关）、MuJoCo→离线物理仲裁（teacher 标签与专家 demo 质检缺第三方裁判）。三线汇合点：**"离线把一切算完，部署只剩一次前向 + 毫秒级守护"的摊销原则**（登记规则 38）。
 
 ## 0. 联网核实（先事实后推理；检索口径 2026-11-08）
 
-本轮用 curl 直取官方仓库、HF 元数据与 arXiv，新增/复核以下事实：
+- **事实 K（通道诚实复核，github README 全文 grep 2026-11-08）**：obs/action 目录无 obstacle/collision/safety/depth/lidar/audio 字样；避障**不是官方通道也不是官方指标**——遵守规则 27/31/35：不以通道进入、不造幽灵需求。其对分数的作用路径明确：**碰倒已放置物体 = 已完成子步骤成果清零 = 部分分倒扣**。
+- **事实 K2（README 键名全表复核，本轮新增精度）**：4 相机官方键名 `cam_{left,right}_{high,wrist}`（前轮"head_stereo"口径 = left_high×right_high 高位相机对，同一对相机命名统一，IP-31 立体基线假设不变）；**双臂各 7 关节**（`left_arm[7]`/`right_arm[7]`，n_a=7 一手确认）+ 双 ee 位姿 `[6]` + 双夹爪 `[1]` + `lower_body[15]`；动作双模式互斥（joint/ee）+ 共享键（双夹爪/pivot[7]）；§6 可信度指标（逐步时延+波动+动作统计规律）与 N 端口（8765 起）复核不变。
+- **事实 L（守护约束的数据可行性，K2 衍生）**：一手 schema 同时有 `(arms[7], ee_pose_gripper_base[6])` 配对 ⇒ FK 参数可回归（无需官方 URDF）；碰撞几何用**演示统计标定的球包络**（取"99% 演示构型无碰"的最大半径）——L0 运动学守护**不依赖 MuJoCo、不依赖 A17**。
+- **事实 M（MuJoCo 资产现状，Menagerie README 实时检索 2026-11-08）**：Menagerie 有 `unitree_g1`(29 DoF)、`unitree_h1`(19)、`unitree_z1`(6 轴臂)、`aloha`(16，双臂) 及 A+/A/B/C 保真度分级体系；**submission 模板仓库文件清单无 URDF/MJCF/mesh（§5 逐项核对）⇒ 官方 UniBot 模型公开性未核实（行动项 A17 维持开放）**；32 任务物体无官方 mesh ⇒ 只能原语代理（cuboid/cylinder/sphere）。诚实结论：MuJoCo 在本赛道只能做**弱验证器**（否决掉落/穿透/自碰等 gross failure），不能精细打分，更不能全量 sim-to-real。
+- **事实 N（文献谱系，arXiv API 实时检索 2026-11-08，编号全部逐条确认）**：R79 CBF 综述（1903.11199）；R80 DAgger（1011.0686，非平稳悔值 O(T·ε)）；R81/R82 蒸馏（1503.02531 / 1511.06295）；R83 安全学习综述（2108.06266）；R84 SafeDiffuser（2306.00148，CBF 嵌入扩散去噪）；**R85 RoboDual（2410.08001，generalist System-2 + 20M specialist System-1，控制频率 ×3.8——双系统摊销的直接谱系证据）**；R86 TinyVLA（2409.12514）；**R87 MA-SafeDiffuser（2611.05524，2026-11-03，联合安全集 = 逐体 ∧ 成对 barrier 集的交集——双臂互避的直接同构）**；VO/ORCA（Fiorini&Shiller 1998、van den Berg 2011）与 MuJoCo 引擎（Todorov 2012 IROS）为非 arXiv 经典。
+- 上轮 F36–F39 复核不变；A15 仍登录墙；A16（160 条指令全表）沿用。
 
-- **事实 A（接口，github README §6 复核）**：策略以 websocket + msgpack-numpy 远程接入，评测方客户端 / 选手服务端（`PolicyService`，端口 8765 起）。**§6 一手确认**：整个评测逐步记录每次 `get_action` 的**时延、时延波动、返回动作的统计规律**，并可能在展榜结果旁展示为**可信度指标**。
-- **事实 B（榜单）**：`unibot.unitree.com` 是 ~7KB 纯静态占位页（无 JS bundle、无 API、无 `fetch`），`/challenges`、`/leaderboard` 返回同一页。**排行榜仍不可得**；用户前提"榜首<30%""5 类泛化"仍**无法核实**（诚实标注）。
-- **事实 C（数据 schema，HF `meta/info.json` 直取）**：`robot_type=unitree_g1`、LeRobot v3.0、30fps、480×640。obs 相机 `head_stereo_left/right` + `wrist_left/right`；本体 `left/right_arm[7]`、`left/right_gripper`、`lower_body[15]`(=左右腿各 6 + waist 3)、`left/right_leg[6]`、`*_ee_pose_gripper_base[6]`、`*_ee_pose_gripper_torso[6]`、`state_torso[6]`、`state_d435[6]`、`waist_state_joint[3]`、`recomputed_ee_valid[1]`；动作 `left/right_arm`、`grippers`、`lower_body`、`left/right_leg`、`ee_pose(base/torso)`、`waist_action_joint`、**`base_command[4]=[vx,vy,angle_z,height]`**、**`pivot[7]=[vx,vy,angle_z,pivot_3,pivot_4,pivot_5,height]`**、`gripper_controls[4]=[L_trig,L_sqz,R_trig,R_sqz]`。
-- **事实 D（★本轮最关键：基座近乎静止）**：直取 HangCup / ConveyorSorting / FruitCollection / OrganizeBookshelf / PourOutMedicine 的 `meta/stats.json`：`pivot` 的 `vx,vy,angle_z,pivot_3,pivot_5 ≈ 0`，`pivot_4 ≈ 0.15` 恒定，`height ≈ 0.735–0.740`（std 仅 0.003–0.016）。**结论：这 32 个桌面任务实质是"定基座（fixed-base）操作"**，自由度几乎全在双臂 + 夹爪 + 腰/高度微调；运动/步态/落脚控制在本赛道**无需求**。
-- **事实 E（夹爪）**：量程 0–4.5；左右手使用强度因任务而异（PourOutMedicine 左手均值 2.5 / 右手 4.18；ConveyorSorting 双手均高 ~3.7–4.0），提示**非对称双臂角色**。
-- **事实 F（仓库结构）**：`unibot_submission` 仅 `README(.zh).md` + `example/*`(4) + `policy/*`(3)，**无评分/任务清单文档**；评分口径只能求诸参赛手册（feishu，登录墙）。
-- **事实 G（数据集开放）**：`unitreerobotics/G1_Dex1_HangCup` 等**非 gated**（`gated:false`），可直连下载；collection 恰为 32 个 `G1_Dex1_*`。
+## 1. 研究者直觉（先直觉与动机，后形式化）
 
-## 1. 灵感词 → 三条落地线（含一条伪线的诚实裁剪）
+**直觉 1（动态避障的赛道诚实翻译：三种"动态障碍"，没有一种是行人车辆）**。桌面操作赛道硬套"避障"会造幽灵需求（事实 K）。但有三类**真实的时变障碍**：(a) **另一条臂**——F41 双臂任务 ≥10 项共享工作空间，一条臂对另一条就是移动障碍，而 v12 的 System-1 是纯生成式流匹配，没有任何显式碰撞约束；(b) **自己已完成的成果**——HangCup 已挂上的杯、StackBowls 已叠好的碗：障碍集随子步完成而**单调增长**，这正是"动态"的本义（时变障碍集），而"碰倒"= 部分分清零，与 IP-28 步骤分直接挂钩；(c) **传送带**——ConveyorSorting 是 32 任务中唯一真动态物体场景，需要超前量/拦截时机。据此把"动态避障"重定义为**进度守护（progress guarding）**：安全层目标不是"永不碰撞"，而是"**永不使已完成子步骤的成果回退**"——目标更小、更准、直连部分分差量（v12 四差量之一）。
 
-- 「**四足机器人**」→ 先做**现实校准**：官方平台是**双足** G1，且**事实 D 证明基座静止**，运动/步态/落脚控制**零需求**。因此"四足"只能以两种**遗产**方式合法进入：**(i) 跨形态（body-agnostic）表征/世界模型**——四足机群积累的 sim-to-real、域随机化、teacher-student、身体无关表征，用于提升**未见物/背景泛化**；**(ii) "低维命令式（command-conditioned）基座控制"的抽象**——在本赛仅退化为 `pivot`/`height` 的**微稳定器**。→ **IP-27 QUAD-PRIOR（P2，仅部分保留）**。**明确不引入任何四足硬件/仿真通道**（遵守第 27 条"通道诚实"）。
-- 「**步骤分**」→ **IP-28 PROGRESS-CRITIC（P0）**：排名=成功率+步骤分。步骤分最可能是**按 rubric 子步骤的部分分**（解释 A；解释 B"每步交互质量"与 IP-25 重叠）。做一个**不依赖 rubric 文本**的自监督进度/子步骤估计器，同时提供：稠密训练信号、卡住检测→重试/重规划、**"部分分最大化"降级**（任务不可挽回时，优先把当前 rubric 步做完以拿部分分）。**吸收上轮 IP-8 的运行期"省步"**。
-- 「**LoRA**」→ **IP-29 LoRA-EXPERT-BANK（P0）**：赛道要求"**单模型**完成全部任务"，但 32 技能异构。以参数高效方式在共享 VLM 上挂 **K 个能力型 LoRA 专家 + 语言/首帧路由器**：推理只激活少数专家（省显存、低时延、低频路由不伤动作统计规律），另设一个由 IP-24 触发的**恢复 LoRA**。与多端口 Approach 2（共享基座 + 逐端口状态隔离）天然契合。
+**直觉 2（创新点提炼的第一重：蒸馏 = 把"卡住时的搜索"搬进训练期）**。v12 运行期最贵组件（beam N≤4 重打分 + IP-30 判别分）只在卡住时触发，但触发时恰是系统最脆弱时刻（时延尖峰 × 决策压力），且上轮解法是"超 SLO 则 N=1"（= 放弃该能力）。"提炼/蒸馏"给出结构性解法：**teacher 在离线交互中跑全链（beam+判别+守护），student 学成单遍前向**——R85 证明双系统"重推理在 System-2、轻执行在 System-1"的摊销谱系（×3.8 控制频率），R80 的 O(T²)→O(T) 界说明长程任务收益最大且**必须交互式**而非纯 BC。ASR 同构再现：流式解码的 LM 重打分在产品化时同样被摊销进声学模型。
 
-## 2. 三线耦合与关键决断
+**直觉 3（MuJoCo 的定位：第三方仲裁者，不是仿真训练场）**。v12 出现新需求：**teacher 自己也需要质检**——beam 重打分与判别头可能合谋选出"看起来对"的坏动作（打翻旁边的碗去够目标物），专家 demo 里也有 bad demo。MuJoCo 原语代理场景恰好做仲裁：掉落/穿透/自碰这类 gross failure 的检测**对代理保真不敏感**（R87 的"成对 barrier 集"甚至只依赖几何拓扑），足以清洗 teacher 标签（IP-34 第三数据源）并补强 IP-30 的数据清洗用途；插入族容差分析是副产品。诚实定位：**弱验证器，只否决不打分**；A17 未核实前只有 L0 运动学版可用。
 
-- **耦合**：`语言+首帧 → 路由 → 激活 LoRA 专家`（IP-29）→ System-2 出子目标 `z_t`（IP-23）→ IP-28 进度头给 `z_t` 时序**稠密进度监督 + 卡住检测** → System-1 少步流匹配出**双臂+夹爪**动作块 → IP-24 触发时切**恢复 LoRA**/重规划 → IP-25 保时延 SLO。IP-27 只在**表征侧**做跨形态预训练（可选、可关）。
-- **关键决断**：
-  1. **`pivot` 默认冻结**：按事实 D 直接用各任务 `pivot` 常值（height≈0.738、`pivot_4`=0.15、其余≈0），预测时只在**观测区间内**微调 height/angle_z（`clip` 防分布外）。
-  2. **步骤分=可微的进度对齐**：训练损失加 `L_prog = ‖p_t − p̂_t‖`，`p̂_t` 由示范**自监督**生成（夹爪开合事件 + 腕部运动基元变点 + 物体位移/光流变点）。
-  3. **LoRA 路由低频**：每 episode 定一次，必要时每 `K_plan` 步复核；避免逐步抖动（呼应 §6 的"动作统计规律"）。
-  4. **恢复 LoRA 只增不减**：恢复动作幅度不超过正常策略包络（呼应第 30 条规则）。
-  5. **诚实裁剪**：IP-27 的 (ii) 基座控制分量在本赛近似**零边际分**——降级为"仅遥测 + 边界裁剪"，不投算力。
+**三线汇合点 = 摊销原则**。IP-33 的 L1、IP-28v2 的 beam 前瞻、IP-30 的判别——全都贵，但全都可以只在训练期跑；蒸馏后运行期只剩 1 次前向 + L0 守护（<1ms）。「创新点提炼」的第二重含义同步兑现：35 轮积累的 12+ IP 收敛为**四层架构**（感知融合/监督验证/决策守护/摊销部署），清单从平铺改分层、逐层给退役判据（见产物区 §2）。
 
-## 3. 本轮最大风险
+## 2. 灵感词 → 落地线（继承 + 裁剪登记）
 
-**灵感-现实的错配**：事实 D 把"四足=运动控制"这条直觉几乎清零，若误投算力到基座/运动将**零收益**。真正的可执行风险有二：**IP-28 的步骤分口径未核实**（rubric 登录墙）与 **IP-29 路由错误导致跨任务干扰**；两者都必须先在本地回放闭环（IP-3）用小规模消融证伪，再谈真机。
+- 「**动态避障**」→ **IP-33 GUARD-CHUNK（P0，新增）**：进度守护安全层 = L0 运行期运动学守护（FK 回归标定 + 球包络 + 进度回退约束）+ L1 离线 MuJoCo 物理守护；通道不存在（事实 K）⇒ 以能力进入；传送带拦截并入 IP-29 动态专家 + IP-28v1 光流线索复用；若 veto 率过高，升级路线为 SafeDiffuser 式屏障约束去噪（R84/R87，P2 条件启用）。
+- 「**创新点提炼**」→ 双关双落地：**(a) IP-34 AMORTIZE-DISTILL（P0，新增）**——DAgger 式决策蒸馏，beam/判别/L1 摊销进 System-1 单遍前向；**(b) 清单四层化（战略）**——12+ IP 提炼为四层 + 一条摊销主轴，本轮起按层组织与汇报。
+- 「**MuJoCo**」→ **IP-35 MUJOCO-PROXY（P1，条件启用，新增）**：原语代理场景离线仲裁器；四用途（teacher 标签否决 / IP-33 L1 / 插入容差分析 / IP-26 物理增广轴——只增观感不改动作标签）；**资产未核实（A17）⇒ 未核实前只立项不投算力，L0 独立可用**。
+- 继承不变：IP-21/22/23/24/25/26/28v2/29/30/31/32（主链）、IP-27（P2 继续挂起）、IP-2/3/4/9/10。
 
-## 4. 一句话结论
+## 3. 形式化定义（严谨版；完整展开见产物区 §3）
 
-本轮最值得押注：把 UNIBOT-RFM 的 System-2 改为**语言路由的 LoRA 能力专家银行（IP-29）**，并用**自监督进度/子步骤估计（IP-28）**同时提供稠密训练信号、卡住重试与"部分分最大化"降级；"四足"仅保留为**跨形态表征先验**（IP-27，P2，明确不做运动控制）。
+**定义 1（时变障碍集与守护约束）**：双臂构型 q_t=(q^L_t,q^R_t)∈R^{14}（n_a=7，事实 K2）；动作块 A=(a_1..a_{T_a})，T_a≈8（参考实现示例值）。障碍集 O_t = L(另一臂,q_t) ∪ P_k（已完成子步放置的物体集合，k 单调增 ⇒ |P_k| 单调增）∪ C_t（传送带物体外推位形，仅 ConveyorSorting）。守护约束 G(A)：∀τ∈[1,T_a]：(i) min_{i∈操作臂, j∈另一臂∪P_k∪C_t} d(s_i(q_τ), s_j) ≥ r_i+r_j+d_min（**当前子步主物体豁免**——插头对准插座、拉链咬合属合理接触）；(ii) p̂^done_{k'}(τ) ≥ p̂^done_{k'}(0) − ζ, ∀k'≤k（**进度回退约束**：任何已完成子步的达成置信不得下降超过 ζ；运行期只查最近两步，成本 O(1)）。
+
+**定义 2（验证器三级分级，登记规则 39）**：L0(A,q,O)：FK + 球包络距离，毫秒级，**在线**；L1(A,M)：MuJoCo 代理场景 rollout，判 gross failure {掉落, 穿透, 自碰, 持物滑移}，**仅离线**；L2：官方评测，唯一真值，不可模拟不可替代。运行期只允许 L0。
+
+**定义 3（决策蒸馏）**：teacher π_T(·|o)=argmax_{A∈beam_N(o)}[Δp 前瞻(IP-28v2)+V_ψ 判别分(IP-30)] 且过 L1（启用后）；student π_S=同 backbone（语言分支保留）+ 单遍流匹配头。聚合数据集 D = D_expert（IP-30 清洗后）∪ D_agg（回放+扰动注入近似 student 状态分布，teacher 标注）∪ D_screen（teacher 输出经 MuJoCo 否决过滤）。L = E_D[L_flow(a^T,a) + β·L_prog(p̂^T,p̂) + γ·L_guard]。
+
+**定义 4（非平稳悔值界，为什么必须交互式）**：纯 BC 在 student 自身状态分布下期望悔值 O(T²·ε_S)；DAgger 式聚合后 O(T·(ε_T+ε_S))（R80）。本赛道 S≤6 子步、T≈410 帧，误差沿子步级联——T² 项正是长程失败的数学形式。诚实登记：部署期交互不可得 ⇒ 用回放+扰动近似（偏离标准 DAgger，见产物区 §3.2 风险）。
+
+**定义 5（弱验证器保守性条件与守门条款）**：设代理失配上界 ε_M；L1 阈值按 (1+ε_M) 膨胀 ⇒ gross failure 否决召回 ≥1−δ。工作点由 E44 人工标注 200 块校准；**误否决率 >5% 即停用 L1**；L0 的 d_min 取演示 99% 分位，**演示重放 veto 率 >1% 即退火半径，>10% 且成功率无增益即回退遥测模式**（防止守护反噬成功率）。
+
+**定义 6（传送带拦截）**：带速 v̂ 由帧间位移回归（复用 IP-28v1 光流线索）；相遇时点 t*=argmin_t‖x_obj(t)−x_ee(t)‖，抓取提前量 Δt=d_min/‖v_rel‖；作为 ConveyorSorting 专用 LoRA 专家（IP-29 动态专家）的辅助输入。
+
+## 4. 三线耦合与关键决断
+
+耦合（继承 v12 架构，增量标注）：TRI-FUSE(+IP-31) → System-2(IP-29 路由 + IP-23 子目标 z_t) → System-1 流匹配 → **[新] IP-33 L0 守护（veto→重采样≤2→降级）** → IP-25 SLO；**[新] IP-34 把 IP-28v2 beam 重打分 + IP-30 判别 + IP-33 L1 全部搬进训练期 teacher**，运行期单遍化；**[新] IP-35 给 teacher 标签与专家 demo 做离线物理仲裁**（三裁判：CTC/VLM/物理，错误模式互不相关）。
+
+关键决断：
+1. **守护的目标函数是"成果不回退"，不是"零碰撞"**：达成路径上的合理接触必须放行（当前子步主物体豁免）；碰撞约束只对已放置物体 P_k 与另一臂生效。
+2. **L0 不依赖 MuJoCo 与官方 URDF**：FK 由 (arms, ee_pose) 一手数据回归；球半径由演示统计标定——A17 失败不阻塞 IP-33。
+3. **蒸馏只摊销"决策"，不摊销"语言"**：backbone 与语言分支保留（grounding 需要在线语言输入）；退役对象是 beam、在线判别、（E46 达标后）低频路由；IP-24 保留为覆盖层（蒸馏不删除恢复能力）。
+4. **DAgger 交互必须做但形态受限**：O(T²)→O(T) 的差在长程任务不可忽略；teacher 标注 ≈ +100ms/块（beam×4 + 判别 + L1），10⁴ 块 = CPU 小时级，离线可承受；部署期交互不可得 ⇒ 回放+扰动近似 + MuJoCo 闭环补充。
+5. **MuJoCo 条件启用**：A17 未核实前只立项不投算力；E44 达标才接入 teacher 清洗；误否决率 5% 守门。
+
+## 5. 本轮最大风险（一句话）
+
+**守护层与蒸馏层共享同一个阿喀琉斯之踵——"安全/teacher 判据"本身失准：若 L0/L1 误否决率过高，守护会把好动作筛掉使成功率不升反降，若 MuJoCo 代理失真则 teacher 被伪标签污染——必须以 E44（代理保真）+ E45（误否决率与成功率增益）先证伪再接入，未达标即回退遥测模式。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 34 轮产物 · 创新点清单 v11：三灵感落地 —— 四足先验 × 步骤分最大化 × LoRA 专家银行
+# 第 36 轮产物 · 创新点清单 v13：进度守护 × 决策摊销 × MuJoCo 仲裁（四层架构版）
 
-> 承接 v10（第 33 轮，现实校准版）。本轮**新增 3 项（IP-27/28/29）、合并 1 项（IP-8→IP-28）、其余保留**，并从"三灵感"各深化一条。
+> 承接 v12（第 35 轮）。本轮**新增 3 项（IP-33/34/35）**，清单组织方式升级为**四层架构**（「创新点提炼」的战略含义：12+ IP 平铺 → 感知融合 / 监督验证 / 决策守护 / 摊销部署，逐层带退役判据）；上轮 A16 沿用、A15 仍登录墙；新增 A17（官方 URDF/MJCF 核实）、A18（E44 代理保真）、A19（veto 率遥测上线）。
 
 ## 0. 结论
 
-- **旗舰仍为 IP-21 UNIBOT-RFM**（单模型双系统 VLA 覆盖 32 任务），但本轮把它的 **System-2 升级为"LoRA 能力专家银行"（IP-29）**，把 **训练/运行时监督升级为"进度-子步骤"（IP-28）**。
-- **新增**：**IP-29 LoRA-EXPERT-BANK（P0）**、**IP-28 PROGRESS-CRITIC（P0）**、**IP-27 QUAD-PRIOR（P2，仅表征先验，明确不做运动控制）**。
-- **合并**：`IP-8 STEP-EFF` 的"少步/早停/平滑"并入 IP-28（运行期步骤分口）+ IP-25（时延口），登记为合并项。
-- **诚实裁剪**：事实 D 证明**定基座**，"四足/运动"路线在官方赛道**零需求**；IP-27 的基座控制分量降级为"遥测 + 边界裁剪"，不投算力。
-- **路线无关原则（继承）**：任何新想法**不得依赖官方未暴露的通道**（力/触觉/社会/运动学底盘指令）；"假设能读到/能控到 X"一律视为未成立。
+- 旗舰 **IP-21 UNIBOT-RFM 不变**；v12 双通道互校监督（IP-28v2×IP-30）不变。本轮给**决策守护层**加 IP-33 安全守护，给**摊销部署层**加 IP-34 蒸馏，给**监督验证层**加 IP-35 离线物理仲裁（与 CTC/VLM 构成三裁判）。
+- **摊销原则（规则 38）**：运行期预算 = 1 次前向 + 毫秒级 L0 守护；beam 重打分/在线判别/MuJoCo 检查全部离线化；在线组件必须带退役判据，防止复杂度蠕变。
+- 路线无关原则 + 通道诚实继承：动态避障以能力进入（事实 K，README 全文 grep 无避障类通道）；MuJoCo 条件启用（A17 未核实，模板仓库无资产文件）。
+- 行动项状态：A16 ✅（沿用）；A15 ❌（登录墙）；**A17/A18/A19 新增**。
 
-## 1. 事实卡（联网核实，检索日期 2026-11-08）
+## 1. 事实卡（新增 F40–F43，检索口径 2026-11-08）
 
-- **F24（官方接口 / github unitreerobotics/unibot_submission，README 复核）**：obs 键 = 4 相机（`cam_left/right_high` 480×640×3 u8、`cam_left/right_wrist`）+ `left/right_arm[7]` + `left/right_ee_pose_gripper_base[6]` + `left/right_gripper[1]` + `lower_body[15]` + `observation.language`(str)。动作：`control_space` 二选一（`joint`→`action.left/right_arm[7]`；`ee`→`action.*_ee_pose_gripper_base[6]`）+ 共享 `action.left/right_gripper[1]` + `action.pivot[7]`；`action_chunk_size=T_a` 前导时间轴；`obs_delta_indices`（offset≤0、严格递增、缺帧首帧补齐）决定"发哪些键 + 时序堆叠"；`image_resize` 决定分辨率；`token` 双向校验；N 机器人→端口 `8765..8765+N-1`，须并发 + 逐端口状态隔离；**§6：逐步记录时延、时延波动、动作统计规律为可信度指标**。
-- **F25（数据集结构）**：LeRobot `v3.0`，`robot_type=unitree_g1`，30 fps，480×640 AV1；HangCup = 1043 episodes / 194564 帧（~13.7s 均值）。
-- **F26（32 任务清单，HF collection 直取，恰 32）**：HangCup、ArrangePlates、ArrangeTestTubes、ZipUp、ColorArrangement、Unlock、DisconnectEthernet、ConveyorSorting、FruitCollection、FoldTowel、OrganizeBookshelf、FruitSorting、SpellRobot、OrganizePencilCase、OrganizeStationery、StackBowls、StoreCups、OrganizeTools、PackDoll、PackBag、PackPhone、StoreEarphones、StorePaddle、PaperCupStacking、PickOutBatteries、ToolboxStorage、PlugCharger、SyringeWaterTransfer、PlugInEthernet、PlacePhotoFrame、RemovePinnedNote、PourOutMedicine。总量口径 32000 episodes / 169 h（challenges.html）。
-- **F30（★动作 schema，HF meta/info.json 直取）**：`action.pivot[7]=[vx,vy,angle_z,pivot_3,pivot_4,pivot_5,height]`；`action.base_command[4]=[vx,vy,angle_z,height]`；`lower_body[15]`=left_leg(6)+right_leg(6)+waist(3)；obs/act 均含 `ee_pose_gripper_base` 与 `ee_pose_gripper_torso`；`waist_*_joint[3]=[yaw,roll,pitch]`；`gripper_controls[4]=[L_trig,L_sqz,R_trig,R_sqz]`。
-- **F31（★定基座：跨任务 pivot stats，直取 5 任务）**：`vx,vy,angle_z,pivot_3,pivot_5≈0`，`pivot_4≈0.15` 恒定，`height≈0.735–0.740`（std 0.003–0.016）。**桌面任务实质定基座**；运动/步态无需求。
-- **F32（夹爪分布）**：量程 0–4.5；左右手强度差异显著（非对称双臂角色）。
-- **F33（repo/HF 结构）**：`unibot_submission` = README×2 + example/*(4) + policy/*(3)，**无评分文档**；`G1_Dex1_*` **非 gated**。
-- **F34（榜单/规则，未核实）**：官网为 7KB 静态占位页，无榜单 API；feishu 参赛手册返回 `code:5 Login Required`。"榜首<30%""5 类泛化"为**用户口径/待验假设**。
-- **F35（文献，arXiv API 实时检索 2026-11-08）**：见 §6。
+- **F40（无避障通道 + 键名全表，README 全文 grep 与逐节复核）**：obs/action 目录无 obstacle/collision/safety/depth/lidar/audio 字样。obs 键名官方口径：`observation.images.cam_{left,right}_{high,wrist}`（前轮"head_stereo"口径 = left_high×right_high 高位相机对，命名统一，IP-31 立体基线假设不变）、`observation.state.{left,right}_arm[7]`（**n_a=7 一手确认**）、`{left,right}_ee_pose_gripper_base[6]`、`{left,right}_gripper[1]`、`lower_body[15]`、`observation.language`（episode 级 str）；动作 joint/ee 双模式互斥 + 共享键（双夹爪、`action.pivot[7]`）；`action_chunk_size=T_a≥1`（参考实现示例 8）；§6 可信度指标（逐步时延+波动+动作统计规律，榜旁展示）与 N 端口（8765 起连续）复核不变。
+- **F41（双臂任务清单，F37 衍生）**：≥10 项双臂共享工作空间任务（ZipUp、PackBag、SyringeWaterTransfer、FoldTowel、StoreEarphones、ToolboxStorage、PackDoll、OrganizePencilCase、StorePaddle、ConveyorSorting）——"另一臂 = 移动障碍"的物理基础；加上"已放置物体 = 单调增长的障碍集"，构成守护约束的两类主要对象。
+- **F42（MuJoCo 资产现状，Menagerie README 实时检索）**：Menagerie 提供 `unitree_g1`(29 DoF)、`unitree_h1`(19)、`unitree_z1`(6 轴臂)、`aloha`(16，双臂) 等模型并带 A+/A/B/C 保真度分级（多数模型"现实但未系统辨识"级）；**submission 模板仓库 §5 文件清单（example/、policy/、requirements.txt）无任何 URDF/MJCF/mesh ⇒ 官方 UniBot 模型公开性未核实（A17 开放）**；32 任务物体无官方 mesh ⇒ 原语代理（cuboid/cylinder/sphere 按任务物体清单生成）。
+- **F43（文献 R79–R87，arXiv API 逐条确认 + 经典）**：R79 CBF 综述 1903.11199（Ames et al.）；R80 DAgger 1011.0686（Ross/Gordon/Bagnell，非平稳 O(T·ε) 界）；R81 蒸馏 1503.02531（Hinton，ASR 声学模型蒸馏先例）；R82 Policy Distillation 1511.06295（Rusu）；R83 Safe Learning in Robotics 综述 2108.06266（Brunke et al.，安全滤波分类学）；R84 SafeDiffuser 2306.00148（CBF 嵌入扩散去噪）；R85 RoboDual 2410.08001（generalist System-2 + 20M specialist，控制频率 ×3.8，5% 数据保持性能）；R86 TinyVLA 2409.12514（紧凑 VLA + 扩散解码器）；R87 MA-SafeDiffuser 2611.05524（2026-11-03，AAMAS 2026，联合安全集 = 逐体 ∧ 成对 barrier 交集）；VO/ORCA（Fiorini&Shiller 1998；van den Berg 2011，非 arXiv）；MuJoCo 引擎（Todorov 2012 IROS，非 arXiv）。
+- **F44（复核不变）**：F24/F25/F26/F30（`arms`+`ee_pose` 配对存在 ⇒ FK 可回归）/F31（定基座）/F32（夹爪 0–4.5 非对称）/F33/F36–F39。
 
-**行动项**：A14 全 32 任务 `pivot`/`base_command`/夹爪分布扫描（确认定基座普适性 + 非对称角色）；A15 获取**步骤分/ rubric 定义**（登录墙，IP-28 前置，最高优先）；A16 取 `meta/tasks.parquet` 得 32 条语言指令（指令泛化前置）；A9/A11/A13 沿用（相机映射 / 节拍与 pivot 语义 / 本地回放闭环）。
+## 2. 创新点清单 v13（四层架构；「创新点提炼」战略产物）
 
-## 2. 创新点清单 v11 一览
+| 层 | 编号 | 名称 | 一句话 | 优先级 | 状态 |
+|---|---|---|---|---|---|
+| **L1 感知融合** | IP-22 | TRI-FUSE | 多视图×本体×语言 token 级融合 + 立体伪深度 | P0 | 继承 |
+| | IP-31 | STEREO-LOCATE | 双目伪深度 + 抓取弱标签 SE(3) 定位（守护层 P_k 的感知源） | P0 | 继承 |
+| | IP-26 | GENERALIZE-SUITE | 五轴增广 + 语言轴(IP-32)；本轮挂"物理增广轴"子项（条件 A17+E44） | P1 | 继承 |
+| **L2 监督验证** | IP-28v2 | CTC-PROGRESS | CTC 软对齐 + 指令先验互校 + 流式解码 + beam 重打分 | P0 | 继承 |
+| | IP-30 | VLM-VERIFIER | 子步判别头（**新增第五用途：teacher 标签质检**） | P0 | 继承 |
+| | IP-32 | LANG-ROBUST | 官方 5 变体 + 槽位 + 字符噪声 | P1 | 继承 |
+| | **IP-35** | **MUJOCO-PROXY** | 原语代理场景离线仲裁器：只否决 gross failure，不打分 | **P1（条件启用）** | **新增** |
+| **L3 决策守护** | IP-23 | TASK-DAG | 子目标 z_t=(k,c,ŝ_c^goal,τ) | P1 | 继承 |
+| | IP-29 | LoRA-EXPERT-BANK | K 专家 + 低频路由（**新增"动态专家"= ConveyorSorting 拦截**） | P0 | 继承 |
+| | **IP-33** | **GUARD-CHUNK** | 进度守护安全层：L0 在线运动学 + L1 离线物理 | **P0** | **新增** |
+| | IP-24 | FAILURE-MONITOR | 失败预警 + 恢复 LoRA + 降级（守护降级的最终兜底） | P1 | 继承 |
+| **L4 摊销部署** | **IP-34** | **AMORTIZE-DISTILL** | DAgger 式决策蒸馏：beam/判别/L1 摊销进单遍前向 | **P0** | **新增** |
+| | IP-25 | LATENCY-SLO | 时延 SLO + QAT + N 端口 + 平滑（蒸馏收益方） | P0 | 继承 |
+| | IP-21 | UNIBOT-RFM | 单模型双系统旗舰 | P0 | 旗舰（继承） |
+| | IP-2/3/4/9/10 | 运营套件 | 对齐/本地评测/提交/并发/算力阶梯 | P0/P1 | 继承 |
+| 挂起 | IP-27 | QUAD-PRIOR | 跨形态先验（数据仍未确认可得） | P2 | 挂起（继承） |
 
-| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
-|---|---|---|---|---|---|---|---|---|
-| IP-21 | **UNIBOT-RFM** | 单模型双系统 VLA 覆盖 32 任务（System-2 规划 + System-1 少步流匹配动作头） | **P0** | A9,A13 | 机器人基础模型 | 算力(重,一次性) | 主成功率 | 旗舰（继承） |
-| **IP-29** | **LoRA-EXPERT-BANK** | 共享 VLM 上挂 K 个能力 LoRA 专家 + 语言/首帧路由器 + 恢复 LoRA | **P0** | IP-21 | **LoRA** | 算力(中,推理省) | 全域成功率 + 省显存 | **新增** |
-| **IP-28** | **PROGRESS-CRITIC** | 自监督进度/子步骤估计：稠密监督 + 卡住重试 + 部分分最大化 | **P0** | A15,IP-3 | **步骤分** | 数据(标注轻) | 步骤分 + 长程成功率 | **新增** |
-| IP-22 | TRI-FUSE | 多视图×本体×语言 token 级融合 + 立体伪深度 + world-model 辅助 | P0 | IP-21 | 技术融合 | 算力(中) | 未见物/位置泛化 | 继承 |
-| IP-23 | TASK-DAG | 得分点驱动子目标分段 + 分层策略 | P1 | IP-28,IP-21 | 任务分解 | 数据(轻) | 步骤分 + 长程 | 继承 |
-| IP-24 | FAILURE-MONITOR | 可观测状态失败预警 + 触发恢复（含恢复 LoRA） | P1 | IP-21,IP-29 | 泛化监控×安全 | 算力(轻) | 鲁棒性/可信度 | 继承 |
-| IP-25 | LATENCY-SLO | 推理时延 SLO + 少步动作头 + QAT + N 端口并发 + 动作平滑 | P0 | IP-4,A11 | 接口工程 | 算力(部署机) | 掉请求→0、可信度 | 继承 |
-| IP-26 | GENERALIZE-SUITE | 位置/干扰/背景/未见物/人为干扰五轴增广与评测 | P1 | IP-2,IP-3 | 泛化能力 | 数据(近零) | 全场景 | 继承 |
-| **IP-27** | **QUAD-PRIOR** | 跨形态(body-agnostic)表征/世界模型先验（**不做运动控制**） | P2 | IP-22 | **四足机器人** | 算力(低) | 未见物泛化 | **新增(部分)** |
-| IP-2 | SCORE-ALIGN v5 | 对齐 32 任务得分点与步骤分（喂给 IP-28） | P0 | 无 | 评测指标 | 数据(近零) | 步骤分 | 继承 |
-| IP-3 | LOCAL-EVAL | `run_server/run_client` 本地闭环 + 回放复现 | P0 | IP-2,A13 | 评测基准 | 算力(1 GPU) | 迭代速度=生命线 | 继承 |
-| IP-4 | SUBMISSION-OPS v3 | 多端口（Approach1/2）+ 单元状态隔离 + 版本回滚 | P0 | 无 | 接口工程 | 算力(部署机) | 掉请求→0 | 继承 |
-| IP-8 | STEP-EFF | 少步/早停/平滑 | — | — | 步骤分 | — | — | **合并入 IP-28/IP-25** |
-| IP-9 | SWARM-DECODE | 集成/自洽投票 + 蒸馏到单模型 | P1 | IP-2 | 泛化能力 | 算力(一次性) | 全场景 +2~5pt | 继承 |
-| IP-10 | COST-LADDER | 三账户记账（训练/服务/工程） | P0(纪律) | 无 | 成本控制 | 全账户 | 防负 ROI | 继承 |
-| IP-1 | SLAM-MAP | 桌面任务无 SLAM | — | — | SLAM | — | — | 退役 |
-| IP-11/13/16/17/18/19/20 | 社交/力觉/触觉/对话 | 接口不可达 | — | — | — | — | — | 退役（原因见 v10） |
+四层之间的主轴即规则 38：**L2 的重验证器 → L4 的 teacher → 蒸馏 → L3 运行期只剩轻守护**。
 
 ## 3. 重点展开
 
-### 3.1 IP-29 LoRA-EXPERT-BANK（灵感：LoRA）
+### 3.1 IP-33 GUARD-CHUNK（完整算法设计）
 
-**动机**：赛道要求"单模型完成全部 32 任务"，但技能高度异构（倒水/插拔/折叠可变形/堆叠/分拣/装包）。全参微调既贵又易灾难性遗忘；**参数高效专家化**是合规的折中。
+**符号表**：
+
+| 符号 | 含义 | 取值/来源 |
+|---|---|---|
+| q_t=(q^L,q^R) | 双臂构型 | ∈R^{14}，n_a=7（F40） |
+| A=(a_1..a_{T_a}) | 候选动作块 | T_a≈8（参考实现示例，可调） |
+| x_τ=FK_θ(q_τ) | 运动学链采样点集 | θ 由 (arms, ee_pose) 配对回归 |
+| s_i={c_i,r_i} | 连杆 i 球包络 | 演示统计标定（99% 无碰分位） |
+| O_t | 时变障碍集 | L(另一臂) ∪ P_k(已放置物体) ∪ C_t(传送带) |
+| d_min | 碰撞裕量 | 演示最小间距 99% 分位 |
+| ζ | 进度回退容差 | E45 扫描定 |
+| p̂^done_{k'} | IP-30 已完成子步达成置信 | 运行期只查最近两步 |
+| r | veto 后重采样上限 | 默认 2 |
+| o*(k) | 当前子步主物体 | **豁免对象**（合理接触放行） |
+| ε_M | MuJoCo 代理失配上界 | E44 估计 |
+
+**算法步骤**：
+
+离线（一次性）：
+1. **FK 回归标定**：min_θ Σ_t‖FK_θ(q_t)−x^ee_t‖²，一手 `(arms[7], ee_pose_gripper_base[6])` 配对 ~10⁴ 帧；报告残差分布，若残差 >5mm（疑似坐标系/标定系不一致）⇒ 降级"ee 直读 + 关节限幅"模式。
+2. **球包络标定**：连杆采样点拟合球链；半径取"99% 演示构型球链互不相交"的最大值（保守包络；细长连杆用多球串联）。
+3. **P_k 构建规则**：已放置物体位形 = IP-31 定位 ŝ_c + 示范终点分布先验；几何 = 任务物体原语表（F37 物体清单 → cuboid/cylinder/sphere）；**o*(k) 豁免**：仅当前子步主物体。
+4. **d_min/ζ 标定**：演示分位 + E45 扫描工作点。
+
+运行期（每动作块，IP-25 预算内）：
+1. L0 检查 A：FK 推进 T_a 步 → 跨臂球对 + 球-P_k(AABB 预筛) 距离 + p̂^done 回退检查（只查最近两步）。
+2. 通过 → 执行；违反 → 重采样 ≤r 次；仍违 → 保守降级（回退上一子目标锚点 / ee 减速模式）并触发 IP-24 评估。
+3. veto/降级事件全量遥测（A19），供守门条款与退役判据。
+
+**复杂度分析**：L0 = O(T_a·(n_L·n_R + n_L·|P_k|))，n_L=n_R≈12 球、|P_k|≤6×2 原语 → ~450 对 × T_a=8 ≈ 3.6×10³ 距离求值 ≈ 10⁴ 量级浮点，**<1ms（实测为准）**；AABB 预筛后更少；显存 0（解析计算）。L1 离线 rollout 每块 10–50ms（CPU），10⁴ 块 = 分钟–小时级，一次性。
+
+**正确性论证**：
+- **P9（守护不损害成功率的条件）**：假设 (i) 专家演示满足 G 的比例 ≥1−η（成功演示几乎不碰倒成果、几乎不自碰——**可直接用数据验证，E45 前置**）；(ii) System-1 候选分布在安全集上有支撑（重采样 r 次命中安全域概率 ≥1−(1−p_safe)^r）。则守护-重采样把"因违反 G 而失败"的概率从 p_viol 压缩至 ≤(1−p_safe)^r·p_viol + δ_veto（δ_veto = 判据漏检/误判项，由守门条款控制）。
+- **P10（进度守护 = 部分分下界保护）**：结合 v12-P3：若每步完成即入账且守护保证 p̂^done 单调不降（回退 ≤ζ），则最终步骤分 ≥ Σ已完成步分数 − ζ·S；守护把"部分分清零"这一最坏尾部事件的概率压到 veto 漏检率水平。
+- **P11（误否决可控）**：d_min 取演示 99% 分位 ⇒ 真实演示动作被 veto 概率 ≤1%（E45 演示重放实测）；veto 率 >10% 且成功率无增益 ⇒ 自动回退遥测模式（守门条款，规则 39）。
+
+**已知风险**：球包络过保守（细长连杆/抓握姿态）→ 误否决；P_k 几何原语化 → 已放置物体碰撞检查粗糙；o*(k) 豁免依赖物体 id 跟踪（依赖 IP-31），跟踪失败即全保守（宁可误拦不可漏拦）；升级路线（P2，条件启用）：SafeDiffuser 式屏障约束去噪（R84/R87）——把 G 嵌入流匹配反向过程，成本高于 veto 方案，仅当 veto 率压不下来时启用。
+
+### 3.2 IP-34 AMORTIZE-DISTILL（完整算法设计）
+
+**动机**：v12 运行期最贵组件（beam N≤4 + 判别）只在卡住时触发，且触发时是时延尖峰 × 决策压力叠加的脆弱时刻；上轮解法"超 SLO 则 N=1"= 放弃能力。R85 证明双系统摊销可行（20M specialist，×3.8 控制频率）；R80 证明长程任务必须交互式蒸馏（O(T²)→O(T)）。
 
 **设计**：
-- 共享冻结 VLM backbone；挂 **K 个能力型 LoRA**（建议 K≈6：`pour`、`insert/plug`、`deformable-fold`、`stack`、`sort/organize`、`pack/container`），可自动聚类确定。
-- **路由器** `g(language, first-frame CLS) → w∈Δ^{K}`：低频决策（每 episode 一次，必要时每 `K_plan` 步复核）；支持 top-1 或加权 soft-merge（`Σ w_k ΔW_k`）。
-- **恢复 LoRA** `ΔW_rec`：由 IP-24 触发时叠加，训练自"语义干预"式纠错数据（对标 OopsieRecover 2611.08462）。
-- **合并/任务算术**：对未见任务，尝试 `ΔW_a ⊕ ΔW_b` 组合以增强 OOV 泛化；路由熵高（不确定）时**回退纯基座**。
-- **与多端口协同**：Approach 2 下共享基座 + 逐端口 LoRA/状态 → 省 N 份显存。
+- **teacher** π_T：beam_N(o)（N=4）采样 → Δp 前瞻（IP-28v2）+ V_ψ 判别分（IP-30）重打分 → argmax → L1 物理否决（IP-35，启用后，违则取次优）→ a^T。
+- **student** π_S：同 backbone（**语言分支保留**，grounding 需在线语言）+ 单遍流匹配动作头；E46 达标后不保留在线 beam/判别/路由。
+- **三源数据**：D_expert（IP-30 清洗后 demo）；D_agg（**回放 + 扰动注入**近似 student 状态分布：初始位姿/物体排布/指令变体扰动，teacher 在扰动状态上标注——诚实登记：这是对标准 DAgger 的偏离，部署期交互不可得；MuJoCo 代理内闭环仅作补充）；D_screen（teacher 输出经 MuJoCo 否决过滤，剔除"beam 与判别合谋"的伪好动作）。
+- **损失**：L = L_flow(a^T,a) + β·L_prog(p̂^T,p̂) + γ·L_guard(A_T)（软守护项，可微惩罚版）+ λ4·router_lb（若保留路由）。
+- **训练算力**：teacher 标注 ≈ +100ms/块（beam×4 ~+30ms + 判别 1–2ms + L1 10–50ms），D_agg 10⁴ 块 × 2 轮 = CPU 小时级，一次性；GPU 侧 = 常规 BC 量级 ×2 轮。
+- **运行期收益与退役判据**：E46 达标（student 分任务族成功率 ≥ teacher×95% 且 p99 ≤ SLO 预算）⇒ beam/判别转纯离线组件，运行期 = 单遍 + L0；不达标 ⇒ 保留 v12 条件触发模式（继承不推倒）。
+- **IP-24 保留为覆盖层**：student 异常（进度停滞 + 判别分骤降遥测）时回退 teacher 式重规划（低频、条件触发）——蒸馏不删除恢复能力。
 
-**与现有方案差异**：v10 只有"单 LoRA 微调 VLM"；本项把"模型容量"问题转为"**路由 + 专家组合**"问题，并显式引入恢复专家。
+**正确性论证**：
+- **P12（悔值界）**：DAgger 式聚合下 student 非平稳悔值 O(T·(ε_T+ε_S))（R80）；ε_T 由 teacher 全链合成错误率定义（E46 直接测）。关键假设 = D_agg 状态覆盖接近部署分布——用扰动注入多样性保证；**覆盖不足处 student 仍是 BC 短板**（诚实登记为失败模式）。
+- **P13（三裁判质检闭环）**：CTC（过/欠分割）、VLM（视觉歧义/遮挡）、MuJoCo（物理后果）三者错误模式互不相关（扩展 v12-P5）；D_screen 剔除前两者合谋的伪标签。
 
-**可行性/资源**：训练一次性（LoRA 参数量小，~2–4 GPU·周内）；推理每步仅激活 ≤2 个 LoRA。数据用现成 32 任务库。风险：路由错误→跨任务干扰。
+**风险**：student 继承 teacher 系统性偏差并被 D_agg 放大——缓解：D_expert:D_agg 混合比 ≥1:1 + E46 分任务分析；System-2 语义纠错能力退化——保留 z_t 输入接口不删。
 
-**落地步骤**：① 技能聚类定 K；② 训练基座 + 全专家 LoRA（多任务）；③ 训练路由器（load-balance + descent-aligned routing 2610.00493）；④ 恢复 LoRA；⑤ 消融 E36。
+### 3.3 IP-35 MUJOCO-PROXY（完整算法设计，条件启用）
 
-```python
-class LoRABank(nn.Module):
-    def __init__(self, backbone, K, rank):
-        self.base = freeze(backbone)
-        self.experts = nn.ModuleList([LoRA(rank) for _ in range(K)])
-        self.recovery = LoRA(rank)
-        self.router = Router(in_dim=backbone.cls_dim + lang_dim, K=K)
-    def forward(self, x, lang, fail_flag=False):
-        w = softmax(self.router(cls(x), lang))          # 低频
-        if w.max() < TAU:  return self.base(x)          # 不确定→纯基座
-        dW = sum(w[k]*self.experts[k].delta() for k in topk(w))
-        if fail_flag: dW = dW + LAM_REC * self.recovery.delta()
-        return self.base(x, lora_delta=dW)
-```
+**设计**：
+- **场景构建**：机器人 = A17 若得官方模型则用之；否则 Menagerie 近似（unitree_g1/z1 臂形或 aloha 双臂拓扑）+ FK 回归残差校准（F42）；物体 = 原语表 + 质量/摩擦默认值 + 域随机化（保真度预期按 Menagerie A/B 级管理）。
+- **四用途**：① **teacher 标签否决**（IP-34 D_screen）；② **IP-33 L1**：d_min 标定的第二意见与边界样本复核；③ **插入容差分析**：PlugCharger/PlugInEthernet 参数化 peg-hole，扫间隙-摩擦-初始偏移 → 成功容差曲面 → 反哺 IP-31 接近段校正目标带；④ **IP-26 物理增广轴**（条件 A17+E44）：演示动作块在随机化物理参数下重渲染——**只增观感不改动作标签**（避免物理失真污染动作监督）。
+- **gross failure 判据（保守，只裁拓扑级事件）**：掉落 = 持物期物体 z 下降 >5cm 且夹爪开度 >0；穿透 = 几何相交 >2mm；自碰 = 双臂球链相交；滑移 = 持物期相对位移 >1cm。精细事件（插没插进、卡没卡牢）**明确不在裁决范围**（诚实边界）。
+- **复杂度**：每块 10–50ms（CPU 单线程）；32 任务 ×10³ 块级 = CPU 天级，一次性可并行；运行期**不加载 MuJoCo**（SLO）。
+- **合规**：全部离线/训练期使用；不接触官方评测通道（规则 39：L2 不可模拟）。
 
-### 3.2 IP-28 PROGRESS-CRITIC（灵感：步骤分）
+**正确性论证**：
+- **P14（弱验证器充分性）**：掉落/穿透/自碰只依赖"接触发生与否"这类粗拓扑事件（R87 的成对 barrier 集同理），对质量/摩擦等参数不敏感——原语代理的召回可以很高；精细接触事件不裁决，避免代理保真天花板。
+- **P15（保守性条件）**：阈值 ×(1+ε_M) 膨胀 + E44 工作点校准；**误否决率 >5% ⇒ 停用 L1**（守门）。
 
-**动机**：排名=成功率+**步骤分**。若步骤分是"按 rubric 子步骤的部分分"，则**部分完成也值钱**；且稠密进度信号能治长程任务（OrganizeBookshelf、PackBag、FoldTowel）。
+**风险**：A17 失败 + FK 残差大 ⇒ 只剩纯运动学层（IP-33 L0 独立可用，本 IP 退化为遥测）；接触动力学失真使"掉落"误报（缓解：只看拓扑事件 + E44 校准 + ε_M 膨胀）。
 
-**设计（rubric 无关，自监督）**：
-- 由示范生成弱标签 `p̂_t∈[0,1]` 与步索引：夹爪开合事件（`gripper` 0↔4.5 跳变）+ 腕部运动基元变点（速度/曲率）+ 物体位移/光流变点 → change-point 对齐 → 单调化。
-- 训练 **进度头** `p_t`、**步头**、**卡住头**（`Δp` 窗口内 < ε）。
-- 三处使用：(a) 训练期稠密损失 `L_prog` 与 `z_t`(IP-23) 进度条件化；(b) 运行期卡住 → 重试/重规划；(c) **部分分最大化降级**：IP-24 预测任务不可挽回时，切换到"完成当前 rubric 步"的保守策略（而非直接放弃）。
-- **省步**：进度门控早停；对示范按"步数/成功率"重加权，偏好干净快例（吸收 IP-8）。
-
-**与现有方案差异**：v10 的 IP-23 依赖"得分点 rubric 文本"（不可得）；本项**不依赖 rubric 文本**，用示范结构自监督，可离线证伪，并用同一信号同时服务**训练、重试、降级**。
-
-**可行性/资源**：数据侧近零额外标注；一个轻量头。风险：自监督分段噪声；降级策略可能过早放弃。缓解：E37 用"截断 episode 的部分分"验证；阈值保守。
-
-```python
-def train_progress(demos):
-    for ep in demos:
-        p_hat = monotonic_pseudo_progress(ep)         # change-point 融合
-        p_t   = progress_head(ep.feats)
-        loss_prog = mse(p_t, p_hat) + mse(diff(p_t), clipped(diff(p_hat)))
-    return progress_head
-def act(obs, state):
-    p  = progress_head(feat(obs))
-    if stuck(p, state.window):  state.mode = "retry_or_replan"
-    if failure_monitor(obs) > TAU_FAIL:               # IP-24
-        state.mode = "partial_credit" if p < P_DONE else "recover"
-    return policy(obs, mode=state.mode)
-```
-
-### 3.3 IP-27 QUAD-PRIOR（灵感：四足机器人，诚实部分保留）
-
-**现实校准**：平台是双足 G1，且 F31 证明**定基座**——运动/步态/落脚控制**零需求**。因此本项**不做**任何底盘/步态控制器，只保留两处合法落点：
-1. **跨形态表征/世界模型先验**：用 body-agnostic 表征（对标 Cross-Embodiment Motion Planning 2610.41330；AIRoA-0 跨形态 2611.03815）与四足机群成熟的 sim-to-real/域随机化配方，预训练视觉/本体编码器，目标是**未见物/背景泛化**（实质是 IP-22/IP-26 的补强）。
-2. **低维命令式基座抽象 → `pivot` 微稳定器（P2，仅边界裁剪）**：按 F31 直接冻结 `pivot` 常值，仅允许 `height`/`angle_z` 在观测区间内微调（`clip`），并作遥测。
-
-**差异**：明确**反向**于直觉——四足之所以有用不在"腿"，而在"**跨形态表征 + 域随机化**"这套**方法论**。
-
-**风险**：跨形态数据/权重的可得性与许可未确认 → 若不可得，本项可**整条关闭**，无负收益（降级机制）。
-
-### 3.4 与 IP-21 的整合（v11 架构）
+### 3.4 v13 四层架构（增量标注）
 
 ```
-输入: 4×RGB ─┐
-     本体(arms/ee/grip/lower_body) ┤→ TRI-FUSE (IP-22, 可选 + QUAD-PRIOR 预训练)
-     语言指令 ────────────────────┘
-              │
-   System-2 = VLM backbone + LoRA-EXPERT-BANK (IP-29) → 子目标 z_t (IP-23)
-              │                         ▲
-              │                  PROGRESS-CRITIC (IP-28): p_t, 步头, 卡住头
-              ▼
-   System-1 = 少步流匹配动作头（joint/ee 双表示）→ 动作块 T_a×(双臂+夹爪)
-              │        + pivot 冻结头（IP-27，仅微调 height/angle_z，clip）
-              ▼
-   FAILURE-MONITOR (IP-24) → 触发 恢复 LoRA / 重试 / 部分分最大化降级
-              │
-   LATENCY-SLO (IP-25): 少步 + QAT + 平滑/限幅 + N 端口并发
+L1 感知融合  语言(5变体,IP-32) + 4×RGB(cam_high×2=立体对 + 腕×2; IP-31 伪深度/弱定位) + 本体(arms[7]×2/ee[6]×2/grip×2/lower_body[15])
+                 → TRI-FUSE(IP-22) → 共享 VLM backbone
+L2 监督验证  IP-28v2 CTC 软对齐流式进度 ┐
+             IP-30 VLM 判别(第五用途: teacher 质检) ├─ 三裁判互校(训练期)
+             IP-35 MuJoCo 离线仲裁(掉落/穿透/自碰/滑移) ┘
+L3 决策守护  IP-29 LoRA 银行(低频路由 + 动态专家=ConveyorSorting) → IP-23 z_t=(k,c,ŝ_c^goal,τ)
+             → System-1 流匹配(joint/ee 双表示) → **IP-33 L0 守护(veto→重采样≤2→降级)**
+             → IP-24 失败监测(兜底)
+L4 摊销部署  IP-34 DAgger 蒸馏: teacher(beam N=4+判别+L1) ──训练期──→ student 单遍
+             运行期 = 1 次前向 + L0(<1ms) → IP-25 SLO(时延+平滑+N 端口 8765..)
 ```
 
 ### 3.5 训练/服务伪代码（增量）
 
 ```python
-def build_v11():
-    base = load_pretrained_vlm()
-    fuse = TriFuseEncoder(...)                       # IP-22
-    bank = LoRABank(base, K=6, rank=LORA_R)          # IP-29
-    system2 = SubgoalPlanner(bank)                   # IP-23
-    system1 = FlowActionExpert(steps=4, chunk=T_a, dual=("joint","ee"))
-    prog = ProgressHead()                            # IP-28
-    pivot_head = FrozenPivotHead(mean=task_pivot)    # IP-27 (clip only)
-    for batch in D:                                  # D 已按 A9 统一 schema
-        f = fuse(batch.images, batch.proprio, batch.lang)
-        z = system2(f, batch.lang)                   # 路由器低频选专家
-        a = system1.sample_train(f, batch.proprio, z, batch.action)
-        loss = flow_loss(a, batch.action) \
-             + LAM_PROG * prog_loss(prog(f), batch.pseudo_progress) \
-             + LAM_CONS * consistency(system1.joint, system1.ee) \
-             + LAM_ROUT * router_lb(bank)                       # 负载均衡
-        update(bank.experts, bank.router, fuse, system2, system1, prog, loss)
-    bank.recovery = train_recovery_loras(bank, semantic_interventions(D))
-    return fuse, bank, system2, system1, prog, pivot_head
+def build_guard(demos):                          # 离线一次性（IP-33）
+    fk  = fit_fk(demos.arms, demos.ee_pose)      # 回归标定; 报告残差(>5mm 降级)
+    sph = calibrate_spheres(demos, fk, q=0.99)   # 99% 无碰最大球包络
+    obst = obstacle_rules(demos, loc_prior)      # P_k 原语表 + IP-31 先验
+    dmin = percentile(demos.min_pair_dist, 0.99)
+    return Guard(fk, sph, obst, dmin, zeta=ZETA) # o*(k) 豁免规则内置
+
+def mujoco_verdict(A, scene):                    # IP-35, 仅离线
+    return gross_failure(rollout(scene, A))      # {掉落,穿透,自碰,滑移}
+
+def teacher_label(obs, state, guard, M):         # IP-34 teacher
+    f = fuse(obs)
+    cands = [s1.sample(f, obs.proprio, z) for _ in range(N_BEAM)]      # N=4
+    A = argmax(cands, key=lambda A: dp_lookahead(prog, f, A)           # IP-28v2
+                                 + ver.score(f, z, A))                 # IP-30
+    if M and mujoco_verdict(A, M): A = next_best(cands)                # 物理否决→次优
+    if guard.l0(A, state) is VIOLATION: A = conservative_fallback(state)
+    return A
+
+def distill(demos, rounds=2):                    # IP-34（回放+扰动近似 DAgger）
+    D = clean(demos, ver, M)                     # IP-30 + IP-35 双清洗
+    for r in range(rounds):
+        roll = replay_perturb(student, demos, inject=("pose","layout","lang"))
+        D = mix(D, [(o, teacher_label(o, s, guard, M)) for (o, s) in roll],
+                ratio=1.0)                       # D_expert : D_agg ≥ 1:1
+        student.update(D, loss=flow + BETA*prog + GAMMA*guard_soft)
+    return student
+
+def act(obs, state):                             # 运行期（E46 达标后）
+    A = s1.sample(fuse(obs), obs.proprio, z(obs.lang, state.k))        # 单遍
+    if guard.l0(A, state) is VIOLATION:
+        A = resample_or_fallback(state, r=2)     # L0 <1ms（IP-33）
+    p = stream_progress(prog, fuse(obs), state.W)                      # IP-28v2 继承
+    if failure_monitor(obs) > TAU_FAIL and p < P_DONE:
+        state.mode = "partial_credit"            # IP-24 × IP-28 遗产
+    return A
 ```
 
-## 4. 实验设计（新增 E36–E39）
+### 3.6 实验设计（新增 E44–E47）
 
 | 实验 | 设置 | 指标 | 门槛/预期 |
 |---|---|---|---|
-| E36 LoRA 专家银行 | 单 LoRA vs K 专家；top-1 vs top-k；有无恢复 LoRA | 32 任务成功率、路由准确、显存 | 专家银行 ≥ 单 LoRA；显存下降 |
-| E37 进度-步骤分 | 截断 episode 的"部分分"；卡住检测 AUROC | 部分分、卡住 AUROC、长程成功率 | AUROC ≥ 0.85；部分分↑ |
-| E38 跨形态表征 | 有无 body-agnostic 预训练的未见物成功率 | OOD 未见物成功率 | OOD↑（若数据不可得则关闭） |
-| E39 pivot 消融 | 冻结常数 vs 预测微调 vs 完全放开 | 成功率、pivot 离群、可信度 | 冻结≈预测；完全放开有风险（验证 F31） |
-| E30–E35 | 沿用（数据统一/闭环/泛化/时延/失败预警/消融） | — | — |
+| E44 代理保真度 | 200 人工标注动作块（含故意注入坏块）vs L1 veto | gross failure 召回率 / 误否决率 / ε_M | 召回 ≥90% 且误否决 ≤5% 才启用 L1 |
+| E45 守护消融 | 双臂任务族 ±L0；演示重放 veto 率；注入"碰倒/自碰"块拦截率；P9 假设 (i) 实测 | 成功率、成果破坏率、误否决率、时延 | 成果破坏率 ↓≥50% 且演示重放 veto ≤1% 且时延 +<1ms；违则退火 d_min→遥测 |
+| E46 蒸馏 | student vs teacher 分任务族成功率；p99 时延；DAgger 轮数消融 | 成功率比、p99、ε_T | student ≥ teacher×95% 且 p99 ≤ SLO ⇒ beam/判别退役 |
+| E47 传送带 | ConveyorSorting ± 速度外推/拦截提前量（动态专家） | 成功率、抓取时机误差 | +5pt 或并入专家常态 |
+| E36–E43 | 沿用 v11/v12（银行/部分分/跨形态/对齐 F1/判别/立体/语言鲁棒） | — | — |
 
-**降级机制**：A15 rubric 不可得 → IP-28 仅用自监督 + 保守阈值；LoRA 路由不稳 → 退化为单全域 LoRA；跨形态数据不可得 → 关闭 IP-27；进度头不过 → 仅遥测不介入降级；pivot 放开有风险 → 回冻结常值。
+**降级机制**：FK 残差大 → ee 直读+关节限幅；球包络误否决高 → 半径退火 → 遥测模式；MuJoCo 误否决 >5% → 停 L1 只留 L0；E46 不达标 → 保留 v12 条件触发 beam；A17 失败 → IP-35 冻结不投算力；D_agg 覆盖不足 → 提高扰动多样性或砍掉第二轮。
 
-## 5. 风险登记簿（新增/更新）
+## 4. 风险登记簿（新增/更新）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| **步骤分口径未核实（A15）→ IP-28 目标错配** | **高** | A15 拿手册；IP-28 设计为 rubric 无关 + 保守阈值；E37 离线证伪 |
-| **LoRA 路由错误 → 跨任务干扰** | 中高 | 软合并 + 路由熵高回退基座 + load-balance + E36 |
-| 灵感错配：误投"运动控制"（F31 已否定） | 中高 | IP-27 明确不做运动控制；只保留表征先验；E39 验证 |
-| 自监督进度标签噪声 | 中 | 多线索变点融合 + 单调化 + E37 |
-| 定基座假设不普适（个别任务需动基座） | 中 | A14 全 32 任务扫描；pivot 头保留小范围微调 |
-| 跨形态数据/许可不明 | 中低 | IP-27 可整体关闭，无负收益 |
-| 恢复 LoRA 引入异常动作（伤可信度） | 中低 | 动作包络约束 + 只增不减 + 平滑（IP-25） |
-| （沿用 v10 高/中风险）相机映射错位、时延异常、算力、多端口隔离等 | 高/中 | 见 v10 §6 |
+| **L0/L1 判据失准 → 误否决反噬成功率（守护变"成功率杀手"）** | **高** | P9 假设显式化并 E45 前置实测 + 演示重放 veto 校准 + 1%/5%/10% 三级守门 + 遥测回退 |
+| MuJoCo 代理失真 → teacher 标签污染（IP-34×35 耦合） | 高 | P14 只裁拓扑事件 + E44 校准 + D_expert:D_agg ≥1:1 + 停用开关 |
+| 蒸馏 student 继承 teacher 偏差 / D_agg 覆盖不足（偏离标准 DAgger） | 中高 | 混合比控制 + 分任务分析 + IP-24 覆盖层 + E46 退役判据 |
+| FK 回归残差超预期（坐标系/标定系不一致） | 中 | 残差报告 + ee 直读降级 + A17 攻坚 |
+| 球包络保守（细连杆/抓握姿态）→ 误否决 | 中 | 分位反推 + E45 扫描 + 半径退火 |
+| o*(k) 豁免的物体 id 跟踪错误（依赖 IP-31） | 中 | 跟踪失败即全保守（宁误拦不漏拦） |
+| （继承 v12）步骤分口径背离、判别假阳性、beam 时延、立体弱标签噪声 | — | 见 v12 §5 |
+| （继承 v10/v11）相机映射、时延异常、多端口隔离、路由干扰 | — | 见 v10 §6 / v11 §5 |
 
-## 6. 来源清单（引用口径：2026-11-08）
+## 5. 来源清单（引用口径：2026-11-08）
 
-**官方/数据（一手）**
-- S1 挑战赛官网 `https://unibot.unitree.com`（首页/challenges/leaderboard，2026-11-08 抓取）——静态占位页，榜单未上线。
-- S2 提交模板 `https://github.com/unitreerobotics/unibot_submission`（README.md、README.zh.md、example/*、policy/*、requirements.txt，2026-11-08 抓取）——接口契约、控制空间、多端口、可信度指标（§6）。
-- S3 数据集 collection `https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset`（32 仓，2026-11-08 直取）；单任务仓 `unitreerobotics/G1_Dex1_HangCup` 等 `meta/info.json` + `meta/stats.json`（含 `pivot`/`base_command`/夹爪分布）。仓 `gated:false`。
-- S4 参赛手册（feishu `...Uz7OdFBcDoqP1dxgH62cHW1CnMh`）——**Login Required，未获取**。
+**官方/数据（一手）**：S1–S5 同 v12；**S6（★新增）= 本轮联网检索**：arXiv API（R79–R87 逐条确认）、GitHub raw README（F40 键名/接口/§6 全文复核）、MuJoCo Menagerie README（F42 模型清单与保真度分级）。
 
-**文献（arXiv API 实时检索，2026-11-08；标题+编号）**
-- R52 Failure Prediction and Classification in VLA via Calibrated Latent Probing, arXiv:2611.08425。
-- R53 OopsieRecover: Learning Transferable VLA Corrections from Semantic Interventions, arXiv:2611.08462。
-- R54 Cross-Embodiment Motion Planning by Coupling Body-Agnostic World Model with Differentiable Ego-Dynamics, arXiv:2610.41330。
-- R55 AIRoA-0: Long-Horizon, Precise, Cross-Embodiment Manipulation from Handheld Data, arXiv:2611.03815。
-- R56 Score the Update, Not the Token: Descent-Aligned Routing for Combinatorial LoRA Experts, arXiv:2610.00493。
-- R57 Uncertainty Is Not Enough: Value-of-Information Routing for Mixtures of LoRA Experts, arXiv:2608.02528。
-- R58 Two-Stage Mixture-of-LoRA for Multi-Task Medical Vision-Language Learning, arXiv:2609.14350。
-- R59 Macaron-V1: Towards Open Continual Learning with Self-Improvement and Mixture-of-LoRA, arXiv:2608.09819。
-- R60 HAF-VLA: Hierarchical Action Flow Framework for Humanoid Vision-Language-Action Control, arXiv:2610.26584。
-- R61 HITCH: Teaching a Vision-Language Model to Operate a Humanoid through a Whole-Body Harness, arXiv:2611.08039。
-- R62 MAST-VLA: Skill-Conditioned Adaptation with Trajectory-Affordance Priors for Multi-Skill Robots, arXiv:2610.32312。
-- R63 La-JEPA: Compact Robot Policies with Latent World Modeling, arXiv:2611.08156。
-- R64 From Teleoperation to Long-Horizon Dexterity: Evaluating Visuomotor Skills and Offline Proxies, arXiv:2610.40828。
-- （R41–R51 沿用 v10：GR00T N1 2503.14734、GR00T N1.7 2609.18108、G0.5 2608.11739、Concertina 2611.07513、DSWAM 2607.04927、Beyond Flat Policies 2608.05999、HAF 2608.16837、CoEvolve 2610.23288、OpenVLA 失败探针 2606.29699、推理时延/量化 2611.06710 & 2611.05093、EyeRobot 2.0 2610.03710。）
+**文献（本轮新增，编号全部实时确认；标题级引用）**：
+- R79 Ames et al., Control Barrier Functions: Theory and Applications, 1903.11199
+- R80 Ross, Gordon, Bagnell, A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning (DAgger), 1011.0686
+- R81 Hinton, Vinyals, Dean, Distilling the Knowledge in a Neural Network, 1503.02531
+- R82 Rusu et al., Policy Distillation, 1511.06295
+- R83 Brunke et al., Safe Learning in Robotics: From Learning-Based Control to Safe Reinforcement Learning, 2108.06266
+- R84 Xiao, Wang, Gan, Rus, SafeDiffuser: Safe Planning with Diffusion Probabilistic Models, 2306.00148
+- R85 Bu et al., RoboDual: Towards Synergistic, Generalized, and Efficient Dual-System for Robotic Manipulation, 2410.08001
+- R86 Wen et al., TinyVLA: Towards Fast, Data-Efficient Vision-Language-Action Models, 2409.12514
+- R87 MA-SafeDiffuser: Safe Multi-Agent Planning with Diffusion Probabilistic Models, 2611.05524（AAMAS 2026）
+- 经典（非 arXiv）：Fiorini & Shiller 1998（Velocity Obstacles）；van den Berg et al. 2011（ORCA）；Todorov, Erez, Tassa 2012（MuJoCo）
+- （R41–R78 沿用 v10–v12）
 
-**诚实记录**：S1 榜单与 S4 手册均不可得；"榜首<30%""5 类泛化""步骤分=rubric 部分分"为**待验假设**；R52–R64 仅为 arXiv API 检索所得标题/编号，未逐篇读全文。
+**诚实记录**：A15 仍登录墙；A17 未核实（模板仓库无资产文件，官方模型公开性未知）；R79–R87 仅标题/摘要级；P9 假设 (i)（专家演示满足守护约束比例）未实测；"误否决 5% / 召回 90%"为工作点假设，E44 前无数据支撑；DAgger 用回放+扰动近似、部署期交互不可得（与标准 DAgger 的偏离如实登记）；传送带带速回归未验证；官方评测是否使用仿真不可知。
 
-## 7. 清单迭代规则（继承 + 第 34 轮增补）
+## 6. 清单迭代规则（继承 + 第 36 轮新增）
 
-- 继承规则 27（通道诚实）、28（映射验证纪律）、29（时延-可信度 SLO）、30（失败预警 fail-safe）。
-- **31（新增）：灵感-现实校验**——任何由灵感词引入的路线，先用**官方数据/接口**证伪其前提（如本轮用 F31 证伪"运动控制"需求）；前提不成立的分量**降级或退役**，并登记证据。
-- **32（新增）：单模型合规的专家化**——多任务只能以"共享基座 + 参数高效专家 + 低频路由"实现，禁止"每任务一份完整模型"绕过"通才赛道"规则。
-- **33（新增）：步骤分双解释登记**——涉及"步骤分"的设计须同时登记 A（rubric 部分分）与 B（每步交互质量）两种解释，并在 A15 前按更保守者(P0)实现。
-- **34（新增）：稠密监督不依赖 rubric**——训练期进度/子步骤监督优先取自示范自监督结构；rubric 文本仅作可选增强，不得成为主链单点依赖。
+- 继承规则 27–37（通道诚实 / 映射验证 / SLO / fail-safe / 灵感-现实校验 / 单模型合规 / 步骤分双解释 / 稠密监督 / 方法论遗产登记 / 元数据重新照亮 / 语言口径分离）。
+- **38（新增）：摊销原则**——一切搜索/判别/物理验证默认离线化；运行期预算只给 1 次前向 + 毫秒级守护；在线组件必须带退役判据（达标即转离线），防止"层层加码"式复杂度蠕变。
+- **39（新增）：验证器分级**——L0 运动学（在线，毫秒级）/ L1 物理代理（离线，MuJoCo）/ L2 官方评测（唯一真值，不可模拟不可替代）；高层验证器只服务训练与内部决策，任何情况下不得替代 L2 口径；接入前必须过守门条款（误否决率门槛）。
 
-**本轮最大风险一句话**：事实 D 把"四足=运动控制"的直觉清零，最大的可执行风险转为 **IP-28 步骤分口径未核实**与 **IP-29 路由错误导致跨任务干扰**；二者必须先经 IP-3 本地闭环小规模消融证伪，再上真机。
+**本轮最大风险一句话**：守护与蒸馏共享同一薄弱前提——判据本身的准确性（L0/L1 误否决、MuJoCo 失真、teacher 合谋伪标签），任何一处失准都会让"安全层"变成"成功率杀手"；E44/E45 守门条款必须先跑，未达标即回退遥测，宁缺毋滥。
 
-**当前最值得押注**：把 UNIBOT-RFM 的 System-2 改为**语言路由的 LoRA 能力专家银行（IP-29）**，并以**自监督进度/子步骤估计（IP-28）**同时驱动稠密训练、卡住重试与"部分分最大化"降级；"四足"仅保留为跨形态表征先验（IP-27，P2）。
+**当前最值得押注**：IP-34 决策摊销（把 v12 最贵的 beam+判别从运行期债务变成一次性训练资产，R85 谱系直接背书）× IP-33 进度守护（以"成果不回退"为目标的窄避障，直连部分分差量，且 L0 完全不依赖 A17）——二者以规则 38 的摊销原则咬合：训练期做重活，部署期做减法。
 <!-- ARTIFACT:END -->
