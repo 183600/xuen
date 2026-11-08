@@ -531,13 +531,14 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    # 超时同样必须是有限的正数（秒）：负数/零会让测试套件或评审立刻超时，
-    # 无限与非有限值则无法作为截止时间；程序化构造 Config 绕过 load_config
-    # 时超大整数也不能让 math.isfinite 抛 OverflowError（与 agent.timeout 同口径）。
-    for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
-                        ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
+    # 超时必须是有限的正数（秒）：负数/0 会让测试套件或 AI 评审立刻超时，
+    # 非有限值（含程序化传入的超大整数，math.isfinite 会抛 OverflowError）
+    # 同样非法；口径与 agent.timeout 一致。
+    for name in ("verify_timeout", "judge_timeout"):
+        value = getattr(cfg.rounds, name)
         if not _is_finite_number(value) or value <= 0:
-            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
+            raise ValueError(f"rounds.{name} 必须为有限的正数（秒），"
+                             f"收到: {value!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
