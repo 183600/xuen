@@ -3,291 +3,446 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 1 轮（循环 B）· 力矩传感 × 视觉伺服 × LoRA：把「SFT 通才」改造成「感知—伺服—适配」三层闭环机
+# 第 32 轮 · 思维深化：SEG-TAC-SYNC-LITE —— 时延账本化证据融合、触觉定位清洗门与密集语义安全场
 
-> 新循环第 1 轮（灵感词：**力矩传感 / 视觉伺服 / LoRA**）。前一轮（灵感词 UniBot-V1 / 泛化能力 / 场景理解）的清单 IP-1…IP-10 作为底座**继承并修剪**，本轮不推倒重来：新增 1 项（IP-11 CONTACT-SENSE）、重构 1 项（IP-2 → SERVO-STACK）、降级 1 项（IP-3 → 观察项 O-1）、具体化 2 项（IP-6 → LoRA-ROUTE、IP-7 → LoRA-DPO）、修订 2 项（IP-1 延迟预算、IP-5 多模态检测）。全部新事实 2026-11-07 联网核实，来源见产物区 §9。
+## 直觉锚点与动机链条（承接第 31 轮）
 
-## 0. 本轮方法论：灵感词先过「事实核查闸」，再进「清单」
+- **先自审再外审**：本轮开工前复查第 31 轮自己的命题，发现两个**比外部风险更优先的逻辑漏洞**，必须先修再谈进取：
+  - **漏洞 A（命题 12/规则 22 的隐藏失效：任务接触饥饿）**：规则 22 将"一切接触转移"排除出适配集。但本系统的任务本体就是接触——机械臂抓取目标物后，名义动力学 M(q) 不含载荷，动量观测器必然对载荷响应（r_obs → τ_payload），于是"有载荷转移"被系统性判为接触并逐出适配集——而这恰是模型误差最大、最需要适配的数据。清洗门越保守，适配越饿；与第 31 轮已登记的"双门过严 → 永远空转"构成**双层饥饿**（数据层 + 门层）。命题 12 只论证了"接触不污染适配"，从未论证"排除接触不饿死适配"——单调不劣化的隐含前提是适配集非空。
+  - **漏洞 B（命题 11 的隐藏失效：报警链端到端延迟未记账）**：命题 11 的"检出 ≤2 步"是监控器内部时钟上的量。闭环反应链 = 观测器收敛（时间常数 1/λ_O）+ n_win_c 持续判据 + 总线传输 + 仲裁栈读 + fallback 解算 + 执行器力矩上升，五段累积延迟没有出现在任何命题中。检测窗口内机器人仍以 v_ee 前进，最终接触力由 v_ee·T_alarm 与制动距离共同决定；而 λ_O 是"快收敛 vs 低 FPR"的折中——第 31 轮把它一句"带宽设计"带过，实际上它是**由安全方程反解的未知数**，不是自由参数。多速率（1kHz 带外 / 0.5ms 仲裁 / 15.3ms 关键帧）、多总线（EtherCAT/CAN/共享内存）各段延迟从未被记账——这正是灵感词「通信延迟」命中的结构性盲区。
+- **弱点诊断 → 灵感映射**：本轮灵感词「通信延迟 / 触觉感知 / 语义分割」逐一命中并构成改进链：
+  - 「通信延迟」→ **DELAY-LEDGER（时延账本 + 延迟补偿融合）**：每条证据附 (t_cap, t_ready, ch) 时间戳元组；账本按通道维护 P50/P99 与溢出计数；消费端按通道延迟做 Smith 预测器式外推，不确定度随 Δt 增长；超龄证据按保守方向处理（距离取下界、报警保持、严禁"超龄就清零"）；报警链 T_alarm 五段分解 + **停止距离方程** v_ee,max·T_alarm + v_ee,max²/(2a_brake) ≤ δ_allow 与 FPR 约束**联立反解 λ_O 可行域**（可行域空 → TELEM_ONLY 降级，继承 fail-safe）；跨处理器时钟偏移 ε_clock 显式估计（PTP 类周期握手）并计入 Δt 上界（漏洞 B 修复）。
+  - 「触觉感知」→ **TAC-CLEAN（指尖触觉 + 期望接触白名单）**：指尖压敏阵列给出接触几何（位置/法向/切向），恰补关节力矩"有力无位置"的盲区；w_grasp = 规划意图 ∈ 抓取相 ∧ 触觉确认 F_n ≥ F_grasp_min ∧ 接触图 ⊆ 指尖预期区 → **期望接触入载荷监督集 D_fit.load**（Δf_θ 以载荷状态位 l_load 条件化），自由空间入 D_fit.free，非期望接触仍禁用（规则 22 修订为三分，漏洞 A 修复）；打滑判据 F_t/F_n vs μ̂_s 材质表 → 抓持力闭环（仲裁外），非期望持续接触 → tactile_alarm 进仲裁 OR（规则 21 扩展：三模态皆只增触发不做否决）。
+  - 「语义分割」→ **SEG-FIELD（密集语义安全场）**：轻量蒸馏分割（与检测共享 backbone、多任务头、半频前向 + 帧间掩码传播）→ 人形掩码 → 距离变换 → 工作空间 d_field，叠加在检测框 d_max 之上**只收紧不放松**（不替换 v8 安全地板，缺省回退检测框）；类别条件威胁级与**类别条件速度上界 v̂_h_max**（手 > 臂 > 躯干，ISO/TS 15066 级规范先验 [F20]）；掩码不确定性（边界熵 + 传播年龄）→ 膨胀裕量 → **保守距离下界 d̃_min = d_field(t_cap) − (v̂_h_max+σ_v,h)·Δt_seg − κ_d·σ_seg**（延迟补偿的密集版，与 DELAY-LEDGER 共用外推算子）；遮挡时掩码时序传播补视觉盲区（E24c 场景的视觉侧增强）。
+- **三者耦合**：分割给"人在哪、多快"（外推的运动先验），触觉给"碰到没、滑没滑"（接触级独立真值，且不需动力学模型——部分绕开第 31 轮最大风险"动量残差基线漂移"），延迟账本给"每条证据还剩多少可信期"（融合的时间诚实性）——安全论证从第 31 轮的"模态可靠"升级为"**模态可靠 × 时间可靠**"。第 31 轮"验证 + 吸收 + 审计 + 独立证据"四件套升级为五件套：+ **时间账本**。
+- **关键设计决断**：(1) 延迟补偿与新鲜度判定**全部带外化**——安全处理器算好 (force_alarm, tactile_alarm, d̃_min) 三标量，仲裁栈只读（+0.02ms），兑现第 31 轮"再增仲裁内环节必须带外化"的预言；(2) seg/触觉沿袭"只增触发不做否决"，字段缺省 → 逐位 v8，退化链 v9→v8→v7→v6→v5 完整；(3) ε_acc 裕量**分账**：自由空间泄漏 η_miss·E‖τ_ext‖²（继承）+ 载荷误判 ε_fp·E‖τ_payload‖²（新增）两笔独立预算；(4) 关键帧预算 15.3 → 16.1ms **诚实升预算**（第 31 轮"不变"声明就此退役，E17 重测确认）；(5) μ̂_s 材质表、T_stale、T_alarm^max、v̂_h_max 表全部加入禁 OTA 清单（规则 19+23+26 联合）。
 
-研究者真实流程是：灵感词触发直觉 → 立刻去查这个词在**本赛题的接口/数据约束**下是否成立 → 成立的进清单，不成立的改写为可成立的等价命题。本轮三个词各过了一次闸，且每一次核查都改写了清单：
+## 形式化定义的深化（继承第 31 轮全部符号）
 
-- **「力矩传感」→ 字面证伪、本质重构**。接口 obs 目录（unibot_submission README §2，逐键核实）只有 4×RGB + 双臂 7-DoF 位置 + EE pose + 夹爪开度 + lower_body[15] + language——**没有 effort、没有 torque**（F11）；数据集 parquet schema（HF datasets-server API，HangCup 全部 33 特征逐项核对）同样**无力矩字段**（F12）。G1 关节电机本身具备力矩估计（Unitree DDS 遥测惯例，背景知识未单独核实），但评测接口不透传——参赛者在接口内**拿不到任何力读数**。上轮 IP-2 中「数据集 effort 蒸馏力头」的设想随之作废。但「力矩传感」的本质诉求是**接触与外力的早期感知**，而接口里藏着两处免费代理信号：(a) 夹爪指令-观测差——Dex1 夹爪 5.5(开)→0.0(合)，action 与 obs 各有一通道，合拢指令下观测卡住=夹到了东西（F13）；(b) 关节指令-观测跟踪残差——我方返回的动作块是已知的，下次 obs 回来的实际状态与它的偏差=接触/被推的物理证据。灵感词于是重构为 **CONTACT-SENSE：把位置残差当力矩传感器**。
-- **「视觉伺服」→ 价值上调**。F8 模型卡本轮新暴露：`use_length=50`、单块 50 步、4090 上单块推理 0.35s（F14）——头部方案一次开环执行 50 步（30fps 下 ≈1.7s），对毫米级对准任务是结构性暴露；其 ArrangePlates 开环验证 MSE 0.229 / MAE 0.176 再次佐证 B1。接口侧 ee 空间与 joint 空间互斥可二选一、EE pose 观测齐备、G1 臂运动学公开——**解析视觉伺服（IBVS + J⁺）在接口内完全可实现，无需评测方任何配合**。裁决：剪掉上轮 IP-2 的「学习式 Δee 残差修正头」，换成解析伺服定律——**感知用学习（从数据自动伪标签蒸馏），控制用定律（零训练、跨任务同一套数学）**。
-- **「LoRA」→ 从微调技巧升格为架构杠杆**。F8 证明 LoRA(r64) 是唯一被验证能在单卡 4090 上做出 32 任务通才的路线；LoRA 的低秩结构另有两件免费的事：任务组 adapter 的**权重空间插值**（未见物品 = 语义最近任务组的 adapter 内插；机理同源线性模式连通性/model soups——推断，非核实事实）与 **RL 后训练的参数载体**（LoRA-DPO/GRPO 单卡可行）。同时模型卡暴露 canonical space 含 waist(4)+base(3)——**上轮 B3「头部置零全身通道」被部分证伪**，IP-3 PIVOT-GATE 差异化前提削弱，降级（§4）。
+### 8.1 时延账本符号（v9 新增）
+- 证据元组 e = (value, t_cap, t_ready, ch)；Δt_e = t_now − t_cap（含跨处理器时钟偏移上界 ε_clock，周期握手估计 [F23]）；账本 B_ch = {P50, P99, 溢出计数}；T_stale(ch) 新鲜度上界。
+- 外推算子 X：x̂(t_now) = x(t_cap) + v̂·Δt；σ̂²(t_now) = σ̂²(t_cap) + (σ_v·Δt)²；距离保守下界 d̃_min = d_field(t_cap) − (v̂_h_max + σ_v,h)·Δt_seg − κ_d·σ_seg。
+- 报警链：T_alarm = t_conv(λ_O, ‖τ_ext‖, τ_gate) + n_win_c/f_obs + t_bus + t_read + t_act ≤ T_alarm^max；停止距离方程 v_ee,max·T_alarm + v_ee,max²/(2a_brake) ≤ δ_allow(ISO/TS 15066 部位参数) [F20]；λ_O 可行域 = 延迟约束 ∩ {FPR ≤ α_c/h}，空 → TELEM_ONLY。
 
-## 1. 新事实卡（编号续接前轮 F1–F10；全部 2026-11-07 检索核实）
+### 8.2 触觉通道符号（v9 新增）
+- τ_tac ∈ R^k₊ 指尖阵列（k 通道，1kHz，总线接入不走感知链路）；C_tac 接触图；F_n/F_t 法向/切向合力；μ̂_s(材质) 标定表；slip ≡ sustained(F_t/max(F_n,ε) > 0.9·μ̂_s, n_win_s=2)（仲裁外，进抓持力闭环）。
+- w_grasp ∈ {0,1} 期望接触白名单 ≡ plan_state ∈ GraspPhase ∧ F_n ≥ F_grasp_min ∧ C_tac ⊆ 指尖预期区；错误率 (ε_fp, ε_fn)；tactile_alarm ≡ sustained(非期望接触, n_win_s=2)（只增触发）。
+- 适配集三分：D_fit.free（自由空间，清洗门继承）/ D_fit.load（期望接触，新增；Δf_θ 条件化 l_load，l_load 由夹爪状态在线观测、非 κ、不破不变性条款）/ D_pool.contact（非期望接触，禁用，继承）。
 
-- **F11 接口无任何力/力矩观测**：obs 目录全表 = 4×RGB(480×640) + left/right_arm[7] + left/right_ee_pose_gripper_base[6] + left/right_gripper[1] + lower_body[15] + language。无 effort/torque/frc 键。
-- **F12 数据集无力矩字段**：HangCup parquet 33 特征逐项核对（state.*：arm/gripper/lower_body/leg/ee_pose base+torso/state_torso/state_d435/waist/recomputed_ee_valid；action.*：arm/gripper/lower_body/pivot/gripper_controls/leg/base_command/ee_pose base+torso/action_torso/action_d435/waist）——无 effort。→ 「力矩白捡」在数据层同样失败，改走动力学残差路线。
-- **F13 夹爪是双通道闭环信号**：action.left/right_gripper（我方指令，shared 键）+ observation.state.left/right_gripper（实际开度）；Dex1 量程 5.5(开)→0.0(合)。指令-观测差 = 免费的接触/抓取确认/滑移检测器——零训练、零接口改动、完全合法。
-- **F14 头部方案画像修正与新暴露面**（模型卡逐条核实）：LoRA r64/α32 于 q/v/o_proj（65M 可训练），**已 merge 成单 safetensors**；canonical space = arms(14) + grippers(2) + **waist(4) + base(3)**，arm 为 state-relative delta；`use_length=50, chunk_ret=True`；4090 单块（50 步）推理 0.35s；ArrangePlates 开环验证 MSE 0.229 / MAE 0.176；模型卡中的参赛 wrapper 外链（github.com/ezhoureal/unibot_submission）**已 404 失效**（GitHub API 核实该账号无此仓库，仅存 lingbot-vla-v2，2026-08-02 推送）。
-- **F15 官方 32 任务清单全部核实**（collection 页面逐项抓取）：ArrangePlates / ArrangeTestTubes / ColorArrangement / ConveyorSorting / DisconnectEthernet / FoldTowel / FruitCollection / FruitSorting / HangCup / OrganizeBookshelf / OrganizePencilCase / OrganizeStationery / OrganizeTools / PackBag / PackDoll / PackPhone / PaperCupStacking / PickOutBatteries / PlacePhotoFrame / PlugCharger / PlugInEthernet / PourOutMedicine / RemovePinnedNote / SpellRobot / StackBowls / StoreCups / StoreEarphones / StorePaddle / SyringeWaterTransfer / ToolboxStorage / Unlock / ZipUp。其中接触丰富/毫米级对准类 **≥11/32 ≈ 34%**（PlugCharger、PlugInEthernet、DisconnectEthernet、ZipUp、Unlock、RemovePinnedNote、SyringeWaterTransfer、PickOutBatteries、StoreEarphones、ArrangeTestTubes、PourOutMedicine）——SERVO-STACK + CONTACT-SENSE 的射程覆盖三分之一赛题，而榜单按平均成功率排序、短板任务决定名次。
-- **F16 排行榜仍 "Coming Soon"**（leaderboard.html 2026-11-07）；「榜首成功率 <30%」仍为用户先验（F10 沿用：弱证据、高置信，榜单公开后复核）。
+### 8.3 分割场符号（v9 新增）
+- S_img ∈ Δ^C 像素类别后验（手/前臂/上臂/躯干/物/线缆/背景，C=7）；M_h = {P(human|p) ≥ 1−δ_seg}；σ_seg(p) = 边界熵 + 传播年龄项；M̃_h = dilate(M_h, κ_d·σ_seg)；d_field = 图像域距离变换 → 标定投影 → 工作空间最小人距。
+- v̂_h_max(c) 类别条件速度上界（规范级先验，E28 标定复核）；一致性门 seg_consistency(seg_lite, teacher) ≥ CONS_MIN，不过 → seg_lite=None（检测框外推退化）。
+- 触发不变性：γ_seg、κ_d、v̂_h_max、μ̂_s、T_stale、T_alarm^max 入禁 OTA 清单；触发条件仍不含 κ 与任何可 OTA 量（命题 1 扩展）。
 
-## 2. 瓶颈清单修订（v1 → v2）
+### 8.4 新增公理（规则 24–26）
+- 规则 24（三模态 fail-safe OR + 新鲜度语义）：force/tactile/seg 皆只增触发不做否决；跨处理器证据必附时间戳，超龄 → 保守方向（距离下界、报警 fail-stay 保持最近值、严禁"超龄就清零"）；账本 P99 超预算 → 告警 + 该通道降"无新增覆盖"模式。
+- 规则 25（期望接触白名单）：适配集转移必须三分（自由/期望接触/非期望接触）；期望接触需规划意图 + 触觉双确认；载荷污染能量 ε_fp·E‖τ_payload‖² 显式计入 ε_acc 分账；非期望接触禁用于适配不变。
+- 规则 26（延迟预算纪律）：T_alarm 五段分解与停止距离方程是设计约束——λ_O、n_win_c、v_ee,max、a_brake、T_alarm^max 任一改动必须重解方程并重测 E26；各通道 P99 入账本并随版本发布。
 
-| 瓶颈 | v1 判断 | v2 修订 | 依据 |
-|---|---|---|---|
-| B1 损失-成功鸿沟 | 成立 | **强化**：开环 MAE 0.176 再添证 | F14 |
-| B2 深度缺失 | 成立 | 不变（接口 RGB-only） | F11 |
-| B3 全身闲置 | 头部置零 pivot | **降级**：头部 canonical space 已含 waist4+base3，可能已用 | F14 |
-| B4 块内开环 | 成立 | **强化**：头部 50 步/块 ≈1.7s 开环窗口 | F14 |
-| B5 任务互扰 | 成立 | 不变，但解法落到 LoRA-ROUTE | F8 |
-| B6 步骤分无人优化 | 成立 | 不变 | F1 |
-| **B7 接触盲目（新）** | （v1 未单列） | 接口与数据均无力反馈，头部方案对接触状态无感知通道——抓取确认靠猜、插入推进靠开环蛮进 | F11–F13 |
+## 算法步骤精炼（离线在七步上加第 8 步；在线 v8 上加 0.66 读双标量）
 
-## 3. 本轮策略结构：三把新刀 + 原有地基
+- 离线（+0.35 GPU·天一次性）：第 8 步 SEG-TAC-SYNC 烧录——(a) 分割蒸馏（共享 backbone 多任务头，半频 + 掩码传播；一致性门）；(b) 触觉驱动与 μ̂_s 材质表标定（+Isaac 触觉仿真扩展）；(c) 延迟账本与时钟同步烧录（各通道 T_stale/P99 预算 + ε_clock 握手）；(d) λ_O 可行域求解（停止距离方程 × FPR 联立；空 → 预置 TELEM_ONLY 模式）；(e) 载荷增广适配分支烧录（Δf_θ 条件化 l_load；三分分类器）；(f) S_bench v2 → v3（分割/触觉/延迟三类对抗场景 30/60 替换，v6/v8 双锚点重跑，规则 20 升版本）。
+- 在线：安全处理器 1kHz 带外（动量观测器继承逐行不变 + 触觉处理 + d̃_min 外推 + 新鲜度审计，WCET <0.15ms 独立报告）→ 三标量；仲裁栈 v9 = v8 全部步骤 + 0.66 读 tactile_alarm 与 d̃_min（+0.02ms，单 cacheline 原子快照）。签名不变；字段缺省 → 逐位 v8 → v7 → v6 → v5。
 
-- **感知层 CONTACT-SENSE（IP-11，新）**：T1 免费信号（夹爪捏合差 + 跟踪残差，零训练）+ T2 学习式动力学残差模型（33k episodes 训练，<2ms）——给全栈装上「力觉」。消费方：IP-5 干扰检测、IP-10 卡死/重试触发、IP-1 进展特征、插入任务的力轮廓（推进-遇阻-横移微调-再推进）。
-- **伺服层 SERVO-STACK（IP-2 重构）**：深度蒸馏保留；学习式残差修正头被解析 IBVS 替换；感知=深度头+任务条件关键点头（全部离线自动伪标签，评测时只跑小头 ≤25ms）；**伺服相位跳过 VLA 前向，单步延迟从 ~350ms 降至 ~25ms——伺服不仅提成功率，还改善 F5 延迟稳定性**。切换由进展模型（IP-1）门控，接触信号（IP-11）裁决插入相位。
-- **适配层 LoRA-ROUTE（IP-6 具体化）+ LoRA-DPO（IP-7 具体化）**：任务组 adapter + 语言条件权重插值（reset 时一次混合，运行时零开销）；未见物品 = 语义最近组插值 + 基座保留系数；RL 后训练以 LoRA 为载体、以数据集自然失败/重试片段为离线偏好对。
-- **地基保留**：IP-8 SERVE-N（F4/F5）、IP-9 LOCAL-BENCH、IP-4 AUG-PANO 原样推进；IP-1 PROGRESS 增加接触特征，并修订 best-of-n 的延迟预算（v1 没算 n 次动作头采样 ≈ n×0.35s 的账——本轮自纠：只在导航/接近相位用、伺服相位禁用）。
+## 复杂度分析（相对第 31 轮增量）
 
-## 4. 修剪记录（执行「修剪优先」原则）
+- 仲裁 0.42 → 0.44ms（+0.02 两标量原子快照读）；P99 < 0.5ms 维持（规则 14 重测；裕量 0.08 → 0.06ms，**下一轮仲裁内环节冻结**，再增必须继续带外化或分频）；带外 0.1 → 0.15ms @1kHz（触觉 + 外推 + 新鲜度，独立 WCET 报告）。
+- 关键帧 15.3 → 16.1ms（多任务头半频分摊 +0.5、掩码传播 +0.1、时间戳打点 +0.2）——诚实升预算（E17 重测确认不破上游）。
+- 训练 1.9 → 2.25 GPU·天一次性（seg 蒸馏 0.2 + 触觉标定 0.05 + Isaac 扩展 0.1）；持续适配 0.06 → 0.07/次（三分分类 + 载荷分支）；回归 0.35 → 0.40/发布；工程 2.5–4 人周（触觉驱动/标定 1–2、账本/时钟 0.5–1、seg 管线 1）。LUT 14MB 不变；触觉/载荷缓冲磁盘资产（IP-10 记账）。
 
-1. **剪**：v1 IP-2 的学习式 Δee 末段残差修正头 → 换成解析 IBVS。理由：修正头要为 11 个接触任务各学一种修正行为（数据低频、梯度被 B5 淹没），解析定律零训练、跨任务同一套数学、对感知噪声的失败模式可解析（增益衰减而非发散）。
-2. **降级**：IP-3 PIVOT-GATE（P2 → 观察项 O-1）。理由：F14 显示头部 canonical space 已含 waist/base，差异化前提削弱；改为复现时检查 norm_stats 与 deploy 代码中 pivot 映射是否非零（F-O6），数据说话。
-3. **剪**：v1 IP-2 中「数据集 effort 蒸馏力头」步骤 → F12 证伪，替换为动力学残差模型（T2）。
-4. **修订**：IP-1 best-of-n 加相位门控与延迟预算（n 次采样 ≈ n×0.35s 只在非伺服相位使用）。
-5. **沿用**：v1 对「动态 chunk」的修剪（与 metadata 静态申报冲突）继续有效。
+## 正确性论证（命题 15–17 新增；命题 11/12 修订——诚实记录失效与修复）
 
-## 5. 本轮最大风险一句话
+- 命题 15（延迟补偿证据的保守性）：在假设 A-v（人体部位速度有界 v_h ≤ v̂_h_max(c)）与账本 Δt^P99 下，P(d̃_min ≤ d_true(t_now)) ≥ 1−δ_seg（单侧尾界）；推论：以 d̃_min 为约束的 fallback/裁剪不弱于 v8（只收紧不放松）。*失效模式*：v̂_h_max 低估（突挥）→ 假设破坏 → force/tactile alarm 兜底 + 速度硬上限；seg 缺省 → 检测框外推（仍保守、更粗）。E26b 注入验证越界率 ≤ δ_seg。
+- 命题 16（报警链延迟预算，修复命题 11 隐藏缺陷）：T_alarm 五段分解 ≤ T_alarm^max 与停止距离方程联立 → λ_O 可行域；**可行域非空 ↔ 命题 11 的检出能力在真实闭环中成立**（第 31 轮命题 11 只证监控器内部性质，修订重述并登记历史）；可行域空 → TELEM_ONLY（无负收益）。E26a 注入验证端到端分布。
+- 命题 17（白名单下适配不污染也不饥饿，修复命题 12 隐藏缺陷）：D_fit.load 污染能量 ≤ ε_fp·E‖τ_payload‖² 计入 ε_acc 分账；载荷转移覆盖率 ≥ (1−ε_fn)·任务接触占比 → 命题 12 从"接触不污染"强化为"接触分类后既不污染也不饿死"（第 31 轮原命题登记历史）。E27 对照 v8 全排除的载荷 G 曲线。
+- 命题 1–10/13/14 继承；命题 1 触发条件扩展为"不含 κ 与任何可 OTA 量（含 μ̂_s/T_stale/v̂_h_max/γ_seg）"；命题 2 WCET 组合更新 0.3 + 0.05 + 0.01 + 0.05 + 0.1(60%) + 0.01 + 0.02 < 0.5ms（带外 0.15ms @1kHz 单独报告）。
 
-伺服栈的三处依赖——腕部相机外参链（F-O1）、关键点伪标签质量、评测端视觉 OOD 下小头（深度/关键点）的稳健性——任何一处塌掉都会把「解析伺服」退化为「更贵的基线」；因此每层独立可关、以 E6/E7 离线验证为合并门槛，而 IBVS 对深度绝对误差的天然鲁棒（Z 估计只缩放收敛增益、不改图像误差下降方向）是整条路线最值得先验证的假设。
+## 风险登记簿（继承 + 新增）
+
+新增四项，本轮最大：**物理假设兜底的边界**——命题 15/16 同时依赖"人体速度上界已知"与"允许变形 δ_allow 已知"两个物理假设（取 ISO/TS 15066 规范值），突挥（>v̂_h_max）或刚性碰撞（δ_allow 极小）使延迟补偿保守性与停止距离方程**同时失效**，安全论证从"接触前预防"退化为"接触后报警"，且证据链越长（seg+触觉+账本）该边界越隐蔽。继承第 31 轮全部风险；其中"真机力矩信号质量"高→中高（指尖接触类事件改由触觉独立证据覆盖，不需动力学模型；臂部接触仍依赖动量观测器）。
+
+**本轮最大风险一句话**：命题 15/16 立足的物理假设（人速上界 v̂_h_max、允许变形 δ_allow）在突挥或刚性碰撞下同时失效——延迟补偿的保守性与停止距离方程一并瓦解，安全论证从"接触前预防"滑向"接触后报警"，而兜底（接触必有力信号）本身是物理假设而非证据，须 E26b 越界扫描 + ISO/TS 15066 参数适配（A8）先行确认，任一存疑则 seg 外推与延迟补偿同步降级为无外推保守模式。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 1 轮（循环 B）产物 · UniBot 创新点清单 v2：感知—伺服—适配三层闭环
+# 第 32 轮产物 · 创新点清单 v9：SEG-TAC-SYNC-LITE 完整算法设计（分割×触觉×延迟同步版）
 
 ## 0. 结论
 
-- **v2 = v1 继承 + 1 新增（IP-11）+ 1 重构（IP-2 → SERVO-STACK）+ 1 降级（IP-3 → 观察项 O-1）+ 2 具体化（IP-6 → LoRA-ROUTE、IP-7 → LoRA-DPO）+ 2 修订（IP-1 延迟预算、IP-5 多模态检测）**。
-- 默认 backbone 不变：LingBot-VLA 2.0 (6.3B) LoRA（F8/F14）；复现入口 `github.com/ezhoureal/lingbot-vla-v2`（模型卡里的 wrapper 外链已 404，需自建参赛包装）。
-- 优先级：**P0** = IP-8 SERVE-N、IP-9 LOCAL-BENCH、IP-4 AUG-PANO；**P1** = IP-2 SERVO-STACK、IP-11 CONTACT-SENSE、IP-5 CHUNK-RESCUE、IP-1 PROGRESS、IP-6 LoRA-ROUTE、IP-10 RESCUE-LIB；**P2** = IP-7 LoRA-DPO。
-- 成本不变式：LoRA 基线复现 1×RTX 4090（F8/F14 佐证）；策略内新增前向（深度+关键点+T2 残差模型）合计 ≤25ms/步；接口零改动；每项增强独立可关。
-- **最值得押注（一句话见 §8）**：IP-2 SERVO-STACK——用「解出来的图像雅可比」替换「学出来的动作均值」，以 IP-11 的免费接触信号为眼睛，攻 11/32 的接触对准任务。
+第 31 轮清单 v8（16 项）本轮完成「时间账本 + 接触几何 + 密集语义」迭代，产出 v9（17 项）：
 
-## 1. 清单 v2 总表
+- **IP-17 SEG-TAC-SYNC-LITE（P1，新增）**：DELAY-LEDGER 端到端时延账本 + 延迟补偿融合 + 报警链停止距离方程（通信延迟）+ TAC-CLEAN 指尖触觉期望接触白名单（触觉感知）+ SEG-FIELD 密集语义安全场（语义分割）；作为 IP-16 的时间层与几何层升级，**在线仲裁签名不变**（增量仅 +0.02ms 读三标量之二，延迟补偿全部带外化）。
+- **IP-13 SOCIAL-MOTION-LITE 微修订**：执行器 v8 → v9（0.66 读 tactile_alarm/d̃_min + hard clip 以保守下界收紧）；触发优先级表扩展；触觉/seg/账本字段缺省 → 逐位 v8。
+- **IP-14 CULTURA-SIM-LITE 微修订**：Isaac 扩展触觉传感器仿真 + 分割真值渲染 + 总线延迟抖动注入（社会层不动，E18c 资产保护不变）。
+- **IP-7 DISTURB-AUG 微修订**：渲染即标签 v9——物理引擎直接输出分割真值/触觉真值/时延元数据（零额外 GPU）。
+- **IP-2/IP-3 微修订**：S_bench v2 → v3（规则 20 升版本：30/60 场景替换为分割/触觉/延迟三类对抗；v6 与 v8 双锚点重跑保可比；触觉/账本指标进软通道）。
+- **IP-12 微修订**：维护窗口追加 μ̂_s 在线再标定、账本审计、λ_O 可行域复检。
+- **IP-16 FORCE-CONTINUAL-LITE 维持**：三机制全保留被继承；清洗门由"二分"升级为"三分"（规则 22 → 规则 25 修订留痕，命题 12 修订登记）。
+- **IP-11 微修订**：threat_ctx 可选携带 tactile_alarm/d_min_safe/ledger_status；π_lite 输入不扩（签名不变）。
+- **IP-4/IP-1/5/6/8/9/10/15 维持**（IP-10 记账更新；IP-15 全保留）。
+- 成本变化：训练账户 1.9 → 2.25 GPU·天一次性；持续适配 0.06 → 0.07 GPU·天/次；回归评测 0.35 → 0.40 GPU·天/发布；工程 2.5–4 人周；仲裁 P99 <0.5ms 维持（0.44ms，裕量 0.06ms，规则 14 重测）；**关键帧 15.3 → 16.1ms 诚实升预算**（E17 重测确认）。
 
-| 编号 | 名称 | v1→v2 变化 | 一句话 | 优先级 | 依赖 | 灵感词 | 资源 | 风险 |
+路线无关原则不变：触觉/seg/账本字段缺省 → v9 逐位 v8；seg 一致性不过 → 检测框外推；λ_O 可行域空 → 力觉 TELEM_ONLY；触觉标定不过 → 触觉 TELEM_ONLY（w_grasp 恒 0，全接触照 v8 排除）；S_bench v3 只增审计不加风险。冻结即回退 v8/v7/v6/v5 能力，无负收益。
+
+## 1. 事实卡（继承与核实状态）
+
+F1–F19 继承（2026-11-07 检索口径）。本轮新增：
+- **F20（规范级）**：ISO/TS 15066 协作机器人功率与限力规范——人体各部位允许接触力/压强与（准静态/瞬态）速度-停距参数，用作 δ_allow 与 v̂_h_max 的规范级来源。如实标注：规范值，非本系统实测；A8 负责法务/安全工程师适配确认。
+- **F21（文献级）**：触觉滑移检测方法体系——切向/法向力比与摩擦锥、incipient slip 判据、指尖阵列设计（代表性工作如 Howe 综述、Heyneman & Cutkosky；无 arXiv 编号，如实标注，本轮未做检索核实）。
+- **F22（文献级）**：实时/轻量语义分割与知识蒸馏、视频掩码传播（文献级引用，无编号核实，诚实标注）。
+- **F23（工程级）**：跨处理器时间戳与时钟同步实践（IEEE 1588 PTP 类；工程标准，无 arXiv，如实标注）。
+
+行动项更新：**A7 扩展为 A7'（力矩 + 触觉 + 时延三合一同步采集）**——一次采集多用途（力觉标定 / μ̂_s 材质表 / 账本 P99 基线），诚实标注多任务采集复杂度上升；**A8（新增）ISO/TS 15066 参数适配与确认**（δ_allow、v̂_h_max 取值经安全工程师签字，E26 前置）；A4/A6 最高优先不变；E12/E13/E17/E18/E20 系列门槛验证仍为上线前置条件。
+
+## 2. 创新点清单 v9 一览
+
+| 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
 |---|---|---|---|---|---|---|---|---|
-| IP-8 | SERVE-N | 保留 | N 端口共享后端+并发调度+量化+延迟稳定性预算 | **P0** | 无 | UniBot-V1 | 1×A100/2×4090 | 低 |
-| IP-9 | LOCAL-BENCH | 保留 | 步骤分代理+5 类泛化变换库+难度谱系 | **P0** | IP-1(弱) | UniBot-V1 | 1 GPU+人工抽检 | 中 |
-| IP-4 | AUG-PANO | 保留 | 视觉 OOD/语义 OOD/EE 重定向三类增强（同步作用于伺服小头训练集） | **P0** | 无 | 泛化能力 | ~0.5 GPU·天 | 中 |
-| **IP-2** | **SERVO-STACK** | **重构** | 蒸馏感知（深度+关键点）+ 解析 IBVS/J⁺ 末段伺服 + 相位切换 | **P1 主力** | IP-9, IP-1 | **视觉伺服** | ~1.5 GPU·天 | 中高 |
-| **IP-11** | **CONTACT-SENSE** | **新增** | 夹爪捏合差+跟踪残差（T1 免费信号）→ 动力学残差模型（T2）= 接口内的「力觉」 | **P1** | IP-9 | **力矩传感** | ~0.2 GPU·天 | 中 |
-| IP-5 | CHUNK-RESCUE | 修订 | T_a 帕累托申报 + 多模态偏差检测（视觉残差×跟踪残差×捏合差）+ 恢复编译进块 | P1 | IP-1, IP-11, IP-9 | UniBot-V1 | 近零 | 中 |
-| IP-1 | PROGRESS | 修订 | 进展模型 P_φ：+接触特征；best-of-n 加相位门控与延迟预算；兼任伺服切换门 | P1 | IP-9 | UniBot-V1 | ~0.3 GPU·天 | 中 |
-| **IP-6** | **LoRA-ROUTE** | **具体化** | K 个任务组 adapter + 语言条件权重插值（reset 时混合）；未见物品=语义插值 | P1 | IP-4 | **LoRA** | ~2 GPU·天 | 中 |
-| IP-10 | RESCUE-LIB | 修订 | 重试片段挖掘 + 卡住检测（P_φ 不涨 + T1 接触信号）+ 恢复库 | P1 | IP-1, IP-11 | 泛化能力 | 近零 | 低 |
-| **IP-7** | **LoRA-DPO** | **具体化** | LoRA 载体的离线偏好优化：数据集自然失败/重试片段为负例、专家段为正例 | P2 | IP-1, IP-9 | LoRA | 1–2 GPU·天 | 高 |
-| IP-3 | PIVOT-GATE | **降级→O-1** | 全身 pivot 差异化前提被 F14 削弱，转为复现时的检查项 | 观察项 | F-O6 | UniBot-V1 | 0 | 低 |
+| IP-1 | SLAM-MAP v2.1 | 四件套 + 维护窗口调度 | P0 | 无 | SLAM(26轮) | 算力(轻) | 三类 +5~15pt | 维持 |
+| IP-2 | SCORE-ALIGN v3 | +S_bench v3 软通道（触觉检出/账本 P99/三分拦截率） | P0 | 无 | 25/27/30/31/32轮 | 数据(近零) | 步骤分 + 仲裁质量 | 微修订 |
+| IP-3 | LOCAL-EVAL | +S_bench v3 烧录与回归（v6/v8 双锚点重跑） | P0 | IP-2 | 26/28/29/30/31/32轮 | 算力(1 GPU) | 迭代速度=生命线 | 微修订 |
+| IP-4 | SUBMISSION-OPS v2 | OTA 族谱任意祖先回滚（不变） | P1 | 无 | 25/27/31轮 | 算力(部署机) | 掉请求→0 | 维持 |
+| IP-5 | DUAL-HEAD | 单模型双解码头 | P2(冻结) | IP-1 | 25轮 | 算力 | 视合规 | 维持 |
+| IP-6 | UNSEEN-GRASP | 指针：并入 IP-1 腕-头闭环（+slip 闭环接入点） | P1 | IP-1 | 26轮 | 共享 | 未见物品 | 维持 |
+| IP-7 | DISTURB-AUG v4 | 渲染即标签 v9：+分割/触觉/时延真值通道 | P1 | 无 | 25/28/29/30/31/32轮 | 数据(近零) | 人为干扰场景 | 微修订 |
+| IP-8 | STEP-EFF | 步骤分效率工程（含 π_lite 推理记账） | P1 | A1 | 25/27/28轮 | 零额外 | 步骤分 | 维持 |
+| IP-9 | SWARM-DECODE | population/蒸馏+自洽投票；dev 选拔/hold 报告 | P1 | IP-2 | 26/28/30轮 | 算力(一次性) | 全场景 +2~5pt | 维持 |
+| IP-10 | COST-LADDER | 三账户记账（本轮 +0.35 训练 +0.01/适配 +0.05/发布 + 工程 2.5–4 人周） | P0(纪律) | 无 | 26/28/30/31/32轮 | 全账户 | 防负 ROI | 微修订 |
+| IP-11 | INTENT-GUARD v2 | 手势感知+意图预测+π_lite 仲裁（执行器换 v9，签名不变） | P1 | IP-1,IP-7,IP-13 | 手势×共享控制×运动×轻量×社会 | 算力(0.7+2.25 GPU·天) | 干扰场景 +5~10pt | 微修订 |
+| IP-12 | PREDICT-MAINT | 三级健康+维护窗口（+μ̂_s 再标定/账本审计/λ_O 复检） | P1 | IP-4 | 预测性维护 | 线上 <2ms/步 | 掉请求→0；感知 −30% | 微修订 |
+| IP-13 | SOCIAL-MOTION-LITE | 执行器 v9：+0.66 读 tactile_alarm/d̃_min + 带外三标量 | P1 | IP-11,IP-14,IP-15,IP-16,IP-17 | **运动×轻量×社会** | 算力(复用 IP-15/16/17 产物) | 同 v8 + 接触几何/时间可靠 | 微修订 |
+| IP-14 | CULTURA-SIM-LITE | SOC-SIM + 课程蒸馏 + 文化条件化（+Isaac 触觉/分割/延迟仿真） | P1 | IP-13 | 虚拟仿真×课程×文化×Isaac Sim | 算力(2.25 GPU·天，一次性) | 社会分↑、OOD 回退率↓ | 微修订 |
+| IP-15 | SERVO-ADAPT-LITE | VS-SHIELD + SAFE-ADAPT + FROZEN-BENCH（第 30 轮，全保留） | P1 | IP-13,IP-14 | 视觉伺服×迁移学习×评测指标 | 算力(已计) | 标定鲁棒、真机差距吸收、评测可信 | 维持 |
+| IP-16 | FORCE-CONTINUAL-LITE | 力觉带外监控+清洗门 + 双门防遗忘 + Isaac 物理桥（第 31 轮，全保留；清洗门升三分） | P1 | IP-12,IP-14,IP-15 | 力矩传感×持续学习×Isaac Sim | 算力(已计 + 三分分类增量) | 接触盲区安全、终身适配、物理先验 | 维持 |
+| IP-17 | SEG-TAC-SYNC-LITE | DELAY-LEDGER 时延账本+停止距离方程 + TAC-CLEAN 期望接触白名单 + SEG-FIELD 密集安全场 | P1 | IP-12,IP-14,IP-16 | **通信延迟×触觉感知×语义分割** | 算力(0.35 GPU·天一次性 + 0.07/适配 + 0.40/发布) | 时间可靠×接触几何×密集盲区 | **新增** |
 
-## 2. 重点展开 A：IP-11 CONTACT-SENSE——把位置残差当力矩传感器
+## 3. 重点展开：SEG-TAC-SYNC-LITE 完整算法设计（IP-17，接第 31 轮 IP-16 骨架）
 
-### 2.1 动机与差异
+### 3.1 符号定义（继承 + v9 新增）
 
-- 动机：F11/F12 证明接口与数据都拿不到力/力矩；F13 证明夹爪指令-观测双通道存在；B7 指出头部方案对接触状态完全盲目——抓取是否成功靠视觉复核甚至靠猜、插入是否受阻全靠开环蛮进。接触感知是 11/32 接触任务的公共瓶颈。
-- 与现有差异：F8 类方案只消费 obs 的当前值；本方案把「我方上一块返回的动作」也当作可观测的一部分（客户端自有缓冲），构造**指令-观测残差**这一评测接口内免费的物理信号。无需评测方配合、不新增 obs 键、零接口改动。
+继承第 31 轮全部符号（p/r_obs/F̂_ext/ε_free/gate(·)/τ_gate/n_win_c/b̂_noise/force_alarm/ε_forget/Δ_forget/D_replay/L_EWC/Θ_cum/lineage/h_γ/ε_fidelity 及第 30 轮全部符号）。
 
-### 2.2 信号分层
+| 符号 | 定义 | 精确性质 |
+|---|---|---|
+| e=(value,t_cap,t_ready,ch) | **证据时间戳元组** | 跨处理器必附；t_cap 采集时刻、t_ready 到达消费方时刻；Δt_e=t_now−t_cap |
+| ε_clock | **跨处理器时钟偏移上界** | PTP 类周期握手估计 [F23]；计入 Δt 上界（Δt̂=Δt+ε_clock，保守方向） |
+| B_ch={P50,P99,溢出} | **通道账本** | 在线滚动统计；P99 超预算 → 告警 + 通道降"无新增覆盖"；随版本发布 |
+| T_stale(ch) | **新鲜度上界** | 通道相关（seg 30ms / 检测 45ms / force 5ms / tactile 5ms）；超龄 → 保守方向处理 |
+| X(·) | **外推算子** | x̂(t_now)=x(t_cap)+v̂·Δt̂；σ̂²=σ̂²(t_cap)+(σ_v·Δt̂)²；Smith 预测器式 |
+| τ_tac∈R^k₊, C_tac | **指尖触觉阵列/接触图** | 1kHz 总线接入（不走感知链路）；接触位置/法向/切向分解 |
+| F_n, F_t | **法向/切向合力** | 摩擦锥判据输入；F_n≥F_grasp_min 为抓取确认之一 |
+| μ̂_s(材质) | **静摩擦系数标定表** | 材质查表 + 保守下界；IP-12 维护窗口在线再标定 |
+| slip | **打滑判据** | sustained(F_t/max(F_n,ε)>0.9·μ̂_s, n_win_s=2)；仲裁外，进抓持力闭环（IP-6 接入点） |
+| w_grasp∈{0,1} | **期望接触白名单** | ≡ plan_state∈GraspPhase ∧ F_n≥F_grasp_min ∧ C_tac⊆指尖预期区；错误率 (ε_fp,ε_fn) |
+| tactile_alarm∈{0,1} | **非期望接触触发标志** | sustained(非期望接触, n_win_s=2)；只增触发（规则 24）；fail-stay 超龄保持 |
+| D_fit.free / D_fit.load / D_pool.contact | **适配集三分** | 自由空间（清洗门继承）/期望接触·载荷（新增，Δf_θ 条件化 l_load）/非期望接触（禁用，继承） |
+| l_load∈{0,1} | **载荷状态位** | 夹爪状态+w_grasp 历史在线观测；非 κ、非可 OTA 量、不破不变性 |
+| S_img∈Δ^C | **像素类别后验** | C=7：手/前臂/上臂/躯干/物/线缆/背景；半频前向+掩码传播 |
+| σ_seg(p) | **掩码不确定度** | 边界熵 + 传播年龄项；M̃_h=dilate(M_h, κ_d·σ_seg) |
+| d_field | **密集人距场** | 图像域距离变换 → 标定投影 → 工作空间最小人距；叠加于检测框 d_max 之上只收紧 |
+| v̂_h_max(c) | **类别条件速度上界** | 手/臂/躯干分级（ISO/TS 15066 级规范先验 [F20]）；假设 A-v 的参数 |
+| d̃_min | **保守距离下界** | d_field(t_cap)−(v̂_h_max+σ_v,h)·Δt̂_seg−κ_d·σ_seg；P(d̃_min≤d_true)≥1−δ_seg |
+| T_alarm^max, δ_allow | **报警链延迟预算/允许变形** | 五段分解；δ_allow 取 ISO/TS 15066 部位参数 [F20]，A8 确认 |
+| γ_seg, κ_d | **分割场触发门/膨胀系数** | 禁 OTA 清单（规则 19+23+26 联合） |
 
-**T1a 夹爪捏合差（零训练，逐调用可得）**
-
-```python
-# Dex1: 5.5(开) -> 0.0(合)；cmd=我方上一块返回值，obs=本轮观测
-pinch[t] = max(0, close_amount(cmd_gripper) - obs_gripper)      # >0 即夹着东西
-width_hold = obs_gripper when cmd≈0                              # 稳态夹持宽度 ≈ 物体尺寸特征
-slide[t]   = d(width_hold)/dt > τ_s while cmd closed             # 宽度回增 = 滑脱前兆
-grasp_ok   = pinch>ε and wrist_img_change_correlates_with_ee_motion   # 夹住后提升，腕图应随动
-```
-
-**T1b 关节跟踪残差（零训练，需 F-O4 时序对齐校准）**
-
-```python
-# 我方在第 k 次调用返回了动作块 A_k=(a_0..a_{T_a-1})；第 k+1 次观测 s_{k+1}
-# 自由空间中 G1 位置控制跟踪紧密：预测 ŝ ≈ a_{T_a-1}（或一阶指数趋近模型）
-r_arm[t] = ||s_obs.arms − ŝ(A_k)||        # 接触/被推 → 残差尖峰（逐臂、逐关节可定位）
-r_base[t] = ||s_obs.lower_body − ŝ_lower||  # 躯干/下肢同理，覆盖「人为干扰推身体」
-# 鲁棒化：滚动基线 z-score + 滞回，避免对时序错位 δ（F-O4）敏感
-```
-
-**T2 动力学残差模型（33k episodes 离线训练，<2ms）**
-
-- 输入：(堆叠 proprio 历史，我方动作块 A_k，任务/语言嵌入)；输出：下一观测状态预测 ŝ_{t+T_a} 逐关节 + 三类头 {自由运动 / 物体接触 / 外部扰动}。
-- 弱标签自动挖掘：夹爪合拢窗口=抓取接触；插入类任务的末段=插入接触；其余=自由运动。演示数据以成功为主 → 失败检测按**一类分类**（偏离学习到的成功动力学即为异常），诚实标注此局限（产物区 §6 E6）。
-- 价值：T1 是阈值启发式，T2 把「多大残差算异常」变成数据驱动的逐任务校准，且残差向量带方向（哪个关节、哪个方向被顶住 → 横移微调的方向）。
-
-### 2.3 消费方（一份投入四处回收）
-
-1. **IP-5 干扰检测**：扰动触发条件 = max(视觉流残差, r_arm, r_base, 捏合异常) 越限 + 滞回；
-2. **IP-10 卡死/重试**：r 振荡小幅 + P_φ 不涨 = 卡住；插入类 r 持续横向分量 = 受阻 → 触发「退-横移-再进」恢复库；轴向残差骤降 = 滑入 → 恢复推进；
-3. **IP-1 进展特征**：P_φ 输入加 [pinch, r_stats, width_hold]——抓取确认与插入进度直接可微调；
-4. **插入力轮廓**（本 IP 独有产出）：PlugCharger/PlugInEthernet/ZipUp/Unlock 的「推进-遇阻-横移 wiggle-再推进」行为模板，由 r 的方向/幅值驱动——位置接口上对阻抗控制的最小近似。
-
-### 2.4 实验 E6（离线，先于一切真机投入）
-
-- 数据：32 任务 × 每任务 5 episodes 回放 + 本地 example_env 时序测量（F-O4）。
-- 指标：接触检测 AUC（以自动相位标签为准）；扰动检测 AUC（对 obs 关节状态注入脚本化瞬态偏移合成「被推」信号——诚实标注：这是对信号的仿真不是真机）；捏合宽度与 episode 结局的相关性。
-- 门槛：接触 AUC ≥0.85；r_arm 误报率（自由运动段）<5%；T1 全链路计算 <1ms。
-- 降级：T2 不过 → 只留 T1（仍全程免费）；F-O4 时序不可辨识 → r_arm 改用逐块聚合统计量。
-
-### 2.5 风险
-
-- 演示数据以成功 episode 为主 → 失败/扰动正例稀缺（一类分类的精度上限）；评测端扰动分布未知；
-- obs 与动作的时序对齐 δ 未知（F-O4）→ 鲁棒统计 + 本地 example_env 先校准；
-- 伺服/恢复行为误触发 → 滞回 + P_φ 门控双保险。
-
-## 3. 重点展开 B：IP-2 SERVO-STACK——感知用学习、控制用定律
-
-### 3.1 动机与差异
-
-- 动机：11/32 接触对准任务成败在毫米级；B1（复合误差）+ B2（RGB 无深度）+ F14（头部 50 步开环块 + MAE 0.176）三重证据。
-- 与现有差异：F8 类方案端到端学「观测→动作」，末段精度是均值回归的副产品；本方案把末段拆成「学习感知 + 解析控制」——关键点/深度用数据蒸馏的小头，控制律用图像雅可比，零训练、跨 11 个任务同一套数学。
-
-### 3.2 三层结构
-
-**S1 感知（全部离线伪标签，评测时只跑小头 ≤20ms）**
+### 3.2 离线算法：SEG-TAC-SYNC 烧录（+0.35 GPU·天一次性）
 
 ```python
-# 深度（沿用 v1）：head_stereo 已校正 → RAFT-Stereo+SGBM 融合伪标签 → 蒸馏 DepthAnything-V2-S
-#   腕部视角自举依赖外参链（F-O1），失败则降级 head-only（可关）
-# 关键点（新增）：任务条件 2D 关键点头（~5-10M 参数，~3-5ms）
-#   伪标签全自动：持握物功能点 = EE pose + 夹爪几何常量偏移 → 投影到腕图（需 F-O1 标定）
-#   目标点（孔位/卡槽）= 数据集内多视角三角化（离线全状态可得）→ 投影
-#   评测端文本提示的开放词检测（GroundingDINO 类）只做离线教师，蒸馏到小头——评测时无大模型
+def build_release_v9():   # 在第 31 轮 build_release_v8 产物 (S_bench v2, θ_pre, torque_sim, continual_adapt) 之后
+    # 第 8a 步：SEG-FIELD 蒸馏（语义分割灵感落地；+0.2 GPU·天 + 1 人周工程）
+    teacher = seg_teacher(SOC_SIM_v2_frames + A6_frames)          # 物理引擎免费真值 [IP-7 v9] + 少量人工校验
+    seg_lite = distill_multitask(backbone=detector_backbone,      # 与检测共享 backbone（关键帧预算内）
+                                 heads=[det, seg(C=7), conf],
+                                 schedule="half_rate",            # 半频全量前向 + 帧间掩码传播
+                                 target_latency_ms=0.5)
+    if seg_consistency(seg_lite, teacher, S_bench_v2_seg) < CONS_MIN:
+        seg_lite = None                                  # 一致性门不过 → 检测框外推退化（仍保守、更粗）
+
+    # 第 8b 步：TAC-CLEAN 标定（触觉感知灵感落地；+0.05 GPU·天 + 1–2 人周驱动/标定）
+    tac_driver = fingertip_array_driver(bus="CAN", rate=1_000)    # 总线接入，不走感知链路（继承 IP-16 决断）
+    mu_table, noise_tac = calibrate_friction(A7p_materials)       # μ̂_s 材质表 + 噪声模型（A7' 采集）
+    isaac_add_sensor(torque_sim, tactile_model=noise_tac)         # Isaac 触觉仿真扩展（E27 测试床）
+    def w_grasp(plan_state, F_n, C_tac):                          # 规则 25 双确认白名单
+        return (plan_state in GRASP_PHASE) and (F_n >= F_GRASP_MIN) \
+               and (C_tac ⊆ FINGERTIP_EXPECTED_REGION)
+
+    # 第 8c 步：DELAY-LEDGER 烧录（通信延迟灵感落地；+0.5–1 人周工程）
+    ledger = LatencyLedger(channels=["seg", "det", "force", "tactile", "cmd"],
+                           clock_sync=PTPHandshake(period=1.0, bound=EPS_CLOCK))   # ε_clock 上界
+    # λ_O 可行域：停止距离方程 × FPR 约束联立（规则 26；命题 16）
+    feas = solve_observer_bandwidth(
+        T_alarm_max=T_ALARM_MAX,                     # 五段预算合成
+        delta_allow=ISO_TS_15066.delta_allow,        # [F20] 规范级，A8 确认
+        v_ee_max=V_EE_MAX, a_brake=A_BRAKE,
+        fpr_bound=ALPHA_C_OVER_H, n_win_c=2)
+    if not feas.nonempty:
+        force_mode = "TELEM_ONLY"                    # 可行域空 → 力觉降级（命题 16，无负收益）
+    K_O = feas.lambda_o_mid                          # 可行域内点（快收敛 vs 低 FPR 折中）
+
+    # 第 8d 步：载荷增广适配分支（规则 25；命题 17）
+    def continual_adapt_v9(theta_k, lineage, D_new, D_replay):
+        D_fit, D_val = split_real(D_new, holdout=0.2)
+        cls_fit = classify_transitions(D_fit, w_grasp, gate_free)     # 三分：free/load/contact
+        D_free, D_load, D_contact = cls_fit.free, cls_fit.load, cls_fit.contact
+        D_pool.contact += D_contact                                   # 非期望接触禁用（继承）
+        if len(D_free) + len(D_load) < N_MIN:
+            return lineage, REJECT("insufficient")                    # 冷启动安全默认（继承）
+        F = diag_fisher(theta_k, anchor_set=D_replay)
+        Δθ = trust_region_solve(
+            loss=L_new(D_free, θ, l=0) + L_new(D_load, θ, l=1)        # Δf_θ 条件化 l_load
+                 + ρ_replay(len(D_new))·L_replay(D_replay, θ)
+                 + λ_EWC·Σ F_i(θ_i − θ_i^anc)²,
+            bound=Θ_MAX)                                              # 信任域（继承）
+        θ_new = theta_k + Δθ
+        cls_val = classify_transitions(D_val, w_grasp, gate_free)     # val 同步三分
+        gate_new = G(θ_new, cls_val.free + cls_val.load) <= G(theta_k, cls_val.free + cls_val.load) - EPS_ACC
+        gate_mem = G(θ_new, D_replay) <= G(theta_k, D_replay) + EPS_FORGET   # 双门（继承）
+        if gate_new and gate_mem:                                     # 族谱/CUSUM/原子 OTA 与 v8 逐行相同
+            γ_new = recalibrate_anom(θ_new, cls_val, SOC_SIM_dev)
+            new_node = ota_lineage_push(lineage, parent=theta_k, dθ=Δθ,
+                                        meta=dict(D=(len(D_free),len(D_load)), gates=(gate_new, gate_mem)))
+            if cum_drift(new_node) > THETA_CUM: freeze_adapt(); schedule_full_reeval(new_node)
+            if cusum(gamma_series(lineage)) > H_GAMMA: freeze_adapt(); alert("gamma_drift")
+            return new_node, atomic_ota(θ_new, γ_new), ACCEPT
+        return lineage, REJECT("gate_new" if not gate_new else "gate_mem")
+
+    # 第 8e 步：S_bench v2 → v3（规则 20 升版本；30/60 对抗场景替换）
+    S_bench_v3 = upgrade_benchmark(S_bench_v2,
+        adv_replace=30,   # 20 分割对抗（相似物假人/衣着光照/部分遮挡人形）
+                          # + 10 触觉注入（材质外打滑/白名单误判/非期望接触）
+                          # + 20 延迟抖动（总线拥塞/时钟偏移/seg 掉帧）
+        anchor_rerun=("v6", "v8"))                                    # 双锚点重跑保可比
+    return S_bench_v3, seg_lite, tac_driver, ledger, K_O, w_grasp, continual_adapt_v9
 ```
 
-**S2 控制（解析，零训练）**
+### 3.3 带外安全处理器 v9（1kHz，WCET <0.15ms/步，独立报告；证据采集与决策仲裁分离的延续）
 
 ```python
-# IBVS：特征误差 e = [u_hole−u_peg, v_hole−v_peg, z_err]（腕图 + 蒸馏深度）
-# 点特征交互矩阵 L(u,v,Z)，v_cam = −λ L⁺ e；T_base←cam 由外参链给出（F-O1）
-# joint 空间输出：Δq = J⁺(q) · [Δp; Δθ]（G1 臂 URDF 运动学，q 来自 obs）
-# 关键鲁棒性：Z 估计偏差只缩放切向收敛增益、不改变图像误差下降方向；
-#   仅沿轴接近速度调度需要粗对深度 —— 整条路线对 F-O1 的暴露面因此大幅缩小
+def safety_processor_step_v9(self, q, q̇, τ_s, τ_tac, seg_pkt, t_now):
+    # (1) 动量观测器（继承 v8 逐行不变）
+    self.p = M(q) @ q̇
+    self.r_obs += K_O * (self.p - self.p_prev + (self.r_obs + τ_s + Cᵀq̇ + g(q)) * δt)
+    self.p_prev = self.p
+    if self.idle_segment(ξ, force_alarm_history):
+        self.b_noise.update(self.r_obs)                    # 空转段自适应噪声底（继承）
+    if sustained(self.r_obs > self.b_noise.gate(), n_win_c=2):
+        self.force_alarm = 1                               # 只增触发（规则 21/24）
+    if self.sensor_selfcheck_failed():
+        self.force_alarm = 0; self.mode = "TELEM_ONLY"     # 降级仅遥测（继承，行为=v8）
+
+    # (2) 触觉处理（新增）
+    F_n, F_t = resolve_tactile(τ_tac)
+    self.slip = sustained(F_t / max(F_n, EPS) > 0.9 * self.mu_hat(F_n, self.material), n_win_s=2)
+    grasp_ctrl.update(F_n, F_t, self.slip)                 # 抓持力闭环（仲裁外，IP-6 接入点）
+    unexpected = (F_n > F_TOUCH_MIN) and (not w_grasp(self.plan_state, F_n, contact_map(τ_tac)))
+    if sustained(unexpected, n_win_s=2):
+        self.tactile_alarm = 1                             # 非期望接触 → 只增触发（规则 24）
+
+    # (3) 分割订阅 + 延迟补偿保守外推（新增；seg_pkt 携带 d_field/σ_seg/t_cap/类别）
+    Δt̂ = (t_now - seg_pkt.t_cap) + self.ledger.eps_clock   # 时钟偏移计入（保守）
+    if seg_pkt is not None and Δt̂ <= self.T_stale["seg"]:
+        d_min = seg_pkt.d_field_min - (V_H_MAX[seg_pkt.cls_argmin] + SIGMA_V_H) * Δt̂ \
+                - K_DILATE * seg_pkt.sigma_max             # 命题 15 保守下界
+    else:
+        d_min = det_box_extrapolate(self.last_det, Δt̂)     # seg 超龄/缺省 → 检测框外推（仍保守、更粗）
+
+    # (4) 新鲜度与账本审计（规则 24）
+    if self.ledger.p99_exceeded("force") or self.ledger.p99_exceeded("tactile"):
+        alert("latency_budget_breach")                     # 超预算 → 告警 + 通道降"无新增覆盖"
+    # 报警 flag 超龄 → fail-stay 保持最近值（严禁"超龄就清零"，规则 24）
+    return self.force_alarm, self.tactile_alarm, d_min     # 三标量 → 仲裁栈只读
 ```
 
-**S3 切换与门控**
-
-- P_φ（IP-1）判定「接近/对准相位」→ 切换 VLA→伺服；接触信号（IP-11）裁决插入推进/横移/回退；超时或 P_φ 回落 → 交还 VLA（基线兜底）。
-- **异构计算红利**：伺服相位跳过 VLA 前向，单步 ~350ms → ~25ms；回程调用率 = 1/(T_a/30 + 0.025)，T_a=4 时 ≈7.5Hz——伺服响应率足够，且 F5 延迟稳定性同时受益（伺服段延迟更低更稳）。
-
-### 3.3 推理伪代码（get_action 内部，全部可逐位关闭）
+### 3.4 在线算法：social_motion_lite_step_v9（签名兼容，仲裁 +0.02ms）
 
 ```python
-def get_action(obs):
-    if not servo_enabled or not P_phi.in_phase(obs, task):
-        return vla_chunk(obs)                      # 基线路径（n_samples 按相位预算）
-    K = kpt_head(obs["wrist"], obs["head"], task)  # ~4ms
-    D = depth_head(obs["wrist"])                   # ~12ms（256×320 + 量化，可 k 步复用）
-    if K.conf < τ_conf: return vla_chunk(obs)      # 感知不确定 → 交还基线（安全回退）
-    chunk = []
-    for i in range(T_a):                           # T_a 小块，块内按 S2 递推（开环段内预测）
-        dx = ibvs_step(K, D, ee_state, gains)      # 解析
-        chunk.append(to_joint(dx, q) if space=="joint" else to_ee(dx))
-    return format(chunk, token)
+def social_motion_lite_step_v9(self, x_ee, a_pol, threat_ctx, t):
+    # 0–0.6 全部继承 v8（ξ 编码 / κ 更新 / 特征伺服层，逐行不变）
+    ξ = self.encode_threat_ctx(threat_ctx); ξ_changed = (‖ξ - ξ_last‖_∞ > ε_ξ) or (self.mode != self.mode_last)
+    o = self.observe_implicit_feedback(threat_ctx); self.kappa_hat = self.update_kappa(self.kappa_hat, o); κ = self.kappa_hat
+    s = self.extract_hand_feature(threat_ctx)
+    if self.feat_conf(s) < C_MIN or self.occlusion_span > T_OCC: self.vs_active = False
+    else:
+        self.vs_active = True
+        if ‖self.v_ee‖ > V_MIN: self.L_hat = rls_update(self.L_hat, s, self.v_ee, huber=True)
+        self.s_pred = predict_feature(s, self.L_hat, self.v_ee, δ_cam)
+
+    # 0.65 读 force_alarm（继承 v8）
+    alarm = self.force_alarm
+    # 0.66 读触觉告警与保守距离（新增；单 cacheline 原子快照；+0.02ms）
+    t_alarm = self.tactile_alarm
+    d_min_safe = self.d_min_safe if self.d_min_safe is not None else threat_ctx.d_max   # 缺省 → v8 行为
+
+    # 1–3 继承 v8（LUT / 蒸馏前向 / 早退出，逐行不变）
+    if (t % T_replan == 0) or ξ_changed or (kappa_bin(κ) != self.k_bin_last):
+        self.K_mpc = self.tvlqr_lut.lookup(ξ, kappa_bin(κ))
+    Δu_lite = self.π_lite.forward(x_ee, ξ, κ); a_lite = self.K_mpc @ x_ee + Δu_lite
+    if ξ.d_max < 0.15 and ξ.τ_min > 1.0: a_lite = self.early_exit_policy(x_ee, ξ, κ)
+
+    # 4. 双轨安全回退（v8 五触发一字不改 + 第六触发 tactile_alarm；d̃_min 只收紧不放松）
+    is_high_threat = (ξ.d_max > γ_safe) or (d_min_safe < γ_seg)      # 密集场收紧（OR 语义）
+    is_anomaly = (‖Δu_lite‖ > self.gamma_anom) or (self.π_lite.entropy() > H_max)
+    is_servo_diverge = (self.vs_active and sustained(self.r_vs > chi2_gate, n_win=3))
+    if alarm or t_alarm or is_high_threat or is_anomaly or is_servo_diverge:
+        a_lite = self.cbf_qp_fallback(x_ee, threat_ctx, img_constraint=self.vs_active,
+                                      d_min_override=d_min_safe)       # 约束用保守下界
+
+    # 5–6 继承 v5/v7/v8（共享控制融合 + 硬裁剪，不引用 κ；速度上限以 d_min_safe 收缩）
+    a_cmd = (1 - self.u) * a_pol + self.u * a_lite
+    a_cmd = self.hard_safety_clip(a_cmd, x_ee, threat_ctx, d_min_override=d_min_safe)
+    return a_cmd
 ```
 
-### 3.4 实验 E7（离线回放，先于真机）
+退化链：触觉/seg/账本字段缺省（TELEM_ONLY 或监控器离线）→ d_min_safe=d_max、t_alarm 恒 0 → v9 逐位 = v8；κ 缺省 + σ_feat=0 → v6；κ 固定 μ_c → v5。完整。
 
-- 关键点头：留出 10% episodes，像素误差 <8px 帧占比 ≥80% 为合并门槛；
-- 深度头：对 RAFT-Stereo 伪标签 AbsRel <0.15；
-- 伺服律回放：留出末段 20 步，从每状态开环执行伺服 Δee，与专家 Δee 的方向余弦 ≥0.8；混合回放（状态按专家动力学推进、动作按伺服）下特征误差单调收敛；
-- 延迟：伺服全链路 P99 ≤25ms（E3 v2）。
+### 3.5 多模态新鲜度语义表与三模态 OR（规则 24 落地）
 
-### 3.5 风险
+| 证据通道 | 采集频率 | 典型 Δt | T_stale | 超龄行为（保守方向） |
+|---|---|---|---|---|
+| force_alarm | 1kHz | ~1ms | 5ms | fail-stay 保持最近值（严禁清零） |
+| tactile_alarm | 1kHz | ~1ms | 5ms | fail-stay 保持最近值 |
+| d̃_min（seg 场） | 关键帧半频 | ~8–16ms | 30ms | 退检测框外推（仍保守、更粗） |
+| 检测框 d_max | 关键帧 | ~15ms | 45ms | 外推 + 膨胀（v8 地板不动） |
+| 账本 B_ch | 连续 | — | — | P99 超预算 → 告警 + 通道降"无新增覆盖" |
 
-- 外参链（F-O1）失败 → 降级 head-only 深度条件化（不投影、不做几何伺服），保留 IP-11/恢复库收益；
-- 评测端光照/背景 OOD 下小头漂移 → IP-4 增强同步作用于小头训练集 + S3 置信度门（K.conf 低即回退基线，永不比基线差）；
-- T_a 静态申报与伺服响应率的矛盾 → E4 联合扫描（T_a × image_resize × 相位占比）。
+触发合并语义：fallback 触发 = force_alarm ∨ tactile_alarm ∨ (d_max>γ_safe) ∨ (d̃_min<γ_seg) ∨ 异常 ∨ 伺服发散——全部只增触发不做否决；d̃_min 对约束只收紧不放松（d̃_min ≤ d_meas 恒成立）；诚实条款继承：力/触觉不能否证视觉接近判断，跨模态互证仅限接触类事件与遥测归因。
 
-## 4. 重点展开 C：LoRA-ROUTE（IP-6）与 LoRA-DPO（IP-7）
+### 3.6 复杂度与延迟预算表（P99 确界，对比 v5–v9）
 
-### 4.1 LoRA-ROUTE：任务组 adapter + 语言条件插值
+| 环节 | v5 (SML) | v6 (CSL) | v7 (SAL) | v8 (FCL) | v9 (STS) | 说明 |
+|---|---|---|---|---|---|---|
+| 仲裁核心 | 0.35ms | 0.36ms | 0.41ms | 0.42ms | **0.44ms**（+0.02 快照读） | 带外监控不入此预算 |
+| 带外监控 | — | — | — | <0.1ms @1kHz | **<0.15ms @1kHz**（+触觉/外推/新鲜度，独立 WCET） | 安全处理器 |
+| 关键帧感知 | 15.0ms | 15.0 | 15.3 | 15.3 | **16.1ms**（+0.8 诚实升预算） | 半频 seg + 传播 + 打点 |
+| LUT 内存 | 2.8MB | 14MB | 14MB | 14MB | **14MB 不变** | O(1) 查表不变 |
+| 双轨回退 | <5% | 不变 | +r_vs | +force_alarm | **+tactile_alarm + d̃_min 收紧** | OR 语义，fail-safe |
+| **合计仲裁增量** | +0.3 | +0.3 | +0.35 | +0.36 | **+0.38 (P99<0.5ms 维持，裕量 0.06ms)** | 规则 14 重测；**下一轮仲裁内环节冻结** |
+| 训练成本 (IP-10) | 0.3 GPU·天 | 1.4 | 1.6 | 1.9 | **2.25 一次性 + 0.07/适配 + 0.40/发布 + 2.5–4 人周** | 三账户 + 工程人日入账 |
 
-- **分组**：数据驱动聚类 32 任务（按接触占比/相位结构/难度谱系），K=4 原型组：放置类、接触对准类、双手协调类、小物件精密类。
-- **训练**：共享冻结基座 + 每组 LoRA r=32–64（~65M/组，4 组 ≈260M 增量，bf16 ~0.5GB）——单卡 4090 可行（F8 同量级）。
-- **部署（reset 时混合，运行时零开销）**：新 episode 拿到 language → 语言嵌入 → α = softmax(sim(e_lang, 组锚点)) → 一次性物化 W = W0 + Σ α_k B_k A_k（只触碰 q/v/o_proj 模块，秒级）；整个 episode 用同一组混合权重——是「语言条件化的单模型」，与内部 MoE 语义等价但便宜得多。
-- **未见物品泛化**：语义最近组的插值 + 基座保留系数（α 封顶 ~0.8，保留通才底座能力）——把「零样本任务泛化」变成权重空间插值（机理依据：同基座 LoRA 增量的线性插值良态性，属推断，E8 验证）。
-- **合规边界与回退**：若规则将「单模型」解释为静态权重（F-O2 待确认），回退 = 各组 α 取先验固定的静态合并（损失自适应性，仍优于单全局 LoRA 的组间折中）。
+命题 2 WCET 组合更新：0.3 + 0.05 + 0.01 + 0.05 + 0.1(60%) + 0.01 + 0.02 < 0.5ms（带外 0.15ms @1kHz 单独出具报告；关键帧 16.1ms 需 E17 实测确认不破上游）。
 
-### 4.2 LoRA-DPO：离线偏好对，无需仿真器
+### 3.7 正确性论证（命题 15–17 新增；命题 11/12 修订——诚实记录失效与修复）
 
-- 正例：数据集专家段；负例三源：(a) 同任务自然失败/重试片段（v1 IP-10 挖掘管线复用）；(b) 当前策略在数据集状态上的采样块（K 个候选，按 P_φ 期望进展排序取低者）；(c) 伺服回退前的失败段。
-- 奖励/标签 = P_φ 进展增量 + 接触轮廓匹配（IP-11）；LoRA-only 更新，参考策略 = 冻结基座+旧 adapter（增量小，显存可行）。
-- 定位：P2 期权——先把 IP-1/2/11 的确定性收益落袋，DPO 作为第二级增益。
+- **命题 15（延迟补偿证据的保守性，新增核心）**：在假设 A-v（人体部位速度有界 v_h ≤ v̂_h_max(c)）与账本 Δt^P99 下，P(d̃_min ≤ d_true(t_now)) ≥ 1−δ_seg（单侧尾界，σ_v,h 与 κ_d·σ_seg 覆盖估计误差）；推论：以 d̃_min 为约束的 fallback/裁剪不弱于 v8 逐位行为（只收紧不放松，因 d̃_min ≤ d_field ≤ d_meas 恒成立）。*失效模式*：v̂_h_max 低估（突挥）→ 假设破坏 → force/tactile alarm 兜底 + 速度硬上限；seg 缺省/超龄 → 检测框外推（仍保守、更粗）。E26b 注入验证越界率 ≤ δ_seg。
+- **命题 16（报警链端到端延迟预算，修复命题 11 隐藏缺陷）**：T_alarm = t_conv(λ_O,‖τ_ext‖,τ_gate) + n_win_c/f_obs + t_bus + t_read + t_act ≤ T_alarm^max 与停止距离方程 v_ee,max·T_alarm + v_ee,max²/(2a_brake) ≤ δ_allow 联立 → λ_O 可行域；**可行域非空 ↔ 命题 11 的检出能力在真实闭环中成立**——第 31 轮命题 11 只证监控器内部性质（检出 ≤2 步为监控器时钟），修订重述并登记历史；可行域空 → TELEM_ONLY 降级（fail-safe，无负收益）。E26a 注入验证端到端分布与接触力-速度曲线。
+- **命题 17（白名单下适配不污染也不饥饿，修复命题 12 隐藏缺陷）**：D_fit.load 的污染能量 ≤ ε_fp·E‖τ_payload‖²，显式计入 ε_acc 分账（与自由空间泄漏 η_miss·E‖τ_ext‖² 两笔独立预算）；载荷转移覆盖率 ≥ (1−ε_fn)·任务接触时长占比 → 命题 12 从"接触不污染适配"强化为"接触分类后**既不污染也不饿死**"（第 31 轮原命题登记历史，规则 22 → 25 修订留痕）。E27 对照 v8 全排除的载荷 G 曲线收敛性。
+- **命题 1–10/13/14 继承**第 31 轮文本；命题 1 触发条件扩展为"不含 κ 与任何可 OTA 量（新增 μ̂_s 表/T_stale/T_alarm^max/v̂_h_max/γ_seg/κ_d 入禁改清单，规则 16+19+23+26 联合）"；命题 13 的"双门过严"失效模式升级为"数据层 + 门层"双层饥饿监控（拒绝率 + 三分覆盖率双遥测）；命题 14 继承（Isaac 门禁不变，触觉/seg 仿真扩展示 E27/E28 新增门槛）。
 
-### 4.3 实验 E8
+### 3.8 双轨安全回退表 v9（文化/适配/力觉/时间四重不变性标注）
 
-- 4 组 adapter vs 单全局 LoRA：逐任务 val loss 对比（接触组预期显著优）；
-- 插值泛化：val 集物体贴图替换（IP-4 管线），插值 α vs 最近组硬路由 vs 单 adapter；
-- reset 时混合开销 <3s/episode（不占调用延迟）。
+| 触发条件 | 行为 | κ 依赖 | 可 OTA 依赖 | E 门槛关联 |
+|---|---|---|---|---|
+| ξ.d_max > γ_safe=0.8 | cbf_qp_fallback | 无 | 无 | 安全覆盖率 ≥99.5%（继承） |
+| force_alarm=1 | cbf_qp_fallback | 无 | 无（τ_gate 禁改） | E24a（继承） |
+| **tactile_alarm=1（新增）** | cbf_qp_fallback | 无 | **无**（μ̂_s 表禁改） | E27b：AUC≥0.9、非期望接触检出 ≤2 步 |
+| **d̃_min < γ_seg（新增，只收紧）** | cbf_qp_fallback（约束用保守下界） | 无 | **无**（γ_seg/v̂_h_max/κ_d 禁改） | E26b：越界率 ≤ δ_seg |
+| ‖Δu_lite‖ > γ_anom | cbf_qp_fallback | 无 | γ_anom 原子 OTA（继承） | 异常率 <1% (P99) |
+| π_lite 熵 > H_max | cbf_qp_fallback | 无 | 无 | 熵逸出率 <0.5%（继承） |
+| r_vs > χ²₃ 门 持续 3 步 | cbf_qp_fallback（vs_active 叠加图像约束） | 无 | 无 | E20b（继承） |
+| 特征置信门不过 | 特征层 abstain → 逐位 v8 行为 + 遥测 | 无 | 无 | E20c（继承） |
+| **证据超龄（新增）** | 距离取下界/报警 fail-stay/通道降覆盖 + 告警 | 无 | **无**（T_stale 禁改） | E26a 注入项 |
+| **账本 P99 超预算（新增）** | 告警 + 该通道降"无新增覆盖" | 无 | 无 | E26a 注入项 |
+| 力觉/触觉自检失败 | TELEM_ONLY：仅遥测 + 告警升级，行为=v8 | 无 | 无 | E24a/E27b 注入项 |
+| 连续 3 步回退 | 遥测 + 模型复审 + OTA | 无 | — | fallback_rate >5% 告警（继承） |
+| κ̂ 越带尝试 | clip 拒绝 + 遥测计数 | 仅 κ | — | 越带次数=0（E19，继承） |
+| **双门拒绝/族谱超界（离线，继承）** | θ/γ_anom 不更新留痕 / 冻结+全量再评估 | 无 | 仅此 | E25（继承） |
+| **三分覆盖率告警（新增，离线）** | 载荷覆盖率 < (1−ε_fn)·占比 → 告警 + 审查 w_grasp | 无 | 仅此 | E27a |
 
-## 5. 其余条目修订简表
+### 3.9 与其他 IP 的接口（零破坏性变更清单）
 
-| 编号 | v2 修订点 | 落地步骤 | 风险 |
+- **IP-13/IP-11**：执行器 v8 → v9，签名不变；threat_ctx 可选携带 tactile_alarm/d_min_safe/ledger_status，缺省 → 行为逐位 v8。
+- **IP-14**：Isaac 扩展触觉传感器模型、分割真值渲染、总线延迟抖动注入（E27/E26 测试床）；物理内核托管与社会层接口零改动（继承）。
+- **IP-7**：渲染即标签 v9 追加分割掩码真值/触觉真值/时延元数据通道（物理引擎直接输出，零额外 GPU）。
+- **IP-2/IP-3**：S_bench v3（升版本 + v6/v8 双锚点重跑）；触觉检出率、账本 P99、三分拦截率、载荷覆盖率进 p_fail 软通道。
+- **IP-4**：不变（族谱任意祖先回滚已具备）。
+- **IP-12**：维护窗口追加 μ̂_s 在线再标定、账本审计、λ_O 可行域复检（参数漂移 → 重解方程 + E26 重测）。
+- **IP-16**：三机制全保留；清洗门二分 → 三分（规则 25），D_fit.load 走载荷增广分支，D_pool.contact 语义不变。
+- **IP-9**：population 学生继续在 S_bench v3 dev 选拔、hold 报告（防选拔泄漏，继承）。
+- **IP-10**：训练 +0.35 一次性、适配 0.07/次、评测 0.40/发布、工程 2.5–4 人周，全部入账并触发 ROI 复核。
+
+## 4. IP-7 渲染即标签 v9（分割/触觉/时延物理通道）
+
+```python
+def augment_seg_tac_labels_v9(physics_seq):   # 物理引擎真值，非渲染——CPU 算术 ~0.5ms/帧
+    for step in physics_seq:
+        step.social_cost = compute_v6_labels(step)            # 继承 κ 化标签
+        step.feature_traj = compute_v7_labels(step)           # 继承特征/L_s/置信
+        step.torque_truth = τ_ext_truth(step)                 # 继承 v8 力矩/接触真值
+        step.seg_truth = instance_mask(step, classes=7)       # 分割真值：实例级人形部位
+        step.tactile_truth = fingertip_pressure(step)         # 触觉真值：接触图/法切向分解
+        step.latency_meta = stamp(step, capture=t_cap, ready=t_ready)   # 时延元数据（账本训练对）
+    return physics_with_seg_tac_labels_v9
+```
+
+## 5. 实验设计（新增 E26/E27/E28，接 E20–E25）
+
+| 实验 | 设置 | 指标 | 门槛/预期 |
 |---|---|---|---|
-| IP-1 PROGRESS | P_φ 输入 + [pinch, r_stats, width_hold]；best-of-n 加相位门控（n≤4 仅导航/接近相位，伺服相位禁用——n×0.35s 延迟账）；兼任 S3 切换门 | 同 v1 + 特征拼接 | best-of-n 延迟超预算 → 相位白名单 |
-| IP-5 CHUNK-RESCUE | 检测器 = max(视觉残差, r_arm, r_base, 捏合异常)+滞回；F14 证据：头部 50 步块 ≈1.7s 开环，我方 T_a=4–8 + 检测 = 响应性护城河 | 同 v1 + 接入 IP-11 | 误触发 → 滞回+P_φ 双门 |
-| IP-10 RESCUE-LIB | 卡住检测加 T1 信号；插入类恢复模板由 r 方向驱动（退-横移-再进） | 同 v1 | 恢复抖振 → 滞回 |
-| IP-8 SERVE-N | 不变；伺服相位跳 VLA 反而降低后端负载 | 同 v1 | 并发阻塞 → E0 压测 |
-| IP-9 LOCAL-BENCH | 增加 E6/E7 的离线校验台（example_env 时序测量、关键点/深度精度、伺服回放） | 同 v1 | 代理鸿沟 → 仅回归信号 |
-| IP-4 AUG-PANO | 增强管线同步作用于深度/关键点小头训练集 | 同 v1 | 过强 → E2 消融 |
-| O-1（原 IP-3） | 复现时检查 norm_stats/unibot_full.json 与 deploy 代码中 pivot 映射是否非零（F-O6）；若头部已用且有效 → 无差异化，关闭 | 0.5 天 | 无 |
+| **E26a 报警链端到端延迟（通信延迟核心）** | 总线抖动/读延迟/时钟偏移注入（账本测试床 + semi-real，A7' 采集） | T_alarm 分布 P50/P99、停止距离-接触力曲线 | T_alarm^P99 ≤ T_alarm^max；v_ee≤V_EE_MAX 时接触力 ≤ δ_allow 对应限值 [F20]；可行域空 → TELEM_ONLY |
+| **E26b 延迟补偿保守性** | 有/无外推 × 人速 {0.3/1.0/1.5/突变} × Δt 注入 全因子 | d̃_min 越界率（d_true < d̃_min 频率）、fallback 增量率 | 越界率 ≤ δ_seg；无外推对照越界率显著升高（收益验证）；越界超 → σ_v 加大或回退无外推 |
+| **E27a 触觉清洗门/载荷适配（触觉核心）** | 抓取-载荷滚动适配，对照 v8 全排除；w_grasp 误判注入 | 载荷转移覆盖率、载荷 G 曲线、适配后异常率 | 覆盖率 ≥(1−ε_fn)·占比；载荷 G 收敛且异常率 <1% (P99) 维持 |
+| **E27b 打滑与白名单** | μ̂_s 材质表外材质注入 + 非期望接触注入 | slip AUC/时延；tactile_alarm 检出/FPR | slip AUC≥0.9；检出 ≤2 步；FPR ≤ α_c/h；不过 → 触觉 TELEM_ONLY |
+| **E28a 分割场（语义分割核心）** | S_bench v3 分割对抗（相似物/衣着光照/部分遮挡） | 掩码 IoU、d̃_min 保守性、触发率漂移 | IoU ≥ 门槛（CONS_MIN 一致性门）；v6/v8 锚点触发率漂移 <2%；不过 → 检测框退化 |
+| **E28b 遮挡盲区组合** | 遮挡+接触组合（接 E24c），seg 掩码传播 | 组合检出率、视觉侧告警提前量 | ≥95% 维持且提前量 ≥1 关键帧 |
+| **E22c S_bench v3 防博弈重审计** | v3 重跑三恶意策略 + v6/v8 双锚点 | Pareto 报告、可靠性图、CI/效应量 | 恶意策略全暴露；双锚点漂移 <2%（版本变更透明性） |
+| **E17/E20/E24/E25 系列重跑** | S_bench v3 上回归（π_lite v9 全栈） | 同第 31 轮门槛 | 碰撞=0、P99<0.5ms、社会代价 ≤CBF−15%、回退率<5%、E18c τ≥0.7 |
 
-## 6. 实验设计 v2（E0–E8；E0–E5 同 v1，增量如下）
+**降级机制**：E28a 一致性不过 → seg_lite=None（检测框外推，仍保守）；E27b 不过 → 触觉 TELEM_ONLY（w_grasp 恒 0 → 全接触照 v8 排除，无负收益）；E26a 可行域空 → 力觉 TELEM_ONLY（继承）；E26b 越界率超 → σ_v 加大或回退无外推保守模式；E27a 载荷集污染超 ε_fp 预算 → D_load 冻结（仅 D_free 适配，l_load 分支停用）；E22c 恶意策略未暴露 → 相应轴不作合并门槛；E17 系列任一不过 → IP-13/14/15/16/17 整体冻结，IP-11 回退 CBF-QP。均无负收益。
 
-| 实验 | 设置 | 指标 | 门槛 |
-|---|---|---|---|
-| **E6 CONTACT** | 160 episodes 回放 + example_env 时序校准 + 合成扰动 | 接触 AUC、误报率、T1 计算耗时 | AUC≥0.85；自由段误报<5%；<1ms |
-| **E7 SERVO** | 关键点/深度小头训练 + 伺服律开环/混合回放 | 像素误差<8px 占比、AbsRel、Δee 方向余弦、P99 延迟 | ≥80%；<0.15；≥0.8；≤25ms |
-| **E8 LoRA-ROUTE** | 4 组 adapter vs 全局 LoRA + 插值泛化 | 逐任务 val loss、OOD val 成功率代理、reset 混合耗时 | 接触组显著优；混合<3s |
-| E4 v2 | T_a ∈ {2,4,8,16} × image_resize × 相位占比 | 伺服响应率 × 延迟稳定性的帕累托 | 记录申报值与理由 |
-
-降级机制升级：每项增强独立开关不变；新增**相位级回退**——S1 置信度不足即整段交还基线，SERVO-STACK 与 CONTACT-SENSE 在任何感知失效下都退化为纯基线，无负收益。
-
-## 7. 风险登记簿 v2（相对 v1 的增量）
+## 6. 风险登记簿（完整表）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 伺服栈三依赖（外参 F-O1/伪标签/小头 OOD）任一塌掉 | **高（本轮最大）** | Z 偏差只影响增益不改方向（先验证该假设）；置信度门控回退基线；E7 门槛 |
-| 演示数据以成功为主 → 接触检测正例稀缺 | 中 | 一类分类 + 合成扰动；诚实标注局限 |
-| obs-动作时序对齐 δ 未知（F-O4 新） | 中 | example_env 本地先测；鲁棒统计 |
-| LoRA-ROUTE 与「单模型」细则的解释冲突（F-O2 扩展） | 中 | 回退静态合并；优先邮件/官方渠道确认 |
-| best-of-n 延迟超预算 | 中 | 相位白名单（v1 缺陷本轮已修） |
-| T2 模型输入含我方动作块 → 训练-推理分布差（训练时动作=专家，推理时=自己） | 中 | 用当前策略 rollout 数据回流微调 T2（自举一轮） |
-| （沿用 v1 全部条目） | — | — |
+| **物理假设兜底边界（v̂_h_max 低估突挥 / δ_allow 刚性碰撞 → 命题 15/16 同时失效，"接触前预防"退化为"接触后报警"）——本轮最大** | **高** | ISO/TS 15066 规范值 + A8 安全工程师确认 + 类别条件速度分级 + 速度硬上限裁剪 + 接触必有力/触觉信号兜底 + E26b 越界扫描；诚实标注：兜底是物理假设而非证据 |
+| 跨处理器时钟偏移（时间戳失真 → 外推方向错误） | 中高 | PTP 类周期握手 ε_clock 上界 + Δt 保守化 + E26a 偏移注入 + 单调时钟 |
+| 触觉 μ̂_s 材质泛化（表外材质 → slip 误判/漏判） | 中高 | 材质表保守下界 + 在线再标定（IP-12）+ E27b 注入 + TELEM_ONLY 降级 |
+| seg 蒸馏域差距/对抗脆弱（相似物假人 → 密集场误报或漏检） | 中 | 一致性门 CONS_MIN + 只收紧不放松（误报仅性能代价）+ 检测框地板不动 + E28a |
+| 关键帧预算膨胀连锁（16.1ms 后再增将破上游） | 中 | 半频 + 掩码传播 + E17 实测确认 + 后续轮感知侧同样冻结新增（与仲裁冻结并立） |
+| 三标量读取竞态（跨处理器写读撕裂） | 低 | 单 cacheline 原子快照 + 序号校验 |
+| 真机力矩信号质量（第 31 轮最大，继承） | 中高（原高） | 指尖接触类事件改由触觉独立证据覆盖（不需动力学模型）；臂部接触仍依赖动量观测器——E23a/E24a 结构不变 |
+| Isaac 接口工程量低估（继承，+触觉/seg 仿真扩展） | 中高 | 范围限定 + E23a 冒烟门 + 降级路径（仅测试床）+ 工程人日入 IP-10 |
+| 清洗门假阴性（继承）+ 白名单误判 ε_fp（新增） | 中 | 保守阈值 + 双预算分账入 ε_acc + E24b/E27a 消融 + 拦截率遥测 |
+| 双门过严 + 数据层饥饿双层空转（升级） | 中 | 拒绝率 + 三分覆盖率双遥测（>50% 或覆盖率告警 → 人工审查） |
+| 腕部相机"自信地错检"（继承） | 中高 | 力觉/触觉补接触级盲区 + seg 传播补遮挡；假手错检仍靠 abstain/松弛/v6 地板 |
+| U2 真机遥测冷启动（继承） | 中 | Isaac 预训练 + 载荷增广分支 + semi-real 回放 + n_min 门 |
+| SOC-SIM 人类反应保真度（继承） | 中低 | 物理层托管 + 触觉/seg 仿真扩展 + E18c 三级对照仍为确认条件 |
+| S_bench 隐性过拟合（继承） | 中 | v3 升版本 + v6/v8 双锚点重跑透明性（E22c）+ 预注册 + hold 禁调参 |
+| r_vs 相关噪声误报（继承） | 中 | Σ̂ 白化 + χ² 门 + E20b + 可冻结 OFF |
+| θ/γ_anom OTA 版本不一致（继承） | 低 | 捆绑原子更新 + 族谱任意祖先回滚 + CUSUM |
+| κ 归因误差（继承） | 中 | 带限 clip + E19 + κ̂ 冻结机制 |
+| 文化先验表有偏（继承） | 中 | 防刻板印象三条款 + A6 少样本校准 |
+| 课程过拟合于仿真难度轴（继承） | 中 | C_cov 反馈 + 课程后期混真实回放 + E18b |
+| 蒸馏策略 OOD 安全退化（继承） | 中 | 双轨兜底 + E17 + 适配通道 |
+| 奖励模型偏差（继承） | 中 | A6 校准 + 双轨兜底 + 分层 DPO |
+| 量化精度损失（继承） | 中 | QAT 校准集扩展 + 确界重测（规则 14） |
+| TV-LQR 线性化误差（继承） | 中 | 残差补偿 + 域边界回退 |
+| 早退出/κ-bin/r_vs/force_alarm/tactile_alarm/d̃_min 抖振（继承+扩展） | 低 | 滞回 + 低通 + 持续判据（n_win=3 / n_win_c=2 / n_win_s=2） |
+| 回放缓冲分布陈旧（继承） | 低中 | 时间衰减 + 周期重建 + 分层覆盖监控 |
+| EWC Fisher 估计噪声（继承） | 低 | 仅辅助小权重；主机制为回放+双门 |
+| A7' 三合一采集复杂度（新增） | 低中 | 采集计划统一时间轴 + 分任务质控清单 + 与 A4/A6 并行排期 |
+| F9 相机映射/校正未确认（继承） | 高（A4 最高优先） | A4 内参验证提权 + 图像层外参不敏感 + E12/E13 |
+| 合成手域差距 + 意图误判（继承） | 高 | 双轨兜底 + B_def + E12/E13 + A6 |
+| LUT 插值误差（继承） | 中 | 双线性插值 + 容错带 + E17d |
 
-## 8. 一句话押注 + 开放问题
+## 7. 来源清单（引用口径：2026-11-08）
 
-**最值得押注**：IP-2 SERVO-STACK——用「解出来的图像雅可比」替换「学出来的动作均值」，攻 11/32 接触对准任务，并以 IP-11 的免费接触信号（夹爪捏合差 + 跟踪残差）为眼睛；两者都在接口内零改动、逐层可关，且伺服相位跳过 VLA 前向后延迟反而更低更稳（F5 受益）。
+- 继承第 27–31 轮 R1–R35，口径不变。
+- 本轮新增：
+  - R36 ISO/TS 15066:2016 Robots and robotic devices — Collaborative robots（国际标准，无 arXiv，如实标注）——人体部位允许接触力/压强与速度-停距参数来源（δ_allow/v̂_h_max 规范级依据）
+  - R37 触觉滑移检测方法体系（incipient slip、切/法向力比、指尖阵列；Howe 综述与 Heyneman & Cutkosky 等代表作，无 arXiv 编号，如实标注——本轮未做检索核实）
+  - R38 实时/轻量语义分割与知识蒸馏（文献级引用，无编号核实，诚实标注）
+  - R39 视频对象分割/掩码时序传播（文献级引用，无编号核实，诚实标注）
+  - R40 IEEE 1588 PTP 精确时间协议（工程标准，无 arXiv，如实标注）——跨处理器时钟同步依据
+- **诚实记录**：本轮无 arXiv 编号记忆纠错事件；R37–R39 为文献级引用未附编号（未检索核实，如实标注）；命题 11/12 的第 31 轮失效模式（报警链延迟未记账、任务接触饥饿）为本轮自审发现，已登记入命题历史并修复（规则 24/25/26）。
 
-开放问题（续 F-O1/F-O2/F-O3，新增）：
-- **F-O4**：评测端 obs 返回与动作块执行的时序对齐 δ——用仓库自带 example_env 本地测量，决定 T1b 的统计形式；
-- **F-O5**：lingbot-vla-v2 代码的深度特征注入点（其 Depth 变体接口），决定蒸馏深度以「特征拼接」还是「输入替换」方式接入；
-- **F-O6**：F8 的 pivot/waist/base 通道是否实际非零输出（norm_stats + deploy 代码检查），决定 O-1 关闭或复活。
+## 8. 清单迭代规则（继承 + 第 32 轮增补）
 
-## 9. 来源清单（全部检索/核实于 2026-11-07）
+- 继承第 28–31 轮规则 12–23（双轨上线强制、社会代价可审计、量化确界、fallback 遥测、E17 门槛、P99 确界、LUT 精度、安全层文化不变、κ 带限防刻板印象、课程判据留痕、适配不变性、评测防博弈、力觉 fail-safe OR、数据清洗、双门与族谱）。
+- **24（新增）：三模态 fail-safe OR + 新鲜度语义**——force/tactile/seg 皆只增触发不做否决；跨处理器证据必附时间戳；超龄 → 保守方向处理（距离取下界、报警 fail-stay 保持最近值、严禁"超龄就清零"）；账本 P99 超预算 → 告警 + 通道降"无新增覆盖"模式；μ̂_s 表、T_stale、T_alarm^max、v̂_h_max、γ_seg、κ_d 加入禁 OTA 清单（规则 19+23 联合扩展）。
+- **25（新增）：期望接触白名单**——适配集转移必须三分（自由/期望接触/非期望接触）；期望接触需规划意图 + 触觉双确认（w_grasp）；载荷污染能量 ε_fp·E‖τ_payload‖² 显式计入 ε_acc 分账；非期望接触禁用于适配不变（规则 22 修订升级）。
+- **26（新增）：延迟预算纪律**——T_alarm 五段分解与停止距离方程 v_ee,max·T_alarm + v_ee,max²/(2a_brake) ≤ δ_allow 是设计约束；λ_O、n_win_c、v_ee,max、a_brake、T_alarm^max 任一改动必须重解方程并重测 E26；各通道 P99 入账本并随版本发布；仲裁内环节冻结（0.44ms 后再增必须带外化或分频）。
 
-1. 官网挑战赛页：https://unibot.unitree.com/challenges.html （32 任务 / 32,000 episodes / 169h / 每任务得分点满分 100；任务卡片 JS 动态加载，静态页只见表头）
-2. 官网排行榜页：https://unibot.unitree.com/leaderboard.html （仍"Coming Soon"，F16）
-3. 提交模板 README（逐节核实）：https://github.com/unitreerobotics/unibot_submission —— obs 目录全表（无 effort/torque，F11）、obs_delta_indices/image_resize/action_chunk_size 语义、N 端口规则、§6 可信度考核、example_env 本地验证工具
-4. 数据集 schema（HF datasets-server info API）：https://datasets-server.huggingface.co/info?dataset=unitreerobotics%2FG1_Dex1_HangCup （33 特征逐项核对，无 effort，F12）
-5. 数据集卡：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup （LeRobot v3.0、AV1 480×640@30、head_stereo 已校正、Dex1 夹爪 5.5→0.0、194,564 行 / 1.04k episodes / 8.8GB，F13）
-6. 头部方案模型卡：https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora （r64/α32 q/v/o_proj 65M、已 merge 单 safetensors、33,276 episodes、10K steps、单卡 4090、val/loss 0.085、canonical space arms14+grippers2+waist4+base3、use_length=50、0.35s/50 步块、ArrangePlates MSE 0.229/MAE 0.176、wrapper 外链 404，F14）
-7. 官方数据 collection：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset （32 个 G1_Dex1_* 数据集逐项抓取，F15）
-8. GitHub API（ezhoureal 仓库列表）：https://api.github.com/users/ezhoureal/repos （仅 lingbot-vla-v2 存在，2026-08-02 推送；unibot_submission fork 不存在）
-9. 训练/部署代码：https://github.com/ezhoureal/lingbot-vla-v2 （复现入口）
-10. 规则文档（仍未核实，需登录）：https://scnhkkkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh （中）/ https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh （英）——诚实记录：仅获 JS 壳
-11. 「榜首成功率 <30%」：用户先验，官网榜单未公开（F10/F16，弱证据高置信采用）
+---
 
-## 10. 清单迭代规则（v1 五条沿用，追加第 6 条）
-
-1. 每项创新点必含：动机/与现有差异/可行性/资源/落地步骤/风险六要素；
-2. 接口红线：不新增 obs 键、不改评测方行为、所有增强独立可关（逐位回退基线）；
-3. 合规红线：不做评测操纵，进展模型只优化我方期望动作选择；
-4. 先证后立：头部方案画像仅基于可证样本与公开文献，推断必须标注；
-5. 修剪优先：每轮先深化/修剪/修正，再新增（v1：动态 chunk→T_a 扫描；本轮：残差头→解析 IBVS、IP-3 降级、effort 蒸馏→动力学残差）；
-6. **（新）灵感词先过事实核查闸**：词义在本赛题接口/数据约束下不成立时，重构为可成立的等价命题再入清单（本轮：力矩传感→位置残差力觉）。
+**本轮最大风险一句话**：命题 15/16 立足的物理假设（人速上界 v̂_h_max、允许变形 δ_allow）在突挥或刚性碰撞下同时失效——延迟补偿的保守性与停止距离方程一并瓦解，安全论证从"接触前预防"滑向"接触后报警"，而兜底（接触必有力/触觉信号）本身是物理假设而非证据，须 E26b 越界扫描 + ISO/TS 15066 参数适配（A8）先行确认，任一存疑则 seg 外推与延迟补偿同步降级为无外推保守模式。
 <!-- ARTIFACT:END -->
