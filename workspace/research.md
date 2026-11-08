@@ -504,5 +504,4 @@ def augment_seg_tac_labels_v9(physics_seq):   # 物理引擎真值，非渲染�
 IP-18 对话调度 → 决定每轮的“当家”；
 IP-19 几何细化 → 约定话语的“语域”与“音量”；
 IP-20 可靠性记账 → 监控话语的“健康度”与“轮换”。
-
 <!-- ARTIFACT:END -->
