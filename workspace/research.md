@@ -3,297 +3,270 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 35 轮 · 三灵感落地：开源基座雷达 × 跨 episode 记忆检索 × 门禁式路线图
+# 第 36 轮 · 三灵感落地：真实立体视觉 × 交互契约工程 × 面部表情识别的诚实退役
 
-> 承接第 34 轮（v11：四足先验 × 步骤分 × LoRA 专家银行）。本轮灵感词「开源软件 / 记忆检索 / 技术路线图」。
-> **先联网核实，再谈创新**——本轮拿到四项改变「资源账」的一手事实（宇树自家开源 VLA 家族、72 仓 G1-Dex1 开放数据集、第三方全量 UniBot LoRA 参考配方、32 任务×5 指令改写），据此对 v11 的"重算力旗舰"假设做**诚实下修**，并把主攻方向转向**记忆检索**。
+> 承接第 35 轮（v12：开源基座雷达 × 跨 episode 记忆检索 × 门禁式路线图）。本轮灵感词「面部表情识别 / 交互设计 / 视觉感知」。
+> 先联网核实，再谈创新。本轮最硬的一手事实：挑战数据集的 `meta/info.json` **公开了 `camera_params`**——头部双目完整标定（内参、畸变、R、T、基线 58.25 mm、`rectified=true`），而提交接口的 `cam_left_high / cam_right_high` 正是这对头双目。这把 v12 里含糊的"伪深度"升级为**可计算的真实米制深度**，也让「视觉感知」第一次有了硬着力点。同时我们精确读完提交 README §1–§6，把「交互设计」从"泛泛而谈的体验"沉淀为一个**可执行、可量化、直连排名的工程创新点**。至于「面部表情识别」，它是本轮被**诚实退役**的灵感。
 
 ## 0. 联网核实（先事实后推理；检索口径 2026-11-08）
 
-复核与新增事实（来源见产物区 §8；编号续接 v11）：
+本轮复核 + 新增事实（编号续接 v12）：
 
-- **S2 复核（github unitreerobotics/unibot_submission）**：仓库自 2026-08-21 后**无新提交**（2 commits：version 2 → 帧跳过堆叠/图像缩放/序列化修改）。接口契约与 v11 记录的 F24 完全一致：4 相机 + 双臂 7 + ee_pose 6×2 + 夹爪 2 + lower_body 15 + language；动作 joint/ee 二选一 + 共享夹爪 + `pivot[7]`；`obs_delta_indices` 兼具选键与时序堆叠；§6 时延/波动/动作统计=可信度指标。**无变化，F24 继续有效**。
-- **S1 复核（unibot.unitree.com）**：`/leaderboard` 与首页同为 7351B 静态占位页（无 JS bundle、无 API、无 fetch）。**排行榜仍不可得**；"榜首<30%""5 类泛化场景""步骤分口径"仍为**待验假设**（诚实标注，A15 继续开放）。
-- **F36（★新：指令改写，HF `meta/tasks.parquet` 直取）**：32 个任务仓**每个恰有 5 条英文改写指令**，以 `@` 连接（如 HangCup："Hang the cup on the marked spot on the cup rack." + 4 变体）。**A16 已解决**。含义重大：配合 arXiv 2610.19438（LIBERO 上改写指令使 OpenVLA 成功率 **-38 分**，prompt 集成无法恢复，paraphrase consensus 反掉 16.8 分）——**指令改写鲁棒性是被低估的排名变量**；我们手里恰好有 5 改写，可做 5× 增广 + 改写鲁棒评测 +  paraphrase-invariant 的路由/检索键。
-- **F37（★新：宇树自家开源 VLA 家族，HF + github）**：`unitreerobotics/UnifoLM-VLA-Base`——**在 G1-Dex1 开放数据集上继续预训练的 VLA**（Qwen2.5-VLM 骨干 + 流匹配 DiT 动作头，代码 `github.com/unitreerobotics/unifolm-vla`，基于 LeRobot；含 `deployment/model_server/run_real_eval_server.py` 真机评测服务端），license **CC BY-NC-SA 4.0**；同门 `UnifoLM-ER-Flow`（**apache-2.0**：交互中心世界模型 + RVQ 离散动作 token）、`UnifoLM-WLA-1.0-Base`（apache-2.0）、`UnifoLM-WMA-0-Base`（**gated**，不可得）。**与官方同平台、同数据家族的开源基座真实存在**。
-- **F38（★新：72 仓 G1-Dex1 开放集）**：`unitreerobotics/g1-dex1-datasets-68bae98bf0a26d617f9983ab` 集合共 **72 个数据集**（2026-10-14 新增约 28 个：Wipe_Table、Erase_Board、Bag_Insert、Connect_The_Network_Port、Put_Food_In_Oven、Tableware_Storage…）。即：**32 挑战任务之外还有约 40 个同平台开放任务**可做预训练/域扩展。
-- **F39（★新：第三方全量参考配方）**：`ezhoureal/lingbot-vla-v2-unibot-lora`（apache-2.0）：LingBot-VLA-V2（6.3B=Qwen3-VL-4B 骨干 + Qwen2 MoE 动作专家，自身 apache-2.0、60k 小时预训练）上做 LoRA r64/α32（q/v/o，65M 可训练），**全量 UniBot G1_Dex1 = 32 任务 / 33,276 episodes**，10K 步、bf16、**单张 RTX 4090**，val loss 0.085，**合并为单一完整 checkpoint**（恰好符合"单模型"通才赛道）；并公开 `norm_stats/unibot_full.json`（全量 meanstd 归一化统计，可复用/交叉校验）。LingBot-VLA-V2 另有 Dual-Query 蒸馏（DINO-Video/LingBot-Depth）与 MoE 动作专家。
-- **F40（新：无公开 UniBot 榜单复现）**：GitHub 搜 `unibot` 691 仓皆无关（校园助手/聊天机器人）；Unitree 其他挑战（IKEA、luckyrobots/g1-manipulation-challenge）与 UniBot 无关。**没有任何公开提交代码/榜单可供对标**——本地闭环（IP-3）+ F39 参考配方就是我们唯一的基准刻度。
-- **S9 数据许可（复核）**：G1_Dex1_HangCup = **apache-2.0**、194,564 帧（与 F25 一致）。**数据可自由商用**，但 F37 的模型权重是 NC-SA——**"数据自由" ≠ "基座自由"**，基座选型必须先过许可审计。
-- **文献（arXiv API 实时检索，2026-11-08）**：记忆/检索/改写鲁棒性集群 R65–R82（HeLM 2611.02660、PREM 2611.00634、IMPRINT 2610.14406、MemBodied 2609.28256、CogMemory 2610.34251、Robocasa-Mem 2611.06475、Paraphrase 2610.19438、Retrieve-to-Act 2610.37215、Externalise-the-Memory 2610.30478、FastHarness 2610.31427、VoI 检索 2610.40030、P² 进度探针 2610.31613、VeriVLA 2610.21985、OCC4M 2609.28798、IOM 2607.23702、FLORA 2610.31779、VLA-HWBench 2610.34717、Async Policies 2611.05155）。均为标题+摘要级核实，未逐篇读全文。
+- **S1 复核（unibot.unitree.com）**：首页与 `/leaderboard` 现返回 **HTTP 567 + 腾讯云 EdgeOne「Access Restricted」拦截页**（7352B，含 requestId、内在 i18n 脚本），已**不再是** v12 记录的"静态占位页"。含义：官网挂了 WAF/CDN 风控（或对我们的请求做了地域/UA 过滤）。**结论不变：排行榜/手册仍不可得**；"榜首<30%""5 类泛化场景""步骤分口径"仍是**待验假设**（A15 继续开放）。变化本身记入 F43，不假装我们看到了榜单。
+- **F24′ 复核（github unitreerobotics/unibot_submission，README 逐条直取）**：仓库仍是 2 commits、2026-08-21 后无新提交。**接口契约与 v12 完全一致，且更精确**：(a) 观测相机键名是 `cam_left_high / cam_right_high / cam_left_wrist / cam_right_wrist`，**不是**数据集里的 `head_stereo_*` → **A9 相机映射（`cam_left_high↔head_stereo_left`）现在有官方文本依据**；(b) 动作 = 共享 `left/right_gripper` + `pivot[7]`，二选一 `joint`（`left/right_arm[7]`）或 `ee`（`left/right_ee_pose_gripper_base[6]`）；(c) **接口内没有头部/颈/躯干主动控制**（无 head/neck action）；(d) N 个测试机器人 → 必须开 N 个连续端口（8765..），**每端口的 `reset` 与历史状态必须互相隔离**；(e) `obs_delta_indices` 既是选键又是时序堆叠，`image_resize` 是**静态**每键分辨率；(f) token 在 handshake 与每步 `meta.token` 各校验一次；(g) §6：时延及其波动、返回动作的**统计规律**都会作为可信度指标展示。→ **"交互设计"是有官方指名的打分表面。**
+- **F41（★本轮最关键新事实：真实双目标定，HF `meta/info.json` 直取）**：`camera_params.head_stereo` 含 `camera_matrix_left/right`、`dist_coeffs_left/right`、`R`、`T`（T[0]=**-58.25 mm** 基线）、`rectified: true`；`wrist_left/right` 含 `color + ir1 + ir2 + extrinsics_to_color`（腕部是带 IR 双目的 RealSense 类模组）。→ **头双目已标定+已校正，米制深度可在策略侧直接重建，无需学习式单目深度**。这是 IP-34 的地基。
+- **F42（★32 任务 episode 表，HF 集合直取）**：逐仓 `totalEpisodes` 求和 = **33,276**，与 v12 引用的 F39 第三方元数据**分毫不差**。→ **F39 的 33,276 从"第三方口径"升级为"HF 官方 API 复核通过"**。任务分布：`ColorArrangement` 最多 1,533 episodes，`Unlock`/`StackBowls`/`PourOutMedicine` 最少 970–979；`ToolboxStorage` 单任务帧数最高（1,199,136 帧）。长程/多物任务（OrganizePencilCase、ToolboxStorage、StoreCup/StoreEarphones、PackDoll/PackBag、SpellRobot、ConveyorSorting）确在列。
+- **F43（新：官网风控化）**：见上 S1——`567 / EdgeOne` 拦截页取代静态占位。**榜单与规则依然不可得**，且我们无法区分"站点加了风控"与"我们被风控误伤"。
+- **F44（★接口/数据 schema 精确化，HF `info.json` 直取）**：数据集 action 列出 `action.pivot[7]`、`action.waist_action_joint[3]`、`action.base_command[4]`、`action.lower_body[15]`、`action.gripper_controls[4]`、`observation.state.state_d435[6]`、`waist_state_joint[3]`、`recomputed_ee_valid[1]`。→ **强假设 H1：`pivot[7]` = `waist(3) ⊕ base_command(4)`（3+4=7）；`lower_body[15]` = `waist(3) ⊕ left_leg(6) ⊕ right_leg(6)`（3+12=15）**。而 v12 记的 LingBot 规范是 `waist(4)+base(3)=7`——**分组维数不同（3/4 vs 4/3）**，A18 转换器必须解出 `pivot` 的真实打包顺序，不能想当然。这是"错一格=全盘皆输"的精确落点。
+- **F45（新：UnifoLM 许可复核，HF API）**：`UnifoLM-ER-Flow` = apache-2.0、`UnifoLM-WLA-1.0-Base` = apache-2.0、`UnifoLM-WMA-0-Base` = **gated(auto)**、`UnifoLM-VLA-Base` 的 API `cardData` **无 license 标签**（v12 记录其卡面为 CC BY-NC-SA 4.0，故 A17 审计更必要：连 HF 元数据都没有明确许可字段）。`ezhoureal/lingbot-vla-v2-unibot-lora` = apache-2.0（复核）。
+- **文献（arXiv API 实时检索，2026-11-08；标题+编号，摘要级）**：为本轮三灵感词新检索到集群 R85–R100（详见产物区 §8）。要点：**立体/主动/注视**方向已有成熟分解——`ExStereo` 2610.04805（把 2D VLA 提升为显式立体表征）、`EATR-Stereo` 2608.17453（**人形 VLA** 的成对立体证据按本体感知路由 token）、`StereoEngine` 2610.12734（无立体相机也能扩增双腕立体数据）、`FoveaVLA` 2610.20064（**用注视动作替代腕相机**）、`ROI-Foveated Attention` 2603.20668、`Artificial Foveated Perception` 2607.10655（**抑制捷径学习**）、`AWAM` 2610.23396 / `Look Before You Act` 2610.23378 / `ActiveWAM` 2610.01698（主动视角与观察对齐）；**世界模型/遮挡**方向：`SCOUT` 2611.01600（物体中心世界模型规划穿遮挡）、`La-JEPA` 2611.08156、`HiFOR` 2610.40373、`PRIME W0` 2610.39528；**语言/交互**方向：`In-Context VLA` 2608.05738、`Grounded Semantic Re-Binding` 2608.02497、`LIBERO-Para` 2603.28301、`GIVE` 2606.13435（手势 grounding）。**「面部表情识别」方向在本竞技语境下几乎检索不到相关操作文献**（仅 2020 年一条隐式反馈旧作）——这本身就是退役信号。
 
-## 1. 灵感词 → 三条落地线
+## 1. 灵感词 → 三条落地线（含一条诚实退役）
 
-- 「**开源软件**」→ **IP-30 OPEN-STACK-RADAR**：整个竞技环境（提交模板、32 挑战仓+72 开放仓、宇树自家 VLA 代码、LingBot-VLA-V2、第三方参考 LoRA）都是开源的。**差异化不在"有没有模型"，而在"基座选型 + 一键复适 + 许可合规 + 持续吸收新发布"**。含一个**现实修正**：F39 证明全量微调在**单卡 4090** 上可行——v11 给 IP-21 记的"算力(重,一次性)"**降级为(中)**；竞争瓶颈从算力转移到**决策纪律**（这正是第三条线的入口）。
-- 「**记忆检索**」→ **IP-31 MEMORY-RETRIEVAL（本轮技术主攻）**：F36 的指令文本暴露 32 任务中大量**长程/多物/非马尔可夫**任务（OrganizePencilCase：开拉链→收全部→拉拉链；ToolboxStorage：收纳→上锁；StoreEarphones：进充电仓→进收纳盒；PackDoll：全部装包→竖放；StoreCups：one by one；ConveyorSorting：传送带动态分拣）。马尔可夫策略在这些任务上结构性吃亏（R65/R68/R70/R78）。记忆检索同时命中三个排名杠杆：**长程成功率、未见物泛化（跨 episode 近邻先验）、失败恢复（失败经验检索）**。
-- 「**技术路线图**」→ **IP-32 ROADMAP-GATES**：当基座与参考配方都开源后，真正的稀缺品是**什么时候做什么、什么时候止损**。做一份带**量化 go/no-go + 预登记止损线 + 三账户预算分配**的分阶段路线图（P0 复现 → P1 旗舰 → P2 记忆栈 → P3 泛化/部署加固 → P4 冻结），并把"开源雷达纳入 slot"（新发布只有在本门槛优于现役且时延不劣才切换）。
+- 「**视觉感知**」→ **IP-34 STEREO-FOVEA-PERCEPTION（本轮技术主攻）**：F41 给了**已校正头双目**，F44 给了 `state_d435` 作真值核对。设计分三层：(i) **米制深度层**——用 K/R/T(Q) 对 `cam_left_high/right_high` 做 SGBM/学习式立体匹配，得到与标定一致的深度图；(ii) **显式立体 token 层**——把深度/视差编码为 token 注入 VLM（ExStereo/EATR-Stereo 式，按手臂本体状态路由，避免"立体证据被当纹理"）；(iii) **软件注视层**——因接口**不暴露头部动作**，主动物理注视不可行，故改为**策略内 ROI 裁剪/多尺度聚焦**（FoveaVLA/ROI-Foveated 的"软件版"），由 System-2 子目标引导关注区域。目标：未见物、位置、背景/干扰物三类泛化的同时改善（几何优先于纹理，R89/R90 抑制捷径）。
+- 「**交互设计**」→ **IP-33 INTERACTION-CONTRACT（本轮工程主攻）**：README §1–§6 把"交互"具象成一组**会被扣分的旋钮**：双动作空间互斥、共享夹爪/`pivot`、`obs_delta_indices`（选键+堆叠）、静态 `image_resize`、`action_chunk_size`、N 端口并发与**各端口状态隔离 + 每 episode `reset`**、token 双点校验、§6 的**时延波动 + 动作统计规律**。设计一个**契约层**：动作空间仲裁与运动学一致性、时延自适应 chunk 执行 + 平滑/离群钳制（直击 §6 "动作异常"扣分）、N 端口共享后端的分发与状态隔离（**这是记忆 IP-31 能否上线的硬前置**）、任务状态机 + 扰动检测/恢复。差异：v12 把这些散落在 IP-4/IP-25 里当实现细节，本轮**升格为一等设计对象**。
+- 「**面部表情识别**」→ **诚实退役，仅做两处有益残值**：(a) 机器人没有脸、接口没有表情输入、数据集无面部通道、arXiv 无相关操作文献 → **字面版退役**（规则 39）；(b) 唯一可迁移的类比是"G1 的头双目 = 它的眼睛"→ 并入 IP-34；"读懂人" → 降维成 IP-33 里的**扰动/异物检测**（检测入侵的手/物，而非表情）。**不把退役灵感硬掰成创新点。**
 
 ## 2. 三线耦合与关键决断
 
-- **耦合**：IP-30 供基座+数据+B0 参照 → IP-29 专家银行在其上挂载（路由器键改为**5 改写平均嵌入**，R71 驱动）→ IP-31 记忆栈给 System-2 提供检索先验与物体账本、给 IP-28 进度头提供历史条件、给 IP-24 提供失败经验 → IP-25 用异步/VoI 门禁保证检索不伤时延 SLO → IP-32 用门禁决定每层的去留。
+- **耦合**：IP-34 为 IP-22 TRI-FUSE 提供真实深度分支（替换"伪深度"）→ 深度/立体 token 提升 System-2（IP-21）的空间推理与 IP-28 进度探针的几何条件 → 注视 ROI 由 IP-23 子目标驱动，形成"子目标 → 关注区域 → 动作"闭环 → IP-33 契约层承接 IP-31 记忆的**每端口状态隔离**与 IP-25 的时延/统计规则 → IP-32 门禁决定三层是否保留。
 - **关键决断**：
-  1. **默认基座 = LingBot-VLA-V2（apache-2.0）**，挑战者臂 = 宇树 `UnifoLM-VLA-Base`（G1-Dex1 原生，但 **CC BY-NC-SA 4.0，先过许可审计**，A17）；对照臂 = F39 公开 LoRA 配方即 B0。**禁止**在无许可结论前把 NC-SA 权重用于正式提交。
-  2. **动作空间转换精确性优先于一切**：LingBot 规范空间是「arms(14)+grippers(2)+waist(4)+base(3)、state-relative deltas、meanstd 归一化」，与官方 joint schema（双臂 7+7、夹爪、`pivot[7]`）**不是同一套**；必须有显式转换器 + 用 F39 的 `norm_stats/unibot_full.json` 交叉校验（A18）。
-  3. **记忆默认外置**：提交是远程服务（合法持有内存状态），故 M1 工作记忆与 M2 检索库**放服务端**，不进权重；仅当时延证明可行才蒸馏（R73 显示蒸馏进 LoRA 可行但仅 +1pp n.s.，不急于做）。
-  4. **检索必须在关键路径之外**：ANN 预索引（亚毫秒级）+ 异步预取（R82）+ VoI 门禁（R75：只检索"信息价值"高于阈值的观测）——直接呼应 §6 时延/可信度指标。
-  5. **指令 5× 增广作为一等公民**：所有语言条件模块用 5 改写训练，并以跨改写评测（E41）验证（R71：改写可 -38 分，不可儿戏）。
+  1. **深度走几何、不走猜**：有标定（F41）与真值（`state_d435`）就**优先立体几何**，学习式单目深度仅作缺失相机时的兜底（R89：几何比纹理更抗背景/物体泛化）。
+  2. **不做物理主动视角**：接口无头/颈动作 → IP-34 的"注视"只能是**软件 ROI/多尺度**，绝不假设能转头。这纠正了 AWAM/Look-Before-You-Act 类工作在 UniBot 上的直接迁移。
+  3. **契约层是记忆的前置**：IP-31 服务端记忆必须先满足"每端口状态隔离 + 每 episode `reset`"（README §4 明文要求），否则 N>1 时记忆会串台。故 IP-33 优先级与 IP-31 绑定。
+  4. **A18 由假设升维**：F44 的 H1（`pivot[7]=waist(3)⊕base(4)`）必须先被数据证实，再谈转换；用 `norm_stats/unibot_full.json` + `info.json` 分组维数交叉校验。
+  5. **§6 当 KPI**：把"每步时延方差最小 + 动作离群率≈0"写成 IP-33 的验收指标，而非事后补救。
 
 ## 3. 诚实标注（未解决项，不假装解决）
 
-- 排行榜、参赛手册/步骤分口径、5 类泛化赛制的官方定义**仍不可得**（S1 占位页、S4 登录墙、F40 无公开复现）。"榜首<30%"是用户口径，**不是已核实事实**。
-- 因此 IP-28/IP-31 的"步骤分最大化"仍按**更保守的解释 A（rubric 部分分）**实现，且保持 rubric 无关的自监督设计（继承规则 33/34）。
-- 文献均为标题/摘要级引用。
+- 排行榜、参赛手册、步骤分口径、5 类泛化定义**仍不可得**（F43：官网已风控化）；"榜首<30%"仍是用户口径而非已核实事实。
+- F44 的 H1（`pivot` 打包顺序）是**由维度巧合推出的强假设**，未经数据验证——列入 A18，不得当作已知。
+- `state_d435` 只是 6 维位姿/状态，**数据集未提供 D435 深度图**；它只能作稀疏真值核对，不能当监督深度源。
+- 文献均为标题/摘要级引用；`FoveaVLA` 等未逐篇读全文。
 
 ## 4. 本轮最大风险
 
-1. **基座-动作空间错配**（F39 的 deltas/分组 ≠ 官方 schema）：转换错一格 = 全盘皆输。缓解：A18 转换器单测 + 本地回放闭环（IP-3）先证伪再上真机。
-2. **记忆检索反噬**：错误先验会主动带偏策略（R72 指出 OOD 视觉偏移下检索自身训练 kinematic 先验才是正道——我们的库正来自训练分布，这点有利；但未见物 embedding 距离不可靠）。缓解：E42 消融 + 检索置信门限 + 回退纯基座。
-3. **路线图变成"规划戏剧"**：缓解：每个门禁必须绑定一个可执行实验 + 一个三账户数字（规则 38）。
+1. **立体深度"算得出但用不好"**：标定给的 R/T 是双目间外参，但深度还需 Q 矩阵与极线校正一致性；若视频帧本身已被裁切/缩放，深度会系统性偏。缓解：先用 `state_d435` 对少量帧回归验证比例尺，再进训练。
+2. **注视 ROI 引入捷径**：裁剪可能放大数据集偏置（R90 警告）。缓解：ROI 随机化 + 与全帧分支互补消融（E46）。
+3. **契约层变成"过度工程"**：陷入端口/格式细节而不产出分数。缓解：规则 38 门禁 + §6 指标必须可量化。
+4. **再次追风口**：Face 退役说明"灵感词≠机会"；防重蹈覆辙（规则 39）。
 
 ## 5. 一句话结论
 
-本轮最值得押注：把 **IP-31 跨 episode 记忆检索**（工作记忆物体账本 + 5-改写鲁棒检索键 + 失败经验检索）立为技术主攻，用 **IP-30 开源基座雷达**（默认 apache-2.0 的 LingBot-VLA-V2、B0 参考配方锚定、许可审计）把算力账降下来，以 **IP-32 门禁式路线图**保证每一步可证伪、可止损。
+本轮最值得押注：**IP-34 真实立体视觉**——利用挑战数据集**已公开的头双目标定（F41）**重建米制深度并做软件注视/立体 token，用最低新增成本同时改善未见物、位置与背景三类泛化；**IP-33 交互契约**为其与记忆栈提供合规、抗扣分的运行底座。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 35 轮产物 · 创新点清单 v12：开源基座雷达 × 跨 episode 记忆检索 × 门禁式路线图
+# 第 36 轮产物 · 创新点清单 v13：真实立体视觉 × 交互契约工程（面部表情识别退役）
 
-> 承接 v11（第 34 轮）。本轮**新增 IP-30/31/32（均 P0）**，**下修 IP-21 算力账户**（F39：单卡 4090 可全量微调），解决行动项 A16（F36），新开 A17（许可审计）/A18（动作空间转换）。灵感词：开源软件 / 记忆检索 / 技术路线图。
+> 承接 v12（第 35 轮）。本轮**新增 IP-33 INTERACTION-CONTRACT、IP-34 STEREO-FOVEA-PERCEPTION（均 P0/P1）**；**升级 IP-22**（伪深度→真实立体深度分支）；**F39 因 F42 由第三方口径升为官方复核**；**新开 A19（立体深度验证）/A20（N 端口状态隔离）**；**「面部表情识别」灵感诚实退役**。灵感词：面部表情识别 / 交互设计 / 视觉感知。
 
 ## 0. 结论
 
-- **旗舰 IP-21 UNIBOT-RFM 保留**，但补一条**基座纪律**：默认基座 `LingBot-VLA-V2`（apache-2.0），挑战臂 `UnifoLM-VLA-Base`（G1-Dex1 原生、CC BY-NC-SA 4.0 → A17 审计），对照臂 B0 = F39 公开 LoRA 配方（单卡 4090 / 10K 步 / 33,276 episodes / 单一 checkpoint）。**IP-21 算力账户从"重"降为"中"**。
-- **新增 IP-31 MEMORY-RETRIEVAL（P0，本轮技术主攻）**：M1 工作记忆（物体账本/过程记忆）+ M2 跨 episode 检索银行（5 改写鲁棒键）+ M3 失败经验检索（驱动 IP-29 恢复 LoRA 选择）+ M4 异步/VoI 检索门禁 + M5 蒸馏可选。
-- **新增 IP-30 OPEN-STACK-RADAR（P0，工程主攻）**：开源候选登记册 + 一键复适 + 许可台账 + B0 锚定；把 72 仓 G1-Dex1 开放集纳入预训练池。
-- **新增 IP-32 ROADMAP-GATES（P0，纪律主攻）**：P0–P4 分阶段 + 量化 go/no-go + 预登记止损线 + 三账户预算 + 开源纳入 slot。
-- **F36（32 任务 × 5 指令改写）升级为一等公民约束**：所有语言条件模块 5× 增广训练 + 跨改写评测（规则 37）。
+- **旗舰 IP-21 UNIBOT-RFM 保留**；本轮真正的新增在"感知底座"与"运行底座"两处。
+- **新增 IP-34 STEREO-FOVEA-PERCEPTION（P0，本轮技术主攻）**：`camera_params` 已给头双目完整标定（F41）→ 真实米制深度（几何优先）+ 显式立体 token（ExStereo/EATR-Stereo 式）+ **软件注视 ROI**（因接口无头部动作，删除物理主动视角假设）。直接对齐未见物/位置/背景三类泛化。
+- **新增 IP-33 INTERACTION-CONTRACT（P0，本轮工程主攻）**：把 README §1–§6 的接口旋钮升格为一等设计对象——动作空间仲裁、时延自适应 chunk、§6 动作统计离群钳制、N 端口共享后端 + **每端口状态隔离**、任务状态机 + 扰动检测。是 IP-31 记忆上线的硬前置。
+- **升级 IP-22 TRI-FUSE**：v12 的"立体伪深度"→ 真实立体深度分支（几何/学习双路，几何优先）。
+- **F39 置信度升级**：F42 用 HF 官方 API 逐仓 `totalEpisodes` 求和 = **33,276**，与第三方完全一致。
+- **「面部表情识别」退役**（规则 39 首次执行）：字面版无接口/无数据/无文献支撑；残值并入 IP-34（"头双目=眼睛"）与 IP-33（"读人"→扰动检测）。
 
 ## 1. 事实卡（联网核实；检索日期 2026-11-08）
 
-- **F24（接口契约，github unibot_submission 复核）**：与 v11 一致（4 相机 480×640 u8、双臂 7×2、ee_pose 6×2、夹爪 2、lower_body 15、language；joint/ee 二选一 + 共享夹爪 + `pivot[7]`；`obs_delta_indices` 选键+时序堆叠；`image_resize`；token；N 端口 8765..；§6 时延/波动/动作统计=可信度指标）。仓库 2026-08-21 后无新提交。
-- **F25/F30/F31/F32/F33（数据 schema 与定基座，HF 直取）**：沿用 v11（LeRobot v3.0、30fps、480×640；HangCup 194,564 帧；`pivot`≈常数、height≈0.735–0.740、std≤0.016 → 桌面任务实质定基座；夹爪 0–4.5、左右手强度非对称）。
-- **F34（榜单/规则，未核实）**：官网为 7351B 静态占位页；feishu 手册 Login Required；"榜首<30%""5 类泛化""步骤分口径"=待验假设。
-- **F35（文献集群 R52–R64）**：沿用 v11。
-- **F36（★指令改写，HF `meta/tasks.parquet` 直取全部 32 仓）**：每任务恰 **5 条英文改写**，`@` 连接。举例：HangCup / OrganizePencilCase（开拉链→收全部文具→拉拉链）/ PackBag（书包→拉链）/ ToolboxStorage（收纳→上锁）/ StoreEarphones（充电仓→收纳盒）/ SpellRobot（拼 "robot"）/ ConveyorSorting（传送带动态→按类分拣）。**A16 关闭**。
-- **F37（★宇树开源 VLA 家族，HF+github）**：`UnifoLM-VLA-Base`（G1-Dex1 继续预训练；Qwen2.5-VLM + 流匹配 DiT 动作头；代码 unifolm-vla：LeRobot 数据栈 + `run_real_eval_server.py`；**CC BY-NC-SA 4.0**）；`UnifoLM-ER-Flow`（**apache-2.0**：动态区域预测 + RVQ 离散动作 token）；`UnifoLM-WLA-1.0-Base`（apache-2.0）；`UnifoLM-WMA-0-Base`（**gated**）。
-- **F38（★72 仓 G1-Dex1 开放集）**：`g1-dex1-datasets` 集合 72 仓（2026-10-14 新增约 28 仓：Wipe_Table、Erase_Board、Bag_Insert、Connect_The_Network_Port、Put_Food_In_Oven、Tableware_Storage 等）→ 预训练池 ≈ 4×挑战集。
-- **F39（★第三方全量参考配方，`ezhoureal/lingbot-vla-v2-unibot-lora`，apache-2.0）**：LingBot-VLA-V2 6.3B（Qwen3-VL-4B 骨干 + Qwen2 MoE 动作专家）上 LoRA r64/α32（q/v/o，65M 可训练）；**全量 32 任务 / 33,276 episodes**；10K 步、bf16、**单 RTX 4090**；val 0.085；**合并为单一 checkpoint**；动作规范 = joint 空间 arms(14)+grippers(2)+waist(4)+base(3)、**state-relative deltas**、meanstd；公开 `norm_stats/unibot_full.json`。LingBot-VLA-V2 本体：apache-2.0、60k 小时（50k 机器人 + 10k 第一人称）、MoE 动作专家、Dual-Query 蒸馏（DINO-Video/LingBot-Depth）。
-- **F40（无公开对标）**：GitHub 无 UniBot 挑战提交/榜单复现；其他 Unitree 挑战（IKEA/luckyrobots）无关。→ 唯一刻度 = IP-3 本地闭环 + B0。
-- **S9（数据许可）**：挑战仓均 apache-2.0（HangCup 复核）；但 F37 基座权重 NC-SA。**数据自由 ≠ 基座自由**。
+- **F24′（接口契约，README 逐条直取；复核）**：相机键 `cam_left_high/right_high/left_wrist/right_wrist`（**A9 映射获官方文本依据**）；共享 `left/right_gripper`+`pivot[7]`，二选一 `joint`(`left/right_arm[7]`) / `ee`(`left/right_ee_pose_gripper_base[6]`)；**无头/颈/躯干动作**；N 端口连续 8765..，**每端口状态隔离 + 每 episode `reset`**；`obs_delta_indices` 选键+堆叠；`image_resize` 静态；token handshake+每步双校验；§6 时延波动与**动作统计规律**=可信度指标。
+- **F25/F30–F33（数据 schema，沿用 v12）**：LeRobot v3.0、30fps、480×640；桌面任务 `pivot`≈常数 → 实质定基座。
+- **F34/F43（榜单/规则，未核实）**：官网现返回 **HTTP 567 + EdgeOne 拦截页**（v12 时是静态占位）→ 榜单/手册/口径仍不可得。**A15 继续开放**。
+- **F35（文献集群 R52–R64，沿用）**；**R65–R84（沿用 v12）**。
+- **F36（指令改写，沿用）**：每任务恰 5 条英文改写（`@` 连接）。
+- **F37（宇树开源 VLA 家族，沿用）**：`UnifoLM-VLA-Base`（G1-Dex1 继续预训练）、`UnifoLM-ER-Flow`、`UnifoLM-WLA-1.0-Base`、`UnifoLM-WMA-0-Base`。
+- **F38（72 仓 G1-Dex1 开放集，沿用）**：g1-dex1 集合 72 仓（本轮再确认）。
+- **F39（第三方全量参考配方，★置信度升级）**：`ezhoureal/lingbot-vla-v2-unibot-lora`（apache-2.0）：LingBot-VLA-V2 6.3B 上 LoRA r64/α32、**全量 33,276 episodes**、10K 步、单张 4090、单一 checkpoint、公开 `norm_stats/unibot_full.json`。
+- **F41（★新：真实双目标定）**：`meta/info.json` → `camera_params.head_stereo`：K_l/K_r、dist_l/r、R、**T[0]=-58.25mm 基线**、`rectified: true`；腕相机含 `color+ir1+ir2+extrinsics`。→ 米制深度可算。
+- **F42（★新：episode 表，官方复核）**：32 仓 `totalEpisodes` 求和 **= 33,276**（= F39）。最少 `Unlock` 970、`StackBowls` 979、`PourOutMedicine` 979；最多 `ColorArrangement` 1,533。`ToolboxStorage` 帧数最高 1,199,136。
+- **F44（★新：schema 精确化 → 强假设 H1）**：数据集 action = `pivot[7]`、`waist_action_joint[3]`、`base_command[4]`、`lower_body[15]`、`gripper_controls[4]`、`state_d435[6]`、`waist_state_joint[3]`、`recomputed_ee_valid[1]`。**H1：`pivot[7]=waist(3)⊕base(4)`；`lower_body[15]=waist(3)⊕leg(6)⊕leg(6)`。** 与 LingBot `waist(4)+base(3)` 分组不同 → A18 必须解出真实打包。
+- **F45（★新：许可复核）**：`UnifoLM-ER-Flow`/`UnifoLM-WLA-1.0-Base` = apache-2.0；`UnifoLM-WMA-0-Base` = **gated(auto)**；`UnifoLM-VLA-Base` API 无 license 标签（卡面记 CC BY-NC-SA 4.0 → A17 更必要）。
+- **S9（数据许可，沿用）**：挑战仓 apache-2.0；**数据自由 ≠ 基座自由**。
 
-**行动项更新**：A16 **关闭**（F36）；**A17 新增**：NC-SA 基座的竞赛用途许可审计（IP-30 前置，最高优先）；**A18 新增**：官方 joint schema ↔ 基座规范空间（deltas/分组）转换器 + norm_stats 交叉校验；A14（全 32 任务 pivot 扫描）、A15（rubric）、A9/A11/A13 沿用。
+**行动项更新**：**A18 深化**（H1 待验）；**A19 新增**：立体深度管线的尺度/极线一致性验证（用 `state_d435` 稀疏核对）；**A20 新增**：N 端口共享后端的并发 + 状态隔离压测（对接 IP-31 记忆）；A9 **半关闭**（`cam_left_high↔head_stereo_left` 映射有官方文本）；A14/A15/A17 沿用。
 
-## 2. 创新点清单 v12 一览
+## 2. 创新点清单 v13 一览
 
 | 编号 | 名称 | 一句话 | 优先级 | 依赖 | 灵感词 | 主成本账户 | 边际分预期 | 状态 |
 |---|---|---|---|---|---|---|---|---|
-| IP-21 | UNIBOT-RFM | 单模型双系统 VLA 覆盖 32 任务（System-2 规划 + System-1 少步流匹配动作头） | P0 | A9,A13,A18 | 机器人基础模型 | **算力(中)** ← F39 下修 | 主成功率 | 旗舰（账户修正） |
-| **IP-31** | **MEMORY-RETRIEVAL** | 工作记忆物体账本 + 跨 episode 检索银行（5 改写鲁棒键）+ 失败经验检索 + 异步/VoI 门禁 | **P0** | IP-3,IP-28,IP-29,A18 | **记忆检索** | 算力(轻)+工程(中) | 长程成功率/未见物/恢复 | **新增** |
-| **IP-30** | **OPEN-STACK-RADAR** | 开源基座登记册 + 一键复适 + 许可台账 + B0 锚定 + 72 仓预训练池 | **P0** | A17,A18,IP-3 | **开源软件** | 工程(中) | 基座选型正确率 + 迭代速度 | **新增** |
-| **IP-32** | **ROADMAP-GATES** | P0–P4 分阶段 + 量化 go/no-go + 预登记止损 + 三账户预算 + 开源纳入 slot | **P0** | IP-10 | **技术路线图** | 近零 | 防负 ROI + 决策速度 | **新增** |
-| IP-29 | LoRA-EXPERT-BANK | 共享 VLM + K 个能力 LoRA 专家 + 语言/首帧路由器 + 恢复 LoRA（键→5 改写平均嵌入） | P0 | IP-21 | LoRA | 算力(中) | 全域成功率 + 省显存 | 继承（键升级） |
-| IP-28 | PROGRESS-CRITIC | 自监督进度/子步骤：稠密监督 + 卡住重试 + 部分分最大化 | P0 | A15,IP-3 | 步骤分 | 数据(标注轻) | 步骤分 + 长程 | 继承（+P² 探针 R76） |
-| IP-25 | LATENCY-SLO | 时延 SLO + 少步动作头 + QAT + N 端口并发 + 动作平滑 | P0 | IP-4,A11 | 接口工程 | 部署机 | 可信度 + 不掉请求 | 继承（+R81/R82） |
-| IP-22 | TRI-FUSE | 多视图×本体×语言融合 + 立体伪深度 +（可选）世界模型辅助 | P0 | IP-21 | 技术融合 | 算力(中) | 未见物/位置泛化 | 继承（+F37 ER-Flow 选项） |
-| IP-24 | FAILURE-MONITOR | 可观测失败预警 + 触发恢复（恢复 LoRA 由 M3 检索选择） | P1 | IP-21,IP-29,IP-31 | 泛化×安全 | 算力(轻) | 鲁棒性/可信度 | 继承（+M3/R77） |
-| IP-23 | TASK-DAG | 得分点驱动子目标分段 + 分层 | P1 | IP-28,IP-21 | 任务分解 | 数据(轻) | 步骤分 + 长程 | 继承 |
+| IP-21 | UNIBOT-RFM | 单模型双系统 VLA 覆盖 32 任务 | P0 | A9,A18 | 机器人基础模型 | 算力(中) | 主成功率 | 旗舰 |
+| **IP-34** | **STEREO-FOVEA-PERCEPTION** | 真实立体米制深度 + 显式立体 token + 软件注视 ROI，几何优先 | **P0** | F41,IP-22,IP-3 | **视觉感知** | 算力(中)+工程(中) | 未见物/位置/背景泛化 | **新增** |
+| **IP-33** | **INTERACTION-CONTRACT** | 接口旋钮一等公民：动作仲裁/时延 chunk/动作离群钳制/N 端口状态隔离/扰动恢复 | **P0** | F24′,IP-25,IP-31 | **交互设计** | 工程(中) | 可信度 + 不掉请求 + 记忆合规 | **新增** |
+| IP-31 | MEMORY-RETRIEVAL | 工作记忆账本 + 跨 episode 检索银行 + 失败经验检索 | P0 | IP-3,IP-28,IP-29 | 记忆检索 | 算力(轻)+工程(中) | 长程/未见物/恢复 | 继承（+A20 前置） |
+| IP-30 | OPEN-STACK-RADAR | 开源基座登记册 + 一键复适 + 许可台账 + B0 锚定 | P0 | A17,A18 | 开源软件 | 工程(中) | 选型正确率 + 迭代速度 | 继承 |
+| IP-32 | ROADMAP-GATES | P0–P4 门禁 + 量化 go/no-go + 止损 + 三账户 | P0 | IP-10 | 技术路线图 | 近零 | 防负 ROI | 继承 |
+| IP-29 | LoRA-EXPERT-BANK | 共享 VLM + K 能力 LoRA + 语言/首帧路由（键=5 改写平均嵌入） | P0 | IP-21 | LoRA | 算力(中) | 全域成功率 | 继承 |
+| IP-28 | PROGRESS-CRITIC | 自监督进度/子步骤 + 卡住重试 + 部分分 | P0 | A15,IP-3 | 步骤分 | 数据(标注轻) | 步骤分 + 长程 | 继承 |
+| IP-25 | LATENCY-SLO | 时延 SLO + 少步动作头 + QAT + 动作平滑 | P0 | IP-4,A11 | 接口工程 | 部署机 | 可信度 | 继承（并入 IP-33 接口面） |
+| **IP-22** | **TRI-FUSE** | 多视图×本体×语言融合 + **真实立体深度分支**（替换伪深度） | P0 | IP-21,IP-34 | 技术融合 | 算力(中) | 未见物/位置泛化 | **升级** |
+| IP-24 | FAILURE-MONITOR | 失败预警 + 触发恢复（恢复 LoRA 由 M3 选） | P1 | IP-21,IP-29,IP-31 | 泛化×安全 | 算力(轻) | 鲁棒性/可信度 | 继承 |
+| IP-23 | TASK-DAG | 得分点驱动子目标分段 + 分层 | P1 | IP-28,IP-21 | 任务分解 | 数据(轻) | 步骤分 + 长程 | 继承（+驱动 IP-34 注视） |
 | IP-26 | GENERALIZE-SUITE | 五轴增广与评测 | P1 | IP-2,IP-3 | 泛化 | 数据(近零) | 全场景 | 继承 |
-| IP-2/IP-3/IP-4/IP-10 | SCORE-ALIGN / LOCAL-EVAL / SUBMISSION-OPS / COST-LADDER | 沿用 | P0 | — | — | — | — | 继承 |
-| IP-9 | SWARM-DECODE | 开源候选池内集成→蒸馏单模型（与 IP-30 登记册共享池） | P1 | IP-2,IP-30 | 泛化 | 算力(一次性) | +2~5pt | 继承（挂 IP-30） |
-| IP-27 | QUAD-PRIOR | 跨形态表征先验，**不做运动控制** | P2 | IP-22 | 四足 | 算力(低) | 未见物 | 继承（保持裁剪） |
-| IP-8 | STEP-EFF | 并入 IP-28/IP-25 | — | — | — | — | — | 合并（v11 起） |
+| IP-2/3/4/10 | SCORE-ALIGN / LOCAL-EVAL / SUBMISSION-OPS / COST-LADDER | 沿用 | P0 | — | — | — | — | 继承 |
+| IP-9 | SWARM-DECODE | 开源候选池集成→蒸馏单模型 | P1 | IP-2,IP-30 | 泛化 | 算力(一次性) | +2~5pt | 继承 |
+| IP-27 | QUAD-PRIOR | 跨形态表征先验，不做运动控制 | P2 | IP-22 | 四足 | 算力(低) | 未见物 | 继承 |
+| IP-8 | STEP-EFF | 并入 IP-28/IP-25 | — | — | — | — | — | 合并 |
 | IP-1/11/13/16/17/18/19/20 | SLAM/社交/力觉/触觉/对话 | 接口不可达或赛道无需求 | — | — | — | — | — | 退役 |
+| **FACE-EXPR** | **面部表情识别** | 无脸/无输入/无数据/无文献 | — | — | 面部表情识别 | — | — | **退役（规则 39）** |
 
 ## 3. 重点展开
 
-### 3.1 IP-31 MEMORY-RETRIEVAL（灵感：记忆检索）
+### 3.1 IP-34 STEREO-FOVEA-PERCEPTION（灵感：视觉感知）
 
-**动机**：(a) F36 指令文本证实 32 任务含大量长程/多物/非马尔可夫任务；(b) 马尔可夫 VLA 在"已处理哪些物体/收纳关系/子步骤"上结构性失明（R65/R68/R70/R78）；(c) 33,276 episodes 本身就是一座**可检索的经验库**（F39），跨 episode 近邻先验是无需训练的泛化机制；(d) 改写是排名暗礁（R71：-38 分）。
+**动机**：F41 提供**已校正头双目标定**（基线 58.25mm），F44 提供 `state_d435[6]` 作稀疏真值；F36 的 32 任务大量涉及未见物/位置/干扰（背景与物体是排名暗礁）。立体几何比单目纹理更抗背景与外观变化（R89 ExStereo、R90 抑制捷径）。
 
-**设计（五模块，默认全部外置于服务端）**：
-- **M1 工作记忆（物体账本 + 过程记忆）**：固定容量记忆（MemBodied 式：associative state + episode anchor），**事件触发更新**（HeLM 式：夹爪开合事件、物体计数变化、子步骤完成）。账本字段：`(物体槽位, 类别, 位置, 状态:原位/已抓/已放/已收纳于 X)`；关系含 **containment**（OCC4M：进包/进盒/进仓）。查询接口给 System-2（子目标）与 IP-28 进度头。
-- **M2 跨 episode 检索银行（RAG）**：预嵌入全部 33,276 episodes：**键 = 5 改写指令的平均嵌入（paraphrase-invariant）+ 首帧视觉嵌入 + 技能标签**，ANN 索引（亚毫秒）。运行时：检索 top-k 相似 episode → (i) 作为 System-2 的上下文示范（记忆增强教师，R73）；(ii) 提取其末段/子目标序列作**检索先验**注入 System-1（R2A：策略自身训练经验里的 kinematic 先验最干净）。
-- **M3 失败经验检索**：IP-24 触发时，从"失败-恢复"配对库检索最相似失败 → 选择/加权 **IP-29 恢复 LoRA**，并复用其成功恢复子轨迹（FastHarness 式"审后再恢复、恢复后回归常规"）。
-- **M4 检索调度（不伤时延）**：R75 VoI 门禁——只有"信息价值"高于阈值的观测才触发检索；ANN 查询异步预取（R82 异步策略），不进控制回路；失败事件为最高优先级同步检索。
-- **M5 蒸馏开关（P2）**：仅当 E42 证明外置检索增益 ≥ 阈值且时延有余，才把记忆行为蒸馏进权重（R73 预注册结论：+1pp n.s.，不急于做）。
+**设计（三层 + 一路兜底）**：
+- **L1 米制深度层**：由 K_l/K_r + R + T 构造 Q，对校正后的 `cam_left_high/right_high` 做 SGBM（或轻量学习式立体如 StereoEngine 式扩展）；输出与标定同一尺度的深度图。**尺度/极线一致性用 `state_d435` 稀疏核对（A19）**。
+- **L2 显式立体 token 层**：深度/视差编码为 token 与 RGB token 成对注入 VLM（ExStereo/EATR-Stereo 式）；**按手臂本体状态（`left/right_arm`）做 embodiment-aware 路由**（EATR-Stereo），避免立体证据被当纹理。
+- **L3 软件注视层（关键约束）**：接口**不暴露头部动作**（F24′）→ **不做物理主动视角**。改为策略内 ROI：由 System-2 子目标（IP-23）给出关注框/尺度，对高分辨率输入做多尺度 crop/attention（FoveaVLA/ROI-Foveated 的软件化），并把 ROI 通过 `image_resize` 之外的方式在策略内部实现。
+- **兜底**：若某相机缺失/退化，回退学习式单目深度（仅兜底，不默认）。
 
-**与现有方案差异**：v11 无任何记忆组件；IP-28 仅是 episode 内进度。IP-31 首次引入**跨 episode 检索 + 物体账本 + 失败经验**，且**键的构造被 F36 直接约束**（改写平均嵌入）。
+**与现有方案差异**：v12 的 IP-22 只提"立体伪深度"，无标定、无 token 路由、无注视、无真值核对。IP-34 把"感知"变成有标定、可验证、有文献锚点的工程。
 
-**可行性/资源**：33k episodes 嵌入预计算（1 GPU·天级）；ANN（faiss 级）；账本更新是轻量规则/小头。数据零新增标注。风险：检索噪声、库与评测场景错配、时延。
+**可行性/资源**：标定已在数据集中（零采集成本）；SGBM 在 480×640 上可实时；token 层复用 IP-22。风险：视频码流裁切导致的尺度偏差（A19 防）。
 
 ```python
-class MemoryStack:
-    def __init__(self, bank_episodes, embed, ann):
-        self.bank_keys = embed_mean_over_5_paraphrases(bank_episodes)  # F36
-        self.ann = ann.index(self.bank_keys)                           # 亚毫秒
-        self.ledger = ObjectLedger()          # M1: (slot,class,pos,state)
-    def on_event(self, ev):                   # 夹爪跳变/计数变化/子步完成
-        self.ledger.update(ev)
-    def retrieve(self, lang_or_variants, frame, voi_ok):
-        if not voi_ok: return None            # M4: 节流，保 §6 时延
-        k = concatenate([mean(embed(v) for v in variants), embed(frame)])
-        ids, scores = self.ann.search(k, top_k=5)
-        return band_filter(ids, scores)       # 阈值过滤，否则回退纯基座
-    def on_failure(self, f):                  # M3
-        return self.retrieve_similar_failure(f)   # → IP-29 恢复 LoRA 选择
+class StereoFovea:
+    def __init__(self, cam_params):            # F41: 已校正头双目
+        self.Q = stereo_rectify_to_Q(cam_params)   # K,R,T -> Q
+        self.matcher = SGBM()
+    def depth(self, left, right):
+        disp = self.matcher.compute(left, right)
+        return cv2.reprojectImageTo3D(disp, self.Q)
+    def perceive(self, obs, subgoal_roi):
+        d  = self.depth(obs.high_l, obs.high_r)
+        roi = crop_multiscale(obs.high_l, subgoal_roi)   # L3 软件注视
+        return stereo_tokens(obs.high_l, d, roi, embodiment=obs.arm_state)  # L2
 ```
 
-### 3.2 IP-30 OPEN-STACK-RADAR（灵感：开源软件）
+### 3.2 IP-33 INTERACTION-CONTRACT（灵感：交互设计）
 
-**动机**：提交模板、数据（apache-2.0）、宇树自家代码与权重、LingBot-VLA-V2、第三方全量 LoRA 配方全部公开（F24/F37/F38/F39）。**差异化 = 基座选型 + 一键复适 + 许可合规 + 持续吸收**。且 F39 把"能不能练得起"变成"敢不敢选错"。
+**动机**：README §1–§6 把"交互"明确成会被扣分的旋钮：双动作空间互斥、共享夹爪/`pivot`、`obs_delta_indices`、静态 `image_resize`、`action_chunk_size`、**N 端口并发 + 每端口状态隔离 + 每 episode `reset`**、token 双校验、**§6 时延波动与动作统计规律=可信度**。v12 把这些当实现细节——本轮升格。
 
-**设计**：
-- **候选登记册**（字段：license、参数量、动作空间、chunking、embodiment 覆盖、G1/Dex1 匹配度、本地硬件时延、IP-3 本地榜成绩、迁移成本）。基线三臂：B0=F39 配方（LingBot+官方 LoRA）、B1=UnifoLM-VLA-Base（待 A17）、B2=域预训练（72 仓）→ 微调。
-- **一键复适**：A9 统一 schema 数据加载 → 同一微调配方（LoRA r64/α32 q/v/o，bf16，10K 步量级）→ IP-3 本地回放榜 → 自动出报告；换基座 < 1 天。
-- **许可台账**：apache-2.0 优先（LingBot-VLA-V2、UnifoLM-ER-Flow、数据）；**CC BY-NC-SA 4.0（UnifoLM-VLA-Base）在 A17 结论前只作对照臂**；WMA-0 gated 不可得 → 不排期。
-- **开源雷达 slot（挂 IP-32）**：新发布进入"优于现役 ≥2pt 且时延不劣"才切换；雷达本身零算力（API 轮询）。
-- **数据池**：72 仓 G1-Dex1（F38）做域预训练（FLORA 式数据引擎概念作参照 R80；InternW0-Δ/ Open-HumanWAM 作外推选项、非关键路径）。
+**设计（五个契约区）**：
+- **C1 动作契约**：joint/ee 双表示仲裁；共享夹爪/`pivot` 与手臂动作的**运动学一致性**；`pivot[7]` 打包按 A18 解出的真实顺序（勿信 H1）。
+- **C2 时延契约**：`action_chunk_size` T_a 自适应 + 少步动作头（IP-25）+ 平滑/限幅；**目标=每步时延方差最小**（§6）。
+- **C3 动作统计契约**：离群/跳变检测与钳制，保证"返回动作无明显异常"（§6 直接扣分项）。
+- **C4 多端口契约**：N 端口共享单模型后端（省显存）+ 请求分发；**每端口 `reset` 与历史/记忆状态彻底隔离**（IP-31 前置，A20）；并发不互阻、时延不膨胀。
+- **C5 任务/扰动契约**：每 episode 状态机（对齐 IP-28 进度）+ 扰动/异物检测与恢复（"读人"的降维残值：检测入侵手/物，而非表情）。
 
-**差异**：v11 假设"自建重算力预训练"；本项改为**选型+复适+合规**的工程纪律，并把 B0 设为一切创新的诚实地平线。
+**差异**：v12 有 IP-25（时延）与 IP-4（多端口运维），但无统一的"接口即设计"观；C3（动作统计离群）是 v12 完全遗漏的官宣扣分点。
 
-**风险**：追新主义（雷达 slot 有门槛）、NC-SA 合规、生态碎片化（迁移成本已单列）。
+**风险**：过度工程 → 每区必须绑一个可量化 §6 指标 + 一条 E47/E48 实验。
 
-### 3.3 IP-32 ROADMAP-GATES（灵感：技术路线图）
+### 3.3 IP-22 TRI-FUSE 升级（原：伪深度 → 真实立体）
 
-**动机**：基座与配方开源后，稀缺品是**决策纪律**：何时做什么、何时止损、何时换基座。路线图即"把风险排进日历"。
+把 v12 的"立体伪深度"替换为 IP-34 的 L1/L2 真实立体分支；保留多视图×本体×语言融合骨架；世界模型辅助（F37 ER-Flow/SCOUT）仍为可选。差异：感知从"猜深度"变"算深度"。
 
-**设计（P0–P4，每阶段量化 go/no-go + 预登记止损线）**：
-- **P0 复现期（W1–2）**：B0 三臂在 IP-3 上跑通；验证 A18 转换器、A14 pivot 冻结、相机映射 A9。Gate：本地 32 任务成功率复现 B0 ±3pt；否则回查 schema/转换（止损：≤2 周）。
-- **P1 旗舰期（W3–5）**：IP-21+IP-29（LoRA 银行）+双表示动作头；5 改写增广。Gate：本地 ≥ B0 +5pt 且路由准确 ≥90%；否则退单 LoRA。
-- **P2 记忆期（W6–9）**：IP-31 M1–M3 + IP-28 进度头。Gate：长程子集（≥5 任务）+10pt 且部分分（E37）↑；否则只留 M1。
-- **P3 泛化/部署期（W10–12）**：IP-26 五轴 + IP-24 + M4 门禁 + IP-25 时延压测 + IP-4 多端口。Gate：p99 时延 ≤SLO、动作统计无离群。
-- **P4 冻结期（W13+）**：可信度预演、官方通道演练、版本冻结；雷达 slot 保留至截止。
-- **三账户预算**：训练/服务/工程按阶段配额 + 每阶段止损线（超支即降级该阶段范围，不动其他阶段）。
-
-**差异**：v11 有实验表但无门禁/止损/预算分配；本项把"何时停"变成可执行判据（规则 38：无门禁不上马）。
-
-**风险**：规划戏剧 → 每个 Gate 必须绑定一个实验编号 + 一个数字。
-
-## 4. v12 整合架构
+## 4. v13 整合架构
 
 ```
-输入: 4×RGB ─┐  本体(arms/ee/grip/lower_body) ┤→ TRI-FUSE (IP-22)
-     语言指令 ×5 改写 (F36) ──────────────────┘
+输入: 4×RGB (cam_left/right_high=头双目, cam_left/right_wrist) ─┐
+     本体(arms/ee/grip/lower_body/pivot) ┤→ TRI-FUSE (IP-22, 升级)
+     语言指令 ×5 改写 (F36) ─────────────┘   ▲
+        │                                   │ L1 米制深度 (IP-34, F41 标定 + state_d435 核对)
+        │                                   │ L2 显式立体 token (ExStereo/EATR-Stereo)
+        │                                   │ L3 软件注视 ROI (子目标驱动, 接口无头部动作)
+ System-2 = 开源基座(默认 LingBot-VLA-V2 apache-2.0)
+          + LoRA-EXPERT-BANK (IP-29) + 检索先验/物体账本 (IP-31 M1/M2) ──→ 子目标 z_t (IP-23)
+        │                                                                     │
+ System-1 = 少步流匹配动作头 (joint/ee 双表示)
         │
- System-2 = 开源基座(默认 LingBot-VLA-V2 apache-2.0 / 臂 UnifoLM-VLA-Base 待 A17)
-          + LoRA-EXPERT-BANK (IP-29, 路由键=5改写平均嵌入)
-          + 检索先验(M2) + 物体账本查询(M1) ──→ 子目标 z_t (IP-23)
-        ▲                         │
- 失败经验检索(M3) ◄── FAILURE-MONITOR(IP-24)   PROGRESS-CRITIC(IP-28) + P²探针(R76)
-        │
- System-1 = 少步流匹配动作头(joint/ee 双表示) → 动作块 T_a×(双臂+夹爪) + pivot 冻结头
-        │
- LATENCY-SLO (IP-25): 少步 + QAT + 平滑/限幅 + N 端口并发；检索异步/VoI 门禁(M4)
- A18 转换器（基座规范空间 deltas/waist-base 分组 ↔ 官方 schema）在所有输入/输出边界
- ROADMAP-GATES (IP-32): P0–P4 门禁决定每层去留；OPEN-STACK-RADAR (IP-30) 供基座与数据
+ INTERACTION-CONTRACT (IP-33):
+   C1 动作仲裁(joint/ee, pivot @A18) · C2 时延 chunk · C3 动作离群钳制(§6)
+   C4 N 端口共享后端 + 每端口状态隔离(A20, IP-31 前置) · C5 状态机+扰动恢复
+ A18 转换器(pivot/lower_body 打包 @H1 待验) 在所有 I/O 边界
+ ROADMAP-GATES (IP-32) 门禁每层去留；OPEN-STACK-RADAR (IP-30) 供基座与数据
 ```
 
 ## 5. 训练/服务伪代码（增量）
 
 ```python
-def build_v12():                       # IP-30: 基座来自登记册（默认 apache-2.0）
-    base = load_open_base("lingbot-vla-v2")            # F39；A17 前不用 NC-SA
-    fuse = TriFuseEncoder()                            # IP-22
-    bank = LoRABank(base, K=6, paraphrase_keys=True)   # IP-29 + F36 键
-    mem  = MemoryStack(bank_episodes=ALL_33K)          # IP-31 M1-M3
-    system2 = SubgoalPlanner(bank, memory=mem)         # IP-23
+def build_v13():
+    base = load_open_base("lingbot-vla-v2")          # IP-30; apache-2.0
+    sf   = StereoFovea(cam_params)                   # IP-34 (F41)
+    fuse = TriFuseEncoder(stereo=sf)                 # IP-22 升级
+    bank = LoRABank(base, K=6, paraphrase_keys=True) # IP-29 + F36 键
+    mem  = MemoryStack(bank_episodes=ALL_33K)        # IP-31 (F42: 33,276)
+    system2 = SubgoalPlanner(bank, memory=mem)       # IP-23 -> ROI
     system1 = FlowActionExpert(steps=4, dual=("joint","ee"))
-    prog = ProgressHead(p2_probes=True)                # IP-28 + R76
-    for batch in D:                                   # 每条样本语言 5× 增广（F36/R71）
-        for variant in batch.lang_variants:
-            f = fuse(batch.images, batch.proprio, variant)
-            demo = mem.retrieve(variant, batch.first_frame)      # M2（训练期暖初始化）
-            z = system2(f, variant, demo)
-            a = system1.sample_train(f, batch.proprio, z, batch.action)
+    prog = ProgressHead(p2_probes=True)              # IP-28
+    for batch in D:
+        for v in batch.lang_variants:                # 5× 增广 (F36)
+            roi = system2.roi(batch, v)              # L3 注视
+            f   = fuse(batch.images, batch.proprio, v, roi)   # L1/L2
+            z   = system2(f, v, mem.retrieve(v, batch.first_frame))
+            a   = system1.sample_train(f, batch.proprio, z, batch.action)
             loss = flow_loss(a, A18.convert(batch.action)) \
-                 + LAM_PROG * prog_loss(prog(f, mem.ledger), batch.pseudo_progress) \
-                 + LAM_ROUT * router_lb(bank) + LAM_PAR * para_invariance(bank)
-    mem.build_failure_bank()                          # M3: 失败-恢复配对
-    return fuse, bank, system2, system1, prog, mem, A18.converter
+                 + LAM_PROG*prog_loss(prog(f, mem.ledger), batch.pseudo_progress) \
+                 + LAM_ROUT*router_lb(bank) + LAM_PAR*para_invariance(bank)
+    mem.build_failure_bank()
+    return sf, fuse, bank, system2, system1, prog, mem, A18.converter
 
-def get_action(obs):                 # 服务端（外置记忆，M4 门禁）
-    if voi_ok(obs) and t_budget_left():
-        demo = mem.retrieve(obs.lang_variants, obs.frame)   # 异步预取结果
-    else:
-        demo = None
-    mem.on_event(detect_event(obs))                    # M1 账本更新
-    if failure_monitor(obs, prog) > TAU:               # IP-24
-        rec = mem.on_failure(obs)                      # M3 → 恢复 LoRA
-        return recover_loras(bank, rec), obs            # 只增不减（规则 30）
-    return policy(obs, demo, mem.ledger)
+def get_action(obs):                 # 每端口独立进程/上下文 (C4)
+    roi  = subgoal_roi(obs)
+    f    = fuse(obs, roi)                        # 含 IP-34 立体
+    a    = system1(...)
+    a    = contract_clamp(a)                     # C3: §6 动作离群钳制
+    return chunk_schedule(a, T_a_adaptive)       # C2: §6 时延方差最小
 ```
 
-## 6. 实验设计（新增 E40–E44；E30–E39 沿用）
+## 6. 实验设计（新增 E45–E48；E30–E44 沿用）
 
 | 实验 | 设置 | 指标 | 门槛/预期 |
 |---|---|---|---|
-| E40 基座对照 | B0(F39 配方) vs B1(UnifoLM-VLA-Base) vs B2(72仓预训练→微调) | 32 任务成功率、p99 时延、显存 | B0 复现 ±3pt 为地平线；选优者进 P1 |
-| E41 改写鲁棒 | 无增广 vs 5× 改写增广；跨改写评测 | 成功率掉幅 | 掉幅 ≤5pt（R71 基线：无增广可 -38） |
-| E42 检索银行 | 无检索 vs M1 vs M1+M2 vs +M3 | 长程子集成功率、部分分、检索 p99、未见物成功率 | 长程 +≥5pt；p99 检索 ≤SLO；错误先验率 <τ |
-| E43 失败恢复 | M3 开/关 | 恢复成功率、动作统计离群（可信度） | 恢复成功率↑；离群≈0 |
-| E44 门禁演练 | 按 IP-32 跑 P0–P2 流程 | 每 Gate 可判定性、预算超支率 | 每个 Gate 有明确数字裁决 |
-| E36–E39 | 沿用（LoRA 银行/进度-部分分/跨形态/pivot 消融） | — | — |
-| E30–E35 | 沿用（数据统一/闭环/泛化/时延/失败预警） | — | — |
+| E45 立体深度 | SGBM/学习式 vs 单目；与 `state_d435` 稀疏核对 | 深度尺度误差、未见物/位置成功率 | 尺度误差 <τ；泛化子集 +≥3pt（A19） |
+| E46 软件注视 | 全帧 vs ROI vs 多尺度；ROI 随机化 | 背景/干扰物子集成功率、捷径指标、p99 | 泛化子集 +≥3pt 且不掉主集（R90 防捷径） |
+| E47 交互契约 | T_a 扫描、离群钳制开/关、N=3 端口共享后端 | 每步时延方差、动作离群率（§6）、有效动作率 | 方差↓、离群率≈0、无非法请求 |
+| E48 扰动/状态隔离 | 扰动注入 vs 无；N 端口并发 + 串台检测 | 恢复率、记忆串台率 | 串台 = 0（IP-31 前置 A20） |
+| E40–E44 | 沿用（基座/改写/检索/失败/门禁） | — | — |
+| E30–E39 | 沿用 | — | — |
 
-**降级机制**：A17 不过 → B1 撤出正式提交（仅对照）；E41 不过 → 强制增广重训；E42 不过 → 仅保 M1（账本）关 M2/M3；门禁不过 → 按止损线缩范围；基座切换触发条件 = 新开源发布本地榜 +≥2pt 且时延不劣。
+**降级机制**：E45 不过 → IP-34 退为纯 RGB + 学习式深度兜底；E46 引入捷径 → 删注视只留全帧；E47 离群率不降 → 回退更小 T_a 与更强平滑；A20 串台 → IP-31 在该端口配置下关闭。
 
 ## 7. 风险登记簿（更新）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| **A18 基座-动作空间转换错位**（deltas/waist-base 分组 ≠ 官方 schema） | **高** | 转换器单测 + norm_stats 交叉校验（F39 公开统计）+ IP-3 回放先证伪 |
-| **A17 基座许可（CC BY-NC-SA 4.0）** | **高** | 默认 apache-2.0 基座；NC-SA 仅对照臂；结论前不用于正式提交 |
-| 记忆检索注入错误先验（未见物 embedding 不可靠） | 中高 | 检索置信门限 + 回退纯基座 + E42 消融 |
-| 检索/账本拖累时延（§6 可信度指标） | 中高 | M4 VoI 门禁 + 异步预取 + ANN 亚毫秒 + p99 监控 |
-| 路线图规划戏剧 | 中 | 规则 38：无门禁不上马；E44 演练 |
-| 步骤分口径未核实（A15） | 高 | rubric 无关设计 + 保守阈值 + E37 |
-| 路由错误跨任务干扰（IP-29） | 中高 | 软合并 + 熵门限回退 + E36 |
-| 定基座假设不普适（A14） | 中 | 全 32 任务扫描 + pivot 小范围微调 |
-| （沿用）相机映射、多端口隔离、时延异常、算力 | 高/中 | 见 v10/v11 |
+| **立体深度尺度偏差**（视频码流裁切/缩放破坏极线） | **高** | A19：`state_d435` 稀疏回归校准；先证伪再进训练 |
+| **注视 ROI 放大数据集捷径** | 中高 | ROI 随机化 + E46 互补消融（R90） |
+| **N 端口记忆串台**（IP-31 上线前置） | **高** | A20 压测 + 每端口独立 `reset`/上下文隔离（README §4） |
+| **§6 动作统计离群扣分**（v12 遗漏） | **中高** | C3 钳制 + E47 量化 |
+| **A18 `pivot`/`lower_body` 打包错位**（F44 H1 未验） | **高** | 分组维数交叉校验 + norm_stats + IP-3 回放 |
+| **A17 基座许可**（UnifoLM-VLA-Base 无明确许可标签，F45） | **高** | 默认 apache-2.0 基座；NC-SA 仅对照 |
+| 记忆检索注入错误先验 | 中高 | 置信门限 + 回退纯基座（E42） |
+| 步骤分口径未核实（A15/F43） | 高 | rubric 无关设计 + 保守阈值 |
+| （沿用）相机映射、时延异常、算力 | 中 | 见 v10–v12 |
 
 ## 8. 来源清单（引用口径：2026-11-08）
 
 **官方/开源（一手，本轮直取）**
-- S1 `https://unibot.unitree.com`（/、/challenges、/leaderboard）——7351B 静态占位页，榜单未上线。
-- S2 `https://github.com/unitreerobotics/unibot_submission`——接口契约（§1–§6）、可信度指标（§6）；2026-08-21 后无新提交。
-- S3 `https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset`（32 仓）+ 各仓 `meta/tasks.parquet`（**F36：每任务 5 改写**）+ `meta/info.json` / `stats.json`；G1_Dex1_HangCup = apache-2.0、194,564 帧；数据集服务端 size/first-rows 复核。
-- S4 参赛手册（feishu）——**Login Required，未获取**。
-- **S5（新）** `https://huggingface.co/unitreerobotics/UnifoLM-VLA-Base`（模型卡：G1-Dex1 继续预训练、CC BY-NC-SA 4.0）+ `github.com/unitreerobotics/unifolm-vla`（Qwen2.5-VLM + 流匹配 DiT、LeRobot 数据栈、run_real_eval_server）+ `UnifoLM-ER-Flow`（apache-2.0，动态区域+RVQ）+ `UnifoLM-WMA-0-Base`（gated）。
-- **S6（新）** `https://huggingface.co/collections/unitreerobotics/g1-dex1-datasets-68bae98bf0a26d617f9983ab`——72 仓开放集。
-- **S7（新）** `https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora`（33,276 episodes / 4090 / 10K 步 / LoRA r64 / 单一 checkpoint / norm_stats）+ `https://huggingface.co/robbyant/lingbot-vla-v2-6b`（apache-2.0，6.3B，60k 小时，MoE 动作专家，Dual-Query 蒸馏）。
-- **S8（新）** GitHub repository search（`unibot`、`unitree challenge`）——无 UniBot 公开提交/榜单。
+- S1 `https://unibot.unitree.com`（/、/leaderboard）——**HTTP 567 + 腾讯云 EdgeOne Access Restricted**（F43），榜单仍不可得。
+- S2 `https://github.com/unitreerobotics/unibot_submission`——README §1–§6 全文（F24′）；2 commits、2026-08-21 后无更新。
+- S3 `https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset`（32 仓）+ 各仓 `meta/info.json`（**F41 camera_params**、**F44 action schema**）/`totalEpisodes`（**F42=33,276**）；`G1_Dex1_HangCup` 1043 eps / 194,564 帧 / 30fps / 头双目+腕双目。
+- S4 参赛手册（feishu）——Login Required，未获取。
+- S5 `https://huggingface.co/unitreerobotics/UnifoLM-VLA-Base` + `github.com/unitreerobotics/unifolm-vla` + `UnifoLM-ER-Flow`/`UnifoLM-WLA-1.0-Base`/`UnifoLM-WMA-0-Base`（**F45 许可标签**）。
+- S6 `https://huggingface.co/collections/unitreerobotics/g1-dex1-datasets-68bae98bf0a26d617f9983ab`——72 仓（复核）。
+- S7 `https://huggingface.co/ezhoureal/lingbot-vla-v2-unibot-lora`（apache-2.0，33,276 eps）+ `robbyant/lingbot-vla-v2-6b`。
+- S8 GitHub repository search（`unibot`）——无公开提交/榜单。
 
 **文献（arXiv API 实时检索 2026-11-08；标题+编号，摘要级）**
-- R65 HeLM: Hierarchical Explicit Language Memory for Non-Markovian Manipulation, 2611.02660。
-- R66 PREM: Prediction-Regulated Memory for Robot Manipulation, 2611.00634。
-- R67 IMPRINT: Memory Without Curation（多流潜记忆）, 2610.14406。
-- R68 MemBodied: Recurrent Associative Memory for VLA, 2609.28256。
-- R69 CogMemory: Variational Cognitive Memory Abstraction, 2610.34251。
-- R70 Robocasa-Mem: Environment & Process Memory Benchmark, 2611.06475。
-- **R71 Paraphrase Consensus Is Not Self-Consistency（改写使 OpenVLA -38 分）, 2610.19438。**
-- **R72 Retrieve to Act: Motion Primitive Graph Retrieval for Robust VLA, 2610.37215。**
-- R73 Externalise the Memory: Where Experience Should Live（预注册研究）, 2610.30478。
-- R74 FastHarness: Experience-Driven Review Scheduling for VLA, 2610.31427。
-- **R75 Cheap Retrieval & Observation Credit Assignment from Value of Information, 2610.40030。**
-- R76 Progress Probes P²: Lightweight Runtime Monitoring via VLA 内部激活, 2610.31613。
-- R77 VeriVLA: Adaptive Test-Time Verification for Flow-Based VLAs, 2610.21985。
-- R78 OCC4M: Object-Centric 4D Memory（含 containment 关系）, 2609.28798。
-- R79 IOM: Try Once, Then Optimal（实例导向跨 episode 记忆）, 2607.23702。
-- R80 FLORA: An Open Model Suite for Scaling Robotics Data Engines, 2610.31779。
-- R81 VLA-HWBench: Where the Time Goes on Edge Hardware, 2610.34717。
-- R82 Asynchronous Robot Policies, 2611.05155。
-- R83 InternW0-Δ: World Action Model, 20K+ 小时开放数据, 2609.31394；R84 Open-HumanWAM, 2611.06817。
-- （R41–R64 沿用 v10/v11。）
+- **视觉感知/立体/注视**：R85 ExStereo 2610.04805；R86 EATR-Stereo 2608.17453（人形 VLA 成对立体路由）；R87 StereoEngine 2610.12734；R88 FoveaVLA 2610.20064；R89 ROI-Driven Foveated Attention 2603.20668；R90 Artificial Foveated Perception 2607.10655（抑制捷径）；R91 AWAM 2610.23396；R92 Look Before You Act 2610.23378；R93 ActiveWAM 2610.01698。
+- **世界模型/遮挡**：R94 SCOUT 2611.01600；R95 La-JEPA 2611.08156；R96 HiFOR 2610.40373；R97 PRIME W0 2610.39528。
+- **语言/交互**：R98 In-Context VLA 2608.05738；R99 Grounded Semantic Re-Binding 2608.02497；R100 LIBERO-Para 2603.28301；GIVE 2606.13435（手势）。
+- （R65–R84 沿用 v12；R41–R64 沿用 v10/v11。）
 
-**诚实记录**：S1 榜单、S4 手册不可得；"榜首<30%""5 类泛化""步骤分=rubric"均待验；文献为摘要级引用；F39 的总 episode 数（33,276）为第三方元数据，与历史"32000/169h"口径并存待官方确认。
+**诚实记录**：S1 榜单、S4 手册不可得（官网已风控化）；F44 的 H1 是维度巧合推出的**未验证假设**；`state_d435` 仅为位姿/状态、**无深度图**；文献为摘要级引用。
 
-## 9. 清单迭代规则（本轮增补 35–38）
+## 9. 清单迭代规则（本轮增补 39–41）
 
-- 继承规则 27–34（通道诚实 / 映射验证 / 时延 SLO / fail-safe / 灵感-现实校验 / 单模型专家化 / 步骤分双解释 / 稠密监督不依赖 rubric）。
-- **35（基座许可审计）**：任何基座必须登记 license；默认 apache-2.0/MIT；NC/SA 权重在审计结论前只作对照臂。数据许可 ≠ 基座许可。
-- **36（记忆外置优先）**：记忆检索默认放服务端内存（合法、可控），权重蒸馏为 P2 可选项；外置记忆必须可解释（物体账本 + 事件日志）。
-- **37（指令 5× 一等公民）**：语言条件模块一律 5 改写增广训练 + 跨改写评测；路由/检索键必须 paraphrase-invariant（R71）。
-- **38（门禁纪律）**：新 IP 上马前必须绑定路线图门禁的量化 go/no-go 与止损线；无门禁 = 不上马。
+- 继承规则 27–38（通道诚实 / 映射验证 / 时延 SLO / fail-safe / 灵感-现实校验 / 单模型专家化 / 步骤分双解释 / 稠密监督不依赖 rubric / 基座许可审计 / 记忆外置优先 / 指令 5× 一等公民 / 门禁纪律）。
+- **39（灵感诚实退役/剪枝）**：灵感词若在本竞技语境下无接口、无数据、无文献支撑（如"面部表情识别"），明确退役或降维为可验证的接口杠杆（"头双目=眼睛"），不得硬掰。
+- **40（接口即设计表面）**：`control_space`/`obs_delta_indices`/`image_resize`/`action_chunk_size`/N 端口/`reset`/token 是**一等设计变量**；任一接口变更必须通过 §6 时延方差与动作统计离群检查。
+- **41（几何优先于纹理）**：有标定（F41）时优先米制立体几何而非学习式单目深度；几何分支须用真值（`state_d435`）验证尺度后方可进训练。
 
-**当前最值得押注**：**IP-31 跨 episode 记忆检索**——以"5 改写平均嵌入 + 首帧"为键的检索银行（M2）与物体账本（M1）同时改善长程成功率、未见物泛化与失败恢复，且**零新增参数、复现成本低**；基座纪律（IP-30，默认 apache-2.0）与路线图门禁（IP-32）为其护航。
+**当前最值得押注**：**IP-34 真实立体视觉**——挑战数据集**已公开头双目标定（F41）**，可用近零采集成本把感知从"猜深度"升级为"算深度 + 软件注视"，同时改善未见物/位置/背景三类泛化；由 **IP-33 交互契约**保证其在本轮新暴露的 §6 可信度指标与 N 端口状态隔离纪律下不掉分、可上线。
 <!-- ARTIFACT:END -->
