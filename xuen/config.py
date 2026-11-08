@@ -508,8 +508,18 @@ def _validate_words_config(cfg: Config) -> None:
 
 def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
-    if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
-        raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    _require_positive_timeout("agent.timeout", cfg.agent.timeout)
+
+
+def _require_positive_timeout(name: str, value: Any) -> None:
+    """超时必须为有限的正数（秒）。
+
+    与 agent.timeout 同口径：程序化构造 Config 时可能传入超大整数
+    （math.isfinite 会抛 OverflowError）或 bool/字符串，都必须转成带
+    字段名的 ValueError，不能让下游拿到非法超时。
+    """
+    if not _is_finite_number(value) or value <= 0:
+        raise ValueError(f"{name} 必须为有限的正数（秒）")
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -531,12 +541,12 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
+    _require_positive_timeout("rounds.verify_timeout",
+                               cfg.rounds.verify_timeout)
+    _require_positive_timeout("rounds.judge_timeout",
+                               cfg.rounds.judge_timeout)
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
         raise ValueError("rounds.dir 不能为空")
-    for name in ("verify_timeout", "judge_timeout"):
-        v = getattr(cfg.rounds, name)
-        if not _is_finite_number(v) or v <= 0:
-            raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
