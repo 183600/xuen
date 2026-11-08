@@ -1025,3 +1025,5 @@
 {"event": "verdict", "id": "20261108-073141-r1", "round": 1, "verifier": "ai", "score": 8.0, "result": "adopted", "reason": "AI 评分 8（阈值 7）", "ts": "2026-11-08 07:32:14"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 09:09:17"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 10:39:41"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 11:26:28"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261108-073141-r1", "changed": ["idea"], "ts": "2026-11-08 11:26:28"}
