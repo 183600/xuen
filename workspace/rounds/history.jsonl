@@ -1015,4 +1015,4 @@
 {"event": "candidate", "id": "20261108-022945-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-08 02:29:45"}
 {"event": "verdict", "id": "20261108-022945-r1", "round": 1, "verifier": "ai", "score": 3.5, "result": "rejected", "reason": "AI 评分 3.5（阈值 7）", "ts": "2026-11-08 02:31:31"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261108-020145-r1", "changed": ["idea", "artifact"], "ts": "2026-11-08 02:31:32"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 03:47:09"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 04:25:32"}
