@@ -1037,3 +1037,4 @@
 {"event": "verdict", "id": "20261108-172111-r1", "round": 1, "verifier": "ai", "score": 4.2, "result": "rejected", "reason": "AI 评分 4.2（阈值 7）", "ts": "2026-11-08 17:21:17"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261108-162906-r1", "changed": ["idea", "artifact"], "ts": "2026-11-08 17:21:17"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-08 19:42:35"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-08 20:43:30"}
