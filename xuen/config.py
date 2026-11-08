@@ -531,15 +531,15 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    if cfg.rounds.enabled and not cfg.rounds.dir.strip():
-        raise ValueError("rounds.dir 不能为空")
-    # 超时必须是有限的正数（秒）：负数/零会让测试套件或 AI 评审瞬间超时。
-    # 程序化构造 Config 时还可能是超大整数——math.isfinite 会抛
-    # OverflowError，必须与 agent.timeout 同一口径拦在配置阶段。
+    # 超时同样必须是有限的正数（秒）：负数/零会让测试套件或评审立刻超时，
+    # 无限与非有限值则无法作为截止时间；程序化构造 Config 绕过 load_config
+    # 时超大整数也不能让 math.isfinite 抛 OverflowError（与 agent.timeout 同口径）。
     for name, value in (("rounds.verify_timeout", cfg.rounds.verify_timeout),
                         ("rounds.judge_timeout", cfg.rounds.judge_timeout)):
         if not _is_finite_number(value) or value <= 0:
-            raise ValueError(f"{name} 必须为有限的正数（秒）")
+            raise ValueError(f"{name} 必须为有限的正数（秒），收到: {value!r}")
+    if cfg.rounds.enabled and not cfg.rounds.dir.strip():
+        raise ValueError("rounds.dir 不能为空")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
