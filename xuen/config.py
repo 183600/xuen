@@ -510,6 +510,14 @@ def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    if cfg.agent.command.strip():
+        from .agents import command_receives_prompt
+        if not command_receives_prompt(cfg.agent.command):
+            raise ValueError(
+                "agent.command 必须包含会被实际替换的 $prompt 或 $prompt_file 占位符"
+                "（被转义的 \\$prompt、shell 注释、heredoc 正文、反引号命令替换，以及"
+                "连着的 $$prompt、$prompt_file 等均不会被替换）"
+            )
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -537,9 +545,6 @@ def _validate_rounds_config(cfg: Config) -> None:
     _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
     _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
-    # agent.command 必须包含会被实际替换的占位符
-    _require_prompt_placeholder("agent.command", cfg.agent.command,
-                                _AGENT_PLACEHOLDER_HINT)
     # AI 评分会静默拿不到候选内容而永远解析不出分数
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
