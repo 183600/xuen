@@ -300,9 +300,15 @@ def load_config(path: Optional[str] = None) -> Config:
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
     cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
-    cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
-    cfg.rounds = _parse_rounds_config(
-        _mapping_section(raw, "rounds"), cfg.rounds)
+if "agent" in raw and raw["agent"] is not None and isinstance(raw["agent"], dict):
+        cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
+    else:
+        raise ValueError("agent 配置必须是一个映射（字典）")
+            else:
+                raise ValueError("agent 配置必须是一个映射（字典）")
+    if "rounds" in raw:
+    if raw["rounds"] is not None and isinstance(raw["rounds"], dict):
+        cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), cfg.rounds)
     cfg.prompt = _parse_prompt_config(
         _mapping_section(raw, "prompt"), cfg.prompt)
 
@@ -532,24 +538,21 @@ def _validate_rounds_config(cfg: Config) -> None:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
-        raise ValueError("rounds.dir 不能为空")
-    # 两个超时都必须是有限的正数：负数/非有限值会让测试套件与 AI 评审的
-    # 等待行为未定义（超时为负会立即判超时，非有限值传不进 wait）
-    for name in ("verify_timeout", "judge_timeout"):
-        v = getattr(cfg.rounds, name)
-        if not _is_finite_number(v) or v <= 0:
-            raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
-    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
+        if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
+            raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
+    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
+    # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
+    _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
     # AI 评分会静默拿不到候选内容而永远解析不出分数
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
-    cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-    _require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
+    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    _validate_windows_command_dual("agent.command", cmd, cfg.workspace)
+    # duplicate removed
     _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
 
 
