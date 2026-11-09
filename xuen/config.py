@@ -300,9 +300,15 @@ def load_config(path: Optional[str] = None) -> Config:
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
     cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
-    cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
-    cfg.rounds = _parse_rounds_config(
-        _mapping_section(raw, "rounds"), cfg.rounds)
+if "agent" in raw and raw["agent"] is not None and isinstance(raw["agent"], dict):
+        cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
+    else:
+        raise ValueError("agent 配置必须是一个映射（字典）")
+            else:
+                raise ValueError("agent 配置必须是一个映射（字典）")
+    if "rounds" in raw:
+    if raw["rounds"] is not None and isinstance(raw["rounds"], dict):
+        cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), cfg.rounds)
     cfg.prompt = _parse_prompt_config(
         _mapping_section(raw, "prompt"), cfg.prompt)
 
