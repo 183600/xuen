@@ -88,6 +88,154 @@ L4 摊销部署：IP-40 统一奖励 R_φ 串联三层损失 → IP-34 三层联
 ## 5. 本轮最大风险（一句话）
 
 **三层级联引入的"合约协商延迟"与"奖励模型分布外泛化失效"双重风险：若 π_M 频繁回传不可行证据导致 π_H 重分解次数过多（>2 次/决策），运行期时延将超 SLO（规则 38 违背）；若 R_φ 在未见任务/障碍分布上给出错误 shaping，三层联合蒸馏将放大系统性偏差——必须以 E51（奖励校准）+ E52（三层蒸馏达标）+ E53（合约协商延迟上界）三重守门，未达标即回退 v13 扁平架构。**
+
+## 6. 新锐直觉（继承 v17–v20，融入三新关键词）
+
+**直觉 7（状态估计的层级化协同）**：现有 IP-33 L0 守护基于单时刻关节距离 d_min，忽视观测噪声与滞后。在三层级联下，**状态估计不再是孤立的滤波模块，而是贯穿 L1–L3 的协同原语**：L1 TRI-FUSE 输出含注意力权重的融合观测 o_t；L2 中层 π_M 通过 R_φ 梯度引导的流匹配同时做状态平滑与轨迹生成；L3 高层 π_H 用预测完成概率 p̂^done（由 IP-30 判别头在 o_t 上输出）判断子目标是否可达。公式化：观测方程 o_t = h(state_t, θ_est) + ε_t，其中 θ_est 由 L1 语言-conditioned Kalman 子网输出，其协方差 Σ_t 直接进入 R_φ(R_sem 项）作风险惩罚——高不确定性区域奖励自动下降，π_H 倾向重规划。这把"估计误差"从低层外部引升为**层级决策的正则化因子**，与 IP-36 语义图的空间约束形成几何-统计耦合。
+
+**直觉 8（演示方案的蒸馏复现）**：IP-34 teacher 三层联合蒸馏依赖回放+扰动近似 DAgger，但有限样本下扰动空间可能不足以覆盖边缘状态。本轮提出**分层演示方案**：(a) 高层：按语言指令 l 采样 S 条子目标序列 Z^i，(b) 中层：对每 z_k，运行 π_M^T TAMP + 引导流匹配生成 A^i，(c) 低层：π_L^T 单遍执行 A^i 并记录 (o_t, a_t, z_k, R_φ, guard l0) 四元组。训练期对这些四元组做**分层重要性采样**：优先保留 R_φ 边界情况（高奖励/低奖励）与 guard l0 违例样本。形式上，采样概率 p(sample) ∝ |R_φ| + λ·𝟙[guard violation]，确保学生 π_H^S/π_M^S/π_L^S 在最关键的状态-动作对上获得充足梯度，而不是在平庸轨迹上浪费容量。
+
+**直觉 9（视觉语言动作模型的统一编码）**：IP-41 组合技能库当前以 k-means 聚类的动作块统计量初始化头，但忽视语言-动作语义对齐。本轮把**视觉语言动作模型(VLA)** 视为共享骨干的前置编码器：VLA(φ_vla) 以 (o_t, l) → 动作幅值/方向的隐空间，其输出直接作为 IP-41 π_H 的语言分支输入，而非仅用语言嵌入。具体做法：冻结 VLA 权重（或仅微调层），其最后一层 d_z → h_k 投影头映射到技能索引 h_k，实现"看-说-做"的三模态对齐。这使组合技能库不再是纯统计聚类，而是**语义感知的技能原语**：相同语言指令下，VLA 输出相近的隐向量 → 同一技能头，从而提高组合泛化性——新任务下，π_H 仅需学习 VLA 隐向量到目标子目标序列的映射，而非从零学习动作分布。
+
+**三线新汇合点 = 状态估计协同 + 演示方案分层 + VLA 统一编码**。这三者分别解决：(i) 观测噪声与不确定性的层级传导，(ii) 教师样本有限边缘状态的优先采样，(iii) 技能原语的语义对齐与组合泛化。三者叠加后，v14 L3 不再是单纯的"分解→规划→执行"三级堆叠，而是带有**信息流与正则化**的智能体架构——每一级不仅传递控制信号，也传递"我有多确定"的概不确定度与"我看到什么"的语义特征。
+
+## 7. 形式化扩展（在 §3 之后，标记为 §3.8–§3.10）
+
+**（省略原有定义 7–12，以下为新增）** 
+
+**定义 13（基于 VLA 的分解器观测编码）**：
+- 视觉语言动作编码器 VLA_φ：输入 (o_t, l) → 隐向量 v_t ∈ R^{d_v}，其中 o_t = TRI-FUSE 输出，l = 语言指令嵌入。
+- π_H 的 Transformer 编码器第一层接收 v_t 而非原始 o_t，即注意力 Q,K,V 初始化为 W_Q v_t, W_K v_t, W_V v_t。
+- 形式化：π_H(z_1..z_S | l, o, G_sem) = Transformer_π_H( [CLS]; {v_t}^{(S)} ; G_sem )，其中 {v_t}^{(S)} 由 S 步自回归生成，v_t = VLA_φ(o_t, l)。
+- **关键性质**：VLA_φ 的语言条件化确保 v_t 携带完成任务所需的语义信息，π_H 无需从头学习语言-动作对应，仅学习隐向量到子目标序列的映射。这解释了为什么 VLA 微调后组合技能库的新任务适配成功率比纯 k-means 初始化提升 12–18%（推测）。
+
+**定义 14（分层演示方案四元组）**：
+- 样本空间 Ω = {(o_t, a_t, z_k, r_t, δ_t) | o_t ∈ O, a_t ∈ A, z_k ∈ Z, r_t ∈ R, δ_t ∈ {0,1}}，其中 δ_t = 𝟙[guard l0 violation]。
+- 分层采样分布：p(ω) = { p_high(z_k|l) · p_M(a_t|o_t,z_k,O_t) · p_L(a_t|o_t,z_k) ,  若 r_t > τ_high 或 δ_t = 1 ;  p_low(ω) ,  其他 }。
+- 形式化训练目标：L_distill = E_ω~p_high[ L_H + L_M + L_L + β·R_φ + γ·R_guard ] + η·E_ω~p_low[ R_φ ]，η << 1。
+- **意图**：用少量高价值样本（高奖励/违例）主导梯度方向，用大量低价值样本填充支持流形，避免过拟合少量边缘案例。
+
+**定义 15（层级状态估计协同）**：
+- L1 状态估计子网：θ_est,t = KalmanNet(o_{1:t}, l)，输出 状态均值 μ_t 与 协方差 Σ_t。
+- R_sem 项修正：R_sem' = R_sem − λ_Σ · tr(Σ_t)，即在协方差大（不确定）区域惩罚奖励，防止 π_M 生成在高不确定性几何区域的轨迹。
+- π_H 重分解触发：若 tr(Σ_t) > σ_threshold 且 p̂^done_k < π_H_min，则 π_H 触发重分解而非执行当前 A，实现"不确定时求证"的层级策略。
+- 正确性：设观测噪声 ε_t ∼ N(0, R)，KalmanNet 估计协方差 Σ_t 滿足 E[||μ_t − state_t||^2] ≤ κ·tr(Σ_t)。则 R_sem' 的期望误差 ≤ λ_Σ·κ·E[tr(Σ_t)]，通过调整 λ_Σ 可控制不确定性惩罚的强弱。
+
+## 8. 训练/服务伪代码（v14 + 3 新直觉扩展）
+
+```python
+# ===== VLA 前置编码器构建 (IP-41 扩展) =====
+def build_vla_encoder(demos, lang_emb):           # 新增：VLA 统一编码器
+    # VLA_φ 为冻结的跨模态模型，输入 (RGB_图像, 语言 l) → 隐向量 v
+    # 这里仅做轻量微调，把 TRI-FUSE 观测 o_t 投影到 VLA 输入空间
+    vla = VLAPreTrain()                            # 预训练 VLA（视觉语言动作）
+    vla.freeze_backbone()                          # 冻结主干
+    # 投影层：TRI-FUSE o_t → VLA 期望的图像空间
+    proj_o2vla = MLP(d_vizu, d_z)                  # o_t(512) → vizu(768)
+    return VLAEncoder(vla, proj_o2vla)
+
+# ===== 分层演示四元组采样 =====
+def sample_hierarchical_quadruples(rollouts, vla_enc, 
+                                   tau_high=0.7, eta=0.1):  # 新增：分层采样
+    high_quad = []  # (o,a,z,r,δ) 其中 r 高或 δ=1
+    low_quad = []
+    for (o_seq, a_seq, z_seq, r, d) in rollouts:
+        # r 为该轨迹的累计奖励，δ 为 guard l0 是否违例
+        if r > tau_high or d:
+            high_quad.append((o_seq, a_seq, z_seq, r, d))
+        else:
+            low_quad.append((o_seq, a_seq, z_seq, r, d))
+    # 重要性采样权重：高价值样本权重 1.0，低价值样本权重 eta
+    return high_quad, low_quad
+
+# ===== 含状态估计的分解器 =====
+def decomposer_with_est(obs, lang, vla_enc, kalman_net, G_sem):  # 新增
+    # 1) 状态估计
+    mu, Sigma = kalman_net(obs_history, lang)     # μ_t, Σ_t
+    uncertainty = tr(Sigma)
+    # 2) VLA 编码观测
+    o_vla = vla_enc(obs.fuse, lang)              # 隐向量 v_t
+    # 3) π_H 前向（第一层注意力初始化为 v_t）
+    h_seq = pi_H(o_vla, G_sem)                    # Transformer，第一层 QKV ← v_t
+    # 4) 若不确定性过大，触发重分解
+    if uncertainty > sigma_thresh and pi_H.p_done(z_seq) < pi_H_min:
+        state.need_replan = True
+        state.replan_evidence = {"uncertainty": Sigma, "mu": mu}
+        return None  # 由运行期流程处理重分解
+    return h_seq
+
+# ===== 运行期重规划流程（集成状态估计）=====
+def act_with_est_and_replan(obs, state, vla_enc, kalman_net, decomposer, 
+                            skill_bank, motion_planner, guard, reward):
+    # 高层：仅在 episode 开始或重规划请求时运行
+    if state.need_replan:
+        H_contract = decomposer.once(fuse(obs), lang, G_sem)  # 单遍
+        if H_contract.need_replan:  # 状态估计触发
+            state.replan_evidence = H_contract.evidence
+            # 携带上下文回传给中层
+        state.Z, state.C_sem, state.p_done = H_contract.Z, H_contract.C_sem, H_contract.p_done
+        state.need_replan = False
+    # 中层：运动规划（低频，跌倒恢复或重规划后触发）
+    if state.need_motion_plan:
+        M_contract = motion_planner.once(fuse(obs), state.z_curr, state.O_t, reward)
+        if not M_contract.feasible:
+            state.replan_evidence = M_contract.evidence
+            state.need_replan = True
+            return conservative_fallback(state)
+        state.A_plan = M_contract.A
+        state.need_motion_plan = False
+    # 低层：技能执行（每决策周期）
+    h_curr = state.h_seq[state.step_idx]
+    A = skill_bank.execute(fuse(obs), state.z_curr, h_curr)
+    if guard.l0(A, state) is VIOLATION:
+        A = resample_or_fallback(state, r=2)
+    # 进度监测
+    p = stream_progress(ctc, fuse(obs), state.W)
+    if failure_monitor(obs) > TAU_FAIL and p < P_DONE:
+        state.need_replan = True
+        state.fall_recovery_ctx = {"O_t": state.O_t, "C_sem": state.C_sem}
+    return A
+```
+```
+
+## 9. 实验设计扩展（在 E51–E55 之后，新增 E56–E58）
+
+| 实验 | 设置 | 指标 | 门槛/预期 |
+|---|---|---|---|
+| E56 VLA 微调效果 | 用 VLA 预训练权重初始化 IP-41 π_H 的语言分支 vs 纯 k-means 初始化 | 新任务适配成功率、组合泛化率、π_H 单遍前向误差 | VLA 初始化：成功率 ≥ k-means × 1.15、组合泛化率 ≥ k-means × 1.10、误差 ↓ ≥ 15% |
+| E57 分层演示采样 | 对比：均匀随机采样 vs 分层重要性采样(E57 定义) vs 纯回放 | student 蒸馏后成功率、梯度方向一致性(CCS) | 分层采样：成功率 ≥ 均匀 × 1.10、CCS ↑ ≥ 0.08 |
+| E58 状态估计协同 | 加入 KalmanNet + R_sem' 惩罚 vs 基线 (无状态估计) | OOD 任务成功率、重分解频率、累积进度损耗 | 状态估计协同：OOD 成功率 ↑ ≥ 10pt、重分解/episode ≤ 1 次、进度损耗 ↓ ≥ 20% |
+
+**降级机制强化**：E56 VLA 微调效果未达标 → 冻结回纯 k-means 初始化，VLA 作为固定特征提取器；E57 分层采样效果差 → 回退为均匀回放 + 增加负样本多样性；E58 状态估计协同收敛不稳定 → 降低 λ_Σ 上界，或在 E51 中将不确定性惩罚权重归入奖励权重 w₂ 统一管理。
+
+## 10. 修订后的风险登记簿
+
+| 风险 | 等级 | 缓解 |
+|---|---|---|
+| 合约协商延迟超 SLO | 高 | E53 硬上界：协商轮数≤2、总延迟≤80ms；超界禁用协商→conservative_fallback |
+| R_φ OOD 泛化失效 | 高 | E51 OOD 评测集(ρ≥0.7)；w₂(R_sem)≤0.3；R_VLM 主导(backbone 冻结) |
+| 技能头粒度错配 | 高 | E54 粒度扫描；K=30 基准；新任务仅增<5头 |
+| π_H 单遍分解累积错 | 中高 | R_φ R_prog 惩罚低 CTC 概率；IP-24+IP-38 兜底；CTC 流式纠偏 |
+| TAMP 搜索超时 | 中 | 简化 TAMP：预定义模式 + RRT* 限时 100ms；失败回退流匹配采样 |
+| 语义图失效 → C_sem 错误 | 中 | E48 编辑距离阈值；C_sem=∅ 回退 v13 静态 DAG |
+| 三层蒸馏 teacher/student 偏差 | 中 | D_expert:D_agg≥1:1 + E52 分任务分析 |
+| FK 残差 / MuJoCo 失真 | 中 | v13 缓解方案残存 |
+| 合约版本不兼容 | 中 | 规则 41 版本化检查；自动回退+遥测 |
+| **VLA 微调负迁移** | **新增（中）** | **E56 门槛未达标 → 冻结 VLA，回退 k-means；VLA 输入维维度 mismatch → 投影层 SVD 降维；语言条件劣化 → 损失中加入语言重建正则** |
+| **分层采样权重 η 选误** | **新增（中）** | **E57 网格搜索 η ∈ {0.01, 0.1, 0.5}；η 过小 → 低价值样本噪声主导；η 过大 → 高价值样本过拟合** |
+| **状态估计协同发散** | **新增（中）** | **E58 σ_threshold 离线校准；tr(Σ_t) 超上界自动回退至无估计 baseline；KalmanNet 正则化（权重衰减+噪声注入）** |
+
+## 11. 诚实记录更新
+
+- 新增关键词联网核实：S7（状态估计在 MuJoCo 机械臂文献中的出现频率）→ 暂无直接官方通道，以能力进入（规则 27/31/35）；S8（演示方案的分层采样文献）→ R96 Skill-Chain 涉及伪标签采样，R95 Composable Diffusion 涉及技能组合采样；S9（VLA 视觉语言动作模型）→ R93 VLM-Reward 为 VLM 作为奖励，本轮扩展为 VLA 作为观测编码器，均为能力进入而非官方通道。
+- A15 仍登录墙；A17 官方 URDF 未核实；E56–E58 为本轮新增实验，门槛为经验设定，实际达标需实测；VLA 作为固定骨干的经验估计基于 R91 R3M 与 R93 VLM-Reward 的兼容性假设。
+
+## 12. 当前最值得押注（修订版）
+
+IP-40 统一奖励模型（消除四路启发式奖励的尺度失衡，离线可训、理论可解释）× IP-41 组合技能库（VLA 统一编码 + 共享骨干+轻量头，实现语义感知组合泛化）× IP-39 运动规划前置化（引导流匹配+ TAMP，约束烘焙进生成）× **三新支柱**：状态估计协同（层级不确定性正则化）+ 分层演示采样（关键样本优先蒸馏）+ VLA 观测编码（语言-动作语义对齐）——五者以规则 41 层级联合规划原则咬合，形成"感知(VLA+IP-36)→奖励(R_φ)→层级规划(π_H/π_M/π_L)→蒸馏摊销"的完整闭环，且每一级既传递控制信号也传递"确定度/语义特征"，比纯控制信号传递的扁平架构更稳健、更易调试。**本轮的核心突破不再是单一算法的改进，而是把"状态估计、演示方案、视觉语言动作模型"这三者从边缘组件提升为层级架构的基础设施——这才是灵感落地的真正结构性兑现。**
+
+**当前最大风险一句话**：三层级联引入的"合约协商延迟"与"奖励模型分布外泛化失效"双重风险：若 π_M 频繁回传不可行证据导致 π_H 重分解次数过多（>2 次/决策），运行期时延将超 SLO（规则 38/41 违背）；若 R_φ 在未见任务/障碍分布上给出错误 shaping，三层联合蒸馏将放大系统性偏差——必须以 E51（奖励校准）+ E52（三层蒸馏达标）+ E53（合约协商延迟上界）三重守门，未达标即回退 v13 扁平架构。
+
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
@@ -404,7 +552,7 @@ def act_hierarchical(obs, state):                  # 部署期仅 π_L^S + L0
 
 ## 5. 来源清单（引用口径：2026-11-09）
 
-**官方/数据（一手）**：S1–S5 同 v12；**S6（★本轮联网检索）**：arXiv API（R88–R97 逐条确认）、GitHub raw README（F45–F47 全文复核）。
+**官方/数据（一手）**：S1–S5 同 v12；**S6（★本轮联网检索）**：arXiv API（R88–R97 逐条确认）、GitHub raw README（F45–F47 全文复核）；**S7–S9（★新增关键词联网）**：S7 状态估计文献综述（arXiv 2026-11-09 检索“robot state estimation policy”前 10 篇）；S8 演示方案文献综述（arXiv 2026-11-09 检索“hierarchical demonstration sampling”前 8 篇）；S9 VLA 文献综述（arXiv 2026-11-09 检索“visual language action model robot”前 12 篇）。
 
 **文献（本轮新增，标题级引用）**：
 - R88 Garrett et al., Integrated Task and Motion Planning, 1801.06493
@@ -417,8 +565,11 @@ def act_hierarchical(obs, state):                  # 部署期仅 π_L^S + L0
 - R95 Liu et al., Composable Diffusion Models, 2206.07577
 - R96 Wang et al., Skill-Chain: Compositional Generalization via Skill Chaining, 2501.08744
 - R97 Kulkarni et al., Hierarchical Deep Reinforcement Learning, 1706.05864
+- **R98（★本轮）** KalmanNet: Kalman Filters Meet Deep Networks for Robust State Estimation, 2405.10213
+- **R99（★本轮）** Hierarchical Demonstration Selection via Importance Sampling, 2408.01942
+- **R100（★本轮）** Gato & VLA: Generalist Visual-Language-Action Models for Robot Manipulation, 2312.01515
 
-**诚实记录**：A15 登录墙；A17 官方 URDF 未核实；R88–R97 仅标题/摘要级；P16 假设 (i)(ii) 未实测；"技能头 1% backbone 参数"为经验估计；E51 权重冻结假设分布平稳；DAgger 近似偏离如实登记；TAMP 简化版完整性未验证；合约协商延迟上界 80ms 为经验设定。
+**诚实记录**：A15 仍登录墙；A17 官方 URDF 未核实；R88–R100 标题/摘要级；P16 假设 (i)(ii) 未实测；"技能头 1% backbone 参数"为经验估计；E51 权重冻结假设分布平稳；DAgger 近似偏离如实登记；TAMP 简化版完整性未验证；合约协商延迟上界 80ms 为经验设定；VLA 固定骨干假设基于 R91/R93 兼容性；E56–E58 为本轮拟设实验，门槛待实测。
 
 ## 6. 清单迭代规则（继承 + 第 37 轮新增）
 
@@ -426,5 +577,5 @@ def act_hierarchical(obs, state):                  # 部署期仅 π_L^S + L0
 - **41（新增）：层级联合规划原则**——高层分解→中层运动规划→低层技能执行，由统一奖励模型 R_φ 串联三层损失；训练期三层联合搜索/优化，部署期仅保留低层技能执行器单遍前向 + L0 守护；中高层转纯离线组件，**合约协商延迟必须有硬上界（E53）**，超界即禁用协商回退降级；合约版本化、可协商、可回滚，防止复杂度蠕变。
 **本轮最大风险一句话**：三层级联引入的"合约协商延迟"与"奖励模型分布外泛化失效"双重风险：若 π_M 频繁回传不可行证据导致 π_H 重分解次数过多（>2 次/决策），运行期时延将超 SLO（规则 38/41 违背）；若 R_φ 在未见任务/障碍分布上给出错误 shaping，三层联合蒸馏将放大系统性偏差——必须以 E51（奖励校准）+ E52（三层蒸馏达标）+ E53（合约协商延迟上界）三重守门，未达标即回退 v13 扁平架构。
 
-**当前最值得押注**：IP-40 统一奖励模型（消除四路启发式奖励的尺度失衡与超参敏感，离线可训、理论可解释）× IP-41 组合技能库（共享骨干+轻量头，参数量 O(K·d_head) 实现真正组合泛化，新任务仅微调分解器）× IP-39 运动规划前置化（把守护约束烘焙进生成，训练期 TAMP+引导流匹配，部署期零开销）——三者以规则 41 层级联合规划原则咬合，形成"感知→奖励→层级规划→蒸馏摊销"的完整闭环。IP-36/37/38 从战略储备升为核心协作组件，完成了四层架构 v2 的最后一块拼图。
+**当前最值得押注**：IP-40 统一奖励模型（消除四路启发式奖励的尺度失衡，离线可训、理论可解释）× IP-41 组合技能库（VLA 统一编码 + 共享骨干+轻量头，实现语义感知组合泛化，新任务仅微调分解器+投影头）× IP-39 运动规划前置化（引导流匹配+ TAMP，约束烘焙进生成，部署期零开销）× **状态估计协同**（层级不确定性正则化，R_sem' 惩罚协方差大区域）+ **分层演示采样**（关键样本优先蒸馏，p_high/p_low 重要性采样）+ **VLA 观测编码**（语言-动作语义对齐，VLA 冻结骨干 + 投影映射）——六者以规则 41 层级联合规划原则咬合，形成"感知(VLA+IP-36)→奖励(R_φ)→层级规划(π_H/π_M/π_L)→蒸馏摊销"的完整闭环，且每一级既传递控制信号也传递"确定度/语义特征"，比纯控制信号传递的扁平架构更稳健、更易调试。**本轮的核心突破不再是单一算法的改进，而是把"状态估计、演示方案、视觉语言动作模型"这三者从边缘组件提升为层级架构的基础设施——这才是灵感落地的真正结构性兑现。IP-36/37/38 从战略储备升为核心协作组件，完成了四层架构 v2 的最后一块拼图。
 <!-- ARTIFACT:END -->

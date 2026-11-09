@@ -1052,3 +1052,5 @@
 {"event": "candidate", "id": "20261109-005827-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-09 00:58:27"}
 {"event": "verdict", "id": "20261109-005827-r1", "round": 1, "verifier": "ai", "score": 7.5, "result": "adopted", "reason": "AI 评分 7.5（阈值 7）", "ts": "2026-11-09 00:59:11"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-09 02:32:29"}
+{"event": "candidate", "id": "20261109-043347-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-09 04:33:47"}
+{"event": "verdict", "id": "20261109-043347-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-09 04:34:10"}
