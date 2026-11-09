@@ -510,6 +510,13 @@ def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
+    _require_prompt_placeholder("agent.command", cfg.agent.command,
+                                _AGENT_PLACEHOLDER_HINT)
+    # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
+    # list2cmdline 处理空格/引号、不转义 cmd 元字符
+    _validate_windows_command_dual("agent.command", cfg.agent.command,
+                                   cfg.workspace)
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -531,20 +538,20 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    if (not _is_finite_number(cfg.rounds.verify_timeout)
-            or cfg.rounds.verify_timeout <= 0):
-        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-    _require_prompt_placeholder("agent.command", cfg.agent.command,
-                                _AGENT_PLACEHOLDER_HINT)
+    if cfg.rounds.enabled:
+        if (not _is_finite_number(cfg.rounds.verify_timeout)
+                or cfg.rounds.verify_timeout <= 0):
+            raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
+        if (not _is_finite_number(cfg.rounds.judge_timeout)
+                or cfg.rounds.judge_timeout <= 0):
+            raise ValueError("rounds.judge_timeout 必须为有限的正数（秒）")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
-    # AI 评分会静默拿不到候选内容而永远解析不出分数（评委命令原来漏检，
-    # 评审提示词会被 cmd 当命令解析）
+    # AI 评分会静默拿不到候选内容而永远解析不出分数
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
-    _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
+    # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
     _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
 
 
