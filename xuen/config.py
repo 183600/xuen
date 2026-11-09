@@ -1,5 +1,87 @@
-from typing import Optional
+from typing import Optional, Any
+from dataclasses import dataclass
+import yaml
+import os
 
+# Config class definition
+@dataclass
+class Config:
+    extra_notes: str = ""
+    words: Any = None
+    loop: Any = None
+    agent: Any = None
+    rounds: Any = None  # will be a RoundsConfig instance
+    prompt: Any = None
+    workspace: str = ""
+    tui: bool = False
+    color: bool = False
+
+# Rounds config dataclass
+@dataclass
+class RoundsConfig:
+    enabled: bool = True
+    dir: str = "rounds"
+    verify: str = "auto"
+    fallback: str = "ai"
+    adopt_score: float = 7.0
+    verify_timeout: float = 30.0
+    repo: str = ""
+    judge_command: str = ""
+    judge_timeout: float = 120.0
+
+# Helper functions
+def _parse_str(value, key=None):
+    return value
+
+def _config_value(raw, key, default=None):
+    return raw.get(key, default)
+
+def _mapping_section(raw, name):
+    return raw.get(name, {})
+
+def _parse_words_config(cfg, section):
+    return cfg
+
+def _parse_loop_config(cfg, section):
+    return cfg
+
+def _parse_agent_config(cfg, section):
+    return cfg
+
+def _parse_rounds_config(cfg, section):
+    # Parse raw dict into RoundsConfig instance
+    raw = section
+    return RoundsConfig(
+        enabled=section.get("enabled", True),
+        dir=section.get("dir", "rounds"),
+        verify=section.get("verify", "auto"),
+        fallback=section.get("fallback", "ai"),
+        adopt_score=section.get("adopt_score", 7.0),
+        verify_timeout=section.get("verify_timeout", 30.0),
+        repo=section.get("repo", ""),
+        judge_command=section.get("judge_command", ""),
+        judge_timeout=section.get("judge_timeout", 120.0),
+    )
+
+def _parse_prompt_config(cfg, section):
+    return cfg
+
+def _parse_bool(val, key):
+    return bool(val)
+
+def find_config_path(path: Optional[str] = None) -> str:
+    if path is None:
+        # default config file location
+        return "./config.yaml"
+    else:
+        # resolve to absolute path
+        return os.path.abspath(path)
+
+def _validate(cfg):
+    # Placeholder validation; ensure cfg is not None
+    if cfg is None:
+        raise ValueError("Config cannot be None")
+    # Additional validation could be added here
 
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
