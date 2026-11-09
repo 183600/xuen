@@ -304,9 +304,11 @@ def load_config(path: Optional[str] = None) -> Config:
         cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
     else:
         raise ValueError("agent 配置必须是一个映射（字典）")
-    if "rounds" in raw:
-        if raw["rounds"] is not None and isinstance(raw["rounds"], dict):
-                cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), cfg.rounds)
+    # rounds 段写成标量（如 rounds: on）多半是笔误：静默忽略会让用户以为
+    # 轮次守卫已按预期配置，实际仍走默认值，必须当场报错
+    if raw.get("rounds") is not None:
+        cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"),
+                                          cfg.rounds)
     cfg.prompt = _parse_prompt_config(
         _mapping_section(raw, "prompt"), cfg.prompt)
 
@@ -514,6 +516,10 @@ def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
+    # 模板缺少会被实际替换的占位符时提示词会被静默丢弃：agent 收不到任何
+    # 输入，循环空转（$$prompt_file 这类字面量同样不算占位符）
+    _require_prompt_placeholder("agent.command", cfg.agent.command,
+                                _AGENT_PLACEHOLDER_HINT)
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -535,22 +541,21 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    if cfg.rounds.enabled and not cfg.rounds.dir.strip():
-        if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
-            raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
-    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
-    # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
-    # AI 评分会静默拿不到候选内容而永远解析不出分数
+    # 超时必须是有限正数：负数/0 会让测试套件或评审调用立刻失败，
+    # inf/NaN 则永远不会超时（README 的 rounds 字段说明同样要求有限正数）
+    for name in ("verify_timeout", "judge_timeout"):
+        value = getattr(cfg.rounds, name)
+        if not _is_finite_number(value) or value <= 0:
+            raise ValueError(f"rounds.{name} 必须为有限的正数（秒），"
+                             f"收到: {value!r}")
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后的
+    # 候选内容送不到评委手里（评委命令原来漏检，评审提示词会被 cmd 当命令解析）
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
-    # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    # duplicate removed
+    _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
     _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
 
 
