@@ -300,15 +300,9 @@ def load_config(path: Optional[str] = None) -> Config:
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
     cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
-if "agent" in raw and raw["agent"] is not None and isinstance(raw["agent"], dict):
-        cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
-    else:
-        raise ValueError("agent 配置必须是一个映射（字典）")
-            else:
-                raise ValueError("agent 配置必须是一个映射（字典）")
-    if "rounds" in raw:
-    if raw["rounds"] is not None and isinstance(raw["rounds"], dict):
-        cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), cfg.rounds)
+    cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
+    cfg.rounds = _parse_rounds_config(
+        _mapping_section(raw, "rounds"), cfg.rounds)
     cfg.prompt = _parse_prompt_config(
         _mapping_section(raw, "prompt"), cfg.prompt)
 
@@ -471,18 +465,9 @@ def _require_bool_fields(cfg: Config) -> None:
             raise ValueError(f"{name} 必须是布尔值，收到: {value!r}")
 
 
-def _validate_string_fields(cfg: Config) -> None:
-    """检查必须为字符串的配置字段。"""  # noqa: TID251
+def _validate(cfg: Config) -> None:
     _require_string_fields(cfg)
-
-
-def _validate_bool_fields(cfg: Config) -> None:
-    """检查必须为布尔值的配置字段。"""  # noqa: TID251
     _require_bool_fields(cfg)
-
-
-def _validate_words_config(cfg: Config) -> None:
-    """检查词库相关配置。"""  # noqa: TID251
     if not isinstance(cfg.words.pick, int) or isinstance(cfg.words.pick, bool):
         raise ValueError(f"words.pick（n）必须是整数，收到: {cfg.words.pick!r}")
     if cfg.words.pick < 0:
@@ -507,22 +492,14 @@ def _validate_words_config(cfg: Config) -> None:
                 f"loop.iterations 必须是整数或 inf(-1)，收到: "
                 f"{cfg.loop.iterations!r}")
         if cfg.loop.iterations < 1:
-            raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
+            raise ValueError("loop.iterations 必须是正整数或 inf(-1)")
         if cfg.loop.iterations > sys.maxsize:
             raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
-
-
-def _validate_agent_config(cfg: Config) -> None:
-    """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
-
-
-def _validate_rounds_config(cfg: Config) -> None:
-    """检查轮次守卫配置。"""  # noqa: TID251
+    # ---- 轮次守卫 ----
     # 延迟导入：rounds.py 依赖 agents/sink，--help 等路径不该背上这些依赖
     from .rounds import FALLBACK_SCORERS, VERIFY_MODES
-    jcmd = cfg.rounds.judge_command
     if cfg.rounds.verify not in VERIFY_MODES:
         raise ValueError(f"rounds.verify 必须是 {'/'.join(VERIFY_MODES)}，"
                          f"收到: {cfg.rounds.verify!r}")
@@ -538,53 +515,21 @@ def _validate_rounds_config(cfg: Config) -> None:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
     if cfg.rounds.enabled and not cfg.rounds.dir.strip():
-        if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
-            raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
-    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
-    # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    _validate_windows_command_dual("agent.command", cfg.agent.command, cfg.workspace)
+        raise ValueError("rounds.dir 不能为空")
+    for name in ("verify_timeout", "judge_timeout"):
+        v = getattr(cfg.rounds, name)
+        if not _is_finite_number(v) or v <= 0:
+            raise ValueError(f"rounds.{name} 必须为有限的正数（秒）")
+    jcmd = cfg.rounds.judge_command
+    # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，
     # AI 评分会静默拿不到候选内容而永远解析不出分数
     _require_prompt_placeholder("rounds.judge_command", jcmd,
                                 _JUDGE_PLACEHOLDER_HINT)
+    cmd = cfg.agent.command
     # 模板缺少占位符时提示词会被静默丢弃：agent 收不到任何输入，循环空转
-    _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
+    _require_prompt_placeholder("agent.command", cmd, _AGENT_PLACEHOLDER_HINT)
     # cmd.exe 无法安全接收内嵌多行参数：$prompt_file 的路径也只经
     # list2cmdline 处理空格/引号、不转义 cmd 元字符。两条命令同口径校验
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
-    # duplicate removed
-    _validate_windows_command_dual("rounds.judge_command", jcmd, cfg.workspace)
-
-
-def _validate_windows_command_dual(name: str, template: str,
-                                  workspace: str) -> None:
-    """同口径校验 agent.command 与 rounds.judge_command 在 Windows 下的命令安全性。"""  # noqa: TID251
-    from .config import _validate_windows_command
-    _validate_windows_command(name, template, workspace)
-
-
-def _validate_loop_config(cfg: Config) -> None:
-    """检查循环轮数配置。"""  # noqa: TID251
-    if cfg.loop.iterations is not None:
-        if (not isinstance(cfg.loop.iterations, int)
-                or isinstance(cfg.loop.iterations, bool)):
-            raise ValueError(
-                f"loop.iterations 必须是整数或 inf(-1)，收到: "
-                f"{cfg.loop.iterations!r}")
-        if cfg.loop.iterations < 1:
-            raise ValueError("loop.iterations 必须为正整数或 inf(-1)")
-        if cfg.loop.iterations > sys.maxsize:
-            raise ValueError("loop.iterations 超出可迭代范围；如需无限循环请用 inf")
-
-
-# _validate_words_config 已在前面定义（第 478 行），此处不再重复
-
-
-# 公开的校验入口，供测试和 CLI 直接调用
-def _validate(cfg: Config) -> None:
-    _validate_string_fields(cfg)
-    _validate_bool_fields(cfg)
-    _validate_words_config(cfg)
-    _validate_loop_config(cfg)
-    _validate_agent_config(cfg)
-    _validate_rounds_config(cfg)
+    _validate_windows_command("agent.command", cmd, cfg.workspace)
+    _validate_windows_command("rounds.judge_command", jcmd, cfg.workspace)
