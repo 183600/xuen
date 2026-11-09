@@ -300,9 +300,15 @@ def load_config(path: Optional[str] = None) -> Config:
                                  "extra_notes")
     cfg.words = _parse_words_config(_mapping_section(raw, "words"), cfg.words)
     cfg.loop = _parse_loop_config(_mapping_section(raw, "loop"), cfg.loop)
-    cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
-    cfg.rounds = _parse_rounds_config(
-        _mapping_section(raw, "rounds"), cfg.rounds)
+if "agent" in raw and raw["agent"] is not None and isinstance(raw["agent"], dict):
+        cfg.agent = _parse_agent_config(_mapping_section(raw, "agent"), cfg.agent)
+    else:
+        raise ValueError("agent 配置必须是一个映射（字典）")
+            else:
+                raise ValueError("agent 配置必须是一个映射（字典）")
+    if "rounds" in raw:
+    if raw["rounds"] is not None and isinstance(raw["rounds"], dict):
+        cfg.rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), cfg.rounds)
     cfg.prompt = _parse_prompt_config(
         _mapping_section(raw, "prompt"), cfg.prompt)
 
@@ -510,7 +516,6 @@ def _validate_agent_config(cfg: Config) -> None:
     """检查外部 agent 配置。"""  # noqa: TID251
     if not _is_finite_number(cfg.agent.timeout) or cfg.agent.timeout <= 0:
         raise ValueError("agent.timeout 必须为有限的正数（秒）")
-    _require_prompt_placeholder("agent.command", cfg.agent.command, _AGENT_PLACEHOLDER_HINT)
 
 
 def _validate_rounds_config(cfg: Config) -> None:
@@ -532,10 +537,9 @@ def _validate_rounds_config(cfg: Config) -> None:
     if not score_valid:
         raise ValueError(f"rounds.adopt_score 必须在 0-10 之间，"
                          f"收到: {cfg.rounds.adopt_score!r}")
-    if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
-        raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
-    if not _is_finite_number(cfg.rounds.judge_timeout) or cfg.rounds.judge_timeout <= 0:
-        raise ValueError("rounds.judge_timeout 必须为有限的正数（秒）")
+    if cfg.rounds.enabled and not cfg.rounds.dir.strip():
+        if not _is_finite_number(cfg.rounds.verify_timeout) or cfg.rounds.verify_timeout <= 0:
+            raise ValueError("rounds.verify_timeout 必须为有限的正数（秒）")
     # 与 agent.command 同样的占位符校验：评审命令收不到提示词时，修正后
     _require_prompt_placeholder("rounds.judge_command", jcmd, _AGENT_PLACEHOLDER_HINT)
     # （评委命令原来漏检，评审提示词会被 cmd 当命令解析）
