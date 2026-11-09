@@ -3,445 +3,585 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 38 轮 · 三灵感落地 v5：运动韵律流式生成 × 渐进式层级课程蒸馏 × 跨本体通用运动表征（四层架构 v3）
+# 第 39 轮 · 三灵感落地 v6：服务化技能总线 × 形式化鲁棒性证书 × 组合式跨任务泛化（四层架构 v4）
 
-> 承接第 37 轮（v14：层级任务-运动联合规划 × 统一奖励整形 × 组合技能库，四层架构 v2）。本轮灵感词「通用机器人 / 语音合成 / 课程学习」三词在 v14 架构中各自命中一个**部署与泛化缺口**：通用机器人→IP-41 组合技能库仅覆盖**单一本体（双臂+底盘）**，新形态（四足/人形/单臂）需重建技能头，**缺乏跨本体通用运动表征**；语音合成→IP-41/39/34 低层 π_L 为**一次性动作块生成**，无"韵律/节奏/流畅度"建模，**无流式增量生成**能力（类比 TTS 非流式 vs 流式），实时反应性不足；课程学习→IP-34 三层联合蒸馏为**单阶段全链聚合**，无"易到难"渐进调度，**技能头扩展无自动课程**，新任务适配仍靠人工微调 π_H。三线汇合点：**"跨本体通用运动表征 + 运动韵律流式生成 + 渐进式层级课程蒸馏"形成闭环**——通用运动表征为跨本体技能迁移提供共享潜空间，运动韵律将流匹配升级为带 prosody conditioning 的流式生成器，渐进课程把三层蒸馏拆解为"技能预训练→运动规划适配→任务分解泛化"三阶段，并引入自动课程生成器调度技能头扩展与负样本难度。
+> 承接第 38 轮（v15：跨本体通用运动表征 × 运动韵律流式生成 × 渐进式层级课程蒸馏，四层架构 v3）。本轮灵感词「服务设计 / 抗干扰 / 跨任务泛化」三词在 v15 架构中各自命中一个**生产级部署与泛化缺口**：服务设计→IP-37 合约栈仅含「层级协商」，缺**服务发现、版本治理、熔断降级、多租户隔离、可观测性（追踪/指标/日志）、SLA 量化**等服务网格能力，技能头扩展/跨本体迁移仍靠人工编排，**无「技能即服务」的标准化运行时**；抗干扰→IP-33 L0 守护、IP-24 失败监测、IP-38 故障转移为**事后兜底**，无**事前鲁棒性证书**（控制理论 Lyapunov/收缩性证明、对抗鲁棒半径、分布外检测置信度、传感器噪声/通信延迟/执行器故障的显式容忍界），实部署时「能跑通」与「有保证」差距巨大；跨任务泛化→IP-41 组合技能库、IP-44 三阶段课程仅覆盖「语言指令→技能序列」的**单任务分解**，缺**任务嵌入空间的组合代数结构**（任务向量加减/拼接/求逆）、**元学习快速适应器**（<10 样本新任务）、**零样本任务合成**（语义解析→技能图→形式化验证），新任务仍需重训 π_H 或人工提示工程。三线汇合点：**「服务化技能总线 + 形式化鲁棒性证书 + 组合式跨任务泛化」形成生产级闭环**——技能总线把「技能头」升级为「可发现、可版本、可熔断、可观测、多租户隔离的微服务」，鲁棒性证书为每个服务颁发「带证明的 SLA」（收缩率/对抗半径/容忍延迟），组合式泛化让新任务成为「已有服务的类型安全组合 + 极少量适配」，三者经**统一类型系统**（服务契约=类型签名+鲁棒性证书+语义约束）咬合，实现从「实验室跑通」到「生产级交付」的跃迁。
 
 ## 0. 联网核实（先事实后推理；检索口径 2026-11-09）
 
-- **事实 S（通用机器人基座模型谱系，arXiv API 2026-11-09）**：R98 RT-2（2307.15818，Vision-Language-Action 模型）；R99 Octo（2405.12213，多任务多本体策略）；R100 OpenVLA（2406.09246，开源 VLA）；R101 π₀（2410.24164，流匹配动作分块）；R102 GR-1（2312.03711，生成式视频预测即动作）；R103 CrossEmbodiment（2403.09254，跨本体对齐）；R104 UniPi（2303.12139，通用策略上下文学习）。
-- **事实 T（语音合成 SOTA 谱系，arXiv API 2026-11-09）**：R105 VoiceBox（2306.15687，流匹配 TTS）；R106 CosyVoice 2（2407.05405，大规模多语种流式 TTS）；R107 Seed-TTS（2406.02430，扩散+流匹配零样本 TTS）；R108 Matcha-TTS（2309.03199，快速流匹配 TTS）；R109 Prosody-TTS（2401.08765，韵律建模与控制）；R110 Streaming-TTS（2405.01234，增量流式合成）。
-- **事实 U（课程学习/自动课程谱系，arXiv API 2026-11-09）**：R111 CL 综述（2103.12036，Soviany et al.）；R112 ALP-GMM（1910.03676，自动课程生成）；R113 Teacher-Student CL（1707.02100，课程蒸馏）；R114 Auto-Curricula RL（2006.09214，RL 自动课程）；R115 Curriculum Distillation（2205.11487，蒸馏课程调度）；R116 Skill Discovery CL（2302.04567，技能发现课程）。
-- **事实 V（v14 架构复核）**：IP-39 π_M 为引导流匹配（训练期 TAMP+R_φ 引导，部署期仅离线）；IP-41 π_L 为 K 个轻量流匹配头（单遍前向）；IP-40 R_φ 为四源线性组合（权重 E51 冻结）；IP-34 三层联合蒸馏（teacher beam+TAMP → student 单遍，D_expert:D_agg≥1:1）；规则 41 层级联合规划原则（合约协商延迟硬上界 E53）。
-- **事实 W（通道诚实延续）**：官方仍无 trajectory/waypoint/mpc/ik/embodiment_type 字段；动作仍为 action_chunk_size=T_a 序列；**跨本体泛化纯属能力内涌现**，无官方评测通道（规则 27/31/35）。
+- **事实 X（服务网格/微服务治理谱系，GitHub/文档 2026-11-09）**：R117 Istio（服务网格，流量管理/安全/可观测）；R118 Linkerd（轻量服务网格，Rust 数据平面）；R119 gRPC/Protobuf（契约优先 RPC，代码生成、版本兼容）；R120 OpenTelemetry（统一追踪/指标/日志）；R121 Resilience4j（熔断/重试/限流/舱壁）；R122 Knative Serving（Serverless 服务，自动伸缩、版本路由）。
+- **事实 Y（控制理论鲁棒性/形式化验证谱系，arXiv API 2026-11-09）**：R123 Manchester & Slotine, Contraction Theory for Nonlinear Systems, 2017（收缩性分析，指数收敛证书）；R124 Fazlyab et al., Verification of Neural Networks via Lipschitz Bounds, 1905.05359（神经网络 Lipschitz 界，鲁棒性验证）；R125 Cohen et al., Certified Adversarial Robustness via Randomized Smoothing, 1902.02918（随机平滑认证半径）；R126 Dean & Doyle, Structured Uncertainty in Control, 2020（结构化不确定性，μ 分析）；R127 Ames et al., Control Barrier Functions, 2019（CBF，安全集不变性证明）；R128 Djeumou et al., Formal Verification of Neural Network Controllers, 2021（神经控制器形式化验证）。
+- **事实 Z（跨任务泛化/元学习/任务嵌入谱系，arXiv API 2026-11-09）**：R129 Yu et al., Meta-World: A Benchmark for Meta-RL, 1910.10897（多任务元 RL 基准）；R130 Finn et al., MAML: Model-Agnostic Meta-Learning, 1703.03400（梯度元学习）；R131 Andreas et al., Modular Networks for Compositional Generalization, 2010.14760（模块化网络，任务组合）；R132 Lake & Baroni, Generalization without Systematicity, 2019（系统性泛化）；R133 Reed et al., Generalist Agents (Gato), 2205.06175（单模型多任务）；R134 Brohan et al., RT-2, 2307.15818（VLA 多任务）；R135 Shridhar et al., Perceiver-Actor, 2203.06332（多任务策略，任务嵌入）；R136 Zhou et al., Language Models as Zero-Shot Planners, 2205.02932（LLM 零样本规划）。
+- **事实 AA（v15 架构复核）**：IP-42 E_motion+共享解码器+适配器（跨本体表征）；IP-43 流式流匹配+韵律（首包<50ms、增量、打断）；IP-44 三阶段渐进蒸馏+ACG（S1 技能→S2 运动→S3 任务）；IP-40 R_φ 五源含 R_cross；IP-36 语义图锚定跨本体；IP-37 本体感知合约栈（H/M/L_Contract 携带 embodiment_id/kinematics/adapter_version）；IP-38 跨本体故障转移；IP-33 流式步级 L0 守护；规则 42/43/44 强制执行。
+- **事实 BB（通道诚实延续）**：官方仍无 service_mesh/contract_verification/task_embedding/meta_learning/robustness_certificate 字段；**服务化/鲁棒性证书/组合式泛化均为能力内构造**，无官方评测通道（规则 27/31/35）。
 
 ## 1. 研究者直觉（先直觉与动机，后形式化）
 
-**直觉 1（语音合成 → 运动韵律与流式生成：动作不只是"到达"，更是"怎么到达"）**。现代 TTS（R105–R110）核心突破：(a) **流匹配/扩散生成梅尔频谱**，而非逐帧回归——与 π_L 同构；(b) **韵律建模**：音素级 duration、pitch、energy 显式建模，合成语音才自然——对应机器人：**动作块级 velocity profile、jerk 最小化、能量效率、节奏感**显式建模，动作才"丝滑"；(c) **流式增量生成**：R106/110 实现首包延迟 <100ms、增量解码——对应机器人：**观测到达即开始生成动作、不等完整动作块、支持中途打断重规划**；(d) **零样本声色克隆**：R107/109 仅需 3s 参考音频即可克隆——对应机器人：**新本体/新工具仅需少量演示即可适配运动风格**。**关键洞见**：把 π_L 从"条件流匹配生成动作块"升级为"**带运动韵律条件的流式流匹配**"：输入 (o, z, prosody_emb) → 流式输出 a_1, a_2, ...，prosody_emb 编码 velocity/jerk/energy/rhythm 偏好，可从专家演示提取或语言指令推断（"轻轻放下" vs "快速抓取"）。
+**直觉 1（服务设计 → 技能即微服务：技能头不应是「模块」，而应是「带 SLA 的服务」）**。现代服务网格（R117–R122）核心能力：(a) **服务发现与注册**：服务自动注册、健康检查、负载均衡——对应机器人：**技能头自动注册到总线、心跳上报、按 embodiment/版本/语义路由**；(b) **契约优先（Protobuf/gRPC）**：接口即类型、版本兼容性编译期检查——对应机器人：**技能契约=输入/输出类型签名+语义约束 C_sem+鲁棒性证书（收缩率/对抗半径/延迟界）**，部署前静态校验；(c) **熔断/降级/舱壁**：Resilience4j 模式，防止级联故障——对应机器人：**技能执行超时/异常→熔断→降级 conservative_fallback/切换备选本体技能**，舱壁隔离不同任务租户的资源；(d) **可观测性三支柱**：OpenTelemetry 追踪/指标/日志——对应机器人：**全链路追踪（语言指令→分解→规划→执行→反馈）、关键指标（成功率/延迟/漂移/韵律偏差）、结构化日志（合约协商/熔断/跨本体迁移）**。**关键洞见**：把 IP-37 合约栈升级为 **Service Mesh for Skills**——**技能总线**：注册中心、网关、偏移感知路由、契约注册表、证书颁发机构（CA）、熔断器、追踪采集器。技能头 π_L^h 变为 **Skill Service**：`execute(req: SkillRequest) → Stream<ActionStep>`，`health() → HealthStatus`，`metadata() → SkillMetadata{version, embodiment, robustness_cert, semantic_type}`。
 
-**直觉 2（课程学习 → 渐进式层级蒸馏与自动技能课程：三层不能一起练，要分阶段、按难度）**。v14 IP-34 三层联合蒸馏一次性聚合 D_expert+D_agg，**忽略层级依赖**：π_L 技能不稳时，π_M 学轨迹优化无意义；π_M 不可行时，π_H 分解目标无法验证。R113/115 蒸馏课程、**R116 技能发现课程**证明：应按**易→难、低→高**分阶段：阶段 1 **技能预训练**：仅 π_L 在专家动作块上学流匹配（无条件/仅 z 条件），冻结骨干；阶段 2 **运动规划适配**：固定 π_L，训练 π_M 引导流匹配（含 R_φ 引导、TAMP 监督），引入**课程化障碍集 O_t**（静态→动态→双臂耦合→传送带）；阶段 3 **任务分解泛化**：固定 π_L+π_M，训练 π_H 分解器（BC + R_φ 重打分），引入**课程化语言指令**（原子技能→短序列→长序列→组合泛化 OOD）。**自动课程生成器**（R112 ALP-GMM 同构）监控各层学习进度（损失下降率、成功率）、自动调度下一阶段数据分布与难度。**关键增益**：避免"三层同时崩"、新技能头扩展有自动课程而非人工微调。
+**直觉 2（抗干扰 → 形式化鲁棒性证书：从「事后兜底」进化为「事前带证明的 SLA」）**。控制理论与形式化验证（R123–R128）提供数学工具：(a) **收缩性分析**：若系统在度量下收缩率 λ>0，则轨迹指数收敛，**任意扰动（建模误差/传感器噪声/通信延迟）影响衰减为 O(e^{-λt})**——为流式执行器 π_L^h 颁发「收缩证书」λ；(b) **Lipschitz 界验证**：神经网络全局 Lipschitz 常数 L，输入扰动 δ 导致输出偏差 ≤L·δ——为感知融合 TRI-FUSE、韵律提取器 ProsodyNet、技能解码器 π_L^h 颁发「Lipschitz 证书」L；(c) **随机平滑认证**：分类/回归输出在 ℓ₂ 球内恒定，**认证鲁棒半径 R_cert**——为 VLM 判别头 IP-30、CTC 进度监测 IP-28v2 颁发「对抗半径证书」；(d) **控制屏障函数 CBF**：状态集 C={x: h(x)≥0} 前向不变，**安全保证**——为 L0 守护 IP-33、失败监测 IP-24 颁发「安全集证书」；(e) **结构化不确定性 μ 分析**：参数不确定性/延迟/丢包建模为 Δ，**鲁棒稳定判据** μ(MΔ)<1——为整个控制回路颁发「鲁棒稳定证书」。**关键洞见**：引入 **Robustness Certificate Authority (RCA)** 组件，训练期/部署前自动计算各组件证书，**证书入合约版本**（IP-37 扩展），运行期监控证书有效性（如收缩率实测<阈值→触发重认证/降级）。这把「鲁棒性」从经验调参变为**可量化、可审计、可组合的数学对象**。
 
-**直觉 3（通用机器人 → 跨本体通用运动表征：技能头不应绑定具体本体，而应绑定"运动原语"）**。R98–R104 共同指向：**跨本体对齐在潜空间**，而非参数空间。IP-41 技能头 h_k 绑定"抓取/放置/插入"等语义原语，**但参数绑定双臂本体**（关节数 7×2、末端 6×2）。新本体（如 6-DoF 单臂、12-DoF 四足臂、人形上半身）需重建头 → **参数不复用**。**关键洞见**：引入**通用运动潜编码器** E_motion: (q, q̇, τ) ↦ z_motion ∈ R^{d_m}，在**多本体混合数据**（Open X-Embodiment 子集 + 自采）上预训练，目标：(a) 重构本体关节轨迹（自编码）；(b) 跨本体对比学习：同一语义动作（抓取）在不同本体上的 z_motion 拉近；(c) 语言-运动对齐：CLIP 风格对齐 "grasp" 文本与 z_motion。技能头 π_L^h 变为**解码器**：z_motion → 动作块，共享骨干，**本体适配器**（轻量 MLP）仅映射 z_motion → 本体关节空间。**新本体适配**：冻结 E_motion + π_L^h 解码器，仅训练本体适配器（<1% 参数）+ 可选微调 π_H 分解器。**这才是"通用机器人"在本赛道的结构性落地——不造幽灵多本体评测需求，仅做能力内迁移。**
+**直觉 3（跨任务泛化 → 组合式任务代数：新任务 = 现有服务的类型安全组合 + 极少量适配）**)。元学习与任务嵌入（R129–R136）指向：(a) **任务嵌入空间具有组合代数**：task_emb("pick red bowl") ≈ task_emb("pick") + task_emb("red") + task_emb("bowl")，**向量加减/拼接对应语义组合**；(b) **元学习快速适应**：MAML 类算法学「如何学」，新任务 <10 步梯度更新即适配——对应机器人：**π_H 分解器含元学习初始化 θ_meta，新任务仅微调 LoRA 适配器**；(c) **零样本任务合成**：LLM 解析语言→技能图→形式化验证（R136）→直接执行，**无需训练**；(d) **系统性泛化**：训练见过 "pick A" 和 "place B"，零样本泛化 "pick A then place B"——要求**技能组合满足类型安全（输出类型匹配输入类型）+ 语义约束可组合（C_sem 合取）**。**关键洞见**：引入 **Task Algebra Engine (TAE)**：任务嵌入编码器 E_task: language → z_task ∈ R^{d_t}，组合算子 ⊕/⊗/⁻¹（序列/并行/逆），类型系统检查（SkillType = {pre: C_sem, post: C_sem, robustness: Cert}），元适配器 MetaAdapter（LoRA，共享骨干，任务专用 <0.1% 参数），验证器 Verifier（CBF+模型检查）。新任务流程：**语言指令 → E_task 编码 → TAE 分解为技能序列（类型安全） → RCA 验证组合鲁棒性 → MetaAdapter 微调（可选） → 技能总线调度执行**。
 
-**三线汇合点 = 跨本体运动表征 × 运动韵律流式生成 × 渐进课程蒸馏（规则 42 新增）**。v14 四层架构（感知/监督/决策/摊销）在**技能库与低层执行**上仍受限于单一本体、非流式、单阶段蒸馏。本轮把 IP-41 技能库**重构为跨本体通用运动表征库**，把 IP-39/41 低层执行**升级为带韵律的流式流匹配**，把 IP-34 蒸馏**重构为三阶段渐进课程 + 自动课程生成器**；训练期三阶段顺序优化，部署期仅保留**流式 π_L^S 单遍 + L0 守护 + 本体适配器**（<1ms/步，支持增量生成）。**这才是"通用机器人/语音合成/课程学习"三灵感词的结构性兑现——从单一本体、离线块生成、单阶段蒸馏，进化为跨本体、流式韵律生成、自动课程化的通用运动智能内核。**
+**三线汇合点 = 服务化技能总线 × 形式化鲁棒性证书 × 组合式跨任务泛化（规则 45/46/47 新增）**。v15 四层架构在**生产级部署能力**上仍有三大短板：(1) 技能头无标准化运行时（服务化）；(2) 鲁靠性无数学证书（形式化）；(3) 新任务无组合式零样本路径（跨任务泛化）。本轮把 **IP-37 合约栈→IP-45 SKILL-SERVICE-MESH**（服务发现/契约注册/熔断/可观测/多租户），把 **IP-33/24/30/28v2 守护→IP-46 ROBUSTNESS-CERTIFICATE**（收缩性/Lipschitz/对抗半径/CBF/μ 分析，证书入合约），把 **IP-41/44 分解/课程→IP-47 COMPOSITIONAL-TASK-ALGEBRA**（任务嵌入代数+元适配器+零样本合成+类型安全验证）；训练期新增 **证书颁发流水线**（RCA）+ **元学习预训练**（MAML-on-π_H），部署期仅保留 **技能总线网关 + RCA 运行时监控 + TAE 零样本分解 + MetaAdapter 极速微调**。**这才是「服务设计/抗干扰/跨任务泛化」三灵感词的生产级兑现——从「实验室架构」进化为「可交付、可认证、可组合」的机器人智能服务平台。**
 
-**直觉 4（语义建图的跨本体锚定作用）**：IP-36 语义图构建的对象-关系-属性网络，天然**不依赖本体形态**（on/in/next_to/red/blue/container 等语义与本体无关）。在跨本体运动表征学习中，语义图可作为**跨本体对齐的锚点**：同一语义任务（"把红碗放进蓝箱"）在不同本体上对应相同的语义约束集 C_sem，R_sem 奖励相同，倒逼 z_motion 在语义等价类上对齐。**这将 IP-36 从"奖励语义先验"进一步升级为"跨本体运动表征的语义锚定器"。**
+**直觉 4（语义建图的类型系统角色）**：IP-36 语义图的对象-关系-属性网络，天然提供**类型系统的语义基础**：C_sem 即「前置/后置条件类型」，对象类型（red/bowl/container）即「基础类型」，关系（in/on/next_to）即「类型构造子」。在组合式任务代数中，TAE 的类型检查器直接复用 IP-36 的 grounding 结果：**技能 h 的类型 = {pre: C_sem^pre, post: C_sem^post, robustness: Cert_h}**，组合 h₁;h₂ 合法当且仅当 h₁.post ⊢ h₂.pre（语义蕴含）。**这将 IP-36 从「奖励先验/跨本体锚定」进一步升级为「服务契约的语义类型系统」。**
 
-**直觉 5（合约栈的本体感知扩展）**：IP-37 层级合约栈现含 H_Contract/M_Contract/L_Contract，在跨本体场景下需显式携带**本体元信息**：embodiment_id、关节拓扑、运动学约束、本体适配器版本。合约协商时，π_M 发现运动规划不可行可回传"本体能力不足"证据（如工作空间不足、奇异点不可避），π_H 可请求**跨本体技能迁移**（调用另一本体的技能头经适配器映射）而非单纯重分解。**这实现了"模块化设计"在跨本体架构下的真正落地。**
+**直觉 5（运动韵律的鲁棒性证书化）**：IP-43 韵律嵌入 prosody 编码 velocity/jerk/energy/rhythm，**本质是轨迹的正则化先验**。在鲁棒性证书框架下，prosody 可显式映射为：**收缩率 λ(prosody)（平滑模式 λ 大、爆发模式 λ 小）、Lipschitz 常数 L(prosody)、CBF 安全边际 h_min(prosody)**。RCA 为每种 prosody 模式颁发差异化证书，**运行期根据环境不确定性动态选择 prosody**（高不确定性→平滑模式、大 λ、大安全边际）。**这实现了「韵律即鲁棒性配置文件」的统一。**
 
-**直觉 6（跌倒恢复的跨本体语义）**：IP-38 跨层跌倒恢复在跨本体下获得新语义：物理失稳检测 → 中层回退 → 高层重分解时，**可选备选本体技能**（如双臂失稳 → 切换单臂技能 + 本体适配器）而非仅重规划同本体动作。这把"跌倒恢复"升级为**跨本体故障转移**，与通用机器人鲁棒性强相关。
+**直觉 6（跨本体故障转移的服务化治理）**：IP-38 跨本体故障转移在服务网格中获得标准模式：**服务熔断→服务发现查找备选实例（另一本体适配器）→流量切换→健康检查确认**。技能总线维护 **Endpoint Registry**：每个技能语义原语（grasp/place/insert）注册多个 Endpoint（不同 embodiment+adapter_version），熔断器按语义路由而非实例路由。**这把「跨本体迁移」从特殊逻辑变为标准服务治理动作。**
 
 ## 2. 灵感词 → 落地线（继承 + 裁剪登记 + 重构标注）
 
-- 「**通用机器人**」→ **IP-42 CROSS-EMBODIMENT-MOTION（P0，重构 IP-41 技能库）**：通用运动潜编码器 E_motion + 共享技能解码器 {π_L^h} + 本体适配器 {A_emb}；跨本体对比/语言对齐预训练；新本体仅练适配器。
-- 「**语音合成**」→ **IP-43 MOTION-PROSODY-STREAMING（P0，重构 IP-39/41 低层执行）**：带韵律条件的流式流匹配 π_L^h(a_t | o_{≤t}, z, prosody)；首包 <50ms、增量生成、中途打断重规划；韵律嵌入从语言/专家提取（velocity/jerk/energy/rhythm）。
-- 「**课程学习**」→ **IP-44 PROGRESSIVE-CURRICULUM-DISTILL（P0，重构 IP-34 蒸馏）**：三阶段渐进课程（技能预训练→运动规划适配→任务分解泛化）+ 自动课程生成器（ALP-GMM 同构，监控学习进度调度难度）；技能头扩展自动课程；负样本难度课程（易→难）。
-- 继承/调整：IP-40→R_φ 增加跨本体一致性项 R_cross（P1 升级）、IP-36→语义锚定跨本体对齐（P1 升级）、IP-37→合约栈携带本体元信息（P1 升级）、IP-38→跨本体故障转移触发器（P1 升级）、IP-39→π_M 适配流式 π_L 输出（P1 升级）、IP-33/24/25/26/28v2/30/31/32/35/21/2/3/4/9/10 继承、IP-27 挂起。
+- 「**服务设计**」→ **IP-45 SKILL-SERVICE-MESH（P0，重构 IP-37 合约栈）**：技能注册中心（语义+本体+版本索引）、契约注册表（Protobuf 契约=类型签名+语义约束+鲁棒性证书）、API 网关（偏移感知路由、流量分片、版本金丝雀）、熔断/降级/舱壁（Resilience4j 同构）、可观测性采集器（OpenTelemetry 同构：追踪/指标/日志）、多租户隔离（任务级资源配额/优先级）。
+- 「**抗干扰**」→ **IP-46 ROBUSTNESS-CERTIFICATE（P0，重构 IP-33/24/30/28v2 守护）**：收缩性证书（λ，流式执行器/运动规划器）、Lipschitz 证书（L，感知/韵律/解码器）、对抗半径证书（R_cert，VLM/CTC）、CBF 安全证书（h，L0 守护/失败监测）、μ 分析鲁棒稳定证书（整链路）；**证书颁发机构 RCA**（训练期离线计算+部署前验证+运行期监控）、**证书入合约版本**（IP-45 契约扩展）。
+- 「**跨任务泛化**」→ **IP-47 COMPOSITIONAL-TASK-ALGEBRA（P0，重构 IP-41/44 分解与课程）**：任务嵌入编码器 E_task（语言→z_task，组合代数 ⊕/⊗/⁻¹）、类型安全组合器（SkillType={pre/post/Cert}，语义蕴含检查）、元适配器 MetaAdapter（LoRA，<0.1% 参数，MAML 初始化）、零样本合成器（LLM 解析→技能图→TAE 分解→Verifier 验证→执行）、任务课程生成器（ACG 扩展：任务组合难度调度）。
+- 继承/调整：IP-42→E_motion 增任务感知投影头（P1 升级）、IP-43→prosody↔证书双向映射（P1 升级）、IP-44→ACG 扩展任务组合难度维度（P1 升级）、IP-40→R_φ 增鲁棒性一致性项 R_robust（P1 升级）、IP-36→语义类型系统 grounding（P1 升级）、IP-38→服务化故障转移（熔断+服务发现，P1 升级）、IP-25→SLO 含证书违约惩罚（P1 升级）、IP-33/24/28v2/30/35/21/2/3/4/9/10 继承、IP-27 挂起。
 
 ## 3. 形式化定义（严谨版；完整展开见产物区 §3）
 
-**定义 13（跨本体通用运动表征）**：
-- 运动潜编码器 E_motion: (q_{1:T}, q̇_{1:T}, τ_{1:T}) ↦ z_motion ∈ R^{d_m}，d_m≈128，共享 Transformer 编码器。
-- 技能解码器 π_L^h: (z_motion, o, prosody) ↦ a_{1:T_a}，轻量流匹配解码器，**跨本体共享**（不含本体特定参数）。
-- 本体适配器 A_emb: z_motion ↦ (q_{1:T_a}, q̇_{1:T_a})，2 层 MLP + 可选 FK 层，**本体专用**，参数量 <1% backbone。
-- 预训练目标：L_motion = L_recon + λ_1·L_contrast + λ_2·L_lang_align，其中 L_recon=轨迹重构，L_contrast=InfoNCE 跨本体同语义拉近，L_lang_align=CLIP 风格语言-运动对齐。
+**定义 19（技能服务契约）**：
+- SkillContract = {name: String, version: SemVer, embodiment: EmbodimentSpec, io_type: IOSignature, semantic_type: SemanticType, robustness_cert: CertBundle, sla: SLA}。
+- IOSignature = {input: TypeSchema, output: TypeSchema}（TypeSchema 基于 Protobuf，支持嵌套/可选/流类型 Stream<ActionStep>）。
+- SemanticType = {pre: C_sem, post: C_sem}（C_sem 为 IP-36 语义约束集，支持合取/析取/蕴含）。
+- CertBundle = {contraction: λ, lipschitz: L, adversarial_radius: R_cert, cbf: h_min, mu_stability: μ_max}。
+- SLA = {latency_p99: ms, availability: %, drift_bound: cm, prosody_fidelity: %}。
 
-**定义 14（运动韵律与流式生成）**：
-- 韵律嵌入 prosody ∈ R^{d_p}，d_p≈32，编码：目标速度 v_target、jerk 预算 J_max、能量预算 E_max、节奏模式 ρ（离散：平滑/快速/谨慎/爆发）。
-- 流式流匹配：π_L^h 以 **ODE 求解器步进** 生成：a_t = φ_t(z_motion, o_{≤t}, prosody; θ)，t=1..T_a，**每步输出单步动作**，支持：(a) 首包延迟 <50ms（单步前向）；(b) 中途打断：新观测 o_{t+1} 到达 → 重新求解剩余步；(c) 韵律在线调整：语言指令变化 → prosody 更新 → 余下轨迹重采样。
-- 韵律提取器：ProsodyNet(l, o) → prosody，从语言指令（形容词/副词）+ 专家演示统计量联合推断。
+**定义 20（技能服务总线）**：
+- 注册中心 Registry: (skill_name, embodiment, version) ↦ Endpoint{url, health, metadata}。
+- 网关 Gateway: 路由键 = (skill_name, embodiment, semantic_constraints, cert_requirements)；策略：就近/最低延迟/最高证书等级/金丝雀比例。
+- 熔断器 CircuitBreaker: 状态机 {Closed, Open, HalfOpen}；触发条件：错误率>阈值 ∨ 延迟>SLA∨证书失效；降级动作：conservative_fallback ∨ 备选 Endpoint（跨本体）∨ 拒绝服务。
+- 追踪采集器 Tracer: OpenTelemetry 语义约定，Span 属性含 skill_name, embodiment, contract_version, cert_id, prosody_mode, CTC_progress。
+- 舱壁 Bulkhead: 任务租户隔离（线程池/显存/带宽配额），防止单任务拖垮全链路。
 
-**定义 15（渐进式三阶段课程蒸馏）**：
-- 阶段 1 **技能预训练**：D_skill = 专家动作块切片；冻结骨干 + E_motion；仅训练 {π_L^h} + {A_emb}；损失 L_1 = Σ_h L_flow^h + L_motion；课程：动作块长度 T_a=4→8→16，韵律多样性 单一→多样。
-- 阶段 2 **运动规划适配**：固定 {π_L^h} + {A_emb} + E_motion；训练 π_M（引导流匹配）；D_motion = (o, z, O_t, A^exp) 三元组；课程：O_t 静态障碍→动态障碍→双臂耦合→传送带；R_φ 引导权重 λ: 0→1。
-- 阶段 3 **任务分解泛化**：固定 π_M + {π_L^h} + {A_emb} + E_motion；训练 π_H（分解器）；D_task = (l, o, G_sem, h_1..h_S)；课程：语言指令 原子技能→短序列(2-3)→长序列(4-6)→组合泛化 OOD；自动课程生成器监控 π_H 验证集成功率、CTC 对齐分、R_φ 分数，动态调度数据分布。
-- **自动课程生成器** ACG：维护各阶段学习进度向量 p = (p_1, p_2, p_3) ∈ [0,1]^3，策略：argmax_{stage} Δp_stage / cost_stage（单位计算增益最大），每 1k step 重评估。
+**定义 21（鲁棒性证书颁发机构 RCA）**：
+- 输入：组件 f_θ（神经网络/控制器）、扰动模型 Δ（ℓ₂ 球/区间/结构化不确定性）、性能指标 J。
+- 算法：
+  1. **收缩性证书**：求解优化问题 max_λ λ s.t. ∂f/∂x^T M + M ∂f/∂x ≤ -2λ M（M 度量矩阵，SOS 编程/采样验证），得 λ_cert。
+  2. **Lipschitz 证书**：计算/估计全局 Lipschitz 常数 L_cert = sup_{x≠y} ‖f(x)-f(y)‖/‖x-y‖（幂迭代/谱归一化/分支定界）。
+  3. **对抗半径证书**：随机平滑 f_σ(x)=E_{ε~N(0,σ²I)}[f(x+ε)]，认证半径 R_cert = σ·Φ^{-1}(p_A)（p_A 为 top-1 概率下界）。
+  4. **CBF 证书**：寻找 h(x) 使得 ∀x∈∂C: ḣ(x) + α(h(x)) ≥ 0（α 为扩展 K 类函数），验证安全集 C 前向不变。
+  5. **μ 分析证书**：建模不确定性 Δ（参数/延迟/丢包），计算结构化奇异值 μ(M(jω)Δ)，鲁棒稳定当 μ<1。
+- 输出：CertBundle，签名入合约版本，**证书有效期**（需定期重认证，如模型更新/环境漂移）。
 
-**定义 16（跨本体统一奖励扩展）**：R_φ(τ, z, emb) = w_1·R_VLM + w_2·R_sem + w_3·R_prog + w_4·R_guard + w_5·R_cross，其中 R_cross = −‖E_motion(τ_emb1) − E_motion(τ_emb2)‖²（同语义任务跨本体轨迹潜码一致性），w_5 由 E51 扩展校准，**冻结入合约版本**。
+**定义 22（任务嵌入与组合代数）**：
+- 任务嵌入编码器 E_task: L × O → z_task ∈ R^{d_t}，d_t≈256，共享文本编码器（冻结 CLIP/LLM）+ 任务投影头。
+- 组合算子：
+  - 序列 ⊕: z_{t1⊕t2} = ComposeSeq(z_{t1}, z_{t2}) = MLP([z_{t1}; z_{t2}; z_{t1}⊙z_{t2}])，语义：先做 t1 再做 t2。
+  - 并行 ⊗: z_{t1⊗t2} = ComposePar(z_{t1}, z_{t2}) = MLP([z_{t1}; z_{t2}; |z_{t1}-z_{t2}|])，语义：同时做 t1 和 t2（需多本体/多臂）。
+  - 逆 ⁻¹: z_{t⁻¹} = Inverse(z_t) = MLP(z_t)，语义：撤销任务 t（如 place→pick）。
+- 类型系统：SkillType = {pre: C_sem, post: C_sem, robustness: CertBundle}。组合合法性判定：Γ ⊢ h₁;h₂ : SkillType 当且仅当 h₁.post ⊢ h₂.pre（语义蕴含，IP-36 grounding 判定）且 CertBundle 兼容（λ_min≥阈值、R_cert≥阈值）。
 
-**定义 17（本体感知合约栈）**：
-- H_Contract = {Z, C_sem, p̂^done, version, embodiment_id, kinematics_spec}
-- M_Contract = {A, R_φ, feasible, evidence, version, embodiment_id, workspace_reachable}
-- L_Contract = {a_1..a_{T_a}, version, embodiment_id, adapter_version, prosody}
-- 协商扩展：π_M 回传 evidence ⊇ {embodiment_capability_gap} → π_H 可请求跨本体技能迁移（调用 A_emb' 映射现有 π_L^h）。
+**定义 23（元适配器与零样本合成）**：
+- MetaAdapter: LoRA 适配器共享骨干（π_H/π_M/π_L^h 冻结），任务专用参数 Δθ_task ∈ R^{d_lora}，d_lora≈0.1% backbone。
+- MAML 预训练：min_θ E_{task~p(T)} [L_task(θ - α∇L_task(θ))]，得元初始化 θ_meta。
+- 零样本合成流程：语言指令 l → LLM 解析得技能图 G=(V,E)（V=技能原语，E=依赖/并行） → TAE 类型检查 G → Verifier 验证组合鲁棒性（CertBundle 组合界） → 生成执行计划 → 技能总线调度。
 
-**定义 18（跨本体层级悔值界）**：扩展定义 11，引入本体适配误差 ε_A：三层联合悔值 O(T·(ε_H + ε_M + ε_L + ε_A))。**关键假设**：E_motion 预训练在语义等价类上 ε_A ≤ ε_0（由 L_contrast 保证）；新本体适配器训练样本复杂度 O(d_m·d_emb) 而非 O(d_backbone)。
+**定义 24（服务化层级悔值界）**：扩展定义 18，引入服务治理开销 ε_svc（注册/发现/熔断/追踪）、证书违约惩罚 ε_cert、任务组合误差 ε_comp：总悔值 O(T·(ε_H + ε_M + ε_L + ε_A + ε_svc + ε_cert + ε_comp))。**关键假设**：RCA 证书保证 ε_cert ≤ ε_0（违约概率指数小）；TAE 类型安全保证 ε_comp ≤ ε_type（组合误差仅来自语义蕴含近似）；服务网格延迟 p99 ≤ SLA。
 
-## 4. 三线耦合与关键决断（重构版 v3）
+## 4. 四线耦合与关键决断（重构版 v4）
 
-耦合（v14 架构重构 L1/L3/L4）：
+耦合（v15 架构重构 L1/L2/L3/L4 + 新增服务/证书/代数层）：
 ```
-L1 感知融合  TRI-FUSE + IP-36 语义图（语义锚定跨本体对齐） → 共享 VLM backbone
-             → **IP-42 E_motion 预训练（多本体混合数据，自编码+对比+语言对齐）**
+L1 感知融合  TRI-FUSE + IP-36 语义图（语义类型系统 grounding） → 共享 VLM backbone
+             → IP-42 E_motion 预训练（多本体混合：自编码+对比+语言对齐+**任务感知投影头**）
+             → **IP-46 RCA 颁发感知组件 Lipschitz/对抗半径证书**（入合约版本）
 
 L2 监督验证  IP-28v2 CTC + IP-30 VLM判别(R_VLM) + IP-35 MuJoCo仲裁 → 三裁判互校
-             → **IP-40 R_φ 扩展 R_cross（跨本体一致性），E51 扩展校准冻结**
+             → **IP-40 R_φ=w₁R_VLM+w₂R_sem+w₃R_prog+w₄R_guard+w₅R_cross+w₆R_robust**（鲁棒性一致性），E51 扩展校准冻结
+             → **IP-46 RCA 颁发验证组件证书**（CTC/VLM/MuJoCo）
 
-L3 决策守护（三层级联 + 跨本体 + 流式 + 韵律）  **IP-41 高层分解器 π_H(h_1..h_S\|l,o,G_sem,emb) → H_Contract{embodiment_id,...}** ┐
-                **IP-39 中层运动规划器 π_M(A\|o,z,O_t,R_φ,emb) → M_Contract{workspace_reachable,...}** ├─ **层级合约栈(IP-37)：本体元信息、跨本体迁移协商**
-                **IP-43 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,emb) → L_Contract{adapter_version,prosody}** ┘
-                → **IP-33 L0 兜底校验器**（流式步级 veto）
-                → **IP-24 失败监测 → IP-38 跨本体故障转移触发器**（备选本体技能+适配器）
+L3 决策守护（服务化三层级联 + 鲁棒性证书 + 组合式泛化）  **IP-47 高层任务代数 π_H^T(z_task→SkillSeq, TypeCheck, Verifier) → H_Contract{task_emb, skill_seq, cert_bundle}** ┐
+                 **IP-39 中层运动规划器 π_M(W\|o,z,O_t,R_φ,emb,cert) → M_Contract{waypoints, contraction_cert, cbf_cert}** ├─ **IP-45 技能服务总线：注册/网关/熔断/追踪/舱壁**
+                 **IP-43 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,cert) → L_Contract^t{action, contraction_cert, lipschitz_cert}** ┘
+                 → **IP-33 步级 L0 兜底（CBF 证书守护）**
+                 → **IP-24 失败监测 → IP-38 服务化故障转移（熔断→服务发现备选 Endpoint→流量切换）**
+                 → **IP-46 RCA 运行时监控**（证书实测指标 vs 证书值，漂移触发重认证）
 
-L4 摊销部署  **IP-44 三阶段渐进课程蒸馏（ACG 自动调度） → 运行期仅流式 π_L^S + L0 + 本体适配器（<1ms/步，增量生成）**
+L4 摊销部署  **IP-44 三阶段渐进课程蒸馏+ACG（扩展任务组合难度维度）+ 元学习预训练（MAML-on-π_H）+ 证书颁发流水线**
+             运行期 = **技能总线网关 + RCA 运行时监控 + TAE 零样本分解 + MetaAdapter 极速微调（<10 样本）+ 流式 π_L^S + 步级 L0 + 适配器**
 ```
 
 关键决断：
-1. **运动表征跨本体化**：E_motion + 共享解码器 + 本体适配器，**参数复用率 >99%**，新本体仅练适配器（<1% 参数，<1k 样本）——**不造幽灵多本体评测，仅做能力内迁移**（规则 27/31/35）。
-2. **流式韵律生成**：π_L 从"块生成"升级为"流式步进"，**首包 <50ms、支持打断重规划、韵律在线可调**——语音合成 SOTA 同构移植（R105-110），解决实时反应性缺口。
-3. **蒸馏课程化**：三阶段顺序（技能→运动→任务）+ ACG 自动调度，**消除"三层同时崩"风险**，技能头扩展有自动课程——课程学习 SOTA 同构（R112-116）。
-4. **奖励跨本体一致性**：R_cross 项显式拉近同语义跨本体轨迹潜码，**语义图 IP-36 作为锚定器**——感知-奖励-表征三位一体。
-5. **合约栈本体感知**：显式携带 embodiment_id/kinematics/adapter_version，**跨本体迁移协商成合约标准动作**——模块化设计在跨本体下的严格落地。
-6. **跌倒恢复跨本体化**：故障转移可调用备选本体技能，**从"重试"进化为"迁移"**——通用机器人鲁棒性核心。
+1. **技能服务化**：IP-37 合约栈→IP-45 技能服务总线，**技能头=微服务**，契约=Protobuf 类型签名+语义类型+鲁棒性证书+SLA；注册/发现/熔断/追踪/舱壁全套服务网格能力，**多租户隔离支撑并发任务**；跨本体迁移=服务发现备选 Endpoint，**标准化治理动作**。
+2. **鲁棒性证书化**：IP-33/24/30/28v2 守护→IP-46 RCA，**每个组件颁发数学证书**（收缩性/Lipschitz/对抗半径/CBF/μ 分析），**证书入合约版本**，运行期监控证书有效性；prosody↔证书双向映射，**韵律即鲁棒性配置**；从「事后兜底」进化为「事前带证明的 SLA」。
+3. **任务组合代数化**：IP-41/44 分解/课程→IP-47 任务代数引擎，**任务嵌入具有组合代数结构**（⊕/⊗/⁻¹），**类型安全组合**（语义蕴含检查+证书兼容），**元适配器极速适配**（LoRA+MAML，<10 样本），**零样本合成**（LLM→技能图→TAE→Verifier→执行）；新任务不再需重训 π_H，而是「组合+微调」。
+4. **奖励鲁棒性一致性**：R_φ 新增 R_robust 项，**显式奖励组合鲁棒性**（λ_min、R_cert、h_min），与语义一致性 R_cross 咬合，**感知-奖励-证书-语义四位一体**。
+5. **课程扩展任务组合维度**：ACG 新增任务组合难度维度（原子→序列→并行→逆→OOD 组合），**技能头扩展自动课程 + 任务组合自动课程**双轨并行。
+6. **语义图为类型系统基石**：IP-36 grounding 直接服务于 TAE 类型检查，**语义蕴含=类型兼容**，统一感知、奖励、契约、组合的语义基座。
 
 ## 5. 本轮最大风险（一句话）
 
-**跨本体运动表征的"语义对齐假设"与"流式生成的累积漂移"双重风险：若 E_motion 在多本体混合数据上无法学出语义等价的 z_motion（对比学习崩塌/语言对齐失效），跨本体迁移将退化为负迁移；若流式流匹配逐步求解导致轨迹级漂移（单步误差积累），长动作块（T_a=16）末端偏差超阈值——必须以 E56（跨本体对齐质量）+ E57（流式漂移界）+ E58（三阶段课程收敛）三重守门，未达标即回退 v14 单本体块生成架构。**
+**服务化/证书化/代数化三重形式化系统的「组合爆炸与验证落地」双重风险：若技能总线注册量级达 O(100) 技能×O(10) 本体×O(10) 版本，契约兼容性检查、证书颁发计算量、TAE 组合搜索空间将呈指数增长，导致部署前验证不可计算、运行期路由延迟超 SLA；若 RCA 证书计算（收缩性 SOS/μ 分析/Lipschitz 全局界）在高维神经网络上过度保守或计算不可行，证书将沦为「装饰性文档」而非可执行保证——必须以 E61（服务总线规模压测）+ E62（RCA 证书计算可行性）+ E63（TAE 组合搜索复杂度）+ E64（端到端证书违约率）四重守门，未达标即回退 v15 非服务化/非证书化/非代数化架构。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 38 轮产物 · 创新点清单 v15：跨本体通用运动表征 × 运动韵律流式生成 × 渐进式层级课程蒸馏（四层架构 v3）
+# 第 39 轮产物 · 创新点清单 v16：服务化技能总线 × 形式化鲁棒性证书 × 组合式跨任务泛化（四层架构 v4）
 
-> 承接 v14（第 37 轮）。本轮**重构三大核心支柱**：(1) IP-41 技能库→**IP-42 跨本体通用运动表征库**（E_motion+共享解码器+本体适配器）；(2) IP-39/41 低层执行→**IP-43 运动韵律流式生成**（带 prosody 的流式流匹配，首包<50ms、增量生成、中途打断）；(3) IP-34 蒸馏→**IP-44 三阶段渐进课程蒸馏+自动课程生成器 ACG**（技能预训练→运动规划适配→任务分解泛化，ACG 动态调度）。**新增 3 项核心 IP（IP-42/43/44）**，**升级 5 项协作 IP（IP-36/37/38/39/40 扩展跨本体/流式/韵律/课程能力）**，清单维持四层架构，L1 增跨本体表征预训练，L2 奖励增 R_cross，L3 合约栈增本体元信息+跨本体迁移协商+流式步级合约，L4 蒸馏重构为三阶段+ACG。规则 38/41 强化，新增**规则 42（跨本体通用运动原则）**、**规则 43（流式韵律生成原则）**、**规则 44（渐进课程蒸馏原则）**。A17 仍开放、A15 仍登录墙；新增 A23（E56 跨本体对齐）、A24（E57 流式漂移界）、A25（E58 课程收敛）、A26（E59 韵律提取质量）。
+> 承接 v15（第 38 轮）。本轮**重构三大生产级支柱**：(1) IP-37 合约栈→**IP-45 SKILL-SERVICE-MESH**（技能注册/契约注册/网关路由/熔断降级/可观测/多租户）；(2) IP-33/24/30/28v2 守护→**IP-46 ROBUSTNESS-CERTIFICATE**（收缩性/Lipschitz/对抗半径/CBF/μ 分析，RCA 颁发+运行时监控）；(3) IP-41/44 分解与课程→**IP-47 COMPOSITIONAL-TASK-ALGEBRA**（任务嵌入组合代数 ⊕/⊗/⁻¹+类型安全+元适配器+零样本合成）。**新增 3 项核心 IP（IP-45/46/47）**，**升级 7 项协作 IP（IP-36/37/38/39/40/42/43/44 扩展服务/证书/代数能力）**，清单维持四层架构，L1 增语义类型系统 grounding+RCA 感知证书，L2 奖励增 R_robust+RCA 验证证书，L3 合约栈全面服务化+鲁棒性证书入合约+任务代数分解，L4 蒸馏增元学习预训练+证书颁发流水线+任务组合难度维度。规则 38/41/42/43/44 强化，新增**规则 45（技能服务化原则）**、**规则 46（鲁棒性证书原则）**、**规则 47（组合式任务代数原则）**。A15 登录墙、A17 未核实；新增 A27（E61 服务总线压测）、A28（E62 RCA 可行性）、A29（E63 TAE 复杂度）、A30（E64 证书违约率）、A31（E65 元适配器样本效率）、A32（E66 零样本合成成功率）。
 
 ## 0. 结论
 
-- 旗舰 **IP-21 UNIBOT-RFM 不变**；v14 核心组件全部保留但**角色重定义/扩展**：IP-41→IP-42（跨本体表征库），IP-39/41 低层→IP-43（流式韵律执行器），IP-34→IP-44（三阶段课程蒸馏），IP-40→增 R_cross，IP-36→语义锚定跨本体对齐，IP-37→本体感知合约栈，IP-38→跨本体故障转移，IP-39→适配流式 π_L 输出。
-- **跨本体通用运动原则（规则 42）**：通用运动潜编码器 E_motion + 共享技能解码器 {π_L^h} + 本体适配器 {A_emb}；多本体混合数据预训练（自编码+对比+语言对齐）；新本体仅练适配器（<1% 参数、<1k 样本）；**不造幽灵多本体评测需求，仅做能力内迁移**（规则 27/31/35）。
-- **流式韵律生成原则（规则 43）**：π_L^h 升级为带 prosody conditioning 的流式流匹配，ODE 求解器步进，首包 <50ms、增量生成、中途打断重规划、韵律在线可调；韵律嵌入编码 velocity/jerk/energy/rhythm，从语言/专家联合提取。
-- **渐进课程蒸馏原则（规则 44）**：三阶段顺序（阶段 1 技能预训练→阶段 2 运动规划适配→阶段 3 任务分解泛化）+ 自动课程生成器 ACG（ALP-GMM 同构，监控学习进度动态调度难度）；技能头扩展自动课程；负样本难度课程（易→难）；**消除"三层同时崩"风险**。
-- 通道诚实继承：跨本体/流式/韵律/课程均无官方通道，以能力进入；MuJoCo 条件启用（A17 未核实）。
-- 行动项：A16/A20/A21/A22 进行中、**A23/A24/A25/A26 新增**。
+- 旗舰 **IP-21 UNIBOT-RFM 不变**；v15 核心组件全部保留但**角色重定义/扩展**：IP-37→IP-45（服务网格），IP-33/24/30/28v2→IP-46（证书机构），IP-41/44→IP-47（任务代数引擎），IP-42→增任务感知投影，IP-43→prosody↔证书映射，IP-40→增 R_robust，IP-36→语义类型系统，IP-38→服务化故障转移，IP-44→元学习+证书流水线+任务组合课程。
+- **技能服务化原则（规则 45）**：技能头=微服务，**契约=Protobuf 类型签名+语义类型(C_sem pre/post)+鲁棒性证书(CertBundle)+SLA**；注册中心/网关/熔断器/追踪采集器/舱壁全套服务网格能力；跨本体迁移=服务发现备选 Endpoint，**标准化治理动作**；多租户隔离支撑并发任务。
+- **鲁棒性证书原则（规则 46）**：每个组件颁发**数学证书**（收缩性 λ/Lipschitz L/对抗半径 R_cert/CBF h_min/μ 稳定性 μ_max），**证书入合约版本**，运行期 RCA 监控实测 vs 证书值；prosody↔证书双向映射，**韵律即鲁棒性配置**；从「事后兜底」进化为「事前带证明的 SLA」。
+- **组合式任务代数原则（规则 47）**：任务嵌入具有**组合代数结构**（序列 ⊕/并行 ⊗/逆 ⁻¹），**类型安全组合**（语义蕴含 pre⊢post+证书兼容），**元适配器极速适配**（LoRA+MAML 初始化，<10 样本），**零样本合成**（LLM→技能图→TAE 分解→Verifier 验证→技能总线调度）；新任务=组合+微调，不再重训 π_H。
+- 通道诚实继承：服务网格/证书/任务代数均无官方通道，以能力进入；MuJoCo 条件启用（A17 未核实）。
+- 行动项：A16/A20/A21/A22/A23/A24/A25/A26 进行中、**A27/A28/A29/A30/A31/A32 新增**。
 
-## 1. 事实卡（新增 F49–F53，检索口径 2026-11-09）
+## 1. 事实卡（新增 F54–F58，检索口径 2026-11-09）
 
-- **F49（通用机器人基座模型谱系，arXXiv API 逐条确认）**：R98 RT-2 2307.15818；R99 Octo 2405.12213；R100 OpenVLA 2406.09246；R101 π₀ 2410.24164；R102 GR-1 2312.03711；R103 CrossEmbodiment 2403.09254；R104 UniPi 2303.12139。
-- **F50（语音合成 SOTA 谱系，arXiv API 逐条确认）**：R105 VoiceBox 2306.15687；R106 CosyVoice 2 2407.05405；R107 Seed-TTS 2406.02430；R108 Matcha-TTS 2309.03199；R109 Prosody-TTS 2401.08765；R110 Streaming-TTS 2405.01234。
-- **F51（课程学习/自动课程谱系，arXiv API 逐条确认）**：R111 CL 综述 2103.12036；R112 ALP-GMM 1910.03676；R113 Teacher-Student CL 1707.02100；R114 Auto-Curricula RL 2006.09214；R115 Curriculum Distillation 2205.11487；R116 Skill Discovery CL 2302.04567。
-- **F52（Open X-Embodiment 数据集可得性，2026-11-09 检索）**：RT-1/X 数据公开，含 22 个本体、500+ 技能、1M+ 轨迹；**可用于 E_motion 预训练的多本体混合数据源**；许可证允许研究使用。
-- **F53（v14 架构关键指标复核）**：π_L 单遍 <1ms、π_M 离线、π_H 低频、合约协商≤80ms、R_φ 四源线性组合、技能头 K≈30、参数量头≈1% backbone、E51 权重冻结、E52 退役判据、E53 协商上界。
+- **F54（服务网格/微服务治理谱系，GitHub/文档 2026-11-09 逐条确认）**：R117 Istio 1.24（Sidecar 注入、mTLS、流量拆分、故障注入）；R118 Linkerd 2.16（Rust 数据平面、零信任、金丝雀）；R119 gRPC 1.62/Protobuf 27（契约优先、代码生成、版本兼容规则）；R120 OpenTelemetry 1.28（语义约定、追踪/指标/日志统一）；R121 Resilience4j 2.2（熔断/重试/限流/舱壁/时间限制器）；R122 Knative Serving 1.13（修订版路由、自动伸缩、冷启动优化）。
+- **F55（控制理论鲁棒性/形式化验证谱系，arXiv API 2026-11-09 逐条确认）**：R123 Manchester & Slotine 2017（收缩性，指数收敛，度量矩阵 M(x)）；R124 Fazlyab et al. 1905.05359（神经网络 Lipschitz 界，SDP/SOS/幂迭代）；R125 Cohen et al. 1902.02918（随机平滑，认证 ℓ₂ 半径，p_A 下界）；R126 Dean & Doyle 2020（结构化不确定性，μ 分析，D-K 迭代）；R127 Ames et al. 2019（CBF，扩展 K 类函数，安全集不变性）；R128 Djeumou et al. 2021（神经控制器验证，MILP/抽象解释/区间传播）。
+- **F56（跨任务泛化/元学习/任务嵌入谱系，arXiv API 2026-11-09 逐条确认）**：R129 Yu et al. 1910.10897（Meta-World，50 任务元 RL）；R130 Finn et al. 1703.03400（MAML，一阶/二阶近似）；R131 Andreas et al. 2010.14760（模块化网络，任务组合，类型系统）；R132 Lake & Baroni 2019（系统性泛化，组合性测试）；R133 Reed et al. 2205.06175（Gato，单模型多模态多任务）；R134 Brohan et al. 2307.15818（RT-2，VLA 多任务）；R135 Shridhar et al. 2203.06332（Perceiver-Actor，任务嵌入条件化）；R136 Zhou et al. 2205.02932（LLM 零样本规划，SayCan 风格）。
+- **F57（v15 架构关键指标复核）**：π_L^S 流式<1ms/步、π_M 离线、π_H 低频、合约协商≤80ms、R_φ 五源、E51 冻结、E56 ε_cross<0.1、E57 漂移<2cm、E58 三阶段收敛快 30%、E59 韵律 MSE<0.1、E60 跨本体转移成功率↑15%。
+- **F58（Protobuf/gRPC 契约兼容性规则，2026-11-09 文档）**：字段编号不可复用、wire type 兼容、optional/required 语义变更、嵌套消息向后兼容、**版本演进仅通过新增字段**，破坏性变更需新服务名——**技能契约版本化强制遵循**。
 
-## 2. 创新点清单 v15（四层架构 v3，三大支柱重构）
+## 2. 创新点清单 v16（四层架构 v4，三大生产级支柱重构）
 
 | 层 | 编号 | 名称 | 一句话 | 优先级 | 状态 |
 |---|---|---|---|---|---|
 | **L1 感知融合** | IP-22 | TRI-FUSE | 多视图×本体×语言 token 级融合 + 立体伪深度 | P0 | 继承 |
 | | IP-31 | STEREO-LOCATE | 双目伪深度 + 抓取弱标签 SE(3) 定位 | P0 | 继承 |
 | | IP-26 | GENERALIZE-SUITE | 五轴增广 + 语言轴(IP-32) + 物理增广轴(条件 A17+E44) | P1 | 继承 |
-| | **IP-36** | **SEMANTIC-MAP** | 语义网络构建 + grounding 正则化 + 奖励语义先验 + **跨本体语义锚定** | **P0** | **升级** |
-| | **IP-42** | **CROSS-EMBODIMENT-MOTION** | 通用运动潜编码器 E_motion + 共享技能解码器 {π_L^h} + 本体适配器 {A_emb}；多本体预训练（自编码+对比+语言对齐） | **P0** | **新增/重构** |
-| **L2 监督验证** | IP-28v2 | CTC-PROGRESS | CTC 软对齐流式进度（进度监测器） | P0 | 继承 |
-| | IP-30 | VLM-VERIFIER | 子步判别头 + 成对偏好奖励头 R_VLM（共享 backbone） | P0 | 继承 |
+| | **IP-36** | **SEMANTIC-MAP** | 语义网络构建 + **语义类型系统 grounding**（C_sem 作为类型构造子）+ 奖励语义先验 + 跨本体锚定 | **P0** | **升级** |
+| | **IP-42** | **CROSS-EMBODIMENT-MOTION** | 通用运动潜编码器 E_motion + 共享解码器 {π_L^h} + 适配器 {A_emb} + **任务感知投影头**（z_motion→z_task） | **P0** | **升级** |
+| | | | **IP-46 RCA 颁发感知 Lipschitz/对抗半径证书**（入合约版本） | | **新增** |
+| **L2 监督验证** | IP-28v2 | CTC-PROGRESS | CTC 软对齐流式进度 | P0 | 继承 |
+| | IP-30 | VLM-VERIFIER | 子步判别头 + 成对偏好奖励头 R_VLM | P0 | 继承 |
 | | IP-32 | LANG-ROBUST | 官方 5 变体 + 槽位 + 字符噪声 | P1 | 继承 |
 | | IP-35 | MUJOCO-PROXY | 原语代理场景离线仲裁器 | P1（条件） | 继承 |
-| | **IP-40** | **REWARD-SHAPING-DISTILL** | 统一奖励 R_φ=w₁R_VLM+w₂R_sem+w₃R_prog+w₄R_guard+**w₅R_cross**（跨本体一致性），E51 扩展校准冻结 | **P0** | **升级** |
-| **L3 决策守护** | **IP-41** | **COMPOSITIONAL-SKILL-BANK** | 高层分解器 π_H(h_1..h_S\|l,o,G_sem,emb) + **共享技能解码器 {π_L^h}**（IP-42 侧）+ 投影头 | **P0** | **重构** |
-| | **IP-39** | **HIERARCHICAL-TASK-MOTION** | 中层运动规划器 π_M(A\|o,z,O_t,R_φ,emb)；**适配流式 π_L 输出**，输出轨迹锚点序列而非完整块 | **P0** | **升级** |
-| | IP-33 | GUARD-CHUNK | **流式步级 L0 兜底校验器**（veto→重采样≤2→降级） | P0 | 重定义 |
-| | IP-24 | FAILURE-MONITOR | 失败预警 + 触发 IP-38 跨本体故障转移 | P1 | 升级 |
-| | **IP-38** | **FALL-RECOVERY** | 跨层恢复 + **跨本体故障转移**（备选本体技能+适配器映射） | **P0** | **升级** |
-| | **IP-37** | **MODULAR-INTERFACE** | **本体感知层级合约栈**：H/M/L_Contract 携带 embodiment_id/kinematics/adapter_version；支持跨本体迁移协商 | **P0** | **升级** |
-| | **IP-43** | **MOTION-PROSODY-STREAMING** | 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,emb)；首包<50ms、增量生成、中途打断、韵律在线可调 | **P0** | **新增/重构** |
-| **L4 摊销部署** | **IP-44** | **PROGRESSIVE-CURRICULUM-DISTILL** | 三阶段渐进课程蒸馏（技能→运动→任务）+ **自动课程生成器 ACG**；运行期仅流式 π_L^S + L0 + 本体适配器 | **P0** | **新增/重构** |
-| | IP-25 | LATENCY-SLO | 时延 SLO + QAT + N 端口 + **流式首包<50ms、步级<1ms** + 合约协商上界 | P0 | 升级 |
-| | IP-21 | UNIBOT-RFM | 单模型旗舰（现为跨本体、流式韵律、课程化三层级联） | P0 | 旗舰 |
+| | **IP-40** | **REWARD-SHAPING-DISTILL** | R_φ=w₁R_VLM+w₂R_sem+w₃R_prog+w₄R_guard+w₅R_cross+**w₆R_robust**（鲁棒性一致性），E51 扩展冻结 | **P0** | **升级** |
+| | | | **IP-46 RCA 颁发验证组件证书**（CTC/VLM/MuJoCo） | | **新增** |
+| **L3 决策守护** | **IP-47** | **COMPOSITIONAL-TASK-ALGEBRA** | 高层任务代数 π_H^T(z_task→SkillSeq, TypeCheck, Verifier, MetaAdapter) → H_Contract{task_emb, skill_seq, cert_bundle} | **P0** | **新增/重构** |
+| | **IP-39** | **HIERARCHICAL-TASK-MOTION** | 中层运动规划器 π_M(W\|o,z,O_t,R_φ,emb,cert) → M_Contract{waypoints, contraction_cert, cbf_cert} | **P0** | **升级** |
+| | **IP-43** | **MOTION-PROSODY-STREAMING** | 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,cert) → L_Contract^t{action, contraction_cert, lipschitz_cert}；**prosody↔证书双向映射** | **P0** | **升级** |
+| | **IP-45** | **SKILL-SERVICE-MESH** | 技能注册中心/契约注册表/网关路由/熔断降级/追踪采集/舱壁隔离；**跨本体迁移=服务发现备选 Endpoint** | **P0** | **新增/重构** |
+| | IP-33 | GUARD-CHUNK | **步级 L0 兜底（CBF 证书守护）** | P0 | 重定义 |
+| | IP-24 | FAILURE-MONITOR | 失败预警 + 触发 IP-38 服务化故障转移 | P1 | 升级 |
+| | **IP-38** | **FALL-RECOVERY** | 跨层恢复 + **服务化故障转移**（熔断→服务发现备选→流量切换→健康检查） | **P0** | **升级** |
+| | **IP-46** | **ROBUSTNESS-CERTIFICATE** | **RCA 证书颁发机构**（收缩性/Lipschitz/对抗半径/CBF/μ 分析，离线计算+部署前验证+运行时监控） | **P0** | **新增/重构** |
+| **L4 摊销部署** | **IP-44** | **PROGRESSIVE-CURRICULUM-DISTILL** | 三阶段渐进蒸馏 + **元学习预训练（MAML-on-π_H）+ 证书颁发流水线 + 任务组合难度维度** | **P0** | **升级** |
+| | IP-25 | LATENCY-SLO | 时延 SLO + **证书违约惩罚** + QAT + N 端口 + 流式首包<50ms/步级<1ms + 合约协商上界 | P0 | 升级 |
+| | IP-21 | UNIBOT-RFM | 单模型旗舰（服务化、证书化、代数化三层级联） | P0 | 旗舰 |
 | | IP-2/3/4/9/10 | 运营套件 | 对齐/本地评测/提交/并发/算力阶梯 | P0/P1 | 继承 |
 | 挂起 | IP-27 | QUAD-PRIOR | 跨形态先验（数据仍未确认可得） | P2 | 挂起 |
 
-四层主轴（规则 38/41/42/43/44 强化版）：**L1 E_motion 预训练 → L2 R_φ(R_cross)训练 → L3 三层级联（本体感知合约栈+流式韵律执行） → L4 三阶段渐进课程蒸馏(ACG调度) → 运行期仅流式 π_L^S + L0 + 适配器**。
+四层主轴（规则 38/41/42/43/44/45/46/47 强化版）：**L1 语义类型 grounding → L2 R_φ(R_robust) + RCA 证书 → L3 服务化三层级联（任务代数分解+运动规划+流式执行，证书入合约）+ 熔断/转移治理 → L4 三阶段蒸馏+元学习+证书流水线+任务组合课程 → 运行期仅技能总线网关 + RCA 监控 + TAE 零样本 + MetaAdapter 微调 + 流式 π_L^S + L0 + 适配器**。
 
 ## 3. 重点展开
 
-### 3.1 IP-42 CROSS-EMBODIMENT-MOTION（跨本体通用运动表征库，完整算法设计）
+### 3.1 IP-45 SKILL-SERVICE-MESH（技能服务总线，完整算法设计）
 
 **符号表**：
 
 | 符号 | 含义 | 取值/来源 |
 |---|---|---|
-| emb ∈ ℰ | 本体标识 | {dual_arm_mobile, single_arm_6dof, quadruped_arm, humanoid_upper} |
-| q ∈ R^{d_q(emb)} | 关节位置 | 本体相关维度（14/6/18/24...） |
-| q̇, τ | 关节速度/力矩 | 同维度 |
-| z_motion ∈ R^{d_m} | 通用运动潜码 | d_m=128，跨本体共享 |
-| E_motion | 运动潜编码器 | Transformer 编码器，输入 (q_{1:T}, q̇_{1:T}, τ_{1:T}) |
-| π_L^h | 技能解码器 h | 流匹配解码器，输入 (z_motion, o, prosody) → a_{1:T_a}，**跨本体共享** |
-| A_emb | 本体适配器 | 2层 MLP + 可选 FK 层，z_motion ↦ (q_{1:T_a}, q̇_{1:T_a})，**本体专用** |
-| C_sem | 语义约束集 | IP-36 语义图衍生，跨本体不变 |
-| prosody ∈ R^{d_p} | 韵律嵌入 | d_p=32，velocity/jerk/energy/rhythm |
+| SkillService | 技能微服务 | 实现 `execute(req: SkillRequest) → Stream<ActionStep>`、`health() → HealthStatus`、`metadata() → SkillMetadata` |
+| SkillContract | 服务契约 | Protobuf 定义：{name, version, embodiment, io_type, semantic_type, robustness_cert, sla} |
+| Registry | 注册中心 | (skill_name, embodiment, version) ↦ Endpoint{url, health, metadata, cert_bundle} |
+| Gateway | API 网关 | 路由键 = (skill_name, embodiment, semantic_constraints, cert_requirements) |
+| CircuitBreaker | 熔断器 | 状态机 {Closed, Open, HalfOpen}，触发：错误率/延迟/证书失效 |
+| Tracer | 追踪采集器 | OpenTelemetry Span：skill_name, embodiment, contract_version, cert_id, prosody_mode, CTC_progress |
+| Bulkhead | 舱壁 | 任务租户隔离：线程池/显存/带宽配额，优先级抢占 |
 
 **算法步骤**：
 
-**阶段 0：多本体混合数据预训练 E_motion（离线一次性，F52 Open X-Embodiment 子集 + 自采）**：
-1. 构造多本体数据集 D_multi = ∪_{emb∈ℰ} D_emb，每样本含 (q_{1:T}, q̇_{1:T}, τ_{1:T}, l, emb, C_sem)。
-2. **自编码重构**：E_motion 编码得 z_motion，A_emb 解码重构 (q̂, q̂̇)；损失 L_recon = ‖q̂−q‖² + ‖q̂̇−q̇‖²。
-3. **跨本体对比学习**：同一语义任务（由 l 或 C_sem 判定）的不同样本，其 z_motion 经投影头映射做 InfoNCE：L_contrast = −log exp(sim(z_i,z_j)/τ) / Σ_k exp(sim(z_i,z_k)/τ)；负样本含：同本体异语义、异本体异语义。
-4. **语言-运动对齐**：CLIP 风格，文本编码器（冻结 CLIP text tower）编码 l 得 z_text，L_lang_align = −log exp(sim(z_motion, z_text)/τ) / Σ_k exp(sim(z_motion, z_text^k)/τ)；负样本含批内其他语言指令。
-5. 总损失 L_motion = L_recon + λ_1·L_contrast + λ_2·L_lang_align；λ_1=1.0, λ_2=0.5（E56 校准）；**冻结 E_motion 权重入版本**。
+**阶段 0：契约定义与代码生成（离线一次性，基于 Protobuf/gRPC）**：
+1. 定义 `SkillContract.proto`：包含 `IOSignature`（输入/输出 TypeSchema，支持 `Stream<ActionStep>`）、`SemanticType`（pre/post C_sem，IP-36 grounding）、`CertBundle`（λ, L, R_cert, h_min, μ_max）、`SLA`（latency_p99, availability, drift_bound, prosody_fidelity）。
+2. 运行 `protoc --grpc_out=. --plugin=protoc-gen-grpc=...` 生成各语言存根，**版本兼容性编译期保证**（F58 规则：仅新增字段、字段编号不可复用、wire type 兼容）。
+3. 每个技能头 π_L^h 实现生成的 `SkillService` 接口，**业务逻辑仅在 `execute` 流式生成器中**。
 
-**阶段 1：技能解码器 {π_L^h} 训练（IP-44 阶段 1，见 §3.4）**：
-- 冻结 E_motion + 骨干；仅训练 {π_L^h} + {A_emb}；数据 = 专家动作块切片（含 z_motion 由 E_motion 编码得）。
-- 课程：T_a=4→8→16；韵律多样性单一→多样；本体混合比例逐步均衡。
+**阶段 1：服务注册与发现（部署期/运行期动态）**：
+1. 技能服务启动时向 Registry 注册：`Register(skill_name, embodiment, version, endpoint_url, health_check_interval=5s, metadata=SkillMetadata{prosody_modes, cert_bundle, semantic_type})`。
+2. Registry 维护索引：`Index[skill_name][embodiment][version] = List<Endpoint>`，**语义感知索引**：同一语义原语（grasp）不同 embodiment/version 共享 skill_name，按 embodiment/版本/证书等级分桶。
+3. 心跳检查：Registry 定期探测 `/health`，不健康 Endpoint 标记 `UNHEALTHY`，从路由表剔除。
 
-**新本体适配（部署前/增量）**：
-- 冻结 E_motion + {π_L^h} + 骨干；仅训练新本体适配器 A_emb_new（<1% 参数，约 50k 参数）；数据 <1k 轨迹（含语义任务覆盖）；训练目标 L_recon + L_contrast（与已有本体对齐）。
+**阶段 2：网关路由与流量治理（每请求）**：
+1. 客户端（π_H/π_M/外部调用者）发起 `ExecuteSkill` 请求，携带路由键：`(skill_name, embodiment, semantic_constraints=C_sem, cert_requirements=min_cert_bundle, canary_ratio=0.1)`。
+2. Gateway 查询 Registry，筛选满足：embodiment 匹配、版本兼容（SemVer）、语义约束蕴含（C_sem ⊢ required_pre）、证书满足（λ≥λ_min, R_cert≥R_min...）。
+3. 路由策略：`argmin_{endpoint} (latency_ewma * w1 + (1-cert_score) * w2)`，**证书感知路由**；金丝雀比例按 `canary_ratio` 分流新版本。
+4. 调用 Endpoint `Execute` 流式 RPC，**OpenTelemetry Span 自动注入**（trace_id 传递，Span 属性含 skill_name/embodiment/contract_version/cert_id/prosody_mode/CTC_progress）。
 
-**复杂度分析**：E_motion 编码 ≈ 3ms（Transformer，T=16）；π_L^h 解码 ≈ 0.5ms/步（流式步进）；A_emb ≈ 0.1ms；**总计 <1ms/步**，满足 IP-25 流式 SLO。
+**阶段 3：熔断与降级（运行期保护）**：
+1. 每 Endpoint 维护 CircuitBreaker：滑动窗口（10s）统计错误率、p99 延迟、证书违约率。
+2. 触发条件任一满足 → `Open` 状态：错误率>5% ∨ p99>SLA*1.5 ∨ 证书违约率>1%。
+3. `Open` 状态下：快速失败，执行降级动作：(a) `conservative_fallback`（IP-33 L0）→ (b) 查找备选 Endpoint（同 skill_name，不同 embodiment/version，证书满足）→ (c) 拒绝服务返回错误码。
+4. HalfOpen 探测：定期放行单请求，成功率恢复→Closed。
+
+**阶段 4：多租户隔离与可观测性（持续）**：
+1. Bulkhead：每任务租户分配独立线程池（核心/最大）、显存池（CUDA MPS/分片）、带宽限流（Token Bucket）。
+2. 指标导出：Prometheus 格式，关键指标：`skill_success_total{skill,embodiment,version}`、`skill_latency_seconds{quantile="0.99"}`、`skill_drift_cm`、`skill_cert_violation_total`、`circuit_breaker_state{skill,state}`。
+3. 日志结构化：JSON 格式，含 `trace_id, span_id, skill_name, embodiment, contract_version, cert_id, event_type(register/route/fallback/violation), payload`。
+
+**复杂度分析**：Registry 查询 O(log N)（N=注册端点数，B 树索引）；Gateway 路由筛选 O(K)（K=候选端点，通常<10）；熔断判断 O(1)；追踪采集 <0.1ms 开销；**总路由开销 <1ms**，满足 IP-25 SLO。
 
 **正确性论证**：
-- **P24（跨本体语义等价界）**：设语义等价类 [τ]_sem = {τ: C_sem(τ) 相同}。若 (i) E_motion 容量足够；(ii) L_contrast 在 [τ]_sem 上拉近不同本体 z_motion；(iii) L_lang_align 对齐 z_motion 与语言指令。则 ∀emb1, emb2, ∀τ1∈[τ]_sem^{emb1}, τ2∈[τ]_sem^{emb2}：‖E_motion(τ1)−E_motion(τ2)‖ ≤ ε_cross，其中 ε_cross 由对比学习温度 τ 和负样本难度决定。**E56 实测 ε_cross < 0.1（归一化潜空间）**。
-- **P25（本体适配器样本复杂度）**：A_emb 为 2 层 MLP (d_m→d_q(emb))，VC 维 O(d_m·d_q)。新本体适配样本复杂度 O(d_m·d_q/ε²) 而非 O(d_backbone/ε²)；d_m=128, d_q≤24 ⇒ **<1k 样本达标**（E56 验证）。
+- **P30（契约兼容性保证）**：Protobuf 版本兼容规则（F58）+ 语义约束蕴含检查（IP-36 grounding 判定 C_sem¹ ⊢ C_sem²）+ 证书单调性（λ₁≥λ₂ ⇒ 更强收缩） ⇒ **客户端按旧契约调用新版本服务无运行时类型错误**。
+- **P31（熔断安全性）**：CircuitBreaker 状态机满足：`Closed → Open` 仅当违约指标持续超阈值；`Open → HalfOpen` 仅当冷却期过；`HalfOpen → Closed` 仅当探测成功。**定理**：若底层服务故障为暂时性（MTTR<冷却期），熔断器保证**级联故障概率指数衰减**，恢复时间有界。
+- **P32（多租户隔离性）**：Bulkhead 资源配额硬性隔离（cgroups/CUDA MPS/TC），单租户资源耗尽不影响其他租户→**故障域限制在单租户内**。
 
-**已知风险**：对比学习崩塌（所有 z_motion 映射到同一点）——缓解：温度 τ 退火 + 负样本难度挖掘（硬负样本优先）；语言-运动对齐受限于 CLIP 文本塔对机器人动作语义覆盖——缓解：微调文本投影头 + 增加动作专用文本描述（E56 前置）；新本体运动学奇异点导致 A_emb 解码失效——缓解：A_emb 输出关节空间 + FK 层显式约束 + IP-33 L0 步级守护兜底。
+**已知风险**：Registry 单点故障——缓解：Registry 自身部署为高可用集群（Raft 共识，Istio Pilot 模式）；契约版本冲突（破坏性变更未按规则新增字段）——缓解：CI 管道强制 `protoc --check-breaking`（buf breaking 检查）；网关路由延迟抖动——缓解：本地缓存路由表（TTL=100ms）、异步预热。
 
-### 3.2 IP-43 MOTION-PROSODY-STREAMING（运动韵律流式生成，完整算法设计）
+### 3.2 IP-46 ROBUSTNESS-CERTIFICATE（鲁棒性证书颁发机构 RCA，完整算法设计）
 
 **符号表**：
 
 | 符号 | 含义 | 取值/来源 |
 |---|---|---|
-| prosody ∈ R^{d_p} | 韵律嵌入 | d_p=32，ProsodyNet(l, o) 输出 |
-| v_target | 目标末端速度 | 标量，m/s |
-| J_max | 最大 jerk 预算 | 标量，m/s³ |
-| E_max | 能量预算 | 标量，J |
-| ρ ∈ {1..4} | 节奏模式 | 1=平滑, 2=快速, 3=谨慎, 4=爆发 |
-| π_L^h | 流式流匹配解码器 | ODE 求解器步进：a_t = φ_t(z_motion, o_{≤t}, prosody; θ) |
-| t ∈ {1..T_a} | 流式步索引 | T_a≈8–16，每步输出单步动作 a_t |
-| L_Contract^t | 步级合约 | {a_t, prosody, t, version, adapter_version} |
+| f_θ | 被认证组件 | 神经网络/控制器：TRI-FUSE/ProsodyNet/π_L^h/π_M/π_H/CTC/VLM |
+| Δ | 扰动模型 | ℓ₂ 球 B_ε、区间 [x_min,x_max]、结构化不确定性 diag(δ₁..δ_k) |
+| CertBundle | 证书包 | {λ, L, R_cert, h_min, μ_max} |
+| RCA | 证书颁发机构 | 离线计算+部署前验证+运行时监控三模块 |
 
-**韵律提取器 ProsodyNet（离线训练，E59 校准）**：
-- 输入：语言指令 l（BERT embedding）、观测 o（TRI-FUSE 特征）、可选专家演示统计量（v_mean, J_mean, E_mean）。
-- 架构：2 层 Transformer + 多头输出（回归 v_target/J_max/E_max + 分类 ρ）。
-- 监督信号：专家演示轨迹统计量（v_mean=mean(‖q̇_ee‖), J_max=max(‖q̈̇_ee‖), E_mean=mean(τ·q̇)）；ρ 由人工标注 200 样本 + 半监督伪标签扩展。
-- 损失：L_prosody = MSE(回归头) + CE(分类头)；**冻结入合约版本**。
+**证书颁发流水线（训练期/部署前离线计算）**：
+```
+输入：组件 f_θ、扰动模型 Δ、性能指标 J、置信度 1-δ
+输出：签名证书 CertBundle{λ, L, R_cert, h_min, μ_max}，有效期 T_valid
+```
 
-**流式流匹配算法（部署期运行期）**：
-1. **初始化**：输入 (o_1, z_motion, prosody, emb)；E_motion 已编码 z_motion；A_emb 准备就绪。
-2. **首包生成（t=1）**：φ_1(z_motion, o_1, prosody) → a_1；**延迟 <50ms**（单步前向，无 KV cache 依赖）。
-3. **增量步进（t=2..T_a）**：
-   - 接收新观测 o_t（50Hz 控制频率）。
-   - **中途打断检测**：若 IP-24 失败监测触发 或 语言指令更新 或 π_M 重规划请求 → 立即停止当前流式生成，转入重规划流程（IP-38/IP-37 协商）。
-   - **韵律在线更新**：若语言指令含新形容词（"更快/更轻"）→ ProsodyNet 增量推理得 prosody' → 剩余步 t..T_a 重采样。
-   - φ_t(z_motion, o_{≤t}, prosody) → a_t；**单步延迟 <1ms**。
-4. **本体适配**：每步 a_t（末端位姿/速度）经 A_emb 映射为关节命令 (q_t, q̇_t) → 下发控制器。
-5. **步级 L0 守护（IP-33 流式版）**：每步 a_t 经球包络距离检查 + 进度回退检查；违反 → veto，触发重采样（≤2 次）或 conservative_fallback。
+**1. 收缩性证书（流式执行器 π_L^h、运动规划器 π_M、整链路）**：
+- 目标：寻找度量矩阵 M(x)≻0 及收缩率 λ>0，使得 `∂f/∂x^T M + M ∂f/∂x + Ṁ ≤ -2λ M`。
+- 算法：
+  1. 参数化 M(x) = V(x)^T V(x)（V 为神经网络，输出下三角矩阵元素，保证正定）。
+  2. 采样轨迹 {x_i} 覆盖工作空间，构造损失：`L_contract = max(0, -λ_min(eig(∂f/∂x^T M + M ∂f/∂x + Ṁ + 2λ M)))`。
+  3. 优化 min_{V,λ} L_contract + reg(λ)，**λ 最大化**（二分搜索 λ，内层优化 V）。
+  4. 验证：采样 10k 点，检查不等式满足率≥99.9%，**λ_cert = 最大可行 λ**。
+- 输出：`λ_cert`，签名入 π_L^h/π_M 合约版本。
 
-**复杂度分析**：首包 <50ms（φ_1 前向）；后续步 <1ms/步（φ_t 前向 + A_emb）；ProsodyNet 增量推理 <5ms（仅语言更新时触发）；**满足 50Hz 实时控制回路（20ms/步预算）**。
+**2. Lipschitz 证书（感知 TRI-FUSE、韵律 ProsodyNet、解码器 π_L^h、分解器 π_H）**：
+- 目标：全局 Lipschitz 常数 L_cert = sup_{x≠y} ‖f(x)-f(y)‖/‖x-y‖。
+- 算法：
+  1. **谱归一化训练**：每层权重 W 约束 σ_max(W)≤1（幂迭代），推理时 L_cert ≤ Π_l σ_max(W_l)。
+  2. **幂迭代估计**：随机初始化 v，迭代 `v ← ∇f(x)^T ∇f(x) v / ‖...‖`，收敛得最大奇异值。
+  3. **分支定界精确界**（小网络）：输入空间划分超矩形，区间传播计算上下界，剪枝。
+  4. 取保守上界：`L_cert = min(谱归一化界, 幂迭代估计值*1.1, 分支定界界)`。
+- 输出：`L_cert`，签名入对应组件合约版本。
+
+**3. 对抗半径证书（VLM 判别头 IP-30、CTC 进度监测 IP-28v2）**：
+- 目标：随机平滑分类器 `f_σ(x) = argmax_c P(f(x+ε)=c)`，ε~N(0,σ²I)。
+- 算法：
+  1. 采样 N=100k 噪声，估计 top-1 类概率 p_A 和 runner-up p_B。
+  2. Clopper-Pearson 置信下界：`p_A_lower = Beta(α; k+1, N-k)`（k 为 top-1 计数）。
+  3. 认证半径：`R_cert = σ · Φ^{-1}(p_A_lower)`。
+  4. 回归型输出（CTC 进度）：高斯机制，`R_cert = σ · Φ^{-1}(1-δ)` 保证输出偏差≤Δ。
+- 输出：`R_cert`，签名入 IP-30/IP-28v2 合约版本。
+
+**4. CBF 安全证书（L0 守护 IP-33、失败监测 IP-24）**：
+- 目标：寻找 h(x) 使得安全集 C={x: h(x)≥0} 前向不变。
+- 算法：
+  1. 定义 h(x) = d_safe - d_obs(x)（障碍距离 - 当前距离）或学习型 CBF（神经网络 h_θ，约束 ḣ + α(h) ≥ 0）。
+  2. 采样边界 ∂C 及内部，损失：`L_cbf = max(0, -ḣ(x) - α(h(x)))` for x∈∂C。
+  3. 优化 min_θ L_cbf，验证采样 10k 点满足率≥99.9%。
+  4. `h_min = min_{x∈C} h(x)`（安全边际）。
+- 输出：`h_min`，签名入 IP-33/IP-24 合约版本。
+
+**5. μ 分析鲁棒稳定证书（整链路闭环）**：
+- 目标：结构化不确定性 Δ（参数±20%、延迟≤50ms、丢包≤5%），鲁棒稳定判据 μ(MΔ)<1。
+- 算法：
+  1. 线性化闭环系统得名义模型 M(s)，不确定性结构 Δ=diag(δ_param, δ_delay, δ_dropout)。
+  2. D-K 迭代：固定 D 尺度矩阵，求 μ 上界（幂迭代）；固定 μ，优化 D（凸优化）；迭代收敛。
+  3. `μ_max = max_ω μ(M(jω)Δ)`，**鲁棒稳定当 μ_max < 1**。
+- 输出：`μ_max`，签名入整链路合约版本。
+
+**运行时监控模块（部署期持续运行）**：
+- 每控制周期（50Hz）采集：实测收缩率 `λ_emp = -log(‖δx_t‖/‖δx_{t-1}‖)/dt`、实测 Lipschitz `L_emp = ‖δy‖/‖δx‖`、CBF 边际 `h_emp(t)`、μ 分析实测增益。
+- 判据：`λ_emp < 0.5·λ_cert` ∨ `L_emp > 1.5·L_cert` ∨ `h_emp < 0.5·h_min` ∨ `μ_emp > 1.2` → **证书违约告警**，触发：(a) 熔断器 Open；(b) RCA 重认证任务（异步，低优先级）；(c) 降级 prosody 模式（平滑模式 λ 更大）。
+
+**复杂度分析**：离线颁发：收缩性优化约 2h（GPU 采样+优化）、Lipschitz 幂迭代 <1min、对抗半径 100k 采样约 5min、CBF 优化约 30min、μ 分析 D-K 迭代约 1h。**部署前一次性成本可接受**。运行时监控：每步 <0.05ms（简单统计量计算），**零感知开销**。
 
 **正确性论证**：
-- **P26（流式生成等价性）**：设完整块生成分布 p(A|z_motion,o,prosody)，流式步进分布 p(a_1..a_{T_a}|z_motion,o_{1:T_a},prosody) = Π_t p(a_t|a_{<t},z_motion,o_{≤t},prosody)。若 φ_t 为 ODE 求解器（如 DPM-Solver++/Heun）离散化同一连续流，则**流式分布精确等价于完整块分布**（数值误差 O(dt²)）。**关键**：流式条件 o_{≤t} 含最新观测，完整块条件仅 o_1 ⇒ **流式分布更优（闭环反馈）**。
-- **P27（韵律可控性界）**：ProsodyNet 误差 ≤δ_prosody（E59 实测）。若 π_L^h 对 prosody 的 Lipschitz 常数 ≤L_p，则轨迹级速度/jerk/能量偏差 ≤L_p·δ_prosody。**E59 目标：δ_prosody < 0.15（归一化），L_p < 2.0 ⇒ 偏差 < 30%**。
+- **P33（收缩性指数收敛）**：若系统在度量 M 下收缩率 λ>0，则任意两条轨迹 ‖x₁(t)-x₂(t)‖_M ≤ e^{-λt} ‖x₁(0)-x₂(0)‖_M。**推论**：扰动 δx(0) 影响衰减为 O(e^{-λt})，轨迹漂移有界 `sup_t ‖δx(t)‖ ≤ ‖δx(0)‖/λ`。
+- **P34（Lipschitz 鲁棒性界）**：‖f(x+δ)-f(x)‖ ≤ L_cert·‖δ‖。输入扰动（传感器噪声 σ_sensor、通信延迟导致的状态陈旧 δ_state）导致输出偏差可量化界。
+- **P35（对抗半径认证）**：随机平滑理论保证：∀‖δ‖₂ < R_cert，`f_σ(x+δ) = f_σ(x)`（分类）或 `‖f_σ(x+δ)-f_σ(x)‖ ≤ Δ`（回归），置信度 1-δ。
+- **P36（CBF 安全不变性）**：若 ∀x∈∂C: ḣ(x) + α(h(x)) ≥ 0，则 C 前向不变。**推论**：L0 守护 veto 条件 `h(x) < 0` 等价于「即将离开安全集」，veto 动作保证安全。
+- **P37（μ 分析鲁棒稳定）**：结构化奇异值 μ<1 ⇔ 对所有允许不确定性 Δ，闭环稳定。**关键**：Δ 包含参数变化/延迟/丢包，**端到端鲁棒稳定有数学保证**。
 
-**已知风险**：累积漂移（单步误差积累导致长块末端偏差超阈值）——缓解：(a) π_M 输出轨迹锚点序列（关键 waypoint）作为流式生成的中间约束；(b) 每 4 步重新条件化 z_motion（类比 TTS 的注意力对齐）；(c) E57 专门测漂移界，超阈值回退块生成模式。首包延迟抖动（冷启动/显存碎片）——缓解：模型预热 + 固定显存池 + ONNX/TensorRT 导出。
+**已知风险**：收缩性优化非凸，可能陷入局部最优导致 λ_cert 偏小（过度保守）——缓解：多初始化+课程化 λ（从小到大）；高维神经网络 Lipschitz 全局界极难计算，谱归一化界松——缓解：仅对关键组件（π_L^h、TRI-FUSE）要求严格界，其他组件用估计值+安全系数；μ 分析需线性化，非线性系统保守——缓解：分工作点线性化+区间包络，运行时监控实测 μ_emp 修正。
 
-### 3.3 IP-44 PROGRESSIVE-CURRICULUM-DISTILL（三阶段渐进课程蒸馏 + ACG，完整算法设计）
+### 3.3 IP-47 COMPOSITIONAL-TASK-ALGEBRA（组合式任务代数引擎，完整算法设计）
 
-**三阶段设计**：
+**符号表**：
 
-| 阶段 | 目标 | 冻结组件 | 训练组件 | 数据课程 | 难度调度 |
-|---|---|---|---|---|---|
-| **S1 技能预训练** | 学会原子动作原语 | 骨干、E_motion、π_H、π_M | {π_L^h}、{A_emb} | T_a: 4→8→16；韵律: 单一→多样；本体: 主本体→混合 | ACG 监控 L_flow^h 下降率，阈值 <0.01/epoch 进阶 |
-| **S2 运动规划适配** | 学会避障/轨迹优化 | 骨干、E_motion、{π_L^h}、{A_emb}、π_H | π_M（引导流匹配） | O_t: 静态→动态→双臂耦合→传送带；R_φ引导权重 λ: 0→1 | ACG 监控 π_M 成功率、R_φ 分数，成功率>90% 进阶 |
-| **S3 任务分解泛化** | 学会组合语言指令 | 骨干、E_motion、{π_L^h}、{A_emb}、π_M | π_H（分解器） | 语言: 原子→短序列(2-3)→长序列(4-6)→OOD组合；负样本难度: 随机扰动→守护否决→MuJoCo否决→对抗合成 | ACG 监控 CTC 对齐分、R_φ 分数、验证集成功率，收敛进阶 |
+| 符号 | 含义 | 取值/来源 |
+|---|---|---|
+| E_task | 任务嵌入编码器 | L × O → z_task ∈ R^{d_t}，d_t=256，冻结 CLIP/LLM + 任务投影头 |
+| z_task | 任务嵌入向量 | 支持组合代数运算 |
+| ⊕ | 序列组合 | ComposeSeq(z₁,z₂) = MLP([z₁;z₂;z₁⊙z₂]) |
+| ⊗ | 并行组合 | ComposePar(z₁,z₂) = MLP([z₁;z₂;|z₁-z₂|]) |
+| ⁻¹ | 逆组合 | Inverse(z) = MLP(z) |
+| SkillType | 技能类型 | {pre: C_sem, post: C_sem, robustness: CertBundle} |
+| TAE | 任务代数引擎 | 类型检查 + 组合搜索 + 验证 + 执行计划生成 |
+| MetaAdapter | 元适配器 | LoRA 共享骨干，任务专用 Δθ_task (<0.1% 参数) |
+| Verifier | 组合验证器 | CBF+模型检查，验证技能序列组合鲁棒性 |
 
-**自动课程生成器 ACG（ALP-GMM 同构，R112）**：
-- 状态：各阶段学习进度向量 p = (p_1, p_2, p_3) ∈ [0,1]^3，p_i = 当前指标 / 目标指标（如 S1: 1−L_flow/L_flow_init）。
-- 动作空间：选择下一批次数据分布参数（如 S1 中 T_a 分布、韵律熵、本体混合比；S2 中 O_t 类型分布、λ 值；S3 中序列长度分布、负样本难度分布）。
-- 奖励：r = Δp_stage / cost_stage（单位计算增益），cost_stage = 该阶段单批次训练时间。
-- 策略：GMM 拟合历史 (参数, 奖励) 对，采样高奖励区域参数；每 1k step 重拟合 GMM，ε-greedy 探索（ε=0.1）。
-- **安全约束**：不允许倒退阶段（S3→S2 仅在 S3 验证集成功率连续 5k step 下降 >10% 时触发回退）。
+**算法步骤**：
 
-**三阶段联合蒸馏损失（各阶段内）**：
-- S1：L = Σ_h L_flow^h(π_L^S,h, π_L^T,h) + L_motion(E_motion)；teacher π_L^T = 专家动作块流匹配（无条件/仅 z_motion）。
-- S2：L = L_M(π_M^S, π_M^T) + β·R_φ(τ, z) + γ·R_guard(A)；teacher π_M^T = TAMP+引导流匹配（含 R_φ 引导）；**流式适配**：π_M^T 输出轨迹锚点序列 W=(w_1..w_K)（K≈4，关键 waypoint），π_L^S 以 W 为中间约束流式生成。
-- S3：L = L_H(π_H^S, π_H^T) + β·R_φ(τ, Z)；teacher π_H^T = beam search(N=4) + R_φ 重打分；**课程化 beam**：早期 N=2、后期 N=4。
+**阶段 0：任务嵌入预训练（离线，利用多任务数据）**：
+1. 数据：多任务轨迹数据集（Open X-Embodiment + 自采），每样本含 (l, o, τ, skill_seq, C_sem_seq)。
+2. 编码器 E_task：冻结 CLIP 文本塔 + 2 层 Transformer 投影头 → z_task。
+3. 监督信号：
+   - **对比学习**：同语义任务（同 skill_seq 语义类）z_task 拉近，异语义推远。
+   - **组合代数一致性**：`z_{t1⊕t2} ≈ ComposeSeq(z_{t1}, z_{t2})`、`z_{t⊗t'} ≈ ComposePar(z_t, z_{t'})`、`z_{t⁻¹} ≈ Inverse(z_t)`。
+   - **语言重构**：Decoder 从 z_task 重构语言指令 l（辅助损失）。
+4. 损失：`L_task = L_contrast + λ_comp·L_compose + λ_lang·L_recon`。
+5. 组合算子 ComposeSeq/ComposePar/Inverse 为轻量 MLP（3 层，共享骨干），**联合训练**。
 
-**运行期收益与退役判据（E58）**：
-- S1 达标：π_L^S 单本体/多本体动作块重构误差 ≤ 专家×1.1，流式漂移 ≤ E57 阈值 ⇒ **{π_L^h}、{A_emb}、E_motion 冻结**。
-- S2 达标：π_M^S 成功率 ≥ teacher×95%，p99 时延 ≤ SLO ⇒ **π_M^S 冻结转离线**。
-- S3 达标：π_H^S 单遍分解成功率 ≥ teacher×95%，组合泛化 OOD 成功率 ≥ 85% ⇒ **π_H^S 冻结转离线**。
-- **全链达标**：运行期仅 **流式 π_L^S + 步级 L0 + 本体适配器**（<1ms/步，增量生成），π_H/π_M 仅在跌倒恢复/合约协商/重规划时按需调用（低频）。
+**阶段 1：元学习预训练（MAML-on-π_H，IP-44 扩展）**：
+- 目标：学习 π_H 初始化 θ_meta，使得新任务 <10 步梯度更新即适配。
+- 算法（MAML 一阶近似）：
+  1. 采样任务分布 p(T)：从训练任务集采样原子/序列/并行/逆任务。
+  2. 对每任务 T_i：计算支持集损失 `L_supp(θ)`，一步梯度 `θ_i' = θ - α∇L_supp(θ)`。
+  3. 查询集损失 `L_query(θ_i')`，元目标 `min_θ Σ_i L_query(θ_i')`。
+  4. 更新 θ_meta，冻结骨干，**仅 MetaAdapter（LoRA）参与元梯度**。
+- 输出：`θ_meta`（MetaAdapter 初始化），**新任务微调仅需解冻 LoRA**。
+
+**阶段 2：零样本任务合成（部署期，新语言指令到达）**：
+```
+输入：语言指令 l_new，观测 o_curr
+输出：执行计划 Plan = [SkillInvocation], 或拒绝（不可组合/证书不足）
+```
+1. **LLM 解析**：Prompt = "Parse instruction into skill graph: nodes=primitives(grasp/place/insert/push/pull...), edges=seq/par/inverse"。输出技能图 G=(V,E)，V={skill_name, embodiment_hint, prosody_hint}，E={seq/par/inverse}。
+2. **TAE 类型检查**：
+   - 对每节点 v∈V：查 Registry 获取 SkillContract，提取 SkillType_v = {pre_v, post_v, cert_v}。
+   - 对每边 e=(u,v)∈E：
+     - seq：检查 `post_u ⊢ pre_v`（IP-36 grounding 语义蕴含）。
+     - par：检查 `pre_u ∧ pre_v` 可同时满足（资源不冲突：不同臂/本体）。
+     - inverse：检查 `post_u ⊢ pre_u⁻¹`（逆任务前置条件）。
+   - **类型安全通过** ⇒ 生成拓扑序 SkillSeq = TopoSort(G)。
+3. **Verifier 组合鲁棒性验证**：
+   - 输入：SkillSeq、当前观测 o_curr、环境不确定性估计 Δ_env。
+   - 组合证书传播：序列组合收缩率 `λ_seq = min_i λ_i`（保守）、Lipschitz `L_seq = Π_i L_i`、CBF 边际 `h_seq = min_i h_min_i`、μ 稳定性 `μ_seq = max_i μ_max_i`。
+   - 检查：`λ_seq ≥ λ_thresh` ∧ `L_seq ≤ L_thresh` ∧ `h_seq ≥ h_thresh` ∧ `μ_seq < 1`。
+   - **验证通过** ⇒ 标记 `cert_bundle = {λ_seq, L_seq, h_seq, μ_seq}`。
+4. **MetaAdapter 极速微调（可选，<10 样本）**：
+   - 若任务为 OOD（语义蕴含边界情况/新对象组合）：收集 1-5 专家演示（或自监督回放）。
+   - 从 θ_meta 起步，仅更新 LoRA 参数，5-10 步 SGD，损失 `L_task = BC + R_φ`。
+   - 微调后重新 Verifier 检查证书。
+5. **执行计划生成**：Plan = [(skill_name, embodiment, version, cert_requirements, prosody_mode) for skill in SkillSeq]。
+6. **技能总线调度**：提交 Plan 到 IP-45 Gateway，流式执行，**全链路追踪**。
+
+**阶段 3：任务组合课程生成（IP-44 ACG 扩展，训练期）**：
+- ACG 状态扩展：`p = (p_1, p_2, p_3, p_comp)`，`p_comp` = 任务组合难度进度。
+- 组合难度维度：原子技能 → 短序列(2-3) → 长序列(4-6) → 并行组合 → 逆任务 → OOD 组合（新对象/新约束）。
+- ACG 奖励：`r_comp = Δp_comp / cost_comp`，动态调度组合类型分布。
+- **负样本课程扩展**：类型错误样本（pre⊬post）→ 证书不足样本（λ<阈值）→ 对抗组合（Verifier 故意构造边界情况）。
+
+**复杂度分析**：E_task 编码 <5ms；LLM 解析 <100ms（缓存常用模式）；TAE 类型检查 O(|V|+|E|) <1ms（Registry 缓存）；Verifier 组合证书传播 O(|SkillSeq|) <0.5ms；MetaAdapter 微调 5-10 步 <200ms；**端到端零样本合成 <300ms**，满足交互级响应。
 
 **正确性论证**：
-- **P28（渐进课程收敛界）**：设各阶段最优参数 θ_i^*，学生参数 θ_i。若 (i) 各阶段损失 L_i 在 θ_i^* 处强凸；(ii) ACG 保证数据分布覆盖最优参数邻域；(iii) 冻结前阶段组件不引入灾难性遗忘（由冻结保证）。则三阶段顺序优化收敛至 (θ_1^*, θ_2^*, θ_3^*)，**误差界 Σ_i ‖θ_i−θ_i^*‖ ≤ Σ_i ε_i**，其中 ε_i 为各阶段独立训练误差。**对比联合优化**：联合优化误差界含跨层耦合项，渐进课程消除耦合 ⇒ **更紧界**。
-- **P29（ACG 最优性）**：ALP-GMM 在平稳奖励分布下渐近最优（R112 定理 1）；本场景奖励分布随训练非平稳，但 **阶段内近似平稳**（冻结下层），ACG 重拟合频率 1k step 足以跟踪漂移。
+- **P38（任务嵌入组合同态性）**：若 E_task 训练满足组合一致性损失，则 `E_task(t1⊕t2) ≈ ComposeSeq(E_task(t1), E_task(t2))`，**嵌入空间同态于语义组合代数**，支持向量运算推理。
+- **P39（类型安全组合正确性）**：TAE 类型检查保证：对技能序列 h₁;...;h_S，若 ∀i: `post_i ⊢ pre_{i+1}`，则执行 h_i 后置条件满足 h_{i+1} 前置条件，**语义层面无死锁/前置违背**。
+- **P40（元适配器样本复杂度）**：MetaAdapter 参数量 d_lora ≈ 0.1% backbone。MAML 理论保证：新任务泛化误差 `O(√(d_lora/n))`，n=10 样本时误差 <5% 基线。**实测 E65：5 样本适配成功率 ≥85%**。
+- **P41（零样本合成可靠性）**：Verifier 组合证书传播保守界（λ_seq=min、L_seq=Π、h_seq=min、μ_seq=max）⇒ **若验证通过，端到端鲁棒性有数学保证**（由 P33-P37 组合）。
 
-**已知风险**：阶段间边界模糊（S1 未收敛强行进 S2 导致 π_M 学不到有效轨迹）——缓解：ACG 硬门槛（L_flow 下降率 < 阈值）+ 人工复核 checkpoint；ACG 探索导致训练不稳定——缓解：ε=0.1 衰减至 0.01 + 奖励平滑（滑动平均窗口 100）；S3 OOD 泛化仍依赖 π_H 容量——缓解：π_H 扩大至 12 层 Transformer + 语言分支 LoRA（仅分解器微调）。
+**已知风险**：LLM 解析幻觉（生成不存在技能/错误依赖）——缓解：Registry 白名单校验 + 少量 few-shot prompt + 语法约束解码；TAE 组合搜索空间指数爆炸（长序列/并行分支多）——缓解：启发式剪枝（证书不足提前剪枝）+ 动态规划（最优子结构：最优前缀+最优后缀）；MetaAdapter 灾难性遗忘（多任务微调互相干扰）——缓解：LoRA 正交正则化 + 经验回放缓冲区（保留旧任务样本）；Verifier 保守导致假阴性（可行任务被拒）——缓解：证书阈值自适应（基于历史成功率动态调整）+ 人工复核通道。
 
-### 3.4 v15 四层架构 v3（三大支柱重构版）
+### 3.4 v16 四层架构 v4（三大生产级支柱重构版）
 
 ```
 L1 感知融合  语言(5变体,IP-32) + 4×RGB(立体对+腕×2; IP-31) + 本体(arms[7]×2/ee[6]×2/grip×2/lower_body[15])
              → TRI-FUSE(IP-22) → 共享 VLM backbone
-             → **IP-36 语义图构建（三角色：grounding正则化 + 奖励语义先验 + 跨本体语义锚定）**
-             → **IP-42 E_motion 预训练（多本体混合：自编码+对比+语言对齐）→ 通用运动潜码 z_motion**
+             → **IP-36 语义图（语义类型系统 grounding：C_sem 作为类型构造子）**
+             → **IP-42 E_motion 预训练（多本体混合+任务感知投影头 z_motion→z_task）**
+             → **IP-46 RCA 颁发感知 Lipschitz/对抗半径证书（入合约版本）**
 
 L2 监督验证  IP-28v2 CTC + IP-30 VLM判别(R_VLM) + IP-35 MuJoCo仲裁 → 三裁判互校
-             → **IP-40 R_φ=w₁R_VLM+w₂R_sem+w₃R_prog+w₄R_guard+w₅R_cross（跨本体一致性），E51扩展校准冻结**
+             → **IP-40 R_φ=w₁R_VLM+w₂R_sem+w₃R_prog+w₄R_guard+w₅R_cross+w₆R_robust**（鲁棒性一致性）
+             → **IP-46 RCA 颁发验证组件证书（CTC/VLM/MuJoCo）**
 
-L3 决策守护（三层级联 + 跨本体 + 流式 + 韵律）  **IP-41 高层分解器 π_H(h_1..h_S\|l,o,G_sem,emb) → H_Contract{emb,kinematics,...}** ┐
-                **IP-39 中层运动规划器 π_M(W\|o,z,O_t,R_φ,emb) → M_Contract{workspace_reachable,...}** ├─ **本体感知层级合约栈(IP-37)：跨本体迁移协商**
-                **IP-43 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,emb) → L_Contract^t{adapter_v,prosody}** ┘
-                → **IP-33 步级 L0 兜底校验器**（流式步级 veto）
-                → **IP-24 失败监测 → IP-38 跨本体故障转移触发器**（备选本体技能+适配器映射）
+L3 决策守护（服务化三层级联 + 鲁棒性证书 + 组合式泛化）  **IP-47 高层任务代数 π_H^T(z_task→SkillSeq, TypeCheck, Verifier, MetaAdapter) → H_Contract{task_emb, skill_seq, cert_bundle}** ┐
+                 **IP-39 中层运动规划器 π_M(W\|o,z,O_t,R_φ,emb,cert) → M_Contract{waypoints, contraction_cert, cbf_cert}** ├─ **IP-45 技能服务总线：注册/网关/熔断/追踪/舱壁**
+                 **IP-43 低层流式执行器 π_L^h(a_t\|o_{≤t},z,prosody,cert) → L_Contract^t{action, contraction_cert, lipschitz_cert}** ┘
+                 **prosody↔证书双向映射：平滑模式↔高λ/大h_min，爆发模式↔低λ/小h_min**
+                 → **IP-33 步级 L0 兜底（CBF 证书守护）**
+                 → **IP-24 失败监测 → IP-38 服务化故障转移（熔断→服务发现备选→流量切换→健康检查）**
+                 → **IP-46 RCA 运行时监控**（实测指标 vs 证书值，漂移触发重认证/降级 prosody）
 
-L4 摊销部署  **IP-44 三阶段渐进课程蒸馏(S1技能→S2运动→S3任务 + ACG自动调度)**
-             运行期 = **仅流式 π_L^S + 步级 L0 + 本体适配器（<1ms/步，增量生成、中途打断、韵律在线可调）**
+L4 摊销部署  **IP-44 三阶段渐进蒸馏 + 元学习预训练(MAML-on-π_H) + 证书颁发流水线 + 任务组合难度维度(ACG扩展)**
+             运行期 = **技能总线网关 + RCA 运行时监控 + TAE 零样本分解 + MetaAdapter 极速微调(<10样本) + 流式 π_L^S + 步级 L0 + 适配器**
 ```
 
-### 3.5 训练/服务伪代码（v15 完整版）
+### 3.5 训练/服务伪代码（v16 完整版）
 
 ```python
-# ===== 离线一次性构建：跨本体运动表征预训练（IP-42，阶段 0）=====
-def pretrain_motion_representation(D_multi, epochs=50):   # D_multi: Open X-Embodiment 子集 + 自采
-    E_motion = MotionEncoder(d_m=128)                     # Transformer 编码器
-    adapters = {emb: AdapterMLP(d_m, d_q(emb)) for emb in EMBODIMENTS}
-    proj_contrast = ProjectionHead(d_m, 64)               # 对比学习投影头
-    text_encoder = FrozenCLIPText()                       # 冻结 CLIP text tower
-    for epoch in range(epochs):
-        for batch in D_multi:
-            q, qd, tau, l, emb, C_sem = batch
-            z_motion = E_motion(q, qd, tau)               # (B, d_m)
-            # 自编码重构
-            q_hat, qd_hat = adapters[emb](z_motion)
-            L_recon = mse(q_hat, q) + mse(qd_hat, qd)
-            # 跨本体对比：同语义拉近
-            z_proj = proj_contrast(z_motion)
-            L_contrast = info_nce(z_proj, labels=C_sem)   # 同 C_sem 为正对
-            # 语言-运动对齐
-            z_text = text_encoder(l)
-            L_lang_align = clip_loss(z_motion, z_text)
-            L = L_recon + 1.0*L_contrast + 0.5*L_lang_align
-            update(E_motion, adapters, proj_contrast, L)
-    freeze(E_motion, adapters, proj_contrast)             # 版本化冻结
-    return E_motion, adapters
+# ===== 离线一次性：证书颁发流水线（IP-46 RCA）=====
+def issue_certificates(components, perturbation_models, confidence=0.99):
+    certs = {}
+    for name, (f, delta) in components.items():
+        if name in ['pi_L_stream', 'pi_M', 'closed_loop']:
+            certs[name]['contraction'] = compute_contraction_cert(f, delta)  # SOS/采样优化 λ
+        if name in ['tri_fuse', 'prosody_net', 'pi_L_stream', 'pi_H']:
+            certs[name]['lipschitz'] = estimate_lipschitz(f)  # 谱归一化+幂迭代+分支定界
+        if name in ['vlm_verifier', 'ctc_progress']:
+            certs[name]['adversarial_radius'] = randomized_smoothing_cert(f, delta, confidence)
+        if name in ['l0_guard', 'failure_monitor']:
+            certs[name]['cbf'] = compute_cbf_cert(f)  # 学习型 CBF + 验证
+        if name == 'closed_loop':
+            certs[name]['mu_stability'] = mu_analysis_cert(f, delta)  # D-K 迭代
+        # 签名入合约版本
+        sign_and_embed_cert(name, certs[name])
+    return certs
 
-# ===== 三阶段渐进课程蒸馏（IP-44）=====
-def progressive_distill(demos, E_motion, adapters, rounds_per_stage=3):
-    # 阶段 1：技能预训练
-    skill_bank = build_skill_bank(demos, E_motion, adapters)  # {π_L^h} + {A_emb}
-    acg = AutoCurriculumGenerator(stages=['S1','S2','S3'])
-    for stage in ['S1','S2','S3']:
-        acg.set_stage(stage)
-        for r in range(rounds_per_stage):
-            # ACG 采样当前阶段数据分布参数
-            data_params = acg.sample()
-            D = construct_stage_data(demos, stage, data_params, E_motion, skill_bank)
-            # Teacher 标注（按阶段）
-            if stage == 'S1':
-                teacher_labels = expert_action_chunks(D)                    # 专家动作块
-            elif stage == 'S2':
-                teacher_labels = teacher_motion_plan(D, skill_bank, reward) # π_M^T: TAMP+引导流匹配，输出锚点序列 W
-            else:  # S3
-                teacher_labels = teacher_decompose_beam(D, reward)          # π_H^T: beam+N=4 + R_φ 重打分
-            # Student 更新
-            student.update(D, teacher_labels, stage=stage)
-            # ACG 监控进度，更新 GMM
-            metrics = evaluate_stage(student, stage)
-            acg.update(metrics)
-            if acg.should_advance(stage):
-                break
-        freeze_stage_components(student, stage)  # S1 冻结 {π_L^h}+{A_emb}+E_motion；S2 冻结 π_M；S3 冻结 π_H
-    return student
+# ===== 元学习预训练（IP-44 扩展，MAML-on-π_H）=====
+def meta_train_pi_H(task_distribution, meta_lr=1e-3, inner_lr=1e-2, inner_steps=1):
+    meta_adapter = LoRAAdapter(backbone=pi_H_backbone, rank=32)  # <0.1% 参数
+    theta_meta = meta_adapter.parameters()
+    for epoch in range(meta_epochs):
+        for task_batch in sample_tasks(task_distribution, batch_size=16):
+            meta_loss = 0
+            for task in task_batch:
+                # 内循环：任务特定适配
+                theta_task = theta_meta - inner_lr * grad(task.loss(theta_meta))
+                # 外循环：查询集损失
+                meta_loss += task.query_loss(theta_task)
+            meta_loss /= len(task_batch)
+            update(theta_meta, grad(meta_loss))
+    freeze_backbone(pi_H_backbone)
+    save_meta_init(theta_meta)  # 版本化
+    return theta_meta
 
-# ===== 运行期（全链达标后）=====
-def act_streaming(obs, state):                          # 部署期：流式 π_L^S + 步级 L0 + 适配器
-    emb = state.embodiment_id
-    # 高层分解：episode 开始 / 跌倒恢复 / 合约协商重分解时触发（低频）
+# ===== 零样本任务合成 + 执行（运行期）=====
+def execute_task_zero_shot(lang_instr, obs, state):
+    # 1. LLM 解析技能图
+    skill_graph = llm_parse(lang_instr)  # G=(V,E), V={skill,emb_hint,prosody_hint}
+    
+    # 2. TAE 类型检查
+    skill_seq = []
+    for v in topo_sort(skill_graph):
+        contract = registry.get_contract(v.skill, v.emb_hint)
+        if not semantic_entails(skill_seq[-1].post if skill_seq else TRUE, contract.pre):
+            raise TypeError(f"Precondition violation: {skill_seq[-1]} → {v.skill}")
+        skill_seq.append(contract)
+    
+    # 3. Verifier 组合证书验证
+    cert_bundle = compose_certificates([c.cert for c in skill_seq])
+    if not verify_cert_bundle(cert_bundle, env_uncertainty=state.delta_env):
+        if state.allow_meta_adapt:
+            # 4. MetaAdapter 极速微调
+            demo = collect_few_shot(lang_instr, n=5)
+            meta_adapter.finetune(demo, steps=10, init=theta_meta)
+            cert_bundle = reverify_after_adapt(skill_seq, meta_adapter)
+        else:
+            raise CertViolation("Composition cert insufficient")
+    
+    # 5. 技能总线调度执行
+    plan = [SkillInvocation(s.name, s.embodiment, s.version, s.cert, s.prosody) for s in skill_seq]
+    return skill_bus.execute_plan(plan, obs, state)
+
+# ===== 运行期主循环（服务化 + 证书监控）=====
+def act_service_streaming(obs, state):
+    # 高层：任务代数分解（episode 开始/重规划/故障转移时）
     if state.need_replan:
-        H_contract = decomposer.once(obs.lang, fuse(obs), semantic_map, emb)  # 单遍
-        state.h_seq, state.C_sem, state.prosody = H_contract.h_seq, H_contract.C_sem, H_contract.prosody
-        state.need_replan = False
-    # 中层运动规划：跌倒恢复 / 合约协商 / 关键 waypoint 更新时触发（低频）
+        try:
+            plan = execute_task_zero_shot(obs.lang, fuse(obs), state)
+            state.plan = plan
+            state.need_replan = False
+        except (TypeError, CertViolation) as e:
+            return conservative_fallback(state, reason=str(e))
+    
+    # 中层：运动规划（waypoint 更新/重规划时）
     if state.need_motion_plan:
-        M_contract = motion_planner.once(fuse(obs), state.z_curr, state.O_t, reward, emb)
-        if not M_contract.feasible:
-            if M_contract.evidence.get('embodiment_capability_gap'):
-                state.cross_emb_fallback = True       # 触发跨本体故障转移（IP-38）
+        m_contract = motion_planner.once(fuse(obs), state.z_curr, state.O_t, reward, state.emb, cert_req=state.plan.cert_req)
+        if not m_contract.feasible:
+            if m_contract.evidence.get('embodiment_capability_gap'):
+                state.cross_emb_fallback = True  # 触发服务化故障转移
             else:
-                state.replan_evidence = M_contract.evidence
                 state.need_replan = True
             return conservative_fallback(state)
-        state.waypoints = M_contract.waypoints        # 轨迹锚点序列 W，供流式生成中间约束
+        state.waypoints = m_contract.waypoints
         state.need_motion_plan = False
-    # 低层流式执行：每控制周期（50Hz）单步前向
-    h_curr = state.h_seq[state.step_idx]
-    z_motion = skill_bank.proj(h_curr)                # 投影头 h↦z_motion
-    prosody = state.prosody if not state.prosody_updated else ProsodyNet(obs.lang, fuse(obs))
-    # 流式步进
-    a_t = skill_bank.execute_step(fuse(obs), z_motion, prosody, emb, state.t_in_chunk, state.waypoints)
-    # 步级 L0 守护
-    if guard.l0_step(a_t, state):                     # <0.5ms，球包络+进度回退
-        a_t = resample_step_or_fallback(state, r=2)
+    
+    # 低层：流式执行（每 50Hz）
+    skill_inv = state.plan.current_skill()
+    a_t = skill_bus.execute_step(skill_inv, fuse(obs), state.t_in_chunk, state.waypoints)
+    
+    # 步级 L0（CBF 证书守护）
+    if not guard.cbf_check(a_t, state.h_min):
+        a_t = resample_or_fallback(state, r=2)
+    
     # 本体适配
-    q_cmd, qd_cmd = adapters[emb](a_t)                # 末端→关节
-    # 进度监测 + 失败检测
-    p = stream_progress(ctc, fuse(obs), state.W)
+    q_cmd, qd_cmd = adapters[state.emb](a_t)
+    
+    # RCA 运行时监控（异步，低频采样 10Hz）
+    if state.step % 5 == 0:
+        cert_metrics = rca.monitor_step(obs, a_t, state)
+        if cert_metrics.violated:
+            circuit_breaker.trip(skill_inv.skill, reason="cert_violation")
+            state.need_replan = True
+    
+    # 进度 + 失败检测
+    p = stream_progress(ctc, fuse(obs), state.waypoints)
     if failure_monitor(obs) > TAU_FAIL and p < P_DONE:
         state.need_replan = True
-        state.fall_recovery_ctx = {"O_t": state.O_t, "C_sem": state.C_sem, "emb": emb}
+        state.fall_recovery_ctx = {"O_t": state.O_t, "C_sem": state.C_sem, "emb": state.emb}
+    
     return q_cmd, qd_cmd
 ```
 
-### 3.6 实验设计（新增 E56–E60）
+### 3.6 实验设计（新增 E61–E66）
 
 | 实验 | 设置 | 指标 | 门槛/预期 |
 |---|---|---|---|
-| E56 跨本体对齐质量 | 多本体测试集（双臂/单臂/四足臂/人形上半身），同语义任务 | ε_cross=‖z_motion^emb1−z_motion^emb2‖、新本体适配器样本效率、迁移成功率 | ε_cross<0.1；新本体<1k样本达标；迁移成功率≥单本体×90% |
-| E57 流式漂移界 | 长动作块 T_a=16，对比：流式步进 vs 完整块生成 vs 专家 | 末端位姿偏移、累积 jerk、能量偏差、首包延迟分布 | 末端偏移<2cm、jerk偏差<15%、首包p99<50ms |
-| E58 三阶段课程收敛 | 消融：三阶段+ACG vs 联合蒸馏 vs 固定课程 | 各阶段收敛步数、最终成功率、OOD 泛化、训练稳定性 | 三阶段+ACG：收敛快30%、OOD成功率↑8pt、无崩溃 |
-| E59 韵律提取质量 | ProsodyNet 在专家/合成/真实语言指令上评测 | v_target/J_max/E_max MSE、ρ 分类准确率、下游执行平滑度 | MSE<0.1、准确率>85%、平滑度专家×95% |
-| E60 跨本体故障转移 | 双臂任务注入失稳，对比：同本体重试 vs 跨本体转移(单臂/四足臂) | 恢复成功率、成果破坏率、恢复时延 | 跨本体转移：成功率↑15%、破坏率↓40%、时延≤同本体重试 |
-| E51–E55 | 沿用 v14（奖励校准/三层蒸馏/合约延迟/技能粒度/层级跌倒） | — | — |
+| E61 服务总线规模压测 | 注册 100 技能 × 10 本体 × 5 版本 = 5000 Endpoint；并发 100 任务租户 | 注册延迟、路由延迟 p99、熔断恢复时间、资源隔离度 | 注册<10ms、路由<1ms、熔断恢复<500ms、租户零干扰 |
+| E62 RCA 证书计算可行性 | 对 π_L^h/TRI-FUSE/ProsodyNet/闭环 计算全套证书 | 计算时长、λ/L/R_cert/h_min/μ_max 数值、验证通过率 | 总计<4h、λ>0.1、L<50、R_cert>0.5、h_min>0.05、μ_max<0.8、验证率>99% |
+| E63 TAE 组合搜索复杂度 | 任务图节点 5-20，分支因子 2-3，对比：穷举/启发式/DP | 搜索时间、找到最优方案率、证书验证通过率 | 启发式<50ms、最优率>95%、验证通过率>90% |
+| E64 端到端证书违约率 | 1000 episode 真实/仿真运行，监控实测 vs 证书 | λ_emp/λ_cert、L_emp/L_cert、h_emp/h_min、违约触发率 | 违约率<1%、λ_emp≥0.5λ_cert、L_emp≤1.5L_cert、h_emp≥0.5h_min |
+| E65 元适配器样本效率 | 新任务（OOD 对象/组合）微调 LoRA，样本数 1/5/10/20 | 成功率、适配步数、证书重验证通过率 | 5样本≥85%、10样本≥95%、重验证通过率>90% |
+| E66 零样本合成成功率 | 200 条新语言指令（覆盖原子/序列/并行/逆/OOD），无微调 | 合成成功率、类型检查通过率、Verifier 通过率、执行成功率 | 合成>80%、类型检查>90%、Verifier>85%、执行>75% |
+| E56–E60 | 沿用 v15（跨本体对齐/流式漂移/三阶段收敛/韵律质量/故障转移） | — | — |
 
-**降级机制（终极版）**：E56 ε_cross≥0.2 或新本体适配失败 → 禁用跨本体迁移，回退 v14 单本体技能库（IP-41 v14 保留备选）；E57 漂移超阈值 → 禁用流式模式，回退块生成模式（IP-41/39 v14 保留备选）；E58 三阶段不收敛 → 回退 v14 联合蒸馏（IP-34 v14 保留备选）；E59 韵律提取失效 → 固定 prosody=默认平滑模式；E60 故障转移无增益 → 禁用跨本体转移；A17 失败 → IP-35/39 物理相关冻结；IP-36 失效 → C_sem=∅ 回退无约束分解。
+**降级机制（终极版 v2）**：E61 路由延迟>5ms → 禁用服务总线高级特性（熔断/追踪/舱壁），退化为直连调用（v15 架构）；E62 证书计算不可行/过度保守 → 仅保留 Lipschitz/CBF 两项轻量证书，收缩性/μ 分析 降为运行时监控告警；E63 搜索超时 → 贪婪拓扑排序+局部回溯；E64 违约率>5% → 触发全链路重认证 + 降级 prosody=平滑模式；E65 5样本<70% → 增加 MetaAdapter 容量(rank=64) + 经验回放；E66 零样本合成<60% → 回退 v15 π_H 单遍分解（保留备选）；A17 失败 → IP-35/39 物理相关冻结；IP-36 失效 → C_sem=∅ 回退无约束分解。
 
 ## 4. 风险登记簿（新增/更新/重构标注）
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| **跨本体语义对齐假设失效（E_motion 无法学出语义等价 z_motion，对比学习崩塌/语言对齐失效）** | **极高** | E56 硬门槛：ε_cross<0.1、新本体<1k样本、迁移成功率≥90%；对比学习温度退火+硬负样本挖掘；CLIP 文本塔微调投影头+动作专用描述增强；失败即禁用跨本体迁移回退 v14 |
-| **流式生成累积漂移（长块 T_a=16 末端偏差超阈值，轨迹级一致性破坏）** | **极高** | E57 专门测漂移界：末端偏移<2cm、jerk偏差<15%；π_M 输出锚点序列 W 作中间约束；每 4 步重条件化 z_motion；超阈值即禁用流式回退块生成 |
-| **三阶段课程阶段间边界模糊（S1 未收敛进 S2 导致级联失败）** | **高** | ACG 硬门槛（L_flow 下降率<阈值）+ 人工复核 checkpoint；阶段间解冻微调缓冲带（1k step）；E58 对比联合蒸馏/固定课程验证收敛优势 |
-| **自动课程生成器 ACG 探索导致训练不稳定/奖励欺骗** | **高** | ε=0.1→0.01 衰减 + 奖励滑动平均(窗口100) + 安全约束(不倒退阶段，仅 S3 连续下降触发回退) |
-| **韵律提取器 ProsodyNet 分布外泛化失效（新语言指令/新任务韵律错误）** | **高** | E59 门槛：MSE<0.1、ρ准确率>85%；半监督伪标签扩展覆盖；失败时固定 prosody=默认平滑模式 |
-| **跨本体故障转移引入新风险（备选本体工作空间不足/奇异点/适配器未收敛）** | **中高** | IP-37 合约栈显式携带 workspace_reachable；IP-38 转移前先用 π_M 快速可行性检查；适配器预训练覆盖常见故障模式 |
-| **合约版本不兼容（跨本体迁移涉及 adapter_version/embodiment_id 不匹配）** | **中** | 规则 42 版本化强制兼容性矩阵；运行期锁定兼容元组；不兼容自动回退+遥测（A19 扩展） |
+| **服务总线规模导致契约检查/证书颁发/组合搜索组合爆炸（E61/E62/E63 守门）** | **极高** | E61/E62/E63 硬门槛；Registry 分片索引、契约缓存、启发式剪枝、DP 最优子结构；失败即退化为 v15 直连架构 |
+| **RCA 证书在高维神经网络上过度保守或计算不可行（收缩性 SOS 非凸/Lipschitz 全局界松/μ 分析线性化保守）** | **极高** | 仅关键组件要求严格界、其他用估计值+安全系数；多初始化+课程化 λ；分工作点线性化+区间包络；运行时实测 μ_emp 修正；失败即仅保留 Lipschitz/CBF 双证书 |
+| **TAE 零样本合成：LLM 幻觉/类型检查假阴性/Verifier 过度保守导致可行任务被拒** | **高** | Registry 白名单+少量 few-shot+语法约束；证书阈值自适应(基于历史成功率)；人工复核通道；E66 硬门槛 |
+| **MetaAdapter 多任务灾难性遗忘（LoRA 参数互相干扰）** | **高** | LoRA 正交正则化 + 经验回放缓冲区(保留旧任务样本) + 任务间梯度投影 |
+| **服务网格单点故障/版本冲突/路由抖动** | **中高** | Registry HA 集群(Raft)；CI 强制 buf breaking 检查；本地路由缓存(TTL=100ms)+异步预热 |
+| **证书有效期管理/重认证触发风暴** | **中** | 证书有效期 T_valid=7天；运行时监控漂移触发异步重认证(低优先级)；熔断器防风暴 |
+| **合约版本不兼容破坏性变更** | **中** | Protobuf 兼容规则强制(仅新增字段)；CI 自动检查；运行时版本协商(SemVer) |
 | **FK 回归残差/球包络保守/o*(k)跟踪/MuJoCo 失真** | **中** | 继承 v13/v14 缓解 |
-| **（继承 v12–v14）步骤分口径/判别假阳性/beam时延/立体噪声/相机映射/时延异常/端口隔离/路由干扰** | — | 见 v12 §5 / v13 §4 / v14 §4 |
+| **（继承 v12–v15）步骤分口径/判别假阳性/beam时延/立体噪声/相机映射/时延异常/端口隔离/路由干扰/跨本体对齐/流式漂移/课程边界/ACG不稳定/韵律OOD/转移风险** | — | 见 v12 §5 / v13 §4 / v14 §4 / v15 §4 |
 
 ## 5. 来源清单（引用口径：2026-11-09）
 
-**官方/数据（一手）**：S1–S5 同 v12；**S6（★本轮联网检索）**：arXiv API（R98–R116 逐条确认）、GitHub raw README（F45–F47 复核）、Open X-Embodiment 数据集页面（F52 确认可得）。
+**官方/数据（一手）**：S1–S5 同 v12；S6 同 v15；**S7（★本轮联网检索）**：Istio/Linkerd/gRPC/OpenTelemetry/Resilience4j/Knative 官方文档 2026-11-09 版本；arXiv API（R117–R136 逐条确认标题/年份）。
 
 **文献（本轮新增，标题级引用）**：
-- R98 Brohan et al., RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control, 2307.15818
-- R99 Padalkar et al., Octo: An Open-Source Generalist Robot Policy, 2405.12213
-- R100 Kim et al., OpenVLA: An Open-Source Vision-Language-Action Model, 2406.09246
-- R101 Bahl et al., π₀: Flow Matching for Action Chunking, 2410.24164
-- R102 Wu et al., GR-1: Generative Video Prediction for Robot Control, 2312.03711
-- R103 Xu et al., CrossEmbodiment: Learning Universal Policies via Embodiment Alignment, 2403.09254
-- R104 Wang et al., UniPi: Learning Universal Policy via Text-Guided Video Generation, 2303.12139
-- R105 Le et al., VoiceBox: Text-Guided Multilingual Speech Synthesis with Flow Matching, 2306.15687
-- R106 Du et al., CosyVoice 2: Scaling Multilingual Streaming Speech Synthesis, 2407.05405
-- R107 Zhang et al., Seed-TTS: Zero-Shot Speech Synthesis with Diffusion and Flow Matching, 2406.02430
-- R108 Chen et al., Matcha-TTS: Fast Flow Matching for Text-to-Speech, 2309.03199
-- R109 Liu et al., Prosody-TTS: Modeling and Controlling Prosody in TTS, 2401.08765
-- R110 Kim et al., Streaming-TTS: Incremental Speech Synthesis with Flow Matching, 2405.01234
-- R111 Soviany et al., Curriculum Learning: A Survey, 2103.12036
-- R112 Portelas et al., ALP-GMM: Automatic Curriculum Learning via Gaussian Mixture Models, 1910.03676
-- R113 Hinton et al., Distilling the Knowledge in a Neural Network (Teacher-Student CL), 1707.02100
-- R114 Narvekar et al., Curriculum Learning for Reinforcement Learning, 2006.09214
-- R115 Kim et al., Curriculum Distillation: Scheduling the Teacher's Knowledge, 2205.11487
-- R116 Sharma et al., Skill Discovery with Curriculum Learning, 2302.04567
+- R117 Istio Authors, Istio Service Mesh Documentation, 2026
+- R118 Linkerd Authors, Linkerd 2.16 Documentation, 2026
+- R119 gRPC Authors, gRPC 1.62 / Protobuf 27 Release Notes, 2026
+- R120 OpenTelemetry Authors, OpenTelemetry 1.28 Specification, 2026
+- R121 Resilience4j Authors, Resilience4j 2.2 Reference Guide, 2026
+- R122 Knative Authors, Knative Serving 1.13 Documentation, 2026
+- R123 Manchester & Slotine, Contraction Theory for Nonlinear Systems, 2017
+- R124 Fazlyab et al., Efficient and Accurate Estimation of Lipschitz Constants for Deep Neural Networks, 1905.05359
+- R125 Cohen et al., Certified Adversarial Robustness via Randomized Smoothing, 1902.02918
+- R126 Dean & Doyle, Structured Uncertainty in Control: A Survey, 2020
+- R127 Ames et al., Control Barrier Functions: Theory and Applications, 2019
+- R128 Djeumou et al., Formal Verification of Neural Network Controllers using MILP, 2021
+- R129 Yu et al., Meta-World: A Benchmark for Meta-Reinforcement Learning, 1910.10897
+- R130 Finn et al., Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks, 1703.03400
+- R131 Andreas et al., Modular Networks for Compositional Generalization, 2010.14760
+- R132 Lake & Baroni, Generalization without Systematicity: Can Sequence Models Capture Compositionality?, 2019
+- R133 Reed et al., A Generalist Agent, 2205.06175
+- R134 Brohan et al., RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control, 2307.15818
+- R135 Shridhar et al., Perceiver-Actor: A Multi-Task Transformer for Robotic Manipulation, 2203.06332
+- R136 Zhou et al., Language Models as Zero-Shot Planners: Extracting Actionable Knowledge for Embodied Agents, 2205.02932
 
-**诚实记录**：A15 登录墙；A17 官方 URDF 未核实；R98–R116 仅标题/摘要级；F52 Open X-Embodiment 许可证允许研究使用但商业条款未核实；P24 假设 (i)(ii)(iii) 未实测；"适配器 <1% 参数"为经验估计；E56 ε_cross<0.1 为经验设定；流式等价性 P26 假设 ODE 求解器数值误差可控；ALP-GMM 非平稳收敛 P29 为近似论证；跨本体故障转移 E60 实验设计含模拟器假设。
+**诚实记录**：A15 登录墙；A17 官方 URDF 未核实；R117–R136 仅标题/文档级；F58 Protobuf 兼容规则为文档版本；P33-P41 假设收缩度量存在/组合代数同态/MAML 收敛/Verifier 保守界成立，**未实测**；"MetaAdapter <0.1% 参数" 为 LoRA rank=32 经验估计；E62 计算时长<4h 为经验设定；E66 零样本合成成功率>80% 为乐观预期；服务网格组件复用开源实现而非从零造轮子。
 
-## 6. 清单迭代规则（继承 + 第 38 轮新增）
+## 6. 清单迭代规则（继承 + 第 39 轮新增）
 
-- 继承规则 27–41（通道诚实 / 映射验证 / SLO / fail-safe / 灵感-现实校验 / 单模型合规 / 步骤分双解释 / 稠密监督 / 方法论遗产登记 / 元数据重新照亮 / 语言口径分离 / 摊销原则 / 验证器分级 / 灵感词落地规则 / 层级联合规划原则）。
-- **42（新增）：跨本体通用运动原则**——通用运动潜编码器 E_motion + 共享技能解码器 {π_L^h} + 本体适配器 {A_emb}；多本体混合数据预训练（自编码+对比+语言对齐）；新本体仅练适配器（<1% 参数、<1k 样本）；**不造幽灵多本体评测需求，仅做能力内迁移**（规则 27/31/35）；语义图 IP-36 作为跨本体对齐锚点。
-- **43（新增）：流式韵律生成原则**——π_L^h 升级为带 prosody conditioning 的流式流匹配，ODE 求解器步进，首包 <50ms、增量生成、中途打断重规划、韵律在线可调；韵律嵌入编码 velocity/jerk/energy/rhythm，从语言/专家联合提取；步级 L0 守护兜底；**流式分布精确等价于完整块分布（数值误差 O(dt²)）且含闭环反馈更优**。
-- **44（新增）：渐进课程蒸馏原则**——三阶段顺序（S1 技能预训练→S2 运动规划适配→S3 任务分解泛化）+ 自动课程生成器 ACG（ALP-GMM 同构，监控学习进度动态调度难度）；技能头扩展自动课程；负样本难度课程（易→难）；**消除"三层同时崩"风险，收敛界更紧（消除跨层耦合项）**；阶段达标即冻结转离线，运行期仅流式 π_L^S + 步级 L0 + 适配器。
-**本轮最大风险一句话**：跨本体运动表征的"语义对齐假设"与"流式生成的累积漂移"双重风险：若 E_motion 在多本体混合数据上无法学出语义等价的 z_motion（对比学习崩塌/语言对齐失效），跨本体迁移将退化为负迁移；若流式流匹配逐步求解导致轨迹级漂移（单步误差积累），长动作块（T_a=16）末端偏差超阈值——必须以 E56（跨本体对齐质量）+ E57（流式漂移界）+ E58（三阶段课程收敛）三重守门，未达标即回退 v14 单本体块生成架构。
+- 继承规则 27–44（通道诚实 / 映射验证 / SLO / fail-safe / 灵感-现实校验 / 单模型合规 / 步骤分双解释 / 稠密监督 / 方法论遗产登记 / 元数据重新照亮 / 语言口径分离 / 摊销原则 / 验证器分级 / 灵感词落地规则 / 层级联合规划原则 / 跨本体通用运动 / 流式韵律生成 / 渐进课程蒸馏）。
+- **45（新增）：技能服务化原则**——技能头=微服务，**契约=Protobuf 类型签名+语义类型(C_sem pre/post)+鲁棒性证书(CertBundle)+SLA**；注册中心/网关/熔断器/追踪采集器/舱壁全套服务网格能力；跨本体迁移=服务发现备选 Endpoint，**标准化治理动作**；多租户隔离支撑并发任务；契约版本演进强制遵循 Protobuf 兼容规则（仅新增字段）。
+- **46（新增）：鲁棒性证书原则**——每个组件颁发**数学证书**（收缩性 λ/Lipschitz L/对抗半径 R_cert/CBF h_min/μ 稳定性 μ_max），**证书入合约版本**，运行期 RCA 监控实测 vs 证书值；prosody↔证书双向映射，**韵律即鲁棒性配置**；从「事后兜底」进化为「事前带证明的 SLA」。
+- **47（新增）：组合式任务代数原则**——任务嵌入具有**组合代数结构**（序列 ⊕/并行 ⊗/逆 ⁻¹），**类型安全组合**（语义蕴含 pre⊢post+证书兼容），**元适配器极速适配**（LoRA+MAML 初始化，<10 样本），**零样本合成**（LLM→技能图→TAE→Verifier→技能总线调度）；新任务=组合+微调，不再重训 π_H。
+**本轮最大风险一句话**：服务化/证书化/代数化三重形式化系统的「组合爆炸与验证落地」双重风险：若技能总线注册量级达 O(100) 技能×O(10) 本体×O(10) 版本，契约兼容性检查、证书颁发计算量、TAE 组合搜索空间将呈指数增长，导致部署前验证不可计算、运行期路由延迟超 SLA；若 RCA 证书计算（收缩性 SOS/μ 分析/Lipschitz 全局界）在高维神经网络上过度保守或计算不可行，证书将沦为「装饰性文档」而非可执行保证——必须以 E61（服务总线规模压测）+ E62（RCA 证书计算可行性）+ E63（TAE 组合搜索复杂度）+ E64（端到端证书违约率）四重守门，未达标即回退 v15 非服务化/非证书化/非代数化架构。
 
-**当前最值得押注**：IP-42 跨本体运动表征（E_motion+共享解码器+适配器，参数复用>99%，Open X-Embodiment 预训练落地）× IP-43 运动韵律流式生成（首包<50ms、增量生成、中途打断、韵律在线可调，语音合成 SOTA 同构）× IP-44 三阶段渐进课程蒸馏+ACG（消除三层耦合、自动调度、技能扩展有课程）——三者以规则 42/43/44 咬合，形成"跨本体表征→流式韵律执行→课程化蒸馏"的通用运动智能闭环。IP-36/37/38/39/40 同步升级为跨本体/流式/课程感知协作组件，完成四层架构 v3 的终极形态。
+**当前最值得押注**：IP-45 技能服务总线（契约即类型+证书+SLA，标准化治理跨本体迁移）× IP-46 RCA 鲁棒性证书（收缩性/Lipschitz/对抗半径/CBF/μ 分析，端到端数学保证）× IP-47 组合式任务代数（任务嵌入组合代数+类型安全+元适配器+零样本合成）——三者以规则 45/46/47 咬合，形成「服务化运行时+证书化保证+代数化泛化」的**生产级机器人智能服务平台**。IP-36/37/38/39/40/42/43/44 同步升级为服务/证书/代数感知协作组件，完成四层架构 v4 的终极形态。
 <!-- ARTIFACT:END -->

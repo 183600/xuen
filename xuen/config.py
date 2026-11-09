@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 def load_config(path: Optional[str] = None) -> Config:
     real_path = find_config_path(path)
     with open(real_path, encoding="utf-8") as f:
