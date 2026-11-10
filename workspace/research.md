@@ -3,207 +3,212 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 40 轮 · 三灵感落地 v7：可认证流匹配执行 × 度量语义几何锚定 × 证书驱动课程引擎（四层架构 v5）
+# 第 41 轮（新循环第 1 轮） · 状态机 × 轻量化：把证书从「装饰性文档」变成「可执行、可负担的转移守卫」（四层架构 v6）
 
-> 承接第 39 轮（v16：服务化技能总线 × 形式化鲁棒性证书 × 组合式跨任务泛化，四层架构 v4）。本轮灵感词「流匹配策略、激光雷达、课程学习」驱动本轮设计聚焦于**证书体系的最后一公里**：将「执行层」升级为可认证的流匹配 ODE 采样器，将「证书」从文档级承诺锚定到激光雷达的度量几何，将「课程」从人工难度维度升级为证书赤字驱动的闭环自修复引擎。
+> 承接第 40 轮 v17（可认证流匹配执行 × 度量语义几何 × 课程引擎）。第 40 轮自陈最大风险是「证书紧致性」：一旦认证界比真值松 10~100 倍，N* 膨胀、ValidRegion 缩空、课程难度失真，「可认证」就会退化为装饰。本轮灵感词「状态机」「轻量化设计」正是针对这一命门的两把手术刀：**状态机**把散装的触发器统一为混合自动机，使证书成为运行时转移的真实守卫；**轻量化设计**把证书从「离线全量重算」变为「按决策需要、按预算触发的任意时间计算」。二者合起来让「证书太松」必须在在线行为里现形，而不是藏在附录。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 执行层的可认证 ODE）**：第 39 轮的证书体系（λ, L, R_cert, h_min, μ_max）认证的是「策略网络」，但执行层若用黑箱扩散采样（几十到上百步），SLA 的 latency_p99 与采样步数之间没有可证明的关系。流匹配把动作生成变成一个 ODE：dx/dτ = v_θ(x, τ; c, s)。ODE 逼近误差有经典定理：全局误差由局部截断误差经 Lipschitz 常数放大；若速度场满足单向 Lipschitz/收缩条件（∂v/∂x ⪯ -κI），误差不仅不爆炸反而指数收缩。于是「采样步数 N」可以从证书【推导】而不是【调参】：N* = 满足 ε_ode(N) ≤ ε_tol 的最小步数。三个直接收益：a) 流式执行（IP-43）有了理论根基——边积分边发射动作块；b) 证书包新增 {L_v, κ, ε_ode}，RCA 的管辖范围从权重空间扩展到积分器本身；c) 韵律 s 直接成为速度场条件变量，「韵律即鲁棒性配置」升级为「韵律即速度场调度」。
+**灵感 1（状态机 → 证书即守卫，而非注释）**：第 40 轮已经有一整套触发器——总线熔断、RCA 重颁、契约热更新、课程带、ValidRegion 出区、ODE 残差——但它们目前是「散装 if-else」，各自为政，没有统一语义，也无法整体验证。于是最危险的问题无人能答：*能否证明系统绝不会在证书已失效时仍继续运动？* 状态机的直觉是：把运行期显式建模为一个**证书增广混合自动机**，状态就是运行制度（Nominal / Watch / Degraded / Escalate / SafeStop），转移守卫就是证书边际谓词，不变式就是 ValidRegion∩{边际≥阈值}。这样「证书有效」不再是一句文档承诺，而是「这一拍允不允许发生这次转移」的布尔门；证书本身升级为**归纳不变式**，可以被模型检验而不是被人相信。组合性也顺带获得：两个技能的组合=乘积自动机，守卫合取、不变式相交，正好接上第 40 轮的 IP-47 任务代数。
 
-**灵感 2（激光雷达 → 证书的度量锚点）**：第 39 轮证书最大的软肋是「证书假设状态估计是准的」，视觉漂移会让 h_min、drift_bound 在物理世界失去意义。激光雷达提供**带误差棒的度量几何**：a) LIO 每帧配准残差可给出高概率协方差界（Bennett/Bernstein 不等式），漂移界 ||x̂-x|| ≤ B_t 由此可证而非可猜；b) 点云 ESDF 给 CBF h_min 一个真实最小间距下界（含漂移球膨胀与遮挡保守膨胀）；c) 语义标签投影到点云后，C_sem 升级为**度量语义类型 C_ms=(φ_sem, B)**——前置/后置条件从「符号成立」变成「在不确定球 B 内成立」。证书从「文档」变成「有几何边界的有效区域」：Cert(x) 仅在激光覆盖与漂移界成立的区域内有效，服务总线的熔断器由此获得物理触发器（离开有效区域→熔断）。
+**灵感 2（轻量化设计 → 证书只需「足够做决定」）**：第 40 轮的证书栈太重了——全层谱范数、LipSDP、上万次雅可比采样、全帧 LIO、全分辨率 ESDF、六类边际在线估计、ODE 积分——不可能每个控制拍都跑。这制造了一个**算力悖论**：越紧的界越贵，跑不起就只能用松界，松界又直接毁掉 N*、ValidRegion 与课程。轻量化的直觉不是「更粗糙地糊弄」，而是三条正交的减重：
+1. **决策等价精化（anytime）**：证书只需要把当前所有守卫的符号定下来。若两个界给出同一个转移决定，更紧的界对本次决策零信息；一旦所有守卫符号确定即可停止精化（T0 谱范数乘积 → T1 CROWN/IBP → T2 LipSDP/采样）。
+2. **事件触发与保持时间**：用边际的时间 Lipschitz 常数 L_m 推出证书保持时间 T_hold=(m₀−θ)/L_m，只在到期或状态机转移时重认证，中间复用上一次证书。
+3. **结构化减重**：只对小执行头严格认证，主干用收缩/量化界；多分辨率 ESDF、关键帧 LIO、早退蒸馏——把「便宜」写进模型结构，而不是靠事后近似。
 
-**灵感 3（课程学习 → 证书赤字即难度）**：第 39 轮的课程只是蒸馏流水线里一个「任务组合难度维度」，靠人工设定。本轮把课程变成**闭环引擎**：难度 D(τ) = Σ w_i·max(0, 1 - m_i(τ)/c_i)，m_i 为证书在当前任务分布上的实测边际，c_i 为证书阈值。课程即「把任务采样带宽对准证书边际接近违约边界的地带」（edge-of-competence 的可操作定义）。闭环：IP-50 采样任务 → IP-44 蒸馏 → IP-46 重颁证书 → 契约热更新回总线。课程学习从「训练技巧」升格为「证书体系的自我修复机制」。
-
-**三灵感的耦合**：流匹配给出「可证的执行」，激光雷达给出「可证的几何」，课程给出「可证的进化路径」——三者共同把第 39 轮的证书从「静态承诺」变成「动态可维护的活文档」：执行证书有闭式步数解，几何证书有物理有效域，课程引擎保证证书不随分布漂移而悄悄失效。
+**耦合**：状态机负责告诉轻量化「哪些决定真的需要证书」（守卫）；轻量化负责告诉状态机「这一拍证书够不够、还能信多久」（保持时间）。证书由此从名词变成动词：每次转移都真实消耗证书预算，证书过松会直接表现为「该转移没触发 / 误触发 / 保持时间过短」，从而被实验当场抓住。
 
 ## 1. 形式化定义
 
-**定义 23（可认证流匹配策略）**：技能 h 的动作生成定义为 ODE dx/dτ = v_θ(x, τ; c, s)，x ∈ R^{d_a·H}（动作块），τ ∈ [0,1]，c = (z_task, w₁~w₆)，s = 韵律向量，g = IP-49 几何状态。训练用线性插值 CFM：L_CFM = E[||v_θ(x_τ,τ) − (x₁−x₀)||²]，x_τ = (1−τ)x₀ + τx₁。采样：从先验 x₀ ~ p₀ 数值积分到 x₁。
+**定义 27（证书增广混合自动机 CAHA）**：H=(Q,X,Σ,E,Inv,Init,f)。Q 为有限运行制度集（至少含 Nominal, Watch, Degraded, Escalate, SafeStop）；X⊆R^n 含连续状态与证书变量 c=(λ,L,h_min,μ_max,ε_ode,B_t)；E⊆Q×Guard×Σ×Reset×Q；每个守卫 Guard_e(x)=[g_e(x)≥0]，g_e 由证书边际 m_e 与阈值 θ_e 构成；Inv(Nominal)=ValidRegion∩⋂ᵢ{mᵢ≥θᵢ}，Inv(Degraded) 以放宽球替换 B_t。**转移 e 合法**当且仅当其守卫由 (1−δ) 置信证书蕴含。**运行证书=归纳不变式** I：Init⊆I；对每个 e，post_e(I∩Inv∩Guard_e)⊆I；且 I⊆Safe。安全目标记为 LTL：□(unsafe ⇒ ◇̄ SafeStop)，即任何进入不安全集的路径必须先经 SafeStop。
 
-**定义 24（流证书 CertFlow）**：CertFlow = {L_v, κ, ε_ode, N*}。
-- L_v = Lip(v_θ)（谱归一化全层 + 幂迭代 + 关键层 LipSDP 精修）；
-- κ = 单向 Lipschitz 常数，取 −λ_max(sym(∂v_θ/∂x)) 的 (1−δ) 置信下界；
-- ε_ode(N) = (C_p h^p / κ)·(1 − e^{−κT})（p 阶积分器全局误差界，Gronwall + 收缩性导出）；
-- N* = min{N : ε_ode(N) ≤ ε_tol}。
-- **定理（误差有界与扰动收缩）**：若 L_v、κ 认证成立，则任意 N ≥ N* 的采样满足 ||x_N − x*|| ≤ ε_tol；且初值扰动被收缩：||φ(x₀+δ₀) − φ(x₀)|| ≤ e^{−κT}||δ₀||。
+**定义 28（决策等价证书）**：给定区间界 [lo_b, hi_b]（包含真值），未定守卫集 U_b(x)={e : lo_b(g_e)<0<hi_b(g_e)}。若 U_b(x)=∅，称 b 在 x 处**决策等价**于精确证书。最小充分档 j*(x)=min{j : U_{b_j}(x)=∅}。**命题**：在区间包含真值、且守卫只依赖边际符号的前提下，用 j*(x) 驱动的转移序列与用精确证书驱动者完全相同；因此「全档精化」对决策冗余。
 
-**定义 25（度量语义类型 C_ms）**：C_ms = (φ_sem, B)：φ_sem 为几何状态上的语义谓词（点云+视觉分割投影，带度量容差），B 为认证不确定球（由 LIO 漂移界导出）。蕴含：C_ms ⊢ C_ms' ⟺ φ_sem ⊨ φ_sem' ∧ B ⊆ B'。技能契约（定义 19）的 SemanticType 升级为 C_ms；CertBundle 增加区域有效性 ValidRegion(C) = {x : 覆盖成立 ∧ B(x) ≤ B_cert}。
+**定义 29（证书保持时间）**：若边际沿轨迹满足 |dm/dt|≤L_m，且 t₀ 时刻以置信 1−δ 认证 m(t₀)≥m₀，则对 t∈[t₀, t₀+T_hold]，m(t)≥m₀−L_m(t−t₀)≥θ，其中 T_hold=(m₀−θ)/L_m。证书对象由「无时限断言」升级为带有效区间的四元组 (m₀,L_m,t₀,δ)；重认证由 min(状态机转移, t₀+T_hold) 事件触发。
 
-**定义 26（证书赤字难度与课程带）**：D(τ) = Σᵢ wᵢ·max(0, 1 − mᵢ(τ)/cᵢ)，mᵢ ∈ {λ̂, 1/L̂, ĥ_min, 1/μ̂, ε̂_ode, B̂} 为实测边际。课程带 [D_lo, D_hi] 自适应：D_center ← D_center + η·(success_rate − target)（Robbins-Monro）；采样 P(τ) ∝ exp(−(D(τ)−D_center)²/2σ²)·replay_weight(τ)。
+**定义 30（分层 anytime 证书与成本模型）**：档 j∈{0,1,2,3}，成本 C_j 严格递增、松弛 ρ_j（界相对真值的保守比）严格递减；任一档仍然 **sound**（界始终合法，只是更松）。每拍预算 Γ：调度器选 j_t≤j*(x) 使成本最小，并在 U≠∅ 时按需升级。这给出「成本–紧致度」Pareto 前沿上的在线取点。
+
+**定义 31（证书→监控器编译 CMC）**：监控器 M 是有限记忆流式自动机，读入传感器/状态摘要，输出 {ok,warn,trip}。**单边可靠性**：M 输出 ok ⇒ 对应不变式在 (1−δ) 下成立（内部用区间算术给出边际的保守下界；不确定一律降级为 warn）。每个守卫编译为定长区间电路，WCET w_e 有界，Σw_e≤Γ；内存上界与技能数线性。
+
+**设计约束（单调保守性）**：所有守卫的极性必须保证「不确定 ⇒ 更保守的制度」。即当无法判定某转移是否安全时，转移只能指向 Degraded/SafeStop，绝不能指向 Nominal。此约束使松界只会导致**可用性下降**，而不会导致**漏报警**——把安全性失效转化为可观测的性能损失。
 
 ## 2. 三大产出设计
 
-### 2.1 IP-48 CERTIFIED-FLOW-POLICY（可认证流匹配执行）
-1. 骨干：线性插值流匹配动作块生成，条件 (c, s, g)；替代扩散骨干，保留 IP-43 流式接口。
-2. 认证：谱归一化全层 → 幂迭代 L_v → 关键层 LipSDP 精修；J_v 对称部分采样 + 集中不等式给 κ 下界。
-3. 自适应步数流式采样：闭式求 N*，RK4/中点积分，块间重叠窗口，边积分边发射。
-4. 一致性蒸馏：沿 ODE 轨迹蒸馏（教师 N=32 → 学生 N=4），蒸馏本身带「步数课程」（32→16→8→4）。
-5. 重认证触发：ODE 残差在线监测，残差超界 → RCA 重颁 → 契约热更新（复用 IP-45 机制）。
+### 2.1 IP-51 CERT-AUTOMATON-RUNTIME（可认证运行时自动机 CAR）
+1. 制度集与转移表：Nominal→Watch→Degraded→Escalate→SafeStop 五态，外加 SafeStop→Escalate 的可恢复边；进入/退出用不同阈值（滞回）以消除抖动。
+2. 守卫生成：每条边绑定一个证书边际（IP-46 输出）与阈值；守卫计算复用 IP-52 分层证书。
+3. 归纳不变式合成：以各证书边际与 ValidRegion 的交作为候选 I，检查 Init⊆I、跳变封闭（post 检查）、流封闭（用 CBF/barrier 在 dwell 区间证明），失败则收紧候选或新增制度。
+4. 抖动与 Zeno 消除：最小驻留时间 τ_min + 滞回 + 有限状态 ⟹ 单位时间转移数有界。
+5. 组合：技能组合=乘积自动机，守卫合取、Inv 相交；用 simulation/bisimulation 关系验证契约精化（接 IP-47）。
 
-### 2.2 IP-49 GEOMETRIC-CERT-GROUNDING（激光雷达几何证书锚定）
-1. LIO：IMU 预积分 + 体素化 scan-to-map，每帧残差 r_k → Bennett 不等式给 (1−δ) 分位协方差 Q̂_k(δ) → 因子图传播漂移界 B_t。
-2. 度量语义融合：分割标签投影点云 → 谓词 φ_sem（带几何容差）+ 不确定球 B。
-3. ESDF 增量构建 → CBF h(x) = clearance − margin，h_min 认证含漂移球与遮挡保守膨胀。
-4. 区域有效性：ValidRegion 上报 Registry，网关路由增加几何有效性检查，出区 → 熔断（扩展 IP-45 触发条件）。
+### 2.2 IP-52 LIGHTWEIGHT-CERT-STACK（轻量认证栈 LCS）
+1. 四档证书：T0 谱范数乘积上界（≈一次前向成本）；T1 执行头 CROWN/IBP 区间界；T2 关键层 LipSDP + 采样 κ；T3 离线精确/经验标定（仅作基准）。
+2. 决策等价停止规则：每拍只精化到 U=∅ 或预算耗尽；耗尽且仍有未定守卫 ⟹ 按单调保守性降级。
+3. 保持时间管理：维护每条边的最小 T_hold，用事件触发（到期/转移/新观测）重认证；用 T_hold 做前馈调度，避免集中重算。
+4. 结构化减重：主干收缩/量化 + 头严格证；多分辨率 ESDF（粗层规划、细层近机）；关键帧 LIO + 漂移界传播；早退蒸馏带证书退出条件。
+5. 预算调度：把「本拍给哪个技能、哪条守卫多少算力」建成带约束的优先级分配（决策边际敏感度高者优先）。
 
-### 2.3 IP-50 CERT-CURRICULUM-ENGINE（证书驱动课程引擎）
-1. 难度：D(τ) 证书赤字（定义 26），六类边际在线估计。
-2. 双轴课程：任务难度 × 采样步数（IP-48 蒸馏步数课程并入统一调度，步数量化 4 档防爆炸）。
-3. 带自适应：随机逼近 + 双时间尺度（策略慢、课程快）+ 滞回防振荡。
-4. 闭环：采样 → 蒸馏 → 重颁证书 → 契约热更新；反遗忘：按证书赤字加权回放。
+### 2.3 IP-53 CERT-TO-MONITOR-COMPILER（证书到监控器编译器 CMC）
+1. 把 CAHA 的每条守卫与不变式编译成定点/区间算术的流式监控器（watchdog）。
+2. 生成 WCET 与内存界；超预算则自动下放到 T0/T1。
+3. 单边可靠性证明生成：监控器带可检查的区间界推导链。
+4. 运行时：监控器与策略解耦，可独立升级；触发 trip 即强制自动机转入 SafeStop，形成硬件级看门狗。
 
-## 3. 四层架构 v5
+## 3. 四层架构 v6
 
 ```
-L1: TRI-FUSE + IP-49 LIO/点云语义融合 → 度量语义图 C_ms + 漂移界 B_t
-L2: CTC + VLM + IP-35 仲裁 → R_φ(w₁~w₆) + IP-49 几何残差证书
-L3: IP-47 任务代数（C_ms 类型检查）→ IP-39 规划（几何 CBF）→ IP-45 总线（区域化证书路由/熔断）
-    → IP-48 认证流匹配执行 + IP-43 韵律条件速度场 → RCA 监控（流证书+几何证书）
-L4: IP-44 蒸馏 + IP-50 课程引擎闭环 → RCA 重颁证书 → 契约热更新
-运行期：技能总线 + 区域化 RCA + TAE + MetaAdapter + 自适应步数流采样 + LIO/ESDF + 课程带自适应
+L1: TRI-FUSE + IP-49 LIO/点云语义 → 度量语义图 C_ms + 漂移界 B_t +（新）边际时间导数 L_m
+L2: CTC + VLM + IP-35 仲裁 → R_φ(w₁~w₆) + 几何残差证书
+L3: IP-51 CAR 运行时自动机（制度守卫） ← IP-52 LCS 分层 anytime 证书（决策等价精化 + 保持时间）
+    → IP-47 乘积自动机类型检查 → IP-39 规划（几何 CBF）→ IP-45 总线（模式感知路由/熔断）
+    → IP-48 认证流匹配执行（N* 随制度自适应）+ IP-43 韵律即模式调度 → IP-53 CMC 看门狗
+L4: IP-44 蒸馏 + IP-50 课程引擎（自身亦为相位自动机）→ RCA 重颁证书（含有效区间）→ 契约热更新
+运行期：模式守卫 + 分层证书 + 保持时间调度 + 事件触发重认证 + 定点看门狗 + 乘积组合验证
 ```
 
-## 4. 实验设计（E67-E72 硬门槛）
+## 4. 实验设计（E73–E78 硬门槛）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E67 证书紧致性 | 认证 L_v / 实测 Lip 比值；N* | 比值≤3；N*≤8 |
-| E68 流式延迟 | 动作块发射 p99 vs 扩散基线 | ≥2x 加速，p99<20ms |
-| E69 漂移界有效性 | 实测漂移在界内比率（含光照突变场景） | ≥99% |
-| E70 几何 CBF 安全 | 近碰撞率 vs 纯视觉 h_min | 下降≥50% |
-| E71 课程效率 | 达标样本数 vs 第 39 轮固定课程 | 节省≥30% |
-| E72 端到端 C_ms 零样本 | 合成/执行成功率、证书违约 | ≥85%/≥80%、违约<0.5% |
+| E73 自动机正确性 | 归纳不变式验证通过率；反例数；Zeno | 100% 通过；0 反例；有界驻留 |
+| E74 轻量证书延迟 | 每拍证书算力 median/p99 vs 全量栈；档位分布 | 降≥5x；p99<5ms；T0/T1 占比≥80% |
+| E75 决策等价保真 | 轻量决策=全量决策的拍占比 | ≥99.9% |
+| E76 保持时间有效性 | 期内边际真实仍≥阈值比例 | ≥99% |
+| E77 看门狗 WCET/内存 | WCET、内存、误 trip 率 | ≤1ms、≤64KB、误 trip<0.1% |
+| E78 端到端安全-可用 | 不安全事件、Nominal 占比、任务成功率、恢复时间 | 0 起；Nominal≥70%；成功率≥85%；恢复<2s |
 
-回退路径：E67 或 E69 不达标 → 回退第 39 轮 v16 配置（C_sem 类型 + 扩散执行），保留课程引擎作离线工具。
+回退：E73 不通过（不变式不可归纳）→ 退回第 40 轮散装触发 + 仅保留保持时间机制；E74 不通过（轻量仍太重）→ 只保留 T0 + SafeStop 双态；E78 可用性不达标 → 放宽阈值/增加 Degraded 档而非放弃形式化。
 
 ## 5. 本轮最大风险
 
-**一句话**：全部三块设计都悬于「证书紧致性」一线——若 L_v/κ/漂移界在实践中比真值松 10~100 倍，N* 会大到流式优势消失、ValidRegion 会缩到空集、课程难度会全面失真，整套「可认证」体系将重演第 39 轮警示的「装饰性证书」命运，必须以 E67/E69 为本轮第一守门实验。
+**一句话**：把证书变成守卫并叠加保守界，最大的风险不是不安全而是**可用性崩塌**——自动机可能长期困在 Degraded/SafeStop，把「可认证的机器人」变成「瘫痪的机器人」；因此 E74 与 E78 必须同时以成本与 Nominal 占比为守门指标，安全与可用不可只优化其一。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 40 轮产物 · 创新点清单 v17：可认证流匹配执行 × 度量语义几何锚定 × 证书驱动课程引擎（四层架构 v5）
+# 第 41 轮产物 · 创新点清单 v18：运行时证书自动机（CAR）× 轻量分层认证（LCS）× 证书监控编译器（CMC）（四层架构 v6）
 
-> 承接第 39 轮产物 v16（IP-45/46/47 三大新增 + IP-36~44 升级）。本轮在其上**增量插入** IP-48/49/50，并升级 IP-43/46/45/47/36/44/39；不推倒任何既有层级。
+> 承接第 40 轮产物 v17（IP-48/49/50）。本轮**增量插入** IP-51/52/53，并升级 IP-43/45/46/47/48/49/50；不推倒任何既有层级。核心是把 v17 的「静态可认证体系」升级为「在线可验证、可负担的运行制度」。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-48 | CERTIFIED-FLOW-POLICY | 新增 | 流匹配 ODE 执行骨干，速度场认证（L_v/κ），自适应步数流式采样 N* 闭式可证 |
-| IP-49 | GEOMETRIC-CERT-GROUNDING | 新增 | LIO 漂移球 B_t、点云 ESDF-CBF、度量语义类型 C_ms、证书有效区域 |
-| IP-50 | CERT-CURRICULUM-ENGINE | 新增 | 证书赤字难度 D(τ)、双轴课程（任务×步数）、随机逼近带自适应、闭环重颁证书 |
-| IP-43 | MOTION-PROSODY-STREAMING | 升级 | 扩散骨干→流匹配骨干，韵律 s 成为速度场条件，「韵律即速度场调度」 |
-| IP-46 | ROBUSTNESS-CERTIFICATE | 升级 | CertBundle 增 {L_v, κ, ε_ode, B_t, ValidRegion}，RCA 管辖扩展到积分器与状态估计 |
-| IP-45 | SKILL-SERVICE-MESH | 升级 | 契约 SemanticType→C_ms，路由增几何有效性检查，出区熔断为第四触发器 |
-| IP-47 | COMPOSITIONAL-TASK-ALGEBRA | 升级 | 类型检查 C_sem→C_ms 蕴含（含球包含），组合流收缩 κ_comp = min(κᵢ) |
-| IP-36 | SEMANTIC-MAP | 升级 | 语义图挂接点云几何，谓词带度量容差 |
-| IP-44 | PROGRESSIVE-CURRICULUM-DISTILL | 升级 | 蒸馏步数课程并入 IP-50 统一调度 |
-| IP-39 | HIERARCHICAL-TASK-MOTION | 升级 | 规划器使用 ESDF CBF 与漂移界 |
-| IP-40 | REWARD-SHAPING-DISTILL | 保持 | R_robust 项保留，可选增 ODE 残差一致性项 |
-| IP-38 | FALL-RECOVERY | 保持 | 沿用 v16 服务化故障转移 |
+| IP-51 | CERT-AUTOMATON-RUNTIME (CAR) | 新增 | 运行期=证书增广混合自动机；制度为态、证书边际为守卫、ValidRegion 为不变式；运行证书=归纳不变式，可模型检验；组合=乘积自动机 |
+| IP-52 | LIGHTWEIGHT-CERT-STACK (LCS) | 新增 | 四档 anytime 证书（T0 谱范数→T3 精确）；决策等价停止；保持时间 T_hold=(m₀−θ)/L_m；预算调度；结构化减重 |
+| IP-53 | CERT-TO-MONITOR-COMPILER (CMC) | 新增 | 守卫/不变式编译为定点区间算术看门狗；给出 WCET/内存界；单边可靠性（ok⇒证书成立）；trip 强制 SafeStop |
+| IP-45 | SKILL-SERVICE-MESH | 升级 | 熔断=Safety 自动机的 SafeStop 转移；路由按制度模式感知；契约携带自动机片段 |
+| IP-46 | ROBUSTNESS-CERTIFICATE | 升级 | 证书从「值」升级为「对象」=(值, 有效区间, 档位, δ)；新增归纳不变式与 L_m |
+| IP-47 | COMPOSITIONAL-TASK-ALGEBRA | 升级 | 类型检查=乘积自动机 + 守卫合取；精化=simulation/bisimulation 关系 |
+| IP-48 | CERTIFIED-FLOW-POLICY | 升级 | N* 随制度/档位自适应；ODE 残差直接作为 CAR 转移事件 |
+| IP-49 | GEOMETRIC-CERT-GROUNDING | 升级 | 额外输出边际时间导数 L_m（供保持时间）；ValidRegion 直接定义 Inv(Nominal) |
+| IP-50 | CERT-CURRICULUM-ENGINE | 升级 | 课程自身=相位自动机（warmup/edge/consolidate/recover）；难度用决策等价边际估计 |
+| IP-43 | MOTION-PROSODY-STREAMING | 升级 | 韵律 s 作为制度与速度场调度的联合条件，「韵律即模式调度」 |
+| IP-39 | HIERARCHICAL-TASK-MOTION | 升级 | 规划器使用模式相关 margin 与保持时间约束 |
+| IP-36 | SEMANTIC-MAP | 升级 | 语义图作为不变式与守卫的几何来源，带度量容差 |
+| IP-38 / IP-40 / IP-44 | — | 保持 | 沿用 v17；IP-44 蒸馏并入 IP-52 的算力预算 |
 
-## 1. 符号体系（承接定义 19-26）
+## 1. 符号体系（承接定义 27–31）
 
 | 符号 | 含义 | 定义 |
 |---|---|---|
-| v_θ(x, τ; c, s) | 流速度场 | ODE dx/dτ = v_θ，条件 c=(z_task,w₁~w₆)、s=韵律、g=几何状态 |
-| CertFlow | 流证书 | {L_v, κ, ε_ode, N*}，CertBundle 的新增子集 |
-| L_v / κ | Lipschitz / 单向 Lipschitz | 幂迭代+LipSDP 上界；−λ_max(sym(∂v/∂x)) 的 (1−δ) 置信下界 |
-| ε_ode(N) | 全局误差界 | (C_p h^p/κ)·(1−e^{−κT})，Gronwall+收缩性 |
-| N* | 认证步数 | min{N: ε_ode(N) ≤ ε_tol}，闭式可解 |
-| C_ms=(φ_sem, B) | 度量语义类型 | 谓词 + 不确定球；蕴含 ⟺ φ_sem ⊨ φ_sem' ∧ B ⊆ B' |
-| B_t | LIO 漂移球 | 每帧残差 Bennett 分位协方差 → 因子图传播，P(‖x̂−x‖>B_t) ≤ δ |
-| ValidRegion(C) | 证书有效区域 | {x: 激光覆盖 ∧ B(x) ≤ B_cert} |
-| D(τ) | 证书赤字难度 | Σ wᵢ·max(0, 1−mᵢ/cᵢ)，mᵢ∈{λ̂,1/L̂,ĥ_min,1/μ̂,ε̂_ode,B̂} |
-| [D_lo, D_hi] | 课程带 | D_center 随机逼近自适应，滞回防振荡 |
+| H=(Q,X,Σ,E,Inv,Init,f) | 证书增广混合自动机 | 态=运行制度；守卫=证书边际谓词；不变式=ValidRegion∩{m≥θ} |
+| Q | 运行制度 | Nominal / Watch / Degraded / Escalate / SafeStop |
+| I | 运行证书（归纳不变式） | Init⊆I ∧ post 封闭 ∧ 流封闭 ∧ I⊆Safe |
+| U_b(x) | 未定守卫集 | {e : lo_b(g_e)<0<hi_b(g_e)}；U=∅ ⟹ 决策等价 |
+| j*(x) | 最小充分证书档 | min{j : U_{b_j}(x)=∅} |
+| T_hold | 证书保持时间 | (m₀−θ)/L_m；期内 m(t)≥θ |
+| L_m | 边际时间 Lipschitz 常数 | 由空间梯度与 v_max 界出，或分段标定 |
+| C_j / ρ_j | 档位成本 / 松弛 | C₀<C₁<C₂<C₃；ρ₀>ρ₁>ρ₂>ρ₃；各档均 sound |
+| Γ | 每拍证书预算 | 调度约束 Σ C_{j_t} ≤ Γ |
+| M | 证书监控器 | 有限记忆流式自动机，{ok,warn,trip}，单边可靠 |
 
-## 2. 关键算法
+## 2. 关键算法（伪代码）
 
-### IP-48 可认证流匹配执行（伪代码）
+### IP-51 CAR：不变式合成与验证
 ```
-def certify_velocity_field(v_θ):
-    apply_spectral_norm_all_layers(v_θ)
-    L_v   = refine_critical_layers_LipSDP(power_iteration_bound(v_θ))
-    kappa = lower_bound_one_sided_lip(v_θ, samples=10k, delta=0.01)
-    return CertFlow(L_v, kappa)
-
-def adaptive_stream_sample(v_θ, c, s, g, eps_tol):
-    N_star = min N s.t. C_p*(1/N)**p / kappa * (1-exp(-kappa*T)) <= eps_tol
-    x = prior_sample(p0)
-    for tau in linspace(0, 1, N_star):
-        x = rk4_step(v_θ, x, tau, cond=(c,s,g), h=1/N_star)
-        if finalized(x, overlap=H//2): yield emit(x_tail)   # 流式发射
-    if ode_residual(x) > gamma*eps_tol: RCA.recertify(h)    # 在线监测
+def synthesize_invariant(H, certs):
+    I = { q: And(cert_i.margin >= theta_i for i) & ValidRegion for q in Q }
+    assert subset(Init, I)
+    for e in E:                                  # 跳变封闭性
+        if not subset(post(I & Guard_e), I[target(e)]):
+            tighten_threshold_or_add_mode(e)
+    for q in Q:                                  # 流封闭性（dwell 内 barrier/CBF）
+        if not flow_invariant(I[q], f_q):
+            strengthen_barrier(q)
+    assert model_check(H, "G(unsafe -> F_bar SafeStop)")  # 无 Zeno 由 tau_min 保证
+    return I
 ```
 
-### IP-49 几何证书锚定（伪代码）
+### IP-52 LCS：决策等价 anytime 认证 + 保持时间
 ```
-def lio_drift_bound(frame, delta=0.01):
-    T_k, r_k = voxel_icp(scan, submap)             # 配准+残差
-    Q_k = bennett_quantile_cov(r_k, delta)         # 高概率协方差界
-    Sigma = isam2_propagate(imu_preint(frame), T_k, Q_k)
-    return B_t = 3*trace_sqrt(Sigma)
+def certify_light(x, guards, budget):
+    cost = 0
+    for j in [0,1,2,3]:                          # T0→T3，成本递增、界更紧
+        b = tier_j(x); cost += C_j
+        U = {e for e in guards if lo(b, g_e) < 0 < hi(b, g_e)}
+        if not U: return b, j                   # 决策等价：无需更紧
+        if cost + next_cost(j) > budget:
+            return downgrade_monotone(b)        # 不确定→更保守制度
+    return b, 3
 
-def metric_semantic_type(pcd, labels, B_t):
-    phi_sem = project_and_quantify(labels, pcd, tol=B_t)
-    esdf.update(tsdf(pcd))
-    h_min = esdf.min_clearance() - margin - B_t - occlusion_inflation(unobserved)
-    return C_ms(phi_sem, B_t), ValidRegion(coverage, B_t <= B_cert)
-
-def cbf_filter(x_hat, u_ref, h, B_t):
-    return QP(u_ref, d/dt h(x_hat, u) >= -alpha*(h(x_hat) - B_t))  # 退化则投影
+def hold_time(m0, theta, L_m): return (m0 - theta) / L_m
+def schedule(certs):
+    return min over edges of (t0 + T_hold, next_mode_transition)  # 事件前馈
 ```
 
-### IP-50 证书驱动课程引擎（伪代码）
+### IP-53 CMC：守卫编译为看门狗
 ```
-def curriculum_step(band, eta, target=0.7):
-    tasks  = sample_band(band)                      # P ∝ exp(-(D-D_c)²/2σ²)·replay_w
-    succ   = mean([rollout(t, policy_bank).success for t in tasks])
-    band.center += eta * (succ - target)            # Robbins-Monro
-    band.width  = hysteresis(band.width, var(succ)) # 双时间尺度+滞回
-    replay.update(weights=cert_deficit)             # 反遗忘
-    if cert_drift_detected(): RCA.reissue(); Registry.hot_reload(contracts)
+def compile_guard(g_e, dtype=fixed):
+    circuit = interval_arith(g_e, dtype)         # 保守下/上界，含舍入
+    return Monitor(circuit,
+                   trip_if = lower(circuit) < theta_e,
+                   wcet    = bound_wcet(circuit),
+                   mem     = bound_mem(circuit))
+
+def watch(M, obs):
+    s = M.step(obs)
+    if s == TRIP:
+        automaton.force(SafeStop)                # 单边可靠：不确定即降级
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间复杂度 | 正确性保证 |
 |---|---|---|
-| L_v 认证 | 幂迭代 O(K·Σn_l d_l²)，重认证分钟级 | 上界可证（SDP 关键层收紧） |
-| κ 认证 | O(10k·d_a²) 雅可比谱（GPU 并行） | 集中不等式，置信 1−δ |
-| 流式采样 | N* 次 v_θ 前向，N*≤8 | **定理**：‖x_N−x*‖≤ε_tol；扰动收缩 e^{−κT} |
-| LIO | 每帧 O(M log M)，iSAM2 摊销 O(1) | **定理**：P(‖x̂−x‖>B_t)≤δ（Bennett） |
-| ESDF/CBF | 增量 O(Δ体素) | h(x̂)−B_t≥0 ∧ Lipschitz ⟹ 真实 h(x)≥0 |
-| 课程难度/采样 | O(6)/任务；带采样 O(1)（按 D 预索引） | Robbins-Monro ⟹ 依概率收敛到 target 成功率 |
-| 组合契约 | O(|V|+|E|) | C_ms 蕴含传递 + κ_comp=min(κᵢ)（复用 IP-46 D-K） |
+| IP-51 不变式合成 | O(|E|·cost(post) + |Q|·cost(flow))，离线分钟~小时 | 归纳不变式 ⟹ 安全；模型检验无反例即证 □(unsafe⇒◇̄SafeStop) |
+| IP-51 乘积组合 | O(|Q₁|·|Q₂|)（assume-guarantee 可降） | 守卫合取+Inv 相交保序；simulation 保精化 |
+| IP-52 决策等价 | 每拍 O(档数·|Guard|)，通常 T0/T1 | U=∅ ⟹ 决策与精确证书一致 |
+| IP-52 保持时间 | O(|E|) 维护，事件触发 | |dm/dt|≤L_m ⟹ 期内有效（置信 1−δ） |
+| IP-53 看门狗 | WCET Σw_e；内存 O(|Q|+|E|) | 单边可靠：ok ⇒ 不变式 (1−δ) 成立 |
+| IP-48 采样（升级） | N* 随档位/模式自适应 | 沿用流证书；残差触发 CAR 转移 |
+| IP-49 LIO/ESDF（升级） | 沿用 v17 + L_m 估计 O(|E|) | 漂移界 + 保持时间联合有效域 |
 
-## 4. 实验设计（E67-E72，硬门槛）
+## 4. 实验设计（E73–E78，硬门槛）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E67 证书紧致性 | 认证 L_v/实测 Lip 比值；N* 实测 | 比值≤3；N*≤8 |
-| E68 流式延迟 | 动作块发射 p99 vs 扩散基线 | ≥2x 加速，p99<20ms |
-| E69 漂移界有效性 | 界内比率（含光照突变/退化场景） | ≥99% |
-| E70 几何 CBF 安全 | 近碰撞率 vs 纯视觉 h_min | 下降≥50% |
-| E71 课程效率 | 达标样本数 vs v16 固定课程 | 节省≥30% |
-| E72 端到端 C_ms 零样本 | 合成/执行成功率、证书违约率 | ≥85%/≥80%、违约<0.5% |
+| E73 自动机正确性 | 归纳不变式验证通过率；反例数；Zeno | 100% 通过；0 反例；有界驻留 |
+| E74 轻量证书延迟 | 每拍证书算力 median/p99 vs 全量栈；档位分布 | 降≥5x；p99<5ms；T0/T1 占比≥80% |
+| E75 决策等价保真 | 轻量决策=全量决策的拍占比 | ≥99.9% |
+| E76 保持时间有效性 | 期内边际真实仍≥阈值比例 | ≥99% |
+| E77 看门狗 WCET/内存 | WCET、内存、误 trip 率 | ≤1ms、≤64KB、误 trip<0.1% |
+| E78 端到端安全-可用 | 不安全事件、Nominal 占比、成功率、恢复时间 | 0 起；Nominal≥70%；成功率≥85%；恢复<2s |
 
-失败即回退：E67/E69 不达标 → 回退 v16（C_sem + 扩散执行），IP-50 转离线工具。
+回退路径：E73 不通过 → 退回 v17 散装触发 + 仅保持时间；E74 不通过 → 仅 T0 + SafeStop 双态；E78 可用性不达标 → 放宽阈值/增设 Degraded 档，而非放弃形式化。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解措施 |
 |---|---|---|
-| 证书松弛：L_v/κ 过保守 → N* 膨胀 | 高 | 仅执行头严证，主干经验值×安全系数；E67 第一守门 |
-| LIO 退化场景（长走廊/雨雾/粉尘）→ ValidRegion 空集 | 高 | 视觉-惯性兜底放宽球体 + 出区熔断降级；E69 守门 |
-| 课程带振荡（非平稳策略为移动目标） | 中 | 双时间尺度 + 滞回 + EWMA 成功率 |
-| 流匹配蒸馏后多模态坍缩 | 中 | ODE 轨迹分叉多样性正则 + 示教模式覆盖审计 |
-| 双轴课程组合空间爆炸 | 低 | 步数轴量化 4 档（32/16/8/4） |
-| C_ms 球包含检验在高维退化 | 中 | 仅对任务相关子空间做投影蕴含检验 |
+| 可用性崩塌：长期困于 Degraded/SafeStop | 高 | 单调保守只降可用不降安全；Degraded 中间档；E78 以 Nominal 占比守门；阈值在线标定 |
+| 守卫极性错误 → 漏报警 | 高 | 类型级强制「不确定→更保守」；反例测试；CMC 单边可靠性检查 |
+| 乘积自动机状态爆炸 | 中 | assume-guarantee 分解、对称性消减、只对任务相关组合展开 |
+| L_m 过松 → 重认证过频 | 中 | 分段/局部 Lipschitz；事件触发 + 证书缓存；T_hold 前馈调度 |
+| 归纳不变式不可证（过保守） | 中 | CEGAR 抽象精化；失败即退化为经验触发 |
+| 定点/量化看门狗舍入误差 | 低-中 | 保守舍入的区间算术；量化证书项 |
+| 决策等价在边界附近抖动 | 中 | 滞回 + τ_min；把边界拍计入 Watch 而非反复切换 |
 
 ## 6. 本轮最大风险
 
-**一句话**：三大设计的共同命门是「证书紧致性」——若 L_v/κ/漂移界比真值松 10~100 倍，则 N* 大到流式优势消失、ValidRegion 缩到空集、课程难度全面失真，可认证体系将沦为装饰性文档，故 E67/E69 为本轮成败判据。
+**一句话**：状态机与轻量化都天然偏向保守，最大风险是**可用性崩塌**——自动机长期滞留在 Degraded/SafeStop，把「可认证」变成「可瘫痪」；因此 E74（成本）与 E78（Nominal 占比）必须联合作守门，安全与可用不可只优化其一。
 <!-- ARTIFACT:END -->

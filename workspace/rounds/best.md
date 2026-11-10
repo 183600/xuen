@@ -3,212 +3,325 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 41 轮（新循环第 1 轮） · 状态机 × 轻量化：把证书从「装饰性文档」变成「可执行、可负担的转移守卫」（四层架构 v6）
+# 第 42 轮（新循环第 2 轮） · Sim-Cert-RAG 闭环：把仿真、低成本部署与经验检索串成「可进化的证书飞轮」（四层架构 v7）
 
-> 承接第 40 轮 v17（可认证流匹配执行 × 度量语义几何 × 课程引擎）。第 40 轮自陈最大风险是「证书紧致性」：一旦认证界比真值松 10~100 倍，N* 膨胀、ValidRegion 缩空、课程难度失真，「可认证」就会退化为装饰。本轮灵感词「状态机」「轻量化设计」正是针对这一命门的两把手术刀：**状态机**把散装的触发器统一为混合自动机，使证书成为运行时转移的真实守卫；**轻量化设计**把证书从「离线全量重算」变为「按决策需要、按预算触发的任意时间计算」。二者合起来让「证书太松」必须在在线行为里现形，而不是藏在附录。
+> 承接第 41 轮 v18（CAR × LCS × CMC）。第 41 轮自陈最大风险是「可用性崩塌」：保守界导致自动机长期滞留 Degraded/SafeStop。本轮灵感词「Isaac Sim」「低成本方案」「检索增强生成」精准击中三个命门：**Isaac Sim** 提供高保真、可程控的「证书压力测试场」，让保守界在仿真里先暴露、再收敛，不上实机就把可用性坑填平；**低成本方案**把第 41 轮的「在线 anytime」向前推一步——「离线预算换在线预算」，用仿真预算预计算证书有效域、把大模型蒸馏到边缘端 8-bit 整数监控器，实机只跑推理不跑优化；**检索增强生成 (RAG)** 把零散的历史证书、反例、课程片段变成可检索的「证书知识库」，新任务来时先检索再合成，冷启动从「从头算」变成「改着用」。三者串成闭环：Isaac Sim 产数据 → RAG 存索引 → LCS 轻量推理 → 实机反馈再入 Sim，证书从「静态制品」进化为「持续进化的资产」。
 
 ## 0. 直觉与动机
 
-**灵感 1（状态机 → 证书即守卫，而非注释）**：第 40 轮已经有一整套触发器——总线熔断、RCA 重颁、契约热更新、课程带、ValidRegion 出区、ODE 残差——但它们目前是「散装 if-else」，各自为政，没有统一语义，也无法整体验证。于是最危险的问题无人能答：*能否证明系统绝不会在证书已失效时仍继续运动？* 状态机的直觉是：把运行期显式建模为一个**证书增广混合自动机**，状态就是运行制度（Nominal / Watch / Degraded / Escalate / SafeStop），转移守卫就是证书边际谓词，不变式就是 ValidRegion∩{边际≥阈值}。这样「证书有效」不再是一句文档承诺，而是「这一拍允不允许发生这次转移」的布尔门；证书本身升级为**归纳不变式**，可以被模型检验而不是被人相信。组合性也顺带获得：两个技能的组合=乘积自动机，守卫合取、不变式相交，正好接上第 40 轮的 IP-47 任务代数。
+**灵感 1（Isaac Sim → 证书的「风洞」与「数字孪生」）**：第 41 轮的守卫阈值 θ、Lipschitz 常数 L_m、保持时间 T_hold 全靠「离线标定 + 在线保守放大」，必然过保守。Isaac Sim 的直觉是：把它当成证书的**风洞**——在仿真里用域随机化（光照、摩擦、质量、传感器噪声、动力学参数）跑万级轨迹，直接**测出**边际的真实分布、L_m 的经验上界、T_hold 的实际覆盖率。更关键的是：仿真里可以**注入故障**（执行器卡滞、传感器漂移、通信延迟），强迫 CAR 触发每一条转移边，把「罕见但致命」的守卫场景变成可回归的测试用例。仿真合成的「证书有效域」与「反例轨迹」直接写入 RAG 知识库，下一轮合成不再从零开始。
 
-**灵感 2（轻量化设计 → 证书只需「足够做决定」）**：第 40 轮的证书栈太重了——全层谱范数、LipSDP、上万次雅可比采样、全帧 LIO、全分辨率 ESDF、六类边际在线估计、ODE 积分——不可能每个控制拍都跑。这制造了一个**算力悖论**：越紧的界越贵，跑不起就只能用松界，松界又直接毁掉 N*、ValidRegion 与课程。轻量化的直觉不是「更粗糙地糊弄」，而是三条正交的减重：
-1. **决策等价精化（anytime）**：证书只需要把当前所有守卫的符号定下来。若两个界给出同一个转移决定，更紧的界对本次决策零信息；一旦所有守卫符号确定即可停止精化（T0 谱范数乘积 → T1 CROWN/IBP → T2 LipSDP/采样）。
-2. **事件触发与保持时间**：用边际的时间 Lipschitz 常数 L_m 推出证书保持时间 T_hold=(m₀−θ)/L_m，只在到期或状态机转移时重认证，中间复用上一次证书。
-3. **结构化减重**：只对小执行头严格认证，主干用收缩/量化界；多分辨率 ESDF、关键帧 LIO、早退蒸馏——把「便宜」写进模型结构，而不是靠事后近似。
+**灵感 2（低成本方案 → 离线预算换在线预算，量化到边缘）**：第 41 轮 LCS 的四档证书（T0–T3）仍在实机上跑区间传播、LipSDP、采样。低成本的直觉是三级阶梯：**L0 仿真预计算**：把整个状态空间的「最小充分档 j*(x)」「边际下界 m_lo(x)」「保持时间 T_hold(x)」离线网格化/树化存入只读表，实机只做 O(log N) 查表 + 线性插值，零矩阵乘法；**L1 蒸馏量化监控器**：把 IP-53 CMC 生成的区间电路进一步通过「证书感知蒸馏」压缩为 8-bit 整数 MLP/决策树，WCET 从 1ms 降到 <100μs，内存从 64KB 降到 <8KB，可跑在 MCU 上；**L2 零拷贝传感器融合**：用定点整数实现 TRI-FUSE 的核心滤波，彻底去浮点。成本模型重写：Γ_online = Γ_sim_precompute / T_horizon + Γ_edge_inference，把 90% 算力挪到离线/云端。
 
-**耦合**：状态机负责告诉轻量化「哪些决定真的需要证书」（守卫）；轻量化负责告诉状态机「这一拍证书够不够、还能信多久」（保持时间）。证书由此从名词变成动词：每次转移都真实消耗证书预算，证书过松会直接表现为「该转移没触发 / 误触发 / 保持时间过短」，从而被实验当场抓住。
+**灵感 3（RAG → 证书合成的「热启动」与「案例推理」）**：第 41 轮的不变式合成、课程生成、阈值标定全是「冷启动」。RAG 的直觉是建立**证书知识库 KB**：每条记录 = (任务指纹 φ, 环境指纹 ψ, 证书模板 {θ, L_m, j*}, 反例轨迹 ξ, 课程相位序列)。新任务到来时：φ, ψ → Top-k 检索 → **模板迁移 + 微调**（只在差集上跑 CEGAR/采样），合成时间从小时降到分钟。更深层：**RAG 增强的课程引擎**——检索相似任务的「成功/失败相位序列」，直接生成新任务的课程草案，人类只需确认。组合性上：技能组合的乘积自动机也可检索——「导航+抓取」的乘积守卫、不变式在 KB 中已有验证済片段，直接拼装。
 
-## 1. 形式化定义
+**耦合升级**：Isaac Sim 是 RAG 的「数据引擎」，RAG 是 LCS 的「模板仓库」，LCS 量化监控器是实机的「低成本执行体」，实机回传的「分布偏移检测」触发 Sim 重跑、RAG 更新。证书由此形成 **Sim→RAG→Edge→Sim** 正向飞轮。
 
-**定义 27（证书增广混合自动机 CAHA）**：H=(Q,X,Σ,E,Inv,Init,f)。Q 为有限运行制度集（至少含 Nominal, Watch, Degraded, Escalate, SafeStop）；X⊆R^n 含连续状态与证书变量 c=(λ,L,h_min,μ_max,ε_ode,B_t)；E⊆Q×Guard×Σ×Reset×Q；每个守卫 Guard_e(x)=[g_e(x)≥0]，g_e 由证书边际 m_e 与阈值 θ_e 构成；Inv(Nominal)=ValidRegion∩⋂ᵢ{mᵢ≥θᵢ}，Inv(Degraded) 以放宽球替换 B_t。**转移 e 合法**当且仅当其守卫由 (1−δ) 置信证书蕴含。**运行证书=归纳不变式** I：Init⊆I；对每个 e，post_e(I∩Inv∩Guard_e)⊆I；且 I⊆Safe。安全目标记为 LTL：□(unsafe ⇒ ◇̄ SafeStop)，即任何进入不安全集的路径必须先经 SafeStop。
+## 1. 形式化定义（增量：定义 32–37）
 
-**定义 28（决策等价证书）**：给定区间界 [lo_b, hi_b]（包含真值），未定守卫集 U_b(x)={e : lo_b(g_e)<0<hi_b(g_e)}。若 U_b(x)=∅，称 b 在 x 处**决策等价**于精确证书。最小充分档 j*(x)=min{j : U_{b_j}(x)=∅}。**命题**：在区间包含真值、且守卫只依赖边际符号的前提下，用 j*(x) 驱动的转移序列与用精确证书驱动者完全相同；因此「全档精化」对决策冗余。
+**定义 32（仿真域随机化分布）**：D_sim = D_nom ⊗ Δ_dyn ⊗ Δ_sens ⊗ Δ_comm ⊗ Δ_env，其中 Δ_dyn 覆盖质量/惯量/摩擦 ±30%，Δ_sens 覆盖噪声/偏置/丢帧，Δ_comm 覆盖延迟/抖动/丢包，Δ_env 覆盖光照/纹理/动态障碍物。**仿真证书有效域** C_sim = {x : ∀ξ∼D_sim, m_ξ(x) ≥ θ}。实机分布 D_real 与 D_sim 的 Wasserstein 距离 W_1(D_real, D_sim) ≤ ε_w 给出 **Sim-to-Real 证书迁移界**：m_real(x) ≥ m_sim(x) − L_m·ε_w。
 
-**定义 29（证书保持时间）**：若边际沿轨迹满足 |dm/dt|≤L_m，且 t₀ 时刻以置信 1−δ 认证 m(t₀)≥m₀，则对 t∈[t₀, t₀+T_hold]，m(t)≥m₀−L_m(t−t₀)≥θ，其中 T_hold=(m₀−θ)/L_m。证书对象由「无时限断言」升级为带有效区间的四元组 (m₀,L_m,t₀,δ)；重认证由 min(状态机转移, t₀+T_hold) 事件触发。
+**定义 33（离线预计算证书表）**：在网格/八叉树/克拉普顿树上存储只读表 T_cert：键 = 状态抽象键 k(x)（如量化后的 (q, v, 语义摘要)），值 = (j*(k), m_lo(k), T_hold(k), θ_vec(k))。查表复杂度 O(log N)；插值误差由网格粒度 δ_grid 和 L_m 界出。**命题**：若 δ_grid·L_m ≤ η，则查表+插值给出的边际下界与真实 m_lo 相差 ≤ η，保持 sound。
 
-**定义 30（分层 anytime 证书与成本模型）**：档 j∈{0,1,2,3}，成本 C_j 严格递增、松弛 ρ_j（界相对真值的保守比）严格递减；任一档仍然 **sound**（界始终合法，只是更松）。每拍预算 Γ：调度器选 j_t≤j*(x) 使成本最小，并在 U≠∅ 时按需升级。这给出「成本–紧致度」Pareto 前沿上的在线取点。
+**定义 34（证书感知蒸馏与量化）**：教师网络 = IP-53 CMC 区间电路（浮点，保守下界）；学生网络 = 定点整数 MLP/决策树。损失 L = L_task + λ·L_cert，其中 L_cert = max(0, θ − student_margin(x)) 强制学生**不低于**教师的保守下界（单调保守性保蒸馏后仍 sound）。量化感知训练 (QAT) 直接在 INT8 整数域优化，部署时零浮点。
 
-**定义 31（证书→监控器编译 CMC）**：监控器 M 是有限记忆流式自动机，读入传感器/状态摘要，输出 {ok,warn,trip}。**单边可靠性**：M 输出 ok ⇒ 对应不变式在 (1−δ) 下成立（内部用区间算术给出边际的保守下界；不确定一律降级为 warn）。每个守卫编译为定长区间电路，WCET w_e 有界，Σw_e≤Γ；内存上界与技能数线性。
+**定义 35（证书知识库 KB 与检索增强合成）**：KB = {(φ_i, ψ_i, C_i, Ξ_i, Π_i)}_i，φ=任务指纹（目标类型、约束拓扑），ψ=环境指纹（地图拓扑、动态度、传感器配置），C=证书模板，Ξ=反例轨迹集，Π=课程相位序列。检索器 R(φ, ψ) = Top-k(KB, sim(φ, φ_i)·sim(ψ, ψ_i))。**RAG 合成流程**：候选模板 C_cand = merge(R(φ, ψ).C)；差集 Δ = {x : C_cand 不覆盖 ∨ m_lo < θ}；仅在 Δ 上跑 CEGAR/采样补全 → C_new。合成成本 ∝ |Δ| 而非 |X|。
 
-**设计约束（单调保守性）**：所有守卫的极性必须保证「不确定 ⇒ 更保守的制度」。即当无法判定某转移是否安全时，转移只能指向 Degraded/SafeStop，绝不能指向 Nominal。此约束使松界只会导致**可用性下降**，而不会导致**漏报警**——把安全性失效转化为可观测的性能损失。
+**定义 36（分布偏移触发的飞轮更新）**：实机运行时监控分布偏移统计量 S_t = W_1(Ê_t, D_sim)（Ê_t 为滑窗经验分布）。若 S_t > τ_drift，触发：(1) Isaac Sim 以新参数重采样，生成新 C_sim、Ξ_new；(2) KB 插入 (φ, ψ_new, C_sim, Ξ_new, Π)；(3) L0 表增量更新，L1 学生网络增量蒸馏。**定理**：若偏移检测召回率 ≥ 1−δ_d，且每轮 Sim 覆盖 Δ_dyn 扩展 ε_w，则长期证书 soundness 以概率 1−δ_d 维持。
 
-## 2. 三大产出设计
+**定义 37（端到端成本模型 v2）**：总拥有成本 COT = C_sim_precompute / N_deploy + C_edge_inference · T_life + C_human_verify · N_verify。其中 C_sim_precompute = |X_grid|·C_tier3（一次性），C_edge_inference = O(1) 查表 + INT8 推理（≈50μs），C_human_verify 由 RAG 从「全人工」降为「确认草案」。**Pareto 前沿**在 (COT, 安全违例率, Nominal 占比) 三维空间上显式给出。
 
-### 2.1 IP-51 CERT-AUTOMATON-RUNTIME（可认证运行时自动机 CAR）
-1. 制度集与转移表：Nominal→Watch→Degraded→Escalate→SafeStop 五态，外加 SafeStop→Escalate 的可恢复边；进入/退出用不同阈值（滞回）以消除抖动。
-2. 守卫生成：每条边绑定一个证书边际（IP-46 输出）与阈值；守卫计算复用 IP-52 分层证书。
-3. 归纳不变式合成：以各证书边际与 ValidRegion 的交作为候选 I，检查 Init⊆I、跳变封闭（post 检查）、流封闭（用 CBF/barrier 在 dwell 区间证明），失败则收紧候选或新增制度。
-4. 抖动与 Zeno 消除：最小驻留时间 τ_min + 滞回 + 有限状态 ⟹ 单位时间转移数有界。
-5. 组合：技能组合=乘积自动机，守卫合取、Inv 相交；用 simulation/bisimulation 关系验证契约精化（接 IP-47）。
+## 2. 四大产出设计（增量 IP-54/55/56 + 升级 IP-51/52/53/49/50/45/47）
 
-### 2.2 IP-52 LIGHTWEIGHT-CERT-STACK（轻量认证栈 LCS）
-1. 四档证书：T0 谱范数乘积上界（≈一次前向成本）；T1 执行头 CROWN/IBP 区间界；T2 关键层 LipSDP + 采样 κ；T3 离线精确/经验标定（仅作基准）。
-2. 决策等价停止规则：每拍只精化到 U=∅ 或预算耗尽；耗尽且仍有未定守卫 ⟹ 按单调保守性降级。
-3. 保持时间管理：维护每条边的最小 T_hold，用事件触发（到期/转移/新观测）重认证；用 T_hold 做前馈调度，避免集中重算。
-4. 结构化减重：主干收缩/量化 + 头严格证；多分辨率 ESDF（粗层规划、细层近机）；关键帧 LIO + 漂移界传播；早退蒸馏带证书退出条件。
-5. 预算调度：把「本拍给哪个技能、哪条守卫多少算力」建成带约束的优先级分配（决策边际敏感度高者优先）。
+### 2.1 IP-54 SIM-CERT-VALIDATOR（仿真证书验证器 SCV）
+1. **域随机化策略**：分层随机化——核心动力学参数用 Sobol 序列低维覆盖，高维感噪用分层采样；故障注入菜单化（执行器卡滞、IMU 漂移、相机模糊、总线延迟）。
+2. **证书压力测试协议**：对 CAR 每条转移边 e，生成「逼近守卫面」的初始状态集（用反向可达/对抗采样），跑 N_e 轨迹，统计：触发率、误触发率、T_hold 实际覆盖率、边际分布分位数。
+3. **Sim-to-Real 迁移界计算**：用实机少量标定轨迹估 W_1(D_real, D_sim)，输出每条边的迁移修正系数 α_e ≥ 1，实机阈值 θ_real = α_e · θ_sim。
+4. **反例自动归因**：反例轨迹 → 时序切片 → 语义标签（如「侧向摩擦骤降→横向边际崩塌」）→ 入 KB Ξ。
 
-### 2.3 IP-53 CERT-TO-MONITOR-COMPILER（证书到监控器编译器 CMC）
-1. 把 CAHA 的每条守卫与不变式编译成定点/区间算术的流式监控器（watchdog）。
-2. 生成 WCET 与内存界；超预算则自动下放到 T0/T1。
-3. 单边可靠性证明生成：监控器带可检查的区间界推导链。
-4. 运行时：监控器与策略解耦，可独立升级；触发 trip 即强制自动机转入 SafeStop，形成硬件级看门狗。
+### 2.2 IP-55 CERT-KNOWLEDGE-BASE（证书知识库 CKB + RAG 引擎）
+1. **多模态指纹嵌入**：φ 用任务图神经网络编码，ψ 用拓扑地图+传感器配置的 Transformer 编码，联合对比学习训练，使相似任务/环境在嵌入空间邻近。
+2. **检索器**：HNSW 索引嵌入，Top-k 亚毫秒；重排用轻量交叉编码器。
+3. **模板合并与差集补全**：守卫合取、不变式相交、阈值取 max（保守）；差集 Δ 用「证书敏感度热力图」引导采样（边际梯度大、L_m 大、守卫密集区优先）。
+4. **版本化与溯源**：每条记录带 (git_commit, sim_config_hash, 硬件版本)，支持回滚与审计。
 
-## 3. 四层架构 v6
+### 2.3 IP-56 EDGE-CERT-RUNTIME（边缘证书运行时 ECR）
+1. **L0 查表引擎**：克拉普顿树/八叉树只读 mmap，键 = 量化状态 (q_int, v_int, sem_hash)，值 = 打包结构体 {j_star: u8, m_lo: i16[6], T_hold: u16, θ_vec: i16[6]}。查表 + 三线性插值 < 5μs。
+2. **L1 INT8 监控器**：IP-54 导出的区间电路 → QAT 蒸馏 → TensorRT-LLM / TVM / 自研 INT8 解释器部署。WCET < 100μs，RAM < 8KB。
+3. **L2 定点 TRI-FUSE**：核心 EKF 用 Q15.16 定点，协方差对角主导近似，去 Cholesky；语义投影用定点矩阵乘。
+4. **分布偏移监控**：滑窗 100 拍估 W_1（用 1-Wasserstein 近似），超阈值上报触发飞轮。
+
+### 2.4 既有 IP 升级
+| IP | 升级点 |
+|---|---|
+| IP-51 CAR | 守卫阈值 θ ← α_e·θ_sim（迁移修正）；转移表新增「SimValidated」标记位；不变式合成初始化用 CKB 模板 |
+| IP-52 LCS | 档位重定义：T-1=L0查表、T0=L1 INT8监控器、T1=区间电路、T2=LipSDP；预算 Γ 仅含 T-1/T0 |
+| IP-53 CMC | 新增「蒸馏导出」后端：区间电路 → ONNX → QAT → INT8 模型 + 部署清单 |
+| IP-49 几何证书 | L_m 由 SCV 经验分位数给出，不再靠解析上界；ValidRegion 网格化入 L0 表 |
+| IP-50 课程引擎 | 相位序列 Π 从 CKB 检索迁移；难度调度用决策等价边际 + Sim 验证的通过率曲线 |
+| IP-45 总线 | 新增「飞轮心跳」话题：偏移统计 S_t、KB 版本、Sim 重跑请求 |
+| IP-47 组合代数 | 乘积自动机模板在 KB 中预存；新组合 = 检索子自动机模板 + 守卫合取 + 接口契约检查 |
+
+## 3. 四层架构 v7
 
 ```
-L1: TRI-FUSE + IP-49 LIO/点云语义 → 度量语义图 C_ms + 漂移界 B_t +（新）边际时间导数 L_m
-L2: CTC + VLM + IP-35 仲裁 → R_φ(w₁~w₆) + 几何残差证书
-L3: IP-51 CAR 运行时自动机（制度守卫） ← IP-52 LCS 分层 anytime 证书（决策等价精化 + 保持时间）
-    → IP-47 乘积自动机类型检查 → IP-39 规划（几何 CBF）→ IP-45 总线（模式感知路由/熔断）
-    → IP-48 认证流匹配执行（N* 随制度自适应）+ IP-43 韵律即模式调度 → IP-53 CMC 看门狗
-L4: IP-44 蒸馏 + IP-50 课程引擎（自身亦为相位自动机）→ RCA 重颁证书（含有效区间）→ 契约热更新
-运行期：模式守卫 + 分层证书 + 保持时间调度 + 事件触发重认证 + 定点看门狗 + 乘积组合验证
+L1: TRI-FUSE(INT8) + IP-49 LIO(关键帧/定点) → 度量语义图 C_ms + 漂移界 B_t + L_m(经验分位)
+L2: CTC + VLM + IP-35 仲裁 → R_φ(w) + 几何残差证书 → CKB 指纹 (φ, ψ)
+L3: IP-51 CAR(迁移修正阈值) ← IP-56 ECR(L0查表 + L1 INT8监控器 + 偏移监控)
+    → IP-47 乘积模板检索组合 → IP-39 规划(CBF margin=查表 m_lo) → IP-45 总线(模式感知+飞轮心跳)
+    → IP-48 认证流匹配(N*=L0查表 j_star) + IP-43 韵律调度 → IP-53 CMC(看门狗=L1 INT8)
+L4: IP-55 CKB(指纹检索 + 模板合并 + 差集补全) ← IP-54 SCV(Isaac Sim 域随机化 + 压力测试 + 反例归因 + 迁移界)
+    → IP-44 蒸馏(QAT→INT8) + IP-50 课程(RAG迁移相位序列) → RCA 重颁证书(含有效区间+版本) → 契约热更新
+运行期：L0查表(5μs) + L1 INT8监控(100μs) + 偏移监控 → 飞轮触发 → Sim重跑 → KB更新 → 热更新下发
 ```
 
-## 4. 实验设计（E73–E78 硬门槛）
+## 4. 实验设计（E79–E86 硬门槛，承接 E73–E78）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E73 自动机正确性 | 归纳不变式验证通过率；反例数；Zeno | 100% 通过；0 反例；有界驻留 |
-| E74 轻量证书延迟 | 每拍证书算力 median/p99 vs 全量栈；档位分布 | 降≥5x；p99<5ms；T0/T1 占比≥80% |
-| E75 决策等价保真 | 轻量决策=全量决策的拍占比 | ≥99.9% |
-| E76 保持时间有效性 | 期内边际真实仍≥阈值比例 | ≥99% |
-| E77 看门狗 WCET/内存 | WCET、内存、误 trip 率 | ≤1ms、≤64KB、误 trip<0.1% |
-| E78 端到端安全-可用 | 不安全事件、Nominal 占比、任务成功率、恢复时间 | 0 起；Nominal≥70%；成功率≥85%；恢复<2s |
+| E79 Sim-to-Real 迁移 | 实机边际 ≥ α·θ_sim 比例；W_1 估计误差 | ≥95% 达标；W_1 误差 < 2x 理论界 |
+| E80 L0 查表延迟 | 查表+插值 p99 延迟；内存占用 | < 10μs；< 32MB |
+| E81 L1 INT8 监控器 | WCET、RAM、误 trip 率 vs 浮点 CMC | < 100μs；< 8KB；误 trip < 0.05% |
+| E82 RAG 合成加速 | 合成时间 vs 冷启动；人工确认时间 | 加速 ≥ 20x；人工确认 < 5min |
+| E83 飞轮闭环有效性 | 连续 3 轮偏移触发后，Nominal 占比回升 | 每轮回升 ≥ 5pp，最终 ≥ 80% |
+| E84 端到端低成本部署 | 总算力成本 COT vs 第 41 轮；边缘硬件规格 | 降 ≥ 10x；跑通 Orin Nano / STM32H7 |
+| E85 组合模板检索 | 新技能组合合成时间；乘积自动机验证通过率 | < 30min；100% |
+| E86 长时程鲁棒性 | 100 小时连续运行：不安全事件、可用性、漂移触发次数 | 0 起；Nominal≥80%；漂移触发<5 次/天 |
 
-回退：E73 不通过（不变式不可归纳）→ 退回第 40 轮散装触发 + 仅保留保持时间机制；E74 不通过（轻量仍太重）→ 只保留 T0 + SafeStop 双态；E78 可用性不达标 → 放宽阈值/增加 Degraded 档而非放弃形式化。
+回退：E79 迁移界失效 → 扩大 Δ_dyn/Δ_sens 重跑 Sim，或回退第 41 轮保守阈值；E80/81 超预算 → 只保 L0 查表 + SafeStop 双态；E82 RAG 无加速 → 关闭检索，退回模板手写；E83 飞轮不收敛 → 人工介入阈值标定，锁定版本。
 
 ## 5. 本轮最大风险
 
-**一句话**：把证书变成守卫并叠加保守界，最大的风险不是不安全而是**可用性崩塌**——自动机可能长期困在 Degraded/SafeStop，把「可认证的机器人」变成「瘫痪的机器人」；因此 E74 与 E78 必须同时以成本与 Nominal 占比为守门指标，安全与可用不可只优化其一。
+**一句话**：Sim-Cert-RAG 飞轮引入了**仿真偏差累积**与**检索幻觉**两条新失效链——若域随机化覆盖不全导致 W_1 低估、或 RAG 检索到不相似模板却高置信合并，证书会在「自信满满」中静默失效，比第 41 轮的显式降级更隐蔽、更致命；因此 E79（迁移界实测）与 E82（RAG 合成审计）必须作为**红线实验**，任何一项不达标即全链路熔断回退。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 41 轮产物 · 创新点清单 v18：运行时证书自动机（CAR）× 轻量分层认证（LCS）× 证书监控编译器（CMC）（四层架构 v6）
+# 第 42 轮产物 · 创新点清单 v19：Sim-Cert-RAG 飞轮（SCV × CKB × ECR）× 量化边缘运行时（四层架构 v7）
 
-> 承接第 40 轮产物 v17（IP-48/49/50）。本轮**增量插入** IP-51/52/53，并升级 IP-43/45/46/47/48/49/50；不推倒任何既有层级。核心是把 v17 的「静态可认证体系」升级为「在线可验证、可负担的运行制度」。
+> 承接第 41 轮产物 v18。本轮**增量插入** IP-54/55/56，并升级 IP-51/52/53/49/50/45/47；不推倒任何既有层级。核心是把 v18 的「在线可验证」升级为「仿真验证→知识沉淀→边缘极致低成本→持续进化」的闭环飞轮。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-51 | CERT-AUTOMATON-RUNTIME (CAR) | 新增 | 运行期=证书增广混合自动机；制度为态、证书边际为守卫、ValidRegion 为不变式；运行证书=归纳不变式，可模型检验；组合=乘积自动机 |
-| IP-52 | LIGHTWEIGHT-CERT-STACK (LCS) | 新增 | 四档 anytime 证书（T0 谱范数→T3 精确）；决策等价停止；保持时间 T_hold=(m₀−θ)/L_m；预算调度；结构化减重 |
-| IP-53 | CERT-TO-MONITOR-COMPILER (CMC) | 新增 | 守卫/不变式编译为定点区间算术看门狗；给出 WCET/内存界；单边可靠性（ok⇒证书成立）；trip 强制 SafeStop |
-| IP-45 | SKILL-SERVICE-MESH | 升级 | 熔断=Safety 自动机的 SafeStop 转移；路由按制度模式感知；契约携带自动机片段 |
-| IP-46 | ROBUSTNESS-CERTIFICATE | 升级 | 证书从「值」升级为「对象」=(值, 有效区间, 档位, δ)；新增归纳不变式与 L_m |
-| IP-47 | COMPOSITIONAL-TASK-ALGEBRA | 升级 | 类型检查=乘积自动机 + 守卫合取；精化=simulation/bisimulation 关系 |
-| IP-48 | CERTIFIED-FLOW-POLICY | 升级 | N* 随制度/档位自适应；ODE 残差直接作为 CAR 转移事件 |
-| IP-49 | GEOMETRIC-CERT-GROUNDING | 升级 | 额外输出边际时间导数 L_m（供保持时间）；ValidRegion 直接定义 Inv(Nominal) |
-| IP-50 | CERT-CURRICULUM-ENGINE | 升级 | 课程自身=相位自动机（warmup/edge/consolidate/recover）；难度用决策等价边际估计 |
-| IP-43 | MOTION-PROSODY-STREAMING | 升级 | 韵律 s 作为制度与速度场调度的联合条件，「韵律即模式调度」 |
-| IP-39 | HIERARCHICAL-TASK-MOTION | 升级 | 规划器使用模式相关 margin 与保持时间约束 |
-| IP-36 | SEMANTIC-MAP | 升级 | 语义图作为不变式与守卫的几何来源，带度量容差 |
-| IP-38 / IP-40 / IP-44 | — | 保持 | 沿用 v17；IP-44 蒸馏并入 IP-52 的算力预算 |
+| IP-54 | SIM-CERT-VALIDATOR (SCV) | 新增 | Isaac Sim 域随机化压力测试；守卫面对抗采样；Sim-to-Real 迁移界 α_e；反例自动归因入库 |
+| IP-55 | CERT-KNOWLEDGE-BASE (CKB) | 新增 | 多模态指纹嵌入 + HNSW 检索；模板合并 + 差集补全；版本化溯源；RAG 增强课程/组合合成 |
+| IP-56 | EDGE-CERT-RUNTIME (ECR) | 新增 | L0 只读查表 (5μs) + L1 INT8 监控器 (100μs/8KB) + L2 定点 TRI-FUSE；偏移监控触发飞轮 |
+| IP-51 | CAR | 升级 | 阈值 θ ← α_e·θ_sim；SimValidated 标记；不变式初始化用 CKB 模板 |
+| IP-52 | LCS | 升级 | 档位重定义 T-1/T0/T1/T2；预算 Γ 仅含 L0/L1；决策等价停在 T-1 |
+| IP-53 | CMC | 升级 | 新增蒸馏导出后端：区间电路 → ONNX → QAT → INT8 模型 + 部署清单 |
+| IP-49 | 几何证书 | 升级 | L_m 由 SCV 经验分位给出，不再靠解析上界；ValidRegion 网格化入 L0 表 |
+| IP-50 | 课程引擎 | 升级 | 相位序列 Π 从 CKB 检索迁移；难度用决策等价边际 + Sim 通过率曲线 |
+| IP-45 | 总线 | 升级 | 飞轮心跳话题：S_t、KB 版本、Sim 重跑请求 |
+| IP-47 | 组合代数 | 升级 | 乘积自动机模板预存 KB；新组合=检索子模板+守卫合取+接口契约检查 |
 
-## 1. 符号体系（承接定义 27–31）
+## 1. 符号体系（增量：定义 32–37 符号）
 
 | 符号 | 含义 | 定义 |
 |---|---|---|
-| H=(Q,X,Σ,E,Inv,Init,f) | 证书增广混合自动机 | 态=运行制度；守卫=证书边际谓词；不变式=ValidRegion∩{m≥θ} |
-| Q | 运行制度 | Nominal / Watch / Degraded / Escalate / SafeStop |
-| I | 运行证书（归纳不变式） | Init⊆I ∧ post 封闭 ∧ 流封闭 ∧ I⊆Safe |
-| U_b(x) | 未定守卫集 | {e : lo_b(g_e)<0<hi_b(g_e)}；U=∅ ⟹ 决策等价 |
-| j*(x) | 最小充分证书档 | min{j : U_{b_j}(x)=∅} |
-| T_hold | 证书保持时间 | (m₀−θ)/L_m；期内 m(t)≥θ |
-| L_m | 边际时间 Lipschitz 常数 | 由空间梯度与 v_max 界出，或分段标定 |
-| C_j / ρ_j | 档位成本 / 松弛 | C₀<C₁<C₂<C₃；ρ₀>ρ₁>ρ₂>ρ₃；各档均 sound |
-| Γ | 每拍证书预算 | 调度约束 Σ C_{j_t} ≤ Γ |
-| M | 证书监控器 | 有限记忆流式自动机，{ok,warn,trip}，单边可靠 |
+| D_sim = D_nom ⊗ Δ_dyn ⊗ Δ_sens ⊗ Δ_comm ⊗ Δ_env | 仿真域随机化分布 | 动力学/感噪/通信/环境四维扰动张积 |
+| C_sim = {x : ∀ξ∼D_sim, m_ξ(x) ≥ θ} | 仿真证书有效域 | 在 D_sim 支撑集上边际一致 ≥ 阈值 |
+| α_e ≥ 1 | 迁移修正系数 | 实机阈值 θ_real = α_e·θ_sim；由 W_1(D_real, D_sim) 估出 |
+| T_cert : k(x) ↦ (j*, m_lo, T_hold, θ_vec) | 离线预计算证书表 | 只读，键=量化状态抽象，值=打包结构体 |
+| L_cert = max(0, θ − student_margin) | 证书感知蒸馏损失 | 强制学生不低于教师保守下界（单调保守性） |
+| KB = {(φ_i, ψ_i, C_i, Ξ_i, Π_i)} | 证书知识库 | 任务指纹、环境指纹、证书模板、反例集、课程相位 |
+| R(φ, ψ) = Top-k(KB, sim·sim) | 检索器 | HNSW 索引嵌入 + 轻量交叉编码器重排 |
+| S_t = W_1(Ê_t, D_sim) | 分布偏移统计量 | 滑窗 100 拍经验分布与仿真分布的 1-Wasserstein 近似 |
+| COT = C_sim/N + C_edge·T + C_human·N_verify | 总拥有成本 | 仿真预计算摊销 + 边缘推理寿命期 + 人工确认成本 |
 
 ## 2. 关键算法（伪代码）
 
-### IP-51 CAR：不变式合成与验证
+### IP-54 SCV：仿真压力测试与迁移界计算
 ```
-def synthesize_invariant(H, certs):
-    I = { q: And(cert_i.margin >= theta_i for i) & ValidRegion for q in Q }
-    assert subset(Init, I)
-    for e in E:                                  # 跳变封闭性
-        if not subset(post(I & Guard_e), I[target(e)]):
-            tighten_threshold_or_add_mode(e)
-    for q in Q:                                  # 流封闭性（dwell 内 barrier/CBF）
-        if not flow_invariant(I[q], f_q):
-            strengthen_barrier(q)
-    assert model_check(H, "G(unsafe -> F_bar SafeStop)")  # 无 Zeno 由 tau_min 保证
-    return I
+def stress_test_certificate(H, D_sim, N_per_edge=1000):
+    results = {}
+    for e in H.E:
+        # 对抗采样：从守卫面 g_e(x)=0 反向采样初始状态
+        X0 = backward_reachable(H, e, budget=N_per_edge//2)
+        X0 += domain_random_sample(D_sim, N_per_edge//2)
+        stats = run_batch_sim(H, X0, D_sim)  # 并行跑 N_per_edge 轨迹
+        results[e] = {
+            'trigger_rate': stats.triggered / N_per_edge,
+            'false_trip': stats.false_trip / N_per_edge,
+            'T_hold_cover': stats.hold_valid / stats.triggered,
+            'margin_p01': stats.margin.quantile(0.01),
+            'margin_p50': stats.margin.quantile(0.50),
+            'L_m_emp': stats.dmargin_dt.max(),
+            'counterexamples': stats.failed_trajectories
+        }
+    return results
+
+def compute_transfer_coeff(results, real_calib_trajs):
+    # 用少量实机标定轨迹估 W_1，给出每条边的 α_e
+    W1_est = estimate_wasserstein(real_calib_trajs, D_sim)
+    for e in H.E:
+        # 理论：m_real ≥ m_sim − L_m·W1；保守取 α_e = 1 + L_m·W1 / θ_sim
+        alpha = 1.0 + results[e]['L_m_emp'] * W1_est / max(1e-6, H.theta_sim[e])
+        results[e]['alpha_e'] = max(1.0, min(alpha, 3.0))  # 夹在 [1,3]
+    return results
+
+def auto_attribute_counterexample(xi):
+    # 时序切片 + 语义标签
+    slices = temporal_slice(xi, window=0.5s)
+    labels = []
+    for sl in slices:
+        if sl.margin_drop > 0.5*sl.margin_prev: labels.append('margin_collapse')
+        if sl.contact_change: labels.append('contact_transition')
+        if sl.sensor_dropout: labels.append('sensor_degradation')
+        if sl.comm_latency > 2*sl.latency_nom: labels.append('comm_delay')
+    return {'trajectory': xi, 'labels': labels, 'root_cause': majority_vote(labels)}
 ```
 
-### IP-52 LCS：决策等价 anytime 认证 + 保持时间
+### IP-55 CKB：RAG 增强证书合成
 ```
-def certify_light(x, guards, budget):
-    cost = 0
-    for j in [0,1,2,3]:                          # T0→T3，成本递增、界更紧
-        b = tier_j(x); cost += C_j
-        U = {e for e in guards if lo(b, g_e) < 0 < hi(b, g_e)}
-        if not U: return b, j                   # 决策等价：无需更紧
-        if cost + next_cost(j) > budget:
-            return downgrade_monotone(b)        # 不确定→更保守制度
-    return b, 3
+def rag_synthesize_certificate(phi, psi, KB, budget_cegar=300s):
+    # 1. 检索
+    cand = KB.retrieve(phi, psi, k=5)  # HNSW + 重排，< 5ms
+    # 2. 模板合并（保守：守卫合取、不变式相交、阈值取 max）
+    C_merged = merge_templates([c.C for c in cand])
+    # 3. 差集识别：C_merged 不覆盖 或 m_lo < θ 的区域
+    Delta = find_gaps(C_merged, phi, psi)  # 用敏感度热力图采样定位
+    # 4. 差集补全：仅在 Δ 上跑 CEGAR/采样
+    C_patch = cegar_refine(Delta, budget=budget_cegar)
+    # 5. 组装新证书
+    C_new = assemble(C_merged, C_patch)
+    # 6. 生成课程草案
+    Pi_draft = merge_phases([c.Pi for c in cand])
+    return C_new, Pi_draft, Delta
 
-def hold_time(m0, theta, L_m): return (m0 - theta) / L_m
-def schedule(certs):
-    return min over edges of (t0 + T_hold, next_mode_transition)  # 事件前馈
+def merge_templates(templates):
+    # 守卫合取：g_new = min(g_i)；不变式相交：Inv_new = ∩ Inv_i
+    # 阈值取 max（更保守）；L_m 取 max；T_hold 取 min
+    return Certificate(
+        guards=[min(g_i) for g_i in zip(*[t.guards for t in templates])],
+        invariants=[intersect(inv_i) for inv_i in zip(*[t.invariants for t in templates])],
+        theta=[max(th_i) for th_i in zip(*[t.theta for t in templates])],
+        L_m=[max(l_i) for l_i in zip(*[t.L_m for t in templates])],
+        T_hold=[min(h_i) for h_i in zip(*[t.T_hold for t in templates])]
+    )
 ```
 
-### IP-53 CMC：守卫编译为看门狗
+### IP-56 ECR：边缘三层运行时
 ```
-def compile_guard(g_e, dtype=fixed):
-    circuit = interval_arith(g_e, dtype)         # 保守下/上界，含舍入
-    return Monitor(circuit,
-                   trip_if = lower(circuit) < theta_e,
-                   wcet    = bound_wcet(circuit),
-                   mem     = bound_mem(circuit))
+# L0: 只读查表引擎（克拉普顿树，mmap）
+def cert_lookup_L0(x_quant):
+    key = pack_key(x_quant)  # (q_int, v_int, sem_hash) -> u64
+    node = kd_tree_traverse(root, key)  # O(log N) 无分支预测失败
+    val = trilinear_interpolate(node, x_quant.frac)  # 定点插值
+    return unpack_val(val)  # j_star, m_lo[6], T_hold, theta_vec[6]
 
-def watch(M, obs):
-    s = M.step(obs)
-    if s == TRIP:
-        automaton.force(SafeStop)                # 单边可靠：不确定即降级
+# L1: INT8 监控器（QAT 蒸馏部署）
+def monitor_step_INT8(obs_int8):
+    # obs_int8: 量化后的传感器/状态摘要
+    # 模型：3层 MLP，INT8 权重/激活，累加器 INT32，输出反量化到 i16 边际
+    margin_int16 = int8_mlp_forward(model_int8, obs_int8)
+    # 判定：margin_int16 >= theta_int16 ? OK : TRIP
+    status = 'OK' if all(margin_int16 >= theta_int16) else 'TRIP'
+    return status, margin_int16
+
+# L2: 定点 TRI-FUSE 核心（Q15.16）
+def trifuse_predict_int(q16_state, q16_cov_diag):
+    # 协方差对角主导近似：P ≈ diag(p_i)
+    # 状态预测：x' = f(x) + w，雅可比定点近似
+    # 协方差预测：P' = F P F^T + Q → 对角近似 p_i' = f_i^2 * p_i + q_i
+    return q16_x_pred, q16_p_pred_diag
+
+def trifuse_update_int(q16_x_pred, q16_p_pred, meas_int, H_int, R_int):
+    # 卡尔曼增益对角近似：k_i = p_i * h_i / (h_i^2 * p_i + r_i)
+    # 状态更新：x = x_pred + k * (z - H x_pred)
+    # 协方差更新：p_i = (1 - k_i * h_i) * p_i
+    return q16_x_upd, q16_p_upd
+
+# 分布偏移监控（滑窗 1-Wasserstein 近似）
+def drift_monitor(window_trajs, D_sim_hist):
+    # 将轨迹投影到证书相关特征：(margin_min, L_m_est, regime_seq)
+    feat_real = project(window_trajs)
+    feat_sim = D_sim_hist  # 预存仿真特征直方图
+    W1_approx = wasserstein_1d_approx(feat_real, feat_sim)  # O(B) 桶距离
+    return W1_approx
+```
+
+### IP-51/52/53 升级：飞轮感知的自动机与证书栈
+```
+# CAR：迁移修正阈值 + SimValidated 标记
+def car_transition_guard(e, x, cert_obj):
+    theta_real = cert_obj.alpha_e[e] * cert_obj.theta_sim[e]
+    margin = cert_lookup_L0(x).m_lo[e]  # L0 查表得边际下界
+    return margin >= theta_real
+
+# LCS：档位重定义，预算仅含 T-1/T0
+def certify_light_v2(x, guards, budget_us=200):
+    # T-1: L0 查表 (5μs)
+    b = cert_lookup_L0(x)
+    U = undecided_guards(b, guards)
+    if not U: return b, -1  # T-1 决策等价
+    # T0: L1 INT8 监控器 (100μs)
+    if budget_us < 110: return downgrade_monotone(b), -1
+    status, margin = monitor_step_INT8(quantize_obs(x))
+    b.m_lo = margin
+    U = undecided_guards(b, guards)
+    if not U: return b, 0
+    # 预算耗尽 → 单调保守降级
+    return downgrade_monotone(b), 0
+
+# CMC：蒸馏导出后端
+def export_monitor_for_edge(interval_circuit):
+    onnx_model = interval_circuit.to_onnx()
+    qat_model = quant_aware_train(onnx_model, calib_data, L_cert)
+    int8_model = export_int8(qat_model, target='tvm')  # 或 tensorrt/tflite
+    deploy_pkg = {
+        'model': int8_model,
+        'theta_int16': quantize_theta(theta),
+        'wcet_us': benchmark_wcet(int8_model),
+        'ram_kb': model_size(int8_model),
+        'cert_hash': hash(interval_circuit)
+    }
+    return deploy_pkg
 ```
 
 ## 3. 复杂度与正确性
 
-| 组件 | 时间复杂度 | 正确性保证 |
-|---|---|---|
-| IP-51 不变式合成 | O(|E|·cost(post) + |Q|·cost(flow))，离线分钟~小时 | 归纳不变式 ⟹ 安全；模型检验无反例即证 □(unsafe⇒◇̄SafeStop) |
-| IP-51 乘积组合 | O(|Q₁|·|Q₂|)（assume-guarantee 可降） | 守卫合取+Inv 相交保序；simulation 保精化 |
-| IP-52 决策等价 | 每拍 O(档数·|Guard|)，通常 T0/T1 | U=∅ ⟹ 决策与精确证书一致 |
-| IP-52 保持时间 | O(|E|) 维护，事件触发 | |dm/dt|≤L_m ⟹ 期内有效（置信 1−δ） |
-| IP-53 看门狗 | WCET Σw_e；内存 O(|Q|+|E|) | 单边可靠：ok ⇒ 不变式 (1−δ) 成立 |
-| IP-48 采样（升级） | N* 随档位/模式自适应 | 沿用流证书；残差触发 CAR 转移 |
-| IP-49 LIO/ESDF（升级） | 沿用 v17 + L_m 估计 O(|E|) | 漂移界 + 保持时间联合有效域 |
+| 组件 | 时间复杂度 | 空间复杂度 | 正确性保证 |
+|---|---|---|---|
+| IP-54 SCV 压力测试 | 离线：O(|E|·N_traj·T_sim) 可并行 | 仿真日志 O(N_traj) | 经验覆盖率 ≥ 1−δ ⟹ 实机迁移界 α_e 有效（置信 1−δ） |
+| IP-54 迁移界计算 | O(N_calib) 实机标定轨迹 | O(1) | m_real ≥ m_sim − L_m·W_1 ⟹ θ_real = α_e·θ_sim 保 sound |
+| IP-55 CKB 检索 | HNSW: O(log N) + 重排 O(k·d) | 嵌入索引 O(N·d) | Top-k 召回 ≥ 0.95（对比学习保证）；模板合并保守 ⟹ sound |
+| IP-55 差集补全 | O(|Δ|·C_cegar) ≪ O(|X|·C_cegar) | 增量补丁 | CEGAR 在 Δ 上收敛 ⟹ C_new 覆盖全域且 sound |
+| IP-56 L0 查表 | O(log N) + 插值 O(1) < 10μs | 只读表 < 32MB | 网格粒度 δ·L_m ≤ η ⟹ 插值误差 ≤ η，保 sound |
+| IP-56 L1 INT8 监控 | WCET < 100μs（固定层数） | 模型 < 8KB | QAT + L_cert 损失 ⟹ 学生边际 ≥ 教师下界，单调保守性保 sound |
+| IP-56 L2 定点 TRI-FUSE | O(n^2) → O(n) 对角近似 | 状态+协方差 < 2KB | 对角主导近似误差由协方差条件数界出，含入 B_t |
+| IP-56 偏移监控 | O(B) 桶距离，B=100 | 滑窗 100 拍 | W_1 近似偏差 ≤ ε_bucket；触发阈值 τ_drift 含安全裕度 |
+| IP-51 CAR 迁移守卫 | O(|E|) 查表+比较 | 同 L0 | α_e 修正后守卫 ⊇ 真实安全守卫 ⟹ 无漏报警 |
+| IP-52 LCS v2 | 通常 T-1/T0 仅 105μs | 同 L0+L1 | 决策等价停在 T-1/T0 ⟹ 与全量证书决策一致 |
 
-## 4. 实验设计（E73–E78，硬门槛）
+## 4. 实验设计（E79–E86，硬门槛）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E73 自动机正确性 | 归纳不变式验证通过率；反例数；Zeno | 100% 通过；0 反例；有界驻留 |
-| E74 轻量证书延迟 | 每拍证书算力 median/p99 vs 全量栈；档位分布 | 降≥5x；p99<5ms；T0/T1 占比≥80% |
-| E75 决策等价保真 | 轻量决策=全量决策的拍占比 | ≥99.9% |
-| E76 保持时间有效性 | 期内边际真实仍≥阈值比例 | ≥99% |
-| E77 看门狗 WCET/内存 | WCET、内存、误 trip 率 | ≤1ms、≤64KB、误 trip<0.1% |
-| E78 端到端安全-可用 | 不安全事件、Nominal 占比、成功率、恢复时间 | 0 起；Nominal≥70%；成功率≥85%；恢复<2s |
+| E79 Sim-to-Real 迁移 | 实机边际 ≥ α·θ_sim 比例；W_1 估计误差 vs 理论界 | ≥95% 达标；W_1 误差 < 2x 理论界 |
+| E80 L0 查表延迟 | 查表+插值 p99 延迟；内存占用 | < 10μs；< 32MB |
+| E81 L1 INT8 监控器 | WCET、RAM、误 trip 率 vs 浮点 CMC | < 100μs；< 8KB；误 trip < 0.05% |
+| E82 RAG 合成加速 | 合成时间 vs 冷启动；人工确认时间 | 加速 ≥ 20x；人工确认 < 5min |
+| E83 飞轮闭环有效性 | 连续 3 轮偏移触发后，Nominal 占比回升 | 每轮回升 ≥ 5pp，最终 ≥ 80% |
+| E84 端到端低成本部署 | 总算力成本 COT vs 第 41 轮；边缘硬件规格 | 降 ≥ 10x；跑通 Orin Nano / STM32H7 |
+| E85 组合模板检索 | 新技能组合合成时间；乘积自动机验证通过率 | < 30min；100% |
+| E86 长时程鲁棒性 | 100 小时连续运行：不安全事件、可用性、漂移触发次数 | 0 起；Nominal≥80%；漂移触发<5 次/天 |
 
-回退路径：E73 不通过 → 退回 v17 散装触发 + 仅保持时间；E74 不通过 → 仅 T0 + SafeStop 双态；E78 可用性不达标 → 放宽阈值/增设 Degraded 档，而非放弃形式化。
+回退：E79 迁移界失效 → 扩大 Δ_dyn/Δ_sens 重跑 Sim，或回退第 41 轮保守阈值；E80/81 超预算 → 只保 L0 查表 + SafeStop 双态；E82 RAG 无加速 → 关闭检索，退回模板手写；E83 飞轮不收敛 → 人工介入阈值标定，锁定版本。
 
-## 5. 风险与缓解
+## 5. 风险与缓解（增量）
 
 | 风险 | 等级 | 缓解措施 |
 |---|---|---|
-| 可用性崩塌：长期困于 Degraded/SafeStop | 高 | 单调保守只降可用不降安全；Degraded 中间档；E78 以 Nominal 占比守门；阈值在线标定 |
-| 守卫极性错误 → 漏报警 | 高 | 类型级强制「不确定→更保守」；反例测试；CMC 单边可靠性检查 |
-| 乘积自动机状态爆炸 | 中 | assume-guarantee 分解、对称性消减、只对任务相关组合展开 |
-| L_m 过松 → 重认证过频 | 中 | 分段/局部 Lipschitz；事件触发 + 证书缓存；T_hold 前馈调度 |
-| 归纳不变式不可证（过保守） | 中 | CEGAR 抽象精化；失败即退化为经验触发 |
-| 定点/量化看门狗舍入误差 | 低-中 | 保守舍入的区间算术；量化证书项 |
-| 决策等价在边界附近抖动 | 中 | 滞回 + τ_min；把边界拍计入 Watch 而非反复切换 |
+| 仿真偏差累积：W_1 低估导致 α_e 过小，实机静默失效 | 高 | E79 红线实测；域随机化覆盖度指标（参数空间体积覆盖 ≥ 90%）；实机在线 W_1 监控双重保险 |
+| RAG 检索幻觉：高相似度但实则不适用的模板被合并 | 高 | E82 合成审计：每次合成输出差集 Δ 供人工确认；模板带「适用域」显式标注（φ,ψ 范围）；合并前做轻量不一致性检测 |
+| 量化蒸馏破坏单边可靠性：INT8 舍入导致边际低于教师 | 高 | L_cert 损失强制学生 ≥ 教师下界；部署前跑全量验证集（10k 样本）零违例才放行 |
+| L0 查表插值误差在高梯度区超界 | 中 | 网格自适应加密（边际梯度大处细化）；插值误差上界 η 写入证书对象，运行时自动降级 |
+| 飞轮偏移检测抖动：频繁触发 Sim 重跑耗尽预算 | 中 | 触发冷却期 T_cool=1h；偏移统计量用 EWMA 平滑；最小触发间隔硬约束 |
+| 乘积模板检索组合不完整：接口契约不匹配 | 中 | KB 存储接口契约（输入/输出证书变量）；组合前自动契约兼容性检查 |
+| 定点 TRI-FUSE 协方差近似发散 | 低-中 | 对角主导度监控：cond(P) > κ_max 触发重初始化；漂移界 B_t 吸收近似误差 |
 
 ## 6. 本轮最大风险
 
-**一句话**：状态机与轻量化都天然偏向保守，最大风险是**可用性崩塌**——自动机长期滞留在 Degraded/SafeStop，把「可认证」变成「可瘫痪」；因此 E74（成本）与 E78（Nominal 占比）必须联合作守门，安全与可用不可只优化其一。
+**一句话**：Sim-Cert-RAG 飞轮引入了**仿真偏差累积**与**检索幻觉**两条新失效链——若域随机化覆盖不全导致 W_1 低估、或 RAG 检索到不相似模板却高置信合并，证书会在「自信满满」中静默失效，比第 41 轮的显式降级更隐蔽、更致命；因此 E79（迁移界实测）与 E82（RAG 合成审计）必须作为**红线实验**，任何一项不达标即全链路熔断回退。
 <!-- ARTIFACT:END -->
