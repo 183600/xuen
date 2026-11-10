@@ -3,255 +3,262 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 46 轮（承接第 45 轮 v10；本轮灵感：双臂协作 × 传感器融合） · BiFuse-Cert：双臂相对姿态证书 × 认证异步多传感器融合的协作过程保证（四层架构 v11）
+# 第 45 轮（承接第 44 轮 v9；本轮灵感：电池管理 × 深度相机 × 上下文理解） · Energy-Context-Depth：能量感知上下文驱动的深度感知调度与姿态证书联合保证（四层架构 v10）
 
-> 承接第 45 轮 v10 Energy-Context-Depth。v10 用能量租约、上下文预测与深度门控守住了“感知是否可用、姿态证书是否覆盖”，但隐含假设 H5：只有一个操作臂，且各传感器被视作**独立、时间同步、可单独认证**的观测源。UniBot 是双臂平台：抓取-交接-协同搬运中，安全量不再是两个臂各自在世界系里的位姿盒，而是两臂之间的**相对位姿** T_rel；单臂各自 sound 的证书叠加，相对误差仍可能被放大。同时 RGB、深度、关节编码器、力矩/触觉以不同频率与延迟到达，融合结果若未经时间对齐与交叉一致性认证，会给出比真值更窄的半径。两个灵感词精确命中 H5：**双臂协作**把证书对象从“绝对位姿”扩展为“相对位姿 + 闭链一致性”，并让一臂的证书失效级联到另一臂的安全谓词；**传感器融合**把“条件覆盖”升级为“认证融合”，必须同时认证时间对齐、创新一致性与跨源交叉覆盖。二者耦合出新问题：**如何让融合出的相对姿态证书在异步、异构、可能交叉不一致的传感器流下保持 sound，并防止闭链过约束与共模偏差让双臂协作在“两个单臂证书都有效”的表象下静默越界**。
+> 承接第 44 轮 v9 Pose-Cert × Data-Cert。v9 把姿态从点估计升级为分层条件覆盖证书 P_t，数据采集升为带护照的可审计闭环，但隐含假设 H4：感知算力/传感器永远可用且能耗可忽略。UniBot 实机中头部四路 RGB + 双目已存在，部署深度相机可显著提升透明/高光/弱纹理/深度空洞层的可观测性，却带来持续 3-8W 的功耗与热瓶颈；电池余量、任务时长、散热约束会迫使感知被动降级。三个灵感词精确命中 H4：**电池管理**迫使感知决策成为能量租约约束下的资源分配问题；**深度相机**给出可开关的观测性增强手段，其增益是分层且条件性的；**上下文理解**提供对未来可观测性退化的先验，从而实现预测性激活。三者耦合出新问题：**如何在能量租约、姿态证书覆盖保证、上下文预测三者之间做联合最优感知调度，若上下文预测错误或电池骤降，姿态证书会静默失效并级联至安全谓词**。
 
 ## 0. 直觉与动机
 
-**灵感 1（双臂协作 → 相对姿态证书与闭链一致性）**
-直觉：交接水杯时，决定成败的是“两爪相对位置/朝向”，不是各自在世界系里有多准。设两臂端帧 A、B，相对变换 T_rel=T_A^{-1}T_B。世界系独立证书只给保守界 rad(P_rel)≤rad(P_A)+rad(P_B)，在两者共享同一底盘/定位共模误差时，这个界既可能过松（浪费）也可能因错误地假设独立而过窄（危险）。因此必须**直接在相对变换数据上共形校准**相对证书 P_rel，并把闭链约束单独认证：双爪刚性抓同一物体时，T_A^{-1}T_B 应接近固定 T_grasp；若相对证书宽度超过闭链容差 ε_cl，就说明“刚性双臂”假设不成立，必须降级为柔顺或单臂，而不是继续按刚性链放行。
+**灵感 1（电池管理 → 感知能量租约与 fail-closed）**
+直觉：感知不是免费的。把电池余量 B_t 建模为能量租约 ℓ_e = (B_t, P_idle, P_m, τ_e, λ_b)，其中各模态 m ∈ {RGB, Stereo, Depth, Depth+Stereo} 的功耗 P_m 已标定。能量消耗上界 r_e(t)=B_t - ∫P_m dt。若 r_e(t) ≤ B_min 安全阈值，则所有依赖该模态的姿态证书必须级联失效。能量租约与姿态租约并列为根信任的两条腿，任一过期即 fail-closed。
 
-**灵感 2（传感器融合 → 认证融合而非简单融合）**
-直觉：融合不是把协方差一加。真正伤人的是**时间不对齐**与**交叉不一致**：深度帧晚到 30ms，快速运动下直接引入 L_v·ε_ts 的位置误差；某路传感器被遮挡/反光时，其“名义协方差”仍然很小，融合反而被坏源拖窄。认证融合要求四件事同时成立：(a) 每个源的覆盖证书本身有效；(b) 时间对齐误差 ε_ts 有上界并计入半径 r_fuse=r_stat+L_v·ε_ts+r_quant；(c) 创新残差马氏距离超过 χ² 门限即判融合不健康（fail-closed）；(d) 跨源覆盖在独立审计集上校准，而不是用同一融合估计自证。
+**灵感 2（深度相机 → 条件可观测性增益）**
+直觉：深度不是万能。定义深度增益 Δr_ω(m→m+Depth)=r_ω(m)-r_ω(m+Depth) 仅在 ω 属于退化层集合 Ω_deg={透明/高光/弱纹理/空洞/快速运动} 时显著；在普通纹理层深度增益接近 0 且功耗浪费。于是深度相机应被建模为**条件激活的观测性增强器**，其价值 = 证书宽度缩减 × 下游敏感度 / 能耗。
 
-**灵感 3（耦合 → 共模偏差与“自证陷阱”）**
-直觉：双臂和融合共享同一套标定与同一时间基准，误差会**共模**：两臂用了同一条被污染的外参标定，或融合门用融合后的估计去检验融合后的估计，就会“自证正确”。所以认证必须引入**外部独立度量**（如标定板/外部动捕/关节编码器冗余一致性）作为锚点，并让相对证书与融合健康度由不同数据源交叉校验；一旦锚点缺失或共模偏差超阈，双臂协作退化为单臂或保持，而非硬撑。
+**灵感 3（上下文理解 → 预测性激活与风险前置）**
+直觉：不要等退化发生才开深度。上下文理解器 C_t 从 VLM/任务规划/场景语义提取上下文 c_t，预测未来 Δt 内的可观测性分层分布 P(ω_{t+Δt}|c_t, X̂_t)。若预测显示将进入 Ω_deg 且当前姿态租约即将过期，则提前预热深度相机并锁定能量预算。若预测置信低，则保守保持深度开启或直接降级。
 
-**耦合升级**：在 v10 四层架构上插入**相对-融合证书层**，四层 v11：根信任层（姿态租约 ℓ_p + 能量租约 ℓ_e + **融合租约 ℓ_f** + 相对租约 ℓ_r），L1 几何层（单臂盒 P_A/P_B 与相对盒 P_rel 并列），L2 上下文层（上下文同时预测传感器退化与双臂协作阶段），L2.5 融合层（认证时间对齐、创新门、交叉覆盖），L3 CAR（守卫相对证书、闭链一致性、自碰撞与受力裕度），L4 DCL（采集时间失配/融合不一致/共模偏差样本）。一臂或融合任一失效，级联冻结双臂。
+**耦合升级**：在 v9 四层架构上新增 **能量-上下文感知调度层**。ECPS（Energy-Context Perception Scheduler）输出模态决策 m_t^* 与能量租约 ℓ_e，PSE 用 m_t^* 调整 ω_t 分层与 r_ω；DCL 在采集任务中加入能量成本项；CCA 对上下文预测误差做红队。四层 v10：根信任层增加能量租约，L1 几何层感知模态条件化，L2 上下文预测驱动检索键，L3 CAR 守卫加入能量可行性，L4 DCL 覆盖驱动采集带能量预算。
 
-## 1. 形式化定义（增量：定义 54–58）
+## 1. 形式化定义（增量：定义 50–53）
 
-**定义 54（双臂相对姿态证书）**
-端帧 A、B 的位姿 T_A,T_B∈SE(3)，相对位姿 T_rel=T_A^{-1}T_B。相对证书 P_rel⊂SE(3) 若满足
-P( T_rel ∈ P_rel | 融合链有效 ∧ 相对租约 ℓ_r 有效 ) ≥ 1-α_r
-则称其 sound。**性质**：由单臂世界系证书仅得保守三角界 rad(P_rel) ≤ rad(P_A)+rad(P_B)；当两臂共享共模误差时该界不可直接使用，必须用相对变换独立校准的 r_rel 取代。相对租约 ℓ_r=(t_τ,r_rel,ε_cl,τ_r)，超时或超宽即失效。
+**定义 50（能量租约与模态功耗）**
+设电池状态 B_t≥0，模态 m 的瞬时功耗 P_m。能量租约 ℓ_e=(B_t, P_m, τ_e, λ_b, B_min)。剩余能量上界
+E(t)=B_t - P_m·(t-τ_e) - λ_b·(t-τ_e)^2。
+**能量可行判据**：E(t) ≥ E_min(φ) 且 B_t ≥ B_min。失效时所有依赖 m 的姿态证书级联失效。
 
-**定义 55（认证传感器融合与时间对齐）**
-异构流 S_i={(z_i^{(k)},t_i^{(k)})}，频率 f_i、延迟 l_i。选定时间基 t_0 后同步误差 ε_ts=max_i |t_i^*-t_0|，插值/外推速度上界 L_v。融合估计
-x̂=F({z_i,Σ_i},ε_ts)，融合半径
-r_fuse = r_stat + L_v·ε_ts + r_quant，
-**融合 soundness**：P(‖x−x̂‖ ≤ r_fuse) ≥ 1−α_f。
-**创新门**：d²=r^T S^{-1} r ≤ χ²_{1-α_i}；超阈即 fusion_unhealthy。认证融合需同时满足：各源证书有效 ∧ ε_ts≤ε_max ∧ 创新门通过 ∧ 跨源覆盖 q_cross≥1−α_c（在独立审计集上校准）。
+**定义 51（上下文-模态可观测性映射）**
+上下文 c_t ∈ C，模态 m。条件可观测性分布
+P(ω| c_t, m)=Cat(θ_{c,m})。
+深度增益 G_{c,m}(ω)=max(0, r_ω(m)-r_ω(m∪Depth))。
+**预测性分层**：ω̂_{t+Δ}=argmax_ω P(ω|c_t,m)。
 
-**定义 56（双臂闭链一致性与协作证书）**
-双臂刚性共抓物体时闭链约束 T_A^{-1}T_B ≈ T_grasp，残差
-e_cl = log( T_grasp^{-1} T_A^{-1} T_B )。
-**闭链一致性证书**：‖e_cl‖_Σ ≤ ε_cl。若 r_rel>ε_cl/κ，则“刚性双臂”假设不成立，必须切到柔顺或单臂。**协作证书** C_t=(P_rel,e_cl,G_t)，其中 G_t 为受力/触觉融合的力闭合裕度证书（接触力旋量可行域非空）。
+**定义 52（联合姿态-能量证书）**
+联合证书 J_t=(P_t, ℓ_p, ℓ_e, m_t)。**联合 soundness**：
+P( X_t∈P_t | ω_t, m_t, ℓ_e 有效 ) ≥ 1-α_p
+且 E(t)≥E_min。
+**边际转移**：m_true ≥ m̂ - L_φ·rad(P_t) - L_e·(B_min - E(t))_+。
 
-**定义 57（双臂协作联合证书）**
-J^B_t=(P_A,P_B,P_rel,F_t,G_t,ℓ_p,ℓ_e,ℓ_f,ℓ_r,m_t)，F_t 为融合证书（含 ε_ts、d²、q_cross）。**联合 soundness**：
-P( X_t∈P_rel ∧ ‖e_cl‖≤ε_cl ∧ 力闭合 | 融合有效,ℓ_p,ℓ_e,ℓ_f,ℓ_r 有效 ) ≥ 1−α_p−α_r−α_f。
-任一租约失效或共模锚点缺失，即冻结双臂并进入保守保持/单臂。
-
-**定义 58（融合-协作降级策略）**
-动作 a=(sensor_subset, arm_mode)，arm_mode∈{dual_rigid, dual_compliant, single_A, single_B, hold, fail_closed}。效用
-U(a)= [Δrad(P_rel|a)·S_φ] / [c_fuse(a)+c_energy(a)+c_switch]
-约束：J^B 在该模式下可 sound。**单调降级梯子**：dual_rigid → dual_compliant → single_arm → hold → fail_closed，只允许在证书重新覆盖后才单向回升，回升需最小驻留时间防抖。
+**定义 53（上下文驱动深度门控策略）**
+策略 π(c_t, ω_t, B_t)=m_t 满足
+m_t = argmax_{m∈M}  U(m; c_t,B_t)
+U = [ E_{ω~P(·|c_t,m)}[ S_φ(ω)·Δrad(m,ω) ] ] / [ P_m + c_risk·Risk_e(B_t) ]
+且约束 E(t+Δ|m)≥E_min。**风险前置**：若 H(P(ω∈Ω_deg|c_t,m))=0 则强制 m包含Depth 或触发保守姿态盒。
 
 ## 2. 三大新增产出与既有 IP 升级
 
-**IP-66 REL-CERT ENGINE（双臂相对姿态证书引擎）**
-- 相对变换独立共形校准 r_rel（按协作阶段/载荷/速度分层）
-- 世界系单臂盒与相对盒并列签发，共模误差检测
-- 相对租约 ℓ_r 与超宽/超时级联失效
+**IP-63 ECPS（Energy-Context Perception Scheduler）**
+- 能量租约跟踪与预测：滑动窗口功耗估算 + 电池内阻衰减模型
+- 上下文可观测性预测器：VLM→c_t→P(ω|...)
+- 模态效用评估与门控：每 100ms 求解 U(m) 并输出 m_t^*、预热信号
+- 能量-姿态级联失效：ℓ_e 失效→ℓ_p 失效→CAR fail-closed
 
-**IP-67 FUSION-CERT（认证异步多传感器融合）**
-- 认证时间对齐：ε_ts 上界、延迟补偿、插值误差计入 r_fuse
-- 创新门与跨源交叉覆盖：d² 卡方门 + q_cross 独立审计校准
-- 共模锚点：外部标定/动捕/编码器冗余交叉校验；锚点缺失即降级
+**IP-64 DEPTH-CERT ADAPTER**
+- 深度质量分层：有效深度率 ρ_depth、空洞率、噪声 σ_depth
+- 条件半径校准 r_ω(m)：为每种模态组合单独共形校准
+- 深度-姿态联合租约：深度帧率失配导致姿态租约加速过期
 
-**IP-68 COORD-GUARD（双臂协作过程守卫）**
-- 闭链一致性检查 e_cl 与过约束检测
-- 自碰撞盒与力闭合裕度守卫
-- 交接状态机：释放前双证书覆盖、释放后单臂重认证
-- 单调降级梯子与最小驻留防抖
+**IP-65 CONTEXT PREDICTOR**
+- 任务/场景/物体语义→Ω_deg 概率输出
+- 预测置信校准：用独立审计集校准预测覆盖率
+- 错误回灌 DCL：预测失误样本加入采集任务
 
 **既有 IP 升级**
-IP-60 PSE：同时输出 P_A/P_B 与 P_rel，半径按融合链分层
-IP-63 ECPS：模态效用加入融合算力/延迟成本 c_fuse，传感器子集可选
-IP-64 Depth-Cert Adapter：深度- RGB 时间对齐误差计入深度半径
-IP-61 DCL：采集时间失配、融合创新超阈、共模偏差与闭链冲突样本
-IP-62 CCA：新增时间戳注入、帧错位、传感器掉线、共模标定污染红队
-IP-51 CAR：守卫相对证书、ε_ts、d²、e_cl、力闭合与模式一致性
-IP-45 总线：新增 rel-pose-cert / fusion-health / sync-error / closure-residual 话题
+IP-60 PSE：ω_t 依赖 m_t，半径查表 r_ω(m)
+IP-61 DCL：采集效用加入能耗 cost_e
+IP-62 CCA：新增上下文预测红队、能量租约注入测试
+IP-51 CAR：守卫加入 E(t)≥E_min
+IP-45 总线：新增 energy-lease / modality-decision / context-pred 话题
 
 ## 3. 算法骨架
 
-每控制周期：
-1. 读各流时间戳、ℓ_p、ℓ_e、ℓ_f、ℓ_r、当前 arm_mode
-2. 认证融合：估 ε_ts、算 r_fuse、过创新门与跨源覆盖 → F_t
-3. 由融合结果与外部锚点算 T_rel、P_rel、e_cl、力闭合 G_t
-4. 若 F_t 不健康 ∨ ε_ts>ε_max ∨ r_rel>ε_cl/κ ∨ 锚点缺失 → 按定义 58 降级
-5. 在可行模式下选最大效用 a*，签发 J^B_t
-6. CAR 用 J^B_t 守卫；任一租约失效 → 冻结双臂 fail-closed
-PSE 签发相对证书，ECPS 分配传感器子集与能量，COORD-GUARD 决定模式迁移。
+ECPS 每控制周期：
+1. 读 B_t, ℓ_e, c_t, ω_t
+2. 预测 P(ω_{t+Δ}|c_t,m) ∀m
+3. 查 r_ω(m), 计算期望证书宽度缩减
+4. 求解带能量约束的 U(m)，选 m_t^*
+5. 若 m_t^*≠m_{t-1} 发预热/休眠指令并更新 ℓ_e
+6. 若 ℓ_e 失效或预测置信<τ_conf → fail-closed
+PSE 在此基础上签发 P_t(m_t^*)，CAR 用联合证书守卫。
 
 ## 4. 本轮最大风险
 
-**一句话**：双臂与融合共享同一套标定和时间基准，共模偏差会让相对证书与创新门“自证正确”而实际半径被低估，闭链过约束又会在“两个单臂证书都有效”的表象下把误差放大成越界或过力，因此必须用外部独立锚点交叉校验、把 ε_ts 与共模偏差显式计入 r_fuse，并在锚点缺失或闭链残差超阈时单调降级到单臂/保持而非硬撑。
+**一句话**：上下文预测对可观测性退化层的先验会错误引导深度相机开关，若在电池紧张时错误关闭深度导致姿态证书在透明/镜面/深度空洞层静默失效，联合证书的 soundness 将被破坏，能量节约换来安全违例；因此必须以独立审计集校准上下文预测覆盖率并在预测置信不足时默认保守开启深度或直接 fail-closed。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 46 轮产物 · 创新点清单 v23：BiFuse-Cert（Rel-Cert Engine × Fusion-Cert × Coord-Guard）× 双臂相对姿态-认证融合联合证书（四层架构 v11）
+# 第 46 轮产物 · 创新点清单 v23：Memory-Safety-Voice（MVR × VAD × SAB）× 记忆-语音-安全全局决策
 
-> 承接第 45 轮产物 v22。本轮增量插入 IP-66/67/68，并升级 IP-60/61/62/63/64/51/45。不推倒 v10：在根信任层增加融合租约 ℓ_f 与相对租约 ℓ_r，L1 几何层并列签发单臂盒与相对盒，L2 上下文层预测传感器退化与协作阶段，L3 CAR 守卫闭链一致性、时间对齐与力闭合，L4 DCL 采集时间失配与共模偏差样本。
+> 承接第 45 轮产物 v22。本轮增量插入 IP-66/67/68，并升级 IP-63/61/62/51/45。不推倒 v10 能量-上下文-深度框架，新增记忆检索链路与语音-安全交互闭环。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-66 | REL-CERT ENGINE | 新增 | 相对变换 T_rel 独立共形校准、P_rel 与单臂盒并列、共模误差检测、相对租约 ℓ_r |
-| IP-67 | FUSION-CERT | 新增 | 认证时间对齐 ε_ts、创新门 d²、跨源覆盖 q_cross、共模锚点交叉校验、融合租约 ℓ_f |
-| IP-68 | COORD-GUARD | 新增 | 闭链一致性 e_cl、过约束检测、自碰撞/力闭合守卫、交接状态机、单调降级梯子 |
-| IP-60 | POSE-CERT-ENGINE | 升级 | 同时输出 P_A/P_B/P_rel，半径按融合链与协作阶段分层 |
-| IP-63 | ECPS | 升级 | 模态效用加入融合算力/延迟 c_fuse，支持传感器子集选择与共享 |
-| IP-64 | DEPTH-CERT ADAPTER | 升级 | 深度-RGB 时间对齐误差计入深度半径 |
-| IP-61 | DATA-CERT-LOOP | 升级 | 采集时间失配、创新超阈、共模偏差、闭链冲突样本；护照新增 sync_snapshot/closure_residual |
-| IP-62 | CERT-COVERAGE-AUDITOR | 升级 | 时间戳注入、帧错位、传感器掉线、共模标定污染、闭链过约束红队 |
-| IP-51 | CAR | 升级 | 守卫 P_rel、ε_ts、d²、e_cl、力闭合与 arm_mode 一致性 |
-| IP-45 | 总线 | 升级 | rel-pose-cert / fusion-health / sync-error / closure-residual 话题 |
+| IP-66 | MVR Memory-Verify-Respond Scheduler | 新增 | 离线记忆库 kNN 检索、语音指令快速决策复用、能量-上下文惩罚 |
+| IP-67 | VAD Voice-Action Dispatcher | 新增 | 语音槽位解析 + 置信度、需求分布 R(v)、分布式模态激活 |
+| IP-68 | SAB Safety Action Binder | 新增 | 指令-姿态绑定函数 B、强制安全队列 Q_safe、认证姿态恢复检测 |
+| IP-63 | ECPS | 升级 | 输出 m_t 前查询记忆库，记忆命中时跳过实时效用求解 |
+| IP-61 | DCL | 升级 | 语音槽位采集任务计入能量租约，绑定不安全指令的后备模态 |
+| IP-62 | CCA | 升级 | 新增记忆检索偏差审计、语音-姿态绑定覆盖率测试 |
+| IP-51 | CAR | 升级 | B(v_t, P_t) ≤ θ_safe 时 fail-closed；安全队列超时自动撤回 |
+| IP-45 | 总线 | 升级 | memory-query / voice-intent / safety-queue / modality-backup 话题 |
 
 ## 1. 符号体系（增量：定义 54–58）
 
 | 符号 | 含义 |
 |---|---|
-| `T_A,T_B` | 两臂端帧位姿 |
-| `T_rel=T_A^{-1}T_B` | 双臂相对位姿 |
-| `P_rel` / `r_rel` | 相对姿态证书 / 相对半径 |
-| `ℓ_r=(t_τ,r_rel,ε_cl,τ_r)` | 相对租约 |
-| `S_i={(z_i,t_i)}` | 异构传感器流 |
-| `ε_ts` | 时间对齐误差上界 |
-| `r_fuse=r_stat+L_v·ε_ts+r_quant` | 融合半径 |
-| `d²=r^T S^{-1} r` | 创新马氏距离 |
-| `q_cross` | 跨源交叉覆盖 |
-| `ℓ_f=(t_τ,ε_max,α_i,α_c,τ_f)` | 融合租约 |
-| `T_grasp` / `e_cl` | 闭链标称变换 / 闭链残差 |
-| `G_t` | 力闭合裕度证书 |
-| `J^B_t=(P_A,P_B,P_rel,F_t,G_t,ℓ_p,ℓ_e,ℓ_f,ℓ_r,m_t)` | 双臂协作联合证书 |
-| `arm_mode` | dual_rigid/dual_compliant/single_A/single_B/hold/fail_closed |
+| M | 记忆库 M = {(c, ω, B, m, U, outcome)} |
+| kNN(v, c_t, B_t) | 基于语音+上下文+能量的记忆检索 |
+| v_t | 第 t 时刻语音指令 |
+| S(v) | 指令槽位集合 |
+| σ_s | 槽位位置信度 |
+| R(v) | 语音指令→Ω 的需求分布 |
+| KL(R || P) | KL 散度作为不匹配惩罚 |
+| B(v_t, P_t, ω_t) | 指令-姿态安全绑定概率 |
+| θ_safe | 安全阈值 |
+| Q_safe | 安全等待队列 |
+| Π(c, ω, B, v) | 全局决策函数 |
 
 ## 2. 关键算法 伪代码
 
-### IP-67 Fusion-Cert 认证融合
+### IP-66 MVR
 ```
-def certified_fusion(streams, t0, lease_f, calib):
-    # 1) 时间对齐：插值到公共时间基，估同步误差
-    z_al, eps_ts = time_align(streams, t0)
-    if eps_ts > lease_f.eps_max:
-        return FusionState(healthy=False, reason='sync')
-    # 2) 各源证书必须有效
-    if not all(src_valid(s, t0) for s in streams):
-        return FusionState(healthy=False, reason='source_cert')
-    # 3) 融合 + 创新门
-    x_hat, Sigma = gaussian_fuse(z_al)
-    r = innovation(z_al, x_hat)
-    d2 = r.T @ inv(Sigma) @ r
-    if d2 > chi2_threshold(lease_f.alpha_i):
-        return FusionState(healthy=False, reason='innovation', d2=d2)
-    # 4) 跨源交叉覆盖（独立审计集校准）
-    if calib.q_cross < 1 - lease_f.alpha_c:
-        return FusionState(healthy=False, reason='cross_coverage')
-    Lv = calib.speed_bound
-    r_fuse = calib.r_stat + Lv*eps_ts + calib.r_quant
-    return FusionState(healthy=True, x=x_hat, r=r_fuse, eps_ts=eps_ts, d2=d2)
+def memory_lookup(v_t, c_t, B_t, M, tau_hit=0.7, lambda_b=0.1, lambda_c=0.2):
+    best_dist, best_i = inf, None
+    for i, (c_i, B_i, m_i, outcome_i) in enumerate(M):
+        d_cos = 1 - cosine(encode(v_t), encode(c_i))
+        d_enc = lambda_b * max(0, B_t - B_i)
+        d_ctx = lambda_c * kl_div(c_t, c_i)
+        dist = d_cos + d_enc + d_ctx
+        if dist < best_dist:
+            best_dist, best_i = dist, i
+    if best_dist < tau_hit:
+        return M[best_i], best_dist  # 返回历史决策与置信度
+    return None, best_dist
+
+def mvr_schedule(c_t, B_t, v_t, M, calib, S_phi):
+    mem_hit, dist = memory_lookup(v_t, c_t, B_t, M)
+    if mem_hit:
+        m_mem = mem_hit[3]
+        if energy_lease_valid(mem_hit[4], t+Delta, E_min):
+            return m_mem, mem_hit[4], 'memory'
+    # 记忆未命中，回退实时求解
+    m_star = max(M, key=lambda m: modality_utility(m, c_t, B_t, calib, S_phi))
+    return m_star, None, 'realtime'
 ```
 
-### IP-66 Rel-Cert Engine
+### IP-67 VAD
 ```
-def relative_cert(T_A, T_B, fusion, calib, anchor):
-    T_rel = inv(T_A) @ T_B
-    r_world = rad(fusion.r)                    # 世界系保守界
-    r_rel = calib.relative_r[fusion.stage]     # 相对变换独立校准，非三角叠加
-    # 共模检测：外部锚点与融合估计的偏差
-    common_mode = dist(anchor.T_rel, T_rel)
-    if anchor.missing or common_mode > calib.cm_max:
-        return RelCert(sound=False, reason='common_mode')
-    r_rel = max(r_rel, common_mode)            # 共模偏差计入半径
-    P_rel = ball(T_rel, r_rel, metric=calib.metric)
-    lease_r = RelLease(tau=now, r_rel=r_rel, eps_cl=calib.eps_cl)
-    return RelCert(P_rel, lease_r, r_rel, sound=True)
+def parse_voice(v_raw):
+    # ASR + NLU pipeline
+    slots = extract_slots(v_raw)  # [(slot_name, value, confidence)]
+    return [(name, val, conf**2) for name, val, conf in slots]
 
-def rel_lease_valid(lease_r, t):
-    return (t - lease_r.tau) <= lease_r.life and lease_r.r_rel <= lease_r.eps_cl
-```
+def demand_dist(slots):
+    # 从槽位构建 Ω 分布
+    R = zeros(|Ω|)
+    for name, val, conf in slots:
+        if name == 'focus':
+            R[face_region(val)] += conf
+        elif name == 'gesture_target':
+            R[gesture_area(val)] += conf
+    return normalize(R)
 
-### IP-68 Coord-Guard 闭链与降级
-```
-def closure_check(T_A, T_B, T_grasp, cert_rel, calib):
-    e_cl = log(inv(T_grasp) @ inv(T_A) @ T_B)
-    ok = norm(e_cl, Sigma=calib.Sigma_cl) <= calib.eps_cl
-    over = cert_rel.r_rel > calib.eps_cl / calib.kappa
-    return ok and not over, e_cl
+def gumbel_topk(probs, k=3):
+    G = -log(-log(uniform(0,1,len(probs))))
+    scores = probs + G
+    return argsort(scores)[-k:]
 
-def force_closure(tactile, tactile_sigma, calib):
-    W = contact_wrenches(tactile)              # 接触力旋量
-    return convex_hull_contains_origin(W) and margin(W) >= calib.eta_g
-
-def degrade(mode, fusion, cert_rel, closure_ok, g_ok, anchors_ok):
-    # 单调降级：只在证据失效时下移，回升需重新覆盖 + 驻留
-    if not fusion.healthy or not anchors_ok:
-        return 'hold' if mode in ('dual_rigid','dual_compliant') else 'fail_closed'
-    if not closure_ok or not g_ok:
-        return {'dual_rigid':'dual_compliant',
-                'dual_compliant':'single_A',
-                'single_A':'hold','single_B':'hold'}.get(mode, 'hold')
-    return mode
+def vad_dispatch(v_raw, c_t, B_t, calib, S_phi):
+    slots = parse_voice(v_raw)
+    R_v = demand_dist(slots)
+    beta = 1.0
+    log_P_m = []
+    for m in M:
+        kl = kl_div(R_v, P(omega|c_t, m))
+        log_P_m.append(-beta*kl - log(Pm[m]))
+    probs = softmax(log_P_m)
+    m_samples = gumbel_topk(probs, k=3)
+    # 优先选能量可行的最高效模态
+    for m in m_samples:
+        if energy_lease_valid(lease_e.update(Pm[m]), t+Delta, E_min):
+            return m, prob=m
+    return None, None  # 进入安全队列
 ```
 
-### IP-51 CAR 升级守卫
+### IP-68 SAB
 ```
-def car_guard_v7(e, x, certB, persona, lease_p, lease_e, lease_f, lease_r, t):
-    if not (pose_lease_valid(lease_p,t) and energy_lease_valid(lease_e,t,E_min(e))
-            and fusion_lease_valid(lease_f,t) and rel_lease_valid(lease_r,t)):
-        cascade_invalidate('pose_energy_fusion_rel')
-        return FailClosed()
-    r = radius_lookup(x.stratum, certB.m_t, certB.calib)
-    m_pose  = L_phi[e] * r
-    m_rel   = L_rel[e] * certB.P_rel.r
-    m_sync  = L_v[e] * certB.F_t.eps_ts
-    m_energy= L_e * max(0.0, B_min - E(t))
-    m = min(certB.lookup, lease_p.m, persona_cap) - m_pose - m_rel - m_sync - m_energy
-    return m >= theta(e) and certB.mode_consistent
+def safety_bind(v_t, P_t, omega_t, theta_safe=0.85):
+    # g(v) 为语音指令指令的机械臂锚点预测
+    g_v = anchor_from_intent(v_t)
+    g_ref = reference_anchor(P_t)
+    rad = P_t.radius
+    deviation = np.linalg.norm(g_v - g_ref)
+    B_prob = exp(-gamma * rad * deviation)
+    return B_prob
+
+def safety_actionBinder(v_t, m_t, B_t, P_t, omega_t):
+    B_prob = safety_bind(v_t, P_t, omega_t)
+    if B_prob >= theta_safe:
+        return 'execute'
+    else:
+        return 'queue', B_prob  # 进入 Q_safe，等待姿态恢复
+```
+
+### 全局决策 Π
+```
+def global_decision(c_t, omega_t, B_t, v_t, M, calib, S_phi, Q_safe):
+    if Q_safe and not empty(Q_safe):
+        # 先处理安全队列
+        next_cmd = pop(Q_safe)
+        m_t, conf = vad_dispatch(next_cmd.v, c_t, B_t, calib, S_phi)
+        return m_t, 'execute_from_queue'
+    result, status = mvr_schedule(c_t, B_t, v_t, M, calib, S_phi)
+    if result is None:
+        return 'fail-closed', 'energy'
+    B_prob = safety_bind(v_t, pose_certify(result), omega_t)
+    if B_prob < theta_safe:
+        push(Q_safe, v_t)
+        return result, 'queued'
+    return result, status
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| Fusion-Cert | O(Σ|S_i|·d) 每周期 | O(d²) | ε_ts≤ε_max ∧ 各源有效 ∧ d²≤χ² ∧ q_cross≥1−α_c ⇒ P(‖x−x̂‖≤r_fuse)≥1−α_f |
-| Rel-Cert Engine | O(1) SE(3) 运算 | O(1) 查表 | 相对变换独立共形 + 共模上界 ⇒ P(T_rel∈P_rel)≥1−α_r |
-| Coord-Guard | O(K) 接触点 | O(K) | e_cl≤ε_cl ∧ 力闭合裕度≥η_g ⇒ 闭链约束一致、无过约束放行 |
-| 联合证书 J^B | O(1) | O(V+E) | 各租约有效 ∧ P_rel 覆盖 ∧ 闭链一致 ⇒ φ^B 在协作模式 sound |
-| 降级梯子 | O(1) | O(1) | 单调下移 + 回升需重新覆盖 ⇒ 无“未认证回升” |
+| MVR 记忆检索 | O(|M|·d) 每指令 | O(|M|·d_ctx) | 记忆命中时，历史能量/姿态约束复用 ⇒ 决策安全 |
+| VAD 语音解析 | O(d_v) ASR 前向 | O(|slots|·|Ω|) | 槽位置信 ≥ τ_s 则需求分布可信 |
+| SAB 绑定检查 | O(1) | O(1) | B(v_t,P_t) ≥ θ_safe ⇒ 指令安全执行 |
+| 全局决策 Π | O(|M|) | O(|Q|) | 记忆/实时/安全队列三重保障 ⇒ fail-closed 保证 |
 
-正确性定理：若 pose/energy/fusion/relative 四类租约均有效，认证融合满足时间对齐、创新一致与跨源覆盖，相对证书 P_rel 在独立锚点校验下满足定义 54 的条件覆盖，闭链残差满足 ‖e_cl‖_Σ≤ε_cl 且力闭合裕度达标，则双臂协作联合证书 J^B_t 对协作谓词 φ^B 保持 sound；任一条件失效则 Coord-Guard 单调降级或 fail-closed，不发放未认证的双臂执行权。
+正确性定理：设定记忆库 M 的检索距离界限为 τ_hit，绑定阈值为 θ_safe。若 kNN(v_t, c_t, B_t) 命中且历史 outcome=success，则全局决策 Π 输出的 m_t 满足能量租约 ℓ_e 且姿态证书 P_t 在检索时效内有效；若未命中，则 VAD 采用的分布式模态激活在能量约束下有解，SAB 的 B(v_t, P_t) ≥ θ_safe 才能执行。否则进入安全队列或 fail-closed。
 
 ## 4. 实验设计 E109–E114
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E109 相对证书 soundness | 相对位姿越界率；P_rel 条件覆盖率 | 0 起；≥1−α_r |
-| E110 认证融合与同步 | ε_ts 估计误差；创新门漏报率；融合越界率 | <20%；<1%；0 起 |
-| E111 闭链一致性 | 过约束误放行率；e_cl 超阈检出率 | 0 起；≥99% |
-| E112 双臂交接安全 | 掉件/碰撞/过力次数；交接成功率 | 0 起；≥98% |
-| E113 降级与恢复 | 传感器掉线/帧错位下 fail-closed 及时率；误降级率 | ≥99.9%；<5% |
-| E114 100h 双臂闭环 | 协作任务成功率；安全违例；相对证书平均宽度；能耗 | 下降<5%；0 起；≤v10 单臂×1.15；增幅<10% |
+| E109 记忆检索准确性 | 命中率、能量偏差 | 命中率 ≥ 65%；能量偏差 ≤ 5% |
+| E110 语音槽位置信 | σ_s 分布；需求匹配度 | σ_s ≥ 0.9（前 80%）；匹配度 ≥ 85% |
+| E111 语音-姿态绑定 | B(v,P) 分布；执行安全率 | θ_safe=0.85 时安全率 ≥ 99% |
+| E112 全局决策一致性 | 记忆复用次数；实时求解次数 | 记忆占比 ≥ 60%；实时求解 ≤ 40% |
+| E113 能量-安全平衡 | Q_safe 长度；停机次数 | Q_safe 平均长度 ≤ 2；停机 0 起 |
+| E114 100h 全局闭环 | 记忆覆盖率；语音成功率 | 记忆覆盖 ≥ 70%；语音成功率 ≥ 95% |
 
-回退：E110 同步/创新门失效 → 关闭多源融合，回退固定低延迟子集 + 保守半径；E111 闭链误放行 → 禁 dual_rigid，强制 dual_compliant；E113 误降级过高 → 放宽门限并加入驻留滞环；E114 位移越界 → 回退 v10 单臂模式。
+回退策略：E109 记忆覆盖 < 50% → 关闭记忆复用，回退纯实时求解；E111 绑定失败率 > 5% → 提高 θ_safe 或要求语音确认；E113 能量-安全冲突 → 强制 Depth On + fail-closed 模式。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 共模标定/时间基准污染使融合自证正确 | 高 | 外部独立锚点交叉校验 + 共模偏差计入 r_fuse + 锚点缺失即降级 |
-| 闭链过约束把误差放大为越界/过力 | 高 | e_cl 检查 + 超宽禁刚性双臂 + 力闭合裕度守卫 |
-| 时间失配（深度/力矩晚到）导致半径低估 | 高 | ε_ts 上界 + L_v·ε_ts 计入 + 创新门 fail-closed |
-| 双臂频繁降级/回升造成抖动 | 中 | 单调梯子 + 最小驻留 + 滞环 |
-| 相对证书校准数据不足产生族偏差 | 中 | 分阶段共形 + DCL 定向采集 + 独立审计再校准 |
-| 融合算力/延迟挤占控制周期 | 中 | 子集选择 + 异步融合 + 延迟预算纳入 c_fuse |
+| 记忆检索复制历史失败 | 高 | τ_hit 设保守值；历史 outcome=failure 时直接屏蔽该记忆 |
+| 语音槽位置信低导致需求偏差 | 中 | σ_s < τ_s 时进入安全队列，要求二次确认 |
+| 绑定函数 B 计算 g(v) 误差大 | 高 | 用视觉-语音互检：若 B < θ_safe，要求用户重说 |
+| 安全队列能量消耗过大 | 中 | 队列元素按能量成本排序，超时撤回 |
+| 记忆库数据漂移 | 低 | 每月强制重训，剔除历史异常 outcome |
 
 ## 6. 本轮最大风险
 
-**一句话**：双臂与多源融合共享同一套标定与时间基准，共模偏差会让相对证书和创新门“自证正确”而实际半径被低估，闭链过约束又会在“两个单臂证书都有效”的表象下把误差放大成越界或过力；因此必须以外部独立锚点交叉校验、把 ε_ts 与共模偏差显式计入 r_fuse，并在锚点缺失或闭链残差超阈时单调降级到单臂/保持而非硬撑。
+**一句话**：记忆检索可能复制历史上因姿态不稳而“成功但代价高”的感知决策，若在能量紧张时恰好检索到这种记忆，系统会在指令执行时被迫暴力拉伸姿态证书甚至失效，安全交互的绑定失效；因此必须在 kNN 的置信度阈值、绑定函数 B 中引入保守惩罚，并在能量临界时强制屏蔽记忆库，直接走实时求解的保守路径。
 <!-- ARTIFACT:END -->
