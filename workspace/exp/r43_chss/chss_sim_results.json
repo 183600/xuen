@@ -1,0 +1,46 @@
+{
+ "none": {
+  "success": 0.8686666666666667,
+  "collision": 0.13133333333333333,
+  "mean_steps": 37.38933333333333,
+  "mean_steps_success": 40.0
+ },
+ "step": {
+  "success": 0.872,
+  "collision": 0.128,
+  "mean_steps": 39.32266666666667,
+  "mean_steps_success": 42.13149847094801
+ },
+ "chss": {
+  "success": 1.0,
+  "collision": 0.0,
+  "mean_steps": 50.20933333333333,
+  "mean_steps_success": 50.20933333333333
+ },
+ "quiet": {
+  "none": {
+   "mean_steps": 40.0
+  },
+  "step": {
+   "mean_steps": 40.0
+  },
+  "chss": {
+   "mean_steps": 40.0
+  }
+ },
+ "config": {
+  "dt": 0.05,
+  "vmax": 1.2,
+  "chunk": 8,
+  "obs_age_steps": 4,
+  "act_delay_steps": 3,
+  "r_obs": 0.12,
+  "r_robot": 0.06,
+  "obstacle_speed": 0.5,
+  "episodes": 1500,
+  "quiet_episodes": 400,
+  "seed": 20261110,
+  "claim": "under age+delay a delay-unaware step filter buys almost nothing; commit-horizon inflation removes nearly all collisions at a measured step cost, and costs nothing when the path is clear",
+  "not_claimed": "not a real-robot or full-physics benchmark; perception is a perfect track with bounded error"
+ }
+}
