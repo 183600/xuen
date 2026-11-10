@@ -3,336 +3,313 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 49 轮（承接第 48 轮 v12；灵感循环第 4 轮；本轮灵感：安全交互 × 原型验证） · InteractCert-Forge：耦合安全交互证书 × 原型证伪锻造（七层架构 v13）
+# 第 50 轮（承接第 49 轮 v13；灵感循环第 5 轮；本轮灵感：用户共创 × 双足机器人 × 模型蒸馏） · CoStride-Distill：共创契约 × 双足可行证书 × 证书引导蒸馏（八层架构 v14）
 
-> 承接第 48 轮 v12 TaskCert-Compose。v12 把长程任务展开为证书契约 DAG，并用边界守卫 CBG 与只追加台账 CCL 保证“单步 sound 且边界蕴含”，但隐含假设 H7：**安全是机器人自身的属性，交互对象（人/其他 agent）可被当作静态或已知模型；证书库的标定可以在离线分析与最终真机序贯评测中被一次性确证**。UniBot 的真实场景是人机共处（厨房/实验室/家庭）与交接/共融接触任务，安全性本质上是“机器人-人-环境”耦合系统的性质；而证书库的偏差只能被**主动证伪**，不能靠最终评测事后确认。两个灵感词精确命中 H7：**安全交互**要求把安全证书从“单机屏障”升级为“耦合鲁棒屏障 + 人意图不确定 + 接触/功率-力限制 + 交互协议”；**原型验证**要求用分层原型阶梯（仿真→HIL→缩比→全尺寸）主动证伪证书假设，并把原型证据**带传输缺口地**折算成部署置信。耦合出的新问题：**如何定义对任意人行为 robust 的交互安全证书、如何让人意图不确定直接调节证书宽度与动作抽象，并如何用原型证伪证据在部署前把“纸面 sound”与“真实安全”之间的传输缺口显式量化为可审计的置信折损**。
+> 承接第 49 轮 v13 InteractCert-Forge。v13 把安全升级为"机器人-人-环境"耦合屏障证书，用 σ(b) 把意图不确定映射为证书宽度，用原型阶梯与传输缺口 δ 把"纸面 sound"折算为部署置信；但它隐含三个新假设：**H8：动力学是"可停"的——MRC=减速到零，动作空间充分驱动、无混合接触事件；H9：整条七层证书栈可在线实时运行——∃u_r 最坏搜索、联合调度、证伪循环都在安全关键路径上；H10：契约与意图模型由设计者离线一次性写死——人只是被观测的"意图源"而非契约的共同作者**。三个灵感词精确命中：**双足机器人**打破 H8（踝部欠驱动、步态相位不可逆、足底接触是混合事件，mid-stride 无法"停到零"，MRC 必须升级为"认证捕获步回归稳态"，屏障必须升级为带时间边界的混合可行性证书）；**模型蒸馏**打破 H9（把昂贵的"搜索"从安全路径上剥离：teacher 全栈离线/影子运行，student 实时提议，便宜且精确的守卫处置；蒸馏只许近似搜索、永远不许近似评估，因而只损失效率、不损失 soundness）；**用户共创**打破 H10（用户成为能力格约束下的共同签署人：可共创子任务、签署协议变体、在授权范围内放宽速度/幅值偏好、提供演示以加权升级为技能证书；但用户输入是证据而非真值，根信任不可委托）。三者耦合出的新问题：**共创条款必须过双足可行性剪辑（用户要"走快点"必须被捕获域收缩约束）；共创改动必须触发版本钉住的重蒸馏（旧 student 不得在新契约下服役）；蒸馏必须让 100–1000 Hz 的双足安全栈第一次成为可部署物**。
 
 ## 0. 直觉与动机
 
-**灵感 1（安全交互 → 耦合屏障证书，而非单机避障）**
-直觉：传统安全把机器人当成孤立系统做避障，但人机共享空间里真正的危险来自**耦合动力学**——人会突然伸手、会松手、会误判机器意图。因此安全证书应定义在联合状态 `z=(x_r, x_h, x_e)` 上，并且必须是**对人行为 robust** 的：无论人做什么（在合理支撑内），机器人都存在一个动作把系统留在安全集里。这正是“游戏屏障证书”的直觉：安全 = 机器人对人行为的**可响应性**，而非机器人自身的轨迹漂亮。
+**灵感 1（双足机器人 → 从"可停屏障"到"混合可行性证书"）**
+直觉：轮式臂的安全哲学是"随时能停"，CBF 的 `Ḃ≥−λB` 隐含任意时刻存在使屏障不降的动作。双足在单支撑相是欠驱动的：ZMP 必须留在支撑多面体内，摆动腿轨迹在触地前不可中断。因此"安全"必须重述为**可行性**：不是"存在 u_r 使 Ḃ≥0"，而是"存在有界控制序列在 τ 步内把系统送回稳态流形（双支撑静止）且途经所有状态安全"。这正是 viability kernel 的语义；我们要的证书是 kernel 的**内近似**——只对能证明可行的子集发放放行权，宁可保守、绝不假安全。时间维度也变了：双足事故的时间尺度是 100–300 ms，屏障检查必须带 time-to-boundary，超时即不等价于安全。
 
-**灵感 2（安全交互 → 人意图不确定性就是证书宽度/速度的旋钮）**
-直觉：当机器人不确定人想干什么（要接杯子还是路过），唯一安全的做法是**慢下来、拉开距离、降低接触力**。把意图后验 `b(θ)` 的熵做成缩放因子 `σ(b)`，直接压速度、放大分离、限功率力；不确定度越高，越只能选细粒度、保守的动作。这恰好把 v12 的“抽象层级=证书宽度旋钮”延伸到**交互维度**：不确定性不是抽象的附加噪声，而是决定抽象可行域的主变量。
+**灵感 2（双足机器人 → MRC 从"停机"到"捕获"）**
+直觉：对双足，"最小风险条件"不是速度零——mid-stride 急停就是摔倒。正确类比是行人的推撞恢复：识别捕获点、执行捕获步、回到稳定站立；捕获不可行时执行**预先认证的保护姿态**（下蹲收臂、断力、以最不伤姿态落地）。MRC 因此成为**分层可达性问题**：`C_1`（一步捕获）⊇ `C_2`（两步捕获）⊇ 保护姿态域，每个域都预先证书化并定期演练；MRC 的"可达"从"能停"变成"能在 N 步内被捕获"。
 
-**灵感 3（原型验证 → 分层证伪阶梯与传输缺口）**
-直觉：证书里最危险的数字是 `α`，而 `α` 从来不是算出来的，是**被证伪出来的**。真机最终评测太晚、太贵、太稀疏；应当用原型阶梯做**主动证伪**：仿真/数字孪生快速扫场景，HIL 抓执行与力控偏差，缩比抓尺度效应，全尺寸抓真实接触。每一层的“零反例”都不能直接搬到部署，必须扣除**传输缺口** `δ_{ℓ→d}`（分布/动力学/尺度失配）。原型验证不是“跑一遍确认没问题”，而是“用有限预算最大化找到反例”。
+**灵感 3（模型蒸馏 → 提议-处置：蒸馏近似搜索、绝不近似评估）**
+直觉：v13 栈里真正贵的不是**求值**（B、PFL、Inv 是闭式/可验证函数，求值便宜），而是**搜索**：∃u_r 最坏情形枚举、(v,a,m,q,ι,κ) 联合调度、PFV 场景预算分配。蒸馏的正确切口是：teacher（全栈+完整搜索）离线/影子运行，产出"状态→认证候选"标签；student 实时提议候选；**精确守卫**只对候选做 O(小) 的证书求值。学生的错误最多让你走上回退路径（效率损失），永远不能让未认证动作被执行——放行权只在精确守卫手里。这条"提议-处置"结构把蒸馏从"精度风险"变成"可用性风险"，是安全蒸馏的关键不对称。
 
-**灵感 4（耦合 → 交互协议契约与最小风险条件）**
-直觉：交接、共融、物理引导都是**双人舞**，单方假设不算共识。必须把交互写成协议状态机（approach→offer→accept→transfer→verify→release），每个状态带屏障/PFL 不变式，状态切换需要**可观测的双方确认**；一旦确认缺失或不变式将破，就进入最小风险条件（MRC）——减速到零、退到已知安全构型、声明 abort，绝不“先做再补证”。
+**灵感 4（用户共创 → 能力格上的共同签署，而非众包真值）**
+直觉：v13 把 α_intent 列为最大信任锚，因为意图是被动的后验。共创的正确打开方式不是"信用户"，而是让用户把意图**变成签署过的承诺**（"把杯子放到我左手边"/"我接受交接协议 B"/"允许你在我厨房走快一档"），用可观测的后续行为校验承诺兑现率（track record → 证据权重 ω_u），未兑现即降权并回到 σ(b) 硬下界。关键约束：用户权威必须落在**能力格**上（空间域×参数类别×幅值上界的偏序格），PFL、屏障类别、MRC 属根信任**不可委托**；"走快点"这类条款要被双足可行性**剪辑**——快步态收缩捕获域，剪辑后的值才生效。用户是"有格子的共同作者"，不是"新的根"。
 
-**耦合升级**：在 v12 六层上新增 **L2.5 交互安全层 SIC/协议** 与 **L6 原型证伪层 PFV/XFER**，并把 `σ(b)` 与人意图信念并入 L3 的联合决策。七层 v13：根信任（ℓ_p, ℓ_e, ℓ_k）+ L1 几何感知 + L2 任务分解/上下文/记忆/语音 + L2.5 交互安全（屏障证书/意图信念/PFL/协议）+ L3 关节证书/动作空间抽象/交互感知决策 + L4 CAR/Shield/边界守卫 + L5 DCL/真机序贯评测 + L6 原型证伪与传输。JCPS 联合输出升级为 `(v_t^*, a_t^*, m_t^*, q_t^*, ι_t)`（分解节点、抽象、模态、构型、交互模式）。
+**灵感 5（模型蒸馏 × 原型证伪 → 反例共蒸馏与学习证伪器）**
+直觉：PFV 的预算永远不够；把历史反例与守卫拒绝样本蒸馏成**学习证伪器** LFF（预测证书薄弱区域），由它给场景分布提优先级，精确证伪器仍然只负责"定罪"。新反例同时回灌 LFF 与 student（把"守卫会拒绝的行为"提前教学生避开），形成"证伪—教学"共蒸馏闭环。LFF 的错误只浪费预算，不产生假阴性放行——因为它无权放行任何东西。
 
-## 1. 形式化定义（增量：定义 71–78）
+**耦合升级**：v13 七层之上新增 **L3.5 动力可行层（HVC/CRM）** 与跨层**蒸馏通道（KDX/LFF，版本钉住）**，L2.5 升级为**交互安全与共创契约层（IPC+UCC）**。八层 v14：根信任+用户能力格 + L1 几何感知 + L2 任务分解/上下文/记忆/语音（语音共创入口）+ L2.5 交互安全与共创契约 + L3 关节证书/抽象/交互感知决策 + L3.5 动力可行（混合可行性/捕获）+ L4 CAR/Shield/CBG+/KDX 守卫 + L5 DCL/真机评测（新增分歧日志）+ L6 原型证伪/XFER/LFF。JCPS 联合输出升级为 `(v_t^*, a_t^*, m_t^*, q_t^*, ι_t, κ_t)`（κ=步态相位/捕获状态/运动模式）。
 
-**定义 71（耦合交互系统与交互安全证书）**
-交互系统 `Σ=(X_r, X_h, X_e, U_r, U_h, f, Z_safe)`，联合状态 `z=(x_r,x_h,x_e)∈Z`，安全集 `Z_safe⊂Z`。交互安全证书是可微函数 `B: Z×B_Θ→ℝ`（`B_Θ` 为意图信念空间），满足：(i) `B(z,b)≥0 ⇒ z∈Z_safe`（内近似）；(ii) 对信念支撑内任意人动作 `u_h∈supp(π_h(·|z,b))`，存在机器人动作 `u_r∈U_r` 使 `Ḃ(z,b)+λB(z,b)≥0`（鲁棒屏障条件）。即 `B` 是“对人行为 robust 的受控不变集”证书；信念支撑扩张时零超平面收缩、安全集变小。
+## 1. 形式化定义（增量：定义 79–86）
 
-**定义 72（意图信念与不确定性感知的安全缩放）**
-`b(θ)` 为意图 `θ`（“要接杯/将松手/只是路过”）的后验；`H(b)` 为其熵，`w(b)=max_{θ∈supp_ε(b)} risk(θ)` 为最坏支撑风险。定义缩放因子 `σ(b)=σ_min+(σ_max−σ_min)·(1−H(b)/H_max)`，并施加 `v≤σ(b)v_max`、`d_sep≥d_min/σ(b)`、`F≤σ(b)F_max`。抽象选择时，粗动作要求更高 `σ(b)`（更确定）；`σ(b)` 低于阈值即强制细化到 primitive 或停止。不确定性因此被直接映射为证书宽度。
+**定义 79（能力格与共创契约）**
+权威格 `L_auth=(𝒜,⊑)`，每个授权范围 `s∈𝒜` 为三元组（空间域 × 参数类别 × 幅值上界），满足偏序与闭包。共创契约 `κ_c=(s, clause, Sig_u, Sig_designer, ver)` 合法当且仅当：(i) `clause ⊑ s.cap`（不超能力格）；(ii) `clause` 与根信任不变式（PFL、屏障类别、MRC、审计）无冲突——**不可委托条款**不参与放宽；(iii) 双签署（用户+设计者模板）且版本 `ver` 钉入台账。用户证据权重 `ω_u=clamp(ω_0·adherence(u), ω_min, ω_max)`，`adherence` 为历史签署承诺兑现率（由 DCL 统计）；权重下降自动回到 σ(b) 硬下界治理。**用户输入永远按证据处理，不是真值。**
 
-**定义 73（接触模式与功率-力限制证书）**
-接触状态机 `M_c:{free, approach, contact, loaded, release}`。功率-力限制证书 `PFL=(F_max(v), P_max, τ_det)`：在 contact/loaded 模式必须满足 `F(t)≤F_max(v(t))`、`P(t)≤P_max`，接触检测延迟 `≤τ_det`；free→contact 转换必须经过 approach 阶段，满足准静态速度上界 `v_app` 与预接触屏障 `B_contact≥0`。任一违反即触发 MRC。
+**定义 80（双足混合可行系统与可行性证书）**
+双足系统 `Σ_b=(Q_m, X, U_b, f_q, G_q, R_q)`，模式集 `Q_m={flight, single, double}`，接触事件经守卫 `G_q` 与重置 `R_q`；执行器有界 `‖u‖≤u_max`，摩擦锥有界。可行集 `V(T)= {z_0: ∃ 有界控制轨迹使 ∀t≤T z(t)∈Z_safe 且 z(T)∈M_stand}`（稳态流形 M_stand=双支撑静止）。可行性证书 `B_v: Z×Q_m→ℝ` 满足 `B_v(z,q)≥0 ⇒ z∈C_cert ⊆ V(T)`（**内近似**）；求值器经离线验证（SMT/区间算术/数值边界检验）且在线求值成本 ≤ τ_eval（**成本被认证**）。放行附加时间边界：`time_to_boundary(z) ≥ τ_ttb_min`。
 
-**定义 74（交互协议契约）**
-交接/共融协议 `π=(Q, q_0, →, Inv, Commit)`，`Q={approach, offer, human_accept, transfer, verify, release, abort}`。每个状态携带不变式 `Inv(q)`（含屏障与 PFL 约束）与双方承诺 `Commit(q)`（可观测的人意图证据 + 机器人自身承诺）。转换 `q→q'` 要求 `Inv(q)` 成立且收到人确认信号（视觉/力/语音多模态），否则保持或转入 `abort→MRC`。**安全交接 = 双方对当前模式达成可观测共识，单方假设不算数**。
+**定义 81（捕获域与双足 MRC）**
+k 步捕获域 `C_k={z: ∃ ≤k 步控制序列将 z 送回 M_stand，且途经状态满足 B_v≥0 ∧ PFL}`，按包含 `C_1⊆C_2⊆…⊆C_max⊆C_cert`。双足 MRC 分层：`z∈C_1` 执行认证一步捕获；`z∈C_2\C_1` 两步；`z∉C_max` 执行**认证保护姿态**（预下蹲、收臂、断力、落地缓冲），其轨迹离线证书化并定期真机演练。捕获执行误差（打滑/推力超出认证扰动集）计入 `α_cap`。轮式/固定基座平台 MRC 退化为 v13 的"减速到零"，CRM 是其严格超集。
 
-**定义 75（原型阶梯与证书证伪算子）**
-原型阶梯 `P_0⊂P_1⊂…⊂P_n`（仿真/数字孪生、HIL、缩比、全尺寸）。证伪算子 `Falsify(B,π,budget)` 在场景分布 `S`（含人行为对抗、接触事件、传感退化）中搜索使 `Inv` 或 `B` 违反的轨迹，返回反例集 `E` 与覆盖 `cov(E)`。原型层 `ℓ` 的失效概率上界 `α_ℓ` 由证据用 e-process/置信上界估计；证据不足时取保守先验。
+**定义 82（证书引导蒸馏）**
+teacher `𝒯`=完整 v14 栈（含完整搜索）；student `s_φ: (o,ctx)→候选 (u_r, a, m, q, ι, κ步序)`。训练数据 = teacher 认证 rollout + PFV 反例 + 守卫拒绝样本；损失 = 认证标签模仿项 + **可行域裕量项**（以 teacher 的证书裕量为回归目标）+ 分歧惩罚。**蒸馏只允许逼近搜索算子；证书求值算子（B、B_v、PFL、Inv、版本哈希）禁止被近似替代**——这是架构红线，不是超参。
 
-**定义 76（原型-部署传输缺口与置信膨胀）**
-层级 `ℓ` 的证据迁移到部署 `d` 存在分布/动力学/尺度失配，定义传输缺口 `δ_{ℓ→d}≥0`（用对抗式域差异、双仿真差异或实测对标估计）。部署有效失效项 `α_d ← α_ℓ + δ_{ℓ→d}`。只有 `δ` 被新证据收紧时才允许下调保守度；**禁止把原型“零反例”当作部署零风险**。
+**定义 83（提议-处置守卫）**
+精确守卫 `G_exact` 在实时预算 τ_g 内对候选执行全部精确求值（屏障/可行性/PFL/协议不变式/共创版本哈希/租约），全部通过才放行；否则依次回退：更多候选 → 限量完整搜索 → CRM。`G_exact` 的求值成本被离线认证（cost-certified）并有运行时看门狗（超预算即强制安全慢模式）；学生提议频次受限以防"守卫抖动"。学生误差只改变所走路径（fast/fallback/MRC），不改变放行标准——**蒸馏损失的是可用性，不是 soundness**。
 
-**定义 77（交互感知的联合决策与 MRC）**
-扩展 JCPS 的联合决策为 `(v,a,m,q,ι)`，`ι` 为交互协议状态/模式。约束加入 `B(z,b)≥0`、`PFL`、`σ(b)` 缩放与 `Inv(ι)`；安全可行性是硬约束，效率只在可行域内优化。若不存在可行组合，转入**最小风险条件 MRC**：减速到零、进入已知安全 hold 构型、声明 abort 并等待人确认/人工接管；MRC 自身也须屏障证书保证可达与安全。
+**定义 84（学习证伪器与反例共蒸馏）**
+`LFF_ψ: 场景→违规概率/薄弱区域`，由历史反例与守卫拒绝样本训练；PFV 预算按 LFF 优先级分配；只有**精确证伪器**能判定违规（定罪权不蒸馏）。新反例同时更新 LFF 与 student（共蒸馏）。LFF 只影响预算分配效率，其假阴性不产生放行。
 
-**定义 78（交互/原型证据的只追加记录与六源归因）**
-CCL 扩展为 `CCL+`，记录交互事件（人确认、接触、力峰值、MRC 触发）与原型证伪反例哈希。边界 gap 归因分解为感知/关节/边界/意图/接触/传输六类来源；任一来源的置信折损必须显式写入台账并参与后续抽象与速度缩放，不得被静默吸收。
+**定义 85（共创-版本-再蒸馏一致性）**
+每次守卫检查携带契约版本哈希 `h(κ_c)`；契约变更触发 teacher 重解 → 重蒸馏 → **再认证**（在守卫集上零违例 + held-out 认证场景回归通过）方可服役；版本不匹配的学生候选一律被 `G_exact` 拒绝（fail-closed），旧学生不得在新契约下执行。
+
+**定义 86（账本与八源归因）**
+`CCL++` 在 `CCL+` 上追加：共创签署/剪辑事件、捕获步与保护姿态事件、学生-守卫分歧与回退、LFF 定罪反例哈希；DDA 归因扩为**八源**：感知/关节/边界/意图/接触/传输/**动力（可行·捕获）**/蒸馏（分歧与服务降级）。任一来源的置信折损显式入账并参与抽象与速度缩放，不得静默吸收。
 
 ## 2. 新增产出与既有 IP 升级
 
-**IP-79 SIC（Safe-Interaction Certificate）**：耦合鲁棒屏障证书；联合状态空间上构造 `B(z,b)`，支持“∀人动作 ∃机器动作”的屏障判定与安全集内近似。
-
-**IP-80 SIG（Safety-Interaction Governor）**：意图信念 + 不确定性缩放 `σ(b)`；把熵/最坏支撑风险映射为速度、分离、接触力上界，并向抽象选择暴露可行性阈值。
-
-**IP-81 PFC（Power-Force & Contact Certificate）**：接触状态机与功率-力限制证书；approach 准静态约束、接触检测延迟、free↔contact 转换屏障。
-
-**IP-82 IPC（Interaction Protocol Contract）**：交接/共融协议状态机；每状态不变式 + 双方可观测承诺；缺确认即 abort→MRC，禁止单方推进。
-
-**IP-83 PFV（Prototype Falsification & Validation）**：原型阶梯与证伪算子；按预算最大化反例与场景覆盖，产出分层证据集 `E_ℓ`。
-
-**IP-84 XFER（Transfer-Gap Estimator & Confidence Inflation）**：估计 `δ_{ℓ→d}` 并把原型证据折算为部署 `α_d`；无收紧证据时保持膨胀。
-
-**IP-85 MRC（Minimal Risk Condition Controller）**：受证书保证的硬回退；减速到零、退安全构型、声明 abort 并等待接管。
+**IP-86 UCC（User Co-creation Contract）**：能力格 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权、版本钉住。
+**IP-87 HVC（Hybrid Viability Certificate）**：双足混合可行性证书；`B_v` 内近似 + 时间边界 + 成本认证的求值器。
+**IP-88 CRM（Capture-Region MRC）**：分层捕获域 `C_1⊆C_2⊆C_max` + 认证保护姿态；v13 MRC 的严格超集。
+**IP-89 KDX（Certificate-guided Distillation eXecutive）**：提议-处置执行器；teacher 离线/影子、student 实时提议、G_exact 精确处置、分歧与回退入账。
+**IP-90 LFF（Learned Falsifier Front-end）**：学习证伪器；给 PFV 提优先级、反例共蒸馏、无定罪权。
 
 **既有 IP 升级**
-IP-74 HTD-Cert：分解 DAG 节点可含交互子任务，边蕴含同时检查交互契约 `Inv/Commit`。
-IP-75 ASC：抽象可行性加入 `B(z,b)≥0` 与 `σ(b)` 门槛；高不确定度强制细化。
-IP-78 CBG：边界守卫同时复核屏障证书、PFL 与协议状态，任一不满足即 hold/再分解/MRC。
-IP-76 CCL：升级为 `CCL+`，记录交互事件、人确认与原型反例哈希，仍只追加。
-IP-77 DDA：gap 归因扩为六源，意图/接触/传输来源可触发再规划或重校准。
-IP-72 RRP：组合 e-process 增加“交互安全证据 + 原型分层证据”，跨层传输带 `δ`。
-IP-61 DCL：新增人行为近失、接触峰值、MRC 触发、原型反例四类高价值样本。
-IP-62 CCA：新增人行为对抗、意图欺骗、接触突袭、原型-部署迁移攻击红队。
-IP-51 CAR：守卫条件加入屏障成立 ∧ PFL 成立 ∧ 协议共识 ∧ ledger 审计通过。
-IP-45 总线：新增 interaction-state / intent-belief / contact-mode / prototype-evidence 话题。
-IP-66/67/68：记忆/语音指令必须合法映射到协议状态与分解节点；交互队列等待双方确认。
+IP-82 IPC：协议状态新增共创签署转换（用户可签协议变体）；确认信号纳入签署证据。
+IP-80 SIG：意图后验升级为"后验 + 已签承诺"的锐化混合 `b'(θ)∝b(θ)·(1+ω_u·c_θ)`；σ 硬下界不动。
+IP-79 SIC：联合状态扩为 `z=(x_r,x_h,x_e,κ)`，屏障条件与步态相位耦合；∀人动作∃机器序列（而非单步动作）。
+IP-85 MRC：升级为 CRM 兼容——轮式臂=停机，双足=捕获/保护姿态；MRC 触发一律入 CCL++。
+IP-83 PFV：预算分配接入 LFF；原型阶梯对双足加入滑移/推撞/柔顺地面注入。
+IP-84 XFER：传输缺口估计加入"动力学保真"维度（双足原型对打滑与推力的对标）；学生跨层迁移同样带 δ。
+IP-77 DDA：六源 → 八源（+动力、+蒸馏）。
+IP-61 DCL：新增学生-守卫分歧、捕获事件、共创承诺未兑现、滑移近失四类样本。
+IP-62 CCA：新增越权共创、承诺欺骗、步态时机欺骗、对抗性提议（student DoS/守卫抖动）红队。
+IP-51 CAR：守卫条件加入"精确求值通过 ∧ 版本哈希匹配 ∧ 求值看门狗正常"。
+IP-45 总线：新增 locomotion-mode / capture-state / contract-version / student-guard-disagreement 话题。
+IP-66/67/68：语音成为共创入口（签署/修改条款需多模态身份确认）；记忆存储契约版本历史；SAB 队列对共创请求走双签署流程。
+IP-75 ASC：抽象可行性加入 κ（步态相位）与捕获域约束；高不确定或窄捕获域强制细化。
+IP-74 HTD-Cert：分解节点可含步态子任务（"走到灶台前"= 可行性证书节点）；边蕴含同时查捕获可达。
+IP-72 RRP：e-process 纳入可行性/捕获/共创证据；跨层传输仍带 δ。
+IP-76 CCL：升级为 CCL++（见定义 86），仍只追加。
 
 ## 3. 算法骨架
 
 每个宏周期：
-1. 读目标、当前证书 `C_t`、租约、`CCL+`；任一租约失效或台账审计失败 → fail-closed。
-2. HTD-Cert 展开/复用证书 DAG；对前沿 v 求 `Pre_v/Pre_next`，标注需交互的子任务与协议状态 `ι`。
-3. 更新意图信念 `b(θ)`，计算 `H(b), w(b), σ(b)`；若 `σ(b)` 低于阈值则只保留 primitive 或直接 MRC。
-4. SIC 在联合状态上求屏障可行集，SIG 施加速度/分离/力缩放，PFC 检查接触模式与 PFL；JCPS 在 `(v,a,m,q,ι)` 上求最粗可行组合。
-5. 执行前后由 CBG 复核边界蕴含、屏障、PFL 与协议共识；通过才执行并追加 `CCL+` 条目；协议转换须记录双方确认证据。
-6. 若实测违反屏障/PFL/协议或边界 gap：DDA 六源归因，选最早安全点再分解或重校准；必要时 MRC。
-7. 离线/并行由 PFV 在原型阶梯上按预算证伪，XFER 估计 `δ` 并膨胀部署 `α`；新反例回灌 DCL/CCA，触发保守度上调。
-8. 所有抽象、协议与原型证据均不可行 → 技能合成 / 人工接管 / fail-closed，绝不绕过交互安全层。
+1. 读目标、证书 `C_t`、租约、`CCL++`、契约版本哈希 `h(κ_c)`；任一失效或审计失败 → fail-closed。
+2. HTD-Cert 展开/复用 DAG；前沿节点标注交互子任务（协议状态 ι）与步态子任务（捕获约束 κ）。
+3. 更新意图信念：`b'(θ)` = 后验 × 已签承诺（ω_u 加权）；计算 `H(b'), σ(b')`；σ 低于阈值只保留 primitive 或 CRM。
+4. UCC 校验新增共创条款：能力格 + 不可委托 + 双签署；通过则更新契约并触发 teacher 重解/重蒸馏（异步）；旧版本学生即刻失效。
+5. KDX 提议-处置：student 提议候选 (u_r,a,m,q,ι,κ)；`G_exact` 精确求值 B/B_v/PFL/Inv/共识/版本/租约；通过才执行；否则更多候选 → 限量完整搜索 → CRM。
+6. HVC 维持可行性内近似：步态相位推进时复核 `B_v≥0` 与 time-to-boundary；接近边界即触发捕获准备。
+7. 执行前后 CBG+ 复核边界蕴含 ∧ 屏障 ∧ 可行性 ∧ PFL ∧ 协议共识 ∧ 版本匹配；通过才追加 CCL++。
+8. 若实测违反（含滑移/推撞/捕获失败）：DDA 八源归因，选最早安全点再分解/重校准/再蒸馏；必要时 CRM。
+9. 离线/并行：PFV+LFF 按预算证伪，XFER 估计 δ 并膨胀部署 α；新反例回灌 DCL/CCA 并共蒸馏 student 与 LFF。
+10. 所有路径（抽象、协议、共创、蒸馏）均不可行 → 技能合成 / 人工接管 / 保护姿态 / fail-closed，绝不绕过 L3.5 与精确守卫。
 
 ## 4. 本轮最大风险
 
-**一句话**：安全保证会从“机器人”迁移到两个未经验证的信任锚——**人意图模型**与**原型代表性**；一旦意图信念失准（真实人行为落在支撑外）或原型不具代表性（传输缺口 `δ` 被低估），耦合屏障证书就会“纸面 sound、现实不安全”，因此意图不确定必须驱动硬保守缩放与可证 MRC，原型证据必须带传输缺口膨胀并持续证伪，绝不能把“原型零反例”当成部署证明。
+**一句话**：安全论证现在悬挂在一个新的承重假设 (A11) 与两个新的近似锚上——**"便宜且精确"的守卫求值**、**可行性内核 C_cert 与捕获策略的保守性**、**用户授权不被滥用**；一旦求值在真机超预算或被静默近似替代，或内核/捕获对打滑与未认证扰动过于乐观，或共创条款越过能力格，propose–dispose"只损失效率不损失 soundness"的不对称就会崩塌成"纸面 sound、现实不安全"，因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 49 轮产物 · 创新点清单 v26：InteractCert-Forge（SIC × SIG × PFC × IPC × PFV × XFER × MRC）× 耦合安全交互证书与原型证伪锻造
+# 第 50 轮产物 · 创新点清单 v27：CoStride-Distill（UCC × HVC × CRM × KDX × LFF）× 共创契约、双足可行证书与证书引导蒸馏（八层架构 v14）
 
-> 承接第 48 轮产物 v25。本轮增量插入 IP-79/80/81/82/83/84/85，并升级 IP-74/75/76/77/78/72/61/62/51/45/66/67/68。不推倒 v12 证书契约分解与边界台账框架，新增 L2.5 交互安全层与 L6 原型证伪层；交互维度（意图不确定、接触、协议）并入 L3 联合决策。第 4 轮灵感循环聚焦 H7：安全不是单机属性，证书也不能靠最终评测一次性确证。
+> 承接第 49 轮产物 v26。本轮增量插入 IP-86/87/88/89/90，并升级 IP-82/80/79/85/83/84/77/61/62/51/45/66/67/68/75/74/72/76。不推倒 v13 耦合安全交互与原型证伪框架；新增 L3.5 动力可行层与跨层蒸馏通道，L2.5 升级为交互安全与共创契约层。第 5 轮灵感循环聚焦 H8/H9/H10：动力可停性、全栈在线实时性、契约作者单一性。核心不对称：**蒸馏只许近似搜索、绝不近似评估——学生误差损失可用性，不损失 soundness**。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-79 | SIC Safe-Interaction Certificate | 新增 | 联合状态 `z=(x_r,x_h,x_e)` 上的鲁棒屏障证书；∀人动作∃机器动作 |
-| IP-80 | SIG Safety-Interaction Governor | 新增 | 意图信念熵/最坏支撑 → 缩放 `σ(b)`，压速度/分离/力 |
-| IP-81 | PFC Power-Force & Contact Certificate | 新增 | 接触状态机 + 功率-力限制 + 接触检测延迟约束 |
-| IP-82 | IPC Interaction Protocol Contract | 新增 | 交接/共融协议；状态不变式 + 双方可观测承诺 |
-| IP-83 | PFV Prototype Falsification & Validation | 新增 | 原型阶梯 + 证伪算子；预算内最大化反例与覆盖 |
-| IP-84 | XFER Transfer-Gap & Confidence Inflation | 新增 | 估计 `δ_{ℓ→d}` 并把原型证据折算为部署 `α_d` |
-| IP-85 | MRC Minimal Risk Condition Controller | 新增 | 受证书保证的硬回退；减速/退安全构型/声明 abort |
-| IP-74 | HTD-Cert | 升级 | 分解节点含交互子任务；边蕴含同时查交互契约 |
-| IP-75 | ASC | 升级 | 抽象可行性加入屏障与 `σ(b)` 门槛；高不确定强制细化 |
-| IP-76 | CCL | 升级 | `CCL+` 记录人确认、接触、MRC、原型反例哈希 |
-| IP-77 | DDA | 升级 | gap 六源归因：感知/关节/边界/意图/接触/传输 |
-| IP-78 | CBG | 升级 | 复核边界蕴含 ∧ 屏障 ∧ PFL ∧ 协议共识 |
-| IP-72 | RRP | 升级 | e-process 纳入交互安全与原型分层证据，跨层带 `δ` |
-| IP-61 | DCL | 升级 | 采集人行为近失/接触峰值/MRC/原型反例样本 |
-| IP-62 | CCA | 升级 | 人行为对抗/意图欺骗/接触突袭/迁移攻击红队 |
-| IP-51 | CAR | 升级 | 守卫加入屏障 ∧ PFL ∧ 协议共识 ∧ 台账审计 |
-| IP-45 | 总线 | 升级 | interaction-state / intent-belief / contact-mode / prototype-evidence |
-| IP-66/67/68 | MVR/VAD/SAB | 升级 | 指令映射到合法协议状态/分解节点；队列等待双方确认 |
+| IP-86 | UCC User Co-creation Contract | 新增 | 能力格授权 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权 ω_u |
+| IP-87 | HVC Hybrid Viability Certificate | 新增 | 双足混合可行性证书；B_v 内近似 + time-to-boundary + 成本认证求值器 |
+| IP-88 | CRM Capture-Region MRC | 新增 | 分层捕获域 C_1⊆C_2⊆C_max + 认证保护姿态；v13 MRC 的严格超集 |
+| IP-89 | KDX Cert-guided Distillation eXecutive | 新增 | 提议-处置：student 提议、G_exact 精确处置；版本钉住、回退入账 |
+| IP-90 | LFF Learned Falsifier Front-end | 新增 | 学习证伪器提 PFV 预算优先级；反例共蒸馏；无定罪权 |
+| IP-82 | IPC | 升级 | 协议新增共创签署转换；确认信号纳入签署证据 |
+| IP-80 | SIG | 升级 | b' = 后验×已签承诺（ω_u 锐化）；σ 硬下界不动 |
+| IP-79 | SIC | 升级 | 联合状态扩 κ；∀人动作 ∃机器**序列**（捕获可达） |
+| IP-85 | MRC | 升级 | CRM 兼容：轮式臂=停机，双足=捕获/保护姿态 |
+| IP-83 | PFV | 升级 | LFF 提优先级；双足阶梯加滑移/推撞/柔顺注入 |
+| IP-84 | XFER | 升级 | δ 增动力学保真维度；学生跨层迁移同样带 δ |
+| IP-77 | DDA | 升级 | 六源 → 八源（+动力、+蒸馏） |
+| IP-61 | DCL | 升级 | 采集学生-守卫分歧/捕获事件/承诺未兑现/滑移近失 |
+| IP-62 | CCA | 升级 | 越权共创/承诺欺骗/步态时机欺骗/对抗性提议红队 |
+| IP-51 | CAR | 升级 | 守卫加"精确求值 ∧ 版本匹配 ∧ 看门狗正常" |
+| IP-45 | 总线 | 升级 | locomotion-mode / capture-state / contract-version / student-guard-disagreement |
+| IP-66/67/68 | VAD/MVR/SAB | 升级 | 语音=共创入口（多模态身份确认）；记忆存契约版本史；共创请求走双签署 |
+| IP-75/74 | ASC/HTD-Cert | 升级 | 可行性加入 κ 与捕获域；步态子任务=可行性证书节点 |
+| IP-72/76 | RRP/CCL | 升级 | e-process 纳入可行/捕获/共创证据；CCL++（定义 86） |
 
-## 1. 符号体系（定义 71–78 见想法区；符号增量）
+## 1. 符号体系（定义 79–86 见想法区；符号增量）
 
 | 符号 | 含义 |
 |---|---|
-| `z=(x_r,x_h,x_e)` | 机器人-人-环境联合状态 |
-| `Z_safe` | 联合安全集 |
-| `B(z,b)` | 耦合鲁棒屏障证书 |
-| `b(θ), H(b), w(b)` | 意图后验 / 熵 / 最坏支撑风险 |
-| `σ(b)∈[σ_min,σ_max]` | 不确定性缩放因子（速度/分离/力） |
-| `M_c` | 接触状态机 `{free,approach,contact,loaded,release}` |
-| `PFL=(F_max(v),P_max,τ_det)` | 功率-力限制证书 |
-| `π=(Q,→,Inv,Commit)` | 交互协议契约 |
-| `ι` | 交互协议状态/模式（并入联合决策） |
-| `P_0..P_n` | 原型阶梯（仿真/HIL/缩比/全尺寸） |
-| `Falsify(B,π,budget)` | 证书证伪算子 |
-| `E_ℓ, cov(E_ℓ)` | 原型层 ℓ 的反例集与覆盖 |
-| `δ_{ℓ→d}` | 原型层 ℓ 到部署 d 的传输缺口 |
-| `α_intent` | 意图支撑失配导致的失效项 |
-| `v^*,a^*,m^*,q^*,ι^*` | 分解节点/抽象/模态/构型/交互模式联合决策 |
-| `MRC` | 最小风险条件（硬回退） |
+| `L_auth=(𝒜,⊑)` | 用户权威格（空间域×参数类别×幅值上界） |
+| `κ_c=(s,clause,Sig_u,Sig_designer,ver)` | 共创契约（双签署 + 版本钉住） |
+| `ω_u` | 用户证据权重（承诺兑现率的单调函数） |
+| `Σ_b=(Q_m,X,U_b,f_q,G_q,R_q)` | 双足混合系统（flight/single/double） |
+| `V(T), M_stand` | 可行集与稳态流形（双支撑静止） |
+| `B_v(z,q), C_cert` | 可行性证书与认证内近似子集 |
+| `τ_ttb, τ_eval, τ_g` | 时间边界 / 求值成本上界 / 守卫实时预算 |
+| `C_1⊆C_2⊆…⊆C_max` | k 步捕获域（CRM 分层） |
+| `α_viable, α_cap` | 可行性内近似误差 / 捕获执行误差失效项 |
+| `α_user` | 用户签署承诺与实际行为发散的失效项 |
+| `𝒯, s_φ` | teacher（全栈+完整搜索）/ student（实时提议者） |
+| `G_exact` | 提议-处置精确守卫（cost-certified） |
+| `LFF_ψ` | 学习证伪器（只提优先级，无定罪权） |
+| `h(κ_c)` | 契约版本哈希（守卫强制校验） |
+| `d_t, r_fb` | 学生-守卫分歧 / 回退率（效率指标，非安全项） |
+| `v^*,a^*,m^*,q^*,ι^*,κ^*` | 分解/抽象/模态/构型/交互/步态联合决策 |
 
 ## 2. 关键算法 伪代码
 
-### IP-79 SIC
+### IP-86 UCC
 ```
-def barrier_ok(z, b, lambda_, horizon):
-    # 鲁棒屏障：对人行为支撑内最坏情况检查屏障条件
-    if B(z, b) < 0:
-        return False                              # 已在安全集外
-    for u_h in worst_case_human_actions(z, b, horizon):
-        # 是否存在机器人动作使屏障不降
-        if not any(B(next_state(z, u_r, u_h), b) + lambda_ * B(z, b) >= 0
-                   for u_r in U_r_feasible(z)):
-            return False
-    return True
+def co_create(clause, user_sig, auth_registry, contracts):
+    scope = auth_registry.scope_of(user_sig.user_id)
+    if not lattice_leq(clause.relaxation, scope.cap):
+        return ('reject', 'out_of_competence')     # 超出能力格
+    if touches_root_trust(clause):                 # PFL/屏障/MRC/审计不可委托
+        return ('reject', 'non_delegable')
+    kappa = Contract(scope, clause, user_sig, sign_template(clause),
+                     ver=next_ver(contracts))
+    ledger_append_plus(now(), 'co_create', kappa)
+    schedule_teacher_resolve(kappa)                # 触发重解→重蒸馏→再认证
+    return ('accept', kappa, 're_distill_required')
 
-def safe_set_margin(z, b):
-    return B(z, b)                                # >=0 即安全；越大越宽裕
-```
-
-### IP-80 SIG
-```
-def intent_scale(b):
-    H = entropy(b)
-    sigma = SIGMA_MIN + (SIGMA_MAX - SIGMA_MIN) * (1 - H / H_MAX)
-    # 最坏支撑风险再压一档，避免熵低估尾部
-    sigma *= (1 - W_BETA * worst_support_risk(b))
-    return clamp(sigma, SIGMA_MIN, SIGMA_MAX)
-
-def govern(action, b):
-    sigma = intent_scale(b)
-    action.v_max = sigma * action.v_max
-    action.d_sep_min = action.d_sep_min / sigma
-    action.F_max = sigma * action.F_max
-    if sigma < SIGMA_THRESHOLD:
-        return 'force_primitive_or_mrc'
-    return action
+def user_evidence_weight(user_id, dcl):
+    return clamp(OMEGA_BASE * dcl.adherence(user_id), OMEGA_MIN, OMEGA_MAX)
 ```
 
-### IP-81 PFC
+### IP-80 SIG（v14 升级：共创锐化意图）
 ```
-def pfl_ok(mode, F, P, v, contact_detected, dt_since_contact):
-    if mode in ('contact', 'loaded'):
-        if F > F_max(v) or P > P_max:
-            return False
-        if not contact_detected and dt_since_contact > TAU_DET:
-            return ('mrc', 'contact_detection_latency')
-    if mode == 'approach':
-        if v > V_APP or B_contact(state) < 0:
-            return ('hold', 'approach_slowdown')
+def sharpened_intent(b, kappa_signed, omega_u, ctx):
+    if kappa_signed and kappa_signed.matches(ctx):
+        b = normalize(b * (1 + omega_u * kappa_signed.theta_indicator))
+    return b          # σ(b') 随签署承诺锐化；硬下界 σ_min 永不放松
+
+def viability_clip(clause, hvc, z, mode):
+    if clause.category == 'speed':
+        v_req = clause.value
+        return min(v_req, hvc.max_certified_speed(z, mode))   # 捕获域剪辑
+    return clause.value
+```
+
+### IP-87 HVC
+```
+def viability_ok(z, mode, kappa):
+    if mode not in CERTIFIED_MODES:
+        return False
+    Bv = evaluate_Bv(z, mode)          # 预计算内核/已验证求值器，O(1)
+    if Bv < 0:                         # 不在认证可行子集内：内近似不放行
+        return False
+    if time_to_boundary(z, kappa) < TAU_TTB_MIN:
+        return False                   # 时间边界不足：安全不等价
     return True
 ```
 
-### IP-82 IPC
+### IP-88 CRM
 ```
-def protocol_step(pi, q, obs):
-    inv_ok = Inv[q](obs) and barrier_ok(obs.z, obs.b, LAMBDA, HORIZON)
-    if not inv_ok:
-        return ('abort', 'mrc')                   # 不变式将破，立即回退
-    for q_next in transitions[q]:
-        if Commit[q](obs) and human_confirm(obs, q_next):
-            ledger_append_plus(now(), q_next, obs,
-                               evidence=obs.evidence)   # 记录双方确认
-            return ('advance', q_next)
-    return ('hold', q)                            # 无共识不推进
+def biped_mrc(z, mode, student):
+    for k in (1, 2):                                # 先试最少步数
+        if k <= K_MAX and z in C_k[k][mode]:
+            seq = student.propose_capture(z, k) or search_capture(z, k)
+            if verify_capture_seq(z, seq):          # 精确验证整条序列
+                execute(seq)
+                ledger_append_plus(now(), 'capture', k)
+                return 'stand'
+    return certified_protective_fall(z)             # 认证保护姿态（离线证书化）
 ```
 
-### IP-83 PFV
+### IP-89 KDX（提议-处置）
 ```
-def falsify(cert, budget, scenario_dist):
+def propose_dispose(o, ctx, student, guard, budget):
+    h = contract_version_hash(ctx)                  # 版本钉住
+    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 限频提议
+        if guard.exact_check(cand, h):              # B/Bv/PFL/Inv/共识/版本/租约
+            return cand, 'fast_path'
+    for cand in teacher_search(o, ctx, budget_fallback):  # 限量完整搜索
+        if guard.exact_check(cand, h):
+            return cand, 'fallback'
+    ledger_append_plus(now(), 'disagreement', ctx)  # 分歧入账，回灌 DCL
+    return biped_mrc(...)                           # CRM
+    # 学生误差只影响走哪条路径；放行标准只在 G_exact 手里
+```
+
+### IP-90 LFF（证伪-教学共蒸馏）
+```
+def falsify_v2(cert, budget, scenario_dist, lff, student):
     E = []
     for _ in range(budget):
-        s = scenario_dist.sample_adversarial(cert.weak_regions)
-        traces = cert.prototype.run(s)            # 在原型层执行
-        for tr in traces:
-            if violates(tr, cert.Inv) or not cert.barrier_ok(tr):
-                E.append(minimize_cex(tr))
+        s = scenario_dist.sample_weighted(lff.weak_regions(cert))
+        for tr in cert.prototype.run(s):            # 含滑移/推撞/柔顺注入
+            if violates_exact(tr, cert):            # 只有精确证伪器能定罪
+                cex = minimize_cex(tr)
+                E.append(cex)
+                lff.retrain([cex])                  # 反例共蒸馏
+                student.retrain(cex_labels=[cex])   # 教学生避开守卫会拒的行为
     return E, coverage(E)
-
-def prototype_ladder_validate(cert, budget_by_level):
-    results = {}
-    for ell, budget in budget_by_level.items():   # P0..Pn
-        E, cov = falsify(cert.at_level(ell), budget, scenario_dist(ell))
-        results[ell] = (E, cov, estimate_alpha_upper(E, cov))
-    return results
 ```
 
-### IP-84 XFER
+### IP-73 JCPS（v14：交互-步态感知 + 提议-处置）
 ```
-def inflate_alpha(alpha_level, ell, dep):
-    delta = estimate_transfer_gap(ell, dep)       # 对抗域差异/双仿真/实测对标
-    return alpha_level + delta, delta             # 只加不减，除非新证据收紧
-
-def transfer_gap(ell, dep):
-    # 无足够对标证据时返回保守先验 DELTA_PRIOR
-    if not has_calibration(ell, dep):
-        return DELTA_PRIOR
-    return min(DELTA_PRIOR, empirical_discrepancy(ell, dep))
-```
-
-### IP-85 MRC
-```
-def minimal_risk_condition(state, cert):
-    if not cert.barrier_ok(state.z, state.b):
-        return 'already_unsafe_signal_human'
-    q_safe = nearest_certified_hold(state.q)      # 受屏障证书覆盖的 hold 构型
-    ramp_to_stop(q_safe, certify=BARRIER_CERT)    # 减速轨迹本身需证书保证
-    ledger_append_plus(now(), 'MRC', state, evidence='safe_stop')
-    return 'abort_declared'
-```
-
-### IP-73 JCPS（v13 升级：交互感知联合决策）
-```
-def joint_interactive_schedule(goal, C_t, leases, energy, q_prev, omega, b):
-    dag = htd_cert(goal, C_t, contracts, leases)
+def joint_costride_schedule(goal, C_t, leases, energy, q_prev, omega, b, kappa_c):
+    h = hash(kappa_c)
+    dag = htd_cert(goal, C_t, contracts, leases)    # 含步态/交互子任务
     if dag is None:
         return ('synthesize_or_fail_closed', None)
-    v, nxt = dag.frontier(), dag.next(dag.frontier())
-    if not barrier_ok(current_z(), b, LAMBDA, HORIZON):
-        return ('mrc', minimal_risk_condition(current_state(), cert))
+    if not viability_ok(current_z(), current_mode(), kappa_c):
+        return ('crm', biped_mrc(current_state(), current_mode(), student))
+    b = sharpened_intent(b, kappa_c.signed_intent, user_evidence_weight(...), ctx)
     sigma = intent_scale(b)
     best = None
-    for iota in PROTOCOL_MODES:                    # 交互模式
-        if not Inv[iota](current_state()):
+    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 候选含 (a,m,q,ι,κ)
+        if not Inv[cand.iota](current_state()) or cand.hash != h:
             continue
-        for m in MODALITIES:
-            P = pose_certificate(C_t, omega, m)
-            if P is None:
-                continue
-            Jc = joint_certify(P, q_prev, m, leases.k, leases.e)
-            if Jc is None:
-                continue
-            pick = choose_abstraction(v, Jc, contracts.get(nxt).Pre,
-                                      leases, energy, q_prev, omega,
-                                      sigma=sigma, barrier=(barrier_ok, b))
-            if pick is None:
-                continue
-            a, C_post, val = pick
-            val = val * sigma                   # 不确定度高时效率天然被压低
-            if best is None or val > best[-1]:
-                best = (v, a, Jc, iota, val)
-    return best if best else ('mrc', minimal_risk_condition(current_state(), cert))
+        if not barrier_ok(extend_z(current_z(), cand.kappa), b, LAMBDA, HORIZON):
+            continue
+        pick = choose_abstraction_viability(dag.frontier(), cand, sigma,
+                                            capture=C_k, hvc=HVC)
+        if pick and pick.value * sigma > (best.value if best else -inf):
+            best = pick
+    if best and guard.exact_check(best, h):
+        return best
+    if full_search_fallback() is not None:          # 限量
+        return fallback
+    return ('crm', biped_mrc(...))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| SIC | O(H·|U_h|·|U_r|·cost(B)) | O(|Z|) | 屏障对信念支撑内所有人动作鲁棒；无动作可救则判不安全 |
-| SIG | O(cost(entropy)+cost(w)) | O(1) | 不确定度单调压缩安全边界，只保守不激进 |
-| PFC | O(1) 每周期 | O(1) | 违反力/功率/检测延迟即回退，不静默通过 |
-| IPC | O(|Q|) 每转换 | O(|Q|) | 无双方可观测确认不推进；不变式将破即 abort |
-| PFV | O(budget·cost(run)) | O(|E|) | 只增反例与覆盖；零反例不产生 α=0 |
-| XFER | O(cost(discrepancy)) | O(n) | `α_d=α_ℓ+δ`，δ≥0 且默认保守先验 |
-| MRC | O(cost(plan)) | O(1) | 停机轨迹本身受屏障证书覆盖 |
-| CBG+ | O(cost(⊨)+cost(B)+cost(PFL)) | O(1) | 边界∧屏障∧PFL∧共识全通过才放行 |
+| UCC | O(|𝒜|) 格判定 | O(|𝒜|+|契约史|) | 越权/触根信任即拒；双签署+版本钉住；权重只降不升伪造 |
+| HVC | 在线 O(1) 求值 | O(|C_cert|) 预计算 | 内近似：B_v≥0 ⇒ z∈C_cert⊆V(T)；时间边界强制 |
+| CRM | O(k·|U_b|) 序列验证 | O(k) | C_k 判层保守（宁可高估所需步数）；保护姿态离线证书化 |
+| KDX | O(N_fast·c_g + c_s) ≪ 全栈 | O(1) 在线 | 放行权仅在 G_exact；学生误差 → 回退率，非安全项 |
+| LFF | O(1) 预测 | O(|E|) | 无定罪权；假阴性只浪费预算 |
+| G_exact | Σ cost(精确求值) ≤ τ_g（离线认证） | O(1) | 看门狗超预算强制安全慢模式 |
+| CBG+ | cost(⊨)+cost(B,B_v,PFL,共识) | O(1) | 边界∧屏障∧可行∧PFL∧共识∧版本全过才放行 |
 
-**正确性定理（Coupled-Safety Compositional Soundness with Prototype Transfer）**
-假设：(A1) 每个技能/抽象契约 sound（v12）；(A2) 每个边界由 CBG 在真实状态复核 `Post_{v_i}⊨_{γ_i}Pre_{v_{i+1}}` 且 `γ_i≥γ_min`；(A3) 租约全程有效；(A4) 初始证书满足 `Pre_root`；(A5) `CCL+` 只追加且审计通过；(A6) 真实人行为在时间 `T` 内以概率 `≥1−α_intent` 落在意图信念支撑内，且屏障按支撑内最坏动作检查；(A7) 原型层证据按 `δ_{ℓ→d}` 膨胀，`α_d=α_ℓ+δ_{ℓ→d}`，δ 估计不被低估；(A8) MRC 可达且其停机轨迹受屏障证书覆盖（否则至少能及时发出人可识别的危险信号）。则沿路径 `v_1…v_k` 与交互序列，
-`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − Σ_ℓ δ_{ℓ→d}`；
-且由于 CBG+ 只放行“边界蕴含 ∧ 屏障 ∧ PFL ∧ 协议共识”全部成立的交互，**不存在“单机 sound、交互断裂”却被执行的路径**。交互抽象与 `σ(b)` 只改变可行域与效率，不放松硬安全门槛；MRC 保证不可行时退回受证书覆盖的安全构型。注意这仍是**条件保证**：它把端到端失效上界归约为可审计项，但 `α_intent` 的人模型与 `δ` 的原型代表性本身是新的信任锚，其正确性由 PFV/DCL/CCA 的持续证伪负责，不在定理覆盖范围内。
+**正确性定理（Co-Created, Distilled, Viability-Compositional Soundness）**
+假设：(A1)–(A8) 承接 v13（契约 sound、CBG 边界蕴含、租约、初始证书、CCL 只追加、意图支撑覆盖 `1−α_intent`、δ 膨胀不被低估、MRC 可达且受证书覆盖——其中 MRC 按 CRM 重释）；新增 **(A9)** `C_cert` 是可行集 V 的认证内近似（对认证摩擦/执行器界成立），B_v 求值与 C_cert 定义精确一致；**(A10)** 捕获策略在认证扰动集内以概率 ≥1−α_cap 在 k 步内到达 M_stand；**(A11)** G_exact 的求值成本被离线认证 ≤ τ_g 且运行时看门狗生效，学生候选永不绕过精确求值；**(A12)** 共创契约过能力格、根信任不可委托、双签署、版本钉住，且用户签署承诺与实际行为发散以概率 ≤α_user。则沿路径 `v_1…v_k`、交互序列与步态相位，
+`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − α_user − α_viable − α_cap − Σ_ℓ δ_{ℓ→d}`；
+且**蒸馏不进入安全上界**：学生误差只能提高回退率 r_fb（可用性/效率损失），因为执行要求 G_exact 精确求值通过——该不对称的承重点恰是 (A11)。共创条款只经"能力格 ∧ 可行性剪辑"后进入约束，不放松任何硬门槛。这仍是**条件保证**：`C_cert`/捕获的近似保守性、用户承诺的兑现、τ_g 的真机可达性是新的信任锚，由 PFV/LFF/DCL/CCA 的持续证伪与演练负责，不在定理覆盖范围内。
 
-## 4. 实验设计 E127–E132
+## 4. 实验设计 E133–E138
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E127 耦合屏障证书 | 违反率；假安全率（held-out 人策略）；屏障可行率 | 标称违反 ≤ 1%；假安全 = 0；可行率 ≥ 95% |
-| E128 意图不确定治理 | 安全违例 vs 任务效率；不必要减速率；σ 单调性 | 违例 0；效率损失 ≤ 15%；误减速 ≤ 10% |
-| E129 接触/PFL 证书 | 力/功率越限率；接触检测延迟；free↔contact 转换违例 | 越限 0；延迟 ≤ τ_det 的 95 分位；转换违例 0 |
-| E130 交互协议/交接 | 成功率；hold/abort 正确率；错误接受人确认率 | 成功 ≥ 95%；错误接受 ≤ 0.5%；安全违例 0 |
-| E131 原型证伪阶梯 | 每预算反例数；场景覆盖；δ 预测误差 | 覆盖 ≥ 90%；δ 相对误差 ≤ 20% |
-| E132 全尺寸原型长程交互 | 任务成功率；MRC 触发率；安全违例；人主观安全感 | 成功 ≥ 94%；MRC ≤ 6%；违例 0；主观 ≥ 4/5 |
+| E133 共创契约与能力格 | 越权放宽拦截率；触根信任拦截率；承诺兑现率-权重曲线；版本错配执行数 | 越权拦截 100%；触根信任 0；版本错配执行 0 |
+| E134 双足可行性证书 | mid-stride 放行正确率；滑移/推撞扰动下违例率；内核保守度 \|C_cert\|/\|V\|；τ_eval 超时率 | 违例 0；假安全 0；保守度 ≤ 40%；超时 ≤ 0.1% |
+| E135 捕获 MRC | 分级推撞恢复成功率；C_k 判层错误率；保护姿态伤害指标（假人/缩比） | 小扰动恢复 ≥ 95%；判层错误 0；伤害低于未认证基线 |
+| E136 蒸馏执行 | fast-path 命中率；回退率 r_fb；延迟降幅；与全栈违例等价性 | 违例等价（=0）；延迟 ≥ 10×；r_fb ≤ 10% |
+| E137 学习证伪循环 | 同预算反例数 vs 随机采样；覆盖增速；LFF 误报率 | 反例 ≥ 3× 基线；覆盖 ≥ 90% |
+| E138 全栈双足人机共处长程共创 | 任务成功率；共创改动→重蒸馏→恢复服役时延；MRC 率；违例；主观安全感 | 成功 ≥ 90%；时延 ≤ 5 min；MRC ≤ 8%；违例 0；主观 ≥ 4/5 |
 
-回退策略：E127 假安全 > 0 → 立即停机、收紧信念支撑并强制 MRC，禁止部署该屏障；E128 误减速 > 10% → 提高信念质量（多模态观测）而非放松 σ 下界；E129 检测延迟超标 → 降低 `V_APP`、换更高带宽力传感、禁止 loaded 模式粗抽象；E130 错误接受 > 0.5% → 改为“双确认 + 力签名”协议，取消单模态确认；E131 δ 误差过大 → 增大保守先验并延后部署，追加 HIL/缩比对标；E132 MRC > 6% → 回溯协议/信念/接触配置，缩小工作域而非绕过交互层。
+回退策略：E133 越权漏拦 → 冻结共创入口、收紧能力格、审计全部已签条款；E134 假安全 > 0 → 立即停机、收缩 C_cert 并对边界追加证伪，禁止部署该内核；E135 判层错误 → 加大 C_k 估计保守度并提高捕获域重算频率；E136 r_fb > 10% → 增加学生训练覆盖而非放松 G_exact，必要时降级为"低频 teacher + 高频 CRM"；E137 反例效率不足 → 扩 LFF 特征（场景因子接入）而非减少精确证伪；E138 时延或 MRC 超标 → 缩小共创范围与工作域，绝不绕过 L3.5 与守卫。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 意图信念失准，真实人行为落在支撑外 | 高 | 硬 `σ_min` + 最坏支撑检查 + 持续 DCL 采集 + 超出即 MRC，绝不外推放宽 |
-| 原型不具代表性，传输缺口 δ 被低估 | 高 | `α_d=α_ℓ+δ` 只加不减；对抗域差异/双仿真/实测对标三路估计；无证据用保守先验 |
-| PFL 参数（F_max/P_max/τ_det）标定偏低 | 高 | 独立力台架标定 + 接触事件注入红队；越限即 MRC 并冻结抽象层 |
-| 协议被“单方推进”绕过（例如语音误触发） | 高 | 双方可观测承诺 + 多模态确认 + `CCL+` 审计；缺证据不推进 |
-| 屏障证书在联合状态近似过于乐观 | 高 | 证书内近似（只证安全子集）+ 数值验证 + 假安全零容忍；不 certified 的集合不进入 |
-| MRC 本身不可达或停机路径不安全 | 高 | MRC 轨迹预先证书化；定期演练；不可达则降级为“危险信号+断力” |
-| 原型证伪预算有限，覆盖不足 | 中 | 反例回灌优先采样 + 主动学习场景分布；覆盖不足则不下调 α |
-| 交互层拖慢实时性 | 中 | 屏障快速近似 + 分层频率（安全层高频、决策层低频）；实时预算硬门限 |
-| 人机交互主观安全与客观证书不一致 | 中 | 加入人因量表与生理/行为指标，作为验收的独立维度，不替代证书 |
+| 守卫求值超实时预算或被静默近似替代 | 高 | 架构红线"只许近似搜索"；求值器离线成本认证 + 运行时看门狗 + 超时强制安全慢模式 |
+| 可行性内核/捕获域过于乐观（打滑、未认证扰动） | 高 | 内近似 + 摩擦/推撞台架标定 + 红队注入 + 边界持续证伪 + α_cap 显式入账 |
+| 用户越权或恶意共创 | 高 | 能力格 + 不可委托条款 + 双签署 + 兑现率降权 + 越权红队 + CCL++ 审计 |
+| 版本错配的旧学生服役 | 高 | 版本哈希入守卫 + fail-closed + 再认证门（守卫集零违例 + held-out 回归） |
+| 学生对抗性提议造成守卫抖动/DoS | 中 | 提议限频 + teacher 顾问 + 回退路径预算 + 分歧入账 |
+| 共创条款与动力可行冲突（"要快但要稳"） | 中 | 可行性剪辑先行 + 冲突即向用户解释并降级，不静默折中 |
+| 蒸馏数据分布偏移 | 中 | DCL 分歧样本回灌 + 定期重蒸馏 + 标签覆盖审计 |
+| 保护姿态演练的伦理与成本 | 中 | 缩比/假人先行 + 全尺寸低频演练 + 演练记录入账 |
+| 联合决策空间扩维（+κ）拖慢调度 | 中 | 提议-处置吸收搜索负担 + 分层频率（安全层高频、决策层低频） |
 
 ## 6. 本轮最大风险
 
-**一句话**：安全保证会从“机器人”迁移到两个未经验证的信任锚——**人意图模型**与**原型代表性**；一旦意图信念失准（真实人行为落在支撑外）或原型不具代表性（`δ_{ℓ→d}` 被低估），耦合屏障证书就会“纸面 sound、现实不安全”，因此意图不确定必须驱动硬保守缩放与可证 MRC，原型证据必须带传输缺口膨胀并持续证伪，绝不能把“原型零反例”当成部署证明。
+**一句话**：整套"蒸馏只损失效率不损失 soundness"的不对称悬挂在 (A11) 与两个新近似锚上——一旦 G_exact 的求值在真机超预算/被近似替代，或可行性内核与捕获策略对打滑、未认证扰动、捕获时机欺骗过于乐观，或共创条款越过能力格被当成新根，耦合屏障就会"纸面 sound、现实不安全"；因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
 <!-- ARTIFACT:END -->
