@@ -3,366 +3,255 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 44 轮（承接第 43 轮 v20；本轮灵感：姿态估计 × 数据采集） · Pose-Cert × Data-Cert：把「姿态」升为证书的根信任，把「数据采集」升为可审计的校准闭环（四层架构 v9）
+# 第 46 轮（承接第 45 轮 v10；本轮灵感：双臂协作 × 传感器融合） · BiFuse-Cert：双臂相对姿态证书 × 认证异步多传感器融合的协作过程保证（四层架构 v11）
 
-> 承接第 43 轮 v20（Persona-Cert × Concurrent-Cert）。v20 自陈最大风险是「共形只保边际覆盖 + 多用户契约求交为空」，但它与整个 v19–v20 证书栈共享一个更底层的未言明假设：**(H3) 位姿 x 是「点估计 + 一个粗糙标量噪声界」**。所有几何证书、CBF margin、查表键、共形人意图集、仿真-现实对齐都以 x 为条件；一旦姿态估计在某个退化条件下有偏或不可观测，下游全部逻辑即使完全正确也会**静默不 sound**。现实中 UniBot 只有四路 RGB（头部双目已校正）与本体感觉，无深度/力/触觉，物体常是透明/高光/弱纹理/关节体，双目深度空洞与头部外参外推长期存在——姿态恰恰是最不可靠的输入。两个灵感词精确命中 H3：**姿态估计**迫使我们把姿态从「点」升级为**带条件覆盖保证的可观测性分层集合证书**，并把下游谓词做**集合提升**；**数据采集**迫使我们追问「这些校准数据从哪来、覆盖了哪些姿态层、可否被选择偏差污染」，把采集升级为**来源可追溯、审计独立、覆盖率驱动的校准闭环**。二者耦合出本轮真正的新问题：**姿态不确定性决定该采什么数据，采到的数据又反过来定义姿态证书——若审计集受采集策略影响，闭环会沿「自己采到的流形」自我确认（Goodhart）**。
+> 承接第 45 轮 v10 Energy-Context-Depth。v10 用能量租约、上下文预测与深度门控守住了“感知是否可用、姿态证书是否覆盖”，但隐含假设 H5：只有一个操作臂，且各传感器被视作**独立、时间同步、可单独认证**的观测源。UniBot 是双臂平台：抓取-交接-协同搬运中，安全量不再是两个臂各自在世界系里的位姿盒，而是两臂之间的**相对位姿** T_rel；单臂各自 sound 的证书叠加，相对误差仍可能被放大。同时 RGB、深度、关节编码器、力矩/触觉以不同频率与延迟到达，融合结果若未经时间对齐与交叉一致性认证，会给出比真值更窄的半径。两个灵感词精确命中 H5：**双臂协作**把证书对象从“绝对位姿”扩展为“相对位姿 + 闭链一致性”，并让一臂的证书失效级联到另一臂的安全谓词；**传感器融合**把“条件覆盖”升级为“认证融合”，必须同时认证时间对齐、创新一致性与跨源交叉覆盖。二者耦合出新问题：**如何让融合出的相对姿态证书在异步、异构、可能交叉不一致的传感器流下保持 sound，并防止闭链过约束与共模偏差让双臂协作在“两个单臂证书都有效”的表象下静默越界**。
 
 ## 0. 直觉与动机
 
-**灵感 1（姿态估计 → 证书的根信任不是真值，而是「可审计的姿态盒」）**
-直觉：与其问「位姿估得准不准」，不如问「在什么条件下、以多大概率，真实位姿落在哪个集合里」。把姿态证书写成 P_t = {X : d(X, X̂_t) ≤ r_{ω_t}}，其中 ω_t 是可观测性分层（双目有效视差比、重投影残差、特征数/纹理梯度、高光/透明标记、关节角外推距离、运动模糊、遮挡比）。半径 r_ω 不是手调常数，而是**按层校准的条件分位数**。这样下游只要把「碰撞/可达/边距」谓词提升为「对 P_t 内所有 X 都成立」，就能把姿态误差变成可证明的 margin 扣减，而不是拍脑袋膨胀。
+**灵感 1（双臂协作 → 相对姿态证书与闭链一致性）**
+直觉：交接水杯时，决定成败的是“两爪相对位置/朝向”，不是各自在世界系里有多准。设两臂端帧 A、B，相对变换 T_rel=T_A^{-1}T_B。世界系独立证书只给保守界 rad(P_rel)≤rad(P_A)+rad(P_B)，在两者共享同一底盘/定位共模误差时，这个界既可能过松（浪费）也可能因错误地假设独立而过窄（危险）。因此必须**直接在相对变换数据上共形校准**相对证书 P_rel，并把闭链约束单独认证：双爪刚性抓同一物体时，T_A^{-1}T_B 应接近固定 T_grasp；若相对证书宽度超过闭链容差 ε_cl，就说明“刚性双臂”假设不成立，必须降级为柔顺或单臂，而不是继续按刚性链放行。
 
-**灵感 2（数据采集 → 校准数据本身需要一张「护照」）**
-直觉：证书的数据来源决定证书的成色。仿真、回放、影子、遥操作、真机专家各有不同的可信度与依赖结构；同一 episode 的相邻帧高度相关，同任务同场景的数据会泄漏。于是给每条数据发**数据护照**：来源、场景/任务/episode 块号、传感器配置、标注者与置信、是否合成、与审计集是否重叠。校准采用**分块 + 来源加权共形**，用有效样本量 n_eff 而非原始条数；审计集必须由**与采集策略无关**的预注册分层抽样产生并封存。否则「覆盖率」只是采集策略的自我实现预言。
+**灵感 2（传感器融合 → 认证融合而非简单融合）**
+直觉：融合不是把协方差一加。真正伤人的是**时间不对齐**与**交叉不一致**：深度帧晚到 30ms，快速运动下直接引入 L_v·ε_ts 的位置误差；某路传感器被遮挡/反光时，其“名义协方差”仍然很小，融合反而被坏源拖窄。认证融合要求四件事同时成立：(a) 每个源的覆盖证书本身有效；(b) 时间对齐误差 ε_ts 有上界并计入半径 r_fuse=r_stat+L_v·ε_ts+r_quant；(c) 创新残差马氏距离超过 χ² 门限即判融合不健康（fail-closed）；(d) 跨源覆盖在独立审计集上校准，而不是用同一融合估计自证。
 
-**灵感 3（耦合 → 覆盖率驱动的主动采集，且必须防自我确认）**
-直觉：最该采的数据在「覆盖最差且下游最敏感」的姿态层：透明杯、镜面、弱纹理桌面、快速运动、头部外参外推、深度空洞边缘。采集目标不是数据量，而是**最坏层条件覆盖缺口**的下降。于是用对抗式分层采样器主动搜索覆盖最差层，用「下游证书宽度缩减 / 采集成本 / 风险」定义效用。但这里有一个自举陷阱：采集策略根据当前证书挑数据，若同一批数据又用于评估覆盖，就会产生选择偏差。解法是**审计隔离 + 预注册目标 + 定期审计交换**：采集策略永远看不到审计集，审计集只用于签发独立证书，不参与采集决策。
+**灵感 3（耦合 → 共模偏差与“自证陷阱”）**
+直觉：双臂和融合共享同一套标定与同一时间基准，误差会**共模**：两臂用了同一条被污染的外参标定，或融合门用融合后的估计去检验融合后的估计，就会“自证正确”。所以认证必须引入**外部独立度量**（如标定板/外部动捕/关节编码器冗余一致性）作为锚点，并让相对证书与融合健康度由不同数据源交叉校验；一旦锚点缺失或共模偏差超阈，双臂协作退化为单臂或保持，而非硬撑。
 
-**耦合升级**：PSE（姿态证书引擎）产出分层姿态盒与根租约；DCL（数据证书闭环）产出带护照的校准数据与分块共形半径；CCA（证书覆盖审计器）用独立审计集做覆盖红队、选择偏差与投毒检测，并把反例回灌 SCV/CKB。四层架构由 v8 的「仿真-检索-边缘-人格-并发」升级为 v9：新增 **姿态根信任层** 与 **校准数据治理层**，二者构成一个可审计的「姿态 → 数据 → 覆盖 → 证书」闭环。
+**耦合升级**：在 v10 四层架构上插入**相对-融合证书层**，四层 v11：根信任层（姿态租约 ℓ_p + 能量租约 ℓ_e + **融合租约 ℓ_f** + 相对租约 ℓ_r），L1 几何层（单臂盒 P_A/P_B 与相对盒 P_rel 并列），L2 上下文层（上下文同时预测传感器退化与双臂协作阶段），L2.5 融合层（认证时间对齐、创新门、交叉覆盖），L3 CAR（守卫相对证书、闭链一致性、自碰撞与受力裕度），L4 DCL（采集时间失配/融合不一致/共模偏差样本）。一臂或融合任一失效，级联冻结双臂。
 
-## 1. 形式化定义（增量：定义 44–49）
+## 1. 形式化定义（增量：定义 54–58）
 
-**定义 44（可观测性分层与姿态证书）**
-设姿态状态 X_t ∈ SE(3)（机器人/头部相机/末端/物体 6D 位姿的笛卡尔积；人机交互时含人体关节）。可观测性分层 ω_t = (ρ_disp, e_rep, n_feat, g_tex, s_spec, δ_joint, b_motion, o_occ) 为离散化条件向量。姿态证书 P_t ⊆ SE(3) 满足**条件覆盖**：
-P(X_t ∈ P_t | ω_t = ω) ≥ 1 − α_p, ∀ω ∈ Ω_obs。
-构造：局部协方差 Σ_t 取因子图边缘（Σ_t ≈ (J^T Ω J)^{-1}），再用该层校准分位数 r_ω = Q_{1−α_p}(d(X, X̂) | ω) 膨胀为 P_t = {X : d(X, X̂_t) ≤ r_ω}（测地 ball 或椭球）。**未观测层** ω ∉ Ω_obs 不产生证书，只能走保守先验。
+**定义 54（双臂相对姿态证书）**
+端帧 A、B 的位姿 T_A,T_B∈SE(3)，相对位姿 T_rel=T_A^{-1}T_B。相对证书 P_rel⊂SE(3) 若满足
+P( T_rel ∈ P_rel | 融合链有效 ∧ 相对租约 ℓ_r 有效 ) ≥ 1-α_r
+则称其 sound。**性质**：由单臂世界系证书仅得保守三角界 rad(P_rel) ≤ rad(P_A)+rad(P_B)；当两臂共享共模误差时该界不可直接使用，必须用相对变换独立校准的 r_rel 取代。相对租约 ℓ_r=(t_τ,r_rel,ε_cl,τ_r)，超时或超宽即失效。
 
-**定义 45（证书提升与姿态-边际转移）**
-对任一安全谓词 φ（无碰撞、边距 ≥ θ、可达、扫掠体不含人），定义**鲁棒提升** φ^□(P) = ∀X∈P φ(X)，**乐观提升** φ^◇(P) = ∃X∈P φ(X)。**可靠性命题**：若 X_t∈P_t 且 φ^□(P_t) 成立，则 φ(X_t) 成立。若 φ 关于姿态度量 L_φ-Lipschitz，则**边际转移** m_true ≥ m(X̂_t) − L_φ·rad(P_t)。安全类谓词只能用 □；目标可达/存在性谓词可用 ◇，但必须配一个对所有 X∈P_t 都可行的鲁棒策略，否则不构成执行证书。
+**定义 55（认证传感器融合与时间对齐）**
+异构流 S_i={(z_i^{(k)},t_i^{(k)})}，频率 f_i、延迟 l_i。选定时间基 t_0 后同步误差 ε_ts=max_i |t_i^*-t_0|，插值/外推速度上界 L_v。融合估计
+x̂=F({z_i,Σ_i},ε_ts)，融合半径
+r_fuse = r_stat + L_v·ε_ts + r_quant，
+**融合 soundness**：P(‖x−x̂‖ ≤ r_fuse) ≥ 1−α_f。
+**创新门**：d²=r^T S^{-1} r ≤ χ²_{1-α_i}；超阈即 fusion_unhealthy。认证融合需同时满足：各源证书有效 ∧ ε_ts≤ε_max ∧ 创新门通过 ∧ 跨源覆盖 q_cross≥1−α_c（在独立审计集上校准）。
 
-**定义 46（姿态租约与根信任依赖）**
-姿态租约 ℓ_p = (X̂, Σ, τ, λ_o, λ_d, ω, κ)，不确定性随时间增长上界 r(t) = r_ω(τ) + λ_o(t−τ) + λ_d√(t−τ)（运动项 + 漂移随机游走项；也可用保守线性界）。**新鲜度判据**：r(t) ≤ r_max(θ, φ) 才可用于守卫；否则租约过期。刷新由回环/已知标定物/视觉惯性更新触发。**根信任命题**：若下游证书 c 的可靠性依赖姿态租约 ℓ_p，则 ℓ_p 过期或失效时 c 必须级联失效——姿态是租约依赖图的根，不能「局部降级后继续用」。
+**定义 56（双臂闭链一致性与协作证书）**
+双臂刚性共抓物体时闭链约束 T_A^{-1}T_B ≈ T_grasp，残差
+e_cl = log( T_grasp^{-1} T_A^{-1} T_B )。
+**闭链一致性证书**：‖e_cl‖_Σ ≤ ε_cl。若 r_rel>ε_cl/κ，则“刚性双臂”假设不成立，必须切到柔顺或单臂。**协作证书** C_t=(P_rel,e_cl,G_t)，其中 G_t 为受力/触觉融合的力闭合裕度证书（接触力旋量可行域非空）。
 
-**定义 47（数据护照与分块/加权共形校准）**
-每条校准数据 d_i 携带护照 π_i = (src, task, scene, episode, t, sensor_cfg, labeler, conf, synthetic, block b_i)。来源权重 w_i = w_src · w_conf · w_density（协变量偏移用密度比），并按 block 做分块共形/块交叉验证以尊重时间与 episode 相关。**有效样本量** n_eff = (Σ_i w_i)^2 / Σ_i w_i^2 / (1 + 2Σ_{lag} ρ_lag)（含自相关校正）。**覆盖命题**：在块可交换或加权可交换条件下，分块/加权共形给出 P(X∈P | ω) ≥ 1−α_p − ε_shift，其中 ε_shift 由来源与部署的分布差界出；n_eff 必须如实报告，禁止用原始条数冒充有效证据。
+**定义 57（双臂协作联合证书）**
+J^B_t=(P_A,P_B,P_rel,F_t,G_t,ℓ_p,ℓ_e,ℓ_f,ℓ_r,m_t)，F_t 为融合证书（含 ε_ts、d²、q_cross）。**联合 soundness**：
+P( X_t∈P_rel ∧ ‖e_cl‖≤ε_cl ∧ 力闭合 | 融合有效,ℓ_p,ℓ_e,ℓ_f,ℓ_r 有效 ) ≥ 1−α_p−α_r−α_f。
+任一租约失效或共模锚点缺失，即冻结双臂并进入保守保持/单臂。
 
-**定义 48（覆盖驱动的姿态数据采集）**
-对每个层 ω 定义**条件覆盖缺口** gap_ω = (1−α_p) − Ĉov_ω（Ĉov_ω 只在独立审计集上估计）。采集效用
-U(ω) = [Δgap_ω · S_φ(ω)] / [cost(ω) + c_risk·Risk(ω;ρ)]，
-其中 S_φ(ω) = E_{X∈ω}[L_φ·∂rad(P)/∂r] 是该层姿态不确定性对下游证书宽度的敏感度。采集目标是 max_ω U(ω)，并用**对抗式分层采样器**在 Ω_obs 中搜索覆盖最差层，而非只采「容易的层」。**采集命题**：若采集只更新校准集、不降低审计集独立性，且每次提交前通过覆盖回归，则采集只缩小证书宽度，不降低 soundness。
-
-**定义 49（审计独立性与选择偏差界）**
-设采集策略 π_acq 是 (D_cal, P_t, gap) 的函数，审计集 A 的选取指示变量为 S_A。若 S_A 依赖 π_acq 或 D_cal，则审计覆盖估计有偏，偏差可达任意大（Goodhart）。**独立性公理**：A ⟂ (D_cal, π_acq)，A 由预注册分层抽样器生成并封存，采集策略不可读。**有限样本界**：A 独立时，用单侧 Clopper–Pearson/Hoeffding 下界 Ĉov_ω − √(log(1/δ)/(2|A_ω|)) 给出置信下界；不独立时无此保证。**闭环降级**：出现未观测层、审计失败、姿态残差超界或退化检测触发时，P_t 膨胀到保守先验 P_max（或直接安全停机），下游证书按定义 46 级联失效，形成 fail-closed。
+**定义 58（融合-协作降级策略）**
+动作 a=(sensor_subset, arm_mode)，arm_mode∈{dual_rigid, dual_compliant, single_A, single_B, hold, fail_closed}。效用
+U(a)= [Δrad(P_rel|a)·S_φ] / [c_fuse(a)+c_energy(a)+c_switch]
+约束：J^B 在该模式下可 sound。**单调降级梯子**：dual_rigid → dual_compliant → single_arm → hold → fail_closed，只允许在证书重新覆盖后才单向回升，回升需最小驻留时间防抖。
 
 ## 2. 三大新增产出与既有 IP 升级
 
-### 2.1 IP-60 POSE-CERT-ENGINE（姿态证书引擎 PSE）
-1. **可观测性分层**：从双目视差有效率、重投影残差、特征/纹理、高光透明、关节外推、运动模糊、遮挡构造 ω；维护 Ω_obs 与未观测层集合。
-2. **条件姿态证书**：因子图边缘协方差 + 分层共形分位数，输出 P_t；同时输出退化标志与未观测层告警。
-3. **证书提升与边际转移**：把碰撞/边距/可达谓词编译为 □/◇ 提升；所有安全 margin 统一扣减 L_φ·rad(P_t)。
-4. **姿态租约与级联失效**：根租约签发/刷新/过期；维护「姿态→几何→CAR→监控」的租约依赖图，根失效则整链 fail-closed。
+**IP-66 REL-CERT ENGINE（双臂相对姿态证书引擎）**
+- 相对变换独立共形校准 r_rel（按协作阶段/载荷/速度分层）
+- 世界系单臂盒与相对盒并列签发，共模误差检测
+- 相对租约 ℓ_r 与超宽/超时级联失效
 
-### 2.2 IP-61 DATA-CERT-LOOP（数据证书闭环 DCL）
-1. **覆盖驱动采集**：以最坏层条件覆盖缺口 × 下游敏感度为目标，对抗式分层采样；输出采集任务单而非随机日志。
-2. **数据护照**：来源/任务/场景/episode 块/传感器配置/标注置信/合成标记/审计重叠标记；毒数据隔离区。
-3. **分块加权共形校准**：尊重时间与 episode 相关；协变量偏移用密度比；如实报告 n_eff 与 ε_shift。
-4. **采集-提交闸门**：每次重校准必须通过「独立审计覆盖 + 证书回归 + 非单调回滚」三闸门，否则整批数据回滚。
+**IP-67 FUSION-CERT（认证异步多传感器融合）**
+- 认证时间对齐：ε_ts 上界、延迟补偿、插值误差计入 r_fuse
+- 创新门与跨源交叉覆盖：d² 卡方门 + q_cross 独立审计校准
+- 共模锚点：外部标定/动捕/编码器冗余交叉校验；锚点缺失即降级
 
-### 2.3 IP-62 CERT-COVERAGE-AUDITOR（证书覆盖审计器 CCA）
-1. **覆盖红队**：在 Ω_obs 与邻域搜索条件覆盖最差层，生成反例与采集请求（只读采集策略）。
-2. **选择偏差/泄漏检测**：比对采集分布与审计分布；检测同 scene/episode/时间的泄漏；量化 Goodhart 偏差。
-3. **投毒与合成污染测试**：注入错误标注/合成数据/对抗位姿，验证证书是否静默退化；触发隔离。
-4. **证书回归套件**：预注册的隐藏层/新环境回归集，每次提交前跑；失败即拒绝提交并回灌 SCV/CKB。
+**IP-68 COORD-GUARD（双臂协作过程守卫）**
+- 闭链一致性检查 e_cl 与过约束检测
+- 自碰撞盒与力闭合裕度守卫
+- 交接状态机：释放前双证书覆盖、释放后单臂重认证
+- 单调降级梯子与最小驻留防抖
 
-### 2.4 既有 IP 升级
-| IP | 升级点 |
-|---|---|
-| IP-49 几何证书 | 以 P_t 替代点估计；碰撞/扫掠体谓词做 □ 提升；margin 统一扣 L_φ·rad(P_t) |
-| IP-51 CAR | 守卫 margin 增加「− L_φ·rad(P_t)」项；新增 PoseMode / Degeneracy / UnseenStratum 状态 |
-| IP-52 LCS | L0 查表键含可观测性层 ω；姿态租约过期或未观测层 → 直接降级而非查表 |
-| IP-53 CMC | 监控器在姿态区间/盒上做区间算术；导出对 P_t 保守的只读监控器 |
-| IP-45 总线 | 新增 pose-cert / observability-stratum / pose-lease / data-passport / audit 话题 |
-| IP-47 组合代数 | 姿态集合的组合传播：P(A∘B) 的 Minkowski/合约组合；根租约依赖 |
-| IP-50 课程 | 课程含姿态退化层（透明/高光/弱纹理/运动/外推）；采集任务即课程 |
-| IP-54 SCV | 仿真注入姿态退化与深度空洞；分层覆盖率作为仿真充分性指标 |
-| IP-55 CKB | 检索按护照/层过滤；存储校准谱系与审计重叠标记；防同 scene 泄漏 |
-| IP-56 ECR | 姿态租约作为根租约；INT8 监控输入带姿态区间；未观测层拒答 |
-| IP-57 PCE | 人体姿态/意图的共形集按人体可观测层分层；姿态不确定时只收缩不扩张 |
-| IP-58 CCR | 租约依赖图以姿态为根；采集/审计任务低关键级且不得写穿安全谓词 |
-| IP-59 ICV | 姿态对抗：遮挡/镜面/透明/深度空洞/外参外推/快速运动；数据投毒 |
+**既有 IP 升级**
+IP-60 PSE：同时输出 P_A/P_B 与 P_rel，半径按融合链分层
+IP-63 ECPS：模态效用加入融合算力/延迟成本 c_fuse，传感器子集可选
+IP-64 Depth-Cert Adapter：深度- RGB 时间对齐误差计入深度半径
+IP-61 DCL：采集时间失配、融合创新超阈、共模偏差与闭链冲突样本
+IP-62 CCA：新增时间戳注入、帧错位、传感器掉线、共模标定污染红队
+IP-51 CAR：守卫相对证书、ε_ts、d²、e_cl、力闭合与模式一致性
+IP-45 总线：新增 rel-pose-cert / fusion-health / sync-error / closure-residual 话题
 
-## 3. 四层架构 v9
+## 3. 算法骨架
 
-```
-根信任层（新）:
-  TRI-FUSE(INT8) + 双目/本体感觉 + 头部外参恢复
-    → IP-60 PSE: ω_t 可观测性分层 → P_t 姿态证书 + ℓ_p 根租约
-    → 未观测层/退化 → 膨胀到 P_max 或 fail-closed（级联失效）
+每控制周期：
+1. 读各流时间戳、ℓ_p、ℓ_e、ℓ_f、ℓ_r、当前 arm_mode
+2. 认证融合：估 ε_ts、算 r_fuse、过创新门与跨源覆盖 → F_t
+3. 由融合结果与外部锚点算 T_rel、P_rel、e_cl、力闭合 G_t
+4. 若 F_t 不健康 ∨ ε_ts>ε_max ∨ r_rel>ε_cl/κ ∨ 锚点缺失 → 按定义 58 降级
+5. 在可行模式下选最大效用 a*，签发 J^B_t
+6. CAR 用 J^B_t 守卫；任一租约失效 → 冻结双臂 fail-closed
+PSE 签发相对证书，ECPS 分配传感器子集与能量，COORD-GUARD 决定模式迁移。
 
-L1: 几何图元/物体 6D 位姿 → C_ms, B_t, L_m；人/多用户 → H_u
-    └─ 所有结论以 P_t 为条件，带根租约引用
-L2: CTC + VLM + IP-35 仲裁 → 分支池（b 候选）；检索键含 ω 与护照
-L3: IP-51 CAR(margin = min(查表, 租约衰减, persona 上限) − L_φ·rad(P_t))
-    → IP-49 几何 □ 提升 → IP-47 组合 → IP-39 规划
-    → IP-45 总线(pose-cert/lease/passport/audit) → IP-53 CMC 区间监控
-L4: IP-61 DCL(覆盖驱动采集 + 护照 + 分块加权共形)
-    ← IP-62 CCA(覆盖红队 + 选择偏差 + 投毒 + 回归)
-    → 重校准 r_ω / 更新 P_t → IP-55 CKB(护照/谱系) + IP-54 SCV(退化仿真)
-    → IP-44 蒸馏 + IP-50 课程 → RCA 重颁 → 证书热更新
-运行期：分层 → 姿态证书 → 谓词提升 → 守卫；退化/未观测 → fail-closed
-        独立审计通过 → 提交新半径；否则回滚
-```
+## 4. 本轮最大风险
 
-## 4. 实验设计（E95–E102 硬门槛，承接 E87–E94）
-
-| 实验 | 指标 | 门槛 |
-|---|---|---|
-| E95 姿态条件覆盖 | 各 ω 层覆盖率；最差层覆盖；未观测层检出率 | ≥1−α_p (α_p=0.05)；≥1−α_p−2%；≥99% |
-| E96 证书提升 soundness | □ 提升后实机违例；margin 转移漏报；相对点估计可用性损失 | 0 起；0；<15% |
-| E97 姿态租约新鲜度 | 过期判据 sound 率；陈旧姿态误用；刷新成功率；p99 延迟 | 100%；0 起；≥99%；<150μs |
-| E98 分块加权共形 | 块/加权覆盖；n_eff 声明诚实度；同 scene/episode 泄漏率 | ≥1−α_p；误差<20%；<1% |
-| E99 覆盖驱动采集 | 最差层缺口下降/样本 vs 随机分层；新覆盖层数；成本 | ≥5x；≥90% 目标层；≤预算 |
-| E100 审计独立性 | 注入 Goodhart 检出率；覆盖膨胀上界 δ；投毒检出率 | ≥95%；<2%；≥95% |
-| E101 100h 姿态-数据闭环 | 不安全事件；审计层证书宽度单调性；退化恢复时延 | 0 起；单调不增；<200ms |
-| E102 人机交互姿态 | 人体姿态层覆盖；意图集条件覆盖；近人安全违例 | ≥1−α_p；≥1−α_p；0 起 |
-
-回退：E95 覆盖不足 → 按层膨胀 r_ω / 关闭认证扩张，退回保守先验盒；E96 提升失败 → 退回点估计 + 手工膨胀（v20），并降速；E97 租约失真 → 缩短租约、提高刷新频率、降速；E98/E100 审计失败 → 冻结重校准、隔离该批数据、只认封存审计集；E99 无收益 → 退回均匀分层采样；未观测层/退化 → fail-closed 安全停机。
-
-## 5. 本轮最大风险
-
-**一句话**：姿态证书的 sound 性依赖「可观测性分层的条件覆盖」，而数据采集又同时决定分层与校准集——若审计集与采集策略不独立，闭环会沿「自己采到的流形」自我确认（Goodhart），在未采到的退化姿态（透明/镜面/弱纹理/深度空洞/外参外推/快速运动）上静默失效；因此 E95（分层条件覆盖）与 E100（审计独立性/选择偏差）必须设为红线，默认回退到「保守先验姿态盒 + 纯查表降级/安全停机」这条永不失 sound 的底线。
+**一句话**：双臂与融合共享同一套标定和时间基准，共模偏差会让相对证书与创新门“自证正确”而实际半径被低估，闭链过约束又会在“两个单臂证书都有效”的表象下把误差放大成越界或过力，因此必须用外部独立锚点交叉校验、把 ε_ts 与共模偏差显式计入 r_fuse，并在锚点缺失或闭链残差超阈时单调降级到单臂/保持而非硬撑。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 44 轮产物 · 创新点清单 v21：Pose-Cert × Data-Cert（PSE × DCL × CCA）× 可审计姿态-数据校准闭环（四层架构 v9）
+# 第 46 轮产物 · 创新点清单 v23：BiFuse-Cert（Rel-Cert Engine × Fusion-Cert × Coord-Guard）× 双臂相对姿态-认证融合联合证书（四层架构 v11）
 
-> 承接第 43 轮产物 v20。本轮**增量插入** IP-60/61/62，并升级 IP-45/47/49/50/51/52/53/54/55/56/57/58/59；不推倒任何既有层级。核心是把 v20 的「仿真→检索→边缘→人格→并发」闭环补上它最底层的根信任：**所有证书都以姿态为条件，而姿态是集合、有分层覆盖、会随可观测性退化；产生这些证书的数据又必须来源可追溯、审计独立**。由此把 v8 的证书闭环升级为 v9 的「姿态根信任 + 校准数据治理」双底座。
+> 承接第 45 轮产物 v22。本轮增量插入 IP-66/67/68，并升级 IP-60/61/62/63/64/51/45。不推倒 v10：在根信任层增加融合租约 ℓ_f 与相对租约 ℓ_r，L1 几何层并列签发单臂盒与相对盒，L2 上下文层预测传感器退化与协作阶段，L3 CAR 守卫闭链一致性、时间对齐与力闭合，L4 DCL 采集时间失配与共模偏差样本。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-60 | POSE-CERT-ENGINE (PSE) | 新增 | 可观测性分层 ω；条件覆盖姿态盒 P_t；□/◇ 谓词提升；L_φ·rad 边际转移；姿态根租约与级联失效 |
-| IP-61 | DATA-CERT-LOOP (DCL) | 新增 | 最坏层覆盖缺口驱动采集；数据护照；分块/来源加权共形；n_eff 诚实报告；三闸门提交 |
-| IP-62 | CERT-COVERAGE-AUDITOR (CCA) | 新增 | 覆盖红队；选择偏差/泄漏检测；投毒与合成污染测试；预注册证书回归套件 |
-| IP-49 | 几何证书 | 升级 | 以 P_t 替代点估计；碰撞/扫掠体 □ 提升；margin 统一扣姿态半径 |
-| IP-51 | CAR | 升级 | margin 增加 −L_φ·rad(P_t)；新增 PoseMode / Degeneracy / UnseenStratum |
-| IP-52 | LCS | 升级 | L0 查表键含可观测性层；姿态租约过期/未观测层直接降级 |
-| IP-53 | CMC | 升级 | 姿态区间/盒上的区间算术监控器；对 P_t 保守的只读导出 |
-| IP-45 | 总线 | 升级 | pose-cert / observability-stratum / pose-lease / data-passport / audit 话题 |
-| IP-47 | 组合代数 | 升级 | 姿态集合的 Minkowski/合约组合传播；根租约依赖图 |
-| IP-50 | 课程引擎 | 升级 | 课程含姿态退化层；采集任务单即课程生成器 |
-| IP-54 | SCV | 升级 | 仿真注入姿态退化/深度空洞；分层覆盖作为仿真充分性指标 |
-| IP-55 | CKB | 升级 | 检索按护照/层过滤；存储校准谱系与审计重叠标记；防同 scene 泄漏 |
-| IP-56 | ECR | 升级 | 姿态根租约；INT8 监控带姿态区间；未观测层拒答 |
-| IP-57 | PCE | 升级 | 人体姿态/意图共形集按人体可观测层分层；姿态不确定时只收缩不扩张 |
-| IP-58 | CCR | 升级 | 租约依赖图以姿态为根；采集/审计任务低关键级且不写穿安全谓词 |
-| IP-59 | ICV | 升级 | 姿态对抗（遮挡/镜面/透明/空洞/外推/快动）+ 数据投毒 |
+| IP-66 | REL-CERT ENGINE | 新增 | 相对变换 T_rel 独立共形校准、P_rel 与单臂盒并列、共模误差检测、相对租约 ℓ_r |
+| IP-67 | FUSION-CERT | 新增 | 认证时间对齐 ε_ts、创新门 d²、跨源覆盖 q_cross、共模锚点交叉校验、融合租约 ℓ_f |
+| IP-68 | COORD-GUARD | 新增 | 闭链一致性 e_cl、过约束检测、自碰撞/力闭合守卫、交接状态机、单调降级梯子 |
+| IP-60 | POSE-CERT-ENGINE | 升级 | 同时输出 P_A/P_B/P_rel，半径按融合链与协作阶段分层 |
+| IP-63 | ECPS | 升级 | 模态效用加入融合算力/延迟 c_fuse，支持传感器子集选择与共享 |
+| IP-64 | DEPTH-CERT ADAPTER | 升级 | 深度-RGB 时间对齐误差计入深度半径 |
+| IP-61 | DATA-CERT-LOOP | 升级 | 采集时间失配、创新超阈、共模偏差、闭链冲突样本；护照新增 sync_snapshot/closure_residual |
+| IP-62 | CERT-COVERAGE-AUDITOR | 升级 | 时间戳注入、帧错位、传感器掉线、共模标定污染、闭链过约束红队 |
+| IP-51 | CAR | 升级 | 守卫 P_rel、ε_ts、d²、e_cl、力闭合与 arm_mode 一致性 |
+| IP-45 | 总线 | 升级 | rel-pose-cert / fusion-health / sync-error / closure-residual 话题 |
 
-## 1. 符号体系（增量：定义 44–49 符号）
+## 1. 符号体系（增量：定义 54–58）
 
-| 符号 | 含义 | 定义 |
-|---|---|---|
-| X_t ∈ SE(3) | 姿态状态 | 机器人/头部相机/末端/物体 6D 位姿的笛卡尔积（交互时含人体关节） |
-| ω_t | 可观测性分层 | (视差有效率, 重投影残差, 特征数, 纹理梯度, 高光透明, 关节外推, 运动模糊, 遮挡) 的离散化 |
-| Ω_obs | 已观测层集合 | 有足够校准数据的层；未在其中则不签发姿态证书 |
-| P_t = {X : d(X,X̂_t) ≤ r_ω} | 姿态证书 | 条件覆盖 P(X_t∈P_t \| ω_t=ω) ≥ 1−α_p |
-| r_ω | 分层共形半径 | Q_{1−α_p}(d(X,X̂) \| ω) |
-| φ^□(P) / φ^◇(P) | 鲁棒/乐观提升 | ∀X∈P φ(X) / ∃X∈P φ(X) |
-| L_φ | 谓词 Lipschitz 常数 | 姿态度量到 margin 的敏感度 |
-| ℓ_p=(X̂,Σ,τ,λ_o,λ_d,ω,κ) | 姿态根租约 | 姿态不确定性随时间的增长契约 |
-| r(t)=r_ω+λ_o(t−τ)+λ_d√(t−τ) | 租约膨胀界 | 运动项 + 漂移随机游走项 |
-| π_i | 数据护照 | 来源/任务/场景/episode 块/传感器/标注/置信/合成/审计重叠 |
-| n_eff | 有效样本量 | (Σw)^2/Σw^2 经自相关校正 |
-| gap_ω | 条件覆盖缺口 | (1−α_p) − Ĉov_ω（仅在独立审计集上估计） |
-| U(ω) | 采集效用 | Δgap·S_φ / (cost + c_risk·Risk) |
-| A ⟂ (D_cal,π_acq) | 审计独立性 | 审计集选取与采集策略/校准数据无关 |
+| 符号 | 含义 |
+|---|---|
+| `T_A,T_B` | 两臂端帧位姿 |
+| `T_rel=T_A^{-1}T_B` | 双臂相对位姿 |
+| `P_rel` / `r_rel` | 相对姿态证书 / 相对半径 |
+| `ℓ_r=(t_τ,r_rel,ε_cl,τ_r)` | 相对租约 |
+| `S_i={(z_i,t_i)}` | 异构传感器流 |
+| `ε_ts` | 时间对齐误差上界 |
+| `r_fuse=r_stat+L_v·ε_ts+r_quant` | 融合半径 |
+| `d²=r^T S^{-1} r` | 创新马氏距离 |
+| `q_cross` | 跨源交叉覆盖 |
+| `ℓ_f=(t_τ,ε_max,α_i,α_c,τ_f)` | 融合租约 |
+| `T_grasp` / `e_cl` | 闭链标称变换 / 闭链残差 |
+| `G_t` | 力闭合裕度证书 |
+| `J^B_t=(P_A,P_B,P_rel,F_t,G_t,ℓ_p,ℓ_e,ℓ_f,ℓ_r,m_t)` | 双臂协作联合证书 |
+| `arm_mode` | dual_rigid/dual_compliant/single_A/single_B/hold/fail_closed |
 
-## 2. 关键算法（伪代码）
+## 2. 关键算法 伪代码
 
-### IP-60 PSE：可观测性分层、姿态证书、提升与根租约
+### IP-67 Fusion-Cert 认证融合
 ```
-def observability_stratum(x_sensors, joint_state, calib):
-    disp    = stereo_disparity(x_sensors.head_stereo)
-    rho_disp = valid_ratio(disp)                     # 双目有效视差比
-    e_rep    = reprojection_rmse(disp, x_sensors.features)
-    n_feat   = feature_count(x_sensors)
-    g_tex    = mean_gradient(x_sensors)
-    s_spec   = specular_transparent_ratio(x_sensors)
-    d_joint  = joint_extrapolation(joint_state, calib.head_joint_range)
-    b_motion = motion_blur_estimate(x_sensors)
-    o_occ    = occlusion_ratio(disp)
-    return quantize(rho_disp, e_rep, n_feat, g_tex, s_spec, d_joint, b_motion, o_occ)
-
-def pose_certificate(X_hat, Sigma, omega, calib):
-    if omega not in calib.observed_strata:
-        return UNOBSERVED(omega)                     # 未观测层：不发证书
-    r = calib.radius[omega]                          # 该层条件共形分位数
-    return PoseCert(center=X_hat, shape=Sigma, radius=r, stratum=omega)
-
-def lift_predicate(phi, P, mode='safe'):
-    if mode == 'safe':
-        return forall_in(P, phi)                     # 安全必须全称
-    return exists_in(P, phi)                         # 可达/存在性
-
-def certified_margin(m_hat, P, L_phi):
-    return m_hat - L_phi * geodesic_radius(P)        # 定义 45 边际转移
-
-def pose_lease(X_hat, Sigma, omega, t, theta):
-    return PoseLease(X_hat, Sigma, tau=t, omega=omega,
-                     lam_o=motion_bound_rate(X_hat),
-                     lam_d=odometry_drift_bound(X_hat))
-
-def pose_lease_valid(lease, t, theta):
-    r_t = lease.r0 + lease.lam_o*(t-lease.tau) \
-                    + lease.lam_d*math.sqrt(t-lease.tau)
-    return r_t <= r_max(theta) and lease.omega in observed_strata
-
-def cascade_invalidate(lease_graph, root):
-    for node in descendants(lease_graph, root):
-        node.invalid = True                          # fail-closed，不局部降级
+def certified_fusion(streams, t0, lease_f, calib):
+    # 1) 时间对齐：插值到公共时间基，估同步误差
+    z_al, eps_ts = time_align(streams, t0)
+    if eps_ts > lease_f.eps_max:
+        return FusionState(healthy=False, reason='sync')
+    # 2) 各源证书必须有效
+    if not all(src_valid(s, t0) for s in streams):
+        return FusionState(healthy=False, reason='source_cert')
+    # 3) 融合 + 创新门
+    x_hat, Sigma = gaussian_fuse(z_al)
+    r = innovation(z_al, x_hat)
+    d2 = r.T @ inv(Sigma) @ r
+    if d2 > chi2_threshold(lease_f.alpha_i):
+        return FusionState(healthy=False, reason='innovation', d2=d2)
+    # 4) 跨源交叉覆盖（独立审计集校准）
+    if calib.q_cross < 1 - lease_f.alpha_c:
+        return FusionState(healthy=False, reason='cross_coverage')
+    Lv = calib.speed_bound
+    r_fuse = calib.r_stat + Lv*eps_ts + calib.r_quant
+    return FusionState(healthy=True, x=x_hat, r=r_fuse, eps_ts=eps_ts, d2=d2)
 ```
 
-### IP-61 DCL：覆盖缺口、对抗式采集、护照与分块加权共形
+### IP-66 Rel-Cert Engine
 ```
-def gap_per_stratum(audit_set, alpha_p, observed):
-    return {w: (1 - alpha_p) - conditional_coverage(audit_set, w)
-            for w in observed}
+def relative_cert(T_A, T_B, fusion, calib, anchor):
+    T_rel = inv(T_A) @ T_B
+    r_world = rad(fusion.r)                    # 世界系保守界
+    r_rel = calib.relative_r[fusion.stage]     # 相对变换独立校准，非三角叠加
+    # 共模检测：外部锚点与融合估计的偏差
+    common_mode = dist(anchor.T_rel, T_rel)
+    if anchor.missing or common_mode > calib.cm_max:
+        return RelCert(sound=False, reason='common_mode')
+    r_rel = max(r_rel, common_mode)            # 共模偏差计入半径
+    P_rel = ball(T_rel, r_rel, metric=calib.metric)
+    lease_r = RelLease(tau=now, r_rel=r_rel, eps_cl=calib.eps_cl)
+    return RelCert(P_rel, lease_r, r_rel, sound=True)
 
-def acquisition_utility(w, gap, sensitivity, cost, risk_budget):
-    risk = upper_risk(w)
-    if risk > risk_budget: return -inf
-    return gap * sensitivity / (cost + C_RISK * risk)
-
-def adversarial_stratum_search(gaps, sensitivity, budget):
-    # 不只取当前最差层，还搜索邻域/组合层，防止只采容易层
-    candidates = expand_neighborhood(gaps.keys(), radius=EPS)
-    return max(candidates,
-               key=lambda w: acquisition_utility(w, gap(w), sensitivity(w),
-                                                 cost(w), budget))
-
-def passport(datum, src, block, audit_index):
-    assert not overlaps_audit(datum, audit_index)    # 采集与审计物理隔离
-    return DataPassport(src=src, task=datum.task, scene=datum.scene,
-                        episode=datum.episode, block=block,
-                        sensor_cfg=datum.cfg, labeler=datum.labeler,
-                        conf=datum.conf, synthetic=datum.synthetic,
-                        audit_overlap=False)
-
-def blocked_weighted_conformal(calib, alpha_p):
-    weights = [p.w_src * p.w_conf * density_ratio(p) for p in calib]
-    n_eff = effective_sample_size(weights, blocks=calib.blocks)
-    q = weighted_block_quantile(scores(calib), weights, 1 - alpha_p)
-    return ConformalModel(q, n_eff=n_eff, eps_shift=shift_bound(calib))
-
-def submit_recalibration(model, audit, regression):
-    if not audit.independent_of(acquisition_policy):
-        return Reject('audit_not_independent')
-    if not conditional_coverage_ok(model, audit, alpha_p):
-        return Reject('coverage_failed')
-    if not regression.pass_all():                    # 隐藏层/新环境
-        return Reject('regression_failed')
-    if not monotone_nonworsening(model, current_model):
-        return Reject('non_monotone')
-    return commit(model)
+def rel_lease_valid(lease_r, t):
+    return (t - lease_r.tau) <= lease_r.life and lease_r.r_rel <= lease_r.eps_cl
 ```
 
-### IP-62 CCA：覆盖红队、选择偏差、投毒与回归
+### IP-68 Coord-Guard 闭链与降级
 ```
-def coverage_redteam(model, audit, strata, delta=1e-3):
-    worst = min(strata, key=lambda w:
-                clopper_pearson_lower(audit, w, delta))
-    lb = clopper_pearson_lower(audit, worst, delta)
-    if lb < 1 - alpha_p:
-        return Counterexample(stratum=worst, deficit=(1 - alpha_p) - lb,
-                              request=acquisition_task(worst))
-    return None
+def closure_check(T_A, T_B, T_grasp, cert_rel, calib):
+    e_cl = log(inv(T_grasp) @ inv(T_A) @ T_B)
+    ok = norm(e_cl, Sigma=calib.Sigma_cl) <= calib.eps_cl
+    over = cert_rel.r_rel > calib.eps_cl / calib.kappa
+    return ok and not over, e_cl
 
-def selection_bias(model, acq_dist, audit_dist):
-    tv = total_variation(acq_dist, audit_dist)
-    inflated = coverage(acq_dist) - coverage(audit_dist)
-    return BiasReport(tv=tv, inflated=inflated,
-                      worst_region=argmax_region_gap(audit_dist))
+def force_closure(tactile, tactile_sigma, calib):
+    W = contact_wrenches(tactile)              # 接触力旋量
+    return convex_hull_contains_origin(W) and margin(W) >= calib.eta_g
 
-def poisoning_test(model, injected):
-    before = audit_coverage(model)
-    after  = retrain(model, injected).audit_coverage
-    if after - before > DELTA_OK:                    # 覆盖率异常上升 = 可疑
-        return Quarantine(injected, reason='coverage_inflation')
-    return None
-
-def certificate_regression(model, hidden_suite):
-    return all(model.certify(z).sound for z in hidden_suite)
+def degrade(mode, fusion, cert_rel, closure_ok, g_ok, anchors_ok):
+    # 单调降级：只在证据失效时下移，回升需重新覆盖 + 驻留
+    if not fusion.healthy or not anchors_ok:
+        return 'hold' if mode in ('dual_rigid','dual_compliant') else 'fail_closed'
+    if not closure_ok or not g_ok:
+        return {'dual_rigid':'dual_compliant',
+                'dual_compliant':'single_A',
+                'single_A':'hold','single_B':'hold'}.get(mode, 'hold')
+    return mode
 ```
 
-### IP-51/52/53 升级：姿态根信任下的自动机与监控
+### IP-51 CAR 升级守卫
 ```
-def car_transition_guard_v5(e, x, cert_obj, persona, lease_p, lease_c, t):
-    theta = cert_obj.alpha_e[e] * cert_obj.theta_sim[e]
-    if (not pose_lease_valid(lease_p, t, theta)
-            or x.stratum not in observed_strata):
-        cascade_invalidate(cert_obj.lease_graph, 'pose')
-        return FailClosed(tag='pose_root_invalid')   # 根失效 → 整链失效
-    m_lookup = cert_lookup_L0(x, stratum=x.stratum).m_lo[e]
-    m_lease  = lease_c.m - lease_c.lam * (t - lease_c.tau)
-    m_cap    = persona_cap[e](persona)
-    m_pose   = L_phi[e] * geodesic_radius(cert_obj.pose_cert)
-    return min(m_lookup, m_lease, m_cap) - m_pose >= theta
-
-def certify_light_v5(x, guards, persona, budget_us, criticality):
-    if x.stratum not in observed_strata:
-        return FailClosed('unseen_stratum'), None, -1
-    b = cert_lookup_L0(x, stratum=x.stratum)
-    lease_p = acquire_pose_lease(x)
-    if not pose_lease_valid(lease_p, monotonic_now(), theta):
-        return downgrade_monotone(b), None, -1
-    U = undecided_guards(b, guards)
-    if not U and lease_valid(lease_c, theta, monotonic_now()):
-        return b, lease_c, -1
-    if budget_us < 110 or criticality < K_GEOMETRY:
-        return downgrade_monotone(b), lease_c, -1
-    status, margin = monitor_step_INT8(quantize_obs(x, pose_cert=b.pose_cert))
-    b.m_lo = min(b.m_lo, margin)
-    U = undecided_guards(b, guards)
-    return (b, lease_c, 0) if not U else (downgrade_monotone(b), lease_c, 0)
+def car_guard_v7(e, x, certB, persona, lease_p, lease_e, lease_f, lease_r, t):
+    if not (pose_lease_valid(lease_p,t) and energy_lease_valid(lease_e,t,E_min(e))
+            and fusion_lease_valid(lease_f,t) and rel_lease_valid(lease_r,t)):
+        cascade_invalidate('pose_energy_fusion_rel')
+        return FailClosed()
+    r = radius_lookup(x.stratum, certB.m_t, certB.calib)
+    m_pose  = L_phi[e] * r
+    m_rel   = L_rel[e] * certB.P_rel.r
+    m_sync  = L_v[e] * certB.F_t.eps_ts
+    m_energy= L_e * max(0.0, B_min - E(t))
+    m = min(certB.lookup, lease_p.m, persona_cap) - m_pose - m_rel - m_sync - m_energy
+    return m >= theta(e) and certB.mode_consistent
 ```
 
 ## 3. 复杂度与正确性
 
-| 组件 | 时间复杂度 | 空间复杂度 | 正确性保证 |
+| 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| IP-60 分层 | O(|sensors|) 每帧 | 分层参数 O(|Ω|) | 分层离散化 ⟹ 条件覆盖可按层校准 |
-| IP-60 姿态证书 | O(1) 查表 + O(d) 拟合 | 每层半径 O(|Ω|) | 定义 44：条件覆盖 ≥1−α_p（校准有效时） |
-| IP-60 谓词提升 | O(|P|_离散) / 解析界 | 同证书 | 定义 45：X∈P ∧ φ^□(P) ⟹ φ(X) |
-| IP-60 根租约 | O(1) 判定 | 依赖图 O(V+E) | 定义 46：r(t) 上界 ⟹ 过期判据 sound；根失效级联 |
-| IP-61 缺口估计 | O(|A|·|Ω|) | 审计集 O(|A|) | 仅用独立审计集估计条件覆盖 |
-| IP-61 对抗采集 | O(|Ω|·|N_ε|) | 任务单 O(|Ω|) | 定义 48：采集只更新校准，不降审计独立性 |
-| IP-61 分块共形 | O(N log N) | 校准 O(N) | 定义 47：块/加权覆盖 ≥1−α_p−ε_shift |
-| IP-61 提交闸门 | O(|A|+|regression|) | 快照 O(model) | 三闸门失败即整批回滚 |
-| IP-62 覆盖红队 | O(|A|·|Ω|) | 反例 O(|Ω|) | 单侧置信下界 ⟹ 覆盖不足可检出 |
-| IP-62 偏差/投毒 | O(N) / O(retrain) | 报告 O(N) | 独立性检验 + 膨胀检测 ⟹ 防 Goodhart |
-| IP-51 姿态守卫 | O(1) 查表 + O(|E|) | 同 L0 + 证书 | 根租约有效 + min 四项 ⟹ 无陈旧/无漏扣 |
-| IP-53 区间监控 | O(|区间|·|谓词|) | 区间 O(d) | 区间算术 ⟹ 对 P_t 保守（无漏报） |
+| Fusion-Cert | O(Σ|S_i|·d) 每周期 | O(d²) | ε_ts≤ε_max ∧ 各源有效 ∧ d²≤χ² ∧ q_cross≥1−α_c ⇒ P(‖x−x̂‖≤r_fuse)≥1−α_f |
+| Rel-Cert Engine | O(1) SE(3) 运算 | O(1) 查表 | 相对变换独立共形 + 共模上界 ⇒ P(T_rel∈P_rel)≥1−α_r |
+| Coord-Guard | O(K) 接触点 | O(K) | e_cl≤ε_cl ∧ 力闭合裕度≥η_g ⇒ 闭链约束一致、无过约束放行 |
+| 联合证书 J^B | O(1) | O(V+E) | 各租约有效 ∧ P_rel 覆盖 ∧ 闭链一致 ⇒ φ^B 在协作模式 sound |
+| 降级梯子 | O(1) | O(1) | 单调下移 + 回升需重新覆盖 ⇒ 无“未认证回升” |
 
-## 4. 实验设计（E95–E102，硬门槛）
+正确性定理：若 pose/energy/fusion/relative 四类租约均有效，认证融合满足时间对齐、创新一致与跨源覆盖，相对证书 P_rel 在独立锚点校验下满足定义 54 的条件覆盖，闭链残差满足 ‖e_cl‖_Σ≤ε_cl 且力闭合裕度达标，则双臂协作联合证书 J^B_t 对协作谓词 φ^B 保持 sound；任一条件失效则 Coord-Guard 单调降级或 fail-closed，不发放未认证的双臂执行权。
+
+## 4. 实验设计 E109–E114
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E95 姿态条件覆盖 | 各 ω 层覆盖率；最差层覆盖；未观测层检出率；层漂移检出 | ≥1−α_p(α_p=0.05)；≥1−α_p−2%；≥99%；≥95% |
-| E96 证书提升 soundness | □ 提升后实机违例；margin 转移漏报；相对点估计可用性损失 | 0 起；0；<15% |
-| E97 姿态租约新鲜度 | 过期判据 sound 率；陈旧姿态误用；刷新成功率；p99 决策延迟 | 100%；0 起；≥99%；<150μs |
-| E98 分块加权共形 | 块/加权覆盖；n_eff 声明误差；同 scene/episode 泄漏率；ε_shift 校准 | ≥1−α_p；<20%；<1%；误差<20% |
-| E99 覆盖驱动采集 | 最差层缺口下降/样本 vs 随机分层；新覆盖层占比；成本超支 | ≥5x；≥90%；0 |
-| E100 审计独立性 | 注入 Goodhart 检出率；覆盖膨胀上界 δ；投毒检出率；泄漏检出 | ≥95%；<2%；≥95%；≥95% |
-| E101 100h 姿态-数据闭环 | 不安全事件；审计层证书宽度单调性；退化恢复时延；灾难性遗忘 | 0 起；单调不增；<200ms；0 |
-| E102 人机交互姿态 | 人体姿态层覆盖；意图集条件覆盖；近人安全违例；快速换人 | ≥1−α_p；≥1−α_p；0 起；≥99% 检出 |
+| E109 相对证书 soundness | 相对位姿越界率；P_rel 条件覆盖率 | 0 起；≥1−α_r |
+| E110 认证融合与同步 | ε_ts 估计误差；创新门漏报率；融合越界率 | <20%；<1%；0 起 |
+| E111 闭链一致性 | 过约束误放行率；e_cl 超阈检出率 | 0 起；≥99% |
+| E112 双臂交接安全 | 掉件/碰撞/过力次数；交接成功率 | 0 起；≥98% |
+| E113 降级与恢复 | 传感器掉线/帧错位下 fail-closed 及时率；误降级率 | ≥99.9%；<5% |
+| E114 100h 双臂闭环 | 协作任务成功率；安全违例；相对证书平均宽度；能耗 | 下降<5%；0 起；≤v10 单臂×1.15；增幅<10% |
 
-回退：E95 覆盖不足 → 按层膨胀 r_ω / 关闭认证扩张，退回保守先验盒；E96 提升失败 → 退回点估计 + 手工膨胀（v20），并降速；E97 租约失真 → 缩短租约 + 提高刷新频率 + 降速；E98/E100 审计失败 → 冻结重校准、隔离该批数据、只认封存审计集；E99 无收益 → 退回均匀分层采样；任何红线失败 → 熔断回「保守先验姿态盒 + 纯查表 + 安全停机」。
+回退：E110 同步/创新门失效 → 关闭多源融合，回退固定低延迟子集 + 保守半径；E111 闭链误放行 → 禁 dual_rigid，强制 dual_compliant；E113 误降级过高 → 放宽门限并加入驻留滞环；E114 位移越界 → 回退 v10 单臂模式。
 
-## 5. 风险与缓解（增量）
+## 5. 风险与缓解
 
-| 风险 | 等级 | 缓解措施 |
+| 风险 | 等级 | 缓解 |
 |---|---|---|
-| 条件覆盖在未采层失效：部署进入透明/镜面/弱纹理/空洞/外推层 | 高 | E95 红线；分层共形 + 未观测层拒答；保守先验盒；fail-closed |
-| 审计集与采集策略不独立 → 覆盖自我确认（Goodhart） | 高 | E100 红线；审计封存 + 预注册分层抽样；采集策略不可读审计；定期审计交换 |
-| 忽略数据依赖（同 episode/时间相关）→ 有效样本量虚高 | 高 | E98 红线；分块共形/块交叉验证；如实报告 n_eff 与 ε_shift |
-| 姿态盒过保守 → 几何/规划可用性崩塌 | 高 | margin 转移最小化；自适应分层；可用性损失门槛（E96）；仅在安全谓词上用 □ |
-| 姿态根失效级联过激 → 频繁安全停机 | 中-高 | 级联只用于安全关键证书；分级降级阶梯；监控误触发率并调 r_max |
-| 6D 位姿标注误差（透明/关节物体尤甚）污染校准 | 中-高 | 多标注者 + 置信护照；鲁棒损失；与审计集分离；投毒测试 |
-| 仿真退化场景不代表真实 → 分层覆盖高估 | 中-高 | 真机锚点 + 密度比；SCV 仿真充分性指标；E99/E101 联测 |
-| 单调提交闸门过严 → 有用重校准被拒、证书冻结 | 中 | 允许「有证据的膨胀/收缩」但 soundness 不降；失败降级而非静默放行 |
+| 共模标定/时间基准污染使融合自证正确 | 高 | 外部独立锚点交叉校验 + 共模偏差计入 r_fuse + 锚点缺失即降级 |
+| 闭链过约束把误差放大为越界/过力 | 高 | e_cl 检查 + 超宽禁刚性双臂 + 力闭合裕度守卫 |
+| 时间失配（深度/力矩晚到）导致半径低估 | 高 | ε_ts 上界 + L_v·ε_ts 计入 + 创新门 fail-closed |
+| 双臂频繁降级/回升造成抖动 | 中 | 单调梯子 + 最小驻留 + 滞环 |
+| 相对证书校准数据不足产生族偏差 | 中 | 分阶段共形 + DCL 定向采集 + 独立审计再校准 |
+| 融合算力/延迟挤占控制周期 | 中 | 子集选择 + 异步融合 + 延迟预算纳入 c_fuse |
 
 ## 6. 本轮最大风险
 
-**一句话**：姿态证书的 sound 性依赖「可观测性分层的条件覆盖」，而数据采集又同时决定分层与校准集——若审计集与采集策略不独立，闭环会沿「自己采到的流形」自我确认（Goodhart），在未采到的退化姿态（透明/镜面/弱纹理/深度空洞/外参外推/快速运动）上静默失效；因此 E95（分层条件覆盖）与 E100（审计独立性/选择偏差）必须设为红线，默认回退到「保守先验姿态盒 + 纯查表降级/安全停机」这条永不失 sound 的底线。
+**一句话**：双臂与多源融合共享同一套标定与时间基准，共模偏差会让相对证书和创新门“自证正确”而实际半径被低估，闭链过约束又会在“两个单臂证书都有效”的表象下把误差放大成越界或过力；因此必须以外部独立锚点交叉校验、把 ε_ts 与共模偏差显式计入 r_fuse，并在锚点缺失或闭链残差超阈时单调降级到单臂/保持而非硬撑。
 <!-- ARTIFACT:END -->

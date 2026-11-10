@@ -87,152 +87,178 @@ PSE 在此基础上签发 P_t(m_t^*)，CAR 用联合证书守卫。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 45 轮产物 · 创新点清单 v22：Energy-Context-Depth（ECPS × Depth-Cert Adapter × Context Predictor）× 能量-姿态联合证书（四层架构 v10）
+# 第 46 轮产物 · 创新点清单 v23：Memory-Safety-Voice（MVR × VAD × SAB）× 记忆-语音-安全全局决策
 
-> 承接第 44 轮产物 v21。本轮增量插入 IP-63/64/65，并升级 IP-60/61/62/51/45。不推倒 v9，四层架构升级为 v10：在根信任层增加能量租约，感知模态条件化姿态证书，上下文预测驱动深度门控。
+> 承接第 45 轮产物 v22。本轮增量插入 IP-66/67/68，并升级 IP-63/61/62/51/45。不推倒 v10 能量-上下文-深度框架，新增记忆检索链路与语音-安全交互闭环。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-63 | ECPS Energy-Context Perception Scheduler | 新增 | 能量租约 ℓ_e 追踪、上下文可观测性预测、模态效用 U(m) 优化、带 fail-closed 的深度门控 |
-| IP-64 | DEPTH-CERT ADAPTER | 新增 | 按模态组合 m 校准 r_ω(m)、深度质量分层 ρ_depth/空洞率、深度-姿态联合租约 |
-| IP-65 | CONTEXT PREDICTOR | 新增 | c_t→P(ω|c_t,m) 预测、预测置信校准、独立审计集红队 |
-| IP-60 | POSE-CERT-ENGINE | 升级 | ω_t、r_ω 依赖 m_t，输出模态条件姿态证书 P_t(m) |
-| IP-61 | DATA-CERT-LOOP | 升级 | 采集效用加入能耗 cost_e，护照新增 modality / energy_snapshot |
-| IP-62 | CERT-COVERAGE-AUDITOR | 升级 | 新增上下文预测覆盖审计、能量租约注入测试、模态切换选择偏差检测 |
-| IP-51 | CAR | 升级 | 守卫加入 E(t)≥E_min 与 m_t 一致性检查 |
-| IP-45 | 总线 | 升级 | energy-lease / modality-decision / context-pred / depth-quality 话题 |
+| IP-66 | MVR Memory-Verify-Respond Scheduler | 新增 | 离线记忆库 kNN 检索、语音指令快速决策复用、能量-上下文惩罚 |
+| IP-67 | VAD Voice-Action Dispatcher | 新增 | 语音槽位解析 + 置信度、需求分布 R(v)、分布式模态激活 |
+| IP-68 | SAB Safety Action Binder | 新增 | 指令-姿态绑定函数 B、强制安全队列 Q_safe、认证姿态恢复检测 |
+| IP-63 | ECPS | 升级 | 输出 m_t 前查询记忆库，记忆命中时跳过实时效用求解 |
+| IP-61 | DCL | 升级 | 语音槽位采集任务计入能量租约，绑定不安全指令的后备模态 |
+| IP-62 | CCA | 升级 | 新增记忆检索偏差审计、语音-姿态绑定覆盖率测试 |
+| IP-51 | CAR | 升级 | B(v_t, P_t) ≤ θ_safe 时 fail-closed；安全队列超时自动撤回 |
+| IP-45 | 总线 | 升级 | memory-query / voice-intent / safety-queue / modality-backup 话题 |
 
-## 1. 符号体系（增量：定义 50–53）
+## 1. 符号体系（增量：定义 54–58）
 
 | 符号 | 含义 |
 |---|---|
-| B_t | 电池剩余电量 Wh |
-| P_m | 模态 m 功耗 W |
-| ℓ_e=(B_t,P_m,τ_e,λ_b,B_min) | 能量租约 |
-| E(t)=B_t-P_m·(t-τ_e)-λ_b·(t-τ_e)^2 | 剩余能量上界 |
-| c_t | 上下文向量 VLM/任务/场景 |
-| P(ω|c_t,m) | 上下文-模态可观测性预测 |
-| G_{c,m}(ω) | 深度增益 |
-| J_t=(P_t,ℓ_p,ℓ_e,m_t) | 联合姿态-能量证书 |
-| U(m;c_t,B_t) | 模态效用 |
+| M | 记忆库 M = {(c, ω, B, m, U, outcome)} |
+| kNN(v, c_t, B_t) | 基于语音+上下文+能量的记忆检索 |
+| v_t | 第 t 时刻语音指令 |
+| S(v) | 指令槽位集合 |
+| σ_s | 槽位位置信度 |
+| R(v) | 语音指令→Ω 的需求分布 |
+| KL(R || P) | KL 散度作为不匹配惩罚 |
+| B(v_t, P_t, ω_t) | 指令-姿态安全绑定概率 |
+| θ_safe | 安全阈值 |
+| Q_safe | 安全等待队列 |
+| Π(c, ω, B, v) | 全局决策函数 |
 
 ## 2. 关键算法 伪代码
 
-### IP-63 ECPS
+### IP-66 MVR
 ```
-def energy_lease_valid(lease, t, E_min):
-    E = lease.B0 - lease.Pm*(t-lease.tau) - lease.lamb*(t-lease.tau)**2
-    return E >= E_min and lease.B0 >= lease.Bmin
+def memory_lookup(v_t, c_t, B_t, M, tau_hit=0.7, lambda_b=0.1, lambda_c=0.2):
+    best_dist, best_i = inf, None
+    for i, (c_i, B_i, m_i, outcome_i) in enumerate(M):
+        d_cos = 1 - cosine(encode(v_t), encode(c_i))
+        d_enc = lambda_b * max(0, B_t - B_i)
+        d_ctx = lambda_c * kl_div(c_t, c_i)
+        dist = d_cos + d_enc + d_ctx
+        if dist < best_dist:
+            best_dist, best_i = dist, i
+    if best_dist < tau_hit:
+        return M[best_i], best_dist  # 返回历史决策与置信度
+    return None, best_dist
 
-def context_predictor(c_t, m):
-    logits = net_ctx(c_t, m)            # 输出 |Ω| 维度
-    prob = softmax(logits)
-    conf = entropy(prob) < tau_conf
-    return prob, conf
-
-def modality_utility(m, c_t, B_t, calib, S_phi):
-    prob, conf = context_predictor(c_t, m)
-    exp_gain = sum(prob[w] * S_phi[w] * (calib.r[w][m0]-calib.r[w][m]) for w in Omega)
-    cost = Pm[m] + c_risk*energy_risk(B_t)
-    if not conf: return -inf
-    return exp_gain / cost
-
-def ecps_step(B_t, c_t, omega_t, lease_e, calib):
-    feasible = [m for m in M if energy_lease_valid(lease_e.update(Pm[m]), t+Delta, E_min)]
-    if not feasible: return FailClosed('energy')
-    m_star = max(feasible, key=lambda m: modality_utility(m,c_t,B_t,calib,S_phi))
-    if omega_t in Omega_deg and Depth not in m_star:
-        # 风险前置：退化层必须有深度
-        m_star = add_depth(m_star)
-    return m_star, lease_e.update(Pm[m_star])
+def mvr_schedule(c_t, B_t, v_t, M, calib, S_phi):
+    mem_hit, dist = memory_lookup(v_t, c_t, B_t, M)
+    if mem_hit:
+        m_mem = mem_hit[3]
+        if energy_lease_valid(mem_hit[4], t+Delta, E_min):
+            return m_mem, mem_hit[4], 'memory'
+    # 记忆未命中，回退实时求解
+    m_star = max(M, key=lambda m: modality_utility(m, c_t, B_t, calib, S_phi))
+    return m_star, None, 'realtime'
 ```
 
-### IP-64 Depth-Cert Adapter
+### IP-67 VAD
 ```
-def depth_quality(depth_frame):
-    rho = valid_pixels(depth_frame)/total_pixels
-    hole = hole_ratio(depth_frame)
-    sigma = noise_std(depth_frame)
-    return stratum_depth(rho, hole, sigma)
+def parse_voice(v_raw):
+    # ASR + NLU pipeline
+    slots = extract_slots(v_raw)  # [(slot_name, value, confidence)]
+    return [(name, val, conf**2) for name, val, conf in slots]
 
-def radius_lookup(omega, m, calib):
-    # calib.r[omega][m] 为分层共形半径
-    return calib.r[omega].get(m, calib.r[omega].get('RGB', INF))
+def demand_dist(slots):
+    # 从槽位构建 Ω 分布
+    R = zeros(|Ω|)
+    for name, val, conf in slots:
+        if name == 'focus':
+            R[face_region(val)] += conf
+        elif name == 'gesture_target':
+            R[gesture_area(val)] += conf
+    return normalize(R)
 
-def joint_lease(pose_lease, energy_lease, m):
-    # 深度帧率失配加速姿态租约
-    if m.contains_depth and depth_fps < required_fps:
-        pose_lease.lam_o *= 1.5
-    return pose_lease, energy_lease
+def gumbel_topk(probs, k=3):
+    G = -log(-log(uniform(0,1,len(probs))))
+    scores = probs + G
+    return argsort(scores)[-k:]
+
+def vad_dispatch(v_raw, c_t, B_t, calib, S_phi):
+    slots = parse_voice(v_raw)
+    R_v = demand_dist(slots)
+    beta = 1.0
+    log_P_m = []
+    for m in M:
+        kl = kl_div(R_v, P(omega|c_t, m))
+        log_P_m.append(-beta*kl - log(Pm[m]))
+    probs = softmax(log_P_m)
+    m_samples = gumbel_topk(probs, k=3)
+    # 优先选能量可行的最高效模态
+    for m in m_samples:
+        if energy_lease_valid(lease_e.update(Pm[m]), t+Delta, E_min):
+            return m, prob=m
+    return None, None  # 进入安全队列
 ```
 
-### IP-65 Context Predictor 审计
+### IP-68 SAB
 ```
-def audit_context_coverage(predictor, audit_set):
-    hits = 0
-    for (c,omega,m) in audit_set:
-        p = predictor.prob(c,m)
-        hits += indicator(omega in topk(p, k=1))
-    return hits/len(audit_set)
+def safety_bind(v_t, P_t, omega_t, theta_safe=0.85):
+    # g(v) 为语音指令指令的机械臂锚点预测
+    g_v = anchor_from_intent(v_t)
+    g_ref = reference_anchor(P_t)
+    rad = P_t.radius
+    deviation = np.linalg.norm(g_v - g_ref)
+    B_prob = exp(-gamma * rad * deviation)
+    return B_prob
 
-def redteam_context(predictor, audit):
-    cov = audit_context_coverage(predictor, audit)
-    if cov < 1 - alpha_c:
-        return Counterexample('context_undercoverage')
-    return None
+def safety_actionBinder(v_t, m_t, B_t, P_t, omega_t):
+    B_prob = safety_bind(v_t, P_t, omega_t)
+    if B_prob >= theta_safe:
+        return 'execute'
+    else:
+        return 'queue', B_prob  # 进入 Q_safe，等待姿态恢复
 ```
 
-### IP-51 CAR 升级守卫
+### 全局决策 Π
 ```
-def car_guard_v6(e,x,cert,persona,lease_p,lease_e,m_t,t):
-    if not pose_lease_valid(lease_p,t) or not energy_lease_valid(lease_e,t,E_min(e)):
-        cascade_invalidate('pose_energy')
-        return FailClosed()
-    r = radius_lookup(x.stratum, m_t, cert.calib)
-    m_pose = L_phi[e]*r
-    m_energy = L_e*(B_min - E(t))_+ 
-    m = min(cert.lookup, lease_p.m, persona_cap) - m_pose - m_energy
-    return m >= theta(e)
+def global_decision(c_t, omega_t, B_t, v_t, M, calib, S_phi, Q_safe):
+    if Q_safe and not empty(Q_safe):
+        # 先处理安全队列
+        next_cmd = pop(Q_safe)
+        m_t, conf = vad_dispatch(next_cmd.v, c_t, B_t, calib, S_phi)
+        return m_t, 'execute_from_queue'
+    result, status = mvr_schedule(c_t, B_t, v_t, M, calib, S_phi)
+    if result is None:
+        return 'fail-closed', 'energy'
+    B_prob = safety_bind(v_t, pose_certify(result), omega_t)
+    if B_prob < theta_safe:
+        push(Q_safe, v_t)
+        return result, 'queued'
+    return result, status
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| ECPS 效用求解 | O(|M|·|Ω|) 每 100ms | O(|C|·|Ω|) | 能量可行 + 效用最大化 ⇒ 约束满足 |
-| Context Predictor | O(d_ctx) 前向 | O(params) | 独立审计覆盖 ≥1-α_c ⇒ 预测声称可信 |
-| Depth-Cert Adapter | O(1) 查表 | O(|Ω|·|M|) | r_ω(m) 共形保证 P(X∈P|ω,m)≥1-α_p |
-| 联合证书 J_t | O(1) | O(V+E) | ℓ_e 有效 ∧ ℓ_p 有效 ∧ P_t(m)覆盖 ⇒ φ^□(P_t) ⇒ φ(X_t) |
-| CAR v6 | O(1) | - | fail-closed 级联 ⇒ 无陈旧/无能量透支使用 |
+| MVR 记忆检索 | O(|M|·d) 每指令 | O(|M|·d_ctx) | 记忆命中时，历史能量/姿态约束复用 ⇒ 决策安全 |
+| VAD 语音解析 | O(d_v) ASR 前向 | O(|slots|·|Ω|) | 槽位置信 ≥ τ_s 则需求分布可信 |
+| SAB 绑定检查 | O(1) | O(1) | B(v_t,P_t) ≥ θ_safe ⇒ 指令安全执行 |
+| 全局决策 Π | O(|M|) | O(|Q|) | 记忆/实时/安全队列三重保障 ⇒ fail-closed 保证 |
 
-正确性定理：若 energy_lease_valid ∧ pose_lease_valid ∧ context_predictor 置信 ≥τ_conf ∧ P_t(m) 满足定义44条件覆盖，则联合证书 J_t 的鲁棒提升 φ^□(P_t) 在能量约束下保持 sound。若任一条件失效，系统进入 fail-closed。
+正确性定理：设定记忆库 M 的检索距离界限为 τ_hit，绑定阈值为 θ_safe。若 kNN(v_t, c_t, B_t) 命中且历史 outcome=success，则全局决策 Π 输出的 m_t 满足能量租约 ℓ_e 且姿态证书 P_t 在检索时效内有效；若未命中，则 VAD 采用的分布式模态激活在能量约束下有解，SAB 的 B(v_t, P_t) ≥ θ_safe 才能执行。否则进入安全队列或 fail-closed。
 
-## 4. 实验设计 E103–E108
+## 4. 实验设计 E109–E114
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E103 能量租约 soundness | 能量透支误用率；B_min 触发及时率 | 0 起；≥99.9% |
-| E104 深度增益有效性 | Ω_deg 层 rad 降低；普通层功耗浪费 | ≥30% rad 降；浪费 <5% |
-| E105 上下文预测覆盖 | P(ω|c,m) 条件覆盖；置信校准误差 | ≥1-α_c(α_c=0.05)；<10% |
-| E106 模态切换抖动 | 切换频率；切换后姿态证书连续性 | ≤2次/min；rad 增幅 ≤15% |
-| E107 联合证书 soundness | 实机违例；能量耗尽后误用 | 0 起；0 起 |
-| E108 100h 能量-上下文闭环 | 平均功耗降低；最坏层覆盖保持；安全停机次数 | ≥20% 降功耗；覆盖≥1-α_p；0 起 |
+| E109 记忆检索准确性 | 命中率、能量偏差 | 命中率 ≥ 65%；能量偏差 ≤ 5% |
+| E110 语音槽位置信 | σ_s 分布；需求匹配度 | σ_s ≥ 0.9（前 80%）；匹配度 ≥ 85% |
+| E111 语音-姿态绑定 | B(v,P) 分布；执行安全率 | θ_safe=0.85 时安全率 ≥ 99% |
+| E112 全局决策一致性 | 记忆复用次数；实时求解次数 | 记忆占比 ≥ 60%；实时求解 ≤ 40% |
+| E113 能量-安全平衡 | Q_safe 长度；停机次数 | Q_safe 平均长度 ≤ 2；停机 0 起 |
+| E114 100h 全局闭环 | 记忆覆盖率；语音成功率 | 记忆覆盖 ≥ 70%；语音成功率 ≥ 95% |
 
-回退：E105 预测覆盖不足 → 关闭预测性激活，回退到保守策略 Depth Always On；E103 能量失效 → 强制 RGB Only + 安全停机；E107 违例 → 回退 v9 无能量调度。
+回退策略：E109 记忆覆盖 < 50% → 关闭记忆复用，回退纯实时求解；E111 绑定失败率 > 5% → 提高 θ_safe 或要求语音确认；E113 能量-安全冲突 → 强制 Depth On + fail-closed 模式。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 上下文预测错误关闭深度 | 高 | 置信校准 + 独立审计 + 预测置信不足时保守开启深度 |
-| 电池内阻/温度模型不准导致 E(t) 高估 | 高 | 在线残差监测 + 保守 λ_b 放大 + 能量租约快速过期 |
-| 深度相机热启动延迟导致姿态证书空窗 | 中 | 预热信号 + 租约冻结窗口 |
-| 模态切换引入控制抖动 | 中 | 滞环门控 + 最小驻留时间 |
-| 能量节约导致覆盖缺口累积 | 中 | DCL 采集效用加入能量成本，避免长期欠采 Ω_deg |
+| 记忆检索复制历史失败 | 高 | τ_hit 设保守值；历史 outcome=failure 时直接屏蔽该记忆 |
+| 语音槽位置信低导致需求偏差 | 中 | σ_s < τ_s 时进入安全队列，要求二次确认 |
+| 绑定函数 B 计算 g(v) 误差大 | 高 | 用视觉-语音互检：若 B < θ_safe，要求用户重说 |
+| 安全队列能量消耗过大 | 中 | 队列元素按能量成本排序，超时撤回 |
+| 记忆库数据漂移 | 低 | 每月强制重训，剔除历史异常 outcome |
 
 ## 6. 本轮最大风险
 
-**一句话**：上下文预测错误引导深度相机开关，结合电池紧张时的能量租约逼近，极易在透明/镜面/深度空洞退化层上出现姿态证书静默失效并级联至安全谓词，因此必须以独立审计集校准上下文预测覆盖率，并在置信不足或能量临界时默认保守开启深度或直接 fail-closed。
+**一句话**：记忆检索可能复制历史上因姿态不稳而“成功但代价高”的感知决策，若在能量紧张时恰好检索到这种记忆，系统会在指令执行时被迫暴力拉伸姿态证书甚至失效，安全交互的绑定失效；因此必须在 kNN 的置信度阈值、绑定函数 B 中引入保守惩罚，并在能量临界时强制屏蔽记忆库，直接走实时求解的保守路径。
 <!-- ARTIFACT:END -->
