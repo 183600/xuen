@@ -1,0 +1,91 @@
+{
+  "config": {
+    "tol": 0.35,
+    "sig_look": 0.3,
+    "move_std": 0.5,
+    "lambda_step": 0.05,
+    "n_ep": 30000
+  },
+  "hazards": {
+    "0.0": {
+      "nolook": {
+        "success": 0.7594,
+        "steps": 1.0,
+        "looks": 0.0,
+        "success_per_step": 0.7594
+      },
+      "always": {
+        "success": 0.9834,
+        "steps": 5.0,
+        "looks": 4.0,
+        "success_per_step": 0.19668000000000002
+      },
+      "vol": {
+        "success": 0.9608333333333333,
+        "steps": 4.0,
+        "looks": 3.0,
+        "success_per_step": 0.24020833333333333
+      }
+    },
+    "0.05": {
+      "nolook": {
+        "success": 0.7427666666666667,
+        "steps": 1.0,
+        "looks": 0.0,
+        "success_per_step": 0.7427666666666667
+      },
+      "always": {
+        "success": 0.9287666666666666,
+        "steps": 5.0,
+        "looks": 4.0,
+        "success_per_step": 0.18575333333333333
+      },
+      "vol": {
+        "success": 0.918,
+        "steps": 4.0,
+        "looks": 3.0,
+        "success_per_step": 0.2295
+      }
+    },
+    "0.15": {
+      "nolook": {
+        "success": 0.7099666666666666,
+        "steps": 1.0,
+        "looks": 0.0,
+        "success_per_step": 0.7099666666666666
+      },
+      "always": {
+        "success": 0.8289,
+        "steps": 5.0,
+        "looks": 4.0,
+        "success_per_step": 0.16577999999999998
+      },
+      "vol": {
+        "success": 0.8347333333333333,
+        "steps": 4.0,
+        "looks": 3.0,
+        "success_per_step": 0.20868333333333333
+      }
+    },
+    "0.3": {
+      "nolook": {
+        "success": 0.6611666666666667,
+        "steps": 1.0,
+        "looks": 0.0,
+        "success_per_step": 0.6611666666666667
+      },
+      "always": {
+        "success": 0.7001333333333334,
+        "steps": 5.0,
+        "looks": 4.0,
+        "success_per_step": 0.1400266666666667
+      },
+      "vol": {
+        "success": 0.7233333333333334,
+        "steps": 4.0,
+        "looks": 3.0,
+        "success_per_step": 0.18083333333333335
+      }
+    }
+  }
+}

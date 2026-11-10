@@ -1,0 +1,96 @@
+{
+  "pool": {
+    "n_pool": 20000,
+    "n_unique_cells": 242,
+    "n_cells_possible": 432,
+    "heldout_cells": 189,
+    "top1_cell_share": 0.2576,
+    "effective_by_raw": 242.0
+  },
+  "ceiling": {
+    "name": "full_pool",
+    "mean_success": 0.6856728431494176,
+    "worst20_success": 0.44623707285773084,
+    "heldout_success": 0.6623246883120785,
+    "n_eff_cells": 432.0,
+    "mean_cov": 0.9998772504100761,
+    "n_unique_selected": 242
+  },
+  "efficiency": {
+    "mean_success_cov@80": {
+      "cov_val": 0.19237604116948076,
+      "random_B": 78.51847346098552,
+      "ratio": 0.981480918262319
+    },
+    "worst20_success_cov@80": {
+      "cov_val": 0.11632848741629741,
+      "random_B": 311.44776070423507,
+      "ratio": 3.8930970088029384
+    },
+    "heldout_success_cov@80": {
+      "cov_val": 0.16101765445620095,
+      "random_B": 75.95305483820796,
+      "ratio": 0.9494131854775996
+    },
+    "mean_success_cov@160": {
+      "cov_val": 0.2812310546984535,
+      "random_B": 172.9889010031675,
+      "ratio": 1.081180631269797
+    },
+    "worst20_success_cov@160": {
+      "cov_val": 0.16656660174540608,
+      "random_B": 610.4178276945124,
+      "ratio": 3.815111423090703
+    },
+    "heldout_success_cov@160": {
+      "cov_val": 0.23075479267538096,
+      "random_B": 165.3563278432803,
+      "ratio": 1.0334770490205019
+    },
+    "mean_success_cov@243": {
+      "cov_val": 0.35587556193323405,
+      "random_B": 290.5617535336733,
+      "ratio": 1.1957273807970095
+    },
+    "worst20_success_cov@243": {
+      "cov_val": 0.21062597514887463,
+      "random_B": 991.6401651841923,
+      "ratio": 4.0808237250378285
+    },
+    "heldout_success_cov@243": {
+      "cov_val": 0.29276654651906686,
+      "random_B": 272.67701302704495,
+      "ratio": 1.1221276256256993
+    },
+    "mean_success_cov@640": {
+      "cov_val": 0.5569891345915406,
+      "random_B": 1151.5998448437904,
+      "ratio": 1.7993747575684225
+    },
+    "worst20_success_cov@640": {
+      "cov_val": 0.34411193503060644,
+      "random_B": null,
+      "ratio": null
+    },
+    "heldout_success_cov@640": {
+      "cov_val": 0.48493729786008233,
+      "random_B": 1018.9285299202018,
+      "ratio": 1.5920758280003153
+    },
+    "mean_success_cov@1000": {
+      "cov_val": 0.6279007135923445,
+      "random_B": null,
+      "ratio": null
+    },
+    "worst20_success_cov@1000": {
+      "cov_val": 0.3990563154430257,
+      "random_B": null,
+      "ratio": null
+    },
+    "heldout_success_cov@1000": {
+      "cov_val": 0.5699163893521938,
+      "random_B": 1951.6878224200382,
+      "ratio": 1.9516878224200382
+    }
+  }
+}
