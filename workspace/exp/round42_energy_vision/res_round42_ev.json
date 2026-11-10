@@ -1,0 +1,78 @@
+{
+  "E79_energy_reserve": {
+    "base": {
+      "first_half": {
+        "cycles": 15000,
+        "strand_rate": 0.0062,
+        "task_complete_rate": 0.9567333333333333,
+        "recharge_rate": 0.12353333333333333,
+        "mean_energy_per_cycle": 0.11496257516059348
+      },
+      "second_half": {
+        "cycles": 15000,
+        "strand_rate": 0.010066666666666666,
+        "task_complete_rate": 0.9484666666666667,
+        "recharge_rate": 0.13486666666666666,
+        "mean_energy_per_cycle": 0.12608615976164922
+      },
+      "all": {
+        "cycles": 30000,
+        "strand_rate": 0.008133333333333333,
+        "task_complete_rate": 0.9526,
+        "recharge_rate": 0.1292,
+        "mean_energy_per_cycle": 0.12052436746112134
+      }
+    },
+    "prop": {
+      "first_half": {
+        "cycles": 15000,
+        "strand_rate": 0.0024666666666666665,
+        "task_complete_rate": 0.9221333333333334,
+        "recharge_rate": 0.1236,
+        "mean_energy_per_cycle": 0.10987485036940266
+      },
+      "second_half": {
+        "cycles": 15000,
+        "strand_rate": 0.002533333333333333,
+        "task_complete_rate": 0.9012666666666667,
+        "recharge_rate": 0.13533333333333333,
+        "mean_energy_per_cycle": 0.11823921495934987
+      },
+      "all": {
+        "cycles": 30000,
+        "strand_rate": 0.0025,
+        "task_complete_rate": 0.9117,
+        "recharge_rate": 0.12946666666666667,
+        "mean_energy_per_cycle": 0.11405703266437626
+      }
+    }
+  },
+  "E80_visual_localization": {
+    "base": {
+      "success_rate": 0.786,
+      "unsafe_rate": 0.10133333333333333,
+      "false_safe_steps": 608,
+      "relocalizations_per_episode": 0.0,
+      "mean_steps": 148.22216666666668
+    },
+    "prop": {
+      "success_rate": 0.9585,
+      "unsafe_rate": 0.0,
+      "false_safe_steps": 0,
+      "relocalizations_per_episode": 0.588,
+      "mean_steps": 152.0995
+    }
+  },
+  "E81_joint_reserve": {
+    "base": {
+      "strand_rate": 0.00013333333333333334,
+      "task_complete_rate": 0.9636666666666667,
+      "mean_reloc_energy": 0.006314400000000213
+    },
+    "prop": {
+      "strand_rate": 0.0,
+      "task_complete_rate": 0.9401,
+      "mean_reloc_energy": 0.006036400000000202
+    }
+  }
+}
