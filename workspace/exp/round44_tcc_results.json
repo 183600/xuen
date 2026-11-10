@@ -1,0 +1,42 @@
+{
+  "naive": {
+    "certified_silent_rate": 0.32,
+    "certified_retained": 116.0,
+    "silent_failures": 36.95,
+    "adapter_count": 0.0,
+    "recalibration_samples": 0.0,
+    "new_tasks_adopted": 49.15
+  },
+  "gated": {
+    "certified_silent_rate": 0.0,
+    "certified_retained": 66.35,
+    "silent_failures": 0.0,
+    "adapter_count": 0.0,
+    "recalibration_samples": 157764.0,
+    "new_tasks_adopted": 49.95
+  },
+  "rollback": {
+    "certified_silent_rate": 0.0,
+    "certified_retained": 76.6,
+    "silent_failures": 0.1,
+    "adapter_count": 0.0,
+    "recalibration_samples": 174328.0,
+    "new_tasks_adopted": 9.75
+  },
+  "isolate": {
+    "certified_silent_rate": 0.0,
+    "certified_retained": 117.1,
+    "silent_failures": 0.1,
+    "adapter_count": 117.1,
+    "recalibration_samples": 2400.0,
+    "new_tasks_adopted": 50.25
+  },
+  "hybrid": {
+    "certified_silent_rate": 0.0,
+    "certified_retained": 86.3,
+    "silent_failures": 0.1,
+    "adapter_count": 26.2,
+    "recalibration_samples": 132464.0,
+    "new_tasks_adopted": 49.25
+  }
+}
