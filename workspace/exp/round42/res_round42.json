@@ -1,0 +1,33 @@
+{
+  "E79_80_pose_set": {
+    "coverage": 0.9795,
+    "nominal_ball": 0.3866,
+    "nominal_set": 0.76635,
+    "nominal_ball_sym": 0.0973138548539114,
+    "nominal_set_sym": 0.48798303487276157,
+    "sym_fraction": 0.4244,
+    "modes_merged": 0.5,
+    "unsafe_set": 0
+  },
+  "E81_82_peft": {
+    "rank": 4,
+    "param_fraction": 0.05555555555555555,
+    "cert_bound": 1.5599028753722497,
+    "max_empirical_change": 0.565604339541158,
+    "bound_violations": 0,
+    "bound_tightness": 2.757940076339776,
+    "mae_frozen": 0.739880929581713,
+    "mae_adapt": 0.18497023239542817,
+    "mae_gain": 0.7500000000000001
+  },
+  "E83_arl": {
+    "nominal_v18": 0.64928,
+    "nominal_arl": 0.88792,
+    "degrade_rate_v18": 0.35072,
+    "degrade_rate_arl": 0.11208,
+    "ask_rate": 0.25116,
+    "adapt_rate": 0.0355,
+    "mean_extra_time_s": 0.1343819033511721,
+    "unsafe": 0
+  }
+}
