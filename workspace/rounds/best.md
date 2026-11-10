@@ -3,262 +3,336 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 45 轮（承接第 44 轮 v9；本轮灵感：电池管理 × 深度相机 × 上下文理解） · Energy-Context-Depth：能量感知上下文驱动的深度感知调度与姿态证书联合保证（四层架构 v10）
+# 第 49 轮（承接第 48 轮 v12；灵感循环第 4 轮；本轮灵感：安全交互 × 原型验证） · InteractCert-Forge：耦合安全交互证书 × 原型证伪锻造（七层架构 v13）
 
-> 承接第 44 轮 v9 Pose-Cert × Data-Cert。v9 把姿态从点估计升级为分层条件覆盖证书 P_t，数据采集升为带护照的可审计闭环，但隐含假设 H4：感知算力/传感器永远可用且能耗可忽略。UniBot 实机中头部四路 RGB + 双目已存在，部署深度相机可显著提升透明/高光/弱纹理/深度空洞层的可观测性，却带来持续 3-8W 的功耗与热瓶颈；电池余量、任务时长、散热约束会迫使感知被动降级。三个灵感词精确命中 H4：**电池管理**迫使感知决策成为能量租约约束下的资源分配问题；**深度相机**给出可开关的观测性增强手段，其增益是分层且条件性的；**上下文理解**提供对未来可观测性退化的先验，从而实现预测性激活。三者耦合出新问题：**如何在能量租约、姿态证书覆盖保证、上下文预测三者之间做联合最优感知调度，若上下文预测错误或电池骤降，姿态证书会静默失效并级联至安全谓词**。
+> 承接第 48 轮 v12 TaskCert-Compose。v12 把长程任务展开为证书契约 DAG，并用边界守卫 CBG 与只追加台账 CCL 保证“单步 sound 且边界蕴含”，但隐含假设 H7：**安全是机器人自身的属性，交互对象（人/其他 agent）可被当作静态或已知模型；证书库的标定可以在离线分析与最终真机序贯评测中被一次性确证**。UniBot 的真实场景是人机共处（厨房/实验室/家庭）与交接/共融接触任务，安全性本质上是“机器人-人-环境”耦合系统的性质；而证书库的偏差只能被**主动证伪**，不能靠最终评测事后确认。两个灵感词精确命中 H7：**安全交互**要求把安全证书从“单机屏障”升级为“耦合鲁棒屏障 + 人意图不确定 + 接触/功率-力限制 + 交互协议”；**原型验证**要求用分层原型阶梯（仿真→HIL→缩比→全尺寸）主动证伪证书假设，并把原型证据**带传输缺口地**折算成部署置信。耦合出的新问题：**如何定义对任意人行为 robust 的交互安全证书、如何让人意图不确定直接调节证书宽度与动作抽象，并如何用原型证伪证据在部署前把“纸面 sound”与“真实安全”之间的传输缺口显式量化为可审计的置信折损**。
 
 ## 0. 直觉与动机
 
-**灵感 1（电池管理 → 感知能量租约与 fail-closed）**
-直觉：感知不是免费的。把电池余量 B_t 建模为能量租约 ℓ_e = (B_t, P_idle, P_m, τ_e, λ_b)，其中各模态 m ∈ {RGB, Stereo, Depth, Depth+Stereo} 的功耗 P_m 已标定。能量消耗上界 r_e(t)=B_t - ∫P_m dt。若 r_e(t) ≤ B_min 安全阈值，则所有依赖该模态的姿态证书必须级联失效。能量租约与姿态租约并列为根信任的两条腿，任一过期即 fail-closed。
+**灵感 1（安全交互 → 耦合屏障证书，而非单机避障）**
+直觉：传统安全把机器人当成孤立系统做避障，但人机共享空间里真正的危险来自**耦合动力学**——人会突然伸手、会松手、会误判机器意图。因此安全证书应定义在联合状态 `z=(x_r, x_h, x_e)` 上，并且必须是**对人行为 robust** 的：无论人做什么（在合理支撑内），机器人都存在一个动作把系统留在安全集里。这正是“游戏屏障证书”的直觉：安全 = 机器人对人行为的**可响应性**，而非机器人自身的轨迹漂亮。
 
-**灵感 2（深度相机 → 条件可观测性增益）**
-直觉：深度不是万能。定义深度增益 Δr_ω(m→m+Depth)=r_ω(m)-r_ω(m+Depth) 仅在 ω 属于退化层集合 Ω_deg={透明/高光/弱纹理/空洞/快速运动} 时显著；在普通纹理层深度增益接近 0 且功耗浪费。于是深度相机应被建模为**条件激活的观测性增强器**，其价值 = 证书宽度缩减 × 下游敏感度 / 能耗。
+**灵感 2（安全交互 → 人意图不确定性就是证书宽度/速度的旋钮）**
+直觉：当机器人不确定人想干什么（要接杯子还是路过），唯一安全的做法是**慢下来、拉开距离、降低接触力**。把意图后验 `b(θ)` 的熵做成缩放因子 `σ(b)`，直接压速度、放大分离、限功率力；不确定度越高，越只能选细粒度、保守的动作。这恰好把 v12 的“抽象层级=证书宽度旋钮”延伸到**交互维度**：不确定性不是抽象的附加噪声，而是决定抽象可行域的主变量。
 
-**灵感 3（上下文理解 → 预测性激活与风险前置）**
-直觉：不要等退化发生才开深度。上下文理解器 C_t 从 VLM/任务规划/场景语义提取上下文 c_t，预测未来 Δt 内的可观测性分层分布 P(ω_{t+Δt}|c_t, X̂_t)。若预测显示将进入 Ω_deg 且当前姿态租约即将过期，则提前预热深度相机并锁定能量预算。若预测置信低，则保守保持深度开启或直接降级。
+**灵感 3（原型验证 → 分层证伪阶梯与传输缺口）**
+直觉：证书里最危险的数字是 `α`，而 `α` 从来不是算出来的，是**被证伪出来的**。真机最终评测太晚、太贵、太稀疏；应当用原型阶梯做**主动证伪**：仿真/数字孪生快速扫场景，HIL 抓执行与力控偏差，缩比抓尺度效应，全尺寸抓真实接触。每一层的“零反例”都不能直接搬到部署，必须扣除**传输缺口** `δ_{ℓ→d}`（分布/动力学/尺度失配）。原型验证不是“跑一遍确认没问题”，而是“用有限预算最大化找到反例”。
 
-**耦合升级**：在 v9 四层架构上新增 **能量-上下文感知调度层**。ECPS（Energy-Context Perception Scheduler）输出模态决策 m_t^* 与能量租约 ℓ_e，PSE 用 m_t^* 调整 ω_t 分层与 r_ω；DCL 在采集任务中加入能量成本项；CCA 对上下文预测误差做红队。四层 v10：根信任层增加能量租约，L1 几何层感知模态条件化，L2 上下文预测驱动检索键，L3 CAR 守卫加入能量可行性，L4 DCL 覆盖驱动采集带能量预算。
+**灵感 4（耦合 → 交互协议契约与最小风险条件）**
+直觉：交接、共融、物理引导都是**双人舞**，单方假设不算共识。必须把交互写成协议状态机（approach→offer→accept→transfer→verify→release），每个状态带屏障/PFL 不变式，状态切换需要**可观测的双方确认**；一旦确认缺失或不变式将破，就进入最小风险条件（MRC）——减速到零、退到已知安全构型、声明 abort，绝不“先做再补证”。
 
-## 1. 形式化定义（增量：定义 50–53）
+**耦合升级**：在 v12 六层上新增 **L2.5 交互安全层 SIC/协议** 与 **L6 原型证伪层 PFV/XFER**，并把 `σ(b)` 与人意图信念并入 L3 的联合决策。七层 v13：根信任（ℓ_p, ℓ_e, ℓ_k）+ L1 几何感知 + L2 任务分解/上下文/记忆/语音 + L2.5 交互安全（屏障证书/意图信念/PFL/协议）+ L3 关节证书/动作空间抽象/交互感知决策 + L4 CAR/Shield/边界守卫 + L5 DCL/真机序贯评测 + L6 原型证伪与传输。JCPS 联合输出升级为 `(v_t^*, a_t^*, m_t^*, q_t^*, ι_t)`（分解节点、抽象、模态、构型、交互模式）。
 
-**定义 50（能量租约与模态功耗）**
-设电池状态 B_t≥0，模态 m 的瞬时功耗 P_m。能量租约 ℓ_e=(B_t, P_m, τ_e, λ_b, B_min)。剩余能量上界
-E(t)=B_t - P_m·(t-τ_e) - λ_b·(t-τ_e)^2。
-**能量可行判据**：E(t) ≥ E_min(φ) 且 B_t ≥ B_min。失效时所有依赖 m 的姿态证书级联失效。
+## 1. 形式化定义（增量：定义 71–78）
 
-**定义 51（上下文-模态可观测性映射）**
-上下文 c_t ∈ C，模态 m。条件可观测性分布
-P(ω| c_t, m)=Cat(θ_{c,m})。
-深度增益 G_{c,m}(ω)=max(0, r_ω(m)-r_ω(m∪Depth))。
-**预测性分层**：ω̂_{t+Δ}=argmax_ω P(ω|c_t,m)。
+**定义 71（耦合交互系统与交互安全证书）**
+交互系统 `Σ=(X_r, X_h, X_e, U_r, U_h, f, Z_safe)`，联合状态 `z=(x_r,x_h,x_e)∈Z`，安全集 `Z_safe⊂Z`。交互安全证书是可微函数 `B: Z×B_Θ→ℝ`（`B_Θ` 为意图信念空间），满足：(i) `B(z,b)≥0 ⇒ z∈Z_safe`（内近似）；(ii) 对信念支撑内任意人动作 `u_h∈supp(π_h(·|z,b))`，存在机器人动作 `u_r∈U_r` 使 `Ḃ(z,b)+λB(z,b)≥0`（鲁棒屏障条件）。即 `B` 是“对人行为 robust 的受控不变集”证书；信念支撑扩张时零超平面收缩、安全集变小。
 
-**定义 52（联合姿态-能量证书）**
-联合证书 J_t=(P_t, ℓ_p, ℓ_e, m_t)。**联合 soundness**：
-P( X_t∈P_t | ω_t, m_t, ℓ_e 有效 ) ≥ 1-α_p
-且 E(t)≥E_min。
-**边际转移**：m_true ≥ m̂ - L_φ·rad(P_t) - L_e·(B_min - E(t))_+。
+**定义 72（意图信念与不确定性感知的安全缩放）**
+`b(θ)` 为意图 `θ`（“要接杯/将松手/只是路过”）的后验；`H(b)` 为其熵，`w(b)=max_{θ∈supp_ε(b)} risk(θ)` 为最坏支撑风险。定义缩放因子 `σ(b)=σ_min+(σ_max−σ_min)·(1−H(b)/H_max)`，并施加 `v≤σ(b)v_max`、`d_sep≥d_min/σ(b)`、`F≤σ(b)F_max`。抽象选择时，粗动作要求更高 `σ(b)`（更确定）；`σ(b)` 低于阈值即强制细化到 primitive 或停止。不确定性因此被直接映射为证书宽度。
 
-**定义 53（上下文驱动深度门控策略）**
-策略 π(c_t, ω_t, B_t)=m_t 满足
-m_t = argmax_{m∈M}  U(m; c_t,B_t)
-U = [ E_{ω~P(·|c_t,m)}[ S_φ(ω)·Δrad(m,ω) ] ] / [ P_m + c_risk·Risk_e(B_t) ]
-且约束 E(t+Δ|m)≥E_min。**风险前置**：若 H(P(ω∈Ω_deg|c_t,m))=0 则强制 m包含Depth 或触发保守姿态盒。
+**定义 73（接触模式与功率-力限制证书）**
+接触状态机 `M_c:{free, approach, contact, loaded, release}`。功率-力限制证书 `PFL=(F_max(v), P_max, τ_det)`：在 contact/loaded 模式必须满足 `F(t)≤F_max(v(t))`、`P(t)≤P_max`，接触检测延迟 `≤τ_det`；free→contact 转换必须经过 approach 阶段，满足准静态速度上界 `v_app` 与预接触屏障 `B_contact≥0`。任一违反即触发 MRC。
 
-## 2. 三大新增产出与既有 IP 升级
+**定义 74（交互协议契约）**
+交接/共融协议 `π=(Q, q_0, →, Inv, Commit)`，`Q={approach, offer, human_accept, transfer, verify, release, abort}`。每个状态携带不变式 `Inv(q)`（含屏障与 PFL 约束）与双方承诺 `Commit(q)`（可观测的人意图证据 + 机器人自身承诺）。转换 `q→q'` 要求 `Inv(q)` 成立且收到人确认信号（视觉/力/语音多模态），否则保持或转入 `abort→MRC`。**安全交接 = 双方对当前模式达成可观测共识，单方假设不算数**。
 
-**IP-63 ECPS（Energy-Context Perception Scheduler）**
-- 能量租约跟踪与预测：滑动窗口功耗估算 + 电池内阻衰减模型
-- 上下文可观测性预测器：VLM→c_t→P(ω|...)
-- 模态效用评估与门控：每 100ms 求解 U(m) 并输出 m_t^*、预热信号
-- 能量-姿态级联失效：ℓ_e 失效→ℓ_p 失效→CAR fail-closed
+**定义 75（原型阶梯与证书证伪算子）**
+原型阶梯 `P_0⊂P_1⊂…⊂P_n`（仿真/数字孪生、HIL、缩比、全尺寸）。证伪算子 `Falsify(B,π,budget)` 在场景分布 `S`（含人行为对抗、接触事件、传感退化）中搜索使 `Inv` 或 `B` 违反的轨迹，返回反例集 `E` 与覆盖 `cov(E)`。原型层 `ℓ` 的失效概率上界 `α_ℓ` 由证据用 e-process/置信上界估计；证据不足时取保守先验。
 
-**IP-64 DEPTH-CERT ADAPTER**
-- 深度质量分层：有效深度率 ρ_depth、空洞率、噪声 σ_depth
-- 条件半径校准 r_ω(m)：为每种模态组合单独共形校准
-- 深度-姿态联合租约：深度帧率失配导致姿态租约加速过期
+**定义 76（原型-部署传输缺口与置信膨胀）**
+层级 `ℓ` 的证据迁移到部署 `d` 存在分布/动力学/尺度失配，定义传输缺口 `δ_{ℓ→d}≥0`（用对抗式域差异、双仿真差异或实测对标估计）。部署有效失效项 `α_d ← α_ℓ + δ_{ℓ→d}`。只有 `δ` 被新证据收紧时才允许下调保守度；**禁止把原型“零反例”当作部署零风险**。
 
-**IP-65 CONTEXT PREDICTOR**
-- 任务/场景/物体语义→Ω_deg 概率输出
-- 预测置信校准：用独立审计集校准预测覆盖率
-- 错误回灌 DCL：预测失误样本加入采集任务
+**定义 77（交互感知的联合决策与 MRC）**
+扩展 JCPS 的联合决策为 `(v,a,m,q,ι)`，`ι` 为交互协议状态/模式。约束加入 `B(z,b)≥0`、`PFL`、`σ(b)` 缩放与 `Inv(ι)`；安全可行性是硬约束，效率只在可行域内优化。若不存在可行组合，转入**最小风险条件 MRC**：减速到零、进入已知安全 hold 构型、声明 abort 并等待人确认/人工接管；MRC 自身也须屏障证书保证可达与安全。
+
+**定义 78（交互/原型证据的只追加记录与六源归因）**
+CCL 扩展为 `CCL+`，记录交互事件（人确认、接触、力峰值、MRC 触发）与原型证伪反例哈希。边界 gap 归因分解为感知/关节/边界/意图/接触/传输六类来源；任一来源的置信折损必须显式写入台账并参与后续抽象与速度缩放，不得被静默吸收。
+
+## 2. 新增产出与既有 IP 升级
+
+**IP-79 SIC（Safe-Interaction Certificate）**：耦合鲁棒屏障证书；联合状态空间上构造 `B(z,b)`，支持“∀人动作 ∃机器动作”的屏障判定与安全集内近似。
+
+**IP-80 SIG（Safety-Interaction Governor）**：意图信念 + 不确定性缩放 `σ(b)`；把熵/最坏支撑风险映射为速度、分离、接触力上界，并向抽象选择暴露可行性阈值。
+
+**IP-81 PFC（Power-Force & Contact Certificate）**：接触状态机与功率-力限制证书；approach 准静态约束、接触检测延迟、free↔contact 转换屏障。
+
+**IP-82 IPC（Interaction Protocol Contract）**：交接/共融协议状态机；每状态不变式 + 双方可观测承诺；缺确认即 abort→MRC，禁止单方推进。
+
+**IP-83 PFV（Prototype Falsification & Validation）**：原型阶梯与证伪算子；按预算最大化反例与场景覆盖，产出分层证据集 `E_ℓ`。
+
+**IP-84 XFER（Transfer-Gap Estimator & Confidence Inflation）**：估计 `δ_{ℓ→d}` 并把原型证据折算为部署 `α_d`；无收紧证据时保持膨胀。
+
+**IP-85 MRC（Minimal Risk Condition Controller）**：受证书保证的硬回退；减速到零、退安全构型、声明 abort 并等待接管。
 
 **既有 IP 升级**
-IP-60 PSE：ω_t 依赖 m_t，半径查表 r_ω(m)
-IP-61 DCL：采集效用加入能耗 cost_e
-IP-62 CCA：新增上下文预测红队、能量租约注入测试
-IP-51 CAR：守卫加入 E(t)≥E_min
-IP-45 总线：新增 energy-lease / modality-decision / context-pred 话题
+IP-74 HTD-Cert：分解 DAG 节点可含交互子任务，边蕴含同时检查交互契约 `Inv/Commit`。
+IP-75 ASC：抽象可行性加入 `B(z,b)≥0` 与 `σ(b)` 门槛；高不确定度强制细化。
+IP-78 CBG：边界守卫同时复核屏障证书、PFL 与协议状态，任一不满足即 hold/再分解/MRC。
+IP-76 CCL：升级为 `CCL+`，记录交互事件、人确认与原型反例哈希，仍只追加。
+IP-77 DDA：gap 归因扩为六源，意图/接触/传输来源可触发再规划或重校准。
+IP-72 RRP：组合 e-process 增加“交互安全证据 + 原型分层证据”，跨层传输带 `δ`。
+IP-61 DCL：新增人行为近失、接触峰值、MRC 触发、原型反例四类高价值样本。
+IP-62 CCA：新增人行为对抗、意图欺骗、接触突袭、原型-部署迁移攻击红队。
+IP-51 CAR：守卫条件加入屏障成立 ∧ PFL 成立 ∧ 协议共识 ∧ ledger 审计通过。
+IP-45 总线：新增 interaction-state / intent-belief / contact-mode / prototype-evidence 话题。
+IP-66/67/68：记忆/语音指令必须合法映射到协议状态与分解节点；交互队列等待双方确认。
 
 ## 3. 算法骨架
 
-ECPS 每控制周期：
-1. 读 B_t, ℓ_e, c_t, ω_t
-2. 预测 P(ω_{t+Δ}|c_t,m) ∀m
-3. 查 r_ω(m), 计算期望证书宽度缩减
-4. 求解带能量约束的 U(m)，选 m_t^*
-5. 若 m_t^*≠m_{t-1} 发预热/休眠指令并更新 ℓ_e
-6. 若 ℓ_e 失效或预测置信<τ_conf → fail-closed
-PSE 在此基础上签发 P_t(m_t^*)，CAR 用联合证书守卫。
+每个宏周期：
+1. 读目标、当前证书 `C_t`、租约、`CCL+`；任一租约失效或台账审计失败 → fail-closed。
+2. HTD-Cert 展开/复用证书 DAG；对前沿 v 求 `Pre_v/Pre_next`，标注需交互的子任务与协议状态 `ι`。
+3. 更新意图信念 `b(θ)`，计算 `H(b), w(b), σ(b)`；若 `σ(b)` 低于阈值则只保留 primitive 或直接 MRC。
+4. SIC 在联合状态上求屏障可行集，SIG 施加速度/分离/力缩放，PFC 检查接触模式与 PFL；JCPS 在 `(v,a,m,q,ι)` 上求最粗可行组合。
+5. 执行前后由 CBG 复核边界蕴含、屏障、PFL 与协议共识；通过才执行并追加 `CCL+` 条目；协议转换须记录双方确认证据。
+6. 若实测违反屏障/PFL/协议或边界 gap：DDA 六源归因，选最早安全点再分解或重校准；必要时 MRC。
+7. 离线/并行由 PFV 在原型阶梯上按预算证伪，XFER 估计 `δ` 并膨胀部署 `α`；新反例回灌 DCL/CCA，触发保守度上调。
+8. 所有抽象、协议与原型证据均不可行 → 技能合成 / 人工接管 / fail-closed，绝不绕过交互安全层。
 
 ## 4. 本轮最大风险
 
-**一句话**：上下文预测对可观测性退化层的先验会错误引导深度相机开关，若在电池紧张时错误关闭深度导致姿态证书在透明/镜面/深度空洞层静默失效，联合证书的 soundness 将被破坏，能量节约换来安全违例；因此必须以独立审计集校准上下文预测覆盖率并在预测置信不足时默认保守开启深度或直接 fail-closed。
+**一句话**：安全保证会从“机器人”迁移到两个未经验证的信任锚——**人意图模型**与**原型代表性**；一旦意图信念失准（真实人行为落在支撑外）或原型不具代表性（传输缺口 `δ` 被低估），耦合屏障证书就会“纸面 sound、现实不安全”，因此意图不确定必须驱动硬保守缩放与可证 MRC，原型证据必须带传输缺口膨胀并持续证伪，绝不能把“原型零反例”当成部署证明。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 46 轮产物 · 创新点清单 v23：Memory-Safety-Voice（MVR × VAD × SAB）× 记忆-语音-安全全局决策
+# 第 49 轮产物 · 创新点清单 v26：InteractCert-Forge（SIC × SIG × PFC × IPC × PFV × XFER × MRC）× 耦合安全交互证书与原型证伪锻造
 
-> 承接第 45 轮产物 v22。本轮增量插入 IP-66/67/68，并升级 IP-63/61/62/51/45。不推倒 v10 能量-上下文-深度框架，新增记忆检索链路与语音-安全交互闭环。
+> 承接第 48 轮产物 v25。本轮增量插入 IP-79/80/81/82/83/84/85，并升级 IP-74/75/76/77/78/72/61/62/51/45/66/67/68。不推倒 v12 证书契约分解与边界台账框架，新增 L2.5 交互安全层与 L6 原型证伪层；交互维度（意图不确定、接触、协议）并入 L3 联合决策。第 4 轮灵感循环聚焦 H7：安全不是单机属性，证书也不能靠最终评测一次性确证。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-66 | MVR Memory-Verify-Respond Scheduler | 新增 | 离线记忆库 kNN 检索、语音指令快速决策复用、能量-上下文惩罚 |
-| IP-67 | VAD Voice-Action Dispatcher | 新增 | 语音槽位解析 + 置信度、需求分布 R(v)、分布式模态激活 |
-| IP-68 | SAB Safety Action Binder | 新增 | 指令-姿态绑定函数 B、强制安全队列 Q_safe、认证姿态恢复检测 |
-| IP-63 | ECPS | 升级 | 输出 m_t 前查询记忆库，记忆命中时跳过实时效用求解 |
-| IP-61 | DCL | 升级 | 语音槽位采集任务计入能量租约，绑定不安全指令的后备模态 |
-| IP-62 | CCA | 升级 | 新增记忆检索偏差审计、语音-姿态绑定覆盖率测试 |
-| IP-51 | CAR | 升级 | B(v_t, P_t) ≤ θ_safe 时 fail-closed；安全队列超时自动撤回 |
-| IP-45 | 总线 | 升级 | memory-query / voice-intent / safety-queue / modality-backup 话题 |
+| IP-79 | SIC Safe-Interaction Certificate | 新增 | 联合状态 `z=(x_r,x_h,x_e)` 上的鲁棒屏障证书；∀人动作∃机器动作 |
+| IP-80 | SIG Safety-Interaction Governor | 新增 | 意图信念熵/最坏支撑 → 缩放 `σ(b)`，压速度/分离/力 |
+| IP-81 | PFC Power-Force & Contact Certificate | 新增 | 接触状态机 + 功率-力限制 + 接触检测延迟约束 |
+| IP-82 | IPC Interaction Protocol Contract | 新增 | 交接/共融协议；状态不变式 + 双方可观测承诺 |
+| IP-83 | PFV Prototype Falsification & Validation | 新增 | 原型阶梯 + 证伪算子；预算内最大化反例与覆盖 |
+| IP-84 | XFER Transfer-Gap & Confidence Inflation | 新增 | 估计 `δ_{ℓ→d}` 并把原型证据折算为部署 `α_d` |
+| IP-85 | MRC Minimal Risk Condition Controller | 新增 | 受证书保证的硬回退；减速/退安全构型/声明 abort |
+| IP-74 | HTD-Cert | 升级 | 分解节点含交互子任务；边蕴含同时查交互契约 |
+| IP-75 | ASC | 升级 | 抽象可行性加入屏障与 `σ(b)` 门槛；高不确定强制细化 |
+| IP-76 | CCL | 升级 | `CCL+` 记录人确认、接触、MRC、原型反例哈希 |
+| IP-77 | DDA | 升级 | gap 六源归因：感知/关节/边界/意图/接触/传输 |
+| IP-78 | CBG | 升级 | 复核边界蕴含 ∧ 屏障 ∧ PFL ∧ 协议共识 |
+| IP-72 | RRP | 升级 | e-process 纳入交互安全与原型分层证据，跨层带 `δ` |
+| IP-61 | DCL | 升级 | 采集人行为近失/接触峰值/MRC/原型反例样本 |
+| IP-62 | CCA | 升级 | 人行为对抗/意图欺骗/接触突袭/迁移攻击红队 |
+| IP-51 | CAR | 升级 | 守卫加入屏障 ∧ PFL ∧ 协议共识 ∧ 台账审计 |
+| IP-45 | 总线 | 升级 | interaction-state / intent-belief / contact-mode / prototype-evidence |
+| IP-66/67/68 | MVR/VAD/SAB | 升级 | 指令映射到合法协议状态/分解节点；队列等待双方确认 |
 
-## 1. 符号体系（增量：定义 54–58）
+## 1. 符号体系（定义 71–78 见想法区；符号增量）
 
 | 符号 | 含义 |
 |---|---|
-| M | 记忆库 M = {(c, ω, B, m, U, outcome)} |
-| kNN(v, c_t, B_t) | 基于语音+上下文+能量的记忆检索 |
-| v_t | 第 t 时刻语音指令 |
-| S(v) | 指令槽位集合 |
-| σ_s | 槽位位置信度 |
-| R(v) | 语音指令→Ω 的需求分布 |
-| KL(R || P) | KL 散度作为不匹配惩罚 |
-| B(v_t, P_t, ω_t) | 指令-姿态安全绑定概率 |
-| θ_safe | 安全阈值 |
-| Q_safe | 安全等待队列 |
-| Π(c, ω, B, v) | 全局决策函数 |
+| `z=(x_r,x_h,x_e)` | 机器人-人-环境联合状态 |
+| `Z_safe` | 联合安全集 |
+| `B(z,b)` | 耦合鲁棒屏障证书 |
+| `b(θ), H(b), w(b)` | 意图后验 / 熵 / 最坏支撑风险 |
+| `σ(b)∈[σ_min,σ_max]` | 不确定性缩放因子（速度/分离/力） |
+| `M_c` | 接触状态机 `{free,approach,contact,loaded,release}` |
+| `PFL=(F_max(v),P_max,τ_det)` | 功率-力限制证书 |
+| `π=(Q,→,Inv,Commit)` | 交互协议契约 |
+| `ι` | 交互协议状态/模式（并入联合决策） |
+| `P_0..P_n` | 原型阶梯（仿真/HIL/缩比/全尺寸） |
+| `Falsify(B,π,budget)` | 证书证伪算子 |
+| `E_ℓ, cov(E_ℓ)` | 原型层 ℓ 的反例集与覆盖 |
+| `δ_{ℓ→d}` | 原型层 ℓ 到部署 d 的传输缺口 |
+| `α_intent` | 意图支撑失配导致的失效项 |
+| `v^*,a^*,m^*,q^*,ι^*` | 分解节点/抽象/模态/构型/交互模式联合决策 |
+| `MRC` | 最小风险条件（硬回退） |
 
 ## 2. 关键算法 伪代码
 
-### IP-66 MVR
+### IP-79 SIC
 ```
-def memory_lookup(v_t, c_t, B_t, M, tau_hit=0.7, lambda_b=0.1, lambda_c=0.2):
-    best_dist, best_i = inf, None
-    for i, (c_i, B_i, m_i, outcome_i) in enumerate(M):
-        d_cos = 1 - cosine(encode(v_t), encode(c_i))
-        d_enc = lambda_b * max(0, B_t - B_i)
-        d_ctx = lambda_c * kl_div(c_t, c_i)
-        dist = d_cos + d_enc + d_ctx
-        if dist < best_dist:
-            best_dist, best_i = dist, i
-    if best_dist < tau_hit:
-        return M[best_i], best_dist  # 返回历史决策与置信度
-    return None, best_dist
+def barrier_ok(z, b, lambda_, horizon):
+    # 鲁棒屏障：对人行为支撑内最坏情况检查屏障条件
+    if B(z, b) < 0:
+        return False                              # 已在安全集外
+    for u_h in worst_case_human_actions(z, b, horizon):
+        # 是否存在机器人动作使屏障不降
+        if not any(B(next_state(z, u_r, u_h), b) + lambda_ * B(z, b) >= 0
+                   for u_r in U_r_feasible(z)):
+            return False
+    return True
 
-def mvr_schedule(c_t, B_t, v_t, M, calib, S_phi):
-    mem_hit, dist = memory_lookup(v_t, c_t, B_t, M)
-    if mem_hit:
-        m_mem = mem_hit[3]
-        if energy_lease_valid(mem_hit[4], t+Delta, E_min):
-            return m_mem, mem_hit[4], 'memory'
-    # 记忆未命中，回退实时求解
-    m_star = max(M, key=lambda m: modality_utility(m, c_t, B_t, calib, S_phi))
-    return m_star, None, 'realtime'
+def safe_set_margin(z, b):
+    return B(z, b)                                # >=0 即安全；越大越宽裕
 ```
 
-### IP-67 VAD
+### IP-80 SIG
 ```
-def parse_voice(v_raw):
-    # ASR + NLU pipeline
-    slots = extract_slots(v_raw)  # [(slot_name, value, confidence)]
-    return [(name, val, conf**2) for name, val, conf in slots]
+def intent_scale(b):
+    H = entropy(b)
+    sigma = SIGMA_MIN + (SIGMA_MAX - SIGMA_MIN) * (1 - H / H_MAX)
+    # 最坏支撑风险再压一档，避免熵低估尾部
+    sigma *= (1 - W_BETA * worst_support_risk(b))
+    return clamp(sigma, SIGMA_MIN, SIGMA_MAX)
 
-def demand_dist(slots):
-    # 从槽位构建 Ω 分布
-    R = zeros(|Ω|)
-    for name, val, conf in slots:
-        if name == 'focus':
-            R[face_region(val)] += conf
-        elif name == 'gesture_target':
-            R[gesture_area(val)] += conf
-    return normalize(R)
-
-def gumbel_topk(probs, k=3):
-    G = -log(-log(uniform(0,1,len(probs))))
-    scores = probs + G
-    return argsort(scores)[-k:]
-
-def vad_dispatch(v_raw, c_t, B_t, calib, S_phi):
-    slots = parse_voice(v_raw)
-    R_v = demand_dist(slots)
-    beta = 1.0
-    log_P_m = []
-    for m in M:
-        kl = kl_div(R_v, P(omega|c_t, m))
-        log_P_m.append(-beta*kl - log(Pm[m]))
-    probs = softmax(log_P_m)
-    m_samples = gumbel_topk(probs, k=3)
-    # 优先选能量可行的最高效模态
-    for m in m_samples:
-        if energy_lease_valid(lease_e.update(Pm[m]), t+Delta, E_min):
-            return m, prob=m
-    return None, None  # 进入安全队列
+def govern(action, b):
+    sigma = intent_scale(b)
+    action.v_max = sigma * action.v_max
+    action.d_sep_min = action.d_sep_min / sigma
+    action.F_max = sigma * action.F_max
+    if sigma < SIGMA_THRESHOLD:
+        return 'force_primitive_or_mrc'
+    return action
 ```
 
-### IP-68 SAB
+### IP-81 PFC
 ```
-def safety_bind(v_t, P_t, omega_t, theta_safe=0.85):
-    # g(v) 为语音指令指令的机械臂锚点预测
-    g_v = anchor_from_intent(v_t)
-    g_ref = reference_anchor(P_t)
-    rad = P_t.radius
-    deviation = np.linalg.norm(g_v - g_ref)
-    B_prob = exp(-gamma * rad * deviation)
-    return B_prob
-
-def safety_actionBinder(v_t, m_t, B_t, P_t, omega_t):
-    B_prob = safety_bind(v_t, P_t, omega_t)
-    if B_prob >= theta_safe:
-        return 'execute'
-    else:
-        return 'queue', B_prob  # 进入 Q_safe，等待姿态恢复
+def pfl_ok(mode, F, P, v, contact_detected, dt_since_contact):
+    if mode in ('contact', 'loaded'):
+        if F > F_max(v) or P > P_max:
+            return False
+        if not contact_detected and dt_since_contact > TAU_DET:
+            return ('mrc', 'contact_detection_latency')
+    if mode == 'approach':
+        if v > V_APP or B_contact(state) < 0:
+            return ('hold', 'approach_slowdown')
+    return True
 ```
 
-### 全局决策 Π
+### IP-82 IPC
 ```
-def global_decision(c_t, omega_t, B_t, v_t, M, calib, S_phi, Q_safe):
-    if Q_safe and not empty(Q_safe):
-        # 先处理安全队列
-        next_cmd = pop(Q_safe)
-        m_t, conf = vad_dispatch(next_cmd.v, c_t, B_t, calib, S_phi)
-        return m_t, 'execute_from_queue'
-    result, status = mvr_schedule(c_t, B_t, v_t, M, calib, S_phi)
-    if result is None:
-        return 'fail-closed', 'energy'
-    B_prob = safety_bind(v_t, pose_certify(result), omega_t)
-    if B_prob < theta_safe:
-        push(Q_safe, v_t)
-        return result, 'queued'
-    return result, status
+def protocol_step(pi, q, obs):
+    inv_ok = Inv[q](obs) and barrier_ok(obs.z, obs.b, LAMBDA, HORIZON)
+    if not inv_ok:
+        return ('abort', 'mrc')                   # 不变式将破，立即回退
+    for q_next in transitions[q]:
+        if Commit[q](obs) and human_confirm(obs, q_next):
+            ledger_append_plus(now(), q_next, obs,
+                               evidence=obs.evidence)   # 记录双方确认
+            return ('advance', q_next)
+    return ('hold', q)                            # 无共识不推进
+```
+
+### IP-83 PFV
+```
+def falsify(cert, budget, scenario_dist):
+    E = []
+    for _ in range(budget):
+        s = scenario_dist.sample_adversarial(cert.weak_regions)
+        traces = cert.prototype.run(s)            # 在原型层执行
+        for tr in traces:
+            if violates(tr, cert.Inv) or not cert.barrier_ok(tr):
+                E.append(minimize_cex(tr))
+    return E, coverage(E)
+
+def prototype_ladder_validate(cert, budget_by_level):
+    results = {}
+    for ell, budget in budget_by_level.items():   # P0..Pn
+        E, cov = falsify(cert.at_level(ell), budget, scenario_dist(ell))
+        results[ell] = (E, cov, estimate_alpha_upper(E, cov))
+    return results
+```
+
+### IP-84 XFER
+```
+def inflate_alpha(alpha_level, ell, dep):
+    delta = estimate_transfer_gap(ell, dep)       # 对抗域差异/双仿真/实测对标
+    return alpha_level + delta, delta             # 只加不减，除非新证据收紧
+
+def transfer_gap(ell, dep):
+    # 无足够对标证据时返回保守先验 DELTA_PRIOR
+    if not has_calibration(ell, dep):
+        return DELTA_PRIOR
+    return min(DELTA_PRIOR, empirical_discrepancy(ell, dep))
+```
+
+### IP-85 MRC
+```
+def minimal_risk_condition(state, cert):
+    if not cert.barrier_ok(state.z, state.b):
+        return 'already_unsafe_signal_human'
+    q_safe = nearest_certified_hold(state.q)      # 受屏障证书覆盖的 hold 构型
+    ramp_to_stop(q_safe, certify=BARRIER_CERT)    # 减速轨迹本身需证书保证
+    ledger_append_plus(now(), 'MRC', state, evidence='safe_stop')
+    return 'abort_declared'
+```
+
+### IP-73 JCPS（v13 升级：交互感知联合决策）
+```
+def joint_interactive_schedule(goal, C_t, leases, energy, q_prev, omega, b):
+    dag = htd_cert(goal, C_t, contracts, leases)
+    if dag is None:
+        return ('synthesize_or_fail_closed', None)
+    v, nxt = dag.frontier(), dag.next(dag.frontier())
+    if not barrier_ok(current_z(), b, LAMBDA, HORIZON):
+        return ('mrc', minimal_risk_condition(current_state(), cert))
+    sigma = intent_scale(b)
+    best = None
+    for iota in PROTOCOL_MODES:                    # 交互模式
+        if not Inv[iota](current_state()):
+            continue
+        for m in MODALITIES:
+            P = pose_certificate(C_t, omega, m)
+            if P is None:
+                continue
+            Jc = joint_certify(P, q_prev, m, leases.k, leases.e)
+            if Jc is None:
+                continue
+            pick = choose_abstraction(v, Jc, contracts.get(nxt).Pre,
+                                      leases, energy, q_prev, omega,
+                                      sigma=sigma, barrier=(barrier_ok, b))
+            if pick is None:
+                continue
+            a, C_post, val = pick
+            val = val * sigma                   # 不确定度高时效率天然被压低
+            if best is None or val > best[-1]:
+                best = (v, a, Jc, iota, val)
+    return best if best else ('mrc', minimal_risk_condition(current_state(), cert))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| MVR 记忆检索 | O(|M|·d) 每指令 | O(|M|·d_ctx) | 记忆命中时，历史能量/姿态约束复用 ⇒ 决策安全 |
-| VAD 语音解析 | O(d_v) ASR 前向 | O(|slots|·|Ω|) | 槽位置信 ≥ τ_s 则需求分布可信 |
-| SAB 绑定检查 | O(1) | O(1) | B(v_t,P_t) ≥ θ_safe ⇒ 指令安全执行 |
-| 全局决策 Π | O(|M|) | O(|Q|) | 记忆/实时/安全队列三重保障 ⇒ fail-closed 保证 |
+| SIC | O(H·|U_h|·|U_r|·cost(B)) | O(|Z|) | 屏障对信念支撑内所有人动作鲁棒；无动作可救则判不安全 |
+| SIG | O(cost(entropy)+cost(w)) | O(1) | 不确定度单调压缩安全边界，只保守不激进 |
+| PFC | O(1) 每周期 | O(1) | 违反力/功率/检测延迟即回退，不静默通过 |
+| IPC | O(|Q|) 每转换 | O(|Q|) | 无双方可观测确认不推进；不变式将破即 abort |
+| PFV | O(budget·cost(run)) | O(|E|) | 只增反例与覆盖；零反例不产生 α=0 |
+| XFER | O(cost(discrepancy)) | O(n) | `α_d=α_ℓ+δ`，δ≥0 且默认保守先验 |
+| MRC | O(cost(plan)) | O(1) | 停机轨迹本身受屏障证书覆盖 |
+| CBG+ | O(cost(⊨)+cost(B)+cost(PFL)) | O(1) | 边界∧屏障∧PFL∧共识全通过才放行 |
 
-正确性定理：设定记忆库 M 的检索距离界限为 τ_hit，绑定阈值为 θ_safe。若 kNN(v_t, c_t, B_t) 命中且历史 outcome=success，则全局决策 Π 输出的 m_t 满足能量租约 ℓ_e 且姿态证书 P_t 在检索时效内有效；若未命中，则 VAD 采用的分布式模态激活在能量约束下有解，SAB 的 B(v_t, P_t) ≥ θ_safe 才能执行。否则进入安全队列或 fail-closed。
+**正确性定理（Coupled-Safety Compositional Soundness with Prototype Transfer）**
+假设：(A1) 每个技能/抽象契约 sound（v12）；(A2) 每个边界由 CBG 在真实状态复核 `Post_{v_i}⊨_{γ_i}Pre_{v_{i+1}}` 且 `γ_i≥γ_min`；(A3) 租约全程有效；(A4) 初始证书满足 `Pre_root`；(A5) `CCL+` 只追加且审计通过；(A6) 真实人行为在时间 `T` 内以概率 `≥1−α_intent` 落在意图信念支撑内，且屏障按支撑内最坏动作检查；(A7) 原型层证据按 `δ_{ℓ→d}` 膨胀，`α_d=α_ℓ+δ_{ℓ→d}`，δ 估计不被低估；(A8) MRC 可达且其停机轨迹受屏障证书覆盖（否则至少能及时发出人可识别的危险信号）。则沿路径 `v_1…v_k` 与交互序列，
+`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − Σ_ℓ δ_{ℓ→d}`；
+且由于 CBG+ 只放行“边界蕴含 ∧ 屏障 ∧ PFL ∧ 协议共识”全部成立的交互，**不存在“单机 sound、交互断裂”却被执行的路径**。交互抽象与 `σ(b)` 只改变可行域与效率，不放松硬安全门槛；MRC 保证不可行时退回受证书覆盖的安全构型。注意这仍是**条件保证**：它把端到端失效上界归约为可审计项，但 `α_intent` 的人模型与 `δ` 的原型代表性本身是新的信任锚，其正确性由 PFV/DCL/CCA 的持续证伪负责，不在定理覆盖范围内。
 
-## 4. 实验设计 E109–E114
+## 4. 实验设计 E127–E132
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E109 记忆检索准确性 | 命中率、能量偏差 | 命中率 ≥ 65%；能量偏差 ≤ 5% |
-| E110 语音槽位置信 | σ_s 分布；需求匹配度 | σ_s ≥ 0.9（前 80%）；匹配度 ≥ 85% |
-| E111 语音-姿态绑定 | B(v,P) 分布；执行安全率 | θ_safe=0.85 时安全率 ≥ 99% |
-| E112 全局决策一致性 | 记忆复用次数；实时求解次数 | 记忆占比 ≥ 60%；实时求解 ≤ 40% |
-| E113 能量-安全平衡 | Q_safe 长度；停机次数 | Q_safe 平均长度 ≤ 2；停机 0 起 |
-| E114 100h 全局闭环 | 记忆覆盖率；语音成功率 | 记忆覆盖 ≥ 70%；语音成功率 ≥ 95% |
+| E127 耦合屏障证书 | 违反率；假安全率（held-out 人策略）；屏障可行率 | 标称违反 ≤ 1%；假安全 = 0；可行率 ≥ 95% |
+| E128 意图不确定治理 | 安全违例 vs 任务效率；不必要减速率；σ 单调性 | 违例 0；效率损失 ≤ 15%；误减速 ≤ 10% |
+| E129 接触/PFL 证书 | 力/功率越限率；接触检测延迟；free↔contact 转换违例 | 越限 0；延迟 ≤ τ_det 的 95 分位；转换违例 0 |
+| E130 交互协议/交接 | 成功率；hold/abort 正确率；错误接受人确认率 | 成功 ≥ 95%；错误接受 ≤ 0.5%；安全违例 0 |
+| E131 原型证伪阶梯 | 每预算反例数；场景覆盖；δ 预测误差 | 覆盖 ≥ 90%；δ 相对误差 ≤ 20% |
+| E132 全尺寸原型长程交互 | 任务成功率；MRC 触发率；安全违例；人主观安全感 | 成功 ≥ 94%；MRC ≤ 6%；违例 0；主观 ≥ 4/5 |
 
-回退策略：E109 记忆覆盖 < 50% → 关闭记忆复用，回退纯实时求解；E111 绑定失败率 > 5% → 提高 θ_safe 或要求语音确认；E113 能量-安全冲突 → 强制 Depth On + fail-closed 模式。
+回退策略：E127 假安全 > 0 → 立即停机、收紧信念支撑并强制 MRC，禁止部署该屏障；E128 误减速 > 10% → 提高信念质量（多模态观测）而非放松 σ 下界；E129 检测延迟超标 → 降低 `V_APP`、换更高带宽力传感、禁止 loaded 模式粗抽象；E130 错误接受 > 0.5% → 改为“双确认 + 力签名”协议，取消单模态确认；E131 δ 误差过大 → 增大保守先验并延后部署，追加 HIL/缩比对标；E132 MRC > 6% → 回溯协议/信念/接触配置，缩小工作域而非绕过交互层。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 记忆检索复制历史失败 | 高 | τ_hit 设保守值；历史 outcome=failure 时直接屏蔽该记忆 |
-| 语音槽位置信低导致需求偏差 | 中 | σ_s < τ_s 时进入安全队列，要求二次确认 |
-| 绑定函数 B 计算 g(v) 误差大 | 高 | 用视觉-语音互检：若 B < θ_safe，要求用户重说 |
-| 安全队列能量消耗过大 | 中 | 队列元素按能量成本排序，超时撤回 |
-| 记忆库数据漂移 | 低 | 每月强制重训，剔除历史异常 outcome |
+| 意图信念失准，真实人行为落在支撑外 | 高 | 硬 `σ_min` + 最坏支撑检查 + 持续 DCL 采集 + 超出即 MRC，绝不外推放宽 |
+| 原型不具代表性，传输缺口 δ 被低估 | 高 | `α_d=α_ℓ+δ` 只加不减；对抗域差异/双仿真/实测对标三路估计；无证据用保守先验 |
+| PFL 参数（F_max/P_max/τ_det）标定偏低 | 高 | 独立力台架标定 + 接触事件注入红队；越限即 MRC 并冻结抽象层 |
+| 协议被“单方推进”绕过（例如语音误触发） | 高 | 双方可观测承诺 + 多模态确认 + `CCL+` 审计；缺证据不推进 |
+| 屏障证书在联合状态近似过于乐观 | 高 | 证书内近似（只证安全子集）+ 数值验证 + 假安全零容忍；不 certified 的集合不进入 |
+| MRC 本身不可达或停机路径不安全 | 高 | MRC 轨迹预先证书化；定期演练；不可达则降级为“危险信号+断力” |
+| 原型证伪预算有限，覆盖不足 | 中 | 反例回灌优先采样 + 主动学习场景分布；覆盖不足则不下调 α |
+| 交互层拖慢实时性 | 中 | 屏障快速近似 + 分层频率（安全层高频、决策层低频）；实时预算硬门限 |
+| 人机交互主观安全与客观证书不一致 | 中 | 加入人因量表与生理/行为指标，作为验收的独立维度，不替代证书 |
 
 ## 6. 本轮最大风险
 
-**一句话**：记忆检索可能复制历史上因姿态不稳而“成功但代价高”的感知决策，若在能量紧张时恰好检索到这种记忆，系统会在指令执行时被迫暴力拉伸姿态证书甚至失效，安全交互的绑定失效；因此必须在 kNN 的置信度阈值、绑定函数 B 中引入保守惩罚，并在能量临界时强制屏蔽记忆库，直接走实时求解的保守路径。
+**一句话**：安全保证会从“机器人”迁移到两个未经验证的信任锚——**人意图模型**与**原型代表性**；一旦意图信念失准（真实人行为落在支撑外）或原型不具代表性（`δ_{ℓ→d}` 被低估），耦合屏障证书就会“纸面 sound、现实不安全”，因此意图不确定必须驱动硬保守缩放与可证 MRC，原型证据必须带传输缺口膨胀并持续证伪，绝不能把“原型零反例”当成部署证明。
 <!-- ARTIFACT:END -->
