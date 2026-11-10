@@ -1,0 +1,376 @@
+{
+ "source_note": "r41 probe; arithmetic on public artifacts (no new downloads)",
+ "q1_surrogate_sizing": {
+  "per_task_success_proxy_mean_range_pct": [
+   17.73,
+   30.32
+  ],
+  "sigma_range": [
+   0.3819,
+   0.4596
+  ],
+  "sigma_cv": 0.0362,
+  "allocation_curve": [
+   {
+    "M_episodes": 160,
+    "uniform_per_task": 5,
+    "se_uniform_pp": 3.425,
+    "se_neyman_pp": 3.454,
+    "two_model_diff_95pp": 9.49,
+    "variance_reduction_pct": -1.7
+   },
+   {
+    "M_episodes": 320,
+    "uniform_per_task": 10,
+    "se_uniform_pp": 2.422,
+    "se_neyman_pp": 2.426,
+    "two_model_diff_95pp": 6.71,
+    "variance_reduction_pct": -0.3
+   },
+   {
+    "M_episodes": 640,
+    "uniform_per_task": 20,
+    "se_uniform_pp": 1.713,
+    "se_neyman_pp": 1.712,
+    "two_model_diff_95pp": 4.75,
+    "variance_reduction_pct": 0.0
+   },
+   {
+    "M_episodes": 1280,
+    "uniform_per_task": 40,
+    "se_uniform_pp": 1.211,
+    "se_neyman_pp": 1.21,
+    "two_model_diff_95pp": 3.36,
+    "variance_reduction_pct": 0.1
+   },
+   {
+    "M_episodes": 2560,
+    "uniform_per_task": 80,
+    "se_uniform_pp": 0.856,
+    "se_neyman_pp": 0.856,
+    "two_model_diff_95pp": 2.37,
+    "variance_reduction_pct": 0.1
+   },
+   {
+    "M_episodes": 5120,
+    "uniform_per_task": 160,
+    "se_uniform_pp": 0.605,
+    "se_neyman_pp": 0.605,
+    "two_model_diff_95pp": 1.68,
+    "variance_reduction_pct": 0.1
+   }
+  ],
+  "detection_budget": {
+   "detect_0.5pp": {
+    "required_SE_pp": 0.18,
+    "M_neyman": 57610
+   },
+   "detect_1.0pp": {
+    "required_SE_pp": 0.361,
+    "M_neyman": 14403
+   },
+   "detect_2.0pp": {
+    "required_SE_pp": 0.722,
+    "M_neyman": 3601
+   }
+  },
+  "task_sigma_weights_top5": [
+   {
+    "id": "T25",
+    "task": "Stack Cups",
+    "p_pct": 30.32,
+    "sigma": 0.4596
+   },
+   {
+    "id": "T24",
+    "task": "Conveyor Food Sorting",
+    "p_pct": 29.12,
+    "sigma": 0.4543
+   },
+   {
+    "id": "T20",
+    "task": "Paper Cup Stacking",
+    "p_pct": 28.05,
+    "sigma": 0.4492
+   },
+   {
+    "id": "T07",
+    "task": "Place Photo Frames",
+    "p_pct": 27.98,
+    "sigma": 0.4489
+   },
+   {
+    "id": "T28",
+    "task": "Store Earphones",
+    "p_pct": 27.88,
+    "sigma": 0.4484
+   }
+  ],
+  "episodes_corr_sigma": 0.2195
+ },
+ "q2_coverage_gap": {
+  "n_tasks": 32,
+  "by_unseen_note": {
+   "true": {
+    "n": 23,
+    "mean_success_pct": 25.21,
+    "mean_best_success_pct": 34.28,
+    "mean_spread_pp": 18.68
+   },
+   "false": {
+    "n": 9,
+    "mean_success_pct": 25.08,
+    "mean_best_success_pct": 33.14,
+    "mean_spread_pp": 16.01
+   }
+  },
+  "by_human_note": {
+   "true": {
+    "n": 30,
+    "mean_success_pct": 25.23,
+    "mean_best_success_pct": 34.23,
+    "mean_spread_pp": 18.2
+   },
+   "false": {
+    "n": 2,
+    "mean_success_pct": 24.32,
+    "mean_best_success_pct": 29.83,
+    "mean_spread_pp": 13.86
+   }
+  },
+  "by_difficulty": {
+   "Easy": {
+    "n": 12,
+    "mean_success_pct": 26.05,
+    "mean_best_success_pct": 35.21,
+    "mean_spread_pp": 19.52
+   },
+   "Hard": {
+    "n": 8,
+    "mean_success_pct": 24.61,
+    "mean_best_success_pct": 32.11,
+    "mean_spread_pp": 15.18
+   },
+   "Medium": {
+    "n": 12,
+    "mean_success_pct": 24.67,
+    "mean_best_success_pct": 33.94,
+    "mean_spread_pp": 18.18
+   }
+  },
+  "corr_mean_success_vs_spread": -0.1932,
+  "corr_mean_success_vs_rubric_steps": -0.1785,
+  "corr_mean_success_vs_episodes": 0.2167,
+  "corr_spread_vs_episodes": 0.2194,
+  "acquisition_weight_top8_mass": 0.345,
+  "acquisition_weight_top16_mass": 0.623,
+  "acquisition_weight_top8": [
+   {
+    "id": "T01",
+    "task": "Hang the Cup",
+    "weight_share_pct": 5.25,
+    "mean_success_pct": 22.95,
+    "spread_pp": 29.4
+   },
+   {
+    "id": "T30",
+    "task": "Remove Pinned Note",
+    "weight_share_pct": 4.59,
+    "mean_success_pct": 27.3,
+    "spread_pp": 26.97
+   },
+   {
+    "id": "T27",
+    "task": "Stack Bowls",
+    "weight_share_pct": 4.53,
+    "mean_success_pct": 24.11,
+    "spread_pp": 24.95
+   },
+   {
+    "id": "T17",
+    "task": "Organize Stationery",
+    "weight_share_pct": 4.34,
+    "mean_success_pct": 22.47,
+    "spread_pp": 23.97
+   },
+   {
+    "id": "T12",
+    "task": "Unlock",
+    "weight_share_pct": 4.2,
+    "mean_success_pct": 20.11,
+    "spread_pp": 21.87
+   },
+   {
+    "id": "T07",
+    "task": "Place Photo Frames",
+    "weight_share_pct": 4.09,
+    "mean_success_pct": 27.98,
+    "spread_pp": 24.43
+   },
+   {
+    "id": "T10",
+    "task": "Plug Charger",
+    "weight_share_pct": 3.78,
+    "mean_success_pct": 25.57,
+    "spread_pp": 21.7
+   },
+   {
+    "id": "T03",
+    "task": "Pack the Doll",
+    "weight_share_pct": 3.69,
+    "mean_success_pct": 26.14,
+    "spread_pp": 21.72
+   }
+  ],
+  "episodes_range": [
+   969,
+   1533
+  ]
+ },
+ "q3_retrieval_feasibility": {
+  "chunk_len": 8,
+  "n_tasks": 15,
+  "per_task": {
+   "ArrangePlates": {
+    "n_queries": 299,
+    "retrieval_rmse_median": 0.4987,
+    "zoh_rmse_median": 0.0834,
+    "retrieval_gain_median_pct": -498.2,
+    "retrieval_win_rate": 0.003,
+    "obs_dist_median": 1.8046,
+    "cache_hit_rate_at_median": 0.502
+   },
+   "ArrangeTestTubes": {
+    "n_queries": 298,
+    "retrieval_rmse_median": 0.3215,
+    "zoh_rmse_median": 0.0661,
+    "retrieval_gain_median_pct": -386.5,
+    "retrieval_win_rate": 0.044,
+    "obs_dist_median": 1.0933,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "ColorArrangement": {
+    "n_queries": 295,
+    "retrieval_rmse_median": 0.3695,
+    "zoh_rmse_median": 0.1922,
+    "retrieval_gain_median_pct": -92.3,
+    "retrieval_win_rate": 0.108,
+    "obs_dist_median": 1.1328,
+    "cache_hit_rate_at_median": 0.502
+   },
+   "ConveyorSorting": {
+    "n_queries": 295,
+    "retrieval_rmse_median": 0.523,
+    "zoh_rmse_median": 0.0875,
+    "retrieval_gain_median_pct": -497.8,
+    "retrieval_win_rate": 0.01,
+    "obs_dist_median": 1.8063,
+    "cache_hit_rate_at_median": 0.502
+   },
+   "DisconnectEthernet": {
+    "n_queries": 295,
+    "retrieval_rmse_median": 0.3728,
+    "zoh_rmse_median": 0.1254,
+    "retrieval_gain_median_pct": -197.2,
+    "retrieval_win_rate": 0.041,
+    "obs_dist_median": 1.2272,
+    "cache_hit_rate_at_median": 0.502
+   },
+   "FoldTowel": {
+    "n_queries": 298,
+    "retrieval_rmse_median": 0.7181,
+    "zoh_rmse_median": 0.1311,
+    "retrieval_gain_median_pct": -447.9,
+    "retrieval_win_rate": 0.0,
+    "obs_dist_median": 2.5248,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "FruitCollection": {
+    "n_queries": 294,
+    "retrieval_rmse_median": 0.5113,
+    "zoh_rmse_median": 0.2604,
+    "retrieval_gain_median_pct": -96.4,
+    "retrieval_win_rate": 0.112,
+    "obs_dist_median": 1.5178,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "HangCup": {
+    "n_queries": 288,
+    "retrieval_rmse_median": 0.4083,
+    "zoh_rmse_median": 0.1501,
+    "retrieval_gain_median_pct": -172.1,
+    "retrieval_win_rate": 0.104,
+    "obs_dist_median": 1.5237,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "OrganizeBookshelf": {
+    "n_queries": 79,
+    "retrieval_rmse_median": 0.95,
+    "zoh_rmse_median": 0.1204,
+    "retrieval_gain_median_pct": -689.3,
+    "retrieval_win_rate": 0.0,
+    "obs_dist_median": 3.5946,
+    "cache_hit_rate_at_median": 0.506
+   },
+   "PlugCharger": {
+    "n_queries": 296,
+    "retrieval_rmse_median": 0.4227,
+    "zoh_rmse_median": 0.0916,
+    "retrieval_gain_median_pct": -361.4,
+    "retrieval_win_rate": 0.01,
+    "obs_dist_median": 1.5194,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "PlugInEthernet": {
+    "n_queries": 298,
+    "retrieval_rmse_median": 0.3062,
+    "zoh_rmse_median": 0.1086,
+    "retrieval_gain_median_pct": -182.1,
+    "retrieval_win_rate": 0.104,
+    "obs_dist_median": 1.0623,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "PourOutMedicine": {
+    "n_queries": 298,
+    "retrieval_rmse_median": 0.4094,
+    "zoh_rmse_median": 0.1223,
+    "retrieval_gain_median_pct": -234.8,
+    "retrieval_win_rate": 0.04,
+    "obs_dist_median": 1.3239,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "SyringeWaterTransfer": {
+    "n_queries": 297,
+    "retrieval_rmse_median": 0.482,
+    "zoh_rmse_median": 0.1292,
+    "retrieval_gain_median_pct": -273.1,
+    "retrieval_win_rate": 0.024,
+    "obs_dist_median": 1.6649,
+    "cache_hit_rate_at_median": 0.502
+   },
+   "Unlock": {
+    "n_queries": 298,
+    "retrieval_rmse_median": 0.5415,
+    "zoh_rmse_median": 0.0703,
+    "retrieval_gain_median_pct": -670.1,
+    "retrieval_win_rate": 0.0,
+    "obs_dist_median": 1.9433,
+    "cache_hit_rate_at_median": 0.5
+   },
+   "ZipUp": {
+    "n_queries": 295,
+    "retrieval_rmse_median": 0.6101,
+    "zoh_rmse_median": 0.16,
+    "retrieval_gain_median_pct": -281.2,
+    "retrieval_win_rate": 0.044,
+    "obs_dist_median": 2.0146,
+    "cache_hit_rate_at_median": 0.502
+   }
+  },
+  "median_gain_pct": -281.2,
+  "mean_gain_pct": -338.7,
+  "median_win_rate": 0.04,
+  "min_gain_pct": -689.3,
+  "max_gain_pct": -92.3
+ }
+}
