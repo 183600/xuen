@@ -1355,3 +1355,30 @@
 {"event": "candidate", "id": "20261110-094330-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-10 09:43:30"}
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 09:43:32"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-10 09:44:04"}
+{"event": "candidate", "id": "20261110-101855-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:18:55"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:18:56"}
+{"event": "candidate", "id": "20261110-102142-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:21:42"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:21:43"}
+{"event": "candidate", "id": "20261110-102436-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:24:36"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:24:37"}
+{"event": "candidate", "id": "20261110-102719-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:27:19"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:27:20"}
+{"event": "verdict", "id": "20261110-101855-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 10:28:55"}
+{"event": "candidate", "id": "20261110-103241-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:32:41"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:32:42"}
+{"event": "verdict", "id": "20261110-102436-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 10:34:36"}
+{"event": "candidate", "id": "20261110-103507-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:35:07"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:35:08"}
+{"event": "candidate", "id": "20261110-103644-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:36:44"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:36:46"}
+{"event": "candidate", "id": "20261110-103737-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:37:37"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:37:38"}
+{"event": "candidate", "id": "20261110-103854-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:38:54"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:38:55"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-10 10:38:57"}
+{"event": "candidate", "id": "20261110-104102-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:41:02"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:41:03"}
+{"event": "candidate", "id": "20261110-104113-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:41:13"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-070639-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 10:41:14"}
+{"event": "candidate", "id": "20261110-104135-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-10 10:41:35"}
+{"event": "verdict", "id": "20261110-104135-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-10 10:41:44"}
