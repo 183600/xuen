@@ -1674,3 +1674,19 @@
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261110-153651-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 19:33:47"}
 {"event": "heartbeat", "round": 1, "ts": "2026-11-10 19:33:47"}
 {"event": "verdict", "id": "20261110-192642-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 19:36:42"}
+{"event": "verdict", "id": "20261110-203338-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 20:43:38"}
+{"event": "verdict", "id": "20261110-203501-r2", "round": 2, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 20:45:01"}
+{"event": "verdict", "id": "20261110-203707-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-10 20:47:07"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-10 21:09:40"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-10 21:10:36"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-11-10 21:10:42"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-11-10 21:11:31"}
+{"event": "restored", "round": 3, "why": "轮次失败（超时）", "best": "20261110-204124-r2", "changed": ["idea", "artifact"], "ts": "2026-11-10 21:11:31"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-10 21:11:36"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-10 21:13:38"}
+{"event": "restored", "round": 2, "why": "轮次失败（超时）", "best": "20261110-153651-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 21:13:38"}
+{"event": "candidate", "id": "20261110-211418-r4", "round": 4, "changed": ["idea", "artifact"], "ts": "2026-11-10 21:14:18"}
+{"event": "verdict", "id": "20261110-211418-r4", "round": 4, "verifier": "tests", "score": null, "result": "adopted", "reason": "测试全部通过｜exit 0｜输出尾部：........................................................................ [ 28%]\n........................................................................ [ 56%]\n........................................................................ [ 85%]\n.....................................                                    [100%]\n253 passed in 6.81s", "ts": "2026-11-10 21:14:25"}
+{"event": "skipped", "round": 3, "reason": "超时", "ts": "2026-11-10 21:15:01"}
+{"event": "restored", "round": 3, "why": "轮次失败（超时）", "best": "20261110-153651-r1", "changed": ["idea", "artifact"], "ts": "2026-11-10 21:15:01"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-10 21:15:53"}
