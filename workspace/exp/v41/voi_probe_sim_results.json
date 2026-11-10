@@ -1,0 +1,324 @@
+{
+  "assumptions": {
+    "tol_m": 0.005,
+    "N_steps": 300,
+    "N_max": 600,
+    "weights": {
+      "success": 1.0,
+      "steps": 1.0,
+      "failure_penalty": 0.0
+    },
+    "perturbation_sigma_m": 0.01,
+    "note": "illustrative only; N, tol, weights are parameters, not measured"
+  },
+  "grid": [
+    {
+      "sigma_over_tol": 2.0,
+      "posterior_over_prior": 0.5,
+      "p0": 0.3829,
+      "p_good": 0.6827,
+      "p_bad": 0.2763,
+      "delta_p": 0.2998,
+      "c_star_recip": null,
+      "c_star_lin": 179.86,
+      "q_max": {
+        "5": {
+          "recip": 0.738,
+          "lin": 0.717
+        },
+        "15": {
+          "recip": 0.737,
+          "lin": 0.676
+        },
+        "30": {
+          "recip": 0.737,
+          "lin": 0.615
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 2.0,
+      "posterior_over_prior": 0.2,
+      "p0": 0.3829,
+      "p_good": 0.9876,
+      "p_bad": 0.2763,
+      "delta_p": 0.6047,
+      "c_star_recip": null,
+      "c_star_lin": 362.79,
+      "q_max": {
+        "5": {
+          "recip": 0.85,
+          "lin": 0.838
+        },
+        "15": {
+          "recip": 0.85,
+          "lin": 0.815
+        },
+        "30": {
+          "recip": 0.85,
+          "lin": 0.78
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 2.0,
+      "posterior_over_prior": 0.1,
+      "p0": 0.3829,
+      "p_good": 1.0,
+      "p_bad": 0.2763,
+      "delta_p": 0.6171,
+      "c_star_recip": null,
+      "c_star_lin": 370.24,
+      "q_max": {
+        "5": {
+          "recip": 0.853,
+          "lin": 0.841
+        },
+        "15": {
+          "recip": 0.852,
+          "lin": 0.818
+        },
+        "30": {
+          "recip": 0.852,
+          "lin": 0.784
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 1.0,
+      "posterior_over_prior": 0.5,
+      "p0": 0.6827,
+      "p_good": 0.9545,
+      "p_bad": 0.3453,
+      "delta_p": 0.2718,
+      "c_star_recip": null,
+      "c_star_lin": 163.09,
+      "q_max": {
+        "5": {
+          "recip": 0.446,
+          "lin": 0.432
+        },
+        "15": {
+          "recip": 0.446,
+          "lin": 0.405
+        },
+        "30": {
+          "recip": 0.446,
+          "lin": 0.364
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 1.0,
+      "posterior_over_prior": 0.2,
+      "p0": 0.6827,
+      "p_good": 1.0,
+      "p_bad": 0.3453,
+      "delta_p": 0.3173,
+      "c_star_recip": null,
+      "c_star_lin": 190.39,
+      "q_max": {
+        "5": {
+          "recip": 0.485,
+          "lin": 0.472
+        },
+        "15": {
+          "recip": 0.484,
+          "lin": 0.446
+        },
+        "30": {
+          "recip": 0.484,
+          "lin": 0.408
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 1.0,
+      "posterior_over_prior": 0.1,
+      "p0": 0.6827,
+      "p_good": 1.0,
+      "p_bad": 0.3453,
+      "delta_p": 0.3173,
+      "c_star_recip": null,
+      "c_star_lin": 190.39,
+      "q_max": {
+        "5": {
+          "recip": 0.485,
+          "lin": 0.472
+        },
+        "15": {
+          "recip": 0.484,
+          "lin": 0.446
+        },
+        "30": {
+          "recip": 0.484,
+          "lin": 0.408
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.5,
+      "posterior_over_prior": 0.5,
+      "p0": 0.9545,
+      "p_good": 0.9999,
+      "p_bad": 0.3724,
+      "delta_p": 0.0454,
+      "c_star_recip": null,
+      "c_star_lin": 27.26,
+      "q_max": {
+        "5": {
+          "recip": 0.072,
+          "lin": 0.059
+        },
+        "15": {
+          "recip": 0.072,
+          "lin": 0.033
+        },
+        "30": {
+          "recip": 0.072,
+          "lin": 0.0
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.5,
+      "posterior_over_prior": 0.2,
+      "p0": 0.9545,
+      "p_good": 1.0,
+      "p_bad": 0.3724,
+      "delta_p": 0.0455,
+      "c_star_recip": null,
+      "c_star_lin": 27.3,
+      "q_max": {
+        "5": {
+          "recip": 0.072,
+          "lin": 0.059
+        },
+        "15": {
+          "recip": 0.072,
+          "lin": 0.033
+        },
+        "30": {
+          "recip": 0.072,
+          "lin": 0.0
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.5,
+      "posterior_over_prior": 0.1,
+      "p0": 0.9545,
+      "p_good": 1.0,
+      "p_bad": 0.3724,
+      "delta_p": 0.0455,
+      "c_star_recip": null,
+      "c_star_lin": 27.3,
+      "q_max": {
+        "5": {
+          "recip": 0.072,
+          "lin": 0.059
+        },
+        "15": {
+          "recip": 0.072,
+          "lin": 0.033
+        },
+        "30": {
+          "recip": 0.072,
+          "lin": 0.0
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.25,
+      "posterior_over_prior": 0.5,
+      "p0": 0.9999,
+      "p_good": 1.0,
+      "p_bad": 0.3802,
+      "delta_p": 0.0001,
+      "c_star_recip": 5.81,
+      "c_star_lin": 0.04,
+      "q_max": {
+        "5": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "15": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "30": {
+          "recip": 0.0,
+          "lin": 0.0
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.25,
+      "posterior_over_prior": 0.2,
+      "p0": 0.9999,
+      "p_good": 1.0,
+      "p_bad": 0.3802,
+      "delta_p": 0.0001,
+      "c_star_recip": 5.81,
+      "c_star_lin": 0.04,
+      "q_max": {
+        "5": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "15": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "30": {
+          "recip": 0.0,
+          "lin": 0.0
+        }
+      }
+    },
+    {
+      "sigma_over_tol": 0.25,
+      "posterior_over_prior": 0.1,
+      "p0": 0.9999,
+      "p_good": 1.0,
+      "p_bad": 0.3802,
+      "delta_p": 0.0001,
+      "c_star_recip": 5.81,
+      "c_star_lin": 0.04,
+      "q_max": {
+        "5": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "15": {
+          "recip": 0.0,
+          "lin": 0.0
+        },
+        "30": {
+          "recip": 0.0,
+          "lin": 0.0
+        }
+      }
+    }
+  ],
+  "monte_carlo": {
+    "sigma_over_tol": 2.0,
+    "posterior_over_prior": 0.05,
+    "p0_analytic": 0.382925,
+    "p0_mc": 0.38307,
+    "p1_analytic": 1.0,
+    "p1_mc": 1.0
+  },
+  "link_to_audit": {
+    "observed_churn_core_frac": {
+      "left": 0.2438,
+      "right": 0.2302
+    },
+    "observed_dwell_frac": {
+      "left": 0.1087,
+      "right": 0.1017
+    },
+    "hypothesis": "if proactive probing removes half the churn at a 5% step budget, net step saving is ~7-9%",
+    "warning": "churn includes necessary pre-grasp dwell; this is an upper bound on reclaimable steps, not a measurement"
+  }
+}
