@@ -3,325 +3,280 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 42 轮（新循环第 2 轮） · Sim-Cert-RAG 闭环：把仿真、低成本部署与经验检索串成「可进化的证书飞轮」（四层架构 v7）
+# 第 43 轮（新循环第 3 轮） · Persona-Cert × Concurrent-Cert：把「个性化交互」与「并发推理」纳入可验证证书闭环（四层架构 v8）
 
-> 承接第 41 轮 v18（CAR × LCS × CMC）。第 41 轮自陈最大风险是「可用性崩塌」：保守界导致自动机长期滞留 Degraded/SafeStop。本轮灵感词「Isaac Sim」「低成本方案」「检索增强生成」精准击中三个命门：**Isaac Sim** 提供高保真、可程控的「证书压力测试场」，让保守界在仿真里先暴露、再收敛，不上实机就把可用性坑填平；**低成本方案**把第 41 轮的「在线 anytime」向前推一步——「离线预算换在线预算」，用仿真预算预计算证书有效域、把大模型蒸馏到边缘端 8-bit 整数监控器，实机只跑推理不跑优化；**检索增强生成 (RAG)** 把零散的历史证书、反例、课程片段变成可检索的「证书知识库」，新任务来时先检索再合成，冷启动从「从头算」变成「改着用」。三者串成闭环：Isaac Sim 产数据 → RAG 存索引 → LCS 轻量推理 → 实机反馈再入 Sim，证书从「静态制品」进化为「持续进化的资产」。
+> 承接第 42 轮 v19（Sim-Cert-RAG 飞轮）。v19 自陈最大风险是「仿真偏差累积 + 检索幻觉」，但它还压着两个未言明的单点假设：**(H1) 人类/用户被当作同一个标称环境**——个性化要么不建模，要么悄悄放宽安全域而无证明；**(H2) 推理栈被默认为串行 anytime**——真实边缘端是 VLM 语义、几何证书、对话个性化、安全监控**并发**运行，交错会让边际陈旧、证书更新非原子，从而静默不 sound。本轮灵感词「个性化交互」「并发推理」精确命中这两个假设：**个性化交互**迫使我们把「用户」从环境噪声提升为一等公民，用契约化 + 共形预测在**不牺牲 soundness** 的前提下做个性化；**并发推理**迫使我们把「并发」从工程细节提升为证书不变式的一部分，用 rely-guarantee + 租约新鲜度 + 混合关键级调度，让并发既安全又成为降低保守性的杠杆。二者耦合处（多用户 × 交错）是本轮真正的新问题：人格契约求交可空、共形覆盖可被边际性欺骗。
 
 ## 0. 直觉与动机
 
-**灵感 1（Isaac Sim → 证书的「风洞」与「数字孪生」）**：第 41 轮的守卫阈值 θ、Lipschitz 常数 L_m、保持时间 T_hold 全靠「离线标定 + 在线保守放大」，必然过保守。Isaac Sim 的直觉是：把它当成证书的**风洞**——在仿真里用域随机化（光照、摩擦、质量、传感器噪声、动力学参数）跑万级轨迹，直接**测出**边际的真实分布、L_m 的经验上界、T_hold 的实际覆盖率。更关键的是：仿真里可以**注入故障**（执行器卡滞、传感器漂移、通信延迟），强迫 CAR 触发每一条转移边，把「罕见但致命」的守卫场景变成可回归的测试用例。仿真合成的「证书有效域」与「反例轨迹」直接写入 RAG 知识库，下一轮合成不再从零开始。
+**灵感 1（个性化交互 → 「契约不是特权」，收缩免费、扩张持证）**：直觉上，用户说「我赶时间，开快点」绝不该让机器人越过全局安全界。因此把个性化定义为**人格契约 Π_u** 对全局证书的**集合收缩**：C_u = C_global ∩ Π_u。收缩对 soundness 天然免费（少做动作不可能新增违例），但会复发第 41 轮的「可用性崩塌」：收缩过度使目标不可达。于是加第二条轨道——对已识别、已校准的用户，用**共形预测**给出人类意图集合 Ĥ_u^α，把「人」作为闭环扰动做鲁棒可达性，得到的交互不变集 I_u^α 可以**合法扩张**可行域；但扩张必须持证：通过覆盖校准 + 在线影子证书 + A/B 回归三重闸门，并消耗**信任预算 τ_u**。一句话：**收缩永远安全，扩张必须付费**。
 
-**灵感 2（低成本方案 → 离线预算换在线预算，量化到边缘）**：第 41 轮 LCS 的四档证书（T0–T3）仍在实机上跑区间传播、LipSDP、采样。低成本的直觉是三级阶梯：**L0 仿真预计算**：把整个状态空间的「最小充分档 j*(x)」「边际下界 m_lo(x)」「保持时间 T_hold(x)」离线网格化/树化存入只读表，实机只做 O(log N) 查表 + 线性插值，零矩阵乘法；**L1 蒸馏量化监控器**：把 IP-53 CMC 生成的区间电路进一步通过「证书感知蒸馏」压缩为 8-bit 整数 MLP/决策树，WCET 从 1ms 降到 <100μs，内存从 64KB 降到 <8KB，可跑在 MCU 上；**L2 零拷贝传感器融合**：用定点整数实现 TRI-FUSE 的核心滤波，彻底去浮点。成本模型重写：Γ_online = Γ_sim_precompute / T_horizon + Γ_edge_inference，把 90% 算力挪到离线/云端。
+**灵感 2（并发推理 → 既是危险，也是「新鲜度杠杆」）**：危险在于交错执行可能撕裂证书状态、读到过期边际、或在模式切换瞬间丢失监控预算；杠杆在于并行评估 b 个候选分支能把证书延迟从 b·T_cert 降到 T_cert+ε，租约更「新鲜」、保守性更低。工程三件套：**(a) rely-guarantee 证书不变式**——低关键任务（对话/个性化）只要保证不写穿安全关键谓词，就能与安全任务任意并发；**(b) 时间衰减的证书租约**——每条结论携带 (m, τ, λ)，满足 m − λ(t−τ) ≥ θ 才可用于守卫；**(c) 混合关键级调度**——过载切 HI 模式，先砍个性化与投机，硬隔离安全监控预算。并发由此从「必须串行化才安全」的负担，变成「并行换新鲜度」的收益。
 
-**灵感 3（RAG → 证书合成的「热启动」与「案例推理」）**：第 41 轮的不变式合成、课程生成、阈值标定全是「冷启动」。RAG 的直觉是建立**证书知识库 KB**：每条记录 = (任务指纹 φ, 环境指纹 ψ, 证书模板 {θ, L_m, j*}, 反例轨迹 ξ, 课程相位序列)。新任务到来时：φ, ψ → Top-k 检索 → **模板迁移 + 微调**（只在差集上跑 CEGAR/采样），合成时间从小时降到分钟。更深层：**RAG 增强的课程引擎**——检索相似任务的「成功/失败相位序列」，直接生成新任务的课程草案，人类只需确认。组合性上：技能组合的乘积自动机也可检索——「导航+抓取」的乘积守卫、不变式在 KB 中已有验证済片段，直接拼装。
+**灵感 3（耦合 → 多用户并发契约与协商）**：个性化会**乘出**并发分支（「这是谁？他想要什么？」），多用户并发时人格契约求交可能直接变空集。必须显式处理：契约不可行时输出**最小让步集**交给用户/操作员确认，而非静默放宽（不安全）或静默停机（不可用）。同时把「多用户 × 调度交错 × 置信度攻击」纳入压力测试，并审计证书更新的线性一致性（防撕裂读/陈旧读）。
 
-**耦合升级**：Isaac Sim 是 RAG 的「数据引擎」，RAG 是 LCS 的「模板仓库」，LCS 量化监控器是实机的「低成本执行体」，实机回传的「分布偏移检测」触发 Sim 重跑、RAG 更新。证书由此形成 **Sim→RAG→Edge→Sim** 正向飞轮。
+**耦合升级**：PCE（契约引擎）把用户编译成守卫谓词与共形意图集；CCR（并发运行时）保证这些谓词在所有交错下被 rely-guarantee 保持、并用租约新鲜度约束陈旧性；ICV（交互并发验证器）在仿真里枚举交错与人格对抗，把反例回灌 CKB 与 SCV。四层架构由此从 v7 的「仿真-检索-边缘飞轮」升级为 v8 的「仿真-检索-边缘飞轮 + 人格契约层 + 并发证书层」。
 
-## 1. 形式化定义（增量：定义 32–37）
+## 1. 形式化定义（增量：定义 38–43）
 
-**定义 32（仿真域随机化分布）**：D_sim = D_nom ⊗ Δ_dyn ⊗ Δ_sens ⊗ Δ_comm ⊗ Δ_env，其中 Δ_dyn 覆盖质量/惯量/摩擦 ±30%，Δ_sens 覆盖噪声/偏置/丢帧，Δ_comm 覆盖延迟/抖动/丢包，Δ_env 覆盖光照/纹理/动态障碍物。**仿真证书有效域** C_sim = {x : ∀ξ∼D_sim, m_ξ(x) ≥ θ}。实机分布 D_real 与 D_sim 的 Wasserstein 距离 W_1(D_real, D_sim) ≤ ε_w 给出 **Sim-to-Real 证书迁移界**：m_real(x) ≥ m_sim(x) − L_m·ε_w。
+**定义 38（人格契约与单调个性化）**：人格契约 Π_u = (A_u, ≺_u, ε_u, τ_u)：A_u ⊆ A 为允许动作子集（速度/接触力/可进入区域上限），≺_u 为交互风格序（提示频率、确认粒度），ε_u ∈ (0,1] 为风险容忍，τ_u ∈ [0,1] 为信任预算。个性化证书 **C_u = C_global ∩ Π_u**。**单调性命题**：若 Π_{u1} ⊆ Π_{u2}（即 A_{u1}⊆A_{u2}、ε_{u1}≤ε_{u2}、风格更保守），则 C_{u1} ⊆ C_{u2} ⊆ C_global。**推论**：纯收缩个性化对 soundness 免费；但其代价是可能「个性化不可行」（C_u 中不存在到达目标的策略），必须走协商而非静默放行。
 
-**定义 33（离线预计算证书表）**：在网格/八叉树/克拉普顿树上存储只读表 T_cert：键 = 状态抽象键 k(x)（如量化后的 (q, v, 语义摘要)），值 = (j*(k), m_lo(k), T_hold(k), θ_vec(k))。查表复杂度 O(log N)；插值误差由网格粒度 δ_grid 和 L_m 界出。**命题**：若 δ_grid·L_m ≤ η，则查表+插值给出的边际下界与真实 m_lo 相差 ≤ η，保持 sound。
+**定义 39（共形人-机交互证书）**：把人的输入作为闭环扰动，交互状态 z=(x_robot, x_human, intent)，z_{t+1}=f(z_t,a_t,h_t)，h_t∈H_u。用（按人格分层的 Mondrian）共形预测给意图集合 Ĥ_u^α，在可交换性下满足 P(h_t∈Ĥ_u^α) ≥ 1−α。**交互鲁棒不变集** I_u^α = 最大集合，使得 ∀h∈Ĥ_u^α、∃a∈A_u 使 z 留在 I_u^α 内。**认证扩展引理**：若 Ĥ_u^α ⊆ H_prior 且覆盖校准有效，则 I_u^α ⊇ I_prior；扩张量 Δ|I_u| 由「覆盖校准 + 秩统计阈值 + 在线影子证书」共同背书，且从 τ_u 中扣除成本。**回退**：若覆盖失效检测（条件覆盖率显著低于 1−α 或人格分布漂移）触发，则 τ_u→0，强制退回纯收缩 C_u。
 
-**定义 34（证书感知蒸馏与量化）**：教师网络 = IP-53 CMC 区间电路（浮点，保守下界）；学生网络 = 定点整数 MLP/决策树。损失 L = L_task + λ·L_cert，其中 L_cert = max(0, θ − student_margin(x)) 强制学生**不低于**教师的保守下界（单调保守性保蒸馏后仍 sound）。量化感知训练 (QAT) 直接在 INT8 整数域优化，部署时零浮点。
+**定义 40（Rely-Guarantee 证书不变式）**：并发任务族 T={T_1..T_k}（VLM 语义、几何证书、对话个性化、安全监控）。每任务声明 guarantee G_i（该任务每步保持的证书谓词，如「不得将 m_lo 降到 θ_i 以下」）与 rely R_i（依赖其他任务保持的谓词）。证书不变式 I 并发安全，当且仅当：
+(1) **非干扰**：∀i≠j，G_i ⇒ R_j；
+(2) **局部保持**：∀i，{I ∧ R_i} step_i {I}。
+则由标准 rely-guarantee 可靠性，任意交错执行都保持 I。**推论**：对话/个性化等低关键任务只要写集不触及 I 的安全关键谓词，就与并发度无关地安全。
 
-**定义 35（证书知识库 KB 与检索增强合成）**：KB = {(φ_i, ψ_i, C_i, Ξ_i, Π_i)}_i，φ=任务指纹（目标类型、约束拓扑），ψ=环境指纹（地图拓扑、动态度、传感器配置），C=证书模板，Ξ=反例轨迹集，Π=课程相位序列。检索器 R(φ, ψ) = Top-k(KB, sim(φ, φ_i)·sim(ψ, ψ_i))。**RAG 合成流程**：候选模板 C_cand = merge(R(φ, ψ).C)；差集 Δ = {x : C_cand 不覆盖 ∨ m_lo < θ}；仅在 Δ 上跑 CEGAR/采样补全 → C_new。合成成本 ∝ |Δ| 而非 |X|。
+**定义 41（证书租约与新鲜度衰减的 sound 性）**：每条推理结论携带租约 ℓ=(m, τ, λ, κ)，m 为测得边际下界，τ 为测量时刻，λ 为衰减率，κ 为关键级。**新鲜度判据**：m − λ·(t−τ) ≥ θ 才可用于守卫决策；否则租约过期，任务必须重取或单调降级。**命题**：若真实状态位移满足 ||x(t)−x(τ)|| ≤ v_max·(t−τ)，取 λ = L_m·v_max 时过期判据 sound（绝不误用陈旧边际）。**注**：租约把「测量时刻」与「使用时刻」解耦，这是并发下唯一可被静态审计的新鲜度契约。
 
-**定义 36（分布偏移触发的飞轮更新）**：实机运行时监控分布偏移统计量 S_t = W_1(Ê_t, D_sim)（Ê_t 为滑窗经验分布）。若 S_t > τ_drift，触发：(1) Isaac Sim 以新参数重采样，生成新 C_sim、Ξ_new；(2) KB 插入 (φ, ψ_new, C_sim, Ξ_new, Π)；(3) L0 表增量更新，L1 学生网络增量蒸馏。**定理**：若偏移检测召回率 ≥ 1−δ_d，且每轮 Sim 覆盖 Δ_dyn 扩展 ε_w，则长期证书 soundness 以概率 1−δ_d 维持。
+**定义 42（混合关键级并发调度）**：关键级 κ 满足 safety > geometry > semantic > dialogue/personalization。调度器在过载时按 LO→HI 模式切换：HI 模式仅保留 κ≥geometry 的任务，砍掉个性化与投机分支，但硬隔离安全监控预算 B_safe（预算不随模式收缩）。**调度契约**：个性化任务的 guarantee 不得出现在监控器的 rely 中（定义 40 非干扰的调度实现）；监控器 rely 仅含硬件心跳与单调时钟。**定理（模式切换安全）**：若 LO/HI 两模式的证书不变式均成立，且切换只删除任务、不新增且不放松阈值，则任意切换点的 I 保持。
 
-**定义 37（端到端成本模型 v2）**：总拥有成本 COT = C_sim_precompute / N_deploy + C_edge_inference · T_life + C_human_verify · N_verify。其中 C_sim_precompute = |X_grid|·C_tier3（一次性），C_edge_inference = O(1) 查表 + INT8 推理（≈50μs），C_human_verify 由 RAG 从「全人工」降为「确认草案」。**Pareto 前沿**在 (COT, 安全违例率, Nominal 占比) 三维空间上显式给出。
+**定义 43（并发投机推理与证书一致选择）**：语义/规划层并行展开 b 个候选分支 {β_1..β_b}，每分支独立查表/合成得到证书 c_j（复用 IP-56 L0/L1）。**证书一致选择**：a* = argmax_{β_j : c_j valid ∧ c_j ⊆ C_global∩Π_u} score(β_j)；选择集为空则触发协商或安全停机。**定理**：若每个 c_j 在其有效域内 sound，且选择只取 valid∧⊆Π_u 的分支，则 a* 的证书 sound（并发只增加候选，不破坏可靠性）。**反向收益**：并行评估把证书延迟从 b·T_cert 降到 T_cert+ε，租约更新更频繁，按定义 41 的衰减判据可用性严格不降。
 
-## 2. 四大产出设计（增量 IP-54/55/56 + 升级 IP-51/52/53/49/50/45/47）
+## 2. 三大新增产出与既有 IP 升级
 
-### 2.1 IP-54 SIM-CERT-VALIDATOR（仿真证书验证器 SCV）
-1. **域随机化策略**：分层随机化——核心动力学参数用 Sobol 序列低维覆盖，高维感噪用分层采样；故障注入菜单化（执行器卡滞、IMU 漂移、相机模糊、总线延迟）。
-2. **证书压力测试协议**：对 CAR 每条转移边 e，生成「逼近守卫面」的初始状态集（用反向可达/对抗采样），跑 N_e 轨迹，统计：触发率、误触发率、T_hold 实际覆盖率、边际分布分位数。
-3. **Sim-to-Real 迁移界计算**：用实机少量标定轨迹估 W_1(D_real, D_sim)，输出每条边的迁移修正系数 α_e ≥ 1，实机阈值 θ_real = α_e · θ_sim。
-4. **反例自动归因**：反例轨迹 → 时序切片 → 语义标签（如「侧向摩擦骤降→横向边际崩塌」）→ 入 KB Ξ。
+### 2.1 IP-57 PERSONA-CONTRACT-ENGINE（人格契约引擎 PCE）
+1. **契约编译**：用户画像（能力、偏好、风险容忍、授权范围）→ 人格契约 Π_u → 自动编译为守卫谓词、CBF 约束与参数化监控器阈值表。
+2. **单调个性化 + 可行性协商**：C_u = C_global ∩ Π_u；若目标不可达，输出**最小让步集**（最小代价的契约放松序列）供用户/操作员选择，绝不静默放宽。
+3. **共形人意图模型**：Mondrian 分层共形（按 persona 校准），输出 Ĥ_u^α；维护信任预算 τ_u 与覆盖失效检测（条件覆盖率、分布漂移）。
+4. **认证扩展闸门**：仅当「覆盖校准 + 影子证书零违例 + 在线 A/B 无回归」三重通过，才允许 Δ 扩张；否则只保留收缩轨道。
 
-### 2.2 IP-55 CERT-KNOWLEDGE-BASE（证书知识库 CKB + RAG 引擎）
-1. **多模态指纹嵌入**：φ 用任务图神经网络编码，ψ 用拓扑地图+传感器配置的 Transformer 编码，联合对比学习训练，使相似任务/环境在嵌入空间邻近。
-2. **检索器**：HNSW 索引嵌入，Top-k 亚毫秒；重排用轻量交叉编码器。
-3. **模板合并与差集补全**：守卫合取、不变式相交、阈值取 max（保守）；差集 Δ 用「证书敏感度热力图」引导采样（边际梯度大、L_m 大、守卫密集区优先）。
-4. **版本化与溯源**：每条记录带 (git_commit, sim_config_hash, 硬件版本)，支持回滚与审计。
+### 2.2 IP-58 CONCURRENT-CERT-RUNTIME（并发证书运行时 CCR）
+1. **证书租约表**：按任务维护 (m, τ, λ, κ)，硬件单调时间戳；过期即触发单调降级（不用陈旧边际）。
+2. **Rely-Guarantee 运行时守卫**：任务声明读集/写集，安全关键谓词只读；监控器用 seqlock/epoch 做**原子快照**，检测到撕裂读则重试或降级。
+3. **混合关键级调度器**：LO/HI 模式 + 预算隔离 + 响应时间分析（RTA）保证监控器 WCET；模式切换只删不增。
+4. **投机并行 + 证书一致选择**：分支池并行评估证书，选择器只接受 valid∧⊆Π_u 的候选，空集则协商/停机。
 
-### 2.3 IP-56 EDGE-CERT-RUNTIME（边缘证书运行时 ECR）
-1. **L0 查表引擎**：克拉普顿树/八叉树只读 mmap，键 = 量化状态 (q_int, v_int, sem_hash)，值 = 打包结构体 {j_star: u8, m_lo: i16[6], T_hold: u16, θ_vec: i16[6]}。查表 + 三线性插值 < 5μs。
-2. **L1 INT8 监控器**：IP-54 导出的区间电路 → QAT 蒸馏 → TensorRT-LLM / TVM / 自研 INT8 解释器部署。WCET < 100μs，RAM < 8KB。
-3. **L2 定点 TRI-FUSE**：核心 EKF 用 Q15.16 定点，协方差对角主导近似，去 Cholesky；语义投影用定点矩阵乘。
-4. **分布偏移监控**：滑窗 100 拍估 W_1（用 1-Wasserstein 近似），超阈值上报触发飞轮。
+### 2.3 IP-59 INTERACTION-CONCURRENCY-VALIDATOR（交互并发验证器 ICV）
+1. **交错场景生成**：按优先级/WCET 枚举可行调度交错，做 schedule fuzzing；人格 × 交错组合覆盖。
+2. **线性一致性检查**：证书更新序列对监控器读是否线性一致，检出撕裂读/陈旧读/丢失更新。
+3. **多用户人格对抗采样**：快速用户切换、矛盾指令、低置信度诱导、置信度投毒。
+4. **交互证书压力测试**：在 Isaac Sim 注入人类延迟/反复/中断，实测 I_u^α 的安全性与可用性曲线。
 
 ### 2.4 既有 IP 升级
 | IP | 升级点 |
 |---|---|
-| IP-51 CAR | 守卫阈值 θ ← α_e·θ_sim（迁移修正）；转移表新增「SimValidated」标记位；不变式合成初始化用 CKB 模板 |
-| IP-52 LCS | 档位重定义：T-1=L0查表、T0=L1 INT8监控器、T1=区间电路、T2=LipSDP；预算 Γ 仅含 T-1/T0 |
-| IP-53 CMC | 新增「蒸馏导出」后端：区间电路 → ONNX → QAT → INT8 模型 + 部署清单 |
-| IP-49 几何证书 | L_m 由 SCV 经验分位数给出，不再靠解析上界；ValidRegion 网格化入 L0 表 |
-| IP-50 课程引擎 | 相位序列 Π 从 CKB 检索迁移；难度调度用决策等价边际 + Sim 验证的通过率曲线 |
-| IP-45 总线 | 新增「飞轮心跳」话题：偏移统计 S_t、KB 版本、Sim 重跑请求 |
-| IP-47 组合代数 | 乘积自动机模板在 KB 中预存；新组合 = 检索子自动机模板 + 守卫合取 + 接口契约检查 |
+| IP-51 CAR | 守护条件加入人格契约与租约新鲜度：m ← min(查表 m_lo, 租约衰减 m, persona 上限)；转移表新增 PersonaMode / LeaseEpoch |
+| IP-52 LCS | 预算按关键级切分；T-1/T0 结果带租约时间戳；过载走 HI 模式只保查表 + 监控 |
+| IP-53 CMC | 人格契约参数化编译（共享主体电路、多套阈值表）；导出并发安全的只读监控器 |
+| IP-49 几何证书 | 交互不变集 I_u^α 与几何证书求交；人作为动态障碍/共-agent 建模 |
+| IP-50 课程引擎 | 按人格与并发负载生成个性化课程；难度含「交互不可行率」与「租约过期率」 |
+| IP-45 总线 | 新增 persona 契约、租约表、关键级、模式切换、线性一致性审计日志话题 |
+| IP-47 组合代数 | 并发组合的 rely-guarantee 接口契约（读写集声明）；子自动机接口兼容性检查 |
+| IP-54 SCV | 并发交错与人格对抗纳入压力测试；Sim 内跑多用户并发场景 |
+| IP-55 CKB | 指纹增加 persona/交互拓扑维度；检索并发接口契约与人格模板 |
+| IP-56 ECR | 租约表 + 混合关键级调度 + 快照读；INT8 监控器固定最高关键级 |
 
-## 3. 四层架构 v7
+## 3. 四层架构 v8
 
 ```
-L1: TRI-FUSE(INT8) + IP-49 LIO(关键帧/定点) → 度量语义图 C_ms + 漂移界 B_t + L_m(经验分位)
-L2: CTC + VLM + IP-35 仲裁 → R_φ(w) + 几何残差证书 → CKB 指纹 (φ, ψ)
-L3: IP-51 CAR(迁移修正阈值) ← IP-56 ECR(L0查表 + L1 INT8监控器 + 偏移监控)
-    → IP-47 乘积模板检索组合 → IP-39 规划(CBF margin=查表 m_lo) → IP-45 总线(模式感知+飞轮心跳)
-    → IP-48 认证流匹配(N*=L0查表 j_star) + IP-43 韵律调度 → IP-53 CMC(看门狗=L1 INT8)
-L4: IP-55 CKB(指纹检索 + 模板合并 + 差集补全) ← IP-54 SCV(Isaac Sim 域随机化 + 压力测试 + 反例归因 + 迁移界)
-    → IP-44 蒸馏(QAT→INT8) + IP-50 课程(RAG迁移相位序列) → RCA 重颁证书(含有效区间+版本) → 契约热更新
-运行期：L0查表(5μs) + L1 INT8监控(100μs) + 偏移监控 → 飞轮触发 → Sim重跑 → KB更新 → 热更新下发
+L1: TRI-FUSE(INT8) + IP-49 LIO → C_ms + B_t + L_m(经验分位)
+    人/多用户状态估计 → x_human, H_u(共形意图集), τ_u
+L2: CTC + VLM + IP-35 仲裁 → R_φ(w) 分支池(b 候选, 并行投机)
+L3: IP-51 CAR(persona 契约守卫 + 租约新鲜度) ← IP-58 CCR(租约表 + RG 守卫 + 混合关键级调度)
+    → IP-47 RG 接口契约组合 → IP-39 规划(CBF margin=min(查表, 租约衰减))
+    → IP-45 总线(persona/lease/criticality/审计) → IP-48 认证流匹配 + IP-43 韵律调度
+    → IP-53 CMC(persona 参数化监控器, 最高关键级)
+L4: IP-57 PCE(契约编译 + 共形意图 + 信任预算) + IP-55 CKB(含 persona 指纹)
+    ← IP-59 ICV(交错 fuzz + 线性一致性 + 人格对抗) + IP-54 SCV(多用户并发仿真)
+    → IP-44 蒸馏 + IP-50 个性化课程 → RCA 重颁(persona-conditioned) → 契约热更新
+运行期：L0/L1 查表 → 租约签发 → 并发分支并行认证 → 一致选择 → 监控快照守卫
+        过载 → HI 模式(砍个性化/投机, 保安全预算) → 交错/人格反例回灌 Sim/CKB
 ```
 
-## 4. 实验设计（E79–E86 硬门槛，承接 E73–E78）
+## 4. 实验设计（E87–E94 硬门槛，承接 E79–E86）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E79 Sim-to-Real 迁移 | 实机边际 ≥ α·θ_sim 比例；W_1 估计误差 | ≥95% 达标；W_1 误差 < 2x 理论界 |
-| E80 L0 查表延迟 | 查表+插值 p99 延迟；内存占用 | < 10μs；< 32MB |
-| E81 L1 INT8 监控器 | WCET、RAM、误 trip 率 vs 浮点 CMC | < 100μs；< 8KB；误 trip < 0.05% |
-| E82 RAG 合成加速 | 合成时间 vs 冷启动；人工确认时间 | 加速 ≥ 20x；人工确认 < 5min |
-| E83 飞轮闭环有效性 | 连续 3 轮偏移触发后，Nominal 占比回升 | 每轮回升 ≥ 5pp，最终 ≥ 80% |
-| E84 端到端低成本部署 | 总算力成本 COT vs 第 41 轮；边缘硬件规格 | 降 ≥ 10x；跑通 Orin Nano / STM32H7 |
-| E85 组合模板检索 | 新技能组合合成时间；乘积自动机验证通过率 | < 30min；100% |
-| E86 长时程鲁棒性 | 100 小时连续运行：不安全事件、可用性、漂移触发次数 | 0 起；Nominal≥80%；漂移触发<5 次/天 |
+| E87 个性化 soundness | 纯收缩路径实机违例；不可行协商成功率 | 0 起；≥95% |
+| E88 共形交互覆盖 | 意图集合条件覆盖率；扩张后违例；τ_u 校准误差 | ≥1−α(α=0.1)；0 起；误差 < 20% |
+| E89 RG 并发正确性 | 交错 fuzz 破坏不变式次数；撕裂读次数 | 0；0 |
+| E90 租约新鲜度 | 过期判据 sound 率；陈旧边际误用；p99 决策延迟 | 100%；0 起；< 150μs |
+| E91 混合关键级调度 | HI 模式监控 WCET；切换后恢复时延；过载下违例 | 达标；< 100ms；0 起 |
+| E92 投机并行收益 | 证书评估延迟降幅；Nominal 提升 | ≥5x；≥5pp |
+| E93 多用户并发契约 | 3 用户并发不可行率；协商时延；契约交集空集率 | < 10%；< 2s；0（空集必协商） |
+| E94 长时程个性化并发 | 100h 不安全事件；persona 切换；线性一致性违例 | 0 起；1000 次；0 |
 
-回退：E79 迁移界失效 → 扩大 Δ_dyn/Δ_sens 重跑 Sim，或回退第 41 轮保守阈值；E80/81 超预算 → 只保 L0 查表 + SafeStop 双态；E82 RAG 无加速 → 关闭检索，退回模板手写；E83 飞轮不收敛 → 人工介入阈值标定，锁定版本。
+回退：E88 覆盖失效 → 关闭认证扩张，只保留纯收缩个性化；E89/E91 不达标 → 推理串行化、牺牲速度保安全；E90 租约模型失真 → 缩短租约并提高重查频率；E92 无收益 → 退回顺序评估；E93 多用户不可行 → 单一活跃 persona 仲裁，其余排队。
 
 ## 5. 本轮最大风险
 
-**一句话**：Sim-Cert-RAG 飞轮引入了**仿真偏差累积**与**检索幻觉**两条新失效链——若域随机化覆盖不全导致 W_1 低估、或 RAG 检索到不相似模板却高置信合并，证书会在「自信满满」中静默失效，比第 41 轮的显式降级更隐蔽、更致命；因此 E79（迁移界实测）与 E82（RAG 合成审计）必须作为**红线实验**，任何一项不达标即全链路熔断回退。
+**一句话**：共形预测只保证**边际覆盖**而非按人格条件覆盖，叠加多用户契约求交在高并发下可能同时触发「覆盖被欺骗的静默失效」与「可行集为空的可用性崩塌」——因此 E88（条件覆盖）与 E93（多用户契约空集）必须设为红线实验，且默认回退到「纯收缩个性化 + 串行安全监控」这条永不失 sound 的底线。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 42 轮产物 · 创新点清单 v19：Sim-Cert-RAG 飞轮（SCV × CKB × ECR）× 量化边缘运行时（四层架构 v7）
+# 第 43 轮产物 · 创新点清单 v20：Persona-Cert × Concurrent-Cert（PCE × CCR × ICV）× 可验证个性化并发闭环（四层架构 v8）
 
-> 承接第 41 轮产物 v18。本轮**增量插入** IP-54/55/56，并升级 IP-51/52/53/49/50/45/47；不推倒任何既有层级。核心是把 v18 的「在线可验证」升级为「仿真验证→知识沉淀→边缘极致低成本→持续进化」的闭环飞轮。
+> 承接第 42 轮产物 v19。本轮**增量插入** IP-57/58/59，并升级 IP-45/47/49/50/51/52/53/54/55/56；不推倒任何既有层级。核心是把 v19 的「仿真→检索→边缘→仿真」飞轮，升级为同时满足 **个性化安全（收缩免费、扩张持证）** 与 **并发安全（rely-guarantee + 租约新鲜度 + 混合关键级）** 的可验证闭环。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-54 | SIM-CERT-VALIDATOR (SCV) | 新增 | Isaac Sim 域随机化压力测试；守卫面对抗采样；Sim-to-Real 迁移界 α_e；反例自动归因入库 |
-| IP-55 | CERT-KNOWLEDGE-BASE (CKB) | 新增 | 多模态指纹嵌入 + HNSW 检索；模板合并 + 差集补全；版本化溯源；RAG 增强课程/组合合成 |
-| IP-56 | EDGE-CERT-RUNTIME (ECR) | 新增 | L0 只读查表 (5μs) + L1 INT8 监控器 (100μs/8KB) + L2 定点 TRI-FUSE；偏移监控触发飞轮 |
-| IP-51 | CAR | 升级 | 阈值 θ ← α_e·θ_sim；SimValidated 标记；不变式初始化用 CKB 模板 |
-| IP-52 | LCS | 升级 | 档位重定义 T-1/T0/T1/T2；预算 Γ 仅含 L0/L1；决策等价停在 T-1 |
-| IP-53 | CMC | 升级 | 新增蒸馏导出后端：区间电路 → ONNX → QAT → INT8 模型 + 部署清单 |
-| IP-49 | 几何证书 | 升级 | L_m 由 SCV 经验分位给出，不再靠解析上界；ValidRegion 网格化入 L0 表 |
-| IP-50 | 课程引擎 | 升级 | 相位序列 Π 从 CKB 检索迁移；难度用决策等价边际 + Sim 通过率曲线 |
-| IP-45 | 总线 | 升级 | 飞轮心跳话题：S_t、KB 版本、Sim 重跑请求 |
-| IP-47 | 组合代数 | 升级 | 乘积自动机模板预存 KB；新组合=检索子模板+守卫合取+接口契约检查 |
+| IP-57 | PERSONA-CONTRACT-ENGINE (PCE) | 新增 | 人格契约编译；单调收缩 C_u=C∩Π_u；共形人意图 Ĥ_u^α；信任预算 τ_u；认证扩展三重闸门 |
+| IP-58 | CONCURRENT-CERT-RUNTIME (CCR) | 新增 | 证书租约 (m,τ,λ,κ)；rely-guarantee 运行时守卫；混合关键级 LO/HI 调度；投机并行 + 证书一致选择 |
+| IP-59 | INTERACTION-CONCURRENCY-VALIDATOR (ICV) | 新增 | 调度交错 fuzzing；线性一致性审计；多用户人格对抗采样；Sim 内人-机交互压力测试 |
+| IP-51 | CAR | 升级 | 守卫 margin ← min(查表, 租约衰减, persona 上限)；新增 PersonaMode / LeaseEpoch |
+| IP-52 | LCS | 升级 | 预算按关键级切分；结果带租约时间戳；过载走 HI 模式 |
+| IP-53 | CMC | 升级 | persona 契约参数化编译；导出并发安全只读监控器（最高关键级） |
+| IP-49 | 几何证书 | 升级 | 交互不变集 I_u^α ∩ 几何证书；人作为共-agent/动态障碍建模 |
+| IP-50 | 课程引擎 | 升级 | 个性化课程；难度含交互不可行率 + 租约过期率 |
+| IP-45 | 总线 | 升级 | persona 契约 / 租约表 / 关键级 / 模式切换 / 线性一致性审计话题 |
+| IP-47 | 组合代数 | 升级 | rely-guarantee 接口契约（读写集声明）；并发子自动机兼容检查 |
+| IP-54 | SCV | 升级 | 并发交错 + 人格对抗纳入压力测试；Sim 多用户并发 |
+| IP-55 | CKB | 升级 | 指纹增 persona/交互拓扑；检索并发接口契约与人格模板 |
+| IP-56 | ECR | 升级 | 租约表 + 混合关键级调度 + 快照读；INT8 监控器固定最高关键级 |
 
-## 1. 符号体系（增量：定义 32–37 符号）
+## 1. 符号体系（增量：定义 38–43 符号）
 
 | 符号 | 含义 | 定义 |
 |---|---|---|
-| D_sim = D_nom ⊗ Δ_dyn ⊗ Δ_sens ⊗ Δ_comm ⊗ Δ_env | 仿真域随机化分布 | 动力学/感噪/通信/环境四维扰动张积 |
-| C_sim = {x : ∀ξ∼D_sim, m_ξ(x) ≥ θ} | 仿真证书有效域 | 在 D_sim 支撑集上边际一致 ≥ 阈值 |
-| α_e ≥ 1 | 迁移修正系数 | 实机阈值 θ_real = α_e·θ_sim；由 W_1(D_real, D_sim) 估出 |
-| T_cert : k(x) ↦ (j*, m_lo, T_hold, θ_vec) | 离线预计算证书表 | 只读，键=量化状态抽象，值=打包结构体 |
-| L_cert = max(0, θ − student_margin) | 证书感知蒸馏损失 | 强制学生不低于教师保守下界（单调保守性） |
-| KB = {(φ_i, ψ_i, C_i, Ξ_i, Π_i)} | 证书知识库 | 任务指纹、环境指纹、证书模板、反例集、课程相位 |
-| R(φ, ψ) = Top-k(KB, sim·sim) | 检索器 | HNSW 索引嵌入 + 轻量交叉编码器重排 |
-| S_t = W_1(Ê_t, D_sim) | 分布偏移统计量 | 滑窗 100 拍经验分布与仿真分布的 1-Wasserstein 近似 |
-| COT = C_sim/N + C_edge·T + C_human·N_verify | 总拥有成本 | 仿真预计算摊销 + 边缘推理寿命期 + 人工确认成本 |
+| Π_u=(A_u,≺_u,ε_u,τ_u) | 人格契约 | 允许动作子集、交互风格序、风险容忍、信任预算 |
+| C_u = C_global ∩ Π_u | 个性化证书 | 只收缩；单调性保证 C_u ⊆ C_global |
+| Ĥ_u^α | 共形人意图集合 | Mondrian 分层共形，覆盖 ≥ 1−α |
+| I_u^α | 交互鲁棒不变集 | ∀h∈Ĥ_u^α，∃a∈A_u 使 z 留在集内 |
+| G_i / R_i | guarantee / rely | 并发任务的证书谓词保证 / 依赖 |
+| I | 证书不变式 | 需被所有交错执行保持 |
+| ℓ=(m,τ,λ,κ) | 证书租约 | 边际下界、测量时刻、衰减率、关键级 |
+| λ = L_m·v_max | 衰减率 | 由 Lipschitz 常数与最大速度界出 |
+| κ ∈ {safety,geometry,semantic,dialogue} | 关键级 | 调度与过载裁剪优先级 |
+| a* = argmax_{c_j valid ∧ c_j⊆C_u} score(β_j) | 证书一致选择 | 只接受有效且满足人格契约的分支 |
 
 ## 2. 关键算法（伪代码）
 
-### IP-54 SCV：仿真压力测试与迁移界计算
+### IP-57 PCE：契约编译、共形意图与认证扩展
 ```
-def stress_test_certificate(H, D_sim, N_per_edge=1000):
-    results = {}
-    for e in H.E:
-        # 对抗采样：从守卫面 g_e(x)=0 反向采样初始状态
-        X0 = backward_reachable(H, e, budget=N_per_edge//2)
-        X0 += domain_random_sample(D_sim, N_per_edge//2)
-        stats = run_batch_sim(H, X0, D_sim)  # 并行跑 N_per_edge 轨迹
-        results[e] = {
-            'trigger_rate': stats.triggered / N_per_edge,
-            'false_trip': stats.false_trip / N_per_edge,
-            'T_hold_cover': stats.hold_valid / stats.triggered,
-            'margin_p01': stats.margin.quantile(0.01),
-            'margin_p50': stats.margin.quantile(0.50),
-            'L_m_emp': stats.dmargin_dt.max(),
-            'counterexamples': stats.failed_trajectories
-        }
-    return results
+def compile_persona_contract(user_profile, C_global, goal):
+    A_u   = restrict_actions(user_profile.caps)       # 速度/接触力/区域上限
+    style = compile_style(user_profile)               # 提示频率/确认粒度
+    Pi_u  = Contract(A_u, style, eps=user_profile.risk_tol, tau=1.0)
+    C_u   = intersect(C_global, Pi_u)                 # 只收缩 => 天然 sound
+    if not feasible(C_u, goal):
+        concessions = minimal_relaxation(C_global, goal)  # 最小让步，不静默放宽
+        return C_u, Negotiation(concessions)          # 交用户/操作员确认
+    return C_u, None
 
-def compute_transfer_coeff(results, real_calib_trajs):
-    # 用少量实机标定轨迹估 W_1，给出每条边的 α_e
-    W1_est = estimate_wasserstein(real_calib_trajs, D_sim)
-    for e in H.E:
-        # 理论：m_real ≥ m_sim − L_m·W1；保守取 α_e = 1 + L_m·W1 / θ_sim
-        alpha = 1.0 + results[e]['L_m_emp'] * W1_est / max(1e-6, H.theta_sim[e])
-        results[e]['alpha_e'] = max(1.0, min(alpha, 3.0))  # 夹在 [1,3]
-    return results
+def conformal_intent_set(hist_u, alpha, persona_id):
+    # Mondrian 分层：按 persona 维护各自的非一致性分数分布
+    scores = calibration_scores[persona_id]
+    q = quantile(scores, 1 - alpha)                   # 秩统计阈值
+    return IntentSet(center=predict_intent(hist_u), radius=q)
 
-def auto_attribute_counterexample(xi):
-    # 时序切片 + 语义标签
-    slices = temporal_slice(xi, window=0.5s)
-    labels = []
-    for sl in slices:
-        if sl.margin_drop > 0.5*sl.margin_prev: labels.append('margin_collapse')
-        if sl.contact_change: labels.append('contact_transition')
-        if sl.sensor_dropout: labels.append('sensor_degradation')
-        if sl.comm_latency > 2*sl.latency_nom: labels.append('comm_delay')
-    return {'trajectory': xi, 'labels': labels, 'root_cause': majority_vote(labels)}
+def certified_expand(C_u, H_u_alpha, tau_u, shadow_cert):
+    I = robust_invariant(C_u, H_u_alpha)              # 人在环鲁棒不变集
+    cov_ok = conditional_coverage_ok(H_u_alpha, alpha)
+    if cov_ok and tau_u > 0 and shadow_cert.zero_violation():
+        cost = size_gain(I, C_u) * kappa_trust
+        return intersect(I, C_u), tau_u - cost        # 认证扩张，消耗信任预算
+    return C_u, 0.0                                   # 覆盖失效 => 退回纯收缩
 ```
 
-### IP-55 CKB：RAG 增强证书合成
+### IP-58 CCR：租约、RG 守卫、混合关键级与一致选择
 ```
-def rag_synthesize_certificate(phi, psi, KB, budget_cegar=300s):
-    # 1. 检索
-    cand = KB.retrieve(phi, psi, k=5)  # HNSW + 重排，< 5ms
-    # 2. 模板合并（保守：守卫合取、不变式相交、阈值取 max）
-    C_merged = merge_templates([c.C for c in cand])
-    # 3. 差集识别：C_merged 不覆盖 或 m_lo < θ 的区域
-    Delta = find_gaps(C_merged, phi, psi)  # 用敏感度热力图采样定位
-    # 4. 差集补全：仅在 Δ 上跑 CEGAR/采样
-    C_patch = cegar_refine(Delta, budget=budget_cegar)
-    # 5. 组装新证书
-    C_new = assemble(C_merged, C_patch)
-    # 6. 生成课程草案
-    Pi_draft = merge_phases([c.Pi for c in cand])
-    return C_new, Pi_draft, Delta
+def acquire_lease(task, x, theta, kappa):
+    b = cert_lookup_L0(x)                 # 或 L1 INT8；见 IP-56
+    lam = L_m * v_max_bound(x)            # 衰减率，定义 41
+    return Lease(m=b.m_lo, tau=monotonic_now(), lam=lam, kappa=kappa)
 
-def merge_templates(templates):
-    # 守卫合取：g_new = min(g_i)；不变式相交：Inv_new = ∩ Inv_i
-    # 阈值取 max（更保守）；L_m 取 max；T_hold 取 min
-    return Certificate(
-        guards=[min(g_i) for g_i in zip(*[t.guards for t in templates])],
-        invariants=[intersect(inv_i) for inv_i in zip(*[t.invariants for t in templates])],
-        theta=[max(th_i) for th_i in zip(*[t.theta for t in templates])],
-        L_m=[max(l_i) for l_i in zip(*[t.L_m for t in templates])],
-        T_hold=[min(h_i) for h_i in zip(*[t.T_hold for t in templates])]
-    )
-```
+def lease_valid(lease, theta, t):
+    return (lease.m - lease.lam * (t - lease.tau)) >= theta   # 新鲜度判据
 
-### IP-56 ECR：边缘三层运行时
-```
-# L0: 只读查表引擎（克拉普顿树，mmap）
-def cert_lookup_L0(x_quant):
-    key = pack_key(x_quant)  # (q_int, v_int, sem_hash) -> u64
-    node = kd_tree_traverse(root, key)  # O(log N) 无分支预测失败
-    val = trilinear_interpolate(node, x_quant.frac)  # 定点插值
-    return unpack_val(val)  # j_star, m_lo[6], T_hold, theta_vec[6]
+def rg_admit(task, I, active):
+    # 非干扰：本任务 guarantee 不得写安全关键谓词
+    if not task.write_set.isdisjoint(I.critical_vars):
+        return False
+    # guarantee => 其他任务的 rely
+    return all(g.implies(r) for t in active if t is not task
+                           for r in task.rely for g in [t.guarantee])
 
-# L1: INT8 监控器（QAT 蒸馏部署）
-def monitor_step_INT8(obs_int8):
-    # obs_int8: 量化后的传感器/状态摘要
-    # 模型：3层 MLP，INT8 权重/激活，累加器 INT32，输出反量化到 i16 边际
-    margin_int16 = int8_mlp_forward(model_int8, obs_int8)
-    # 判定：margin_int16 >= theta_int16 ? OK : TRIP
-    status = 'OK' if all(margin_int16 >= theta_int16) else 'TRIP'
-    return status, margin_int16
+def schedule_mixed_criticality(tasks, overload):
+    if overload:                          # HI 模式：只删不增
+        tasks = [t for t in tasks if t.kappa >= K_GEOMETRY]
+        reserve_budget(SAFETY_MONITOR, B_safe)   # 安全预算硬隔离，不随模式缩
+    return edf_with_rta(tasks)            # 响应时间分析保证监控器 WCET
 
-# L2: 定点 TRI-FUSE 核心（Q15.16）
-def trifuse_predict_int(q16_state, q16_cov_diag):
-    # 协方差对角主导近似：P ≈ diag(p_i)
-    # 状态预测：x' = f(x) + w，雅可比定点近似
-    # 协方差预测：P' = F P F^T + Q → 对角近似 p_i' = f_i^2 * p_i + q_i
-    return q16_x_pred, q16_p_pred_diag
+def concurrent_speculative_select(branches, persona, C_global):
+    certs = parallel_map(lambda b: (b, certify_branch(b)), branches)  # b 路并行
+    valid = [(b, c) for b, c in certs
+             if c.valid and subset(c.admissible, intersect(C_global, persona))]
+    if not valid:
+        return negotiate_or_safestop()    # 空集绝不静默放行
+    return max(valid, key=lambda bc: score(bc[0]))
 
-def trifuse_update_int(q16_x_pred, q16_p_pred, meas_int, H_int, R_int):
-    # 卡尔曼增益对角近似：k_i = p_i * h_i / (h_i^2 * p_i + r_i)
-    # 状态更新：x = x_pred + k * (z - H x_pred)
-    # 协方差更新：p_i = (1 - k_i * h_i) * p_i
-    return q16_x_upd, q16_p_upd
-
-# 分布偏移监控（滑窗 1-Wasserstein 近似）
-def drift_monitor(window_trajs, D_sim_hist):
-    # 将轨迹投影到证书相关特征：(margin_min, L_m_est, regime_seq)
-    feat_real = project(window_trajs)
-    feat_sim = D_sim_hist  # 预存仿真特征直方图
-    W1_approx = wasserstein_1d_approx(feat_real, feat_sim)  # O(B) 桶距离
-    return W1_approx
+def monitor_snapshot(cert_state):
+    # seqlock/epoch：前后 epoch 一致才接受，否则重试或单调降级
+    e1 = cert_state.epoch; snap = cert_state.value; e2 = cert_state.epoch
+    return snap if e1 == e2 else downgrade_snapshot(cert_state)
 ```
 
-### IP-51/52/53 升级：飞轮感知的自动机与证书栈
+### IP-51/52/53 升级：并发-人格感知的自动机与证书栈
 ```
-# CAR：迁移修正阈值 + SimValidated 标记
-def car_transition_guard(e, x, cert_obj):
-    theta_real = cert_obj.alpha_e[e] * cert_obj.theta_sim[e]
-    margin = cert_lookup_L0(x).m_lo[e]  # L0 查表得边际下界
-    return margin >= theta_real
+def car_transition_guard(e, x, cert_obj, persona, lease, t):
+    theta = cert_obj.alpha_e[e] * cert_obj.theta_sim[e]
+    m_lookup = cert_lookup_L0(x).m_lo[e]
+    m_lease  = lease.m - lease.lam * (t - lease.tau)
+    m_cap    = persona_cap[e](persona)          # 人格契约只做上限收缩
+    return min(m_lookup, m_lease, m_cap) >= theta and lease_valid(lease, theta, t)
 
-# LCS：档位重定义，预算仅含 T-1/T0
-def certify_light_v2(x, guards, budget_us=200):
-    # T-1: L0 查表 (5μs)
-    b = cert_lookup_L0(x)
+def certify_light_v3(x, guards, persona, budget_us, criticality):
+    # T-1: L0 查表 + 租约签发
+    b = cert_lookup_L0(x); lease = acquire_lease('lcs', x, theta, criticality)
     U = undecided_guards(b, guards)
-    if not U: return b, -1  # T-1 决策等价
-    # T0: L1 INT8 监控器 (100μs)
-    if budget_us < 110: return downgrade_monotone(b), -1
+    if not U and lease_valid(lease, theta, monotonic_now()): return b, lease, -1
+    # T0: L1 INT8 监控（关键级低于 safety 时可能被 HI 模式裁掉）
+    if budget_us < 110 or criticality < K_GEOMETRY:
+        return downgrade_monotone(b), lease, -1
     status, margin = monitor_step_INT8(quantize_obs(x))
-    b.m_lo = margin
+    b.m_lo = min(b.m_lo, margin)
     U = undecided_guards(b, guards)
-    if not U: return b, 0
-    # 预算耗尽 → 单调保守降级
-    return downgrade_monotone(b), 0
-
-# CMC：蒸馏导出后端
-def export_monitor_for_edge(interval_circuit):
-    onnx_model = interval_circuit.to_onnx()
-    qat_model = quant_aware_train(onnx_model, calib_data, L_cert)
-    int8_model = export_int8(qat_model, target='tvm')  # 或 tensorrt/tflite
-    deploy_pkg = {
-        'model': int8_model,
-        'theta_int16': quantize_theta(theta),
-        'wcet_us': benchmark_wcet(int8_model),
-        'ram_kb': model_size(int8_model),
-        'cert_hash': hash(interval_circuit)
-    }
-    return deploy_pkg
+    return (b, lease, 0) if not U else (downgrade_monotone(b), lease, 0)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间复杂度 | 空间复杂度 | 正确性保证 |
 |---|---|---|---|
-| IP-54 SCV 压力测试 | 离线：O(|E|·N_traj·T_sim) 可并行 | 仿真日志 O(N_traj) | 经验覆盖率 ≥ 1−δ ⟹ 实机迁移界 α_e 有效（置信 1−δ） |
-| IP-54 迁移界计算 | O(N_calib) 实机标定轨迹 | O(1) | m_real ≥ m_sim − L_m·W_1 ⟹ θ_real = α_e·θ_sim 保 sound |
-| IP-55 CKB 检索 | HNSW: O(log N) + 重排 O(k·d) | 嵌入索引 O(N·d) | Top-k 召回 ≥ 0.95（对比学习保证）；模板合并保守 ⟹ sound |
-| IP-55 差集补全 | O(|Δ|·C_cegar) ≪ O(|X|·C_cegar) | 增量补丁 | CEGAR 在 Δ 上收敛 ⟹ C_new 覆盖全域且 sound |
-| IP-56 L0 查表 | O(log N) + 插值 O(1) < 10μs | 只读表 < 32MB | 网格粒度 δ·L_m ≤ η ⟹ 插值误差 ≤ η，保 sound |
-| IP-56 L1 INT8 监控 | WCET < 100μs（固定层数） | 模型 < 8KB | QAT + L_cert 损失 ⟹ 学生边际 ≥ 教师下界，单调保守性保 sound |
-| IP-56 L2 定点 TRI-FUSE | O(n^2) → O(n) 对角近似 | 状态+协方差 < 2KB | 对角主导近似误差由协方差条件数界出，含入 B_t |
-| IP-56 偏移监控 | O(B) 桶距离，B=100 | 滑窗 100 拍 | W_1 近似偏差 ≤ ε_bucket；触发阈值 τ_drift 含安全裕度 |
-| IP-51 CAR 迁移守卫 | O(|E|) 查表+比较 | 同 L0 | α_e 修正后守卫 ⊇ 真实安全守卫 ⟹ 无漏报警 |
-| IP-52 LCS v2 | 通常 T-1/T0 仅 105μs | 同 L0+L1 | 决策等价停在 T-1/T0 ⟹ 与全量证书决策一致 |
+| IP-57 契约编译 | O(|A|+|区域|) 一次性 | 契约 O(|A_u|) | C_u=C∩Π_u ⟹ 单调收缩 ∀u 保 sound |
+| IP-57 共形意图 | 校准 O(1) 查表；推理 O(d) | 按 persona 分数表 O(N_p) | 可交换性下边际覆盖 ≥ 1−α；条件覆盖需 E88 验证 |
+| IP-57 认证扩张 | O(鲁棒可达性) 离线 | 不变集网格 | 三重闸门通过才扩张；否则 τ_u→0 回退收缩 |
+| IP-58 租约签发 | O(log N) 查表 + O(1) | 每任务 O(1) | λ=L_m·v_max ⟹ 过期判据 sound（不误用陈旧边际） |
+| IP-58 RG 守卫 | O(|写集|+|rely|) | 读写集 O(1) | 非干扰 + 局部保持 ⟹ 任意交错保持 I |
+| IP-58 混合关键级 | EDF+RTA O(k log k) | 预算表 O(k) | 切换只删不增 ⟹ 切换点 I 保持 |
+| IP-58 投机并行 | O(b) 并行 / 墙钟 O(T+ε) | 分支 O(b) | 只选 valid∧⊆C_u ⟹ 输出 sound；延迟降 ≥5x |
+| IP-58 快照读 | O(1) 期望，冲突重试 | epoch O(1) | seqlock 前后 epoch 一致 ⟹ 无撕裂读 |
+| IP-59 交错 fuzz | O(#交错 × T_sim) 离线 | 轨迹 O(N) | 覆盖可行交错 ⟹ RG 条件反例可被检出 |
+| IP-59 线性一致性 | O(#事件 log #事件) | 审计日志 O(#事件) | 检出撕裂/陈旧/丢失更新 ⟹ 更新序列可线性化 |
+| IP-51 CAR 并发守卫 | O(|E|) 比较 | 同 L0+租约 | min 三源 + 租约有效 ⟹ 无漏报、无陈旧放行 |
 
-## 4. 实验设计（E79–E86，硬门槛）
+## 4. 实验设计（E87–E94，硬门槛）
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E79 Sim-to-Real 迁移 | 实机边际 ≥ α·θ_sim 比例；W_1 估计误差 vs 理论界 | ≥95% 达标；W_1 误差 < 2x 理论界 |
-| E80 L0 查表延迟 | 查表+插值 p99 延迟；内存占用 | < 10μs；< 32MB |
-| E81 L1 INT8 监控器 | WCET、RAM、误 trip 率 vs 浮点 CMC | < 100μs；< 8KB；误 trip < 0.05% |
-| E82 RAG 合成加速 | 合成时间 vs 冷启动；人工确认时间 | 加速 ≥ 20x；人工确认 < 5min |
-| E83 飞轮闭环有效性 | 连续 3 轮偏移触发后，Nominal 占比回升 | 每轮回升 ≥ 5pp，最终 ≥ 80% |
-| E84 端到端低成本部署 | 总算力成本 COT vs 第 41 轮；边缘硬件规格 | 降 ≥ 10x；跑通 Orin Nano / STM32H7 |
-| E85 组合模板检索 | 新技能组合合成时间；乘积自动机验证通过率 | < 30min；100% |
-| E86 长时程鲁棒性 | 100 小时连续运行：不安全事件、可用性、漂移触发次数 | 0 起；Nominal≥80%；漂移触发<5 次/天 |
+| E87 个性化 soundness | 纯收缩路径实机违例；不可行协商成功率；让步集最小性 | 0 起；≥95%；≥90% 命中最小集 |
+| E88 共形交互覆盖 | 条件覆盖率；认证扩张后违例；τ_u 校准误差；漂移检出率 | ≥1−α(α=0.1)；0 起；<20%；≥95% |
+| E89 RG 并发正确性 | 交错 fuzz 破坏 I；撕裂读；陈旧边际进入守卫 | 0；0；0 |
+| E90 租约新鲜度 | 过期判据 sound 率；陈旧边际误用；p99 决策延迟 | 100%；0 起；<150μs |
+| E91 混合关键级调度 | HI 模式监控 WCET；切换恢复时延；过载下安全违例 | 达标；<100ms；0 起 |
+| E92 投机并行收益 | 证书评估延迟降幅；Nominal 占比提升；空分支选择率 | ≥5x；≥5pp；0 |
+| E93 多用户并发契约 | 3 用户并发不可行率；协商时延；空集静默放行 | <10%；<2s；0 |
+| E94 长时程个性化并发 | 100h 不安全事件；persona 切换；线性一致性违例；租约过期率 | 0 起；1000 次；0；<5% |
 
-回退：E79 迁移界失效 → 扩大 Δ_dyn/Δ_sens 重跑 Sim，或回退第 41 轮保守阈值；E80/81 超预算 → 只保 L0 查表 + SafeStop 双态；E82 RAG 无加速 → 关闭检索，退回模板手写；E83 飞轮不收敛 → 人工介入阈值标定，锁定版本。
+回退：E88 覆盖失效 → 关闭认证扩张，仅保留纯收缩个性化；E89/E91 不达标 → 推理串行化，牺牲速度保安全；E90 租约模型失真 → 缩短租约 + 提高重查频率；E92 无收益 → 退回顺序评估；E93 多用户不可行 → 单一活跃 persona 仲裁，其余排队；任何红线实验失败 → 全链路熔断回退 v19。
 
 ## 5. 风险与缓解（增量）
 
 | 风险 | 等级 | 缓解措施 |
 |---|---|---|
-| 仿真偏差累积：W_1 低估导致 α_e 过小，实机静默失效 | 高 | E79 红线实测；域随机化覆盖度指标（参数空间体积覆盖 ≥ 90%）；实机在线 W_1 监控双重保险 |
-| RAG 检索幻觉：高相似度但实则不适用的模板被合并 | 高 | E82 合成审计：每次合成输出差集 Δ 供人工确认；模板带「适用域」显式标注（φ,ψ 范围）；合并前做轻量不一致性检测 |
-| 量化蒸馏破坏单边可靠性：INT8 舍入导致边际低于教师 | 高 | L_cert 损失强制学生 ≥ 教师下界；部署前跑全量验证集（10k 样本）零违例才放行 |
-| L0 查表插值误差在高梯度区超界 | 中 | 网格自适应加密（边际梯度大处细化）；插值误差上界 η 写入证书对象，运行时自动降级 |
-| 飞轮偏移检测抖动：频繁触发 Sim 重跑耗尽预算 | 中 | 触发冷却期 T_cool=1h；偏移统计量用 EWMA 平滑；最小触发间隔硬约束 |
-| 乘积模板检索组合不完整：接口契约不匹配 | 中 | KB 存储接口契约（输入/输出证书变量）；组合前自动契约兼容性检查 |
-| 定点 TRI-FUSE 协方差近似发散 | 低-中 | 对角主导度监控：cond(P) > κ_max 触发重初始化；漂移界 B_t 吸收近似误差 |
+| 共形只保边际覆盖，按人格/多用户条件覆盖不足，扩张被欺骗 | 高 | E88 红线测条件覆盖；Mondrian 分层校准；τ_u 动态扣减；覆盖失效即回退纯收缩 |
+| 多用户契约求交为空：既不能放行也不能无限停机 | 高 | E93 红线；空集必走最小让步协商；单一活跃 persona 仲裁兜底 |
+| 租约在调度抖动下集体过期，导致集体降级（可用性崩塌） | 高 | E90 红线；λ 由保守 v_max 界出；租约分关键级错峰续期；HI 模式优先保监控租约 |
+| rely-guarantee 读写集声明错误，非干扰条件被绕过 | 中-高 | 规范写集由工具生成而非手写；E89 交错 fuzz + 线性一致性审计；CI 静态检查 |
+| 混合关键级模式切换瞬间丢失监控预算（优先级反转） | 中 | 预算硬隔离不随模式缩；切换只删不增；切换点不变式检查 |
+| 投机并行放大算力，过载反而加速租约过期 | 中 | 分支数 b 自适应；HI 模式砍投机；并行只用于证书评估不用于放宽阈值 |
+| 人格契约参数化监控器阈值表被错误索引（张冠李戴） | 中 | 契约哈希绑定 persona_id + 硬件版本；部署前全量 persona 回归 |
 
 ## 6. 本轮最大风险
 
-**一句话**：Sim-Cert-RAG 飞轮引入了**仿真偏差累积**与**检索幻觉**两条新失效链——若域随机化覆盖不全导致 W_1 低估、或 RAG 检索到不相似模板却高置信合并，证书会在「自信满满」中静默失效，比第 41 轮的显式降级更隐蔽、更致命；因此 E79（迁移界实测）与 E82（RAG 合成审计）必须作为**红线实验**，任何一项不达标即全链路熔断回退。
+**一句话**：共形预测只保证**边际覆盖**而非按人格条件覆盖，叠加多用户契约求交在高并发下可能同时触发「覆盖被欺骗的静默失效」与「可行集为空的可用性崩塌」——因此 E88（条件覆盖）与 E93（多用户契约空集）必须设为红线实验，且默认回退到「纯收缩个性化 + 串行安全监控」这条永不失 sound 的底线。
 <!-- ARTIFACT:END -->
