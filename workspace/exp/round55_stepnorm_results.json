@@ -1,0 +1,456 @@
+{
+ "meta": {
+  "date": "2026-11-11",
+  "seed": 20261111,
+  "episodes_per_task": 2500,
+  "episodes_per_task_sweep": 1200,
+  "n_tasks": 32,
+  "declared_hazard": {
+   "h_crit": 0.15,
+   "h_non": 0.01,
+   "s_crit": 0.2,
+   "s_non": 0.02,
+   "q0": 0.15,
+   "kappa_h": 0.45,
+   "kappa_s": 0.05,
+   "recovery": 0.5,
+   "eps_hard": 0.25,
+   "planner_assumed_p_hard_undo": 0.8
+  },
+  "note": "Declared generative toy model, NOT a robot/benchmark result. Real grounding is only the task list, leaderboard difficulty and rubric lengths/weights. The p_hard_undo sweep is the central sensitivity result: norm-aware planning only pays when a social breach actually triggers a costly human undo."
+ },
+ "scenarios": {
+  "id": {
+   "success": {
+    "step_score": 52.042,
+    "success": 0.428,
+    "hard_violation_episode": 0.094,
+    "hard_per_100_steps": 5.934,
+    "soft_per_100_steps": 8.258,
+    "mean_steps": 1.623
+   },
+   "step": {
+    "step_score": 61.613,
+    "success": 0.429,
+    "hard_violation_episode": 0.1,
+    "hard_per_100_steps": 5.163,
+    "soft_per_100_steps": 7.652,
+    "mean_steps": 1.938
+   },
+   "stepnorm": {
+    "step_score": 59.305,
+    "success": 0.412,
+    "hard_violation_episode": 0.076,
+    "hard_per_100_steps": 4.566,
+    "soft_per_100_steps": 6.654,
+    "mean_steps": 1.84
+   }
+  },
+  "ood": {
+   "success": {
+    "step_score": 39.467,
+    "success": 0.263,
+    "hard_violation_episode": 0.082,
+    "hard_per_100_steps": 5.747,
+    "soft_per_100_steps": 8.026,
+    "mean_steps": 1.414
+   },
+   "step": {
+    "step_score": 47.78,
+    "success": 0.259,
+    "hard_violation_episode": 0.09,
+    "hard_per_100_steps": 5.08,
+    "soft_per_100_steps": 7.32,
+    "mean_steps": 1.717
+   },
+   "stepnorm": {
+    "step_score": 47.489,
+    "success": 0.259,
+    "hard_violation_episode": 0.065,
+    "hard_per_100_steps": 4.23,
+    "soft_per_100_steps": 6.191,
+    "mean_steps": 1.68
+   }
+  }
+ },
+ "penalty_sweep_ood": [
+  {
+   "p_hard_undo": 0.0,
+   "success": {
+    "step_score": 40.951,
+    "success": 0.286,
+    "hard_violation_episode": 0.082,
+    "hard_per_100_steps": 5.587
+   },
+   "step": {
+    "step_score": 49.651,
+    "success": 0.283,
+    "hard_violation_episode": 0.093,
+    "hard_per_100_steps": 5.086
+   },
+   "stepnorm": {
+    "step_score": 48.739,
+    "success": 0.282,
+    "hard_violation_episode": 0.066,
+    "hard_per_100_steps": 4.245
+   }
+  },
+  {
+   "p_hard_undo": 0.2,
+   "success": {
+    "step_score": 40.588,
+    "success": 0.283,
+    "hard_violation_episode": 0.081,
+    "hard_per_100_steps": 5.576
+   },
+   "step": {
+    "step_score": 48.84,
+    "success": 0.275,
+    "hard_violation_episode": 0.093,
+    "hard_per_100_steps": 5.22
+   },
+   "stepnorm": {
+    "step_score": 48.18,
+    "success": 0.275,
+    "hard_violation_episode": 0.067,
+    "hard_per_100_steps": 4.344
+   }
+  },
+  {
+   "p_hard_undo": 0.4,
+   "success": {
+    "step_score": 40.22,
+    "success": 0.274,
+    "hard_violation_episode": 0.083,
+    "hard_per_100_steps": 5.783
+   },
+   "step": {
+    "step_score": 48.553,
+    "success": 0.271,
+    "hard_violation_episode": 0.089,
+    "hard_per_100_steps": 4.979
+   },
+   "stepnorm": {
+    "step_score": 48.186,
+    "success": 0.272,
+    "hard_violation_episode": 0.066,
+    "hard_per_100_steps": 4.221
+   }
+  },
+  {
+   "p_hard_undo": 0.6,
+   "success": {
+    "step_score": 39.919,
+    "success": 0.269,
+    "hard_violation_episode": 0.083,
+    "hard_per_100_steps": 5.685
+   },
+   "step": {
+    "step_score": 47.889,
+    "success": 0.26,
+    "hard_violation_episode": 0.092,
+    "hard_per_100_steps": 5.114
+   },
+   "stepnorm": {
+    "step_score": 47.549,
+    "success": 0.265,
+    "hard_violation_episode": 0.065,
+    "hard_per_100_steps": 4.149
+   }
+  },
+  {
+   "p_hard_undo": 0.8,
+   "success": {
+    "step_score": 39.603,
+    "success": 0.264,
+    "hard_violation_episode": 0.081,
+    "hard_per_100_steps": 5.722
+   },
+   "step": {
+    "step_score": 47.687,
+    "success": 0.258,
+    "hard_violation_episode": 0.091,
+    "hard_per_100_steps": 5.091
+   },
+   "stepnorm": {
+    "step_score": 47.311,
+    "success": 0.258,
+    "hard_violation_episode": 0.066,
+    "hard_per_100_steps": 4.277
+   }
+  },
+  {
+   "p_hard_undo": 0.95,
+   "success": {
+    "step_score": 39.018,
+    "success": 0.258,
+    "hard_violation_episode": 0.08,
+    "hard_per_100_steps": 5.642
+   },
+   "step": {
+    "step_score": 47.348,
+    "success": 0.252,
+    "hard_violation_episode": 0.091,
+    "hard_per_100_steps": 5.169
+   },
+   "stepnorm": {
+    "step_score": 47.16,
+    "success": 0.255,
+    "hard_violation_episode": 0.063,
+    "hard_per_100_steps": 4.118
+   }
+  },
+  {
+   "p_hard_undo": 1.0,
+   "success": {
+    "step_score": 38.912,
+    "success": 0.256,
+    "hard_violation_episode": 0.081,
+    "hard_per_100_steps": 5.698
+   },
+   "step": {
+    "step_score": 47.321,
+    "success": 0.252,
+    "hard_violation_episode": 0.09,
+    "hard_per_100_steps": 5.067
+   },
+   "stepnorm": {
+    "step_score": 47.245,
+    "success": 0.253,
+    "hard_violation_episode": 0.065,
+    "hard_per_100_steps": 4.231
+   }
+  }
+ ],
+ "per_task_ood_stepnorm_minus_step": [
+  {
+   "task": "Store Earphones",
+   "n": 4,
+   "delta_step_score": -4.15,
+   "hard_step": 0.2117,
+   "hard_stepnorm": 0.08
+  },
+  {
+   "task": "Pack Bag",
+   "n": 4,
+   "delta_step_score": -3.83,
+   "hard_step": 0.2,
+   "hard_stepnorm": 0.0867
+  },
+  {
+   "task": "Plug In Ethernet",
+   "n": 3,
+   "delta_step_score": -3.18,
+   "hard_step": 0.0533,
+   "hard_stepnorm": 0.0425
+  },
+  {
+   "task": "Pack the Doll",
+   "n": 2,
+   "delta_step_score": -3.17,
+   "hard_step": 0.0533,
+   "hard_stepnorm": 0.0492
+  },
+  {
+   "task": "Unlock",
+   "n": 3,
+   "delta_step_score": -2.6,
+   "hard_step": 0.0692,
+   "hard_stepnorm": 0.0525
+  },
+  {
+   "task": "Fold Towel",
+   "n": 5,
+   "delta_step_score": -2.45,
+   "hard_step": 0.2292,
+   "hard_stepnorm": 0.0958
+  },
+  {
+   "task": "Organize Stationery",
+   "n": 5,
+   "delta_step_score": -2.07,
+   "hard_step": 0.2317,
+   "hard_stepnorm": 0.1117
+  },
+  {
+   "task": "Plug Charger",
+   "n": 3,
+   "delta_step_score": -1.84,
+   "hard_step": 0.0708,
+   "hard_stepnorm": 0.0767
+  },
+  {
+   "task": "Arrange Test Tubes",
+   "n": 3,
+   "delta_step_score": -1.73,
+   "hard_step": 0.0675,
+   "hard_stepnorm": 0.0742
+  },
+  {
+   "task": "Organize Bookshelf",
+   "n": 2,
+   "delta_step_score": -1.62,
+   "hard_step": 0.0692,
+   "hard_stepnorm": 0.0417
+  },
+  {
+   "task": "Zip Up",
+   "n": 2,
+   "delta_step_score": -1.25,
+   "hard_step": 0.0383,
+   "hard_stepnorm": 0.045
+  },
+  {
+   "task": "Clear Plates",
+   "n": 3,
+   "delta_step_score": -1.23,
+   "hard_step": 0.0567,
+   "hard_stepnorm": 0.0792
+  },
+  {
+   "task": "Conveyor Food Sorting",
+   "n": 2,
+   "delta_step_score": -1.08,
+   "hard_step": 0.0625,
+   "hard_stepnorm": 0.0525
+  },
+  {
+   "task": "Color Arrangement",
+   "n": 3,
+   "delta_step_score": -0.92,
+   "hard_step": 0.0658,
+   "hard_stepnorm": 0.0783
+  },
+  {
+   "task": "Place Photo Frames",
+   "n": 3,
+   "delta_step_score": -0.85,
+   "hard_step": 0.0642,
+   "hard_stepnorm": 0.0642
+  },
+  {
+   "task": "Fruit Basket Collection",
+   "n": 2,
+   "delta_step_score": -0.67,
+   "hard_step": 0.0667,
+   "hard_stepnorm": 0.0542
+  },
+  {
+   "task": "Pick Out Battery",
+   "n": 3,
+   "delta_step_score": -0.5,
+   "hard_step": 0.0542,
+   "hard_stepnorm": 0.0742
+  },
+  {
+   "task": "Disconnect Ethernet",
+   "n": 2,
+   "delta_step_score": -0.38,
+   "hard_step": 0.0492,
+   "hard_stepnorm": 0.0667
+  },
+  {
+   "task": "Spell robot",
+   "n": 4,
+   "delta_step_score": -0.33,
+   "hard_step": 0.1817,
+   "hard_stepnorm": 0.0692
+  },
+  {
+   "task": "Remove Pinned Note",
+   "n": 2,
+   "delta_step_score": -0.33,
+   "hard_step": 0.0558,
+   "hard_stepnorm": 0.0567
+  },
+  {
+   "task": "Open Pill Bottle",
+   "n": 2,
+   "delta_step_score": 0.21,
+   "hard_step": 0.055,
+   "hard_stepnorm": 0.0558
+  },
+  {
+   "task": "Fruit Sorting",
+   "n": 3,
+   "delta_step_score": 0.34,
+   "hard_step": 0.0692,
+   "hard_stepnorm": 0.0717
+  },
+  {
+   "task": "Organize Pencil Case",
+   "n": 3,
+   "delta_step_score": 0.71,
+   "hard_step": 0.0658,
+   "hard_stepnorm": 0.0625
+  },
+  {
+   "task": "Hang the Cup",
+   "n": 2,
+   "delta_step_score": 0.83,
+   "hard_step": 0.0433,
+   "hard_stepnorm": 0.0358
+  },
+  {
+   "task": "Stack Bowls",
+   "n": 3,
+   "delta_step_score": 1.08,
+   "hard_step": 0.07,
+   "hard_stepnorm": 0.0642
+  },
+  {
+   "task": "Toolbox Storage",
+   "n": 4,
+   "delta_step_score": 1.48,
+   "hard_step": 0.2058,
+   "hard_stepnorm": 0.0908
+  },
+  {
+   "task": "Stack Cups",
+   "n": 3,
+   "delta_step_score": 1.48,
+   "hard_step": 0.0883,
+   "hard_stepnorm": 0.0767
+  },
+  {
+   "task": "Paper Cup Stacking",
+   "n": 3,
+   "delta_step_score": 1.55,
+   "hard_step": 0.0742,
+   "hard_stepnorm": 0.0808
+  },
+  {
+   "task": "Organize Tools",
+   "n": 4,
+   "delta_step_score": 1.71,
+   "hard_step": 0.2008,
+   "hard_stepnorm": 0.095
+  },
+  {
+   "task": "Pack Phone",
+   "n": 3,
+   "delta_step_score": 1.82,
+   "hard_step": 0.055,
+   "hard_stepnorm": 0.0708
+  },
+  {
+   "task": "Syringe Water Transfer",
+   "n": 2,
+   "delta_step_score": 3.17,
+   "hard_step": 0.0525,
+   "hard_stepnorm": 0.0583
+  },
+  {
+   "task": "Store Racket",
+   "n": 2,
+   "delta_step_score": 4.25,
+   "hard_step": 0.0475,
+   "hard_stepnorm": 0.0683
+  }
+ ],
+ "summary": {
+  "n_tasks": 32,
+  "stepnorm_worse_tasks": 20,
+  "stepnorm_better_tasks": 12
+ }
+}
