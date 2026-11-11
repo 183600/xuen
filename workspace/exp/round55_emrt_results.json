@@ -1,0 +1,48 @@
+{
+  "seed": 55,
+  "episodes": 4000,
+  "steps_per_episode": 24,
+  "params": {
+    "D_emp": 0.8,
+    "tau_harm": 1.8,
+    "sigma_obs": 0.25
+  },
+  "results": [
+    {
+      "policy": "open",
+      "distress_reduction": 0.5435,
+      "empathic_quality_Q": 0.3697,
+      "overclaim_rate": 1.0,
+      "late_rate": 0.1545,
+      "social_safety_violations": 20.535,
+      "CVaR90_final_distress": 0.0101
+    },
+    {
+      "policy": "blind",
+      "distress_reduction": 0.5388,
+      "empathic_quality_Q": 0.6843,
+      "overclaim_rate": 0.0,
+      "late_rate": 0.1537,
+      "social_safety_violations": 0.004,
+      "CVaR90_final_distress": 0.0241
+    },
+    {
+      "policy": "ernrt",
+      "distress_reduction": 0.5426,
+      "empathic_quality_Q": 0.7581,
+      "overclaim_rate": 0.0,
+      "late_rate": 0.0,
+      "social_safety_violations": 0.002,
+      "CVaR90_final_distress": 0.0025
+    },
+    {
+      "policy": "quiet",
+      "distress_reduction": 0.5025,
+      "empathic_quality_Q": 0.5024,
+      "overclaim_rate": 0.0,
+      "late_rate": 0.0,
+      "social_safety_violations": 0,
+      "CVaR90_final_distress": 0.2664
+    }
+  ]
+}

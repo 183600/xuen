@@ -1,0 +1,38 @@
+{
+  "seed": 20261111,
+  "n_test": 200000,
+  "R": 0.05,
+  "tau_t": 0.015,
+  "tau_psi_deg": 10.0,
+  "yaw_mode_mixture": {
+    "0": 0.4,
+    "pi": 0.4,
+    "pi/2": 0.2
+  },
+  "certified": {
+    "raw": {
+      "eps": 0.008125,
+      "accept_rate": 0.173535,
+      "success_rate": 0.628225,
+      "false_reject_among_success": 0.7237693501532094,
+      "unsafe_accept_rate": 0.0,
+      "accepted_and_success_rate": 0.173535
+    },
+    "obj_naive": {
+      "eps": 0.015,
+      "accept_rate": 0.997165,
+      "success_rate": 0.628225,
+      "false_reject_among_success": 0.0,
+      "unsafe_accept_rate": 0.36894,
+      "accepted_and_success_rate": 0.628225
+    },
+    "act": {
+      "eps": 0.008125,
+      "accept_rate": 0.34623,
+      "success_rate": 0.628225,
+      "false_reject_among_success": 0.4488758008675236,
+      "unsafe_accept_rate": 0.0,
+      "accepted_and_success_rate": 0.34623
+    }
+  }
+}
