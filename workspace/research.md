@@ -3,538 +3,333 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 53 轮（承接第 52 轮 v16 GroundEdge-GenSim；灵感循环第 4 轮；本轮灵感：「鲁棒性层级化」×「反向解释」）
+# 第 54 轮（承接第 53 轮 v16 GroundEdge-GenSim++；灵感循环第 5 轮；本轮灵感：「动作空间」×「技能组合」×「云边协同」）
 
-> 灵感循环第 4 轮聚焦 **「鲁棒性层级化」×「反向解释」**。第 52 轮已把证书从"单任务真理"升级为"带适用域、迁移风险、仿真保真的可判定证书"；但它仍隐有 **H18：鲁棒性是整体量词、不是任务层面的可组合资源**——不同任务/策略/组合的鲁棒性如何从部件中合成仍是黑箱；**H19：仿真只能否决，不能解释为何失败**——当下只有"通过"/"不通过"的单向信号，缺乏反向解释（failure explanation）导致局部改进动力弱。
+> 第 53 轮已把鲁棒性拆解为可传递的维度谱 ρ 与反向解释 Explain，形成可解释的鲁棒性金字塔。本轮聚焦 **动作空间剖面化、技能组合的可判定性、云边协同的闭环**。核心矛盾：H20：技能组合在动作空间上存在语义与时序错配，组合前看似兼容、执行时因动作空间交集/覆盖导致冲突；H21：云端全局规划与边端实时反馈在动作粒度上不一致，云端可用性证书在边端动作空间中失效。
 
 ## 0. 直觉与动机
 
-**灵感 1（鲁棒性层级化 → 把鲁棒性从"黑盒容差"变为"可组合并标量化的资源"）**
+**灵感 1（动作空间剖面 → 把技能从黑箱能力变为动作空间占用）**
+直觉：技能 S 不只是一个鲁棒性谱 ρ_S，更是一个在动作空间 A 上的占用剖面 `α_S : A → [0,1]`。`α_S(a)=1` 表示动作 a 被技能完全覆盖，`0` 表示不可达。组合时，不是简单 `min(ρ)`，而是先做 **动作空间交集检查**：`A_{S1⊗S2} = A_{S1} ∩ A_{S2} ∪ transition(A_{S1},A_{S2})`。若交集为空或转换区 `ΔA` 超过边端可控带宽，则组合不可行。这样，**动作空间成为技能组合的第一性约束**，鲁棒性谱只在可行域内起作用。
 
-直觉：v16 的 `δ_tr(T)` 把迁移风险压缩成一个标量，掩盖了**鲁棒性在不同维度上的脆弱结构**：某个任务在关节力矩上鲁棒，在刚性变形上却脆弱；某个技能组合在抓握姿态上稳，在转换瞬间因共地变化失效。若鲁棒性是不可拆解的整体，复用时只能靠经验；若能**层级化、可组件化**，就能在任务族里做"鲁棒拼图"：取 A 技能在 `d_A` 维度的鲁棒性 `ρ_A(d_A)`，取 B 技能在 `d_B` 的鲁棒性 `ρ_B(d_B)`，组合时得到交叉风险 `ρ_AB(d_A,d_B) = max(ρ_A(d_A) + Δ_AB, ρ_B(d_B))` 或更复杂的耦合函数。这样，**迁移的每一步都能给出可解释的鲁棒性缺口**，而不是只说"风险太大/太小"。
+**灵感 2（技能组合可判定化 → 从启发式拼接变为图搜索 + 证书）**
+直觉：把技能库建模为 **动作空间有向图 G_S**，节点为技能，边为动作空间相容关系 `compat(S_i,S_j) = |A_i ∩ A_j| / |A_i ∪ A_j| ≥ θ_a` 且转换成本 `c_trans < τ_e`。组合规划变成在 G_S 上寻找满足任务动作序列 `A_T` 的路径，并为每条边附带 **组合证书 `C_comp = (A_overlap, ρ_comp, γ_ce)`**。这把组合从经验拼接变为可验证的路径搜索，并与第 53 轮的鲁棒性耦合矩阵 K 联动。
 
-**灵感 2（反向解释 → 仿真不是"找反例器"，而是"教科书"）**
+**灵感 3（云边协同 → 粗到细的动作分解与鲁棒性回传）**
+直觉：云端负责 **粗动作空间 A_c** 的技能选择与组合序，边端负责 **细动作空间 A_e** 的实时追踪与鲁棒性校验。云端生成组合计划 `P_c = ⟨S_1,...,S_k; A_c⟩`，边端把计划映射为 `P_e = map(A_c→A_e)`，并用 TRO/REX 在线校验。若边端检测到 `ρ_e(d) < ρ_min` 或 Explain 返回根因 `a_e`，则通过 **反向解释信道** 回传给云端，云端触发动作空间重剖分 `reprofile(A_c)`。这形成 **云规划 - 边校验 - 反向解释 - 重剖分** 的闭环。
 
-直觉：当前 v16 的 FDR 只做单向判决——仿真找到反例就收缩域/拒绝，听说了知道。用户和调度器想知道的是：**为什么失败？在哪几条支撑关系上脆弱？该怎么改造技能、调参或约束？**这需要 **反向解释（reverse explanation）**：从仿真的失效轨迹 `π_fail` 挖出**因果链**（哪个接触、哪个假设、哪个参数突破了安全界），并映射回任务描述符与技能声明。这样，迁移/组合/蒸馏的每一步都不是盲目试用/错，用仿真的"失败案例"直接当作**改进的蓝图**。
+**灵感 4（动作空间对齐的耦合 → 鲁棒性 + 动作占用联合证书）**
+直觉：组合后证书不应只记 ρ，还需记 **动作占用证书 `A_cert = (A_core, A_buffer, δ_a)`**，其中 `A_core` 为保证覆盖的核心动作子集，`A_buffer` 为容错带。云边协同时，云端承诺 `A_core ⊆ A_c`，边端保证 `A_core ⊆ A_e` 且 `ρ_e(A_core) ≥ ρ_min`。若云端扩张 `A_c` 超出边端 `A_e` 的物理带宽，则触发 `δ_a` 超预算否决。鲁棒性与动作空间在此耦合。
 
-**灵感 3（层级化鲁棒性的形式化 → 鲁棒性维度格 + 可传递的鲁棒性证书）**
+**灵感 5（从组合到协同的金字塔扩展）**
+直觉：在第 53 轮鲁棒性金字塔 `𝕃` 之上叠加 **动作空间协同层 `𝔸`**：`𝔸_0` 物理动作极限，`𝔸_1` 技能动作剖面，`𝔸_2` 云边动作映射，`𝔸_3` 任务动作序列。跨层传递证书需同时包含 `ρ` 与 `A_cert`，形成 **可解释的动作-鲁棒性双证书体系**。
 
-直觉：把鲁棒性抽象为 **维度化谓词**：每个技能/任务都有 **鲁棒性谱 `ρ = {ρ_1, ρ_2, ..., ρ_k}`**，对应动力学/几何/感知/控制/K 的不同维度。不同维度的鲁棒性可以独立分析，也可以在组合时按耦合矩阵叠加。**鲁棒性证书 `R = (ρ, D_R, ε_B)`** 声明：在适用域 `D_R` 内，维度谱 `ρ` 以容差 `ε_B` 成立；跨域迁移时，新的 `ρ'` 需要计算 **耦合修正 `γ(ρ, φ)`**。这样，**鲁棒性不再是整体的噤声声誉，而是可以检索、组合、传递的结构化资源**。
+## 1. 形式化定义（增量：定义 115–120）
 
-**灵感 4（从仿真到技能：反向仿真解释器）**
+**定义 115（动作空间剖面）**
+动作空间 `A = A_c × A_e`，`A_c` 为云端粗粒度动作，`A_e` 为边端细粒度动作。技能 `S` 的动作空间剖面 `α_S : A → [0,1]`，满足 `∫_A α_S(a) da = vol(S)`。**动作覆盖** `cover(S, A_T) = 1` 当且仅当 `∀ a∈A_T, α_S(a) ≥ θ_cov`。
 
-直觉：设想一个 **反向解释器 `Explain(sim_result)`**：输入仿真器跑出的失败轨迹，输出 **失败根因分布**（P(因果根因 = c_i)）和 **局部修正建议**（Δ 参数 / 约束 / 技能子模块）。这个解释器不是神经网络的黑箱，而是基于 **结构化仿真模型 + 形式语义学**：把仿真过程切片、建模、抽象成逻辑命题。这样，**每一次仿真的失败都成为技能的进化反馈**，蒸馏过程从"挑最好的"变成"把失败的教训写进新技能"。
-
-**灵感 5（层级化 + 反向解释 的耦合 → 可解释的鲁棒性金字塔）**
-
-直觉：构筑一个 **可解释的鲁棒性金字塔**：
-- **底层**：物理/动力学鲁棒性（刚体、接触、摩擦）——用最保守的数值/形式化界；
-- **中层**：控制/规划鲁棒性（HVAC、PSC、ACC）——从仿真反向解释提取关键约束；
-- **顶层**：系统级/任务鲁棒性（CAR、SHIELD、CBG+）——由下而上拼合、校准。
-每层都有 **可判定的鲁棒性谓词** 与 **反向解释机制**；跨层迁移时，需要 **跨层鲁棒性传递证书**。这把 v16 从"全局风险预算"提升为**可结构化、可解释、可传递的鲁棒性体系**。
-
-## 1. 形式化定义（增量：定义 107–114）
-
-**定义 107（鲁棒性维度与谱）**
-鲁棒性维度 `d ∈ 𝔇_ρ = {dynamics, geometry, force, friction, cable, compliance, perception, control, latency, human, ...}`。技能 `S` 的**鲁棒性谱** `ρ_S : 𝔇_ρ → [0,1]`，其中 `ρ_S(d) = 1` 表示在维度 `d` 上具备完美鲁棒性，`ρ_S(d) = 0` 表示完全脆弱。**鲁棒性是局部的、条件化的**：`ρ_S(d)(θ)` 随参数向量 `θ` 变化。
-
-**定义 108（鲁棒性证书）**
-鲁棒性证书 `R = (ρ, D_R, ε_B, evidence)`：
-- `ρ` 为鲁棒性谱；
-- `D_R ⊆ ℱ` 为**鲁棒性适用域**，由谓词 `dom_R : 𝔇 → {in,out,unknown}` 判定；
-- `ε_B` 为**容差包**，说明在域内 `ρ` 的实际值可能出现的下游漂移；
-- `evidence` 为依据：E0=仿真反例；E1=仿真校准+锚点；E2=真实认证。
-**迁移时**：若 `φ` 为任务态射，需计算 `ρ' = ρ ∘ φ` 并给出 **耦合修正 `γ(ρ, φ)`**；若 `|ρ' - ρ| > ε_B` 或 `dom_R(φ(T)) = out`，则迁移失效。
-
-**定义 109（鲁棒性耦合修正）**
-给定技能族 `{S_i}` 及其跨维度耦合矩阵 `K ∈ [0,1]^{k×k}`（`K_{ij}` 表示维度 `j` 的脆弱性如何放大/抑制维度 `i`），组合技能 `S_⊗` 的鲁棒性谱：
+**定义 116（动作空间兼容性）**
+两技能 `S_i,S_j` 的动作兼容性 `compat(S_i,S_j) = |A_i ∩ A_j| / |A_i ∪ A_j|`。组合可判定条件：
 ```
-ρ_{S⊗}(d_i) = min_{j} [ ρ_{S_i}(d_j) / (1 + K_{ij}·(1 - ρ_{S_i}(d_j))) ] · ∏_c f_c(adjacent_d)
+compat(S_i,S_j) ≥ θ_a ∧ c_trans(A_i,A_j) ≤ τ_e ∧ ρ_{S_i⊗S_j}(d) ≥ ρ_min ∀ d
 ```
-其中 `f_c` 为组合约束的折扣因子，`adjacent_d` 为相邻维度的鲁棒性。**组合时必须给出新的 `γ` 或接受 `α_int` 风险**。
+其中 `c_trans` 为动作转换成本，`τ_e` 为边端最大可控延迟。
 
-**定义 110（反向仿真解释器）**
-反向解释器 `Explain : (sim_result, model) → (RootCauseSet, Confidence, Suggestion)`：
-- **输入**：仿真结果 `sim_result = (π, failure_mode, violation_set)`；
-- **模型**：结构化仿真模型 `ℳ = (states, actions, assumptions, constraints)`；
-- **输出**：
-  - `RootCauseSet ⊆ assumptions` 为**概率加权的根因集合**；
-  - `Confidence ∈ [0,1]` 为解释可信度；
-  - `Suggestion` 为**局部修正动作**（参数调小/大、约束 tighten、子技能 replace）。
-解释器必须满足 **结构一致性**：根因必须可追溯到仿真轨迹的具体时刻、假设、约束。
+**定义 117（技能组合图）**
+技能组合图 `G_S = (V,E)`，`V` 为技能集合，`E = {(i,j) | compat(S_i,S_j)}`。每条边附带 **组合证书** `C_comp = (A_overlap, ρ_comp, γ_ce)`，其中 `γ_ce` 为云边映射函数 `γ_ce : A_c → A_e`。
 
-**定义 111（鲁棒性金字塔）**
-鲁棒性金字塔 `𝕃 = (𝕃_0, 𝕃_1, ..., 𝕃_h)`：
-- **底层 `𝕃_0`**：物理/动力学鲁棒性，用最保守的数值/形式化界界定；
-- **中层 `𝕃_i (i≥1)`**：控制/规划/系统鲁棒性，由 `Explain` 从下层反馈构造；
-- **顶层 `𝕃_h`**：任务/策略鲁棒性，由自上而下的约束传播 + 下而上的校准闭合。
-**跨层传递**：`L_i → L_j` 必须通过 **跨层鲁棒性传递证书**，说明 `ρ(L_j)` 相对于 `ρ(L_i)` 的变化界。
+**定义 118（云边协同契约）**
+云边契约 `C_ce = (P_c, P_e, Δ, Explain_loop)`：
+- `P_c` 云端组合计划：技能序列与粗动作序列；
+- `P_e` 边端细化计划：`P_e = γ_ce(P_c)`；
+- `Δ` 为动作空间对齐误差上界，`|A_c - γ_ce^{-1}(A_e)| ≤ Δ`；
+- `Explain_loop` 为反向解释回传通道：`Explain(sim_e) → ΔP_c`。
 
-**定义 112（可传递鲁棒性迁移证书）**
-跨层迁移证书 `TRC = (S_source, L_target, γ, δ_ρ, D_TR, evidence)`：
-- `γ` 为**鲁棒性传递函数**，说明如何从源层谱 `ρ_source` 计算目标层谱 `ρ_target`；
-- `δ_ρ` 为**鲁棒性迁移间隙**，满足 `|ρ_target - γ(ρ_source)| ≤ δ_ρ`；
-- `D_TR` 为**传递适用域**；
-- `evidence` 至少 E1。
-若 `dom_TR(T) = in` 且 `δ_ρ < THETA_ρ`，则迁移可接受。
+**定义 119（动作空间对齐成本）**
+对齐成本 `cost_align(S_i,S_j) = w_a·(1 - compat) + w_ρ·(1 - ρ_comp) + w_ce·||γ_ce - id||`。组合搜索目标为最小化路径总成本。
 
-**定义 113（反向解释化验锚点）**
-反向解释 **锚点集** `A_E = {e_1, ..., e_q}`：每个锚点是 **(场景, 期望根因, 验证方法)** 的三元组。锚点必须**事前预注册**，验证 `Explain` 的根因识别是否覆盖 `failure_mode`。若 `|{e : Explain(sim(e)) = e_root}| / q < 1 - β_E`，则解释器失效，迁移/复用受限。
-
-**定义 114（鲁棒性更新规则）**
-给定历史 `H = {T_k, S_k, ρ_k, Explain_k, residual_k}`，**鲁棒性更新规则**：
-```
-ρ_{new} = (1 - λ) · ρ_{old} + λ · update_rule(H, d_ρ)
-```
-其中 `λ ∈ (0,1)` 为**学习率**；`update_rule` 可以是 **指数加权** 或 **贝叶斯更新**。更新必须通过 **反向解释化验锚点** 验证，防止**负迁移的鲁棒性泄漏**。
+**定义 120（云边鲁棒性动作联合证书）**
+联合证书 `J = (ρ, A_cert, γ_ce, δ_a, evidence)`：
+- `ρ` 为第 53 轮鲁棒性谱；
+- `A_cert = (A_core, A_buffer, δ_a)` 为动作占用证书；
+- `γ_ce` 为云边映射；
+- `δ_a` 为动作对齐容差；
+- `evidence` 至少包含边端仿真反例与云端规划日志。若 `dom_J(T)=in` 且 `δ_a < Θ_a`，则组合可部署。
 
 ## 2. 关键算法 伪代码
 
-### IP-107 TRO（Robustness Spectrum & Certificate）
+### IP-115 ACS（Action Space Characterization）
 
 ```python
-def robustness_spectrum(skill, dimensions):
-    """计算技能在鲁棒性维度上的谱"""
-    rho = {}
-    for d in dimensions:
-        if d == 'dynamics':
-            rho[d] = assess_lyapunov_robustness(skill.dynamics)
-        elif d == 'geometry':
-            rho[d] = assess_collision_margin(skill.geometry)
-        elif d == 'force':
-            rho[d] = assess_force_torque_safety(skill.force_model)
-        elif d == 'friction':
-            rho[d] = assess_sliding_stability(skill.friction_model)
-        elif d == 'control':
-            rho[d] = assess_control_barrier_robustness(skill.controller)
-        else:
-            rho[d] = assess_via_sim_benchmarks(skill, d)
-    return rho
+def action_profile(skill, A_c, A_e):
+    alpha = {}
+    for a_c in A_c:
+        for a_e in A_e:
+            feas = skill.can_execute(a_c, a_e)
+            alpha[(a_c,a_e)] = 1.0 if feas else 0.0
+    return alpha
 
-def domain_check_robust(R, d):
-    """鲁棒性域判定：unknown→out，fail-closed"""
-    if R.dom_predicate(d) == 'unknown':
-        return 'out'
-    return R.dom_predicate(d)
-
-def robust_certificate(rho, domain, epsilon_B, evidence):
-    return RobustCert(rho, domain, epsilon_B, evidence)
+def cover_check(alpha, A_T, theta_cov=0.8):
+    return all(alpha.get(a,0) >= theta_cov for a in A_T)
 ```
 
-### IP-110 REX（Reverse Explanation Engine）
+### IP-116 SCOM（Skill Composition Graph）
 
 ```python
-def explain_failure(sim_result, model):
-    """从仿真失败轨迹生成反向解释"""
-    π, fail_mode, violations = sim_result
-    
-    # 1. 构建原因图
-    causes = []
-    for t, state in enumerate(π):
-        for v in violations:
-            if violated_at(v, state):
-                c = causal_trace(v, state, model)
-                causes.append((c.root_cause, c.confidence * time_decay(t, len(π))))
-    
-    # 2. 聚合 & 归一化
-    cause_dist = aggregate_causes(causes)
-    
-    # 3. 生成修正建议
-    suggestions = []
-    for c, p in top_k(cause_dist, k=3):
-        if c.type == 'parameter':
-            suggestions.append(('tighten', c.param, delta=c.violation - margin))
-        elif c.type == 'constraint':
-            suggestions.append(('add', c.constraint, scope=c.region))
-        elif c.type == 'subskill':
-            suggestions.append(('replace', c.subskill, alternatives=c.viable_alt))
-    
-    return Explanation(
-        root_causes=sorted(cause_dist, key=lambda x: -x[1]),
-        confidence=max(p for _, p in cause_dist),
-        suggestions=suggestions
-    )
+def build_composition_graph(skills, theta_a, tau_e):
+    G = nx.DiGraph()
+    for i,s1 in enumerate(skills):
+        for j,s2 in enumerate(skills):
+            if i==j: continue
+            compat = jaccard(action_profile(s1), action_profile(s2))
+            c_trans = transition_cost(s1, s2)
+            if compat >= theta_a and c_trans <= tau_e:
+                rho_comp = compose_robustness(s1.rho, s2.rho, K)
+                G.add_edge(i,j, compat=compat, cost=c_trans, rho_comp=rho_comp)
+    return G
 ```
 
-### IP-109 RCO（Robustness Coupling & Composition）
+### IP-117 CEC（Cloud-Edge Coordination）
 
 ```python
-def compose_robustness(rho1, rho2, coupling_matrix, constraints):
-    """组合技能的鲁棒性耦合计算"""
-    rho_new = {}
-    
-    for d in rho1.keys():
-        # 基本保守上界
-        rho_new[d] = min(rho1[d], rho2[d])
-        
-        # 耦合矩阵修正
-        for j in rho1.keys():
-            if coupling_matrix.get((d, j), 0) > 0:
-                coupling_effect = coupling_matrix[(d, j)] * (1 - rho1[j])
-                rho_new[d] = max(0, rho_new[d] - coupling_effect)
-        
-        # 约束折扣
-        if d in constraints:
-            rho_new[d] *= constraints[d].discount_factor
-    
-    return rho_new
+def cloud_plan(T, G, A_c):
+    path = a_star(G, start='root', goal=T, heuristic=cost_align)
+    P_c = [(s, A_c[s]) for s in path]
+    return P_c
 
-def coupling_correction(rho_source, coupling_matrix, phi):
-    """态射 φ 带来的鲁棒性耦合修正"""
-    rho_target = {}
-    for d_target in rho_source.keys():
-        # 传递函数：基于 φ 在 d_target 维度上的失配
-        loss = coupling_mismatch(coupling_matrix, phi, d_target)
-        rho_target[d_target] = max(0, rho_source.get(d_target, 0) - loss)
-    return rho_target
+def edge_refine(P_c, gamma_ce, sim_model):
+    P_e = []
+    for s, a_c in P_c:
+        a_e = gamma_ce(a_c)
+        rho_e = robustness_spectrum(s, dimensions)
+        if not cover_check(s.alpha, a_e):
+            exp = explain_failure(sim_model.run(s, a_e), sim_model)
+            return ('reject', exp.suggestions)
+        P_e.append((s, a_e, rho_e))
+    return ('ok', P_e)
 ```
 
-### IP-112 TRC（Transfer Robustness Certificate）
+### IP-118 AEC（Action-Edge Consistency）
 
 ```python
-def transfer_robustness_certify(S_source, L_target, phi, delta_ρ_budget):
-    """跨层迁移鲁棒性证书生成"""
-    rho_source = S_source.robustness_spectrum
-    
-    # 1. 计算传递函数 γ
-    gamma = lambda rho: coupling_correction(rho, COUPLING_MAT, phi)
-    
-    rho_target = gamma(rho_source)
-    
-    # 2. 计算迁移间隙 δ_ρ
-    delta_ρ = {d: max(0, rho_source[d] - rho_target[d]) for d in rho_source}
-    
-    # 3. 判定
-    if sum(delta_ρ.values()) > delta_ρ_budget:
-        return ('reject', 'robustness_budget_exceeded', delta_ρ)
-    
-    # 4. 生成域与证据
-    domain = compute_transfer_domain(S_source, phi, L_target)
-    if domain_check_robust(S_source.R, domain) != 'in':
-        return ('reject', 'domain_mismatch')
-    
-    evidence = collect_evidence_for_transfer(S_source, L_target, phi)
-    if evidence.level < E1:
-        return ('reject', 'insufficient_evidence')
-    
-    return ('ok', TRC(
-        S_source=S_source.id,
-        L_target=L_target,
-        gamma=gamma,
-        delta_ρ=delta_ρ,
-        D_TR=domain,
-        evidence=evidence
-    ))
-```
-
-### IP-114 RUR（Robustness Update Rule）
-
-```python
-def update_robustness_spectrum(rho_old, H, lambda_lr, explanation_anchors):
-    """基于历史数据和反向解释更新鲁棒性谱"""
-    rho_new = {}
-    
-    # 1. 计算每个维度的残差
-    for d in rho_old.keys():
-        residuals = [residual(Explainer(T, S, rho) for T, S in H if d in S.claimed_dims]
-        
-        # 2. 贝叶斯更新
-        prior = rho_old[d]
-        likelihood = exp(-mean(residuals))
-        posterior = (1 - lambda_lr) * prior + lambda_lr * likelihood
-        
-        rho_new[d] = max(0, min(1, posterior))
-    
-    # 3. 验证解释锚点
-    for anchor in explanation_anchors:
-        if not validate_explanation(rho_new, anchor):
-            # 锚点失败，减缓更新
-            rho_new = conservative_blend(rho_old, rho_new, factor=0.5)
-            break
-    
-    return rho_new
-```
-
-### IP-108 RXC（Robustness Exchange Protocol）
-
-```python
-def robustness_exchange_request(T_new, candidate_certs, graph, constraints):
-    """任务新鲜性请求：检查鲁棒性迁移可行性"""
-    d_T = interpretable_descriptors(T_new)
-    
-    # 1. 域判定
-    viable_certs = [C for C in candidate_certs 
-                   if domain_check_robust(C.R, d_T) == 'in']
-    
-    # 2. 鲁棒性传递检查
-    transfers = []
-    for C in viable_certs:
-        for phi in possible_morphisms(T_new, C.domain):
-            trc = transfer_robustness_certify(C.S, L_TASK, phi, DELTA_RHO_BUDGET)
-            if trc[0] == 'ok':
-                transfers.append(trc[1])
-    
-    if not transfers:
-        # 3. 生成反向解释建议
-        suggestions = []
-        for C in candidate_certs:
-            failure_pred = predict_robustness_gap(T_new, C, graph)
-            if failure_pred:
-                exp = explain_failure(failure_pred, SIM_MODEL)
-                suggestions.extend(exp.suggestions)
-        
-        return ('rejected', 'no_suitable_robustness', need_suggestions=suggestions)
-    
-    return ('ok', transfers, auto_aggregate_constraints(transfers))
+def joint_certificate(skill_seq, gamma_ce, delta_a_budget):
+    A_core = intersection([s.alpha for s in skill_seq])
+    delta_a = max_alignment_error(gamma_ce, A_core)
+    if delta_a > delta_a_budget:
+        return ('reject','action_mismatch', delta_a)
+    rho_comp = compose_robustness_chain(skill_seq)
+    return ('ok', JointCert(rho_comp, A_cert=(A_core,buffer), gamma_ce, delta_a))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间复杂度 | 空间复杂度 | 正确性关键 |
 |---|---|---|---|
-| TRO | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 维度谱完整、容差包闭合 |
-| REX | O(|π|·|violations|) | O(|causes|) | 结构一致性、锚点验证 |
-| RCO | O(|𝔇_ρ|²) | O(|𝔇_ρ|²) | 耦合矩阵正确、约束折扣合理 |
-| TRC | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 传递函数 γ sound、δ_ρ 预算 |
-| RUR | O(|H|·|𝔇_ρ|) | O(|H|) | 锚点验证、负迁移防护 |
+| ACS | O(|A_c|·|A_e|) | O(|A|) | 剖面完备、采样覆盖 |
+| SCOM | O(|S|²·|A|) | O(|S|²) | compat 阈值 sound、成本单调 |
+| CEC | O(|V| log |V| + |E|) | O(|V|+|E|) | γ_ce 可逆、Explain 闭环 |
+| AEC | O(|S|·|A|) | O(|A|) | δ_a 预算闭合、联合证书 sound |
 
-**正确性定理（Layerwise Robustness Soundness）**
-假设 (A17)–(A21) 承接 v16；
-**(A22)** 鲁棒性谱 `ρ` 由结构化仿真模型支持，维度 `d` 的 `ρ(d)` 基于形式语义学或可验证的物理模型；
-**(A23)** 耦合矩阵 `K` 由红队测评与跨层实验校准，`γ(ρ, φ)` 在给定 `K` 下单调；
-**(A24)** 反向解释器 `Explain` 通过锚点验证，`P(Explain(sim) = true_root) ≥ 1 - β_E`；
-**(A25)** 鲁棒性更新规则 conservatively 更新，防止负迁移。
-则：`P(∀t≤T: ρ(z(t), d) ≥ ρ_min ∀ d ∈ 𝔇_ρ) ≥ 1 - Σ_d (1 - ρ_min(d)) - α_δ - β_E`。
+**正确性定理（Action-Aware Cloud-Edge Composition Soundness）**
+假设 (A22)–(A25) 承接第 53 轮；**(A26)** `α_S` 由结构化仿真校准，`cover(S,A_T)` 可判定；**(A27)** `γ_ce` 在 `A_core` 上 Lipschitz 常数 L<1；**(A28)** 边端 Explain 回传延迟 ≤ τ_loop。
+则：`P(success(P_e) | P_c feasible) ≥ 1 - Σ_d (1-ρ_min(d)) - β_E - P(δ_a > Θ_a)`。
 
-## 4. 实验设计 E151–E156
+## 4. 实验设计 E157–E161
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E151 鲁棒性谱度量 | 各维度 `ρ(d)` 可重复性；K 估计误差 | ρ(d) CI 宽度 ≤ 0.05；K 估计 R² ≥ 0.8 |
-| E152 耦合矩阵校准 | 跨维度脆弱性放大率；RCO 预测准确 | `|ρ_composed - ρ_actual| ≤ 0.1`；Pearson r ≥ 0.85 |
-| E153 反向解释驱动改进 | Explain 正确率；改进后成功率提升 | 解释正确率 ≥ 90%；改进后成功率 Δ ≥ 15% |
-| E154 迁移鲁棒性传递 | TRC 迁移成功率 vs 本地认证 | 迁移成功率 ≥ 80% 本地认证的 90% |
-| E155 金字塔层级传递 | 跨层传递 δ_ρ 误差；漂移检测延迟 | δ_ρ 误差 ≤ 0.05；延迟 ≤ τ_shift |
-| E156 负迁移防护 | 误用旧 R 的放行次数；回退触发率 | 放行 0 次；回退率 100% 检出负迁移 |
+| E157 动作剖面准确度 | `|α_S - α_real|` | MAE ≤ 0.05 |
+| E158 组合可判定率 | 可行路径发现率 / 误报率 | 发现率 ≥ 90%，误报 ≤ 5% |
+| E159 云边对齐延迟 | `τ_loop` 分布 | P95 ≤ 50ms |
+| E160 联合证书有效性 | 部署成功率 vs 仅 ρ | 成功率提升 ≥ 12% |
+| E161 反向解释驱动重剖分 | 重剖分后成功率提升 | Δ ≥ 15% |
 
 ## 5. 风险与缓解
 
-| 风险 | 等级 | 缓解措施 |
+| 风险 | 等级 | 缓解 |
 |---|---|---|
-| 鲁棒性维度划分不完整 | 高 | 动态扩维 + 红队发现 + 元学习发现隐藏维度 |
-| 耦合矩阵 K 误估 | 高 | 红队对抗 + 多仿真器交叉 + 实时在线校准 |
-| 反向解释器产生误导性根因 | 高 | 多模型投票 + 结构一致性检查 + 锚点验证 |
-| 迁移 δ_ρ 超预算 | 高 | 保守传递函数 + 负迁移即拒 + 费用归因 |
-| 鲁棒性更新导致漂移 | 中 | 锚点验证 + 保守学习率 λ + 红队监测 |
-| 解释器锚点不足 | 中 | 多场景锚点 + 交叉验证 + 持续补充 |
-| 金字塔传递信息丢失 | 中 | 跨层映射函数闭合 + 信息保持约束 |
-| 维度谱过度稀疏 | 低 | 稀疏正则化 + 维度激活门控 |
+| 动作空间剖面采样不足 | 高 | 主动采样 + 贝叶斯优化 + 红队探索 |
+| 云边映射 γ_ce 非单调 | 高 | Lipschitz 约束 + 在线校准 + 失败回滚 |
+| 组合图规模爆炸 | 中 | 分层剪枝 + 动作哈希索引 |
+| Explain 回传导致震荡 | 中 |  hysteresis + 冷启动锚点 |
+| 粗细动作语义断层 | 高 | 共享本体 + 形式化接口契约 |
 
 ## 6. 本轮最大风险
 
-**一句话**：层级化鲁棒性与反向解释将 v16 的"全局风险"拆解为可传递的维度谱，却引入了 **K 耦合矩阵、Explain 解释器、锚点验证三重自指估计**；一旦耦合矩阵误算、解释器对抗欺骗或锚点不足，**鲁棒性的"可传递性"就变成了"可误传播性"**——局部检查均衡，却在真实任务族的维度交叉脆弱处系统性失效，故必须以**跨仿真器校准、红队对抗解释、负迁移绊线+预注册锚点**双重验证，宁可保守维度，绝不把结构化的"安全外衣"当作底层防护。
+**一句话**：动作空间剖面化与云边协同把技能组合从“能力匹配”提升为“动作-鲁棒性双证书”，但其 soundness **三重依赖动作剖面的完备采样、γ_ce 映射的单调可逆、以及 Explain 回传的实时收敛**；一旦动作剖面欠采样导致虚假兼容、或云边映射在极限动作处非单调，组合路径在真实边端会系统性动作错位并触发负迁移，故必须以 **主动剖面采样 + Lipschitz 约束的 γ_ce + 负迁移绊线** 三重护栏，宁可保守组合，绝不把动作空间的“可对齐假象”当作部署前提。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 53 轮产物 · 创新点清单 v30：GroundEdge-GenSim++（TIX×XFR×CRC×SFE×FDR×RAB×DST×SBC×TRO×REX×RCO×TRC×RUR）
+# 第 54 轮产物 · 创新点清单 v31：GroundEdge-GenSim+++（ACS×SCOM×CEC×AEC×JTC）
 
-> 承接第 52 轮产物 v29。本轮在 v16 基础上插入 **「层级化鲁棒性」** 与 **「反向解释」** 两大算子：
-> - **TRO（Robustness Spectrum）**：把鲁棒性从标量 `δ_tr` 解构为可维度化的谱 `ρ`；
-> - **REX（Reverse Explanation Engine）**：从仿真失败生成结构化根因 + 修正建议；
-> - **RCO（Robustness Coupling）**：提供耦合矩阵 `K`，实现鲁棒性的可组合标量化；
-> - **TRC（Transfer Robustness Certificate）**：跨域/跨层迁移的鲁棒性传递证书；
-> - **RUR（Robustness Update Rule）**：贝叶斯式更新鲁棒性谱，防止负迁移。
+> 承接第 53 轮产物 v30。本轮在层级化鲁棒性 + 反向解释体系之上，增加 **动作空间剖面化、技能组合可判定化、云边协同闭环** 三大算子：
+> - **ACS（Action Space Characterization）**：技能动作占用剖面 `α_S`，将能力映射到动作空间；
+> - **SCOM（Skill Composition Graph）**：基于动作兼容性的技能组合图 + 组合证书；
+> - **CEC（Cloud-Edge Coordination）**：云端粗动作规划 ↔ 边端细动作校验的闭环；
+> - **AEC（Action-Edge Consistency）**：动作-鲁棒性联合证书 `J`，保证云边对齐；
+> - **JTC（Joint Transfer Certificate）**：跨层动作与鲁棒性联合迁移证书。
 >
-> IP 编号：IP-107~IP-114（共 8 个新增），并升级 IP-51/85/96/45/72 以纳入鲁棒性维度与反向证据。
+> IP 编号：IP-115~IP-120（共 6 个新增），升级 IP-107/109/112 以纳入动作空间维度。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-107 | TRO Robustness Spectrum | 新增 | 维度化鲁棒性谱 `ρ:𝔇_ρ→[0,1]`；域判定 `dom_R`；`unknown=fail-closed` |
-| IP-108 | RXC Robustness Exchange | 新增 | 任务鲁棒性查询 → 传递检查 → 反向解释建议 |
-| IP-109 | RCO Robustness Coupling | 新增 | 维度耦合矩阵 `K`；组合鲁棒性标量化 `ρ_{S⊗}(d)` |
-| IP-110 | REX Reverse Explanation | 新增 | 仿真失败 → 根因分布 + 置信度 + 局部修正建议 |
-| IP-111 | RTA Robustness Tower | 新增 | 金字塔结构 `𝕃=(𝕃_0,...,𝕃_h)`；跨层传递证书 |
-| IP-112 | TRC Transfer Robustness | 新增 | 跨层鲁棒性传递证书 `TRC=(S, L, γ, δ_ρ, D, E)` |
-| IP-113 | REX-A Explanation Anchor | 新增 | 反向解释化验锚点集，验证解释正确率 |
-| IP-114 | RUR Robustness Update | 新增 | 贝叶斯/指数更新 `ρ_{new} = (1-λ)·ρ_{old} + λ·update` |
+| IP-115 | ACS Action Space Characterization | 新增 | 动作剖面 `α_S : A→[0,1]`，覆盖检查 `cover(S,A_T)` |
+| IP-116 | SCOM Skill Composition Graph | 新增 | 动作兼容性图 `G_S`，组合证书 `C_comp` |
+| IP-117 | CEC Cloud-Edge Coordination | 新增 | 粗-细动作映射 `γ_ce`，Explain 回传闭环 |
+| IP-118 | AEC Action-Edge Consistency | 新增 | 联合证书 `J=(ρ,A_cert,γ_ce,δ_a)` |
+| IP-119 | AAL Action Alignment Loss | 新增 | 对齐成本 `cost_align = w_a·(1-compat)+...` |
+| IP-120 | JTC Joint Transfer Certificate | 新增 | 跨层动作-鲁棒性联合迁移证书 |
 
-## 1. 符号体系增量（新增定义 107–114）
+## 1. 符号体系增量（新增定义 115–120）
 
 | 符号 | 含义 |
 |---|---|
-| `𝔇_ρ` | 鲁棒性维度格：`{dynamics, geometry, force, friction, cable, compliance, perception, control, latency, human}` |
-| `ρ_S(d)` | 技能 `S` 在维度 `d` 上的鲁棒性值 `[0,1]` |
-| `R = (ρ, D_R, ε_B, evidence)` | 鲁棒性证书：谱、适用域、容差包、证据 |
-| `K ∈ [0,1]^{k×k}` | 鲁棒性耦合矩阵：`K_{ij}` 表示 `j` 脆弱性如何放大 `i` |
-| `Explain(sim_result)` | 反向解释器：从失败轨迹生成根因分布 + 修正建议 |
-| `𝕃 = (𝕃_0,...,𝕃_h)` | 鲁棒性金字塔：从物理到任务的层级结构 |
-| `TRC = (S, L, γ, δ_ρ, D, E)` | 跨层鲁棒性传递证书 |
-| `A_E = {e_1,...,e_q}` | 反向解释化验锚点集 |
-| `ρ_{new}` | 更新后的鲁棒性谱 |
-| `λ` | 鲁棒性更新学习率 `(0,1)` |
+| `A = A_c × A_e` | 动作空间：云端粗 × 边端细 |
+| `α_S(a)` | 技能 S 在动作 a 上的占用度 `[0,1]` |
+| `compat(S_i,S_j)` | 动作兼容性 Jaccard 系数 |
+| `c_trans(A_i,A_j)` | 动作转换成本 |
+| `G_S = (V,E)` | 技能组合图 |
+| `γ_ce : A_c → A_e` | 云边动作映射 |
+| `C_comp = (A_overlap,ρ_comp,γ_ce)` | 组合证书 |
+| `J = (ρ,A_cert,γ_ce,δ_a,evidence)` | 动作-鲁棒性联合证书 |
+| `A_cert = (A_core,A_buffer,δ_a)` | 动作占用证书 |
+| `cost_align` | 动作对齐成本 |
 
 ## 2. 关键算法 伪代码
 
-### IP-107 TRO（Robustness Spectrum & Certificate）
+### IP-115 ACS
 
 ```python
-def robustness_spectrum(skill, dimensions=DEFAULT_DIMENSIONS):
-    rho = {}
-    for d in dimensions:
-        if d == 'dynamics':
-            rho[d] = assess_lyapunov_robustness(skill.dynamics)
-        elif d == 'geometry':
-            rho[d] = assess_collision_margin(skill.geometry)
-        elif d == 'force':
-            rho[d] = assess_force_torque_safety(skill.force_model)
-        elif d == 'friction':
-            rho[d] = assess_sliding_stability(skill.friction_model)
-        elif d == 'control':
-            rho[d] = assess_control_barrier_robustness(skill.controller)
-        else:
-            rho[d] = assess_via_sim_benchmarks(skill, d)
-    return rho
+def action_profile(skill, A_c, A_e, sampler):
+    alpha = {}
+    for a_c in A_c:
+        for a_e in A_e:
+            feas, conf = sampler.query(skill, a_c, a_e)
+            alpha[(a_c,a_e)] = conf if feas else 0.0
+    return alpha
 
-def domain_check_robust(R, d):
-    if R.dom_predicate(d) == 'unknown':
-        return 'out'
-    return R.dom_predicate(d)
+def cover_check(alpha, A_T, theta_cov=0.8):
+    return all(alpha.get(a,0.0) >= theta_cov for a in A_T)
 ```
 
-### IP-110 REX（Reverse Explanation Engine）
+### IP-116 SCOM
 
 ```python
-def explain_failure(sim_result, model):
-    π, fail_mode, violations = sim_result
-    causes = []
-    for t, state in enumerate(π):
-        for v in violations:
-            if violated_at(v, state):
-                c = causal_trace(v, state, model)
-                causes.append((c.root_cause, c.confidence * time_decay(t, len(π))))
-    
-    cause_dist = aggregate_causes(causes)
-    suggestions = generate_suggestions(top_k(cause_dist, k=3))
-    
-    return Explanation(
-        root_causes=sorted(cause_dist, key=lambda x: -x[1]),
-        confidence=max(p for _, p in cause_dist),
-        suggestions=suggestions
-    )
+def build_composition_graph(skills, theta_a, tau_e, K):
+    G = nx.DiGraph()
+    for i,s1 in skills:
+        for j,s2 in skills:
+            if i==j: continue
+            alpha1, alpha2 = s1.alpha, s2.alpha
+            inter = jaccard(alpha1, alpha2)
+            c_trans = transition_cost(s1, s2)
+            if inter >= theta_a and c_trans <= tau_e:
+                rho_comp = compose_robustness(s1.rho, s2.rho, K)
+                G.add_edge(i,j, compat=inter, cost=c_trans, rho_comp=rho_comp, A_overlap=intersection(alpha1,alpha2))
+    return G
 ```
 
-### IP-109 RCO（Robustness Coupling & Composition）
+### IP-117 CEC
 
 ```python
-def compose_robustness(rho1, rho2, coupling_matrix, constraints):
-    rho_new = {}
-    for d in rho1:
-        rho_new[d] = min(rho1[d], rho2[d])
-        for j in rho1:
-            if coupling_matrix.get((d, j), 0) > 0:
-                coupling_effect = coupling_matrix[(d, j)] * (1 - rho1[j])
-                rho_new[d] = max(0, rho_new[d] - coupling_effect)
-        if d in constraints:
-            rho_new[d] *= constraints[d].discount_factor
-    return rho_new
+def cloud_plan(T_desc, G, A_c, constraints):
+    # A* 搜索最小 cost_align 路径
+    path, cost = a_star(G, start='root', goal=T_desc, heuristic=lambda n: cost_align(n))
+    P_c = [(skills[n].id, A_c[n]) for n in path]
+    return P_c, cost
 
-def coupling_correction(rho_source, coupling_matrix, phi):
-    rho_target = {}
-    for d_target in rho_source:
-        loss = coupling_mismatch(coupling_matrix, phi, d_target)
-        rho_target[d_target] = max(0, rho_source.get(d_target, 0) - loss)
-    return rho_target
+def edge_refine(P_c, gamma_ce, sim_model, rho_min):
+    P_e, reports = [], []
+    for sid, a_c in P_c:
+        s = skill_lib[sid]
+        a_e = gamma_ce(a_c)
+        if not cover_check(s.alpha, a_e):
+            exp = explain_failure(sim_model.run(s,a_e), sim_model)
+            return ('reject', exp)
+        rho_e = robustness_spectrum(s)
+        if min(rho_e.values()) < rho_min:
+            exp = explain_failure(sim_model.run(s,a_e), sim_model)
+            reports.append(('rho_fail',sid,exp))
+        P_e.append((sid,a_e,rho_e))
+    return ('ok', P_e, reports)
 ```
 
-### IP-112 TRC（Transfer Robustness Certificate）
+### IP-118 AEC
 
 ```python
-def transfer_robustness_certify(S_source, L_target, phi, delta_ρ_budget):
-    rho_source = S_source.robustness_spectrum
-    gamma = lambda rho: coupling_correction(rho, COUPLING_MAT, phi)
-    rho_target = gamma(rho_source)
-    delta_ρ = {d: max(0, rho_source[d] - rho_target[d]) for d in rho_source}
-    
-    if sum(delta_ρ.values()) > delta_ρ_budget:
-        return ('reject', 'robustness_budget_exceeded', delta_ρ)
-    
-    domain = compute_transfer_domain(S_source, phi, L_target)
-    if domain_check_robust(S_source.R, domain) != 'in':
-        return ('reject', 'domain_mismatch')
-    
-    evidence = collect_evidence_for_transfer(S_source, L_target, phi)
-    if evidence.level < E1:
-        return ('reject', 'insufficient_evidence')
-    
-    return ('ok', TRC(S_source.id, L_target, gamma, delta_ρ, domain, evidence))
+def joint_certificate(skill_seq, gamma_ce, delta_a_budget, rho_min):
+    A_core = reduce(intersection, [s.alpha for s in skill_seq])
+    delta_a = max_alignment_error(gamma_ce, A_core)
+    if delta_a > delta_a_budget:
+        return ('reject','action_mismatch', delta_a)
+    rho_comp = compose_robustness_chain([s.rho for s in skill_seq], K)
+    if min(rho_comp.values()) < rho_min:
+        return ('reject','robustness_fail', rho_comp)
+    A_cert = (A_core, buffer_zone(A_core, delta_a))
+    return ('ok', JointCert(rho_comp, A_cert, gamma_ce, delta_a))
 ```
 
-### IP-114 RUR（Robustness Update Rule）
+### IP-120 JTC
 
 ```python
-def update_robustness_spectrum(rho_old, H, lambda_lr, explanation_anchors):
-    rho_new = {}
-    for d in rho_old:
-        residuals = [evaluate_residual(T, S, rho_old) for T, S in H]
-        prior = rho_old[d]
-        likelihood = exp(-mean(residuals))
-        posterior = (1 - lambda_lr) * prior + lambda_lr * likelihood
-        rho_new[d] = max(0, min(1, posterior))
-    
-    for anchor in explanation_anchors:
-        if not validate_explanation(rho_new, anchor):
-            rho_new = conservative_blend(rho_old, rho_new, factor=0.5)
-            break
-    
-    return rho_new
+def joint_transfer_certify(J_source, L_target, phi, delta_a_budget, delta_rho_budget):
+    gamma_ce = J_source.gamma_ce
+    rho_target = coupling_correction(J_source.rho, K, phi)
+    delta_rho = {d: max(0, J_source.rho[d]-rho_target[d]) for d in J_source.rho}
+    delta_a = alignment_drift(gamma_ce, phi)
+    if sum(delta_rho.values()) > delta_rho_budget or delta_a > delta_a_budget:
+        return ('reject','budget_exceeded', delta_rho, delta_a)
+    domain = compute_action_domain(J_source, phi, L_target)
+    if domain_check_robust(J_source.R, domain) != 'in':
+        return ('reject','domain_mismatch')
+    return ('ok', TRC_Joint(J_source, L_target, gamma_ce, delta_rho, delta_a, domain))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| TRO | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 维度谱可观测、容差包闭合 |
-| REX | O(|π|·|violations|) | O(|causes|) | 根因结构一致、锚点验证 ≥ 90% |
-| RCO | O(|𝔇_ρ|²) | O(|𝔇_ρ|²) | 耦合矩阵单调、组合上界有效 |
-| TRC | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 传递函数γ sound、δ_ρ 预算 |
-| RUR | O(|H|·|𝔇_ρ|) | O(|H|) | 负迁移防护、锚点闭环 |
+| ACS | O(|A_c|·|A_e|·|S|) | O(|A|) | 采样覆盖 ≥ 95% |
+| SCOM | O(|S|²·|A|) | O(|S|²+|E|) | compat 阈值 sound，路径最优 |
+| CEC | O(|V| log |V| + |E| + |P|·|π|) | O(|V|+|E|) | γ_ce Lipschitz，Explain 闭环收敛 |
+| AEC | O(|S|·|A| + |𝔇_ρ|) | O(|A|+|𝔇_ρ|) | 联合证书 sound，δ_a 预算闭合 |
 
-**正确性定理（Layerwise & Explainable Robustness Soundness）**
-假设 (A17)–(A25) 成立。则：
+**正确性定理（Action-Aware Cloud-Edge Composition Soundness）**
+假设第 53 轮 (A22)-(A25) 成立；**(A26)** `α_S` 由结构化仿真校准，覆盖可判定；**(A27)** `γ_ce` 在 `A_core` 上 Lipschitz L<1；**(A28)** Explain 回传延迟 ≤ τ_loop 且锚点验证通过。
+则部署成功概率：
 ```
-P(∀t≤T: ρ(z(t), d) ≥ ρ_min ∀ d ∈ 𝔇_ρ) ≥ 1 - Σ_d(1-ρ_min(d)) - α_δ - β_E
+P_success ≥ 1 - Σ_d(1-ρ_min(d)) - β_E - P(δ_a > Θ_a) - P(compat<θ_a)
 ```
-关键：**跨层传递的每一步都有可解释的δ_ρ + 负迁移绊线**；**仿真的每一次否决都有结构化的原因分布**；**更新经过锚点验证，防止负迁移**。
+关键：**组合前提先验动作兼容**，**云边映射可逆且有界**，**反向解释驱动重剖分收敛**。
 
-## 4. 集成更新：v16 → v16+ 体系
+## 4. 集成更新：v16+ → v16++ 体系
 
 ```
 根信任 + 能力格
 │
-├─ L0 分布式底座与执行边 (v15 GPC/SEN/TBC)
-├─ L0.5 任务迁移与仿真证据 (TIX, XFR, CRC, SFE, FDR, RAB, DST, SBC)
-├─ L0.5+ 鲁棒性层 (TRO, RXC, RCO, REX, RTA, TRC, REX-A, RUR)  ← 新增
+├─ L0 分布式底座与执行边 (GPC/SEN/TBC)
+├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
+├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR) ← v53
+├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC) ← v54 新增
 ├─ L1 几何感知
 ├─ L2 任务/上下文/记忆/语音
-├─ L2.5 交互共地与共创契约
-├─ L3 关节证书/抽象/决策
-├─ L3.5 动力可行 (HVC/CRM)
-├─ L4 CAR/Shield/CBG+/KDX
-├─ L5 DCL/真机/HCI 评测
+...
 └─ L6 原型证伪/XFER/LFF/IXD
 ```
 
 JCPS 输出扩展为：
-`(v, a, m, q, ι, κ, g, λ, τ, σ, ρ, Explain, RUR_state)`
+`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a)`
 
-其中：
-- `ρ`：当前任务的鲁棒性谱；
-- `Explain`：最近一次仿真的反向解释；
-- `RUR_state`：鲁棒性谱的贝叶斯更新状态。
+其中新增：
+- `α_S` 动作剖面；
+- `A_cert` 动作占用证书；
+- `γ_ce` 云边映射；
+- `δ_a` 动作对齐误差。
 
 ## 5. 本轮最大风险
 
-**一句话**：层级化鲁棒性让 v16 从"全局风险"变为"可传递的维度谱"，但这套体系的 soundness 现在**三位一体地依赖 K 矩阵精准性、Explain 解释器的因果识别、以及锚点的充分覆盖**；一旦耦合矩阵漏算关键维度、解释器在对抗场景下误判根因，或锚点集在真实任务族边缘不足，**鲁棒性的"可传递性"就退化为"可误传播的幻象"**——局部鲁棒性检查均衡，却在真任务的维度交叉脆弱处系统性失效，故必须以**跨仿真器校准 + 红队对抗解释 + 负迁移绊线 + 预注册锚点**的四重护栏，宁可保守每维，绝不把"可解释的鲁棒性金字塔"当作最终防御。
+**一句话**：动作空间剖面化与云边协同将技能组合从能力匹配升级为动作-鲁棒性双证书，但其 soundness **三重依赖动作剖面的完备采样、γ_ce 映射的单调可逆、以及 Explain 回传的实时收敛**；一旦动作剖面欠采样导致虚假兼容、或云边映射在极限动作处非单调，组合路径在真实边端会系统性动作错位并触发负迁移，故必须以 **主动剖面采样 + Lipschitz 约束的 γ_ce + 负迁移绊线** 三重护栏，宁可保守组合，绝不把动作空间的“可对齐假象”当作部署前提。
 <!-- ARTIFACT:END -->

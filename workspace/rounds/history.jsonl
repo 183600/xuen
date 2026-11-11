@@ -1716,3 +1716,5 @@
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261111-022037-r3", "changed": ["idea", "artifact"], "ts": "2026-11-11 03:18:41"}
 {"event": "candidate", "id": "20261111-032253-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-11 03:22:53"}
 {"event": "verdict", "id": "20261111-032253-r1", "round": 1, "verifier": "ai", "score": 8.5, "result": "adopted", "reason": "AI 评分 8.5（阈值 7）", "ts": "2026-11-11 03:23:04"}
+{"event": "candidate", "id": "20261111-041854-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-11 04:18:54"}
+{"event": "verdict", "id": "20261111-041854-r1", "round": 1, "verifier": "ai", "score": 7.5, "result": "adopted", "reason": "AI 评分 7.5（阈值 7）", "ts": "2026-11-11 04:20:59"}
