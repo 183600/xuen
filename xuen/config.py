@@ -5,10 +5,14 @@ import os
 import re
 import math
 
+_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
+
+
 @dataclass
 class AgentConfig:
     command: str = ""
     timeout: float = 1800.0
+
 
 @dataclass
 class WordsConfig:
@@ -17,17 +21,16 @@ class WordsConfig:
     pick: int = 2
     reuse: bool = True
 
+
 @dataclass
 class LoopConfig:
     iterations: Optional[int] = 5
-    count: int = 1000
-    batch: int = 100
-    pick: int = 2
-    reuse: bool = True
+
 
 @dataclass
 class PromptConfig:
     max_state_chars: int = 60000
+
 
 @dataclass
 class RoundsConfig:
@@ -41,6 +44,7 @@ class RoundsConfig:
     judge_command: str = ""
     judge_timeout: float = 120.0
 
+
 @dataclass
 class Config:
     extra_notes: str = ""
@@ -53,10 +57,12 @@ class Config:
     tui: bool = False
     color: bool = False
 
+
 def _parse_str(value, key=None):
     if not isinstance(value, str):
         raise ValueError(f"{key or '字段'} 必须是字符串")
     return value
+
 
 def _parse_int(value, key):
     if isinstance(value, bool):
@@ -79,6 +85,7 @@ def _parse_int(value, key):
         raise ValueError(f"{key} 值超出范围")
     return v
 
+
 def _parse_float(value, key):
     if isinstance(value, bool):
         raise ValueError(f"{key} 必须是数值")
@@ -89,6 +96,7 @@ def _parse_float(value, key):
     if not math.isfinite(v):
         raise ValueError(f"{key} 值超出范围")
     return v
+
 
 def _parse_bool(val, key):
     if isinstance(val, bool):
@@ -105,6 +113,7 @@ def _parse_bool(val, key):
             return True
     raise ValueError(f"{key} 必须是布尔值")
 
+
 def _config_value(raw, key, default=None):
     if raw is None:
         return default
@@ -112,10 +121,12 @@ def _config_value(raw, key, default=None):
         return default
     return raw.get(key, default)
 
+
 def _mapping_section(raw, name):
     if raw is None:
         return {}
     return raw.get(name, {})
+
 
 def _parse_words_config(raw, section):
     if raw is None:
@@ -139,6 +150,7 @@ def _parse_words_config(raw, section):
         raise ValueError("words.reuse")
     return WordsConfig(count=count, batch=batch, pick=pick, reuse=reuse)
 
+
 def _parse_loop_config(raw, section):
     if raw is None:
         raw = {}
@@ -153,6 +165,7 @@ def _parse_loop_config(raw, section):
             raise ValueError("loop.iterations 必须在 1 或更多")
     return LoopConfig(iterations=iterations)
 
+
 def _parse_agent_config(raw, section):
     if raw is None:
         raw = {}
@@ -160,20 +173,19 @@ def _parse_agent_config(raw, section):
     timeout = _parse_float(_config_value(raw, "timeout", 1800.0), "agent.timeout")
     return AgentConfig(command=command, timeout=timeout)
 
+
 def _parse_rounds_config(raw, section):
     if raw is None:
         raw = {}
     enabled = _parse_bool(_config_value(raw, "enabled", True), "rounds.enabled")
     dir_val = _parse_str(_config_value(raw, "dir", "rounds"), "rounds.dir")
-    
-    # Special handling for verify field: convert boolean False to string "off"
+
     verify_value = _config_value(raw, "verify", "auto")
     if verify_value is False and "verify" in raw:
-        # Handle case where unquoted "off" is parsed as boolean False
         verify = "off"
     else:
         verify = _parse_str(verify_value, "rounds.verify")
-    
+
     valid_verify = ("auto", "tests", "user", "ai", "off")
     if verify not in valid_verify:
         raise ValueError(f"rounds.verify 必须是 {valid_verify} 之一")
@@ -193,6 +205,7 @@ def _parse_rounds_config(raw, section):
         adopt_score=adopt_score, verify_timeout=verify_timeout,
         repo=repo, judge_command=judge_command, judge_timeout=judge_timeout
     )
+
 
 def _parse_prompt_config(raw, section):
     if raw is None:
@@ -217,11 +230,10 @@ def _config_dict_to_obj(raw: Any) -> Config:
     if raw is None:
         raw = {}
 
-    # 各节必须是映射(dict)，标量如 'rounds: on' 直接拒绝
     for section in ("words", "loop", "agent", "rounds", "prompt"):
         val = raw.get(section)
         if val is not None and not isinstance(val, dict):
-            raise ValueError(f"rounds" if section == "rounds" else section)
+            raise ValueError(f"{section}")
 
     words = _parse_words_config(_mapping_section(raw, "words"), "words")
     loop = _parse_loop_config(_mapping_section(raw, "loop"), "loop")
@@ -249,44 +261,38 @@ def _validate(cfg: Config) -> None:
     """
     import math as _m
 
-    # words.* 必须是 int，不能是 bool（bool 是 int 的子类）
     for name in ("count", "batch", "pick"):
         val = getattr(cfg.words, name)
         if not isinstance(val, int) or isinstance(val, bool):
             raise ValueError(f"words.{name}")
 
-    # words.reuse 必须是 bool
     if not isinstance(cfg.words.reuse, bool):
         raise ValueError("words.reuse")
 
-    for name in ("iterations", "count", "batch", "pick"):
-        val = getattr(cfg.loop, name)
-        if not isinstance(val, int) or isinstance(val, bool):
-            raise ValueError(f"loop.{name}")
+    val = cfg.loop.iterations
+    if val is None or isinstance(val, bool):
+        pass
+    elif not isinstance(val, int):
+        raise ValueError(f"loop.iterations")
 
-    # rounds.enabled 必须是 bool
     if not isinstance(cfg.rounds.enabled, bool):
         raise ValueError("rounds.enabled")
 
-    # tui / color 必须是 bool
     if not isinstance(cfg.tui, bool):
         raise ValueError("tui")
     if not isinstance(cfg.color, bool):
         raise ValueError("color")
 
-    # rounds.verify / rounds.fallback 必须是 str
     if not isinstance(cfg.rounds.verify, str):
         raise ValueError("rounds.verify")
     if not isinstance(cfg.rounds.fallback, str):
         raise ValueError("rounds.fallback")
 
-    # rounds.adopt_score 必须是数值且在 0-10 之间
     if not isinstance(cfg.rounds.adopt_score, (int, float)) or isinstance(cfg.rounds.adopt_score, bool):
         raise ValueError("rounds.adopt_score")
     if not (0.0 <= cfg.rounds.adopt_score <= 10.0):
         raise ValueError("rounds.adopt_score")
 
-    # rounds.verify_timeout / rounds.judge_timeout 必须是有限正数
     for name in ("verify_timeout", "judge_timeout"):
         val = getattr(cfg.rounds, name)
         if not isinstance(val, (int, float)) or isinstance(val, bool):
@@ -299,15 +305,12 @@ def _validate(cfg: Config) -> None:
         if val <= 0:
             raise ValueError(f"rounds.{name}")
 
-    # judge_command 如果非空必须包含 $prompt 或 $prompt_file
     if cfg.rounds.judge_command and ("$prompt" not in cfg.rounds.judge_command and "$prompt_file" not in cfg.rounds.judge_command):
         raise ValueError("judge_command")
 
-    # agent.command 必须是 str
     if not isinstance(cfg.agent.command, str):
         raise ValueError("agent.command")
 
-    # agent.timeout 必须是有限数值
     if not isinstance(cfg.agent.timeout, (int, float)) or isinstance(cfg.agent.timeout, bool):
         raise ValueError("agent.timeout")
     try:
@@ -316,11 +319,9 @@ def _validate(cfg: Config) -> None:
     except (OverflowError, ValueError):
         raise ValueError("agent.timeout")
 
-    # prompt.max_state_chars 必须是 int，不能是 bool
     if not isinstance(cfg.prompt.max_state_chars, int) or isinstance(cfg.prompt.max_state_chars, bool):
         raise ValueError("prompt.max_state_chars")
 
-    # Config 级别的字符串字段不能为 None
     if cfg.extra_notes is None:
         raise ValueError("extra_notes")
     if cfg.workspace is None:
@@ -332,36 +333,31 @@ def _validate(cfg: Config) -> None:
     if not isinstance(cfg.workspace, str):
         raise ValueError("workspace")
 
-    # Windows 下检查命令中的占位符安全性
     if os.name == "nt":
         try:
             import warnings
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                # agent.command 必须通过 Windows 命令校验
                 try:
                     _validate_windows_command(
                         "agent.command", cfg.agent.command, cfg.workspace
                     )
                 except ValueError:
                     raise ValueError("agent.command")
-                # rounds.judge_command 必须通过 Windows 命令校验
                 try:
                     _validate_windows_command(
                         "rounds.judge_command", cfg.rounds.judge_command, cfg.workspace
                     )
                 except ValueError:
                     raise ValueError("judge_command")
-            # $$prompt_file 检查
-            try:
-                _validate_windows_command(
-                    "agent.command", cfg.agent.command, cfg.workspace
-                )
-            except ValueError as e:
-                if "必须包含会被实际替换" in str(e):
-                    raise ValueError("必须包含会被实际替换")
+                try:
+                    _validate_windows_command(
+                        "agent.command", cfg.agent.command, cfg.workspace
+                    )
+                except ValueError as e:
+                    if "必须包含会被实际替换" in str(e):
+                        raise ValueError("必须包含会被实际替换")
         except (NotImplementedError, AttributeError, ImportError):
-            # pathlib WindowsPath 在非Windows系统上不可用，忽略
             pass
     if cfg.rounds.dir is None:
         raise ValueError("rounds.dir")
@@ -370,24 +366,25 @@ def _validate(cfg: Config) -> None:
     if cfg.rounds.judge_command is None:
         raise ValueError("rounds.judge_command")
 
+
 def find_config_path(path: Optional[str] = None) -> str:
     if path is None:
         return "./config.yaml"
     else:
         return os.path.abspath(path)
 
-PROMPT_FILE_LEN = 12
-PROMPT_LEN = 7
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
 
 def _has_valid_expansion(command: str) -> bool:
     """Check if command has $prompt or $prompt_file that will actually expand.
-    
+
     On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
     This matches the behavior of _windows_placeholder_starts from agents.py.
     """
     if not command:
         return False
+
+    PROMPT_FILE_LEN = 12
+    PROMPT_LEN = 7
 
     has_expansion = False
     i = 0
@@ -437,6 +434,7 @@ def _has_valid_expansion(command: str) -> bool:
         i += 1
 
     return has_expansion
+
 
 def _validate_windows_command(field: str, command: str, workspace: str) -> None:
     if not command:
@@ -502,563 +500,3 @@ def _validate_windows_command(field: str, command: str, workspace: str) -> None:
             pass
         if re.search(r'[&%^|]', resolved):
             raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
