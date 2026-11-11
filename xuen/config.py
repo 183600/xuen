@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 import yaml
 import os
 import re
-import sys
 import math
+import sys
 
 @dataclass
 class AgentConfig:
@@ -63,24 +63,25 @@ def _parse_int(value, key):
     if isinstance(value, bool):
         raise ValueError(f"{key} 必须是整数")
     if isinstance(value, int):
-        # Python int 是任意精度：超出 float 范围的巨大整数在这里合法，
-        # 超出平台 range 上限的轮数由 _validate 统一拒绝（不能让
-        # math.isfinite 的 float 换算抛 OverflowError 外泄）
+        if not _is_finite_int(value):
+            raise ValueError(f"{key} 值超出范围")
         return value
     try:
         v = int(value)
-    except (ValueError, TypeError, OverflowError):
+        if not _is_finite_int(v):
+            raise ValueError(f"{key} 值超出范围")
+        return v
+    except (ValueError, TypeError):
         raise ValueError(f"{key} 必须是整数")
-    return v
 
 def _parse_float(value, key):
     if isinstance(value, bool):
         raise ValueError(f"{key} 必须是数值")
     try:
         v = float(value)
-    except (ValueError, TypeError, OverflowError):
-        # OverflowError：YAML 可解析出超出 float 范围的巨大整数，
-        # 必须转成带字段名的 ValueError，不能外泄 OverflowError
+    except OverflowError:
+        raise ValueError(f"{key} 值超出范围")
+    except (ValueError, TypeError):
         raise ValueError(f"{key} 必须是数值")
     if not math.isfinite(v):
         raise ValueError(f"{key} 值超出范围")
@@ -96,6 +97,13 @@ def _parse_bool(val, key):
             return True
     raise ValueError(f"{key} 必须是布尔值")
 
+def _is_finite_int(value):
+    """超大整数转 float 会抛 OverflowError：统一按「超出范围」处理。"""
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
 def _config_value(raw, key, default=None):
     if raw is None:
         return default
@@ -104,7 +112,12 @@ def _config_value(raw, key, default=None):
 def _mapping_section(raw, name):
     if raw is None:
         return {}
-    return raw.get(name, {})
+    value = raw.get(name)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} 必须是映射（键值对）")
+    return value
 
 def _parse_words_config(raw, section):
     if raw is None:
@@ -128,18 +141,29 @@ def _parse_words_config(raw, section):
         raise ValueError("words.reuse")
     return WordsConfig(count=count, batch=batch, pick=pick, reuse=reuse)
 
+def _parse_iterations(value, key="loop.iterations"):
+    """轮数：正整数；inf（及等价写法）表示无限循环。"""
+    if value is None:
+        return 5
+    if isinstance(value, bool):
+        raise ValueError(f"{key} 必须是整数")
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in _INFINITE_ITERATIONS:
+            return None
+    elif isinstance(value, float) and math.isinf(value):
+        return None
+    iterations = _parse_int(value, key)
+    if iterations < 0:
+        raise ValueError(f"{key} 必须是正整数")
+    if iterations == 0:
+        raise ValueError(f"{key} 必须在 1 或更多")
+    return iterations
+
 def _parse_loop_config(raw, section):
     if raw is None:
         raw = {}
-    iterations_raw = _config_value(raw, "iterations")
-    if iterations_raw is None:
-        iterations = 5
-    else:
-        iterations = _parse_int(iterations_raw, "loop.iterations")
-        if iterations < 0:
-            raise ValueError("loop.iterations 必须是正整数")
-        if iterations == 0:
-            raise ValueError("loop.iterations 必须在 1 或更多")
+    iterations = _parse_iterations(_config_value(raw, "iterations"))
     return LoopConfig(iterations=iterations)
 
 def _parse_agent_config(raw, section):
@@ -188,6 +212,44 @@ def _parse_prompt_config(raw, section):
         raw = {}
     max_state_chars = _parse_int(_config_value(raw, "max_state_chars", 60000), "prompt.max_state_chars")
     return PromptConfig(max_state_chars=max_state_chars)
+
+def _parse_optional_str(value, key, default=""):
+    """可选字符串字段：缺省（或写成空）用默认值，其余必须是字符串。"""
+    if value is None:
+        return default
+    return _parse_str(value, key)
+
+def _parse_switch(value, key, default=False):
+    """顶层开关：接受布尔、0/1 与 on/off 字符串。"""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if value == 0:
+            return False
+        if value == 1:
+            return True
+        raise ValueError(f"{key} 必须是布尔值")
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("on", "true", "yes"):
+            return True
+        if text in ("off", "false", "no"):
+            return False
+    raise ValueError(f"{key} 必须是布尔值")
+
+def _parse_workspace(value, key="workspace"):
+    """工作区路径：字符串；写成数字时按字面目录名处理。"""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        raise ValueError(f"{key} 必须是字符串")
+    if isinstance(value, int):
+        return str(value)
+    raise ValueError(f"{key} 必须是字符串")
 
 def find_config_path(path: Optional[str] = None) -> str:
     if path is None:
@@ -322,766 +384,136 @@ def _validate_windows_command(field: str, command: str, workspace: str) -> None:
         if re.search(r'[&%^|]', resolved):
             raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
 
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-
-def _validate_windows_command(field: str, command: str, workspace: str) -> None:
-    if not command:
-        raise ValueError(f"{field} 不能为空")
-
-    has_expanding_prompt = False
-    has_expanding_prompt_file = False
-
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt_file = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expanding_prompt = True
-            i = end
-            continue
-
-        i += 1
-
-    if has_expanding_prompt:
-        raise ValueError(f"{field} 包含 $prompt，Windows 不安全")
-
-    if has_expanding_prompt_file:
-        resolved = workspace
-        try:
-            resolved = os.path.realpath(workspace)
-        except (OSError, RuntimeError):
-            pass
-        if re.search(r'[&%^|]', resolved):
-            raise ValueError(f"{field} 包含 $prompt_file，工作区路径必须不含 cmd 元字符")
-
-_WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
-
-def _has_valid_expansion(command: str) -> bool:
-    """Check if command has $prompt or $prompt_file that will actually expand.
-    
-    On Windows ($$ is escape, $$$ has expansion), on POSIX ($$ is literal).
-    This matches the behavior of _windows_placeholder_starts from agents.py.
-    """
-    if not command:
-        return False
-
-    has_expansion = False
-    i = 0
-    n = len(command)
-    while i < n:
-        c = command[i]
-        if c == '^':
-            i += 2
-            continue
-        if c == '"':
-            i += 1
-            continue
-
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
-            if end < n and _WORD_CHAR.match(command[end]):
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
-                i += 1
-                continue
-            end = i + PROMPT_LEN
-            if end < n and command[end].isalnum():
-                i += 1
-                continue
-            k = i - 1
-            dollars = 0
-            while k >= 0 and command[k] == '$':
-                dollars += 1
-                k -= 1
-            if dollars % 2 == 0:
-                has_expansion = True
-            i = end
-            continue
-
-        i += 1
-
-    return has_expansion
-def _parse_switch(value, key):
-    """解析 tui/color 这类界面开关：布尔、0/1 数字与常见的字符串写法
-    （YAML 1.1 会把未加引号的 on/off/yes/no 解析成布尔，但带引号的
-    "off" 是字符串，语义上仍应当作开关值接受）。"""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        if value == 0:
-            return False
-        if value == 1:
-            return True
-        raise ValueError(f"{key} 必须是布尔值")
-    if isinstance(value, str):
-        s = value.strip().lower()
-        if s in ("1", "on", "true", "yes"):
-            return True
-        if s in ("0", "off", "false", "no"):
-            return False
-    raise ValueError(f"{key} 必须是布尔值")
-
-def _parse_workspace(value):
-    """workspace 接受标量（字符串/数字，数字按 YAML 源文本转 str），
-    拒绝 list/dict/set/bytes 等结构化值，不能 str() 成 Python repr。"""
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    if isinstance(value, bool):
-        raise ValueError("workspace 必须是字符串")
-    if isinstance(value, (int, float)):
-        return str(value)
-    raise ValueError("workspace 必须是字符串")
-
-def _section_mapping(raw, name):
-    """取出顶层配置段并确保它是映射：`rounds: on`（YAML 解析成布尔）
-    这类标量段必须报错，不能让解析器对非映射调 .get 崩溃或静默取默认。"""
-    section = _mapping_section(raw, name)
-    if not isinstance(section, dict):
-        raise ValueError(f"{name} 配置段必须是键值映射")
-    return section
-
-def _default_config_path() -> str:
-    """未用 -c/--config 指定时，依次查找当前目录的
-    config.yaml → config.yml → xuen.yaml；都不存在则 FileNotFoundError。"""
-    for name in ("config.yaml", "config.yml", "xuen.yaml"):
+_INFINITE_ITERATIONS = ("inf", ".inf", "+.inf", "infinite", "∞")
+_VALID_VERIFY = ("auto", "tests", "user", "ai", "off")
+_VALID_FALLBACK = ("user", "ai")
+DEFAULT_CONFIG_NAMES = ("config.yaml", "config.yml", "xuen.yaml")
+
+def _find_default_config() -> str:
+    """未指定 -c 时按 config.yaml → config.yml → xuen.yaml 顺序查找。"""
+    for name in DEFAULT_CONFIG_NAMES:
         if os.path.isfile(name):
             return name
     raise FileNotFoundError(
-        "找不到配置文件：当前目录没有 config.yaml / config.yml / xuen.yaml")
+        "当前目录没有 " + " / ".join(DEFAULT_CONFIG_NAMES))
 
 def load_config(path: Optional[str] = None) -> Config:
-    """读取 YAML 配置并构造 Config，最后经 _validate 整体校验。
-
-    path 为 None 时按 config.yaml → config.yml → xuen.yaml 顺序查找；
-    显式传入的路径（包括空字符串）不做任何回退，文件不存在时抛
-    FileNotFoundError。解析或校验失败一律抛 ValueError。
-    """
+    """读取配置文件并校验；path 为 None 时按默认顺序查找当前目录的配置。"""
     if path is None:
-        path = _default_config_path()
-    with open(path, "r", encoding="utf-8-sig") as f:
+        path = _find_default_config()
+    if not path:
+        raise FileNotFoundError("配置文件路径为空")
+    with open(path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     if raw is None:
         raw = {}
     if not isinstance(raw, dict):
-        raise ValueError("配置文件根必须是键值映射")
-
-    extra_notes = raw.get("extra_notes")
-    if extra_notes is None:
-        extra_notes = ""
-
-    words_raw = _section_mapping(raw, "words")
-    loop_raw = _section_mapping(raw, "loop")
-    agent_raw = _section_mapping(raw, "agent")
-    rounds_raw = _section_mapping(raw, "rounds")
-    prompt_raw = _section_mapping(raw, "prompt")
-
+        raise ValueError("配置文件顶层必须是键值映射")
     cfg = Config(
-        extra_notes=_parse_str(extra_notes, "extra_notes"),
-        words=_parse_words_config(words_raw, words_raw),
-        loop=_parse_loop_config(loop_raw, loop_raw),
-        agent=_parse_agent_config(agent_raw, agent_raw),
-        rounds=_parse_rounds_config(rounds_raw, rounds_raw),
-        prompt=_parse_prompt_config(prompt_raw, prompt_raw),
-        workspace=_parse_workspace(_config_value(raw, "workspace", "")),
-        tui=_parse_switch(_config_value(raw, "tui", False), "tui"),
-        color=_parse_switch(_config_value(raw, "color", False), "color"),
+        extra_notes=_parse_optional_str(raw.get("extra_notes"), "extra_notes"),
+        words=_parse_words_config(_mapping_section(raw, "words"), "words"),
+        loop=_parse_loop_config(_mapping_section(raw, "loop"), "loop"),
+        agent=_parse_agent_config(_mapping_section(raw, "agent"), "agent"),
+        rounds=_parse_rounds_config(_mapping_section(raw, "rounds"), "rounds"),
+        prompt=_parse_prompt_config(_mapping_section(raw, "prompt"), "prompt"),
+        workspace=_parse_workspace(raw.get("workspace")),
+        tui=_parse_switch(raw.get("tui"), "tui", Config.tui),
+        color=_parse_switch(raw.get("color"), "color", Config.color),
     )
     _validate(cfg)
     return cfg
 
-def _validate(cfg: Config) -> None:
-    """对 Config 做整体校验（load_config 末尾与 CLI 覆盖之后共用）。
+def _check_str(value, key):
+    if not isinstance(value, str):
+        raise ValueError(f"{key} 必须是字符串")
+    return value
 
-    程序化构造的 Config 可能带任意类型的字段值：必须先按字段名做类型
-    与范围检查，再做占位符与平台相关的命令检查；agent.command 允许为
-    空字符串（空命令由 runner 的预检负责报错）。
-    """
-    # ---- 字符串字段：None/list 等必须带字段名报 ValueError，不能让
-    # .strip()/正则/Path() 先抛 AttributeError/TypeError ----
-    for field_name, value in (
-        ("extra_notes", cfg.extra_notes),
-        ("workspace", cfg.workspace),
-        ("agent.command", cfg.agent.command),
-        ("rounds.dir", cfg.rounds.dir),
-        ("rounds.repo", cfg.rounds.repo),
-        ("rounds.judge_command", cfg.rounds.judge_command),
-    ):
-        if not isinstance(value, str):
-            raise ValueError(f"{field_name} 必须是字符串")
+def _check_bool(value, key):
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} 必须是布尔值")
+    return value
 
-    # ---- 布尔字段：字符串 "false" / 数字 0 不能被 if 静默当真值 ----
-    for field_name, value in (
-        ("words.reuse", cfg.words.reuse),
-        ("rounds.enabled", cfg.rounds.enabled),
-        ("tui", cfg.tui),
-        ("color", cfg.color),
-    ):
-        if not isinstance(value, bool):
-            raise ValueError(f"{field_name} 必须是布尔值")
+def _check_int(value, key, minimum=None, maximum=None):
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{key} 必须是整数")
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{key} 必须 >= {minimum}")
+    if maximum is not None and value > maximum:
+        raise ValueError(f"{key} 必须 <= {maximum}")
+    return value
 
-    # ---- 整数字段：bool 是 int 子类，必须显式排除 ----
-    for field_name, value in (
-        ("words.count", cfg.words.count),
-        ("words.batch", cfg.words.batch),
-        ("words.pick", cfg.words.pick),
-    ):
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ValueError(f"{field_name} 必须是整数")
-    if cfg.words.pick < 0:
-        raise ValueError("words.pick 必须 >= 0")
-
-    iterations = cfg.loop.iterations
-    if iterations is not None:
-        if isinstance(iterations, bool) or not isinstance(iterations, int):
-            raise ValueError("loop.iterations 必须是整数")
-        if iterations < 1:
-            raise ValueError("loop.iterations 必须是正整数")
-        # runner 用 range(1, iterations + 1) 表示轮数上限：超出平台
-        # ssize_t 的整数语义上合法但 range 无法表示，必须在配置阶段拒绝
-        if iterations > sys.maxsize - 1:
-            raise ValueError("loop.iterations 超出平台 range 可表示范围")
-
-    if isinstance(cfg.prompt.max_state_chars, bool) \
-            or not isinstance(cfg.prompt.max_state_chars, int):
-        raise ValueError("prompt.max_state_chars 必须是整数")
-    if cfg.prompt.max_state_chars < 0:
-        raise ValueError("prompt.max_state_chars 不能为负数")
-
-    # ---- 数值字段：有限正数；超出 float 范围的巨大整数不能从
-    # math.isfinite 泄漏 OverflowError，必须转成带字段名的 ValueError ----
-    for field_name, value in (
-        ("agent.timeout", cfg.agent.timeout),
-        ("rounds.verify_timeout", cfg.rounds.verify_timeout),
-        ("rounds.judge_timeout", cfg.rounds.judge_timeout),
-    ):
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"{field_name} 必须是数值")
-        try:
-            finite = math.isfinite(value)
-        except (OverflowError, ValueError, TypeError):
-            finite = False
-        if not finite:
-            raise ValueError(f"{field_name} 值超出范围")
-        if value <= 0:
-            raise ValueError(f"{field_name} 必须是有限正数")
-
-    adopt_score = cfg.rounds.adopt_score
-    if isinstance(adopt_score, bool) \
-            or not isinstance(adopt_score, (int, float)):
-        raise ValueError("rounds.adopt_score 必须是数值")
+def _check_number(value, key, minimum=None, maximum=None):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{key} 必须是数值")
     try:
-        finite = math.isfinite(adopt_score)
+        number = float(value)
     except (OverflowError, ValueError, TypeError):
-        finite = False
-    if not finite:
-        raise ValueError("rounds.adopt_score 值超出范围")
-    if not (0.0 <= adopt_score <= 10.0):
-        raise ValueError("rounds.adopt_score 必须在 0-10 之间")
+        raise ValueError(f"{key} 值超出范围")
+    if not math.isfinite(number):
+        raise ValueError(f"{key} 值超出范围")
+    if minimum is not None and number < minimum:
+        raise ValueError(f"{key} 必须 >= {minimum}")
+    if maximum is not None and number > maximum:
+        raise ValueError(f"{key} 必须 <= {maximum}")
+    return number
 
-    # ---- 枚举字段 ----
-    if cfg.rounds.verify not in ("auto", "tests", "user", "ai", "off"):
-        raise ValueError("rounds.verify 必须是 auto/tests/user/ai/off 之一")
-    if cfg.rounds.fallback not in ("user", "ai"):
-        raise ValueError("rounds.fallback 必须是 user/ai 之一")
+def _check_positive_number(value, key):
+    number = _check_number(value, key)
+    if number <= 0:
+        raise ValueError(f"{key} 必须是有限正数")
+    return number
 
-    # ---- 命令模板必须包含会被实际替换的占位符（与平台无关）：
-    # $$prompt_file 这类不会兑现的写法必须拒绝，而不是静默接受 ----
-    if cfg.agent.command and not _has_valid_expansion(cfg.agent.command):
-        raise ValueError("agent.command 必须包含会被实际替换的 "
-                         "$prompt / $prompt_file 占位符")
-    if cfg.rounds.judge_command \
-            and not _has_valid_expansion(cfg.rounds.judge_command):
-        raise ValueError("rounds.judge_command 必须包含会被实际替换的 "
-                         "$prompt / $prompt_file 占位符")
+def _validate_command(field: str, command: str, workspace: str) -> None:
+    """命令模板校验：必须真的把提示词送到外部 agent。"""
+    if not command:
+        return
+    # 复用渲染器的实际行为判断占位符是否会被兑现：被转义、落在注释/
+    # heredoc 里或被 $$ 吃掉的写法都不会替换提示词，此时必须拒绝配置，
+    # 而不是运行期静默丢弃提示词。
+    from .agents import command_receives_prompt
 
-    # ---- Windows：cmd.exe 无法安全接收内嵌多行的 $prompt；只有工作区
-    # 路径不含 cmd 元字符时才允许把 $prompt_file 的解析路径裸插进命令 ----
+    if not command_receives_prompt(command):
+        raise ValueError(f"{field} 必须包含会被实际替换的提示词占位符"
+                         "（$prompt / $prompt_file）")
     if os.name == "nt":
-        _validate_windows_command("agent.command", cfg.agent.command,
-                                  cfg.workspace)
-        if cfg.rounds.judge_command:
-            _validate_windows_command("rounds.judge_command",
-                                      cfg.rounds.judge_command,
-                                      cfg.workspace)
+        _validate_windows_command(field, command, workspace)
+
+def _validate(cfg: Config) -> None:
+    """校验配置；命令行覆盖之后同样要重新校验（覆盖值不能绕过约束）。"""
+    _check_str(cfg.extra_notes, "extra_notes")
+    _check_str(cfg.workspace, "workspace")
+    _check_str(cfg.agent.command, "agent.command")
+    _check_str(cfg.rounds.dir, "rounds.dir")
+    _check_str(cfg.rounds.repo, "rounds.repo")
+    _check_str(cfg.rounds.judge_command, "rounds.judge_command")
+
+    _check_bool(cfg.words.reuse, "words.reuse")
+    _check_bool(cfg.rounds.enabled, "rounds.enabled")
+    _check_bool(cfg.tui, "tui")
+    _check_bool(cfg.color, "color")
+
+    _check_int(cfg.words.count, "words.count", minimum=1)
+    _check_int(cfg.words.batch, "words.batch", minimum=1)
+    _check_int(cfg.words.pick, "words.pick", minimum=0)
+    _check_int(cfg.prompt.max_state_chars, "prompt.max_state_chars", minimum=0)
+    if cfg.loop.iterations is not None:
+        _check_int(cfg.loop.iterations, "loop.iterations", minimum=1)
+        # 超出平台 range 上限的轮数必须提前拒绝：否则 runner 的 range()
+        # 会抛 OverflowError。
+        if cfg.loop.iterations > sys.maxsize:
+            raise ValueError("loop.iterations 超出范围（无法用 range 表示）")
+
+    _check_positive_number(cfg.agent.timeout, "agent.timeout")
+    _check_positive_number(cfg.rounds.verify_timeout, "rounds.verify_timeout")
+    _check_positive_number(cfg.rounds.judge_timeout, "rounds.judge_timeout")
+    _check_number(cfg.rounds.adopt_score, "rounds.adopt_score",
+                  minimum=0, maximum=10)
+
+    if cfg.rounds.verify not in _VALID_VERIFY:
+        raise ValueError(f"rounds.verify 必须是 {_VALID_VERIFY} 之一")
+    if cfg.rounds.fallback not in _VALID_FALLBACK:
+        raise ValueError(f"rounds.fallback 必须是 {_VALID_FALLBACK} 之一")
+
+    _validate_command("agent.command", cfg.agent.command, cfg.workspace)
+    _validate_command("rounds.judge_command", cfg.rounds.judge_command,
+                      cfg.workspace)
