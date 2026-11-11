@@ -3,353 +3,338 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 56 轮（承接第 55 轮「语义-接触接地与全身生存核」IP-121~126；灵感循环第 2 轮；本轮灵感：「四足机器人」×「交互设计」×「语义地图」）
+# 第 57 轮（承接第 56 轮「证据地图×主动探询×信任协商」IP-127~132；灵感循环第 3 轮；本轮灵感：「小样本学习」×「多模态交互」×「个性化交互」）
 
-> 第 55 轮把"感知标签"升级为"接触约束"，用生存核 + 护盾 + 证书把语义不确定性挡在不可逆接触之前；但它的风险自陈已点出软肋——soundness 三重依赖分割置信校准、κ 跨域迁移、核外近似紧致，而护盾面对不确定性只有两个动作：**保守或制动**，缺少第三个动作"把不确定性变少"；且语义 Σ 是单帧的，每次到访都从零支付全部不确定性。本轮三个灵感各补一条腿：**四足机器人**给探询一个物理载体（闲着的腿就是传感器，步态就是裕度的变速箱），**交互设计**给拒绝一个出口（可读、分级、有界的人类影响），**语义地图**给证据一个居所（持久、溯源、可积累、可版本化的信念载体）。核心命题由"模型说可信"升级为 **"证据说可信"**。
+> 第 56 轮把安全的赌注从"模型置信"换成"证据承诺"——持久地图 𝓜、探-诺-演闭环、同意阶梯三层纵深，使单点过度自信不再足以产生承诺；但它的风险自陈同时暴露了三个未解的经济学问题：**(a)** 每个区域只被到访两三次，探针样本天然稀少，信念宽度与校准全靠手工先验与手设 θ_voi/k_probes——赌注从"模型置信"换到"证据质量"后，又落回"先验质量"；**(b)** 证据基本来自单一模态，一个"同时欺骗该模态"的物理性质（透明冰面看起来干、探起来硬）可以制造跨到访自洽的假信念——同一模态重复五遍只是把同一个错误问五遍；**(c)** 人类被建模为静态有界权重 w_h：橡皮章者与严谨者同权、疲劳 session 与清醒 session 同权——既浪费（严谨者标注被隔离同样久）又危险（橡皮章确认被当作真确认）。本轮三个灵感各补一条腿：**小样本学习**让先验不再手设而是从全体区域史中摊销、且以共形预测保底；**多模态交互**让证据按模态分账、跨模态对账——分歧即不确定性下限，一致才是新证据类；**个性化交互**让操作者从静态权重变成单向有界演化的信任状态机。本轮同时给第 56 轮"坏证据长寿"一个新武器：**事后证伪回溯**（发现某模态/标注错了，回溯降权其全部历史证据）。核心命题由"证据说可信"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据说可信"**。
 
 核心矛盾：
-- **H24**：第 55 轮的可行性判定建立在"单帧置信"之上，而置信不是证据——边界处一次过度自信的分割足以让护盾在伪生存核内放行；系统只能被动容忍不确定性，不能主动交易它。
-- **H25**：无人参与的安全系统在部署上不可持续——只会急停且说不清为什么的机器人会被操作者绕过或关机；但人类影响若无界，又把新的单点故障引入安全回路。交互设计的要求恰是"**可读但有界**"。
+- **H26（少样本 vs 校准）**：每区域 k≤5 次探针下，手工先验要么过保守（浪费探针与节拍）要么过自信（欠覆盖）；元先验自己也可能错——安全的赌注层层后移，最终总要有人为"先验的质量"负责。
+- **H27（单模态共谋）**：物理欺骗是跨模态不均匀的，但单模态融合看不见模态间分歧；"跨模态一致"这一最强证据形态与"跨模态分歧"这一最强警报，在单模态体系里都不存在。
+- **H28（个性化 vs 博弈）**：把人当常量既浪费又危险；但个性化若允许"变松"，就制造了可被博弈的信任通胀——操作者可以先表现得严谨攒授权、再滥用授权。
 
 ## 0. 直觉与动机
 
-**灵感 1（四足机器人 → 探询成为第一类动作，步态是不确定性变速箱）**
-直觉：四足 crawl 步态天然三点支撑、闲出一条腿——这条腿不只是备用支撑，更是 **仪器**：轻点（tap）测滑移与刚度、偏载（shift）在非完全承诺下预支部分体重、换视角（view）补一次分割。于是动作空间从纯运动扩为 **运动 × 探询 × 沟通** 三元组。更妙的是步态与不确定性之间存在天然兑换率：crawl 静态裕度大、可吸收单点失误但慢；trot 动态、快但每个接触都不可失——**步态就是不确定性预算的变速箱**：语义风险高 → 降档买裕度；证据到位 → 升档买速度。
+**灵感 1（小样本学习 → 摊销先验 + 共形保底）**
+直觉：机器人部署生涯就是一场持续的小样本考试——每个区域只有 1~5 次探针机会，却要为不可逆接触给出校准后验。手工先验是"老师划重点"：划对省题、划错全错。元学习换一种问法：**先验不从天降，从全体区域的探针史里摊销**——新区域一次轻点，先定位"它像已见过的哪类表面"，借那一类的响应结构解码后验；效率来自元先验，安全却不托付给元先验：**OOD 门 + 共形保底带**——元模型声明分布内才用摊销后验；一旦观测序列不像任何训练过的表面，退回非参共形区间，宁可宽、不可错。于是 k_probes 从手设常数变成**声明的样本效率证书 k\*(w\*)**。
 
-**灵感 2（交互设计 → 拒绝必须可读，人类影响必须有界）**
-直觉：护盾的每次拒绝/降档/绕行都必须输出 **接地解释**——指认地图区域、信念摘要、被违反的约束，而不是一句 "infeasible"。同意按（风险 × 可逆性）矩阵分级：常规步态 L0 自动、中等风险 L1 异步通知、不可逆高险接触 L2 同步确认且超时保守停。人类的角色被严格限定为 **证据提供者而非决策者**：标注只能以有界权重进入信念，决策规则本体不可触碰——人可以让系统"知道得更多"，不能让系统"更冒险"。
+**灵感 2（多模态交互 → 证据分账与跨模态对账）**
+直觉：单模态的重复探针是"把同一个问题问五遍"。把区域信念按模态分账 {b_r^m}（视觉/触探/本体/声学），跨模态对账产出两种单模态体系里不存在的信息：**分歧即不确定性下限**（D(r) 大 ⇒ 后验强制加宽 ⇒ 自动趋向探询/绕行/降档）；**一致即新证据类**（两个条件独立的模态同侧 ⇒ EV-xmodal，可在 L1 非不可逆接触上顶替一次佐证）。模态可靠性 ρ_m 按事后证伪降级、按证实恢复、全程审计——被冰面骗过一次的"视觉"在同类区域自动失重。
 
-**灵感 3（语义地图 → 从单帧 Σ 到持久 𝓜：证据有了居所）**
-直觉：地图让语义 **跨到访积累**：区域信念 `b_r` 由边端探针、云端先验、人类标注三方证据贝叶斯融合，带溯源（到访次数/最近时间/来源集）、带陈旧衰减、带版本。地图同时是 **交互界面**（人读图、标图）与 **云边共享对象**（版本化同步）。第 55 轮"κ 跨域迁移"的风险由此获得结构性缓解：不再盲信迁移来的可供性，而是用本地探针与多次到访把 κ 长成区域自己的后验。
+**灵感 3（个性化交互 → 单向有界的信任状态机）**
+直觉：操作者不是常量而是状态 s_o=(cal, vig, auth)：cal 校准分（标注 vs 事后实测）、vig 警觉度（橡皮章/疲劳检测）、auth∈{A0,A1,A2} 授权级（决定标注佐证数、w_h、L2 超时）。关键设计是**个性化只能向保守方向滑动**：降级实时（检出橡皮章即刻降），升级要攒够事后证实的记录且有界速率；授权只参数化"佐证数量与时延参数"，决策规则本体永不可触碰——人可以让系统"更快相信自己"，永远不能让系统"更敢赌"。信任可以赢得慢、失去快。
 
-**灵感 4（三源证据 + 证据门 → 从"模型置信"到"证据承诺"）**
-直觉：第 55 轮承诺接触的依据是模型置信（conf ≥ θ_conf），一次过度自信就击穿。本轮立 **证据门**：每个被承诺的接触必须挂证据类 `EV-probe / EV-visit / EV-margin / EV-human` 之一——探针实证、多访融合、足额裕度、或经校准操作者且获佐证的标注。击穿安全需要三层同时失守（模型误校准 ∧ 无探针无裕度 ∧ 人也错），防御从单层变为纵深。
+**灵感 4（三灵感合流 → 证据门从四类到五类、从静态到分层）**
+直觉：第 56 轮证据门 EV-probe/visit/margin/human 在本轮各获得一个新维度：EV-probe 必须挂**元校准证书或共形带**（少样本维度）；**EV-xmodal** 新增且仅限 L1（多模态维度）；EV-human 的佐证数与激活速度由 auth 决定（个性化维度）。击穿安全需要：元先验错 ∧ OOD 门漏检 ∧ 跨模态无一致 ∧ 无裕度 ∧ 人也错——纵深从三层到五层。
 
-**灵感 5（探-诺-演 PCE → 把信息价值写进控制回路）**
-直觉：每个检查点上，排程风险 ≤ δ_f 则承诺；否则选"VOI 扣除代价后最大"的探针，探完融合、重估、再决策；探不动则绕行，绕不动则降档，降不动则 L2 协商或安全停。不确定性不再只是被容忍的对象，而是被 **交易** 的对象——用时间与能量买信息，用信息买承诺。
+**灵感 5（PCE+ → 探询预算本身成为被学习的对象）**
+直觉：VOI 改用元后验做悲观估计；承诺前插入对账检查点——D(r)>θ_D 先发一次"最大分歧模态"的共识探针；OOD 触发则切共形带（带变宽 ⇒ 自动趋向绕行/降档）。少样本、多模态、个性化三个机制全部经由"信念更准或动作更保守"两个安全通道起作用，延续并强化第 56 轮的交互单调性。
 
-## 1. 形式化定义（增量：定义 127–132）
+## 1. 形式化定义（增量：定义 133–138）
 
-**定义 127（语义-可供性地图）** `𝓜 = (G, {b_r}, κ_𝓜, prov, ver)`：拓扑图 `G=(V,E)`；区域信念 `b_r` 为标签与接触参数 `(μ, k, F_bear)` 的后验；`κ_𝓜(r,c)=P(接触 c 成功 | b_r)`；溯源 `prov(r)=(n_visits, t_last, src_set)`；证据源 `E = E_seg ∪ E_probe ∪ E_cloud ∪ E_human`，融合 `b_r ← Bayes(b_r, like(e), w(src))`，人类权重 `w_h ≤ w_max` 且随操作者校准分衰减。
+**定义 133（元少样本信念推断 MFSL）** 元训练集 𝒟_meta={(R_j,O_j,θ̂_j)}（区域/探针观测序列/事后实测参数），摊销推断器 q_φ(θ|o_{1:k},z_r)，θ=(μ,k,F_bear)，z_r 区域上下文（坡度/材质簇/季节）。校准契约：∀k≤k_max，ECE_k(q_φ)≤ε_meta(k) 且 ε_meta 随 k 单调不增；样本效率证书 k\*(w\*)=min{k:E[|C_k|]≤w\*}。OOD 门 n(o_{1:k})=−Σ_i log p̂_φ(o_i|o_{<i},z_r)>θ_ood ⇒ 判分布外，退共形带 C_cf(r)=wCF({res_j},sim(z_r,z_j),α_conf)（分层加权共形+union bound），覆盖 ≥1−α_conf。ID 信念以声明校准进 SMM；OOD 信念只以带内最坏值进 P_fail。
 
-**定义 128（探询动作与非破坏性公理）** `A = A_loco × A_epis × A_comm`；探针 `π ∈ {view, tap, shift, revisit}`，各有代价 `(τ_p, e_p)` 与似然模型 `p(e | r, θ_true)`。非破坏性：`F_probe ≤ F_abs` 且 `P(探针自身引发失效) ≤ δ_probe`——探针必须不改写它要测量的世界。
+**定义 134（跨模态对账 XMC）** 模态集 ℳ={vis,tap,prop,acou}，区域分账 {b_r^m}，融合 b_r=Fuse({b_r^m},{ρ_m})，ρ_m∈[ρ_min,1]。分歧 D(r)=Σ_{m<m'}[TV(lbl^m,lbl^{m'})+|Q_μ^m(0.9)−Q_μ^{m'}(0.9)|/μ_scale]。三规则：(R1) D(r)>θ_D ⇒ P_fail 以加宽混合后验计算（不确定性下限）；(R2) EV-xmodal ⇔ ∃(m,m') 独立声明 ∧ ρ≥ρ_0 ∧ 与融合同侧 ∧ D(r)≤θ_D，仅可替代 L1 接触一次佐证，不得进入不可逆接触必要证据集；(R3) 事后证伪 ⇒ ρ_m 乘性降级并回溯标记历史证据，证实 ⇒ 有界恢复。
 
-**定义 129（信念空间生存核）** 接触排程 `σ = {(r_i, p_i, F_i)}`，`P_fail(r,p,F) = P(μ_r < μ_req(F) ∨ F_bear(r) < F_peak ∨ m_s(p) < θ_m | b_r)`。机会约束可行：`viable_b(x,σ,𝓜) ⇔ ∀i: P_fail ≤ δ_f(g) ∧ 全身动力学可行 ∧ x∈𝒳_safe`；`K_B(𝓜) = {x | ∃σ: viable_b}`。步态预算 `δ_f(g)` 随动态性单调递减：`δ_f(crawl) ≥ δ_f(pace) ≥ δ_f(trot) ≥ δ_f(bound)`。
+**定义 135（个性化信任状态 PTM）** s_o=(cal_o,vig_o,auth_o)，auth∈{A0,A1,A2}；cal 由 proper scoring（标注 vs 事后实测）；vig=g(确认间隔分布,确认率偏离,会话时长)，橡皮章判定（时延<τ_rs 且率>p_rs）⇒ vig↓。授权动态：升级需 n_verify≥N_up(A) ∧ cal_o≥θ_cal(A) ∧ 速率≤Δ_auth/T；降级实时；会话域衰减。授权只参数化隔离出口 corrob\*(auth)（A0=探针实证/A1=2/A2=1）、w_h=min(w_max^g,w0·cal_o)、τ_int(auth) 单调递减。全局硬界与决策规则本体不因个性化而变。
 
-**定义 130（探-诺-演策略 PCE）** 每检查点决策：承诺 ⇔ ∃g 使 `R(σ) ≤ δ_f(g)`（取最快满足者）；否则选 `argmax_π [VOI(π) − cost(π)] ≥ θ_voi` 的探针，探 + 融合 + 重估；探尽 → 绕行；绕尽 → 降档；降尽 → L2 协商或安全停。探针预算 `k_probes` 保证终止。
+**定义 136（多模态个性化解释 MXI）** 内容五元组不变 Exp=(r,b_r 摘要,违反约束,裕度,建议)；渲染 m_E\*=argmax_m Ê[理解正确|m,s_o]，候选 {地图叠层,触觉力回放,语音摘要,文本}；输入通道（触图标注/语音确认）各带错误模型并按校准入账；τ_mm≤τ_int。
 
-**定义 131（交互契约）** 同意阶梯 L0（低险可逆，自动）/ L1（异步通知，不阻塞）/ L2（同步确认，超时保守停）；接地解释 `Exp = (r, b_r 摘要, 违反约束, 裕度, 建议动作{确认/绕行/标注})`；标注隔离区：新标注挂起，待一次探针或到访佐证后生效；**决策规则与人类输入隔离**，人类只经有界信念更新起作用。
+**定义 137（少样本证据门 FSE 与证书 J_p）** 证据类 EV-probe\*（须声明 ECE_k≤ε_meta(k) 或挂共形带）/EV-visit/EV-margin/EV-xmodal（限 L1）/EV-human（auth≥A1 且佐证≥corrob\*(auth)）；OOD 区域在共形带建立前禁 EV-probe；不可逆接触必要证据集={EV-probe\*∨EV-margin}∪佐证，不含 EV-xmodal。J_p=(M_core,C_core,K_margin,ρ_sem,δ_s,probe_log,consent_log,evidence,meta_cal_log,xmodal_log,auth_log,ood_registry)，继承 J_m 全检。
 
-**定义 132（地图-证据证书 J_m）** `J_m = (𝓜_core, C_core, K_margin, ρ_sem, δ_s, probe_log, consent_log, evidence)`；每个承诺接触必须带证据类（无类即拒绝）；继承第 55 轮 SCC 全部检查（`K_margin ≥ θ_K`、`ρ_sem ≥ ρ_min`、`δ_s < Θ_s`、置信校准）；同意日志完备（每个 L2 有决议）。
+**定义 138（探-诺-演+ 算子 PCX）** 每检查点：①元推断（ID→摊销后验/OOD→共形带）；②对账：D(r)>θ_D 且未做共识探针 ⇒ 先发最大分歧模态探针（预算 k_cons）；③承诺 ⇔ ∃g:R≤δ_f(g) ∧ 证据门过；否则选 argmax_π[VOI_元悲观(π)−cost(π)]≥θ_voi；探尽→绕行→降档→L2 协商（τ_int(auth)）或安全停。
 
 ## 2. 关键算法伪代码（完整版见产物区）
 
-### IP-127 SMM（Semantic Map Maintenance）
-
 ```python
-def map_fuse(M, batch):
-    for e in batch:                                  # e=(region,type,payload,t,src)
-        r = e.region
-        if e.type == 'human':                        # A35: 有界 + 隔离
-            if not M.quarantine[r].admit(e):
-                M.quarantine[r].hold(e); continue    # 待一次探针/到访佐证后生效
-            like, w = human_likelihood(e), min(w_max, w_h(e.src.cal))
-        elif e.type == 'probe':
-            like, w = probe_likelihood(e), 1.0
-        elif e.type == 'seg':                        # 第 55 轮 SCG 单帧输出入图
-            like, w = seg_likelihood(e), w_seg(e.conf)
-        else:
-            like, w = cloud_prior(e), w_cloud(e.ver)
-        M.b[r] = staleness_decay(bayes_update(M.b[r], like, w), age(e, M.prov[r]))
-        M.prov[r] = touch(M.prov[r], e)              # n_visits / t_last / src_set
-    return M, changed(M, batch)
-```
+def meta_infer_and_fuse(M, r, obs, meta):          # IP-133/134 合流
+    inf = meta.q_phi(obs, z=ctx(r)) if ood_score(obs) <= theta_ood \
+          else conformal_belt(meta.res, sim=ctx(r), alpha=alpha_conf)
+    for m in modalities(obs):
+        M.b[r][m] = bayes_update(M.b[r][m], like(obs[m]), w=rho(M)[m])
+    fused = Fuse(M.b[r], M.rho)
+    D = disagreement(M.b[r])
+    return M, (widen(fused, D) if D > theta_D else fused), inf, D
 
-### IP-128 PCE（Probe-Commit-Evolve，含不确定性变速箱）
-
-```python
-def probe_commit_evolve(x0, M, task, budget, consent):
-    route = plan_on_map(M, task, risk_model)         # 拓扑图上的风险感知路径
-    sched, log = [], []
-    for cp in route.checkpoints:
-        sigma = foothold_schedule(x0, cp, M); R = schedule_risk(sigma, M)
-        while select_gait(R) == 'halt' and budget.probes_left > 0:
-            cands = admissible_probes(cp, M, F_abs)  # 非破坏性过滤（A34）
-            if not cands: break
-            p = argmax(cands, key=lambda q: voi(q, M, R) - cost(q))
-            if voi(p, M, R) < theta_voi: break
-            M, _ = map_fuse(M, [execute_probe(p, cap=F_abs)])
-            sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
-            budget.spend(p)
-        g = select_gait(R)                           # 变速箱: R≤δ_f(g) 的最快步态
-        if g != 'halt':
-            sched.append(commit(sigma, g)); log.append(tag_evidence(sigma, M)); continue
-        alt = reroute(M, cp, risk_model)
-        if alt and select_gait(schedule_risk(alt, M)) != 'halt': route = alt; continue
-        return negotiate_or_stop(cp, M, sigma, R, consent)   # L2 协商 / 安全停+解释
-    return sched, log, M
-```
-
-### IP-130 ISE（Interaction Safety Envelope）
-
-```python
-def interaction_shield(u_nom, x, M, sched, consent):
-    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)    # 第 55 轮 SSF 为底座
-    failc = failing_constraint(x, u, sched, M)
-    if st != 'ok' or risk(u) > consent.threshold(failc):
-        exp = grounded_explanation(M, sched, failc)       # 指认区域+信念+违反约束
-        lvl = consent.level(failc, u)                     # 风险×可逆性 → L0/L1/L2
-        if lvl == 'L2' and not confirm(exp, timeout=tau_int):
-            return safe_brake(x), exp, 'L2_denied_or_timeout'
-        if lvl == 'L1': notify(exp)                       # 异步，不阻塞节拍
-    return u, exp_if_any, st
+def persona_update(s, ev, audit):                  # IP-135: 单向有界
+    s.cal = proper_score_update(s.cal, ev)
+    if ev == 'confirm' and rubber_stamping(s):
+        s.auth = demote(s.auth)                    # 降级实时
+    if ev == 'verdict' and can_promote(s):
+        s.auth = promote(s.auth)                   # 升级有据有界
+    s.w_h = min(W_MAX_G, w0 * s.cal); audit.log(s); return s
 ```
 
 ## 3. 复杂度与正确性（要点）
 
 | 组件 | 时间 | 空间 | 正确性关键 |
 |---|---|---|---|
-| SMM | O(|ΔE|·d_r) 增量 | O(|V|·d_b) | 源权重诚实、融合保校准 |
-| PCE | O(|CP|·k_p·(C_VOI+|E|)) | O(|V|+|σ|) | 悲观 VOI、k_p 预算终止 |
-| BVK | O(N_sc·T_dyn+QP-SOCP) | O(|X|+|σ|) | 机会约束内近似 sound、δ_f(g) 单调 |
-| ISE | O(QP)+O(1) | O(|Exp|) | 拒绝必有接地解释、超时保守停 |
-| TAF | O(1)+O(H_op) | O(|标注|) | w_h 有界、隔离区延迟生效 |
-| MEC | O(|σ|+|probe_log|) | O(|σ|) | 无证据类即拒绝、L2 日志完备 |
+| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood |
+| XMC | O(\|ℳ\|²·d_b)/区域 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整 |
+| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界（A39）、审计完备 |
+| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int |
+| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
+| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止 |
 
-**正确性定理（Evidence-Grounded Commitment Soundness）**：在 A29–A32 基础上加 **(A33)** 融合后区域信念校准（ECE ≤ ε_cal）且融合保校准；**(A34)** 探针似然诚实且非破坏；**(A35)** `w_h ≤ w_max`、标注隔离、决策规则与人类输入隔离；**(A36)** 交互时延 ≤ τ_int、超时保守停。则：(i) 承诺接触经验失效率 `≤ δ_f + ε_cal + δ_probe + ε_h(w_max)`；(ii) **安全单调引理**：交互与探针只能经信念更新或触发更保守动作影响系统，不存在升险交互路径；(iii) PCE 在 `k_probes` 内终止于 {承诺, 绕行, 协商, 安全停} 之一。
+**正确性定理（CCPS 概要）**：在 A33–A36 上加 (A37) 元校准与 OOD 门（ECE_k≤ε_meta(k)、漏检 ≤δ_ood、共形覆盖 ≥1−α_conf）；(A38) 条件独立仅于 EV-xmodal 使用处被要求且仅限 L1；(A39) 个性化单向有界；(A40) 多模态接口误差诚实、τ_mm≤τ_int。则：(i) ID 路径承诺失效率 ≤δ_f+ε_meta(k)+δ_probe+ε_h(w_max)，OOD 漏检贡献 ≤δ_ood·α_conf；(ii) 交互单调性强化：三个新机制只能经"信念更准（含加宽）"或"动作更保守"影响系统；(iii) PCE+ 在 k_probes+k_cons 内终止。
 
-## 4. 实验设计 E167–E171
+## 4. 实验设计 E172–E176
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E167 地图融合校准与抗污染 | 多访融合 ECE；注入 20% 错误标注后承诺失效率增幅 | ECE ≤ 0.05；增幅 ≤ 1% |
-| E168 探询效率与非破坏性 | 每探针风险降幅 vs 随机探针；探针致损次数；时延开销 | ≥ 2×；0 次；≤ 15% |
-| E169 证据门承诺健全性 | 承诺接触失效率 vs δ_f=0.05；假承诺率；vs 第 55 轮置信基线 | ≤ 0.06；≤ 2%；降幅 ≥ 50% |
-| E170 交互质量与时延 | 解释可读性；校准操作者标注精度；L2 P95；超时安全停成功率 | ≥ 0.8；≥ 0.85；≤ 300ms；100% |
-| E171 端到端四足部署 | 成功率 / 跌倒率 / 完成时间 / 降档恰当率 vs 第 55 轮基线 | +10% / −40% / ≤ +20% / ≥ 90% |
+| E172 少样本校准与样本效率 | ECE_k(k=1..5)、区间宽度、k\* 预测误差；vs 第 56 轮手工先验 | ECE_1≤0.10、ECE_3≤0.05；同等风险探针数 ↓≥40% |
+| E173 OOD 门与共形回退 | 语料外新材质：OOD 检出率；回退后假承诺率；时间增幅 | ≥95%；0；≤+25% |
+| E174 跨模态对账 | 单模态欺骗场景假承诺率；EV-xmodal 越级数；ρ 降级生效时延 | ↓≥60%；0 次（L2 越级）；≤1 到访 |
+| E175 个性化信任 | 橡皮章检出/降级时延；A2 激活提速；疲劳会话超时保守停；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
+| E176 端到端 | 新材质场地四足 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注利用率 | +8%/−30%/−25%/+20% |
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 探针非破坏假设被打破（薄冰上轻点即塌） | 高 | 绝对力帽 F_abs + 承载下界预检 + 不可逆性审计 |
-| 高置信错误标注污染持久地图 | 高 | 标注隔离区 + 校准权重 w_h ≤ w_max + 佐证生效 |
-| VOI 依赖同一可能失准的信念模型（循环性） | 中 | 悲观 VOI（信念方差悲观界）+ 探后校验 |
-| 地图陈旧："旧证据"放行今日风险 | 中 | 陈旧半衰期 + 高险区域强制重探 |
-| L2 警报疲劳 → 无脑确认 | 中 | 解释分级 + 确认率监控 + 超阈回退保守停 |
+| 元语料盲区 → 自信的错误后验 | 高 | OOD 门 + 共形保底 + 语料分层覆盖审计（材质×季节×坡度披露） |
+| EV-xmodal 独立性被物理共谋违反 | 高 | 仅限 L1 + 分歧下限 + 事后证伪回溯降权 |
+| 个性化被博弈（授权养成） | 中 | 会话域授权 + 有界升级速率 + 连续再评估 + 审计 |
+| 元推断时延进入控制回路 | 中低 | 前向 O(d_φ) + 预取 + 可退回第 56 轮手工路径 |
+| 多模态解释理解错误 | 中 | 输入错误模型 + 校准入账 + 文本回退 |
 
 ## 6. 本轮最大风险
 
-**一句话**：本轮把安全的赌注从"模型置信"换到"证据质量"，但地图的持久性让坏证据长寿——一根在薄冰上"非破坏"轻点即塌的探针、或一条高置信错误的人工标注，会在隔离与衰减护栏生效前污染区域信念，并经多访融合把局部错误放大为全图系统性偏差，使之后所有证据门都"诚实地为坏证据放行"——因此必须以 **探针绝对力帽+不可逆审计、标注隔离区+校准权重、溯源版本+陈旧衰减** 三重护栏，宁可重访重探，绝不采信"无溯源的确定"。
+**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变成"坏先验普遍"——若语料存在系统性盲区（某类新材质从未被探过），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的一致性加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 56 轮产物 · 创新点清单 v32：MapProbe-Negotiate（证据地图×主动探询×信任协商，SMM×PCE×BVK×ISE×TAF×MEC）
+# 第 57 轮产物 · 创新点清单 v33：FewShot-XModal-Persona（少样本元推断×跨模态对账×个性化有界信任，MFSL×XMC×PTM×MXI×FSE×PCE+）
 
-> 承接第 55 轮 IP-121~126（SCG/WBV/SSF/SCC/SRS/CEB）与第 54 轮 v31 云边动作体系。本轮把部署前提从"模型置信"升级为 **"证据承诺"**：语义从单帧 Σ 升级为持久地图 𝓜，动作从纯运动升级为 **运动×探询×沟通** 三元组，护盾从单边保守升级为 **探-诺-演协商闭环**，人类以有界、经校准、可审计的方式进入安全回路。
-> IP 编号：IP-127~IP-132（共 6 个新增），升级 IP-121/123/124/126 以纳入地图信念与交互维度。
+> 承接第 56 轮 IP-127~132（SMM/PCE/BVK/ISE/TAF/MEC）与第 55 轮 IP-121~126（SCG/WBV/SSF/SCC/SRS/CEB）。本轮把部署前提从"证据承诺"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据承诺"**：先验从手工变为跨区域摊销且带共形保底，证据从单模态变为分账对账，人类从静态权重变为单向有界的信任状态机；第 56 轮"地图证据走隔离"推广为"**一切判定器（含元模型）走隔离**"。
+> IP 编号：IP-133~IP-138（共 6 个），升级 IP-127/128/130/131/132 以纳入元推断、对账与个性化维度。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-127 | SMM Semantic Map Maintenance | 新增 | 区域信念 `b_r` 三源贝叶斯融合 + 溯源/陈旧/版本 |
-| IP-128 | PCE Probe-Commit-Evolve | 新增 | 检查点 VOI 探询 + 承诺/绕行/降档/协商四态决策 |
-| IP-129 | BVK Belief Viability Kernel | 升级 IP-122/124 | 机会约束生存核 + 步态不确定性变速箱 `δ_f(g)` |
-| IP-130 | ISE Interaction Safety Envelope | 升级 IP-123 | 护盾 + 同意阶梯 + 接地解释 + 超时保守停 |
-| IP-131 | TAF Trust-calibrated Annotation Fusion | 新增 | 操作者校准权重 + 标注隔离区 + 审计日志 |
-| IP-132 | MEC Map-Evidence Certificate | 升级 IP-124 | 证据门 `EV-probe/visit/margin/human` + L2 日志完备 |
+| IP-133 | MFSL Meta-Few-Shot Learner | 新增 | 跨区域摊销后验 q_φ + 样本效率证书 k\*(w\*) + OOD 共形保底 |
+| IP-134 | XMC Cross-Modal Consistency | 新增 | 证据按模态分账、分歧下限、EV-xmodal（限 L1）、ρ 模态可靠性 |
+| IP-135 | PTM Personalized Trust Model | 升级 IP-131 | cal/vig/auth 信任状态机、单向有界、橡皮章/疲劳检测 |
+| IP-136 | MXI Multimodal eXplanation Interface | 升级 IP-130 | 解释内容不变、渲染个性化、多模态输入带误差模型 |
+| IP-137 | FSE Few-Shot Evidence gate | 升级 IP-132 | 证据门五类、EV-probe\* 须校准证书、J_p 证书 |
+| IP-138 | PCE+ Probe-Commit-Evolve Plus | 升级 IP-128 | 元 VOI、共识探针、OOD 切共形带、个性化协商 |
 
-## 1. 符号体系增量（定义 127–132）
+## 1. 符号体系增量（定义 133–138）
 
 | 符号 | 含义 |
 |---|---|
-| `𝓜 = (G,{b_r},κ_𝓜,prov,ver)` | 语义-可供性地图（拓扑图/区域信念/可供性/溯源/版本） |
-| `b_r` | 区域 r 上 (标签, μ, k, F_bear) 的后验 |
-| `A = A_loco × A_epis × A_comm` | 动作三元组：运动 × 探询 × 沟通 |
-| `π ∈ {view,tap,shift,revisit}` | 探针（代价 τ_p,e_p；似然 p(e\|r,θ_true)） |
-| `F_abs, δ_probe` | 探针绝对力帽与探针致失效上界（非破坏性公理） |
-| `P_fail(r,p,F)` | 信念导出的接触失效概率 |
-| `δ_f(g)` | 步态 g 的失效率预算，crawl ≥ pace ≥ trot ≥ bound |
-| `VOI(π)` | 探针信息价值（悲观界） |
-| `L0/L1/L2` | 同意阶梯（自动/通知/确认） |
-| `Exp` | 接地解释对象（区域+信念+违反约束+建议动作） |
-| `w_h ≤ w_max` | 人类标注权重上界，随操作者校准分衰减 |
-| `EV-probe/visit/margin/human` | 证据门四类 |
-| `J_m` | 地图-证据证书 |
+| `𝒟_meta={(R_j,O_j,θ̂_j)}` | 元训练集（区域/探针观测序列/事后实测参数） |
+| `q_φ(θ\|o_{1:k},z_r)` | 摊销后验（θ=(μ,k,F_bear)） |
+| `ε_meta(k), k\*(w\*)` | 元校准契约与样本效率证书 |
+| `n(o), θ_ood, C_cf(r)` | OOD 门分数/阈值与共形保底带 |
+| `ℳ={vis,tap,prop,acou}, b_r^m, ρ_m` | 模态集/模态分账信念/模态可靠性 |
+| `D(r), θ_D` | 跨模态分歧度与阈值 |
+| `EV-xmodal` | 跨模态一致证据类（仅限 L1 非不可逆接触） |
+| `s_o=(cal,vig,auth)` | 操作者信任状态，auth∈{A0,A1,A2} |
+| `corrob\*(auth), τ_int(auth)` | 授权参数化的佐证数与 L2 超时 |
+| `m_E` | 解释渲染模态（地图/触觉/语音/文本） |
+| `k_cons` | 每检查点共识探针预算 |
+| `J_p` | 少样本-跨模态-个性化证书 |
 
 ## 2. 关键算法伪代码
 
-### IP-127 SMM（Semantic Map Maintenance）
+### IP-133 MFSL（元少样本信念推断，含 OOD 共形保底）
 
 ```python
-def map_fuse(M, batch):
-    changed = []
-    for e in batch:                                   # e=(region,type,payload,t,src)
-        r = e.region
-        if e.type == 'human':                         # A35: 有界 + 隔离
-            if not M.quarantine[r].admit(e, op_cal=e.src.cal):
-                M.quarantine[r].hold(e); continue     # 待一次 probe/visit 佐证后生效
-            like, w = human_likelihood(e), min(w_max, w_h(e.src.cal))
-        elif e.type == 'probe':                       # A34: 探针证据权重最高
-            like, w = probe_likelihood(e), 1.0
-        elif e.type == 'seg':                         # 第 55 轮 SCG 单帧输出入图
-            like, w = seg_likelihood(e), w_seg(e.conf)
-        else:                                         # E_cloud: 云端先验（带版本）
-            like, w = cloud_prior(e), w_cloud(e.ver)
-        post = bayes_update(M.b[r], like, weight=w)
-        M.b[r] = staleness_decay(post, age=t_now - M.prov[r].t_last, half=tau_stale)
-        M.prov[r] = touch(M.prov[r], e)               # n_visits / t_last / src_set
-        M.ver.bump(r); changed.append(r)
-    return M, changed
-
-def staleness_gate(M, r, now):
-    return (now - M.prov[r].t_last <= tau_stale) or risk_class(r) == 'low'
+def meta_few_shot_infer(M, r, obs, meta):
+    z = region_context(r, M)                          # 坡度/材质簇/季节
+    n = -sum(meta.logp(o, o_prev, z) for o in obs)    # OOD 门分数
+    if n > meta.theta_ood:                            # 分布外 → 共形保底
+        belt = conformal_belt(meta.residuals, sim=csim(z, meta.Z), alpha=alpha_conf)
+        return Inf(cls='OOD', belt=belt)              # 只以带内最坏值进 P_fail
+    post = meta.q_phi(obs, z)                         # 摊销后验（分布近似）
+    kstar = meta.sample_cert(post, w_target)          # 样本效率证书 k*(w*)
+    return Inf(cls='ID', post=post, kstar=kstar, ece_k=meta.ece_decl[len(obs)])
 ```
 
-### IP-128 PCE（Probe-Commit-Evolve，含不确定性变速箱）
+### IP-134 XMC（跨模态对账融合）
 
 ```python
-def select_gait(R):
-    for g in ['trot', 'pace', 'crawl']:               # 由快到慢
-        if R <= delta_f_of_gait(g): return g          # δ_f: trot < pace < crawl
-    return 'halt'                                     # 全部超预算：停
+def xmodal_fuse(M, r, e):                             # e 带 modality 字段
+    m = e.modality
+    M.b[r][m] = staleness_decay(bayes_update(M.b[r][m], e.like, w=e.w), age(e))
+    fused = Fuse(M.b[r], M.rho)                       # 可靠性加权融合
+    D = sum(disc(M.b[r][a], M.b[r][b]) for a, b in pairs(modalities))
+    if D > theta_D:                                   # R1: 分歧即不确定性下限
+        fused = widen_mix(fused, M.b[r])
+    for mm in modalities:                             # R3: 事后证伪回溯
+        if e.verdict_falsifies(mm):
+            M.rho[mm] = max(rho_min, M.rho[mm] * gamma_down); M.audit.flag(mm)
+        elif e.verdict_confirms(mm):
+            M.rho[mm] = min(1.0, M.rho[mm] + gamma_up)
+    M.ver.bump(r)
+    return M, fused, D
 
-def probe_commit_evolve(x0, M, task, budget, consent):
-    route = plan_on_map(M, task, risk_model)          # 拓扑图上的风险感知 A*
+def xmodal_evidence(b_r, D, rho, level):              # R2: 一致即证据，仅 L1
+    if D <= theta_D and agreeing_pair(b_r, rho, indep_declared=True):
+        return 'EV-xmodal' if level == 'L1' else None  # 不可逆接触不可用
+    return None
+```
+
+### IP-135 PTM（个性化信任状态机，单向有界）
+
+```python
+def persona_update(s, ev, audit):                     # ev∈{ann,confirm,verdict}
+    s.cal = proper_score_update(s.cal, ev)            # 标注 vs 事后实测
+    if ev == 'confirm':
+        s.vig = update_vigilance(s.vig, latency(ev), rate(ev), session_len())
+        if rubber_stamping(s):                        # 时延<τ_rs 且率>p_rs
+            s.auth = demote(s.auth); audit.log(('demote', s.op, t_now))
+    if ev == 'verdict':
+        s.n_verify += ev.correct
+        if s.n_verify >= N_up(s.auth) and s.cal >= theta_cal(s.auth) \
+           and upgrade_rate_ok(s):                    # 有界升级速率
+            s.auth = promote(s.auth); audit.log(('promote', s.op, t_now))
+    s.w_h = min(W_MAX_GLOBAL, w0 * s.cal)             # 全局硬界不可放宽
+    return s
+
+def quarantine_exit(auth):                            # 佐证数按授权
+    return {'A0': 'probe_only', 'A1': 2, 'A2': 1}[auth]
+```
+
+### IP-136 MXI（多模态个性化解释）
+
+```python
+def explanation_render(exp, persona):
+    m_E = argmax(['map', 'haptic', 'voice', 'text'],
+                 key=lambda m: persona.understanding[m])   # 内容不变，渲染个性化
+    return render(exp, m_E)                                # tau_mm <= tau_int
+
+def confirm_multimodal(exp, m_E, persona):
+    ok = await_input(exp, m_E, timeout=tau_int(persona.auth))  # 授权越低超时越短
+    if not ok or input_error_model(exp, m_E).suspect:      # 输入带误差模型
+        return False
+    return ok
+```
+
+### IP-137 FSE（少样本证据门 + 证书 J_p）
+
+```python
+def few_shot_evidence_gate(c, M, persona, ood_reg):
+    if   c.ev == 'EV-probe*':
+        ok = (c.inf.cls == 'ID' and c.inf.ece_k <= eps_meta(c.k)) or \
+             (c.inf.cls == 'OOD' and c.region in ood_reg.certified)
+    elif c.ev == 'EV-xmodal':
+        ok = c.level == 'L1' and c.indep_declared and D(c.region) <= theta_D
+    elif c.ev == 'EV-human':
+        ok = persona[c.op].auth >= 'A1' and \
+             c.corrob >= quarantine_exit(persona[c.op].auth)
+    elif c.ev in ('EV-visit', 'EV-margin'):
+        ok = round56_checks(c, M)                     # 继承第 56 轮判定
+    else:
+        return ('reject', 'no_evidence_class', c)     # 证据门：无证据不承诺
+    if not ok: return ('reject', 'evidence_insufficient', c)
+    if c.irreversible and c.ev == 'EV-xmodal':
+        return ('reject', 'xmodal_on_irreversible', c)  # 硬禁令
+    return ('ok', c)
+
+def map_evidence_certificate_p(sched, log, M, consent_log, auth_log, ood_reg):
+    for c in contacts(sched):
+        st = few_shot_evidence_gate(c, M, persona_of(c), ood_reg)
+        if st[0] != 'ok': return st
+    if min(x.K_margin for x in sched) < budgets.theta_K: return ('reject', 'K_margin')
+    if rho_sem(sched, M) < budgets.rho_min:           return ('reject', 'rho_sem')
+    if semantic_perturbation(M.core) > budgets.Theta_s: return ('reject', 'delta_s')
+    if not all(l2.resolved for l2 in consent_log):    return ('reject', 'consent_open')
+    return ('ok', Jp(M.core, core_contacts(sched), K_margin, rho_sem,
+                     probe_log, consent_log, meta_cal_log, xmodal_log,
+                     auth_log, ood_reg))
+```
+
+### IP-138 PCE+（探-诺-演+：元 VOI × 共识探针 × 个性化协商）
+
+```python
+def probe_commit_evolve_plus(x0, M, task, budget, consent, personas):
+    route = plan_on_map(M, task, risk_model)
     sched, log = [], []
     for cp in route.checkpoints:
-        if not staleness_gate(M, cp.region, t_now):   # 陈旧区域先补一次 view
-            M, _ = map_fuse(M, [execute_probe(view_probe(cp.region), cap=F_abs)])
-        sigma = foothold_schedule(x0, cp, M)          # 步态+落脚点候选（可达集内）
-        R = schedule_risk(sigma, M)                   # Σ_i P_fail(r_i,p_i,F_i)
+        inf = meta_few_shot_infer(M, cp.region, M.obs[cp.region], meta)
+        M.b[cp.region] = inf.post if inf.cls == 'ID' else worst_in(inf.belt)
+        sigma = foothold_schedule(x0, cp, M); R = schedule_risk(sigma, M)
         while select_gait(R) == 'halt' and budget.probes_left > 0:
-            cands = admissible_probes(cp, M, F_abs)   # 非破坏性过滤（A34）
+            cands = admissible_probes(cp, M, F_abs)   # 非破坏性过滤（A34 继承）
             if not cands: break
-            p = argmax(cands, key=lambda q: voi_pessimistic(q, M, R) - cost(q))
-            if voi_pessimistic(p, M, R) < theta_voi: break
-            M, _ = map_fuse(M, [execute_probe(p, cap=F_abs)])
+            p = argmax(cands, key=lambda q: voi_meta_pessimistic(q, M, inf) - cost(q))
+            if voi_meta_pessimistic(p, M, inf) < theta_voi: break
+            M, _, D = xmodal_fuse(M, cp.region, execute_probe(p, cap=F_abs))
+            if D > theta_D and 'consensus' not in cp.done:    # 共识探针
+                p2 = most_disagreeing_modality_probe(M, cp.region)
+                M, _, D = xmodal_fuse(M, cp.region, execute_probe(p2, cap=F_abs))
+                cp.done.add('consensus')
             sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
             budget.spend(p)
-        g = select_gait(R)
-        if g != 'halt':
-            sched.append(commit(sigma, g))
-            log.append(tag_evidence(sigma, M))        # 打证据类标签
-            continue
+        g = select_gait(R)                                 # 变速箱（第 56 轮继承）
+        lv = contact_level(cp)                             # L0/L1/L2
+        ev = tag_evidence_p(sigma, M, lv)
+        if g != 'halt' and few_shot_evidence_gate(core_contact(cp), M,
+                                                  personas, ood_reg)[0] == 'ok':
+            sched.append(commit(sigma, g)); log.append(ev); continue
         alt = reroute(M, cp, risk_model)
-        if alt and select_gait(schedule_risk(alt, M)) != 'halt':
-            route = alt; continue
-        return negotiate_or_stop(cp, M, sigma, R, consent)   # L2 协商 / 安全停
+        if alt and select_gait(schedule_risk(alt, M)) != 'halt': route = alt; continue
+        return negotiate_or_stop(cp, M, sigma, R, consent,
+                                 tau_int=tau_int(personas.active.auth))  # 超时保守停
     return sched, log, M
 ```
 
-### IP-129 BVK（信念空间生存核 + 机会约束）
+### IP-130→ISE-X（多模态交互护盾，继承 SSF 底座）
 
 ```python
-def belief_viability(x, sigma, M, gait):
-    delta_f = delta_f_of_gait(gait)
-    pf_max = 0.0
-    for (r, p, F) in sigma:
-        mu_req = friction_demand(F, posture(x))
-        pf = P_post(M.b[r], mu_r < mu_req or F_bear_r < F.peak or m_s(p) < theta_m)
-        pf_max = max(pf_max, pf)
-        if pf > delta_f: return KernelInfeasible(pf)
-    feas, u, lam = solve_contact_dynamics(x, sigma, FC(mu_lower_conf(M, sigma)))
-    return KernelApprox(feas=feas, pf_max=pf_max,
-                        margin=dist_to_chance_boundary(x, sigma, M))
-# K_in/K_out：机会约束经 Cantelli/场景近似凸化（SOCP）；外近似仍须 sound（A30 继承）
-```
-
-### IP-130 ISE（Interaction Safety Envelope）
-
-```python
-def consent_level(failc, u):
-    if failc is None and reversibility(u) == 'high': return 'L0'      # 自动
-    if failc.risk <= theta_L1 or reversibility(u) == 'high': return 'L1'
-    return 'L2'                                                       # 不可逆/高险
-
-def interaction_shield(u_nom, x, M, sched, consent):
-    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)   # 第 55 轮 SSF 为底座
+def interaction_shield_x(u_nom, x, M, sched, consent, persona):
+    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)     # 第 55 轮 SSF 底座
     failc = failing_constraint(x, u, sched, M)
     if st != 'ok' or risk(u) > consent.threshold(failc):
-        exp = grounded_explanation(M, sched, failc)      # Exp=(r,b_r,违反约束,裕度,建议)
+        exp = grounded_explanation(M, sched, failc)        # 内容五元组不变
+        m_E = render_modality(exp, persona)                # 渲染个性化
         lvl = consent_level(failc, u)
         if lvl == 'L2':
-            ok = confirm_request(exp, timeout=tau_int)   # A36: 时延上界
+            ok = confirm_multimodal(exp, m_E, persona)
             if not ok: return safe_brake(x), exp, 'L2_denied_or_timeout'
-        elif lvl == 'L1': notify(exp)                    # 异步，不阻塞节拍
+        elif lvl == 'L1': notify(exp, m_E)                 # 异步，不阻塞节拍
     return u, exp_if_any, st
-```
-
-### IP-131 TAF（Trust-calibrated Annotation Fusion）
-
-```python
-def trust_fuse(M, ann, op_hist, audit):
-    cal = calibration_score(op_hist)                     # 历史标注 vs 事后探针/实测
-    w_h = min(w_max, w0 * cal)                           # A35: 影响有界
-    e = annotation_evidence(ann, weight=w_h)
-    M, chg = map_fuse(M, [e])
-    M.quarantine[ann.region].hold(ann)                   # 佐证前不参与承诺判定
-    audit.append((ann, ann.op, cal, t_now))              # 可审计
-    return M, chg
-```
-
-### IP-132 MEC（Map-Evidence Certificate）
-
-```python
-def map_evidence_certificate(sched, log, M, consent_log, budgets):
-    for c in contacts(sched):
-        if   c.ev == 'EV-probe':  ok = c.probe.passed and c.probe.nondestructive
-        elif c.ev == 'EV-visit':  ok = M.prov[c.region].n_visits >= k_v
-        elif c.ev == 'EV-margin': ok = c.m_s >= theta_m_strict
-        elif c.ev == 'EV-human':  ok = c.op_cal >= theta_cal and c.corroborated
-        else: return ('reject', 'no_evidence_class', c)  # 证据门：无证据不承诺
-        if not ok: return ('reject', 'evidence_insufficient', c)
-    if min(x.K_margin for x in sched) < budgets.theta_K: return ('reject', 'K_margin')
-    if rho_sem(sched, M) < budgets.rho_min:              return ('reject', 'rho_sem')
-    if semantic_perturbation(M.core) > budgets.Theta_s:  return ('reject', 'delta_s')
-    if not all(l2.resolved for l2 in consent_log):       return ('reject', 'consent_open')
-    return ('ok', MapCert(M.core, core_contacts(sched), K_margin, rho_sem,
-                          delta_s, probe_log, consent_log))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| SMM | O(\|ΔE\|·d_r) 增量 | O(\|V\|·d_b) | 源权重诚实、融合保校准（A33） |
-| PCE | O(\|CP\|·k_p·(C_VOI+\|E\|)+\|CP\|·A*) | O(\|V\|+\|σ\|) | 悲观 VOI、k_p 终止、四态完备 |
-| BVK | O(N_sc·T_dyn + QP-SOCP) | O(\|X\|+\|σ\|) | 机会约束内近似 sound、δ_f(g) 单调（A29 继承） |
-| ISE | O(QP)+O(1) | O(\|Exp\|) | 拒绝必有接地解释、超时保守停（A36） |
-| TAF | O(1)+O(H_op) | O(\|标注\|) | w_h ≤ w_max、隔离区延迟生效（A35） |
-| MEC | O(\|σ\|+\|probe_log\|) | O(\|σ\|) | 无证据类即拒绝、L2 日志完备 |
+| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood（A37） |
+| XMC | O(\|ℳ\|²·d_b)/区域更新 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整（A38） |
+| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界、审计完备（A39） |
+| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int（A40） |
+| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
+| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止、四态完备 |
 
-**正确性定理（Evidence-Grounded Commitment Soundness, EGCS）**
-假设 A22–A28（第 53/54 轮）、A29–A32（第 55 轮）成立；**(A33)** 融合后区域信念校准 `ECE ≤ ε_cal` 且融合算子保校准（共轭/加权似然 + 诚实源权重）；**(A34)** 探针似然诚实且非破坏（`F_probe ≤ F_abs`，`P(探针致失效) ≤ δ_probe`）；**(A35)** `w_h ≤ w_max`、标注隔离、决策规则与人类输入隔离；**(A36)** 交互时延 `≤ τ_int` 且超时触发保守停。则：
+**正确性定理（Cross-modal Calibrated Personalized Soundness, CCPS）**
+假设 A22–A32（第 53–55 轮）、A33–A36（第 56 轮）成立；**(A37)** 元校准与 OOD 门：ID 区域 ECE_k≤ε_meta(k) 且声明诚实，OOD 门漏检率 ≤δ_ood，共形带覆盖 ≥1−α_conf；**(A38)** 条件独立假设仅在 EV-xmodal 使用处被要求，且 EV-xmodal 仅限 L1 非不可逆接触；ρ_m 跟踪与回溯诚实；**(A39)** 个性化单向有界：不确定下所有授权/权重更新只向保守方向，每会话升级 ≤Δ_auth，全局硬界不放宽；**(A40)** 多模态接口误差模型诚实且 τ_mm≤τ_int。则：
 
-1. **承诺健全性**：PCE 承诺的每个接触满足 `P(fail) ≤ δ_f + ε_cal + δ_probe + ε_h(w_max)`；
-2. **交互单调性**：任何 L1/L2/探针路径只经（a）有界信念更新或（b）触发更保守动作影响系统，不存在升险交互路径；
-3. **终止性**：PCE 在每检查点 `k_probes` 内终止于 {承诺, 绕行, L2 协商, 安全停}；
+1. **少样本承诺健全性**：ID 路径 P(fail) ≤ δ_f + ε_meta(k) + δ_probe + ε_h(w_max)；OOD 漏检路径贡献 ≤ δ_ood·α_conf；EV-xmodal 仅在 L1 上贡献 ≤ δ_xm。
+2. **交互单调性强化**：元推断、对账、个性化只能经 (a) 校准信念更新（含强制加宽）或 (b) 更保守的动作参数（τ_int↓、佐证数↑、带变宽、步态降档）影响系统，不存在升险路径；橡皮章检出使 L2 更快落入保守默认。
+3. **终止性**：每检查点共识探针 ≤k_cons，PCE+ 在 k_probes+k_cons 内终止于 {承诺, 绕行, L2 协商, 安全停}。
 4. **部署界**（对检查点取联合界）：
 
 ```
-P_safe ≥ 1 − Σ_cp (δ_f + ε_cal + δ_probe + ε_h)
-             − P(𝓜 陈旧 > τ_stale 未检出) − P(护盾回退失败) − P(τ_int 超时 ∧ 安全停失效)
+P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + δ_xm·1[L1])
+             − P(𝓜 陈旧未检出) − P(护盾回退失败) − P(τ_int ∧ τ_mm 超时 ∧ 安全停失效)
 ```
 
-关键：**证据门使单点过度自信不再足以产生承诺**（模型误校准 ∧ 无探针无裕度 ∧ 人也错，三层同时失守才会击穿）；**决策规则固定而信念流动**（人/云/探针只能改信念，不能改规则）；**护盾兜底与超时保守停继承第 55 轮 A30/A32**。
+关键：**元先验给效率、共形给保底**（效率与安全解耦，赌注不押在元模型上）；**EV-xmodal 把"一致性"变成证据，用"仅限 L1"把独立性假设的失败隔离在非不可逆层**；**个性化把人从常量变成单向状态机**（信任赢得慢、失去快）；三个新机制全部经"信念更准或动作更保守"两个安全通道起作用。
 
-## 4. 实验设计 E167–E171
+## 4. 实验设计 E172–E176
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E167 地图融合校准与抗污染 | 多访融合 ECE；注入 20% 错误标注后承诺失效率增幅 | ECE ≤ 0.05；增幅 ≤ 1% |
-| E168 探询效率与非破坏性 | 每探针风险降幅 vs 随机探针；探针致损次数；时延开销 | ≥ 2×；0 次；≤ 15% |
-| E169 证据门承诺健全性 | 承诺接触失效率 vs δ_f=0.05；假承诺率；vs 第 55 轮置信基线 | ≤ 0.06；≤ 2%；降幅 ≥ 50% |
-| E170 交互质量与时延 | 解释可读性；校准操作者标注精度；L2 P95；超时安全停成功率 | ≥ 0.8；≥ 0.85；≤ 300ms；100% |
-| E171 端到端四足部署 | 成功率 / 跌倒率 / 完成时间 / 降档恰当率 vs 第 55 轮基线 | +10% / −40% / ≤ +20% / ≥ 90% |
+| E172 少样本校准与样本效率 | ECE_k(k=1..5)；区间宽度-覆盖曲线；k\* 预测误差；vs 第 56 轮手工先验同等风险的探针数 | ECE_1≤0.10、ECE_3≤0.05；探针数 ↓≥40% |
+| E173 OOD 门与共形回退 | 注入语料外新材质：OOD 检出率；回退后假承诺率；完成时间增幅；共形带经验覆盖 | ≥95%；0；≤+25%；≥1−α_conf |
+| E174 跨模态对账 | 单模态欺骗场景（视觉伪装/刚度欺骗）假承诺率；EV-xmodal 越级使用次数；ρ 降级生效时延 | ↓≥60% vs 单模态；0 次（L2 越级）；≤1 到访 |
+| E175 个性化信任 | 橡皮章检出率与降级时延；A2 标注激活提速；疲劳会话 L2 超时保守停率；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
+| E176 端到端 | 新材质场地四足部署 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注有效率 | +8%/−30%/−25%/+20% |
 
-## 5. 集成更新：v16++ → v16* 体系
+## 5. 集成更新：v16* → v16** 体系
 
 ```
 根信任 + 能力格
@@ -358,7 +343,8 @@ P_safe ≥ 1 − Σ_cp (δ_f + ε_cal + δ_probe + ε_h)
 ├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
 ├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR)
 ├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
-├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC) ← v56 新增
+├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC)
+├─ L0.5*⁺ 元认知-信任层 (MFSL,XMC,PTM,MXI,FSE,J_p) ← v57 新增
 ├─ L1 几何感知
 ├─ L2 任务/上下文/记忆/语音
 ...
@@ -366,13 +352,13 @@ P_safe ≥ 1 − Σ_cp (δ_f + ε_cal + δ_probe + ε_h)
 ```
 
 JCPS 输出扩展为：
-`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h)`
+`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k\*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p)`
 
-其中新增：`𝓜_core` 地图核心区信念与溯源；`J_m` 地图-证据证书；`probe_log` 探针证据日志；`consent_state` 同意阶梯状态；`w_h` 人类标注权重。
+其中新增：`q_φ/k\*` 元后验与样本效率证书；`D(r)` 跨模态分歧度；`ρ_ℳ` 模态可靠性向量；`s_op/auth` 操作者信任状态；`m_E` 解释渲染模态；`ood_state` OOD 注册状态；`J_p` 少样本-跨模态-个性化证书。
 
-云边协议升级：第 55 轮 CEB（IP-126）→ **CEB+**：边界重剖分不再直接改 Σ，而是作为带版本号的地图证据写入 𝓜（与探针/人工标注同走 SMM 融合与隔离逻辑）；云端可下发 **探针建议**（哪片区域值得先探），边端回传 probe_log 作为云端先验的校准集。
+云边协议 CEB+ → **CEB++**：云端可下发元模型增量更新（带版本），但**元模型更新也要过隔离区**——先以影子模式在边端探针流上运行，校准回归测试（ECE 不劣化 ∧ OOD 检出率不降 ∧ 分歧下限触发率不降）通过后才接管承诺判定；边端回传跨模态对账残差与证伪事件，作为云端元训练的校准集与语料补盲依据。第 56 轮"地图证据走隔离"在本轮推广为"**一切判定器（含元模型）走隔离**"。
 
 ## 6. 本轮最大风险
 
-**一句话**：证据地图-探询-协商把安全赌注从"模型置信"换成"证据质量"，但地图的持久性使坏证据长寿——一次被"非破坏"假设掩盖的破坏性探针或一条高置信错误标注，会在隔离与衰减护栏生效前污染区域信念、并经多访融合放大为全图系统性偏差，让之后所有证据门都"诚实地为坏证据放行"；必须以探针力帽+不可逆审计、标注隔离+校准权重、溯源版本+陈旧衰减三重护栏，宁可重访重探，绝不采信"无溯源的确定"。
+**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变为"坏先验普遍"——若语料存在系统性盲区（某类新材质在训练分布中缺席），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的跨模态一致加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
 <!-- ARTIFACT:END -->
