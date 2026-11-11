@@ -3,313 +3,538 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 50 轮（承接第 49 轮 v13；灵感循环第 5 轮；本轮灵感：用户共创 × 双足机器人 × 模型蒸馏） · CoStride-Distill：共创契约 × 双足可行证书 × 证书引导蒸馏（八层架构 v14）
+# 第 53 轮（承接第 52 轮 v16 GroundEdge-GenSim；灵感循环第 4 轮；本轮灵感：「鲁棒性层级化」×「反向解释」）
 
-> 承接第 49 轮 v13 InteractCert-Forge。v13 把安全升级为"机器人-人-环境"耦合屏障证书，用 σ(b) 把意图不确定映射为证书宽度，用原型阶梯与传输缺口 δ 把"纸面 sound"折算为部署置信；但它隐含三个新假设：**H8：动力学是"可停"的——MRC=减速到零，动作空间充分驱动、无混合接触事件；H9：整条七层证书栈可在线实时运行——∃u_r 最坏搜索、联合调度、证伪循环都在安全关键路径上；H10：契约与意图模型由设计者离线一次性写死——人只是被观测的"意图源"而非契约的共同作者**。三个灵感词精确命中：**双足机器人**打破 H8（踝部欠驱动、步态相位不可逆、足底接触是混合事件，mid-stride 无法"停到零"，MRC 必须升级为"认证捕获步回归稳态"，屏障必须升级为带时间边界的混合可行性证书）；**模型蒸馏**打破 H9（把昂贵的"搜索"从安全路径上剥离：teacher 全栈离线/影子运行，student 实时提议，便宜且精确的守卫处置；蒸馏只许近似搜索、永远不许近似评估，因而只损失效率、不损失 soundness）；**用户共创**打破 H10（用户成为能力格约束下的共同签署人：可共创子任务、签署协议变体、在授权范围内放宽速度/幅值偏好、提供演示以加权升级为技能证书；但用户输入是证据而非真值，根信任不可委托）。三者耦合出的新问题：**共创条款必须过双足可行性剪辑（用户要"走快点"必须被捕获域收缩约束）；共创改动必须触发版本钉住的重蒸馏（旧 student 不得在新契约下服役）；蒸馏必须让 100–1000 Hz 的双足安全栈第一次成为可部署物**。
+> 灵感循环第 4 轮聚焦 **「鲁棒性层级化」×「反向解释」**。第 52 轮已把证书从"单任务真理"升级为"带适用域、迁移风险、仿真保真的可判定证书"；但它仍隐有 **H18：鲁棒性是整体量词、不是任务层面的可组合资源**——不同任务/策略/组合的鲁棒性如何从部件中合成仍是黑箱；**H19：仿真只能否决，不能解释为何失败**——当下只有"通过"/"不通过"的单向信号，缺乏反向解释（failure explanation）导致局部改进动力弱。
 
 ## 0. 直觉与动机
 
-**灵感 1（双足机器人 → 从"可停屏障"到"混合可行性证书"）**
-直觉：轮式臂的安全哲学是"随时能停"，CBF 的 `Ḃ≥−λB` 隐含任意时刻存在使屏障不降的动作。双足在单支撑相是欠驱动的：ZMP 必须留在支撑多面体内，摆动腿轨迹在触地前不可中断。因此"安全"必须重述为**可行性**：不是"存在 u_r 使 Ḃ≥0"，而是"存在有界控制序列在 τ 步内把系统送回稳态流形（双支撑静止）且途经所有状态安全"。这正是 viability kernel 的语义；我们要的证书是 kernel 的**内近似**——只对能证明可行的子集发放放行权，宁可保守、绝不假安全。时间维度也变了：双足事故的时间尺度是 100–300 ms，屏障检查必须带 time-to-boundary，超时即不等价于安全。
+**灵感 1（鲁棒性层级化 → 把鲁棒性从"黑盒容差"变为"可组合并标量化的资源"）**
 
-**灵感 2（双足机器人 → MRC 从"停机"到"捕获"）**
-直觉：对双足，"最小风险条件"不是速度零——mid-stride 急停就是摔倒。正确类比是行人的推撞恢复：识别捕获点、执行捕获步、回到稳定站立；捕获不可行时执行**预先认证的保护姿态**（下蹲收臂、断力、以最不伤姿态落地）。MRC 因此成为**分层可达性问题**：`C_1`（一步捕获）⊇ `C_2`（两步捕获）⊇ 保护姿态域，每个域都预先证书化并定期演练；MRC 的"可达"从"能停"变成"能在 N 步内被捕获"。
+直觉：v16 的 `δ_tr(T)` 把迁移风险压缩成一个标量，掩盖了**鲁棒性在不同维度上的脆弱结构**：某个任务在关节力矩上鲁棒，在刚性变形上却脆弱；某个技能组合在抓握姿态上稳，在转换瞬间因共地变化失效。若鲁棒性是不可拆解的整体，复用时只能靠经验；若能**层级化、可组件化**，就能在任务族里做"鲁棒拼图"：取 A 技能在 `d_A` 维度的鲁棒性 `ρ_A(d_A)`，取 B 技能在 `d_B` 的鲁棒性 `ρ_B(d_B)`，组合时得到交叉风险 `ρ_AB(d_A,d_B) = max(ρ_A(d_A) + Δ_AB, ρ_B(d_B))` 或更复杂的耦合函数。这样，**迁移的每一步都能给出可解释的鲁棒性缺口**，而不是只说"风险太大/太小"。
 
-**灵感 3（模型蒸馏 → 提议-处置：蒸馏近似搜索、绝不近似评估）**
-直觉：v13 栈里真正贵的不是**求值**（B、PFL、Inv 是闭式/可验证函数，求值便宜），而是**搜索**：∃u_r 最坏情形枚举、(v,a,m,q,ι,κ) 联合调度、PFV 场景预算分配。蒸馏的正确切口是：teacher（全栈+完整搜索）离线/影子运行，产出"状态→认证候选"标签；student 实时提议候选；**精确守卫**只对候选做 O(小) 的证书求值。学生的错误最多让你走上回退路径（效率损失），永远不能让未认证动作被执行——放行权只在精确守卫手里。这条"提议-处置"结构把蒸馏从"精度风险"变成"可用性风险"，是安全蒸馏的关键不对称。
+**灵感 2（反向解释 → 仿真不是"找反例器"，而是"教科书"）**
 
-**灵感 4（用户共创 → 能力格上的共同签署，而非众包真值）**
-直觉：v13 把 α_intent 列为最大信任锚，因为意图是被动的后验。共创的正确打开方式不是"信用户"，而是让用户把意图**变成签署过的承诺**（"把杯子放到我左手边"/"我接受交接协议 B"/"允许你在我厨房走快一档"），用可观测的后续行为校验承诺兑现率（track record → 证据权重 ω_u），未兑现即降权并回到 σ(b) 硬下界。关键约束：用户权威必须落在**能力格**上（空间域×参数类别×幅值上界的偏序格），PFL、屏障类别、MRC 属根信任**不可委托**；"走快点"这类条款要被双足可行性**剪辑**——快步态收缩捕获域，剪辑后的值才生效。用户是"有格子的共同作者"，不是"新的根"。
+直觉：当前 v16 的 FDR 只做单向判决——仿真找到反例就收缩域/拒绝，听说了知道。用户和调度器想知道的是：**为什么失败？在哪几条支撑关系上脆弱？该怎么改造技能、调参或约束？**这需要 **反向解释（reverse explanation）**：从仿真的失效轨迹 `π_fail` 挖出**因果链**（哪个接触、哪个假设、哪个参数突破了安全界），并映射回任务描述符与技能声明。这样，迁移/组合/蒸馏的每一步都不是盲目试用/错，用仿真的"失败案例"直接当作**改进的蓝图**。
 
-**灵感 5（模型蒸馏 × 原型证伪 → 反例共蒸馏与学习证伪器）**
-直觉：PFV 的预算永远不够；把历史反例与守卫拒绝样本蒸馏成**学习证伪器** LFF（预测证书薄弱区域），由它给场景分布提优先级，精确证伪器仍然只负责"定罪"。新反例同时回灌 LFF 与 student（把"守卫会拒绝的行为"提前教学生避开），形成"证伪—教学"共蒸馏闭环。LFF 的错误只浪费预算，不产生假阴性放行——因为它无权放行任何东西。
+**灵感 3（层级化鲁棒性的形式化 → 鲁棒性维度格 + 可传递的鲁棒性证书）**
 
-**耦合升级**：v13 七层之上新增 **L3.5 动力可行层（HVC/CRM）** 与跨层**蒸馏通道（KDX/LFF，版本钉住）**，L2.5 升级为**交互安全与共创契约层（IPC+UCC）**。八层 v14：根信任+用户能力格 + L1 几何感知 + L2 任务分解/上下文/记忆/语音（语音共创入口）+ L2.5 交互安全与共创契约 + L3 关节证书/抽象/交互感知决策 + L3.5 动力可行（混合可行性/捕获）+ L4 CAR/Shield/CBG+/KDX 守卫 + L5 DCL/真机评测（新增分歧日志）+ L6 原型证伪/XFER/LFF。JCPS 联合输出升级为 `(v_t^*, a_t^*, m_t^*, q_t^*, ι_t, κ_t)`（κ=步态相位/捕获状态/运动模式）。
+直觉：把鲁棒性抽象为 **维度化谓词**：每个技能/任务都有 **鲁棒性谱 `ρ = {ρ_1, ρ_2, ..., ρ_k}`**，对应动力学/几何/感知/控制/K 的不同维度。不同维度的鲁棒性可以独立分析，也可以在组合时按耦合矩阵叠加。**鲁棒性证书 `R = (ρ, D_R, ε_B)`** 声明：在适用域 `D_R` 内，维度谱 `ρ` 以容差 `ε_B` 成立；跨域迁移时，新的 `ρ'` 需要计算 **耦合修正 `γ(ρ, φ)`**。这样，**鲁棒性不再是整体的噤声声誉，而是可以检索、组合、传递的结构化资源**。
 
-## 1. 形式化定义（增量：定义 79–86）
+**灵感 4（从仿真到技能：反向仿真解释器）**
 
-**定义 79（能力格与共创契约）**
-权威格 `L_auth=(𝒜,⊑)`，每个授权范围 `s∈𝒜` 为三元组（空间域 × 参数类别 × 幅值上界），满足偏序与闭包。共创契约 `κ_c=(s, clause, Sig_u, Sig_designer, ver)` 合法当且仅当：(i) `clause ⊑ s.cap`（不超能力格）；(ii) `clause` 与根信任不变式（PFL、屏障类别、MRC、审计）无冲突——**不可委托条款**不参与放宽；(iii) 双签署（用户+设计者模板）且版本 `ver` 钉入台账。用户证据权重 `ω_u=clamp(ω_0·adherence(u), ω_min, ω_max)`，`adherence` 为历史签署承诺兑现率（由 DCL 统计）；权重下降自动回到 σ(b) 硬下界治理。**用户输入永远按证据处理，不是真值。**
+直觉：设想一个 **反向解释器 `Explain(sim_result)`**：输入仿真器跑出的失败轨迹，输出 **失败根因分布**（P(因果根因 = c_i)）和 **局部修正建议**（Δ 参数 / 约束 / 技能子模块）。这个解释器不是神经网络的黑箱，而是基于 **结构化仿真模型 + 形式语义学**：把仿真过程切片、建模、抽象成逻辑命题。这样，**每一次仿真的失败都成为技能的进化反馈**，蒸馏过程从"挑最好的"变成"把失败的教训写进新技能"。
 
-**定义 80（双足混合可行系统与可行性证书）**
-双足系统 `Σ_b=(Q_m, X, U_b, f_q, G_q, R_q)`，模式集 `Q_m={flight, single, double}`，接触事件经守卫 `G_q` 与重置 `R_q`；执行器有界 `‖u‖≤u_max`，摩擦锥有界。可行集 `V(T)= {z_0: ∃ 有界控制轨迹使 ∀t≤T z(t)∈Z_safe 且 z(T)∈M_stand}`（稳态流形 M_stand=双支撑静止）。可行性证书 `B_v: Z×Q_m→ℝ` 满足 `B_v(z,q)≥0 ⇒ z∈C_cert ⊆ V(T)`（**内近似**）；求值器经离线验证（SMT/区间算术/数值边界检验）且在线求值成本 ≤ τ_eval（**成本被认证**）。放行附加时间边界：`time_to_boundary(z) ≥ τ_ttb_min`。
+**灵感 5（层级化 + 反向解释 的耦合 → 可解释的鲁棒性金字塔）**
 
-**定义 81（捕获域与双足 MRC）**
-k 步捕获域 `C_k={z: ∃ ≤k 步控制序列将 z 送回 M_stand，且途经状态满足 B_v≥0 ∧ PFL}`，按包含 `C_1⊆C_2⊆…⊆C_max⊆C_cert`。双足 MRC 分层：`z∈C_1` 执行认证一步捕获；`z∈C_2\C_1` 两步；`z∉C_max` 执行**认证保护姿态**（预下蹲、收臂、断力、落地缓冲），其轨迹离线证书化并定期真机演练。捕获执行误差（打滑/推力超出认证扰动集）计入 `α_cap`。轮式/固定基座平台 MRC 退化为 v13 的"减速到零"，CRM 是其严格超集。
+直觉：构筑一个 **可解释的鲁棒性金字塔**：
+- **底层**：物理/动力学鲁棒性（刚体、接触、摩擦）——用最保守的数值/形式化界；
+- **中层**：控制/规划鲁棒性（HVAC、PSC、ACC）——从仿真反向解释提取关键约束；
+- **顶层**：系统级/任务鲁棒性（CAR、SHIELD、CBG+）——由下而上拼合、校准。
+每层都有 **可判定的鲁棒性谓词** 与 **反向解释机制**；跨层迁移时，需要 **跨层鲁棒性传递证书**。这把 v16 从"全局风险预算"提升为**可结构化、可解释、可传递的鲁棒性体系**。
 
-**定义 82（证书引导蒸馏）**
-teacher `𝒯`=完整 v14 栈（含完整搜索）；student `s_φ: (o,ctx)→候选 (u_r, a, m, q, ι, κ步序)`。训练数据 = teacher 认证 rollout + PFV 反例 + 守卫拒绝样本；损失 = 认证标签模仿项 + **可行域裕量项**（以 teacher 的证书裕量为回归目标）+ 分歧惩罚。**蒸馏只允许逼近搜索算子；证书求值算子（B、B_v、PFL、Inv、版本哈希）禁止被近似替代**——这是架构红线，不是超参。
+## 1. 形式化定义（增量：定义 107–114）
 
-**定义 83（提议-处置守卫）**
-精确守卫 `G_exact` 在实时预算 τ_g 内对候选执行全部精确求值（屏障/可行性/PFL/协议不变式/共创版本哈希/租约），全部通过才放行；否则依次回退：更多候选 → 限量完整搜索 → CRM。`G_exact` 的求值成本被离线认证（cost-certified）并有运行时看门狗（超预算即强制安全慢模式）；学生提议频次受限以防"守卫抖动"。学生误差只改变所走路径（fast/fallback/MRC），不改变放行标准——**蒸馏损失的是可用性，不是 soundness**。
+**定义 107（鲁棒性维度与谱）**
+鲁棒性维度 `d ∈ 𝔇_ρ = {dynamics, geometry, force, friction, cable, compliance, perception, control, latency, human, ...}`。技能 `S` 的**鲁棒性谱** `ρ_S : 𝔇_ρ → [0,1]`，其中 `ρ_S(d) = 1` 表示在维度 `d` 上具备完美鲁棒性，`ρ_S(d) = 0` 表示完全脆弱。**鲁棒性是局部的、条件化的**：`ρ_S(d)(θ)` 随参数向量 `θ` 变化。
 
-**定义 84（学习证伪器与反例共蒸馏）**
-`LFF_ψ: 场景→违规概率/薄弱区域`，由历史反例与守卫拒绝样本训练；PFV 预算按 LFF 优先级分配；只有**精确证伪器**能判定违规（定罪权不蒸馏）。新反例同时更新 LFF 与 student（共蒸馏）。LFF 只影响预算分配效率，其假阴性不产生放行。
+**定义 108（鲁棒性证书）**
+鲁棒性证书 `R = (ρ, D_R, ε_B, evidence)`：
+- `ρ` 为鲁棒性谱；
+- `D_R ⊆ ℱ` 为**鲁棒性适用域**，由谓词 `dom_R : 𝔇 → {in,out,unknown}` 判定；
+- `ε_B` 为**容差包**，说明在域内 `ρ` 的实际值可能出现的下游漂移；
+- `evidence` 为依据：E0=仿真反例；E1=仿真校准+锚点；E2=真实认证。
+**迁移时**：若 `φ` 为任务态射，需计算 `ρ' = ρ ∘ φ` 并给出 **耦合修正 `γ(ρ, φ)`**；若 `|ρ' - ρ| > ε_B` 或 `dom_R(φ(T)) = out`，则迁移失效。
 
-**定义 85（共创-版本-再蒸馏一致性）**
-每次守卫检查携带契约版本哈希 `h(κ_c)`；契约变更触发 teacher 重解 → 重蒸馏 → **再认证**（在守卫集上零违例 + held-out 认证场景回归通过）方可服役；版本不匹配的学生候选一律被 `G_exact` 拒绝（fail-closed），旧学生不得在新契约下执行。
+**定义 109（鲁棒性耦合修正）**
+给定技能族 `{S_i}` 及其跨维度耦合矩阵 `K ∈ [0,1]^{k×k}`（`K_{ij}` 表示维度 `j` 的脆弱性如何放大/抑制维度 `i`），组合技能 `S_⊗` 的鲁棒性谱：
+```
+ρ_{S⊗}(d_i) = min_{j} [ ρ_{S_i}(d_j) / (1 + K_{ij}·(1 - ρ_{S_i}(d_j))) ] · ∏_c f_c(adjacent_d)
+```
+其中 `f_c` 为组合约束的折扣因子，`adjacent_d` 为相邻维度的鲁棒性。**组合时必须给出新的 `γ` 或接受 `α_int` 风险**。
 
-**定义 86（账本与八源归因）**
-`CCL++` 在 `CCL+` 上追加：共创签署/剪辑事件、捕获步与保护姿态事件、学生-守卫分歧与回退、LFF 定罪反例哈希；DDA 归因扩为**八源**：感知/关节/边界/意图/接触/传输/**动力（可行·捕获）**/蒸馏（分歧与服务降级）。任一来源的置信折损显式入账并参与抽象与速度缩放，不得静默吸收。
+**定义 110（反向仿真解释器）**
+反向解释器 `Explain : (sim_result, model) → (RootCauseSet, Confidence, Suggestion)`：
+- **输入**：仿真结果 `sim_result = (π, failure_mode, violation_set)`；
+- **模型**：结构化仿真模型 `ℳ = (states, actions, assumptions, constraints)`；
+- **输出**：
+  - `RootCauseSet ⊆ assumptions` 为**概率加权的根因集合**；
+  - `Confidence ∈ [0,1]` 为解释可信度；
+  - `Suggestion` 为**局部修正动作**（参数调小/大、约束 tighten、子技能 replace）。
+解释器必须满足 **结构一致性**：根因必须可追溯到仿真轨迹的具体时刻、假设、约束。
 
-## 2. 新增产出与既有 IP 升级
+**定义 111（鲁棒性金字塔）**
+鲁棒性金字塔 `𝕃 = (𝕃_0, 𝕃_1, ..., 𝕃_h)`：
+- **底层 `𝕃_0`**：物理/动力学鲁棒性，用最保守的数值/形式化界界定；
+- **中层 `𝕃_i (i≥1)`**：控制/规划/系统鲁棒性，由 `Explain` 从下层反馈构造；
+- **顶层 `𝕃_h`**：任务/策略鲁棒性，由自上而下的约束传播 + 下而上的校准闭合。
+**跨层传递**：`L_i → L_j` 必须通过 **跨层鲁棒性传递证书**，说明 `ρ(L_j)` 相对于 `ρ(L_i)` 的变化界。
 
-**IP-86 UCC（User Co-creation Contract）**：能力格 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权、版本钉住。
-**IP-87 HVC（Hybrid Viability Certificate）**：双足混合可行性证书；`B_v` 内近似 + 时间边界 + 成本认证的求值器。
-**IP-88 CRM（Capture-Region MRC）**：分层捕获域 `C_1⊆C_2⊆C_max` + 认证保护姿态；v13 MRC 的严格超集。
-**IP-89 KDX（Certificate-guided Distillation eXecutive）**：提议-处置执行器；teacher 离线/影子、student 实时提议、G_exact 精确处置、分歧与回退入账。
-**IP-90 LFF（Learned Falsifier Front-end）**：学习证伪器；给 PFV 提优先级、反例共蒸馏、无定罪权。
+**定义 112（可传递鲁棒性迁移证书）**
+跨层迁移证书 `TRC = (S_source, L_target, γ, δ_ρ, D_TR, evidence)`：
+- `γ` 为**鲁棒性传递函数**，说明如何从源层谱 `ρ_source` 计算目标层谱 `ρ_target`；
+- `δ_ρ` 为**鲁棒性迁移间隙**，满足 `|ρ_target - γ(ρ_source)| ≤ δ_ρ`；
+- `D_TR` 为**传递适用域**；
+- `evidence` 至少 E1。
+若 `dom_TR(T) = in` 且 `δ_ρ < THETA_ρ`，则迁移可接受。
 
-**既有 IP 升级**
-IP-82 IPC：协议状态新增共创签署转换（用户可签协议变体）；确认信号纳入签署证据。
-IP-80 SIG：意图后验升级为"后验 + 已签承诺"的锐化混合 `b'(θ)∝b(θ)·(1+ω_u·c_θ)`；σ 硬下界不动。
-IP-79 SIC：联合状态扩为 `z=(x_r,x_h,x_e,κ)`，屏障条件与步态相位耦合；∀人动作∃机器序列（而非单步动作）。
-IP-85 MRC：升级为 CRM 兼容——轮式臂=停机，双足=捕获/保护姿态；MRC 触发一律入 CCL++。
-IP-83 PFV：预算分配接入 LFF；原型阶梯对双足加入滑移/推撞/柔顺地面注入。
-IP-84 XFER：传输缺口估计加入"动力学保真"维度（双足原型对打滑与推力的对标）；学生跨层迁移同样带 δ。
-IP-77 DDA：六源 → 八源（+动力、+蒸馏）。
-IP-61 DCL：新增学生-守卫分歧、捕获事件、共创承诺未兑现、滑移近失四类样本。
-IP-62 CCA：新增越权共创、承诺欺骗、步态时机欺骗、对抗性提议（student DoS/守卫抖动）红队。
-IP-51 CAR：守卫条件加入"精确求值通过 ∧ 版本哈希匹配 ∧ 求值看门狗正常"。
-IP-45 总线：新增 locomotion-mode / capture-state / contract-version / student-guard-disagreement 话题。
-IP-66/67/68：语音成为共创入口（签署/修改条款需多模态身份确认）；记忆存储契约版本历史；SAB 队列对共创请求走双签署流程。
-IP-75 ASC：抽象可行性加入 κ（步态相位）与捕获域约束；高不确定或窄捕获域强制细化。
-IP-74 HTD-Cert：分解节点可含步态子任务（"走到灶台前"= 可行性证书节点）；边蕴含同时查捕获可达。
-IP-72 RRP：e-process 纳入可行性/捕获/共创证据；跨层传输仍带 δ。
-IP-76 CCL：升级为 CCL++（见定义 86），仍只追加。
+**定义 113（反向解释化验锚点）**
+反向解释 **锚点集** `A_E = {e_1, ..., e_q}`：每个锚点是 **(场景, 期望根因, 验证方法)** 的三元组。锚点必须**事前预注册**，验证 `Explain` 的根因识别是否覆盖 `failure_mode`。若 `|{e : Explain(sim(e)) = e_root}| / q < 1 - β_E`，则解释器失效，迁移/复用受限。
 
-## 3. 算法骨架
+**定义 114（鲁棒性更新规则）**
+给定历史 `H = {T_k, S_k, ρ_k, Explain_k, residual_k}`，**鲁棒性更新规则**：
+```
+ρ_{new} = (1 - λ) · ρ_{old} + λ · update_rule(H, d_ρ)
+```
+其中 `λ ∈ (0,1)` 为**学习率**；`update_rule` 可以是 **指数加权** 或 **贝叶斯更新**。更新必须通过 **反向解释化验锚点** 验证，防止**负迁移的鲁棒性泄漏**。
 
-每个宏周期：
-1. 读目标、证书 `C_t`、租约、`CCL++`、契约版本哈希 `h(κ_c)`；任一失效或审计失败 → fail-closed。
-2. HTD-Cert 展开/复用 DAG；前沿节点标注交互子任务（协议状态 ι）与步态子任务（捕获约束 κ）。
-3. 更新意图信念：`b'(θ)` = 后验 × 已签承诺（ω_u 加权）；计算 `H(b'), σ(b')`；σ 低于阈值只保留 primitive 或 CRM。
-4. UCC 校验新增共创条款：能力格 + 不可委托 + 双签署；通过则更新契约并触发 teacher 重解/重蒸馏（异步）；旧版本学生即刻失效。
-5. KDX 提议-处置：student 提议候选 (u_r,a,m,q,ι,κ)；`G_exact` 精确求值 B/B_v/PFL/Inv/共识/版本/租约；通过才执行；否则更多候选 → 限量完整搜索 → CRM。
-6. HVC 维持可行性内近似：步态相位推进时复核 `B_v≥0` 与 time-to-boundary；接近边界即触发捕获准备。
-7. 执行前后 CBG+ 复核边界蕴含 ∧ 屏障 ∧ 可行性 ∧ PFL ∧ 协议共识 ∧ 版本匹配；通过才追加 CCL++。
-8. 若实测违反（含滑移/推撞/捕获失败）：DDA 八源归因，选最早安全点再分解/重校准/再蒸馏；必要时 CRM。
-9. 离线/并行：PFV+LFF 按预算证伪，XFER 估计 δ 并膨胀部署 α；新反例回灌 DCL/CCA 并共蒸馏 student 与 LFF。
-10. 所有路径（抽象、协议、共创、蒸馏）均不可行 → 技能合成 / 人工接管 / 保护姿态 / fail-closed，绝不绕过 L3.5 与精确守卫。
+## 2. 关键算法 伪代码
 
-## 4. 本轮最大风险
+### IP-107 TRO（Robustness Spectrum & Certificate）
 
-**一句话**：安全论证现在悬挂在一个新的承重假设 (A11) 与两个新的近似锚上——**"便宜且精确"的守卫求值**、**可行性内核 C_cert 与捕获策略的保守性**、**用户授权不被滥用**；一旦求值在真机超预算或被静默近似替代，或内核/捕获对打滑与未认证扰动过于乐观，或共创条款越过能力格，propose–dispose"只损失效率不损失 soundness"的不对称就会崩塌成"纸面 sound、现实不安全"，因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
+```python
+def robustness_spectrum(skill, dimensions):
+    """计算技能在鲁棒性维度上的谱"""
+    rho = {}
+    for d in dimensions:
+        if d == 'dynamics':
+            rho[d] = assess_lyapunov_robustness(skill.dynamics)
+        elif d == 'geometry':
+            rho[d] = assess_collision_margin(skill.geometry)
+        elif d == 'force':
+            rho[d] = assess_force_torque_safety(skill.force_model)
+        elif d == 'friction':
+            rho[d] = assess_sliding_stability(skill.friction_model)
+        elif d == 'control':
+            rho[d] = assess_control_barrier_robustness(skill.controller)
+        else:
+            rho[d] = assess_via_sim_benchmarks(skill, d)
+    return rho
+
+def domain_check_robust(R, d):
+    """鲁棒性域判定：unknown→out，fail-closed"""
+    if R.dom_predicate(d) == 'unknown':
+        return 'out'
+    return R.dom_predicate(d)
+
+def robust_certificate(rho, domain, epsilon_B, evidence):
+    return RobustCert(rho, domain, epsilon_B, evidence)
+```
+
+### IP-110 REX（Reverse Explanation Engine）
+
+```python
+def explain_failure(sim_result, model):
+    """从仿真失败轨迹生成反向解释"""
+    π, fail_mode, violations = sim_result
+    
+    # 1. 构建原因图
+    causes = []
+    for t, state in enumerate(π):
+        for v in violations:
+            if violated_at(v, state):
+                c = causal_trace(v, state, model)
+                causes.append((c.root_cause, c.confidence * time_decay(t, len(π))))
+    
+    # 2. 聚合 & 归一化
+    cause_dist = aggregate_causes(causes)
+    
+    # 3. 生成修正建议
+    suggestions = []
+    for c, p in top_k(cause_dist, k=3):
+        if c.type == 'parameter':
+            suggestions.append(('tighten', c.param, delta=c.violation - margin))
+        elif c.type == 'constraint':
+            suggestions.append(('add', c.constraint, scope=c.region))
+        elif c.type == 'subskill':
+            suggestions.append(('replace', c.subskill, alternatives=c.viable_alt))
+    
+    return Explanation(
+        root_causes=sorted(cause_dist, key=lambda x: -x[1]),
+        confidence=max(p for _, p in cause_dist),
+        suggestions=suggestions
+    )
+```
+
+### IP-109 RCO（Robustness Coupling & Composition）
+
+```python
+def compose_robustness(rho1, rho2, coupling_matrix, constraints):
+    """组合技能的鲁棒性耦合计算"""
+    rho_new = {}
+    
+    for d in rho1.keys():
+        # 基本保守上界
+        rho_new[d] = min(rho1[d], rho2[d])
+        
+        # 耦合矩阵修正
+        for j in rho1.keys():
+            if coupling_matrix.get((d, j), 0) > 0:
+                coupling_effect = coupling_matrix[(d, j)] * (1 - rho1[j])
+                rho_new[d] = max(0, rho_new[d] - coupling_effect)
+        
+        # 约束折扣
+        if d in constraints:
+            rho_new[d] *= constraints[d].discount_factor
+    
+    return rho_new
+
+def coupling_correction(rho_source, coupling_matrix, phi):
+    """态射 φ 带来的鲁棒性耦合修正"""
+    rho_target = {}
+    for d_target in rho_source.keys():
+        # 传递函数：基于 φ 在 d_target 维度上的失配
+        loss = coupling_mismatch(coupling_matrix, phi, d_target)
+        rho_target[d_target] = max(0, rho_source.get(d_target, 0) - loss)
+    return rho_target
+```
+
+### IP-112 TRC（Transfer Robustness Certificate）
+
+```python
+def transfer_robustness_certify(S_source, L_target, phi, delta_ρ_budget):
+    """跨层迁移鲁棒性证书生成"""
+    rho_source = S_source.robustness_spectrum
+    
+    # 1. 计算传递函数 γ
+    gamma = lambda rho: coupling_correction(rho, COUPLING_MAT, phi)
+    
+    rho_target = gamma(rho_source)
+    
+    # 2. 计算迁移间隙 δ_ρ
+    delta_ρ = {d: max(0, rho_source[d] - rho_target[d]) for d in rho_source}
+    
+    # 3. 判定
+    if sum(delta_ρ.values()) > delta_ρ_budget:
+        return ('reject', 'robustness_budget_exceeded', delta_ρ)
+    
+    # 4. 生成域与证据
+    domain = compute_transfer_domain(S_source, phi, L_target)
+    if domain_check_robust(S_source.R, domain) != 'in':
+        return ('reject', 'domain_mismatch')
+    
+    evidence = collect_evidence_for_transfer(S_source, L_target, phi)
+    if evidence.level < E1:
+        return ('reject', 'insufficient_evidence')
+    
+    return ('ok', TRC(
+        S_source=S_source.id,
+        L_target=L_target,
+        gamma=gamma,
+        delta_ρ=delta_ρ,
+        D_TR=domain,
+        evidence=evidence
+    ))
+```
+
+### IP-114 RUR（Robustness Update Rule）
+
+```python
+def update_robustness_spectrum(rho_old, H, lambda_lr, explanation_anchors):
+    """基于历史数据和反向解释更新鲁棒性谱"""
+    rho_new = {}
+    
+    # 1. 计算每个维度的残差
+    for d in rho_old.keys():
+        residuals = [residual(Explainer(T, S, rho) for T, S in H if d in S.claimed_dims]
+        
+        # 2. 贝叶斯更新
+        prior = rho_old[d]
+        likelihood = exp(-mean(residuals))
+        posterior = (1 - lambda_lr) * prior + lambda_lr * likelihood
+        
+        rho_new[d] = max(0, min(1, posterior))
+    
+    # 3. 验证解释锚点
+    for anchor in explanation_anchors:
+        if not validate_explanation(rho_new, anchor):
+            # 锚点失败，减缓更新
+            rho_new = conservative_blend(rho_old, rho_new, factor=0.5)
+            break
+    
+    return rho_new
+```
+
+### IP-108 RXC（Robustness Exchange Protocol）
+
+```python
+def robustness_exchange_request(T_new, candidate_certs, graph, constraints):
+    """任务新鲜性请求：检查鲁棒性迁移可行性"""
+    d_T = interpretable_descriptors(T_new)
+    
+    # 1. 域判定
+    viable_certs = [C for C in candidate_certs 
+                   if domain_check_robust(C.R, d_T) == 'in']
+    
+    # 2. 鲁棒性传递检查
+    transfers = []
+    for C in viable_certs:
+        for phi in possible_morphisms(T_new, C.domain):
+            trc = transfer_robustness_certify(C.S, L_TASK, phi, DELTA_RHO_BUDGET)
+            if trc[0] == 'ok':
+                transfers.append(trc[1])
+    
+    if not transfers:
+        # 3. 生成反向解释建议
+        suggestions = []
+        for C in candidate_certs:
+            failure_pred = predict_robustness_gap(T_new, C, graph)
+            if failure_pred:
+                exp = explain_failure(failure_pred, SIM_MODEL)
+                suggestions.extend(exp.suggestions)
+        
+        return ('rejected', 'no_suitable_robustness', need_suggestions=suggestions)
+    
+    return ('ok', transfers, auto_aggregate_constraints(transfers))
+```
+
+## 3. 复杂度与正确性
+
+| 组件 | 时间复杂度 | 空间复杂度 | 正确性关键 |
+|---|---|---|---|
+| TRO | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 维度谱完整、容差包闭合 |
+| REX | O(|π|·|violations|) | O(|causes|) | 结构一致性、锚点验证 |
+| RCO | O(|𝔇_ρ|²) | O(|𝔇_ρ|²) | 耦合矩阵正确、约束折扣合理 |
+| TRC | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 传递函数 γ sound、δ_ρ 预算 |
+| RUR | O(|H|·|𝔇_ρ|) | O(|H|) | 锚点验证、负迁移防护 |
+
+**正确性定理（Layerwise Robustness Soundness）**
+假设 (A17)–(A21) 承接 v16；
+**(A22)** 鲁棒性谱 `ρ` 由结构化仿真模型支持，维度 `d` 的 `ρ(d)` 基于形式语义学或可验证的物理模型；
+**(A23)** 耦合矩阵 `K` 由红队测评与跨层实验校准，`γ(ρ, φ)` 在给定 `K` 下单调；
+**(A24)** 反向解释器 `Explain` 通过锚点验证，`P(Explain(sim) = true_root) ≥ 1 - β_E`；
+**(A25)** 鲁棒性更新规则 conservatively 更新，防止负迁移。
+则：`P(∀t≤T: ρ(z(t), d) ≥ ρ_min ∀ d ∈ 𝔇_ρ) ≥ 1 - Σ_d (1 - ρ_min(d)) - α_δ - β_E`。
+
+## 4. 实验设计 E151–E156
+
+| 实验 | 指标 | 目标 |
+|---|---|---|
+| E151 鲁棒性谱度量 | 各维度 `ρ(d)` 可重复性；K 估计误差 | ρ(d) CI 宽度 ≤ 0.05；K 估计 R² ≥ 0.8 |
+| E152 耦合矩阵校准 | 跨维度脆弱性放大率；RCO 预测准确 | `|ρ_composed - ρ_actual| ≤ 0.1`；Pearson r ≥ 0.85 |
+| E153 反向解释驱动改进 | Explain 正确率；改进后成功率提升 | 解释正确率 ≥ 90%；改进后成功率 Δ ≥ 15% |
+| E154 迁移鲁棒性传递 | TRC 迁移成功率 vs 本地认证 | 迁移成功率 ≥ 80% 本地认证的 90% |
+| E155 金字塔层级传递 | 跨层传递 δ_ρ 误差；漂移检测延迟 | δ_ρ 误差 ≤ 0.05；延迟 ≤ τ_shift |
+| E156 负迁移防护 | 误用旧 R 的放行次数；回退触发率 | 放行 0 次；回退率 100% 检出负迁移 |
+
+## 5. 风险与缓解
+
+| 风险 | 等级 | 缓解措施 |
+|---|---|---|
+| 鲁棒性维度划分不完整 | 高 | 动态扩维 + 红队发现 + 元学习发现隐藏维度 |
+| 耦合矩阵 K 误估 | 高 | 红队对抗 + 多仿真器交叉 + 实时在线校准 |
+| 反向解释器产生误导性根因 | 高 | 多模型投票 + 结构一致性检查 + 锚点验证 |
+| 迁移 δ_ρ 超预算 | 高 | 保守传递函数 + 负迁移即拒 + 费用归因 |
+| 鲁棒性更新导致漂移 | 中 | 锚点验证 + 保守学习率 λ + 红队监测 |
+| 解释器锚点不足 | 中 | 多场景锚点 + 交叉验证 + 持续补充 |
+| 金字塔传递信息丢失 | 中 | 跨层映射函数闭合 + 信息保持约束 |
+| 维度谱过度稀疏 | 低 | 稀疏正则化 + 维度激活门控 |
+
+## 6. 本轮最大风险
+
+**一句话**：层级化鲁棒性与反向解释将 v16 的"全局风险"拆解为可传递的维度谱，却引入了 **K 耦合矩阵、Explain 解释器、锚点验证三重自指估计**；一旦耦合矩阵误算、解释器对抗欺骗或锚点不足，**鲁棒性的"可传递性"就变成了"可误传播性"**——局部检查均衡，却在真实任务族的维度交叉脆弱处系统性失效，故必须以**跨仿真器校准、红队对抗解释、负迁移绊线+预注册锚点**双重验证，宁可保守维度，绝不把结构化的"安全外衣"当作底层防护。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 50 轮产物 · 创新点清单 v27：CoStride-Distill（UCC × HVC × CRM × KDX × LFF）× 共创契约、双足可行证书与证书引导蒸馏（八层架构 v14）
+# 第 53 轮产物 · 创新点清单 v30：GroundEdge-GenSim++（TIX×XFR×CRC×SFE×FDR×RAB×DST×SBC×TRO×REX×RCO×TRC×RUR）
 
-> 承接第 49 轮产物 v26。本轮增量插入 IP-86/87/88/89/90，并升级 IP-82/80/79/85/83/84/77/61/62/51/45/66/67/68/75/74/72/76。不推倒 v13 耦合安全交互与原型证伪框架；新增 L3.5 动力可行层与跨层蒸馏通道，L2.5 升级为交互安全与共创契约层。第 5 轮灵感循环聚焦 H8/H9/H10：动力可停性、全栈在线实时性、契约作者单一性。核心不对称：**蒸馏只许近似搜索、绝不近似评估——学生误差损失可用性，不损失 soundness**。
+> 承接第 52 轮产物 v29。本轮在 v16 基础上插入 **「层级化鲁棒性」** 与 **「反向解释」** 两大算子：
+> - **TRO（Robustness Spectrum）**：把鲁棒性从标量 `δ_tr` 解构为可维度化的谱 `ρ`；
+> - **REX（Reverse Explanation Engine）**：从仿真失败生成结构化根因 + 修正建议；
+> - **RCO（Robustness Coupling）**：提供耦合矩阵 `K`，实现鲁棒性的可组合标量化；
+> - **TRC（Transfer Robustness Certificate）**：跨域/跨层迁移的鲁棒性传递证书；
+> - **RUR（Robustness Update Rule）**：贝叶斯式更新鲁棒性谱，防止负迁移。
+>
+> IP 编号：IP-107~IP-114（共 8 个新增），并升级 IP-51/85/96/45/72 以纳入鲁棒性维度与反向证据。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-86 | UCC User Co-creation Contract | 新增 | 能力格授权 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权 ω_u |
-| IP-87 | HVC Hybrid Viability Certificate | 新增 | 双足混合可行性证书；B_v 内近似 + time-to-boundary + 成本认证求值器 |
-| IP-88 | CRM Capture-Region MRC | 新增 | 分层捕获域 C_1⊆C_2⊆C_max + 认证保护姿态；v13 MRC 的严格超集 |
-| IP-89 | KDX Cert-guided Distillation eXecutive | 新增 | 提议-处置：student 提议、G_exact 精确处置；版本钉住、回退入账 |
-| IP-90 | LFF Learned Falsifier Front-end | 新增 | 学习证伪器提 PFV 预算优先级；反例共蒸馏；无定罪权 |
-| IP-82 | IPC | 升级 | 协议新增共创签署转换；确认信号纳入签署证据 |
-| IP-80 | SIG | 升级 | b' = 后验×已签承诺（ω_u 锐化）；σ 硬下界不动 |
-| IP-79 | SIC | 升级 | 联合状态扩 κ；∀人动作 ∃机器**序列**（捕获可达） |
-| IP-85 | MRC | 升级 | CRM 兼容：轮式臂=停机，双足=捕获/保护姿态 |
-| IP-83 | PFV | 升级 | LFF 提优先级；双足阶梯加滑移/推撞/柔顺注入 |
-| IP-84 | XFER | 升级 | δ 增动力学保真维度；学生跨层迁移同样带 δ |
-| IP-77 | DDA | 升级 | 六源 → 八源（+动力、+蒸馏） |
-| IP-61 | DCL | 升级 | 采集学生-守卫分歧/捕获事件/承诺未兑现/滑移近失 |
-| IP-62 | CCA | 升级 | 越权共创/承诺欺骗/步态时机欺骗/对抗性提议红队 |
-| IP-51 | CAR | 升级 | 守卫加"精确求值 ∧ 版本匹配 ∧ 看门狗正常" |
-| IP-45 | 总线 | 升级 | locomotion-mode / capture-state / contract-version / student-guard-disagreement |
-| IP-66/67/68 | VAD/MVR/SAB | 升级 | 语音=共创入口（多模态身份确认）；记忆存契约版本史；共创请求走双签署 |
-| IP-75/74 | ASC/HTD-Cert | 升级 | 可行性加入 κ 与捕获域；步态子任务=可行性证书节点 |
-| IP-72/76 | RRP/CCL | 升级 | e-process 纳入可行/捕获/共创证据；CCL++（定义 86） |
+| IP-107 | TRO Robustness Spectrum | 新增 | 维度化鲁棒性谱 `ρ:𝔇_ρ→[0,1]`；域判定 `dom_R`；`unknown=fail-closed` |
+| IP-108 | RXC Robustness Exchange | 新增 | 任务鲁棒性查询 → 传递检查 → 反向解释建议 |
+| IP-109 | RCO Robustness Coupling | 新增 | 维度耦合矩阵 `K`；组合鲁棒性标量化 `ρ_{S⊗}(d)` |
+| IP-110 | REX Reverse Explanation | 新增 | 仿真失败 → 根因分布 + 置信度 + 局部修正建议 |
+| IP-111 | RTA Robustness Tower | 新增 | 金字塔结构 `𝕃=(𝕃_0,...,𝕃_h)`；跨层传递证书 |
+| IP-112 | TRC Transfer Robustness | 新增 | 跨层鲁棒性传递证书 `TRC=(S, L, γ, δ_ρ, D, E)` |
+| IP-113 | REX-A Explanation Anchor | 新增 | 反向解释化验锚点集，验证解释正确率 |
+| IP-114 | RUR Robustness Update | 新增 | 贝叶斯/指数更新 `ρ_{new} = (1-λ)·ρ_{old} + λ·update` |
 
-## 1. 符号体系（定义 79–86 见想法区；符号增量）
+## 1. 符号体系增量（新增定义 107–114）
 
 | 符号 | 含义 |
 |---|---|
-| `L_auth=(𝒜,⊑)` | 用户权威格（空间域×参数类别×幅值上界） |
-| `κ_c=(s,clause,Sig_u,Sig_designer,ver)` | 共创契约（双签署 + 版本钉住） |
-| `ω_u` | 用户证据权重（承诺兑现率的单调函数） |
-| `Σ_b=(Q_m,X,U_b,f_q,G_q,R_q)` | 双足混合系统（flight/single/double） |
-| `V(T), M_stand` | 可行集与稳态流形（双支撑静止） |
-| `B_v(z,q), C_cert` | 可行性证书与认证内近似子集 |
-| `τ_ttb, τ_eval, τ_g` | 时间边界 / 求值成本上界 / 守卫实时预算 |
-| `C_1⊆C_2⊆…⊆C_max` | k 步捕获域（CRM 分层） |
-| `α_viable, α_cap` | 可行性内近似误差 / 捕获执行误差失效项 |
-| `α_user` | 用户签署承诺与实际行为发散的失效项 |
-| `𝒯, s_φ` | teacher（全栈+完整搜索）/ student（实时提议者） |
-| `G_exact` | 提议-处置精确守卫（cost-certified） |
-| `LFF_ψ` | 学习证伪器（只提优先级，无定罪权） |
-| `h(κ_c)` | 契约版本哈希（守卫强制校验） |
-| `d_t, r_fb` | 学生-守卫分歧 / 回退率（效率指标，非安全项） |
-| `v^*,a^*,m^*,q^*,ι^*,κ^*` | 分解/抽象/模态/构型/交互/步态联合决策 |
+| `𝔇_ρ` | 鲁棒性维度格：`{dynamics, geometry, force, friction, cable, compliance, perception, control, latency, human}` |
+| `ρ_S(d)` | 技能 `S` 在维度 `d` 上的鲁棒性值 `[0,1]` |
+| `R = (ρ, D_R, ε_B, evidence)` | 鲁棒性证书：谱、适用域、容差包、证据 |
+| `K ∈ [0,1]^{k×k}` | 鲁棒性耦合矩阵：`K_{ij}` 表示 `j` 脆弱性如何放大 `i` |
+| `Explain(sim_result)` | 反向解释器：从失败轨迹生成根因分布 + 修正建议 |
+| `𝕃 = (𝕃_0,...,𝕃_h)` | 鲁棒性金字塔：从物理到任务的层级结构 |
+| `TRC = (S, L, γ, δ_ρ, D, E)` | 跨层鲁棒性传递证书 |
+| `A_E = {e_1,...,e_q}` | 反向解释化验锚点集 |
+| `ρ_{new}` | 更新后的鲁棒性谱 |
+| `λ` | 鲁棒性更新学习率 `(0,1)` |
 
 ## 2. 关键算法 伪代码
 
-### IP-86 UCC
-```
-def co_create(clause, user_sig, auth_registry, contracts):
-    scope = auth_registry.scope_of(user_sig.user_id)
-    if not lattice_leq(clause.relaxation, scope.cap):
-        return ('reject', 'out_of_competence')     # 超出能力格
-    if touches_root_trust(clause):                 # PFL/屏障/MRC/审计不可委托
-        return ('reject', 'non_delegable')
-    kappa = Contract(scope, clause, user_sig, sign_template(clause),
-                     ver=next_ver(contracts))
-    ledger_append_plus(now(), 'co_create', kappa)
-    schedule_teacher_resolve(kappa)                # 触发重解→重蒸馏→再认证
-    return ('accept', kappa, 're_distill_required')
+### IP-107 TRO（Robustness Spectrum & Certificate）
 
-def user_evidence_weight(user_id, dcl):
-    return clamp(OMEGA_BASE * dcl.adherence(user_id), OMEGA_MIN, OMEGA_MAX)
-```
+```python
+def robustness_spectrum(skill, dimensions=DEFAULT_DIMENSIONS):
+    rho = {}
+    for d in dimensions:
+        if d == 'dynamics':
+            rho[d] = assess_lyapunov_robustness(skill.dynamics)
+        elif d == 'geometry':
+            rho[d] = assess_collision_margin(skill.geometry)
+        elif d == 'force':
+            rho[d] = assess_force_torque_safety(skill.force_model)
+        elif d == 'friction':
+            rho[d] = assess_sliding_stability(skill.friction_model)
+        elif d == 'control':
+            rho[d] = assess_control_barrier_robustness(skill.controller)
+        else:
+            rho[d] = assess_via_sim_benchmarks(skill, d)
+    return rho
 
-### IP-80 SIG（v14 升级：共创锐化意图）
-```
-def sharpened_intent(b, kappa_signed, omega_u, ctx):
-    if kappa_signed and kappa_signed.matches(ctx):
-        b = normalize(b * (1 + omega_u * kappa_signed.theta_indicator))
-    return b          # σ(b') 随签署承诺锐化；硬下界 σ_min 永不放松
-
-def viability_clip(clause, hvc, z, mode):
-    if clause.category == 'speed':
-        v_req = clause.value
-        return min(v_req, hvc.max_certified_speed(z, mode))   # 捕获域剪辑
-    return clause.value
+def domain_check_robust(R, d):
+    if R.dom_predicate(d) == 'unknown':
+        return 'out'
+    return R.dom_predicate(d)
 ```
 
-### IP-87 HVC
-```
-def viability_ok(z, mode, kappa):
-    if mode not in CERTIFIED_MODES:
-        return False
-    Bv = evaluate_Bv(z, mode)          # 预计算内核/已验证求值器，O(1)
-    if Bv < 0:                         # 不在认证可行子集内：内近似不放行
-        return False
-    if time_to_boundary(z, kappa) < TAU_TTB_MIN:
-        return False                   # 时间边界不足：安全不等价
-    return True
+### IP-110 REX（Reverse Explanation Engine）
+
+```python
+def explain_failure(sim_result, model):
+    π, fail_mode, violations = sim_result
+    causes = []
+    for t, state in enumerate(π):
+        for v in violations:
+            if violated_at(v, state):
+                c = causal_trace(v, state, model)
+                causes.append((c.root_cause, c.confidence * time_decay(t, len(π))))
+    
+    cause_dist = aggregate_causes(causes)
+    suggestions = generate_suggestions(top_k(cause_dist, k=3))
+    
+    return Explanation(
+        root_causes=sorted(cause_dist, key=lambda x: -x[1]),
+        confidence=max(p for _, p in cause_dist),
+        suggestions=suggestions
+    )
 ```
 
-### IP-88 CRM
-```
-def biped_mrc(z, mode, student):
-    for k in (1, 2):                                # 先试最少步数
-        if k <= K_MAX and z in C_k[k][mode]:
-            seq = student.propose_capture(z, k) or search_capture(z, k)
-            if verify_capture_seq(z, seq):          # 精确验证整条序列
-                execute(seq)
-                ledger_append_plus(now(), 'capture', k)
-                return 'stand'
-    return certified_protective_fall(z)             # 认证保护姿态（离线证书化）
+### IP-109 RCO（Robustness Coupling & Composition）
+
+```python
+def compose_robustness(rho1, rho2, coupling_matrix, constraints):
+    rho_new = {}
+    for d in rho1:
+        rho_new[d] = min(rho1[d], rho2[d])
+        for j in rho1:
+            if coupling_matrix.get((d, j), 0) > 0:
+                coupling_effect = coupling_matrix[(d, j)] * (1 - rho1[j])
+                rho_new[d] = max(0, rho_new[d] - coupling_effect)
+        if d in constraints:
+            rho_new[d] *= constraints[d].discount_factor
+    return rho_new
+
+def coupling_correction(rho_source, coupling_matrix, phi):
+    rho_target = {}
+    for d_target in rho_source:
+        loss = coupling_mismatch(coupling_matrix, phi, d_target)
+        rho_target[d_target] = max(0, rho_source.get(d_target, 0) - loss)
+    return rho_target
 ```
 
-### IP-89 KDX（提议-处置）
-```
-def propose_dispose(o, ctx, student, guard, budget):
-    h = contract_version_hash(ctx)                  # 版本钉住
-    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 限频提议
-        if guard.exact_check(cand, h):              # B/Bv/PFL/Inv/共识/版本/租约
-            return cand, 'fast_path'
-    for cand in teacher_search(o, ctx, budget_fallback):  # 限量完整搜索
-        if guard.exact_check(cand, h):
-            return cand, 'fallback'
-    ledger_append_plus(now(), 'disagreement', ctx)  # 分歧入账，回灌 DCL
-    return biped_mrc(...)                           # CRM
-    # 学生误差只影响走哪条路径；放行标准只在 G_exact 手里
+### IP-112 TRC（Transfer Robustness Certificate）
+
+```python
+def transfer_robustness_certify(S_source, L_target, phi, delta_ρ_budget):
+    rho_source = S_source.robustness_spectrum
+    gamma = lambda rho: coupling_correction(rho, COUPLING_MAT, phi)
+    rho_target = gamma(rho_source)
+    delta_ρ = {d: max(0, rho_source[d] - rho_target[d]) for d in rho_source}
+    
+    if sum(delta_ρ.values()) > delta_ρ_budget:
+        return ('reject', 'robustness_budget_exceeded', delta_ρ)
+    
+    domain = compute_transfer_domain(S_source, phi, L_target)
+    if domain_check_robust(S_source.R, domain) != 'in':
+        return ('reject', 'domain_mismatch')
+    
+    evidence = collect_evidence_for_transfer(S_source, L_target, phi)
+    if evidence.level < E1:
+        return ('reject', 'insufficient_evidence')
+    
+    return ('ok', TRC(S_source.id, L_target, gamma, delta_ρ, domain, evidence))
 ```
 
-### IP-90 LFF（证伪-教学共蒸馏）
-```
-def falsify_v2(cert, budget, scenario_dist, lff, student):
-    E = []
-    for _ in range(budget):
-        s = scenario_dist.sample_weighted(lff.weak_regions(cert))
-        for tr in cert.prototype.run(s):            # 含滑移/推撞/柔顺注入
-            if violates_exact(tr, cert):            # 只有精确证伪器能定罪
-                cex = minimize_cex(tr)
-                E.append(cex)
-                lff.retrain([cex])                  # 反例共蒸馏
-                student.retrain(cex_labels=[cex])   # 教学生避开守卫会拒的行为
-    return E, coverage(E)
-```
+### IP-114 RUR（Robustness Update Rule）
 
-### IP-73 JCPS（v14：交互-步态感知 + 提议-处置）
-```
-def joint_costride_schedule(goal, C_t, leases, energy, q_prev, omega, b, kappa_c):
-    h = hash(kappa_c)
-    dag = htd_cert(goal, C_t, contracts, leases)    # 含步态/交互子任务
-    if dag is None:
-        return ('synthesize_or_fail_closed', None)
-    if not viability_ok(current_z(), current_mode(), kappa_c):
-        return ('crm', biped_mrc(current_state(), current_mode(), student))
-    b = sharpened_intent(b, kappa_c.signed_intent, user_evidence_weight(...), ctx)
-    sigma = intent_scale(b)
-    best = None
-    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 候选含 (a,m,q,ι,κ)
-        if not Inv[cand.iota](current_state()) or cand.hash != h:
-            continue
-        if not barrier_ok(extend_z(current_z(), cand.kappa), b, LAMBDA, HORIZON):
-            continue
-        pick = choose_abstraction_viability(dag.frontier(), cand, sigma,
-                                            capture=C_k, hvc=HVC)
-        if pick and pick.value * sigma > (best.value if best else -inf):
-            best = pick
-    if best and guard.exact_check(best, h):
-        return best
-    if full_search_fallback() is not None:          # 限量
-        return fallback
-    return ('crm', biped_mrc(...))
+```python
+def update_robustness_spectrum(rho_old, H, lambda_lr, explanation_anchors):
+    rho_new = {}
+    for d in rho_old:
+        residuals = [evaluate_residual(T, S, rho_old) for T, S in H]
+        prior = rho_old[d]
+        likelihood = exp(-mean(residuals))
+        posterior = (1 - lambda_lr) * prior + lambda_lr * likelihood
+        rho_new[d] = max(0, min(1, posterior))
+    
+    for anchor in explanation_anchors:
+        if not validate_explanation(rho_new, anchor):
+            rho_new = conservative_blend(rho_old, rho_new, factor=0.5)
+            break
+    
+    return rho_new
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| UCC | O(|𝒜|) 格判定 | O(|𝒜|+|契约史|) | 越权/触根信任即拒；双签署+版本钉住；权重只降不升伪造 |
-| HVC | 在线 O(1) 求值 | O(|C_cert|) 预计算 | 内近似：B_v≥0 ⇒ z∈C_cert⊆V(T)；时间边界强制 |
-| CRM | O(k·|U_b|) 序列验证 | O(k) | C_k 判层保守（宁可高估所需步数）；保护姿态离线证书化 |
-| KDX | O(N_fast·c_g + c_s) ≪ 全栈 | O(1) 在线 | 放行权仅在 G_exact；学生误差 → 回退率，非安全项 |
-| LFF | O(1) 预测 | O(|E|) | 无定罪权；假阴性只浪费预算 |
-| G_exact | Σ cost(精确求值) ≤ τ_g（离线认证） | O(1) | 看门狗超预算强制安全慢模式 |
-| CBG+ | cost(⊨)+cost(B,B_v,PFL,共识) | O(1) | 边界∧屏障∧可行∧PFL∧共识∧版本全过才放行 |
+| TRO | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 维度谱可观测、容差包闭合 |
+| REX | O(|π|·|violations|) | O(|causes|) | 根因结构一致、锚点验证 ≥ 90% |
+| RCO | O(|𝔇_ρ|²) | O(|𝔇_ρ|²) | 耦合矩阵单调、组合上界有效 |
+| TRC | O(|𝔇_ρ|) | O(|𝔇_ρ|) | 传递函数γ sound、δ_ρ 预算 |
+| RUR | O(|H|·|𝔇_ρ|) | O(|H|) | 负迁移防护、锚点闭环 |
 
-**正确性定理（Co-Created, Distilled, Viability-Compositional Soundness）**
-假设：(A1)–(A8) 承接 v13（契约 sound、CBG 边界蕴含、租约、初始证书、CCL 只追加、意图支撑覆盖 `1−α_intent`、δ 膨胀不被低估、MRC 可达且受证书覆盖——其中 MRC 按 CRM 重释）；新增 **(A9)** `C_cert` 是可行集 V 的认证内近似（对认证摩擦/执行器界成立），B_v 求值与 C_cert 定义精确一致；**(A10)** 捕获策略在认证扰动集内以概率 ≥1−α_cap 在 k 步内到达 M_stand；**(A11)** G_exact 的求值成本被离线认证 ≤ τ_g 且运行时看门狗生效，学生候选永不绕过精确求值；**(A12)** 共创契约过能力格、根信任不可委托、双签署、版本钉住，且用户签署承诺与实际行为发散以概率 ≤α_user。则沿路径 `v_1…v_k`、交互序列与步态相位，
-`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − α_user − α_viable − α_cap − Σ_ℓ δ_{ℓ→d}`；
-且**蒸馏不进入安全上界**：学生误差只能提高回退率 r_fb（可用性/效率损失），因为执行要求 G_exact 精确求值通过——该不对称的承重点恰是 (A11)。共创条款只经"能力格 ∧ 可行性剪辑"后进入约束，不放松任何硬门槛。这仍是**条件保证**：`C_cert`/捕获的近似保守性、用户承诺的兑现、τ_g 的真机可达性是新的信任锚，由 PFV/LFF/DCL/CCA 的持续证伪与演练负责，不在定理覆盖范围内。
+**正确性定理（Layerwise & Explainable Robustness Soundness）**
+假设 (A17)–(A25) 成立。则：
+```
+P(∀t≤T: ρ(z(t), d) ≥ ρ_min ∀ d ∈ 𝔇_ρ) ≥ 1 - Σ_d(1-ρ_min(d)) - α_δ - β_E
+```
+关键：**跨层传递的每一步都有可解释的δ_ρ + 负迁移绊线**；**仿真的每一次否决都有结构化的原因分布**；**更新经过锚点验证，防止负迁移**。
 
-## 4. 实验设计 E133–E138
+## 4. 集成更新：v16 → v16+ 体系
 
-| 实验 | 指标 | 门槛 |
-|---|---|---|
-| E133 共创契约与能力格 | 越权放宽拦截率；触根信任拦截率；承诺兑现率-权重曲线；版本错配执行数 | 越权拦截 100%；触根信任 0；版本错配执行 0 |
-| E134 双足可行性证书 | mid-stride 放行正确率；滑移/推撞扰动下违例率；内核保守度 \|C_cert\|/\|V\|；τ_eval 超时率 | 违例 0；假安全 0；保守度 ≤ 40%；超时 ≤ 0.1% |
-| E135 捕获 MRC | 分级推撞恢复成功率；C_k 判层错误率；保护姿态伤害指标（假人/缩比） | 小扰动恢复 ≥ 95%；判层错误 0；伤害低于未认证基线 |
-| E136 蒸馏执行 | fast-path 命中率；回退率 r_fb；延迟降幅；与全栈违例等价性 | 违例等价（=0）；延迟 ≥ 10×；r_fb ≤ 10% |
-| E137 学习证伪循环 | 同预算反例数 vs 随机采样；覆盖增速；LFF 误报率 | 反例 ≥ 3× 基线；覆盖 ≥ 90% |
-| E138 全栈双足人机共处长程共创 | 任务成功率；共创改动→重蒸馏→恢复服役时延；MRC 率；违例；主观安全感 | 成功 ≥ 90%；时延 ≤ 5 min；MRC ≤ 8%；违例 0；主观 ≥ 4/5 |
+```
+根信任 + 能力格
+│
+├─ L0 分布式底座与执行边 (v15 GPC/SEN/TBC)
+├─ L0.5 任务迁移与仿真证据 (TIX, XFR, CRC, SFE, FDR, RAB, DST, SBC)
+├─ L0.5+ 鲁棒性层 (TRO, RXC, RCO, REX, RTA, TRC, REX-A, RUR)  ← 新增
+├─ L1 几何感知
+├─ L2 任务/上下文/记忆/语音
+├─ L2.5 交互共地与共创契约
+├─ L3 关节证书/抽象/决策
+├─ L3.5 动力可行 (HVC/CRM)
+├─ L4 CAR/Shield/CBG+/KDX
+├─ L5 DCL/真机/HCI 评测
+└─ L6 原型证伪/XFER/LFF/IXD
+```
 
-回退策略：E133 越权漏拦 → 冻结共创入口、收紧能力格、审计全部已签条款；E134 假安全 > 0 → 立即停机、收缩 C_cert 并对边界追加证伪，禁止部署该内核；E135 判层错误 → 加大 C_k 估计保守度并提高捕获域重算频率；E136 r_fb > 10% → 增加学生训练覆盖而非放松 G_exact，必要时降级为"低频 teacher + 高频 CRM"；E137 反例效率不足 → 扩 LFF 特征（场景因子接入）而非减少精确证伪；E138 时延或 MRC 超标 → 缩小共创范围与工作域，绝不绕过 L3.5 与守卫。
+JCPS 输出扩展为：
+`(v, a, m, q, ι, κ, g, λ, τ, σ, ρ, Explain, RUR_state)`
 
-## 5. 风险与缓解
+其中：
+- `ρ`：当前任务的鲁棒性谱；
+- `Explain`：最近一次仿真的反向解释；
+- `RUR_state`：鲁棒性谱的贝叶斯更新状态。
 
-| 风险 | 等级 | 缓解 |
-|---|---|---|
-| 守卫求值超实时预算或被静默近似替代 | 高 | 架构红线"只许近似搜索"；求值器离线成本认证 + 运行时看门狗 + 超时强制安全慢模式 |
-| 可行性内核/捕获域过于乐观（打滑、未认证扰动） | 高 | 内近似 + 摩擦/推撞台架标定 + 红队注入 + 边界持续证伪 + α_cap 显式入账 |
-| 用户越权或恶意共创 | 高 | 能力格 + 不可委托条款 + 双签署 + 兑现率降权 + 越权红队 + CCL++ 审计 |
-| 版本错配的旧学生服役 | 高 | 版本哈希入守卫 + fail-closed + 再认证门（守卫集零违例 + held-out 回归） |
-| 学生对抗性提议造成守卫抖动/DoS | 中 | 提议限频 + teacher 顾问 + 回退路径预算 + 分歧入账 |
-| 共创条款与动力可行冲突（"要快但要稳"） | 中 | 可行性剪辑先行 + 冲突即向用户解释并降级，不静默折中 |
-| 蒸馏数据分布偏移 | 中 | DCL 分歧样本回灌 + 定期重蒸馏 + 标签覆盖审计 |
-| 保护姿态演练的伦理与成本 | 中 | 缩比/假人先行 + 全尺寸低频演练 + 演练记录入账 |
-| 联合决策空间扩维（+κ）拖慢调度 | 中 | 提议-处置吸收搜索负担 + 分层频率（安全层高频、决策层低频） |
+## 5. 本轮最大风险
 
-## 6. 本轮最大风险
-
-**一句话**：整套"蒸馏只损失效率不损失 soundness"的不对称悬挂在 (A11) 与两个新近似锚上——一旦 G_exact 的求值在真机超预算/被近似替代，或可行性内核与捕获策略对打滑、未认证扰动、捕获时机欺骗过于乐观，或共创条款越过能力格被当成新根，耦合屏障就会"纸面 sound、现实不安全"；因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
+**一句话**：层级化鲁棒性让 v16 从"全局风险"变为"可传递的维度谱"，但这套体系的 soundness 现在**三位一体地依赖 K 矩阵精准性、Explain 解释器的因果识别、以及锚点的充分覆盖**；一旦耦合矩阵漏算关键维度、解释器在对抗场景下误判根因，或锚点集在真实任务族边缘不足，**鲁棒性的"可传递性"就退化为"可误传播的幻象"**——局部鲁棒性检查均衡，却在真任务的维度交叉脆弱处系统性失效，故必须以**跨仿真器校准 + 红队对抗解释 + 负迁移绊线 + 预注册锚点**的四重护栏，宁可保守每维，绝不把"可解释的鲁棒性金字塔"当作最终防御。
 <!-- ARTIFACT:END -->
