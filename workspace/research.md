@@ -3,313 +3,386 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 50 轮（承接第 49 轮 v13；灵感循环第 5 轮；本轮灵感：用户共创 × 双足机器人 × 模型蒸馏） · CoStride-Distill：共创契约 × 双足可行证书 × 证书引导蒸馏（八层架构 v14）
+# 第 52 轮（承接第 51 轮 v15 GroundEdge；灵感循环第 3 轮；本轮灵感：跨任务泛化 × 虚拟仿真） · GroundEdge-GenSim：适用域证书 × 迁移风险预算 × 仿真保真包络与单向证伪（十层架构 v16）
 
-> 承接第 49 轮 v13 InteractCert-Forge。v13 把安全升级为"机器人-人-环境"耦合屏障证书，用 σ(b) 把意图不确定映射为证书宽度，用原型阶梯与传输缺口 δ 把"纸面 sound"折算为部署置信；但它隐含三个新假设：**H8：动力学是"可停"的——MRC=减速到零，动作空间充分驱动、无混合接触事件；H9：整条七层证书栈可在线实时运行——∃u_r 最坏搜索、联合调度、证伪循环都在安全关键路径上；H10：契约与意图模型由设计者离线一次性写死——人只是被观测的"意图源"而非契约的共同作者**。三个灵感词精确命中：**双足机器人**打破 H8（踝部欠驱动、步态相位不可逆、足底接触是混合事件，mid-stride 无法"停到零"，MRC 必须升级为"认证捕获步回归稳态"，屏障必须升级为带时间边界的混合可行性证书）；**模型蒸馏**打破 H9（把昂贵的"搜索"从安全路径上剥离：teacher 全栈离线/影子运行，student 实时提议，便宜且精确的守卫处置；蒸馏只许近似搜索、永远不许近似评估，因而只损失效率、不损失 soundness）；**用户共创**打破 H10（用户成为能力格约束下的共同签署人：可共创子任务、签署协议变体、在授权范围内放宽速度/幅值偏好、提供演示以加权升级为技能证书；但用户输入是证据而非真值，根信任不可委托）。三者耦合出的新问题：**共创条款必须过双足可行性剪辑（用户要"走快点"必须被捕获域收缩约束）；共创改动必须触发版本钉住的重蒸馏（旧 student 不得在新契约下服役）；蒸馏必须让 100–1000 Hz 的双足安全栈第一次成为可部署物**。
+> 承接第 51 轮 v15 GroundEdge。v15 把安全从"大脑里的证书"改写成"沿 ROS 图流动、在执行器边缘被强制的证书连续统"，用 IGC/ILM/XTC/GPC/SEN/CE/TBC 把共地、主动权、图钉、零信任信封与边缘租约接进九层栈，并把安全论证写成"蒸馏只损失效率、不损失 soundness"。但它仍隐含两个未被点破的承重假设：**H16：证书是"单任务、单部署"的一次性产物——每个新任务都要从零再认证；任务族之间的相似性、技能复用、组合泛化的风险被当作 0 或不可言说，"任务"被当成一个没有邻域的点**。**H17：仿真是外部可信的便宜证伪器——仿真保真度由他人保证，仿真结果只在 PFV 里"找反例"；一旦把仿真用于跨任务筛选、课程、蒸馏、回归与选型，它的分布就悄悄变成了验收通道，而"仿真通过"从未被认证**。两个灵感词精确命中：**跨任务泛化**要求安全从"单任务证书"升级为**带适用域与迁移风险预算的泛化证书**——证书不是"永远正确"，而是"在可判定的任务域内、以显式间隙成立"，跨域必须付费；**虚拟仿真**要求把仿真器当**有校准证书的仪器**而非神谕——保真度是任务条件化的函数，仿真只能单向证伪（失败即拒绝，通过不等于批准），规模化搜索还要付**选择偏差**的代价。二者耦合出一个反直觉、且最容易骗过所有局部检查的失效：**仿真越搜越"安全"、任务越测越"泛化"，可能只是把策略过拟合到了仿真器的偏置与任务采样偏差上**——证书齐全、指标漂亮，却在真实任务族的边缘系统性地错。于是本轮把证书升级为 `C=(claim, domain, tolerance, evidence)`，把"泛化"变成可判定的适用域 + 可入账的迁移/仿真/选择三重风险，并坚持：**仿真可否决，不可单独批准；跨域可迁移，不可免费继承**。
 
 ## 0. 直觉与动机
 
-**灵感 1（双足机器人 → 从"可停屏障"到"混合可行性证书"）**
-直觉：轮式臂的安全哲学是"随时能停"，CBF 的 `Ḃ≥−λB` 隐含任意时刻存在使屏障不降的动作。双足在单支撑相是欠驱动的：ZMP 必须留在支撑多面体内，摆动腿轨迹在触地前不可中断。因此"安全"必须重述为**可行性**：不是"存在 u_r 使 Ḃ≥0"，而是"存在有界控制序列在 τ 步内把系统送回稳态流形（双支撑静止）且途经所有状态安全"。这正是 viability kernel 的语义；我们要的证书是 kernel 的**内近似**——只对能证明可行的子集发放放行权，宁可保守、绝不假安全。时间维度也变了：双足事故的时间尺度是 100–300 ms，屏障检查必须带 time-to-boundary，超时即不等价于安全。
+**灵感 1（跨任务泛化 → 证书是"带适应症与禁忌症的药品说明书"，不是万能真理）**
+直觉：v15 的证书像一句"这药有效"，却不写适应症、剂量与禁忌。真实部署面对的是**任务流**：今天是递物、明天是引路、后天是狭窄空间避让；用户还会问"那这个新任务行不行"。若每个任务都从零认证，成本不可承受；若把旧证书直接复用，又会把"在 A 任务上成立"悄悄说成"在 B 上也成立"。正确的对象不是任务点，而是**带结构的任务族**：证书必须声明可判定的**适用域** `D(C)`，域内以显式容差成立，域外必须走**迁移证书**或任务本地再认证。关键是：任务相似度只能用于调度与检索，**绝不能用嵌入最近邻冒充 soundness**；域判定必须是对可解释任务描述符的可检查谓词，`unknown` 一律按 `out` 处理（fail-closed）。
 
-**灵感 2（双足机器人 → MRC 从"停机"到"捕获"）**
-直觉：对双足，"最小风险条件"不是速度零——mid-stride 急停就是摔倒。正确类比是行人的推撞恢复：识别捕获点、执行捕获步、回到稳定站立；捕获不可行时执行**预先认证的保护姿态**（下蹲收臂、断力、以最不伤姿态落地）。MRC 因此成为**分层可达性问题**：`C_1`（一步捕获）⊇ `C_2`（两步捕获）⊇ 保护姿态域，每个域都预先证书化并定期演练；MRC 的"可达"从"能停"变成"能在 N 步内被捕获"。
+**灵感 2（虚拟仿真 → 仿真器是有校准证书的仪器，不是神谕）**
+直觉：科学里没有"这台仪器总是对的"，只有"在量程、工况、校准期内误差 ≤ ε"。仿真同理：刚体接触、摩擦、线缆、柔性、传感器噪声、执行器饱和在不同任务上误差不同；同一仿真器在平整地面很准，在软地毯上可能完全错。因此必须给出**任务条件化的仿真保真包络** `ε_S(T)`：在经认证的测试分布上，以 `1−β_S(T)` 覆盖真实与仿真的风险差。更要命的是不对称：**仿真报失败**可能只是仿真太保守（损失可用性，安全方向）；**仿真报通过**却无法排除真实失败（危险方向）。所以仿真可以**否决**，但**不能单独批准**；通过只有在"已校准 `ε_S` + 独立真实锚点"闭合后才可进入放行，否则只是提议。
 
-**灵感 3（模型蒸馏 → 提议-处置：蒸馏近似搜索、绝不近似评估）**
-直觉：v13 栈里真正贵的不是**求值**（B、PFL、Inv 是闭式/可验证函数，求值便宜），而是**搜索**：∃u_r 最坏情形枚举、(v,a,m,q,ι,κ) 联合调度、PFV 场景预算分配。蒸馏的正确切口是：teacher（全栈+完整搜索）离线/影子运行，产出"状态→认证候选"标签；student 实时提议候选；**精确守卫**只对候选做 O(小) 的证书求值。学生的错误最多让你走上回退路径（效率损失），永远不能让未认证动作被执行——放行权只在精确守卫手里。这条"提议-处置"结构把蒸馏从"精度风险"变成"可用性风险"，是安全蒸馏的关键不对称。
+**灵感 3（耦合 → 仿真规模化搜索的"赢家诅咒"与选择偏差）**
+直觉：跨任务泛化天然要在仿真里**批量生成**任务与候选策略，再挑最好看的那个。可一旦从 `N` 个候选里挑"最安全"的，观测到的安全就是乐观有偏的——这正是多重比较/赢家诅咒。仿真越能搜，越容易挑到"恰好迎合仿真偏置"的策略；同时用同一批场景既做搜索又做验收，等于把考卷提前泄题。因此 `N` 必须成为一等风险资源：**搜索预算越大，真实锚点预算也必须越大**；证书必须扣除可计算的 `α_sel(N,m)`（anytime-valid e-process 或均匀收敛界），并且验收锚点必须**预注册、与搜索独立、不可复用**。
 
-**灵感 4（用户共创 → 能力格上的共同签署，而非众包真值）**
-直觉：v13 把 α_intent 列为最大信任锚，因为意图是被动的后验。共创的正确打开方式不是"信用户"，而是让用户把意图**变成签署过的承诺**（"把杯子放到我左手边"/"我接受交接协议 B"/"允许你在我厨房走快一档"），用可观测的后续行为校验承诺兑现率（track record → 证据权重 ω_u），未兑现即降权并回到 σ(b) 硬下界。关键约束：用户权威必须落在**能力格**上（空间域×参数类别×幅值上界的偏序格），PFL、屏障类别、MRC 属根信任**不可委托**；"走快点"这类条款要被双足可行性**剪辑**——快步态收缩捕获域，剪辑后的值才生效。用户是"有格子的共同作者"，不是"新的根"。
+**灵感 4（仿真证伪的单向性 → 只用仿真扩"边界"，不用仿真造"真理"）**
+直觉：把仿真当"找反例的猎犬"而不是"发证书的法官"。给定源证书与候选适用域，用对抗式任务/策略搜索去**扩大失败边界**：仿真找到反例就收缩域或拒绝（可能是假警报，但方向安全）；仿真搜不到反例只说明"在当前搜索预算内没找到"，不能说明域可扩。于是适用域不是"训练集覆盖"，而是**经对抗搜索未被击穿、且真实锚点通过的最大邻域**。这把 v15 的 `A_est/A_lb` 不对称再推一层：**仿真/学生只允许"提议与证伪"，精确守卫与真实锚点才允许"放行"**。
 
-**灵感 5（模型蒸馏 × 原型证伪 → 反例共蒸馏与学习证伪器）**
-直觉：PFV 的预算永远不够；把历史反例与守卫拒绝样本蒸馏成**学习证伪器** LFF（预测证书薄弱区域），由它给场景分布提优先级，精确证伪器仍然只负责"定罪"。新反例同时回灌 LFF 与 student（把"守卫会拒绝的行为"提前教学生避开），形成"证伪—教学"共蒸馏闭环。LFF 的错误只浪费预算，不产生假阴性放行——因为它无权放行任何东西。
+**灵感 5（组合泛化 → 技能组合的"药物相互作用"）**
+直觉：把两个各自认证的技能接起来，可能产生部件层面都不存在的失效：抓取技能与行走技能各自安全，组合后却在交接瞬间遮挡视野、改变支撑多边形、触发新的接触。组合证书不能只做风险相加，必须显式承担**交互项** `α_int` 与**适配义务**（坐标系、共地、接触模型、时序、参数域），并按"组合类"做仿真证伪 + 真实锚点。泛化不是"把零件拼起来就自动成立"，而是"每次新组合都生成新声明、新域、新证据"。
 
-**耦合升级**：v13 七层之上新增 **L3.5 动力可行层（HVC/CRM）** 与跨层**蒸馏通道（KDX/LFF，版本钉住）**，L2.5 升级为**交互安全与共创契约层（IPC+UCC）**。八层 v14：根信任+用户能力格 + L1 几何感知 + L2 任务分解/上下文/记忆/语音（语音共创入口）+ L2.5 交互安全与共创契约 + L3 关节证书/抽象/交互感知决策 + L3.5 动力可行（混合可行性/捕获）+ L4 CAR/Shield/CBG+/KDX 守卫 + L5 DCL/真机评测（新增分歧日志）+ L6 原型证伪/XFER/LFF。JCPS 联合输出升级为 `(v_t^*, a_t^*, m_t^*, q_t^*, ι_t, κ_t)`（κ=步态相位/捕获状态/运动模式）。
+**耦合升级**：v15 九层之上插入 **L0.5 任务迁移与仿真证据层（TIX + XFR + CRC + SFE + FDR + RAB + DST + SBC）**，作为连接"底座/执行边"与"感知/任务"的证据平面。十层 v16：根信任+能力格 + L0 分布式底座与执行边 + **L0.5 任务迁移与仿真证据** + L1 几何感知 + L2 任务/上下文/记忆/语音 + L2.5 交互共地与共创契约 + L3 关节证书/抽象/决策 + L3.5 动力可行（HVC/CRM）+ L4 CAR/Shield/CBG+/KDX + L5 DCL/真机/HCI 评测 + L6 原型证伪/XFER/LFF/IXD。JCPS 输出扩为 `(v,a,m,q,ι,κ,g,λ,τ,σ)`（`τ`=任务指纹/适用域判定，`σ`=仿真证据等级与保真包络句柄）。
 
-## 1. 形式化定义（增量：定义 79–86）
+## 1. 形式化定义（增量：定义 97–106）
 
-**定义 79（能力格与共创契约）**
-权威格 `L_auth=(𝒜,⊑)`，每个授权范围 `s∈𝒜` 为三元组（空间域 × 参数类别 × 幅值上界），满足偏序与闭包。共创契约 `κ_c=(s, clause, Sig_u, Sig_designer, ver)` 合法当且仅当：(i) `clause ⊑ s.cap`（不超能力格）；(ii) `clause` 与根信任不变式（PFL、屏障类别、MRC、审计）无冲突——**不可委托条款**不参与放宽；(iii) 双签署（用户+设计者模板）且版本 `ver` 钉入台账。用户证据权重 `ω_u=clamp(ω_0·adherence(u), ω_min, ω_max)`，`adherence` 为历史签署承诺兑现率（由 DCL 统计）；权重下降自动回到 σ(b) 硬下界治理。**用户输入永远按证据处理，不是真值。**
+**定义 97（任务、任务族与可判定适用域）**
+任务 `T=(O,E,G,W,Emb,Ctx)`：对象/场景、环境分布、目标规格、用户契约、本体/ embodiment、上下文。任务族 `ℱ` 由**可解释描述符** `d(T)∈𝔇` 描述（对象类别、几何/动力学工况、接触/地面类别、交互协议、人群/语言、负载与速度域等）。任务距离 `d_ℱ` 只用于检索与调度，**单独不构成 soundness 依据**。证书 `C=(claim, D(C), tolerance, evidence)` 携带**可判定适用域** `D(C)⊆ℱ`，由谓词 `dom_C:𝔇→{in,out,unknown}` 判定，要求 `dom_C(T)=in ⇒ T∈D(C)`；`unknown` 按 `out` 处理。域判定必须在承诺前完成且可因上下文歧义而撤销。域外执行必须走迁移证书或任务本地再认证，禁止"默认继承"。
 
-**定义 80（双足混合可行系统与可行性证书）**
-双足系统 `Σ_b=(Q_m, X, U_b, f_q, G_q, R_q)`，模式集 `Q_m={flight, single, double}`，接触事件经守卫 `G_q` 与重置 `R_q`；执行器有界 `‖u‖≤u_max`，摩擦锥有界。可行集 `V(T)= {z_0: ∃ 有界控制轨迹使 ∀t≤T z(t)∈Z_safe 且 z(T)∈M_stand}`（稳态流形 M_stand=双支撑静止）。可行性证书 `B_v: Z×Q_m→ℝ` 满足 `B_v(z,q)≥0 ⇒ z∈C_cert ⊆ V(T)`（**内近似**）；求值器经离线验证（SMT/区间算术/数值边界检验）且在线求值成本 ≤ τ_eval（**成本被认证**）。放行附加时间边界：`time_to_boundary(z) ≥ τ_ttb_min`。
+**定义 98（迁移证书与任务条件化泛化间隙）**
+任务态射 `φ:(z_t,u_t)→(z_s,u_s)` 携带适配义务 `κ_ad`：`Inv_s∘φ⇒Inv_t`、`Z_safe^s` 拉回包含于 `Z_safe^t`、契约前置条件保持、执行包络 `A_lb` 映射不放大。迁移证书
+`TC=(C_s,φ,D,δ_tr,κ_ad,h_T)` 满足：`∀T∈D, dom_{C_s}(φ(T))=in ∧ κ_ad(T) ⇒ P(z_t∈Z_safe^t, ∀t≤H) ≥ 1−α_s−δ_tr(T)`。
+`δ_tr(T)` 必须至少含一个**sound 分量**（对动力学/接触失配的 Lipschitz/收缩界、barrier 鲁棒性界、或经形式化验证的最坏失配仿真），统计残差只可用 conformal 下界修正；禁止只用学到的任务嵌入距离。`δ_tr(T)` 可超过风险预算 → 迁移无效（负迁移），必须拒绝而非折中。无适用域谓词 → 无迁移证书。
 
-**定义 81（捕获域与双足 MRC）**
-k 步捕获域 `C_k={z: ∃ ≤k 步控制序列将 z 送回 M_stand，且途经状态满足 B_v≥0 ∧ PFL}`，按包含 `C_1⊆C_2⊆…⊆C_max⊆C_cert`。双足 MRC 分层：`z∈C_1` 执行认证一步捕获；`z∈C_2\C_1` 两步；`z∉C_max` 执行**认证保护姿态**（预下蹲、收臂、断力、落地缓冲），其轨迹离线证书化并定期真机演练。捕获执行误差（打滑/推力超出认证扰动集）计入 `α_cap`。轮式/固定基座平台 MRC 退化为 v13 的"减速到零"，CRM 是其严格超集。
+**定义 99（证书组合与适配义务）**
+技能 `S_i=(Pre_i,Post_i,Inv_i,A_lb,i,C_i)`。组合 `S_1⊗S_2` 可接受当且仅当 `Post_1⇒Pre_2`、接口上 `Inv` 保持、且适配义务 `κ_ad^⊗`（共享物体、接触、坐标、时序、共地、参数域）被清偿。组合风险
+`α_⊗=α_1+α_2+α_int(⊗)`，其中 `α_int` 是**部件层面不存在、组合才出现的交互失效**，不可由各部分相加推出，必须按组合类用仿真证伪 + 真实锚点给出上界。组合产生新声明、新适用域与新证据义务，**不是旧证书的免费并集**。
 
-**定义 82（证书引导蒸馏）**
-teacher `𝒯`=完整 v14 栈（含完整搜索）；student `s_φ: (o,ctx)→候选 (u_r, a, m, q, ι, κ步序)`。训练数据 = teacher 认证 rollout + PFV 反例 + 守卫拒绝样本；损失 = 认证标签模仿项 + **可行域裕量项**（以 teacher 的证书裕量为回归目标）+ 分歧惩罚。**蒸馏只允许逼近搜索算子；证书求值算子（B、B_v、PFL、Inv、版本哈希）禁止被近似替代**——这是架构红线，不是超参。
+**定义 100（仿真保真包络与仿真证据等级）**
+仿真器 `S=(engine,assets,scenarios,seeds,h_S)` 视为仪器。对风险泛函 `R`（安全裕量、违例率、成功率），任务条件化保真度
+`ε_S(T)=sup_{π∈Π_T}|R_real(T,π)−R_sim(T,π)|`，在经认证测试分布 `D_test(T)` 上以 `1−β_S(T)` 覆盖；仿真证书 `SC=(h_S,D_test,ε_S(T),β_S,coverage,seeds,asset_sbom)`。保真度**不是全局标量**，必须按任务族给出。证据等级：**E0** 仅仿真反例（只可拒绝）；**E1** 仿真结果 + 校准 `ε_S` + 独立真实锚点（可带膨胀支持认证）；**E2** 任务本地真实认证（完整）。**无 E2 的接受必须经 E1 闭合；E0 永不接受。**
 
-**定义 83（提议-处置守卫）**
-精确守卫 `G_exact` 在实时预算 τ_g 内对候选执行全部精确求值（屏障/可行性/PFL/协议不变式/共创版本哈希/租约），全部通过才放行；否则依次回退：更多候选 → 限量完整搜索 → CRM。`G_exact` 的求值成本被离线认证（cost-certified）并有运行时看门狗（超预算即强制安全慢模式）；学生提议频次受限以防"守卫抖动"。学生误差只改变所走路径（fast/fallback/MRC），不改变放行标准——**蒸馏损失的是可用性，不是 soundness**。
+**定义 101（仿真证据的单向准入 / 证伪优先）**
+准入函数 `Adm(⋅)`：`Adm(sim_fail)=reject` 或收缩域（假警报只损失可用性，方向安全）；`Adm(sim_pass)=proposal_only`，除非满足 E1（`ε_S` 有效 ∧ 锚点完成）。形式化要求**单调性**：仿真证据只能使已认证域/置信度**单调不增**（`D′⊆D`），除非 `ε_S` + 真实锚点另行闭合。因此被投毒或过度乐观的仿真最多造成过度保守，不能造成未认证放行；反之，仿真漏报是危险方向，绝不能由仿真单独接受。
 
-**定义 84（学习证伪器与反例共蒸馏）**
-`LFF_ψ: 场景→违规概率/薄弱区域`，由历史反例与守卫拒绝样本训练；PFV 预算按 LFF 优先级分配；只有**精确证伪器**能判定违规（定罪权不蒸馏）。新反例同时更新 LFF 与 student（共蒸馏）。LFF 只影响预算分配效率，其假阴性不产生放行。
+**定义 102（真实锚点预算与预注册采样）**
+真实锚点集 `A(T)={a_1,…,a_m}` 由**预注册**采样从 `D(T)` 抽取，采样过程与仿真搜索独立，且不得复用为模型选择。若采用"零失败"规则，需 `m ≥ ln(β_a)/ln(1−α_a)` 才能以 `1−β_a` 声称违例率 `≤α_a`；更一般地可用 anytime-valid e-process 停止。锚点预算 `B_real`（时间/成本）是一等约束：**预算不足则不得扩域**，只能留在已锚定域内或 fail-closed。**禁止用仿真单独扩张适用域。**
 
-**定义 85（共创-版本-再蒸馏一致性）**
-每次守卫检查携带契约版本哈希 `h(κ_c)`；契约变更触发 teacher 重解 → 重蒸馏 → **再认证**（在守卫集上零违例 + held-out 认证场景回归通过）方可服役；版本不匹配的学生候选一律被 `G_exact` 拒绝（fail-closed），旧学生不得在新契约下执行。
+**定义 103（联合再认证与版本六元组）**
+守卫校验 `(h(κ_c),h_G,v_student,v_interaction,h_T,h_S)` 六元组（`h_T`=任务指纹/适用域哈希，`h_S`=仿真器/资产/场景版本）。任一不匹配即 fail-closed。契约、部署图、学生、交互策略、任务域、仿真器/资产任一变更 → 重解 → 重蒸馏 → **域重判 → 迁移界重算 → 仿真保真复核 → 必要时重跑锚点** → 再认证后方可服役。
 
-**定义 86（账本与八源归因）**
-`CCL++` 在 `CCL+` 上追加：共创签署/剪辑事件、捕获步与保护姿态事件、学生-守卫分歧与回退、LFF 定罪反例哈希；DDA 归因扩为**八源**：感知/关节/边界/意图/接触/传输/**动力（可行·捕获）**/蒸馏（分歧与服务降级）。任一来源的置信折损显式入账并参与抽象与速度缩放，不得静默吸收。
+**定义 104（域漂移绊线与负迁移）**
+在线监控任务描述符 `d(T)`、成功率/安全残差与预测之差、共地与上下文；用 anytime-valid e-process 检验 `T∈D` 与迁移界 `δ_tr`。检验拒绝即：撤销迁移证书、收缩域、回退任务本地认证或 CRM，**绝不带病继续**。要求检测延迟 `≤τ_shift`、误报 `≤α_shift`；负迁移一旦被证据支持，旧 `TC` 永久失效并记入账本。
+
+**定义 105（选择偏差与搜索预算）**
+若用仿真从 `N` 个候选策略/域中选出最优，表观安全有乐观偏差。证书必须扣除
+`α_sel(N,m) ≥ sqrt(2(ln N+ln(1/β))/m)`（或等价的 anytime-valid/e-value 修正），其中 `m` 为独立锚点数。搜索预算 `N` 是风险资源：仿真搜得越多，所需真实锚点越多。禁止在验收锚点上做早停、挑选或多次比较而不校正。
+
+**定义 106（账本与十二源归因）**
+`CCL⁴` 在 `CCL+++` 上追加：任务域判定/扩张/撤销、迁移使用与负迁移、组合交互项、仿真证据等级、保真漂移、锚点结果与泄漏审计、搜索预算 `N`、域漂移绊线。DDA 归因扩为**十二源**：感知 / 关节 / 边界 / 意图 / 接触 / 传输 / 动力 / 蒸馏 / 交互 / 底座 / **迁移（域·组合·负迁移）** / **仿真（保真·选择·资产）**。任一来源的置信折损显式入账并参与抽象、速度缩放与自主权缩放，不得静默吸收。
 
 ## 2. 新增产出与既有 IP 升级
 
-**IP-86 UCC（User Co-creation Contract）**：能力格 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权、版本钉住。
-**IP-87 HVC（Hybrid Viability Certificate）**：双足混合可行性证书；`B_v` 内近似 + 时间边界 + 成本认证的求值器。
-**IP-88 CRM（Capture-Region MRC）**：分层捕获域 `C_1⊆C_2⊆C_max` + 认证保护姿态；v13 MRC 的严格超集。
-**IP-89 KDX（Certificate-guided Distillation eXecutive）**：提议-处置执行器；teacher 离线/影子、student 实时提议、G_exact 精确处置、分歧与回退入账。
-**IP-90 LFF（Learned Falsifier Front-end）**：学习证伪器；给 PFV 提优先级、反例共蒸馏、无定罪权。
+**IP-99 TIX（Task Index & Applicability Domain）**：任务指纹、可解释描述符格、可判定适用域谓词；`unknown` 即 out，域外禁止默认继承。
+**IP-100 XFR（Cross-task Transfer Certificate）**：任务态射 + 适配义务 + 任务条件化 `δ_tr`；至少一个 sound 分量；负迁移直接拒绝。
+**IP-101 CRC（Certificate Reuse Composer）**：技能/证书组合代数、适配义务清偿、交互项 `α_int`；组合必须新生证据。
+**IP-102 SFE（Simulation Fidelity Envelope）**：任务条件化 `ε_S(T)`、覆盖与版本钉住、场景/资产 SBOM；仿真作为带校准的仪器。
+**IP-103 FDR（Falsification-Only Discipline）**：仿真证据单向准入；失败即拒绝/收缩，通过默认只是提议。
+**IP-104 RAB（Reality Anchor Budget）**：预注册、与搜索独立的真实锚点与统计功效；预算不足不得扩域。
+**IP-105 DST（Domain-Shift Tripwire）**：在线 e-process 域漂移/负迁移绊线；撤销迁移、回退本地认证或 CRM。
+**IP-106 SBC（Search-Budget Correction）**：把搜索预算 `N` 计入风险，扣除 `α_sel(N,m)`，抑制赢家诅咒。
 
 **既有 IP 升级**
-IP-82 IPC：协议状态新增共创签署转换（用户可签协议变体）；确认信号纳入签署证据。
-IP-80 SIG：意图后验升级为"后验 + 已签承诺"的锐化混合 `b'(θ)∝b(θ)·(1+ω_u·c_θ)`；σ 硬下界不动。
-IP-79 SIC：联合状态扩为 `z=(x_r,x_h,x_e,κ)`，屏障条件与步态相位耦合；∀人动作∃机器序列（而非单步动作）。
-IP-85 MRC：升级为 CRM 兼容——轮式臂=停机，双足=捕获/保护姿态；MRC 触发一律入 CCL++。
-IP-83 PFV：预算分配接入 LFF；原型阶梯对双足加入滑移/推撞/柔顺地面注入。
-IP-84 XFER：传输缺口估计加入"动力学保真"维度（双足原型对打滑与推力的对标）；学生跨层迁移同样带 δ。
-IP-77 DDA：六源 → 八源（+动力、+蒸馏）。
-IP-61 DCL：新增学生-守卫分歧、捕获事件、共创承诺未兑现、滑移近失四类样本。
-IP-62 CCA：新增越权共创、承诺欺骗、步态时机欺骗、对抗性提议（student DoS/守卫抖动）红队。
-IP-51 CAR：守卫条件加入"精确求值通过 ∧ 版本哈希匹配 ∧ 求值看门狗正常"。
-IP-45 总线：新增 locomotion-mode / capture-state / contract-version / student-guard-disagreement 话题。
-IP-66/67/68：语音成为共创入口（签署/修改条款需多模态身份确认）；记忆存储契约版本历史；SAB 队列对共创请求走双签署流程。
-IP-75 ASC：抽象可行性加入 κ（步态相位）与捕获域约束；高不确定或窄捕获域强制细化。
-IP-74 HTD-Cert：分解节点可含步态子任务（"走到灶台前"= 可行性证书节点）；边蕴含同时查捕获可达。
-IP-72 RRP：e-process 纳入可行性/捕获/共创证据；跨层传输仍带 δ。
-IP-76 CCL：升级为 CCL++（见定义 86），仍只追加。
+IP-94 GPC：图钉追加 `h_T`（任务域）与 `h_S`（仿真器/资产/场景）及资产 SBOM；图/任务/仿真任一变更即失效。
+IP-96 CE：信封携带 `h_T`、迁移证书摘要、仿真证书摘要、证据等级与搜索预算 `N`；任务域成为证书语义的一部分。
+IP-83 PFV：仿真自身进入证伪对象——仿真保真包络、场景采样偏差、资产/引擎投毒、过拟合到仿真；仍无定罪权。
+IP-84 XFER：δ 从标量升级为任务条件化三元 `(δ_tr, ε_S, α_sel)`，并显式报告锚点覆盖。
+IP-77 DDA：十源 → 十二源（+迁移、+仿真）。
+IP-61 DCL：采集域判定失败/扩张、迁移失败、负迁移、仿真-真实残差、锚点结果、泄漏审计、漂移事件、搜索预算。
+IP-62 CCA：新增仿真器/资产投毒、场景挑樱桃、基准过拟合、Goodhart、锚点泄漏、域欺骗、旧迁移重放、负迁移注入红队。
+IP-51 CAR：守卫加"`dom_C(T)=in` ∧ 迁移有效 ∧ 证据等级可准入 ∧ 锚点已完成 ∧ 绊线未触发"。
+IP-45 总线：新增 task-fingerprint / applicability-domain / transfer-cert / sim-cert / sim-evidence-class / domain-shift / reality-anchor 话题。
+IP-85 MRC：新增"域漂移绊线/迁移失效/仿真保真漂移/锚点失败"触发；CRM 作为本地默认。
+IP-79 SIC：联合状态扩为 `z=(x_r,x_h,x_e,κ,g,λ,τ,σ)`；屏障条件含任务域与仿真证据等级。
+IP-82 IPC：协议并入任务/域协商与证据披露（向用户说明"此能力仅在某域内、证据等级为何"）。
+IP-75 ASC：抽象只在适用域内可行；跨域强制细化/迁移/再认证，禁止用大模型"感觉相似"扩域。
+IP-74 HTD-Cert：分解节点携带任务域约束、仿真证据等级与组合适配义务节点。
+IP-86 UCC：共创条款只在域内生效；新任务请求必须走迁移或再认证，并如实解释不确定性。
+IP-72 RRP：e-process 纳入域成员、迁移残差、仿真保真、选择偏差与锚点证据；跨层仍带 δ。
+IP-76 CCL：升级为 `CCL⁴`（定义 106），只追加。
 
 ## 3. 算法骨架
 
 每个宏周期：
-1. 读目标、证书 `C_t`、租约、`CCL++`、契约版本哈希 `h(κ_c)`；任一失效或审计失败 → fail-closed。
-2. HTD-Cert 展开/复用 DAG；前沿节点标注交互子任务（协议状态 ι）与步态子任务（捕获约束 κ）。
-3. 更新意图信念：`b'(θ)` = 后验 × 已签承诺（ω_u 加权）；计算 `H(b'), σ(b')`；σ 低于阈值只保留 primitive 或 CRM。
-4. UCC 校验新增共创条款：能力格 + 不可委托 + 双签署；通过则更新契约并触发 teacher 重解/重蒸馏（异步）；旧版本学生即刻失效。
-5. KDX 提议-处置：student 提议候选 (u_r,a,m,q,ι,κ)；`G_exact` 精确求值 B/B_v/PFL/Inv/共识/版本/租约；通过才执行；否则更多候选 → 限量完整搜索 → CRM。
-6. HVC 维持可行性内近似：步态相位推进时复核 `B_v≥0` 与 time-to-boundary；接近边界即触发捕获准备。
-7. 执行前后 CBG+ 复核边界蕴含 ∧ 屏障 ∧ 可行性 ∧ PFL ∧ 协议共识 ∧ 版本匹配；通过才追加 CCL++。
-8. 若实测违反（含滑移/推撞/捕获失败）：DDA 八源归因，选最早安全点再分解/重校准/再蒸馏；必要时 CRM。
-9. 离线/并行：PFV+LFF 按预算证伪，XFER 估计 δ 并膨胀部署 α；新反例回灌 DCL/CCA 并共蒸馏 student 与 LFF。
-10. 所有路径（抽象、协议、共创、蒸馏）均不可行 → 技能合成 / 人工接管 / 保护姿态 / fail-closed，绝不绕过 L3.5 与精确守卫。
+1. **任务索引**：由上下文构建 `d(T)`，计算任务指纹 `h_T`；检索候选证书、迁移证书与仿真证书；解析六元组，任一失效 → fail-closed。
+2. **底座自检**：承接 v15，验证 SROS2 enclave、图清单 `h_G`、包签名/SBOM、SEN/看门狗；不通过即 hold。
+3. **域判定**：对每个候选证书计算 `dom_C(T)`；`unknown` 按 out。域外候选只能进入迁移/再认证分支，禁止默认复用。
+4. **仿真证据**：以对抗任务/策略搜索做 E0 证伪，扩大失败边界；任一反例 → 收缩域或拒绝；仿真通过只登记为提议，不进入放行。
+5. **迁移与组合**：计算 `δ_tr(T)` 的 sound 分量与 conformal 残差；清偿适配义务；组合时计入 `α_int` 并生成新声明/新域。
+6. **选择校正**：记录搜索预算 `N`，扣除 `α_sel(N,m)`；若验收锚点被搜索污染 → 判定泄漏、重采。
+7. **锚点闭合**：E1 必须在预注册、独立真实锚点上通过；预算不足 → 不扩域，回退已锚定域或任务本地认证。
+8. **共地与主动权**：承接 v15，`B_g<θ_ground` 只许澄清/示范/最小动作；IL 单写者、交接保持 `Z_hold`。
+9. **计划与驱动**：承接 v15 的 PSC/CRT/ACC/JDA/EDR；计划骨架与 `A_lb` 复核，及时条件不满足即重规划。
+10. **精确处置与签发**：KDX 提议 → `G_exact` 在 `A_lb`、`h_G`、`h_T`、`h_S`、`h(κ_c)` 与证据等级下精确求值；通过后签发 CE 与 AL；只有 SEN 能在边缘验证并授权执行器。
+11. **执行与绊线**：SEN 监控期限/看门狗/租约；DST 在线检验域成员与迁移界；任一失败 → 本地 CRM，撤销迁移证书并入账。
+12. **归因与回灌**：DDA 十二源归因；负迁移/仿真漏报/锚点失败回灌 DCL/CCA；必要时收缩域、重蒸馏、重认证。
+13. 所有路径不可行 → 技能合成/人工接管/保护姿态/fail-closed；绝不绕过 SEN、`G_exact`、L3.5，也绝不用仿真单独扩域。
 
 ## 4. 本轮最大风险
 
-**一句话**：安全论证现在悬挂在一个新的承重假设 (A11) 与两个新的近似锚上——**"便宜且精确"的守卫求值**、**可行性内核 C_cert 与捕获策略的保守性**、**用户授权不被滥用**；一旦求值在真机超预算或被静默近似替代，或内核/捕获对打滑与未认证扰动过于乐观，或共创条款越过能力格，propose–dispose"只损失效率不损失 soundness"的不对称就会崩塌成"纸面 sound、现实不安全"，因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
+**一句话**：v16 把"泛化"从一句口号变成了可计算的适用域与风险预算，但整条论证现在悬挂在两个"自指"的估计上——**适用域谓词与 `δ_tr` 是用有限任务样本学/估出来的，仿真保真包络 `ε_S(T)` 又是在同一批仿真分布上校准的**；一旦任务族被错误划分、仿真器被投毒或过拟合、或锚点与搜索发生泄漏，"域内成立"的证书就会变成**证书齐全的过度泛化**——所有局部检查都通过，却在真实任务族的边缘系统性失效，因此必须以独立预注册锚点、单调证伪纪律、选择偏差校正和持续域漂移绊线来证伪"泛化"本身，宁可拒绝扩域，绝不把相似当等价。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 50 轮产物 · 创新点清单 v27：CoStride-Distill（UCC × HVC × CRM × KDX × LFF）× 共创契约、双足可行证书与证书引导蒸馏（八层架构 v14）
+# 第 52 轮产物 · 创新点清单 v29：GroundEdge-GenSim（TIX × XFR × CRC × SFE × FDR × RAB × DST × SBC）× 适用域证书、迁移风险预算与仿真保真/单向证伪（十层架构 v16）
 
-> 承接第 49 轮产物 v26。本轮增量插入 IP-86/87/88/89/90，并升级 IP-82/80/79/85/83/84/77/61/62/51/45/66/67/68/75/74/72/76。不推倒 v13 耦合安全交互与原型证伪框架；新增 L3.5 动力可行层与跨层蒸馏通道，L2.5 升级为交互安全与共创契约层。第 5 轮灵感循环聚焦 H8/H9/H10：动力可停性、全栈在线实时性、契约作者单一性。核心不对称：**蒸馏只许近似搜索、绝不近似评估——学生误差损失可用性，不损失 soundness**。
+> 承接第 51 轮产物 v28。本轮增量插入 IP-99/100/101/102/103/104/105/106，并升级 IP-94/96/83/84/77/61/62/51/45/85/79/82/75/74/86/72/76。不推倒 v15 GroundEdge 的 IGC/ILM/XTC/GPC/SEN/CE/TBC 框架；新增 L0.5 任务迁移与仿真证据层，把"单任务证书"升级为"带可判定适用域、迁移风险预算与仿真保真包络的泛化证书"。第 3 轮灵感循环聚焦 H16/H17：认证单元的任务泛化性、仿真证据的认识论地位。核心架构位移：**证书从"在某任务上为真"变成"在可判定域内、以可入账容差为真"；仿真从"可信证伪器"降格为"有校准包络的仪器"，只能否决、不能单独批准**。核心不对称再次扩展：**学生/仿真只许提议与证伪，精确守卫、真实锚点与 SEN 才许放行；跨域可迁移，但绝不免费继承**。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-86 | UCC User Co-creation Contract | 新增 | 能力格授权 + 双签署共创契约；越权拦截、根信任不可委托、兑现率加权 ω_u |
-| IP-87 | HVC Hybrid Viability Certificate | 新增 | 双足混合可行性证书；B_v 内近似 + time-to-boundary + 成本认证求值器 |
-| IP-88 | CRM Capture-Region MRC | 新增 | 分层捕获域 C_1⊆C_2⊆C_max + 认证保护姿态；v13 MRC 的严格超集 |
-| IP-89 | KDX Cert-guided Distillation eXecutive | 新增 | 提议-处置：student 提议、G_exact 精确处置；版本钉住、回退入账 |
-| IP-90 | LFF Learned Falsifier Front-end | 新增 | 学习证伪器提 PFV 预算优先级；反例共蒸馏；无定罪权 |
-| IP-82 | IPC | 升级 | 协议新增共创签署转换；确认信号纳入签署证据 |
-| IP-80 | SIG | 升级 | b' = 后验×已签承诺（ω_u 锐化）；σ 硬下界不动 |
-| IP-79 | SIC | 升级 | 联合状态扩 κ；∀人动作 ∃机器**序列**（捕获可达） |
-| IP-85 | MRC | 升级 | CRM 兼容：轮式臂=停机，双足=捕获/保护姿态 |
-| IP-83 | PFV | 升级 | LFF 提优先级；双足阶梯加滑移/推撞/柔顺注入 |
-| IP-84 | XFER | 升级 | δ 增动力学保真维度；学生跨层迁移同样带 δ |
-| IP-77 | DDA | 升级 | 六源 → 八源（+动力、+蒸馏） |
-| IP-61 | DCL | 升级 | 采集学生-守卫分歧/捕获事件/承诺未兑现/滑移近失 |
-| IP-62 | CCA | 升级 | 越权共创/承诺欺骗/步态时机欺骗/对抗性提议红队 |
-| IP-51 | CAR | 升级 | 守卫加"精确求值 ∧ 版本匹配 ∧ 看门狗正常" |
-| IP-45 | 总线 | 升级 | locomotion-mode / capture-state / contract-version / student-guard-disagreement |
-| IP-66/67/68 | VAD/MVR/SAB | 升级 | 语音=共创入口（多模态身份确认）；记忆存契约版本史；共创请求走双签署 |
-| IP-75/74 | ASC/HTD-Cert | 升级 | 可行性加入 κ 与捕获域；步态子任务=可行性证书节点 |
-| IP-72/76 | RRP/CCL | 升级 | e-process 纳入可行/捕获/共创证据；CCL++（定义 86） |
+| IP-99 | TIX Task Index & Applicability Domain | 新增 | 任务指纹 + 可解释描述符格 + 可判定域谓词；`unknown`=out，域外禁止默认继承 |
+| IP-100 | XFR Cross-task Transfer Certificate | 新增 | 任务态射 + 适配义务 + 任务条件化 `δ_tr`；至少一个 sound 分量；负迁移直接拒绝 |
+| IP-101 | CRC Certificate Reuse Composer | 新增 | 组合代数 + 适配义务清偿 + 交互项 `α_int`；组合必须新生证据 |
+| IP-102 | SFE Simulation Fidelity Envelope | 新增 | 任务条件化 `ε_S(T)` + 覆盖/版本钉住 + 场景资产 SBOM；仿真=带校准仪器 |
+| IP-103 | FDR Falsification-Only Discipline | 新增 | 仿真证据单向准入；失败即拒绝/收缩，通过默认只是提议 |
+| IP-104 | RAB Reality Anchor Budget | 新增 | 预注册、搜索独立的真实锚点与统计功效；预算不足不得扩域 |
+| IP-105 | DST Domain-Shift Tripwire | 新增 | 在线 e-process 域漂移/负迁移绊线；撤销迁移、回退本地认证/CRM |
+| IP-106 | SBC Search-Budget Correction | 新增 | 搜索预算 `N` 计入风险，扣除 `α_sel(N,m)`，抑制赢家诅咒 |
+| IP-94 | GPC | 升级 | 图钉加 `h_T`/`h_S`/资产 SBOM；图·任务·仿真任一变更即失效 |
+| IP-96 | CE | 升级 | 信封加 `h_T`、迁移/仿真证书摘要、证据等级、搜索预算 `N` |
+| IP-83 | PFV | 升级 | 仿真自身成为证伪对象：保真包络/采样偏差/投毒/过拟合；无定罪权 |
+| IP-84 | XFER | 升级 | δ 升级为 `(δ_tr, ε_S, α_sel)` 三元 + 锚点覆盖报告 |
+| IP-77 | DDA | 升级 | 十源 → 十二源（+迁移、+仿真） |
+| IP-61 | DCL | 升级 | 采域失败/扩张/迁移失败/负迁移/仿真-真实残差/锚点/泄漏/漂移/N |
+| IP-62 | CCA | 升级 | 仿真投毒/挑樱桃/基准过拟合/Goodhart/锚点泄漏/域欺骗/旧迁移重放/负迁移注入 |
+| IP-51 | CAR | 升级 | 守卫加域成员∧迁移有效∧证据等级可准入∧锚点完成∧绊线未触发 |
+| IP-45 | 总线 | 升级 | task-fingerprint / applicability-domain / transfer-cert / sim-cert / sim-evidence-class / domain-shift / reality-anchor |
+| IP-85/79 | MRC/SIC | 升级 | 新触发（漂移/迁移失效/保真漂移/锚点失败）；状态含 `τ,σ`，屏障含域 |
+| IP-82/86 | IPC/UCC | 升级 | 协议并入域协商与证据披露；共创条款只在域内生效，新任务须迁移/再认证 |
+| IP-75/74 | ASC/HTD-Cert | 升级 | 抽象只在域内；分解节点带域约束、证据等级、组合适配义务 |
+| IP-72/76 | RRP/CCL | 升级 | e-process 纳入域/迁移/保真/选择/锚点；`CCL⁴`（定义 106） |
 
-## 1. 符号体系（定义 79–86 见想法区；符号增量）
+## 1. 符号体系（定义 97–106 见想法区；符号增量）
 
 | 符号 | 含义 |
 |---|---|
-| `L_auth=(𝒜,⊑)` | 用户权威格（空间域×参数类别×幅值上界） |
-| `κ_c=(s,clause,Sig_u,Sig_designer,ver)` | 共创契约（双签署 + 版本钉住） |
-| `ω_u` | 用户证据权重（承诺兑现率的单调函数） |
-| `Σ_b=(Q_m,X,U_b,f_q,G_q,R_q)` | 双足混合系统（flight/single/double） |
-| `V(T), M_stand` | 可行集与稳态流形（双支撑静止） |
-| `B_v(z,q), C_cert` | 可行性证书与认证内近似子集 |
-| `τ_ttb, τ_eval, τ_g` | 时间边界 / 求值成本上界 / 守卫实时预算 |
-| `C_1⊆C_2⊆…⊆C_max` | k 步捕获域（CRM 分层） |
-| `α_viable, α_cap` | 可行性内近似误差 / 捕获执行误差失效项 |
-| `α_user` | 用户签署承诺与实际行为发散的失效项 |
-| `𝒯, s_φ` | teacher（全栈+完整搜索）/ student（实时提议者） |
-| `G_exact` | 提议-处置精确守卫（cost-certified） |
-| `LFF_ψ` | 学习证伪器（只提优先级，无定罪权） |
-| `h(κ_c)` | 契约版本哈希（守卫强制校验） |
-| `d_t, r_fb` | 学生-守卫分歧 / 回退率（效率指标，非安全项） |
-| `v^*,a^*,m^*,q^*,ι^*,κ^*` | 分解/抽象/模态/构型/交互/步态联合决策 |
+| `T=(O,E,G,W,Emb,Ctx)` | 任务：对象/场景、环境分布、目标、用户契约、本体、上下文 |
+| `d(T)∈𝔇, d_ℱ` | 可解释任务描述符 / 任务距离（仅检索，不单独作 soundness） |
+| `D(C), dom_C(T)` | 证书适用域 / 域判定谓词（`in/out/unknown`，unknown→out） |
+| `φ, κ_ad` | 任务态射 / 适配义务 |
+| `TC=(C_s,φ,D,δ_tr,κ_ad,h_T)` | 迁移证书 |
+| `δ_tr(T)` | 任务条件化泛化间隙（含 sound 分量 + conformal 残差） |
+| `S_i=(Pre_i,Post_i,Inv_i,A_lb,i,C_i)` | 可组合技能证书 |
+| `α_int(⊗)` | 组合交互失效项（不由部件相加得出） |
+| `S=(engine,assets,scenarios,seeds,h_S)` | 仿真器仪器与版本 |
+| `ε_S(T), β_S(T)` | 任务条件化仿真保真包络 / 未覆盖概率 |
+| `SC=(h_S,D_test,ε_S,β_S,coverage,seeds,asset_sbom)` | 仿真证书 |
+| `E0/E1/E2` | 仿真反例 / 校准仿真+锚点 / 任务本地真实认证 |
+| `Adm(⋅)` | 仿真证据单向准入函数 |
+| `A(T), m, B_real` | 真实锚点集 / 样本数 / 预算 |
+| `α_a, β_a` | 锚点可证违例率 / 置信失败概率 |
+| `N, α_sel(N,m)` | 仿真搜索预算 / 选择偏差修正项 |
+| `τ_shift, α_shift` | 域漂移检测延迟 / 误报率 |
+| `(h(κ_c),h_G,v_student,v_interaction,h_T,h_S)` | 版本六元组（守卫强制校验） |
+| `h_T, h_S` | 任务域哈希 / 仿真器与资产版本哈希 |
+| `α_transfer, α_sim, α_select, α_shift` | 迁移 / 仿真保真 / 选择偏差 / 域漂移失效项 |
+| `τ, σ` | JCPS 输出中的任务域判定 / 仿真证据等级句柄 |
 
 ## 2. 关键算法 伪代码
 
-### IP-86 UCC
+### IP-99 TIX（任务索引与可判定适用域）
 ```
-def co_create(clause, user_sig, auth_registry, contracts):
-    scope = auth_registry.scope_of(user_sig.user_id)
-    if not lattice_leq(clause.relaxation, scope.cap):
-        return ('reject', 'out_of_competence')     # 超出能力格
-    if touches_root_trust(clause):                 # PFL/屏障/MRC/审计不可委托
-        return ('reject', 'non_delegable')
-    kappa = Contract(scope, clause, user_sig, sign_template(clause),
-                     ver=next_ver(contracts))
-    ledger_append_plus(now(), 'co_create', kappa)
-    schedule_teacher_resolve(kappa)                # 触发重解→重蒸馏→再认证
-    return ('accept', kappa, 're_distill_required')
+def task_index(T, descriptors):
+    d = interpretable_descriptors(T, descriptors)   # 对象/几何/工况/交互/人群
+    h_T = H(canonical(d))
+    return d, h_T
 
-def user_evidence_weight(user_id, dcl):
-    return clamp(OMEGA_BASE * dcl.adherence(user_id), OMEGA_MIN, OMEGA_MAX)
-```
+def domain_check(C, d):
+    # 只认可解释谓词；嵌入最近邻仅供调度，不作 soundness
+    r = C.dom_predicate(d)
+    if r == 'unknown':
+        return 'out'                                 # fail-closed
+    return r
 
-### IP-80 SIG（v14 升级：共创锐化意图）
-```
-def sharpened_intent(b, kappa_signed, omega_u, ctx):
-    if kappa_signed and kappa_signed.matches(ctx):
-        b = normalize(b * (1 + omega_u * kappa_signed.theta_indicator))
-    return b          # σ(b') 随签署承诺锐化；硬下界 σ_min 永不放松
-
-def viability_clip(clause, hvc, z, mode):
-    if clause.category == 'speed':
-        v_req = clause.value
-        return min(v_req, hvc.max_certified_speed(z, mode))   # 捕获域剪辑
-    return clause.value
+def certified_for(C, d):
+    return domain_check(C, d) == 'in'
 ```
 
-### IP-87 HVC
+### IP-100 XFR（迁移证书与泛化间隙）
 ```
-def viability_ok(z, mode, kappa):
-    if mode not in CERTIFIED_MODES:
-        return False
-    Bv = evaluate_Bv(z, mode)          # 预计算内核/已验证求值器，O(1)
-    if Bv < 0:                         # 不在认证可行子集内：内近似不放行
-        return False
-    if time_to_boundary(z, kappa) < TAU_TTB_MIN:
-        return False                   # 时间边界不足：安全不等价
-    return True
-```
-
-### IP-88 CRM
-```
-def biped_mrc(z, mode, student):
-    for k in (1, 2):                                # 先试最少步数
-        if k <= K_MAX and z in C_k[k][mode]:
-            seq = student.propose_capture(z, k) or search_capture(z, k)
-            if verify_capture_seq(z, seq):          # 精确验证整条序列
-                execute(seq)
-                ledger_append_plus(now(), 'capture', k)
-                return 'stand'
-    return certified_protective_fall(z)             # 认证保护姿态（离线证书化）
+def transfer_certify(C_s, phi, d, kappa_ad, graph, sim_cert):
+    if not sound_morphism(phi, C_s):                 # Inv 拉回/安全集包含
+        return ('reject', 'morphism_unsound')
+    if not discharge(kappa_ad, d):                   # 适配义务未清偿
+        return ('reject', 'adapter_unmet')
+    delta_sound = max(lyapunov_mismatch_bound(phi, graph),
+                      barrier_robustness_loss(phi, C_s),
+                      worst_case_mismatch_sim(phi, sim_cert))
+    delta_stat = conformal_upper(transfer_residuals(d), alpha=ALPHA_TR)
+    delta_tr = delta_sound + delta_stat              # 只可加，不可抵消
+    if delta_tr > DELTA_BUDGET:
+        return ('reject', 'negative_transfer', delta_tr)
+    return ('ok', TC(C_s, phi, D=d.nbr_region, delta_tr=delta_tr,
+                     kappa_ad=kappa_ad, h_T=d.h_T))
 ```
 
-### IP-89 KDX（提议-处置）
+### IP-101 CRC（组合与交互项）
 ```
-def propose_dispose(o, ctx, student, guard, budget):
-    h = contract_version_hash(ctx)                  # 版本钉住
-    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 限频提议
-        if guard.exact_check(cand, h):              # B/Bv/PFL/Inv/共识/版本/租约
-            return cand, 'fast_path'
-    for cand in teacher_search(o, ctx, budget_fallback):  # 限量完整搜索
-        if guard.exact_check(cand, h):
-            return cand, 'fallback'
-    ledger_append_plus(now(), 'disagreement', ctx)  # 分歧入账，回灌 DCL
-    return biped_mrc(...)                           # CRM
-    # 学生误差只影响走哪条路径；放行标准只在 G_exact 手里
-```
-
-### IP-90 LFF（证伪-教学共蒸馏）
-```
-def falsify_v2(cert, budget, scenario_dist, lff, student):
-    E = []
-    for _ in range(budget):
-        s = scenario_dist.sample_weighted(lff.weak_regions(cert))
-        for tr in cert.prototype.run(s):            # 含滑移/推撞/柔顺注入
-            if violates_exact(tr, cert):            # 只有精确证伪器能定罪
-                cex = minimize_cex(tr)
-                E.append(cex)
-                lff.retrain([cex])                  # 反例共蒸馏
-                student.retrain(cex_labels=[cex])   # 教学生避开守卫会拒的行为
-    return E, coverage(E)
+def compose(S1, S2, adapter):
+    if not implies(S1.Post, S2.Pre):
+        return ('reject', 'pre_post_mismatch')
+    if not preserves_invariants(S1, S2, adapter.interface):
+        return ('reject', 'invariant_break')
+    if not discharge(adapter.obligations, context()):
+        return ('reject', 'adapter_unmet')
+    a_int = interaction_term(S1, S2, adapter.cls)    # 组合类上单独估计
+    return ('ok', Skill(S1, S2, alpha=a_int,
+                        evidence=require_new_evidence(S1, S2, adapter)))
 ```
 
-### IP-73 JCPS（v14：交互-步态感知 + 提议-处置）
+### IP-102 SFE + IP-103 FDR（仿真保真与单向准入）
 ```
-def joint_costride_schedule(goal, C_t, leases, energy, q_prev, omega, b, kappa_c):
-    h = hash(kappa_c)
-    dag = htd_cert(goal, C_t, contracts, leases)    # 含步态/交互子任务
+def sim_fidelity(sim, T, R, D_test):
+    scores = [abs(R.real(x) - R.sim(sim, x)) for x in sample(D_test, T)]
+    eps = conformal_upper(scores, beta=BETA_S)       # 任务条件化，非全局标量
+    return SC(h_S=sim.version, D_test=D_test, eps_T=eps, beta=BETA_S,
+              coverage=len(scores), seeds=sim.seeds,
+              asset_sbom=audit_assets(sim))
+
+def admit(evidence, sc, anchors_done, N):
+    # 单调、单向：仿真只能收缩已认证域/置信度
+    if evidence.kind == 'counterexample':
+        return ('reject_or_shrink', evidence)        # 假警报只损可用性
+    if evidence.kind == 'pass':
+        if sc is None or sc.eps_T is None:
+            return ('proposal_only', 'no_fidelity_envelope')
+        if not anchors_done:
+            return ('proposal_only', 'no_reality_anchor')   # E1 未闭合
+        return ('support_E1', sc, alpha_sel(N, m=anchors_done))
+    if evidence.kind == 'real_cert':
+        return ('support_E2', evidence)
+    return ('reject', 'unknown_evidence')
+```
+
+### IP-104 RAB + IP-106 SBC（锚点与选择偏差）
+```
+def reality_anchor(T, D, alpha_a, beta_a, budget):
+    m_req = ceil(log(beta_a) / log(1 - alpha_a))     # 零失败规则（或 e-process）
+    if budget < cost(m_req, T):
+        return ('insufficient_budget', m_req)       # 不得扩域
+    A = preregistered_sample(D, m_req, seed=PRE_SEED)  # 与仿真搜索独立
+    for a in A:
+        if violates(a, T):
+            return ('anchor_fail', a)               # 撤销扩域
+    return ('anchor_pass', m_req)
+
+def alpha_sel(N, m, beta=0.05):
+    return sqrt(2.0 * (log(max(N, 1)) + log(1.0 / beta)) / max(m, 1))
+    # 或用 anytime-valid e-value；禁止在验收锚点上做未校正的选择/早停
+```
+
+### IP-105 DST（域漂移绊线）
+```
+def domain_shift_watch(T_stream, C, TC, eproc):
+    d, h_T = task_index(T_stream.latest(), DESCRIPTORS)
+    e = eproc.update(evidence=(d, residual(T_stream), success_rate(T_stream)))
+    if domain_check(C, d) != 'in':
+        return revoke(TC, reason='out_of_domain')    # 不等拒绝检验
+    if e.rejects(H0='T in D and delta_tr holds'):
+        return revoke(TC, reason='negative_transfer_or_shift')
+    return ('ok', e.value)
+```
+
+### IP-73 JCPS（v16：任务域-迁移-仿真联合调度）
+```
+def groundedge_gensim_schedule(goal, ctx, certs, leases, graph, now):
+    if not base_selfcheck(graph, now):               # v15 L0
+        return ('fail_closed', 'substrate')
+    d, h_T = task_index(ctx.task, DESCRIPTORS)
+    cand = retrieve(certs, d)                        # 距离仅用于检索
+    live = []
+    for C in cand:
+        if not domain_check(C, d) == 'in':
+            continue                                 # 域外不默认继承
+        if not version_six_ok(C, h_T, graph, now):   # h(κ),h_G,h_T,h_S,...
+            continue
+        live.append(C)
+    if not live:
+        # 迁移或任务本地再认证，绝不用"相似"直接放行
+        tc = best_transfer_certificate(cand, d, graph)
+        if tc is None or tc.delta_tr > DELTA_BUDGET:
+            return ('reverify_or_fail_closed', None)
+        sim_sc = best_sim_certificate(tc, d)
+        adm = admit(sim_evidence(tc, sim_sc), sim_sc,
+                    anchors_done=anchors_for(d), N=search_budget())
+        if adm[0] not in ('support_E1', 'support_E2'):
+            return ('reverify_or_crm', adm)
+        live = [inflate(tc, adm)]
+    bg = calibrated_Bg(current_g(), history())
+    if bg < THETA_GROUND:
+        return repair_or_act(current_g(), minimal(goal), history())  # v15
+    il = acquire_or_renew_initiative(current_holder(), scope_of(goal), now, current_z())
+    if il[0] == 'reject':
+        return ('hold_and_propose', certified_hold_set(scope_of(goal)))
+    dag = htd_cert(goal, live, contracts, leases, graph)  # 含域/组合/证据节点
     if dag is None:
         return ('synthesize_or_fail_closed', None)
-    if not viability_ok(current_z(), current_mode(), kappa_c):
-        return ('crm', biped_mrc(current_state(), current_mode(), student))
-    b = sharpened_intent(b, kappa_c.signed_intent, user_evidence_weight(...), ctx)
-    sigma = intent_scale(b)
-    best = None
-    for cand in student.propose(o, ctx, n_cand=N_FAST):   # 候选含 (a,m,q,ι,κ)
-        if not Inv[cand.iota](current_state()) or cand.hash != h:
+    if not viability_ok_A(current_z(), current_mode(), A_lb(current_drive())):
+        return ('crm', sen_local_crm())
+    for s in student.propose(o, ctx, current_g()):
+        if not guard.exact_check(s, h_T=h_T, h_S=sim_version(), hG=graph_hash(),
+                                 il=il[1], evidence_class=evidence_class(live), now=now):
             continue
-        if not barrier_ok(extend_z(current_z(), cand.kappa), b, LAMBDA, HORIZON):
+        ce = issue_envelope(s, cert_of(s), graph, now, h_T=h_T,
+                            transfer_digest=tc_digest(live),
+                            sim_digest=sim_digest(live),
+                            evidence_class=evidence_class(live), N=search_budget())
+        if not temporal_sound(ce, graph):
             continue
-        pick = choose_abstraction_viability(dag.frontier(), cand, sigma,
-                                            capture=C_k, hvc=HVC)
-        if pick and pick.value * sigma > (best.value if best else -inf):
-            best = pick
-    if best and guard.exact_check(best, h):
-        return best
-    if full_search_fallback() is not None:          # 限量
-        return fallback
-    return ('crm', biped_mrc(...))
+        return ('actuate', ce, issue_actuation_lease(ce, il[1], now))
+    return ('crm', sen_local_crm())
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| UCC | O(|𝒜|) 格判定 | O(|𝒜|+|契约史|) | 越权/触根信任即拒；双签署+版本钉住；权重只降不升伪造 |
-| HVC | 在线 O(1) 求值 | O(|C_cert|) 预计算 | 内近似：B_v≥0 ⇒ z∈C_cert⊆V(T)；时间边界强制 |
-| CRM | O(k·|U_b|) 序列验证 | O(k) | C_k 判层保守（宁可高估所需步数）；保护姿态离线证书化 |
-| KDX | O(N_fast·c_g + c_s) ≪ 全栈 | O(1) 在线 | 放行权仅在 G_exact；学生误差 → 回退率，非安全项 |
-| LFF | O(1) 预测 | O(|E|) | 无定罪权；假阴性只浪费预算 |
-| G_exact | Σ cost(精确求值) ≤ τ_g（离线认证） | O(1) | 看门狗超预算强制安全慢模式 |
-| CBG+ | cost(⊨)+cost(B,B_v,PFL,共识) | O(1) | 边界∧屏障∧可行∧PFL∧共识∧版本全过才放行 |
+| TIX | O(|d|) 指纹，O(1) 谓词 | O(|certs|) | `unknown`=out；域外不继承；嵌入距离仅检索 |
+| XFR | O(|φ|+标定表) | O(|D|) | 至少一个 sound 分量；`δ_tr>预算` 即拒绝 |
+| CRC | O(|obligations|) | O(|skills|) | Pre/Post/Inv 清偿 + 交互项单独取证 |
+| SFE | 离线 O(|D_test|)，在线 O(1) 查表 | O(|T|·|scenarios|) | 任务条件化覆盖；版本/资产钉住 |
+| FDR | O(1)/证据 | O(1) | 仿真单调收缩；E0 永不接受，通过仅提议 |
+| RAB | O(m) 真实试验 | O(m) | 预注册独立采样；预算不足不得扩域 |
+| DST | O(1)/更新，e-process | O(1) | 检测延迟 ≤`τ_shift`；撤销后回退本地认证/CRM |
+| SBC | O(1) | O(1) | `α_sel(N,m)` 扣除；N 越大锚点需求越大 |
+| v15 组件 | 承接 v15 | 承接 v15 | GPC/CE/SEN/TBC/IGC/ILM 全部保留 |
 
-**正确性定理（Co-Created, Distilled, Viability-Compositional Soundness）**
-假设：(A1)–(A8) 承接 v13（契约 sound、CBG 边界蕴含、租约、初始证书、CCL 只追加、意图支撑覆盖 `1−α_intent`、δ 膨胀不被低估、MRC 可达且受证书覆盖——其中 MRC 按 CRM 重释）；新增 **(A9)** `C_cert` 是可行集 V 的认证内近似（对认证摩擦/执行器界成立），B_v 求值与 C_cert 定义精确一致；**(A10)** 捕获策略在认证扰动集内以概率 ≥1−α_cap 在 k 步内到达 M_stand；**(A11)** G_exact 的求值成本被离线认证 ≤ τ_g 且运行时看门狗生效，学生候选永不绕过精确求值；**(A12)** 共创契约过能力格、根信任不可委托、双签署、版本钉住，且用户签署承诺与实际行为发散以概率 ≤α_user。则沿路径 `v_1…v_k`、交互序列与步态相位，
-`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − α_user − α_viable − α_cap − Σ_ℓ δ_{ℓ→d}`；
-且**蒸馏不进入安全上界**：学生误差只能提高回退率 r_fb（可用性/效率损失），因为执行要求 G_exact 精确求值通过——该不对称的承重点恰是 (A11)。共创条款只经"能力格 ∧ 可行性剪辑"后进入约束，不放松任何硬门槛。这仍是**条件保证**：`C_cert`/捕获的近似保守性、用户承诺的兑现、τ_g 的真机可达性是新的信任锚，由 PFV/LFF/DCL/CCA 的持续证伪与演练负责，不在定理覆盖范围内。
+**正确性定理（Domain-Scoped, Sim-Falsified, Anchor-Closed Generalization Soundness）**
+假设 (A1)–(A16) 承接 v15；
+**(A17)** 域谓词 sound：`dom_C(T)=in ⇒ T∈D(C)`，且域判定在承诺前完成、`unknown` 按 out 处理；任务描述符可观测且不可被未授权方伪造；
+**(A18)** 仿真保真包络 sound 且任务条件化：在 `D_test(T)` 上 `P(|R_real−R_sim|≤ε_S(T))≥1−β_S(T)`，`h_S`/资产 SBOM 被守卫校验，仿真供应链受保护；
+**(A19)** 迁移 `δ_tr(T)` 的 sound 分量成立（态射保持不变式、barrier/Lyapunov 失配界、最坏失配仿真），统计分量用 conformal 下界，适配义务被清偿；组合交互项 `α_int` 按组合类单独取证；
+**(A20)** 仿真证据只经单向准入；E1 接受必须由**预注册、与搜索独立**的真实锚点闭合，锚点不漏用、不早停；搜索预算 `N` 经 `α_sel(N,m)` 校正；
+**(A21)** DST 以延迟 `≤τ_shift`、误报 `≤α_shift` 检测域漂移/负迁移，拒绝后撤销迁移并回退本地认证或 CRM。
+则对任意目标任务 `T` 与任务序列，
+`P(∀t≤T: z(t)∈Z_safe) ≥ 1 − Σ_i α_i − Σ_i ε_hand,i − α_lease − α_intent − α_user − α_viable − α_cap − α_ground − α_expl − α_take − α_graph − α_comm − α_sen − α_transfer − α_sim − α_select − α_shift − α_δ`，
+其中 `α_δ` 汇总跨层 δ。**关键不对称仍不破**：student/仿真只能提议与证伪；放行要求 `dom_C(T)=in`、六元组匹配、`G_exact` 在 `A_lb` 下精确通过、证据等级可准入、锚点闭合、且 SEN 边缘验证成功。**跨域迁移的每一分泛化都对应一笔显式风险预算；仿真无法通过"搜得多、看起来好"抬高安全上界。**
 
-## 4. 实验设计 E133–E138
+**关键推论（泛化不免费）**：在 (A17)–(A21) 下，若目标任务落在已锚定域外，系统只能选择"迁移并付费（`δ_tr+ε_S+α_sel`）"或"任务本地再认证"或"拒绝"，**不存在"因为像所以行"的第四条路**；任何通过仿真单独扩域、复用旧证书、或忽略选择偏差的路径都被 fail-closed。这把 v15 的"图/传输/共地任一不匹配即失效"扩展为"域/迁移/仿真/选择任一不匹配即失效"。
+
+## 4. 实验设计 E145–E150
 
 | 实验 | 指标 | 门槛 |
 |---|---|---|
-| E133 共创契约与能力格 | 越权放宽拦截率；触根信任拦截率；承诺兑现率-权重曲线；版本错配执行数 | 越权拦截 100%；触根信任 0；版本错配执行 0 |
-| E134 双足可行性证书 | mid-stride 放行正确率；滑移/推撞扰动下违例率；内核保守度 \|C_cert\|/\|V\|；τ_eval 超时率 | 违例 0；假安全 0；保守度 ≤ 40%；超时 ≤ 0.1% |
-| E135 捕获 MRC | 分级推撞恢复成功率；C_k 判层错误率；保护姿态伤害指标（假人/缩比） | 小扰动恢复 ≥ 95%；判层错误 0；伤害低于未认证基线 |
-| E136 蒸馏执行 | fast-path 命中率；回退率 r_fb；延迟降幅；与全栈违例等价性 | 违例等价（=0）；延迟 ≥ 10×；r_fb ≤ 10% |
-| E137 学习证伪循环 | 同预算反例数 vs 随机采样；覆盖增速；LFF 误报率 | 反例 ≥ 3× 基线；覆盖 ≥ 90% |
-| E138 全栈双足人机共处长程共创 | 任务成功率；共创改动→重蒸馏→恢复服役时延；MRC 率；违例；主观安全感 | 成功 ≥ 90%；时延 ≤ 5 min；MRC ≤ 8%；违例 0；主观 ≥ 4/5 |
+| E145 适用域与跨任务迁移 | 域外误放行率；`δ_tr` 覆盖率；负迁移检出率；跨任务成功率 vs 任务本地重认证 | 域外放行 0；覆盖率 ≥ 95%；负迁移全拒；成功率差可解释 |
+| E146 仿真保真包络 | `ε_S(T)` 任务条件覆盖率；按任务族的误差散布；保真漂移检出；投毒/挑樱桃检出 | 覆盖率 ≥ 95%；漂移可检；投毒检出；无静默漏报 |
+| E147 单向证伪 vs 仿真作证明 | 对抗仿真偏置下的假安全率；E0/E1/E2 准入合规率；过度保守代价 | 本方案假安全 0；违规准入 0；保守代价可量化 |
+| E148 选择偏差与锚点 | 未校正 vs `α_sel` 校正的泛化虚高；锚点泄漏检出；预算-功效曲线 | 校正后虚高 ≤ 目标；泄漏全检；功效达标 |
+| E149 组合泛化与交互项 | 组合类新失效检出率；`α_int` 覆盖；适配义务漏检；组合复用 vs 逐技能重认证 | 新失效检出 ≥ 95%；漏检 0；复用显著省成本 |
+| E150 全栈跨任务 sim-to-real 长程 | 跨任务族成功率；域漂移检测延迟；MRC/违例；主观信任与解释一致性 | 成功 ≥ 90%；延迟 ≤ `τ_shift`；违例 0；信任校准良好 |
 
-回退策略：E133 越权漏拦 → 冻结共创入口、收紧能力格、审计全部已签条款；E134 假安全 > 0 → 立即停机、收缩 C_cert 并对边界追加证伪，禁止部署该内核；E135 判层错误 → 加大 C_k 估计保守度并提高捕获域重算频率；E136 r_fb > 10% → 增加学生训练覆盖而非放松 G_exact，必要时降级为"低频 teacher + 高频 CRM"；E137 反例效率不足 → 扩 LFF 特征（场景因子接入）而非减少精确证伪；E138 时延或 MRC 超标 → 缩小共创范围与工作域，绝不绕过 L3.5 与守卫。
+回退策略：E145 域外误放行 → 立即冻结该域扩域、收紧谓词、重跑锚点，绝不靠相似度补洞；E146 保真包络失准 → 冻结该 `h_S` 版本与资产、扩大 `ε_S`、加真实对标，禁止用其支撑 E1；E147 出现仿真假安全 → 回退到 E0-only 或 E2，重建证据等级门；E148 选择偏差超界 → 减小 `N`、增加独立锚点、启用 anytime-valid 校正；E149 组合漏检 → 禁用该组合类、逐技能回退、补交互测试；E150 漂移或 MRC 超标 → 收缩工作域与共创范围、回退任务本地认证，绝不放松域判定与边缘守卫。
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 守卫求值超实时预算或被静默近似替代 | 高 | 架构红线"只许近似搜索"；求值器离线成本认证 + 运行时看门狗 + 超时强制安全慢模式 |
-| 可行性内核/捕获域过于乐观（打滑、未认证扰动） | 高 | 内近似 + 摩擦/推撞台架标定 + 红队注入 + 边界持续证伪 + α_cap 显式入账 |
-| 用户越权或恶意共创 | 高 | 能力格 + 不可委托条款 + 双签署 + 兑现率降权 + 越权红队 + CCL++ 审计 |
-| 版本错配的旧学生服役 | 高 | 版本哈希入守卫 + fail-closed + 再认证门（守卫集零违例 + held-out 回归） |
-| 学生对抗性提议造成守卫抖动/DoS | 中 | 提议限频 + teacher 顾问 + 回退路径预算 + 分歧入账 |
-| 共创条款与动力可行冲突（"要快但要稳"） | 中 | 可行性剪辑先行 + 冲突即向用户解释并降级，不静默折中 |
-| 蒸馏数据分布偏移 | 中 | DCL 分歧样本回灌 + 定期重蒸馏 + 标签覆盖审计 |
-| 保护姿态演练的伦理与成本 | 中 | 缩比/假人先行 + 全尺寸低频演练 + 演练记录入账 |
-| 联合决策空间扩维（+κ）拖慢调度 | 中 | 提议-处置吸收搜索负担 + 分层频率（安全层高频、决策层低频） |
+| 任务族/域谓词被错误划分，出现语义 OOD | 高 | 可解释描述符 + 谓词审计 + `unknown`=out + 在线 DST + 对抗域欺骗红队 |
+| `δ_tr` 的统计分量在相关/对抗漂移下低估 | 高 | 至少一个 sound 分量 + conformal 下界 + 分层任务族 + 负迁移即拒 |
+| 仿真保真包络 `ε_S(T)` 校准偏差或只覆盖窄分布 | 高 | 任务条件化校准 + 对抗场景采样 + 资产/引擎 SBOM + 真实对标 + 版本钉住 |
+| 赢家诅咒/选择偏差导致"仿真越搜越安全" | 高 | `α_sel(N,m)` 校正 + 预注册独立锚点 + 禁止锚点复用/早停 + anytime-valid e-process |
+| 锚点预算不足被"放宽" | 高 | 预算是一等约束；不足即不扩域、回退已锚定域或 fail-closed |
+| 组合交互失效未被部件证据覆盖 | 高 | 交互项 `α_int` 单独取证 + 适配义务 + 按组合类仿真证伪与锚点 |
+| 仿真器/资产投毒或基准过拟合 | 高 | 资产 SBOM + 可复现构建 + 红队 + 多仿真器交叉 + 独立锚点 |
+| 域漂移检测延迟/误报 | 中 | e-process + 多信号（描述符/残差/共地）+ 保守回退 + 定期演练 |
+| 证书与域组合爆炸、部署脆弱 | 中 | 域格分级（关键域强钉、外围弱钉）+ 证书复用组合 + 渐进扩域流水线 |
+| 解释把"域内能力"说成"通用能力" | 中 | XTC 解释保真扩展到域/证据等级；证据披露；过度信任监测 |
 
 ## 6. 本轮最大风险
 
-**一句话**：整套"蒸馏只损失效率不损失 soundness"的不对称悬挂在 (A11) 与两个新近似锚上——一旦 G_exact 的求值在真机超预算/被近似替代，或可行性内核与捕获策略对打滑、未认证扰动、捕获时机欺骗过于乐观，或共创条款越过能力格被当成新根，耦合屏障就会"纸面 sound、现实不安全"；因此求值成本必须离线认证+看门狗兜底、内核必须内近似+持续证伪、共创必须过格+不可委托+版本钉住。
+**一句话**：GroundEdge-GenSim 的 soundness 现在依赖两个自指估计——**适用域谓词与迁移间隙是用有限任务样本学出来的，仿真保真包络又是在同一批仿真分布上校准的**；一旦任务族被错误划分、仿真器被投毒或过拟合、或验收锚点与搜索发生泄漏，"域内成立"就会退化成**证书齐全的过度泛化**：每一层局部检查都通过，却在真实任务族边缘系统性失效，因此必须用独立预注册锚点、仿真单向证伪、选择偏差校正与持续域漂移绊线来证伪"泛化"本身——**宁可拒绝扩域，绝不把相似当等价**。
 <!-- ARTIFACT:END -->
