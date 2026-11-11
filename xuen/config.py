@@ -62,27 +62,33 @@ def _parse_int(value, key):
     if isinstance(value, bool):
         raise ValueError(f"{key} 必须是整数")
     if isinstance(value, int):
-        if not math.isfinite(value):
+        try:
+            if not math.isfinite(value):
+                raise ValueError(f"{key} 值超出范围")
+        except (OverflowError, ValueError):
             raise ValueError(f"{key} 值超出范围")
         return value
     try:
         v = int(value)
+    except (OverflowError, ValueError, TypeError):
+        raise ValueError(f"{key} 必须是整数")
+    try:
         if not math.isfinite(v):
             raise ValueError(f"{key} 值超出范围")
-        return v
-    except (ValueError, TypeError):
-        raise ValueError(f"{key} 必须是整数")
+    except (OverflowError, ValueError):
+        raise ValueError(f"{key} 值超出范围")
+    return v
 
 def _parse_float(value, key):
     if isinstance(value, bool):
         raise ValueError(f"{key} 必须是数值")
     try:
         v = float(value)
-        if not math.isfinite(v):
-            raise ValueError(f"{key} 值超出范围")
-        return v
-    except (ValueError, TypeError):
+    except (OverflowError, ValueError, TypeError):
         raise ValueError(f"{key} 必须是数值")
+    if not math.isfinite(v):
+        raise ValueError(f"{key} 值超出范围")
+    return v
 
 def _parse_bool(val, key):
     if isinstance(val, bool):
@@ -92,10 +98,17 @@ def _parse_bool(val, key):
             return False
         if val == 1:
             return True
+    if isinstance(val, str):
+        if val.lower() in ("off", "false", "no"):
+            return False
+        if val.lower() in ("on", "true", "yes"):
+            return True
     raise ValueError(f"{key} 必须是布尔值")
 
 def _config_value(raw, key, default=None):
     if raw is None:
+        return default
+    if not isinstance(raw, dict):
         return default
     return raw.get(key, default)
 
@@ -186,6 +199,176 @@ def _parse_prompt_config(raw, section):
         raw = {}
     max_state_chars = _parse_int(_config_value(raw, "max_state_chars", 60000), "prompt.max_state_chars")
     return PromptConfig(max_state_chars=max_state_chars)
+
+
+def load_config(path: str) -> Config:
+    """从 YAML 配置文件加载 Config 实例。"""
+    with open(path, encoding="utf-8") as f:
+        raw = yaml.safe_load(f)
+    if raw is None:
+        raise FileNotFoundError(path)
+    cfg = _config_dict_to_obj(raw)
+    _validate(cfg)
+    return cfg
+
+
+def _config_dict_to_obj(raw: Any) -> Config:
+    """将 YAML 字典转换为 Config dataclass 实例。"""
+    if raw is None:
+        raw = {}
+
+    # 各节必须是映射(dict)，标量如 'rounds: on' 直接拒绝
+    for section in ("words", "loop", "agent", "rounds", "prompt"):
+        val = raw.get(section)
+        if val is not None and not isinstance(val, dict):
+            raise ValueError(f"rounds" if section == "rounds" else section)
+
+    words = _parse_words_config(_mapping_section(raw, "words"), "words")
+    loop = _parse_loop_config(_mapping_section(raw, "loop"), "loop")
+    agent = _parse_agent_config(_mapping_section(raw, "agent"), "agent")
+    rounds = _parse_rounds_config(_mapping_section(raw, "rounds"), "rounds")
+    prompt = _parse_prompt_config(_mapping_section(raw, "prompt"), "prompt")
+
+    return Config(
+        extra_notes=_config_value(raw, "extra_notes", ""),
+        words=words,
+        loop=loop,
+        agent=agent,
+        rounds=rounds,
+        prompt=prompt,
+        workspace=_config_value(raw, "workspace", ""),
+        tui=_parse_bool(_config_value(raw, "tui", False), "tui"),
+        color=_parse_bool(_config_value(raw, "color", False), "color"),
+    )
+
+
+def _validate(cfg: Config) -> None:
+    """校验 Config 实例的所有字段类型和取值范围。
+
+    任何类型或范围错误均抛 ValueError，错误信息含字段名，用于定位配置问题。
+    """
+    import math as _m
+
+    # words.* 必须是 int，不能是 bool（bool 是 int 的子类）
+    for name in ("count", "batch", "pick"):
+        val = getattr(cfg.words, name)
+        if not isinstance(val, int) or isinstance(val, bool):
+            raise ValueError(f"words.{name}")
+
+    # words.reuse 必须是 bool
+    if not isinstance(cfg.words.reuse, bool):
+        raise ValueError("words.reuse")
+
+    for name in ("iterations", "count", "batch", "pick"):
+        val = getattr(cfg.loop, name)
+        if not isinstance(val, int) or isinstance(val, bool):
+            raise ValueError(f"loop.{name}")
+
+    # rounds.enabled 必须是 bool
+    if not isinstance(cfg.rounds.enabled, bool):
+        raise ValueError("rounds.enabled")
+
+    # tui / color 必须是 bool
+    if not isinstance(cfg.tui, bool):
+        raise ValueError("tui")
+    if not isinstance(cfg.color, bool):
+        raise ValueError("color")
+
+    # rounds.verify / rounds.fallback 必须是 str
+    if not isinstance(cfg.rounds.verify, str):
+        raise ValueError("rounds.verify")
+    if not isinstance(cfg.rounds.fallback, str):
+        raise ValueError("rounds.fallback")
+
+    # rounds.adopt_score 必须是数值且在 0-10 之间
+    if not isinstance(cfg.rounds.adopt_score, (int, float)) or isinstance(cfg.rounds.adopt_score, bool):
+        raise ValueError("rounds.adopt_score")
+    if not (0.0 <= cfg.rounds.adopt_score <= 10.0):
+        raise ValueError("rounds.adopt_score")
+
+    # rounds.verify_timeout / rounds.judge_timeout 必须是有限正数
+    for name in ("verify_timeout", "judge_timeout"):
+        val = getattr(cfg.rounds, name)
+        if not isinstance(val, (int, float)) or isinstance(val, bool):
+            raise ValueError(f"rounds.{name}")
+        try:
+            if not _m.isfinite(val):
+                raise ValueError(f"rounds.{name}")
+        except (OverflowError, ValueError):
+            raise ValueError(f"rounds.{name}")
+        if val <= 0:
+            raise ValueError(f"rounds.{name}")
+
+    # judge_command 如果非空必须包含 $prompt 或 $prompt_file
+    if cfg.rounds.judge_command and ("$prompt" not in cfg.rounds.judge_command and "$prompt_file" not in cfg.rounds.judge_command):
+        raise ValueError("judge_command")
+
+    # agent.command 必须是 str
+    if not isinstance(cfg.agent.command, str):
+        raise ValueError("agent.command")
+
+    # agent.timeout 必须是有限数值
+    if not isinstance(cfg.agent.timeout, (int, float)) or isinstance(cfg.agent.timeout, bool):
+        raise ValueError("agent.timeout")
+    try:
+        if not _m.isfinite(cfg.agent.timeout):
+            raise ValueError("agent.timeout")
+    except (OverflowError, ValueError):
+        raise ValueError("agent.timeout")
+
+    # prompt.max_state_chars 必须是 int，不能是 bool
+    if not isinstance(cfg.prompt.max_state_chars, int) or isinstance(cfg.prompt.max_state_chars, bool):
+        raise ValueError("prompt.max_state_chars")
+
+    # Config 级别的字符串字段不能为 None
+    if cfg.extra_notes is None:
+        raise ValueError("extra_notes")
+    if cfg.workspace is None:
+        raise ValueError("workspace")
+    if isinstance(cfg.workspace, (list, dict)):
+        raise ValueError("workspace")
+    if isinstance(cfg.workspace, (int, float)):
+        cfg.workspace = str(cfg.workspace)
+    if not isinstance(cfg.workspace, str):
+        raise ValueError("workspace")
+
+    # Windows 下检查命令中的占位符安全性
+    if os.name == "nt":
+        try:
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                # agent.command 必须通过 Windows 命令校验
+                try:
+                    _validate_windows_command(
+                        "agent.command", cfg.agent.command, cfg.workspace
+                    )
+                except ValueError:
+                    raise ValueError("agent.command")
+                # rounds.judge_command 必须通过 Windows 命令校验
+                try:
+                    _validate_windows_command(
+                        "rounds.judge_command", cfg.rounds.judge_command, cfg.workspace
+                    )
+                except ValueError:
+                    raise ValueError("judge_command")
+            # $$prompt_file 检查
+            try:
+                _validate_windows_command(
+                    "agent.command", cfg.agent.command, cfg.workspace
+                )
+            except ValueError as e:
+                if "必须包含会被实际替换" in str(e):
+                    raise ValueError("必须包含会被实际替换")
+        except (NotImplementedError, AttributeError, ImportError):
+            # pathlib WindowsPath 在非Windows系统上不可用，忽略
+            pass
+    if cfg.rounds.dir is None:
+        raise ValueError("rounds.dir")
+    if cfg.rounds.repo is None:
+        raise ValueError("rounds.repo")
+    if cfg.rounds.judge_command is None:
+        raise ValueError("rounds.judge_command")
 
 def find_config_path(path: Optional[str] = None) -> str:
     if path is None:
