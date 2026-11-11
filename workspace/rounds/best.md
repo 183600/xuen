@@ -3,161 +3,198 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 54 轮（承接第 53 轮 v16 GroundEdge-GenSim++；灵感循环第 5 轮；本轮灵感：「动作空间」×「技能组合」×「云边协同」）
+# 第 55 轮（承接第 54 轮 v31 GroundEdge-GenSim+++；灵感循环第 1 轮；本轮灵感：「语义分割」×「全身控制」）
 
-> 第 53 轮已把鲁棒性拆解为可传递的维度谱 ρ 与反向解释 Explain，形成可解释的鲁棒性金字塔。本轮聚焦 **动作空间剖面化、技能组合的可判定性、云边协同的闭环**。核心矛盾：H20：技能组合在动作空间上存在语义与时序错配，组合前看似兼容、执行时因动作空间交集/覆盖导致冲突；H21：云端全局规划与边端实时反馈在动作粒度上不一致，云端可用性证书在边端动作空间中失效。
+> 第 54 轮已把技能组合从“能力匹配”推进到“动作-鲁棒性双证书”。本轮把视角从“动作空间有没有被覆盖”下探到 **“动作所依赖的接触在语义上是否可信、全身耦合下是否仍然可行”**。核心矛盾：**H22**：语义分割输出的是标签分布而非确定表面，接触可供性在语义边界处最不可信，而全身控制恰恰把全部体重压在这些接触上；**H23**：全身控制的可行性由质心动力学把四肢耦合为一个整体，单肢的语义检查不可组合——一只脚的支撑面被误判，会经平衡约束放大为整条动作序列的失效。
 
 ## 0. 直觉与动机
 
-**灵感 1（动作空间剖面 → 把技能从黑箱能力变为动作空间占用）**
-直觉：技能 S 不只是一个鲁棒性谱 ρ_S，更是一个在动作空间 A 上的占用剖面 `α_S : A → [0,1]`。`α_S(a)=1` 表示动作 a 被技能完全覆盖，`0` 表示不可达。组合时，不是简单 `min(ρ)`，而是先做 **动作空间交集检查**：`A_{S1⊗S2} = A_{S1} ∩ A_{S2} ∪ transition(A_{S1},A_{S2})`。若交集为空或转换区 `ΔA` 超过边端可控带宽，则组合不可行。这样，**动作空间成为技能组合的第一性约束**，鲁棒性谱只在可行域内起作用。
+**灵感 1（语义分割 → 接触可供性先验，而非仅感知标签）**
+直觉：分割不该只回答“这块像素是什么”，而应回答“这块表面能被怎样接触”。把语义标签 `l∈L` 与接触类型 `c∈{支撑,抓取,推压,避让}` 组合成 **接触可供性** `κ(l,c)`：草地是“可支撑但低摩擦”，玻璃是“可支撑低置信”，扶手是“可抓取”。于是分割从感知模块变成 **控制的第一性约束来源**，动作剖面上的可行性被语义条件化。
 
-**灵感 2（技能组合可判定化 → 从启发式拼接变为图搜索 + 证书）**
-直觉：把技能库建模为 **动作空间有向图 G_S**，节点为技能，边为动作空间相容关系 `compat(S_i,S_j) = |A_i ∩ A_j| / |A_i ∪ A_j| ≥ θ_a` 且转换成本 `c_trans < τ_e`。组合规划变成在 G_S 上寻找满足任务动作序列 `A_T` 的路径，并为每条边附带 **组合证书 `C_comp = (A_overlap, ρ_comp, γ_ce)`**。这把组合从经验拼接变为可验证的路径搜索，并与第 53 轮的鲁棒性耦合矩阵 K 联动。
+**灵感 2（全身控制 → 语义-接触生存核）**
+直觉：全身控制的动作不是一个向量，而是“在接触约束下保持质心可行动”的闭环。给定语义图 `Σ`，可行动集不是在每个关节上分别判定，而是 **生存核** `K(Σ) = {x | ∃ u, λ : 动力学可行 ∧ 接触 ⊆ C(Σ) ∧ 摩擦锥/关节限位满足}`。语义错误通过 `λ`（接触力）进入动力学，直接改变 `K(Σ)` 的边界，因此“分割错一点”会变成“可行动集塌一块”。
 
-**灵感 3（云边协同 → 粗到细的动作分解与鲁棒性回传）**
-直觉：云端负责 **粗动作空间 A_c** 的技能选择与组合序，边端负责 **细动作空间 A_e** 的实时追踪与鲁棒性校验。云端生成组合计划 `P_c = ⟨S_1,...,S_k; A_c⟩`，边端把计划映射为 `P_e = map(A_c→A_e)`，并用 TRO/REX 在线校验。若边端检测到 `ρ_e(d) < ρ_min` 或 Explain 返回根因 `a_e`，则通过 **反向解释信道** 回传给云端，云端触发动作空间重剖分 `reprofile(A_c)`。这形成 **云规划 - 边校验 - 反向解释 - 重剖分** 的闭环。
+**灵感 3（语义边界 → 控制裕度与保守膨胀）**
+直觉：分割的不确定性集中在标签边界 `∂Ω`。全身控制若把脚掌、手掌压在边界上，等于把安全赌在分割模型的边界精度上。因此必须 **边界保守膨胀**：`Ω_l^+ = Ω_l ⊕ B(ε_s)`，并要求接触点 `p` 到边界的距离 `m_s(p) ≥ θ_m`。这不是给感知打补丁，而是把“语义边界”显式变成“控制裕度”。
 
-**灵感 4（动作空间对齐的耦合 → 鲁棒性 + 动作占用联合证书）**
-直觉：组合后证书不应只记 ρ，还需记 **动作占用证书 `A_cert = (A_core, A_buffer, δ_a)`**，其中 `A_core` 为保证覆盖的核心动作子集，`A_buffer` 为容错带。云边协同时，云端承诺 `A_core ⊆ A_c`，边端保证 `A_core ⊆ A_e` 且 `ρ_e(A_core) ≥ ρ_min`。若云端扩张 `A_c` 超出边端 `A_e` 的物理带宽，则触发 `δ_a` 超预算否决。鲁棒性与动作空间在此耦合。
+**灵感 4（语义-接触证书 → 把分割不确定性写进可部署条件）**
+直觉：第 54 轮的联合证书 `J` 只记了动作兼容与鲁棒性谱，未记“这些动作用到的接触有多确定”。新证书需携带 `Σ_core`（核心接触区语义）、`C_core`（核心接触集）、`margin`、`δ_s`（语义扰动预算）与反例证据，使“可部署”意味着 **在语义扰动预算内接触与全身可行性同时保持**。
 
-**灵感 5（从组合到协同的金字塔扩展）**
-直觉：在第 53 轮鲁棒性金字塔 `𝕃` 之上叠加 **动作空间协同层 `𝔸`**：`𝔸_0` 物理动作极限，`𝔸_1` 技能动作剖面，`𝔸_2` 云边动作映射，`𝔸_3` 任务动作序列。跨层传递证书需同时包含 `ρ` 与 `A_cert`，形成 **可解释的动作-鲁棒性双证书体系**。
+**灵感 5（云边语义接口 → 粗语义在场、细控制在校验）**
+直觉：云端可用大模型做全局一致的粗语义与接触可供性，边端用局部几何与力反馈做细粒度校验。两者以 **语义-接触接口** 对接：云端给 `(Σ_c, κ_c)`，边端回传边界不一致 `∂Ω_c vs ∂Ω_e` 与接触失败证据，触发云端 **边界重分割**。这把第 54 轮的动作重剖分升级为 **语义-动作联合重剖分**。
 
-## 1. 形式化定义（增量：定义 115–120）
+## 1. 形式化定义（增量：定义 121–126）
 
-**定义 115（动作空间剖面）**
-动作空间 `A = A_c × A_e`，`A_c` 为云端粗粒度动作，`A_e` 为边端细粒度动作。技能 `S` 的动作空间剖面 `α_S : A → [0,1]`，满足 `∫_A α_S(a) da = vol(S)`。**动作覆盖** `cover(S, A_T) = 1` 当且仅当 `∀ a∈A_T, α_S(a) ≥ θ_cov`。
+**定义 121（语义-接触图）**
+语义图 `Σ: Ω → Δ(L)` 为像素/体素到标签分布的映射；接触可供性 `κ: L × C → [0,1]`。语义接触集
+`C(Σ) = {(p,c) | κ(Σ̄(p), c) ≥ θ_κ ∧ conf(Σ(p)) ≥ θ_conf}`，其中 `Σ̄(p)=argmax_l Σ(p,l)`、`conf` 为校准后的后验置信。
 
-**定义 116（动作空间兼容性）**
-两技能 `S_i,S_j` 的动作兼容性 `compat(S_i,S_j) = |A_i ∩ A_j| / |A_i ∪ A_j|`。组合可判定条件：
-```
-compat(S_i,S_j) ≥ θ_a ∧ c_trans(A_i,A_j) ≤ τ_e ∧ ρ_{S_i⊗S_j}(d) ≥ ρ_min ∀ d
-```
-其中 `c_trans` 为动作转换成本，`τ_e` 为边端最大可控延迟。
+**定义 122（全身语义-接触生存核）**
+全身动作空间 `A_WB = A_b × A_a × A_l × A_t`（基座×臂×腿×躯干），质心动力学 `ẋ = f(x,u,λ)`，接触力 `λ∈FC(μ)`（摩擦锥）。生存核
+`K(Σ) = {x | ∃ u∈A_WB, λ : f(x,u,λ)=ẋ ∧ supp(λ) ⊆ C(Σ) ∧ x_{t+1}∈𝒳_safe}`。
+**语义可行性** `viable(x,Σ)=1 ⇔ x∈K(Σ)`。
 
-**定义 117（技能组合图）**
-技能组合图 `G_S = (V,E)`，`V` 为技能集合，`E = {(i,j) | compat(S_i,S_j)}`。每条边附带 **组合证书** `C_comp = (A_overlap, ρ_comp, γ_ce)`，其中 `γ_ce` 为云边映射函数 `γ_ce : A_c → A_e`。
+**定义 123（语义边界裕度）**
+对标签 `l` 的区域 `Ω_l`，边界 `∂Ω_l`。接触点 `p` 的语义裕度 `m_s(p)=dist(p, ∂Ω_{Σ̄(p)})`。保守接触集
+`C^+(Σ) = {(p,c)∈C(Σ) | m_s(p) ≥ θ_m(κ,c)}`，其中 `θ_m` 随可供性置信升高而降低。
 
-**定义 118（云边协同契约）**
-云边契约 `C_ce = (P_c, P_e, Δ, Explain_loop)`：
-- `P_c` 云端组合计划：技能序列与粗动作序列；
-- `P_e` 边端细化计划：`P_e = γ_ce(P_c)`；
-- `Δ` 为动作空间对齐误差上界，`|A_c - γ_ce^{-1}(A_e)| ≤ Δ`；
-- `Explain_loop` 为反向解释回传通道：`Explain(sim_e) → ΔP_c`。
+**定义 124（全身语义护盾）**
+给定名义动作 `u_nom`，护盾输出
+`u* = argmin_u ||u-u_nom||²_W s.t. x_{t+1}∈K(Σ), supp(λ)⊆C^+(Σ), λ∈FC(μ), u∈A_WB`。
+若可行集为空，回退到 **最小风险制动** `u_stop∈𝒳_safe`；护盾的职责是把“感知不确定”挡在“不可逆接触”之前。
 
-**定义 119（动作空间对齐成本）**
-对齐成本 `cost_align(S_i,S_j) = w_a·(1 - compat) + w_ρ·(1 - ρ_comp) + w_ce·||γ_ce - id||`。组合搜索目标为最小化路径总成本。
+**定义 125（语义鲁棒性谱）**
+在第 53 轮维度谱 `ρ` 上增加语义维：
+`ρ_sem(ε) = inf_{||Σ-Σ̂||_∞ ≤ ε_s} P(viable(x,Σ) | Σ̂)`。
+即分割扰动球内全身可行性的最坏保持概率，`ρ_sem` 与 `ρ` 的其他维度共用证书框架。
 
-**定义 120（云边鲁棒性动作联合证书）**
-联合证书 `J = (ρ, A_cert, γ_ce, δ_a, evidence)`：
-- `ρ` 为第 53 轮鲁棒性谱；
-- `A_cert = (A_core, A_buffer, δ_a)` 为动作占用证书；
-- `γ_ce` 为云边映射；
-- `δ_a` 为动作对齐容差；
-- `evidence` 至少包含边端仿真反例与云端规划日志。若 `dom_J(T)=in` 且 `δ_a < Θ_a`，则组合可部署。
+**定义 126（语义-接触联合证书）**
+`J_s = (Σ_core, C_core, K_margin, ρ_sem, δ_s, evidence)`：
+- `Σ_core` 核心接触区语义分布，`C_core ⊆ C^+(Σ_core)` 核心接触集；
+- `K_margin = min_{x∈轨迹} dist(x, ∂K(Σ))` 生存核裕度；
+- `δ_s = ||Σ_core - Σ̂_core||` 语义扰动实测量；
+- `evidence` 含边界反例与力反馈日志。
+若 `Σ_core` 置信校准通过、`K_margin ≥ θ_K`、`ρ_sem ≥ ρ_min` 且 `δ_s < Θ_s`，则语义-接触可部署。
 
 ## 2. 关键算法 伪代码
 
-### IP-115 ACS（Action Space Characterization）
+### IP-121 SCG（Semantic-Contact Grounding）
 
 ```python
-def action_profile(skill, A_c, A_e):
-    alpha = {}
-    for a_c in A_c:
-        for a_e in A_e:
-            feas = skill.can_execute(a_c, a_e)
-            alpha[(a_c,a_e)] = 1.0 if feas else 0.0
-    return alpha
+def semantic_contact_map(rgbd, seg_model, kappa, theta_k, theta_conf):
+    Sigma = seg_model.predict_soft(rgbd)          # per-pixel label distribution
+    C = set()
+    for p in grid(rgbd):
+        l = argmax(Sigma[p])
+        if confidence(Sigma[p]) < theta_conf:
+            continue
+        for c in CONTACT_TYPES:
+            if kappa[l][c] >= theta_k:
+                C.add((p, c))
+    M = boundary_margin(Sigma)                     # m_s(p) for every p
+    return Sigma, C, M
 
-def cover_check(alpha, A_T, theta_cov=0.8):
-    return all(alpha.get(a,0) >= theta_cov for a in A_T)
+def conservative_contacts(C, M, kappa, theta_m):
+    return {(p,c) for (p,c) in C if M[p] >= theta_m(kappa[argmax_at(p)][c])}
 ```
 
-### IP-116 SCOM（Skill Composition Graph）
+### IP-122 WBV（Whole-Body Viability Kernel）
 
 ```python
-def build_composition_graph(skills, theta_a, tau_e):
-    G = nx.DiGraph()
-    for i,s1 in enumerate(skills):
-        for j,s2 in enumerate(skills):
-            if i==j: continue
-            compat = jaccard(action_profile(s1), action_profile(s2))
-            c_trans = transition_cost(s1, s2)
-            if compat >= theta_a and c_trans <= tau_e:
-                rho_comp = compose_robustness(s1.rho, s2.rho, K)
-                G.add_edge(i,j, compat=compat, cost=c_trans, rho_comp=rho_comp)
-    return G
+def viability_kernel(Sigma, C_plus, x0, horizon, eps):
+    K, margins = set(), []
+    for x in sample_state_space(x0, horizon):
+        feas, u, lam = solve_contact_dynamics(x, C_plus, friction_cone=mu)
+        if feas:
+            K.add(x)
+            margins.append(distance_to_infeasible(x, C_plus))
+    # 用 eps-网与区间包络给出 K 的外/内近似 (K_out, K_in)
+    return KernelApprox(K_in=inner_hull(K), K_out=outer_hull(K, eps),
+                        margin=min(margins) if margins else 0.0)
 ```
 
-### IP-117 CEC（Cloud-Edge Coordination）
+### IP-123 SSF（Semantic Shield Filter）
 
 ```python
-def cloud_plan(T, G, A_c):
-    path = a_star(G, start='root', goal=T, heuristic=cost_align)
-    P_c = [(s, A_c[s]) for s in path]
-    return P_c
-
-def edge_refine(P_c, gamma_ce, sim_model):
-    P_e = []
-    for s, a_c in P_c:
-        a_e = gamma_ce(a_c)
-        rho_e = robustness_spectrum(s, dimensions)
-        if not cover_check(s.alpha, a_e):
-            exp = explain_failure(sim_model.run(s, a_e), sim_model)
-            return ('reject', exp.suggestions)
-        P_e.append((s, a_e, rho_e))
-    return ('ok', P_e)
+def semantic_shield(u_nom, x, Kernel, C_plus, W):
+    u = qp_solve(
+        H=W, g=-W @ u_nom,
+        constraints=[
+            viability_constraint(x, u, Kernel.K_in),   # x_{t+1} in K_in
+            contact_constraint(u, C_plus),             # support(lambda) subset C+
+            friction_cone_constraint(u, mu),
+            joint_limit_constraint(u),
+        ],
+    )
+    if u is None or projection_gap(u, u_nom) > Delta_u:
+        return safe_brake(x), 'shield_infeasible'
+    return u, 'ok'
 ```
 
-### IP-118 AEC（Action-Edge Consistency）
+### IP-124 SCC（Semantic-Contact Certificate）
 
 ```python
-def joint_certificate(skill_seq, gamma_ce, delta_a_budget):
-    A_core = intersection([s.alpha for s in skill_seq])
-    delta_a = max_alignment_error(gamma_ce, A_core)
-    if delta_a > delta_a_budget:
-        return ('reject','action_mismatch', delta_a)
-    rho_comp = compose_robustness_chain(skill_seq)
-    return ('ok', JointCert(rho_comp, A_cert=(A_core,buffer), gamma_ce, delta_a))
+def semantic_contact_certificate(traj, Sigma, kappa, rho_sem, budgets):
+    Sigma_core = core_semantics(traj, Sigma)
+    C_core = contacts_used(traj) & conservative_contacts(Sigma_core, M, kappa, theta_m)
+    if not C_core:
+        return ('reject', 'no_core_contact')
+    K_margin = min(distance_to_boundary_K(x, Sigma) for x in traj)
+    delta_s = semantic_perturbation(Sigma_core, calibrated_eps)
+    if K_margin < budgets.theta_K or delta_s > budgets.Theta_s:
+        return ('reject', 'semantic_budget_exceeded', K_margin, delta_s)
+    if rho_sem(delta_s) < budgets.rho_min:
+        return ('reject', 'semantic_robustness_fail')
+    return ('ok', SemanticCert(Sigma_core, C_core, K_margin, rho_sem, delta_s))
+```
+
+### IP-125 SRS（Semantic Robustness Spectrum）
+
+```python
+def semantic_robustness_spectrum(Sigma_hat, eps_s, sampler):
+    worst = 1.0
+    for Sigma_adv in sampler.ball(Sigma_hat, eps_s, worst_case=True):
+        Sigma_adv = renormalize(Sigma_adv)
+        p = empirical_viability(Sigma_adv, sampler.states)
+        worst = min(worst, p)
+    return worst
+```
+
+### IP-126 CEB（Cloud-Edge Semantic Boundary Protocol）
+
+```python
+def cloud_edge_semantics(P_c, Sigma_c, kappa_c, edge):
+    Sigma_e, C_e = edge.local_semantics()
+    mismatch = boundary_disagreement(Sigma_c, Sigma_e)
+    if mismatch.area > delta_A:
+        exp = edge.explain_contact_failure()
+        return ('reprofile', region=mismatch.hotspots, evidence=exp)
+    C_shared = conservative_contacts(C_e, edge.margin, kappa_c, theta_m)
+    return ('ok', C_shared, merge_uncertainty(Sigma_c, Sigma_e))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间复杂度 | 空间复杂度 | 正确性关键 |
 |---|---|---|---|
-| ACS | O(|A_c|·|A_e|) | O(|A|) | 剖面完备、采样覆盖 |
-| SCOM | O(|S|²·|A|) | O(|S|²) | compat 阈值 sound、成本单调 |
-| CEC | O(|V| log |V| + |E|) | O(|V|+|E|) | γ_ce 可逆、Explain 闭环 |
-| AEC | O(|S|·|A|) | O(|A|) | δ_a 预算闭合、联合证书 sound |
+| SCG | O(|Ω|·(|L|+|C|)) | O(|Ω|·|L|) | 置信校准、可供性标定 |
+| WBV | O(|X|·T·QP) | O(|X|) | 生存核外近似 sound、接触集完备 |
+| SSF | O(QP) 每次 | O(|A_WB|) | QP 可行或安全回退、投影有界 |
+| SCC | O(|轨迹|·|Ω|) | O(|Ω|) | δ_s 预算闭合、核心接触非空 |
+| SRS | O(N_adv·|X|) | O(|X|) | 扰动球覆盖、最坏情形可复现 |
 
-**正确性定理（Action-Aware Cloud-Edge Composition Soundness）**
-假设 (A22)–(A25) 承接第 53 轮；**(A26)** `α_S` 由结构化仿真校准，`cover(S,A_T)` 可判定；**(A27)** `γ_ce` 在 `A_core` 上 Lipschitz 常数 L<1；**(A28)** 边端 Explain 回传延迟 ≤ τ_loop。
-则：`P(success(P_e) | P_c feasible) ≥ 1 - Σ_d (1-ρ_min(d)) - β_E - P(δ_a > Θ_a)`。
+**正确性定理（Whole-Body Semantic-Contact Soundness）**
+假设第 54 轮 (A26)–(A28) 成立；**(A29)** `Σ` 的置信经温度/分位数校准，ECE ≤ ε_cal；**(A30)** `K_in ⊆ K(Σ) ⊆ K_out` 且护盾在不可行时回退 `u_stop∈𝒳_safe`；**(A31)** 真实语义扰动 `||Σ-Σ̂||_∞ ≤ ε_s`；**(A32)** 云边边界回传延迟 ≤ τ_sem 且重分割收敛。
+则部署后单步安全概率：
+```
+P_safe ≥ 1 - P(||Σ-Σ̂||_∞ > ε_s) - P(κ miscalibrated) - P(K_out \ K_in ≠ ∅) - P(shield fallback fails)
+```
+关键：**语义不确定性进证书、生存核保守包含、护盾兜底**，三层任一层失守都不允许把“分割看起来很确定”当作“接触一定成立”。
 
-## 4. 实验设计 E157–E161
+## 4. 实验设计 E162–E166
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E157 动作剖面准确度 | `|α_S - α_real|` | MAE ≤ 0.05 |
-| E158 组合可判定率 | 可行路径发现率 / 误报率 | 发现率 ≥ 90%，误报 ≤ 5% |
-| E159 云边对齐延迟 | `τ_loop` 分布 | P95 ≤ 50ms |
-| E160 联合证书有效性 | 部署成功率 vs 仅 ρ | 成功率提升 ≥ 12% |
-| E161 反向解释驱动重剖分 | 重剖分后成功率提升 | Δ ≥ 15% |
+| E162 接触可供性校准 | ECE / 接触成功预测 MAE | ECE ≤ 0.05，MAE ≤ 0.07 |
+| E163 生存核准确性 | 预测可行 vs 实际可行的 P/R、保守间隙 | P/R ≥ 0.90，间隙 ≤ 10% |
+| E164 语义护盾安全性 | 跌倒率 / 约束违反率 vs 无护盾 | 违反率下降 ≥ 80% |
+| E165 边界对抗鲁棒性 | 边界噪声 ε 下成功率下降 | 下降 ≤ 8% |
+| E166 云边语义接口 | 边界不一致检测 AUC、τ_sem、成功率增益 | AUC ≥ 0.90，P95 ≤ 80ms，增益 ≥ 10% |
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 动作空间剖面采样不足 | 高 | 主动采样 + 贝叶斯优化 + 红队探索 |
-| 云边映射 γ_ce 非单调 | 高 | Lipschitz 约束 + 在线校准 + 失败回滚 |
-| 组合图规模爆炸 | 中 | 分层剪枝 + 动作哈希索引 |
-| Explain 回传导致震荡 | 中 |  hysteresis + 冷启动锚点 |
-| 粗细动作语义断层 | 高 | 共享本体 + 形式化接口契约 |
+| 分割置信过度自信（边界尤甚） | 高 | 温度/分位数校准 + 边界专门校准集 |
+| 接触可供性跨材质迁移失败 | 高 | 材质分层标定 + 在线力反馈更新 κ |
+| 生存核过保守导致“冻结” | 中 | 分层核 + 保守度预算 + 主动探索恢复 |
+| 护盾 QP 频繁不可行 | 高 | 软约束分层 + 安全制动回退 + 可行性预检 |
+| 云边语义本体不一致 | 高 | 共享标签本体 + 边界证据回传 + 版本化接口 |
 
 ## 6. 本轮最大风险
 
-**一句话**：动作空间剖面化与云边协同把技能组合从“能力匹配”提升为“动作-鲁棒性双证书”，但其 soundness **三重依赖动作剖面的完备采样、γ_ce 映射的单调可逆、以及 Explain 回传的实时收敛**；一旦动作剖面欠采样导致虚假兼容、或云边映射在极限动作处非单调，组合路径在真实边端会系统性动作错位并触发负迁移，故必须以 **主动剖面采样 + Lipschitz 约束的 γ_ce + 负迁移绊线** 三重护栏，宁可保守组合，绝不把动作空间的“可对齐假象”当作部署前提。
+**一句话**：语义-接触接地与全身生存核把“感知标签”升级为“可执行的接触约束”，但其 soundness **三重依赖分割置信的校准、接触可供性的跨域迁移、以及生存核外近似的紧致性**；一旦边界处置信过度自信、或可供性在未见材质上系统偏移，护盾会在“自认为可行”的伪生存核内放行动作，让全身控制器把所有肢体压上虚假支撑面，造成不可逆的跌倒——因此必须以 **边界校准 + 在线 κ 更新 + 核保守度预算** 三重护栏，宁可保守制动，绝不把语义的“高置信”当作接触的“已证实”。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
