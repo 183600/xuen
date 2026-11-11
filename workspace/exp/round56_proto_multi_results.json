@@ -1,0 +1,81 @@
+{
+  "seed": 20261111,
+  "n_embodiments": 4000,
+  "population_failure_rate": 0.261,
+  "naive_single_robot": {
+    "accept_rate": 0.62325,
+    "false_accept": 0.192940232651424,
+    "population_risk": 0.12025
+  },
+  "transfer_aware_gate": {
+    "n_eval_robots": 24,
+    "residual_q10": -0.035610954230472745,
+    "mean_nearest_neighbour_distance": 0.6152029622111365,
+    "accept_rate": 0.0765,
+    "false_accept": 0.0032679738562091504,
+    "false_reject": 0.7176502436383324,
+    "population_risk": 0.00025
+  },
+  "prototype_test_efficiency": {
+    "random_violation_rate": 0.1135,
+    "boundary_targeted_violation_rate": 0.24090541632983023,
+    "speedup": 2.12251468132009,
+    "n_random": 2000,
+    "n_targeted": 1237
+  },
+  "stratum_risk": {
+    "per_pred_quartile": [
+      0.0,
+      0.29006085192697767,
+      0.227,
+      0.111
+    ],
+    "mean": 0.15701521298174442,
+    "worst_over_mean": 1.8473423461247795
+  },
+  "pareto_sweep": [
+    {
+      "lambda": 0.0,
+      "accept_rate": 0.57775,
+      "false_accept": 0.07053223712678494,
+      "false_reject": 0.4783895796329189,
+      "population_risk": 0.04075
+    },
+    {
+      "lambda": 0.005,
+      "accept_rate": 0.537,
+      "false_accept": 0.06610800744878957,
+      "false_reject": 0.5129589632829373,
+      "population_risk": 0.0355
+    },
+    {
+      "lambda": 0.01,
+      "accept_rate": 0.495,
+      "false_accept": 0.05353535353535353,
+      "false_reject": 0.5356435643564357,
+      "population_risk": 0.0265
+    },
+    {
+      "lambda": 0.02,
+      "accept_rate": 0.40975,
+      "false_accept": 0.03355704697986577,
+      "false_reject": 0.5811096992799661,
+      "population_risk": 0.01375
+    },
+    {
+      "lambda": 0.03,
+      "accept_rate": 0.3385,
+      "false_accept": 0.019202363367799114,
+      "false_reject": 0.6152683295540439,
+      "population_risk": 0.0065
+    },
+    {
+      "lambda": 0.05,
+      "accept_rate": 0.231,
+      "false_accept": 0.012987012987012988,
+      "false_reject": 0.6644993498049415,
+      "population_risk": 0.003
+    }
+  ],
+  "note": "toy phenomenon pilot; not a real-robot result"
+}

@@ -3,354 +3,362 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 55 轮（承接第 54 轮 v31 GroundEdge-GenSim+++；灵感循环第 1 轮；本轮灵感：「语义分割」×「全身控制」）
+# 第 56 轮（承接第 55 轮「语义-接触接地与全身生存核」IP-121~126；灵感循环第 2 轮；本轮灵感：「四足机器人」×「交互设计」×「语义地图」）
 
-> 第 54 轮已把技能组合从“能力匹配”推进到“动作-鲁棒性双证书”。本轮把视角从“动作空间有没有被覆盖”下探到 **“动作所依赖的接触在语义上是否可信、全身耦合下是否仍然可行”**。核心矛盾：**H22**：语义分割输出的是标签分布而非确定表面，接触可供性在语义边界处最不可信，而全身控制恰恰把全部体重压在这些接触上；**H23**：全身控制的可行性由质心动力学把四肢耦合为一个整体，单肢的语义检查不可组合——一只脚的支撑面被误判，会经平衡约束放大为整条动作序列的失效。
+> 第 55 轮把"感知标签"升级为"接触约束"，用生存核 + 护盾 + 证书把语义不确定性挡在不可逆接触之前；但它的风险自陈已点出软肋——soundness 三重依赖分割置信校准、κ 跨域迁移、核外近似紧致，而护盾面对不确定性只有两个动作：**保守或制动**，缺少第三个动作"把不确定性变少"；且语义 Σ 是单帧的，每次到访都从零支付全部不确定性。本轮三个灵感各补一条腿：**四足机器人**给探询一个物理载体（闲着的腿就是传感器，步态就是裕度的变速箱），**交互设计**给拒绝一个出口（可读、分级、有界的人类影响），**语义地图**给证据一个居所（持久、溯源、可积累、可版本化的信念载体）。核心命题由"模型说可信"升级为 **"证据说可信"**。
+
+核心矛盾：
+- **H24**：第 55 轮的可行性判定建立在"单帧置信"之上，而置信不是证据——边界处一次过度自信的分割足以让护盾在伪生存核内放行；系统只能被动容忍不确定性，不能主动交易它。
+- **H25**：无人参与的安全系统在部署上不可持续——只会急停且说不清为什么的机器人会被操作者绕过或关机；但人类影响若无界，又把新的单点故障引入安全回路。交互设计的要求恰是"**可读但有界**"。
 
 ## 0. 直觉与动机
 
-**灵感 1（语义分割 → 接触可供性先验，而非仅感知标签）**
-直觉：分割不该只回答“这块像素是什么”，而应回答“这块表面能被怎样接触”。把语义标签 `l∈L` 与接触类型 `c∈{支撑,抓取,推压,避让}` 组合成 **接触可供性** `κ(l,c)`：草地是“可支撑但低摩擦”，玻璃是“可支撑低置信”，扶手是“可抓取”。于是分割从感知模块变成 **控制的第一性约束来源**，动作剖面上的可行性被语义条件化。
+**灵感 1（四足机器人 → 探询成为第一类动作，步态是不确定性变速箱）**
+直觉：四足 crawl 步态天然三点支撑、闲出一条腿——这条腿不只是备用支撑，更是 **仪器**：轻点（tap）测滑移与刚度、偏载（shift）在非完全承诺下预支部分体重、换视角（view）补一次分割。于是动作空间从纯运动扩为 **运动 × 探询 × 沟通** 三元组。更妙的是步态与不确定性之间存在天然兑换率：crawl 静态裕度大、可吸收单点失误但慢；trot 动态、快但每个接触都不可失——**步态就是不确定性预算的变速箱**：语义风险高 → 降档买裕度；证据到位 → 升档买速度。
 
-**灵感 2（全身控制 → 语义-接触生存核）**
-直觉：全身控制的动作不是一个向量，而是“在接触约束下保持质心可行动”的闭环。给定语义图 `Σ`，可行动集不是在每个关节上分别判定，而是 **生存核** `K(Σ) = {x | ∃ u, λ : 动力学可行 ∧ 接触 ⊆ C(Σ) ∧ 摩擦锥/关节限位满足}`。语义错误通过 `λ`（接触力）进入动力学，直接改变 `K(Σ)` 的边界，因此“分割错一点”会变成“可行动集塌一块”。
+**灵感 2（交互设计 → 拒绝必须可读，人类影响必须有界）**
+直觉：护盾的每次拒绝/降档/绕行都必须输出 **接地解释**——指认地图区域、信念摘要、被违反的约束，而不是一句 "infeasible"。同意按（风险 × 可逆性）矩阵分级：常规步态 L0 自动、中等风险 L1 异步通知、不可逆高险接触 L2 同步确认且超时保守停。人类的角色被严格限定为 **证据提供者而非决策者**：标注只能以有界权重进入信念，决策规则本体不可触碰——人可以让系统"知道得更多"，不能让系统"更冒险"。
 
-**灵感 3（语义边界 → 控制裕度与保守膨胀）**
-直觉：分割的不确定性集中在标签边界 `∂Ω`。全身控制若把脚掌、手掌压在边界上，等于把安全赌在分割模型的边界精度上。因此必须 **边界保守膨胀**：`Ω_l^+ = Ω_l ⊕ B(ε_s)`，并要求接触点 `p` 到边界的距离 `m_s(p) ≥ θ_m`。这不是给感知打补丁，而是把“语义边界”显式变成“控制裕度”。
+**灵感 3（语义地图 → 从单帧 Σ 到持久 𝓜：证据有了居所）**
+直觉：地图让语义 **跨到访积累**：区域信念 `b_r` 由边端探针、云端先验、人类标注三方证据贝叶斯融合，带溯源（到访次数/最近时间/来源集）、带陈旧衰减、带版本。地图同时是 **交互界面**（人读图、标图）与 **云边共享对象**（版本化同步）。第 55 轮"κ 跨域迁移"的风险由此获得结构性缓解：不再盲信迁移来的可供性，而是用本地探针与多次到访把 κ 长成区域自己的后验。
 
-**灵感 4（语义-接触证书 → 把分割不确定性写进可部署条件）**
-直觉：第 54 轮的联合证书 `J` 只记了动作兼容与鲁棒性谱，未记“这些动作用到的接触有多确定”。新证书需携带 `Σ_core`（核心接触区语义）、`C_core`（核心接触集）、`margin`、`δ_s`（语义扰动预算）与反例证据，使“可部署”意味着 **在语义扰动预算内接触与全身可行性同时保持**。
+**灵感 4（三源证据 + 证据门 → 从"模型置信"到"证据承诺"）**
+直觉：第 55 轮承诺接触的依据是模型置信（conf ≥ θ_conf），一次过度自信就击穿。本轮立 **证据门**：每个被承诺的接触必须挂证据类 `EV-probe / EV-visit / EV-margin / EV-human` 之一——探针实证、多访融合、足额裕度、或经校准操作者且获佐证的标注。击穿安全需要三层同时失守（模型误校准 ∧ 无探针无裕度 ∧ 人也错），防御从单层变为纵深。
 
-**灵感 5（云边语义接口 → 粗语义在场、细控制在校验）**
-直觉：云端可用大模型做全局一致的粗语义与接触可供性，边端用局部几何与力反馈做细粒度校验。两者以 **语义-接触接口** 对接：云端给 `(Σ_c, κ_c)`，边端回传边界不一致 `∂Ω_c vs ∂Ω_e` 与接触失败证据，触发云端 **边界重分割**。这把第 54 轮的动作重剖分升级为 **语义-动作联合重剖分**。
+**灵感 5（探-诺-演 PCE → 把信息价值写进控制回路）**
+直觉：每个检查点上，排程风险 ≤ δ_f 则承诺；否则选"VOI 扣除代价后最大"的探针，探完融合、重估、再决策；探不动则绕行，绕不动则降档，降不动则 L2 协商或安全停。不确定性不再只是被容忍的对象，而是被 **交易** 的对象——用时间与能量买信息，用信息买承诺。
 
-## 1. 形式化定义（增量：定义 121–126）
+## 1. 形式化定义（增量：定义 127–132）
 
-**定义 121（语义-接触图）**
-语义图 `Σ: Ω → Δ(L)` 为像素/体素到标签分布的映射；接触可供性 `κ: L × C → [0,1]`。语义接触集
-`C(Σ) = {(p,c) | κ(Σ̄(p), c) ≥ θ_κ ∧ conf(Σ(p)) ≥ θ_conf}`，其中 `Σ̄(p)=argmax_l Σ(p,l)`、`conf` 为校准后的后验置信。
+**定义 127（语义-可供性地图）** `𝓜 = (G, {b_r}, κ_𝓜, prov, ver)`：拓扑图 `G=(V,E)`；区域信念 `b_r` 为标签与接触参数 `(μ, k, F_bear)` 的后验；`κ_𝓜(r,c)=P(接触 c 成功 | b_r)`；溯源 `prov(r)=(n_visits, t_last, src_set)`；证据源 `E = E_seg ∪ E_probe ∪ E_cloud ∪ E_human`，融合 `b_r ← Bayes(b_r, like(e), w(src))`，人类权重 `w_h ≤ w_max` 且随操作者校准分衰减。
 
-**定义 122（全身语义-接触生存核）**
-全身动作空间 `A_WB = A_b × A_a × A_l × A_t`（基座×臂×腿×躯干），质心动力学 `ẋ = f(x,u,λ)`，接触力 `λ∈FC(μ)`（摩擦锥）。生存核
-`K(Σ) = {x | ∃ u∈A_WB, λ : f(x,u,λ)=ẋ ∧ supp(λ) ⊆ C(Σ) ∧ x_{t+1}∈𝒳_safe}`。
-**语义可行性** `viable(x,Σ)=1 ⇔ x∈K(Σ)`。
+**定义 128（探询动作与非破坏性公理）** `A = A_loco × A_epis × A_comm`；探针 `π ∈ {view, tap, shift, revisit}`，各有代价 `(τ_p, e_p)` 与似然模型 `p(e | r, θ_true)`。非破坏性：`F_probe ≤ F_abs` 且 `P(探针自身引发失效) ≤ δ_probe`——探针必须不改写它要测量的世界。
 
-**定义 123（语义边界裕度）**
-对标签 `l` 的区域 `Ω_l`，边界 `∂Ω_l`。接触点 `p` 的语义裕度 `m_s(p)=dist(p, ∂Ω_{Σ̄(p)})`。保守接触集
-`C^+(Σ) = {(p,c)∈C(Σ) | m_s(p) ≥ θ_m(κ,c)}`，其中 `θ_m` 随可供性置信升高而降低。
+**定义 129（信念空间生存核）** 接触排程 `σ = {(r_i, p_i, F_i)}`，`P_fail(r,p,F) = P(μ_r < μ_req(F) ∨ F_bear(r) < F_peak ∨ m_s(p) < θ_m | b_r)`。机会约束可行：`viable_b(x,σ,𝓜) ⇔ ∀i: P_fail ≤ δ_f(g) ∧ 全身动力学可行 ∧ x∈𝒳_safe`；`K_B(𝓜) = {x | ∃σ: viable_b}`。步态预算 `δ_f(g)` 随动态性单调递减：`δ_f(crawl) ≥ δ_f(pace) ≥ δ_f(trot) ≥ δ_f(bound)`。
 
-**定义 124（全身语义护盾）**
-给定名义动作 `u_nom`，护盾输出
-`u* = argmin_u ||u-u_nom||²_W s.t. x_{t+1}∈K(Σ), supp(λ)⊆C^+(Σ), λ∈FC(μ), u∈A_WB`。
-若可行集为空，回退到 **最小风险制动** `u_stop∈𝒳_safe`；护盾的职责是把“感知不确定”挡在“不可逆接触”之前。
+**定义 130（探-诺-演策略 PCE）** 每检查点决策：承诺 ⇔ ∃g 使 `R(σ) ≤ δ_f(g)`（取最快满足者）；否则选 `argmax_π [VOI(π) − cost(π)] ≥ θ_voi` 的探针，探 + 融合 + 重估；探尽 → 绕行；绕尽 → 降档；降尽 → L2 协商或安全停。探针预算 `k_probes` 保证终止。
 
-**定义 125（语义鲁棒性谱）**
-在第 53 轮维度谱 `ρ` 上增加语义维：
-`ρ_sem(ε) = inf_{||Σ-Σ̂||_∞ ≤ ε_s} P(viable(x,Σ) | Σ̂)`。
-即分割扰动球内全身可行性的最坏保持概率，`ρ_sem` 与 `ρ` 的其他维度共用证书框架。
+**定义 131（交互契约）** 同意阶梯 L0（低险可逆，自动）/ L1（异步通知，不阻塞）/ L2（同步确认，超时保守停）；接地解释 `Exp = (r, b_r 摘要, 违反约束, 裕度, 建议动作{确认/绕行/标注})`；标注隔离区：新标注挂起，待一次探针或到访佐证后生效；**决策规则与人类输入隔离**，人类只经有界信念更新起作用。
 
-**定义 126（语义-接触联合证书）**
-`J_s = (Σ_core, C_core, K_margin, ρ_sem, δ_s, evidence)`：
-- `Σ_core` 核心接触区语义分布，`C_core ⊆ C^+(Σ_core)` 核心接触集；
-- `K_margin = min_{x∈轨迹} dist(x, ∂K(Σ))` 生存核裕度；
-- `δ_s = ||Σ_core - Σ̂_core||` 语义扰动实测量；
-- `evidence` 含边界反例与力反馈日志。
-若 `Σ_core` 置信校准通过、`K_margin ≥ θ_K`、`ρ_sem ≥ ρ_min` 且 `δ_s < Θ_s`，则语义-接触可部署。
+**定义 132（地图-证据证书 J_m）** `J_m = (𝓜_core, C_core, K_margin, ρ_sem, δ_s, probe_log, consent_log, evidence)`；每个承诺接触必须带证据类（无类即拒绝）；继承第 55 轮 SCC 全部检查（`K_margin ≥ θ_K`、`ρ_sem ≥ ρ_min`、`δ_s < Θ_s`、置信校准）；同意日志完备（每个 L2 有决议）。
 
-## 2. 关键算法 伪代码
+## 2. 关键算法伪代码（完整版见产物区）
 
-### IP-121 SCG（Semantic-Contact Grounding）
+### IP-127 SMM（Semantic Map Maintenance）
 
 ```python
-def semantic_contact_map(rgbd, seg_model, kappa, theta_k, theta_conf):
-    Sigma = seg_model.predict_soft(rgbd)          # per-pixel label distribution
-    C = set()
-    for p in grid(rgbd):
-        l = argmax(Sigma[p])
-        if confidence(Sigma[p]) < theta_conf:
-            continue
-        for c in CONTACT_TYPES:
-            if kappa[l][c] >= theta_k:
-                C.add((p, c))
-    M = boundary_margin(Sigma)                     # m_s(p) for every p
-    return Sigma, C, M
-
-def conservative_contacts(C, M, kappa, theta_m):
-    return {(p,c) for (p,c) in C if M[p] >= theta_m(kappa[argmax_at(p)][c])}
+def map_fuse(M, batch):
+    for e in batch:                                  # e=(region,type,payload,t,src)
+        r = e.region
+        if e.type == 'human':                        # A35: 有界 + 隔离
+            if not M.quarantine[r].admit(e):
+                M.quarantine[r].hold(e); continue    # 待一次探针/到访佐证后生效
+            like, w = human_likelihood(e), min(w_max, w_h(e.src.cal))
+        elif e.type == 'probe':
+            like, w = probe_likelihood(e), 1.0
+        elif e.type == 'seg':                        # 第 55 轮 SCG 单帧输出入图
+            like, w = seg_likelihood(e), w_seg(e.conf)
+        else:
+            like, w = cloud_prior(e), w_cloud(e.ver)
+        M.b[r] = staleness_decay(bayes_update(M.b[r], like, w), age(e, M.prov[r]))
+        M.prov[r] = touch(M.prov[r], e)              # n_visits / t_last / src_set
+    return M, changed(M, batch)
 ```
 
-### IP-122 WBV（Whole-Body Viability Kernel）
+### IP-128 PCE（Probe-Commit-Evolve，含不确定性变速箱）
 
 ```python
-def viability_kernel(Sigma, C_plus, x0, horizon, eps):
-    K, margins = set(), []
-    for x in sample_state_space(x0, horizon):
-        feas, u, lam = solve_contact_dynamics(x, C_plus, friction_cone=mu)
-        if feas:
-            K.add(x)
-            margins.append(distance_to_infeasible(x, C_plus))
-    # 用 eps-网与区间包络给出 K 的外/内近似 (K_out, K_in)
-    return KernelApprox(K_in=inner_hull(K), K_out=outer_hull(K, eps),
-                        margin=min(margins) if margins else 0.0)
+def probe_commit_evolve(x0, M, task, budget, consent):
+    route = plan_on_map(M, task, risk_model)         # 拓扑图上的风险感知路径
+    sched, log = [], []
+    for cp in route.checkpoints:
+        sigma = foothold_schedule(x0, cp, M); R = schedule_risk(sigma, M)
+        while select_gait(R) == 'halt' and budget.probes_left > 0:
+            cands = admissible_probes(cp, M, F_abs)  # 非破坏性过滤（A34）
+            if not cands: break
+            p = argmax(cands, key=lambda q: voi(q, M, R) - cost(q))
+            if voi(p, M, R) < theta_voi: break
+            M, _ = map_fuse(M, [execute_probe(p, cap=F_abs)])
+            sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
+            budget.spend(p)
+        g = select_gait(R)                           # 变速箱: R≤δ_f(g) 的最快步态
+        if g != 'halt':
+            sched.append(commit(sigma, g)); log.append(tag_evidence(sigma, M)); continue
+        alt = reroute(M, cp, risk_model)
+        if alt and select_gait(schedule_risk(alt, M)) != 'halt': route = alt; continue
+        return negotiate_or_stop(cp, M, sigma, R, consent)   # L2 协商 / 安全停+解释
+    return sched, log, M
 ```
 
-### IP-123 SSF（Semantic Shield Filter）
+### IP-130 ISE（Interaction Safety Envelope）
 
 ```python
-def semantic_shield(u_nom, x, Kernel, C_plus, W):
-    u = qp_solve(
-        H=W, g=-W @ u_nom,
-        constraints=[
-            viability_constraint(x, u, Kernel.K_in),   # x_{t+1} in K_in
-            contact_constraint(u, C_plus),             # support(lambda) subset C+
-            friction_cone_constraint(u, mu),
-            joint_limit_constraint(u),
-        ],
-    )
-    if u is None or projection_gap(u, u_nom) > Delta_u:
-        return safe_brake(x), 'shield_infeasible'
-    return u, 'ok'
+def interaction_shield(u_nom, x, M, sched, consent):
+    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)    # 第 55 轮 SSF 为底座
+    failc = failing_constraint(x, u, sched, M)
+    if st != 'ok' or risk(u) > consent.threshold(failc):
+        exp = grounded_explanation(M, sched, failc)       # 指认区域+信念+违反约束
+        lvl = consent.level(failc, u)                     # 风险×可逆性 → L0/L1/L2
+        if lvl == 'L2' and not confirm(exp, timeout=tau_int):
+            return safe_brake(x), exp, 'L2_denied_or_timeout'
+        if lvl == 'L1': notify(exp)                       # 异步，不阻塞节拍
+    return u, exp_if_any, st
 ```
 
-### IP-124 SCC（Semantic-Contact Certificate）
+## 3. 复杂度与正确性（要点）
 
-```python
-def semantic_contact_certificate(traj, Sigma, kappa, rho_sem, budgets):
-    Sigma_core = core_semantics(traj, Sigma)
-    C_core = contacts_used(traj) & conservative_contacts(Sigma_core, M, kappa, theta_m)
-    if not C_core:
-        return ('reject', 'no_core_contact')
-    K_margin = min(distance_to_boundary_K(x, Sigma) for x in traj)
-    delta_s = semantic_perturbation(Sigma_core, calibrated_eps)
-    if K_margin < budgets.theta_K or delta_s > budgets.Theta_s:
-        return ('reject', 'semantic_budget_exceeded', K_margin, delta_s)
-    if rho_sem(delta_s) < budgets.rho_min:
-        return ('reject', 'semantic_robustness_fail')
-    return ('ok', SemanticCert(Sigma_core, C_core, K_margin, rho_sem, delta_s))
-```
-
-### IP-125 SRS（Semantic Robustness Spectrum）
-
-```python
-def semantic_robustness_spectrum(Sigma_hat, eps_s, sampler):
-    worst = 1.0
-    for Sigma_adv in sampler.ball(Sigma_hat, eps_s, worst_case=True):
-        Sigma_adv = renormalize(Sigma_adv)
-        p = empirical_viability(Sigma_adv, sampler.states)
-        worst = min(worst, p)
-    return worst
-```
-
-### IP-126 CEB（Cloud-Edge Semantic Boundary Protocol）
-
-```python
-def cloud_edge_semantics(P_c, Sigma_c, kappa_c, edge):
-    Sigma_e, C_e = edge.local_semantics()
-    mismatch = boundary_disagreement(Sigma_c, Sigma_e)
-    if mismatch.area > delta_A:
-        exp = edge.explain_contact_failure()
-        return ('reprofile', region=mismatch.hotspots, evidence=exp)
-    C_shared = conservative_contacts(C_e, edge.margin, kappa_c, theta_m)
-    return ('ok', C_shared, merge_uncertainty(Sigma_c, Sigma_e))
-```
-
-## 3. 复杂度与正确性
-
-| 组件 | 时间复杂度 | 空间复杂度 | 正确性关键 |
+| 组件 | 时间 | 空间 | 正确性关键 |
 |---|---|---|---|
-| SCG | O(|Ω|·(|L|+|C|)) | O(|Ω|·|L|) | 置信校准、可供性标定 |
-| WBV | O(|X|·T·QP) | O(|X|) | 生存核外近似 sound、接触集完备 |
-| SSF | O(QP) 每次 | O(|A_WB|) | QP 可行或安全回退、投影有界 |
-| SCC | O(|轨迹|·|Ω|) | O(|Ω|) | δ_s 预算闭合、核心接触非空 |
-| SRS | O(N_adv·|X|) | O(|X|) | 扰动球覆盖、最坏情形可复现 |
+| SMM | O(|ΔE|·d_r) 增量 | O(|V|·d_b) | 源权重诚实、融合保校准 |
+| PCE | O(|CP|·k_p·(C_VOI+|E|)) | O(|V|+|σ|) | 悲观 VOI、k_p 预算终止 |
+| BVK | O(N_sc·T_dyn+QP-SOCP) | O(|X|+|σ|) | 机会约束内近似 sound、δ_f(g) 单调 |
+| ISE | O(QP)+O(1) | O(|Exp|) | 拒绝必有接地解释、超时保守停 |
+| TAF | O(1)+O(H_op) | O(|标注|) | w_h 有界、隔离区延迟生效 |
+| MEC | O(|σ|+|probe_log|) | O(|σ|) | 无证据类即拒绝、L2 日志完备 |
 
-**正确性定理（Whole-Body Semantic-Contact Soundness）**
-假设第 54 轮 (A26)–(A28) 成立；**(A29)** `Σ` 的置信经温度/分位数校准，ECE ≤ ε_cal；**(A30)** `K_in ⊆ K(Σ) ⊆ K_out` 且护盾在不可行时回退 `u_stop∈𝒳_safe`；**(A31)** 真实语义扰动 `||Σ-Σ̂||_∞ ≤ ε_s`；**(A32)** 云边边界回传延迟 ≤ τ_sem 且重分割收敛。
-则部署后单步安全概率：
-```
-P_safe ≥ 1 - P(||Σ-Σ̂||_∞ > ε_s) - P(κ miscalibrated) - P(K_out \ K_in ≠ ∅) - P(shield fallback fails)
-```
-关键：**语义不确定性进证书、生存核保守包含、护盾兜底**，三层任一层失守都不允许把“分割看起来很确定”当作“接触一定成立”。
+**正确性定理（Evidence-Grounded Commitment Soundness）**：在 A29–A32 基础上加 **(A33)** 融合后区域信念校准（ECE ≤ ε_cal）且融合保校准；**(A34)** 探针似然诚实且非破坏；**(A35)** `w_h ≤ w_max`、标注隔离、决策规则与人类输入隔离；**(A36)** 交互时延 ≤ τ_int、超时保守停。则：(i) 承诺接触经验失效率 `≤ δ_f + ε_cal + δ_probe + ε_h(w_max)`；(ii) **安全单调引理**：交互与探针只能经信念更新或触发更保守动作影响系统，不存在升险交互路径；(iii) PCE 在 `k_probes` 内终止于 {承诺, 绕行, 协商, 安全停} 之一。
 
-## 4. 实验设计 E162–E166
+## 4. 实验设计 E167–E171
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E162 接触可供性校准 | ECE / 接触成功预测 MAE | ECE ≤ 0.05，MAE ≤ 0.07 |
-| E163 生存核准确性 | 预测可行 vs 实际可行的 P/R、保守间隙 | P/R ≥ 0.90，间隙 ≤ 10% |
-| E164 语义护盾安全性 | 跌倒率 / 约束违反率 vs 无护盾 | 违反率下降 ≥ 80% |
-| E165 边界对抗鲁棒性 | 边界噪声 ε 下成功率下降 | 下降 ≤ 8% |
-| E166 云边语义接口 | 边界不一致检测 AUC、τ_sem、成功率增益 | AUC ≥ 0.90，P95 ≤ 80ms，增益 ≥ 10% |
+| E167 地图融合校准与抗污染 | 多访融合 ECE；注入 20% 错误标注后承诺失效率增幅 | ECE ≤ 0.05；增幅 ≤ 1% |
+| E168 探询效率与非破坏性 | 每探针风险降幅 vs 随机探针；探针致损次数；时延开销 | ≥ 2×；0 次；≤ 15% |
+| E169 证据门承诺健全性 | 承诺接触失效率 vs δ_f=0.05；假承诺率；vs 第 55 轮置信基线 | ≤ 0.06；≤ 2%；降幅 ≥ 50% |
+| E170 交互质量与时延 | 解释可读性；校准操作者标注精度；L2 P95；超时安全停成功率 | ≥ 0.8；≥ 0.85；≤ 300ms；100% |
+| E171 端到端四足部署 | 成功率 / 跌倒率 / 完成时间 / 降档恰当率 vs 第 55 轮基线 | +10% / −40% / ≤ +20% / ≥ 90% |
 
 ## 5. 风险与缓解
 
 | 风险 | 等级 | 缓解 |
 |---|---|---|
-| 分割置信过度自信（边界尤甚） | 高 | 温度/分位数校准 + 边界专门校准集 |
-| 接触可供性跨材质迁移失败 | 高 | 材质分层标定 + 在线力反馈更新 κ |
-| 生存核过保守导致“冻结” | 中 | 分层核 + 保守度预算 + 主动探索恢复 |
-| 护盾 QP 频繁不可行 | 高 | 软约束分层 + 安全制动回退 + 可行性预检 |
-| 云边语义本体不一致 | 高 | 共享标签本体 + 边界证据回传 + 版本化接口 |
+| 探针非破坏假设被打破（薄冰上轻点即塌） | 高 | 绝对力帽 F_abs + 承载下界预检 + 不可逆性审计 |
+| 高置信错误标注污染持久地图 | 高 | 标注隔离区 + 校准权重 w_h ≤ w_max + 佐证生效 |
+| VOI 依赖同一可能失准的信念模型（循环性） | 中 | 悲观 VOI（信念方差悲观界）+ 探后校验 |
+| 地图陈旧："旧证据"放行今日风险 | 中 | 陈旧半衰期 + 高险区域强制重探 |
+| L2 警报疲劳 → 无脑确认 | 中 | 解释分级 + 确认率监控 + 超阈回退保守停 |
 
 ## 6. 本轮最大风险
 
-**一句话**：语义-接触接地与全身生存核把“感知标签”升级为“可执行的接触约束”，但其 soundness **三重依赖分割置信的校准、接触可供性的跨域迁移、以及生存核外近似的紧致性**；一旦边界处置信过度自信、或可供性在未见材质上系统偏移，护盾会在“自认为可行”的伪生存核内放行动作，让全身控制器把所有肢体压上虚假支撑面，造成不可逆的跌倒——因此必须以 **边界校准 + 在线 κ 更新 + 核保守度预算** 三重护栏，宁可保守制动，绝不把语义的“高置信”当作接触的“已证实”。
+**一句话**：本轮把安全的赌注从"模型置信"换到"证据质量"，但地图的持久性让坏证据长寿——一根在薄冰上"非破坏"轻点即塌的探针、或一条高置信错误的人工标注，会在隔离与衰减护栏生效前污染区域信念，并经多访融合把局部错误放大为全图系统性偏差，使之后所有证据门都"诚实地为坏证据放行"——因此必须以 **探针绝对力帽+不可逆审计、标注隔离区+校准权重、溯源版本+陈旧衰减** 三重护栏，宁可重访重探，绝不采信"无溯源的确定"。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 54 轮产物 · 创新点清单 v31：GroundEdge-GenSim+++（ACS×SCOM×CEC×AEC×JTC）
+# 第 56 轮产物 · 创新点清单 v32：MapProbe-Negotiate（证据地图×主动探询×信任协商，SMM×PCE×BVK×ISE×TAF×MEC）
 
-> 承接第 53 轮产物 v30。本轮在层级化鲁棒性 + 反向解释体系之上，增加 **动作空间剖面化、技能组合可判定化、云边协同闭环** 三大算子：
-> - **ACS（Action Space Characterization）**：技能动作占用剖面 `α_S`，将能力映射到动作空间；
-> - **SCOM（Skill Composition Graph）**：基于动作兼容性的技能组合图 + 组合证书；
-> - **CEC（Cloud-Edge Coordination）**：云端粗动作规划 ↔ 边端细动作校验的闭环；
-> - **AEC（Action-Edge Consistency）**：动作-鲁棒性联合证书 `J`，保证云边对齐；
-> - **JTC（Joint Transfer Certificate）**：跨层动作与鲁棒性联合迁移证书。
->
-> IP 编号：IP-115~IP-120（共 6 个新增），升级 IP-107/109/112 以纳入动作空间维度。
+> 承接第 55 轮 IP-121~126（SCG/WBV/SSF/SCC/SRS/CEB）与第 54 轮 v31 云边动作体系。本轮把部署前提从"模型置信"升级为 **"证据承诺"**：语义从单帧 Σ 升级为持久地图 𝓜，动作从纯运动升级为 **运动×探询×沟通** 三元组，护盾从单边保守升级为 **探-诺-演协商闭环**，人类以有界、经校准、可审计的方式进入安全回路。
+> IP 编号：IP-127~IP-132（共 6 个新增），升级 IP-121/123/124/126 以纳入地图信念与交互维度。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-115 | ACS Action Space Characterization | 新增 | 动作剖面 `α_S : A→[0,1]`，覆盖检查 `cover(S,A_T)` |
-| IP-116 | SCOM Skill Composition Graph | 新增 | 动作兼容性图 `G_S`，组合证书 `C_comp` |
-| IP-117 | CEC Cloud-Edge Coordination | 新增 | 粗-细动作映射 `γ_ce`，Explain 回传闭环 |
-| IP-118 | AEC Action-Edge Consistency | 新增 | 联合证书 `J=(ρ,A_cert,γ_ce,δ_a)` |
-| IP-119 | AAL Action Alignment Loss | 新增 | 对齐成本 `cost_align = w_a·(1-compat)+...` |
-| IP-120 | JTC Joint Transfer Certificate | 新增 | 跨层动作-鲁棒性联合迁移证书 |
+| IP-127 | SMM Semantic Map Maintenance | 新增 | 区域信念 `b_r` 三源贝叶斯融合 + 溯源/陈旧/版本 |
+| IP-128 | PCE Probe-Commit-Evolve | 新增 | 检查点 VOI 探询 + 承诺/绕行/降档/协商四态决策 |
+| IP-129 | BVK Belief Viability Kernel | 升级 IP-122/124 | 机会约束生存核 + 步态不确定性变速箱 `δ_f(g)` |
+| IP-130 | ISE Interaction Safety Envelope | 升级 IP-123 | 护盾 + 同意阶梯 + 接地解释 + 超时保守停 |
+| IP-131 | TAF Trust-calibrated Annotation Fusion | 新增 | 操作者校准权重 + 标注隔离区 + 审计日志 |
+| IP-132 | MEC Map-Evidence Certificate | 升级 IP-124 | 证据门 `EV-probe/visit/margin/human` + L2 日志完备 |
 
-## 1. 符号体系增量（新增定义 115–120）
+## 1. 符号体系增量（定义 127–132）
 
 | 符号 | 含义 |
 |---|---|
-| `A = A_c × A_e` | 动作空间：云端粗 × 边端细 |
-| `α_S(a)` | 技能 S 在动作 a 上的占用度 `[0,1]` |
-| `compat(S_i,S_j)` | 动作兼容性 Jaccard 系数 |
-| `c_trans(A_i,A_j)` | 动作转换成本 |
-| `G_S = (V,E)` | 技能组合图 |
-| `γ_ce : A_c → A_e` | 云边动作映射 |
-| `C_comp = (A_overlap,ρ_comp,γ_ce)` | 组合证书 |
-| `J = (ρ,A_cert,γ_ce,δ_a,evidence)` | 动作-鲁棒性联合证书 |
-| `A_cert = (A_core,A_buffer,δ_a)` | 动作占用证书 |
-| `cost_align` | 动作对齐成本 |
+| `𝓜 = (G,{b_r},κ_𝓜,prov,ver)` | 语义-可供性地图（拓扑图/区域信念/可供性/溯源/版本） |
+| `b_r` | 区域 r 上 (标签, μ, k, F_bear) 的后验 |
+| `A = A_loco × A_epis × A_comm` | 动作三元组：运动 × 探询 × 沟通 |
+| `π ∈ {view,tap,shift,revisit}` | 探针（代价 τ_p,e_p；似然 p(e\|r,θ_true)） |
+| `F_abs, δ_probe` | 探针绝对力帽与探针致失效上界（非破坏性公理） |
+| `P_fail(r,p,F)` | 信念导出的接触失效概率 |
+| `δ_f(g)` | 步态 g 的失效率预算，crawl ≥ pace ≥ trot ≥ bound |
+| `VOI(π)` | 探针信息价值（悲观界） |
+| `L0/L1/L2` | 同意阶梯（自动/通知/确认） |
+| `Exp` | 接地解释对象（区域+信念+违反约束+建议动作） |
+| `w_h ≤ w_max` | 人类标注权重上界，随操作者校准分衰减 |
+| `EV-probe/visit/margin/human` | 证据门四类 |
+| `J_m` | 地图-证据证书 |
 
-## 2. 关键算法 伪代码
+## 2. 关键算法伪代码
 
-### IP-115 ACS
+### IP-127 SMM（Semantic Map Maintenance）
 
 ```python
-def action_profile(skill, A_c, A_e, sampler):
-    alpha = {}
-    for a_c in A_c:
-        for a_e in A_e:
-            feas, conf = sampler.query(skill, a_c, a_e)
-            alpha[(a_c,a_e)] = conf if feas else 0.0
-    return alpha
+def map_fuse(M, batch):
+    changed = []
+    for e in batch:                                   # e=(region,type,payload,t,src)
+        r = e.region
+        if e.type == 'human':                         # A35: 有界 + 隔离
+            if not M.quarantine[r].admit(e, op_cal=e.src.cal):
+                M.quarantine[r].hold(e); continue     # 待一次 probe/visit 佐证后生效
+            like, w = human_likelihood(e), min(w_max, w_h(e.src.cal))
+        elif e.type == 'probe':                       # A34: 探针证据权重最高
+            like, w = probe_likelihood(e), 1.0
+        elif e.type == 'seg':                         # 第 55 轮 SCG 单帧输出入图
+            like, w = seg_likelihood(e), w_seg(e.conf)
+        else:                                         # E_cloud: 云端先验（带版本）
+            like, w = cloud_prior(e), w_cloud(e.ver)
+        post = bayes_update(M.b[r], like, weight=w)
+        M.b[r] = staleness_decay(post, age=t_now - M.prov[r].t_last, half=tau_stale)
+        M.prov[r] = touch(M.prov[r], e)               # n_visits / t_last / src_set
+        M.ver.bump(r); changed.append(r)
+    return M, changed
 
-def cover_check(alpha, A_T, theta_cov=0.8):
-    return all(alpha.get(a,0.0) >= theta_cov for a in A_T)
+def staleness_gate(M, r, now):
+    return (now - M.prov[r].t_last <= tau_stale) or risk_class(r) == 'low'
 ```
 
-### IP-116 SCOM
+### IP-128 PCE（Probe-Commit-Evolve，含不确定性变速箱）
 
 ```python
-def build_composition_graph(skills, theta_a, tau_e, K):
-    G = nx.DiGraph()
-    for i,s1 in skills:
-        for j,s2 in skills:
-            if i==j: continue
-            alpha1, alpha2 = s1.alpha, s2.alpha
-            inter = jaccard(alpha1, alpha2)
-            c_trans = transition_cost(s1, s2)
-            if inter >= theta_a and c_trans <= tau_e:
-                rho_comp = compose_robustness(s1.rho, s2.rho, K)
-                G.add_edge(i,j, compat=inter, cost=c_trans, rho_comp=rho_comp, A_overlap=intersection(alpha1,alpha2))
-    return G
+def select_gait(R):
+    for g in ['trot', 'pace', 'crawl']:               # 由快到慢
+        if R <= delta_f_of_gait(g): return g          # δ_f: trot < pace < crawl
+    return 'halt'                                     # 全部超预算：停
+
+def probe_commit_evolve(x0, M, task, budget, consent):
+    route = plan_on_map(M, task, risk_model)          # 拓扑图上的风险感知 A*
+    sched, log = [], []
+    for cp in route.checkpoints:
+        if not staleness_gate(M, cp.region, t_now):   # 陈旧区域先补一次 view
+            M, _ = map_fuse(M, [execute_probe(view_probe(cp.region), cap=F_abs)])
+        sigma = foothold_schedule(x0, cp, M)          # 步态+落脚点候选（可达集内）
+        R = schedule_risk(sigma, M)                   # Σ_i P_fail(r_i,p_i,F_i)
+        while select_gait(R) == 'halt' and budget.probes_left > 0:
+            cands = admissible_probes(cp, M, F_abs)   # 非破坏性过滤（A34）
+            if not cands: break
+            p = argmax(cands, key=lambda q: voi_pessimistic(q, M, R) - cost(q))
+            if voi_pessimistic(p, M, R) < theta_voi: break
+            M, _ = map_fuse(M, [execute_probe(p, cap=F_abs)])
+            sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
+            budget.spend(p)
+        g = select_gait(R)
+        if g != 'halt':
+            sched.append(commit(sigma, g))
+            log.append(tag_evidence(sigma, M))        # 打证据类标签
+            continue
+        alt = reroute(M, cp, risk_model)
+        if alt and select_gait(schedule_risk(alt, M)) != 'halt':
+            route = alt; continue
+        return negotiate_or_stop(cp, M, sigma, R, consent)   # L2 协商 / 安全停
+    return sched, log, M
 ```
 
-### IP-117 CEC
+### IP-129 BVK（信念空间生存核 + 机会约束）
 
 ```python
-def cloud_plan(T_desc, G, A_c, constraints):
-    # A* 搜索最小 cost_align 路径
-    path, cost = a_star(G, start='root', goal=T_desc, heuristic=lambda n: cost_align(n))
-    P_c = [(skills[n].id, A_c[n]) for n in path]
-    return P_c, cost
-
-def edge_refine(P_c, gamma_ce, sim_model, rho_min):
-    P_e, reports = [], []
-    for sid, a_c in P_c:
-        s = skill_lib[sid]
-        a_e = gamma_ce(a_c)
-        if not cover_check(s.alpha, a_e):
-            exp = explain_failure(sim_model.run(s,a_e), sim_model)
-            return ('reject', exp)
-        rho_e = robustness_spectrum(s)
-        if min(rho_e.values()) < rho_min:
-            exp = explain_failure(sim_model.run(s,a_e), sim_model)
-            reports.append(('rho_fail',sid,exp))
-        P_e.append((sid,a_e,rho_e))
-    return ('ok', P_e, reports)
+def belief_viability(x, sigma, M, gait):
+    delta_f = delta_f_of_gait(gait)
+    pf_max = 0.0
+    for (r, p, F) in sigma:
+        mu_req = friction_demand(F, posture(x))
+        pf = P_post(M.b[r], mu_r < mu_req or F_bear_r < F.peak or m_s(p) < theta_m)
+        pf_max = max(pf_max, pf)
+        if pf > delta_f: return KernelInfeasible(pf)
+    feas, u, lam = solve_contact_dynamics(x, sigma, FC(mu_lower_conf(M, sigma)))
+    return KernelApprox(feas=feas, pf_max=pf_max,
+                        margin=dist_to_chance_boundary(x, sigma, M))
+# K_in/K_out：机会约束经 Cantelli/场景近似凸化（SOCP）；外近似仍须 sound（A30 继承）
 ```
 
-### IP-118 AEC
+### IP-130 ISE（Interaction Safety Envelope）
 
 ```python
-def joint_certificate(skill_seq, gamma_ce, delta_a_budget, rho_min):
-    A_core = reduce(intersection, [s.alpha for s in skill_seq])
-    delta_a = max_alignment_error(gamma_ce, A_core)
-    if delta_a > delta_a_budget:
-        return ('reject','action_mismatch', delta_a)
-    rho_comp = compose_robustness_chain([s.rho for s in skill_seq], K)
-    if min(rho_comp.values()) < rho_min:
-        return ('reject','robustness_fail', rho_comp)
-    A_cert = (A_core, buffer_zone(A_core, delta_a))
-    return ('ok', JointCert(rho_comp, A_cert, gamma_ce, delta_a))
+def consent_level(failc, u):
+    if failc is None and reversibility(u) == 'high': return 'L0'      # 自动
+    if failc.risk <= theta_L1 or reversibility(u) == 'high': return 'L1'
+    return 'L2'                                                       # 不可逆/高险
+
+def interaction_shield(u_nom, x, M, sched, consent):
+    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)   # 第 55 轮 SSF 为底座
+    failc = failing_constraint(x, u, sched, M)
+    if st != 'ok' or risk(u) > consent.threshold(failc):
+        exp = grounded_explanation(M, sched, failc)      # Exp=(r,b_r,违反约束,裕度,建议)
+        lvl = consent_level(failc, u)
+        if lvl == 'L2':
+            ok = confirm_request(exp, timeout=tau_int)   # A36: 时延上界
+            if not ok: return safe_brake(x), exp, 'L2_denied_or_timeout'
+        elif lvl == 'L1': notify(exp)                    # 异步，不阻塞节拍
+    return u, exp_if_any, st
 ```
 
-### IP-120 JTC
+### IP-131 TAF（Trust-calibrated Annotation Fusion）
 
 ```python
-def joint_transfer_certify(J_source, L_target, phi, delta_a_budget, delta_rho_budget):
-    gamma_ce = J_source.gamma_ce
-    rho_target = coupling_correction(J_source.rho, K, phi)
-    delta_rho = {d: max(0, J_source.rho[d]-rho_target[d]) for d in J_source.rho}
-    delta_a = alignment_drift(gamma_ce, phi)
-    if sum(delta_rho.values()) > delta_rho_budget or delta_a > delta_a_budget:
-        return ('reject','budget_exceeded', delta_rho, delta_a)
-    domain = compute_action_domain(J_source, phi, L_target)
-    if domain_check_robust(J_source.R, domain) != 'in':
-        return ('reject','domain_mismatch')
-    return ('ok', TRC_Joint(J_source, L_target, gamma_ce, delta_rho, delta_a, domain))
+def trust_fuse(M, ann, op_hist, audit):
+    cal = calibration_score(op_hist)                     # 历史标注 vs 事后探针/实测
+    w_h = min(w_max, w0 * cal)                           # A35: 影响有界
+    e = annotation_evidence(ann, weight=w_h)
+    M, chg = map_fuse(M, [e])
+    M.quarantine[ann.region].hold(ann)                   # 佐证前不参与承诺判定
+    audit.append((ann, ann.op, cal, t_now))              # 可审计
+    return M, chg
+```
+
+### IP-132 MEC（Map-Evidence Certificate）
+
+```python
+def map_evidence_certificate(sched, log, M, consent_log, budgets):
+    for c in contacts(sched):
+        if   c.ev == 'EV-probe':  ok = c.probe.passed and c.probe.nondestructive
+        elif c.ev == 'EV-visit':  ok = M.prov[c.region].n_visits >= k_v
+        elif c.ev == 'EV-margin': ok = c.m_s >= theta_m_strict
+        elif c.ev == 'EV-human':  ok = c.op_cal >= theta_cal and c.corroborated
+        else: return ('reject', 'no_evidence_class', c)  # 证据门：无证据不承诺
+        if not ok: return ('reject', 'evidence_insufficient', c)
+    if min(x.K_margin for x in sched) < budgets.theta_K: return ('reject', 'K_margin')
+    if rho_sem(sched, M) < budgets.rho_min:              return ('reject', 'rho_sem')
+    if semantic_perturbation(M.core) > budgets.Theta_s:  return ('reject', 'delta_s')
+    if not all(l2.resolved for l2 in consent_log):       return ('reject', 'consent_open')
+    return ('ok', MapCert(M.core, core_contacts(sched), K_margin, rho_sem,
+                          delta_s, probe_log, consent_log))
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| ACS | O(|A_c|·|A_e|·|S|) | O(|A|) | 采样覆盖 ≥ 95% |
-| SCOM | O(|S|²·|A|) | O(|S|²+|E|) | compat 阈值 sound，路径最优 |
-| CEC | O(|V| log |V| + |E| + |P|·|π|) | O(|V|+|E|) | γ_ce Lipschitz，Explain 闭环收敛 |
-| AEC | O(|S|·|A| + |𝔇_ρ|) | O(|A|+|𝔇_ρ|) | 联合证书 sound，δ_a 预算闭合 |
+| SMM | O(\|ΔE\|·d_r) 增量 | O(\|V\|·d_b) | 源权重诚实、融合保校准（A33） |
+| PCE | O(\|CP\|·k_p·(C_VOI+\|E\|)+\|CP\|·A*) | O(\|V\|+\|σ\|) | 悲观 VOI、k_p 终止、四态完备 |
+| BVK | O(N_sc·T_dyn + QP-SOCP) | O(\|X\|+\|σ\|) | 机会约束内近似 sound、δ_f(g) 单调（A29 继承） |
+| ISE | O(QP)+O(1) | O(\|Exp\|) | 拒绝必有接地解释、超时保守停（A36） |
+| TAF | O(1)+O(H_op) | O(\|标注\|) | w_h ≤ w_max、隔离区延迟生效（A35） |
+| MEC | O(\|σ\|+\|probe_log\|) | O(\|σ\|) | 无证据类即拒绝、L2 日志完备 |
 
-**正确性定理（Action-Aware Cloud-Edge Composition Soundness）**
-假设第 53 轮 (A22)-(A25) 成立；**(A26)** `α_S` 由结构化仿真校准，覆盖可判定；**(A27)** `γ_ce` 在 `A_core` 上 Lipschitz L<1；**(A28)** Explain 回传延迟 ≤ τ_loop 且锚点验证通过。
-则部署成功概率：
-```
-P_success ≥ 1 - Σ_d(1-ρ_min(d)) - β_E - P(δ_a > Θ_a) - P(compat<θ_a)
-```
-关键：**组合前提先验动作兼容**，**云边映射可逆且有界**，**反向解释驱动重剖分收敛**。
+**正确性定理（Evidence-Grounded Commitment Soundness, EGCS）**
+假设 A22–A28（第 53/54 轮）、A29–A32（第 55 轮）成立；**(A33)** 融合后区域信念校准 `ECE ≤ ε_cal` 且融合算子保校准（共轭/加权似然 + 诚实源权重）；**(A34)** 探针似然诚实且非破坏（`F_probe ≤ F_abs`，`P(探针致失效) ≤ δ_probe`）；**(A35)** `w_h ≤ w_max`、标注隔离、决策规则与人类输入隔离；**(A36)** 交互时延 `≤ τ_int` 且超时触发保守停。则：
 
-## 4. 集成更新：v16+ → v16++ 体系
+1. **承诺健全性**：PCE 承诺的每个接触满足 `P(fail) ≤ δ_f + ε_cal + δ_probe + ε_h(w_max)`；
+2. **交互单调性**：任何 L1/L2/探针路径只经（a）有界信念更新或（b）触发更保守动作影响系统，不存在升险交互路径；
+3. **终止性**：PCE 在每检查点 `k_probes` 内终止于 {承诺, 绕行, L2 协商, 安全停}；
+4. **部署界**（对检查点取联合界）：
+
+```
+P_safe ≥ 1 − Σ_cp (δ_f + ε_cal + δ_probe + ε_h)
+             − P(𝓜 陈旧 > τ_stale 未检出) − P(护盾回退失败) − P(τ_int 超时 ∧ 安全停失效)
+```
+
+关键：**证据门使单点过度自信不再足以产生承诺**（模型误校准 ∧ 无探针无裕度 ∧ 人也错，三层同时失守才会击穿）；**决策规则固定而信念流动**（人/云/探针只能改信念，不能改规则）；**护盾兜底与超时保守停继承第 55 轮 A30/A32**。
+
+## 4. 实验设计 E167–E171
+
+| 实验 | 指标 | 目标 |
+|---|---|---|
+| E167 地图融合校准与抗污染 | 多访融合 ECE；注入 20% 错误标注后承诺失效率增幅 | ECE ≤ 0.05；增幅 ≤ 1% |
+| E168 探询效率与非破坏性 | 每探针风险降幅 vs 随机探针；探针致损次数；时延开销 | ≥ 2×；0 次；≤ 15% |
+| E169 证据门承诺健全性 | 承诺接触失效率 vs δ_f=0.05；假承诺率；vs 第 55 轮置信基线 | ≤ 0.06；≤ 2%；降幅 ≥ 50% |
+| E170 交互质量与时延 | 解释可读性；校准操作者标注精度；L2 P95；超时安全停成功率 | ≥ 0.8；≥ 0.85；≤ 300ms；100% |
+| E171 端到端四足部署 | 成功率 / 跌倒率 / 完成时间 / 降档恰当率 vs 第 55 轮基线 | +10% / −40% / ≤ +20% / ≥ 90% |
+
+## 5. 集成更新：v16++ → v16* 体系
 
 ```
 根信任 + 能力格
 │
 ├─ L0 分布式底座与执行边 (GPC/SEN/TBC)
 ├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
-├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR) ← v53
-├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC) ← v54 新增
+├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR)
+├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
+├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC) ← v56 新增
 ├─ L1 几何感知
 ├─ L2 任务/上下文/记忆/语音
 ...
@@ -358,15 +366,13 @@ P_success ≥ 1 - Σ_d(1-ρ_min(d)) - β_E - P(δ_a > Θ_a) - P(compat<θ_a)
 ```
 
 JCPS 输出扩展为：
-`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a)`
+`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h)`
 
-其中新增：
-- `α_S` 动作剖面；
-- `A_cert` 动作占用证书；
-- `γ_ce` 云边映射；
-- `δ_a` 动作对齐误差。
+其中新增：`𝓜_core` 地图核心区信念与溯源；`J_m` 地图-证据证书；`probe_log` 探针证据日志；`consent_state` 同意阶梯状态；`w_h` 人类标注权重。
 
-## 5. 本轮最大风险
+云边协议升级：第 55 轮 CEB（IP-126）→ **CEB+**：边界重剖分不再直接改 Σ，而是作为带版本号的地图证据写入 𝓜（与探针/人工标注同走 SMM 融合与隔离逻辑）；云端可下发 **探针建议**（哪片区域值得先探），边端回传 probe_log 作为云端先验的校准集。
 
-**一句话**：动作空间剖面化与云边协同将技能组合从能力匹配升级为动作-鲁棒性双证书，但其 soundness **三重依赖动作剖面的完备采样、γ_ce 映射的单调可逆、以及 Explain 回传的实时收敛**；一旦动作剖面欠采样导致虚假兼容、或云边映射在极限动作处非单调，组合路径在真实边端会系统性动作错位并触发负迁移，故必须以 **主动剖面采样 + Lipschitz 约束的 γ_ce + 负迁移绊线** 三重护栏，宁可保守组合，绝不把动作空间的“可对齐假象”当作部署前提。
+## 6. 本轮最大风险
+
+**一句话**：证据地图-探询-协商把安全赌注从"模型置信"换成"证据质量"，但地图的持久性使坏证据长寿——一次被"非破坏"假设掩盖的破坏性探针或一条高置信错误标注，会在隔离与衰减护栏生效前污染区域信念、并经多访融合放大为全图系统性偏差，让之后所有证据门都"诚实地为坏证据放行"；必须以探针力帽+不可逆审计、标注隔离+校准权重、溯源版本+陈旧衰减三重护栏，宁可重访重探，绝不采信"无溯源的确定"。
 <!-- ARTIFACT:END -->
