@@ -2,184 +2,263 @@
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 <!-- IDEA:START -->
-# 第 1 轮（灵感循环 v1：「迭代验证」×「排行榜」×「常识推理」）—— 方向校正：从「低层执行理论」转向「竞赛对齐研究」
+# 第 2 轮迭代（灵感循环 v2：「Gazebo」×「实时性」×「模块化设计」）—— 在真实赛制证据上继续打磨 UIP 清单
 
-> **本轮先做一次方向校正（pivot）再展开。** research.md 承接的第 59–60 轮（IP-145~160：BUQ / ERTC / EEIS / CLEP / XMC+ / SSM / CIEC / EPIR / SERC / PCE++++ …）是一套围绕「关节阻抗编译 / ROS 因果隔离 / 认知预算」的**低层执行控制理论**。但核实真实赛制后可见：UniBot 世界挑战赛里，**选手只在远端把模型部署成一个 `observation→action` 的 API 服务，评测系统自行连接并在真机上执行**（`unibot_submission` README §1、§5）。选手**不接触**电机阻抗、**不控制** ROS 消息队列、**无权**修改执行层与证据链。因此 IP-145~160 的执行层机制**在本赛事中不可落地，予以封存（parked）**；只抽取其「在线辨识 / 置信度分层 / 证据校验」的**元思想**作为本轮变异算子。
+> **本轮是「深化 + 修剪」，不是推倒重来。** 承接第 1 轮的 UIP-01~10（选手远程部署 `observation→action` 的 API 内、推理期泛化策略），用三个新灵感词做差异化打磨。本轮最重要的**新证据**：官网每个任务的 `tasks_v2/<slug>/info.json` 都带 `generalization` 字段，而其中的 `human_*`（人为干扰）描述**大量是「把已完成进度撤回」**——"合上后再打开""拉上后再拉开""叠好后翻开""放入后再拿走"。这把第 1 轮「步骤分安全网」的**工作假设**升级成了**规则级事实**：**人为干扰会主动反向消耗你的步骤分**，而公开数据集里**一条这类演示都没有**。
 
 ---
 
-## 0. 本轮先核实的事实（检索日期 2026-11-12）
+## 0. 本轮核实的事实（检索日期 2026-11-12）
 
-| 事实 | 内容 | 来源 |
+| 事实 | 内容 | 来源（检索日期） |
 |---|---|---|
-| 赛事定位 | 「具身智能大模型真实世界泛化不足」；单模型多任务，真机规模化评测；抓取/放置/双手协调 | https://unibot.unitree.com （2026-11-12） |
-| 任务规模 | **32 项**真实桌面任务；数据集 32000 episodes / 169 小时 | https://unibot.unitree.com/challenges.html （2026-11-12） |
-| 数据集 | HF Collection `unitreerobotics/unibot-v1-challenge-dataset`，32 个 LeRobot v3.0 数据集，G1、30fps、4 路 AV1 480×640（head_stereo_left/right、wrist_left/right），Dex1 单通道夹爪 | https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup （2026-11-12） |
-| 32 任务名（实测） | HangCup、ArrangePlates、ArrangeTestTubes、ZipUp、ColorArrangement、Unlock、DisconnectEthernet、ConveyorSorting、FruitCollection、FoldTowel、OrganizeBookshelf、FruitSorting、SpellRobot、OrganizePencilCase、OrganizeStationery、StackBowls、StoreCups、OrganizeTools、PackDoll、PackBag、PackPhone、StoreEarphones、StorePaddle、PaperCupStacking、PickOutBatteries、ToolboxStorage、PlugCharger、SyringeWaterTransfer、PlugInEthernet、PlacePhotoFrame、RemovePinnedNote、PourOutMedicine | HF Collection 逐条列举（2026-11-12） |
-| 排名口径 | 按**平均成功率 + 步骤分（step score）**综合排序；任务单页有「得分点（满分 100）Scoring Steps」 | https://unibot.unitree.com/leaderboard.html ；https://unibot.unitree.com/challenges.html （2026-11-12） |
-| 榜单现状 | 官方**排行榜与运行记录均为「即将发布 / Coming Soon」**，无已公开条目 | https://unibot.unitree.com/leaderboard.html ；https://unibot.unitree.com/runs.html （2026-11-12） |
-| 接口 | `metadata{control_space:joint/ee, obs_delta_indices, image_resize, action_chunk_size T_a, token}`；`get_action(obs)` 返回动作块；`reset()`；observation 含 4 路图像 + 双臂关节/EE 位姿 + 夹爪 + lower_body + `observation.language` | https://github.com/unitreerobotics/unibot_submission （2026-11-12） |
-| 部署要求 | 评测在 **N 台真机**随机顺序进行，须暴露 **N 个连续端口 8765..8765+N-1**；记录每步**响应延迟及其波动**与**动作统计规律性**用于**结果可信度**判定 | 同上 README §5/§6 （2026-11-12） |
-| 同厂商先验模型 | Unitree 已开源 `UnifoLM-VLA-0`、`UnifoLM-WMA-0`（World-Model-Action）、`UnifoLM-WLA-1.0`、`UnifoLM_G1_Table-top_Manipulation_Dataset` 等 | https://huggingface.co/unitreerobotics （2026-11-12） |
-| 规则手册 | 飞书文档（中/英）**页面为 JS 渲染，curl/抓取仅得外壳**，正文未能取得；任务级 5 类泛化轴「位置/干扰物/背景/未见物品/人为干扰」来自**用户给定，尚未在可抓取页面复核** | 中：scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh ；英：…/ZNHIdaGx0oPOlBxNVxkcswqqnnh （2026-11-12，未取得正文） |
+| 任务集（权威） | 官网现用「新 32 任务集（2026-06）」，页面 slug 与任务 ID `T01–T32`；英文名与 HF Collection 的 32 个数据集**一一对应**（页面只是改了 slug 命名） | https://unibot.unitree.com/challenges.html （其内嵌 JS 的 `TASKS` 数组）；https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset （2026-11-12） |
+| 任务级计分点 | 每任务 `scoring_points` 合计 **100 分**：2 步=50/50（11 个）、3 步=30/30/40（14 个）、4 步=25×4（5 个）、5 步=20×5（2 个）；**最后一步分值恒 ≥ 前序步** | https://unibot.unitree.com/tasks_v2/<slug>/info.json（32 个逐条，2026-11-12） |
+| 泛化轴（规则侧证据） | 每任务 `generalization` 对象把扰动**逐条实例化**；实测键名前缀只有 `unseen_object_*` 与 `human_*`（未见物品 / 人为干扰）；位置/干扰物/背景三轴未在该字段文本化（与用户所述 5 轴一致，另 3 轴需手册确认） | 同上（2026-11-12） |
+| **人类干扰=反向撤回** | 例：T12「中途把锁拿走」；T14「拧开盖子之后拧动回来」；T16「将叠完的毛巾翻开」；T17「笔盒合上之后手动打开」；T19「拉上拉链之后拉开」；T27「叠了第二个之后拿下第二个」 | 各 `info.json.generalization.human_*`（2026-11-12） |
+| 计分=成功率+步骤分 | 榜单「按平均成功率与步骤分综合排序」；每个任务详情展示 Scoring Steps(100) | https://unibot.unitree.com/leaderboard.html ；…/challenges.html （2026-11-12） |
+| 榜单状态 | 排行榜与运行记录仍为 **Coming Soon**；本轮无法核实"榜首<30%" | https://unibot.unitree.com/leaderboard.html ；…/runs.html （2026-11-12） |
+| 接口=开环动作块 | `get_action(obs)` 返回 `action_chunk_size` 步的动作块，**评测端整块执行**后才再次调用；`reset()` 每 episode 一次；`metadata` 决定控制空间/obs 选择/图像缩放/块长 | https://github.com/unitreerobotics/unibot_submission README §1–§3（2026-11-12） |
+| 传输与实时 | 图像经 **JPEG q95、4:4:4** 上线（`policy/web_policy.py`）；`obs_delta_indices` 决定**发送哪些键 + 时间堆叠几帧**（堆叠多帧=多张 JPEG，直接抬延迟/带宽）；N 端口并发、**每端口状态必须隔离**；结果可信度看**逐步延迟及其波动 + 动作统计规律性** | 同上 README §2/§5/§6 与 `policy/web_policy.py`（2026-11-12） |
+| 数据键 vs 接口键 | 数据集：4 路 AV1 480×640（`head_stereo_left/right`、`wrist_left/right`）+ 丰富 state/action（含 `lower_body`、`pivot`、`base_command`）；接口只收/发其子集（4 图≈head+wrist；动作含 `pivot[7]`） | https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup README+`meta/info.json`（2026-11-12） |
+| Gazebo 资源 | Unitree `unitree_ros` 明确"可在 Gazebo 中加载机器人 + 关节控制器，做**低层力矩/位置/速度控制**"，含 **G1（23/29 DOF）** 与 **Dex1**；明确**不能做高层行走**——恰好够用于**固定底座桌面任务** | https://github.com/unitreerobotics/unitree_ros README（2026-11-12） |
+| 平行自研仿真 | Unitree 另有 `unitree_sim_isaaclab`（Isaac Lab 多任务，DDS 与真机同构，可采集/回放/生成）；世界模型 `UnifoLM-WMA-0` 自述两大用途=**Simulation Engine（造数据）+ Policy Enhancement** | https://github.com/unitreerobotics/unitree_sim_isaaclab ；https://github.com/unitreerobotics/unifolm-world-model-action（2026-11-12） |
+| 规则手册 | 飞书文档仍是**纯客户端渲染**，curl/webfetch 仅得外壳，正文不可取 | 中 https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh ；英 …/ZNHIdaGx0oPOlBxNVxkcswqqnnh（2026-11-12） |
 
-**对「榜首成功率不到 30%」的处理**：官方榜单尚未开放，该数字**无法从可抓取来源核实**，本轮把它当作**工作假设**（若成立，则「步骤分」是拉开差距的关键，见 §3）。后续每轮以飞书手册/榜单开放后的真实数字替换。
+**对"榜首<30%"**：仍不可核实，继续作工作假设；但本轮已能**从计分点结构直接推出**：失败 episode 里"锁住前置步骤分"的边际收益极大。
 
-## 1. 对现有清单的诊断
+## 1. 上轮清单诊断（哪些该升级、哪些该修剪）
 
-- **错位**：IP-145~160 解决的是「边端如何把阻抗参数编译进实时契约、如何让 ROS 证据链不断裂」——这是**机器人执行栈开发者**的问题，不是**远程策略提交者**的问题。
-- **保留**：SSM 的「场景信念→先验」、SIC 的「置信度三元校验」、EPIR 的「证据校验」可改写为：**任务/子目标信念 → 动作先验**、**成功置信度 → 重试/弃权判据**、**动作块合法性 → 接口合规校验**。
-- **结论**：本轮**推倒重来**，建立与赛制同构的清单（UIP 系列）。
+- **升级**：UIP-01（滚动验证）——`human_*` 反向撤回证据，把"验证器"从锦上添花变成**必需**；UIP-02（步骤分安全网）——现已拿到全部 32 任务计分点，可精确调度；UIP-09（干扰恢复）——直接命中最大数据空白。
+- **改写/合并**：UIP-07（回放代理）→ 升级为 **Gazebo 物理回放 + 计分点自动判定**（比"视频回放"更接近真机，且能测计分步）；UIP-04（学习式世界模型 MPC）→ **降级并合并**进 Gazebo 物理 oracle 的"混合裁判"（物理仿真为主、WMA-0 为辅），因为物理 oracle 在**接口层级**更忠实且不必先训世界模型。
+- **修剪/降级**：UIP-10（joint/ee 双空间仲裁）→ 降为**配置项**（metadata 只能在握手定一次，运行期不能切，价值有限）；UIP-03（LoRA 路由）→ 并入新 UIP-14（模块化技能图），避免"多模型"合规歧义。
+- **新增（命中三词）**：UIP-11 GSO（Gazebo 计分神谕）、UIP-12 DRF（扰动-恢复数据工厂）、UIP-13 ACS（自适应块长实时调度）、UIP-14 MSGR（模块化技能图路由）、UIP-15 CSG（可信度安全阀）。
 
 ## 2. 三个灵感词的解读
 
-1. **迭代验证**：不是「训一个更强的模型」，而是**在推理时反复验证并修正**——动作块 → 执行 k 步 → 用视觉/语言核验子目标 → 再规划。对应的赛事抓手：`action_chunk_size`、`reset()`、逐步延迟。
-2. **排行榜**：排名 = 平均成功率 + **步骤分**。这决定了目标函数**不是纯成功率**，而是**分段得分期望**；同时 N 端口工程、延迟稳定性、动作统计规律性直接影响**可信度分**。竞争策略本身是创新点。
-3. **常识推理**：泛化轴（未见物品/干扰物/背景/人为干扰）无法靠记忆坐标解决，必须靠**语义可供性 + 空间关系 + 物理常识**的条件化。
+1. **Gazebo**：不是"再造一个训练环境"，而是把 **Gazebo 当作"离线计分神谕 + 扰动发生器"**——选手唯一无法在家做的事是"真机反复试 + 看步骤分"，Gazebo 恰好补上：① 用几何谓词自动判每个计分步；② 用脚本化机械手**复现"反向撤回"干扰**，生成数据集里缺的恢复演示。注意 G1 在 Gazebo 是**固定底座低层控制**，与 UniBot 桌面任务同构，无需行走。
+2. **实时性**：排名可信度直接吃"逐步延迟及其波动 + 动作规律性"；而 `action_chunk_size` 是**唯一**能在开环执行下控制"重观测频率"的旋钮——它同时决定反应性、往返次数与延迟暴露面。实时性不是优化项，而是**成功率与可信度的耦合约束**。
+3. **模块化设计**：32 任务虽异，但可压缩为少数**可复用技能模块**（抓/放/插/倒/拉链/折叠/堆叠/按色分拣/开合/挑取）。在"单模型"合规前提下，用 **共享骨干 + 参数高效技能头/适配器**做模块化，比 32 个独立模型更可能过审、更省显存、更好并发。
 
-## 3. 瓶颈假设（工作假设）
+## 3. 瓶颈假设（更新）
 
-- 若成功率上限 <30%，则**离散的成功/失败二值化**使分数高度不由「成功」决定，而由**失败任务里能拿多少步骤分**决定 → **子目标安全网**的边际收益可能超过把成功率从 25%→28%。
-- 32 任务 × 每任务 ~1000 条演示、单一语言指令：**任务间差异大（倒药、插网线、叠纸杯、折毛巾）**，单一大模型容易「平均化」；**路由/专家化**是自然结构。
-- 真机评测**不可在家反复试**（只能预约时段）→ 谁能建立**可离线、可回放的迭代验证 harness**，谁迭代更快。
-- 视觉泛化（背景/干扰物）在 AV1 压过的低分辨率图上难靠纯视觉记忆解决，**语言/常识条件**是更省样本的路径。
+- **H1（最高杠杆）**：若人为干扰被计入正式评测，则**"检测进度被撤回→重做"**是唯一能同时救成功率与步骤分的机制；公开数据零覆盖 → 谁先造出恢复数据，谁在这条轴上独占。
+- **H2**：计分步**严格有序且末步分值更大** ⇒ 策略应"保前置、搏末步"；乱序探索会丢分。
+- **H3**：开环大块 + 高堆叠 = 高延迟、高方差、低反应性；在接触密集步（插网线/合盖）尤其致命。
+- **H4**：Gazebo 与真机的**接口忠实度**（joint 目标 + Dex1 + 同视角相机）可能高于其**视觉/接触保真度**；因此 Gazebo 更适合做"结构/顺序/恢复"决策的裁判，而非像素级成败的裁判。
 
-## 4. 候选创新点（草稿 → 合并）
+## 4. 候选与合并 → v2 清单（详见产物区）
 
-围绕三灵感词发散出 12 个草案，合并后收敛为 10 个（见产物区 UIP-01~10）。**旗舰点**是 UIP-01（常识进度验证器驱动的滚动时域重试），因为它同时满足：迭代验证（滚动重试）、常识推理（VLM 判子目标）、排行榜（直接冲成功率与步骤分），且**只需改 API 内部逻辑，不触碰执行层**——完全是选手权限之内的事。
+围绕三词发散 9 个草案，合并后得到 v2 清单（UIP-01′、02′、05、07′、08′、09′ | 新增 11–15；封存 04、10）。旗舰仍是 **UIP-01′（扰动感知的滚动验证-重做）**，但本轮把它**重新对准"反向撤回"**，并由 **UIP-12 造数据 + UIP-11 判分 + UIP-13 控时**三条腿支撑。
 
 ## 5. 本轮最大风险
 
-**一句话**：把「迭代验证」做成「推理时无限重试」，会同时**抬高每步延迟方差异常**（触发 §6 可信度质疑）并**耗尽 episode 时预算导致连原本能成的任务也失败**；必须给重试设**延迟预算 + 置信度门限 + 最大重试次数**三重上限，且所有重试要**动作形态平滑**（避免统计规律性异常）。
+**一句话**：模块化技能路由 + Gazebo 造数据，容易滑向"用仿真过拟合仿真"（sim-to-real 掉了却浑然不知）；必须把 **UIP-11 的判分当作"结构代理"而非"成败代理"**，并以真机预约时段做**校准锚点**；同时对外部 VLM 验证器保持**单模型合规警醒**（外部大模型可能被判为"非单模型"）。
 
-**→ 本轮最值得押注：UIP-01 —— 以「常识进度验证器」为中枢的滚动时域重试策略**：它是在 <30% 成功率现实下，同时撬动「平均成功率」与「步骤分」两个排名口径、且完全落在选手 API 权限内的最高杠杆点。
+**→ 本轮最值得押注：UIP-09′（扰动撤回检测-重做）× UIP-12（Gazebo 扰动-恢复数据工厂）组成的"模块化扰动恢复闭环"，由 UIP-01′ 的实时验证器调度**——它精确对准规则里白纸黑字、而公开数据完全空白的最大得分缺口，且完全落在选手 API 权限与离线算力之内。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 1 轮产物 · UniBot 创新点清单 v1（UIP-01~10）
+# 第 2 轮产物 · UniBot 创新点清单 v2（UIP-01′~15）
 
-> 赛事事实来源与检索日期见想法区 §0（均 2026-11-12）。编号从头开始：**UIP = UniBot Innovation Point**，与前序 IP-145~160（低层执行理论，已封存）**不延续编号**，以标记本次方向校正。
-> 排名口径：**平均成功率 + 步骤分**；接口约束：远程 `observation→action` API、N 端口、逐步延迟与动作规律性计入可信度。
+> 承接 v1（UIP-01~10）。本轮为**深化 + 修剪**：升级 6 个、封存 2 个、新增 5 个。
+> 事实来源与检索日期见想法区 §0（均 2026-11-12）。排名口径=**平均成功率 + 步骤分**；接口约束=远程 `observation→action`、N 端口并发隔离、逐步延迟与动作规律性计入**可信度**；合规约束=**单模型多任务**。
 
-## 0. 清单总表
+## 0. 清单总表（v2）
 
-| 编号 | 名称 | 主要命中灵感词 | 一句话动机 | 权限内? |
+| 编号 | 名称 | 状态 | 主要命中词 | 一句话动机 | 权限内? |
+|---|---|---|---|---|---|
+| **UIP-01′** | 干扰感知的滚动验证-重做 RHPV-D | **旗舰·升级** | 实时性+模块化 | 每 k 步核验子目标；检测"进度被撤回"→重做 | ✅ 纯 API 内 |
+| UIP-02′ | 计分步安全网 SSG（带 32 任务计分表） | 升级 | — | 按真实计分点有序推进：保前置、搏末步 | ✅ |
+| UIP-05 | 语言→可供性/关系分解 LCAG | 保留 | — | 未见物品/背景靠语义条件化 | ✅ |
+| UIP-07′ | Gazebo 计分神谕 GSO（原 RRV 升级） | **改写为 UIP-11** | Gazebo | 用物理仿真自动判计分步，做离线适应度 | ✅ 离线 |
+| UIP-08′ | N 端口确定性延迟工程 LAT-ENG | 升级 | 实时性 | 共享骨干 + 批处理 + 每端口状态隔离 | ✅ 工程侧 |
+| **UIP-09′** | 扰动撤回检测-重做 DCR-R | **升级·次旗舰** | 常识+实时性 | 检测人为撤回并恢复，堵最大数据空白 | ✅ |
+| ~~UIP-04~~ | 学习式世界模型 MPC | **封存/合并** | — | 并入 UIP-11 的"混合裁判" | — |
+| ~~UIP-10~~ | joint/ee 双空间仲裁 | **封存/降级** | — | metadata 握手后不可切换，价值有限 | — |
+| **UIP-11** | Gazebo 计分神谕 GSO | **新增** | Gazebo | 数字孪生里用几何谓词给计分步打分 | ✅ 离线 |
+| **UIP-12** | 扰动-恢复数据工厂 DRF | **新增** | Gazebo+模块化 | 脚本化"反向撤回+恢复"演示，补数据空白 | ✅ 离线 |
+| **UIP-13** | 自适应块长实时调度 ACS | **新增** | 实时性 | 按阶段/预算选 T_a + 投机预计算压方差 | ✅ |
+| **UIP-14** | 模块化技能图路由 MSGR | **新增** | 模块化 | 32 任务≈10 技能模块，单骨干+技能头 | ✅ |
+| **UIP-15** | 可信度安全阀 CSG | **新增** | 实时性 | 给重试/重做设延迟-抖动预算，防翻车 | ✅ |
+
+---
+
+## 1. 旗舰深潜：UIP-01′ · RHPV-D（Rolling-Horizon Progress-Verified with Disturbance-awareness）
+
+- **机制**：动作块 `A=(a_1..a_{T_a})` 不整段盲执行。设 `action_chunk_size=k`（小 k = 高频重观测），每 k 步用**进度验证器** `V(o_t,l,g)` 判断当前子目标 `g` 的状态 ∈ {`done`,`ongoing`,`fail`,`regressed`}。新增 **`regressed`（被撤回）** 状态：由时序差分（子目标从 done 回退到 undone）或视觉/几何判据触发 → **重做该子目标**而非前进。
+- **与 v1 差异**：v1 只有 done/fail/ongoing；v2 增加"反向"分支，直接对应 `human_*` 撤回证据（T14/T16/T17/T19/T27）。这是本轮从规则里读出的**真实对手动作模型**。
+- **可行性**：高。`action_chunk_size`、`reset()`、`get_action` 均在接口内；验证器可用**几何+语言规则**（零额外模型，规避"单模型"风险）或以同骨干蒸馏出的小头实现。
+- **资源**：公开 32 数据集（写判据+弱标注）；1 张推理卡；无额外接口。
+- **落地**：① 逐任务写 2–5 个可观测子目标（与计分点对齐，见 §2）；② 写 done/fail/regressed 判据（几何谓词优先）；③ 在 loop 内接入 k 步验证与状态机；④ 用 UIP-11 离线回放调参；⑤ 真机校准。
+- **风险**：误判 `regressed` 会"反复重做"→ 用 UIP-15 三重护栏（置信度门限 / 最大重做次数 / 延迟预算）。
+
+## 2. 【附产物】32 任务计分点全表（来自官网 `info.json`，2026-11-12）
+
+> 分值分布：2 步 50/50（11 个）；3 步 30/30/40（14 个）；4 步 25×4（5 个）；5 步 20×5（2 个）。**末步恒 ≥ 前序步** ⇒ 有序推进、末步搏分。
+
+| ID | 任务（英/中） | 难度 | 步数×分值 | 关键人为干扰（撤回型标 ★） |
 |---|---|---|---|---|
-| **UIP-01** | 常识进度验证器驱动的滚动时域重试 RHPV-V | 迭代验证+常识+排行榜 | 用 VLM 逐步核验子目标并重规划，把失败任务转成部分得分 | ✅ 纯 API 内 |
-| UIP-02 | 步骤分安全网 SSG | 排行榜 | 显式优化 100 分步骤点，先保底再冲成功率 | ✅ |
-| UIP-03 | 单模型 LoRA 专家路由 MoA-Router | 排行榜+常识 | 满足「单模型」规则下用适配器专家化 32 任务 | ✅ |
-| UIP-04 | 潜在世界模型动作裁决 WMA-MPC | 迭代验证 | 提交前在学到的世界模型里预演候选动作块 | ✅ |
-| UIP-05 | 语言→可供性/关系分解 LCAG | 常识 | 把指令解析成 物体/可供性/空间关系，抗未见物品 | ✅ |
-| UIP-06 | 泛化轴对齐数据配方 GAX | 常识+排行榜 | 针对 5 泛化轴做视觉域增广与重加权 | 训练侧 |
-| UIP-07 | 回放式离线迭代验证 Harness RRV | 迭代验证 | 用公开数据集做可回放的成功/步骤分代理指标 | ✅ |
-| UIP-08 | N 端口确定性延迟工程 LAT-ENG | 排行榜 | 共享骨干+批处理+KV 隔离，压低延迟方差 | ✅ 工程侧 |
-| UIP-09 | 干扰常识恢复 DCR | 常识 | 检测人为干扰并暂停-等待-重抓 | ✅ |
-| UIP-10 | 双空间输出仲裁 CTRL-ARB | 排行榜+迭代验证 | 按任务在 joint/ee 间择优，提升抗扰动稳健性 | ✅ |
+| T01 | HangCup 挂杯子 | 易 | 50/50 | 杯向后/向右；缺红杯+塑料架 |
+| T02 | FruitCollection 水果收集 | 易 | 50/50 | 水果向前/向右 |
+| T03 | PackDoll 装娃娃 | 易 | 50/50 | 娃娃向前/向右 |
+| T04 | FruitSorting 水果分类 | 易 | 30/30/40 | 盘向左/梨向右 |
+| T05 | DisconnectEthernet 拔网线 | 难 | 50/50 | 另一头也插上/移动道具手 |
+| T06 | ColorArrangement 颜色排列 | 易 | 30/30/40 | 绿块向右/红块向前 |
+| T07 | PlacePhotoFrame 摆放相框 | 中 | 30/30/40 | 相框向上 |
+| T08 | OrganizeBookshelf 整理书架 | 易 | 50/50 | 抓书后挪架子 ★ |
+| T09 | ToolboxStorage 工具箱收纳 | 难 | 25×4 | 胶带向后/向右 |
+| T10 | PlugCharger 插插头 | 难 | 30/30/40 | 抓插头前移动/拔起插头 ★ |
+| T11 | PickOutBatteries 挑出电池 | 中 | 30/30/40 | 抓电池前动底座/抓后动绿盒 ★ |
+| T12 | Unlock 开锁 | 难 | 30/30/40 | 锁向左/**中途把锁拿走** ★ |
+| T13 | ArrangeTestTubes 整理试管 | 易 | 30/30/40 | 试管右/左移 |
+| T14 | PourOutMedicine 倒出药品 | 难 | 50/50 | **拧开后再拧回去** ★ |
+| T15 | OrganizeTools 整理工具 | 中 | 25×4 | 钳子左/螺丝刀右 |
+| T16 | FoldTowel 叠毛巾 | 难 | 20×5 | **叠好后翻开** ★ |
+| T17 | OrganizeStationery 整理文具 | 易 | 20×5 | **合上后再打开** ★ |
+| T18 | PackBag 收拾书包 | 中 | 25×4 | 文具盒上移/书包左移 |
+| T19 | ZipUp 拉上拉链 | 中 | 50/50 | 包左移/**拉上后再拉开** ★ |
+| T20 | PaperCupStacking 纸杯堆叠 | 易 | 30/30/40 | 杯上移/右移 |
+| T21 | ArrangePlates 餐盘排列 | 易 | 30/30/40 | 盘前移/架左移 |
+| T22 | SpellRobot 字母拼写 | 中 | 25×4 | 字母上/左移 |
+| T23 | StorePaddle 球拍收纳 | 中 | 50/50 | 球拍前/左移 |
+| T24 | ConveyorSorting 传送带分拣 | 中 | 50/50 | **把货放回传送带起点** ★ |
+| T25 | StoreCups 整理纸杯 | 易 | 30/30/40 | 杯左移/**放第一个后马上挪底座** ★ |
+| T26 | PlugInEthernet 插网线 | 中 | 30/30/40 | 网线移开/**插口移开** ★ |
+| T27 | StackBowls 碗具堆叠 | 易 | 30/30/40 | 粉色碗下移/**叠第二后拿下第二** ★ |
+| T28 | StoreEarphones 装耳机 | 难 | 25×4 | 耳机前/右移 |
+| T29 | PackPhone 装手机 | 难 | 30/30/40 | 手机上移/外壳盖移开 ★ |
+| T30 | RemovePinnedNote 移除便签 | 中 | 50/50 | 钉子移到中间/向下 |
+| T31 | OrganizePencilCase 整理文具袋 | 中 | 30/30/40 | 打开后…（拉链有序） |
+| T32 | SyringeWaterTransfer 针管转移液体 | 中 | 50/50 | 抽水/注水 |
+
+**读表结论**：难度以 T05/T09/T10/T12/T14/T16/T28/T29 为最（多含"插入/拧动/折叠/合盖"细接触步）；**至少 11 个任务存在明确撤回型干扰**，是恢复策略的直接靶点。
 
 ---
 
-## 1. 旗舰点深潜
+## 3. Gazebo 三步走：UIP-11 GSO  /  UIP-12 DRF  /  UIP-04 合流
 
-### UIP-01 · RHPV-V（Rolling-Horizon Progress-Verified with Vision）
+### UIP-11 · GSO（Gazebo Step-Score Oracle）
+- **机制**：为每个任务建一个 Gazebo 场景（G1 29-DoF 固定底座 + Dex1 + 桌面资产 + 与真机同名义的相机位）。把策略输出的动作块（joint 或 ee）送进仿真执行，用**几何谓词**判每个计分步（见 §6 伪代码），得到 **episode 级 step-score 代理**——这正是榜单的第二口径。
+- **与 v1 差异**：v1 的 RRV 只能"回放数据集视频/动作"，无法评判"策略新造的动作"是否能达成计分步；GSO 能**对任意策略 rollout 直接打分**。
+- **可行性**：中高。Unitree 官方 `unitree_ros` 已提供 G1（23/29）+ Dex1 的 Gazebo 模型与关节控制器（明确支持低层位置控制、不支持行走——固定底座桌面任务正合适）。
+- **资源**：CPU 级 headless Gazebo 可并行多实例；场景资产需从数据集视频/官方模型半自动重建。
+- **风险**：视觉/接触 sim-to-real gap ⇒ **只把 GSO 当"结构/顺序"裁判**（H4）；需真机锚点校准。
 
-- **机制**：模型输出动作块 `A=(a_1..a_{T_a})`；**不整段盲执行**，而是执行 `k<T_a` 步后重新观测，用**常识进度验证器** `V(o_t, l, g)` 判断子目标 `g` 是否达成/失败/进行中，据此切换（继续 / 重规划 / 回退重试 / 提前结束）。
-- **与现有方案差异**：常规做法要么开环整块执行（pi0/ACT 式），要么纯状态机；本点把**验证器作为一等公民**插入 chunk 之间，且验证器用 VLM 做**语义子目标**判定（如「纸杯是否套上」「网线是否插入」），而非仅距离阈值。
-- **技术可行性**：高。只需在 `get_action` 内部维护 episode 状态；`action_chunk_size` 与 `reset()` 都在接口内；验证器可用本地小 VLM（Qwen2.5-VL-3B 级）或规则+几何混合以降延迟。
-- **所需资源**：数据=公开 32 数据集（用于验证器微调/评测）；算力=1 张推理卡即可跑策略+小 VLM；接口=无额外要求。
-- **落地步骤**：① 为每个任务写 3–6 个可观测子目标与判据；② 训练小 VLM 进度分类器（用成功/失败回放弱标注）；③ 在策略 loop 内接入 `k`-步验证与控制切换；④ 本地 `example_env.py` 桩 + 数据集回放联调；⑤ 提测。
-- **风险**：验证器误判导致错误重试 → 加置信度门限与最大重试；VLM 延迟 → 异步/降频验证。
+### UIP-12 · DRF（Disturb-and-Recover data Factory）
+- **机制**：在 Gazebo 里**按 `human_*` 文本复现干扰**（脚本化机械手：拧回、翻开、拉开、拿走、挪底座），并让"示范者"恢复 → 生成 **(干扰前 → 撤回 → 恢复)** 三元组数据。训练策略识别 `regressed` 并重做。
+- **与 v1 差异**：公开数据 32000 episodes **零干扰**；DRF 是唯一补齐"人为干扰轴"的路径，且可**按 §2 表逐任务定向生成**。
+- **可行性**：中高（纯脚本 + 现有仿真）；比真机采集便宜千倍。
+- **风险**：仿真干扰 ≠ 真机人为干扰的形态/时机；用**随机化时机/速度/轨迹**提高覆盖，真机域随机化兜底。
 
-### UIP-02 · SSG（Scoring-Step Safety Net）
-
-- **机制**：依据「得分点（满分 100）」把任务拆成有序计分步；策略显式**优先到达前置计分步**，失败时至少锁定已得步骤分。
-- **差异**：多数方案只以稀疏成功奖励训练；本点在**推理调度层**做计分点优先（与训练解耦，风险低）。
-- **可行性/资源**：高；需拿到每任务计分点定义（飞书手册，正文待取）。
-- **步骤**：取计分点表 → 定义每点可观测完成条件 → 在策略中选择「保底动作序列」。
-- **风险**：计分点不可观测 → 需 UIP-01 的验证器补足。
-
----
-
-## 2. 其余点（结构化）
-
-**UIP-03 MoA-Router**｜动机：单模型规则下仍要专家化。差异：MoE-LoRA + 轻量任务路由（由 `observation.language` + 首帧驱动）。可行性：高（vLLM/PEFT 生态成熟）。资源：32 数据集微调 + 推理显存。步骤：任务聚类→训适配器→路由阈值→合入单进程。风险：路由错误跨任务污染（用软路由 + 回退通用头）。
-
-**UIP-04 WMA-MPC**｜动机：真机不可反复试，先在想象中淘汰坏动作块。差异：用 Unitree 已开源的 `UnifoLM-WMA-0` 风格世界模型做候选筛选。可行性：中（世界模型保真度是关键）。资源：世界模型训练/微调算力。步骤：候选采样→latent  rollout→打分选块→执行。风险：模型误差导致「过度自信」→保守 mix(真实观测)。
-
-**UIP-05 LCAG**｜动机：未见物品/背景靠语义而非坐标。差异：把 `observation.language` 解析为 `(物体, 可供性, 关系)` 三元组并条件化视觉-动作。可行性：高（VLM grounding 成熟）。资源：标注少量三元组 + VLM 推理。步骤：指令解析器→可供性热图/关系约束→条件化策略。风险：解析错误级联。
-
-**UIP-06 GAX**｜动机：评测含 5 泛化轴，训练需对齐。差异：背景替换/干扰物合成/物品替换的**域增广**与**轴重加权**。可行性：高。资源：图像增广流水线 + 训练算力。步骤：轴定义→增广→消融验证各轴增益。风险：过度增广损害真实分布性能。
-
-**UIP-07 RRV**｜动机：只有预约时段能上真机，迭代慢。差异：构建**离线回放 harness**，以各泛化轴切分数据集，产出成功率/步骤分**代理指标**。可行性：高。资源：数据+评测脚本。步骤：固定切分→基线复现→迭代门禁。风险：代理与真机相关性不足（需真机校准）。
-
-**UIP-08 LAT-ENG**｜动机：延迟方差与动作统计异常计入可信度。差异：N 端口共享骨干 + 请求批处理 + per-port KV/历史隔离 + 延迟平滑。可行性：高。资源：工程。步骤：单模型多端点→并发压测→方差 SLA。风险：并发下抖动增大（需队列 + 预取）。
-
-**UIP-09 DCR**｜动机：人为干扰轴需专门处置。差异：多模态异常检测（人/外来物体入镜）→ 暂停/等待/重抓。可行性：中高。资源：干扰情形采集/合成。步骤：检测器→安全暂停策略→恢复动作。风险：误停降低效率。
-
-**UIP-10 CTRL-ARB**｜动机：joint 与 ee 各有所长。差异：按任务/阶段在两种控制空间间仲裁（ee 抗位置泛化、joint 抗抖动）。可行性：中（需 IK 与一致性校验）。资源：双表示数据（数据集同时含二者）。步骤：可切换策略头→一致性检查→择优。风险：切换不平滑导致动作跳变。
+### UIP-04 合流
+- 原"学习式世界模型 MPC"**不再单列**：其"预演候选动作"的思想并入 UIP-11，形成**混合裁判**——物理仿真（GSO）为主、`UnifoLM-WMA-0`（自述即"仿真引擎+策略增强"）在仿真资产缺失时补位。理由：先建 Gazebo 花销远小于先训世界模型。
 
 ---
 
-## 3. 关键算法（旗舰 UIP-01 伪代码）
+## 4. 实时性：UIP-13 ACS  /  UIP-15 CSG  /  UIP-08′ LAT-ENG
+
+### UIP-13 · ACS（Adaptive Chunk Scheduler）
+- **机制**：`action_chunk_size` 是开环执行下**唯一**的重观测频率旋钮。按**任务阶段**动态选 k：远距离搬运用大 k（少往返、低开销）；接触密集步（插入/合盖/拉链）用小 k（高频核验、快纠错）。再叠加**投机预计算**：评测端执行当前块时，后台按"预测的下一步观测"预生成下一块，真到时只做一致性校验→返回，压平延迟方差。
+- **与 v1 差异**：v1 的 LAT-ENG 只做工程隔离；ACS 把"块长/反应性/延迟"纳入**策略级决策**。
+- **可行性**：高（k 随阶段变，但 metadata 只握手一次——采用**全局最大 k**，实际每次可返回 ≤k 步的块；评测端每次都会重新调用）。
+- **风险**：返回块长与声明不一致可能被拒 ⇒ 严格按 §3 形状约束（`(T_a,…)`，索引 0 先执行）。
+
+### UIP-15 · CSG（Credibility-Safe Governor）
+- 给所有"重试/重做"设 **延迟预算 + 抖动上限 + 最大次数**；并做**动作形态平滑**（避免统计规律性异常）。直接对应 README §6 的可信度判定。
+
+### UIP-08′ · LAT-ENG（升级）
+- 共享骨干 + 请求批处理 + **每端口 KV/历史隔离**；利用 `obs_delta_indices`/`image_resize` **主动削减载荷**（少堆叠帧、降分辨率、只声明必要键）——因为每张图 = 一张 JPEG。
+
+---
+
+## 5. 模块化：UIP-14 MSGR（Modular Skill-Graph Router）
+
+- **机制**：把 32 任务映射为**技能图**（节点≈10 个技能：抓取/放置/插入/倒出/拉链/折叠/堆叠/按色分拣/开合/挑取；边=顺序），由 `observation.language` + 首帧路由到图。**单骨干 + 参数高效技能头/适配器**（满足"单模型"合规），共享视觉-语言编码，各技能头专家化。
+- **与 v1 差异**：v1 的 UIP-03 是"扁平 LoRA 路由"；MSGR 显式建**可组合技能图**，天然复用计分点顺序（§2），并可与 UIP-01′ 的子目标状态机对齐。
+- **可行性**：高（PEFT 生态成熟；技能图可手工/半自动从计分点生成）。
+- **资源**：32 数据集微调适配器 + 推理显存（取决于头数）。
+- **风险**：路由错误跨任务污染 ⇒ 软路由 + 通用回退头；技能粒度需实验确定。
+
+---
+
+## 6. 关键算法（旗舰 UIP-01′ 伪代码 + GSO 判分）
 
 ```python
-class RHPVPolicy:
-    def __init__(self, policy, verifier, k=4, max_retry=2,
-                 conf_thr=0.6, latency_budget_ms=200):
-        self.policy, self.verifier = policy, verifier
-        self.k, self.max_retry = k, max_retry
-        self.conf_thr, self.budget = conf_thr, latency_budget_ms
-
-    def reset(self):
-        self.policy.reset(); self.step = 0
-        self.subgoal = 0; self.retry = 0; self.buf = []
-
+class RHPVD_Policy:                      # UIP-01′ + UIP-13 + UIP-15
+    def __init__(self, policy, verifier, skill_graph, K_MAX=8,
+                 conf_thr=0.6, max_redo=2, latency_budget_ms=200):
+        ...
+    def reset(self):                     # 每 episode 一次
+        self.policy.reset(); self.g = 0  # 当前子目标(计分步)索引
+        self.redo = 0; self.buf = []
     def get_action(self, obs):
-        if not self.buf or self._needs_replan(obs):
-            chunk = self.policy.get_action(obs)          # (T_a, ...)
-            self.buf = list(chunk[: self.k])             # 只承诺 k 步
-        act = self.buf.pop(0)
-        self.step += 1
-        return act
-
-    def _needs_replan(self, obs):
-        g = self.subgoals[self.subgoal]
-        s, conf = self.verifier(obs, self.lang, g)       # 常识进度验证器
-        if conf >= self.conf_thr and s == "done":
-            self.subgoal += 1; self.retry = 0; return True
-        if conf >= self.conf_thr and s == "fail":
-            if self.retry < self.max_retry:
-                self.retry += 1; return True             # 触发重试
-            self.subgoal += 1; self.retry = 0; return True
-        return len(self.buf) == 0
+        if not self.buf or self._verify(obs) != "ongoing":
+            k = self._pick_k(obs)        # ACS: 阶段自适应 or 全局 K_MAX
+            self.buf = list(self.policy.get_action(obs, k))[:k]
+        return self.buf.pop(0)
+    def _verify(self, obs):
+        st, conf = self.verifier(obs, self.lang, self.skill_graph.knot(self.g))
+        if conf < self.conf_thr:                      return "ongoing"
+        if st == "done":     self.g += 1; self.redo = 0; return "advance"
+        if st == "regressed" and self.redo < self.max_redo:   # 检测被撤回
+            self.redo += 1; return "replace"          # 重做同一子目标
+        if st == "fail" and self.redo < self.max_redo:
+            self.redo += 1; return "retry"
+        return "continue"
 ```
 
-**三重护栏**：`k` 步承诺限制单次盲走；`conf_thr` 限制误判重试；`max_retry` + 延迟预算限制发散。
+```python
+# UIP-11 GSO: 计分步的几何谓词（示例，非全部）
+def score_step(task, sim):
+    s = 0
+    if task == "T26_plug_in_ethernet":
+        s += 30 if sim.gripper_holds("ethernet") else 0
+        s += 30 if sim.gripper_holds("port")     else 0
+        s += 40 if sim.contacts("rj45", "port") and sim.insert_depth() > D  else 0
+    if task == "T27_stack_bowls_three":
+        s += 30 if sim.bowl_at("bowl1","center") else 0
+        s += 30 if sim.stacked_on("bowl2","bowl1") else 0
+        s += 40 if sim.stacked_on("bowl3","bowl2") else 0
+    return s        # 该 episode 的步骤分代理（/100）
+```
 
 ---
 
-## 4. 实验设计 E001–E006（v1）
+## 7. 实验设计 E101–E108（v2）
 
 | 实验 | 对照 | 指标 | 目标 |
 |---|---|---|---|
-| E001 | 开环整块执行 vs UIP-01 | 平均成功率 / 步骤分 | 成功率 +Δ，步骤分 +20% |
-| E002 | 单模型 vs UIP-03 | 32 任务平均成功率 | +Δ 且方差下降 |
-| E003 | 无里程碑 vs UIP-04 | 真机失败率（回放代理） | 失败率 −20% |
-| E004 | 无增广 vs UIP-06 | 5 泛化轴逐轴成功率 | 每轴 +Δ |
-| E005 | 朴素多端口 vs UIP-08 | 每步延迟均值/方差 | 方差 −50%，无异常动作 |
-| E006 | 端到端（01+03+06+08） | 榜单综合（成功率+步骤分） | 相对基线显著提升 |
+| E101 | 开环整块 vs UIP-01′ | 成功率 / 步骤分 | 撤回干扰下步骤分 +30% |
+| E102 | 无干扰数据 vs UIP-12 DRF | 人扰轴步骤分 | 明确 +Δ（主攻点） |
+| E103 | 视频回放代理 vs UIP-11 GSO | 代理-真机相关性 ρ | ρ 显著高于回放代理 |
+| E104 | 固定 k vs UIP-13 ACS | 平均步骤分 / 延迟方差 | 方差 −50%，步骤分不降 |
+| E105 | 扁平模型 vs UIP-14 MSGR | 32 任务平均成功率 | +Δ 且方差下降 |
+| E106 | 无护栏 vs UIP-15 CSG | 可信度异常率 / 超时率 | 异常率 → 0 |
+| E107 | 朴素多端口 vs UIP-08′ | 延迟均值/方差 | 方差 −50% |
+| E108 | 端到端(01′+11+12+13+14+15) | 榜单综合 | 相对基线显著提升 |
 
-> 所有"真机"结论在正式提测前一律标注为**代理指标（RRV, UIP-07）**，不得当作真机结论。
+> 所有真机结论提测前一律标注为 **GSO 代理（UIP-11）**，不得当真机结论。
 
 ---
 
-## 5. 资源与时间线（粗排）
+## 8. 合规与风险（本轮新增重点）
 
-- 第 1–2 周：RRV harness + 基线复现（pi0/ACT/SmolVLA 或 UnifoLM-VLA-0 微调）。
-- 第 3–5 周：UIP-01 验证器 + 策略 loop；UIP-06 数据配方。
-- 第 6–8 周：UIP-03 路由 + UIP-08 端口工程；内部回放评测。
-- 第 9 周起：预约真机提测，用真实榜单数据校准代理。
+- **单模型合规**：外部 VLM 验证器（UIP-01 原设想）**可能被判为"非单模型"** ⇒ 优先用**几何/规则验证器**，或从主骨干蒸馏出内部小头。所有"模块"须共享一条骨干。
+- **仿真过拟合**：GSO/DRF 只在仿真里"刷分"而无真机校准 = 伪进展；必须预留真机时段做锚点（E103）。
+- **接口红线**：形状/dtype/token/块长严格按 README §3；返回块长与声明不一致、动作统计异常都会伤可信度。
+- **手册仍未取到**：5 轴中的"位置/干扰物/背景"与"评测轮次/时限/控制频率"仍待飞书手册公开后核实。
 
-## 6. 本轮最大风险（承接想法区 §5）
+## 9. 资源与时间线（粗排）
 
-**一句话**：UIP-01 若缺少「延迟预算 + 置信度门限 + 最大重试」三重上限，会同时触发**可信度异常**与**episode 超时**，反而拉低成功率与步骤分；因此**先上护栏、再上重试**，并在 UIP-07 代理上验证护栏有效性后才提测。
+- 第 1–2 周：搭 GSO 骨架（3–5 个代表任务：T26 插网线、T27 叠碗、T19 拉链、T16 叠毛巾、T23 球拍），写几何判据。
+- 第 3–5 周：UIP-12 DRF 脚本化干扰 + 恢复数据；UIP-01′ 状态机接入。
+- 第 6–8 周：UIP-14 MSGR 模块化；UIP-13 ACS/ UIP-15 CSG 实时调度；UIP-08′ 多端口压测。
+- 第 9 周起：预约真机，用真实榜单/步骤分校准 GSO 代理并迭代。
+
+## 10. 本轮最大风险 & 押注
+
+**一句话**：若把 GSO 当"成败裁判"而非"结构裁判"，会陷入仿真自我欺骗；先保证验证器单模型合规与真机校准锚点，再放大自动化。
+
+**→ 押注：UIP-09′ + UIP-12 的"扰动恢复闭环"（由 UIP-01′ 实时调度、UIP-11 离线判分）**——对准规则已写明、数据全空白、且选手权限内可闭环的最大得分缺口。
 <!-- ARTIFACT:END -->

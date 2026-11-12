@@ -1,0 +1,134 @@
+{
+  "config": {
+    "dt": 0.03333333333333333,
+    "T": 120,
+    "x_wall": 0.1,
+    "x_goal": 0.12,
+    "alpha": 0.3
+  },
+  "sweeps": {
+    "500": {
+      "rigid": {
+        "peak_force": 2.9999999999999956,
+        "mean_force_after_contact": 2.999999999999996,
+        "impulse": 6.911520163345573,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.045163779219427e-05,
+        "cmd_total_variation": 0.12
+      },
+      "prop": {
+        "peak_force": 2.9414506789968224,
+        "mean_force_after_contact": 2.9411809511177847,
+        "impulse": 6.775453361283191,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.036264176534978e-05,
+        "cmd_total_variation": 0.11961157386390235
+      },
+      "adm": {
+        "peak_force": 0.3683415043324867,
+        "mean_force_after_contact": 0.18212232386547028,
+        "impulse": 0.36424464773094056,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 9.780552581159423e-05,
+        "cmd_total_variation": 0.10376404193819229
+      },
+      "adm_unguarded": {
+        "peak_force": 0.5906637081841484,
+        "mean_force_after_contact": 0.17759242284317078,
+        "impulse": 0.35518484568634157,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 0.00010649963914191262,
+        "cmd_total_variation": 0.11925484666204558
+      }
+    },
+    "2000": {
+      "rigid": {
+        "peak_force": 11.999999999999982,
+        "mean_force_after_contact": 11.999999999999984,
+        "impulse": 27.646080653382292,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.045163779219427e-05,
+        "cmd_total_variation": 0.12
+      },
+      "prop": {
+        "peak_force": 11.76580271598729,
+        "mean_force_after_contact": 11.764723804471139,
+        "impulse": 27.101813445132763,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.036264176534978e-05,
+        "cmd_total_variation": 0.11961157386390235
+      },
+      "adm": {
+        "peak_force": 1.4733660173299468,
+        "mean_force_after_contact": 0.7284892954618811,
+        "impulse": 1.4569785909237623,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 9.780552581159423e-05,
+        "cmd_total_variation": 0.10376404193819229
+      },
+      "adm_unguarded": {
+        "peak_force": 2.3626548327365935,
+        "mean_force_after_contact": 0.7103696913726831,
+        "impulse": 1.4207393827453663,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 0.00010649963914191262,
+        "cmd_total_variation": 0.11925484666204558
+      }
+    },
+    "10000": {
+      "rigid": {
+        "peak_force": 59.99999999999991,
+        "mean_force_after_contact": 59.99999999999991,
+        "impulse": 138.2304032669114,
+        "jam_frac": 0.6,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.045163779219427e-05,
+        "cmd_total_variation": 0.12
+      },
+      "prop": {
+        "peak_force": 58.82901357993644,
+        "mean_force_after_contact": 58.82361902235571,
+        "impulse": 135.5090672256638,
+        "jam_frac": 0.6,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 8.036264176534978e-05,
+        "cmd_total_variation": 0.11961157386390235
+      },
+      "adm": {
+        "peak_force": 7.366830086649733,
+        "mean_force_after_contact": 3.642446477309405,
+        "impulse": 7.28489295461881,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 9.780552581159423e-05,
+        "cmd_total_variation": 0.10376404193819229
+      },
+      "adm_unguarded": {
+        "peak_force": 11.81327416368297,
+        "mean_force_after_contact": 3.5518484568634157,
+        "impulse": 7.103696913726833,
+        "jam_frac": 0.0,
+        "final_penetration": 0.0,
+        "cmd_rms_jerk": 0.00010649963914191262,
+        "cmd_total_variation": 0.11925484666204558
+      }
+    }
+  },
+  "reach_trim": {
+    "torso_len_m": 0.3,
+    "waist_pitch_rad": 0.15,
+    "shoulder_shift_m": 0.044831439742079766,
+    "target_m": 0.63,
+    "arm_reach_m": 0.6,
+    "extension_without_posture": 1.05,
+    "extension_with_posture": 0.9752809337632004
+  }
+}
