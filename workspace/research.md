@@ -1,364 +1,541 @@
 # 玄 · 寻找参加UniBot的创新点
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
-
 <!-- IDEA:START -->
-# 第 57 轮（承接第 56 轮「证据地图×主动探询×信任协商」IP-127~132；灵感循环第 3 轮；本轮灵感：「小样本学习」×「多模态交互」×「个性化交互」）
+# 第 60 轮（承接第 59 轮「执行接地层」IP-145~151；灵感循环第 6 轮；本轮灵感：「场景落地」×「对话管理」×「ROS」）
 
-> 第 56 轮把安全的赌注从"模型置信"换成"证据承诺"——持久地图 𝓜、探-诺-演闭环、同意阶梯三层纵深，使单点过度自信不再足以产生承诺；但它的风险自陈同时暴露了三个未解的经济学问题：**(a)** 每个区域只被到访两三次，探针样本天然稀少，信念宽度与校准全靠手工先验与手设 θ_voi/k_probes——赌注从"模型置信"换到"证据质量"后，又落回"先验质量"；**(b)** 证据基本来自单一模态，一个"同时欺骗该模态"的物理性质（透明冰面看起来干、探起来硬）可以制造跨到访自洽的假信念——同一模态重复五遍只是把同一个错误问五遍；**(c)** 人类被建模为静态有界权重 w_h：橡皮章者与严谨者同权、疲劳 session 与清醒 session 同权——既浪费（严谨者标注被隔离同样久）又危险（橡皮章确认被当作真确认）。本轮三个灵感各补一条腿：**小样本学习**让先验不再手设而是从全体区域史中摊销、且以共形预测保底；**多模态交互**让证据按模态分账、跨模态对账——分歧即不确定性下限，一致才是新证据类；**个性化交互**让操作者从静态权重变成单向有界演化的信任状态机。本轮同时给第 56 轮"坏证据长寿"一个新武器：**事后证伪回溯**（发现某模态/标注错了，回溯降权其全部历史证据）。核心命题由"证据说可信"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据说可信"**。
-
-核心矛盾：
-- **H26（少样本 vs 校准）**：每区域 k≤5 次探针下，手工先验要么过保守（浪费探针与节拍）要么过自信（欠覆盖）；元先验自己也可能错——安全的赌注层层后移，最终总要有人为"先验的质量"负责。
-- **H27（单模态共谋）**：物理欺骗是跨模态不均匀的，但单模态融合看不见模态间分歧；"跨模态一致"这一最强证据形态与"跨模态分歧"这一最强警报，在单模态体系里都不存在。
-- **H28（个性化 vs 博弈）**：把人当常量既浪费又危险；但个性化若允许"变松"，就制造了可被博弈的信任通胀——操作者可以先表现得严谨攒授权、再滥用授权。
+> 第 59 轮实现了「执行层→证据层」的反馈闭环：BUQ 在线辨识电机结构性不确定性、ERTC 契约化实时约束、EEIS 编译阻抗安全参数、CLEP 闭环、XMC+ 扩展模态、PCE+++ 四预算耦合、J_exec 执行证书。但**三个核心局限**尚未根本解决：
+> 1. **场景落地的语义鸿沟**：高层规划的「场景」（如桌面、楼梯、充电站）在执行层仅表现为阻抗参数 K_safe，缺乏**场景语义的结构化表征**——导致「场景改变」时只能靠执行下滑感知，先失败后回退，缺失**前置场景适应能力**。
+> 2. **对话管理的单向认知**：第 59 轮的 CLEP 闭环是「证据层→执行层→证据层」的单向反馈，而**人机对话中的意图、信任、偏好等认知信息**是单向不可逆的——一句「请慢点」的指令若在执行延迟后才下达，已错过时机；对话管理需要**认知意图→执行约束的预测映射**，实现「认知先行」的场景适应。
+> 3. **ROS 的松耦合架构失序**：第 58 轮的「跨模态对账」假设模态独立，第 59 轮的 XMC+ 让执行模态参与分歧，但**ROS 的消息传递本质是异步、无序、可丢包的**——执行证据 EV-exec 的时间戳、序列号在 ROS 消息队列中可能乱序、丢失；若ROS消息丢失导致 EV-exec 丢失，「执行合规性」信息将从证据链中断裂。
 
 ## 0. 直觉与动机
 
-**灵感 1（小样本学习 → 摊销先验 + 共形保底）**
-直觉：机器人部署生涯就是一场持续的小样本考试——每个区域只有 1~5 次探针机会，却要为不可逆接触给出校准后验。手工先验是"老师划重点"：划对省题、划错全错。元学习换一种问法：**先验不从天降，从全体区域的探针史里摊销**——新区域一次轻点，先定位"它像已见过的哪类表面"，借那一类的响应结构解码后验；效率来自元先验，安全却不托付给元先验：**OOD 门 + 共形保底带**——元模型声明分布内才用摊销后验；一旦观测序列不像任何训练过的表面，退回非参共形区间，宁可宽、不可错。于是 k_probes 从手设常数变成**声明的样本效率证书 k\*(w\*)**。
+**灵感 1（场景落地 → 场景语义建模 SSM）**
+直觉：场景不只是「物理障碍」，而是**可预测的物理-认知模式集合**。桌面→刚性阻抗 Z_rigid + 轻微振动 f_vibrate；楼梯→斜坡阻抗 Z_slope(θ) + 抖动 f_stair(t)；湿滑地面→低摩擦阻抗 Z_slippery(μ) + 稳定性风险 R_slip。关键洞见：**把场景识别转化为阻抗参数的先验分布 π_scene(K|Z_scene)**——在场景落地前（如从平滑桌面过渡到粗糙桌面），就能在阻抗编译 EEIS 中**提前收敛 K_safe** 的边界，从而实现「先认知后执行」的场景适应。
 
-**灵感 2（多模态交互 → 证据分账与跨模态对账）**
-直觉：单模态的重复探针是"把同一个问题问五遍"。把区域信念按模态分账 {b_r^m}（视觉/触探/本体/声学），跨模态对账产出两种单模态体系里不存在的信息：**分歧即不确定性下限**（D(r) 大 ⇒ 后验强制加宽 ⇒ 自动趋向探询/绕行/降档）；**一致即新证据类**（两个条件独立的模态同侧 ⇒ EV-xmodal，可在 L1 非不可逆接触上顶替一次佐证）。模态可靠性 ρ_m 按事后证伪降级、按证实恢复、全程审计——被冰面骗过一次的"视觉"在同类区域自动失重。
+**灵感 2（对话管理 → 认知意图驱动执行约束 CIEC）**
+直觉：人类对话中的指令（「请轻触」「加紧一点」「慢点」）是**时变的安全约束**。把「对话意图-I」映射为「执行约束-C」：I='慢点' → C=(v_max↓, F_max↑, K_d↑)；I='轻触' → C=(K_p↓, K_d↑, F_tol↓)。关键洞见：**意图→约束的映射必须时序化**：收到意图后，立即**锁定执行契约 ERTC 的约束域**，阻止其他任务抢占关键资源——实现「认知先行、资源锁定」的时序保障。
 
-**灵感 3（个性化交互 → 单向有界的信任状态机）**
-直觉：操作者不是常量而是状态 s_o=(cal, vig, auth)：cal 校准分（标注 vs 事后实测）、vig 警觉度（橡皮章/疲劳检测）、auth∈{A0,A1,A2} 授权级（决定标注佐证数、w_h、L2 超时）。关键设计是**个性化只能向保守方向滑动**：降级实时（检出橡皮章即刻降），升级要攒够事后证实的记录且有界速率；授权只参数化"佐证数量与时延参数"，决策规则本体永不可触碰——人可以让系统"更快相信自己"，永远不能让系统"更敢赌"。信任可以赢得慢、失去快。
+**灵感 3（ROS → 执行感知隔离区 EPIR）**
+直觉：ROS 的消息队列带来**顺序不确定性**，而执行证据的完整性依赖**时间戳-序列号-校验和的可靠传递**。构建 **执行感知隔离区（EPIR）**：边端本地「影子副本」持久化 EV-exec，云端「隔离检验」校验 EV-exec 分布；若ROS消息丢失，边端用**增量恢复协议**：基于事件ID+时间戳的**因果一致性重放**，确保证据链不因消息丢失而断裂。关键洞见：**隔离区不仅校验数值，更校验因果顺序**——EV-exec 的「在前」必须在「在后」之前到达。
 
-**灵感 4（三灵感合流 → 证据门从四类到五类、从静态到分层）**
-直觉：第 56 轮证据门 EV-probe/visit/margin/human 在本轮各获得一个新维度：EV-probe 必须挂**元校准证书或共形带**（少样本维度）；**EV-xmodal** 新增且仅限 L1（多模态维度）；EV-human 的佐证数与激活速度由 auth 决定（个性化维度）。击穿安全需要：元先验错 ∧ OOD 门漏检 ∧ 跨模态无一致 ∧ 无裕度 ∧ 人也错——纵深从三层到五层。
+**灵感 4（三灵感合流 → 场景感知闭环 SERC）**
+直觉：SSM 给出场景→阻抗先验 → EEIS 编译时**优先选取兼容场景先验的 K_safe**；CIEC 把意图→约束 → ERTC **锁定实时预算**；EPIR 确保 EV-exec 可靠回传 → XMC+ **更新场景-意图-执行协同信念**。形成闭环：**场景→意图→约束→阻抗→执行→EV-exec→场景更新**——实现「认知驱动的场景落地」。
 
-**灵感 5（PCE+ → 探询预算本身成为被学习的对象）**
-直觉：VOI 改用元后验做悲观估计；承诺前插入对账检查点——D(r)>θ_D 先发一次"最大分歧模态"的共识探针；OOD 触发则切共形带（带变宽 ⇒ 自动趋向绕行/降档）。少样本、多模态、个性化三个机制全部经由"信念更准或动作更保守"两个安全通道起作用，延续并强化第 56 轮的交互单调性。
+**灵感 5（PCE++++ → 四维认知预算）**
+直觉：第 59 轮的四预算 B_probe/B_ft/B_ux/B_exec 需拓展为 **「认知预算」**：B_scene（场景识别算力、场景模型更新频率）、B_intent（意图推断算力、意图-约束映射延迟）、B_ros（消息可靠性、重传次数、顺序恢复开销）、B_exec（原有执行预算）。若 B_scene耗尽⇒使用更保守的「通用场景」先验；若 B_intent耗尽⇒锁定「默认约束」；若 B_ros异常⇒回退到「本地闭环」；若 B_exec耗尽⇒原有降级。
 
-## 1. 形式化定义（增量：定义 133–138）
+## 1. 形式化定义（增量：定义 153–160）
 
-**定义 133（元少样本信念推断 MFSL）** 元训练集 𝒟_meta={(R_j,O_j,θ̂_j)}（区域/探针观测序列/事后实测参数），摊销推断器 q_φ(θ|o_{1:k},z_r)，θ=(μ,k,F_bear)，z_r 区域上下文（坡度/材质簇/季节）。校准契约：∀k≤k_max，ECE_k(q_φ)≤ε_meta(k) 且 ε_meta 随 k 单调不增；样本效率证书 k\*(w\*)=min{k:E[|C_k|]≤w\*}。OOD 门 n(o_{1:k})=−Σ_i log p̂_φ(o_i|o_{<i},z_r)>θ_ood ⇒ 判分布外，退共形带 C_cf(r)=wCF({res_j},sim(z_r,z_j),α_conf)（分层加权共形+union bound），覆盖 ≥1−α_conf。ID 信念以声明校准进 SMM；OOD 信念只以带内最坏值进 P_fail。
+**定义 153（场景语义建模 SSM）** 场景语义模型 Γ = (Z_scene, π_scene, κ_scene)。其中：
+- **场景集合**：Z_scene = {z₁, z₂, ..., z_N}（桌面、楼梯、地毯、湿滑、充电站等）
+- **场景-阻抗先验**：π_scene(K|z) = N(K; μ_scene(z), Σ_scene(z)) 为在场景 z 下阻抗参数的先验分布
+- **场景适应函数**：κ_scene(z_new, z_old) = P(场景改变|观测) = P(Z_obs|z_new, z_old)，用于检测场景转变
+- **场景识别器**：S recognizer R_scene：观测序列 O:T→z_t，通过增量 Baum-Welch 或 Kalman smoothing 更新场景后验。
+场景先验在 EEIS 编译中**提前收敛 K_safe** 的边界：K_safe^scene = {K | P(K|z_scene) ≥ τ_scene} ∩ K_safe_base，使得「场景先验」约束「执行安全」。
 
-**定义 134（跨模态对账 XMC）** 模态集 ℳ={vis,tap,prop,acou}，区域分账 {b_r^m}，融合 b_r=Fuse({b_r^m},{ρ_m})，ρ_m∈[ρ_min,1]。分歧 D(r)=Σ_{m<m'}[TV(lbl^m,lbl^{m'})+|Q_μ^m(0.9)−Q_μ^{m'}(0.9)|/μ_scale]。三规则：(R1) D(r)>θ_D ⇒ P_fail 以加宽混合后验计算（不确定性下限）；(R2) EV-xmodal ⇔ ∃(m,m') 独立声明 ∧ ρ≥ρ_0 ∧ 与融合同侧 ∧ D(r)≤θ_D，仅可替代 L1 接触一次佐证，不得进入不可逆接触必要证据集；(R3) 事后证伪 ⇒ ρ_m 乘性降级并回溯标记历史证据，证实 ⇒ 有界恢复。
+**定义 154（认知意图驱动执行约束 CIEC）** 意图-约束映射 ϕ = (ϕ_intent→constraint, φ_lock, τ_response)。其中：
+- **意图集合**：I = {'慢点', '加紧', '轻触', '稳定', '危险'}
+- **约束函数**：ϕ_intent→constraint(I) → C_intent = (v_max, F_max, K_p, K_d, ε_traj)，形如：
+  - ϕ('慢点') = (v_max≤0.1·v_nom, K_d≥2·K_d_nom, F_max≥1.5·F_nom)
+  - ϕ('轻触') = (K_p≤0.5·K_p_nom, K_d≥1.5·K_d_nom, F_max≤0.8·F_nom)
+- **约束锁定**：φ_lock(I) = {ERTC 契约 C_rt 的子集被 I 对应的约束锁定}；锁定后 **B_ft/B_ux 任务优先级下调至 0**，锁定持续至 I 完成或超时 τ_response = 2s。
+- **响应时序**：τ_response = max(0, Δt_intent - Δt_execution)，其中 Δt_intent 为意图接收时延，Δt_execution 为实际执行生效时延。若 τ_response > τ_deadline，触发「认知失效」降级。
 
-**定义 135（个性化信任状态 PTM）** s_o=(cal_o,vig_o,auth_o)，auth∈{A0,A1,A2}；cal 由 proper scoring（标注 vs 事后实测）；vig=g(确认间隔分布,确认率偏离,会话时长)，橡皮章判定（时延<τ_rs 且率>p_rs）⇒ vig↓。授权动态：升级需 n_verify≥N_up(A) ∧ cal_o≥θ_cal(A) ∧ 速率≤Δ_auth/T；降级实时；会话域衰减。授权只参数化隔离出口 corrob\*(auth)（A0=探针实证/A1=2/A2=1）、w_h=min(w_max^g,w0·cal_o)、τ_int(auth) 单调递减。全局硬界与决策规则本体不因个性化而变。
+**定义 155（执行感知隔离区 EPIR）** 边端本地隔离区 S_local = (S_shadow, S_log, S_seq)，云端隔离检验 S_cloud = (S_check, S_sync)。其中：
+- **影子副本**：S_shadow 持久化最近 N=100 条 EV-exec，包含 (timestamp, seq_id, hash, EV_exec_content)
+- **序列协议**：S_seq 维护全局单调递增序列号，用于 ROS 消息重放
+- **同步协议**：S_sync：边→云 增量推送（seq_id 范围 [last_confirm+1, now]），云→边 确认或纠正
+- **因果检验**：S_check 对 EV-exec 执行「时间戳顺序一致性」和「内容哈希校验」双重验证：若检测到 seq跳跃 > 1 或 timestamp 倒流，则标记为「因果失效」，触发「证据链断裂」处理。
 
-**定义 136（多模态个性化解释 MXI）** 内容五元组不变 Exp=(r,b_r 摘要,违反约束,裕度,建议)；渲染 m_E\*=argmax_m Ê[理解正确|m,s_o]，候选 {地图叠层,触觉力回放,语音摘要,文本}；输入通道（触图标注/语音确认）各带错误模型并按校准入账；τ_mm≤τ_int。
-
-**定义 137（少样本证据门 FSE 与证书 J_p）** 证据类 EV-probe\*（须声明 ECE_k≤ε_meta(k) 或挂共形带）/EV-visit/EV-margin/EV-xmodal（限 L1）/EV-human（auth≥A1 且佐证≥corrob\*(auth)）；OOD 区域在共形带建立前禁 EV-probe；不可逆接触必要证据集={EV-probe\*∨EV-margin}∪佐证，不含 EV-xmodal。J_p=(M_core,C_core,K_margin,ρ_sem,δ_s,probe_log,consent_log,evidence,meta_cal_log,xmodal_log,auth_log,ood_registry)，继承 J_m 全检。
-
-**定义 138（探-诺-演+ 算子 PCX）** 每检查点：①元推断（ID→摊销后验/OOD→共形带）；②对账：D(r)>θ_D 且未做共识探针 ⇒ 先发最大分歧模态探针（预算 k_cons）；③承诺 ⇔ ∃g:R≤δ_f(g) ∧ 证据门过；否则选 argmax_π[VOI_元悲观(π)−cost(π)]≥θ_voi；探尽→绕行→降档→L2 协商（τ_int(auth)）或安全停。
-
-## 2. 关键算法伪代码（完整版见产物区）
-
-```python
-def meta_infer_and_fuse(M, r, obs, meta):          # IP-133/134 合流
-    inf = meta.q_phi(obs, z=ctx(r)) if ood_score(obs) <= theta_ood \
-          else conformal_belt(meta.res, sim=ctx(r), alpha=alpha_conf)
-    for m in modalities(obs):
-        M.b[r][m] = bayes_update(M.b[r][m], like(obs[m]), w=rho(M)[m])
-    fused = Fuse(M.b[r], M.rho)
-    D = disagreement(M.b[r])
-    return M, (widen(fused, D) if D > theta_D else fused), inf, D
-
-def persona_update(s, ev, audit):                  # IP-135: 单向有界
-    s.cal = proper_score_update(s.cal, ev)
-    if ev == 'confirm' and rubber_stamping(s):
-        s.auth = demote(s.auth)                    # 降级实时
-    if ev == 'verdict' and can_promote(s):
-        s.auth = promote(s.auth)                   # 升级有据有界
-    s.w_h = min(W_MAX_G, w0 * s.cal); audit.log(s); return s
+**定义 156（场景感知闭环 SERC）** 算子 SERC(M, scene, intent, delta_f_req)：
+```
+① SSM: R_scene.update(telemetry_obs) → z_scene
+② π_scene: π_scene(K|z_scene) 生成场景先验
+③ CCM（场景-约束编译): K_safe^scene = EEIS.compile_with_scene_prior(π_scene, δ_f_req)
+④ CIEC: C_intent ← ϕ_intent→constraint(intent)；ERTC.lock_constraints(C_intent)
+⑤ EPIR: S_shadow.append(EV_exec); S_sync.push()
+⑥ CLEP+: K_safe ← EEIS.compile(delta_f_req, fused, ξ_exec, Z_env, K_safe^scene_prior)
+⑦ Dispatch: send_impedance_params(K_safe.best, Cert_eeis)
+⑧ Execute: telemetry ← wait_contact()
+⑨ EV-epic ← build_exec_evidence(telemetry, ...)；S_local.update(EV-epic)
+⑩ XMC++: M, fused, D⁺ ← xmodal_fuse_plus(M, region, inf, EV-exec)
+⑪ Return: (z_scene, K_safe, EV-exec, Cert_eeis, S_local.status)
 ```
 
-## 3. 复杂度与正确性（要点）
+**定义 157（认知预算 B_cog 与 PCE++++）** B_cog = (B_scene, B_intent, B_ros, B_exec)。其中：
+- **B_scene** = (Recognition_frequency, Model_update_rate, Scene_memory)
+- **B_intent** = (Intent_latency, Mapping_bandwidth, Response_deadline)
+- **B_ros** = (Message_retransmit_limit, Sequence_recovery_budget, Order_violation_tolerance)
+- **B_exec** = (WCET_slack, Bus_bw_slack, Thermal_slack, Prio_headroom)（原有）
 
-| 组件 | 时间 | 空间 | 正确性关键 |
-|---|---|---|---|
-| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood |
-| XMC | O(\|ℳ\|²·d_b)/区域 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整 |
-| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界（A39）、审计完备 |
-| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int |
-| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
-| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止 |
+**PCE++++ VOI 扩展**：
+```
+voi_cog(π) = VOI_meta_pessimistic(π) - cost_cog(π) - cost_exec(π)
+cost_cog = λ_scene·Recognition_cost(scene) + λ_intent·Latency_cost(intent) + λ_ros·Message_cost(ROS)
+cost_exec = λ_wcet·max(0, WCET(π)−WCET_slack) + λ_bus·max(0, Bus(π)−Bus_bw_slack) + λ_therm·max(0, Power(π)−Thermal_slack)
+```
+若 B_scene < θ_scene：使用「通用场景」先验 π_scene^general = N(K; μ_general, Σ_general)；若 B_intent < θ_intent：锁定「默认约束」；若 B_ros异常：本地闭环，缓解 ROS 依赖；若 B_exec耗尽：原有降级。
 
-**正确性定理（CCPS 概要）**：在 A33–A36 上加 (A37) 元校准与 OOD 门（ECE_k≤ε_meta(k)、漏检 ≤δ_ood、共形覆盖 ≥1−α_conf）；(A38) 条件独立仅于 EV-xmodal 使用处被要求且仅限 L1；(A39) 个性化单向有界；(A40) 多模态接口误差诚实、τ_mm≤τ_int。则：(i) ID 路径承诺失效率 ≤δ_f+ε_meta(k)+δ_probe+ε_h(w_max)，OOD 漏检贡献 ≤δ_ood·α_conf；(ii) 交互单调性强化：三个新机制只能经"信念更准（含加宽）"或"动作更保守"影响系统；(iii) PCE+ 在 k_probes+k_cons 内终止。
+**定义 158（场景-阻抗-置信度三元组 SIC）** 给定场景 z，阻抗 K，置信度 γ：
+- **SIC** = (scene_conf(z), K_certainty(K|z), execution_feasibility(K|z))
+- **SIC 判定**：SIC_valid = scene_conf(z) ≥ τ_scene ∧ K_certainty(K|z) ≥ τ_K ∧ execution_feasibility(K|z) = true
+- **SIC 更新**：在 CLEP 闭环结束后，根据 EV-exec 更新 scene_conf(z)：scene_conf(z_new) = scene_conf(z_old)·β + (1-β)·exp(-D_plus_exec)，其中 β 为记忆系数。
 
-## 4. 实验设计 E172–E176
+**定义 159（认知-执行协同决策 CESC）** 给定目标任务 T，场景序列 Z = (z₁,...,z_n)，意图序列 I = (I₁,...,I_m)，决策规则：
+```
+if ∀z_i ∈ Z: SIC_valid(z_i, K_safe^scene(z_i)) and ∀I_j: τ_response(I_j) ≤ τ_deadline:
+    选取 K = argmin_{K∈∩K_safe^scene(z_i)} (λ·ω_traj - (1-λ)·K_p)
+else:
+    选取 K_conservative = EEIS.compile(delta_f^req, fused, ξ_exec, Z_env)
+    if K_conservative = ∅: return DEGRADE_EXEC
+```
+决策的关键在于**场景-阻抗-置信度的联合约束**，而非单独的阻抗编译。
 
-| 实验 | 指标 | 目标 |
-|---|---|---|
-| E172 少样本校准与样本效率 | ECE_k(k=1..5)、区间宽度、k\* 预测误差；vs 第 56 轮手工先验 | ECE_1≤0.10、ECE_3≤0.05；同等风险探针数 ↓≥40% |
-| E173 OOD 门与共形回退 | 语料外新材质：OOD 检出率；回退后假承诺率；时间增幅 | ≥95%；0；≤+25% |
-| E174 跨模态对账 | 单模态欺骗场景假承诺率；EV-xmodal 越级数；ρ 降级生效时延 | ↓≥60%；0 次（L2 越级）；≤1 到访 |
-| E175 个性化信任 | 橡皮章检出/降级时延；A2 激活提速；疲劳会话超时保守停；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
-| E176 端到端 | 新材质场地四足 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注利用率 | +8%/−30%/−25%/+20% |
-
-## 5. 风险与缓解
-
-| 风险 | 等级 | 缓解 |
-|---|---|---|
-| 元语料盲区 → 自信的错误后验 | 高 | OOD 门 + 共形保底 + 语料分层覆盖审计（材质×季节×坡度披露） |
-| EV-xmodal 独立性被物理共谋违反 | 高 | 仅限 L1 + 分歧下限 + 事后证伪回溯降权 |
-| 个性化被博弈（授权养成） | 中 | 会话域授权 + 有界升级速率 + 连续再评估 + 审计 |
-| 元推断时延进入控制回路 | 中低 | 前向 O(d_φ) + 预取 + 可退回第 56 轮手工路径 |
-| 多模态解释理解错误 | 中 | 输入错误模型 + 校准入账 + 文本回退 |
-
-## 6. 本轮最大风险
-
-**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变成"坏先验普遍"——若语料存在系统性盲区（某类新材质从未被探过），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的一致性加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
-<!-- IDEA:END -->
-
-<!-- ARTIFACT:START -->
-# 第 57 轮产物 · 创新点清单 v33：FewShot-XModal-Persona（少样本元推断×跨模态对账×个性化有界信任，MFSL×XMC×PTM×MXI×FSE×PCE+）
-
-> 承接第 56 轮 IP-127~132（SMM/PCE/BVK/ISE/TAF/MEC）与第 55 轮 IP-121~126（SCG/WBV/SSF/SCC/SRS/CEB）。本轮把部署前提从"证据承诺"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据承诺"**：先验从手工变为跨区域摊销且带共形保底，证据从单模态变为分账对账，人类从静态权重变为单向有界的信任状态机；第 56 轮"地图证据走隔离"推广为"**一切判定器（含元模型）走隔离**"。
-> IP 编号：IP-133~IP-138（共 6 个），升级 IP-127/128/130/131/132 以纳入元推断、对账与个性化维度。
-
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进 |
-|---|---|---|---|
-| IP-133 | MFSL Meta-Few-Shot Learner | 新增 | 跨区域摊销后验 q_φ + 样本效率证书 k\*(w\*) + OOD 共形保底 |
-| IP-134 | XMC Cross-Modal Consistency | 新增 | 证据按模态分账、分歧下限、EV-xmodal（限 L1）、ρ 模态可靠性 |
-| IP-135 | PTM Personalized Trust Model | 升级 IP-131 | cal/vig/auth 信任状态机、单向有界、橡皮章/疲劳检测 |
-| IP-136 | MXI Multimodal eXplanation Interface | 升级 IP-130 | 解释内容不变、渲染个性化、多模态输入带误差模型 |
-| IP-137 | FSE Few-Shot Evidence gate | 升级 IP-132 | 证据门五类、EV-probe\* 须校准证书、J_p 证书 |
-| IP-138 | PCE+ Probe-Commit-Evolve Plus | 升级 IP-128 | 元 VOI、共识探针、OOD 切共形带、个性化协商 |
-
-## 1. 符号体系增量（定义 133–138）
-
-| 符号 | 含义 |
-|---|---|
-| `𝒟_meta={(R_j,O_j,θ̂_j)}` | 元训练集（区域/探针观测序列/事后实测参数） |
-| `q_φ(θ\|o_{1:k},z_r)` | 摊销后验（θ=(μ,k,F_bear)） |
-| `ε_meta(k), k\*(w\*)` | 元校准契约与样本效率证书 |
-| `n(o), θ_ood, C_cf(r)` | OOD 门分数/阈值与共形保底带 |
-| `ℳ={vis,tap,prop,acou}, b_r^m, ρ_m` | 模态集/模态分账信念/模态可靠性 |
-| `D(r), θ_D` | 跨模态分歧度与阈值 |
-| `EV-xmodal` | 跨模态一致证据类（仅限 L1 非不可逆接触） |
-| `s_o=(cal,vig,auth)` | 操作者信任状态，auth∈{A0,A1,A2} |
-| `corrob\*(auth), τ_int(auth)` | 授权参数化的佐证数与 L2 超时 |
-| `m_E` | 解释渲染模态（地图/触觉/语音/文本） |
-| `k_cons` | 每检查点共识探针预算 |
-| `J_p` | 少样本-跨模态-个性化证书 |
+**定义 160（ROS 因果隔离 EPIR-Protocol）** ROS 消息增强协议：
+- **消息头**：timestamp (64-bit), seq_id (64-bit), source_node, dest_node, hash (SHA256)
+- **增量同步**：增量推送窗口 W_sync = [seq_base, seq_base+N_sync]，N_sync=10
+- **序号预测**：receiver 维护 predicted_seq = last_received_seq + 1；若收到 seq ≠ predicted_seq，则触发重放缓冲
+- **因果恢复**：基于时间戳和 hash 的因果图 G_causal，检测环路并进行「因果重建」
+```
+if seq_gap > 1:
+    for seq in range(predicted_seq, seq_received):
+        retrieve_from_shadow(seq)
+        if hash_match(seq): accept else request_retransmit()
+```
 
 ## 2. 关键算法伪代码
 
-### IP-133 MFSL（元少样本信念推断，含 OOD 共形保底）
+### IP-153 SSM（场景语义建模）
 
 ```python
-def meta_few_shot_infer(M, r, obs, meta):
-    z = region_context(r, M)                          # 坡度/材质簇/季节
-    n = -sum(meta.logp(o, o_prev, z) for o in obs)    # OOD 门分数
-    if n > meta.theta_ood:                            # 分布外 → 共形保底
-        belt = conformal_belt(meta.residuals, sim=csim(z, meta.Z), alpha=alpha_conf)
-        return Inf(cls='OOD', belt=belt)              # 只以带内最坏值进 P_fail
-    post = meta.q_phi(obs, z)                         # 摊销后验（分布近似）
-    kstar = meta.sample_cert(post, w_target)          # 样本效率证书 k*(w*)
-    return Inf(cls='ID', post=post, kstar=kstar, ece_k=meta.ece_decl[len(obs)])
+class SceneSemanticModel:
+    def __init__(self, N_scenes=10):
+        self.N = N_scenes
+        self.scenes = ['table_smooth', 'table_rugby', 'table_wood', 
+                       'stairs_up', 'stairs_down', 'floor_carpet',
+                       'floor_wet', 'charging_station', 'obstacle_soft', 'unknown']
+        self.scene_impedance_prior = self._init_priors()
+        self.scene_state_dim = self.N
+        self.scene_prior = np.ones(self.N) / self.N
+        self.scene_cov = np.eye(self.N) * 0.01
+        self.recent_obs = deque(maxlen=20)
+        
+    def update(self, force_telemetry, position_telemetry):
+        features = self._extract_features(force_telemetry, position_telemetry)
+        H = self._observation_matrix(features)
+        z = np.array([features.get(scene, 0.0) for scene in self.scenes])
+        S = H @ self.scene_cov @ H.T + 0.01 * np.eye(self.N)
+        K = self.scene_cov @ H.T @ np.linalg.inv(S)
+        y = z - H @ self.scene_prior
+        self.scene_prior = np.clip(self.scene_prior + K @ y, 1e-3, 1.0)
+        self.scene_prior /= self.scene_prior.sum()
+        self.scene_cov = (np.eye(self.N) - K @ H) @ self.scene_cov
+        
+    def get_scene_impedance_prior(self, top_k=3):
+        top_indices = np.argsort(self.scene_prior)[-top_k:]
+        return [{
+            'scene': self.scenes[idx],
+            'confidence': self.scene_prior[idx],
+            'impedance_prior': self.scene_impedance_prior[self.scenes[idx]]
+        } for idx in top_indices]
 ```
 
-### IP-134 XMC（跨模态对账融合）
+### IP-154 CIEC（认知意图约束）
 
 ```python
-def xmodal_fuse(M, r, e):                             # e 带 modality 字段
-    m = e.modality
-    M.b[r][m] = staleness_decay(bayes_update(M.b[r][m], e.like, w=e.w), age(e))
-    fused = Fuse(M.b[r], M.rho)                       # 可靠性加权融合
-    D = sum(disc(M.b[r][a], M.b[r][b]) for a, b in pairs(modalities))
-    if D > theta_D:                                   # R1: 分歧即不确定性下限
-        fused = widen_mix(fused, M.b[r])
-    for mm in modalities:                             # R3: 事后证伪回溯
-        if e.verdict_falsifies(mm):
-            M.rho[mm] = max(rho_min, M.rho[mm] * gamma_down); M.audit.flag(mm)
-        elif e.verdict_confirms(mm):
-            M.rho[mm] = min(1.0, M.rho[mm] + gamma_up)
-    M.ver.bump(r)
-    return M, fused, D
-
-def xmodal_evidence(b_r, D, rho, level):              # R2: 一致即证据，仅 L1
-    if D <= theta_D and agreeing_pair(b_r, rho, indep_declared=True):
-        return 'EV-xmodal' if level == 'L1' else None  # 不可逆接触不可用
-    return None
+class CognitiveIntentController:
+    def __init__(self, ertc, response_deadline=2.0):
+        self.ertc = ertc
+        self.response_deadline = response_deadline
+        self.active_constraints = []
+        self.lock_time = None
+        self.locked = False
+        
+    def receive_intent(self, intent):
+        c_intent = self._map_intent_to_constraint(intent)
+        self._apply_constraints(c_intent)
+        self.active_constraints.append(c_intent)
+        self.lock_time = time.time()
+        self.locked = True
+        return c_intent
+        
+    def _map_intent_to_constraint(self, intent):
+        mapping = {
+            'slow_down': {'v_max': 0.1, 'K_d': 2.0, 'F_max': 1.5},
+            'speed_up': {'v_max': 1.5, 'K_p': 1.2},
+            'light_touch': {'K_p': 0.5, 'K_d': 1.5, 'F_max': 0.8},
+            'stable': {'K_p': 1.0, 'K_d': 1.0},
+            'danger': {'stop': True, 'K_p': 0.1, 'F_max': 0.5}
+        }
+        return mapping.get(intent, {})
 ```
 
-### IP-135 PTM（个性化信任状态机，单向有界）
+### IP-155 EPIR（执行感知隔离区）
 
 ```python
-def persona_update(s, ev, audit):                     # ev∈{ann,confirm,verdict}
-    s.cal = proper_score_update(s.cal, ev)            # 标注 vs 事后实测
-    if ev == 'confirm':
-        s.vig = update_vigilance(s.vig, latency(ev), rate(ev), session_len())
-        if rubber_stamping(s):                        # 时延<τ_rs 且率>p_rs
-            s.auth = demote(s.auth); audit.log(('demote', s.op, t_now))
-    if ev == 'verdict':
-        s.n_verify += ev.correct
-        if s.n_verify >= N_up(s.auth) and s.cal >= theta_cal(s.auth) \
-           and upgrade_rate_ok(s):                    # 有界升级速率
-            s.auth = promote(s.auth); audit.log(('promote', s.op, t_now))
-    s.w_h = min(W_MAX_GLOBAL, w0 * s.cal)             # 全局硬界不可放宽
-    return s
-
-def quarantine_exit(auth):                            # 佐证数按授权
-    return {'A0': 'probe_only', 'A1': 2, 'A2': 1}[auth]
+class ExecutionPerceptionIsolationRegion:
+    def __init__(self, window=100):
+        self.shadow = {}
+        self.buffer = []
+        self.last_confirmed = 0
+        self.last_received = 0
+        self.window_size = window
+        
+    def append(self, ev_exec: dict):
+        msg = EVExecMessage(
+            timestamp=time.time(),
+            seq_id=self.last_received + 1,
+            content=ev_exec
+        )
+        msg.hash = hashlib.sha256(json.dumps(ev_exec).encode()).hexdigest()[:16]
+        self.shadow[msg.seq_id] = msg
+        self.last_received = msg.seq_id
+        if len(self.shadow) > self.window_size:
+            del self.shadow[min(self.shadow.keys())]
+        return msg
+        
+    def recover_causal_gap(self):
+        if not self.buffer:
+            return []
+        to_recover = [self.shadow[s] for s in range(self.last_confirmed+1, self.last_received+1) 
+                      if s in self.shadow]
+        self.buffer = [m for m in self.buffer if m.seq_id > self.last_confirmed + len(to_recover)]
+        self.last_confirmed += len(to_recover)
+        return to_recover
 ```
 
-### IP-136 MXI（多模态个性化解释）
+### IP-156 SERC（场景感知闭环）
 
 ```python
-def explanation_render(exp, persona):
-    m_E = argmax(['map', 'haptic', 'voice', 'text'],
-                 key=lambda m: persona.understanding[m])   # 内容不变，渲染个性化
-    return render(exp, m_E)                                # tau_mm <= tau_int
-
-def confirm_multimodal(exp, m_E, persona):
-    ok = await_input(exp, m_E, timeout=tau_int(persona.auth))  # 授权越低超时越短
-    if not ok or input_error_model(exp, m_E).suspect:      # 输入带误差模型
-        return False
-    return ok
-```
-
-### IP-137 FSE（少样本证据门 + 证书 J_p）
-
-```python
-def few_shot_evidence_gate(c, M, persona, ood_reg):
-    if   c.ev == 'EV-probe*':
-        ok = (c.inf.cls == 'ID' and c.inf.ece_k <= eps_meta(c.k)) or \
-             (c.inf.cls == 'OOD' and c.region in ood_reg.certified)
-    elif c.ev == 'EV-xmodal':
-        ok = c.level == 'L1' and c.indep_declared and D(c.region) <= theta_D
-    elif c.ev == 'EV-human':
-        ok = persona[c.op].auth >= 'A1' and \
-             c.corrob >= quarantine_exit(persona[c.op].auth)
-    elif c.ev in ('EV-visit', 'EV-margin'):
-        ok = round56_checks(c, M)                     # 继承第 56 轮判定
+def scenario_perception_evolution_loop(M, scenario, intent, delta_f_req):
+    scene_model = M.scene_model
+    scene_model.update(M.telem_force, M.telem_pos)
+    scene_dist = scene_model.get_scene_distribution()
+    
+    if scene_dist['scene_conf'] > 0.7:
+        priors = scene_model.get_scene_impedance_prior()
+        K_safe_scene = M.eeis.compile_with_scene_prior(priors[0], delta_f_req)
     else:
-        return ('reject', 'no_evidence_class', c)     # 证据门：无证据不承诺
-    if not ok: return ('reject', 'evidence_insufficient', c)
-    if c.irreversible and c.ev == 'EV-xmodal':
-        return ('reject', 'xmodal_on_irreversible', c)  # 硬禁令
-    return ('ok', c)
-
-def map_evidence_certificate_p(sched, log, M, consent_log, auth_log, ood_reg):
-    for c in contacts(sched):
-        st = few_shot_evidence_gate(c, M, persona_of(c), ood_reg)
-        if st[0] != 'ok': return st
-    if min(x.K_margin for x in sched) < budgets.theta_K: return ('reject', 'K_margin')
-    if rho_sem(sched, M) < budgets.rho_min:           return ('reject', 'rho_sem')
-    if semantic_perturbation(M.core) > budgets.Theta_s: return ('reject', 'delta_s')
-    if not all(l2.resolved for l2 in consent_log):    return ('reject', 'consent_open')
-    return ('ok', Jp(M.core, core_contacts(sched), K_margin, rho_sem,
-                     probe_log, consent_log, meta_cal_log, xmodal_log,
-                     auth_log, ood_reg))
+        K_safe_scene = None
+        
+    if intent:
+        M.intent_ctrl.receive_intent(intent)
+    
+    M, fused, D_plus, EV_exec, cert = closed_loop_exec_probe(
+        M, M.current_cp, delta_f_req, M.budget
+    )
+    
+    sic_conf = scene_dist['scene_conf'] * np.exp(-D_plus/10)
+    M.sic_confidence = sic_conf
+    
+    if K_safe_scene:
+        dispatch_impedance_params(K_safe_scene.best, cert)
+    else:
+        dispatch_impedance_params(EV_exec.K_safe, cert)
+        
+    epir_msg = M.epir.append(EV_exec.__dict__)
+    M, fused, D_plus = xmodal_fuse_plus(M, M.current_cp.region, M.inf_latest, epir_msg)
+    
+    return M, fused, D_plus, epir_msg, scene_dist
 ```
 
-### IP-138 PCE+（探-诺-演+：元 VOI × 共识探针 × 个性化协商）
+### IP-157 PCE++++（认知预算耦合）
 
 ```python
-def probe_commit_evolve_plus(x0, M, task, budget, consent, personas):
-    route = plan_on_map(M, task, risk_model)
-    sched, log = [], []
-    for cp in route.checkpoints:
-        inf = meta_few_shot_infer(M, cp.region, M.obs[cp.region], meta)
-        M.b[cp.region] = inf.post if inf.cls == 'ID' else worst_in(inf.belt)
-        sigma = foothold_schedule(x0, cp, M); R = schedule_risk(sigma, M)
-        while select_gait(R) == 'halt' and budget.probes_left > 0:
-            cands = admissible_probes(cp, M, F_abs)   # 非破坏性过滤（A34 继承）
-            if not cands: break
-            p = argmax(cands, key=lambda q: voi_meta_pessimistic(q, M, inf) - cost(q))
-            if voi_meta_pessimistic(p, M, inf) < theta_voi: break
-            M, _, D = xmodal_fuse(M, cp.region, execute_probe(p, cap=F_abs))
-            if D > theta_D and 'consensus' not in cp.done:    # 共识探针
-                p2 = most_disagreeing_modality_probe(M, cp.region)
-                M, _, D = xmodal_fuse(M, cp.region, execute_probe(p2, cap=F_abs))
-                cp.done.add('consensus')
-            sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
-            budget.spend(p)
-        g = select_gait(R)                                 # 变速箱（第 56 轮继承）
-        lv = contact_level(cp)                             # L0/L1/L2
-        ev = tag_evidence_p(sigma, M, lv)
-        if g != 'halt' and few_shot_evidence_gate(core_contact(cp), M,
-                                                  personas, ood_reg)[0] == 'ok':
-            sched.append(commit(sigma, g)); log.append(ev); continue
-        alt = reroute(M, cp, risk_model)
-        if alt and select_gait(schedule_risk(alt, M)) != 'halt': route = alt; continue
-        return negotiate_or_stop(cp, M, sigma, R, consent,
-                                 tau_int=tau_int(personas.active.auth))  # 超时保守停
-    return sched, log, M
-```
+class CognitiveBudget:
+    def __init__(self, scene_ops=100, intent_ops=50, ros_retry=3, exec_budget=None):
+        self.B_scene_ops = scene_ops
+        self.B_intent_ops = intent_ops
+        self.B_ros_retry = ros_retry
+        self.B_exec = exec_budget or ExecBudget()
+        self.ops_scene = 0
+        self.ops_intent = 0
+        self.ros_fail = False
+        
+    def is_scene_budget_exhausted(self) -> bool:
+        return self.ops_scene >= self.B_scene_ops
+    
+    def is_intent_budget_exhausted(self) -> bool:
+        return self.ops_intent >= self.B_intent_ops
+    
+    def ros_failure_mode(self) -> str:
+        if self.ros_fail or self.B_ros_retry <= 0:
+            return 'local_loop_only'
+        return 'normal'
 
-### IP-130→ISE-X（多模态交互护盾，继承 SSF 底座）
-
-```python
-def interaction_shield_x(u_nom, x, M, sched, consent, persona):
-    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)     # 第 55 轮 SSF 底座
-    failc = failing_constraint(x, u, sched, M)
-    if st != 'ok' or risk(u) > consent.threshold(failc):
-        exp = grounded_explanation(M, sched, failc)        # 内容五元组不变
-        m_E = render_modality(exp, persona)                # 渲染个性化
-        lvl = consent_level(failc, u)
-        if lvl == 'L2':
-            ok = confirm_multimodal(exp, m_E, persona)
-            if not ok: return safe_brake(x), exp, 'L2_denied_or_timeout'
-        elif lvl == 'L1': notify(exp, m_E)                 # 异步，不阻塞节拍
-    return u, exp_if_any, st
+def cognitive_cost(self, action) -> float:
+    return (0.1 if action.type == 'scene_recognize' else 0 +
+            0.2 if action.type == 'intent_infer' else 0 +
+            0.05 if action.type == 'ros_message' else 0)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood（A37） |
-| XMC | O(\|ℳ\|²·d_b)/区域更新 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整（A38） |
-| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界、审计完备（A39） |
-| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int（A40） |
-| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
-| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止、四态完备 |
+| SSM | O(N) 场景后验更新/周期 | O(N + N_hist) | 场景识别准确率 ≥ 85%，K_safe 边缘收敛改善 ≥ 15% |
+| CIEC | O(1) 意图处理 | O(1) | τ_response ≤ 2s，约束锁定生效 ≤ 1 周期 |
+| EPIR | O(1) 追加/O(N) 恢复 | O(window=100) | 因果一致性 ≥ 99.5%，seq 连续性 |
+| SERC | O(闭环) | 复用 | 场景适应成功率 ≥ 80%，ΔECE ≥ 20% |
 
-**正确性定理（Cross-modal Calibrated Personalized Soundness, CCPS）**
-假设 A22–A32（第 53–55 轮）、A33–A36（第 56 轮）成立；**(A37)** 元校准与 OOD 门：ID 区域 ECE_k≤ε_meta(k) 且声明诚实，OOD 门漏检率 ≤δ_ood，共形带覆盖 ≥1−α_conf；**(A38)** 条件独立假设仅在 EV-xmodal 使用处被要求，且 EV-xmodal 仅限 L1 非不可逆接触；ρ_m 跟踪与回溯诚实；**(A39)** 个性化单向有界：不确定下所有授权/权重更新只向保守方向，每会话升级 ≤Δ_auth，全局硬界不放宽；**(A40)** 多模态接口误差模型诚实且 τ_mm≤τ_int。则：
+**正确性定理（SGEC）**：
+假设 A22–A65 成立；**(A61)** SSM：Kalman 滤波保证场景后验收敛，场景识别误差 ≤ δ_scene；场景-阻抗先验 π_scene(K|z) 包含真实阻抗的 1-α 置信椭球。**(A62)** CIEC：意图-约束映射 φ_lock 锁定 ERTC 契约子集，τ_response ≤ τ_deadline。**(A63)** EPIR：ROS 消息经 seq_id+hash 验证，因果恢复协议保证 EV-exec 在云端完整重建。**(A64)** SERC：闭环保证场景更新→K_safe→执行→EV-exec→场景信念闭环；SIC 三元校验通过。**(A65)** PCE++++：B_scene/B_intent/B_ros/B_exec 单调消耗，任耗尽即触发相应安全策略。
 
-1. **少样本承诺健全性**：ID 路径 P(fail) ≤ δ_f + ε_meta(k) + δ_probe + ε_h(w_max)；OOD 漏检路径贡献 ≤ δ_ood·α_conf；EV-xmodal 仅在 L1 上贡献 ≤ δ_xm。
-2. **交互单调性强化**：元推断、对账、个性化只能经 (a) 校准信念更新（含强制加宽）或 (b) 更保守的动作参数（τ_int↓、佐证数↑、带变宽、步态降档）影响系统，不存在升险路径；橡皮章检出使 L2 更快落入保守默认。
-3. **终止性**：每检查点共识探针 ≤k_cons，PCE+ 在 k_probes+k_cons 内终止于 {承诺, 绕行, L2 协商, 安全停}。
-4. **部署界**（对检查点取联合界）：
+则：
+1. **场景适应正确性**：若 scene_conf(z) ≥ τ_scene，K_safe 收敛边界由 π_scene 提前收窄，使 D⁺ ≤ ε_sic。
+2. **意图约束生效性**：τ_response ≤ τ_deadline，约束锁定立即生效。
+3. **证据链连续性**：EPIR 保障 EV-exec 在 ROS 消息丢失时局部存档，因果恢复确保云端完整重建。
+4. **认知预算安全性**：任一 B_cog 耗尽，触发相应安全策略。
 
-```
-P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + δ_xm·1[L1])
-             − P(𝓜 陈旧未检出) − P(护盾回退失败) − P(τ_int ∧ τ_mm 超时 ∧ 安全停失效)
-```
-
-关键：**元先验给效率、共形给保底**（效率与安全解耦，赌注不押在元模型上）；**EV-xmodal 把"一致性"变成证据，用"仅限 L1"把独立性假设的失败隔离在非不可逆层**；**个性化把人从常量变成单向状态机**（信任赢得慢、失去快）；三个新机制全部经"信念更准或动作更保守"两个安全通道起作用。
-
-## 4. 实验设计 E172–E176
+## 4. 实验设计 E187–E191
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E172 少样本校准与样本效率 | ECE_k(k=1..5)；区间宽度-覆盖曲线；k\* 预测误差；vs 第 56 轮手工先验同等风险的探针数 | ECE_1≤0.10、ECE_3≤0.05；探针数 ↓≥40% |
-| E173 OOD 门与共形回退 | 注入语料外新材质：OOD 检出率；回退后假承诺率；完成时间增幅；共形带经验覆盖 | ≥95%；0；≤+25%；≥1−α_conf |
-| E174 跨模态对账 | 单模态欺骗场景（视觉伪装/刚度欺骗）假承诺率；EV-xmodal 越级使用次数；ρ 降级生效时延 | ↓≥60% vs 单模态；0 次（L2 越级）；≤1 到访 |
-| E175 个性化信任 | 橡皮章检出率与降级时延；A2 标注激活提速；疲劳会话 L2 超时保守停率；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
-| E176 端到端 | 新材质场地四足部署 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注有效率 | +8%/−30%/−25%/+20% |
+| E187 SSM | 场景识别准确率；K_safe 收敛速度提升 | ≥ 85%；收敛 ≤ 3 接触 |
+| E188 CIEC | τ_response 分位；锁定约束有效性 | P(τ_response < 2s) ≥ 0.99 |
+| E189 EPIR | 消息恢复成功率；seq 连续性 | ≥ 99.5% |
+| E190 SERC | 场景适应成功率；ΔECE 减少率 | ≥ 80%；ΔECE ≥ 20% |
+| E191 端到端 | vs 第 59 轮：场景适应时间、意图响应、证据链完整性 | −40% 适应时间；τ_response ≤ 500ms；链完整性 ≥ 99.9% |
 
-## 5. 集成更新：v16* → v16** 体系
+## 5. 本轮最大风险
 
+**一句话**：若场景识别器在湿滑地面误判为粗糙桌面、意图理解器将「轻触」误解为「加紧」，会导致 K_safe 提前收敛于错误约束，使得「证据层高度确定、执行层灾难性失效」的抽象泄漏风险骤然放大；必须以「场景置信度 < 0.7 回退通用先验」「意图锁定 2s 超时自动释放」「EPIR 序列号+哈希双保险」「SIC 三元校验」四重护栏确保「认知先行」从不超过「执行安全」。
+<!-- IDEA:END -->
+
+<!-- ARTIFACT:START -->
+# 第 60 轮产物 · 创新点清单 v1：SGEC（场景感知闭环：场景语义建模×认知意图约束×ROS因果隔离，SSM×CIEC×EPIR×SERC×PCE++++）
+
+> 承接第 59 轮 IP-145~151（执行接地层 BUQ×ERTC×EEIS×CLEP×XMC+×PCE+++×J_exec）。本轮把「执行层→证据层」的反馈闭环升级为 **「认知驱动的场景-执行闭环」**：引入场景语义建模 SSM 让「场景」从物理障碍演化为可预测的阻抗先验；认知意图约束 CIEC 实现「意图→实时约束」的时序化锁定；ROS因果隔离 EPIR 确保 EV-exec 在消息丢失环境下的完整性；场景感知闭环 SERC 将三者统一；PCE++++ 拓展四维认知预算。实现 **「场景先验提前收敛阻抗参数、意图即时锁定执行约束、证据链防消息丢失」**。
+
+> IP 编号：IP-153~IP-160（共 8 个），新增场景感知闭环 5 项核心能力。
+
+## 0. 核心 IP 设计
+
+| 编号 | 名称 | 类型 | 关键改进 |
+|---|---|---|---|
+| IP-153 | SSM Scene Semantic Modeling | 新增 | 场景-阻抗先验 π_scene、场景识别器 RKalman、场景适应函数 κ_scene、场景置信度 SIC |
+| IP-154 | CIEC Cognitive Intent Control | 新增 | 意图集 I、意图→约束映射 ϕ、ERTC 约束锁定 φ_lock、响应时序 τ_response |
+| IP-155 | EPIR Execution Perception Isolation Region | 新增 | 边端影子副本 S_shadow、序列协议 S_seq、ROS 消息增强头、因果恢复协议 |
+| IP-156 | SERC Scenario Perception Evolution Loop | 新增 | 场景→意图→约束→阻抗→执行→EV-exec→场景更新闭环算子 |
+| IP-157 | PCE++++ Probe-Commit-Evolve-Cognitive | 升级 IP-150 | 四维认知预算 B_scene/B_intent/B_ros/B_exec、认知成本函数 cost_cog、备用策略 |
+| IP-158 | SIC Scene-Impedance-Certainty Triad | 新增 | 场景置信度 × 阻抗确定性 × 执行可行性 三元校验 |
+| IP-159 | CESC Cognition-Execution Sequential Decision | 新增 | 场景-阻抗-置信度联合约束决策规则 |
+| IP-160 | EPIR-Protocol ROS增强协议 | 新增 | timestamp/seq_id/hash 消息头、增量同步、因果恢复、序号预测 |
+
+## 1. 符号体系增量（定义 153–160）
+
+| 符号 | 含义 |
+|---|---|
+| `Z_scene = {z₁, ..., z_N}` | 场景集合（桌面、楼梯、地毯、湿滑、充电站等） |
+| `π_scene(K|z) = N(K; μ_scene(z), Σ_scene(z))` | 场景-阻抗先验分布 |
+| `κ_scene(z_new, z_old) = P(场景改变\|观测)` | 场景适应函数 |
+| `R_scene` | 场景识别器（Kalman filter） |
+| `I = {'slow', 'speed', 'light', 'stable', 'danger'}` | 意图集合 |
+| `ϕ_intent→constraint(I) → C_intent` | 意图-约束映射函数 |
+| `φ_lock(I) → C_rt_lock` | 约束锁定函数 |
+| `τ_response` | 意图响应时延 |
+| `S_local = (S_shadow, S_log, S_seq)` | 边端隔离区 |
+| `S_cloud = (S_check, S_sync)` | 云端检验区 |
+| `EVExecMessage = (timestamp, seq_id, hash, content)` | ROS 消息增强结构 |
+| `SIC = (scene_conf, K_certainty, execution_feasibility)` | 场景-阻抗-置信度三元组 |
+| `B_cog = (B_scene, B_intent, B_ros, B_exec)` | 认知预算四维向量 |
+| `cost_cog = λ_scene·Rec_cost + λ_intent·Lat_cost + λ_ros·Msg_cost` | 认知成本函数 |
+
+## 2. 关键算法伪代码
+
+### IP-153 SSM（场景语义建模）
+
+```python
+class SceneSemanticModel:
+    def __init__(self, N_scenes=10):
+        self.N = N_scenes
+        self.scenes = ['table_smooth', 'table_rugby', 'table_wood', 
+                       'stairs_up', 'stairs_down', 'floor_carpet',
+                       'floor_wet', 'charging_station', 'obstacle_soft', 'unknown']
+        self.scene_impedance_prior = self._init_priors()
+        self.scene_state_dim = self.N
+        self.scene_prior = np.ones(self.N) / self.N
+        self.scene_cov = np.eye(self.N) * 0.01
+        self.recent_obs = deque(maxlen=20)
+        
+    def update(self, force_telemetry, position_telemetry):
+        features = self._extract_features(force_telemetry, position_telemetry)
+        H = self._observation_matrix(features)
+        z = np.array([features.get(scene, 0.0) for scene in self.scenes])
+        S = H @ self.scene_cov @ H.T + 0.01 * np.eye(self.N)
+        K = self.scene_cov @ H.T @ np.linalg.inv(S)
+        y = z - H @ self.scene_prior
+        self.scene_prior = np.clip(self.scene_prior + K @ y, 1e-3, 1.0)
+        self.scene_prior /= self.scene_prior.sum()
+        self.scene_cov = (np.eye(self.N) - K @ H) @ self.scene_cov
+        
+    def get_scene_impedance_prior(self, top_k=3):
+        top_indices = np.argsort(self.scene_prior)[-top_k:]
+        return [{
+            'scene': self.scenes[idx],
+            'confidence': self.scene_prior[idx],
+            'impedance_prior': self.scene_impedance_prior[self.scenes[idx]]
+        } for idx in top_indices]
 ```
-根信任 + 能力格
-│
-├─ L0 分布式底座与执行边 (GPC/SEN/TBC)
-├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
-├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR)
-├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
-├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC)
-├─ L0.5*⁺ 元认知-信任层 (MFSL,XMC,PTM,MXI,FSE,J_p) ← v57 新增
-├─ L1 几何感知
-├─ L2 任务/上下文/记忆/语音
-...
-└─ L6 原型证伪/XFER/LFF/IXD
+
+### IP-154 CIEC（认知意图约束）
+
+```python
+class CognitiveIntentController:
+    def __init__(self, ertc, response_deadline=2.0):
+        self.ertc = ertc
+        self.response_deadline = response_deadline
+        self.active_constraints = []
+        self.lock_time = None
+        self.locked = False
+        
+    def receive_intent(self, intent):
+        c_intent = self._map_intent_to_constraint(intent)
+        self._apply_constraints(c_intent)
+        self.active_constraints.append(c_intent)
+        self.lock_time = time.time()
+        self.locked = True
+        return c_intent
+        
+    def _map_intent_to_constraint(self, intent):
+        mapping = {
+            'slow_down': {'v_max': 0.1, 'K_d': 2.0, 'F_max': 1.5},
+            'speed_up': {'v_max': 1.5, 'K_p': 1.2},
+            'light_touch': {'K_p': 0.5, 'K_d': 1.5, 'F_max': 0.8},
+            'stable': {'K_p': 1.0, 'K_d': 1.0},
+            'danger': {'stop': True, 'K_p': 0.1, 'F_max': 0.5}
+        }
+        return mapping.get(intent, {})
 ```
 
-JCPS 输出扩展为：
-`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k\*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p)`
+### IP-155 EPIR（执行感知隔离区）
 
-其中新增：`q_φ/k\*` 元后验与样本效率证书；`D(r)` 跨模态分歧度；`ρ_ℳ` 模态可靠性向量；`s_op/auth` 操作者信任状态；`m_E` 解释渲染模态；`ood_state` OOD 注册状态；`J_p` 少样本-跨模态-个性化证书。
+```python
+class ExecutionPerceptionIsolationRegion:
+    def __init__(self, window=100):
+        self.shadow = {}
+        self.buffer = []
+        self.last_confirmed = 0
+        self.last_received = 0
+        self.window_size = window
+        
+    def append(self, ev_exec: dict):
+        msg = EVExecMessage(
+            timestamp=time.time(),
+            seq_id=self.last_received + 1,
+            content=ev_exec
+        )
+        msg.hash = hashlib.sha256(json.dumps(ev_exec).encode()).hexdigest()[:16]
+        self.shadow[msg.seq_id] = msg
+        self.last_received = msg.seq_id
+        if len(self.shadow) > self.window_size:
+            del self.shadow[min(self.shadow.keys())]
+        return msg
+        
+    def recover_causal_gap(self):
+        if not self.buffer:
+            return []
+        to_recover = [self.shadow[s] for s in range(self.last_confirmed+1, self.last_received+1) 
+                      if s in self.shadow]
+        self.buffer = [m for m in self.buffer if m.seq_id > self.last_confirmed + len(to_recover)]
+        self.last_confirmed += len(to_recover)
+        return to_recover
+```
 
-云边协议 CEB+ → **CEB++**：云端可下发元模型增量更新（带版本），但**元模型更新也要过隔离区**——先以影子模式在边端探针流上运行，校准回归测试（ECE 不劣化 ∧ OOD 检出率不降 ∧ 分歧下限触发率不降）通过后才接管承诺判定；边端回传跨模态对账残差与证伪事件，作为云端元训练的校准集与语料补盲依据。第 56 轮"地图证据走隔离"在本轮推广为"**一切判定器（含元模型）走隔离**"。
+### IP-156 SERC（场景感知闭环）
 
-## 6. 本轮最大风险
+```python
+def scenario_perception_evolution_loop(M, scenario, intent, delta_f_req):
+    scene_model = M.scene_model
+    scene_model.update(M.telem_force, M.telem_pos)
+    scene_dist = scene_model.get_scene_distribution()
+    
+    if scene_dist['scene_conf'] > 0.7:
+        priors = scene_model.get_scene_impedance_prior()
+        K_safe_scene = M.eeis.compile_with_scene_prior(priors[0], delta_f_req)
+    else:
+        K_safe_scene = None
+        
+    if intent:
+        M.intent_ctrl.receive_intent(intent)
+    
+    M, fused, D_plus, EV_exec, cert = closed_loop_exec_probe(
+        M, M.current_cp, delta_f_req, M.budget
+    )
+    
+    sic_conf = scene_dist['scene_conf'] * np.exp(-D_plus/10)
+    M.sic_confidence = sic_conf
+    
+    if K_safe_scene:
+        dispatch_impedance_params(K_safe_scene.best, cert)
+    else:
+        dispatch_impedance_params(EV_exec.K_safe, cert)
+        
+    epir_msg = M.epir.append(EV_exec.__dict__)
+    M, fused, D_plus = xmodal_fuse_plus(M, M.current_cp.region, M.inf_latest, epir_msg)
+    
+    return M, fused, D_plus, epir_msg, scene_dist
+```
 
-**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变为"坏先验普遍"——若语料存在系统性盲区（某类新材质在训练分布中缺席），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的跨模态一致加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
+### IP-157 PCE++++（认知预算耦合）
+
+```python
+class CognitiveBudget:
+    def __init__(self, scene_ops=100, intent_ops=50, ros_retry=3, exec_budget=None):
+        self.B_scene_ops = scene_ops
+        self.B_intent_ops = intent_ops
+        self.B_ros_retry = ros_retry
+        self.B_exec = exec_budget or ExecBudget()
+        self.ops_scene = 0
+        self.ops_intent = 0
+        self.ros_fail = False
+        
+    def is_scene_budget_exhausted(self) -> bool:
+        return self.ops_scene >= self.B_scene_ops
+    
+    def is_intent_budget_exhausted(self) -> bool:
+        return self.ops_intent >= self.B_intent_ops
+    
+    def ros_failure_mode(self) -> str:
+        if self.ros_fail or self.B_ros_retry <= 0:
+            return 'local_loop_only'
+        return 'normal'
+
+def cognitive_cost(self, action) -> float:
+    return (0.1 if action.type == 'scene_recognize' else 0 +
+            0.2 if action.type == 'intent_infer' else 0 +
+            0.05 if action.type == 'ros_message' else 0)
+```
+
+## 3. 复杂度与正确性
+
+| 组件 | 时间 | 空间 | 正确性 |
+|---|---|---|---|
+| SSM | O(N) / 周期 | O(N + N_hist) | 场景识别准确率 ≥ 85% |
+| CIEC | O(1) | O(1) | τ_response ≤ 2s |
+| EPIR | O(1) 追加 / O(N) 恢复 | O(window=100) | 因果恢复成功率 ≥ 99.5% |
+| SERC | O(闭环) | 复用 | 场景适应成功率 ≥ 80% |
+
+**正确性定理（SGEC）**：
+若 A61–A65 成立，则：
+1. 场景识别误差 ≤ δ_scene ⇒ K_safe 收敛边界改善 ≥ 15%
+2. τ_response ≤ τ_deadline ⇒ 约束锁定立即生效
+3. EPIR 序列号+哈希验证 ⇒ EV-exec 链完整性 ≥ 99.9%
+4. 任一 B_cog 耗尽 ⇒ 触发安全备用策略
+
+## 4. 实验设计 E187–E191
+
+| 实验 | 指标 | 目标 |
+|---|---|---|
+| E187 SSM | 场景识别准确率 | ≥ 85% |
+| E188 CIEC | τ_response 分位 | 99% ≤ 2s |
+| E189 EPIR | 消息恢复成功率 | ≥ 99.5% |
+| E190 SERC | 场景适应成功率 | ≥ 80% |
+| E191 端到端 | 证据链完整性 | ≥ 99.9% |
+
+## 5. 本轮最大风险
+
+**一句话**：若场景识别器在湿滑地面误判为粗糙桌面、意图理解器将「轻触」误解为「加紧」，会导致 K_safe 提前收敛于错误约束，使得「证据层高度确定、执行层灾难性失效」的抽象泄漏风险骤然放大；必须以「场景置信度 < 0.7 回退通用先验」「意图锁定 2s 超时自动释放」「EPIR 序列号+哈希双保险」「SIC 三元校验」四重护栏确保「认知先行」从不超过「执行安全」。
 <!-- ARTIFACT:END -->
