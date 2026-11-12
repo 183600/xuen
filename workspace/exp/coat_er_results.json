@@ -1,0 +1,272 @@
+{
+  "appearance_aggressive": {
+    "seen_normal": {
+      "success": 0.931,
+      "harm": 0.018,
+      "score": 144.3,
+      "aggression": 1.0
+    },
+    "seen_risk": {
+      "success": 0.931,
+      "harm": 0.5987,
+      "score": 144.3,
+      "aggression": 1.0
+    },
+    "novel_normal": {
+      "success": 0.678,
+      "harm": 0.0549,
+      "score": 105.2,
+      "aggression": 1.0
+    },
+    "novel_risk": {
+      "success": 0.604,
+      "harm": 0.8475,
+      "score": 93.6,
+      "aggression": 1.0
+    },
+    "_overall": {
+      "mean_success": 0.837,
+      "mean_score": 129.8,
+      "novelty_gap": 0.253,
+      "worst_group_success": 0.604,
+      "max_group_harm": 0.8475,
+      "risk_violations": 3
+    }
+  },
+  "affordance_aggressive": {
+    "seen_normal": {
+      "success": 0.945,
+      "harm": 0.018,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "seen_risk": {
+      "success": 0.945,
+      "harm": 0.5987,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "novel_normal": {
+      "success": 0.898,
+      "harm": 0.0549,
+      "score": 139.2,
+      "aggression": 1.0
+    },
+    "novel_risk": {
+      "success": 0.887,
+      "harm": 0.8475,
+      "score": 137.5,
+      "aggression": 1.0
+    },
+    "_overall": {
+      "mean_success": 0.928,
+      "mean_score": 143.9,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.887,
+      "max_group_harm": 0.8475,
+      "risk_violations": 3
+    }
+  },
+  "affordance_soft_penalty": {
+    "seen_normal": {
+      "success": 0.945,
+      "harm": 0.018,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "seen_risk": {
+      "success": 0.881,
+      "harm": 0.003,
+      "score": 107.5,
+      "aggression": 0.0
+    },
+    "novel_normal": {
+      "success": 0.898,
+      "harm": 0.0549,
+      "score": 139.2,
+      "aggression": 1.0
+    },
+    "novel_risk": {
+      "success": 0.771,
+      "harm": 0.0064,
+      "score": 94.0,
+      "aggression": 0.0
+    },
+    "_overall": {
+      "mean_success": 0.9,
+      "mean_score": 130.3,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0549,
+      "risk_violations": 1
+    }
+  },
+  "affordance_soft_population": {
+    "seen_normal": {
+      "success": 0.945,
+      "harm": 0.018,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "seen_risk": {
+      "success": 0.945,
+      "harm": 0.5987,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "novel_normal": {
+      "success": 0.898,
+      "harm": 0.0549,
+      "score": 139.2,
+      "aggression": 1.0
+    },
+    "novel_risk": {
+      "success": 0.887,
+      "harm": 0.8475,
+      "score": 137.5,
+      "aggression": 1.0
+    },
+    "_overall": {
+      "mean_success": 0.928,
+      "mean_score": 143.9,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.887,
+      "max_group_harm": 0.8475,
+      "risk_violations": 3
+    }
+  },
+  "affordance_ethics_gate": {
+    "seen_normal": {
+      "success": 0.945,
+      "harm": 0.018,
+      "score": 146.5,
+      "aggression": 1.0
+    },
+    "seen_risk": {
+      "success": 0.881,
+      "harm": 0.003,
+      "score": 107.5,
+      "aggression": 0.0
+    },
+    "novel_normal": {
+      "success": 0.791,
+      "harm": 0.0017,
+      "score": 96.5,
+      "aggression": 0.0
+    },
+    "novel_risk": {
+      "success": 0.771,
+      "harm": 0.0064,
+      "score": 94.0,
+      "aggression": 0.0
+    },
+    "_overall": {
+      "mean_success": 0.878,
+      "mean_score": 121.4,
+      "novelty_gap": 0.154,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.018,
+      "risk_violations": 0
+    }
+  },
+  "_sweep_alpha": {
+    "0.005": {
+      "mean_success": 0.878,
+      "mean_score": 121.4,
+      "novelty_gap": 0.154,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.018,
+      "risk_violations": 0
+    },
+    "0.01": {
+      "mean_success": 0.878,
+      "mean_score": 121.4,
+      "novelty_gap": 0.154,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.018,
+      "risk_violations": 0
+    },
+    "0.02": {
+      "mean_success": 0.878,
+      "mean_score": 121.4,
+      "novelty_gap": 0.154,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.018,
+      "risk_violations": 0
+    },
+    "0.05": {
+      "mean_success": 0.9,
+      "mean_score": 130.3,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0549,
+      "risk_violations": 1
+    },
+    "0.1": {
+      "mean_success": 0.9,
+      "mean_score": 130.3,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0549,
+      "risk_violations": 1
+    }
+  },
+  "_sweep_lambda": {
+    "0": {
+      "mean_success": 0.928,
+      "mean_score": 143.9,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.887,
+      "max_group_harm": 0.8475,
+      "risk_violations": 3
+    },
+    "100": {
+      "mean_success": 0.908,
+      "mean_score": 134.4,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.1824,
+      "risk_violations": 2
+    },
+    "200": {
+      "mean_success": 0.9,
+      "mean_score": 130.3,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0549,
+      "risk_violations": 1
+    },
+    "400": {
+      "mean_success": 0.9,
+      "mean_score": 130.3,
+      "novelty_gap": 0.047,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0549,
+      "risk_violations": 1
+    },
+    "800": {
+      "mean_success": 0.891,
+      "mean_score": 125.9,
+      "novelty_gap": 0.092,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.0209,
+      "risk_violations": 1
+    },
+    "1600": {
+      "mean_success": 0.878,
+      "mean_score": 121.4,
+      "novelty_gap": 0.154,
+      "worst_group_success": 0.771,
+      "max_group_harm": 0.018,
+      "risk_violations": 0
+    }
+  },
+  "_meta": {
+    "kind": "synthetic object-class calibration; not robot data",
+    "n_objects": 24,
+    "seen": 16,
+    "novel": 8,
+    "alpha_harm": 0.02,
+    "seed": 11
+  }
+}

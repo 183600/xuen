@@ -1,0 +1,838 @@
+{
+  "source": "exp/r16_task_profile.json + exp/r16_leaderboard_stats.json + exp/lb_20261102.json",
+  "note": "leaderboard values are a generated fixture; priority is a heuristic, not a validated utility",
+  "n_tasks": 32,
+  "n_with_documented_object_gap": 23,
+  "n_with_human_interference_note": 3,
+  "n_by_difficulty": {
+    "Easy": 12,
+    "Medium": 12,
+    "Hard": 8
+  },
+  "tasks": [
+    {
+      "id": "T26",
+      "task": "PlugInEthernet",
+      "difficulty": "Medium",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1009,
+      "unseen_gap": true,
+      "unseen": "不同的网线跟端口",
+      "perturbation_notes": [
+        "把网线移开",
+        "把插口移开"
+      ],
+      "human_interference_note": false,
+      "best_success": 27.54,
+      "mean_success": 17.73,
+      "best_step": 36.16,
+      "mean_step": 23.73,
+      "n_models": 8,
+      "priority_success": 144.92,
+      "priority_step": 127.68
+    },
+    {
+      "id": "T12",
+      "task": "Unlock",
+      "difficulty": "Hard",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 970,
+      "unseen_gap": true,
+      "unseen": "缺少一把绿色锁",
+      "perturbation_notes": [
+        "锁向左移动",
+        "中途把锁拿走"
+      ],
+      "human_interference_note": true,
+      "best_success": 28.17,
+      "mean_success": 20.11,
+      "best_step": 37.81,
+      "mean_step": 26.94,
+      "n_models": 8,
+      "priority_success": 143.66,
+      "priority_step": 124.38
+    },
+    {
+      "id": "T11",
+      "task": "PickOutBatteries",
+      "difficulty": "Medium",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 993,
+      "unseen_gap": true,
+      "unseen": "缺少黑色电池",
+      "perturbation_notes": [
+        "抓取电池之前动底座",
+        "抓电池之后动绿色盒子"
+      ],
+      "human_interference_note": false,
+      "best_success": 30.03,
+      "mean_success": 23.31,
+      "best_step": 39.89,
+      "mean_step": 31.25,
+      "n_models": 8,
+      "priority_success": 139.94,
+      "priority_step": 120.22
+    },
+    {
+      "id": "T14",
+      "task": "PourOutMedicine",
+      "difficulty": "Hard",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 979,
+      "unseen_gap": true,
+      "unseen": "缺少不同颜色的药品收纳盒",
+      "perturbation_notes": [
+        "拧开盖子之后拧动回来",
+        "把瓶子向左移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 30.09,
+      "mean_success": 22.73,
+      "best_step": 41.07,
+      "mean_step": 30.5,
+      "n_models": 8,
+      "priority_success": 139.82,
+      "priority_step": 117.86
+    },
+    {
+      "id": "T18",
+      "task": "PackBag",
+      "difficulty": "Medium",
+      "rubric_steps": 4,
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "episodes": 1067,
+      "unseen_gap": true,
+      "unseen": "缺少其他颜色的文具盒",
+      "perturbation_notes": [
+        "把文具盒向上移动",
+        "把书包向左移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 31.38,
+      "mean_success": 25.28,
+      "best_step": 42.33,
+      "mean_step": 33.91,
+      "n_models": 8,
+      "priority_success": 137.24,
+      "priority_step": 115.34
+    },
+    {
+      "id": "T28",
+      "task": "StoreEarphones",
+      "difficulty": "Hard",
+      "rubric_steps": 4,
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "episodes": 982,
+      "unseen_gap": true,
+      "unseen": "缺少不同的收纳盒以及耳机托盘",
+      "perturbation_notes": [
+        "把黄色盒子的耳机向前移动",
+        "把红盒子的耳机向右移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 32.3,
+      "mean_success": 27.88,
+      "best_step": 42.9,
+      "mean_step": 37.42,
+      "n_models": 8,
+      "priority_success": 135.4,
+      "priority_step": 114.2
+    },
+    {
+      "id": "T02",
+      "task": "FruitCollection",
+      "difficulty": "Easy",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1050,
+      "unseen_gap": true,
+      "unseen": "缺少不同果篮",
+      "perturbation_notes": [
+        "水果向前",
+        "水果向右"
+      ],
+      "human_interference_note": false,
+      "best_success": 32.38,
+      "mean_success": 27.79,
+      "best_step": 43.68,
+      "mean_step": 37.3,
+      "n_models": 8,
+      "priority_success": 135.24,
+      "priority_step": 112.64
+    },
+    {
+      "id": "T05",
+      "task": "DisconnectEthernet",
+      "difficulty": "Hard",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1025,
+      "unseen_gap": true,
+      "unseen": "缺少其他颜色的短网线",
+      "perturbation_notes": [
+        "把网线另一头也插上",
+        "移动道具手握网口"
+      ],
+      "human_interference_note": true,
+      "best_success": 33.44,
+      "mean_success": 26.81,
+      "best_step": 44.41,
+      "mean_step": 35.99,
+      "n_models": 8,
+      "priority_success": 133.12,
+      "priority_step": 111.18
+    },
+    {
+      "id": "T17",
+      "task": "OrganizeStationery",
+      "difficulty": "Easy",
+      "rubric_steps": 5,
+      "rubric_weights": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "episodes": 1028,
+      "unseen_gap": true,
+      "unseen": "缺少黑色的文件盒",
+      "perturbation_notes": [
+        "荧光笔向后",
+        "笔盒合上之后手动打开"
+      ],
+      "human_interference_note": true,
+      "best_success": 33.06,
+      "mean_success": 22.47,
+      "best_step": 45.12,
+      "mean_step": 30.1,
+      "n_models": 8,
+      "priority_success": 133.88,
+      "priority_step": 109.76
+    },
+    {
+      "id": "T20",
+      "task": "PaperCupStacking",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 969,
+      "unseen_gap": true,
+      "unseen": "缺少不同类型纸杯",
+      "perturbation_notes": [
+        "把左边的纸杯向上移动",
+        "把右上角的纸杯向右移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 35.28,
+      "mean_success": 28.05,
+      "best_step": 46.33,
+      "mean_step": 37.57,
+      "n_models": 8,
+      "priority_success": 129.44,
+      "priority_step": 107.34
+    },
+    {
+      "id": "T22",
+      "task": "SpellRobot",
+      "difficulty": "Medium",
+      "rubric_steps": 4,
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "episodes": 1018,
+      "unseen_gap": true,
+      "unseen": "缺少不同颜色的字母",
+      "perturbation_notes": [
+        "字母上移动",
+        "字母向左边移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 33.99,
+      "mean_success": 21.82,
+      "best_step": 46.39,
+      "mean_step": 29.31,
+      "n_models": 8,
+      "priority_success": 132.02,
+      "priority_step": 107.22
+    },
+    {
+      "id": "T23",
+      "task": "StorePaddle",
+      "difficulty": "Medium",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1047,
+      "unseen_gap": true,
+      "unseen": "缺少不同的球拍套装",
+      "perturbation_notes": [
+        "球拍向前移动",
+        "球拍向左移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 34.23,
+      "mean_success": 25.57,
+      "best_step": 46.5,
+      "mean_step": 34.35,
+      "n_models": 8,
+      "priority_success": 131.54,
+      "priority_step": 107.0
+    },
+    {
+      "id": "T13",
+      "task": "ArrangeTestTubes",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1004,
+      "unseen_gap": true,
+      "unseen": "不同类型的试管",
+      "perturbation_notes": [
+        "试管向右移动",
+        "试管向左移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 34.38,
+      "mean_success": 24.15,
+      "best_step": 46.93,
+      "mean_step": 32.38,
+      "n_models": 8,
+      "priority_success": 131.24,
+      "priority_step": 106.14
+    },
+    {
+      "id": "T21",
+      "task": "ArrangePlates",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1069,
+      "unseen_gap": true,
+      "unseen": "缺少不同类型的盘子",
+      "perturbation_notes": [
+        "把盘子向前移动",
+        "把架子向左边移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 34.36,
+      "mean_success": 25.9,
+      "best_step": 47.1,
+      "mean_step": 34.76,
+      "n_models": 8,
+      "priority_success": 131.28,
+      "priority_step": 105.8
+    },
+    {
+      "id": "T25",
+      "task": "StoreCups",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1025,
+      "unseen_gap": true,
+      "unseen": "缺少不同颜色的纸杯",
+      "perturbation_notes": [
+        "把纸杯向左移动",
+        "放了第一个马上放第二个挪一下底座"
+      ],
+      "human_interference_note": false,
+      "best_success": 35.48,
+      "mean_success": 30.32,
+      "best_step": 47.21,
+      "mean_step": 40.65,
+      "n_models": 8,
+      "priority_success": 129.04,
+      "priority_step": 105.58
+    },
+    {
+      "id": "T27",
+      "task": "StackBowls",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 979,
+      "unseen_gap": true,
+      "unseen": "除了塑料类型",
+      "perturbation_notes": [
+        "把粉色碗向下移动",
+        "叠了第二个之后拿下第二个"
+      ],
+      "human_interference_note": false,
+      "best_success": 36.28,
+      "mean_success": 24.11,
+      "best_step": 48.19,
+      "mean_step": 32.34,
+      "n_models": 8,
+      "priority_success": 127.44,
+      "priority_step": 103.62
+    },
+    {
+      "id": "T04",
+      "task": "FruitSorting",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1032,
+      "unseen_gap": true,
+      "unseen": "缺少其他款式的盘子",
+      "perturbation_notes": [
+        "橘色盘子向左移动",
+        "把梨往右移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 35.5,
+      "mean_success": 27.01,
+      "best_step": 48.22,
+      "mean_step": 36.23,
+      "n_models": 8,
+      "priority_success": 129.0,
+      "priority_step": 103.56
+    },
+    {
+      "id": "T03",
+      "task": "PackDoll",
+      "difficulty": "Easy",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1060,
+      "unseen_gap": true,
+      "unseen": "缺少绿色和紫色娃娃",
+      "perturbation_notes": [
+        "娃娃向前",
+        "娃娃向右"
+      ],
+      "human_interference_note": false,
+      "best_success": 37.01,
+      "mean_success": 26.14,
+      "best_step": 48.6,
+      "mean_step": 35.05,
+      "n_models": 8,
+      "priority_success": 125.98,
+      "priority_step": 102.8
+    },
+    {
+      "id": "T06",
+      "task": "ColorArrangement",
+      "difficulty": "Easy",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1533,
+      "unseen_gap": true,
+      "unseen": "只有塑料积木",
+      "perturbation_notes": [
+        "绿色积木向右移动",
+        "红色积木向前移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 37.32,
+      "mean_success": 27.12,
+      "best_step": 49.01,
+      "mean_step": 36.3,
+      "n_models": 8,
+      "priority_success": 125.36,
+      "priority_step": 101.98
+    },
+    {
+      "id": "T24",
+      "task": "ConveyorSorting",
+      "difficulty": "Medium",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1049,
+      "unseen_gap": true,
+      "unseen": "缺少不同的零食",
+      "perturbation_notes": [
+        "可乐快到了然后放回传送带起点",
+        "薯片快到了然后放回传送带起点"
+      ],
+      "human_interference_note": false,
+      "best_success": 37.55,
+      "mean_success": 29.12,
+      "best_step": 49.01,
+      "mean_step": 38.99,
+      "n_models": 8,
+      "priority_success": 124.9,
+      "priority_step": 101.98
+    },
+    {
+      "id": "T10",
+      "task": "PlugCharger",
+      "difficulty": "Hard",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1022,
+      "unseen_gap": true,
+      "unseen": "缺少其他颜色的插排",
+      "perturbation_notes": [
+        "抓插头前进行移动",
+        "将插头拔起"
+      ],
+      "human_interference_note": false,
+      "best_success": 38.17,
+      "mean_success": 25.57,
+      "best_step": 52.1,
+      "mean_step": 34.33,
+      "n_models": 8,
+      "priority_success": 123.66,
+      "priority_step": 95.8
+    },
+    {
+      "id": "T01",
+      "task": "HangCup",
+      "difficulty": "Easy",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1043,
+      "unseen_gap": true,
+      "unseen": "缺少红色杯子和塑料架子",
+      "perturbation_notes": [
+        "杯子向后",
+        "杯子向右"
+      ],
+      "human_interference_note": false,
+      "best_success": 38.43,
+      "mean_success": 22.95,
+      "best_step": 52.2,
+      "mean_step": 30.81,
+      "n_models": 8,
+      "priority_success": 123.14,
+      "priority_step": 95.6
+    },
+    {
+      "id": "T07",
+      "task": "PlacePhotoFrame",
+      "difficulty": "Medium",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1041,
+      "unseen_gap": true,
+      "unseen": "只有一种相框",
+      "perturbation_notes": [
+        "相框向上移动",
+        "相框向上移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 42.0,
+      "mean_success": 27.98,
+      "best_step": 57.05,
+      "mean_step": 37.49,
+      "n_models": 8,
+      "priority_success": 116.0,
+      "priority_step": 85.9
+    },
+    {
+      "id": "T32",
+      "task": "SyringeWaterTransfer",
+      "difficulty": "Medium",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1034,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [],
+      "human_interference_note": false,
+      "best_success": 29.35,
+      "mean_success": 24.57,
+      "best_step": 39.39,
+      "mean_step": 32.94,
+      "n_models": 8,
+      "priority_success": 70.65,
+      "priority_step": 60.61
+    },
+    {
+      "id": "T09",
+      "task": "ToolboxStorage",
+      "difficulty": "Hard",
+      "rubric_steps": 4,
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "episodes": 1064,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "胶带向后移动",
+        "胶带向右移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 30.71,
+      "mean_success": 25.82,
+      "best_step": 40.33,
+      "mean_step": 34.6,
+      "n_models": 8,
+      "priority_success": 69.29,
+      "priority_step": 59.67
+    },
+    {
+      "id": "T31",
+      "task": "OrganizePencilCase",
+      "difficulty": "Medium",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1024,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [],
+      "human_interference_note": false,
+      "best_success": 30.3,
+      "mean_success": 24.08,
+      "best_step": 41.16,
+      "mean_step": 32.38,
+      "n_models": 8,
+      "priority_success": 69.7,
+      "priority_step": 58.84
+    },
+    {
+      "id": "T29",
+      "task": "PackPhone",
+      "difficulty": "Hard",
+      "rubric_steps": 3,
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "episodes": 1016,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "手机向上移动",
+        "外壳盖移开"
+      ],
+      "human_interference_note": false,
+      "best_success": 31.86,
+      "mean_success": 23.88,
+      "best_step": 43.28,
+      "mean_step": 32.07,
+      "n_models": 8,
+      "priority_success": 68.14,
+      "priority_step": 56.72
+    },
+    {
+      "id": "T08",
+      "task": "OrganizeBookshelf",
+      "difficulty": "Easy",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1027,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "抓到书后挪动架子",
+        "书向右"
+      ],
+      "human_interference_note": false,
+      "best_success": 33.02,
+      "mean_success": 26.62,
+      "best_step": 43.36,
+      "mean_step": 35.66,
+      "n_models": 8,
+      "priority_success": 66.98,
+      "priority_step": 56.64
+    },
+    {
+      "id": "T16",
+      "task": "FoldTowel",
+      "difficulty": "Hard",
+      "rubric_steps": 5,
+      "rubric_weights": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "episodes": 1053,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "将叠完的毛巾翻开",
+        "将叠完的毛巾翻开"
+      ],
+      "human_interference_note": false,
+      "best_success": 32.15,
+      "mean_success": 24.08,
+      "best_step": 43.88,
+      "mean_step": 32.31,
+      "n_models": 8,
+      "priority_success": 67.85,
+      "priority_step": 56.12
+    },
+    {
+      "id": "T19",
+      "task": "ZipUp",
+      "difficulty": "Medium",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1006,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "把包向左边移动",
+        "拉上拉链之后拉开"
+      ],
+      "human_interference_note": false,
+      "best_success": 33.42,
+      "mean_success": 23.39,
+      "best_step": 43.88,
+      "mean_step": 31.32,
+      "n_models": 8,
+      "priority_success": 66.58,
+      "priority_step": 56.12
+    },
+    {
+      "id": "T15",
+      "task": "OrganizeTools",
+      "difficulty": "Medium",
+      "rubric_steps": 4,
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "episodes": 1032,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "钳子向左移动",
+        "螺丝刀向右移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 37.2,
+      "mean_success": 25.94,
+      "best_step": 48.85,
+      "mean_step": 34.74,
+      "n_models": 8,
+      "priority_success": 62.8,
+      "priority_step": 51.15
+    },
+    {
+      "id": "T30",
+      "task": "RemovePinnedNote",
+      "difficulty": "Medium",
+      "rubric_steps": 2,
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "episodes": 1026,
+      "unseen_gap": false,
+      "unseen": null,
+      "perturbation_notes": [
+        "把黄色钉子移到中间",
+        "把绿色钉子向下移动"
+      ],
+      "human_interference_note": false,
+      "best_success": 40.28,
+      "mean_success": 27.3,
+      "best_step": 54.98,
+      "mean_step": 36.68,
+      "n_models": 8,
+      "priority_success": 59.72,
+      "priority_step": 45.02
+    }
+  ]
+}

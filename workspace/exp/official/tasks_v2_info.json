@@ -1,0 +1,1959 @@
+{
+ "hang_the_cup": {
+  "task_id": "T01",
+  "slug": "hang_the_cup",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "挂杯子",
+  "en_name": "HangCup",
+  "zh_desc": "把杯子挂到杯架的标记位置上。",
+  "en_desc": "Hang the cup on the marked spot on the cup rack.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住杯把（50分）\n2. 挂到杯架标记位置上（50分）",
+  "scoring_points_en": "1. Grab the cup handle (50 pts)\n2. Hang it on the marked spot on the rack (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少红色杯子和塑料架子",
+   "human_1_note": "杯子向后",
+   "human_4_note": "杯子向右"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0052",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0057",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0073",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0125",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0173",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住杯把",
+    "en": "Grab the cup handle",
+    "score": 50
+   },
+   {
+    "zh": "挂到杯架标记位置上",
+    "en": "Hang it on the marked spot on the rack",
+    "score": 50
+   }
+  ]
+ },
+ "fruit_basket_collection": {
+  "task_id": "T02",
+  "slug": "fruit_basket_collection",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "水果收集",
+  "en_name": "FruitCollection",
+  "zh_desc": "把所有水果收进果篮里。",
+  "en_desc": "Put all the fruits into the fruit basket.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住水果1放入果篮（50分）\n2. 抓住水果2放入果篮（50分）",
+  "scoring_points_en": "1. Grab fruit 1 and put it into the basket (50 pts)\n2. Grab fruit 2 and put it into the basket (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同果篮",
+   "human_1_note": "水果向前",
+   "human_4_note": "水果向右"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0005",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0006",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0007",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0008",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0009",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住水果1放入果篮",
+    "en": "Grab fruit 1 and put it into the basket",
+    "score": 50
+   },
+   {
+    "zh": "抓住水果2放入果篮",
+    "en": "Grab fruit 2 and put it into the basket",
+    "score": 50
+   }
+  ]
+ },
+ "pack_the_doll": {
+  "task_id": "T03",
+  "slug": "pack_the_doll",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "装娃娃",
+  "en_name": "PackDoll",
+  "zh_desc": "将所有娃娃装进袋子后，将袋子摆正在面前。",
+  "en_desc": "Pack all the dolls into the bag, then place the bag upright in front of you.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 将所有娃娃装进袋子。（50分）\n2. 将袋子摆正在面前。（50分）",
+  "scoring_points_en": "1. Pack all the dolls into the bag. (50 pts)\n2. Place the bag upright in front of you. (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少绿色和紫色娃娃",
+   "human_1_note": "娃娃向前",
+   "human_4_note": "娃娃向右"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0031",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0051",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0055",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0057",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0293",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "将所有娃娃装进袋子。",
+    "en": "Pack all the dolls into the bag.",
+    "score": 50
+   },
+   {
+    "zh": "将袋子摆正在面前。",
+    "en": "Place the bag upright in front of you.",
+    "score": 50
+   }
+  ]
+ },
+ "sort_fruit": {
+  "task_id": "T04",
+  "slug": "sort_fruit",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "水果分类",
+  "en_name": "FruitSorting",
+  "zh_desc": "把水果放进颜色对应的盘子里。",
+  "en_desc": "Place each fruit onto the plate with the matching color.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住水果1放入对应颜色的餐盘（30分）\n2. 抓住水果2放入对应颜色的餐盘（30分）\n3. 抓住水果3放入对应颜色的餐盘（40分）",
+  "scoring_points_en": "1. Grab fruit 1 and place it onto the plate with the matching color (30 pts)\n2. Grab fruit 2 and place it onto the plate with the matching color (30 pts)\n3. Grab fruit 3 and place it onto the plate with the matching color (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少其他款式的盘子",
+   "human_1_note": "橘色盘子向左移动移动",
+   "human_4_note": "把梨往右移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0048",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0119",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0151",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0152",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0270",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住水果1放入对应颜色的餐盘",
+    "en": "Grab fruit 1 and place it onto the plate with the matching color",
+    "score": 30
+   },
+   {
+    "zh": "抓住水果2放入对应颜色的餐盘",
+    "en": "Grab fruit 2 and place it onto the plate with the matching color",
+    "score": 30
+   },
+   {
+    "zh": "抓住水果3放入对应颜色的餐盘",
+    "en": "Grab fruit 3 and place it onto the plate with the matching color",
+    "score": 40
+   }
+  ]
+ },
+ "disconnect_ethernet": {
+  "task_id": "T05",
+  "slug": "disconnect_ethernet",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "拔网线",
+  "en_name": "DisconnectEthernet",
+  "zh_desc": "把网线从网口拔出来。",
+  "en_desc": "Unplug the Ethernet cable from the network port.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 夹住网口再夹住网线（50分）\n2. 拔出网线（50分）",
+  "scoring_points_en": "1. Hold the network port, then grip the Ethernet cable (50 pts)\n2. Unplug the Ethernet cable (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少其他颜色的短网线",
+   "human_1_note": "把网线另一头也插上",
+   "human_4_note": "移动道具手握网口"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0004",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0021",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0038",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0062",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0143",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "夹住网口再夹住网线",
+    "en": "Hold the network port, then grip the Ethernet cable",
+    "score": 50
+   },
+   {
+    "zh": "拔出网线",
+    "en": "Unplug the Ethernet cable",
+    "score": 50
+   }
+  ]
+ },
+ "color_arrangement": {
+  "task_id": "T06",
+  "slug": "color_arrangement",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "颜色排列",
+  "en_name": "ColorArrangement",
+  "zh_desc": "将积木按红色、绿色、黄色的顺序从右到左排列。",
+  "en_desc": "Arrange the blocks from right to left in the order: red, green, yellow.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 将红色积木放到最右侧位置（30分）\n2. 将绿色积木放到中间位置（30分）\n3. 将黄色积木放到最左侧位置（40分）",
+  "scoring_points_en": "1. Place the red block in the rightmost position (30 pts)\n2. Place the green block in the middle position (30 pts)\n3. Place the yellow block in the leftmost position (40 pts)",
+  "generalization": {
+   "unseen_object_3": "没有其他积木 只有塑料积木",
+   "human_1_note": "绿色积木向右移动",
+   "human_4_note": "红色积木向前移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0001",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0090",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0139",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0193",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0234",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "将红色积木放到最右侧位置",
+    "en": "Place the red block in the rightmost position",
+    "score": 30
+   },
+   {
+    "zh": "将绿色积木放到中间位置",
+    "en": "Place the green block in the middle position",
+    "score": 30
+   },
+   {
+    "zh": "将黄色积木放到最左侧位置",
+    "en": "Place the yellow block in the leftmost position",
+    "score": 40
+   }
+  ]
+ },
+ "place_photo_frames": {
+  "task_id": "T07",
+  "slug": "place_photo_frames",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "摆放相框",
+  "en_name": "PlacePhotoFrame",
+  "zh_desc": "把相框展开并将其摆放到桌子上。",
+  "en_desc": "Open the photo frame and place it on the table.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住相框（30分）\n2. 打开相框支架（30分）\n3. 摆正相框（40分）",
+  "scoring_points_en": "1. Grab the photo frame (30 pts)\n2. Open the frame stand (30 pts)\n3. Straighten the photo frame (40 pts)",
+  "generalization": {
+   "unseen_object_3": "只有一种相框",
+   "human_1_note": "相框向上移动",
+   "human_4_note": "相框向上移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0015",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0030",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0047",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0052",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0053",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住相框",
+    "en": "Grab the photo frame",
+    "score": 30
+   },
+   {
+    "zh": "打开相框支架",
+    "en": "Open the frame stand",
+    "score": 30
+   },
+   {
+    "zh": "摆正相框",
+    "en": "Straighten the photo frame",
+    "score": 40
+   }
+  ]
+ },
+ "organize_bookshelf": {
+  "task_id": "T08",
+  "slug": "organize_bookshelf",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "整理书架",
+  "en_name": "OrganizeBookshelf",
+  "zh_desc": "将最上面的书放到书架上。",
+  "en_desc": "Put the top book onto the bookshelf.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住书并拿起（50分）\n2. 放到书架上（50分）",
+  "scoring_points_en": "1. Grab the book and pick it up (50 pts)\n2. Place it on the bookshelf (50 pts)",
+  "generalization": {
+   "human_1_note": "抓到书后挪动架子",
+   "human_4_note": "书向右"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0002",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0039",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0117",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0119",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0210",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住书并拿起",
+    "en": "Grab the book and pick it up",
+    "score": 50
+   },
+   {
+    "zh": "放到书架上",
+    "en": "Place it on the bookshelf",
+    "score": 50
+   }
+  ]
+ },
+ "toolbox_storage": {
+  "task_id": "T09",
+  "slug": "toolbox_storage",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "工具箱收纳",
+  "en_name": "ToolboxStorage",
+  "zh_desc": "将桌面上所有工具收纳进工具箱，并锁上箱子。",
+  "en_desc": "Store all the tools on the table in the toolbox and lock the toolbox.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 完成2个工具的收纳（25分）\n2. 完成所有工具的收纳（25分）\n3. 盖上箱子盖（25分）\n4. 锁上箱子（25分）",
+  "scoring_points_en": "1. Store two tools in the toolbox. (25 pts)\n2. Store all the remaining tools in the toolbox. (25 pts)\n3. Close the toolbox lid. (25 pts)\n4. Lock the toolbox. (25 pts)",
+  "generalization": {
+   "human_1_note": "胶带向后移动",
+   "human_4_note": "胶带向右移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0004",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0006",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0033",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0138",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0145",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "完成2个工具的收纳",
+    "en": "Store two tools in the toolbox.",
+    "score": 25
+   },
+   {
+    "zh": "完成所有工具的收纳",
+    "en": "Store all the remaining tools in the toolbox.",
+    "score": 25
+   },
+   {
+    "zh": "盖上箱子盖",
+    "en": "Close the toolbox lid.",
+    "score": 25
+   },
+   {
+    "zh": "锁上箱子",
+    "en": "Lock the toolbox.",
+    "score": 25
+   }
+  ]
+ },
+ "plug_charger": {
+  "task_id": "T10",
+  "slug": "plug_charger",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "插插头",
+  "en_name": "PlugCharger",
+  "zh_desc": "摆正插线板，并将插头插入第一个插座孔。",
+  "en_desc": "Position the power strip properly and plug the plug into the first socket.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住插排（30分）\n2. 抓住插头（30分）\n3. 把插头插到插排中（40分）",
+  "scoring_points_en": "1. Grab the power strip (30 pts)\n2. Grab the plug (30 pts)\n3. Plug it into the power strip (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少其他颜色的插排",
+   "human_1_note": "抓插头前进行移动",
+   "human_4_note": "将插头拔起"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0001",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0021",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0049",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0053",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0081",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住插排",
+    "en": "Grab the power strip",
+    "score": 30
+   },
+   {
+    "zh": "抓住插头",
+    "en": "Grab the plug",
+    "score": 30
+   },
+   {
+    "zh": "把插头插到插排中",
+    "en": "Plug it into the power strip",
+    "score": 40
+   }
+  ]
+ },
+ "pick_out_battery": {
+  "task_id": "T11",
+  "slug": "pick_out_battery",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "挑出电池",
+  "en_name": "PickOutBatteries",
+  "zh_desc": "把电池从积木中挑出来，放到绿色盒子中。",
+  "en_desc": "Pick out the batteries from the blocks and place them into the green box.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 挑出电池1（不夹带积木）（30分）\n2. 挑出电池2（不夹带积木）（30分）\n3. 挑出电池3（不夹带积木）（40分）",
+  "scoring_points_en": "1. Pick out battery 1 (without grabbing any block) (30 pts)\n2. Pick out battery 2 (without grabbing any block) (30 pts)\n3. Pick out battery 3 (without grabbing any block) (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少黑色电池",
+   "human_1_note": "抓取电池之前动底座",
+   "human_4_note": "抓电池之后动绿色盒子"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0013",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0026",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0027",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0038",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0117",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "挑出电池1（不夹带积木）",
+    "en": "Pick out battery 1 (without grabbing any block)",
+    "score": 30
+   },
+   {
+    "zh": "挑出电池2（不夹带积木）",
+    "en": "Pick out battery 2 (without grabbing any block)",
+    "score": 30
+   },
+   {
+    "zh": "挑出电池3（不夹带积木）",
+    "en": "Pick out battery 3 (without grabbing any block)",
+    "score": 40
+   }
+  ]
+ },
+ "unlock": {
+  "task_id": "T12",
+  "slug": "unlock",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "开锁",
+  "en_name": "Unlock",
+  "zh_desc": "用钥匙把锁打开。",
+  "en_desc": "Unlock the lock using the key.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓起锁（30分）\n2. 拧动钥匙（30分）\n3. 拨动铁环（40分）",
+  "scoring_points_en": "1. Pick up the lock (30 pts)\n2. Turn the key (30 pts)\n3. Flip the metal ring (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少一把绿色锁",
+   "human_1_note": "锁向左移动",
+   "human_4_note": "中途把锁拿走"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0006",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0030",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0097",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0140",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0209",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓起锁",
+    "en": "Pick up the lock",
+    "score": 30
+   },
+   {
+    "zh": "拧动钥匙",
+    "en": "Turn the key",
+    "score": 30
+   },
+   {
+    "zh": "拨动铁环",
+    "en": "Flip the metal ring",
+    "score": 40
+   }
+  ]
+ },
+ "organize_test_cube": {
+  "task_id": "T13",
+  "slug": "organize_test_cube",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "整理试管",
+  "en_name": "ArrangeTestTubes",
+  "zh_desc": "把试管整齐地摆回试管架。",
+  "en_desc": "Place the test tubes neatly back into the test tube rack.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓起试管1放回架中指定位置（30分）\n2. 抓起试管2放回架中指定位置（30分）\n3. 抓起试管3放回架中指定位置（40分）",
+  "scoring_points_en": "1. Pick up test tube 1 and return it to its designated spot in the rack (30 pts)\n2. Pick up test tube 2 and return it to its designated spot in the rack (30 pts)\n3. Pick up test tube 3 and return it to its designated spot in the rack (40 pts)",
+  "generalization": {
+   "unseen_object_3": "不同类型的试管",
+   "human_1_note": "试管向右移动",
+   "human_4_note": "试管向左移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0060",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0100",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0139",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0145",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0235",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓起试管1放回架中指定位置",
+    "en": "Pick up test tube 1 and return it to its designated spot in the rack",
+    "score": 30
+   },
+   {
+    "zh": "抓起试管2放回架中指定位置",
+    "en": "Pick up test tube 2 and return it to its designated spot in the rack",
+    "score": 30
+   },
+   {
+    "zh": "抓起试管3放回架中指定位置",
+    "en": "Pick up test tube 3 and return it to its designated spot in the rack",
+    "score": 40
+   }
+  ]
+ },
+ "open_pill_bottle": {
+  "task_id": "T14",
+  "slug": "open_pill_bottle",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "倒出药品",
+  "en_name": "PourOutMedicine",
+  "zh_desc": "拧开瓶盖，把瓶子里的药倒进盒子里。",
+  "en_desc": "Unscrew the bottle cap and pour the medicine from the bottle into the container.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 打开药瓶盖（50分）\n2. 倒出药品（50分）",
+  "scoring_points_en": "1. Open the pill bottle cap (50 pts)\n2. Pour out the medicine (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同颜色的药品收纳盒",
+   "human_1_note": "拧开盖子之后拧动回来",
+   "human_4_note": "把瓶子向左移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0010",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0063",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0076",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0244",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0283",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "打开药瓶盖",
+    "en": "Open the pill bottle cap",
+    "score": 50
+   },
+   {
+    "zh": "倒出药品",
+    "en": "Pour out the medicine",
+    "score": 50
+   }
+  ]
+ },
+ "organize_tools": {
+  "task_id": "T15",
+  "slug": "organize_tools",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "整理工具",
+  "en_name": "OrganizeTools",
+  "zh_desc": "将工具从右到左依次放到工具架上。",
+  "en_desc": "Place the tools onto the tool rack from right to left.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住工具1放回架中（25分）\n2. 抓住工具2放回架中（25分）\n3. 抓住工具3放回架中（25分）\n4. 抓住工具4放回架中（25分）",
+  "scoring_points_en": "1. Grab tool 1 and return it to the rack (25 pts)\n2. Grab tool 2 and return it to the rack (25 pts)\n3. Grab tool 3 and return it to the rack (25 pts)\n4. Grab tool 4 and return it to the rack (25 pts)",
+  "generalization": {
+   "human_1_note": "钳子向左移动",
+   "human_4_note": "螺丝刀向右移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0026",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0079",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0112",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0138",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0145",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住工具1放回架中",
+    "en": "Grab tool 1 and return it to the rack",
+    "score": 25
+   },
+   {
+    "zh": "抓住工具2放回架中",
+    "en": "Grab tool 2 and return it to the rack",
+    "score": 25
+   },
+   {
+    "zh": "抓住工具3放回架中",
+    "en": "Grab tool 3 and return it to the rack",
+    "score": 25
+   },
+   {
+    "zh": "抓住工具4放回架中",
+    "en": "Grab tool 4 and return it to the rack",
+    "score": 25
+   }
+  ]
+ },
+ "fold_towel": {
+  "task_id": "T16",
+  "slug": "fold_towel",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "叠毛巾",
+  "en_name": "FoldTowel",
+  "zh_desc": "将毛巾叠整齐并放到一旁。",
+  "en_desc": "Fold the towel neatly and place it aside.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 挥正毛巾（20分）\n2. 上下对折一次（20分）\n3. 抓住左边对折一次（20分）\n4. 抓住右边对折一次（20分）\n5. 对折后放到旁边（20分）",
+  "scoring_points_en": "1. Straighten the towel (20 pts)\n2. Fold it in half top to bottom once (20 pts)\n3. Grab the left side and fold once (20 pts)\n4. Grab the right side and fold once (20 pts)\n5. Fold and set it aside (20 pts)",
+  "generalization": {
+   "human_1_note": "将叠完的毛巾翻开",
+   "human_4_note": "将叠完的毛巾翻开"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0008",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0102",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0144",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0236",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0257",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "挥正毛巾",
+    "en": "Straighten the towel",
+    "score": 20
+   },
+   {
+    "zh": "上下对折一次",
+    "en": "Fold it in half top to bottom once",
+    "score": 20
+   },
+   {
+    "zh": "抓住左边对折一次",
+    "en": "Grab the left side and fold once",
+    "score": 20
+   },
+   {
+    "zh": "抓住右边对折一次",
+    "en": "Grab the right side and fold once",
+    "score": 20
+   },
+   {
+    "zh": "对折后放到旁边",
+    "en": "Fold and set it aside",
+    "score": 20
+   }
+  ]
+ },
+ "organize_stationery": {
+  "task_id": "T17",
+  "slug": "organize_stationery",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "整理文具",
+  "en_name": "OrganizeStationery",
+  "zh_desc": "把文具装进文具盒里。",
+  "en_desc": "Put the stationery into the pencil case.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 摆正文具盒（20分）\n2. 放入文具1到文具盒中（20分）\n3. 放入文具2到文具盒中（20分）\n4. 放入文具3到文具盒中（20分）\n5. 盖上文具盒（20分）",
+  "scoring_points_en": "1. Straighten the pencil case (20 pts)\n2. Put stationery 1 into the case (20 pts)\n3. Put stationery 2 into the case (20 pts)\n4. Put stationery 3 into the case (20 pts)\n5. Close the pencil case (20 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少黑色的文件盒",
+   "human_1_note": "荧光笔向后",
+   "human_4_note": "笔盒合上之后手动打开"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0011",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0014",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0105",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0194",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0199",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "摆正文具盒",
+    "en": "Straighten the pencil case",
+    "score": 20
+   },
+   {
+    "zh": "放入文具1到文具盒中",
+    "en": "Put stationery 1 into the case",
+    "score": 20
+   },
+   {
+    "zh": "放入文具2到文具盒中",
+    "en": "Put stationery 2 into the case",
+    "score": 20
+   },
+   {
+    "zh": "放入文具3到文具盒中",
+    "en": "Put stationery 3 into the case",
+    "score": 20
+   },
+   {
+    "zh": "盖上文具盒",
+    "en": "Close the pencil case",
+    "score": 20
+   }
+  ]
+ },
+ "pack_bag": {
+  "task_id": "T18",
+  "slug": "pack_bag",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "收拾书包",
+  "en_name": "PackBag",
+  "zh_desc": "把文具盒放进书包并拉上拉链。",
+  "en_desc": "Put the pencil case into the backpack and zip it up.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住文具盒（25分）\n2. 抓住书包并拉过来（25分）\n3. 把文具盒放入书包（25分）\n4. 拉上书包拉链（25分）",
+  "scoring_points_en": "1. Grab the pencil case (25 pts)\n2. Grab the backpack and pull it over (25 pts)\n3. Put the pencil case into the backpack (25 pts)\n4. Zip up the backpack (25 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少其他颜色的文具盒",
+   "human_1_note": "把文具盒向上移动",
+   "human_4_note": "把书包向左移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0001",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0123",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0210",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0279",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0293",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住文具盒",
+    "en": "Grab the pencil case",
+    "score": 25
+   },
+   {
+    "zh": "抓住书包并拉过来",
+    "en": "Grab the backpack and pull it over",
+    "score": 25
+   },
+   {
+    "zh": "把文具盒放入书包",
+    "en": "Put the pencil case into the backpack",
+    "score": 25
+   },
+   {
+    "zh": "拉上书包拉链",
+    "en": "Zip up the backpack",
+    "score": 25
+   }
+  ]
+ },
+ "zip_up": {
+  "task_id": "T19",
+  "slug": "zip_up",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "拉上拉链",
+  "en_name": "ZipUp",
+  "zh_desc": "摆正收纳包并拉上拉链。",
+  "en_desc": "Straighten the storage pouch and zip it up.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 摆正收纳包（50分）\n2. 拉上收纳包拉链（50分）",
+  "scoring_points_en": "1. Straighten the pouch (50 pts)\n2. Zip up the pouch (50 pts)",
+  "generalization": {
+   "human_1_note": "把包向左边移动",
+   "human_4_note": "拉上拉链之后拉开"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0026",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0050",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0100",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0149",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0164",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "摆正收纳包",
+    "en": "Straighten the pouch",
+    "score": 50
+   },
+   {
+    "zh": "拉上收纳包拉链",
+    "en": "Zip up the pouch",
+    "score": 50
+   }
+  ]
+ },
+ "paper_cup_stacking": {
+  "task_id": "T20",
+  "slug": "paper_cup_stacking",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "纸杯堆叠",
+  "en_name": "PaperCupStacking",
+  "zh_desc": "将纸杯堆叠在面前，下层两个、上层一个。",
+  "en_desc": "Stack the paper cups in front of you with two on the bottom and one on top.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 把纸杯1放到中间（30分）\n2. 把纸杯2放到纸杯1的旁边（30分）\n3. 把纸杯3放到纸杯1和2的上边（40分）",
+  "scoring_points_en": "1. Place paper cup 1 in the middle (30 pts)\n2. Place paper cup 2 next to cup 1 (30 pts)\n3. Place paper cup 3 on top of cups 1 and 2 (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同类型纸杯",
+   "human_1_note": "把左边的纸杯向上移动",
+   "human_4_note": "把右上角的纸杯向右移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0055",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0297",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0303",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0398",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0428",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "把纸杯1放到中间",
+    "en": "Place paper cup 1 in the middle",
+    "score": 30
+   },
+   {
+    "zh": "把纸杯2放到纸杯1的旁边",
+    "en": "Place paper cup 2 next to cup 1",
+    "score": 30
+   },
+   {
+    "zh": "把纸杯3放到纸杯1和2的上边",
+    "en": "Place paper cup 3 on top of cups 1 and 2",
+    "score": 40
+   }
+  ]
+ },
+ "clear_plates": {
+  "task_id": "T21",
+  "slug": "clear_plates",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "餐盘排列",
+  "en_name": "ArrangePlates",
+  "zh_desc": "将盘子按红色、绿色、蓝色的顺序，从右向左放到架子上。",
+  "en_desc": "Place the plates on the rack from right to left in the order of red, green, and blue.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 把餐盘1放入架中（30分）\n2. 把餐盘2放入架中（30分）\n3. 把餐盘3放入架中（40分）",
+  "scoring_points_en": "1. Place plate 1 into the rack (30 pts)\n2. Place plate 2 into the rack (30 pts)\n3. Place plate 3 into the rack (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同类型的盘子",
+   "human_1_note": "把盘子向前移动",
+   "human_4_note": "把架子向左边移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0200",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0202",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0320",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0325",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0392",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "把餐盘1放入架中",
+    "en": "Place plate 1 into the rack",
+    "score": 30
+   },
+   {
+    "zh": "把餐盘2放入架中",
+    "en": "Place plate 2 into the rack",
+    "score": 30
+   },
+   {
+    "zh": "把餐盘3放入架中",
+    "en": "Place plate 3 into the rack",
+    "score": 40
+   }
+  ]
+ },
+ "spell_robot": {
+  "task_id": "T22",
+  "slug": "spell_robot",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "字母拼写",
+  "en_name": "SpellRobot",
+  "zh_desc": "将字母方块依次摆放，拼出 robot。",
+  "en_desc": "Arrange the letter blocks to spell \"robot\".",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住字母拼写板（25分）\n2. 把字母 b 放到拼板中（25分）\n3. 把字母 o 放到拼板中（25分）\n4. 把字母 t 放到拼板中（25分）",
+  "scoring_points_en": "1. Grab the spelling board (25 pts)\n2. Place letter b onto the board (25 pts)\n3. Place letter o onto the board (25 pts)\n4. Place letter t onto the board (25 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同颜色的字母",
+   "human_1_note": "字母上移动",
+   "human_4_note": "字母向左边移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0001",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0066",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0112",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0113",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0158",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住字母拼写板",
+    "en": "Grab the spelling board",
+    "score": 25
+   },
+   {
+    "zh": "把字母 b 放到拼板中",
+    "en": "Place letter b onto the board",
+    "score": 25
+   },
+   {
+    "zh": "把字母 o 放到拼板中",
+    "en": "Place letter o onto the board",
+    "score": 25
+   },
+   {
+    "zh": "把字母 t 放到拼板中",
+    "en": "Place letter t onto the board",
+    "score": 25
+   }
+  ]
+ },
+ "store_racket": {
+  "task_id": "T23",
+  "slug": "store_racket",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "球拍收纳",
+  "en_name": "StorePaddle",
+  "zh_desc": "将乒乓球拍放入球拍套并拉上拉链。",
+  "en_desc": "Put the table tennis paddle into its case and zip it up.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 把球拍放入球拍套中（50分）\n2. 拉上球拍套的拉链（50分）",
+  "scoring_points_en": "1. Put the paddle into the case (50 pts)\n2. Zip up the paddle case (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同的球拍套装",
+   "human_1_note": "球拍向前移动",
+   "human_4_note": "球拍向左移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0006",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0082",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0125",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0138",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0160",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "把球拍放入球拍套中",
+    "en": "Put the paddle into the case",
+    "score": 50
+   },
+   {
+    "zh": "拉上球拍套的拉链",
+    "en": "Zip up the paddle case",
+    "score": 50
+   }
+  ]
+ },
+ "sort_food_conveyor": {
+  "task_id": "T24",
+  "slug": "sort_food_conveyor",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "传送带分拣",
+  "en_name": "ConveyorSorting",
+  "zh_desc": "拿起传送带上移动的食物，并按类别分类放到右侧架子上。",
+  "en_desc": "Pick up the food items moving on the conveyor belt and sort them onto the rack on the right by category.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住传送带上的食品（50分）\n2. 将食品放到架子上对应类别的位置（50分）",
+  "scoring_points_en": "1. Grab the food item on the conveyor belt (50 pts)\n2. Place it at the position corresponding to its category on the rack (50 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同的零食",
+   "human_1_note": "可乐快到了然后放回传送带起点",
+   "human_4_note": "薯片快到了然后放回传送带起点"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0039",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0137",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0170",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0180",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0316",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住传送带上的食品",
+    "en": "Grab the food item on the conveyor belt",
+    "score": 50
+   },
+   {
+    "zh": "将食品放到架子上对应类别的位置",
+    "en": "Place it at the position corresponding to its category on the rack",
+    "score": 50
+   }
+  ]
+ },
+ "stack_cups": {
+  "task_id": "T25",
+  "slug": "stack_cups",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "整理纸杯",
+  "en_name": "StoreCups",
+  "zh_desc": "把桌上的纸杯依次收纳到杯架中。",
+  "en_desc": "Place the paper cups on the table into the cup rack one by one.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 把纸杯1放入架中（30分）\n2. 把纸杯2放入架中（30分）\n3. 把纸杯3放入架中（40分）",
+  "scoring_points_en": "1. Place paper cup 1 into the rack (30 pts)\n2. Place paper cup 2 into the rack (30 pts)\n3. Place paper cup 3 into the rack (40 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同颜色的纸杯",
+   "human_1_note": "把纸杯向左移动",
+   "human_4_note": "放了第一个马上放第二个挪一下底座"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0016",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0019",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0035",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0098",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0203",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "把纸杯1放入架中",
+    "en": "Place paper cup 1 into the rack",
+    "score": 30
+   },
+   {
+    "zh": "把纸杯2放入架中",
+    "en": "Place paper cup 2 into the rack",
+    "score": 30
+   },
+   {
+    "zh": "把纸杯3放入架中",
+    "en": "Place paper cup 3 into the rack",
+    "score": 40
+   }
+  ]
+ },
+ "plug_in_ethernet": {
+  "task_id": "T26",
+  "slug": "plug_in_ethernet",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "插网线",
+  "en_name": "PlugInEthernet",
+  "zh_desc": "把网线插入网口。",
+  "en_desc": "Plug the Ethernet cable into the network port.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住网线（30分）\n2. 抓住网口（30分）\n3. 把网线插入到网口中（40分）",
+  "scoring_points_en": "1. Grab the ethernet cable (30 pts)\n2. Hold the network port (30 pts)\n3. Plug the cable into the network port (40 pts)",
+  "generalization": {
+   "unseen_object_3": "不同的网线跟端口",
+   "human_1_note": "把网线移开",
+   "human_4_note": "把插口移开"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0029",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0052",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0109",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0166",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0168",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住网线",
+    "en": "Grab the ethernet cable",
+    "score": 30
+   },
+   {
+    "zh": "抓住网口",
+    "en": "Hold the network port",
+    "score": 30
+   },
+   {
+    "zh": "把网线插入到网口中",
+    "en": "Plug the cable into the network port",
+    "score": 40
+   }
+  ]
+ },
+ "stack_bowls_three": {
+  "task_id": "T27",
+  "slug": "stack_bowls_three",
+  "difficulty_zh": "容易",
+  "difficulty_en": "Easy",
+  "zh_name": "碗具堆叠",
+  "en_name": "StackBowls",
+  "zh_desc": "将三个碗按红色、绿色、蓝色的顺序叠放。",
+  "en_desc": "Stack the three bowls in the order: red, green, blue.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 把碗1放到中间（30分）\n2. 把碗2堆叠到碗1上（30分）\n3. 把碗3堆叠到碗2上（40分）",
+  "scoring_points_en": "1. Place bowl 1 in the middle (30 pts)\n2. Stack bowl 2 onto bowl 1 (30 pts)\n3. Stack bowl 3 onto bowl 2 (40 pts)",
+  "generalization": {
+   "unseen_object_3": "除了塑料类型",
+   "human_1_note": "把粉色碗向下移动",
+   "human_4_note": "叠了第二个之后拿下第二个"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0010",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0011",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0037",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0143",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0283",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "把碗1放到中间",
+    "en": "Place bowl 1 in the middle",
+    "score": 30
+   },
+   {
+    "zh": "把碗2堆叠到碗1上",
+    "en": "Stack bowl 2 onto bowl 1",
+    "score": 30
+   },
+   {
+    "zh": "把碗3堆叠到碗2上",
+    "en": "Stack bowl 3 onto bowl 2",
+    "score": 40
+   }
+  ]
+ },
+ "store_earphones": {
+  "task_id": "T28",
+  "slug": "store_earphones",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "装耳机",
+  "en_name": "StoreEarphones",
+  "zh_desc": "将耳机放入充电盒，并将充电盒放入收纳盒。",
+  "en_desc": "Place the earphones into the charging case and put the case into the storage box.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 抓住耳机舱（25分）\n2. 把左耳机放到耳机舱中（25分）\n3. 把右耳机放到耳机舱中（25分）\n4. 把耳机盖盖上放到收纳盒中（25分）",
+  "scoring_points_en": "1. Grab the earphone case (25 pts)\n2. Put the left earphone into the case (25 pts)\n3. Put the right earphone into the case (25 pts)\n4. Close the earphone case lid and put the case into the storage box (25 pts)",
+  "generalization": {
+   "unseen_object_3": "缺少不同的收纳盒以及耳机托盘",
+   "human_1_note": "把黄色盒子的耳机向前移动",
+   "human_4_note": "把红盒子的耳机向右移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0004",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0007",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0048",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0079",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0096",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "抓住耳机舱",
+    "en": "Grab the earphone case",
+    "score": 25
+   },
+   {
+    "zh": "把左耳机放到耳机舱中",
+    "en": "Put the left earphone into the case",
+    "score": 25
+   },
+   {
+    "zh": "把右耳机放到耳机舱中",
+    "en": "Put the right earphone into the case",
+    "score": 25
+   },
+   {
+    "zh": "把耳机盖盖上放到收纳盒中",
+    "en": "Close the earphone case lid and put the case into the storage box",
+    "score": 25
+   }
+  ]
+ },
+ "pack_iphone": {
+  "task_id": "T29",
+  "slug": "pack_iphone",
+  "difficulty_zh": "困难",
+  "difficulty_en": "Hard",
+  "zh_name": "装手机",
+  "en_name": "PackPhone",
+  "zh_desc": "将手机装入包装盒。",
+  "en_desc": "Pack the phone into its packaging box.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 将托盘放入包装盒（30分）\n2. 将手机放到托盘上（30分）\n3. 盖上包装盒（40分）",
+  "scoring_points_en": "1. Place the tray into the box (30 pts)\n2. Put the phone onto the tray (30 pts)\n3. Close the box (40 pts)",
+  "generalization": {
+   "human_1_note": "手机向上移动",
+   "human_4_note": "外壳盖移开"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0050",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0066",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0221",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0244",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0287",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "将托盘放入包装盒",
+    "en": "Place the tray into the box",
+    "score": 30
+   },
+   {
+    "zh": "将手机放到托盘上",
+    "en": "Put the phone onto the tray",
+    "score": 30
+   },
+   {
+    "zh": "盖上包装盒",
+    "en": "Close the box",
+    "score": 40
+   }
+  ]
+ },
+ "remove_pinned_note": {
+  "task_id": "T30",
+  "slug": "remove_pinned_note",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "移除固定便签",
+  "en_name": "RemovePinnedNote",
+  "zh_desc": "把图钉固定的便签从板上取下来。",
+  "en_desc": "Remove the note that is pinned to the board with push pins.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 拔出所有工字钉并放置到收纳盒中（50分）\n2. 把标签纸放回收纳盒（50分）",
+  "scoring_points_en": "1. Pull out all the push pins and place them into the storage box (50 pts)\n2. Put the note back into the storage box (50 pts)",
+  "generalization": {
+   "human_1_note": "把把黄色钉子移到中间",
+   "human_4_note": "把绿色钉子向下移动"
+  },
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0012",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0066",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0104",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0129",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0196",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "拔出所有工字钉并放置到收纳盒中",
+    "en": "Pull out all the push pins and place them into the storage box",
+    "score": 50
+   },
+   {
+    "zh": "把标签纸放回收纳盒",
+    "en": "Put the note back into the storage box",
+    "score": 50
+   }
+  ]
+ },
+ "pencil_case": {
+  "task_id": "T31",
+  "slug": "pencil_case",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "整理文具袋",
+  "en_name": "OrganizePencilCase",
+  "zh_desc": "拉开文具袋拉链，将桌面上的所有文具收纳进文具袋，并拉上拉链。",
+  "en_desc": "Open the pencil case zipper, place all stationery items into the pencil case, and close the zipper.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 拉开文具袋拉链（30分）\n2. 将所有文具放入文具袋（30分）\n3. 拉上文具袋拉链（40分）",
+  "scoring_points_en": "1. Open the pencil case zipper (30 pts)\n2. Put all stationery items into the pencil case (30 pts)\n3. Close the zipper (40 pts)",
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0004",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0044",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0052",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0069",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0197",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "拉开文具袋拉链",
+    "en": "Open the pencil case zipper",
+    "score": 30
+   },
+   {
+    "zh": "将所有文具放入文具袋",
+    "en": "Put all stationery items into the pencil case",
+    "score": 30
+   },
+   {
+    "zh": "拉上文具袋拉链",
+    "en": "Close the zipper",
+    "score": 40
+   }
+  ]
+ },
+ "syring_water": {
+  "task_id": "T32",
+  "slug": "syring_water",
+  "difficulty_zh": "中等",
+  "difficulty_en": "Medium",
+  "zh_name": "针管转移液体",
+  "en_name": "SyringeWaterTransfer",
+  "zh_desc": "使用针管将大杯子中的水转移到小杯子中。",
+  "en_desc": "Transfer water from the large cup to the small cup using a syringe.",
+  "robot": "Unitree G1",
+  "scoring_points": "1. 使用针管从大杯中吸取水（50分）\n2. 将水注入小杯（50分）",
+  "scoring_points_en": "1. Draw water from the large cup using the syringe (50 pts)\n2. Inject the water into the small cup (50 pts)",
+  "episodes": [
+   {
+    "index": 0,
+    "episode": "episode_0005",
+    "video": "video_0.mp4"
+   },
+   {
+    "index": 1,
+    "episode": "episode_0014",
+    "video": "video_1.mp4"
+   },
+   {
+    "index": 2,
+    "episode": "episode_0036",
+    "video": "video_2.mp4"
+   },
+   {
+    "index": 3,
+    "episode": "episode_0133",
+    "video": "video_3.mp4"
+   },
+   {
+    "index": 4,
+    "episode": "episode_0184",
+    "video": "video_4.mp4"
+   }
+  ],
+  "score_steps": [
+   {
+    "zh": "使用针管从大杯中吸取水",
+    "en": "Draw water from the large cup using the syringe",
+    "score": 50
+   },
+   {
+    "zh": "将水注入小杯",
+    "en": "Inject the water into the small cup",
+    "score": 50
+   }
+  ]
+ }
+}

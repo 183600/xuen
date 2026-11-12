@@ -1,0 +1,751 @@
+{
+  "source": "exp/r16_task_profile.json + exp/r16_leaderboard_stats.json (retrieved 2026-11-04)",
+  "n_tasks": 32,
+  "n_with_unseen_note": 23,
+  "n_risk": 9,
+  "n_risk_and_unseen": 6,
+  "risk_tasks": [
+    {
+      "id": "T05",
+      "name": "DisconnectEthernet",
+      "risk": "mains ethernet",
+      "mean_success": 26.81
+    },
+    {
+      "id": "T09",
+      "name": "ToolboxStorage",
+      "risk": "sharp tools in toolbox",
+      "mean_success": 25.82
+    },
+    {
+      "id": "T10",
+      "name": "PlugCharger",
+      "risk": "mains charger/socket",
+      "mean_success": 25.57
+    },
+    {
+      "id": "T11",
+      "name": "PickOutBatteries",
+      "risk": "batteries",
+      "mean_success": 23.31
+    },
+    {
+      "id": "T13",
+      "name": "ArrangeTestTubes",
+      "risk": "glass test tubes",
+      "mean_success": 24.15
+    },
+    {
+      "id": "T14",
+      "name": "PourOutMedicine",
+      "risk": "medicine bottle",
+      "mean_success": 22.73
+    },
+    {
+      "id": "T15",
+      "name": "OrganizeTools",
+      "risk": "sharp hand tools",
+      "mean_success": 25.94
+    },
+    {
+      "id": "T26",
+      "name": "PlugInEthernet",
+      "risk": "mains ethernet/port",
+      "mean_success": 17.73
+    },
+    {
+      "id": "T32",
+      "name": "SyringeWaterTransfer",
+      "risk": "syringe + liquid",
+      "mean_success": 24.57
+    }
+  ],
+  "risk_and_unseen": [
+    {
+      "id": "T05",
+      "name": "DisconnectEthernet",
+      "risk": "mains ethernet",
+      "unseen": "缺少其他颜色的短网线",
+      "mean_success": 26.81
+    },
+    {
+      "id": "T10",
+      "name": "PlugCharger",
+      "risk": "mains charger/socket",
+      "unseen": "缺少其他颜色的插排",
+      "mean_success": 25.57
+    },
+    {
+      "id": "T11",
+      "name": "PickOutBatteries",
+      "risk": "batteries",
+      "unseen": "缺少黑色电池",
+      "mean_success": 23.31
+    },
+    {
+      "id": "T13",
+      "name": "ArrangeTestTubes",
+      "risk": "glass test tubes",
+      "unseen": "不同类型的试管",
+      "mean_success": 24.15
+    },
+    {
+      "id": "T14",
+      "name": "PourOutMedicine",
+      "risk": "medicine bottle",
+      "unseen": "缺少不同颜色的药品收纳盒",
+      "mean_success": 22.73
+    },
+    {
+      "id": "T26",
+      "name": "PlugInEthernet",
+      "risk": "mains ethernet/port",
+      "unseen": "不同的网线跟端口",
+      "mean_success": 17.73
+    }
+  ],
+  "mean_success_risk": 24.07,
+  "mean_success_safe": 25.61,
+  "mean_success_unseen": 25.21,
+  "mean_success_seen": 25.08,
+  "hardest_tasks": [
+    {
+      "id": "T26",
+      "name": "PlugInEthernet",
+      "mean_success": 17.73,
+      "risk": "mains ethernet/port",
+      "has_unseen": true
+    },
+    {
+      "id": "T12",
+      "name": "Unlock",
+      "mean_success": 20.11,
+      "risk": null,
+      "has_unseen": true
+    },
+    {
+      "id": "T22",
+      "name": "SpellRobot",
+      "mean_success": 21.82,
+      "risk": null,
+      "has_unseen": true
+    },
+    {
+      "id": "T17",
+      "name": "OrganizeStationery",
+      "mean_success": 22.47,
+      "risk": null,
+      "has_unseen": true
+    },
+    {
+      "id": "T14",
+      "name": "PourOutMedicine",
+      "mean_success": 22.73,
+      "risk": "medicine bottle",
+      "has_unseen": true
+    },
+    {
+      "id": "T01",
+      "name": "HangCup",
+      "mean_success": 22.95,
+      "risk": null,
+      "has_unseen": true
+    },
+    {
+      "id": "T11",
+      "name": "PickOutBatteries",
+      "mean_success": 23.31,
+      "risk": "batteries",
+      "has_unseen": true
+    },
+    {
+      "id": "T19",
+      "name": "ZipUp",
+      "mean_success": 23.39,
+      "risk": null,
+      "has_unseen": false
+    }
+  ],
+  "model_level_fit": {
+    "formula": "step = 0.510 + 1.321 * success",
+    "intercept": 0.51,
+    "slope": 1.321,
+    "r2": 0.9814
+  },
+  "tasks": [
+    {
+      "id": "T01",
+      "name": "HangCup",
+      "diff": "Easy",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少红色杯子和塑料架子",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 22.95,
+      "min_success": 9.03,
+      "max_success": 38.43,
+      "mean_step_score": null,
+      "step_fit": 30.79
+    },
+    {
+      "id": "T02",
+      "name": "FruitCollection",
+      "diff": "Easy",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少不同果篮",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 27.79,
+      "min_success": 23.56,
+      "max_success": 32.38,
+      "mean_step_score": null,
+      "step_fit": 37.3
+    },
+    {
+      "id": "T03",
+      "name": "PackDoll",
+      "diff": "Easy",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少绿色和紫色娃娃",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 26.14,
+      "min_success": 15.29,
+      "max_success": 37.01,
+      "mean_step_score": null,
+      "step_fit": 35.05
+    },
+    {
+      "id": "T04",
+      "name": "FruitSorting",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少其他款式的盘子",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 27.01,
+      "min_success": 18.23,
+      "max_success": 35.5,
+      "mean_step_score": null,
+      "step_fit": 36.23
+    },
+    {
+      "id": "T05",
+      "name": "DisconnectEthernet",
+      "diff": "Hard",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少其他颜色的短网线",
+      "has_unseen": true,
+      "risk": "mains ethernet",
+      "mean_success": 26.81,
+      "min_success": 21.29,
+      "max_success": 33.44,
+      "mean_step_score": null,
+      "step_fit": 35.98
+    },
+    {
+      "id": "T06",
+      "name": "ColorArrangement",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "只有塑料积木",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 27.12,
+      "min_success": 11.38,
+      "max_success": 37.32,
+      "mean_step_score": null,
+      "step_fit": 36.31
+    },
+    {
+      "id": "T07",
+      "name": "PlacePhotoFrame",
+      "diff": "Medium",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "只有一种相框",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 27.98,
+      "min_success": 17.57,
+      "max_success": 42.0,
+      "mean_step_score": null,
+      "step_fit": 37.51
+    },
+    {
+      "id": "T08",
+      "name": "OrganizeBookshelf",
+      "diff": "Easy",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 26.62,
+      "min_success": 19.78,
+      "max_success": 33.02,
+      "mean_step_score": null,
+      "step_fit": 35.66
+    },
+    {
+      "id": "T09",
+      "name": "ToolboxStorage",
+      "diff": "Hard",
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": "sharp tools in toolbox",
+      "mean_success": 25.82,
+      "min_success": 22.76,
+      "max_success": 30.71,
+      "mean_step_score": null,
+      "step_fit": 34.59
+    },
+    {
+      "id": "T10",
+      "name": "PlugCharger",
+      "diff": "Hard",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少其他颜色的插排",
+      "has_unseen": true,
+      "risk": "mains charger/socket",
+      "mean_success": 25.57,
+      "min_success": 16.47,
+      "max_success": 38.17,
+      "mean_step_score": null,
+      "step_fit": 34.34
+    },
+    {
+      "id": "T11",
+      "name": "PickOutBatteries",
+      "diff": "Medium",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少黑色电池",
+      "has_unseen": true,
+      "risk": "batteries",
+      "mean_success": 23.31,
+      "min_success": 16.17,
+      "max_success": 30.03,
+      "mean_step_score": null,
+      "step_fit": 31.25
+    },
+    {
+      "id": "T12",
+      "name": "Unlock",
+      "diff": "Hard",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少一把绿色锁",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 20.11,
+      "min_success": 6.3,
+      "max_success": 28.17,
+      "mean_step_score": null,
+      "step_fit": 26.95
+    },
+    {
+      "id": "T13",
+      "name": "ArrangeTestTubes",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "不同类型的试管",
+      "has_unseen": true,
+      "risk": "glass test tubes",
+      "mean_success": 24.15,
+      "min_success": 14.67,
+      "max_success": 34.38,
+      "mean_step_score": null,
+      "step_fit": 32.37
+    },
+    {
+      "id": "T14",
+      "name": "PourOutMedicine",
+      "diff": "Hard",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少不同颜色的药品收纳盒",
+      "has_unseen": true,
+      "risk": "medicine bottle",
+      "mean_success": 22.73,
+      "min_success": 11.68,
+      "max_success": 30.09,
+      "mean_step_score": null,
+      "step_fit": 30.51
+    },
+    {
+      "id": "T15",
+      "name": "OrganizeTools",
+      "diff": "Medium",
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": "sharp hand tools",
+      "mean_success": 25.94,
+      "min_success": 19.15,
+      "max_success": 37.2,
+      "mean_step_score": null,
+      "step_fit": 34.75
+    },
+    {
+      "id": "T16",
+      "name": "FoldTowel",
+      "diff": "Hard",
+      "rubric_weights": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 24.08,
+      "min_success": 16.71,
+      "max_success": 32.15,
+      "mean_step_score": null,
+      "step_fit": 32.31
+    },
+    {
+      "id": "T17",
+      "name": "OrganizeStationery",
+      "diff": "Easy",
+      "rubric_weights": [
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "unseen_note": "缺少黑色的文件盒",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 22.47,
+      "min_success": 9.09,
+      "max_success": 33.06,
+      "mean_step_score": null,
+      "step_fit": 30.09
+    },
+    {
+      "id": "T18",
+      "name": "PackBag",
+      "diff": "Medium",
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "unseen_note": "缺少其他颜色的文具盒",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 25.28,
+      "min_success": 16.35,
+      "max_success": 31.38,
+      "mean_step_score": null,
+      "step_fit": 33.92
+    },
+    {
+      "id": "T19",
+      "name": "ZipUp",
+      "diff": "Medium",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 23.39,
+      "min_success": 13.58,
+      "max_success": 33.42,
+      "mean_step_score": null,
+      "step_fit": 31.31
+    },
+    {
+      "id": "T20",
+      "name": "PaperCupStacking",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少不同类型纸杯",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 28.05,
+      "min_success": 18.04,
+      "max_success": 35.28,
+      "mean_step_score": null,
+      "step_fit": 37.58
+    },
+    {
+      "id": "T21",
+      "name": "ArrangePlates",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少不同类型的盘子",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 25.9,
+      "min_success": 18.05,
+      "max_success": 34.36,
+      "mean_step_score": null,
+      "step_fit": 34.76
+    },
+    {
+      "id": "T22",
+      "name": "SpellRobot",
+      "diff": "Medium",
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "unseen_note": "缺少不同颜色的字母",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 21.82,
+      "min_success": 14.37,
+      "max_success": 33.99,
+      "mean_step_score": null,
+      "step_fit": 29.3
+    },
+    {
+      "id": "T23",
+      "name": "StorePaddle",
+      "diff": "Medium",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少不同的球拍套装",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 25.57,
+      "min_success": 20.33,
+      "max_success": 34.23,
+      "mean_step_score": null,
+      "step_fit": 34.34
+    },
+    {
+      "id": "T24",
+      "name": "ConveyorSorting",
+      "diff": "Medium",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": "缺少不同的零食",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 29.12,
+      "min_success": 17.09,
+      "max_success": 37.55,
+      "mean_step_score": null,
+      "step_fit": 39.0
+    },
+    {
+      "id": "T25",
+      "name": "StoreCups",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "缺少不同颜色的纸杯",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 30.32,
+      "min_success": 19.87,
+      "max_success": 35.48,
+      "mean_step_score": null,
+      "step_fit": 40.64
+    },
+    {
+      "id": "T26",
+      "name": "PlugInEthernet",
+      "diff": "Medium",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "不同的网线跟端口",
+      "has_unseen": true,
+      "risk": "mains ethernet/port",
+      "mean_success": 17.73,
+      "min_success": 9.23,
+      "max_success": 27.54,
+      "mean_step_score": null,
+      "step_fit": 23.73
+    },
+    {
+      "id": "T27",
+      "name": "StackBowls",
+      "diff": "Easy",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": "除了塑料类型",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 24.11,
+      "min_success": 11.33,
+      "max_success": 36.28,
+      "mean_step_score": null,
+      "step_fit": 32.33
+    },
+    {
+      "id": "T28",
+      "name": "StoreEarphones",
+      "diff": "Hard",
+      "rubric_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "unseen_note": "缺少不同的收纳盒以及耳机托盘",
+      "has_unseen": true,
+      "risk": null,
+      "mean_success": 27.88,
+      "min_success": 23.3,
+      "max_success": 32.3,
+      "mean_step_score": null,
+      "step_fit": 37.42
+    },
+    {
+      "id": "T29",
+      "name": "PackPhone",
+      "diff": "Hard",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 23.88,
+      "min_success": 16.94,
+      "max_success": 31.86,
+      "mean_step_score": null,
+      "step_fit": 32.08
+    },
+    {
+      "id": "T30",
+      "name": "RemovePinnedNote",
+      "diff": "Medium",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 27.3,
+      "min_success": 13.31,
+      "max_success": 40.28,
+      "mean_step_score": null,
+      "step_fit": 36.69
+    },
+    {
+      "id": "T31",
+      "name": "OrganizePencilCase",
+      "diff": "Medium",
+      "rubric_weights": [
+        30,
+        30,
+        40
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": null,
+      "mean_success": 24.08,
+      "min_success": 12.94,
+      "max_success": 30.3,
+      "mean_step_score": null,
+      "step_fit": 32.38
+    },
+    {
+      "id": "T32",
+      "name": "SyringeWaterTransfer",
+      "diff": "Medium",
+      "rubric_weights": [
+        50,
+        50
+      ],
+      "unseen_note": null,
+      "has_unseen": false,
+      "risk": "syringe + liquid",
+      "mean_success": 24.57,
+      "min_success": 19.0,
+      "max_success": 29.35,
+      "mean_step_score": null,
+      "step_fit": 32.94
+    }
+  ]
+}

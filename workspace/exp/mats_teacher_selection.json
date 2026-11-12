@@ -1,0 +1,137 @@
+{
+ "source": "exp/lb_20261102.json + exp/r16_task_profile.json (public snapshot 2026-11-04)",
+ "note": "material labels are author annotations; numbers are published leaderboard, not robot reruns",
+ "best_single": {
+  "model": "MolmoAct2",
+  "success": 29.6996875,
+  "step": 39.0
+ },
+ "task_oracle": {
+  "success": 33.958125,
+  "step": 45.5384375,
+  "success_headroom": 4.258437500000003,
+  "step_headroom": 6.538437500000001
+ },
+ "winner_counts": {
+  "MolmoAct2": 8,
+  "WALL-OSS-0.5": 7,
+  "DreamZero": 6,
+  "Spirit-v1.5": 5,
+  "DM0": 2,
+  "PI-0.5": 2,
+  "GigaBrain-0": 1,
+  "GR00T N1.5": 1
+ },
+ "router_mat": {
+  "success": 30.7125,
+  "step": 40.7109375,
+  "headroom_capture": 0.23783664783151057,
+  "table": [
+   {
+    "group": "ARTICULATION",
+    "n": 3,
+    "model": "DreamZero",
+    "success": 29.366666666666667,
+    "step": 39.89
+   },
+   {
+    "group": "CLUTTER",
+    "n": 2,
+    "model": "MolmoAct2",
+    "success": 30.330000000000002,
+    "step": 39.83
+   },
+   {
+    "group": "DEFORMABLE",
+    "n": 9,
+    "model": "MolmoAct2",
+    "success": 30.08,
+    "step": 39.49777777777778
+   },
+   {
+    "group": "FLOW",
+    "n": 2,
+    "model": "MolmoAct2",
+    "success": 28.23,
+    "step": 37.07
+   },
+   {
+    "group": "INSERTION",
+    "n": 5,
+    "model": "WALL-OSS-0.5",
+    "success": 31.686,
+    "step": 43.25
+   },
+   {
+    "group": "RIGID",
+    "n": 5,
+    "model": "MolmoAct2",
+    "success": 31.714000000000002,
+    "step": 41.646
+   },
+   {
+    "group": "THIN",
+    "n": 6,
+    "model": "MolmoAct2",
+    "success": 31.643333333333334,
+    "step": 41.553333333333335
+   }
+  ]
+ },
+ "router_topo": {
+  "success": 29.843125,
+  "step": 39.9178125,
+  "headroom_capture": 0.033683129081969826,
+  "table": [
+   {
+    "group": "chain",
+    "n": 18,
+    "model": "DreamZero",
+    "success": 28.643333333333334,
+    "step": 38.90888888888889
+   },
+   {
+    "group": "mixed",
+    "n": 6,
+    "model": "MolmoAct2",
+    "success": 31.453333333333333,
+    "step": 41.303333333333335
+   },
+   {
+    "group": "set",
+    "n": 8,
+    "model": "MolmoAct2",
+    "success": 31.335,
+    "step": 41.14875
+   }
+  ]
+ },
+ "router_diff": {
+  "success": 30.03,
+  "step": 39.801875,
+  "headroom_capture": 0.0775665957290676,
+  "table": [
+   {
+    "group": "Easy",
+    "n": 12,
+    "model": "MolmoAct2",
+    "success": 31.9,
+    "step": 41.89083333333333
+   },
+   {
+    "group": "Hard",
+    "n": 8,
+    "model": "WALL-OSS-0.5",
+    "success": 28.435,
+    "step": 38.81125
+   },
+   {
+    "group": "Medium",
+    "n": 12,
+    "model": "MolmoAct2",
+    "success": 29.223333333333333,
+    "step": 38.373333333333335
+   }
+  ]
+ }
+}

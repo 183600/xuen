@@ -1,0 +1,588 @@
+{
+ "source": "exp/lb_20261102.json (= live leaderboard_data.json snapshot, both success and step per task) + exp/r16_task_profile.json; material/topology labels are author annotations",
+ "n_tasks": 32,
+ "n_models": 8,
+ "means": {
+  "success": 25.174765625,
+  "step": 33.7618359375,
+  "premium": 8.5870703125,
+  "median_b": 1.3371706327288642,
+  "median_r2": 0.9952717434664258
+ },
+ "tasks": [
+  {
+   "task": "StoreCups",
+   "display": "Stack Cups",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 30.32,
+   "mean_step": 40.64875,
+   "premium": 10.32875,
+   "a": 0.8253841817994712,
+   "b": 1.313435548093685,
+   "r2": 0.988363150885596,
+   "mat": "thin-film",
+   "topo": "set"
+  },
+  {
+   "task": "ConveyorSorting",
+   "display": "Conveyor Food Sorting",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 29.12375,
+   "mean_step": 38.9925,
+   "premium": 9.868749999999999,
+   "a": 1.488543647675911,
+   "b": 1.287744756507115,
+   "r2": 0.9943288444940389,
+   "mat": "deformable+moving",
+   "topo": "chain"
+  },
+  {
+   "task": "StoreEarphones",
+   "display": "Store Earphones",
+   "diff": "Hard",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "mean_succ": 27.8825,
+   "mean_step": 37.41625,
+   "premium": 9.533749999999998,
+   "a": -1.050842862227718,
+   "b": 1.379614197515564,
+   "r2": 0.9715348568925785,
+   "mat": "cable+small-parts",
+   "topo": "chain+set"
+  },
+  {
+   "task": "PaperCupStacking",
+   "display": "Paper Cup Stacking",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 28.048750000000002,
+   "mean_step": 37.57375,
+   "premium": 9.524999999999995,
+   "a": 1.0296836653730423,
+   "b": 1.302876824622379,
+   "r2": 0.9960199562297567,
+   "mat": "thin-film+stack",
+   "topo": "chain"
+  },
+  {
+   "task": "PlacePhotoFrame",
+   "display": "Place Photo Frames",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 27.9775,
+   "mean_step": 37.495,
+   "premium": 9.517499999999998,
+   "a": 0.15698710773757796,
+   "b": 1.334572885077738,
+   "r2": 0.996197837191358,
+   "mat": "rigid+hinge",
+   "topo": "chain"
+  },
+  {
+   "task": "FruitCollection",
+   "display": "Fruit Basket Collection",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 27.79375,
+   "mean_step": 37.29625,
+   "premium": 9.502500000000001,
+   "a": -1.2120931421322183,
+   "b": 1.385503688495875,
+   "r2": 0.980834261024183,
+   "mat": "rigid/deformable",
+   "topo": "set"
+  },
+  {
+   "task": "RemovePinnedNote",
+   "display": "Remove Pinned Note",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 27.3025,
+   "mean_step": 36.676249999999996,
+   "premium": 9.373749999999998,
+   "a": -0.6061771103251274,
+   "b": 1.3655316220245446,
+   "r2": 0.9970751489489178,
+   "mat": "thin-film+adhesion",
+   "topo": "chain+set"
+  },
+  {
+   "task": "FruitSorting",
+   "display": "Fruit Sorting",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 27.0125,
+   "mean_step": 36.2275,
+   "premium": 9.215,
+   "a": 0.12040035133343707,
+   "b": 1.336681153120465,
+   "r2": 0.9946277140281212,
+   "mat": "rigid/deformable",
+   "topo": "set"
+  },
+  {
+   "task": "ColorArrangement",
+   "display": "Color Arrangement",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 27.11625,
+   "mean_step": 36.305,
+   "premium": 9.188749999999999,
+   "a": 0.646820299910928,
+   "b": 1.3150114672968818,
+   "r2": 0.9960512838829344,
+   "mat": "rigid",
+   "topo": "set"
+  },
+  {
+   "task": "DisconnectEthernet",
+   "display": "Disconnect Ethernet",
+   "diff": "Hard",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 26.814999999999998,
+   "mean_step": 35.9875,
+   "premium": 9.1725,
+   "a": -0.5364856894338104,
+   "b": 1.3620729326658143,
+   "r2": 0.9898242632746997,
+   "mat": "compliant+cable",
+   "topo": "chain"
+  },
+  {
+   "task": "OrganizeBookshelf",
+   "display": "Organize Bookshelf",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 26.61875,
+   "mean_step": 35.6625,
+   "premium": 9.043750000000003,
+   "a": 1.8205445070502861,
+   "b": 1.271357802036148,
+   "r2": 0.9892009923403904,
+   "mat": "rigid+place",
+   "topo": "chain"
+  },
+  {
+   "task": "PackDoll",
+   "display": "Pack the Doll",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 26.13625,
+   "mean_step": 35.045,
+   "premium": 8.908750000000001,
+   "a": 0.8573626845579554,
+   "b": 1.3080544192622143,
+   "r2": 0.9959157729047302,
+   "mat": "deformable",
+   "topo": "chain+set"
+  },
+  {
+   "task": "ArrangePlates",
+   "display": "Clear Plates",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 25.89625,
+   "mean_step": 34.7575,
+   "premium": 8.861250000000002,
+   "a": -0.5189005909893538,
+   "b": 1.3622204215278024,
+   "r2": 0.9916033251390381,
+   "mat": "rigid+stack",
+   "topo": "set"
+  },
+  {
+   "task": "OrganizeTools",
+   "display": "Organize Tools",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "mean_succ": 25.93625,
+   "mean_step": 34.74125,
+   "premium": 8.805,
+   "a": 1.4713090170051544,
+   "b": 1.2827583395053195,
+   "r2": 0.9931519540347878,
+   "mat": "rigid",
+   "topo": "set"
+  },
+  {
+   "task": "ToolboxStorage",
+   "display": "Toolbox Storage",
+   "diff": "Hard",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "mean_succ": 25.81875,
+   "mean_step": 34.6025,
+   "premium": 8.783749999999998,
+   "a": 3.8676705197904333,
+   "b": 1.1904073388606948,
+   "r2": 0.9740867518136413,
+   "mat": "rigid+hinge",
+   "topo": "chain+set"
+  },
+  {
+   "task": "StorePaddle",
+   "display": "Store Racket",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 25.57125,
+   "mean_step": 34.34625,
+   "premium": 8.774999999999999,
+   "a": -1.460982331818883,
+   "b": 1.4002926071982746,
+   "r2": 0.9929867392092492,
+   "mat": "rigid+zipper",
+   "topo": "chain"
+  },
+  {
+   "task": "PlugCharger",
+   "display": "Plug Charger",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 25.57,
+   "mean_step": 34.3325,
+   "premium": 8.762500000000003,
+   "a": -0.6390283195893716,
+   "b": 1.367678072725435,
+   "r2": 0.997097312730987,
+   "mat": "compliant+insertion",
+   "topo": "chain"
+  },
+  {
+   "task": "PackBag",
+   "display": "Pack Bag",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "mean_succ": 25.28375,
+   "mean_step": 33.91,
+   "premium": 8.626249999999995,
+   "a": -0.1104189506037514,
+   "b": 1.3455448242687,
+   "r2": 0.9923209672957224,
+   "mat": "deformable+zipper",
+   "topo": "chain"
+  },
+  {
+   "task": "SyringeWaterTransfer",
+   "display": "Syringe Water Transfer",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 24.56625,
+   "mean_step": 32.9375,
+   "premium": 8.37125,
+   "a": 0.8225964183086347,
+   "b": 1.3072774062663763,
+   "r2": 0.9842828387010367,
+   "mat": "fluid",
+   "topo": "chain"
+  },
+  {
+   "task": "OrganizePencilCase",
+   "display": "Organize Pencil Case",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 24.08,
+   "mean_step": 32.38,
+   "premium": 8.300000000000004,
+   "a": -1.336131204579253,
+   "b": 1.4001715616519625,
+   "r2": 0.9967193125751062,
+   "mat": "deformable+zipper",
+   "topo": "chain"
+  },
+  {
+   "task": "ArrangeTestTubes",
+   "display": "Arrange Test Tubes",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 24.15,
+   "mean_step": 32.38375,
+   "premium": 8.23375,
+   "a": -0.035824570932526,
+   "b": 1.3424254480717404,
+   "r2": 0.9962399350245825,
+   "mat": "transparent+insertion",
+   "topo": "set"
+  },
+  {
+   "task": "FoldTowel",
+   "display": "Fold Towel",
+   "diff": "Hard",
+   "w": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "mean_succ": 24.08125,
+   "mean_step": 32.3125,
+   "premium": 8.23125,
+   "a": -0.4628317824664805,
+   "b": 1.361031166673926,
+   "r2": 0.9939750187750528,
+   "mat": "deformable",
+   "topo": "chain"
+  },
+  {
+   "task": "StackBowls",
+   "display": "Stack Bowls",
+   "diff": "Easy",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 24.111250000000002,
+   "mean_step": 32.33875,
+   "premium": 8.227499999999996,
+   "a": 0.243982312315147,
+   "b": 1.3311117294907915,
+   "r2": 0.9973715630030275,
+   "mat": "rigid+stack",
+   "topo": "chain"
+  },
+  {
+   "task": "PackPhone",
+   "display": "Pack Phone",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 23.88375,
+   "mean_step": 32.07375,
+   "premium": 8.189999999999998,
+   "a": -0.9260753747851282,
+   "b": 1.3816852619368871,
+   "r2": 0.9928931383316615,
+   "mat": "rigid+thin",
+   "topo": "chain"
+  },
+  {
+   "task": "PickOutBatteries",
+   "display": "Pick Out Battery",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 23.30625,
+   "mean_step": 31.245,
+   "premium": 7.938750000000002,
+   "a": 0.8072876868518186,
+   "b": 1.305989265246369,
+   "r2": 0.9880205518358139,
+   "mat": "rigid+clutter",
+   "topo": "set"
+  },
+  {
+   "task": "ZipUp",
+   "display": "Zip Up",
+   "diff": "Medium",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 23.3875,
+   "mean_step": 31.315,
+   "premium": 7.927500000000002,
+   "a": 0.5565218475224043,
+   "b": 1.315167425012404,
+   "r2": 0.9968725387690294,
+   "mat": "deformable+zipper",
+   "topo": "chain"
+  },
+  {
+   "task": "HangCup",
+   "display": "Hang the Cup",
+   "diff": "Easy",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 22.955,
+   "mean_step": 30.81125,
+   "premium": 7.856250000000003,
+   "a": -0.28051102408673145,
+   "b": 1.3544657383614347,
+   "r2": 0.9980919012152552,
+   "mat": "rigid+insertion",
+   "topo": "chain"
+  },
+  {
+   "task": "PourOutMedicine",
+   "display": "Open Pill Bottle",
+   "diff": "Hard",
+   "w": [
+    50,
+    50
+   ],
+   "mean_succ": 22.72625,
+   "mean_step": 30.49625,
+   "premium": 7.77,
+   "a": -0.1773999180915098,
+   "b": 1.3497013329560095,
+   "r2": 0.9960596558942207,
+   "mat": "granular",
+   "topo": "chain"
+  },
+  {
+   "task": "OrganizeStationery",
+   "display": "Organize Stationery",
+   "diff": "Easy",
+   "w": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "mean_succ": 22.4675,
+   "mean_step": 30.096249999999998,
+   "premium": 7.628749999999997,
+   "a": 0.232226085996313,
+   "b": 1.329209921620282,
+   "r2": 0.9967795352442324,
+   "mat": "rigid+deformable",
+   "topo": "chain+set"
+  },
+  {
+   "task": "SpellRobot",
+   "display": "Spell robot",
+   "diff": "Medium",
+   "w": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "mean_succ": 21.82375,
+   "mean_step": 29.3075,
+   "premium": 7.483750000000001,
+   "a": -0.4440946049554597,
+   "b": 1.3632668356701052,
+   "r2": 0.9964584677681351,
+   "mat": "rigid+place",
+   "topo": "chain+set"
+  },
+  {
+   "task": "Unlock",
+   "display": "Unlock",
+   "diff": "Hard",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 20.105,
+   "mean_step": 26.93625,
+   "premium": 6.831250000000001,
+   "a": 0.04259344145932076,
+   "b": 1.3376601123372633,
+   "r2": 0.9978032182384153,
+   "mat": "metal+articulation",
+   "topo": "chain"
+  },
+  {
+   "task": "PlugInEthernet",
+   "display": "Plug In Ethernet",
+   "diff": "Medium",
+   "w": [
+    30,
+    30,
+    40
+   ],
+   "mean_succ": 17.725,
+   "mean_step": 23.728749999999998,
+   "premium": 6.003749999999997,
+   "a": 0.5894426255047094,
+   "b": 1.3054616290265324,
+   "r2": 0.9965102935030143,
+   "mat": "compliant+insertion",
+   "topo": "chain"
+  }
+ ]
+}

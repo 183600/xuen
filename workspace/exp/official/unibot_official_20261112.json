@@ -1,0 +1,1461 @@
+{
+ "retrieved": "2026-11-12",
+ "source": "https://unibot.unitree.com/leaderboard_data.json",
+ "tasks": {
+  "hang_the_cup": {
+   "en_name": "HangCup",
+   "display_name": "Hang the Cup",
+   "difficulty": "Easy",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少红色杯子和塑料架子",
+    "human_1_note": "杯子向后",
+    "human_4_note": "杯子向右"
+   },
+   "success": {
+    "MolmoAct2": 27.29,
+    "WALL-OSS-0.5": 32.89,
+    "DreamZero": 38.43,
+    "Spirit-v1.5": 9.03,
+    "DM0": 22.12,
+    "PI-0.5": 15.46,
+    "GigaBrain-0": 25.75,
+    "GR00T N1.5": 12.67
+   },
+   "step_score": {
+    "MolmoAct2": 35.84,
+    "WALL-OSS-0.5": 44.89,
+    "DreamZero": 52.2,
+    "Spirit-v1.5": 11.99,
+    "DM0": 29.84,
+    "PI-0.5": 20.75,
+    "GigaBrain-0": 33.61,
+    "GR00T N1.5": 17.37
+   },
+   "duration": {
+    "MolmoAct2": 24.62,
+    "WALL-OSS-0.5": 30.48,
+    "DreamZero": 31.61,
+    "Spirit-v1.5": 30.06,
+    "DM0": 32.21,
+    "PI-0.5": 34.99,
+    "GigaBrain-0": 24.4,
+    "GR00T N1.5": 26.26
+   }
+  },
+  "fruit_basket_collection": {
+   "en_name": "FruitCollection",
+   "display_name": "Fruit Basket Collection",
+   "difficulty": "Easy",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同果篮",
+    "human_1_note": "水果向前",
+    "human_4_note": "水果向右"
+   },
+   "success": {
+    "MolmoAct2": 27.85,
+    "WALL-OSS-0.5": 30.91,
+    "DreamZero": 30.77,
+    "Spirit-v1.5": 24.53,
+    "DM0": 32.38,
+    "PI-0.5": 23.56,
+    "GigaBrain-0": 27.85,
+    "GR00T N1.5": 24.5
+   },
+   "step_score": {
+    "MolmoAct2": 36.57,
+    "WALL-OSS-0.5": 42.19,
+    "DreamZero": 41.8,
+    "Spirit-v1.5": 32.58,
+    "DM0": 43.68,
+    "PI-0.5": 31.62,
+    "GigaBrain-0": 36.35,
+    "GR00T N1.5": 33.58
+   },
+   "duration": {
+    "MolmoAct2": 40.85,
+    "WALL-OSS-0.5": 42.61,
+    "DreamZero": 44.45,
+    "Spirit-v1.5": 40.92,
+    "DM0": 48.49,
+    "PI-0.5": 38.66,
+    "GigaBrain-0": 37.94,
+    "GR00T N1.5": 43.2
+   }
+  },
+  "pack_the_doll": {
+   "en_name": "PackDoll",
+   "display_name": "Pack the Doll",
+   "difficulty": "Easy",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少绿色和紫色娃娃",
+    "human_1_note": "娃娃向前",
+    "human_4_note": "娃娃向右"
+   },
+   "success": {
+    "MolmoAct2": 37.01,
+    "WALL-OSS-0.5": 25.82,
+    "DreamZero": 28.41,
+    "Spirit-v1.5": 33.37,
+    "DM0": 23.91,
+    "PI-0.5": 23.26,
+    "GigaBrain-0": 15.29,
+    "GR00T N1.5": 22.02
+   },
+   "step_score": {
+    "MolmoAct2": 48.6,
+    "WALL-OSS-0.5": 35.24,
+    "DreamZero": 38.59,
+    "Spirit-v1.5": 44.32,
+    "DM0": 32.25,
+    "PI-0.5": 31.22,
+    "GigaBrain-0": 19.96,
+    "GR00T N1.5": 30.18
+   },
+   "duration": {
+    "MolmoAct2": 54.55,
+    "WALL-OSS-0.5": 55.75,
+    "DreamZero": 55.46,
+    "Spirit-v1.5": 59.73,
+    "DM0": 54.3,
+    "PI-0.5": 50.27,
+    "GigaBrain-0": 55.48,
+    "GR00T N1.5": 60.23
+   }
+  },
+  "sort_fruit": {
+   "en_name": "FruitSorting",
+   "display_name": "Fruit Sorting",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他款式的盘子",
+    "human_1_note": "橘色盘子向左移动移动",
+    "human_4_note": "把梨往右移动"
+   },
+   "success": {
+    "MolmoAct2": 31.76,
+    "WALL-OSS-0.5": 25.95,
+    "DreamZero": 35.5,
+    "Spirit-v1.5": 32.24,
+    "DM0": 28.78,
+    "PI-0.5": 23.81,
+    "GigaBrain-0": 19.83,
+    "GR00T N1.5": 18.23
+   },
+   "step_score": {
+    "MolmoAct2": 41.71,
+    "WALL-OSS-0.5": 35.42,
+    "DreamZero": 48.22,
+    "Spirit-v1.5": 42.82,
+    "DM0": 38.82,
+    "PI-0.5": 31.96,
+    "GigaBrain-0": 25.88,
+    "GR00T N1.5": 24.99
+   },
+   "duration": {
+    "MolmoAct2": 33.64,
+    "WALL-OSS-0.5": 37.81,
+    "DreamZero": 30.39,
+    "Spirit-v1.5": 38.86,
+    "DM0": 37.18,
+    "PI-0.5": 31.42,
+    "GigaBrain-0": 35.3,
+    "GR00T N1.5": 35.25
+   }
+  },
+  "disconnect_ethernet": {
+   "en_name": "DisconnectEthernet",
+   "display_name": "Disconnect Ethernet",
+   "difficulty": "Hard",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的短网线",
+    "human_1_note": "把网线另一头也插上",
+    "human_4_note": "移动道具手握网口"
+   },
+   "success": {
+    "MolmoAct2": 21.29,
+    "WALL-OSS-0.5": 30.09,
+    "DreamZero": 22.83,
+    "Spirit-v1.5": 33.44,
+    "DM0": 31.73,
+    "PI-0.5": 23.95,
+    "GigaBrain-0": 25.37,
+    "GR00T N1.5": 25.82
+   },
+   "step_score": {
+    "MolmoAct2": 27.96,
+    "WALL-OSS-0.5": 41.07,
+    "DreamZero": 31.01,
+    "Spirit-v1.5": 44.41,
+    "DM0": 42.8,
+    "PI-0.5": 32.14,
+    "GigaBrain-0": 33.12,
+    "GR00T N1.5": 35.39
+   },
+   "duration": {
+    "MolmoAct2": 46.29,
+    "WALL-OSS-0.5": 48.38,
+    "DreamZero": 49.94,
+    "Spirit-v1.5": 52.25,
+    "DM0": 41.23,
+    "PI-0.5": 52.29,
+    "GigaBrain-0": 44.83,
+    "GR00T N1.5": 42.91
+   }
+  },
+  "color_arrangement": {
+   "en_name": "ColorArrangement",
+   "display_name": "Color Arrangement",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "没有其他积木 只有塑料积木",
+    "human_1_note": "绿色积木向右移动",
+    "human_4_note": "红色积木向前移动"
+   },
+   "success": {
+    "MolmoAct2": 37.32,
+    "WALL-OSS-0.5": 29.1,
+    "DreamZero": 32.78,
+    "Spirit-v1.5": 25.72,
+    "DM0": 25.1,
+    "PI-0.5": 29.26,
+    "GigaBrain-0": 26.27,
+    "GR00T N1.5": 11.38
+   },
+   "step_score": {
+    "MolmoAct2": 49.01,
+    "WALL-OSS-0.5": 39.72,
+    "DreamZero": 44.53,
+    "Spirit-v1.5": 34.16,
+    "DM0": 33.86,
+    "PI-0.5": 39.27,
+    "GigaBrain-0": 34.29,
+    "GR00T N1.5": 15.6
+   },
+   "duration": {
+    "MolmoAct2": 55.79,
+    "WALL-OSS-0.5": 60.24,
+    "DreamZero": 55.69,
+    "Spirit-v1.5": 65.83,
+    "DM0": 63.01,
+    "PI-0.5": 56.08,
+    "GigaBrain-0": 59.36,
+    "GR00T N1.5": 61.62
+   }
+  },
+  "place_photo_frames": {
+   "en_name": "PlacePhotoFrame",
+   "display_name": "Place Photo Frames",
+   "difficulty": "Medium",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "只有一种相框",
+    "human_1_note": "相框向上移动",
+    "human_4_note": "相框向上移动"
+   },
+   "success": {
+    "MolmoAct2": 24.33,
+    "WALL-OSS-0.5": 26.71,
+    "DreamZero": 42.0,
+    "Spirit-v1.5": 34.22,
+    "DM0": 27.42,
+    "PI-0.5": 18.1,
+    "GigaBrain-0": 33.47,
+    "GR00T N1.5": 17.57
+   },
+   "step_score": {
+    "MolmoAct2": 31.95,
+    "WALL-OSS-0.5": 36.46,
+    "DreamZero": 57.05,
+    "Spirit-v1.5": 45.45,
+    "DM0": 36.99,
+    "PI-0.5": 24.29,
+    "GigaBrain-0": 43.69,
+    "GR00T N1.5": 24.08
+   },
+   "duration": {
+    "MolmoAct2": 41.85,
+    "WALL-OSS-0.5": 46.28,
+    "DreamZero": 35.44,
+    "Spirit-v1.5": 40.14,
+    "DM0": 36.73,
+    "PI-0.5": 32.99,
+    "GigaBrain-0": 37.6,
+    "GR00T N1.5": 37.47
+   }
+  },
+  "organize_bookshelf": {
+   "en_name": "OrganizeBookshelf",
+   "display_name": "Organize Bookshelf",
+   "difficulty": "Easy",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "human_1_note": "抓到书后挪动架子",
+    "human_4_note": "书向右"
+   },
+   "success": {
+    "MolmoAct2": 33.02,
+    "WALL-OSS-0.5": 30.0,
+    "DreamZero": 25.04,
+    "Spirit-v1.5": 30.05,
+    "DM0": 22.96,
+    "PI-0.5": 26.77,
+    "GigaBrain-0": 25.33,
+    "GR00T N1.5": 19.78
+   },
+   "step_score": {
+    "MolmoAct2": 43.36,
+    "WALL-OSS-0.5": 40.95,
+    "DreamZero": 34.01,
+    "Spirit-v1.5": 39.91,
+    "DM0": 30.97,
+    "PI-0.5": 35.93,
+    "GigaBrain-0": 33.06,
+    "GR00T N1.5": 27.11
+   },
+   "duration": {
+    "MolmoAct2": 58.19,
+    "WALL-OSS-0.5": 48.1,
+    "DreamZero": 50.66,
+    "Spirit-v1.5": 52.72,
+    "DM0": 49.18,
+    "PI-0.5": 48.75,
+    "GigaBrain-0": 45.64,
+    "GR00T N1.5": 50.67
+   }
+  },
+  "toolbox_storage": {
+   "en_name": "ToolboxStorage",
+   "display_name": "Toolbox Storage",
+   "difficulty": "Hard",
+   "n_steps": 4,
+   "step_scores": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "generalization": {
+    "human_1_note": "胶带向后移动",
+    "human_4_note": "胶带向右移动"
+   },
+   "success": {
+    "MolmoAct2": 30.71,
+    "WALL-OSS-0.5": 23.96,
+    "DreamZero": 25.56,
+    "Spirit-v1.5": 23.62,
+    "DM0": 25.14,
+    "PI-0.5": 22.76,
+    "GigaBrain-0": 28.67,
+    "GR00T N1.5": 26.13
+   },
+   "step_score": {
+    "MolmoAct2": 40.33,
+    "WALL-OSS-0.5": 32.7,
+    "DreamZero": 34.72,
+    "Spirit-v1.5": 31.37,
+    "DM0": 33.91,
+    "PI-0.5": 30.55,
+    "GigaBrain-0": 37.42,
+    "GR00T N1.5": 35.82
+   },
+   "duration": {
+    "MolmoAct2": 38.38,
+    "WALL-OSS-0.5": 32.32,
+    "DreamZero": 27.41,
+    "Spirit-v1.5": 24.77,
+    "DM0": 29.06,
+    "PI-0.5": 29.28,
+    "GigaBrain-0": 29.55,
+    "GR00T N1.5": 37.59
+   }
+  },
+  "plug_charger": {
+   "en_name": "PlugCharger",
+   "display_name": "Plug Charger",
+   "difficulty": "Hard",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的插排",
+    "human_1_note": "抓插头前进行移动",
+    "human_4_note": "将插头拔起"
+   },
+   "success": {
+    "MolmoAct2": 30.51,
+    "WALL-OSS-0.5": 38.17,
+    "DreamZero": 34.5,
+    "Spirit-v1.5": 19.4,
+    "DM0": 18.53,
+    "PI-0.5": 26.05,
+    "GigaBrain-0": 20.93,
+    "GR00T N1.5": 16.47
+   },
+   "step_score": {
+    "MolmoAct2": 40.06,
+    "WALL-OSS-0.5": 52.1,
+    "DreamZero": 46.87,
+    "Spirit-v1.5": 25.77,
+    "DM0": 25.0,
+    "PI-0.5": 34.96,
+    "GigaBrain-0": 27.32,
+    "GR00T N1.5": 22.58
+   },
+   "duration": {
+    "MolmoAct2": 45.65,
+    "WALL-OSS-0.5": 47.83,
+    "DreamZero": 44.27,
+    "Spirit-v1.5": 48.27,
+    "DM0": 38.52,
+    "PI-0.5": 39.91,
+    "GigaBrain-0": 42.15,
+    "GR00T N1.5": 47.88
+   }
+  },
+  "pick_out_battery": {
+   "en_name": "PickOutBatteries",
+   "display_name": "Pick Out Battery",
+   "difficulty": "Medium",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少黑色电池",
+    "human_1_note": "抓取电池之前动底座",
+    "human_4_note": "抓电池之后动绿色盒子"
+   },
+   "success": {
+    "MolmoAct2": 23.46,
+    "WALL-OSS-0.5": 21.45,
+    "DreamZero": 22.57,
+    "Spirit-v1.5": 30.03,
+    "DM0": 16.17,
+    "PI-0.5": 23.45,
+    "GigaBrain-0": 23.88,
+    "GR00T N1.5": 25.44
+   },
+   "step_score": {
+    "MolmoAct2": 30.81,
+    "WALL-OSS-0.5": 29.28,
+    "DreamZero": 30.66,
+    "Spirit-v1.5": 39.89,
+    "DM0": 21.81,
+    "PI-0.5": 31.47,
+    "GigaBrain-0": 31.17,
+    "GR00T N1.5": 34.87
+   },
+   "duration": {
+    "MolmoAct2": 51.29,
+    "WALL-OSS-0.5": 60.65,
+    "DreamZero": 53.07,
+    "Spirit-v1.5": 57.1,
+    "DM0": 58.23,
+    "PI-0.5": 55.29,
+    "GigaBrain-0": 54.32,
+    "GR00T N1.5": 62.05
+   }
+  },
+  "unlock": {
+   "en_name": "Unlock",
+   "display_name": "Unlock",
+   "difficulty": "Hard",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少一把绿色锁",
+    "human_1_note": "锁向左移动",
+    "human_4_note": "中途把锁拿走"
+   },
+   "success": {
+    "MolmoAct2": 23.52,
+    "WALL-OSS-0.5": 23.18,
+    "DreamZero": 20.54,
+    "Spirit-v1.5": 24.35,
+    "DM0": 20.39,
+    "PI-0.5": 28.17,
+    "GigaBrain-0": 14.39,
+    "GR00T N1.5": 6.3
+   },
+   "step_score": {
+    "MolmoAct2": 30.88,
+    "WALL-OSS-0.5": 31.64,
+    "DreamZero": 27.9,
+    "Spirit-v1.5": 32.34,
+    "DM0": 27.5,
+    "PI-0.5": 37.81,
+    "GigaBrain-0": 18.78,
+    "GR00T N1.5": 8.64
+   },
+   "duration": {
+    "MolmoAct2": 34.21,
+    "WALL-OSS-0.5": 41.73,
+    "DreamZero": 39.63,
+    "Spirit-v1.5": 41.18,
+    "DM0": 38.1,
+    "PI-0.5": 41.8,
+    "GigaBrain-0": 39.21,
+    "GR00T N1.5": 36.11
+   }
+  },
+  "organize_test_cube": {
+   "en_name": "ArrangeTestTubes",
+   "display_name": "Arrange Test Tubes",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "不同类型的试管",
+    "human_1_note": "试管向右移动",
+    "human_4_note": "试管向左移动"
+   },
+   "success": {
+    "MolmoAct2": 28.93,
+    "WALL-OSS-0.5": 34.38,
+    "DreamZero": 19.53,
+    "Spirit-v1.5": 30.65,
+    "DM0": 23.74,
+    "PI-0.5": 23.86,
+    "GigaBrain-0": 17.44,
+    "GR00T N1.5": 14.67
+   },
+   "step_score": {
+    "MolmoAct2": 37.99,
+    "WALL-OSS-0.5": 46.93,
+    "DreamZero": 26.53,
+    "Spirit-v1.5": 40.71,
+    "DM0": 32.02,
+    "PI-0.5": 32.02,
+    "GigaBrain-0": 22.76,
+    "GR00T N1.5": 20.11
+   },
+   "duration": {
+    "MolmoAct2": 54.51,
+    "WALL-OSS-0.5": 43.15,
+    "DreamZero": 54.35,
+    "Spirit-v1.5": 43.54,
+    "DM0": 47.87,
+    "PI-0.5": 47.13,
+    "GigaBrain-0": 51.81,
+    "GR00T N1.5": 55.02
+   }
+  },
+  "open_pill_bottle": {
+   "en_name": "PourOutMedicine",
+   "display_name": "Open Pill Bottle",
+   "difficulty": "Hard",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的药品收纳盒",
+    "human_1_note": "拧开盖子之后拧动回来",
+    "human_4_note": "把瓶子向左移动"
+   },
+   "success": {
+    "MolmoAct2": 28.57,
+    "WALL-OSS-0.5": 30.09,
+    "DreamZero": 28.06,
+    "Spirit-v1.5": 11.68,
+    "DM0": 26.14,
+    "PI-0.5": 19.79,
+    "GigaBrain-0": 22.11,
+    "GR00T N1.5": 15.37
+   },
+   "step_score": {
+    "MolmoAct2": 37.52,
+    "WALL-OSS-0.5": 41.07,
+    "DreamZero": 38.12,
+    "Spirit-v1.5": 15.51,
+    "DM0": 35.26,
+    "PI-0.5": 26.56,
+    "GigaBrain-0": 28.86,
+    "GR00T N1.5": 21.07
+   },
+   "duration": {
+    "MolmoAct2": 33.3,
+    "WALL-OSS-0.5": 30.81,
+    "DreamZero": 23.44,
+    "Spirit-v1.5": 26.22,
+    "DM0": 33.96,
+    "PI-0.5": 34.44,
+    "GigaBrain-0": 26.09,
+    "GR00T N1.5": 30.59
+   }
+  },
+  "organize_tools": {
+   "en_name": "OrganizeTools",
+   "display_name": "Organize Tools",
+   "difficulty": "Medium",
+   "n_steps": 4,
+   "step_scores": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "generalization": {
+    "human_1_note": "钳子向左移动",
+    "human_4_note": "螺丝刀向右移动"
+   },
+   "success": {
+    "MolmoAct2": 37.2,
+    "WALL-OSS-0.5": 20.92,
+    "DreamZero": 23.43,
+    "Spirit-v1.5": 25.35,
+    "DM0": 19.15,
+    "PI-0.5": 26.69,
+    "GigaBrain-0": 25.46,
+    "GR00T N1.5": 29.29
+   },
+   "step_score": {
+    "MolmoAct2": 48.85,
+    "WALL-OSS-0.5": 28.55,
+    "DreamZero": 31.83,
+    "Spirit-v1.5": 33.67,
+    "DM0": 25.83,
+    "PI-0.5": 35.82,
+    "GigaBrain-0": 33.23,
+    "GR00T N1.5": 40.15
+   },
+   "duration": {
+    "MolmoAct2": 39.07,
+    "WALL-OSS-0.5": 37.57,
+    "DreamZero": 41.68,
+    "Spirit-v1.5": 41.85,
+    "DM0": 38.85,
+    "PI-0.5": 38.7,
+    "GigaBrain-0": 37.14,
+    "GR00T N1.5": 48.27
+   }
+  },
+  "fold_towel": {
+   "en_name": "FoldTowel",
+   "display_name": "Fold Towel",
+   "difficulty": "Hard",
+   "n_steps": 5,
+   "step_scores": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "generalization": {
+    "human_1_note": "将叠完的毛巾翻开",
+    "human_4_note": "将叠完的毛巾翻开"
+   },
+   "success": {
+    "MolmoAct2": 27.19,
+    "WALL-OSS-0.5": 32.15,
+    "DreamZero": 23.25,
+    "Spirit-v1.5": 21.61,
+    "DM0": 30.54,
+    "PI-0.5": 16.71,
+    "GigaBrain-0": 22.28,
+    "GR00T N1.5": 18.92
+   },
+   "step_score": {
+    "MolmoAct2": 35.7,
+    "WALL-OSS-0.5": 43.88,
+    "DreamZero": 31.58,
+    "Spirit-v1.5": 28.7,
+    "DM0": 41.2,
+    "PI-0.5": 22.43,
+    "GigaBrain-0": 29.08,
+    "GR00T N1.5": 25.93
+   },
+   "duration": {
+    "MolmoAct2": 52.44,
+    "WALL-OSS-0.5": 48.44,
+    "DreamZero": 59.3,
+    "Spirit-v1.5": 56.23,
+    "DM0": 61.82,
+    "PI-0.5": 52.97,
+    "GigaBrain-0": 52.94,
+    "GR00T N1.5": 50.09
+   }
+  },
+  "organize_stationery": {
+   "en_name": "OrganizeStationery",
+   "display_name": "Organize Stationery",
+   "difficulty": "Easy",
+   "n_steps": 5,
+   "step_scores": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少黑色的文件盒",
+    "human_1_note": "荧光笔向后",
+    "human_4_note": "笔盒合上之后手动打开"
+   },
+   "success": {
+    "MolmoAct2": 30.9,
+    "WALL-OSS-0.5": 33.06,
+    "DreamZero": 21.51,
+    "Spirit-v1.5": 26.3,
+    "DM0": 9.09,
+    "PI-0.5": 13.34,
+    "GigaBrain-0": 25.38,
+    "GR00T N1.5": 20.16
+   },
+   "step_score": {
+    "MolmoAct2": 40.58,
+    "WALL-OSS-0.5": 45.12,
+    "DreamZero": 29.22,
+    "Spirit-v1.5": 34.93,
+    "DM0": 12.26,
+    "PI-0.5": 17.9,
+    "GigaBrain-0": 33.13,
+    "GR00T N1.5": 27.63
+   },
+   "duration": {
+    "MolmoAct2": 38.17,
+    "WALL-OSS-0.5": 28.91,
+    "DreamZero": 32.0,
+    "Spirit-v1.5": 30.84,
+    "DM0": 36.07,
+    "PI-0.5": 35.24,
+    "GigaBrain-0": 35.15,
+    "GR00T N1.5": 33.22
+   }
+  },
+  "pack_bag": {
+   "en_name": "PackBag",
+   "display_name": "Pack Bag",
+   "difficulty": "Medium",
+   "n_steps": 4,
+   "step_scores": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少其他颜色的文具盒",
+    "human_1_note": "把文具盒向上移动",
+    "human_4_note": "把书包向左移动"
+   },
+   "success": {
+    "MolmoAct2": 28.77,
+    "WALL-OSS-0.5": 27.3,
+    "DreamZero": 28.52,
+    "Spirit-v1.5": 24.17,
+    "DM0": 31.38,
+    "PI-0.5": 24.59,
+    "GigaBrain-0": 21.19,
+    "GR00T N1.5": 16.35
+   },
+   "step_score": {
+    "MolmoAct2": 37.78,
+    "WALL-OSS-0.5": 37.26,
+    "DreamZero": 38.74,
+    "Spirit-v1.5": 32.1,
+    "DM0": 42.33,
+    "PI-0.5": 33.0,
+    "GigaBrain-0": 27.66,
+    "GR00T N1.5": 22.41
+   },
+   "duration": {
+    "MolmoAct2": 47.23,
+    "WALL-OSS-0.5": 44.71,
+    "DreamZero": 54.01,
+    "Spirit-v1.5": 42.05,
+    "DM0": 50.8,
+    "PI-0.5": 48.43,
+    "GigaBrain-0": 53.8,
+    "GR00T N1.5": 53.08
+   }
+  },
+  "zip_up": {
+   "en_name": "ZipUp",
+   "display_name": "Zip Up",
+   "difficulty": "Medium",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "human_1_note": "把包向左边移动",
+    "human_4_note": "拉上拉链之后拉开"
+   },
+   "success": {
+    "MolmoAct2": 33.42,
+    "WALL-OSS-0.5": 30.95,
+    "DreamZero": 21.26,
+    "Spirit-v1.5": 31.36,
+    "DM0": 17.09,
+    "PI-0.5": 19.79,
+    "GigaBrain-0": 19.65,
+    "GR00T N1.5": 13.58
+   },
+   "step_score": {
+    "MolmoAct2": 43.88,
+    "WALL-OSS-0.5": 42.24,
+    "DreamZero": 28.88,
+    "Spirit-v1.5": 41.65,
+    "DM0": 23.05,
+    "PI-0.5": 26.56,
+    "GigaBrain-0": 25.65,
+    "GR00T N1.5": 18.61
+   },
+   "duration": {
+    "MolmoAct2": 58.11,
+    "WALL-OSS-0.5": 56.35,
+    "DreamZero": 53.98,
+    "Spirit-v1.5": 62.25,
+    "DM0": 63.08,
+    "PI-0.5": 61.74,
+    "GigaBrain-0": 64.91,
+    "GR00T N1.5": 53.48
+   }
+  },
+  "paper_cup_stacking": {
+   "en_name": "PaperCupStacking",
+   "display_name": "Paper Cup Stacking",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同类型纸杯",
+    "human_1_note": "把左边的纸杯向上移动",
+    "human_4_note": "把右上角的纸杯向右移动"
+   },
+   "success": {
+    "MolmoAct2": 35.28,
+    "WALL-OSS-0.5": 23.65,
+    "DreamZero": 25.92,
+    "Spirit-v1.5": 34.03,
+    "DM0": 32.47,
+    "PI-0.5": 33.88,
+    "GigaBrain-0": 21.12,
+    "GR00T N1.5": 18.04
+   },
+   "step_score": {
+    "MolmoAct2": 46.33,
+    "WALL-OSS-0.5": 32.28,
+    "DreamZero": 35.21,
+    "Spirit-v1.5": 45.2,
+    "DM0": 43.8,
+    "PI-0.5": 45.47,
+    "GigaBrain-0": 27.57,
+    "GR00T N1.5": 24.73
+   },
+   "duration": {
+    "MolmoAct2": 32.5,
+    "WALL-OSS-0.5": 32.82,
+    "DreamZero": 34.07,
+    "Spirit-v1.5": 42.52,
+    "DM0": 44.38,
+    "PI-0.5": 38.96,
+    "GigaBrain-0": 37.37,
+    "GR00T N1.5": 39.99
+   }
+  },
+  "clear_plates": {
+   "en_name": "ArrangePlates",
+   "display_name": "Clear Plates",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同类型的盘子",
+    "human_1_note": "把盘子向前移动",
+    "human_4_note": "把架子向左边移动"
+   },
+   "success": {
+    "MolmoAct2": 32.72,
+    "WALL-OSS-0.5": 27.52,
+    "DreamZero": 23.54,
+    "Spirit-v1.5": 21.98,
+    "DM0": 24.47,
+    "PI-0.5": 18.05,
+    "GigaBrain-0": 24.53,
+    "GR00T N1.5": 34.36
+   },
+   "step_score": {
+    "MolmoAct2": 42.97,
+    "WALL-OSS-0.5": 37.56,
+    "DreamZero": 31.98,
+    "Spirit-v1.5": 29.19,
+    "DM0": 33.01,
+    "PI-0.5": 24.23,
+    "GigaBrain-0": 32.02,
+    "GR00T N1.5": 47.1
+   },
+   "duration": {
+    "MolmoAct2": 51.28,
+    "WALL-OSS-0.5": 53.78,
+    "DreamZero": 51.06,
+    "Spirit-v1.5": 55.29,
+    "DM0": 49.19,
+    "PI-0.5": 47.07,
+    "GigaBrain-0": 47.37,
+    "GR00T N1.5": 52.72
+   }
+  },
+  "spell_robot": {
+   "en_name": "SpellRobot",
+   "display_name": "Spell robot",
+   "difficulty": "Medium",
+   "n_steps": 4,
+   "step_scores": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的字母",
+    "human_1_note": "字母上移动",
+    "human_4_note": "字母向左边移动"
+   },
+   "success": {
+    "MolmoAct2": 28.62,
+    "WALL-OSS-0.5": 33.99,
+    "DreamZero": 22.94,
+    "Spirit-v1.5": 14.37,
+    "DM0": 21.17,
+    "PI-0.5": 18.93,
+    "GigaBrain-0": 17.03,
+    "GR00T N1.5": 17.54
+   },
+   "step_score": {
+    "MolmoAct2": 37.58,
+    "WALL-OSS-0.5": 46.39,
+    "DreamZero": 31.16,
+    "Spirit-v1.5": 19.09,
+    "DM0": 28.56,
+    "PI-0.5": 25.41,
+    "GigaBrain-0": 22.23,
+    "GR00T N1.5": 24.04
+   },
+   "duration": {
+    "MolmoAct2": 29.04,
+    "WALL-OSS-0.5": 25.18,
+    "DreamZero": 33.69,
+    "Spirit-v1.5": 36.29,
+    "DM0": 28.24,
+    "PI-0.5": 36.47,
+    "GigaBrain-0": 34.69,
+    "GR00T N1.5": 31.89
+   }
+  },
+  "store_racket": {
+   "en_name": "StorePaddle",
+   "display_name": "Store Racket",
+   "difficulty": "Medium",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的球拍套装",
+    "human_1_note": "球拍向前移动",
+    "human_4_note": "球拍向左移动"
+   },
+   "success": {
+    "MolmoAct2": 28.49,
+    "WALL-OSS-0.5": 28.02,
+    "DreamZero": 34.23,
+    "Spirit-v1.5": 20.45,
+    "DM0": 23.35,
+    "PI-0.5": 24.56,
+    "GigaBrain-0": 20.33,
+    "GR00T N1.5": 25.14
+   },
+   "step_score": {
+    "MolmoAct2": 37.41,
+    "WALL-OSS-0.5": 38.24,
+    "DreamZero": 46.5,
+    "Spirit-v1.5": 27.16,
+    "DM0": 31.5,
+    "PI-0.5": 32.96,
+    "GigaBrain-0": 26.54,
+    "GR00T N1.5": 34.46
+   },
+   "duration": {
+    "MolmoAct2": 41.34,
+    "WALL-OSS-0.5": 38.29,
+    "DreamZero": 47.23,
+    "Spirit-v1.5": 48.27,
+    "DM0": 45.8,
+    "PI-0.5": 39.38,
+    "GigaBrain-0": 42.13,
+    "GR00T N1.5": 40.69
+   }
+  },
+  "sort_food_conveyor": {
+   "en_name": "ConveyorSorting",
+   "display_name": "Conveyor Food Sorting",
+   "difficulty": "Medium",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的零食",
+    "human_1_note": "可乐快到了然后放回传送带起点",
+    "human_4_note": "薯片快到了然后放回传送带起点"
+   },
+   "success": {
+    "MolmoAct2": 32.26,
+    "WALL-OSS-0.5": 27.03,
+    "DreamZero": 35.38,
+    "Spirit-v1.5": 34.36,
+    "DM0": 17.09,
+    "PI-0.5": 23.36,
+    "GigaBrain-0": 37.55,
+    "GR00T N1.5": 25.96
+   },
+   "step_score": {
+    "MolmoAct2": 42.36,
+    "WALL-OSS-0.5": 36.89,
+    "DreamZero": 48.06,
+    "Spirit-v1.5": 45.64,
+    "DM0": 23.05,
+    "PI-0.5": 31.35,
+    "GigaBrain-0": 49.01,
+    "GR00T N1.5": 35.58
+   },
+   "duration": {
+    "MolmoAct2": 63.39,
+    "WALL-OSS-0.5": 64.22,
+    "DreamZero": 58.16,
+    "Spirit-v1.5": 60.34,
+    "DM0": 52.36,
+    "PI-0.5": 53.3,
+    "GigaBrain-0": 54.97,
+    "GR00T N1.5": 58.79
+   }
+  },
+  "stack_cups": {
+   "en_name": "StoreCups",
+   "display_name": "Stack Cups",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同颜色的纸杯",
+    "human_1_note": "把纸杯向左移动",
+    "human_4_note": "放了第一个马上放第二个挪一下底座"
+   },
+   "success": {
+    "MolmoAct2": 31.44,
+    "WALL-OSS-0.5": 34.59,
+    "DreamZero": 31.48,
+    "Spirit-v1.5": 35.48,
+    "DM0": 31.8,
+    "PI-0.5": 19.87,
+    "GigaBrain-0": 32.41,
+    "GR00T N1.5": 25.49
+   },
+   "step_score": {
+    "MolmoAct2": 41.28,
+    "WALL-OSS-0.5": 47.21,
+    "DreamZero": 42.76,
+    "Spirit-v1.5": 47.12,
+    "DM0": 42.9,
+    "PI-0.5": 26.67,
+    "GigaBrain-0": 42.31,
+    "GR00T N1.5": 34.94
+   },
+   "duration": {
+    "MolmoAct2": 32.52,
+    "WALL-OSS-0.5": 30.79,
+    "DreamZero": 42.37,
+    "Spirit-v1.5": 37.14,
+    "DM0": 43.09,
+    "PI-0.5": 41.87,
+    "GigaBrain-0": 29.97,
+    "GR00T N1.5": 38.23
+   }
+  },
+  "plug_in_ethernet": {
+   "en_name": "PlugInEthernet",
+   "display_name": "Plug In Ethernet",
+   "difficulty": "Medium",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "不同的网线跟端口",
+    "human_1_note": "把网线移开",
+    "human_4_note": "把插口移开"
+   },
+   "success": {
+    "MolmoAct2": 27.54,
+    "WALL-OSS-0.5": 22.9,
+    "DreamZero": 16.94,
+    "Spirit-v1.5": 18.75,
+    "DM0": 12.87,
+    "PI-0.5": 9.23,
+    "GigaBrain-0": 19.3,
+    "GR00T N1.5": 14.27
+   },
+   "step_score": {
+    "MolmoAct2": 36.16,
+    "WALL-OSS-0.5": 31.26,
+    "DreamZero": 23.01,
+    "Spirit-v1.5": 24.9,
+    "DM0": 17.36,
+    "PI-0.5": 12.39,
+    "GigaBrain-0": 25.19,
+    "GR00T N1.5": 19.56
+   },
+   "duration": {
+    "MolmoAct2": 48.65,
+    "WALL-OSS-0.5": 47.35,
+    "DreamZero": 48.93,
+    "Spirit-v1.5": 50.02,
+    "DM0": 45.47,
+    "PI-0.5": 56.11,
+    "GigaBrain-0": 46.98,
+    "GR00T N1.5": 47.95
+   }
+  },
+  "stack_bowls_three": {
+   "en_name": "StackBowls",
+   "display_name": "Stack Bowls",
+   "difficulty": "Easy",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "unseen_object_3": "除了塑料类型",
+    "human_1_note": "把粉色碗向下移动",
+    "human_4_note": "叠了第二个之后拿下第二个"
+   },
+   "success": {
+    "MolmoAct2": 29.28,
+    "WALL-OSS-0.5": 24.59,
+    "DreamZero": 29.66,
+    "Spirit-v1.5": 36.28,
+    "DM0": 26.2,
+    "PI-0.5": 11.33,
+    "GigaBrain-0": 16.12,
+    "GR00T N1.5": 19.43
+   },
+   "step_score": {
+    "MolmoAct2": 38.45,
+    "WALL-OSS-0.5": 33.56,
+    "DreamZero": 40.29,
+    "Spirit-v1.5": 48.19,
+    "DM0": 35.34,
+    "PI-0.5": 15.21,
+    "GigaBrain-0": 21.04,
+    "GR00T N1.5": 26.63
+   },
+   "duration": {
+    "MolmoAct2": 31.33,
+    "WALL-OSS-0.5": 23.17,
+    "DreamZero": 30.94,
+    "Spirit-v1.5": 34.35,
+    "DM0": 25.25,
+    "PI-0.5": 33.69,
+    "GigaBrain-0": 33.84,
+    "GR00T N1.5": 24.83
+   }
+  },
+  "store_earphones": {
+   "en_name": "StoreEarphones",
+   "display_name": "Store Earphones",
+   "difficulty": "Hard",
+   "n_steps": 4,
+   "step_scores": [
+    25,
+    25,
+    25,
+    25
+   ],
+   "generalization": {
+    "unseen_object_3": "缺少不同的收纳盒以及耳机托盘",
+    "human_1_note": "把黄色盒子的耳机向前移动",
+    "human_4_note": "把红盒子的耳机向右移动"
+   },
+   "success": {
+    "MolmoAct2": 27.73,
+    "WALL-OSS-0.5": 28.35,
+    "DreamZero": 28.52,
+    "Spirit-v1.5": 32.3,
+    "DM0": 25.61,
+    "PI-0.5": 29.85,
+    "GigaBrain-0": 23.3,
+    "GR00T N1.5": 27.4
+   },
+   "step_score": {
+    "MolmoAct2": 36.41,
+    "WALL-OSS-0.5": 38.7,
+    "DreamZero": 38.74,
+    "Spirit-v1.5": 42.9,
+    "DM0": 34.55,
+    "PI-0.5": 40.06,
+    "GigaBrain-0": 30.41,
+    "GR00T N1.5": 37.56
+   },
+   "duration": {
+    "MolmoAct2": 44.5,
+    "WALL-OSS-0.5": 47.75,
+    "DreamZero": 35.83,
+    "Spirit-v1.5": 42.54,
+    "DM0": 42.32,
+    "PI-0.5": 38.28,
+    "GigaBrain-0": 47.33,
+    "GR00T N1.5": 40.79
+   }
+  },
+  "pack_iphone": {
+   "en_name": "PackPhone",
+   "display_name": "Pack Phone",
+   "difficulty": "Hard",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {
+    "human_1_note": "手机向上移动",
+    "human_4_note": "外壳盖移开"
+   },
+   "success": {
+    "MolmoAct2": 27.39,
+    "WALL-OSS-0.5": 21.49,
+    "DreamZero": 31.86,
+    "Spirit-v1.5": 22.25,
+    "DM0": 21.23,
+    "PI-0.5": 24.72,
+    "GigaBrain-0": 16.94,
+    "GR00T N1.5": 25.19
+   },
+   "step_score": {
+    "MolmoAct2": 35.97,
+    "WALL-OSS-0.5": 29.33,
+    "DreamZero": 43.28,
+    "Spirit-v1.5": 29.55,
+    "DM0": 28.64,
+    "PI-0.5": 33.18,
+    "GigaBrain-0": 22.11,
+    "GR00T N1.5": 34.53
+   },
+   "duration": {
+    "MolmoAct2": 58.01,
+    "WALL-OSS-0.5": 51.09,
+    "DreamZero": 51.97,
+    "Spirit-v1.5": 55.03,
+    "DM0": 60.52,
+    "PI-0.5": 58.49,
+    "GigaBrain-0": 58.28,
+    "GR00T N1.5": 52.22
+   }
+  },
+  "remove_pinned_note": {
+   "en_name": "RemovePinnedNote",
+   "display_name": "Remove Pinned Note",
+   "difficulty": "Medium",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {
+    "human_1_note": "把把黄色钉子移到中间",
+    "human_4_note": "把绿色钉子向下移动"
+   },
+   "success": {
+    "MolmoAct2": 33.75,
+    "WALL-OSS-0.5": 40.28,
+    "DreamZero": 30.66,
+    "Spirit-v1.5": 23.17,
+    "DM0": 13.31,
+    "PI-0.5": 32.26,
+    "GigaBrain-0": 18.86,
+    "GR00T N1.5": 26.13
+   },
+   "step_score": {
+    "MolmoAct2": 44.32,
+    "WALL-OSS-0.5": 54.98,
+    "DreamZero": 41.65,
+    "Spirit-v1.5": 30.77,
+    "DM0": 17.95,
+    "PI-0.5": 43.3,
+    "GigaBrain-0": 24.62,
+    "GR00T N1.5": 35.82
+   },
+   "duration": {
+    "MolmoAct2": 28.57,
+    "WALL-OSS-0.5": 40.08,
+    "DreamZero": 37.64,
+    "Spirit-v1.5": 28.66,
+    "DM0": 39.89,
+    "PI-0.5": 28.61,
+    "GigaBrain-0": 29.7,
+    "GR00T N1.5": 27.41
+   }
+  },
+  "pencil_case": {
+   "en_name": "OrganizePencilCase",
+   "display_name": "Organize Pencil Case",
+   "difficulty": "Medium",
+   "n_steps": 3,
+   "step_scores": [
+    30,
+    30,
+    40
+   ],
+   "generalization": {},
+   "success": {
+    "MolmoAct2": 24.95,
+    "WALL-OSS-0.5": 28.7,
+    "DreamZero": 30.3,
+    "Spirit-v1.5": 21.16,
+    "DM0": 26.33,
+    "PI-0.5": 24.87,
+    "GigaBrain-0": 12.94,
+    "GR00T N1.5": 23.39
+   },
+   "step_score": {
+    "MolmoAct2": 32.76,
+    "WALL-OSS-0.5": 39.17,
+    "DreamZero": 41.16,
+    "Spirit-v1.5": 28.1,
+    "DM0": 35.52,
+    "PI-0.5": 33.38,
+    "GigaBrain-0": 16.89,
+    "GR00T N1.5": 32.06
+   },
+   "duration": {
+    "MolmoAct2": 40.95,
+    "WALL-OSS-0.5": 47.69,
+    "DreamZero": 51.37,
+    "Spirit-v1.5": 44.0,
+    "DM0": 50.8,
+    "PI-0.5": 46.56,
+    "GigaBrain-0": 45.73,
+    "GR00T N1.5": 49.49
+   }
+  },
+  "syring_water": {
+   "en_name": "SyringeWaterTransfer",
+   "display_name": "Syringe Water Transfer",
+   "difficulty": "Medium",
+   "n_steps": 2,
+   "step_scores": [
+    50,
+    50
+   ],
+   "generalization": {},
+   "success": {
+    "MolmoAct2": 27.89,
+    "WALL-OSS-0.5": 23.81,
+    "DreamZero": 26.86,
+    "Spirit-v1.5": 23.07,
+    "DM0": 24.33,
+    "PI-0.5": 29.35,
+    "GigaBrain-0": 22.22,
+    "GR00T N1.5": 19.0
+   },
+   "step_score": {
+    "MolmoAct2": 36.62,
+    "WALL-OSS-0.5": 32.5,
+    "DreamZero": 36.49,
+    "Spirit-v1.5": 30.64,
+    "DM0": 32.82,
+    "PI-0.5": 39.39,
+    "GigaBrain-0": 29.0,
+    "GR00T N1.5": 26.04
+   },
+   "duration": {
+    "MolmoAct2": 58.31,
+    "WALL-OSS-0.5": 55.35,
+    "DreamZero": 66.93,
+    "Spirit-v1.5": 56.91,
+    "DM0": 57.54,
+    "PI-0.5": 54.94,
+    "GigaBrain-0": 64.29,
+    "GR00T N1.5": 60.87
+   }
+  }
+ }
+}
