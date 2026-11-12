@@ -1,465 +1,393 @@
 # 玄 · 寻找参加UniBot的创新点
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
-
 <!-- IDEA:START -->
-# 第 57 轮（承接第 56 轮「证据地图×主动探询×信任协商」IP-127~132；灵感循环第 3 轮；本轮灵感：「小样本学习」×「多模态交互」×「个性化交互」）
+# 第 59 轮（承接第 58 轮「结构化自适应层」IP-139~144；灵感循环第 5 轮；本轮灵感：「无刷电机」×「嵌入式系统」×「末端执行器控制」）
 
-> 第 56 轮把安全的赌注从"模型置信"换成"证据承诺"——持久地图 𝓜、探-诺-演闭环、同意阶梯三层纵深，使单点过度自信不再足以产生承诺；但它的风险自陈同时暴露了三个未解的经济学问题：**(a)** 每个区域只被到访两三次，探针样本天然稀少，信念宽度与校准全靠手工先验与手设 θ_voi/k_probes——赌注从"模型置信"换到"证据质量"后，又落回"先验质量"；**(b)** 证据基本来自单一模态，一个"同时欺骗该模态"的物理性质（透明冰面看起来干、探起来硬）可以制造跨到访自洽的假信念——同一模态重复五遍只是把同一个错误问五遍；**(c)** 人类被建模为静态有界权重 w_h：橡皮章者与严谨者同权、疲劳 session 与清醒 session 同权——既浪费（严谨者标注被隔离同样久）又危险（橡皮章确认被当作真确认）。本轮三个灵感各补一条腿：**小样本学习**让先验不再手设而是从全体区域史中摊销、且以共形预测保底；**多模态交互**让证据按模态分账、跨模态对账——分歧即不确定性下限，一致才是新证据类；**个性化交互**让操作者从静态权重变成单向有界演化的信任状态机。本轮同时给第 56 轮"坏证据长寿"一个新武器：**事后证伪回溯**（发现某模态/标注错了，回溯降权其全部历史证据）。核心命题由"证据说可信"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据说可信"**。
+> 第 58 轮把「证据承诺」的上层建筑做到了极致：KG 结构化记忆、安全微调、心智模型协同、自适应共形校准、六类证据门、三重预算耦合——但所有这些都假设「探针执行即观测」「承诺即轨迹执行」，把底层执行当成了无延迟、无抖动、无建模误差的理想执行器。本轮三个灵感精准击中这个**抽象泄漏**：**无刷电机**带来转矩脉动、齿槽效应、磁饱和、电流采样噪声、PWM 分辨率量化——这些不是高斯噪声，而是**状态相关、非线性、周期性**的结构性不确定性；**嵌入式系统**带来确定性延迟抖动、内存碎片、中断嵌套、缓存未命中、总线仲裁——高层 1~10 Hz 决策下发到 10~20 kHz 电流环，中间隔着**数量级时钟域跨度**与**资源竞争**；**末端执行器控制**把「接触」还原为阻抗/导纳参数、力限幅、轨迹时长——高层的 δ_f（失效概率）必须**形式化映射**为低层的增益余量、相位余量、电流上限、轨迹带宽。本轮核心命题：**「把证据层的概率安全界，编译成执行层的确定性硬约束；把执行层的结构性不确定性，反编译成证据层的校正证据」**——实现**双向契约**。
 
 核心矛盾：
-- **H26（少样本 vs 校准）**：每区域 k≤5 次探针下，手工先验要么过保守（浪费探针与节拍）要么过自信（欠覆盖）；元先验自己也可能错——安全的赌注层层后移，最终总要有人为"先验的质量"负责。
-- **H27（单模态共谋）**：物理欺骗是跨模态不均匀的，但单模态融合看不见模态间分歧；"跨模态一致"这一最强证据形态与"跨模态分歧"这一最强警报，在单模态体系里都不存在。
-- **H28（个性化 vs 博弈）**：把人当常量既浪费又危险；但个性化若允许"变松"，就制造了可被博弈的信任通胀——操作者可以先表现得严谨攒授权、再滥用授权。
+- **H29（抽象泄漏·执行不确定性下沉）**：证据层假设「探针 = 观测 + 高斯噪声」，实则 BLDC 转矩脉动随电角度、电流、温度变化；电流采样同步抖动导致力估计偏移；PWM 死区在低电流段引入非线性死区——这些**状态相关非高斯结构性不确定性**若不建模，证据层的后验校准（ECE、共形带）全是建立在错误似然之上的「自洽幻觉」。
+- **H30（时钟域鸿沟·证据陈旧性）**：证据层 1~10 Hz 决策（PCX++），规划层 50~100 Hz，全身控制 1~2 kHz，电流环 10~20 kHz。**中断嵌套、DMA 竞争、缓存未命中**导致指令下发到执行的端到端抖动达 0.5~5 ms；若证据层用「陈旧 100 ms 前的信念」下发阻抗参数，环境早已变化——**证据鲜度**成为新的安全维度。
+- **H31（安全界编译·概率到确定的映射）**：高层 δ_f=10⁻⁴ 必须映射为：电流环饱和概率 < 10⁻⁶、阻抗增益相位余量 > 45°、力限幅触发率 < 10⁻³、轨迹跟踪误差 99.99% 分位数 < ε_traj。**没有形式化编译链**，高层「安全」只是口号；**编译链若过保守**，机器人动弹不得；**编译链若泄漏**，真实失效率超标。
 
 ## 0. 直觉与动机
 
-**灵感 1（小样本学习 → 摊销先验 + 共形保底）**
-直觉：机器人部署生涯就是一场持续的小样本考试——每个区域只有 1~5 次探针机会，却要为不可逆接触给出校准后验。手工先验是"老师划重点"：划对省题、划错全错。元学习换一种问法：**先验不从天降，从全体区域的探针史里摊销**——新区域一次轻点，先定位"它像已见过的哪类表面"，借那一类的响应结构解码后验；效率来自元先验，安全却不托付给元先验：**OOD 门 + 共形保底带**——元模型声明分布内才用摊销后验；一旦观测序列不像任何训练过的表面，退回非参共形区间，宁可宽、不可错。于是 k_probes 从手设常数变成**声明的样本效率证书 k\*(w\*)**。
+**灵感 1（无刷电机 → 结构化执行不确定性建模 BUQ）**
+直觉：BLDC 不是「扭矩源」，而是**含周期性扰动的非线性执行器**。转矩脉动 τ_ripple(θ_e, i_q, T) = Σ_k a_k(θ_e, T) sin(k·θ_e + φ_k) + b·i_q²（磁饱和）+ c·sign(i_q)（摩擦）；电流采样同步抖动 δ_t_sync ~ Uniform[−T_pwm/2, T_pwm/2] 经克拉克-帕克变换折射为 dq 轴电流噪声；ADC 量化 + 增益漂移 + 偏移漂移。关键洞见：**这些不确定性是可辨识、可建模、可在线校准的**——把电机参数（相电阻、电感、磁链、齿槽谐波系数）纳入 **执行不确定性状态 ξ_exec**，随每次接触/探针在线辨识（RLS/UKF），输出 **结构化似然修正因子** L_exec(obs|θ, ξ_exec) 替代高层的高斯似然。于是探针观测的「噪声模型」从手设常数变成**随执行状态自适应的结构化模型**；共形校准集残差不再是 i.i.d. 而是**条件于 ξ_exec 的分层残差**。
 
-**灵感 2（多模态交互 → 证据分账与跨模态对账）**
-直觉：单模态的重复探针是"把同一个问题问五遍"。把区域信念按模态分账 {b_r^m}（视觉/触探/本体/声学），跨模态对账产出两种单模态体系里不存在的信息：**分歧即不确定性下限**（D(r) 大 ⇒ 后验强制加宽 ⇒ 自动趋向探询/绕行/降档）；**一致即新证据类**（两个条件独立的模态同侧 ⇒ EV-xmodal，可在 L1 非不可逆接触上顶替一次佐证）。模态可靠性 ρ_m 按事后证伪降级、按证实恢复、全程审计——被冰面骗过一次的"视觉"在同类区域自动失重。
+**灵感 2（嵌入式系统 → 确定性实时契约 ERTC）**
+直觉：高层决策下发到电机驱动，中间隔着 **OS 调度、中断嵌套、总线仲裁、内存分配**。与其事后统计延迟分布，不如**前置契约化**：定义 **实时执行契约** C_rt = (T_wcet, T_jitter_max, Mem_bound, Bus_bw_reserved, Priority_ceiling)。编译期静态分析（AI-Timing/抽象解释）给出 WCET 边界；运行时 **预算监视器** 强制执行：超越契约即触发**降级模式**（切保守阻抗、冻结非关键任务、上报证据层「执行降级」证据）。契约参数随固件版本、硬件批次版本化，**证据层只信契约内的执行**；契约外视为「未知执行」，强制回退共形保底带 + 安全停。于是「证据陈旧性」被量化为：**证据年龄 τ_evidence ≤ T_contract_renewal**（契约续约周期，典型 10~50 ms）。
 
-**灵感 3（个性化交互 → 单向有界的信任状态机）**
-直觉：操作者不是常量而是状态 s_o=(cal, vig, auth)：cal 校准分（标注 vs 事后实测）、vig 警觉度（橡皮章/疲劳检测）、auth∈{A0,A1,A2} 授权级（决定标注佐证数、w_h、L2 超时）。关键设计是**个性化只能向保守方向滑动**：降级实时（检出橡皮章即刻降），升级要攒够事后证实的记录且有界速率；授权只参数化"佐证数量与时延参数"，决策规则本体永不可触碰——人可以让系统"更快相信自己"，永远不能让系统"更敢赌"。信任可以赢得慢、失去快。
+**灵感 3（末端执行器控制 → 阻抗参数安全编译 EEIS）**
+直觉：高层 δ_f 与低层阻抗增益 K_p, K_d, 力限幅 F_max, 轨迹带宽 ω_traj 之间存在**可验证的映射关系**。利用**通道不等式/小增益定理/结构奇异值 μ 分析**：给定环境阻抗不确定性集合 Z_env(ξ_exec, b_r)，合成阻抗控制器使闭环 **鲁棒稳定性概率 ≥ 1−δ_f** 且 **接触力超限概率 ≤ δ_force**。编译输出：**参数集合 K_safe = {(K_p, K_d, F_max, ω_traj) | 鲁棒稳定 ∧ 力约束满足 ∧ 跟踪误差分位数 ≤ ε_traj}**。运行时：证据层给出风险上界 δ_f^req，EEIS 在 K_safe 中**在线投影**选取「最软/最快」的参数（最大化柔顺/速度受安全约束）；若 K_safe 为空 ⇒ **证据层必须降级**（绕行/降档/停止）。于是「承诺」不再是抽象动作，而是**带形式化安全证书的阻抗参数包**。
 
-**灵感 4（三灵感合流 → 证据门从四类到五类、从静态到分层）**
-直觉：第 56 轮证据门 EV-probe/visit/margin/human 在本轮各获得一个新维度：EV-probe 必须挂**元校准证书或共形带**（少样本维度）；**EV-xmodal** 新增且仅限 L1（多模态维度）；EV-human 的佐证数与激活速度由 auth 决定（个性化维度）。击穿安全需要：元先验错 ∧ OOD 门漏检 ∧ 跨模态无一致 ∧ 无裕度 ∧ 人也错——纵深从三层到五层。
+**灵感 4（三灵感合流 → 双向契约闭环 CLEP）**
+直觉：BUQ 给出执行不确定性状态 ξ_exec → 修正证据层似然 → 校准后验 → δ_f^req；ERTC 给出执行契约 C_rt → 界定证据鲜度 τ_evidence → 若过期强制回退；EEIS 编译 δ_f^req → K_safe → 下发执行器；执行器实测 (τ_actual, i_actual, θ_actual, F_contact) → 更新 ξ_exec、验证 C_rt、审计 EEIS 证书 → 产生 **执行证据 EV-exec** 回传证据层（作为新模态参与跨模态对账）。**EV-exec 包含：执行契约遵守位、参数辨识残差、力跟踪误差分位数、稳定性证书审计结果**。跨模态对账 (XMC) 现在把 EV-exec 与视觉/触探/本体/声学同权对账——**执行一致性成为第 5 个模态**，分歧即触发保守。
 
-**灵感 5（PCE+ → 探询预算本身成为被学习的对象）**
-直觉：VOI 改用元后验做悲观估计；承诺前插入对账检查点——D(r)>θ_D 先发一次"最大分歧模态"的共识探针；OOD 触发则切共形带（带变宽 ⇒ 自动趋向绕行/降档）。少样本、多模态、个性化三个机制全部经由"信念更准或动作更保守"两个安全通道起作用，延续并强化第 56 轮的交互单调性。
+**灵感 5（PCE+++ → 三层预算耦合：探针/微调/解释/执行）**
+直觉：第 58 轮已有 B_probe, B_ft, B_ux；本轮新增 **B_exec（执行预算：WCET 余量、总线带宽余量、热功率余量）**。PCE+++ 在 VOI 计算中显式纳入 **执行成本**：voi_exec = VOI_meta_pessimistic − cost_exec(ξ_exec, C_rt, K_safe)；若执行预算不足以支撑「最优探针/承诺」，自动退向「可执行的次优」或「保守停」。执行预算耗尽触发**热降频/切核/冻结非关键**——由 ERTC 监视器强制保证关键链路（电流环、力环、安全监视）永不抢占。
 
-## 1. 形式化定义（增量：定义 133–138）
+## 1. 形式化定义（增量：定义 145–152）
 
-**定义 133（元少样本信念推断 MFSL）** 元训练集 𝒟_meta={(R_j,O_j,θ̂_j)}（区域/探针观测序列/事后实测参数），摊销推断器 q_φ(θ|o_{1:k},z_r)，θ=(μ,k,F_bear)，z_r 区域上下文（坡度/材质簇/季节）。校准契约：∀k≤k_max，ECE_k(q_φ)≤ε_meta(k) 且 ε_meta 随 k 单调不增；样本效率证书 k\*(w\*)=min{k:E[|C_k|]≤w\*}。OOD 门 n(o_{1:k})=−Σ_i log p̂_φ(o_i|o_{<i},z_r)>θ_ood ⇒ 判分布外，退共形带 C_cf(r)=wCF({res_j},sim(z_r,z_j),α_conf)（分层加权共形+union bound），覆盖 ≥1−α_conf。ID 信念以声明校准进 SMM；OOD 信念只以带内最坏值进 P_fail。
+**定义 145（BLDC 执行不确定性建模 BUQ）** 执行不确定性状态 ξ_exec=(R_ph, L_d, L_q, λ_pm, {a_k,φ_k}_k=1..K_ripple, b_sat, c_fric, ADC_gain, ADC_offset, δ_t_sync, T_junc)。在线辨识器 UKF_ξ：过程模型 ξ_{t+1}=ξ_t+w_t（慢漂移），观测模型 y_t=h(ξ_t, u_t)+v_t 其中 y_t=(i_d,i_q,τ_est,θ_e)，u_t=(v_d,v_q)。辨识收敛契约：‖ξ_exec−ξ_true‖_P⁻¹ ≤ χ²_dof(1−α_ξ) 在 N_id 接触后。结构化似然修正：L_exec(obs|θ,ξ_exec)=N(obs; h_probe(θ,ξ_exec), Σ_exec(ξ_exec))，其中 Σ_exec 由 UKF 后验协方差传播得出。OOD 扩展：ξ_exec 落出辨识置信椭球 ⇒ 判执行 OOD，触发共形保底带（同 IP-133）+ 执行降级。
 
-**定义 134（跨模态对账 XMC）** 模态集 ℳ={vis,tap,prop,acou}，区域分账 {b_r^m}，融合 b_r=Fuse({b_r^m},{ρ_m})，ρ_m∈[ρ_min,1]。分歧 D(r)=Σ_{m<m'}[TV(lbl^m,lbl^{m'})+|Q_μ^m(0.9)−Q_μ^{m'}(0.9)|/μ_scale]。三规则：(R1) D(r)>θ_D ⇒ P_fail 以加宽混合后验计算（不确定性下限）；(R2) EV-xmodal ⇔ ∃(m,m') 独立声明 ∧ ρ≥ρ_0 ∧ 与融合同侧 ∧ D(r)≤θ_D，仅可替代 L1 接触一次佐证，不得进入不可逆接触必要证据集；(R3) 事后证伪 ⇒ ρ_m 乘性降级并回溯标记历史证据，证实 ⇒ 有界恢复。
+**定义 146（嵌入式实时契约 ERTC）** 契约 C_rt=(WCET_map, Jitter_bound, Mem_pool, Bus_bw_reserved, Prio_ceiling, Renewal_period)。WCET_map: 每关键任务（电流环/力环/安全监视/证据下发）的最坏执行时间，经静态分析 (AI-Timing) 认证；Jitter_bound: 端到端抖动上界（含中断嵌套/DMA/缓存）；Mem_pool: 静态内存池划分，零动态分配；Bus_bw_reserved: CAN/FD/以太网时隙预留；Prio_ceiling: 优先级上限协议防止优先级反转；Renewal_period: 契约参数重验证周期（典型 10 ms）。运行时监视器 M_rt：周期性采样实际 WCET、抖动、内存、总线利用率；任一指标超界 ⇒ 触发 **执行降级模式**（DEGRADE_EXEC）：切保守阻抗预设、冻结 B_ft/B_ux 任务、上报 EV-exec.degraded=true。证据层只接受契约内执行：τ_evidence ≤ Renewal_period ∧ ¬degraded。
 
-**定义 135（个性化信任状态 PTM）** s_o=(cal_o,vig_o,auth_o)，auth∈{A0,A1,A2}；cal 由 proper scoring（标注 vs 事后实测）；vig=g(确认间隔分布,确认率偏离,会话时长)，橡皮章判定（时延<τ_rs 且率>p_rs）⇒ vig↓。授权动态：升级需 n_verify≥N_up(A) ∧ cal_o≥θ_cal(A) ∧ 速率≤Δ_auth/T；降级实时；会话域衰减。授权只参数化隔离出口 corrob\*(auth)（A0=探针实证/A1=2/A2=1）、w_h=min(w_max^g,w0·cal_o)、τ_int(auth) 单调递减。全局硬界与决策规则本体不因个性化而变。
+**定义 147（末端阻抗安全编译 EEIS）** 环境阻抗不确定性集 Z_env(ξ_exec, b_r) = {Z(s) | Re[Z(jω)] ∈ [R_min(ξ_exec,b_r), R_max(ξ_exec,b_r)], |Z(jω)| ≤ M(ξ_exec,b_r)}。阻抗控制器 C_imp(s)=K_p + K_d·s（并联虚拟阻尼）。鲁棒稳定性条件（小增益定理）：‖W_s(s)·S(s)‖_∞ < 1，S(s)=1/(1+P(s)C_imp(s))，W_s 为环境不确定性权重。力约束条件：Pr[|F_contact| > F_max] ≤ δ_force，经高斯近似/共形量化。跟踪误差条件：Pr[‖x−x_des‖ > ε_traj] ≤ δ_traj。编译问题：
+```
+K_safe = argmax_{K_p,K_d,F_max,ω_traj} (λ_compl·ω_traj − λ_stiff·K_p)
+s.t.  ‖W_s·S‖_∞ ≤ 1−γ_margin(δ_f^req)
+      Pr[|F|>F_max] ≤ δ_force(δ_f^req)
+      Pr[‖e‖>ε_traj] ≤ δ_traj(δ_f^req)
+      K_p∈[K_min,K_max], K_d∈[K_d_min,K_d_max], F_max≤F_abs
+```
+γ_margin(δ)=Φ⁻¹(1−δ/2)·σ_model（模型不确定性标准差）。求解器：凸松弛 + 线搜索 + μ 分析验证，离线预计算 Pareto 前沿、在线 O(1) 查表投影。输出证书 Cert_eeis=(K_p,K_d,F_max,ω_traj, γ_margin, δ_force, δ_traj, μ_verified, version)。
 
-**定义 136（多模态个性化解释 MXI）** 内容五元组不变 Exp=(r,b_r 摘要,违反约束,裕度,建议)；渲染 m_E\*=argmax_m Ê[理解正确|m,s_o]，候选 {地图叠层,触觉力回放,语音摘要,文本}；输入通道（触图标注/语音确认）各带错误模型并按校准入账；τ_mm≤τ_int。
+**定义 148（执行证据 EV-exec 与跨模态扩展 XMC+）** EV-exec = (contract_ok, ξ_exec_residual, force_tracking_quantile, stability_cert_audit, τ_evidence, degraded_flag)。模态集扩展 ℳ⁺ = ℳ ∪ {exec}。跨模态对账分歧 D⁺(r) = D(r) + w_exec·TV(lbl_exec, lbl_fused) + w_exec·|Q_μ_exec(0.99)−Q_μ_fused(0.99)|/μ_scale。规则扩展：(R1+) D⁺>θ_D⁺ ⇒ 后验加宽；(R2+) EV-exec 仅作对账模态，**不得作为 EV-xmodal 替代佐证**（执行非独立观测）；(R3+) degraded_flag=true ⇒ ρ_exec 乘性降级至 ρ_min、回溯标记历史 EV-exec。
 
-**定义 137（少样本证据门 FSE 与证书 J_p）** 证据类 EV-probe\*（须声明 ECE_k≤ε_meta(k) 或挂共形带）/EV-visit/EV-margin/EV-xmodal（限 L1）/EV-human（auth≥A1 且佐证≥corrob\*(auth)）；OOD 区域在共形带建立前禁 EV-probe；不可逆接触必要证据集={EV-probe\*∨EV-margin}∪佐证，不含 EV-xmodal。J_p=(M_core,C_core,K_margin,ρ_sem,δ_s,probe_log,consent_log,evidence,meta_cal_log,xmodal_log,auth_log,ood_registry)，继承 J_m 全检。
-
-**定义 138（探-诺-演+ 算子 PCX）** 每检查点：①元推断（ID→摊销后验/OOD→共形带）；②对账：D(r)>θ_D 且未做共识探针 ⇒ 先发最大分歧模态探针（预算 k_cons）；③承诺 ⇔ ∃g:R≤δ_f(g) ∧ 证据门过；否则选 argmax_π[VOI_元悲观(π)−cost(π)]≥θ_voi；探尽→绕行→降档→L2 协商（τ_int(auth)）或安全停。
-
-## 2. 关键算法伪代码（完整版见产物区）
-
-```python
-def meta_infer_and_fuse(M, r, obs, meta):          # IP-133/134 合流
-    inf = meta.q_phi(obs, z=ctx(r)) if ood_score(obs) <= theta_ood \
-          else conformal_belt(meta.res, sim=ctx(r), alpha=alpha_conf)
-    for m in modalities(obs):
-        M.b[r][m] = bayes_update(M.b[r][m], like(obs[m]), w=rho(M)[m])
-    fused = Fuse(M.b[r], M.rho)
-    D = disagreement(M.b[r])
-    return M, (widen(fused, D) if D > theta_D else fused), inf, D
-
-def persona_update(s, ev, audit):                  # IP-135: 单向有界
-    s.cal = proper_score_update(s.cal, ev)
-    if ev == 'confirm' and rubber_stamping(s):
-        s.auth = demote(s.auth)                    # 降级实时
-    if ev == 'verdict' and can_promote(s):
-        s.auth = promote(s.auth)                   # 升级有据有界
-    s.w_h = min(W_MAX_G, w0 * s.cal); audit.log(s); return s
+**定义 149（双向契约闭环 CLEP）** 算子 CLEP(M, cp, δ_f^req)：
+```
+① BUQ: ξ_exec ← UKF_ξ.update(telemetry)；Σ_exec ← propagate(ξ_exec)
+② ERTC: contract_ok ← M_rt.check()；τ_evidence ← now − last_renewal
+      if ¬contract_ok ∨ τ_evidence > C_rt.Renewal_period: return DEGRADE_EXEC
+③ MFSL+: inf ← meta_infer(obs, ξ_exec, Σ_exec)  # 结构化似然
+④ XMC+: M, fused, D⁺ ← xmodal_fuse_plus(M, cp.region, inf, EV-exec)
+⑤ EEIS:  K_safe, Cert_eeis ← compile_impedance(δ_f^req, fused, ξ_exec, b_r)
+      if K_safe = ∅: return DEGRADE_EXEC
+⑥ Dispatch: send_impedance_params(K_safe.best, Cert_eeis)
+⑦ Execute & Collect: telemetry ← wait_contact(τ_contact)
+⑧ EV-exec ← build_exec_evidence(telemetry, Cert_eeis, contract_ok, ξ_exec)
+⑨ M ← update_beliefs(M, cp.region, fused, EV-exec)
+⑩ Return: (M, fused, D⁺, EV-exec, Cert_eeis)
 ```
 
-## 3. 复杂度与正确性（要点）
+**定义 150（执行预算 B_exec 与 PCE+++）** B_exec = (WCET_slack, Bus_bw_slack, Thermal_slack, Prio_headroom)。WCET_slack = min_t(WCET_bound[t] − WCET_actual[t])；Bus_bw_slab = reserved − used；Thermal_slack = T_junc_max − T_junc_current；Prio_headroom = Prio_ceiling − current_max_prio。PCE+++ VOI 扩展：
+```
+voi_exec(π) = VOI_meta_pessimistic(π) − cost_exec(π; ξ_exec, C_rt, K_safe)
+cost_exec = λ_wcet·max(0, WCET(π)−WCET_slack) 
+          + λ_bus·max(0, Bus(π)−Bus_bw_slack)
+          + λ_therm·max(0, Power(π)−Thermal_slack)
+```
+预算耗尽策略：WCET_slack<0 ⇒ 切单核/降频/冻结 B_ft/B_ux；Bus_bw_slack<0 ⇒ 切低带宽遥测/压缩日志；Thermal_slack<0 ⇒ 限流电流/降阻抗增益/安全停。
 
-| 组件 | 时间 | 空间 | 正确性关键 |
-|---|---|---|---|
-| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood |
-| XMC | O(\|ℳ\|²·d_b)/区域 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整 |
-| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界（A39）、审计完备 |
-| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int |
-| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
-| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止 |
+**定义 151（执行证书 J_exec 与扩展 JCPS++）** J_exec = (ξ_exec, C_rt, Cert_eeis, EV-exec_log, M_rt_log, WCET_audit, μ_analysis)。JCPS++ 输出扩展：
+```
+(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a,
+ Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p,
+ kg_subgraph_id, ft_version, mental_snapshot, misunderstanding_prob, ft_log, ux_log,
+ ξ_exec, C_rt, Cert_eeis, EV_exec_latest, B_exec_snapshot, M_rt_status)
+```
 
-**正确性定理（CCPS 概要）**：在 A33–A36 上加 (A37) 元校准与 OOD 门（ECE_k≤ε_meta(k)、漏检 ≤δ_ood、共形覆盖 ≥1−α_conf）；(A38) 条件独立仅于 EV-xmodal 使用处被要求且仅限 L1；(A39) 个性化单向有界；(A40) 多模态接口误差诚实、τ_mm≤τ_int。则：(i) ID 路径承诺失效率 ≤δ_f+ε_meta(k)+δ_probe+ε_h(w_max)，OOD 漏检贡献 ≤δ_ood·α_conf；(ii) 交互单调性强化：三个新机制只能经"信念更准（含加宽）"或"动作更保守"影响系统；(iii) PCE+ 在 k_probes+k_cons 内终止。
-
-## 4. 实验设计 E172–E176
-
-| 实验 | 指标 | 目标 |
-|---|---|---|
-| E172 少样本校准与样本效率 | ECE_k(k=1..5)、区间宽度、k\* 预测误差；vs 第 56 轮手工先验 | ECE_1≤0.10、ECE_3≤0.05；同等风险探针数 ↓≥40% |
-| E173 OOD 门与共形回退 | 语料外新材质：OOD 检出率；回退后假承诺率；时间增幅 | ≥95%；0；≤+25% |
-| E174 跨模态对账 | 单模态欺骗场景假承诺率；EV-xmodal 越级数；ρ 降级生效时延 | ↓≥60%；0 次（L2 越级）；≤1 到访 |
-| E175 个性化信任 | 橡皮章检出/降级时延；A2 激活提速；疲劳会话超时保守停；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
-| E176 端到端 | 新材质场地四足 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注利用率 | +8%/−30%/−25%/+20% |
-
-## 5. 风险与缓解
-
-| 风险 | 等级 | 缓解 |
-|---|---|---|
-| 元语料盲区 → 自信的错误后验 | 高 | OOD 门 + 共形保底 + 语料分层覆盖审计（材质×季节×坡度披露） |
-| EV-xmodal 独立性被物理共谋违反 | 高 | 仅限 L1 + 分歧下限 + 事后证伪回溯降权 |
-| 个性化被博弈（授权养成） | 中 | 会话域授权 + 有界升级速率 + 连续再评估 + 审计 |
-| 元推断时延进入控制回路 | 中低 | 前向 O(d_φ) + 预取 + 可退回第 56 轮手工路径 |
-| 多模态解释理解错误 | 中 | 输入错误模型 + 校准入账 + 文本回退 |
-
-## 6. 本轮最大风险
-
-**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变成"坏先验普遍"——若语料存在系统性盲区（某类新材质从未被探过），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的一致性加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
-<!-- IDEA:END -->
-
-<!-- ARTIFACT:START -->
-# 第 58 轮产物 · 创新点清单 v34：KG-SFT-UX（知识图谱结构化元记忆×安全微调×心智模型协同，KGMM×SFT-KG×UXSE×KGES×ACC×PCX++）
-
-> 承接第 57 轮 IP-133~138（MFSL/XMC/PTM/MXI/FSE/PCE+）与第 56 轮 IP-127~132（SMM/PCE/BVK/ISE/TAF/MEC）。本轮把部署前提从「少样本可校准、跨模态可对账、个性化有界的证据承诺」升级为 **「结构化记忆守护下的安全自适应、心智模型协同的证据承诺」**：上下文从扁平向量升级为可推理知识图谱，元模型从冻结推理升级为 KG 守护下的安全微调，用户体验从渲染选择升级为心智模型协同估计；第 57 轮「一切判定器走隔离」在本轮推广为「知识图谱也要走隔离——仅证据门通过的接触可写入，边带溯源置信度，事后证伪可回溯删除」。
-> IP 编号：IP-139~IP-144（共 6 个），升级 IP-133/134/135/136/137/138 以纳入 KG、微调、UX 三维度。
-
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进 |
-|---|---|---|---|
-| IP-139 | KGMM Knowledge-Graph Meta-Memory | 新增 | 结构化元记忆 𝒢、子图检索+GNN 编码、KG 驱动 OOD/共形校准集/证据合成/心智预测 |
-| IP-140 | SFT-KG Safe Fine-Tuning with KG Guardrails | 新增 | φ_bk 冻结、φ_ad/φ_cal 微调、三元触发条件、影子微调+审计+热切换、即时回滚 |
-| IP-141 | UXSE User-Experience Mental State Estimation | 升级 IP-136 | s_o.mental=(μ_mis, L_cog, SA, H_exp)、μ_mis 只增不减、UX 决策规则四条 |
-| IP-142 | KGES KG-Guided Evidence Synthesis | 新增 | 三源证据合成（直接/类比/结构）、权重单调硬界、结构证据禁入不可逆必要集 |
-| IP-143 | ACC Adaptive Conformal Calibration | 升级 IP-133 | 子图级分位数估计器 q_v(α)、在线覆盖监测、微调只更新校准层与适配器末层 |
-| IP-144 | PCX++ Probe-Commit-Evolve++ | 升级 IP-138 | KG 检索编码、影子微调异步、UX 前置检查、六类证据门、三预算耦合 |
-
-## 1. 符号体系增量（定义 139–144）
-
-| 符号 | 含义 |
-|---|---|
-| `𝒢=(ℰ,ℛ,w_ℛ,src_ℛ,ver_ℛ)` | 知识图谱：实体/关系/权重/溯源/版本 |
-| `ℰ={Surface, Material, EnvCond, ProbeType, Operator, FailureMode, DeceptionPattern}` | 实体类型 |
-| `ℛ⊆ℰ×{similar_to, deceives_modality, requires_probe, familiar_with, caused_by, mitigated_by, co_occurs_with}×ℰ` | 关系类型 |
-| `𝒢_v, z_r=GNN(𝒢_v)` | 种子节点 v 的 k-hop 子图与图编码 |
-| `n(o)=1−max_path_consistency(o, 𝒢_v)` | KG 增强 OOD 门分数 |
-| `C_cal(v)={res_j : region_j ∈ 𝒢_v.similar_to}` | 子图级共形校准集 |
-| `φ={φ_bk, φ_ad, φ_cal}` | 参数分解：骨干/适配器/校准层 |
-| `Trigger_ft(v)` | 微调触发谓词（证据数/带宽/校验） |
-| `KG_verify(v)` | KG 校验：无新增欺骗边、探针边收敛、同类覆盖达标 |
-| `ft_log=(v, Δφ_ad, Δφ_cal, pre/post_width, pre/post_coverage, rollback_flag)` | 微调审计日志 |
-| `s_o.mental=(μ_mis, L_cog, SA, H_exp)` | 心智模型状态：误解概率/认知负荷/情境感知/解释历史 |
-| `μ_mis=KG_predict_mis(𝒢, op, risk, H_exp)` | KG 预测误解概率 |
-| `m_E*=argmin_m μ_mis(m)` | 误解最小化渲染选择 |
-| `upgrade_exp(r, op)` | 解释升级：多模态并行+强制交互+对比案例 |
-| `E1/E2/E3` | 直接/类比/结构 三类证据源 |
-| `w_E1=1, w_E2=w_sim·ρ_m, w_E3=w_path·min_edge_conf` | 证据合成权重（单调硬界） |
-| `q_v(α)` | 子图级共形分位数估计器 |
-| `B_probe, B_ft, B_ux` | 三重预算：探针/微调/解释升级 |
-| `EV-ft, EV-ux` | 新增证据类：微调后首接触、L2 前置 UX 升级 |
-| `J_p++` | 扩展证书：kg_subgraph_id, ft_version, mental_snapshot, misunderstanding_prob |
+**定义 152（云边协同 CEB++++：执行感知隔离区）** 云端下发：固件增量（电流环/力环/安全监视）、电机参数先验、WCET 分析模型、μ 分析模板。**均需过隔离区**：影子模式运行 N_shadow 接触，校验「WCET 实测 ≤ 边界 ∧ 抖动 ≤ 界 ∧ μ 分析通过 ∧ 执行证据分布无异常」；边端回传：ξ_exec 辨识轨迹、WCET 实测分布、EV-exec 残差、稳定性证书审计结果。隔离区通过 ⇒ 热切换固件/参数；失败 ⇒ 回滚、上报云端。
 
 ## 2. 关键算法伪代码
 
-### IP-139 KGMM（知识图谱结构化元记忆）
+### IP-145 BUQ（BLDC 不确定性建模）
 
 ```python
-class KnowledgeGraphMetaMemory:
-    def __init__(self):
-        self.G = KnowledgeGraph()                    # 𝒢=(ℰ,ℛ,w,src,ver)
-        self.gnn = GNNEncoder()
-        self.residuals = defaultdict(list)           # 每 Surface 节点的残差历史
+class BLDCUncertaintyQuantifier:
+    def __init__(self, motor_spec):
+        self.ukf = UKF(state_dim=13, obs_dim=4)  # ξ_exec, y=(i_d,i_q,τ_est,θ_e)
+        self.motor_spec = motor_spec
+        self.ripple_order = 6  # 齿槽谐波阶数
     
-    def retrieve_and_encode(self, obs):
-        v0 = self.locate_seed(obs)                   # 种子 Surface 节点
-        Gv = khop_subgraph(self.G, v0, k=2)
-        z = self.gnn.encode(Gv)
-        n_ood = 1 - max_path_consistency(obs, Gv)    # KG OOD 门
-        cal_set = {res for u in Gv.similar_to for res in self.residuals[u]}
-        return z, n_ood, cal_set, Gv
+    def predict(self, dt):
+        # 慢漂移过程模型：参数随温度/老化极慢变化
+        self.ukf.predict(f=lambda x: x, Q=self.process_noise_cov())
     
-    def locate_seed(self, obs):
-        # 向量粗筛 + KG 邻域精排
-        cand = self.vector_index.topk(encode(obs), k=10)
-        return max(cand, key=lambda v: path_consistency(obs, self.G, v))
+    def update(self, telemetry):
+        # telemetry: v_d, v_q, i_d_meas, i_q_meas, θ_e, τ_est (从电流/位置观测器)
+        v_d, v_q, i_d, i_q, theta_e, tau_est = telemetry
+        # 观测模型：电机电压方程 + 转矩方程 + 脉动模型
+        def h(xi):
+            R, Ld, Lq, lam, *ripple, b_sat, c_fric, gain, offset, dt_sync = xi
+            # dq 电压方程（离散化欧拉）
+            di_d = (v_d - R*i_d + Lq*i_q*omega_e) / Ld
+            di_q = (v_q - R*i_q - Ld*i_d*omega_e - lam*omega_e) / Lq
+            # 转矩：标准 + 饱和 + 摩擦 + 脉动
+            tau = 1.5 * p * (lam*i_q + (Ld-Lq)*i_d*i_q) \
+                  + b_sat * i_q * abs(i_q) \
+                  + c_fric * sign(i_q) \
+                  + sum(a_k * sin(k*theta_e + phi_k) for k,(a_k,phi_k) in enumerate(ripple,1))
+            # ADC 模型
+            i_d_adc = gain * i_d + offset
+            i_q_adc = gain * i_q + offset
+            return np.array([i_d_adc, i_q_adc, tau, theta_e])
+        
+        y_meas = np.array([i_d, i_q, tau_est, theta_e])
+        self.ukf.update(y_meas, h=h)
     
-    def add_evidence(self, region, evidence, contact_cert):
-        """仅证据门通过的接触可写入 KG"""
-        if not contact_cert.ok: return
-        v = self.region_to_surface[region]
-        # 自动抽取候选三元组
-        candidates = self.extract_triplets(v, evidence)
-        for (h, r, t), conf, src in candidates:
-            self.G.add_edge(h, r, t, w=conf, src=src, ver=self.G.ver+1)
-        # 残差入校准集
-        self.residuals[v].append(evidence.residual)
+    def get_likelihood_correction(self, probe_force_pred, probe_force_cov):
+        """返回结构化似然：均值修正 + 协方差膨胀"""
+        xi_mean, xi_cov = self.ukf.state_mean, self.ukf.state_cov
+        # 传播到力预测空间
+        J = self.jacobian_force_wrt_xi(xi_mean)  # 数值微分
+        mean_corr = J @ (xi_mean - self.motor_spec.nominal_xi)
+        cov_infl = J @ xi_cov @ J.T
+        return mean_corr, probe_force_cov + cov_infl
     
-    def falsify_retract(self, modality, region, verdict):
-        """复用第 57 轮 ρ_m 回溯：事后证伪删除边"""
-        v = self.region_to_surface[region]
-        for (h, r, t) in self.G.out_edges(v, r='deceives_modality'):
-            if t == modality and verdict.falsifies(modality):
-                self.G.retract_edge(h, r, t, src='falsification_retract')
+    def is_ood_execution(self, alpha=0.01):
+        """执行 OOD：辨识状态落出置信椭球"""
+        mahal = self.ukf.state_mahalanobis()
+        return mahal > chi2_ppf(1-alpha, df=13)
 ```
 
-### IP-140 SFT-KG（知识图谱守护下的安全微调）
+### IP-146 ERTC（嵌入式实时契约监视器）
 
 ```python
-def sft_kg_guard(M, v, meta, budget):
-    if not Trigger_ft(v, M): return False, None
+class RealTimeContractMonitor:
+    def __init__(self, contract):
+        self.C_rt = contract
+        self.wcet_hist = {task: CircularBuffer(1000) for task in contract.WCET_map}
+        self.jitter_hist = CircularBuffer(1000)
+        self.last_renewal = time_now()
     
-    # 影子微调：在副本上训练，不阻塞主流程
-    phi_ad_prime, phi_cal_prime = shadow_finetune(
-        meta.phi_ad, meta.phi_cal,
-        cal_set=M.cal_set[v],
-        kl_constraint=meta.kl_constraint,
-        width_target=M.width_target[v]
+    def sample(self, task_name, wcet_actual, jitter_actual, mem_used, bus_used):
+        self.wcet_hist[task_name].append(wcet_actual)
+        self.jitter_hist.append(jitter_actual)
+        self.mem_used = mem_used
+        self.bus_used = bus_used
+    
+    def check(self):
+        # WCET 检查
+        for task, hist in self.wcet_hist.items():
+            if hist.percentile(99.9) > self.C_rt.WCET_map[task]:
+                return False, f"wcet_violation_{task}"
+        # 抖动检查
+        if self.jitter_hist.percentile(99.9) > self.C_rt.Jitter_bound:
+            return False, "jitter_violation"
+        # 内存/总线
+        if self.mem_used > self.C_rt.Mem_pool:
+            return False, "mem_violation"
+        if self.bus_used > self.C_rt.Bus_bw_reserved:
+            return False, "bus_violation"
+        # 契约续约
+        if time_now() - self.last_renewal > self.C_rt.Renewal_period:
+            self.last_renewal = time_now()
+            # 重新校准历史记录（滑动窗口）
+            for h in self.wcet_hist.values(): h.reset()
+            self.jitter_hist.reset()
+        return True, "ok"
+    
+    def get_slack(self):
+        return BudgetSnapshot(
+            wcet_slack=min(self.C_rt.WCET_map[t] - h.percentile(99.9) 
+                           for t,h in self.wcet_hist.items()),
+            jitter_slack=self.C_rt.Jitter_bound - self.jitter_hist.percentile(99.9),
+            mem_slack=self.C_rt.Mem_pool - self.mem_used,
+            bus_slack=self.C_rt.Bus_bw_reserved - self.bus_used
+        )
+```
+
+### IP-147 EEIS（阻抗安全编译器）
+
+```python
+class ImpedanceSafetyCompiler:
+    def __init__(self, motor_params, env_uncertainty_model):
+        self.pareto_front = self.offline_precompute_pareto(motor_params, env_uncertainty_model)
+        # pareto_front: List[(K_p, K_d, F_max, ω_traj, γ_margin, δ_force, δ_traj, mu_verified)]
+    
+    def offline_precompute_pareto(self, motor, env_model):
+        front = []
+        for K_p in np.logspace(2, 5, 20):
+            for K_d in np.logspace(0, 3, 15):
+                for F_max in np.linspace(50, motor.F_abs, 10):
+                    for ω_traj in np.linspace(1, 50, 10):
+                        # 鲁棒稳定性 μ 分析
+                        mu = mu_analysis(motor, env_model, K_p, K_d)
+                        γ_margin = 1/mu - 1 if mu > 0 else inf
+                        # 力约束（高斯近似 + 共形量化）
+                        δ_force = force_violation_prob(K_p, K_d, F_max, env_model)
+                        # 跟踪误差
+                        δ_traj = tracking_error_prob(K_p, K_d, ω_traj, env_model)
+                        if γ_margin > 0 and δ_force < 1e-3 and δ_traj < 1e-3:
+                            front.append((K_p, K_d, F_max, ω_traj, γ_margin, δ_force, δ_traj, mu))
+        # 帕累托筛选：不可被同时改进 ω_traj(大) 和 -K_p(小)
+        return pareto_filter(front, maximize=['ω_traj'], minimize=['K_p'])
+    
+    def compile(self, delta_f_req, fused_belief, xi_exec, b_r):
+        # 环境不确定性集依赖于执行状态和信念
+        env_model = self.build_env_model(xi_exec, fused_belief, b_r)
+        # 风险分配：δ_f → (γ_margin, δ_force, δ_traj)
+        γ_req = norm_ppf(1 - delta_f_req/2) * env_model.sigma_model
+        δ_force_req = delta_f_req / 3
+        δ_traj_req = delta_f_req / 3
+        
+        # 在线投影：找到满足约束的「最软/最快」参数
+        feasible = [p for p in self.pareto_front 
+                    if p.γ_margin >= γ_req 
+                    and p.δ_force <= δ_force_req 
+                    and p.δ_traj <= δ_traj_req
+                    and p.F_max <= motor.F_abs]
+        if not feasible:
+            return None, None  # K_safe 为空
+        # 选择：最大 ω_traj，次选最小 K_p
+        best = max(feasible, key=lambda p: (p.ω_traj, -p.K_p))
+        cert = ImpedanceCertificate(
+            K_p=best.K_p, K_d=best.K_d, F_max=best.F_max, ω_traj=best.ω_traj,
+            γ_margin=best.γ_margin, δ_force=best.δ_force, δ_traj=best.δ_traj,
+            mu_verified=best.mu_verified, version=self.version, env_model_hash=hash(env_model)
+        )
+        return best, cert
+```
+
+### IP-148 CLEP（双向契约闭环算子）
+
+```python
+def closed_loop_exec_probe(M, cp, delta_f_req, budget):
+    """CLEP: 双向契约闭环——单次探针/承诺的完整执行-证据循环"""
+    
+    # ① BUQ: 更新执行不确定性状态
+    xi_exec = M.buq.ukf.state_mean
+    M.buq.predict(dt=M.dt_control)
+    M.buq.update(M.telemetry_latest)
+    mean_corr, cov_infl = M.buq.get_likelihood_correction(
+        M.probe_force_pred[cp.region], M.probe_force_cov[cp.region]
     )
     
-    # 审计：覆盖不退化、KL 约束、无新增欺骗边
-    ft_audit = audit_finetune(
-        meta, phi_ad_prime, phi_cal_prime, v, M.G,
-        delta_ft=budget.delta_ft
+    # ② ERTC: 契约检查
+    contract_ok, violation = M.ertc.check()
+    tau_evidence = time_now() - M.ertc.last_renewal
+    if not contract_ok or tau_evidence > M.ertc.C_rt.Renewal_period:
+        M.exec_degraded = True
+        return degrade_exec_mode(M, cp, f"ERT_violation:{violation or 'stale_evidence'}")
+    
+    # ③ MFSL+: 结构化似然元推断
+    obs_corrected = M.obs[cp.region].copy()
+    obs_corrected.force_mean += mean_corr
+    obs_corrected.force_cov += cov_infl
+    inf = meta_few_shot_infer(M, cp.region, obs_corrected, M.meta)
+    
+    # ④ XMC+: 跨模态对账（含执行模态）
+    EV_exec_latest = M.EV_exec_log[-1] if M.EV_exec_log else null_evidence()
+    M, fused, D_plus = xmodal_fuse_plus(M, cp.region, inf, EV_exec_latest)
+    
+    # ⑤ EEIS: 阻抗安全编译
+    K_safe, cert_eeis = M.eeis.compile(delta_f_req, fused, xi_exec, M.b_r[cp.region])
+    if K_safe is None:
+        return degrade_exec_mode(M, cp, "EEIS_infeasible")
+    
+    # ⑥ 分发阻抗参数（带证书）
+    dispatch_impedance(K_safe, cert_eeis)
+    
+    # ⑦ 执行接触并收集遥测
+    telemetry = execute_contact(cp, K_safe, timeout=M.contact_timeout)
+    
+    # ⑧ 构建执行证据 EV-exec
+    EV_exec = build_exec_evidence(
+        telemetry=telemetry,
+        cert_eeis=cert_eeis,
+        contract_ok=contract_ok,
+        xi_exec=xi_exec,
+        tau_evidence=tau_evidence,
+        degraded_flag=M.exec_degraded
     )
+    M.EV_exec_log.append(EV_exec)
     
-    if ft_audit.passed:
-        # 热切换
-        meta.hot_swap(phi_ad_prime, phi_cal_prime)
-        M.ft_log.append(FinetuneLog(
-            v=v, delta_phi_ad=phi_ad_prime - meta.phi_ad,
-            delta_phi_cal=phi_cal_prime - meta.phi_cal,
-            pre_width=M.width[v], post_width=ft_audit.width,
-            pre_cov=M.coverage[v], post_cov=ft_audit.coverage,
-            rollback_flag=False
-        ))
-        M.G.bump_ver(v)
-        return True, ft_audit
-    else:
-        M.ft_log.append(FinetuneLog(v=v, rollback_flag=True, reason=ft_audit.reason))
-        return False, ft_audit
+    # ⑨ 更新信念（执行证据作为新模态参与融合）
+    M = update_beliefs_with_exec(M, cp.region, fused, EV_exec)
+    
+    # ⑩ 更新执行预算快照
+    budget.exec_snapshot = M.ertc.get_slack()
+    
+    return M, fused, D_plus, EV_exec, cert_eeis
 
-def Trigger_ft(v, M):
-    return (M.N_evidence[v] >= M.N_adapt and
-            M.width[v] > M.w_thresh and not M.width_converging[v] and
-            KG_verify(v, M.G))
-
-def KG_verify(v, G):
-    # 无新增欺骗边
-    no_new_deception = not G.has_new_edge(v, 'deceives_modality', since_last_ft)
-    # 推荐探针边收敛
-    probe_edges_converged = G.edge_stable(v, 'requires_probe', window=5)
-    # 同类覆盖达标
-    similar_coverage_ok = all(
-        G.coverage[u] >= 1 - G.alpha_conf for u in G.similar_to(v)
+def build_exec_evidence(telemetry, cert_eeis, contract_ok, xi_exec, tau_evidence, degraded_flag):
+    # 契约遵守位
+    contract_ok_bit = contract_ok and not degraded_flag
+    # 辨识残差（马氏距离）
+    xi_residual = mahalanobis(xi_exec, xi_nominal, cov_nominal)
+    # 力跟踪误差 99% 分位数
+    force_err = telemetry.force_measured - telemetry.force_desired
+    force_q99 = np.percentile(np.abs(force_err), 99)
+    # 稳定性证书审计：μ 分析复核
+    mu_audit = mu_analysis_recheck(telemetry, cert_eeis)
+    stability_ok = mu_audit < 1.0
+    return ExecEvidence(
+        contract_ok=contract_ok_bit,
+        xi_residual=xi_residual,
+        force_tracking_q99=force_q99,
+        stability_cert_audit=stability_ok,
+        tau_evidence=tau_evidence,
+        degraded_flag=degraded_flag
     )
-    return no_new_deception and probe_edges_converged and similar_coverage_ok
 
-def audit_finetune(meta, phi_ad_p, phi_cal_p, v, G, delta_ft):
-    # 1. 目标子图覆盖
-    cov_v = estimate_coverage(meta, phi_ad_p, phi_cal_p, v)
-    if cov_v < 1 - meta.alpha_conf - delta_ft:
-        return AuditResult(False, "target_coverage_drop")
+def xmodal_fuse_plus(M, region, inf, EV_exec):
+    """跨模态融合扩展：把 EV-exec 作为第 5 模态"""
+    # 标准模态融合
+    for m in ['vis','tap','prop','acou']:
+        M.b[region][m] = bayes_update(M.b[region][m], inf.likelihood[m], w=M.rho[m])
+    # 执行模态：似然来自力跟踪分布
+    exec_likelihood = exec_likelihood_from_evidence(EV_exec)
+    M.b[region]['exec'] = bayes_update(M.b[region]['exec'], exec_likelihood, w=M.rho_exec)
     
-    # 2. 同类子图覆盖不退化
-    for u in G.similar_to(v):
-        cov_u = estimate_coverage(meta, phi_ad_p, phi_cal_p, u)
-        if cov_u < G.coverage[u] - delta_ft:
-            return AuditResult(False, f"similar_coverage_drop_{u}")
+    # 融合
+    fused = Fuse({**M.b[region], 'exec': M.b[region]['exec']}, 
+                 {**M.rho, 'exec': M.rho_exec})
     
-    # 3. KL 约束
-    kl = estimate_kl(meta, phi_ad_p, v)
-    if kl > meta.kl_constraint:
-        return AuditResult(False, "kl_violation")
-    
-    # 4. 无新增欺骗边（影子模式下通过 KG 预测检查）
-    if predict_new_deception(meta, phi_ad_p, v, G):
-        return AuditResult(False, "predicted_new_deception")
-    
-    return AuditResult(True, width=cov_v, coverage=cov_v)
+    # 分歧计算（含执行模态）
+    D_plus = disagreement_plus(M.b[region], M.rho_exec)
+    return M, fused, D_plus
 ```
 
-### IP-141 UXSE（心智模型协同估计）
+### IP-149 PCE+++（三层预算耦合探-诺-演）
 
 ```python
-class UXMentalStateEstimator:
-    def __init__(self, KG):
-        self.KG = KG
-        self.mis_predictor = MisunderstandingPredictor(KG)
-    
-    def estimate(self, op, region, risk_type, session, H_exp):
-        # 误解概率：仅由实测证据降低，表现不计入
-        mu_mis = self.mis_predictor.predict(op, risk_type, H_exp)
-        
-        # 认知负荷：会话时长、并发风险、解释复杂度
-        L_cog = cognitive_load(session.duration, 
-                               session.concurrent_risks,
-                               complexity(H_exp))
-        
-        # 情境感知：地图一致性
-        SA = situation_awareness(op, region, session.M)
-        
-        return MentalState(mu_mis, L_cog, SA, H_exp)
-    
-    def update_on_verdict(self, mental, verdict_correct, risk_type):
-        """事后复盘：仅实测正确且先前误解低时增熟悉度"""
-        if verdict_correct:
-            delta = -mental.eta * (1 - mental.mu_mis)
-            self.KG.update_familiar(mental.op, risk_type, delta)
-            # μ_mis 只能被证据降低
-            mental.mu_mis = max(0, mental.mu_mis + delta)
-        # 表现「我懂了」不更新 μ_mis
-    
-    def select_render_modality(self, mental, modalities):
-        """U1: 误解最小化选择"""
-        return min(modalities, key=lambda m: mental.mu_mis_per_modality[m])
-    
-    def should_upgrade_explanation(self, mental):
-        """U2: 误解阈值触发升级"""
-        return mental.mu_mis > mental.theta_mis
-    
-    def should_simplify_or_defer(self, mental):
-        """U3: 认知过载触发简化/延后/换班"""
-        return mental.L_cog > mental.theta_load
-    
-    def consent_timeout(self, auth, mu_mis):
-        """τ_int 随 μ_mis 单增、随 auth 单减"""
-        base = {'A0': 30, 'A1': 20, 'A2': 10}[auth]
-        return base * (1 + 2 * mu_mis)  # 误解概率 1.0 时超时 3x
-```
-
-### IP-142 KGES（KG 引导证据合成）
-
-```python
-def kg_guided_evidence_synthesis(M, r, Gv):
-    """三源证据合成，权重单调硬界"""
-    # E1: 直接证据
-    b_E1 = M.belief_direct[r] if r in M.belief_direct else None
-    
-    # E2: 类比证据——similar_to 邻域
-    b_E2 = None
-    w_E2_total = 0
-    for u, w_sim in Gv.similar_to.items():
-        if u in M.belief_direct and M.evidence_gate_ok(u):
-            b_u = M.belief_direct[u]
-            w = w_sim * M.rho_modality  # 按模态可靠性加权
-            b_E2 = mixture(b_E2, b_u, w) if b_E2 else b_u
-            w_E2_total += w
-    
-    # E3: 结构证据——KG 路径推导
-    b_E3 = None
-    w_E3_total = 0
-    for path in Gv.structural_paths(r, max_len=3):
-        # 如: Surface_X --deceives_modality--> Visual --requires_probe--> Tap
-        conf = min(edge.w for edge in path) * path.prior
-        derived_belief = belief_from_path(path)
-        b_E3 = mixture(b_E3, derived_belief, conf) if b_E3 else derived_belief
-        w_E3_total += conf
-    
-    # 权重硬界：E1 ≥ E2 ≥ E3
-    w_E1 = 1.0
-    w_E2 = min(w_E2_total, 0.5)      # 上界 0.5
-    w_E3 = min(w_E3_total, 0.2)      # 上界 0.2，且 w_E3 ≤ w_E2
-    w_E3 = min(w_E3, w_E2)
-    
-    # 融合：结构证据不入不可逆必要集
-    fused = mixture(mixture(b_E1, b_E2, w_E2), b_E3, w_E3)
-    return fused, (w_E1, w_E2, w_E3), {'E3_for_irreversible': False}
-```
-
-### IP-143 ACC（自适应共形校准）
-
-```python
-class AdaptiveConformalCalibration:
-    def __init__(self, alpha_conf=0.1):
-        self.alpha_conf = alpha_conf
-        self.quantile_estimators = {}  # v -> OnlineQuantileEstimator
-    
-    def get_belt(self, v, residuals, sim_weights=None):
-        if v not in self.quantile_estimators:
-            self.quantile_estimators[v] = OnlineQuantileEstimator(self.alpha_conf)
-        qe = self.quantile_estimators[v]
-        
-        # 分层加权：同类残差权重更高
-        if sim_weights is None:
-            sim_weights = [1.0] * len(residuals)
-        for r, w in zip(residuals, sim_weights):
-            qe.add(r, weight=w)
-        
-        q = qe.quantile()
-        return ConformalBelt(center=q, radius=q, coverage=qe.empirical_coverage())
-    
-    def update_on_ft(self, v, phi_cal_new):
-        """微调后：重置该子图估计器，保留其他"""
-        self.quantile_estimators[v] = OnlineQuantileEstimator(self.alpha_conf)
-        # 其他子图保持不变
-    
-    def monitor_coverage(self, v, prediction, actual):
-        """在线滑动窗口覆盖监测"""
-        qe = self.quantile_estimators[v]
-        qe.record_outcome(prediction, actual)
-        if qe.empirical_coverage() < 1 - self.alpha_conf - self.delta_ft:
-            return RollbackTrigger(v, qe.empirical_coverage())
-        return None
-```
-
-### IP-144 PCX++（探-诺-演++）
-
-```python
-def probe_commit_evolve_plus_plus(x0, M, task, budget, consent, operators):
+def probe_commit_evolve_plus_plus_plus(x0, M, task, budget, consent, operators):
     route = plan_on_map(M, task, risk_model)
     sched, log = [], []
     
     for cp in route.checkpoints:
-        # ① KG 检索与图编码
-        z, n_ood, cal_set, Gv = M.kgmm.retrieve_and_encode(M.obs[cp.region])
+        # 预检查：执行预算是否支撑基本操作
+        if not budget.exec_snapshot.is_viable_for_contact():
+            return negotiate_or_stop(cp, M, "exec_budget_exhausted")
         
-        # ② 元推断（含当前适配器版本）
-        inf = meta_few_shot_infer(M, cp.region, z, n_ood, cal_set, meta)
-        M.b[cp.region] = inf.post if inf.cls == 'ID' else worst_in(inf.belt)
+        # CLEP 闭环：探针或承诺的完整执行-证据循环
+        delta_f_req = risk_model.delta_f(cp)
+        M, fused, D_plus, EV_exec, cert_eeis = closed_loop_exec_probe(M, cp, delta_f_req, budget)
         
-        # ③ 影子微调触发检查（异步，不阻塞）
-        if budget.ft_budget > 0:
-            spawn_shadow_task(sft_kg_guard, M, Gv.seed, meta, budget)
+        # 若执行降级，记录并进入保守分支
+        if EV_exec.degraded_flag:
+            log.append(EvidenceRecord(ev='EV-exec', degraded=True, cp=cp))
+            alt = reroute_conservative(M, cp)
+            if alt: route = alt; continue
+            return negotiate_or_stop(cp, M, "exec_degraded")
         
-        # ④ 跨模态对账
-        M, fused, D = xmodal_fuse(M, cp.region, inf.obs)
-        if D > theta_D and 'consensus' not in cp.done:
-            p2 = most_disagreeing_modality_probe(M, cp.region)
-            M, _, D = xmodal_fuse(M, cp.region, execute_probe(p2, cap=F_abs))
-            cp.done.add('consensus')
-        
-        # ⑤ UX 前置检查
-        mental = ux_estimate(operators.active, cp.region, risk_type(cp), M)
-        if mental.mu_mis > theta_mis:
-            upgrade_explanation(cp, operators.active, M)
-            budget.ux_spend()
-            # 重新估计
-            mental = ux_estimate(operators.active, cp.region, risk_type(cp), M)
-        
-        # ⑥ 证据门六类判定
+        # 证据门判定（七类：+EV-exec）
         sigma = foothold_schedule(x0, cp, M)
         R = schedule_risk(sigma, M)
         lv = contact_level(cp)
         
-        # 探询循环
+        # 探询循环（VOI 含执行成本）
         while select_gait(R) == 'halt' and budget.probes_left > 0:
             cands = admissible_probes(cp, M, F_abs)
             if not cands: break
             
-            # VOI 包含微调/解释升级选项
-            p = argmax(cands + ['ft', 'ux'], 
-                       key=lambda q: voi_meta_pessimistic(q, M, inf, mental) - cost(q))
+            # 计算每个候选的执行成本
+            cands_with_cost = []
+            for p in cands:
+                wcet_est, bus_est, power_est = estimate_exec_cost(p, M.xi_exec, M.ertc.C_rt)
+                cost_exec = budget.exec_cost(wcet_est, bus_est, power_est)
+                voi = voi_meta_pessimistic(p, M, fused) - cost_exec
+                cands_with_cost.append((p, voi, cost_exec))
             
-            if p == 'ft' and budget.ft_budget > 0 and Trigger_ft(Gv.seed, M):
-                budget.ft_spend()
-                # 等待影子微调完成（已在异步进行）
-                wait_for_ft_completion(Gv.seed)
-                inf = meta_few_shot_infer(M, cp.region, z, n_ood, cal_set, meta)
-                continue
+            p, voi_best, _ = max(cands_with_cost, key=lambda x: x[1])
+            if voi_best < theta_voi: break
             
-            if p == 'ux' and budget.ux_budget > 0:
-                upgrade_explanation(cp, operators.active, M)
-                budget.ux_spend()
-                mental = ux_estimate(operators.active, cp.region, risk_type(cp), M)
-                continue
-            
-            if voi_meta_pessimistic(p, M, inf) < theta_voi: break
-            M, _, D = xmodal_fuse(M, cp.region, execute_probe(p, cap=F_abs))
+            # 执行探针（走 CLEP）
+            M, fused, D_plus, EV_exec, _ = closed_loop_exec_probe(M, cp, delta_f_req, budget)
             budget.probe_spend()
+            if EV_exec.degraded_flag: break
             sigma = reselect_footholds(x0, cp, M)
             R = schedule_risk(sigma, M)
         
-        # ⑦ 承诺判定（六类证据门）
-        ev = tag_evidence_pp(sigma, M, lv, mental, Gv, meta.ft_version)
-        gate_result = few_shot_evidence_gate_pp(ev, M, operators.active, M.ood_reg, mental)
+        # 承诺判定（七类证据门）
+        ev = tag_evidence_ppp(sigma, M, lv, operators.active, M.ood_reg, EV_exec, cert_eeis)
+        gate_result = evidence_gate_ppp(ev, M, operators.active, M.ood_reg, EV_exec)
         
         if select_gait(R) != 'halt' and gate_result[0] == 'ok':
-            sched.append(commit(sigma, select_gait(R)))
+            sched.append(commit(sigma, select_gait(R), cert_eeis))
             log.append(ev)
             continue
         
@@ -469,107 +397,101 @@ def probe_commit_evolve_plus_plus(x0, M, task, budget, consent, operators):
             route = alt
             continue
         
-        return negotiate_or_stop_pp(cp, M, sigma, R, consent, 
-                                     tau_int=mental.consent_timeout(),
-                                     mu_mis=mental.mu_mis)
+        return negotiate_or_stop_ppp(cp, M, sigma, R, consent, 
+                                      tau_int=operators.active.consent_timeout(),
+                                      mu_mis=operators.active.mu_mis)
     
     return sched, log, M
 
-def few_shot_evidence_gate_pp(c, M, persona, ood_reg, mental):
-    """六类证据门"""
+def evidence_gate_ppp(c, M, persona, ood_reg, EV_exec):
+    """七类证据门：+EV-exec"""
     if c.ev == 'EV-probe*':
         ok = (c.inf.cls == 'ID' and c.inf.ece_k <= eps_meta(c.k) and 
-              c.inf.ft_version == meta.ft_version) or \
+              c.inf.ft_version == M.meta.ft_version) or \
              (c.inf.cls == 'OOD' and c.region in ood_reg.certified)
     elif c.ev == 'EV-xmodal':
-        ok = c.level == 'L1' and c.indep_declared and D(c.region) <= theta_D
+        ok = c.level == 'L1' and c.indep_declared and c.D <= theta_D
     elif c.ev == 'EV-human':
-        corrob_req = quarantine_exit(persona.auth, mental.mu_mis)
+        corrob_req = quarantine_exit(persona.auth, persona.mu_mis)
         ok = persona.auth >= 'A1' and c.corrob >= corrob_req
     elif c.ev == 'EV-ft':
         ok = c.ft_audit_passed and c.level != 'L2_irreversible'
     elif c.ev == 'EV-ux':
-        ok = c.level == 'L2' and mental.mu_mis <= theta_mis
+        ok = c.level == 'L2' and persona.mu_mis <= theta_mis
+    elif c.ev == 'EV-exec':
+        # 执行证据仅作一致性检查：契约OK、辨识收敛、力跟踪达标、稳定性证书审计通过
+        ok = (EV_exec.contract_ok and EV_exec.xi_residual < chi2_thresh 
+              and EV_exec.force_tracking_q99 < F_track_thresh
+              and EV_exec.stability_cert_audit)
     elif c.ev in ('EV-visit', 'EV-margin'):
         ok = round56_checks(c, M)
     else:
         return ('reject', 'no_evidence_class', c)
     
     if not ok: return ('reject', 'evidence_insufficient', c)
-    if c.irreversible and c.ev in ('EV-xmodal', 'EV-ft'):
-        return ('reject', 'xmodal_or_ft_on_irreversible', c)
+    # 不可逆接触硬禁令
+    if c.irreversible and c.ev in ('EV-xmodal', 'EV-ft', 'EV-exec'):
+        return ('reject', 'exec_or_xmodal_or_ft_on_irreversible', c)
     return ('ok', c)
 
-def quarantine_exit(auth, mu_mis):
-    """佐证数：auth 越高越少，μ_mis 越高越多"""
-    base = {'A0': 'probe_only', 'A1': 2, 'A2': 1}[auth]
-    if base == 'probe_only': return base
-    return base + ceil(2 * mu_mis)  # 误解概率 1.0 时 +2 佐证
-```
-
-### IP-136→MXI++（多模态心智模型感知解释）
-
-```python
-def explanation_render_pp(exp, mental, KG):
-    # U1: 误解最小化模态选择
-    m_E = min(['map', 'haptic', 'voice', 'text'],
-              key=lambda m: mental.mu_mis_per_modality.get(m, 0.5))
+class ExecBudget:
+    def __init__(self, ertc):
+        self.ertc = ertc
     
-    # U2: 若误解高，多模态并行渲染
-    if mental.mu_mis > theta_mis:
-        return render_multimodal(exp, ['map', 'voice', 'text'], 
-                                 priority=mental.mu_mis_per_modality)
+    def is_viable_for_contact(self):
+        slack = self.ertc.get_slack()
+        return (slack.wcet_slack > WCET_CONTACT_MIN and
+                slack.bus_slack > BUS_CONTACT_MIN and
+                slack.mem_slack > MEM_CONTACT_MIN)
     
-    return render(exp, m_E)
-
-def confirm_multimodal_pp(exp, mental, auth):
-    timeout = mental.consent_timeout(auth)
-    # 强制交互：必须显式确认每个风险点
-    ok = await_structured_confirmation(exp, timeout=timeout)
-    if not ok or input_error_model(exp).suspect:
-        return False
-    return ok
+    def exec_cost(self, wcet_est, bus_est, power_est):
+        slack = self.ertc.get_slack()
+        return (max(0, wcet_est - slack.wcet_slack) * LAMBDA_WCET +
+                max(0, bus_est - slack.bus_slack) * LAMBDA_BUS +
+                max(0, power_est - slack.thermal_slack) * LAMBDA_THERM)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| KGMM | O(\|𝒢_v\|+d_GNN)/检查点 | O(\|ℰ\|+\|ℛ\|) 增量 | 子图检索召回 ≥1−δ_kg、边溯源诚实、版本单增 |
-| SFT-KG | 影子 O(d_φ_ad)/触发；热切换 O(1) | O(\|φ_ad\|+\|φ_cal\|) | 三元触发校验、覆盖不退化、回滚 ≤1 接触延迟 |
-| UXSE | O(1) 预测 + O(\|H_exp\|) 更新 | O(\|操作者\|·\|风险类型\|) | μ_mis 仅实测降低、L_cog 保守、τ_int 单调 |
-| KGES | O(\|𝒢_v\|) 合成 | 复用 KGMM | 权重硬界 w_E1≥w_E2≥w_E3、E3 禁入不可逆必要集 |
-| ACC | O(1) 在线分位数更新 | O(\|ℰ_Surface\|) | 子图级覆盖监测、回滚触发 ≤δ_ft |
-| PCX++ | O(\|CP\|·(k_p+k_c+k_ft+k_ux)·(C_VOI+d_GNN)+\|CP\|·A\*) | O(\|V\|+\|σ\|+\|𝒢\|) | 三预算单调、六类证据门硬禁令、四态完备 |
+| BUQ | UKF: O(d_ξ³)/周期 (d_ξ=13) | O(d_ξ²) | 辨识收敛契约 ‖ξ−ξ_true‖_P⁻¹ ≤ χ²(1−α_ξ) |
+| ERTC | O(1)/采样（环形缓冲百分位数） | O(N_hist·任务数) | 静态 WCET 认证、运行时 99.9% 分位数守界 |
+| EEIS | 离线 O(∏参数网格) 预计算；在线 O(1) 查表投影 | O(\|Pareto前沿\|) ~ 10³ | μ 分析验证、风险分配正确性、Pareto 最优性 |
+| CLEP | O(UKF + μ复核 + 融合)/接触 | 复用 BUQ/ERTC/EEIS | 双向契约：执行证据回传→信念更新→下次编译 |
+| XMC+ | O(\|ℳ⁺\|²·d_b)/区域 | O(\|V\|·\|ℳ⁺\|·d_b) | 执行模态仅作对账、不作佐证、分歧下限保守 |
+| PCE+++ | O(\|CP\|·(k_p+k_c+k_ft+k_ux+k_exec)·(C_VOI+UKF+μ)) | O(\|V\|+\|σ\|+\|𝒢\|+N_hist) | 四预算单调、七类证据门硬禁令、五态完备 |
 
-**正确性定理（Structured Memory-Guarded Adaptive Soundness, SMGAS）**
-假设 A22–A40（第 53–57 轮）成立；**(A41)** KGMM：边溯源诚实、版本单增、子图检索召回率 ≥1−δ_kg、自动抽取仅来自证据门通过的接触；**(A42)** SFT-KG：微调仅在 Trigger_ft(v) ∧ KG_verify(v) ∧ 审计通过时热切换，回滚条件 coverage_v<1−α_conf−δ_ft ⇒ ≤1 接触延迟生效；**(A43)** UXSE：μ_mis 更新规则 Δμ_mis=−η·1[verdict_correct]·(1−μ_mis)（仅实测正确降低），表现不计入；L_cog 估计保守上界；τ_int(μ_mis, auth) 随 μ_mis 单增、随 auth 单减；**(A44)** KGES：证据合成权重满足 w_E1=1 ≥ w_E2 ≥ w_E3 ≥ 0，且 w_E3≤w_E2≤0.2；结构证据(E3)不得进入不可逆接触必要证据集；**(A45)** ACC：每子图在线覆盖监测诚实、微调仅重置目标子图估计器、其他子图不变。则：
+**正确性定理（Execution-Grounded Evidence Soundness, EGES）**
+假设 A22–A45（第 53–58 轮）成立；**(A46)** BUQ：UKF 辨识满足 ‖ξ_exec−ξ_true‖_P⁻¹ ≤ χ²_dof(1−α_ξ) 在 N_id 接触后；结构化似然 L_exec 诚实包含真实观测分布；执行 OOD 判定漏检率 ≤δ_ξ_ood。**(A47)** ERTC：静态 WCET 分析音完备（无漏报）；运行时监视器 99.9% 分位数守界诚实；契约违例 ⇒ 立即降级、证据层感知延迟 ≤1 周期。**(A48)** EEIS：离线 Pareto 前沿完备覆盖可行域；在线投影音完备（K_safe=∅ ⇔ 真无可行参数）；μ 分析验证音完备；证书 Cert_eeis 不可篡改、版本化。**(A49)** CLEP：单次接触闭环在 τ_contact_max 内终止；EV-exec 诚实记录执行实测；执行模态仅参与对账分歧计算、不进入 EV-xmodal/EV-human 佐证集。**(A50)** PCE+++：四预算 B_probe/B_ft/B_ux/B_exec 单调消耗、互不挪用；执行成本 cost_exec 诚实上界真实资源消耗；预算耗尽 ⇒ 保守降级而非冒险。则：
 
-1. **自适应校准健全性**：任意时刻 t，∀v∈ℰ_Surface，coverage_v(t) ≥ 1−α_conf−δ_ft·1[回滚窗口内]；微调后目标子图带宽单调不增（或触发回滚）。
-2. **结构化证据合成保守性**：合成信念的不确定性（如区间宽度、熵）≥ 任一单源信念的不确定性（加权混合的凸性 + 权重上界）；EV-xmodal/EV-ft/EV-ux 的越级被硬禁令隔离在 L1/L2 前置。
-3. **心智模型协同单向性**：μ_mis(t) 非增序列；L2 协商超时 τ_int(t) 非减序列（随 μ_mis 单增、随 auth 单减）；博弈攻击（故意表现理解）对 μ_mis 无影响。
-4. **终止性**：PCE++ 在 k_probes+k_cons+k_ft+k_ux 内终止于 {承诺, 绕行, L2 协商, 安全停}；影子微调不阻塞主流程；B_ft 累积单增、B_ux 会话累积有上限。
-5. **部署界**（对检查点取联合界）：
+1. **执行接地的校准健全性**：证据层后验校准误差 ECE_k ≤ ε_meta(k) + δ_exec(ξ_exec)，其中 δ_exec=O(‖ξ_exec−ξ_nominal‖) 经 BUQ 量化；执行 OOD 触发共形保底带覆盖率 ≥1−α_conf−δ_ξ_ood。
+2. **实时契约安全性**：任意时刻，关键任务（电流环/力环/安全监视/证据下发）WCET ≤ WCET_bound、端到端抖动 ≤ Jitter_bound、内存/总线 ≤ 预留界——违例立即触发 DEGRADE_EXEC，证据层在 ≤1 个控制周期内感知。
+3. **阻抗编译健全性**：下发阻抗参数 K_p,K_d,F_max,ω_traj 满足 ‖W_s·S‖_∞ ≤ 1−γ_margin(δ_f^req) ∧ Pr[|F|>F_max] ≤ δ_force ∧ Pr[‖e‖>ε_traj] ≤ δ_traj；K_safe=∅ ⇒ 证据层强制降级（绕行/停止）。
+4. **双向契约单向性**：EV-exec 只能通过「分歧加宽后验」或「触发降级」影响系统，不能通过「一致性」减少探针/佐证需求；执行预算耗尽只能导致动作更保守。
+5. **终止性**：PCE+++ 在 k_probes+k_cons+k_ft+k_ux+k_exec 内终止于 {承诺(带Cert_eeis), 绕行, 降档, L2协商, 安全停, 执行降级停}。
+6. **部署界**（对检查点取联合界）：
 
 ```
 P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + δ_xm·1[L1] 
-                   + δ_ft·1[回滚窗口] + δ_kg·1[检索失败] + δ_ux·1[μ_mis>θ_mis])
-         − P(𝒢 结构性错误未检出) − P(护盾回退失败) − P(τ_int 超时 ∧ 安全停失效)
+                   + δ_ft·1[回滚窗口] + δ_kg·1[检索失败] + δ_ux·1[μ_mis>θ_mis]
+                   + δ_exec·1[ξ_exec漂移] + δ_ξ_ood·1[执行OOD] + δ_ertc·1[契约违例] + δ_eeis·1[μ分析漏报])
+         − P(𝒢 结构性错误未检出) − P(护盾回退失败) − P(τ_int 超时 ∧ 安全停失效) − P(固件回滚失败)
 ```
 
-关键：**KG 做结构化记忆锚定**（检索/OOD/校准集/证据合成/心智预测统一源头）；**微调只改适配器与校准层、且有 KG 三重守门**（证据充分/无新增欺骗/同类覆盖达标）；**UX 把心智模型纳入安全状态**（μ_mis 只增不减、τ_int 单调、博弈无效）；三预算耦合决策经「信念更准（微调收敛）、不确定性更大（共形带变宽）、动作更保守（UX 升级/佐证数增/τ_int 延长）」三条安全单向通道。
+关键：**BUQ 把「电机物理」变成「可量化的似然修正」**——不再假设高斯噪声，而是在线辨识结构化不确定性；**ERTC 把「嵌入式不确定性」变成「可契约化的硬界」**——静态认证 + 运行时守界，违例即降级；**EEIS 把「概率安全界」编译成「确定性阻抗参数+证书」**——μ 分析 + 风险分配 + Pareto 最优；**CLEP 闭环**让执行实测成为第 5 个模态参与跨模态对账，分歧即保守；**PCE+++ 四预算耦合**确保资源感知决策。三条安全单向通道延续：**信念更准（BUQ 修正似然）、不确定性更大（执行分歧/共形带）、动作更保守（阻抗更软/预算耗尽降级）**。
 
-## 4. 实验设计 E177–E181
+## 4. 实验设计 E182–E186
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E177 KG 构建与检索 | 自动抽取精确率/召回率（人工标注测试集）；子图检索命中率（vs 向量最近邻 Top-1 准确率）；OOD 门 AUC 提升（vs 第 57 轮似然分数） | ≥85%/≥80%；≥90%；AUC ↑≥0.1 |
-| E178 安全微调 | 触发后共形带宽度收敛率（≤5 接触内收敛）；覆盖回滚次数；微调后 k\* 下降幅度；对其他子图带宽影响（Δwidth） | ≥80% 收敛；0 次回滚；↓≥30%；Δwidth≤+5% |
-| E179 心智模型估计 | μ_mis 校准误差（预测 vs 实测误解率的 ECE）；UX 升级后 μ_mis 下降幅度；博弈攻击成功率（操作者故意快速确认「我懂了」） | ECE≤0.05；↓≥40%；≤1% |
-| E180 KG 证据合成 | 类比证据(E2)贡献率（合成信念中 E2 权重占比）；结构证据(E3)假承诺率；合成 vs 单区域：探针数/首访承诺时延 | ≥40%；0；−25%/−20% |
-| E181 端到端 | 季度漂移场地（新铺装/季节退化）四足部署 vs 第 57 轮：成功率/探针时间/首访承诺时延/标注有效率/微调次数/回滚次数 | +10%/−35%/−30%/+25%/≥5 次/0 次 |
+| E182 BUQ 辨识与校准 | ξ_exec 辨识收敛步数 (N_id)；结构化似然 vs 高斯似然：后验 ECE_k(k=1..5)；执行 OOD 检出率 (AUC) | N_id ≤ 10 接触；ECE_1 ↓≥30%、ECE_3 ↓≥20%；AUC ≥0.95 |
+| E183 ERTC 契约守界 | 静态 WCET 认证覆盖率；运行时 99.9% 分位数违例率；契约违例→降级延迟 | 100% 关键任务覆盖；0 次违例；≤1 控制周期 (50 μs) |
+| E184 EEIS 编译健全 | μ 分析验证通过率；K_safe 非空率（vs δ_f^req）；下发参数实测稳定性/力约束/跟踪误差达标率 | 100%；≥95%（δ_f^req=10⁻⁴）；≥99.9%/≥99.9%/≥99.9% |
+| E185 CLEP 双向闭环 | EV-exec 分歧触发保守率；执行证据回传后信念校准改善 (ΔECE)；执行降级误触发率 | ≥80% 分歧场景触发；ΔECE ≤ -0.02；≤1% |
+| E186 端到端 | 真实四足/机械臂部署（含电机发热/电压跌落/总线拥塞）：成功率/探针时间/首访承诺时延/执行降级率/证据层感知延迟 | vs 第 58 轮：+8%/−30%/−25%/≤2%/≤1 周期 |
 
-## 5. 集成更新：v16** → v16*** 体系
+## 5. 集成更新：v16*** → v16**** 体系
 
 ```
 根信任 + 能力格
@@ -580,21 +502,843 @@ P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + 
 ├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
 ├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC)
 ├─ L0.5*⁺ 元认知-信任层 (MFSL,XMC,PTM,MXI,FSE,J_p)
-├─ L0.5*⁺⁺ 结构化自适应层 (KGMM,SFT-KG,UXSE,KGES,ACC,J_p++) ← v58 新增
+├─ L0.5*⁺⁺ 结构化自适应层 (KGMM,SFT-KG,UXSE,KGES,ACC,J_p++)
+├─ L0.5*⁺⁺⁺ 执行接地层 (BUQ,ERTC,EEIS,CLEP,XMC+,PCE+++,J_exec) ← v59 新增
 ├─ L1 几何感知
 ├─ L2 任务/上下文/记忆/语音
 ...
 └─ L6 原型证伪/XFER/LFF/IXD
 ```
 
-JCPS 输出扩展为：
-`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k\*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p, kg_subgraph_id, ft_version, mental_snapshot, misunderstanding_prob, ft_log, ux_log)`
+JCPS++ 输出（含执行接地扩展）：
+```
+(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a,
+ Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p,
+ kg_subgraph_id, ft_version, mental_snapshot, misunderstanding_prob, ft_log, ux_log,
+ ξ_exec, C_rt, Cert_eeis, EV_exec_latest, B_exec_snapshot, M_rt_status)
+```
 
-其中新增：`kg_subgraph_id` 当前 KG 子图标识；`ft_version` 适配器/校准层版本；`mental_snapshot` 心智模型快照；`misunderstanding_prob` 当前误解概率；`ft_log` 微调审计日志；`ux_log` 解释升级日志。
-
-云边协议 CEB++ → **CEB+++**：云端可下发 KG 增量（新节点/边/权重）与元模型适配器增量，**但均需过隔离区**——KG 增量先以影子模式在边端运行，校验「检索召回不降 ∧ OOD AUC 不降 ∧ 微调触发率不异常」；适配器增量走 SFT-KG 完整审计流程；边端回传：跨模态对账残差、证伪事件、μ_mis 预测误差、微调审计结果，作为云端 KG 修正与元训练的校准集。**第 57 轮「一切判定器走隔离」在本轮落实为「知识图谱也要走隔离——仅证据门通过的接触可写入，边带溯源置信度与版本，事后证伪可回溯删除」**。
+云边协议 CEB++++：云端下发固件增量/电机先验/WCET 模型/μ 模板 → 隔离区影子运行 N_shadow 接触 → 校验「WCET 实测≤界 ∧ 抖动≤界 ∧ μ分析通过 ∧ EV-exec 分布无异常」 → 通过即热切换、失败即回滚。边端回传：ξ_exec 辨识轨迹、WCET 实测分布、EV-exec 残差、稳定性证书审计结果。
 
 ## 6. 本轮最大风险
 
-**一句话**：本轮把「结构化记忆」做成了安全论证的核心支柱——知识图谱同时驱动元推断检索、OOD 判定、微调触发、证据合成、心智模型预测，若 KG 中存在**系统性结构性错误**（如某类欺骗模式边缺失、相似边把本质不同的表面强行归类、熟悉度边因早期橡皮章操作者被高估），会导致**多重机制同时失效**：元推断检索到错误子图、OOD 门漏检、微调在错误模式上收敛、证据合成引入错误类比、UX 预测低估误解——这是单点故障的「共模失效」，必须以「仅证据门通过可写入」「边级溯源与置信度」「事后证伪回溯删除」「多源交叉校验（向量检索并行兜底）」四重护栏，宁可 KG 稀疏导致退回保守，绝不采信「图里写着但证据不支持」的知识。
+**一句话**：本轮把「执行层物理」全面纳入安全论证链——BUQ 辨识、ERTC 契约、EEIS 编译、CLEP 闭环、PCE+++ 四预算，**任何一环的建模缺陷（如齿槽谐波阶数不足、WCET 静态分析漏报、μ 分析权重函数保守性不够、执行模态独立性假设被物理耦合违反）都会导致「证据层自信满满但执行层实则失效」的灾难性抽象泄漏**；必须以「BUQ 辨识置信椭球外即 OOD 回退」「ERTC 静态认证 100% 覆盖关键链路 + 运行时零容忍」「EEIS μ 分析音完备验证 + 证书不可篡改」「EV-exec 仅作对账分歧、绝不作佐证」「四预算硬隔离、耗尽即保守」五重护栏，宁可执行层频繁降级导致「又慢又笨」，绝不允许「证据层通过但执行层失效」。
+<!-- IDEA:END -->
+
+<!-- ARTIFACT:START -->
+# 第 59 轮产物 · 创新点清单 v35：EX-GRD（执行接地层：BLDC不确定性量化×实时契约×阻抗安全编译×双向契约闭环，BUQ×ERTC×EEIS×CLEP×XMC+×PCE+++×J_exec）
+
+> 承接第 58 轮 IP-139~144（KGMM/SFT-KG/UXSE/KGES/ACC/PCX++）。本轮把部署前提从「结构化记忆守护下的安全自适应、心智模型协同的证据承诺」升级为 **「执行接地的证据承诺」**：高层概率安全界（δ_f、共形带、证据门）经**形式化编译链**映射为低层确定性硬约束（WCET、抖动、阻抗增益、力限幅、电流上限）；低层结构性不确定性（转矩脉动、电流采样抖动、磁饱和、ADC 漂移）经**在线辨识**反编译为结构化似然修正，并作为**第 5 个模态**参与跨模态对账。实现**双向契约**：证据层下发「带证书的阻抗参数」，执行层回传「带审计的执行证据」。
+> IP 编号：IP-145~IP-151（共 7 个），新增执行接地层 7 项核心能力。
+
+## 0. 核心 IP 设计
+
+| 编号 | 名称 | 类型 | 关键改进 |
+|---|---|---|---|
+| IP-145 | BUQ BLDC Uncertainty Quantification | 新增 | 13 维执行不确定性状态 ξ_exec、UKF 在线辨识、结构化似然修正 L_exec、执行 OOD 判定 |
+| IP-146 | ERTC Embedded Real-Time Contract | 新增 | 静态 WCET 认证、运行时 99.9% 分位数监视、零动态分配内存池、总线时隙预留、优先级上限协议、契约续约机制 |
+| IP-147 | EEIS End-Effector Impedance Synthesis | 新增 | 环境阻抗不确定性集 Z_env、小增益/μ 分析鲁棒稳定性、风险分配 δ_f→(γ,δ_force,δ_traj)、离线 Pareto 前沿预计算、在线 O(1) 投影、不可篡改证书 Cert_eeis |
+| IP-148 | CLEP Closed-Loop Execution-Probe | 新增 | 双向契约闭环算子：BUQ→ERTC→MFSL+→XMC+→EEIS→Dispatch→Execute→EV-exec→BeliefUpdate |
+| IP-149 | XMC+ Cross-Modal Reconciliation Plus | 升级 IP-134 | 模态集扩展 ℳ⁺=ℳ∪{exec}、执行模态仅作分歧对账、不作佐证、degraded_flag 触发 ρ_exec 降级 |
+| IP-150 | PCE+++ Probe-Commit-Evolve+++ | 升级 IP-144 | 四重预算 B_probe/B_ft/B_ux/B_exec、VOI 含执行成本 cost_exec、执行预算耗尽即保守降级 |
+| IP-151 | J_exec Execution Certificate | 新增 | ξ_exec 辨识轨迹、C_rt 契约参数、Cert_eeis 证书链、EV-exec 日志、M_rt 监视日志、WCET 审计、μ 分析记录 |
+
+## 1. 符号体系增量（定义 145–152）
+
+| 符号 | 含义 |
+|---|---|
+| `ξ_exec=(R_ph,L_d,L_q,λ_pm,{a_k,φ_k}_{k=1..K},b_sat,c_fric,ADC_gain,ADC_offset,δ_t_sync,T_junc)` | 13 维执行不确定性状态 |
+| `UKF_ξ` | 无迹卡尔曼滤波辨识器（过程模型：慢漂移；观测模型：电压方程+转矩方程+脉动+ADC） |
+| `L_exec(obs|θ,ξ_exec)=N(obs; h_probe(θ,ξ_exec), Σ_exec(ξ_exec))` | 结构化似然修正（均值修正+协方差膨胀） |
+| `C_rt=(WCET_map, Jitter_bound, Mem_pool, Bus_bw_reserved, Prio_ceiling, Renewal_period)` | 嵌入式实时契约 |
+| `M_rt` | 实时契约监视器：周期性采样 WCET/抖动/内存/总线、99.9% 分位数守界、违例即降级 |
+| `Z_env(ξ_exec,b_r)={Z(s) | Re[Z]∈[R_min,R_max], |Z|≤M}` | 环境阻抗不确定性集（依赖执行状态与信念） |
+| `K_safe={(K_p,K_d,F_max,ω_traj) | ‖W_s·S‖_∞≤1−γ_margin ∧ Pr[|F|>F_max]≤δ_force ∧ Pr[‖e‖>ε_traj]≤δ_traj}` | 安全阻抗参数集 |
+| `Cert_eeis=(K_p,K_d,F_max,ω_traj,γ_margin,δ_force,δ_traj,μ_verified,version,env_hash)` | 阻抗安全证书（不可篡改、版本化） |
+| `EV-exec=(contract_ok, ξ_residual, force_q99, stability_audit, τ_evidence, degraded_flag)` | 执行证据：第 5 模态 |
+| `ℳ⁺=ℳ∪{exec}` | 扩展模态集 |
+| `D⁺(r)=D(r)+w_exec·TV(lbl_exec,lbl_fused)+w_exec·|Q_μ_exec(0.99)−Q_μ_fused(0.99)|/μ_scale` | 扩展分歧度量 |
+| `B_exec=(WCET_slack, Bus_bw_slack, Thermal_slack, Prio_headroom)` | 执行预算 |
+| `cost_exec(π)=λ_wcet·max(0,WCET(π)−WCET_slack)+λ_bus·max(0,Bus(π)−Bus_slack)+λ_therm·max(0,Power(π)−Therm_slack)` | 执行成本函数 |
+| `J_exec=(ξ_exec_traj, C_rt, Cert_eeis_chain, EV_exec_log, M_rt_log, WCET_audit, μ_analysis_log)` | 执行证书 |
+| `JCPS++` | 扩展输出：含 ξ_exec, C_rt, Cert_eeis, EV_exec_latest, B_exec_snapshot, M_rt_status |
+
+## 2. 关键算法伪代码
+
+### IP-145 BUQ（BLDC 不确定性量化）
+
+```python
+class BLDCUncertaintyQuantifier:
+    def __init__(self, motor_spec):
+        self.ukf = UKF(state_dim=13, obs_dim=4)
+        self.motor_spec = motor_spec
+        self.ripple_order = 6
+        # 过程噪声：极小，参数慢漂移
+        self.Q = diag([1e-6, 1e-6, 1e-6, 1e-6] +  # R,Ld,Lq,λ
+                      [1e-8]*12 +                  # 6谐波×2
+                      [1e-7, 1e-7, 1e-8, 1e-8, 1e-9, 1e-6])  # b_sat,c_fric,gain,offset,dt_sync,T_junc
+    
+    def predict(self, dt):
+        self.ukf.predict(f=lambda x: x, Q=self.Q)
+    
+    def update(self, telemetry):
+        v_d, v_q, i_d, i_q, theta_e, tau_est, omega_e = telemetry
+        
+        def h(xi):
+            R, Ld, Lq, lam, *ripple_params, b_sat, c_fric, gain, offset, dt_sync, T_junc = xi
+            # 离散化电压方程（前向欧拉）
+            di_d = (v_d - R*i_d + Lq*i_q*omega_e) / Ld
+            di_q = (v_q - R*i_q - Ld*i_d*omega_e - lam*omega_e) / Lq
+            # 转矩模型
+            tau = 1.5 * p * (lam*i_q + (Ld-Lq)*i_d*i_q) \
+                  + b_sat * i_q * abs(i_q) \
+                  + c_fric * np.sign(i_q)
+            # 齿槽脉动
+            for k in range(1, self.ripple_order+1):
+                a_k = ripple_params[2*(k-1)]
+                phi_k = ripple_params[2*(k-1)+1]
+                tau += a_k * np.sin(k*theta_e + phi_k)
+            # ADC 模型
+            i_d_adc = gain * i_d + offset
+            i_q_adc = gain * i_q + offset
+            return np.array([i_d_adc, i_q_adc, tau, theta_e])
+        
+        y_meas = np.array([i_d, i_q, tau_est, theta_e])
+        self.ukf.update(y_meas, h=h)
+    
+    def get_likelihood_correction(self, force_pred_mean, force_pred_cov):
+        xi_mean, xi_cov = self.ukf.x, self.ukf.P
+        # 数值雅可比：力预测对 ξ_exec 的敏感度
+        eps = 1e-6
+        J = np.zeros((1, 13))
+        for i in range(13):
+            xi_plus = xi_mean.copy(); xi_plus[i] += eps
+            xi_minus = xi_mean.copy(); xi_minus[i] -= eps
+            # 简化：力预测 ≈ τ_est / 传动比
+            tau_plus = self.compute_torque(xi_plus, telemetry_dummy)
+            tau_minus = self.compute_torque(xi_minus, telemetry_dummy)
+            J[0, i] = (tau_plus - tau_minus) / (2*eps)
+        
+        mean_corr = J @ (xi_mean - self.motor_spec.nominal_xi)
+        cov_infl = J @ xi_cov @ J.T
+        return float(mean_corr), force_pred_cov + cov_infl
+    
+    def compute_torque(self, xi, telemetry):
+        # 复用 h() 中的转矩计算
+        pass
+    
+    def is_ood_execution(self, alpha=0.01):
+        mahal = (self.ukf.x - self.motor_spec.nominal_xi).T @ \
+                np.linalg.inv(self.ukf.P) @ \
+                (self.ukf.x - self.motor_spec.nominal_xi)
+        return mahal > chi2.ppf(1-alpha, df=13)
+    
+    def get_identification_confidence(self):
+        """返回辨识置信度：协方差迹的倒数"""
+        return 1.0 / (np.trace(self.ukf.P) + 1e-6)
+```
+
+### IP-146 ERTC（嵌入式实时契约监视器）
+
+```python
+from dataclasses import dataclass
+from collections import deque
+
+@dataclass
+class RealTimeContract:
+    WCET_map: dict          # task_name -> wcet_bound (seconds)
+    Jitter_bound: float     # 端到端抖动上界
+    Mem_pool: int           # 静态内存池字节数
+    Bus_bw_reserved: float  # 预留总线带宽 (bytes/s)
+    Prio_ceiling: int       # 优先级上限
+    Renewal_period: float   # 契约续约周期 (seconds)
+
+class RealTimeContractMonitor:
+    def __init__(self, contract: RealTimeContract):
+        self.C_rt = contract
+        self.wcet_hist = {task: deque(maxlen=1000) for task in contract.WCET_map}
+        self.jitter_hist = deque(maxlen=1000)
+        self.mem_used = 0
+        self.bus_used = 0.0
+        self.last_renewal = time.monotonic()
+        self.violation_log = []
+    
+    def sample(self, task_name: str, wcet_actual: float, 
+               jitter_actual: float, mem_used: int, bus_used: float):
+        self.wcet_hist[task_name].append(wcet_actual)
+        self.jitter_hist.append(jitter_actual)
+        self.mem_used = mem_used
+        self.bus_used = bus_used
+    
+    def check(self) -> tuple[bool, str]:
+        # WCET 检查：99.9% 分位数
+        for task, hist in self.wcet_hist.items():
+            if len(hist) >= 100:
+                p999 = np.percentile(hist, 99.9)
+                if p999 > self.C_rt.WCET_map[task]:
+                    self._log_violation(f"wcet_{task}", p999, self.C_rt.WCET_map[task])
+                    return False, f"wcet_violation_{task}"
+        
+        # 抖动检查
+        if len(self.jitter_hist) >= 100:
+            p999 = np.percentile(self.jitter_hist, 99.9)
+            if p999 > self.C_rt.Jitter_bound:
+                self._log_violation("jitter", p999, self.C_rt.Jitter_bound)
+                return False, "jitter_violation"
+        
+        # 内存/总线（硬界）
+        if self.mem_used > self.C_rt.Mem_pool:
+            self._log_violation("mem", self.mem_used, self.C_rt.Mem_pool)
+            return False, "mem_violation"
+        if self.bus_used > self.C_rt.Bus_bw_reserved:
+            self._log_violation("bus", self.bus_used, self.C_rt.Bus_bw_reserved)
+            return False, "bus_violation"
+        
+        # 契约续约
+        now = time.monotonic()
+        if now - self.last_renewal > self.C_rt.Renewal_period:
+            self.last_renewal = now
+            for h in self.wcet_hist.values(): h.clear()
+            self.jitter_hist.clear()
+        
+        return True, "ok"
+    
+    def _log_violation(self, name, actual, bound):
+        self.violation_log.append({
+            'time': time.monotonic(), 'type': name, 
+            'actual': actual, 'bound': bound
+        })
+    
+    def get_slack(self) -> 'BudgetSnapshot':
+        wcet_slack = min(
+            self.C_rt.WCET_map[t] - (np.percentile(h, 99.9) if len(h)>=100 else 0)
+            for t, h in self.wcet_hist.items()
+        ) if self.wcet_hist else float('inf')
+        
+        jitter_slack = (self.C_rt.Jitter_bound - 
+                        (np.percentile(self.jitter_hist, 99.9) if len(self.jitter_hist)>=100 else 0))
+        
+        return BudgetSnapshot(
+            wcet_slack=wcet_slack,
+            jitter_slack=jitter_slack,
+            mem_slack=self.C_rt.Mem_pool - self.mem_used,
+            bus_slack=self.C_rt.Bus_bw_reserved - self.bus_used,
+            thermal_slack=0.0,  # 由热监视器单独提供
+            prio_headroom=self.C_rt.Prio_ceiling - self.current_max_prio()
+        )
+    
+    def current_max_prio(self) -> int:
+        # 从 OS 获取当前最高激活优先级
+        return 0  # 占位
+    
+    def get_status(self) -> dict:
+        return {
+            'contract_ok': self.check()[0],
+            'wcet_slack': self.get_slack().wcet_slack,
+            'violations_recent': self.violation_log[-10:],
+            'renewal_due_in': self.C_rt.Renewal_period - (time.monotonic() - self.last_renewal)
+        }
+
+@dataclass
+class BudgetSnapshot:
+    wcet_slack: float
+    jitter_slack: float
+    mem_slack: int
+    bus_slack: float
+    thermal_slack: float
+    prio_headroom: int
+    
+    def is_viable_for_contact(self) -> bool:
+        return (self.wcet_slack > WCET_CONTACT_MIN and
+                self.bus_slack > BUS_CONTACT_MIN and
+                self.mem_slack > MEM_CONTACT_MIN)
+```
+
+### IP-147 EEIS（阻抗安全编译器）
+
+```python
+@dataclass
+class ImpedanceCertificate:
+    K_p: float
+    K_d: float
+    F_max: float
+    ω_traj: float
+    γ_margin: float
+    δ_force: float
+    δ_traj: float
+    mu_verified: float
+    version: int
+    env_model_hash: int
+    timestamp: float
+
+class ImpedanceSafetyCompiler:
+    def __init__(self, motor_params, env_uncertainty_model):
+        self.motor = motor_params
+        self.base_env_model = env_uncertainty_model
+        self.pareto_front = self._offline_precompute_pareto()
+        self.version = 0
+    
+    def _offline_precompute_pareto(self):
+        """离线计算帕累托前沿：覆盖 (K_p, K_d, F_max, ω_traj) 空间"""
+        front = []
+        # 参数网格
+        K_p_grid = np.logspace(2, 5, 20)      # 100 ~ 100,000 N/m
+        K_d_grid = np.logspace(0, 3, 15)      # 1 ~ 1000 Ns/m
+        F_max_grid = np.linspace(50, self.motor.F_abs, 10)
+        ω_traj_grid = np.linspace(1, 50, 10)  # 1 ~ 50 rad/s
+        
+        for K_p in K_p_grid:
+            for K_d in K_d_grid:
+                for F_max in F_max_grid:
+                    for ω_traj in ω_traj_grid:
+                        # 构建标准环境模型（后续在线调整）
+                        env_model = self.base_env_model
+                        
+                        # μ 分析：鲁棒稳定性
+                        mu = self._mu_analysis(K_p, K_d, env_model)
+                        if mu <= 0 or mu >= 1.0:  # 不稳定或边缘
+                            continue
+                        γ_margin = 1.0/mu - 1.0
+                        
+                        # 力约束违例概率（高斯近似 + 共形量化）
+                        δ_force = self._force_violation_prob(K_p, K_d, F_max, env_model)
+                        
+                        # 跟踪误差违例概率
+                        δ_traj = self._tracking_error_prob(K_p, K_d, ω_traj, env_model)
+                        
+                        # 硬约束
+                        if δ_force > 1e-3 or δ_traj > 1e-3:
+                            continue
+                        
+                        front.append(ParetoPoint(
+                            K_p=K_p, K_d=K_d, F_max=F_max, ω_traj=ω_traj,
+                            γ_margin=γ_margin, δ_force=δ_force, δ_traj=δ_traj,
+                            mu=mu
+                        ))
+        
+        # 帕累托筛选：最大化 ω_traj，最小化 K_p（柔顺优先）
+        return self._pareto_filter(front)
+    
+    def _pareto_filter(self, points):
+        """保留不可被同时改进的点"""
+        filtered = []
+        for p in points:
+            dominated = False
+            for q in points:
+                if (q.ω_traj >= p.ω_traj and q.K_p <= p.K_p and 
+                    (q.ω_traj > p.ω_traj or q.K_p < p.K_p)):
+                    dominated = True
+                    break
+            if not dominated:
+                filtered.append(p)
+        return filtered
+    
+    def _mu_analysis(self, K_p, K_d, env_model):
+        """结构奇异值 μ 分析（简化：用 H∞ 范数上界）"""
+        # 实际应用中应用 mussv 或鲁棒控制工具箱
+        # 这里返回上界估计
+        P = self._plant_tf()  # 电机+传动+负载传递函数
+        C = tf([K_d, K_p], [1])  # PD 控制器
+        S = feedback(1, P*C)
+        W_s = env_model.uncertainty_weight()
+        return hinf_norm(W_s * S)
+    
+    def _force_violation_prob(self, K_p, K_d, F_max, env_model):
+        # 接触力分布近似：F ~ N(μ_F(K_p,K_d), σ_F²(K_p,K_d,env))
+        μ_F, σ_F = self._contact_force_stats(K_p, K_d, env_model)
+        return 1 - norm.cdf(F_max, μ_F, σ_F) + norm.cdf(-F_max, μ_F, σ_F)
+    
+    def _tracking_error_prob(self, K_p, K_d, ω_traj, env_model):
+        # 轨迹跟踪误差分布
+        σ_e = self._tracking_error_std(K_p, K_d, ω_traj, env_model)
+        ε_traj = self.motor.epsilon_traj_max
+        return 2 * (1 - norm.cdf(ε_traj, 0, σ_e))
+    
+    def compile(self, delta_f_req: float, fused_belief, xi_exec, b_r) -> tuple[object, ImpedanceCertificate]:
+        """在线编译：给定风险预算，投影到 Pareto 前沿"""
+        # 1. 构建当前环境不确定性模型（依赖执行状态和信念）
+        env_model = self._build_env_model(xi_exec, fused_belief, b_r)
+        
+        # 2. 风险分配：δ_f → (γ_margin, δ_force, δ_traj)
+        # 使用 Boole 不等式分配：各占 1/3
+        γ_req = norm.ppf(1 - delta_f_req/6) * env_model.sigma_model
+        δ_force_req = delta_f_req / 3
+        δ_traj_req = delta_f_req / 3
+        
+        # 3. 在线投影：找到满足约束的最优点
+        feasible = []
+        for p in self.pareto_front:
+            # 重新评估当前环境模型下的指标（轻量级近似）
+            mu = self._mu_analysis(p.K_p, p.K_d, env_model)
+            if mu >= 1.0: continue
+            γ_margin = 1.0/mu - 1.0
+            
+            δ_force = self._force_violation_prob(p.K_p, p.K_d, p.F_max, env_model)
+            δ_traj = self._tracking_error_prob(p.K_p, p.K_d, p.ω_traj, env_model)
+            
+            if (γ_margin >= γ_req and 
+                δ_force <= δ_force_req and 
+                δ_traj <= δ_traj_req and
+                p.F_max <= self.motor.F_abs):
+                feasible.append((p, γ_margin, δ_force, δ_traj, mu))
+        
+        if not feasible:
+            return None, None  # K_safe 为空
+        
+        # 选择：最大 ω_traj（速度优先），次选最小 K_p（柔顺优先）
+        best_p, γ_m, δ_f, δ_t, mu_v = max(feasible, key=lambda x: (x[0].ω_traj, -x[0].K_p))
+        
+        self.version += 1
+        cert = ImpedanceCertificate(
+            K_p=best_p.K_p, K_d=best_p.K_d, F_max=best_p.F_max, ω_traj=best_p.ω_traj,
+            γ_margin=γ_m, δ_force=δ_f, δ_traj=δ_t, mu_verified=mu_v,
+            version=self.version, env_model_hash=hash(str(env_model)),
+            timestamp=time.monotonic()
+        )
+        return best_p, cert
+    
+    def _build_env_model(self, xi_exec, fused_belief, b_r):
+        """根据执行状态和信念构建环境阻抗不确定性模型"""
+        # 从信念提取环境刚度/阻尼估计
+        env_stiffness = fused_belief.get('stiffness_mean', 1000)
+        env_damping = fused_belief.get('damping_mean', 10)
+        
+        # 执行状态修正：电机参数不确定性映射到环境不确定性
+        R_unc = xi_exec[0] / self.motor.R_nominal
+        L_unc = max(xi_exec[1], xi_exec[2]) / self.motor.L_nominal
+        ripple_mag = np.sqrt(sum(xi_exec[4:4+12:2]**2))  # 谐波幅值 RMS
+        
+        sigma_model = 0.1 * (1 + 0.5*(R_unc-1) + 0.3*(L_unc-1) + 0.2*ripple_mag)
+        
+        return EnvUncertaintyModel(
+            stiffness_nom=env_stiffness,
+            damping_nom=env_damping,
+            sigma_model=sigma_model,
+            R_min=env_stiffness * (1 - 2*sigma_model),
+            R_max=env_stiffness * (1 + 2*sigma_model),
+            M_max=env_stiffness * (1 + 3*sigma_model)
+        )
+```
+
+### IP-148 CLEP（双向契约闭环算子）
+
+```python
+@dataclass
+class ExecEvidence:
+    contract_ok: bool
+    xi_residual: float        # 辨识马氏距离
+    force_tracking_q99: float # 力跟踪误差 99% 分位数
+    stability_cert_audit: bool # μ 分析复核通过
+    tau_evidence: float       # 证据年龄
+    degraded_flag: bool       # 是否处于降级模式
+
+def closed_loop_exec_probe(M, cp, delta_f_req, budget):
+    """CLEP: 双向契约闭环——单次探针/承诺的完整执行-证据循环"""
+    
+    # ① BUQ: 更新执行不确定性状态
+    M.buq.predict(dt=M.dt_control)
+    M.buq.update(M.telemetry_latest)
+    mean_corr, cov_infl = M.buq.get_likelihood_correction(
+        M.probe_force_pred.get(cp.region, 0.0),
+        M.probe_force_cov.get(cp.region, 1.0)
+    )
+    
+    # ② ERTC: 契约检查
+    contract_ok, violation = M.ertc.check()
+    tau_evidence = time.monotonic() - M.ertc.last_renewal
+    if not contract_ok or tau_evidence > M.ertc.C_rt.Renewal_period:
+        M.exec_degraded = True
+        return degrade_exec_mode(M, cp, f"ERT_violation:{violation or 'stale_evidence'}")
+    
+    # ③ MFSL+: 结构化似然元推断
+    obs_corrected = M.obs[cp.region].copy() if cp.region in M.obs else Observation()
+    obs_corrected.force_mean = obs_corrected.get('force_mean', 0.0) + mean_corr
+    obs_corrected.force_cov = obs_corrected.get('force_cov', 1.0) + cov_infl
+    inf = meta_few_shot_infer(M, cp.region, obs_corrected, M.meta)
+    
+    # ④ XMC+: 跨模态对账（含执行模态）
+    EV_exec_latest = M.EV_exec_log[-1] if M.EV_exec_log else null_exec_evidence()
+    M, fused, D_plus = xmodal_fuse_plus(M, cp.region, inf, EV_exec_latest)
+    
+    # ⑤ EEIS: 阻抗安全编译
+    K_safe, cert_eeis = M.eeis.compile(delta_f_req, fused, M.buq.ukf.x, M.b_r[cp.region])
+    if K_safe is None:
+        return degrade_exec_mode(M, cp, "EEIS_infeasible")
+    
+    # ⑥ 分发阻抗参数（带证书）
+    dispatch_impedance_params(K_safe, cert_eeis)
+    
+    # ⑦ 执行接触并收集遥测
+    telemetry = execute_contact(cp, K_safe, timeout=M.contact_timeout)
+    
+    # ⑧ 构建执行证据 EV-exec
+    EV_exec = build_exec_evidence(
+        telemetry=telemetry,
+        cert_eeis=cert_eeis,
+        contract_ok=contract_ok,
+        xi_exec=M.buq.ukf.x,
+        tau_evidence=tau_evidence,
+        degraded_flag=M.exec_degraded
+    )
+    M.EV_exec_log.append(EV_exec)
+    
+    # ⑨ 更新信念（执行证据作为新模态参与融合）
+    M = update_beliefs_with_exec(M, cp.region, fused, EV_exec)
+    
+    # ⑩ 更新执行预算快照
+    budget.exec_snapshot = M.ertc.get_slack()
+    budget.thermal_snapshot = M.thermal_monitor.get_slack()
+    
+    return M, fused, D_plus, EV_exec, cert_eeis
+
+def build_exec_evidence(telemetry, cert_eeis, contract_ok, xi_exec, tau_evidence, degraded_flag):
+    # 辨识残差（马氏距离，相对于名义值）
+    xi_nominal = np.array([...])  # 电机名义参数
+    cov_nominal = np.diag([...])  # 名义协方差
+    xi_residual = mahalanobis(xi_exec, xi_nominal, cov_nominal)
+    
+    # 力跟踪误差 99% 分位数
+    force_err = telemetry.force_measured - telemetry.force_desired
+    force_q99 = np.percentile(np.abs(force_err), 99)
+    
+    # 稳定性证书审计：在线 μ 分析复核
+    mu_audit = mu_analysis_recheck(telemetry, cert_eeis)
+    stability_ok = mu_audit < 1.0
+    
+    return ExecEvidence(
+        contract_ok=contract_ok and not degraded_flag,
+        xi_residual=xi_residual,
+        force_tracking_q99=force_q99,
+        stability_cert_audit=stability_ok,
+        tau_evidence=tau_evidence,
+        degraded_flag=degraded_flag
+    )
+
+def xmodal_fuse_plus(M, region, inf, EV_exec):
+    """跨模态融合扩展：把 EV-exec 作为第 5 模态"""
+    # 标准模态
+    for m in ['vis', 'tap', 'prop', 'acou']:
+        if m in inf.likelihood:
+            M.b[region][m] = bayes_update(M.b[region][m], inf.likelihood[m], w=M.rho[m])
+    
+    # 执行模态：似然来自力跟踪分布
+    exec_likelihood = exec_likelihood_from_evidence(EV_exec)
+    M.b[region]['exec'] = bayes_update(M.b[region]['exec'], exec_likelihood, w=M.rho_exec)
+    
+    # 融合
+    fused = Fuse({**M.b[region], 'exec': M.b[region]['exec']}, 
+                 {**M.rho, 'exec': M.rho_exec})
+    
+    # 分歧计算（含执行模态）
+    D_plus = disagreement_plus(M.b[region], M.rho_exec)
+    return M, fused, D_plus
+
+def exec_likelihood_from_evidence(EV_exec):
+    """从执行证据构造力观测似然"""
+    if EV_exec.degraded_flag or not EV_exec.contract_ok:
+        # 降级/契约违例：极宽似然（无信息）
+        return Gaussian(mean=0, cov=1e6)
+    # 正常：以力跟踪误差为观测噪声
+    return Gaussian(mean=0, cov=EV_exec.force_tracking_q99**2)
+
+def disagreement_plus(beliefs, rho_exec):
+    """扩展分歧：含执行模态"""
+    modalities = ['vis', 'tap', 'prop', 'acou', 'exec']
+    D = 0.0
+    for i, m1 in enumerate(modalities):
+        for m2 in modalities[i+1:]:
+            if m1 in beliefs and m2 in beliefs:
+                # 标签 TV 距离
+                tv = tv_distance(beliefs[m1].label_dist, beliefs[m2].label_dist)
+                # 99% 分位数差异
+                q_diff = abs(beliefs[m1].quantile(0.99) - beliefs[m2].quantile(0.99))
+                w = rho_exec if 'exec' in (m1, m2) else 1.0
+                D += w * (tv + q_diff / MU_SCALE)
+    return D
+
+def degrade_exec_mode(M, cp, reason):
+    """执行降级模式：切保守阻抗、冻结非关键、上报"""
+    M.exec_degraded = True
+    # 切换到最保守阻抗预设
+    conservative_K = ImpedanceParams(K_p=1000, K_d=100, F_max=50, ω_traj=1.0)
+    dispatch_impedance_params(conservative_K, null_certificate())
+    # 冻结 B_ft, B_ux 预算
+    M.budget.ft_frozen = True
+    M.budget.ux_frozen = True
+    # 记录降级事件
+    M.degradation_log.append({
+        'time': time.monotonic(), 'cp': cp, 'reason': reason
+    })
+    return M, None, float('inf'), null_exec_evidence(), null_certificate()
+```
+
+### IP-149 XMC+（跨模态对账扩展）
+
+```python
+# 规则扩展已在 disagreement_plus 和 evidence_gate_ppp 中体现
+# 关键点：
+# 1. EV-exec 仅参与分歧计算 D⁺，不进入 EV-xmodal 判定
+# 2. degraded_flag=true ⇒ ρ_exec *= 0.5 (降至 ρ_min)，回溯标记历史 EV-exec
+# 3. contract_ok=false ⇒ 执行模态似然极宽（等效于无模态）
+# 4. ρ_exec 更新规则：事后证伪（稳定性审计失败/力超限）⇒ 乘性降级；证实 ⇒ 有界恢复
+```
+
+### IP-150 PCE+++（四预算耦合探-诺-演）
+
+```python
+class ExecBudget:
+    def __init__(self, ertc, thermal_monitor):
+        self.ertc = ertc
+        self.thermal = thermal_monitor
+        self.probes_left = 10
+        self.ft_budget = 5
+        self.ux_budget = 3
+        self.ft_frozen = False
+        self.ux_frozen = False
+    
+    def get_snapshot(self):
+        ertc_slack = self.ertc.get_slack()
+        therm_slack = self.thermal.get_slack()
+        return BudgetSnapshot(
+            wcet_slack=ertc_slack.wcet_slack,
+            jitter_slack=ertc_slack.jitter_slack,
+            mem_slack=ertc_slack.mem_slack,
+            bus_slack=ertc_slack.bus_slack,
+            thermal_slack=therm_slack,
+            prio_headroom=ertc_slack.prio_headroom
+        )
+    
+    def exec_cost(self, wcet_est, bus_est, power_est):
+        snap = self.get_snapshot()
+        return (max(0, wcet_est - snap.wcet_slack) * LAMBDA_WCET +
+                max(0, bus_est - snap.bus_slack) * LAMBDA_BUS +
+                max(0, power_est - snap.thermal_slack) * LAMBDA_THERM)
+    
+    def probe_spend(self):
+        self.probes_left -= 1
+    
+    def ft_spend(self):
+        if not self.ft_frozen: self.ft_budget -= 1
+    
+    def ux_spend(self):
+        if not self.ux_frozen: self.ux_budget -= 1
+    
+    def is_viable_for_contact(self):
+        return self.get_snapshot().is_viable_for_contact()
+
+def probe_commit_evolve_plus_plus_plus(x0, M, task, budget, consent, operators):
+    route = plan_on_map(M, task, risk_model)
+    sched, log = [], []
+    
+    for cp in route.checkpoints:
+        # 预检查：执行预算
+        if not budget.is_viable_for_contact():
+            return negotiate_or_stop(cp, M, "exec_budget_exhausted", budget.exec_snapshot)
+        
+        delta_f_req = risk_model.delta_f(cp)
+        M, fused, D_plus, EV_exec, cert_eeis = closed_loop_exec_probe(M, cp, delta_f_req, budget)
+        
+        if EV_exec.degraded_flag:
+            log.append(EvidenceRecord(ev='EV-exec', degraded=True, cp=cp, reason=EV_exec))
+            alt = reroute_conservative(M, cp)
+            if alt: route = alt; continue
+            return negotiate_or_stop(cp, M, "exec_degraded", EV_exec)
+        
+        # 证据门判定（七类）
+        sigma = foothold_schedule(x0, cp, M)
+        R = schedule_risk(sigma, M)
+        lv = contact_level(cp)
+        
+        # 探询循环
+        while select_gait(R) == 'halt' and budget.probes_left > 0:
+            cands = admissible_probes(cp, M, F_abs)
+            if not cands: break
+            
+            # VOI 含执行成本
+            best_p, best_voi = None, -inf
+            for p in cands:
+                wcet_est, bus_est, power_est = estimate_exec_cost(p, M.buq.ukf.x, M.ertc.C_rt)
+                cost_e = budget.exec_cost(wcet_est, bus_est, power_est)
+                voi = voi_meta_pessimistic(p, M, fused) - cost_e
+                if voi > best_voi:
+                    best_voi, best_p = voi, p
+            
+            if best_voi < theta_voi: break
+            
+            M, fused, D_plus, EV_exec, _ = closed_loop_exec_probe(M, cp, delta_f_req, budget)
+            budget.probe_spend()
+            if EV_exec.degraded_flag: break
+            sigma = reselect_footholds(x0, cp, M)
+            R = schedule_risk(sigma, M)
+        
+        # 承诺判定
+        ev = tag_evidence_ppp(sigma, M, lv, operators.active, M.ood_reg, EV_exec, cert_eeis)
+        gate_result = evidence_gate_ppp(ev, M, operators.active, M.ood_reg, EV_exec)
+        
+        if select_gait(R) != 'halt' and gate_result[0] == 'ok':
+            sched.append(commit(sigma, select_gait(R), cert_eeis))
+            log.append(ev)
+            continue
+        
+        alt = reroute(M, cp, risk_model)
+        if alt and select_gait(schedule_risk(alt, M)) != 'halt':
+            route = alt
+            continue
+        
+        return negotiate_or_stop_ppp(cp, M, sigma, R, consent, 
+                                      tau_int=operators.active.consent_timeout(),
+                                      mu_mis=operators.active.mu_mis)
+    
+    return sched, log, M
+
+def evidence_gate_ppp(c, M, persona, ood_reg, EV_exec):
+    """七类证据门"""
+    if c.ev == 'EV-probe*':
+        ok = (c.inf.cls == 'ID' and c.inf.ece_k <= eps_meta(c.k) and 
+              c.inf.ft_version == M.meta.ft_version) or \
+             (c.inf.cls == 'OOD' and c.region in ood_reg.certified)
+    elif c.ev == 'EV-xmodal':
+        ok = c.level == 'L1' and c.indep_declared and c.D <= theta_D
+    elif c.ev == 'EV-human':
+        corrob_req = quarantine_exit(persona.auth, persona.mu_mis)
+        ok = persona.auth >= 'A1' and c.corrob >= corrob_req
+    elif c.ev == 'EV-ft':
+        ok = c.ft_audit_passed and c.level != 'L2_irreversible'
+    elif c.ev == 'EV-ux':
+        ok = c.level == 'L2' and persona.mu_mis <= theta_mis
+    elif c.ev == 'EV-exec':
+        # 执行证据仅作一致性检查：契约OK、辨识收敛、力跟踪达标、稳定性审计通过
+        ok = (EV_exec.contract_ok and 
+              EV_exec.xi_residual < CHI2_THRESH_13_99 and
+              EV_exec.force_tracking_q99 < FORCE_TRACK_THRESH and
+              EV_exec.stability_cert_audit)
+    elif c.ev in ('EV-visit', 'EV-margin'):
+        ok = round56_checks(c, M)
+    else:
+        return ('reject', 'no_evidence_class', c)
+    
+    if not ok: return ('reject', 'evidence_insufficient', c)
+    
+    # 不可逆接触硬禁令
+    if c.irreversible and c.ev in ('EV-xmodal', 'EV-ft', 'EV-exec'):
+        return ('reject', 'exec_or_xmodal_or_ft_on_irreversible', c)
+    return ('ok', c)
+
+# 常数
+WCET_CONTACT_MIN = 50e-6      # 50 μs
+BUS_CONTACT_MIN = 1000        # bytes/s
+MEM_CONTACT_MIN = 1024        # bytes
+CHI2_THRESH_13_99 = chi2.ppf(0.99, df=13)  # ~27.7
+FORCE_TRACK_THRESH = 5.0      # 5N
+LAMBDA_WCET = 1000.0
+LAMBDA_BUS = 1.0
+LAMBDA_THERM = 10.0
+```
+
+### IP-151 J_exec（执行证书）
+
+```python
+@dataclass
+class ExecutionCertificate:
+    xi_exec_trajectory: list      # 每控制周期的 ξ_exec 估计
+    C_rt: RealTimeContract        # 契约参数快照
+    Cert_eeis_chain: list         # 全程阻抗证书链
+    EV_exec_log: list             # 执行证据日志
+    M_rt_log: list                # 实时监视器日志
+    WCET_audit: dict              # WCET 静态分析审计记录
+    mu_analysis_log: list         # 每次接触的 μ 分析记录
+    degradation_log: list         # 降级事件日志
+    budget_snapshots: list        # 四预算快照序列
+    version: int                  # 证书版本
+    timestamp: float
+    
+    def verify_chain(self) -> bool:
+        """验证证书链完整性"""
+        # 1. 版本单增
+        for i in range(1, len(self.Cert_eeis_chain)):
+            if self.Cert_eeis_chain[i].version <= self.Cert_eeis_chain[i-1].version:
+                return False
+        # 2. 每证书 μ_verified < 1.0
+        if any(c.mu_verified >= 1.0 for c in self.Cert_eeis_chain):
+            return False
+        # 3. EV-exec 与证书时间对齐
+        for ev, cert in zip(self.EV_exec_log, self.Cert_eeis_chain):
+            if abs(ev.timestamp - cert.timestamp) > 0.1:  # 100ms 容差
+                return False
+        return True
+```
+
+## 3. 复杂度与正确性
+
+| 组件 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|
+| BUQ | UKF: O(13³)=O(2197)/周期 ≈ 50 μs @ 200 MHz | O(13²)=169 floats | 辨识收敛契约 ‖ξ−ξ_true‖_P⁻¹ ≤ χ²(1−α_ξ)、执行 OOD 漏检 ≤δ_ξ_ood |
+| ERTC | O(1)/采样（环形缓冲百分位数增量维护） | O(N_hist·任务数) ~ 10 KB | 静态 WCET 音完备、运行时 99.9% 分位数守界、违例→降级 ≤1 周期 |
+| EEIS | 离线 O(30k) 预计算；在线 O(\|Pareto\|)≈O(100) 查表投影 | O(\|Pareto\|) ~ 1 KB | μ 分析验证音完备、风险分配 Boole 不等式、Pareto 最优性、证书不可篡改 |
+| CLEP | O(UKF + μ复核 + 融合)/接触 ≈ 200 μs | 复用 BUQ/ERTC/EEIS | 双向契约：执行证据回传→信念更新→下次编译、单次闭环 ≤ τ_contact_max |
+| XMC+ | O(5²·d_b)/区域 | O(\|V\|·5·d_b) | 执行模态仅作分歧对账、不作佐证、degraded 触发 ρ_exec 降级 |
+| PCE+++ | O(\|CP\|·(k_p+k_c+k_ft+k_ux+k_exec)·(C_VOI+UKF+μ)) | O(\|V\|+\|σ\|+\|𝒢\|+N_hist) | 四预算单调消耗、互不挪用、执行成本诚实上界、耗尽即保守 |
+| J_exec | O(1)/接触追加 | O(接触数) | 证书链版本单增、μ_verified<1.0、时戳对齐、完整性可验证 |
+
+**正确性定理（Execution-Grounded Evidence Soundness, EGES）**
+假设 A22–A50（第 53–59 轮）成立；**(A51)** BUQ：UKF 辨识在 N_id 接触后满足 ‖ξ_exec−ξ_true‖_P⁻¹ ≤ χ²_dof(1−α_ξ)；结构化似然 L_exec 诚实包含真实观测分布（即真实参数在 1−α_ξ 置信椭球内）；执行 OOD 判定（马氏距离超 χ² 阈值）漏检率 ≤δ_ξ_ood。**(A52)** ERTC：静态 WCET 分析对关键任务（电流环/力环/安全监视/证据下发）音完备（无漏报）；运行时监视器以 99.9% 分位数诚实守界；契约违例 ⇒ 立即触发 DEGRADE_EXEC，证据层感知延迟 ≤1 个控制周期。**(A53)** EEIS：离线 Pareto 前沿完备覆盖可行参数域；在线投影音完备（K_safe=∅ ⇔ 真无可行参数满足约束）；μ 分析验证音完备；证书 Cert_eeis 版本单增、不可篡改、含环境模型哈希。**(A54)** CLEP：单次接触闭环在 τ_contact_max 内终止；EV-exec 诚实记录执行实测（契约位、辨识残差、力跟踪分位数、稳定性审计）；执行模态仅参与对账分歧 D⁺ 计算，不进入 EV-xmodal/EV-human 佐证集。**(A55)** PCE+++：四预算 B_probe/B_ft/B_ux/B_exec 单调消耗、互不挪用；执行成本 cost_exec 诚实上界真实资源消耗；任一预算耗尽 ⇒ 保守降级（绕行/降档/停止）而非冒险。则：
+
+1. **执行接地的校准健全性**：证据层后验校准误差 ECE_k ≤ ε_meta(k) + δ_exec(ξ_exec)，其中 δ_exec = O(‖ξ_exec−ξ_nominal‖) 经 BUQ 量化；执行 OOD 触发共形保底带覆盖率 ≥ 1−α_conf−δ_ξ_ood。
+2. **实时契约安全性**：任意时刻，关键任务 WCET ≤ WCET_bound、端到端抖动 ≤ Jitter_bound、内存/总线 ≤ 预留界——违例立即触发 DEGRADE_EXEC，证据层在 ≤1 控制周期内感知并回退。
+3. **阻抗编译健全性**：下发阻抗参数满足 ‖W_s·S‖_∞ ≤ 1−γ_margin(δ_f^req) ∧ Pr[|F|>F_max] ≤ δ_force ∧ Pr[‖e‖>ε_traj] ≤ δ_traj；K_safe=∅ ⇒ 证据层强制降级。
+4. **双向契约单向性**：EV-exec 只能通过「分歧加宽后验」或「触发降级」影响系统，不能通过「一致性」减少探针/佐证需求（ρ_exec 不参与 EV-xmodal 判定）；执行预算耗尽只能导致动作更保守。
+5. **终止性**：PCE+++ 在 k_probes+k_cons+k_ft+k_ux+k_exec 内终止于 {承诺(带 Cert_eeis), 绕行, 降档, L2 协商, 安全停, 执行降级停}。
+6. **部署界**（对检查点取联合界）：
+
+```
+P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + δ_xm·1[L1] 
+                   + δ_ft·1[回滚窗口] + δ_kg·1[检索失败] + δ_ux·1[μ_mis>θ_mis]
+                   + δ_exec·1[ξ_exec漂移] + δ_ξ_ood·1[执行OOD] + δ_ertc·1[契约违例] + δ_eeis·1[μ分析漏报])
+         − P(𝒢 结构性错误未检出) − P(护盾回退失败) − P(τ_int 超时 ∧ 安全停失效) − P(固件回滚失败)
+```
+
+关键：**BUQ 把「电机物理」变成「可量化的似然修正」**——不再假设高斯噪声，而是在线辨识结构化不确定性；**ERTC 把「嵌入式不确定性」变成「可契约化的硬界」**——静态认证 + 运行时守界，违例即降级；**EEIS 把「概率安全界」编译成「确定性阻抗参数+证书」**——μ 分析 + 风险分配 + Pareto 最优；**CLEP 闭环**让执行实测成为第 5 个模态参与跨模态对账，分歧即保守；**PCE+++ 四预算耦合**确保资源感知决策。三条安全单向通道延续：**信念更准（BUQ 修正似然）、不确定性更大（执行分歧/共形带）、动作更保守（阻抗更软/预算耗尽降级）**。
+
+## 4. 实验设计 E182–E186
+
+| 实验 | 指标 | 目标 |
+|---|---|---|
+| E182 BUQ 辨识与校准 | ξ_exec 辨识收敛步数 (N_id)；结构化似然 vs 高斯似然：后验 ECE_k(k=1..5)；执行 OOD 检出率 (AUC) | N_id ≤ 10 接触；ECE_1 ↓≥30%、ECE_3 ↓≥20%；AUC ≥0.95 |
+| E183 ERTC 契约守界 | 静态 WCET 认证覆盖率；运行时 99.9% 分位数违例率；契约违例→降级延迟 | 100% 关键任务覆盖；0 次违例；≤1 控制周期 (50 μs) |
+| E184 EEIS 编译健全 | μ 分析验证通过率；K_safe 非空率（vs δ_f^req）；下发参数实测稳定性/力约束/跟踪误差达标率 | 100%；≥95%（δ_f^req=10⁻⁴）；≥99.9%/≥99.9%/≥99.9% |
+| E185 CLEP 双向闭环 | EV-exec 分歧触发保守率；执行证据回传后信念校准改善 (ΔECE)；执行降级误触发率 | ≥80% 分歧场景触发；ΔECE ≤ -0.02；≤1% |
+| E186 端到端 | 真实四足/机械臂部署（含电机发热/电压跌落/总线拥塞）：成功率/探针时间/首访承诺时延/执行降级率/证据层感知延迟 | vs 第 58 轮：+8%/−30%/−25%/≤2%/≤1 周期 |
+
+## 5. 集成更新：v16*** → v16**** 体系
+
+```
+根信任 + 能力格
+│
+├─ L0 分布式底座与执行边 (GPC/SEN/TBC)
+├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
+├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR)
+├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
+├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC)
+├─ L0.5*⁺ 元认知-信任层 (MFSL,XMC,PTM,MXI,FSE,J_p)
+├─ L0.5*⁺⁺ 结构化自适应层 (KGMM,SFT-KG,UXSE,KGES,ACC,J_p++)
+├─ L0.5*⁺⁺⁺ 执行接地层 (BUQ,ERTC,EEIS,CLEP,XMC+,PCE+++,J_exec) ← v59 新增
+├─ L1 几何感知
+├─ L2 任务/上下文/记忆/语音
+...
+└─ L6 原型证伪/XFER/LFF/IXD
+```
+
+JCPS++ 输出（含执行接地扩展）：
+```
+(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a,
+ Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p,
+ kg_subgraph_id, ft_version, mental_snapshot, misunderstanding_prob, ft_log, ux_log,
+ ξ_exec, C_rt, Cert_eeis, EV_exec_latest, B_exec_snapshot, M_rt_status)
+```
+
+云边协议 CEB++++：云端下发固件增量/电机先验/WCET 模型/μ 模板 → 隔离区影子运行 N_shadow 接触 → 校验「WCET 实测≤界 ∧ 抖动≤界 ∧ μ分析通过 ∧ EV-exec 分布无异常」 → 通过即热切换、失败即回滚。边端回传：ξ_exec 辨识轨迹、WCET 实测分布、EV-exec 残差、稳定性证书审计结果。
+
+## 6. 本轮最大风险
+
+**一句话**：本轮把「执行层物理」全面纳入安全论证链——BUQ 辨识、ERTC 契约、EEIS 编译、CLEP 闭环、PCE+++ 四预算，**任何一环的建模缺陷（如齿槽谐波阶数不足、WCET 静态分析漏报、μ 分析权重函数保守性不够、执行模态独立性假设被物理耦合违反）都会导致「证据层自信满满但执行层实则失效」的灾难性抽象泄漏**；必须以「BUQ 辨识置信椭球外即 OOD 回退」「ERTC 静态认证 100% 覆盖关键链路 + 运行时零容忍」「EEIS μ 分析音完备验证 + 证书不可篡改」「EV-exec 仅作对账分歧、绝不作佐证」「四预算硬隔离、耗尽即保守」五重护栏，宁可执行层频繁降级导致「又慢又笨」，绝不允许「证据层通过但执行层失效」。
 <!-- ARTIFACT:END -->
