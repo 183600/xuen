@@ -1,0 +1,249 @@
+{
+  "note": "Synthetic mechanism check for Round-61 FTCG; NOT benchmark evidence.",
+  "s1_tsf": {
+    "setting": {
+      "n_per_cell": 2,
+      "noise": 0.95,
+      "lam": 6.0,
+      "tasks": 32,
+      "axes": 5,
+      "skills": 6,
+      "held_out": "one axis per task, g = task mod 5",
+      "interaction_sigma": 0.22
+    },
+    "results": {
+      "global": {
+        "mse": 7.7772,
+        "success": 0.5201,
+        "worst_task_success": 0.0103
+      },
+      "per_task": {
+        "mse": 5.3309,
+        "success": 0.6557,
+        "worst_task_success": 0.0347
+      },
+      "per_cell": {
+        "mse": 5.3309,
+        "success": 0.6557,
+        "worst_task_success": 0.0347
+      },
+      "tsf": {
+        "mse": 4.3183,
+        "success": 0.7234,
+        "worst_task_success": 0.1208
+      },
+      "task_only": {
+        "mse": 4.6068,
+        "success": 0.7005,
+        "worst_task_success": 0.1501
+      }
+    }
+  },
+  "s1_tsf_1shot": {
+    "setting": {
+      "n_per_cell": 1,
+      "noise": 0.95,
+      "lam": 6.0,
+      "tasks": 32,
+      "axes": 5,
+      "skills": 6,
+      "held_out": "one axis per task, g = task mod 5",
+      "interaction_sigma": 0.22
+    },
+    "results": {
+      "global": {
+        "mse": 6.8678,
+        "success": 0.5932,
+        "worst_task_success": 0.0097
+      },
+      "per_task": {
+        "mse": 5.486,
+        "success": 0.6265,
+        "worst_task_success": 0.105
+      },
+      "per_cell": {
+        "mse": 5.486,
+        "success": 0.6265,
+        "worst_task_success": 0.105
+      },
+      "tsf": {
+        "mse": 5.1585,
+        "success": 0.6655,
+        "worst_task_success": 0.0989
+      },
+      "task_only": {
+        "mse": 5.4032,
+        "success": 0.6544,
+        "worst_task_success": 0.0429
+      }
+    }
+  },
+  "s2_affinity": {
+    "setting": {
+      "robots": 8,
+      "n_obs": 8,
+      "systematic_shift": 1.1,
+      "noise": 0.75,
+      "tau_A": 0.7
+    },
+    "results": {
+      "target_only": {
+        "mean": 0.9543,
+        "worst": 0.8244,
+        "p10": 0.9073
+      },
+      "naive_pool": {
+        "mean": 0.9825,
+        "worst": 0.9825,
+        "p10": 0.9825
+      },
+      "affinity": {
+        "mean": 0.9772,
+        "worst": 0.9535,
+        "p10": 0.9621
+      },
+      "fam_calibrated": {
+        "mean": 0.9836,
+        "worst": 0.9836,
+        "p10": 0.9836
+      }
+    },
+    "clean_target": {
+      "target_only": {
+        "mean": 0.9872,
+        "worst": 0.9842,
+        "p10": 0.9846
+      },
+      "naive_pool": {
+        "mean": 0.9825,
+        "worst": 0.9825,
+        "p10": 0.9825
+      },
+      "affinity": {
+        "mean": 0.9896,
+        "worst": 0.9876,
+        "p10": 0.9879
+      },
+      "fam_calibrated": {
+        "mean": 0.9836,
+        "worst": 0.9836,
+        "p10": 0.9836
+      }
+    },
+    "shifted_target": {
+      "target_only": {
+        "mean": 0.9213,
+        "worst": 0.8244,
+        "p10": 0.8599
+      },
+      "naive_pool": {
+        "mean": 0.9825,
+        "worst": 0.9825,
+        "p10": 0.9825
+      },
+      "affinity": {
+        "mean": 0.9648,
+        "worst": 0.9535,
+        "p10": 0.9572
+      },
+      "fam_calibrated": {
+        "mean": 0.9836,
+        "worst": 0.9836,
+        "p10": 0.9836
+      }
+    }
+  },
+  "s3_reconcile": {
+    "setting": {
+      "robots": 10,
+      "trials": 400,
+      "report_noise": 0.55
+    },
+    "results": {
+      "byz_0pct": {
+        "mean": {
+          "mse": 0.1212,
+          "success": 0.9892
+        },
+        "median": {
+          "mse": 0.1715,
+          "success": 0.9876
+        },
+        "trimmed": {
+          "mse": 0.1376,
+          "success": 0.9887
+        }
+      },
+      "byz_10pct": {
+        "mean": {
+          "mse": 0.2318,
+          "success": 0.9858
+        },
+        "median": {
+          "mse": 0.1869,
+          "success": 0.9872
+        },
+        "trimmed": {
+          "mse": 0.1576,
+          "success": 0.9881
+        }
+      },
+      "byz_20pct": {
+        "mean": {
+          "mse": 0.3355,
+          "success": 0.9826
+        },
+        "median": {
+          "mse": 0.2237,
+          "success": 0.986
+        },
+        "trimmed": {
+          "mse": 0.1932,
+          "success": 0.987
+        }
+      },
+      "byz_30pct": {
+        "mean": {
+          "mse": 0.4783,
+          "success": 0.9779
+        },
+        "median": {
+          "mse": 0.2875,
+          "success": 0.9841
+        },
+        "trimmed": {
+          "mse": 0.276,
+          "success": 0.9844
+        }
+      },
+      "byz_40pct": {
+        "mean": {
+          "mse": 0.575,
+          "success": 0.9746
+        },
+        "median": {
+          "mse": 0.3645,
+          "success": 0.9816
+        },
+        "trimmed": {
+          "mse": 0.3783,
+          "success": 0.9812
+        }
+      }
+    }
+  },
+  "s4_router": {
+    "setting": {
+      "episodes": 6000,
+      "effect_size": 6.0,
+      "alpha": 0.05
+    },
+    "results": {
+      "tau": 0.51,
+      "coverage": 0.6303,
+      "selective_error": 0.0672,
+      "route_all_error": 0.1573,
+      "abstention_rate": 0.3697
+    }
+  }
+}
