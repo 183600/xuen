@@ -1,0 +1,228 @@
+{
+ "seed": 20261112,
+ "note": "synthetic mechanism check, not benchmark evidence",
+ "E211_few_shot": [
+  {
+   "k": 1,
+   "meta_ridge_err": 0.7751,
+   "zero_ridge_err": 0.96,
+   "meta_ogd_err": 0.7914
+  },
+  {
+   "k": 2,
+   "meta_ridge_err": 0.7441,
+   "zero_ridge_err": 0.9205,
+   "meta_ogd_err": 0.7819
+  },
+  {
+   "k": 3,
+   "meta_ridge_err": 0.7233,
+   "zero_ridge_err": 0.8815,
+   "meta_ogd_err": 0.7755
+  },
+  {
+   "k": 5,
+   "meta_ridge_err": 0.6537,
+   "zero_ridge_err": 0.818,
+   "meta_ogd_err": 0.7535
+  },
+  {
+   "k": 10,
+   "meta_ridge_err": 0.4981,
+   "zero_ridge_err": 0.6347,
+   "meta_ogd_err": 0.7168
+  },
+  {
+   "k": 20,
+   "meta_ridge_err": 0.248,
+   "zero_ridge_err": 0.261,
+   "meta_ogd_err": 0.6502
+  },
+  {
+   "k": 50,
+   "meta_ridge_err": 0.1,
+   "zero_ridge_err": 0.1009,
+   "meta_ogd_err": 0.4688
+  }
+ ],
+ "E212_conformal_95": [
+  {
+   "n": 4,
+   "target": 0.95,
+   "coverage": 1.0,
+   "infinite_radius_rate": 1.0,
+   "mean_radius_finite": null
+  },
+  {
+   "n": 9,
+   "target": 0.95,
+   "coverage": 1.0,
+   "infinite_radius_rate": 1.0,
+   "mean_radius_finite": null
+  },
+  {
+   "n": 19,
+   "target": 0.95,
+   "coverage": 0.9535,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 2.148
+  },
+  {
+   "n": 39,
+   "target": 0.95,
+   "coverage": 0.9507,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 2.048
+  },
+  {
+   "n": 99,
+   "target": 0.95,
+   "coverage": 0.9493,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.992
+  },
+  {
+   "n": 199,
+   "target": 0.95,
+   "coverage": 0.9477,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.977
+  }
+ ],
+ "E212_conformal_90": [
+  {
+   "n": 4,
+   "target": 0.9,
+   "coverage": 1.0,
+   "infinite_radius_rate": 1.0,
+   "mean_radius_finite": null
+  },
+  {
+   "n": 9,
+   "target": 0.9,
+   "coverage": 0.9032,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.853
+  },
+  {
+   "n": 19,
+   "target": 0.9,
+   "coverage": 0.8975,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.743
+  },
+  {
+   "n": 39,
+   "target": 0.9,
+   "coverage": 0.8968,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.687
+  },
+  {
+   "n": 99,
+   "target": 0.9,
+   "coverage": 0.905,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.66
+  },
+  {
+   "n": 199,
+   "target": 0.9,
+   "coverage": 0.901,
+   "infinite_radius_rate": 0.0,
+   "mean_radius_finite": 1.653
+  }
+ ],
+ "E213_aci_shift": {
+  "target": 0.9,
+  "fixed_calibrated_pre_shift": 0.8981,
+  "fixed_calibrated_post_shift": 0.4919,
+  "aci_post_shift": 0.8993,
+  "aci_last500": 0.8998
+ },
+ "E214_anytime": {
+  "true_min": 0.0,
+  "rows": [
+   {
+    "n_candidates": 0,
+    "certified_lb_minus_true": -0.1131,
+    "sampled_upper_minus_true": 0.5869
+   },
+   {
+    "n_candidates": 1,
+    "certified_lb_minus_true": -0.1131,
+    "sampled_upper_minus_true": 0.0819
+   },
+   {
+    "n_candidates": 2,
+    "certified_lb_minus_true": -0.113,
+    "sampled_upper_minus_true": 0.0557
+   },
+   {
+    "n_candidates": 4,
+    "certified_lb_minus_true": -0.1134,
+    "sampled_upper_minus_true": 0.0304
+   },
+   {
+    "n_candidates": 8,
+    "certified_lb_minus_true": -0.1135,
+    "sampled_upper_minus_true": 0.017
+   },
+   {
+    "n_candidates": 16,
+    "certified_lb_minus_true": -0.1133,
+    "sampled_upper_minus_true": 0.008
+   },
+   {
+    "n_candidates": 32,
+    "certified_lb_minus_true": -0.1136,
+    "sampled_upper_minus_true": 0.0026
+   }
+  ],
+  "L_m": 0.7
+ },
+ "E215_latency": [
+  {
+   "n_candidates": 0,
+   "mean_us": 300.0,
+   "p99_us": 360.0,
+   "deadline_ms": 1.0,
+   "miss": false
+  },
+  {
+   "n_candidates": 4,
+   "mean_us": 420.0,
+   "p99_us": 480.0,
+   "deadline_ms": 1.0,
+   "miss": false
+  },
+  {
+   "n_candidates": 8,
+   "mean_us": 540.0,
+   "p99_us": 600.0,
+   "deadline_ms": 1.0,
+   "miss": false
+  },
+  {
+   "n_candidates": 16,
+   "mean_us": 780.0,
+   "p99_us": 840.0,
+   "deadline_ms": 1.0,
+   "miss": false
+  },
+  {
+   "n_candidates": 24,
+   "mean_us": 1020.0,
+   "p99_us": 1080.0,
+   "deadline_ms": 1.0,
+   "miss": true
+  },
+  {
+   "n_candidates": 32,
+   "mean_us": 1260.0,
+   "p99_us": 1320.0,
+   "deadline_ms": 1.0,
+   "miss": true
+  }
+ ]
+}
