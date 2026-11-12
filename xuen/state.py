@@ -16,7 +16,7 @@ HELPER_NAME = "write_section.py"
 
 
 def _atomic_write_text(path: Path, text: str, *, newline=None) -> None:
-    """写入 UTF-8 文本并原子替换目标；任何中断都不留临时半成品。"""
+    """Write UTF-8 text and atomically replace target; no partial artifacts on interruption."""
     atomic_write_text(path, text, newline=newline)
 
 
@@ -29,7 +29,6 @@ def end_marker(name: str) -> str:
 
 
 def scaffold(task: str) -> str:
-    # 标题必须保持单行：任务文本若引入换行，可能被误写成区块标记并污染解析
     title_task = task.replace("\r", " ").replace("\n", " ")
     return (
         f"# 玄 · {title_task}\n\n"

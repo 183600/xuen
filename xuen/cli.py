@@ -1,4 +1,4 @@
-"""命令行入口。"""
+"""CLI entry point."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ from .ui import configure, ui
 
 
 def _load_tui():
-    """延迟导入 TUI；独立成函数便于测试「未安装 textual」的降级路径。"""
+    """Lazy import TUI; separate function for testing the fallback path without 'textual'."""
     from .tui import run_tui
     return run_tui
 
@@ -17,39 +17,40 @@ def _load_tui():
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="xuen",
-        description="灵感词驱动的研究循环：生成领域词库 → 每轮随机抽词 → "
-                    "外部 agent（如 opencode）模拟人类研究者思考并演进想法区/产物区",
-        epilog='示例：python main.py "设计一个新的优化器"',
+        description="Inspiration-word-driven research loop: generate domain word list → random "
+                    "word extraction each round → external agent (e.g. opencode) simulates "
+                    "human researcher thinking to evolve idea/artifact sections",
+        epilog='Example: python main.py "Design a new optimizer"',
     )
-    p.add_argument("task", nargs="*", help="任务描述，例如：设计一个新的优化器")
-    p.add_argument("-c", "--config", help="配置文件路径（默认：./config.yaml）")
-    p.add_argument("--task-file", help="从文件读取任务")
-    p.add_argument("--workspace", help="覆盖工作区目录")
-    p.add_argument("--iterations", help="覆盖轮数（整数或 inf）")
-    p.add_argument("--pick", type=int, help="覆盖每轮随机灵感词数量 n（>=0）")
-    p.add_argument("--regen-words", action="store_true", help="忽略已有词库并重新生成")
-    p.add_argument("--no-tui", action="store_true", help="不用 TUI，直接输出到终端")
-    p.add_argument("--no-color", action="store_true", help="关闭彩色输出（--no-tui 时有效）")
-    # ---- 轮次守卫：每轮快照、候选/最佳分离、自动验证与评分 ----
+    p.add_argument("task", nargs="*", help="Task description, e.g.: Design a new optimizer")
+    p.add_argument("-c", "--config", help="Config file path (default: ./config.yaml)")
+    p.add_argument("--task-file", help="Read task from file")
+    p.add_argument("--workspace", help="Override workspace directory")
+    p.add_argument("--iterations", help="Override iteration count (integer or inf)")
+    p.add_argument("--pick", type=int, help="Override random inspiration words count per round n (>=0)")
+    p.add_argument("--regen-words", action="store_true", help="Ignore existing word list and regenerate")
+    p.add_argument("--no-tui", action="store_true", help="Disable TUI, output directly to terminal")
+    p.add_argument("--no-color", action="store_true", help="Disable colored output (effective with --no-tui)")
+    # ---- Round guard: per-round snapshot, candidate/best separation, auto verification and scoring ----
     p.add_argument("--no-rounds", action="store_true",
-                   help="关闭轮次守卫（退回旧行为：每轮直接覆盖，无快照无最佳）")
+                   help="Disable round guard (reverts to old behavior: each round directly overwrites, no snapshot, no best)")
     p.add_argument("--rounds-verify", choices=("auto", "tests", "user", "ai", "off"),
-                   help="候选验证方式（默认 auto：有测试跑测试，否则用兜底评分者）")
+                   help="Candidate verification method (default auto: run tests if available, otherwise use fallback scorer)")
     p.add_argument("--rounds-fallback", choices=("user", "ai"),
-                   help="auto 模式下无测试可用时的兜底评分者（默认 ai）")
+                   help="Fallback scorer when auto mode has no tests available (default ai)")
     p.add_argument("--rounds-score", type=float, metavar="N",
-                   help="采纳阈值：评分 >= N 才把候选晋升为最佳（0-10，默认 7）")
+                   help="Adoption threshold: candidate promoted to best only if score >= N (0-10, default 7)")
     return p
 
 
 def _fail(message: str) -> int:
-    """把用户可见的错误写到 stderr，并返回统一的参数错误退出码。"""
+    """Write user-visible error to stderr and return the standard argparse error exit code."""
     print(message, file=sys.stderr)
     return 2
 
 
 def _interrupted() -> int:
-    """统一的 Ctrl+C 退出处理：换行、提示并返回中断退出码。"""
+    """Standard Ctrl+C exit handling: newline, message, and return exit code 130."""
     print()
     ui.warn("已中断")
     return 130
