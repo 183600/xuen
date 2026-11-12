@@ -1,0 +1,93 @@
+{
+  "E192_admission": [
+    {
+      "patch": "benign_refactor",
+      "d_F_suite": 0.0,
+      "d_F_holdout": 0.0,
+      "admitted": true,
+      "behaviour_changed_offsuite": false
+    },
+    {
+      "patch": "semantic_patch",
+      "d_F_suite": 0.038517,
+      "d_F_holdout": 0.038517,
+      "admitted": false,
+      "behaviour_changed_offsuite": true
+    },
+    {
+      "patch": "adversarial_patch",
+      "d_F_suite": 0.0,
+      "d_F_holdout": 0.348459,
+      "admitted": true,
+      "behaviour_changed_offsuite": true
+    }
+  ],
+  "E193_isolation": {
+    "episodes": 400,
+    "broker_mediated_writes": 182,
+    "hidden_channel_writes": 218,
+    "hidden_channel_detection_rate_ISOL1": 0.0,
+    "hidden_channel_detection_rate_ISOL2": 0.954,
+    "note": "ISOL-1 tracks only broker-mediated writes, so a global write is invisible; ISOL-2 adds an OS-level side-effect audit and catches it except for a small audit gap"
+  },
+  "E194_attribution_full_ref": {
+    "single": {
+      "episodes": 200,
+      "reactive_detection_rate": 1.0,
+      "proactive_detection_rate": 1.0,
+      "confirmed_attribution_top1": 1.0,
+      "confirmed_rate": 1.0,
+      "unresolved_rate": 0.0,
+      "fallback_window_contains_cause": 0.0,
+      "masker_identified_rate": null,
+      "mean_replays": 1.93,
+      "mean_quarantine_size": 1,
+      "baseline_reactive_detected": 1.0,
+      "baseline_reactive_top1": 0.0
+    },
+    "masked": {
+      "episodes": 200,
+      "reactive_detection_rate": 0.0,
+      "proactive_detection_rate": 1.0,
+      "confirmed_attribution_top1": 1.0,
+      "confirmed_rate": 1.0,
+      "unresolved_rate": 0.0,
+      "fallback_window_contains_cause": 0.0,
+      "masker_identified_rate": 1.0,
+      "mean_replays": 3.28,
+      "mean_quarantine_size": 1,
+      "baseline_reactive_detected": 0.0,
+      "baseline_reactive_top1": 0.0
+    }
+  },
+  "E197_attribution_partial_ref": {
+    "single": {
+      "episodes": 200,
+      "reactive_detection_rate": 1.0,
+      "proactive_detection_rate": 1.0,
+      "confirmed_attribution_top1": 0.27,
+      "confirmed_rate": 0.27,
+      "unresolved_rate": 0.73,
+      "fallback_window_contains_cause": 0.73,
+      "masker_identified_rate": null,
+      "mean_replays": 1,
+      "mean_quarantine_size": 2.725,
+      "baseline_reactive_detected": 1.0,
+      "baseline_reactive_top1": 0.0
+    },
+    "masked": {
+      "episodes": 200,
+      "reactive_detection_rate": 0.0,
+      "proactive_detection_rate": 1.0,
+      "confirmed_attribution_top1": 0.22,
+      "confirmed_rate": 0.22,
+      "unresolved_rate": 0.78,
+      "fallback_window_contains_cause": 0.78,
+      "masker_identified_rate": 0.22,
+      "mean_replays": 1.22,
+      "mean_quarantine_size": 2.795,
+      "baseline_reactive_detected": 0.0,
+      "baseline_reactive_top1": 0.0
+    }
+  }
+}

@@ -1,364 +1,560 @@
 # 玄 · 寻找参加UniBot的创新点
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
-
 <!-- IDEA:START -->
-# 第 57 轮（承接第 56 轮「证据地图×主动探询×信任协商」IP-127~132；灵感循环第 3 轮；本轮灵感：「小样本学习」×「多模态交互」×「个性化交互」）
+# 第 61 轮（承接第 60 轮 SGEC/IP-153~160；新一轮灵感循环第 1 轮；本轮灵感：「最优控制」×「惯性测量单元」）
 
-> 第 56 轮把安全的赌注从"模型置信"换成"证据承诺"——持久地图 𝓜、探-诺-演闭环、同意阶梯三层纵深，使单点过度自信不再足以产生承诺；但它的风险自陈同时暴露了三个未解的经济学问题：**(a)** 每个区域只被到访两三次，探针样本天然稀少，信念宽度与校准全靠手工先验与手设 θ_voi/k_probes——赌注从"模型置信"换到"证据质量"后，又落回"先验质量"；**(b)** 证据基本来自单一模态，一个"同时欺骗该模态"的物理性质（透明冰面看起来干、探起来硬）可以制造跨到访自洽的假信念——同一模态重复五遍只是把同一个错误问五遍；**(c)** 人类被建模为静态有界权重 w_h：橡皮章者与严谨者同权、疲劳 session 与清醒 session 同权——既浪费（严谨者标注被隔离同样久）又危险（橡皮章确认被当作真确认）。本轮三个灵感各补一条腿：**小样本学习**让先验不再手设而是从全体区域史中摊销、且以共形预测保底；**多模态交互**让证据按模态分账、跨模态对账——分歧即不确定性下限，一致才是新证据类；**个性化交互**让操作者从静态权重变成单向有界演化的信任状态机。本轮同时给第 56 轮"坏证据长寿"一个新武器：**事后证伪回溯**（发现某模态/标注错了，回溯降权其全部历史证据）。核心命题由"证据说可信"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据说可信"**。
-
-核心矛盾：
-- **H26（少样本 vs 校准）**：每区域 k≤5 次探针下，手工先验要么过保守（浪费探针与节拍）要么过自信（欠覆盖）；元先验自己也可能错——安全的赌注层层后移，最终总要有人为"先验的质量"负责。
-- **H27（单模态共谋）**：物理欺骗是跨模态不均匀的，但单模态融合看不见模态间分歧；"跨模态一致"这一最强证据形态与"跨模态分歧"这一最强警报，在单模态体系里都不存在。
-- **H28（个性化 vs 博弈）**：把人当常量既浪费又危险；但个性化若允许"变松"，就制造了可被博弈的信任通胀——操作者可以先表现得严谨攒授权、再滥用授权。
+> 第 60 轮的 SGEC 用 SSM×CIEC×EPIR×SERC 把「场景语义→认知意图→执行约束→证据链」接了起来，但仍有三个结构性缺口：
+> 1. **阻抗参数仍是「编译/搜索」而非「最优合成」**：EEIS 的 K_safe 来自约束筛选与场景先验收窄，缺少一个显式代价（能量、接触力方差、跟踪误差）下的最优性保证——「安全」有了，「为什么这组 K_p/K_d 在代价意义下最好」没有。
+> 2. **接触瞬态是「高频盲区」**：force/position 遥测是低频、事件驱动的，而落地冲击、滑动起始、抓取微振发生在 100–1000 Hz；第 60 轮的场景识别看到的是「冲击之后」，不是「冲击之中」。
+> 3. **证据链在稀疏 EV-exec 之间是「空档」**：EPIR 只保证已产生的 EV-exec 不丢、不乱序，却无法回答「两条 EV-exec 之间机器人到底发生了什么」——消息丢失窗口内的连续状态仍是黑箱。
+>
+> 本轮引入两个灵感词：**最优控制**（把阻抗增益从「约束可行」提升为「代价最优 + 可证明次优界」）与**惯性测量单元**（用 IMU 的高频惯性信息补上接触瞬态与证据空档，并作为最优控制模型辨识的激励源）。
 
 ## 0. 直觉与动机
 
-**灵感 1（小样本学习 → 摊销先验 + 共形保底）**
-直觉：机器人部署生涯就是一场持续的小样本考试——每个区域只有 1~5 次探针机会，却要为不可逆接触给出校准后验。手工先验是"老师划重点"：划对省题、划错全错。元学习换一种问法：**先验不从天降，从全体区域的探针史里摊销**——新区域一次轻点，先定位"它像已见过的哪类表面"，借那一类的响应结构解码后验；效率来自元先验，安全却不托付给元先验：**OOD 门 + 共形保底带**——元模型声明分布内才用摊销后验；一旦观测序列不像任何训练过的表面，退回非参共形区间，宁可宽、不可错。于是 k_probes 从手设常数变成**声明的样本效率证书 k\*(w\*)**。
+**灵感 1（最优控制 → 阻抗的参数化最优合成 IOIS）**
+直觉：阻抗控制律 F = K_p(x_d−x) + K_d(ẋ_d−ẋ) 本质上就是一个状态反馈 u = −K z，z=(x,ẋ)。既然是反馈，就可以问：在代价 J=∫(zᵀQz+uᵀRu)dt 下，最优的 K 是什么？答案由 Riccati 方程给出 K* = R⁻¹BᵀP，且 K* 直接就是阻抗增益 [K_p*, K_d*]。关键洞见：**不是「先设 K_p/K_d 再论证安全」，而是「先声明代价 Q/R 与约束，再由 CARE 解出唯一的 K*，最后把 K* 投影到 K_safe」**——阻抗从手工参数变成有代价语义的最优反馈。
 
-**灵感 2（多模态交互 → 证据分账与跨模态对账）**
-直觉：单模态的重复探针是"把同一个问题问五遍"。把区域信念按模态分账 {b_r^m}（视觉/触探/本体/声学），跨模态对账产出两种单模态体系里不存在的信息：**分歧即不确定性下限**（D(r) 大 ⇒ 后验强制加宽 ⇒ 自动趋向探询/绕行/降档）；**一致即新证据类**（两个条件独立的模态同侧 ⇒ EV-xmodal，可在 L1 非不可逆接触上顶替一次佐证）。模态可靠性 ρ_m 按事后证伪降级、按证实恢复、全程审计——被冰面骗过一次的"视觉"在同类区域自动失重。
+**灵感 2（IMU → 高频惯性能态与接触模型辨识）**
+直觉：接触力遥测像「脉搏」，IMU 像「心电图」——前者告诉你力多大，后者告诉你加速度/角速度如何突变。接触动力学 M ẍ + D ẋ + K x = u + w 里的 ẍ 正是 IMU 直接测量的量。关键洞见：**IMU 把接触模型从「离线标定的先验」变成「在线可辨识的对象」**：用 (u, x̂, ẋ̂, a_m) 做递归最小二乘，实时估计 (M̂, D̂, K̂) 及其协方差，喂给 CARE 得到「当前接触状态下的最优阻抗」。
 
-**灵感 3（个性化交互 → 单向有界的信任状态机）**
-直觉：操作者不是常量而是状态 s_o=(cal, vig, auth)：cal 校准分（标注 vs 事后实测）、vig 警觉度（橡皮章/疲劳检测）、auth∈{A0,A1,A2} 授权级（决定标注佐证数、w_h、L2 超时）。关键设计是**个性化只能向保守方向滑动**：降级实时（检出橡皮章即刻降），升级要攒够事后证实的记录且有界速率；授权只参数化"佐证数量与时延参数"，决策规则本体永不可触碰——人可以让系统"更快相信自己"，永远不能让系统"更敢赌"。信任可以赢得慢、失去快。
+**灵感 3（IMU → 冲击事件触发的滚动最优控制 ETIOC）**
+直觉：最优控制若每毫秒都解一遍 MPC 太贵，但接触瞬态只占很小时间窗。IMU 的加速度残差 ||a_m − â|| 是天然的「事件探测器」：一旦超过 γ_imp 就触发一次短时域 OCP，在 [t_k, t_k+T_h] 上带力/速度约束滚动优化。关键洞见：**「事件触发」把最优控制的算力花在真正需要的瞬态上**，并用最小事件间隔 τ_min 保证 Zeno-free 与实时可调度。
 
-**灵感 4（三灵感合流 → 证据门从四类到五类、从静态到分层）**
-直觉：第 56 轮证据门 EV-probe/visit/margin/human 在本轮各获得一个新维度：EV-probe 必须挂**元校准证书或共形带**（少样本维度）；**EV-xmodal** 新增且仅限 L1（多模态维度）；EV-human 的佐证数与激活速度由 auth 决定（个性化维度）。击穿安全需要：元先验错 ∧ OOD 门漏检 ∧ 跨模态无一致 ∧ 无裕度 ∧ 人也错——纵深从三层到五层。
+**灵感 4（IMU → 惯性桥证据链 IB-EPIR）**
+直觉：两条 EV-exec 之间不是真空——IMU 以 200–1000 Hz 记录了这段惯性轨迹。把这段轨迹降采样后做哈希 H_k，随下一条 EV-exec 一起上链，云端就能在消息丢失时用 H_k 重建「空档里发生了什么」。关键洞见：**证据不只证明「结果」，还要证明「过程」**；惯性桥把 EV-exec 的稀疏点连成连续带，且桥的积分协方差 tr(Σ_gap) 给出「这条桥还能信多久」的硬边界。
 
-**灵感 5（PCE+ → 探询预算本身成为被学习的对象）**
-直觉：VOI 改用元后验做悲观估计；承诺前插入对账检查点——D(r)>θ_D 先发一次"最大分歧模态"的共识探针；OOD 触发则切共形带（带变宽 ⇒ 自动趋向绕行/降档）。少样本、多模态、个性化三个机制全部经由"信念更准或动作更保守"两个安全通道起作用，延续并强化第 56 轮的交互单调性。
+**灵感 5（合流 → 惯性最优接地闭环 IOGC）**
+直觉：IMU 估计 ξ̂ → 辨识 θ̂ → CARE 合成 K* → 事件触发 MPC 处理冲击 → 执行产生 EV-exec → IMU 桥补空档 → 更新 θ̂ 与不确定性。形成 **「惯性能态→模型→最优增益→事件执行→惯性证据→模型更新」** 的闭环。关键洞见：**最优性不是一次性的，而是随模型辨识与 IMU 置信度在线刷新**；当 IMU 不健康时，最优解必须退化为鲁棒/缓存解。
 
-## 1. 形式化定义（增量：定义 133–138）
+## 1. 形式化定义（增量：定义 161–168）
 
-**定义 133（元少样本信念推断 MFSL）** 元训练集 𝒟_meta={(R_j,O_j,θ̂_j)}（区域/探针观测序列/事后实测参数），摊销推断器 q_φ(θ|o_{1:k},z_r)，θ=(μ,k,F_bear)，z_r 区域上下文（坡度/材质簇/季节）。校准契约：∀k≤k_max，ECE_k(q_φ)≤ε_meta(k) 且 ε_meta 随 k 单调不增；样本效率证书 k\*(w\*)=min{k:E[|C_k|]≤w\*}。OOD 门 n(o_{1:k})=−Σ_i log p̂_φ(o_i|o_{<i},z_r)>θ_ood ⇒ 判分布外，退共形带 C_cf(r)=wCF({res_j},sim(z_r,z_j),α_conf)（分层加权共形+union bound），覆盖 ≥1−α_conf。ID 信念以声明校准进 SMM；OOD 信念只以带内最坏值进 P_fail。
+**定义 161（惯性能态与接触动力学 ICD）** 任务空间接触模型与 IMU 观测模型：
+- **接触动力学**：M(x)ẍ + D(x,ẋ)ẋ + K(x)x = u + w，其中 u 为阻抗/力矩控制量，w 为外部扰动与未建模力。
+- **线性化状态空间**：z = [x; ẋ]，ż = A z + B u + B_w w，A = [[0, I], [−M⁻¹K, −M⁻¹D]]，B = [0; M⁻¹]。
+- **IMU 观测**：a_m = Rᵀ(ẍ − g) + b_a + n_a，ω_m = ω + b_g + n_g，其中 b_a、b_g 为加速度/角速度偏置。
+- **EKF 状态**：ξ = (p, v, q, b_a, b_g)，输出估计 (x̂, ẋ̂) 与协方差 Σ_z；惯性信息矩阵 I_imu = Σ_z⁻¹。
+- **IMU 健康度**：h_imu = 1[‖b̂_a‖ ≤ β_a ∧ ‖b̂_g‖ ≤ β_g ∧ tr(Σ_z) ≤ σ̄] ∈ {0,1}。
 
-**定义 134（跨模态对账 XMC）** 模态集 ℳ={vis,tap,prop,acou}，区域分账 {b_r^m}，融合 b_r=Fuse({b_r^m},{ρ_m})，ρ_m∈[ρ_min,1]。分歧 D(r)=Σ_{m<m'}[TV(lbl^m,lbl^{m'})+|Q_μ^m(0.9)−Q_μ^{m'}(0.9)|/μ_scale]。三规则：(R1) D(r)>θ_D ⇒ P_fail 以加宽混合后验计算（不确定性下限）；(R2) EV-xmodal ⇔ ∃(m,m') 独立声明 ∧ ρ≥ρ_0 ∧ 与融合同侧 ∧ D(r)≤θ_D，仅可替代 L1 接触一次佐证，不得进入不可逆接触必要证据集；(R3) 事后证伪 ⇒ ρ_m 乘性降级并回溯标记历史证据，证实 ⇒ 有界恢复。
+**定义 162（逆最优阻抗合成 IOIS）** 给定辨识模型 θ̂ = (M̂, D̂, K̂)、代价 (Q, R) 与安全集 K_safe：
+- **最优反馈**：求解连续代数 Riccati 方程 AᵀP + PA − PBR⁻¹BᵀP + Q = 0，得 K* = R⁻¹BᵀP ∈ R^{m×2n}。
+- **阻抗分解**：K* = [K_p*, K_d*]，即最优刚度与阻尼增益。
+- **安全投影**：K^proj = Π_{K_safe}(K*) = argmin_{K∈K_safe} ‖K − K*‖_{Σ_z}，其中 Σ_z 为惯性能态协方差加权。
+- **逆最优残差**：ε_inv(K) = ‖R K − BᵀP‖_F / (‖R K‖_F + 1)，用于判定「某增益是否等价于某个 (Q,R) 下的最优反馈」。
+- **最优性保证**：若 ε_inv ≤ τ_inv、Riccati 残差 ε_ric ≤ τ_ric、模型失配 ε_mod ≤ τ_mod，则 K^proj 是 (Q,R,θ̂) 意义下的 ε_opt-次优增益。
 
-**定义 135（个性化信任状态 PTM）** s_o=(cal_o,vig_o,auth_o)，auth∈{A0,A1,A2}；cal 由 proper scoring（标注 vs 事后实测）；vig=g(确认间隔分布,确认率偏离,会话时长)，橡皮章判定（时延<τ_rs 且率>p_rs）⇒ vig↓。授权动态：升级需 n_verify≥N_up(A) ∧ cal_o≥θ_cal(A) ∧ 速率≤Δ_auth/T；降级实时；会话域衰减。授权只参数化隔离出口 corrob\*(auth)（A0=探针实证/A1=2/A2=1）、w_h=min(w_max^g,w0·cal_o)、τ_int(auth) 单调递减。全局硬界与决策规则本体不因个性化而变。
+**定义 163（惯性扰动观测器 IDOB）** 由 IMU 高频测量构造力残差：
+- **残差**：r(t) = M̂ a_m(t) + D̂ ẋ̂(t) + K̂ x̂(t) − u(t)。
+- **扰动估计**：d̂ = LPF_λ(r)，即一阶低通滤波，截止频率 λ 由接触带宽决定。
+- **前馈补偿**：u_ff = −d̂，用于抵消外部扰动与未建模力。
+- **冲击事件**：E_imp(t) = 1[‖r(t)‖ > γ_imp]，作为 ETIOC 的事件触发源之一。
+- **误差界**：在偏置有界 ‖b_a‖ ≤ β_a、噪声有界前提下，‖d − d̂‖ ≤ ε_dob(β_a, λ, Σ_z)。
 
-**定义 136（多模态个性化解释 MXI）** 内容五元组不变 Exp=(r,b_r 摘要,违反约束,裕度,建议)；渲染 m_E\*=argmax_m Ê[理解正确|m,s_o]，候选 {地图叠层,触觉力回放,语音摘要,文本}；输入通道（触图标注/语音确认）各带错误模型并按校准入账；τ_mm≤τ_int。
+**定义 164（事件触发惯性最优控制 ETIOC）** 触发函数与滚动优化：
+- **触发条件**：e(t) = ‖z(t) − z(t_k)‖_W；当 e(t) ≥ σ‖z(t_k)‖ + η 或 E_imp(t)=1 时触发事件。
+- **有限时域 OCP**：
+  ```
+  min_{u(·)} ∫_{t_k}^{t_k+T_h} (zᵀQz + uᵀRu) dτ + z(t_k+T_h)ᵀP z(t_k+T_h)
+  s.t.  ż = A z + B u,  u ∈ [u_min, u_max],  |ẋ| ≤ v_max,  z(t_k) = ẑ(t_k)
+  ```
+- **Zeno 防护**：最小事件间隔 τ_min > 0，且 τ_min ≥ T_solve（CARE/QP 最坏求解时间）。
+- **稳定性**：当 (σ, η) 满足 Lyapunov 触发条件时，闭环对触发误差 ISS，且存在正的不变集。
 
-**定义 137（少样本证据门 FSE 与证书 J_p）** 证据类 EV-probe\*（须声明 ECE_k≤ε_meta(k) 或挂共形带）/EV-visit/EV-margin/EV-xmodal（限 L1）/EV-human（auth≥A1 且佐证≥corrob\*(auth)）；OOD 区域在共形带建立前禁 EV-probe；不可逆接触必要证据集={EV-probe\*∨EV-margin}∪佐证，不含 EV-xmodal。J_p=(M_core,C_core,K_margin,ρ_sem,δ_s,probe_log,consent_log,evidence,meta_cal_log,xmodal_log,auth_log,ood_registry)，继承 J_m 全检。
+**定义 165（惯性桥证据链 IB-EPIR）** 在第 60 轮 EPIR 上增加惯性段：
+- **惯性签名段**：s_k = {(t, a_m, ω_m)}，t ∈ [t_k^{ev}, t_{k+1}^{ev}]，降采样后量化为 H_k = H(quantize(downsample(s_k)))。
+- **惯性桥**：B_k = (seq_id, t_start, t_end, H_k, anchor=x̂(t_start), Σ_gap)。
+- **协方差传播**：Σ_gap(t) = Σ_z(t_start) + ∫_{t_start}^{t} Q_imu dτ + drift_term(t)，用于量化积分漂移。
+- **桥有效性**：bridge_valid(B_k) = 1[tr(Σ_gap) ≤ δ_bridge ∧ H_k 与重叠段重放哈希一致]。
+- **因果检验扩展**：云端在原 S_check 的「时间戳顺序 + 内容哈希」之外，增加「相邻桥哈希连续」检验；若断裂则判定为「惯性-证据分歧」，请求 S_shadow 重放。
 
-**定义 138（探-诺-演+ 算子 PCX）** 每检查点：①元推断（ID→摊销后验/OOD→共形带）；②对账：D(r)>θ_D 且未做共识探针 ⇒ 先发最大分歧模态探针（预算 k_cons）；③承诺 ⇔ ∃g:R≤δ_f(g) ∧ 证据门过；否则选 argmax_π[VOI_元悲观(π)−cost(π)]≥θ_voi；探尽→绕行→降档→L2 协商（τ_int(auth)）或安全停。
-
-## 2. 关键算法伪代码（完整版见产物区）
-
-```python
-def meta_infer_and_fuse(M, r, obs, meta):          # IP-133/134 合流
-    inf = meta.q_phi(obs, z=ctx(r)) if ood_score(obs) <= theta_ood \
-          else conformal_belt(meta.res, sim=ctx(r), alpha=alpha_conf)
-    for m in modalities(obs):
-        M.b[r][m] = bayes_update(M.b[r][m], like(obs[m]), w=rho(M)[m])
-    fused = Fuse(M.b[r], M.rho)
-    D = disagreement(M.b[r])
-    return M, (widen(fused, D) if D > theta_D else fused), inf, D
-
-def persona_update(s, ev, audit):                  # IP-135: 单向有界
-    s.cal = proper_score_update(s.cal, ev)
-    if ev == 'confirm' and rubber_stamping(s):
-        s.auth = demote(s.auth)                    # 降级实时
-    if ev == 'verdict' and can_promote(s):
-        s.auth = promote(s.auth)                   # 升级有据有界
-    s.w_h = min(W_MAX_G, w0 * s.cal); audit.log(s); return s
+**定义 166（惯性最优接地闭环 IOGC）** 算子 IOGC(M, task, scene, intent, δ_f_req)：
+```
+① ISE:   (ξ̂, Σ_z, h_imu) ← IMU_EKF.step(a_m, ω_m, dt)
+② ID:    θ̂ = (M̂, D̂, K̂), Σ_θ ← RLS.update(u, x̂, ẋ̂, a_m)
+③ IOIS:  K* ← CARE(A(θ̂), B(θ̂), Q, R)；K^proj ← Π_{K_safe}(K*)
+④ IDOB:  d̂ ← LPF(M̂a_m + D̂ẋ̂ + K̂x̂ − u)；E_imp ← 1[‖r‖ > γ_imp]
+⑤ ETIOC: if 触发: u* ← solve_finite_horizon_OCP(z=ẑ, P, K^proj, 约束)
+⑥ SERC:  复用第 60 轮场景/意图约束，更新 K_safe（场景先验 + 意图锁定）
+⑦ Execute: 下发 K^proj 与 u*；采集力/位遥测
+⑧ EV-exec: build_exec_evidence(...) → 生成 seq_id 对应的执行证据
+⑨ IB-EPIR: B_k ← build_inertial_bridge(IMU 段)；S_shadow.append(EV-exec ⊕ B_k)
+⑩ IOC:   Cert_io ← build_inertial_optimality_certificate(K^proj, P, ε_ric, ε_mod, ε_inv, h_imu)
+⑪ Return: (K^proj, u*, EV-exec, B_k, Cert_io, θ̂, Σ_θ)
 ```
 
-## 3. 复杂度与正确性（要点）
+**定义 167（惯性最优性证书 IOC）** 证书结构：
+- **Cert_io** = (K^proj, P, ε_ric, ε_mod, ε_inv, ε_opt, safety_margin, h_imu, bridge_valid)。
+- **次优界**：存在常数 c₁,c₂,c₃，使 J(u) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv，其中 J* 为理想模型/理想 IMU 下的最优代价。
+- **有效性判定**：Cert_valid = 1[ε_ric ≤ τ_ric ∧ ε_mod ≤ τ_mod ∧ ε_inv ≤ τ_inv ∧ K^proj ∈ K_safe ∧ h_imu=1 ∧ bridge_valid=1]。
+- **失效动作**：任一不满足即撤销「最优」标签，降级为鲁棒增益 K_rob 或第 60 轮缓存增益 K_cache。
 
-| 组件 | 时间 | 空间 | 正确性关键 |
-|---|---|---|---|
-| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood |
-| XMC | O(\|ℳ\|²·d_b)/区域 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整 |
-| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界（A39）、审计完备 |
-| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int |
-| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
-| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止 |
-
-**正确性定理（CCPS 概要）**：在 A33–A36 上加 (A37) 元校准与 OOD 门（ECE_k≤ε_meta(k)、漏检 ≤δ_ood、共形覆盖 ≥1−α_conf）；(A38) 条件独立仅于 EV-xmodal 使用处被要求且仅限 L1；(A39) 个性化单向有界；(A40) 多模态接口误差诚实、τ_mm≤τ_int。则：(i) ID 路径承诺失效率 ≤δ_f+ε_meta(k)+δ_probe+ε_h(w_max)，OOD 漏检贡献 ≤δ_ood·α_conf；(ii) 交互单调性强化：三个新机制只能经"信念更准（含加宽）"或"动作更保守"影响系统；(iii) PCE+ 在 k_probes+k_cons 内终止。
-
-## 4. 实验设计 E172–E176
-
-| 实验 | 指标 | 目标 |
-|---|---|---|
-| E172 少样本校准与样本效率 | ECE_k(k=1..5)、区间宽度、k\* 预测误差；vs 第 56 轮手工先验 | ECE_1≤0.10、ECE_3≤0.05；同等风险探针数 ↓≥40% |
-| E173 OOD 门与共形回退 | 语料外新材质：OOD 检出率；回退后假承诺率；时间增幅 | ≥95%；0；≤+25% |
-| E174 跨模态对账 | 单模态欺骗场景假承诺率；EV-xmodal 越级数；ρ 降级生效时延 | ↓≥60%；0 次（L2 越级）；≤1 到访 |
-| E175 个性化信任 | 橡皮章检出/降级时延；A2 激活提速；疲劳会话超时保守停；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
-| E176 端到端 | 新材质场地四足 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注利用率 | +8%/−30%/−25%/+20% |
-
-## 5. 风险与缓解
-
-| 风险 | 等级 | 缓解 |
-|---|---|---|
-| 元语料盲区 → 自信的错误后验 | 高 | OOD 门 + 共形保底 + 语料分层覆盖审计（材质×季节×坡度披露） |
-| EV-xmodal 独立性被物理共谋违反 | 高 | 仅限 L1 + 分歧下限 + 事后证伪回溯降权 |
-| 个性化被博弈（授权养成） | 中 | 会话域授权 + 有界升级速率 + 连续再评估 + 审计 |
-| 元推断时延进入控制回路 | 中低 | 前向 O(d_φ) + 预取 + 可退回第 56 轮手工路径 |
-| 多模态解释理解错误 | 中 | 输入错误模型 + 校准入账 + 文本回退 |
-
-## 6. 本轮最大风险
-
-**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变成"坏先验普遍"——若语料存在系统性盲区（某类新材质从未被探过），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的一致性加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
-<!-- IDEA:END -->
-
-<!-- ARTIFACT:START -->
-# 第 57 轮产物 · 创新点清单 v33：FewShot-XModal-Persona（少样本元推断×跨模态对账×个性化有界信任，MFSL×XMC×PTM×MXI×FSE×PCE+）
-
-> 承接第 56 轮 IP-127~132（SMM/PCE/BVK/ISE/TAF/MEC）与第 55 轮 IP-121~126（SCG/WBV/SSF/SCC/SRS/CEB）。本轮把部署前提从"证据承诺"升级为 **"少样本可校准、跨模态可对账、个性化有界的证据承诺"**：先验从手工变为跨区域摊销且带共形保底，证据从单模态变为分账对账，人类从静态权重变为单向有界的信任状态机；第 56 轮"地图证据走隔离"推广为"**一切判定器（含元模型）走隔离**"。
-> IP 编号：IP-133~IP-138（共 6 个），升级 IP-127/128/130/131/132 以纳入元推断、对账与个性化维度。
-
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进 |
-|---|---|---|---|
-| IP-133 | MFSL Meta-Few-Shot Learner | 新增 | 跨区域摊销后验 q_φ + 样本效率证书 k\*(w\*) + OOD 共形保底 |
-| IP-134 | XMC Cross-Modal Consistency | 新增 | 证据按模态分账、分歧下限、EV-xmodal（限 L1）、ρ 模态可靠性 |
-| IP-135 | PTM Personalized Trust Model | 升级 IP-131 | cal/vig/auth 信任状态机、单向有界、橡皮章/疲劳检测 |
-| IP-136 | MXI Multimodal eXplanation Interface | 升级 IP-130 | 解释内容不变、渲染个性化、多模态输入带误差模型 |
-| IP-137 | FSE Few-Shot Evidence gate | 升级 IP-132 | 证据门五类、EV-probe\* 须校准证书、J_p 证书 |
-| IP-138 | PCE+ Probe-Commit-Evolve Plus | 升级 IP-128 | 元 VOI、共识探针、OOD 切共形带、个性化协商 |
-
-## 1. 符号体系增量（定义 133–138）
-
-| 符号 | 含义 |
-|---|---|
-| `𝒟_meta={(R_j,O_j,θ̂_j)}` | 元训练集（区域/探针观测序列/事后实测参数） |
-| `q_φ(θ\|o_{1:k},z_r)` | 摊销后验（θ=(μ,k,F_bear)） |
-| `ε_meta(k), k\*(w\*)` | 元校准契约与样本效率证书 |
-| `n(o), θ_ood, C_cf(r)` | OOD 门分数/阈值与共形保底带 |
-| `ℳ={vis,tap,prop,acou}, b_r^m, ρ_m` | 模态集/模态分账信念/模态可靠性 |
-| `D(r), θ_D` | 跨模态分歧度与阈值 |
-| `EV-xmodal` | 跨模态一致证据类（仅限 L1 非不可逆接触） |
-| `s_o=(cal,vig,auth)` | 操作者信任状态，auth∈{A0,A1,A2} |
-| `corrob\*(auth), τ_int(auth)` | 授权参数化的佐证数与 L2 超时 |
-| `m_E` | 解释渲染模态（地图/触觉/语音/文本） |
-| `k_cons` | 每检查点共识探针预算 |
-| `J_p` | 少样本-跨模态-个性化证书 |
+**定义 168（惯性-最优预算 B_io 与 PCE+++++）** B_io = (B_oc, B_imu, B_cog)：
+- **B_oc** = (CARE_solve_budget, MPC_horizon_budget, QP_iterations)：最优控制算力预算。
+- **B_imu** = (Sample_rate, Bias_drift_budget, Calibration_health, Bridge_horizon)：惯性测量预算。
+- **B_cog** = 第 60 轮的 (B_scene, B_intent, B_ros, B_exec)。
+- **VOI 扩展**：
+  ```
+  voi_io(π) = VOI_meta_pessimistic(π) − cost_cog(π) − cost_exec(π) − cost_oc(π) − cost_imu(π)
+  cost_oc  = λ_care·T_care + λ_mpc·T_mpc + λ_qp·N_qp
+  cost_imu = λ_rate·(1/Sample_rate) + λ_bias·‖b̂_a,b̂_g‖ + λ_bridge·tr(Σ_gap)
+  ```
+- **降级策略**：B_oc 耗尽 ⇒ 使用上一周期缓存 K_cache；B_imu 不健康 ⇒ 使用鲁棒增益 K_rob = argmin_{K∈K_safe} max_{θ∈Θ} J(K;θ)；桥时域超限 ⇒ 停止惯性重建，回退到 EPIR 纯序列校验。
 
 ## 2. 关键算法伪代码
 
-### IP-133 MFSL（元少样本信念推断，含 OOD 共形保底）
+### IP-161 ISE（惯性能态估计）
 
 ```python
-def meta_few_shot_infer(M, r, obs, meta):
-    z = region_context(r, M)                          # 坡度/材质簇/季节
-    n = -sum(meta.logp(o, o_prev, z) for o in obs)    # OOD 门分数
-    if n > meta.theta_ood:                            # 分布外 → 共形保底
-        belt = conformal_belt(meta.residuals, sim=csim(z, meta.Z), alpha=alpha_conf)
-        return Inf(cls='OOD', belt=belt)              # 只以带内最坏值进 P_fail
-    post = meta.q_phi(obs, z)                         # 摊销后验（分布近似）
-    kstar = meta.sample_cert(post, w_target)          # 样本效率证书 k*(w*)
-    return Inf(cls='ID', post=post, kstar=kstar, ece_k=meta.ece_decl[len(obs)])
+class InertialStateEstimator:
+    def __init__(self, cfg):
+        self.ekf = ErrorStateKalmanFilter(cfg)
+        self.beta_a, self.beta_g, self.sigma_bar = cfg.beta_a, cfg.beta_g, cfg.sigma_bar
+
+    def step(self, a_m, omega_m, dt):
+        self.ekf.predict(a_m, omega_m, dt)
+        self.ekf.correct_contact(self.contact_model)
+        xi, Sigma = self.ekf.state, self.ekf.cov
+        healthy = (norm(xi.ba) <= self.beta_a and
+                   norm(xi.bg) <= self.beta_g and
+                   trace(Sigma) <= self.sigma_bar)
+        return xi, Sigma, healthy
 ```
 
-### IP-134 XMC（跨模态对账融合）
+### IP-162 IOIS（逆最优阻抗合成）
 
 ```python
-def xmodal_fuse(M, r, e):                             # e 带 modality 字段
-    m = e.modality
-    M.b[r][m] = staleness_decay(bayes_update(M.b[r][m], e.like, w=e.w), age(e))
-    fused = Fuse(M.b[r], M.rho)                       # 可靠性加权融合
-    D = sum(disc(M.b[r][a], M.b[r][b]) for a, b in pairs(modalities))
-    if D > theta_D:                                   # R1: 分歧即不确定性下限
-        fused = widen_mix(fused, M.b[r])
-    for mm in modalities:                             # R3: 事后证伪回溯
-        if e.verdict_falsifies(mm):
-            M.rho[mm] = max(rho_min, M.rho[mm] * gamma_down); M.audit.flag(mm)
-        elif e.verdict_confirms(mm):
-            M.rho[mm] = min(1.0, M.rho[mm] + gamma_up)
-    M.ver.bump(r)
-    return M, fused, D
-
-def xmodal_evidence(b_r, D, rho, level):              # R2: 一致即证据，仅 L1
-    if D <= theta_D and agreeing_pair(b_r, rho, indep_declared=True):
-        return 'EV-xmodal' if level == 'L1' else None  # 不可逆接触不可用
-    return None
+def synthesize_optimal_impedance(theta_hat, Q, R, K_safe, Sigma_z):
+    M, D, K = theta_hat
+    n = M.shape[0]
+    A = np.block([[np.zeros((n, n)), np.eye(n)],
+                  [-np.linalg.inv(M) @ K, -np.linalg.inv(M) @ D]])
+    B = np.vstack([np.zeros((n, n)), np.linalg.inv(M)])
+    P = scipy.linalg.solve_continuous_are(A, B, Q, R)
+    K_lqr = np.linalg.inv(R) @ B.T @ P
+    Kp, Kd = K_lqr[:, :n], K_lqr[:, n:]
+    eps_ric = norm(A.T @ P + P @ A - P @ B @ np.linalg.inv(R) @ B.T @ P + Q)
+    K_proj = project_to_safe(K_lqr, K_safe, weight=np.linalg.inv(Sigma_z))
+    eps_inv = norm(R @ K_lqr - B.T @ P) / (norm(R @ K_lqr) + 1.0)
+    return K_proj, P, eps_ric, eps_inv
 ```
 
-### IP-135 PTM（个性化信任状态机，单向有界）
+### IP-163 IDOB（惯性扰动观测器）
 
 ```python
-def persona_update(s, ev, audit):                     # ev∈{ann,confirm,verdict}
-    s.cal = proper_score_update(s.cal, ev)            # 标注 vs 事后实测
-    if ev == 'confirm':
-        s.vig = update_vigilance(s.vig, latency(ev), rate(ev), session_len())
-        if rubber_stamping(s):                        # 时延<τ_rs 且率>p_rs
-            s.auth = demote(s.auth); audit.log(('demote', s.op, t_now))
-    if ev == 'verdict':
-        s.n_verify += ev.correct
-        if s.n_verify >= N_up(s.auth) and s.cal >= theta_cal(s.auth) \
-           and upgrade_rate_ok(s):                    # 有界升级速率
-            s.auth = promote(s.auth); audit.log(('promote', s.op, t_now))
-    s.w_h = min(W_MAX_GLOBAL, w0 * s.cal)             # 全局硬界不可放宽
-    return s
+class InertialDisturbanceObserver:
+    def __init__(self, theta_hat, lam=0.9, gamma_imp=2.0):
+        self.theta_hat, self.lam, self.gamma_imp = theta_hat, lam, gamma_imp
+        self.d_hat = np.zeros(3)
 
-def quarantine_exit(auth):                            # 佐证数按授权
-    return {'A0': 'probe_only', 'A1': 2, 'A2': 1}[auth]
+    def update(self, a_m, x_hat, v_hat, u):
+        M, D, K = self.theta_hat
+        r = M @ a_m + D @ v_hat + K @ x_hat - u
+        self.d_hat = self.lam * self.d_hat + (1 - self.lam) * r
+        impact = np.linalg.norm(r) > self.gamma_imp
+        return self.d_hat, impact, r
 ```
 
-### IP-136 MXI（多模态个性化解释）
+### IP-164 ETIOC（事件触发惯性最优控制）
 
 ```python
-def explanation_render(exp, persona):
-    m_E = argmax(['map', 'haptic', 'voice', 'text'],
-                 key=lambda m: persona.understanding[m])   # 内容不变，渲染个性化
-    return render(exp, m_E)                                # tau_mm <= tau_int
+class EventTriggeredInertialOCP:
+    def __init__(self, Q, R, P, W, sigma, eta, tau_min, horizon):
+        self.Q, self.R, self.P, self.W = Q, R, P, W
+        self.sigma, self.eta = sigma, eta
+        self.tau_min, self.horizon = tau_min, horizon
+        self.t_last, self.u_seq = -np.inf, None
+        self.z_k = None
 
-def confirm_multimodal(exp, m_E, persona):
-    ok = await_input(exp, m_E, timeout=tau_int(persona.auth))  # 授权越低超时越短
-    if not ok or input_error_model(exp, m_E).suspect:      # 输入带误差模型
-        return False
-    return ok
+    def maybe_solve(self, t, z_hat, impact, K_proj, constraints):
+        if self.z_k is None:
+            self.z_k, self.t_last = z_hat.copy(), t
+            self.u_seq = solve_finite_horizon_ocp(
+                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
+            return self.u_seq
+        e = np.linalg.norm(self.W @ (z_hat - self.z_k))
+        trigger = impact or (e >= self.sigma * np.linalg.norm(self.z_k) + self.eta)
+        if trigger and (t - self.t_last) >= self.tau_min:
+            self.z_k, self.t_last = z_hat.copy(), t
+            self.u_seq = solve_finite_horizon_ocp(
+                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
+        return self.u_seq
 ```
 
-### IP-137 FSE（少样本证据门 + 证书 J_p）
+### IP-165 IB-EPIR（惯性桥证据链）
 
 ```python
-def few_shot_evidence_gate(c, M, persona, ood_reg):
-    if   c.ev == 'EV-probe*':
-        ok = (c.inf.cls == 'ID' and c.inf.ece_k <= eps_meta(c.k)) or \
-             (c.inf.cls == 'OOD' and c.region in ood_reg.certified)
-    elif c.ev == 'EV-xmodal':
-        ok = c.level == 'L1' and c.indep_declared and D(c.region) <= theta_D
-    elif c.ev == 'EV-human':
-        ok = persona[c.op].auth >= 'A1' and \
-             c.corrob >= quarantine_exit(persona[c.op].auth)
-    elif c.ev in ('EV-visit', 'EV-margin'):
-        ok = round56_checks(c, M)                     # 继承第 56 轮判定
-    else:
-        return ('reject', 'no_evidence_class', c)     # 证据门：无证据不承诺
-    if not ok: return ('reject', 'evidence_insufficient', c)
-    if c.irreversible and c.ev == 'EV-xmodal':
-        return ('reject', 'xmodal_on_irreversible', c)  # 硬禁令
-    return ('ok', c)
+class InertialBridgeEPIR(ExecutionPerceptionIsolationRegion):
+    def __init__(self, window=100, delta_bridge=1e-3):
+        super().__init__(window)
+        self.delta_bridge = delta_bridge
 
-def map_evidence_certificate_p(sched, log, M, consent_log, auth_log, ood_reg):
-    for c in contacts(sched):
-        st = few_shot_evidence_gate(c, M, persona_of(c), ood_reg)
-        if st[0] != 'ok': return st
-    if min(x.K_margin for x in sched) < budgets.theta_K: return ('reject', 'K_margin')
-    if rho_sem(sched, M) < budgets.rho_min:           return ('reject', 'rho_sem')
-    if semantic_perturbation(M.core) > budgets.Theta_s: return ('reject', 'delta_s')
-    if not all(l2.resolved for l2 in consent_log):    return ('reject', 'consent_open')
-    return ('ok', Jp(M.core, core_contacts(sched), K_margin, rho_sem,
-                     probe_log, consent_log, meta_cal_log, xmodal_log,
-                     auth_log, ood_reg))
+    def build_bridge(self, seq_id, imu_segment, anchor, Sigma_anchor):
+        Hk = hash_quantized(downsample(imu_segment))
+        Sigma_gap = propagate_covariance(Sigma_anchor, imu_segment)
+        return InertialBridge(seq_id, imu_segment.t0, imu_segment.t1,
+                              Hk, anchor, Sigma_gap)
+
+    def append_with_bridge(self, ev_exec, imu_segment, anchor, Sigma_anchor):
+        bridge = self.build_bridge(self.last_received + 1, imu_segment, anchor, Sigma_anchor)
+        msg = super().append({**ev_exec, 'bridge': bridge})
+        return msg, bridge
+
+    def verify_bridge(self, bridge, imu_replay):
+        hash_ok = (hash_quantized(downsample(imu_replay)) == bridge.H)
+        drift_ok = trace(bridge.Sigma_gap) <= self.delta_bridge
+        return hash_ok and drift_ok
 ```
 
-### IP-138 PCE+（探-诺-演+：元 VOI × 共识探针 × 个性化协商）
+### IP-166 IOGC（惯性最优接地闭环）
 
 ```python
-def probe_commit_evolve_plus(x0, M, task, budget, consent, personas):
-    route = plan_on_map(M, task, risk_model)
-    sched, log = [], []
-    for cp in route.checkpoints:
-        inf = meta_few_shot_infer(M, cp.region, M.obs[cp.region], meta)
-        M.b[cp.region] = inf.post if inf.cls == 'ID' else worst_in(inf.belt)
-        sigma = foothold_schedule(x0, cp, M); R = schedule_risk(sigma, M)
-        while select_gait(R) == 'halt' and budget.probes_left > 0:
-            cands = admissible_probes(cp, M, F_abs)   # 非破坏性过滤（A34 继承）
-            if not cands: break
-            p = argmax(cands, key=lambda q: voi_meta_pessimistic(q, M, inf) - cost(q))
-            if voi_meta_pessimistic(p, M, inf) < theta_voi: break
-            M, _, D = xmodal_fuse(M, cp.region, execute_probe(p, cap=F_abs))
-            if D > theta_D and 'consensus' not in cp.done:    # 共识探针
-                p2 = most_disagreeing_modality_probe(M, cp.region)
-                M, _, D = xmodal_fuse(M, cp.region, execute_probe(p2, cap=F_abs))
-                cp.done.add('consensus')
-            sigma = reselect_footholds(x0, cp, M); R = schedule_risk(sigma, M)
-            budget.spend(p)
-        g = select_gait(R)                                 # 变速箱（第 56 轮继承）
-        lv = contact_level(cp)                             # L0/L1/L2
-        ev = tag_evidence_p(sigma, M, lv)
-        if g != 'halt' and few_shot_evidence_gate(core_contact(cp), M,
-                                                  personas, ood_reg)[0] == 'ok':
-            sched.append(commit(sigma, g)); log.append(ev); continue
-        alt = reroute(M, cp, risk_model)
-        if alt and select_gait(schedule_risk(alt, M)) != 'halt': route = alt; continue
-        return negotiate_or_stop(cp, M, sigma, R, consent,
-                                 tau_int=tau_int(personas.active.auth))  # 超时保守停
-    return sched, log, M
+def inertial_optimal_grounding_loop(M, task, scene, intent, delta_f_req):
+    xi, Sigma_z, h_imu = M.ise.step(M.a_m, M.omega_m, M.dt)
+    theta_hat, Sigma_theta = M.id.update(M.u_prev, xi.x, xi.v, M.a_m)
+
+    K_safe = M.serc.update_constraints(scene, intent, delta_f_req)
+    K_proj, P, eps_ric, eps_inv = synthesize_optimal_impedance(
+        theta_hat, M.Q, M.R, K_safe, Sigma_z)
+
+    d_hat, impact, r = M.idob.update(M.a_m, xi.x, xi.v, M.u_prev)
+    u_seq = M.etioc.maybe_solve(M.t, np.hstack([xi.x, xi.v]),
+                                impact, K_proj, M.constraints)
+
+    result = execute_impedance(K_proj, u_seq, d_hat)
+    ev_exec = build_exec_evidence(result, xi, theta_hat, K_proj)
+    msg, bridge = M.epir.append_with_bridge(ev_exec, M.imu_buffer, xi.x, Sigma_z)
+
+    cert = build_inertial_optimality_certificate(
+        K_proj, P, eps_ric, Sigma_theta, eps_inv, h_imu, bridge)
+    if not cert.valid:
+        K_proj = M.fallback_gain(K_rob=M.K_rob, K_cache=M.K_cache)
+
+    return K_proj, u_seq, ev_exec, bridge, cert, theta_hat, Sigma_theta
 ```
 
-### IP-130→ISE-X（多模态交互护盾，继承 SSF 底座）
+### IP-167 IOC（惯性最优性证书）
 
 ```python
-def interaction_shield_x(u_nom, x, M, sched, consent, persona):
-    u, st = semantic_shield(u_nom, x, K_in, C_plus, W)     # 第 55 轮 SSF 底座
-    failc = failing_constraint(x, u, sched, M)
-    if st != 'ok' or risk(u) > consent.threshold(failc):
-        exp = grounded_explanation(M, sched, failc)        # 内容五元组不变
-        m_E = render_modality(exp, persona)                # 渲染个性化
-        lvl = consent_level(failc, u)
-        if lvl == 'L2':
-            ok = confirm_multimodal(exp, m_E, persona)
-            if not ok: return safe_brake(x), exp, 'L2_denied_or_timeout'
-        elif lvl == 'L1': notify(exp, m_E)                 # 异步，不阻塞节拍
-    return u, exp_if_any, st
+def build_inertial_optimality_certificate(K_proj, P, eps_ric, Sigma_theta,
+                                          eps_inv, h_imu, bridge):
+    eps_mod = sqrt(trace(Sigma_theta))
+    eps_opt = C1 * eps_ric + C2 * eps_mod + C3 * eps_inv
+    valid = (eps_ric <= TAU_RIC and eps_mod <= TAU_MOD and
+             eps_inv <= TAU_INV and h_imu and bridge.valid)
+    return InertialOptimalityCertificate(
+        K=K_proj, P=P, eps_ric=eps_ric, eps_mod=eps_mod,
+        eps_inv=eps_inv, eps_opt=eps_opt, h_imu=h_imu,
+        bridge_valid=bridge.valid, valid=valid)
+```
+
+### IP-168 PCE+++++（惯性-最优预算耦合）
+
+```python
+class InertialOptimalBudget:
+    def __init__(self, care_ops=20, mpc_ops=10, imu_rate=500,
+                 bias_budget=0.05, bridge_horizon=2.0):
+        self.B_oc = {'care': care_ops, 'mpc': mpc_ops}
+        self.B_imu = {'rate': imu_rate, 'bias': bias_budget,
+                      'horizon': bridge_horizon}
+        self.used_oc = {'care': 0, 'mpc': 0}
+
+    def degrade_mode(self, h_imu, bridge_trace):
+        if self.used_oc['care'] >= self.B_oc['care']:
+            return 'cache_gain'
+        if not h_imu or bridge_trace > self.B_imu['horizon']:
+            return 'robust_gain'
+        return 'optimal'
+
+def inertial_optimal_cost(pi):
+    return (LAMBDA_CARE * pi.t_care + LAMBDA_MPC * pi.t_mpc +
+            LAMBDA_RATE / pi.imu_rate + LAMBDA_BRIDGE * pi.bridge_trace)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| MFSL | O(d_φ)/探针；回退 O(N_cal) | O(\|𝒟_meta\|) 静态 | ε_meta 声明诚实、OOD 漏检 ≤δ_ood（A37） |
-| XMC | O(\|ℳ\|²·d_b)/区域更新 | O(\|V\|·\|ℳ\|·d_b) | 分歧下限保守、ρ 回溯完整（A38） |
-| PTM | O(1)+O(H_op) | O(\|操作者\|) | 单向有界、审计完备（A39） |
-| MXI | O(1) | O(\|Exp\|) | 内容不变、τ_mm≤τ_int（A40） |
-| FSE | O(\|σ\|) | O(\|σ\|) | 无证据类即拒、EV-xmodal 限 L1 |
-| PCE+ | O(\|CP\|·(k_p+k_c)·(C_VOI+d_φ)+\|CP\|·A\*) | O(\|V\|+\|σ\|) | 悲观元 VOI、k_p+k_c 终止、四态完备 |
+| ISE | O(n_ξ²) EKF 更新/步 | O(n_ξ²) | 有界偏置下状态误差 ≤ δ_ξ，h_imu 正确判定 |
+| IOIS | O(n³) CARE（n=2 dim） | O(n²) | K^proj ∈ K_safe，ε_opt 次优界成立 |
+| IDOB | O(n²) / 步 | O(n) | ‖d−d̂‖ ≤ ε_dob(β_a, λ) |
+| ETIOC | O(H·n³) / 事件 | O(H·n) | τ_min > 0 无 Zeno，闭环 ISS |
+| IB-EPIR | O(L) 桥构造/段 | O(window + L) | 桥有效概率 ≥ 1−δ，因果哈希连续 |
+| IOGC | O(单闭环) | 复用 | 端到端场景适应 + 最优性 + 证据连续 |
+| IOC | O(n³) 证书 | O(n²) | 证书有效性 ⇒ 次优界与安全裕度可验证 |
 
-**正确性定理（Cross-modal Calibrated Personalized Soundness, CCPS）**
-假设 A22–A32（第 53–55 轮）、A33–A36（第 56 轮）成立；**(A37)** 元校准与 OOD 门：ID 区域 ECE_k≤ε_meta(k) 且声明诚实，OOD 门漏检率 ≤δ_ood，共形带覆盖 ≥1−α_conf；**(A38)** 条件独立假设仅在 EV-xmodal 使用处被要求，且 EV-xmodal 仅限 L1 非不可逆接触；ρ_m 跟踪与回溯诚实；**(A39)** 个性化单向有界：不确定下所有授权/权重更新只向保守方向，每会话升级 ≤Δ_auth，全局硬界不放宽；**(A40)** 多模态接口误差模型诚实且 τ_mm≤τ_int。则：
+**正确性定理（IOG）**：
+假设 A66–A70 成立：
+- **(A66)** ISE：IMU + 接触零速/几何更新使系统可观测，EKF 在偏置有界下收敛，‖ξ̂−ξ‖ ≤ δ_ξ。
+- **(A67)** 辨识：递归最小二乘在持续激励下 θ̂ → θ，协方差收敛，模型失配 ε_mod ≤ τ_mod。
+- **(A68)** 最优性：θ̂ 下 (A,B) 可稳、(A,Q^{1/2}) 可检测，CARE 有唯一稳定解，K* 稳定且 K^proj ∈ K_safe。
+- **(A69)** 事件触发：τ_min ≥ T_solve > 0，且 (σ,η) 满足 Lyapunov 触发条件，闭环 ISS。
+- **(A70)** 惯性桥：桥时域内积分协方差有界，tr(Σ_gap) ≤ δ_bridge。
 
-1. **少样本承诺健全性**：ID 路径 P(fail) ≤ δ_f + ε_meta(k) + δ_probe + ε_h(w_max)；OOD 漏检路径贡献 ≤ δ_ood·α_conf；EV-xmodal 仅在 L1 上贡献 ≤ δ_xm。
-2. **交互单调性强化**：元推断、对账、个性化只能经 (a) 校准信念更新（含强制加宽）或 (b) 更保守的动作参数（τ_int↓、佐证数↑、带变宽、步态降档）影响系统，不存在升险路径；橡皮章检出使 L2 更快落入保守默认。
-3. **终止性**：每检查点共识探针 ≤k_cons，PCE+ 在 k_probes+k_cons 内终止于 {承诺, 绕行, L2 协商, 安全停}。
-4. **部署界**（对检查点取联合界）：
+则：
+1. **ε-最优性**：J(K^proj) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv，且 Cert_io.valid=1 时该界可验证。
+2. **安全性**：K^proj ∈ K_safe，事件间由 ISS 不变集保证力/速度约束不越界，事件时刻由 OCP 约束保证。
+3. **证据连续性**：在丢包率低于桥容量时，IB-EPIR 以概率 ≥ 1−δ 重建 EV-exec 之间的连续惯性轨迹，且哈希连续可验。
+4. **预算安全性**：B_oc / B_imu / B_cog 任一耗尽或不健康，IOGC 退化为 cache_gain / robust_gain / 第 60 轮降级策略，绝不下发未验证的「最优」增益。
 
-```
-P_safe ≥ 1 − Σ_cp (δ_f + ε_meta(k) + δ_probe + ε_h + δ_ood·α_conf + δ_xm·1[L1])
-             − P(𝓜 陈旧未检出) − P(护盾回退失败) − P(τ_int ∧ τ_mm 超时 ∧ 安全停失效)
-```
-
-关键：**元先验给效率、共形给保底**（效率与安全解耦，赌注不押在元模型上）；**EV-xmodal 把"一致性"变成证据，用"仅限 L1"把独立性假设的失败隔离在非不可逆层**；**个性化把人从常量变成单向状态机**（信任赢得慢、失去快）；三个新机制全部经"信念更准或动作更保守"两个安全通道起作用。
-
-## 4. 实验设计 E172–E176
+## 4. 实验设计 E192–E196
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E172 少样本校准与样本效率 | ECE_k(k=1..5)；区间宽度-覆盖曲线；k\* 预测误差；vs 第 56 轮手工先验同等风险的探针数 | ECE_1≤0.10、ECE_3≤0.05；探针数 ↓≥40% |
-| E173 OOD 门与共形回退 | 注入语料外新材质：OOD 检出率；回退后假承诺率；完成时间增幅；共形带经验覆盖 | ≥95%；0；≤+25%；≥1−α_conf |
-| E174 跨模态对账 | 单模态欺骗场景（视觉伪装/刚度欺骗）假承诺率；EV-xmodal 越级使用次数；ρ 降级生效时延 | ↓≥60% vs 单模态；0 次（L2 越级）；≤1 到访 |
-| E175 个性化信任 | 橡皮章检出率与降级时延；A2 标注激活提速；疲劳会话 L2 超时保守停率；授权养成攻击成功率 | ≥90%；≥30% 且失效率不增；100%；≤1% |
-| E176 端到端 | 新材质场地四足部署 vs 第 56 轮：成功率/探针时间/首访承诺时延/标注有效率 | +8%/−30%/−25%/+20% |
+| E192 ISE | 姿态/速度 RMSE；偏置收敛时间；冲击检测延迟 | RMSE ≤ 0.5° / 0.01 m/s；≤ 1 s；≤ 5 ms |
+| E193 IOIS | 力跟踪误差；ε_inv；K_safe 约束满足率 | 误差 −25% vs EEIS；ε_inv ≤ 0.1；100% |
+| E194 ETIOC | 冲击峰值力；事件间隔；约束违反次数 | 峰值力 −30%；τ_min 稳定；0 违反 |
+| E195 IB-EPIR | 丢包下证据链完整率；桥漂移 tr(Σ_gap) | ≥ 99.5%；≤ δ_bridge |
+| E196 端到端 | vs 第 60 轮：接触建立时间、能量、ΔECE、证书有效率 | 建立 −35%；能量 −15%；ΔECE ≥ 15%；证书 ≥ 99% |
 
-## 5. 集成更新：v16* → v16** 体系
+## 5. 本轮最大风险
 
+**一句话**：若 IMU 偏置/积分漂移与接触模型误辨识同时发生，CARE 会基于错误动力学解出「对错误模型可证明最优、对真实接触却可能失稳」的增益——最优性证书反而放大了虚假确定性；必须以「h_imu 健康门槛 + Σ_θ 模型失配门控 + K^proj 安全投影 + cache/robust 双回退」四重护栏，确保最优控制永远只在可验证的模型与惯性置信域内生效。
+<!-- IDEA:END -->
+
+<!-- ARTIFACT:START -->
+# 第 61 轮产物 · 创新点清单 v1：IOG（惯性最优接地：最优控制×惯性测量单元，ISExIOIS×IDOB×ETIOC×IB-EPIR×IOGC×IOC×PCE+++++）
+
+> 承接第 60 轮 SGEC（IP-153~160，SSM×CIEC×EPIR×SERC×PCE++++）。本轮把「阻抗安全编译」升级为**「代价最优 + 可证明次优界」的阻抗合成**，并用 IMU 同时解决**接触瞬态高频盲区**与**EV-exec 之间的证据空档**。核心叙事：阻抗就是状态反馈 `u=−Kz`，最优控制给出 `K*=R⁻¹BᵀP`（其分块即 `[K_p*,K_d*]`）；IMU 提供 `ẍ` 与高频段，使接触模型在线可辨识、冲击可事件触发、证据可惯性桥接。
+
+> IP 编号：IP-161~IP-168（共 8 个）。本轮不推翻第 60 轮，而是在其 `K_safe`、`EPIR`、`SERC`、`PCE++++` 之上做「最优合成 + 惯性增强」。
+
+## 0. 核心 IP 设计
+
+| 编号 | 名称 | 类型 | 关键改进 |
+|---|---|---|---|
+| IP-161 | ISE Inertial State Estimation | 新增 | EKF 状态 ξ=(p,v,q,b_a,b_g)、惯性能态协方差 Σ_z、健康度 h_imu、信息矩阵 I_imu |
+| IP-162 | IOIS Inverse Optimal Impedance Synthesis | 新增 | CARE 解 K*=R⁻¹BᵀP、阻抗分解 [K_p*,K_d*]、安全投影 Π_{K_safe}、逆最优残差 ε_inv |
+| IP-163 | IDOB Inertial Disturbance Observer | 新增 | 惯性力残差 r=M̂a_m+D̂ẋ̂+K̂x̂−u、低通扰动估计 d̂、冲击事件 E_imp、前馈 u_ff |
+| IP-164 | ETIOC Event-Triggered Inertial Optimal Control | 新增 | 触发函数 e(t)、有限时域 OCP、Zeno 防护 τ_min、ISS 稳定性 |
+| IP-165 | IB-EPIR Inertial-Bridge Evidence chain | 升级 IP-155 | 惯性签名段 H_k、惯性桥 B_k、协方差传播 Σ_gap、桥有效性、因果哈希连续 |
+| IP-166 | IOGC Inertial-Optimal Grounding Closed loop | 新增 | 惯性能态→辨识→最优增益→事件执行→惯性证据→模型更新闭环算子 |
+| IP-167 | IOC Inertial Optimality Certificate | 新增 | 次优界 J−J* ≤ c₁ε_ric+c₂ε_mod+c₃ε_inv、证书有效性、失效降级 |
+| IP-168 | PCE+++++ Inertial-Optimal Budget | 升级 IP-157 | 新增 B_oc/B_imu 预算、cost_oc/cost_imu、cache/robust/optimal 三态降级 |
+
+## 1. 符号体系增量（定义 161–168）
+
+| 符号 | 含义 |
+|---|---|
+| `M(x)ẍ + D(x,ẋ)ẋ + K(x)x = u + w` | 任务空间接触动力学 |
+| `z = [x; ẋ]`，`ż = Az+Bu+B_ww` | 线性化接触状态空间 |
+| `a_m = Rᵀ(ẍ−g)+b_a+n_a`，`ω_m = ω+b_g+n_g` | IMU 观测模型 |
+| `ξ = (p,v,q,b_a,b_g)`，`Σ_z` | EKF 惯性能态与协方差 |
+| `h_imu ∈ {0,1}` | IMU 健康度（偏置/协方差门控） |
+| `AᵀP+PA−PBR⁻¹BᵀP+Q=0` | 连续 Riccati 方程（CARE） |
+| `K* = R⁻¹BᵀP = [K_p*, K_d*]` | 最优阻抗增益 |
+| `K^proj = Π_{K_safe}(K*)` | 安全投影后的最优增益 |
+| `ε_ric, ε_mod, ε_inv` | Riccati 残差 / 模型失配 / 逆最优残差 |
+| `ε_opt ≤ c₁ε_ric+c₂ε_mod+c₃ε_inv` | 次优界 |
+| `r = M̂a_m+D̂ẋ̂+K̂x̂−u`，`d̂ = LPF_λ(r)` | 扰动残差与估计 |
+| `E_imp = 1[‖r‖>γ_imp]` | IMU 冲击事件 |
+| `e(t)=‖z(t)−z(t_k)‖_W ≥ σ‖z(t_k)‖+η` | ETIOC 触发条件 |
+| `τ_min ≥ T_solve` | 最小事件间隔（Zeno 防护） |
+| `H_k = H(quantize(downsample(s_k)))` | 惯性签名哈希 |
+| `B_k = (seq_id,t_start,t_end,H_k,anchor,Σ_gap)` | 惯性桥 |
+| `tr(Σ_gap) ≤ δ_bridge` | 桥有效性（漂移边界） |
+| `B_io=(B_oc,B_imu,B_cog)` | 惯性-最优预算 |
+| `cost_oc=λ_care·T_care+λ_mpc·T_mpc+λ_qp·N_qp` | 最优控制成本 |
+| `cost_imu=λ_rate/Sample_rate+λ_bias·‖b̂‖+λ_bridge·tr(Σ_gap)` | 惯性测量成本 |
+
+## 2. 关键算法伪代码
+
+### IP-161 ISE（惯性能态估计）
+
+```python
+class InertialStateEstimator:
+    def __init__(self, cfg):
+        self.ekf = ErrorStateKalmanFilter(cfg)
+        self.beta_a, self.beta_g, self.sigma_bar = cfg.beta_a, cfg.beta_g, cfg.sigma_bar
+
+    def step(self, a_m, omega_m, dt):
+        self.ekf.predict(a_m, omega_m, dt)
+        self.ekf.correct_contact(self.contact_model)
+        xi, Sigma = self.ekf.state, self.ekf.cov
+        healthy = (norm(xi.ba) <= self.beta_a and
+                   norm(xi.bg) <= self.beta_g and
+                   trace(Sigma) <= self.sigma_bar)
+        return xi, Sigma, healthy
 ```
-根信任 + 能力格
-│
-├─ L0 分布式底座与执行边 (GPC/SEN/TBC)
-├─ L0.5 任务迁移与仿真证据 (TIX,XFR,CRC,SFE,FDR,RAB,DST,SBC)
-├─ L0.5+ 鲁棒性层 (TRO,RXC,RCO,REX,RTA,TRC,RUR)
-├─ L0.5++ 动作-协同层 (ACS,SCOM,CEC,AEC,JTC)
-├─ L0.5* 证据-交互层 (SMM,PCE,BVK,ISE,TAF,MEC)
-├─ L0.5*⁺ 元认知-信任层 (MFSL,XMC,PTM,MXI,FSE,J_p) ← v57 新增
-├─ L1 几何感知
-├─ L2 任务/上下文/记忆/语音
-...
-└─ L6 原型证伪/XFER/LFF/IXD
+
+### IP-162 IOIS（逆最优阻抗合成）
+
+```python
+def synthesize_optimal_impedance(theta_hat, Q, R, K_safe, Sigma_z):
+    M, D, K = theta_hat
+    n = M.shape[0]
+    A = np.block([[np.zeros((n, n)), np.eye(n)],
+                  [-np.linalg.inv(M) @ K, -np.linalg.inv(M) @ D]])
+    B = np.vstack([np.zeros((n, n)), np.linalg.inv(M)])
+    P = scipy.linalg.solve_continuous_are(A, B, Q, R)
+    K_lqr = np.linalg.inv(R) @ B.T @ P
+    Kp, Kd = K_lqr[:, :n], K_lqr[:, n:]
+    eps_ric = norm(A.T @ P + P @ A - P @ B @ np.linalg.inv(R) @ B.T @ P + Q)
+    K_proj = project_to_safe(K_lqr, K_safe, weight=np.linalg.inv(Sigma_z))
+    eps_inv = norm(R @ K_lqr - B.T @ P) / (norm(R @ K_lqr) + 1.0)
+    return K_proj, P, eps_ric, eps_inv
 ```
 
-JCPS 输出扩展为：
-`(v,a,m,q,ι,κ,g,λ,τ,σ,ρ,Explain,RUR_state,α_S,A_cert,γ_ce,δ_a, Σ/C+ 结构, 𝓜_core, J_m, probe_log, consent_state, w_h, q_φ/k\*, D(r), ρ_ℳ, s_op/auth, m_E, ood_state, J_p)`
+### IP-163 IDOB（惯性扰动观测器）
 
-其中新增：`q_φ/k\*` 元后验与样本效率证书；`D(r)` 跨模态分歧度；`ρ_ℳ` 模态可靠性向量；`s_op/auth` 操作者信任状态；`m_E` 解释渲染模态；`ood_state` OOD 注册状态；`J_p` 少样本-跨模态-个性化证书。
+```python
+class InertialDisturbanceObserver:
+    def __init__(self, theta_hat, lam=0.9, gamma_imp=2.0):
+        self.theta_hat, self.lam, self.gamma_imp = theta_hat, lam, gamma_imp
+        self.d_hat = np.zeros(3)
 
-云边协议 CEB+ → **CEB++**：云端可下发元模型增量更新（带版本），但**元模型更新也要过隔离区**——先以影子模式在边端探针流上运行，校准回归测试（ECE 不劣化 ∧ OOD 检出率不降 ∧ 分歧下限触发率不降）通过后才接管承诺判定；边端回传跨模态对账残差与证伪事件，作为云端元训练的校准集与语料补盲依据。第 56 轮"地图证据走隔离"在本轮推广为"**一切判定器（含元模型）走隔离**"。
+    def update(self, a_m, x_hat, v_hat, u):
+        M, D, K = self.theta_hat
+        r = M @ a_m + D @ v_hat + K @ x_hat - u
+        self.d_hat = self.lam * self.d_hat + (1 - self.lam) * r
+        impact = np.linalg.norm(r) > self.gamma_imp
+        return self.d_hat, impact, r
+```
 
-## 6. 本轮最大风险
+### IP-164 ETIOC（事件触发惯性最优控制）
 
-**一句话**：本轮把"证据质量"的判定权交给一个从历史语料摊销出来的元推断器，风险从"坏证据长寿"变为"坏先验普遍"——若语料存在系统性盲区（某类新材质在训练分布中缺席），元模型会在 OOD 门学会识别的模式之外给出高度自信的错误后验，而 EV-xmodal 的跨模态一致加成与个性化授权的加速激活会让这类错误更快进入承诺；必须以共形保底带、EV-xmodal 仅限非不可逆接触、授权单向有界且全程审计三重护栏，宁可退回又宽又慢的非参区间，绝不采信"语料里没有的世界"。
+```python
+class EventTriggeredInertialOCP:
+    def __init__(self, Q, R, P, W, sigma, eta, tau_min, horizon):
+        self.Q, self.R, self.P, self.W = Q, R, P, W
+        self.sigma, self.eta = sigma, eta
+        self.tau_min, self.horizon = tau_min, horizon
+        self.t_last, self.u_seq, self.z_k = -np.inf, None, None
+
+    def maybe_solve(self, t, z_hat, impact, K_proj, constraints):
+        if self.z_k is None:
+            self.z_k, self.t_last = z_hat.copy(), t
+            self.u_seq = solve_finite_horizon_ocp(
+                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
+            return self.u_seq
+        e = np.linalg.norm(self.W @ (z_hat - self.z_k))
+        trigger = impact or (e >= self.sigma * np.linalg.norm(self.z_k) + self.eta)
+        if trigger and (t - self.t_last) >= self.tau_min:
+            self.z_k, self.t_last = z_hat.copy(), t
+            self.u_seq = solve_finite_horizon_ocp(
+                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
+        return self.u_seq
+```
+
+### IP-165 IB-EPIR（惯性桥证据链）
+
+```python
+class InertialBridgeEPIR(ExecutionPerceptionIsolationRegion):
+    def __init__(self, window=100, delta_bridge=1e-3):
+        super().__init__(window)
+        self.delta_bridge = delta_bridge
+
+    def build_bridge(self, seq_id, imu_segment, anchor, Sigma_anchor):
+        Hk = hash_quantized(downsample(imu_segment))
+        Sigma_gap = propagate_covariance(Sigma_anchor, imu_segment)
+        return InertialBridge(seq_id, imu_segment.t0, imu_segment.t1,
+                              Hk, anchor, Sigma_gap)
+
+    def append_with_bridge(self, ev_exec, imu_segment, anchor, Sigma_anchor):
+        bridge = self.build_bridge(self.last_received + 1, imu_segment, anchor, Sigma_anchor)
+        msg = super().append({**ev_exec, 'bridge': bridge})
+        return msg, bridge
+
+    def verify_bridge(self, bridge, imu_replay):
+        hash_ok = (hash_quantized(downsample(imu_replay)) == bridge.H)
+        drift_ok = trace(bridge.Sigma_gap) <= self.delta_bridge
+        return hash_ok and drift_ok
+```
+
+### IP-166 IOGC（惯性最优接地闭环）
+
+```python
+def inertial_optimal_grounding_loop(M, task, scene, intent, delta_f_req):
+    xi, Sigma_z, h_imu = M.ise.step(M.a_m, M.omega_m, M.dt)
+    theta_hat, Sigma_theta = M.id.update(M.u_prev, xi.x, xi.v, M.a_m)
+
+    K_safe = M.serc.update_constraints(scene, intent, delta_f_req)
+    K_proj, P, eps_ric, eps_inv = synthesize_optimal_impedance(
+        theta_hat, M.Q, M.R, K_safe, Sigma_z)
+
+    d_hat, impact, r = M.idob.update(M.a_m, xi.x, xi.v, M.u_prev)
+    u_seq = M.etioc.maybe_solve(M.t, np.hstack([xi.x, xi.v]),
+                                impact, K_proj, M.constraints)
+
+    result = execute_impedance(K_proj, u_seq, d_hat)
+    ev_exec = build_exec_evidence(result, xi, theta_hat, K_proj)
+    msg, bridge = M.epir.append_with_bridge(ev_exec, M.imu_buffer, xi.x, Sigma_z)
+
+    cert = build_inertial_optimality_certificate(
+        K_proj, P, eps_ric, Sigma_theta, eps_inv, h_imu, bridge)
+    if not cert.valid:
+        K_proj = M.fallback_gain(K_rob=M.K_rob, K_cache=M.K_cache)
+
+    return K_proj, u_seq, ev_exec, bridge, cert, theta_hat, Sigma_theta
+```
+
+### IP-167 IOC（惯性最优性证书）
+
+```python
+def build_inertial_optimality_certificate(K_proj, P, eps_ric, Sigma_theta,
+                                          eps_inv, h_imu, bridge):
+    eps_mod = sqrt(trace(Sigma_theta))
+    eps_opt = C1 * eps_ric + C2 * eps_mod + C3 * eps_inv
+    valid = (eps_ric <= TAU_RIC and eps_mod <= TAU_MOD and
+             eps_inv <= TAU_INV and h_imu and bridge.valid)
+    return InertialOptimalityCertificate(
+        K=K_proj, P=P, eps_ric=eps_ric, eps_mod=eps_mod,
+        eps_inv=eps_inv, eps_opt=eps_opt, h_imu=h_imu,
+        bridge_valid=bridge.valid, valid=valid)
+```
+
+### IP-168 PCE+++++（惯性-最优预算耦合）
+
+```python
+class InertialOptimalBudget:
+    def __init__(self, care_ops=20, mpc_ops=10, imu_rate=500,
+                 bias_budget=0.05, bridge_horizon=2.0):
+        self.B_oc = {'care': care_ops, 'mpc': mpc_ops}
+        self.B_imu = {'rate': imu_rate, 'bias': bias_budget,
+                      'horizon': bridge_horizon}
+        self.used_oc = {'care': 0, 'mpc': 0}
+
+    def degrade_mode(self, h_imu, bridge_trace):
+        if self.used_oc['care'] >= self.B_oc['care']:
+            return 'cache_gain'
+        if not h_imu or bridge_trace > self.B_imu['horizon']:
+            return 'robust_gain'
+        return 'optimal'
+
+def inertial_optimal_cost(pi):
+    return (LAMBDA_CARE * pi.t_care + LAMBDA_MPC * pi.t_mpc +
+            LAMBDA_RATE / pi.imu_rate + LAMBDA_BRIDGE * pi.bridge_trace)
+```
+
+## 3. 复杂度与正确性
+
+| 组件 | 时间 | 空间 | 正确性 |
+|---|---|---|---|
+| ISE | O(n_ξ²)/步 | O(n_ξ²) | 有界偏置下 ‖ξ̂−ξ‖ ≤ δ_ξ |
+| IOIS | O(n³) CARE | O(n²) | K^proj ∈ K_safe；ε_opt 次优界 |
+| IDOB | O(n²)/步 | O(n) | ‖d−d̂‖ ≤ ε_dob(β_a,λ) |
+| ETIOC | O(H·n³)/事件 | O(H·n) | τ_min>0 无 Zeno；闭环 ISS |
+| IB-EPIR | O(L)/段 | O(window+L) | 桥有效概率 ≥ 1−δ |
+| IOGC | O(单闭环) | 复用 | 最优性 + 安全性 + 证据连续 |
+| IOC | O(n³) | O(n²) | 证书有效 ⇒ 次优界可验证 |
+
+**正确性定理（IOG）**：若 A66–A70 成立（ISE 可观测收敛、辨识持续激励、CARE 可解且 K^proj∈K_safe、事件触发 τ_min>0 且 ISS、桥协方差有界），则：
+1. `J(K^proj) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv`，且证书有效时可验证；
+2. 事件时刻由 OCP 约束保证、事件间由 ISS 不变集保证力/速度不越界；
+3. 丢包率低于桥容量时，IB-EPIR 以概率 ≥ 1−δ 重建 EV-exec 间连续惯性与哈希连续；
+4. 任一 B_oc/B_imu/B_cog 耗尽或不健康，退化为 cache_gain / robust_gain / 第 60 轮降级，绝不下发未验证「最优」增益。
+
+## 4. 实验设计 E192–E196
+
+| 实验 | 指标 | 目标 |
+|---|---|---|
+| E192 ISE | 姿态/速度 RMSE；偏置收敛；冲击延迟 | ≤0.5°/0.01 m/s；≤1 s；≤5 ms |
+| E193 IOIS | 力跟踪误差；ε_inv；约束满足率 | −25% vs EEIS；≤0.1；100% |
+| E194 ETIOC | 冲击峰值力；事件间隔；约束违反 | −30%；τ_min 稳定；0 |
+| E195 IB-EPIR | 丢包下链完整率；桥漂移 | ≥99.5%；≤δ_bridge |
+| E196 端到端 | 接触建立时间、能量、ΔECE、证书有效率 | −35%；−15%；≥15%；≥99% |
+
+## 5. 本轮最大风险
+
+**一句话**：若 IMU 偏置/积分漂移与接触模型误辨识同时发生，CARE 会基于错误动力学解出「对错误模型可证明最优、对真实接触却可能失稳」的增益——最优性证书反而放大了虚假确定性；必须以「h_imu 健康门槛 + Σ_θ 模型失配门控 + K^proj 安全投影 + cache/robust 双回退」四重护栏，确保最优控制永远只在可验证的模型与惯性置信域内生效。
 <!-- ARTIFACT:END -->
