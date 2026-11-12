@@ -1,0 +1,356 @@
+{
+  "dcf": [
+    {
+      "k": 5,
+      "rho_bar": 0.0010485063651371573,
+      "n_eff": 4.979117454624244,
+      "n_min": 2.0,
+      "single_agent_acc": 0.9338,
+      "fused_acc": 0.99975,
+      "all_agree_rate": 0.70925,
+      "false_consensus_rate": 0.0,
+      "mean_abs_confidence": 1.4961294188055299,
+      "gate_coverage": 1.0,
+      "gated_acc_on_covered": 0.99975
+    },
+    {
+      "k": 5,
+      "rho_bar": 0.06065321292941863,
+      "n_eff": 4.023779404090709,
+      "n_min": 2.0,
+      "single_agent_acc": 0.9074,
+      "fused_acc": 0.987,
+      "all_agree_rate": 0.66855,
+      "false_consensus_rate": 0.00025,
+      "mean_abs_confidence": 1.5119934073112298,
+      "gate_coverage": 1.0,
+      "gated_acc_on_covered": 0.987
+    },
+    {
+      "k": 5,
+      "rho_bar": 0.28260411550778286,
+      "n_eff": 2.346958958077623,
+      "n_min": 2.0,
+      "single_agent_acc": 0.8566,
+      "fused_acc": 0.9168,
+      "all_agree_rate": 0.62995,
+      "false_consensus_rate": 0.0119,
+      "mean_abs_confidence": 1.594504719161298,
+      "gate_coverage": 1.0,
+      "gated_acc_on_covered": 0.9168
+    },
+    {
+      "k": 5,
+      "rho_bar": 0.5807750169548991,
+      "n_eff": 1.5046191501782482,
+      "n_min": 2.0,
+      "single_agent_acc": 0.75295,
+      "fused_acc": 0.77065,
+      "all_agree_rate": 0.66585,
+      "false_consensus_rate": 0.1012,
+      "mean_abs_confidence": 2.058293968235568,
+      "gate_coverage": 0.0,
+      "gated_acc_on_covered": null
+    },
+    {
+      "k": 5,
+      "rho_bar": 0.7028309555288624,
+      "n_eff": 1.311880132301323,
+      "n_min": 2.0,
+      "single_agent_acc": 0.68575,
+      "fused_acc": 0.69295,
+      "all_agree_rate": 0.7338,
+      "false_consensus_rate": 0.1877,
+      "mean_abs_confidence": 2.6986359551572403,
+      "gate_coverage": 0.0,
+      "gated_acc_on_covered": null
+    }
+  ],
+  "qec": {
+    "crash": [
+      {
+        "p_fail": 0.01,
+        "replicas": [
+          {
+            "r": 1,
+            "q": 1,
+            "survival_prob": 0.99,
+            "loss_prob": 0.010000000000000009
+          },
+          {
+            "r": 2,
+            "q": 2,
+            "survival_prob": 0.9801,
+            "loss_prob": 0.01990000000000003
+          },
+          {
+            "r": 3,
+            "q": 2,
+            "survival_prob": 0.999702,
+            "loss_prob": 0.00029800000000002047
+          },
+          {
+            "r": 4,
+            "q": 3,
+            "survival_prob": 0.9994079699999999,
+            "loss_prob": 0.0005920300000000767
+          },
+          {
+            "r": 5,
+            "q": 3,
+            "survival_prob": 0.9999901493999999,
+            "loss_prob": 9.850600000138598e-06
+          }
+        ]
+      },
+      {
+        "p_fail": 0.05,
+        "replicas": [
+          {
+            "r": 1,
+            "q": 1,
+            "survival_prob": 0.95,
+            "loss_prob": 0.050000000000000044
+          },
+          {
+            "r": 2,
+            "q": 2,
+            "survival_prob": 0.9025,
+            "loss_prob": 0.09750000000000003
+          },
+          {
+            "r": 3,
+            "q": 2,
+            "survival_prob": 0.9927499999999999,
+            "loss_prob": 0.00725000000000009
+          },
+          {
+            "r": 4,
+            "q": 3,
+            "survival_prob": 0.9859812499999998,
+            "loss_prob": 0.01401875000000019
+          },
+          {
+            "r": 5,
+            "q": 3,
+            "survival_prob": 0.9988418749999998,
+            "loss_prob": 0.0011581250000002319
+          }
+        ]
+      },
+      {
+        "p_fail": 0.1,
+        "replicas": [
+          {
+            "r": 1,
+            "q": 1,
+            "survival_prob": 0.9,
+            "loss_prob": 0.09999999999999998
+          },
+          {
+            "r": 2,
+            "q": 2,
+            "survival_prob": 0.81,
+            "loss_prob": 0.18999999999999995
+          },
+          {
+            "r": 3,
+            "q": 2,
+            "survival_prob": 0.9720000000000001,
+            "loss_prob": 0.027999999999999914
+          },
+          {
+            "r": 4,
+            "q": 3,
+            "survival_prob": 0.9477,
+            "loss_prob": 0.05230000000000001
+          },
+          {
+            "r": 5,
+            "q": 3,
+            "survival_prob": 0.9914400000000001,
+            "loss_prob": 0.008559999999999901
+          }
+        ]
+      }
+    ],
+    "byzantine": [
+      {
+        "f": 0,
+        "n": 1,
+        "quorum_q": 1,
+        "forgery_accept_prob": 0.0
+      },
+      {
+        "f": 1,
+        "n": 4,
+        "quorum_q": 3,
+        "forgery_accept_prob": 0.0
+      },
+      {
+        "f": 2,
+        "n": 7,
+        "quorum_q": 5,
+        "forgery_accept_prob": 0.0
+      },
+      {
+        "f": 3,
+        "n": 10,
+        "quorum_q": 7,
+        "forgery_accept_prob": 0.0
+      },
+      {
+        "f": 4,
+        "n": 13,
+        "quorum_q": 9,
+        "forgery_accept_prob": 0.0
+      }
+    ]
+  },
+  "lase": {
+    "enforce_ms": 20,
+    "margin_ms": 10,
+    "rows": [
+      {
+        "T_c_ms": 60,
+        "models": [
+          {
+            "model": "slow_accurate",
+            "acc": 0.98,
+            "latency_ms": 180,
+            "admissible": false,
+            "on_time": false
+          },
+          {
+            "model": "fast_sufficient",
+            "acc": 0.9,
+            "latency_ms": 40,
+            "admissible": false,
+            "on_time": false
+          },
+          {
+            "model": "local_cheap",
+            "acc": 0.82,
+            "latency_ms": 12,
+            "admissible": true,
+            "on_time": true
+          }
+        ],
+        "best_admissible_acc": 0.82,
+        "naive_most_accurate_on_time": false
+      },
+      {
+        "T_c_ms": 100,
+        "models": [
+          {
+            "model": "slow_accurate",
+            "acc": 0.98,
+            "latency_ms": 180,
+            "admissible": false,
+            "on_time": false
+          },
+          {
+            "model": "fast_sufficient",
+            "acc": 0.9,
+            "latency_ms": 40,
+            "admissible": true,
+            "on_time": true
+          },
+          {
+            "model": "local_cheap",
+            "acc": 0.82,
+            "latency_ms": 12,
+            "admissible": true,
+            "on_time": true
+          }
+        ],
+        "best_admissible_acc": 0.9,
+        "naive_most_accurate_on_time": false
+      },
+      {
+        "T_c_ms": 150,
+        "models": [
+          {
+            "model": "slow_accurate",
+            "acc": 0.98,
+            "latency_ms": 180,
+            "admissible": false,
+            "on_time": false
+          },
+          {
+            "model": "fast_sufficient",
+            "acc": 0.9,
+            "latency_ms": 40,
+            "admissible": true,
+            "on_time": true
+          },
+          {
+            "model": "local_cheap",
+            "acc": 0.82,
+            "latency_ms": 12,
+            "admissible": true,
+            "on_time": true
+          }
+        ],
+        "best_admissible_acc": 0.9,
+        "naive_most_accurate_on_time": false
+      },
+      {
+        "T_c_ms": 200,
+        "models": [
+          {
+            "model": "slow_accurate",
+            "acc": 0.98,
+            "latency_ms": 180,
+            "admissible": false,
+            "on_time": false
+          },
+          {
+            "model": "fast_sufficient",
+            "acc": 0.9,
+            "latency_ms": 40,
+            "admissible": true,
+            "on_time": true
+          },
+          {
+            "model": "local_cheap",
+            "acc": 0.82,
+            "latency_ms": 12,
+            "admissible": true,
+            "on_time": true
+          }
+        ],
+        "best_admissible_acc": 0.9,
+        "naive_most_accurate_on_time": false
+      },
+      {
+        "T_c_ms": 300,
+        "models": [
+          {
+            "model": "slow_accurate",
+            "acc": 0.98,
+            "latency_ms": 180,
+            "admissible": true,
+            "on_time": true
+          },
+          {
+            "model": "fast_sufficient",
+            "acc": 0.9,
+            "latency_ms": 40,
+            "admissible": true,
+            "on_time": true
+          },
+          {
+            "model": "local_cheap",
+            "acc": 0.82,
+            "latency_ms": 12,
+            "admissible": true,
+            "on_time": true
+          }
+        ],
+        "best_admissible_acc": 0.98,
+        "naive_most_accurate_on_time": true
+      }
+    ]
+  }
+}
