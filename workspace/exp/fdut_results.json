@@ -1,0 +1,64 @@
+{
+  "n": 6000,
+  "episode_policies": [
+    {
+      "policy": "no_diag",
+      "success": 72.3,
+      "safety_viol": 3.2,
+      "interventions": 0,
+      "isolation_top1": null,
+      "confusion_resolved": 30.9,
+      "repair_rate": 0.0
+    },
+    {
+      "policy": "threshold",
+      "success": 73.7,
+      "safety_viol": 2.8,
+      "interventions": 0,
+      "isolation_top1": null,
+      "confusion_resolved": 39.7,
+      "repair_rate": 0.0
+    },
+    {
+      "policy": "random",
+      "success": 80.7,
+      "safety_viol": 2.1,
+      "interventions": 3,
+      "isolation_top1": 77.3,
+      "confusion_resolved": 50.3,
+      "repair_rate": 28.0
+    },
+    {
+      "policy": "always_ask",
+      "success": 79.1,
+      "safety_viol": 2.6,
+      "interventions": 2,
+      "isolation_top1": 67.8,
+      "confusion_resolved": 39.2,
+      "repair_rate": 23.1
+    },
+    {
+      "policy": "voi",
+      "success": 82.8,
+      "safety_viol": 1.6,
+      "interventions": 1.62,
+      "isolation_top1": 80.5,
+      "confusion_resolved": 55.7,
+      "repair_rate": 29.7
+    }
+  ],
+  "drift": [
+    {
+      "policy": "cusum",
+      "detect_rate": 100.0,
+      "mean_latency": 14.3,
+      "false_alarm": 1.7
+    },
+    {
+      "policy": "threshold",
+      "detect_rate": 99.7,
+      "mean_latency": 9.3,
+      "false_alarm": 47.0
+    }
+  ]
+}
