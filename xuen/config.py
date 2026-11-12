@@ -1,9 +1,12 @@
-from typing import Optional, Any
-from dataclasses import dataclass, field
-import yaml
+from __future__ import annotations
+
+import math
 import os
 import re
-import math
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+import yaml
 
 _WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
 
@@ -226,7 +229,6 @@ def load_config(path: str) -> Config:
 
 
 def _config_dict_to_obj(raw: Any) -> Config:
-    """将 YAML 字典转换为 Config dataclass 实例。"""
     if raw is None:
         raw = {}
 
@@ -255,11 +257,10 @@ def _config_dict_to_obj(raw: Any) -> Config:
 
 
 def _validate(cfg: Config) -> None:
-    """校验 Config 实例的所有字段类型和取值范围。
+    """Validate all Config fields: types and value ranges.
 
-    任何类型或范围错误均抛 ValueError，错误信息含字段名，用于定位配置问题。
+    Any type or range error raises ValueError with field name for locating config issues.
     """
-    import math as _m
 
     for name in ("count", "batch", "pick"):
         val = getattr(cfg.words, name)
@@ -297,12 +298,7 @@ def _validate(cfg: Config) -> None:
         val = getattr(cfg.rounds, name)
         if not isinstance(val, (int, float)) or isinstance(val, bool):
             raise ValueError(f"rounds.{name}")
-        try:
-            if not _m.isfinite(val):
-                raise ValueError(f"rounds.{name}")
-        except (OverflowError, ValueError):
-            raise ValueError(f"rounds.{name}")
-        if val <= 0:
+        if not math.isfinite(val) or val <= 0:
             raise ValueError(f"rounds.{name}")
 
     if cfg.rounds.judge_command and ("$prompt" not in cfg.rounds.judge_command and "$prompt_file" not in cfg.rounds.judge_command):
@@ -313,10 +309,7 @@ def _validate(cfg: Config) -> None:
 
     if not isinstance(cfg.agent.timeout, (int, float)) or isinstance(cfg.agent.timeout, bool):
         raise ValueError("agent.timeout")
-    try:
-        if not _m.isfinite(cfg.agent.timeout):
-            raise ValueError("agent.timeout")
-    except (OverflowError, ValueError):
+    if not math.isfinite(cfg.agent.timeout):
         raise ValueError("agent.timeout")
 
     if not isinstance(cfg.prompt.max_state_chars, int) or isinstance(cfg.prompt.max_state_chars, bool):

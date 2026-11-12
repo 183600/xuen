@@ -2,559 +2,540 @@
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 <!-- IDEA:START -->
-# 第 61 轮（承接第 60 轮 SGEC/IP-153~160；新一轮灵感循环第 1 轮；本轮灵感：「最优控制」×「惯性测量单元」）
+# 第 60 轮（承接第 59 轮「执行接地层」IP-145~151；灵感循环第 6 轮；本轮灵感：「场景落地」×「对话管理」×「ROS」）
 
-> 第 60 轮的 SGEC 用 SSM×CIEC×EPIR×SERC 把「场景语义→认知意图→执行约束→证据链」接了起来，但仍有三个结构性缺口：
-> 1. **阻抗参数仍是「编译/搜索」而非「最优合成」**：EEIS 的 K_safe 来自约束筛选与场景先验收窄，缺少一个显式代价（能量、接触力方差、跟踪误差）下的最优性保证——「安全」有了，「为什么这组 K_p/K_d 在代价意义下最好」没有。
-> 2. **接触瞬态是「高频盲区」**：force/position 遥测是低频、事件驱动的，而落地冲击、滑动起始、抓取微振发生在 100–1000 Hz；第 60 轮的场景识别看到的是「冲击之后」，不是「冲击之中」。
-> 3. **证据链在稀疏 EV-exec 之间是「空档」**：EPIR 只保证已产生的 EV-exec 不丢、不乱序，却无法回答「两条 EV-exec 之间机器人到底发生了什么」——消息丢失窗口内的连续状态仍是黑箱。
->
-> 本轮引入两个灵感词：**最优控制**（把阻抗增益从「约束可行」提升为「代价最优 + 可证明次优界」）与**惯性测量单元**（用 IMU 的高频惯性信息补上接触瞬态与证据空档，并作为最优控制模型辨识的激励源）。
+> 第 59 轮实现了「执行层→证据层」的反馈闭环：BUQ 在线辨识电机结构性不确定性、ERTC 契约化实时约束、EEIS 编译阻抗安全参数、CLEP 闭环、XMC+ 扩展模态、PCE+++ 四预算耦合、J_exec 执行证书。但**三个核心局限**尚未根本解决：
+> 1. **场景落地的语义鸿沟**：高层规划的「场景」（如桌面、楼梯、充电站）在执行层仅表现为阻抗参数 K_safe，缺乏**场景语义的结构化表征**——导致「场景改变」时只能靠执行下滑感知，先失败后回退，缺失**前置场景适应能力**。
+> 2. **对话管理的单向认知**：第 59 轮的 CLEP 闭环是「证据层→执行层→证据层」的单向反馈，而**人机对话中的意图、信任、偏好等认知信息**是单向不可逆的——一句「请慢点」的指令若在执行延迟后才下达，已错过时机；对话管理需要**认知意图→执行约束的预测映射**，实现「认知先行」的场景适应。
+> 3. **ROS 的松耦合架构失序**：第 58 轮的「跨模态对账」假设模态独立，第 59 轮的 XMC+ 让执行模态参与分歧，但**ROS 的消息传递本质是异步、无序、可丢包的**——执行证据 EV-exec 的时间戳、序列号在 ROS 消息队列中可能乱序、丢失；若ROS消息丢失导致 EV-exec 丢失，「执行合规性」信息将从证据链中断裂。
 
 ## 0. 直觉与动机
 
-**灵感 1（最优控制 → 阻抗的参数化最优合成 IOIS）**
-直觉：阻抗控制律 F = K_p(x_d−x) + K_d(ẋ_d−ẋ) 本质上就是一个状态反馈 u = −K z，z=(x,ẋ)。既然是反馈，就可以问：在代价 J=∫(zᵀQz+uᵀRu)dt 下，最优的 K 是什么？答案由 Riccati 方程给出 K* = R⁻¹BᵀP，且 K* 直接就是阻抗增益 [K_p*, K_d*]。关键洞见：**不是「先设 K_p/K_d 再论证安全」，而是「先声明代价 Q/R 与约束，再由 CARE 解出唯一的 K*，最后把 K* 投影到 K_safe」**——阻抗从手工参数变成有代价语义的最优反馈。
+**灵感 1（场景落地 → 场景语义建模 SSM）**
+直觉：场景不只是「物理障碍」，而是**可预测的物理-认知模式集合**。桌面→刚性阻抗 Z_rigid + 轻微振动 f_vibrate；楼梯→斜坡阻抗 Z_slope(θ) + 抖动 f_stair(t)；湿滑地面→低摩擦阻抗 Z_slippery(μ) + 稳定性风险 R_slip。关键洞见：**把场景识别转化为阻抗参数的先验分布 π_scene(K|Z_scene)**——在场景落地前（如从平滑桌面过渡到粗糙桌面），就能在阻抗编译 EEIS 中**提前收敛 K_safe** 的边界，从而实现「先认知后执行」的场景适应。
 
-**灵感 2（IMU → 高频惯性能态与接触模型辨识）**
-直觉：接触力遥测像「脉搏」，IMU 像「心电图」——前者告诉你力多大，后者告诉你加速度/角速度如何突变。接触动力学 M ẍ + D ẋ + K x = u + w 里的 ẍ 正是 IMU 直接测量的量。关键洞见：**IMU 把接触模型从「离线标定的先验」变成「在线可辨识的对象」**：用 (u, x̂, ẋ̂, a_m) 做递归最小二乘，实时估计 (M̂, D̂, K̂) 及其协方差，喂给 CARE 得到「当前接触状态下的最优阻抗」。
+**灵感 2（对话管理 → 认知意图驱动执行约束 CIEC）**
+直觉：人类对话中的指令（「请轻触」「加紧一点」「慢点」）是**时变的安全约束**。把「对话意图-I」映射为「执行约束-C」：I='慢点' → C=(v_max↓, F_max↑, K_d↑)；I='轻触' → C=(K_p↓, K_d↑, F_tol↓)。关键洞见：**意图→约束的映射必须时序化**：收到意图后，立即**锁定执行契约 ERTC 的约束域**，阻止其他任务抢占关键资源——实现「认知先行、资源锁定」的时序保障。
 
-**灵感 3（IMU → 冲击事件触发的滚动最优控制 ETIOC）**
-直觉：最优控制若每毫秒都解一遍 MPC 太贵，但接触瞬态只占很小时间窗。IMU 的加速度残差 ||a_m − â|| 是天然的「事件探测器」：一旦超过 γ_imp 就触发一次短时域 OCP，在 [t_k, t_k+T_h] 上带力/速度约束滚动优化。关键洞见：**「事件触发」把最优控制的算力花在真正需要的瞬态上**，并用最小事件间隔 τ_min 保证 Zeno-free 与实时可调度。
+**灵感 3（ROS → 执行感知隔离区 EPIR）**
+直觉：ROS 的消息队列带来**顺序不确定性**，而执行证据的完整性依赖**时间戳-序列号-校验和的可靠传递**。构建 **执行感知隔离区（EPIR）**：边端本地「影子副本」持久化 EV-exec，云端「隔离检验」校验 EV-exec 分布；若ROS消息丢失，边端用**增量恢复协议**：基于事件ID+时间戳的**因果一致性重放**，确保证据链不因消息丢失而断裂。关键洞见：**隔离区不仅校验数值，更校验因果顺序**——EV-exec 的「在前」必须在「在后」之前到达。
 
-**灵感 4（IMU → 惯性桥证据链 IB-EPIR）**
-直觉：两条 EV-exec 之间不是真空——IMU 以 200–1000 Hz 记录了这段惯性轨迹。把这段轨迹降采样后做哈希 H_k，随下一条 EV-exec 一起上链，云端就能在消息丢失时用 H_k 重建「空档里发生了什么」。关键洞见：**证据不只证明「结果」，还要证明「过程」**；惯性桥把 EV-exec 的稀疏点连成连续带，且桥的积分协方差 tr(Σ_gap) 给出「这条桥还能信多久」的硬边界。
+**灵感 4（三灵感合流 → 场景感知闭环 SERC）**
+直觉：SSM 给出场景→阻抗先验 → EEIS 编译时**优先选取兼容场景先验的 K_safe**；CIEC 把意图→约束 → ERTC **锁定实时预算**；EPIR 确保 EV-exec 可靠回传 → XMC+ **更新场景-意图-执行协同信念**。形成闭环：**场景→意图→约束→阻抗→执行→EV-exec→场景更新**——实现「认知驱动的场景落地」。
 
-**灵感 5（合流 → 惯性最优接地闭环 IOGC）**
-直觉：IMU 估计 ξ̂ → 辨识 θ̂ → CARE 合成 K* → 事件触发 MPC 处理冲击 → 执行产生 EV-exec → IMU 桥补空档 → 更新 θ̂ 与不确定性。形成 **「惯性能态→模型→最优增益→事件执行→惯性证据→模型更新」** 的闭环。关键洞见：**最优性不是一次性的，而是随模型辨识与 IMU 置信度在线刷新**；当 IMU 不健康时，最优解必须退化为鲁棒/缓存解。
+**灵感 5（PCE++++ → 四维认知预算）**
+直觉：第 59 轮的四预算 B_probe/B_ft/B_ux/B_exec 需拓展为 **「认知预算」**：B_scene（场景识别算力、场景模型更新频率）、B_intent（意图推断算力、意图-约束映射延迟）、B_ros（消息可靠性、重传次数、顺序恢复开销）、B_exec（原有执行预算）。若 B_scene耗尽⇒使用更保守的「通用场景」先验；若 B_intent耗尽⇒锁定「默认约束」；若 B_ros异常⇒回退到「本地闭环」；若 B_exec耗尽⇒原有降级。
 
-## 1. 形式化定义（增量：定义 161–168）
+## 1. 形式化定义（增量：定义 153–160）
 
-**定义 161（惯性能态与接触动力学 ICD）** 任务空间接触模型与 IMU 观测模型：
-- **接触动力学**：M(x)ẍ + D(x,ẋ)ẋ + K(x)x = u + w，其中 u 为阻抗/力矩控制量，w 为外部扰动与未建模力。
-- **线性化状态空间**：z = [x; ẋ]，ż = A z + B u + B_w w，A = [[0, I], [−M⁻¹K, −M⁻¹D]]，B = [0; M⁻¹]。
-- **IMU 观测**：a_m = Rᵀ(ẍ − g) + b_a + n_a，ω_m = ω + b_g + n_g，其中 b_a、b_g 为加速度/角速度偏置。
-- **EKF 状态**：ξ = (p, v, q, b_a, b_g)，输出估计 (x̂, ẋ̂) 与协方差 Σ_z；惯性信息矩阵 I_imu = Σ_z⁻¹。
-- **IMU 健康度**：h_imu = 1[‖b̂_a‖ ≤ β_a ∧ ‖b̂_g‖ ≤ β_g ∧ tr(Σ_z) ≤ σ̄] ∈ {0,1}。
+**定义 153（场景语义建模 SSM）** 场景语义模型 Γ = (Z_scene, π_scene, κ_scene)。其中：
+- **场景集合**：Z_scene = {z₁, z₂, ..., z_N}（桌面、楼梯、地毯、湿滑、充电站等）
+- **场景-阻抗先验**：π_scene(K|z) = N(K; μ_scene(z), Σ_scene(z)) 为在场景 z 下阻抗参数的先验分布
+- **场景适应函数**：κ_scene(z_new, z_old) = P(场景改变|观测) = P(Z_obs|z_new, z_old)，用于检测场景转变
+- **场景识别器**：S recognizer R_scene：观测序列 O:T→z_t，通过增量 Baum-Welch 或 Kalman smoothing 更新场景后验。
+场景先验在 EEIS 编译中**提前收敛 K_safe** 的边界：K_safe^scene = {K | P(K|z_scene) ≥ τ_scene} ∩ K_safe_base，使得「场景先验」约束「执行安全」。
 
-**定义 162（逆最优阻抗合成 IOIS）** 给定辨识模型 θ̂ = (M̂, D̂, K̂)、代价 (Q, R) 与安全集 K_safe：
-- **最优反馈**：求解连续代数 Riccati 方程 AᵀP + PA − PBR⁻¹BᵀP + Q = 0，得 K* = R⁻¹BᵀP ∈ R^{m×2n}。
-- **阻抗分解**：K* = [K_p*, K_d*]，即最优刚度与阻尼增益。
-- **安全投影**：K^proj = Π_{K_safe}(K*) = argmin_{K∈K_safe} ‖K − K*‖_{Σ_z}，其中 Σ_z 为惯性能态协方差加权。
-- **逆最优残差**：ε_inv(K) = ‖R K − BᵀP‖_F / (‖R K‖_F + 1)，用于判定「某增益是否等价于某个 (Q,R) 下的最优反馈」。
-- **最优性保证**：若 ε_inv ≤ τ_inv、Riccati 残差 ε_ric ≤ τ_ric、模型失配 ε_mod ≤ τ_mod，则 K^proj 是 (Q,R,θ̂) 意义下的 ε_opt-次优增益。
+**定义 154（认知意图驱动执行约束 CIEC）** 意图-约束映射 ϕ = (ϕ_intent→constraint, φ_lock, τ_response)。其中：
+- **意图集合**：I = {'慢点', '加紧', '轻触', '稳定', '危险'}
+- **约束函数**：ϕ_intent→constraint(I) → C_intent = (v_max, F_max, K_p, K_d, ε_traj)，形如：
+  - ϕ('慢点') = (v_max≤0.1·v_nom, K_d≥2·K_d_nom, F_max≥1.5·F_nom)
+  - ϕ('轻触') = (K_p≤0.5·K_p_nom, K_d≥1.5·K_d_nom, F_max≤0.8·F_nom)
+- **约束锁定**：φ_lock(I) = {ERTC 契约 C_rt 的子集被 I 对应的约束锁定}；锁定后 **B_ft/B_ux 任务优先级下调至 0**，锁定持续至 I 完成或超时 τ_response = 2s。
+- **响应时序**：τ_response = max(0, Δt_intent - Δt_execution)，其中 Δt_intent 为意图接收时延，Δt_execution 为实际执行生效时延。若 τ_response > τ_deadline，触发「认知失效」降级。
 
-**定义 163（惯性扰动观测器 IDOB）** 由 IMU 高频测量构造力残差：
-- **残差**：r(t) = M̂ a_m(t) + D̂ ẋ̂(t) + K̂ x̂(t) − u(t)。
-- **扰动估计**：d̂ = LPF_λ(r)，即一阶低通滤波，截止频率 λ 由接触带宽决定。
-- **前馈补偿**：u_ff = −d̂，用于抵消外部扰动与未建模力。
-- **冲击事件**：E_imp(t) = 1[‖r(t)‖ > γ_imp]，作为 ETIOC 的事件触发源之一。
-- **误差界**：在偏置有界 ‖b_a‖ ≤ β_a、噪声有界前提下，‖d − d̂‖ ≤ ε_dob(β_a, λ, Σ_z)。
+**定义 155（执行感知隔离区 EPIR）** 边端本地隔离区 S_local = (S_shadow, S_log, S_seq)，云端隔离检验 S_cloud = (S_check, S_sync)。其中：
+- **影子副本**：S_shadow 持久化最近 N=100 条 EV-exec，包含 (timestamp, seq_id, hash, EV_exec_content)
+- **序列协议**：S_seq 维护全局单调递增序列号，用于 ROS 消息重放
+- **同步协议**：S_sync：边→云 增量推送（seq_id 范围 [last_confirm+1, now]），云→边 确认或纠正
+- **因果检验**：S_check 对 EV-exec 执行「时间戳顺序一致性」和「内容哈希校验」双重验证：若检测到 seq跳跃 > 1 或 timestamp 倒流，则标记为「因果失效」，触发「证据链断裂」处理。
 
-**定义 164（事件触发惯性最优控制 ETIOC）** 触发函数与滚动优化：
-- **触发条件**：e(t) = ‖z(t) − z(t_k)‖_W；当 e(t) ≥ σ‖z(t_k)‖ + η 或 E_imp(t)=1 时触发事件。
-- **有限时域 OCP**：
-  ```
-  min_{u(·)} ∫_{t_k}^{t_k+T_h} (zᵀQz + uᵀRu) dτ + z(t_k+T_h)ᵀP z(t_k+T_h)
-  s.t.  ż = A z + B u,  u ∈ [u_min, u_max],  |ẋ| ≤ v_max,  z(t_k) = ẑ(t_k)
-  ```
-- **Zeno 防护**：最小事件间隔 τ_min > 0，且 τ_min ≥ T_solve（CARE/QP 最坏求解时间）。
-- **稳定性**：当 (σ, η) 满足 Lyapunov 触发条件时，闭环对触发误差 ISS，且存在正的不变集。
-
-**定义 165（惯性桥证据链 IB-EPIR）** 在第 60 轮 EPIR 上增加惯性段：
-- **惯性签名段**：s_k = {(t, a_m, ω_m)}，t ∈ [t_k^{ev}, t_{k+1}^{ev}]，降采样后量化为 H_k = H(quantize(downsample(s_k)))。
-- **惯性桥**：B_k = (seq_id, t_start, t_end, H_k, anchor=x̂(t_start), Σ_gap)。
-- **协方差传播**：Σ_gap(t) = Σ_z(t_start) + ∫_{t_start}^{t} Q_imu dτ + drift_term(t)，用于量化积分漂移。
-- **桥有效性**：bridge_valid(B_k) = 1[tr(Σ_gap) ≤ δ_bridge ∧ H_k 与重叠段重放哈希一致]。
-- **因果检验扩展**：云端在原 S_check 的「时间戳顺序 + 内容哈希」之外，增加「相邻桥哈希连续」检验；若断裂则判定为「惯性-证据分歧」，请求 S_shadow 重放。
-
-**定义 166（惯性最优接地闭环 IOGC）** 算子 IOGC(M, task, scene, intent, δ_f_req)：
+**定义 156（场景感知闭环 SERC）** 算子 SERC(M, scene, intent, delta_f_req)：
 ```
-① ISE:   (ξ̂, Σ_z, h_imu) ← IMU_EKF.step(a_m, ω_m, dt)
-② ID:    θ̂ = (M̂, D̂, K̂), Σ_θ ← RLS.update(u, x̂, ẋ̂, a_m)
-③ IOIS:  K* ← CARE(A(θ̂), B(θ̂), Q, R)；K^proj ← Π_{K_safe}(K*)
-④ IDOB:  d̂ ← LPF(M̂a_m + D̂ẋ̂ + K̂x̂ − u)；E_imp ← 1[‖r‖ > γ_imp]
-⑤ ETIOC: if 触发: u* ← solve_finite_horizon_OCP(z=ẑ, P, K^proj, 约束)
-⑥ SERC:  复用第 60 轮场景/意图约束，更新 K_safe（场景先验 + 意图锁定）
-⑦ Execute: 下发 K^proj 与 u*；采集力/位遥测
-⑧ EV-exec: build_exec_evidence(...) → 生成 seq_id 对应的执行证据
-⑨ IB-EPIR: B_k ← build_inertial_bridge(IMU 段)；S_shadow.append(EV-exec ⊕ B_k)
-⑩ IOC:   Cert_io ← build_inertial_optimality_certificate(K^proj, P, ε_ric, ε_mod, ε_inv, h_imu)
-⑪ Return: (K^proj, u*, EV-exec, B_k, Cert_io, θ̂, Σ_θ)
+① SSM: R_scene.update(telemetry_obs) → z_scene
+② π_scene: π_scene(K|z_scene) 生成场景先验
+③ CCM（场景-约束编译): K_safe^scene = EEIS.compile_with_scene_prior(π_scene, δ_f_req)
+④ CIEC: C_intent ← ϕ_intent→constraint(intent)；ERTC.lock_constraints(C_intent)
+⑤ EPIR: S_shadow.append(EV_exec); S_sync.push()
+⑥ CLEP+: K_safe ← EEIS.compile(delta_f_req, fused, ξ_exec, Z_env, K_safe^scene_prior)
+⑦ Dispatch: send_impedance_params(K_safe.best, Cert_eeis)
+⑧ Execute: telemetry ← wait_contact()
+⑨ EV-epic ← build_exec_evidence(telemetry, ...)；S_local.update(EV-epic)
+⑩ XMC++: M, fused, D⁺ ← xmodal_fuse_plus(M, region, inf, EV-exec)
+⑪ Return: (z_scene, K_safe, EV-exec, Cert_eeis, S_local.status)
 ```
 
-**定义 167（惯性最优性证书 IOC）** 证书结构：
-- **Cert_io** = (K^proj, P, ε_ric, ε_mod, ε_inv, ε_opt, safety_margin, h_imu, bridge_valid)。
-- **次优界**：存在常数 c₁,c₂,c₃，使 J(u) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv，其中 J* 为理想模型/理想 IMU 下的最优代价。
-- **有效性判定**：Cert_valid = 1[ε_ric ≤ τ_ric ∧ ε_mod ≤ τ_mod ∧ ε_inv ≤ τ_inv ∧ K^proj ∈ K_safe ∧ h_imu=1 ∧ bridge_valid=1]。
-- **失效动作**：任一不满足即撤销「最优」标签，降级为鲁棒增益 K_rob 或第 60 轮缓存增益 K_cache。
+**定义 157（认知预算 B_cog 与 PCE++++）** B_cog = (B_scene, B_intent, B_ros, B_exec)。其中：
+- **B_scene** = (Recognition_frequency, Model_update_rate, Scene_memory)
+- **B_intent** = (Intent_latency, Mapping_bandwidth, Response_deadline)
+- **B_ros** = (Message_retransmit_limit, Sequence_recovery_budget, Order_violation_tolerance)
+- **B_exec** = (WCET_slack, Bus_bw_slack, Thermal_slack, Prio_headroom)（原有）
 
-**定义 168（惯性-最优预算 B_io 与 PCE+++++）** B_io = (B_oc, B_imu, B_cog)：
-- **B_oc** = (CARE_solve_budget, MPC_horizon_budget, QP_iterations)：最优控制算力预算。
-- **B_imu** = (Sample_rate, Bias_drift_budget, Calibration_health, Bridge_horizon)：惯性测量预算。
-- **B_cog** = 第 60 轮的 (B_scene, B_intent, B_ros, B_exec)。
-- **VOI 扩展**：
-  ```
-  voi_io(π) = VOI_meta_pessimistic(π) − cost_cog(π) − cost_exec(π) − cost_oc(π) − cost_imu(π)
-  cost_oc  = λ_care·T_care + λ_mpc·T_mpc + λ_qp·N_qp
-  cost_imu = λ_rate·(1/Sample_rate) + λ_bias·‖b̂_a,b̂_g‖ + λ_bridge·tr(Σ_gap)
-  ```
-- **降级策略**：B_oc 耗尽 ⇒ 使用上一周期缓存 K_cache；B_imu 不健康 ⇒ 使用鲁棒增益 K_rob = argmin_{K∈K_safe} max_{θ∈Θ} J(K;θ)；桥时域超限 ⇒ 停止惯性重建，回退到 EPIR 纯序列校验。
+**PCE++++ VOI 扩展**：
+```
+voi_cog(π) = VOI_meta_pessimistic(π) - cost_cog(π) - cost_exec(π)
+cost_cog = λ_scene·Recognition_cost(scene) + λ_intent·Latency_cost(intent) + λ_ros·Message_cost(ROS)
+cost_exec = λ_wcet·max(0, WCET(π)−WCET_slack) + λ_bus·max(0, Bus(π)−Bus_bw_slack) + λ_therm·max(0, Power(π)−Thermal_slack)
+```
+若 B_scene < θ_scene：使用「通用场景」先验 π_scene^general = N(K; μ_general, Σ_general)；若 B_intent < θ_intent：锁定「默认约束」；若 B_ros异常：本地闭环，缓解 ROS 依赖；若 B_exec耗尽：原有降级。
+
+**定义 158（场景-阻抗-置信度三元组 SIC）** 给定场景 z，阻抗 K，置信度 γ：
+- **SIC** = (scene_conf(z), K_certainty(K|z), execution_feasibility(K|z))
+- **SIC 判定**：SIC_valid = scene_conf(z) ≥ τ_scene ∧ K_certainty(K|z) ≥ τ_K ∧ execution_feasibility(K|z) = true
+- **SIC 更新**：在 CLEP 闭环结束后，根据 EV-exec 更新 scene_conf(z)：scene_conf(z_new) = scene_conf(z_old)·β + (1-β)·exp(-D_plus_exec)，其中 β 为记忆系数。
+
+**定义 159（认知-执行协同决策 CESC）** 给定目标任务 T，场景序列 Z = (z₁,...,z_n)，意图序列 I = (I₁,...,I_m)，决策规则：
+```
+if ∀z_i ∈ Z: SIC_valid(z_i, K_safe^scene(z_i)) and ∀I_j: τ_response(I_j) ≤ τ_deadline:
+    选取 K = argmin_{K∈∩K_safe^scene(z_i)} (λ·ω_traj - (1-λ)·K_p)
+else:
+    选取 K_conservative = EEIS.compile(delta_f^req, fused, ξ_exec, Z_env)
+    if K_conservative = ∅: return DEGRADE_EXEC
+```
+决策的关键在于**场景-阻抗-置信度的联合约束**，而非单独的阻抗编译。
+
+**定义 160（ROS 因果隔离 EPIR-Protocol）** ROS 消息增强协议：
+- **消息头**：timestamp (64-bit), seq_id (64-bit), source_node, dest_node, hash (SHA256)
+- **增量同步**：增量推送窗口 W_sync = [seq_base, seq_base+N_sync]，N_sync=10
+- **序号预测**：receiver 维护 predicted_seq = last_received_seq + 1；若收到 seq ≠ predicted_seq，则触发重放缓冲
+- **因果恢复**：基于时间戳和 hash 的因果图 G_causal，检测环路并进行「因果重建」
+```
+if seq_gap > 1:
+    for seq in range(predicted_seq, seq_received):
+        retrieve_from_shadow(seq)
+        if hash_match(seq): accept else request_retransmit()
+```
 
 ## 2. 关键算法伪代码
 
-### IP-161 ISE（惯性能态估计）
+### IP-153 SSM（场景语义建模）
 
 ```python
-class InertialStateEstimator:
-    def __init__(self, cfg):
-        self.ekf = ErrorStateKalmanFilter(cfg)
-        self.beta_a, self.beta_g, self.sigma_bar = cfg.beta_a, cfg.beta_g, cfg.sigma_bar
-
-    def step(self, a_m, omega_m, dt):
-        self.ekf.predict(a_m, omega_m, dt)
-        self.ekf.correct_contact(self.contact_model)
-        xi, Sigma = self.ekf.state, self.ekf.cov
-        healthy = (norm(xi.ba) <= self.beta_a and
-                   norm(xi.bg) <= self.beta_g and
-                   trace(Sigma) <= self.sigma_bar)
-        return xi, Sigma, healthy
+class SceneSemanticModel:
+    def __init__(self, N_scenes=10):
+        self.N = N_scenes
+        self.scenes = ['table_smooth', 'table_rugby', 'table_wood', 
+                       'stairs_up', 'stairs_down', 'floor_carpet',
+                       'floor_wet', 'charging_station', 'obstacle_soft', 'unknown']
+        self.scene_impedance_prior = self._init_priors()
+        self.scene_state_dim = self.N
+        self.scene_prior = np.ones(self.N) / self.N
+        self.scene_cov = np.eye(self.N) * 0.01
+        self.recent_obs = deque(maxlen=20)
+        
+    def update(self, force_telemetry, position_telemetry):
+        features = self._extract_features(force_telemetry, position_telemetry)
+        H = self._observation_matrix(features)
+        z = np.array([features.get(scene, 0.0) for scene in self.scenes])
+        S = H @ self.scene_cov @ H.T + 0.01 * np.eye(self.N)
+        K = self.scene_cov @ H.T @ np.linalg.inv(S)
+        y = z - H @ self.scene_prior
+        self.scene_prior = np.clip(self.scene_prior + K @ y, 1e-3, 1.0)
+        self.scene_prior /= self.scene_prior.sum()
+        self.scene_cov = (np.eye(self.N) - K @ H) @ self.scene_cov
+        
+    def get_scene_impedance_prior(self, top_k=3):
+        top_indices = np.argsort(self.scene_prior)[-top_k:]
+        return [{
+            'scene': self.scenes[idx],
+            'confidence': self.scene_prior[idx],
+            'impedance_prior': self.scene_impedance_prior[self.scenes[idx]]
+        } for idx in top_indices]
 ```
 
-### IP-162 IOIS（逆最优阻抗合成）
+### IP-154 CIEC（认知意图约束）
 
 ```python
-def synthesize_optimal_impedance(theta_hat, Q, R, K_safe, Sigma_z):
-    M, D, K = theta_hat
-    n = M.shape[0]
-    A = np.block([[np.zeros((n, n)), np.eye(n)],
-                  [-np.linalg.inv(M) @ K, -np.linalg.inv(M) @ D]])
-    B = np.vstack([np.zeros((n, n)), np.linalg.inv(M)])
-    P = scipy.linalg.solve_continuous_are(A, B, Q, R)
-    K_lqr = np.linalg.inv(R) @ B.T @ P
-    Kp, Kd = K_lqr[:, :n], K_lqr[:, n:]
-    eps_ric = norm(A.T @ P + P @ A - P @ B @ np.linalg.inv(R) @ B.T @ P + Q)
-    K_proj = project_to_safe(K_lqr, K_safe, weight=np.linalg.inv(Sigma_z))
-    eps_inv = norm(R @ K_lqr - B.T @ P) / (norm(R @ K_lqr) + 1.0)
-    return K_proj, P, eps_ric, eps_inv
+class CognitiveIntentController:
+    def __init__(self, ertc, response_deadline=2.0):
+        self.ertc = ertc
+        self.response_deadline = response_deadline
+        self.active_constraints = []
+        self.lock_time = None
+        self.locked = False
+        
+    def receive_intent(self, intent):
+        c_intent = self._map_intent_to_constraint(intent)
+        self._apply_constraints(c_intent)
+        self.active_constraints.append(c_intent)
+        self.lock_time = time.time()
+        self.locked = True
+        return c_intent
+        
+    def _map_intent_to_constraint(self, intent):
+        mapping = {
+            'slow_down': {'v_max': 0.1, 'K_d': 2.0, 'F_max': 1.5},
+            'speed_up': {'v_max': 1.5, 'K_p': 1.2},
+            'light_touch': {'K_p': 0.5, 'K_d': 1.5, 'F_max': 0.8},
+            'stable': {'K_p': 1.0, 'K_d': 1.0},
+            'danger': {'stop': True, 'K_p': 0.1, 'F_max': 0.5}
+        }
+        return mapping.get(intent, {})
 ```
 
-### IP-163 IDOB（惯性扰动观测器）
+### IP-155 EPIR（执行感知隔离区）
 
 ```python
-class InertialDisturbanceObserver:
-    def __init__(self, theta_hat, lam=0.9, gamma_imp=2.0):
-        self.theta_hat, self.lam, self.gamma_imp = theta_hat, lam, gamma_imp
-        self.d_hat = np.zeros(3)
-
-    def update(self, a_m, x_hat, v_hat, u):
-        M, D, K = self.theta_hat
-        r = M @ a_m + D @ v_hat + K @ x_hat - u
-        self.d_hat = self.lam * self.d_hat + (1 - self.lam) * r
-        impact = np.linalg.norm(r) > self.gamma_imp
-        return self.d_hat, impact, r
+class ExecutionPerceptionIsolationRegion:
+    def __init__(self, window=100):
+        self.shadow = {}
+        self.buffer = []
+        self.last_confirmed = 0
+        self.last_received = 0
+        self.window_size = window
+        
+    def append(self, ev_exec: dict):
+        msg = EVExecMessage(
+            timestamp=time.time(),
+            seq_id=self.last_received + 1,
+            content=ev_exec
+        )
+        msg.hash = hashlib.sha256(json.dumps(ev_exec).encode()).hexdigest()[:16]
+        self.shadow[msg.seq_id] = msg
+        self.last_received = msg.seq_id
+        if len(self.shadow) > self.window_size:
+            del self.shadow[min(self.shadow.keys())]
+        return msg
+        
+    def recover_causal_gap(self):
+        if not self.buffer:
+            return []
+        to_recover = [self.shadow[s] for s in range(self.last_confirmed+1, self.last_received+1) 
+                      if s in self.shadow]
+        self.buffer = [m for m in self.buffer if m.seq_id > self.last_confirmed + len(to_recover)]
+        self.last_confirmed += len(to_recover)
+        return to_recover
 ```
 
-### IP-164 ETIOC（事件触发惯性最优控制）
+### IP-156 SERC（场景感知闭环）
 
 ```python
-class EventTriggeredInertialOCP:
-    def __init__(self, Q, R, P, W, sigma, eta, tau_min, horizon):
-        self.Q, self.R, self.P, self.W = Q, R, P, W
-        self.sigma, self.eta = sigma, eta
-        self.tau_min, self.horizon = tau_min, horizon
-        self.t_last, self.u_seq = -np.inf, None
-        self.z_k = None
-
-    def maybe_solve(self, t, z_hat, impact, K_proj, constraints):
-        if self.z_k is None:
-            self.z_k, self.t_last = z_hat.copy(), t
-            self.u_seq = solve_finite_horizon_ocp(
-                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
-            return self.u_seq
-        e = np.linalg.norm(self.W @ (z_hat - self.z_k))
-        trigger = impact or (e >= self.sigma * np.linalg.norm(self.z_k) + self.eta)
-        if trigger and (t - self.t_last) >= self.tau_min:
-            self.z_k, self.t_last = z_hat.copy(), t
-            self.u_seq = solve_finite_horizon_ocp(
-                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
-        return self.u_seq
+def scenario_perception_evolution_loop(M, scenario, intent, delta_f_req):
+    scene_model = M.scene_model
+    scene_model.update(M.telem_force, M.telem_pos)
+    scene_dist = scene_model.get_scene_distribution()
+    
+    if scene_dist['scene_conf'] > 0.7:
+        priors = scene_model.get_scene_impedance_prior()
+        K_safe_scene = M.eeis.compile_with_scene_prior(priors[0], delta_f_req)
+    else:
+        K_safe_scene = None
+        
+    if intent:
+        M.intent_ctrl.receive_intent(intent)
+    
+    M, fused, D_plus, EV_exec, cert = closed_loop_exec_probe(
+        M, M.current_cp, delta_f_req, M.budget
+    )
+    
+    sic_conf = scene_dist['scene_conf'] * np.exp(-D_plus/10)
+    M.sic_confidence = sic_conf
+    
+    if K_safe_scene:
+        dispatch_impedance_params(K_safe_scene.best, cert)
+    else:
+        dispatch_impedance_params(EV_exec.K_safe, cert)
+        
+    epir_msg = M.epir.append(EV_exec.__dict__)
+    M, fused, D_plus = xmodal_fuse_plus(M, M.current_cp.region, M.inf_latest, epir_msg)
+    
+    return M, fused, D_plus, epir_msg, scene_dist
 ```
 
-### IP-165 IB-EPIR（惯性桥证据链）
+### IP-157 PCE++++（认知预算耦合）
 
 ```python
-class InertialBridgeEPIR(ExecutionPerceptionIsolationRegion):
-    def __init__(self, window=100, delta_bridge=1e-3):
-        super().__init__(window)
-        self.delta_bridge = delta_bridge
+class CognitiveBudget:
+    def __init__(self, scene_ops=100, intent_ops=50, ros_retry=3, exec_budget=None):
+        self.B_scene_ops = scene_ops
+        self.B_intent_ops = intent_ops
+        self.B_ros_retry = ros_retry
+        self.B_exec = exec_budget or ExecBudget()
+        self.ops_scene = 0
+        self.ops_intent = 0
+        self.ros_fail = False
+        
+    def is_scene_budget_exhausted(self) -> bool:
+        return self.ops_scene >= self.B_scene_ops
+    
+    def is_intent_budget_exhausted(self) -> bool:
+        return self.ops_intent >= self.B_intent_ops
+    
+    def ros_failure_mode(self) -> str:
+        if self.ros_fail or self.B_ros_retry <= 0:
+            return 'local_loop_only'
+        return 'normal'
 
-    def build_bridge(self, seq_id, imu_segment, anchor, Sigma_anchor):
-        Hk = hash_quantized(downsample(imu_segment))
-        Sigma_gap = propagate_covariance(Sigma_anchor, imu_segment)
-        return InertialBridge(seq_id, imu_segment.t0, imu_segment.t1,
-                              Hk, anchor, Sigma_gap)
-
-    def append_with_bridge(self, ev_exec, imu_segment, anchor, Sigma_anchor):
-        bridge = self.build_bridge(self.last_received + 1, imu_segment, anchor, Sigma_anchor)
-        msg = super().append({**ev_exec, 'bridge': bridge})
-        return msg, bridge
-
-    def verify_bridge(self, bridge, imu_replay):
-        hash_ok = (hash_quantized(downsample(imu_replay)) == bridge.H)
-        drift_ok = trace(bridge.Sigma_gap) <= self.delta_bridge
-        return hash_ok and drift_ok
-```
-
-### IP-166 IOGC（惯性最优接地闭环）
-
-```python
-def inertial_optimal_grounding_loop(M, task, scene, intent, delta_f_req):
-    xi, Sigma_z, h_imu = M.ise.step(M.a_m, M.omega_m, M.dt)
-    theta_hat, Sigma_theta = M.id.update(M.u_prev, xi.x, xi.v, M.a_m)
-
-    K_safe = M.serc.update_constraints(scene, intent, delta_f_req)
-    K_proj, P, eps_ric, eps_inv = synthesize_optimal_impedance(
-        theta_hat, M.Q, M.R, K_safe, Sigma_z)
-
-    d_hat, impact, r = M.idob.update(M.a_m, xi.x, xi.v, M.u_prev)
-    u_seq = M.etioc.maybe_solve(M.t, np.hstack([xi.x, xi.v]),
-                                impact, K_proj, M.constraints)
-
-    result = execute_impedance(K_proj, u_seq, d_hat)
-    ev_exec = build_exec_evidence(result, xi, theta_hat, K_proj)
-    msg, bridge = M.epir.append_with_bridge(ev_exec, M.imu_buffer, xi.x, Sigma_z)
-
-    cert = build_inertial_optimality_certificate(
-        K_proj, P, eps_ric, Sigma_theta, eps_inv, h_imu, bridge)
-    if not cert.valid:
-        K_proj = M.fallback_gain(K_rob=M.K_rob, K_cache=M.K_cache)
-
-    return K_proj, u_seq, ev_exec, bridge, cert, theta_hat, Sigma_theta
-```
-
-### IP-167 IOC（惯性最优性证书）
-
-```python
-def build_inertial_optimality_certificate(K_proj, P, eps_ric, Sigma_theta,
-                                          eps_inv, h_imu, bridge):
-    eps_mod = sqrt(trace(Sigma_theta))
-    eps_opt = C1 * eps_ric + C2 * eps_mod + C3 * eps_inv
-    valid = (eps_ric <= TAU_RIC and eps_mod <= TAU_MOD and
-             eps_inv <= TAU_INV and h_imu and bridge.valid)
-    return InertialOptimalityCertificate(
-        K=K_proj, P=P, eps_ric=eps_ric, eps_mod=eps_mod,
-        eps_inv=eps_inv, eps_opt=eps_opt, h_imu=h_imu,
-        bridge_valid=bridge.valid, valid=valid)
-```
-
-### IP-168 PCE+++++（惯性-最优预算耦合）
-
-```python
-class InertialOptimalBudget:
-    def __init__(self, care_ops=20, mpc_ops=10, imu_rate=500,
-                 bias_budget=0.05, bridge_horizon=2.0):
-        self.B_oc = {'care': care_ops, 'mpc': mpc_ops}
-        self.B_imu = {'rate': imu_rate, 'bias': bias_budget,
-                      'horizon': bridge_horizon}
-        self.used_oc = {'care': 0, 'mpc': 0}
-
-    def degrade_mode(self, h_imu, bridge_trace):
-        if self.used_oc['care'] >= self.B_oc['care']:
-            return 'cache_gain'
-        if not h_imu or bridge_trace > self.B_imu['horizon']:
-            return 'robust_gain'
-        return 'optimal'
-
-def inertial_optimal_cost(pi):
-    return (LAMBDA_CARE * pi.t_care + LAMBDA_MPC * pi.t_mpc +
-            LAMBDA_RATE / pi.imu_rate + LAMBDA_BRIDGE * pi.bridge_trace)
+def cognitive_cost(self, action) -> float:
+    return (0.1 if action.type == 'scene_recognize' else 0 +
+            0.2 if action.type == 'intent_infer' else 0 +
+            0.05 if action.type == 'ros_message' else 0)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| ISE | O(n_ξ²) EKF 更新/步 | O(n_ξ²) | 有界偏置下状态误差 ≤ δ_ξ，h_imu 正确判定 |
-| IOIS | O(n³) CARE（n=2 dim） | O(n²) | K^proj ∈ K_safe，ε_opt 次优界成立 |
-| IDOB | O(n²) / 步 | O(n) | ‖d−d̂‖ ≤ ε_dob(β_a, λ) |
-| ETIOC | O(H·n³) / 事件 | O(H·n) | τ_min > 0 无 Zeno，闭环 ISS |
-| IB-EPIR | O(L) 桥构造/段 | O(window + L) | 桥有效概率 ≥ 1−δ，因果哈希连续 |
-| IOGC | O(单闭环) | 复用 | 端到端场景适应 + 最优性 + 证据连续 |
-| IOC | O(n³) 证书 | O(n²) | 证书有效性 ⇒ 次优界与安全裕度可验证 |
+| SSM | O(N) 场景后验更新/周期 | O(N + N_hist) | 场景识别准确率 ≥ 85%，K_safe 边缘收敛改善 ≥ 15% |
+| CIEC | O(1) 意图处理 | O(1) | τ_response ≤ 2s，约束锁定生效 ≤ 1 周期 |
+| EPIR | O(1) 追加/O(N) 恢复 | O(window=100) | 因果一致性 ≥ 99.5%，seq 连续性 |
+| SERC | O(闭环) | 复用 | 场景适应成功率 ≥ 80%，ΔECE ≥ 20% |
 
-**正确性定理（IOG）**：
-假设 A66–A70 成立：
-- **(A66)** ISE：IMU + 接触零速/几何更新使系统可观测，EKF 在偏置有界下收敛，‖ξ̂−ξ‖ ≤ δ_ξ。
-- **(A67)** 辨识：递归最小二乘在持续激励下 θ̂ → θ，协方差收敛，模型失配 ε_mod ≤ τ_mod。
-- **(A68)** 最优性：θ̂ 下 (A,B) 可稳、(A,Q^{1/2}) 可检测，CARE 有唯一稳定解，K* 稳定且 K^proj ∈ K_safe。
-- **(A69)** 事件触发：τ_min ≥ T_solve > 0，且 (σ,η) 满足 Lyapunov 触发条件，闭环 ISS。
-- **(A70)** 惯性桥：桥时域内积分协方差有界，tr(Σ_gap) ≤ δ_bridge。
+**正确性定理（SGEC）**：
+假设 A22–A65 成立；**(A61)** SSM：Kalman 滤波保证场景后验收敛，场景识别误差 ≤ δ_scene；场景-阻抗先验 π_scene(K|z) 包含真实阻抗的 1-α 置信椭球。**(A62)** CIEC：意图-约束映射 φ_lock 锁定 ERTC 契约子集，τ_response ≤ τ_deadline。**(A63)** EPIR：ROS 消息经 seq_id+hash 验证，因果恢复协议保证 EV-exec 在云端完整重建。**(A64)** SERC：闭环保证场景更新→K_safe→执行→EV-exec→场景信念闭环；SIC 三元校验通过。**(A65)** PCE++++：B_scene/B_intent/B_ros/B_exec 单调消耗，任耗尽即触发相应安全策略。
 
 则：
-1. **ε-最优性**：J(K^proj) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv，且 Cert_io.valid=1 时该界可验证。
-2. **安全性**：K^proj ∈ K_safe，事件间由 ISS 不变集保证力/速度约束不越界，事件时刻由 OCP 约束保证。
-3. **证据连续性**：在丢包率低于桥容量时，IB-EPIR 以概率 ≥ 1−δ 重建 EV-exec 之间的连续惯性轨迹，且哈希连续可验。
-4. **预算安全性**：B_oc / B_imu / B_cog 任一耗尽或不健康，IOGC 退化为 cache_gain / robust_gain / 第 60 轮降级策略，绝不下发未验证的「最优」增益。
+1. **场景适应正确性**：若 scene_conf(z) ≥ τ_scene，K_safe 收敛边界由 π_scene 提前收窄，使 D⁺ ≤ ε_sic。
+2. **意图约束生效性**：τ_response ≤ τ_deadline，约束锁定立即生效。
+3. **证据链连续性**：EPIR 保障 EV-exec 在 ROS 消息丢失时局部存档，因果恢复确保云端完整重建。
+4. **认知预算安全性**：任一 B_cog 耗尽，触发相应安全策略。
 
-## 4. 实验设计 E192–E196
+## 4. 实验设计 E187–E191
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E192 ISE | 姿态/速度 RMSE；偏置收敛时间；冲击检测延迟 | RMSE ≤ 0.5° / 0.01 m/s；≤ 1 s；≤ 5 ms |
-| E193 IOIS | 力跟踪误差；ε_inv；K_safe 约束满足率 | 误差 −25% vs EEIS；ε_inv ≤ 0.1；100% |
-| E194 ETIOC | 冲击峰值力；事件间隔；约束违反次数 | 峰值力 −30%；τ_min 稳定；0 违反 |
-| E195 IB-EPIR | 丢包下证据链完整率；桥漂移 tr(Σ_gap) | ≥ 99.5%；≤ δ_bridge |
-| E196 端到端 | vs 第 60 轮：接触建立时间、能量、ΔECE、证书有效率 | 建立 −35%；能量 −15%；ΔECE ≥ 15%；证书 ≥ 99% |
+| E187 SSM | 场景识别准确率；K_safe 收敛速度提升 | ≥ 85%；收敛 ≤ 3 接触 |
+| E188 CIEC | τ_response 分位；锁定约束有效性 | P(τ_response < 2s) ≥ 0.99 |
+| E189 EPIR | 消息恢复成功率；seq 连续性 | ≥ 99.5% |
+| E190 SERC | 场景适应成功率；ΔECE 减少率 | ≥ 80%；ΔECE ≥ 20% |
+| E191 端到端 | vs 第 59 轮：场景适应时间、意图响应、证据链完整性 | −40% 适应时间；τ_response ≤ 500ms；链完整性 ≥ 99.9% |
 
 ## 5. 本轮最大风险
 
-**一句话**：若 IMU 偏置/积分漂移与接触模型误辨识同时发生，CARE 会基于错误动力学解出「对错误模型可证明最优、对真实接触却可能失稳」的增益——最优性证书反而放大了虚假确定性；必须以「h_imu 健康门槛 + Σ_θ 模型失配门控 + K^proj 安全投影 + cache/robust 双回退」四重护栏，确保最优控制永远只在可验证的模型与惯性置信域内生效。
+**一句话**：若场景识别器在湿滑地面误判为粗糙桌面、意图理解器将「轻触」误解为「加紧」，会导致 K_safe 提前收敛于错误约束，使得「证据层高度确定、执行层灾难性失效」的抽象泄漏风险骤然放大；必须以「场景置信度 < 0.7 回退通用先验」「意图锁定 2s 超时自动释放」「EPIR 序列号+哈希双保险」「SIC 三元校验」四重护栏确保「认知先行」从不超过「执行安全」。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 61 轮产物 · 创新点清单 v1：IOG（惯性最优接地：最优控制×惯性测量单元，ISExIOIS×IDOB×ETIOC×IB-EPIR×IOGC×IOC×PCE+++++）
+# 第 60 轮产物 · 创新点清单 v1：SGEC（场景感知闭环：场景语义建模×认知意图约束×ROS因果隔离，SSM×CIEC×EPIR×SERC×PCE++++）
 
-> 承接第 60 轮 SGEC（IP-153~160，SSM×CIEC×EPIR×SERC×PCE++++）。本轮把「阻抗安全编译」升级为**「代价最优 + 可证明次优界」的阻抗合成**，并用 IMU 同时解决**接触瞬态高频盲区**与**EV-exec 之间的证据空档**。核心叙事：阻抗就是状态反馈 `u=−Kz`，最优控制给出 `K*=R⁻¹BᵀP`（其分块即 `[K_p*,K_d*]`）；IMU 提供 `ẍ` 与高频段，使接触模型在线可辨识、冲击可事件触发、证据可惯性桥接。
+> 承接第 59 轮 IP-145~151（执行接地层 BUQ×ERTC×EEIS×CLEP×XMC+×PCE+++×J_exec）。本轮把「执行层→证据层」的反馈闭环升级为 **「认知驱动的场景-执行闭环」**：引入场景语义建模 SSM 让「场景」从物理障碍演化为可预测的阻抗先验；认知意图约束 CIEC 实现「意图→实时约束」的时序化锁定；ROS因果隔离 EPIR 确保 EV-exec 在消息丢失环境下的完整性；场景感知闭环 SERC 将三者统一；PCE++++ 拓展四维认知预算。实现 **「场景先验提前收敛阻抗参数、意图即时锁定执行约束、证据链防消息丢失」**。
 
-> IP 编号：IP-161~IP-168（共 8 个）。本轮不推翻第 60 轮，而是在其 `K_safe`、`EPIR`、`SERC`、`PCE++++` 之上做「最优合成 + 惯性增强」。
+> IP 编号：IP-153~IP-160（共 8 个），新增场景感知闭环 5 项核心能力。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进 |
 |---|---|---|---|
-| IP-161 | ISE Inertial State Estimation | 新增 | EKF 状态 ξ=(p,v,q,b_a,b_g)、惯性能态协方差 Σ_z、健康度 h_imu、信息矩阵 I_imu |
-| IP-162 | IOIS Inverse Optimal Impedance Synthesis | 新增 | CARE 解 K*=R⁻¹BᵀP、阻抗分解 [K_p*,K_d*]、安全投影 Π_{K_safe}、逆最优残差 ε_inv |
-| IP-163 | IDOB Inertial Disturbance Observer | 新增 | 惯性力残差 r=M̂a_m+D̂ẋ̂+K̂x̂−u、低通扰动估计 d̂、冲击事件 E_imp、前馈 u_ff |
-| IP-164 | ETIOC Event-Triggered Inertial Optimal Control | 新增 | 触发函数 e(t)、有限时域 OCP、Zeno 防护 τ_min、ISS 稳定性 |
-| IP-165 | IB-EPIR Inertial-Bridge Evidence chain | 升级 IP-155 | 惯性签名段 H_k、惯性桥 B_k、协方差传播 Σ_gap、桥有效性、因果哈希连续 |
-| IP-166 | IOGC Inertial-Optimal Grounding Closed loop | 新增 | 惯性能态→辨识→最优增益→事件执行→惯性证据→模型更新闭环算子 |
-| IP-167 | IOC Inertial Optimality Certificate | 新增 | 次优界 J−J* ≤ c₁ε_ric+c₂ε_mod+c₃ε_inv、证书有效性、失效降级 |
-| IP-168 | PCE+++++ Inertial-Optimal Budget | 升级 IP-157 | 新增 B_oc/B_imu 预算、cost_oc/cost_imu、cache/robust/optimal 三态降级 |
+| IP-153 | SSM Scene Semantic Modeling | 新增 | 场景-阻抗先验 π_scene、场景识别器 RKalman、场景适应函数 κ_scene、场景置信度 SIC |
+| IP-154 | CIEC Cognitive Intent Control | 新增 | 意图集 I、意图→约束映射 ϕ、ERTC 约束锁定 φ_lock、响应时序 τ_response |
+| IP-155 | EPIR Execution Perception Isolation Region | 新增 | 边端影子副本 S_shadow、序列协议 S_seq、ROS 消息增强头、因果恢复协议 |
+| IP-156 | SERC Scenario Perception Evolution Loop | 新增 | 场景→意图→约束→阻抗→执行→EV-exec→场景更新闭环算子 |
+| IP-157 | PCE++++ Probe-Commit-Evolve-Cognitive | 升级 IP-150 | 四维认知预算 B_scene/B_intent/B_ros/B_exec、认知成本函数 cost_cog、备用策略 |
+| IP-158 | SIC Scene-Impedance-Certainty Triad | 新增 | 场景置信度 × 阻抗确定性 × 执行可行性 三元校验 |
+| IP-159 | CESC Cognition-Execution Sequential Decision | 新增 | 场景-阻抗-置信度联合约束决策规则 |
+| IP-160 | EPIR-Protocol ROS增强协议 | 新增 | timestamp/seq_id/hash 消息头、增量同步、因果恢复、序号预测 |
 
-## 1. 符号体系增量（定义 161–168）
+## 1. 符号体系增量（定义 153–160）
 
 | 符号 | 含义 |
 |---|---|
-| `M(x)ẍ + D(x,ẋ)ẋ + K(x)x = u + w` | 任务空间接触动力学 |
-| `z = [x; ẋ]`，`ż = Az+Bu+B_ww` | 线性化接触状态空间 |
-| `a_m = Rᵀ(ẍ−g)+b_a+n_a`，`ω_m = ω+b_g+n_g` | IMU 观测模型 |
-| `ξ = (p,v,q,b_a,b_g)`，`Σ_z` | EKF 惯性能态与协方差 |
-| `h_imu ∈ {0,1}` | IMU 健康度（偏置/协方差门控） |
-| `AᵀP+PA−PBR⁻¹BᵀP+Q=0` | 连续 Riccati 方程（CARE） |
-| `K* = R⁻¹BᵀP = [K_p*, K_d*]` | 最优阻抗增益 |
-| `K^proj = Π_{K_safe}(K*)` | 安全投影后的最优增益 |
-| `ε_ric, ε_mod, ε_inv` | Riccati 残差 / 模型失配 / 逆最优残差 |
-| `ε_opt ≤ c₁ε_ric+c₂ε_mod+c₃ε_inv` | 次优界 |
-| `r = M̂a_m+D̂ẋ̂+K̂x̂−u`，`d̂ = LPF_λ(r)` | 扰动残差与估计 |
-| `E_imp = 1[‖r‖>γ_imp]` | IMU 冲击事件 |
-| `e(t)=‖z(t)−z(t_k)‖_W ≥ σ‖z(t_k)‖+η` | ETIOC 触发条件 |
-| `τ_min ≥ T_solve` | 最小事件间隔（Zeno 防护） |
-| `H_k = H(quantize(downsample(s_k)))` | 惯性签名哈希 |
-| `B_k = (seq_id,t_start,t_end,H_k,anchor,Σ_gap)` | 惯性桥 |
-| `tr(Σ_gap) ≤ δ_bridge` | 桥有效性（漂移边界） |
-| `B_io=(B_oc,B_imu,B_cog)` | 惯性-最优预算 |
-| `cost_oc=λ_care·T_care+λ_mpc·T_mpc+λ_qp·N_qp` | 最优控制成本 |
-| `cost_imu=λ_rate/Sample_rate+λ_bias·‖b̂‖+λ_bridge·tr(Σ_gap)` | 惯性测量成本 |
+| `Z_scene = {z₁, ..., z_N}` | 场景集合（桌面、楼梯、地毯、湿滑、充电站等） |
+| `π_scene(K|z) = N(K; μ_scene(z), Σ_scene(z))` | 场景-阻抗先验分布 |
+| `κ_scene(z_new, z_old) = P(场景改变\|观测)` | 场景适应函数 |
+| `R_scene` | 场景识别器（Kalman filter） |
+| `I = {'slow', 'speed', 'light', 'stable', 'danger'}` | 意图集合 |
+| `ϕ_intent→constraint(I) → C_intent` | 意图-约束映射函数 |
+| `φ_lock(I) → C_rt_lock` | 约束锁定函数 |
+| `τ_response` | 意图响应时延 |
+| `S_local = (S_shadow, S_log, S_seq)` | 边端隔离区 |
+| `S_cloud = (S_check, S_sync)` | 云端检验区 |
+| `EVExecMessage = (timestamp, seq_id, hash, content)` | ROS 消息增强结构 |
+| `SIC = (scene_conf, K_certainty, execution_feasibility)` | 场景-阻抗-置信度三元组 |
+| `B_cog = (B_scene, B_intent, B_ros, B_exec)` | 认知预算四维向量 |
+| `cost_cog = λ_scene·Rec_cost + λ_intent·Lat_cost + λ_ros·Msg_cost` | 认知成本函数 |
 
 ## 2. 关键算法伪代码
 
-### IP-161 ISE（惯性能态估计）
+### IP-153 SSM（场景语义建模）
 
 ```python
-class InertialStateEstimator:
-    def __init__(self, cfg):
-        self.ekf = ErrorStateKalmanFilter(cfg)
-        self.beta_a, self.beta_g, self.sigma_bar = cfg.beta_a, cfg.beta_g, cfg.sigma_bar
-
-    def step(self, a_m, omega_m, dt):
-        self.ekf.predict(a_m, omega_m, dt)
-        self.ekf.correct_contact(self.contact_model)
-        xi, Sigma = self.ekf.state, self.ekf.cov
-        healthy = (norm(xi.ba) <= self.beta_a and
-                   norm(xi.bg) <= self.beta_g and
-                   trace(Sigma) <= self.sigma_bar)
-        return xi, Sigma, healthy
+class SceneSemanticModel:
+    def __init__(self, N_scenes=10):
+        self.N = N_scenes
+        self.scenes = ['table_smooth', 'table_rugby', 'table_wood', 
+                       'stairs_up', 'stairs_down', 'floor_carpet',
+                       'floor_wet', 'charging_station', 'obstacle_soft', 'unknown']
+        self.scene_impedance_prior = self._init_priors()
+        self.scene_state_dim = self.N
+        self.scene_prior = np.ones(self.N) / self.N
+        self.scene_cov = np.eye(self.N) * 0.01
+        self.recent_obs = deque(maxlen=20)
+        
+    def update(self, force_telemetry, position_telemetry):
+        features = self._extract_features(force_telemetry, position_telemetry)
+        H = self._observation_matrix(features)
+        z = np.array([features.get(scene, 0.0) for scene in self.scenes])
+        S = H @ self.scene_cov @ H.T + 0.01 * np.eye(self.N)
+        K = self.scene_cov @ H.T @ np.linalg.inv(S)
+        y = z - H @ self.scene_prior
+        self.scene_prior = np.clip(self.scene_prior + K @ y, 1e-3, 1.0)
+        self.scene_prior /= self.scene_prior.sum()
+        self.scene_cov = (np.eye(self.N) - K @ H) @ self.scene_cov
+        
+    def get_scene_impedance_prior(self, top_k=3):
+        top_indices = np.argsort(self.scene_prior)[-top_k:]
+        return [{
+            'scene': self.scenes[idx],
+            'confidence': self.scene_prior[idx],
+            'impedance_prior': self.scene_impedance_prior[self.scenes[idx]]
+        } for idx in top_indices]
 ```
 
-### IP-162 IOIS（逆最优阻抗合成）
+### IP-154 CIEC（认知意图约束）
 
 ```python
-def synthesize_optimal_impedance(theta_hat, Q, R, K_safe, Sigma_z):
-    M, D, K = theta_hat
-    n = M.shape[0]
-    A = np.block([[np.zeros((n, n)), np.eye(n)],
-                  [-np.linalg.inv(M) @ K, -np.linalg.inv(M) @ D]])
-    B = np.vstack([np.zeros((n, n)), np.linalg.inv(M)])
-    P = scipy.linalg.solve_continuous_are(A, B, Q, R)
-    K_lqr = np.linalg.inv(R) @ B.T @ P
-    Kp, Kd = K_lqr[:, :n], K_lqr[:, n:]
-    eps_ric = norm(A.T @ P + P @ A - P @ B @ np.linalg.inv(R) @ B.T @ P + Q)
-    K_proj = project_to_safe(K_lqr, K_safe, weight=np.linalg.inv(Sigma_z))
-    eps_inv = norm(R @ K_lqr - B.T @ P) / (norm(R @ K_lqr) + 1.0)
-    return K_proj, P, eps_ric, eps_inv
+class CognitiveIntentController:
+    def __init__(self, ertc, response_deadline=2.0):
+        self.ertc = ertc
+        self.response_deadline = response_deadline
+        self.active_constraints = []
+        self.lock_time = None
+        self.locked = False
+        
+    def receive_intent(self, intent):
+        c_intent = self._map_intent_to_constraint(intent)
+        self._apply_constraints(c_intent)
+        self.active_constraints.append(c_intent)
+        self.lock_time = time.time()
+        self.locked = True
+        return c_intent
+        
+    def _map_intent_to_constraint(self, intent):
+        mapping = {
+            'slow_down': {'v_max': 0.1, 'K_d': 2.0, 'F_max': 1.5},
+            'speed_up': {'v_max': 1.5, 'K_p': 1.2},
+            'light_touch': {'K_p': 0.5, 'K_d': 1.5, 'F_max': 0.8},
+            'stable': {'K_p': 1.0, 'K_d': 1.0},
+            'danger': {'stop': True, 'K_p': 0.1, 'F_max': 0.5}
+        }
+        return mapping.get(intent, {})
 ```
 
-### IP-163 IDOB（惯性扰动观测器）
+### IP-155 EPIR（执行感知隔离区）
 
 ```python
-class InertialDisturbanceObserver:
-    def __init__(self, theta_hat, lam=0.9, gamma_imp=2.0):
-        self.theta_hat, self.lam, self.gamma_imp = theta_hat, lam, gamma_imp
-        self.d_hat = np.zeros(3)
-
-    def update(self, a_m, x_hat, v_hat, u):
-        M, D, K = self.theta_hat
-        r = M @ a_m + D @ v_hat + K @ x_hat - u
-        self.d_hat = self.lam * self.d_hat + (1 - self.lam) * r
-        impact = np.linalg.norm(r) > self.gamma_imp
-        return self.d_hat, impact, r
+class ExecutionPerceptionIsolationRegion:
+    def __init__(self, window=100):
+        self.shadow = {}
+        self.buffer = []
+        self.last_confirmed = 0
+        self.last_received = 0
+        self.window_size = window
+        
+    def append(self, ev_exec: dict):
+        msg = EVExecMessage(
+            timestamp=time.time(),
+            seq_id=self.last_received + 1,
+            content=ev_exec
+        )
+        msg.hash = hashlib.sha256(json.dumps(ev_exec).encode()).hexdigest()[:16]
+        self.shadow[msg.seq_id] = msg
+        self.last_received = msg.seq_id
+        if len(self.shadow) > self.window_size:
+            del self.shadow[min(self.shadow.keys())]
+        return msg
+        
+    def recover_causal_gap(self):
+        if not self.buffer:
+            return []
+        to_recover = [self.shadow[s] for s in range(self.last_confirmed+1, self.last_received+1) 
+                      if s in self.shadow]
+        self.buffer = [m for m in self.buffer if m.seq_id > self.last_confirmed + len(to_recover)]
+        self.last_confirmed += len(to_recover)
+        return to_recover
 ```
 
-### IP-164 ETIOC（事件触发惯性最优控制）
+### IP-156 SERC（场景感知闭环）
 
 ```python
-class EventTriggeredInertialOCP:
-    def __init__(self, Q, R, P, W, sigma, eta, tau_min, horizon):
-        self.Q, self.R, self.P, self.W = Q, R, P, W
-        self.sigma, self.eta = sigma, eta
-        self.tau_min, self.horizon = tau_min, horizon
-        self.t_last, self.u_seq, self.z_k = -np.inf, None, None
-
-    def maybe_solve(self, t, z_hat, impact, K_proj, constraints):
-        if self.z_k is None:
-            self.z_k, self.t_last = z_hat.copy(), t
-            self.u_seq = solve_finite_horizon_ocp(
-                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
-            return self.u_seq
-        e = np.linalg.norm(self.W @ (z_hat - self.z_k))
-        trigger = impact or (e >= self.sigma * np.linalg.norm(self.z_k) + self.eta)
-        if trigger and (t - self.t_last) >= self.tau_min:
-            self.z_k, self.t_last = z_hat.copy(), t
-            self.u_seq = solve_finite_horizon_ocp(
-                z_hat, K_proj, self.Q, self.R, self.P, self.horizon, constraints)
-        return self.u_seq
+def scenario_perception_evolution_loop(M, scenario, intent, delta_f_req):
+    scene_model = M.scene_model
+    scene_model.update(M.telem_force, M.telem_pos)
+    scene_dist = scene_model.get_scene_distribution()
+    
+    if scene_dist['scene_conf'] > 0.7:
+        priors = scene_model.get_scene_impedance_prior()
+        K_safe_scene = M.eeis.compile_with_scene_prior(priors[0], delta_f_req)
+    else:
+        K_safe_scene = None
+        
+    if intent:
+        M.intent_ctrl.receive_intent(intent)
+    
+    M, fused, D_plus, EV_exec, cert = closed_loop_exec_probe(
+        M, M.current_cp, delta_f_req, M.budget
+    )
+    
+    sic_conf = scene_dist['scene_conf'] * np.exp(-D_plus/10)
+    M.sic_confidence = sic_conf
+    
+    if K_safe_scene:
+        dispatch_impedance_params(K_safe_scene.best, cert)
+    else:
+        dispatch_impedance_params(EV_exec.K_safe, cert)
+        
+    epir_msg = M.epir.append(EV_exec.__dict__)
+    M, fused, D_plus = xmodal_fuse_plus(M, M.current_cp.region, M.inf_latest, epir_msg)
+    
+    return M, fused, D_plus, epir_msg, scene_dist
 ```
 
-### IP-165 IB-EPIR（惯性桥证据链）
+### IP-157 PCE++++（认知预算耦合）
 
 ```python
-class InertialBridgeEPIR(ExecutionPerceptionIsolationRegion):
-    def __init__(self, window=100, delta_bridge=1e-3):
-        super().__init__(window)
-        self.delta_bridge = delta_bridge
+class CognitiveBudget:
+    def __init__(self, scene_ops=100, intent_ops=50, ros_retry=3, exec_budget=None):
+        self.B_scene_ops = scene_ops
+        self.B_intent_ops = intent_ops
+        self.B_ros_retry = ros_retry
+        self.B_exec = exec_budget or ExecBudget()
+        self.ops_scene = 0
+        self.ops_intent = 0
+        self.ros_fail = False
+        
+    def is_scene_budget_exhausted(self) -> bool:
+        return self.ops_scene >= self.B_scene_ops
+    
+    def is_intent_budget_exhausted(self) -> bool:
+        return self.ops_intent >= self.B_intent_ops
+    
+    def ros_failure_mode(self) -> str:
+        if self.ros_fail or self.B_ros_retry <= 0:
+            return 'local_loop_only'
+        return 'normal'
 
-    def build_bridge(self, seq_id, imu_segment, anchor, Sigma_anchor):
-        Hk = hash_quantized(downsample(imu_segment))
-        Sigma_gap = propagate_covariance(Sigma_anchor, imu_segment)
-        return InertialBridge(seq_id, imu_segment.t0, imu_segment.t1,
-                              Hk, anchor, Sigma_gap)
-
-    def append_with_bridge(self, ev_exec, imu_segment, anchor, Sigma_anchor):
-        bridge = self.build_bridge(self.last_received + 1, imu_segment, anchor, Sigma_anchor)
-        msg = super().append({**ev_exec, 'bridge': bridge})
-        return msg, bridge
-
-    def verify_bridge(self, bridge, imu_replay):
-        hash_ok = (hash_quantized(downsample(imu_replay)) == bridge.H)
-        drift_ok = trace(bridge.Sigma_gap) <= self.delta_bridge
-        return hash_ok and drift_ok
-```
-
-### IP-166 IOGC（惯性最优接地闭环）
-
-```python
-def inertial_optimal_grounding_loop(M, task, scene, intent, delta_f_req):
-    xi, Sigma_z, h_imu = M.ise.step(M.a_m, M.omega_m, M.dt)
-    theta_hat, Sigma_theta = M.id.update(M.u_prev, xi.x, xi.v, M.a_m)
-
-    K_safe = M.serc.update_constraints(scene, intent, delta_f_req)
-    K_proj, P, eps_ric, eps_inv = synthesize_optimal_impedance(
-        theta_hat, M.Q, M.R, K_safe, Sigma_z)
-
-    d_hat, impact, r = M.idob.update(M.a_m, xi.x, xi.v, M.u_prev)
-    u_seq = M.etioc.maybe_solve(M.t, np.hstack([xi.x, xi.v]),
-                                impact, K_proj, M.constraints)
-
-    result = execute_impedance(K_proj, u_seq, d_hat)
-    ev_exec = build_exec_evidence(result, xi, theta_hat, K_proj)
-    msg, bridge = M.epir.append_with_bridge(ev_exec, M.imu_buffer, xi.x, Sigma_z)
-
-    cert = build_inertial_optimality_certificate(
-        K_proj, P, eps_ric, Sigma_theta, eps_inv, h_imu, bridge)
-    if not cert.valid:
-        K_proj = M.fallback_gain(K_rob=M.K_rob, K_cache=M.K_cache)
-
-    return K_proj, u_seq, ev_exec, bridge, cert, theta_hat, Sigma_theta
-```
-
-### IP-167 IOC（惯性最优性证书）
-
-```python
-def build_inertial_optimality_certificate(K_proj, P, eps_ric, Sigma_theta,
-                                          eps_inv, h_imu, bridge):
-    eps_mod = sqrt(trace(Sigma_theta))
-    eps_opt = C1 * eps_ric + C2 * eps_mod + C3 * eps_inv
-    valid = (eps_ric <= TAU_RIC and eps_mod <= TAU_MOD and
-             eps_inv <= TAU_INV and h_imu and bridge.valid)
-    return InertialOptimalityCertificate(
-        K=K_proj, P=P, eps_ric=eps_ric, eps_mod=eps_mod,
-        eps_inv=eps_inv, eps_opt=eps_opt, h_imu=h_imu,
-        bridge_valid=bridge.valid, valid=valid)
-```
-
-### IP-168 PCE+++++（惯性-最优预算耦合）
-
-```python
-class InertialOptimalBudget:
-    def __init__(self, care_ops=20, mpc_ops=10, imu_rate=500,
-                 bias_budget=0.05, bridge_horizon=2.0):
-        self.B_oc = {'care': care_ops, 'mpc': mpc_ops}
-        self.B_imu = {'rate': imu_rate, 'bias': bias_budget,
-                      'horizon': bridge_horizon}
-        self.used_oc = {'care': 0, 'mpc': 0}
-
-    def degrade_mode(self, h_imu, bridge_trace):
-        if self.used_oc['care'] >= self.B_oc['care']:
-            return 'cache_gain'
-        if not h_imu or bridge_trace > self.B_imu['horizon']:
-            return 'robust_gain'
-        return 'optimal'
-
-def inertial_optimal_cost(pi):
-    return (LAMBDA_CARE * pi.t_care + LAMBDA_MPC * pi.t_mpc +
-            LAMBDA_RATE / pi.imu_rate + LAMBDA_BRIDGE * pi.bridge_trace)
+def cognitive_cost(self, action) -> float:
+    return (0.1 if action.type == 'scene_recognize' else 0 +
+            0.2 if action.type == 'intent_infer' else 0 +
+            0.05 if action.type == 'ros_message' else 0)
 ```
 
 ## 3. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性 |
 |---|---|---|---|
-| ISE | O(n_ξ²)/步 | O(n_ξ²) | 有界偏置下 ‖ξ̂−ξ‖ ≤ δ_ξ |
-| IOIS | O(n³) CARE | O(n²) | K^proj ∈ K_safe；ε_opt 次优界 |
-| IDOB | O(n²)/步 | O(n) | ‖d−d̂‖ ≤ ε_dob(β_a,λ) |
-| ETIOC | O(H·n³)/事件 | O(H·n) | τ_min>0 无 Zeno；闭环 ISS |
-| IB-EPIR | O(L)/段 | O(window+L) | 桥有效概率 ≥ 1−δ |
-| IOGC | O(单闭环) | 复用 | 最优性 + 安全性 + 证据连续 |
-| IOC | O(n³) | O(n²) | 证书有效 ⇒ 次优界可验证 |
+| SSM | O(N) / 周期 | O(N + N_hist) | 场景识别准确率 ≥ 85% |
+| CIEC | O(1) | O(1) | τ_response ≤ 2s |
+| EPIR | O(1) 追加 / O(N) 恢复 | O(window=100) | 因果恢复成功率 ≥ 99.5% |
+| SERC | O(闭环) | 复用 | 场景适应成功率 ≥ 80% |
 
-**正确性定理（IOG）**：若 A66–A70 成立（ISE 可观测收敛、辨识持续激励、CARE 可解且 K^proj∈K_safe、事件触发 τ_min>0 且 ISS、桥协方差有界），则：
-1. `J(K^proj) − J* ≤ c₁ε_ric + c₂ε_mod + c₃ε_inv`，且证书有效时可验证；
-2. 事件时刻由 OCP 约束保证、事件间由 ISS 不变集保证力/速度不越界；
-3. 丢包率低于桥容量时，IB-EPIR 以概率 ≥ 1−δ 重建 EV-exec 间连续惯性与哈希连续；
-4. 任一 B_oc/B_imu/B_cog 耗尽或不健康，退化为 cache_gain / robust_gain / 第 60 轮降级，绝不下发未验证「最优」增益。
+**正确性定理（SGEC）**：
+若 A61–A65 成立，则：
+1. 场景识别误差 ≤ δ_scene ⇒ K_safe 收敛边界改善 ≥ 15%
+2. τ_response ≤ τ_deadline ⇒ 约束锁定立即生效
+3. EPIR 序列号+哈希验证 ⇒ EV-exec 链完整性 ≥ 99.9%
+4. 任一 B_cog 耗尽 ⇒ 触发安全备用策略
 
-## 4. 实验设计 E192–E196
+## 4. 实验设计 E187–E191
 
 | 实验 | 指标 | 目标 |
 |---|---|---|
-| E192 ISE | 姿态/速度 RMSE；偏置收敛；冲击延迟 | ≤0.5°/0.01 m/s；≤1 s；≤5 ms |
-| E193 IOIS | 力跟踪误差；ε_inv；约束满足率 | −25% vs EEIS；≤0.1；100% |
-| E194 ETIOC | 冲击峰值力；事件间隔；约束违反 | −30%；τ_min 稳定；0 |
-| E195 IB-EPIR | 丢包下链完整率；桥漂移 | ≥99.5%；≤δ_bridge |
-| E196 端到端 | 接触建立时间、能量、ΔECE、证书有效率 | −35%；−15%；≥15%；≥99% |
+| E187 SSM | 场景识别准确率 | ≥ 85% |
+| E188 CIEC | τ_response 分位 | 99% ≤ 2s |
+| E189 EPIR | 消息恢复成功率 | ≥ 99.5% |
+| E190 SERC | 场景适应成功率 | ≥ 80% |
+| E191 端到端 | 证据链完整性 | ≥ 99.9% |
 
 ## 5. 本轮最大风险
 
-**一句话**：若 IMU 偏置/积分漂移与接触模型误辨识同时发生，CARE 会基于错误动力学解出「对错误模型可证明最优、对真实接触却可能失稳」的增益——最优性证书反而放大了虚假确定性；必须以「h_imu 健康门槛 + Σ_θ 模型失配门控 + K^proj 安全投影 + cache/robust 双回退」四重护栏，确保最优控制永远只在可验证的模型与惯性置信域内生效。
+**一句话**：若场景识别器在湿滑地面误判为粗糙桌面、意图理解器将「轻触」误解为「加紧」，会导致 K_safe 提前收敛于错误约束，使得「证据层高度确定、执行层灾难性失效」的抽象泄漏风险骤然放大；必须以「场景置信度 < 0.7 回退通用先验」「意图锁定 2s 超时自动释放」「EPIR 序列号+哈希双保险」「SIC 三元校验」四重护栏确保「认知先行」从不超过「执行安全」。
 <!-- ARTIFACT:END -->

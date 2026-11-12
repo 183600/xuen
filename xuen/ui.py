@@ -1,4 +1,4 @@
-"""终端输出（带可选 ANSI 颜色）。"""
+"""Terminal output with optional ANSI colors."""
 from __future__ import annotations
 
 import os
@@ -38,7 +38,7 @@ class UI:
             # 触发 Exception ignored 并把退出码改成 120。把底层 fd 重定向到
             # devnull 后，最终 flush 落到空设备，进程才能按真实结果退出。
             # OSError/ValueError 覆盖非管道场景：stdout 被显式 close() 后
-            # write 抛 ValueError，终端写入失败抛 OSError；输出通道失效
+            # write 报 ValueError，终端写入失败抛 OSError；输出通道失效
             # 不能反过来炸掉研究循环（没有可展示的终端时只能丢弃）。
             try:
                 devnull = os.open(os.devnull, os.O_WRONLY)
