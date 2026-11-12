@@ -2,1141 +2,478 @@
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 <!-- IDEA:START -->
-# 第 61 轮（承接第 60 轮「场景感知闭环」IP-153~160；灵感循环第 7 轮；本轮灵感：「技术融合」×「具身智能大模型」×「对话管理」）
+# 第 62 轮（承接第 61 轮「ESEC 具身语义进化闭环」IP-173~182；灵感循环 II 第 1 轮；本轮灵感：「场景驱动创新」×「在线学习」×「鲁棒性」）
 
-> 第 60 轮构建了「认知驱动的场景-执行闭环」：SSM 让场景成为可预测的阻抗先验、CIEC 实现意图→约束的时序化锁定、EPIR 保障 ROS 消息丢失下的证据链完整性、SERC 统一三者形成闭环、PCE++++ 拓展四维认知预算。但**四个核心局限**仍待突破：
-> 1. **模块间的语义割裂**：SSM（Kalman 滤波）、CIEC（规则映射）、EEIS（优化编译）、XMC+（证据融合）各自为政，**缺乏统一的语义表征空间**——场景语义、意图语义、执行证据语义无法在向量空间中直接运算，导致「场景→意图→约束」链路中的信息损耗与不一致。
-> 2. **场景识别的零样本脆弱性**：SSM 依赖预定义场景集 Z_scene 和离线先验 π_scene，**遇到未见场景（新材质、复合地形、动态障碍）只能回退通用先验**——缺乏「具身推理」能力：从视觉-触觉-本体感受的多模态观测中，零样本推断物理属性（摩擦、刚度、脆性）并生成阻抗先验。
-> 3. **对话管理的单轮僵化**：CIEC 仅支持「意图→约束」的单轮映射，**真实人机对话是多轮、含糊、需澄清、可协商的**——用户可能说「轻一点……不对，是稳住」，CIEC 无法维护对话历史、跟踪信念状态、发起澄清、或根据执行反馈调整对话策略。
-> 4. **大模型与实时控制的时序鸿沟**：具身大模型（VLM/LLM）推理延迟 ~100-500ms，而 ERTC 实时契约要求 ~1-10ms，**大模型语义推理与实时阻抗控制的时间尺度差 2-3 个数量级**——若强行串行，会阻塞实时环；若并行，面临语义-控制一致性与安全兜底的难题。
+> 第 61 轮构建了 ESEC：USR 统一语义表征、MEL 零样本物理推断、DMS 多轮对话接地、SRT-Dual 双流解耦、PCE+++++ 六维预算。但第 61 轮自述的最大风险暴露了**四个根基性短板**：
+> 1. **USR 对齐是「一次性离线训练」**：ℒ_align 假设在凸集上收敛到驻点（A66），但部署后环境分布持续漂移（材质磨损、温变、新物体），Π 与编码器**没有持续学习机制，更没有遗憾（regret）层面的保证**——对齐可能随时间悄悄失效，且无人知晓。
+> 2. **MEL 零样本推断的系统性偏差无免疫**：E193 只约束平均误差（μ<15%）；若 sim2real 导致 μ_fric **普遍低估 20%**，EEIS 编译出的 K_safe 将整体越过真实安全边界——第 61 轮唯一的兜底是「固定系数保守扩展」（K_p×0.8、K_d×1.2），既不数据驱动、也不可证明。
+> 3. **DMS 规则-RL 冲突只是「假设安全」而非「机制安全」**：A68 假设规则策略兜底，但 _merge_actions 是启发式混合，RL 提案仍可能违反 ERTC 约束，没有形式化的拦截算子。
+> 4. **经验用完即弃**：EV_exec 只进 evidence_buffer 与审计证书，失败与险情没有回流为学习信号和测试场景——系统「经历很多、学到很少」。
 
 ## 0. 直觉与动机
 
-**灵感 1（技术融合 → 统一语义表征空间 USR）**
-直觉：第 60 轮的 SSM、CIEC、EEIS、XMC+ 分别处理「场景语义」「意图语义」「阻抗参数」「执行证据」，它们本质上都是**同一物理交互过程的不同投影**。关键洞见：构建 **统一语义表征空间（USR）**，将场景、意图、阻抗、证据、策略全部映射到共享的潜在向量空间 ℝ^d_us ——场景先验 π_scene 变为 scene_emb ∈ ℝ^d_us，意图约束 C_intent 变为 intent_emb ∈ ℝ^d_us，阻抗参数 K 经编码器映射为 impedance_emb ∈ ℝ^d_us，EV-exec 经编码器映射为 evidence_emb ∈ ℝ^d_us。在 USR 中，「场景→意图→约束→阻抗→执行→证据」成为**向量空间中的可微路径**，技术融合从「模块拼接」升级为「表征对齐」。
+**灵感 1（在线学习 → OLP：带遗憾保证的在线投影学习）**
+直觉：第 61 轮的投影头 Π 离线训练后冻结。关键洞见：把「语义→阻抗」重构为**在线凸优化（OCO）**——冻结 MEL/USR 骨干，投影头参数化为「冻结基座 Π_0 + 凸集内的线性修正头 W·h(x)」（h 为冻结特征映射，W 为唯一在线参数），每个语义周期用执行损失做一步在线梯度下降。第 61 轮「对齐陷入坏局部最优」的担忧被**遗憾界取代**：无论环境序列如何对抗，累计损失与最优固定投影头之差 ≤ D·G̃·√T。不需要整个网络凸，只需修正头凸——这是「在线学习」灵感的最小代价注入点。
 
-**灵感 2（具身智能大模型 → 多模态具身基座模型 MEL）**
-直觉：第 60 轮的 SSM 用 Kalman 滤波做场景识别，**本质是「分类+参数估计」**，缺乏对物理世界的「理解」。具身大模型（MEL, Multimodal Embodied LLM）输入：多视角视觉 V、触觉序列 T、本体感受 P、语言指令 L、场景先验 scene_emb、历史证据 evidence_emb；输出：场景语义嵌入 z_scene ∈ ℝ^d_us、物理属性推断 φ_phys = (μ_fric, k_stiff, η_damp, σ_brittle)、交互策略 π_intact、不确定性量化 U_epistemic/U_aleatoric。关键洞见：**MEL 不直接输出控制量**，而是输出「语义-物理双重先验」——语义先验注入 USR 对齐 EEIS 编译，物理先验作为 EEIS 的物理约束条件；MEL 的不确定性量化直接驱动 PCE++++ 的 B_scene 预算分配。
+**灵感 2（鲁棒性 → WCV：Wasserstein-CVaR 鲁棒编译 + RSC 残差自校准球）**
+直觉：与其「假设 MEL 校准良好」（A67），不如**承认系统性偏差必然存在并围绕估计值构造不确定球**：K_safe 必须在球内最坏物理参数下仍安全，即优化 sup_{φ∈B(φ̂,r)} CVaR_ε[ℓ(K;φ)]。球半径 r 不拍脑袋：用**执行残差**（外力矩预测 vs 实测）经灵敏度 Jacobian 反演到参数空间，EWMA 自校准——MEL 偏差多大，球就长多大，护栏自动收紧。选 CVaR 而非期望：安全只关心尾部，不关心平均。
 
-**灵感 3（对话管理 → 执行接地的多轮对话管理 DMS）**
-直觉：第 60 轮 CIEC 是「单轮意图→约束」，而真实对话需要**信念跟踪、策略选择、澄清生成、执行反馈接地**。构建 **对话管理系统 DMS**：状态 = (dialogue_history, belief_state, execution_context, pending_constraints)；动作 = {confirm, clarify, propose_constraint, negotiate, execute, abort}；奖励 = 任务完成度 - 认知负荷 - 安全风险 - 时延惩罚。关键洞见：**执行证据 EV-exec 进入对话状态**——若执行中出现「滑移」「振动」「力超限」，DMS 自动生成澄清或约束重协商（「检测到滑移，是否降低 K_p？」），实现「执行→语言」的反向接地。
+**灵感 3（场景驱动创新 → SBR 场景银行 + 遗憾驱动的场景课程）**
+直觉：真实交互中的失败与险情是最贵的创新原料。把场景从「预定义集合 Z_scene」升级为**可生长的场景银行**：Mine(EV_exec) 把险情挖成新场景，Mut(·) 变异出复合场景（新材质+湿滑+动态障碍）；以**集群遗憾**（每场景簇相对保守基线的累计损失）为信号，Hedge 指数加权调度语义流重推理频率、MEL 适配采样与仿真生成预算——「场景驱动创新」被形式化为**对场景簇的遗憾最小化**：系统自动把学习力投向最亏钱的场景。
 
-**灵感 4（三灵感合流 → 语义-实时双流架构 SRT-Dual）**
-直觉：MEL 推理慢（~200ms）、ERTC 实时快（~1ms），**不能串行、不能简单并行**，需「语义流-实时流」双流架构：语义流（MEL + DMS + USR）在 ~10-100Hz 运行，产出「语义意图→物理先验→USR 嵌入」；实时流（EEIS + ERTC + CLEP）在 ~1-10kHz 运行，**仅消费 USR 嵌入中的「阻抗先验向量」**，通过轻量投影头投影为 K_safe。两流通过 **USR 中的「语义锚点」同步**：语义流每周期写入 scene_emb/intent_emb，实时流每周期读取并投影；若语义流延迟超阈值，实时流自动回退到「上一有效语义锚点 + 保守扩展」，保证实时性不依赖大模型时序。
+**灵感 4（三灵感合流 → ROSE：鲁棒在线场景进化闭环）**
+三者不是并列而是咬合：场景银行回答「学什么」（curriculum），在线学习回答「怎么学」（regret 保证的更新），鲁棒层回答「学错时怎么办」（CVaR 球兜底，学习漂移永不破坏安全）。闭环：EV_exec → 残差校准 r_t → WCV 编译兜底；EV_exec → 集群遗憾记账 → 场景银行 → 课程调度；EV_exec → OLP/MEL-OA 在线更新 → 下一轮更准。第 61 轮的 ESEC 是「语义-执行的静态闭环」，ROSE 是「学习-鲁棒的动态闭环」。
 
-**灵感 5（PCE+++++ → 五维认知-语义预算）**
-直觉：第 60 轮四维认知预算 B_cog = (B_scene, B_intent, B_ros, B_exec) 缺失「大模型推理预算」「语义对齐预算」。拓展为 **B_cog5 = (B_scene, B_intent, B_ros, B_exec, B_mel, B_usr)**：B_mel = (MEL推理频率、Token预算、KV缓存、不确定性阈值)；B_usr = (对齐迭代次数、表征维度、投影误差容忍)。VOI 扩展：voi_cog5 = VOI_meta - cost_mel - cost_usr - cost_exec；B_mel 耗尽⇒MEL 降级为「轻量蒸馏模型」；B_usr 耗尽⇒冻结 USR 投影头，仅用缓存嵌入。
+**灵感 5（DMS → Shield：对话约束的安全屏蔽）**
+第 61 轮风险 3 的机制化修复：RL 提案约束 c 必须过**凸安全集投影** shield(c) = argmin_{c'∈𝒞_safe(φ̂,r)}‖c'−c‖；投影距离 > δ_shield 则降级为 ask_clarify。安全从「A68 假设」变为「投影算子的不动点性质」——任何经过 Shield 的约束**不可能**违反安全集，与 RL 策略多差无关。
 
-## 1. 形式化定义（增量：定义 161–172）
+**灵感 6（预算 → PCE-OCB：从手调阈值到对抗老虎机）**
+第 61 轮 PCE+++++ 的降级阈值（latency>200ms→蒸馏）是手调的，无法适应非平稳算力（如 GPU 热点时蒸馏模式反而最优）。把「MEL 模式 × 对齐开关」的选择重构为 K 臂对抗老虎机（EXP3），奖励 = 任务进展 − 归一化代价，伪遗憾 O(√(KT log K))——预算调度自身获得在线学习保证。
 
-**定义 161（统一语义表征空间 USR）** 统一语义空间 U = (E, Π, Φ, Ψ, d_us)。其中：
-- **共享嵌入维度**：d_us = 256（可配置），所有语义实体映射至此
-- **场景编码器**：E_scene: Z_scene × Obs → ℝ^d_us，将 (场景标签, 观测) 映射为 scene_emb
-- **意图编码器**：E_intent: I × DialogueHistory → ℝ^d_us，将 (意图, 对话历史) 映射为 intent_emb
-- **阻抗编码器**：E_impedance: K × Cert → ℝ^d_us，将 (阻抗参数, 证书) 映射为 impedance_emb
-- **证据编码器**：E_evidence: EV_exec × Context → ℝ^d_us，将 (执行证据, 上下文) 映射为 evidence_emb
-- **投影头**：Π: ℝ^d_us → K_safe，轻量 MLP（2层，~0.1ms），将 USR 嵌入投影为实时阻抗参数
-- **对齐损失**：ℒ_align = ‖E_impedance(K_safe) - (α·scene_emb + β·intent_emb + γ·evidence_emb)‖²，驱动语义-控制一致性
-- **语义锚点**：Anchor_t = (scene_emb_t, intent_emb_t, timestamp_t, valid_flag_t)，实时流读取的语义快照
+## 1. 形式化定义（增量：定义 173–184）
 
-**定义 162（多模态具身基座模型 MEL）** MEL = (Θ_mel, Enc_v, Enc_t, Enc_p, Enc_l, Dec_phys, Dec_sem, Head_unc)。其中：
-- **视觉编码器**：Enc_v: V → ℝ^d_v（ViT-L/14，冻结骨干，LoRA 微调）
-- **触觉编码器**：Enc_t: T → ℝ^d_t（时序 Conv + Attention，输入力/力矩序列）
-- **本体编码器**：Enc_p: P → ℝ^d_p（MLP，输入关节位置/速度/力矩）
-- **语言编码器**：Enc_l: L → ℝ^d_l（LLM 最后一层 hidden state，或专用文本编码器）
-- **融合器**：CrossAttention([Enc_v, Enc_t, Enc_p, Enc_l, scene_emb_prev, evidence_emb_prev]) → ℝ^d_fused
-- **物理属性解码头**：Dec_phys: ℝ^d_fused → φ_phys = (μ_fric, k_stiff, η_damp, σ_brittle, confidence_phys)
-- **语义解码头**：Dec_sem: ℝ^d_fused → z_scene ∈ ℝ^d_us（场景语义嵌入），π_intact ∈ Δ(A)（交互策略分布）
-- **不确定性头**：Head_unc: ℝ^d_fused → (U_epistemic, U_aleatoric) ∈ ℝ²
-- **推理模式**：全模态 ~200ms；蒸馏模式（仅 Enc_v + Enc_l + 共享融合器）~50ms；缓存模式（复用上一帧 KV）~20ms
+- **定义 173（鲁棒在线场景进化闭环 ROSE）**：ROSE = (USR, MEL, DMS, SRT-Dual, SBR, OLP, WCV, RSC, ARA, Shield, OCB, J_rose)。定位：ESEC 的「在线化 × 鲁棒化 × 场景化」升级，全部新增组件挂在第 61 轮骨架上，不推翻任何既有接口。
+- **定义 174（场景银行 SBR）**：Bank = {(s, meta_s)}，meta_s = (cluster_id, 签名, visit_count, failure_count, regret_acc, 变异谱系)。算子 Mine(EV_exec, anchor) 与 Mut(s)。
+- **定义 175（集群遗憾与 Hedge 调度）**：R_c(T) = Σ_{t∈T_c}(ℓ_t − ℓ_t^ref)，ℓ^ref 为保守基线损失；权重 w_c ∝ exp(η Ĝ_c)，伪遗憾 ≤ √(2T log C)。
+- **定义 176（OLP 在线投影学习）**：K_W(x) = Π_0(x) + h(x)ᵀW，W ∈ 𝒲（凸紧集，保证 K_W(x) ∈ 𝒦）；更新 W_{t+1} = P_𝒲(W_t − η_t g_t)，η_t = D/(G̃√t)。
+- **定义 177（WCV 鲁棒编译）**：ℓ̃_t(W) = sup_{φ∈B(φ̂_t, r_t)} CVaR_ε[ℓ(K_W(x_t); φ)]，ε=0.05 尾部质量；CVaR_ε(Z) = min_β{β + (1/ε)E[(Z−β)_+]}。
+- **定义 178（RSC 残差自校准）**：e_t = ‖J_φ⁺(τ_ext^obs − τ_ext^pred)‖；r_{t+1} = clip((1−β_c)r_t + β_c e_t, r_min, r_max)。
+- **定义 179（ARA 自适应鲁棒锚点）**：Anchor_t = (x_t, φ̂_t, Σ_t, r_t, R̂_c(t), version, checksum)；实时流消费 K_prior = Shrink(Π_W(x_t), κ_φ·r_t)。
+- **定义 180（Shield 对话约束屏蔽）**：shield(c) = argmin_{c'∈𝒞_safe(C_exec, φ̂, r)}‖c'−c‖；dist > δ_shield ⇒ 降级 ask_clarify。
+- **定义 181（OCB 在线预算老虎机）**：臂 = MEL 模式 {full, distill, cached, frozen} × {align on/off}；EXP3 重要性加权，伪遗憾 O(√(KT log K))。
+- **定义 182（MEL-OA 在线适配）**：仅更新 LoRA 子集 θ_A；损失 = CVaR_ε 预测损失 + λ_F·EWC 惩罚 + 银行回放；门控 = (U_ep > τ) ∧ (e_t^exec > τ_res)。
+- **定义 183（ROSE 鲁棒证书 J_rose）**：J_rose = (J_sem_exec, ρ_rob, r_t, R̂_c, ocb_arm, shield_hash, adapter_ver)；Valid ⇔ Valid(J_sem_exec) ∧ ρ_rob ≥ 0 ∧ anchor_fresh ∧ shield_applied。
+- **定义 184（ROSE 闭环算子）**：语义流（10–100Hz，承载全部在线学习与场景记账）∘ 实时流（1–10kHz，**零学习写操作**，只做锚点原子读 + OLP 前向 + WCV 编译）。
 
-**定义 163（执行接地的多轮对话管理 DMS）** DMS = (S, A, P, R, π_dms, B_diag)。其中：
-- **状态空间**：S = (H_diag, b_intent, C_exec, C_pending, U_mel, turn_id)
-  - H_diag: 对话历史 [(speaker, utterance, timestamp, grounded_evidence?)]
-  - b_intent ∈ Δ(I): 意图信念分布（支持多意图共存）
-  - C_exec: 当前执行约束（来自 ERTC 锁定）
-  - C_pending: 待确认/协商的约束提案
-  - U_mel: MEL 不确定性 (U_epistemic, U_aleatoric)
-  - turn_id: 轮次计数
-- **动作空间**：A = {ask_clarify(q), propose_constraint(c), confirm_constraint(c), negotiate(c_old, c_new), execute, abort, wait}
-- **转移模型**：P(s'|s, a) 由 MEL 语义推理 + 规则引擎定义
-- **奖励函数**：R(s,a) = 𝕀[task_complete] - λ_cog·cognitive_load(a) - λ_safe·safety_risk(C_exec) - λ_lat·latency(a)
-- **策略**：π_dms = π_rule ∘ π_rl，规则策略兜底（安全优先），RL 策略优化长期回报
-- **诊断缓冲**：B_diag 记录最近 N=20 轮 (s, a, r, s')，用于在线策略改进与事后审计
-
-**定义 164（语义-实时双流架构 SRT-Dual）** 系统拆分为两个异步流水线：
-- **语义流** SemanticPipeline(f_sem ≈ 10-100Hz)：
-  ① MEL.infer(V, T, P, L, scene_emb_prev, evidence_emb_prev) → (φ_phys, z_scene, π_intact, U)
-  ② DMS.step(H_diag, b_intent, C_exec, U) → (a_diag, C_pending, b_intent')
-  ③ USR.update(scene_emb=z_scene, intent_emb=E_intent(b_intent'), phys_prior=φ_phys)
-  ④ Anchor_t ← USR.commit_snapshot()  # 写入语义锚点，含版本号
-- **实时流** RealtimePipeline(f_rt ≈ 1-10kHz)：
-  ① Anchor_latest ← USR.read_latest_anchor()  # 非阻塞读取
-  ② if Anchor_latest.version > Anchor_cached.version: K_prior ← Π(Anchor_latest.scene_emb + Anchor_latest.intent_emb)
-  ③ K_safe ← EEIS.compile(delta_f_req, fused, ξ_exec, Z_env, K_prior)
-  ④ ERTC.dispatch(K_safe) → 执行
-  ⑤ EV_exec ← build_evidence(...); USR.evidence_buffer.push(E_evidence(EV_exec))
-- **一致性协议**：版本号单调递增；实时流持有 Anchor_cached，若语义流超时 > τ_sem_max（默认 500ms），实时流自动扩展 Anchor_cached 的协方差 Σ_anchor ← Σ_anchor · 1.5（保守扩展）
-
-**定义 165（语义锚点一致性协议 SACP）** 保证语义流与实时流的「语义-控制」一致性：
-- **写入原子性**：USR.commit_snapshot() 以 CAS（Compare-And-Swap）写入共享内存，version++，包含 (scene_emb, intent_emb, phys_prior, timestamp, U_mel, checksum)
-- **读取新鲜度**：实时流读取时检查 (now - anchor.timestamp) < τ_fresh（默认 200ms），否则视为过期
-- **投影误差监控**：实时流周期性计算 e_proj = ‖K_safe - Π(anchor.scene_emb + anchor.intent_emb)‖，若 e_proj > ε_proj 触发「语义-控制漂移」告警，语义流强制重算
-- **回滚机制**：连续 3 次投影误差超标 ⇒ 实时流回退到「上一稳定锚点 + 最大保守扩展」
-
-**定义 166（五维认知-语义预算 B_cog5 与 PCE+++++）** B_cog5 = (B_scene, B_intent, B_ros, B_exec, B_mel, B_usr)。其中：
-- **B_mel** = (Inference_freq, Token_budget, KV_cache_size, Uncertainty_threshold, Distill_fallback)
-- **B_usr** = (Align_iters, Dim_us, Proj_error_tol, Anchor_ttl, Sync_freq)
-- **成本函数扩展**：
-  ```
-  cost_cog5 = λ_scene·Rec_cost + λ_intent·Lat_cost + λ_ros·Msg_cost
-            + λ_mel·(Inference_latency/τ_mel_budget + Token_usage/Token_budget)
-            + λ_usr·(Align_iters/Max_iters + Proj_error/Proj_tol)
-  ```
-- **降级策略**：
-  - B_mel.ops ≥ θ_mel：MEL 切换至蒸馏模式（仅视觉+语言，~50ms）；再耗尽→缓存模式（~20ms）；再耗尽→冻结语义锚点
-  - B_usr.align_iters ≥ θ_usr：冻结投影头 Π，仅用缓存嵌入；USR 对齐损失停止更新
-
-**定义 167（MEL-驱动的场景-物理先验融合 MSPF）** 在 EEIS 编译中融合 MEL 物理先验：
-```
-K_safe^mel = EEIS.compile_with_mel_prior(delta_f_req, φ_phys, U_epistemic, U_aleatoric)
-其中 φ_phys = (μ_fric, k_stiff, η_damp, σ_brittle) 约束阻抗参数空间：
-  K_p ∈ [k_stiff_min, k_stiff_max], K_d ∈ [η_damp_min, η_damp_max]
-  F_max ≤ μ_fric · N_normal · safety_margin
-  若 σ_brittle > τ_brittle：K_p ← K_p · 0.5（脆性材料软化）
-U_epistemic 高 ⇒ 在上述区间内取更保守值（向区间内侧收缩 20%）
-```
-
-**定义 168（执行反馈接地的对话策略 EFGP）** DMS 根据 EV-exec 自动触发对话：
-```
-if EV_exec.slip_detected and not C_pending.has('reduce_Kp'):
-    a = propose_constraint({'K_p': 0.7 * current_K_p, 'reason': 'slip_detected'})
-elif EV_exec.vibration > τ_vib and not C_pending.has('increase_Kd'):
-    a = propose_constraint({'K_d': 1.5 * current_K_d, 'reason': 'vibration_suppression'})
-elif EV_exec.force_exceed and b_intent['light_touch'] > 0.6:
-    a = ask_clarify("检测到力超限，是否改为'轻触'模式？")
-elif U_mel.epistemic > τ_uncertain:
-    a = ask_clarify(f"环境不确定性较高({U_mel.epistemic:.2f})，建议切换保守模式，确认？")
-```
-
-**定义 169（跨模态语义对账 XMC+++）** 升级第 60 轮 XMC+，在 USR 空间进行语义级对账：
-```
-D⁺_sem = ‖scene_emb - E_scene(telemetry)‖ + ‖intent_emb - E_intent(dialogue)‖ 
-        + ‖impedance_emb - E_impedance(K_safe)‖ + ‖evidence_emb - E_evidence(EV_exec)‖
-XMC+++: fused_sem = (scene_emb + intent_emb + impedance_emb + evidence_emb) / 4
-       D⁺_sem 用于触发 MEL 重推理（D⁺_sem > τ_sem ⇒ MEL.infer()）
-       语义一致性分数：C_sem = exp(-D⁺_sem / σ_sem) ∈ [0,1]
-```
-
-**定义 170（语义-执行联合证书 J_sem_exec）** 扩展第 60 轮 J_exec，包含语义一致性证明：
-```
-J_sem_exec = (J_exec, 
-              C_sem,                    # 语义一致性分数
-              anchor_version,           # 语义锚点版本
-              mel_uncertainty,          # MEL 不确定性 (U_ep, U_al)
-              usr_proj_error,           # 投影误差 e_proj
-              dms_policy_hash)          # 对话策略哈希（可审计）
-验证规则：Valid(J_sem_exec) ⇔ Valid(J_exec) ∧ C_sem ≥ τ_csem ∧ e_proj ≤ ε_proj ∧ anchor_fresh
-```
-
-**定义 171（具身语义进化闭环 ESEC）** 统一第 60 轮 SERC 与本轮语义流：
-```
-ESEC(M, V, T, P, L, delta_f_req):
-  # 语义流（异步，~10-100Hz）
-  φ_phys, z_scene, π_intact, U_mel ← MEL.infer(V, T, P, L, M.scene_emb, M.evidence_emb)
-  a_diag, C_pending, b_intent ← DMS.step(M.H_diag, M.b_intent, M.C_exec, U_mel)
-  M.scene_emb ← z_scene
-  M.intent_emb ← E_intent(b_intent)
-  M.phys_prior ← φ_phys
-  M.anchor ← USR.commit(M.scene_emb, M.intent_emb, φ_phys, U_mel)
-  if a_diag ∈ {propose_constraint, confirm_constraint}:
-      M.C_pending.update(C_pending); ERTC.lock_pending(C_pending)
-  
-  # 实时流（同步，~1-10kHz，伪代码展示单步）
-  anchor ← USR.read_latest()
-  if anchor.fresh: K_prior ← Π(anchor.scene_emb + anchor.intent_emb)
-  else: K_prior ← Π(anchor.scene_emb + anchor.intent_emb) expanded_conservative()
-  K_safe ← EEIS.compile(delta_f_req, fused, ξ_exec, Z_env, K_prior, φ_phys)
-  dispatch(K_safe)
-  EV_exec ← wait_contact()
-  M.evidence_emb ← E_evidence(EV_exec)
-  USR.evidence_buffer.push(M.evidence_emb)
-  M.fused_sem, D⁺_sem ← XMC+++(M.scene_emb, M.intent_emb, E_impedance(K_safe), M.evidence_emb)
-  M.J_sem_exec ← build_sem_exec_cert(EV_exec, M.fused_sem, D⁺_sem, anchor.version, U_mel, e_proj)
-  return M, K_safe, EV_exec, M.J_sem_exec
-```
-
-**定义 172（零样本场景泛化 ZSSG）** MEL 的零样本能力形式化：
-- **物理属性零样本推断**：对未见场景 z_new ∉ Z_scene，MEL 从 (V, T, P) 推断 φ_phys = (μ, k, η, σ) 而非分类标签
-- **阻抗先验生成**：π_scene^zssg(K|φ_phys) = N(K; μ_k(φ_phys), Σ_k(φ_phys))，由物理属性解析生成（而非查表）
-- **泛化保证**：若 MEL 在包含材质、几何、动态变化的仿真数据集 D_sim 上训练，且 sim2real gap 经域随机化缩小，则对真实未见场景，物理属性推断误差 ≤ δ_phys（实验目标：μ 误差 < 15%，k 误差 < 20%）
-
-## 2. 关键算法伪代码
-
-### IP-173 USR（统一语义表征空间）
+## 2. 关键算法骨架（完整伪代码见产物区）
 
 ```python
-class UnifiedSemanticRepresentation:
-    def __init__(self, d_us=256, anchor_ttl=0.2):
-        self.d_us = d_us
-        self.anchor_ttl = anchor_ttl
-        self.scene_encoder = SceneEncoder(d_us)
-        self.intent_encoder = IntentEncoder(d_us)
-        self.impedance_encoder = ImpedanceEncoder(d_us)
-        self.evidence_encoder = EvidenceEncoder(d_us)
-        self.projector = ImpedanceProjector(d_us)  # Π: ℝ^d_us -> K_safe
-        
-        # 共享内存锚点（多进程/线程安全）
-        self.anchor_buffer = SharedMemoryAnchor(d_us)
-        self.evidence_buffer = deque(maxlen=100)
-        self.align_optimizer = torch.optim.Adam(self.projector.parameters(), lr=1e-4)
-        
-    def commit_anchor(self, scene_emb, intent_emb, phys_prior, U_mel):
-        anchor = SemanticAnchor(
-            version=self.anchor_buffer.next_version(),
-            scene_emb=scene_emb,
-            intent_emb=intent_emb,
-            phys_prior=phys_prior,
-            U_epistemic=U_mel[0],
-            U_aleatoric=U_mel[1],
-            timestamp=time.time(),
-            checksum=hash((scene_emb, intent_emb, phys_prior))
-        )
-        self.anchor_buffer.write(anchor)  # CAS 写入
-        return anchor
-    
-    def read_latest_anchor(self):
-        anchor = self.anchor_buffer.read_latest()
-        if anchor and (time.time() - anchor.timestamp) < self.anchor_ttl:
-            return anchor, True  # fresh
-        elif anchor:
-            return anchor, False  # stale but usable
-        return None, False  # no anchor
-    
-    def push_evidence(self, ev_exec):
-        ev_emb = self.evidence_encoder.encode(ev_exec)
-        self.evidence_buffer.append(ev_emb)
-    
-    def align_step(self, K_safe, cert, scene_emb, intent_emb, evidence_emb):
-        # 对齐损失：让阻抗编码靠近语义融合
-        target = 0.4 * scene_emb + 0.3 * intent_emb + 0.3 * evidence_emb
-        pred = self.impedance_encoder.encode(K_safe, cert)
-        loss = F.mse_loss(pred, target.detach())
-        self.align_optimizer.zero_grad()
-        loss.backward()
-        self.align_optimizer.step()
-        return loss.item()
-    
-    def project_to_impedance(self, anchor):
-        fused = anchor.scene_emb + anchor.intent_emb
-        K_prior = self.projector(fused)
-        return K_prior
+# OLP：冻结骨干 + 凸修正头（实时前向 <0.05ms，语义流低频更新）
+K_t = clip(Π_0(x_t) + h(x_t)ᵀW_t);  W_{t+1} = P_𝒲(W_t − η_t·∇_W ℓ̃_t)
+# WCV + RSC：偏差驱动的鲁棒兜底
+ℓ̃_t = sup_{φ∈B(φ̂_t, r_t)} CVaR_ε[ℓ(K_t;φ)];  r_{t+1} = EWMA(‖J_φ⁺·resid_t‖)
+# SBR + Hedge：场景驱动课程
+w_c ∝ exp(η·Ĝ_c);  预算 ∝ w_c（重推理/适配采样/仿真生成）
 ```
 
-### IP-174 MEL（多模态具身基座模型）
+## 3. 保证概要与推导要点（完整推导见产物区）
 
-```python
-class MultimodalEmbodiedLLM:
-    def __init__(self, d_us=256, use_lora=True, distill=False):
-        self.d_us = d_us
-        self.distill = distill
-        
-        # 编码器
-        self.enc_v = VisionEncoder(freeze_backbone=True, lora=use_lora)  # ViT-L/14
-        self.enc_t = TactileEncoder(d_model=256, n_layers=3)  # 时序触觉
-        self.enc_p = ProprioEncoder(d_model=128)  # 本体感受
-        self.enc_l = LanguageEncoder()  # LLM 最后层或专用编码器
-        
-        # 跨模态融合
-        self.fusion = CrossModalFusion(d_model=512, n_heads=8, n_layers=4)
-        
-        # 解码头
-        self.dec_phys = PhysicalPropertyHead(d_in=512, d_out=5)  # μ, k, η, σ, conf
-        self.dec_sem = SemanticHead(d_in=512, d_out=d_us)  # scene_emb
-        self.dec_policy = PolicyHead(d_in=512, d_out=10)  # 交互策略分布
-        self.head_unc = UncertaintyHead(d_in=512, d_out=2)  # U_ep, U_al
-        
-        # KV 缓存用于加速
-        self.kv_cache = None
-        
-    def infer(self, V, T, P, L, scene_emb_prev=None, evidence_emb_prev=None):
-        # 编码各模态
-        v_feat = self.enc_v(V)  # [1, d_v]
-        t_feat = self.enc_t(T)  # [1, d_t]
-        p_feat = self.enc_p(P)  # [1, d_p]
-        l_feat = self.enc_l(L)  # [1, d_l]
-        
-        # 融合（含历史语义锚点）
-        fusion_input = [v_feat, t_feat, p_feat, l_feat]
-        if scene_emb_prev is not None:
-            fusion_input.append(scene_emb_prev.unsqueeze(0))
-        if evidence_emb_prev is not None:
-            fusion_input.append(evidence_emb_prev.unsqueeze(0))
-        
-        fused = self.fusion(fusion_input, kv_cache=self.kv_cache)  # [1, 512]
-        
-        # 解码
-        phi_phys = self.dec_phys(fused)      # [μ_fric, k_stiff, η_damp, σ_brittle, conf_phys]
-        z_scene = self.dec_sem(fused)        # [d_us]
-        pi_intact = self.dec_policy(fused)   # [n_actions]
-        U_ep, U_al = self.head_unc(fused)    # 不确定性
-        
-        # 更新 KV 缓存
-        if self.fusion.kv_cache is not None:
-            self.kv_cache = self.fusion.kv_cache
-        
-        return phi_phys, z_scene, pi_intact, (U_ep.item(), U_al.item())
-    
-    def distill_infer(self, V, L):
-        """蒸馏模式：仅视觉+语言，共享融合器前层"""
-        v_feat = self.enc_v(V)
-        l_feat = self.enc_l(L)
-        fused = self.fusion.distill_forward([v_feat, l_feat])
-        return self.dec_phys(fused), self.dec_sem(fused), self.head_unc(fused)
-    
-    def cached_infer(self):
-        """缓存模式：复用上一帧 KV，仅更新语言"""
-        if self.kv_cache is None:
-            return None
-        fused = self.fusion.cached_forward(self.kv_cache)
-        return self.dec_phys(fused), self.dec_sem(fused), self.head_unc(fused)
-```
+- **引理 1（凸性）**：ℓ 对 K 凸且 G-Lipschitz（A71），K_W 对 W 仿射，CVaR_ε 是 min_β 的联合凸表示 ⇒ E[(Z−β)_+] 对 (K,β) 联合凸，min_β 保持凸；再对球取 sup（凸函数族的逐点上确界）⇒ ℓ̃_t(W) 凸。
+- **定理 1（鲁棒遗憾界）**：‖∇_W ℓ̃_t‖ ≤ G̃ = G·L_h·(1+κ_φ·r_max)；OGD 取 η_t = D/(G̃√t) ⇒ R_T = Σℓ̃_t(W_t) − min_W Σℓ̃_t(W) ≤ D·G̃·√T（完整平方和推导见产物区）。
+- **引理 2（偏差免疫）**：若 RSC 校准使 P[φ* ∈ B(φ̂_t, r_t)] ≥ 1−α_cal，则 WCV 编译的 K_safe 在真实 φ* 下安全概率 ≥ 1−α_cal——**系统性偏差被球覆盖，而非被假设消除**。
+- **动态遗憾**：非平稳比较器下 R_T^dyn ≤ D·G̃·√T + 2D·G̃·P_T（P_T 为最优轨迹路径长度）；环境漂移快于 √T 时界变松，由 Hedge 集群调度补偿（已声明的理论缝隙）。
+- **实时性**：实时路径无任何在线学习写操作（A75），保持第 61 轮 ≤1ms 契约。
 
-### IP-175 DMS（执行接地的多轮对话管理）
+## 4. 实验概览（完整设计见产物区 E201–E210）
 
-```python
-class DialogueManagementSystem:
-    def __init__(self, ertc, mel, usr, max_turns=20):
-        self.ertc = ertc
-        self.mel = mel
-        self.usr = usr
-        self.max_turns = max_turns
-        
-        # 状态
-        self.H_diag = []  # [(speaker, text, ts, grounded_ev?)]
-        self.b_intent = np.ones(5) / 5  # slow, speed, light, stable, danger
-        self.C_exec = {}  # 当前锁定约束
-        self.C_pending = {}  # 待确认约束
-        self.turn_id = 0
-        self.diag_buffer = []  # (s, a, r, s')
-        
-        # 规则策略（安全兜底）
-        self.rule_policy = RuleBasedDialoguePolicy()
-        # RL 策略（可选，离线训练）
-        self.rl_policy = None
-        
-    def step(self, U_mel):
-        # 1. 状态编码
-        s = self._encode_state(U_mel)
-        
-        # 2. 策略选择：规则优先（安全），RL 优化（效率）
-        a_rule = self.rule_policy.select(s, self.C_exec, self.C_pending)
-        if self.rl_policy and self.turn_id > 5:  # 预热后启用 RL
-            a_rl = self.rl_policy.select(s)
-            a = self._merge_actions(a_rule, a_rl)
-        else:
-            a = a_rule
-        
-        # 3. 执行动作
-        reward, info = self._execute_action(a)
-        
-        # 4. 记录转移
-        s_next = self._encode_state(U_mel)
-        self.diag_buffer.append((s, a, reward, s_next))
-        if len(self.diag_buffer) > 100:
-            self.diag_buffer.pop(0)
-        
-        self.turn_id += 1
-        return a, self.C_pending, self.b_intent
-    
-    def _encode_state(self, U_mel):
-        return DialogueState(
-            H_diag=self.H_diag[-10:],  # 最近 10 轮
-            b_intent=self.b_intent.copy(),
-            C_exec=self.C_exec.copy(),
-            C_pending=self.C_pending.copy(),
-            U_epistemic=U_mel[0],
-            U_aleatoric=U_mel[1],
-            turn_id=self.turn_id
-        )
-    
-    def _execute_action(self, action):
-        if action.type == 'ask_clarify':
-            self.H_diag.append(('robot', action.question, time.time(), None))
-            return -0.1, {}  # 认知负荷惩罚
-        elif action.type == 'propose_constraint':
-            self.C_pending[action.constraint_id] = action.constraint
-            self.H_diag.append(('robot', f"建议: {action.reason}", time.time(), None))
-            return 0.0, {}
-        elif action.type == 'confirm_constraint':
-            cid = action.constraint_id
-            if cid in self.C_pending:
-                self.C_exec[cid] = self.C_pending.pop(cid)
-                self.ertc.lock_constraints(self.C_exec[cid])
-            return 0.5, {}
-        elif action.type == 'negotiate':
-            # 协商逻辑：调整约束参数
-            return 0.0, {}
-        elif action.type == 'execute':
-            return 1.0, {'task_complete': True}
-        elif action.type == 'abort':
-            return -1.0, {'aborted': True}
-        return 0.0, {}
-    
-    def receive_user_utterance(self, text, timestamp):
-        # 语义解析更新信念（简化：关键词匹配，实际接入 NLU）
-        intent_scores = self._parse_intent(text)
-        self.b_intent = 0.7 * self.b_intent + 0.3 * intent_scores
-        self.H_diag.append(('user', text, timestamp, None))
-    
-    def ground_execution_feedback(self, EV_exec):
-        """执行反馈接地：根据 EV-exec 自动触发对话动作"""
-        actions = []
-        if EV_exec.slip_detected and 'reduce_Kp' not in self.C_pending:
-            actions.append(DialogueAction('propose_constraint', 
-                constraint={'K_p': 0.7 * self.C_exec.get('K_p', 1.0)},
-                reason='slip_detected', constraint_id='reduce_Kp'))
-        if EV_exec.vibration > 0.5 and 'increase_Kd' not in self.C_pending:
-            actions.append(DialogueAction('propose_constraint',
-                constraint={'K_d': 1.5 * self.C_exec.get('K_d', 1.0)},
-                reason='vibration_suppression', constraint_id='increase_Kd'))
-        if EV_exec.force_exceed and self.b_intent[2] > 0.6:  # light_touch index
-            actions.append(DialogueAction('ask_clarify',
-                question="检测到力超限，是否切换到'轻触'模式？"))
-        if U_mel.epistemic > 0.7:
-            actions.append(DialogueAction('ask_clarify',
-                question=f"环境不确定性高({U_mel.epistemic:.2f})，建议保守模式，确认？"))
-        return actions
-```
-
-### IP-176 SRT-Dual（语义-实时双流架构）
-
-```python
-class SemanticRealtimeDualFlow:
-    def __init__(self, mel, dms, usr, eeis, ertc, budget):
-        self.mel = mel
-        self.dms = dms
-        self.usr = usr
-        self.eeis = eeis
-        self.ertc = ertc
-        self.budget = budget
-        
-        # 语义流线程
-        self.semantic_thread = None
-        self.running = False
-        
-        # 实时流状态
-        self.anchor_cached = None
-        self.K_prior_cached = None
-        self.semantic_timeout = 0.5  # 500ms
-        self.last_semantic_update = 0
-        
-    def start(self):
-        self.running = True
-        self.semantic_thread = threading.Thread(target=self._semantic_loop, daemon=True)
-        self.semantic_thread.start()
-    
-    def _semantic_loop(self):
-        """语义流：~10-100Hz，运行 MEL + DMS + USR 更新"""
-        while self.running:
-            start = time.time()
-            
-            # 获取最新观测
-            V, T, P = get_latest_multimodal_obs()
-            L = get_latest_user_utterance()  # 可能为空
-            
-            # MEL 推理（根据预算选择模式）
-            if self.budget.is_mel_budget_exhausted():
-                phi_phys, z_scene, pi_intact, U = self.mel.cached_infer()
-                if phi_phys is None:
-                    phi_phys, z_scene, pi_intact, U = self.mel.distill_infer(V, L)
-            else:
-                phi_phys, z_scene, pi_intact, U = self.mel.infer(
-                    V, T, P, L, 
-                    self.usr.anchor_buffer.read_latest().scene_emb if self.usr.anchor_buffer.read_latest() else None,
-                    self.usr.evidence_buffer[-1] if self.usr.evidence_buffer else None
-                )
-            
-            # DMS 步进
-            a_diag, C_pending, b_intent = self.dms.step(U)
-            
-            # USR 更新
-            intent_emb = self.usr.intent_encoder.encode(b_intent)
-            self.usr.commit_anchor(z_scene, intent_emb, phi_phys, U)
-            
-            # 处理对话动作
-            for action in a_diag if isinstance(a_diag, list) else [a_diag]:
-                if action.type in ('propose_constraint', 'confirm_constraint'):
-                    self.ertc.lock_pending(action.constraint)
-            
-            self.last_semantic_update = time.time()
-            
-            # 频率控制
-            elapsed = time.time() - start
-            target_period = 0.1  # 10Hz 基准
-            if elapsed < target_period:
-                time.sleep(target_period - elapsed)
-    
-    def realtime_step(self, delta_f_req, fused, xi_exec, Z_env):
-        """实时流：~1-10kHz，仅消费 USR 锚点"""
-        # 读取最新语义锚点
-        anchor, fresh = self.usr.read_latest_anchor()
-        
-        if anchor is None:
-            # 无锚点：纯保守编译
-            K_safe = self.eeis.compile(delta_f_req, fused, xi_exec, Z_env)
-        elif fresh:
-            # 新鲜锚点：投影 + 编译
-            K_prior = self.usr.project_to_impedance(anchor)
-            K_safe = self.eeis.compile_with_prior(delta_f_req, fused, xi_exec, Z_env, K_prior, anchor.phys_prior)
-            self.anchor_cached = anchor
-            self.K_prior_cached = K_prior
-        else:
-            # 过期锚点：保守扩展
-            if self.anchor_cached is not None:
-                K_prior_expanded = self._conservative_expand(self.K_prior_cached)
-                K_safe = self.eeis.compile_with_prior(delta_f_req, fused, xi_exec, Z_env, K_prior_expanded, self.anchor_cached.phys_prior)
-            else:
-                K_safe = self.eeis.compile(delta_f_req, fused, xi_exec, Z_env)
-        
-        # 派发执行
-        cert = self.ertc.dispatch(K_safe)
-        
-        # 等待接触并构建证据
-        EV_exec = wait_contact_and_build_evidence()
-        
-        # 更新 USR 证据缓冲
-        self.usr.push_evidence(EV_exec)
-        
-        # 对齐步进（异步或低频）
-        if self.budget.can_align():
-            scene_emb = anchor.scene_emb if anchor else self.usr.anchor_buffer.read_latest().scene_emb
-            intent_emb = anchor.intent_emb if anchor else self.usr.anchor_buffer.read_latest().intent_emb
-            evidence_emb = self.usr.evidence_encoder.encode(EV_exec)
-            self.usr.align_step(K_safe, cert, scene_emb, intent_emb, evidence_emb)
-        
-        return K_safe, EV_exec, cert
-    
-    def _conservative_expand(self, K_prior):
-        """保守扩展：增加协方差，向安全区收缩"""
-        K_expanded = K_prior.copy()
-        K_expanded['K_p'] *= 0.8  # 降低刚度
-        K_expanded['K_d'] *= 1.2  # 增加阻尼
-        K_expanded['F_max'] *= 1.1  # 增加力容限
-        return K_expanded
-```
-
-### IP-177 PCE+++++（五维认知-语义预算）
-
-```python
-class CognitiveSemanticBudget:
-    def __init__(self, 
-                 scene_ops=100, intent_ops=50, ros_retry=3, 
-                 exec_budget=None,
-                 mel_freq=10, mel_tokens=2048, mel_kv_cache=512, mel_unc_thresh=0.7,
-                 usr_align_iters=5, usr_dim=256, usr_proj_tol=0.1):
-        # 继承第 60 轮四维
-        self.B_scene_ops = scene_ops
-        self.B_intent_ops = intent_ops
-        self.B_ros_retry = ros_retry
-        self.B_exec = exec_budget or ExecBudget()
-        
-        # 新增：MEL 预算
-        self.B_mel_freq = mel_freq  # Hz
-        self.B_mel_tokens = mel_tokens
-        self.B_mel_kv_cache = mel_kv_cache
-        self.B_mel_unc_thresh = mel_unc_thresh
-        self.mel_ops = 0
-        self.mel_mode = 'full'  # full, distill, cached, frozen
-        
-        # 新增：USR 预算
-        self.B_usr_align_iters = usr_align_iters
-        self.B_usr_dim = usr_dim
-        self.B_usr_proj_tol = usr_proj_tol
-        self.usr_align_count = 0
-        self.usr_frozen = False
-        
-    def is_mel_budget_exhausted(self) -> bool:
-        return self.mel_ops >= self.B_mel_freq * 10  # 10秒窗口
-    
-    def can_align(self) -> bool:
-        return not self.usr_frozen and self.usr_align_count < self.B_usr_align_iters
-    
-    def mel_step(self, mode_latency_ms):
-        self.mel_ops += 1
-        if mode_latency_ms > 200:  # 全模态超时
-            self.mel_mode = 'distill'
-        elif mode_latency_ms > 50:  # 蒸馏超时
-            self.mel_mode = 'cached'
-        elif self.mel_ops > self.B_mel_freq * 5:
-            self.mel_mode = 'frozen'
-    
-    def usr_align_step(self, proj_error):
-        self.usr_align_count += 1
-        if proj_error > self.B_usr_proj_tol * 2:
-            self.usr_frozen = True
-    
-    def get_mel_mode(self) -> str:
-        return self.mel_mode
-    
-    def voi_cog5(self, action) -> float:
-        base_voi = self.voi_meta_pessimistic(action)
-        cost = 0
-        if action.type == 'scene_recognize': cost += 0.1
-        elif action.type == 'intent_infer': cost += 0.2
-        elif action.type == 'ros_message': cost += 0.05
-        elif action.type == 'mel_infer': cost += 0.3 * (action.latency / 200)
-        elif action.type == 'usr_align': cost += 0.1 * (action.iters / self.B_usr_align_iters)
-        return base_voi - cost - self.cost_exec(action)
-```
-
-## 3. 复杂度与正确性
-
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| USR | O(d_us) 编码/投影 | O(d_us × N_anchors) | 投影误差 ≤ ε_proj，对齐收敛 ≤ 50 迭代 |
-| MEL | Full: ~200ms / Distill: ~50ms / Cached: ~20ms | ~2GB (ViT-L + LLM) / ~500MB (蒸馏) | 物理属性推断 μ误差<15%，k误差<20%（零样本） |
-| DMS | O(1) 轮次 | O(N_turns) | 任务完成率 ≥ 90%，澄清轮次 ≤ 3 |
-| SRT-Dual | 语义流 10-100Hz / 实时流 1-10kHz | 共享内存 ~10MB | 实时流不阻塞 > 1ms；语义锚点新鲜度 ≥ 95% |
-| PCE+++++ | O(1) 预算检查 | O(1) | 任一预算耗尽触发对应降级，安全不降级 |
-
-**正确性定理（ESEC-Complete）**：
-假设 A61–A65 及 **(A66)** USR：投影头 Π 为 Lipschitz 连续，‖Π(x) - Π(y)‖ ≤ L‖x-y‖；对齐损失 ℒ_align 在凸集上收敛到 ε_align-驻点。**(A67)** MEL：物理属性解码头在仿真域训练，经域随机化满足 sim2real gap ≤ δ_sim2real；不确定性头校准良好（ECE ≤ 0.05）。**(A68)** DMS：规则策略保证安全性（不会提出违反 ERTC 的约束）；RL 策略在规则约束子空间内优化。**(A69)** SRT-Dual：实时流读取语义锚点为非阻塞原子操作；语义流写入为 CAS 原子操作；版本号单调递增保证无撕裂读。**(A70)** PCE+++++：六维预算单调消耗，降级策略保证安全不退化（B_mel 耗尽→蒸馏→缓存→冻结锚点；B_usr 耗尽→冻结投影头）。
-
-则：
-1. **语义-控制一致性**：若 anchor_fresh ∧ e_proj ≤ ε_proj，则 K_safe ∈ Π(USR_fused) 的 ε_proj-邻域，语义意图在控制层得到忠实执行。
-2. **实时性保证**：实时流周期 ≤ 1ms（不含 EEIS 优化），不依赖 MEL 推理时序；语义流延迟超时自动触发保守扩展。
-3. **零样本泛化**：对未见场景，MEL 推断 φ_phys 误差 ≤ δ_phys ⇒ EEIS 编译的 K_safe 包含真实安全阻抗的 1-α 概率。
-4. **对话-执行接地**：DMS 根据 EV-exec 自动触发澄清/协商，闭环收敛轮次 ≤ 3，任务完成率 ≥ 90%。
-5. **预算安全性**：任一 B_cog5 维度耗尽，触发对应安全降级，不违反 ERTC 实时契约。
-
-## 4. 实验设计 E192–E200
-
-| 实验 | 指标 | 目标 |
+| 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E192 USR | 投影误差 e_proj 分位；对齐收敛迭代数 | P95 ≤ 0.05；≤ 50 迭代 |
-| E193 MEL | 零样本物理属性推断误差 (μ, k, η, σ) | μ<15%，k<20%，η<25%，σ<30% |
-| E194 DMS | 任务完成率；平均澄清轮次；安全违规率 | ≥ 90%；≤ 3 轮；= 0% |
-| E195 SRT-Dual | 实时流周期抖动；语义锚点新鲜度；保守扩展触发率 | ≤ 0.2ms 抖动；≥ 95%；≤ 5% |
-| E196 PCE+++++ | 六维预算耗尽触发降级正确性；VOI 单调性 | 100% 正确触发；单调递减 |
-| E197 XMC+++ | 语义一致性分数 C_sem 与任务成功率相关性 | ρ ≥ 0.8 |
-| E198 J_sem_exec | 证书验证通过率；审计追溯完整性 | ≥ 99.9%；100% |
-| E199 ZSSG | 未见场景（新材质/复合地形）下的执行成功率 | ≥ 80%（vs 第 60 轮 40%） |
-| E200 端到端 | vs 第 60 轮：场景适应时间、对话轮次、零样本成功率、实时抖动 | -50% 适应时间；-40% 对话轮次；+40% 零样本；抖动 ≤ 0.2ms |
+| E201 OLP | 遗憾是否 √T 增长 | log-log 斜率 ≈ 0.5 |
+| E202 WCV vs 点估计 | 注入 μ 低估 20% 系统偏差 | 力超限率 0%（点估计对照 >40%） |
+| E203 RSC | 球半径是否覆盖真实偏差 | 覆盖率 ≥ 1−α_cal |
+| E204 Hedge 课程 | 场景驱动是否加速适应 | 最难簇适应时间 −40% |
+| E205 MEL-OA | 在线适配 vs 遗忘 | 适配后成功率 +25%，bank 回测损失增幅 ≤5% |
+| E206 Shield | RL 提案安全拦截 | 拦截率 100%，完成率不降 |
+| E207 OCB | vs oracle 模式切换 | regret gap ≤ 10% |
+| E208 J_rose | 证书完整性 | 通过率 ≥99.9%，审计 100% |
+| E209 端到端 vs 第 61 轮 | 非平稳+偏差场景 | 非平稳成功率 +30%，偏差场景违规 =0 |
+| E210 压力测试 | 语义流死亡 60s | 实时流安全运行，ρ_rob > 0 |
 
 ## 5. 本轮最大风险
 
-**一句话**：若 MEL 在零样本场景下物理属性推断系统性偏差（如普遍低估摩擦系数）、或 USR 对齐损失陷入坏的局部最优导致语义-控制持续漂移、或 DMS 规则策略与 RL 策略冲突提出不安全约束、或 SRT-Dual 语义锚点版本号回绕/撕裂读，将导致「大模型高度自信、实时控制灾难性失效」的**语义-现实鸿沟**；必须以「MEL 不确定性量化校准 + USR 投影误差实时监控 + DMS 规则策略硬约束优先 + SRT-Dual 版本号 64 位单调 + SACP 三重一致性检验」构建**语义安全护栏**，确保「语义先行」永不跨越「执行安全」红线。
+**一句话**：若灵敏度 Jacobian J_φ 病态、或外力矩残差被控制回路自身吸收（真实物理偏差不体现在残差中），RSC 将系统性低估球半径 r_t，CVaR 球「覆盖失效」，WCV 的鲁棒保证从「可证明的安全护栏」退化为「纸面保证」——这是本轮所有安全论证共同依赖的单点假设。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 61 轮产物 · 创新点清单 v2：ESEC（具身语义进化闭环：统一语义表征×具身大模型×多轮对话管理×语义-实时双流，USR×MEL×DMS×SRT-Dual×PCE+++++）
+# 第 62 轮产物 · 创新点清单 v2：ROSE（鲁棒在线场景进化闭环：在线学习遗憾保证 × Wasserstein-CVaR 鲁棒编译 × 场景银行遗憾课程，OLP×WCV×RSC×ARA×SBR×SHC×MEL-OA×Shield×OCB）
 
-> 承接第 60 轮 IP-153~160（SGEC：SSM×CIEC×EPIR×SERC×PCE++++×SIC×CESC×EPIR-Protocol）。本轮实现 **「技术融合」向「表征对齐」跃迁**：引入统一语义表征空间 USR 打通场景/意图/阻抗/证据的向量空间运算；具身多模态大模型 MEL 提供零样本物理属性推断与语义嵌入；执行接地的多轮对话管理 DMS 实现信念跟踪、澄清协商、执行反馈接地；语义-实时双流架构 SRT-Dual 解耦大模型推理与实时控制时序；PCE+++++ 拓展六维认知-语义预算。实现 **「语义统一表征、大模型零样本泛化、对话多轮接地、双流时序解耦、预算六维兜底」**。
+> 承接第 61 轮 IP-173~182（ESEC：USR×MEL×DMS×SRT-Dual×PCE+++++×MSPF×EFGP×XMC+++×J_sem_exec）。本轮不做推翻，而是给 ESEC 补上三个缺失的动力学维度：**在线学习**（对齐从离线训练变为带遗憾界的持续学习）、**鲁棒性**（从「假设校准良好」变为「偏差驱动的 CVaR 球兜底」）、**场景驱动创新**（从「预定义场景集」变为「遗憾记账驱动的可生长场景银行」）。实现 **「投影在线可学、偏差免疫可证、场景自驱生长、对话安全可屏蔽、预算调度可对抗」**。
 
-> IP 编号：IP-173~IP-182（共 10 个），新增具身语义进化闭环 6 项核心能力。
+> IP 编号：IP-183~IP-192（共 10 个），全部为第 61 轮组件的原位升级或挂载式新增。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进 |
+| 编号 | 名称 | 类型 | 关键改进（相对第 61 轮） |
 |---|---|---|---|
-| IP-173 | USR Unified Semantic Representation | 新增 | 共享嵌入空间 ℝ^d_us、场景/意图/阻抗/证据编码器、轻量投影头 Π、对齐损失 ℒ_align、语义锚点 CAS 写入 |
-| IP-174 | MEL Multimodal Embodied LLM | 新增 | 视觉/触觉/本体/语言四模态编码器、跨模态融合器、物理属性解码头、语义解码头、不确定性头、三级推理模式 |
-| IP-175 | DMS Dialogue Management System | 升级 IP-154 | 信念跟踪 b_intent、规则+RL 混合策略、执行反馈接地 EFGP、诊断缓冲、多轮澄清/协商 |
-| IP-176 | SRT-Dual Semantic-Realtime Dual Flow | 新增 | 语义流(~10-100Hz) + 实时流(~1-10kHz)、非阻塞锚点读写、保守扩展回退、版本号单调同步 |
-| IP-177 | PCE+++++ Probe-Commit-Evolve-Cognitive-Semantic | 升级 IP-157 | 六维预算 B_cog5、MEL 模式自适应、USR 对齐预算、VOI 扩展 cost_cog5 |
-| IP-178 | MSPF MEL-driven Scene-Physics Prior Fusion | 新增 | EEIS 编译融合 φ_phys 物理约束、不确定性驱动保守收缩、脆性材料软化 |
-| IP-179 | EFGP Execution-Feedback Grounded Policy | 新增 | EV-exec 触发自动澄清/协商、滑移/振动/力超限/高不确定性四类触发规则 |
-| IP-180 | XMC+++ Cross-Modal Semantic Reconciliation | 升级 IP-155/159 | USR 空间语义级对账 D⁺_sem、语义一致性分数 C_sem、触发 MEL 重推理 |
-| IP-181 | J_sem_exec Semantic-Execution Joint Certificate | 升级 IP-151 | 语义一致性分数、锚点版本、MEL 不确定性、投影误差、对话策略哈希 |
-| IP-182 | ESEC Embodied Semantic Evolution Loop | 升级 IP-156 | 语义流/实时流统一闭环、MEL→USR→Π→EEIS→执行→EV-exec→USR→XMC+++→MEL |
+| IP-183 | OLP Online Learning Projector | 升级 IP-173 的 Π | 冻结骨干 Π_0 + 凸修正头 W·h(x)，OGD 更新，遗憾界 D·G̃·√T |
+| IP-184 | WCV Wasserstein-CVaR Compile | 升级 IP-178 MSPF | 球内最坏 φ 的 CVaR_ε 编译，尾部安全而非均值安全 |
+| IP-185 | RSC Residual Self-Calibration | 新增 | 执行残差 → J_φ⁺ 反演 → EWMA 球半径，偏差驱动 |
+| IP-186 | ARA Adaptive Robust Anchor | 升级 SACP 锚点 | 锚点携带 (Σ_t, r_t, R̂_c)，r_t 驱动保守收缩取代固定 ×0.8/×1.2 |
+| IP-187 | SBR Scenario Bank & Regret Mining | 新增 | 险情挖掘 Mine、变异 Mut、集群遗憾账本 |
+| IP-188 | SHC Hedge Scenario Curriculum | 新增 | 指数加权场景簇调度：重推理频率/适配采样/仿真生成预算 |
+| IP-189 | MEL-OA MEL Online Adaptation | 升级 IP-174 | 不确定性门控 LoRA 在线适配 + EWC + 银行回放防遗忘 |
+| IP-190 | DSL Dialogue Safety Shield | 升级 IP-175 DMS | 凸安全集投影硬保证，RL 提案先过屏蔽再入 ERTC |
+| IP-191 | OCB Online Confidence-Bandit Budget | 升级 IP-177 PCE+++++ | EXP3 调度 MEL 模式 × 对齐开关，伪遗憾 O(√(KT log K)) |
+| IP-192 | ROSE Robust Online Scenario Evolution Loop | 升级 IP-182 ESEC | 语义流承载全部学习，实时流零学习写操作 + J_rose 证书 |
 
-## 1. 符号体系增量（定义 161–172）
+## 1. 符号体系增量（定义 173–184）
 
 | 符号 | 含义 |
 |---|---|
-| `U = (E, Π, Φ, Ψ, d_us)` | 统一语义表征空间 |
-| `d_us = 256` | 共享嵌入维度 |
-| `E_scene: Z_scene × Obs → ℝ^d_us` | 场景编码器 |
-| `E_intent: I × DialogueHistory → ℝ^d_us` | 意图编码器 |
-| `E_impedance: K × Cert → ℝ^d_us` | 阻抗编码器 |
-| `E_evidence: EV_exec × Context → ℝ^d_us` | 证据编码器 |
-| `Π: ℝ^d_us → K_safe` | 轻量投影头（2层 MLP，~0.1ms） |
-| `ℒ_align = ‖E_impedance(K_safe) - (α·scene_emb + β·intent_emb + γ·evidence_emb)‖²` | 对齐损失 |
-| `Anchor_t = (scene_emb, intent_emb, phys_prior, ts, version, U, checksum)` | 语义锚点 |
-| `MEL = (Θ, Enc_v, Enc_t, Enc_p, Enc_l, Dec_phys, Dec_sem, Head_unc)` | 多模态具身基座模型 |
-| `φ_phys = (μ_fric, k_stiff, η_damp, σ_brittle, conf_phys)` | 物理属性推断 |
-| `U_epistemic, U_aleatoric` | 认知/偶然不确定性 |
-| `DMS = (S, A, P, R, π_dms, B_diag)` | 多轮对话管理系统 |
-| `S = (H_diag, b_intent, C_exec, C_pending, U_mel, turn_id)` | 对话状态 |
-| `A = {ask_clarify, propose_constraint, confirm, negotiate, execute, abort, wait}` | 对话动作 |
-| `R = 𝕀[complete] - λ_cog·load - λ_safe·risk - λ_lat·latency` | 奖励函数 |
-| `SRT-Dual = (SemanticPipeline, RealtimePipeline, SACP)` | 语义-实时双流架构 |
-| `B_cog5 = (B_scene, B_intent, B_ros, B_exec, B_mel, B_usr)` | 六维认知-语义预算 |
-| `B_mel = (Freq, Tokens, KV_Cache, Unc_Thresh, Distill_Fallback)` | MEL 预算 |
-| `B_usr = (Align_Iters, Dim_us, Proj_Tol, Anchor_TTL, Sync_Freq)` | USR 预算 |
-| `cost_cog5 = λ_scene·Rec + λ_intent·Lat + λ_ros·Msg + λ_mel·Mel_Cost + λ_usr·Usr_Cost` | 扩展认知成本 |
-| `K_safe^mel = EEIS.compile_with_mel_prior(δ_f, φ_phys, U_ep, U_al)` | MEL 物理先验融合编译 |
-| `D⁺_sem = ‖scene_emb - E_scene(tele)‖ + ‖intent_emb - E_intent(diag)‖ + ‖imp_emb - E_imp(K)‖ + ‖ev_emb - E_ev(EV)‖` | 语义级分歧度 |
-| `C_sem = exp(-D⁺_sem / σ_sem)` | 语义一致性分数 |
-| `J_sem_exec = (J_exec, C_sem, anchor_ver, U_mel, e_proj, π_dms_hash)` | 语义-执行联合证书 |
-| `ESEC = SemanticPipeline ∘ RealtimePipeline` | 具身语义进化闭环算子 |
-| `π_scene^zssg(K|φ_phys) = N(K; μ_k(φ_phys), Σ_k(φ_phys))` | 零样本场景阻抗先验 |
+| `ROSE = (USR, MEL, DMS, SRT-Dual, SBR, OLP, WCV, RSC, ARA, Shield, OCB, J_rose)` | 鲁棒在线场景进化闭环 |
+| `K_W(x) = Π_0(x) + h(x)ᵀW` | 在线投影头：冻结基座 + 冻结特征 h + 凸参数 W |
+| `𝒲 = {W : ‖W‖_F ≤ D, K_W(x) ∈ 𝒦, ∀x∈𝒳_obs}` | 凸紧参数集（区间算术校验） |
+| `ℓ_t = ℓ(K_t; φ_t*)` | 执行损失：跟踪误差+滑移+力超限+能耗（由 EV_exec 可测） |
+| `ℓ̃_t(W) = sup_{φ∈B(φ̂_t, r_t)} CVaR_ε[ℓ(K_W(x_t); φ)]` | Wasserstein-CVaR 鲁棒损失 |
+| `CVaR_ε(Z) = min_β { β + (1/ε)·E[(Z−β)_+] }` | 最坏 ε 分位均值（ε=0.05，Rockafellar-Uryasev 表示） |
+| `resid_t = τ_ext^obs − τ_ext^pred(φ̂_t, K_t)` | 执行外力矩残差 |
+| `e_t = ‖J_φ⁺ · resid_t‖` | 残差反演到物理参数空间（J_φ：φ→τ_ext 局部灵敏度） |
+| `r_{t+1} = clip((1−β_c)·r_t + β_c·e_t, r_min, r_max)` | RSC 球半径 EWMA 自校准 |
+| `Anchor_t = (x_t, φ̂_t, Σ_t, r_t, R̂_c(t), version, checksum)` | ARA 自适应鲁棒锚点 |
+| `Shrink(K, κ_φ·r_t)` | r_t 驱动的安全内收缩（κ_φ：安全约束对 φ 的灵敏度上界） |
+| `Bank = {(s, meta_s)}`，`meta_s = (cluster_id, sig, n_vis, n_fail, R̂_c, lineage)` | 场景银行 |
+| `R_c(T) = Σ_{t∈T_c} (ℓ_t − ℓ_t^ref)` | 场景簇 c 相对保守基线的集群遗憾 |
+| `w_c ∝ exp(η Ĝ_c)`，`Ĝ_c` 为 R_c 的指数加权均值 | Hedge 场景课程权重 |
+| `shield(c) = argmin_{c'∈𝒞_safe(C_exec,φ̂,r)} ‖c'−c‖` | 对话约束安全屏蔽（凸投影） |
+| `OCB arms = MEL模式 {full,distill,cached,frozen} × {align on/off}`，K=8 臂 | 在线预算老虎机 |
+| `L_OA = CVaR_ε[ℓ_pred] + λ_F·tr((θ_A−θ_A^prev)F(θ_A−θ_A^prev)ᵀ) + ℒ_replay` | MEL-OA 适配损失 |
+| `ρ_rob = dist(K_safe, ∂𝒦_unsafe | φ∈B(φ̂,r))` | 最坏球下到不安全边界距离（鲁棒裕度） |
+| `J_rose = (J_sem_exec, ρ_rob, r_t, R̂_c, ocb_arm, shield_hash, adapter_ver)` | ROSE 鲁棒证书 |
+| `G̃ = G·L_h·(1 + κ_φ·r_max)` | 鲁棒化后的梯度上界（L_h = sup‖h(x)‖） |
 
-## 2. 关键算法伪代码
+## 2. 形式化定义（完整版）
 
-### IP-173 USR（统一语义表征空间）
+**定义 173（鲁棒在线场景进化闭环 ROSE）** ROSE 是 ESEC 的在线化升级：在第 61 轮「语义流 ∘ 实时流」骨架上挂载五个学习/鲁棒组件（OLP、WCV+RSC、SBR+SHC、MEL-OA、OCB）与一个安全算子（Shield）。不变式：**全部在线学习只发生在语义流与低频线程；实时路径（1–10kHz）只做原子锚点读、OLP 前向、WCV 编译、派发**——学习与安全在时序上隔离。
+
+**定义 174（场景银行 SBR）** Bank = {(s, meta_s)}；s = (视觉签名 V_s, 触觉签名 T_s, 物理标签 φ_s, 动态标注)；meta_s = (cluster_id, visit_count, failure_count, regret_acc, lineage)。算子：
+- `Mine(EV_exec, anchor)`：若 EV_exec 含险情（滑移/振动/力超限/投影漂移）且最近邻场景距离 > d_new，则创建新场景（签名为险情时刻多模态观测指纹）；否则对应场景 failure_count++。
+- `Mut(s)`：变异算子族 {材质扰动 μ±δ, 刚度扰动 k±δ, 湿滑叠加, 动态障碍注入, 复合地形拼接}，生成子场景并入 bank（lineage 记录父场景）。
+
+**定义 175（集群遗憾与 Hedge 调度 SHC）** 场景按签名聚类为 C 个簇；簇 c 的集群遗憾 R_c(T) = Σ_{t∈T_c}(ℓ_t − ℓ_t^ref)，其中 ℓ_t^ref 为保守基线 K_baseline 在同一观测下的损失。调度器 w_c ∝ exp(η Ĝ_c)（Ĝ_c 为 R_c 的指数加权在线估计），三个预算通道按 w_c 分配：① 语义流对该簇观测的 MEL 重推理频率；② MEL-OA 适配采样概率；③ 仿真域场景生成预算。Hedge 保证：Σ_t ℓ_t(w_t) − min_c Σ_t ℓ_t(c) ≤ √(2T log C)（对最优固定簇）。
+
+**定义 176（OLP 在线投影学习）** 投影头参数化为 K_W(x) = Π_0(x) + h(x)ᵀW，其中 Π_0 为第 61 轮离线 Π 冻结副本，h: ℝ^d_us → ℝ^m 为冻结随机特征（m=64），W ∈ 𝒲 凸紧集（‖W‖_F ≤ D 且区间算术校验 K_W(x) ∈ 𝒦, ∀x ∈ 𝒳_obs）。每语义步：W_{t+1} = P_𝒲(W_t − η_t·∇_W ℓ̃_t)，η_t = D/(G̃√t)。遗憾界见定理 1。
+
+**定义 177（WCV 鲁棒编译）** 鲁棒损失 ℓ̃_t(W) = sup_{φ∈B(φ̂_t, r_t)} CVaR_ε[ℓ(K_W(x_t); φ)]，其中球 B 以 MEL 推断 φ̂_t 为心、RSC 半径 r_t 为半径；最坏 φ 通过「球面梯度上升一步 + 随机对抗方向」n_worst=16 个候选近似；编译输出 K_safe = tail 候选集中安全裕度最大者的交集收缩，并报告 ρ_rob。
+
+**定义 178（RSC 残差自校准）** 执行后由 EV_exec 提取外力矩残差 resid_t = τ_ext^obs − τ_ext^pred(φ̂_t, K_t)；经局部灵敏度 J_φ = ∂τ_ext/∂φ |_{(φ̂_t, K_t)} 伪逆反演 e_t = ‖J_φ⁺·resid_t‖；r_{t+1} = clip((1−β_c)r_t + β_c e_t, r_min, r_max)，β_c=0.1。
+
+**定义 179（ARA 自适应鲁棒锚点）** 锚点扩为 Anchor_t = (x_t, φ̂_t, Σ_t, r_t, R̂_c(t), version, checksum)，CAS 原子写入（沿用第 61 轮 SACP）。实时流消费：K_prior = Shrink(OLP.project(x_t), κ_φ·r_t)——**收缩量与 r_t 成正比**，取代第 61 轮固定 ×0.8/×1.2 保守扩展；锚点过期时按 r_t·(1+age/τ_fresh) 继续膨胀。
+
+**定义 180（Shield 对话约束屏蔽）** 对 DMS 的任何约束提案 c（规则或 RL 来源）：c* = argmin_{c'∈𝒞_safe(C_exec, φ̂_t, r_t)}‖c'−c‖；若 ‖c*−c‖ ≤ δ_shield 则 c* 入 ERTC 锁定，否则动作降级为 ask_clarify(c)。𝒞_safe 由 ERTC 安全约束在球 B(φ̂_t, r_t) 最坏情形下求得，保持凸（线性约束的交集）。
+
+**定义 181（OCB 在线预算老虎机）** 臂空间 = MEL 模式 {full, distill, cached, frozen} × 对齐 {on, off}，K=8；每语义步 EXP3 采样臂 a_t，奖励 r_t = progress_t − κ·cost_t（cost 归一化到 [0,1]，沿用 cost_cog5）；重要性加权更新 w_a ← w_a·exp(η·r̂_t(a_t))。伪遗憾 ≤ √(2KT log K)。原 PCE+++++ 的硬性降级规则保留为**安全下界**（EXP3 的臂选择不得突破降级阶梯）。
+
+**定义 182（MEL-OA 在线适配）** 门控 g_t = 𝟙[U_ep > τ_unc] ∧ 𝟙[e_t^exec > τ_res]；g_t=1 时仅更新 LoRA 子集 θ_A：
+L_OA = CVaR_ε[ℓ_pred(batch)] + λ_F·tr((θ_A−θ_A^prev)·F·(θ_A−θ_A^prev)ᵀ) + ℒ_replay
+其中 batch = 当前险情样本 ⊕ Bank 按 w_c 采样的回放样本（回放占比 ≥ ρ=0.5），F 为 Fisher 对角代理。θ_A^prev 每 T_anchor 步快照一次。
+
+**定义 183（ROSE 鲁棒证书 J_rose）** J_rose = (J_sem_exec, ρ_rob, r_t, R̂_c(t), ocb_arm, shield_hash, adapter_ver)。
+验证规则：Valid(J_rose) ⇔ Valid(J_sem_exec) ∧ ρ_rob ≥ 0 ∧ anchor_fresh ∧ r_t ≤ r_max ∧ shield_applied(该周期所有提案)。审计链：shield_hash 与 adapter_ver 使「谁改了约束、谁改了模型」可追溯。
+
+**定义 184（ROSE 闭环算子）** 见下方 IP-192 伪代码：语义流执行 [MEL 推理 → USR 更新 → ARA 提交 → Shield(DMS) → OCB 更新 → 门控 MEL-OA → 执行损失回传 → OLP 更新 → RSC 校准 → Bank 记账/挖掘 → Hedge 调度]；实时流执行 [锚点原子读 → OLP 前向 + Shrink → WCV 编译 → 派发 → J_rose 构建]。
+
+## 3. 关键算法伪代码
+
+### IP-183 OLP（在线学习投影头）
 
 ```python
-class UnifiedSemanticRepresentation:
-    def __init__(self, d_us=256, anchor_ttl=0.2):
-        self.d_us = d_us
-        self.anchor_ttl = anchor_ttl
-        self.scene_encoder = SceneEncoder(d_us)
-        self.intent_encoder = IntentEncoder(d_us)
-        self.impedance_encoder = ImpedanceEncoder(d_us)
-        self.evidence_encoder = EvidenceEncoder(d_us)
-        self.projector = ImpedanceProjector(d_us)  # Π: ℝ^d_us -> K_safe
-        
-        # 共享内存锚点（多进程/线程安全）
-        self.anchor_buffer = SharedMemoryAnchor(d_us)
-        self.evidence_buffer = deque(maxlen=100)
-        self.align_optimizer = torch.optim.Adam(self.projector.parameters(), lr=1e-4)
-        
-    def commit_anchor(self, scene_emb, intent_emb, phys_prior, U_mel):
-        anchor = SemanticAnchor(
-            version=self.anchor_buffer.next_version(),
-            scene_emb=scene_emb,
-            intent_emb=intent_emb,
-            phys_prior=phys_prior,
-            U_epistemic=U_mel[0],
-            U_aleatoric=U_mel[1],
-            timestamp=time.time(),
-            checksum=hash((scene_emb, intent_emb, phys_prior))
-        )
-        self.anchor_buffer.write(anchor)  # CAS 写入
-        return anchor
-    
-    def read_latest_anchor(self):
-        anchor = self.anchor_buffer.read_latest()
-        if anchor and (time.time() - anchor.timestamp) < self.anchor_ttl:
-            return anchor, True  # fresh
-        elif anchor:
-            return anchor, False  # stale but usable
-        return None, False  # no anchor
-    
-    def push_evidence(self, ev_exec):
-        ev_emb = self.evidence_encoder.encode(ev_exec)
-        self.evidence_buffer.append(ev_emb)
-    
-    def align_step(self, K_safe, cert, scene_emb, intent_emb, evidence_emb):
-        # 对齐损失：让阻抗编码靠近语义融合
-        target = 0.4 * scene_emb + 0.3 * intent_emb + 0.3 * evidence_emb
-        pred = self.impedance_encoder.encode(K_safe, cert)
-        loss = F.mse_loss(pred, target.detach())
-        self.align_optimizer.zero_grad()
-        loss.backward()
-        self.align_optimizer.step()
-        return loss.item()
-    
-    def project_to_impedance(self, anchor):
-        fused = anchor.scene_emb + anchor.intent_emb
-        K_prior = self.projector(fused)
-        return K_prior
+class OnlineLearningProjector:
+    """冻结骨干 + 凸修正头。实时流只调 project()；online_step() 仅语义流调用。"""
+    def __init__(self, Pi0, d_us=256, m=64, d_out=6, D=1.0, r_max=0.5):
+        self.h = FrozenRandomFeatures(d_us, m, seed=42)   # 冻结特征映射 h(x)
+        self.W = np.zeros((m, d_out))                     # 唯一在线参数
+        self.Pi0 = Pi0                                    # 第 61 轮离线投影头冻结副本
+        self.K_box = ImpedanceBox()                       # 凸紧安全框 𝒦
+        self.D, self.r_max = D, r_max
+        self.G_tilde = None                               # 运行时按 G·L_h·(1+κ_φ·r_max) 估计
+        self.t = 0
+
+    def project(self, x):
+        K = self.Pi0(x) + self.h(x) @ self.W              # O(d_us·m + m·d_out) < 0.05ms
+        return self.K_box.clip(K)                         # 数值兜底（𝒲 已保证在框内）
+
+    def online_step(self, x, grad_l):                     # grad_l = ∂ℓ̃/∂K（WCV 回传）
+        g = np.outer(self.h(x), grad_l)                   # 链式：∂ℓ̃/∂W
+        eta = self.D / (self.G_tilde * np.sqrt(self.t + 1))
+        self.W = self.K_box.proj_fro(self.W - eta * g)    # Frobenius 投影回凸集
+        self.t += 1
+        return np.linalg.norm(g)
 ```
 
-### IP-174 MEL（多模态具身基座模型）
+### IP-184 WCV（Wasserstein-CVaR 鲁棒编译）
 
 ```python
-class MultimodalEmbodiedLLM:
-    def __init__(self, d_us=256, use_lora=True, distill=False):
-        self.d_us = d_us
-        self.distill = distill
-        
-        # 编码器
-        self.enc_v = VisionEncoder(freeze_backbone=True, lora=use_lora)  # ViT-L/14
-        self.enc_t = TactileEncoder(d_model=256, n_layers=3)  # 时序触觉
-        self.enc_p = ProprioEncoder(d_model=128)  # 本体感受
-        self.enc_l = LanguageEncoder()  # LLM 最后层或专用编码器
-        
-        # 跨模态融合
-        self.fusion = CrossModalFusion(d_model=512, n_heads=8, n_layers=4)
-        
-        # 解码头
-        self.dec_phys = PhysicalPropertyHead(d_in=512, d_out=5)  # μ, k, η, σ, conf
-        self.dec_sem = SemanticHead(d_in=512, d_out=d_us)  # scene_emb
-        self.dec_policy = PolicyHead(d_in=512, d_out=10)  # 交互策略分布
-        self.head_unc = UncertaintyHead(d_in=512, d_out=2)  # U_ep, U_al
-        
-        # KV 缓存用于加速
-        self.kv_cache = None
-        
-    def infer(self, V, T, P, L, scene_emb_prev=None, evidence_emb_prev=None):
-        # 编码各模态
-        v_feat = self.enc_v(V)  # [1, d_v]
-        t_feat = self.enc_t(T)  # [1, d_t]
-        p_feat = self.enc_p(P)  # [1, d_p]
-        l_feat = self.enc_l(L)  # [1, d_l]
-        
-        # 融合（含历史语义锚点）
-        fusion_input = [v_feat, t_feat, p_feat, l_feat]
-        if scene_emb_prev is not None:
-            fusion_input.append(scene_emb_prev.unsqueeze(0))
-        if evidence_emb_prev is not None:
-            fusion_input.append(evidence_emb_prev.unsqueeze(0))
-        
-        fused = self.fusion(fusion_input, kv_cache=self.kv_cache)  # [1, 512]
-        
-        # 解码
-        phi_phys = self.dec_phys(fused)      # [μ_fric, k_stiff, η_damp, σ_brittle, conf_phys]
-        z_scene = self.dec_sem(fused)        # [d_us]
-        pi_intact = self.dec_policy(fused)   # [n_actions]
-        U_ep, U_al = self.head_unc(fused)    # 不确定性
-        
-        # 更新 KV 缓存
-        if self.fusion.kv_cache is not None:
-            self.kv_cache = self.fusion.kv_cache
-        
-        return phi_phys, z_scene, pi_intact, (U_ep.item(), U_al.item())
-    
-    def distill_infer(self, V, L):
-        """蒸馏模式：仅视觉+语言，共享融合器前层"""
-        v_feat = self.enc_v(V)
-        l_feat = self.enc_l(L)
-        fused = self.fusion.distill_forward([v_feat, l_feat])
-        return self.dec_phys(fused), self.dec_sem(fused), self.head_unc(fused)
-    
-    def cached_infer(self):
-        """缓存模式：复用上一帧 KV，仅更新语言"""
-        if self.kv_cache is None:
-            return None
-        fused = self.fusion.cached_forward(self.kv_cache)
-        return self.dec_phys(fused), self.dec_sem(fused), self.head_unc(fused)
-```
-
-### IP-175 DMS（执行接地的多轮对话管理）
-
-```python
-class DialogueManagementSystem:
-    def __init__(self, ertc, mel, usr, max_turns=20):
-        self.ertc = ertc
-        self.mel = mel
-        self.usr = usr
-        self.max_turns = max_turns
-        
-        # 状态
-        self.H_diag = []  # [(speaker, text, ts, grounded_ev?)]
-        self.b_intent = np.ones(5) / 5  # slow, speed, light, stable, danger
-        self.C_exec = {}  # 当前锁定约束
-        self.C_pending = {}  # 待确认约束
-        self.turn_id = 0
-        self.diag_buffer = []  # (s, a, r, s')
-        
-        # 规则策略（安全兜底）
-        self.rule_policy = RuleBasedDialoguePolicy()
-        # RL 策略（可选，离线训练）
-        self.rl_policy = None
-        
-    def step(self, U_mel):
-        # 1. 状态编码
-        s = self._encode_state(U_mel)
-        
-        # 2. 策略选择：规则优先（安全），RL 优化（效率）
-        a_rule = self.rule_policy.select(s, self.C_exec, self.C_pending)
-        if self.rl_policy and self.turn_id > 5:  # 预热后启用 RL
-            a_rl = self.rl_policy.select(s)
-            a = self._merge_actions(a_rule, a_rl)
+def wcv_compile(olp, x, eeis, phi_hat, r, grad_prev=None,
+                eps=0.05, n_worst=16, kappa_phi=KAPPA_PHI):
+    candidates = []
+    for i in range(n_worst):
+        if i == 0 and grad_prev is not None:              # 沿上一步损失梯度方向
+            phi_t = phi_hat + r * normalize(grad_prev)    # 球面最坏方向
         else:
-            a = a_rule
-        
-        # 3. 执行动作
-        reward, info = self._execute_action(a)
-        
-        # 4. 记录转移
-        s_next = self._encode_state(U_mel)
-        self.diag_buffer.append((s, a, reward, s_next))
-        if len(self.diag_buffer) > 100:
-            self.diag_buffer.pop(0)
-        
-        self.turn_id += 1
-        return a, self.C_pending, self.b_intent
-    
-    def _encode_state(self, U_mel):
-        return DialogueState(
-            H_diag=self.H_diag[-10:],  # 最近 10 轮
-            b_intent=self.b_intent.copy(),
-            C_exec=self.C_exec.copy(),
-            C_pending=self.C_pending.copy(),
-            U_epistemic=U_mel[0],
-            U_aleatoric=U_mel[1],
-            turn_id=self.turn_id
-        )
-    
-    def _execute_action(self, action):
-        if action.type == 'ask_clarify':
-            self.H_diag.append(('robot', action.question, time.time(), None))
-            return -0.1, {}  # 认知负荷惩罚
-        elif action.type == 'propose_constraint':
-            self.C_pending[action.constraint_id] = action.constraint
-            self.H_diag.append(('robot', f"建议: {action.reason}", time.time(), None))
-            return 0.0, {}
-        elif action.type == 'confirm_constraint':
-            cid = action.constraint_id
-            if cid in self.C_pending:
-                self.C_exec[cid] = self.C_pending.pop(cid)
-                self.ertc.lock_constraints(self.C_exec[cid])
-            return 0.5, {}
-        elif action.type == 'negotiate':
-            # 协商逻辑：调整约束参数
-            return 0.0, {}
-        elif action.type == 'execute':
-            return 1.0, {'task_complete': True}
-        elif action.type == 'abort':
-            return -1.0, {'aborted': True}
-        return 0.0, {}
-    
-    def receive_user_utterance(self, text, timestamp):
-        # 语义解析更新信念（简化：关键词匹配，实际接入 NLU）
-        intent_scores = self._parse_intent(text)
-        self.b_intent = 0.7 * self.b_intent + 0.3 * intent_scores
-        self.H_diag.append(('user', text, timestamp, None))
-    
-    def ground_execution_feedback(self, EV_exec):
-        """执行反馈接地：根据 EV-exec 自动触发对话动作"""
-        actions = []
-        if EV_exec.slip_detected and 'reduce_Kp' not in self.C_pending:
-            actions.append(DialogueAction('propose_constraint', 
-                constraint={'K_p': 0.7 * self.C_exec.get('K_p', 1.0)},
-                reason='slip_detected', constraint_id='reduce_Kp'))
-        if EV_exec.vibration > 0.5 and 'increase_Kd' not in self.C_pending:
-            actions.append(DialogueAction('propose_constraint',
-                constraint={'K_d': 1.5 * self.C_exec.get('K_d', 1.0)},
-                reason='vibration_suppression', constraint_id='increase_Kd'))
-        if EV_exec.force_exceed and self.b_intent[2] > 0.6:  # light_touch index
-            actions.append(DialogueAction('ask_clarify',
-                question="检测到力超限，是否切换到'轻触'模式？"))
-        if U_mel.epistemic > 0.7:
-            actions.append(DialogueAction('ask_clarify',
-                question=f"环境不确定性高({U_mel.epistemic:.2f})，建议保守模式，确认？"))
-        return actions
+            phi_t = phi_hat + r * random_unit(phi_hat.shape)  # 随机对抗方向
+        K = olp.project(x)
+        K_c = eeis.compile_with_phys_constraint(K, phi_t)     # 含第 61 轮 MSPF 约束
+        margin = safety_margin(K_c, phi_t)                    # 到不安全边界距离
+        loss_i = execution_loss_estimate(K_c, phi_t)
+        candidates.append((phi_t, K_c, margin, loss_i))
+    candidates.sort(key=lambda z: z[3], reverse=True)
+    tail = candidates[:max(1, int(eps * n_worst))]        # 最坏 ε 尾部
+    K_safe = intersect_shrink([K_c for _, K_c, _, _ in tail])  # 尾部可行域收缩
+    rho_rob = min(margin for _, _, margin, _ in tail)     # 鲁棒裕度
+    cvar = np.mean([loss_i for _, _, _, loss_i in tail])
+    return K_safe, rho_rob, cvar
 ```
 
-### IP-176 SRT-Dual（语义-实时双流架构）
+### IP-185 RSC（残差自校准）
 
 ```python
-class SemanticRealtimeDualFlow:
-    def __init__(self, mel, dms, usr, eeis, ertc, budget):
-        self.mel = mel
-        self.dms = dms
-        self.usr = usr
-        self.eeis = eeis
-        self.ertc = ertc
-        self.budget = budget
-        
-        # 语义流线程
-        self.semantic_thread = None
-        self.running = False
-        
-        # 实时流状态
-        self.anchor_cached = None
-        self.K_prior_cached = None
-        self.semantic_timeout = 0.5  # 500ms
-        self.last_semantic_update = 0
-        
-    def start(self):
-        self.running = True
-        self.semantic_thread = threading.Thread(target=self._semantic_loop, daemon=True)
-        self.semantic_thread.start()
-    
-    def _semantic_loop(self):
-        """语义流：~10-100Hz，运行 MEL + DMS + USR 更新"""
-        while self.running:
-            start = time.time()
-            
-            # 获取最新观测
-            V, T, P = get_latest_multimodal_obs()
-            L = get_latest_user_utterance()  # 可能为空
-            
-            # MEL 推理（根据预算选择模式）
-            if self.budget.is_mel_budget_exhausted():
-                phi_phys, z_scene, pi_intact, U = self.mel.cached_infer()
-                if phi_phys is None:
-                    phi_phys, z_scene, pi_intact, U = self.mel.distill_infer(V, L)
-            else:
-                phi_phys, z_scene, pi_intact, U = self.mel.infer(
-                    V, T, P, L, 
-                    self.usr.anchor_buffer.read_latest().scene_emb if self.usr.anchor_buffer.read_latest() else None,
-                    self.usr.evidence_buffer[-1] if self.usr.evidence_buffer else None
-                )
-            
-            # DMS 步进
-            a_diag, C_pending, b_intent = self.dms.step(U)
-            
-            # USR 更新
-            intent_emb = self.usr.intent_encoder.encode(b_intent)
-            self.usr.commit_anchor(z_scene, intent_emb, phi_phys, U)
-            
-            # 处理对话动作
-            for action in a_diag if isinstance(a_diag, list) else [a_diag]:
-                if action.type in ('propose_constraint', 'confirm_constraint'):
-                    self.ertc.lock_pending(action.constraint)
-            
-            self.last_semantic_update = time.time()
-            
-            # 频率控制
-            elapsed = time.time() - start
-            target_period = 0.1  # 10Hz 基准
-            if elapsed < target_period:
-                time.sleep(target_period - elapsed)
-    
-    def realtime_step(self, delta_f_req, fused, xi_exec, Z_env):
-        """实时流：~1-10kHz，仅消费 USR 锚点"""
-        # 读取最新语义锚点
-        anchor, fresh = self.usr.read_latest_anchor()
-        
-        if anchor is None:
-            # 无锚点：纯保守编译
-            K_safe = self.eeis.compile(delta_f_req, fused, xi_exec, Z_env)
-        elif fresh:
-            # 新鲜锚点：投影 + 编译
-            K_prior = self.usr.project_to_impedance(anchor)
-            K_safe = self.eeis.compile_with_prior(delta_f_req, fused, xi_exec, Z_env, K_prior, anchor.phys_prior)
-            self.anchor_cached = anchor
-            self.K_prior_cached = K_prior
-        else:
-            # 过期锚点：保守扩展
-            if self.anchor_cached is not None:
-                K_prior_expanded = self._conservative_expand(self.K_prior_cached)
-                K_safe = self.eeis.compile_with_prior(delta_f_req, fused, xi_exec, Z_env, K_prior_expanded, self.anchor_cached.phys_prior)
-            else:
-                K_safe = self.eeis.compile(delta_f_req, fused, xi_exec, Z_env)
-        
-        # 派发执行
-        cert = self.ertc.dispatch(K_safe)
-        
-        # 等待接触并构建证据
-        EV_exec = wait_contact_and_build_evidence()
-        
-        # 更新 USR 证据缓冲
-        self.usr.push_evidence(EV_exec)
-        
-        # 对齐步进（异步或低频）
-        if self.budget.can_align():
-            scene_emb = anchor.scene_emb if anchor else self.usr.anchor_buffer.read_latest().scene_emb
-            intent_emb = anchor.intent_emb if anchor else self.usr.anchor_buffer.read_latest().intent_emb
-            evidence_emb = self.usr.evidence_encoder.encode(EV_exec)
-            self.usr.align_step(K_safe, cert, scene_emb, intent_emb, evidence_emb)
-        
-        return K_safe, EV_exec, cert
-    
-    def _conservative_expand(self, K_prior):
-        """保守扩展：增加协方差，向安全区收缩"""
-        K_expanded = K_prior.copy()
-        K_expanded['K_p'] *= 0.8  # 降低刚度
-        K_expanded['K_d'] *= 1.2  # 增加阻尼
-        K_expanded['F_max'] *= 1.1  # 增加力容限
-        return K_expanded
+class ResidualSelfCalibration:
+    def __init__(self, r0=0.05, r_min=0.02, r_max=0.5, beta_c=0.1):
+        self.r, self.r_min, self.r_max, self.beta_c = r0, r_min, r_max, beta_c
+        self.history = deque(maxlen=200)
+
+    def update(self, tau_ext_obs, tau_ext_pred, J_phi):
+        resid = tau_ext_obs - tau_ext_pred                    # 执行外力矩残差
+        e_param = np.linalg.norm(np.linalg.pinv(J_phi) @ resid)  # 反演到参数空间
+        self.r = np.clip((1 - self.beta_c) * self.r + self.beta_c * e_param,
+                         self.r_min, self.r_max)              # EWMA 自校准
+        self.history.append(e_param)
+        return self.r                                         # 喂给 WCV / ARA / Shrink
 ```
 
-### IP-177 PCE+++++（五维认知-语义预算）
+### IP-186 ARA（自适应鲁棒锚点）
 
 ```python
-class CognitiveSemanticBudget:
-    def __init__(self, 
-                 scene_ops=100, intent_ops=50, ros_retry=3, 
-                 exec_budget=None,
-                 mel_freq=10, mel_tokens=2048, mel_kv_cache=512, mel_unc_thresh=0.7,
-                 usr_align_iters=5, usr_dim=256, usr_proj_tol=0.1):
-        # 继承第 60 轮四维
-        self.B_scene_ops = scene_ops
-        self.B_intent_ops = intent_ops
-        self.B_ros_retry = ros_retry
-        self.B_exec = exec_budget or ExecBudget()
-        
-        # 新增：MEL 预算
-        self.B_mel_freq = mel_freq  # Hz
-        self.B_mel_tokens = mel_tokens
-        self.B_mel_kv_cache = mel_kv_cache
-        self.B_mel_unc_thresh = mel_unc_thresh
-        self.mel_ops = 0
-        self.mel_mode = 'full'  # full, distill, cached, frozen
-        
-        # 新增：USR 预算
-        self.B_usr_align_iters = usr_align_iters
-        self.B_usr_dim = usr_dim
-        self.B_usr_proj_tol = usr_proj_tol
-        self.usr_align_count = 0
-        self.usr_frozen = False
-        
-    def is_mel_budget_exhausted(self) -> bool:
-        return self.mel_ops >= self.B_mel_freq * 10  # 10秒窗口
-    
-    def can_align(self) -> bool:
-        return not self.usr_frozen and self.usr_align_count < self.B_usr_align_iters
-    
-    def mel_step(self, mode_latency_ms):
-        self.mel_ops += 1
-        if mode_latency_ms > 200:  # 全模态超时
-            self.mel_mode = 'distill'
-        elif mode_latency_ms > 50:  # 蒸馏超时
-            self.mel_mode = 'cached'
-        elif self.mel_ops > self.B_mel_freq * 5:
-            self.mel_mode = 'frozen'
-    
-    def usr_align_step(self, proj_error):
-        self.usr_align_count += 1
-        if proj_error > self.B_usr_proj_tol * 2:
-            self.usr_frozen = True
-    
-    def get_mel_mode(self) -> str:
-        return self.mel_mode
-    
-    def voi_cog5(self, action) -> float:
-        base_voi = self.voi_meta_pessimistic(action)
-        cost = 0
-        if action.type == 'scene_recognize': cost += 0.1
-        elif action.type == 'intent_infer': cost += 0.2
-        elif action.type == 'ros_message': cost += 0.05
-        elif action.type == 'mel_infer': cost += 0.3 * (action.latency / 200)
-        elif action.type == 'usr_align': cost += 0.1 * (action.iters / self.B_usr_align_iters)
-        return base_voi - cost - self.cost_exec(action)
+class AdaptiveRobustAnchor:                                   # 沿用 SACP CAS 机制
+    def commit(self, x, phi_hat, r, Rhat_c, Sigma):
+        a = Anchor(version=self.next_version(), x=x, phi_hat=phi_hat,
+                   Sigma=Sigma, r=r, Rhat_c=Rhat_c, ts=time.time(),
+                   checksum=hash((x, phi_hat, r)))
+        self.buffer.cas_write(a)                              # 64 位单调版本号
+
+    def read_latest(self):
+        a = self.buffer.read_latest()                         # 非阻塞原子读
+        if a is None: return None, False
+        return a, (time.time() - a.ts) < TAU_FRESH
+
+def robust_prior(olp, anchor, fresh):
+    K = olp.project(anchor.x)
+    infl = anchor.r * (1 + (now() - anchor.ts) / TAU_FRESH) if not fresh else anchor.r
+    return shrink_toward_safe_interior(K, KAPPA_PHI * infl)   # r 驱动收缩（非固定系数）
 ```
 
-## 3. 复杂度与正确性
+### IP-187 SBR + IP-188 SHC（场景银行与遗憾课程）
+
+```python
+class ScenarioBank:
+    def __init__(self, C_max=64):
+        self.scenes, self.clusters = {}, OnlineClusterer(n_clusters=C_max)
+
+    def mine(self, EV_exec, anchor):
+        if not EV_exec.has_incident():                        # 无险情仅更新访问计数
+            self._touch(anchor.cluster_id); return None
+        sig = fingerprint(EV_exec, anchor)                    # 多模态观测指纹
+        nn, dist = self._nearest(sig)
+        if dist > D_NEW:                                      # 新场景入行
+            s = Scenario(sig, lineage=None)
+            self.scenes[id(s)] = s
+            return s
+        nn.meta.n_fail += 1                                   # 已知场景记失败
+        return nn
+
+    def mutate(self, s):
+        children = [mutate_material(s, delta), mutate_stiffness(s, delta),
+                    add_wetness(s), inject_dynamic_obstacle(s), compose_terrain(s)]
+        for c in children: c.lineage = s.id
+        return children
+
+class HedgeCurriculum:
+    def __init__(self, C, eta=0.2):
+        self.w = np.ones(C) / C; self.Ghat = np.zeros(C); self.eta = eta
+
+    def step(self, cluster_id, loss, loss_ref):
+        self.Ghat[cluster_id] = (1 - 0.1) * self.Ghat[cluster_id] + \
+                                 0.1 * (loss - loss_ref)      # 集群遗憾在线估计
+        self.w = softmax(self.eta * self.Ghat)                # Hedge 权重
+        return self.w
+
+    def allocate(self, mel_reinf_slots, oa_batch_slots, sim_gen_slots):
+        return (sample_by_weight(self.w, mel_reinf_slots),   # ① 重推理频率
+                sample_by_weight(self.w, oa_batch_slots),    # ② MEL-OA 采样
+                sample_by_weight(self.w, sim_gen_slots))     # ③ 仿真生成预算
+```
+
+### IP-189 MEL-OA（MEL 在线适配）
+
+```python
+def mel_online_adapt(mel, bank, hedge_w, U_ep, e_exec,
+                     tau_unc=0.7, tau_res=RES_TAU, lam_F=1e-2, rho=0.5):
+    if not (U_ep > tau_unc and e_exec > tau_res):             # 门控：不确定且证据确凿
+        return None
+    fail_batch = bank.recent_failures(k=16)
+    replay = bank.sample_by_weight(hedge_w, k=int(rho * 32))  # 防遗忘回放
+    batch = concat(fail_batch, replay)
+    loss_pred = cvar_tail_loss(mel.predict_phys(batch), batch.phi_star_proxy)
+    ewc = lam_F * np.sum(mel.fisher * (mel.lora_theta - mel.theta_prev) ** 2)
+    grad = autograd(loss_pred + ewc, mel.lora_theta)
+    mel.lora_theta -= LR_ADAPT * grad                         # 仅 LoRA 子集更新
+    mel.adapter_ver += 1
+    return mel.adapter_ver                                    # 写入 J_rose 审计链
+```
+
+### IP-190 Shield（对话约束安全屏蔽）
+
+```python
+def dialogue_safety_shield(c_prop, C_exec, phi_hat, r):
+    K_unsafe = ertc.unsafe_region()                           # ERTC 安全约束
+    C_safe = feasible_constraint_set(C_exec, phi_hat, r, K_unsafe)  # 球内最坏 φ 下凸可行集
+    c_star = project_onto_convex(C_safe, c_prop)              # 凸投影
+    if np.linalg.norm(c_star - c_prop, ord=INF) > DELTA_SHIELD:
+        return DialogueAction('ask_clarify',
+            question=f"提案 {c_prop} 距安全域过远，请确认参数范围")
+    return DialogueAction('lock_constraint', constraint=c_star, shielded=True)
+```
+
+### IP-191 OCB（在线预算老虎机）
+
+```python
+class OnlineBudgetScheduler:                                  # EXP3, K=8 臂
+    ARMS = [(m, a) for m in ('full', 'distill', 'cached', 'frozen')
+                   for a in ('align_on', 'align_off')]
+
+    def __init__(self, K=8, eta=0.3):
+        self.w = np.ones(K) / K; self.eta = eta; self.K = K
+
+    def choose(self):
+        return self.ARMS[np.random.choice(self.K, p=self.w)]
+
+    def update(self, arm_idx, cost, progress):
+        reward = np.clip(progress - KAPPA_OCB * cost, 0, 1)
+        r_hat = reward / max(self.w[arm_idx], 1e-6) / self.K  # 重要性加权（无偏）
+        self.w[arm_idx] *= np.exp(self.eta * r_hat / self.K)
+        self.w /= self.w.sum()
+
+    def clipped_arm(self, arm, hard_rule):                    # PCE+++++ 降级为安全下界
+        return hard_rule.dominates(arm) if hard_rule else arm # 硬规则优先于老虎机
+```
+
+### IP-192 ROSE 闭环算子（整合）
+
+```python
+def ROSE_round(M, obs, delta_f_req):
+    V, T, P, L = obs
+    # ———— 语义流（10–100Hz：全部在线学习与记账在此）————
+    arm = M.ocb.choose()                                      # 选预算臂
+    phi_hat, z_scene, pi_int, (U_ep, U_al) = M.mel.infer_by_mode(
+        arm.mode, V, T, P, L, M.anchor.x if M.anchor else None)
+    M.intent_emb = M.usr.intent_encoder(M.dms.b_intent)
+    x = 0.4*z_scene + 0.3*M.intent_emb + 0.3*M.evidence_emb   # USR 融合（第 61 轮）
+    M.anchor = M.ara.commit(x, phi_hat, r=M.rsc.r, Rhat_c=M.hedge.Ghat, Sigma=None)
+
+    a_raw = M.dms.step((U_ep, U_al))
+    a_shielded = [dialogue_safety_shield(a.c, M.C_exec, phi_hat, M.rsc.r)
+                  for a in actions_of(a_raw) if a.is_constraint]      # IP-190 硬屏蔽
+    M.ertc.lock_pending([a.constraint for a in a_shielded
+                         if a.type == 'lock_constraint'])
+
+    K_safe, EV_exec, cert_exec = realtime_step(M, delta_f_req)  # 见下：实时流
+    progress = task_progress(EV_exec, M.C_exec)
+    M.ocb.update(M.arm_idx, cost=arm_cost(arm, phi_hat), progress=progress)
+
+    # —— 执行损失回传与在线更新（语义流侧，非实时）——
+    grad_K = execution_loss_grad(K_safe, EV_exec, worst_phi_in_ball(phi_hat, M.rsc.r))
+    M.olp.online_step(x, grad_K)                              # OLP 遗憾保证的更新
+    tau_pred = predict_ext_torque(phi_hat, K_safe)
+    M.rsc.update(EV_exec.tau_ext_obs, tau_pred, sens_jacobian(phi_hat, K_safe))
+    new_scene = M.bank.mine(EV_exec, M.anchor)                # 险情挖掘
+    if new_scene: M.bank.mutate(new_scene)                    # 场景变异生长
+    M.hedge.step(M.anchor.cluster_id, loss=loss_of(EV_exec),
+                 loss_ref=baseline_loss(EV_exec, K_BASELINE)) # 集群遗憾记账
+    adapter_ver = mel_online_adapt(M.mel, M.bank, M.hedge.w, U_ep,
+                                   M.rsc.history[-1])         # 门控 MEL-OA
+    return M, K_safe, EV_exec, build_j_rose(cert_exec, rho_rob=M.rho, r=M.rsc.r,
+                                            Rhat=M.hedge.Ghat, arm=arm,
+                                            shield=shield_log_hash(a_shielded),
+                                            adapter_ver=adapter_ver)
+
+def realtime_step(M, delta_f_req):                            # ———— 实时流（1–10kHz）————
+    anchor, fresh = M.ara.read_latest()                       # 非阻塞原子读
+    if anchor is None:
+        K_prior = K_BASELINE                                  # 无锚点：纯保守
+    else:
+        K_prior = robust_prior(M.olp, anchor, fresh)          # OLP 前向 + r 驱动 Shrink
+    K_safe, rho_rob, _ = wcv_compile(M.olp, anchor.x if anchor else None,
+                                     M.eeis, anchor.phi_hat if anchor else PHI_SAFE,
+                                     M.rsc.r)
+    cert_exec = M.ertc.dispatch(K_safe)                       # 派发（≤1ms 路径，零学习写）
+    EV_exec = wait_contact_and_build_evidence()
+    M.usr.push_evidence(EV_exec)
+    M.rho = rho_rob
+    return K_safe, EV_exec, cert_exec
+```
+
+## 4. 推导
+
+**引理 1（WCV 损失对 W 的凸性）** 设 ℓ 对 K 凸且 G-Lipschitz（A71），K_W(x) = Π_0(x) + h(x)ᵀW 对 W 仿射。由 Rockafellar-Uryasev 表示 CVaR_ε(Z) = min_β{β + (1/ε)E[(Z−β)_+]}，且 (Z(K,φ)−β)_+ 对 (K,β) 联合凸，min_β 保凸 ⇒ φ 固定时 CVaR_ε[ℓ(K_W(x);φ)] 对 W 凸；对球取上确界是凸函数族的逐点 sup，仍凸。∎
+
+**引理 2（覆盖引理 / 偏差免疫）** 设 RSC 稳态下 P[‖φ* − φ̂_t‖ ≤ r_t] ≥ 1−α_cal（偏差有界 + 残差噪声次高斯时 EWMA 半径收敛到真值带的 (1+o(1)) 倍）。WCV 在 B(φ̂_t, r_t) 内最坏情形编译 ⇒ K_safe 对球内全部 φ 可行 ⇒ 对真实 φ* 安全概率 ≥ 1−α_cal。系统性偏差不再被「假设消除」而被「球覆盖」。∎
+
+**定理 1（鲁棒遗憾界）** 由链式法则 ‖∇_W ℓ̃_t‖ ≤ ‖∇_K ℓ‖·‖h(x_t)‖·(1+κ_φ·r_max) ≤ G̃，其中 G̃ = G·L_h·(1+κ_φ·r_max)，L_h = sup_x‖h(x)‖。OGD 标准分析：
+Σ⟨g_t, W_t − W*⟩ ≤ D²/(2η) + (η/2)Σ‖g_t‖² ≤ D²/(2η) + ηG̃²T/2；
+凸性 + 投影性质给出 ℓ̃_t(W_t) − ℓ̃_t(W*) ≤ ⟨g_t, W_t − W*⟩；
+取 η = D/(G̃√T)：**R_T ≤ D·G̃·√T**，平均每步遗憾 O(1/√T) → 0。语义-控制漂移的累计代价有界且渐近消失。∎
+
+**推论（动态遗憾）** 允许比较器沿路径长度 P_T 变化时，R_T^dyn ≤ D·G̃·√T + 2D·G̃·P_T（标准同时化论证）。环境漂移快于 O(√T) 时静态界变松——此时由 SHC 的集群调度承担快速追踪（已声明的理论缝隙，见风险节）。
+
+**命题（遗忘界，非正式）** MEL-OA 一步更新后 bank 上损失增幅 ΔL_bank ≤ (η_adapt·G²)/(2λ_F·σ_min(F)) + (1−ρ)·ΔL_shift：EWC 惩罚系数 λ_F 与回放占比 ρ 联合压制遗忘；E205 实证校验 ≤5%。
+
+**命题（屏蔽安全性）** 𝒞_safe 凸非空（A73）时投影可行，shield 输出 c* ∈ 𝒞_safe ⊆ ERTC 安全域与 RL 策略质量无关 ⇒ 安全违规率 0 是**机制保证**而非假设（A68 由此可退役为构造性事实）。
+
+## 5. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| USR | O(d_us) 编码/投影 | O(d_us × N_anchors) | 投影误差 ≤ ε_proj，对齐收敛 ≤ 50 迭代 |
-| MEL | Full: ~200ms / Distill: ~50ms / Cached: ~20ms | ~2GB (ViT-L + LLM) / ~500MB (蒸馏) | 物理属性推断 μ误差<15%，k误差<20%（零样本） |
-| DMS | O(1) 轮次 | O(N_turns) | 任务完成率 ≥ 90%，澄清轮次 ≤ 3 |
-| SRT-Dual | 语义流 10-100Hz / 实时流 1-10kHz | 共享内存 ~10MB | 实时流不阻塞 > 1ms；语义锚点新鲜度 ≥ 95% |
-| PCE+++++ | O(1) 预算检查 | O(1) | 任一预算耗尽触发对应降级，安全不降级 |
+| OLP 前向（实时路径） | O(d_us·m + m·d_out) ≈ 2×10⁴ FLOPs < 0.05ms | O(m·d_out) | 定理 1：遗憾 ≤ D·G̃·√T |
+| OLP 更新（语义流） | O(m·d_out) | O(1) 增量 | 每步一次 Frobenius 投影，永不出凸集 |
+| WCV 编译 | O(n_worst·C_eeis)，n_worst=16 | O(n_worst) | 引理 2：覆盖概率 ≥ 1−α_cal |
+| RSC | O(1)（含 4×4 伪逆） | O(200) 历史 | r_t → 偏差带的 (1+o(1)) 倍 |
+| ARA | O(1) CAS 读写 | O(d_us + 常数) | 沿用 SACP：无撕裂读、64 位版本单调 |
+| SBR 挖掘/变异 | O(\|Bank\|·d_sig) 近邻 | O(\|Bank\|·d_sig) | 险情 100% 记账（审计可验） |
+| SHC Hedge | O(C)，C=64 | O(C) | 伪遗憾 ≤ √(2T log C) |
+| MEL-OA | 每 gate 周期一次 LoRA step（~50ms，语义流侧） | +LoRA 参数 | 遗忘增幅 ≤ 5%（E205 校验） |
+| Shield | 凸投影 O(n_c·iters) | O(n_c) | 违规率 0（A73 下机制保证） |
+| OCB EXP3 | O(K)，K=8 | O(K) | 伪遗憾 ≤ √(2KT log K) |
+| ROSE 实时路径 | ≤ 1ms 保持（第 61 轮契约） | — | **零学习写操作**（A75） |
 
-**正确性定理（ESEC-Complete）**：
-假设 A61–A65 及 **(A66)** USR：投影头 Π 为 Lipschitz 连续，‖Π(x) - Π(y)‖ ≤ L‖x-y‖；对齐损失 ℒ_align 在凸集上收敛到 ε_align-驻点。**(A67)** MEL：物理属性解码头在仿真域训练，经域随机化满足 sim2real gap ≤ δ_sim2real；不确定性头校准良好（ECE ≤ 0.05）。**(A68)** DMS：规则策略保证安全性（不会提出违反 ERTC 的约束）；RL 策略在规则约束子空间内优化。**(A69)** SRT-Dual：实时流读取语义锚点为非阻塞原子操作；语义流写入为 CAS 原子操作；版本号单调递增保证无撕裂读。**(A70)** PCE+++++：六维预算单调消耗，降级策略保证安全不退化（B_mel 耗尽→蒸馏→缓存→冻结锚点；B_usr 耗尽→冻结投影头）。
+**正确性定理（ROSE-Complete）** 假设 A61–A70（第 61 轮）及：
+- **(A71)** 执行损失 ℓ 对 K 凸且 G-Lipschitz；h 有界（L_h = sup‖h(x)‖ < ∞）；𝒲 经区间算术校验使 K_W(x) ∈ 𝒦, ∀x∈𝒳_obs。
+- **(A72)** RSC 一致性：物理偏差有界 ‖φ*−φ̂‖_∞ ≤ δ_bias + sub-Gaussian 噪声，且 J_φ 最小奇异值 ≥ σ_J > 0（残差可观测、反演良态）。
+- **(A73)** 𝒞_safe(C_exec, φ̂, r) 非空紧凸（ERTC 安全约束为线性不等式交集）。
+- **(A74)** Bank 回放覆盖：任一簇样本以概率 ≥ ρ/C 出现在每次适配 batch 中。
+- **(A75)** 实时路径无在线学习写操作；锚点读写原子（继承 A69）。
+- **(A76)** EXP3/Hedge 奖励经重要性加权（无偏）。
 
 则：
-1. **语义-控制一致性**：若 anchor_fresh ∧ e_proj ≤ ε_proj，则 K_safe ∈ Π(USR_fused) 的 ε_proj-邻域，语义意图在控制层得到忠实执行。
-2. **实时性保证**：实时流周期 ≤ 1ms（不含 EEIS 优化），不依赖 MEL 推理时序；语义流延迟超时自动触发保守扩展。
-3. **零样本泛化**：对未见场景，MEL 推断 φ_phys 误差 ≤ δ_phys ⇒ EEIS 编译的 K_safe 包含真实安全阻抗的 1-α 概率。
-4. **对话-执行接地**：DMS 根据 EV-exec 自动触发澄清/协商，闭环收敛轮次 ≤ 3，任务完成率 ≥ 90%。
-5. **预算安全性**：任一 B_cog5 维度耗尽，触发对应安全降级，不违反 ERTC 实时契约。
+1. **鲁棒遗憾保证**：Σℓ̃_t(W_t) − min_W Σℓ̃_t(W) ≤ D·G̃·√T——语义-控制对齐随在线学习渐近最优，无需凸性成立于整个网络。
+2. **偏差免疫**：P[K_safe 在真实 φ* 下安全] ≥ 1−α_cal——MEL 系统性偏差被 RSC 球覆盖并经 WCV 兜底，第 61 轮风险 2 被机制性缓解。
+3. **对话安全**：任何 DMS 提案（规则或 RL）经 Shield 后 ∈ 𝒞_safe，安全违规率 0——第 61 轮风险 3 从假设升级为机制。
+4. **场景驱动适应**：Hedge 对最优固定簇伪遗憾 O(√(T log C))，银行遗憾记账保证险情 100% 回流为课程信号——第 61 轮短板 4 消除。
+5. **预算对抗适应**：OCB 伪遗憾 O(√(KT log K))，且硬降级规则构成安全下界——预算调度获得在线保证且不突破 PCE+++++ 降级阶梯。
+6. **实时性不变**：实时路径零学习写操作，≤1ms 契约与锚点新鲜度保证与第 61 轮完全一致。
 
-## 4. 实验设计 E192–E200
+## 6. 实验设计 E201–E210
 
-| 实验 | 指标 | 目标 |
-|---|---|---|
-| E192 USR | 投影误差 e_proj 分位；对齐收敛迭代数 | P95 ≤ 0.05；≤ 50 迭代 |
-| E193 MEL | 零样本物理属性推断误差 (μ, k, η, σ) | μ<15%，k<20%，η<25%，σ<30% |
-| E194 DMS | 任务完成率；平均澄清轮次；安全违规率 | ≥ 90%；≤ 3 轮；= 0% |
-| E195 SRT-Dual | 实时流周期抖动；语义锚点新鲜度；保守扩展触发率 | ≤ 0.2ms 抖动；≥ 95%；≤ 5% |
-| E196 PCE+++++ | 六维预算耗尽触发降级正确性；VOI 单调性 | 100% 正确触发；单调递减 |
-| E197 XMC+++ | 语义一致性分数 C_sem 与任务成功率相关性 | ρ ≥ 0.8 |
-| E198 J_sem_exec | 证书验证通过率；审计追溯完整性 | ≥ 99.9%；100% |
-| E199 ZSSG | 未见场景（新材质/复合地形）下的执行成功率 | ≥ 80%（vs 第 60 轮 40%） |
-| E200 端到端 | vs 第 60 轮：场景适应时间、对话轮次、零样本成功率、实时抖动 | -50% 适应时间；-40% 对话轮次；+40% 零样本；抖动 ≤ 0.2ms |
+| 实验 | 设计 | 指标 | 目标 |
+|---|---|---|---|
+| E201 OLP 遗憾曲线 | 1000 语义步持续学习，log-log 拟合 R_T vs T | 斜率 | ≈ 0.5（吻合 √T） |
+| E202 偏差注入 | 强制 MEL μ_fric 低估 20%，对比 WCV vs 点估计编译 | 力超限率 | WCV = 0%，点估计对照 > 40% |
+| E203 RSC 覆盖率 | 扫描 δ_bias ∈ [5%, 30%]，检验 r_t 覆盖 | 覆盖率 | ≥ 1−α_cal（95%） |
+| E204 Hedge 课程 | 8 场景簇非平稳轮换，Hedge vs 均匀调度 | 最难簇适应时间 | −40% |
+| E205 MEL-OA | 在线适配 20 个险情场景后回测 bank | 未见场景成功率 / 回测损失增幅 | +25% / ≤ 5% |
+| E206 Shield | RL 策略注入 50 个违规提案 | 拦截率 / 任务完成率影响 | 100% / ≤ 2% 下降 |
+| E207 OCB | GPU 热点时变算力，vs oracle 切换 | regret gap | ≤ 10% |
+| E208 J_rose | 全链路审计回放 | 证书通过率 / 审计完整性 | ≥ 99.9% / 100% |
+| E209 端到端 vs 第 61 轮 | 非平稳场景 + 偏差场景混合评测 | 非平稳成功率 / 偏差场景违规 / 实时抖动 | +30% / =0 / ≤ 0.2ms |
+| E210 压力测试 | 杀死语义流线程 60s（锚点冻结） | 实时流安全运行 / ρ_rob | 100% / > 0 |
 
-## 5. 本轮最大风险
+## 7. 已知风险
 
-**一句话**：若 MEL 在零样本场景下物理属性推断系统性偏差（如普遍低估摩擦系数）、或 USR 对齐损失陷入坏的局部最优导致语义-控制持续漂移、或 DMS 规则策略与 RL 策略冲突提出不安全约束、或 SRT-Dual 语义锚点版本号回绕/撕裂读，将导致「大模型高度自信、实时控制灾难性失效」的**语义-现实鸿沟**；必须以「MEL 不确定性量化校准 + USR 投影误差实时监控 + DMS 规则策略硬约束优先 + SRT-Dual 版本号 64 位单调 + SACP 三重一致性检验」构建**语义安全护栏**，确保「语义先行」永不跨越「执行安全」红线。
+**一句话**：若灵敏度 Jacobian J_φ 病态（最小奇异值 σ_J → 0）、或外力矩残差被控制回路自身吸收（真实物理偏差不体现在残差中），RSC 将系统性低估 r_t，CVaR 球「覆盖失效」，引理 2 与定理 ROSE-Complete 第 2 条退化为纸面保证——这是本轮全部鲁棒性论证共同依赖的单点假设（A72）。
+
+**次级风险与缓解**：
+1. **动态遗憾缝隙**：环境漂移快于 O(√T) 时静态遗憾界失效 → SHC 集群调度兜底 + 监控 R̂_c 增速，超阈值时回退保守基线 K_baseline。
+2. **J_φ 在线估计噪声**：灵敏度 Jacobian 由局部线性化估计，接触瞬态误差大 → 仅在稳态接触窗口更新 RSC，瞬态样本降权。
+3. **银行漂移**：场景银行无界生长 → 簇数 C 封顶 64，Hedge 权重低于阈值的簇定期合并/淘汰（lineage 保留审计）。
+4. **MEL-OA 与 OLP 双学习耦合**：两者同时更新可能互相追逐（模型改了、投影头跟着追）→ 交替更新调度（奇偶步分离）+ gate 联锁。
+5. **EXP3 奖励稀疏**：任务进展信号低频 → 以执行损失负值填充稠密奖励，硬降级规则兜底。
 <!-- ARTIFACT:END -->
