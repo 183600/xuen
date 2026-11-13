@@ -1,0 +1,95 @@
+{
+ "note": "proprio-only demo-anchoring probe; no images; D-level",
+ "per_task": {
+  "G1_Dex1_ArrangeTestTubes": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9878,
+   "forward_order_acc": 0.9675,
+   "reversed_order_acc": 0.9825,
+   "reversed_negative_derivative_frac": 0.6834
+  },
+  "G1_Dex1_ConveyorSorting": {
+   "n_episodes": 2,
+   "phase_spearman_mean": 0.3465,
+   "forward_order_acc": 0.6187,
+   "reversed_order_acc": 0.6388,
+   "reversed_negative_derivative_frac": 0.5081
+  },
+  "G1_Dex1_FoldTowel": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9799,
+   "forward_order_acc": 0.965,
+   "reversed_order_acc": 0.9725,
+   "reversed_negative_derivative_frac": 0.582
+  },
+  "G1_Dex1_HangCup": {
+   "n_episodes": 5,
+   "phase_spearman_mean": 0.8447,
+   "forward_order_acc": 0.8775,
+   "reversed_order_acc": 0.8675,
+   "reversed_negative_derivative_frac": 0.6335
+  },
+  "G1_Dex1_OrganizeTools": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.585,
+   "forward_order_acc": 0.77,
+   "reversed_order_acc": 0.8175,
+   "reversed_negative_derivative_frac": 0.7121
+  },
+  "G1_Dex1_PackDoll": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9906,
+   "forward_order_acc": 0.97,
+   "reversed_order_acc": 0.9825,
+   "reversed_negative_derivative_frac": 0.6596
+  },
+  "G1_Dex1_PlugInEthernet": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9355,
+   "forward_order_acc": 0.9225,
+   "reversed_order_acc": 0.9375,
+   "reversed_negative_derivative_frac": 0.6233
+  },
+  "G1_Dex1_SpellRobot": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9929,
+   "forward_order_acc": 0.98,
+   "reversed_order_acc": 0.9925,
+   "reversed_negative_derivative_frac": 0.6934
+  },
+  "G1_Dex1_StackBowls": {
+   "n_episodes": 2,
+   "phase_spearman_mean": 0.6481,
+   "forward_order_acc": 0.78,
+   "reversed_order_acc": 0.7612,
+   "reversed_negative_derivative_frac": 0.5776
+  },
+  "G1_Dex1_ToolboxStorage": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9912,
+   "forward_order_acc": 0.9825,
+   "reversed_order_acc": 0.9775,
+   "reversed_negative_derivative_frac": 0.6433
+  },
+  "G1_Dex1_Unlock": {
+   "n_episodes": 1,
+   "phase_spearman_mean": 0.9947,
+   "forward_order_acc": 0.975,
+   "reversed_order_acc": 0.9825,
+   "reversed_negative_derivative_frac": 0.5645
+  },
+  "G1_Dex1_ZipUp": {
+   "n_episodes": 2,
+   "phase_spearman_mean": -0.0874,
+   "forward_order_acc": 0.4725,
+   "reversed_order_acc": 0.5262,
+   "reversed_negative_derivative_frac": 0.5333
+  }
+ },
+ "macro_mean": {
+  "phase_spearman_mean": 0.7675,
+  "forward_order_acc": 0.8568,
+  "reversed_order_acc": 0.8699,
+  "reversed_negative_derivative_frac": 0.6178
+ }
+}
