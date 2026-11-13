@@ -17,6 +17,7 @@ HELPER_NAME = "write_section.py"
 
 def _atomic_write_text(path: Path, text: str, *, newline=None) -> None:
     """Write UTF-8 text and atomically replace target; no partial artifacts on interruption."""
+    from .atomic_io import atomic_write_text
     atomic_write_text(path, text, newline=newline)
 
 

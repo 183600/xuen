@@ -271,10 +271,10 @@ def _validate(cfg: Config) -> None:
         raise ValueError("words.reuse")
 
     val = cfg.loop.iterations
-    if val is None or isinstance(val, bool):
-        pass
-    elif not isinstance(val, int):
-        raise ValueError(f"loop.iterations")
+    if val is not None and (isinstance(val, bool) or not isinstance(val, int)):
+        raise ValueError("loop.iterations")
+    if val is not None and val < 1:
+        raise ValueError("loop.iterations 必须在 1 或更多")
 
     if not isinstance(cfg.rounds.enabled, bool):
         raise ValueError("rounds.enabled")
@@ -298,7 +298,10 @@ def _validate(cfg: Config) -> None:
         val = getattr(cfg.rounds, name)
         if not isinstance(val, (int, float)) or isinstance(val, bool):
             raise ValueError(f"rounds.{name}")
-        if not math.isfinite(val) or val <= 0:
+        try:
+            if not math.isfinite(val) or val <= 0:
+                raise ValueError(f"rounds.{name}")
+        except (OverflowError, ValueError):
             raise ValueError(f"rounds.{name}")
 
     if cfg.rounds.judge_command and ("$prompt" not in cfg.rounds.judge_command and "$prompt_file" not in cfg.rounds.judge_command):
@@ -309,7 +312,10 @@ def _validate(cfg: Config) -> None:
 
     if not isinstance(cfg.agent.timeout, (int, float)) or isinstance(cfg.agent.timeout, bool):
         raise ValueError("agent.timeout")
-    if not math.isfinite(cfg.agent.timeout):
+    try:
+        if not math.isfinite(cfg.agent.timeout):
+            raise ValueError("agent.timeout")
+    except (OverflowError, ValueError):
         raise ValueError("agent.timeout")
 
     if not isinstance(cfg.prompt.max_state_chars, int) or isinstance(cfg.prompt.max_state_chars, bool):
@@ -352,6 +358,7 @@ def _validate(cfg: Config) -> None:
                         raise ValueError("必须包含会被实际替换")
         except (NotImplementedError, AttributeError, ImportError):
             pass
+
     if cfg.rounds.dir is None:
         raise ValueError("rounds.dir")
     if cfg.rounds.repo is None:
