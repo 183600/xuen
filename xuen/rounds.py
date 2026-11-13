@@ -1477,8 +1477,8 @@ def _last_comment(text: str, max_lines: int = 5) -> str:
     return " / ".join(lines[-max_lines:])[:300]
 
 def _parse_verdict_line(line: str) -> Tuple[Optional[float], str]:
-    \"\"\"Parse a verdict line from verdicts.txt.
-    Returns (score, comment). score is None if parsing fails or nan/inf.\"\"\"
+    """Parse a verdict line from verdicts.txt.
+    Returns (score, comment). score is None if parsing fails or nan/inf."""
     parts = line.split(None, 2)
     if len(parts) < 2:
         return None, ""
