@@ -10,6 +10,11 @@ import yaml
 
 _WORD_CHAR = re.compile(r'[A-Za-z0-9_]')
 
+# 占位符长度：_validate_windows_command 与 _has_valid_expansion 共用，
+# 统一定义在模块级，避免前者把局部变量当全局常量引用而抛 NameError。
+_PROMPT_FILE_LEN = 12  # len('$prompt_file')
+_PROMPT_LEN = 7        # len('$prompt')
+
 
 @dataclass
 class AgentConfig:
@@ -383,9 +388,6 @@ def _has_valid_expansion(command: str) -> bool:
     if not command:
         return False
 
-    PROMPT_FILE_LEN = 12
-    PROMPT_LEN = 7
-
     has_expansion = False
     i = 0
     n = len(command)
@@ -398,8 +400,8 @@ def _has_valid_expansion(command: str) -> bool:
             i += 1
             continue
 
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
+        if i + _PROMPT_FILE_LEN <= n and command[i:i+_PROMPT_FILE_LEN] == '$prompt_file':
+            end = i + _PROMPT_FILE_LEN
             if end < n and _WORD_CHAR.match(command[end]):
                 i += 1
                 continue
@@ -413,11 +415,11 @@ def _has_valid_expansion(command: str) -> bool:
             i = end
             continue
 
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
+        if i + _PROMPT_LEN <= n and command[i:i+_PROMPT_LEN] == '$prompt':
+            if i + _PROMPT_LEN < n and command[i+_PROMPT_LEN] == '_':
                 i += 1
                 continue
-            end = i + PROMPT_LEN
+            end = i + _PROMPT_LEN
             if end < n and command[end].isalnum():
                 i += 1
                 continue
@@ -454,8 +456,8 @@ def _validate_windows_command(field: str, command: str, workspace: str) -> None:
             i += 1
             continue
 
-        if i + PROMPT_FILE_LEN <= n and command[i:i+PROMPT_FILE_LEN] == '$prompt_file':
-            end = i + PROMPT_FILE_LEN
+        if i + _PROMPT_FILE_LEN <= n and command[i:i+_PROMPT_FILE_LEN] == '$prompt_file':
+            end = i + _PROMPT_FILE_LEN
             if end < n and _WORD_CHAR.match(command[end]):
                 i += 1
                 continue
@@ -469,11 +471,11 @@ def _validate_windows_command(field: str, command: str, workspace: str) -> None:
             i = end
             continue
 
-        if i + PROMPT_LEN <= n and command[i:i+PROMPT_LEN] == '$prompt':
-            if i + PROMPT_LEN < n and command[i+PROMPT_LEN] == '_':
+        if i + _PROMPT_LEN <= n and command[i:i+_PROMPT_LEN] == '$prompt':
+            if i + _PROMPT_LEN < n and command[i+_PROMPT_LEN] == '_':
                 i += 1
                 continue
-            end = i + PROMPT_LEN
+            end = i + _PROMPT_LEN
             if end < n and command[end].isalnum():
                 i += 1
                 continue
