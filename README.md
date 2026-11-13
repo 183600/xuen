@@ -1,13 +1,10 @@
 # xuen
 
-用「随机灵感词 × 外部 agent」模拟人类研究者持续演进想法的 **TUI** 循环。
+使用「随机灵感词 × 外部 agent」模拟人类研究者的 **TUI** 研究循环。
 
-xuen 本身不调用模型，也不内置研究工具；它只负责组织循环、维护状态、展示变化和保存进度。
-真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 把任务、
-随机灵感词、当前想法区/产物区和写入说明拼成提示词；外部 agent 执行后覆盖对应区块，
-xuen 再展示变化并（可选地）验证本轮结果。
+xuen 本身不调用模型，也不内置研究工具；它只负责组织循环、维护状态、展示变化和保存进度。真正的思考与写作交给外部 agent（如 opencode、claude、aider）。每一轮，xuen 将任务、随机灵感词、当前想法区/产物区和写入说明拼成提示词；外部 agent 执行后覆盖对应区块，xuen 再展示变化并（可选地）验证本轮结果。
 
-适合需要让 agent 围绕同一目标长期迭代、又希望每轮产物可追溯、可回退的场景。
+适合需要让 agent 围绕同一目标长期迭代，又希望每轮产物可追溯、可回退的场景。
 
 > **注意**：xuen 本身不调用任何 LLM。所有思考由外部 agent 完成，xuen 只负责循环组织、状态持久化、TUI 展示与轮次守卫。
 
@@ -26,7 +23,7 @@ xuen 再展示变化并（可选地）验证本轮结果。
 
 ## 快速开始
 
-需求 Python 3.9 或更高版本，以及一个可用的外部 agent 命令。
+Python 3.9 或更高版本，以及一个可用的外部 agent 命令。
 
 ```bash
 # 1. 安装运行时依赖
@@ -54,8 +51,7 @@ xuen "设计一个新的优化器"
 未用 `-c/--config` 指定时，程序依次查找当前目录的 `config.yaml`、`config.yml`、
 `xuen.yaml`。配置文件本身必须存在；除 `agent.command` 外，其余字段都可以省略并使用内置默认值。
 
-生效优先级为「命令行参数 > 配置文件 > 内置默认值」。命令行覆盖后会重新校验，
-因此 `--workspace`、`--iterations` 等参数同样不能绕过路径、轮数或命令模板约束。
+生效优先级为「命令行参数 > 配置文件 > 内置默认值」。命令行覆盖后会重新校验，因此 `--workspace`、`--iterations` 等参数同样不能绕过路径、轮数或命令模板约束。
 
 最小可用配置只需要一条 agent 命令：
 
@@ -80,8 +76,7 @@ agent:
 ```
 
 占位符必须位于会被实际执行的位置。若只写在 shell 注释、heredoc 正文、命令替换
-或其他无法安全解析的展开语境中，配置校验会直接报错，而不是在运行期静默丢弃提示词。
-这也是为什么模板应尽量简单：把提示词作为命令的普通参数传入即可。
+或其他无法安全解析的展开语境中，配置校验会直接报错，而不是在运行期静默丢弃提示词。这也是为什么模板应尽量简单：把提示词作为命令的普通参数传入即可。
 
 ### 常用命令
 
@@ -89,7 +84,7 @@ agent:
 python main.py "设计一个新的优化器" --no-tui          # 纯终端输出
 python main.py "设计一个新的优化器" --iterations inf --pick 3
 python main.py "设计一个新的优化器" --regen-words     # 忽略旧词库并重建
-python main.py --task-file task.md --no-tui           # 从文件读取任务
+python main.py "设计一个新的优化器" --task-file task.md --no-tui           # 从文件读取任务
 python main.py "设计一个新的优化器" --rounds-verify ai --rounds-score 8
 python main.py "设计一个新的优化器" --no-rounds       # 关闭轮次守卫
 python main.py "设计一个新的优化器" -c my-config.yaml
@@ -173,7 +168,7 @@ python write_section.py show
 
 - `$prompt`：把整段提示词按所在 shell 语境转义后替换；
 - `$prompt_file`：把提示词写入工作区内本次运行唯一的 `.prompt.XXXXXX.md`，
-  再把占位符替换为文件路径，运行结束后自动清理（跨平台推荐）；
+  占位符替换为文件路径，运行结束后自动清理（跨平台推荐）；
 - 模板中的命令替换、heredoc、注释、算术展开等区域不会被误替换；无法安全处理的
   写法会在配置校验阶段直接报错；
 - `agent.timeout` 超时后终止整个进程树；TUI 中按 `q` / `Ctrl+C` 也会先终止
@@ -185,7 +180,7 @@ python write_section.py show
 `xuen/words.py` 负责词库的生成、解析、持久化与抽样：
 
 - 按 `words.batch` 分批请求外部 agent 列出术语/关键词；
-- 程序只做解析、清洗、去重（去掉序号、引号、冒号解释等）并原子写入 `words.txt`；
+- 程序只做解析、清洗、去重（去掉序号、引号、冒号解释等）并原子写入 `words.txt`;
 - 某一批没有带来新词时提前结束；生成失败或结果为空时，若允许复用则回退到
   磁盘上的旧词库；
 - 生成结果不完整且少于旧词库时，默认保留更完整的旧词库；不会用残缺词表覆盖它；
@@ -272,7 +267,7 @@ stateDiagram-v2
   ├─ 有改动 → ① 快照为 rounds/cand-<id>.md（候选 ≠ 最佳）
   │        │
   │        ├─ ② 按 rounds.verify 验证
-  │        │    auto  有可运行测试就跑测试；没有则用 fallback 评分者
+  │        │    auto 有可运行测试就跑测试；没有则用 fallback 评分者
   │        │    tests 只跑测试（pytest → make → npm → go 级联）
   │        │    user  只认 verdicts.txt 用户评分
   │        │    ai    复用外部 agent 当评审员（judge_command 可配便宜模型）
@@ -331,7 +326,7 @@ rounds:
 
 评审员看到的是候选快照与当前最佳，而不是可能被外部改写的实时状态；评分达到
 `adopt_score` 才采纳。评审员超时、非零退出或输出无法解析时，候选按挂起处理，
-不会因为评审基础设施故障而被误判为差候选。
+不会因评审基础设施故障而被误判为差候选。
 
 ### 持久化与恢复
 
@@ -506,7 +501,7 @@ python -m pytest --cov=xuen --cov-report=term-missing
 | 只调用外部 agent | 外部调用集中在 `ShellAgent`；词库也由外部 agent 生成；无直连 LLM |
 | 配置 shell 命令调用外部 agent | `agent.command` + `$prompt` / `$prompt_file` |
 | TUI | `textual` 实现，默认启用；不可用时自动降级 |
-| 想法区/产物区变化展示 | TUI 面板显示 `[修改想法区]<内容>` / `[修改产物区]<内容>` |
+| 想法区/产物区变化展示 | TUI 面板显示 `[修改xx区]<内容>` 实时反映 research.md 变化 |
 | 底部输入框 | 输入入队，下一轮提示词中以「【用户输入】」段落带给 agent |
 | 状态持久化 | `research.md` 标记区块；重跑自动续用 |
 | 候选与最佳分离 | `rounds/cand-*.md` + `best.md` / `best.json` + `history.jsonl` |
