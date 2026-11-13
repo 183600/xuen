@@ -480,3 +480,4 @@ def CALM_RAS_round(M, obs):
 
 **次级风险与缓解**：表征坍缩（VICReg + 有效秩监控 + 坍缩即回滚）；负迁移（LoRA 隔离 + PCGrad）；伪标签偏差（残差门限 + wm_drift 冻结提交）；CAC 竞态（双缓冲 + 回滚失败即 k=0 全局降级）；标定红线悖论（出厂计量溯源 + 红线纳入 J_CALM 版本链）。
 <!-- ARTIFACT:END -->
+
