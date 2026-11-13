@@ -1,0 +1,242 @@
+{
+ "config": {
+  "BASE": [
+   [
+    30,
+    8.0,
+    6.0,
+    0.01
+   ],
+   [
+    30,
+    8.0,
+    6.0,
+    0.006
+   ],
+   [
+    40,
+    8.0,
+    6.0,
+    0.02
+   ]
+  ],
+  "N_TRIALS": 30000,
+  "CF": 0.1,
+  "CC": 3.0
+ },
+ "rows": [
+  {
+   "T": 40.0,
+   "arm": "R1-slack:fixed,no-commit",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [],
+   "mean_score": 93.028,
+   "success": 0.8137,
+   "sd": 15.111
+  },
+  {
+   "T": 40.0,
+   "arm": "R1-slack:delay-high-wl,no-commit",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [],
+   "mean_score": 93.027,
+   "success": 0.8143,
+   "sd": 15.155
+  },
+  {
+   "T": 40.0,
+   "arm": "R1-slack:high-wl-first,no-commit",
+   "order": [
+    2,
+    0,
+    1
+   ],
+   "commit": [],
+   "mean_score": 92.903,
+   "success": 0.8112,
+   "sd": 15.281
+  },
+  {
+   "T": 40.0,
+   "arm": "R1-slack:commit-high-wl",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [
+    2
+   ],
+   "mean_score": 96.739,
+   "success": 0.8987,
+   "sd": 9.929
+  },
+  {
+   "T": 40.0,
+   "arm": "R1-slack:commit-all",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [
+    0,
+    1,
+    2
+   ],
+   "mean_score": 99.275,
+   "success": 0.9797,
+   "sd": 5.113
+  },
+  {
+   "T": 30.0,
+   "arm": "R2-tight:fixed,no-commit",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [],
+   "mean_score": 92.648,
+   "success": 0.8047,
+   "sd": 15.488
+  },
+  {
+   "T": 30.0,
+   "arm": "R2-tight:delay-high-wl,no-commit",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [],
+   "mean_score": 92.778,
+   "success": 0.8086,
+   "sd": 15.389
+  },
+  {
+   "T": 30.0,
+   "arm": "R2-tight:high-wl-first,no-commit",
+   "order": [
+    2,
+    0,
+    1
+   ],
+   "commit": [],
+   "mean_score": 93.022,
+   "success": 0.8145,
+   "sd": 15.189
+  },
+  {
+   "T": 30.0,
+   "arm": "R2-tight:commit-high-wl",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [
+    2
+   ],
+   "mean_score": 97.082,
+   "success": 0.9072,
+   "sd": 9.281
+  },
+  {
+   "T": 30.0,
+   "arm": "R2-tight:commit-all",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [
+    0,
+    1,
+    2
+   ],
+   "mean_score": 0.0,
+   "success": 0.0,
+   "sd": 0.0
+  },
+  {
+   "T": 50.0,
+   "arm": "R3-slow-redo:fixed,no-commit",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [],
+   "mean_score": 79.787,
+   "success": 0.5199,
+   "sd": 23.309
+  },
+  {
+   "T": 50.0,
+   "arm": "R3-slow-redo:delay-high-wl,no-commit",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [],
+   "mean_score": 79.717,
+   "success": 0.5208,
+   "sd": 23.46
+  },
+  {
+   "T": 50.0,
+   "arm": "R3-slow-redo:high-wl-first,no-commit",
+   "order": [
+    2,
+    0,
+    1
+   ],
+   "commit": [],
+   "mean_score": 80.295,
+   "success": 0.5291,
+   "sd": 23.173
+  },
+  {
+   "T": 50.0,
+   "arm": "R3-slow-redo:commit-high-wl",
+   "order": [
+    1,
+    0,
+    2
+   ],
+   "commit": [
+    2
+   ],
+   "mean_score": 90.183,
+   "success": 0.7146,
+   "sd": 16.526
+  },
+  {
+   "T": 50.0,
+   "arm": "R3-slow-redo:commit-all",
+   "order": [
+    0,
+    1,
+    2
+   ],
+   "commit": [
+    0,
+    1,
+    2
+   ],
+   "mean_score": 97.7,
+   "success": 0.9355,
+   "sd": 8.922
+  }
+ ]
+}

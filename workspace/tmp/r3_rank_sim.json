@@ -1,0 +1,152 @@
+{
+  "Q1_rank_fidelity": {
+    "ground_truth_rank": [
+      4,
+      7,
+      3,
+      0,
+      1,
+      2,
+      6,
+      5
+    ],
+    "ground_truth_score": [
+      0.4652,
+      0.4333,
+      0.3687,
+      0.5595,
+      0.6304,
+      0.2743,
+      0.3191,
+      0.5717
+    ],
+    "results": {
+      "indep": [
+        {
+          "budget_per_policy": 32,
+          "kendall_tau": 0.807,
+          "pairwise_acc": 0.9035,
+          "top1_acc": 0.6333
+        },
+        {
+          "budget_per_policy": 64,
+          "kendall_tau": 0.8815,
+          "pairwise_acc": 0.9408,
+          "top1_acc": 0.725
+        },
+        {
+          "budget_per_policy": 128,
+          "kendall_tau": 0.9277,
+          "pairwise_acc": 0.9638,
+          "top1_acc": 0.8792
+        },
+        {
+          "budget_per_policy": 256,
+          "kendall_tau": 0.9512,
+          "pairwise_acc": 0.9756,
+          "top1_acc": 0.9708
+        },
+        {
+          "budget_per_policy": 512,
+          "kendall_tau": 0.975,
+          "pairwise_acc": 0.9875,
+          "top1_acc": 1
+        }
+      ],
+      "pair": [
+        {
+          "budget_per_policy": 32,
+          "kendall_tau": 0.9244,
+          "pairwise_acc": 0.9622,
+          "top1_acc": 0.8833
+        },
+        {
+          "budget_per_policy": 64,
+          "kendall_tau": 0.9524,
+          "pairwise_acc": 0.9762,
+          "top1_acc": 0.95
+        },
+        {
+          "budget_per_policy": 128,
+          "kendall_tau": 0.9714,
+          "pairwise_acc": 0.9857,
+          "top1_acc": 0.9917
+        },
+        {
+          "budget_per_policy": 256,
+          "kendall_tau": 0.9839,
+          "pairwise_acc": 0.992,
+          "top1_acc": 1
+        },
+        {
+          "budget_per_policy": 512,
+          "kendall_tau": 0.9917,
+          "pairwise_acc": 0.9958,
+          "top1_acc": 1
+        }
+      ],
+      "strat": [
+        {
+          "budget_per_policy": 32,
+          "kendall_tau": 0.9163,
+          "pairwise_acc": 0.9582,
+          "top1_acc": 0.9
+        },
+        {
+          "budget_per_policy": 64,
+          "kendall_tau": 0.9485,
+          "pairwise_acc": 0.9743,
+          "top1_acc": 0.9708
+        },
+        {
+          "budget_per_policy": 128,
+          "kendall_tau": 0.9688,
+          "pairwise_acc": 0.9844,
+          "top1_acc": 0.9958
+        },
+        {
+          "budget_per_policy": 256,
+          "kendall_tau": 0.9854,
+          "pairwise_acc": 0.9927,
+          "top1_acc": 1
+        },
+        {
+          "budget_per_policy": 512,
+          "kendall_tau": 0.9923,
+          "pairwise_acc": 0.9961,
+          "top1_acc": 1
+        }
+      ]
+    }
+  },
+  "Q1b_correlation": {
+    "mean_pairwise_score_correlation": 0.6224,
+    "implied_crn_efficiency_1/(1-rho)": 2.648
+  },
+  "Q2_win_probability": {
+    "control_equal_mean": {
+      "N=1": 0.501,
+      "N=3": 0.498,
+      "N=10": 0.5008,
+      "N=32": 0.4981
+    },
+    "A_lowvar_mean_-0.005": {
+      "N=1": 0.4789,
+      "N=3": 0.4647,
+      "N=10": 0.4381,
+      "N=32": 0.3924
+    },
+    "A_lowvar_mean_+0.010": {
+      "N=1": 0.5396,
+      "N=3": 0.5646,
+      "N=10": 0.6221,
+      "N=32": 0.708
+    },
+    "A_highvar_mean_+0.010": {
+      "N=1": 0.5367,
+      "N=3": 0.5655,
+      "N=10": 0.6221,
+      "N=32": 0.7114
+    }
+  }
+}
