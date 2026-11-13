@@ -1,0 +1,234 @@
+{
+ "seed": 20261113,
+ "note": "synthetic mechanism check, not benchmark evidence",
+ "A_transfer_certificate": [
+  {
+   "delta_max": 0.0,
+   "conformal_q": 0.107,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.0,
+   "naive_false_safe_rate": 0.0,
+   "bridge_transfer_rate": 0.9995,
+   "bridge_unsafe_rate": 0.0,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_mean_lower_bound": 0.1483,
+   "bridge_mean_true_margin_transferred": 0.3,
+   "oracle_transfer_rate": 1.0,
+   "oracle_false_safe_rate": 0.0
+  },
+  {
+   "delta_max": 0.2,
+   "conformal_q": 0.1095,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.0,
+   "naive_false_safe_rate": 0.0,
+   "bridge_transfer_rate": 0.985,
+   "bridge_unsafe_rate": 0.0,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_mean_lower_bound": 0.1292,
+   "bridge_mean_true_margin_transferred": 0.3006,
+   "oracle_transfer_rate": 1.0,
+   "oracle_false_safe_rate": 0.0
+  },
+  {
+   "delta_max": 0.4,
+   "conformal_q": 0.1206,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.0035,
+   "naive_false_safe_rate": 0.0035,
+   "bridge_transfer_rate": 0.8562,
+   "bridge_unsafe_rate": 0.0035,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_mean_lower_bound": 0.0861,
+   "bridge_mean_true_margin_transferred": 0.3023,
+   "oracle_transfer_rate": 0.9912,
+   "oracle_false_safe_rate": 0.0
+  },
+  {
+   "delta_max": 0.6,
+   "conformal_q": 0.1138,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.043,
+   "naive_false_safe_rate": 0.043,
+   "bridge_transfer_rate": 0.7482,
+   "bridge_unsafe_rate": 0.043,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_mean_lower_bound": 0.0592,
+   "bridge_mean_true_margin_transferred": 0.2997,
+   "oracle_transfer_rate": 0.9203,
+   "oracle_false_safe_rate": 0.0
+  },
+  {
+   "delta_max": 0.8,
+   "conformal_q": 0.1134,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.085,
+   "naive_false_safe_rate": 0.085,
+   "bridge_transfer_rate": 0.6508,
+   "bridge_unsafe_rate": 0.085,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_mean_lower_bound": 0.022,
+   "bridge_mean_true_margin_transferred": 0.2997,
+   "oracle_transfer_rate": 0.8343,
+   "oracle_false_safe_rate": 0.0
+  },
+  {
+   "delta_max": 1.0,
+   "conformal_q": 0.1076,
+   "naive_transfer_rate": 1.0,
+   "naive_unsafe_rate": 0.1205,
+   "naive_false_safe_rate": 0.1205,
+   "bridge_transfer_rate": 0.5847,
+   "bridge_unsafe_rate": 0.1205,
+   "bridge_false_safe_rate": 0.0003,
+   "bridge_mean_lower_bound": -0.0116,
+   "bridge_mean_true_margin_transferred": 0.301,
+   "oracle_transfer_rate": 0.7572,
+   "oracle_false_safe_rate": 0.0
+  }
+ ],
+ "B_virtual_probe_auction": [
+  {
+   "gap": 0.0,
+   "strategy": "random",
+   "accuracy": 0.672,
+   "mean_real_probes": 3.0,
+   "mean_real_risk": 1.877,
+   "mean_final_entropy": 0.614
+  },
+  {
+   "gap": 0.0,
+   "strategy": "real_only",
+   "accuracy": 0.98,
+   "mean_real_probes": 2.684,
+   "mean_real_risk": 1.282,
+   "mean_final_entropy": 0.1296
+  },
+  {
+   "gap": 0.0,
+   "strategy": "sim_only",
+   "accuracy": 0.996,
+   "mean_real_probes": 0.0,
+   "mean_real_risk": 0.0,
+   "mean_final_entropy": 0.0201
+  },
+  {
+   "gap": 0.0,
+   "strategy": "vpa",
+   "accuracy": 0.996,
+   "mean_real_probes": 0.112,
+   "mean_real_risk": 0.056,
+   "mean_final_entropy": 0.0356
+  },
+  {
+   "gap": 0.5,
+   "strategy": "random",
+   "accuracy": 0.722,
+   "mean_real_probes": 3.0,
+   "mean_real_risk": 1.834,
+   "mean_final_entropy": 0.5659
+  },
+  {
+   "gap": 0.5,
+   "strategy": "real_only",
+   "accuracy": 0.966,
+   "mean_real_probes": 2.714,
+   "mean_real_risk": 1.217,
+   "mean_final_entropy": 0.1365
+  },
+  {
+   "gap": 0.5,
+   "strategy": "sim_only",
+   "accuracy": 0.982,
+   "mean_real_probes": 0.0,
+   "mean_real_risk": 0.0,
+   "mean_final_entropy": 0.1261
+  },
+  {
+   "gap": 0.5,
+   "strategy": "vpa",
+   "accuracy": 0.992,
+   "mean_real_probes": 0.384,
+   "mean_real_risk": 0.234,
+   "mean_final_entropy": 0.1307
+  },
+  {
+   "gap": 1.0,
+   "strategy": "random",
+   "accuracy": 0.708,
+   "mean_real_probes": 3.0,
+   "mean_real_risk": 1.801,
+   "mean_final_entropy": 0.572
+  },
+  {
+   "gap": 1.0,
+   "strategy": "real_only",
+   "accuracy": 0.98,
+   "mean_real_probes": 2.686,
+   "mean_real_risk": 1.235,
+   "mean_final_entropy": 0.1243
+  },
+  {
+   "gap": 1.0,
+   "strategy": "sim_only",
+   "accuracy": 0.886,
+   "mean_real_probes": 0.0,
+   "mean_real_risk": 0.0,
+   "mean_final_entropy": 0.9125
+  },
+  {
+   "gap": 1.0,
+   "strategy": "vpa",
+   "accuracy": 0.968,
+   "mean_real_probes": 1.67,
+   "mean_real_risk": 1.004,
+   "mean_final_entropy": 0.2679
+  }
+ ],
+ "C_common_cause": [
+  {
+   "b_common": 0.0,
+   "naive_false_safe_rate": 0.0,
+   "paired_only_false_safe_rate": 0.0,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_transfer_rate": 0.9998
+  },
+  {
+   "b_common": 0.2,
+   "naive_false_safe_rate": 0.0005,
+   "paired_only_false_safe_rate": 0.0005,
+   "bridge_false_safe_rate": 0.0,
+   "bridge_transfer_rate": 0.049
+  },
+  {
+   "b_common": 0.4,
+   "naive_false_safe_rate": 0.0968,
+   "paired_only_false_safe_rate": 0.0965,
+   "bridge_false_safe_rate": 0.0045,
+   "bridge_transfer_rate": 0.055
+  },
+  {
+   "b_common": 0.6,
+   "naive_false_safe_rate": 1.0,
+   "paired_only_false_safe_rate": 1.0,
+   "bridge_false_safe_rate": 0.043,
+   "bridge_transfer_rate": 0.043
+  },
+  {
+   "b_common": 0.8,
+   "naive_false_safe_rate": 1.0,
+   "paired_only_false_safe_rate": 1.0,
+   "bridge_false_safe_rate": 0.0498,
+   "bridge_transfer_rate": 0.0498
+  }
+ ],
+ "D_open_set": [
+  {
+   "unknown_detection_rate": 0.9902,
+   "closed_set_forced_misattribution_rate": 1.0,
+   "known_fault_accuracy": 0.893,
+   "known_false_unknown_rate": 0.0005,
+   "calibration_threshold": 3.3505
+  }
+ ]
+}

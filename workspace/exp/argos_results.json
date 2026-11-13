@@ -1,0 +1,158 @@
+{
+ "seed": 20261113,
+ "note": "synthetic mechanism check, not benchmark evidence",
+ "A_zero_trust_shim": {
+  "naive_execute_all": {
+   "alpha": 0.05,
+   "conformal_q": -0.2966,
+   "admit_rate": 1.0,
+   "unsafe_executed_rate": 0.1366,
+   "unsafe_among_admitted": 0.1366,
+   "harmful_admit_rate": 1.0,
+   "benign_false_reject_rate": 0.0,
+   "unsafe_executed": 5464
+  },
+  "threshold_only": {
+   "alpha": 0.05,
+   "conformal_q": -0.2966,
+   "admit_rate": 0.855,
+   "unsafe_executed_rate": 0.01655,
+   "unsafe_among_admitted": 0.01936,
+   "harmful_admit_rate": 0.17514,
+   "benign_false_reject_rate": 0.025,
+   "unsafe_executed": 662
+  },
+  "zts_conformal_95": {
+   "alpha": 0.05,
+   "conformal_q": -0.2966,
+   "admit_rate": 0.6722,
+   "unsafe_executed_rate": 0.0007,
+   "unsafe_among_admitted": 0.00104,
+   "harmful_admit_rate": 0.01983,
+   "benign_false_reject_rate": 0.21268,
+   "unsafe_executed": 28
+  },
+  "zts_conformal_90": {
+   "alpha": 0.1,
+   "conformal_q": -0.2355,
+   "admit_rate": 0.7276,
+   "unsafe_executed_rate": 0.00183,
+   "unsafe_among_admitted": 0.00251,
+   "harmful_admit_rate": 0.03416,
+   "benign_false_reject_rate": 0.15003,
+   "unsafe_executed": 73
+  },
+  "n": 40000,
+  "harmful_fraction": 0.15
+ },
+ "B_lease_exposure": {
+  "dt_ms": 50,
+  "sem_period_ms": 250,
+  "rows": [
+   {
+    "policy": "no_lease_detection_only",
+    "ttl_ms": null,
+    "mean_exposure_actions": 3.788,
+    "p99_exposure_actions": 19.0,
+    "max_exposure_actions": 74,
+    "analytic_bound_actions": null
+   },
+   {
+    "policy": "lease_ttl_200",
+    "ttl_ms": 200,
+    "mean_exposure_actions": 1.498,
+    "p99_exposure_actions": 4.0,
+    "max_exposure_actions": 4,
+    "analytic_bound_actions": 5
+   },
+   {
+    "policy": "lease_ttl_250",
+    "ttl_ms": 250,
+    "mean_exposure_actions": 2.073,
+    "p99_exposure_actions": 5.0,
+    "max_exposure_actions": 5,
+    "analytic_bound_actions": 6
+   },
+   {
+    "policy": "lease_ttl_300",
+    "ttl_ms": 300,
+    "mean_exposure_actions": 2.5,
+    "p99_exposure_actions": 6.0,
+    "max_exposure_actions": 6,
+    "analytic_bound_actions": 7
+   },
+   {
+    "policy": "lease_ttl_500",
+    "ttl_ms": 500,
+    "mean_exposure_actions": 3.292,
+    "p99_exposure_actions": 10.0,
+    "max_exposure_actions": 10,
+    "analytic_bound_actions": 11
+   }
+  ]
+ },
+ "C_lifecycle_monotonicity": {
+  "episodes": 20000,
+  "total_promotion_requests": 39999,
+  "unsafe_promotion_requests": 15826,
+  "naive_unsafe_activations": 15826,
+  "naive_unsafe_active_fraction": 0.3997,
+  "guarded_unsafe_activations": 0,
+  "guarded_blocked": 15826,
+  "guarded_admitted_legitimate": 24173
+ },
+ "D_graph_attribution": {
+  "classes": [
+   "none",
+   "node_late",
+   "topic_drop",
+   "qos_mismatch",
+   "semantic_drift"
+  ],
+  "node_local_top1": 0.5304,
+  "graph_fused_top1": 0.9463,
+  "per_class_node_local": {
+   "none": 0.2923,
+   "node_late": 0.3688,
+   "topic_drop": 0.4126,
+   "qos_mismatch": 0.8094,
+   "semantic_drift": 0.7571
+  },
+  "per_class_graph_fused": {
+   "none": 0.8814,
+   "node_late": 0.9456,
+   "topic_drop": 0.9519,
+   "qos_mismatch": 0.9749,
+   "semantic_drift": 0.9764
+  }
+ },
+ "E_semantic_drift": {
+  "calibration_null_quantile": 0.99,
+  "rows": [
+   {
+    "delta": 0.25,
+    "calibrated_h": 44.572,
+    "mean_delay_samples": 300.56,
+    "p95_delay_samples": 548.5,
+    "miss_rate": 0.01,
+    "false_alarm_rate": 0.0033
+   },
+   {
+    "delta": 0.5,
+    "calibrated_h": 22.159,
+    "mean_delay_samples": 83.98,
+    "p95_delay_samples": 159.15,
+    "miss_rate": 0.0,
+    "false_alarm_rate": 0.0067
+   },
+   {
+    "delta": 1.0,
+    "calibrated_h": 12.34,
+    "mean_delay_samples": 23.5,
+    "p95_delay_samples": 43.05,
+    "miss_rate": 0.0,
+    "false_alarm_rate": 0.0
+   }
+  ]
+ }
+}
