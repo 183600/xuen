@@ -2999,3 +2999,4 @@
 {"event": "verdict", "id": "20261113-024350-r3", "round": 3, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-13 02:53:50"}
 {"event": "restored", "round": 3, "why": "候选被拒绝", "best": "20261112-220657-r1", "changed": ["idea"], "ts": "2026-11-13 02:53:50"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-13 02:57:43"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-13 03:56:38"}
