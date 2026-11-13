@@ -1,0 +1,176 @@
+{
+  "note": "synthetic 5-step process; not a benchmark result",
+  "params": {
+    "G": 5,
+    "weights": [
+      20.0,
+      20.0,
+      20.0,
+      20.0,
+      20.0
+    ],
+    "p_step": 0.45,
+    "h_low": 0.03,
+    "h_high": 0.55,
+    "h_guard": 0.03,
+    "persist": 0.88,
+    "horizon": 30,
+    "obs_sigma": 0.7,
+    "n_ep": 20000
+  },
+  "reactive_monte_carlo": {
+    "step_score_mean": 75.992,
+    "step_score_sd": 36.009,
+    "success_rate": 0.6465,
+    "guard_fraction": 0.0
+  },
+  "belief_best_monte_carlo": {
+    "threshold": 0.7,
+    "g_min": 2,
+    "step_score_mean": 79.84,
+    "step_score_sd": 31.237,
+    "success_rate": 0.6502,
+    "guard_fraction": 0.1411
+  },
+  "belief_sweep": [
+    {
+      "threshold": 0.4,
+      "g_min": 1,
+      "step_score_mean": 74.274,
+      "step_score_sd": 32.21,
+      "success_rate": 0.543,
+      "guard_fraction": 0.3892
+    },
+    {
+      "threshold": 0.4,
+      "g_min": 2,
+      "step_score_mean": 78.935,
+      "step_score_sd": 29.579,
+      "success_rate": 0.5978,
+      "guard_fraction": 0.2422
+    },
+    {
+      "threshold": 0.4,
+      "g_min": 3,
+      "step_score_mean": 79.117,
+      "step_score_sd": 31.39,
+      "success_rate": 0.6159,
+      "guard_fraction": 0.1313
+    },
+    {
+      "threshold": 0.5,
+      "g_min": 1,
+      "step_score_mean": 75.422,
+      "step_score_sd": 32.381,
+      "success_rate": 0.5735,
+      "guard_fraction": 0.3416
+    },
+    {
+      "threshold": 0.5,
+      "g_min": 2,
+      "step_score_mean": 79.205,
+      "step_score_sd": 30.202,
+      "success_rate": 0.6173,
+      "guard_fraction": 0.2084
+    },
+    {
+      "threshold": 0.5,
+      "g_min": 3,
+      "step_score_mean": 79.332,
+      "step_score_sd": 32.031,
+      "success_rate": 0.6357,
+      "guard_fraction": 0.1076
+    },
+    {
+      "threshold": 0.6,
+      "g_min": 1,
+      "step_score_mean": 76.96,
+      "step_score_sd": 32.09,
+      "success_rate": 0.6041,
+      "guard_fraction": 0.2956
+    },
+    {
+      "threshold": 0.6,
+      "g_min": 2,
+      "step_score_mean": 79.645,
+      "step_score_sd": 30.534,
+      "success_rate": 0.6352,
+      "guard_fraction": 0.1749
+    },
+    {
+      "threshold": 0.6,
+      "g_min": 3,
+      "step_score_mean": 78.83,
+      "step_score_sd": 32.591,
+      "success_rate": 0.6363,
+      "guard_fraction": 0.0886
+    },
+    {
+      "threshold": 0.7,
+      "g_min": 1,
+      "step_score_mean": 77.61,
+      "step_score_sd": 32.418,
+      "success_rate": 0.624,
+      "guard_fraction": 0.2507
+    },
+    {
+      "threshold": 0.7,
+      "g_min": 2,
+      "step_score_mean": 79.84,
+      "step_score_sd": 31.237,
+      "success_rate": 0.6502,
+      "guard_fraction": 0.1411
+    },
+    {
+      "threshold": 0.7,
+      "g_min": 3,
+      "step_score_mean": 78.161,
+      "step_score_sd": 33.641,
+      "success_rate": 0.6428,
+      "guard_fraction": 0.0678
+    },
+    {
+      "threshold": 0.8,
+      "g_min": 1,
+      "step_score_mean": 78.087,
+      "step_score_sd": 32.926,
+      "success_rate": 0.6444,
+      "guard_fraction": 0.1931
+    },
+    {
+      "threshold": 0.8,
+      "g_min": 2,
+      "step_score_mean": 79.748,
+      "step_score_sd": 32.07,
+      "success_rate": 0.6639,
+      "guard_fraction": 0.1012
+    },
+    {
+      "threshold": 0.8,
+      "g_min": 3,
+      "step_score_mean": 78.246,
+      "step_score_sd": 34.028,
+      "success_rate": 0.6549,
+      "guard_fraction": 0.0473
+    }
+  ],
+  "reactive_dp_expected": 76.248,
+  "oracle_dp_expected": 86.833,
+  "oracle_policy": {
+    "g=0,r=0": "attempt",
+    "g=0,r=1": "attempt",
+    "g=1,r=0": "attempt",
+    "g=1,r=1": "attempt",
+    "g=2,r=0": "attempt",
+    "g=2,r=1": "guard",
+    "g=3,r=0": "attempt",
+    "g=3,r=1": "guard",
+    "g=4,r=0": "attempt",
+    "g=4,r=1": "guard",
+    "g=5,r=0": "done",
+    "g=5,r=1": "done"
+  },
+  "belief_vs_reactive_pp": 3.848,
+  "oracle_minus_reactive_pp": 10.585,
+  "belief_captures_oracle_gain_pct": 36.4
+}
