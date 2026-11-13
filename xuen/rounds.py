@@ -1301,17 +1301,8 @@ class RoundGuard:
                 continue
             cid, raw_score, comment = parts[0], parts[1], (
                 parts[2].strip() if len(parts) > 2 else "")
-            try:
-                score = float(raw_score)
-            except ValueError:
-                score = None
-            else:
-                # nan/inf 不是合法评分：min/max 夹取会把它们留成 10 分，
-                # 等于凭空给候选满分——必须和「解析不出」同等对待
-                if not math.isfinite(score):
-                    score = None
-                else:
-                    score = _clamp_score(score)
+            cid = parts[0]
+            score, comment = _parse_verdict_line(line)
             if score is None and cid in out and out[cid][0] is not None:
                 # 同一候选写了两行、后一行分数打错时，不能让坏行覆盖
                 # 前面已解析出的有效评分；后一行有效评分仍按最后一条
@@ -1484,3 +1475,24 @@ def _last_comment(text: str, max_lines: int = 5) -> str:
     lines = [ln.strip() for ln in text.splitlines()
              if ln.strip() and not any(p.search(ln) for p in _SCORE_PATTERNS)]
     return " / ".join(lines[-max_lines:])[:300]
+
+def _parse_verdict_line(line: str) -> Tuple[Optional[float], str]:
+    \"\"\"Parse a verdict line from verdicts.txt.
+    Returns (score, comment). score is None if parsing fails or nan/inf.\"\"\"
+    parts = line.split(None, 2)
+    if len(parts) < 2:
+        return None, ""
+    cid = parts[0]
+    raw_score = parts[1]
+    comment = parts[2].strip() if len(parts) > 2 else ""
+    try:
+        score = float(raw_score)
+    except ValueError:
+        score = None
+    else:
+        if not math.isfinite(score):
+            score = None
+        else:
+            score = _clamp_score(score)
+    return score, comment
+
