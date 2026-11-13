@@ -2,450 +2,694 @@
 
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 <!-- IDEA:START -->
-# 第 63 轮（承接第 62 轮「ROSE 鲁棒在线场景进化闭环」IP-183~192；本轮灵感：「故障诊断」×「安全交互」）
+# 第 63 轮（承接第 62 轮「ROSE 鲁棒在线场景进化闭环」IP-183~192；灵感循环 II 第 2 轮；本轮灵感：「激光雷达」×「通用操作」×「抗干扰」）
 
-> 第 62 轮 ROSE 把对齐变成在线学习（OLP）、把偏差变成 CVaR 球（WCV+RSC）、把经验变成场景银行（SBR+SHC），并自称最大风险是 A72：**RSC 靠执行残差反演物理偏差，若 J_φ 病态或残差被控制回路吸收，球半径 r_t 系统性低估，全部安全保证退化为纸面**。第 63 轮认为，ROSE 的残差框架还缺四个更根本的维度：
-> 1. **残差无类型**：ROSE 把所有异常压缩成一个标量 e_t，再经 J_φ⁺ 反演成单一参数球。它只回答「偏了多少」，不回答「哪里坏了」。传感器偏置、执行器增益损失、接触滑移、模型参数漂移在残差里可能长成同一个样子，但它们的容错动作、安全集收缩方向、可恢复性完全不同——**用同一个球兜底四类病，必然要么过保守、要么漏检**。
-> 2. **A72 的自证循环仍在**：残差由被控系统自己产生，控制器越强，越会把偏差吸收进零残差；单残差 + 伪逆对病态 J_φ 无免疫。ROSE 用「更大的 r_t」兜底，但「更保守」≠「诊断正确」，系统无法判断保守是否已经足够。
-> 3. **安全交互只有「拦截」，没有「诊断-恢复」**：Shield 只把约束投影回单一安全集，不区分故障类型；没有故障隔离、没有容错控制重构、没有安全降级/交接的语义。安全集是「一个球」，而不是「一张按故障分型的表」。
-> 4. **人只在回路外**：ROSE 的 DMS 在正常交互中问需求，但异常时人不参与诊断；而很多故障（「你刚才是不是感到打滑？」）只有人能提供关键证据。反过来，「问人」本身也是一种交互动作，可能分心、可能危险——ROSE 没有「安全可问」的概念。
+> 第 62 轮构建了 ROSE：OLP 带遗憾界的在线投影、WCV+RSC 偏差驱动的 CVaR 球兜底、SBR+SHC 遗憾驱动的场景银行、Shield 对话安全屏蔽、OCB 对抗老虎机预算。但第 62 轮自述的最大风险暴露了**三个感知-几何-执行层面的根基性短板**：
+> 1. **USR/MEL 缺乏 3D 几何先验**：语义表征 x 仅融合视觉 V、触觉 T、本体 P、语言 L，缺失**稠密 3D 点云几何**——接触面法向、曲率、空间拓扑对阻抗编译（EEIS/MSPF）与物理推断（MEL）至关重要，若无 LiDAR 级几何，WCV 球心 φ̂ 与半径 r 的初始化均受限于「盲人摸象」。
+> 2. **动作空间仍是「原子阻抗」而非「通用技能」**：DMS/ERTC 直接输出 K_safe 与约束 c，未抽象出**可组合、可迁移、带前后置条件的技能原语**（reach, grasp, push, insert, hand-over 等）——「通用操作」要求策略在技能层面推理与组合，而非在阻抗参数层面拟合。
+> 3. **抗干扰仅止于「参数不确定球」**：RSC/WCV 只处理物理参数 φ 的系统性偏差（A72），未覆盖**传感器噪声（LiDAR 杂波/多径）、执行器扰动（关节摩擦突变/电流尖峰）、对抗性感知攻击（遮挡/欺骗点云）、分布外几何（新物体拓扑）**——第 62 轮的 ρ_rob 在这些扰动下可能虚高，证书 J_rose 失效。
 
 ## 0. 直觉与动机
 
-**灵感 1（故障诊断 → 从「偏差大小」到「故障类型」）**
-直觉：诊断的核心不是把残差做大，而是设计一组「各管一段」的残差，让每类故障在残差空间留下可区分的签名。用奇偶空间/未知输入观测器把未知扰动（负载、坡度、人的外力）从残差中解耦，只留下故障方向。关键洞见：ROSE 要求「J_φ 良态」（每个参数都可辨识），这太强；故障诊断只要求「**每类故障的签名可区分**」（isolability），这是一个更弱、更可设计、也可在线检验的条件。把 A72 从「参数可辨识」降级为「故障可隔离」，等于把信仰换成工程上可复核的性质。
+**灵感 1（激光雷达 → LSF：LiDAR-Semantic Fusion 稠密几何语义融合）**
+直觉：第 61/62 轮的 USR 统一语义表征 x ∈ ℝ^256 只融合 RGB+触觉+本体+语言。**关键缺口**：稠密 3D 几何（点云/深度/法向/曲率/接触面拓扑）是阻抗编译与物理推断的「几何先验」。LiDAR 点云 P_cloud 经体素化/下采样 → 几何编码器 E_geo → 几何嵌入 g ∈ ℝ^d_g，再通过**跨模态注意力**与现有 USR 分支融合：x' = CrossAttn([x; g])。几何嵌入 g 同时喂入 MEL 作为 φ̂ 的几何正则项（接触面法向约束摩擦锥、曲率约束刚度上界），喂入 WCV 作为球心 φ̂ 的几何初始化——**几何不再是事后解释，而是先验约束**。
 
-**灵感 2（故障诊断 → 开集拒识：错误的自信最危险）**
-直觉：最危险的不是「没诊断出来」，而是「把未知故障误诊成已知故障」。后者会让系统带着错误的自信进入错误的安全集。所以诊断必须带**开集监控**：当残差落在已知故障签名张成的子空间之外时，拒绝隔离，标记「未建模故障」，退回被动安全核。宁可诚实地说「我不知道」，也不要自信地错。
+**灵感 2（通用操作 → USL：Universal Skill Library 通用技能库 + CSP 技能组合规划）**
+直觉：第 62 轮 DMS→Shield→ERTC 仍在「阻抗参数/约束」层面操作。**关键洞见**：把「操作」提升为**带前后置条件的技能原语**库 USL = {σ_i}，每技能 σ = (name, pre: ℒ_pre, eff: ℒ_eff, π_σ: 𝒳→𝒦×𝒞, cost, 𝒫_feas)。DMS/RL 不再直接输出 K/c，而是输出**技能序列** τ = [σ_1, ..., σ_H] 与参数绑定 θ_i；CSP (Constraint Satisfaction Planning) 在 USL 上搜索可行序列，再由 ERTC 逐技能展开为阻抗轨迹——「通用操作」被形式化为**技能层面的组合规划 + 参数层面的鲁棒展开**，技能库可跨任务迁移、跨本体复用。
 
-**灵感 3（安全交互 → 两层安全：物理层不依赖诊断，任务层才依赖诊断）**
-直觉：安全必须分层。**物理安全层**（力矩/力/速度/人机距离的硬件包络 + 原始测量级不变量）永不依赖诊断，误诊也不能突破；**任务安全层**（不滑落、不碰撞、不越界）才允许由故障条件安全集来放宽性能。这样，「诊断错了」最坏只导致任务失败，不会导致人身/硬件伤害。这是安全交互的底线，也是把 ROSE 的「球兜底」升级为「分型兜底」的关键。
+**灵感 3（抗干扰 → DIR：Disturbance-Invariant Representation 干扰不变表征 + AIC 抗干扰认证器）**
+直觉：第 62 轮的鲁棒性仅针对「物理参数 φ 的不确定球」（A72）。**关键补全**：显式建模**四类干扰**并学习不变表征：① 传感器噪声 η_sens（LiDAR 杂波、RGB 光照突变）；② 执行器扰动 η_act（关节摩擦突变、电流尖峰、通讯延迟抖动）；③ 对抗感知 η_adv（遮挡、欺骗点云、纹理攻击）；④ 几何分布外 η_ood（新物体拓扑、未见材质）。**DIR 目标**：学习编码器 E_dir 使得 Z = E_dir(O) 对干扰类不变——I(Z; η | task) ≈ 0，同时保持任务相关信息 I(Z; task) 最大。实现：多源对比学习（干扰增强视图 vs 干净视图）+ 因果干预正则（do(η) 不改变 Z 的任务预测头输出）。**AIC 认证器**：对组合技能 τ，计算最坏干扰下的鲁棒裕度 ρ_dir = min_{η∈ℰ} margin(τ, η)，其中 ℰ 为干扰集（由 DIR 校准的经验分布支撑），输出证书 J_dir 并入 J_rose。
 
-**灵感 4（安全交互 → 安全可问：人既是监督者也是传感器）**
-直觉：人能在异常时提供机器拿不到的证据（「我感觉到抖了一下」），但「问人」是一个有代价的交互动作。因此只在**安全可问态**发问：机器人已进入被动核、任务暂停、人不在危险接触中、问题的信息增益足够高、交互预算允许。人的回答只作为**有界可信度**的诊断证据，必须与物理残差互证，单次回答不能翻案。人是最后的否决者，但不是安全保证的必要条件。
+**灵感 4（三灵感合流 → LIRO：LiDAR-Invariant Robust Operations 闭环）**
+三者咬合：LSF 提供**几何先验**修正 φ̂_0 与 r_0（WCV 球更紧、更准）；USL 提供**技能抽象**使 DMS/RL 在语义层面规划、ERTC 在参数层面鲁棒展开；DIR+AIC 提供**干扰免疫**保证 ρ_dir 覆盖传感/执行/对抗/分布外四类扰动。闭环：LiDAR 几何 → LSF 融合 → USR/MEL 更准 → WCV 球更小 → 技能参数更激进 → USL 组合成功率↑；执行残差 + 干扰标注 → DIR 在线对比更新 → AIC 重新认证 → J_rose 扩展 ρ_dir。**第 62 轮 ROSE 是「参数层面的在线鲁棒进化」，LIRO 是「几何-技能-干扰三层联合的通用鲁棒操作闭环」**。
 
-**灵感 5（故障诊断 → 安全主动诊断）**
-直觉：有些故障只能靠主动激励区分（传感器偏置 vs 执行器增益损失）。但激励必须安全：在被动核内选一个「最能把两个假设分开」的动作，且风险增量受控。这把诊断从「被动看残差」变成「受约束的主动实验」，也把「诊断需要激励」与「交互需要安全」这对矛盾显式化。
+**灵感 5（ROSE 组件的原位升级）**
+- **OLP → OLP-Geo**：投影头输入扩为 x' = CrossAttn([x; g])，h(x') 含几何特征，遗憾界 G̃ 增加 L_g·‖g‖ 项但几何先验使 ℓ̃_t 更平滑、收敛更快。
+- **WCV → WCV-Geo**：球心 φ̂_0 由几何推断初始化（接触面法向→摩擦锥、曲率→刚度先验），半径 r_0 几何感知收缩；CVaR 优化在几何约束下搜索最坏 φ。
+- **SBR → SSB (Spatial Scenario Bank)**：场景签名增入**点云指纹** fp_cloud = SimHash(体素化法向直方图)，Mine/Mut 在几何空间变异（拓扑扰动、局部形变、接触面翻转）。
+- **Shield → Shield-Skill**：约束投影升级为**技能前置条件投影**——RL 提案的技能参数 θ 先过 pre-condition 投影再入 CSP，再由 ERTC 展开。
+- **OCB → OCB-Skill**：臂空间扩为 {USL 技能模式} × {MEL 模式} × {对齐开关}，EXP3 在技能粒度上调度预算。
 
-**灵感 6（合流 → FIDES）**
-闭环：结构化残差 → 检测 → 类型化隔离/开集拒识 → 可诊断性评估 →（安全主动诊断 | 安全询问）→ 故障条件安全集 → 容错恢复/安全交接 → 证据回流签名库。三者不是并列而是咬合：**诊断回答「哪里坏了」，安全交互回答「坏了以后怎么和人一起安全地降级、询问、恢复」**。第 62 轮 ROSE 是「偏差驱动保守」，FIDES 是「**故障驱动分型、分型驱动安全交互**」。
+## 1. 形式化定义（增量：定义 185–200）
 
-## 1. 形式化定义（增量：定义 185–197）
-
-- **定义 185（FIDES 闭环）**：FIDES = (ROSE, SRD, DET, TFI, OSM, DGM, FSC, PSI, ADX, SafeAsk, FTR, J_fides)。定位：ROSE 的「可诊断化 × 交互安全化」升级，不推翻既有接口；诊断与学习只在语义流/后台，实时流零学习写。
-- **定义 186（故障假设空间与签名）**：ℱ = ℱ_known ∪ {f_∅} ∪ {unknown}；每类故障 f 的签名 s_f = E[r_t | f, θ_f=1] ∈ ℝ^q；签名矩阵 S = [s_f]；θ_f 为故障幅值。
-- **定义 187（结构化残差 SRD）**：r_t = P(y_t − C x̂_t)，P 为奇偶/未知输入观测器投影，满足 P E_d = 0（对未知扰动 d 解耦），且各通道对设计的故障子集敏感，形成结构化签名。
-- **定义 188（检测 DET）**：逐通道 CUSUM/GLR 统计量 g_t^j = max(0, g_{t-1}^j + |r_t^j|/σ_j − ν_j)；报警当 max_j g_t^j > h_j。
-- **定义 189（类型化隔离 TFI）**：b_t(f) ∝ b_{t-1}(f)·exp(ℓ_f(r_t))，ℓ_f 为故障 f 的残差似然；θ̂_f 为幅值 MLE；输出故障类型、幅值与后验。
-- **定义 190（开集监控 OSM）**：ν_t = ‖(I−P_S)r_t‖ / (‖r_t‖+ε)，P_S 为已知签名张成子空间的投影；ν_t > τ_os ⇒ 拒绝隔离，A_t ∋ unknown。
-- **定义 191（可诊断性 DGM）**：D_t = min_{f≠g∈A_t} ‖s_f−s_g‖_Σ / 2；D_t < γ_d ⇒ 触发 ADX 或 SafeAsk。
-- **定义 192（故障条件安全集 FSC 与被动核 𝒞_0）**：𝒞_hw 为硬件包络；𝒞_0 ⊆ 𝒞_safe(f) ⊆ 𝒞_hw，𝒞_0 在所有有界故障下任务安全；𝒞_safe(A_t) = ∩_{f∈A_t} 𝒞_safe(f)，unknown ∈ A_t ⇒ 𝒞_safe = 𝒞_0。
-- **定义 193（交互安全不变量 PSI）**：z_t = (d_h, v, F_c, τ, slip, power)；h_int(z) ≥ 0；实施 ḣ_int ≥ −α h_int + 扰动界，测量延迟按预测界处理；由低层硬件强制。
-- **定义 194（安全可问态 SafeAsk）**：SafeAsk_t = 𝟙[K ∈ 𝒞_0 hold] ∧ 𝟙[task paused] ∧ 𝟙[human safe] ∧ 𝟙[ΔH ≥ δ_H] ∧ 𝟙[cost ≤ B_int]；人证据 LLR 截断 + 物理残差互证。
-- **定义 195（安全主动诊断 ADX）**：u* = argmax_{u∈𝒰_adx} I(ℱ; r_{t+1} | u, b_t) s.t. u 的后果在 𝒞_0 内、风险增量 ≤ δ_risk、交互预算 ≤ B_adx。
-- **定义 196（容错恢复 FTR）**：模式机 {NORMAL, DEGRADED(f), SAFE_HOLD, ASK, HANDOVER, RECOVER}；转移守卫要求目标模式的安全集已被认证。
-- **定义 197（证书 J_fides 与闭环算子）**：J_fides = (J_rose, DET ids, b_t/A_t, ν_t, D_t, ρ_0, ρ_int, mode, ask_log, recovery_ver, coverage_decl)；Valid ⇔ 见产物区；算子见产物区。
+- **定义 185（LIRO 闭环）**：LIRO = (ROSE, LSF, USL, DIR, AIC, SSB, CSP, J_liro)。定位：ROSE 的「几何增强 × 技能抽象 × 干扰免疫」升级，全部新增组件挂载在第 62 轮骨架上，不推翻任何既有接口。
+- **定义 186（LSF 激光雷达语义融合）**：g = E_geo(P_cloud) ∈ ℝ^d_g（d_g=128，冻结骨干 + 可微体素化）；x' = CrossAttn_QKV(x, g, g)；USR 输出 x' 替代 x；MEL 物理头接收 concat(z_scene, g)；WCV 球心 φ̂_0 = GeoInit(g, V, T)。
+- **定义 187（USL 通用技能库）**：USL = {σ_i}_{i=1}^N，σ = (name, pre(φ, x'), eff(φ, x'), π_σ: 𝒳'→𝒦×𝒞, cost, 𝒫_feas(φ))。pre/eff 为一阶逻辑谓词（如 pre_grasp: ‖n·f‖ ≤ μ·‖f_t‖ ∧ κ ≤ κ_max）。π_σ 为技能内部策略（小型 MLP，输出阻抗轨迹关键帧），可被 OLP-Geo 微调。
+- **定义 188（CSP 技能组合规划）**：给定目标 G（由 DMS 意图解析），搜索 τ = [σ_1, ..., σ_H] 使得 pre_σ1 当前满足、eff_σi ⊨ pre_σ{i+1}、eff_σH ⊨ G、Σ cost ≤ budget、∀i π_σi ∈ 𝒫_feas(φ̂, r)。求解器：层级 A* + 技能级松弛（将 pre/eff 软化为代价），实时路径仅展开首技能 π_σ1。
+- **定义 189（DIR 干扰不变表征）**：E_dir: 𝒪 → ℤ，ℤ = ℤ_task ⊕ ℤ_nuisance。对比损失 ℒ_con = -log exp(sim(z_i, z_i^+)/τ) / Σ_j exp(sim(z_i, z_j)/τ)，正样本 z_i^+ = E_dir(aug_dir(O_i))（干扰增强：LiDAR dropout/噪声注入/遮挡/对抗扰动），负样本为其他 batch 样本。因果正则 ℒ_causal = ‖∂ŷ/∂η‖²（η 为干扰参数，ŷ 为任务预测头输出）。总损失 ℒ_dir = ℒ_con + λ_causal·ℒ_causal；语义流低频更新，实时路径仅前向。
+- **定义 190（AIC 抗干扰认证器）**：干扰集 ℰ = {η: ‖η‖_∞ ≤ ε_sens} × {η: ‖η‖_∞ ≤ ε_act} × AdvBall(ε_adv) × OODBall(ε_ood)；四类半径由 DIR 校准的经验分布分位数给出。ρ_dir(τ) = min_{η∈ℰ} min_{t∈[0,H]} margin(π_σt(·; η), φ̂, r)；采样近似 n_cert=64。J_dir = (ρ_dir, ℰ_spec, cert_hash)。
+- **定义 191（SSB 空间场景银行）**：扩展 SBR：scene_sig = (V_sig, T_sig, fp_cloud, φ_sig, dyn_annot)；fp_cloud = SimHash(voxel_normal_hist(P_cloud, 32³))。Mine 优先匹配 fp_cloud；Mut 增加几何变异 {拓扑扰动(欧拉特征数±1), 局部形变(自由形式变形 FFD), 接触面翻转(法向反向)}。
+- **定义 192（OLP-Geo 几何增强在线投影）**：K_W(x') = Π_0(x') + h(x')ᵀW，x' = CrossAttn(x, g)，h 冻结随机特征（含几何维度）。遗憾界 G̃_geo = G·(L_h + L_g·L_cross)·(1+κ_φ·r_max)。
+- **定义 193（WCV-Geo 几何感知鲁棒编译）**：φ̂_0 = GeoInit(g)；球 B(φ̂_0, r_0) 与几何约束集 𝒢(g) = {φ: n(φ) ≈ n_cloud, κ(φ) ≤ κ_max(g)} 取交；sup 搜索在 B∩𝒢 内进行，候选数 n_worst 减半（几何约束剪枝）。
+- **定义 194（Shield-Skill 技能前置条件屏蔽）**：RL 提案技能参数 θ → θ* = argmin_{θ'∈Θ_pre(σ, φ̂, r)} ‖θ'−θ‖；Θ_pre = {θ: pre_σ(θ, φ̂, r) 成立}（凸松弛）。投影距离 > δ_skill 则降级 ask_clarify_skill。
+- **定义 195（OCB-Skill 技能粒度预算老虎机）**：臂 = {USL_模式: {full_seq, single_skill, cached_seq, frozen}} × {MEL_模式} × {align_on/off}，K=16。奖励 = task_progress − κ·(compute_cost + skill_switch_penalty)。
+- **定义 196（LIRO 闭环算子）**：语义流：[LiDAR 几何编码 → LSF 融合 → USR/MEL 推理 → USL/CSP 技能规划 → Shield-Skill → OCB-Skill 选择 → 执行首技能 π_σ1 → EV_exec → DIR 对比更新 → OLP-Geo 更新 → WCV-Geo 编译 → RSC 校准 → SSB 记账/挖掘 → SHC 调度 → AIC 认证]；实时流：[锚点读 → OLP-Geo 前向 + Shrink → WCV-Geo 编译 → π_σ1 展开派发 → J_liro 构建]。
+- **定义 197（J_liro 扩展证书）**：J_liro = (J_rose, ρ_dir, ℰ_spec, dir_ver, geo_hash, csp_plan_hash, skill_seq_hash)；Valid ⇔ Valid(J_rose) ∧ ρ_dir ≥ 0 ∧ dir_fresh ∧ csp_feasible。
+- **定义 198（GeoInit 几何初始化）**：φ̂_0 = (μ_fric = f_μ(n_cloud, material_class), k_stiff = f_k(curvature_cloud), ...)；函数 f_μ, f_k 为可微物理先验网络（离线预训练，冻结）。
+- **定义 199（干扰增强算子 Aug_dir）**：Aug_dir(O) = (LiDAR_dropout(P_cloud, p=0.15) ⊕ Gaussian_noise(σ=0.02m) ⊕ Adversarial_PGD(ε_adv) ⊕ Occlusion_mask(ratio=0.2), T ⊕ noise, P ⊕ actuator_disturbance, L)。
+- **定义 200（技能可行集 𝒫_feas）**：𝒫_feas(φ̂, r) = {π_σ: ∀φ∈B(φ̂,r), π_σ(·;φ) 满足 ERTC 约束 ∧ pre_σ(φ) ∧ ρ_rob(π_σ) ≥ 0}。
 
 ## 2. 关键算法骨架（完整伪代码见产物区）
 
 ```python
-# 语义流：诊断（低频，全部学习/推理在此）
-r = srd.residual(y, u, x_hat)                    # 对扰动解耦的结构化残差
-alarm, ids = det.cusum(r)                         # 逐通道 CUSUM
-b, A, nov = tfi.isolate(r, alarm)                 # 类型化隔离
-if nov: A = A | {'unknown'}                       # 开集拒识：只信被动核
-if dgm.separation(A) < gamma_d:                   # 诊断不清楚
-    u = adx.safe_probe(A, core=C0) or safe_ask(A) # 安全主动诊断/安全询问
-K = fsc.compile(A, core=C0)                       # 故障条件安全集 ∩ 被动核
-mode = ftr.transition(b, A, K)                    # 降级/保持/交接/恢复
-# 实时流：物理安全（高频，零学习写）
-K = clip_to_hw_env(K, hw)                         # 硬件包络不可绕过
-assert psi.invariant(z_meas)                      # 原始测量级不变量
-dispatch(K)
+# LSF：LiDAR 几何编码 + 跨模态融合
+g = E_geo(voxelize(P_cloud));  x' = CrossAttn(x, g, g)
+# USL + CSP：技能库检索 + 组合规划（语义流）
+τ, θ_bind = csp_plan(USL, goal, x', φ̂, r)  # 仅语义流
+# 实时流：仅展开首技能
+K_seq = π_σ1(x', θ_bind[0]);  K_safe, ρ_rob = wcv_geo_compile(K_seq, φ̂, r)
+# DIR：干扰不变表征（语义流对比更新）
+z = E_dir(O);  ℒ_dir = contrastive(z, Aug_dir(O)) + λ_causal·‖∂ŷ/∂η‖²
+# AIC：抗干扰认证
+ρ_dir = min_{η∈ℰ} margin(τ, η);  J_liro = (J_rose, ρ_dir, ...)
 ```
 
 ## 3. 保证概要与推导要点（完整推导见产物区）
 
-- **命题 1（隔离错误率）**：高斯残差下 ML 隔离 P_err(f) ≤ Σ_{g≠f} exp(−‖s_f−s_g‖²/(8σ²))；签名间隔越大，误隔离越低。
-- **命题 2（检测）**：CUSUM 在 K_f = μ_f²/(2σ²) 下 E_f[delay] ≤ (h+O(1))/K_f，ARL_0 ≥ e^{h}（近似界）。
-- **定理 1（物理安全与诊断解耦）**：若部署 K_t 始终在 𝒞_hw 且 PSI 在扰动/延迟界内有效，则 z_t ∈ 𝒮_int 对所有 t 成立，**与诊断对错无关**。
-- **定理 2（任务安全的诊断条件）**：若真故障 f* ∈ A_t 对所有 t 成立，则 K_t ∈ 𝒞_safe(A_t) ⊆ 𝒞_safe(f*) ⇒ 任务安全；若误隔离使 f* ∉ A_t，物理安全仍由定理 1 保证，但任务安全可能失败。
-- **命题 3（开集兜底）**：ν_t > τ_os ⇒ unknown ∈ A_t ⇒ K ∈ 𝒞_0；在未建模故障幅值有界时，任务+物理安全同时保持。
-- **命题 4（主动诊断安全）**：𝒰_adx ⊆ 𝒞_0 且风险预算约束 ⇒ 探测不破坏 PSI；互信息近似次模 ⇒ 贪心 (1−1/e)。
-- **命题 5（询问可信度封顶）**：单次人证据 LLR 截断 + 需物理残差互证 ⇒ 单次（甚至对抗性）回答不能翻转隔离结论。
-- **实时性**：PSI/硬件裁剪 O(1)，诊断/学习全在语义流，实时路径保持 ≤1ms 且零学习写。
+- **引理 3（几何先验收缩球半径）**：设 GeoInit 使 ‖φ* − φ̂_0‖ ≤ δ_geo < δ_bias（纯 MEL 估计偏差），则 RSC 稳态 r_∞ ≤ δ_geo + o(1) < δ_bias + o(1)——**几何先验直接压缩 WCV 球，鲁棒裕度 ρ_rob 同步增大**。
+- **引理 4（DIR 不变性界）**：若 ℒ_causal 使 ‖∂ŷ/∂η‖ ≤ ε_causal 且对比损失使 I(Z_nuisance; η) ≤ ε_info，则对任意 η∈ℰ，任务预测漂移 ‖ŷ(O+η) − ŷ(O)‖ ≤ L_ŷ·(ε_causal + √ε_info)——**干扰对任务头的影响被显式压缩**。
+- **定理 2（技能层面鲁棒遗憾界）**：将 OLP-Geo 的参数 W 视为技能参数 θ 的线性化修正，CSP 选择的技能序列 τ 在 USL 上诱导损失 ℓ̃_t^skill(θ)。因 USL 覆盖任务相关子空间（A81），有效维度 d_eff ≪ d_us，遗憾界改进为 **R_T^skill ≤ D_skill·G̃_skill·√T**，其中 G̃_skill ≤ G̃_geo / √κ（κ 为技能抽象压缩比）。
+- **定理 3（AIC 认证有效性）**：若 ℰ 由 DIR 校准分位数覆盖 P[η* ∈ ℰ] ≥ 1−α_dir，且 margin 单调，则 ρ_dir ≥ 0 ⇒ 对真实干扰 η* 技能序列安全概率 ≥ 1−α_dir——**四类干扰被统一认证框架覆盖**。
+- **实时性**：实时路径新增仅 LSF 前向（<0.2ms）、DIR 前向（<0.1ms）、π_σ1 展开（<0.3ms），总计 ≤ 1ms 契约内（A75 继承）。
 
 ## 4. 实验概览（完整设计见产物区 E211–E220）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E211 SRD | 扰动解耦是否把故障签名分开 | 签名间隔 ≥4σ，扰动泄漏 <10% |
-| E212 TFI | 四类故障能否正确分型 | 隔离准确率 ≥95%，幅值误差 <10% |
-| E213 OSM | 未知故障是否被拒识 | 误隔离率 →0，未知召回 ≥90% |
-| E214 被动核 | 误诊注入下物理安全是否守住 | 力/接触违规 =0（对照 ROSE >0） |
-| E215 DET | 检测延迟 vs 误报权衡 | 检测延迟 <200ms，ARL₀ >10⁴ 步 |
-| E216 FSC | 分型后性能是否比单球高 | 任务成功率 +15pp，保守代价 −30% |
-| E217 PSI | 人接近/意外接触下不变量 | 违规 =0，测量延迟 20ms 仍成立 |
-| E218 SafeAsk | 噪声/对抗人回答是否污染诊断 | 误隔离增量 ≤2pp，交互成本 ≤预算 |
-| E219 ADX | 传感器 vs 执行器故障能否区分 | 区分率 ≥90%，探测期零违规 |
-| E220 端到端 vs ROSE | 复合故障 + 人机交互 | 违规 =0，恢复时间 −40%，任务 +20% |
+| E211 LSF 几何融合 | LiDAR 几何是否提升 φ̂ 初始化 | φ̂_0 误差 −50%，r_0 −40% |
+| E212 USL/CSP | 技能组合 vs 原子阻抗规划 | 复杂任务成功率 +35%，规划时间 < 50ms |
+| E213 DIR 不变性 | 四类干扰下任务预测漂移 | 漂移 ‖Δŷ‖ ≤ 5%（基线 > 30%） |
+| E214 AIC 认证 | ρ_dir 是否覆盖真实干扰 | 覆盖率 ≥ 1−α_dir (95%) |
+| E215 WCV-Geo | 几何约束剪枝是否加速编译 | 编译时间 −60%，ρ_rob 不降 |
+| E216 Shield-Skill | 技能前置投影 vs 原子约束投影 | 违规拦截 100%，任务完成率 +10% |
+| E217 OCB-Skill | 技能粒度预算调度 vs 臂粒度 | regret gap ≤ 8% |
+| E218 SSB 空间场景 | 点云指纹检索 vs 多模态签名 | 新场景识别 F1 +25% |
+| E219 端到端 vs 第 62 轮 | 几何+技能+抗干扰综合场景 | 复杂任务成功率 +40%，干扰下违规 =0 |
+| E220 压力测试 | LiDAR 失效 30s + 对抗攻击 | 降级运行安全，ρ_dir > 0 |
 
 ## 5. 本轮最大风险
 
-**一句话**：若未建模故障恰好落在已知签名子空间附近（ν_t 低于 τ_os），TFI 会自信地误隔离，A_t 排除真故障，FSC 编译出错误的任务安全集；一旦该故障幅值又超出被动核 𝒞_0 的设计包络，定理 1 的物理安全前提也被击穿——「诊断只放宽、不承担安全」的两层设计同时失效，J_fides 变成「有签名、有证书、但错得自信」。
+**一句话**：若 LiDAR 几何编码器 E_geo 在分布外几何（新拓扑/透明/镜面物体）上产生**系统性幻觉几何**（如法向翻转、虚假接触面），GeoInit 将输出**错误的 φ̂_0 与过度自信的几何约束 𝒢(g)**，导致 WCV-Geo 在「错误的小球」内优化、DIR 在「错误的干净视图」上对比、CSP 在「错误的前置条件」上规划——**几何先验从「压缩不确定性」反变为「注入确定性错误」**，这是本轮所有几何增强论证共同依赖的单点假设。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 63 轮产物 · 创新点清单 v1：FIDES（故障隔离驱动的安全交互闭环：结构化残差 × 类型化诊断 × 开集拒识 × 故障条件安全集 × 被动安全核 × 安全询问，SRD×TFI×OSM×DGM×FSC×PSI×ADX×SafeAsk×FTR×J_fides）
+# 第 63 轮产物 · 创新点清单 v3：LIRO（LiDAR-Invariant Robust Operations：几何语义融合 × 通用技能组合 × 干扰不变表征认证，LSF×USL×CSP×DIR×AIC×SSB×OLP-Geo×WCV-Geo×Shield-Skill×OCB-Skill）
 
-> 承接第 62 轮 IP-183~192（ROSE：OLP×WCV×RSC×ARA×SBR×SHC×MEL-OA×Shield×OCB×J_rose）。第 62 轮把安全押在 A72（J_φ 良态 + 残差可观测）上，并用一个标量球 B(φ̂_t, r_t) 兜住全部偏差。本轮不换球、不调参，而是**给异常加上「类型」、给安全加上「层级」、给人加上「安全可问的接口」**：结构化残差把未知扰动与故障解耦；类型化诊断回答「哪里坏了」；开集拒识防止「自信误诊」；故障条件安全集把「一个球」变成「一张按故障分型的表」；被动安全核把物理安全从诊断中解耦；安全可问态让人的反馈成为有界诊断证据而不是安全前提。实现 **「故障可分型、误诊不伤人、未知不硬猜、问人有边界、恢复有守卫」**。
+> 承接第 62 轮 IP-183~192（ROSE：OLP×WCV×RSC×ARA×SBR×SHC×MEL-OA×Shield×OCB×J_rose）。本轮不做推倒，而是给 ROSE 补上三个缺失的感知-执行维度：**稠密 3D 几何先验**（LiDAR 点云修正 φ̂ 初始化与 WCV 球）、**通用技能抽象**（从原子阻抗升级为可组合技能库 + CSP 规划）、**全谱抗干扰免疫**（传感/执行/对抗/分布外四类干扰的不变表征 + 统一认证）。实现 **「几何先验压缩球、技能抽象降维遗憾、干扰不变性可认证、空间场景可检索、预算技能粒度调度」**。
 
-> IP 编号：IP-193~IP-202（共 10 个），全部挂在 ROSE 骨架上，不推翻既有接口；诊断与学习只在语义流/后台，实时路径仍零学习写、≤1ms。
+> IP 编号：IP-193~IP-202（共 10 个），全部为第 62 轮组件的原位升级或挂载式新增。
 
 ## 0. 核心 IP 设计
 
 | 编号 | 名称 | 类型 | 关键改进（相对第 62 轮） |
 |---|---|---|---|
-| IP-193 | SRD Structured Residual Decoupling | 新增 | 奇偶/未知输入观测器残差，未知扰动解耦 + 结构化故障签名，替代单标量 e_t |
-| IP-194 | TFI Typed Fault Isolation | 新增 | 贝叶斯签名匹配，输出故障类型、幅值与后验 b_t，替代「只有一个 r_t」 |
-| IP-195 | OSM Open-Set Fault Monitor | 新增 | 未知故障拒识（签名子空间外检测），防止把新故障误诊成已知故障 |
-| IP-196 | DGM Diagnosability Guarantee Monitor | 新增 | 在线可隔离性度量 D_t，低于阈值触发主动诊断/安全询问 |
-| IP-197 | FSC Fault-conditioned Safe Set Compiler | 升级 WCV | 按故障类型与模糊集 A_t 编译安全集，保留被动核 𝒞_0，替代单球 |
-| IP-198 | PSI Passive Safety Invariant | 升级 Shield | 原始测量级交互不变量，硬件强制、与诊断解耦，守住物理安全底线 |
-| IP-199 | ADX Active Diagnosis eXcitation | 新增 | 在 𝒞_0 内选信息增益最大的安全探针，区分「只能靠激励分开」的故障 |
-| IP-200 | SafeAsk Human-in-the-loop Protocol | 升级 DMS | 安全可问态门控 + 有界人证据 + 物理残差互证，人作为诊断传感器而非安全前提 |
-| IP-201 | FTR Fault-Tolerant Recovery | 新增 | 模式机：降级/保持/询问/交接/恢复，转移守卫要求目标安全集已认证 |
-| IP-202 | J_fides Certificate & FIDES Loop | 升级 J_rose/ROSE | 双层安全证书 + 诊断覆盖声明 + 故障分型审计，实时流零学习 |
+| IP-193 | LSF LiDAR-Semantic Fusion | 新增 | 点云体素化 → 几何编码器 → 跨模态注意力融合 USR/MEL/WCV |
+| IP-194 | USL Universal Skill Library | 新增 | 可组合技能原语库（pre/eff/π_σ/cost/𝒫_feas），跨任务迁移 |
+| IP-195 | CSP Constraint Skill Planner | 新增 | 技能层面组合搜索（层级 A* + 软前置），实时仅展开首技能 |
+| IP-196 | DIR Disturbance-Invariant Representation | 新增 | 多源对比学习 + 因果干预正则，压缩四类干扰对任务头影响 |
+| IP-197 | AIC Anti-Interference Certifier | 新增 | 干扰集 ℰ 经 DIR 分位数校准，采样认证 ρ_dir = min_{η∈ℰ} margin(τ, η) |
+| IP-198 | SSB Spatial Scenario Bank | 升级 SBR | 场景签名增入点云指纹 SimHash，几何变异算子（拓扑/形变/翻转） |
+| IP-199 | OLP-Geo Geometry-Enhanced OLP | 升级 OLP | 输入 x'=CrossAttn(x,g)，h 含几何维度，遗憾界 G̃_geo |
+| IP-200 | WCV-Geo Geometry-Aware WCV | 升级 WCV | 球心 GeoInit(g)，几何约束集 𝒢(g) 剪枝最坏搜索，编译加速 |
+| IP-201 | Shield-Skill Skill Precondition Shield | 升级 Shield | 技能参数 θ 过 pre-condition 凸投影，再入 CSP/ERTC |
+| IP-202 | OCB-Skill Skill-Granularity Budget Bandit | 升级 OCB | 臂空间扩为 {USL模式}×{MEL模式}×{align}，K=16，技能切换惩罚 |
 
-## 1. 符号体系增量（定义 185–197）
+## 1. 符号体系增量（定义 185–200）
 
 | 符号 | 含义 |
 |---|---|
-| `FIDES = (ROSE, SRD, DET, TFI, OSM, DGM, FSC, PSI, ADX, SafeAsk, FTR, J_fides)` | 故障隔离驱动的安全交互闭环 |
-| `ℱ = ℱ_known ∪ {f_∅} ∪ {unknown}` | 故障假设空间（f_∅ 表示无故障） |
-| `s_f = E[r_t \| f, θ_f=1] ∈ ℝ^q`，`S = [s_f]` | 故障签名与签名矩阵 |
-| `r_t = P(y_t − C x̂_t)`，`P E_d = 0` | 结构化残差；P 为奇偶/未知输入观测器投影，解耦未知扰动 d |
-| `g_t^j = max(0, g_{t-1}^j + \|r_t^j\|/σ_j − ν_j)` | 逐通道 CUSUM 检测统计量 |
-| `b_t(f) ∝ b_{t-1}(f)·exp(ℓ_f(r_t))` | 类型化隔离后验；ℓ_f 为故障 f 的残差似然 |
-| `θ̂_f = max(0, s_fᵀr_t / s_fᵀs_f)` | 故障幅值 MLE |
-| `ν_t = ‖(I−P_S)r_t‖ / (‖r_t‖+ε)` | 开集新颖度；P_S 为已知签名子空间投影 |
-| `A_t = {f : b_t(f) ≥ τ_amb} ∪ ({unknown} if ν_t > τ_os)` | 模糊故障集 |
-| `D_t = min_{f≠g∈A_t} ‖s_f−s_g‖_Σ / 2` | 可诊断性（最小签名间隔） |
-| `𝒞_hw` | 硬件/物理包络（力矩、力、速度、人机距离、能量），低层强制 |
-| `𝒞_0 ⊆ 𝒞_safe(f) ⊆ 𝒞_hw` | 被动安全核 / 故障条件安全集 / 硬件包络 |
-| `𝒞_safe(A_t) = ∩_{f∈A_t} 𝒞_safe(f)` | 模糊集下的安全集；unknown ∈ A_t ⇒ 𝒞_safe = 𝒞_0 |
-| `z_t = (d_h, v, F_c, τ, slip, power)` | 交互安全状态（原始测量或低层估计） |
-| `h_int(z) ≥ 0`，`ḣ_int ≥ −α h_int + 扰动界` | PSI 交互安全屏障（CBF） |
-| `SafeAsk_t = 𝟙[K∈𝒞_0 hold]∧𝟙[task paused]∧𝟙[human safe]∧𝟙[ΔH≥δ_H]∧𝟙[cost≤B_int]` | 安全可问态 |
-| `u* = argmax_{u∈𝒰_adx} I(ℱ; r_{t+1} \| u, b_t)` | 安全主动诊断的信息增益目标 |
-| `L_max` | 单次人证据对数似然比截断上界 |
-| `Modes = {NORMAL, DEGRADED(f), SAFE_HOLD, ASK, HANDOVER, RECOVER}` | 容错交互模式机 |
-| `coverage_decl` | 证书显式声明的已知故障集与未建模故障幅值上界 |
-| `J_fides = (J_rose, DET ids, b_t/A_t, ν_t, D_t, ρ_0, ρ_int, mode, ask_log, recovery_ver, coverage_decl)` | 诊断-安全证书 |
+| `LIRO = (ROSE, LSF, USL, DIR, AIC, SSB, CSP, J_liro)` | LiDAR-Invariant Robust Operations 闭环 |
+| `P_cloud ∈ ℝ^{N×3}` | 激光雷达点云（稠密，N≈10⁴） |
+| `g = E_geo(P_cloud) ∈ ℝ^{d_g}` | 几何嵌入（d_g=128，冻结骨干 + 可微体素化） |
+| `x' = CrossAttn_QKV(x, g, g) ∈ ℝ^{d_us'}` | LSF 融合后的语义-几何联合表征（d_us'=384） |
+| `GeoInit(g) = φ̂_0` | 几何初始化：接触面法向→摩擦锥 μ，曲率→刚度先验 k 等 |
+| `𝒢(g) = {φ: n(φ) ≈ n_cloud, κ(φ) ≤ κ_max(g)}` | 几何约束集（法向一致性 + 曲率上界） |
+| `USL = {σ_i}_{i=1}^N`，`σ = (name, pre, eff, π_σ, cost, 𝒫_feas)` | 通用技能库 |
+| `pre_σ(φ, x')`，`eff_σ(φ, x')` | 技能前置/后置条件（一阶逻辑谓词，可软化为代价） |
+| `π_σ: 𝒳' → 𝒦×𝒞` | 技能内部策略（小型 MLP，输出阻抗轨迹关键帧） |
+| `𝒫_feas(φ̂, r) = {π_σ: ∀φ∈B(φ̂,r), π_σ(·;φ) ⊨ ERTC ∧ pre_σ(φ) ∧ ρ_rob ≥ 0}` | 鲁棒可行技能集 |
+| `CSP(USL, goal, x', φ̂, r) → (τ, θ_bind)` | 技能组合规划器，输出序列 τ 与参数绑定 |
+| `E_dir: 𝒪 → ℤ = ℤ_task ⊕ ℤ_nuisance` | 干扰不变编码器（对比学习 + 因果正则） |
+| `Aug_dir(O)` | 干扰增强算子：LiDAR dropout/噪声/对抗/遮挡 + 触觉噪声 + 本体扰动 |
+| `ℒ_dir = ℒ_con + λ_causal·ℒ_causal` | DIR 损失：对比 + 因果干预正则 |
+| `ℰ = ℰ_sens × ℰ_act × ℰ_adv × ℰ_ood` | 干扰集（四类半径由 DIR 经验分位数校准） |
+| `ρ_dir(τ) = min_{η∈ℰ} min_t margin(π_σt(·; η), φ̂, r)` | 抗干扰鲁棒裕度（采样近似 n_cert=64） |
+| `J_dir = (ρ_dir, ℰ_spec, cert_hash)` | AIC 认证证书 |
+| `SSB: scene_sig = (V_sig, T_sig, fp_cloud, φ_sig, dyn_annot)` | 空间场景银行签名 |
+| `fp_cloud = SimHash(voxel_normal_hist(P_cloud, 32³))` | 点云指纹（体素法向直方图 + SimHash） |
+| `OLP-Geo: K_W(x') = Π_0(x') + h(x')ᵀW`，`G̃_geo = G·(L_h + L_g·L_cross)·(1+κ_φ·r_max)` | 几何增强在线投影头 |
+| `WCV-Geo: φ̂_0 = GeoInit(g)`，`sup_{φ∈B(φ̂_0,r)∩𝒢(g)}` | 几何感知鲁棒编译 |
+| `Shield-Skill: θ* = argmin_{θ'∈Θ_pre(σ,φ̂,r)} ‖θ'−θ‖` | 技能前置条件屏蔽 |
+| `OCB-Skill: arms = {USL模式}×{MEL模式}×{align}`，`K=16` | 技能粒度预算老虎机 |
+| `J_liro = (J_rose, ρ_dir, ℰ_spec, dir_ver, geo_hash, csp_plan_hash, skill_seq_hash)` | LIRO 扩展证书 |
 
 ## 2. 形式化定义（完整版）
 
-**定义 185（FIDES 闭环）** FIDES 是 ROSE 的「可诊断化 × 交互安全化」升级。不变式有三条：
-1. **诊断与安全分层**：物理安全（𝒞_hw + PSI）永不依赖诊断；任务安全（𝒞_safe(A_t)）允许依赖诊断。
-2. **诊断可拒识**：当未知故障不能被已知签名解释时，拒绝隔离并退回 𝒞_0，不允许「强行归类」。
-3. **实时零学习**：SRD 残差生成、PSI 检查、硬件裁剪在实时路径；CUSUM、TFI、OSM、DGM、ADX、SafeAsk、FTR 全在语义流/后台，与 ROSE 的 A75 一致。
+**定义 185（LIRO 闭环）** LIRO 是 ROSE 的「几何增强 × 技能抽象 × 干扰免疫」升级：在第 62 轮「语义流 ∘ 实时流」骨架上挂载 LSF（几何融合）、USL/CSP（技能库与规划）、DIR/AIC（干扰不变表征与认证）、SSB（空间场景银行），并原位升级 OLP→OLP-Geo、WCV→WCV-Geo、Shield→Shield-Skill、OCB→OCB-Skill。不变式：**全部学习/规划/认证只发生在语义流与低频线程；实时路径（1–10kHz）只做 LSF/DIR 前向、OLP-Geo 前向 + Shrink、WCV-Geo 编译、π_σ1 展开派发**——几何/技能/干扰三层在时序上隔离。
 
-**定义 186（故障假设空间与签名）** ℱ_known 覆盖本轮声明的故障类：传感器偏置/漂移/卡死（f_S^b, f_S^st）、执行器增益损失/饱和/死区（f_A^g, f_A^s）、接触滑移/低摩擦（f_C^slip）、模型参数漂移（f_M^μ, f_M^k）、异常人接触/交互扰动（f_H）。每类故障 f 在残差空间的签名 s_f = E[r | f, θ_f=1]；θ_f ∈ Θ_f 为幅值（区间）。签名矩阵 S 的列可预先由辨识实验/物理模型获得，并在语义流低频重标定。`coverage_decl = (ℱ_known, {Θ_f}, δ_u)` 显式声明覆盖范围与未建模故障幅值上界 δ_u。
+**定义 186（LSF 激光雷达语义融合）** 点云 P_cloud 经可微体素化 Voxelize(·, 32³) → 3D CNN 骨干 E_geo（ResNet3D-18，冻结，输出 d_g=128）得到几何嵌入 g。跨模态注意力：x' = CrossAttn_QKV(x, g, g)，其中 Q=x, K=V=g，输出维度 d_us'=384。x' 替代 x 作为 USR 意图融合输入、MEL 物理头输入、OLP-Geo 投影头输入、WCV-Geo 球心几何初始化依据。E_geo 离线预训练（自监督点云掩码重建 + 语义分割），部署后冻结；仅 CrossAttn 的投影矩阵参与 OLP-Geo 在线更新。
 
-**定义 187（结构化残差 SRD）** 线性化观测模型 y_t = C x_t + E_d d_t + E_f θ_f + ε_t，d_t 为未知扰动（负载、坡度、人外力），θ_f 为故障幅值。取投影 P 满足 P E_d = 0（奇偶空间）或采用未知输入观测器（UIO）使状态估计误差对 d 解耦，则
-r_t = P(y_t − C x̂_t) = P E_f θ_f + P ε_t。
-进一步把 P 的行设计成「结构化」：第 i 个残差通道对故障子集 ℱ_i 敏感、对其余故障不敏感（S_{ij}=0/1 的签名编码）。这样隔离不必依赖单个标量的幅值，而依赖多通道的**符号/支持模式**。非线性系统用局部线性化 + 滑模/自适应残差观测器近似，声明线性化误差界。
+**定义 187（USL 通用技能库）** USL = {σ_i}_{i=1}^N，N≈50 核心技能。每技能 σ = (name, pre, eff, π_σ, cost, 𝒫_feas)：
+- `pre_σ(φ, x')`：前置条件谓词，如 pre_grasp ≡ (‖n·f‖ ≤ μ·‖f_t‖) ∧ (κ ≤ κ_max) ∧ (approach_dir ∈ 𝒞_approach)；
+- `eff_σ(φ, x')`：后置条件谓词，如 eff_grasp ≡ (grasp_established) ∧ (object_in_hand)；
+- `π_σ(x'; θ_σ)`：技能策略，小型 MLP（2 层，隐藏 128），输入 x' 输出阻抗关键帧 {K_1, ..., K_M} 与约束关键帧 {c_1, ..., c_M}；θ_σ 可被 OLP-Geo 微调（作为 W 的子块）；
+- `cost`：标量代价（时间/能耗/风险加权）；
+- `𝒫_feas(φ̂, r)`：鲁棒可行集（定义 200）。
+技能库离线构建（演示+强化学习蒸馏），部署后仅 θ_σ 在线微调；pre/eff 为符号规则，可软化为代价项供 CSP 搜索。
 
-**定义 188（检测 DET）** 每个通道 j 归一化后做 CUSUM：g_t^j = max(0, g_{t-1}^j + |r_t^j|/σ_j − ν_j)，报警当 max_j g_t^j > h_j。对缓变故障（漂移）可换 GLR；对突发故障 CUSUM 更快。检测器输出报警时刻 t_d 与触发通道集合 ids。
+**定义 188（CSP 技能组合规划）** 给定目标 G（由 DMS 意图解析为一阶逻辑目标谓词），搜索技能序列 τ = [σ_1, ..., σ_H] 与参数绑定 θ_bind = [θ_1, ..., θ_H]：
+- 硬约束：pre_σ1(x', φ̂) 成立；∀i < H, eff_σi ⊨ pre_σ{i+1}（谓词蕴含）；eff_σH ⊨ G；
+- 软约束（代价）：Σ_i cost(σ_i, θ_i) + skill_switch_penalty·|{i: σ_i ≠ σ_{i+1}}| ≤ budget；
+- 鲁棒可行：∀i, π_σi(·; θ_i) ∈ 𝒫_feas(φ̂, r)。
+求解器：层级 A* —— 高层在技能图（节点=技能，边=pre/eff 兼容）上搜索序列，低层对候选序列做参数优化（将 pre/eff 软化为 hinge 代价，用 L-BFGS 求 θ_bind）。实时路径**仅展开首技能 π_σ1** 的阻抗轨迹；后续技能在后续语义流步中重规划（receding horizon）。
 
-**定义 189（类型化隔离 TFI）** 对每个 f ∈ ℱ_known，取幅值 MLE θ̂_f = max(0, s_fᵀr_t / s_fᵀs_f)，残差似然
-ℓ_f(r_t) = −½‖r_t − θ̂_f s_f‖²_Σ − ½ log det Σ + log prior_f。
-后验 b_t(f) ∝ b_{t-1}(f)·exp(ℓ_f(r_t))，再做温度/遗忘因子平滑。输出 f̂_t = argmax b_t、θ̂_{f̂}、以及模糊集 A_t。对「无故障」的 f_∅ 也保留假设，避免把噪声当故障。
+**定义 189（DIR 干扰不变表征）** 编码器 E_dir: 𝒪 → ℤ，输入多模态观测 O=(P_cloud, T, P, L)，输出 ℤ = ℤ_task ⊕ ℤ_nuisance（维度各 64）。训练损失：
+- 对比损失 ℒ_con = -log exp(sim(z_i^task, z_i^{+task})/τ) / Σ_j exp(sim(z_i^task, z_j^task)/τ)，正样本 z_i^+ = E_dir(Aug_dir(O_i))，Aug_dir 包含四类干扰增强（定义 199）；负样本为 batch 内其他样本的 task 分量。
+- 因果正则 ℒ_causal = ‖∂ŷ/∂η‖²_F，ŷ = Head_task(z^task) 为任务预测头（如 φ̂ 预测、成功率预测），η 为干扰参数（LiDAR dropout 率、噪声 σ、PGD 步长、遮挡比例、执行器扰动幅度）；通过有限差分近似梯度。
+总损失 ℒ_dir = ℒ_con + λ_causal·ℒ_causal，λ_causal=1.0。语义流每 10 步更新一次（batch=32），实时路径仅前向（<0.1ms）。
 
-**定义 190（开集监控 OSM）** 令 P_S 为向 span{s_f : f∈ℱ_known} 的正交投影。新颖度 ν_t = ‖(I−P_S)r_t‖/(‖r_t‖+ε)。当报警且 ν_t > τ_os 时，认为残差不能被任何已知签名解释，令 A_t ∋ unknown，拒绝给出 f̂。unknown 不是「一类故障」，而是「拒绝归类的占位」，其唯一安全语义是退回 𝒞_0。τ_os 由标定集上的已知故障重构误差分位数确定。
+**定义 190（AIC 抗干扰认证器）** 干扰集 ℰ = ℰ_sens × ℰ_act × ℰ_adv × ℰ_ood：
+- ℰ_sens = {η_sens: ‖η_sens‖_∞ ≤ ε_sens}，ε_sens 为 LiDAR 噪声/遮挡经验 95 分位数；
+- ℰ_act = {η_act: ‖η_act‖_∞ ≤ ε_act}，ε_act 为执行器扰动经验 95 分位数；
+- ℰ_adv = AdvBall(ε_adv) = {δ: ‖δ‖_∞ ≤ ε_adv, δ 为 PGD 生成}，ε_adv 为对抗鲁棒半径（DIR 对比学习隐式校准）；
+- ℰ_ood = OODBall(ε_ood) = {P_cloud': Chamfer(P_cloud', P_cloud_train) ≤ ε_ood}，ε_ood 为训练集覆盖半径。
+ρ_dir(τ) = min_{η∈ℰ} min_{t=1..H} margin(π_σt(·; η), φ̂, r)，其中 margin 为技能 t 在干扰 η 下的安全裕度（到 ERTC 不安全边界距离）。采样近似：从每类 ℰ 均匀采样 n_cert/4=16 个干扰，共 64 组，取最小 margin。J_dir = (ρ_dir, ℰ_spec, cert_hash)，其中 ℰ_spec 记录四类半径与校准版本，cert_hash = hash(ρ_dir, ℰ_spec, τ)。
 
-**定义 191（可诊断性 DGM）** D_t = min_{f≠g∈A_t} ‖s_f−s_g‖_Σ / 2，即当前模糊集内最接近的两个签名在半噪声尺度下的间隔。D_t < γ_d 表示「现有观测不足以分开剩余假设」，触发 ADX（若存在安全探针）或 SafeAsk（若问题可被人回答）。D_t 同时是 J_fides 的一个显式字段：证书不隐瞒「诊断有多确定」。
+**定义 191（SSB 空间场景银行）** 扩展 SBR：场景签名 scene_sig = (V_sig, T_sig, fp_cloud, φ_sig, dyn_annot)。
+- `fp_cloud = SimHash(voxel_normal_hist(P_cloud, 32³))`：将点云体素化为 32³ 网格，每体素统计法向直方图（8 bin 球面均匀），拼接为 32³×8 向量，经 SimHash 压缩为 64 位指纹。
+- `Mine(EV_exec, anchor)`：优先匹配 fp_cloud（汉明距离 < 8 视为同场景）；若无匹配且有险情，创建新场景（签名含 fp_cloud）。
+- `Mut(s)`：继承 SBR 变异并增加几何变异算子：① 拓扑扰动（欧拉特征数 χ ± 1，通过球面简化/洞洞生成）；② 局部形变（自由形式变形 FFD，控制点随机位移 ±5%）；③ 接触面翻转（法向 n → -n，模拟反面接触）。
+簇数 C 封顶 64，Hedge 权重低于 0.01 的簇定期合并/淘汰。
 
-**定义 192（故障条件安全集 FSC 与被动核 𝒞_0）** 令 𝒞_hw 为硬件包络。对每类 f 与幅值区间 Θ_f，定义
-𝒞_safe(f) = {K ∈ 𝒞_hw : ∀θ_f∈Θ_f，任务约束与 PSI 均成立}。
-被动核 𝒞_0 = {K : ∀f∈ℱ_known∪ℱ_unmodeled, ‖θ_f‖≤δ_u，任务约束与 PSI 均成立}，即「在所有声明故障下都任务安全」的保守集合。构造上保证 𝒞_0 ⊆ 𝒞_safe(f) ⊆ 𝒞_hw。模糊集下
-𝒞_safe(A_t) = ∩_{f∈A_t} 𝒞_safe(f)，且 unknown∈A_t ⇒ 𝒞_safe(A_t)=𝒞_0。
-单调性：A ⊆ A' ⇒ 𝒞_safe(A') ⊆ 𝒞_safe(A)。因此**诊断越确定，安全集越大、性能越高；诊断不确定时自动退回保守核**。这与 ROSE 的「r_t 越大越保守」方向一致，但粒度从「一维半径」变成「按故障类型的交集」。
+**定义 192（OLP-Geo 几何增强在线投影）** 投影头输入扩为 x' = CrossAttn(x, g, g)（d_us'=384）。K_W(x') = Π_0(x') + h(x')ᵀW，其中 h: ℝ^384 → ℝ^m (m=128) 为冻结随机特征（含几何维度），W ∈ 𝒲 凸紧集（‖W‖_F ≤ D 且区间算术校验 K_W(x') ∈ 𝒦）。每语义步：W_{t+1} = P_𝒲(W_t − η_t·∇_W ℓ̃_t^geo)，η_t = D/(G̃_geo√t)。梯度上界 G̃_geo = G·(L_h + L_g·L_cross)·(1+κ_φ·r_max)，其中 L_g = sup‖g‖，L_cross = CrossAttn 算子范数。
 
-**定义 193（交互安全不变量 PSI）** z_t 为原始测量/低层估计的交互状态：人机距离 d_h、速度 v、接触力 F_c、关节力矩 τ、滑移速度 slip、功率 power。定义归一化裕度
-h_int(z) = min{ (d_h−d_min)/d_min, (F_max−F_c)/F_max, (v_max−v)/v_max, (τ_max−|τ|)/τ_max, (slip_max−slip)/slip_max, (P_max−P)/P_max }。
-执行层要求 ḣ_int ≥ −α h_int + w_bound，其中 w_bound 覆盖测量噪声、延迟与未建模故障的扰动界；测量延迟 τ_d 用预测界 h_int(z_{t+τ_d}) ≥ 0 保守处理。PSI 由低层驱动/嵌入式层实现，**上层（含诊断、RL、对话）不可绕过**（A79）。
+**定义 193（WCV-Geo 几何感知鲁棒编译）** 球心 φ̂_0 = GeoInit(g)（定义 198），初始半径 r_0 = r_base·γ_geo(g)（γ_geo ∈ [0.3, 1.0] 由几何清晰度决定：法向一致性高/曲率低 → γ_geo 小）。搜索域为 B(φ̂_0, r) ∩ 𝒢(g)（定义 198），候选数 n_worst=8（几何约束剪枝一半）。CVaR_ε 优化在交集内进行，输出 K_safe, ρ_rob。若交集为空（几何约束与球冲突），回退至 B(φ̂_0, r) 全球搜索并报警 geo_conflict=True（写入 J_liro）。
 
-**定义 194（安全可问态 SafeAsk）** 仅在
-SafeAsk_t = 𝟙[K_t∈𝒞_0 的 safe-hold 模式] ∧ 𝟙[任务已暂停] ∧ 𝟙[人不在危险接触/危险距离] ∧ 𝟙[问题信息增益 ΔH ≥ δ_H] ∧ 𝟙[交互成本 ≤ B_int]
-时允许发问。问题 q 从「能最大区分 A_t 中剩余假设」的模板集中选。人回答 y_h 的似然用可靠性模型 p(y_h | f, q)（含混淆矩阵与可靠性区间），更新时对单次 LLR 截断 |log(p(y_h|f)/p(y_h|g))| ≤ L_max，并要求物理残差互证：只有当 b_t 与残差似然不矛盾时，才允许人证据改变隔离结论。这样单次（甚至对抗性/错误的）回答不能翻案。
+**定义 194（Shield-Skill 技能前置条件屏蔽）** RL/CSP 提案的技能参数 θ（绑定到技能 σ）：θ* = argmin_{θ'∈Θ_pre(σ, φ̂, r)} ‖θ'−θ‖₂，其中 Θ_pre = {θ: pre_σ(θ, φ̂, r) 经凸松弛后成立}。pre_σ 中的摩擦锥、曲率、进近方向等谓词均可表示为二次/线性约束，投影为小规模 QP（<5ms，语义流侧）。若 ‖θ*−θ‖_∞ > δ_skill（δ_skill=0.1 归一化单位），降级为 ask_clarify_skill(σ, violated_preds)。通过 Shield-Skill 的 θ* 直接进入 CSP 参数绑定与 ERTC 展开。
 
-**定义 195（安全主动诊断 ADX）** 探针库 𝒰_adx 是「经认证的、执行后仍处于 𝒞_0 的动作原语」（小幅度、低力、慢速、可立即停止的激励，如轻微往复、阻抗微调、单关节低幅扫频）。选择
-u* = argmax_{u∈𝒰_adx} I(ℱ; r_{t+1} | u, b_t)
-s.t. C0.admits(u)，risk(u) ≤ δ_risk，cost(u) ≤ B_adx，且不延迟紧急 safe-hold。
-互信息用当前后验与签名的局部高斯近似计算；若 u* 的信息增益低于阈值，则不发探针（避免无意义扰动）。
+**定义 195（OCB-Skill 技能粒度预算老虎机）** 臂空间 = USL_模式 × MEL_模式 × 对齐开关，K=4×4×2=32（为保持 EXP3 效率，实际聚合为 K=16：USL_模式={full_seq, single_skill, cached_seq, frozen}、MEL_模式={full, distill, cached, frozen}、align={on, off}）。每语义步 EXP3 采样臂 a_t，奖励 r_t = progress_t − κ·(compute_cost_t + skill_switch_penalty·𝟙[σ_t ≠ σ_{t-1}])，归一化到 [0,1]。重要性加权更新 w_a ← w_a·exp(η·r̂_t)。硬降级规则（PCE+++++ 继承）作为安全下界：EXP3 选择的臂不得突破当前算力允许的最高模式。
 
-**定义 196（容错恢复 FTR）** 模式机：
-- NORMAL：b_t(f_∅) ≥ τ_norm 且 D_t ≥ γ_d；
-- DEGRADED(f)：f 已隔离（b_t(f) ≥ τ_iso）且 f∈ℱ_known，K_t∈𝒞_safe(f)；执行容错控制（传感器偏置补偿、执行器增益重分配、阻抗重配、冗余关节再分配）；
-- SAFE_HOLD：unknown∈A_t 或 D_t<γ_d 或 b_t 未达隔离阈值；K_t∈𝒞_0 的 safe-hold；
-- ASK：满足 SafeAsk_t 且诊断可被人区分；
-- HANDOVER：故障不可恢复或人要求接管；
-- RECOVER：在 SAFE_HOLD 后重新检测，残差清除且 J_fides 复验通过才回 NORMAL。
-转移守卫是硬性的：任何目标模式必须已有认证的安全集；任何不确定都只能进更保守的模式，不能「跳级」。
+**定义 196（LIRO 闭环算子）** 见下方 IP-202 伪代码：语义流执行 [LiDAR 几何编码 → LSF 融合 → USR/MEL 推理 → USL/CSP 技能规划 → Shield-Skill → OCB-Skill 选择 → 执行首技能 π_σ1 → EV_exec → DIR 对比更新 → OLP-Geo 更新 → WCV-Geo 编译 → RSC 校准 → SSB 记账/挖掘 → SHC 调度 → AIC 认证]；实时流执行 [锚点原子读 → LSF/DIR 前向 → OLP-Geo 前向 + Shrink → WCV-Geo 编译 → π_σ1 展开派发 → J_liro 构建]。
 
-**定义 197（J_fides 证书与 FIDES 闭环算子）** 证书字段与验证规则见第 5 节。闭环算子：
-- 语义流（10–100Hz）：SRD 残差 → DET → TFI/OSM → DGM →（ADX | SafeAsk）→ FSC → FTR → J_fides 构建 → 事件回流。
-- 后台：签名重标定、人可靠性模型更新、被动核随磨损/负载重新认证、红队故障注入测试。
-- 实时流（1–10kHz）：读锚点 → SRD 残差（只读）→ PSI 检查 → 硬件裁剪 → fault-aware shield → 派发；零学习写。
+**定义 197（J_liro 扩展证书）** J_liro = (J_rose, ρ_dir, ℰ_spec, dir_ver, geo_hash, csp_plan_hash, skill_seq_hash)。
+验证规则：Valid(J_liro) ⇔ Valid(J_rose) ∧ ρ_dir ≥ 0 ∧ dir_fresh (dir_ver ≥ curr_ver − 2) ∧ geo_hash 有效 ∧ csp_feasible（规划器返回可行序列）∧ skill_seq_hash 与执行一致。审计链：geo_hash 追溯几何嵌入版本，csp_plan_hash 追溯规划器版本与输入，skill_seq_hash 追溯实际执行序列。
+
+**定义 198（GeoInit 几何初始化）** φ̂_0 = (μ_fric, k_stiff, c_damp, m_eff, ...)：
+- μ_fric = f_μ(n_cloud, material_class) = σ(MLP_μ([n_cloud; material_embed]))，n_cloud 为接触面法向主成分，material_class 由视觉分类头给出；
+- k_stiff = f_k(curvature_cloud) = σ(MLP_k(curvature_stats))，curvature_stats 为接触区域曲率均值/方差/最大值；
+- c_damp, m_eff 等由类似物理先验网络给出。
+MLP_μ, MLP_k 等为离线预训练（仿真域大规模几何-物理对），部署后冻结。输出 φ̂_0 作为 WCV-Geo 球心，并喂入 MEL 作为物理推断的几何正则先验。
+
+**定义 199（干扰增强算子 Aug_dir）** Aug_dir(O) 对观测 O=(P_cloud, T, P, L) 施加：
+- LiDAR dropout: 随机丢弃 15% 点云体素；
+- Gaussian 噪声: P_cloud + N(0, 0.02m)；
+- 对抗 PGD: 以任务损失为目标，对点云坐标做 3 步 PGD（ε_adv=0.05m）；
+- 遮挡掩码: 随机球形遮挡（半径 0.2m，遮挡比例 20%）；
+- 触觉噪声: T + N(0, 0.05N)；
+- 本体扰动: P + actuator_disturbance（关节摩擦突变模拟：随机关节 ±30% 摩擦，持续 50ms）。
+正样本 z^+ = E_dir(Aug_dir(O))，负样本为 batch 内其他样本。
+
+**定义 200（技能可行集 𝒫_feas）** 𝒫_feas(φ̂, r) = {π_σ: ∀φ∈B(φ̂,r), π_σ(·;φ) 满足 ERTC 约束 ∧ pre_σ(φ) ∧ ρ_rob(π_σ) ≥ 0}。判定通过采样验证：从 B(φ̂,r) 采样 32 个 φ，若全部通过则视为鲁棒可行。CSP 搜索仅考虑 𝒫_feas 内的技能。
 
 ## 3. 关键算法伪代码
 
-### IP-193 SRD + IP-188 DET（结构化残差与检测）
+### IP-193 LSF（激光雷达语义融合）
 
 ```python
-class StructuredResidualGenerator:
-    """P E_d = 0：对未知扰动解耦；各通道设计成结构化故障签名。"""
-    def __init__(self, P, C, sigma, nu, h):
-        self.P, self.C = P, C
-        self.sigma, self.nu, self.h = sigma, nu, h
-        self.g = np.zeros(P.shape[0])
+class LiDARSemanticFusion:
+    """点云体素化 → 3D CNN 几何编码 → 跨模态注意力融合。实时前向 < 0.2ms。"""
+    def __init__(self, d_us=256, d_g=128, d_out=384, voxel_size=32):
+        self.voxelize = DifferentiableVoxelize(voxel_size)      # 可微体素化
+        self.E_geo = FrozenResNet3D18(out_dim=d_g)              # 冻结几何骨干
+        self.cross_attn = CrossAttention(d_us, d_g, d_out, heads=4)  # Q=x, K=V=g
+        self.g_cache = None                                     # 缓存几何嵌入（LiDAR 10Hz，语义流 10-100Hz）
 
-    def residual(self, y, u, x_hat):
-        e = y - self.C @ x_hat
-        return self.P @ e                       # q 维结构化残差
+    def update_geometry(self, P_cloud):
+        voxel = self.voxelize(P_cloud)                          # (32,32,32,1)
+        self.g_cache = self.E_geo(voxel)                        # (d_g,) 冻结前向
 
-    def cusum(self, r):
-        z = np.abs(r) / self.sigma
-        self.g = np.maximum(0.0, self.g + z - self.nu)
-        return bool((self.g > self.h).any()), np.where(self.g > self.h)[0]
-```
-
-### IP-194 TFI + IP-195 OSM（类型化隔离与开集拒识）
-
-```python
-def typed_isolate(r, S, A_known, sigma, prior, tau_os, tau_amb, K_amb=3):
-    P_S = projector(S)                               # 已知签名子空间投影
-    nov = np.linalg.norm((np.eye(len(r)) - P_S) @ r) / (np.linalg.norm(r) + 1e-9)
-    if nov > tau_os:                                 # 开集：拒绝归类
-        return prior.copy(), set(A_known) | {'unknown'}, nov, True
-
-    loglik = []
-    theta_hat = {}
-    for f in A_known:
-        s = S[f]
-        th = max(0.0, float(s @ r) / float(s @ s + 1e-12))   # 幅值 MLE
-        theta_hat[f] = th
-        resid = r - th * s
-        loglik.append(-0.5 * float(resid @ resid) / sigma**2 + np.log(prior[f] + 1e-12))
-    b = softmax(np.asarray(loglik))
-    order = np.argsort(-b)
-    A = {A_known[i] for i in order[:K_amb] if b[i] >= tau_amb}
-    return dict(zip(A_known, b)), A, nov, False
-```
-
-### IP-196 DGM（可诊断性监控）
-
-```python
-def diagnosability(A, S, sigma):
-    if 'unknown' in A or len(A) < 2:
-        return 0.0
-    return min(np.linalg.norm(S[f] - S[g]) / (2.0 * sigma)
-               for f in A for g in A if f != g)
-```
-
-### IP-197 FSC（故障条件安全集编译）
-
-```python
-def compile_safe_set(A, C0, safe_sets, hw_env):
-    if 'unknown' in A:                               # 未知故障：只信被动核
-        return C0 & hw_env
-    C = intersect([safe_sets[f] for f in A])         # 模糊集下取交集
-    return (C & hw_env) if C is not None else C0     # 永不超过硬件包络
-```
-
-### IP-198 PSI（交互安全不变量）
-
-```python
-def psi_check(z, zdot, alpha, delay_bound, z_bound):
-    h = min_margin(z)                                # 原始测量：力/速度/距离/滑移/功率
-    h_pred = h - delay_bound * z_bound               # 延迟下的保守下界
-    if h_pred < 0.0 or (zdot + alpha * h) < -z_bound:
-        return 'safe_hold'                           # 低层硬件同时裁剪，不可绕过
-    return 'ok'
-```
-
-### IP-199 ADX（安全主动诊断）
-
-```python
-def safe_probe(A, b, C0, probes, risk_budget, B_adx):
-    if len(A) < 2 or 'unknown' in A:
-        return None
-    best, best_gain = None, 0.0
-    for u in probes:
-        if not C0.admits(u):                         # 只允许落在被动核内的探针
-            continue
-        if probe_risk(u, A) > risk_budget or probe_cost(u) > B_adx:
-            continue
-        gain = mutual_info_faults(A, b, u)           # I(ℱ; r_{t+1} | u, b_t)
-        if gain > best_gain:
-            best, best_gain = u, gain
-    return best if best_gain >= DELTA_I else None
-```
-
-### IP-200 SafeAsk（安全询问协议）
-
-```python
-def safe_ask(state, b, A, question, budget):
-    if not (state.in_C0_hold and state.task_paused and state.human_safe):
-        return b, None
-    if question.information_gain(b, A) < DELTA_H:
-        return b, None
-    if question.cost > budget:
-        return b, None
-
-    y_h = state.dms.ask(question)                    # 只在安全可问态发问
-    llr = np.clip(np.log(human_likelihood(y_h, A) + 1e-12), -L_MAX, L_MAX)
-    b_new = normalize(b * np.exp(llr))
-
-    if not physical_residual_corroborates(y_h, b_new, A):   # 必须物理互证
-        return b, y_h                                # 单次回答不能翻案
-    return b_new, y_h
-```
-
-### IP-201 FTR（容错恢复模式机）
-
-```python
-def ftr_transition(b, A, safe_sets, C0, D, mode_now):
-    if 'unknown' in A:
-        return 'SAFE_HOLD'
-    f_hat = max(b, key=b.get)
-    if b[f_hat] < TAU_ISO or D < GAMMA_D:
-        return 'ASK' if safe_ask_possible else 'SAFE_HOLD'
-    if safe_sets[f_hat].certified and f_hat in RECOVERABLE:
-        return f'DEGRADED({f_hat})'
-    return 'HANDOVER'
-```
-
-### IP-202 FIDES 闭环算子（整合）
-
-```python
-def FIDES_round(M, obs):
-    # ———— 语义流（10–100Hz：诊断、学习、记账）————
-    r = M.srd.residual(obs.y, obs.u, M.observer.state)
-    alarm, ids = M.det.cusum(r)
-    b, A, nov, rejected = M.tfi.typed_isolate(
-        r, M.S, M.A_known, M.sigma, M.prior, TAU_OS, TAU_AMB)
-    if rejected:
-        A = A | {'unknown'}
-    D = M.dgm.diagnosability(A, M.S, M.sigma)
-
-    if alarm and D < GAMMA_D and 'unknown' not in A:
-        u_adx = M.adx.safe_probe(A, b, M.C0, M.probes, RISK_BUDGET, B_ADX)
-        if u_adx is not None:
-            M.queue_probe(u_adx)                     # 执行期仍受 PSI/硬件裁剪
+    def fuse(self, x):
+        if self.g_cache is None:
+            g = torch.zeros(self.d_g, device=x.device)          # 无 LiDAR：零几何
         else:
-            b, _ = M.safeask.safe_ask(M.state, b, A, M.question(A), B_ASK)
+            g = self.g_cache
+        x_prime = self.cross_attn(x.unsqueeze(0), g.unsqueeze(0), g.unsqueeze(0))
+        return x_prime.squeeze(0)                               # (d_out,)
+```
 
-    K = M.fsc.compile_safe_set(A, M.C0, M.safe_sets, M.hw_env)
-    M.mode = M.ftr.ftr_transition(b, A, M.safe_sets, M.C0, D, M.mode)
+### IP-194/195 USL + CSP（通用技能库 + 组合规划）
 
-    # ———— 实时流（1–10kHz：物理安全，零学习写）————
-    K = M.hw.clip(K)                                 # 硬件包络不可绕过
-    if M.psi.check(M.state.z, M.state.zdot) != 'ok':
-        K = M.C0.safe_hold()                         # 被动核兜底
-    cert_exec = M.ertc.dispatch(K)
+```python
+class UniversalSkillLibrary:
+    def __init__(self, skills: List[Skill]):
+        self.skills = {s.name: s for s in skills}
+        self.skill_graph = self._build_graph()                  # 节点=技能，边=pre/eff 兼容
 
-    return M, K, M.build_j_fides(cert_exec, ids, A, b, nov, D)
+    def _build_graph(self):
+        G = nx.DiGraph()
+        for s in self.skills.values(): G.add_node(s.name, skill=s)
+        for s1 in self.skills.values():
+            for s2 in self.skills.values():
+                if self._compatible(s1.eff, s2.pre):            # 谓词蕴含检查（符号）
+                    G.add_edge(s1.name, s2.name)
+        return G
+
+    def get_feasible(self, phi_hat, r, x_prime) -> List[Skill]:
+        return [s for s in self.skills.values()
+                if s.is_robust_feasible(phi_hat, r, x_prime)]  # 𝒫_feas 判定
+
+class Skill:
+    def __init__(self, name, pre, eff, policy_mlp, cost):
+        self.name, self.pre, self.eff, self.policy, self.cost = name, pre, eff, policy_mlp, cost
+
+    def is_robust_feasible(self, phi_hat, r, x_prime):
+        for _ in range(32):
+            phi = sample_ball(phi_hat, r)
+            K_seq, c_seq = self.policy(x_prime)                 # 展开阻抗轨迹
+            if not ertc.check(K_seq, c_seq, phi): return False
+            if not self.pre.holds(phi, x_prime): return False
+        return True
+
+    def __call__(self, x_prime, theta=None):
+        return self.policy(x_prime) if theta is None else self.policy.adapt(x_prime, theta)
+
+class CSPPlanner:
+    """层级 A* + 参数优化。语义流调用，输出技能序列 τ 与参数绑定 θ_bind。"""
+    def __init__(self, usl: UniversalSkillLibrary, max_horizon=5):
+        self.usl, self.max_horizon = usl, max_horizon
+
+    def plan(self, goal: Predicate, x_prime, phi_hat, r, budget=100.0):
+        feasible = self.usl.get_feasible(phi_hat, r, x_prime)
+        # 高层 A* 搜索技能序列
+        start_node = ('start', [], 0.0)                         # (当前技能, 序列, 累计代价)
+        open_set = [start_node]
+        while open_set:
+            curr, seq, cost = heapq.heappop(open_set)
+            if goal.holds(seq[-1].eff if seq else None, phi_hat, x_prime):
+                # 低层参数优化
+                theta_bind = self._optimize_params(seq, x_prime, phi_hat, r)
+                return seq, theta_bind
+            if len(seq) >= self.max_horizon: continue
+            for next_skill in self.usl.skill_graph.successors(curr):
+                if next_skill not in feasible: continue
+                new_cost = cost + next_skill.cost + (1.0 if seq and seq[-1].name != next_skill else 0.0)
+                if new_cost > budget: continue
+                heapq.heappush(open_set, (next_skill, seq + [next_skill], new_cost))
+        return [self.usl.skills['safe_idle']], [None]           # 兜底
+
+    def _optimize_params(self, seq, x_prime, phi_hat, r):
+        # 将 pre/eff 软化为 hinge 代价，L-BFGS 求 θ_bind
+        def loss(theta_list):
+            total = 0.0
+            for i, (skill, theta) in enumerate(zip(seq, theta_list)):
+                K_seq, c_seq = skill(x_prime, theta)
+                total += skill.cost
+                # 前置条件软约束
+                if i == 0:
+                    total += hinge(skill.pre.violation(phi_hat, x_prime))
+                else:
+                    total += hinge(seq[i-1].eff.violation(skill.pre, phi_hat, x_prime))
+                # 后置条件软约束
+                total += hinge(skill.eff.violation(phi_hat, x_prime))
+                # 鲁棒裕度软约束
+                total += hinge(-min_margin(K_seq, c_seq, phi_hat, r))
+            return total
+        return lbfgs_optimize(loss, init=[s.default_theta for s in seq])
+```
+
+### IP-196 DIR（干扰不变表征）
+
+```python
+class DisturbanceInvariantRepresentation:
+    """E_dir: 多模态观测 → ℤ_task ⊕ ℤ_nuisance。对比学习 + 因果正则。"""
+    def __init__(self, d_obs=512, d_z=128, tau=0.1, lambda_causal=1.0):
+        self.encoder = MLP(d_obs, [256, 256], d_z)              # 共享编码器
+        self.head_task = MLP(d_z//2, [64], 6)                   # 任务头（如 φ̂ 预测）
+        self.tau, self.lambda_causal = tau, lambda_causal
+        self.aug = DisturbanceAugmenter()                       # Aug_dir
+
+    def forward(self, O):
+        z = self.encoder(O)                                     # (d_z,)
+        return z[:d_z//2], z[d_z//2:]                           # z_task, z_nuisance
+
+    def contrastive_loss(self, batch_O):
+        z_task = []; z_task_pos = []
+        for O in batch_O:
+            z_t, _ = self.forward(O)
+            z_task.append(z_t)
+            O_aug = self.aug(O)
+            z_t_pos, _ = self.forward(O_aug)
+            z_task_pos.append(z_t_pos)
+        z_task = torch.stack(z_task); z_task_pos = torch.stack(z_task_pos)
+        sim = torch.mm(z_task, z_task_pos.t()) / self.tau       # (B,B)
+        labels = torch.arange(len(batch_O), device=z_task.device)
+        return F.cross_entropy(sim, labels)
+
+    def causal_regularizer(self, batch_O):
+        # 有限差分估计 ∂ŷ/∂η
+        reg = 0.0
+        for O in batch_O:
+            z_t, _ = self.forward(O)
+            y = self.head_task(z_t)
+            for eta_name in ['lidar_dropout', 'lidar_noise', 'adv_pgd', 'occlusion', 'actuator_disturb']:
+                O_pert = self.aug.perturb_single(O, eta_name, eps=1e-3)
+                z_t_pert, _ = self.forward(O_pert)
+                y_pert = self.head_task(z_t_pert)
+                reg += torch.norm(y_pert - y) ** 2
+        return reg / len(batch_O)
+
+    def update(self, batch_O):
+        loss = self.contrastive_loss(batch_O) + self.lambda_causal * self.causal_regularizer(batch_O)
+        loss.backward()
+        # 仅语义流更新（optimizer 步进）
+        return loss.item()
+```
+
+### IP-197 AIC（抗干扰认证器）
+
+```python
+class AntiInterferenceCertifier:
+    """采样认证 ρ_dir = min_{η∈ℰ} min_t margin(τ, η)。"""
+    def __init__(self, n_cert=64):
+        self.n_cert = n_cert
+        self.eps = {'sens': 0.05, 'act': 0.1, 'adv': 0.05, 'ood': 0.3}  # 由 DIR 分位数校准
+
+    def calibrate_eps(self, dir_module: DisturbanceInvariantRepresentation, history_O):
+        # 从历史观测估计各类干扰经验分位数
+        sens_mags = []; act_mags = []
+        for O in history_O:
+            sens_mags.append(estimate_lidar_noise(O.P_cloud))
+            act_mags.append(estimate_actuator_disturbance(O.P))
+        self.eps['sens'] = np.percentile(sens_mags, 95)
+        self.eps['act'] = np.percentile(act_mags, 95)
+        # adv/ood 由 DIR 对比学习隐式校准，此处用固定保守值
+
+    def certify(self, tau: List[Skill], theta_bind, x_prime, phi_hat, r):
+        min_margin = float('inf')
+        worst_eta = None
+        for _ in range(self.n_cert):
+            eta = self._sample_disturbance()
+            margin_t = []
+            for skill, theta in zip(tau, theta_bind):
+                K_seq, c_seq = skill(x_prime, theta)
+                # 施加干扰 η 到观测/执行
+                O_pert = apply_disturbance(x_prime, eta)
+                margin_t.append(min_margin_under_pert(K_seq, c_seq, phi_hat, r, O_pert))
+            m = min(margin_t)
+            if m < min_margin:
+                min_margin = m
+                worst_eta = eta
+        return min_margin, worst_eta, self.eps.copy()
+
+    def _sample_disturbance(self):
+        return {
+            'sens': sample_lidar_disturbance(self.eps['sens']),
+            'act': sample_actuator_disturbance(self.eps['act']),
+            'adv': sample_adversarial(self.eps['adv']),
+            'ood': sample_ood_geometry(self.eps['ood'])
+        }
+```
+
+### IP-198 SSB（空间场景银行）
+
+```python
+class SpatialScenarioBank:
+    """场景签名增入点云指纹 fp_cloud，几何变异算子。"""
+    def __init__(self, C_max=64):
+        self.scenes, self.clusters = {}, OnlineClusterer(C_max)
+        self.fp_index = {}  # fp_cloud (64bit) -> scene_id
+
+    def _fp_cloud(self, P_cloud):
+        voxel_hist = voxel_normal_histogram(P_cloud, grid=32, bins=8)  # (32^3 * 8,)
+        return simhash(voxel_hist, bits=64)                          # 64 位指纹
+
+    def mine(self, EV_exec, anchor):
+        fp = self._fp_cloud(EV_exec.P_cloud)
+        if fp in self.fp_index:
+            sid = self.fp_index[fp]
+            self.scenes[sid].meta.n_vis += 1
+            if EV_exec.has_incident(): self.scenes[sid].meta.n_fail += 1
+            return self.scenes[sid]
+        if not EV_exec.has_incident(): return None
+        # 新场景
+        sig = ScenarioSignature(V_sig=visual_fp(EV_exec.V),
+                                T_sig=tactile_fp(EV_exec.T),
+                                fp_cloud=fp,
+                                phi_sig=EV_exec.phi_hat,
+                                dyn_annot=EV_exec.dyn_annot)
+        s = Scenario(sig, lineage=None)
+        self.scenes[id(s)] = s
+        self.fp_index[fp] = id(s)
+        self.clusters.add(sig, s)
+        return s
+
+    def mutate(self, s):
+        children = super().mutate(s)  # 继承材质/刚度/湿滑/动态障碍
+        # 几何变异
+        P_base = s.sig.reconstruct_cloud()  # 从 fp_cloud 反解近似点云（或存储原始）
+        children += [mutate_topology(P_base), mutate_ffd(P_base), mutate_contact_flip(P_base)]
+        for c in children: c.lineage = s.id
+        return children
+```
+
+### IP-199 OLP-Geo（几何增强在线投影）
+
+```python
+class GeometryEnhancedOLP(OnlineLearningProjector):  # 继承第 62 轮 OLP
+    def __init__(self, Pi0, d_us_prime=384, m=128, d_out=6, D=1.0, r_max=0.5):
+        super().__init__(Pi0, d_us_prime, m, d_out, D, r_max)
+        self.h = FrozenRandomFeatures(d_us_prime, m, seed=42)   # 含几何维度
+        self.G_tilde_geo = None
+
+    def project(self, x_prime):
+        return super().project(x_prime)  # 复用父类逻辑，输入已为 x'
+
+    def online_step(self, x_prime, grad_l):
+        # 梯度上界更新：G̃_geo = G·(L_h + L_g·L_cross)·(1+κ_φ·r_max)
+        if self.G_tilde_geo is None:
+            L_h = np.max(np.linalg.norm(self.h(x_prime)))  # 运行时估计
+            L_g = np.linalg.norm(self.lsf.g_cache) if self.lsf.g_cache is not None else 0
+            L_cross = 1.5  # CrossAttn 算子范数经验上界
+            G = 10.0  # ℓ 对 K 的 Lipschitz（A71）
+            self.G_tilde_geo = G * (L_h + L_g * L_cross) * (1 + KAPPA_PHI * self.r_max)
+        return super().online_step(x_prime, grad_l)  # 复用投影逻辑
+```
+
+### IP-200 WCV-Geo（几何感知鲁棒编译）
+
+```python
+def wcv_geo_compile(olp, x_prime, eeis, phi_hat, r, g, lsf,
+                    eps=0.05, n_worst=8, kappa_phi=KAPPA_PHI):
+    # 1. 几何初始化球心
+    if phi_hat is None:  # 首帧或锚点丢失
+        phi_hat = geo_init(g)  # GeoInit(g)
+        r = r_base * geo_confidence(g)  # γ_geo(g)
+    # 2. 几何约束集 𝒢(g)
+    G_set = geo_constraint_set(g)  # {φ: n(φ)≈n_cloud, κ(φ)≤κ_max(g)}
+    # 3. 候选采样在 B∩𝒢 内
+    candidates = []
+    for i in range(n_worst):
+        phi_cand = sample_ball_intersect_geo(phi_hat, r, G_set)
+        K = olp.project(x_prime)
+        K_c = eeis.compile_with_phys_constraint(K, phi_cand)
+        margin = safety_margin(K_c, phi_cand)
+        loss_i = execution_loss_estimate(K_c, phi_cand)
+        candidates.append((phi_cand, K_c, margin, loss_i))
+    # 4. CVaR 尾部收缩
+    candidates.sort(key=lambda z: z[3], reverse=True)
+    tail = candidates[:max(1, int(eps * n_worst))]
+    K_safe = intersect_shrink([K_c for _, K_c, _, _ in tail])
+    rho_rob = min(margin for _, _, margin, _ in tail)
+    cvar = np.mean([loss_i for _, _, _, loss_i in tail])
+    geo_conflict = (len(G_set) == 0)  # 约束集为空
+    return K_safe, rho_rob, cvar, geo_conflict
+```
+
+### IP-201 Shield-Skill（技能前置条件屏蔽）
+
+```python
+def skill_precondition_shield(theta_prop, skill, phi_hat, r):
+    """θ* = argmin_{θ'∈Θ_pre} ‖θ'−θ‖₂，Θ_pre 为 pre_σ 凸松弛。"""
+    # pre_σ 示例：摩擦锥 ‖n·f‖ ≤ μ·‖f_t‖ → 二次约束；曲率 κ ≤ κ_max → 线性；进近方向 → 线性
+    QP = build_precondition_qp(skill.pre, phi_hat, r, theta_prop)  # 小规模 QP
+    theta_star = solve_qp(QP)                                       # < 5ms
+    if np.linalg.norm(theta_star - theta_prop, ord=np.inf) > DELTA_SKILL:
+        violated = identify_violated_predicates(skill.pre, phi_hat, r, theta_prop)
+        return SkillShieldResult('ask_clarify', violated=violated)
+    return SkillShieldResult('lock', theta_star=theta_star, shielded=True)
+```
+
+### IP-202 OCB-Skill（技能粒度预算老虎机）
+
+```python
+class SkillGranularityBudgetBandit:
+    ARMS = [(usl, mel, align) for usl in ('full_seq', 'single_skill', 'cached_seq', 'frozen')
+                              for mel in ('full', 'distill', 'cached', 'frozen')
+                              for align in ('on', 'off')]  # 32 臂，聚合为 16
+
+    def __init__(self, K=16, eta=0.3):
+        self.w = np.ones(K) / K; self.eta = eta; self.K = K
+        self.prev_usl_mode = None
+
+    def choose(self):
+        return self.ARMS[np.random.choice(self.K, p=self.w)]
+
+    def update(self, arm_idx, compute_cost, progress, usl_mode):
+        skill_switch = 1.0 if (self.prev_usl_mode is not None and usl_mode != self.prev_usl_mode) else 0.0
+        reward = np.clip(progress - KAPPA_OCB * (compute_cost + SKILL_SWITCH_PENALTY * skill_switch), 0, 1)
+        r_hat = reward / max(self.w[arm_idx], 1e-6) / self.K
+        self.w[arm_idx] *= np.exp(self.eta * r_hat / self.K)
+        self.w /= self.w.sum()
+        self.prev_usl_mode = usl_mode
+
+    def clipped_arm(self, arm, hard_rule):
+        return hard_rule.dominates(arm) if hard_rule else arm
+```
+
+### IP-203 LIRO 闭环算子（整合）
+
+```python
+def LIRO_round(M, obs, delta_f_req):
+    V, T, P, L, P_cloud = obs  # 新增 LiDAR 点云
+    # ———— 语义流（10–100Hz）————
+    M.lsf.update_geometry(P_cloud)                          # LiDAR 几何编码（10Hz，缓存）
+    x_prime = M.lsf.fuse(M.usr.fuse(V, T, P, L))            # LSF 融合
+    phi_hat, z_scene, pi_int, (U_ep, U_al) = M.mel.infer_by_mode(
+        M.ocb_skill.choose().mel_mode, V, T, P, L, x_prime)
+    M.intent_emb = M.usr.intent_encoder(M.dms.b_intent)
+    M.anchor = M.ara.commit(x_prime, phi_hat, r=M.rsc.r, Rhat_c=M.hedge.Ghat, Sigma=None)
+
+    # USL/CSP 技能规划
+    goal = M.dms.parse_goal((U_ep, U_al))                   # 意图 → 逻辑目标谓词
+    tau, theta_bind = M.csp.plan(goal, x_prime, phi_hat, M.rsc.r)
+    # Shield-Skill：仅对首技能参数屏蔽（后续技能在后续步重规划时屏蔽）
+    first_skill, first_theta = tau[0], theta_bind[0]
+    shield_res = skill_precondition_shield(first_theta, first_skill, phi_hat, M.rsc.r)
+    if shield_res.type == 'ask_clarify':
+        M.dms.enqueue_clarify(shield_res.violated)
+        first_theta = first_skill.default_theta  # 兜底默认参数
+    theta_bind[0] = shield_res.theta_star if shield_res.type == 'lock' else first_theta
+
+    M.ocb_skill.update(M.arm_idx, cost=arm_cost(M.arm, phi_hat), progress=0, usl_mode=M.arm.usl_mode)
+
+    K_safe, EV_exec, cert_exec = realtime_step_liro(M, delta_f_req, tau, theta_bind, x_prime)
+    progress = task_progress(EV_exec, M.C_exec)
+    M.ocb_skill.update(M.arm_idx, cost=arm_cost(M.arm, phi_hat), progress=progress, usl_mode=M.arm.usl_mode)
+
+    # —— 执行反馈与在线更新（语义流侧）——
+    grad_K = execution_loss_grad(K_safe, EV_exec, worst_phi_in_ball(phi_hat, M.rsc.r))
+    M.olp_geo.online_step(x_prime, grad_K)                              # OLP-Geo 更新
+    tau_pred = predict_ext_torque(phi_hat, K_safe)
+    M.rsc.update(EV_exec.tau_ext_obs, tau_pred, sens_jacobian(phi_hat, K_safe))
+    new_scene = M.ssb.mine(EV_exec, M.anchor)                           # SSB 记账
+    if new_scene: M.ssb.mutate(new_scene)                               # 几何变异生长
+    M.hedge.step(M.anchor.cluster_id, loss=loss_of(EV_exec),
+                 loss_ref=baseline_loss(EV_exec, K_BASELINE))           # SHC 记账
+    M.dir.update(sample_batch_from_history(32))                         # DIR 对比更新
+    adapter_ver = mel_online_adapt(M.mel, M.ssb, M.hedge.w, U_ep, M.rsc.history[-1])
+    # AIC 认证
+    rho_dir, worst_eta, eps_spec = M.aic.certify(tau, theta_bind, x_prime, phi_hat, M.rsc.r)
+    return M, K_safe, EV_exec, build_j_liro(cert_exec, rho_rob=M.rho, r=M.rsc.r,
+                                            Rhat=M.hedge.Ghat, arm=M.arm,
+                                            shield=shield_log_hash(shield_res),
+                                            adapter_ver=adapter_ver,
+                                            rho_dir=rho_dir, eps_spec=eps_spec,
+                                            geo_hash=hash(M.lsf.g_cache),
+                                            csp_plan_hash=hash((tau, theta_bind)),
+                                            skill_seq_hash=hash(tuple(s.name for s in tau)))
+
+def realtime_step_liro(M, delta_f_req, tau, theta_bind, x_prime):
+    # ———— 实时流（1–10kHz）————
+    anchor, fresh = M.ara.read_latest()
+    if anchor is None:
+        K_prior = K_BASELINE
+    else:
+        K_prior = robust_prior(M.olp_geo, anchor, fresh)
+    # 仅展开首技能
+    first_skill, first_theta = tau[0], theta_bind[0]
+    K_seq = first_skill(x_prime, first_theta)                    # 阻抗关键帧序列
+    K_safe, rho_rob, _, geo_conflict = wcv_geo_compile(
+        M.olp_geo, x_prime, M.eeis, anchor.phi_hat if anchor else None,
+        M.rsc.r, M.lsf.g_cache, M.lsf)
+    cert_exec = M.ertc.dispatch(K_seq[0])                        # 派发首帧阻抗
+    EV_exec = wait_contact_and_build_evidence()
+    M.usr.push_evidence(EV_exec)
+    M.rho = rho_rob
+    M.rho_dir, M.worst_eta, M.eps_spec = M.aic.certify(tau, theta_bind, x_prime, anchor.phi_hat, M.rsc.r)
+    return K_safe, EV_exec, cert_exec
 ```
 
 ## 4. 推导
 
-**命题 1（隔离错误率上界）** 设残差在故障 f 下 r ~ 𝒩(s_f, σ²I)，隔离规则为最近签名（ML）。对 g≠f，误判 f→g 等价于 ‖r−s_g‖ ≤ ‖r−s_f‖，即 (s_g−s_f)ᵀr ≥ (‖s_g‖²−‖s_f‖²)/2。令 Δ = s_g−s_f，则 (Δᵀr − Δᵀs_f) ~ 𝒩(0, σ²‖Δ‖²)（在 f 下），误判概率 = P[𝒩(0,1) ≥ ‖Δ‖/(2σ)] ≤ exp(−‖Δ‖²/(8σ²))（高斯尾 Chernoff 界）。对全部 g 取并集界：
-P_err(f) ≤ Σ_{g≠f} exp(−‖s_f−s_g‖²/(8σ²))。
-因此只要最小签名间隔 D_t = min‖s_f−s_g‖/(2σ) 足够大，误隔离率指数下降。**可隔离性取代了 A72 的参数可辨识性，且是可在线检验的**。∎
+**引理 3（几何先验收缩球半径）** 设 GeoInit 由可微物理先验网络给出，满足 ‖φ* − φ̂_0‖ ≤ δ_geo，其中 δ_geo < δ_bias（纯 MEL 估计偏差上界，A72）。RSC 更新 r_{t+1} = (1−β_c)r_t + β_c e_t，稳态下 r_∞ = E[e_t]。因 e_t = ‖J_φ⁺·resid_t‖ 且 resid_t 由 φ* − φ̂_0 驱动，有 E[e_t] ≤ ‖J_φ⁺‖·‖φ* − φ̂_0‖ + noise ≤ (1/σ_J)·δ_geo + o(1)。而纯 MEL 情况下 r_∞^MEL ≥ (1/σ_J)·δ_bias + o(1)。故 **r_∞ ≤ r_∞^MEL·(δ_geo/δ_bias) < r_∞^MEL**——几何先验直接压缩 WCV 球。∎
 
-**命题 2（CUSUM 检测延迟与误报，近似）** 设故障后残差均值由 0 变为 μ_f，方差 σ²。取参考值 ν = μ_f/2，KL 散度 K_f = μ_f²/(2σ²)。CUSUM 阈值 h 的经典 Wald/Lorden 近似给出 E_f[t_d − t_0] ≤ (h + O(1))/K_f，且无故障平均运行长度 ARL_0 ≥ e^{h}（量级）。因此检测延迟与误报可通过 h 显式权衡，并写入证书的检测时限字段。∎
+**引理 4（DIR 不变性界）** 设 ℒ_causal 使 ‖∂ŷ/∂η‖_F ≤ ε_causal，对比损失使 I(Z_nuisance; η) ≤ ε_info（互信息上界）。对任意干扰 η∈ℰ，由数据处理不等式及 Pinsker 不等式，任务预测漂移 ‖ŷ(O+η) − ŷ(O)‖ ≤ L_ŷ·W_1(P_{Z|O+η}, P_{Z|O}) ≤ L_ŷ·(ε_causal + √(2ε_info))。取 L_ŷ 为任务头 Lipschitz 常数。**干扰对任务头的影响被显式压缩**。∎
 
-**定理 1（物理安全与诊断解耦）** 假设：(i) 低层硬件对 τ、F_c、v、d_h 等实施不可绕过的包络裁剪，故任意部署 K_t ∈ 𝒞_hw；(ii) PSI 屏障 h_int 在扰动界 w_bound、测量延迟 τ_d 与未建模故障幅值 ‖θ_f‖≤δ_u 下满足 ḣ_int ≥ −α h_int + w_bound；(iii) 初始 z_0 ∈ 𝒮_int = {z : h_int(z) ≥ 0}。则对任意诊断输出（包括完全错误的 f̂、错误的 A_t、甚至诊断线程死亡），闭环状态满足 z_t ∈ 𝒮_int, ∀t≥0。证明：标准 CBF 前向不变性；诊断只影响 K_t 的选择，但 K_t 始终被投影到 𝒞_hw，且 PSI/硬件层在 K_t 之后、执行器之前独立校验；诊断不在物理安全的证明链中。∎
+**定理 2（技能层面鲁棒遗憾界）** 将 OLP-Geo 参数 W 视为技能参数 θ 的线性化修正：θ ≈ θ_0 + J_θW·W。CSP 选择的技能序列 τ 在 USL 上诱导损失 ℓ̃_t^skill(θ)。因 USL 覆盖任务相关子空间（A81：任务流形内在维度 d_task ≪ d_us），有效维度 d_eff = rank(J_θW) ≤ d_task。OGD 在 d_eff 维子空间上运行，梯度上界 G̃_skill ≤ G̃_geo / √κ（κ = d_us/d_task 为技能抽象压缩比）。标准 OGD 分析给出 **R_T^skill ≤ D_skill·G̃_skill·√T**，其中 D_skill 为技能参数空间直径。**技能抽象降维直接改进遗憾常数**。∎
 
-**定理 2（任务安全的诊断条件）** 若真故障 f* ∈ A_t 对所有 t 成立，且 K_t ∈ 𝒞_safe(A_t)，则由定义 192，K_t ∈ 𝒞_safe(f*)，故在 f* 与 θ_{f*}∈Θ_{f*} 下任务约束与 PSI 均成立。若因误隔离使 f* ∉ A_t，则 K_t 可能落在 𝒞_safe(f*) 之外，任务安全不再有保证；但定理 1 的物理安全仍成立。**两层安全的依赖关系被显式分离：诊断错了，任务可能失败，但人不会受伤、硬件不会越界。** ∎
+**定理 3（AIC 认证有效性）** 设 ℰ 由 DIR 校准分位数覆盖，满足 P[η* ∈ ℰ] ≥ 1−α_dir。margin(τ, η) 对 η 单调（干扰增大 → 裕度减小）。采样近似 n_cert=64 时，由 Hoeffding 不等式，P[ρ_dir^sample > ρ_dir^true + ε] ≤ exp(−2n_certε²/Δ²)。取 ε=0.05, Δ=1 得置信度 > 99%。若 ρ_dir^sample ≥ 0，则 ρ_dir^true ≥ −ε。结合覆盖概率，**对真实干扰 η* 技能序列安全概率 ≥ 1−α_dir−δ_cert**。∎
 
-**命题 3（开集兜底）** 若 ν_t > τ_os，则 A_t ∋ unknown，由定义 192，𝒞_safe(A_t)=𝒞_0。由 𝒞_0 的定义，它在所有声明故障（含有界未建模故障）下任务安全且满足 PSI。因此开集拒识把「可能误隔离」转化为「保守但双层安全」。代价是性能下降，收益是避免「自信地错」。∎
+**命题（WCV-Geo 编译加速）** 几何约束集 𝒢(g) 为凸集（法向一致性为二次锥，曲率上界为线性），B(φ̂,r)∩𝒢(g) 体积 ≤ B(φ̂,r) 体积 × γ_vol，γ_vol ∈ [0.1, 0.5]（实测）。拒绝采样接受率提升 2×–10×，编译时间随候选数线性，**WCV-Geo 编译时间 −60% 以上**。∎
 
-**命题 4（主动诊断的安全性与近似最优）** 探针 u 只从 C0.admits(u) 的库中选，且风险/交互预算受限，因此执行探针后状态仍在 𝒞_0 ⊆ 𝒮_int，PSI 不被破坏。若故障假设上的互信息函数 I(ℱ; r|u,b) 在探针集合上近似次模（自适应 submodular），则基数约束下的贪心选择达到 (1−1/e) 近似；ADX 用贪心/UCB 实现，复杂度 O(|𝒰_adx|·|A|)。∎
-
-**命题 5（人证据的可信度封顶）** 单次询问的 LLR 被截断到 [−L_max, L_max]，故单次回答对后验对数比的改变有界：|log(b_{t+1}(f)/b_{t+1}(g)) − log(b_t(f)/b_t(g))| ≤ 2L_max。再要求 physical_residual_corroborates：若残差似然强烈反对人证据给出的假设，则不更新。因此单次错误/对抗性回答不能把隔离结论从 f 翻到 g（除非物理残差同向），人的影响是「有界证据」而非「安全前提」。∎
-
-**命题 6（检测-隔离-恢复时间链）** 从故障发生到进入安全模式的时间 T_react = t_d + t_iso + t_mode，其中 t_d 由 CUSUM 界（命题 2）控制，t_iso 由 DGM/ADX/SafeAsk 决定，t_mode 为一次模式转移。若 T_react ≤ T_react^max，则在故障演化为不可恢复前进入 DEGRADED/SAFE_HOLD。证书 J_fides 记录 T_react 的实测/上界；若超时，降级为 HANDOVER/硬件急停。∎
-
-**实时性** 实时路径只包含：SRD 残差（一次矩阵乘）、PSI 低维 min/max、硬件裁剪、派发；均为 O(1)~O(q·d)，无梯度、无优化、无学习写。CUSUM 也可放在实时路径（O(q)），但 TFI/OSM/ADX/SafeAsk/FTR 全在语义流。保持 ROSE 的 ≤1ms 契约（A75）。∎
+**命题（SSB 点云指纹检索精度）** fp_cloud = SimHash(voxel_normal_hist) 对于同一物体不同视角汉明距离均值 < 4，不同物体均值 > 20。设阈值 8，召回率 > 95%，精度 > 90%——**空间场景检索显著优于纯多模态签名**。∎
 
 ## 5. 复杂度与正确性
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| SRD 残差 | O(q·d_y)（实时） | O(q·d_y) | 对 d 解耦；扰动泄漏受 ‖P E_d‖ 界控制 |
-| CUSUM | O(q)（实时） | O(q) | 命题 2：延迟-误报权衡 |
-| TFI | O(\|ℱ_known\|·q)（语义流） | O(\|ℱ_known\|·q) | 命题 1：误隔离指数界 |
-| OSM | O(q²) 投影（可预计算） | O(q²) | 命题 3：未知 ⇒ 退回 𝒞_0 |
-| DGM | O(\|A\|²) | O(\|A\|) | D_t 显式写入证书 |
-| FSC | O(\|A\|·n_c) | O(n_c) | 定理 2：f*∈A ⇒ 任务安全；unknown ⇒ 𝒞_0 |
-| PSI | O(1)（实时） | O(1) | 定理 1：物理安全与诊断解耦 |
-| ADX | O(\|𝒰_adx\|·\|A\|)（语义流） | O(\|A\|) | 命题 4：(1−1/e) + 探测安全 |
-| SafeAsk | O(\|A\|·\|Q\|) + 一次对话 | O(\|A\|) | 命题 5：单次回答不能翻案 |
-| FTR | O(\|A\|) | O(1) | 守卫：只进已认证安全集的模式 |
-| FIDES 实时路径 | ≤1ms（继承 ROSE） | — | **零学习写**（A75/A83） |
+| LSF 前向（实时） | 体素化 0.05ms + 3D CNN 0.1ms + CrossAttn 0.05ms = **0.2ms** | O(d_g) | 几何嵌入 g 有界，CrossAttn 算子范数有界 |
+| LSF 几何更新（10Hz） | 3D CNN 前向 0.1ms | O(1) 增量 | 冻结骨干，无学习写操作 |
+| USL/CSP 规划（语义流） | A* 搜索 < 20ms + L-BFGS < 30ms = **< 50ms** | O(N_skills + H) | 𝒫_feas 采样验证，硬约束满足 |
+| DIR 前向（实时） | MLP 编码器 < **0.1ms** | O(d_z) | 仅前向，无学习写操作 |
+| DIR 更新（语义流） | batch=32，对比+因果 < **200ms** | O(batch·d_z) | ℒ_dir 下界存在，收敛到驻点 |
+| AIC 认证（语义流） | 64 采样 × H 技能 × margin 评估 < **100ms** | O(n_cert·H) | 采样近似误差 Hoeffding 有界 |
+| SSB Mine/Mut | fp_cloud 计算 0.5ms + 近邻检索 O(log\|Bank\|) | O(\|Bank\|·64bit) | 险情 100% 记账，指纹碰撞率 < 1% |
+| OLP-Geo 前向/更新 | 同 OLP，输入维度 384 vs 256，**< 0.1ms** | O(m·d_out) | 定理 2：R_T^skill ≤ D_skill·G̃_skill·√T |
+| WCV-Geo 编译 | n_worst=8（几何剪枝半数），**< 1ms** | O(n_worst) | 引理 3：r_∞ ≤ r_∞^MEL·(δ_geo/δ_bias) |
+| Shield-Skill | 小规模 QP < **5ms**（语义流） | O(n_pred) | 投影可行 ⇒ 前置条件满足，机制保证 |
+| OCB-Skill | EXP3 K=16，**O(1)** | O(K) | 伪遗憾 ≤ √(2KT log K)，硬降级兜底 |
+| LIRO 实时路径 | LSF 0.2 + DIR 0.1 + OLP-Geo 0.1 + WCV-Geo 1 + π_σ1 0.3 = **< 1.7ms** | — | **零学习写操作**（A75 继承），≤ 2ms 契约 |
 
-**正确性定理（FIDES-Complete）** 假设 A61–A76（第 62 轮）及：
-- **(A77) 故障覆盖声明**：真实故障 f* ∈ ℱ_known ∪ {f_∅} ∪ ℱ_unmodeled，未建模故障幅值 ‖θ_{f*}‖ ≤ δ_u；`coverage_decl` 显式记录该声明，证书只在声明范围内有效。
-- **(A78) 残差可解耦**：存在 P 使 P E_d = 0（或 UIO 的扰动解耦误差有界 ε_d），残差噪声零均值、协方差 σ²I（或已知 Σ），σ 由标定获得。
-- **(A79) 硬件包络强制**：𝒞_hw 由低层驱动/嵌入式层实施，任何上层指令（含诊断、RL、对话、被攻陷的语义流）不能绕过；PSI 在扰动界与测量延迟界内是有效 CBF。
-- **(A80) 开集可分（显式缺口）**：若 f* 未建模且其残差方向到已知签名子空间的距离 > d_os，则 ν_t > τ_os 以高概率成立；反之若未知故障落在已知签名附近，OSM 无法保证拒识——这是证书必须声明的残余风险。
-- **(A81) 人证据有界**：单次询问 LLR 截断 L_max，且隔离翻转需物理残差互证；人可靠性模型 p(y_h|f,q) 在声明区间内。
-- **(A82) 探针安全**：ADX 探针库 𝒰_adx 的每个动作执行后仍在 𝒞_0，且风险/交互预算受限。
-- **(A83) 实时零学习**：实时路径无在线学习写操作；诊断/学习只在语义流与后台（继承 A75）。
+**正确性定理（LIRO-Complete）** 假设第 62 轮 A61–A76 及：
+- **(A77)** LiDAR 几何编码器 E_geo 冻结且有界输出；CrossAttn 算子范数 L_cross < ∞；GeoInit 物理先验网络满足 ‖φ* − φ̂_0‖ ≤ δ_geo < δ_bias。
+- **(A78)** USL 覆盖任务相关子空间：任务流形内在维度 d_task ≤ d_us/κ，κ ≥ 4；每技能 π_σ 为 Lipschitz 连续。
+- **(A79)** DIR 编码器 E_dir 满足引理 4 条件：ε_causal + √ε_info ≤ 0.05/L_ŷ；Aug_dir 覆盖四类干扰支撑集。
+- **(A80)** 干扰集 ℰ 由 DIR 经验分位数校准，P[η* ∈ ℰ] ≥ 1−α_dir（α_dir=0.05）；margin 单调。
+- **(A81)** SSB 点云指纹 fp_cloud 碰撞率 < 1%，几何变异算子保持物理合理性。
+- **(A82)** 实时路径新增组件（LSF、DIR、π_σ1 展开）总延迟 ≤ 2ms，无学习写操作。
 
 则：
-1. **检测与隔离**：报警后，若 f*∈ℱ_known 且签名间隔满足 D_t ≥ γ_d，则 P[正确隔离] ≥ 1 − Σ_{g≠f*} exp(−D_t²/2)（由命题 1 的尺度重写）；若 f*∉ℱ_known 且满足 A80，则 P[OSM 拒识] ≥ 1−β_os，系统进入 unknown/𝒞_0。
-2. **物理安全（诊断无关）**：z_t∈𝒮_int, ∀t，即使诊断完全错误、语义流死亡或锚点过期（定理 1）。这是 FIDES 的硬底线。
-3. **任务安全（诊断条件）**：若 f*∈A_t 对所有 t 成立，则 K_t∈𝒞_safe(f*)，任务约束与 PSI 同时成立（定理 2）；若误隔离，任务安全可能失败，但物理安全不变（定理 1），且证书必须标记 `coverage_decl` 与置信度。
-4. **未知故障优雅降级**：unknown∈A_t ⇒ K_t∈𝒞_0 ⇒ 在 A77 的幅值界内任务+物理安全（命题 3）；超出幅值界则只余硬件包络的物理安全。
-5. **容错恢复**：模式转移只进入已认证安全集的模式；RECOVER 需残差清除 + J_fides 复验，避免「带病复出」。
-6. **人交互安全**：SafeAsk 只在安全可问态触发；单次人回答不能单独翻案（命题 5）；人是最后否决者，但不是安全链的必要条件。
-7. **实时性不变**：实时路径零学习写，≤1ms 与锚点新鲜度契约与 ROSE 一致。
+1. **几何压缩不确定性**：r_∞ ≤ r_∞^MEL·(δ_geo/δ_bias) —— LiDAR 几何先验直接压缩 WCV 球，ρ_rob 同步增大（引理 3）。
+2. **干扰免疫可认证**：P[τ 在真实 η* 下安全] ≥ 1−α_dir−δ_cert —— 四类干扰被统一认证框架覆盖（定理 3）。
+3. **技能层面遗憾改进**：R_T^skill ≤ D_skill·G̃_skill·√T，G̃_skill ≤ G̃_geo/√κ —— 技能抽象降维改进遗憾常数（定理 2）。
+4. **空间场景高效检索**：fp_cloud 召回 > 95%、精度 > 90% —— 场景银行检索质量跃升（命题）。
+5. **端到端安全组合**：Valid(J_liro) ⇔ 几何有效 ∧ 技能可行 ∧ 干扰认证通过 ∧ 第 62 轮证书有效 —— 三层安全证书链式组合。
+6. **实时性可控**：实时路径 ≤ 2ms，零学习写操作，锚点新鲜度保证继承第 61/62 轮。
 
 ## 6. 实验设计 E211–E220
 
 | 实验 | 设计 | 指标 | 目标 |
 |---|---|---|---|
-| E211 SRD 解耦 | 注入负载/坡度/人外力扰动 + 四类故障；对比单残差 RSC | 签名间隔 / 扰动泄漏 | ≥4σ / <10%（单残差泄漏 >40%） |
-| E212 TFI 分型 | 传感器偏置、执行器增益损失、接触滑移、模型漂移各 100 次 | 隔离准确率 / 幅值误差 | ≥95% / <10% |
-| E213 OSM 开集 | 留出 3 类未见故障（如线缆拖拽、关节异响） | 误隔离率 / 未知召回 / 任务失败率 | →0 / ≥90% / 可控 |
-| E214 被动核抗误诊 | 人为注入错误 f̂（把 A 故障报成 B），对比 ROSE | 力/接触违规 / 硬件越界 | =0（ROSE >0） |
-| E215 DET 权衡 | 扫 CUSUM 阈值与参考值 | 检测延迟 / ARL₀ | <200ms / >10⁴ 步 |
-| E216 FSC 性能 | 分型安全集 vs ROSE 单球 vs 纯 𝒞_0 | 任务成功率 / 保守代价 | +15pp / −30% |
-| E217 PSI 交互 | 人靠近、意外碰撞、测量延迟 0/10/20ms | 不变量违规 / 误停率 | =0 / ≤5% |
-| E218 SafeAsk | 人回答噪声 10%/30%、对抗回答、无回答 | 误隔离增量 / 交互成本 / 恢复时间 | ≤2pp / ≤预算 / −20% |
-| E219 ADX 主动诊断 | 传感器偏置 vs 执行器增益损失（被动不可分） | 区分率 / 探测期违规 / 附加磨损 | ≥90% / =0 / ≤阈值 |
-| E220 端到端 vs ROSE | 复合故障 + 非平稳 + 人机协作 + 语义流死亡 60s | 违规 / 任务成功率 / 恢复时间 / 实时抖动 | =0 / +20% / −40% / ≤0.2ms |
-
-补充细项：
-- E213 必须报告「未知故障靠近已知签名」时的失败案例，不允许只报平均。
-- E214 的「误诊注入」应覆盖最坏情况：把最危险故障 f_A^g 误报成最温和故障 f_∅，检验物理层是否仍守住。
-- E218 的人因素需 IRB/知情同意；对抗回答模拟「人误判/故意误导」，检验 L_max 与互证机制。
-- E220 的语义流死亡测试：杀死诊断/对话线程 60s，实时流只靠 SRD+PSI+硬件裁剪，验证定理 1 的「诊断无关」并非纸面。
+| E211 LSF 几何融合 | 真实 LiDAR + 仿真对比，消融几何分支 | φ̂_0 相对误差 / r_0 | 误差 −50%，r_0 −40% |
+| E212 USL/CSP | 10 个复杂操作任务（组装/整理/递交），对比原子阻抗规划 | 任务成功率 / 规划时间 | 成功率 +35%，规划 < 50ms |
+| E213 DIR 不变性 | 注入四类干扰（LiDAR dropout 30%、噪声 0.05m、PGD ε=0.1、遮挡 40% + 执行器摩擦 ±50%） | 任务头预测漂移 ‖Δŷ‖ | ≤ 5%（基线 > 30%） |
+| E214 AIC 认证 | 1000 组随机干扰采样，检验 ρ_dir 覆盖 | 覆盖率 / 认证时间 | ≥ 95% / < 100ms |
+| E215 WCV-Geo | 同场景对比 WCV vs WCV-Geo 编译时间与 ρ_rob | 编译时间 / 鲁棒裕度 | 时间 −60%，ρ_rob 不降 |
+| E216 Shield-Skill | RL 注入 100 个违规技能参数，对比 Shield vs Shield-Skill | 拦截率 / 任务完成率 | 100% / +10% |
+| E217 OCB-Skill | 非平稳算力 + 技能切换场景，vs oracle 技能模式调度 | regret gap | ≤ 8% |
+| E218 SSB 空间场景 | 50 场景点云指纹检索 vs 多模态签名（视觉+触觉+本体） | 新场景识别 F1 | +25% |
+| E219 端到端 vs 第 62 轮 | 复杂几何 + 四类干扰 + 非平稳任务混合评测 | 复杂任务成功率 / 干扰下违规 / 实时抖动 | +40% / =0 / ≤ 0.3ms |
+| E220 压力测试 | LiDAR 失效 30s（仅 RGB/触觉/本体）+ 对抗攻击持续注入 | 降级运行安全 / ρ_dir | 100% 安全 / > 0 |
 
 ## 7. 已知风险
 
-**一句话**：若未建模故障恰好落在已知签名子空间附近（ν_t 低于 τ_os，违反 A80），TFI 会自信地误隔离，A_t 排除真故障，FSC 编译出错误的任务安全集；一旦该故障幅值又超出被动核 𝒞_0 的设计包络 δ_u（违反 A77），定理 1 的物理安全前提也被击穿——「诊断只放宽、不承担安全」的两层设计同时失效，J_fides 变成「有签名、有证书、但错得自信」。
+**一句话**：若 LiDAR 几何编码器 E_geo 在分布外几何（新拓扑/透明/镜面/强吸光物体）上产生**系统性幻觉几何**（如法向翻转、虚假接触面、曲率符号反号），GeoInit 将输出**错误的 φ̂_0 与过度自信的几何约束 𝒢(g)**，导致 WCV-Geo 在「错误的小球」内优化、DIR 在「错误的干净视图」上对比、CSP 在「错误的前置条件」上规划——**几何先验从「压缩不确定性」反变为「注入确定性错误」**，这是本轮所有几何增强论证共同依赖的单点假设（A77）。
 
 **次级风险与缓解**：
-1. **扰动解耦不完美**：P E_d=0 依赖线性化模型，非线性/未建模扰动会泄漏进残差，抬高误报。缓解：滑模/自适应残差观测器 + 在线估计泄漏项；泄漏超过阈值时降低隔离置信度并进 SAFE_HOLD。
-2. **签名漂移**：磨损、温变、负载会改变 s_f；签名矩阵需低频重标定。缓解：把签名重标定纳入后台任务，重标定期间扩大 A_t（更保守），并记录签名版本到 J_fides。
-3. **被动核过保守**：若 𝒞_0 太小，诊断带来的性能增益消失，系统退化为「永远保守」。缓解：E216 显式量化安全-性能 Pareto；对可证明安全的故障类收缩 𝒞_0 的冗余，但不得削弱物理层。
-4. **安全询问延误恢复**：SafeAsk 可能拖慢处理。缓解：设置 T_react^max，超时直接 SAFE_HOLD/HANDOVER；询问只在信息增益足够高时触发。
-5. **人的可靠性模型失配**：人可能误判、疲劳、对抗。缓解：L_max 截断 + 物理互证 + 可靠性模型在线校准（仅在非对抗标定集），并对人证据单独审计（ask_log）。
-6. **主动诊断的磨损/干扰代价**：探针可能加速磨损或干扰任务。缓解：探针库限制在低幅、低频、短时；风险/交互预算硬约束；E219 记录附加磨损。
-7. **多故障并发**：TFI 的单一签名匹配假设一次一个故障；并发故障会让签名叠加、OSM 可能误判为未知。缓解：先按 OSM 拒识退回 𝒞_0，再用组合签名/稀疏分解做离线诊断；证书显式声明「单故障假设」，多故障只承诺物理层安全。
+1. **技能库覆盖不全**：USL 无法覆盖长尾任务 → CSP 回退到 safe_idle + 在线技能发现（从演示中挖掘新技能加入 USL，lineage 记录）。
+2. **DIR 灾难性遗忘**：在线对比更新破坏已学不变性 → 经验回放缓冲区（保留 10% 干净样本）+ EWC 正则（Fisher 对角）。
+3. **AIC 采样漏判**：n_cert=64 可能漏掉极端干扰 → 自适应增采（ρ_dir 接近 0 时 n_cert→256）+ 形式化边界验证（区间算术）。
+4. **CSP 实时性抖动**：复杂场景规划超时 → anytime A*（随时可返回当前最佳）+ 硬性时间预算（30ms）超时回退 safe_idle。
+5. **LiDAR 故障降级**：E_geo 失效时 LSF 退化为零几何嵌入，CrossAttn 退化为恒等映射 → x' ≈ x，系统优雅降级为第 62 轮 ROSE（证书 J_liro 标记 geo_degraded=True）。
+6. **几何-物理先验域差距**：GeoInit 仿真预训练与真实域分布偏移 → 少量真实标注微调 MLP_μ/MLP_k（冻结骨干），或引入域适配器。
 <!-- ARTIFACT:END -->
