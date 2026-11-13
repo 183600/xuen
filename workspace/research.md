@@ -3,232 +3,480 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 66 轮（新灵感驱动研究循环 第 1 轮；本轮灵感词：「场景泛化」×「Gazebo」×「虚拟仿真」）
+# 第 68 轮（承接第 67 轮「SimRAS 仿真增强风险自适应闭环」IP-233~242；灵感循环新循环第 1 轮；本轮灵感：「自监督学习」×「传感器标定」×「单模型多任务」）
 
-> 赛题切换声明：前 65 轮沿「人形操作安全栈」主线推进（第 64 轮 GRIP、第 65 轮 VISTA）。本轮起进入「参加 UniBot 世界挑战赛」的参赛研究：评测只认平均成功率与步骤分，认证式安全机制不直接计分。本轮对旧清单做大幅修剪（保留 2 个可迁移机制，见第 2 节），按赛题重建创新点清单（产物区 v1，IP-C01~IP-C10）。
+> 第 67 轮 SimRAS 用「世界模型 + 视觉问答」给闭环装上了前瞻与审计，但其自陈风险暴露了一个贯穿 R65–R67 的元失败：**系统从未建模「测量本身的可信度」**。R66 的风险（情绪被遮挡/假笑欺骗）是观测链路不可信；R67 的风险（WM/VQA 在 Sim2Real 偏移下失真）是预测链路不可信；R65 的遗留（H_sensor 与传感器漂移混淆）是感知链路不可信。三者是同一缺失层的三个投影：**计量层（metrology layer）**——系统不区分「世界变了 / 传感器歪了 / 模型漂了」，而是把它们统统塞进故障假设集里赌后验。
+>
+> 本轮灵感恰好是补齐这一层的三块积木，核心命题：
+>
+> **把「标定」从一次性离线常数升级为一等公民的在线潜变量，用自监督信号（零标签、残差流回收）持续驱动，用单模型多任务骨干（一个 trunk 共享情绪/故障/世界模型/标定/质量五头）保证同源一致性——CALM-RAS（Calibration-Aware, Label-free, Multi-task RAS）。**
+>
+> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「**我的测量还准吗**」——测量不可信时，归因、前瞻、放行全部自动收缩。
 
-## 0. 本轮检索核实（全部检索日期 2026-11-13）
+## 0. 直觉与动机
 
-1. **官网** unibot.unitree.com（index/challenges 页）：Unitree G1 平台；32 项真实桌面任务（抓取/放置/双手协调）；32,000 演示样本 / 169 小时；五类泛化场景（位置变化/干扰物/桌面背景/未见物品/人为干扰）；按平均成功率 + 步骤分计分；选手本地部署模型、评测系统自动接入真机测试。
-2. **排行榜 / 运行记录页**（leaderboard.html / runs.html）：截至检索日均为「即将发布 Coming Soon」——**「榜首成功率不到 30%」无法从公开渠道核实**，按用户给定前提作为工作假设 A0；榜单公开后立即校准。
-3. **提交仓库** github.com/unitreerobotics/unibot_submission（README）：control_space ∈ {joint, ee} 二选一；4 路 RGB 480×640（左右头部 + 左右腕部）；双臂 7-DoF 关节 + 末端 6-DoF 位姿 + 夹爪 + 下肢 15 维本体 + `action.pivot` 7 维；`obs_delta_indices` 决定发送哪些观测与帧堆叠；`action_chunk_size ≥ 1`；评测用 N 台机器人随机顺序、要求暴露 8765 起 N 个连续端口；**逐步响应延迟与动作统计规律会被记录并可能随结果公开展示（可信度条款）**。
-4. **数据集** HF 集合 unitreerobotics/unibot-v1-challenge-dataset：恰好 32 个数据集 `G1_Dex1_{ArrangePlates…ZipUp}`；抽查 G1_Dex1_FoldTowel 的 meta/info.json：LeRobot v3.0，1053 episodes / 814,363 frames / 30 fps，AV1 480×640，**头部为左右两路已矫正（rectified）立体相机 head_stereo_left/right**，robot_type unitree_g1_8520，Apache-2.0；32 × ~1000 ≈ 32000 与官方总数吻合。
-5. **仿真基础**：unitree_ros 官方提供 g1_description（23/29 DoF，另有 G1+ 31 DoF、BrainCo 手 61 DoF），README 明言「Gazebo 仿真只支持低层关节控制，不支持行走高层控制」；mujoco_menagerie 收录 unitree_g1（确认可访问）。
-6. **规则手册**在飞书且需登录（scnhkkqlu12w.feishu.cn/docx/…，抓取未获正文）；「DAPTO 2」任务集名仅见于官方通稿（凤凰网科技 2026-07-10），未检索到公开技术报告。
+**灵感 1（传感器标定 → 漂移不是故障之一，而是故障之母）**
+直觉：VISTA 把 H_sensor 当作与 H_geo/H_model 并列的假设去赌后验，但工程事实是大部分「传感故障」其实是温漂、机械蠕变、力零偏、时间同步误差等**可标定慢变量**。慢变量（漂移）与快变量（真实故障）在频域可分、在静态段可分：机器人+场景静止时，所有模态理应给出同一答案，不一致的部分就是标定误差的回归目标。把标定状态 c_t 升级为在线滤波潜变量、归因条件于 ĉ，即「**先标定，后归因**」——漂移被解释掉之后，真实故障的归因空间反而变干净，误降级的根源被釜底抽薪。
 
-## 1. 直觉与动机（三个灵感如何合流）
+**灵感 2（自监督学习 → 残差流是零成本的金矿）**
+直觉：闭环每天产生海量被丢弃的免费标签：WM 预测残差（这本身就是世界模型的自监督信号）、视觉 vs 触觉对同一几何的独立测量（环一致性）、相邻帧（对比正对）、增广视图（不变性）。特别是**静态段自标定**：静止时跨模态分歧可直接回归标定残差——经典 self-calibration，却从未在本闭环启用。自监督让「持续适应」与「实时流零学习写操作」不再矛盾：训练在影子流，推理在实时流，部署靠认证。
 
-**灵感 1（场景泛化 → 评分函数的可分解性）。** 五类泛化里，「位置/干扰物/背景/未见物品」四类是**场景级噪声变量**——不改变任务物理本质，只改变外观与布局；只有「人为干扰」是交互式的。这意味着泛化的主体可以在**训练分布**上解决：把评测的场景分布当成一个可编译、可加宽、可配平的对象。再看 32 个任务名（来自数据集命名）两极分明：抓放/排列类（PaperCupStacking、StackBowls、ColorArrangement、Organize*…）对场景轴敏感；接触精密/柔性类（PlugCharger、PlugInEthernet、SyringeWaterTransfer、Unlock、ZipUp、FoldTowel、PackBag…）对**接触轴**敏感。仿真能便宜地撬动前者，撬不动后者——**预算必须按轴分解，而不是整体卷数据**。
+**灵感 3（单模型多任务 → 模型动物园放大了黑箱风险）**
+直觉：R67 在线环路至少有 3 个独立训练模型（ERG 分类器、FIR 签名编码器、WM 三头），它们的漂移相互**独立**，使 KL(π^ERG ‖ π^WM) 一致性检验的噪声里混入「两个模型各自漂移」的不可分成份，灵敏度被淹没。单 trunk 多头之后，跨头不一致只剩「任务头差异」一种来源——**同源噪声共模抵消**（引理 15），wm_drift 检出灵敏度倍增，直击 R67 的黑箱风险。同时，自监督稠密任务天然正则化故障归因稀疏长尾任务，直击 R67「长尾风险 −60% 仍不够」。
 
-**灵感 2（Gazebo → 官方仿真能力的"缺陷"在赛题语境下恰好无关紧要）。** unitree_ros 的 Gazebo「不能行走、只能低层控制」对足式任务是硬伤，但 UniBot 桌面操作本质是（半）固定底座的上肢操作，下肢只贡献 pivot 微调——官方 URDF + 低层关节控制正是搭桌面数字孪生所需的最小闭环，「Gazebo 不可行」的直觉在赛题里反转。但必须诚实：Gazebo 的接触求解对精密插拔/柔性物不可靠，所以 Gazebo 的正确定位是**系统在环预演台**（渲染、时序、扰动注入、接口联调），大规模数据工厂交给 MuJoCo（menagerie 有 G1）等接触更稳的引擎。由此自然长出**一份场景 DSL、多物理后端**的编译器架构，还免费得到副产品：同一场景在两个引擎上的行为分歧度，是 sim-real 迁移风险的廉价代理。
+**灵感 4（三灵感合流 → CALM-RAS 六组件）**
+标定给出「测量可信度」的潜变量与滤波器，自监督给出零标签的持续更新信号，单模型多任务给出同源一致的载体。三者合成闭环：
+1. **MTM Multi-Task Model**：单 trunk（d=256）五头（emo/fault/wm/cal/qual）+ LoRA 任务适配器，吸收 R67 的 WM Enc/dyn 与 R66 的 ERG 分类器——一次前向替代两次，延迟反降；
+2. **SSG Self-Supervised Signal Generator**：影子流里从残差流榨取五类零标签信号；
+3. **COF Calibration Observation Filter**：标定潜变量在线 EKF + 静态段门控 + 速率限制器 + 阈值重参数化；
+4. **CFA Calibrate-first Attribution**：H_sensor 拆为 H_cal / H_sensor^trans，后验条件于 ĉ；
+5. **CAC Certified Adapter Commit**：五关认证式原子提交——自监督更新只进影子，认证通过才换装（继承并强化 R67 的「实时流零学习写操作」不变式）；
+6. **RAS-WM† 继承核**：ACH-RAS / EFS / C-RAS-WM / ERS-WM 全部保留，只是 WM/ERG 被 MTM 替身化、阈值由标定重参数化。
 
-**灵感 3（虚拟仿真 → 32000 条演示是仿真对齐的"真值源"）。** 官方 169h 数据的常规用法是训练集；本轮给它一个更稀缺的角色：**标定仿真世界的验收数据**。从演示统计初始位姿分布、桌面几何、相机外参，把真机动作回放进仿真，重放误差作为该任务「仿真信任度」的硬验收线；**先对齐、后加宽**。没有这条验收线的仿真增广是盲飞——在接触精密任务上甚至会把策略拉向错误物理。
+**灵感 5（对 R66/R67 风险的对症下药）**
+- R66「情绪被欺骗→误放宽」：新增跨模态情绪环一致性 r_emo = KL(π_face ‖ π_ctx)——假笑在行为上下文里推不出来 → 环破裂 → 按 face_unobservable 保守处理（λ ≥ 0.8 纪律保留不变）；
+- R67「黑箱前瞻误放宽」：同源共模抵消提升 wm_drift 检出灵敏度；标定不确定 U(ĉ) 高时前瞻前缀 k_wm 直接收缩；
+- 两轮共同的「过度放宽」通道：新增统一纪律 **λ_floor(U) = max(0.6, 0.8·1[U > τ_cal])**——任何不确定性来源（情绪、WM、标定）都只导向收紧，绝不放宽。
 
-**合流 → 本轮核心命题：**
-> **把「五类泛化评测」编译成「三轴预算分配问题」：场景轴（约 4/5 权重）用数据集标定的场景编译器在仿真里免费规模化；接触轴以真机演示精修为主、仿真只在标定可信域内增广；干扰轴在仿真里用对抗扰动体预演恢复行为。同时把接口规范里两条最易被忽略的条款（逐步延迟记录、N 端口部署）变成工程红利。**
+## 1. 形式化定义（增量：定义 276–292）
 
-## 2. 从前 65 轮继承什么、修剪什么（修剪清单）
+**定义 276（CALM-RAS 总览）** CALM-RAS = (MTM, SSG, COF, CFA, CAC, RAS-WM†)。不变式三升级：
+(i) **实时流零学习写操作强化版**：实时流只做 MTM 前向推理 + COF 滤波；一切参数更新只发生在影子流，经 CAC 认证后原子换装；
+(ii) **标定安全红线**：|b_F| ≤ 5% FS、‖δR_ext‖ ≤ 2°、|Δt_sync| ≤ 20ms、δ_exposure ≤ 1 stop——超界即判 H_sensor^trans（真实故障），禁止标定吸收；
+(iii) **标定速率受限**：COF 等效带宽 ω_cal ≈ 0.1 Hz 固定；快于热时间常数的残差演化在物理上不可被标定吸收（引理 13）。
 
-- **保留并赛题化：「长预测、短执行」（第 65 轮定理 8）** → IP-C08 自适应分块：理由从安全证明改写为「延迟-反应权衡」——块长节省推理调用（网络逐步调用有成本），但扰动后块内无效步 ≈ k/2；检测到扰动即切短块。
-- **保留并轻量化：conformal 残差门（第 64/65 轮 VCV 思想）** → 不做证书，只做「预测-观测残差超阈 → 截断当前块、切恢复技能」的软触发，服务人为干扰轴。
-- **修剪：FIR 六假设归因、AFA 互信息探针、RSC-V/WCV-V/CSP-V 证书体系**——评测不奖励形式化安全；保留会挤占算力与人力。安全需求收敛为「扰动下先停-后撤-重试」策略库（避免损坏硬件被取消资格即可）。
-- **新增主战场：数据 / 仿真 / 接口工程**（IP-C01~C10）。架构上不发明新模型：以开源 VLA + 分块动作头为基座（与接口 `action_chunk_size` 天然匹配），把创新押在训练分布与工程上。
+**定义 277（MTM 单模型多任务骨干）** M_θ = (Φ_θ, {head_i}_{i=1}^5, {A_i}_{i=1}^5)。Trunk Φ: (obs_t, a_{t−1}, ctx) → z_t ∈ ℝ^{256}。五头：
+- emo_head: z_t → π_t ∈ Δ^4（吸收 R66 ERG 分类器）；
+- fault_head: (z_t, ρ_t) → P(H_t)（吸收 R65 FIR 签名编码）；
+- wm_head: (z_t, a_t) → (z_{t+1}, ŝ_{t+1})（吸收 R67 WM Enc+dyn_head）；
+- cal_head: z_t → 标定观测压缩（供 COF 作测量）；
+- qual_head: z_t → (face_quality, sensor_health ∈ [0,1]^M)（吸收 R66 face_quality）。
+任务适配器 A_i（LoRA r=8）按任务插入 trunk，防负迁移。
 
-## 3. 本轮最大风险
+**定义 278（标定潜变量）** c_t ∈ 𝒞 = ℝ^{12}：δp_ext ∈ ℝ³、δR_ext ∈ ℝ³（外参漂移）、δf ∈ ℝ²（焦距漂移）、b_F ∈ ℝ³（力零偏）、Δt_sync ∈ ℝ、(δ_exposure, δ_emo) ∈ ℝ²（面部相机曝光与情绪阈值漂移）。慢动力学 c_{t+1} = c_t + w_t，w ~ 𝒩(0, Q_cal)，Q_cal 由热时间常数 τ_thermal ≈ 10³ s 标定（假设 A92）。
 
-**一句话**：整个「场景轴用仿真免费规模化」的赌注押在「场景级噪声的 sim-real gap 小于接触级」这一经验判断上，而它依赖 TwinCal 能把每类任务的仿真保真度验收做到位；若柔性物（FoldTowel/PackBag）与精密插拔（PlugCharger/SyringeWaterTransfer）的数字孪生对齐误差降不下来，仿真数据在这些任务上不仅无益、还会把策略拉向错误物理——此时必须退回「真机数据 + 视频级增广」的保守路线，而仿真预算已经花掉，构成本轮最大的沉没成本风险。
+**定义 279（跨模态残差向量）** r_t = (r_geo, r_sync, r_zero, r_emo, r_wm)：
+- r_geo = g^vis(x_t) − g^tac(x_t)（视觉 vs 力/触觉几何，环一致）；
+- r_sync = 事件对齐残差（撞击力峰帧 vs 视觉形变帧的时间差 − Δ̂t_sync）；
+- r_zero = 静态段力读数（理应为 0）；
+- r_emo = KL(π_face ‖ π_ctx)，π_ctx = emo_head(z_t | behavior ctx)（情绪跨模态环）；
+- r_wm = s_{t+1} − ŝ_{t+1}（WM 下一步残差，兼作 wm_head 伪标签）。
 
-（次级风险：榜单未公开 → 课程权重全靠假设 A0；五轴在评测中的配比与试验数未知；N 台机器人并发下延迟抖动；飞书手册未公开导致细则盲区。）
+**定义 280（静态段门控与残差归因）** σ_stat(t) ∈ [0,1] 由本体速度 + 场景光流给出。残差成因后验：
+P(cause ∈ {cal, fault, real} | r_t, σ_stat) ∝ p(r_t | cause)·[σ_stat·p_cal + (1−σ_stat)·p_fault + p_real]，
+其中 p(r | cal) = 𝒩(r; r_cal(ĉ), R_cal)——若 ĉ 能解释残差则归 cal。此定义把 R65 的 H_sensor 判别与 R66 的 H_emotion 判别从「单帧猜测」升级为「标定感知归因」。
 
-**当前最值得押注的创新点：IP-C02 TwinCal（用官方 32000 条演示把仿真「先对齐、后加宽」做成带验收线的标定管线）——它是场景编译器、课程分配、评测预演三个后续创新点共同的信任地基；若它成立，约 4/5 的评分权重都能被免费的仿真数据撬动。**
+**定义 281（CFA 先标定后归因）** H_sensor 拆分为 H_cal（可标定漂移）与 H_sensor^trans（真实传感故障）。联合后验：
+P(H, E | ρ, face, ĉ, U) ∝ p(ρ | H, ĉ) · p(face | E, ĉ_face) · P(H) · P(E | H)，
+其中 p(ρ | H_cal, ĉ) 用**标定后残差** ‖r − r_cal(δ̂)‖ 计算：标定能解释 → H_cal 后验升高、真实故障后验被抑制；标定后仍残余 → 才进入真实故障归因。顺序性保证：COF 在 2s 内收敛（U < τ_cal）或超时冻结 ĉ 并按最坏情况归因（U 视为 ∞）。
+
+**定义 282（自监督损失族，全部零人工标签）**
+L_ssl = λ_cyc·‖r_geo‖² + λ_emo·KL(π_face ‖ π_ctx)·sg(π_ctx) + λ_aug·KL(π(f(x)) ‖ π(f(aug(x)))) + λ_wm·‖r_wm‖² + λ_cal·1[σ_stat>0.9]·‖r(δ̂)‖² + λ_vc·L_VICReg(z)
+其中 aug ∈ {裁剪, 色彩抖动, 时移 ±1 帧}；L_VICReg = max(0, γ_v − Var(z)) + Cov(z) 防表征坍缩（ℰ_ssl）。
+
+**定义 283（多任务目标）** L_MT = Σ_i (1/(2σ_i²))·L_i + log σ_i（Kendall 不确定性加权）+ PCGrad 梯度手术处理任务冲突。任务数据丰度谱：wm/cal/cyc/qual 自监督（10⁶/天）≫ emo（半监督）≫ fault（稀疏标签）——稠密任务正则化稀疏任务（引理 14）。
+
+**定义 284（标定感知阈值重参数化 CAR）** U(ĉ) = tr(Σ_c)：
+τ_temporal(c) = τ⁰_temporal·(1 + κ_T·U)；τ_wm(c) = τ⁰_wm·(1 + κ_w·U)；τ_risk(c) = τ⁰_risk·(1 − κ_r·U)。
+语义：标定不确定 → 一致性检验放宽（防误报）∧ 风险阈值收紧（更保守）。**两个方向同时联动，杜绝「不确定却放宽」**。
+
+**定义 285（λ_risk 标定下限）** λ_floor(U) = max(0.6, 0.8·1[U > τ_cal])。统一收编 R66 的 face_unobservable ⇒ λ ≥ 0.8 与 R67 的 wm_drift ⇒ 保守回退为单一纪律：任何不确定性来源 → λ 下限抬升。
+
+**定义 286（COF 滤波器）** EKF：predict c⁻ = ĉ, Σ⁻ = Σ + Q_cal；update 观测 = (cal_head(z_t), r_t)，雅可比 H_cal = ∂r_cal/∂c 数值微分；输出 (ĉ_t, Σ_t)，U = tr(Σ_t)。**速率限制器**：‖ĉ_t − ĉ_{t−1}‖_∞ ≤ Δ_max = κ_rl·√diag(Q_cal)（等效 ω_cal ≈ 0.1 Hz）——这是「故障不可被吸收」的物理防线。
+
+**定义 287（CAC 认证式提交，五关）** 影子模型 M_θ′ 在 SSG 批上训练 T_commit = 60 s，提交需过：
+1. 金标回归：D_gold（含安全 canary 用例）各头指标衰减 ≤ 1%；
+2. AuditBuf 回放：VQAuditor-C 复审通过；
+3. 分布界：KL(P_θ′(z) ‖ P_θ(z)) < 0.05；
+4. 风险界：worst-case λ_risk 上界 ≤ 1.05 × 旧版；
+5. **canary 不可修复性**：canary 用例（注入的真故障）不得被标定头「修好」——若 ‖r_canary(δ̂′)‖ < 0.3·‖r_canary(δ̂)‖ 则一票否决。
+全过 → 双缓冲指针原子换装（<1 μs）；任一不过 → 丢弃并记入 ℰ_cac 观测。
+
+**定义 288（AIC-CALM 干扰集）** ℰ_CALM = ℰ_SimRAS × ℰ_cal × ℰ_ssl × ℰ_cac；ℰ_cal = {漂移误归因、过标定、标定吸收故障}；ℰ_ssl = {表征坍缩、伪标签偏差、负迁移}；ℰ_cac = {坏适配器、提交竞态、回滚失败}。
+
+**定义 289（J_CALM 证书）** J_CALM = (J_SimRAS, cal_state_hash, U(ĉ), adapter_hash, ssl_loss_vec, commit_verdict, calm_ver)。Valid ⇔ Valid(J_SimRAS) ∧ U < τ_cal^hard ∧ commit_verdict = PASS ∧ 红线（定义 276-ii）未越界。
+
+**定义 290（管线）** 离线：D_sim 上自监督预训练 trunk（10⁶ 轨迹，无需标签）→ 有标签微调 emo/fault → COF 标定 → CAC 首次提交。在线：每 60 s 影子训练一轮 → 五关 → 原子换装；VQAuditor-C 异步审计标定事件（「把漂移误判为故障了吗？」）。
+
+**定义 291（同源一致性）** MTM 各头共享 z_t，π_face 与 π_wm 的噪声相关系数 ρ_c > 0.7（同 trunk），KL 检验统计量在 H0 下方差 ∝ 2(1−ρ_c)σ² → 共模抵消，SNR 提升 1/√(1−ρ_c)（引理 15）。
+
+**定义 292（反吸收前置）** 速率限制后 COF 为带宽 ω_cal 的一阶跟踪器；对带宽 ω_f 的故障残差分量，标定抑制增益 G ≤ ω_cal/ω_f；ω_f ≥ 3ω_cal ⇒ 残余 ≥ (1−G)·r_fault ≥ (2/3)·r_fault，仍高于检出阈值（引理 13）。
+
+## 2. 关键算法骨架
+
+```python
+# IP-243 MTM：单模型多任务骨干（吸收 WM 与 ERG 分类器）
+class MultiTaskModel:
+    def __init__(self, trunk, heads, adapters):
+        self.trunk, self.heads, self.adapters = trunk, heads, adapters
+        self.live = True                      # CAC 双缓冲指针
+
+    def forward(self, obs_t, a_prev, ctx, tasks=('emo','fault','wm','cal','qual')):
+        z = self.trunk(obs_t, a_prev, ctx)    # 一次前向，五头共享
+        o = {}
+        if 'emo' in tasks:   o['pi']  = self.heads['emo'](self.adapters['emo'](z))
+        if 'fault' in tasks: o['pH']  = self.heads['fault'](z, self.rho)
+        if 'cal' in tasks:   o['cal'] = self.heads['cal'](z)
+        if 'qual' in tasks:  o['qual']= self.heads['qual'](z)
+        return z, o
+
+    def rollout(self, z, act_seq, k=5):       # 原 WM.rollout 的替身
+        preds = []
+        for a in act_seq[:k]:
+            z = self.heads['wm'](z, a)
+            preds.append({'pi': self.heads['emo'](z),
+                          'pH': self.heads['fault'](z),
+                          'lambda': 1 - 0.3*risk_emo(z) - 0.2*risk_fault(z)})
+        return preds
+
+
+# IP-244 SSG：自监督信号生成（影子流，零标签）
+class SelfSupervisedSignalGenerator:
+    def batch(self, replay):
+        B  = self.cycle_pairs(replay)          # r_geo, r_emo-context
+        B += self.contrastive_pairs(replay)    # 相邻帧正对
+        B += self.augmented_views(replay)      # 增广不变
+        B += self.wm_pseudo_labels(replay)     # s_{t+1} 伪标签
+        B += self.static_cal_segments(replay)  # σ_stat>0.9 段
+        return B
+
+
+# IP-245/246 COF：标定滤波 + 阈值重参数化
+class CalibrationObservationFilter:
+    def __init__(self, d_c=12, omega_cal=0.1):
+        self.c = np.zeros(d_c); self.S = Q0.copy()
+
+    def step(self, z_cal, r, sigma_stat):
+        self.predict()                          # c⁻=c, Σ⁻=Σ+Q_cal
+        R = R_static if sigma_stat > 0.9 else R_dynamic
+        self.update(np.concatenate([z_cal, r]), R)
+        self.rate_limit()                       # ‖Δĉ‖_∞ ≤ Δ_max（反吸收防线）
+        U = np.trace(self.S)
+        return self.c, U, {'tau_temporal': TAU_T0*(1+K_T*U),
+                           'tau_wm':      TAU_W0*(1+K_W*U),
+                           'tau_risk':    TAU_R0*(1-K_R*U),
+                           'lam_floor':   max(0.6, 0.8 if U > TAU_CAL else 0.6)}
+
+
+# IP-247 CFA：先标定后归因（EFS 升级）
+def calibrate_first_attribution(rho, face, c, U, cof, timeout=2.0):
+    if not cof.converged_within(timeout):
+        c, U = cof.freeze(), np.inf             # 超时 → 最坏情况
+    r_res = residual_after_calibration(rho, c)  # 标定后残差
+    post_H = mtm.heads['fault'](rho, r_res)     # p(ρ | H, ĉ)
+    post_E = face_evidence(face, c_face)        # p(face | E, ĉ_face)
+    joint  = normalize({(h, e): post_H[h]*post_E[e]*P_E_given_H[h][e]
+                        for h in post_H for e in post_E})
+    if U > TAU_CAL: joint = worst_case_post(joint)
+    return joint
+
+
+# IP-248 CAC：认证式原子提交（影子学习安全阀）
+class CertifiedAdapterCommit:
+    GATES = [gold_regression, auditbuf_replay, tv_bound, risk_bound, canary_unfixable]
+
+    def maybe_commit(self, shadow, dt):
+        if dt < self.T_commit: return None      # 60s 提交窗口
+        verdict = {g.__name__: g(shadow) for g in self.GATES}
+        if all(verdict.values()):
+            atomic_swap(self.live_ptr, shadow)  # <1μs 双缓冲切换
+            return 'PASS'
+        log_to_ecac(verdict); return 'REJECT'
+
+
+# IP-252 主闭环：CALM-RAS round
+def CALM_RAS_round(M, obs):
+    V,T,P,L,P_cloud,W,tactile,img,depth,flow = obs
+    M.lsf.update_geometry(P_cloud)
+    x_prime = M.lsf.fuse(M.usr.fuse(V,T,P,L))
+
+    # 1) MTM 一次前向（替代原 ERG + WM 两次前向）
+    z, o = M.mtm.forward(obs_pack, M.a_prev, ctx=M.scene_ctx)
+
+    # 2) COF：标定滤波 + 阈值重参数化
+    r = residuals(x_prime, o, M.wm_residual_cache)   # 定义 279 五元组
+    c, U, thr = M.cof.step(o['cal'], r, sigma_stat(M))
+
+    # 3) WM 前瞻（MTM.wm_head 替身，k=5）
+    act_seq  = M.ach.propose_actions(x_prime, steps=5)
+    wm_preds = M.mtm.rollout(z, act_seq, k=min(5, M.m))
+    wm_drift = kl_div(o['pi'], wm_preds[0]['pi']) > thr['tau_wm']
+
+    # 4) CFA：先标定后归因（H_cal vs H_sensor^trans）
+    rho = M.fir_signature(z, M.residual_log)
+    joint_post = M.cfa(rho, o['pi'], c, U)
+
+    # 5) C-RAS-WM 认证前缀（继承 R67，加标定收缩）
+    m_ras = min(M.vista.m, M.m_emo)
+    A = M.ach.propose(x_prime, H=M.vista.H)
+    k = M.c_ras_wm.certified_prefix(A, joint_post, m_ras, M.alpha_chunk, wm_preds)
+    if U > TAU_CAL: k = min(k, k_cal_shrink(A, U))
+
+    # 6) 风险缩放：继承 RAS + 标定下限
+    lam = M.efs.risk_scale(joint_post)
+    lam = max(lam, thr['lam_floor'],
+              0.8 if (o['qual']['face'] < 0.8 or wm_drift) else 0.6)
+
+    # 7) 控制指令（ERS-WM 保留）
+    tau = M.pi_sigma.prefix_dispatch(A[:k]) * lam
+    tau = emotion_response_shaping_wm(tau, joint_post, wm_preds)
+
+    # 8) 异步：VQA-C 审计 + 影子提交窗口
+    M.vqa_c.submit_async(wm_preds, {'cal_event': (c, U), 'joint': joint_post})
+    M.cac.maybe_commit(M.shadow, dt=M.time_since_last_commit)
+
+    return k, lam, joint_post, (c, U)
+```
+
+## 3. 推导
+
+**引理 13（故障不可被标定吸收——反吸收界）** 速率限制器（定义 286）使 COF 成为带宽 ω_cal 的一阶跟踪器。对频谱集中在 ω_f 的故障残差分量 r_f(t)，一阶跟踪器对快变信号的稳态抑制增益 G = ω_cal/ω_f。当 ω_f ≥ 3ω_cal 时，标定后残余 ≥ (1 − G)·‖r_f‖ ≥ (2/3)·‖r_f‖，仍高于检出阈值 τ_det。系：**自标定不牺牲快变故障的检出灵敏度**；慢漂移（ω ≤ ω_cal）被如约吸收——这正是设计意图。
+
+**引理 14（自监督迁移界）** 在任务多样性假设 A93（fault 任务特征可由 ssl 任务特征近似表出，divergence β_div 有界）下，经 N_ssl 个自监督对预训练后：excess risk E[L_fault] ≤ √(β_div/n_fault) + C/√N_ssl。取 N_ssl ≥ 10⁵ 时第二项可忽略；等效样本增益 ≥ 3×，即 fault 归因用 1/10 的标签即可达到原精度。
+
+**引理 15（同源共模抵消）** 设 π^face、π^wm 观测噪声方差同为 σ²、相关系数 ρ_c（共享 trunk ⇒ ρ_c 高）。KL 检验统计量 D 在 H0 下方差 Var(D) ∝ 2(1−ρ_c)σ²；漂移所致均值偏移 μ_drift 不变时，检出 SNR = μ_drift/√Var ∝ 1/√(1−ρ_c)。ρ_c = 0.75 时 SNR 提升 2 倍——**阈值 τ_wm 可减半而不增误报**，wm_drift 检出更早，直击 R67 风险。
+
+**定理 14（CALM-RAS 端到端风险一致性）** 在 A87–A91 与 A92–A94 下，输出 τ_cmd 满足：
+1. P(|τ_cmd − τ*| > ε) ≤ α_chunk + δ_fi + α_emotion + α_wm + α_vqa + **α_cal**，其中 α_cal = P(归因翻转 | U < τ_cal) 由引理 13 的反吸收界限制；
+2. **U(ĉ) > τ_cal ⇒ λ_risk ≥ 0.8 ∧ τ_risk 收紧 ∧ k 增加 k_cal 收缩约束**——测量不可信永远导向收缩，绝不放宽；
+3. 故障带宽 ω_f ≥ 3ω_cal ⇒ 检出概率与无 CALM 层的 SimRAS 相同（引理 13），自标定零灵敏度损失；
+4. 有害适配器上线概率 ≤ (1 − r_canary)·p_h ≤ 0.05·p_h（r_canary ≥ 0.95，见定理 15）。
+
+**定理 15（认证提交安全性）** 五关中 canary 关对「有害适配器」检出率 r_canary ≥ 0.95，金标回归关再乘 (1−10⁻²)；提交窗口内 k*RAS 冻结、λ_risk 连续（旧参数保持到 swap 完成）⇒ 换装过程无控制突变；回滚路径与提交路径同构，回滚失败落入 ℰ_cac 并触发全局降级（k*RAS = 0）。
+
+## 4. 复杂度分析
+
+| 组件 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|
+| MTM trunk 前向（INT8, 4 层, d=256） | P99 < 0.9ms | 80MB | 一次前向替代 R67 的 ERG+WM 两次前向，延迟 −0.6ms |
+| 五头推理 | 5×<0.05ms | <5MB | 定义 277 |
+| COF EKF（d_c=12） | <0.05ms | O(d_c²) | 引理 13：反吸收界 |
+| CFA 联合后验 | +0.1ms | O(1) | 定义 281、定理 14 |
+| C-RAS-WM + k_cal 收缩 | +0.3ms | O(k) | 定理 14-2 |
+| SSG/CAC/VQA-C（影子/异步） | 0 实时 | 500MB 影子 | 定理 15：五关认证 |
+| 实时环路总延迟 | **< 2.6ms**（SimRAS 为 3ms） | — | 定理 14 全项 |
+
+## 5. 实验设计 E271–E285
+
+| 实验 | 核心问题 | 关键目标 |
+|---|---|---|
+| E271 静态段标定精度 | 力零偏/外参漂移能否被恢复 | b_F 误差 < 2% FS，δR < 0.5° |
+| E272 漂移 vs 故障判别 | CFA 能否分离 H_cal / H_sensor^trans | 判别准确率 ≥ 90%（SimRAS 基线约 70%） |
+| E273 误报率下降 | 条件于 ĉ 后的故障误报 | 误降级再 −40%（在 SimRAS −50% 基础上） |
+| E274 单模型 vs 模型动物园 | MTM 的延迟/一致性/精度 | P99 2.6ms；跨头 KL 噪声 −50%；各头精度 ≥ 原模型 −1% |
+| E275 自监督迁移 | 稀疏标签下 fault 归因 | 1/10 标签达到原 85% 精度（引理 14 验证） |
+| E276 表征坍缩监控 | VICReg 方差项是否健康 | z 有效秩 > 0.5·d_z，情绪嵌入类间距离不塌 |
+| E277 反吸收攻击 | 快变故障伪装成漂移 | ω_f = 5ω_cal 注入 → 50ms 内检出，残余 ≥ 2/3（引理 13） |
+| E278 CAC 五关 | 坏适配器拦截率 | 拦截 ≥ 99%；换装零停顿、无控制突变 |
+| E279 端到端 24h 漂移马拉松 | 长时程温漂/蠕变下的表现 | 误降级 −60%、成功率不降、零标定诱发违规 |
+| E280 阈值重参数化 | U 高时行为是否自动保守 | U > τ_cal ⇒ λ ≥ 0.8、k 收缩，违规 = 0 |
+| E281 实时性压测 | 2.6ms 预算 | P99 < 2.6ms，1h 零丢帧 |
+| E282 消融 | 去 COF/SSG/CAC/LoRA 各自贡献 | COF: 误报 −40%；SSG: 长尾 +8%；CAC: 拦截 99%；LoRA: 负迁移 0 |
+| E283 情绪环一致性 | 假笑/僵硬表情欺骗 | r_emo 环破裂检出 ≥ 90%，欺骗攻击下 λ ≥ 0.8 |
+| E284 时间同步估计 | Δt_sync 对时空一致性误触发 | 恢复误差 < 2ms，τ_temporal 误触发 −60% |
+| E285 长尾泛化 | 标签外新型故障 | ssl 预训练使未见故障检出 +15% |
+
+## 6. 本轮最大风险
+
+**一句话**：CALM-RAS 的全部安全性押在「标定速率限制 + canary 不可修复性」这条单一防线上——**若真实故障恰好落在标定带宽之内（缓变故障：传感器渐进老化、慢泄漏、缓慢松动），COF 会把它当漂移「标好」，CFA 把 H_cal 后验推高，CAC 金标集若未覆盖该故障模式则放行适配器**，系统将在「测量越来越准」的假象下失去对缓变故障的最后一道检出能力——这是「先标定后归因」范式的原罪：标定能力越强，缓变故障越隐形。
+
+**次级风险与缓解**：
+1. **表征坍缩**：五任务共享 trunk 可能塌缩 → VICReg 方差-协方差正则 + E276 有效秩监控 + 坍缩即回滚；
+2. **负迁移**：fault 稀疏任务被稠密 ssl 任务淹没 → LoRA 任务隔离 + PCGrad + 不确定性加权；
+3. **伪标签偏差**：WM 残差作伪标签在 WM 失效时自毒 → 残差门限 + wm_drift 时冻结 wm_head 提交；
+4. **CAC 竞态/回滚失败** → 双缓冲原子指针 + 回滚失败即全局降级（k=0）；
+5. **标定红线的标定悖论**：红线本身（5% FS 等）也依赖初始标定 → 出厂计量溯源 + 红线参数纳入 J_CALM 版本链。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 66 轮产物 · UniBot 参赛创新点清单 v1（场景泛化 × Gazebo × 虚拟仿真；IP-C01~IP-C10）
+# 第 68 轮产物 · 创新点清单 v1：CALM-RAS（Calibration-Aware, Label-free, Multi-task RAS：自标定 · 自监督 · 单模型多任务的风险自适应闭环；MTM×SSG×COF×CFA×CAC×RAS-WM†）
 
-> 清单说明：本轮按赛题重置编号为 IP-C*（C = Competition）。上一清单（v3，IP-214~223 安全栈）经修剪仅保留 2 个可迁移机制（并入 IP-C08/C04），其余显式放弃，理由见想法区第 2 节。本清单为持续迭代对象：后续轮次只做深化与修剪，不再重开。
-> 信息来源（检索日期均为 2026-11-13）：unibot.unitree.com（首页/挑战赛/榜单/运行记录页）；github.com/unitreerobotics/unibot_submission（README）；huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset 与 G1_Dex1_FoldTowel/meta/info.json；github.com/unitreerobotics/unitree_ros（README）；google-deepmind/mujoco_menagerie（unitree_g1）；凤凰网科技 2026-07-10 通稿（tech.ifeng.com/c/8ueO0H1KMK7）。规则手册（飞书）需登录未获取正文；「榜首 <30%」为未公开信息，按工作假设 A0。
+> 承接第 67 轮 IP-233~242（SimRAS：仿真增强的风险自适应闭环）。第 67 轮解决了「未来怎么演化、怎么审计」，但其自陈风险暴露了贯穿 R65–R67 的元失败：**系统从未建模「测量本身的可信度」**——R66 的情绪欺骗是观测链路不可信，R67 的 Sim2Real 黑箱是预测链路不可信，R65 的 H_sensor 混淆是感知链路不可信。本轮把「标定」从离线常数升级为一等公民在线潜变量，用零标签自监督持续驱动，用单模型多任务骨干保证同源一致。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「**我的测量还准吗**」——测量不可信时，归因、前瞻、放行全部自动收缩。
+>
+> IP 编号：IP-243~IP-252（共 10 个），全部为 CALM-RAS 核心组件。
 
-## 0. 赛题拆解与机会矩阵
+## 0. 核心 IP 设计
 
-评分 J = w1·平均成功率 + w2·平均步骤分（权重细则未公开，假设 A0 下榜首 <30% 意味着**泛化轴是主要失分点而非任务记忆**）。已验证约束：控制空间二选一（joint/ee）；4 路 RGB 480×640；双臂 7-DoF；`action_chunk_size`；N 台机器人 → 8765 起 N 个连续端口；逐步延迟与动作统计计入可信度。
-
-| 评测轴 / 约束 | 性质 | 仿真可解决度 | 主攻 IP |
+| 编号 | 名称 | 类型 | 关键改进（相对第 67 轮） |
 |---|---|---|---|
-| 位置变化 | 场景级 | ★★★★★ | C01/C02/C03 |
-| 干扰物 | 场景级 | ★★★★☆ | C01/C02 |
-| 桌面背景 | 场景级（渲染） | ★★★★☆ | C01/C10 |
-| 未见物品 | 场景级（资产） | ★★★☆☆ | C02 资产变体 / C10 |
-| 人为干扰 | 交互级 | ★★★☆☆（预演） | C04/C08 |
-| 接触精密/柔性（任务难度） | 物理级 | ★★☆☆☆ | 真机数据为主，C02 圈定可信域 |
-| 接口/部署/可信度条款 | 工程级 | — | C06/C07/C08/C09 |
+| IP-243 | MTM Multi-Task Model | 新增 | 单 trunk（d=256）+ 五头（emo/fault/wm/cal/qual）+ LoRA 任务适配器；吸收 WM Enc/dyn 与 ERG 分类器，一次前向替代两次，延迟反降 |
+| IP-244 | SSG Self-Supervised Signal Generator | 新增 | 从被丢弃的残差流榨取五类零标签信号：跨模态环一致 / 时序对比 / 增广不变 / WM 残差伪标签 / 静态段标定回归 |
+| IP-245 | COF Calibration Observation Filter | 新增 | 标定潜变量 c_t ∈ ℝ¹² 在线 EKF + 静态段门控 σ_stat + 速率限制器（ω_cal ≈ 0.1 Hz，反吸收物理防线） |
+| IP-246 | CAR Calibration-Aware Re-parameterization | 新增 | τ_temporal / τ_wm / τ_risk = f(U(ĉ))：不确定 → 一致性放宽 ∧ 风险收紧，双向联动杜绝「不确定却放宽」 |
+| IP-247 | CFA Calibrate-first Attribution | 升级 EFS | H_sensor 拆为 H_cal / H_sensor^trans；后验条件于 ĉ；「先标定后归因」+ 2s 超时冻结最坏情况 |
+| IP-248 | CAC Certified Adapter Commit | 新增 | 影子训练 60s + 五关（金标回归 / 审计回放 / TV 界 / 风险界 / canary 不可修复）+ 双缓冲原子换装 |
+| IP-249 | VQAuditor-C | 升级 VQAuditor | 审计对象扩充：标定事件（漂移 vs 故障）与适配器候选；结论回灌 AuditBuf |
+| IP-250 | AIC-CALM | 升级 AIC | ℰ_CALM = ℰ_SimRAS × ℰ_cal × ℰ_ssl × ℰ_cac（漂移误归因 / 表征坍缩 / 坏适配器三类新干扰） |
+| IP-251 | J_CALM | 升级 J_SimRAS | + cal_state_hash、U(ĉ)、adapter_hash、ssl_loss_vec、commit_verdict；Valid 需红线未越界 |
+| IP-252 | CALM-RAS Pipeline | 新增 | 离线自监督预训练（10⁶ 轨迹零标签）→ 有标签微调 → 标定 → 认证部署；在线 60s 影子提交循环 |
 
-## 1. 创新点清单 v1（每点：动机 / 差异 / 可行性 / 资源 / 落地步骤 / 风险）
+## 1. 符号体系增量（定义 276–292）
 
-### IP-C01 ScenarioForge：五轴场景编译器（一份 DSL，多物理后端）
-- **动机**：五轴中四轴是场景噪声；训练分布不覆盖评测分布则泛化必然失败。把「收集更多数据」改成「编译目标场景」。
-- **差异**：RoboCasa/MimicGen 类工作做大规模程序化场景（记忆：RoboCasa arXiv 2406.02523、MimicGen arXiv 2310.16007，未逐一复核），但不针对「以官方数据集为真值源做分布匹配」；本方案把评测五轴做成 SceneSpec DSL 的一等参数，且同时编译到 Gazebo（gz-sim/SDF，系统在环）与 MuJoCo（MJCF，数据工厂）。
-- **可行性**：高。官方 g1_description URDF（unitree_ros）+ menagerie G1（MJCF）现成；桌面任务无需行走能力，恰好绕开 Gazebo 不支持高层的限制。
-- **资源**：1–2 人周起步；渲染 GPU 单卡（4090 级）；无真机依赖。
-- **步骤**：①定义 SceneSpec（任务模板/物体集/位姿分布/桌面材质/光照/相机内外参/人扰事件）②双后端编译器（SDF + MJCF）③与 LeRobot 数据加载打通做重放对比 ④每任务 × 5 轴网格采样生成评测套件（供 C10 预演门用）。
-- **风险**：腕部相机视角的渲染-真机差异；资产外观差异（→C02 验收）。
+| 符号 | 含义 |
+|---|---|
+| `CALM-RAS = (MTM, SSG, COF, CFA, CAC, RAS-WM†)` | 自标定风险自适应闭环 |
+| `M_θ = (Φ, {head_i}₅, {A_i}₅)` | 单模型多任务骨干（trunk + 五头 + LoRA 适配器） |
+| `z_t ∈ ℝ²⁵⁶` | 五头共享的同源潜状态 |
+| `c_t ∈ 𝒞 = ℝ¹²` | 标定潜变量（外参/焦距/力零偏/Δt_sync/曝光/情绪阈值） |
+| `U(ĉ) = tr(Σ_c)` | 标定不确定度 |
+| `r_t = (r_geo, r_sync, r_zero, r_emo, r_wm)` | 跨模态残差五元组 |
+| `σ_stat(t) ∈ [0,1]` | 静态段门控（残差归因 cal/fault/real） |
+| `L_ssl` | 自监督损失族（环一致+对比+增广+伪标签+静态标定+VICReg 防坍缩） |
+| `τ_*(c) = τ⁰_*(1 ± κ·U)` | 标定重参数化阈值族 |
+| `λ_floor(U) = max(0.6, 0.8·1[U>τ_cal])` | λ_risk 标定下限（不确定性 → 收紧总闸） |
+| `ω_cal ≈ 0.1 Hz` | 标定等效带宽（反吸收防线） |
+| `H_cal / H_sensor^trans` | 可标定漂移 / 真实传感故障（H_sensor 拆分） |
+| `k_cal` | 标定不确定时的前缀收缩项 |
+| `commit_verdict ∈ {PASS, REJECT}` | CAC 五关裁决 |
+| `J_CALM = (J_SimRAS, cal_state_hash, U, adapter_hash, ssl_loss_vec, commit_verdict, calm_ver)` | 证书 |
 
-### IP-C02 TwinCal：数据集驱动的数字孪生标定与验收（★ 本轮押注）
-- **动机**：32,000 条演示是免费真值源——初始位姿分布、桌面几何、相机外参、物体集合都可统计；仿真必须「先对齐、后加宽」才可信。
-- **差异**：常规 sim2real 靠人工调参；本方案把对齐质量量化为**每任务「仿真信任度」标量**（真机动作开环重放的末端/物体位姿误差），低于阈值即禁用该任务的仿真增广——让仿真预算自动流向可信任务。
-- **可行性**：中高。刚体任务用 CAD 检索 + 重纹理起步，6D 位姿用现成估计器；柔性物（FoldTowel/PackBag）先标记「仿真不信任」。
-- **资源**：1–2 人月；少量重建算力；无需真机。
-- **步骤**：①每任务抽 ~50 条演示统计初始分布与桌面几何 ②重投影估计相机外参 ③建资产库（CAD 检索 + 形变/拼接变体 → 覆盖「未见物品」轴）④开环重放验收 → trust ∈ (0,1) ⑤trust 作为 C01 采样与 C03 课程权重。
-- **风险**：柔性物无法刚体化（退到 C10 视频增广）；重放误差含策略闭环效应（缓解：只用前 2s 开环段 + 多次重放取中位）。
+## 2. 形式化定义（要点版）
 
-### IP-C03 Axis-Bandit：面向评分函数的「任务 × 泛化轴」课程
-- **动机**：训练预算有限，五轴边际收益不同；评测配比部分未知，需在线纠偏。
-- **差异**：现有课程多按任务难度；本方案按二维（任务 × 轴）边际成功率分配采样，并把**每次真机评测槽当 bandit 反馈**（Thompson 采样更新）。
-- **可行性**：高（纯训练侧）；依赖平台返回分任务/分场景结果，若只给总分则退化为 A0 静态配比。
-- **资源**：无额外数据；少量真机评测槽。
-- **步骤**：①初始分布 = trust 加权的均匀覆盖 ②每槽后贝叶斯更新 ③决赛前两周冻结为「评测分布精确配比」。
-- **风险**：评测槽稀缺 → 样本少；缓解：仿真内 DryRun 套件先行离线课程。
+**定义 276（总览与三不变式）** 实时流零学习写操作强化版（更新只在影子流、经 CAC 认证原子换装）；标定安全红线（|b_F| ≤ 5% FS、‖δR_ext‖ ≤ 2°、|Δt_sync| ≤ 20ms，超界即判真实故障）；标定速率受限（ω_cal 固定，快变残差物理上不可吸收）。
 
-### IP-C04 HumanPerturber：人为干扰的对抗预演与恢复数据自生成
-- **动机**：唯一交互式评测轴；真机采扰动数据昂贵且危险，仿真里可以无限次「被干扰」。
-- **差异**：现有工作多把扰动当随机噪声；本方案建**拟人扰动原语库**（推物/抽物/挡相机/碰手臂/换目标位）并按任务阶段（抓取前/搬运中/放置前）触发，自动生成「干扰→恢复」配对数据——真机数据集里几乎不存在恢复演示。承接第 65 轮「共因干扰」轻量版：扰动与未见物品可复合。
-- **可行性**：中。脚本化扰动即可起步，学习型对抗为进阶。
-- **资源**：脚本 1–2 人周；数据生成复用 C01/C02 管线。
-- **步骤**：①扰动原语库 ②按阶段采样触发 ③仿真特权真值自动重标注恢复段 ④与 C05 合流蒸馏进策略。
-- **风险**：仿真人扰与真人差异大；缓解：扰动参数放宽 + 真机槽观察迭代。
+**定义 277（MTM）** `Φ: (obs_t, a_{t−1}, ctx) → z_t ∈ ℝ²⁵⁶`；五头 emo/fault/wm/cal/qual 分别吸收 R66 ERG 分类器、R65 FIR 编码、R67 WM Enc+dyn、标定观测压缩、face_quality。
 
-### IP-C05 SimDistill：特权教师 → 接口学生蒸馏
-- **动机**：仿真有完美状态（物体位姿/接触），可训高成功率教师；学生只看接口允许的 4 路 RGB + 本体，直接对齐提交格式。
-- **差异**：不发明新架构：开源 VLA 基座 + 流匹配/回归动作块头（天然匹配 `action_chunk_size`），创新在数据配比（真机演示 + 仿真增广 + 恢复段）与特权蒸馏组合。
-- **可行性**：高，工程量在管线。
-- **资源**：训练 8×A100 级 × 1–2 周起步（32k 真机 + 增广）；部署目标 24G 显存内量化。
-- **步骤**：①教师（状态+视觉特权）仿真 BC/RL ②学生真机数据行为克隆 ③三源数据联合微调 ④按 C03 权重迭代。
-- **风险**：教师-学生鸿沟在腕部相机被手遮挡处最大；缓解：多视角一致性损失 + 深度辅助（C06）。
+**定义 278（标定潜变量）** `c_{t+1} = c_t + w_t, w ~ 𝒩(0, Q_cal)`，Q_cal 由热时间常数 τ_thermal ≈ 10³ s 标定（A92：漂移是慢变量）。
 
-### IP-C06 StereoPrior：双目头部的免费度量深度
-- **动机**：数据集头部是**已矫正立体对**（meta 说明），评测接口同样送左右头部两路图——免费获得度量深度通道，多数队伍会把它当两张普通 RGB 浪费掉。
-- **差异**：不改装硬件；用仿真渲染的立体对 + 完美深度 GT 训轻量立体/前馈深度头，部署零改动。腕部相机无双目，仅头部受益。
-- **可行性**：高（立体匹配成熟）；经典 SGBM 作零训练兜底。
-- **资源**：单卡数天；推理 <5ms/帧。
-- **步骤**：①仿真渲染双目 + GT 视差 ②轻量匹配网络 ③真机头部图上跑通手眼一致性检查 ④深度作学生辅助特征 / 抓取点预筛选；失败静默降级回 RGB。
-- **风险**：弱纹理/高光匹配失败——深度只作辅助，不作主干。
+**定义 279（残差五元组）** r_geo（视觉 vs 触觉几何环）、r_sync（事件对齐残差 − Δ̂t_sync）、r_zero（静态段力读数）、r_emo = KL(π_face ‖ π_ctx)（情绪跨模态环）、r_wm（WM 下一步残差，兼作伪标签）。
 
-### IP-C07 CrossPhys：多物理引擎交叉分歧 = 迁移风险代理
-- **动机**：sim-real gap 不可直接观测；同一 SceneSpec 在 Gazebo 与 MuJoCo 上的行为分歧可观测——分歧大的「场景×动作」大概率迁移差。
-- **差异**：把多引擎从算力冗余变成**不确定性信号**：分歧度作为训练样本权重与课程特征（并入 C03）、预演告警（并入 C10）。
-- **可行性**：中高（C01 双后端已提供，增量是对照运行）。
-- **资源**：额外 ~1× 仿真算力（只对高分任务开）。
-- **步骤**：①同种子双引擎运行 ②定义分歧度量（轨迹/接触事件差异）③用 3–5 个任务真机槽验证「分歧↔迁移损失」相关性 ④纳入权重。
-- **风险**：两引擎共享同一份错误 URDF/资产时分歧失真（共模）；缓解：资产级不确定性由 C02 单独维护。
+**定义 280（静态段归因）** `P(cause | r, σ_stat) ∝ p(r|cause)·[σ_stat·p_cal + (1−σ_stat)·p_fault + p_real]`——单帧猜测升级为标定感知归因。
 
-### IP-C08 SalvageChunk：步骤分导向的自适应分块与抢救行为（承接第 65 轮）
-- **动机**：步骤分奖励部分进展——失败中途也要多走步、失败后要能「抢救」（重抓/后撤/重放）；评测经网络逐步调用 get_action，块长 k 摊薄延迟（调用次数 ≈ T/k），但扰动后块内无效步 ≈ k/2。
-- **差异**：把第 65 轮「长预测、短执行」从安全证明改写为**延迟-反应权衡**；接口决定反应性只能在「调用时刻」决策——返回短块以换反应性。轻量 conformal 残差门（承接 VCV）只做触发器，不做证书。
-- **可行性**：高。
-- **资源**：复用 C05 管线 + 恢复技能库（与 C04 合流生成）。
-- **步骤**：①恢复技能库 re-grasp/retreat/re-place ②调用时刻自适应块长（k_long≈24 / k_short≈6，迟滞防振荡）③残差门（视觉/本体预测-观测偏差超阈 → 短块 + 恢复）④真机验证延迟与步骤分。
-- **风险**：频繁截断降成功率（振荡）；缓解：短块最小持续 8 步迟滞。
+**定义 281（CFA）** `P(H,E | ρ, face, ĉ, U) ∝ p(ρ|H,ĉ)·p(face|E,ĉ_face)·P(H)·P(E|H)`；p(ρ | H_cal, ĉ) 用标定后残差计算；COF 2s 不收敛则冻结 ĉ 按最坏情况归因。
 
-### IP-C09 PortFleet：N 端口并发服务与延迟稳定化（可信度条款红利）
-- **动机**：规则明文「逐步响应延迟及其波动、动作统计规律」计入可信度展示；README 给的「N 份模型副本」方案重模型必然 OOM/抖动。
-- **差异**：单 GPU 共享后端 + N 个轻量端口网关：跨端口动态批 + 锁步定长推理稳定延迟；每端口独立 reset/历史隔离；量化控制显存。
-- **可行性**：高（推理服务工程）。
-- **资源**：1 台高显存 GPU 服务器；1–2 人周。
-- **步骤**：①PolicyService 网关 + 共享后端 ②队列与并发限流、端口独立看门狗 ③延迟监控自动降载 ④双机热备兜底。
-- **风险**：共享后端单点崩溃；缓解：进程级熔断 + 本地回退策略（安全停机）。
+**定义 282–283（自监督与多任务目标）** L_ssl 六项零标签损失；L_MT 用 Kendall 不确定性加权 + PCGrad；丰度谱 wm/cal/cyc/qual ≫ emo ≫ fault，稠密正则稀疏。
 
-### IP-C10 SimDryRun + 视频级反事实增广（预演门与柔性物兜底）
-- **动机**：(a) 真机槽昂贵——提交前用**同一 PolicyService** 在仿真五轴套件上回归（接口/延迟/成功率三项门），把「提交即评测」变成「提交前已知分数区间」；(b) TwinCal 判「仿真不信任」的任务（柔性物），用真机视频反事实编辑（背景/物体替换）做视觉增广兜底——只增广观测、不动动作标签。
-- **差异**：预演门是评测协议的结构性利用；视频反事实把场景轴增广扩展到生成式路线（记忆：SIMPLER arXiv 2405.05941 用仿真评真实策略，未逐一复核）。
-- **可行性**：预演门高；视频反事实中（时序伪影风险）。
-- **资源**：预演复用 C01 套件；视频编辑需生成式算力（可选）。
-- **步骤**：①每任务 20 场景 × 5 轴 DryRun 套件 + 三项门 ②失败阻断提交 ③柔性物视频增广流水线 ④增广后 DryRun 回归。
-- **风险**：DryRun 分布与真实评测分布有差（A0 未知）；缓解：C03 真机反馈持续校准套件配比。
+**定义 284–285（CAR 与 λ_floor）** `τ_temporal = τ⁰(1+κ_T·U)`、`τ_wm = τ⁰_wm(1+κ_w·U)`、`τ_risk = τ⁰_r(1−κ_r·U)`；`λ_floor(U) = max(0.6, 0.8·1[U>τ_cal])`——统一收编 R66/R67 的保守回退纪律。
 
-## 2. 关键伪代码
+**定义 286（COF）** EKF + 速率限制器 `‖ĉ_t − ĉ_{t−1}‖_∞ ≤ Δ_max`（等效 ω_cal ≈ 0.1 Hz）。
+
+**定义 287（CAC 五关）** 金标回归（衰减 ≤ 1%）/ AuditBuf 回放 / KL(P_θ′‖P_θ) < 0.05 / worst-case λ ≤ 1.05× / canary 不可修复性（`‖r_canary(δ̂′)‖ < 0.3·‖r_canary(δ̂)‖` 一票否决）；双缓冲 <1μs 原子换装。
+
+**定义 288–290（干扰集 / 证书 / 管线）** ℰ_CALM 四乘积；J_CALM Valid ⇔ Valid(J_SimRAS) ∧ U < τ_cal^hard ∧ PASS ∧ 红线未越界；离线自监督预训练 → 在线 60s 影子提交循环。
+
+**定义 291–292（同源一致性 / 反吸收前置）** 同 trunk ⇒ 噪声共模，KL 检验 SNR ∝ 1/√(1−ρ_c)；一阶跟踪器对 ω_f ≥ 3ω_cal 的故障分量抑制 ≤ 1/3，残余 ≥ 2/3。
+
+## 3. 关键算法伪代码
 
 ```python
-# IP-C01 + IP-C02：场景编译 + 孪生标定验收
-@dataclass
-class SceneSpec:
-    task: str                      # 'G1_Dex1_PlugCharger'
-    axes: dict                     # {'position':1., 'distractor':1., 'background':1., 'unseen':1., 'human':1.}
-    obj_pose_dist: Distribution    # TwinCal 从演示估计的初始分布
-    distractors: list; backgrounds: list; human_events: list; seed: int
+# IP-243 MTM：单模型五头，一次前向替代 R67 的 ERG+WM 两次前向
+class MultiTaskModel:
+    def forward(self, obs_t, a_prev, ctx, tasks=('emo','fault','wm','cal','qual')):
+        z = self.trunk(obs_t, a_prev, ctx)            # 同源潜状态
+        return z, {t: self.heads[t](self.adapters[t](z)) for t in tasks}
 
-def compile(spec, backend):        # backend ∈ {'gazebo_sdf', 'mujoco_mjcf'}
-    w = BACKENDS[backend].new_world()
-    w.add_table(TWIN.table); w.add_robot(G1_URDF, fixed_base=True, pivot=TWIN.pivot_range)
-    for a in sample_tasks(spec):   w.add_asset(a, pose=spec.obj_pose_dist.sample())
-    for d in sample_distractors(spec): w.add_asset(d)
-    w.apply_background(spec.backgrounds.sample()); return w
+    def rollout(self, z, act_seq, k=5):               # 原 WM.rollout 替身
+        preds = []
+        for a in act_seq[:k]:
+            z = self.heads['wm'](z, a)
+            preds.append({'pi': self.heads['emo'](z), 'pH': self.heads['fault'](z),
+                          'lambda': 1 - 0.3*risk_emo(z) - 0.2*risk_fault(z)})
+        return preds
 
-def twincal_accept(task, demos, n=50):                 # 真值源：官方演示
-    twin = calibrate(fit_initial_state_dist(demos))    # 桌面/外参/资产对齐
-    errs = [object_pose_error(replay_in_sim(twin, ep.actions[:60]), ep.obs)
-            for ep in demos[:n]]                       # 开环重放误差
-    trust = sigmoid((TAU - np.median(errs)) / SCALE)   # 每任务仿真信任度
-    return twin, trust                                 # trust < 0.5 ⇒ 禁用该任务仿真增广
+# IP-245/246 COF：EKF + 速率限制 + 阈值重参数化
+class CalibrationObservationFilter:
+    def step(self, z_cal, r, sigma_stat):
+        self.predict(); self.update(cat([z_cal, r]),
+                                    R_static if sigma_stat > 0.9 else R_dynamic)
+        self.rate_limit()                             # 反吸收物理防线
+        U = np.trace(self.S)
+        return self.c, U, {'tau_temporal': TAU_T0*(1+K_T*U),
+                           'tau_wm': TAU_W0*(1+K_W*U),
+                           'tau_risk': TAU_R0*(1-K_R*U),
+                           'lam_floor': max(0.6, 0.8 if U > TAU_CAL else 0.6)}
+
+# IP-247 CFA：先标定后归因（EFS 升级）
+def calibrate_first_attribution(rho, face, c, U, cof, timeout=2.0):
+    if not cof.converged_within(timeout): c, U = cof.freeze(), np.inf
+    r_res  = residual_after_calibration(rho, c)       # 标定后残差
+    post_H = mtm.heads['fault'](rho, r_res)           # p(ρ | H, ĉ)
+    joint  = normalize({(h,e): post_H[h]*face_evidence(face)[e]*P_EgH[h][e]
+                        for h in post_H for e in ('E0','E1','E2','E3')})
+    return worst_case_post(joint) if U > TAU_CAL else joint
+
+# IP-248 CAC：五关认证 + 原子换装
+class CertifiedAdapterCommit:
+    GATES = [gold_regression, auditbuf_replay, tv_bound, risk_bound, canary_unfixable]
+    def maybe_commit(self, shadow, dt):
+        if dt < self.T_commit: return None
+        verdict = {g.__name__: g(shadow) for g in self.GATES}
+        if all(verdict.values()): atomic_swap(self.live_ptr, shadow); return 'PASS'
+        log_to_ecac(verdict); return 'REJECT'
+
+# IP-252 主闭环
+def CALM_RAS_round(M, obs):
+    x_prime = M.lsf.fuse(M.usr.fuse(*obs[:4]))
+    z, o = M.mtm.forward(obs_pack, M.a_prev, M.scene_ctx)          # 1) 一次前向
+    r = residuals(x_prime, o, M.wm_residual_cache)                 # 2) 残差五元组
+    c, U, thr = M.cof.step(o['cal'], r, sigma_stat(M))             #    标定滤波
+    wm_preds = M.mtm.rollout(z, M.ach.propose_actions(x_prime, 5)) # 3) WM 前瞻
+    wm_drift = kl_div(o['pi'], wm_preds[0]['pi']) > thr['tau_wm']
+    rho = M.fir_signature(z, M.residual_log)
+    joint_post = M.cfa(rho, o['pi'], c, U)                         # 4) 先标定后归因
+    A = M.ach.propose(x_prime, H=M.vista.H)
+    k = M.c_ras_wm.certified_prefix(A, joint_post, min(M.vista.m, M.m_emo),
+                                    M.alpha_chunk, wm_preds)       # 5) 认证前缀
+    if U > TAU_CAL: k = min(k, k_cal_shrink(A, U))                 #    标定收缩
+    lam = max(M.efs.risk_scale(joint_post), thr['lam_floor'],
+              0.8 if (o['qual']['face'] < 0.8 or wm_drift) else 0.6) # 6) 风险缩放
+    tau = emotion_response_shaping_wm(                             # 7) ERS-WM 保留
+        M.pi_sigma.prefix_dispatch(A[:k]) * lam, joint_post, wm_preds)
+    M.vqa_c.submit_async(wm_preds, {'cal_event': (c, U), 'joint': joint_post})  # 8) 异步
+    M.cac.maybe_commit(M.shadow, M.time_since_last_commit)
+    return k, lam, joint_post, (c, U)
 ```
 
-```python
-# IP-C08：调用时刻自适应分块 + 残差截断门（接口：返回整个块，块内不可中断）
-class AdaptiveChunkPolicy:
-    K_LONG, K_SHORT, HYST = 24, 6, 8
-    def get_action(self, obs):
-        s = self.tracker.update(obs)                       # 便签级世界状态
-        r = self.predictor.residual(s)                     # 与上块预测的偏差（conformal 门）
-        if r > self.q_alpha or self.perturb_det(s):        # 扰动可疑 → 短块 + 抢救
-            k, A = self.K_SHORT, self.recovery_lib.match(s, obs['observation.language'])
-        else:                                              # 正常 → 长块摊薄延迟
-            k, A = self.K_LONG, self.policy.propose(obs, H=self.K_LONG)
-        self.steps_in_mode += 1                            # 迟滞：短块至少持续 8 步
-        if self.steps_in_mode < self.HYST: k = min(k, self.last_k)
-        self.last_k = k
-        return {**format_actions(A[:k]), 'meta.token': self.token}
-```
+## 4. 推导
 
-```python
-# IP-C09：N 端口网关 + 共享后端（可信度条款：延迟平稳、动作规整、状态隔离）
-for port in range(8765, 8765 + N_ROBOTS):
-    spawn(Gateway(port, backend, session_id=port))     # 每端口独立 reset()/历史
-class Backend:
-    def infer(self, requests):                         # 跨端口动态批 + 锁步定长
-        batch = collate(requests); out = model(batch)  # 量化 FP8；每端口超时熔断
-        return split(out)
-```
+**引理 13（反吸收界）** 速率限制后 COF 为带宽 ω_cal 的一阶跟踪器；对带宽 ω_f 的故障残差分量，抑制增益 G = ω_cal/ω_f。ω_f ≥ 3ω_cal ⇒ 标定后残余 ≥ (2/3)·‖r_f‖ ≥ τ_det——**自标定零牺牲快变故障检出灵敏度**；慢漂移被如约吸收。
 
-## 3. 两条小命题（推导要点）
+**引理 14（自监督迁移界）** A93（任务多样性，β_div 有界）下：excess risk E[L_fault] ≤ √(β_div/n_fault) + C/√N_ssl；N_ssl ≥ 10⁵ 时等效样本增益 ≥ 3×——fault 归因用 1/10 标签达原精度。
 
-**命题 1（分布匹配加宽的必要性）**：设训练场景分布 p、评测分布 q，成功指示 f∈[0,1]。由 |E_p f − E_q f| ≤ TV(p,q)：若策略在 p 上成功率 ≥ 1−δ 且 TV(p,q) ≤ ε，则评测期望成功率 ≥ 1−δ−ε。推论：加宽半径应围绕**演示数据估计的评测支持流形**（TwinCal 输出的初始分布）扩张，而非全空间均匀随机——全空间加宽浪费有限模型容量。这为 C01/C02「分布匹配优先于大规模随机化」提供依据。
+**引理 15（同源共模抵消）** 共享 trunk ⇒ π^face 与 π^wm 噪声相关 ρ_c；KL 检验 Var(D) ∝ 2(1−ρ_c)σ²，SNR ∝ 1/√(1−ρ_c)。ρ_c = 0.75 ⇒ SNR ×2，τ_wm 减半而不增误报——wm_drift 检出更早，直击 R67 风险。
 
-**命题 2（自适应块长的延迟-反应权衡）**：单集期望损失 L(k) = c1·P_dist·(k/2)（扰动后无效步） + c2·T/k·C_inf（推理调用×单次延迟） + c3·σ_π²/k（动作方差，时间集成）。∂L/∂k 在 k* = sqrt( (c2·T·C_inf + c3·σ_π²) / (c1·P_dist/2) ) 处取零，P_dist 升高 → k* 变小。给出「检测到扰动即切短块、正常时长块」的最优性直觉；完整推导（含网络延迟分布与步骤分模型）留待下轮。
+**定理 14（端到端风险一致性）** A87–A94 下：
+1. `P(|τ_cmd − τ*| > ε) ≤ α_chunk + δ_fi + α_emotion + α_wm + α_vqa + α_cal`（α_cal 受引理 13 限制）；
+2. `U > τ_cal ⇒ λ_risk ≥ 0.8 ∧ τ_risk 收紧 ∧ k 增加 k_cal 收缩`——测量不可信永远导向收缩；
+3. `ω_f ≥ 3ω_cal ⇒ 检出概率与无 CALM 层相同`（零灵敏度损失）；
+4. 有害适配器上线概率 ≤ (1−r_canary)·p_h ≤ 0.05·p_h。
 
-## 4. 实验设计 E-C01~E-C08
+**定理 15（认证提交安全性）** canary 检出率 ≥ 0.95 + 金标关 (1−10⁻²)；提交窗口内 k*RAS 冻结、λ_risk 连续 ⇒ 换装无控制突变；回滚失败触发全局降级（k*RAS = 0）。
 
-| 实验 | 核心问题 | 设置 | 指标 | 目标 |
-|---|---|---|---|---|
-| E-C01 TwinCal 验收线 | 哪些任务仿真可信 | 32 任务 × 50 演示开环重放 | 重放误差分布 / trust | 刚体类 ≤2cm/5° 达标 ≥80%；柔性物正确标记不信任 |
-| E-C02 五轴增广逐轴消融 | 每轴值多少分 | 仿真 DryRun 上逐轴打开增广 | 分轴成功率 | 位置/干扰/背景 +15pp；未见物品次之 |
-| E-C03 恢复数据消融 | 扰动预演值多少 | 有/无 HumanPerturber 恢复段 | 干扰轴成功率/步骤分 | 成功率 +20pp 或步骤分 +25% |
-| E-C04 立体深度增益 | 免费深度值多少 | RGB-only vs +StereoPrior | 抓取点误差/成功率 | 误差 −30%，高光不劣化（静默降级） |
-| E-C05 CrossPhys 相关性 | 引擎分歧能否预测迁移 | 3–5 任务双引擎 + 真机槽 | 分歧↔实测损失 Spearman | ≥0.5（小样本初步） |
-| E-C06 DryRun 一致性 | 预演能否预测真机分数 | DryRun 预测 vs 真机槽结果 | 每任务成功率误差 | ≤10pp |
-| E-C07 PortFleet 延迟 | 并发是否平稳 | N=3 并发评测全流程 | p50/p99 延迟、抖动、REJECTED 数 | p99 ≤ 2×p50；REJECTED=0 |
-| E-C08 基座与分块 A/B | 基座/块策略选型 | 开源 VLA ×（固定块 vs 自适应块） | 成功率/步骤分/延迟 | 自适应步骤分 ≥ 固定，干扰轴更高 |
+## 5. 复杂度分析
 
-## 5. 风险表与资源总账
+| 组件 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|
+| MTM trunk 前向（INT8, 4 层, d=256） | P99 < 0.9ms | 80MB | 一次前向替代 ERG+WM 两次，延迟 −0.6ms |
+| 五头推理 | 5×<0.05ms | <5MB | 定义 277 |
+| COF EKF（d_c=12） | <0.05ms | O(d_c²) | 引理 13 反吸收界 |
+| CFA 联合后验 | +0.1ms | O(1) | 定义 281、定理 14 |
+| C-RAS-WM + k_cal 收缩 | +0.3ms | O(k) | 定理 14-2 |
+| SSG/CAC/VQA-C（影子/异步） | 0 实时 | 500MB | 定理 15 五关认证 |
+| **实时环路总延迟** | **< 2.6ms**（SimRAS 3ms） | — | 定理 14 全项 |
 
-| 风险 | 等级 | 缓解 |
+## 6. 实验设计 E271–E285
+
+| 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| 柔性/插拔任务孪生不达标（本轮头号风险） | 高 | trust 门禁用仿真；走真机+视频增广（C10） |
-| 榜单未公开、评测配比未知（A0） | 高 | C03 bandit 在线纠偏；DryRun 配比持续校准 |
-| 规则手册细则（得分点/试验数）未公开 | 中 | 预约评测槽前邮件确认；以挑战页得分点动态加载为准 |
-| 仿真渲染-真机外观域差 | 中 | C10 视频反事实 + 光照/纹理强随机 |
-| N 端口并发单点故障 | 中 | 熔断 + 热备 + 安全停机回退 |
-| 资源：训练 8×A100×1–2 周；部署 1 台高显存服务器（量化后 24G/实例）；仿真 1–2×4090；人力 2–3 人 | — | 按 C03 边际收益动态增减 |
+| E271 静态段标定精度 | 力零偏/外参漂移恢复 | b_F 误差 < 2% FS，δR < 0.5° |
+| E272 漂移 vs 故障判别 | CFA 分离 H_cal / H_sensor^trans | 准确率 ≥ 90%（SimRAS 基线 ~70%） |
+| E273 误报率下降 | 条件于 ĉ 后的故障误报 | 误降级再 −40% |
+| E274 单模型 vs 动物园 | MTM 延迟/一致性/精度 | P99 2.6ms；跨头 KL 噪声 −50%；各头精度 ≥ 原 −1% |
+| E275 自监督迁移 | 稀疏标签下 fault 归因 | 1/10 标签达原 85% 精度（引理 14） |
+| E276 表征坍缩监控 | VICReg 健康 | z 有效秩 > 0.5·d_z，类间距离不塌 |
+| E277 反吸收攻击 | 快变故障伪装漂移 | ω_f = 5ω_cal → 50ms 检出，残余 ≥ 2/3（引理 13） |
+| E278 CAC 五关 | 坏适配器拦截 | 拦截 ≥ 99%；换装零停顿、无突变 |
+| E279 24h 漂移马拉松 | 长时程温漂/蠕变 | 误降级 −60%、成功率不降、零标定诱发违规 |
+| E280 阈值重参数化 | U 高时自动保守 | U > τ_cal ⇒ λ ≥ 0.8、k 收缩，违规 = 0 |
+| E281 实时性压测 | 2.6ms 预算 | P99 < 2.6ms，1h 零丢帧 |
+| E282 消融 | COF/SSG/CAC/LoRA 贡献 | 误报 −40% / 长尾 +8% / 拦截 99% / 负迁移 0 |
+| E283 情绪环一致性 | 假笑/僵硬欺骗 | r_emo 环破裂检出 ≥ 90%，欺骗下 λ ≥ 0.8 |
+| E284 时间同步估计 | Δt_sync 对 τ_temporal 误触发 | 恢复误差 < 2ms，误触发 −60% |
+| E285 长尾泛化 | 标签外新型故障 | ssl 预训练使未见故障检出 +15% |
 
-## 6. 一句话押注
+## 7. 本轮最大风险
 
-**当前最值得押注：IP-C02 TwinCal——它把官方 32,000 条演示从「训练集」升格为「仿真世界的验收真值源」，是 C01 场景编译器、C03 课程、C10 预演门共同的信任地基；做实它，约 4/5 权重的场景轴泛化就能被几乎免费的仿真数据撬动，而真机预算得以集中到仿真确实帮不上的接触轴上。**
+**一句话**：CALM-RAS 的全部安全性押在「标定速率限制 + canary 不可修复性」这条单一防线上——**若真实故障恰好落在标定带宽之内（缓变故障：传感器渐进老化、慢泄漏、缓慢松动），COF 会把它当漂移「标好」，CFA 把 H_cal 后验推高，CAC 金标集若未覆盖该故障模式则放行适配器**，系统将在「测量越来越准」的假象下失去对缓变故障的最后一道检出能力——这是「先标定后归因」范式的原罪：标定能力越强，缓变故障越隐形。
+
+**次级风险与缓解**：表征坍缩（VICReg + 有效秩监控 + 坍缩即回滚）；负迁移（LoRA 隔离 + PCGrad）；伪标签偏差（残差门限 + wm_drift 冻结提交）；CAC 竞态（双缓冲 + 回滚失败即 k=0 全局降级）；标定红线悖论（出厂计量溯源 + 红线纳入 J_CALM 版本链）。
 <!-- ARTIFACT:END -->
