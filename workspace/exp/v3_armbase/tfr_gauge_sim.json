@@ -1,0 +1,77 @@
+{
+  "gauge_equiv_max_pixel_diff": 0.0,
+  "contact_drift_mm": {
+    "Ta1": {
+      "v0.01": 0.33,
+      "v0.02": 0.67,
+      "v0.05": 1.67,
+      "v0.1": 3.33,
+      "v0.5": 16.67
+    },
+    "Ta4": {
+      "v0.01": 1.33,
+      "v0.02": 2.67,
+      "v0.05": 6.67,
+      "v0.1": 13.33,
+      "v0.5": 66.67
+    },
+    "Ta8": {
+      "v0.01": 2.67,
+      "v0.02": 5.33,
+      "v0.05": 13.33,
+      "v0.1": 26.67,
+      "v0.5": 133.33
+    },
+    "Ta16": {
+      "v0.01": 5.33,
+      "v0.02": 10.67,
+      "v0.05": 26.67,
+      "v0.1": 53.33,
+      "v0.5": 266.67
+    }
+  },
+  "contact_safe_base_speed_mps": {
+    "eps1mm": {
+      "Ta1": 0.03,
+      "Ta4": 0.0075,
+      "Ta8": 0.0037,
+      "Ta16": 0.0019
+    },
+    "eps2mm": {
+      "Ta1": 0.06,
+      "Ta4": 0.015,
+      "Ta8": 0.0075,
+      "Ta16": 0.0037
+    },
+    "eps5mm": {
+      "Ta1": 0.15,
+      "Ta4": 0.0375,
+      "Ta8": 0.0187,
+      "Ta16": 0.0094
+    },
+    "eps10mm": {
+      "Ta1": 0.3,
+      "Ta4": 0.075,
+      "Ta8": 0.0375,
+      "Ta16": 0.0187
+    }
+  },
+  "estimator_rmse": {
+    "push_0mm": {
+      "dead_reckoning_mm": 5.77,
+      "vision_only_mm": 2.99,
+      "fused_mm": 1.24
+    },
+    "push_20mm": {
+      "dead_reckoning_mm": 21.1,
+      "vision_only_mm": 2.99,
+      "fused_mm": 1.27
+    },
+    "push_60mm": {
+      "dead_reckoning_mm": 59.89,
+      "vision_only_mm": 3.0,
+      "fused_mm": 1.26
+    }
+  },
+  "notes": "1-D illustrative; gauge diff ~0 means base-move vs inverse task-move are observationally identical."
+}
