@@ -3,387 +3,395 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
+# 第 70 轮（承接第 69 轮「FLUID-RAS 流匹配多模态交互不确定性二分闭环」IP-253~263；灵感循环新循环第 3 轮；本轮灵感：「力矩传感」×「对比实验」×「并发推理」）
 
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
+> R69 给系统装上了「会问的嘴巴」，但自陈最大风险写得清楚：全部效率收益押在「流模型的模态分布可信」上——模态权重未校准时，VoI 在错误信念上计算，系统会自信地追问一个幻影，或把人类一个误导性回答盖上「已验证」的章。检查 R69 的缓解手段（MCG 校准门）发现两个洞：它依赖**离线校准集**算 ECE，在线、无校准集时无能为力；且「问」的答案来自**可能说谎的证人**——k 个正交源的相关性 ρ 只是被压低、不是归零，因为证言类证据都出自同一个说谎者的意图。
 >
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
+> 本轮三个灵感各堵一个洞：
+> - **对比实验**回答「怎么问才对」：消歧的最优形式不是抛出一个问题，而是**设计一个让候选假设必然分歧的实验**。对比度 C(g)（模态间预测结果的 TV 分离）是 VoI 的可计算代理；实验可先在世界模型里**并发预演**（dry-run），真实预算只花在「预演里就分得出胜负」的实验上。
+> - **力矩传感**回答「问谁才不会被骗」：扭矩签名受动力学约束——门有多重、抽屉空不空，不取决于任何人的说法，而取决于手腕上 0.5 N·m 的读数。在威胁模型内（A100：排除执行器级构陷），力矩是**范畴上不可伪造的证据通道**；R69 的 g_probe 从「摸一下」升级为「一次有设计的力矩实验」。
+> - **并发推理**回答「问得起吗、信得过得起吗」：K 个模态 × |G| 个候选实验的预演**天然可批量**（实时性红利）；N_c 条独立推理路径的**一致性**给出免校准集的在线信任代理（CCG），正面回应 R69 最大风险；代价是共因失败——路径共享 trunk，「一致」可能只是同一次幻觉的回声，用 A101 + 诚实声明兜住。
 >
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
+> 核心命题：**把 R69 的「向证人求证」升级为「让物理作证」：消歧动作 = 一场对比实验（CGX 设计 + DRY 并发预演 + 真实执行）；证据按完整性序仲裁（物理 ≻ 观测 ≻ 证言，PEA）；模态分布自身的可信度由并发一致性在线把关（CCG）。** 命名 **TORCH-RAS**（Torque-gROunded Contrastive Hypothesis-testing with Concurrent inference）。
 >
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证、还能问什么」，R70 问「**谁的答案无法说谎**」——不再问证人，让世界在一场设计好的对比实验里自己作证；证人只保留旁听席。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
+**灵感 1（对比实验 → 消歧的最优形式是「设计分歧」，不是「提问」）**
+直觉：R69 的 MINT 用期望后验熵选交互动作，但 E[H(M|o,y)] 需要一个**学习型答案模型** p̂(y|g,o)——它本身可以错，且其误差无界时能翻转候选排序（在错误的候选上花真实预算）。实验科学的答案是：好实验不是「让答案模型预言结果」，而是「让候选假设的预测**必然分歧**」。定义对比度 C(g) = Σ_{i<j} ŵ_i ŵ_j·TV(p(·|m_i,g), p(·|m_j,g))：候选实验在当前模态分布下能制造的假设分离度。对比度由**认证世界模型（R67 VISTA，已被 R68 认证）的动力学约束预测**给出，误差有界（ε_dr），排序在间隔 > 2ε_dr 时稳定（引理 19b）；VoI 与对比度的关系由 Le Cam/Fano 型界给出（引理 19a）。R69 的「歧义大且分得开，交互才值钱」由此获得一个**可计算、可审计**的操作化。
 
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
+**灵感 2（力矩传感 → 存在一条说不了谎的证据通道）**
+直觉：R69 的证据纪律（k 个正交源一致）面对「共谋欺骗」（表情+语气+证言一起演）时，相关性 ρ 只是被压低、不是归零——所有证言类证据都出自同一个说谎者的意图。力矩传感提供**范畴上不同**的证据：扭矩签名 τ̂_k 是世界模型在模态 m_k 下对动作的动力学预测，测量 τ_meas 由物理定律决定——门框的阻力不会陪人演戏，「容器空还是满」由 0.5 N·m 的腕部读数回答，不取决于任何人的回答意愿。于是 R69 的 g_probe 从「摸一下看看」升级为**有设计的力矩实验 g_tq**：微扰位移 ≤ ε_g、力 ≤ f_probe，读取的却是对手（在 A100 威胁模型内）无法伪造的物理签名。同时力矩残差 τ_res 成为第二条「标定不可吸收」异常通道（定义 324），与 R69 的 (r_res, Δa) 镜像互为备份——单通道被吸收不再等于全盲。
 
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
+**灵感 3（并发推理 → 实时性与可信度第一次同时成立）**
+直觉：并发推理给 TORCH 两个红利。**红利一（实时性）**：K 个模态 × |G| 个候选实验的 dry-run 预演是**天然可批量**的——一次 WM 批量前向（CRN：同一噪声种子跨模态复用，使对比反映假设差而非采样差）替代 R69 逐候选串行的期望熵估计，歧义路径延迟几乎不涨；**红利二（可信度）**：N_c 条独立推理路径（互异条件扰动/dropout 种子/N_step）的模态身份一致性，给出**免校准集的在线信任代理**——R69 的 MCG 需要离线 ECE，CCG 在线即可发现「这次采样的模态集不可信」。代价必须诚实声明：路径共享同一 trunk（A101 只假设部分去相关 ρ_c<1），「N_c 路一致」是**必要非充分**条件，共因失败（同一次幻觉的三次回声）是残余风险，交给 CCG disagree 率监控 + E311/E314 验证。
 
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
+**灵感 4（仿真不定案 → dry-run 自己的证据纪律）**
+直觉：预演再逼真也只是模型意见。dry-run 的结果只允许用于三件事：候选排序、预算门控、安全预检；**任何后验更新、λ 计算、模态定案只能由真实观测驱动**（新不变式 iv）。这与 R69 的「单源不得定案」同构：预演是第 k+1 个「源」，但它是仿真源，完整性永远低于任何真实源。这样 WM gap 的最坏后果被限制在「选了个次优实验」，而不是「信了个错结论」（引理 21）。
 
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
+**灵感 5（证据完整性序 → 物理锚定仲裁）**
+直觉：R69 把所有证据等权送入 k-一致裁决；但证据有**范畴级的可信度差**：物理（力矩）> 观测（视觉/几何）> 证言（人话）。PEA 规则：证言与可采纳物理证据冲突 → 证言丢弃并记投毒嫌疑；定案需 ≥1 个非证言源。这正面回应 R69 自陈的「把误导性回答盖上已验证的章」——**人话可以错、可以说谎，但手腕上的 0.5 N·m 不会**（A100 威胁模型内）。
 
-## 1. 形式化定义（增量：定义 293–309）
+**灵感 6（严格包含姿态 → 三级退避阶梯）**
+直觉：与 R69 包含 R68 同理，TORCH 必须**包含** FLUID 为退化边界：τ 通道不可采纳（TPF 拒绝）∧ N_c=1 ∧ dry-run 关闭 ∧ CGX 退化为 MINT 启发式 ⇒ 逐指令等于 R69；再叠加 VoI−c≤0 ∨ ECE>τ_ece ⇒ 逐指令等于 R68。三级阶梯（TORCH→FLUID→CALM）每级退化确定性、可审计、可复现（E308）。新层不引入任何需要独立信任的黑箱——它的每个新能力都有明确的「关掉即回上一级」开关。
 
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
+## 1. 形式化定义（增量：定义 310–326）
 
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
+**定义 310（TORCH-RAS 总览）** TORCH-RAS = (CGX, DRY, CON, TOR/TPF, PEA, CCG, FLUID-RAS†)。继承 R69 三不变式（零学习写操作；交互预算硬约束；k 源证据纪律），新增两条：
+(iv) **仿真不定案纪律**：dry-run（定义 314）结果只用于候选排序、预算门控与安全预检；后验、λ、模态定案只由真实观测驱动；
+(v) **物理锚定与并发确定性**：证据完整性序 Θ_phys ≻ Θ_obs ≻ Θ_testi（定义 318），证言不得推翻可采纳物理证据；并发汇聚为确定性单写者（定义 315b），竞争态不得写入控制缓冲。
 
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
+**定义 311（力矩签名与残差）** 模态 m_k 与增广动作 ξ 下，认证 WM 给出预测扭矩轨迹 τ̂_k(ξ) = g_WM(ŝ_{t:t+W}, ξ | m_k)；测量 τ_meas；混合残差 τ_res = τ_meas − Σ_k ŵ_k τ̂_k，逐模态残差 τ_res,k = τ_meas − τ̂_k。力矩空间 Y_τ ⊂ ℝ^{d_τ} 并入结果空间 y = (y_vis, y_geo, y_τ)，对比度在联合空间上计算。
 
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
+**定义 312（对比度）** C(g) = Σ_{i<j} ŵ_i ŵ_j · TV( p(·|m_i, g, ŝ_t) , p(·|m_j, g, ŝ_t) )，p 为执行 g 后 W 步内的结果分布。C 度量「当前信念下该实验能制造多少假设分离」；A99 保证存在 g 使 C(g) ≥ γ_min > 0（实验可设计性）。
 
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
+**定义 313（CGX 对比实验设计器）** g* = argmax_{g∈𝒜_info} [C(g) − c(g)] s.t. 预算未超 ∧ C-RAS-WM 认证（信息动作安全，R69 定义 302 保持）。候选类扩展：g_gaze、g_probe、g_ask、**g_tq（力矩探针：位移 ≤ ε_g、力 ≤ f_probe、时长 ≤ t_probe）**。若 max[C−c] ≤ 0 → 不交互，退 FLUID 决策。
 
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
+**定义 314（DRY 并发仿真预演）** 对候选集 G 与模态集 {m_k}，以 common random numbers（同一噪声种子跨模态复用）批量前向 WM：ŷ_{kj} = WM_{H_d}(·|m_k, g_j, ŝ_t)，得 Ĉ(g_j) 与 bootstrap 置信区间 CI(Ĉ)。用途白名单：{候选排序, 预算门控, 安全预检}（不变式 iv）；禁用清单：{后验更新, λ 计算, 模态定案}。
 
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
+**定义 315（CON 并发推理调度器）** (a) 批量化：K 个流样本与 N_c 条独立路径（互异条件扰动/dropout 种子/N_step）单批执行；(b) **确定性汇聚**：单写者缓冲，规则「最后通过认证者胜出」，无锁竞争、无部分写入；(c) **降载阶梯**：预测批次超 P99 预算时依序关闭 {dry-run → N_c=1 → K=4→1 → 退 FLUID 决策}，λ 单调不降（定理 19b）。
 
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
+**定义 316（TOR 证据通道与 TPF 信任滤波）** 力矩证据 admissible ⇔ (a) 力矩标定自身残差 τ_cal_res ∈ 界内；(b) 未检出力矩侧「标定吸收」对偶模式（定义 324：τ_res↓ ∧ Δa_τ↑）。不可采纳时本次弃权（权重 0），通道不弃用、待窗口恢复。
 
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
+**定义 317（CCG 并发一致性门）** agree ⇔ N_c 条路径的 top-1 模态身份（聚类容差内）一致 ∧ H_mode 分歧 ≤ τ_ccg。disagree ⇒ U_epi 升格为未消解、禁用本次交互决策（λ 走未消解分支）。CCG 是**在线、免校准集**的信任代理，补 R69 MCG 需离线 ECE 之缺；两者并存：MCG 管分布级校准（离线），CCG 管本次采样可信（在线）。
 
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
+**定义 318（PEA 物理锚定证据仲裁）** (a) 完整性序：Θ_phys ≻ Θ_obs ≻ Θ_testi；(b) 证言与可采纳物理证据冲突 → 证言丢弃 + 投毒嫌疑记录（回灌 AuditBuf）；(c) 定案条件升级 R69 定义 293-iii：需 k−1 个正交源一致**且其中 ≥1 个非证言源**；(d) 物理证据自身须过 TPF（定义 316）。
 
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
+**定义 319（三级退避阶梯）** L0 TORCH 完全态；L1 → FLUID 决策（触发：CGX 不可行 ∨ CCG disagree ∨ TPF 拒绝且需要交互）；L2 → R68 纯保守（触发：VoI−c≤0 ∨ ECE>τ_ece ∨ slow_fault_suspect）。每级退化逐指令确定、可审计（E308 验证边界等价）。
 
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
+**定义 320（锚定后验更新）** 输入 (g*, y_real, 证据格)；顺序：物理证据削枝（排除与 τ 签名矛盾的模态）→ 贝叶斯权重更新 → k-一致纪律裁决（R69 引理 18 边界在 PEA 下收紧，见引理 20）。
 
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
+**定义 321（自适应 K 与 N_c 调度）** mode_head 报歧义 → K=4；K>1 且预算富余 → N_c=3；CCG 历史 disagree 率高 → 冻结交互决策若干步（走 L1）。全部由 P99 预算器仲裁（定义 315c）。
 
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
+**定义 322（威胁模型 ℰ_TORCH）** ℰ_TORCH = ℰ_FLUID × ℰ_phys × ℰ_conc；ℰ_phys = 力矩通道欺骗 / 配重构陷 / 力矩标定吸收慢变故障；ℰ_conc = 并发共因失败 / 汇聚竞争 / 降载时序错乱。**A100 显式声明执行器级构陷在威胁模型之外**（该前提的脆弱性在风险区诚实声明）。
 
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
+**定义 323（证书 J_TORCH）** J_TORCH = (J_FLUID, τ_res_p95, contrast_achieved, ccg_agree_rate, dryrun_gap_p95, tpf_admit_rate, torch_ver)。Valid ⇔ Valid(J_FLUID) ∧ τ 通道 admissible ∧ ccg_agree_rate ≥ τ_ccg ∧ 降载事件入审计日志。
 
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
+**定义 324（力矩-行为对偶：反吸收第二镜像）** 慢变故障被力矩标定吸收 ⇒ τ_res≈0；但若偏移改变负载动力学且方向偏离策略主脊，Δa_τ = |a_score^τ(o) − a_score^τ(o_cal^τ)| 上升。(τ_res↓, Δa_τ↑) = 力矩侧缓变故障判别联合模式——R69 引理 17 在力矩侧的镜像；(r_res, Δa) 与 (τ_res, Δa_τ) 两个镜像互为备份，单通道被吸收不再等于全盲。
 
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
+**定义 325（风险缩放与预算红利）** λ 语义与 R68/R69 完全一致：λ = max(efs.risk_scale, λ_floor(U_ale + 未消解 U_epi))。resolution bonus 扩展：对比设计提高单位交互的期望熵降（引理 19a）⇒ 同预算内更多歧义被消解 → 纯效率侧收益，安全侧公式不变。
+
+**定义 326（确定性退化保证）** 任何失效事件 e ∈ {超时, 降载, CCG disagree, TPF 拒绝, 投毒嫌疑} 映射到唯一阶梯级别（定义 319）；映射确定性、审计可查；控制连续性由 R68 定理 15（提交/换装不变式）在所有级别保持。
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
-
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
-
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
-
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
-
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
+# IP-264/265 CGX + DRY：对比实验设计与并发预演（CRN：跨模态同种子）
+def design_contrastive_experiment(modes, w, state, G, wm, budget):
     best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
+    for g in G:                                        # gaze / probe / ask / g_tq
+        if not budget.allow(g) or not c_ras_wm.certify_info(g, state):
+            continue
+        ys = wm.batch_rollout([m.prototype for m in modes], g, state,
+                              H=H_DRY, crn=True)       # [K, W, d_y]，一次批调用
+        C_hat = contrast(ys, w)                        # 定义 312；含 bootstrap CI
+        score  = C_hat.mean - cost(g)
+        if C_hat.ci_upper() - cost(g) <= 0: continue   # CI 含 0 → 无对比价值
+        if best is None or score > best.score: best = (g, score, C_hat)
+    return best if best and best.score > 0 else None   # 无利可图 → 退 FLUID
 
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
+# IP-267/268 TOR + TPF：力矩签名、残差与信任滤波
+def torque_evidence(wm, modes, w, tau_meas, tau_cal):
+    tau_hat = sum(w[k] * wm.torque_signature(modes[k]) for k in range(len(modes)))
+    tau_res = tau_meas - tau_hat
+    admissible = (abs(tau_cal.residual) < TAU_CAL_BOUND
+                  and not tau_cal.absorption_suspect)  # 定义 324 对偶检查
+    return tau_res, admissible                         # 不可采纳 → 本次弃权
 
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
+# IP-269 CCG：并发一致性门（免校准集的在线信任代理）
+def concurrent_consensus(fmp, o_t, N_c):
+    paths   = fmp.sample_batched(o_t, K, seeds=perturb_seeds(N_c))  # 单批并发
+    top_ids = [cluster_top_id(p) for p in paths]
+    agree   = (len(set(top_ids)) == 1
+               and hmode_spread(paths) <= TAU_CCG)
+    return agree, paths[0]                             # disagree → 禁交互、升格 U_epi
 
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
+# IP-270 PEA：物理锚定证据仲裁
+def arbitrate(modes, phys, obs, testi):
+    if phys.admissible:
+        modes = prune_by_torque(modes, phys)           # 物理证据先削枝
+        if testi.conflicts(phys):
+            audit.poison_suspect(testi); testi = None  # 证言冲突即弃
+    agree = k_orthogonal_agree([phys, obs, testi],
+                               k=2, require_non_testimonial=True)
+    return bayes_update(modes, agree)                  # 定案需 ≥1 非证言源
 
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
+# IP-274 主闭环（继承 FLUID_RAS_round，替换其交互决策与证据段）
+def TORCH_RAS_round(M, obs):
+    z, o = M.mtm.forward(...)                          # R68 一次前向
+    c, U_cal, thr = M.cof.step(...)
+    # 1) 并发采样 + 一致性门（降载阶梯在 CON 内部执行）
     K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
+    agree, samples = M.con.consent(M.fmp, o, N_c=M.sched.N_c(K, M.budget))
     U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
+    # 2) 双对偶异常：行为似然（R69）+ 力矩残差（本轮镜像）
+    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_cal)
+    t_res, t_ok = M.tor.torque_evidence(M.wm, modes, w_of(modes),
+                                        obs.tau, M.tau_cal)
+    slow = ((a_hat > TAU_FMA and M.last_r_res < TAU_RES)
+            or (t_res > TAU_TRES and M.tau_cal.absorption_suspect))
+    # 3) 交互决策：CGX 对比设计 + DRY 预演（仿真只排序，不定案）
+    g = None
+    if U_epi > TAU_EPI and agree and not slow and M.mcga.ece_ok():
+        g = M.cgx.design(modes, o, G=info_candidates(modes) + [G_TQ],
+                         wm=M.wm, budget=M.budget)     # 含 dry-run 排序
     if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
+        y_real = M.cia.execute(g)                      # 真实交互（认证+预算）
+        t_res2, t_ok2 = M.tor.observe(y_real)          # 力矩证据随交互回收
+        U_epi_after = M.pea.arbitrate(modes, phys=(t_res2, t_ok2),
+                                      obs=y_real, testi=y_real.testi)
     else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
+        U_epi_after = U_epi                            # 走 319 阶梯
+    # 4) 风险缩放（语义与 R68/R69 完全一致）
     U_floor = U_ale + (U_epi_after if g is None else 0.0)
     lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
     A = M.ach.propose(x_prime, H=M.vista.H)
     k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
+    if slow:
+        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))
     mode = select_mode(modes, U_epi_after, lam)
     tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
+    # 5) 参与式审计 + 证书（新增 dry-run 差距与 CCG 一致率）
+    M.vqa_t.submit_async(g, y_real, gap=(C_hat - C_real), agree, t_res, t_ok)
+    return k, lam, mode, (U_ale, U_epi_after, M.j_torch.issue())
 ```
 
 ## 3. 推导
 
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
+**假设 A99（模态结果可分）** 存在信息动作 g 使任意模态对的条件结果分布 TV ≥ γ_min > 0（实验可设计性）。
+**假设 A100（物理证据不可伪造）** 威胁模型排除执行器级构陷（对手不能在不触发力/位包络报警的情况下伪造扭矩签名）；WM 动力学辨识误差 ≤ δ_τ。
+**假设 A101（并发部分去相关）** N_c 条路径的条件失败相关性 ≤ ρ_c < 1（互异扰动部分生效）；承认共享 trunk 的共因残余。
+**假设 A102（dry-run 偏差有界）** |Ĉ − C| ≤ ε_dr，且用于决策的对比间隔 > 2ε_dr。
 
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
+**引理 19（对比–信息等价与排序稳定性）** 设 A99、A102。
+(a)（信息下界）若 C(g) ≥ γ，则执行 g 观测 y 后的最大后验错误概率 P_err ≤ (K−1)(1−γ)/2（Le Cam 两点界 + 并集），且 VoI(g) = I(M;Y|g) ≥ h(γ)（Fano 型单调下界）；故对比度是 VoI 的可计算代理，「可分的歧义才值得实验」与 R69 引理 16 同型。
+(b)（排序稳定性）dry-run 误差 |Ĉ−C| ≤ ε_dr 时，若 C(g₁)−C(g₂) > 2ε_dr 则 CGX 排序不变。CGX 相较 R69 MINT 的本质优势：MINT 依赖学习型答案模型 p̂(y|g,o)，其误差 ε_ans 无界时可翻转排序（在错误的候选上花真实预算）；CGX 的对比由认证 WM 的动力学约束预测给出，误差有界（ε_dr），间隔充分即稳定。
+系：**歧义越大、模态越分得开，对比实验越值钱；普遍不可分（C 处处 < γ_min）时应直接保守**——与 R69 引理 16 同型的保守边界。
 
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
+**引理 20（物理锚定的投毒上界收紧）** 在 A100、TPF 可采纳下，PEA 规则 (b) 使纯证言欺骗只能在「与可采纳物理证据一致」的子空间被采纳；设证言欺骗率 δ_p、源相关 ρ<1、力矩一致滤波通过率 γ_τ∈(0,1]，则错误模态采纳率 ≤ δ_p·ρ^{k−1}·γ_τ + ε_σ，严格收紧 R69 引理 18（新增 γ_τ<1 因子）。绕过 γ_τ 需物理构陷，其风险 ≥ C-RAS-WM 包络报警阈值——在 A100 之外，只有计入 ℰ_phys 才可能。
 
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
+**引理 21（dry-run 不定案界）** 由不变式 iv，dry-run 只进入候选排序与门控；后验只由真实观测驱动。设对比间隔 ΔC = C(g₁)−C(g₂)、dry-run 噪声 σ_dr，则排序翻转概率 P_flip ≤ 2Φ(−ΔC/(2σ_dr))；TORCH 相较「直接按 R69 MINT」的期望风险差 ≤ P_flip·Δc + P_miss·L_res（Δc 为候选成本差，L_res 为分辨率损失），二者随 ΔC 指数衰减。**WM gap 的最坏后果被限制在「选了次优实验」，不是「信了错结论」**。
 
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**定理 18（TORCH 严格包含 FLUID ⊇ CALM）** 在 A99–A102 下：
+(a) 退化等价——TPF 拒绝 ∧ N_c=1 ∧ dry-run 关闭 ∧ CGX 退化为 MINT 启发式时，TORCH 逐指令等于 FLUID-R69；再叠加 VoI−c≤0 ∨ ECE>τ_ece 时逐指令等于 R68（定义 319 阶梯；E308 验证）。
+(b) 风险支配——任意状态期望风险 ≤ FLUID（每个新增决策都有保守侧回退且 λ 单调不降）；分辨率红利 ≥ 0，可分模态（A99）上由引理 19a 严格为正。
+(c) 五不变式（R69 三条 + iv/v）在所有级别保持。
+
+**定理 19（并发安全、无突变与降载单调）** (a) 并发仅在推理侧发生，零学习写操作不变式保持；汇聚为确定性单写者（定义 315b），竞争态不进入控制缓冲。(b) 降载阶梯使 λ 关于资源压力单调不降，任何降载事件等价于沿定义 326 的确定性退化。(c) CCG disagree 只升格 U_epi、只增 λ、不改安全包络；信息动作仍过 C-RAS-WM 认证（R69 定理 17 保持）；提交/换装不变式（R68 定理 15）在所有级别保持 ⇒ 控制连续、无突变。
 
 ## 4. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
+| FMP 批量采样（K≤4 × N_c≤3 单批） | P99 < 1.0ms | 45MB | 定义 315a；K=1 默认路径 |
+| CCG 一致性汇聚 | < 0.05ms | O(N_c) | 定义 317；在线信任代理 |
+| DRY 批量预演（\|G\|≤3, W=6, 单次 WM 批调用） | < 0.5ms | O(K·W·d_y) | 定义 314；仅歧义且可交互时触发 |
+| CGX 对比计算 + CI | < 0.05ms | O(\|G\|·K²) | 定义 313、引理 19 |
+| TOR 残差 + TPF（被动读取） | < 0.05ms | O(d_τ) | 定义 311/316 |
+| PEA 仲裁 | < 0.05ms | O(k²) | 定义 318 |
+| **实时环路总延迟** | **< 2.7ms**（K=1 常规，较 R69 +0.1ms：力矩被动读取与对偶检查）；歧义路径 < 3.9ms（+0.4ms：dry-run 预演与并发一致性）；超支即降载（定义 315c，退 R69 学习型答案模型路径） | — | 定理 18–19 |
 
-## 5. 实验设计 E286–E300
+## 5. 实验设计 E301–E315
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
+| E301 力矩签名可分性 | τ̂_k 能否区分模态 | 模态对 τ 签名 TV ≥ γ_min 覆盖率 ≥ 85% |
+| E302 对比设计 vs 被动 VoI | CGX 是否选对实验 | 单位交互熵降 ≥ R69 MINT +40%；成功率 +15%（R69 +12% 之上） |
+| E303 dry-run 排序保真 | 预演排序 vs 真实排序 | Spearman ρ ≥ 0.8；排序翻转率 ≤ 10% |
+| E304 CCG 检出能力 | 并发一致能否抓幻觉/坍缩 | 幻觉模态检出 ≥ 90%；误禁率 ≤ 3%；免校准集（对比 MCG） |
+| E305 力矩构陷抵抗 | 视觉共谋 + 证言欺骗 | 物理锚定下错误采纳 ≤ 0.5%（E290 的 ≤1% 之上） |
+| E306 物理锚定仲裁 | 冲突时信谁 | 证言-物理冲突判物理正确率 ≥ 98%；错杀正确证言 ≤ 2% |
+| E307 实时预算与降载 | 并发是否守时 | 常规 P99 < 2.7ms；歧义 < 3.9ms；降载后行为退 FLUID 且零违例 |
+| E308 三级阶梯逐指令一致 | 退化边界等价 | TORCH→FLUID→R68 各级行为差 = 0 |
+| E309 分辨红利 | 同预算消解更多歧义 | 交互次数 −25%（同等成功率）；resolution bonus 净增 |
+| E310 力矩侧慢变故障 | 配重漂移被力矩标定吸收 | (τ_res↓, Δa_τ↑) AUC ≥ 0.85（引理 17 的力矩镜像） |
+| E311 消融 | CGX/DRY/TOR/CCG/PEA 贡献 | 去 CGX 退 R69；去 TOR 构陷抵抗 −60%；去 CCG 幻觉追问 ×3 |
+| E312 24h 长时程 | 力矩漂移 × 交互疲劳 | τ 标定漂移下零交互诱发违规；降载事件全程可审计 |
+| E313 OOD 力矩分布 | 新物体/新负载 | OOD 检出 ≥ 90%，误报 ≤ 5% |
+| E314 并发压力测试 | 负载高峰行为 | P99 超支 = 0；降载触发率与 λ 单调性验证 |
+| E315 幻影模态追问（对比门控版） | E300 的 5% 之上 | 追问幻影 ≤ 2%；CI(Ĉ) 含 0 时追问 = 0 |
 
 ## 6. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：TORCH 把「向谁求证」的最终信任押在「物理不会说谎」上——但「力矩不可伪造」只是 A100 的一句**声明**（执行器级构陷被排除在威胁模型之外），一旦对手能通过接触配置/配重/选择性施力制造与某模态一致的扭矩签名，力矩证据就从「不可贿赂的证人」变成「最易被构陷的证人」；同时 N_c 条并发路径共享同一 trunk，「N_c 路一致」可能只是同一次幻觉的三次回声——**一致不等于正确**，而这正是 R69 风险（在错误信念上自信行动）的并发版放大。
 
 **次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
+1. dry-run 与真实的偏差（WM gap）→ 仿真不定案纪律 + 引理 21 + E303 保真度验证；最坏后果限于「选次优实验」；
+2. 力矩标定自身被吸收（R68 教训的力矩版）→ TPF 信任滤波 + 定义 324 对偶 + E310；
+3. 并发共因失败（一致 = 回声）→ 互异条件扰动去相关 + CCG disagree 率监控 + E311/E314；诚实声明：一致性是必要非充分条件；
+4. 预算击穿 → 降载阶梯（定义 315c）+ E307/E314；
+5. 对比度普遍偏低（Δ_min 小、模态不可分）→ 引理 19 系：不可分时直接保守（与 R69 引理 16 同型边界），交互预算不浪费。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+# 第 70 轮产物 · 创新点清单 v1：TORCH-RAS（Torque-gROunded Contrastive Hypothesis-testing with Concurrent inference：力矩锚定 × 对比实验设计 × 并发推理的物理证据闭环；CGX×DRY×CON×TOR/TPF×PEA×CCG×FLUID-RAS†）
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
+> 承接第 69 轮 IP-253~263（FLUID-RAS）。R69 让系统「会问」，但全部效率收益押在「流模型模态分布可信」上，且「问」的答案来自可能说谎的证人。本轮把「向证人求证」升级为「让物理作证」：消歧动作 = 对比实验（设计 + 并发预演 + 真实执行），证据按完整性序仲裁（物理≻观测≻证言），模态分布自身可信度由并发一致性在线把关。定位：R69 问「我该向谁求证、还能问什么」，R70 问「**谁的答案无法说谎**」——不再问证人，让世界在一场设计好的对比实验里自己作证。
 >
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
->
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+> IP 编号：IP-264~IP-274（共 11 个）；理论姿态：TORCH 以**三级退避阶梯**严格包含 FLUID-R69 ⊇ CALM-R68，安全侧不做任何让步；新增两条不变式（仿真不定案、物理锚定与并发确定性）。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 69 轮） |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
+| IP-264 | CGX Contrastive-Guided eXperiment designer | 升级 MINT（IP-255） | VoI 启发式 → 对比度最大化实验设计；对比由认证 WM 动力学约束预测计算（误差有界、排序稳定，引理 19b）；新增力矩探针候选 g_tq |
+| IP-265 | DRY in-silico DrY-run renderer | 新增 | K×\|G\| 实验×模态批量预演（CRN 同种子）+ bootstrap CI；只排序不定案（新不变式 iv） |
+| IP-266 | CON CONcurrent inference Scheduler | 新增 | 批量化流采样（K×N_c 单批）、确定性单写者汇聚、降载阶梯（dry-run→N_c=1→K=1→退 FLUID） |
+| IP-267 | TOR TORque-grounded evidence channel | 新增 | 逐模态力矩签名 τ̂_k + 混合残差 τ_res；威胁模型内不可伪造的物理证据通道（A100） |
+| IP-268 | TPF Torque-evidence Trust Filter | 新增 | 力矩通道自身的标定感知可采纳性；防「R68 式吸收」在力矩侧重演；不可采纳 → 本次弃权 |
+| IP-269 | CCG Concurrent Consensus Gate | 新增 | N_c 路独立推理的模态身份一致 + H_mode 分歧检查；免校准集在线信任代理，补 R69 MCG 需离线 ECE 之缺 |
+| IP-270 | PEA Physics-anchored Evidence Arbiter | 升级证据纪律（R69 定义 293-iii） | 完整性序 物理≻观测≻证言；证言冲突即弃并记投毒嫌疑；定案需 ≥1 非证言源 |
+| IP-271 | VQAuditor-T | 升级 VQAuditor-I | 审计实验设计针对性、dry-run/真实对比差距、TPF 弃权率、CCG disagree 率、降载事件 |
+| IP-272 | AIC-TORCH | 升级 AIC-FLUID | ℰ_TORCH = ℰ_FLUID × ℰ_phys × ℰ_conc（力矩构陷 / 共因失败） |
+| IP-273 | J_TORCH | 升级 J_FLUID | + τ_res_p95、contrast_achieved、ccg_agree_rate、dryrun_gap_p95、tpf_admit_rate |
+| IP-274 | TORCH-RAS Pipeline | 新增 | FLUID 闭环 + 并发一致性门 → 对比实验设计 → 并发预演 → 力矩锚定仲裁 → 三级退避阶梯 |
 
-## 1. 符号体系增量（定义 293–309）
+## 1. 符号体系增量（定义 310–326）
 
 | 符号 | 含义 |
 |---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
+| `TORCH-RAS = (CGX, DRY, CON, TOR/TPF, PEA, CCG, FLUID-RAS†)` | 力矩锚定对比实验闭环（FLUID 为退化边界） |
+| `τ̂_k(ξ), τ_meas, τ_res` | 模态 k 力矩签名 / 测量扭矩 / 混合残差 |
+| `g_tq` | 力矩探针（位移 ≤ ε_g、力 ≤ f_probe 的有设计微扰实验） |
+| `C(g) = Σ_{i<j} ŵ_i ŵ_j TV(p(·\|m_i,g), p(·\|m_j,g))` | 对比度（VoI 的动力学约束代理） |
+| `Ĉ(g), CI(Ĉ)` | dry-run 对比估计与置信区间（CRN 同种子；只排序不定案） |
+| `N_c, agree` | 并发推理路径数 / CCG 一致性判定 |
+| `Θ_phys ≻ Θ_obs ≻ Θ_testi` | 证据完整性序（PEA 仲裁） |
+| `Δa_τ = \|a_score^τ(o) − a_score^τ(o_cal^τ)\|` | 力矩侧行为似然差（反吸收第二镜像） |
+| `(τ_res↓, Δa_τ↑)` | 力矩侧缓变故障判别联合模式（定义 324） |
+| `γ_min, ε_dr, γ_τ, ρ_c` | 可分性下界（A99）/ dry-run 偏差界（A102）/ 力矩滤波通过率 / 并发相关上界（A101） |
+| `J_TORCH = (J_FLUID, τ_res_p95, contrast_achieved, ccg_agree_rate, dryrun_gap_p95, tpf_admit_rate, torch_ver)` | 证书 |
 
 ## 2. 形式化定义（要点版）
 
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
+**定义 310（总览与五不变式）** TORCH-RAS = (CGX, DRY, CON, TOR/TPF, PEA, CCG, FLUID-RAS†)；继承 R69 三不变式，新增：(iv) 仿真不定案（dry-run 只排序/门控/预检，定案只由真实观测驱动）；(v) 物理锚定与并发确定性（物理≻观测≻证言；单写者汇聚，竞争态不进控制缓冲）。
 
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
+**定义 311–312（力矩签名与对比度）** τ̂_k 为认证 WM 在模态 m_k 下的扭矩轨迹预测，τ_res 为混合残差；C(g) = Σ_{i<j} ŵ_i ŵ_j·TV(p_i, p_j) 度量实验制造的假设分离，A99 保证可设计性（∃g: C ≥ γ_min）。
 
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
+**定义 313–314（CGX 与 DRY）** g* = argmax[C(g) − c(g)] s.t. 预算 ∧ C-RAS-WM 认证，候选含力矩探针 g_tq；dry-run 以 CRN 批量预演得 Ĉ + CI，白名单 {排序, 门控, 预检}，禁入 {后验, λ, 定案}。max[C−c] ≤ 0 → 不交互、退 FLUID。
 
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
+**定义 315–317（CON/TPF/CCG）** 批量化采样 + 确定性单写者汇聚 + 降载阶梯（λ 单调不降）；力矩证据 admissible ⇔ 力矩标定残差在界内 ∧ 无吸收对偶（定义 324）；CCG：N_c 路模态身份一致 ∧ H_mode 分歧 ≤ τ_ccg，disagree ⇒ 禁交互、U_epi 升格（在线免校准集，补 R69 MCG 之缺）。
 
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
+**定义 318–320（PEA 与锚定后验）** 证言与可采纳物理证据冲突即弃并记投毒嫌疑；定案需 k−1 正交源一致且 ≥1 非证言源；更新顺序：物理削枝 → 贝叶斯更新 → k-一致裁决（R69 引理 18 边界收紧为引理 20）。
 
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
+**定义 321–323（调度/威胁/证书）** mode_head 报歧义 → K=4、预算富余 → N_c=3、disagree 率高 → 冻结交互；ℰ_TORCH = ℰ_FLUID × ℰ_phys × ℰ_conc（A100 声明执行器级构陷在模型外）；J_TORCH 并入 τ_res_p95、contrast_achieved、ccg_agree_rate、dryrun_gap_p95、tpf_admit_rate。
 
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
-
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
-
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
+**定义 324–326（对偶/风险/退化）** (τ_res↓, Δa_τ↑) 为力矩侧缓变故障判别模式（R69 引理 17 的镜像，双镜像互为备份）；λ 语义与 R68/R69 完全一致，对比设计只带来效率侧预算红利；任何失效事件映射到三级阶梯（TORCH→FLUID→CALM）的唯一级别，退化确定性可审计。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
-        for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
-
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
-
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
-
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
+# IP-264/265 CGX+DRY：对比实验设计 + 并发预演（CRN 跨模态同种子）
+def design_contrastive_experiment(modes, w, state, G, wm, budget):
     best = None
-    for g in info_action_candidates(modes):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
+    for g in G:                                   # gaze/probe/ask/g_tq(力矩探针)
+        if not budget.allow(g) or not c_ras_wm.certify_info(g, state): continue
+        ys = wm.batch_rollout([m.prototype for m in modes], g, state,
+                              H=H_DRY, crn=True)   # [K,W,d_y] 一次批调用
+        C = contrast(ys, w)                        # 定义 312 + bootstrap CI
+        if C.ci_upper() - cost(g) <= 0: continue   # CI 含 0 → 无对比价值
+        s = C.mean - cost(g)
+        if best is None or s > best.s: best = (g, s, C)
+    return best if best and best.s > 0 else None   # 无利可图 → 退 FLUID
 
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
+# IP-267/268 TOR+TPF：力矩证据与信任滤波（防力矩侧标定吸收）
+def torque_evidence(wm, modes, w, tau_meas, tau_cal):
+    tau_hat = sum(w[k]*wm.torque_signature(modes[k]) for k in range(len(modes)))
+    return tau_meas - tau_hat, (abs(tau_cal.res) < TAU_CAL_BOUND
+                                and not tau_cal.absorption_suspect)
 
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
+# IP-269 CCG：并发一致性门（免校准集在线信任代理，补 R69 MCG 之缺）
+def concurrent_consensus(fmp, o_t, N_c):
+    paths = fmp.sample_batched(o_t, K, seeds=perturb_seeds(N_c))
+    top = [cluster_top_id(p) for p in paths]
+    return len(set(top)) == 1 and hmode_spread(paths) <= TAU_CCG, paths[0]
+
+# IP-270 PEA：物理锚定证据仲裁（物理≻观测≻证言）
+def arbitrate(modes, phys, obs, testi):
+    if phys.admissible:
+        modes = prune_by_torque(modes, phys)
+        if testi.conflicts(phys): audit.poison_suspect(testi); testi = None
+    return bayes_update(modes, k_orthogonal_agree(
+        [phys, obs, testi], k=2, require_non_testimonial=True))
+
+# IP-274 主闭环（继承 FLUID_RAS_round，替换交互决策与证据段）
+def TORCH_RAS_round(M, obs):
     z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
     K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
+    agree, samples = M.con.consent(M.fmp, o, N_c=M.sched.N_c(K, M.budget))
     U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
+    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_cal)
+    t_res, t_ok = M.tor.torque_evidence(M.wm, modes, w_of(modes),
+                                        obs.tau, M.tau_cal)
+    slow = ((a_hat > TAU_FMA and M.last_r_res < TAU_RES)
+            or (t_res > TAU_TRES and M.tau_cal.absorption_suspect))  # 双对偶
+    g = (M.cgx.design(modes, o, G=info_candidates(modes)+[G_TQ], wm=M.wm,
+                      budget=M.budget)
+         if (U_epi > TAU_EPI and agree and not slow and M.mcga.ece_ok()) else None)
+    if g is not None:
+        y = M.cia.execute(g); t2, ok2 = M.tor.observe(y)
+        U_epi = M.pea.arbitrate(modes, (t2, ok2), y, y.testi)
     U_floor = U_ale + (U_epi if g is None else 0.0)
     lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
+    A = M.ach.propose(x_prime, H=M.vista.H)
+    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
+    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))
     mode = select_mode(modes, U_epi, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
-    return k, lam, mode, (U_ale, U_epi)
+    tau = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
+    M.vqa_t.submit_async(g, y, gap=(C_hat - C_real), agree, t_res, t_ok)
+    return k, lam, mode, (U_ale, U_epi, M.j_torch.issue())
 ```
 
 ## 4. 推导
 
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
+**假设 A99–A102** 模态结果可分（∃g: TV ≥ γ_min）；物理证据不可伪造（排除执行器级构陷，WM 辨识误差 ≤ δ_τ）；并发部分去相关（ρ_c < 1，承认共因残余）；dry-run 偏差有界（|Ĉ−C| ≤ ε_dr，决策间隔 > 2ε_dr）。
 
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
+**引理 19（对比–信息等价与排序稳定性）** (a) C(g) ≥ γ ⇒ 单次观测后验错误 P_err ≤ (K−1)(1−γ)/2（Le Cam + 并集），VoI ≥ h(γ)（Fano 型）——对比度是 VoI 的可计算代理；(b) |Ĉ−C| ≤ ε_dr 时 C(g₁)−C(g₂) > 2ε_dr 则排序不变——CGX 修复 R69 MINT 学习型答案模型误差无界、可翻转排序的缺陷。系：普遍不可分时直接保守（与 R69 引理 16 同型边界）。
 
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
+**引理 20（物理锚定的投毒上界收紧）** A100 + TPF 可采纳下，纯证言欺骗只能在「与物理证据一致」的子空间被采纳：错误采纳率 ≤ δ_p·ρ^{k−1}·γ_τ + ε_σ，严格收紧 R69 引理 18（新增 γ_τ<1 因子）；绕过 γ_τ 需物理构陷（A100 之外）。
 
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
+**引理 21（dry-run 不定案界）** 不变式 iv 下，WM gap 只影响候选排序：P_flip ≤ 2Φ(−ΔC/(2σ_dr))，期望风险差 ≤ P_flip·Δc + P_miss·L_res，随 ΔC 指数衰减——**最坏后果是「选次优实验」，不是「信错结论」**。
 
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**定理 18（TORCH 严格包含 FLUID ⊇ CALM）** TPF 拒绝 ∧ N_c=1 ∧ dry-run 关 ∧ CGX 退化为 MINT 启发式 ⇒ 逐指令等于 FLUID；叠加 VoI−c≤0 ∨ ECE>τ_ece ⇒ 逐指令等于 R68（E308 验证）。任意状态期望风险 ≤ FLUID，分辨率红利 ≥ 0（A99 上严格为正），五不变式全程保持。
+
+**定理 19（并发安全、无突变与降载单调）** 并发仅在推理侧（零写不变式保持）；确定性单写者汇聚，无竞争态；降载阶梯使 λ 关于资源压力单调不降；CCG disagree 只升格 U_epi、只增 λ、不改安全包络；信息动作仍过 C-RAS-WM 认证、换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
 
 ## 5. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
+| FMP 批量采样（K≤4 × N_c≤3 单批） | P99 < 1.0ms | 45MB | 定义 315a；K=1 默认 |
+| CCG 一致性汇聚 | < 0.05ms | O(N_c) | 定义 317 |
+| DRY 批量预演（\|G\|≤3, W=6） | < 0.5ms | O(K·W·d_y) | 定义 314；仅歧义且可交互触发 |
+| CGX 对比 + CI | < 0.05ms | O(\|G\|·K²) | 定义 313、引理 19 |
+| TOR 残差 + TPF（被动） | < 0.05ms | O(d_τ) | 定义 311/316 |
+| PEA 仲裁 | < 0.05ms | O(k²) | 定义 318 |
+| **实时环路总延迟** | **< 2.7ms**（K=1 常规，较 R69 +0.1ms）；歧义 < 3.9ms（+0.4ms）；超支即降载退 R69 路径 | — | 定理 18–19 |
 
-## 6. 实验设计 E286–E300
+## 6. 实验设计 E301–E315
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E301 力矩签名可分性 | τ̂_k 能否区分模态 | 模态对 τ 签名 TV ≥ γ_min 覆盖率 ≥ 85% |
+| E302 对比设计 vs 被动 VoI | CGX 是否选对实验 | 单位交互熵降 ≥ MINT +40%；成功率 +15% |
+| E303 dry-run 排序保真 | 预演 vs 真实排序 | Spearman ρ ≥ 0.8；翻转率 ≤ 10% |
+| E304 CCG 检出能力 | 并发一致能否抓幻觉/坍缩 | 检出 ≥ 90%；误禁率 ≤ 3%；免校准集 |
+| E305 力矩构陷抵抗 | 视觉共谋 + 证言欺骗 | 物理锚定下错误采纳 ≤ 0.5%（E290 ≤1% 之上） |
+| E306 物理锚定仲裁 | 冲突时信谁 | 判物理正确率 ≥ 98%；错杀正确证言 ≤ 2% |
+| E307 实时预算与降载 | 并发是否守时 | 常规 P99 < 2.7ms；歧义 < 3.9ms；降载零违例 |
+| E308 三级阶梯逐指令一致 | 退化边界等价 | TORCH→FLUID→R68 行为差 = 0 |
+| E309 分辨红利 | 同预算消解更多歧义 | 交互次数 −25%（同等成功率） |
+| E310 力矩侧慢变故障 | 配重漂移被力矩标定吸收 | (τ_res↓, Δa_τ↑) AUC ≥ 0.85 |
+| E311 消融 | CGX/DRY/TOR/CCG/PEA 贡献 | 去 CGX 退 R69；去 TOR 构陷抵抗 −60%；去 CCG 幻觉追问 ×3 |
+| E312 24h 长时程 | 力矩漂移 × 交互疲劳 | 漂移下零交互诱发违规；降载全程可审计 |
+| E313 OOD 力矩分布 | 新物体/新负载 | 检出 ≥ 90%，误报 ≤ 5% |
+| E314 并发压力测试 | 负载高峰行为 | P99 超支 = 0；降载触发率与 λ 单调性验证 |
+| E315 幻影模态追问（对比门控版） | E300 的 5% 之上 | 追问幻影 ≤ 2%；CI(Ĉ) 含 0 时追问 = 0 |
 
 ## 7. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：TORCH 把「向谁求证」的最终信任押在「物理不会说谎」上——但「力矩不可伪造」只是 A100 的一句**声明**（执行器级构陷被排除在威胁模型之外），一旦对手能通过接触配置/配重/选择性施力制造与某模态一致的扭矩签名，力矩证据就从「不可贿赂的证人」变成「最易被构陷的证人」；同时 N_c 条并发路径共享同一 trunk，「N_c 路一致」可能只是同一次幻觉的三次回声——**一致不等于正确**，而这正是 R69 风险（在错误信念上自信行动）的并发版放大。
 
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+**次级风险与缓解**：dry-run 偏差（仿真不定案 + 引理 21 + E303，最坏限于选次优实验）；力矩标定被吸收（TPF + 定义 324 对偶 + E310）；并发共因失败（互异扰动去相关 + disagree 率监控 + E311/E314，诚实声明一致≠正确）；预算击穿（降载阶梯 + E307/E314）；对比度普遍偏低（引理 19 系：不可分即保守，不浪费预算）。
 <!-- ARTIFACT:END -->
