@@ -3,770 +3,598 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 66 轮（承接第 65 轮「VISTA 故障可归因闭环」IP-214~223；灵感循环第 3 轮；本轮灵感：「闭环控制」×「面部表情识别」×「时空推理」）
+# 第 68 轮（承接第 67 轮「SimRAS 仿真增强闭环」IP-233~242；灵感循环第 1 轮；本轮灵感：「共情表达」×「行为克隆」）
 
-> 第 65 轮 VISTA 把闭环控制框架化为「视觉前瞻×动作分块×故障归因」的六层结构，核心在于把「先验可证伪」升级为「故障可归因」。然而，VISTA 的闭环控制仍然是**被动响应**：它依赖预测模型、残差检出故障，再通过归因决定降级。这个闭环的最大不足是：**它缺少对“主体意图”这一高度凝聚信号的主动捕获**——而面部表情恰恰是人类（或类人智能体）的情绪、紧张、风险态度的直接窗口。
+> 第 65~67 轮把系统从「故障可归因」推到「情绪驱动闭环」再到「仿真预演 + 视觉问答审计」，能力一路加码，却始终默认了一件事：**策略先验是给定的，人类只是被感知、被归因、被审计的外部信号源**。翻遍前三轮，没有任何一个环节回答「机器人如何从人的示范里学到能力与关切」。
 >
-> 本轮灵感的核心命题是：
+> 这正是行为克隆（BC）的位置，也是 BC 最深的裂缝：它学的是 `s→a`，丢掉的是「**为什么这样做、做的时候有多担心**」。而「共情表达」恰恰是示范者在做动作时免费泄漏出来的那一路信息：犹豫、紧张、注视、语调。
 >
-> **把「被动故障响应闭环」升级为「主动意图感知闭环」：用面部表情识别捕获主体的风险态度与信心信号，融入故障归因的贝叶斯框架，构成「情绪驱动的闭环控制（RAS: Risk-aware Adaptive Closure）」。**
+> 本轮提出 **EBC（Empathic Behavior Cloning，共情行为克隆）**：
 >
-> RAS 问的不是「故障该去哪儿」，而是「**谁该控制，何时控制，控制多少**」。它把「几何 vs 传感器 vs 模型」的技术故障，和「意图 vs 风险 vs 失效期望」的社会故障统一到一个时空一致的贝叶斯闭环里。
+> **把示范拆成「动作」与「关切」两条潜通道，用共情表达作为示范者关切潜变量的证据，而非标签；再以「共情只踩刹车、不踩油门」的单调守卫，把表达的可欺骗性隔离在安全边界之外。** EBC 不要求机器人表演情绪，只要求它学会「**示范者在担心什么，以及担心时会把动作收多少**」。
 
 ## 0. 直觉与动机
 
-**灵感 1（闭环控制 → 风险自适应控制）**
-直觉：第 65 轮的 VISTA 闭环由「感知→归因→处置」构成，但处置是**被动的**：当故障被检出，才降几何球、改力限。这是一条从 1→0 的单向闭环。若主体本身就是“高风险”或“不确定”，这一闭环永远跑不满。更根本的是：**控制系统的输入空间不包括“主体态度”**——而面部表情恰恰是这种态度的最直观信号。把表情接入闭环，就实现了**从“自动降级”到“意图协商”的控制范式跃迁**。
+**灵感 1（行为克隆的冰山）**
+直觉：BC 的目标是 `max_θ E_{(s,a)~D}[log π_θ(a|s)]`。但示范动作是潜变量 `c`（关切/紧迫）与状态 `s` 共同生成的：`a ~ π_H(a|s,c)`。对 `c` 边缘化后得到 `π_BC(a|s)=∫π_H(a|s,c)p(c|s)dc`。这在两种情形下直接致命：
+- **模式平均**：同一 `s` 下，谨慎者给 `a_safe`、赶时间者给 `a_fast`，BC 学出 `0.5(a_safe+a_fast)`——一个谁也不曾示范、且常常正好越过安全边界的中庸动作；
+- **协变量偏移**：误差复利把策略推到示范分布外，而 BC 没有任何信号判断「人到这里会不会介入」。
 
-**灵感 2（面部表情识别 → 主动学习的“故障姿托”）**
-直觉：表情识别器本质是一个**主动学习系统**。它要在不完全可见的面孔特质上，对人类情绪进行判别。这与 VISTA 的故障归因有惊人的结构相似：
-- 表情识别器的输入是 `face = (region, landmarks, appearance)`；
-- 它的输出是 `emotion ∈ {happy, neutral, tense, fear, pain}`；
-- 它的目标是最大化 `I(emotion; τ | face)`——即在已知面部信息下，最有效地判别情绪。
+BC 真正缺的不是数据量，而是**把「关切」从「动作」里解耦出来的那个潜变量**。
 
-把「最大化情绪判别信息」映射到「最小化故障不确定性」上，表情识别器就成了 **故障归因的主动学习姿托**：它告诉闭环“**此时此刻，风险态度的观测噪声最小**”，于是闭环可以临时**放宽**或**收紧**其容差。
+**灵感 2（共情表达是免费但不可信的偏好标注）**
+直觉：示范者说「这里要小心」往往不用嘴，而是皱眉、放慢、屏息、盯住目标。这些表达由 `c` 生成，因而携带关于 `c` 的信息。但它与标签有本质区别：
+- **免费**：示范时人本来就在表达，无需额外标注；
+- **不可信**：文化显示规则、职业性镇定、假笑、疲劳、刻意表演都会让表达偏离真实关切；
+- **单向可掩蔽**：人很难在真正紧张时完全装出放松，却很容易在放松时装出紧张（或反之）。这提示我们只能把表达当作**有方向的证据**，不能当作对称的监督。
 
-**灵感 3（时空推理 → 表情的轨迹一致性）**
-直觉：单帧的表情是不稳定的，面部表情本身包含强时序结构（从 `neutral→tense→fear` 或 `surprise→happy`）。如果把「表情轨迹」与「机器人行为轨迹」做**跨模态时空对齐**，则能捕捉到 「行动-情绪-风险」的耦合模式。例如：
-- 机器人路径越来越近 + 使用者 `tense,fear` → 立即收紧力限；
-- 机器人轨迹不稳 + 使用者 `happy,relaxed` → 说明误检，放宽容差。
+因此 EBC 把表达建模为似然 `p(e|s,a,c)`，而不是把 `e` 直接回归成 `c`。
 
-这正是 VISTA 缺失的**跨模态时空一致性**：它只有“力-视觉-几何”单一时序，没有把“人-机-环境”拉链式耦合进去。
+**灵感 3（关键翻转：共情只踩刹车，不踩油门）**
+直觉：第 66 轮 RAS 允许「表情安全」去**放宽**容差，这是整条脉络里最危险的一步——一旦表情被遮挡或表演，真实的几何故障会被误判为安全。EBC 把方向反过来：
+> **表达只能增加谨慎，永远不能把谨慎降到行为基线以下。**
 
-**灵感 4（三灵感合流 → RAS：Risk-aware Adaptive Closure）**
-闭环：RAS 从 VISTA 的「VPG→ACH→FIR→VCV→CSC」复制其时序结构，换装为：
-1. **ERG Emotion Recognition Gateway**：主动捕获面部表情，用 EMG-风险估计和时序过滤抑制噪声；
-2. **ACH-RAS**：把「动作块」拆为「行为承诺块」+「情绪响应块」；
-3. **EFS Emotion-Fault Synthesis**：把「情绪」当作新的故障维度，加入 7 假设集合；
-4. **FRAS Fault Re-Attribution with RAS**：在归因后验中加 `H_emotion`（情绪误判/延迟/隐蔽）；
-5. **C-RAS Certified-RAS prefix**：执行前缀 k*RAS 不仅要满足力/几何，还要满足「情绪容差」；
-6. **ERS Emotion-Response Shaping**：用控制输入调节情绪反馈，达成「情绪-行为-风险」的闭环共振。
+形式上，设行为基线给出 `c_base`，表达给出上置信界 `c_UC`（越大越谨慎），单调守卫取 `c_use = max(c_UC, c_base)`。于是对**任意**观测到的 `e`（包括对抗性伪造），`c_use ≥ c_base`，安全裕度单调不减。这是一个**分布无关**的保证：它不依赖「表情忠实」这一假设。表情是否可信只决定系统保守多少，不决定是否安全。
 
-**灵感 5（VISTA 组件的情绪化升级）**
-- **FIR → EFS**：故障假设集 ℋ 扩展6→7维，新增 H_emotion；后验 `P(H_emotion | face, ρ)`；
-- **CSC → C-RAS**：认证前缀 k*RAS = min(k_VISTA, k_emotion, m)；
-- **FIR 的 r_geo/r_force/r_model**：在 H_emotion 归因时，**不膨胀几何球，而是调整 λ_risk**；
-- **AIC-V → AIC-RAS**：干扰集扩充 ℰ_emotion（面部遮挡、光照/打骨、姿势局部），并建共因故障 ℰ_common_emotion（同一事件同时触发几何误差与情绪失真）；
-- **J_vista → J_RAS**：证书增 fault_emotion_posterior、λ_risk、face_quality、expression_hash。
+**灵感 4（care 与 urgency：恐惧的两种读法）**
+直觉：皱眉后退可以读作「别靠近」（care），也可以读作「来不及了」（urgency）。二者对控制方向的要求相反：前者要收紧，后者要在安全前提下落块。若把二者混为一个「负面情绪」标量，EBC 会把紧急示范误判为鲁莽并降权，反而学到迟缓策略。因此潜变量必须是二维的：
+- `c_care ∈ [0,1]`：风险厌恶 / 谨慎程度；
+- `c_urg ∈ [0,1]`：时间压力 / 任务紧迫度。
+表达提供高唤醒信号，动作运动学（速度、提前量、犹豫时长）提供方向性约束，二者共同辨识。
 
-## 1. 形式化定义（增量：定义 233–250）
+**灵感 5（与前三轮合流：EBC-RAS）**
+EBC 不是一个孤立的模仿学习器，而是给 VISTA/RAS/SimRAS 补上「从人学」的前端：
+1. **ELE（Empathic Latent Encoder）**：从 `(s,a,e)` 推断 `(c_care,c_urg)`，用 β-TC 解耦；
+2. **CCP（Care-Conditioned Policy）**：`π_θ(a|s,c_use)`，在到边界时自动收动作；
+3. **MEG（Monotone Empathy Guard）**：`c_use=max(c_UC,c_base)`，把可欺骗性挡在安全边界外；
+4. **ECQ（Empathic Curation & Query）**：按示范者可靠性与表达一致性重加权；
+5. **CST（Care-Surprise Trigger）**：当关切后验意外升高时触发 DAgger 查询或回退到保守前缀；
+6. **EWM-E（Empathic World Model head）**：在 SimRAS 的世界模型上加一路「人类表达响应」预测，供 VQAuditor 做「示范者看到这条轨迹会不会担心」的反事实审计；
+7. **J_EBC**：把 care 后验、示范覆盖率、校准误差、隐私预算写进证书。
 
-- **定义 233（RAS 总览）**：RAS = (ERG, ACH-RAS, EFS, FRAS, FAS, C-RAS, ERG, ERS)。定位：VISTA 的「故障闭环」升级为「意图闭环」。不变式：所有情绪观测、故障-情绪联合归因、风险缩放、证书构建只在语义流；实时流只采集面部ROI残差、阶段判定、情绪容差早停，零学习写操作。
-- **定义 234（面部表情观测量）**：面部检测器 f_face 把 RGB 图像映射为 `face = (r ∈ ℝ^{d_r}, l ∈ ℝ^{68×2}, a ∈ ℝ^{512})`（区域特征、68d 关键点、11位向量）。情绪概率 `π_t = f_face(face_t)`，输出 `π ∈ Δ^4`（4 类别：{neutral, tense, fear, pain}）。
-- **定义 235（EMG-风险估计）**：风险函数 `R_emotion(r, π) = 1 - π(neutral) - 0.3·π(tense) - 0.8·π(fear) - π(pain) + ε`。采用极小化风险判决：`R_emotion < τ_risk` 时认为「情绪安全」。
-- **定义 236（时空表情一致性）**：定义跨帧 KL 散度 `d_temporal(t) = KL(π_t || π_{t-T})`。若 `d_temporal > τ_temporal`，则标记 `face_temporal_unstable = True`，并在 FAS 中上调 H_face_delay。
-- **定义 237（故障-情绪联合假设）**：故障-情绪联合假设集 ℋ_RAS = ℋ × E，其中 E = {E0 正常, E1 延迟, E2 隐蔽, E3 误判}。联合后验：`P(H, E | ρ, face) ∝ p(ρ | H) · p(face | E) · P(H) · P(E | H)`。
-- **定义 238（情绪引导的风险缩放）**：控制输入空间乘以因子：`λ_risk(t) = 1 - α_risk·R_emotion(t) - β_risk·H_face(t)`。α_risk, β_risk 为标定参数。λ_risk ∈ (0.5, 1.2)。
-- **定义 239（C-RAS 认证前缀）**：对块 A_t，认证前缀 k*RAS 需满足：1. VISTA 认证：k_VISTA ≥ k；2. RAS 认证：`∀s≤k: λ_risk(s)·ρ_safe(s) ≥ 0`；3. 跨模态一致性：`KL(π_{t-s:t} || π_pred) < τ_consistency`；4. k*RAS ≤ m_ras = min(m_VISTA, m_emotion)。
-- **定义 240（ERS 情绪响应塑造）**：闭环控制律：`τ_cmd = τ_desired - γ·∇_{τ} R_emotion(π(τ))`。其中 γ 为情绪响应比例，∇_{τ} 在输入空间上做情绪风险梯度下降。
-- **定义 241（ERG Emotion Recognition Gateway）**：ERG 由面部检测、EMG-风险估计、时序滤波器构成。输出 `emotion_gate = {SAFE, HIGH_RISK, FACE_UNOBSERVABLE}`。若 `face_unobservable`，ERG 输出 `HIGH_RISK` 但不做降极处置，直接进入 FAS。
-- **定义 242（FAS Fault Awareness Switch）**：FAS 根据 H_emotion 的后验决定是否启动情绪探针：`P(H_emotion | post) ≥ τ_fas → activate_emotion_probe()`。探针包括：`head_tilt`, `eye_contact`, `micro_expression`。
-- **定义 243（AIC-RAS 干扰与共因）**：干扰集 `ℰ_RAS = ℰ_V × ℰ_emotion × ℰ_temporal × ℰ_common_emotion`，其中 ℰ_common_emotion 捕获「几何误差 → 面部表情紧张」的因果链。
-- **定义 244（J_RAS 证书）**：J_RAS = (J_vista, λ_risk, fault_emotion_posterior, face_quality, expression_hash, aic_ras_ver)。Valid ⇔ Valid(J_vista) ∧ λ_risk ≥ 0.6 ∧ face_quality ≥ 0.8 ∨ (H_emotion = E0)。
+**从直觉到严谨问题**：表达到底在什么条件下对 `c` 有信息增益？它什么时候会误导？单调守卫能否在不假设忠实性的前提下保住最坏情况安全？反事实共情是否可辨识？下面逐一形式化。
+
+## 1. 形式化定义（增量：定义 276–296）
+
+- **定义 276（EBC 总览）**：`EBC = (EmD, ELE, CCP, MEG, ECQ, CST, EWM-E, ECA, J_EBC)`。定位：为 VISTA/RAS/SimRAS 补上「从人类示范学习策略与关切」的前端。不变式：表达只进入潜变量后验与保守化方向，实时流只做前向推断，零在线学习写操作。
+- **定义 277（共情示范元组）**：`D_E = {(s_t^i, a_t^i, e_t^i, h_t^i)}`，`h_t` 为可选的示范者自报信心/风险（稀疏、可缺失）。`s` 为多模态观测，`a` 为连续/离散动作块，`e` 为共情表达观测。
+- **定义 278（共情表达观测）**：`e_t = (e_face, e_voice, e_kin)`：面部动作单元与关键点、语调韵律、以及示范者的动作学特征（犹豫时长、减速、回撤、注视切换）。`e ∈ E`，允许整段缺失（遮挡、静音、不可见）。
+- **定义 279（关切-紧迫潜变量）**：`c_t = (c_care, c_urg) ∈ [0,1]^2`。`c_care` 越大越风险厌恶；`c_urg` 越大时间压力越大。二者慢变：`c_{t+1}=c_t+η_t`，`||η_t||≤η_max`。
+- **定义 280（示范者生成模型）**：结构因果模型
+  ```
+  s_{t+1} = f(s_t,a_t)
+  c_t     ~ p(c|s_t)
+  a_t     ~ π_H(a|s_t,c_t)
+  e_t     ~ p_H(e|s_t,a_t,c_t)
+  ```
+  关键：`e` 与 `a` 都依赖 `c`，但 `e` 不是 `a` 的确定性函数——这正是额外信息的来源。
+- **定义 281（忠实性/可辨识条件 A92–A94）**：
+  - A92（无直接混杂）：给定 `(s,a)`，`c` 与 `e` 之间无未观测共同原因；
+  - A93（单调似然比）：在关切类表达特征上，`p(e|c_care)` 关于 `c_care` 满足单调似然比序（MLR）；
+  - A94（掩蔽不对称）：存在表达 `e*` 使 `p(e*|c_care^high) ≫ p(e*|c_care^low)`，但反向不成立。即「紧张很难完全伪装成放松」。
+- **定义 282（关切后验编码器）**：变分后验 `q_φ(c|s,a,e)`，训练目标
+  ```
+  L_ELE = E_q[log p(a|s,c)] + λ_e E_q[log p(e|s,a,c)]
+          - β·TC(q(c|s,a,e)) + λ_h E_q[log p(h|s,c)]
+  ```
+  其中 TC 为 total correlation，用于解耦 `c_care` 与 `c_urg`。
+- **定义 283（关切上置信界）**：`c_UC = Q_{1-δ}(q_φ(c_care|s,a,e))`，用分位数网络或 conformal 校准给出覆盖率为 `1-δ` 的上界。方向约定：越大越谨慎。
+- **定义 284（单调共情守卫 MEG）**：行为基线 `c_base = Q_{1-δ}(q_φ(c_care|s,a))`（仅用动作证据）。守卫输出
+  ```
+  c_use = max(c_UC, c_base)
+  u     = c_use
+  λ_EBC = clip(1 - α_E·u, 0.5, 1.0)
+  ```
+  不变式：`λ_total = λ_RAS · λ_EBC ≤ λ_RAS`。表达缺失时 `c_UC ← Q_{1-δ}^{prior}(c_care|s)`，只允许更保守。
+- **定义 285（关切条件策略）**：`π_θ(a|s,c_use)`，以加权 BC 训练：`max_θ Σ_i w_i log π_θ(a_i|s_i,c_use,i)`。
+- **定义 286（care-单调策略类）**：安全裕度 `M(s,a,c)` 对 `c_care` 单调不减：`c_1 ≥ c_2 ⇒ M(s,a,c_1) ≥ M(s,a,c_2)`。策略在满足任务约束下最大化 `M`。此单调性是把「共情」转成「保守」的结构性前提。
+- **定义 287（共情数据整形 ECQ）**：示范者可靠性 `r_i ∈ [0,1]`，样本权重
+  ```
+  w_i = r_i · exp(-β_c·KL(q(c|s,a,e) || q(c|s,a)))
+  ```
+  可靠性由「自报—动作—表达」三方可复现性、跨示范者一致性、以及 `c_urg` 校正后的矛盾度估计。
+- **定义 288（反事实表达模型）**：`g_ψ(e|s,a,c)`，训练自 `D_E` 与 Sim2Empathy 合成数据。反事实偏好
+  ```
+  Δ(a→a') = E_{c~q}[ D_KL( g(e|s,a',c) || g(e|s,a,c) ) ]
+  ```
+  仅在 top-k 候选内作为排序/过滤信号，**永不单独充当安全证明**。
+- **定义 289（关切意外度与触发）**：`U_t = H(q(c|s_t,a_t,e_t))` 与 `KL(q(c|·,e_t) || q_pred(c|·))` 的加权和；`U_t > τ_cst ⇒` 触发 CST。触发动作：DAgger 查询（若人可介入）或回退到保守前缀（若不可介入）。
+- **定义 290（共情查询规则）**：触发后以 `(s_t, a_t^CCP)` 请求示范者标注/接管，并将新样本并入 `D_E`。查询预算 `B_q` 与触发召回率共同决定协变量偏移的收敛速度。
+- **定义 291（共情滚动）**：SimEngine 按 `c` 动力学与 `g_ψ` 生成 `{(s,a,c,e)_{t+i}}`；`e_{t+i}` 供 VQAuditor 做「示范者反应」审计，供 EWM-E 预训练。
+- **定义 292（EBC-RAS 耦合）**：认证前缀
+  ```
+  k_EBC = max{k : ∀i≤k, M(s_{t+i}, a_{t+i}, c_use) · λ_total ≥ 0}
+  k*    = min(k_VISTA, k_emo, k_wm, k_EBC, m_ras)
+  ```
+  且 `λ_total ≤ λ_RAS`、`k_EBC ≤ k_base`（表达缺失时）。
+- **定义 293（J_EBC 证书）**：`J_EBC = (J_SimRAS, care_posterior, care_UCB, demo_coverage, care_calibration_ECE, privacy_budget, clone_safety_margin, empathic_consistency)`。`Valid ⇔ Valid(J_SimRAS) ∧ ECE ≤ 0.05 ∧ demo_coverage ≥ 0.9 ∧ privacy_ok`。
+- **定义 294（AIC-EBC 干扰集）**：`ℰ_EBC = ℰ_SimRAS × ℰ_empathy × ℰ_clone`，其中 `ℰ_empathy = {掩蔽, 表演, 文化显示规则, 疲劳, 对抗伪造}`，`ℰ_clone = {分布偏移, 模式平均, 虚假相关, 示范者错误}`。
+- **定义 295（示范者可靠性）**：`r_i = σ(α_1·consistency_i + α_2·calibration_i - α_3·contradiction_i)`，`contradiction_i` 在 `c_urg` 高时自动降权（紧急时的反常动作不一定是错误）。
+- **定义 296（在线不变式与隐私）**：表达数据只在设备端编码，`e` 不出端；对外只发布 `(c_use, λ_EBC, k_EBC)` 与证书哈希。若隐私预算耗尽或表达缺失，则退回 `c^prior_UC`，行为可用性下降但安全裕度不降。
 
 ## 2. 关键算法骨架
 
 ```python
-# ERG：情绪识别网关
-class EmotionRecognitionGateway:
-    def __init__(self, tau_risk=0.4, tau_temporal=0.5):
-        self.tau_risk, self.tau_temporal = tau_risk, tau_temporal
+class EmpathicLatentEncoder:
+    def __init__(self, beta_tc=4.0, delta=0.05):
+        self.beta_tc, self.delta = beta_tc, delta
 
-    def recognize(self, face_img, prev_pi=None):
-        region = extract_face_region(face_img)
-        landmarks = detect_landmarks(region)
-        appearance = encode_appearance(region)
-        face = (region, landmarks, appearance)
-        pi = emotion_classifier(face)      # ∈ Δ^4
-        R = 1 - pi[0] - 0.3*pi[1] - 0.8*pi[2] - pi[3]  # risk
-        temporal_unstable = (prev_pi is not None
-                            and kl_div(pi, prev_pi) > self.tau_temporal)
-        gate = 'HIGH_RISK' if R > self.tau_risk else 'SAFE'
-        if landmarks is None or temporal_unstable:
-            gate = 'HIGH_RISK'
-        return {'pi': pi, 'risk': R, 'gate': gate,
-                'unobservable': landmarks is None,
-                'temporal_unstable': temporal_unstable}
+    def encode(self, s, a, e=None):
+        if e is None:
+            q = self.prior(s, a)            # 仅行为证据
+            return q, self.ucb(q, self.delta)
+        q_care, q_urg = self.split(self.net(s, a, e))
+        return (q_care, q_urg), self.ucb(q_care, self.delta)
+
+    def ucb(self, q, delta):
+        return self.quantile(q, 1 - delta)  # 越大越谨慎
 
 
-# EFS：情绪-故障联合合成
-class EmotionFaultSynthesis:
-    def synthesize(self, rho, face_gate, prior=None):
-        post_H = self.fir.attribute(rho)
-        post_E = {e: 1.0 for e in ['E0', 'E1', 'E2', 'E3']}
-        if face_gate['unobservable']:
-            post_E = {'E0': 0.05, 'E1': 0.7, 'E2': 0.2, 'E3': 0.05}
-        elif face_gate['temporal_unstable']:
-            post_E = {'E0': 0.1, 'E1': 0.3, 'E2': 0.5, 'E3': 0.1}
-        elif face_gate['gate'] == 'HIGH_RISK':
-            post_E = {'E0': 0.2, 'E1': 0.4, 'E2': 0.3, 'E3': 0.1}
-        # 联合后验
-        joint = {}
-        for (h, e), p in product(post_H.keys(), post_E.items()):
-            joint[(h, e[0])] = p[0] * p[1]
-        total = sum(joint.values())
-        joint = {k: v/total for k, v in joint.items()}
-        return joint, post_H
+class MonotoneEmpathyGuard:
+    def __init__(self, alpha_e=0.5):
+        self.alpha_e = alpha_e
 
-    def risk_scale(self, joint, base_risk=1.0):
-        λ_emotion = 1.0
-        for (h, e), p in joint.items():
-            if e == 'E1':
-                λ_emotion *= (1 - 0.3*p)  # 延迟 → 收紧
-            elif e == 'E2':
-                λ_emotion *= (1 + 0.2*p)  # 隐蔽 → 放宽探针
-            elif e == 'E3':
-                λ_emotion *= (1 - 0.5*p)  # 误判 → 紧急降级
-        return max(0.5, min(1.2, base_risk * λ_emotion))
+    def guard(self, c_uc, c_base):
+        c_use = max(c_uc, c_base)           # 只升不降
+        lam = max(0.5, min(1.0, 1 - self.alpha_e * c_use))
+        return c_use, lam                   # lam <= 1.0，永远只收紧
 
 
-# C-RAS：情绪认证前缀
-class ChunkSafetyCertificateRAS(ChunkSafetyCertificate):
-    def certified_prefix_ras(self, A, joint_post, m_ras, alpha_chunk):
-        top_pairs = sorted(joint_post.items(), key=lambda x: x[1], reverse=True)[:3]
-        k_best = 0
-        for k in range(1, min(len(A), m_ras) + 1):
-            ok = True
-            for (h, e), p in top_pairs:
-                if not self._safety_with_risk(A[s], h, e, p):
-                    ok = False
-                    break
-            if ok:
-                k_best = k
-            else:
-                break
-        return k_best
+def EBC_round(M, s, e, a_last, base_prefix):
+    # 1) 关切后验 + 单调守卫
+    (q_care, q_urg), c_uc = M.ele.encode(s, a_last, e)
+    c_base = M.ele.ucb(M.ele.prior(s, a_last), M.delta)
+    c_use, lam_ebc = M.meg.guard(c_uc, c_base)
 
-    def _safety_with_risk(self, a, h, e, p):
-        margin = self.safety_margin(a, h)
-        λ = 1.0 if e == 'E0' else self._risk_factor(e)
-        return margin * λ >= 0
+    # 2) 关切条件策略（仅在保守前缀内选块）
+    A = M.ccp.propose(s, c_use)
+    k = M.certify_prefix(A, c_use, min(base_prefix, len(A)))
 
+    # 3) 关切意外 -> 查询或回退
+    U = M.cst.surprise(q_care, q_urg, a_last)
+    if U > M.tau_cst:
+        if M.human_available:
+            M.query_human(s, A[:k]); M.ele.update_offline()
+        else:
+            k = min(k, M.fallback_prefix(s, c_use))
 
-# FRAS：情绪感知故障重归因
-def VISTA_RAS_round(M, obs, delta_f_req):
-    # 1) 原有 VISTA 前向
-    V, T, P, L, P_cloud, W_meas, tactile, img, depth, flow = obs
-    M.lsf.update_geometry(P_cloud)
-    x_prime = M.lsf.fuse(M.usr.fuse(V, T, P, L))
-    y_vis = M.f_vis(img, depth, flow)
-
-    # 2) ERG：情绪检测
-    face_gate = M.er.gateway.recognize(img)
-
-    # 3) ACH-RAS：生成块 + 情绪响应块
-    A = M.vista.ach.propose(x_prime, H=M.vista.H)
-
-    # 4) EFS：情绪-故障联合归因
-    rho = M.vista.fir.signature(M.vista.stage.split(M.vista.residual_log))
-    joint_post, post_H = M.efs.synthesize(rho, face_gate)
-
-    # 5) C-RAS：计算认证前缀 + 风险缩放
-    m_ras = min(M.vista.m, M.er.max_m_emotion)
-    k_ras = M.csc_ras.certified_prefix_ras(A, joint_post, m_ras, M.alpha_chunk)
-    λ_risk = M.efs.risk_scale(joint_post)
-
-    # 6) ERG-FAS：若情绪不确定，启动情绪探针
-    if face_gate['gate'] == 'HIGH_RISK':
-        e_post = {e: p for (h,e), p in joint_post.items() if h == 'H0'}
-        if max(e_post.values()) < M.tau_fas_ambiguous:
-            probe = M.fas.choose_probe(e_post)
-            if probe:
-                M.execute_emotion_probe(probe)
-                # 重算
-                face_gate = M.er.gateway.recognize(img)
-                joint_post, _ = M.efs.synthesize(rho, face_gate)
-
-    # 7) 控制指令
-    τ_cmd = M.vista.pi_sigma.prefix_dispatch(A[:k_ras])
-    τ_cmd = τ_cmd * λ_risk  # 风险缩放
-    tau_cmd = M.ers.shaping(τ_cmd, joint_post)
-
-    return k_ras, λ_risk, joint_post, face_gate
+    # 4) 与 RAS 链路耦合（只收紧）
+    lam = M.ras.lambda_risk * lam_ebc
+    return A[:k], c_use, lam, U
 ```
 
-## 3. 推导
+## 3. 推导（本轮新增：引理 13–15，定理 14–17）
 
-**引理 9（情绪风险缩放的收敛性）** RAS 的风险缩放 λ_risk(t) = ∏_t (1 - α_risk·R_emotion)。若情绪信号稳定（d_temporal < τ_temporal），则 λ_risk 收敛到常数 λ_∞ ∈ [0.5, 1.2]。此下界保证了故障存在时不会“因情绪放宽”而失控；此上界保证了情绪过度紧张时仍允许安全降级。
+**引理 13（共情信息恒等式）**
+```
+I(c; a,e | s) = I(c; a | s) + I(c; e | s,a)
+```
+第二项 `I(c;e|s,a) ≥ 0`，当且仅当 `e ⟂ c | (s,a)` 时取 0。故表达在 A92 下**只可能增加**关于 `c` 的信息。这条引理给出 EBC 的"免费午餐"边界：若表达与关切无关，EBC 退化为普通 BC，不会更差（见引理 14）。
 
-**引理 10（时空一致性抑制误判）** 设情绪误判的概率为 ε_e。若引入时空 KL 检查 `d_temporal > τ_temporal → H_face_delay`，则联合误判概率下降为 ε_e·exp(-γ_temporal·τ_temporal)。在 τ_temporal = 0.5 时，误判降 70% 以上。
+**引理 14（单调守卫的最坏情况安全）**
+设安全裕度 `M(s,a,c)` 对 `c_care` 单调不减（定义 286），则对任意观测 `e`（含对抗伪造），`c_use=max(c_UC,c_base) ≥ c_base`，于是
+```
+M(s, a, c_use) ≥ M(s, a, c_base)
+```
+即**表达的任何欺骗都无法把认证裕度降到纯行为基线以下**。该结论不依赖 A93/A94，也不依赖 `e` 的分布，是分布无关的。这是 EBC 与 RAS 最根本的区别：RAS 让表情能放宽 `λ`，EBC 让表情只能收紧。
 
-**定理 9（RAS 端到端风险一致性）** 在 A87-A91 下，RAS 输出的控制指令 τ_cmd 满足：
-1. `P(|τ_cmd - τ*| > ε) ≤ α_chunk + δ_fi + α_emotion`；
-2. λ_risk ≥ 0.6 ⇔ 实际执行风险 ≤ 设定上限 × 1.2；
-3. `face_unobservable ⇒ λ_risk ≥ 0.8`（自动保守），且不因「看不见」而误判 H_emotion=E0。
+**引理 15（去模式平均）**
+设 `c ∈ {c_low,c_high}`，`c_low<c_high`，对应示范动作 `a_low,a_high`。BC 边缘策略产生 `ā = ½(a_low+a_high)`。若 `M(s,·,c)` 在动作上凹且对 `c` 单调，则 `M(s,ā,c_high) ≤ ½[M(s,a_low,c_high)+M(s,a_high,c_high)]`；当 `a_low` 是唯一满足 `M≥0` 的动作时，条件化 `c_use≥c_high-δ` 可把 `ā` 替换回安全侧，避免模式平均越界。
 
-**定理 10（情绪-故障联合可分离性）** 故障-情绪联合可辨识矩阵 S_RAS = diag(S_H, S_E) 嵌套于 32 维签名空间。若情绪观测噪声 Σ_E 和故障签名 Σ_ρ 的跨模态协方差为 0，则 κ_fi_RAS = min(κ_fi, κ_ri)。这意味着情绪维度不降低故障归因的可辨识度，反而通过「情绪-故障共因校正」抑制误归因。
+**定理 14（共情触发下的协变量偏移）**
+设普通 BC 的累计代价界为 `J(π_BC) ≤ J(π_H) + O(εT²)`。若 CST 对「会离开示范分布」的状态具有召回率 `1-δ_trig`，且触发后最多查询 `B_q` 次，则
+```
+J(π_EBC) ≤ J(π_H) + O(ε·T) + O(δ_trig·T²) + O(B_q·T·ε_prior)
+```
+当 `δ_trig` 小到 `O(1/T)` 时，主导项从 `T²` 降为 `T`。代价是 `δ_trig` 依赖 `U_t` 的质量：**触发器的召回率而非精度决定该定理是否成立**。
 
-## 4. 复杂度分析
+**定理 15（反事实共情的可辨识边界）**
+若 `g_ψ` 校准误差 `≤ ε_cal` 且排序 AUC `≥ 1-δ_rank`，则经反事实过滤保留的动作，其真实风险不超过 `(1-δ_rank)` 分位加 `ε_cal`。但当动作对 `(a,a')` 在示范数据中**无重叠（positivity 失败）**时，`g_ψ(e|s,a')` 是不可辨识的外推，此时上述保证失效。故 EBC 规定反事实共情只做 top-k 重排，不做安全证明——这是对「不可证伪」的工程承认。
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| ERG（面部ROI + 情绪分类） | 64×64↑ <1ms | 128KB | EMG-风险估计 + 时序滤波 |
-| EFS 联合后验 | 7×4 假设 <0.5ms | O(1) | 引理 10：误判降 70% |
-| C-RAS 认证前缀 | O(k_ras·7) <1ms | O(k_ras) | 定理 9：风险≤设定上限 |
-| ers 控制塑造 | 10Hz <1ms | O(1) | λ_risk 收敛（引理 9） |
-| 实时环路 | ERG+C-RAS ≈ <2ms | — | 零学习写操作 |
+**定理 16（EBC-RAS 端到端风险一致性）**
+在 A87–A94 与定理 11 下，EBC-RAS 输出满足：
+1. `P(|τ_cmd-τ*|>ε) ≤ α_chunk + δ_fi + α_emotion + α_wm + α_vqa + α_clone`；
+2. `λ_total ≤ λ_RAS`（表达永不放宽）；
+3. `e` 缺失 `⇒ c_use = c^prior_UC ≥ c_base ⇒ k*_EBC ≤ k*_base`（只降可用性，不降安全）；
+4. 若 `ECE>0.05` 或 `demo_coverage<0.9`，`J_EBC` 判为 `Invalid`，系统退化到 `J_SimRAS` 并使用 `c_base`。
 
-## 5. 实验设计 E241–E250
+**定理 17（表达缺失的可用性—安全权衡）**
+设表达对 `c` 的 Fisher 信息为 `I_e`，缺失概率为 `p_miss`，则有效信息降为 `(1-p_miss)I_e`，后验方差放大约 `1/(1-p_miss)`，认证前缀长度单调不增，但安全裕度下界不变。即：**遮挡只该让机器人变慢，不该让它变冒险**。
+
+## 4. 实验设计 E271–E290
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E241 ERG 情绪精度 | 面部遮挡/光照/打骨下，情绪风险 R 是否仍可靠 | R MAE < 0.15，τ_risk = 0.4 时误判 < 5% |
-| E242 EFS 故障-情绪联合归因 | H_emotion 能否被正确分离 | 7 类联合归因准确率 ≥ 85% |
-| E243 时空一致性 | d_temporal 过滤后误判率 | τ_temporal 取 0.5 时误判降 70% |
-| E244 λ_risk 缩放 | 高风险情绪下，力限是否自动收紧 10% | λ_risk ≥ 0.6 时违规率 ≤ 1% |
-| E245 C-RAS 认证前缀 | k_ras 相比 k_vista 更保守如何？ | k_ras ≥ k_vista·0.9，违规 = 0 |
-| E246 ERG-FAS 情绪探针 | 主动情绪探针能否消除 H_emotion 不确定 | 探针次数 −40%，后验集中度 ↑ 30% |
-| E247 端到端 RAS vs VISTA | 复杂情绪干扰下的安全性 | 成功率不降、误降级 −40%、情绪违规 = 0 |
-| E248 共因故障 | 几何故障诱发的面部紧张 | 正确判 H_geo+E1，不主动降级 |
-| E249 实时性 | 面部 ROI + 情绪分类是否影响 2ms 实时目标 | <2ms |
-| E250 鲁棒性 | 30s 连续面部遮挡 | λ_risk ≥ 0.8，故障归因不受影响 |
+| E271 care/urgency 可辨识 | 两轴能否从表达+运动学中解耦 | 轴间互信息 < 0.1 nat，反事实重构 R² > 0.8 |
+| E272 后验校准 | `c_UC` 的覆盖率是否可靠 | ECE < 0.05，95% 覆盖误差 < 2% |
+| E273 CCP vs BC | 意图歧义任务下的安全与成功率 | 越界率 −60%，成功率不降 |
+| E274 模式平均 | 边界附近是否仍学出中庸动作 | 危险中庸动作出现率 < 3% |
+| E275 MEG 对抗表达 | 伪造/表演能否降低认证裕度 | 任意伪装下 `M ≥ M_base`，违规 = 0 |
+| E276 ECQ 数据整形 | 含 30% 低质量示范时 | 安全率 +25%，不误删紧急示范 |
+| E277 CST 触发 | OOD/关切意外的召回率 | 召回 > 92%，误触发 < 8% |
+| E278 共情 DAgger | 查询预算下的样本效率 | 达到同安全水平所需查询 −50% |
+| E279 反事实共情 | 排序与校准 | AUC > 0.8，ECE < 0.08 |
+| E280 EWM-E 表达滚动 | 5 步表达预测误差 | 单步 KL < 0.1，5 步 < 0.4 |
+| E281 ECA 审计一致性 | VQA 审计与人类专家判断 | 一致性 κ > 0.7 |
+| E282 Sim2Empathy | 合成表达迁移到真人 | 跨文化风格下退化 < 20% |
+| E283 端到端 EBC-RAS | 对比 BC/RAS/SimRAS | 越界 false-safe −70%，误降级不升 |
+| E284 表达缺失 | 30s 全遮挡 | 仅前缀变短，`M` 下界不变 |
+| E285 隐私 | 设备端 DP 编码的效用损失 | `ε_dp=2` 时 care 误差 < 0.1 |
+| E286 公平性 | 不同人群的表达分布偏移 | 各族群误刹率差 < 5% |
+| E287 表演/伪造攻击 | 刻意表演"放松"或"紧张" | 系统不因放松而放宽；因紧张仅更保守 |
+| E288 实时性 | ELE+MEG+CCP 是否进预算 | 端到端 < 3ms |
+| E289 长时程复利 | 1h 连续任务的累积误差 | 漂移 < 2× 普通 BC |
+| E290 消融 | ELE/MEG/ECQ/CST/反事实各自贡献 | 每项可单独归因，去掉 MEG 风险显著上升 |
 
-## 6. 本轮最大风险
+## 5. 本轮最大风险
 
-**一句话**：RAS 将「情绪」当作可观测的故障维度来建模，但实际场景中「情绪」常被面部遮挡、光照欺骗或刻意设计（假笑、僵硬表情），导致情绪观测噪声甚至恶意攻击——此时 RAS 会把「真实的几何故障」误判为「情绪安全」，从而**过度放宽容差**，把原本可被VISTA 降级的故障，变成更严重的「误判放行」——这是该轮所有理论依赖的核心假设：**情绪是故障-安全的可靠信号，且其观测噪声可被时空一致性约束所抑制**。
-
-**次级风险与缓解**：
-1. **情绪欺骗**：用 EMG/皮肤电等生理信号做冗余；若多模态不一致 → 自动 `face_unobservable`；
-2. **情绪不匹配**：情绪与行为轨迹不符时，EFS 上调 `H_behavior_mismatch`；
-3. **时空滤波收敛慢**：快速突发风险事件（突然掉果汁）在 0.5s 仍不可感知 → 设置极端事件快速触发门槛；
-4. **情绪探针成本**：主动探针可能引发更多不适 → 初始阶段优先被动观测，仅在 `P(H_emotion) > 0.3` 时激活；
-5. **实时算力**：面部 ROI + 情绪分类在嵌入式平台仍是瓶颈 → 考虑事件相机 + CNN 轻量化模型（MobileNetV3-Quant）。
-
---- 产物区 ---
-## 第 66 轮产物 · 创新点清单 v1：RAS（Risk-aware Adaptive Closure：情绪驱动的闭环控制；ERG×ACH-RAS×EFS×FRAS×C-RAS×ERS）
-
-> 承接第 65 轮 IP-214~223（VISTA：视觉感知 × 动作分块的故障可归因）。第 65 轮解决了「哪一层坏了」，但未触及「谁要控制、该控制多少」。本轮把「被动故障响应闭环」升级为「主动意图感知闭环」：**用面部表情识别捕获风险态度，用时空推理抑制感知误差，用风险缩放实现控制自适应**。
->
-> IP 编号：IP-224~IP-233（共 10 个），全部为 RAS 的核心组件。
-
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进（相对第 65 轮） |
-|---|---|---|---|
-| IP-224 | ERG Emotion Recognition Gateway | 新增 | 主动捕获面部表情，用 EMG-风险估计 + 时序滤波输出 `emotion_gate`；`face_unobservable` 时不降极处置 |
-| IP-225 | ACH-RAS Action-Chunk Hypothesis-RAS | 升级 ACH | 把块拆为「行为承诺块」+「情绪响应块」；块间加入情绪一致性 |
-| IP-226 | EFS Emotion-Fault Synthesis | 新增 | 把情绪当作故障维度，加入 4 类 H_emotion；输出 7×4 联合后验 |
-| IP-227 | FRAS Fault Re-Attribution with RAS | 升级 FIR | 在 H_emotion 归因时，**不膨胀几何球，而是调整 λ_risk** |
-| IP-228 | FAS Fault Awareness Switch | 新增 | 根据 H_emotion 后验决定是否启动情绪探针；探针从 `null_test` 类推 |
-| IP-229 | C-RAS Certified-RAS prefix | 新增 | 认证前缀 k*RAS = min(k_VISTA, k_emotion, m_ras)；满足情绪容差 |
-| IP-230 | ERG-ERS Emotion-Response Shaping | 新增 | 控制律 τ_cmd = τ_desired - γ∇R_emotion；闭环塑造情绪-风险共振 |
-| IP-231 | AIC-V → AIC-RAS | 升级 AIC | 干扰集扩充 ℰ_emotion，新增共因故障 ℰ_common_emotion |
-| IP-232 | J_vista → J_RAS | 整合 | 证书增 λ_risk、fault_emotion_posterior、face_quality、expression_hash |
-
-## 1. 符号体系增量（定义 233–250）
-
-| 符号 | 含义 |
-|---|---|
-| `RAS = (ERG, ACH-RAS, EFS, FRAS, FAS, C-RAS, ERG, ERS)` | 情绪驱动的闭环控制 |
-| `π ∈ Δ^4` | 4 类情绪概率 {neutral, tense, fear, pain} |
-| `R_emotion(r, π) = 1 - π(neutral) - 0.3·π(tense) - 0.8·π(fear) - π(pain) + ε` | EMG-风险估计 |
-| `d_temporal = KL(π_t || π_{t-T})` | 时空表情一致性 |
-| `E = {E0, E1, E2, E3}` | 情绪假设集 |
-| `λ_risk = 1 - α_risk·R_emotion - β_risk·H_face` | 风险缩放系数 |
-| `m_ras = min(m_VISTA, m_emotion)` | RAS 不可逆视界 |
-| `k*RAS` | 情绪认证前缀 |
-| `joint_post((H,E))` | 故障-情绪联合后验 |
-| `J_RAS = (J_vista, λ_risk, fault_emotion_posterior, face_quality, expression_hash, aic_ras_ver)` | RAS 证书 |
-
-## 2. 形式化定义（完整版）
-
-**定义 233（RAS 总览）** RAS 是 VISTA 的「故障闭环」升级为「意图闭环」：
-```
-RAS = (ERG, ACH-RAS, EFS, FRAS, FAS, C-RAS, ERG, ERS)
-```
-不变式：所有情绪观测、故障-情绪联合归因、风险缩放、证书构建只在语义流；实时流只采集面部ROI残差、阶段判定、情绪容差早停，零学习写操作。
-
-**定义 234（面部表情观测量）** 面部检测器 `f_face` 把 RGB 图像映射为 `face = (r ∈ ℝ^{d_r}, l ∈ ℝ^{68×2}, a ∈ ℝ^{512})`。情绪概率 `π_t = f_face(face_t)`，输出 `π ∈ Δ^4`。
-
-**定义 235（EMG-风险估计）** 风险函数
-```
-R_emotion(r, π) = 1 - π(neutral) - 0.3·π(tense) - 0.8·π(fear) - π(pain) + ε
-```
-
-**定义 236（时空表情一致性）** 跨帧 KL 散度
-```
-d_temporal(t) = KL(π_t || π_{t-T})
-```
-若 `d_temporal > τ_temporal`，标记 `face_temporal_unstable = True`。
-
-**定义 237（故障-情绪联合假设）** 联合假设集合
-```
-ℋ_RAS = ℋ × E, 其中 E = {E0 正常, E1 延迟, E2 隐蔽, E3 误判}
-```
-联合后验：
-```
-P(H, E | ρ, face) ∝ p(ρ | H) · p(face | E) · P(H) · P(E | H)
-```
-
-**定义 238（情绪引导的风险缩放）** 控制缩放因子：
-```
-λ_risk(t) = 1 - α_risk·R_emotion(t) - β_risk·H_face(t)
-```
-
-**定义 239（C-RAS 认证前缀）** 认证前缀 k*RAS 需满足：
-1. `∀s≤k: λ_risk(s)·ρ_safe(s) ≥ 0`；
-2. 跨模态一致性：`KL(π_{t-s:t} || π_pred) < τ_consistency`；
-3. `k*RAS ≤ m_ras`。
-
-**定义 240（ERS 情绪响应塑造）** 控制律：
-```
-τ_cmd = τ_desired - γ·∇_{τ} R_emotion(π(τ))
-```
-
-**定义 241（ERG Emotion Recognition Gateway）** ERG 由面部检测、EMG-风险估计、时序滤波器构成。若 `face_unobservable`，ERG 输出 `HIGH_RISK` 但不降极处置。
-
-**定义 242（FAS Fault Awareness Switch）** FAS 根据 `P(H_emotion | post) ≥ τ_fas` 决定是否激活情绪探针。
-
-**定义 243（AIC-RAS 干扰与共因）**
-```
-ℰ_RAS = ℰ_V × ℰ_emotion × ℰ_temporal × ℰ_common_emotion
-```
-其中 ℰ_common_emotion 捕获「几何误差 → 面部表情紧张」的因果链。
-
-**定义 244（J_RAS 证书）**
-```
-J_RAS = (J_vista, λ_risk, fault_emotion_posterior, face_quality, expression_hash, aic_ras_ver)
-```
-Valid ⇔ Valid(J_vista) ∧ λ_risk ≥ 0.6 ∧ face_quality ≥ 0.8 ∨ (H_emotion = E0)。
-
-## 3. 关键算法伪代码
-
-```python
-# IP-224 ERG
-class EmotionRecognitionGateway:
-    def recognize(self, face_img, prev_pi=None):
-        region = extract_face_region(face_img)
-        landmarks = detect_landmarks(region)
-        appearance = encode_appearance(region)
-        face = (region, landmarks, appearance)
-        pi = emotion_classifier(face)      # ∈ Δ^4
-        R = 1 - pi[0] - 0.3*pi[1] - 0.8*pi[2] - pi[3]
-        temporal_unstable = (prev_pi and kl_div(pi, prev_pi) > 0.5)
-        gate = 'HIGH_RISK' if R > 0.4 or not landmarks else 'SAFE'
-        return {'pi': pi, 'risk': R, 'gate': gate,
-                'unobservable': landmarks is None,
-                'temporal_unstable': temporal_unstable}
-
-
-# IP-226 EFS
-class EmotionFaultSynthesis:
-    def synthesize(self, rho, face_gate):
-        post_H = self.fir.attribute(rho)
-        post_E = {e: 1.0 for e in ['E0', 'E1', 'E2', 'E3']}
-        if face_gate['unobservable']:
-            post_E = {'E0': 0.05, 'E1': 0.7, 'E2': 0.2, 'E3': 0.05}
-        joint = {}
-        for (h, e), p in product(post_H.keys(), post_E.items()):
-            joint[(h, e[0])] = p[0] * p[1]
-        return normalize(joint)
-
-    def risk_scale(self, joint):
-        λ = 1.0
-        for (h, e), p in joint.items():
-            if e == 'E1': λ *= (1 - 0.3*p)
-            elif e == 'E2': λ *= (1 + 0.2*p)
-            elif e == 'E3': λ *= (1 - 0.5*p)
-        return max(0.5, min(1.2, λ))
-
-
-# IP-229 C-RAS
-class ChunkSafetyCertificateRAS(ChunkSafetyCertificate):
-    def certified_prefix_ras(self, A, joint_post, m_ras, alpha_chunk):
-        top_pairs = sorted(joint_post.items(), key=lambda x: x[1], reverse=True)[:3]
-        k_best = 0
-        for k in range(1, min(len(A), m_ras) + 1):
-            ok = True
-            for (h, e), p in top_pairs:
-                if not self._safety_with_risk(A[s], h, e, p):
-                    ok = False; break
-            if ok: k_best = k
-            else: break
-        return k_best
-
-
-# IP-230 ERS
-def emotion_response_shaping(tau_cmd, joint_post, gamma=0.1):
-    grad_R = compute_risk_gradient(joint_post)  # ∇_τ R_emotion
-    return tau_cmd - gamma * grad_R
-
-
-# IP-232 RAS闭环
-def RAS_round(M, obs):
-    V, T, P, L, P_cloud, W_meas, tactile, img, depth, flow = obs
-    M.lsf.update_geometry(P_cloud)
-    x_prime = M.lsf.fuse(M.usr.fuse(V, T, P, L))
-    y_vis = M.f_vis(img, depth, flow)
-
-    face_gate = M.er.recognize(img)
-    A = M.vista.ach.propose(x_prime, H=M.vista.H)
-    rho = M.vista.fir.signature(M.vista.stage.split(M.vista.residual_log))
-    joint_post, _ = M.efs.synthesize(rho, face_gate)
-
-    m_ras = min(M.vista.m, M.er.max_m_emotion)
-    k_ras = M.csc_ras.certified_prefix_ras(A, joint_post, m_ras, M.alpha_chunk)
-    λ_risk = M.efs.risk_scale(joint_post)
-
-    tau_cmd = M.vista.pi_sigma.prefix_dispatch(A[:k_ras])
-    tau_cmd = tau_cmd * λ_risk
-    tau_cmd = emotion_response_shaping(tau_cmd, joint_post)
-
-    return k_ras, λ_risk, joint_post, face_gate
-```
-
-## 4. 推导
-
-**引理 9（情绪风险缩放收敛）** λ_risk(t) = ∏_t (1 - α_risk·R_emotion)。若情绪稳定，λ_risk 收敛到 λ_∞ ∈ [0.5, 1.2]。
-
-**引理 10（时空一致性抑制误判）** d_temporal > τ_temporal → H_face_delay 可将联合误判概率降至 ε_e·exp(-γ_temporal·τ_temporal)。
-
-**定理 9（RAS 端到端风险一致性）** 在 A87-A91 下，τ_cmd 满足：
-1. `P(|τ_cmd - τ*| > ε) ≤ α_chunk + δ_fi + α_emotion`；
-2. λ_risk ≥ 0.6 ⇔ 实际执行风险 ≤ 设定上限 × 1.2；
-3. `face_unobservable ⇒ λ_risk ≥ 0.8`。
-
-**定理 10（联合可分离性）** S_RAS = diag(S_H, S_E)，κ_fi_RAS = min(κ_fi, κ_ri)。
-
-## 5. 实验设计 E241–E250
-
-| 实验 | 关键问题 | 目标 |
-|---|---|---|
-| E241 ERG情绪精度 | 遮挡/光照下 R 的可靠性 | R MAE < 0.15，误判 < 5% |
-| E242 EFS联合归因 | H_emotion 分离 | 7 类准确率 ≥ 85% |
-| E243 时空一致性 | 误判抑制 | τ_temporal 取 0.5 时误判降 70% |
-| E244 λ_risk 缩放 | 高风险下容差收紧 | λ_risk ≥ 0.6 时违规率 ≤ 1% |
-| E245 C-RAS前缀 | k_ras 保守性 | k_ras ≥ k_vista·0.9，违规 = 0 |
-| E246 ERG-FAS | 主动探针 | 次数 −40%，后验集中度 ↑ 30% |
-| E247 端到端RAS | 复杂情绪干扰 | 成功率不降、误降级 −40% |
-| E248 共因故障 | 几何→情绪链 | 正确判 H_geo+E1 |
-| E249 实时性 | 面部ROI 是否卡顿 | <2ms |
-| E250 鲁棒性 | 30s 连续遮挡 | λ_risk ≥ 0.8，归因不受影响 |
-
-## 6. 本轮最大风险
-
-**一句话**：RAS 将「情绪」当作可观测的故障维度来建模，但实际场景中「情绪」常被面部遮挡、光照欺骗或刻意设计（假笑、僵硬表情），导致情绪观测噪声甚至恶意攻击——此时 RAS 会把「真实的几何故障」误判为「情绪安全」，从而**过度放宽容差**，把原本可被VISTA 降级的故障，变成更严重的「误判放行」——这是该轮所有理论依赖的核心假设：**情绪是故障-安全的可靠信号，且其观测噪声可被时空一致性约束所抑制**。
+**一句话**：EBC 的全部安全收益依赖「共情表达是示范者真实关切的可辨识代理」这一假设——而文化显示规则、职业性镇定、刻意表演与示范者自身"自信地做错"会系统性地让表达偏离真实关切；单调守卫能保证 EBC 不比行为基线更冒险，却无法阻止它**忠实地克隆错误**（学到一个"安全但无用"或"带着偏见"的策略），而反事实共情又因反事实表达不可观测而本质上不可证伪——这是本轮所有理论依赖的核心假设：**示范者的表达与其真实风险偏好之间存在可学习的单向一致性，且示范者本身是可靠的**。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
---- 产物区 ---
-# 第 67 轮产物 · 创新点清单 v1：SimRAS（Simulation-augmented Risk-aware Adaptive Closure：仿真增强的风险自适应闭环；SimEngine×WorldModel×VQAuditor×RAS-WM）
+# 第 68 轮产物 · 创新点清单 v1：EBC（Empathic Behavior Cloning，共情行为克隆；EmD×ELE×CCP×MEG×ECQ×CST×EWM-E×ECA）
 
-> 承接第 66 轮 IP-224~233（RAS：情绪驱动的闭环控制）。第 66 轮解决了「当下谁控制、控制多少」，但未触及「未来风险怎么演化、怎么可解释地审计」。本轮把「在线反应式情绪闭环」升级为「离线仿真预训练 + 在线世界模型推理 + 视觉问答式风险审计」的三层架构：**用世界模型在虚拟仿真中预演情绪-行为-故障联合演化，用视觉问答对反事实轨迹做可解释性审计，再将审计结论蒸馏回在线风险先验。**
+> 承接第 65~67 轮（VISTA → RAS → SimRAS）。前三轮把「故障可归因」「情绪驱动闭环」「仿真预演 + 视觉问答审计」依次补齐，却始终默认策略先验是给定的，人类只是被感知与审计的外部信号源。本轮补上缺失的「从人学」前端：**用共情表达作为示范者关切潜变量的证据，用行为克隆把动作与关切一起学下来，用单调守卫保证表达的可欺骗性不侵入安全边界。**
 >
-> IP 编号：IP-233~IP-242（共 10 个），覆盖 SimEngine、WorldModel、VQAuditor 及 RAS-WM 全系升级。
+> IP 编号：IP-243~IP-252（共 10 个）。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 66 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 67 轮） |
 |---|---|---|---|
-| IP-233 | SimEngine Virtual Simulation Engine | 新增 | 可微物理 + 情绪动力学 + 故障注入 + 离屏渲染；离线合成 10^6 级联合轨迹库 |
-| IP-234 | WorldModel 世界模型 | 新增 | 三头 Transformer（动力学/情绪/故障），INT8 量化，<1ms 在线 k=5 步滚动 |
-| IP-235 | VQAuditor Visual QA Auditor | 新增 | 渲染 WM 滚动视频 → VQA 因果问答 → 结构化审计报告 → 审计缓冲区复用 |
-| IP-236 | ERG-WM Emotion Recognition Gateway-WM | 升级 ERG | 引入 WM 一致性校验（KL 散度），分布偏移时自动保守回退 |
-| IP-237 | EFS-WM Emotion-Fault Synthesis-WM | 升级 EFS | 融合 WM 滚动故障后验作为时序先验，联合后验平滑 |
-| IP-238 | C-RAS-WM Certified-RAS-WM prefix | 升级 C-RAS | 前瞻认证前缀 k_wm = max{k: ∀i≤k, λ_risk_i·ρ_safe_i ≥ 0}，取 min(k_ras, k_wm) |
-| IP-239 | ERS-WM Emotion-Response Shaping-WM | 升级 ERS | 控制律加入单步 MPC 项：τ_MPC ≈ -η∇_τ[R_emotion(π_{t+1}) + c_fault·P(H_{t+1}≠H0)] |
-| IP-240 | AIC-SimRAS 干扰与共因扩充 | 升级 AIC | 新增 ℰ_wm（WM 分布偏移/滚动发散/头冲突）、ℰ_vqa（VQA 幻觉/提示注入/渲染伪影） |
-| IP-241 | J_SimRAS 证书 | 升级 J_RAS | 新增 wm_rollout_hash、vqa_audit_hash、sim_pretrain_ver、wm_consist_flag |
-| IP-242 | SimRAS Offline Pretraining Pipeline | 新增 | SimEngine→D_sim→WM预训练→VQA审计→AuditBuf初始化→RAS仿真标定参数 |
+| IP-243 | EmD Empathic Demonstration Corpus | 新增 | 示范元组 `(s,a,e,h)`；表达含面部/语调/运动学三路，允许整段缺失 |
+| IP-244 | ELE Empathic Latent Encoder | 新增 | 从 `(s,a,e)` 推断二维潜变量 `(c_care,c_urg)`；β-TC 解耦 + 分位上置信界 |
+| IP-245 | CCP Care-Conditioned Policy | 新增 | `π_θ(a|s,c_use)`，以加权 BC 训练；在边界附近随 care 自动收动作 |
+| IP-246 | MEG Monotone Empathy Guard | 新增 | `c_use=max(c_UC,c_base)`，`λ_EBC≤1`；**表达只收紧，永不放宽** |
+| IP-247 | ECQ Empathic Curation & Query | 新增 | 按示范者可靠性与表达-动作一致性重加权；紧急语境下不误删反常规示范 |
+| IP-248 | CST Care-Surprise Trigger | 新增 | 关切意外度超阈值 → DAgger 查询或保守前缀回退；直接压制 BC 协变量偏移 |
+| IP-249 | EWM-E Empathic World Model head | 升级 WM | 在世界模型上加「人类表达响应」预测头，供 SimRAS 滚动与审计使用 |
+| IP-250 | ECA Empathic Consistency Auditor | 升级 VQA | 增加反事实提问「示范者看到这条轨迹会不会担心」，结构化输出关切证据 |
+| IP-251 | J_EBC Certificate | 升级 J | 增 `care_posterior, care_UCB, demo_coverage, ECE, privacy_budget, clone_safety_margin` |
+| IP-252 | Sim2Empathy Pipeline | 新增 | 用 SimEngine 合成 `(s,a,c,e)`，解决共情表达数据稀缺与跨文化风格覆盖 |
 
-## 1. 符号体系增量（定义 251–275）
+## 1. 符号体系增量（定义 276–296）
 
 | 符号 | 含义 |
 |---|---|
-| `SimRAS = (SimEngine, WorldModel, VQAuditor, RAS-WM)` | 仿真增强的风险自适应闭环 |
-| `SimEngine = (DiffPhys, EmoDyn, FaultInject, Renderer)` | 虚拟仿真引擎四元组 |
-| `τ_sim = (s_0:T, a_0:T, π_0:T, H_0:T, ρ_0:T, img_0:T)` | 合成联合轨迹 |
-| `D_sim = {τ_sim^i}_{i=1}^N, N≥10^6` | 离线合成数据集 |
-| `WM_θ = (Enc, dyn_head, emo_head, fault_head)` | 世界模型三头架构 |
-| `z_t ∈ ℝ^d` | WM 潜状态 |
-| `π_{t+1} = emo_head(z_t)` | 情绪演化头 |
-| `P(H_{t+1}) = fault_head(z_t)` | 故障演化头 |
-| `λ_risk_{t+i} = 1 - α·R_emotion(π_{t+i}) - β·H_fault(P(H_{t+i}))` | 滚动风险缩放 |
-| `VQAuditor = (VideoRenderer, VQA_Model, PromptTemplate, StructParser)` | 视觉问答审计员 |
-| `AuditReport = {risk_factors[], counterfactuals[], λ_adjust_recommend}` | 结构化审计报告 |
-| `AuditBuf[scene_hash] = AuditReport` | 审计缓冲区（键值存储） |
-| `scene_hash = hash(几何, 任务, π_t, P(H_t))` | 场景指纹 |
-| `wm_drift = [KL(π_t^ERG || π_t^WM) > τ_wm_consist]` | WM 分布偏移标记 |
-| `k_wm = max{k' ≤ k : ∀i≤k', λ_risk_{t+i}·ρ_safe_{t+i} ≥ 0}` | WM 允许的前瞻步数 |
-| `k*RAS = min(k_VISTA, k_emo, k_wm, m_ras)` | 最终认证前缀 |
-| `τ_MPC = -η·∇_τ[R_emotion(π_{t+1}) + c_fault·P(H_{t+1}≠H0)]` | 单步 MPC 修正项 |
-| `ℰ_SimRAS = ℰ_RAS × ℰ_wm × ℰ_vqa` | 扩充干扰集 |
-| `J_SimRAS = (J_RAS, wm_rollout_hash, vqa_audit_hash, sim_pretrain_ver, wm_consist_flag)` | SimRAS 证书 |
+| `EBC = (EmD, ELE, CCP, MEG, ECQ, CST, EWM-E, ECA, J_EBC)` | 共情行为克隆 |
+| `D_E = {(s_t,a_t,e_t,h_t)}` | 共情示范数据集 |
+| `e = (e_face,e_voice,e_kin) ∈ E` | 共情表达观测（可缺失） |
+| `c = (c_care,c_urg) ∈ [0,1]^2` | 关切-紧迫潜变量 |
+| `a ~ π_H(a|s,c)`，`e ~ p_H(e|s,a,c)` | 示范者生成模型 |
+| `q_φ(c|s,a,e)` | 变分关切后验 |
+| `c_UC = Q_{1-δ}(q_φ(c_care|s,a,e))` | 关切上置信界（越大越谨慎） |
+| `c_use = max(c_UC, c_base)` | 单调守卫输出 |
+| `λ_EBC = clip(1-α_E·c_use, 0.5, 1.0)` | 共情收紧系数（≤1） |
+| `π_θ(a|s,c_use)` | 关切条件策略 |
+| `M(s,a,c)` | 安全裕度，对 `c_care` 单调不减 |
+| `w_i = r_i·exp(-β_c·KL(q(c|s,a,e)||q(c|s,a)))` | 共情数据权重 |
+| `g_ψ(e|s,a,c)` | 反事实表达模型 |
+| `U_t` | 关切意外度（熵 + KL） |
+| `k_EBC` | 共情认证前缀 |
+| `J_EBC` | 共情证书 |
+| `ℰ_EBC = ℰ_SimRAS × ℰ_empathy × ℰ_clone` | 扩充干扰集 |
 
 ## 2. 形式化定义（完整版）
 
-**定义 251（SimRAS 总览）** SimRAS 是 RAS 的「离线仿真预训练 + 在线世界模型推理 + 视觉问答审计」增强层：
+**定义 276（EBC 总览）**
 ```
-SimRAS = (SimEngine, WorldModel, VQAuditor, RAS-WM)
+EBC = (EmD, ELE, CCP, MEG, ECQ, CST, EWM-E, ECA, J_EBC)
 ```
-不变式：SimEngine 纯离线，零实时开销；WM 推理 ≤1ms INT8；VQAuditor 异步运行，不阻塞实时环路。
+定位：为 VISTA/RAS/SimRAS 补上「从人类示范学习策略与关切」的前端，而非替换其在线安全闭环。不变式：表达只进入潜变量后验与保守化方向；实时流只做前向推断，零在线学习写操作；表达原始数据不出端。
 
-**定义 252（虚拟仿真引擎）** SimEngine = (DiffPhys, EmoDyn, FaultInject, Renderer)。DiffPhys：可微物理引擎（MuJoCo-Diff / Brax）；EmoDyn：情绪动力学 `π_{t+1} = σ(W_emo·[π_t; τ_t; scene_emb] + b_emo)`，基于 PAD 情绪模型标定；FaultInject：从 ℰ_RAS 采样故障注入序列；Renderer：离屏渲染 RGB-D 流供 VQA 使用。
+**定义 277（共情示范元组）** 示范数据 `D_E = {(s_t^i,a_t^i,e_t^i,h_t^i)}_{i,t}`。`h_t∈[0,1]` 为可选的示范者自报信心/风险，允许缺失；训练时以 `λ_h` 加权。
 
-**定义 253（合成联合轨迹）** 单条轨迹 `τ_sim = (s_0:T, a_0:T, π_0:T, H_0:T, ρ_0:T, img_0:T)`。数据集 `D_sim = {τ_sim^i}_{i=1}^N`，N ≥ 10^6。分布匹配目标：`TV(P_sim(s,a,π,H) || P_real(s,a,π,H)) < 0.1`。
+**定义 278（共情表达观测）** `e_t=(e_face,e_voice,e_kin)`：
+- `e_face`：面部动作单元、68 关键点、瞬目/注视；
+- `e_voice`：基频、能量、语速、停顿；
+- `e_kin`：犹豫时长、减速、回撤、视线切换等运动学线索。
+允许 `e_t=∅`（遮挡、静音、不可见）。
 
-**定义 254（世界模型）** WM_θ = (Enc, dyn_head, emo_head, fault_head)。Enc 将 `(obs_t, act_t)` 编码为潜状态 `z_t ∈ ℝ^d`。三头：
-- `dyn_head(z_t) → (z_{t+1}, ŝ_{t+1})`（重构观测）
-- `emo_head(z_t) → π_{t+1}`（情绪分布）
-- `fault_head(z_t) → P(H_{t+1})`（故障后验）
-损失：`L = L_recon + λ_emo·L_emo + λ_fault·L_fault + λ_cons·L_cons`，其中 `L_cons` 强制三头隐状态一致。
+**定义 279（关切-紧迫潜变量）** `c_t=(c_care,c_urg)∈[0,1]^2`，慢变：`c_{t+1}=c_t+η_t`，`||η_t||≤η_max`。`c_care` 越大越风险厌恶；`c_urg` 越大时间压力越大。
 
-**定义 255（WM 滚动预测）** 给定当前 `z_t` 与候选动作序列 `a_{t:t+k-1}`，WM 迭代输出 `{(π_{t+i}, P(H_{t+i}), λ_risk_{t+i})}_{i=1}^k`。`λ_risk_{t+i} = 1 - α·R_emotion(π_{t+i}) - β·H_fault(P(H_{t+i}))`。
+**定义 280（示范者生成模型）**
+```
+s_{t+1} = f(s_t,a_t)
+c_t     ~ p(c|s_t)
+a_t     ~ π_H(a|s_t,c_t)
+e_t     ~ p_H(e|s_t,a_t,c_t)
+```
+`e` 与 `a` 同为 `c` 的下游，但 `e` 不是 `a` 的确定性函数——这是表达提供额外信息的结构来源。
 
-**定义 256（视觉问答审计员）** VQAuditor = (VideoRenderer, VQA_Model, PromptTemplate, StructParser)。输入：WM 滚动轨迹的渲染视频 `vid_{t:t+k}`。PromptTemplate 含 3 类问题：因果归因、反事实干预、风险总结。输出 `AuditReport = {risk_factors[], counterfactuals[], λ_adjust_recommend}`。
+**定义 281（可辨识条件 A92–A94）**
+- A92（无直接混杂）：给定 `(s,a)`，`c` 与 `e` 间无未观测共同原因；
+- A93（单调似然比）：`p(e|c_care)` 在关切类特征上满足 MLR；
+- A94（掩蔽不对称）：存在 `e*` 使 `p(e*|c_care^high)≫p(e*|c_care^low)`，反向不成立。
 
-**定义 257（审计缓冲区）** 键值存储 `AuditBuf[scene_hash] = AuditReport`。scene_hash = hash(场景几何、任务类型、当前 π_t、P(H_t))。在线命中时直接复用 `λ_adjust_recommend` 更新 RAS 的 `λ_risk_prior`。
+**定义 282（关切后验编码器）** 变分后验 `q_φ(c|s,a,e)`，训练目标
+```
+L_ELE = E_q[log p(a|s,c)] + λ_e·E_q[log p(e|s,a,c)]
+        - β·TC(q(c|s,a,e)) + λ_h·E_q[log p(h|s,c)]
+```
+`TC` 为 total correlation，用于解耦 care 与 urgency；`λ_e` 使表达成为辅助似然而非硬标签。
 
-**定义 258（ERG-WM 一致性校验）** 若 `KL(π_t^ERG || π_t^WM) > τ_wm_consist`，标记 `wm_drift = True`，触发 ERG 重检并冻结 WM 预测 `k_wm = 0`。
+**定义 283（关切上置信界）** `c_UC = Q_{1-δ}(q_φ(c_care|s,a,e))`，由分位数网络或 split-conformal 校准，覆盖率目标 `1-δ`。方向约定：`c_UC` 越大越谨慎。
 
-**定义 259（EFS-WM 时序先验）** 联合后验修正：`P_WM(H, E | ·) ∝ P_EFS(H, E | ·) · ∏_{i=1}^k P_WM(H_{t+i} | z_t, a_{t:t+i-1})^{w_i}`，权重 `w_i = exp(-i/τ_horizon)`。
+**定义 284（单调共情守卫 MEG）**
+```
+c_base = Q_{1-δ}(q_φ(c_care|s,a))        # 仅动作证据
+c_use  = max(c_UC, c_base)               # 只升不降
+λ_EBC  = clip(1 - α_E·c_use, 0.5, 1.0)   # ≤ 1，只收紧
+```
+表达缺失时 `c_UC ← Q_{1-δ}^{prior}(c_care|s)`。不变式：`λ_total = λ_RAS·λ_EBC ≤ λ_RAS`，且 `k_EBC ≤ k_base`。
 
-**定义 260（C-RAS-WM 前瞻认证）** `k_wm = max{k' ≤ k : ∀i≤k', λ_risk_{t+i}·ρ_safe_{t+i} ≥ 0}`。最终 `k*RAS = min(k_VISTA, k_emo, k_wm, m_ras)`。
+**定义 285（关切条件策略）** `π_θ(a|s,c_use)`，目标
+```
+max_θ Σ_i w_i·log π_θ(a_i|s_i,c_use,i) - λ_reg·R_reg(θ)
+```
+训练中 `c_use` 由定义 284 生成，故策略只在「不低于行为基线谨慎度」的区域采样。
 
-**定义 261（ERS-WM 模型预测控制项）** `τ_MPC = argmin_{Δτ} ∑_{i=1}^k [R_emotion(π_{t+i}) + c_fault·P(H_{t+i}≠H0)]` s.t. `τ_cmd = τ_desired + Δτ`。简化为单步梯度：`τ_MPC ≈ -η·∇_τ [R_emotion(π_{t+1}) + c_fault·P(H_{t+1}≠H0)]`。
+**定义 286（care-单调策略类）** 安全裕度 `M(s,a,c)` 满足
+```
+c_care^1 ≥ c_care^2  ⇒  M(s,a,c^1) ≥ M(s,a,c^2)
+```
+策略在满足任务约束下最大化 `M`。该单调性是「共情→保守」可组合的结构前提。
 
-**定义 262（AIC-SimRAS 扩充干扰集）** `ℰ_SimRAS = ℰ_RAS × ℰ_wm × ℰ_vqa`，其中 ℰ_wm = {WM 分布偏移、滚动发散、头冲突}，ℰ_vqa = {VQA 幻觉、提示注入、渲染伪影}。
+**定义 287（共情数据整形 ECQ）** 可靠性 `r_i = σ(α_1·consistency_i + α_2·calibration_i - α_3·contradiction_i)`，样本权重
+```
+w_i = r_i · exp(-β_c·KL(q(c|s_i,a_i,e_i) || q(c|s_i,a_i)))
+```
+`contradiction_i` 在 `c_urg` 高时按 `(1-c_urg)` 衰减，避免把紧急示范当错误样本删除。
 
-**定义 263（J_SimRAS 证书）** `J_SimRAS = (J_RAS, wm_rollout_hash, vqa_audit_hash, sim_pretrain_ver, wm_consist_flag)`。Valid ⇔ Valid(J_RAS) ∧ `wm_consist_flag = True` ∧ `vqa_audit_hash ≠ ∅`。
+**定义 288（反事实表达模型与偏好）** `g_ψ(e|s,a,c)` 训练自 `D_E` 与 Sim2Empathy。反事实偏好
+```
+Δ(a→a') = E_{c~q}[ D_KL( g(e|s,a',c) || g(e|s,a,c) ) ]
+```
+`Δ` 仅用于 top-k 候选重排/过滤，**永不单独充当安全证明**（见定理 15）。
 
-**定义 264（SimRAS 离线预训练流程）** 1) SimEngine 生成 `D_sim`；2) WM_θ 在 `D_sim` 上预训练；3) VQAuditor 对 `D_sim` 子集做审计，产出 `AuditBuf` 初始版；4) RAS 在 `D_sim` 上做闭环仿真评估，标定 `α_risk, β_risk, γ, η`。
+**定义 289（关切意外度与 CST 触发）**
+```
+U_t = H(q(c|s_t,a_t,e_t)) + η·KL(q(c|s_t,a_t,e_t) || q_pred(c|s_t,a_t))
+U_t > τ_cst  ⇒  CST = ON
+```
+触发后：人可介入则 DAgger 查询；不可介入则回退 `k ← min(k, k_fallback)` 并保持 `c_use`。
 
-**定义 265（SimRAS 在线部署不变式）** 实时环路仅含 ERG, ACH-RAS, EFS-WM, C-RAS-WM, ERS-WM（同 RAS + WM 推理）。WM 推理并行于 ERG，延迟 <1ms。VQAuditor 在后台线程异步运行，周期 100ms，不占用控制周期。
+**定义 290（共情查询规则）** 以 `(s_t, a_t^CCP)` 请求示范者接管/标注，新样本并入 `D_E`。查询预算 `B_q` 与触发召回率共同决定定理 14 的收敛项。
+
+**定义 291（共情滚动）** SimEngine 依 `c` 动力学与 `g_ψ` 生成 `{(s,a,c,e)_{t+i}}`；`e_{t+i}` 供 EWM-E 训练、供 ECA 做「示范者看到轨迹是否担心」的审计。
+
+**定义 292（EBC-RAS 耦合）**
+```
+k_EBC = max{k : ∀i≤k, M(s_{t+i},a_{t+i},c_use)·λ_total ≥ 0}
+k*    = min(k_VISTA, k_emo, k_wm, k_EBC, m_ras)
+λ_total = λ_RAS·λ_EBC,  λ_EBC ≤ 1
+```
+表达缺失时 `c_use=c^prior_UC`，`k_EBC` 单调不增。
+
+**定义 293（J_EBC 证书）**
+```
+J_EBC = (J_SimRAS, care_posterior, care_UCB, demo_coverage,
+         care_calibration_ECE, privacy_budget, clone_safety_margin,
+         empathic_consistency)
+Valid ⇔ Valid(J_SimRAS) ∧ ECE ≤ 0.05 ∧ demo_coverage ≥ 0.9 ∧ privacy_ok
+```
+
+**定义 294（AIC-EBC 干扰集）**
+```
+ℰ_EBC = ℰ_SimRAS × ℰ_empathy × ℰ_clone
+ℰ_empathy = {掩蔽, 表演, 文化显示规则, 疲劳, 对抗伪造}
+ℰ_clone   = {分布偏移, 模式平均, 虚假相关, 示范者错误}
+```
+
+**定义 295（示范者可靠性）** 见定义 287 的 `r_i`；另设跨示范者一致性 `consistency_i` 与自报校准 `calibration_i`。可靠性低于 `r_min` 的示范只进入预训练、不进入安全证书覆盖统计。
+
+**定义 296（在线不变式与隐私）** 表达只在设备端编码，原始 `e` 不出端；对外只发布 `(c_use, λ_EBC, k_EBC, J_EBC)` 与哈希。隐私预算耗尽或表达缺失时退回先验保守界：可用性下降、安全裕度不降。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-233 SimEngine：虚拟仿真引擎（离线）
-class SimEngine:
-    def __init__(self, diff_phys, emo_dyn, fault_inject, renderer):
-        self.phys, self.emo, self.fault, self.render = diff_phys, emo_dyn, fault_inject, renderer
+# IP-243/244 EmD + ELE
+class EmpathicLatentEncoder:
+    def __init__(self, net, prior_net, beta_tc=4.0, delta=0.05):
+        self.net, self.prior_net = net, prior_net
+        self.beta_tc, self.delta = beta_tc, delta
 
-    def generate_trajectory(self, policy, scene_config, T=100):
-        s = scene_config.initial_state
-        π = self.emo.initial_emotion(scene_config)
-        H = 'H0'
-        traj = []
-        for t in range(T):
-            a = policy.act(s, π, H)
-            s_next = self.phys.step(s, a)
-            π_next = self.emo.step(π, a, s, scene_config)
-            H_next = self.fault.step(H, s, a)
-            img = self.render.render(s_next)
-            traj.append((s, a, π, H, img))
-            s, π, H = s_next, π_next, H_next
-        return Trajectory(traj)
+    def encode(self, s, a, e=None):
+        if e is None:
+            q = self.prior_net(s, a)
+            return q, self.ucb(q, self.delta), True
+        q_care, q_urg = self.net(s, a, e)
+        return (q_care, q_urg), self.ucb(q_care, self.delta), False
+
+    def ucb(self, q, delta):
+        return self.quantile(q, 1.0 - delta)     # 越大越谨慎
+
+    def loss(self, s, a, e, h=None):
+        q = self.net(s, a, e)
+        rec_a = -log_lik(q, a)
+        rec_e = -log_lik_expr(q, s, a, e)
+        tc = total_correlation(q)                 # 解耦 care/urg
+        aux = -log_lik_h(q, h) if h is not None else 0.0
+        return rec_a + 1.0*rec_e + self.beta_tc*tc + 0.5*aux
 
 
-# IP-234 WorldModel：世界模型（在线 INT8 推理）
-class WorldModel:
-    def __init__(self, enc, dyn_head, emo_head, fault_head, device='cuda'):
-        self.enc, self.dyn, self.emo, self.fault = enc, dyn_head, emo_head, fault_head
-        self.enc.half(); self.dyn.half(); self.emo.half(); self.fault.half()  # INT8 量化
+# IP-246 MEG
+class MonotoneEmpathyGuard:
+    def __init__(self, alpha_e=0.5, lam_lo=0.5):
+        self.alpha_e, self.lam_lo = alpha_e, lam_lo
 
-    def rollout(self, obs_t, act_seq, k=5):
-        z = self.enc(obs_t.half())
+    def guard(self, c_uc, c_base):
+        c_use = max(c_uc, c_base)                 # 表达只升不降
+        lam = max(self.lam_lo, min(1.0, 1.0 - self.alpha_e*c_use))
+        return c_use, lam
+
+
+# IP-245 CCP
+class CareConditionedPolicy:
+    def __init__(self, policy_net):
+        self.policy = policy_net
+
+    def propose(self, s, c_use, n_chunks=8):
+        scores = [self.policy.chunk_score(s, a, c_use) for a in self.policy.candidates(s)]
+        return self.policy.decode(sorted(scores, key=lambda x: x.margin, reverse=True)[:n_chunks])
+
+    def train(self, D_E, ele, weights):
+        for (s, a, e, h), w in zip(D_E, weights):
+            _, c_uc, _ = ele.encode(s, a, e)
+            c_base = ele.ucb(ele.prior_net(s, a), ele.delta)
+            c_use, _ = MEG().guard(c_uc, c_base)
+            loss = -w * self.policy.log_prob(a, s, c_use)
+            self.policy.backward(loss)
+
+
+# IP-247 ECQ
+def empathic_curation(D_E, ele, r_min=0.3):
+    weights = []
+    for (s, a, e, h) in D_E:
+        q_full, _, missing = ele.encode(s, a, e)
+        q_act, _, _ = ele.encode(s, a, None)
+        kl = KL(q_full, q_act) if not missing else 0.0
+        r = estimator_reliability(s, a, e, h)          # 定义 287/295
+        w = 0.0 if r < r_min else r * math.exp(-0.5*kl)
+        weights.append(w)
+    return weights
+
+
+# IP-248 CST
+class CareSurpriseTrigger:
+    def __init__(self, tau=0.6, eta=0.5):
+        self.tau, self.eta = tau, eta
+
+    def surprise(self, q_c, q_urg, a_prev):
+        H = entropy(q_c) + entropy(q_urg)
+        kl = KL(q_c, self.q_pred(a_prev))
+        return H + self.eta*kl
+
+    def step(self, s, a, U, human_available, k, c_use, M):
+        if U <= self.tau:
+            return k, False
+        if human_available:
+            M.query_human(s, a)
+            return k, True
+        return min(k, M.fallback_prefix(s, c_use)), True
+
+
+# IP-249 EWM-E
+class EmpathicWorldModelHead:
+    def __init__(self, trunk, expr_head):
+        self.trunk, self.expr_head = trunk, expr_head
+
+    def rollout(self, z_t, act_seq, k=5):
         preds = []
         for a in act_seq[:k]:
-            z = self.dyn(z, a.half())
-            π = self.emo(z)
-            pH = self.fault(z)
-            λ = 1 - 0.3*self.risk_emotion(π) - 0.2*self.risk_fault(pH)
-            preds.append({'pi': π.float(), 'pH': pH.float(), 'lambda': λ.float()})
+            z_t = self.trunk.step(z_t, a)
+            preds.append({'e': self.expr_head(z_t), 'z': z_t})
         return preds
 
-    def risk_emotion(self, pi): return 1 - pi[0] - 0.3*pi[1] - 0.8*pi[2] - pi[3]
-    def risk_fault(self, pH): return 1 - pH.get('H0', 0.0)
 
+# IP-251/252 EBC 在线环路
+def EBC_round(M, s, e, a_prev, base_prefix):
+    # 1) 关切后验 + 单调守卫
+    q_c, c_uc, missing = M.ele.encode(s, a_prev, e)
+    c_base = M.ele.ucb(M.ele.prior_net(s, a_prev), M.ele.delta)
+    c_use, lam_ebc = M.meg.guard(c_uc, c_base)
 
-# IP-235 VQAuditor：视觉问答审计员（异步）
-class VQAuditor:
-    def __init__(self, vqa_model, renderer, prompt_templates):
-        self.vqa, self.render, self.prompts = vqa_model, renderer, prompt_templates
+    # 2) 关切条件策略
+    A = M.ccp.propose(s, c_use)
+    k = M.certify_prefix(A, c_use, min(base_prefix, len(A)))
 
-    def audit(self, rollout_preds, scene_context):
-        vid = self.render.render_rollout(rollout_preds)  # 离屏渲染 5帧视频
-        report = {}
-        for q_type, prompt in self.prompts.items():
-            ans = self.vqa.ask(vid, prompt.format(**scene_context))
-            report[q_type] = self.parse(ans)
-        return AuditReport(report)
+    # 3) 关切意外 -> 查询 / 回退
+    U = M.cst.surprise(q_c[0], q_c[1], a_prev)
+    if U > M.cst.tau:
+        if M.human_available:
+            M.cst.step(s, A[:k], U, True, k, c_use, M)
+        else:
+            k = M.cst.step(s, A[:k], U, False, k, c_use, M)[0]
 
-    def parse(self, ans):  # 结构化解析
-        return {'risk_factors': extract_factors(ans),
-                'counterfactuals': extract_counterfactuals(ans),
-                'lambda_adjust': extract_lambda_adjust(ans)}
-
-
-# IP-236 ERG-WM：一致性校验增强的情绪网关
-class EmotionRecognitionGatewayWM(EmotionRecognitionGateway):
-    def __init__(self, wm, tau_wm_consist=0.3, **kwargs):
-        super().__init__(**kwargs)
-        self.wm, self.tau_wm = wm, tau_wm_consist
-        self.prev_pi_wm = None
-
-    def recognize(self, face_img, obs_t, act_seq, prev_pi=None):
-        result = super().recognize(face_img, prev_pi)
-        # WM 预测下一帧情绪
-        wm_preds = self.wm.rollout(obs_t, act_seq, k=1)
-        pi_wm = wm_preds[0]['pi'] if wm_preds else None
-        if pi_wm is not None:
-            kl = kl_div(result['pi'], pi_wm)
-            result['wm_consist'] = kl < self.tau_wm
-            result['pi_wm'] = pi_wm
-            if not result['wm_consist']:
-                result['gate'] = 'HIGH_RISK'  # 分布偏移 → 保守
-        self.prev_pi_wm = pi_wm
-        return result
-
-
-# IP-237 EFS-WM：融合 WM 时序先验的联合归因
-class EmotionFaultSynthesisWM(EmotionFaultSynthesis):
-    def __init__(self, wm, tau_horizon=3.0, **kwargs):
-        super().__init__(**kwargs)
-        self.wm, self.tau_h = wm, tau_horizon
-
-    def synthesize(self, rho, face_gate, obs_t, act_seq):
-        joint_post, post_H = super().synthesize(rho, face_gate)
-        # WM 时序先验
-        wm_preds = self.wm.rollout(obs_t, act_seq, k=5)
-        for i, pred in enumerate(wm_preds):
-            w = math.exp(-(i+1)/self.tau_h)
-            for h, p in pred['pH'].items():
-                key = (h, 'E0')  # 假设情绪正常
-                if key in joint_post:
-                    joint_post[key] *= (p ** w)
-        joint_post = normalize(joint_post)
-        return joint_post, post_H
-
-
-# IP-238 C-RAS-WM：前瞻认证前缀
-class ChunkSafetyCertificateRASWM(ChunkSafetyCertificateRAS):
-    def certified_prefix_ras_wm(self, A, joint_post, m_ras, alpha_chunk, wm_preds):
-        # 先算 WM 允许的最大步数
-        k_wm = 0
-        for i, pred in enumerate(wm_preds):
-            if pred['lambda'] * self.safety_margin_est(A[i]) >= 0:
-                k_wm = i + 1
-            else:
-                break
-        # 再算原有 RAS 认证
-        k_ras = self.certified_prefix_ras(A, joint_post, m_ras, alpha_chunk)
-        return min(k_ras, k_wm, m_ras)
-
-
-# IP-239 ERS-WM：含 MPC 项的控制律
-def emotion_response_shaping_wm(tau_cmd, joint_post, wm_preds, gamma=0.1, eta=0.05):
-    grad_R = compute_risk_gradient(joint_post)
-    # MPC 项：基于 WM 预测的下一步风险梯度
-    if wm_preds:
-        pi_next = wm_preds[0]['pi']
-        pH_next = wm_preds[0]['pH']
-        grad_R_wm = compute_risk_gradient_wm(pi_next, pH_next)
-        grad_R = grad_R + eta * grad_R_wm
-    return tau_cmd - gamma * grad_R
-
-
-# IP-240 SimRAS 闭环（在线实时环路）
-def SimRAS_round(M, obs):
-    V, T, P, L, P_cloud, W_meas, tactile, img, depth, flow = obs
-    M.lsf.update_geometry(P_cloud)
-    x_prime = M.lsf.fuse(M.usr.fuse(V, T, P, L))
-    y_vis = M.f_vis(img, depth, flow)
-
-    # 1) ERG-WM：情绪识别 + WM 一致性校验
-    act_seq = M.vista.ach.propose_actions(x_prime, H=M.vista.H, steps=5)
-    face_gate = M.erg_wm.recognize(img, x_prime, act_seq)
-
-    # 2) ACH-RAS：生成块
-    A = M.vista.ach.propose(x_prime, H=M.vista.H)
-
-    # 3) WM 滚动预测（并行于 ERG，这里串行写为清晰）
-    wm_preds = M.wm.rollout(x_prime, act_seq, k=min(5, len(A)))
-
-    # 4) EFS-WM：联合归因 + WM 时序先验
-    rho = M.vista.fir.signature(M.vista.stage.split(M.vista.residual_log))
-    joint_post, _ = M.efs_wm.synthesize(rho, face_gate, x_prime, act_seq)
-
-    # 5) C-RAS-WM：前瞻认证前缀
-    m_ras = min(M.vista.m, M.er.max_m_emotion)
-    k_ras = M.csc_ras_wm.certified_prefix_ras_wm(A, joint_post, m_ras, M.alpha_chunk, wm_preds)
-    λ_risk = M.efs_wm.risk_scale(joint_post)
-
-    # 6) ERG-FAS：情绪探针（同 RAS）
-    if face_gate['gate'] == 'HIGH_RISK':
-        e_post = {e: p for (h,e), p in joint_post.items() if h == 'H0'}
-        if max(e_post.values()) < M.tau_fas_ambiguous:
-            probe = M.fas.choose_probe(e_post)
-            if probe:
-                M.execute_emotion_probe(probe)
-                face_gate = M.erg_wm.recognize(img, x_prime, act_seq)
-                joint_post, _ = M.efs_wm.synthesize(rho, face_gate, x_prime, act_seq)
-                wm_preds = M.wm.rollout(x_prime, act_seq, k=min(5, len(A)))
-
-    # 7) ERS-WM：控制指令 + MPC 项
-    tau_cmd = M.vista.pi_sigma.prefix_dispatch(A[:k_ras])
-    tau_cmd = tau_cmd * λ_risk
-    tau_cmd = emotion_response_shaping_wm(tau_cmd, joint_post, wm_preds)
-
-    # 8) 异步 VQA 审计（后台线程，不阻塞）
-    M.vqa_auditor.submit_async(wm_preds, {'scene': x_prime, 'pi': face_gate['pi'], 'pH': joint_post})
-
-    return k_ras, λ_risk, joint_post, face_gate, wm_preds
+    # 4) 与 RAS 链路耦合（只收紧）
+    lam = M.ras.lambda_risk * lam_ebc
+    return A[:k], c_use, lam, U, missing
 ```
 
 ## 4. 推导
 
-**引理 11（WM 滚动预测的误差界）** 设 WM 单步预测误差 `E[||π_{t+1} - π̂_{t+1}||] ≤ ε_π`，`E[||P(H_{t+1}) - P̂(H_{t+1})||] ≤ ε_H`。则 `k` 步滚动误差满足 `E[||π_{t+k} - π̂_{t+k}||] ≤ ε_π·(1 - γ^k)/(1 - γ)` 其中 `γ = Lip(emo_head) < 1`。取 `k ≤ 5` 且 `γ ≤ 0.8` 时，累积误差 `< 5ε_π`。
+**引理 13（共情信息恒等式）**
+```
+I(c; a,e | s) = I(c; a | s) + I(c; e | s,a)
+```
+证明：链式法则直接展开，`I(c;e|s,a)=E[log p(e|s,a,c)/p(e|s,a)]≥0`。故表达在 A92 下只可能增加关于 `c` 的信息；若 `e` 与 `c` 条件独立，则 EBC 精确退化为普通 BC，不会更差。
 
-**引理 12（VQA 审计的泛化界）** 设 VQA 模型在审计任务上的零样本准确率为 `Acc_vqa`。对未见场景 `scene'`，若 `scene_hash` 在 `AuditBuf` 中最近邻距离 `d < τ_scene`，则复用审计结论的风险调整误差 `E[|λ_adjust - λ*_adjust|] ≤ (1 - Acc_vqa) + L_lip·d`。
+**引理 14（单调守卫的最坏情况安全）**
+设 `M(s,a,c)` 对 `c_care` 单调不减（定义 286）。对任意 `e`（含对抗伪造），`c_use=max(c_UC,c_base)≥c_base`，故
+```
+M(s,a,c_use) ≥ M(s,a,c_base)
+```
+证明：由 `max(·,·)` 的下界与单调性直接得到。该结论不依赖 A93/A94 与 `e` 的分布，是分布无关保证；表达是否忠实只决定保守程度，不决定安全下界。
 
-**定理 11（SimRAS 端到端风险一致性扩展）** 在 A87-A91 及 WM 误差界、VQA 泛化界下，SimRAS 输出满足：
-1. `P(|τ_cmd - τ*| > ε) ≤ α_chunk + δ_fi + α_emotion + α_wm + α_vqa`；
-2. `k*RAS ≥ min(k_VISTA, k_emo, k_wm*)·0.9` 其中 `k_wm*` 是理想 WM 允许的步数；
-3. `face_unobservable ⇒ λ_risk ≥ 0.8 ∧ k_wm = 0`（自动降级到纯 RAS）；
-4. `wm_drift = True ⇒ k_wm = 0 ∧ λ_risk ≥ 0.9`（WM 失效时保守回退）。
+**引理 15（去模式平均）**
+设 `c∈{c_low,c_high}`，`c_low<c_high`，对应示范动作 `a_low,a_high`。BC 边缘策略给出 `ā=½(a_low+a_high)`。若 `M(s,·,c)` 关于动作凹且对 `c` 单调，则
+```
+M(s,ā,c_high) ≤ ½[M(s,a_low,c_high)+M(s,a_high,c_high)]
+```
+当 `a_low` 是唯一满足 `M≥0` 的动作时，条件化 `c_use≥c_high-δ` 可把动作拉回安全侧，避免模式平均越界。
 
-**定理 12（离线仿真到在线的分布迁移界）** 设 `TV(P_sim || P_real) ≤ δ_sim`。则 SimEngine 预训练的 WM 在线部署时，单步预测误差 `ε_π ≤ ε_π^sim + C·δ_sim`，其中 `C` 依赖于 `emo_head` 的 Lipschitz 常数。同理 `ε_H ≤ ε_H^sim + C'·δ_sim`。
+**定理 14（共情触发下的协变量偏移）**
+设普通 BC 累计代价界 `J(π_BC) ≤ J(π_H)+O(εT²)`；CST 对「将离开示范分布」状态召回率 `1-δ_trig`；触发后查询预算 `B_q`。则
+```
+J(π_EBC) ≤ J(π_H) + O(εT) + O(δ_trig·T²) + O(B_q·T·ε_prior)
+```
+证明思路：标准 BC 的 `T²` 项来自每一步 `O(ε)` 的 OOD 概率累积；CST 以 `1-δ_trig` 概率在该步插入专家纠正，使该步之后的误差重置为 `O(ε)`，仅剩漏检的 `δ_trig` 部分继续按 `T²` 累积；查询预算项来自纠正样本的估计误差。当 `δ_trig=O(1/T)` 时主导项降为 `T`。**触发召回率而非精度**是该定理成立的关键。
 
-**定理 13（审计缓冲区的样本复杂度）** 为使 `AuditBuf` 覆盖 95% 的在线场景，需离线审计样本数 `N_audit ≥ (d_scene/τ_scene)^d · log(1/δ)`，其中 `d_scene` 是场景特征维度。实测 `d_scene ≈ 12`，`τ_scene=0.3` 时 `N_audit ≈ 5000` 即可。
+**定理 15（反事实共情的可辨识边界）**
+若 `g_ψ` 校准误差 `≤ε_cal`、排序 AUC `≥1-δ_rank`，则反事实过滤保留动作的真实风险 `≤ (1-δ_rank)` 分位 `+ε_cal`。但当 `(a,a')` 在示范数据中无重叠（positivity 失败）时，`g_ψ(e|s,a')` 为不可辨识外推，保证失效。故 EBC 规定反事实共情只做 top-k 重排，不做安全证明。
+
+**定理 16（EBC-RAS 端到端风险一致性）**
+在 A87–A94 与定理 11（SimRAS）下：
+1. `P(|τ_cmd-τ*|>ε) ≤ α_chunk+δ_fi+α_emotion+α_wm+α_vqa+α_clone`；
+2. `λ_total=λ_RAS·λ_EBC ≤ λ_RAS`；
+3. `e` 缺失 `⇒ c_use=c^prior_UC≥c_base ⇒ k*_EBC≤k*_base`；
+4. `ECE>0.05 ∨ demo_coverage<0.9 ⇒ J_EBC=Invalid`，退化到 `J_SimRAS` 且沿用 `c_base`。
+证明：由引理 14 得 `λ_total` 永不超过 RAS 上界；由定义 284/292 得缺失时前缀单调不增；其余项由定理 11 的误差分解逐项继承，`α_clone` 来自 CCP 的加权 BC 泛化误差。
+
+**定理 17（表达缺失的可用性—安全权衡）**
+设表达对 `c` 的 Fisher 信息为 `I_e`，缺失概率 `p_miss`，则有效信息 `≤(1-p_miss)I_e`（数据处理不等式），后验方差放大约 `1/(1-p_miss)`，认证前缀长度单调不增，但由引理 14 安全裕度下界不变。即：**遮挡只该让机器人变慢，不该让它变冒险。**
 
 ## 5. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| SimEngine（离线） | 10^6 轨迹 · 2h GPU | 500GB | 分布匹配 TV < 0.1 |
-| WM_θ 预训练（离线） | 8×A100 · 24h | 2GB | 引理 11：滚动误差 < 5ε_π |
-| WM 推理（在线 INT8） | <1ms (k=5) | 50MB | 引理 11、定理 11 |
-| VQAuditor（异步） | 50ms/次 (后台) | 200MB | 引理 12、定理 13 |
-| ERG-WM 一致性校验 | +0.1ms | — | 定理 11：wm_drift 保守回退 |
-| EFS-WM 时序先验 | +0.2ms | — | 定理 11：后验平滑 |
-| C-RAS-WM 前瞻认证 | +0.3ms | — | 定理 11：k*RAS ≥ 0.9·理想值 |
-| ERS-WM MPC 项 | +0.1ms | — | 单步梯度近似，收敛 |
-| 实时环路总延迟 | ERG+WM+EFS+C-RAS+ERS ≈ <3ms | — | 定理 11：风险一致性保持 |
+| ELE 前向（`(s,a,e)` 编码 + 分位头） | <0.4ms | 20MB | 引理 13、定理 17 |
+| MEG | O(1) <0.01ms | O(1) | 引理 14：分布无关安全下界 |
+| CCP（8 候选块打分） | <0.2ms | 15MB | 引理 15、定理 14 |
+| CST 触发 | <0.1ms | O(1) | 定理 14：召回率决定偏移界 |
+| EWM-E（共享 WM 主干，k=5） | <0.5ms | 50MB | 定理 15：仅排序不外推 |
+| ECQ（离线） | 一次 O(N) | O(N) | 定义 287/295 |
+| ECA（VQA 异步） | 50ms/次（后台） | 200MB | 定义 291、定理 15 |
+| Sim2Empathy（离线） | 10^6 轨迹 | 500GB | 定义 291 |
+| 实时环路总计 | ELE+MEG+CCP+CST <1ms；含 WM 共享 <3ms | — | 定理 16：风险一致性 |
 
-## 6. 实验设计 E251–E270
+## 6. 实验设计 E271–E290
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E251 SimEngine 分布匹配 | 合成轨迹是否覆盖真实情绪-故障联合分布 | TV(P_sim, P_real) < 0.1，高风险稀有事件覆盖率 > 80% |
-| E252 WM 预训练收敛 | 三头联合训练是否收敛 | 单步 ε_π < 0.08, ε_H < 0.05；5步滚动 ε_π < 0.35 |
-| E253 WM 在线推理延迟 | INT8 量化后是否满足 <1ms | 批大小=1, k=5 时 P99 < 1ms |
-| E254 ERG-WM 一致性校验 | KL 阈值 τ_wm=0.3 时误报/漏报 | 分布偏移检出率 > 90%，误报 < 5% |
-| E255 EFS-WM 时序先验 | 融合 WM 后联合归因准确率 | 7×4 类准确率 ≥ 88%（比 RAS 单独 85% 高 3%） |
-| E256 C-RAS-WM 前瞻认证 | k_wm 相比 k_ras 是否更保守/准确 | k*RAS ≥ k_ras·0.9，违规率 = 0 |
-| E257 ERS-WM MPC 项 | MPC 项是否降低未来情绪风险 | 5步内 R_emotion 积分 ↓ 15%，控制平滑度 ↑ |
-| E258 VQAuditor 审计质量 | VQA 回答的因果准确性 | 专家评分 ≥ 4/5，反事实建议可执行率 > 85% |
-| E259 AuditBuf 覆盖率 | 5000 审计样本能否覆盖 95% 在线场景 | 命中率 ≥ 95%，复用 λ_adjust 误差 < 0.1 |
-| E260 端到端 SimRAS vs RAS | 复杂长时程任务下的安全性 | 成功率不降、误降级 −50%、情绪违规 = 0、长尾风险 −60% |
-| E261 分布迁移鲁棒性 | Sim→Real 迁移下 WM 性能衰减 | δ_sim=0.15 时 ε_π 增长 < 2×，定理 12 验证 |
-| E262 WM 失效回退 | wm_drift 触发时是否安全回退 RAS | 100% 回退成功，无控制突变 |
-| E263 VQA 提示注入鲁棒性 | 恶意渲染伪影是否诱导错误审计 | 注入攻击成功率 < 1%，结构化解析拦截 |
-| E264 实时性压测 | 全链路 3ms 预算下连续 1h 运行 | P99 < 3ms，零帧丢 |
-| E265 消融实验 | 去掉 WM / VQA / SimEngine 各自贡献 | WM 贡献 +3% 归因、VQA 贡献 −20% 长尾风险、SimEngine 贡献 离线标定 |
+| E271 care/urgency 可辨识 | 两轴能否从表达+运动学中解耦 | 轴间互信息 <0.1 nat，反事实重构 R² >0.8 |
+| E272 后验校准 | `c_UC` 覆盖率是否可靠 | ECE <0.05，95% 覆盖误差 <2% |
+| E273 CCP vs BC | 意图歧义任务下的安全与成功率 | 越界率 −60%，成功率不降 |
+| E274 模式平均 | 边界附近是否仍学出中庸动作 | 危险中庸动作出现率 <3% |
+| E275 MEG 对抗表达 | 伪造/表演能否降低认证裕度 | 任意伪装下 `M≥M_base`，违规 =0 |
+| E276 ECQ 数据整形 | 含 30% 低质量示范 | 安全率 +25%，紧急示范不被误删 |
+| E277 CST 触发 | OOD/关切意外的召回 | 召回 >92%，误触发 <8% |
+| E278 共情 DAgger | 查询预算下的样本效率 | 同安全水平所需查询 −50% |
+| E279 反事实共情 | 排序与校准 | AUC >0.8，ECE <0.08 |
+| E280 EWM-E 表达滚动 | 5 步表达预测误差 | 单步 KL <0.1，5 步 <0.4 |
+| E281 ECA 审计一致性 | VQA 与人类专家判断 | 一致性 κ >0.7 |
+| E282 Sim2Empathy | 合成表达迁移到真人 | 跨文化风格退化 <20% |
+| E283 端到端 EBC-RAS | 对比 BC/RAS/SimRAS | false-safe −70%，误降级不升 |
+| E284 表达缺失 | 30s 全遮挡 | 仅前缀变短，`M` 下界不变 |
+| E285 隐私 | 设备端 DP 编码的效用损失 | `ε_dp=2` 时 care 误差 <0.1 |
+| E286 公平性 | 不同人群表达分布偏移 | 各族群误刹率差 <5% |
+| E287 表演/伪造攻击 | 刻意表演放松或紧张 | 放松不放宽；紧张仅更保守 |
+| E288 实时性 | ELE+MEG+CCP+CST 是否进预算 | 端到端 <3ms |
+| E289 长时程复利 | 1h 连续任务累积误差 | 漂移 <2× 普通 BC |
+| E290 消融 | ELE/MEG/ECQ/CST/反事实贡献 | 各项可单独归因；去 MEG 风险显著上升 |
 
 ## 7. 本轮最大风险
 
-**一句话**：SimRAS 引入的「世界模型 + 视觉问答」双黑箱在离线仿真分布偏移（Sim2Real Gap）下，可能产生**看似合理实则错误的未来风险预测与审计建议**，导致在线 RAS **基于虚假的前瞻信心过度放宽容差**（k_wm 过大、λ_risk 过高），在真实故障发生时失去最后的保守兜底——这是该轮所有理论依赖的核心假设：**世界模型的滚动预测误差可被一致性校验捕获，且视觉问答的审计结论在分布外场景下仍具备可靠的因果推理能力**。
+**一句话**：EBC 的全部安全收益依赖「共情表达是示范者真实关切的可辨识代理」这一假设——文化显示规则、职业性镇定、刻意表演与示范者自身"自信地做错"会系统性让表达偏离真实关切；单调守卫能保证 EBC 不比行为基线更冒险，却无法阻止它**忠实地克隆错误**（学到"安全但无用"或"带着群体偏见"的策略），而反事实共情又因反事实表达不可观测而本质上不可证伪——这是本轮所有理论依赖的核心假设：**示范者的表达与其真实风险偏好之间存在可学习的单向一致性，且示范者本身可靠**。
 <!-- ARTIFACT:END -->
