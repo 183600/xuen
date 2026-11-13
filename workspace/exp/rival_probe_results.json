@@ -1,0 +1,120 @@
+{
+  "exploitability": {
+    "K": 6,
+    "game_value": 0.2363,
+    "rfm_style": 0,
+    "raw_exploitability": 1.3106,
+    "mix_exploitability": 0.0,
+    "raw_vs_uniform_league": 0.3562,
+    "mix_vs_uniform_league": 0.2363,
+    "mix_entropy": 1.7795,
+    "sigma": [
+      0.1773,
+      0.1908,
+      0.1854,
+      0.1578,
+      0.1153,
+      0.1734
+    ]
+  },
+  "byzantine": [
+    {
+      "honest_accuracy": 1.0,
+      "cases": [
+        {
+          "f": 1,
+          "n": 4,
+          "r69_k2_error": 0.0,
+          "rival_majority_error": 0.0
+        },
+        {
+          "f": 2,
+          "n": 7,
+          "r69_k2_error": 0.0461,
+          "rival_majority_error": 0.0
+        },
+        {
+          "f": 3,
+          "n": 10,
+          "r69_k2_error": 0.0648,
+          "rival_majority_error": 0.0
+        }
+      ]
+    },
+    {
+      "honest_accuracy": 0.99,
+      "cases": [
+        {
+          "f": 1,
+          "n": 4,
+          "r69_k2_error": 0.0049,
+          "rival_majority_error": 0.0003
+        },
+        {
+          "f": 2,
+          "n": 7,
+          "r69_k2_error": 0.0512,
+          "rival_majority_error": 0.001
+        },
+        {
+          "f": 3,
+          "n": 10,
+          "r69_k2_error": 0.0689,
+          "rival_majority_error": 0.0001
+        }
+      ]
+    },
+    {
+      "honest_accuracy": 0.9,
+      "cases": [
+        {
+          "f": 1,
+          "n": 4,
+          "r69_k2_error": 0.0557,
+          "rival_majority_error": 0.0284
+        },
+        {
+          "f": 2,
+          "n": 7,
+          "r69_k2_error": 0.099,
+          "rival_majority_error": 0.0828
+        },
+        {
+          "f": 3,
+          "n": 10,
+          "r69_k2_error": 0.1154,
+          "rival_majority_error": 0.0261
+        }
+      ]
+    },
+    {
+      "honest_accuracy": 0.85,
+      "cases": [
+        {
+          "f": 1,
+          "n": 4,
+          "r69_k2_error": 0.0875,
+          "rival_majority_error": 0.0618
+        },
+        {
+          "f": 2,
+          "n": 7,
+          "r69_k2_error": 0.129,
+          "rival_majority_error": 0.1679
+        },
+        {
+          "f": 3,
+          "n": 10,
+          "r69_k2_error": 0.1447,
+          "rival_majority_error": 0.0741
+        }
+      ]
+    }
+  ],
+  "rank_vs_score": {
+    "score_optimal": "A(steady)",
+    "p_win_A": 0.2477,
+    "p_win_B": 0.3198,
+    "note": "same mean, higher variance B wins more in a 4-way final"
+  }
+}
