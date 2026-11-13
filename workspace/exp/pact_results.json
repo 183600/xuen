@@ -1,783 +1,166 @@
 {
-  "round": 16,
-  "name": "PACT-VLA",
-  "date": "2026-11-02",
-  "E0_leaderboard": {
-    "n_tasks": 32,
-    "n_models": 8,
-    "leader": {
-      "model": "MolmoAct2",
-      "succ": 29.7,
-      "step": 39.0
-    },
-    "per_task_sorted": [
-      {
-        "task": "Plug In Ethernet",
-        "mean_succ": 17.73,
-        "max_succ": 27.54,
-        "std_succ": 5.42,
-        "mean_dur": 48.9,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Unlock",
-        "mean_succ": 20.11,
-        "max_succ": 28.17,
-        "std_succ": 6.4,
-        "mean_dur": 39.0,
-        "best_model": "PI-0.5"
-      },
-      {
-        "task": "Spell robot",
-        "mean_succ": 21.82,
-        "max_succ": 33.99,
-        "std_succ": 6.14,
-        "mean_dur": 31.9,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Organize Stationery",
-        "mean_succ": 22.47,
-        "max_succ": 33.06,
-        "std_succ": 7.71,
-        "mean_dur": 33.7,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Open Pill Bottle",
-        "mean_succ": 22.73,
-        "max_succ": 30.09,
-        "std_succ": 6.26,
-        "mean_dur": 29.9,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Hang the Cup",
-        "mean_succ": 22.95,
-        "max_succ": 38.43,
-        "std_succ": 9.5,
-        "mean_dur": 29.3,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Pick Out Battery",
-        "mean_succ": 23.31,
-        "max_succ": 30.03,
-        "std_succ": 3.62,
-        "mean_dur": 56.5,
-        "best_model": "Spirit-v1.5"
-      },
-      {
-        "task": "Zip Up",
-        "mean_succ": 23.39,
-        "max_succ": 33.42,
-        "std_succ": 6.97,
-        "mean_dur": 59.2,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Pack Phone",
-        "mean_succ": 23.88,
-        "max_succ": 31.86,
-        "std_succ": 4.21,
-        "mean_dur": 55.7,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Fold Towel",
-        "mean_succ": 24.08,
-        "max_succ": 32.15,
-        "std_succ": 5.09,
-        "mean_dur": 54.3,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Organize Pencil Case",
-        "mean_succ": 24.08,
-        "max_succ": 30.3,
-        "std_succ": 4.99,
-        "mean_dur": 47.1,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Stack Bowls",
-        "mean_succ": 24.11,
-        "max_succ": 36.28,
-        "std_succ": 7.58,
-        "mean_dur": 29.7,
-        "best_model": "Spirit-v1.5"
-      },
-      {
-        "task": "Arrange Test Tubes",
-        "mean_succ": 24.15,
-        "max_succ": 34.38,
-        "std_succ": 6.39,
-        "mean_dur": 49.7,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Syringe Water Transfer",
-        "mean_succ": 24.57,
-        "max_succ": 29.35,
-        "std_succ": 3.13,
-        "mean_dur": 59.4,
-        "best_model": "PI-0.5"
-      },
-      {
-        "task": "Pack Bag",
-        "mean_succ": 25.28,
-        "max_succ": 31.38,
-        "std_succ": 4.5,
-        "mean_dur": 49.3,
-        "best_model": "DM0"
-      },
-      {
-        "task": "Plug Charger",
-        "mean_succ": 25.57,
-        "max_succ": 38.17,
-        "std_succ": 7.54,
-        "mean_dur": 44.3,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Store Racket",
-        "mean_succ": 25.57,
-        "max_succ": 34.23,
-        "std_succ": 4.32,
-        "mean_dur": 42.9,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Toolbox Storage",
-        "mean_succ": 25.82,
-        "max_succ": 30.71,
-        "std_succ": 2.51,
-        "mean_dur": 31.0,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Clear Plates",
-        "mean_succ": 25.9,
-        "max_succ": 34.36,
-        "std_succ": 5.09,
-        "mean_dur": 51.0,
-        "best_model": "GR00T N1.5"
-      },
-      {
-        "task": "Organize Tools",
-        "mean_succ": 25.94,
-        "max_succ": 37.2,
-        "std_succ": 5.21,
-        "mean_dur": 40.4,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Pack the Doll",
-        "mean_succ": 26.14,
-        "max_succ": 37.01,
-        "std_succ": 6.36,
-        "mean_dur": 55.7,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Organize Bookshelf",
-        "mean_succ": 26.62,
-        "max_succ": 33.02,
-        "std_succ": 4.01,
-        "mean_dur": 50.5,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Disconnect Ethernet",
-        "mean_succ": 26.81,
-        "max_succ": 33.44,
-        "std_succ": 4.13,
-        "mean_dur": 47.3,
-        "best_model": "Spirit-v1.5"
-      },
-      {
-        "task": "Fruit Sorting",
-        "mean_succ": 27.01,
-        "max_succ": 35.5,
-        "std_succ": 5.76,
-        "mean_dur": 35.0,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Color Arrangement",
-        "mean_succ": 27.12,
-        "max_succ": 37.32,
-        "std_succ": 7.06,
-        "mean_dur": 59.7,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Remove Pinned Note",
-        "mean_succ": 27.3,
-        "max_succ": 40.28,
-        "std_succ": 8.15,
-        "mean_dur": 32.6,
-        "best_model": "WALL-OSS-0.5"
-      },
-      {
-        "task": "Fruit Basket Collection",
-        "mean_succ": 27.79,
-        "max_succ": 32.38,
-        "std_succ": 3.14,
-        "mean_dur": 42.1,
-        "best_model": "DM0"
-      },
-      {
-        "task": "Store Earphones",
-        "mean_succ": 27.88,
-        "max_succ": 32.3,
-        "std_succ": 2.51,
-        "mean_dur": 42.4,
-        "best_model": "Spirit-v1.5"
-      },
-      {
-        "task": "Place Photo Frames",
-        "mean_succ": 27.98,
-        "max_succ": 42.0,
-        "std_succ": 7.8,
-        "mean_dur": 38.6,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Paper Cup Stacking",
-        "mean_succ": 28.05,
-        "max_succ": 35.28,
-        "std_succ": 6.26,
-        "mean_dur": 37.8,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Conveyor Food Sorting",
-        "mean_succ": 29.12,
-        "max_succ": 37.55,
-        "std_succ": 6.52,
-        "mean_dur": 58.2,
-        "best_model": "GigaBrain-0"
-      },
-      {
-        "task": "Stack Cups",
-        "mean_succ": 30.32,
-        "max_succ": 35.48,
-        "std_succ": 4.83,
-        "mean_dur": 37.0,
-        "best_model": "Spirit-v1.5"
-      }
+  "meta": {
+    "purpose": "synthetic mechanism check, NOT benchmark or human-subject evidence",
+    "seed": 17
+  },
+  "A_decision_relevant_intent": {
+    "M_intents": 12,
+    "C_behaviour_classes": 3,
+    "mean_H_intent_nats": 1.7512293591448285,
+    "mean_H_quotient_nats": 0.4180224296239599,
+    "log_M": 2.4849066497880004,
+    "action_0_mean_EVPI": 0.20784945883470976,
+    "action_1_mean_EVPI": 1.033895191682177e-17,
+    "wasted_clarification_rate_action0": 0.32125,
+    "wasted_clarification_rate_action1": 1.0,
+    "false_confidence_rate": 0.0,
+    "corr_H_intent_EVPI_action0": 0.7767804951074241,
+    "full_vs_quotient_decision_agreement": [
+      1.0,
+      1.0
     ],
-    "hardest5": [
+    "calibration_mse_per_intent": 0.007300000000000002,
+    "calibration_mse_per_class": 0.0009666666666666669,
+    "calibration_mse_ratio": 0.1324200913242009
+  },
+  "B_consent_gated_prefix": {
+    "t_contact_s": 1.0,
+    "tau_mean_s": 0.34917354582195576,
+    "tau_q90_s": 0.4516728426662669,
+    "k_from_mean_reaction": 6,
+    "k_from_q90_reaction": 5,
+    "harm_at_mean_horizon": 0.039255,
+    "harm_at_q90_horizon": 0.0044775,
+    "harm_fixed_k16": 0.15,
+    "relative_harm_reduction_q90_vs_k16": 0.97015,
+    "curve": [
       {
-        "task": "Plug In Ethernet",
-        "mean_succ": 17.73,
-        "max_succ": 27.54,
-        "std_succ": 5.42,
-        "mean_dur": 48.9,
-        "best_model": "MolmoAct2"
+        "k": 1,
+        "latency_mean_s": 0.4491735458219558,
+        "harm_given_threat": 0.0,
+        "harm_rate": 0.0
       },
       {
-        "task": "Unlock",
-        "mean_succ": 20.11,
-        "max_succ": 28.17,
-        "std_succ": 6.4,
-        "mean_dur": 39.0,
-        "best_model": "PI-0.5"
+        "k": 2,
+        "latency_mean_s": 0.5491735458219558,
+        "harm_given_threat": 0.0,
+        "harm_rate": 0.0
       },
       {
-        "task": "Spell robot",
-        "mean_succ": 21.82,
-        "max_succ": 33.99,
-        "std_succ": 6.14,
-        "mean_dur": 31.9,
-        "best_model": "WALL-OSS-0.5"
+        "k": 3,
+        "latency_mean_s": 0.6491735458219559,
+        "harm_given_threat": 0.0,
+        "harm_rate": 0.0
       },
       {
-        "task": "Organize Stationery",
-        "mean_succ": 22.47,
-        "max_succ": 33.06,
-        "std_succ": 7.71,
-        "mean_dur": 33.7,
-        "best_model": "WALL-OSS-0.5"
+        "k": 4,
+        "latency_mean_s": 0.7491735458219557,
+        "harm_given_threat": 0.000975,
+        "harm_rate": 0.00014624999999999998
       },
       {
-        "task": "Open Pill Bottle",
-        "mean_succ": 22.73,
-        "max_succ": 30.09,
-        "std_succ": 6.26,
-        "mean_dur": 29.9,
-        "best_model": "WALL-OSS-0.5"
+        "k": 5,
+        "latency_mean_s": 0.8491735458219558,
+        "harm_given_threat": 0.02985,
+        "harm_rate": 0.0044775
+      },
+      {
+        "k": 6,
+        "latency_mean_s": 0.9491735458219559,
+        "harm_given_threat": 0.2617,
+        "harm_rate": 0.039255
+      },
+      {
+        "k": 8,
+        "latency_mean_s": 1.1491735458219559,
+        "harm_given_threat": 0.9691,
+        "harm_rate": 0.145365
+      },
+      {
+        "k": 12,
+        "latency_mean_s": 1.549173545821956,
+        "harm_given_threat": 1.0,
+        "harm_rate": 0.15
+      },
+      {
+        "k": 16,
+        "latency_mean_s": 1.949173545821956,
+        "harm_given_threat": 1.0,
+        "harm_rate": 0.15
       }
-    ],
-    "easiest5": [
-      {
-        "task": "Store Earphones",
-        "mean_succ": 27.88,
-        "max_succ": 32.3,
-        "std_succ": 2.51,
-        "mean_dur": 42.4,
-        "best_model": "Spirit-v1.5"
-      },
-      {
-        "task": "Place Photo Frames",
-        "mean_succ": 27.98,
-        "max_succ": 42.0,
-        "std_succ": 7.8,
-        "mean_dur": 38.6,
-        "best_model": "DreamZero"
-      },
-      {
-        "task": "Paper Cup Stacking",
-        "mean_succ": 28.05,
-        "max_succ": 35.28,
-        "std_succ": 6.26,
-        "mean_dur": 37.8,
-        "best_model": "MolmoAct2"
-      },
-      {
-        "task": "Conveyor Food Sorting",
-        "mean_succ": 29.12,
-        "max_succ": 37.55,
-        "std_succ": 6.52,
-        "mean_dur": 58.2,
-        "best_model": "GigaBrain-0"
-      },
-      {
-        "task": "Stack Cups",
-        "mean_succ": 30.32,
-        "max_succ": 35.48,
-        "std_succ": 4.83,
-        "mean_dur": 37.0,
-        "best_model": "Spirit-v1.5"
-      }
-    ],
-    "mean_inter_task_corr_of_model_profiles": 0.246,
-    "oracle_routing_ceiling": 33.96,
-    "best_single_model": {
-      "model": "MolmoAct2",
-      "succ": 29.7
-    },
-    "routing_headroom_pp": 4.26,
-    "step_over_success_ratio": 1.341,
-    "contact_group_mean_succ": 22.92,
-    "all_group_mean_succ": 25.17,
-    "contact_tasks": [
-      "Plug In Ethernet",
-      "Disconnect Ethernet",
-      "Unlock",
-      "Open Pill Bottle",
-      "Plug Charger",
-      "Hang the Cup",
-      "Syringe Water Transfer"
     ]
   },
-  "E1_concurrency": {
-    "dt": 0.033,
-    "t_heavy_ms": 55.0,
-    "t_wm_ms": 8.0,
-    "n_ports": 5,
-    "policies": {
-      "A_per_port_copies_c8": {
-        "chunk_steps": 8,
-        "spec_every": 1,
-        "batch": 1,
-        "p50_latency_ms": 55.0,
-        "p99_latency_ms": 55.0,
-        "mean_age_ms": 187.0,
-        "wm_quality": 1.0,
-        "success": 0.2268,
-        "gpu_cost": 0.2085,
-        "success_per_cost": 1.09,
-        "gpu_cost_rel": 1.0
+  "C_trust_calibration": {
+    "true_reliability": 0.7,
+    "fault_rate": 0.3,
+    "residual_fault_given_fault": 0.3,
+    "rows": [
+      {
+        "policy": "overclaim",
+        "reported_trust": 0.98,
+        "trust_error_abs": 0.28,
+        "monitoring_prob": 0.2535060166623379,
+        "harm_rate": 0.06718445850038958,
+        "unnecessary_override_rate": 0.2306904751627275
       },
-      "B_shared_serial_c8": {
-        "chunk_steps": 8,
-        "spec_every": 1,
-        "batch": 1,
-        "p50_latency_ms": 2662.0,
-        "p99_latency_ms": 5137.0,
-        "mean_age_ms": 2794.0,
-        "wm_quality": 1.0,
-        "success": 0.0,
-        "gpu_cost": 0.2085,
-        "success_per_cost": 0.0,
-        "gpu_cost_rel": 1.0
+      {
+        "policy": "calibrated",
+        "reported_trust": 0.7,
+        "trust_error_abs": 0.0,
+        "monitoring_prob": 0.6456563062257956,
+        "harm_rate": 0.031890932439678395,
+        "unnecessary_override_rate": 0.587547238665474
       },
-      "C_shared_batch4_c8": {
-        "chunk_steps": 8,
-        "spec_every": 1,
-        "batch": 4,
-        "p50_latency_ms": 55.0,
-        "p99_latency_ms": 110.0,
-        "mean_age_ms": 198.0,
-        "wm_quality": 1.0,
-        "success": 0.2192,
-        "gpu_cost": 0.0834,
-        "success_per_cost": 2.63,
-        "gpu_cost_rel": 0.4
-      },
-      "D_shared_batch4_c4": {
-        "chunk_steps": 4,
-        "spec_every": 1,
-        "batch": 4,
-        "p50_latency_ms": 55.0,
-        "p99_latency_ms": 110.0,
-        "mean_age_ms": 132.0,
-        "wm_quality": 1.0,
-        "success": 0.261,
-        "gpu_cost": 0.1668,
-        "success_per_cost": 1.56,
-        "gpu_cost_rel": 0.8
-      },
-      "E_spec_batch4_c4_R4": {
-        "chunk_steps": 4,
-        "spec_every": 4,
-        "batch": 4,
-        "p50_latency_ms": 8.0,
-        "p99_latency_ms": 110.0,
-        "mean_age_ms": 89.7,
-        "wm_quality": 0.922,
-        "success": 0.2593,
-        "gpu_cost": 0.06,
-        "success_per_cost": 4.32,
-        "gpu_cost_rel": 0.288
-      },
-      "F_spec_batch4_c8_R3": {
-        "chunk_steps": 8,
-        "spec_every": 3,
-        "batch": 4,
-        "p50_latency_ms": 8.0,
-        "p99_latency_ms": 110.0,
-        "mean_age_ms": 160.4,
-        "wm_quality": 0.948,
-        "success": 0.2316,
-        "gpu_cost": 0.0359,
-        "success_per_cost": 6.44,
-        "gpu_cost_rel": 0.172
-      },
-      "G_spec_batch4_c2_R3": {
-        "chunk_steps": 2,
-        "spec_every": 3,
-        "batch": 4,
-        "p50_latency_ms": 52.0,
-        "p99_latency_ms": 110.0,
-        "mean_age_ms": 76.1,
-        "wm_quality": 0.948,
-        "success": 0.2716,
-        "gpu_cost": 0.1436,
-        "success_per_cost": 1.89,
-        "gpu_cost_rel": 0.689
+      {
+        "policy": "underclaim",
+        "reported_trust": 0.4,
+        "trust_error_abs": 0.29999999999999993,
+        "monitoring_prob": 0.9168273035060777,
+        "harm_rate": 0.00748554268445301,
+        "unnecessary_override_rate": 0.8343128461905307
       }
-    },
-    "scaling": {
-      "3": {
-        "serial_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 110.0,
-          "p99_latency_ms": 165.0,
-          "mean_age_ms": 242.0,
-          "wm_quality": 1.0,
-          "success": 0.1878,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 0.9
-        },
-        "copies_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 187.0,
-          "wm_quality": 1.0,
-          "success": 0.2268,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 1.09
-        },
-        "batch4_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 4,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 187.0,
-          "wm_quality": 1.0,
-          "success": 0.2268,
-          "gpu_cost": 0.0695,
-          "success_per_cost": 3.26
-        },
-        "spec_batch4_c4_R4": {
-          "chunk_steps": 4,
-          "spec_every": 4,
-          "batch": 4,
-          "p50_latency_ms": 8.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 85.8,
-          "wm_quality": 0.922,
-          "success": 0.2608,
-          "gpu_cost": 0.05,
-          "success_per_cost": 5.22
-        }
-      },
-      "5": {
-        "serial_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 2662.0,
-          "p99_latency_ms": 5137.0,
-          "mean_age_ms": 2794.0,
-          "wm_quality": 1.0,
-          "success": 0.0,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 0.0
-        },
-        "copies_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 187.0,
-          "wm_quality": 1.0,
-          "success": 0.2268,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 1.09
-        },
-        "batch4_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 4,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 110.0,
-          "mean_age_ms": 198.0,
-          "wm_quality": 1.0,
-          "success": 0.2192,
-          "gpu_cost": 0.0834,
-          "success_per_cost": 2.63
-        },
-        "spec_batch4_c4_R4": {
-          "chunk_steps": 4,
-          "spec_every": 4,
-          "batch": 4,
-          "p50_latency_ms": 8.0,
-          "p99_latency_ms": 110.0,
-          "mean_age_ms": 89.7,
-          "wm_quality": 0.922,
-          "success": 0.2593,
-          "gpu_cost": 0.06,
-          "success_per_cost": 4.32
-        }
-      },
-      "8": {
-        "serial_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 40199.5,
-          "p99_latency_ms": 79420.0,
-          "mean_age_ms": 40331.5,
-          "wm_quality": 1.0,
-          "success": 0.0,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 0.0
-        },
-        "copies_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 187.0,
-          "wm_quality": 1.0,
-          "success": 0.2268,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 1.09
-        },
-        "batch4_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 4,
-          "p50_latency_ms": 82.5,
-          "p99_latency_ms": 110.0,
-          "mean_age_ms": 214.5,
-          "wm_quality": 1.0,
-          "success": 0.2076,
-          "gpu_cost": 0.0521,
-          "success_per_cost": 3.98
-        },
-        "spec_batch4_c4_R4": {
-          "chunk_steps": 4,
-          "spec_every": 4,
-          "batch": 4,
-          "p50_latency_ms": 16.0,
-          "p99_latency_ms": 110.0,
-          "mean_age_ms": 95.7,
-          "wm_quality": 0.922,
-          "success": 0.2571,
-          "gpu_cost": 0.0375,
-          "success_per_cost": 6.86
-        }
-      },
-      "12": {
-        "serial_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 90249.5,
-          "p99_latency_ms": 178475.0,
-          "mean_age_ms": 90381.5,
-          "wm_quality": 1.0,
-          "success": 0.0,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 0.0
-        },
-        "copies_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 1,
-          "p50_latency_ms": 55.0,
-          "p99_latency_ms": 55.0,
-          "mean_age_ms": 187.0,
-          "wm_quality": 1.0,
-          "success": 0.2268,
-          "gpu_cost": 0.2085,
-          "success_per_cost": 1.09
-        },
-        "batch4_c8": {
-          "chunk_steps": 8,
-          "spec_every": 1,
-          "batch": 4,
-          "p50_latency_ms": 110.0,
-          "p99_latency_ms": 165.0,
-          "mean_age_ms": 242.0,
-          "wm_quality": 1.0,
-          "success": 0.1878,
-          "gpu_cost": 0.0521,
-          "success_per_cost": 3.6
-        },
-        "spec_batch4_c4_R4": {
-          "chunk_steps": 4,
-          "spec_every": 4,
-          "batch": 4,
-          "p50_latency_ms": 41.0,
-          "p99_latency_ms": 165.0,
-          "mean_age_ms": 113.8,
-          "wm_quality": 0.922,
-          "success": 0.2493,
-          "gpu_cost": 0.0375,
-          "success_per_cost": 6.65
-        }
-      }
-    }
+    ]
   },
-  "E2_torque": {
-    "sigma_oob": 0.7,
-    "tau": 0.7,
-    "tau_hi": 1.1,
-    "sigma_est": 0.35,
-    "by_rho": {
-      "0.0": {
-        "success": 0.6285,
-        "overstiff_violation": 0.0796,
-        "stall": 0.1862
+  "D_social_attribution": {
+    "hypotheses": [
+      "H_robot",
+      "H_human_intent",
+      "H_human_slip",
+      "H_comm",
+      "H_env"
+    ],
+    "argmax_accuracy": 0.8316666666666667,
+    "argmax_false_human_blame": 0.0481,
+    "argmax_false_self_blame": 0.052533333333333335,
+    "by_loss_ratio": [
+      {
+        "loss_ratio": 1.5,
+        "accuracy": 0.8082333333333334,
+        "false_human_blame": 0.017266666666666666,
+        "false_self_blame": 0.10513333333333333,
+        "false_blame_relative_reduction": 0.641025641025641
       },
-      "0.25": {
-        "success": 0.7377,
-        "overstiff_violation": 0.039,
-        "stall": 0.1319
+      {
+        "loss_ratio": 2.0,
+        "accuracy": 0.7718333333333334,
+        "false_human_blame": 0.007966666666666667,
+        "false_self_blame": 0.1526,
+        "false_blame_relative_reduction": 0.8343728343728344
       },
-      "0.5": {
-        "success": 0.8689,
-        "overstiff_violation": 0.009,
-        "stall": 0.0651
+      {
+        "loss_ratio": 3.0,
+        "accuracy": 0.7130333333333333,
+        "false_human_blame": 0.0029333333333333334,
+        "false_self_blame": 0.21906666666666666,
+        "false_blame_relative_reduction": 0.939015939015939
       },
-      "0.75": {
-        "success": 0.9843,
-        "overstiff_violation": 0.0001,
-        "stall": 0.0077
-      },
-      "0.9": {
-        "success": 0.9999,
-        "overstiff_violation": 0.0,
-        "stall": 0.0
-      },
-      "1.0": {
-        "success": 1.0,
-        "overstiff_violation": 0.0,
-        "stall": 0.0
+      {
+        "loss_ratio": 5.0,
+        "accuracy": 0.6423,
+        "false_human_blame": 0.00046666666666666666,
+        "false_self_blame": 0.29423333333333335,
+        "false_blame_relative_reduction": 0.9902979902979903
       }
-    },
-    "ood_width_sweep": {
-      "0.2": {
-        "fixed_success": 0.9163,
-        "oracle_success": 1.0,
-        "fixed_violation": 0.003,
-        "oracle_violation": 0.0
-      },
-      "0.4": {
-        "fixed_success": 0.811,
-        "oracle_success": 1.0,
-        "fixed_violation": 0.02,
-        "oracle_violation": 0.0
-      },
-      "0.7": {
-        "fixed_success": 0.6304,
-        "oracle_success": 1.0,
-        "fixed_violation": 0.0801,
-        "oracle_violation": 0.0
-      },
-      "1.0": {
-        "fixed_success": 0.492,
-        "oracle_success": 1.0,
-        "fixed_violation": 0.149,
-        "oracle_violation": 0.0
-      },
-      "1.3": {
-        "fixed_success": 0.3969,
-        "oracle_success": 1.0,
-        "fixed_violation": 0.2052,
-        "oracle_violation": 0.0
-      }
-    }
-  },
-  "E3_pretraining": {
-    "rho0": 0.2,
-    "rho_max": 0.92,
-    "H0_hours": 900.0,
-    "by_pretrain_hours": {
-      "0": {
-        "rho": 0.2,
-        "contact_task_success": 0.7159
-      },
-      "169": {
-        "rho": 0.323,
-        "contact_task_success": 0.7761
-      },
-      "500": {
-        "rho": 0.507,
-        "contact_task_success": 0.8721
-      },
-      "1000": {
-        "rho": 0.683,
-        "contact_task_success": 0.9534
-      },
-      "1500": {
-        "rho": 0.784,
-        "contact_task_success": 0.9878
-      },
-      "2500": {
-        "rho": 0.875,
-        "contact_task_success": 0.9973
-      },
-      "4000": {
-        "rho": 0.912,
-        "contact_task_success": 0.9999
-      }
-    },
-    "gain_169h_to_2500h_pp": 22.1,
-    "note": "169h=挑战集单独; 2500h=官方WLA-1.0基座量级; 含 G1_Dex1/WBT/R1 同类数据"
+    ]
   }
 }
