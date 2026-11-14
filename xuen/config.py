@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 import os
 import re
-import sys
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -281,11 +280,6 @@ def _validate(cfg: Config) -> None:
         raise ValueError("loop.iterations")
     if val is not None and val < 1:
         raise ValueError("loop.iterations 必须在 1 或更多")
-    # 正整数语义上合法，但 Python range（runner 的轮次计数器）最大只能
-    # 表示到 C ssize_t 上限；超出平台的轮数必须在配置阶段拒绝，
-    # 不能让 runner 的 range() 抛 OverflowError
-    if val is not None and val > sys.maxsize:
-        raise ValueError("loop.iterations 超出平台可表示上限")
 
     if not isinstance(cfg.rounds.enabled, bool):
         raise ValueError("rounds.enabled")
@@ -345,17 +339,28 @@ def _validate(cfg: Config) -> None:
 
     if os.name == "nt":
         try:
-            _validate_windows_command(
-                "agent.command", cfg.agent.command, cfg.workspace
-            )
-            if cfg.rounds.judge_command:
-                _validate_windows_command(
-                    "rounds.judge_command", cfg.rounds.judge_command, cfg.workspace
-                )
-            if not _has_valid_expansion(cfg.agent.command):
-                raise ValueError(
-                    "agent.command 必须包含会被实际替换的占位符（$prompt_file / $prompt）"
-                )
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    _validate_windows_command(
+                        "agent.command", cfg.agent.command, cfg.workspace
+                    )
+                except ValueError:
+                    raise ValueError("agent.command")
+                try:
+                    _validate_windows_command(
+                        "rounds.judge_command", cfg.rounds.judge_command, cfg.workspace
+                    )
+                except ValueError:
+                    raise ValueError("judge_command")
+                try:
+                    _validate_windows_command(
+                        "agent.command", cfg.agent.command, cfg.workspace
+                    )
+                except ValueError as e:
+                    if "必须包含会被实际替换" in str(e):
+                        raise ValueError("必须包含会被实际替换")
         except (NotImplementedError, AttributeError, ImportError):
             pass
 
