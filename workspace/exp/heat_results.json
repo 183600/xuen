@@ -1,0 +1,153 @@
+{
+  "seed": 20261114,
+  "note": "synthetic mechanism check, NOT benchmark evidence",
+  "A_thermal_governor": {
+    "params": {
+      "C": 8.0,
+      "R": 1.0,
+      "T_amb": 25.0,
+      "T_max": 90.0,
+      "tau_peak": 30.0,
+      "n_task": 80
+    },
+    "static_torque_Nm": 23.57,
+    "naive": {
+      "tasks": 80,
+      "time_s": 28.0,
+      "peak_C": 101.97,
+      "overtemp_s": 11.04,
+      "tau_last_Nm": 30.0,
+      "tau_mean_Nm": 30.0,
+      "cooldown_steps": 0,
+      "mean_task_s": 0.35,
+      "speedup_vs_heat_pct": 5.4
+    },
+    "static": {
+      "tasks": 80,
+      "time_s": 34.55,
+      "peak_C": 73.9,
+      "overtemp_s": 0.0,
+      "tau_last_Nm": 23.57,
+      "tau_mean_Nm": 23.57,
+      "cooldown_steps": 0,
+      "mean_task_s": 0.4319
+    },
+    "heat": {
+      "tasks": 80,
+      "time_s": 29.59,
+      "peak_C": 88.64,
+      "overtemp_s": 0.0,
+      "tau_last_Nm": 26.0,
+      "tau_mean_Nm": 28.23,
+      "cooldown_steps": 0,
+      "mean_task_s": 0.3699,
+      "speedup_vs_static_pct": 14.4
+    }
+  },
+  "B_cold_calibration_hot": {
+    "temps_C": [
+      25.0,
+      30.0,
+      35.0,
+      40.0,
+      45.0,
+      50.0,
+      55.0,
+      60.0,
+      65.0,
+      70.0,
+      75.0
+    ],
+    "true_hw_mrad": [
+      20.0,
+      19.599999999999998,
+      19.2,
+      18.8,
+      18.4,
+      18.000000000000004,
+      17.6,
+      17.2,
+      16.8,
+      16.400000000000002,
+      16.0
+    ],
+    "cold_cal_error_mrad": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0,
+      1.2,
+      1.4,
+      1.6,
+      1.8,
+      2.0
+    ],
+    "heat_est_error_mrad": [
+      0.001,
+      0.017,
+      0.115,
+      0.041,
+      0.064,
+      0.012,
+      0.05,
+      0.027,
+      0.094,
+      0.034,
+      0.131
+    ],
+    "cold_cal_max_mrad": 2.0,
+    "heat_est_p95_mrad": 0.123
+  },
+  "C_internal_probe": {
+    "n": 4000,
+    "no_probe_p95_mrad": 28.127,
+    "probe_p95_mrad": 2.999,
+    "no_probe_mean_mrad": 10.282,
+    "probe_mean_mrad": 1.195,
+    "p95_reduction_pct": 89.3,
+    "probe_time_s": 0.15,
+    "probe_heat_J": 1.94,
+    "expected_sq_gain_mrad2": 217.47,
+    "decision_threshold": 0.97,
+    "economic_decision_probe": true
+  },
+  "D_fingerprint": {
+    "classes": [
+      "sensor_bias",
+      "thermal_expansion",
+      "wear",
+      "grease_degradation"
+    ],
+    "n_per_class": 600,
+    "noise_sigma_std": 0.3,
+    "accuracy": 0.8679,
+    "confusion": [
+      [
+        555,
+        27,
+        18,
+        0
+      ],
+      [
+        20,
+        490,
+        9,
+        81
+      ],
+      [
+        16,
+        8,
+        548,
+        28
+      ],
+      [
+        3,
+        81,
+        26,
+        490
+      ]
+    ]
+  }
+}
