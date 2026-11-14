@@ -1,0 +1,64 @@
+{
+  "claim_A_phantom_multimodality": {
+    "false_interaction_rate": {
+      "R69_AUD": 0.9213,
+      "MAG": 0.009
+    },
+    "resolvable_recall": {
+      "R69_AUD": 1.0,
+      "MAG": 1.0
+    },
+    "n_no_resolvable_ambiguity": 18636,
+    "n_resolvable_ambiguity": 1364
+  },
+  "claim_B_unobserved_not_free": [
+    {
+      "occluded_fraction": 0.05,
+      "naive_collision_rate": 0.3225,
+      "naive_success_rate": 0.6775,
+      "certified_free_success_rate": 0.949
+    },
+    {
+      "occluded_fraction": 0.15,
+      "naive_collision_rate": 0.71,
+      "naive_success_rate": 0.29,
+      "certified_free_success_rate": 0.785
+    },
+    {
+      "occluded_fraction": 0.25,
+      "naive_collision_rate": 0.87,
+      "naive_success_rate": 0.13,
+      "certified_free_success_rate": 0.5355
+    },
+    {
+      "occluded_fraction": 0.35,
+      "naive_collision_rate": 0.947,
+      "naive_success_rate": 0.053,
+      "certified_free_success_rate": 0.166
+    },
+    {
+      "occluded_fraction": 0.45,
+      "naive_collision_rate": 0.975,
+      "naive_success_rate": 0.025,
+      "certified_free_success_rate": 0.001
+    },
+    {
+      "occluded_fraction": 0.55,
+      "naive_collision_rate": 0.9925,
+      "naive_success_rate": 0.0075,
+      "certified_free_success_rate": 0.0
+    }
+  ],
+  "claim_C_channel_routing": {
+    "mean_residual_entropy": {
+      "typed": 0.7973,
+      "r69": 0.8622,
+      "always_ask": 0.9269,
+      "always_look": 0.991
+    },
+    "typed_improvement_vs_r69": 0.0649,
+    "r69_misroute_rate": 0.2802,
+    "leakage_lambda": 0.15
+  },
+  "note": "Toy mechanism check only; not benchmark evidence."
+}
