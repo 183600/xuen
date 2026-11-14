@@ -312,307 +312,256 @@ def MODGAUGE_round(M, obs, audio, tac_frame, depth_img):
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 73 轮产物 · 创新点清单 v4：MODGAUGE-RAS（MODular, Physics-aware evidence metrology with GAUGE audits for RAS：模块化 × 物理感知证据计量 × 计量契约代数 × 主张-证明绑定；MMS×DPEM×CCA×ΣREFLEX×CPB×EMBODIED-GAUGE-RAS†）
+# 第 74 轮产物 · 创新点清单 v5：SENTGAUGE-RAS（SENTinel-audited evidence metrology with GAUGE audits for RAS：契约异常哨兵 × 物体证据计量 × 约定计量适应 × 门控组合代数；CAS×OEM×NCM×GATE-CCA†×SENT-REFLEX†×J_SENT×MODGAUGE†）
 
-> 承接第 72 轮 IP-287~294（EMBODIED-GAUGE-RAS）。R72 完成具身层下沉（REG/IRL/DMEM/EREFLEX/ERVOI/E-RISK/S2R-UQ/RTM），但留下三个单体病：换模块=重审系统、深度相机仍是无类型观测、反作用层手写无法容纳 L4 视角层。本轮以「深度相机 × 模块化设计 × 论文创新点」三位一体补齐：
-> - **MMS**：证据契约 EC + 模块三元组 + 注册表 MReg——接口即契约，组合即定理；复杂度上限成为可审计图性质；
-> - **DPEM**：深度六分量不确定度 + 材质条件似然 + 视角反作用通道 χ_v——「新模态 = 新模块」的第一个示范；
-> - **CCA**：串联/并联/否决组合代数 + 组合单调性 + 热替换定理（并联仅 conformal 一致性审计通过才许缩窄）；
-> - **ΣREFLEX**：反作用通道成为契约字段，层数从系统结构降为模块声明（ψ/z/c/v 四层为当前实例）；
-> - **CPB**：三条可证伪主张（C1 物理感知证据计量 / C2 反作用预算组合 / C3 契约式模块化）+ MBench 最小基准 + 蒸馏纪律（非绑定组件=工程附件，不入 MReg 不进正文）。
+> 承接第 73 轮 IP-295~302（MODGAUGE-RAS）。R73 完成契约代数（MMS/DPEM/CCA/ΣREFLEX/CPB + ECG 因果图 + MIC），但自认最大风险暴露共同盲区：**组合代数只管「契约内如何组合」，没有任何机制运行时检验「现实是否还在契约内」**；证据全部是连续几何量，物体身份无否决语义；意图似然被当作普适物理，约定（第三类先验）被当成常量。本轮三灵感三位一体补齐：
+> - **CAS**：anytime-valid e-process 赌局哨兵——Ville 不等式下预注册假阳率永久成立；三态门控 GREEN/YELLOW/RED；联合哨兵合取审计（不依赖模块独立假设）；第 0 层物理包络兜底截断元回归；**把 R73 最大风险变为可证伪主张 C4**；
+> - **OEM**：物体证据五分量离散计量 + 身份否决（单源不定案）+ χ_obj 视角反作用——离散证据进契约代数的第一个示范；
+> - **NCM**：约定似然 p(y_intent|z,κ) + 预算化适应（KL β + 来源追溯 + 安全轴锚点 + 再授权）+ 漂移哨兵——文化适应性 = 带预算的校准漂移补偿，与 u_calib 同型。
 >
-> 核心命题：**证据计量成为可组合的契约——系统级安全性质在模块热替换、传感器增删、本体迁移下由组合规则自动保持。**
+> 核心命题：**把 R73 的「自信地组合一个错误世界」改造为「诚实地发现并退出错误世界」——哨兵在现实越出契约可表达空间的时刻，以预注册假阳率与可界定检出延迟，自动降级到安全子图。**
 >
-> IP 编号：IP-295~301（共 7 个）+ R72 组件的 † 化。理论姿态延续：**新层是旧层的严格泛化，安全侧只增不减，退化链逐指令等价。**
+> IP 编号：IP-303~309（共 7 个）+ R73 组件的 † 化。理论姿态延续：**新层是旧层的严格泛化（门控只做 (u,D,I⊥) 单调变换），安全侧只增不减，退化链逐指令等价。**
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 72 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 73 轮） |
 |---|---|---|---|
-| IP-295 | MMS Metrological Module System | 新增 | 证据契约 EC（类型/预算/通道/域/否决/追溯/时序/密封引用）+ 模块三元组 + MReg 模块 DAG；\|V_M\|≤24、深度≤4 成为可审计图性质 |
-| IP-296 | DPEM Depth Perception Evidence Metrology | 新增 | 深度六分量不确定度（range/material/edge/calib/interf/motion）；材质后验 b_t(m)；有效域硬边界；视角反作用通道 χ_v；在线自标定 |
-| IP-297 | CCA Contract Composition Algebra | 新增 | SER/PAR/VETO 三算子；PAR 仅在 conformal 一致性审计通过且 \|ρ̂\|<ρ_max 时允许缩窄；组合单调性定理（引理 34） |
-| IP-298 | ΣREFLEX Channelized Reflexive Budget | 升级 EREFLEX† | 反作用通道成为契约字段；层数由模块声明给出（ψ/z/c/v 当前实例）；合算预算与稳态交集；有限停止保持（引理 36） |
-| IP-299 | PVOP Perceptual Viewpoint-aware Planner | 新增 | 计量域 20Hz；E[u_depth^next] 由 χ_v 解析给出（零 rollout）；进度-证据质量-反作用三目标；REG 时序契约内求解 |
-| IP-300 | CPB Claim-to-Proof Binding | 新增 | 三主张 C1/C2/C3 ↔ 组件/基准/消融/预注册指标绑定表；入图前置校验；非绑定组件=工程附件 |
-| IP-301 | MODGAUGE Pipeline | 新增 | 复用 R72 三域结构；跨模块数据流全部经契约；J_MOD 组合证书（定义 376）；模块级 stub 降级零级联（定理 29） |
+| IP-303 | CAS Contract-Anomaly Sentinel | 新增 | anytime-valid e-process 赌局监控（可预测下注+混合网格+log 域维护）；三态门控与滞回恢复；联合哨兵合取审计；检出延迟界 log(1/α)/δ |
+| IP-304 | OEM Object Evidence Metrology | 新增 | 检测证据五分量（u_cls/u_det/u_id/u_nov/u_assoc）；离散似然独立证据类型；身份否决语义（单源不定案）；χ_obj 视角反作用通道 |
+| IP-305 | NCM Norm-Convention Metrology | 新增 | 约定画像 κ 条件化意图似然；KL 预算 β 适应 + 来源追溯 + 安全轴保守锚点 + 人类再授权；约定漂移哨兵（意图残差 e-process） |
+| IP-306 | GATE-CCA† | 升级 CCA† | 哨兵状态纳入组合语义：SER 路径 γ 乘积化、PAR 缩窄要求全 GREEN+u_assoc 达标、RED 即 stub；门控只做 (u,D,I⊥) 单调变换（引理 40） |
+| IP-307 | SENT-REFLEX† | 升级 ΣREFLEX† | 新增 ν 通道（新颖处置：E[Δu_nov\|a]）与 ρ 通道（约定澄清：E[ΔH(b(κ))\|a]）；稳态集扩展 N_safe、K_safe；层数仍由模块声明 |
+| IP-308 | J_SENT 赌局日志证书 | 新增 | J_MOD ⊗ 哨兵日志 ⊗ E_t^joint 截面；审计员可重放「赌局何时以何速率增长」——检出与误杀都有账 |
+| IP-309 | SENTGAUGE Pipeline | 新增 | 复用 R73 三域；第 0 层物理包络兜底（不可 stub，截断元回归）；ECG 边级哨兵；离散+连续证据同图组合 |
 
-## 1. 符号体系增量（定义 366–382）
+## 1. 符号体系增量（定义 383–397）
 
 | 符号 | 含义 |
 |---|---|
-| `MODGAUGE-RAS = (MMS, DPEM, CCA, ΣREFLEX, CPB, EMBODIED-GAUGE-RAS†)` | 计量契约代数闭环 |
-| `EC = (T_in, T_out, 𝒰_in, 𝒰_out, χ_R, D, τ_merge, I⊥, W, seal_ref)` | 证据契约：类型/预算/反作用通道/有效域/追溯合并/否决/时序/密封引用 |
-| `Module = (EC, impl, cert)` | 模块三元组：契约 / 实现 / 证书 |
-| `MReg = (V_M, E_M, ⊛)` | 模块注册表：模块 DAG + 组合算子标注（SER/PAR/VETO） |
-| `χ_R: 𝒢 × X → Θ_noise × D′` | 反作用通道声明：动作如何调制噪声参数与有效域（可为平凡恒等） |
-| `p_depth(y_d \| s, v, m)` | 深度条件似然：v=视角（距离+入射角），m=材质类别 |
-| `u_depth² = u_range²+u_material²+u_edge²+u_calib²+u_interf²+u_motion²` | 深度六分量：距离/材质/边缘/标定/互扰/运动 |
-| `b_t(m), 𝓜 = {opaque-diffuse, specular, transparent, dark-absorbing, unknown}` | 材质后验与材质类别集 |
-| `D_depth` | 深度有效域：b_t(m_fail)<τ_m ∧ 无互扰 ∧ d∈[d_min,d_max] |
-| `χ_v` | 视角反作用通道：g → (d, θ_inc, 相对速度) → 调制 (u_range, u_edge, u_motion) |
-| `COMP-SER / COMP-PAR / COMP-VETO` | 串联（单调传播）/ 并联（conformal 审计后才许缩窄）/ 否决（非补偿） |
-| `C_α, ρ̂, ρ_max` | 一致性审计的 conformal 集、相关性估计与独立性门槛 |
-| `V_safe = {E[u_depth^{t+1} \| v′(g)] ≤ τ_v}` | 视角稳态集（ΣREFLEX 第四层） |
-| `Σ_t Σ_i c_reflex^i ≤ B_total` | 通道化反作用总预算（层数 = 模块声明数） |
-| `a* = argmax Progress − λ·E[u_depth^next(a)] − Σ c_reflex^i(a)` | PVOP 视角感知规划目标 |
-| `ℰ_depth` | 深度威胁面：材质伪装 / IR 互扰 / 飞点注入 / 外参投毒 / 多径欺骗 |
-| `J_MOD = ⊗_i J(module_i) ⊗ J_comp(MReg)` | 组合证书：模块证书 ⊗ 组合校验 |
-| `stub(模块) = (证据∅, u=∞, D=∅, I⊥=本模态全集, χ_R 平凡)` | 模块级降级语义（保守证据，零级联） |
-| `CertCost = Σ 模块(SEAL+conformal) + 组合校验` | 认证成本度量（C3 可证伪形式：热替换比 >10×） |
-| `MB1/MB2/MB3` | 最小基准：深度计量 / 交互预算 / 热替换（各 ≤3h 单卡可复现） |
+| `SENTGAUGE-RAS = (CAS, OEM, NCM, GATE-CCA†, SENT-REFLEX†, MODGAUGE†)` | 哨兵审计的计量契约代数闭环 |
+| `E_t^i = Π_{s≤t}(1+λ_s^i r_s^i), λ_s 可预测` | 赌局哨兵：H0=「现实分布=契约声明族」；Ville ⇒ P(∃t: E_t≥1/α)≤α |
+| `r_t^i = φ_θ(Y_t^i)` | 声明族白化残差（标准空间得分） |
+| `state_i ∈ {GREEN, YELLOW, RED}` | 三态门控：YELLOW=γ 膨胀+禁 PAR 缩窄；RED=stub（非补偿） |
+| `α_y, α_r, γ, W_stab` | 门控参数（预注册，写入契约 seal_ref）；滞回恢复需重认证事件 RC_i |
+| `E_t^joint = Π_i Π_s(1+λ_s^i r_s^i)` | 联合哨兵：联合契约零假设（含声明依赖结构）下的合取审计 |
+| `δ = KL(q ‖ p̂_contract)` | 声明族与真实分布的功效间隙；检出延迟 ≤ (log(1/α_r)+C)/δ |
+| `u_obj² = u_cls²+u_det²+u_id²+u_nov²+u_assoc²` | OEM 五分量：类别混淆/漏检重复/身份持续/开集新颖/跨模态关联 |
+| `p_obj(y_obj \| O, κ_place)` | 离散似然（多伯努利/点过程），独立证据类型进 BSE† |
+| `VETO_SINGLE_SOURCE` | 身份否决：单模态不定案，需双模态一致（含 u_assoc 折算）或接触确认 |
+| `χ_obj: g ↦ (d,θ,occ,曝光) ↦ (q, u_cls, u_nov)` | 物体证据的视角反作用通道 |
+| `p_I(y_intent \| z, κ), κ=(κ_space, κ_touch, κ_gest, κ_addr, …)` | 约定条件化意图似然；\|κ 轴\|≤8，κ 紧集、版本化 |
+| `KL(κ_{t+1}‖κ_t) ≤ β` | 约定适应预算（每窗口）；每次更新有来源交互集合 S_t 可回放 |
+| `安全轴锚点 + 再授权 token` | 适应只能放大不确定度；缩窄授权阈值必须人类显式再授权（非补偿拒绝） |
+| `E_t^norm` | 约定漂移哨兵：监控 p_I(·|κ̂) 是否仍是真分布；越界⇒意图 YELLOW+κ 冻结回滚 |
+| `N_safe={E[u_nov^next]≤τ_nov}, K_safe={H(b(κ))≤τ_κ}` | ν/ρ 通道稳态集（歧义高⇒仅澄清级动作） |
+| `第 0 层哨兵 = 物理包络监控` | 力/力矩/温升/时序/断链；不依赖学习模型、不可 stub、硬件熔断（元回归底） |
+| `AIC-SOCIAL` | 社会威胁面：社会工程/身份欺骗/关联投毒/哨兵致盲/规范迁移伪装 |
+| `σ 地板 λ_floor` | u_decl 下界，防「垫高声明 σ」的哨兵致盲注入 |
+| `J_SENT = J_MOD ⊗ 哨兵日志 ⊗ E_t^joint 截面` | 赌局日志证书：Valid ⇒ R73 定理 28 全部结论 + 违规可检出性 |
+| `MB4` | 哨兵审计最小基准：违规注入矩阵×3 强度 + 长时程假阳运行（≤3h 单卡） |
+| `C4（anytime-valid 哨兵审计）` | 第四条可证伪主张 ← MB4 ← AB4（有/无哨兵 × 宽/窄声明族） |
 
 ## 2. 形式化定义（要点版）
 
-**定义 366（MODGAUGE-RAS 总览与五不变式）** 契约完整性（无契约不入图）/ 组合单调性（无凭空变好）/ 反作用通道完备（可为平凡，但必须声明）/ 主张绑定（附件不进核心认证路径）/ 严格退化链扩展（模块级 stub 降级，安全侧只增不减）。
+**定义 383（总览与六不变式）** R73 五不变式 + **哨兵完备性**：每个参与组合的证据流必须挂接哨兵（平凡哨兵=第 0 层物理包络），状态与证据可用性绑定、不可旁路。
 
-**定义 367（证据契约 EC）** 见符号表。核心：**反作用通道 χ_R 是契约字段**——「我的噪声如何被机器人动作调制」成为模块必须声明的接口信息；平凡恒等 χ_R(g)=(θ_0, D) 表示「与动作无关」。
+**定义 384（赌局哨兵）** 可预测下注 + 有限混合网格 + log 域维护 + 下界截断；H0 下 E[E_t]=1，Ville 给出 anytime-valid 假阳率界——不依赖停止时刻与样本量（与 SPRT/CUSUM 的 ARL 渐近界本质不同）。
 
-**定义 368（模块三元组与 MReg）** Module = (EC, impl, cert)；MReg 是运行时模块 DAG，计量域每轮遍历校验组合合法性；|V_M|≤24、深度≤4 为可审计图性质。
+**定义 385（三态门控与滞回）** GREEN→YELLOW（log E ≥ log(1/α_y)）：u_eff=γ·u_decl、PAR 禁缩窄、χ_R 加保守包络；YELLOW→RED（log E ≥ log(1/α_r)）：stub、非补偿；恢复需重认证事件 + 稳定窗（滞回防抖）。
 
-**定义 369（DPEM）** p_depth(y_d|s,v,m) = 𝒩(h(s,v,m), Σ_d(s,v,m))；六分量各有独立追溯链；材质后验 b_t(m) 在线推断；有效域硬边界（材质失效/互扰/超距 ⇒ stub）。
+**定义 386（联合哨兵）** MReg 全部残差流合并为单一赌局流（下注在联合域可预测）⇒ 联合契约零假设下 Ville 成立；**依赖结构声明错误本身在检验功效内**（R73 风险#5 隐共享物理耦合从「无法审计」变为「以 KL 为速率可检出」）。
 
-**定义 370（CCA 组合代数）** SER：u_out ≥ u_A + L_B·u_A，域取交，追溯合并，否决取并；PAR：conformal 一致性审计通过且 |ρ̂|<ρ_max 才允许缩窄，否则保守 max；VETO：任一否决即整体否决（非补偿）。
+**定义 387（OEM）** 五分量离散计量 + 离散似然独立证据类型 + 身份否决语义 + χ_obj 视角反作用 + 有效域硬边界（新颖度高⇒保守处置）。
 
-**定义 371（ΣREFLEX）** 预算 Σ_t Σ_i c_reflex^i ≤ B_total；稳态集 Ω_safe = Ψ∩Z∩C∩V_safe；任一层越界即拒绝；有限停止（引理 36）。
+**定义 388（NCM）** 约定适应四纪律：KL 预算 β / 来源追溯 S_t / 安全轴保守锚点（只放宽不缩窄，缩窄须再授权）/ 漂移哨兵（越界⇒冻结+回滚最近锚点版本）。
 
-**定义 372（PVOP）** 计量域 20Hz；E[u_depth^next(a)] 由 χ_v 解析给出（零 rollout）；s.t. REG 时序契约、V_safe、C_safe。
+**定义 389（GATE-CCA†）** SER：u_out ≥ (Πγ)·(u_A+L_B·u_A)，路径 RED⇒stub；PAR：非全 GREEN 禁缩窄、身份级 PAR 需 u_assoc<τ_assoc；VETO：RED 的 I⊥ 并入。门控=(u,D,I⊥) 单调变换，引理 34/定理 29 无需重证。
 
-**定义 373（AIC-DEPTH）** 深度威胁面五类；防线：材质后验 + 跨模态一致性审计 + τ 断链 + 单源不定案。
+**定义 390（SENT-REFLEX†）** ν 通道（E[Δu_nov|a]）+ ρ 通道（E[ΔH(b(κ))|a]）并入预算；稳态集 Ω_safe 扩展 N_safe∩K_safe。
 
-**定义 374（CPB 绑定表）** C1←(DPEM,DMEM†)←MB1←AB1←(ECE,覆盖率，碰撞率，误抓率)；C2←(ΣREFLEX,ERVOI†,PVOP)←MB2←AB2←(交互次数，人类负担，停止方差)；C3←(MMS,CCA,J_MOD)←MB3←AB3←(逐指令等价，认证成本比，迁移行数)。非绑定=工程附件。
+**定义 391（第 0 层兜底）** 物理包络监控不依赖学习模型、不可 stub、硬件熔断；学习型哨兵在其上，失效逐层降级到更保守层；第 0 层失效=停机（衔接 R68/RTM，元回归的单调收敛底）。
 
-**定义 375（模块化 E-IVG）** 失效粒度到模块级：DPEM/DMEM/IRL 失效 ⇒ 各自 stub；REG 失效 ⇒ R68（唯一系统级降级）。
+**定义 392（ECG† 因果哨兵）** 每条因果边挂边级 e-process；边越界⇒链上全部下游证据 YELLOW、该链反事实重排禁用、回退保守路径。
 
-**定义 376（J_MOD 组合证书）** Valid ⇔ 各模块 cert 有效 ∧ MReg 组合校验通过（预算闭合/域交非空/追溯可复算/通道完备/预算未超）；Valid(J_MOD) ⇒ Valid(J_EMB)。
+**定义 393（假设 A114–A116）** 声明族非平凡（SEAL 上 ≥δ_min 功效间隙）/ 赌局可预测性（λ 可预测、白化 Lipschitz）/ 适应可观测性（AIC-SOCIAL 防护下无未检出注入）。
 
-**定义 377（复杂度结构上限）** |V_M|≤24、深度≤4、|𝓜|≤5、|Z|≤8、|C|≤5、|I_total|≤64——MReg 可审计图性质。
+**定义 394（MB4）** 违规注入矩阵（重尾/慢漂移/依赖错误×3 强度）+ 长时程假阳；预注册：假阳率 ∈[α_y/3,3α_y]，延迟 ≤ log(1/α_r)/δ̂+c。
 
-**定义 378（深度在线自标定）** 本体/接触/已知几何作外部基准，深度残差仅作观测；滑动窗口贝叶斯更新 u_calib 回写契约；断链即停用回退上界。
+**定义 395（AIC-SOCIAL）** 五类社会威胁 + 防线：锚点+再授权+身份双源+σ 地板+κ 版本回滚。
 
-**定义 379（MBench）** MB1 深度计量 / MB2 交互预算 / MB3 热替换；预注册脚本+固定种子+密封保持集 SEAL-MB，各 ≤3h 单卡可复现。
+**定义 396（J_SENT）** Valid ⇔ Valid(J_MOD) ∧ 全哨兵 ∈{GREEN,YELLOW(已降级)} ∧ 赌局上界日志可复算 ∧ 恢复链完整。审计语义升级：可重放「赌局何时以何速率增长」。
 
-**定义 380（认证成本度量）** CertCost = Σ 模块(SEAL+conformal) + 组合校验；C3 可证伪：热替换 CertCost 比 >10×。
-
-**定义 381（stub 语义）** 证据∅、u=∞、D=∅、I⊥=本模态全集、χ_R 平凡；仍参与 MReg 校验（图连通不断）。
-
-**定义 382（跨机互扰协议）** IR 投影计划广播 + MReg 协商避让；互扰检出 ⇒ 深度 stub + 触觉/本体补偿。
+**定义 397（CPB 扩展 C4）** C4 ←(CAS, OEM 哨兵, NCM 漂移哨兵) ← MB4 ← AB4 ←（假阳率, 检出延迟, YELLOW 期覆盖率, 误杀率）；C1–C3 不变，新组件先填 C4 绑定入 MReg。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-295 MMS：证据契约与模块注册表
-@dataclass(frozen=True)
-class EvidenceContract:
-    t_in: type; t_out: type                    # 证据类型（类型系统隔离模态）
-    u_fields: Tuple[str, ...]                  # 不确定度字段（DPEM: 六分量）
-    chi_R: Callable[[Action], NoiseMod]        # 反作用通道声明（可为平凡恒等）
-    domain: Predicate                          # 有效域谓词 D
-    tau_merge: Callable                        # 追溯合并函数
-    veto_set: FrozenSet[str]                   # 否决指示 I⊥
-    wcet_us: float; domain_tag: str            # 时序预算 + 执行域（ctrl/metric/percept）
-    seal_ref: str                              # 密封审计集引用
+# IP-303 CAS：anytime-valid 赌局哨兵（每模块挂接，log 域维护）
+class ContractAnomalySentinel:
+    def __init__(self, ec, alpha_y=1e-2, alpha_r=1e-4):
+        self.logE = 0.0; self.state = 'GREEN'
+        self.bets = MixtureBets(ec.u_fields)               # 有限混合网格 Λ
+    def step(self, resid, hist):
+        lam = self.bets.predictable_bet(hist)              # λ_s 仅依赖 F_{s-1}（A115）
+        self.logE += math.log(max(1.0 + lam*resid, 1e-12)) # log 域，防下溢
+        if self.state == 'GREEN' and self.logE >= -math.log(self.alpha_y):
+            self.state = 'YELLOW'                          # 降级：γ 膨胀、禁 PAR 缩窄
+        elif self.state == 'YELLOW' and self.logE >= -math.log(self.alpha_r):
+            self.state = 'RED'                             # stub（定义 381），非补偿
+        return self.state, math.exp(self.logE)
+    def request_recover(self, recert):                     # 滞回恢复（定义 385）
+        if recert.valid and self.logE < -math.log(self.alpha_y):
+            self.state = 'GREEN' if self.stable_window_ok() else 'YELLOW'
 
-@dataclass
-class Module:
-    ec: EvidenceContract; impl: object; cert: Cert   # 三元组（定义 368）
+# IP-304 OEM：物体证据计量（感知域；离散证据类型 + 身份否决）
+class ObjectEvidenceMetrology:
+    def update(self, det_set, tracks, depth_ev, rgb, tac_blobs):
+        u_cls = self.conf.calibrated_confusion(det_set)    # 温度校准混淆后验
+        q     = self.det_model.q(depth_ev.v, occ)          # 剂量-视角检出概率
+        u_id  = self.track.markov_unc(tracks)              # 身份持续转移
+        u_nov = self.openset.pvalue(rgb, det_set)          # EVT 校准 novel p 值
+        u_aso = self.assoc.entropy(depth_ev.blobs, det_set, tac_blobs)
+        valid = (u_nov < TAU_NOV or self.conservative) and depth_ev.valid
+        ident = None if (u_aso < TAU_ASSOC or self.contact_confirmed()) \
+                else VETO_SINGLE_SOURCE                    # 身份否决语义
+        return ObjEvidence(det_set, tracks, valid=valid,
+               u=math.sqrt(u_cls**2+u_det**2+u_id**2+u_nov**2+u_aso**2),
+               identity_veto=ident, chi_obj=chi_view_det(depth_ev.v),
+               tau=self.tchain.merge(rgb_t, track_t, calib_t))
 
-class ModuleRegistry:                          # MReg：模块 DAG
-    def compose(self, a, b, op):               # op ∈ {SER, PAR, VETO}
-        edge = self.check_budget_closure(a, b, op)   # 预算闭合校验（定义 376）
-        self.edges.append(edge); return Composite(a, b, op)
-    def audit(self):                           # 计量域每轮遍历：组合合法性
-        return all(self.check_budget_closure(*e) for e in self.edges) \
-               and len(self.nodes) <= 24 and self.depth() <= 4   # 定义 377
+# IP-305 NCM：约定计量与适应（预算化 + 锚点 + 追溯）
+class NormConventionMetrology:
+    def adapt(self, S_window):
+        if self.proposed_kl(S_window) > BETA: return self.kappa     # 适应预算拒绝
+        if self.touch_axis_narrows(self.proposed, self.kappa) and not human_reauth():
+            return self.kappa                              # 锚点：缩窄授权必须再授权
+        self.kappa = self.proposed
+        self.log.append(source_set(S_window))              # 全程可回放追溯
+        return self.kappa
+    def intent_likelihood(self, y_intent, z):
+        return self.calib.p_intent(y_intent, z, self.kappa)   # p(y|z,κ)
 
-# IP-296 DPEM：深度证据计量（感知域，100Hz）
-class DepthPerceptionMetrology:
-    def update(self, depth_img, rgb, cam_state, motion_state, peers):
-        m_post = self.material_net(rgb, depth_img)          # b_t(m) 材质后验
-        v = viewpoint(cam_state, motion_state)              # (d, θ_inc, rel_vel)
-        u_range = self.calib.range_unc(v.d)                 # σ ∝ d²/B
-        u_mat   = self.calib.material_unc(m_post)           # 材质分量
-        u_edge  = self.calib.edge_unc(depth_img)            # 飞点/不连续
-        u_cal   = self.selfcal.u_calib                      # 在线自标定（定义 378）
-        u_int   = self.interf.detect(peers)                 # 互扰分量（定义 382）
-        u_mot   = self.calib.motion_unc(v.rel_vel, exposure)
-        valid   = (m_post['fail'].prob < TAU_M) and (u_int < TAU_INTF)
-        lik     = depth_likelihood(depth_img, v, m_post)    # p(y_d | s, v, m)
-        return DepthEvidence(lik=lik, m_post=m_post, v=v, valid=valid,
-               u=math.sqrt(u_range**2+u_mat**2+u_edge**2+u_cal**2+u_int**2+u_mot**2),
-               breakdown=(u_range,u_mat,u_edge,u_cal,u_int,u_mot),
-               chi_v=chi_viewpoint(v),                      # 视角反作用通道
-               tau=self.tchain.merge(rgb_tchain, calib_tchain))
+# IP-306 GATE-CCA†：哨兵门控组合（升级 IP-297 compose）
+def gated_compose(a, b, op, audit):
+    if 'RED' in (a.sent_state, b.sent_state): return stub_of(a, b)  # 非补偿
+    if op == 'SER':
+        g = gamma_prod(a, b)                               # 路径 γ 乘积化
+        return Ev(u=g*(a.u + lipschitz(b, a.u)), D=a.D & b.D,
+                  tau=a.tau.merge(b.tau), veto=a.veto | b.veto)
+    if op == 'PAR':
+        narrowing = (audit.conformal_covers(resid(a, b))
+                     and gamma_prod(a, b) == 1.0
+                     and (a.kind != 'identity' or a.u_assoc < TAU_ASSOC))
+        if narrowing and abs(audit.rho) < RHO_MAX: return fuse(a, b, audit.rho)
+        return Ev(u=max(a.u, b.u), D=a.D & b.D, tau=a.tau.merge(b.tau),
+                  veto=a.veto | b.veto | {'GATE_AUDIT_FAIL'})
 
-# IP-297 CCA：组合代数
-def compose(a_ev, b_ev, op, audit):
-    if op == 'SER':   # 串联：单调传播，只能更差
-        return Ev(u=a_ev.u + lipschitz(b_ev, a_ev.u), D=a_ev.D & b_ev.D,
-                  tau=a_ev.tau.merge(b_ev.tau), veto=a_ev.veto | b_ev.veto)
-    if op == 'PAR':   # 并联：先一致性审计，再决定是否缩窄
-        r = cross_modal_residual(a_ev, b_ev)
-        if audit.conformal_covers(r):                     # SEAL 校准的 conformal 集
-            rho = audit.estimate_corr(a_ev, b_ev)
-            if abs(rho) < RHO_MAX: return fuse(a_ev, b_ev, rho)   # 允许缩窄
-        return Ev(u=max(a_ev.u, b_ev.u), D=a_ev.D & b_ev.D,
-                  tau=a_ev.tau.merge(b_ev.tau),
-                  veto=a_ev.veto | b_ev.veto | {'PAR_AUDIT_FAIL'})
-    if op == 'VETO':  # 否决：非补偿
-        if a_ev.veto or b_ev.veto: return Ev(valid=False, veto=a_ev.veto | b_ev.veto)
-        return Ev(u=min(a_ev.u, b_ev.u), D=a_ev.D & b_ev.D)
+# IP-307 SENT-REFLEX†：ν 通道 + ρ 通道并入 ΣREFLEX
+def sent_reflex_step(mods, g, state, budget):
+    s2, cost = {}, 0.0
+    for i, m in mods.items():
+        chi = m.ec.chi_R(g); c_i, s_i = m.reflex_cost(state[i], chi)
+        if i == 'OEM': c_i += E_delta_u_nov(g);   s_i &= N_safe
+        if i == 'NCM': c_i += E_delta_H_kappa(g); s_i &= K_safe  # 歧义高⇒仅澄清级
+        if not s_i: return None, cost                     # 非补偿
+        s2[i], cost = s_i, cost + c_i
+    return (s2, cost) if budget.spent + cost <= budget.B else (None, cost)
 
-# IP-298 ΣREFLEX：通道化多层反作用预算（替代手写三层）
-def sigmareflex_step(modules, g, state, budget):
-    total, states2 = 0.0, {}
-    for i, m in modules.items():                       # 遍历模块，层数非手写
-        chi = m.ec.chi_R(g)                            # 通道：动作如何调制我的噪声
-        c_i, s2 = m.reflex_cost(state[i], chi)         # ψ:R71 / z:KL / c:ΔH / v:E[Δu]
-        if s2 not in m.safe_set: return None, total    # 任一稳态越界 → 拒绝（非补偿）
-        states2[i], total = s2, total + c_i
-    if budget.spent + total > budget.B: return None, total
-    return states2, total
+# IP-308 J_SENT：组合证书 + 赌局日志
+def write_sent_cert(M):
+    return J_SENT(J_MOD(M.mreg), E_joint=M.sentinel_joint.logE,
+                  states={i: m.sent.state for i, m in M.mods.items()},
+                  recover_chain=M.recert.log, sigma_floor=M.floor.status())
 
-# IP-299 PVOP：视角感知规划（计量域 20Hz，χ_v 解析 → 零 rollout）
-def viewpoint_aware_plan(b_t, mods, risk_params):
-    def J(a):
-        prog = task_progress(b_t, a)
-        u_next = sum(m.ec.chi_R(a).expected_u(state[m]) for m in depth_mods)
-        reflex = sum(m.reflex_cost_estimate(state[m], m.ec.chi_R(a)) for m in mods)
-        return prog - risk_params.lam * u_next - reflex
-    return optimize_under_reg_contract(J, horizon=0.5)   # REG 时序契约内求解
-
-# IP-300 CPB：主张-证明绑定（蒸馏纪律，入图前置校验）
-CLAIM_BINDINGS = {
- 'C1': dict(mods=['DPEM','DMEM'], bench='MB1', ablation='AB1',
-            metrics=['ece','coverage','collision_rate','grasp_err']),
- 'C2': dict(mods=['SIGMAREFLEX','ERVOI','PVOP'], bench='MB2', ablation='AB2',
-            metrics=['n_interactions','human_cost','stop_var']),
- 'C3': dict(mods=['MMS','CCA','J_MOD'], bench='MB3', ablation='AB3',
-            metrics=['instr_equiv','cert_cost_ratio','transfer_loc']),
-}
-def register(module):                                  # 新组件入图前必填绑定表
-    if module.name not in {m for c in CLAIM_BINDINGS.values() for m in c['mods']}:
-        assert module.tag == 'APPENDIX'                # 工程附件：不进 MReg、不进正文
-
-# IP-301 MODGAUGE 主闭环（复用 R72 三域，跨模块数据流全部经契约）
-def MODGAUGE_round(M, obs, audio, tac_frame, depth_img):
-    # === 感知域（异步 100Hz，Best-effort）===
-    d_ev  = M.dpe.update(depth_img, rgb, M.cam_state, M.motion, M.peers)
-    if not d_ev.valid: d_ev = stub(M.dpe)              # 模块级降级（定义 381）
-    t_ev  = M.dmem.update(tac_frame, M.last_action)    # R72 DMEM†（契约化包装）
-    psi_hat, ece = M.aura.update(audio)
-    M.y_intent_buf.append(extract_intent_obs(obs, audio, M.last_action))
-
-    # === 计量域（50Hz，软实时）===
+# IP-309 SENTGAUGE 主闭环（复用 R73 三域；哨兵挂接 + 离散证据 + 第 0 层兜底）
+def SENTGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set, tracks):
+    # === 感知域（异步 100Hz）===
+    d_ev = M.dpe.update(depth_img, rgb, M.cam_state, M.motion, M.peers)
+    o_ev = M.oem.update(det_set, tracks, d_ev, rgb, M.tac_blobs)
+    for ev, mod in ((d_ev, M.dpe), (o_ev, M.oem)):
+        st, E = mod.sent.step(ev.resid, M.hist); ev.sent_state = st
+        if st == 'RED': ev = stub(mod)                     # 非补偿自降级
+    t_ev = M.dmem.update(tac_frame, M.last_action)
+    # === 计量域（50Hz）===
     if M.clock.due_metric():
-        b_t = M.bse.step_full(..., d_ev=d_ev, t_ev=t_ev)         # BSE†：吃契约证据
-        z_dist, ece_z, iota_z = M.irl.update(M.y_intent_buf, psi_hat, b_t)
-        M.pvop = viewpoint_aware_plan(b_t, M.mods, M.risk_params)  # IP-299
-        g = M.ervoi.choose(b_t, psi_hat, z_dist, t_ev.c_dist,
-                           M.budget, M.fmp, M.bse)               # R72 ERVOI†
+        M.kappa = M.ncm.adapt(M.interact_window)           # 预算化适应
+        M.irl.set_convention(M.kappa)
+        b_t = M.bse.step_full(..., d_ev=d_ev, o_ev=o_ev, t_ev=t_ev)
+        g = M.ervoi.choose(b_t, psi_hat, z_dist, t_ev.c_dist, M.budget, M.fmp, M.bse)
         if g:
-            s2, cost = sigmareflex_step(M.mods, g, M.state, M.budget)  # IP-298
+            s2, cost = sent_reflex_step(M.mods, g, M.state, M.budget)
             if s2 is not None: M.last_g, M.state = g, s2
-        M.snapshot.write(b_t, z_dist, d_ev, t_ev, M.state)  # 版本号快照
-        M.mreg.audit()                                      # 组合合法性遍历
-
-    # === 控制域（1kHz，硬实时，只读快照，零分配）===
+        M.mreg.audit(); M.ecg_edge_sentinels.step()        # ECG† 边级哨兵
+        M.cert = write_sent_cert(M)
+    # === 控制域（1kHz，只读快照；第 0 层物理包络兜底）===
     snap = M.snapshot.read_latest()
     lam = embodied_risk_scale(snap.U_ale, snap.U_epi, snap.H_z,
-                              max(snap.t_ev.u, snap.d_ev.u), M.risk_params)  # R72 E-RISK†
-    A = M.ach.propose_ctrl(..., pvop_bias=snap.pvop); k = M.c_ras_wm.certified_prefix(A, lam)
-    M.ctrl_out.publish(k, lam)
-    M.cert_ctrl.write(k=k, lam=lam, wcet=M.rtm.wcet_us(), breaker=M.breaker.status())
-    return k, lam, J_MOD(M.mreg)                            # 组合证书（定义 376）
+                              max(snap.t_ev.u, snap.d_ev.u, snap.o_ev.u),
+                              M.risk_params)
+    k = M.c_ras_wm.certified_prefix(M.ach.propose_ctrl(..., pvop_bias=snap.pvop), lam)
+    M.envelope.check0(k, lam)                              # 不可 stub 的底
+    return k, lam, M.cert
 ```
 
 ## 4. 推导
 
-**引理 33（深度六分量的条件正交性）** 给定 (v, m, d_edge, 互扰指示， 曝光×相对速度) 条件下，六分量由独立物理机制产生（三角量测、表面反射、边缘插值、标定链、多径/串扰、积分时间），条件近似不相关；遗漏任一 ⇒ 系统性低估（与引理 30 同型，条件集扩大到视角与材质）。系：**DPEM 把 R72 的「模式条件」一般化为「(动作， 场景) 条件」。**
+**引理 38（anytime-valid 性）** λ_s 可预测且 H0 下期望增益为零 ⇒ E_t 非负上鞅；Ville ⇒ P(∃t: E_t ≥ 1/α) ≤ α。假阳率不依赖停止时刻——预注册 α + 无限时程审计在语义上成立。
 
-**引理 34（组合单调性：不存在凭空变好）** SER：u_out ≥ u_A + L_B·u_A ≥ u_A；PAR：缩窄仅在 conformal 审计通过且 |ρ̂|<ρ_max 时发生，缩窄量受校准覆盖约束（1−α 上界）；VETO：有效域单调收缩。⇒ 任何组合路径的输出不确定度不可能低于路径中所有输入不确定度的单调组合而同时通过审计。系：**组合不产生认知免费午餐——把「审计」从单模块升级到模块图的代数基础。**
+**引理 39（检出延迟界）** 真实分布与声明族最近点的逐步 KL ≥ δ ⇒ E[log E_t] ≥ δt − O(C_Λ)，期望延迟 ≤ (log(1/α_r)+C)/δ。系：**C4 可证伪**——δ̂ 可注入测量，MB4/E397 点验。
 
-**引理 35（热替换安全保持）** impl′ 与 impl 同 EC 且 cert′ 有效 ⇒ 系统级性质（退化链 375、风险单调 23、时序隔离 28、审计覆盖）的证明只引用 EC 与组合校验，不引用 impl 内部；归纳于 MReg 的 DAG ⇒ 替换后逐指令性质保持。系：**E362「换本体零改核心」从实验希望升为定理；认证成本 O(系统) → O(模块)。**
+**引理 40（门控单调性）** 门控变换（γ≥1 膨胀、PAR 禁缩窄、RED→stub、I⊥ 并入）在 (u,D,I⊥) 偏序上单调 ⇒ 引理 34 组合下界与 R73 定理 29 在门控图上保持；YELLOW 期覆盖率由 γ 的 SEAL 校准给出。系：**哨兵层是 CCA 的保守扩张，不是新的信任来源。**
 
-**引理 36（视角反作用的 Lipschitz 性与预算吸收）** D_depth 内 u_range(d,θ) 对 (d,θ) Lipschitz；g 对相机位姿的映射 Lipschitz（REG 速度/加速度包络）⇒ c_reflex^v 有正下界 ε_v 且对 g Lipschitz；结合各层边际成本正下界与总边际增益非增（引理 31 的 Σ 层推广）⇒ ΣREFLEX 存在有限停止 n*。系：**「层数」增加不破坏有限停止。**
+**引理 41（约定适应的安全性）** KL 预算 + 安全轴单调 + 再授权锚点 ⇒ 任意适应序列下 P(授权错误) ≤ 初始保守界 + β·T·|κ 轴|/n_交互；漂移哨兵以引理 39 速率检出 κ 模型偏离并冻结回滚。系：**文化适应性 = 带预算的校准漂移补偿，与 u_calib 同型。**
 
-**引理 37（PVOP 的解析收益）** E[u_depth^next(a)] 由 χ_v 闭式给出（零 rollout）⇒ PVOP 在 2ms 计量预算内可解；任务进展梯度与证据质量梯度夹角 ≤90°（非对抗任务）时存在步长使 J 单调改进。系：**「计量契约使反作用可计算」是 PVOP 可实时化的原因——通用传感器仿真做不到。**
+**定理 30（SENTGAUGE 严格包含）** A111–A116 下：MODGAUGE = SENTGAUGE 的「全 GREEN + OEM stub + κ 冻结先验」实例化；退化链逐指令等于 R73→R72→R71→R68。安全单调不减。
 
-**定理 27（MODGAUGE 严格包含）** 在 A111–A113（契约表达力、conformal 审计校准、通道 Lipschitz）下：R72 EMBODIED 是 MODGAUGE 的单模块组实例化（深度证据置 stub、χ_R 手写等价三层通道）；由定义 366(v) 与引理 35，退化条件下逐指令等于 R72，再退化等于 R71/R68。**安全单调不减。**
-
-**定理 28（组合证书有效性 ⇒ 系统安全）** Valid(J_MOD) ⇒ 模块 cert 有效 ∧ MReg 校验通过 ∧ ΣREFLEX 预算闭合 ∧ J_EMB 特例成立（定理 24）⇒ 物理执行风险 ≤ ε_mod（相对具身测量模型与**契约表达力**）。**证明重量落在「契约表达力在分布外仍成立」与「一致性审计的 conformal 校准不被对抗漂移」上。**
-
-**定理 29（模块级降级的零级联）** 任一模块失效 ⇒ stub 替换（定义 381）⇒ 由引理 35 与定义 375，系统逐指令退化为少模态版本；stub 不产生观测 ⇒ 不参与 PAR 缩窄 ⇒ 不污染其他模块审计。系：**失效传染路径唯一（该模态缺失），零级联——R72 E364 从实验目标升为结构性质。**
+**定理 31（联合哨兵审计的完备性）** Valid(J_SENT) ⇒ (i) R73 定理 28 全部结论；(ii) 现实偏离联合契约且逐步 KL≥δ ⇒ 期望延迟 (log(1/α_r)+C)/δ 内降级到保守子图；(iii) 降级后性质由 stub/γ 语义保持。**证明重量从「契约表达力在分布外成立」（不可检验）转移到「声明族功效间隙 ≥δ 且哨兵校准正确」（可注入检验）——不可检验假设替换为可证伪主张 C4。**
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|---|
-| MReg 组合校验（每轮计量域） | 软实时 50Hz | <0.2ms（\|V_M\|≤24） | O(\|V_M\|+\|E_M\|) | 定义 370、376、引理 34 |
-| DPEM 六分量 + 材质后验 | 感知域 100Hz | <0.3ms/帧 | <3MB | 定义 369、引理 33 |
-| 串/并/否决组合求值 | 计量域 | <0.05ms/对 | O(1) | 引理 34、定义 370 |
-| ΣREFLEX 通道步进 | 计量域（事件触发） | O(\|V_M\|) <0.1ms | O(\|V_M\|) | 定义 371、引理 36 |
-| PVOP 轨迹修正 | 计量域 20Hz | <2ms（解析 χ_v） | <5MB | 定义 372、引理 37 |
-| CPB 绑定校验（入图时） | 部署期 | <10ms/模块 | O(1) | 定义 374 |
-| 在线自标定（u_calib 回写） | 计量域 1Hz | <1ms | <1MB | 定义 378 |
-| 控制域全栈（继承 R72） | 硬实时 1kHz | <0.8ms P99 | <200KB | 定理 23–26 不变 |
-| **新增总开销（计量+感知）** | — | **<3.5ms/周期** | <10MB | **定理 27–29** |
+| 哨兵步进（每模块/帧） | 感知+计量 | O(1)/模块 <5μs | O(1)（logE+有限网格） | 引理 38、定义 384 |
+| 联合 e-process 维护 | 计量域 50Hz | O(\|V_M\|) <0.1ms | O(\|V_M\|) | 定义 386、定理 31 |
+| OEM 五分量+关联熵 | 感知域 100Hz | <1.5ms/帧 | <8MB | 定义 387 |
+| 身份一致性 PAR 审计 | 计量域（事件触发） | <0.3ms/对 | O(候选关联) | 定义 387/389 |
+| NCM 适应（窗口式） | 计量域 0.2Hz | <2ms/窗口 | O(\|κ 轴\|×窗口) | 定义 388、引理 41 |
+| GATE-CCA 求值 | 计量域 | <0.05ms/对 | O(1) | 引理 40 |
+| ECG 边级哨兵 | 计量域 | O(\|E_M\|) <0.1ms | O(\|E_M\|) | 定义 392 |
+| 第 0 层物理包络 | 硬实时 1kHz | <20μs | <1KB | 定义 391（不可 stub） |
+| **新增总开销（叠加 R73 的 3.5ms）** | — | **<3ms/周期** | <15MB | **定理 30–31** |
 
-## 6. 实验设计 E371–E390（RAS-Baselines v2 协议 + MBench 预注册）
+## 6. 实验设计 E396–E410（RAS-Baselines v3 协议 + MB4 预注册）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E371 深度六分量辨识 | 受控矩阵（距离×材质×边缘×干扰×速度）下分量可分离 | 各分量贡献方差分解 ≥80% 可归因；u_depth 校准 ECE <0.06 |
-| E372 材质后验校准 | 透明/镜面/黑体检出 | AUROC ≥0.94，b_t(m_fail) 校准偏差 <0.05，失效即 stub |
-| E373 跨机互扰检出与协商 | 双机对射注入 + 时间片协商 | 互扰检出 ≤50ms，协商后 u_interf 回落，零互相致盲 |
-| E374 深度不确定度进 λ_floor | 透明/镜面物体抓取 | 误抓率 -50%，无效深度 stub 化不进 λ，抓取成功率 +20% |
-| E375 PVOP 视角感知规划 | 同任务对比固定视角策略 | 后验精度 +25%（同等步数）或同等精度步数 -30% |
-| E376 ΣREFLEX 四层预算 | 24h 长时程预算闭合、有限停止 | 预算未耗尽，停止步数方差 < 无预算组 1/3 |
-| E377 串联单调性验证 | 级联两个校准模块，实测 u 传播 | 实测 u_out ≥ 理论下界，零违例 |
-| E378 并联缩窄合法性 | conformal 审计覆盖 + 对抗分歧注入 | 覆盖率 ≥ 预注册 1−α；攻击时 100% 退保守 |
-| E379 热替换等价性 | 换 DMEM 实现（Allegro→Shadow）/换 IRL 网/换深度计 | 同契约逐指令 diff = 0，系统级性质保持 |
-| E380 本体迁移认证成本 | 仅模块级重认证 | CertCost 比值 >10×（定义 380），核心代码改动 0 行 |
-| E381 MReg 运行时审计 | 组合合法性遍历是否守时、断链是否降级 | 审计 <0.2ms @50Hz，断链检出 100%，降级无突变 |
-| E382 C1 隔离消融 | 六/四分量 vs MC-Dropout vs 深度集成 vs 厂商噪声模型 | ECE 与碰撞率同时显著优（Wilcoxon p<0.01, d≥0.5） |
-| E383 C2 隔离消融 | 四层通道 vs 仅 ψ vs 无预算 | 同等后验精度交互次数 -30%，且停止性保持 |
-| E384 C3 隔离消融 | 契约热替换 vs 全系统重审 | 等价性 100%，认证成本比 >10× |
-| E385 MBench 三方复现 | 预注册脚本 + 固定种子 + 密封保持集 | 三独立复现结果偏差 < 预注册带宽 |
-| E386 对抗：材质伪装 | 镜面假体/透明屏障欺骗深度 | 跨模态审计拦截 ≥85%，单源深度不定案 |
-| E387 深度在线自标定 | 外参热漂移补偿 | u_calib 跟踪漂移，24h 后标定残差 < 静态基线 50% |
-| E388 模块级故障注入全栈 | 任一模块失效 → stub → 零级联 | 恢复 <1s，其他模态指标无污染（引理 34 保守性） |
-| E389 严格包含回归 | R72 全部退化组合在 MODGAUGE 下重跑 | 与 R72/R71/R68 逐指令差 = 0 |
-| E390 论文主张包完整性 | C1/C2/C3 是否各有一个最小可证伪实验 | 三主张各有 MB+AB+预注册指标，无孤悬组件 |
+| E396 哨兵 anytime-valid 假阳率 | 长时程（≥7×24h 等效流）GREEN 稳态 | 实测假阳率 ∈[α_y/3,3α_y]，零 RED 误杀 |
+| E397 违规注入检出延迟 | 重尾/慢漂移/依赖错误×3 强度 | 延迟 ≤ log(1/α_r)/δ̂+c，理论拟合 R²≥0.9 |
+| E398 YELLOW 期降级质量 | 违规持续期覆盖与安全 | 覆盖 ≥1−α′，碰撞率不高于无违规基线 |
+| E399 OEM 五分量辨识 | 混淆/漏检/身份/新颖/关联注入方差分解 | 归因 ≥75%，身份 AUROC ≥0.95 |
+| E400 身份双源否决 | 单源假身份攻击 | 单源不定案 100%，双源+接触确认才放行，误放行 0 |
+| E401 开集新颖处置 | 长尾 50 未见类 | u_nov 校准偏差 <0.05，ν 通道后验精度 +20%（同预算） |
+| E402 跨人群意图校准（文化） | ≥3 画像×（空间/手势/授权） | κ 条件化 vs 普适：ECE -40%，误触率 -35% |
+| E403 社会工程对抗 | 塑造 κ 驻留不安全区 | 锚点+再授权拦截 100%，κ 可回滚，哨兵检出 ≤2× 交互预算 |
+| E404 约定漂移检出 | 人群切换/缓慢漂移注入 | E^norm 延迟符合引理 39，冻结回滚无突变 |
+| E405 门控热替换联合回归 | E379 全案例×哨兵挂接 | 逐指令 diff=0 且 J_SENT 有效、恢复链完整 |
+| E406 联合哨兵对隐耦合检出 | 共享光源/振动（R73 风险#5） | 联合 e-process 检出 ≥90%，逐模块串行基线 <40% |
+| E407 哨兵致盲对抗 | 垫高声明 σ | σ 地板生效，延迟劣化 <2× |
+| E408 C4 隔离消融 | 有/无哨兵×宽/窄声明族 | 无哨兵组违例显著增多（p<0.01）；误杀-安全权衡曲线量化 |
+| E409 ECG 边级哨兵 | 因果链断裂注入 | 链上 YELLOW 传播 100%，断裂链反事实禁用 |
+| E410 主张包完整性 | C1–C4 各有最小可证伪实验 | 四主张 MB+AB+预注册齐全，无孤悬组件 |
 
 ## 7. 本轮最大风险
 
-**一句话**：MODGAUGE 把系统安全的证明负担从「全系统审计」转移到「**契约的表达力**」——如果真实噪声超出契约可表达的空间（材质是连续谱而非五类离散、视角-噪声映射在极端入射角或近场违背 Lipschitz 假设、或两个模块通过共享物理过程（同一光源、同一机械振动、同一温度场）隐性耦合而并联一致性审计的 conformal 集未覆盖这种相关），那么组合定理会在「**所有模块证书都有效、所有组合校验都通过**」的情况下给出错误的安全界——系统会用一套类型正确、预算闭合、证书齐全的模块图，**自信地组合出一个错误的世界**，而审计日志将证明「每一步都合规」。
+**一句话**：哨兵把「自信地组合一个错误世界」改造为「诚实地发现并退出错误世界」，但这个转换的全部重量落在**声明族的先验选择**上——e-process 只能检验「现实偏离声明族」，若声明族选得过宽（大 σ、重尾兜底、宽依赖界），真实违规会被声明族「吸收」而赌局无力，检出延迟趋于无穷、哨兵沦为装饰，而系统对此**没有内省手段**（检不出「检不出」）；若声明族过窄则在有效域边缘频繁误杀，可用性-安全性权衡点没有任何内部基准可证明其正确——C4 把 R73 的不可检验假设替换成了一个可检验但**以校准集代表性为前提**的主张，而 SEAL 是否覆盖真实部署分布，重新成为整个体系的隐式地基。
 
 次级风险与缓解：
-1. **契约僵化/stub 过保守** → 契约版本化 + stub 观察模式（stub 旁路记录真实质量，离线校准契约本身，SEAL-Contract 审计集）。
-2. **PVOP 解析 χ_v 失真（近场/极端角度）** → 有效域硬边界 + 近场禁用解析式改用在线校准查表 + V_safe 收紧。
-3. **组合路径爆炸** → 结构上限（定义 377：|V_M|≤24、深度≤4）+ MReg 部署期图搜索验证 + 运行时只验增量。
-4. **CPB 蒸馏失真（主张过窄掩盖系统性贡献）** → 主张包加「组合收益」条目：C3 显式包含多模块协同的增益归因（E383/E384 联合归因树）。
-5. **隐共享物理过程耦合** → 环境级共因审计（温度/振动/光照传感器独立于模块，作为 VETO 组合的第三方输入；怀疑相关时禁用 PAR 缩窄）。
-6. **深度自标定自举循环**（用深度标定深度）→ 自标定只用「本体/接触/已知几何」作外部基准，深度残差仅作观测；断链即停用并回退 u_calib 上界。
-7. **MBench 过拟合** → 密封保持集（SEAL-MB）+ 预注册 + 三方复现（E385）；主张只认预注册指标。
-## 7. 本轮最大风险（续）
-
-**一句话**：即使合同表达足够，若真实噪声超出契约可表达空间（材质连续谱而非五类离散、视角-噪声映射在极端入射角或近场违背Lipschitz假设、或两个模块通过共享物理过程（同一光源、同一机械振动、同一温度场）隐性耦合而并联一致性审计的conformal集未覆盖这种相关），且因果链断裂时的反事实推理失效，组合定理会在‘所有模块证书有效、所有组合校验通过’的情况下给出错误的安全界——系统自信地组合出一个错误的世界，而审计日志将证明‘每一步都合规’，但因果链已断裂导致安全性质不保持。
-
-次级风险与缓解：
-8. **ECG边表达极限** → ECG版本化 + 反事实审计 + 极端情况离线验证（实验E392验证因果链在对抗性材质/视角下的保持率）。
-9. **形态迁移缺陷** → MAL形态适配层 + 运行时契约兼容性验证（实验E393验证新形态下MIC契约的平滑过渡与核心代码行数上限）。
-10. **组合验证负担** → 增量验证 + 部署期完备性检查（实验E394验证运行时仅验证增量组合路径的安全性，验证延迟<0.1ms @50Hz）。
-
-## 实验设计 E391–E395（RAS-Baselines v3 协议 + 因果/形态扩展）
-
-| 实验 | 核心问题 | 关键目标 |
-|---|---|---|
-| E391 ECG因果链完整性 | ECG边条件依赖在受控实验中是否可识别 | 因果发现算法精度 ≥80%，干预实验验证因果方向，零误导性相关 |
-| E392 极端情况因果验证 | 对抗性材质/视角下ECG因果链是否保持 | 因果链保持率 ≥70%，安全拒绝率 ≤5% |
-| E393 形态迁移适配 | MIC契约在新形态下的兼容性验证 | 迁移成功率 ≥90%，核心代码改动 <5行 |
-| E394 增量MReg验证 | 运行时仅验证新增/替换模块的增量路径是否安全 | 验证延迟 <0.1ms @50Hz，漏检率 <1% |
-| E395 Causal-aware隔离消融 | 四层ΣREFLEX vs 无因果追踪 | 后验精度 +10%，且因果链断裂时安全拒绝率提升至95% |
-
-IP-302（因果证据组合）：ECG节点与边的声明，因果组合算子（因果串联Cau-SER、因果并联Cau-PAR、因果否决Cau-VETO），组合单调性在因果链完整性下保持。证书代数扩展：J_MOD = ⊗_i J(module_i) ⊗ J_ECG(MReg) ⊗ J_comp(MReg)。
+1. **哨兵元回归** → 第 0 层物理包络（定义 391，不可 stub，硬件熔断）+ 学习型哨兵只在其上。
+2. **误杀可用性（YELLOW 频繁触发）** → 滞回 + γ 校准 + α_y 分层 + 误杀率纳入 C4 预注册（E408 量化权衡曲线）。
+3. **OEM 关联不可辨识** → u_assoc 显式计量 + 身份双源否决；关联失败不静默（E399/E400）。
+4. **NCM 对抗适应（社会工程）** → 预算 β + 安全轴单调 + 再授权锚点 + κ 版本回滚 + AIC-SOCIAL（E403/E404）。
+5. **联合赌局数值下溢/膨胀** → log 域维护 + 下界截断 + 有限混合网格（定义 384）。
+6. **σ 地板被合法重校准通道绕过** → 重校准事件须过 SEAL-MB4 密封协议，σ 地板变更全链追溯（E407）。
+7. **MB4 注入矩阵自身偏差** → SEAL-MB4 密封保持集 + 三方复现 + 只认预注册指标。
 <!-- ARTIFACT:END -->
