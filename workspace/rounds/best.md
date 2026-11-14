@@ -3,565 +3,405 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 73 轮（承接第 72 轮「EMBODIED-GAUGE-RAS 具身计量审计闭环」IP-287~294；灵感循环第 3 轮；本轮灵感：「深度相机」×「模块化设计」×「论文创新点」）
+# 第 1 轮（灵感循环第 1 轮；本轮灵感：「迭代验证」×「需求洞察」×「少样本学习」）
 
-> R72 把 GAUGE 从认知层下沉到具身层（REG 调度契约 / IRL 意图隐变量 / DMEM 接触计量 / EREFLEX 三层反作用 / S2R-UQ / RTM 信任锚点），确立了五不变式与严格退化链。但 R72 留下三个**结构性**问题：
-> - **单体结构问题**：EMBODIED 是不可分割的整体。REG 拓扑、IRL 输入接口、DMEM 四分量、EREFLEX 三层全部「写死」在主闭环里：换一只灵巧手要重审整个系统，加一个新传感器要改主闭环，E362 的「跨本体零改核心」只是实验希望而非结构保证；|N_REG|≤20、|Z|≤8、|C|≤5 的复杂度上限是**外生数字纪律**，不是内生结构性质。
-> - **模态覆盖问题**：R72 把「接触」升级为模式条件计量证据，但机器人最普遍的传感器——**深度相机**——在 BSE 里仍是「又一个观测 y」。深度噪声强依赖距离（立体匹配 σ∝d²/基线）、表面材质（透明/镜面/黑体直接无深度或大偏差）、深度不连续（飞点）、多机 IR 互扰、外参热漂移、运动模糊；把「深度不确定度」误读为「场景几何不确定度」，与 R72 批判的「把接触不确定度误读为位姿不确定度」是**同型错误**。
-> - **可动计量问题（第四反作用层）**：深度证据质量是机器人**自身位姿/视角**的函数——走近一点、偏个角度，σ 就显著变小。机器人运动 → 视角变化 → 证据质量变化 → 状态估计变化 → 运动变化，这是 L4 反作用。R72 的 EREFLEX 是手写三层（ψ/z/c），结构上无法容纳新层；需要让「反作用通道」成为**模块接口的一部分**，而不是主闭环里的手写分支。
+> 背景：当前具身智能系统往往依赖海量标注数据进行监督学习，而在真实部署中面对「需求洞察」中暗示的稀缺场景（罕见故障、边缘案例、新环境）时，往往因数据不足而失效或产生灾难性误判。R73 的 MODGAUGE 提供「计量契约代数」框架，将不确定度明确传递，但其前提是「契约可表达」且「模块已认证」。当模块在部署初期只有极少量样本时，MODGAUGE 的「模块热替换」定理无法直接使用——我们没有足够的材质/视角/互扰数据来校准 DPEM、训练 IRL、构架 MReg。
 >
-> 本轮三个灵感正好补三块：
-> - **深度相机** → **DPEM（Depth Perception Evidence Metrology）**：六分量深度不确定度（距离/材质/边缘/标定/互扰/运动）+ 材质条件似然 + **视角反作用通道**——深度是「模块化声明」的第一个示范实例，证明「新模态 = 新模块 + 新校准 + 新契约」，核心零改动。
-> - **模块化设计** → **MMS（Metrological Module System）**：模块 =（证据契约，实现，证书）三元组；不确定度预算、有效域、追溯链、否决指示、**反作用通道**全部成为接口类型；**组合代数 CCA**（串联/并联/否决）给出组合单调性定理与**热替换定理**——系统级性质只依赖契约，不依赖实现。
-> - **论文创新点** → **CPB（Claim-to-Proof Binding）**：把 R71–R73 的庞大体系蒸馏为**三条可证伪主张**（C1 物理感知证据计量 / C2 反作用预算组合 / C3 契约式模块化），每条绑定最小基准、隔离消融与预注册指标；不服务任何主张的组件降级为工程附件，不进核心认证路径。
+> 本轮灵感三位一体，设计 **LeanGauge** 算法：
+> - **需求洞察**：系统需要在「故障前哨」层面识别「尚未被需求覆盖的风险区域」——这些区域往往是「数据稀缺」的、且「代价高」的；
+> - **迭代验证**：通过「可预测的自助下注」在线生成「伪需求」样本，对每个「需求未覆盖」的子空间进行「最小验证子图」的「闭环修复」；
+> - **少样本学习**：在「需求洞察」发现的稀缺子空间内，用「结构化的先验约束」+「贝叶斯不确定度传播」+「迭代验证生成的样本」进行「计量契约的局部校准」；
 >
-> 核心命题：**不再问「这个具身系统可信吗」，而问「证据计量能否成为可组合的契约——使系统级安全性质在模块热替换、传感器增删、本体迁移下由组合规则自动保持？」** 把 R72 的「具身计量审计闭环」重构为 **MODGAUGE-RAS**（MODular, Physics-aware evidence metrology with GAUGE audits for RAS）——**计量契约代数**。
+> 核心命题：**把「等待大数据」的被动学习，变为「在少样本下主动发现+迭代修复需求盲区」的主动计量增强**——系统在每次「需求洞察」触发时，自动生成「迭代验证子图」，在子图内就地完成「少样本学习」的「计量契约修复」，从而在「模块热替换」前置条件（材质/视角/互扰覆盖）得到满足。
 
 ## 0. 直觉与动机
 
-**灵感 1（深度相机 → 深度不确定度是「被材质与几何调制的物理量」）**
-直觉：消费级深度相机的噪声有**确定性的物理结构**：立体匹配 σ_z ∝ d²/基线；ToF 受多径与 IR 串扰；透明/镜面/黑体表面直接无深度或大偏差；深度不连续处飞点云；多台 RealSense 对射互扰；外参随温度漂移；曝光时间与相对运动造成运动模糊。这些失效模式可写成**模式条件似然** p_depth(y_d | s, v, m)：v =（距离，入射角）视角（机器人可控），m = 表面材质类别（不可观测，由 RGB + 深度残差历史推断后验 b_t(m)）。**六分量**：u_range（距离项）、u_material（材质项）、u_edge（不连续/飞点项）、u_calib（内外参漂移项）、u_interf（多机互扰项）、u_motion（运动模糊项），各有独立追溯链。与 R72 的接触四分量完全同构——接触模式 c 是「手与环境的关系」，视角 v 是「眼与场景的关系」，都是**动作条件化的证据质量**。深度相机的独特价值：它是「模块化声明」压力最小的示范实例——一个全新模态、物理噪声文献最全；如果连它都要改主闭环，MMS 就是失败的。
+**灵感 1（需求洞察 → 故障前哨层面的「需求盲区」识别）**
+直觉：R73 的 MODGAUGE 追求「契约表达力完备」，但实际部署时往往面临「契约可表达性盲区」——某个材质/视角/干扰组合在训练数据中从未出现，这在「故障前哨」层面表现为：DPEM 对该组合的 u_depth 估计偏低（假确定性），但实际测量 σ 远大于预期，导致下游 BSE 发出错误的「安全」信号。这种盲区往往在「极端边缘」或「罕见组合」——数据稀缺、代价高昂——它们正是需求洞察要发现的：**需求盲区 = 稀疏子空间 + 高风险等价类**。
 
-**灵感 2（模块化设计 → 接口即契约，组合即定理）**
-直觉：R72 的问题不在组件不对，而在**组件之间没有类型**。IRL 吃 y_intent，DMEM 吃 tac_frame，BSE 吃一切——数据流是隐式的，不确定度在边界上**静默丢失**（u_tac 的四分量与追溯链传给 BSE 时被压扁成标量；z_dist 的 ι_intent 传给 λ 时无预算记账）。模块化设计的正确抽象不是「代码分包」，而是**计量契约（Evidence Contract, EC）**：每个模块声明（输入预算消耗，输出预算生成，反作用通道，有效域，否决指示，追溯合并函数，WCET 预算）。组合规则是**单调的**：串联的不确定度只能增不能减；并联（多模态融合）只在**跨模态一致性审计**（conformal 校准于 SEAL）通过时允许缩窄，否则取保守上界；否决组合非补偿。有了代数，**热替换定理**可证：同契约替换实现 ⇒ 系统级性质（退化链、风险单调、时序隔离、审计覆盖）逐指令保持。这把 E362 的「换本体零改核心」从实验希望升为定理，把 R72 的复杂度上限从数字纪律变为**结构上限**（组合深度 ≤ 4、模块数 ≤ 24 本身成为可审计的图性质）。
+我们引入**需求盲区检测器 D-Box**，它持有「需求覆盖率矩阵」R ∈ ℝ^(d×m×i)，其中 d=距离维、m=材质维、i=互扰维；每个单元格的值是「该子空间是否被验证过」+「当前 u 的置信区间宽度」。当 R 某格单元的验证次数 < τ_n (例如 ≤1) 且该格属高风险区域（碰撞/失手代价 > τ_cost），即判定该子空间为「需求盲区」。
 
-**灵感 3（论文创新点 → 蒸馏纪律：三条主张，每条可证伪）**
-直觉：R71–R72 已积累 16 个 IP、365 个定义、365 个实验——但论文创新点必须能三句话说清、三个实验隔离。本轮强加**蒸馏纪律**：
-- **C1（物理感知证据计量）**：模态专属不确定度分解（深度六分量、接触四分量）在**校准质量（ECE/覆盖率）与下游安全（碰撞率、误抓率）**上显著优于通用异方差不确定度（MC-Dropout、深度集成、厂商标准噪声模型如 Nguyen-Izadi-Liu 型二次模型）。
-- **C2（反作用预算组合）**：把「动作调制证据质量」显式声明为反作用通道并**合算**预算，比单层（仅 ψ）或无预算方案在同等后验精度下**交互成本更低且有限停止可证**。
-- **C3（契约式模块化）**：系统级安全性质在**模块热替换**下由契约保持；本体迁移只需模块级重认证，认证成本从 O(系统) 降为 O(模块)。
-每个组件必须声明服务哪条主张（CPB 绑定表），否则是工程附件——写附录、不进核心认证路径。CPB 同时是**防御装置**：当审稿人问「贡献是不是工程堆叠」，答案是「三个可隔离的主张 + 三个隔离实验 + 预注册指标」。**定位声明**：深度噪声模型（Nguyen et al.）、主动感知/NBV、conformal prediction、ROS 组件模型都是已知工作；本方案的创新点不在其中任何单项，而在「**审计 + 契约 + 组合**」这一层——证据不确定度成为被审计的、带否决语义的、可组合的一等公民，且热替换下系统级安全可证。
+**灵感 2（迭代验证 → 可预测下注的「自助验证」机制）**
+直觉：R73 的最高风险是「契约表达力盲区」——系统自信地组合一个错误世界。我们的「迭代验证」灵感来源于 R73 的 CAS 哨兵，但**不依赖外部标签，而是用「可预测的自助下注」在线生成「伪需求样本」**：
+- 选取当前需求盲区所在的「边缘子空间」；
+- 构造「最小验证子图」M_ver ⊆ MReg（只包含涉及该子空间的所有关键模块）；
+- 在 M_ver 内，对每个候选动作 a，执行「可预测下注」：
+  - 假设 a 将进入盲区 → 观测 σ_pred；
+  - 若 σ_pred > σ_decl + γ (经验安全裕度) → 下注 a 为「潜在风险信号」；
+  - 执行 a，记录真实观测 σ_obs；
+- 根据「下注结果」→「真实是否中标」生成「需求样本」+「计量反馈」；
+- 更新盲区覆盖矩阵 R。
 
-**灵感 4（视角反作用 L4 → 反作用通道的统一抽象 ΣREFLEX）**
-直觉：R72 手写三层反作用（ψ/z/c）。深度相机揭示第四层：机器人运动改变视角 → 改变深度证据质量 → 改变估计 → 改变运动。L3 与 L4 同构：都是「动作 → 观测模式 → 噪声分布 → 估计 → 动作」。统一抽象：每个证据模块在契约中声明**反作用通道 χ_R: g ↦（噪声参数调制，有效域收缩）**；EREFLEX 推广为 **ΣREFLEX**：预算 = Σ_模块 c_reflex^i ≤ B_total，稳态集 = ∩ 模块稳态集（新增 V_safe：下一视角的期望深度不确定度 ≤ τ_v）。四层（ψ,z,c,v）只是当前实例化。**「层数」从系统结构降为模块声明**——未来加任何「动作会改变其噪声」的传感器（超声、雷达、麦克风阵列），只需在模块契约里声明通道，主闭环零改动。
+这与 CAS 的「赌局哨兵」不同：**我们不是监控契约偏离，而是主动发起「哨兵式的探测行动」来发现盲区本身**。
 
-**灵感 5（组合证书 → 证书代数）**
-直觉：R72 的 J_EMB 是不可分的整体证书，任何改动都要全系统重审。模块化后，证书**可组合**：J(system) = ⊗_i J(module_i) ⊗ J_comp(MReg)。组合校验：预算闭合（下游输入消耗 ≤ 上游输出生成）、有效域交集非空、追溯链合并可复算、否决并集、ΣREFLEX 通道完备。「全系统重新认证」降为「模块认证 + 组合校验」——模块化的复利在审计侧兑现：认证成本 O(系统) → O(模块数 × 模块大小)。
+**灵感 3（少样本学习 → 计量契约的「局部校准」）**
+直觉：一旦迭代验证生成了「需求盲区样本」，我们需要在「数据稀缺」的前提下完成「计量契约的局部校准」。方案：
+- **结构化先验**：对 DPEM 的每个分量 u_range, u_material, u_edge 等，都有已知的物理尺度（σ ∝ d²/B、材质反射率指数等）；
+- **贝叶斯不确定度传播**：在需求盲区样本 N_bl 上，构建高斯过程（或变分推断），对 u 进行后验更新。先验由物理尺度给出，数据不足时靠先验，充足时数据主导；
+- **局部修复**：只修复盲区子图的「契约声明」——更新 EC 中的 χ_R, D, τ_merge 等。其余子图保持原有证书，实现「局部热替换」。
 
+这把「需求盲区」从「黑 桶」变成「可验证的、可修复的子问题」。
 
+## 1. 形式化定义（增量：定义 398–415）
 
-**灵感 6（因果推理 → 证据因果图）**：
-直觉：现有的CCA组合代数关注不确定度的传播，但未显式建立证据间的因果关系。灵巧手的每个指关节都产生因果关联的接触证据，这些因果链需要显式追踪以保证安全性质在重配置下保持。我们引入**证据因果图（Evidence Causal Graph, ECG）**，节点为模块证据，边为条件依赖关系（如：视角→深度质量→状态估计→运动决策）。ECG在MReg层构建，每条边标注条件预算消耗与否决指示。因果链的断裂触发安全拒绝，而非简单的不确定度累积。这把「动作→观测→噪声→估计→动作」的L3/L4同构提升为可追踪的因果链，支持反事实推理：若某指关节失效，因果链如何重排以最小化安全风险？
+**定义 398（需求覆盖矩阵与需求盲区）** 需求覆盖矩阵 R ∈ ℝ^(d×m×i)：
+- R[d,m,i] = (n_verify, σ_conf_lo, σ_conf_hi, cost_risk)；
+- n_verify：子空间 (d,m,i) 的验证次数；
+- σ_conf : 该子空间当前 u 的置信区间；
+- cost_risk：该子空间的风险等价类（碰撞/失手代价）。
 
-**灵巧手几何与证据契约的对应**：
-灵巧手的16个自由度映射到MMS模块的特定子集：每个手指基节→深度模块，每个指尖→接触模块，关节角度→视角反作用通道。手姿态→模块激活图。这为E362的「跨本体零改核心」提供了结构化实现：手指模块的EC契约是通用的，仅实现不同，热替换定理直接适用。
+**定义 399（需求盲区）** 子空间 s = (d,m,i) 为需求盲区 ⇔ n_verify(s) ≤ τ_n ∧ cost_risk(s) ≥ τ_cost。
 
-**通用机器人形态无关性**：
-MMS的模块化抽象本应服务于任何机器人，但实际实现往往绑定特定硬件。我们引入**形态无关契约（Morphology‑Independent Contract, MIC）**：契约声明不依赖特定关节数、手指数或传感器阵列，仅依赖证据类型、不确定度分解维度和反作用通道结构。新增任意机器人只需声明对应的模块实例，主闭环零改动。这把E362从「实验希望」升为「形态无关定理」。
+**定义 400（可预测自助下注）** 给定需求盲区 s，候选动作集合 A_s。下注函数 λ: A_s → ℝ，λ(a) = σ_pred(a|s) - σ_decl(a)。若 λ(a) ≥ γ，则判 a 为「潜在风险信号」。
 
-## 1. 形式化定义（增量：定义 366–382）
+**定义 401（最小验证子图 M_ver）** M_ver = (V_ver, E_ver) ⊆ MReg，其中 V_ver 包含所有涉及盲区 s 的模块，E_ver 是其诱导子图。
 
-**定义 366（MODGAUGE-RAS 总览）** MODGAUGE-RAS = (MMS, DPEM, CCA, ΣREFLEX, CPB, EMBODIED-GAUGE-RAS†)。五不变式：
-(i) **契约完整性**：模块图中每个节点实例化完整证据契约（定义 367），缺一不可入图、不可参与组合；
-(ii) **组合单调性**：所有组合路径经 CCA 校验（定义 370），不确定度满足组合下界定理（引理 34），无「凭空变好」路径；
-(iii) **反作用通道完备**：每个证据模块必须声明反作用通道（可为平凡恒等 χ_R ≡ id），ΣREFLEX 预算闭合（定义 371）；
-(iv) **主张绑定**：每个组件 ∈ {C1, C2, C3, 工程附件}（定义 374 绑定表），附件不进核心认证路径、不进正文；
-(v) **严格退化链扩展**：模块级失效 → 模块级 stub 降级（定义 381）→ 系统级性质不变（热替换定理保证）；安全侧只增不减。
+**定义 402（迭代验证采样）** 对 a ∈ A_s：
+1. 执行下注：假设 a 进入 s → 计算 σ_pred = χ_viewpoint(a) + χ_material(a) + ...；
+2. 若 σ_pred > σ_decl + γ：执行 a → 记录 σ_obs；
+3. 生成「需求样本」(a, σ_obs, u_bl)；
+4. 更新 R[s].n_verify += 1, σ_conf 更新。
 
-**定义 367（证据契约 EC）** EC = (T_in, T_out, 𝒰_in, 𝒰_out, χ_R, D, τ_merge, I⊥, W, seal_ref)：
-- T_in/T_out：输入/输出证据类型（类型系统保证「深度证据不会被当成触觉证据」）；
-- 𝒰_in ⊆ 𝒰_out：输入预算消耗 ⊆ 输出预算生成（输出必须携带输入的追溯与不确定度）；
-- χ_R: 𝒢 × X → Θ_noise × D′：反作用通道声明——动作 g 如何调制本模块噪声参数与有效域（平凡恒等 χ_R(g) = (θ_0, D) 表示「我的噪声与动作无关」）；
-- D：有效域（材质/距离/干扰/接触模式的显式前提条件）；
-- τ_merge: (τ_in, τ_self) ↦ τ_out：追溯合并函数；
-- I⊥：否决指示集合（本模块能对哪些命题投非补偿性否决票）；
-- W：WCET/内存/执行域（控制/计量/感知）预算；
-- seal_ref：密封审计集引用（SEAL-Depth/SEAL-Contact/SEAL-Intent）。
+**定义 403（少样本局部校准）** 在 N_bl = {(a_j, σ_j)}_J^j=1 个需求盲区样本上，对 DPEM 的每个分量 u_k 进行贝叶斯更新：
+- 高斯过程先验：u_k ~ GP(μ_0(d,m,i), K_0(·,·))；
+- 观测似然：σ_j | u_k ~ 𝒩(u_k(a_j), σ_obs²)；
+- 后验：u_k | N_bl ~ GP(μ_N, K_N)；
+- 局部修复：更新 EC 中 u_fields, χ_R, D 的声明。
 
-**定义 368（模块三元组与注册表）** Module = (EC, impl, cert)，cert =（SEAL 校准报告， conformal 覆盖率， RTA 片段， 版本哈希， s2r_uq 链）。**MReg（模块注册表）**= (V_M, E_M, ⊛)：运行时模块 DAG，节点 = 模块实例，边 = 契约组合实例，⊛ ∈ {SER, PAR, VETO} 为组合算子标注。计量域每轮遍历 MReg 校验组合合法性。
+**定义 404（迭代修复闭环 I-Box）** 给定需求盲区 s：
+```
+循环：
+  1. M_ver ← MINIMAL_VALIDATION_SUBGRAPH(s)
+  2. A_s ← ACTIONS_ENTERING(s)
+  3. for each a ∈ A_s:
+        λ ← PREDICTABLE_BET(a, s)
+        if λ ≥ γ: EXECUTE(a), SAMPLE ← OBSERVE(a)
+  4. N_bl ← COLLECT_SAMPLES(s)
+  5. if N_bl 达标：
+        (R, EC) ← LOCAL_CALIBRATE(N_bl)
+        if CONTRACT_VALID(EC) and BUDGET_OK: BREAK
+```
 
-**定义 369（深度证据计量 DPEM）** 观测 y_d = (深度图， RGB, 相机内参状态， IMU/运动状态)。条件似然
-p_depth(y_d | s, v, m) = 𝒩(y_d; h(s, v, m), Σ_d(s, v, m))，
-Σ_d 的结构由六分量给出：
-u_depth² = u_range²(d, B) + u_material²(m̂) + u_edge²(d_edge) + u_calib²(温度， 外参漂移) + u_interf²(互扰指示) + u_motion²(曝光 × 相对速度)。
-材质后验 b_t(m) 由 RGB + 深度残差历史在线推断，𝓜 = {opaque-diffuse, specular, transparent, dark-absorbing, unknown}。有效域 D_depth = {b_t(m_fail) < τ_m} ∧ 无互扰 ∧ d ∈ [d_min, d_max]。**视角反作用通道 χ_v**：动作 g → 相机位姿变化 → (d, θ_inc, 相对速度) → 调制 (u_range, u_edge, u_motion) 与 D_depth。**每分量独立追溯链 τ_d_i**。
+**定义 405（检测-纠正-验证-更新 4CV）**
+- **检测 D**：D-Box 发现需求盲区；
+- **纠正 C**：I-Box 执行迭代验证采样；
+- **验证 V**：局部校准得到新契约 EC'；
+- **更新 U**：MReg 中盲区子图热替换为 EC'，R 更新。
 
-**定义 370（组合代数 CCA）** 三种组合算子：
-- **串联 COMP-SER**（A ∘ B）：u_out ≥ u_A + L_B·u_A ≥ u_A（Lipschitz 传播下界）；D_out = D_A ∩ D_B；τ_out = τ_merge(τ_A, τ_B)；I⊥,out = I⊥,A ∪ I⊥,B；χ_R,out = χ_R,B ∘ χ_R,A（通道串联）。
-- **并联 COMP-PAR**（A ⊕ B 融合）：先做**一致性审计**——跨模态残差 r = |f_A(ŝ) − f_B(ŝ)| ∈ conformal 集 C_α（校准于 SEAL）⇒ 允许缩窄 u_out = fuse(u_A, u_B, ρ̂)（ρ̂ ∈ [−1,1] 为审计估计的相关性，|ρ̂| < ρ_max 才按独立性缩窄）；审计失败 ⇒ u_out = max(u_A, u_B)（保守并集，禁用缩窄）。**攻击语义**：对抗性模态分歧本身触发 I⊥。
-- **否决 COMP-VETO**（A ⊠ B）：validity = validity_A ∧ validity_B，任一否决 ⇒ 整体否决（非补偿，继承 R71 安全否决）。
-**组合下界定理（引理 34）**：任何由 SER/PAR/VETO 构成的组合路径，其输出不确定度 ≥ 路径上所有输入贡献的单调函数；不存在「组合后不确定度低于所有输入且通过审计」的路径。
+**定义 406（LeanGauge 总览）** LeanGauge = (MODGAUGE, D-Box, I-Box, 4CV)。
 
-**定义 371（ΣREFLEX 多层反作用预算）** 模块集 {i} 的反作用成本 c_reflex^i（各模块按其通道定义：ψ 用 R71 REFLEX、z 用 KL、c 用 ΔH[b(c)]、v 用 E[Δu_depth | v′]）。预算：Σ_t Σ_i c_reflex^i ≤ B_total；稳态集 Ω_safe = Ψ_safe ∩ Z_safe ∩ C_safe ∩ V_safe，其中 V_safe = {E[u_depth^{t+1} | v′(g)] ≤ τ_v}。任一层越界 ⇒ 该交互/动作被拒绝（继承 R71 非补偿性）。**有限停止**：每层边际成本正下界 + 总边际增益非增（引理 36）⇒ 存在有限 n*。
+**定义 407（迭代验证时序契约 IV-Contract）** 与 REG 类比，IV-Contract = (A_s, τ_iter, B_iter, recovery_condition)：
+- A_s：允许进入盲区的动作集合；
+- τ_iter：每次迭代验证的最长时延；
+- B_iter：迭代预算总量；
+- recovery: 迭代收敛/失败的恢复条件。
 
-**定义 372（视角感知规划 PVOP）** 在计量域（20Hz、软实时）求解轨迹修正：
-a* = argmax_a [ Progress(a) − λ·E[u_depth^{next}(a)] − Σ_i c_reflex^i(a) ]
-s.t. REG 时序契约、V_safe、C_safe。**关键**：E[u_depth^{next}(a)] 由 χ_v 通道**解析**给出（不需要 rollout 传感器仿真）——这是「计量契约使反作用可计算」的直接收益，也是 PVOP 能在 2ms 预算内求解的原因。
+**定义 408（采样效率下界）** 为保证盲区 s 的 σ_conf 缩小至 ≤ ε，所需最小样本数：
+n_min(s) ≥ (σ_prior² - ε²) / (KL(U_prior || U_post) ≥ δ) 
 
-**定义 373（深度威胁面 AIC-DEPTH）** ℰ_depth = {材质伪装（镜面假体/透明屏障）、IR 互扰攻击（故意外射）、飞点注入（边缘投毒）、外参投毒（篡改标定链）、多径欺骗}。防线：材质后验 + 跨模态一致性（视觉-触觉-本体并联审计）+ τ 断链检出 + 单源不定案（继承 E356/E357 原则）。
-
-**定义 374（主张-证明绑定 CPB）** 绑定表（组件 → 主张 → 最小基准 → 隔离消融 → 预注册指标）：
-- C1 ← (DPEM, DMEM†) ← MB1 ← AB1（六/四分量 vs MC-Dropout vs 深度集成 vs 厂商噪声模型）← (ECE, 覆盖率， 碰撞率， 误抓率)；
-- C2 ← (ΣREFLEX, ERVOI†, PVOP) ← MB2 ← AB2（四层 vs 仅 ψ vs 无预算）← (交互次数， 人类负担， 停止步数方差)；
-- C3 ← (MMS, CCA, 证书代数) ← MB3 ← AB3（热替换 vs 全系统重审）← (逐指令等价性， 认证成本比， 迁移改动行数)。
-**工程附件**（ROS 2 包装、数据记录器等）不绑定主张、不进正文。任何新增组件必须先填绑定表才能进入 MReg。
-
-**定义 375（模块化 E-IVG）** 失效粒度从「系统级」细化到「模块级」：DPEM 失效（u_depth 超预算 / b_t(m_fail) 高 / 互扰 / τ 断链）⇒ DPEM stub；DMEM 失效 ⇒ DMEM stub；IRL 失效 ⇒ 固定先验 stub；REG 失效 ⇒ R68（唯一系统级降级，继承 R72）。**stub 语义见定义 381**。
-
-**定义 376（模块化证书 J_MOD）** J_MOD = ⊗_{i∈V_M} J(module_i) ⊗ J_comp(MReg)，J_comp 校验：∀e ∈ E_M 预算闭合 ∧ 有效域交集非空 ∧ 追溯合并可复算 ∧ χ_R 完备 ∧ ΣREFLEX 预算未超。Valid(J_MOD) ⇒ Valid(J_EMB)（R72 证书为其特例）。
-
-**定义 377（复杂度结构上限）** |V_M| ≤ 24、组合深度 ≤ 4、|𝓜| ≤ 5、|Z| ≤ 8、|C| ≤ 5、|I_total| ≤ 64——全部为 **MReg 的可审计图性质**（部署期 + 运行时增量校验），不再是文档纪律。
-
-**定义 378（深度自标定模块）** 自由空间运动（本体确认 b_t(c) = free）时的深度-本体残差作为外参漂移观测；已知几何标定物作为基准；滑动窗口贝叶斯更新 u_calib 并回写契约（u_calib 进入 W 与 λ_floor）。**自举防御**：自标定只用「本体/接触/已知几何」作外部基准，深度残差仅作观测；断链即停用并回退 u_calib 上界。
-
-**定义 379（MBench 最小基准）** MB1（深度计量：受控距离×材质×边缘×干扰矩阵 + 3 个下游抓取任务）、MB2（交互预算：协作组装 + 教学场景 × 有/无通道声明）、MB3（热替换：换手/换意图网/换深度计，逐指令 diff）。**每个 ≤ 3 小时单卡可复现，预注册脚本 + 固定种子 + 密封保持集 SEAL-MB。**
-
-**定义 380（认证成本度量）** CertCost = Σ_模块（SEAL 评估时间 + conformal 校准时间）+ 组合校验时间。C3 的可证伪形式：热替换后 CertCost 比值 ≈ 新模块成本 / 全系统成本（实验 E375 验证 >10×）。
-
-**定义 381（stub 语义与保守证据）** stub(模块) 输出：证据 = ∅（不产生观测）、u = ∞、D = ∅、I⊥ = 本模态全集（对本模态一切命题投否决票，但不否决其他模态）、χ_R = 平凡。stub 仍参与 MReg 合法性校验（图连通性不断）。
-
-**定义 382（跨机互扰协议）** 多机器人场景：各机深度模块广播 IR 投影计划（时间片/频谱），MReg 层协商避让；互扰检出（u_interf 分量激增 + 跨模态残差异常）⇒ 本机深度 stub + 触觉/本体补偿。
+其中 KL 由贝叶斯后验控制，δ 为目标信息增益。
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-295 MMS：证据契约与模块注册表
-@dataclass(frozen=True)
-class EvidenceContract:
-    t_in: type; t_out: type                    # 证据类型（类型系统隔离模态）
-    u_fields: Tuple[str, ...]                  # 不确定度字段（DPEM: 六分量）
-    chi_R: Callable[[Action], NoiseMod]        # 反作用通道声明（可为平凡恒等）
-    domain: Predicate                          # 有效域谓词 D
-    tau_merge: Callable                        # 追溯合并函数
-    veto_set: FrozenSet[str]                   # 否决指示 I⊥
-    wcet_us: float; domain_tag: str            # 时序预算 + 执行域（ctrl/metric/percept）
-    seal_ref: str                              # 密封审计集引用
+# IP-310 LeanGauge：需求盲区检测器 D-Box
+class DBox:
+    def __init__(self, subspace_dims=(DIST_BINS, MATTERIAL_CAT, INTF_LEVEL)):
+        self.R = np.zeros(subspace_dims + (4,))  # (n_verify, σ_lo, σ_hi, cost_risk)
+        self.tau_n = 2
+        self.tau_cost = 0.3  # normalized risk
 
-@dataclass
-class Module:
-    ec: EvidenceContract; impl: object; cert: Cert   # 三元组（定义 368）
+    def detect_blind_spot(self):
+        blind_spots = []
+        for idx in np.argwhere(self.R[..., 0] <= self.tau_n):
+            if self.R[tuple(idx) + (3,)] >= self.tau_cost:
+                blind_spots.append((idx, self.R[tuple(idx)]))
+        return blind_spots  # [(subspace_idx, (n, σ_lo, σ_hi, cost))]
 
-class ModuleRegistry:                          # MReg：模块 DAG
-    def compose(self, a, b, op):               # op ∈ {SER, PAR, VETO}
-        edge = self.check_budget_closure(a, b, op)   # 预算闭合校验（定义 376）
-        self.edges.append(edge); return Composite(a, b, op)
-    def audit(self):                           # 计量域每轮遍历：组合合法性
-        return all(self.check_budget_closure(*e) for e in self.edges) \
-               and len(self.nodes) <= 24 and self.depth() <= 4   # 定义 377
+    def update(self, subspace, n_verify, sigma_conf, cost):
+        self.R[subspace] = [n_verify, sigma_conf[0], sigma_conf[1], cost]
 
-# IP-296 DPEM：深度证据计量（感知域，100Hz）
-class DepthPerceptionMetrology:
-    def update(self, depth_img, rgb, cam_state, motion_state, peers):
-        m_post = self.material_net(rgb, depth_img)          # b_t(m) 材质后验
-        v = viewpoint(cam_state, motion_state)              # (d, θ_inc, rel_vel)
-        u_range = self.calib.range_unc(v.d)                 # σ ∝ d²/B
-        u_mat   = self.calib.material_unc(m_post)           # 材质分量
-        u_edge  = self.calib.edge_unc(depth_img)            # 飞点/不连续
-        u_cal   = self.selfcal.u_calib                      # 在线自标定（定义 378）
-        u_int   = self.interf.detect(peers)                 # 互扰分量（定义 382）
-        u_mot   = self.calib.motion_unc(v.rel_vel, exposure)
-        valid   = (m_post['fail'].prob < TAU_M) and (u_int < TAU_INTF)
-        lik     = depth_likelihood(depth_img, v, m_post)    # p(y_d | s, v, m)
-        return DepthEvidence(lik=lik, m_post=m_post, v=v, valid=valid,
-               u=math.sqrt(u_range**2+u_mat**2+u_edge**2+u_cal**2+u_int**2+u_mot**2),
-               breakdown=(u_range,u_mat,u_edge,u_cal,u_int,u_mot),
-               chi_v=chi_viewpoint(v),                      # 视角反作用通道
-               tau=self.tchain.merge(rgb_tchain, calib_tchain))
 
-# IP-297 CCA：组合代数
-def compose(a_ev, b_ev, op, audit):
-    if op == 'SER':   # 串联：单调传播，只能更差
-        return Ev(u=a_ev.u + lipschitz(b_ev, a_ev.u), D=a_ev.D & b_ev.D,
-                  tau=a_ev.tau.merge(b_ev.tau), veto=a_ev.veto | b_ev.veto)
-    if op == 'PAR':   # 并联：先一致性审计，再决定是否缩窄
-        r = cross_modal_residual(a_ev, b_ev)
-        if audit.conformal_covers(r):                     # SEAL 校准的 conformal 集
-            rho = audit.estimate_corr(a_ev, b_ev)
-            if abs(rho) < RHO_MAX: return fuse(a_ev, b_ev, rho)   # 允许缩窄
-        return Ev(u=max(a_ev.u, b_ev.u), D=a_ev.D & b_ev.D,
-                  tau=a_ev.tau.merge(b_ev.tau),
-                  veto=a_ev.veto | b_ev.veto | {'PAR_AUDIT_FAIL'})
-    if op == 'VETO':  # 否决：非补偿
-        if a_ev.veto or b_ev.veto: return Ev(valid=False, veto=a_ev.veto | b_ev.veto)
-        return Ev(u=min(a_ev.u, b_ev.u), D=a_ev.D & b_ev.D)
+# IP-311 I-Box：可预测自助下注与迭代验证采样
+class IBox:
+    def __init__(self, dpem, budget_cycle, gamma=0.15):
+        self.dpem = dpem
+        self.budget = budget_cycle
+        self.gamma = gamma  # 预测-声明差阈值
 
-# IP-298 ΣREFLEX：通道化多层反作用预算（替代手写三层）
-def sigmareflex_step(modules, g, state, budget):
-    total, states2 = 0.0, {}
-    for i, m in modules.items():                       # 遍历模块，层数非手写
-        chi = m.ec.chi_R(g)                            # 通道：动作如何调制我的噪声
-        c_i, s2 = m.reflex_cost(state[i], chi)         # ψ:R71 / z:KL / c:ΔH / v:E[Δu]
-        if s2 not in m.safe_set: return None, total    # 任一稳态越界 → 拒绝（非补偿）
-        states2[i], total = s2, total + c_i
-    if budget.spent + total > budget.B: return None, total
-    return states2, total
+    def predictable_bet(self, action, subspace):
+        v = action.viewpoint
+        m = subspace[1]  # material category
+        sigma_pred = self.dpem.predict_uncertainty(v=v, m=m)
+        sigma_decl = self.dpem.declared_uncertainty(v=v, m=m)
+        return sigma_pred - sigma_decl
 
-# IP-299 PVOP：视角感知规划（计量域 20Hz，χ_v 解析 → 零 rollout）
-def viewpoint_aware_plan(b_t, mods, risk_params):
-    def J(a):
-        prog = task_progress(b_t, a)
-        u_next = sum(m.ec.chi_R(a).expected_u(state[m]) for m in depth_mods)
-        reflex = sum(m.reflex_cost_estimate(state[m], m.ec.chi_R(a)) for m in mods)
-        return prog - risk_params.lam * u_next - reflex
-    return optimize_under_reg_contract(J, horizon=0.5)   # REG 时序契约内求解
+    def execute_validation(self, blind_spot):
+        s = blind_spot[0]  # subspace index
+        actions = self._actions_entering(s)
+        samples = []
+        for a in actions:
+            if self.predictable_bet(a, s) >= self.gamma:
+                sigma_obs = self.dpem.observe(action=a)  # 实际执行
+                samples.append((a, sigma_obs))
+                DBox.update(s, n_verify+1, ...)  # update coverage
+        return samples
 
-# IP-300 CPB：主张-证明绑定（蒸馏纪律，入图前置校验）
-CLAIM_BINDINGS = {
- 'C1': dict(mods=['DPEM','DMEM'], bench='MB1', ablation='AB1',
-            metrics=['ece','coverage','collision_rate','grasp_err']),
- 'C2': dict(mods=['SIGMAREFLEX','ERVOI','PVOP'], bench='MB2', ablation='AB2',
-            metrics=['n_interactions','human_cost','stop_var']),
- 'C3': dict(mods=['MMS','CCA','J_MOD'], bench='MB3', ablation='AB3',
-            metrics=['instr_equiv','cert_cost_ratio','transfer_loc']),
-}
-def register(module):                                  # 新组件入图前必填绑定表
-    if module.name not in {m for c in CLAIM_BINDINGS.values() for m in c['mods']}:
-        assert module.tag == 'APPENDIX'                # 工程附件：不进 MReg、不进正文
 
-# IP-301 MODGAUGE 主闭环（复用 R72 三域，跨模块数据流全部经契约）
-def MODGAUGE_round(M, obs, audio, tac_frame, depth_img):
-    # === 感知域（异步 100Hz，Best-effort）===
-    d_ev  = M.dpe.update(depth_img, rgb, M.cam_state, M.motion, M.peers)
-    if not d_ev.valid: d_ev = stub(M.dpe)              # 模块级降级（定义 381）
-    t_ev  = M.dmem.update(tac_frame, M.last_action)    # R72 DMEM†（契约化包装）
-    psi_hat, ece = M.aura.update(audio)
-    M.y_intent_buf.append(extract_intent_obs(obs, audio, M.last_action))
+# IP-312 BP-Cal：贝叶斯先验驱动的局部校准
+class BayesianLocalCalibrator:
+    def __init__(self, prior_mean, prior_cov):
+        self.prior_mean = prior_mean  # 物理尺度给出的 GP 均值
+        self.prior_cov = prior_cov    # 物理尺度给出的 GP 协方差
 
-    # === 计量域（50Hz，软实时）===
-    if M.clock.due_metric():
-        b_t = M.bse.step_full(..., d_ev=d_ev, t_ev=t_ev)         # BSE†：吃契约证据
-        z_dist, ece_z, iota_z = M.irl.update(M.y_intent_buf, psi_hat, b_t)
-        M.pvop = viewpoint_aware_plan(b_t, M.mods, M.risk_params)  # IP-299
-        g = M.ervoi.choose(b_t, psi_hat, z_dist, t_ev.c_dist,
-                           M.budget, M.fmp, M.bse)               # R72 ERVOI†
-        if g:
-            s2, cost = sigmareflex_step(M.mods, g, M.state, M.budget)  # IP-298
-            if s2 is not None: M.last_g, M.state = g, s2
-        M.snapshot.write(b_t, z_dist, d_ev, t_ev, M.state)  # 版本号快照
-        M.mreg.audit()                                      # 组合合法性遍历
+    def calibrate(self, samples, subspace):
+        """贝叶斯线性高斯过程更新"""
+        X = np.array([s[0].viewpoint for s in samples])
+        y = np.array([s[1] for s in samples])
+        K = self.prior_cov(X, X) + 1e-6 * np.eye(len(X))
+        L = np.linalg.cholesky(K)
+        alpha = np.linalg.solve(L.T, np.linalg.solve(L, y))
+        # 预测均值/协方差（标准BFGS优化版）
+        mu_post = self.prior_mean(X) @ alpha  # 简化
+        # 更新契约声明
+        return mu_post, K  # 新的 u_k, Σ_k
 
-    # === 控制域（1kHz，硬实时，只读快照，零分配）===
-    snap = M.snapshot.read_latest()
-    lam = embodied_risk_scale(snap.U_ale, snap.U_epi, snap.H_z,
-                              max(snap.t_ev.u, snap.d_ev.u), M.risk_params)  # R72 E-RISK†
-    A = M.ach.propose_ctrl(..., pvop_bias=snap.pvop); k = M.c_ras_wm.certified_prefix(A, lam)
-    M.ctrl_out.publish(k, lam)
-    M.cert_ctrl.write(k=k, lam=lam, wcet=M.rtm.wcet_us(), breaker=M.breaker.status())
-    return k, lam, J_MOD(M.mreg)                            # 组合证书（定义 376）
+    def update_contract(self, module, new_u, subspace):
+        old_ec = module.ec
+        new_fields = old_ec.u_fields.copy()
+        new_fields[subspace] = new_u
+        new_chi = lambda a: compute_chi_from_physical(u=new_u, v=a.viewpoint)
+        new_ec = old_ec._replace(u_fields=new_fields, chi_R=new_chi)
+        return new_ec
+
+
+# IP-313 LeanGauge-4CV：一次完整的迭代修复闭环
+def lean_gauge_4cv(M, blind_spot):
+    """一次 I-Box 迭代"""
+    if blind_spot.n_verify < 3:  # 初始探测
+        samples = IBox.execute_validation(M, blind_spot)
+        if len(samples) < 2:
+            return False, "探测样本不足"
+        new_u, _ = BayesianLocalCalibrator.calibrate(samples, blind_spot.subspace)
+        new_ec = BayesianLocalCalibrator.update_contract(M.dpe, new_u, blind_spot.subspace)
+        M.mreg.hot_replace(M.dpe, new_ec)  # 局部热替换
+        DBox.update(blind_spot.subspace, len(samples), ...)
+        return True, "迭代完成"
+    else:  # 验证收敛
+        return True, "子图已验证通过"
+
+
+# IP-314 LeanGauge 主闭环（嵌入 MODGAUGE）
+def LeanGauge_round(M, obs, audio, tac_frame, depth_img, det_set):
+    """MODGAUGE-RAS + I-Box 迭代修复闭环"""
+    blind_spots = DBox.detect_blind_spot()
+    for spot in blind_spots:
+        success, msg = lean_gauge_4cv(M, spot)
+        if success:
+            break  # 局部修复成功，继续主循环
+    return MODGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set)
 ```
 
 ## 3. 推导
 
-**引理 33（深度六分量的条件正交性）** 给定 (v, m, d_edge, 互扰指示， 曝光×相对速度) 条件下，六分量由独立物理机制产生（三角量测、表面反射、边缘插值、标定链、多径/串扰、积分时间），条件近似不相关；遗漏任一 ⇒ 系统性低估（与引理 30 同型，条件集扩大到视角与材质）。系：**DPEM 不是「给深度再加个方差估计」，而是接触计量的严格推广——把 R72 的「模式条件」一般化为「(动作， 场景) 条件」。**
+**引理 42（自助下注可预测性）** 若动作 a 的观测 σ(a) 服从亚强稳健条件（A115 类），则 σ_pred(a|s) 为在子空间 s 上的可预测下注 λ(a)。系：利用 χ_v 等反作用通道，对每个 (v,m) 组合给出闭式 σ_pred；亚强稳健保证 λ(a) ≥ γ 时实际 σ(a) 的上界可控。
 
-**引理 34（组合单调性：不存在凭空变好）** 对 SER：u_out ≥ u_A + L_B·u_A ≥ u_A（Lipschitz 传播）；对 PAR：缩窄仅在 conformal 审计通过且 |ρ̂| < ρ_max 时发生，缩窄量受校准覆盖约束（1−α 上界）；对 VETO：有效域单调收缩。⇒ 任何组合路径的输出不确定度不可能低于路径中所有输入不确定度的单调组合而同时通过审计。系：**组合不产生认知免费午餐——这是把「审计」从单模块升级到模块图的代数基础。**
+**引理 43（局部贝叶斯校准可收敛）** 设先验 u ~ GP(μ_0, K_0)，样本数 N ≥ n_min(s)，则后验 σ_post ≤ ε ⇒ P(σ_post > ε) ≤ exp(-N·δ)。系：标准 GP 回归的后验方差收敛率。
 
-**引理 35（热替换安全保持）** 设 impl′ 与 impl 满足同一 EC（类型、预算、通道、域、否决、合并函数逐项相同）且 cert′ 有效。系统级性质（退化链定义 375、风险单调定理 23、时序隔离引理 28、审计覆盖）的证明只引用 EC 与组合校验，不引用 impl 内部。归纳于 MReg 的 DAG：替换后逐指令性质保持。系：**E362「换本体零改核心」从实验希望升为定理；认证成本 O(系统) → O(模块)（定义 380）。**
+**引理 44（迭代修复的局部热替换）** M_ver 子图的模块 EC 更新为 EC' ⇔ EC' 满足定义 367 契约完整性 + 定义 370 组合单调性 + 引理 35 热替换定理 ⇒ 子图系统级性质保持。因 M_ver 只是 MReg 的子图，整体安全由 4CV 保持。
 
-**引理 36（视角反作用的 Lipschitz 性与预算吸收）** 在有效域 D_depth 内，u_range(d, θ) 对 (d, θ) Lipschitz；动作 g 对相机位姿的映射 Lipschitz（REG 速度/加速度包络）⇒ c_reflex^v = E[Δu_depth | v′(g)] 有正下界 ε_v 且对 g Lipschitz。结合各层边际成本正下界与总边际增益非增（引理 31 的 Σ 层推广）⇒ ΣREFLEX 存在有限停止 n*。系：**「层数」增加不破坏有限停止——层数由模块声明给出，停止性由预算代数给出。**
-
-**引理 37（PVOP 的解析收益）** E[u_depth^{next}(a)] 无需传感器 rollout 即可由 χ_v 解析计算（噪声模型闭式）⇒ PVOP 在计量域 2ms 预算内可解；且若任务进展梯度与证据质量梯度的夹角 ≤ 90°（非对抗任务），存在步长使 J 单调改进。系：**「计量契约使反作用可计算」是 PVOP 可实时化的原因——通用传感器仿真做不到。**
-
-**定理 27（MODGAUGE 严格包含）** 在 A111–A113（契约表达力：噪声模型覆盖真实分布、conformal 审计校准不被对抗漂移、通道 Lipschitz 在有效域内成立）下：EMBODIED-GAUGE-RAS（R72）是 MODGAUGE 的单模块组实例化——把 REG/IRL/DMEM/EREFLEX 打包为一个复合模块组、深度证据置空（stub）、χ_R 手写等价于三层通道。由定义 366(v) 与引理 35，退化条件下 MODGAUGE 逐指令等于 R72，再退化等于 R71/R68。**安全单调不减，效率仅在契约满足时获益。**
-
-**定理 28（组合证书有效性 ⇒ 系统安全）** Valid(J_MOD) ⇒ (i) 各模块 cert 有效（SEAL/conformal/RTA 片段）；(ii) MReg 组合校验通过（预算闭合、域交非空、通道完备）；(iii) ΣREFLEX 预算闭合；(iv) J_EMB 特例成立（定理 24）⇒ 物理执行风险 ≤ ε_mod（相对具身测量模型与**契约表达力**）。**证明重量落在「契约表达力」（引理 33/34 的条件假设在分布外仍成立）与「一致性审计的 conformal 校准不被对抗漂移」上。**
-
-**定理 29（模块级降级的零级联）** 任一模块失效 ⇒ 替换为 stub（定义 381：u=∞、D=∅、I⊥=本模态全集、χ_R 平凡）⇒ 由引理 35（stub 是同契约实现）与定义 375，系统逐指令退化为少模态版本；stub 不产生观测 ⇒ 不参与 PAR 缩窄 ⇒ 不污染其他模块的审计。系：**失效的传染路径只有一条（该模态缺失），无级联——R72 E364 的「零级联崩溃」从实验目标升为结构性质。**
+**引理 45（全流程时序预算）** IV-Contract 保证每次迭代 ≤ τ_iter，总预算 ≤ Σ B_iter ≤ B_total；且 τ_iter 由 REG 时序契约界定，硬实时不变。
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|---|
-| MReg 组合校验（每轮计量域） | 软实时 50Hz | <0.2ms（\|V_M\|≤24） | O(\|V_M\|+\|E_M\|) | 定义 370、376、引理 34 |
-| DPEM 六分量 + 材质后验 | 感知域 100Hz | <0.3ms/帧 | <3MB | 定义 369、引理 33 |
-| 串/并/否决组合求值 | 计量域 | <0.05ms/对 | O(1) | 引理 34、定义 370 |
-| ΣREFLEX 通道步进 | 计量域（事件触发） | O(\|V_M\|) <0.1ms | O(\|V_M\|) | 定义 371、引理 36 |
-| PVOP 轨迹修正 | 计量域 20Hz | <2ms（解析 χ_v） | <5MB | 定义 372、引理 37 |
-| CPB 绑定校验（入图时） | 部署期 | <10ms/模块 | O(1) | 定义 374 |
-| 在线自标定（u_calib 回写） | 计量域 1Hz | <1ms | <1MB | 定义 378 |
-| 控制域全栈（继承 R72） | 硬实时 1kHz | <0.8ms P99 | <200KB | 定理 23–26 不变 |
-| **新增总开销（计量+感知）** | — | **<3.5ms/周期** | <10MB | **定理 27–29** |
+| D-Box 盲区检测 | 计量域 50Hz | O(|subspace|) < 1ms | O(|subspace|) | 定义 398、399 |
+| I-Box 迭代采样 | 计量域（事件触发） | O(|A_s|·T_obs) < 10ms | O(N_bl) | 定义 401、402 |
+| BP-Cal 局部校准 | 计量域 1Hz | O(N²_bl) < 50ms | O(N_bl²) | 定义 403、引理 43 |
+| 局部热替换 | 计量域 | < 1ms | O(1) | 引理 44 |
+| 4CV 主闭环 | 计量域 | O(#blinds × 采样) < 50ms | O(blinds) | 定义 405 |
 
-## 5. 实验设计 E371–E390（RAS-Baselines v2 协议 + MBench 预注册）
+**总增开销**：相对于 MODGAUGE-RAS 的 3.5ms/周期，LeanGauge 最坏情况（每次都触发盲区）额外 ≤ 100ms/周期，但这是「稀疏事件」，平均开销 ≈ 10ms/分钟。
+
+## 5. 实验设计 E411–E425（RAS-Baselines v4 协议）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E371 深度六分量辨识 | 受控矩阵（距离×材质×边缘×干扰×速度）下分量可分离 | 各分量贡献方差分解 ≥80% 可归因；u_depth 校准 ECE <0.06 |
-| E372 材质后验校准 | 透明/镜面/黑体检出 | AUROC ≥0.94，b_t(m_fail) 校准偏差 <0.05，失效即 stub |
-| E373 跨机互扰检出与协商 | 双机对射注入 + 时间片协商 | 互扰检出 ≤50ms，协商后 u_interf 回落，零互相致盲 |
-| E374 深度不确定度进 λ_floor | 透明/镜面物体抓取 | 误抓率 -50%，无效深度 stub 化不进 λ，抓取成功率 +20% |
-| E375 PVOP 视角感知规划 | 同任务对比固定视角策略 | 后验精度 +25%（同等步数）或同等精度步数 -30% |
-| E376 ΣREFLEX 四层预算 | 24h 长时程预算闭合、有限停止 | 预算未耗尽，停止步数方差 < 无预算组 1/3 |
-| E377 串联单调性验证 | 级联两个校准模块，实测 u 传播 | 实测 u_out ≥ 理论下界，零违例 |
-| E378 并联缩窄合法性 | conformal 审计覆盖 + 对抗分歧注入 | 覆盖率 ≥ 预注册 1−α；攻击时 100% 退保守 |
-| E379 热替换等价性 | 换 DMEM 实现（Allegro→Shadow）/换 IRL 网/换深度计 | 同契约逐指令 diff = 0，系统级性质保持 |
-| E380 本体迁移认证成本 | 仅模块级重认证 | CertCost 比值 >10×（定义 380），核心代码改动 0 行 |
-| E381 MReg 运行时审计 | 组合合法性遍历是否守时、断链是否降级 | 审计 <0.2ms @50Hz，断链检出 100%，降级无突变 |
-| E382 C1 隔离消融 | 六/四分量 vs MC-Dropout vs 深度集成 vs 厂商噪声模型 | ECE 与碰撞率同时显著优（Wilcoxon p<0.01, d≥0.5） |
-| E383 C2 隔离消融 | 四层通道 vs 仅 ψ vs 无预算 | 同等后验精度交互次数 -30%，且停止性保持 |
-| E384 C3 隔离消融 | 契约热替换 vs 全系统重审 | 等价性 100%，认证成本比 >10× |
-| E385 MBench 三方复现 | 预注册脚本 + 固定种子 + 密封保持集 | 三独立复现结果偏差 < 预注册带宽 |
-| E386 对抗：材质伪装 | 镜面假体/透明屏障欺骗深度 | 跨模态审计拦截 ≥85%，单源深度不定案 |
-| E387 深度在线自标定 | 外参热漂移补偿 | u_calib 跟踪漂移，24h 后标定残差 < 静态基线 50% |
-| E388 模块级故障注入全栈 | 任一模块失效 → stub → 零级联 | 恢复 <1s，其他模态指标无污染（引理 34 保守性） |
-| E389 严格包含回归 | R72 全部退化组合在 MODGAUGE 下重跑 | 与 R72/R71/R68 逐指令差 = 0 |
-| E390 论文主张包完整性 | C1/C2/C3 是否各有一个最小可证伪实验 | 三主张各有 MB+AB+预注册指标，无孤悬组件 |
+| E411 D-Box 盲区探测 | 稀疏矩阵中盲区检出率 | 检出率 ≥90%，误检 ≤10% |
+| E412 自助下注可预测性 | σ_pred - σ_obs 偏差 | 偏差 ≤15%（亚强稳健验证） |
+| E413 迭代采样有效性 | N_bl=3 时 σ_conf 收敛 | σ_conf ≤ 1.5σ_decl |
+| E414 局部贝叶斯校准 | 先验 vs 后验 KL 增益 | KL ≥ 0.5 nats / 样本 |
+| E415 局部热替换等价性 | 替换后 diff = 0 | 逐指令等价，系统属性保持 |
+| E416 4CV 闭环收敛 | 迭代次数上界 | ≤ 5 次收敛 |
+| E417 总时序保全 | 100 周期实时性 | 99% 周期 < 50ms |
+| E418 少样本抗鲁棒 | 5% 离群点干扰 | σ_conf 增益 ≥ 0.8×理想 |
 
 ## 6. 本轮最大风险
 
-**一句话**：MODGAUGE 把系统安全的证明负担从「全系统审计」转移到「**契约的表达力**」——如果真实噪声超出契约可表达的空间（材质是连续谱而非五类离散、视角-噪声映射在极端入射角或近场违背 Lipschitz 假设、或两个模块通过共享物理过程（同一光源、同一机械振动、同一温度场）隐性耦合而并联一致性审计的 conformal 集未覆盖这种相关），那么组合定理会在「**所有模块证书都有效、所有组合校验都通过**」的情况下给出错误的安全界——系统会用一套类型正确、预算闭合、证书齐全的模块图，**自信地组合出一个错误的世界**，而审计日志将证明「每一步都合规」。
+**一句话**：LeanGauge 的核心假设是「需求盲区可以通过「可预测自助下注」在有限预算内探测并校准」——但这依赖「σ_pred 与 σ_obs 高度相关」且「采样点足够信息论充分」；若实际噪声受**不可预测的环境突变**（如骤降气温导致标定瞬间失效、意外的反射材质使深度模型完全失效）或**攻击者精心设计的「盲区注入」**（故意进入模型训练分布外、且不触发下注阈值的区域），那么 I-Box 的「迭代采样」会被错误地当作「需求已覆盖」，系统在盲区上产生**自信的错误判断**——这相当于 R73 的「自信地组合错误世界」在「数据稀缺」的子空间中被「主动放大」。
 
 次级风险与缓解：
-1. **契约僵化/stub 过保守** → 契约版本化 + stub 观察模式（stub 旁路记录真实质量，离线校准契约本身，SEAL-Contract 审计集）。
-2. **PVOP 解析 χ_v 失真（近场/极端角度）** → 有效域硬边界 + 近场禁用解析式改用在线校准查表 + V_safe 收紧。
-3. **组合路径爆炸** → 结构上限（定义 377：|V_M|≤24、深度≤4）+ MReg 部署期图搜索验证 + 运行时只验增量。
-4. **CPB 蒸馏失真（主张过窄掩盖系统性贡献）** → 主张包加「组合收益」条目：C3 显式包含多模块协同的增益归因（E383/E384 联合归因树）。
-5. **隐共享物理过程耦合** → 环境级共因审计（温度/振动/光照传感器独立于模块，作为 VETO 组合的第三方输入；怀疑相关时禁用 PAR 缩窄）。
-6. **深度自标定自举循环**（用深度标定深度）→ 自标定只用「本体/接触/已知几何」作外部基准，深度残差仅作观测；断链即停用并回退 u_calib 上界。
-7. **MBench 过拟合** → 密封保持集（SEAL-MB）+ 预注册 + 三方复现（E385）；主张只认预注册指标。
+1. **σ_pred 与 σ_obs 相关性不足** → 增设「模型-agnostic 观测回执」（如 RGB-深度残差），用以校验 σ_pred；
+2. **迭代采样不充分** → 预注册 n_min = 2×引理 48 样本；采样后做「盲区敏感性扫描」；
+3. **盲区注入攻击** → 第 0 层物理包络（力/温/时序）兜底；若盲区采样后 u 不降则 RED；
+4. **先验驱动的局部校准偏执** → 校准后做「契约回归测试」，若回归不通过则 stub 盲区模块；
+5. **4CV 循环死锁** → IV-Contract 中的 recovery_condition：迭代 N > N_max ⇒ 全系统降级（R68 样式）；
+6. **D-Box 误检** → cost_risk 阈值 τ_cost 随任务风险动态调节；
+7. **贝叶斯校准数值不稳** → 使用稳健 GP（高斯似然 + 学生 t 协方差）+ 数值断点保护。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 74 轮产物 · 创新点清单 v5：SENTGAUGE-RAS（SENTinel-audited evidence metrology with GAUGE audits for RAS：契约异常哨兵 × 物体证据计量 × 约定计量适应 × 门控组合代数；CAS×OEM×NCM×GATE-CCA†×SENT-REFLEX†×J_SENT×MODGAUGE†）
+# 第 1 轮产物 · 创新点清单 v1：**LeanGauge**（Iterative Blind-spot Evidence Metrology with GAUGE audits for RAS）
 
-> 承接第 73 轮 IP-295~302（MODGAUGE-RAS）。R73 完成契约代数（MMS/DPEM/CCA/ΣREFLEX/CPB + ECG 因果图 + MIC），但自认最大风险暴露共同盲区：**组合代数只管「契约内如何组合」，没有任何机制运行时检验「现实是否还在契约内」**；证据全部是连续几何量，物体身份无否决语义；意图似然被当作普适物理，约定（第三类先验）被当成常量。本轮三灵感三位一体补齐：
-> - **CAS**：anytime-valid e-process 赌局哨兵——Ville 不等式下预注册假阳率永久成立；三态门控 GREEN/YELLOW/RED；联合哨兵合取审计（不依赖模块独立假设）；第 0 层物理包络兜底截断元回归；**把 R73 最大风险变为可证伪主张 C4**；
-> - **OEM**：物体证据五分量离散计量 + 身份否决（单源不定案）+ χ_obj 视角反作用——离散证据进契约代数的第一个示范；
-> - **NCM**：约定似然 p(y_intent|z,κ) + 预算化适应（KL β + 来源追溯 + 安全轴锚点 + 再授权）+ 漂移哨兵——文化适应性 = 带预算的校准漂移补偿，与 u_calib 同型。
+> 背景：R73 的 MODGAUGE 提供「计量契约代数」框架，将不确定度明确传递。但在部署初期，面对「需求洞察」中暗示的稀缺场景（罕见故障、边缘案例、新环境），模组认证往往缺乏足够样本。LeanGauge 通过「迭代验证」机制，主动发现「需求盲区」并在「少样本」条件下完成「局部计量契约修复」，实现「需求先行」的计量增强。
 >
-> 核心命题：**把 R73 的「自信地组合一个错误世界」改造为「诚实地发现并退出错误世界」——哨兵在现实越出契约可表达空间的时刻，以预注册假阳率与可界定检出延迟，自动降级到安全子图。**
->
-> IP 编号：IP-303~309（共 7 个）+ R73 组件的 † 化。理论姿态延续：**新层是旧层的严格泛化（门控只做 (u,D,I⊥) 单调变换），安全侧只增不减，退化链逐指令等价。**
+> IP 编号：IP-310~314（共 5 个）。理论姿态：**在 MODGAUGE 基础上，增加「需求盲区检测-迭代修复闭环」层**——不改变 R73 的五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链），而是为「模块热替换」前置条件提供「数据稀缺情形下的自动发现+校准」路径。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 73 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MODGAUGE） |
 |---|---|---|---|
-| IP-303 | CAS Contract-Anomaly Sentinel | 新增 | anytime-valid e-process 赌局监控（可预测下注+混合网格+log 域维护）；三态门控与滞回恢复；联合哨兵合取审计；检出延迟界 log(1/α)/δ |
-| IP-304 | OEM Object Evidence Metrology | 新增 | 检测证据五分量（u_cls/u_det/u_id/u_nov/u_assoc）；离散似然独立证据类型；身份否决语义（单源不定案）；χ_obj 视角反作用通道 |
-| IP-305 | NCM Norm-Convention Metrology | 新增 | 约定画像 κ 条件化意图似然；KL 预算 β 适应 + 来源追溯 + 安全轴保守锚点 + 人类再授权；约定漂移哨兵（意图残差 e-process） |
-| IP-306 | GATE-CCA† | 升级 CCA† | 哨兵状态纳入组合语义：SER 路径 γ 乘积化、PAR 缩窄要求全 GREEN+u_assoc 达标、RED 即 stub；门控只做 (u,D,I⊥) 单调变换（引理 40） |
-| IP-307 | SENT-REFLEX† | 升级 ΣREFLEX† | 新增 ν 通道（新颖处置：E[Δu_nov\|a]）与 ρ 通道（约定澄清：E[ΔH(b(κ))\|a]）；稳态集扩展 N_safe、K_safe；层数仍由模块声明 |
-| IP-308 | J_SENT 赌局日志证书 | 新增 | J_MOD ⊗ 哨兵日志 ⊗ E_t^joint 截面；审计员可重放「赌局何时以何速率增长」——检出与误杀都有账 |
-| IP-309 | SENTGAUGE Pipeline | 新增 | 复用 R73 三域；第 0 层物理包络兜底（不可 stub，截断元回归）；ECG 边级哨兵；离散+连续证据同图组合 |
+| IP-310 | D-Box 需求盲区检测器 | 核心模块 | 稀疏子空间覆盖矩阵 + 代价感知盲区判定 |
+| IP-311 | I-Box 可预测自助下注 | 核心模块 | 基于 χ_R 的闭式 σ_pred + 迭代采样生成需求样本 |
+| IP-312 | BP-Cal 局部贝叶斯校准 | 核心模块 | 物理先验 + 少样本后验更新 → 局部契约修复 |
+| IP-313 | LeanGauge-4CV | 设计模式 | 检测-纠正-验证-更新 四阶段闭环 |
+| IP-314 | LeanGauge 主闭环 | 集成 | MODGAUGE + 4CV 迭代修复 → 稀疏场景自适应 |
 
-## 1. 符号体系增量（定义 383–397）
+## 1. 符号体系增量（定义 398–415）
 
 | 符号 | 含义 |
 |---|---|
-| `SENTGAUGE-RAS = (CAS, OEM, NCM, GATE-CCA†, SENT-REFLEX†, MODGAUGE†)` | 哨兵审计的计量契约代数闭环 |
-| `E_t^i = Π_{s≤t}(1+λ_s^i r_s^i), λ_s 可预测` | 赌局哨兵：H0=「现实分布=契约声明族」；Ville ⇒ P(∃t: E_t≥1/α)≤α |
-| `r_t^i = φ_θ(Y_t^i)` | 声明族白化残差（标准空间得分） |
-| `state_i ∈ {GREEN, YELLOW, RED}` | 三态门控：YELLOW=γ 膨胀+禁 PAR 缩窄；RED=stub（非补偿） |
-| `α_y, α_r, γ, W_stab` | 门控参数（预注册，写入契约 seal_ref）；滞回恢复需重认证事件 RC_i |
-| `E_t^joint = Π_i Π_s(1+λ_s^i r_s^i)` | 联合哨兵：联合契约零假设（含声明依赖结构）下的合取审计 |
-| `δ = KL(q ‖ p̂_contract)` | 声明族与真实分布的功效间隙；检出延迟 ≤ (log(1/α_r)+C)/δ |
-| `u_obj² = u_cls²+u_det²+u_id²+u_nov²+u_assoc²` | OEM 五分量：类别混淆/漏检重复/身份持续/开集新颖/跨模态关联 |
-| `p_obj(y_obj \| O, κ_place)` | 离散似然（多伯努利/点过程），独立证据类型进 BSE† |
-| `VETO_SINGLE_SOURCE` | 身份否决：单模态不定案，需双模态一致（含 u_assoc 折算）或接触确认 |
-| `χ_obj: g ↦ (d,θ,occ,曝光) ↦ (q, u_cls, u_nov)` | 物体证据的视角反作用通道 |
-| `p_I(y_intent \| z, κ), κ=(κ_space, κ_touch, κ_gest, κ_addr, …)` | 约定条件化意图似然；\|κ 轴\|≤8，κ 紧集、版本化 |
-| `KL(κ_{t+1}‖κ_t) ≤ β` | 约定适应预算（每窗口）；每次更新有来源交互集合 S_t 可回放 |
-| `安全轴锚点 + 再授权 token` | 适应只能放大不确定度；缩窄授权阈值必须人类显式再授权（非补偿拒绝） |
-| `E_t^norm` | 约定漂移哨兵：监控 p_I(·|κ̂) 是否仍是真分布；越界⇒意图 YELLOW+κ 冻结回滚 |
-| `N_safe={E[u_nov^next]≤τ_nov}, K_safe={H(b(κ))≤τ_κ}` | ν/ρ 通道稳态集（歧义高⇒仅澄清级动作） |
-| `第 0 层哨兵 = 物理包络监控` | 力/力矩/温升/时序/断链；不依赖学习模型、不可 stub、硬件熔断（元回归底） |
-| `AIC-SOCIAL` | 社会威胁面：社会工程/身份欺骗/关联投毒/哨兵致盲/规范迁移伪装 |
-| `σ 地板 λ_floor` | u_decl 下界，防「垫高声明 σ」的哨兵致盲注入 |
-| `J_SENT = J_MOD ⊗ 哨兵日志 ⊗ E_t^joint 截面` | 赌局日志证书：Valid ⇒ R73 定理 28 全部结论 + 违规可检出性 |
-| `MB4` | 哨兵审计最小基准：违规注入矩阵×3 强度 + 长时程假阳运行（≤3h 单卡） |
-| `C4（anytime-valid 哨兵审计）` | 第四条可证伪主张 ← MB4 ← AB4（有/无哨兵 × 宽/窄声明族） |
+| `DBox` | 需求盲区检测器 |
+| `R ∈ ℝ^(d×m×i×4)` | 需求覆盖矩阵 (n_verify, σ_lo, σ_hi, cost_risk) |
+| `s = (d,m,i)` | 子空间索引 |
+| `τ_n, τ_cost` | 盲区判定阈值 |
+| `IBox` | 迭代验证子系统 |
+| `λ(a,s)` | 可预测下注函数 σ_pred - σ_decl |
+| `γ` | 下注阈值 |
+| `M_ver ⊆ MReg` | 最小验证子图 |
+| `N_bl = {(a_j, σ_j)}_J` | 需求盲区样本集 |
+| `BP-Cal` | 贝叶斯局部校准器 |
+| `U_prior ~ GP(μ_0, K_0)` | 先验高斯过程 |
+| `U_post ~ GP(μ_N, K_N)` | 后验高斯过程 |
+| `n_min(s) ≥ (σ_prior² - ε²)/δ` | 理论最小样本数 |
+| `4CV` | 检测-纠正-验证-更新 四阶段闭环 |
 
-## 2. 形式化定义（要点版）
+## 2. 形式化定义（要点）
 
-**定义 383（总览与六不变式）** R73 五不变式 + **哨兵完备性**：每个参与组合的证据流必须挂接哨兵（平凡哨兵=第 0 层物理包络），状态与证据可用性绑定、不可旁路。
+**定义 398（需求覆盖矩阵与需求盲区）** 详见上文。
 
-**定义 384（赌局哨兵）** 可预测下注 + 有限混合网格 + log 域维护 + 下界截断；H0 下 E[E_t]=1，Ville 给出 anytime-valid 假阳率界——不依赖停止时刻与样本量（与 SPRT/CUSUM 的 ARL 渐近界本质不同）。
+**定义 400（可预测自助下注）** λ(a,s) = σ_pred(a|s) - σ_decl(a)，其中 σ_pred 由 χ_R 解析计算。
 
-**定义 385（三态门控与滞回）** GREEN→YELLOW（log E ≥ log(1/α_y)）：u_eff=γ·u_decl、PAR 禁缩窄、χ_R 加保守包络；YELLOW→RED（log E ≥ log(1/α_r)）：stub、非补偿；恢复需重认证事件 + 稳定窗（滞回防抖）。
+**定义 401（最小验证子图）** M_ver = (V_ver, E_ver) ⊆ MReg，其中 V_ver 包含所有涉及盲区 s 的模块。
 
-**定义 386（联合哨兵）** MReg 全部残差流合并为单一赌局流（下注在联合域可预测）⇒ 联合契约零假设下 Ville 成立；**依赖结构声明错误本身在检验功效内**（R73 风险#5 隐共享物理耦合从「无法审计」变为「以 KL 为速率可检出」）。
+**定义 404（迭代修复闭环 I-Box）** 循环更新：
+```
+循环：
+  1. M_ver ← MINIMAL_VALIDATION_SUBGRAPH(s)
+  2. A_s ← ACTIONS_ENTERING(s)
+  3. for each a ∈ A_s:
+        λ ← PREDICTABLE_BET(a, s)
+        if λ ≥ γ: EXECUTE(a), SAMPLE ← OBSERVE(a)
+  4. N_bl ← COLLECT_SAMPLES(s)
+  5. if N_bl 达标：
+        (R, EC) ← LOCAL_CALIBRATE(N_bl)
+        if CONTRACT_VALID(EC) and BUDGET_OK: BREAK
+```
 
-**定义 387（OEM）** 五分量离散计量 + 离散似然独立证据类型 + 身份否决语义 + χ_obj 视角反作用 + 有效域硬边界（新颖度高⇒保守处置）。
+**定义 407（迭代验证时序契约 IV-Contract）** IV-Contract = (A_s, τ_iter, B_iter, recovery_condition)。
 
-**定义 388（NCM）** 约定适应四纪律：KL 预算 β / 来源追溯 S_t / 安全轴保守锚点（只放宽不缩窄，缩窄须再授权）/ 漂移哨兵（越界⇒冻结+回滚最近锚点版本）。
+**定义 408（采样效率下界）** n_min(s) ≥ (σ_prior² - ε²) / KL(U_prior || U_post) ≥ δ。
 
-**定义 389（GATE-CCA†）** SER：u_out ≥ (Πγ)·(u_A+L_B·u_A)，路径 RED⇒stub；PAR：非全 GREEN 禁缩窄、身份级 PAR 需 u_assoc<τ_assoc；VETO：RED 的 I⊥ 并入。门控=(u,D,I⊥) 单调变换，引理 34/定理 29 无需重证。
-
-**定义 390（SENT-REFLEX†）** ν 通道（E[Δu_nov|a]）+ ρ 通道（E[ΔH(b(κ))|a]）并入预算；稳态集 Ω_safe 扩展 N_safe∩K_safe。
-
-**定义 391（第 0 层兜底）** 物理包络监控不依赖学习模型、不可 stub、硬件熔断；学习型哨兵在其上，失效逐层降级到更保守层；第 0 层失效=停机（衔接 R68/RTM，元回归的单调收敛底）。
-
-**定义 392（ECG† 因果哨兵）** 每条因果边挂边级 e-process；边越界⇒链上全部下游证据 YELLOW、该链反事实重排禁用、回退保守路径。
-
-**定义 393（假设 A114–A116）** 声明族非平凡（SEAL 上 ≥δ_min 功效间隙）/ 赌局可预测性（λ 可预测、白化 Lipschitz）/ 适应可观测性（AIC-SOCIAL 防护下无未检出注入）。
-
-**定义 394（MB4）** 违规注入矩阵（重尾/慢漂移/依赖错误×3 强度）+ 长时程假阳；预注册：假阳率 ∈[α_y/3,3α_y]，延迟 ≤ log(1/α_r)/δ̂+c。
-
-**定义 395（AIC-SOCIAL）** 五类社会威胁 + 防线：锚点+再授权+身份双源+σ 地板+κ 版本回滚。
-
-**定义 396（J_SENT）** Valid ⇔ Valid(J_MOD) ∧ 全哨兵 ∈{GREEN,YELLOW(已降级)} ∧ 赌局上界日志可复算 ∧ 恢复链完整。审计语义升级：可重放「赌局何时以何速率增长」。
-
-**定义 397（CPB 扩展 C4）** C4 ←(CAS, OEM 哨兵, NCM 漂移哨兵) ← MB4 ← AB4 ←（假阳率, 检出延迟, YELLOW 期覆盖率, 误杀率）；C1–C3 不变，新组件先填 C4 绑定入 MReg。
-
-## 3. 关键算法伪代码
+## 3. 关键算法骨架
 
 ```python
-# IP-303 CAS：anytime-valid 赌局哨兵（每模块挂接，log 域维护）
-class ContractAnomalySentinel:
-    def __init__(self, ec, alpha_y=1e-2, alpha_r=1e-4):
-        self.logE = 0.0; self.state = 'GREEN'
-        self.bets = MixtureBets(ec.u_fields)               # 有限混合网格 Λ
-    def step(self, resid, hist):
-        lam = self.bets.predictable_bet(hist)              # λ_s 仅依赖 F_{s-1}（A115）
-        self.logE += math.log(max(1.0 + lam*resid, 1e-12)) # log 域，防下溢
-        if self.state == 'GREEN' and self.logE >= -math.log(self.alpha_y):
-            self.state = 'YELLOW'                          # 降级：γ 膨胀、禁 PAR 缩窄
-        elif self.state == 'YELLOW' and self.logE >= -math.log(self.alpha_r):
-            self.state = 'RED'                             # stub（定义 381），非补偿
-        return self.state, math.exp(self.logE)
-    def request_recover(self, recert):                     # 滞回恢复（定义 385）
-        if recert.valid and self.logE < -math.log(self.alpha_y):
-            self.state = 'GREEN' if self.stable_window_ok() else 'YELLOW'
+# IP-310 D-Box：需求盲区检测器
+class DBox:
+    def detect_blind_spot(self):
+        blind_spots = []
+        for idx in np.argwhere(self.R[..., 0] <= self.tau_n):
+            if self.R[tuple(idx) + (3,)] >= self.tau_cost:
+                blind_spots.append((idx, self.R[tuple(idx)]))
+        return blind_spots  # [(subspace_idx, (n, σ_lo, σ_hi, cost))]
 
-# IP-304 OEM：物体证据计量（感知域；离散证据类型 + 身份否决）
-class ObjectEvidenceMetrology:
-    def update(self, det_set, tracks, depth_ev, rgb, tac_blobs):
-        u_cls = self.conf.calibrated_confusion(det_set)    # 温度校准混淆后验
-        q     = self.det_model.q(depth_ev.v, occ)          # 剂量-视角检出概率
-        u_id  = self.track.markov_unc(tracks)              # 身份持续转移
-        u_nov = self.openset.pvalue(rgb, det_set)          # EVT 校准 novel p 值
-        u_aso = self.assoc.entropy(depth_ev.blobs, det_set, tac_blobs)
-        valid = (u_nov < TAU_NOV or self.conservative) and depth_ev.valid
-        ident = None if (u_aso < TAU_ASSOC or self.contact_confirmed()) \
-                else VETO_SINGLE_SOURCE                    # 身份否决语义
-        return ObjEvidence(det_set, tracks, valid=valid,
-               u=math.sqrt(u_cls**2+u_det**2+u_id**2+u_nov**2+u_aso**2),
-               identity_veto=ident, chi_obj=chi_view_det(depth_ev.v),
-               tau=self.tchain.merge(rgb_t, track_t, calib_t))
+# IP-311 I-Box：可预测自助下注
+class IBox:
+    def predictable_bet(self, action, subspace):
+        v = action.viewpoint
+        m = subspace[1]
+        sigma_pred = self.dpem.predict_uncertainty(v=v, m=m)
+        sigma_decl = self.dpem.declared_uncertainty(v=v, m=m)
+        return sigma_pred - sigma_decl
 
-# IP-305 NCM：约定计量与适应（预算化 + 锚点 + 追溯）
-class NormConventionMetrology:
-    def adapt(self, S_window):
-        if self.proposed_kl(S_window) > BETA: return self.kappa     # 适应预算拒绝
-        if self.touch_axis_narrows(self.proposed, self.kappa) and not human_reauth():
-            return self.kappa                              # 锚点：缩窄授权必须再授权
-        self.kappa = self.proposed
-        self.log.append(source_set(S_window))              # 全程可回放追溯
-        return self.kappa
-    def intent_likelihood(self, y_intent, z):
-        return self.calib.p_intent(y_intent, z, self.kappa)   # p(y|z,κ)
+    def execute_validation(self, blind_spot):
+        samples = []
+        for a in self._actions_entering(blind_spot.subspace):
+            if self.predictable_bet(a, blind_spot.subspace) >= self.gamma:
+                sigma_obs = self.dpem.observe(action=a)
+                samples.append((a, sigma_obs))
+        return samples
 
-# IP-306 GATE-CCA†：哨兵门控组合（升级 IP-297 compose）
-def gated_compose(a, b, op, audit):
-    if 'RED' in (a.sent_state, b.sent_state): return stub_of(a, b)  # 非补偿
-    if op == 'SER':
-        g = gamma_prod(a, b)                               # 路径 γ 乘积化
-        return Ev(u=g*(a.u + lipschitz(b, a.u)), D=a.D & b.D,
-                  tau=a.tau.merge(b.tau), veto=a.veto | b.veto)
-    if op == 'PAR':
-        narrowing = (audit.conformal_covers(resid(a, b))
-                     and gamma_prod(a, b) == 1.0
-                     and (a.kind != 'identity' or a.u_assoc < TAU_ASSOC))
-        if narrowing and abs(audit.rho) < RHO_MAX: return fuse(a, b, audit.rho)
-        return Ev(u=max(a.u, b.u), D=a.D & b.D, tau=a.tau.merge(b.tau),
-                  veto=a.veto | b.veto | {'GATE_AUDIT_FAIL'})
+# IP-312 BP-Cal：局部贝叶斯校准
+class BayesianLocalCalibrator:
+    def calibrate(self, samples, subspace):
+        X = np.array([s[0].viewpoint for s in samples])
+        y = np.array([s[1] for s in samples])
+        K = self.prior_cov(X, X) + 1e-6 * np.eye(len(X))
+        L = np.linalg.cholesky(K)
+        alpha = np.linalg.solve(L.T, np.linalg.solve(L, y))
+        mu_post = self.prior_mean(X) @ alpha
+        return mu_post, K
 
-# IP-307 SENT-REFLEX†：ν 通道 + ρ 通道并入 ΣREFLEX
-def sent_reflex_step(mods, g, state, budget):
-    s2, cost = {}, 0.0
-    for i, m in mods.items():
-        chi = m.ec.chi_R(g); c_i, s_i = m.reflex_cost(state[i], chi)
-        if i == 'OEM': c_i += E_delta_u_nov(g);   s_i &= N_safe
-        if i == 'NCM': c_i += E_delta_H_kappa(g); s_i &= K_safe  # 歧义高⇒仅澄清级
-        if not s_i: return None, cost                     # 非补偿
-        s2[i], cost = s_i, cost + c_i
-    return (s2, cost) if budget.spent + cost <= budget.B else (None, cost)
+    def update_contract(self, module, new_u, subspace):
+        new_ec = module.ec._replace(u_fields=..., chi_R=...)
+        return new_ec
 
-# IP-308 J_SENT：组合证书 + 赌局日志
-def write_sent_cert(M):
-    return J_SENT(J_MOD(M.mreg), E_joint=M.sentinel_joint.logE,
-                  states={i: m.sent.state for i, m in M.mods.items()},
-                  recover_chain=M.recert.log, sigma_floor=M.floor.status())
-
-# IP-309 SENTGAUGE 主闭环（复用 R73 三域；哨兵挂接 + 离散证据 + 第 0 层兜底）
-def SENTGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set, tracks):
-    # === 感知域（异步 100Hz）===
-    d_ev = M.dpe.update(depth_img, rgb, M.cam_state, M.motion, M.peers)
-    o_ev = M.oem.update(det_set, tracks, d_ev, rgb, M.tac_blobs)
-    for ev, mod in ((d_ev, M.dpe), (o_ev, M.oem)):
-        st, E = mod.sent.step(ev.resid, M.hist); ev.sent_state = st
-        if st == 'RED': ev = stub(mod)                     # 非补偿自降级
-    t_ev = M.dmem.update(tac_frame, M.last_action)
-    # === 计量域（50Hz）===
-    if M.clock.due_metric():
-        M.kappa = M.ncm.adapt(M.interact_window)           # 预算化适应
-        M.irl.set_convention(M.kappa)
-        b_t = M.bse.step_full(..., d_ev=d_ev, o_ev=o_ev, t_ev=t_ev)
-        g = M.ervoi.choose(b_t, psi_hat, z_dist, t_ev.c_dist, M.budget, M.fmp, M.bse)
-        if g:
-            s2, cost = sent_reflex_step(M.mods, g, M.state, M.budget)
-            if s2 is not None: M.last_g, M.state = g, s2
-        M.mreg.audit(); M.ecg_edge_sentinels.step()        # ECG† 边级哨兵
-        M.cert = write_sent_cert(M)
-    # === 控制域（1kHz，只读快照；第 0 层物理包络兜底）===
-    snap = M.snapshot.read_latest()
-    lam = embodied_risk_scale(snap.U_ale, snap.U_epi, snap.H_z,
-                              max(snap.t_ev.u, snap.d_ev.u, snap.o_ev.u),
-                              M.risk_params)
-    k = M.c_ras_wm.certified_prefix(M.ach.propose_ctrl(..., pvop_bias=snap.pvop), lam)
-    M.envelope.check0(k, lam)                              # 不可 stub 的底
-    return k, lam, M.cert
+# IP-314 LeanGauge 主闭环
+def LeanGauge_round(M, obs, audio, tac_frame, depth_img, det_set):
+    blind_spots = DBox.detect_blind_spot()
+    for spot in blind_spots:
+        success, msg = lean_gauge_4cv(M, spot)
+        if success: break
+    return MODGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set)
 ```
 
 ## 4. 推导
 
-**引理 38（anytime-valid 性）** λ_s 可预测且 H0 下期望增益为零 ⇒ E_t 非负上鞅；Ville ⇒ P(∃t: E_t ≥ 1/α) ≤ α。假阳率不依赖停止时刻——预注册 α + 无限时程审计在语义上成立。
+**引理 42（自助下注可预测性）** 由 χ_R 解析表达式及亚强稳健条件 (A115) 保证。
 
-**引理 39（检出延迟界）** 真实分布与声明族最近点的逐步 KL ≥ δ ⇒ E[log E_t] ≥ δt − O(C_Λ)，期望延迟 ≤ (log(1/α_r)+C)/δ。系：**C4 可证伪**——δ̂ 可注入测量，MB4/E397 点验。
+**引理 43（局部贝叶斯校准可收敛）** 标准 GP 回归后验方差收敛率。
 
-**引理 40（门控单调性）** 门控变换（γ≥1 膨胀、PAR 禁缩窄、RED→stub、I⊥ 并入）在 (u,D,I⊥) 偏序上单调 ⇒ 引理 34 组合下界与 R73 定理 29 在门控图上保持；YELLOW 期覆盖率由 γ 的 SEAL 校准给出。系：**哨兵层是 CCA 的保守扩张，不是新的信任来源。**
+**引理 44（迭代修复的局部热替换）** M_ver 子图的模块 EC 更新后，局部子系统性质保持。
 
-**引理 41（约定适应的安全性）** KL 预算 + 安全轴单调 + 再授权锚点 ⇒ 任意适应序列下 P(授权错误) ≤ 初始保守界 + β·T·|κ 轴|/n_交互；漂移哨兵以引理 39 速率检出 κ 模型偏离并冻结回滚。系：**文化适应性 = 带预算的校准漂移补偿，与 u_calib 同型。**
-
-**定理 30（SENTGAUGE 严格包含）** A111–A116 下：MODGAUGE = SENTGAUGE 的「全 GREEN + OEM stub + κ 冻结先验」实例化；退化链逐指令等于 R73→R72→R71→R68。安全单调不减。
-
-**定理 31（联合哨兵审计的完备性）** Valid(J_SENT) ⇒ (i) R73 定理 28 全部结论；(ii) 现实偏离联合契约且逐步 KL≥δ ⇒ 期望延迟 (log(1/α_r)+C)/δ 内降级到保守子图；(iii) 降级后性质由 stub/γ 语义保持。**证明重量从「契约表达力在分布外成立」（不可检验）转移到「声明族功效间隙 ≥δ 且哨兵校准正确」（可注入检验）——不可检验假设替换为可证伪主张 C4。**
+**引理 45（全流程时序预算）** IV-Contract 保证每次迭代 ≤ τ_iter。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|---|
-| 哨兵步进（每模块/帧） | 感知+计量 | O(1)/模块 <5μs | O(1)（logE+有限网格） | 引理 38、定义 384 |
-| 联合 e-process 维护 | 计量域 50Hz | O(\|V_M\|) <0.1ms | O(\|V_M\|) | 定义 386、定理 31 |
-| OEM 五分量+关联熵 | 感知域 100Hz | <1.5ms/帧 | <8MB | 定义 387 |
-| 身份一致性 PAR 审计 | 计量域（事件触发） | <0.3ms/对 | O(候选关联) | 定义 387/389 |
-| NCM 适应（窗口式） | 计量域 0.2Hz | <2ms/窗口 | O(\|κ 轴\|×窗口) | 定义 388、引理 41 |
-| GATE-CCA 求值 | 计量域 | <0.05ms/对 | O(1) | 引理 40 |
-| ECG 边级哨兵 | 计量域 | O(\|E_M\|) <0.1ms | O(\|E_M\|) | 定义 392 |
-| 第 0 层物理包络 | 硬实时 1kHz | <20μs | <1KB | 定义 391（不可 stub） |
-| **新增总开销（叠加 R73 的 3.5ms）** | — | **<3ms/周期** | <15MB | **定理 30–31** |
+| D-Box 盲区检测 | 计量域 50Hz | O(\|subspace\|) < 1ms | O(\|subspace\|) | 定义 398、399 |
+| I-Box 迭代采样 | 计量域（事件触发） | O(\|A_s\|·T_obs) < 10ms | O(N_bl) | 定义 401、402 |
+| BP-Cal 局部校准 | 计量域 1Hz | O(N²_bl) < 50ms | O(N_bl²) | 定义 403、引理 43 |
+| 局部热替换 | 计量域 | < 1ms | O(1) | 引理 44 |
+| 4CV 主闭环 | 计量域 | O(#blinds × 采样) < 50ms | O(blinds) | 定义 405 |
 
-## 6. 实验设计 E396–E410（RAS-Baselines v3 协议 + MB4 预注册）
+**总增开销**：相对于 MODGAUGE-RAS，LeanGauge 最坏情况额外 ≤ 100ms/周期，但稀疏事件驱动，平均开销 ≈ 10ms/分钟。
+
+## 6. 实验设计 E411–E425（RAS-Baselines v4 协议）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E396 哨兵 anytime-valid 假阳率 | 长时程（≥7×24h 等效流）GREEN 稳态 | 实测假阳率 ∈[α_y/3,3α_y]，零 RED 误杀 |
-| E397 违规注入检出延迟 | 重尾/慢漂移/依赖错误×3 强度 | 延迟 ≤ log(1/α_r)/δ̂+c，理论拟合 R²≥0.9 |
-| E398 YELLOW 期降级质量 | 违规持续期覆盖与安全 | 覆盖 ≥1−α′，碰撞率不高于无违规基线 |
-| E399 OEM 五分量辨识 | 混淆/漏检/身份/新颖/关联注入方差分解 | 归因 ≥75%，身份 AUROC ≥0.95 |
-| E400 身份双源否决 | 单源假身份攻击 | 单源不定案 100%，双源+接触确认才放行，误放行 0 |
-| E401 开集新颖处置 | 长尾 50 未见类 | u_nov 校准偏差 <0.05，ν 通道后验精度 +20%（同预算） |
-| E402 跨人群意图校准（文化） | ≥3 画像×（空间/手势/授权） | κ 条件化 vs 普适：ECE -40%，误触率 -35% |
-| E403 社会工程对抗 | 塑造 κ 驻留不安全区 | 锚点+再授权拦截 100%，κ 可回滚，哨兵检出 ≤2× 交互预算 |
-| E404 约定漂移检出 | 人群切换/缓慢漂移注入 | E^norm 延迟符合引理 39，冻结回滚无突变 |
-| E405 门控热替换联合回归 | E379 全案例×哨兵挂接 | 逐指令 diff=0 且 J_SENT 有效、恢复链完整 |
-| E406 联合哨兵对隐耦合检出 | 共享光源/振动（R73 风险#5） | 联合 e-process 检出 ≥90%，逐模块串行基线 <40% |
-| E407 哨兵致盲对抗 | 垫高声明 σ | σ 地板生效，延迟劣化 <2× |
-| E408 C4 隔离消融 | 有/无哨兵×宽/窄声明族 | 无哨兵组违例显著增多（p<0.01）；误杀-安全权衡曲线量化 |
-| E409 ECG 边级哨兵 | 因果链断裂注入 | 链上 YELLOW 传播 100%，断裂链反事实禁用 |
-| E410 主张包完整性 | C1–C4 各有最小可证伪实验 | 四主张 MB+AB+预注册齐全，无孤悬组件 |
+| E411 D-Box 盲区探测 | 稀疏矩阵中盲区检出率 | 检出率 ≥90%，误检 ≤10% |
+| E412 自助下注可预测性 | σ_pred - σ_obs 偏差 | 偏差 ≤15% |
+| E413 迭代采样有效性 | N_bl=3 时 σ_conf 收敛 | σ_conf ≤ 1.5σ_decl |
+| E414 局部贝叶斯校准 | 先验 vs 后验 KL 增益 | KL ≥ 0.5 nats / 样本 |
+| E415 局部热替换等价性 | 替换后 diff = 0 | 逐指令等价，系统属性保持 |
+| E416 4CV 闭环收敛 | 迭代次数上界 | ≤ 5 次收敛 |
+| E417 总时序保全 | 100 周期实时性 | 99% 周期 < 50ms |
+| E418 少样本抗鲁棒 | 5% 离群点干扰 | σ_conf 增益 ≥ 0.8×理想 |
 
 ## 7. 本轮最大风险
 
-**一句话**：哨兵把「自信地组合一个错误世界」改造为「诚实地发现并退出错误世界」，但这个转换的全部重量落在**声明族的先验选择**上——e-process 只能检验「现实偏离声明族」，若声明族选得过宽（大 σ、重尾兜底、宽依赖界），真实违规会被声明族「吸收」而赌局无力，检出延迟趋于无穷、哨兵沦为装饰，而系统对此**没有内省手段**（检不出「检不出」）；若声明族过窄则在有效域边缘频繁误杀，可用性-安全性权衡点没有任何内部基准可证明其正确——C4 把 R73 的不可检验假设替换成了一个可检验但**以校准集代表性为前提**的主张，而 SEAL 是否覆盖真实部署分布，重新成为整个体系的隐式地基。
-
-次级风险与缓解：
-1. **哨兵元回归** → 第 0 层物理包络（定义 391，不可 stub，硬件熔断）+ 学习型哨兵只在其上。
-2. **误杀可用性（YELLOW 频繁触发）** → 滞回 + γ 校准 + α_y 分层 + 误杀率纳入 C4 预注册（E408 量化权衡曲线）。
-3. **OEM 关联不可辨识** → u_assoc 显式计量 + 身份双源否决；关联失败不静默（E399/E400）。
-4. **NCM 对抗适应（社会工程）** → 预算 β + 安全轴单调 + 再授权锚点 + κ 版本回滚 + AIC-SOCIAL（E403/E404）。
-5. **联合赌局数值下溢/膨胀** → log 域维护 + 下界截断 + 有限混合网格（定义 384）。
-6. **σ 地板被合法重校准通道绕过** → 重校准事件须过 SEAL-MB4 密封协议，σ 地板变更全链追溯（E407）。
-7. **MB4 注入矩阵自身偏差** → SEAL-MB4 密封保持集 + 三方复现 + 只认预注册指标。
+**一句话**：LeanGauge 核心假设「需求盲区可通过可预测下注在有限预算内探测并校准」，但若实际噪声受**不可预测的环境突变**（骤降气温、意外反射材质）或**精心设计的盲区注入攻击**（进入模型训练分布外、且不触发下注阈值的区域），I-Box 的迭代采样会被错误地当作「需求已覆盖」，系统在盲区上产生**自信的错误判断**——这相当于 R73 的「自信地组合错误世界」在「数据稀缺」的子空间中被「主动放大」。
 <!-- ARTIFACT:END -->
