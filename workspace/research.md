@@ -3,440 +3,535 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
+# 第 71 轮（承接第 70 轮「BELIEF-RAS 贝叶斯状态估计层」IP-264~274；灵感循环第 1 轮；本轮灵感：「指标体系」×「情感语音」）
 
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
+> R70 把 epistemic 从「动作模态」升级为「世界状态后验」b_t(s)，但让 **H[b_t] 同时扮演两个角色**：它既是「我对世界有多不确定」的测量结果，又是 MINT/VoI 要压低的优化目标。这个双重身份是一枚还没爆炸的定时炸弹——指标系统研究的第一条教训是：**一个数一旦既是度量又是目标，它就不再是好的度量**（Goodhart / Campbell 定律）。BSE 可以通过锐化先验、过拟合证据来降低 H[b_t] 而不减少真实误差；MINT 可以专挑**确认性证据**而非**判别性证据**；证书可以让 ECE、延迟、成功率、交互次数互相「补偿」；而 H[b_t] 只覆盖已被建模的状态维度，对「我根本没想到的状态」完全无感。R70 自陈的「自信地错」，本质是**指标系统本身没有被审计**。
 >
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
+> 情感语音补上另一块：R70 的观测模型 p_interact(y|s) 把交互证据当成一个固定噪声率 δ_p 的标签。但交互的另一端是**人**：人会犹豫、紧张、疲劳、敷衍，会因机器人的语速/音高/措辞而改变合作意愿。这些状态既**调节回答的可信度**（情感语音是「关于测量的测量」，元证据），又**被机器人自己的提问改变**（测量反作用 / reflexivity）。忽略这一点，VoI 会系统性高估「多问一句」的价值：问到对方不想答，BSE 只看到噪声变大，于是更想问——一个会自我强化的坏循环。
 >
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
+> 本轮两个灵感正好补两块：
+> - **指标体系**：把 H[b_t]、ECE、VoI、延迟、成功率从「几个数」升级为一个**有构造效度、有不确定度预算、有有效性域、有反 Goodhart 对偶、且安全项不可补偿的指标系统**；安全不是加权求和里的一项，而是否决项。
+> - **情感语音**：把「人的回答」升级为**由可观测的情感/韵律状态调制的证据**；情感状态本身属于状态估计，也是交互反作用的通道。
 >
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 核心命题：**不再只问「我的不确定性是多少」，而问「我对『我的不确定性读数』的信任是多少、这个读数是否正在被我自己改变」。** 把 R70 的标量 epistemic 指标降格为一个**有预算、有边界、可被证伪的测量结果**；在有效性域之外一律退回 R70/R68。命名 **GAUGE-RAS**（Gauge-valid, Affect-aware, Uncertainty-budgeted, Goodhart-resistant Evidence for RAS）。
+>
+> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证」，R70 问「我该信哪个状态」，R71 问「**我用来判断『该信什么』的那把尺子本身可信吗；我量的时候，是不是把被量的人改变了**」——信任不是一个数，而是一条可追溯、可证伪、且会反作用于被测者的测量链。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
+**灵感 1（指标体系 → H[b_t] 是「目标—度量」同体，天然会被 gaming）**
+直觉：仪表盘上如果只有一个「不确定性」表盘，而控制器的目标就是把这个表盘压下去，那么最省力的办法未必是「看清世界」，而是「把表盘弄坏」——让后验更尖、让模型更自信、让证据更同质。人做 KPI 会这样，优化器也会。指标体系研究的教训是：单一复合指标不可信；必须有**构造效度**（量的是不是它声称的量）、**收敛/区分效度**（和别的量该不该相关）、**不确定度预算**（每个数字的误差来源与大小）、**有效性域**（外推即失效），以及**反指标**（专门抓 gaming）。所以本轮不是再调 H[b_t] 的一个权重，而是给它配一整套「审计与保险」。
 
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
+**灵感 2（情感语音 → 人是一个会疲劳、会被语气影响的传感器）**
+直觉：同一句「在左边」，用平稳语气说出来，和用迟疑、急促、敷衍的语气说出来，信息量完全不同。韵律里带着**置信、犹豫、压力、疲劳、亲和/敌意**。这不是世界状态 s 的观测，而是**信息源 ψ 的观测**——关于「这条证据有多可信」的元证据（meta-evidence）。更进一步，机器人的语速、音高、音量、措辞会改变 ψ：质问式语气让人防御，机械式语气让人敷衍，连续追问让人疲劳。于是**交互不是中性取样，而是一次有副作用、会改变未来样本分布的干预**。这把 R69/R70 的「社交成本 c(g)」从一个常数，升级为一个**状态相关、会累积、且影响未来证据质量**的动力学项。
 
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
+**灵感 3（反作用 → 「问到确定」可能发散，最优是「问到刚好」）**
+直觉：R70 的 MINT 是「只要 VoI > 成本就问」。但如果每问一次对方可信度 c(ψ) 就掉一点，那么第 n 次提问的**边际真实增益** ∝ c(ψ_n)·ΔH_n 会递减，而边际反作用成本不减。于是「问到 H < τ」可能永远问不到，或者代价爆炸；真正的最优是一个有限的停止点 n*。**「知道何时停止问」比「知道该问什么」更重要**——这是 R69/R70 一直缺的一条。它也是「指标体系」给的另一面：不仅要选指标，还要给指标设**停止/寿终规则**，否则一个永不满足的 KPI 会驱动系统自我消耗。
 
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
+**灵感 4（非补偿性 → 安全不能被别的指标「买」回来）**
+直觉：如果证书是一个加权和，那么延迟、成功率、交互次数、ECE 之间可以互相补偿——「多问几次把 ECE 压低」就能掩盖「模态分布变差」。指标体系研究里这叫**补偿性聚合的操纵空间**。安全必须是**否决项（veto）**：任何一个安全指标越界，整张证书失效，不能拿性能去换。这与 R68 的 λ_floor 精神一致，但把它从「一个数」变成「一个聚合结构」：不是把安全做成更大的权重，而是做成**不可交易**的约束。
 
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
+**灵感 5（严格包含 → 计量层必须能整体关掉）**
+直觉：如果情感通道不可用（无麦克风、跨语种、强噪声）、反作用可忽略、指标系统通过审计，那么 GAUGE 应当**逐指令退化为 R70**，再退化为 R69/R68。新层不能是「必须被信任的新黑箱」，而必须是「在旧层之上可选启用的审计层」。否则每加一层就多一个故障源——这正是 R70 的教训。**本轮所有收益都必须以「可退化」为代价换取，而不是以「多信一个模型」为代价。**
 
-## 1. 形式化定义（增量：定义 293–309）
+## 1. 形式化定义（增量：定义 331–348）
 
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
+**定义 331（GAUGE-RAS 总览）** GAUGE-RAS = (MIB, GAP, IVG, NCA, SEAL, TCHAIN, AURA, ICL, REFLEX, RVOI, AIC-GAUGE, J_GAUGE, BELIEF-RAS†)。四不变式：
+(i) **实时流零学习写操作**（继承 R70 定义 310-i）；指标的失效/降级是带审计的**安全状态转移**，不是梯度更新；
+(ii) **指标完整性**：凡参与在线决策的指标，必须携带 (构造 φ, 估计器 m, 不确定度预算 u, 有效性域 D, 追溯链 τ, 反指标 I⊥)；缺一即不得单独驱动高风险动作；
+(iii) **非补偿性安全**：高风险动作的放行由否决指标集合 V 的交集决定；性能指标只能在 V 全过后参与排序，绝不可反向补偿；
+(iv) **反作用预算**：交互必须使信息源状态保持在 Ψ_safe 内，且累计反作用成本 ≤ B_reflex。
 
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
+**定义 332（测量记录 / 指标单元）** 指标 I = (φ, m, u, D, τ, I⊥)。φ 为目标构念（如「对世界状态的无知」）；m 为估计量（如 H[b_t]）；u 为不确定度预算，分解为系统误差 u_sys、统计误差 u_stat、模型失配 u_model，合成 u = √(u_sys² + u_stat² + u_model²)（GUM 式）；D ⊆ 𝒮×𝒜×ℬ 为有效性域；τ 为可追溯链（数据、标定件、模型版本、种子、代码哈希）；I⊥ = {I⊥_j} 为反指标集合。**一个数只有在六元组齐全时才是「测量结果」，否则只是「读数」；读数不得进入 veto。**
 
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
+**定义 333（指标 DAG 与领先/滞后）** 指标构成有向无环图 𝒢，边表示「证据/因果支持」，而非加权求和。节点分四类：
+- **硬安全否决节点 V**：碰撞裕度、力矩/速度包络、后验校准下界、信息源稳态；
+- **领先指标 L**：OOD 分数、模态分歧、预测误差、覆盖率、反作用余量；
+- **滞后指标 G**：成功率、H[b_t]、ECE、缓变检出率；
+- **审计指标 A**：离线/密封/人工标注指标。
+在线决策只能用 L ∪ V；**G 只能用于事后评估，绝不能被在线优化**——这是防止 Goodhart 的**结构性隔离**（不是靠调参，而是靠可见性）。
 
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
+**定义 334（非补偿性聚合 NCA）** 聚合算子 Agg 满足：
+若 ∃v∈V：v 无效或越界，则 Agg = FAIL，与任何性能指标无关；
+否则 Agg = Rank(G) 在可行集内按加权几何平均或词典序排序。
+性质：对任意 ε>0 的性能提升，不能补偿任一 veto 的 δ>0 越界（引理 26）。
 
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
+**定义 335（反 Goodhart 对偶与间隙）** 对每个可能被优化的目标指标 m，配一个**同构念、异偏差**的反指标 m⊥：H[b_t] ↔ 后验校准/分辨率；成功率 ↔ 干预下的鲁棒成功率；VoI ↔ 实际获得的信息增益；ECE ↔ sharpness；交互收益 ↔ 人类主观负担。定义间隙 D = |m − m⊥|。gaming 的特征是 **m 改善而 m⊥ 不改善甚至恶化**，即 D ↑。阈值 τ_D 由零假设下 D 的分布（bootstrap / 置换检验）给出；D > τ_D ⇒ Goodhart 告警，m 在本次决策中失效（定义 342）。**对偶的关键是偏差方向不同，而不是两个指标都高。**
 
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
+**定义 336（密封审计指标 SEAL）** 在线优化器**不可见**的一组审计指标（不同分布、不同种子、隐藏场景、人工标注子集），由 VQAuditor 离线/异步评估。任何证书的续期都需要 SEAL 通过；在线系统只能看到「通过/不通过」的比特，不能看到梯度。这把「优化器把指标本身优化坏」的可能性从在线回路里切断。**密封集本身要有防泄漏审计（访问日志、哈希承诺）。**
 
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
+**定义 337（信息源状态 ψ 与韵律观测）** 信息源（人）状态 ψ = (v, a, κ, f, r, σ) ∈ Ψ：效价 v、唤醒 a、置信 κ、疲劳 f、亲和/信任 r、压力 σ。情感语音观测 o_pros（基频轨迹 F0、能量、语速、停顿、抖动、呼吸/填充词）服从 p(o_pros | ψ, spk, ch)，其中 spk/ch 为说话人与信道（麦克风、语言、文化）。**ψ 不是世界状态 s 的一部分，而是观测过程的状态**；它属于「关于证据的证据」。
 
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
+**定义 338（情感条件交互似然与可信度）** p_interact(y | s, ψ) = Σ_k π_k(ψ) · p_k(y | s)，其中 π(ψ) 是「认真回答 / 猜测 / 敷衍 / 撒谎 / 听不懂」的混合权重；可信度
+c(ψ) = π_认真 + π_听不懂·(1 − ε_ask) ∈ [0,1]。
+R70 的固定 δ_p 是 ψ 固定时的退化（c = 1 − δ_p）。**关键**：c(ψ) 不改变 s 的先验，只改变「这条证据值多少」——因此它必须作为**似然的乘性/混合修正**进入 BSE，而不是当作 s 的观测。
 
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
+**定义 339（反作用动力学 REFLEX）** ψ_{t+1} = T(ψ_t, g_t, ρ_robot, a_t)，其中 ρ_robot 为机器人自己的韵律/措辞动作（语速、音高、音量、礼貌/解释性措辞）。T 满足：疲劳 f 随累计交互次数单调不减；压力 σ 随「质问式」韵律与高频追问上升；亲和 r 随解释性/礼貌韵律上升、随机械/命令式下降。定义**信息源稳态集** Ψ_safe = {ψ : f ≤ f_max, σ ≤ σ_max, r ≥ r_min}；交互必须满足 ψ_{t+1} ∈ Ψ_safe。**注意：T 是概率性的，且参数因人而异；Ψ_safe 必须用群体先验 + 在线个性化后验，不能假设一个固定的人。**
 
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
+**定义 340（反作用成本与信任预算）** c_reflex(g, ψ) = E[ΔRisk(ψ_{t+1}) + λ_s·dist(ψ_{t+1}, Ψ_safe)^+ + λ_f·Δf]，包含「把人推出稳态」的期望风险。累计预算 Σ_t c_reflex ≤ B_reflex(ψ_0)。这是对 R69/R70「社交成本常数」的替换：**打扰不是花固定的钱，而是消耗一个会恢复、也会枯竭的信任账户。**
 
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
+**定义 341（反作用 VoI 与最优停止 RVOI）**
+VoI^R(g) = c(ψ)·(H[b_t] − E_y[H[b_{t+1}]]) − c_reflex(g, ψ) − γ·E[ΔH^{future}_{degraded}]
+其中最后一项刻画「这次提问降低未来证据质量」的远期损失（由 ψ 漂移估计）。选 g* = argmax VoI^R，s.t. ψ_{t+1}∈Ψ_safe、预算未超；当 max VoI^R ≤ 0 或预算耗尽即停止。**R70 的 VoI 是 c≡1、γ≡0、Ψ_safe=Ψ、c_reflex=常数 的退化情形。**
 
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
+**定义 342（指标有效性门 IVG）** 若任一 gating 指标满足以下之一：ECE > τ_ece、D > τ_D（Goodhart 间隙）、有效性域 D 被越出、追溯链断裂、SEAL 未通过、AURA 的 ECE_affect > τ_aff——则 IVG 判该指标「无效」，并：禁用其在线优化、冻结其权重、把依赖它的交互/规划降级为 R70/R68 兜底，同时在 J_GAUGE 记录失效原因。**IVG 的语义是「尺子的校准证书过期，就停止用这把尺子」，而不是「尺子读数偏大，就把它调小」。**
 
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
+**定义 343（情感证据纪律与跨通道一致性）** 接受一条交互证据需满足：内容语义、韵律置信、以及至少一个正交通道（视觉表情 / 行为一致性 / 历史一致性）**不矛盾**；且 c(ψ) 不低于阈值。情感通道**不得单独**把一条高风险决策定案（继承 R69 定义 293-iii、R70 证据纪律）。单源高置信是提示，不是证明。**特别地，韵律与语义「过度一致」也要警惕——共谋式欺骗会同时演好两个通道。**
 
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
+**定义 344（计量追溯链 TCHAIN）** 每个进入 J_GAUGE 的数字附带链 ℓ = (source, calibration_ref, model_hash, data_hash, seed, timestamp, validity_interval)。链上任一环缺失或过期 ⇒ 该数字降级为「未验证读数」，不得作为 veto 通过依据。这把 R70 的 baseline/proto hash 从「报告字段」升级为**门控条件**：**没有溯源，就没有 veto。**
 
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
+**定义 345（威胁模型 AIC-GAUGE）** ℰ_GAUGE = ℰ_BELIEF × ℰ_metric × ℰ_affect：
+ℰ_metric = {指标 gaming / reward hacking / 选择性报告 / 补偿性聚合攻击 / 密封集泄漏 / 指标投毒}；
+ℰ_affect = {情感伪装（acted prosody）、语音转换/克隆、跨说话人/跨文化误读、疲劳诱导、以情绪施压的社交工程、共谋式「内容—韵律」一致欺骗}。
 
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
+**定义 346（证书 J_GAUGE）** J_GAUGE = (J_BELIEF, indicator_validity_vector, goodhart_gaps, tchain_hashes, ECE_affect, psi_trajectory, reflex_cost, seal_status, gauge_ver)。
+Valid ⇔ Valid(J_BELIEF) ∧ IVG 全过 ∧ NCA 的 V 全过 ∧ ψ 轨迹在 Ψ_safe 内 ∧ 反作用预算未超。
 
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
+**定义 347（GAUGE 流水线）** 见产物区 IP-286；核心是**三频分离**：高频控制（R70 原样执行）／中频计量与指标审计（10–20Hz，MIB/GAP/IVG）／低频情感与反作用（异步 30–50Hz，AURA/REFLEX）＋交互事件触发的 RVOI。**计量层永远不阻塞控制层。**
+
+**定义 348（退化与包含）** 当 c(ψ)≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和时，GAUGE-RAS 逐指令等于 BELIEF-RAS；再按 R70 定理 18 退化为 FLUID/R68。**安全侧只增不减，效率侧只在「计量可信且反作用可控」时获得收益。**
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
+# IP-275 MIB：指标登记与不确定度预算（在线只读；写入需审计）
+class IndicatorRegistry:
+    def __init__(self, records): self.r = records       # I=(phi,m,u,D,tau,I_perp)
+    def valid(self, I, state):
+        return (I.u.total() <= U_MAX
+                and I.D.contains(state)
+                and tchain.verify(I.tau)
+                and I.ece <= TAU_ECE)
+    def online_visible(self):                           # 结构性隔离
+        return [I for I in self.r if I.role in ('leading', 'veto')]
 
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
+# IP-276 GAP：反 Goodhart 对偶（m 与 m⊥ 的偏差方向必须不同）
+def goodhart_gap(I, ctx):
+    m   = I.measure(ctx)
+    m_p = [Ip.measure(ctx) for Ip in I.I_perp]
+    return max(abs(m - mp) for mp in m_p)                # 归一化后
 
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
+def goodhart_alarm(I, ctx, tau_D):
+    return goodhart_gap(I, ctx) > tau_D                  # 失效，见 IVG
 
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
+# IP-277 IVG：指标有效性门（过期/越域/断裂/SEAL 失败 -> 降级）
+def indicator_gate(reg, state, seal):
+    bad = [I.id for I in reg.gating()
+           if not reg.valid(I, state) or I.id in seal.failed
+           or I.goodhart_alarm(state)]
+    if bad:
+        return Gate(valid=False, reason=bad,
+                    fallback='R70')                     # 一律回退
+    return Gate(valid=True)
 
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
+# IP-278 NCA：非补偿性聚合（安全是否决，不是权重）
+def aggregate(metrics, veto_set):
+    for v in veto_set:
+        if not metrics[v].pass_: return FAIL, None       # 不可补偿
+    return OK, weighted_geomean({k: metrics[k] for k in metrics if k not in veto_set})
+
+# IP-279 SEAL：密封审计集（在线不可见）
+def sealed_audit(reg, escrow):
+    # 在线只提交当前策略快照；离线评测，返回通过位
+    return {I.id: escrow.eval_hidden(I, snapshot).pass_
+            for I in reg.audit_only()}
+
+# IP-280 TCHAIN：追溯链校验（缓存 + 区间校验）
+def verify_chain(record):
+    return all([record.source, record.calibration_ref,
+                record.model_hash, record.data_hash,
+                record.seed is not None,
+                now() < record.validity_interval.end])
+
+# IP-281 AURA：情感/韵律观测（流式、异步、跨说话人校准）
+class AffectiveObserver:
+    def __init__(self, prosody_net, spk_adapter, calib):
+        self.net, self.adapt, self.calib = prosody_net, spk_adapter, calib
+    def update(self, audio_frame):
+        e = self.adapt(self.net(audio_frame))            # 去说话人/信道nuisance
+        psi_hat, ece = self.calib.predict(e)             # 带校准不确定度
+        return psi_hat, ece
+
+# IP-282 ICL：情感条件可信度（元证据，不是世界观测）
+def credible_likelihood(y, s, psi_hat):
+    pi = mixture_weights(psi_hat)                        # 认真/猜测/敷衍/撒谎/听不懂
+    c  = pi['sincere'] + pi['confused'] * (1 - EPS_ASK)
+    lik = sum(pi[k] * p_answer[k](y, s) for k in pi)
+    return lik, c
+
+# IP-283 REFLEX：反作用动力学 + 稳态/信任预算
+def reflex_step(psi, g, rho_robot, a, budget):
+    psi2 = T(psi, g, rho_robot, a)                       # 疲劳↑、压力↑、亲和↓
+    cost = risk_delta(psi2) + LAM_S * dist(psi2, PSI_SAFE).positive() \
+           + LAM_F * (psi2.f - psi.f)
+    if psi2 not in PSI_SAFE or budget.spent + cost > budget.B:
+        return psi, None, cost                           # 不许交互
+    return psi2, cost, cost
+
+# IP-284 RVOI：反作用 VoI + 停止规则（R70 VoI 的严格推广）
+def reflexive_voi(b_t, psi, budget, fmp, bse):
     best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
+    for g in info_action_candidates(top_k_hypotheses(b_t, 2)):
+        if not budget.allow(g): continue
+        psi2, cost, _ = reflex_step(psi, g, robot_prosody(g), None, budget)
+        if psi2 is None: continue                        # 出稳态 -> 禁问
+        c = credibility(psi)                             # 当前信息源可信度
+        ig = c * (entropy(b_t) - expected_posterior_entropy(b_t, g, fmp))
+        far = GAMMA * expected_future_evidence_loss(psi, g)
+        score = ig - cost - far
         if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
+    return best if best and best.score > 0 else None      # 无利可图 -> 停止/R70
 
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
-
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
-
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
-
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
+# IP-286 GAUGE 主闭环：三频分离，计量层不阻塞控制层
+def GAUGE_RAS_round(M, obs, audio):
+    # --- 高频：R70 控制原样执行 ---
+    b_t = M.bse.step(M.b_prev, obs, M.last_action, M.last_g, M.last_y)
+    z, o = M.mtm.forward(obs); c, U_cal, thr = M.cof.step(...)
+    # --- 中频（10-20Hz）：计量审计 ---
+    if M.clock.due_metric():
+        gate = M.ivg.check(M.registry, b_t, M.seal.latest)
+        if not gate.valid:
+            M.mode = 'R70'                                # 尺子过期 -> 回退
+            M.registry.freeze(gate.reason)
+    # --- 低频（异步 30-50Hz）：情感 + 反作用 ---
+    psi_hat, ece_aff = M.aura.update(audio)
+    if ece_aff > TAU_AFF: M.mode = 'R70_NO_AFFECT'       # 情感不可信 -> 不用
+    # --- 交互事件触发：反作用 VoI ---
+    g = None
+    if M.mode == 'FULL' and entropy(b_t) > TAU_EPI:
+        g = M.rvoi.choose(b_t, psi_hat, M.budget, M.fmp, M.bse)
     if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
-    else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
-    U_floor = U_ale + (U_epi_after if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
-    mode = select_mode(modes, U_epi_after, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
+        y = M.cia.execute(g)                              # 看/问/触
+        lik, c = M.icl.credible_likelihood(y, b_t, psi_hat)
+        b_t = M.bse.step(b_t, o, M.last_action, g, y, lik_weight=c)
+        psi_hat, _, _ = M.reflex.step(psi_hat, g, M.robot_prosody(y), None, M.budget)
+    # --- 风险缩放 + 控制（R70 原样，使用更新后的 b_t）---
+    U_ale, U_epi = decompose_from_belief(b_t, M.fmp, o)
+    lam = max(M.efs.risk_scale(...),
+              lam_floor(U_ale + (U_epi if g is None else 0.0)))
+    A = M.ach.propose(...); k = M.c_ras_wm.certified_prefix(A, ...)
+    # --- 指标与证书 ---
+    M.mib.update(b_t, psi_hat, gate)
+    M.vqa_ii.submit_async(b_t, g, psi_hat, gate, M.registry.gaps())
+    M.b_prev, M.last_action, M.last_g, M.last_y = b_t, A[:k], g, y
+    return k, lam, (U_ale, U_epi), J_GAUGE(M)
 ```
 
 ## 3. 推导
 
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
+**引理 23（Goodhart 间隙的可检测性）** 设构念 φ 的代理 m = φ + b(θ) + ε，反代理 m⊥ = φ' + b⊥(θ) + ε⊥，其中 θ 为策略参数，gaming 方向使 ∂b/∂θ > 0 而 ∂b⊥/∂θ ≈ 0（偏差方向不同）。则间隙 D = m − m⊥ 的期望满足 ∂E[D]/∂θ ≈ ∂b/∂θ > 0，而 φ 可不变。故：**m 的任何单指标改善都不构成 φ 改善的证明；但 D 的上升是 gaming 的可检验证据。** 取 K 个偏差近似独立的对偶，检测功效随 K 上升，误报由 σ_D 与 τ_D 控制。系：R70 只报告 H[b_t] 而不报告其「反指标间隙」，因此**无法区分「真的看清了」与「把后验弄尖了」**——这正是 Goodhart 的盲区。
 
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
+**引理 24（信息源可信度对 VoI 与欺骗界的影响）** 在定义 338 下，单次交互的实际期望信息增益 ≤ c(ψ)·(H[b_t] − E[H[b_{t+1}]])；若系统把 c 高估 Δc，则 VoI 高估 Δc·ΔH，且当 c 随累计提问下降时高估会累积。k 个正交证据源、单源欺骗率 δ_p、源间相关 ρ<1 时，错误采纳率 ≤ [1 − c(ψ)(1−δ_p)]·ρ^{k−1} + ε_σ。系：**R70 的固定 δ_p 相当于假设 c≡1−δ_p，既高估了疲劳者的可信度，也无法利用韵律提供的实时 c(ψ) 来降权。**
 
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
+**引理 25（反作用下的最优停止）** 设第 n 次提问的真实边际增益为 c_n·ΔH_n，反作用边际成本为 r_n ≥ r_0 > 0，且 c_n 不增、ΔH_n 不增。则累计净收益 G(n) = Σ_{i≤n}(c_i ΔH_i − r_i) 是离散凹的，存在有限 n*，满足 c_{n+1}ΔH_{n+1} ≤ r_{n+1} 时停止。进一步，若疲劳使 c_n → 0，则「问到熵低于固定 τ」所需提问次数 → ∞，而 RVOI 在 n* 处停止。系：**R70 的「H[b_t] 未降到阈值就问」在反作用下可能永不终止或耗尽信任预算；「何时停」是一个可证明的有限停止问题，不是工程调参。**
 
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
+**引理 26（非补偿性聚合的不可操纵性）** 设 Agg 为定义 334 的否决式聚合。则对任意性能向量 g 与任意 veto 越界 δ>0，存在性：Agg(pass 之外的结果)=FAIL，与 g 无关。反之，若用权重 w 的补偿式聚合，则一个 veto 越界 δ 可被性能增益 Δg ≥ δ·(w_veto/w_perf) 抵消。系：**R70 的「多维 Pareto」如果没有 veto 结构，就等价于给安全标了价；GAUGE 的非补偿性把安全从「可交易商品」变回「约束」。**
 
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**引理 27（情感通道的 gauge 不变性与域移风险）** 设 T 为保持 ψ 的 nuisance 变换（换说话人、麦克风、语言、文化）。理想估计器满足 q(ψ|o_pros) = q(ψ|T(o_pros))。若实际估计器不满足，定义不变性间隙 ι = sup_o TV(q(ψ|o), q(ψ|T(o)))。则在域移下，基于情感的可信度误差至少增加 ι 量级；因此 ECE_affect 与 ι 必须同时作为 IVG 的门控量，而不能只报告平均情绪分类准确率。系：**情感语音最大的工程陷阱不是「识别不准」，而是「在训练说话人上很准、换个人就系统性偏移」——这正是 gauge 失效。**
+
+**定理 20（严格包含链）** 在 A102–A105（指标可测且有效性域可检、对偶偏差不完全相关、反作用 T Lipschitz 且 Ψ_safe 对「不交互」策略受控不变、韵律估计器在域内校准）下：GAUGE 在 c≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和时逐指令等于 BELIEF；而 BELIEF ⊂ FLUID ⊂ R68（R70 定理 18）。故安全侧永不弱于 R70，效率侧只在「计量可信且反作用可控」时获得收益。
+
+**定理 21（指标完整性 ⇒ 风险界）** 若一次执行通过 J_GAUGE，则所有 veto 指标通过 IVG 且 TCHAIN 完整，按定义 334 与 R70 定理 18，其风险 ≤ ε_cert（相对测量模型）；若任一 veto 失效，IVG 强制回退 R70/R68，其风险界由 R70 保证。故 GAUGE 的期望风险 ≤ R70。**证明的全部重量落在「veto 指标本身有效」上**——这正是 IVG/SEAL/TCHAIN 存在的理由，也是本轮最大风险所在。
+
+**定理 22（反作用安全与无发散）** 在定义 339–341 下，RVOI 只选择使 ψ_{t+1}∈Ψ_safe 且预算未超的 g；若不存在这样的正收益 g，则不交互并回退 R70。由引理 25，最优停止点 n* 有限。由于交互只改变「选哪个模态/是否询问」而不改变硬安全包络，且回退时 λ 单调不降，控制连续、无突变（延伸 R68 定理 15、R70 定理 18）。**但该定理不保证 ψ 的模型 T 正确——它只保证「在 T 正确的前提下不把人推出稳态」。**
 
 ## 4. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
+| MIB/GAP/IVG（中频 10–20Hz，|I|≤32） | <0.05ms/tick | <1MB | 定义 332–335、342；结构性隔离 |
+| TCHAIN 校验（缓存） | <0.02ms/记录 | O(1) | 定义 344；过期即降级 |
+| NCA 聚合（|V|≤8） | <0.02ms | O(1) | 定义 334、引理 26 |
+| AURA 韵律流式（20ms 帧，异步 50Hz） | <0.3ms/帧 | 2MB | 定义 337、引理 27；ECE_affect 门控 |
+| ICL 可信度（5 混合） | <0.05ms | O(1) | 定义 338、引理 24 |
+| REFLEX + 信任预算 | <0.05ms | O(1) | 定义 339–340、定理 22 |
+| RVOI（N=16，仅交互 tick） | <0.6ms | O(N·M) | 定义 341、引理 25 |
+| SEAL 密封审计 | 离线/异步 | — | 定义 336；在线不可见 |
+| **高频控制环（R70 原样）** | **<4.5ms（K=1）/ <6.2ms（K=4）** | — | 定理 20–22；计量层不阻塞 |
+| **交互决策 tick（含 RVOI）** | **<5.4ms**（低频，非每帧） | — | 允许一次性预算超支，日志记录 |
+| **计量审计 tick** | **<0.5ms @ 20Hz** | — | 误差不进入控制路径 |
 
-## 5. 实验设计 E286–E300
+## 5. 实验设计 E321–E340
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
+| E321 指标构造效度 | 指标是否量了它声称的量 | 因子分析：收敛效度 AVE>0.5，区分效度 √AVE>相关；专家评审通过 |
+| E322 Goodhart 攻击 | 优化器能否把 H[b_t] 压下去而真实误差不降 | 构造 reward-hacking 攻击：H↓>20% 而真误差不降；GAP 检出率 ≥90% |
+| E323 GAP 检测功效 | 对偶间隙是否可靠 | AUC ≥0.90，误报 ≤5%（零假设 bootstrap） |
+| E324 非补偿聚合 | veto 是否真的不可交易 | 与加权和基线比：安全越界率从 X%→0，性能损失 ≤3% |
+| E325 密封审计 | 在线不可见指标能否抓住 gaming | 泄漏攻击下 SEAL 仍检出 ≥85%，且在线性能不显著下降 |
+| E326 追溯链完整性 | 每个证书数字是否可复现 | TCHAIN 完整率 100%，断链检出 ≥99%，复现误差 <1% |
+| E327 AURA 识别 | 情感/置信/疲劳是否可观测 | 跨说话人 5 折：情绪 UA ≥0.75，置信/疲劳 MAE <0.12 |
+| E328 情感校准 | ECE_affect 是否可信 | ECE_affect <0.08，可靠图单调；域内/域外分别报告 |
+| E329 Gauge 不变性 | 换人/换麦/换语言是否偏移 | 不变性间隙 ι <0.1，跨语种性能下降 <15% |
+| E330 可信度校准 | c(ψ) 是否预测回答正确率 | Brier <0.15，ECE_cred <0.08；与固定 δ_p 基线显著更优 |
+| E331 情感条件 VoI | 用 c(ψ) 降权是否提升真实增益 | 实际信息增益 +15%，无效追问 −30% |
+| E332 反作用疲劳实验 | 追问是否让人可信度下降 | 拟合 c_n 单调下降；RVOI 停止点 n* 可复现 |
+| E333 最优停止 | RVOI 是否比「问到阈值」更好 | 达到同等后验误差所需提问 −25%，人类负担评分 −30% |
+| E334 稳态保持 | Ψ_safe 是否守住 | 越界率 ≤1%，压力/疲劳峰值显著低于无约束基线 |
+| E335 韵律欺骗 | acted/克隆语音能否被识破 | 跨通道一致性检出 ≥80%；单独韵律通道 ≤50%（诚实报告上限） |
+| E336 情感社交工程 | 情绪施压是否被证据纪律拦住 | 高风险误放行 ≤1%；单源情感定案 = 0 |
+| E337 严格包含/消融 | 退化边界是否逐指令一致 | 关 AURA/REFLEX 后与 R70 差 = 0；去 GAP 后 gaming 检出 −40% |
+| E338 24h 人机长时程 | 疲劳/漂移/信任是否累积失控 | 交互频次稳定，信任预算不耗尽，零交互诱发违规 |
+| E339 实时预算 | 三频分离是否守时 | 控制 P99 <4.5ms，计量 tick <0.5ms，无 deadline miss |
+| E340 基线协议与归因 | 是否在 RAS-Baselines v1 下显著优于 R70 | Wilcoxon p<0.01，d≥0.5；失败归因树覆盖指标/情感/反作用/工程四层 |
 
 ## 6. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：GAUGE-RAS 把安全从「相信 H[b_t]」转移到「相信指标系统的效度与情感通道的校准」——**如果 Goodhart 对偶本身被同一个隐藏混杂因子驱动（两把尺子一起歪），或者情感通道在换人/换语种/被克隆语音攻击时系统性偏移，那么系统会用一套坏掉的度量去认证自己「计量有效」，把 R70 的「自信地错状态」升级为「自信地错自己的可信度」——不知道自己不知道，还多了一张盖了章的审计证书。**
 
 **次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
+1. **对偶共线（两把尺子同歪）** → K 个偏差近似独立的对偶 + 密封审计 + E323/E325 强制检验；无法证明独立时按「不可用」处理。
+2. **情感通道跨域失效/被伪装** → gauge 不变性测试（E329）+ ECE_affect 门控 + 跨通道一致性（E335）+ 单源不定案（定义 343）；不可信就整体关掉。
+3. **反作用模型 T 错** → Ψ_safe 用保守下界 + 个性化在线后验 + 信任预算硬上限；T 的失配本身触发 IVG 回退（定理 22 的边界写明）。
+4. **非补偿聚合导致过度保守/任务失败** → veto 只覆盖硬安全与校准下界，性能层保留排序；E324 量化性能损失。
+5. **实时预算被计量/情感层击穿** → 三频分离 + 异步 + 中频 20Hz；计量层永不进控制快路径，E339 守时。
+6. **指标系统自身过度复杂、难以审计** → 指标数量上限 |I|≤32、DAG 可视化、每个 veto 一条可复算证明；复杂度本身就是审计对象。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 70 轮产物 · 创新点清单 v1：BELIEF-RAS（Bayesian Estimation Layer for Interactive Epistemic uncertainty reduction in FLUID-RAS：贝叶斯状态估计层，把交互式消歧落地到显式世界信念上；BSE×RAS-Baselines×Proto-Val×FLUID-RAS†）
+# 第 71 轮产物 · 创新点清单 v2：GAUGE-RAS（Gauge-valid, Affect-aware, Uncertainty-budgeted, Goodhart-resistant Evidence for RAS：计量有效 × 情感感知 × 不确定度预算 × 抗 Goodhart 的证据闭环；MIB×GAP×IVG×NCA×SEAL×TCHAIN×AURA×ICL×REFLEX×RVOI×BELIEF-RAS†）
 
-> 承接第 69 轮 IP-253~263（FLUID-RAS）。R69 把不确定性拆为 aleatoric/epistemic，引入流匹配多模态策略（FMP）与主动交互（MINT/CIA），并用流似然（FMA）做标定不可吸收的第二意见。但 R69 的 epistemic 仍停留在「动作模态分布」，缺乏显式世界状态后验；实验设计虽完整但缺可复现基线协议；原型从未在物理/高保真仿真跑通。R69 最大风险「问错比不问更危险」根源正是：无显式状态估计、无基线复现、无原型验证。
+> 承接第 70 轮 IP-264~274（BELIEF-RAS）。R70 把 epistemic 抬升为世界状态后验 b_t(s)，交付了基线协议与原型验收；但它让 **H[b_t] 同时是「测量」与「目标」**，并把交互证据简化为固定欺骗率 δ_p。前者是 Goodhart 定律的教科书结构，后者忽略了「信息源是人、人会被提问改变」这一反作用。
 >
-> 本轮三位一体补齐：
-> - **状态估计（BSE）**：建立显式贝叶斯世界状态后验 b_t(s)，把 FMP 流似然升级为观测模型，把 MINT 交互升级为主动感知动作，把 CIA 模态对升级为状态假设对；epistemic = 状态后验熵 H[b_t]。
-> - **基线复现（RAS-Baselines v1）**：固定 5 基线、种子、分割、指标、统计检验、报告模板；所有主张必须在协议下复现。
-> - **原型验证（Proto-Val v1）**：Isaac Sim + ROS 2 + 真机，故障注入、长时程、工程指标验收（P99<3.5ms、零交互违规、ECE<0.08、缓变检出≥80%、显著优于 R68）。
+> 本轮两位一体补齐：
+> - **指标体系（MIB/GAP/IVG/NCA/SEAL/TCHAIN）**：把每个在线指标升级为带构造效度、不确定度预算、有效性域、追溯链与反指标间隙的「测量结果」；安全变为不可补偿的 veto，滞后指标被结构性隔离，审计指标被密封。
+> - **情感语音（AURA/ICL/REFLEX/RVOI）**：把韵律作为「关于证据的元证据」，估计信息源 ψ 的可信度 c(ψ)；把提问建模为会改变 ψ 的干预，从而给出反作用 VoI 与有限最优停止。
 >
-> 核心命题：把 FLUID 的「动作模态 epistemic」升级为「世界状态后验 epistemic」；把实验从「设计」变为「可复现协议」；把算法从「伪代码」变为「可跑通原型」。
+> 核心命题：**从「估计不确定性」升级为「估计并审计『不确定性读数』本身，且对被测量者的反作用负责」。** 所有新能力只在「计量有效 + 情感可信 + 反作用可控」时启用，否则逐指令退化为 BELIEF → FLUID → R68。
 >
-> IP 编号：IP-264~274（共 11 个），含 FLUID-RAS 11 个组件的升级版（†）+ BSE + RAS-Baselines + Proto-Val。
+> IP 编号：IP-275~286（共 12 个）+ BELIEF-RAS 组件的 † 化。理论姿态延续前几轮：**新层是旧层的严格泛化，安全侧只增不减。**
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 69 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 70 轮） |
 |---|---|---|---|
-| IP-264 | FMP† State-Conditional Flow-Matching Policy | 升级 | 显式条件于状态 s，训练加状态监督/伪标签，推理边缘化后验 b_t |
-| IP-265 | AUD† Aleatoric/Epistemic from Belief | 升级 | 直接从 BSE 后验得 U_ale=E[trΣ_obs]、U_epi=H[b_t]；兼容输出模态投影 |
-| IP-266 | MINT† Bayesian VoI Controller | 升级 | VoI = H[b_t] − E[H[b_{t+1}]]，候选 g 由 top-2 状态假设对生成 |
-| IP-267 | CIA† State-Hypothesis Pair Selector | 升级 | 选后验概率最高的两个语义假设，最大化其互信息的残差模态对 |
-| IP-268 | FMA† Marginalized Flow Anomaly | 升级 | a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds，边缘化后验更敏感 |
-| IP-269 | IBG† Interaction & Estimation Budget Governor | 升级 | 加状态估计预算（≤1ms）、后验熵单调性检查 |
-| IP-270 | VQAuditor-II | 升级 | 审 BSE 收敛性、后验校准 ECE_state、基线复现合规 |
-| IP-271 | AIC-BELIEF | 升级 | ℰ_BELIEF = ℰ_FLUID × ℰ_state（状态估计发散/粒子耗尽/后验坍缩） |
-| IP-272 | J_BELIEF | 升级 | + ECE_state、H[b_t]_trajectory、baseline_report_hash、proto_val_hash |
-| IP-273 | MCG† State Posterior Calibration Gate | 升级 | 校准对象：状态后验可靠性 ECE_state，越界即退回 R68 |
-| IP-274 | BELIEF-RAS Pipeline | 新增 | 集成 BSE、RAS-Baselines、Proto-Val，三位一体闭环 |
+| IP-275 | MIB Metrological Indicator Budget | 新增 | 每个指标携带 (φ,m,u,D,τ,I⊥)；系统/统计/模型误差合成不确定度预算 |
+| IP-276 | GAP Goodhart Anti-gaming Pair | 新增 | 目标指标 ↔ 同构念异偏差反指标；间隙 D 检测「m 改善而真值不变」 |
+| IP-277 | IVG Indicator Validity Gate | 新增 | ECE/D/域/链/SEAL 任一失效 ⇒ 指标失效并整体回退，不调权重 |
+| IP-278 | NCA Non-Compensatory Aggregation | 新增 | 安全 veto 不可补偿；性能层只在 veto 全过后排序 |
+| IP-279 | SEAL Sealed Escrow Audit Ledger | 新增 | 在线不可见的审计指标 + 哈希承诺 + 防泄漏 |
+| IP-280 | TCHAIN Traceability Chain | 升级 | 把 baseline/proto hash 从报告字段升级为 veto 门控条件 |
+| IP-281 | AURA Affective Uncertainty & Reliability Assessment | 新增 | 流式韵律 → ψ̂，带 ECE_affect 与 gauge 不变性检验 |
+| IP-282 | ICL Informant Credibility Likelihood | 升级 | p_interact 由固定 δ_p 升级为 c(ψ) 调制的混合似然（元证据） |
+| IP-283 | REFLEX Reflexive Informant Dynamics | 新增 | ψ_{t+1}=T(ψ_t,g,ρ_robot,a)；Ψ_safe 稳态集 + 信任预算 |
+| IP-284 | RVOI Reflexive Value of Information | 升级 MINT† | VoI^R = c(ψ)·ΔH − c_reflex − γ·远期证据损失；带有限停止 n* |
+| IP-285 | AIC-GAUGE / J_GAUGE | 升级 | ℰ_GAUGE=ℰ_BELIEF×ℰ_metric×ℰ_affect；证书加指标效度/间隙/情感校准 |
+| IP-286 | GAUGE Pipeline | 新增 | 三频分离：高频控制 / 中频计量审计 / 低频情感反作用；计量不阻塞控制 |
 
-## 1. 符号体系增量（定义 310–330）
+## 1. 符号体系增量（定义 331–348）
 
 | 符号 | 含义 |
 |---|---|
-| `BELIEF-RAS = (FMP†, AUD†, MINT†, CIA†, FMA†, BSE, RAS-Baselines, Proto-Val, RAS-WM†)` | 贝叶斯状态估计交互消歧闭环 |
-| `b_t(s) = p(s | o_{1:t}, ξ_{1:t-1}, g_{1:t-1}, y_{1:t-1})` | 世界状态后验（离散语义 × 连续参数） |
-| `𝒮 = 𝒮_disc × 𝒮_cont` | 语义假设 {s^1..s^M} × 连续参数 ℝ^{d_s} |
-| `p(o_t|s) = p_flow·p_interact·p_calib` | 观测模型三分解：流似然 × 交互回答 × 标定残差 |
-| `H[b_t] = −∫ b_t log b_t` | 状态后验熵 = epistemic 不确定性真身 |
-| `U_ale = E_{s∼b_t}[tr(Σ_obs(s))]` | 观测噪声下界 = aleatoric 不确定性 |
-| `VoI(g) = H[b_t] − E_y[H[b_{t+1}(y)]]` | 贝叶斯实验设计信息增益 |
-| `a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds` | 边缘化后验的流似然异常分 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 标定不可吸收的第二意见（增强版） |
-| `λ_floor(U_ale + α·H[b_t])` | 两级退避：α=0 若 H[b_t]<τ_entropy（消解），α=1 否则 |
-| `ECE_state` | 状态后验可靠性校准误差（MCG† 门控对象） |
-| `RAS-Baselines v1` | 5 基线、固定种子/分割/指标/检验/模板 |
-| `Proto-Val v1` | Isaac Sim/ROS2/真机验收套件 |
-| `J_BELIEF = (J_FLUID, ECE_state, H[b_t]_traj, baseline_hash, proto_hash, belief_ver)` | 证书 |
+| `GAUGE-RAS = (MIB,GAP,IVG,NCA,SEAL,TCHAIN,AURA,ICL,REFLEX,RVOI,AIC-GAUGE,J_GAUGE,BELIEF-RAS†)` | 计量审计 + 情感反作用闭环 |
+| `I = (φ,m,u,D,τ,I⊥)` | 指标单元：构念/估计/预算/有效性域/追溯链/反指标 |
+| `u = √(u_sys²+u_stat²+u_model²)` | GUM 式合成不确定度 |
+| `𝒢` | 指标 DAG（V 否决 / L 领先 / G 滞后 / A 审计） |
+| `Agg = 1[∀v∈V pass]·Rank(G)` | 非补偿性聚合 |
+| `D = |m − m⊥|` | Goodhart 间隙 |
+| `ψ = (v,a,κ,f,r,σ) ∈ Ψ` | 信息源（人）状态：效价/唤醒/置信/疲劳/亲和/压力 |
+| `p(o_pros|ψ,spk,ch)` | 韵律观测模型（含说话人/信道 nuisance） |
+| `c(ψ) = π_认真 + π_听不懂(1−ε_ask)` | 信息源可信度 |
+| `ψ_{t+1} = T(ψ_t,g,ρ_robot,a)` | 反作用动力学；`ρ_robot` 为机器人韵律动作 |
+| `Ψ_safe` | 信息源稳态集（f≤f_max, σ≤σ_max, r≥r_min） |
+| `c_reflex(g,ψ)` | 反作用成本；累计 ≤ B_reflex |
+| `VoI^R(g)` | `c(ψ)ΔH − c_reflex − γE[ΔH_future_degraded]` |
+| `ECE_affect, ι` | 情感校准误差与 gauge 不变性间隙 |
+| `J_GAUGE = (J_BELIEF, validity_vec, gaps, tchain, ECE_affect, ψ_traj, reflex_cost, seal, ver)` | 证书 |
 
 ## 2. 形式化定义（要点版）
 
-**定义 310（总览与三不变式）** BELIEF-RAS 继承 FLUID 全部组件（† 升级），新增 BSE、RAS-Baselines、Proto-Val。三不变式：(i) 零学习写操作；(ii) 交互预算 + 状态估计预算（BSE≤1ms、粒子数≤N_max、后验熵单调不增）；(iii) 证据纪律 + 基线纪律（所有主张须在 v1 协议下复现）。
+**定义 331（总览与四不变式）** GAUGE-RAS 继承 BELIEF 全部组件（† 升级），新增计量层（MIB/GAP/IVG/NCA/SEAL/TCHAIN）与情感反作用层（AURA/ICL/REFLEX/RVOI）。四不变式：(i) 零学习写操作；(ii) 指标完整性（六元组齐全）；(iii) 非补偿性安全（veto 不可交易）；(iv) 反作用预算（ψ∈Ψ_safe，累计反作用 ≤ B_reflex）。
 
-**定义 311（世界状态空间）** s = (s_disc, s_cont) ∈ 𝒮_disc × 𝒮_cont。先验 b_0 由语义先验 × 高斯先验给出。
+**定义 332（指标单元）** I=(φ,m,u,D,τ,I⊥)。u 为系统/统计/模型三类误差的合成；D 为有效性域；τ 为追溯链（数据/标定件/模型/种子/代码哈希）；I⊥ 为同构念异偏差反指标。六元组不全 ⇒ 只是「读数」，不得进 veto。
 
-**定义 312（观测模型三分解）** p(o|s) = p_θ(ξ|o,s) · Cat(y; π_ans(g,s)) · 𝒩(r; μ_cal(s), Σ_cal)。FMP 速度场显式条件于 s，推理时边缘化 b_t。
+**定义 333（指标 DAG）** 节点分为硬安全否决 V、领先 L、滞后 G、审计 A；在线决策仅用 L∪V，G 仅事后评估，A 在线不可见。**结构性隔离是抗 Goodhart 的第一道防线。**
 
-**定义 313（状态转移）** 离散语义马尔可夫链 + 连续参数高斯过程（恒定速度/加速度）。
+**定义 334（NCA）** Agg=FAIL 若任一 v∈V 失效/越界，与性能无关；否则在可行集内按加权几何平均/词典序排序。性质：性能提升不能补偿 veto 越界（引理 26）。
 
-**定义 314（BSE 贝叶斯滤波器）** 预测→更新（流似然+交互回答+标定残差，对数域加和）→归一化/重采样/修剪。实现：离散精确分类分布 M≤20，连续粒子滤波 N≤500 或混合 EKF。P99≤1ms。
+**定义 335（GAP）** D=|m−m⊥|；阈值 τ_D 由零假设分布（bootstrap/置换）给出；D>τ_D ⇒ Goodhart 告警，m 本次失效。反指标必须**偏差方向不同**：H[b_t]↔校准/分辨率，成功率↔干预鲁棒成功率，VoI↔实际增益，ECE↔sharpness，交互收益↔人类主观负担。
 
-**定义 315–316（不确定性二分升级）** U_epi = H[b_t]（后验熵）；U_ale = E_{b_t}[tr(Σ_obs(s))]（观测噪声期望）。替代 R69 的模态熵/协方差 trace。
+**定义 336（SEAL）** 在线不可见的隐藏分布/种子/场景/人工标注审计集；VQAuditor 离线评估，只回传通过位；需哈希承诺与访问日志防泄漏。证书续期必须 SEAL 通过。
 
-**定义 317（贝叶斯 VoI）** VoI(g) = H[b_t] − E_y[H[b_{t+1}(y)]]；g* = argmax[VoI−c] s.t. 安全/预算。子模性下贪心 (1−1/e) 最优。
+**定义 337（ψ 与韵律观测）** ψ=(v,a,κ,f,r,σ)；o_pros 为 F0 轨迹、能量、语速、停顿、抖动、呼吸/填充词；p(o_pros|ψ,spk,ch) 含信道与说话人 nuisance。ψ 是观测过程状态，不是世界状态 s。
 
-**定义 318（CIA† 状态假设对选择）** pair* = argmax_{i,j} IG(s_i,s_j; r_{ij}|g*)，顶层语义假设对，而非动作模态对。
+**定义 338（ICL）** p_interact(y|s,ψ)=Σ_k π_k(ψ)p_k(y|s)，π 为认真/猜测/敷衍/撒谎/听不懂；c(ψ)=π_认真+π_听不懂(1−ε_ask)。c 只改「证据值多少」，不改 s 先验。**R70 的 δ_p 是 c≡1−δ_p 的退化。**
 
-**定义 319（FMA† 边缘化流似然）** a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds；Δa = |a(o)−a(o_cal)|；(r_res↓, Δa↑, H[b_t]↑) 三元组判别缓变故障。
+**定义 339（REFLEX）** ψ_{t+1}=T(ψ_t,g,ρ_robot,a)：疲劳随累计交互单调不减；压力随质问式韵律/高频追问上升；亲和随解释性/礼貌上升、随命令式下降。交互必须 ψ_{t+1}∈Ψ_safe。
 
-**定义 320（两级退避†）** λ = λ_floor(U_ale + α·H[b_t])，α=0 若 H[b_t]<τ_entropy（消解获 resolution bonus），α=1 否则。
+**定义 340（信任预算）** c_reflex=E[ΔRisk(ψ_{t+1})+λ_s·dist(·,Ψ_safe)^+ +λ_f·Δf]；Σ c_reflex ≤ B_reflex(ψ_0)。**打扰消耗会恢复也会枯竭的信任账户，而非固定价格。**
 
-**定义 321（MCG† 后验校准门）** 校准状态后验可靠性 ECE_state；越界 ⇒ 禁用 VoI、退回 R68。
+**定义 341（RVOI）** VoI^R(g)=c(ψ)(H[b_t]−E[H[b_{t+1}]])−c_reflex−γE[ΔH_future_degraded]；g*=argmax s.t. ψ_{t+1}∈Ψ_safe、预算未超；max VoI^R≤0 或预算耗尽即停。R70 的 VoI=c≡1、γ≡0、c_reflex=常数的退化。
 
-**定义 322（RAS-Baselines v1 协议）** 5 基线：R68-CALM、Flow-Only、Flow-Multi、Active-Only、Calib-Only。固定种子、分割、6 维指标、Wilcoxon p<0.01 Bonferroni、强制报告模板。
+**定义 342（IVG）** ECE>τ_ece、D>τ_D、越出 D、τ 断链、SEAL 未过、ECE_affect>τ_aff 任一成立 ⇒ 指标失效：禁用在线优化、冻结权重、依赖它的交互/规划退 R70/R68，并记录原因。**「校准证书过期 → 停用尺子」，而非「读数偏高 → 把尺子调小」。**
 
-**定义 323（Proto-Val v1 验收套件）** 三环境（Isaac Sim/ROS2/真机），故障注入，验收指标：P99<3.5ms、零交互违规、ECE_state<0.08、缓变检出≥80%、FLUID>R68(p<0.01)。
+**定义 343（情感证据纪律）** 接受证据需内容语义、韵律置信、至少一个正交通道（视觉/行为/历史）不矛盾，且 c(ψ)≥阈值；情感通道不得单独定案。**韵律与语义「过度一致」同样要警惕共谋欺骗。**
 
-**定义 324（工程诊断报告）** 组件延迟分解、显存峰值、后验熵轨迹、Δ_min 随时间、交互统计、基线对比表、失败模式归因树。
+**定义 344（TCHAIN）** 每个证书数字附 ℓ=(source,calibration_ref,model_hash,data_hash,seed,timestamp,validity_interval)；任一缺失/过期 ⇒ 降级为未验证读数，不得作为 veto 依据。
 
-**定义 325（IP 升级映射）** 见想法区表格：R69 11 个 IP 全部升级（†），新增 BSE、RAS-Baselines、Proto-Val。
+**定义 345（AIC-GAUGE）** ℰ_GAUGE=ℰ_BELIEF×ℰ_metric×ℰ_affect，其中 ℰ_metric={指标 gaming/reward hacking/选择性报告/补偿攻击/密封集泄漏/指标投毒}，ℰ_affect={情感伪装/语音克隆/跨说话人跨文化误读/疲劳诱导/情绪施压社交工程/共谋式内容-韵律一致欺骗}。
+
+**定义 346（J_GAUGE）** 见符号表；Valid ⇔ Valid(J_BELIEF) ∧ IVG 全过 ∧ NCA 的 V 全过 ∧ ψ 轨迹∈Ψ_safe ∧ 反作用预算未超。
+
+**定义 347（三频流水线）** 高频控制（R70 原样）；中频计量审计（10–20Hz）；低频情感/反作用（异步 30–50Hz）+ 交互事件触发 RVOI。**计量层永不阻塞控制层。**
+
+**定义 348（严格包含）** c≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和 ⇒ 逐指令等于 BELIEF；再按 R70 定理 18 退化 FLUID/R68。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-264 FMP†：状态条件流匹配策略
-class FlowMatchingPolicyState:
-    def __init__(self, trunk, velocity_net, state_encoder, N_step=2):
-        self.trunk, self.v, self.se = trunk, velocity_net, state_encoder
+# IP-275 MIB：指标登记（在线只读；写入带审计）
+class IndicatorRegistry:
+    def __init__(self, records): self.r = records
+    def valid(self, I, state):
+        return (I.u.total() <= U_MAX and I.D.contains(state)
+                and tchain.verify(I.tau) and I.ece <= TAU_ECE)
+    def online_visible(self):
+        return [I for I in self.r if I.role in ('leading', 'veto')]
 
-    def sample(self, o_t, b_t, K, N_step=2):
-        z = self.trunk(o_t)
-        s_cond = [self.se.sample(b_t) for _ in range(K)]
-        xs = randn(K, D)
-        for i in range(N_step):
-            s = i / N_step
-            xs = xs + (1.0/N_step) * self.v(xs, s, z, s_cond)
-        return [self.decode(x) for x in xs]
+# IP-276 GAP + IP-277 IVG
+def goodhart_gap(I, ctx):
+    return max(abs(I.measure(ctx) - Ip.measure(ctx)) for Ip in I.I_perp)
 
-    def log_likelihood_state(self, xi, o, b):          # 边缘化后验
-        z = self.trunk(o)
-        s_samples = self.se.sample(b, N_is=32)
-        log_p = logsumexp([self._log_likelihood_single(xi, z, s) for s in s_samples]) - log(32)
-        return log_p
+def indicator_gate(reg, state, seal):
+    bad = [I.id for I in reg.gating()
+           if not reg.valid(I, state) or I.id in seal.failed
+           or goodhart_gap(I, state) > TAU_D]
+    return Gate(valid=not bad, reason=bad, fallback='R70')
 
-    def _log_likelihood_single(self, xi, z, s_state):
-        return -hutchinson_divergence_integral(lambda xs, s: self.v(xs, s, z, s_state), xi)
+# IP-278 NCA
+def aggregate(metrics, veto_set):
+    if any(not metrics[v].pass_ for v in veto_set): return FAIL, None
+    return OK, weighted_geomean({k: metrics[k] for k in metrics if k not in veto_set})
 
-# IP-265 AUD†：从后验直接得不确定性
-def decompose_from_belief(b_t, fmp, o_t):
-    U_ale = expectation(b_t, lambda s: trace(obs_noise_cov(s)))
-    U_epi = entropy(b_t)
-    modes = project_belief_to_modes(b_t, fmp)          # 兼容 R69 接口
-    return U_ale, U_epi, modes, b_t
+# IP-281 AURA
+class AffectiveObserver:
+    def update(self, frame):
+        e = self.adapt(self.net(frame))              # 去说话人/信道 nuisance
+        return self.calib.predict(e)                 # psi_hat, ece_affect
 
-# IP-266 MINT†：贝叶斯 VoI
-def choose_interaction_belief(b_t, fmp, budget, c_ras_wm):
+# IP-282 ICL
+def credible_likelihood(y, s, psi_hat):
+    pi = mixture_weights(psi_hat)
+    c  = pi['sincere'] + pi['confused'] * (1 - EPS_ASK)
+    return sum(pi[k] * p_answer[k](y, s) for k in pi), c
+
+# IP-283 REFLEX
+def reflex_step(psi, g, rho_robot, a, budget):
+    psi2 = T(psi, g, rho_robot, a)
+    cost = risk_delta(psi2) + LAM_S * dist(psi2, PSI_SAFE).positive() \
+           + LAM_F * (psi2.f - psi.f)
+    if psi2 not in PSI_SAFE or budget.spent + cost > budget.B:
+        return psi, None, cost                       # 出稳态 -> 禁问
+    return psi2, cost, cost
+
+# IP-284 RVOI
+def reflexive_voi(b_t, psi, budget, fmp, bse):
     best = None
-    for g in generate_info_actions(top_k_hypotheses(b_t, 2)):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, b_t): continue
-        voi = entropy(b_t) - expected_posterior_entropy(b_t, g, fmp)
-        score = voi - cost(g)
-        if best is None or score > best.score: best = (g, score, voi)
+    for g in info_action_candidates(top_k_hypotheses(b_t, 2)):
+        if not budget.allow(g): continue
+        psi2, cost, _ = reflex_step(psi, g, robot_prosody(g), None, budget)
+        if psi2 is None: continue
+        c  = credibility(psi)
+        ig = c * (entropy(b_t) - expected_posterior_entropy(b_t, g, fmp))
+        score = ig - cost - GAMMA * expected_future_evidence_loss(psi, g)
+        if best is None or score > best.score: best = (g, score)
     return best if best and best.score > 0 else None
 
-def expected_posterior_entropy(b_t, g, fmp):
-    y_samples = sample_possible_answers(g, b_t, N=16)
-    return sum(p_y * entropy(BSE_step(b_t, predict_o(), predict_xi(), g, y)) for y, p_y in y_samples)
-
-# IP-268 FMA†：边缘化流似然异常
-def flow_anomaly_belief(fmp, xi_obs, o, o_cal, b_t):
-    a_o   = -fmp.log_likelihood_state(xi_obs, o, b_t)
-    a_cal = -fmp.log_likelihood_state(xi_obs, o_cal, b_t)
-    return abs(a_o - a_cal)
-
-# IP-274 BELIEF-RAS 主闭环
-def BELIEF_RAS_round(M, obs):
-    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    # BSE 预测-更新
-    b_t = M.bse.step(M.b_prev, o, M.last_action, M.last_g, M.last_y)
-    # FMP 采样（自适应 K 由后验熵门控）
-    K = 1 if entropy(b_t) < TAU_ENT else 4
-    samples = M.fmp.sample(o, b_t, K)
-    # AUD† 直接从后验
-    U_ale, U_epi, modes, _ = M.aud.decompose_from_belief(b_t, M.fmp, o)
-    # FMA† 第二意见
-    a_hat = M.fma.flow_anomaly_belief(M.fmp, M.last_action, o, o_cal, b_t)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # MINT† 贝叶斯 VoI 交互
-    g = (M.mint.choose_interaction_belief(b_t, M.fmp, M.budget, M.c_ras_wm)
-         if (U_epi > TAU_EPI and not slow) else None)
+# IP-286 GAUGE 主闭环
+def GAUGE_RAS_round(M, obs, audio):
+    b_t = M.bse.step(M.b_prev, obs, M.last_action, M.last_g, M.last_y)   # R70
+    z, o = M.mtm.forward(obs); c, U_cal, thr = M.cof.step(...)
+    if M.clock.due_metric():                                  # 中频审计
+        gate = M.ivg.check(M.registry, b_t, M.seal.latest)
+        if not gate.valid: M.mode = 'R70'; M.registry.freeze(gate.reason)
+    psi_hat, ece_aff = M.aura.update(audio)                   # 低频异步
+    if ece_aff > TAU_AFF: M.mode = 'R70_NO_AFFECT'
+    g = (M.rvoi.choose(b_t, psi_hat, M.budget, M.fmp, M.bse)
+         if M.mode == 'FULL' and entropy(b_t) > TAU_EPI else None)
     if g is not None:
         y = M.cia.execute(g)
-        b_t = M.bse.step(b_t, o, M.last_action, g, y)   # 立即用回答更新
-        U_epi = entropy(b_t)
-    # 风险缩放
-    U_floor = U_ale + (U_epi if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))
-    mode = select_mode_from_belief(modes, b_t, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 审计 + 证书 + 基线纪律
-    M.vqa_ii.submit_async(b_t, g, y, U_ale, U_epi, a_hat)
-    M.baseline_logger.log_if_eval(M.cfg.eval_mode)
-    M.b_prev = b_t
-    return k, lam, mode, (U_ale, U_epi)
+        lik, c_cred = M.icl.credible_likelihood(y, b_t, psi_hat)
+        b_t = M.bse.step(b_t, o, M.last_action, g, y, lik_weight=c_cred)
+        psi_hat, _, _ = M.reflex.step(psi_hat, g, M.robot_prosody(y), None, M.budget)
+    U_ale, U_epi = decompose_from_belief(b_t, M.fmp, o)       # R70 AUD†
+    lam = max(M.efs.risk_scale(...),
+              lam_floor(U_ale + (U_epi if g is None else 0.0)))
+    A = M.ach.propose(...); k = M.c_ras_wm.certified_prefix(A, ...)
+    M.mib.update(b_t, psi_hat, gate)
+    M.vqa_ii.submit_async(b_t, g, psi_hat, gate, M.registry.gaps())
+    M.b_prev, M.last_action, M.last_g, M.last_y = b_t, A[:k], g, y
+    return k, lam, (U_ale, U_epi), J_GAUGE(M)
 ```
 
 ## 4. 推导
 
-**引理 19（状态后验熵为 Epistemic 唯一真相）** A99（观测模型可识别、转移遍历）下，任意策略 π 的期望损失 L(π) ≥ L* + c·H[b_t]。等号当且仅当 π 依赖 b_t 的充分统计量。系：H[b_t] 是 epistemic 的信息论下界；R69 的 H_mode·g(Δ_min) 只是动作空间投影，多状态同模态时低估无知。
+**引理 23（Goodhart 间隙可检测）** m=φ+b(θ)+ε，m⊥=φ'+b⊥(θ)+ε⊥，gaming 使 ∂b/∂θ>0、∂b⊥/∂θ≈0，则 ∂E[D]/∂θ≈∂b/∂θ>0，而 φ 可不变。故单指标改善不证明构念改善；D 上升是 gaming 的可检验证据。K 个偏差近似独立对偶提升检测功效，τ_D 控误报。**R70 只报 H[b_t] 不报对偶间隙，因此无法区分「看清了」与「把后验弄尖了」。**
 
-**引理 20（贝叶斯 VoI 贪心近似最优）** A100（观测条件独立、转移马尔可夫）下，f(g)=H[b_t]−E[H[b_{t+1}]|g] 子模，贪心选 g* 在预算约束下达 (1−1/e) 近似最优。系：R69 启发式 VoI 无此保证。
+**引理 24（可信度对 VoI 与欺骗界）** 实际增益 ≤ c(ψ)ΔH；高估 Δc 使 VoI 高估 Δc·ΔH，且随 c 下降累积。k 个正交源、单源欺骗 δ_p、相关 ρ<1 时错误采纳 ≤ [1−c(ψ)(1−δ_p)]ρ^{k−1}+ε_σ。**R70 的固定 δ_p 既高估疲劳者可信度，也浪费了韵律提供的实时 c(ψ)。**
 
-**引理 21（三元组故障判别增强）** 缓变故障被 COF 吸收（r_res≈0），但状态后验通过流似然持续接收行为自洽证据。若偏移使真实状态似然显著低于后验均值，则 a_score 期望上升 ≥ L_b·KL(b_t||b_t^cal) − ε_num（A101：流似然对后验 Lipschitz）。故 **(r_res↓, Δa↑, H[b_t]↑) 三元组**比二元组判别力更强——后验熵同步升高是「信念崩塌」直接证据。
+**引理 25（反作用下最优停止）** 边际增益 c_nΔH_n 不增、边际反作用 r_n≥r_0>0，则 G(n) 离散凹，存在有限 n*，c_{n+1}ΔH_{n+1}≤r_{n+1} 时停。若疲劳使 c_n→0，「问到熵<τ」所需次数 →∞，RVOI 在 n* 停。**「何时停」是可证明的有限停止问题，不是调参。**
 
-**引理 22（基线协议统计功效）** v1 协议下，若真实效应量 d≥0.5，10 种子 Wilcoxon p<0.01 Bonferroni 功效 ≥ 0.92。系：固定种子+配对检验+多重校正，把「跑得好」变「有证据好」。
+**引理 26（非补偿不可操纵）** 否决式 Agg 下，任意性能提升不能改变 veto 越界导致的 FAIL；补偿式下越界 δ 可被 Δg≥δ·(w_veto/w_perf) 抵消。**没有 veto 的 Pareto 等价于给安全标价。**
 
-**定理 18（BELIEF 严格包含 FLUID 严格包含 R68）** A99–A101 下，BELIEF 三阶段策略期望风险 ≤ FLUID ≤ R68；且当 H[b_t]<τ_entropy、VoI≤c、ECE_state>τ_ece 或 slow_fault_suspect 时三者逐指令相同。R68=FLUID=BELIEF 在「永不交互、后验熵不可约、标定吸收一切」边界退化，安全侧层层不让步。
+**引理 27（情感 gauge 不变性与域移）** nuisance 保持 ψ 的 T 下，理想 q(ψ|o)=q(ψ|T(o))；定义 ι=sup_o TV(q(ψ|o),q(ψ|T(o)))，域移下可信度误差至少增加 ι 量级。故 ECE_affect 与 ι 必须同时门控，不能只报平均情绪准确率。**情感语音最大的坑不是「识别不准」，而是「训练说话人上准、换人系统性偏移」。**
 
-**定理 19（原型验证工程一致性）** Proto-Val v1 全项通过 ⇒ 部署环境下 P99≤3.5ms、零交互违规、后验熵单调不增（数值误差<1e-3）、缓变检出≥80%、基线协议下显著优于 R68。原型验收不再是「能不能跑」，而是「工程指标是否满足理论假设」——A99–A101 的 Lipschitz/子模性/识别性在原型上可测。
+**定理 20（严格包含链）** A102–A105（指标可测且域可检、对偶偏差不完全相关、T Lipschitz 且 Ψ_safe 对不交互策略受控不变、韵律域内校准）下：GAUGE 在退化条件下逐指令等于 BELIEF；BELIEF⊂FLUID⊂R68（R70 定理 18）。安全侧不弱于 R70。
+
+**定理 21（指标完整性 ⇒ 风险界）** 通过 J_GAUGE ⇒ veto 全过 IVG 且 TCHAIN 完整 ⇒ 风险 ≤ ε_cert（相对测量模型）；任一 veto 失效 ⇒ IVG 强制回退 R70/R68，风险由 R70 保证。故期望风险 ≤ R70。**全部重量落在「veto 指标本身有效」上。**
+
+**定理 22（反作用安全与无发散）** RVOI 只选 ψ_{t+1}∈Ψ_safe 且预算内的 g；无正收益则不问并回退；由引理 25 停止点有限；交互只改模态选择不改硬安全包络，回退 λ 单调不降 ⇒ 控制连续无突变。**但不保证 T 正确，只保证「T 正确时不把人推出稳态」。**
 
 ## 5. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| BSE 预测-更新（M≤20, N≤500） | P99 < 1.0ms | 8MB | 定义 314；后验熵单调性检查 |
-| FMP† 状态条件采样（K=1/4, N_is=32） | < 1.2ms / < 2.8ms | 50MB | 定义 312；边缘化无偏估计 |
-| AUD† 从后验直接计算 | < 0.01ms | <1MB | 定义 315–316 |
-| MINT† VoI 蒙特卡洛 (N=16) | < 0.5ms | O(N·M) | 定义 317；子模性近似 |
-| FMA† 边缘化似然 (N_is=32) | < 0.6ms | O(N_is) | 定义 319 |
-| **实时环路总延迟** | **< 4.5ms**（K=1）；**< 6.2ms**（K=4） | — | 定理 18–19；Proto-Val 要求 P99<3.5ms 留 1ms 裕度 |
+| MIB/GAP/IVG（20Hz，|I|≤32） | <0.05ms/tick | <1MB | 定义 332–335、342 |
+| TCHAIN 校验 | <0.02ms/记录 | O(1) | 定义 344 |
+| NCA（|V|≤8） | <0.02ms | O(1) | 定义 334、引理 26 |
+| AURA 韵律流式（20ms，异步 50Hz） | <0.3ms/帧 | 2MB | 定义 337、引理 27 |
+| ICL 可信度 | <0.05ms | O(1) | 定义 338、引理 24 |
+| REFLEX + 信任预算 | <0.05ms | O(1) | 定义 339–340、定理 22 |
+| RVOI（N=16，仅交互 tick） | <0.6ms | O(N·M) | 定义 341、引理 25 |
+| SEAL | 离线/异步 | — | 定义 336 |
+| **高频控制环** | **<4.5ms（K=1）/ <6.2ms（K=4）** | — | 定理 20–22 |
+| **交互决策 tick** | **<5.4ms**（低频） | — | 一次性预算超支可记录 |
+| **计量审计 tick** | **<0.5ms @ 20Hz** | — | 不进控制路径 |
 
-## 6. 实验设计 E301–E320（全在 RAS-Baselines v1 协议下）
+## 6. 实验设计 E321–E340（全在 RAS-Baselines v1 协议下）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E301 状态后验收敛 | BSE 真实噪声下收敛 | H[b_t] 指数降至 <0.5 nat，步数 <20 |
-| E302 后验校准可靠性 | ECE_state 可信度 | ECE_state<0.05，可靠图对角偏差<0.03 |
-| E303 贝叶斯 VoI vs 启发式 | 升级 VoI 更优 | 同预算下 H[b_t] 降降速 +25%，成功率 +8% |
-| E304 三元组故障判别 | 三元组 vs 二元组 | 缓变故障 AUC ≥0.92（R69: 0.85） |
-| E305 基线复现一致性 | 5 基线协议下稳定 | 10 种子方差<2%，R68 复现误差<1% |
-| E306 FLUID vs 基线显著性 | 协议下显著优于 R68 | Wilcoxon p<0.01，d≥0.5，6 维 Pareto 优 |
-| E307 Proto-Val Isaac Sim | 仿真端到端跑通 | 全项验收通过，P99<3.5ms，零交互违规 |
-| E308 Proto-Val ROS 2 | 实时中间件守时 | 无 deadline miss，CPU<70%，抖动<0.5ms |
-| E309 Proto-Val 真机 | 物理机械臂安全 | 安全停止<3次/小时，力控抖动不触发拦截 |
-| E310 24h 长时程漂移 | 后验是否发散 | H[b_t] 无单调上升，粒子耗尽<1次/小时 |
-| E311 交互投毒穿透率 | δ_p=0.5 证据纪律守住 | 穿透率≤2%（R69: ≤5%），k=3 正交源 |
-| E312 模态坍缩诊断 | FMP† 训练模态坍缩 | Δ_min > 3σ_in 保持 >90% episodes |
-| E313 异步流水线延迟 | LLM 解码异步化 | 首 token 延迟剥离，决策→输出<10ms |
-| E314 粒子滤波 vs EKF | 混合状态稳定性 | 后验熵差<5%，EKF 10x 快 |
-| E315 状态条件流训练 | 显式监督 vs 伪标签 | 伪标签(EM)收敛同监督，覆盖率无显著差异 |
-| E316 边缘化采样方差 | N_is=32 是否够 | log_p 相对误差<5%，增 64 无显著改善 |
-| E317 后验熵单调性数值 | 浮点误差导致熵增 | 单步熵增<1e-4 nat，累计 1e6 步<0.1 nat |
-| E318 基线消融完整性 | 去 BSE/FMA/MINT | 去 BSE 退 FLUID；去 FMA 缓变检出−35%；去 MINT 退 R68 |
-| E319 J_BELIEF 完整性 | 字段自动生成 | Valid 率 100%，哈希可追溯代码/数据/种子 |
-| E320 失败模式归因树 | 原型跑不通根因分类 | 输出分类树：算法数值/工程实现/硬件限制/建模假设违背 |
+| E321 指标构造效度 | 指标是否量了声称的量 | 收敛 AVE>0.5、区分 √AVE>相关；专家评审 |
+| E322 Goodhart 攻击 | 能否压低 H 而不降真误差 | H↓>20% 而真误差不降；GAP 检出 ≥90% |
+| E323 GAP 检测功效 | 对偶间隙是否可靠 | AUC ≥0.90，误报 ≤5% |
+| E324 非补偿聚合 | veto 是否不可交易 | 安全越界 X%→0，性能损失 ≤3% |
+| E325 密封审计 | 隐藏指标能否抓 gaming | 泄漏攻击下 SEAL 检出 ≥85% |
+| E326 追溯链 | 证书数字是否可复现 | 完整率 100%，断链检出 ≥99% |
+| E327 AURA 识别 | 情感/置信/疲劳可观测性 | 跨说话人情绪 UA ≥0.75，MAE<0.12 |
+| E328 情感校准 | ECE_affect 是否可信 | ECE_affect<0.08，可靠图单调 |
+| E329 Gauge 不变性 | 换人/麦/语言是否偏移 | ι<0.1，跨语种下降 <15% |
+| E330 可信度校准 | c(ψ) 是否预测正确率 | Brier<0.15，ECE_cred<0.08 |
+| E331 情感条件 VoI | 用 c(ψ) 降权是否增益 | 实际增益 +15%，无效追问 −30% |
+| E332 反作用疲劳 | 追问是否降低可信度 | c_n 单调下降，n* 可复现 |
+| E333 最优停止 | RVOI vs 问到阈值 | 同等误差提问 −25%，人类负担 −30% |
+| E334 稳态保持 | Ψ_safe 是否守住 | 越界 ≤1%，压力/疲劳显著更低 |
+| E335 韵律欺骗 | acted/克隆语音可识破性 | 跨通道检出 ≥80%（单通道 ≤50% 如实报告） |
+| E336 情感社交工程 | 情绪施压是否被拦 | 高风险误放行 ≤1%，单源定案=0 |
+| E337 严格包含/消融 | 退化边界逐指令一致 | 关 AURA/REFLEX 与 R70 差=0；去 GAP gaming 检出−40% |
+| E338 24h 人机长时程 | 疲劳/漂移/信任是否失控 | 交互频次稳定，信任预算不耗尽，零交互违规 |
+| E339 实时预算 | 三频分离是否守时 | 控制 P99<4.5ms，计量 tick<0.5ms，无 deadline miss |
+| E340 基线协议与归因 | 是否显著优于 R70 | Wilcoxon p<0.01、d≥0.5；四层失败归因树 |
 
 ## 7. 本轮最大风险
 
-**一句话**：BELIEF-RAS 把所有筹码押在「状态后验 b_t 能在实时约束下可靠收敛、且其熵 H[b_t] 真实反映 epistemic 不确定性」——**若观测模型 p_flow/p_interact/p_calib 中任一显著失配（流似然在分布外给出过度自信的似然、交互回答模型假设人类理性实则情绪化、标定残差模型漏掉相关噪声），后验就会「自信地错」，H[b_t] 变小反而意味着风险变大；原型验证若跑不通（P99>3.5ms、后验发散、基线无显著差异），R70 就只交付了一份「失败诊断报告」而非可用系统——**理论自洽不等于工程可用，状态估计的脆弱性会被实时部署无情放大**。
+**一句话**：GAUGE-RAS 把安全从「相信 H[b_t]」转移到「相信指标系统的效度与情感通道的校准」——**如果 Goodhart 对偶被同一个隐藏混杂因子驱动（两把尺子一起歪），或者情感通道在换人/换语种/被克隆语音攻击时系统性偏移，系统就会用一套坏掉的度量认证自己「计量有效」，把 R70 的「自信地错状态」升级为「自信地错自己的可信度」——不知道自己不知道，还多了一张盖了章的审计证书。**
+
+次级风险与缓解：
+1. **对偶共线** → K 个独立偏差对偶 + SEAL + E323/E325；无法证明独立即按「不可用」处理；
+2. **情感跨域/伪装** → gauge 不变性（E329）+ ECE_affect 门控 + 跨通道一致性（E335）+ 单源不定案（定义 343）；
+3. **反作用模型 T 错** → Ψ_safe 保守下界 + 个性化在线后验 + 信任预算硬上限；T 失配触发 IVG 回退；
+4. **过度保守/任务失败** → veto 只覆盖硬安全与校准下界，性能层保留排序；E324 量化损失；
+5. **实时预算被击穿** → 三频分离 + 异步 + 20Hz 中频；计量不进快路径，E339 守时；
+6. **指标系统自身过复杂** → |I|≤32、DAG 可视化、每个 veto 一条可复算证明；复杂度本身是审计对象。
 <!-- ARTIFACT:END -->
