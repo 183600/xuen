@@ -1,0 +1,81 @@
+{
+  "seed": 20261114,
+  "note": "synthetic mechanism check; not benchmark evidence",
+  "A_camouflage": [
+    {
+      "beta": 1.0,
+      "auc": 0.921671955,
+      "tpr_at_fpr5": 0.64535,
+      "tau": 1.633547233236244
+    },
+    {
+      "beta": 0.7,
+      "auc": 0.837816325,
+      "tpr_at_fpr5": 0.41075,
+      "tau": 1.633547233236244
+    },
+    {
+      "beta": 0.4,
+      "auc": 0.714410225,
+      "tpr_at_fpr5": 0.20675,
+      "tau": 1.633547233236244
+    },
+    {
+      "beta": 0.0,
+      "auc": 0.5001983325,
+      "tpr_at_fpr5": 0.0487,
+      "tau": 1.633547233236244
+    }
+  ],
+  "B_nullspace": [
+    {
+      "beta": 1.0,
+      "free_probe_effort": 9.0,
+      "free_vs_borrow_effort": 1.0,
+      "margin_cost": 0.0,
+      "must_borrow": false
+    },
+    {
+      "beta": 0.7,
+      "free_probe_effort": 18.36734693877551,
+      "free_vs_borrow_effort": 2.040816326530612,
+      "margin_cost": 0.0,
+      "must_borrow": false
+    },
+    {
+      "beta": 0.4,
+      "free_probe_effort": 56.25,
+      "free_vs_borrow_effort": 6.25,
+      "margin_cost": 0.0,
+      "must_borrow": true
+    },
+    {
+      "beta": 0.0,
+      "free_probe_effort": null,
+      "margin_cost": 0.0,
+      "must_borrow": true
+    }
+  ],
+  "C_evidence": [
+    {
+      "n_probes": 1,
+      "bayes_error": 0.27085
+    },
+    {
+      "n_probes": 2,
+      "bayes_error": 0.1933
+    },
+    {
+      "n_probes": 3,
+      "bayes_error": 0.1513
+    },
+    {
+      "n_probes": 5,
+      "bayes_error": 0.08935
+    },
+    {
+      "n_probes": 10,
+      "bayes_error": 0.0298
+    }
+  ]
+}

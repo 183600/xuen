@@ -1,0 +1,74 @@
+{
+  "seed": 20261114,
+  "n": 20000,
+  "part_a_testability_hack_auc": [
+    {
+      "kappa": 1.0,
+      "auc_detect_hack": 0.9213002825,
+      "tpr_at_fpr5": 0.6349
+    },
+    {
+      "kappa": 0.7,
+      "auc_detect_hack": 0.8367829975,
+      "tpr_at_fpr5": 0.3999
+    },
+    {
+      "kappa": 0.4,
+      "auc_detect_hack": 0.7127095375,
+      "tpr_at_fpr5": 0.1929
+    },
+    {
+      "kappa": 0.0,
+      "auc_detect_hack": 0.499476405,
+      "tpr_at_fpr5": 0.0506
+    }
+  ],
+  "part_b_farming": [
+    {
+      "amplitude": 0.2,
+      "raw_event_reward": 4.0,
+      "pbrs_conservative": 0.0,
+      "pbrs_nonconservative": 0.5026548245743669
+    },
+    {
+      "amplitude": 0.5,
+      "raw_event_reward": 10.0,
+      "pbrs_conservative": 0.0,
+      "pbrs_nonconservative": 3.141592653589793
+    },
+    {
+      "amplitude": 1.0,
+      "raw_event_reward": 20.0,
+      "pbrs_conservative": 0.0,
+      "pbrs_nonconservative": 12.566370614359172
+    },
+    {
+      "amplitude": 2.0,
+      "raw_event_reward": 40.0,
+      "pbrs_conservative": 0.0,
+      "pbrs_nonconservative": 50.26548245743669
+    }
+  ],
+  "part_c_joint_channel": [
+    {
+      "kappa": 1.0,
+      "hack_accept_at_90pct_coverage": 0.23624041589411693,
+      "blindspot_discovery": 1.0
+    },
+    {
+      "kappa": 0.7,
+      "hack_accept_at_90pct_coverage": 0.45285617535623457,
+      "blindspot_discovery": 0.7
+    },
+    {
+      "kappa": 0.4,
+      "hack_accept_at_90pct_coverage": 0.6849377299203945,
+      "blindspot_discovery": 0.4
+    },
+    {
+      "kappa": 0.0,
+      "hack_accept_at_90pct_coverage": 0.9,
+      "blindspot_discovery": 0.0
+    }
+  ]
+}

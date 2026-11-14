@@ -1,0 +1,120 @@
+{
+  "seed": 20261114,
+  "n_trials_detection": 60000,
+  "note": "synthetic mechanism check; not benchmark evidence",
+  "detection": [
+    {
+      "kappa": 1.0,
+      "hallucination": {
+        "r71_auc": 0.996,
+        "triad_auc": 1.0
+      },
+      "spatial_spoof": {
+        "r71_auc": 0.504,
+        "triad_auc": 0.951
+      },
+      "metric_alias": {
+        "r71_auc": 0.507,
+        "triad_auc": 0.95
+      }
+    },
+    {
+      "kappa": 0.7,
+      "hallucination": {
+        "r71_auc": 0.995,
+        "triad_auc": 0.987
+      },
+      "spatial_spoof": {
+        "r71_auc": 0.498,
+        "triad_auc": 0.748
+      },
+      "metric_alias": {
+        "r71_auc": 0.497,
+        "triad_auc": 0.746
+      }
+    },
+    {
+      "kappa": 0.4,
+      "hallucination": {
+        "r71_auc": 0.996,
+        "triad_auc": 0.983
+      },
+      "spatial_spoof": {
+        "r71_auc": 0.497,
+        "triad_auc": 0.603
+      },
+      "metric_alias": {
+        "r71_auc": 0.497,
+        "triad_auc": 0.602
+      }
+    },
+    {
+      "kappa": 0.0,
+      "hallucination": {
+        "r71_auc": 0.996,
+        "triad_auc": 0.996
+      },
+      "spatial_spoof": {
+        "r71_auc": 0.5,
+        "triad_auc": 0.5
+      },
+      "metric_alias": {
+        "r71_auc": 0.502,
+        "triad_auc": 0.502
+      }
+    }
+  ],
+  "aggregation": [
+    {
+      "p_missing": 0.0,
+      "weighted_cert_despite_missing": 0.0,
+      "meet_cert_despite_missing": 0.0
+    },
+    {
+      "p_missing": 0.1,
+      "weighted_cert_despite_missing": 0.08,
+      "meet_cert_despite_missing": 0.0
+    },
+    {
+      "p_missing": 0.3,
+      "weighted_cert_despite_missing": 0.24,
+      "meet_cert_despite_missing": 0.0
+    },
+    {
+      "p_missing": 0.5,
+      "weighted_cert_despite_missing": 0.401,
+      "meet_cert_despite_missing": 0.0
+    }
+  ],
+  "view_cover": {
+    "greedy_mean_coverage": 0.815,
+    "random_mean_coverage": 0.661,
+    "trials": 2000
+  },
+  "schema": [
+    {
+      "kappa_support": 1.0,
+      "s1_pose_only_cert": 1.0,
+      "s2_pose_plus_support_cert": 0.0,
+      "unverified_rate": 0.0
+    },
+    {
+      "kappa_support": 0.7,
+      "s1_pose_only_cert": 1.0,
+      "s2_pose_plus_support_cert": 0.299,
+      "unverified_rate": 0.299
+    },
+    {
+      "kappa_support": 0.4,
+      "s1_pose_only_cert": 1.0,
+      "s2_pose_plus_support_cert": 0.597,
+      "unverified_rate": 0.597
+    },
+    {
+      "kappa_support": 0.0,
+      "s1_pose_only_cert": 1.0,
+      "s2_pose_plus_support_cert": 1.0,
+      "unverified_rate": 1.0
+    }
+  ]
+}
