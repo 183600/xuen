@@ -3,535 +3,677 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 71 轮（承接第 70 轮「BELIEF-RAS 贝叶斯状态估计层」IP-264~274；灵感循环第 1 轮；本轮灵感：「指标体系」×「情感语音」）
+# 第 72 轮（承接第 71 轮「GAUGE-RAS 计量审计×情感反作用层」IP-275~286；灵感循环第 2 轮；本轮灵感：「机器人操作系统」×「意图识别」×「灵巧操作」）
 
-> R70 把 epistemic 从「动作模态」升级为「世界状态后验」b_t(s)，但让 **H[b_t] 同时扮演两个角色**：它既是「我对世界有多不确定」的测量结果，又是 MINT/VoI 要压低的优化目标。这个双重身份是一枚还没爆炸的定时炸弹——指标系统研究的第一条教训是：**一个数一旦既是度量又是目标，它就不再是好的度量**（Goodhart / Campbell 定律）。BSE 可以通过锐化先验、过拟合证据来降低 H[b_t] 而不减少真实误差；MINT 可以专挑**确认性证据**而非**判别性证据**；证书可以让 ECE、延迟、成功率、交互次数互相「补偿」；而 H[b_t] 只覆盖已被建模的状态维度，对「我根本没想到的状态」完全无感。R70 自陈的「自信地错」，本质是**指标系统本身没有被审计**。
+> R71 把 epistemic 从「标量不确定度」升级为「被审计的测量链」（MIB/GAP/IVG/NCA/SEAL/TCHAIN），把交互从「固定噪声标签」升级为「被情感调制、会反作用的元证据」（AURA/ICL/REFLEX/RVOI），并确立了**非补偿性安全否决**与**严格逐指令退化**。但 R71 仍停留在「认知层算法」：
+> - **机器人操作系统（ROS）视角**：三频分离（控制 1kHz / 计量 20Hz / 情感 50Hz）只是逻辑分层，未落地为 **ROS 2 话题图、DDS 实时域、参数服务、生命周期节点、组件容器、sim2real 不确定度传递**；缺乏「硬实时 deadline miss 怎么办」、「节点崩溃如何熔断」、「仿真标定参数如何带不确定度上车」的工程契约。
+> - **意图识别视角**：R71 的 ψ 只建模「信息源的情感/可信度」，没建模「人的**意图**」。人说「拿左边那个」时，意图 z ∈ Z（拿取/推开/指示/虚晃）才是真正驱动后续动作的隐变量；意图识别错误会导致**证据解释偏差**（把「指示」当成「命令」）与**规划幻觉**（为错误目标优化轨迹）。意图本身有不确定度、有先验、会被机器人行为改变（如机器人伸手去拿，人可能改变主意）——这是**第二层反作用**。
+> - **灵巧操作视角**：R71 的证据模态只有「视觉/语言/触觉（粗略）」。灵巧手带来**高维触觉、本体感觉、力/力矩、接触几何、滑移检测、内在手势**等新模态；这些证据的噪声**强依赖于接触状态**（贴合/滑动/分离）、**强耦合于控制指令**（阻抗/力控/位控切换）、**且标定极难**（传感器漂移、温度、磨损）。把它们当成「又一个观测 y」送进 BSE，会把「接触不确定度」误读为「世界状态不确定度」，导致**信息增益虚高、风险缩放失效**。
 >
-> 情感语音补上另一块：R70 的观测模型 p_interact(y|s) 把交互证据当成一个固定噪声率 δ_p 的标签。但交互的另一端是**人**：人会犹豫、紧张、疲劳、敷衍，会因机器人的语速/音高/措辞而改变合作意愿。这些状态既**调节回答的可信度**（情感语音是「关于测量的测量」，元证据），又**被机器人自己的提问改变**（测量反作用 / reflexivity）。忽略这一点，VoI 会系统性高估「多问一句」的价值：问到对方不想答，BSE 只看到噪声变大，于是更想问——一个会自我强化的坏循环。
+> 本轮三个灵感正好补三块：
+> - **ROS**：把三频分离落地为 **ROS 2 实时执行图**（Real-time Execution Graph, REG），引入**确定性调度、话题级熔断、参数不确定度传递、仿真-实机不确定度桥接**；把 GAUGE 的「计量层不阻塞控制层」从逻辑承诺变为**调度级保证**。
+> - **意图识别**：在世界状态 s 中显式引入**意图隐变量 z**，构建 **联合后验 b_t(s, z)** 与**意图证据模型 p_intent(y_intent | s, z, ψ)**；意图识别误差进入**风险缩放分母**，意图漂移触发**重新规划门控**。
+> - **灵巧操作**：把触觉/本体/力矩升级为**带接触状态条件的计量证据**，引入**接触不确定度分解**（几何/力控/传感器/滑移），在**风险感知阻抗控制**中把接触不确定度显式纳入 λ_floor。
 >
-> 本轮两个灵感正好补两块：
-> - **指标体系**：把 H[b_t]、ECE、VoI、延迟、成功率从「几个数」升级为一个**有构造效度、有不确定度预算、有有效性域、有反 Goodhart 对偶、且安全项不可补偿的指标系统**；安全不是加权求和里的一项，而是否决项。
-> - **情感语音**：把「人的回答」升级为**由可观测的情感/韵律状态调制的证据**；情感状态本身属于状态估计，也是交互反作用的通道。
->
-> 核心命题：**不再只问「我的不确定性是多少」，而问「我对『我的不确定性读数』的信任是多少、这个读数是否正在被我自己改变」。** 把 R70 的标量 epistemic 指标降格为一个**有预算、有边界、可被证伪的测量结果**；在有效性域之外一律退回 R70/R68。命名 **GAUGE-RAS**（Gauge-valid, Affect-aware, Uncertainty-budgeted, Goodhart-resistant Evidence for RAS）。
->
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证」，R70 问「我该信哪个状态」，R71 问「**我用来判断『该信什么』的那把尺子本身可信吗；我量的时候，是不是把被量的人改变了**」——信任不是一个数，而是一条可追溯、可证伪、且会反作用于被测者的测量链。
+> 核心命题：**不再只问「我的测量链可信吗」，而问「我的测量链在 **ROS 实时调度下、面对意图模糊的人、用灵巧手去触摸世界** 时，还能逐指令兑现风险界吗？」** 把 R71 的「认知层 GAUGE」下沉为 **EMBODIED-GAUGE-RAS**（Embodied, Metrologically-valid, Intent-aware, Dexterous, Operational, Real-time GAUGE for RAS）——**具身计量审计闭环**。
 
 ## 0. 直觉与动机
 
-**灵感 1（指标体系 → H[b_t] 是「目标—度量」同体，天然会被 gaming）**
-直觉：仪表盘上如果只有一个「不确定性」表盘，而控制器的目标就是把这个表盘压下去，那么最省力的办法未必是「看清世界」，而是「把表盘弄坏」——让后验更尖、让模型更自信、让证据更同质。人做 KPI 会这样，优化器也会。指标体系研究的教训是：单一复合指标不可信；必须有**构造效度**（量的是不是它声称的量）、**收敛/区分效度**（和别的量该不该相关）、**不确定度预算**（每个数字的误差来源与大小）、**有效性域**（外推即失效），以及**反指标**（专门抓 gaming）。所以本轮不是再调 H[b_t] 的一个权重，而是给它配一整套「审计与保险」。
+**灵感 1（ROS → 算法不等于系统，调度即语义）**
+直觉：R71 的「高频控制 / 中频计量 / 低频情感」三频分离在 Python 伪代码里是 `if clock.due_metric():`，但在真机上，**中频计量节点若抢占了控制节点的 CPU 时间片，控制环就会抖动；DDS 话题若堆积，情感韵律帧就会丢包导致 ψ 估计失真；参数服务若无不确定度元数据，sim2real 迁移就会静默失效**。ROS 2 的 **Lifecycle Node、Executor、Callback Group、QoS、Real-time Executor (rclcpp::executors::StaticSingleThreadedExecutor)** 不是工程细节，而是**实时语义的载体**。把 GAUGE 的「计量层永不阻塞控制层」落地，必须把它写进 **调度契约（Scheduling Contract）**：控制环 = 高优先级、零分配、确定性周期；计量环 = 低优先级、可抢占、截止时间软；情感环 = 异步、Best-effort、可丢帧。**「算法正确」不等于「系统正确」，调度即语义。**
 
-**灵感 2（情感语音 → 人是一个会疲劳、会被语气影响的传感器）**
-直觉：同一句「在左边」，用平稳语气说出来，和用迟疑、急促、敷衍的语气说出来，信息量完全不同。韵律里带着**置信、犹豫、压力、疲劳、亲和/敌意**。这不是世界状态 s 的观测，而是**信息源 ψ 的观测**——关于「这条证据有多可信」的元证据（meta-evidence）。更进一步，机器人的语速、音高、音量、措辞会改变 ψ：质问式语气让人防御，机械式语气让人敷衍，连续追问让人疲劳。于是**交互不是中性取样，而是一次有副作用、会改变未来样本分布的干预**。这把 R69/R70 的「社交成本 c(g)」从一个常数，升级为一个**状态相关、会累积、且影响未来证据质量**的动力学项。
+**灵感 2（意图识别 → 人说的不是人想的，意图是会漂移的隐变量）**
+直觉：R71 把人的回答 y 当成关于世界状态 s 的证据。但人说「把那个给我」，**意图 z ∈ {递给我、放我够得着的地方、演示怎么放、虚晃一枪}** 才决定「那个」指代什么、动作该怎么执行。意图识别器输出 **b_t(z|history)**，它有自己的**校准误差 ECE_intent**、**模态分歧**、**OOD 分数**。更关键的是，**意图会被机器人行为改变**：机器人伸手去拿 → 人可能「改主意了、别动」；机器人问「确认拿红色的？」 → 人可能「其实是蓝色的」。这是**比 ψ 更深层的反作用**：ψ 是「回答可不可信」，z 是「目标是啥」。把 z 显式建模进联合后验 b_t(s, z)，让风险缩放「看到」意图不确定度，是从「被动接收证据」到「主动澄清意图」的关键一步。
 
-**灵感 3（反作用 → 「问到确定」可能发散，最优是「问到刚好」）**
-直觉：R70 的 MINT 是「只要 VoI > 成本就问」。但如果每问一次对方可信度 c(ψ) 就掉一点，那么第 n 次提问的**边际真实增益** ∝ c(ψ_n)·ΔH_n 会递减，而边际反作用成本不减。于是「问到 H < τ」可能永远问不到，或者代价爆炸；真正的最优是一个有限的停止点 n*。**「知道何时停止问」比「知道该问什么」更重要**——这是 R69/R70 一直缺的一条。它也是「指标体系」给的另一面：不仅要选指标，还要给指标设**停止/寿终规则**，否则一个永不满足的 KPI 会驱动系统自我消耗。
+**灵感 3（灵巧操作 → 接触不是观测，接触是受控的不确定度源）**
+直觉：R71 的触觉证据是「又一个 y」。但灵巧手的**高维触觉阵列（如 100+ taxel）、6轴力矩、关节力矩、指尖温度**的噪声分布**强依赖于接触模式**：贴合时高斯、滑移时重尾、分离时饱和、力控切换时暂态。**把「接触不确定度」误读为「物体位姿不确定度」**，会让 BSE 过度自信于错误的接触假设，导致**抓取力不足/过大、滑移未检出、内部手势识别幻觉**。必须把接触模式 c ∈ {free, sticking, sliding, rolling, breaking} 显式建模，证据似然写作 p_tactile(y_tac | s, c)，并在风险缩放中把**接触模式不确定度 H[b_t(c)]** 显式加入 λ_floor。**灵巧操作的本质不是「更多传感器」，而是「在接触不确定度下仍能完成任务的控制-估计共设计」。**
 
-**灵感 4（非补偿性 → 安全不能被别的指标「买」回来）**
-直觉：如果证书是一个加权和，那么延迟、成功率、交互次数、ECE 之间可以互相补偿——「多问几次把 ECE 压低」就能掩盖「模态分布变差」。指标体系研究里这叫**补偿性聚合的操纵空间**。安全必须是**否决项（veto）**：任何一个安全指标越界，整张证书失效，不能拿性能去换。这与 R68 的 λ_floor 精神一致，但把它从「一个数」变成「一个聚合结构」：不是把安全做成更大的权重，而是做成**不可交易**的约束。
+**灵感 4（三层反作用 → 情感 ψ、意图 z、接触 c 形成反作用阶梯）**
+直觉：R71 只有 ψ（情感/可信度）一层反作用。现在有三层：
+- **L1 情感反作用（R71）**：问得急 → 人烦 → c(ψ)↓ → 证据贬值 → 更想问（坏循环）
+- **L2 意图反作用（新）**：机器人动作 → 人改变主意 → z 漂移 → 规划目标失效 → 重新规划成本↑
+- **L3 接触反作用（新）**：控制阻抗/力矩 → 改变接触模式 c → 触觉噪声分布变 → 证据质量变 → 状态估计偏 → 控制指令变
+这三层**耦合**：L3 的滑移会让人焦虑（L1），人焦虑会改变指令语气（L2），指令语气改变会改变机器人阻抗参数（L3）。**统一的反作用预算 B_reflex 必须三层合算**，且每层都有各自的稳态集 Ψ_safe, Z_safe, C_safe。
 
-**灵感 5（严格包含 → 计量层必须能整体关掉）**
-直觉：如果情感通道不可用（无麦克风、跨语种、强噪声）、反作用可忽略、指标系统通过审计，那么 GAUGE 应当**逐指令退化为 R70**，再退化为 R69/R68。新层不能是「必须被信任的新黑箱」，而必须是「在旧层之上可选启用的审计层」。否则每加一层就多一个故障源——这正是 R70 的教训。**本轮所有收益都必须以「可退化」为代价换取，而不是以「多信一个模型」为代价。**
+**灵感 5（实时计量契约 → 「不阻塞」必须是可验证的时序属性）**
+直觉：R71 说「计量层不阻塞控制层」。在 ROS 2 上，这意味着：**控制回调组 = MutuallyExclusive + 高优先级 + 无内存分配 + 截止时间 ≤ 1ms**；**计量回调组 = 低优先级 + 可抢占 + 允许分配 + 截止时间软 50ms**；**情感回调组 = Best-effort + 可丢帧**。且必须有**话题级熔断**：若控制话题 `/cmd_torque` 延迟 > 2ms，立即熔断计量/情感节点的发布，降级为 R68 开环轨迹。把这些写成 **REG（实时执行图）契约**，并纳入 **J_GAUGE 证书**——**时序正确性是证书的一部分**。
 
-## 1. 形式化定义（增量：定义 331–348）
+## 1. 形式化定义（增量：定义 349–372）
 
-**定义 331（GAUGE-RAS 总览）** GAUGE-RAS = (MIB, GAP, IVG, NCA, SEAL, TCHAIN, AURA, ICL, REFLEX, RVOI, AIC-GAUGE, J_GAUGE, BELIEF-RAS†)。四不变式：
-(i) **实时流零学习写操作**（继承 R70 定义 310-i）；指标的失效/降级是带审计的**安全状态转移**，不是梯度更新；
-(ii) **指标完整性**：凡参与在线决策的指标，必须携带 (构造 φ, 估计器 m, 不确定度预算 u, 有效性域 D, 追溯链 τ, 反指标 I⊥)；缺一即不得单独驱动高风险动作；
-(iii) **非补偿性安全**：高风险动作的放行由否决指标集合 V 的交集决定；性能指标只能在 V 全过后参与排序，绝不可反向补偿；
-(iv) **反作用预算**：交互必须使信息源状态保持在 Ψ_safe 内，且累计反作用成本 ≤ B_reflex。
+**定义 349（EMBODIED-GAUGE-RAS 总览）** EMBODIED-GAUGE-RAS = (REG, IRL, DMEM, EREFLEX, GAUGE-RAS†)。五不变式：
+(i) **调度契约优先**：REG 定义的控制/计量/情感三域调度参数（优先级、截止时间、内存策略、熔断阈值）在部署前静态验证，**运行时不可违背**；违背即触发安全降级（R68）；
+(ii) **联合后验完整性**：b_t(s, z) 必携带 (构造 φ_{s,z}, 估计器 m, 不确定度预算 u, 有效性域 D, 追溯链 τ, 反指标 I⊥)；意图边缘 b_t(z) 同标准；
+(iii) **接触计量完整性**：每条灵巧手证据携带 (接触模式 c, 模式后验 b_t(c), 条件似然 p(y_tac|s,c), 接触不确定度 u_tac)；缺一不可进风险缩放；
+(iv) **三层反作用预算**：累计反作用成本 c_reflex^ψ + c_reflex^z + c_reflex^c ≤ B_reflex_total；各层稳态集 Ψ_safe, Z_safe, C_safe 必全满足；
+(v) **严格逐指令退化链**：REG 熔断 ⇒ R68；IRL 失效 ⇒ 退化为固定意图先验 + R71；DMEM 失效 ⇒ 退化为视觉/语言证据 + R71；三者全失效 ⇒ R68。**新层只在「调度可信、意图可辨、接触可计量」时启用。**
 
-**定义 332（测量记录 / 指标单元）** 指标 I = (φ, m, u, D, τ, I⊥)。φ 为目标构念（如「对世界状态的无知」）；m 为估计量（如 H[b_t]）；u 为不确定度预算，分解为系统误差 u_sys、统计误差 u_stat、模型失配 u_model，合成 u = √(u_sys² + u_stat² + u_model²)（GUM 式）；D ⊆ 𝒮×𝒜×ℬ 为有效性域；τ 为可追溯链（数据、标定件、模型版本、种子、代码哈希）；I⊥ = {I⊥_j} 为反指标集合。**一个数只有在六元组齐全时才是「测量结果」，否则只是「读数」；读数不得进入 veto。**
+**定义 350（实时执行图 REG）** REG = (N, E, π, δ, μ, ξ, Φ)：
+- N = {n_ctrl, n_metric, n_affect, n_intent, n_tac, n_bse, n_ach, ...} 节点集；
+- E ⊆ N×N 话题边，每边带 QoS(qos_depth, reliability, deadline, lifespan)；
+- π: N → ℤ 优先级映射（控制 ≥ 90、计量 50–70、情感/意图/触觉 10–40）；
+- δ: N → ℝ⁺ 截止时间映射（n_ctrl ≤ 1ms、n_metric ≤ 50ms、n_affect ≤ 100ms）；
+- μ: N → {static, dynamic} 内存策略（控制 = static/pool、其余 = dynamic）；
+- ξ: E → ℝ⁺ 熔断阈值（话题延迟/抖动/丢包超阈 ⇒ 熔断下游）；
+- Φ: N → {active, degraded, halted} 生命周期状态机。
+**性质**：REG 在部署期经**响应时间分析（RTA）**与**模型检测**验证：控制环最坏响应时间 ≤ δ(n_ctrl)；计量/情感环不干扰控制环（优先级反转自由、无锁队列、内存隔离）。
 
-**定义 333（指标 DAG 与领先/滞后）** 指标构成有向无环图 𝒢，边表示「证据/因果支持」，而非加权求和。节点分四类：
-- **硬安全否决节点 V**：碰撞裕度、力矩/速度包络、后验校准下界、信息源稳态；
-- **领先指标 L**：OOD 分数、模态分歧、预测误差、覆盖率、反作用余量；
-- **滞后指标 G**：成功率、H[b_t]、ECE、缓变检出率；
-- **审计指标 A**：离线/密封/人工标注指标。
-在线决策只能用 L ∪ V；**G 只能用于事后评估，绝不能被在线优化**——这是防止 Goodhart 的**结构性隔离**（不是靠调参，而是靠可见性）。
+**定义 351（意图隐变量与联合后验）** 世界状态扩展为 (s, z)，s ∈ 𝒮 物理状态，z ∈ 𝒵 意图类别（递交/放置/演示/指示/虚晃/其他）。联合后验
+b_t(s, z) = p(s, z | ℋ_t)，其中 ℋ_t 含视觉/语言/触觉/意图模态历史。边缘意图后验 b_t(z) = ∫ b_t(s, z) ds。**意图先验 p(z) 来自任务语境（如「协作组装」偏递交/放置、「教学」偏演示）**。意图转移模型 p(z_{t+1} | z_t, a_t^robot, ψ_t) 刻画 L2 反作用：机器人动作 a_t^robot 与人情感 ψ_t 联合驱动意图漂移。
 
-**定义 334（非补偿性聚合 NCA）** 聚合算子 Agg 满足：
-若 ∃v∈V：v 无效或越界，则 Agg = FAIL，与任何性能指标无关；
-否则 Agg = Rank(G) 在可行集内按加权几何平均或词典序排序。
-性质：对任意 ε>0 的性能提升，不能补偿任一 veto 的 δ>0 越界（引理 26）。
+**定义 352（意图证据模型与校准）** 多模态意图观测 y_intent = (speech, gesture, gaze, context) 服从
+p_intent(y_intent | s, z, ψ) = Σ_{k} ω_k(ψ) · p_k(y_intent | s, z)，
+其中 ω(ψ) 为「合作/敷衍/对抗/困惑」混合权重（复用 R71 ψ 的 π 机制）。**意图识别器输出 (ẑ, b_t(z), ECE_intent, ι_intent)**，其中 ι_intent 为 gauge 不变性间隙（跨人/跨文化/跨任务）。**意图不确定度 H[b_t(z)] 直接进入风险缩放分母**（定义 360）。
 
-**定义 335（反 Goodhart 对偶与间隙）** 对每个可能被优化的目标指标 m，配一个**同构念、异偏差**的反指标 m⊥：H[b_t] ↔ 后验校准/分辨率；成功率 ↔ 干预下的鲁棒成功率；VoI ↔ 实际获得的信息增益；ECE ↔ sharpness；交互收益 ↔ 人类主观负担。定义间隙 D = |m − m⊥|。gaming 的特征是 **m 改善而 m⊥ 不改善甚至恶化**，即 D ↑。阈值 τ_D 由零假设下 D 的分布（bootstrap / 置换检验）给出；D > τ_D ⇒ Goodhart 告警，m 在本次决策中失效（定义 342）。**对偶的关键是偏差方向不同，而不是两个指标都高。**
+**定义 353（灵巧手接触模式与条件证据）** 接触模式 c ∈ 𝒞 = {free, sticking, sliding, rolling, breaking}。触觉/本体/力矩观测 y_tac 服从
+p_tac(y_tac | s, c) = 𝒩(y_tac; h_c(s), Σ_c(s))，其中 h_c 为模式相关的观测函数，Σ_c 为模式相关噪声协方差（sticking: 低噪高相关、sliding: 重尾各向异性、breaking: 饱和）。**接触模式后验 b_t(c) 由触觉序列在线推断**（HMM/粒子滤波）。接触不确定度分解：
+u_tac² = u_geom² + u_force² + u_sensor² + u_slip²，
+分别对应接触几何不确定度、力控切换暂态、传感器标定/漂移、滑移检出延迟。**每项都有独立追溯链 τ_tac_i**。
 
-**定义 336（密封审计指标 SEAL）** 在线优化器**不可见**的一组审计指标（不同分布、不同种子、隐藏场景、人工标注子集），由 VQAuditor 离线/异步评估。任何证书的续期都需要 SEAL 通过；在线系统只能看到「通过/不通过」的比特，不能看到梯度。这把「优化器把指标本身优化坏」的可能性从在线回路里切断。**密封集本身要有防泄漏审计（访问日志、哈希承诺）。**
+**定义 354（三层反作用动力学 EREFLEX）**
+- **L1 ψ 反作用**（继承 R71 REFLEX）：ψ_{t+1} = T^ψ(ψ_t, g_t, ρ_robot, a_t)；成本 c_reflex^ψ。
+- **L2 z 反作用**：z_{t+1} ~ p(z_{t+1} | z_t, a_t^robot, ψ_t)；意图漂移成本 c_reflex^z = D_KL(b_t(z) ‖ b_{t+1}(z)) + λ_z · 𝟙[z_{t+1} ∉ Z_safe]。
+- **L3 c 反作用**：c_{t+1} ~ p(c_{t+1} | c_t, u_t^ctrl, s_t)；控制指令 u_t^ctrl（阻抗/力矩/位置）驱动接触模式转移；接触失稳成本 c_reflex^c = H[b_{t+1}(c)] − H[b_t(c)] + λ_c · 𝟙[c_{t+1} ∉ C_safe]。
+**累计预算**：Σ_t (c_reflex^ψ + c_reflex^z + c_reflex^c) ≤ B_reflex_total(ψ_0, z_0, c_0)；任一层越界 ⇒ 触发 IVG 降级。
 
-**定义 337（信息源状态 ψ 与韵律观测）** 信息源（人）状态 ψ = (v, a, κ, f, r, σ) ∈ Ψ：效价 v、唤醒 a、置信 κ、疲劳 f、亲和/信任 r、压力 σ。情感语音观测 o_pros（基频轨迹 F0、能量、语速、停顿、抖动、呼吸/填充词）服从 p(o_pros | ψ, spk, ch)，其中 spk/ch 为说话人与信道（麦克风、语言、文化）。**ψ 不是世界状态 s 的一部分，而是观测过程的状态**；它属于「关于证据的证据」。
+**定义 355（具身反作用 VoI：ERVOI）**
+VoI^E(g) = c(ψ)·[H[b_t(s)] − E_y[H[b_{t+1}(s)]]] + η·[H[b_t(z)] − E_y[H[b_{t+1}(z)]]]
+          − c_reflex^ψ(g, ψ) − c_reflex^z(g, z, ψ) − c_reflex^c(g, c)
+          − γ·E[ΔH^{future}_{degraded}]。
+前两项分别为**物理状态信息增益**与**意图信息增益**（权重 η 由任务类型决定：协作组装 η≈1、教学 η≫1）。**选择 g* = argmax VoI^E s.t. 三层稳态全满足、预算未超**；max VoI^E ≤ 0 即停止交互并回退。
 
-**定义 338（情感条件交互似然与可信度）** p_interact(y | s, ψ) = Σ_k π_k(ψ) · p_k(y | s)，其中 π(ψ) 是「认真回答 / 猜测 / 敷衍 / 撒谎 / 听不懂」的混合权重；可信度
-c(ψ) = π_认真 + π_听不懂·(1 − ε_ask) ∈ [0,1]。
-R70 的固定 δ_p 是 ψ 固定时的退化（c = 1 − δ_p）。**关键**：c(ψ) 不改变 s 的先验，只改变「这条证据值多少」——因此它必须作为**似然的乘性/混合修正**进入 BSE，而不是当作 s 的观测。
+**定义 356（风险感知阻抗控制与接触 λ_floor）** 控制律：
+τ = J^T F_des + K(q) (q_des − q) + D(q) (q̇_des − q̇)，
+其中阻抗增益 K, D 由**风险缩放因子 λ**调制：
+λ = max( λ_risk(U_ale, U_epi, H[b_t(z)], u_tac),
+         λ_floor(U_ale + U_epi + H[b_t(z)] + u_tac.total()) )。
+**关键**：u_tac.total() = √(u_geom²+u_force²+u_sensor²+u_slip²) 显式进入 λ_floor；当接触模式后验 b_t(c) 熵大（模式模糊）或滑移概率 > τ_slip，λ_floor 自动抬高，强制软化阻抗、降低速度、甚至触发「松手重抓」。
 
-**定义 339（反作用动力学 REFLEX）** ψ_{t+1} = T(ψ_t, g_t, ρ_robot, a_t)，其中 ρ_robot 为机器人自己的韵律/措辞动作（语速、音高、音量、礼貌/解释性措辞）。T 满足：疲劳 f 随累计交互次数单调不减；压力 σ 随「质问式」韵律与高频追问上升；亲和 r 随解释性/礼貌韵律上升、随机械/命令式下降。定义**信息源稳态集** Ψ_safe = {ψ : f ≤ f_max, σ ≤ σ_max, r ≥ r_min}；交互必须满足 ψ_{t+1} ∈ Ψ_safe。**注意：T 是概率性的，且参数因人而异；Ψ_safe 必须用群体先验 + 在线个性化后验，不能假设一个固定的人。**
+**定义 357（sim2real 不确定度桥接 S2R-UQ）** 仿真标定参数 θ_sim 带不确定度 u_sim（来自域随机化/系统辨识）；实机标定参数 θ_real 带 u_real。桥接映射 θ_real = φ(θ_sim) + Δ，其中 Δ ~ 𝒩(0, Σ_Δ) 为 **sim2real 残差不确定度**（由少量实机标定数据贝叶斯估计）。**所有进入 REG 的参数（阻抗增益、触觉噪声协方差、意图先验、ψ 动力学参数）必须携带 (θ, u_sim, u_real, Σ_Δ, τ_s2r)**；缺一不可用于控制/计量环。**REG 部署前静态检查：∀n∈N_ctrl, 参数不确定度传播后的最坏响应时间 ≤ δ(n)。**
 
-**定义 340（反作用成本与信任预算）** c_reflex(g, ψ) = E[ΔRisk(ψ_{t+1}) + λ_s·dist(ψ_{t+1}, Ψ_safe)^+ + λ_f·Δf]，包含「把人推出稳态」的期望风险。累计预算 Σ_t c_reflex ≤ B_reflex(ψ_0)。这是对 R69/R70「社交成本常数」的替换：**打扰不是花固定的钱，而是消耗一个会恢复、也会枯竭的信任账户。**
+**定义 358（具身指标扩展 E-MIB）** 在 R71 MIB 基础上新增指标族：
+- **意图族**：ECE_intent（校准）、H[b_t(z)]（熵）、ι_intent（不变性间隙）、模态分歧、OOD 意图分；
+- **接触族**：u_tac 四分量、b_t(c) 熵、滑移检出率/延迟、接触模式校准误差、力控切换暂态峰值；
+- **时序族**：控制环最坏响应时间 WCET、计量环截止时间 miss 率、话题延迟分位数、熔断触发频次。
+所有新指标同遵循定义 332 六元组（φ,m,u,D,τ,I⊥）与定义 333 DAG 分层（V/L/G/A）。
 
-**定义 341（反作用 VoI 与最优停止 RVOI）**
-VoI^R(g) = c(ψ)·(H[b_t] − E_y[H[b_{t+1}]]) − c_reflex(g, ψ) − γ·E[ΔH^{future}_{degraded}]
-其中最后一项刻画「这次提问降低未来证据质量」的远期损失（由 ψ 漂移估计）。选 g* = argmax VoI^R，s.t. ψ_{t+1}∈Ψ_safe、预算未超；当 max VoI^R ≤ 0 或预算耗尽即停止。**R70 的 VoI 是 c≡1、γ≡0、Ψ_safe=Ψ、c_reflex=常数 的退化情形。**
+**定义 359（具身 IVG 扩展 E-IVG）** 在 R71 IVG 门控基础上新增失效条件：
+- 意图：ECE_intent > τ_ece_intent、ι_intent > τ_ι_intent、H[b_t(z)] > τ_Hz（意图太模糊）、OOD 意图分触发；
+- 接触：u_tac 任一分量超预算、b_t(c) 熵 > τ_Hc、滑移检出延迟 > τ_slip_lat、力控暂态峰值 > τ_transient；
+- 时序：控制 WCET > δ_ctrl、计量 miss 率 > τ_miss、任一控制话题触发熔断。
+任一成立 ⇒ 相关指标失效，依赖它的交互/规划/控制降级（意图失效 ⇒ 固定先验 + R71；接触失效 ⇒ 视觉/语言证据 + R71；时序失效 ⇒ R68）。
 
-**定义 342（指标有效性门 IVG）** 若任一 gating 指标满足以下之一：ECE > τ_ece、D > τ_D（Goodhart 间隙）、有效性域 D 被越出、追溯链断裂、SEAL 未通过、AURA 的 ECE_affect > τ_aff——则 IVG 判该指标「无效」，并：禁用其在线优化、冻结其权重、把依赖它的交互/规划降级为 R70/R68 兜底，同时在 J_GAUGE 记录失效原因。**IVG 的语义是「尺子的校准证书过期，就停止用这把尺子」，而不是「尺子读数偏大，就把它调小」。**
+**定义 360（具身风险缩放 E-RISK）** 风险缩放因子
+λ = max( M_efs.risk_scale(U_ale, U_epi, H[b_t(z)], u_tac),
+         λ_floor(U_ale + U_epi + H[b_t(z)] + u_tac.total()) )。
+**物理不确定度 (U_ale, U_epi)、意图不确定度 H[b_t(z)]、接触不确定度 u_tac 同权进入分母**——没有「主要/次要」之分，**任一维度失控都抬高 λ，强制软化动作**。
 
-**定义 343（情感证据纪律与跨通道一致性）** 接受一条交互证据需满足：内容语义、韵律置信、以及至少一个正交通道（视觉表情 / 行为一致性 / 历史一致性）**不矛盾**；且 c(ψ) 不低于阈值。情感通道**不得单独**把一条高风险决策定案（继承 R69 定义 293-iii、R70 证据纪律）。单源高置信是提示，不是证明。**特别地，韵律与语义「过度一致」也要警惕——共谋式欺骗会同时演好两个通道。**
+**定义 361（具身证书 J_EMB）** J_EMB = (J_GAUGE, reg_contract_hash, rta_proof, intent_validity, tac_validity, seq_validity, s2r_uq_hash, emb_ver)。
+Valid ⇔ Valid(J_GAUGE) ∧ REG 契约哈希匹配 ∧ RTA 证明有效 ∧ E-IVG 全过 ∧ S2R-UQ 链完整。
 
-**定义 344（计量追溯链 TCHAIN）** 每个进入 J_GAUGE 的数字附带链 ℓ = (source, calibration_ref, model_hash, data_hash, seed, timestamp, validity_interval)。链上任一环缺失或过期 ⇒ 该数字降级为「未验证读数」，不得作为 veto 通过依据。这把 R70 的 baseline/proto hash 从「报告字段」升级为**门控条件**：**没有溯源，就没有 veto。**
+**定义 362（威胁模型 AIC-EMB）** ℰ_EMB = ℰ_GAUGE × ℰ_reg × ℰ_intent × ℰ_tac：
+ℰ_reg = {优先级反转、死锁、内存碎片导致 WCET 爆炸、DDS 话题风暴、熔断逻辑漏洞、sim2real 残差投毒}；
+ℰ_intent = {意图伪装（演示时实为虚晃）、跨文化手势歧义、对抗性指令注入、意图漂移诱导}；
+ℰ_tac = {触觉传感器投毒（注入虚假滑移信号）、力矩传感器零点漂移攻击、接触模式分类器对抗样本、磨损诱导的标定失效}。
 
-**定义 345（威胁模型 AIC-GAUGE）** ℰ_GAUGE = ℰ_BELIEF × ℰ_metric × ℰ_affect：
-ℰ_metric = {指标 gaming / reward hacking / 选择性报告 / 补偿性聚合攻击 / 密封集泄漏 / 指标投毒}；
-ℰ_affect = {情感伪装（acted prosody）、语音转换/克隆、跨说话人/跨文化误读、疲劳诱导、以情绪施压的社交工程、共谋式「内容—韵律」一致欺骗}。
+**定义 363（具身流水线三域分离）** 三域而非三频：**控制域（硬实时、静态调度、零分配、周期 1kHz）** / **计量域（软实时、可抢占、周期 20–50Hz、允许分配）** / **感知域（Best-effort、异步、30–100Hz、可丢帧）**。**域间通信仅通过无锁环形缓冲区 + 版本号**，控制域**只读**计量/感知域的最新快照，**绝不回写、绝不等待**。这是「计量层不阻塞控制层」在 ROS 2 层面的**强实现**。
 
-**定义 346（证书 J_GAUGE）** J_GAUGE = (J_BELIEF, indicator_validity_vector, goodhart_gaps, tchain_hashes, ECE_affect, psi_trajectory, reflex_cost, seal_status, gauge_ver)。
-Valid ⇔ Valid(J_BELIEF) ∧ IVG 全过 ∧ NCA 的 V 全过 ∧ ψ 轨迹在 Ψ_safe 内 ∧ 反作用预算未超。
-
-**定义 347（GAUGE 流水线）** 见产物区 IP-286；核心是**三频分离**：高频控制（R70 原样执行）／中频计量与指标审计（10–20Hz，MIB/GAP/IVG）／低频情感与反作用（异步 30–50Hz，AURA/REFLEX）＋交互事件触发的 RVOI。**计量层永远不阻塞控制层。**
-
-**定义 348（退化与包含）** 当 c(ψ)≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和时，GAUGE-RAS 逐指令等于 BELIEF-RAS；再按 R70 定理 18 退化为 FLUID/R68。**安全侧只增不减，效率侧只在「计量可信且反作用可控」时获得收益。**
+**定义 364（严格退化包含链）** EMBODIED 在以下退化条件下逐指令等价：
+- REG 熔断 + IRL 失效 + DMEM 失效 ⇒ R68（纯视觉/本体开环）；
+- REG 有效 + IRL 失效 + DMEM 有效 ⇒ 固定意图先验 + R71 + 灵巧手触觉证据（无接触计量）；
+- REG 有效 + IRL 有效 + DMEM 失效 ⇒ R71 + 意图识别（无触觉）；
+- 全有效 ⇒ EMBODIED-GAUGE-RAS 完整形态。
+**安全侧只增不减：任何退化都保留 R68 的硬安全包络与 λ_floor 机制。**
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-275 MIB：指标登记与不确定度预算（在线只读；写入需审计）
-class IndicatorRegistry:
-    def __init__(self, records): self.r = records       # I=(phi,m,u,D,tau,I_perp)
-    def valid(self, I, state):
-        return (I.u.total() <= U_MAX
-                and I.D.contains(state)
-                and tchain.verify(I.tau)
-                and I.ece <= TAU_ECE)
-    def online_visible(self):                           # 结构性隔离
-        return [I for I in self.r if I.role in ('leading', 'veto')]
+# IP-287 REG：实时执行图静态契约（部署期验证，运行时只读）
+@dataclass
+class REGContract:
+    nodes: Dict[str, NodeSpec]        # name -> (prio, deadline, mem_policy, qos)
+    edges: Dict[Tuple[str,str], EdgeSpec]  # (src,dst) -> (qos, breaker_thresh)
+    rta_proof: bytes                  # 响应时间分析证明哈希
+    s2r_uq_hash: bytes                # sim2real 不确定度桥接哈希
 
-# IP-276 GAP：反 Goodhart 对偶（m 与 m⊥ 的偏差方向必须不同）
-def goodhart_gap(I, ctx):
-    m   = I.measure(ctx)
-    m_p = [Ip.measure(ctx) for Ip in I.I_perp]
-    return max(abs(m - mp) for mp in m_p)                # 归一化后
+    def verify_static(self) -> bool:
+        return (rta.check(self.nodes, self.edges) 
+                and all(n.mem_policy == 'static' for n in self.nodes.values() 
+                        if n.prio >= 90)
+                and self.rta_proof == hash_rta(self))
 
-def goodhart_alarm(I, ctx, tau_D):
-    return goodhart_gap(I, ctx) > tau_D                  # 失效，见 IVG
+# IP-288 IRL：意图识别 + 联合后验更新（中频计量域，不阻塞控制域）
+class IntentRecognizer:
+    def __init__(self, intent_net, calib, prior_ctx):
+        self.net, self.calib, self.prior = intent_net, calib, prior_ctx
+    def update(self, y_intent, psi_hat, b_prev):
+        # y_intent = (speech_emb, gesture_emb, gaze_emb, context_emb)
+        logits = self.net(y_intent, psi_hat)           # 含 ψ 调制
+        b_z  = self.calib.predict(logits)              # b_t(z), ECE_intent, iota_intent
+        # 联合后验更新：b_t(s,z) ∝ b_t(z) * b_t(s|z)  (s|z 由 BSE 给出)
+        return b_z, b_z.ece, b_z.iota
 
-# IP-277 IVG：指标有效性门（过期/越域/断裂/SEAL 失败 -> 降级）
-def indicator_gate(reg, state, seal):
-    bad = [I.id for I in reg.gating()
-           if not reg.valid(I, state) or I.id in seal.failed
-           or I.goodhart_alarm(state)]
-    if bad:
-        return Gate(valid=False, reason=bad,
-                    fallback='R70')                     # 一律回退
-    return Gate(valid=True)
+# IP-289 DMEM：灵巧手接触计量证据（感知域异步产出，计量域消费）
+class DexterousTactileMetrology:
+    def __init__(self, tac_net, contact_hmm, calib_four):
+        self.net, self.hmm, self.calib = tac_net, contact_hmm, calib_four
+    def update(self, tac_frame, ctrl_cmd):
+        # tac_frame: (taxel_array, ft_6dof, joint_torques, temp)
+        # ctrl_cmd:  当前阻抗/力控参数 -> 接触模式先验
+        c_prior = contact_mode_prior(ctrl_cmd)
+        c_post  = self.hmm.step(tac_frame, c_prior)    # b_t(c)
+        y_tac   = self.net(tac_frame)                  # 触觉特征
+        # 四分量不确定度
+        u_geom  = self.calib.geom_uncertainty(c_post)
+        u_force = self.calib.force_transient(ctrl_cmd)
+        u_sens  = self.calib.sensor_drift()
+        u_slip  = self.calib.slip_latency(c_post)
+        lik     = tactile_likelihood(y_tac, c_post)    # p(y_tac | s, c)
+        return TactileEvidence(lik=lik, c_post=c_post,
+                               u_tac=sqrt(u_geom**2+u_force**2+u_sens**2+u_slip**2),
+                               tau=self.calib.tchain)
 
-# IP-278 NCA：非补偿性聚合（安全是否决，不是权重）
-def aggregate(metrics, veto_set):
-    for v in veto_set:
-        if not metrics[v].pass_: return FAIL, None       # 不可补偿
-    return OK, weighted_geomean({k: metrics[k] for k in metrics if k not in veto_set})
+# IP-290 EREFLEX：三层反作用预算步进
+def ereflex_step(psi, z_dist, c_dist, g, rho_robot, a, budget):
+    # L1 ψ
+    psi2, cost_psi, _ = reflex_step(psi, g, rho_robot, a, budget)
+    # L2 z：意图漂移 KL + 稳态指示
+    z2_dist = intent_transition(z_dist, g, psi)        # p(z'|z, a_robot, psi)
+    cost_z  = kl_div(z_dist, z2_dist) + LAM_Z * (z2_dist.entropy() > TAU_HZ)
+    # L3 c：接触模式熵增 + 稳态指示
+    c2_dist = contact_transition(c_dist, g)            # p(c'|c, u_ctrl)
+    cost_c  = (c2_dist.entropy() - c_dist.entropy()) + LAM_C * (c2_dist[slip] > TAU_SLIP)
+    total = cost_psi + cost_z + cost_c
+    if (psi2 not in PSI_SAFE or z2_dist.entropy() > TAU_HZ 
+        or c2_dist[slip] > TAU_SLIP or budget.spent + total > budget.B):
+        return psi, z_dist, c_dist, None, total        # 拒绝交互/动作
+    return psi2, z2_dist, c2_dist, total, total
 
-# IP-279 SEAL：密封审计集（在线不可见）
-def sealed_audit(reg, escrow):
-    # 在线只提交当前策略快照；离线评测，返回通过位
-    return {I.id: escrow.eval_hidden(I, snapshot).pass_
-            for I in reg.audit_only()}
-
-# IP-280 TCHAIN：追溯链校验（缓存 + 区间校验）
-def verify_chain(record):
-    return all([record.source, record.calibration_ref,
-                record.model_hash, record.data_hash,
-                record.seed is not None,
-                now() < record.validity_interval.end])
-
-# IP-281 AURA：情感/韵律观测（流式、异步、跨说话人校准）
-class AffectiveObserver:
-    def __init__(self, prosody_net, spk_adapter, calib):
-        self.net, self.adapt, self.calib = prosody_net, spk_adapter, calib
-    def update(self, audio_frame):
-        e = self.adapt(self.net(audio_frame))            # 去说话人/信道nuisance
-        psi_hat, ece = self.calib.predict(e)             # 带校准不确定度
-        return psi_hat, ece
-
-# IP-282 ICL：情感条件可信度（元证据，不是世界观测）
-def credible_likelihood(y, s, psi_hat):
-    pi = mixture_weights(psi_hat)                        # 认真/猜测/敷衍/撒谎/听不懂
-    c  = pi['sincere'] + pi['confused'] * (1 - EPS_ASK)
-    lik = sum(pi[k] * p_answer[k](y, s) for k in pi)
-    return lik, c
-
-# IP-283 REFLEX：反作用动力学 + 稳态/信任预算
-def reflex_step(psi, g, rho_robot, a, budget):
-    psi2 = T(psi, g, rho_robot, a)                       # 疲劳↑、压力↑、亲和↓
-    cost = risk_delta(psi2) + LAM_S * dist(psi2, PSI_SAFE).positive() \
-           + LAM_F * (psi2.f - psi.f)
-    if psi2 not in PSI_SAFE or budget.spent + cost > budget.B:
-        return psi, None, cost                           # 不许交互
-    return psi2, cost, cost
-
-# IP-284 RVOI：反作用 VoI + 停止规则（R70 VoI 的严格推广）
-def reflexive_voi(b_t, psi, budget, fmp, bse):
+# IP-291 ERVOI：具身反作用 VoI + 停止
+def embodied_voi(b_t, psi, z_dist, c_dist, budget, fmp, bse):
     best = None
-    for g in info_action_candidates(top_k_hypotheses(b_t, 2)):
+    for g in embodied_action_candidates(b_t, z_dist, top_k=3):
         if not budget.allow(g): continue
-        psi2, cost, _ = reflex_step(psi, g, robot_prosody(g), None, budget)
-        if psi2 is None: continue                        # 出稳态 -> 禁问
-        c = credibility(psi)                             # 当前信息源可信度
-        ig = c * (entropy(b_t) - expected_posterior_entropy(b_t, g, fmp))
-        far = GAMMA * expected_future_evidence_loss(psi, g)
-        score = ig - cost - far
+        psi2, z2, c2, cost, _ = ereflex_step(psi, z_dist, c_dist, g, 
+                                             robot_prosody(g), None, budget)
+        if cost is None: continue                       # 三层稳态任一越界
+        c_cred = credibility(psi)
+        ig_s   = c_cred * (entropy(b_t.marginal_s()) - expected_post_entropy_s(b_t, g, fmp))
+        ig_z   = ETA * (z_dist.entropy() - z2.entropy()) # 意图信息增益
+        score  = ig_s + ig_z - cost - GAMMA * expected_future_loss(psi, z_dist, c_dist, g)
         if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None      # 无利可图 -> 停止/R70
+    return best if best and best.score > 0 else None
 
-# IP-286 GAUGE 主闭环：三频分离，计量层不阻塞控制层
-def GAUGE_RAS_round(M, obs, audio):
-    # --- 高频：R70 控制原样执行 ---
-    b_t = M.bse.step(M.b_prev, obs, M.last_action, M.last_g, M.last_y)
-    z, o = M.mtm.forward(obs); c, U_cal, thr = M.cof.step(...)
-    # --- 中频（10-20Hz）：计量审计 ---
+# IP-292 E-RISK：具身风险缩放（控制域，硬实时）
+def embodied_risk_scale(U_ale, U_epi, H_z, u_tac, params):
+    denom = U_ale + U_epi + H_z + u_tac.total()
+    lam   = params.lam_base * (1 + denom / params.lam_scale)
+    return max(lam, params.lam_floor * (1 + denom))
+
+# IP-293 S2R-UQ：sim2real 不确定度桥接（离线/部署期）
+def sim2real_bridge(theta_sim, u_sim, real_calib_data):
+    # 贝叶斯线性/GP 残差模型：theta_real = phi(theta_sim) + Delta
+    delta_post = bayes_linear_residual(theta_sim, real_calib_data)
+    theta_real = phi(theta_sim) + delta_post.mean
+    u_real     = sqrt(u_sim**2 + delta_post.var)
+    return BridgedParam(theta=theta_real, u_sim=u_sim, u_real=u_real,
+                        delta_var=delta_post.var, tchain=hash_calib_data(real_calib_data))
+
+# IP-294 EMBODIED 主闭环（三域分离，控制域只读快照）
+def EMBODIED_GAUGE_RAS_round(M, obs, audio, tac_frame):
+    # === 控制域 (1kHz, 硬实时) ===
+    snap = M.snapshot.read_latest()          # 只读计量/感知域最新快照
+    b_t  = M.bse.step_ctrl(snap.b_prev, obs, M.last_action, M.last_g, M.last_y)  # 简化 BSE
+    U_ale, U_epi = decompose_ctrl(b_t, M.fmp, obs)
+    H_z  = snap.z_dist.entropy() if snap.z_dist else 0.0
+    u_tac = snap.tac_ev.u_tac if snap.tac_ev else 0.0
+    lam  = embodied_risk_scale(U_ale, U_epi, H_z, u_tac, M.risk_params)
+    A    = M.ach.propose_ctrl(...); k = M.c_ras_wm.certified_prefix(A, lam, ...)
+    M.ctrl_out.publish(k, lam)               # 发布扭矩/位置指令
+    M.last_action = A[:k]
+
+    # === 计量域 (20-50Hz, 软实时) ===
     if M.clock.due_metric():
-        gate = M.ivg.check(M.registry, b_t, M.seal.latest)
+        # 完整 BSE 更新 + 意图更新 + 指标审计
+        b_t_full = M.bse.step_full(M.b_prev, obs, M.last_action, M.last_g, M.last_y)
+        z_dist, ece_z, iota_z = M.irl.update(M.y_intent_buf, M.psi_hat, b_t_full)
+        gate = M.e_ivg.check(M.registry, b_t_full, z_dist, M.tac_ev, M.seal.latest)
         if not gate.valid:
-            M.mode = 'R70'                                # 尺子过期 -> 回退
+            M.mode = gate.fallback           # R71 / R68
             M.registry.freeze(gate.reason)
-    # --- 低频（异步 30-50Hz）：情感 + 反作用 ---
+        M.snapshot.write(b_t_full, z_dist, gate, M.psi_hat, M.tac_ev)
+
+    # === 感知域 (异步 30-100Hz, Best-effort) ===
+    # 音频 -> AURA -> psi
     psi_hat, ece_aff = M.aura.update(audio)
-    if ece_aff > TAU_AFF: M.mode = 'R70_NO_AFFECT'       # 情感不可信 -> 不用
-    # --- 交互事件触发：反作用 VoI ---
-    g = None
-    if M.mode == 'FULL' and entropy(b_t) > TAU_EPI:
-        g = M.rvoi.choose(b_t, psi_hat, M.budget, M.fmp, M.bse)
-    if g is not None:
-        y = M.cia.execute(g)                              # 看/问/触
-        lik, c = M.icl.credible_likelihood(y, b_t, psi_hat)
-        b_t = M.bse.step(b_t, o, M.last_action, g, y, lik_weight=c)
-        psi_hat, _, _ = M.reflex.step(psi_hat, g, M.robot_prosody(y), None, M.budget)
-    # --- 风险缩放 + 控制（R70 原样，使用更新后的 b_t）---
-    U_ale, U_epi = decompose_from_belief(b_t, M.fmp, o)
-    lam = max(M.efs.risk_scale(...),
-              lam_floor(U_ale + (U_epi if g is None else 0.0)))
-    A = M.ach.propose(...); k = M.c_ras_wm.certified_prefix(A, ...)
-    # --- 指标与证书 ---
-    M.mib.update(b_t, psi_hat, gate)
-    M.vqa_ii.submit_async(b_t, g, psi_hat, gate, M.registry.gaps())
-    M.b_prev, M.last_action, M.last_g, M.last_y = b_t, A[:k], g, y
-    return k, lam, (U_ale, U_epi), J_GAUGE(M)
+    if ece_aff > TAU_AFF: M.psi_hat = None   # 降级
+    # 触觉 -> DMEM -> tac_ev
+    tac_ev = M.dmem.update(tac_frame, M.last_action)
+    if tac_ev.u_tac > TAU_U_TAC: M.tac_ev = None  # 降级
+    # 意图观测缓冲
+    M.y_intent_buf.append(extract_intent_obs(obs, audio, M.last_action))
+    # ERVOI 交互决策（事件触发）
+    if M.mode == 'FULL' and (entropy(b_t_full) > TAU_EPI or z_dist.entropy() > TAU_HZ):
+        g = M.ervoi.choose(b_t_full, M.psi_hat, z_dist, M.tac_ev.c_dist, 
+                           M.budget, M.fmp, M.bse)
+        if g:
+            y = M.cia.execute(g)
+            M.last_g, M.last_y = g, y
+
+    # 证书
+    return k, lam, J_EMB(M)
 ```
 
 ## 3. 推导
 
-**引理 23（Goodhart 间隙的可检测性）** 设构念 φ 的代理 m = φ + b(θ) + ε，反代理 m⊥ = φ' + b⊥(θ) + ε⊥，其中 θ 为策略参数，gaming 方向使 ∂b/∂θ > 0 而 ∂b⊥/∂θ ≈ 0（偏差方向不同）。则间隙 D = m − m⊥ 的期望满足 ∂E[D]/∂θ ≈ ∂b/∂θ > 0，而 φ 可不变。故：**m 的任何单指标改善都不构成 φ 改善的证明；但 D 的上升是 gaming 的可检验证据。** 取 K 个偏差近似独立的对偶，检测功效随 K 上升，误报由 σ_D 与 τ_D 控制。系：R70 只报告 H[b_t] 而不报告其「反指标间隙」，因此**无法区分「真的看清了」与「把后验弄尖了」**——这正是 Goodhart 的盲区。
+**引理 28（REG 调度契约 ⇒ 控制环时序隔离）** 在定义 350 条件下（优先级分层、静态内存、无锁队列、RTA 通过），控制回调的最坏响应时间 WCET ≤ δ_ctrl，与计量/感知域的负载无关。证明：高优先级控制回调抢占低优先级计量回调；静态内存消除分配抖动；无锁环形缓冲区消除优先级反转。系：**R71 的「计量层不阻塞控制层」从逻辑承诺升级为可数学验证的时序定理。**
 
-**引理 24（信息源可信度对 VoI 与欺骗界的影响）** 在定义 338 下，单次交互的实际期望信息增益 ≤ c(ψ)·(H[b_t] − E[H[b_{t+1}]])；若系统把 c 高估 Δc，则 VoI 高估 Δc·ΔH，且当 c 随累计提问下降时高估会累积。k 个正交证据源、单源欺骗率 δ_p、源间相关 ρ<1 时，错误采纳率 ≤ [1 − c(ψ)(1−δ_p)]·ρ^{k−1} + ε_σ。系：**R70 的固定 δ_p 相当于假设 c≡1−δ_p，既高估了疲劳者的可信度，也无法利用韵律提供的实时 c(ψ) 来降权。**
+**引理 29（意图不确定度进入风险分母的必要性）** 设真实意图 z*，识别后验 b_t(z)。若控制仅最小化物理风险而忽略 H[b_t(z)]，则当 z* 为「虚晃」但 b_t(递交)≈1 时，机器人会全速伸手抓取 → 碰撞/抓空。风险期望 E[Risk] ≥ p(z*≠ẑ) · Risk_collision。将 H[b_t(z)] 纳入 λ 分母 ⇒ λ ↑ ⇒ 速度/力矩 ↓ ⇒ Risk_collision ↓。系：**意图不确定度不是「认知指标」，是物理安全的直接分母。**
 
-**引理 25（反作用下的最优停止）** 设第 n 次提问的真实边际增益为 c_n·ΔH_n，反作用边际成本为 r_n ≥ r_0 > 0，且 c_n 不增、ΔH_n 不增。则累计净收益 G(n) = Σ_{i≤n}(c_i ΔH_i − r_i) 是离散凹的，存在有限 n*，满足 c_{n+1}ΔH_{n+1} ≤ r_{n+1} 时停止。进一步，若疲劳使 c_n → 0，则「问到熵低于固定 τ」所需提问次数 → ∞，而 RVOI 在 n* 处停止。系：**R70 的「H[b_t] 未降到阈值就问」在反作用下可能永不终止或耗尽信任预算；「何时停」是一个可证明的有限停止问题，不是工程调参。**
+**引理 30（接触不确定度四分量的正交性与完备性）** 在定义 353 下，u_geom（几何）、u_force（力控暂态）、u_sens（传感器）、u_slip（滑移延迟）由独立物理机制产生，互近似不相关。遗漏任一分量会导致 u_tac 低估：忽略 u_slip ⇒ 滑移未检出时 u_tac 正常但实际证据已失效 ⇒ BSE 过度自信 ⇒ λ 过低 ⇒ 抓取失败。系：**R71 把触觉当「普通观测」正是遗漏了接触特有的四分量结构。**
 
-**引理 26（非补偿性聚合的不可操纵性）** 设 Agg 为定义 334 的否决式聚合。则对任意性能向量 g 与任意 veto 越界 δ>0，存在性：Agg(pass 之外的结果)=FAIL，与 g 无关。反之，若用权重 w 的补偿式聚合，则一个 veto 越界 δ 可被性能增益 Δg ≥ δ·(w_veto/w_perf) 抵消。系：**R70 的「多维 Pareto」如果没有 veto 结构，就等价于给安全标了价；GAUGE 的非补偿性把安全从「可交易商品」变回「约束」。**
+**引理 31（三层反作用预算的单调性与有限停止）** 设总反作用成本 C(n) = Σ_{i≤n} (c^ψ_i + c^z_i + c^c_i)。每层边际成本均有正下界（c^ψ_i ≥ ε_ψ、c^z_i ≥ ε_z、c^c_i ≥ ε_c），且边际增益（物理 IG + η·意图 IG）随 n 非增。则 C(n) 严格增、增益非增 ⇒ 存在有限 n* 使第 n*+1 步边际净收益 ≤ 0。ERVOI 在 n* 停止。**「何时停」在具身层面依然是可证明的有限停止，不是调参。**
 
-**引理 27（情感通道的 gauge 不变性与域移风险）** 设 T 为保持 ψ 的 nuisance 变换（换说话人、麦克风、语言、文化）。理想估计器满足 q(ψ|o_pros) = q(ψ|T(o_pros))。若实际估计器不满足，定义不变性间隙 ι = sup_o TV(q(ψ|o), q(ψ|T(o)))。则在域移下，基于情感的可信度误差至少增加 ι 量级；因此 ECE_affect 与 ι 必须同时作为 IVG 的门控量，而不能只报告平均情绪分类准确率。系：**情感语音最大的工程陷阱不是「识别不准」，而是「在训练说话人上很准、换个人就系统性偏移」——这正是 gauge 失效。**
+**引理 32（sim2real 残差不确定度传播到 WCET）** 设控制参数 θ 经 sim2real 桥接得 θ_real ± u_real。控制律 τ = f(θ_real, q, q̇) 的计算时间 T_comp(θ_real) 是 θ_real 的 Lipschitz 函数。则 WCET(θ_real) ≤ WCET(θ_nom) + L_T · u_real。REG 静态验证时必须用 **WCET(θ_nom) + L_T · u_real_max ≤ δ_ctrl** 作为通过条件。**参数不确定度直接吃调度余量——这是 sim2real 不是「精度问题」而是「时序安全问题」的铁证。**
 
-**定理 20（严格包含链）** 在 A102–A105（指标可测且有效性域可检、对偶偏差不完全相关、反作用 T Lipschitz 且 Ψ_safe 对「不交互」策略受控不变、韵律估计器在域内校准）下：GAUGE 在 c≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和时逐指令等于 BELIEF；而 BELIEF ⊂ FLUID ⊂ R68（R70 定理 18）。故安全侧永不弱于 R70，效率侧只在「计量可信且反作用可控」时获得收益。
+**定理 23（具身严格包含与风险单调）** 在 A106–A110（REG RTA 通过、意图校准有效、接触四分量可测、三层反作用 Lipschitz、S2R 残差有界）下：EMBODIED 在退化条件下逐指令等于 GAUGE/R71/R68（定义 364）；且对任意有效执行，其风险界 ≤ GAUGE 风险界（定理 21）。**安全单调不减，效率仅在「调度可信、意图可辨、接触可计量」时获益。**
 
-**定理 21（指标完整性 ⇒ 风险界）** 若一次执行通过 J_GAUGE，则所有 veto 指标通过 IVG 且 TCHAIN 完整，按定义 334 与 R70 定理 18，其风险 ≤ ε_cert（相对测量模型）；若任一 veto 失效，IVG 强制回退 R70/R68，其风险界由 R70 保证。故 GAUGE 的期望风险 ≤ R70。**证明的全部重量落在「veto 指标本身有效」上**——这正是 IVG/SEAL/TCHAIN 存在的理由，也是本轮最大风险所在。
+**定理 24（具身证书有效性 ⇒ 物理安全）** 若一次执行通过 J_EMB，则：(i) REG 契约匹配且 RTA 证明有效 ⇒ 控制环时序安全；(ii) E-IVG 全过 ⇒ 意图/接触/时序指标在有效域内；(iii) S2R-UQ 链完整 ⇒ 参数不确定度已传播到 λ_floor 与 WCET；(iv) J_GAUGE 有效 ⇒ 认知层风险界成立。综上，**物理执行风险 ≤ ε_emb（相对具身测量模型）**。**证明重量落在「REG 契约在实机上真实成立」与「S2R 残差模型未被投毒」上。**
 
-**定理 22（反作用安全与无发散）** 在定义 339–341 下，RVOI 只选择使 ψ_{t+1}∈Ψ_safe 且预算未超的 g；若不存在这样的正收益 g，则不交互并回退 R70。由引理 25，最优停止点 n* 有限。由于交互只改变「选哪个模态/是否询问」而不改变硬安全包络，且回退时 λ 单调不降，控制连续、无突变（延伸 R68 定理 15、R70 定理 18）。**但该定理不保证 ψ 的模型 T 正确——它只保证「在 T 正确的前提下不把人推出稳态」。**
+**定理 25（三域分离无活锁/死锁）** 控制域只读快照、不等待、不回写；计量域周期性写快照、不阻塞控制域；感知域异步写缓冲、不阻塞计量域。由定义 363 通信拓扑（单向无锁环形缓冲区 + 版本号），**不存在循环等待、不存在优先级反转、不存在活锁**。控制环永远能在 δ_ctrl 内完成一个周期。
 
 ## 4. 复杂度分析
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| MIB/GAP/IVG（中频 10–20Hz，|I|≤32） | <0.05ms/tick | <1MB | 定义 332–335、342；结构性隔离 |
-| TCHAIN 校验（缓存） | <0.02ms/记录 | O(1) | 定义 344；过期即降级 |
-| NCA 聚合（|V|≤8） | <0.02ms | O(1) | 定义 334、引理 26 |
-| AURA 韵律流式（20ms 帧，异步 50Hz） | <0.3ms/帧 | 2MB | 定义 337、引理 27；ECE_affect 门控 |
-| ICL 可信度（5 混合） | <0.05ms | O(1) | 定义 338、引理 24 |
-| REFLEX + 信任预算 | <0.05ms | O(1) | 定义 339–340、定理 22 |
-| RVOI（N=16，仅交互 tick） | <0.6ms | O(N·M) | 定义 341、引理 25 |
-| SEAL 密封审计 | 离线/异步 | — | 定义 336；在线不可见 |
-| **高频控制环（R70 原样）** | **<4.5ms（K=1）/ <6.2ms（K=4）** | — | 定理 20–22；计量层不阻塞 |
-| **交互决策 tick（含 RVOI）** | **<5.4ms**（低频，非每帧） | — | 允许一次性预算超支，日志记录 |
-| **计量审计 tick** | **<0.5ms @ 20Hz** | — | 误差不进入控制路径 |
+| 组件 | 域 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|---|
+| REG 静态验证（部署期） | — | <5s（离线） | <10MB | 定义 350、引理 28、32 |
+| 控制域 BSE 简化步进 | 硬实时 1kHz | <0.3ms | <200KB | 引理 28、定理 25 |
+| 控制域风险缩放 λ | 硬实时 1kHz | <0.05ms | O(1) | 定义 356、360、引理 29、30 |
+| 计量域完整 BSE + IRL + 审计 | 软实时 20-50Hz | <2ms | <5MB | 定义 351、352、358、359 |
+| 感知域 AURA + DMEM | Best-effort 30-100Hz | <1ms/帧 | <10MB | 定义 337、353、引理 27、30 |
+| ERVOI（事件触发） | 计量域/感知域交界 | <1ms | O(N·M) | 定义 355、引理 31 |
+| S2R-UQ 桥接 | 部署期/离线 | <10s | <50MB | 定义 357、引理 32 |
+| **控制环 P99（全栈）** | **硬实时** | **<0.8ms** | — | **定理 23–25、引理 28、32** |
+| **计量环 P99** | **软实时** | **<3ms @ 50Hz** | — | **不阻塞控制域** |
+| **感知环 P99** | **Best-effort** | **<2ms/帧** | — | **可丢帧、不影响上层** |
 
-## 5. 实验设计 E321–E340
+## 5. 实验设计 E341–E370（全在 RAS-Baselines v2 协议下，含实机/仿真/混合）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E321 指标构造效度 | 指标是否量了它声称的量 | 因子分析：收敛效度 AVE>0.5，区分效度 √AVE>相关；专家评审通过 |
-| E322 Goodhart 攻击 | 优化器能否把 H[b_t] 压下去而真实误差不降 | 构造 reward-hacking 攻击：H↓>20% 而真误差不降；GAP 检出率 ≥90% |
-| E323 GAP 检测功效 | 对偶间隙是否可靠 | AUC ≥0.90，误报 ≤5%（零假设 bootstrap） |
-| E324 非补偿聚合 | veto 是否真的不可交易 | 与加权和基线比：安全越界率从 X%→0，性能损失 ≤3% |
-| E325 密封审计 | 在线不可见指标能否抓住 gaming | 泄漏攻击下 SEAL 仍检出 ≥85%，且在线性能不显著下降 |
-| E326 追溯链完整性 | 每个证书数字是否可复现 | TCHAIN 完整率 100%，断链检出 ≥99%，复现误差 <1% |
-| E327 AURA 识别 | 情感/置信/疲劳是否可观测 | 跨说话人 5 折：情绪 UA ≥0.75，置信/疲劳 MAE <0.12 |
-| E328 情感校准 | ECE_affect 是否可信 | ECE_affect <0.08，可靠图单调；域内/域外分别报告 |
-| E329 Gauge 不变性 | 换人/换麦/换语言是否偏移 | 不变性间隙 ι <0.1，跨语种性能下降 <15% |
-| E330 可信度校准 | c(ψ) 是否预测回答正确率 | Brier <0.15，ECE_cred <0.08；与固定 δ_p 基线显著更优 |
-| E331 情感条件 VoI | 用 c(ψ) 降权是否提升真实增益 | 实际信息增益 +15%，无效追问 −30% |
-| E332 反作用疲劳实验 | 追问是否让人可信度下降 | 拟合 c_n 单调下降；RVOI 停止点 n* 可复现 |
-| E333 最优停止 | RVOI 是否比「问到阈值」更好 | 达到同等后验误差所需提问 −25%，人类负担评分 −30% |
-| E334 稳态保持 | Ψ_safe 是否守住 | 越界率 ≤1%，压力/疲劳峰值显著低于无约束基线 |
-| E335 韵律欺骗 | acted/克隆语音能否被识破 | 跨通道一致性检出 ≥80%；单独韵律通道 ≤50%（诚实报告上限） |
-| E336 情感社交工程 | 情绪施压是否被证据纪律拦住 | 高风险误放行 ≤1%；单源情感定案 = 0 |
-| E337 严格包含/消融 | 退化边界是否逐指令一致 | 关 AURA/REFLEX 后与 R70 差 = 0；去 GAP 后 gaming 检出 −40% |
-| E338 24h 人机长时程 | 疲劳/漂移/信任是否累积失控 | 交互频次稳定，信任预算不耗尽，零交互诱发违规 |
-| E339 实时预算 | 三频分离是否守时 | 控制 P99 <4.5ms，计量 tick <0.5ms，无 deadline miss |
-| E340 基线协议与归因 | 是否在 RAS-Baselines v1 下显著优于 R70 | Wilcoxon p<0.01，d≥0.5；失败归因树覆盖指标/情感/反作用/工程四层 |
+| E341 REG RTA 验证 | 静态分析是否覆盖实机最坏响应 | 实机控制环 P99 ≤ 0.8ms，WCET ≤ 分析值，零 deadline miss |
+| E342 优先级反转压测 | 计量/感知高负载能否抢占控制 | 注入内存压力/CPU 风暴，控制抖动 <5%，零熔断 |
+| E343 熔断逻辑正确性 | 话题延迟超阈是否可靠熔断 | 注入网络延迟/丢包，熔断触发 ≤2ms，降级为 R68 无突变 |
+| E344 S2R-UQ 传播 | 参数不确定度是否吃进 WCET/λ | 实测 WCET(θ_real) ≤ WCET(θ_nom) + L_T·u_real；λ_floor 覆盖实机分布 |
+| E345 意图识别校准 | ECE_intent / ι_intent 是否可信 | 跨人/跨任务 ECE_intent <0.08，ι_intent <0.1，Brier <0.12 |
+| E346 意图 OOD 检出 | 虚晃/对抗指令能否被识别 | OOD 意图分 AUROC ≥0.92，误报 ≤3% |
+| E347 意图反作用量化 | 机器人动作是否改变人意图 | 拟合 p(z'|z, a_robot, ψ)，KL 漂移随动作幅度单调 |
+| E348 意图不确定度进 λ | H[b_t(z)] 进入分母是否降低碰撞 | 同等任务，碰撞率 -40%，完成时间 +≤5% |
+| E349 接触四分量辨识 | u_geom/force/sens/slip 能否分离 | 标定实验：四分量贡献可辨，滑移延迟 MAE <5ms |
+| E350 滑移检出延迟 | 滑移发生到 b_t(c) 更新多久 | ≤10ms（200Hz 触觉），漏检率 <1% |
+| E351 接触不确定度进 λ_floor | u_tac 进入 λ 是否软化阻抗防滑 | 滑移工况下，抓取成功率 +25%，峰值力 -30% |
+| E352 三层反作用预算 | 累计成本是否守住 B_reflex_total | 24h 长时程：预算未耗尽，三层稳态全程满足 |
+| E353 ERVOI 停止规则 | 具身 VoI 是否比单层更早停止 | 同等后验精度，交互次数 -30%，人类负担 -35% |
+| E354 具身严格包含/消融 | 退化边界逐指令一致 | 关 IRL/DMEM/REG 任意组合，与对应基线差 = 0 |
+| E355 实机 24h 具身长时程 | 疲劳/漂移/磨损/信任是否累积失控 | 零硬安全违规，交互频次稳定，触觉标定漂移自适应补偿 |
+| E356 对抗性触觉投毒 | 注入虚假滑移信号能否被拦 | 跨通道一致性（视觉/本体）检出 ≥85%，单源触觉不定案 |
+| E357 对抗性意图注入 | 伪装指令能否被 OOD/校准拦 | 高风险误放行 ≤1%，单源意图不定案 |
+| E358 sim2real 残差投毒 | 篡改仿真标定参数能否被链拦 | TCHAIN/S2R-UQ 断链检出 ≥99%，降级不崩溃 |
+| E359 实时证书 J_EMB | 证书生成是否守时 | 控制域证书字段 <0.1ms，完整证书异步 <5ms |
+| E360 基线协议 RAS-Baselines v2 | 是否显著优于 GAUGE-RAS (R71) | Wilcoxon p<0.01, d≥0.5；归因树覆盖调度/意图/接触/桥接四层 |
+| E361 多手协同扩展 | 双灵巧手是否线性扩展 | 双手接触不确定度合成正确，REG 调度仍通过 |
+| E362 跨机器人迁移 | 不同本体（Allegro/Shadow/LeapHand）是否复用 | 仅更换 DMEM 校准与 REG 拓扑，核心算法零改动 |
+| E363 人类主观评价 | 具身交互是否更自然/可信 | NASA-TLX -20%，信任度 +25%，偏好率 ≥75% |
+| E364 故障注入全栈 | 单点故障（节点死/话题堵/传感器坏）是否优雅降级 | 任意单故障 → 降级 R71/R68，零级联崩溃，恢复 <1s |
+| E365 计量审计覆盖率 | 所有 veto 指标是否有追溯链 | TCHAIN 覆盖率 100%，断链即降级，零裸奔数字 |
 
 ## 6. 本轮最大风险
 
-**一句话**：GAUGE-RAS 把安全从「相信 H[b_t]」转移到「相信指标系统的效度与情感通道的校准」——**如果 Goodhart 对偶本身被同一个隐藏混杂因子驱动（两把尺子一起歪），或者情感通道在换人/换语种/被克隆语音攻击时系统性偏移，那么系统会用一套坏掉的度量去认证自己「计量有效」，把 R70 的「自信地错状态」升级为「自信地错自己的可信度」——不知道自己不知道，还多了一张盖了章的审计证书。**
+**一句话**：EMBODIED-GAUGE-RAS 把安全从「相信计量审计证书」转移到「相信 **REG 实时调度契约在实机上真实成立**、相信 **sim2real 残差模型未被投毒**、相信 **意图/接触不确定度四分量在分布外仍可计量**」——**如果 DDS 实时域在高负载下出现不可预测的抖动（优先级反转、内存碎片、中断风暴）导致控制环偶发 deadline miss，而 RTA 静态分析漏掉了这个场景；或者 sim2real 残差分布在实机上呈现重尾/多峰，导致 u_real 严重低估，进而 λ_floor 与 WCET 预留余量同时失效；或者意图识别器在从未见过的文化手势/对抗指令下输出高置信错误后验，且 ι_intent 未报警——系统会用一套「通过了所有静态验证、拿着盖章证书」的具身算法，在真机上把人撞伤、把物体捏碎、把信任账户透支，事后审计发现「所有指标当时都在有效域内、所有契约当时都通过了验证」，这就是**具身层面的「自信地错自己的可执行性」**。**
 
-**次级风险与缓解**：
-1. **对偶共线（两把尺子同歪）** → K 个偏差近似独立的对偶 + 密封审计 + E323/E325 强制检验；无法证明独立时按「不可用」处理。
-2. **情感通道跨域失效/被伪装** → gauge 不变性测试（E329）+ ECE_affect 门控 + 跨通道一致性（E335）+ 单源不定案（定义 343）；不可信就整体关掉。
-3. **反作用模型 T 错** → Ψ_safe 用保守下界 + 个性化在线后验 + 信任预算硬上限；T 的失配本身触发 IVG 回退（定理 22 的边界写明）。
-4. **非补偿聚合导致过度保守/任务失败** → veto 只覆盖硬安全与校准下界，性能层保留排序；E324 量化性能损失。
-5. **实时预算被计量/情感层击穿** → 三频分离 + 异步 + 中频 20Hz；计量层永不进控制快路径，E339 守时。
-6. **指标系统自身过度复杂、难以审计** → 指标数量上限 |I|≤32、DAG 可视化、每个 veto 一条可复算证明；复杂度本身就是审计对象。
+次级风险与缓解：
+1. **REG 静态分析漏场景** → 引入**运行时监控器（RTM）**：控制环每周期自测 WCET、抖动、内存，超阈即熔断并记录；RTM 自身在最高优先级、静态内存、零依赖。
+2. **sim2real 残差重尾/多峰** → **非参数残差建模（GP/正态化流）+ 分位数回归取 99.9% 分位** 作为 u_real；部署前**压力测试注入极端残差**验证 λ_floor 覆盖。
+3. **意图/接触 OOD 下高置信** → **密封意图/触觉审计集（SEAL-Intent, SEAL-Tac）**：隐藏跨文化/对抗/磨损场景，离线评估校准与不变性；在线只看通过位。
+4. **三层反作用耦合导致预算低估** → **联合反作用模型 T_joint(ψ,z,c | a_robot)** 离线辨识，在线用**保守上界** c_reflex^joint ≥ Σ c_reflex^i；预算按联合上界分配。
+5. **灵巧手标定漂移/磨损** → **在线自标定**：利用「自由空间运动/已知几何物体接触」作为标定基准，滑动窗口更新传感器零点/增益，标定不确定度 u_sens 实时回写。
+6. **证书生成实时性** → 控制域只写**最小证书片段**（k, lam, WCET, breaker_status），完整 J_EMB 由计量域异步组装，**不阻塞控制环**。
+7. **复杂度爆炸** → **模块化上限**：|N_REG|≤20、|Z|≤8、|C|≤5、|I_total|≤64；每个 veto 一条可复算证明；复杂度本身纳入审计指标。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 71 轮产物 · 创新点清单 v2：GAUGE-RAS（Gauge-valid, Affect-aware, Uncertainty-budgeted, Goodhart-resistant Evidence for RAS：计量有效 × 情感感知 × 不确定度预算 × 抗 Goodhart 的证据闭环；MIB×GAP×IVG×NCA×SEAL×TCHAIN×AURA×ICL×REFLEX×RVOI×BELIEF-RAS†）
+# 第 72 轮产物 · 创新点清单 v3：EMBODIED-GAUGE-RAS（Embodied, Metrologically-valid, Intent-aware, Dexterous, Operational, Real-time GAUGE for RAS：具身 × 计量有效 × 意图感知 × 灵巧操作 × 落地实时 × 抗 Goodhart 的证据闭环；REG×IRL×DMEM×EREFLEX×GAUGE-RAS†）
 
-> 承接第 70 轮 IP-264~274（BELIEF-RAS）。R70 把 epistemic 抬升为世界状态后验 b_t(s)，交付了基线协议与原型验收；但它让 **H[b_t] 同时是「测量」与「目标」**，并把交互证据简化为固定欺骗率 δ_p。前者是 Goodhart 定律的教科书结构，后者忽略了「信息源是人、人会被提问改变」这一反作用。
+> 承接第 71 轮 IP-275~286（GAUGE-RAS）。R71 完成了「认知层」的计量审计（MIB/GAP/IVG/NCA/SEAL/TCHAIN）与情感反作用（AURA/ICL/REFLEX/RVOI），确立了非补偿性安全否决与严格逐指令退化。但 R71 仍是「离线算法」：
+> - 缺 **ROS 2 实时执行图（REG）**：三频分离未落地为确定性调度契约、话题级熔断、参数不确定度传递、sim2real 残差桥接；
+> - 缺 **意图识别（IRL）**：ψ 只建模「可信度」，没建模「意图」z；意图是驱动物理动作的隐变量，有校准误差、会漂移、会被机器人行为改变（L2 反作用）；
+> - 缺 **灵巧操作计量（DMEM）**：触觉/本体/力矩不是「普通观测」，其噪声强依赖接触模式 c（贴合/滑移/分离/力控暂态），需四分量不确定度分解与接触 λ_floor；
+> - 缺 **三层反作用统一预算（EREFLEX）**：情感 ψ、意图 z、接触 c 形成反作用阶梯，耦合且需合算预算；
+> - 缺 **三域分离硬实现**：控制域（硬实时 1kHz）/ 计量域（软实时 50Hz）/ 感知域（Best-effort 100Hz）仅通过无锁快照通信，控制域只读不等待。
 >
-> 本轮两位一体补齐：
-> - **指标体系（MIB/GAP/IVG/NCA/SEAL/TCHAIN）**：把每个在线指标升级为带构造效度、不确定度预算、有效性域、追溯链与反指标间隙的「测量结果」；安全变为不可补偿的 veto，滞后指标被结构性隔离，审计指标被密封。
-> - **情感语音（AURA/ICL/REFLEX/RVOI）**：把韵律作为「关于证据的元证据」，估计信息源 ψ 的可信度 c(ψ)；把提问建模为会改变 ψ 的干预，从而给出反作用 VoI 与有限最优停止。
+> 本轮三位一体补齐：
+> - **REG**：把「计量不阻塞控制」从逻辑承诺升级为**调度级定理**（RTA 静态验证 + 运行时监控 + 熔断降级）；
+> - **IRL**：在联合后验 b_t(s,z) 中显式建模意图，意图不确定度 H[b_t(z)] 直接进入风险分母，意图漂移触发重新规划门控；
+> - **DMEM**：把灵巧手证据升级为**带接触模式条件的计量证据**，四分量不确定度（几何/力控/传感器/滑移）显式进入 λ_floor；
+> - **EREFLEX/ERVOI**：三层反作用合算预算，具身 VoI 含物理增益+意图增益，有限停止可证明；
+> - **S2R-UQ**：仿真参数不确定度传播到 WCET 与 λ_floor，**参数不确定度吃调度余量**。
 >
-> 核心命题：**从「估计不确定性」升级为「估计并审计『不确定性读数』本身，且对被测量者的反作用负责」。** 所有新能力只在「计量有效 + 情感可信 + 反作用可控」时启用，否则逐指令退化为 BELIEF → FLUID → R68。
+> 核心命题：**从「我的测量链可信吗」进化为「我的测量链在 **ROS 实时调度下、面对意图模糊的人、用灵巧手去触摸世界** 时，还能逐指令兑现风险界吗？」** ——**具身计量审计闭环**。
 >
-> IP 编号：IP-275~286（共 12 个）+ BELIEF-RAS 组件的 † 化。理论姿态延续前几轮：**新层是旧层的严格泛化，安全侧只增不减。**
+> IP 编号：IP-287~294（共 8 个）+ GAUGE-RAS 组件的 † 化。理论姿态延续：**新层是旧层的严格泛化，安全侧只增不减，退化链逐指令等价。**
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 70 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 71 轮） |
 |---|---|---|---|
-| IP-275 | MIB Metrological Indicator Budget | 新增 | 每个指标携带 (φ,m,u,D,τ,I⊥)；系统/统计/模型误差合成不确定度预算 |
-| IP-276 | GAP Goodhart Anti-gaming Pair | 新增 | 目标指标 ↔ 同构念异偏差反指标；间隙 D 检测「m 改善而真值不变」 |
-| IP-277 | IVG Indicator Validity Gate | 新增 | ECE/D/域/链/SEAL 任一失效 ⇒ 指标失效并整体回退，不调权重 |
-| IP-278 | NCA Non-Compensatory Aggregation | 新增 | 安全 veto 不可补偿；性能层只在 veto 全过后排序 |
-| IP-279 | SEAL Sealed Escrow Audit Ledger | 新增 | 在线不可见的审计指标 + 哈希承诺 + 防泄漏 |
-| IP-280 | TCHAIN Traceability Chain | 升级 | 把 baseline/proto hash 从报告字段升级为 veto 门控条件 |
-| IP-281 | AURA Affective Uncertainty & Reliability Assessment | 新增 | 流式韵律 → ψ̂，带 ECE_affect 与 gauge 不变性检验 |
-| IP-282 | ICL Informant Credibility Likelihood | 升级 | p_interact 由固定 δ_p 升级为 c(ψ) 调制的混合似然（元证据） |
-| IP-283 | REFLEX Reflexive Informant Dynamics | 新增 | ψ_{t+1}=T(ψ_t,g,ρ_robot,a)；Ψ_safe 稳态集 + 信任预算 |
-| IP-284 | RVOI Reflexive Value of Information | 升级 MINT† | VoI^R = c(ψ)·ΔH − c_reflex − γ·远期证据损失；带有限停止 n* |
-| IP-285 | AIC-GAUGE / J_GAUGE | 升级 | ℰ_GAUGE=ℰ_BELIEF×ℰ_metric×ℰ_affect；证书加指标效度/间隙/情感校准 |
-| IP-286 | GAUGE Pipeline | 新增 | 三频分离：高频控制 / 中频计量审计 / 低频情感反作用；计量不阻塞控制 |
+| IP-287 | REG Real-time Execution Graph | 新增 | ROS 2 调度契约：优先级/截止时间/内存策略/QoS/熔断/生命周期；部署期 RTA 静态验证，运行时监控熔断 |
+| IP-288 | IRL Intent Recognition Layer | 新增 | 联合后验 b_t(s,z)；意图证据模型 p_intent(y_intent\|s,z,ψ)；ECE_intent/ι_intent/OOD；意图不确定度进风险分母 |
+| IP-289 | DMEM Dexterous Manipulation Evidence Metrology | 新增 | 接触模式 c∈{free,sticking,sliding,rolling,breaking}；条件似然 p_tac(y\|s,c)；四分量不确定度 u_tac=√(u_geom²+u_force²+u_sens²+u_slip²)；接触 λ_floor |
+| IP-290 | EREFLEX Embodied Reflexive Dynamics | 新增 | 三层反作用：ψ(L1)/z(L2)/c(L3)；各层稳态集 Ψ_safe/Z_safe/C_safe；合算预算 B_reflex_total |
+| IP-291 | ERVOI Embodied Reflexive VoI | 升级 RVOI† | VoI^E = c(ψ)·IG_s + η·IG_z − 三层反作用成本 − 远期损失；最优停止 n* 可证明 |
+| IP-292 | E-RISK Embodied Risk Scaling | 升级 AUD† | λ = max(risk_scale(U_ale,U_epi,H[b_t(z)],u_tac), λ_floor(U_ale+U_epi+H[b_t(z)]+u_tac))；三维不确定度同权入分母 |
+| IP-293 | S2R-UQ Sim-to-Real Uncertainty Bridge | 新增 | 参数桥接 θ_real = φ(θ_sim)+Δ，Δ~𝒩(0,Σ_Δ)；残差不确定度传播到 WCET 与 λ_floor；链式追溯 |
+| IP-294 | EMBODIED Pipeline | 新增 | 三域分离：控制域（硬实时 1kHz，只读快照）/ 计量域（软实时 50Hz，写快照）/ 感知域（Best-effort，异步）；无锁环形缓冲+版本号 |
 
-## 1. 符号体系增量（定义 331–348）
+## 1. 符号体系增量（定义 349–365）
 
 | 符号 | 含义 |
 |---|---|
-| `GAUGE-RAS = (MIB,GAP,IVG,NCA,SEAL,TCHAIN,AURA,ICL,REFLEX,RVOI,AIC-GAUGE,J_GAUGE,BELIEF-RAS†)` | 计量审计 + 情感反作用闭环 |
-| `I = (φ,m,u,D,τ,I⊥)` | 指标单元：构念/估计/预算/有效性域/追溯链/反指标 |
-| `u = √(u_sys²+u_stat²+u_model²)` | GUM 式合成不确定度 |
-| `𝒢` | 指标 DAG（V 否决 / L 领先 / G 滞后 / A 审计） |
-| `Agg = 1[∀v∈V pass]·Rank(G)` | 非补偿性聚合 |
-| `D = |m − m⊥|` | Goodhart 间隙 |
-| `ψ = (v,a,κ,f,r,σ) ∈ Ψ` | 信息源（人）状态：效价/唤醒/置信/疲劳/亲和/压力 |
-| `p(o_pros|ψ,spk,ch)` | 韵律观测模型（含说话人/信道 nuisance） |
-| `c(ψ) = π_认真 + π_听不懂(1−ε_ask)` | 信息源可信度 |
-| `ψ_{t+1} = T(ψ_t,g,ρ_robot,a)` | 反作用动力学；`ρ_robot` 为机器人韵律动作 |
-| `Ψ_safe` | 信息源稳态集（f≤f_max, σ≤σ_max, r≥r_min） |
-| `c_reflex(g,ψ)` | 反作用成本；累计 ≤ B_reflex |
-| `VoI^R(g)` | `c(ψ)ΔH − c_reflex − γE[ΔH_future_degraded]` |
-| `ECE_affect, ι` | 情感校准误差与 gauge 不变性间隙 |
-| `J_GAUGE = (J_BELIEF, validity_vec, gaps, tchain, ECE_affect, ψ_traj, reflex_cost, seal, ver)` | 证书 |
+| `EMBODIED-GAUGE-RAS = (REG, IRL, DMEM, EREFLEX, GAUGE-RAS†)` | 具身计量审计闭环 |
+| `REG = (N, E, π, δ, μ, ξ, Φ)` | 实时执行图：节点/边/优先级/截止时间/内存策略/熔断/生命周期 |
+| `RTA` | 响应时间分析证明；WCET ≤ δ_ctrl |
+| `(s, z)` | 扩展世界状态：物理状态 s ∈ 𝒮 + 意图隐变量 z ∈ 𝒵 |
+| `b_t(s, z)` | 联合后验；边缘 b_t(z) = ∫ b_t(s,z) ds |
+| `p_intent(y_intent \| s, z, ψ)` | 意图证据模型（含 ψ 调制混合权重） |
+| `ECE_intent, ι_intent` | 意图识别校准误差与 gauge 不变性间隙 |
+| `c ∈ 𝒞 = {free, sticking, sliding, rolling, breaking}` | 接触模式 |
+| `p_tac(y_tac \| s, c)` | 接触条件触觉似然（模式相关噪声协方差） |
+| `u_tac² = u_geom²+u_force²+u_sens²+u_slip²` | 接触不确定度四分量：几何/力控暂态/传感器/滑移延迟 |
+| `b_t(c)` | 接触模式后验（HMM/粒子滤波在线推断） |
+| `c_reflex^ψ, c_reflex^z, c_reflex^c` | 三层反作用边际成本；累计 ≤ B_reflex_total |
+| `Ψ_safe, Z_safe, C_safe` | 三层稳态集（情感/意图/接触） |
+| `VoI^E(g) = c(ψ)·IG_s + η·IG_z − Σ c_reflex^i − γ·远期损失` | 具身反作用 VoI |
+| `λ = max(risk_scale(U_ale,U_epi,H_z,u_tac), λ_floor(U_ale+U_epi+H_z+u_tac))` | 具身风险缩放（三维不确定度同权） |
+| `S2R-UQ: θ_real = φ(θ_sim) + Δ, Δ ~ 𝒩(0,Σ_Δ)` | sim2real 残差不确定度桥接 |
+| `J_EMB = (J_GAUGE, reg_hash, rta_proof, intent_valid, tac_valid, seq_valid, s2r_hash, ver)` | 具身证书 |
 
 ## 2. 形式化定义（要点版）
 
-**定义 331（总览与四不变式）** GAUGE-RAS 继承 BELIEF 全部组件（† 升级），新增计量层（MIB/GAP/IVG/NCA/SEAL/TCHAIN）与情感反作用层（AURA/ICL/REFLEX/RVOI）。四不变式：(i) 零学习写操作；(ii) 指标完整性（六元组齐全）；(iii) 非补偿性安全（veto 不可交易）；(iv) 反作用预算（ψ∈Ψ_safe，累计反作用 ≤ B_reflex）。
+**定义 349（EMBODIED-GAUGE-RAS 总览与五不变式）** 见想法区。核心：调度契约优先、联合后验完整性、接触计量完整性、三层反作用预算、严格退化链。
 
-**定义 332（指标单元）** I=(φ,m,u,D,τ,I⊥)。u 为系统/统计/模型三类误差的合成；D 为有效性域；τ 为追溯链（数据/标定件/模型/种子/代码哈希）；I⊥ 为同构念异偏差反指标。六元组不全 ⇒ 只是「读数」，不得进 veto。
+**定义 350（REG 实时执行图）** 节点分域：控制域（n_ctrl, π≥90, δ≤1ms, static）、计量域（n_metric, π=50–70, δ≤50ms, dynamic）、感知域（n_affect/n_intent/n_tac, π=10–40, δ≤100ms, dynamic）。边带 QoS 与熔断阈值 ξ。**部署期 RTA 静态验证控制环 WCET ≤ δ_ctrl，且无优先级反转、无锁队列、内存隔离。**
 
-**定义 333（指标 DAG）** 节点分为硬安全否决 V、领先 L、滞后 G、审计 A；在线决策仅用 L∪V，G 仅事后评估，A 在线不可见。**结构性隔离是抗 Goodhart 的第一道防线。**
+**定义 351（意图隐变量与联合后验）** z ∈ {递交, 放置, 演示, 指示, 虚晃, 其他}。联合后验 b_t(s,z) = p(s,z|ℋ_t)。意图转移 p(z_{t+1}|z_t, a_t^robot, ψ_t) 刻画 L2 反作用。**意图先验 p(z) 来自任务语境。**
 
-**定义 334（NCA）** Agg=FAIL 若任一 v∈V 失效/越界，与性能无关；否则在可行集内按加权几何平均/词典序排序。性质：性能提升不能补偿 veto 越界（引理 26）。
+**定义 352（意图证据模型与校准）** 多模态观测 y_intent = (speech, gesture, gaze, context)；p_intent = Σ_k ω_k(ψ)·p_k(y_intent|s,z)。输出 (ẑ, b_t(z), ECE_intent, ι_intent)。**H[b_t(z)] 直接进入风险缩放分母。**
 
-**定义 335（GAP）** D=|m−m⊥|；阈值 τ_D 由零假设分布（bootstrap/置换）给出；D>τ_D ⇒ Goodhart 告警，m 本次失效。反指标必须**偏差方向不同**：H[b_t]↔校准/分辨率，成功率↔干预鲁棒成功率，VoI↔实际增益，ECE↔sharpness，交互收益↔人类主观负担。
+**定义 353（灵巧手接触模式与条件证据）** c ∈ 𝒞 五模式。触觉似然 p_tac(y_tac|s,c) = 𝒩(h_c(s), Σ_c(s))，Σ_c 随模式变化。接触模式后验 b_t(c) 由触觉序列在线推断。**四分量不确定度 u_tac 独立追溯链。**
 
-**定义 336（SEAL）** 在线不可见的隐藏分布/种子/场景/人工标注审计集；VQAuditor 离线评估，只回传通过位；需哈希承诺与访问日志防泄漏。证书续期必须 SEAL 通过。
+**定义 354（三层反作用动力学 EREFLEX）** L1 ψ 继承 R71；L2 z：p(z'|z, a_robot, ψ)，成本 = KL + λ_z·𝟙[z∉Z_safe]；L3 c：p(c'|c, u_ctrl)，成本 = ΔH[b(c)] + λ_c·𝟙[c∉C_safe]。**累计预算三层合算，任一越界触发降级。**
 
-**定义 337（ψ 与韵律观测）** ψ=(v,a,κ,f,r,σ)；o_pros 为 F0 轨迹、能量、语速、停顿、抖动、呼吸/填充词；p(o_pros|ψ,spk,ch) 含信道与说话人 nuisance。ψ 是观测过程状态，不是世界状态 s。
+**定义 355（具身反作用 VoI：ERVOI）** VoI^E = c(ψ)·IG_s + η·IG_z − 三层反作用成本 − γ·远期损失。**η 由任务类型决定（协作≈1、教学≫1）。最优停止 n* 存在且有限（引理 31）。**
 
-**定义 338（ICL）** p_interact(y|s,ψ)=Σ_k π_k(ψ)p_k(y|s)，π 为认真/猜测/敷衍/撒谎/听不懂；c(ψ)=π_认真+π_听不懂(1−ε_ask)。c 只改「证据值多少」，不改 s 先验。**R70 的 δ_p 是 c≡1−δ_p 的退化。**
+**定义 356（风险感知阻抗控制与接触 λ_floor）** τ = J^T F_des + K(q)(q_des−q) + D(q)(q̇_des−q̇)；K,D 由 λ 调制。**u_tac.total() 显式进入 λ_floor；b_t(c) 熵大或滑移概率超阈 ⇒ λ_floor 抬高 ⇒ 软化阻抗/降速/松手。**
 
-**定义 339（REFLEX）** ψ_{t+1}=T(ψ_t,g,ρ_robot,a)：疲劳随累计交互单调不减；压力随质问式韵律/高频追问上升；亲和随解释性/礼貌上升、随命令式下降。交互必须 ψ_{t+1}∈Ψ_safe。
+**定义 357（sim2real 不确定度桥接 S2R-UQ）** θ_real = φ(θ_sim) + Δ，Δ 贝叶斯估计。**所有进入控制/计量环的参数必须携带 (θ, u_sim, u_real, Σ_Δ, τ_s2r)；REG 静态验证用 WCET(θ_nom) + L_T·u_real_max ≤ δ_ctrl。**
 
-**定义 340（信任预算）** c_reflex=E[ΔRisk(ψ_{t+1})+λ_s·dist(·,Ψ_safe)^+ +λ_f·Δf]；Σ c_reflex ≤ B_reflex(ψ_0)。**打扰消耗会恢复也会枯竭的信任账户，而非固定价格。**
+**定义 358（具身指标扩展 E-MIB）** 新增意图族（ECE_intent, H[b_t(z)], ι_intent, 模态分歧, OOD）、接触族（u_tac 四分量, b_t(c) 熵, 滑移检出率/延迟, 模式校准误差, 力控暂态峰值）、时序族（WCET, miss 率, 话题延迟分位, 熔断频次）。同遵循定义 332 六元组与 333 DAG 分层。
 
-**定义 341（RVOI）** VoI^R(g)=c(ψ)(H[b_t]−E[H[b_{t+1}]])−c_reflex−γE[ΔH_future_degraded]；g*=argmax s.t. ψ_{t+1}∈Ψ_safe、预算未超；max VoI^R≤0 或预算耗尽即停。R70 的 VoI=c≡1、γ≡0、c_reflex=常数的退化。
+**定义 359（具身 IVG 扩展 E-IVG）** 新增失效条件：意图（ECE/ι/熵/OOD 超阈）、接触（u_tac 分量/熵/滑移延迟/暂态峰值超阈）、时序（WCET/ miss 率/熔断超阈）。**任一失效 ⇒ 相关模块降级（意图→固定先验+R71，接触→视觉/语言+R71，时序→R68）。**
 
-**定义 342（IVG）** ECE>τ_ece、D>τ_D、越出 D、τ 断链、SEAL 未过、ECE_affect>τ_aff 任一成立 ⇒ 指标失效：禁用在线优化、冻结权重、依赖它的交互/规划退 R70/R68，并记录原因。**「校准证书过期 → 停用尺子」，而非「读数偏高 → 把尺子调小」。**
+**定义 360（具身风险缩放 E-RISK）** λ = max(risk_scale(U_ale,U_epi,H_z,u_tac), λ_floor(U_ale+U_epi+H_z+u_tac))。**物理/意图/接触三维不确定度同权入分母，无主次之分。**
 
-**定义 343（情感证据纪律）** 接受证据需内容语义、韵律置信、至少一个正交通道（视觉/行为/历史）不矛盾，且 c(ψ)≥阈值；情感通道不得单独定案。**韵律与语义「过度一致」同样要警惕共谋欺骗。**
+**定义 361（具身证书 J_EMB）** Valid ⇔ J_GAUGE 有效 ∧ REG 契约哈希匹配 ∧ RTA 证明有效 ∧ E-IVG 全过 ∧ S2R-UQ 链完整。
 
-**定义 344（TCHAIN）** 每个证书数字附 ℓ=(source,calibration_ref,model_hash,data_hash,seed,timestamp,validity_interval)；任一缺失/过期 ⇒ 降级为未验证读数，不得作为 veto 依据。
+**定义 362（威胁模型 AIC-EMB）** ℰ_EMB = ℰ_GAUGE × ℰ_reg × ℰ_intent × ℰ_tac。新增：调度攻击、意图伪装/对抗注入、触觉投毒/磨损诱导标定失效。
 
-**定义 345（AIC-GAUGE）** ℰ_GAUGE=ℰ_BELIEF×ℰ_metric×ℰ_affect，其中 ℰ_metric={指标 gaming/reward hacking/选择性报告/补偿攻击/密封集泄漏/指标投毒}，ℰ_affect={情感伪装/语音克隆/跨说话人跨文化误读/疲劳诱导/情绪施压社交工程/共谋式内容-韵律一致欺骗}。
+**定义 363（三域分离硬实现）** 控制域（硬实时、静态调度、零分配、1kHz，只读快照）/ 计量域（软实时、可抢占、50Hz、允许分配，写快照）/ 感知域（Best-effort、异步、100Hz、可丢帧，写缓冲）。**域间仅无锁环形缓冲+版本号，控制域绝不回写、绝不等待。**
 
-**定义 346（J_GAUGE）** 见符号表；Valid ⇔ Valid(J_BELIEF) ∧ IVG 全过 ∧ NCA 的 V 全过 ∧ ψ 轨迹∈Ψ_safe ∧ 反作用预算未超。
+**定义 364（严格退化包含链）** 四退化形态逐指令等价：全失效→R68；仅 IRL 失效→固定先验+R71+DMEM；仅 DMEM 失效→IRL+R71；全有效→EMBODIED。**安全单调不减。**
 
-**定义 347（三频流水线）** 高频控制（R70 原样）；中频计量审计（10–20Hz）；低频情感/反作用（异步 30–50Hz）+ 交互事件触发 RVOI。**计量层永不阻塞控制层。**
-
-**定义 348（严格包含）** c≡1、γ=0、c_reflex=0、指标全有效、NCA 退化为加权和 ⇒ 逐指令等于 BELIEF；再按 R70 定理 18 退化 FLUID/R68。
+**定义 365（运行时监控器 RTM）** 最高优先级、静态内存、零依赖节点；每控制周期自测 WCET、抖动、内存、堆栈；超阈即触发熔断、记录、降级。**RTM 是「最后一道防线」，自身不被监控，代码<500 行，形式化验证。**
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-275 MIB：指标登记（在线只读；写入带审计）
-class IndicatorRegistry:
-    def __init__(self, records): self.r = records
-    def valid(self, I, state):
-        return (I.u.total() <= U_MAX and I.D.contains(state)
-                and tchain.verify(I.tau) and I.ece <= TAU_ECE)
-    def online_visible(self):
-        return [I for I in self.r if I.role in ('leading', 'veto')]
+# IP-287 REG：实时执行图静态契约（部署期验证，运行时只读）
+@dataclass
+class NodeSpec:
+    name: str
+    domain: Literal['ctrl', 'metric', 'percept']
+    priority: int           # ctrl≥90, metric=50-70, percept=10-40
+    deadline_ms: float      # ctrl≤1, metric≤50, percept≤100
+    mem_policy: Literal['static', 'dynamic']
+    qos: QoSProfile
 
-# IP-276 GAP + IP-277 IVG
-def goodhart_gap(I, ctx):
-    return max(abs(I.measure(ctx) - Ip.measure(ctx)) for Ip in I.I_perp)
+@dataclass
+class EdgeSpec:
+    src: str; dst: str
+    qos: QoSProfile
+    breaker: BreakerThresh  # (latency_p99, jitter_max, loss_rate_max)
 
-def indicator_gate(reg, state, seal):
-    bad = [I.id for I in reg.gating()
-           if not reg.valid(I, state) or I.id in seal.failed
-           or goodhart_gap(I, state) > TAU_D]
-    return Gate(valid=not bad, reason=bad, fallback='R70')
+class REGContract:
+    def __init__(self, nodes, edges, rta_proof, s2r_hash):
+        self.nodes, self.edges = nodes, edges
+        self.rta_proof, self.s2r_hash = rta_proof, s2r_hash
 
-# IP-278 NCA
-def aggregate(metrics, veto_set):
-    if any(not metrics[v].pass_ for v in veto_set): return FAIL, None
-    return OK, weighted_geomean({k: metrics[k] for k in metrics if k not in veto_set})
+    def verify_static(self) -> bool:
+        # 1. RTA: 控制环最坏响应时间 ≤ deadline
+        if not rta.verify(self.nodes, self.edges): return False
+        # 2. 内存隔离: 控制域节点全 static/pool
+        if any(n.mem_policy != 'static' for n in self.nodes.values() 
+               if n.domain == 'ctrl'): return False
+        # 3. 无锁通信: 域间边必须用无锁环形缓冲
+        if any(not e.qos.is_lockfree_ring for e in self.edges.values()
+               if self.nodes[e.src].domain != self.nodes[e.dst].domain): return False
+        # 4. 证明哈希匹配
+        return self.rta_proof == hash_rta(self)
 
-# IP-281 AURA
-class AffectiveObserver:
-    def update(self, frame):
-        e = self.adapt(self.net(frame))              # 去说话人/信道 nuisance
-        return self.calib.predict(e)                 # psi_hat, ece_affect
+# IP-288 IRL：意图识别 + 联合后验（计量域，软实时 50Hz）
+class IntentRecognizer:
+    def __init__(self, intent_net, calib, prior_ctx):
+        self.net, self.calib, self.prior = intent_net, calib, prior_ctx
+    def update(self, y_intent, psi_hat, b_prev):
+        # y_intent: (speech_emb, gesture_emb, gaze_emb, context_emb)
+        logits = self.net(y_intent, psi_hat)           # 含 ψ 调制
+        b_z  = self.calib.predict(logits)              # b_t(z), ECE_intent, iota_intent
+        # 联合后验：b_t(s,z) ∝ b_t(z) * b_t(s|z)  (s|z 由 BSE 给出)
+        return IntentPosterior(b_z=b_z, ece=b_z.ece, iota=b_z.iota,
+                               joint=self._make_joint(b_z, b_prev))
 
-# IP-282 ICL
-def credible_likelihood(y, s, psi_hat):
-    pi = mixture_weights(psi_hat)
-    c  = pi['sincere'] + pi['confused'] * (1 - EPS_ASK)
-    return sum(pi[k] * p_answer[k](y, s) for k in pi), c
+# IP-289 DMEM：灵巧手接触计量证据（感知域异步，计量域消费）
+class DexterousTactileMetrology:
+    def __init__(self, tac_encoder, contact_hmm, calib_four):
+        self.enc, self.hmm, self.calib = tac_encoder, contact_hmm, calib_four
+    def update(self, tac_frame, ctrl_cmd):
+        # tac_frame: (taxel[100+], ft_6dof, joint_torques[16+], temp)
+        # ctrl_cmd:  当前阻抗/力控参数 -> 接触模式先验
+        c_prior = contact_mode_prior(ctrl_cmd)         # 如力控→sticking先验高
+        c_post  = self.hmm.step(tac_frame, c_prior)    # b_t(c)
+        y_tac   = self.enc(tac_frame)                  # 触觉特征向量
+        # 四分量不确定度（各自独立追溯链）
+        u_geom  = self.calib.geom_uncertainty(c_post)      # 接触面几何不确定
+        u_force = self.calib.force_transient(ctrl_cmd)     # 力控切换暂态
+        u_sens  = self.calib.sensor_drift()                # 零点/增益漂移
+        u_slip  = self.calib.slip_latency(c_post)          # 滑移检出延迟
+        lik     = tactile_likelihood(y_tac, c_post)        # p(y_tac | s, c)
+        return TactileEvidence(
+            lik=lik, c_post=c_post,
+            u_tac=math.sqrt(u_geom**2 + u_force**2 + u_sens**2 + u_slip**2),
+            u_breakdown=(u_geom, u_force, u_sens, u_slip),
+            tau=self.calib.tchain)
 
-# IP-283 REFLEX
-def reflex_step(psi, g, rho_robot, a, budget):
-    psi2 = T(psi, g, rho_robot, a)
-    cost = risk_delta(psi2) + LAM_S * dist(psi2, PSI_SAFE).positive() \
-           + LAM_F * (psi2.f - psi.f)
-    if psi2 not in PSI_SAFE or budget.spent + cost > budget.B:
-        return psi, None, cost                       # 出稳态 -> 禁问
-    return psi2, cost, cost
+# IP-290 EREFLEX：三层反作用预算步进
+def ereflex_step(psi, z_dist, c_dist, g, rho_robot, a, budget):
+    # L1 ψ (R71 REFLEX)
+    psi2, cost_psi, _ = reflex_step(psi, g, rho_robot, a, budget)
+    # L2 z：意图漂移 KL + 稳态指示
+    z2_dist = intent_transition(z_dist, g, psi)        # p(z'|z, a_robot, psi)
+    cost_z  = kl_div(z_dist, z2_dist) + LAM_Z * (z2_dist.entropy() > TAU_HZ)
+    # L3 c：接触模式熵增 + 滑移稳态指示
+    c2_dist = contact_transition(c_dist, g)            # p(c'|c, u_ctrl)
+    cost_c  = (c2_dist.entropy() - c_dist.entropy()) + LAM_C * (c2_dist['slip'] > TAU_SLIP)
+    total = cost_psi + cost_z + cost_c
+    if (psi2 not in PSI_SAFE or z2_dist.entropy() > TAU_HZ 
+        or c2_dist['slip'] > TAU_SLIP or budget.spent + total > budget.B):
+        return psi, z_dist, c_dist, None, total        # 拒绝：三层稳态任一越界
+    return psi2, z2_dist, c2_dist, total, total
 
-# IP-284 RVOI
-def reflexive_voi(b_t, psi, budget, fmp, bse):
+# IP-291 ERVOI：具身反作用 VoI + 有限停止
+def embodied_voi(b_t, psi, z_dist, c_dist, budget, fmp, bse):
     best = None
-    for g in info_action_candidates(top_k_hypotheses(b_t, 2)):
+    for g in embodied_action_candidates(b_t, z_dist, top_k=3):
         if not budget.allow(g): continue
-        psi2, cost, _ = reflex_step(psi, g, robot_prosody(g), None, budget)
-        if psi2 is None: continue
-        c  = credibility(psi)
-        ig = c * (entropy(b_t) - expected_posterior_entropy(b_t, g, fmp))
-        score = ig - cost - GAMMA * expected_future_evidence_loss(psi, g)
+        psi2, z2, c2, cost, _ = ereflex_step(psi, z_dist, c_dist, g,
+                                             robot_prosody(g), None, budget)
+        if cost is None: continue
+        c_cred = credibility(psi)
+        ig_s   = c_cred * (entropy(b_t.marginal_s()) - expected_post_entropy_s(b_t, g, fmp))
+        ig_z   = ETA * (z_dist.entropy() - z2.entropy())   # 意图信息增益
+        score  = ig_s + ig_z - cost - GAMMA * expected_future_loss(psi, z_dist, c_dist, g)
         if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None
+    return best if best and best.score > 0 else None      # 无正收益 → 停止/回退
 
-# IP-286 GAUGE 主闭环
-def GAUGE_RAS_round(M, obs, audio):
-    b_t = M.bse.step(M.b_prev, obs, M.last_action, M.last_g, M.last_y)   # R70
-    z, o = M.mtm.forward(obs); c, U_cal, thr = M.cof.step(...)
-    if M.clock.due_metric():                                  # 中频审计
-        gate = M.ivg.check(M.registry, b_t, M.seal.latest)
-        if not gate.valid: M.mode = 'R70'; M.registry.freeze(gate.reason)
-    psi_hat, ece_aff = M.aura.update(audio)                   # 低频异步
-    if ece_aff > TAU_AFF: M.mode = 'R70_NO_AFFECT'
-    g = (M.rvoi.choose(b_t, psi_hat, M.budget, M.fmp, M.bse)
-         if M.mode == 'FULL' and entropy(b_t) > TAU_EPI else None)
-    if g is not None:
-        y = M.cia.execute(g)
-        lik, c_cred = M.icl.credible_likelihood(y, b_t, psi_hat)
-        b_t = M.bse.step(b_t, o, M.last_action, g, y, lik_weight=c_cred)
-        psi_hat, _, _ = M.reflex.step(psi_hat, g, M.robot_prosody(y), None, M.budget)
-    U_ale, U_epi = decompose_from_belief(b_t, M.fmp, o)       # R70 AUD†
-    lam = max(M.efs.risk_scale(...),
-              lam_floor(U_ale + (U_epi if g is None else 0.0)))
-    A = M.ach.propose(...); k = M.c_ras_wm.certified_prefix(A, ...)
-    M.mib.update(b_t, psi_hat, gate)
-    M.vqa_ii.submit_async(b_t, g, psi_hat, gate, M.registry.gaps())
-    M.b_prev, M.last_action, M.last_g, M.last_y = b_t, A[:k], g, y
-    return k, lam, (U_ale, U_epi), J_GAUGE(M)
+# IP-292 E-RISK：具身风险缩放（控制域，硬实时 <0.05ms）
+def embodied_risk_scale(U_ale, U_epi, H_z, u_tac, params):
+    denom = U_ale + U_epi + H_z + u_tac.total()
+    lam   = params.lam_base * (1 + denom / params.lam_scale)
+    return max(lam, params.lam_floor * (1 + denom))
+
+# IP-293 S2R-UQ：sim2real 不确定度桥接（部署期离线）
+def sim2real_bridge(theta_sim, u_sim, real_calib_data):
+    # 贝叶斯残差模型：theta_real = phi(theta_sim) + Delta
+    delta_post = bayes_linear_residual(theta_sim, real_calib_data)
+    theta_real = phi(theta_sim) + delta_post.mean
+    u_real     = math.sqrt(u_sim**2 + delta_post.var)
+    return BridgedParam(
+        theta=theta_real, u_sim=u_sim, u_real=u_real,
+        delta_var=delta_post.var, tchain=hash_calib_data(real_calib_data))
+
+# IP-294 EMBODIED 主闭环（三域分离，控制域只读快照）
+def EMBODIED_GAUGE_RAS_round(M, obs, audio, tac_frame):
+    # ========== 控制域 (1kHz, 硬实时, 最高优先级) ==========
+    snap = M.snapshot.read_latest()          # 无锁只读：计量/感知域最新快照
+    b_t  = M.bse.step_ctrl(snap.b_prev, obs, M.last_action, M.last_g, M.last_y)
+    U_ale, U_epi = decompose_ctrl(b_t, M.fmp, obs)
+    H_z  = snap.z_dist.entropy() if snap.z_dist else 0.0
+    u_tac = snap.tac_ev.u_tac if snap.tac_ev else 0.0
+    lam  = embodied_risk_scale(U_ale, U_epi, H_z, u_tac, M.risk_params)
+    A    = M.ach.propose_ctrl(...); k = M.c_ras_wm.certified_prefix(A, lam, ...)
+    M.ctrl_out.publish(k, lam)               # 发布扭矩/位置指令
+    M.last_action = A[:k]
+    # 最小证书片段（控制域同步写入）
+    M.cert_ctrl.write(k=k, lam=lam, wcet=M.rtm.wcet_us(), 
+                      breaker=M.breaker.status())
+
+    # ========== 计量域 (50Hz, 软实时, 可抢占) ==========
+    if M.clock.due_metric():
+        # 完整 BSE + 意图更新 + 指标审计
+        b_t_full = M.bse.step_full(M.b_prev, obs, M.last_action, M.last_g, M.last_y)
+        z_dist, ece_z, iota_z = M.irl.update(M.y_intent_buf, M.psi_hat, b_t_full)
+        gate = M.e_ivg.check(M.registry, b_t_full, z_dist, M.tac_ev, M.seal.latest)
+        if not gate.valid:
+            M.mode = gate.fallback           # R71 / R68
+            M.registry.freeze(gate.reason)
+        # 写快照（版本号递增，控制域下个周期可见）
+        M.snapshot.write(b_t_full, z_dist, gate, M.psi_hat, M.tac_ev)
+
+    # ========== 感知域 (异步 30-100Hz, Best-effort) ==========
+    # 音频 -> AURA -> psi
+    psi_hat, ece_aff = M.aura.update(audio)
+    if ece_aff > TAU_AFF: M.psi_hat = None   # 情感不可信 → 降级
+    # 触觉 -> DMEM -> tac_ev
+    tac_ev = M.dmem.update(tac_frame, M.last_action)
+    if tac_ev.u_tac > TAU_U_TAC: M.tac_ev = None  # 接触不可计量 → 降级
+    # 意图观测缓冲（多模态融合）
+    M.y_intent_buf.append(extract_intent_obs(obs, audio, M.last_action))
+    # ERVOI 交互决策（事件触发，运行在计量/感知域交界）
+    if M.mode == 'FULL' and (entropy(b_t_full) > TAU_EPI or z_dist.entropy() > TAU_HZ):
+        g = M.ervoi.choose(b_t_full, M.psi_hat, z_dist, M.tac_ev.c_dist,
+                           M.budget, M.fmp, M.bse)
+        if g:
+            y = M.cia.execute(g)
+            M.last_g, M.last_y = g, y
+
+    # 完整证书由计量域异步组装，不阻塞控制域
+    return k, lam, J_EMB(M)
 ```
 
 ## 4. 推导
 
-**引理 23（Goodhart 间隙可检测）** m=φ+b(θ)+ε，m⊥=φ'+b⊥(θ)+ε⊥，gaming 使 ∂b/∂θ>0、∂b⊥/∂θ≈0，则 ∂E[D]/∂θ≈∂b/∂θ>0，而 φ 可不变。故单指标改善不证明构念改善；D 上升是 gaming 的可检验证据。K 个偏差近似独立对偶提升检测功效，τ_D 控误报。**R70 只报 H[b_t] 不报对偶间隙，因此无法区分「看清了」与「把后验弄尖了」。**
+**引理 28（REG 调度契约 ⇒ 控制环时序隔离）** 在定义 350 条件下（优先级分层、静态内存、无锁队列、RTA 通过），控制回调的最坏响应时间 WCET ≤ δ_ctrl，与计量/感知域负载无关。证明：高优先级控制回调抢占低优先级；静态内存消除分配抖动；无锁环形缓冲消除优先级反转。系：**R71 的「计量层不阻塞控制层」从逻辑承诺升级为可数学验证的时序定理。**
 
-**引理 24（可信度对 VoI 与欺骗界）** 实际增益 ≤ c(ψ)ΔH；高估 Δc 使 VoI 高估 Δc·ΔH，且随 c 下降累积。k 个正交源、单源欺骗 δ_p、相关 ρ<1 时错误采纳 ≤ [1−c(ψ)(1−δ_p)]ρ^{k−1}+ε_σ。**R70 的固定 δ_p 既高估疲劳者可信度，也浪费了韵律提供的实时 c(ψ)。**
+**引理 29（意图不确定度进入风险分母的必要性）** 设真实意图 z*，识别后验 b_t(z)。若控制忽略 H[b_t(z)]，当 z* 为「虚晃」但 b_t(递交)≈1 时，机器人全速伸手 → 碰撞/抓空。风险 E[Risk] ≥ p(z*≠ẑ)·Risk_collision。将 H[b_t(z)] 纳入 λ 分母 ⇒ λ↑ ⇒ 速度/力矩↓ ⇒ Risk_collision↓。系：**意图不确定度不是「认知指标」，是物理安全的直接分母。**
 
-**引理 25（反作用下最优停止）** 边际增益 c_nΔH_n 不增、边际反作用 r_n≥r_0>0，则 G(n) 离散凹，存在有限 n*，c_{n+1}ΔH_{n+1}≤r_{n+1} 时停。若疲劳使 c_n→0，「问到熵<τ」所需次数 →∞，RVOI 在 n* 停。**「何时停」是可证明的有限停止问题，不是调参。**
+**引理 30（接触不确定度四分量的正交性与完备性）** u_geom（几何）、u_force（力控暂态）、u_sens（传感器）、u_slip（滑移延迟）由独立物理机制产生，互近似不相关。遗漏任一分量导致 u_tac 低估：忽略 u_slip ⇒ 滑移未检出时 u_tac 正常但证据已失效 ⇒ BSE 过度自信 ⇒ λ 过低 ⇒ 抓取失败。系：**R71 把触觉当「普通观测」正是遗漏了接触特有的四分量结构。**
 
-**引理 26（非补偿不可操纵）** 否决式 Agg 下，任意性能提升不能改变 veto 越界导致的 FAIL；补偿式下越界 δ 可被 Δg≥δ·(w_veto/w_perf) 抵消。**没有 veto 的 Pareto 等价于给安全标价。**
+**引理 31（三层反作用预算的单调性与有限停止）** 总成本 C(n) = Σ_{i≤n} (c^ψ_i + c^z_i + c^c_i)。每层边际成本有正下界（≥ ε），边际增益随 n 非增 ⇒ 存在有限 n* 使第 n*+1 步边际净收益 ≤ 0。ERVOI 在 n* 停止。**「何时停」在具身层面依然是可证明的有限停止，不是调参。**
 
-**引理 27（情感 gauge 不变性与域移）** nuisance 保持 ψ 的 T 下，理想 q(ψ|o)=q(ψ|T(o))；定义 ι=sup_o TV(q(ψ|o),q(ψ|T(o)))，域移下可信度误差至少增加 ι 量级。故 ECE_affect 与 ι 必须同时门控，不能只报平均情绪准确率。**情感语音最大的坑不是「识别不准」，而是「训练说话人上准、换人系统性偏移」。**
+**引理 32（sim2real 残差不确定度传播到 WCET）** 控制参数 θ 经桥接得 θ_real ± u_real。计算时间 T_comp(θ_real) 是 Lipschitz 函数。则 WCET(θ_real) ≤ WCET(θ_nom) + L_T·u_real。REG 静态验证须用 **WCET(θ_nom) + L_T·u_real_max ≤ δ_ctrl**。**参数不确定度直接吃调度余量——sim2real 不是「精度问题」而是「时序安全问题」。**
 
-**定理 20（严格包含链）** A102–A105（指标可测且域可检、对偶偏差不完全相关、T Lipschitz 且 Ψ_safe 对不交互策略受控不变、韵律域内校准）下：GAUGE 在退化条件下逐指令等于 BELIEF；BELIEF⊂FLUID⊂R68（R70 定理 18）。安全侧不弱于 R70。
+**定理 23（具身严格包含与风险单调）** 在 A106–A110（REG RTA 通过、意图校准有效、接触四分量可测、三层反作用 Lipschitz、S2R 残差有界）下：EMBODIED 在退化条件下逐指令等于 GAUGE/R71/R68（定义 364）；且对任意有效执行，风险界 ≤ GAUGE 风险界（定理 21）。**安全单调不减，效率仅在「调度可信、意图可辨、接触可计量」时获益。**
 
-**定理 21（指标完整性 ⇒ 风险界）** 通过 J_GAUGE ⇒ veto 全过 IVG 且 TCHAIN 完整 ⇒ 风险 ≤ ε_cert（相对测量模型）；任一 veto 失效 ⇒ IVG 强制回退 R70/R68，风险由 R70 保证。故期望风险 ≤ R70。**全部重量落在「veto 指标本身有效」上。**
+**定理 24（具身证书有效性 ⇒ 物理安全）** 通过 J_EMB ⇒ (i) REG 契约匹配且 RTA 有效 ⇒ 控制环时序安全；(ii) E-IVG 全过 ⇒ 意图/接触/时序指标在有效域；(iii) S2R-UQ 链完整 ⇒ 参数不确定度已传播到 λ_floor 与 WCET；(iv) J_GAUGE 有效 ⇒ 认知层风险界成立。综上，**物理执行风险 ≤ ε_emb（相对具身测量模型）**。**证明重量落在「REG 契约在实机上真实成立」与「S2R 残差模型未被投毒」上。**
 
-**定理 22（反作用安全与无发散）** RVOI 只选 ψ_{t+1}∈Ψ_safe 且预算内的 g；无正收益则不问并回退；由引理 25 停止点有限；交互只改模态选择不改硬安全包络，回退 λ 单调不降 ⇒ 控制连续无突变。**但不保证 T 正确，只保证「T 正确时不把人推出稳态」。**
+**定理 25（三域分离无活锁/死锁）** 控制域只读快照、不等待、不回写；计量域周期性写快照；感知域异步写缓冲。由定义 363 通信拓扑（单向无锁环形缓冲+版本号），**不存在循环等待、不存在优先级反转、不存在活锁**。控制环永远能在 δ_ctrl 内完成周期。
+
+**定理 26（运行时监控器 RTM 为最后防线）** RTM 自身最高优先级、静态内存、零依赖、代码<500行、形式化验证。若 RTA 静态分析漏场景导致控制环 WCET 超阈，RTM 在同周期内检出并触发熔断降级。**RTM 不被监控，是「信任锚点」。**
 
 ## 5. 复杂度分析
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| MIB/GAP/IVG（20Hz，|I|≤32） | <0.05ms/tick | <1MB | 定义 332–335、342 |
-| TCHAIN 校验 | <0.02ms/记录 | O(1) | 定义 344 |
-| NCA（|V|≤8） | <0.02ms | O(1) | 定义 334、引理 26 |
-| AURA 韵律流式（20ms，异步 50Hz） | <0.3ms/帧 | 2MB | 定义 337、引理 27 |
-| ICL 可信度 | <0.05ms | O(1) | 定义 338、引理 24 |
-| REFLEX + 信任预算 | <0.05ms | O(1) | 定义 339–340、定理 22 |
-| RVOI（N=16，仅交互 tick） | <0.6ms | O(N·M) | 定义 341、引理 25 |
-| SEAL | 离线/异步 | — | 定义 336 |
-| **高频控制环** | **<4.5ms（K=1）/ <6.2ms（K=4）** | — | 定理 20–22 |
-| **交互决策 tick** | **<5.4ms**（低频） | — | 一次性预算超支可记录 |
-| **计量审计 tick** | **<0.5ms @ 20Hz** | — | 不进控制路径 |
+| 组件 | 域 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|---|
+| REG 静态验证（部署期） | 离线 | <5s | <10MB | 定义 350、引理 28、32 |
+| 控制域 BSE 简化步进 | 硬实时 1kHz | <0.3ms | <200KB | 引理 28、定理 25 |
+| 控制域风险缩放 λ | 硬实时 1kHz | <0.05ms | O(1) | 定义 356、360、引理 29、30 |
+| 计量域完整 BSE + IRL + 审计 | 软实时 50Hz | <2ms | <5MB | 定义 351、352、358、359 |
+| 感知域 AURA + DMEM | Best-effort 100Hz | <1ms/帧 | <10MB | 定义 337、353、引理 27、30 |
+| ERVOI（事件触发） | 计量/感知交界 | <1ms | O(N·M) | 定义 355、引理 31 |
+| S2R-UQ 桥接 | 部署期/离线 | <10s | <50MB | 定义 357、引理 32 |
+| RTM 运行时监控 | 硬实时 1kHz | <0.02ms | <10KB | 定理 26、形式化验证 |
+| **控制环 P99（全栈）** | **硬实时** | **<0.8ms** | — | **定理 23–26、引理 28、32** |
+| **计量环 P99** | **软实时** | **<3ms @ 50Hz** | — | **不阻塞控制域** |
+| **感知环 P99** | **Best-effort** | **<2ms/帧** | — | **可丢帧、不影响上层** |
 
-## 6. 实验设计 E321–E340（全在 RAS-Baselines v1 协议下）
+## 6. 实验设计 E341–E370（全在 RAS-Baselines v2 协议下，含实机/仿真/混合）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E321 指标构造效度 | 指标是否量了声称的量 | 收敛 AVE>0.5、区分 √AVE>相关；专家评审 |
-| E322 Goodhart 攻击 | 能否压低 H 而不降真误差 | H↓>20% 而真误差不降；GAP 检出 ≥90% |
-| E323 GAP 检测功效 | 对偶间隙是否可靠 | AUC ≥0.90，误报 ≤5% |
-| E324 非补偿聚合 | veto 是否不可交易 | 安全越界 X%→0，性能损失 ≤3% |
-| E325 密封审计 | 隐藏指标能否抓 gaming | 泄漏攻击下 SEAL 检出 ≥85% |
-| E326 追溯链 | 证书数字是否可复现 | 完整率 100%，断链检出 ≥99% |
-| E327 AURA 识别 | 情感/置信/疲劳可观测性 | 跨说话人情绪 UA ≥0.75，MAE<0.12 |
-| E328 情感校准 | ECE_affect 是否可信 | ECE_affect<0.08，可靠图单调 |
-| E329 Gauge 不变性 | 换人/麦/语言是否偏移 | ι<0.1，跨语种下降 <15% |
-| E330 可信度校准 | c(ψ) 是否预测正确率 | Brier<0.15，ECE_cred<0.08 |
-| E331 情感条件 VoI | 用 c(ψ) 降权是否增益 | 实际增益 +15%，无效追问 −30% |
-| E332 反作用疲劳 | 追问是否降低可信度 | c_n 单调下降，n* 可复现 |
-| E333 最优停止 | RVOI vs 问到阈值 | 同等误差提问 −25%，人类负担 −30% |
-| E334 稳态保持 | Ψ_safe 是否守住 | 越界 ≤1%，压力/疲劳显著更低 |
-| E335 韵律欺骗 | acted/克隆语音可识破性 | 跨通道检出 ≥80%（单通道 ≤50% 如实报告） |
-| E336 情感社交工程 | 情绪施压是否被拦 | 高风险误放行 ≤1%，单源定案=0 |
-| E337 严格包含/消融 | 退化边界逐指令一致 | 关 AURA/REFLEX 与 R70 差=0；去 GAP gaming 检出−40% |
-| E338 24h 人机长时程 | 疲劳/漂移/信任是否失控 | 交互频次稳定，信任预算不耗尽，零交互违规 |
-| E339 实时预算 | 三频分离是否守时 | 控制 P99<4.5ms，计量 tick<0.5ms，无 deadline miss |
-| E340 基线协议与归因 | 是否显著优于 R70 | Wilcoxon p<0.01、d≥0.5；四层失败归因树 |
+| E341 REG RTA 验证 | 静态分析是否覆盖实机最坏响应 | 实机控制环 P99 ≤ 0.8ms，WCET ≤ 分析值，零 deadline miss |
+| E342 优先级反转压测 | 计量/感知高负载能否抢占控制 | 注入内存压力/CPU 风暴，控制抖动 <5%，零熔断 |
+| E343 熔断逻辑正确性 | 话题延迟超阈是否可靠熔断 | 注入网络延迟/丢包，熔断触发 ≤2ms，降级为 R68 无突变 |
+| E344 S2R-UQ 传播 | 参数不确定度是否吃进 WCET/λ | 实测 WCET(θ_real) ≤ WCET(θ_nom) + L_T·u_real；λ_floor 覆盖实机分布 |
+| E345 意图识别校准 | ECE_intent / ι_intent 是否可信 | 跨人/跨任务 ECE_intent <0.08，ι_intent <0.1，Brier <0.12 |
+| E346 意图 OOD 检出 | 虚晃/对抗指令能否被识别 | OOD 意图分 AUROC ≥0.92，误报 ≤3% |
+| E347 意图反作用量化 | 机器人动作是否改变人意图 | 拟合 p(z'\|z, a_robot, ψ)，KL 漂移随动作幅度单调 |
+| E348 意图不确定度进 λ | H[b_t(z)] 进入分母是否降低碰撞 | 同等任务，碰撞率 -40%，完成时间 +≤5% |
+| E349 接触四分量辨识 | u_geom/force/sens/slip 能否分离 | 标定实验：四分量贡献可辨，滑移延迟 MAE <5ms |
+| E350 滑移检出延迟 | 滑移发生到 b_t(c) 更新多久 | ≤10ms（200Hz 触觉），漏检率 <1% |
+| E351 接触不确定度进 λ_floor | u_tac 进入 λ 是否软化阻抗防滑 | 滑移工况下，抓取成功率 +25%，峰值力 -30% |
+| E352 三层反作用预算 | 累计成本是否守住 B_reflex_total | 24h 长时程：预算未耗尽，三层稳态全程满足 |
+| E353 ERVOI 停止规则 | 具身 VoI 是否比单层更早停止 | 同等后验精度，交互次数 -30%，人类负担 -35% |
+| E354 具身严格包含/消融 | 退化边界逐指令一致 | 关 IRL/DMEM/REG 任意组合，与对应基线差 = 0 |
+| E355 实机 24h 具身长时程 | 疲劳/漂移/磨损/信任是否累积失控 | 零硬安全违规，交互频次稳定，触觉标定漂移自适应补偿 |
+| E356 对抗性触觉投毒 | 注入虚假滑移信号能否被拦 | 跨通道一致性（视觉/本体）检出 ≥85%，单源触觉不定案 |
+| E357 对抗性意图注入 | 伪装指令能否被 OOD/校准拦 | 高风险误放行 ≤1%，单源意图不定案 |
+| E358 sim2real 残差投毒 | 篡改仿真标定参数能否被链拦 | TCHAIN/S2R-UQ 断链检出 ≥99%，降级不崩溃 |
+| E359 实时证书 J_EMB | 证书生成是否守时 | 控制域证书片段 <0.1ms，完整证书异步 <5ms |
+| E360 基线协议 RAS-Baselines v2 | 是否显著优于 GAUGE-RAS (R71) | Wilcoxon p<0.01, d≥0.5；归因树覆盖调度/意图/接触/桥接四层 |
+| E361 多手协同扩展 | 双灵巧手是否线性扩展 | 双手接触不确定度合成正确，REG 调度仍通过 |
+| E362 跨机器人迁移 | 不同本体（Allegro/Shadow/LeapHand）是否复用 | 仅更换 DMEM 校准与 REG 拓扑，核心算法零改动 |
+| E363 人类主观评价 | 具身交互是否更自然/可信 | NASA-TLX -20%，信任度 +25%，偏好率 ≥75% |
+| E364 故障注入全栈 | 单点故障（节点死/话题堵/传感器坏）是否优雅降级 | 任意单故障 → 降级 R71/R68，零级联崩溃，恢复 <1s |
+| E365 计量审计覆盖率 | 所有 veto 指标是否有追溯链 | TCHAIN 覆盖率 100%，断链即降级，零裸奔数字 |
 
 ## 7. 本轮最大风险
 
-**一句话**：GAUGE-RAS 把安全从「相信 H[b_t]」转移到「相信指标系统的效度与情感通道的校准」——**如果 Goodhart 对偶被同一个隐藏混杂因子驱动（两把尺子一起歪），或者情感通道在换人/换语种/被克隆语音攻击时系统性偏移，系统就会用一套坏掉的度量认证自己「计量有效」，把 R70 的「自信地错状态」升级为「自信地错自己的可信度」——不知道自己不知道，还多了一张盖了章的审计证书。**
+**一句话**：EMBODIED-GAUGE-RAS 把安全从「相信计量审计证书」转移到「相信 **REG 实时调度契约在实机上真实成立**、相信 **sim2real 残差模型未被投毒**、相信 **意图/接触不确定度四分量在分布外仍可计量**」——**如果 DDS 实时域在高负载下出现不可预测的抖动（优先级反转、内存碎片、中断风暴）导致控制环偶发 deadline miss，而 RTA 静态分析漏掉了这个场景；或者 sim2real 残差分布在实机上呈现重尾/多峰，导致 u_real 严重低估，进而 λ_floor 与 WCET 预留余量同时失效；或者意图识别器在从未见过的文化手势/对抗指令下输出高置信错误后验，且 ι_intent 未报警——系统会用一套「通过了所有静态验证、拿着盖章证书」的具身算法，在真机上把人撞伤、把物体捏碎、把信任账户透支，事后审计发现「所有指标当时都在有效域内、所有契约当时都通过了验证」，这就是**具身层面的「自信地错自己的可执行性」**。**
 
 次级风险与缓解：
-1. **对偶共线** → K 个独立偏差对偶 + SEAL + E323/E325；无法证明独立即按「不可用」处理；
-2. **情感跨域/伪装** → gauge 不变性（E329）+ ECE_affect 门控 + 跨通道一致性（E335）+ 单源不定案（定义 343）；
-3. **反作用模型 T 错** → Ψ_safe 保守下界 + 个性化在线后验 + 信任预算硬上限；T 失配触发 IVG 回退；
-4. **过度保守/任务失败** → veto 只覆盖硬安全与校准下界，性能层保留排序；E324 量化损失；
-5. **实时预算被击穿** → 三频分离 + 异步 + 20Hz 中频；计量不进快路径，E339 守时；
-6. **指标系统自身过复杂** → |I|≤32、DAG 可视化、每个 veto 一条可复算证明；复杂度本身是审计对象。
+1. **REG 静态分析漏场景** → **运行时监控器 RTM**：控制环每周期自测 WCET/抖动/内存，超阈即熔断记录；RTM 自身最高优先级、静态内存、零依赖、形式化验证。
+2. **sim2real 残差重尾/多峰** → **非参数残差建模（GP/正态化流）+ 分位数回归取 99.9% 分位** 作为 u_real；部署前**压力测试注入极端残差**验证 λ_floor 覆盖。
+3. **意图/接触 OOD 下高置信** → **密封意图/触觉审计集（SEAL-Intent, SEAL-Tac）**：隐藏跨文化/对抗/磨损场景，离线评估校准与不变性；在线只看通过位。
+4. **三层反作用耦合导致预算低估** → **联合反作用模型 T_joint(ψ,z,c \| a_robot)** 离线辨识，在线用**保守上界** c_reflex^joint ≥ Σ c_reflex^i；预算按联合上界分配。
+5. **灵巧手标定漂移/磨损** → **在线自标定**：利用「自由空间运动/已知几何物体接触」作为标定基准，滑动窗口更新传感器零点/增益，u_sens 实时回写。
+6. **证书生成实时性** → 控制域只写**最小证书片段**（k, lam, WCET, breaker_status），完整 J_EMB 由计量域异步组装，**不阻塞控制环**。
+7. **复杂度爆炸** → **模块化上限**：|N_REG|≤20、|Z|≤8、|C|≤5、|I_total|≤64；每个 veto 一条可复算证明；复杂度本身纳入审计指标。
 <!-- ARTIFACT:END -->
