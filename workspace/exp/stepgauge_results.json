@@ -1,0 +1,76 @@
+{
+ "seed": 20261114,
+ "note": "synthetic mechanism check, not benchmark evidence",
+ "part_a_step_credit": {
+  "luck_rate": 0.285975,
+  "desert_rate": 0.035675,
+  "auc_step_min_vs_process": 0.9549694990292349,
+  "auc_step_prod_vs_process": 0.9563262945112189,
+  "auc_outcome_vs_process": 0.45723295115274065,
+  "outcome_only_cert_rate": 0.6799,
+  "outcome_only_false_cert_rate": 0.4206133254890425,
+  "selective_curve": [
+   {
+    "theta": 0.3,
+    "coverage": 0.5318,
+    "selective_risk": 0.1773223016171493,
+    "false_cert_rate": 0.223862354268522,
+    "lucky_safe_withheld": 0.7933385785470758
+   },
+   {
+    "theta": 0.5,
+    "coverage": 0.4708,
+    "selective_risk": 0.1528249787595582,
+    "false_cert_rate": 0.16827740016992354,
+    "lucky_safe_withheld": 0.8605647346796048
+   },
+   {
+    "theta": 0.7,
+    "coverage": 0.402175,
+    "selective_risk": 0.13109964567663332,
+    "false_cert_rate": 0.11599428109653757,
+    "lucky_safe_withheld": 0.918174665617624
+   },
+   {
+    "theta": 0.9,
+    "coverage": 0.270525,
+    "selective_risk": 0.10682931337214675,
+    "false_cert_rate": 0.05692634691802976,
+    "lucky_safe_withheld": 0.972637468310167
+   }
+  ]
+ },
+ "part_b_optional_stopping": {
+  "delta": 0.05,
+  "eprocess_false_commit_at_h0": 0.02493333333333333,
+  "repeated_peek_false_commit_at_h0": 0.9219166666666667,
+  "h1_commit_rate": 0.9997833333333334,
+  "h1_median_steps": 6.0
+ },
+ "part_c_commitment_gating": {
+  "fixed": {
+   "k8": {
+    "error": 0.35465,
+    "mean_frames": 8.0
+   },
+   "k12": {
+    "error": 0.3053,
+    "mean_frames": 12.0
+   },
+   "k20": {
+    "error": 0.198275,
+    "mean_frames": 20.0
+   },
+   "k30": {
+    "error": 0.0779,
+    "mean_frames": 30.0
+   }
+  },
+  "gate": {
+   "error_before_resolve": 0.154425,
+   "error_after_resolve": 0.03425,
+   "ask_rate": 0.371825,
+   "mean_frames": 17.0352
+  }
+ }
+}

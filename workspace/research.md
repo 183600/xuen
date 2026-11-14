@@ -615,5 +615,4 @@ def MODGAUGE_round(M, obs, audio, tac_frame, depth_img):
 | E395 Causal-aware隔离消融 | 四层ΣREFLEX vs 无因果追踪 | 后验精度 +10%，且因果链断裂时安全拒绝率提升至95% |
 
 IP-302（因果证据组合）：ECG节点与边的声明，因果组合算子（因果串联Cau-SER、因果并联Cau-PAR、因果否决Cau-VETO），组合单调性在因果链完整性下保持。证书代数扩展：J_MOD = ⊗_i J(module_i) ⊗ J_ECG(MReg) ⊗ J_comp(MReg)。
-
 <!-- ARTIFACT:END -->
