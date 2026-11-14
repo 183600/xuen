@@ -3,405 +3,490 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 1 轮（灵感循环第 1 轮；本轮灵感：「迭代验证」×「需求洞察」×「少样本学习」）
+# 第 2 轮（灵感循环第 2 轮；本轮灵感：「工具调用」×「预训练」×「视觉-语言-动作模型」）
 
-> 背景：当前具身智能系统往往依赖海量标注数据进行监督学习，而在真实部署中面对「需求洞察」中暗示的稀缺场景（罕见故障、边缘案例、新环境）时，往往因数据不足而失效或产生灾难性误判。R73 的 MODGAUGE 提供「计量契约代数」框架，将不确定度明确传递，但其前提是「契约可表达」且「模块已认证」。当模块在部署初期只有极少量样本时，MODGAUGE 的「模块热替换」定理无法直接使用——我们没有足够的材质/视角/互扰数据来校准 DPEM、训练 IRL、构架 MReg。
->
-> 本轮灵感三位一体，设计 **LeanGauge** 算法：
-> - **需求洞察**：系统需要在「故障前哨」层面识别「尚未被需求覆盖的风险区域」——这些区域往往是「数据稀缺」的、且「代价高」的；
-> - **迭代验证**：通过「可预测的自助下注」在线生成「伪需求」样本，对每个「需求未覆盖」的子空间进行「最小验证子图」的「闭环修复」；
-> - **少样本学习**：在「需求洞察」发现的稀缺子空间内，用「结构化的先验约束」+「贝叶斯不确定度传播」+「迭代验证生成的样本」进行「计量契约的局部校准」；
->
-> 核心命题：**把「等待大数据」的被动学习，变为「在少样本下主动发现+迭代修复需求盲区」的主动计量增强**——系统在每次「需求洞察」触发时，自动生成「迭代验证子图」，在子图内就地完成「少样本学习」的「计量契约修复」，从而在「模块热替换」前置条件（材质/视角/互扰覆盖）得到满足。
+> **基线继承**：第 1 轮 **LeanGauge**（IP-310–314；定义 398–415；引理 42–45；实验 E411–E425）。
+> 本轮纪律：**在前人基础上改进，而不是推倒重来**——LeanGauge 的三个核心模块（D-Box / I-Box / BP-Cal）
+> 各沿一条灵感轴升级；MODGAUGE 五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链）
+> 与 4CV 骨架全部保留；同时审计并修复第 1 轮遗留的三处缺陷（见 §5）。
+
+## 三位一体映射（升级而非重写）
+
+| 灵感词 | 第 1 轮对象 | 升级为 | 一句话动机 |
+|---|---|---|---|
+| 视觉-语言-动作模型 | IP-310 D-Box：只知道「格子没验证过」 | **L-Box**：VLA 把数值盲区翻译成共形校准的「因果假设集」 | 盲区不仅要被发现，还要被**理解**——镜面反射、透明玻璃、形变表面对应完全不同的探测工具与校准先验 |
+| 工具调用 | IP-311 I-Box：χ_R 闭式下注，观测无差别接受 | **T-Box + TCV**：探测动作升级为带类型契约、前置/后置条件与签名回执的「计量工具调用程序」 | 堵住第 1 轮最大风险：任何观测都被无条件当成有效证据 |
+| 预训练 | IP-312 BP-Cal：每盲区从零拟合物理先验 GP | **MP-Φ + AP-Cal**：预训练计量先验，摊销后验，跨盲区复用经验 | 「物理先验足够好」本身不可审计；预训练让先验质量第一次有了样本复杂度上界 |
+
+**核心命题**：把 LeanGauge 的「数值盲区 + 数值探测 + 逐盲区校准」升级为
+「**语义假设 → 契约化工具调用 → 摊销校准 → 交叉验证后局部热替换**」：
+VLA 只做三件被审计的事（提假设、选工具、写主张），数值真值仍由计量层独占；
+预训练先验把「每盲区从零学习」变为「跨盲区摊销学习」，并用元泛化界把先验质量变成可测量、可告警的量。
+
+**不变式保持声明**：
+- MODGAUGE 五不变式全部保留；
+- 主张绑定不变式的**语言扩展**：语言主张必须引用有效数值回执，否则在契约序列化时剥离（定义 423）；
+- **严格退化链延长**：ToolGauge 失效（VLA 不可用 / 假设全被 SNC 剔除 / 预算耗尽）⇒ 退回 LeanGauge 纯数值探测 ⇒ 再失效退回 MODGAUGE。VLA 是增强项，不是依赖项。
 
 ## 0. 直觉与动机
 
-**灵感 1（需求洞察 → 故障前哨层面的「需求盲区」识别）**
-直觉：R73 的 MODGAUGE 追求「契约表达力完备」，但实际部署时往往面临「契约可表达性盲区」——某个材质/视角/干扰组合在训练数据中从未出现，这在「故障前哨」层面表现为：DPEM 对该组合的 u_depth 估计偏低（假确定性），但实际测量 σ 远大于预期，导致下游 BSE 发出错误的「安全」信号。这种盲区往往在「极端边缘」或「罕见组合」——数据稀缺、代价高昂——它们正是需求洞察要发现的：**需求盲区 = 稀疏子空间 + 高风险等价类**。
+**灵感 1（工具调用 → 探测动作的「接口化与回执化」）**
+直觉：LeanGauge 的 I-Box 用 χ_R 闭式 σ_pred 决定「要不要进盲区」，但探测动作本身没有接口约束——
+任何返回值都被无差别接受为样本，这正是第 1 轮最大风险（「迭代采样被误判为已覆盖」）的根源。
+LLM 工具调用的工程智慧恰好是解药：**工具 = 类型化 schema + 物理前置条件 + 后置回执 + 来源签名**。
+我们把每个计量探测（IR 补测、敲击激励、光照扫描、双目基线、热漂移、跨通道互检）包装成「计量工具」，
+探测方案由 VLA 编译成程序 Π_s，由工具调用校验器 TCV 逐条验证（schema / 前置 / 预算 / 循环）后才执行，
+每条回执携带签名与声明的 σ。盲区注入攻击者现在必须**同时**伪造四层：schema、物理前置、签名回执、
+语义一致性（SNC）——攻击面从 1 层变 4 层。
 
-我们引入**需求盲区检测器 D-Box**，它持有「需求覆盖率矩阵」R ∈ ℝ^(d×m×i)，其中 d=距离维、m=材质维、i=互扰维；每个单元格的值是「该子空间是否被验证过」+「当前 u 的置信区间宽度」。当 R 某格单元的验证次数 < τ_n (例如 ≤1) 且该格属高风险区域（碰撞/失手代价 > τ_cost），即判定该子空间为「需求盲区」。
+**灵感 2（预训练 → 先验质量从「信仰」变为「可审计量」）**
+直觉：BP-Cal 的物理先验 GP 隐含假设「物理尺度先验足够好」，但该假设本身不可审计，且每个盲区从零拟合——
+第 2 个盲区学不到第 1 个盲区的任何经验。预训练的启示有三：
+(a) 在海量仿真（域随机化的材质×光照×干扰组合）+ 自监督真实数据（多视一致性、敲击响应动力学、热漂移）上
+元训练「计量先验 MP-Φ」，输入（假设 h，已收到的回执流）直接输出契约参数的**摊销后验**——少样本适应被摊销；
+(b) 元泛化界（引理 47）给出「M 个预训练环境 + N_bl 条上下文」的超额风险上界，**先验质量第一次可测量**；
+(c) 预训练阶段的失败模式可以**预先进入测试集**：在仿真里扫过 10⁴ 种组合，已知失败模式写进 SNC 指纹库。
+同时保留物理先验作为 KL 锚与方差下界（保守性夹紧），防止预训练先验漂离物理或输出过度自信。
 
-**灵感 2（迭代验证 → 可预测下注的「自助验证」机制）**
-直觉：R73 的最高风险是「契约表达力盲区」——系统自信地组合一个错误世界。我们的「迭代验证」灵感来源于 R73 的 CAS 哨兵，但**不依赖外部标签，而是用「可预测的自助下注」在线生成「伪需求样本」**：
-- 选取当前需求盲区所在的「边缘子空间」；
-- 构造「最小验证子图」M_ver ⊆ MReg（只包含涉及该子空间的所有关键模块）；
-- 在 M_ver 内，对每个候选动作 a，执行「可预测下注」：
-  - 假设 a 将进入盲区 → 观测 σ_pred；
-  - 若 σ_pred > σ_decl + γ (经验安全裕度) → 下注 a 为「潜在风险信号」；
-  - 执行 a，记录真实观测 σ_obs；
-- 根据「下注结果」→「真实是否中标」生成「需求样本」+「计量反馈」；
-- 更新盲区覆盖矩阵 R。
+**灵感 3（视觉-语言-动作模型 → 盲区的「语义化」与 VLA 的「降格审计」）**
+直觉：D-Box 的覆盖矩阵只知道「格子 (d,m,i) 没验证过」，不知道「为什么没验证」。
+不同根因（镜面反射 / 透明 / 形变 / 热漂移）对应不同的探测工具组合与不同的校准先验——
+VLA 的语义能力恰好补上这一层：把格子翻译成共形校准的因果假设集 H_s，再针对性编译探测程序。
+但 VLA 以「自信地胡说」著称——恰是 R73/LeanGauge 最怕的「自信地组合错误世界」。
+因此 ToolGauge 中 VLA 被降格为三个**被审计的角色**：
+假设器（共形覆盖 1−α，定义 422）、编程器（只能选预注册工具、参数限物理包络内）、
+解说器（文字主张必须引用数值回执，否则剥离，定义 423）。
+**语言永远不进入数值通道**；VLA 整体失效时系统按退化链原样运行。
 
-这与 CAS 的「赌局哨兵」不同：**我们不是监控契约偏离，而是主动发起「哨兵式的探测行动」来发现盲区本身**。
+## 1. 形式化定义（增量：定义 416–431）
 
-**灵感 3（少样本学习 → 计量契约的「局部校准」）**
-直觉：一旦迭代验证生成了「需求盲区样本」，我们需要在「数据稀缺」的前提下完成「计量契约的局部校准」。方案：
-- **结构化先验**：对 DPEM 的每个分量 u_range, u_material, u_edge 等，都有已知的物理尺度（σ ∝ d²/B、材质反射率指数等）；
-- **贝叶斯不确定度传播**：在需求盲区样本 N_bl 上，构建高斯过程（或变分推断），对 u 进行后验更新。先验由物理尺度给出，数据不足时靠先验，充足时数据主导；
-- **局部修复**：只修复盲区子图的「契约声明」——更新 EC 中的 χ_R, D, τ_merge 等。其余子图保持原有证书，实现「局部热替换」。
+**定义 416（计量工具与工具契约 MTC）** 计量工具 t = (Schema_t, Pre_t, Post_t, c_t, τ_t, Ĝ_t)：
+- Schema_t：类型化参数与返回值，如 `illum.sweep(ω∈[−60°,60°], I∈[0,2klx]) → (Δz: μ, σ_decl)`；
+- Pre_t：物理前置谓词（力/温/时序包络，第 0 层兜底的工具级实例化）；
+- Post_t：后置回执谓词：返回必须含 (μ, σ_decl, 来源签名 sig, 时间戳 ts, 单调序号 seq)；
+- c_t：归一化调用代价（时间+磨损+风险）；τ_t：最坏执行时延；
+- Ĝ_t(h)：给定假设 h 的预测信息增益（nats）。高斯观测下闭式 Ĝ = ½·log(1 + σ²_prior/σ²_obs)，其余由 MP-Φ 查询。
+工具库 T₀ = {ir.probe, tap.percuss, illum.sweep, stereo.baseline, therm.drift, cross.modal}，全部预注册物理包络与失败指纹。
 
-这把「需求盲区」从「黑 桶」变成「可验证的、可修复的子问题」。
+**定义 417（工具回执与有效性）** r = (t, args, obs=(μ,σ_decl), sig, ts, seq)；
+valid(r) ⇔ Schema_t(args) ∧ Pre_t(执行时刻快照) ∧ Post_t(obs) ∧ Verify(sig) ∧ seq 单调。
+无效回执一律作废并计入失败计数；**作废回执永不进入校准样本集**。
 
-## 1. 形式化定义（增量：定义 398–415）
+**定义 418（探测程序与 TCV）** Π_s = ((t₁,a₁),…,(t_L,a_L))，L ≤ L_max = 6，允许 DAG 依赖（后调用参数可引用前回执）。
+TCV(Π_s) 逐条检查：① Schema；② Pre（对预估执行时刻外推包络）；③ 预算 Σc_t ≤ B_tools；
+④ 循环拒绝（同一 (t,args) 不重复）。执行语义：任一条 Pre 实测失败 ⇒ 该调用 void、程序以完成前缀收尾（零副作用保证）。
 
-**定义 398（需求覆盖矩阵与需求盲区）** 需求覆盖矩阵 R ∈ ℝ^(d×m×i)：
-- R[d,m,i] = (n_verify, σ_conf_lo, σ_conf_hi, cost_risk)；
-- n_verify：子空间 (d,m,i) 的验证次数；
-- σ_conf : 该子空间当前 u 的置信区间；
-- cost_risk：该子空间的风险等价类（碰撞/失手代价）。
+**定义 419（双层下注，推广定义 400）**
+- **风险门 λ（继承）**：λ(a,s) = σ_pred(a|s) − σ_decl(a) ≥ γ 才允许进入盲区——管「这条探测**安不安全**」；
+- **增益注 β（新增）**：β_t = Ĝ_t(h) − c_t ≥ γ_B 才值得调用——管「这条探测**值不值**」。
+两门同过才执行；任一门失败不产生物理副作用。
 
-**定义 399（需求盲区）** 子空间 s = (d,m,i) 为需求盲区 ⇔ n_verify(s) ≤ τ_n ∧ cost_risk(s) ≥ τ_cost。
+**定义 420（预训练计量先验 MP-Φ 与摊销校准 AP-Cal）**
+MP-Φ_θ : (h, {r_j}_{≤k}) ↦ q_θ(u_s) = 𝒩(μ_θ, Σ_θ)，契约参数 u_s 的（低秩）摊销后验；
+元训练目标：min_θ Σ_{m=1..M} E[−log p(u*_m | ctx_m)] + β_KL·KL(q_θ ‖ p_phys)——物理先验作为 KL 锚。
+**保守性夹紧**：Σ_θ ≽ κ_phys·I（预测 σ 不得低于物理噪声底），禁止预训练过度自信进入契约。
 
-**定义 400（可预测自助下注）** 给定需求盲区 s，候选动作集合 A_s。下注函数 λ: A_s → ℝ，λ(a) = σ_pred(a|s) - σ_decl(a)。若 λ(a) ≥ γ，则判 a 为「潜在风险信号」。
+**定义 421（ToolGauge 六段闭环 6C）** 修复循环 = H(ypothesize) → C(ompile) → E(xecute) → C(alibrate) → V(erify) → U(pdate)：
+1. H：D-Box（定义 398/399，继承）发现盲区 s ⇒ L-Box 生成共形假设集 H_s；
+2. C：VLA 编程器对 H_s 编译 Π_s，TCV 验证；
+3. E：逐工具执行，双层闸门 + 回执校验，产出有效回执流；
+4. C：AP-Cal 以回执流为上下文输出 q_θ(u_s)；
+5. V：**独立回执交叉验证**——q_θ(u_s) 对至少一条未参与拟合的 cross.modal 回执的标准化残差 |z| ≤ ε_cross；再跑契约回归测试（继承第 1 轮）；
+6. U：通过 ⇒ 局部热替换 M_ver 子图 + 语言修复证书（定义 427）绑定进 EC；不通过 ⇒ 夹紧方差重试 1 次，再失败 ⇒ stub + RED（严格退化）。
 
-**定义 401（最小验证子图 M_ver）** M_ver = (V_ver, E_ver) ⊆ MReg，其中 V_ver 包含所有涉及盲区 s 的模块，E_ver 是其诱导子图。
+**定义 422（共形假设覆盖）** 预注册校准集 C_cal = {(s_i, h_i*)}（部署前由交叉通道真值标注），假设分数取 1−α 分位 τ_h；
+运行时 H_s = {h : score(h) ≤ τ_h}；保证 P(h* ∈ H_s) ≥ 1−α（可交换性下；漂移下按引理 48 修正）。
 
-**定义 402（迭代验证采样）** 对 a ∈ A_s：
-1. 执行下注：假设 a 进入 s → 计算 σ_pred = χ_viewpoint(a) + χ_material(a) + ...；
-2. 若 σ_pred > σ_decl + γ：执行 a → 记录 σ_obs；
-3. 生成「需求样本」(a, σ_obs, u_bl)；
-4. 更新 R[s].n_verify += 1, σ_conf 更新。
+**定义 423（语言主张-回执绑定）** EC 新增字段 claims：每条语言主张 c 必须携带 receipts(c) ⊆ 有效回执集；
+无引用或引用无效回执的主张在契约序列化时剥离；剥离是纯投影，不改变任何数值行为（主张绑定不变式的语言扩展）。
 
-**定义 403（少样本局部校准）** 在 N_bl = {(a_j, σ_j)}_J^j=1 个需求盲区样本上，对 DPEM 的每个分量 u_k 进行贝叶斯更新：
-- 高斯过程先验：u_k ~ GP(μ_0(d,m,i), K_0(·,·))；
-- 观测似然：σ_j | u_k ~ 𝒩(u_k(a_j), σ_obs²)；
-- 后验：u_k | N_bl ~ GP(μ_N, K_N)；
-- 局部修复：更新 EC 中 u_fields, χ_R, D 的声明。
+**定义 424（工具预算契约 TB-Contract）** TB = (B_tools, L_max, τ_repair, recovery)：
+单盲区修复预算、程序长度上限、修复总时延上限、恢复条件（预算耗尽 / V 连续 2 次失败 ⇒ stub + RED + 排队人工）。
+TB-Contract 是 IV-Contract（定义 407）的工具级细化，时序结论继承引理 45。
 
-**定义 404（迭代修复闭环 I-Box）** 给定需求盲区 s：
-```
-循环：
-  1. M_ver ← MINIMAL_VALIDATION_SUBGRAPH(s)
-  2. A_s ← ACTIONS_ENTERING(s)
-  3. for each a ∈ A_s:
-        λ ← PREDICTABLE_BET(a, s)
-        if λ ≥ γ: EXECUTE(a), SAMPLE ← OBSERVE(a)
-  4. N_bl ← COLLECT_SAMPLES(s)
-  5. if N_bl 达标：
-        (R, EC) ← LOCAL_CALIBRATE(N_bl)
-        if CONTRACT_VALID(EC) and BUDGET_OK: BREAK
-```
+**定义 425（语义-数值一致性 SNC）** H_s 中的材质/光照/干扰标签必须与 R 的格子语义及回执观测模式一致
+（例：h=「镜面反射」⇔ cross.modal 的 IR/RGB 残差符号模式匹配预注册指纹 F_specular）。
+不一致 ⇒ 该假设剔除；全部被剔 ⇒ H_s = {UNKNOWN}，退回 LeanGauge 纯数值探测路径（退化链第 1 级）。
 
-**定义 405（检测-纠正-验证-更新 4CV）**
-- **检测 D**：D-Box 发现需求盲区；
-- **纠正 C**：I-Box 执行迭代验证采样；
-- **验证 V**：局部校准得到新契约 EC'；
-- **更新 U**：MReg 中盲区子图热替换为 EC'，R 更新。
+**定义 426（修正后的采样复杂度，替代第 1 轮定义 408）** 独立高斯观测（σ_obs 已知）、先验方差 σ_0²、保守性夹紧下，
+将盲区点后验 σ 压至 ε 需 n ≥ σ_obs²·(ε⁻² − σ_0⁻²)（由 σ_post² = (σ_0⁻² + n·σ_obs⁻²)⁻¹ 直接解出）。
+AP-Cal 的经验收缩率若低于该解析值的 80%，触发先验-现实失配告警（联动定义 428）。
 
-**定义 406（LeanGauge 总览）** LeanGauge = (MODGAUGE, D-Box, I-Box, 4CV)。
+**定义 427（语言修复证书）** RepairCert(s) = (H_s, Π_s, receipts, 文字解说)，绑定进 EC.claims；
+解说中每个数值必须逐字引自 receipts，否则整条剥离。证书服务于人工审计与事故复盘（E436）。
 
-**定义 407（迭代验证时序契约 IV-Contract）** 与 REG 类比，IV-Contract = (A_s, τ_iter, B_iter, recovery_condition)：
-- A_s：允许进入盲区的动作集合；
-- τ_iter：每次迭代验证的最长时延；
-- B_iter：迭代预算总量；
-- recovery: 迭代收敛/失败的恢复条件。
+**定义 428（先验隔离监控 P-Quarantine）** 维护最近 K 次修复的（预测收缩, 实际收缩）残差符号序列；
+连续 ≥ q 次（默认 K=q=3）同向 ⇒ 判定摊销先验出现**跨盲区相关偏差**：暂停 AP-Cal，
+回退第 1 轮 BP-Cal 逐盲区校准，直至重训/再校准完成。这是对「预训练把局部误差变成系统性误差」的在线断路器。
 
-**定义 408（采样效率下界）** 为保证盲区 s 的 σ_conf 缩小至 ≤ ε，所需最小样本数：
-n_min(s) ≥ (σ_prior² - ε²) / (KL(U_prior || U_post) ≥ δ) 
+**定义 429（语义输入白名单）** VLA 的输入仅允许：数值张量（R 格子、回执统计）、固定枚举 schema；
+**禁止**环境中出现的自由文本/二维码/OCR 结果进入 VLA 上下文（提示注入防御；E435 验证）。
 
-其中 KL 由贝叶斯后验控制，δ 为目标信息增益。
+**定义 430（探测显式状态 PROBING）** 工具执行期间系统进入显式 PROBING 状态：动作幅值受限、
+力矩硬限制、日志全录、（人机协作场景）对操作者可见。探测是「系统公开声明的一等行为」，不是隐式副作用。
+
+**定义 431（继承与编号约定）** 未被本轮重定义的第 1 轮记号（R、s、λ、γ、M_ver、N_bl、EC、MReg 等）沿用定义 398–415；
+本文所有增量定义以 LeanGauge 为退化特例：令 VLA=∅、T₀={被动观测}、MP-Φ=物理先验 GP ⇒ ToolGauge ≡ LeanGauge。
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-310 LeanGauge：需求盲区检测器 D-Box
-class DBox:
-    def __init__(self, subspace_dims=(DIST_BINS, MATTERIAL_CAT, INTF_LEVEL)):
-        self.R = np.zeros(subspace_dims + (4,))  # (n_verify, σ_lo, σ_hi, cost_risk)
-        self.tau_n = 2
-        self.tau_cost = 0.3  # normalized risk
+# IP-316 MTC + TCV：计量工具契约与工具调用校验器
+@dataclass
+class MetrologyTool:
+    name: str
+    schema: Callable[[dict], bool]            # ① 参数类型/范围
+    pre:   Callable[[Snapshot], bool]         # ② 物理前置（力/温/时序包络）
+    post:  Callable[[Raw], "Receipt | None"]  # ③ 回执构造 (μ, σ_decl, sig, ts, seq)
+    cost:  float
+    tau:   float
+    info_gain: Callable[["Hyp", "MPPhi"], float]   # Ĝ_t(h)
 
-    def detect_blind_spot(self):
-        blind_spots = []
-        for idx in np.argwhere(self.R[..., 0] <= self.tau_n):
-            if self.R[tuple(idx) + (3,)] >= self.tau_cost:
-                blind_spots.append((idx, self.R[tuple(idx)]))
-        return blind_spots  # [(subspace_idx, (n, σ_lo, σ_hi, cost))]
+class TCV:
+    def verify(self, prog, budget):
+        seen = set()
+        for (t, args) in prog:
+            if not t.schema(args): return False, "schema"
+            key = (t.name, canon(args))
+            if key in seen:           return False, "loop"       # ④ 循环拒绝
+            seen.add(key)
+            budget -= t.cost
+            if budget < 0:            return False, "budget"     # ③ 预算
+        return True, "ok"
 
-    def update(self, subspace, n_verify, sigma_conf, cost):
-        self.R[subspace] = [n_verify, sigma_conf[0], sigma_conf[1], cost]
+    def execute(self, prog, env):
+        receipts = []
+        for (t, args) in prog:
+            if not t.pre(env.snapshot()): break    # void：前缀完成态，零副作用
+            r = t.post(env.invoke(t, args))
+            if r is None or not verify_sig(r):
+                self.fail += 1; continue           # 作废回执永不进入样本集
+            receipts.append(r)
+        return receipts
 
+# IP-315 L-Box：语义盲区假设器（VLA + 共形 + SNC）
+class LBox:
+    def hypothesize(self, s, R_cell):
+        hs = self.vla.propose(featurize_num(s, R_cell))   # 输入=白名单数值（定义 429）
+        hs = SNC_filter(hs, R_cell, fingerprint_lib)      # 定义 425
+        q  = conformal_quantile(self.cal, alpha=0.1)
+        H  = [h for h in hs if self.vla.score(h, s) <= q] # 定义 422
+        return H or ["UNKNOWN"]                           # 全被剔 ⇒ 退化链第 1 级
 
-# IP-311 I-Box：可预测自助下注与迭代验证采样
-class IBox:
-    def __init__(self, dpem, budget_cycle, gamma=0.15):
-        self.dpem = dpem
-        self.budget = budget_cycle
-        self.gamma = gamma  # 预测-声明差阈值
+# IP-317 T-Box：双层下注的程序化探测
+class TBox:
+    def select(self, H_s, tools, tcv, budget):
+        prog = self.vla.plan_probes(H_s, tools)           # VLA 编程器（只选预注册工具）
+        ok, why = tcv.verify(prog, budget)
+        if not ok: prog = self.numeric_fallback(H_s)      # 退化：LeanGauge 数值探测
+        return [c for c in prog
+                if self.risk_gate(c) and self.gain_bet(c)]  # λ ≥ γ 且 β ≥ γ_B（定义 419）
 
-    def predictable_bet(self, action, subspace):
-        v = action.viewpoint
-        m = subspace[1]  # material category
-        sigma_pred = self.dpem.predict_uncertainty(v=v, m=m)
-        sigma_decl = self.dpem.declared_uncertainty(v=v, m=m)
-        return sigma_pred - sigma_decl
+# IP-318 MP-Φ / AP-Cal：预训练先验 + 摊销校准 + 交叉验证
+class APCal:
+    def calibrate(self, receipts, H, s):
+        mu, Sig = self.mp_phi(featurize_ctx(receipts, H, s))  # 单前向摊销后验
+        Sig = clamp_min(Sig, KAPPA_PHYS)                      # 保守性夹紧（定义 420）
+        return mu, Sig
+    def cross_validate(self, mu, Sig, r_indep):               # 定义 421.5（V 阶段）
+        z = (r_indep.mu - mu) / sqrt(Sig + r_indep.var)
+        return abs(z) <= self.eps_cross
 
-    def execute_validation(self, blind_spot):
-        s = blind_spot[0]  # subspace index
-        actions = self._actions_entering(s)
-        samples = []
-        for a in actions:
-            if self.predictable_bet(a, s) >= self.gamma:
-                sigma_obs = self.dpem.observe(action=a)  # 实际执行
-                samples.append((a, sigma_obs))
-                DBox.update(s, n_verify+1, ...)  # update coverage
-        return samples
+# IP-319 6C 闭环（含先验隔离）
+def toolgauge_6c(M, s):
+    H        = M.lbox.hypothesize(s, M.dbox.R[s])                  # H
+    prog     = M.tbox.select(H, M.tools, M.tcv, M.budget_left(s))  # C
+    receipts = M.tcv.execute(prog, M.env)                          # E（PROBING 态，定义 430）
+    if len(receipts) < n_min(s):                                   # 定义 426 解析门槛
+        return stub_and_red(s, reason="insufficient_evidence")
+    mu, Sig = M.apcal.calibrate(receipts, H, s)                    # C
+    if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):    # V
+        mu, Sig = M.apcal.calibrate(receipts, ["UNKNOWN"], s)      #   夹紧重试 1 次
+        if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+            return stub_and_red(s, reason="cross_check_failed")    #   严格退化
+    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)            # U
+    if not contract_regression(new_ec):
+        return stub_and_red(s, reason="regression_failed")
+    M.mreg.hot_replace(M.dpe, new_ec)
+    M.dbox.update_from_posterior(s, mu, Sig)      # 修复第 1 轮缺陷：σ_conf 由后验分位数写入
+    bind_claims(new_ec, H, prog, receipts)        # 定义 427 语言修复证书
+    M.pquar.record(M.apcal.last_gain, realized_gain(receipts))   # 定义 428
+    return True
 
-
-# IP-312 BP-Cal：贝叶斯先验驱动的局部校准
-class BayesianLocalCalibrator:
-    def __init__(self, prior_mean, prior_cov):
-        self.prior_mean = prior_mean  # 物理尺度给出的 GP 均值
-        self.prior_cov = prior_cov    # 物理尺度给出的 GP 协方差
-
-    def calibrate(self, samples, subspace):
-        """贝叶斯线性高斯过程更新"""
-        X = np.array([s[0].viewpoint for s in samples])
-        y = np.array([s[1] for s in samples])
-        K = self.prior_cov(X, X) + 1e-6 * np.eye(len(X))
-        L = np.linalg.cholesky(K)
-        alpha = np.linalg.solve(L.T, np.linalg.solve(L, y))
-        # 预测均值/协方差（标准BFGS优化版）
-        mu_post = self.prior_mean(X) @ alpha  # 简化
-        # 更新契约声明
-        return mu_post, K  # 新的 u_k, Σ_k
-
-    def update_contract(self, module, new_u, subspace):
-        old_ec = module.ec
-        new_fields = old_ec.u_fields.copy()
-        new_fields[subspace] = new_u
-        new_chi = lambda a: compute_chi_from_physical(u=new_u, v=a.viewpoint)
-        new_ec = old_ec._replace(u_fields=new_fields, chi_R=new_chi)
-        return new_ec
-
-
-# IP-313 LeanGauge-4CV：一次完整的迭代修复闭环
-def lean_gauge_4cv(M, blind_spot):
-    """一次 I-Box 迭代"""
-    if blind_spot.n_verify < 3:  # 初始探测
-        samples = IBox.execute_validation(M, blind_spot)
-        if len(samples) < 2:
-            return False, "探测样本不足"
-        new_u, _ = BayesianLocalCalibrator.calibrate(samples, blind_spot.subspace)
-        new_ec = BayesianLocalCalibrator.update_contract(M.dpe, new_u, blind_spot.subspace)
-        M.mreg.hot_replace(M.dpe, new_ec)  # 局部热替换
-        DBox.update(blind_spot.subspace, len(samples), ...)
-        return True, "迭代完成"
-    else:  # 验证收敛
-        return True, "子图已验证通过"
-
-
-# IP-314 LeanGauge 主闭环（嵌入 MODGAUGE）
-def LeanGauge_round(M, obs, audio, tac_frame, depth_img, det_set):
-    """MODGAUGE-RAS + I-Box 迭代修复闭环"""
-    blind_spots = DBox.detect_blind_spot()
-    for spot in blind_spots:
-        success, msg = lean_gauge_4cv(M, spot)
-        if success:
-            break  # 局部修复成功，继续主循环
-    return MODGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set)
+# IP-320 主闭环：50Hz 路径不动，修复全异步 + 先验隔离
+def ToolGauge_round(M, obs, audio, tac, depth, det):
+    for s in M.dbox.detect_blind_spot():          # 继承定义 398/399
+        if s not in M.inflight:
+            M.inflight.add(s)
+            submit_async(toolgauge_6c, M, s)      # 偏离 50Hz 路径（引理 50）
+    if M.pquar.triggered():
+        M.apcal.pause(); M.use_bpcal_fallback = True   # 定义 428 断路器
+    return MODGAUGE_round(M, obs, audio, tac, depth, det)   # 主控不变
 ```
 
 ## 3. 推导
 
-**引理 42（自助下注可预测性）** 若动作 a 的观测 σ(a) 服从亚强稳健条件（A115 类），则 σ_pred(a|s) 为在子空间 s 上的可预测下注 λ(a)。系：利用 χ_v 等反作用通道，对每个 (v,m) 组合给出闭式 σ_pred；亚强稳健保证 λ(a) ≥ γ 时实际 σ(a) 的上界可控。
+**引理 46（双层下注的安全-增益联合界）** 在亚高斯稳健条件 A115′（观测噪声关于 χ_R 反作用通道亚高斯，参数 b）下：
+(a) 风险门：P(σ_obs > σ_decl + γ + 2b) ≤ exp(−γ²/2b²)（继承引理 42 形式）；
+(b) 增益注：若保守性夹紧成立且 MP-Φ 增益预测误差 ≤ ξ，则每次调用的实际后验收缩 ≥ Ĝ_t − ξ，
+L 次调用的联合浪费概率 ≤ L·exp(−γ_B²/2ξ²)（union bound）。
+系：TCV 拒绝或闸门未过的程序不产生物理副作用 ⇒ 探测安全下界为「零副作用」。
 
-**引理 43（局部贝叶斯校准可收敛）** 设先验 u ~ GP(μ_0, K_0)，样本数 N ≥ n_min(s)，则后验 σ_post ≤ ε ⇒ P(σ_post > ε) ≤ exp(-N·δ)。系：标准 GP 回归的后验方差收敛率。
+**引理 47（摊销校准的元泛化界）** 设预训练 episode i.i.d. 采自环境族 𝒟_env，部署环境 TV(𝒟_dep, 𝒟_env) ≤ η，
+M 个预训练 episode、N_bl 条上下文回执、后验族复杂度 C(Θ)、参数维 d_u：
+超额风险 R̄(q_θ) − R̄(q*) ≤ 2η + 𝒪(√((C(Θ)+log(1/δ))/M)) + 𝒪(√((d_u+log(1/δ))/N_bl))。
+证明思路：元级 PAC-Bayes（先验=物理锚 p_phys）给前两项；任务内 Bernstein 给第三项；夹紧保证似然可辨识。
+**推论 47.1**：M→∞ 时 N_bl=1 亦可收敛——「预训练买样本效率」的形式化；η 项不可消除，必须由 E431 实测并计入风险账本。
 
-**引理 44（迭代修复的局部热替换）** M_ver 子图的模块 EC 更新为 EC' ⇔ EC' 满足定义 367 契约完整性 + 定义 370 组合单调性 + 引理 35 热替换定理 ⇒ 子图系统级性质保持。因 M_ver 只是 MReg 的子图，整体安全由 4CV 保持。
+**引理 48（共形覆盖与漂移敏感度）** 可交换性下 P(h*∈H_s) ≥ 1−α；校准-部署 TV = η′ 时覆盖 ≥ 1−α−2η′，
+加权共形可恢复至 1−α−η′·L′。系：α=0.1、η′≤0.05 ⇒ 覆盖 ≥ 0.8，作为 L-Box 运行期 SLA；
+SLA 跌破 ⇒ H_s := {UNKNOWN}（退化链第 1 级）。
 
-**引理 45（全流程时序预算）** IV-Contract 保证每次迭代 ≤ τ_iter，总预算 ≤ Σ B_iter ≤ B_total；且 τ_iter 由 REG 时序契约界定，硬实时不变。
+**引理 49（语言层不破坏热替换等价性）** U 仅当 V 通过才触发；EC 变更仅限 (u_fields, χ_R, claims)，
+claims 不在任何数值计算路径上 ⇒ 子图数值等价性与第 1 轮引理 44 相同；claims 剥离（定义 423）为纯投影；
+SNC 失败 ⇒ 不替换（stub），退化链保持 ⇒ 系统级性质保持。
+
+**引理 50（时序与预算保持）** 6C 全部位于 50Hz 计量路径之外（事件驱动、异步、每盲区至多一次在飞）；
+50Hz 周期新增开销仅为回执验证 O(1) < 0.2ms；单盲区修复时延 ≤ L_max·max τ_t + τ_VLA + τ_AP ≤ τ_repair（TB-Contract 界定），
+预算耗尽由 TB-Contract 强制降级 ⇒ 硬实时（引理 45）与预算不变式保持。
 
 ## 4. 复杂度分析
 
-| 组件 | 域 | 时间 | 空间 | 正确性保证 |
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| D-Box 盲区检测 | 计量域 50Hz | O(|subspace|) < 1ms | O(|subspace|) | 定义 398、399 |
-| I-Box 迭代采样 | 计量域（事件触发） | O(|A_s|·T_obs) < 10ms | O(N_bl) | 定义 401、402 |
-| BP-Cal 局部校准 | 计量域 1Hz | O(N²_bl) < 50ms | O(N_bl²) | 定义 403、引理 43 |
-| 局部热替换 | 计量域 | < 1ms | O(1) | 引理 44 |
-| 4CV 主闭环 | 计量域 | O(#blinds × 采样) < 50ms | O(blinds) | 定义 405 |
+| D-Box 扫描 | 50Hz 内联 | O(\|R\|)，位图加速 < 1ms | O(\|R\|) | 定义 398/399（继承） |
+| 回执验证 | 50Hz 内联 | O(1) < 0.2ms | O(1) | 定义 417 |
+| L-Box 假设 | 异步事件 | 1×VLA 前向，τ≈0.2–0.8s（缓存） | O(\|H_s\|) | 定义 422、引理 48 |
+| 编程 + TCV | 异步 | O(L_max·\|T₀\|) < 5ms | O(L_max) | 定义 418、引理 46 |
+| 工具执行 | 物理域 | Σ τ_t ≤ B_tools（秒级，PROBING 显式态） | O(L_max) | 定义 416–418 |
+| AP-Cal 校准 | 异步 | O(N_bl·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 420、引理 47 |
+| V 交叉验证 | 异步 | O(1) + 1 条独立回执 | O(1) | 定义 421/427 |
+| U 热替换 + 证书 | 计量域 | < 1ms | O(1) | 引理 49 |
+| P-Quarantine | 异步 | O(K) | O(K) | 定义 428 |
 
-**总增开销**：相对于 MODGAUGE-RAS 的 3.5ms/周期，LeanGauge 最坏情况（每次都触发盲区）额外 ≤ 100ms/周期，但这是「稀疏事件」，平均开销 ≈ 10ms/分钟。
+**相对第 1 轮的关键改进**：BP-Cal O(N_bl²) Cholesky（N_bl=8 时 ≈50ms）→ AP-Cal O(N_bl·d_ctx) 单前向（<10ms），
+且先验质量随预训练规模 M 可证提升（引理 47）；探测动作从「无接口观测」→「四层校验的契约化工具调用」。
+总增开销：50Hz 路径 ≤ 0.2ms/周期（仅回执验证）；修复事件全异步，单事件 ≤ τ_repair，稀疏触发。
 
-## 5. 实验设计 E411–E425（RAS-Baselines v4 协议）
+## 5. 对第 1 轮缺陷的审计与修复清单
 
-| 实验 | 核心问题 | 关键目标 |
+| # | 第 1 轮缺陷 | 本轮处置 |
 |---|---|---|
-| E411 D-Box 盲区探测 | 稀疏矩阵中盲区检出率 | 检出率 ≥90%，误检 ≤10% |
-| E412 自助下注可预测性 | σ_pred - σ_obs 偏差 | 偏差 ≤15%（亚强稳健验证） |
-| E413 迭代采样有效性 | N_bl=3 时 σ_conf 收敛 | σ_conf ≤ 1.5σ_decl |
-| E414 局部贝叶斯校准 | 先验 vs 后验 KL 增益 | KL ≥ 0.5 nats / 样本 |
-| E415 局部热替换等价性 | 替换后 diff = 0 | 逐指令等价，系统属性保持 |
-| E416 4CV 闭环收敛 | 迭代次数上界 | ≤ 5 次收敛 |
-| E417 总时序保全 | 100 周期实时性 | 99% 周期 < 50ms |
-| E418 少样本抗鲁棒 | 5% 离群点干扰 | σ_conf 增益 ≥ 0.8×理想 |
+| 1 | 定义 408 公式 (σ_prior²−ε²)/(KL≥δ) 维度不成立、非良定义不等式 | 定义 426：干净闭式 n ≥ σ_obs²(ε⁻² − σ_0⁻²) |
+| 2 | BP-Cal 伪代码 `mu_post = prior_mean(X) @ alpha` 数学错误 | 正确 GP 后验 μ_post = k*ᵀ(K+σ²I)⁻¹y、Σ_post = k** − k*ᵀ(K+σ²I)⁻¹k*；且被 AP-Cal 摊销前向替代 |
+| 3 | IBox 静态调用 `DBox.update` 且使用未定义局部变量 | 依赖注入 coverage-store，显式传参（见 IP-317/319 骨架） |
+| 4 | 「迭代采样被误判为已覆盖」仅有单层防线 | 回执签名 + seq 单调 + SNC + 双层闸门，四层攻击面（E434） |
+| 5 | R 的 σ_conf 更新逻辑缺失 | U 阶段由 AP-Cal 后验分位数直接写入 R[s]（IP-319） |
+| 6 | 第 1 轮风险 2「采样不充分」未预注册量化门槛 | 定义 426 解析 n_min 进入 V 阶段门槛；不足即不校准、不替换 |
 
-## 6. 本轮最大风险
+## 6. 本轮最大风险（一句话）
 
-**一句话**：LeanGauge 的核心假设是「需求盲区可以通过「可预测自助下注」在有限预算内探测并校准」——但这依赖「σ_pred 与 σ_obs 高度相关」且「采样点足够信息论充分」；若实际噪声受**不可预测的环境突变**（如骤降气温导致标定瞬间失效、意外的反射材质使深度模型完全失效）或**攻击者精心设计的「盲区注入」**（故意进入模型训练分布外、且不触发下注阈值的区域），那么 I-Box 的「迭代采样」会被错误地当作「需求已覆盖」，系统在盲区上产生**自信的错误判断**——这相当于 R73 的「自信地组合错误世界」在「数据稀缺」的子空间中被「主动放大」。
+**一句话**：AP-Cal 的摊销后验在「预训练分布 → 部署分布」偏移下会产生**跨盲区强相关**的系统性偏差
+（例如预训练世界缺少某种后向反射材质时，所有含该材质的盲区的后验会同时向同一错误方向收缩），
+使第 1 轮「局部修复、误差局部化」的安全论证整体失效——一次错误的先验会同时污染所有被热替换的子图，
+而 VLA 生成的语言修复证书会让这种污染显得格外可信（E431/E434/E435 为证伪实验，P-Quarantine 为在线断路器）。
 
-次级风险与缓解：
-1. **σ_pred 与 σ_obs 相关性不足** → 增设「模型-agnostic 观测回执」（如 RGB-深度残差），用以校验 σ_pred；
-2. **迭代采样不充分** → 预注册 n_min = 2×引理 48 样本；采样后做「盲区敏感性扫描」；
-3. **盲区注入攻击** → 第 0 层物理包络（力/温/时序）兜底；若盲区采样后 u 不降则 RED；
-4. **先验驱动的局部校准偏执** → 校准后做「契约回归测试」，若回归不通过则 stub 盲区模块；
-5. **4CV 循环死锁** → IV-Contract 中的 recovery_condition：迭代 N > N_max ⇒ 全系统降级（R68 样式）；
-6. **D-Box 误检** → cost_risk 阈值 τ_cost 随任务风险动态调节；
-7. **贝叶斯校准数值不稳** → 使用稳健 GP（高斯似然 + 学生 t 协方差）+ 数值断点保护。
+**次级风险与缓解**：
+1. **相关性污染** → V 阶段强制独立回执交叉验证 + P-Quarantine 断路器 + 定期盲区抽样重验；
+2. **VLA 提示注入**（环境二维码/文本）→ 定义 429 输入白名单 + 输出 schema 校验（E435）；
+3. **共形可交换性失效** → 加权共形 + η′ 在线估计，SLA 跌破 0.8 ⇒ H_s := {UNKNOWN}（E426 漂移组）；
+4. **探测工具物理风险**（敲击/变光可能扰动物品）→ Pre 包络 + PROBING 显式状态（定义 430）+ 力矩硬限制；
+5. **回执伪造** → 签名 + 单调 seq + 传感器原始数据绑定（定义 417）；
+6. **预算赌博循环** → TB-Contract 硬顶 + (t,args) 重复拒绝（定义 418.④）；
+7. **VLA 时延抖动/不可用** → 异步 + 假设缓存 + 数值路径独立可跑（退化链，引理 50）。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 1 轮产物 · 创新点清单 v1：**LeanGauge**（Iterative Blind-spot Evidence Metrology with GAUGE audits for RAS）
+# 第 2 轮产物 · 创新点清单 v2：**ToolGauge**（Tool-Contracted Probing, Pretrain-Amortized Metrology with Audited VLA Hypotheses）
 
-> 背景：R73 的 MODGAUGE 提供「计量契约代数」框架，将不确定度明确传递。但在部署初期，面对「需求洞察」中暗示的稀缺场景（罕见故障、边缘案例、新环境），模组认证往往缺乏足够样本。LeanGauge 通过「迭代验证」机制，主动发现「需求盲区」并在「少样本」条件下完成「局部计量契约修复」，实现「需求先行」的计量增强。
+> 背景：第 1 轮 LeanGauge（IP-310–314）解决了「数据稀缺下盲区的发现与修复」，但遗留三个结构性弱点：
+> 探测动作无接口约束（任何观测都被当有效证据，第 1 轮最大风险的根源）、物理先验「足够好」不可审计、
+> 逐盲区从零校准不复用经验。本轮以「工具调用 × 预训练 × 视觉-语言-动作模型」为灵感，
+> **在 LeanGauge 之上**升级三个模块并延长退化链：
 >
-> IP 编号：IP-310~314（共 5 个）。理论姿态：**在 MODGAUGE 基础上，增加「需求盲区检测-迭代修复闭环」层**——不改变 R73 的五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链），而是为「模块热替换」前置条件提供「数据稀缺情形下的自动发现+校准」路径。
+> **集成链：MODGAUGE ⊃ LeanGauge ⊃ ToolGauge**。
+> VLA 只做三件被审计的事（提假设 / 选工具 / 写主张），数值真值由计量层独占；
+> 预训练先验使少样本适应摊销化，先验质量由元泛化界（引理 47）量化，并由 P-Quarantine（定义 428）在线断路。
+> IP 编号：IP-315–320（共 6 个）。定义增量 416–431；引理增量 46–50；实验增量 E426–E440。
+> 理论姿态：不改变五不变式，新增「语言模态扩展」（定义 423）与「严格退化链延长」。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MODGAUGE） |
+| 编号 | 名称 | 类型 | 关键改进（相对 LeanGauge） |
 |---|---|---|---|
-| IP-310 | D-Box 需求盲区检测器 | 核心模块 | 稀疏子空间覆盖矩阵 + 代价感知盲区判定 |
-| IP-311 | I-Box 可预测自助下注 | 核心模块 | 基于 χ_R 的闭式 σ_pred + 迭代采样生成需求样本 |
-| IP-312 | BP-Cal 局部贝叶斯校准 | 核心模块 | 物理先验 + 少样本后验更新 → 局部契约修复 |
-| IP-313 | LeanGauge-4CV | 设计模式 | 检测-纠正-验证-更新 四阶段闭环 |
-| IP-314 | LeanGauge 主闭环 | 集成 | MODGAUGE + 4CV 迭代修复 → 稀疏场景自适应 |
+| IP-315 | L-Box 语义盲区假设器 | 核心模块 | VLA 假设集 + 共形覆盖（1−α）+ SNC 指纹过滤；全被剔则退化为 UNKNOWN（数值路径） |
+| IP-316 | MTC/TCV 工具契约与校验器 | 核心模块 | 探测动作接口化：schema/前置/预算/循环四查 + 签名回执；无效回执永不入样本集 |
+| IP-317 | T-Box 双层下注执行器 | 核心模块 | 风险门 λ（安全）+ 增益注 β（值不值）双闸门；TCV 拒绝 ⇒ 零副作用 |
+| IP-318 | MP-Φ + AP-Cal 摊销校准器 | 核心模块 | 预训练计量先验，摊销后验单前向；保守性夹紧 Σ ≽ κ_phys·I；P-Quarantine 断路器 |
+| IP-319 | ToolGauge-6C 闭环 | 设计模式 | H→C→E→C→V→U 六段；V 阶段强制独立回执交叉验证后才热替换 |
+| IP-320 | ToolGauge 主闭环 | 集成 | 50Hz 路径不动，修复全异步；严格退化链 ToolGauge ⇐ LeanGauge ⇐ MODGAUGE |
 
-## 1. 符号体系增量（定义 398–415）
+**退化链声明**：VLA 不可用 / H_s={UNKNOWN} / 预算耗尽 / 交叉验证或回归失败 ⇒ LeanGauge 纯数值路径；
+LeanGauge 失效 ⇒ MODGAUGE 原样。VLA 是增强项，不是依赖项（引理 49/50）。
+
+## 1. 符号体系增量（定义 416–431）
 
 | 符号 | 含义 |
 |---|---|
-| `DBox` | 需求盲区检测器 |
-| `R ∈ ℝ^(d×m×i×4)` | 需求覆盖矩阵 (n_verify, σ_lo, σ_hi, cost_risk) |
-| `s = (d,m,i)` | 子空间索引 |
-| `τ_n, τ_cost` | 盲区判定阈值 |
-| `IBox` | 迭代验证子系统 |
-| `λ(a,s)` | 可预测下注函数 σ_pred - σ_decl |
-| `γ` | 下注阈值 |
-| `M_ver ⊆ MReg` | 最小验证子图 |
-| `N_bl = {(a_j, σ_j)}_J` | 需求盲区样本集 |
-| `BP-Cal` | 贝叶斯局部校准器 |
-| `U_prior ~ GP(μ_0, K_0)` | 先验高斯过程 |
-| `U_post ~ GP(μ_N, K_N)` | 后验高斯过程 |
-| `n_min(s) ≥ (σ_prior² - ε²)/δ` | 理论最小样本数 |
-| `4CV` | 检测-纠正-验证-更新 四阶段闭环 |
+| `t ∈ T₀` | 预注册计量工具：ir.probe / tap.percuss / illum.sweep / stereo.baseline / therm.drift / cross.modal |
+| `t = (Schema, Pre, Post, c, τ, Ĝ)` | 工具契约 MTC（定义 416） |
+| `r = (t, args, (μ,σ_decl), sig, ts, seq)` | 工具回执 Receipt（定义 417） |
+| `Π_s, L_max=6` | 盲区 s 的探测程序与长度上限（定义 418） |
+| `λ(a,s) / γ` | 风险门：σ_pred − σ_decl ≥ γ（继承定义 400） |
+| `β_t = Ĝ_t(h) − c_t / γ_B` | 增益注：预测信息增益 − 代价（定义 419） |
+| `MP-Φ_θ` | 预训练计量先验：(h, 回执流) ↦ 摊销后验 q_θ(u_s)（定义 420） |
+| `κ_phys` | 保守性夹紧下界：Σ_θ ≽ κ_phys·I |
+| `H_s, α, C_cal` | 共形因果假设集、覆盖水平、预注册校准集（定义 422） |
+| `SNC / F_*` | 语义-数值一致性检查与失败指纹库（定义 425） |
+| `TB = (B_tools, L_max, τ_repair, recovery)` | 工具预算契约（定义 424，细化 IV-Contract） |
+| `ε_cross` | V 阶段独立回执交叉验证的标准化残差阈值 |
+| `RepairCert(s)` | 语言修复证书 = (H_s, Π_s, receipts, 解说)（定义 427） |
+| `P-Quarantine` | 先验隔离监控：跨盲区相关偏差在线断路器（定义 428） |
+| `n ≥ σ_obs²(ε⁻² − σ_0⁻²)` | 修正后的解析样本下界（定义 426，替代第 1 轮定义 408） |
 
 ## 2. 形式化定义（要点）
 
-**定义 398（需求覆盖矩阵与需求盲区）** 详见上文。
-
-**定义 400（可预测自助下注）** λ(a,s) = σ_pred(a|s) - σ_decl(a)，其中 σ_pred 由 χ_R 解析计算。
-
-**定义 401（最小验证子图）** M_ver = (V_ver, E_ver) ⊆ MReg，其中 V_ver 包含所有涉及盲区 s 的模块。
-
-**定义 404（迭代修复闭环 I-Box）** 循环更新：
-```
-循环：
-  1. M_ver ← MINIMAL_VALIDATION_SUBGRAPH(s)
-  2. A_s ← ACTIONS_ENTERING(s)
-  3. for each a ∈ A_s:
-        λ ← PREDICTABLE_BET(a, s)
-        if λ ≥ γ: EXECUTE(a), SAMPLE ← OBSERVE(a)
-  4. N_bl ← COLLECT_SAMPLES(s)
-  5. if N_bl 达标：
-        (R, EC) ← LOCAL_CALIBRATE(N_bl)
-        if CONTRACT_VALID(EC) and BUDGET_OK: BREAK
-```
-
-**定义 407（迭代验证时序契约 IV-Contract）** IV-Contract = (A_s, τ_iter, B_iter, recovery_condition)。
-
-**定义 408（采样效率下界）** n_min(s) ≥ (σ_prior² - ε²) / KL(U_prior || U_post) ≥ δ。
+**定义 416（MTC）/ 417（回执）/ 418（TCV）** 工具 = 类型 schema + 物理前置 + 回执谓词（含签名/单调 seq）+ 代价 + 最坏时延 + 预测信息增益；TCV 逐条查 schema/前置/预算/循环，实测前置失败 ⇒ 调用 void、零副作用收尾；无效回执一律作废。
+**定义 419（双层下注）** λ 管安全（进盲区的物理闸门，继承），β 管收益（信息增益 − 代价），两门同过才执行。
+**定义 420（MP-Φ / AP-Cal）** 元训练 min_θ Σ E[−log p(u*|ctx)] + β_KL·KL(q_θ‖p_phys)；摊销后验单前向输出；保守性夹紧 Σ_θ ≽ κ_phys·I。
+**定义 421（6C 闭环）** H（共形假设）→ C（TCV 编译）→ E（工具执行）→ C（摊销校准）→ V（独立回执 |z| ≤ ε_cross + 契约回归）→ U（热替换 + 语言证书绑定）；V 失败 ⇒ 夹紧重试 1 次 ⇒ 再失败 stub + RED。
+**定义 423（主张-回执绑定）** 语言主张必须引用有效回执，否则序列化时剥离；剥离为纯投影，不改变数值行为。
+**定义 426（采样复杂度修正）** σ_post² = (σ_0⁻² + n·σ_obs⁻²)⁻¹ ⇒ n ≥ σ_obs²(ε⁻² − σ_0⁻²)；AP-Cal 经验收缩低于解析值 80% ⇒ 先验失配告警。
+**定义 428（P-Quarantine）** 最近 K 次修复的（预测, 实际）收缩残差连续 ≥ q 次同向 ⇒ 暂停 AP-Cal，回退第 1 轮 BP-Cal。
+**定义 429/430** VLA 输入白名单（禁自由文本/二维码）与 PROBING 显式状态（幅值受限、力矩硬限、日志全录）。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-310 D-Box：需求盲区检测器
-class DBox:
-    def detect_blind_spot(self):
-        blind_spots = []
-        for idx in np.argwhere(self.R[..., 0] <= self.tau_n):
-            if self.R[tuple(idx) + (3,)] >= self.tau_cost:
-                blind_spots.append((idx, self.R[tuple(idx)]))
-        return blind_spots  # [(subspace_idx, (n, σ_lo, σ_hi, cost))]
+# IP-316 TCV：契约化工具调用（四查 + 回执）
+class TCV:
+    def verify(self, prog, budget):
+        seen = set()
+        for (t, args) in prog:
+            if not t.schema(args): return False, "schema"
+            key = (t.name, canon(args))
+            if key in seen:    return False, "loop"
+            seen.add(key); budget -= t.cost
+            if budget < 0:     return False, "budget"
+        return True, "ok"
+    def execute(self, prog, env):
+        receipts = []
+        for (t, args) in prog:
+            if not t.pre(env.snapshot()): break       # void，零副作用
+            r = t.post(env.invoke(t, args))
+            if r is None or not verify_sig(r): continue
+            receipts.append(r)
+        return receipts
 
-# IP-311 I-Box：可预测自助下注
-class IBox:
-    def predictable_bet(self, action, subspace):
-        v = action.viewpoint
-        m = subspace[1]
-        sigma_pred = self.dpem.predict_uncertainty(v=v, m=m)
-        sigma_decl = self.dpem.declared_uncertainty(v=v, m=m)
-        return sigma_pred - sigma_decl
+# IP-315 L-Box：共形假设 + SNC
+class LBox:
+    def hypothesize(self, s, R_cell):
+        hs = SNC_filter(self.vla.propose(featurize_num(s, R_cell)), R_cell, fp_lib)
+        q = conformal_quantile(self.cal, alpha=0.1)
+        return [h for h in hs if self.vla.score(h, s) <= q] or ["UNKNOWN"]
 
-    def execute_validation(self, blind_spot):
-        samples = []
-        for a in self._actions_entering(blind_spot.subspace):
-            if self.predictable_bet(a, blind_spot.subspace) >= self.gamma:
-                sigma_obs = self.dpem.observe(action=a)
-                samples.append((a, sigma_obs))
-        return samples
+# IP-317 T-Box：双层下注
+class TBox:
+    def select(self, H_s, tools, tcv, budget):
+        prog = self.vla.plan_probes(H_s, tools)
+        if not tcv.verify(prog, budget)[0]: prog = self.numeric_fallback(H_s)
+        return [c for c in prog if self.risk_gate(c) and self.gain_bet(c)]
 
-# IP-312 BP-Cal：局部贝叶斯校准
-class BayesianLocalCalibrator:
-    def calibrate(self, samples, subspace):
-        X = np.array([s[0].viewpoint for s in samples])
-        y = np.array([s[1] for s in samples])
-        K = self.prior_cov(X, X) + 1e-6 * np.eye(len(X))
-        L = np.linalg.cholesky(K)
-        alpha = np.linalg.solve(L.T, np.linalg.solve(L, y))
-        mu_post = self.prior_mean(X) @ alpha
-        return mu_post, K
+# IP-318 AP-Cal：摊销后验 + 交叉验证
+class APCal:
+    def calibrate(self, receipts, H, s):
+        mu, Sig = self.mp_phi(featurize_ctx(receipts, H, s))
+        return mu, clamp_min(Sig, KAPPA_PHYS)
+    def cross_validate(self, mu, Sig, r_indep):
+        return abs((r_indep.mu - mu) / sqrt(Sig + r_indep.var)) <= self.eps_cross
 
-    def update_contract(self, module, new_u, subspace):
-        new_ec = module.ec._replace(u_fields=..., chi_R=...)
-        return new_ec
+# IP-319 6C 闭环
+def toolgauge_6c(M, s):
+    H = M.lbox.hypothesize(s, M.dbox.R[s])                        # H
+    prog = M.tbox.select(H, M.tools, M.tcv, M.budget_left(s))     # C
+    receipts = M.tcv.execute(prog, M.env)                         # E
+    if len(receipts) < n_min(s): return stub_and_red(s, "insufficient")
+    mu, Sig = M.apcal.calibrate(receipts, H, s)                   # C
+    if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+        mu, Sig = M.apcal.calibrate(receipts, ["UNKNOWN"], s)
+        if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+            return stub_and_red(s, "cross_failed")                # V 失败 ⇒ 退化
+    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)           # U
+    if not contract_regression(new_ec): return stub_and_red(s, "regression")
+    M.mreg.hot_replace(M.dpe, new_ec)
+    M.dbox.update_from_posterior(s, mu, Sig)
+    bind_claims(new_ec, H, prog, receipts)                        # 定义 427
+    M.pquar.record(M.apcal.last_gain, realized_gain(receipts))    # 定义 428
+    return True
 
-# IP-314 LeanGauge 主闭环
-def LeanGauge_round(M, obs, audio, tac_frame, depth_img, det_set):
-    blind_spots = DBox.detect_blind_spot()
-    for spot in blind_spots:
-        success, msg = lean_gauge_4cv(M, spot)
-        if success: break
-    return MODGAUGE_round(M, obs, audio, tac_frame, depth_img, det_set)
+# IP-320 主闭环
+def ToolGauge_round(M, obs, audio, tac, depth, det):
+    for s in M.dbox.detect_blind_spot():
+        if s not in M.inflight:
+            M.inflight.add(s); submit_async(toolgauge_6c, M, s)
+    if M.pquar.triggered(): M.apcal.pause(); M.use_bpcal_fallback = True
+    return MODGAUGE_round(M, obs, audio, tac, depth, det)
 ```
 
 ## 4. 推导
 
-**引理 42（自助下注可预测性）** 由 χ_R 解析表达式及亚强稳健条件 (A115) 保证。
-
-**引理 43（局部贝叶斯校准可收敛）** 标准 GP 回归后验方差收敛率。
-
-**引理 44（迭代修复的局部热替换）** M_ver 子图的模块 EC 更新后，局部子系统性质保持。
-
-**引理 45（全流程时序预算）** IV-Contract 保证每次迭代 ≤ τ_iter。
+**引理 46（双层下注联合界）** A115′ 亚高斯条件下：风险门 P(σ_obs > σ_decl + γ + 2b) ≤ exp(−γ²/2b²)（继承引理 42）；
+增益注实际收缩 ≥ Ĝ_t − ξ，L 次联合浪费概率 ≤ L·exp(−γ_B²/2ξ²)；TCV 拒绝 ⇒ 零副作用。
+**引理 47（元泛化界）** 超额风险 ≤ 2η + 𝒪(√((C(Θ)+log(1/δ))/M)) + 𝒪(√((d_u+log(1/δ))/N_bl))；
+元级 PAC-Bayes（先验=物理锚）+ 任务内 Bernstein + 夹紧保证似然可辨识。
+推论 47.1：M→∞ 时 N_bl=1 亦可收敛；η 项不可消除，由 E431 实测计入风险账本。
+**引理 48（共形覆盖）** 可交换下 P(h*∈H_s) ≥ 1−α；TV=η′ 漂移下 ≥ 1−α−2η′（加权共形可恢复至 1−α−η′L′）；
+SLA < 0.8 ⇒ H_s := {UNKNOWN}（退化链第 1 级）。
+**引理 49（语言层不破坏热替换等价性）** claims 不在数值路径，剥离为纯投影 ⇒ 子图数值等价性同第 1 轮引理 44；SNC 失败 ⇒ stub ⇒ 系统级性质保持。
+**引理 50（时序预算保持）** 6C 全异步于 50Hz 路径外，周期新增 < 0.2ms；修复时延 ≤ τ_repair；预算耗尽强制降级 ⇒ 硬实时（引理 45）与预算不变式保持。
 
 ## 5. 复杂度分析
 
-| 组件 | 域 | 时间 | 空间 | 正确性保证 |
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| D-Box 盲区检测 | 计量域 50Hz | O(\|subspace\|) < 1ms | O(\|subspace\|) | 定义 398、399 |
-| I-Box 迭代采样 | 计量域（事件触发） | O(\|A_s\|·T_obs) < 10ms | O(N_bl) | 定义 401、402 |
-| BP-Cal 局部校准 | 计量域 1Hz | O(N²_bl) < 50ms | O(N_bl²) | 定义 403、引理 43 |
-| 局部热替换 | 计量域 | < 1ms | O(1) | 引理 44 |
-| 4CV 主闭环 | 计量域 | O(#blinds × 采样) < 50ms | O(blinds) | 定义 405 |
+| D-Box 扫描 | 50Hz 内联 | O(\|R\|) < 1ms | O(\|R\|) | 定义 398/399（继承） |
+| 回执验证 | 50Hz 内联 | O(1) < 0.2ms | O(1) | 定义 417 |
+| L-Box 假设 | 异步事件 | 1×VLA 前向，τ≈0.2–0.8s（缓存） | O(\|H_s\|) | 定义 422、引理 48 |
+| 编程 + TCV | 异步 | O(L_max·\|T₀\|) < 5ms | O(L_max) | 定义 418、引理 46 |
+| 工具执行 | 物理域 | Στ_t ≤ B_tools（PROBING 显式态） | O(L_max) | 定义 416–418 |
+| AP-Cal 校准 | 异步 | O(N_bl·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 420、引理 47 |
+| V 交叉验证 | 异步 | O(1) + 1 独立回执 | O(1) | 定义 421/427 |
+| U 热替换 + 证书 | 计量域 | < 1ms | O(1) | 引理 49 |
+| P-Quarantine | 异步 | O(K) | O(K) | 定义 428 |
 
-**总增开销**：相对于 MODGAUGE-RAS，LeanGauge 最坏情况额外 ≤ 100ms/周期，但稀疏事件驱动，平均开销 ≈ 10ms/分钟。
+**相对第 1 轮**：BP-Cal O(N_bl²) Cholesky（N_bl=8 时 ≈50ms）→ AP-Cal 单前向（<10ms），
+且先验质量随预训练规模 M 可证提升；探测动作从「无接口观测」→「四层校验的契约化工具调用」。
+总增开销：50Hz 路径 ≤ 0.2ms/周期；修复事件全异步、稀疏触发。
 
-## 6. 实验设计 E411–E425（RAS-Baselines v4 协议）
+## 6. 实验设计 E426–E440（RAS-Baselines v4 协议）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E411 D-Box 盲区探测 | 稀疏矩阵中盲区检出率 | 检出率 ≥90%，误检 ≤10% |
-| E412 自助下注可预测性 | σ_pred - σ_obs 偏差 | 偏差 ≤15% |
-| E413 迭代采样有效性 | N_bl=3 时 σ_conf 收敛 | σ_conf ≤ 1.5σ_decl |
-| E414 局部贝叶斯校准 | 先验 vs 后验 KL 增益 | KL ≥ 0.5 nats / 样本 |
-| E415 局部热替换等价性 | 替换后 diff = 0 | 逐指令等价，系统属性保持 |
-| E416 4CV 闭环收敛 | 迭代次数上界 | ≤ 5 次收敛 |
-| E417 总时序保全 | 100 周期实时性 | 99% 周期 < 50ms |
-| E418 少样本抗鲁棒 | 5% 离群点干扰 | σ_conf 增益 ≥ 0.8×理想 |
+| E426 | L-Box 共形覆盖（含未见材质/漂移组） | P(h*∈H_s) ≥ 0.9；漂移下 ≥ 0.8（SLA） |
+| E427 | TCV 拦截有效性 | schema/预算/循环违规拦截率 100%；程序生成失败重询率 ≤ 20% |
+| E428 | 增益注校准曲线 | 预测收缩 vs 实际收缩 ECE ≤ 0.1 |
+| E429 | AP-Cal 样本效率 | N_bl=2 达到第 1 轮 BP-Cal N_bl=5 的 σ_conf；增益 ≥ 2× |
+| E430 | 预训练规模扩展 | M∈{10²,10³,10⁴}，超额风险按 𝒪(M^{−1/2}) 衰减，拟合 R² ≥ 0.9 |
+| E431 | sim→real 偏移 η 实测 | 引理 47 界在 ≥95% 运行中成立（界不空谈） |
+| E432 | 6C 收敛与预算 | ≤ 5 次迭代；B_tools 内完成率 ≥ 95% |
+| E433 | 时序保全 | 50Hz 路径 99.9% 周期 < 20ms；修复时延 P99 ≤ τ_repair |
+| E434 | 对抗盲区注入 | 四层防线后注入成功率 < 5%（对照第 1 轮单层基线） |
+| E435 | VLA 幻觉压力测试（提示注入/错误假设） | SNC 剔除率 ≥ 90%；数值修复路径零污染 |
+| E436 | 语言修复证书有用性 | 人工审计确认时间下降 ≥ 40% |
+| E437 | 热替换等价性 | 未涉及子图逐指令 diff = 0（含 claims 剥离投影） |
+| E438 | 预算耗尽/恢复 | recovery 触发 100%，stub + RED 行为一致 |
+| E439 | 消融 | 去 MP-Φ / 去 TCV / 去 SNC / 去 P-Quarantine 各自贡献量化 |
 
-## 7. 本轮最大风险
+## 7. 与第 1 轮的差异与继承
 
-**一句话**：LeanGauge 核心假设「需求盲区可通过可预测下注在有限预算内探测并校准」，但若实际噪声受**不可预测的环境突变**（骤降气温、意外反射材质）或**精心设计的盲区注入攻击**（进入模型训练分布外、且不触发下注阈值的区域），I-Box 的迭代采样会被错误地当作「需求已覆盖」，系统在盲区上产生**自信的错误判断**——这相当于 R73 的「自信地组合错误世界」在「数据稀缺」的子空间中被「主动放大」。
+- **继承**：R/盲区判定（定义 398/399）、风险门 λ（定义 400）、M_ver（401）、热替换定理（引理 44）、IV-Contract（407，细化为 TB-Contract 424）、4CV → 6C（421）、契约回归测试。
+- **修复（第 1 轮缺陷审计）**：定义 408 公式不成立 → 定义 426 闭式；BP-Cal 后验均值 bug（`mu_post = prior_mean(X) @ alpha`）→ 正确 GP 后验式并被 AP-Cal 替代；IBox/DBox 耦合 bug → 依赖注入；R 的 σ_conf 更新缺失 → U 阶段由后验分位数写入；「采样不充分」无量化门槛 → 定义 426 解析 n_min 进 V 阶段。
+- **新增**：工具契约层（IP-315–317）、预训练摊销层（IP-318）、语言审计层（定义 423/427/429）、相关性断路器（定义 428）。
+
+## 8. 本轮最大风险
+
+**一句话**：AP-Cal 的摊销后验在预训练→部署分布偏移下会产生**跨盲区强相关**的系统性偏差
+（一次错误先验同时污染所有被热替换子图），使「局部修复、误差局部化」的安全论证整体失效，
+且 VLA 语言修复证书会放大其可信度外观——以 E431/E434/E435 证伪、
+P-Quarantine（定义 428）在线断路、独立回执交叉验证（定义 421.V）三重兜底。
 <!-- ARTIFACT:END -->
