@@ -218,172 +218,225 @@ def FLUID_RAS_round(M, obs):
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+# 第 70 轮产物 · 创新点清单 v1：BELIEF-RAS（Bayesian Estimation Layer for Interactive Epistemic uncertainty reduction in FLUID-RAS：贝叶斯状态估计层，把交互式消歧落地到显式世界信念上；BSE×RAS-Baselines×Proto-Val×FLUID-RAS†）
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
+> 承接第 69 轮 IP-253~263（FLUID-RAS）。R69 把不确定性拆为 aleatoric/epistemic，引入流匹配多模态策略（FMP）与主动交互（MINT/CIA），并用流似然（FMA）做标定不可吸收的第二意见。但 R69 的 epistemic 仍停留在「动作模态分布」，缺乏显式世界状态后验；实验设计虽完整但缺可复现基线协议；原型从未在物理/高保真仿真跑通。R69 最大风险「问错比不问更危险」根源正是：无显式状态估计、无基线复现、无原型验证。
 >
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 本轮三位一体补齐：
+> - **状态估计（BSE）**：建立显式贝叶斯世界状态后验 b_t(s)，把 FMP 流似然升级为观测模型，把 MINT 交互升级为主动感知动作，把 CIA 模态对升级为状态假设对；epistemic = 状态后验熵 H[b_t]。
+> - **基线复现（RAS-Baselines v1）**：固定 5 基线、种子、分割、指标、统计检验、报告模板；所有主张必须在协议下复现。
+> - **原型验证（Proto-Val v1）**：Isaac Sim + ROS 2 + 真机，故障注入、长时程、工程指标验收（P99<3.5ms、零交互违规、ECE<0.08、缓变检出≥80%、显著优于 R68）。
 >
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+> 核心命题：把 FLUID 的「动作模态 epistemic」升级为「世界状态后验 epistemic」；把实验从「设计」变为「可复现协议」；把算法从「伪代码」变为「可跑通原型」。
+>
+> IP 编号：IP-264~274（共 11 个），含 FLUID-RAS 11 个组件的升级版（†）+ BSE + RAS-Baselines + Proto-Val。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 69 轮） |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
+| IP-264 | FMP† State-Conditional Flow-Matching Policy | 升级 | 显式条件于状态 s，训练加状态监督/伪标签，推理边缘化后验 b_t |
+| IP-265 | AUD† Aleatoric/Epistemic from Belief | 升级 | 直接从 BSE 后验得 U_ale=E[trΣ_obs]、U_epi=H[b_t]；兼容输出模态投影 |
+| IP-266 | MINT† Bayesian VoI Controller | 升级 | VoI = H[b_t] − E[H[b_{t+1}]]，候选 g 由 top-2 状态假设对生成 |
+| IP-267 | CIA† State-Hypothesis Pair Selector | 升级 | 选后验概率最高的两个语义假设，最大化其互信息的残差模态对 |
+| IP-268 | FMA† Marginalized Flow Anomaly | 升级 | a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds，边缘化后验更敏感 |
+| IP-269 | IBG† Interaction & Estimation Budget Governor | 升级 | 加状态估计预算（≤1ms）、后验熵单调性检查 |
+| IP-270 | VQAuditor-II | 升级 | 审 BSE 收敛性、后验校准 ECE_state、基线复现合规 |
+| IP-271 | AIC-BELIEF | 升级 | ℰ_BELIEF = ℰ_FLUID × ℰ_state（状态估计发散/粒子耗尽/后验坍缩） |
+| IP-272 | J_BELIEF | 升级 | + ECE_state、H[b_t]_trajectory、baseline_report_hash、proto_val_hash |
+| IP-273 | MCG† State Posterior Calibration Gate | 升级 | 校准对象：状态后验可靠性 ECE_state，越界即退回 R68 |
+| IP-274 | BELIEF-RAS Pipeline | 新增 | 集成 BSE、RAS-Baselines、Proto-Val，三位一体闭环 |
 
-## 1. 符号体系增量（定义 293–309）
+## 1. 符号体系增量（定义 310–330）
 
 | 符号 | 含义 |
 |---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
+| `BELIEF-RAS = (FMP†, AUD†, MINT†, CIA†, FMA†, BSE, RAS-Baselines, Proto-Val, RAS-WM†)` | 贝叶斯状态估计交互消歧闭环 |
+| `b_t(s) = p(s | o_{1:t}, ξ_{1:t-1}, g_{1:t-1}, y_{1:t-1})` | 世界状态后验（离散语义 × 连续参数） |
+| `𝒮 = 𝒮_disc × 𝒮_cont` | 语义假设 {s^1..s^M} × 连续参数 ℝ^{d_s} |
+| `p(o_t|s) = p_flow·p_interact·p_calib` | 观测模型三分解：流似然 × 交互回答 × 标定残差 |
+| `H[b_t] = −∫ b_t log b_t` | 状态后验熵 = epistemic 不确定性真身 |
+| `U_ale = E_{s∼b_t}[tr(Σ_obs(s))]` | 观测噪声下界 = aleatoric 不确定性 |
+| `VoI(g) = H[b_t] − E_y[H[b_{t+1}(y)]]` | 贝叶斯实验设计信息增益 |
+| `a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds` | 边缘化后验的流似然异常分 |
+| `Δa = |a_score(o) − a_score(o_cal)|` | 标定不可吸收的第二意见（增强版） |
+| `λ_floor(U_ale + α·H[b_t])` | 两级退避：α=0 若 H[b_t]<τ_entropy（消解），α=1 否则 |
+| `ECE_state` | 状态后验可靠性校准误差（MCG† 门控对象） |
+| `RAS-Baselines v1` | 5 基线、固定种子/分割/指标/检验/模板 |
+| `Proto-Val v1` | Isaac Sim/ROS2/真机验收套件 |
+| `J_BELIEF = (J_FLUID, ECE_state, H[b_t]_traj, baseline_hash, proto_hash, belief_ver)` | 证书 |
 
 ## 2. 形式化定义（要点版）
 
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
+**定义 310（总览与三不变式）** BELIEF-RAS 继承 FLUID 全部组件（† 升级），新增 BSE、RAS-Baselines、Proto-Val。三不变式：(i) 零学习写操作；(ii) 交互预算 + 状态估计预算（BSE≤1ms、粒子数≤N_max、后验熵单调不增）；(iii) 证据纪律 + 基线纪律（所有主张须在 v1 协议下复现）。
 
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
+**定义 311（世界状态空间）** s = (s_disc, s_cont) ∈ 𝒮_disc × 𝒮_cont。先验 b_0 由语义先验 × 高斯先验给出。
 
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
+**定义 312（观测模型三分解）** p(o|s) = p_θ(ξ|o,s) · Cat(y; π_ans(g,s)) · 𝒩(r; μ_cal(s), Σ_cal)。FMP 速度场显式条件于 s，推理时边缘化 b_t。
 
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
+**定义 313（状态转移）** 离散语义马尔可夫链 + 连续参数高斯过程（恒定速度/加速度）。
 
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
+**定义 314（BSE 贝叶斯滤波器）** 预测→更新（流似然+交互回答+标定残差，对数域加和）→归一化/重采样/修剪。实现：离散精确分类分布 M≤20，连续粒子滤波 N≤500 或混合 EKF。P99≤1ms。
 
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
+**定义 315–316（不确定性二分升级）** U_epi = H[b_t]（后验熵）；U_ale = E_{b_t}[tr(Σ_obs(s))]（观测噪声期望）。替代 R69 的模态熵/协方差 trace。
 
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
+**定义 317（贝叶斯 VoI）** VoI(g) = H[b_t] − E_y[H[b_{t+1}(y)]]；g* = argmax[VoI−c] s.t. 安全/预算。子模性下贪心 (1−1/e) 最优。
 
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
+**定义 318（CIA† 状态假设对选择）** pair* = argmax_{i,j} IG(s_i,s_j; r_{ij}|g*)，顶层语义假设对，而非动作模态对。
 
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
+**定义 319（FMA† 边缘化流似然）** a_score = −log ∫ p_θ(ξ|o,s)b_t(s)ds；Δa = |a(o)−a(o_cal)|；(r_res↓, Δa↑, H[b_t]↑) 三元组判别缓变故障。
+
+**定义 320（两级退避†）** λ = λ_floor(U_ale + α·H[b_t])，α=0 若 H[b_t]<τ_entropy（消解获 resolution bonus），α=1 否则。
+
+**定义 321（MCG† 后验校准门）** 校准状态后验可靠性 ECE_state；越界 ⇒ 禁用 VoI、退回 R68。
+
+**定义 322（RAS-Baselines v1 协议）** 5 基线：R68-CALM、Flow-Only、Flow-Multi、Active-Only、Calib-Only。固定种子、分割、6 维指标、Wilcoxon p<0.01 Bonferroni、强制报告模板。
+
+**定义 323（Proto-Val v1 验收套件）** 三环境（Isaac Sim/ROS2/真机），故障注入，验收指标：P99<3.5ms、零交互违规、ECE_state<0.08、缓变检出≥80%、FLUID>R68(p<0.01)。
+
+**定义 324（工程诊断报告）** 组件延迟分解、显存峰值、后验熵轨迹、Δ_min 随时间、交互统计、基线对比表、失败模式归因树。
+
+**定义 325（IP 升级映射）** 见想法区表格：R69 11 个 IP 全部升级（†），新增 BSE、RAS-Baselines、Proto-Val。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
+# IP-264 FMP†：状态条件流匹配策略
+class FlowMatchingPolicyState:
+    def __init__(self, trunk, velocity_net, state_encoder, N_step=2):
+        self.trunk, self.v, self.se = trunk, velocity_net, state_encoder
+
+    def sample(self, o_t, b_t, K, N_step=2):
+        z = self.trunk(o_t)
+        s_cond = [self.se.sample(b_t) for _ in range(K)]
+        xs = randn(K, D)
         for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
+            s = i / N_step
+            xs = xs + (1.0/N_step) * self.v(xs, s, z, s_cond)
+        return [self.decode(x) for x in xs]
 
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
+    def log_likelihood_state(self, xi, o, b):          # 边缘化后验
+        z = self.trunk(o)
+        s_samples = self.se.sample(b, N_is=32)
+        log_p = logsumexp([self._log_likelihood_single(xi, z, s) for s in s_samples]) - log(32)
+        return log_p
 
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
+    def _log_likelihood_single(self, xi, z, s_state):
+        return -hutchinson_divergence_integral(lambda xs, s: self.v(xs, s, z, s_state), xi)
 
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
+# IP-265 AUD†：从后验直接得不确定性
+def decompose_from_belief(b_t, fmp, o_t):
+    U_ale = expectation(b_t, lambda s: trace(obs_noise_cov(s)))
+    U_epi = entropy(b_t)
+    modes = project_belief_to_modes(b_t, fmp)          # 兼容 R69 接口
+    return U_ale, U_epi, modes, b_t
+
+# IP-266 MINT†：贝叶斯 VoI
+def choose_interaction_belief(b_t, fmp, budget, c_ras_wm):
     best = None
-    for g in info_action_candidates(modes):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
+    for g in generate_info_actions(top_k_hypotheses(b_t, 2)):
+        if not budget.allow(g) or not c_ras_wm.certify_info(g, b_t): continue
+        voi = entropy(b_t) - expected_posterior_entropy(b_t, g, fmp)
+        score = voi - cost(g)
+        if best is None or score > best.score: best = (g, score, voi)
+    return best if best and best.score > 0 else None
 
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
+def expected_posterior_entropy(b_t, g, fmp):
+    y_samples = sample_possible_answers(g, b_t, N=16)
+    return sum(p_y * entropy(BSE_step(b_t, predict_o(), predict_xi(), g, y)) for y, p_y in y_samples)
 
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
+# IP-268 FMA†：边缘化流似然异常
+def flow_anomaly_belief(fmp, xi_obs, o, o_cal, b_t):
+    a_o   = -fmp.log_likelihood_state(xi_obs, o, b_t)
+    a_cal = -fmp.log_likelihood_state(xi_obs, o_cal, b_t)
+    return abs(a_o - a_cal)
+
+# IP-274 BELIEF-RAS 主闭环
+def BELIEF_RAS_round(M, obs):
     z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
+    # BSE 预测-更新
+    b_t = M.bse.step(M.b_prev, o, M.last_action, M.last_g, M.last_y)
+    # FMP 采样（自适应 K 由后验熵门控）
+    K = 1 if entropy(b_t) < TAU_ENT else 4
+    samples = M.fmp.sample(o, b_t, K)
+    # AUD† 直接从后验
+    U_ale, U_epi, modes, _ = M.aud.decompose_from_belief(b_t, M.fmp, o)
+    # FMA† 第二意见
+    a_hat = M.fma.flow_anomaly_belief(M.fmp, M.last_action, o, o_cal, b_t)
     slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
+    # MINT† 贝叶斯 VoI 交互
+    g = (M.mint.choose_interaction_belief(b_t, M.fmp, M.budget, M.c_ras_wm)
          if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
+    if g is not None:
+        y = M.cia.execute(g)
+        b_t = M.bse.step(b_t, o, M.last_action, g, y)   # 立即用回答更新
+        U_epi = entropy(b_t)
+    # 风险缩放
     U_floor = U_ale + (U_epi if g is None else 0.0)
     lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
-    mode = select_mode(modes, U_epi, lam)
+    A = M.ach.propose(x_prime, H=M.vista.H)
+    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
+    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))
+    mode = select_mode_from_belief(modes, b_t, lam)
     tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
+    # 审计 + 证书 + 基线纪律
+    M.vqa_ii.submit_async(b_t, g, y, U_ale, U_epi, a_hat)
+    M.baseline_logger.log_if_eval(M.cfg.eval_mode)
+    M.b_prev = b_t
     return k, lam, mode, (U_ale, U_epi)
 ```
 
 ## 4. 推导
 
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
+**引理 19（状态后验熵为 Epistemic 唯一真相）** A99（观测模型可识别、转移遍历）下，任意策略 π 的期望损失 L(π) ≥ L* + c·H[b_t]。等号当且仅当 π 依赖 b_t 的充分统计量。系：H[b_t] 是 epistemic 的信息论下界；R69 的 H_mode·g(Δ_min) 只是动作空间投影，多状态同模态时低估无知。
 
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
+**引理 20（贝叶斯 VoI 贪心近似最优）** A100（观测条件独立、转移马尔可夫）下，f(g)=H[b_t]−E[H[b_{t+1}]|g] 子模，贪心选 g* 在预算约束下达 (1−1/e) 近似最优。系：R69 启发式 VoI 无此保证。
 
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
+**引理 21（三元组故障判别增强）** 缓变故障被 COF 吸收（r_res≈0），但状态后验通过流似然持续接收行为自洽证据。若偏移使真实状态似然显著低于后验均值，则 a_score 期望上升 ≥ L_b·KL(b_t||b_t^cal) − ε_num（A101：流似然对后验 Lipschitz）。故 **(r_res↓, Δa↑, H[b_t]↑) 三元组**比二元组判别力更强——后验熵同步升高是「信念崩塌」直接证据。
 
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
+**引理 22（基线协议统计功效）** v1 协议下，若真实效应量 d≥0.5，10 种子 Wilcoxon p<0.01 Bonferroni 功效 ≥ 0.92。系：固定种子+配对检验+多重校正，把「跑得好」变「有证据好」。
 
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**定理 18（BELIEF 严格包含 FLUID 严格包含 R68）** A99–A101 下，BELIEF 三阶段策略期望风险 ≤ FLUID ≤ R68；且当 H[b_t]<τ_entropy、VoI≤c、ECE_state>τ_ece 或 slow_fault_suspect 时三者逐指令相同。R68=FLUID=BELIEF 在「永不交互、后验熵不可约、标定吸收一切」边界退化，安全侧层层不让步。
+
+**定理 19（原型验证工程一致性）** Proto-Val v1 全项通过 ⇒ 部署环境下 P99≤3.5ms、零交互违规、后验熵单调不增（数值误差<1e-3）、缓变检出≥80%、基线协议下显著优于 R68。原型验收不再是「能不能跑」，而是「工程指标是否满足理论假设」——A99–A101 的 Lipschitz/子模性/识别性在原型上可测。
 
 ## 5. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
+| BSE 预测-更新（M≤20, N≤500） | P99 < 1.0ms | 8MB | 定义 314；后验熵单调性检查 |
+| FMP† 状态条件采样（K=1/4, N_is=32） | < 1.2ms / < 2.8ms | 50MB | 定义 312；边缘化无偏估计 |
+| AUD† 从后验直接计算 | < 0.01ms | <1MB | 定义 315–316 |
+| MINT† VoI 蒙特卡洛 (N=16) | < 0.5ms | O(N·M) | 定义 317；子模性近似 |
+| FMA† 边缘化似然 (N_is=32) | < 0.6ms | O(N_is) | 定义 319 |
+| **实时环路总延迟** | **< 4.5ms**（K=1）；**< 6.2ms**（K=4） | — | 定理 18–19；Proto-Val 要求 P99<3.5ms 留 1ms 裕度 |
 
-## 6. 实验设计 E286–E300
+## 6. 实验设计 E301–E320（全在 RAS-Baselines v1 协议下）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E301 状态后验收敛 | BSE 真实噪声下收敛 | H[b_t] 指数降至 <0.5 nat，步数 <20 |
+| E302 后验校准可靠性 | ECE_state 可信度 | ECE_state<0.05，可靠图对角偏差<0.03 |
+| E303 贝叶斯 VoI vs 启发式 | 升级 VoI 更优 | 同预算下 H[b_t] 降降速 +25%，成功率 +8% |
+| E304 三元组故障判别 | 三元组 vs 二元组 | 缓变故障 AUC ≥0.92（R69: 0.85） |
+| E305 基线复现一致性 | 5 基线协议下稳定 | 10 种子方差<2%，R68 复现误差<1% |
+| E306 FLUID vs 基线显著性 | 协议下显著优于 R68 | Wilcoxon p<0.01，d≥0.5，6 维 Pareto 优 |
+| E307 Proto-Val Isaac Sim | 仿真端到端跑通 | 全项验收通过，P99<3.5ms，零交互违规 |
+| E308 Proto-Val ROS 2 | 实时中间件守时 | 无 deadline miss，CPU<70%，抖动<0.5ms |
+| E309 Proto-Val 真机 | 物理机械臂安全 | 安全停止<3次/小时，力控抖动不触发拦截 |
+| E310 24h 长时程漂移 | 后验是否发散 | H[b_t] 无单调上升，粒子耗尽<1次/小时 |
+| E311 交互投毒穿透率 | δ_p=0.5 证据纪律守住 | 穿透率≤2%（R69: ≤5%），k=3 正交源 |
+| E312 模态坍缩诊断 | FMP† 训练模态坍缩 | Δ_min > 3σ_in 保持 >90% episodes |
+| E313 异步流水线延迟 | LLM 解码异步化 | 首 token 延迟剥离，决策→输出<10ms |
+| E314 粒子滤波 vs EKF | 混合状态稳定性 | 后验熵差<5%，EKF 10x 快 |
+| E315 状态条件流训练 | 显式监督 vs 伪标签 | 伪标签(EM)收敛同监督，覆盖率无显著差异 |
+| E316 边缘化采样方差 | N_is=32 是否够 | log_p 相对误差<5%，增 64 无显著改善 |
+| E317 后验熵单调性数值 | 浮点误差导致熵增 | 单步熵增<1e-4 nat，累计 1e6 步<0.1 nat |
+| E318 基线消融完整性 | 去 BSE/FMA/MINT | 去 BSE 退 FLUID；去 FMA 缓变检出−35%；去 MINT 退 R68 |
+| E319 J_BELIEF 完整性 | 字段自动生成 | Valid 率 100%，哈希可追溯代码/数据/种子 |
+| E320 失败模式归因树 | 原型跑不通根因分类 | 输出分类树：算法数值/工程实现/硬件限制/建模假设违背 |
 
 ## 7. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
-
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+**一句话**：BELIEF-RAS 把所有筹码押在「状态后验 b_t 能在实时约束下可靠收敛、且其熵 H[b_t] 真实反映 epistemic 不确定性」——**若观测模型 p_flow/p_interact/p_calib 中任一显著失配（流似然在分布外给出过度自信的似然、交互回答模型假设人类理性实则情绪化、标定残差模型漏掉相关噪声），后验就会「自信地错」，H[b_t] 变小反而意味着风险变大；原型验证若跑不通（P99>3.5ms、后验发散、基线无显著差异），R70 就只交付了一份「失败诊断报告」而非可用系统——**理论自洽不等于工程可用，状态估计的脆弱性会被实时部署无情放大**。
 <!-- ARTIFACT:END -->
