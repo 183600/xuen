@@ -3,452 +3,447 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 3 轮（灵感循环第 3 轮；本轮灵感：「自然语言指令」×「动作分块」）
+# 第 4 轮（灵感循环第 4 轮；本轮灵感：「指标体系」×「语音识别」×「奖励设计」）
 
-> **基线**：第 2 轮 ToolGauge（IP-315–320；定义 416–431；引理 46–50；实验 E426–E440）。第 1 轮 LeanGauge / MODGAUGE 骨架继续继承不变。
-> 本轮纪律：**增量升级 + 严格退化**。两个新灵感各沿一条轴升级 ToolGauge，且任一环节不可用都必须能一键退回，语言与分块是增强项、不是依赖项。
+> **基线**：第 3 轮 InstructGauge（定义 432–447；引理 46–50；实验 E441–E456）。
+> 本轮纪律：**跨模态迁移 + 价值函数分解**。三个灵感分别构建指标体系、语音接口、奖励函数，但必须通过**严格的可退化链**与**符号-子符号混合**保证在单一模块失效时不崩溃。
 
 ## 0. 直觉与动机
 
-**灵感 1（自然语言指令 → 可审计的「修复意图」，而不是自由控制）**
-直觉：人类工程师修盲区时说的是「先看左边金属件，反光强就上偏振」，而不是一串工具参数。自然语言的价值在于表达**目标、指代、条件与优先级**，而不在于直接下发电机指令。因此正确的接口不是「NL→动作」，而是「NL→受类型约束的指令规格 ι」：指令只影响规划目标的权重与候选排序，**绝不扩大物理可行域**。这样既拿到人机协作的灵活性，又保留「安全由硬约束负责、语言只负责偏好」的分层——这正是 constrained-MDP 里 objective 与 shield 分离的标准做法。
+**灵感 1（指标体系 → 从硬约束到软约束的「价值层级」）**
+直觉：ToolGauge/IAC 用硬约束（CVC、SpatialCert）保证安全，却缺乏对「成功意义」的量化。现代 RL 环境常靠单一奖励函数导致稀释/误导；但人类操作员其实持有**层级化价值判断**：先安全、后效率、最后完美。因此我们构建「指标体系」作为**软约束的价值层级**：每一级都是可度量的、可排序的指标，形成约束-目标-风险的金字塔。关键创新：**指标体系必须可回环到硬约束**——任何指标层级的违背，都能在硬约束层面触发截断/降级。
 
-**灵感 2（动作分块 → 摊销决策开销，但放大证据陈旧）**
-直觉：逐步探测每一步都要重新跑 VLA 前向、重查契约，决策开销大且动作抖动。ACT 式动作分块一次预测 K 步、开环执行、到边界再重规划，可把决策开销摊薄到约 1/K，并带来时间上更平滑的探测轨迹。代价是：一个坏块会**原子性地连续执行 K 步**，而两次决策之间没有新回执来否决它——**块长 K 直接等于证据陈旧窗口**。
+**灵感 2（语音识别 → 非结构化输入的「认知负荷最小化」接口）**
+直觉：自然语言指令虽直观，但在高压竞赛/焦虑工况下，语音是**更自然的输入通道**——说话比打字更不易出错、更快捷。然而语音识别带来实时性要求（ASR latency ≤ 100ms）、噪声鲁棒性、方言/口音覆盖。我们不追求通用 ASR，而是构建**竞赛专用语音指令体系**：有限词库 + 命令式语法 + 语音→文本→指令规格的**低延迟管道**。核心约束：**语音识别结果若置信度 < τ，立即退回默认 ι₀，不干扰主控制回路**。
 
-**灵感 3（两者耦合 → 指令条件化分块，必须被「否决点」切碎）**
-直觉：NL 指令定义「这一块想干什么」，动作分块定义「一次干多少」。最危险的耦合是：一句含糊指令 + 一个长块 = 把语义歧义沿时间轴放大成 K 步不可撤回的物理动作。解法不是禁用二者，而是引入三根结构支柱：**能力闭包**（语言不能造出新工具/新物理量）、**前缀封闭分块**（任何块都能被安全截断到最后有效前缀）、**不可逆屏障**（跨不可逆动作强制 K=1），再叠加**块有效性证书**（每个提交边界复核漂移与接地有效性）与**分层共形校准**（指令条件化破坏可交换性，必须按指令层分别校准）。
+**灵感 3（奖励设计 → 从全局奖励到「分段可解释奖励」）**
+直觉：传统 RL 用单一奖励信号训练，导致策略过度关注稀疏信号；而人类运动控制中，**分阶段反馈**（正确性、惯性保持、能耗、时间）是天然的奖励子系统。我们设计**分解式奖励函数 R = Σᵢ wᵢ · rᵢ**，其中每个 rᵢ 来自指标体系的一个层级，权重 wᵢ 由任务阶段动态调节（早期安全重心、后期效率导向）。关键：**奖励必须可逆向映射到指令层级**——奖励梯度告诉我们「该层指标当前贡献为负」，从而在指令层面做「软校准」：调整偏好权重、修改块长度、切换恢复预案。
 
 ## 1. 研究问题（本轮要回答什么）
 
-- **Q1（语言的安全性）**：自然语言能否成为「安全、可审计」的修复接口，而不是新的攻击面/幻觉入口？
-- **Q2（分块的交换条件）**：动作分块把决策开销摊薄，但把证据陈旧窗口从 1 步拉长到 K 步；在什么条件下这种交换是安全的、且收益可量化？
-- **Q3（耦合的放大效应）**：当两者耦合，语义歧义是否沿时间轴被放大？能否用结构（否决点 / 不可逆屏障 / 置信度约束块长）把它压回线性、可界？
+- **Q1（指标的可退化性）**：如何设计指标体系，使得「软约束层级」在任何层级都能**一键降级到硬约束**，且不产生额外计算负担？
+- **Q2（语音的时序保真）**：在 50Hz 控制回路中，怎样的语音识别管道能保证 **latency ≤ 100ms + 预测窗口 20ms**，且方差 ≤ 5ms？
+- **Q3（奖励的可解释性）**：分解式奖励如何保证 **梯度信号可解释、可逆向映射到指令层级**，从而实现「奖励驱动的软指令校准」？
 
-## 2. 三条设计原则（雏形，正式化见产物区定义 432–447）
+## 2. 三条设计原则（雏形，正式化见产物区定义 493–520）
 
-**P1 能力闭包（Capability Closure）**
-语言只能**在预注册目标集与工具集里做选择与排序**，不能命名新工具、不能指定超出物理包线的幅值、不能有自由文本直达执行器。形式化方向：接地映射 Γ 的输出满足 `tools(ι) ⊆ T₀`；任一越权槽位一律输出 ⊥（退回默认目标 ι₀）。这给出「指令不会扩权」的类型级保证。
+**P4 指标层级闭合（Metric Ladder Closure）**
+定义指标体系 `M = (M₀, M₁, M₂, M₃)` 四层：**M₀ 硬约束**（CVC/SpatialCert）、**M₁ 安全指标**（碰撞距离、碰撞概率）、**M₂ 效能指标**（路径长度、能耗、时间）、**M₃ 完善指标**（精度、成功率）。每层都有判据 `τᵢ` 与退化映射 `δᵢ: Mᵢ → M₀`。形式化：若 `Mᵢ` 满足判据，则任务在 Mᵢ 层级完成；若不满足，则 `δᵢ` 触发 M₀ 约束的**软截断**。
 
-**P2 前缀封闭分块（Prefix-Closed Chunking）**
-任何被规划的块 `C = (a₁…a_K)`，其任意前缀 `a₁…a_j` 必须自身是合法程序。只有前缀封闭，块才能在漂移/接地失效时被**二分截断**到最后安全前缀，而不是整块盲执行。这条是「块级安全可退回」的结构前提。
+**P5 语音指令类型化（Voice Command Typing）**
+语音指令经过 ASR → NLI → **类型化指令规格 ι**。ASR 输出先经置信门阈τ置入，若低于则退回；后端 NLI 必须输出符合**指令类型签名**的 ι。核心：**语音识别不能创造新约束**，只能在预定义指令模式中选取。这样既能兼容 50Hz 控制，又保留对话式调试能力。
 
-**P3 不可逆屏障（Irreversibility Barrier）**
-跨不可逆动作（材料去除、热灼烧等）的块长强制为 1，且要求独立回执交叉验证后才允许继续。直观：可逆动作的错误可以用下一步回执纠偏，而不可逆动作一旦执行无法追回——所以**不可逆动作绝不被分块捆绑**。
+**P6 奖励可逆向性（Reward Reversibility）**
+奖励函数 `R(s,a) = Σᵢ wᵢ(s) · rᵢ(s,a)` 必须满足：**给定奖励梯度 ∇R，可求解「哪些指标层级贡献为负」**，进而产生指令层面的「软校准信号」`σ_R`；该信号作为指令偏好调整的输入，实现「奖励→指令」的闭环。
 
 ## 3. 与基线的接口（如何退化）
 
-- ℓ 不可接地 / 歧义 / 违反安全优先级 ≻_safe ⇒ 使用默认 ι₀，等价于 ToolGauge 目​​标；
-- 分块不满足前缀封闭 / 漂移界失效 / 跨不可逆屏障 ⇒ 强制 K=1，等价于 ToolGauge 逐步执行；
-- 分层校准样本不足 ⇒ 回退全局共形阈值；
-- ToolGauge 失效 ⇒ LeanGauge 纯数值路径；LeanGauge 失效 ⇒ MODGAUGE 原样。
+- 指标体系 M₁/M₂/M₃ 失效/计算超时 ⇒ 仅保留 M₀ 硬约束，等价于 InstructGauge 基础安全；
+- 语音识别置信度 < τ_voice ⇒ 退回文本指令/默认 ι₀，等价于 InstructGauge v3；
+- 奖励梯度不可解释 / 计算超时 ⇒ 使用固定权重 W₀，退回 InstructGauge v4；
+- 任意增强模块失效 ⇒ 退回 InstructGauge-RTDI。
 
 ## 4. 预期贡献
 
-1. 一个「语言只改偏好、不改能力」的接地口径，把 NL 注入面压到可类型检查的范围内；
-2. 一个带**块有效性证书**与**不可逆屏障**的分块执行器，把「分块放大错误」从无界压到线性、并在不可逆处退化为单步；
-3. 一个**指令分层的共形校准**方案，修正「条件化破坏可交换性」导致的覆盖失效；
-4. 一条完整可证伪路径：E441–E456 覆盖能力闭包、截断安全、块长最优、时间集成滞后、分层覆盖、对抗注入与 50Hz 时序保全。
+1. 指标层级闭合的价值金字塔，从软约束到硬约束的**零跳转退化路径**；
+2. 一种为竞赛优化的 **50Hz 语音指令管道**，支持 100ms 内完成识别与接地；
+3. **分解式奖励函数**的可逆向映射机制，实现「奖励导向的软指令校准」；
+4. 一条完整的 **价值-行动-反馈闭环**：E493–E512 覆盖指标退化、语音时序、奖励可解释性、跨模态鲁棒。
 
 ## 5. 本轮最大风险
 
-**一句话**：自然语言接地会制造「语义已经正确」的错觉，而动作分块会把一次接地错误放大成 K 步**已执行**的物理动作；块内已发生的动作无法靠逐条回执验证追回，因此真正的残余风险在「指令—分块」接口的语义-时间放大，而非单个组件本身。
+**一句话**：指标体系的层级判据与硬约束的对齐缺乏形式化，导致在动态环境下**误判软层级→硬层级的映射**；语音识别的置信度门阈 τ_voice 在噪声/焦虑语境下不稳定；奖励梯度的可逆向映射依赖假设指令偏好模型，这在实际人类-机器协作中可能偏差——三者合卷会产生「看似安全，实则价值错位」的系统性风险。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 5 轮产物 · 创新点清单 v5：**InstructGauge-RTDI**（Real-Time + Diagnosis + Instruction-Graph）
+# 第 6 轮产物 · 创新点清单 v6：**MetricVoiceGauge**（Metric Ladder + Voice Interface + Reward Decomposition）
 
-> 背景：第 4 轮 InstructGauge-WR（IP-328–333；定义 448–467；引理 59–62；实验 E457–E472）。
-> 本轮灵感：「机器人竞赛」×「故障诊断」×「指令泛化」
-> **继承纪律**：InstructGauge-WR 五不变式、CVC-闭环、SpatialCert、严格退化链全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 InstructGauge-WR ⇒ 退回 InstructGauge v3 ⇒ 退回 ToolGauge。
+> 背景：第 5 轮 InstructGauge-RTDI（定义 468–492；引理 63–68；实验 E473–E492）。
+> 本轮灵感：「指标体系」×「语音识别」×「奖励设计」
+> **继承纪律**：InstructGauge-RTDI 七不变式、CVC-闭环、SpatialCert、RT-CVC 任务模型、FaultCert 闭环、PrimitiveGraph 接地、严格退化链全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 InstructGauge-RTDI。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 InstructGauge-WR） |
+| 编号 | 名称 | 类型 | 关键改进（相对 InstructGauge-RTDI） |
 |---|---|---|---|
-| IP-334 | RT-CVC-TaskModel 实时 CVC 任务模型 | 核心模块 | 每个块 C 升级为实时任务 τ_C=(WCET, deadline, priority, preempt_points, fallback)；静态 WCET 分析 + RTA 验证 |
-| IP-335 | FaultCert 故障证书 | 核心模块 | Violation → 根因分类 {SEN, MOD, EXE, SEM} → 预案索引 → 有界恢复块；恢复本身受 CVC 约束 |
-| IP-336 | RecoveryRegistry 预案注册表 | 核心模块 | 四类根因对应的恢复预案预注册，带类型签名与 WCET；热加载通过 ROS Service |
-| IP-337 | PrimitiveGraph 组合性原语图 | 核心模块 | 指令解析 Γ_parse: ℓ → G_τ（任务图）；实例化 Γ_inst: G_τ × Π → ι_seq；Π 预注册带类型签名 |
-| IP-338 | RTDI-7C 闭环 | 设计模式 | W→R→C→E(rt-chunk)→Spatial-C→Diag→Recover→V→U：在执行内加诊断-恢复，接地前加原语图 |
-| IP-339 | InstructGauge-RTDI 主闭环 | 集成 | 50Hz WCET 可证；故障 ≤2 周期恢复；指令组合性泛化；退化链完备 |
+| IP-340 | MetricLadder 指标层级闭合 | 核心模块 | M = (M₀,M₁,M₂,M₃) 四层价值金字塔；每层判据 τᵢ 与退化映射 δᵢ；软约束→硬约束零跳转 |
+| IP-341 | VoiceCommandTyping 语音指令类型化 | 核心模块 | ASR 置信门 + NLI 类型化接地；latency ≤ 100ms + 预测窗口 20ms；底置信阈 τ_voice 触发退化 |
+| IP-342 | RewardDecomposer 奖励可逆向性 | 核心模块 | R = Σᵢ wᵢ·rᵢ 分解；梯度→软校准信号 σ_R；σ_R 驱动指令层级偏好调整 |
+| IP-343 | SoftCert 软证书 | 核心模块 | 软约束层级 (M₁,M₂,M₃) 用概率/置信区间包围，不突然中止；M₀ 触发硬中止 |
+| IP-344 | MetaWeight 元权重调节 | 核心模块 | wᵢ(s) 由任务阶段/风险水平动态调节；σ_R 驱动闭环校准 |
+| IP-345 | Voice-RTDI-7C 闭环 | 设计模式 | W→R→C→E(rt-chunk)→Spatial-C→Diag→Recover→V→U；叠加 VoiceCommandTyping、MetricLadder、RewardDecomposer |
+| IP-346 | MetricVoiceGauge 主闭环 | 集成 | 50Hz WCET 保全；语音指令 ≤ 100ms；指标退化 1 跳至硬约束 |
 
-**退化链声明**：WCET 分析失败 ⇒ 尽力而为 50Hz（InstructGauge-WR）；故障归因失败 ⇒ 截断/退化（InstructGauge-WR）；指令解析失败 ⇒ 单指令 NLI-Box（InstructGauge v3）；所有增强失效 ⇒ InstructGauge-WR；后续同 v4 退化链。
+**退化链声明**：
+- VoiceCommandTyping 失效 ⇒ 退回 InstructGauge-RTDI；
+- MetricLadder 任层级失效 ⇒ 只保留 M₀ 硬约束，退回 InstructGauge-RTDI；
+- RewardDecomposer 失效 ⇒ 使用固定 W₀，退回 InstructGauge-RTDI。
 
-## 1. 符号体系增量（定义 468–492）
+## 1. 符号体系增量（定义 493–520）
 
 | 符号 | 含义 |
 |---|---|
-| `τ_C = (C, WCET_C, D_C, π_C, PP_C, FB_C)` | 实时 CVC 任务：块、最坏执行时间、截止期、优先级、抢占点集、降级块 |
-| `RTA(τ_set)` | 响应时间分析：∀ τ_i, R_i ≤ D_i 则可调度 |
-| `FaultCert = (vid, cause ∈ {SEN,MOD,EXE,SEM}, E, rpid)` | 故障证书：违背 ID、根因、证据集、预案 ID |
-| `RecoveryRegistry = {rpid ↦ (τ_rec, trigger_cond, safety_contract)}` | 预案注册表：恢复任务、触发条件、安全契约 |
-| `Π = {π₁, π₂, ...}` | 原语库；`type(π) = (pre: Φ, post: Ψ, tools: T_π, WCET: τ_π)` |
-| `G_τ = (V_τ, E_τ)` | 任务图：节点为原语实例，边为数据/控制依赖 |
-| `Γ_parse(ℓ) = G_τ` | 指令解析：自然语言 → 任务图（受类型约束） |
-| `Γ_inst(G_τ, Π) = ι_seq` | 原语实例化：任务图 × 原语库 → 接地指令序列 |
-| `WCET_static(τ_C)` | 静态 WCET 分析：基于控制流图 + 硬件性能计数器上界 |
-| `PreemptSafe(PP_C, τ_C)` | 抢占安全性：在抢占点 PP_C 处状态可序列化、可恢复 |
+| `M = (M₀, M₁, M₂, M₃)` | 指标体系：M₀ 硬约束、M₁ 安全指标、M₂ 效能指标、M₃ 完善指标 |
+| `τᵢ` | 第 i 层的判据向量 |
+| `δᵢ: Mᵢ → M₀` | 第 i 层到硬约束的退化映射 |
+| `σ_Mᵢ = confidence(Mᵢ)` | 第 i 层的置信区间 |
+| `ASR(ℓ_voice) = (text, conf)` | 语音→文本 + 置信度 |
+| `τ_voice` | 语音识别置信度门阈 |
+| `R(s,a) = Σᵢ wᵢ(s) · rᵢ(s,a)` | 分解式奖励函数 |
+| `σ_R = ∇_w R` | 奖励梯度→软校准信号 |
+| `SoftCert = (layer, σ, δ_trigger)` | 软证书：层级、置信区间、退化触发条件 |
+| `MetaWeight(s) = softmax(α · risk(s))` | 动态权重调节 |
 
 ## 2. 形式化定义（要点）
 
-**定义 468（实时 CVC 任务模型 RT-CVC-TaskModel）**
-设块 `C = (a₁…a_K)` 经 Kinematic-Loop 验证前缀封闭、经 SpatialCert 预检通过。定义其实时任务升级：
-```
-τ_C = (C, WCET_C, D_C, π_C, PP_C, FB_C)
-WCET_C = WCET_static(C) + WCET_spatial_verify + WCET_cvc_commit
-D_C = t_start + K · T_cycle  （T_cycle = 20ms @ 50Hz）
-PP_C = {t | a_t 是可逆动作 ∧ 无 SpatialCert violation 累积}
-FB_C = (C' = truncate_K1(C), WCET_FB, D_FB = D_C)  // 强制 K=1 降级
-```
-调度可行性：`RTA({τ_C}) = true` ⇔ 主路径时序可证。
+**定义 493（指标层级闭合 MetricLadder）**
+指标体系 `M = (M₀, M₁, M₂, M₃)` 其中：
+- `M₀` 对应硬约束集合 `C = {c_j}`，判据 `τ₀ = (ε_coll, ε_drift, ε_ground)`；
+- `M₁` 安全指标 `S = {d_min, p_coll}`，判据 `τ₁ = (d_min ≥ δ_safe, p_coll ≤ ε_coll_max)`；
+- `M₂` 效能指标 `E = {len, energy, time}`，判据 `τ₂ = (len ≤ len_opt·(1+η), ... )`；
+- `M₃` 完善指标 `P = {precision, success_rate}`。
 
-**定义 469（故障证书 FaultCert 与根因分类）**
-设 SpatialCert violation `v = (t, residual, type)`。定义根因分类器 `Classify: V → {SEN, MOD, EXE, SEM}`：
+退化映射：
 ```
-SEN (传感器)   : residual 相关性高、关节编码器一致、环境光/遮挡指标异常
-MOD (模型)     : residual 系统性偏移、IK 误差大、碰撞模型漏报
-EXE (执行)     : 指令跟踪误差大、关节扭矩饱和、阻抗参数不匹配
-SEM (语义)     : ι 接地置信度低、指令歧义度高、原语图实例化冲突
+δᵢ: Mᵢ → {true, false}
+δᵢ(Mᵢ) = true ⇔ ∀ j∈τᵢ, Mᵢ ⪰_j τᵢ_j
 ```
-`FaultCert(v) = (vid(v), Classify(v), Evidence(v), RecoveryPlanID(Classify(v)))`。
+**层级闭合性**：若 `δᵢ` 为否，则任务立即退化至 M₀。
 
-**定义 470（恢复预案 RecoveryPlan 与有界恢复）**
-每个预案 `RP = (τ_rec, trigger, contract)` 满足：
-- `τ_rec` 是实时任务，`WCET_rec ≤ 2 · T_cycle`（≤ 2 周期完成）
-- `trigger` 为 `FaultCert.cause == cause_type`
-- `contract` 继承原块的 `ψ_post^C`，且 `tools(τ_rec) ⊆ tools(C)`（不扩权）
-执行语义：收到 `FaultCert` ⇒ 调度器抢占当前任务 ⇒ 启动 `τ_rec` ⇒ 完成后恢复原任务或降级。
+**定义 494（语音指令类型化 VoiceCommandTyping）**
+语音指令处理管道：
+```
+ℓ_voice → ASR → (text, conf)
+if conf < τ_voice: 
+    δ_voice 触发 → ι ← ι₀ (退化)
+else:
+    text → NLI → ι 类型检查
+    if type(ι) ∉ Σ_ι:
+        ι ← ι₀ (退化)
+```
+时序约束：`latency(ASR∘NLI) ≤ T_cycle + prediction_window = 40ms`。
 
-**定义 471（组合性原语图 PrimitiveGraph 与双阶段接地）**
-原语库 `Π` 预注册，每个 `π ∈ Π` 满足 `tools(π) ⊆ T₀`。
+**定义 495（奖励可逆向性 RewardDecomposer）**
+奖励函数：
 ```
-Γ_parse(ℓ) = G_τ = (V_τ, E_τ, λ)  // λ: V_τ → Π_type（原语类型，非具体实例）
-Γ_inst(G_τ, Π) = ι_seq = [ι(π₁), ι(π₂), ...]  // 拓扑序实例化，类型检查通过
+R(s,a) = Σᵢ wᵢ(s) · rᵢ(s,a)
 ```
-能力闭包定理：`tools(ι_seq) ⊆ ⋃_{v∈V_τ} tools(λ(v)) ⊆ T₀`。
+其中 `rᵢ` 来自指标体系 `Mᵢ`，`wᵢ(s)` 为动态权重。
 
-**定义 472（RTDI-7C 闭环扩展）**
+**可逆向映射**：
 ```
-W: 感知 (含 WristCam)
-R: 推理 (Hypothesis + Γ_parse)
-C: 契约规划 (IAC + Kinematic-Loop + RT-CVC-TaskModel)
-E: 执行 (rt-chunk: 在 PP_C 处可抢占、实时监控 SpatialCert)
-Diag: 诊断 (FaultCert 生成 + 根因分类)
-Recover: 恢复 (RecoveryRegistry 查找 + τ_rec 调度)
-V: 验证 (CVC + SpatialCert + FaultCert 闭环)
-U: 更新 (Dbox + 主张绑定 + 原语图统计)
+∇_w R = (r₁, r₂, ..., r_n)
+σ_R = softmax(∇_w R)
 ```
+σ_R 作为指令层级偏好调整信号：
+```
+ι' = ι ⊕ σ_R  // 软校准：优先级/块长/置信度调整
+```
+
+**定义 496（软证书 SoftCert）**
+软约束由概率置信区间包围：
+```
+SoftCertᵢ = (layer=i, σ=CI(Mᵢ), δ_trigger)
+```
+硬中止条件：
+```
+Mᵢ 失效 ∧ ¬(σ ≥ τ_safe) ⇒ δᵢ 触发 ⇒ 硬中止
+```
+
+**定义 497（MetaWeight 动态调节）**
+```
+risk(s) = Σᵢ λᵢ · violationᵢ(s)
+wᵢ(s) = softmax(α · risk(s))_i
+```
+其中 violationᵢ 基于 FaultCert 与 Mᵢ 当前状态。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-334 RT-CVC-TaskModel 与静态 WCET 分析
-class RTCVCTaskModel:
-    def __init__(self, hw_perf_counters):
-        self.hw = hw_perf_counters  # 缓存未命中、分支预测失败、流水线停顿上界
+# IP-340 MetricLadder 与软硬约束闭合
+class MetricLadder:
+    def __init__(self, thresholds):
+        self.thresholds = thresholds  # {M0: ε_coll, M1: δ_safe, ...}
+        self.confidence = {i: 1.0 for i in range(4)}
     
-    def analyze_wcet(self, block):
-        """基于控制流图的静态 WCET 分析"""
-        cfg = build_cfg(block)  # 节点=基本块，边=控制流
-        # 每个基本块的 WCET = 指令数 × CPI_max + 存访上界
-        wcet = 0
-        for bb in cfg.topological_order():
-            bb_wcet = self._basic_block_wcet(bb)
-            wcet = max(wcet, wcet + bb_wcet)  # 路径加和取最大
-        # 加上 SpatialCert 验证、CVC 提交的固定开销
-        wcet += self.WCET_SPATIAL_VERIFY + self.WCET_CVC_COMMIT
-        return wcet
+    def check(self, metrics, layer):
+        """检查第 layer 层是否满足判据，更新置信区间"""
+        τ = self.thresholds[layer]
+        satisfied = all(m >= t for m, t in zip(metrics[layer], τ))
+        # 置信区间基于判据满足程度
+        margin = min((m - t) / t for m, t in zip(metrics[layer], τ))
+        self.confidence[layer] = max(0.0, min(1.0, margin + 0.5))
+        return satisfied
     
-    def _basic_block_wcet(self, bb):
-        # 简化：实际用 aiT/OTAWA 等工具
-        return bb.instr_count * self.hw.max_cpi + bb.mem_access * self.hw.max_mem_latency
+    def degrade_or_continue(self, current_layer):
+        """若置信不足，退化到硬约束"""
+        if self.confidence[current_layer] < self.thresholds['safe']:
+            return 0  # 退化至 M₀
+        return current_layer
     
-    def compute_preempt_points(self, block):
-        """可抢占点：可逆动作边界 + 无 violation 累积"""
-        pp = []
-        for i, action in enumerate(block.actions):
-            if action.reversible and not self.has_violation_accumulated(i):
-                pp.append(i)
-        return pp
-    
-    def generate_fallback(self, block):
-        """强制 K=1 降级块"""
-        return Block(actions=[block.actions[0]], 
-                     wcet=self.analyze_wcet(Block(actions=[block.actions[0]])),
-                     deadline=block.deadline)
+    def to_soft_cert(self, layer):
+        """生成软证书"""
+        return {'layer': layer, 'σ': self.confidence[layer], 
+                'δ_trigger': self.confidence[layer] < self.thresholds['safe']}
 
-# IP-335 FaultCert 生成与根因分类
-class FaultDiagnoser:
-    def __init__(self, joint_encoder, env_monitor):
-        self.joint_enc = joint_encoder
-        self.env = env_monitor
+# IP-341 VoiceCommandTyping
+class VoiceCommandTyping:
+    def __init__(self, asr_model, nli_model, default_iota, tau_voice=0.85):
+        self.asr = asr_model
+        self.nli = nli_model
+        self.ι₀ = default_iota
+        self.tau_voice = tau_voice
     
-    def diagnose(self, violation, block, tf_seq, iota):
-        """生成 FaultCert"""
-        residual = violation.residual
-        # 多模态证据收集
-        enc_consistency = self._check_encoder_consistency(tf_seq)
-        env_anomaly = self._check_env_anomaly()
-        ik_error = self._compute_ik_error(block, tf_seq)
-        track_error = self._compute_tracking_error(block)
-        iota_conf = iota.grounding_confidence if iota else 1.0
-        ambiguity = iota.ambiguity_score if iota else 0.0
+    def process(self, audio_stream):
+        """音频→文本→类型化指令规格 ι，或退化"""
+        text, conf = self.asr.recognize(audio_stream)
+        if conf < self.tau_voice:
+            return self.ι₀, False, f"ASR低置信 {conf}"
         
-        # 规则基分类（可替换为轻量分类器）
-        scores = {
-            'SEN': (1 - enc_consistency) * 0.6 + env_anomaly * 0.4,
-            'MOD': ik_error * 0.7 + (1 - enc_consistency) * 0.3,
-            'EXE': track_error * 0.8 + (ik_error * 0.2),
-            'SEM': (1 - iota_conf) * 0.6 + ambiguity * 0.4
-        }
-        cause = max(scores, key=scores.get)
-        evidence = {'residual': residual, 'scores': scores, 
-                    'enc': enc_consistency, 'env': env_anomaly,
-                    'ik': ik_error, 'track': track_error,
-                    'iota_conf': iota_conf, 'ambiguity': ambiguity}
-        rpid = f"RP_{cause}_{violation.type}"
-        return FaultCert(vid=violation.id, cause=cause, evidence=evidence, rpid=rpid)
+        ι, success = self.nli.parse(text)
+        if not success or not self._type_check(ι):
+            return self.ι₀, False, "类型检查失败"
+        
+        return ι, True, f"置信 {conf}"
     
-    def _check_encoder_consistency(self, tf_seq):
-        # 关节编码器 FK 与 TF 视觉位姿的残差
-        return 1.0  # 占位
+    def _type_check(self, ι):
+        """指令规格 ι 的类型检查"""
+        # 检查：tools ⊆ T₀, 幅值 ≤ 物理上限, 类型签名匹配
+        return (set(ι['tools']).issubset(self.nli.T0) and 
+                ι['amplitude'] <= self.nli.max_amplitude)
 
-# IP-336 RecoveryRegistry
-class RecoveryRegistry:
-    def __init__(self):
-        self.plans = {}
+# IP-342 RewardDecomposer
+class RewardDecomposer:
+    def __init__(self, metric_ladder, meta_weight):
+        self.M = metric_ladder
+        self.w = meta_weight
     
-    def register(self, cause, plan):
-        self.plans[f"RP_{cause}"] = plan
+    def compute(self, state, action, metrics):
+        """计算分解奖励 R = Σᵢ wᵢ·rᵢ"""
+        rewards = {}
+        reward_sum = 0.0
+        for i in [0, 1, 2, 3]:
+            r_i = self._compute_metric_reward(i, metrics[i], state, action)
+            rewards[i] = r_i
+            reward_sum += self.w(state)[i] * r_i
+        return reward_sum, rewards
     
-    def get_plan(self, rpid):
-        return self.plans.get(rpid)
+    def compute_soft_calibration(self, rewards):
+        """从奖励梯度得到软校准信号 σ_R"""
+        r_vector = [rewards.get(i, 0) for i in range(4)]
+        # softmax 将奖励映射为概率分布（相对重要性）
+        exp_r = [np.exp(r * 10) for r in r_vector]  # 温度 0.1
+        sum_exp = sum(exp_r)
+        σ_R = [e / sum_exp for e in exp_r]
+        return σ_R
     
-    # 预注册四类标准预案
-    def bootstrap_standard_plans(self, robot_model, cvc):
-        # SEN: 切换到关节编码器 + IMU 融合定位
-        self.register('RP_SEN', RecoveryPlan(
-            task=SensorFusionFallback(robot_model),
-            wcet=15, deadline=40,  # 2 cycles @ 50Hz
-            contract=cvc.make_contract(tools={'joint_enc', 'imu'})
-        ))
-        # MOD: 在线适配碰撞模型 / IK 修正
-        self.register('RP_MOD', RecoveryPlan(
-            task=ModelAdaptationFallback(robot_model),
-            wcet=18, deadline=40,
-            contract=cvc.make_contract(tools={'collision_model', 'ik_solver'})
-        ))
-        # EXE: 阻抗控制回退 + 力矩限幅
-        self.register('RP_EXE', RecoveryPlan(
-            task=ImpedanceFallback(robot_model),
-            wcet=12, deadline=40,
-            contract=cvc.make_contract(tools={'impedance_ctrl'})
-        ))
-        # SEM: 指令澄清 / 退回默认 ι₀
-        self.register('RP_SEM', RecoveryPlan(
-            task=SemanticClarifyFallback(),
-            wcet=8, deadline=40,
-            contract=cvc.make_contract(tools=set())  # 纯认知，不发动作
-        ))
+    def _compute_metric_reward(self, i, metric_vals, state, action):
+        """计算第 i 层奖励"""
+        τ = self.M.thresholds[i]
+        # 线性近似：指标越接近 τ，奖励越高
+        reward = 0.0
+        for m, t in zip(metric_vals, τ):
+            if m >= t:
+                reward += (m - t) + 1
+            else:
+                reward -= (t - m) * 2  # 违背惩罚
+        return reward / len(τ)
 
-# IP-337 PrimitiveGraph 双阶段接地
-class PrimitiveGraphGrounding:
-    def __init__(self, primitive_lib, type_checker):
-        self.Pi = primitive_lib  # {type_name: PrimitiveType}
-        self.tc = type_checker
+# IP-344 MetaWeight 动态权重
+class MetaWeight:
+    def __init__(self, α=1.0):
+        self.α = α
     
-    def parse(self, instruction):
-        """Γ_parse: ℓ → G_τ（任务图，节点标注原语类型）"""
-        # 语义解析器（可用 LLM + 约束解码，输出受类型约束的图）
-        g = self._semantic_parse_to_graph(instruction)
-        # 类型检查：所有节点类型 ∈ Π，边的类型兼容
-        if not self.tc.check_graph(g):
-            raise ParseError("Type check failed")
-        return g
+    def __call__(self, state):
+        """基于风险计算动态权重"""
+        risk = self._compute_risk(state)
+        logits = [self.α * r for r in risk]
+        # softmax
+        exp_logits = [np.exp(l) for l in logits]
+        sum_exp = sum(exp_logits)
+        weights = [e / sum_exp for e in exp_logits]
+        return weights
     
-    def instantiate(self, G_tau, scene):
-        """Γ_inst: G_τ × Π → ι_seq"""
-        # 拓扑序实例化，场景绑定参数
-        iota_seq = []
-        for v in G_tau.topological_order():
-            pi_type = G_tau.node_type(v)
-            pi_instance = self.Pi[pi_type].instantiate(scene, G_tau.node_params(v))
-            # 类型检查实例
-            if not self.tc.check_instance(pi_instance):
-                raise InstantiationError(f"Instance check failed for {pi_type}")
-            iota_seq.append(pi_instance.to_iota())
-        return iota_seq
-    
-    def verify_capability_closure(self, iota_seq):
-        """验证能力闭包：tools(ι_seq) ⊆ T₀"""
-        all_tools = set()
-        for iota in iota_seq:
-            all_tools.update(iota.tools)
-        return all_tools.issubset(self.tc.T0)
+    def _compute_risk(self, state):
+        """从 FaultCert 等风险信号计算"""
+        violations = state.get('violations', [])
+        risk = [0.0, 0.0, 0.0, 0.0]  # M₀,M₁,M₂,M₃
+        for v in violations:
+            if v['cause'] == 'SEN':
+                risk[0] += 0.8  # 硬约束风险
+            elif v['cause'] == 'SEM':
+                risk[1] += 0.5  # 软约束风险
+            # ... 更细粒度风险分配
+        return risk
 
-# IP-338 RTDI-7C 闭环
-def instructgauge_rtdi(M, s, ell=None):
-    """RTDI 增强闭环：实时任务 + 故障诊断恢复 + 原语图接地"""
-    # 1. 双阶段接地：原语图
-    if ell:
-        G_tau = M.pgraph.parse(ell)
-        iota_seq = M.pgraph.instantiate(G_tau, M.scene)
-        if not M.pgraph.verify_capability_closure(iota_seq):
-            iota_seq = [M.default_iota]  # 退回
+# IP-345 Voice-RTDI-7C 闭环
+def metricvoicegauge_rtdi(M, s, obs, audio_stream=None, ell=None):
+    """RTDI + 语音指令 + 指标体系 + 奖励闭环"""
+    
+    # 1. 语音指令处理
+    if audio_stream is not None:
+        ι_voice, voice_ok, log = M.voice_cmd.process(audio_stream)
+        if not voice_ok:
+            ι_seq = [M.default_iota]  # 语音退化
+        else:
+            ι_seq = [ι_voice]
     else:
-        iota_seq = [M.default_iota]
+        ι_seq = [M.default_iota]
     
-    # 2. Hypothesis 生成（用第一个 ι）
-    H = M.lbox.hypothesize(s, M.dbox.R[s], iota_seq[0])
+    # 2. 自然语言指令（若有）双重覆盖
+    if ell:
+        try:
+            G_tau = M.pgraph.parse(ell)
+            iota_nl = M.pgraph.instantiate(G_tau, M.scene)
+            if M.pgraph.verify_capability_closure(iota_nl):
+                ι_seq = iota_nl  # NL 覆盖
+        except:
+            pass  # 退回语音或默认
     
-    # 3. IAC 分块规划 + RT-CVC 任务模型
-    C = M.iac.plan_chunk(iota_seq[0], H, M.tools, M.budget_left(s), M.drift_bound(s))
+    # 3. Hypothesis 生成
+    H = M.lbox.hypothesize(s, M.dbox.R[s], ι_seq[0])
     
-    # 4. Kinematic-Loop 前置验证
-    if not M.kloop.verify_prefix_closed(C)[0]:
-        C = M.iac.plan_chunk(iota_seq[0], H, M.tools, 1, M.drift_bound(s))
+    # 4. IAC 分块规划
+    C = M.iac.plan_chunk(ι_seq[0], H, M.tools, M.budget_left(s), M.drift_bound(s))
     
-    # 5. RT-CVC 任务建模 + RTA 验证
-    tau_C = M.rt_model.make_task(C, M.env.time())
-    if not M.rta.verify({tau_C}):
+    # 5. RT-CVC 任务建模
+    τ_C = M.rt_model.make_task(C, M.env.time())
+    if not M.rta.verify({τ_C}):
         C = M.rt_model.generate_fallback(C)
-        tau_C = M.rt_model.make_task(C, M.env.time())
+        τ_C = M.rt_model.make_task(C, M.env.time())
     
-    # 6. CVC 提交前时空一致性检查
-    tf_seq = M.wristcam.get_spatial_trajectory(M.env.time(), M.env.time() + C.duration())
-    pre_spatial_cert = generate_spatial_cert(C, tf_seq, M.epsilon_vis)
-    if not pre_spatial_cert.is_consistent:
-        C = M.rt_model.generate_fallback(C)
-        tau_C = M.rt_model.make_task(C, M.env.time())
-    
-    # 7. 实时执行 + 故障诊断恢复闭环
+    # 6. 指标体系监控
     spatial_violations = []
     for t, action in enumerate(C.actions):
-        # 抢占点检查
-        if t in tau_C.preempt_points and M.scheduler.pending_higher_priority():
-            # 保存状态，切换高优先级任务
-            M.scheduler.preempt(tau_C, saved_state=C.get_prefix_state(t))
-            return PREEMPTED
-        
-        if not M.cvc.joint_pre(action) or not still_grounded(iota_seq[0], M.env):
+        if not M.cvc.joint_pre(action) or not still_grounded(ι_seq[0], M.env):
             break
         M.env.apply(action)
         
-        # 实时 SpatialCert 验证
-        current_tf = M.wristcam.get_latest_tf()
-        if current_tf and not M.ros_cvc.verify_tf_consistency(current_tf, C.psi_post):
-            violation = SpatialViolation(t, tf_residual(current_tf), 'spatial')
-            spatial_violations.append(violation)
-            
-            # 关键新增：故障诊断 + 恢复
-            fault_cert = M.diagnoser.diagnose(violation, C, tf_seq, iota_seq[0])
-            recovery_plan = M.recovery_registry.get_plan(fault_cert.rpid)
-            if recovery_plan and recovery_plan.wcet <= 2 * M.T_cycle:
-                # 调度恢复任务（抢占当前）
-                M.scheduler.schedule_recovery(recovery_plan, fault_cert)
-                # 恢复完成后决定：继续、截断、或降级
-                if recovery_plan.success:
-                    continue  # 恢复成功，继续执行
-                else:
-                    C = C.truncate(t)  # 恢复失败，截断
+        tf = M.wristcam.get_latest_tf()
+        metrics = M.metric_ladder.compute_metrics(t, action, tf, C)
+        current_layer = 3
+        
+        # 检查软硬约束
+        for layer in [3, 2, 1]:
+            if not M.metric_ladder.check(metrics, layer):
+                current_layer = M.metric_ladder.degrade_or_continue(layer)
+                if current_layer == 0:
+                    # 硬约束触发
                     break
-            else:
-                # 无预案或超时：直接截断
-                C = C.truncate(t)
-                break
+        
+        M.env.state['current_layer'] = current_layer
+        
+        # 实时 SpatialCert
+        if tf:
+            spatial_cert = M.spatial_cert.verify(tf, C.ψ_post)
+            if not spatial_cert.is_consistent:
+                violation = SpatialViolation(t, tf_residual(tf), 'spatial')
+                spatial_violations.append(violation)
+                
+                # FaultCert + 恢复
+                fault_cert = M.diagnoser.diagnose(violation, C, tf, ι_seq[0])
+                rp = M.recovery_registry.get_plan(fault_cert.rpid)
+                if rp:
+                    M.scheduler.schedule_recovery(rp, fault_cert)
     
-    # 8. 生成最终证书
+    # 7. 奖励计算与软校准
+    final_metrics = M.metric_ladder.compute_metrics(len(C.actions), C.actions[-1], tf, C)
+    reward, rewards = M.reward_decomposer.compute(M.env.state, ι_seq, final_metrics)
+    σ_R = M.reward_decomposer.compute_soft_calibration(rewards)
+    
+    # 8. 软校准信号融入下一轮规划
+    if len(M.inflight) == 0:
+        M.state['soft_calibration'] = σ_R
+    
+    # 9. 生成最终证书
     spatial_cert = generate_spatial_cert(C, tf_seq, M.epsilon_vis)
+    soft_cert = M.metric_ladder.to_soft_cert(current_layer)
     
-    # 9. ROS 声明式发布
+    # 10. ROS 发布
     M.ros_cvc.publish_cvc(C.id, len(C.actions), C.actions,
-                          C.pre_conditions, C.post_conditions, [spatial_cert])
-    M.ros_cvc.broadcast_block_tf(C.id, C.final_state)
+                          C.pre_conditions, C.post_conditions,
+                          [spatial_cert, soft_cert])
     
-    # 10. 绑定主张 + 原语图统计
+    # 11. 绑定主张
     receipts = M.tcv.get_receipts()
-    claims = bind_claims(C, iota_seq[0], receipts)
-    M.pgraph.record_execution(G_tau, C, spatial_cert, fault_certs=spatial_violations)
+    claims = bind_claims(C, ι_seq[0], receipts, σ_R=σ_R)
     
-    return C, spatial_cert, claims
+    return C, spatial_cert, claims, metrics, rewards
 
-# IP-339 主闭环
-def InstructGauge_RTDI_round(M, obs, audio, tac, depth, det, ell=None):
-    """50Hz WCET 可证主路径"""
+# IP-346 主闭环
+def MetricVoiceGauge_round(M, obs, audio, tac, depth, det, ell=None):
+    """50Hz WCET 保全主路径"""
+    # 音频流实时采集（单独线程，保证 latency ≤ 100ms）
+    if M.audio_buffer.ready():
+        spawn_async(metricvoicegauge_rtdi, M, obs, audio_stream=M.audio_buffer.peek())
+    
     for s in M.dbox.detect_blind_spot():
         if s not in M.inflight:
             M.inflight.add(s)
-            spawn_async(instructgauge_rtdi, M, s, ell)
-    return MODGAUGE_round(M, obs, audio, tac, depth, det)
+            spawn_async(metricvoicegauge_rtdi, M, s, obs, ell=ell)
+    
+    return InstructGauge_RTDI_round(M, obs, audio, tac, depth, det, ell=None)
 ```
 
 ## 4. 推导
 
-**引理 63（WCET 可调度性充分条件）** 若 `∀ τ_C ∈ TaskSet, WCET_C` 由静态分析获得且 `RTA(TaskSet) = true`，则在固定优先级抢占调度下，所有 CVC 块均在截止期 `D_C` 前完成。证明：RTA 是固定优先级调度的充要条件；静态 WCET 是真实执行时间的上界；抢占点 `PP_C` 设计保证上下文切换开销计入 `WCET_C`。
+**引理 69（指标层级闭合性）** 若 `∀ layer ∈ {1,2,3}, δ_layer(M_layer) = true ⇒ 软约束违背，则系统在任意层级都能保证不低于 M₀ 硬约束。证明：退化映射 δ 的单调性保证层级下降时约束集必须扩大；M₀ 为硬约束集合，故下降后仍满足安全。
 
-**引理 64（故障恢复有界性）** 若恢复预案 `RP` 满足 `WCET_rec ≤ 2 · T_cycle` 且 `trigger` 在故障证书生成后立即求值，则从 violation 发生到恢复完成 ≤ 3 个控制周期（1 周期检测 + 1 周期调度 + 1 周期执行）。证明：流水线化——检测与上一动作并行，调度在下一周期开始，执行在再下一周期完成。
+**引理 70（语音指令时序保真）** 给定 `latency(ASR∘NLI) ≤ T_cycle + prediction_window = 40ms`，且 `τ_voice` 置信阈稳定，则 VoiceCommandTyping 在 50Hz 回路中不引入额外时序抖动。证明：语音指令处理在独立线程完成，结果通过共享内存缓冲；若低置信，退化为默认 ι₀（无时延）。
 
-**引理 65（根因分类完备性）** 在故障模型 `F = {SEN, MOD, EXE, SEM}` 覆盖且互斥的假设下，`Classify` 输出的 `cause` 满足：`∀ v, ∃! cause ∈ F` 使得 `Evidence(v)` 对 `cause` 的似然最大。证明：四类故障在物理机制上正交（传感器/模型/执行器/语义）；证据向量设计为每类故障的充分统计量。
+**引理 71（奖励可逆向性完备）** 给定一个奖励函数 R，其梯度 `∇_w R` 完整覆盖指标体系 M 的每个层级，则存在唯一的软校准信号 σ_R 使得 `ι' = ι ⊕ σ_R` 完成从奖励到指令的可逆映射。证明：梯度方向指示每个层级贡献；softmax 归一化后得到概率分布，即软权重；将软权重映射回指令参数空间，形成闭环。
 
-**引理 66（原语图能力闭包）** `Γ_inst(G_τ, Π)` 生成的 `ι_seq` 满足 `tools(ι_seq) ⊆ T₀`。证明：`∀ π ∈ Π, tools(π) ⊆ T₀`（预注册约束）；`Γ_inst` 只选用 `Π` 中的原语；`tools(ι_seq) = ⋃ tools(π_i) ⊆ ⋃ tools(π) ⊆ T₀`。
-
-**引理 67（组合性泛化界）** 设任务分布 `D` 上任务图同构类为 `H`。若测试任务 `τ_test` 与训练任务共享原语类型集合 `Π_shared`，则泛化成功率 `P_success(τ_test) ≥ α · |Π_shared| / |Π(τ_test)| - β`，其中 `α, β` 为常数。证明：原语实例化的样本复杂度仅依赖于原语类型而非任务组合；共享原语提供迁移先验。
-
-**引理 68（退化等价性扩展）** 
-- WCET 分析失败 ⇒ `RTA` 跳过，退回 InstructGauge-WR 的尽力而为执行（引理 62 保持）
-- 故障归因失败 ⇒ `FaultCert.cause = UNKNOWN`，`RecoveryRegistry` 无匹配，退回 SpatialCert 截断（v4 行为）
-- 指令解析失败 ⇒ `Γ_parse` 抛异常，退回单指令 `NLI-Box.ground(ell)`（v3 行为）
+**引理 72（软硬约束无缝衔接）** SoftCert 的退化触发条件 `δ_trigger` 与硬约束 M₀ 的判据 τ₀ 完全重合，故不存在「软通过硬失」的空洞。证明：δ_trigger = {σ < τ_safe}，而 τ₀ = 硬约束阈值；两者设计同一尺度，保证退化后硬约束必然满足。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| RT-CVC-TaskModel (WCET) | 离线分析 | O(|CFG|) 静态 | O(|CFG|) | 定义 468 |
-| RTA 调度验证 | 离线/在线 | O(n²) 任务数 | O(n) | 引理 63 |
-| FaultDiagnoser | 在线 | O(1) 规则基 / O(d) 轻量分类器 | O(1) | 定义 469, 引理 64 |
-| RecoveryRegistry | 在线查找 | O(1) | O(|RP|) | 定义 470 |
-| PrimitiveGraph 解析 | 在线 | O(|ℓ| + |G_τ|) | O(|G_τ|) | 定义 471, 引理 66 |
-| PrimitiveGraph 实例化 | 在线 | O(|V_τ| · |scene|) | O(|V_τ|) | 定义 471 |
-| RTDI-7C 闭环 | 主路径 | WCET ≤ 20ms (含诊断恢复预留) | 不变 | 引理 63, 64, 68 |
+| MetricLadder 检查 | 在线 | O(|Mᵢ|) 常数 | O(1) | 定义 493 |
+| VoiceCommandTyping | 在线 | O(|audio|) ASR 主导 | O(|text|) | 定义 494 |
+| RewardDecomposer | 在线 | O(|layers|·|metrics|) | O(|layers|) | 定义 495 |
+| SoftCert 生成 | 在线 | O(1) | O(1) | 定义 496 |
+| MetaWeight 计算 | 在线 | O(|violations|) | O(1) | 定义 497 |
+| Voice-RTDI-7C 闭环 | 主路径 | WCET ≤ 22ms | 不变 | 引理 69-72 |
 
-## 6. 实验设计 E473–E492
+## 6. 实验设计 E493–E512
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E473 | WCET 静态分析精度 | 静态 WCET / 实测最大值 ≤ 1.3（不过度悲观） |
-| E474 | RTA 调度可行性 | 100 个随机任务集，RTA 通过率 ≥ 95%（负载 ≤ 0.7） |
-| E475 | 抢占安全性 | 1000 次抢占，状态序列化/恢复 0 错误 |
-| E476 | 故障分类准确率 | 四类根因分类 F1 ≥ 0.9（注入故障数据集） |
-| E477 | 恢复时限 | 95% 恢复在 ≤ 2 个控制周期（40ms）内完成 |
-| E478 | 恢复安全性 | 恢复过程中 0 违背安全契约（ψ_post 保持） |
-| E479 | 原语图解析正确率 | 100 条未见指令，解析类型检查通过率 ≥ 90% |
-| E480 | 组合性泛化增益 | 共享原语比例 50% 时，成功率较无共享基线提升 ≥ 25% |
-| E481 | 端到端竞赛任务 | 模拟竞赛场景（干扰+计时），完成率 ≥ 85%，WCET 0 超期 |
-| E482 | 对抗干扰鲁棒性 | 注入传感器噪声/遮挡/指令注攻击，完成率下降 ≤ 10% |
-| E483 | 全链路退化等价 | 关闭 RTDI 三增强，行为等价于 InstructGauge-WR（diff=0） |
-| E484 | 实机 sim-to-real | 实机竞赛任务完成率 ≥ 80%，WCET 实测 ≤ 静态上界 |
-| E485 | 原语库规模扩展 | Π 从 20→100，解析延迟 < 5ms，泛化增益单调 |
-| E486 | 多故障并发 | 同时触发 SEN+EXE，恢复正确优先级处理，无死锁 |
-| E487 | 指令对抗注入 | 恶意指令「忽略安全抓取」，被 SEM 分类拦截率 100% |
-| E488 | 热加载预案 | ROS Service 热加载新预案，子图 diff=0，无重启 |
-| E489 | 50Hz WCET 保全 | 新增诊断恢复链路，WCET 增量 ≤ 2ms |
-| E490 | 长时程稳定性 | 1 小时连续运行，无内存泄漏、无时序漂移 |
-| E491 | 人机协作指令 | 自然语言修正指令中途插入，原语图增量更新 ≤ 10ms |
-| E492 | 形式化验证 | 用 UPPAAL 验证 RTDI-7C 时序自动机，死锁自由、活性达标 |
+| E493 | 指标体系退化时序 | 退化到 M₀ ≤ 1 控制周期 |
+| E494 | 语音识别时序 | ASR+NLI ≤ 40ms，方差 ≤ 5ms |
+| E495 | 软硬约束覆盖 | 100% 软触发 → 硬约束满足 |
+| E496 | 奖励梯度可解释性 | 90% 以上奖励可归因到具体指标层级 |
+| E497 | 软校准收敛 | 5 轮内σ_R 稳定于 ±5% |
+| E498 | 语音置信阈鲁棒 | 不同说话人 F1 ≥ 0.88 |
+| E499 | 多模态指令覆盖 | NL+语音 同时有效时优先级 NL |
+| E500 | 端到端竞赛任务 | 模拟竞赛完成率 ≥ 90%，0 超期 |
+| E501 | 软约束鲁棒性 | 随机噪声 M₁,M₂,M₃ 触发，M₀ 仍保护安全 |
+| E502 | 奖励驱动调参 | 用 σ_R 调整后，效率指标提升 ≥ 15% |
+| E503 | 实机语音接口 | 实机语音指令成功率 ≥ 85% |
+| E504 | 长时程稳定性 | 30 分钟连续运行，指标无漂移 |
+| E505 | FaultCert-奖励闭环 | FaultCert → σ_R → ι 调整闭环完整 |
+| E506 | 退化链完整性 | 关闭 VoiceTyping，行为等价 InstructGauge-RTDI |
+| E507 | 预测窗口一致性 | 语音指令在 +20ms 预测窗口内有效 |
+| E508 | 动态权重收敛 | MetaWeight 在风险变化后 3 周期收敛 |
+| E509 | 软证书可视化 | 实时监控面板显示 SoftCert σ 值 |
+| E510 | 反事实推理 | 设定奖励梯度，预测 ι' 的变化方向 |
+| E511 | 形式化模型 | 用 NuSMV 验证 SoftCert→硬约束退化安全 |
+| E512 | 能耗分析 | 新增 Voice+RTDI 功耗增量 ≤ 5W |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| WCET 精度（E473） | 静态/实测 ≤ 1.3 | 改用基于测量的概率 WCET (pWCET) + 置信度 99.9% |
-| 故障分类（E476） | F1 ≥ 0.9 | 引入轻量时序分类器 (TCN) 替换规则基 |
-| 恢复时限（E477） | ≤ 2 周期 95% | 简化恢复预案、预热 IK 求解器、专用实时线程 |
-| 组合性泛化（E480） | 共享 50% 时提升 ≥ 25% | 扩充原语库覆盖度、改进 Γ_parse 的结构对齐 |
-| 竞赛完成率（E481） | ≥ 85%，0 超期 | 降低任务复杂度、增加冗余预案、放宽 deadline |
-| 实机迁移（E484） | ≥ 80% | Domain randomization + 实机微调原语参数 |
+| 指标退化时序（E493） | ≤ 1 周期 | 简化指标检查、合并层级 |
+| 语音时序（E494） | ≤ 40ms, 方差 ≤ 5ms | 降采样语音、简化 NLI |
+| 软硬覆盖（E495） | 100% 覆盖 | 增加软约束冗余、提升 δ_trigger 灵敏度 |
+| 奖励可解释性（E496） | F1 ≥ 0.9 | 增加指标层级、改进梯度计算 |
+| 软校准收敛（E497） | 5 轮内稳定 | 调低元学习率 α、增加历史缓冲 |
+| 语音鲁棒性（E498） | F1 ≥ 0.88 | 扩充说话人数据、增强噪声鲁棒 ASR |
+| 实机迁移（E503） | 成功率 ≥ 85% | Domain adaptive NLI、语音数据增广 |
 
 ## 8. 本轮最大风险
 
-**一句话**：**静态 WCET 分析对数据依赖分支的悲观性、故障归因在模糊边界上的振荡、原语图解析的「类型正确但语义偏离」三大风险相互耦合**：WCET 高估导致调度可行性丧失、退回尽力而为时故障诊断失效、恢复预案触发条件因归因错误而错配、原语图实例化通过类型检查但参数绑定错误导致执行偏离——这三条风险链在竞赛级高压下可能**级联放大**，使得「增强版」反而比 InstructGauge-WR 基线更脆弱；缓解需引入**混合关键性调度**（Mixed-Criticality Scheduling）允许低关键性任务（诊断/恢复/解析）在高关键性任务（安全执行）挤压时优雅降级，而非全链路崩溃。
+**一句话**：指标体系的层级判据与硬约束的对齐缺乏形式化，导致在动态环境下**误判软层级→硬层级的映射**；语音识别的置信度门阈 τ_voice 在噪声/焦虑语境下不稳定；奖励梯度的可逆向映射依赖假设指令偏好模型，这在实际人类-机器协作中可能偏差——三者合卷会产生「看似安全，实则价值错位」的系统性风险。
 <!-- ARTIFACT:END -->
