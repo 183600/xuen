@@ -1,0 +1,97 @@
+{
+  "torque": {
+    "sweep": [
+      {
+        "contact_nm": 0.5,
+        "torque_detect_rate": 0.988,
+        "torque_latency_ms_median": 18.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 292.0
+      },
+      {
+        "contact_nm": 0.7,
+        "torque_detect_rate": 1.0,
+        "torque_latency_ms_median": 9.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 226.0
+      },
+      {
+        "contact_nm": 1.0,
+        "torque_detect_rate": 1.0,
+        "torque_latency_ms_median": 5.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 193.0
+      },
+      {
+        "contact_nm": 1.5,
+        "torque_detect_rate": 1.0,
+        "torque_latency_ms_median": 3.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 160.0
+      },
+      {
+        "contact_nm": 2.5,
+        "torque_detect_rate": 1.0,
+        "torque_latency_ms_median": 1.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 160.0
+      },
+      {
+        "contact_nm": 4.0,
+        "torque_detect_rate": 1.0,
+        "torque_latency_ms_median": 0.0,
+        "vision_detect_rate": 1.0,
+        "vision_latency_ms_median": 127.0
+      }
+    ],
+    "false_alarm_rate": {
+      "0.05": 0.0,
+      "0.15": 0.0,
+      "0.3": 0.0
+    }
+  },
+  "dialogue": {
+    "never+torque": {
+      "success_rate": 0.848,
+      "unsafe_execution_rate": 0.0,
+      "veto_rate": 0.124,
+      "mean_turns": 0.12,
+      "mean_dialogue_s": 0.1
+    },
+    "always+torque": {
+      "success_rate": 0.989,
+      "unsafe_execution_rate": 0.0,
+      "veto_rate": 0.008,
+      "mean_turns": 2.53,
+      "mean_dialogue_s": 2.02
+    },
+    "voi+torque": {
+      "success_rate": 0.972,
+      "unsafe_execution_rate": 0.0,
+      "veto_rate": 0.016,
+      "mean_turns": 1.68,
+      "mean_dialogue_s": 1.34
+    },
+    "never": {
+      "success_rate": 0.721,
+      "unsafe_execution_rate": 0.127,
+      "veto_rate": 0.0,
+      "mean_turns": 0.0,
+      "mean_dialogue_s": 0.0
+    },
+    "always": {
+      "success_rate": 0.984,
+      "unsafe_execution_rate": 0.007,
+      "veto_rate": 0.0,
+      "mean_turns": 2.54,
+      "mean_dialogue_s": 2.03
+    },
+    "voi": {
+      "success_rate": 0.96,
+      "unsafe_execution_rate": 0.014,
+      "veto_rate": 0.0,
+      "mean_turns": 1.65,
+      "mean_dialogue_s": 1.32
+    }
+  }
+}

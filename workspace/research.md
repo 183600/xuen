@@ -3,387 +3,451 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
+# 第 10 轮（本轮灵感循环第 1 轮；基线 v9；本轮灵感：「数据集构建」×「状态估计」）
 
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
->
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
->
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
->
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> **基线**：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
+> 本轮纪律：**信念代替点估计 + 数据集代替手调常数**。v9 的最大风险是「块证书在最需要安全的时刻暴露最不可靠的证书」：其根因不是分块，而是证书把状态 s_t 当作精确已知、把前向模型误差 β 当作手调常数、并用 20 帧滑窗的 Δ_dom 做信任门。两个灵感分别命中两处隐藏假设；必须通过中立元退化链保证新模块失效时严格退回 v9（引理 92），而不是行为漂移。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
+**灵感 1（状态估计 → 信念证书）**
+直觉：v9 的证书在最关键的项上少了一个变量——状态估计误差。真实系统里 s_t 是估计值 μ_t，带协方差 Σ_t；块证书却按 s_t 精确计算间隙。于是"证书有效"可能只是"估计错误地自信"。核心创新：**信念状态估计器（BeliefStateEstimator, BSE）** 输出 b_t=(μ_t,Σ_t)，把估计不确定度 ρ_t 经 Lipschitz 可达集传播进块证书，得到**鲁棒块证书** Ĉ^rob：预测间隙先扣模型误差 β_t，再扣 L_g·ρ_t。语义从"在 s_t 处安全"升级为"在置信椭球内处处安全"。
 
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
+**灵感 2（数据集构建 → 可校准的 β 与可追溯的信任）**
+直觉：v9 的 β 与 τ_dom 是"研究者的手"，不是"数据的证词"。保形预测（split conformal）把"前向模型误差 ≤ β"从假设变成带有限样本覆盖率的经验命题：β 取校准集残差的(1−α)分位，覆盖率 ≥1−α。更关键：部署期每执行一步都能观测真实指标 y_{k+1}，与 F̂ 的预测比较得到**新息残差** r_k——这是零延迟（1 步）的模型失配信号，而 Δ_dom 是 20 帧滑窗（约 400ms 滞后）。核心创新：**新息信任监控器（InnovationTrustMonitor, ITM）** 用 CUSUM 累积 r_k，超阈即刻吊销证书、切最近中止点；**在线保形校准器（OnlineConformalCalibrator, OCC）** 用 ACI 在漂移下维持长期覆盖率；**覆盖校准数据集引擎（CoverageCalibratedDatasetEngine, CCDE）** 构造 D_fit/D_cal/D_corner/D_drift 与版本化来源账本。
 
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
+**为什么两者必须一起用**
+状态估计单独用：Σ_t 可能系统性低估，鲁棒证书仍会乐观；数据集单独用：保形交换性在域偏移下失效，覆盖率不能保证突变第一步。二者合成一个**双证据证书**：空间证据（信念椭球包含真值）+ 经验证据（保形残差分位）。任一证据缺失即退回 v9 点证书并保守化，而不是继续乐观。这也解释了为什么"数据集构建"不是一次性离线工作，而是与"状态估计"共享同一个失效模式：都必须在部署中持续被检验。
 
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
+## 1. 研究问题（轮次升级版）
 
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
+- **Q1（信念证书可靠性）**：在估计误差仅满足置信椭球包含（概率 1−δ）、前向模型误差仅满足保形覆盖（概率 1−α）的前提下，块证书能否给出可证明的间隙下界？Lipschitz 界带来的保守性是否会吞掉分块的全部算力收益（K_eff 恒为 1）？
+- **Q2（新息检测的时效-误报权衡）**：一步新息 CUSUM 相比 Δ_dom 的 20 帧滑窗，能把"模型失配被察觉"的最坏延迟压到多少？在测量噪声与抓取瞬态下如何控制误报，避免"虚假退化风暴"？
+- **Q3（数据集-部署一致性）**：split conformal 的交换性在域偏移下失效时，ACI 的长期覆盖率与 CUSUM 的局部报警如何互补？如何用数据集构造（分层、角落样本、主动采样）同时优化 β 的覆盖性与保守性，并保证数据集版本、模型版本与证书版本可追溯？
 
-## 1. 形式化定义（增量：定义 293–309）
+## 2. 设计原则（在 P10–P12 基础上新增 P13–P15）
 
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
-
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
-
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
-
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
-
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
-
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
-
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
-
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
-
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
-
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
-
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
-
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
-
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
-
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
-
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
-
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
-
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
-
-## 2. 关键算法骨架
-
-```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
-
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
-
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
-
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
-
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
-
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
-
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
-
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
-
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
-    if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
-    else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
-    U_floor = U_ale + (U_epi_after if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
-    mode = select_mode(modes, U_epi_after, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
+**P13 信念证书律（Belief-Certificate, BC）**
+证书必须在信念状态上成立，而非点估计上。定义置信椭球 E_t(δ)={s:(s−μ_t)^TΣ_t^{-1}(s−μ_t)≤χ²_{d,1−δ}} 与半径 ρ_t=sqrt(χ²_{d,1−δ}·λ_max(Σ_t))。利用 F̂ 对状态的 Lipschitz 界 L_g，鲁棒间隙下界
 ```
+ĝ_min^rob = min_{k≤K} [ F̂_clearance(μ_k, a^{1:k}) − β_t − L_g·ρ_k ]
+```
+只有 ĝ_min^rob ≥ d_safe 时证书才算有效。估计不确定度越大，证书越保守；K_eff 同时受 ρ_t 门控。
 
-## 3. 推导
+**P14 新息信任律（Innovation-Trust, IT）**
+每执行一步即用真实观测校验前向模型：r_k=‖y_k−ŷ_k‖_∞（按维尺度归一），CUSUM S_k=max(0, S_{k−1}+r_k−(β_t+ν))；S_k>h 立即吊销当前块证书并切换到 ≤ 当前执行步的最大中止点 p*。证书生命周期为 provisional → confirmed → revoked：块生成时只是"暂定"，每步残差在校准界内才"确认"，否则"吊销"。这把"预测的证书"升级为"被逐步验证的证书"。
 
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
+**P15 覆盖-校准数据律（Coverage-Calibrated Data, CD）**
+β 不是常数而是数据集与在线残差的函数，且**只增不减的安全棘轮**：β_t ≥ β_v9 恒成立，数据集只能让证书更保守、不能更乐观。
+- 分布内：split conformal，β_0 = D_cal 上非一致性得分的 ⌈(n+1)(1−α)⌉/n 分位，覆盖率 ≥1−α（交换性下有限样本）；
+- 分布外：ACI 在线更新 β_{t+1}=clip(β_t+γ(α−err_t), [β_v9, β_max])，保持长期覆盖率并应对漂移；
+- 数据集：D_fit/D_cal/D_corner/D_drift/D_regress 分层构造，D_corner 用中块突变/传感器失效反事实注入，D_regress 为证书回归金标；账本记录 (H_D,H_model,β_0,α,γ) 以便任一证书可复现。
+- 下限重置只能由离线重标定 + 人工审批完成（带迟滞），运行期不允许下调。
 
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
+## 3. 与基线的接口（如何退化）
 
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
+- BSE 失效（滤波发散 / NIS 连续超阈 / 超时）⇒ Σ←Σ_max（信任膨胀，K_eff←1）或直接点估计 + v9 β；
+- ITM 失效 ⇒ 关闭新息报警，仅保留 v9 的 Δ_dom 门控；
+- CCDE/OCC 失效 ⇒ β←β_v9（固定常数），数据集转只读；
+- RCC 失效 ⇒ 用 v9 点证书公式（定义 533）；
+- 全部失效 ⇒ 严格退回 MetricVoiceGauge-ACMD v9，再退回 v8/v7。
+退化不是"另一种算法"，而是把 BSE 输出置为 (μ,Σ=0)、β 置为 β_v9、ITM 置为不报警——即中立元注入，日志可审计。
 
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
+## 4. 预期贡献
 
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+1. **信念证书**：把状态估计不确定度以可证明的方式传播进块证书，补齐 v9 证书"假设状态精确已知"的空洞；给出 δ-α 联合覆盖率界。
+2. **新息信任闭环**：用一步残差 CUSUM 把模型失配检测延迟从 Δ_dom 的 20 帧压缩到 ≤3 个控制周期，并给出检测延迟与误报的设计公式；直接回应 v9 的最大风险。
+3. **数据集作为一等公民**：保形校准 + 分层覆盖采样 + 角落样本注入 + 版本化账本，把"信任"从叙事变成可复现、可审计的经验证据；同时为 ID 的消融归因提供配对反事实数据，降低 c_m 方差。
+4. **保守性守恒**：β 棘轮与中立元退化使 v10 的安全性单调不弱于 v9；E571–E590 覆盖估计一致性、覆盖校准、检测时效、迁移、投毒与端到端。
 
-## 4. 复杂度分析
+## 5. 本轮最大风险
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
-
-## 5. 实验设计 E286–E300
-
-| 实验 | 核心问题 | 关键目标 |
-|---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
-
-## 6. 本轮最大风险
-
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
-
-**次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
+**一句话**：双证据证书的可靠性依赖「校准集与部署同分布」和「滤波置信椭球真的包含真值」这两个假设，而最危险的域突变恰恰同时破坏二者——更糟的是 Lipschitz 常数低估会让证书静默乐观，高估则让 K_eff 恒为 1、分块算力收益归零，即"我们用数据校准的那个不确定性，正是数据分布在突变时最难校准的量"。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-SEDC**（State-Estimation & Dataset-Certified MetricVoiceGauge）
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
->
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
->
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+> 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
+> 本轮灵感：「数据集构建」×「状态估计」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）与 v9 的 AC/MW/ID 三模块全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元（Σ=0、β=β_v9、不报警、v9 点证书），严格等价退回 v9（引理 92），而非行为漂移。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
+| IP-340–356 | v9 全部模块 | 继承 | 语义不变；证书入口改由 RCC 合成，信任门增加 ρ_t/β_t 两维 |
+| IP-357 | BeliefStateEstimator 信念状态估计器 | 新增核心模块 | UKF/EnKF 融合里程计、IMU、视觉/SLAM 位姿与音频方位，输出 b=(μ,Σ,NIS)；NIS 一致性检验；提供置信椭球半径 ρ 与状态传播 |
+| IP-358 | InnovationTrustMonitor 新息信任监控器 | 新增核心模块 | 每执行步比较真实指标 y_k 与 F̂ 预测 ŷ_k，得一步残差 r_k；CUSUM 累积，超阈即刻吊销块证书并切最近中止点；检测延迟 ≤⌈h/δ0⌉ 步 |
+| IP-359 | CoverageCalibratedDatasetEngine 覆盖校准数据集引擎 | 新增核心模块 | 构造 D_fit/D_cal/D_corner/D_drift/D_regress；分层 k-center 覆盖采样；中块突变反事实注入；数据集/模型/证书联合哈希账本 |
+| IP-360 | OnlineConformalCalibrator 在线保形校准器 | 新增核心模块 | split conformal 给 β_0（有限样本覆盖 ≥1−α）；ACI 在线更新 β_t 应对漂移；**β 棘轮**：β_t ≥ β_v9，运行期只增不减 |
+| IP-361 | RobustCertificateComposer 鲁棒证书合成器 | 新增核心模块 | 把 b、β_t、Lipschitz 常数合成为 Ĉ^rob=(ĝ_min^rob, ê_max^rob, γ̂^rob) 与鲁棒中止点集 P_t；K_eff 由 Δ_dom、risk_SLAM、ρ_t、β_t 四维门控 |
 
-## 1. 符号体系增量（定义 293–309）
+**退化链声明（v10 六级）：**
+- Level-1：ITM 报警或信任域破坏（Δ_dom≥τ_dom ∨ risk_SLAM≥τ_SLAM ∨ ρ_t≥ρ_max ∨ β_t≥β_max）⇒ 吊销证书、切 p* 或 K_eff←1，逐步执行，等价 v9 决策粒度；
+- Level-2：RCC 失效 ⇒ 用 v9 点证书公式（定义 533），K_eff 退回 v9 定义 539；
+- Level-3：BSE 失效 ⇒ (μ,Σ=0) 点状态 + 信任膨胀（K_eff←1），等价 v9；
+- Level-4：CCDE/OCC 失效 ⇒ β←β_v9 固定常数，数据集只读；
+- Level-5：MW/ID 失效 ⇒ 按 v9 定义 535/538 退回手写网关 / 全模块 active；
+- Level-6：v8 的 DA/SPR/Cal 失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7，再退回 v6。
+
+## 1. 符号体系增量（定义 540–550）
 
 | 符号 | 含义 |
 |---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
+| b_t=(μ_t,Σ_t,ν_t) | 信念状态：均值、协方差、NIS 统计量 |
+| E_t(δ) | 置信椭球 {s:(s−μ_t)^TΣ_t^{-1}(s−μ_t)≤χ²_{d,1−δ}} |
+| ρ_t | 信念半径 sqrt(χ²_{d,1−δ}·λ_max(Σ_t))；估计不确定度的标量摘要 |
+| ρ_k | 沿 K 步传播的半径，ρ_{k+1}=L_f·ρ_k+ε_proc |
+| L_f, L_g, L_e, L_γ | 动力学、间隙、能耗、抓取指标对状态的 Lipschitz 常数（离线在 D_cal 上标定） |
+| β_t | 时变前向模型误差界；β_0 来自 split conformal，β_t 由 ACI 更新 |
+| α | 保形显著性水平（默认 0.01）；δ 为估计椭球显著性（默认 0.01） |
+| ν, h, γ | CUSUM 松弛量、报警阈、ACI 步长 |
+| r_k | 一步新息残差 ‖y_k−ŷ_k‖_∞（按维尺度归一） |
+| S_k | 新息 CUSUM 统计量 |
+| D_fit,D_cal,D_corner,D_drift,D_regress | 训练/校准/角落/漂移/回归五类数据集 |
+| H_D, H_model | 数据集与模型的内容哈希；与证书哈希共同入账本 |
+| ε_N | 分层采样在特征空间的覆盖半径 |
+| cert∈{provisional,confirmed,revoked} | 证书生命周期状态 |
 
-## 2. 形式化定义（要点版）
+**定义 540（信念状态 BeliefState）** 滤波器（UKF/EnKF）在观测 obs_t 与上一步动作 a_{t−1} 上输出 b_t=(μ_t,Σ_t,ν_t)。NIS 一致性检验：ν_t=(z_t−h(μ_t^−))^T S_t^{−1}(z_t−h(μ_t^−))，若连续 3 步 ν_t>χ²_{q,0.99}，判滤波不一致并膨胀 Σ_t（乘因子 κ_inf=2）。RCC 只在 b_t 上做预测，不再接受裸点状态。
 
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
+**定义 541（估计不确定度传播 EstimationUncertaintyPropagation）** 设动力学 s_{k+1}=f(s_k,a_k)+w_k，f 对状态 L_f-Lipschitz，‖w‖≤ε_proc。若 s_k∈B(μ_k,ρ_k)，则 s_{k+1}∈B(μ_{k+1}, L_f ρ_k+ε_proc)。故
+```
+ρ_k ≤ L_f^k·ρ_0 + (L_f^k − 1)/(L_f − 1)·ε_proc   (L_f ≠ 1)
+ρ_k ≤ ρ_0 + k·ε_proc                              (L_f = 1)
+```
+该式只用于保守上界；实际实现对每步取上式的 min 与滤波器边缘协方差给出的 sqrt(χ²λ_max(Σ_k))。
 
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
+**定义 542（鲁棒块证书 RobustChunkCertificate）** 对候选块 a^{1:K}：
+```
+ĝ_min^rob = min_{k≤K} [ F̂_clearance(μ_k, a^{1:k}) − β_t − L_g·ρ_k ]
+ê_max^rob = max_{k≤K} [ F̂_effort(μ_k, a^{1:k})   + β_t + L_e·ρ_k ]
+γ̂_grasp^rob valid ⇔ L_γ·ρ_K ≤ γ_margin
+```
+证书有效 ⇔ ĝ_min^rob ≥ d_safe ∧ ê_max^rob ≤ τ_eff(t) ∧ γ̂_grasp^rob valid ∧ P_t≠∅ ∧ cert≠revoked。
 
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
+**定义 543（一步新息与 CUSUM InnovationResidual）** 执行第 k 步后观测指标 y_k∈R^q，ŷ_k=F̂(μ_k,a_k)。归一化残差 r_k=max_j |y_{k,j}−ŷ_{k,j}|/σ_j，σ_j 为 D_cal 上该维残差的中位绝对偏差。CUSUM：
+```
+S_k = max(0, S_{k−1} + r_k − (β_t + ν)),   S_0=0
+报警 ⇔ S_k > h
+```
+ν>0 吸收正常噪声；h 由 E579 在误报率约束下标定（默认 h=0.03，度量单位为归一化间隙）。
 
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
+**定义 544（证书生命周期 CertificateLifecycle）**
+- provisional：5Hz 块生成时写入，允许执行第 1 步；
+- confirmed：第 k 步执行后 r_k≤β_t，允许继续执行 k+1；
+- revoked：S_k>h 或停车不变式破坏；revoked 不可复活，只能切中止点 p* 并在下一 5Hz 节拍重生成。
+该状态机把 v9 的"预测即信任"改为"执行中验证"，且不增加重规划频率（仅廉价残差比较）。
 
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
+**定义 545（覆盖校准数据集 CoverageCalibratedDataset）** D=(D_fit,D_cal,D_corner,D_drift,D_regress)，版本 H_D=H(D_fit‖D_cal‖D_corner‖stats)。非一致性得分 s_i=‖y_i−F̂(x_i)‖_∞/σ。split conformal：
+```
+β_0 = Quantile_{⌈(n+1)(1−α)⌉/n}( {s_i : (x_i,y_i)∈D_cal} )
+```
+在 D_cal 与部署样本可交换时，P(s_new≤β_0)≥1−α。**明确边界**：域偏移破坏交换性，故 β_0 只提供分布内保证；分布外由定义 547 的 ACI 与定义 543 的 ITM 接管。D_corner 由中块障碍注入、传感器丢帧、打滑三类反事实生成；D_regress 为证书金标回归集（停车不变式、P_t 非空、K_eff 单调性）。
 
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
+**定义 546（分层覆盖采样 StratifiedCoverageSampling）** 特征 φ=(Δ_dom 分箱, risk_SLAM 分箱, 杂波密度, 速度, 抓取相位)。以 k-center 贪心在 D_cal 上最大化最小成对距离，得到 ε_N-覆盖；采样权重 w∝risk_proxy（低间隙、高速度、高 Δ_dom 加权）。目标：在预算 N 下使覆盖半径 ε_N 最小，且各风险分箱至少 n_min 个样本。理论上若特征空间紧致直径 R、维度 d，则 ε_N ≤ c·(R/N)^{1/d}（在密度有下界的假设下）。
 
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
+**定义 547（在线保形校准 OnlineConformalCalibration, ACI）** 每个块结束后 err_j=1[r_j>β_j]，更新
+```
+β_{j+1} = clip( β_j + γ(α − err_j), [β_v9, β_max] )
+```
+下界 β_v9 即安全棘轮：运行期 β 永远不弱于 v9。ACI 给出长期覆盖率
+```
+(1/J)·Σ_{j=1}^J err_j ≤ α + (β_max − β_v9)/(γJ)
+```
+故 J 越大越接近 1−α；突变期允许短暂欠覆盖，由 ITM 的局部报警兜底。下调 β 只能通过离线重标定 + 人工审批（记录于账本），且需满足 E585 的防投毒门槛。
 
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
+**定义 548（鲁棒证书合成 RobustCertificateComposer）** 四维门控：
+```
+g_t = max( Δ_dom/τ_dom, risk_SLAM/τ_SLAM, ρ_t/ρ_max, (β_t−β_v9)/(β_max−β_v9) )
+K_eff(t) = 1                                           若 g_t ≥ 1
+         = max(1, ⌊K_max·(1−g_t)⌋)                     否则
+```
+随后按定义 542 计算 Ĉ^rob，并按鲁棒停车不变式构造 P_t：
+```
+d_brake(v_p) + d_safe ≤ dist(μ_p,O) − |traj_{p:K}| − L_g·ρ_p
+```
+与 v9 定义 539 相比，新增 ρ_t 与 β_t 两个门控维度；当 ρ=0、β=β_v9 时逐项退化为 v9。
 
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
+**定义 549（证书来源账本 CertificateProvenanceLedger）** 每条记录：(H_D, H_model, β_0, α, γ, 标定时间戳, K_eff 策略版本, 证书哈希)。审计要求：给定账本条目与数据集版本，可离线逐位复现任意历史证书与 K_eff 轨迹。账本还记录 β 的每次上调与其触发原因（漂移、角落样本、人工重标定），形成"信任变更日志"。
 
-## 3. 关键算法伪代码
+**定义 550（周期预算口径修正 CycleBudgetRecalibration）** v9 引理 86 的"感知 2ms + 决策 20ms"合计 22ms，与 50Hz 的 20ms 周期矛盾。v10 重归一：
+```
+B_cycle = 20ms = 感知 3.0ms + 决策 16.5ms + 余量 0.5ms
+感知 3.0ms = v8 感知 2.0ms + BSE 增量 0.8ms + 账本抽样 0.2ms
+决策 16.5ms 中，块生成 12ms 只在 5Hz 节拍发生，且与 v8 重路径相位错峰（不同周期）。
+```
+该修正不改变任何 v8/v9 语义，只改预算记账；后续复杂度分析均按此口径。
+
+## 2. 形式化定义（要点与升级）
+
+**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
+**定义 495/524（MetaWeight/情感）** 继承 v8 不变。
+**定义 521（DA-OTL）** 继承 v8；τᵢ(t) 的复核输入由点状态改为信念状态，但阈值语义不变。
+**升级定义 496（软证书，v10）**
+```
+δ_trigger = { σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom
+              ∧ risk_SLAM < τ_SLAM ∧ Ĉ^rob valid ∧ cert ≠ revoked }
+```
+六条件同尺度：v9 的 Ĉ_t valid 被替换为更强的 Ĉ^rob valid；cert=revoked 直接触发 M₀ 硬检查，不存在"块内软通过、硬失"的空洞（引理 87+89 联合）。
+**升级定义 531（软硬约束衔接）** 任一中块守卫违规、或 ITM 报警 ⇒ 立即切 p* 或安全停驻，不等块边界；停车判据使用鲁棒间隙 ĝ_min^rob。
+**升级定义 535（契约表）** 新增五行；预算按定义 550 记账：
+
+| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
+|---|---|---|---|---|
+| BSE（信念融合） | 1.0 | 0.8 | 点状态 μ_t（Σ=0） | ✗ |
+| ITM（新息 CUSUM） | 0.1 | 0.05 | 不报警（退 v9 仅 Δ_dom） | ✗ |
+| RCC（证书合成） | 0.4 | 0.2 | v9 点证书（定义 533） | ✗ |
+| OCC（ACI 校准） | 0.05 | 0.02 | β←β_v9 | ✗ |
+| CCDE（离线构建） | — | — | β←β_v9，数据集只读 | ✗ |
+
+**升级定义 538（提炼状态机）** 不变；新增：CCDE 为 ID 提供配对反事实块（with/without m），c_m 用配对差估计，降低方差（E588 验证）。
+
+## 3. 关键算法骨架
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
-        for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
+# IP-357 BeliefStateEstimator：信念状态估计器
+class BeliefStateEstimator:
+    def __init__(self, ukf, Lf, eps_proc, delta=0.01, chi2=None):
+        self.f, self.Lf, self.eps = ukf, Lf, eps_proc
+        self.delta, self.chi2 = delta, chi2 or chi2_quantile
 
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
+    def update(self, obs, a_prev):
+        mu, Sigma, nis = self.f.predict_update(obs, a_prev)
+        if self.f.consecutive_inconsistent(nis, k=3):        # 定义 540
+            Sigma = 2.0 * Sigma                              # 滤波不一致 → 信任膨胀
+        rho0 = sqrt(self.chi2(self.d, 1 - self.delta)
+                    * max_eig(Sigma))
+        return Belief(mu, Sigma, nis, rho0)
 
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
+    def propagate(self, rho0, K):
+        rho = [rho0]
+        for _ in range(K - 1):                               # 定义 541
+            rho.append(min(self.Lf * rho[-1] + self.eps,
+                           sqrt(self.chi2 * max_eig(self.Sigma))))
+        return rho
 
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
 
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
+# IP-361 RobustCertificateComposer：鲁棒证书合成器
+class RobustCertificateComposer:
+    def __init__(self, F, Lg, Le, Lgamma, d_safe, d_brake_fn, K_max=10):
+        self.F, self.Lg, self.Le, self.Lgamma = F, Lg, Le, Lgamma
+        self.d_safe, self.d_brake, self.K_max = d_safe, d_brake_fn, K_max
 
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
-    U_floor = U_ale + (U_epi if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
-    mode = select_mode(modes, U_epi, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
-    return k, lam, mode, (U_ale, U_epi)
+    def gate(self, delta_dom, tau_dom, risk_slam, tau_slam,
+             rho, rho_max, beta, beta_v9, beta_max):
+        g = max(delta_dom / tau_dom, risk_slam / tau_slam,
+                rho / rho_max, (beta - beta_v9) / max(beta_max - beta_v9, 1e-9))
+        if g >= 1.0:
+            return 1
+        return max(1, int(self.K_max * (1.0 - g)))            # 定义 548
+
+    def compose(self, belief, actions, beta):
+        K = len(actions)
+        pred = self.F.rollout(belief.mu, actions)
+        rho = belief.propagate(belief.rho0, K)
+        g_min = min(pred.clearance[k] - beta - self.Lg * rho[k] for k in range(K))
+        e_max = max(pred.effort[k]   + beta + self.Le * rho[k] for k in range(K))
+        if g_min < self.d_safe or e_max > pred.tau_eff:
+            return None                                       # 定义 542
+        if self.Lgamma * rho[-1] > pred.gamma_margin:
+            return None
+        pts = [p for p in range(1, K)
+               if pred.clearance[p] - self.d_brake(pred.speed[p])
+                  - self.d_safe >= pred.path_len[p:] + self.Lg * rho[p]]
+        if not pts:
+            return None
+        return Chunk(actions, Cert(g_min, e_max, robust=True), pts,
+                     state='provisional')                     # 定义 544
+
+
+# IP-358 InnovationTrustMonitor：新息信任监控器
+class InnovationTrustMonitor:
+    def __init__(self, nu=0.005, h=0.03):
+        self.nu, self.h, self.S = nu, h, 0.0
+
+    def observe(self, y, yhat, scales, beta):
+        r = max(abs(y[j] - yhat[j]) / scales[j] for j in range(len(y)))
+        self.S = max(0.0, self.S + r - (beta + self.nu))      # 定义 543
+        if self.S > self.h:
+            return 'revoke', r
+        return ('confirm' if r <= beta else 'hold'), r
+
+    def reset(self):
+        self.S = 0.0
+
+
+# IP-360 OnlineConformalCalibrator：在线保形校准器（ACI + β 棘轮）
+class OnlineConformalCalibrator:
+    def __init__(self, beta0, beta_v9, beta_max, alpha=0.01, gamma=0.002):
+        self.beta = max(beta0, beta_v9)                       # 定义 547 安全棘轮
+        self.beta_v9, self.beta_max = beta_v9, beta_max
+        self.alpha, self.gamma = alpha, gamma
+
+    def update(self, residual):
+        err = 1.0 if residual > self.beta else 0.0
+        self.beta = clip(self.beta + self.gamma * (self.alpha - err),
+                         self.beta_v9, self.beta_max)         # 只增不减下界
+        return self.beta
+
+
+# IP-359 CoverageCalibratedDatasetEngine：覆盖校准数据集引擎
+class CoverageCalibratedDatasetEngine:
+    def __init__(self, alpha=0.01, n_min=50):
+        self.alpha, self.n_min = alpha, n_min
+
+    def build(self, logs, model):
+        D_fit, D_cal = self.chronological_split(logs)         # 定义 545
+        D_cal = self.stratified_kcenter(D_cal, self.n_min)    # 定义 546
+        scores = [nonconformity(model, x, y) for x, y in D_cal]
+        beta0 = quantile(scores, ceil((len(scores)+1)*(1-self.alpha))/len(scores))
+        D_corner = self.counterfactual_inject(logs)           # 中块突变/丢帧/打滑
+        D_regress = self.golden_certificates(model, beta0)
+        H = content_hash(D_fit, D_cal, D_corner, beta0)
+        return DatasetBundle(D_fit, D_cal, D_corner, D_regress, H, beta0)
+
+
+# 主闭环集成：MetricVoiceGauge-SEDC
+def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
+    b = bse.update(obs, last_action)                          # 信念状态
+    ctx.delta_dom, ctx.risk_slam = perception_via_mw(obs)     # v9 契约调用
+    beta = occ.beta                                           # ≥ β_v9
+
+    if current_chunk is None or current_chunk.exhausted:
+        K = rcc.gate(ctx.delta_dom, M.tau_dom, ctx.risk_slam, M.tau_slam,
+                     b.rho0, M.rho_max, beta, M.beta_v9, M.beta_max)
+        current_chunk = (rcc.compose(b, policy.sample_sequences(b.mu, K), beta)
+                         or single_step_fallback(b))          # K=1 退 v9
+
+    # 50Hz 廉价守卫：证书状态 + 新息 CUSUM + 停车不变式
+    verdict, k_next = current_chunk.midchunk_guard(b, live_obs)
+    if verdict == 'abort':
+        current_chunk.execute_safe_stop_at(k_next)            # 鲁棒 p*
+        current_chunk, itm = None, itm.reset()
+    else:
+        y_obs = execute(current_chunk.actions[k_next])
+        state, r = itm.observe(y_obs, current_chunk.pred[k_next],
+                               scales, beta)                  # 定义 543
+        if state == 'revoke':
+            execute_safe_stop_at(current_chunk.nearest_abort(k_next))
+            current_chunk = None
+        else:
+            occ.update(r)                                     # ACI 更新 β
+            dataset_log.append((b.mu, current_chunk.actions[k_next], y_obs, r))
+
+    # v8 继承路径 + v9 ID（配对反事实数据由 CCDE 异步供给）
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
+    distiller.step(cycle_idx, ctx)
+    return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
+**引理 87（信念证书可靠性 Belief-Certificate Soundness）**
+设 (A1) 对每个 k≤K，P(s_k∈E_k(δ))≥1−δ；(A2) 保形覆盖 P(β_true,k≤β_t)≥1−α（分布内交换性下）或 ACI 长期覆盖（定义 547）；(A3) F̂_clearance 对状态 L_g-Lipschitz，且由定义 541 有 ∀s∈E_k: ‖s−μ_k‖≤ρ_k。则对块内任一步 k，
+```
+P( g_true,k ≥ ĝ_min^rob ) ≥ 1 − K(δ+α)
+```
+其中 g_true,k=F_clearance(s_k,a^{1:k})。
+证明：g_true,k = F(s_k) ≥ F̂(s_k) − β_true,k ≥ F̂(μ_k) − L_g‖s_k−μ_k‖ − β_true,k ≥ F̂(μ_k) − L_g ρ_k − β_t = 该项 + β_t − β_true,k ≥ 该项。对 K 步做并集界，A1 与 A2 各自失败概率相加。∎
+**边界说明**：若交换性被破坏，(A2) 只能降级为 ACI 的长期平均覆盖率（引理 91），此时单块保证由 ITM 的局部报警兜底，而非由上式给出。
 
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
+**引理 88（新息检测延迟 InnovationDetectionDelay）**
+设失配发生后真实残差持续满足 r_k ≥ β_t+ν+δ0（δ0>0）。则 CUSUM 从 S=0 起每步至少增加 δ0，至多 ⌈h/δ0⌉ 步即越过 h。控制周期 Δt=20ms，故最坏检测延迟
+```
+T_detect ≤ Δt·⌈h/δ0⌉
+```
+取 h=0.03、δ0=0.01（归一化单位）得 ≤3 周期 = 60ms；而 v9 的 Δ_dom 为 20 帧滑窗，最坏 ≥400ms。反向（H0：r_k≤β_t+ν−δ1）时 CUSUM 漂移为负，误报平均间隔随 h 指数增长，h 由 E579 按 ≤1 次/小时标定。∎
 
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
+**引理 89（估计误差下的中止安全性 AbortSafetyUnderEstimation）**
+若块被接受时按定义 548 的鲁棒停车不变式选取 p*，且引理 87 成立，则从 p* 执行安全停驻后，真实终点到障碍的距离 ≥ d_safe，概率 ≥1−K(δ+α)。证明：鲁棒不变式给出 d_brake(v_p)+d_safe+L_g ρ_p ≤ dist(μ_p,O)−|traj_{p:K}|；真实 dist(s_p,O) ≥ dist(μ_p,O)−L_g ρ_p，故 d_brake(v_p)+d_safe ≤ 真实间隙 − |traj|，刹车轨迹落在安全域内。∎
 
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
+**引理 90（分层覆盖的泛化界 StratifiedCoverageBound）**
+设 F̂ 残差对特征 φ 为 L_φ-Lipschitz，D_cal 在特征空间构成 ε_N-覆盖，则任一查询 φ 处的 conformal 分位与全局分位之差 ≤2L_φ ε_N；若特征空间有界直径 R、内在维度 d，则 ε_N ≤ c(R/N)^{1/d}，从而覆盖率的分布外偏差 ≤2L_φ c(R/N)^{1/d}。证明：ε_N-覆盖给出最近校准点 φ' 满足 ‖φ−φ'‖≤ε_N，残差 Lipschitz 给出分位差 ≤2L_φ ε_N；覆盖半径界为标准体积论证。∎
+**用途**：该界把"数据集要多大"从拍脑袋变成 E575/E576 的可检验命题；当 d 很高时该界退化，正是需要 ACI/ITM 的原因。
 
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**引理 91（ACI 长期覆盖与无抖振 ACICoverageNoFlap）**
+对定义 547 的更新，长期误差率满足 (1/J)Σ err_j ≤ α + (β_max−β_v9)/(γJ)。又因每次更新幅度 ≤γ、β 被投影到 [β_v9,β_max]，单个块内 β 单调变化不会造成证书多次翻转；配合 v9 引理 85 的 Schmitt 迟滞，状态迁移间隔 ≥T_abl，无 Zeno。∎
+
+**引理 92（中立元退化与 v9 逐位等价 NeutralElementDegradation）**
+对每个新模块注入中立元：BSE→(μ,Σ=0,ρ=0)、ITM→不报警、OCC/CCDE→β=β_v9、RCC→定义 533 点证书公式。逐项代入定义 542/543/547/548：
+- Ĉ^rob 的 β+L_g ρ 退化为 β_v9，与定义 533 一致；
+- K_eff 的 g_t 退化为 max(Δ_dom/τ_dom, risk_SLAM/τ_SLAM)，与定义 539 一致；
+- 证书状态机无 revoked 事件，等同于 v9 无 ITM 路径。
+故可观测行为与 v9 逐位等价。∎
+
+**引理 93（端到端安全不变式传递 EndToEndInvariant）**
+β 棘轮保证 β_t≥β_v9，鲁棒项 L_g ρ≥0 只增大保守性，四维门控只会缩小 K_eff，故 v10 的安全集 ⊆ v9 安全集；v9 引理 80–86 与 v8 九不变式在退化路径上原样适用。因此新模块只可能"更保守"，不可能"更乐观"。∎
+**注意**：该单调性是"相对 v9 基线"的，不替代引理 87 对绝对可靠性的条件性陈述；若 BSE 的 Σ 系统性低估，则"更保守"的比较对象本身失真，这是本轮最大风险。
 
 ## 5. 复杂度分析
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
+|---|---|---|---|---|
+| BSE 融合（50Hz） | 在线 | ≤0.8ms（d≤6） | O(d²) | 定义 540/541 |
+| RCC 证书合成（5Hz） | 在线 | ≤0.2ms/候选·K，n=64,k=10 | O(n·K) | 定义 542/548 |
+| ITM 新息 CUSUM（50Hz） | 在线 | ≤0.05ms | O(1) | 定义 543 |
+| OCC ACI（块级） | 在线 | ≤0.02ms | O(1) | 定义 547 |
+| CCDE 构建（离线/夜间） | 离线 | O(N log N) k-center | O(N) | 定义 545/546 |
+| AC 块生成（5Hz，v9） | 在线 | ≤12ms/次，摊销 ≤1.2ms | O(n·K·d_a) | 定义 532/533 |
+| v8 继承路径 | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
+| 决策侧合计 | 在线 | 典型 ≤6ms；块生成周期 ≤16.5ms（相位错峰） | — | 定义 550, 引理 86 |
+| 感知侧合计 | 在线 | ≤3.0ms（v8 2.0 + BSE 0.8 + 账本 0.2） | — | 定义 550 |
 
-## 6. 实验设计 E286–E300
+预算口径说明：v9 的"2+20=22ms"与 50Hz 矛盾（定义 550）；v10 以 B_cycle=20ms 重新记账，块生成与 v8 重路径错峰，保证 p99≤16.5ms 决策 + ≤3.0ms 感知 + 0.5ms 余量。
+
+## 6. 实验设计 E571–E590
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E571 | 状态估计精度 | ATE ≤0.05m、RPE ≤2%；NIS 经验分布落在 95% 理论区间 |
+| E572 | 置信椭球包含率 | 经验包含率 ≥1−δ=99%（多场景、多速度） |
+| E573 | 鲁棒证书保守性 | 声效率 100%（无低估）；保守比 ≤1.5×；>2× 触发重标 L_g |
+| E574 | split conformal 覆盖 | 分布内留出集覆盖率 ≥1−α=99% |
+| E575 | 校准集规模 vs β | N_cal 500→5000 的 β 收敛曲线；N≥2000 时覆盖率波动 ≤1% |
+| E576 | 主动采样 vs 随机 | 达到同一覆盖半径所需样本 ↓≥40% |
+| E577 | 角落样本与中块突变 | ≥500 次注入，中止成功 ≥99%，0 碰撞 |
+| E578 | 新息检测延迟 | δ0=2β 时 ≤3 周期(60ms)；对照 Δ_dom ≥20 帧(400ms) |
+| E579 | CUSUM 误报 | ≤1 次/小时；抓取瞬态场景 ≤2 次/小时 |
+| E580 | ACI 漂移覆盖 | 长期覆盖 ≥1−α−0.01；β 始终 ∈[β_v9,β_max] |
+| E581 | K_eff 与保守性权衡 | 加入 ρ/β 门控后算力节省仍 ≥30%，不塌缩到 K_eff≡1 |
+| E582 | 估计失效退化 | 里程计丢失/欺骗下 0 碰撞，NIS ≤2 周期报警，退 v9 日志可辨 |
+| E583 | 数据集/证书可追溯 | 由账本 100% 复现任一历史证书与 K_eff 轨迹 |
+| E584 | 跨机器人迁移 | A→B 的覆盖率下降 ≤5%，β 重标定 ≤1 次 |
+| E585 | 数据投毒鲁棒 | 检测率 ≥95%，安全违背 ≤2%；β 不得被下压 |
+| E586 | 端到端 vs v9 | RoboCup@Home 仿真 ≥ v9 + 10% |
+| E587 | 8h 长跑 | 覆盖率趋势稳定，β 漂移 ≤10%，无 Zenο 迁移 |
+| E588 | 模块消融 | BSE/ITM/CCDE/OCC/RCC 逐一关闭后严格退回 v9；ID 归因方差 ↓≥20% |
+| E589 | Chunk×ER 与时序 | 块边界情感生效 ≤200ms，操作员评分 ≥4/5 |
+| E590 | 综合竞赛与红队 | ≥ v9 + 15%；红队安全违背 ≤2% |
 
-## 7. 本轮最大风险
+## 7. 预注册判据
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+| 判据 | 门槛（预注册） | 若未达标的处置 |
+|---|---|---|
+| 估计精度（E571） | ATE ≤0.05m、RPE ≤2% | 换滤波器、增传感器、扩大 D_fit |
+| 椭球包含（E572） | ≥99% | 膨胀 Σ、重标 χ² 分位、检查传感器外参 |
+| 证书保守性（E573） | 声效率 100%、保守比 ≤1.5× | 重标 L_g；若仍 >2× 则缩 K_max |
+| 保形覆盖（E574） | ≥99% | 增 N_cal、核对交换性、改用留一 conformal |
+| 校准规模（E575） | N≥2000 时波动 ≤1% | 扩 D_cal、改分位估计 |
+| 主动采样（E576） | 样本 ↓≥40% | 改 k-center 特征、调风险权重 |
+| 角落样本（E577） | 中止 ≥99%、0 碰撞 | 增中止点密度、缩短 K_max、增大 β |
+| 检测延迟（E578） | ≤3 周期 | 调 h/ν、提高 ITM 频率（仍 ≤0.05ms） |
+| 误报（E579） | ≤1 次/小时 | 增大 h、加抓取相位抑制窗 |
+| ACI 覆盖（E580） | ≥1−α−0.01 | 调 γ、检查 β 上界是否饱和 |
+| 算力节省（E581） | ≥30% | 松 ρ_max、改门控函数、扩 K_max |
+| 失效退化（E582） | 0 碰撞、≤2 周期报警 | 加 NIS 冗余检验、切点估计兜底 |
+| 可追溯（E583） | 100% 复现 | 修账本哈希、冻结随机种子 |
+| 迁移（E584） | 覆盖下降 ≤5% | 扩 D_cal 跨域、分层重采样 |
+| 投毒（E585） | 检测 ≥95%、违背 ≤2% | 加异常检测、双人审批、数据集签名 |
+| 端到端（E586） | ≥ v9 +10% | 回退 K_max、重标 β |
+| 长跑（E587） | β 漂移 ≤10%、无 Zeno | 周期重标定、加迟滞 |
+| 消融（E588） | 严格退 v9、ID 方差 ↓≥20% | 修中立元映射、增配对样本 |
+| 时序（E589） | ≤200ms、≥4/5 | 缩短 K_max、情感触发即时块终止 |
+| 综合（E590） | ≥ v9 +15%、违背 ≤2% | 综合调参、红队复盘 |
 
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+## 8. 本轮最大风险
+
+**一句话**：双证据证书的可靠性依赖「校准集与部署同分布」和「滤波置信椭球真的包含真值」这两个假设，而最危险的域突变恰恰同时破坏二者——更糟的是 Lipschitz 常数低估会让证书静默乐观，高估则让 K_eff 恒为 1、分块算力收益归零，即"我们用数据校准的那个不确定性，正是数据分布在突变时最难校准的量"。
 <!-- ARTIFACT:END -->

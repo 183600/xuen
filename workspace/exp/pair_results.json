@@ -1,0 +1,85 @@
+{
+  "part_a": {
+    "n": 50,
+    "nominal_passive": {
+      "tau_err": 0.11299737468027832,
+      "coverage90": 0.0,
+      "ci_width": 0.0035999999999999995,
+      "entropy": 0.08073151699421764,
+      "confidently_wrong": 1.0,
+      "cwm_auc": 0.0,
+      "param_err": 0.5516
+    },
+    "nominal_active": {
+      "tau_err": 0.10818757773126553,
+      "coverage90": 0.0,
+      "ci_width": 0.0005599999999999983,
+      "entropy": 0.020753946889800035,
+      "confidently_wrong": 1.0,
+      "cwm_auc": 0.0,
+      "param_err": 0.3358
+    },
+    "rich_passive": {
+      "tau_err": 0.002002705961504299,
+      "coverage90": 1.0,
+      "ci_width": 0.03448,
+      "entropy": 1.8896374357349521,
+      "confidently_wrong": 0.0,
+      "cwm_auc": 0.0,
+      "param_err": 0.0
+    },
+    "rich_active": {
+      "tau_err": 0.0011555132682380751,
+      "coverage90": 1.0,
+      "ci_width": 0.0152,
+      "entropy": 0.8349386029667627,
+      "confidently_wrong": 0.0,
+      "cwm_auc": 0.0,
+      "param_err": 0.0
+    },
+    "cwm_auc_pooled": 0.9941,
+    "oracle_chirp": {
+      "peak_v_p95": 0.2884691435955949,
+      "wear_max": 1.0712145814192047
+    }
+  },
+  "part_b": {
+    "calibration_delta": 0.1,
+    "conformal_q": 0.009614555930622298,
+    "v_safe": 0.24,
+    "rows": [
+      {
+        "test_delta": 0.0,
+        "nominal_violation": 0.375,
+        "bound_violation": 0.0,
+        "certified_violation": 0.0,
+        "acceptance": 0.475,
+        "real_peak_mean": 0.21944805078673818
+      },
+      {
+        "test_delta": 0.1,
+        "nominal_violation": 0.475,
+        "bound_violation": 0.05,
+        "certified_violation": 0.0,
+        "acceptance": 0.425,
+        "real_peak_mean": 0.2309586640415447
+      },
+      {
+        "test_delta": 0.2,
+        "nominal_violation": 0.3,
+        "bound_violation": 0.575,
+        "certified_violation": 0.0,
+        "acceptance": 0.675,
+        "real_peak_mean": 0.22368578195865832
+      },
+      {
+        "test_delta": 0.35,
+        "nominal_violation": 0.4,
+        "bound_violation": 0.825,
+        "certified_violation": 0.1,
+        "acceptance": 0.675,
+        "real_peak_mean": 0.22603065508012418
+      }
+    ]
+  }
+}

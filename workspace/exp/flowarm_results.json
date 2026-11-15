@@ -1,0 +1,177 @@
+{
+  "part_a": {
+    "2.0": {
+      "flow_lipschitz": 0.1353,
+      "rows": [
+        {
+          "N": 4,
+          "max_abs_err": 0.145671
+        },
+        {
+          "N": 8,
+          "max_abs_err": 0.070445
+        },
+        {
+          "N": 16,
+          "max_abs_err": 0.034536
+        },
+        {
+          "N": 32,
+          "max_abs_err": 0.017093
+        },
+        {
+          "N": 64,
+          "max_abs_err": 0.008503
+        }
+      ]
+    },
+    "0.0": {
+      "flow_lipschitz": 1.0,
+      "rows": [
+        {
+          "N": 4,
+          "max_abs_err": 0.0
+        },
+        {
+          "N": 8,
+          "max_abs_err": 0.0
+        },
+        {
+          "N": 16,
+          "max_abs_err": 0.0
+        },
+        {
+          "N": 32,
+          "max_abs_err": 0.0
+        },
+        {
+          "N": 64,
+          "max_abs_err": 0.0
+        }
+      ]
+    },
+    "-2.0": {
+      "flow_lipschitz": 7.3891,
+      "rows": [
+        {
+          "N": 4,
+          "max_abs_err": 4.653112
+        },
+        {
+          "N": 8,
+          "max_abs_err": 2.857183
+        },
+        {
+          "N": 16,
+          "max_abs_err": 1.611612
+        },
+        {
+          "N": 32,
+          "max_abs_err": 0.860779
+        },
+        {
+          "N": 64,
+          "max_abs_err": 0.44556
+        }
+      ]
+    }
+  },
+  "part_b": {
+    "no_obstacle": {
+      "baseline": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.99,
+        "stop_rate": 0.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": 9.0
+      },
+      "guard_only": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.99,
+        "stop_rate": 0.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": 9.0
+      },
+      "plan_guard": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.99,
+        "stop_rate": 0.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": 9.0
+      }
+    },
+    "tight": {
+      "baseline": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.99,
+        "stop_rate": 0.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": 0.0156
+      },
+      "guard_only": {
+        "n": 100,
+        "collision_rate": 0.01,
+        "limit_rate": 0.0,
+        "reached_rate": 0.4,
+        "stop_rate": 0.66,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": 0.0158
+      },
+      "plan_guard": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.29,
+        "stop_rate": 0.71,
+        "mean_scale": 0.29,
+        "reject_rate": 0.71,
+        "min_clear_p05": 0.1135
+      }
+    },
+    "on_path": {
+      "baseline": {
+        "n": 100,
+        "collision_rate": 1.0,
+        "limit_rate": 0.0,
+        "reached_rate": 1.0,
+        "stop_rate": 0.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": -0.1599
+      },
+      "guard_only": {
+        "n": 100,
+        "collision_rate": 0.21,
+        "limit_rate": 0.0,
+        "reached_rate": 0.0,
+        "stop_rate": 1.0,
+        "mean_scale": 1.0,
+        "reject_rate": 0.0,
+        "min_clear_p05": -0.1082
+      },
+      "plan_guard": {
+        "n": 100,
+        "collision_rate": 0.0,
+        "limit_rate": 0.0,
+        "reached_rate": 0.0,
+        "stop_rate": 1.0,
+        "mean_scale": 0.0,
+        "reject_rate": 1.0,
+        "min_clear_p05": 9.0
+      }
+    }
+  }
+}

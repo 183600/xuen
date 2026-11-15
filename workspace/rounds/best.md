@@ -3,387 +3,379 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
-
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
->
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
->
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
->
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+# 第 9 轮（新灵感循环第 1 轮；本轮灵感：「创新点提炼」×「中间件」×「动作分块」）
+> **基线**：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮纪律：**分块执行 + 契约中间件 + 创新提炼**。三个灵感分别治理 v8 的三种债：算力债（50Hz 逐步重计算无余量）、集成债（手写退化网关靠约定不靠机制）、叙事债（14 个 IP 无实证机制）。必须通过**中立元契约退化链**保证任一新模块失效时注入恒等元、严格等价退回 v8，而非行为漂移。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
+**灵感 1（创新点提炼 → 模块贡献归因与蒸馏）**
+直觉：系统已堆叠 14 个 IP 模块，严谨的研究者必须回答"哪些组件真正挣得它们的算力"。核心创新：**创新点蒸馏器（InnovationDistiller, ID）**：滑窗消融归因产出贡献向量 c_m(t)，Schmitt 双阈把模块置入 active/dormant/frozen 状态机。关键安全设计：dormant 行为严格等价于 v8 对应退化级（注入中立元），故"提炼"只是计算再分配、不是功能删除——**P12 提炼不删码律**。附带产出：IP 清单从论文叙事升级为带消融证据的活文档（每项 IP 附 c_m 曲线）。
 
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
+**灵感 2（中间件 → 退化链的声明化）**
+直觉：v8 主闭环中模块接线与退化逻辑是手写 if-else 网关，模块越多越脆。中间件思想：把"接线、时限、失效语义"升级为一等公民。核心创新：**实时契约中间件（ContractMiddleware, MW）**：每模块声明契约 κ_m=(In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)；每周期 EDF 调度，超时即注入中立元 v_m^⊥（该端口聚合算子的恒等元）。v8 的四级退化链由此变成契约表的一个**数据实例**（引理 83 证明逐位等价复现）。退化从"代码"变成"配置"，组合正确性从人工验证变成代数性质。
 
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
+**灵感 3（动作分块 → 分块证书执行）**
+直觉：50Hz 逐步决策让重模块每周期全额燃烧算力，预算利用率近 1.0，正是 v8 抖动风险的根源。ACT 思想：一次生成 K 步动作块 ζ=(a^{1:K}, Ĉ, P)——Ĉ 为块证书（前向模型预测的块内指标最坏界，留余量 β），P 为满足停车不变式的中止点集。5Hz 生成块，50Hz 只跑廉价守卫；违规时切换到最近中止点安全停驻。核心创新：**分块证书执行器（ActionChunkCertifier, AC）**；且有效块长 K_eff 由 Δ_dom、risk_SLAM 连续门控——域越陌生块越短，极端时 K=1 退回 v8 逐步模式。分块使决策预算利用率从 ~1.0 降至 ~0.3，直接给 v8 的"抖动→虚假退化风暴"风险上保险。
 
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
+## 1. 研究问题（轮次升级版）
 
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
+- **Q1（分块证书可靠性）**：如何设计块证书与中止点集，使「信任域内前向模型误差 ≤ β」假设下，中块突变的安全性与逐步执行统计等价？信任域门控能否消除模型误差与域偏移的相关性风险？
+- **Q2（契约化退化）**：如何将 v8 四级退化链编码为中立元代数，使"模块失效（超时）"与"显式退化"在可观测日志层面逐位不可区分？
+- **Q3（提炼安全边界）**：消融归因与状态机在什么资格谓词 φ^elig 下保证蒸馏永不触碰安全不变式？双阈迟滞能否根除休眠-唤醒抖振？
 
-## 1. 形式化定义（增量：定义 293–309）
+## 2. 设计原则（在 P7–P9 基础上新增 P10–P12）
 
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
+**P10 分块证书律（Chunked-Certificate Execution, AC）**
+决策以块为单位：ζ_t = (a^{1:K}, Ĉ_t, P_t)。证书 Ĉ_t 携带前向模型误差余量 β；中止点 p ∈ P_t 满足停车不变式 d_stop(p)。50Hz 守卫只做廉价检查（证书失效检测 + 停车不变式），重规划只在块边界发生。有效块长受信任域门控：K_eff(t) = 1 若 Δ_dom ≥ τ_dom 或 risk_SLAM ≥ τ_SLAM，否则 K_eff = max(1, ⌊K_max·(1−Δ_dom/τ_dom)⌋)。
 
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
+**P11 中立元退化律（Neutral-Element Degradation, MW）**
+每模块输出端口定义聚合算子 ⊕ 与中立元 v^⊥（恒等元：x ⊕ v^⊥ = x）。模块在截止期内完成则输出 x_m(t)，超时/失效则注入 v^⊥。系统退化行为 = 中立元组合，由契约表声明，不再手写分支。
 
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
+**P12 提炼不删码律（Distill-Not-Delete, ID）**
+蒸馏只改变调度（计算分配），不改变代码可达性：dormant/frozen 模块保留在契约表中，其 v^⊥ 路径随时可用；φ^elig=false 的安全关键模块（M₀ 硬检查、SpatialCert、FaultCert、MW 自身、AC 证书检查）永不消融；Δ_dom 越阈强制全模块唤醒。
 
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
+## 3. 与基线的接口（如何退化）
 
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
+- AC 失效（前向模型超差 / 证书连续失效）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- MW 失效 ⇒ 切换 v8 手写网关代码路径（代码保留、非契约驱动），等价 v8 集成方式；
+- ID 失效 ⇒ 全模块 active、c_m 冻结不再更新，等价 v8（全模块常开）；
+- v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- 全部失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
+## 4. 预期贡献
 
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
+1. **分块证书执行**框架：块级证书 + 中止点集 + 信任域门控块长，在保持安全论证局部化的同时将决策算力利用率降一个量级；
+2. **契约中间件**：退化链的代数化——中立元恒等性使组合退化正确性从枚举验证变为代数性质（v9 引理 83）；
+3. **创新点蒸馏器**：IP 清单的实证化与算力的自适应再分配，附"陌生域强制唤醒"反脆弱设计；
+4. **预算-安全-自省三闭环**：分块释放的算力反哺 DA/SPR/Cal 的余量；E551–E570 覆盖块长扫描、中止功效、契约等价、归因精度、抖振抑制、陌生域唤醒与端到端任务。
 
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
+## 5. 本轮最大风险
 
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
-
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
-
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
-
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
-
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
-
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
-
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
-
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
-
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
-
-## 2. 关键算法骨架
-
-```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
-
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
-
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
-
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
-
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
-
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
-
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
-
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
-
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
-    if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
-    else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
-    U_floor = U_ale + (U_epi_after if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
-    mode = select_mode(modes, U_epi_after, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
-```
-
-## 3. 推导
-
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
-
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
-
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
-
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
-
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
-
-## 4. 复杂度分析
-
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
-
-## 5. 实验设计 E286–E300
-
-| 实验 | 核心问题 | 关键目标 |
-|---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
-
-## 6. 本轮最大风险
-
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
-
-**次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+# 第 9 轮产物 · 创新点清单 v9：**MetricVoiceGauge-ACMD**（Metric Voice Gauge with Action-Chunk Certificates, Contract Middleware & Innovation Distillation）
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
->
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
->
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+> 背景：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮灵感：「创新点提炼」×「中间件」×「动作分块」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留；v8 的 DA-ML/SPR/Cal 三模块原样继承。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格等价退回 v8 行为（引理 83），而非行为漂移。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-DA-SPR-Cal v8） |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
+| IP-340–353 | v8 全部模块 | 继承 | 语义不变；接线方式改由 MW 契约表声明（IP-355） |
+| IP-346 | MetricVoiceGauge 主闭环 | 集成升级 | WCET 从"贴满 20ms"变为"分块摊销后典型 ≤8ms、p99 ≤20ms"（引理 86） |
+| IP-354 | ActionChunkCertifier 分块证书执行器 | 新增核心模块 | 5Hz 生成 ζ=(a^{1:K}, Ĉ, P)：K 步动作、带余量 β 的块证书、满足停车不变式的中止点集；50Hz 廉价守卫；K_eff 由 Δ_dom/risk_SLAM 门控 |
+| IP-355 | ContractMiddleware 实时契约中间件 | 新增核心模块 | 契约 κ_m=(In,Out,D_m,Ŵ_m,v_m^⊥,π_m,φ^elig)；周期内 EDF 调度；超时注入中立元 v^⊥；v8 四级退化链成为契约表数据实例 |
+| IP-356 | InnovationDistiller 创新点蒸馏器 | 新增核心模块 | 滑窗消融归因 c_m；Schmitt 双阈 active/dormant/frozen 状态机；Δ_dom 越阈强制全唤醒；dormant ≡ 注入 v^⊥（等价 v8 退化级） |
 
-## 1. 符号体系增量（定义 293–309）
+**退化链声明（v9 契约化五级）：**
+- Level-1：AC 证书失效或信任域破坏（Δ_dom ≥ τ_dom ∨ risk_SLAM ≥ τ_SLAM）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- Level-2：MW 失效 ⇒ 切换 v8 手写网关代码路径（保留于代码库，非契约驱动），等价 v8 集成方式；
+- Level-3：ID 失效 ⇒ 全模块 active、归因冻结，等价 v8 全模块常开；
+- Level-4：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- Level-5：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
+
+## 1. 符号体系增量（定义 532–539）
 
 | 符号 | 含义 |
 |---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
+| ζ_t = (a^{1:K}, Ĉ_t, P_t) | 动作块：K 步动作序列、块证书、中止点集（P_t ⊆ {1..K}） |
+| Ĉ_t = (ĝ_min, ê_max, γ̂_grasp) | 块证书：前向模型 F̂ 预测的块内指标最坏界，含模型误差余量 β |
+| d_stop(p) | 停车不变式：dist(s_t, O) − \|traj_{p:end}\| ≥ d_brake(v_p) + d_safe |
+| K_eff(t) | 有效块长：K_max 经信任域门控（定义 539） |
+| U_t | 前向模型信任域：{Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM} |
+| κ_m = (In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig) | 模块契约：输入输出模式、截止期、WCET 上界、中立元、优先级、蒸馏资格谓词 |
+| v_m^⊥ | 中立元：模块失效时注入其输出端口，为其聚合算子 ⊕ 的恒等元（x ⊕ v^⊥ = x） |
+| c_m(t) ∈ [0,1] | 模块贡献向量：滑窗消融归因的 EMA（定义 537） |
+| st_m ∈ {active, dormant, frozen} | 提炼状态机（定义 538） |
+| τ_off < τ_on | Schmitt 双阈：休眠阈 < 唤醒阈，保证迟滞 |
+| T_abl, H_off | 消融回合周期（500 控制周期）与休眠确认回合数 |
 
-## 2. 形式化定义（要点版）
+**新增定义 532（动作块 ActionChunk）** 一次决策的输出单元：ζ_t = (a_t^{1:K}, Ĉ_t, P_t)，a ∈ A 为 K 步动作，K = K_eff(t) ≤ K_max = 10（50Hz 下 200ms 时域）。块在 5Hz 节拍生成，逐周期执行第 k 步。
 
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
+**新增定义 533（块证书 ChunkCertificate）** 由冻结前向模型 F̂（轻量 LSTM-MPC 代理，输入状态-动作、输出指标轨迹）预测块内各软层指标最坏界并留余量：
+```
+ĝ_min = min_{k≤K} F̂_clearance(s,a^{1:k}) − β,   ê_max = max_{k≤K} F̂_effort + β
+```
+证书有效 ⇔ ĝ_min ≥ d_safe ∧ ê_max ≤ τ_eff ∧ γ̂_grasp = valid ∧（用当前 τᵢ(t) 复核各层）。β 由 E554 标定（信任域内经验误差上界 ×1.2 安全系数）。
 
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
+**新增定义 534（中止点与停车不变式 AbortPoint）** 前缀索引 p ∈ P_t 满足：从第 p 步末执行安全停驻（速度指数衰减）所需刹停距离不超过当前间隙余量：
+```
+d_brake(v_p) + d_safe ≤ dist(s_p, O) − |traj_{p:K}|
+```
+骨架中候选块的 P_t 为空即拒绝该候选；故"无点可退"仅发生于 K=1 fallback（等价 v8 逐步语义）。中块违规时切换到 ≤ 当前执行步的最大中止点 p*。
 
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
+**新增定义 535（中间件契约 MiddlewareContract）** 每模块 m 声明 κ_m = (In_m, Out_m, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)。部署期静态验证 Σ_m Ŵ_m ≤ B_dec（决策预算 20ms）与 EDF 可行性；运行期 deadline_guard 强制执行 Ŵ_m。默认契约表（感知侧 ≤2ms + 决策侧 ≤20ms）：
 
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
+| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
+|---|---|---|---|---|
+| DA-ML（域偏移） | 1.0 | 1.0 | 0.0（Δ_dom≡0） | ✗ |
+| SPR（SLAM 风险） | 0.2 | 0.2 | 0.0（risk_SLAM≡0） | ✗ |
+| Calib-FI（标定隔离） | 0.1 | 0.1 | 恒等（weight≡1, κ 基准） | ✗ |
+| GCT/ER/OTL | 各 ≤1 | 各 ≤1 | 各自 v8 退化值 | ✗ |
+| AC 块生成（5Hz） | 12 | 12 | 单步 fallback 动作 | ✗ |
+| AC 中块守卫（50Hz） | 0.5 | 0.3 | continue（持当前步） | ✗ |
+| ID 归因 | 0.2 | 0.1 | 跳过本回合 | ✓ |
 
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
+**新增定义 536（中立元退化实例表 NeutralElementTable）** 每行：模块 → v^⊥ → 等价 v8 退化级。例：DA-ML: v^⊥=0 ⇒ Level-1（Δ_dom≡0）；SPR: v^⊥=0 ⇒ risk_SLAM≡0；Calib-FI: v^⊥=恒等 ⇒ sensor_weight≡1；ID dormant: v^⊥ 注入 ⇒ 该模块"缺席"＝对应显式退化分支。AC 端口的中立元为安全停驻序列 a^⊥（速度衰减到 0），吸收元性质（后续块不再执行）而非恒等元，单独验证。
 
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
+**新增定义 537（贡献向量滑窗消融 WindowedAblation）** 每 T_abl=500 周期进行一次消融回合（H=20 周期）：仅对 φ^elig 模块 m，交替运行 with/without m 的块，得分 J = 任务进展 − 安全罚（块级聚合）：
+```
+c_m ← clip( 0.9·c_m + 0.1·norm(J_with − J_base), 0, 1 )
+```
+安全关键模块不参与消融（φ^elig=false），其"贡献"记为 ∞。
 
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
+**新增定义 538（提炼状态机 DistillFSM）** st_m: active → dormant（c_m < τ_off=0.01 持续 H_off=3 回合）；dormant → active（c_m ≥ τ_on=0.03 或 Δ_dom ≥ τ_dom 强制唤醒）；dormant → frozen（dormant 持续 20 回合）；frozen 仅可由离线证据解冻。dormant 执行 = MW 将该模块输出置为 v^⊥ 并跳过其计算。
 
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
+**新增定义 539（有效块长门控 EffectiveChunkLength）**
+```
+K_eff(t) = 1                                   若 U_t 不成立
+         = max(1, ⌊K_max·(1 − min(1, Δ_dom(t)/τ_dom))⌋)   否则
+```
+域越陌生块越短；risk_SLAM ≥ τ_SLAM 时 U_t 直接破坏，K_eff=1。
 
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
+## 2. 形式化定义（要点与升级）
 
-## 3. 关键算法伪代码
+**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
+**定义 495/524（MetaWeight/情感，5 维）** 继承 v8 不变。
+**定义 521（DA-OTL）** 继承 v8 不变；τᵢ(t) 在 K_eff>1 时以块证书替代逐层逐步复核。
+**升级定义 496（软证书，v9）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM ∧ Ĉ_t valid}，五条件同尺度设计；块证书失效与单步条件同样触发 M₀ 硬检查，无"块内软通过硬失"空洞（引理 82+81 联合）。
+**升级定义 531（软硬约束衔接）** M₀ 判据增加块级入口：任一中块守卫违规 ⇒ 立即切换 p* 或安全停驻，不等块边界。
+
+## 3. 关键算法骨架
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
-        for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
+# IP-354 ActionChunkCertifier：分块证书执行器
+class ActionChunkCertifier:
+    def __init__(self, forward_model, policy, K_max=10, beta=0.02,
+                 d_safe=0.15, d_brake_fn=None, dt=0.02):
+        self.F = forward_model        # 冻结 LSTM-MPC 代理，输出指标轨迹
+        self.policy = policy
+        self.K_max, self.beta, self.d_safe = K_max, beta, d_safe
+        self.d_brake = d_brake_fn or (lambda v: 0.5 * v * v / 2.0)
 
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
+    def effective_K(self, delta_dom, tau_dom, trust_ok):
+        if not trust_ok:
+            return 1
+        return max(1, int(self.K_max * (1 - min(1.0, delta_dom / tau_dom))))
 
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
+    def generate_chunk(self, state, delta_dom, tau_dom, trust_ok):
+        K = self.effective_K(delta_dom, tau_dom, trust_ok)
+        if K == 1:
+            return self._single_step_fallback(state)      # 等价 v8 逐步
+        best = None
+        for cand in self.policy.sample_sequences(state, K, n=64):   # MPC 采样
+            pred = self.F.rollout(state, cand)            # 指标轨迹预测
+            g_min = pred.min_clearance - self.beta        # 留余量（定义 533）
+            e_max = pred.max_effort + self.beta
+            if g_min < self.d_safe or e_max > state.tau_eff:
+                continue
+            pts = self._abort_points(state, cand, pred)   # 定义 534
+            if not pts:                                   # 无中止点 → 拒绝
+                continue
+            score = self.policy.score(cand, pred)
+            if best is None or score > best.score:
+                best = Chunk(cand, Cert(g_min, e_max), pts, score)
+        return best or self._single_step_fallback(state)
 
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
+    def _abort_points(self, state, actions, pred):
+        pts = []
+        for p in range(1, len(actions)):
+            remaining = pred.path_len[p:]                 # 剩余轨迹长
+            margin = (pred.clearance[p]
+                      - self.d_brake(pred.speed[p]) - self.d_safe)
+            if margin >= remaining:                       # 停车不变式成立
+                pts.append(p)
+        return pts
 
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
+    def midchunk_guard(self, chunk, k_exec, live_obs):
+        """50Hz 廉价守卫；返回 ('continue', k+1) 或 ('abort', p*)"""
+        if not chunk.cert_still_valid(live_obs):          # 证书失效检测
+            return self._nearest_abort(chunk, k_exec)
+        stop_inv = (live_obs.nearest_clearance
+                    - self.d_brake(live_obs.speed) - self.d_safe)
+        if stop_inv < chunk.remaining_len(k_exec):        # 停车不变式破坏
+            return self._nearest_abort(chunk, k_exec)
+        return ('continue', k_exec + 1)
 
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
-    U_floor = U_ale + (U_epi if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
-    mode = select_mode(modes, U_epi, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
-    return k, lam, mode, (U_ale, U_epi)
+
+# IP-355 ContractMiddleware：实时契约中间件
+@dataclass
+class Contract:
+    name: str; deadline_ms: float; wcet_ms: float
+    fail_value: object; priority: int; distill_eligible: bool
+
+class ContractMiddleware:
+    def __init__(self, contracts):
+        self.contracts = {c.name: c for c in contracts}
+        self.strikes = defaultdict(int)
+
+    def run_cycle(self, runners, ctx):
+        results = {}
+        for c in sorted(self.contracts.values(),
+                        key=lambda c: c.deadline_ms):     # 周期内 EDF
+            t0 = now_ms()
+            try:
+                with deadline_guard(c.deadline_ms):
+                    if not self.is_dormant(c.name):       # ID 休眠则跳过计算
+                        results[c.name] = runners[c.name](ctx)
+                    else:
+                        results[c.name] = c.fail_value    # dormant ≡ v^⊥
+            except DeadlineOverrun:
+                results[c.name] = c.fail_value            # 中立元注入
+                self.strikes[c.name] += 1
+                log_overrun(c.name, now_ms() - t0)        # 日志可区分性审计
+            ctx[c.name] = results[c.name]
+        return results
+
+
+# IP-356 InnovationDistiller：创新点蒸馏器
+class InnovationDistiller:
+    def __init__(self, mw, tau_on=0.03, tau_off=0.01,
+                 T_abl=500, abl_len=20, H_off=3):
+        self.mw, self.ema = mw, {}
+        self.state = {}                                   # 仅 eligible 模块
+        self.tau_on, self.tau_off = tau_on, tau_off
+        self.T_abl, self.abl_len, self.H_off = T_abl, abl_len, H_off
+        self.dormant_count = defaultdict(int)
+
+    def attribute(self, module, J_with, J_base):
+        delta = max(0.0, normalize(J_with - J_base))      # 定义 537
+        self.ema[module] = 0.9 * self.ema.get(module, delta) + 0.1 * delta
+
+    def step(self, cycle_idx, ctx):
+        if ctx.delta_dom >= ctx.tau_dom:                  # 陌生域强制全唤醒
+            self.wake_all(); return
+        if cycle_idx % self.T_abl == 0:
+            self.run_one_ablation_episode()               # 仅 eligible 模块
+        for m, c in self.ema.items():
+            if self.state[m] == 'active' and c < self.tau_off:
+                self.dormant_count[m] += 1
+                if self.dormant_count[m] >= self.H_off:   # Schmitt 迟滞
+                    self.state[m] = 'dormant'             # ≡ 注入 v^⊥
+                    self.mw.set_dormant(m)
+            elif self.state[m] == 'dormant' and c >= self.tau_on:
+                self.state[m] = 'active'
+                self.mw.set_active(m)
+                self.dormant_count[m] = 0
+
+
+# 主闭环集成：MetricVoiceGauge-ACMD
+def metricvoicegauge_round_9(M, s, obs, audio_stream=None, ell=None, ...):
+    ctx = mw_default_ctx()
+    # ---- MW 驱动感知侧（契约预算 ≤2ms，超时即中立元，5 级退化见表 536）----
+    results = middleware.run_cycle(runners={
+        'DA_ML':  lambda c: domain_adapter.update_and_measure(obs),
+        'SPR':    lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
+        'CAL_FI': lambda c: calib_fi.get_weights_kappa(),
+        'OTL':    lambda c: online_learner.update_and_thresholds(c),
+    }, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
+
+    # ---- 5Hz 块生成（重计算，摊销进决策预算；受 ID 状态影响候选池）----
+    if current_chunk is None or current_chunk.exhausted:
+        current_chunk = chunker.generate_chunk(
+            ctx.state, ctx.delta_dom, ctx.tau_dom,
+            trust_ok=(ctx.delta_dom < ctx.tau_dom
+                      and ctx.risk_slam < M.tau_slam))
+
+    # ---- 50Hz 中块守卫（廉价 ≤0.3ms）----
+    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec, live_obs)
+    if verdict == 'abort':
+        current_chunk.execute_safe_stop_at(k_next)        # 定义 534
+        current_chunk = None
+    else:
+        execute(current_chunk.actions[k_next])
+
+    # ---- v8 继承路径（契约化调用）：GCT/ER/5 维风险/奖励 ----
+    #      δ_trigger 五条件：σ<τ_safe ∧ γ_grasp ∧ Δ_dom<τ_dom
+    #                        ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t valid
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
+
+    # ---- ID：块级归因与状态迁移（每 500 周期一次消融回合）----
+    distiller.step(cycle_idx, ctx)
+    return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
+**引理 82（块证书可靠性与中止安全性）** 设信任域 U_t 内前向模型一致误差 ‖F̂−F‖∞ ≤ β_true ≤ β。则 (i) ∀k≤K: g_k ≥ ĝ_min（证书保守有效）；(ii) 若块内某时刻真实间隙跌破 d_safe，则必可切换 p* ∈ P_t 安全停驻。证明：(i) 由一致误差界 min_k g_k ≥ min_k F̂g_k − β_true ≥ ĝ_min + β − β_true ≥ ĝ_min；(ii) 定义 534 的停车不变式给出从 p* 停驻的所需距离 d_brake(v_p*) ≤ dist(s_p,O) − |traj_{p*:K}| − d_safe，刹车轨迹终点距障碍 ≥ d_safe；骨架保证 P_t 非空才接受块，"无点可退"仅发生在 K=1 fallback（等价 v8 语义）。∎
 
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
+**引理 83（中立元退化与 v8 逐位等价）** 对契约表 535 每行，注入 v_m^⊥ 后下游端口读数与 v8 对应显式退化分支的读数逐位一致（表 536 给出映射：DA-ML→Δ_dom≡0、SPR→risk_SLAM≡0、Calib-FI→weight≡1/κ 基准、ID dormant→对应模块缺席）；MW 仅改变调度顺序、不改变取值集合，故可观测行为与 v8 对应退化级等价。∎
 
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
+**引理 84（蒸馏安全不变式）** ID 仅能迁移 φ^elig=true 的模块；每次 dormant 迁移在行为上等价于"该模块超时"（引理 83 的 v^⊥ 注入）；φ^elig=false 的安全关键模块永不消融；Δ_dom ≥ τ_dom 触发强制全唤醒，消除"陌生域缺模块"。故任意蒸馏状态下的系统行为 ∈ v8 退化格点，安全性由 v8 引理 80–81 传递成立。∎
 
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
+**引理 85（双阈防抖 / 无 Zeno）** τ_off < τ_on 且归因每 T_abl 回合更新一次、每次迁移需 H_off 回合确认 ⇒ 相邻状态迁移间隔 ≥ T_abl 个控制周期，翻转率 ≤ 1/(T_abl·Δt)，有限时间内迁移次数有限，无抖振。∎
 
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**引理 86（EDF 可行性与 50Hz 守恒）** 部署期静态校验 Σ_m Ŵ_m ≤ B_dec（决策 20ms）与链式约束 D_m ≤ B_dec；运行期 deadline_guard 强制 Ŵ_m，超时模块贡献 v^⊥ 而非延长周期 ⇒ 每周期总执行 ≤ 感知 2ms + 决策 20ms，50Hz 保持；分块摊销使典型利用率降至 ~0.3（块生成 12ms/10 周期 + 守卫 0.3ms + 契约调用 ~1ms + v8 继承路径 ~4ms）。∎
 
 ## 5. 复杂度分析
 
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
+|---|---|---|---|---|
+| AC 块生成（5Hz） | 在线 | ≤12ms/次，摊销 ≤1.2ms/cycle | O(n·K·d_a) 候选缓存 n=64 | 定义 532/533 |
+| AC 中块守卫（50Hz） | 在线 | ≤0.3ms（距离查询+证书检测） | O(1) | 定义 534 |
+| MW 周期调度 | 在线 | O(M log M)，M≈16 → ≤0.05ms | O(M) 契约表 | 定义 535, 引理 86 |
+| ID 归因 | 在线 | O(1)/cycle + 每 T_abl 一回合 | O(|eligible|) | 定义 537/538 |
+| v8 继承路径（6 层指标+5 维权重+GCT/ER） | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
+| 决策侧合计 | 在线 | 典型 ≤8ms，p99 ≤20ms（块生成周期 ≤16.5ms） | — | 引理 86 |
+| 感知侧合计 | 在线 | ≤2ms（v8 不变） | — | v8 定义 526–530 |
 
-## 6. 实验设计 E286–E300
+## 6. 实验设计 E551–E570
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E551 | 块长扫描 K∈{1,2,5,10,20} | 成功率-时延-中止延迟 Pareto；K=10 为默认 |
+| E552 | 中块突变障碍注入 | 中止成功率 ≥99%，0 碰撞 |
+| E553 | 中止点密度 vs 中止成功率 | 确定最小密度 p*，指导 P_t 构造 |
+| E554 | 前向模型误差标定 | β 经验值 vs 理论；Δ_dom-β 相关曲线验证信任域门控必要性 |
+| E555 | MW 超时注入 | 超时模块当周期被 v^⊥ 替换，0 越界、0 崩溃 |
+| E556 | 契约退化 ≡ v8 四级链 | 日志逐位等价（E539 的契约驱动复刻） |
+| E557 | 全模块激活 50Hz 保持 | WCET p99 ≤20ms；对比 v8 抖动分布 p99 ↓ ≥50% |
+| E558 | 突发负载/背压 | 感知风暴下主环 0 丢拍 |
+| E559 | 蒸馏归因精度 | 与全因子离线消融相关性 ≥0.8 |
+| E560 | 休眠降耗 | eligible 模块休眠后决策算力 ↓≥40%，总功耗 ≤25W |
+| E561 | 抖振抑制 | Schmitt 双阈下翻转率 ≤1 次/模块/10min |
+| E562 | 陌生域强制唤醒 | 注入大 Δ_dom，dormant 模块 1 周期内回到 active |
+| E563 | 端到端仿真全任务 | RoboCup@Home 仿真 ≥ v8 + 10% |
+| E564 | Chunk×DA 耦合 | Δ_dom 越阈后 K_eff 收缩至 1 的过渡平滑性（无指令跳变） |
+| E565 | Chunk×ER 边界生效 | 情感变化在块边界生效延迟 ≤200ms，操作员评分 ≥4/5 |
+| E566 | MW 调度器形式化验证 | CBMC 验证 EDF 可行性、无优先级反转、v^⊥ 注入路径可达 |
+| E567 | 8h 长跑 | 块证书失效触发率、中止点命中率、休眠占比统计 |
+| E568 | 双机共享契约表 | 契约表与块证书跨机共享，协同任务完成率 ↑≥10% |
+| E569 | 对抗时序攻击 | 恶意制造模块超时 ⇒ 系统 v^⊥ 退化而非 crash，安全违背 ≤2% |
+| E570 | 综合竞赛模拟 | ≥ v8 + 15% |
 
-## 7. 本轮最大风险
+## 7. 预注册判据
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+| 判据 | 门槛（预注册） | 若未达标的处置 |
+|---|---|---|
+| 块长扫描（E551） | K=10 时成功率不降且时延 ↓ | 调 K_max、候选数 n、评分函数 |
+| 中块突变（E552） | 中止成功 ≥99%、0 碰撞 | 提高中止点密度、减小 β 余量步进、缩短 K_max |
+| 中止点密度（E553） | 存在 p* 使成功率 ≥99% | 放宽停车不变式冗余、增加每步中止点 |
+| 模型误差标定（E554） | β 覆盖 ≥99% 经验误差 | 换更强前向模型、增大 β 安全系数 |
+| MW 超时（E555） | 0 越界 | 检查 deadline_guard 实现、收紧 Ŵ_m |
+| 契约等价（E556） | 日志逐位等价 | 逐行审计表 536 映射、修 v^⊥ 定义 |
+| WCET（E557） | p99 ≤20ms 且抖动 ↓≥50% | 块生成移独立线程、精简继承路径 |
+| 背压（E558） | 0 丢拍 | 契约表加过载降级行、感知批量化 |
+| 归因精度（E559） | 相关性 ≥0.8 | 增大消融回合 H、改归因得分聚合 |
+| 降耗（E560） | 算力 ↓≥40% | 扩大 eligible 集（仍受 φ^elig 约束） |
+| 抖振（E561） | 翻转 ≤1/模块/10min | 增大 τ_on−τ_off 间隔、提高 H_off |
+| 强制唤醒（E562） | 1 周期内唤醒 | 唤醒路径移出 EDF 低优先级、预载权重 |
+| 端到端（E563） | ≥ v8 + 10% | 回退 K_eff 上限、调 β |
+| Chunk×DA（E564） | 过渡无跳变 | K_eff 收缩插值平滑、块边界重规划 |
+| Chunk×ER（E565） | 延迟 ≤200ms 且评分 ≥4/5 | 缩短 K_max、情感变化触发即时块终止 |
+| 形式化（E566） | CBMC 全通过 | 修调度器实现、补 v^⊥ 路径断言 |
+| 长跑（E567） | 中止命中率趋势稳定 | 复盘 β 标定漂移、加周期性 β 重标定 |
+| 多机（E568） | 完成率 ↑≥10% | 契约表版本化、冲突消解协议 |
+| 对抗时序（E569） | v^⊥ 退化而非 crash、违背 ≤2% | 增加异常检测、契约表完整性校验 |
+| 竞赛（E570） | ≥ v8 + 15% | 综合调参、分析失分瓶颈 |
 
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+## 8. 本轮最大风险
+
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- ARTIFACT:END -->
