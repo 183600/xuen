@@ -1,0 +1,23 @@
+{
+  "seed": 20261115,
+  "N": 20000,
+  "inversion_rate": 0.34685,
+  "r69": {
+    "probe_rate": 1.0,
+    "contact_rate": 1.0,
+    "contact_low_sep_rate": 0.4714,
+    "mean_net_utility": 0.033674750985374396
+  },
+  "mirage": {
+    "probe_rate": 1.0,
+    "contact_rate": 0.35415,
+    "contact_low_sep_rate": 5e-05,
+    "mean_net_utility": 0.11650766026921265
+  },
+  "oracle": {
+    "probe_rate": 1.0,
+    "contact_rate": 0.35415,
+    "contact_low_sep_rate": 5e-05,
+    "mean_net_utility": 0.11650766026921265
+  }
+}
