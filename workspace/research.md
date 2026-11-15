@@ -56,302 +56,399 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 4 轮产物 · 创新点清单 v4：**InstructGauge-WR**（WristCamera-ROS-Enhanced）
+# 第 5 轮产物 · 创新点清单 v5：**InstructGauge-RTDI**（Real-Time + Diagnosis + Instruction-Graph）
 
-> 背景：第 3 轮 InstructGauge（IP-321–327；定义 432–447；引理 51–58；实验 E441–E456）。
-> 本轮灵感：「腕部相机」×「ROS」×「机械臂」
-> **继承纪律**：InstructGauge 五不变式、CVC-闭环、严格退化链全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 InstructGauge v3 ⇒ 退回 ToolGauge。
+> 背景：第 4 轮 InstructGauge-WR（IP-328–333；定义 448–467；引理 59–62；实验 E457–E472）。
+> 本轮灵感：「机器人竞赛」×「故障诊断」×「指令泛化」
+> **继承纪律**：InstructGauge-WR 五不变式、CVC-闭环、SpatialCert、严格退化链全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 InstructGauge-WR ⇒ 退回 InstructGauge v3 ⇒ 退回 ToolGauge。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 InstructGauge） |
+| 编号 | 名称 | 类型 | 关键改进（相对 InstructGauge-WR） |
 |---|---|---|---|
-| IP-328 | WristCam-Perception 腕部相机感知 | 核心模块 | 持续采集腕部相机局部视角 → 时空一致性监控；若失效自动退化 |
-| IP-329 | ROS-CVC-Protocol ROS安全协议 | 集成模块 | CVC 证书序列化为标准 ROS 消息 `CVC_Spec`, `SpatialCert`；TF 树维护块-坐标系映射 |
-| IP-330 | Kinematic-Loop 刚体约束闭环 | 核心模块 | 基于运动学约束与视觉闭环实现「可解释前缀封闭」；动作可采纳集实时更新 |
-| IP-331 | SpatialCert 时空一致性证书 | 核心模块 | 记录块执行期间的相机-端坐标系变换序列 `TF_seq`；提供提前截断依据 |
-| IP-332 | WRC-ROS-7C 闭环 | 设计模式 | W→R→C→E(chunk)→Spatial-C→V→U：在 CVC 前加入时空一致性，在 E 内加 TF-Verify |
-| IP-333 | InstructGauge-WR 主闭环 | 集成 | 50Hz 路径不变；时空一致性提前检测；热替换通过 ROS Service实现；退化链完备 |
+| IP-334 | RT-CVC-TaskModel 实时 CVC 任务模型 | 核心模块 | 每个块 C 升级为实时任务 τ_C=(WCET, deadline, priority, preempt_points, fallback)；静态 WCET 分析 + RTA 验证 |
+| IP-335 | FaultCert 故障证书 | 核心模块 | Violation → 根因分类 {SEN, MOD, EXE, SEM} → 预案索引 → 有界恢复块；恢复本身受 CVC 约束 |
+| IP-336 | RecoveryRegistry 预案注册表 | 核心模块 | 四类根因对应的恢复预案预注册，带类型签名与 WCET；热加载通过 ROS Service |
+| IP-337 | PrimitiveGraph 组合性原语图 | 核心模块 | 指令解析 Γ_parse: ℓ → G_τ（任务图）；实例化 Γ_inst: G_τ × Π → ι_seq；Π 预注册带类型签名 |
+| IP-338 | RTDI-7C 闭环 | 设计模式 | W→R→C→E(rt-chunk)→Spatial-C→Diag→Recover→V→U：在执行内加诊断-恢复，接地前加原语图 |
+| IP-339 | InstructGauge-RTDI 主闭环 | 集成 | 50Hz WCET 可证；故障 ≤2 周期恢复；指令组合性泛化；退化链完备 |
 
-**退化链声明**：腕部相机失效 ⇒ CVC 退化为单帧漂移检测；ROS 协议失效 ⇒ 本地 CVC 证书；机械臂约束检测失败 ⇒ 强制 K=1；所有增强失效 ⇒ InstructGauge v3；InstructGauge 失效 ⇒ ToolGauge。
+**退化链声明**：WCET 分析失败 ⇒ 尽力而为 50Hz（InstructGauge-WR）；故障归因失败 ⇒ 截断/退化（InstructGauge-WR）；指令解析失败 ⇒ 单指令 NLI-Box（InstructGauge v3）；所有增强失效 ⇒ InstructGauge-WR；后续同 v4 退化链。
 
-## 1. 符号体系增量（定义 448–467）
+## 1. 符号体系增量（定义 468–492）
 
 | 符号 | 含义 |
 |---|---|
-| `Cam wrist` | 腕部相机坐标系 |
-| `TF(t)` | ROS TF 变换树；`TF_base→Cam(t) → TF_end→Cam(t)` |
-| `ψ_post^C_rob` | 块后置约束基于机械臂刚体运动学 |
-| `ε_vis` | 时空一致性阈值 |
-| `KinematicAdmissibleSet(a_i)` | 动作 a_i 的可采纳集（基于关节限制+刚体运动学） |
-| `TF_seq = (TF₁, TF₂, ..., TF_t)` | 块执行期间的 TF 序列 |
-| `SpatialCert(C, TF_seq, violations)` | 时空一致性证书 |
-| `CVC_Spec` | ROS 消息：序列化的 CVC 证书 |
-| `SpatialCertMsg` | ROS 消息：序列化的时空一致性证书 |
-| `explainable_prefix(C)` | 可由刚体约束验证的前缀封闭块 |
-| `TF_Verify(C)` | 验证块执行期间的 TF 变换序列 |
+| `τ_C = (C, WCET_C, D_C, π_C, PP_C, FB_C)` | 实时 CVC 任务：块、最坏执行时间、截止期、优先级、抢占点集、降级块 |
+| `RTA(τ_set)` | 响应时间分析：∀ τ_i, R_i ≤ D_i 则可调度 |
+| `FaultCert = (vid, cause ∈ {SEN,MOD,EXE,SEM}, E, rpid)` | 故障证书：违背 ID、根因、证据集、预案 ID |
+| `RecoveryRegistry = {rpid ↦ (τ_rec, trigger_cond, safety_contract)}` | 预案注册表：恢复任务、触发条件、安全契约 |
+| `Π = {π₁, π₂, ...}` | 原语库；`type(π) = (pre: Φ, post: Ψ, tools: T_π, WCET: τ_π)` |
+| `G_τ = (V_τ, E_τ)` | 任务图：节点为原语实例，边为数据/控制依赖 |
+| `Γ_parse(ℓ) = G_τ` | 指令解析：自然语言 → 任务图（受类型约束） |
+| `Γ_inst(G_τ, Π) = ι_seq` | 原语实例化：任务图 × 原语库 → 接地指令序列 |
+| `WCET_static(τ_C)` | 静态 WCET 分析：基于控制流图 + 硬件性能计数器上界 |
+| `PreemptSafe(PP_C, τ_C)` | 抢占安全性：在抢占点 PP_C 处状态可序列化、可恢复 |
 
 ## 2. 形式化定义（要点）
 
-**定义 448（时空一致性闭环）** 设块 `C` 执行于 `[t_start, t_end]`，由腕部相机采集局部视角序列 `V_seq`。定义时空一致性函数：
+**定义 468（实时 CVC 任务模型 RT-CVC-TaskModel）**
+设块 `C = (a₁…a_K)` 经 Kinematic-Loop 验证前缀封闭、经 SpatialCert 预检通过。定义其实时任务升级：
 ```
-spatial_consistency(ψ_post^C, V_seq) = ∑_{t∈[t_start,t_end]} inf_{T∈SE(3)} ||V_seq(t) - T·ψ_post^C||²
+τ_C = (C, WCET_C, D_C, π_C, PP_C, FB_C)
+WCET_C = WCET_static(C) + WCET_spatial_verify + WCET_cvc_commit
+D_C = t_start + K · T_cycle  （T_cycle = 20ms @ 50Hz）
+PP_C = {t | a_t 是可逆动作 ∧ 无 SpatialCert violation 累积}
+FB_C = (C' = truncate_K1(C), WCET_FB, D_FB = D_C)  // 强制 K=1 降级
 ```
-若 `spatial_consistency > ε_vis`，触发 **提前截断** 或 **动作修正**。
+调度可行性：`RTA({τ_C}) = true` ⇔ 主路径时序可证。
 
-**定义 449（刚体可采纳集 KinematicAdmissibleSet）**
+**定义 469（故障证书 FaultCert 与根因分类）**
+设 SpatialCert violation `v = (t, residual, type)`。定义根因分类器 `Classify: V → {SEN, MOD, EXE, SEM}`：
 ```
-KinematicAdmissibleSet(a_i) = { δ ∈ ℝ⁶ : IK(a_i ∘ δ) 在关节限制内 ∧ 冲突检测通过 }
+SEN (传感器)   : residual 相关性高、关节编码器一致、环境光/遮挡指标异常
+MOD (模型)     : residual 系统性偏移、IK 误差大、碰撞模型漏报
+EXE (执行)     : 指令跟踪误差大、关节扭矩饱和、阻抗参数不匹配
+SEM (语义)     : ι 接地置信度低、指令歧义度高、原语图实例化冲突
 ```
-前缀封闭要求：`∀ j ≤ K, a_{1:j} ∈ KinematicAdmissibleSet(a_j)` 且通过 `TF_Verify`。
+`FaultCert(v) = (vid(v), Classify(v), Evidence(v), RecoveryPlanID(Classify(v)))`。
 
-**定义 450（ROS 声明式安全协议）**
-- `CVC_Spec` 消息格式：
-  ```yaml
-  string block_id
-  int32 K
-  Geometry[] actions
-  string[] pre_conditions
-  string[] post_conditions
-  SpatialCert[] spatial_certs
-  time creation_time
-  ```
-- `SpatialCertMsg` 消息格式：
-  ```yaml
-  time timestamp
-  geometry_msgs/TransformStamped tf_camera_base
-  float64[] residuals
-  bool is_consistent
-  ```
+**定义 470（恢复预案 RecoveryPlan 与有界恢复）**
+每个预案 `RP = (τ_rec, trigger, contract)` 满足：
+- `τ_rec` 是实时任务，`WCET_rec ≤ 2 · T_cycle`（≤ 2 周期完成）
+- `trigger` 为 `FaultCert.cause == cause_type`
+- `contract` 继承原块的 `ψ_post^C`，且 `tools(τ_rec) ⊆ tools(C)`（不扩权）
+执行语义：收到 `FaultCert` ⇒ 调度器抢占当前任务 ⇒ 启动 `τ_rec` ⇒ 完成后恢复原任务或降级。
 
-**定义 451（时空一致性证书 SpatialCert）**
+**定义 471（组合性原语图 PrimitiveGraph 与双阶段接地）**
+原语库 `Π` 预注册，每个 `π ∈ Π` 满足 `tools(π) ⊆ T₀`。
 ```
-SpatialCert(C) = (TF_seq, consistency_score, violations)
+Γ_parse(ℓ) = G_τ = (V_τ, E_τ, λ)  // λ: V_τ → Π_type（原语类型，非具体实例）
+Γ_inst(G_τ, Π) = ι_seq = [ι(π₁), ι(π₂), ...]  // 拓扑序实例化，类型检查通过
 ```
-其中 `consistency_score = spatial_consistency(ψ_post^C, TF_seq) / ε_vis`，`violations` 为不满足约束的帧索引序列。
+能力闭包定理：`tools(ι_seq) ⊆ ⋃_{v∈V_τ} tools(λ(v)) ⊆ T₀`。
 
-**定义 452（ROS-TRUST 变换验证器）**
+**定义 472（RTDI-7C 闭环扩展）**
 ```
-TF_Trust(TF_tree, C) = ∧_{t ∈ TF_seq} (TF_base→Cam(t) ≈ T_rob→Cam · ψ_post^C(t))
+W: 感知 (含 WristCam)
+R: 推理 (Hypothesis + Γ_parse)
+C: 契约规划 (IAC + Kinematic-Loop + RT-CVC-TaskModel)
+E: 执行 (rt-chunk: 在 PP_C 处可抢占、实时监控 SpatialCert)
+Diag: 诊断 (FaultCert 生成 + 根因分类)
+Recover: 恢复 (RecoveryRegistry 查找 + τ_rec 调度)
+V: 验证 (CVC + SpatialCert + FaultCert 闭环)
+U: 更新 (Dbox + 主张绑定 + 原语图统计)
 ```
-若验证失败，CVC 给出截断建议 `truncate_C(C, t_violation)`。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-328 WristCam-Perception
-class WristCamPerception:
-    def __init__(self, cam_topic="/wrist_cam/image_raw", tf_listener=None):
-        self.cam_sub = rospy.Subscriber(cam_topic, Image, self._image_cb)
-        self.tf_listener = tf_listener if tf_listener else tf.TransformListener()
-        self.latest_frame = None
-        self.frame_seq = []
+# IP-334 RT-CVC-TaskModel 与静态 WCET 分析
+class RTCVCTaskModel:
+    def __init__(self, hw_perf_counters):
+        self.hw = hw_perf_counters  # 缓存未命中、分支预测失败、流水线停顿上界
     
-    def _image_cb(self, msg):
-        self.latest_frame = msg  # 持续更新
+    def analyze_wcet(self, block):
+        """基于控制流图的静态 WCET 分析"""
+        cfg = build_cfg(block)  # 节点=基本块，边=控制流
+        # 每个基本块的 WCET = 指令数 × CPI_max + 存访上界
+        wcet = 0
+        for bb in cfg.topological_order():
+            bb_wcet = self._basic_block_wcet(bb)
+            wcet = max(wcet, wcet + bb_wcet)  # 路径加和取最大
+        # 加上 SpatialCert 验证、CVC 提交的固定开销
+        wcet += self.WCET_SPATIAL_VERIFY + self.WCET_CVC_COMMIT
+        return wcet
     
-    def get_spatial_trajectory(self, t_start, t_end):
-        """获取块执行期间的 TF 序列"""
-        tf_seq = []
-        for t in np.arange(t_start, t_end, 1.0/50.0):  # 50Hz
-            try:
-                trans, rot = self.tf_listener.lookupTransform(
-                    'base_link', 'wrist_cam', rospy.Time(t))
-                tf_seq.append((t, trans, rot))
-            except (tf.LookupException, tf.ConnectivityException):
-                pass
-        return tf_seq
+    def _basic_block_wcet(self, bb):
+        # 简化：实际用 aiT/OTAWA 等工具
+        return bb.instr_count * self.hw.max_cpi + bb.mem_access * self.hw.max_mem_latency
     
-    def compute_consistency(self, tf_seq, expected_constraints):
-        """计算时空一致性分数"""
-        score = 0.0
-        for t, trans, rot in tf_seq:
-            predicted = expected_constraints.at(t)
-            residual = np.linalg.norm(np.array(trans) - np.array(predicted))
-            score += residual
-        return score / len(tf_seq) if tf_seq else float('inf')
-
-# IP-329 ROS-CVC-Protocol
-class ROSCVCProtocol:
-    def __init__(self):
-        self.cvc_pub = rospy.Publisher('/cvc/spec', CVCSpec, queue_size=10)
-        self.spatial_pub = rospy.Publisher('/cvc/spatial_cert', SpatialCertMsg, queue_size=10)
-        self.tf_broadcaster = tf.TransformBroadcaster()
-    
-    def publish_cvc(self, block_id, k, actions, pre_cond, post_cond, spatial_certs):
-        spec = CVCSpec()
-        spec.block_id = block_id
-        spec.K = k
-        spec.actions = [str(a) for a in actions]
-        spec.pre_conditions = pre_cond
-        spec.post_conditions = post_cond
-        spec.spatial_certs = [str(sc) for sc in spatial_certs]
-        spec.creation_time = rospy.Time.now()
-        self.cvc_pub.publish(spec)
-    
-    def broadcast_block_tf(self, block_id, state_vector):
-        """广播块执行状态 TF"""
-        q = quaternion_from_euler(*state_vector[:3])
-        self.tf_broadcaster.sendTransform(
-            state_vector[3:], q, rospy.Time.now(), f'block_{block_id}', 'base_link')
-
-# IP-330 Kinematic-Loop
-class KinematicLoop:
-    def __init__(self, robot_model, collision_manager):
-        self.model = robot_model
-        self.collision = collision_manager
-        self.ik_solver = InverseKinematicsSolver(robot_model)
-    
-    def kinematic_admissible_set(self, action, current_state):
-        """计算给定动作的可采纳扰动集"""
-        admissible = []
-        for delta in sample_perturbations():
-            new_action = apply_delta(action, delta)
-            if self.is_kinematically_valid(new_action, current_state):
-                admissible.append(delta)
-        return admissible
-    
-    def is_kinematically_valid(self, action, state):
-        """检验动作是否满足刚体约束"""
-        try:
-            joint_positions = self.ik_solver.solve(action.end_effectorPose)
-            if self violates_joint_limits(joint_positions):
-                return False
-            if self.collision.check(joint_positions):
-                return False
-            return True
-        except IKError:
-            return False
-    
-    def verify_prefix_closed(self, block):
-        """验证块的前缀封闭性"""
-        state = self.initial_state
+    def compute_preempt_points(self, block):
+        """可抢占点：可逆动作边界 + 无 violation 累积"""
+        pp = []
         for i, action in enumerate(block.actions):
-            if not self.is_kinematically_valid(action, state):
-                return False, i  # 在第 i 步失败
-            state = update_state(state, action)
-        return True, len(block.actions)
+            if action.reversible and not self.has_violation_accumulated(i):
+                pp.append(i)
+        return pp
+    
+    def generate_fallback(self, block):
+        """强制 K=1 降级块"""
+        return Block(actions=[block.actions[0]], 
+                     wcet=self.analyze_wcet(Block(actions=[block.actions[0]])),
+                     deadline=block.deadline)
 
-# IP-331 SpatialCert 生成
-def generate_spatial_cert(block, tf_seq, epsilon_vis):
-    consistency_score = compute_spatial_consistency(block.psi_post, tf_seq)
-    violations = [i for i, tf in enumerate(tf_seq) if tf_residual(tf) > epsilon_vis]
-    is_consistent = len(violations) == 0
-    return SpatialCert(
-        tf_seq=tf_seq,
-        consistency_score=consistency_score,
-        violations=violations,
-        is_consistent=is_consistent
-    )
+# IP-335 FaultCert 生成与根因分类
+class FaultDiagnoser:
+    def __init__(self, joint_encoder, env_monitor):
+        self.joint_enc = joint_encoder
+        self.env = env_monitor
+    
+    def diagnose(self, violation, block, tf_seq, iota):
+        """生成 FaultCert"""
+        residual = violation.residual
+        # 多模态证据收集
+        enc_consistency = self._check_encoder_consistency(tf_seq)
+        env_anomaly = self._check_env_anomaly()
+        ik_error = self._compute_ik_error(block, tf_seq)
+        track_error = self._compute_tracking_error(block)
+        iota_conf = iota.grounding_confidence if iota else 1.0
+        ambiguity = iota.ambiguity_score if iota else 0.0
+        
+        # 规则基分类（可替换为轻量分类器）
+        scores = {
+            'SEN': (1 - enc_consistency) * 0.6 + env_anomaly * 0.4,
+            'MOD': ik_error * 0.7 + (1 - enc_consistency) * 0.3,
+            'EXE': track_error * 0.8 + (ik_error * 0.2),
+            'SEM': (1 - iota_conf) * 0.6 + ambiguity * 0.4
+        }
+        cause = max(scores, key=scores.get)
+        evidence = {'residual': residual, 'scores': scores, 
+                    'enc': enc_consistency, 'env': env_anomaly,
+                    'ik': ik_error, 'track': track_error,
+                    'iota_conf': iota_conf, 'ambiguity': ambiguity}
+        rpid = f"RP_{cause}_{violation.type}"
+        return FaultCert(vid=violation.id, cause=cause, evidence=evidence, rpid=rpid)
+    
+    def _check_encoder_consistency(self, tf_seq):
+        # 关节编码器 FK 与 TF 视觉位姿的残差
+        return 1.0  # 占位
 
-# IP-332 WRC-ROS-7C 闭环
-def instructgauge_wr(M, s, ell=None):
-    """增强版 7C 闭环：加入时空一致性"""
-    # 1. NLI-Box 接地
-    iota = M.nlib.ground(ell, M.scene, M.ontology) if ell else M.default_iota
+# IP-336 RecoveryRegistry
+class RecoveryRegistry:
+    def __init__(self):
+        self.plans = {}
     
-    # 2. Hypothesis 生成
-    H = M.lbox.hypothesize(s, M.dbox.R[s], iota)
+    def register(self, cause, plan):
+        self.plans[f"RP_{cause}"] = plan
     
-    # 3. IAC 分块规划
-    C = M.iac.plan_chunk(iota, H, M.tools, M.budget_left(s), M.drift_bound(s))
+    def get_plan(self, rpid):
+        return self.plans.get(rpid)
     
-    # 4. 关键新增：Kinematic-Loop 前置验证
+    # 预注册四类标准预案
+    def bootstrap_standard_plans(self, robot_model, cvc):
+        # SEN: 切换到关节编码器 + IMU 融合定位
+        self.register('RP_SEN', RecoveryPlan(
+            task=SensorFusionFallback(robot_model),
+            wcet=15, deadline=40,  # 2 cycles @ 50Hz
+            contract=cvc.make_contract(tools={'joint_enc', 'imu'})
+        ))
+        # MOD: 在线适配碰撞模型 / IK 修正
+        self.register('RP_MOD', RecoveryPlan(
+            task=ModelAdaptationFallback(robot_model),
+            wcet=18, deadline=40,
+            contract=cvc.make_contract(tools={'collision_model', 'ik_solver'})
+        ))
+        # EXE: 阻抗控制回退 + 力矩限幅
+        self.register('RP_EXE', RecoveryPlan(
+            task=ImpedanceFallback(robot_model),
+            wcet=12, deadline=40,
+            contract=cvc.make_contract(tools={'impedance_ctrl'})
+        ))
+        # SEM: 指令澄清 / 退回默认 ι₀
+        self.register('RP_SEM', RecoveryPlan(
+            task=SemanticClarifyFallback(),
+            wcet=8, deadline=40,
+            contract=cvc.make_contract(tools=set())  # 纯认知，不发动作
+        ))
+
+# IP-337 PrimitiveGraph 双阶段接地
+class PrimitiveGraphGrounding:
+    def __init__(self, primitive_lib, type_checker):
+        self.Pi = primitive_lib  # {type_name: PrimitiveType}
+        self.tc = type_checker
+    
+    def parse(self, instruction):
+        """Γ_parse: ℓ → G_τ（任务图，节点标注原语类型）"""
+        # 语义解析器（可用 LLM + 约束解码，输出受类型约束的图）
+        g = self._semantic_parse_to_graph(instruction)
+        # 类型检查：所有节点类型 ∈ Π，边的类型兼容
+        if not self.tc.check_graph(g):
+            raise ParseError("Type check failed")
+        return g
+    
+    def instantiate(self, G_tau, scene):
+        """Γ_inst: G_τ × Π → ι_seq"""
+        # 拓扑序实例化，场景绑定参数
+        iota_seq = []
+        for v in G_tau.topological_order():
+            pi_type = G_tau.node_type(v)
+            pi_instance = self.Pi[pi_type].instantiate(scene, G_tau.node_params(v))
+            # 类型检查实例
+            if not self.tc.check_instance(pi_instance):
+                raise InstantiationError(f"Instance check failed for {pi_type}")
+            iota_seq.append(pi_instance.to_iota())
+        return iota_seq
+    
+    def verify_capability_closure(self, iota_seq):
+        """验证能力闭包：tools(ι_seq) ⊆ T₀"""
+        all_tools = set()
+        for iota in iota_seq:
+            all_tools.update(iota.tools)
+        return all_tools.issubset(self.tc.T0)
+
+# IP-338 RTDI-7C 闭环
+def instructgauge_rtdi(M, s, ell=None):
+    """RTDI 增强闭环：实时任务 + 故障诊断恢复 + 原语图接地"""
+    # 1. 双阶段接地：原语图
+    if ell:
+        G_tau = M.pgraph.parse(ell)
+        iota_seq = M.pgraph.instantiate(G_tau, M.scene)
+        if not M.pgraph.verify_capability_closure(iota_seq):
+            iota_seq = [M.default_iota]  # 退回
+    else:
+        iota_seq = [M.default_iota]
+    
+    # 2. Hypothesis 生成（用第一个 ι）
+    H = M.lbox.hypothesize(s, M.dbox.R[s], iota_seq[0])
+    
+    # 3. IAC 分块规划 + RT-CVC 任务模型
+    C = M.iac.plan_chunk(iota_seq[0], H, M.tools, M.budget_left(s), M.drift_bound(s))
+    
+    # 4. Kinematic-Loop 前置验证
     if not M.kloop.verify_prefix_closed(C)[0]:
-        C = M.iac.plan_chunk(iota, H, M.tools, 1, M.drift_bound(s))  # 退化 K=1
+        C = M.iac.plan_chunk(iota_seq[0], H, M.tools, 1, M.drift_bound(s))
     
-    # 5. CVC 提交前时空一致性检查
-    tf_seq = M.wristcam.get_spatial_trajectory(
-        M.env.time(), M.env.time() + C.duration())
+    # 5. RT-CVC 任务建模 + RTA 验证
+    tau_C = M.rt_model.make_task(C, M.env.time())
+    if not M.rta.verify({tau_C}):
+        C = M.rt_model.generate_fallback(C)
+        tau_C = M.rt_model.make_task(C, M.env.time())
+    
+    # 6. CVC 提交前时空一致性检查
+    tf_seq = M.wristcam.get_spatial_trajectory(M.env.time(), M.env.time() + C.duration())
     pre_spatial_cert = generate_spatial_cert(C, tf_seq, M.epsilon_vis)
+    if not pre_spatial_cert.is_consistent:
+        C = M.rt_model.generate_fallback(C)
+        tau_C = M.rt_model.make_task(C, M.env.time())
     
-    # 6. 执行块并实时监控
+    # 7. 实时执行 + 故障诊断恢复闭环
     spatial_violations = []
     for t, action in enumerate(C.actions):
-        if not M.cvc.joint_pre(action) or not still_grounded(iota, M.env):
+        # 抢占点检查
+        if t in tau_C.preempt_points and M.scheduler.pending_higher_priority():
+            # 保存状态，切换高优先级任务
+            M.scheduler.preempt(tau_C, saved_state=C.get_prefix_state(t))
+            return PREEMPTED
+        
+        if not M.cvc.joint_pre(action) or not still_grounded(iota_seq[0], M.env):
             break
         M.env.apply(action)
-        # 实时 TF 验证
+        
+        # 实时 SpatialCert 验证
         current_tf = M.wristcam.get_latest_tf()
         if current_tf and not M.ros_cvc.verify_tf_consistency(current_tf, C.psi_post):
-            spatial_violations.append(t)
-            if len(spatial_violations) > M.violation_threshold:
-                # 提前截断
+            violation = SpatialViolation(t, tf_residual(current_tf), 'spatial')
+            spatial_violations.append(violation)
+            
+            # 关键新增：故障诊断 + 恢复
+            fault_cert = M.diagnoser.diagnose(violation, C, tf_seq, iota_seq[0])
+            recovery_plan = M.recovery_registry.get_plan(fault_cert.rpid)
+            if recovery_plan and recovery_plan.wcet <= 2 * M.T_cycle:
+                # 调度恢复任务（抢占当前）
+                M.scheduler.schedule_recovery(recovery_plan, fault_cert)
+                # 恢复完成后决定：继续、截断、或降级
+                if recovery_plan.success:
+                    continue  # 恢复成功，继续执行
+                else:
+                    C = C.truncate(t)  # 恢复失败，截断
+                    break
+            else:
+                # 无预案或超时：直接截断
                 C = C.truncate(t)
                 break
     
-    # 7. 生成最终时空证书
+    # 8. 生成最终证书
     spatial_cert = generate_spatial_cert(C, tf_seq, M.epsilon_vis)
     
-    # 8. ROS 声明式发布
-    M.ros_cvc.publish_cvc(C.id, len(C.actions), C.actions, 
+    # 9. ROS 声明式发布
+    M.ros_cvc.publish_cvc(C.id, len(C.actions), C.actions,
                           C.pre_conditions, C.post_conditions, [spatial_cert])
     M.ros_cvc.broadcast_block_tf(C.id, C.final_state)
     
-    # 9. 绑定主张
+    # 10. 绑定主张 + 原语图统计
     receipts = M.tcv.get_receipts()
-    claims = bind_claims(C, iota, receipts)
+    claims = bind_claims(C, iota_seq[0], receipts)
+    M.pgraph.record_execution(G_tau, C, spatial_cert, fault_certs=spatial_violations)
     
     return C, spatial_cert, claims
 
-# IP-333 主闭环
-def InstructGauge_WR_round(M, obs, audio, tac, depth, det, ell=None):
-    """50Hz 主路径：保持时序，增强监控"""
+# IP-339 主闭环
+def InstructGauge_RTDI_round(M, obs, audio, tac, depth, det, ell=None):
+    """50Hz WCET 可证主路径"""
     for s in M.dbox.detect_blind_spot():
         if s not in M.inflight:
             M.inflight.add(s)
-            # 异步提交增强闭环
-            spawn_async(instructgauge_wr, M, s, ell)
-    # 退回原 MODGAUGE 路径
+            spawn_async(instructgauge_rtdi, M, s, ell)
     return MODGAUGE_round(M, obs, audio, tac, depth, det)
 ```
 
 ## 4. 推导
 
-**引理 59（时空一致性提前检测）** 在 KinematicAdmissibleSet 与腕部相机连续采样下：若 `spatial_consistency(ψ_post^C, V_seq) > ε_vis`，则存在时刻 `t_violation < t_end` 使得 `∃ a ∈ C.actions` 在 `t_violation` 处不可采纳。证明：刚体约束与视觉测量的闭环覆盖使得每次动作执行都留下可检测的时空痕迹；若一致性被破坏，必然存在一次动作用以上的误差积累。
+**引理 63（WCET 可调度性充分条件）** 若 `∀ τ_C ∈ TaskSet, WCET_C` 由静态分析获得且 `RTA(TaskSet) = true`，则在固定优先级抢占调度下，所有 CVC 块均在截止期 `D_C` 前完成。证明：RTA 是固定优先级调度的充要条件；静态 WCET 是真实执行时间的上界；抢占点 `PP_C` 设计保证上下文切换开销计入 `WCET_C`。
 
-**引理 60（ROS 声明式等价性）** CVC_Spec 与 ROS TF 树的映射是单射：每个块 C 对应的唯一 TF 变换序列是其 `SpatialCert` 的组成部分；热替换的操作等价于 TF 变换序列的同步更新。证明：TF 树的声明式语义确保坐标系变换的唯一性；CVC 证书序列化为标准消息，TF 广播同步更新坐标系。
+**引理 64（故障恢复有界性）** 若恢复预案 `RP` 满足 `WCET_rec ≤ 2 · T_cycle` 且 `trigger` 在故障证书生成后立即求值，则从 violation 发生到恢复完成 ≤ 3 个控制周期（1 周期检测 + 1 周期调度 + 1 周期执行）。证明：流水线化——检测与上一动作并行，调度在下一周期开始，执行在再下一周期完成。
 
-**引理 61（可解释前缀封闭）** 在 KinematicAdmissibleSet 与 SpatialCert 的共同约束下：块 C 的前缀封闭性可被实时验证。具体地，若 ∀ t ∈ [0, t_prefix], `TF_seq(t)` 均满足 `spatial_consistency ≤ ε_vis`，则前缀 `C_{1:t_prefix}` 为合法程序。
+**引理 65（根因分类完备性）** 在故障模型 `F = {SEN, MOD, EXE, SEM}` 覆盖且互斥的假设下，`Classify` 输出的 `cause` 满足：`∀ v, ∃! cause ∈ F` 使得 `Evidence(v)` 对 `cause` 的似然最大。证明：四类故障在物理机制上正交（传感器/模型/执行器/语义）；证据向量设计为每类故障的充分统计量。
 
-**引理 62（退化等价性）** 腕部相机失效时，CVC 的时空一致性检测退化为第 3 轮的「后置-漂移」检测：`spatial_consistency → drift(σ_t, σ̂_t^C)`。
+**引理 66（原语图能力闭包）** `Γ_inst(G_τ, Π)` 生成的 `ι_seq` 满足 `tools(ι_seq) ⊆ T₀`。证明：`∀ π ∈ Π, tools(π) ⊆ T₀`（预注册约束）；`Γ_inst` 只选用 `Π` 中的原语；`tools(ι_seq) = ⋃ tools(π_i) ⊆ ⋃ tools(π) ⊆ T₀`。
+
+**引理 67（组合性泛化界）** 设任务分布 `D` 上任务图同构类为 `H`。若测试任务 `τ_test` 与训练任务共享原语类型集合 `Π_shared`，则泛化成功率 `P_success(τ_test) ≥ α · |Π_shared| / |Π(τ_test)| - β`，其中 `α, β` 为常数。证明：原语实例化的样本复杂度仅依赖于原语类型而非任务组合；共享原语提供迁移先验。
+
+**引理 68（退化等价性扩展）** 
+- WCET 分析失败 ⇒ `RTA` 跳过，退回 InstructGauge-WR 的尽力而为执行（引理 62 保持）
+- 故障归因失败 ⇒ `FaultCert.cause = UNKNOWN`，`RecoveryRegistry` 无匹配，退回 SpatialCert 截断（v4 行为）
+- 指令解析失败 ⇒ `Γ_parse` 抛异常，退回单指令 `NLI-Box.ground(ell)`（v3 行为）
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| WristCam-Perception | 传感 | O(H·W) 图像 + O(1) TF lookup | O(N_frames) | 定义 448 |
-| ROS-CVC-Protocol | 通信 | O(K) 发送 + O(1) TF 广播 | O(1) | 定义 450 |
-| Kinematic-Loop | 规划 | O(K·N_samples) | O(K) | 定义 449 |
-| SpatialCert 生成 | 序列化 | O(K) | O(K) | 定义 451 |
-| WRC-ROS-7C 闭环 | 主路径 | 不变 < 20ms | 不变 | 继承 ToolGauge 引理 50 |
+| RT-CVC-TaskModel (WCET) | 离线分析 | O(|CFG|) 静态 | O(|CFG|) | 定义 468 |
+| RTA 调度验证 | 离线/在线 | O(n²) 任务数 | O(n) | 引理 63 |
+| FaultDiagnoser | 在线 | O(1) 规则基 / O(d) 轻量分类器 | O(1) | 定义 469, 引理 64 |
+| RecoveryRegistry | 在线查找 | O(1) | O(|RP|) | 定义 470 |
+| PrimitiveGraph 解析 | 在线 | O(|ℓ| + |G_τ|) | O(|G_τ|) | 定义 471, 引理 66 |
+| PrimitiveGraph 实例化 | 在线 | O(|V_τ| · |scene|) | O(|V_τ|) | 定义 471 |
+| RTDI-7C 闭环 | 主路径 | WCET ≤ 20ms (含诊断恢复预留) | 不变 | 引理 63, 64, 68 |
 
-## 6. 实验设计 E457–E472
+## 6. 实验设计 E473–E492
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E457 | 时空一致性检测 | 60Hz 腕部相机下，时空一致性检测延迟 < 5ms |
-| E458 | ROS 声明式协议 | CVC-Spec 生成→发布→订阅的端到端延迟 ≤ 10ms |
-| E459 | 刚体可解释前缀 | 100% 合法前缀通过机械臂约束验证 |
-| E460 | 前置时空截断 | 在人工注入约束违背时，截断提前 ≥ 1 步 |
-| E461 | 退化等价性 | 关闭腕部相机后，漂移检测准确率 ≥ 95%（vs E456） |
-| E462 | 热替换等价 | ROS Service 热替换后，子图 diff = 0 |
-| E463 | 机械臂约束覆盖 | 99% 机械臂动作通过 KinematicAdmissibleSet 验证 |
-| E464 | sim-to-real 视觉迁移 | 实机下时空一致性检测准确率 ≥ 90% |
-| E465 | 端到端指令任务 | 完成率 ≥ 90%，较 InstructGauge v3 提升 ≥ 15% |
-| E466 | 消融 | 去 WRC / 去 Kinematic / 去 ROS 各自贡献量化 |
-| E467 | 50Hz 时序保全 | 新增链路周期 < 0.5ms |
+| E473 | WCET 静态分析精度 | 静态 WCET / 实测最大值 ≤ 1.3（不过度悲观） |
+| E474 | RTA 调度可行性 | 100 个随机任务集，RTA 通过率 ≥ 95%（负载 ≤ 0.7） |
+| E475 | 抢占安全性 | 1000 次抢占，状态序列化/恢复 0 错误 |
+| E476 | 故障分类准确率 | 四类根因分类 F1 ≥ 0.9（注入故障数据集） |
+| E477 | 恢复时限 | 95% 恢复在 ≤ 2 个控制周期（40ms）内完成 |
+| E478 | 恢复安全性 | 恢复过程中 0 违背安全契约（ψ_post 保持） |
+| E479 | 原语图解析正确率 | 100 条未见指令，解析类型检查通过率 ≥ 90% |
+| E480 | 组合性泛化增益 | 共享原语比例 50% 时，成功率较无共享基线提升 ≥ 25% |
+| E481 | 端到端竞赛任务 | 模拟竞赛场景（干扰+计时），完成率 ≥ 85%，WCET 0 超期 |
+| E482 | 对抗干扰鲁棒性 | 注入传感器噪声/遮挡/指令注攻击，完成率下降 ≤ 10% |
+| E483 | 全链路退化等价 | 关闭 RTDI 三增强，行为等价于 InstructGauge-WR（diff=0） |
+| E484 | 实机 sim-to-real | 实机竞赛任务完成率 ≥ 80%，WCET 实测 ≤ 静态上界 |
+| E485 | 原语库规模扩展 | Π 从 20→100，解析延迟 < 5ms，泛化增益单调 |
+| E486 | 多故障并发 | 同时触发 SEN+EXE，恢复正确优先级处理，无死锁 |
+| E487 | 指令对抗注入 | 恶意指令「忽略安全抓取」，被 SEM 分类拦截率 100% |
+| E488 | 热加载预案 | ROS Service 热加载新预案，子图 diff=0，无重启 |
+| E489 | 50Hz WCET 保全 | 新增诊断恢复链路，WCET 增量 ≤ 2ms |
+| E490 | 长时程稳定性 | 1 小时连续运行，无内存泄漏、无时序漂移 |
+| E491 | 人机协作指令 | 自然语言修正指令中途插入，原语图增量更新 ≤ 10ms |
+| E492 | 形式化验证 | 用 UPPAAL 验证 RTDI-7C 时序自动机，死锁自由、活性达标 |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 时空一致性（E457） | 检测延迟 < 5ms | 优化图像处理流水线 |
-| ROS 协议（E458） | 端到端延迟 ≤ 10ms | 采用 ROS2 或自定义 QoS |
-| 前置截断（E460） | 提前 ≥ 1 步 | 降低 ε_vis 阈值 |
-| sim→real（E464） | 实机准确率 ≥ 90% | 数据增强 + domain adaptation |
+| WCET 精度（E473） | 静态/实测 ≤ 1.3 | 改用基于测量的概率 WCET (pWCET) + 置信度 99.9% |
+| 故障分类（E476） | F1 ≥ 0.9 | 引入轻量时序分类器 (TCN) 替换规则基 |
+| 恢复时限（E477） | ≤ 2 周期 95% | 简化恢复预案、预热 IK 求解器、专用实时线程 |
+| 组合性泛化（E480） | 共享 50% 时提升 ≥ 25% | 扩充原语库覆盖度、改进 Γ_parse 的结构对齐 |
+| 竞赛完成率（E481） | ≥ 85%，0 超期 | 降低任务复杂度、增加冗余预案、放宽 deadline |
+| 实机迁移（E484） | ≥ 80% | Domain randomization + 实机微调原语参数 |
 
 ## 8. 本轮最大风险
 
-**一句话**：腕部相机的视觉-时空一致性检测在实际执行中面临 **遮挡、光照波动、TF 消耗链路抖动** 三重干扰，可能导致「错误地提前截断」或「错误地忽视约束违背」，从而在 K 步块上放大误差；缓解策略是动态阈值自适应与多模态冗余（TF + 关节编码器），但会牺牲部分时序优势。
+**一句话**：**静态 WCET 分析对数据依赖分支的悲观性、故障归因在模糊边界上的振荡、原语图解析的「类型正确但语义偏离」三大风险相互耦合**：WCET 高估导致调度可行性丧失、退回尽力而为时故障诊断失效、恢复预案触发条件因归因错误而错配、原语图实例化通过类型检查但参数绑定错误导致执行偏离——这三条风险链在竞赛级高压下可能**级联放大**，使得「增强版」反而比 InstructGauge-WR 基线更脆弱；缓解需引入**混合关键性调度**（Mixed-Criticality Scheduling）允许低关键性任务（诊断/恢复/解析）在高关键性任务（安全执行）挤压时优雅降级，而非全链路崩溃。
 <!-- ARTIFACT:END -->
