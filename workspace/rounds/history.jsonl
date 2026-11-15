@@ -4898,3 +4898,4 @@
 {"event": "skipped", "round": 2, "reason": "退出码 -9", "ts": "2026-11-15 11:53:02"}
 {"event": "skipped", "round": 3, "reason": "退出码 -9", "ts": "2026-11-15 11:53:02"}
 {"event": "skipped", "round": 4, "reason": "退出码 -9", "ts": "2026-11-15 11:53:02"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-15 12:51:49"}
