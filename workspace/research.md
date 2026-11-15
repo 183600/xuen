@@ -3,387 +3,416 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
+# 第 70 轮（承接第 69 轮「FLUID-RAS 流匹配交互消歧」IP-253~263；灵感循环新循环第 3 轮；本轮灵感：「仿真到现实」×「UniBot世界挑战赛」）
 
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
+> R69 把不确定性一分为二（aleatoric / epistemic），并让系统学会「问」：看、探、问句都是动作，VoI 决定值不值得问。但 R69 的每一个保证——模态权重 ECE、VoI 校准、流似然阈值 τ_FMA、C-RAS-WM 动作认证——都建立在**同一个生成模型**上，而这个模型是在**仿真**里学出来的。仿真到现实不是又一种噪声，而是**模型形式本身的错位（model-form error）**：世界不是「更吵的仿真」，而是「另一个世界」。于是 R69 可以做到**在仿真里完美校准、在现实里自信地错**；而且系统越自洽、证书越紧，静默迁移失败越危险。
 >
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
+> 本轮两个灵感正好各补一刀：
+> - **仿真到现实**告诉我们：要建模的是「差距的结构」（观测/动力学/语义/具身），而不是域随机化的一个标量预算；域随机化覆盖的是参数，不是现实。
+> - **UniBot 世界挑战赛**告诉我们：标准化公开任务 + 排行榜既是可比性的来源，也是 Goodhart 与记忆化的压力源；同时它提供了从 S0 纯仿真到 S3 真机的**迁移阶梯**，正好用来检验「证书是否只在仿真里成立」。
 >
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
+> 核心命题：把不确定性从二分升级为**三分**——U_ale（噪声，不可约）、U_epi（任务歧义，可用交互消解）、**U_sim（模型形式 / 迁移差距，只能靠现实锚点与桥接探针消解，不能靠向同一个模型多问）**；并用三件套守住它：(i) **迁移风险证书**（密度比 + 保形风险控制；达不到就诚实地「不认证」）；(ii) **无模型安全底座**（因为用有 gap 的模型去认证动作是循环论证）；(iii) **反 Goodhart 的隐藏元分割**（按生成因子而非实例划分）。命名 **BRIDGE-RAS**（Bridged-Reality Identifiability with Dual-channel Gap Evidence）。
 >
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证、还能问什么」，R70 问「**我求证时所处的那个世界，是真实世界吗**」——比「问错」更危险的是「在错的世界里，把问题问对了」。
 
 ## 0. 直觉与动机
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
+**灵感 1（仿真到现实是模型形式误差，不是标量噪声）**
+直觉：R69 的 U 是在「给定模型 p_θ」的前提下度量不确定性。但 sim-to-real 改变的是 p_θ 本身：渲染的镜面反射让透明物体看起来像两个物体（观测 gap）；轮子在地毯上的摩擦与仿真不同（动力学 gap）；挑战赛把「成功」定义为推出区域，而人认为该轻放（语义 gap）；真机的关节间隙与通信延迟（具身 gap）。把这四件事压成一个域随机化范围，等于用「参数覆盖」冒充「现实覆盖」——仿真里每一次采样都在自己的世界里自洽，唯独不在部署世界里自洽。
+严谨地说：存在一个**桥接算子**把真实观测映回仿真等价观测，gap 是这个算子在四类因子上的**可辨识残差**；不可辨识的部分不能被更多仿真数据或更多交互样本消掉。
 
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
+**灵感 2（UniBot 挑战赛是双刃剑：可比性 vs Goodhart）**
+直觉：公开排行榜让方法可比、可复现，这是科学进步必需的；但一旦把排行榜当成目标，优化压力就会寻找仿真漏洞（穿模、利用摩擦参数、卡住判定器）与任务记忆（记住固定布局/种子），而不是迁移能力。竞赛要赢，研究要真——两者只在「评估协议不可被优化」时才一致。
+所以我们不交一个标量名次，而交一条**迁移阶梯向量** (S0 纯仿真, S1 域随机化, S2 硬件在环, S3 真机)，每一步附证书；并按**生成因子**（光照/摩擦/具身/物体类别/指令族）而不是按实例做隐藏元分割，让「跨因子泛化」无法靠记住实例通过。
 
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
+**灵感 3（第三类不确定性 U_sim：问同一个模型，问不出模型外的答案）**
+直觉：R69 的交互（看/问/触）能消解 U_epi，是因为它引入了**新的真实证据**。但对 U_sim，向同一个仿真器再多采 K 个模态、再多问人一句，都不会告诉你「你的摩擦模型错了」。消解 U_sim 的唯一途径是**桥接探针**：轻敲听声/测柔顺、在已知几何区做一次已知动作测延迟、低风险扫掠测摩擦、放置标定物测观测偏移。这类动作与 R69 的信息动作本质不同：前者的信息目标是**任务模态 M**，后者是**迁移参数 φ**。前者可以向人求证，后者只能向物理世界求证。
 
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
+**灵感 4（用模型认证模型是循环论证 → 必须有不会说谎的底座）**
+直觉：R69 的 C-RAS-WM 用世界模型预测未来、认证动作前缀。这在模型可信时是对的；但 sim-to-real gap 恰恰使模型不可信——**用一个有 gap 的模型去证明「这个动作在有 gap 的真实世界里安全」，是循环论证**。因此 BRIDGE-RAS 必须引入一条**不依赖学习模型的**安全通道：仅由本体感觉、关节限位、自碰撞几何、力矩/电流上界、看门狗构成的**无模型安全底座（MFSF）**。它保守、能力弱，但它不会因为 sim-to-real 而失效。
+这里提炼出一条跨轮原则：**每加一层，都要加一条该层无法自我认证的独立通道**——R69 用流似然对冲标定吸收，R70 用无模型底座对冲模型形式误差。
 
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
+**灵感 5（静默失败：证书会把「仿真里的自信」洗成「带证书的自信」）**
+直觉：R69 最大的风险是「问错比不问更危险」。R70 把它推进一格：当系统能签发一张「已认证可迁移」的证书时，失败不再表现为犹豫，而表现为**自信且可审计的错误**。尤其当锚点只在策略已经成功的状态附近采集（幸存者偏差）、当隐藏元分割发生泄漏时，U_sim 会被系统性低估，证书变成一张不可证伪的通行证。因此本轮把「锚点覆盖」与「泄漏审计」当成与安全同等级的一等公民，而不是事后检查。
 
-## 1. 形式化定义（增量：定义 293–309）
+## 1. 形式化定义（增量：定义 310–326）
 
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
+**定义 310（BRIDGE-RAS 总览）** BRIDGE-RAS = (FLUID-RAS†, SGE, TRC, MFSF, DCC, BPA, PIM, HGX, ILD, TILA, AIC-S2R)。四不变式：
+(i) 继承 FLUID-RAS 定义 293 的三不变式（零学习写操作、交互预算硬约束、证据纪律）；
+(ii) **模型形式诚实性**：任何依赖学习模型的保证，必须显式标注其适用的 gap 区域；未认证区域内不得以 WM 证书单独放行；
+(iii) **无模型兜底**：真实提交的动作必须同时通过 MFSF；DCC 冲突时取更保守者；
+(iv) **可迁移性证据纪律**：单次真机锚点、单一因子覆盖、单一公开任务不得单独支撑「已迁移」结论，需跨因子锚点集与隐藏元分割一致。
 
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
+**定义 311（结构化 gap 分解）** 设仿真联合分布 P_S(o,ξ)、真实 P_R(o,ξ)。gap 分解为四类算子：
+- 观测 gap：B_o: O_R→O_S（光度/传感器/标定），残差 r_obs = E_{o~P_R}‖B_o(o) − o_S‖；
+- 动力学 gap：B_d 作用于转移核 P(dx'|x,a)，参数 φ_d（摩擦、质量、柔顺、延迟）；
+- 语义 gap：B_y 定义成功/失败标签与奖励的映射差异，参数 φ_y；
+- 具身 gap：B_m 定义形态/关节限位/传动差异，参数 φ_m。
+记 φ = (φ_d, φ_y, φ_m)。**gap 不是标量**：它是作用在分布与转移核上的算子族，只能在其可辨识子空间上被估计。
 
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
+**定义 312（桥接与迁移风险）** 部署策略由仿真策略经桥接复合：π_R(·|o) = π_S(·|B_o(o))。迁移风险 gap 定义为
+ε_gap(π) = sup_{π∈Π_cert} |R_R(π) − R_S(π)|，
+其中 R_R、R_S 为真实/仿真期望风险，Π_cert 为待认证策略类。BRIDGE 的目标不是把 ε_gap 压到 0（通常不可能），而是**在置信度 1−δ 下给出上界 ε̂_gap 并在其上决策**。
 
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
+**定义 313（三分不确定性）** U_ale = 模态内不可约方差（继承定义 297）；U_epi = 任务模态可约歧义（继承定义 297）；**U_sim** 由 gap 上界与未辨识迁移参数后验共同定义：U_sim = ε̂_gap + λ_φ·tr(Cov(φ | D_anchor))，其中 D_anchor 为现实锚点集。三者语义正交，**不做标量加和**：U_ale 进 λ floor；U_epi 进交互；U_sim 进「认证 / 探针 / 无模型兜底」三选一（定义 325）。
 
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
+**定义 314（迁移风险证书 TRC）** 对锚点集 D_anchor 与密度比估计 ŵ(o) = p̂_R(o)/p̂_S(B_o(o))，用保形风险控制给出
+R_R(π) ≤ R̂_S^w(π) + q_{1−δ}({ℓ_i}) + D_f(P_R‖P_S)，
+其中 R̂_S^w 为重要性加权的仿真风险，q 为保形分位，D_f 为 f-散度（Rényi/TV）上界。**若任一前提不成立（锚点覆盖不足、密度比支撑外、f-散度上界不可估），TRC 输出 Uncertified，而不是给一个好看的数**。Uncertified 是一等输出。
 
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
+**定义 315（锚点覆盖与可交换域）** 锚点集必须覆盖声明域 Ω_cert（按因子分层：光照×摩擦×具身×类别），覆盖率 ρ_cov(Ω_cert) ≥ 1−δ_cov。仅当部署观测 o 落入 Ω_cert 且密度比有界时 TRC 才可认证，否则降级（定义 325）。**声明域之外的迁移结论一律无效**。
 
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
+**定义 316（无模型安全底座 MFSF）** 安全集 S_0 由与学习模型无关的量定义：关节限位、速度/加速度/力矩上界、自碰撞几何、支撑多边形、命令-反馈一致性看门狗。存在控制障碍函数 h_0(x)（仅用本体感觉与已知几何）使得对任意有界扰动 d∈D_max，ḣ_0 + α(h_0) ≥ 0。MFSF 输出安全动作集 K_0(x)。它保守且能力有限，但其有效性**不依赖** p_θ。
 
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
+**定义 317（双通道证书 DCC）** 对动作前缀 A，WM 通道给出 k_wm = certified_prefix_WM(A)（依赖学习世界模型），无模型通道给出 k_mf = certified_prefix_MFSF(A)（不依赖模型）。联合证书：
+- 若 TRC 认证 ε̂_gap ≤ ε_cert：k = k_wm（R69 行为），MFSF 仅作最后防线；
+- 若未认证：k = min(k_wm·χ_gap, k_mf)，两通道冲突时取更保守（更短前缀 / 更低速度）。
+语义：**安全 = (WM 认证 ∧ 已认证 gap) ∨ MFSF**；在 gap 未认证时，MFSF 是唯一可单独放行的通道。
 
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
+**定义 318（桥接探针空间与可辨识性）** 桥接探针 g_b ∈ 𝒜_bridge ⊂ 𝒜_+：轻敲/挤压测柔顺（激励 φ_d）、已知位姿往返测延迟、低风险扫掠测摩擦、放置标定物测观测偏移。探针必须持续激励（persistent excitation）：对迁移参数 φ 的 Fisher 信息矩阵满足 I(φ; g_b) ⪰ ε_pe·I 时 φ 才可辨识；否则探针「做了但不长知识」，不计入 U_sim 下降。探针本身必须落在 S_0 内（定义 316）。
 
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
+**定义 319（分层 VoI）** 交互预算在两类信息动作间分配：
+- 任务 VoI：VoI_task(g)（继承定义 298，目标是模态身份 M）；
+- 迁移 VoI：VoI_sim(g_b) = E[U_sim | D_anchor] − E[U_sim | D_anchor ∪ y(g_b)]（目标是迁移参数 φ 与 gap 上界）。
+选择 argmax(β_task·VoI_task − c) 与 argmax(β_sim·VoI_sim − c) 中净收益更大者；两者共享同一硬预算（定义 293-ii）。当 U_sim 高时 β_sim 自动上调——**先确认世界，再决定动作**。
 
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
+**定义 320（隐藏元分割 HGX）** 任务按生成因子 F = (光照, 摩擦, 具身, 物体类别, 指令族) 分组，公开集与隐藏集在因子层正交（同一因子组合不跨集）。评测输出迁移阶梯向量 sc = (sc_S0, sc_S1, sc_S2, sc_S3) 与各步证书，**不输出单一标量名次**；跨因子泛化取 sc 在隐藏因子上的最差值（min-over-factors），而非均值。
 
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
+**定义 321（不变性责任检测 ILD）** 对同一任务施加保语义的物理扰动族 T_inv（微小摩擦/质量/光照/延迟变化）。若成功率在 T_inv 下骤降而仿真奖励不降，判为**仿真漏洞利用（sim exploit）**：它优化了仿真器伪影而非任务本身。ILD 输出 exploit_score，作为 HGX 的一票否决项。
 
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
+**定义 322（任务身份泄漏审计 TILA）** 检测策略是否使用了与任务实例身份相关、但与任务语义无关的特征（固定种子、布局哈希、贴图 ID、排行榜元数据）。用「打乱身份但保持语义」的对照集测性能差 Δ_id；Δ_id 显著 > 0 ⇒ 记忆化，排行榜分数不可用于迁移结论。
 
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
+**定义 323（对抗分布 AIC-S2R）** ℰ_S2R = ℰ_FLUID × {渲染欺骗, 动力学参数漂移, 硬件延迟/丢帧, 语义错标, 探针致伤, 锚点投毒, 隐藏集泄漏}。特别地，**锚点投毒**（现实中给出错误标定）可使 U_sim 被低估，需与 R69 的 ℰ_poison 联合防御。
 
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
+**定义 324（证书 J_BRIDGE）** J_BRIDGE = (J_FLUID, ε̂_gap, TRC_state, ρ_cov, U_sim, probe_FIM_min, ladder_vector, exploit_score, Δ_id, mfsf_active, bridge_ver)。Valid ⇔ Valid(J_FLUID) ∧ (TRC Certified ⇒ 全链一致) ∧ (¬Certified ⇒ MFSF 全程激活且 λ 满足定义 325)。**Uncertified 是合法且必须被记录的证书状态**。
 
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
+**定义 325（迁移感知退避律）** 三级：
+- L0（认证）：ε̂_gap ≤ ε_cert ⇒ λ = λ_floor(U_ale)，行为同 R69（resolution bonus 保留）；
+- L1（可探）：未认证但存在 g_b 使 VoI_sim(g_b) > c(g_b) 且可辨识 ⇒ 执行桥接探针，更新后重判；探针期间 λ ≥ λ_floor(U_ale + U_epi + U_sim)；
+- L2（兜底）：未认证且探针无利可图/不可辨识/超预算 ⇒ λ = λ_floor(U_ale + U_epi + U_sim)，动作前缀取 DCC 保守值，必要时只允许 MFSF 内的反射动作。
+单调性：L0→L1→L2 λ 单调不降，安全侧永不弱于 R69。
 
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
+**定义 326（时序与预算）** 默认每轮不触发 gap 估计（复用缓存 ε̂_gap 与 φ 后验）；仅当 (a) 观测落入 Ω_cert 边界、(b) 模态分布突变、(c) TRC 临近过期、(d) ILD 报警 时重估。桥接探针与任务信息动作共享 ≤1 次/单位时间预算；探针不得挤占紧急安全动作。
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
+# IP-264 SGE：结构化 gap 估计（密度比 + 保形 + 系统辨识后验）
+def estimate_gap(anchors, policy, bridge):
+    w = density_ratio(anchors.obs, sim_ref)
+    if not support_ok(w, anchors.region):        # 定义 315
+        return GapEstimate.uncertified()
+    eps_hat   = conformal_transfer_bound(policy, anchors, w)   # 定义 314
+    phi_post  = system_id_posterior(anchors, transfer_model)  # 观测/动力/具身
+    return GapEstimate(eps_hat, phi_post, certified=eps_hat <= EPS_CERT)
 
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
-
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
-
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
-
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
+# IP-268 BPA + IP-269 PIM：分层 VoI（先确认世界，再消歧任务）
+def choose_info_action(modes, gap, budget, beta_task, beta_sim):
     best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
+    for g in bridge_probe_candidates(gap.phi_post):        # 轻敲/往返/扫掠
+        if not budget.allow(g) or not mfsf.inside(g):      continue
+        if lambda_min(fim(g, gap.phi_post)) < EPS_PE:      continue  # 不可辨识
+        score = beta_sim * voi_sim(g, gap) - cost(g)
+        if best is None or score > best.score: best = (g, "bridge", score)
+    for g in info_action_candidates(modes):                # 继承 R69
+        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
+        score = beta_task * voi_task(g, modes) - cost(g)
+        if best is None or score > best.score: best = (g, "task", score)
+    return best if best and best.score > 0 else None       # 无利可图 → 不交互
 
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
+# IP-266 MFSF：无模型安全前缀（仅本体感觉 + 几何 + 看门狗）
+def mfsf_prefix(self, A):
+    k = 0
+    for a in A:
+        if not (self.joint_ok(a) and self.torque_ok(a) and self.self_col_ok(a)):
+            break
+        if not self.watchdog_consistent(a): break
+        k += 1
+    return k                                               # 不依赖 p_θ
 
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
-
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
-
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
-    if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
-    else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
-    U_floor = U_ale + (U_epi_after if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
+# IP-274 主闭环：FLUID 层不变，外包一层「认证 / 探针 / 兜底」
+def BRIDGE_RAS_round(M, obs):
+    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)   # R69
+    U_ale, U_epi, modes = M.aud.decompose(M.fmp.sample(o, K), z)
+    # 1) gap 估计（缓存；仅触发时重估，定义 326）
+    gap = M.sge.maybe_update(o, M.anchors, M.fmp)
+    U_sim = gap.eps_hat + LAM_PHI * trace(gap.phi_cov)
+    # 2) 分层交互：U_sim 高则先探世界
+    g = M.bpa.choose_info_action(modes, gap, M.budget,
+                                 beta_task=1.0,
+                                 beta_sim=(1.0 if U_sim > TAU_SIM else 0.2))
+    if g is not None and g.kind == "bridge":
+        M.anchors.add(M.execute_probe(g)); gap = M.sge.update(g)
+    elif g is not None:
+        U_epi = M.cia.update_belief(modes, M.cia.execute(g))
+    # 3) 三级退避（定义 325）
     A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
-    mode = select_mode(modes, U_epi_after, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
+    k_wm = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
+    if gap.certified:                                   # L0 = R69
+        lam, k = lam_floor(U_ale), k_wm
+    else:
+        k_mf = M.mfsf.mfsf_prefix(A)
+        if M.bpa.probe_profitable(gap) and not budget_exhausted:   # L1
+            lam, k = lam_floor(U_ale + U_epi + U_sim), min(k_wm, k_mf)
+        else:                                           # L2
+            lam, k = lam_floor(U_ale + U_epi + U_sim), k_mf
+            if k == 0: return reflex_only()
+    # 4) 反 Goodhart 审计（异步，不阻塞实时环）
+    M.ild.check(A, T_inv); M.tila.audit(obs); M.hgx.log(M.ladder)
+    return k, lam, select_mode(modes, U_epi, lam), \
+           J_BRIDGE(M.fma, gap, U_ale, U_epi, U_sim, k_wm, k)
 ```
 
 ## 3. 推导
 
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
+**引理 19（迁移证书的可靠性）** 在 A99（锚点可交换域）、A100（密度比有界且支撑覆盖）、A101（保形可交换）下，定义 314 的 ε̂_gap 满足 P(R_R(π) > R̂_S^w(π) + q_{1−δ} + D_f) ≤ δ，对 Π_cert 一致成立。要点：**证书的价值在于它敢输出 Uncertified**——当支撑或覆盖前提破裂时，任何有限上界都不成立，此时「不认证」本身是正确的统计结论，而非失败。
 
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
+**引理 20（模型认证的循环性 / gap 放大）** 设 WM 对转移核的误差 ≤ ε_m，真实 gap ≤ ε_gap。则 WM 认证前缀的真实风险上界膨胀为 L_c·(ε_m + ε_gap)（L_c 为证书对模型误差的 Lipschitz 常数）；当 ε_gap 未知时**不存在有限保证**。故任何纯 WM 证书在 sim-to-real 下都不可单独作为放行依据，必须由一条不依赖 p_θ 的通道（MFSF）兜底。这是「每加一层必须有独立通道」原则的形式化。
 
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
+**引理 21（探针可辨识性）** 若探针 g_b 的 Fisher 信息 I(φ; g_b) ⪰ ε_pe·I，则其后验协方差满足 tr(Cov(φ|D∪y)) ≤ tr(Cov(φ|D)) − c·ε_pe，U_sim 至少下降 c·ε_pe。若 I(φ; g_b) 在 φ 的某方向上奇异（非持续激励），该方向上 U_sim **不下降**：敲一个刚体听不出摩擦。系：探针的「值钱」不是由动作幅度决定，而是由它对 φ 的激励方向决定。
 
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
+**引理 22（反 Goodhart 的因子分割界）** 在定义 320 的因子正交分割下，公开集与隐藏集之间不存在共享因子组合，故记忆化只能提升公开集分数；若 TILA 测得 Δ_id > 0，则公开集分数对 S3 真机表现的条件相关性 ≤ 0（排行榜不再有预测力）。ILD 的 T_inv 进一步把「利用仿真伪影」与「完成任务」分离：exploit_score 高者，其 S0 分数与 S3 分数呈负相关。
 
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**定理 18（BRIDGE 严格包含 FLUID）** 取 ε̂_gap ≡ 0（已认证）、无桥接探针、MFSF 不收紧（k_mf ≥ k_wm），则 BRIDGE 的 L0 路径与 R69 逐指令相同：λ = λ_floor(U_ale)，交互仍由 VoI_task 决定，resolution bonus 保留。因此 FLUID 是 BRIDGE 在「gap 已认证为零」边界上的严格退化；安全侧只增不减，效率侧只在认证成立时才获得。
+
+**定理 19（双通道安全的纵深界）** 部署安全失败要求 (WM 通道 ∧ 已认证 gap) 与 MFSF 同时失效。若两通道失效事件在给定状态下的相关性 ≤ ρ_c，则
+P_fail ≤ P_wm·P_mf + ρ_c·min(P_wm, P_mf)，
+且 P_mf 由 A102（扰动有界 |d| ≤ D_max）单独界定，与 p_θ 无关。故即使 WM 因 gap 完全失效（P_wm→1），只要 MFSF 的扰动界成立，失败率仍被 P_mf 封顶——这是 R69 单通道所没有的下界。
+
+**定理 20（迁移感知的单调保守性）** 沿 L0→L1→L2，λ 单调不降；且对任意状态，BRIDGE 的期望风险 ≤ R69 在「把 U_sim 误当 0」时的风险，而 ≥ R69 的真实安全下界。即：**认证失败时，BRIDGE 比「假装 gap 不存在」的 R69 更安全；认证成功时，二者等价**。安全与效率的交换只发生在证书允许的地方。
 
 ## 4. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
+| MFSF 前缀认证（本体感觉 + 几何） | < 0.1ms（与 K 无关） | O(1) | 定义 316；不依赖 p_θ |
+| DCC 联合判定 + 三级退避 | < 0.05ms | O(1) | 定义 317、325；定理 19–20 |
+| 分层 VoI（候选 ≤ 6） | < 0.12ms | O(1) | 定义 319 |
+| SGE gap 重估（触发式，异步） | 80–300ms（环外） | O(|D_anchor|) | 定义 314–315；不占实时环 |
+| 保形迁移证书（离线/增量） | 秒级，离线 | O(|D_anchor|·d) | 引理 19 |
+| 桥接探针执行 | 0.1–2s（物理动作，占预算） | — | 定义 318；须过 MFSF |
+| HGX / ILD / TILA 审计 | 异步 | — | 定义 320–322 |
+| **实时环路总延迟** | **< 2.75ms**（缓存 gap、K=1；比 R69 多 0.15ms） | — | 定理 18–20 |
 
-## 5. 实验设计 E286–E300
+## 5. 实验设计 E301–E316
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
+| E301 结构化 gap 归因 | 四类 gap 能否被分别估计 | 归因误差 < 15%，优于标量域随机化 |
+| E302 TRC 覆盖率 | 迁移证书是否保守可信 | 经验覆盖 ≥ 1−δ，且在缺口场景输出 Uncertified |
+| E303 诚实拒证 | 该说「不认证」时是否会说 | 缺口场景误认证率 < 2% |
+| E304 MFSF 独立性 | 无模型底座在 WM 失效时是否仍安全 | 注入 WM 错误后违规率 ≤ 基线 1/10 |
+| E305 探针可辨识性 | 有激励才长知识 | 可辨识探针使 U_sim 降 ≥ 40%；非激励探针 ≈ 0 |
+| E306 探针成本-收益 | 桥接探针是否值得 | 找到 VoI_sim/成本拐点，净任务收益 ≥ +8% |
+| E307 分层 VoI | 先确认世界再动作是否更好 | 相对 R69 任务成功率 +10%，错误执行 −30% |
+| E308 公开 vs 隐藏排名 | 排行榜是否预测真机 | 隐藏因子最差值与公开排名相关 ≤ 0.3 |
+| E309 仿真漏洞利用 | ILD 能否识别 exploit | exploit AUC ≥ 0.9；S0 高分/exploit 高分者 S3 失败 ≥ 80% |
+| E310 任务记忆化 | TILA 能否测出身份泄漏 | Δ_id 与隐藏集掉分相关 ≥ 0.8 |
+| E311 迁移阶梯 | S0→S3 是否给出一致结论 | 阶梯向量可复现，步间方差 < 5% |
+| E312 锚点幸存者偏差 | 只在成功处采样会怎样 | 偏差锚点使 U_sim 低估 ≥ 30%，覆盖率检验可检出 |
+| E313 锚点投毒 | 错误标定能否骗过证书 | 投毒检出 ≥ 90%，误认证 ≤ 3% |
+| E314 跨具身迁移 | 换机器人是否仍成立 | 未重新锚定时自动降级到 L2 |
+| E315 真机长时程 | 24h 内 gap 漂移与探针疲劳 | 零探针致伤；U_sim 漂移可追踪 |
+| E316 对 FLUID 的严格包含 | ε_gap=0 时是否逐指令一致 | 行为差 = 0，延迟增量 ≤ 0.15ms |
 
 ## 6. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：BRIDGE-RAS 把「仿真里的自信」升级为「带证书的自信」——**若锚点集存在幸存者偏差（只在策略已成功的状态采样）、或隐藏元分割发生泄漏、或锚点被投毒，U_sim 会被系统性低估，TRC 会在最需要承认「我不在真实世界」的时刻签发一张不可证伪的通行证**；此时系统不是犹豫地错，而是**有审计日志、有证书、有排行榜名次地错**——这比 R69 的「问错」更难被发现，也更难被纠正。
 
 **次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
+1. **证书不可证伪地过度自信** → TRC 强制输出 Uncertified + 锚点覆盖率检验 + E303/E312/E313；
+2. **WM 与 MFSF 相关失效**（同一物理假设被两边共享）→ 定理 19 的相关性惩罚项 + E304 独立注入实验；
+3. **探针致伤或挤占安全动作** → 定义 318 的 S_0 约束 + 预算硬隔离 + E315；
+4. **排行榜 Goodhart / 记忆化** → 因子正交隐藏分割 + TILA + ILD + 只报阶梯向量（E308–E310）；
+5. **MFSF 过于保守导致任务不可用** → L0/L1 只在认证成立时放宽，用 E306/E307 量化能力损失，绝不以安全换分数。
+
+**结论一句话**：本轮把「我该问谁」推进到「我凭什么相信我所处的世界」，并给出可证伪的迁移证书；但它最大的风险恰是——**证书本身可能只是把不确定性从系统内部转移到了评估协议里，而非真正消除。**
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+# 第 70 轮产物 · 创新点清单 v1：BRIDGE-RAS（Bridged-Reality Identifiability with Dual-channel Gap Evidence：仿真到现实迁移风险证书 × 无模型安全底座 × 反 Goodhart 隐藏元分割的三分不确定性闭环；SGE×TRC×MFSF×DCC×BPA×PIM×HGX×ILD×TILA×AIC-S2R）
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
+> 承接第 69 轮 IP-253~263（FLUID-RAS）。R69 把不确定性一分为二（aleatoric / epistemic），并让系统学会「问」；但它所有保证——模态 ECE、VoI、流似然阈值、C-RAS-WM 动作认证——都建立在**同一个仿真里学出的生成模型**上。仿真到现实不是更大的噪声，而是**模型形式误差**：世界不是「更吵的仿真」，而是「另一个世界」。于是 R69 可以**在仿真里完美校准、在现实里自信地错**。
 >
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 本轮把不确定性升级为**三分**：U_ale（噪声）、U_epi（任务歧义，交互消解）、**U_sim（模型形式/迁移差距，只能靠现实锚点与桥接探针消解）**。并用三件套守住：**迁移风险证书**（达不到就诚实地「不认证」）、**无模型安全底座**（用有 gap 的模型认证动作是循环论证）、**反 Goodhart 隐藏元分割**（按生成因子而非实例划分）。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证」，R70 问「**我求证时所处的世界，是真实世界吗**」。
 >
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+> IP 编号：IP-264~IP-274（共 11 个）。理论姿态不变：**当迁移 gap 被认证为零且不触发探针时，BRIDGE 逐指令退化为 FLUID**；安全侧只增不减，效率只在证书允许处获得。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 名称 | 类型 | 关键改进（相对第 69 轮） |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
+| IP-264 | SGE Sim-to-real Gap Estimator | 新增 | 四类结构化 gap（观测/动力/语义/具身）；密度比 + 保形 + 系统辨识后验；缺口即 Uncertified |
+| IP-265 | TRC Transfer Risk Certificate | 新增 | 重要性加权仿真风险 + 保形分位 + f-散度上界；把「不认证」作为一等输出 |
+| IP-266 | MFSF Model-Free Safety Floor | 新增 | 仅用本体感觉/关节限位/自碰撞/力矩上界/看门狗的 CBF 前缀；不依赖 p_θ |
+| IP-267 | DCC Dual-Channel Certificate | 新增 | WM 认证与 MFSF 认证并联；gap 未认证时以 MFSF 为唯一可单独放行者，冲突取保守 |
+| IP-268 | BPA Bridging Probe Allocator | 新增 | 桥接探针（轻敲/往返/扫掠/标定物）+ 分层 VoI：先确认世界，再消解任务 |
+| IP-269 | PIM Probe Identifiability Monitor | 新增 | Fisher 信息/持续激励检查；非激励探针不计入 U_sim 下降 |
+| IP-270 | HGX Hidden-factor Generalization eXam | 新增 | 按生成因子做隐藏元分割；只报迁移阶梯向量，不报单一标量名次 |
+| IP-271 | ILD Invariance Liability Detector | 新增 | 保语义扰动族下性能骤降 ⇒ 仿真漏洞利用；HGX 一票否决 |
+| IP-272 | TILA Task-Identity Leakage Auditor | 新增 | 打乱任务身份、保持语义，测 Δ_id；识别排行榜记忆化 |
+| IP-273 | AIC-S2R | 升级 AIC-FLUID | ℰ_S2R = ℰ_FLUID × {渲染欺骗, 动力学漂移, 延迟丢帧, 语义错标, 探针致伤, 锚点投毒, 隐藏集泄漏} |
+| IP-274 | J_BRIDGE + BRIDGE-RAS Pipeline | 新增 | FLUID 闭环外包「gap 估计 → 分层交互 → 三级退避 → 反 Goodhart 审计」 |
 
-## 1. 符号体系增量（定义 293–309）
+## 1. 符号体系增量（定义 310–326）
 
 | 符号 | 含义 |
 |---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
+| `BRIDGE-RAS = (FLUID-RAS†, SGE, TRC, MFSF, DCC, BPA, PIM, HGX, ILD, TILA, AIC-S2R)` | 迁移风险感知闭环 |
+| `B_o, B_d, B_y, B_m` | 观测 / 动力学 / 语义 / 具身 桥接算子 |
+| `φ = (φ_d, φ_y, φ_m)` | 迁移参数（摩擦/质量/柔顺/延迟、标签映射、形态） |
+| `ε_gap = sup_π |R_R(π) − R_S(π)|` | 迁移风险 gap |
+| `ε̂_gap` | 置信度 1−δ 下的 gap 上界（TRC 输出） |
+| `ŵ(o) = p̂_R(o)/p̂_S(B_o(o))` | 密度比 |
+| `U_sim = ε̂_gap + λ_φ·tr(Cov(φ|D_anchor))` | 模型形式/迁移不确定性 |
+| `D_anchor, Ω_cert, ρ_cov` | 现实锚点集 / 声明域 / 覆盖 |
+| `h_0(x), K_0(x)` | 无模型 CBF / MFSF 安全动作集 |
+| `k_wm, k_mf, χ_gap` | WM 前缀 / 无模型前缀 / gap 折扣 |
+| `g_b, I(φ; g_b), ε_pe` | 桥接探针 / Fisher 信息 / 持续激励阈值 |
+| `VoI_sim(g_b)` | 迁移信息增益 |
+| `F = (光照,摩擦,具身,类别,指令族)` | 生成因子（隐藏元分割） |
+| `sc = (sc_S0, sc_S1, sc_S2, sc_S3)` | 迁移阶梯向量 |
+| `exploit_score, Δ_id` | 仿真漏洞利用分 / 身份泄漏分 |
+| `J_BRIDGE = (J_FLUID, ε̂_gap, TRC_state, ρ_cov, U_sim, probe_FIM_min, ladder_vector, exploit_score, Δ_id, mfsf_active, bridge_ver)` | 证书 |
 
 ## 2. 形式化定义（要点版）
 
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
+**定义 310（总览与四不变式）** 继承 FLUID 三不变式；新增模型形式诚实性（未认证区域不得以 WM 证书单独放行）、无模型兜底（真实动作须过 MFSF，冲突取保守）、可迁移性证据纪律（单锚点/单因子/单任务不得单独支撑「已迁移」）。
 
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
+**定义 311–312（结构化 gap 与迁移风险）** gap 分解为观测 `B_o`、动力学 `B_d`、语义 `B_y`、具身 `B_m` 四类算子，只能在其可辨识子空间估计；`ε_gap = sup_π|R_R−R_S|`，目标不是压到 0，而是给出 `ε̂_gap` 并据此决策。
 
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
+**定义 313（三分不确定性）** `U_ale`、`U_epi`、`U_sim` 语义正交、不做标量加和；分别走 λ floor、交互、认证/探针/兜底。
 
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
+**定义 314–315（TRC 与锚点覆盖）** `R_R ≤ R̂_S^w + q_{1−δ} + D_f`；前提不成立即输出 **Uncertified**；仅当 `o ∈ Ω_cert` 且密度比有界才可认证，声明域外结论无效。
 
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
+**定义 316–317（MFSF 与 DCC）** `h_0` 仅用本体感觉/几何/看门狗；安全 = `(WM 认证 ∧ 已认证 gap) ∨ MFSF`；未认证时 `k = min(k_wm·χ_gap, k_mf)`。
 
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
+**定义 318–319（桥接探针与分层 VoI）** 探针须持续激励 `I(φ;g_b) ⪰ ε_pe I` 且落在 `S_0` 内；预算在 `VoI_task` 与 `VoI_sim` 间分配，`U_sim` 高时 `β_sim` 上调。
 
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
+**定义 320–322（HGX / ILD / TILA）** 按生成因子正交分割公开/隐藏集；只报 `sc` 阶梯向量，取隐藏因子最差值；保语义扰动下骤降判为 sim exploit；身份打乱测 `Δ_id` 识别记忆化。
 
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
+**定义 323–324（对抗与证书）** `ℰ_S2R = ℰ_FLUID × {渲染欺骗, 动力学漂移, 延迟丢帧, 语义错标, 探针致伤, 锚点投毒, 隐藏集泄漏}`；`J_BRIDGE` 显式记录 Uncertified 为合法状态。
 
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
+**定义 325–326（三级退避与时序）** L0 认证 ⇒ 同 R69；L1 可探 ⇒ 探针后重判；L2 兜底 ⇒ `λ=λ_floor(U_ale+U_epi+U_sim)`、前缀取 DCC 保守值、必要时仅反射。gap 重估触发式、环外异步，探针与信息动作共享 ≤1 次/单位时间预算。
 
 ## 3. 关键算法伪代码
 
 ```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
-        for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
+# IP-264 SGE：结构化 gap 估计（缺口即 Uncertified）
+def estimate_gap(anchors, policy, bridge):
+    w = density_ratio(anchors.obs, sim_ref)
+    if not support_ok(w, anchors.region): return GapEstimate.uncertified()
+    eps_hat  = conformal_transfer_bound(policy, anchors, w)     # 定义 314
+    phi_post = system_id_posterior(anchors, transfer_model)
+    return GapEstimate(eps_hat, phi_post, certified=eps_hat <= EPS_CERT)
 
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
-
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
-
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
+# IP-268 BPA + IP-269 PIM：分层 VoI（先确认世界，再消歧任务）
+def choose_info_action(modes, gap, budget, beta_task, beta_sim):
     best = None
+    for g in bridge_probe_candidates(gap.phi_post):
+        if not budget.allow(g) or not mfsf.inside(g): continue
+        if lambda_min(fim(g, gap.phi_post)) < EPS_PE: continue  # 不可辨识
+        s = beta_sim * voi_sim(g, gap) - cost(g)
+        if best is None or s > best.score: best = (g, "bridge", s)
     for g in info_action_candidates(modes):
         if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
+        s = beta_task * voi_task(g, modes) - cost(g)
+        if best is None or s > best.score: best = (g, "task", s)
+    return best if best and best.score > 0 else None
 
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
+# IP-266 MFSF：无模型前缀（不依赖 p_θ）
+def mfsf_prefix(self, A):
+    k = 0
+    for a in A:
+        if not (self.joint_ok(a) and self.torque_ok(a)
+                and self.self_col_ok(a) and self.watchdog_consistent(a)):
+            break
+        k += 1
+    return k
 
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
+# IP-274 主闭环：FLUID 层不变，外包认证/探针/兜底
+def BRIDGE_RAS_round(M, obs):
     z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
-    U_floor = U_ale + (U_epi if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
-    mode = select_mode(modes, U_epi, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
-    return k, lam, mode, (U_ale, U_epi)
+    U_ale, U_epi, modes = M.aud.decompose(M.fmp.sample(o, K), z)
+    gap   = M.sge.maybe_update(o, M.anchors, M.fmp)             # 定义 326
+    U_sim = gap.eps_hat + LAM_PHI * trace(gap.phi_cov)
+    g = M.bpa.choose_info_action(modes, gap, M.budget, 1.0,
+                                 beta_sim=(1.0 if U_sim > TAU_SIM else 0.2))
+    if g is not None and g.kind == "bridge":
+        M.anchors.add(M.execute_probe(g)); gap = M.sge.update(g)
+    elif g is not None:
+        U_epi = M.cia.update_belief(modes, M.cia.execute(g))
+    A    = M.ach.propose(x_prime, H=M.vista.H)
+    k_wm = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
+    if gap.certified:                                           # L0 = R69
+        lam, k = lam_floor(U_ale), k_wm
+    else:
+        k_mf = M.mfsf.mfsf_prefix(A)
+        if M.bpa.probe_profitable(gap):                         # L1
+            lam, k = lam_floor(U_ale + U_epi + U_sim), min(k_wm, k_mf)
+        else:                                                   # L2
+            lam, k = lam_floor(U_ale + U_epi + U_sim), k_mf
+            if k == 0: return reflex_only()
+    M.ild.check(A, T_inv); M.tila.audit(obs)                    # 异步
+    return k, lam, select_mode(modes, U_epi, lam), \
+           J_BRIDGE(M.fma, gap, U_ale, U_epi, U_sim, k_wm, k)
 ```
 
 ## 4. 推导
 
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
+**引理 19（迁移证书可靠性）** A99–A101 下，`P(R_R(π) > R̂_S^w + q_{1−δ} + D_f) ≤ δ` 对 `Π_cert` 一致成立。要点：**证书的价值在于它敢输出 Uncertified**；前提破裂时任何有限上界都不成立，「不认证」是正确统计结论而非失败。
 
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
+**引理 20（模型认证循环性 / gap 放大）** WM 误差 `ε_m`、真实 gap `ε_gap` 时，认证前缀真实风险上界膨胀 `L_c(ε_m+ε_gap)`；`ε_gap` 未知则无有限保证。⇒ 纯 WM 证书在 sim-to-real 下不可单独放行，必须由不依赖 `p_θ` 的 MFSF 兜底（「每加一层必须有独立通道」的形式化）。
 
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
+**引理 21（探针可辨识性）** `I(φ;g_b) ⪰ ε_pe I` ⇒ `tr(Cov(φ|D∪y)) ≤ tr(Cov(φ|D)) − c·ε_pe`，U_sim 至少降 `c·ε_pe`；非持续激励方向上 U_sim **不下降**——敲刚体听不出摩擦。系：探针价值由对 φ 的激励方向决定，而非动作幅度。
 
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
+**引理 22（反 Goodhart 因子分割界）** 因子正交分割下公开/隐藏集不共享因子组合，记忆化只能抬高公开分；若 `Δ_id>0`，公开分对 S3 表现的条件相关 ≤ 0。ILD 的 `T_inv` 进一步使 exploit_score 高者 S0 分与 S3 分负相关。
 
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
+**定理 18（BRIDGE 严格包含 FLUID）** `ε̂_gap≡0`、无探针、MFSF 不收紧时，L0 与 R69 逐指令相同：`λ=λ_floor(U_ale)`，交互仍由 `VoI_task` 决定，resolution bonus 保留。FLUID = BRIDGE 在「gap 已认证为零」边界的严格退化。
+
+**定理 19（双通道纵深界）** 失败要求 WM 通道（含已认证 gap）与 MFSF 同时失效：`P_fail ≤ P_wm·P_mf + ρ_c·min(P_wm,P_mf)`；`P_mf` 由扰动有界 `|d|≤D_max` 单独界定、与 `p_θ` 无关。即使 WM 因 gap 完全失效，失败率仍被 `P_mf` 封顶。
+
+**定理 20（迁移感知单调保守性）** 沿 L0→L1→L2 `λ` 单调不降；BRIDGE 风险 ≤ 「把 U_sim 误当 0」的 R69 风险，且 ≥ R69 真实安全下界。认证失败时比「假装 gap 不存在」更安全，认证成功时与 R69 等价。
 
 ## 5. 复杂度分析
 
 | 组件 | 时间 | 空间 | 正确性保证 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
+| MFSF 前缀认证（本体感觉 + 几何） | < 0.1ms（与 K 无关） | O(1) | 定义 316；不依赖 p_θ |
+| DCC + 三级退避 | < 0.05ms | O(1) | 定义 317、325；定理 19–20 |
+| 分层 VoI（候选 ≤6） | < 0.12ms | O(1) | 定义 319 |
+| SGE gap 重估（触发式、异步） | 80–300ms（环外） | O(|D_anchor|) | 定义 314–315 |
+| 保形迁移证书（离线/增量） | 秒级，离线 | O(|D_anchor|·d) | 引理 19 |
+| 桥接探针执行 | 0.1–2s（物理，占预算） | — | 定义 318；须过 MFSF |
+| HGX / ILD / TILA 审计 | 异步 | — | 定义 320–322 |
+| **实时环路总延迟** | **< 2.75ms**（缓存 gap、K=1；比 R69 多 0.15ms） | — | 定理 18–20 |
 
-## 6. 实验设计 E286–E300
+## 6. 实验设计 E301–E316
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E301 结构化 gap 归因 | 四类 gap 能否分别估计 | 归因误差 < 15%，优于标量域随机化 |
+| E302 TRC 覆盖率 | 证书是否保守可信 | 经验覆盖 ≥ 1−δ，缺口场景输出 Uncertified |
+| E303 诚实拒证 | 该拒时是否拒 | 缺口场景误认证率 < 2% |
+| E304 MFSF 独立性 | WM 失效时底座是否仍安全 | 注入 WM 错误后违规率 ≤ 基线 1/10 |
+| E305 探针可辨识性 | 有激励才长知识 | 可辨识探针使 U_sim 降 ≥ 40%；非激励 ≈ 0 |
+| E306 探针成本-收益 | 桥接是否值得 | 找到 VoI_sim/成本拐点，净任务收益 ≥ +8% |
+| E307 分层 VoI | 先确认世界再动作 | 相对 R69 成功率 +10%，错误执行 −30% |
+| E308 公开 vs 隐藏排名 | 排行榜能否预测真机 | 隐藏因子最差值与公开排名相关 ≤ 0.3 |
+| E309 仿真漏洞利用 | ILD 能否识别 exploit | AUC ≥ 0.9；S0 高分 + exploit 高者 S3 失败 ≥ 80% |
+| E310 任务记忆化 | TILA 能否测身份泄漏 | Δ_id 与隐藏集掉分相关 ≥ 0.8 |
+| E311 迁移阶梯 | S0→S3 结论一致 | 阶梯向量可复现，步间方差 < 5% |
+| E312 锚点幸存者偏差 | 只在成功处采样 | U_sim 低估 ≥ 30%，覆盖率检验可检出 |
+| E313 锚点投毒 | 错误标定能否骗过证书 | 检出 ≥ 90%，误认证 ≤ 3% |
+| E314 跨具身迁移 | 换机器人是否成立 | 未重新锚定自动降级到 L2 |
+| E315 真机长时程 | 24h gap 漂移与探针疲劳 | 零探针致伤；U_sim 漂移可追踪 |
+| E316 对 FLUID 严格包含 | ε_gap=0 是否逐指令一致 | 行为差 = 0，延迟增量 ≤ 0.15ms |
 
 ## 7. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：BRIDGE-RAS 把「仿真里的自信」升级为「带证书的自信」——**若锚点集有幸存者偏差、隐藏元分割泄漏或锚点被投毒，U_sim 会被系统性低估，TRC 会在最需要承认「我不在真实世界」时签发一张不可证伪的通行证**；系统不是犹豫地错，而是**有审计日志、有证书、有排行榜名次地错**——这比 R69 的「问错」更难发现、更难纠正。
 
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+**次级风险与缓解**：证书过度自信（TRC 强制 Uncertified + 覆盖率检验 + E303/E312/E313）；WM 与 MFSF 相关失效（定理 19 相关性惩罚 + E304）；探针致伤或挤占安全动作（S_0 约束 + 预算硬隔离 + E315）；排行榜 Goodhart/记忆化（因子正交隐藏分割 + TILA + ILD + 阶梯向量）；MFSF 过保守致任务不可用（仅在认证成立时放宽，E306/E307 量化能力损失）。
+
+**结论一句话**：本轮把「我该问谁」推进到「我凭什么相信我所处的世界」，并给出可证伪的迁移证书；但它最大的风险恰是——**证书本身可能只是把不确定性从系统内部转移到了评估协议里，而非真正消除。**
 <!-- ARTIFACT:END -->
