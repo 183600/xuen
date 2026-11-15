@@ -3,551 +3,379 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 7 轮（灵感循环第 7 轮；本轮灵感：「在线学习」×「抓取规划」×「情感计算」）
-> **基线**：第 6 轮 MetricVoiceGauge（定义 493–520；引理 69–72；实验 E493–E512）。
-> 本轮纪律：**在线适应 + 抓取几何 + 情感调节**。三个灵感分别构建在线学习适应性、抓取规划几何、情感计算权重调节，必须通过**在线退化链**保证单一模块失效时平滑降级而非突 crash。
+# 第 9 轮（新灵感循环第 1 轮；本轮灵感：「创新点提炼」×「中间件」×「动作分块」）
+> **基线**：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮纪律：**分块执行 + 契约中间件 + 创新提炼**。三个灵感分别治理 v8 的三种债：算力债（50Hz 逐步重计算无余量）、集成债（手写退化网关靠约定不靠机制）、叙事债（14 个 IP 无实证机制）。必须通过**中立元契约退化链**保证任一新模块失效时注入恒等元、严格等价退回 v8，而非行为漂移。
 
 ## 0. 直觉与动机
 
-**灵感 1（在线学习 → 动态阈值自适应）**
-直觉：固定的判据向量 τᵢ 难以适应动态环境。在线学习可以实时调整阈值，使指标体系随任务难度、环境变化自动调整。核心创新：**在线阈值学习（OTL）**：基于最近 N 轮的性能统计，动态收缩或扩展 τᵢ，保证在任务难度增加时不会产生过多的软层级违背，从而避免不必要的硬约束退化。
+**灵感 1（创新点提炼 → 模块贡献归因与蒸馏）**
+直觉：系统已堆叠 14 个 IP 模块，严谨的研究者必须回答"哪些组件真正挣得它们的算力"。核心创新：**创新点蒸馏器（InnovationDistiller, ID）**：滑窗消融归因产出贡献向量 c_m(t)，Schmitt 双阈把模块置入 active/dormant/frozen 状态机。关键安全设计：dormant 行为严格等价于 v8 对应退化级（注入中立元），故"提炼"只是计算再分配、不是功能删除——**P12 提炼不删码律**。附带产出：IP 清单从论文叙事升级为带消融证据的活文档（每项 IP 附 c_m 曲线）。
 
-**灵感 2（抓取规划 → 手部-目标几何约束的指标扩展）**
-直觉：现有指标体系主要关注运动轨迹和安全，缺乏对‘抓取成功’的显式建模。抓取规划自然引入手指关节角度、物体几何特征、接触力矩等新指标。我们将这些作为 M₂ (效能指标) 的子层或 M₄ 临时层，与语音指令结合：语音指令“抓取物体A”会触发特定的抓取几何检查，作为指标层级的实时判据。
+**灵感 2（中间件 → 退化链的声明化）**
+直觉：v8 主闭环中模块接线与退化逻辑是手写 if-else 网关，模块越多越脆。中间件思想：把"接线、时限、失效语义"升级为一等公民。核心创新：**实时契约中间件（ContractMiddleware, MW）**：每模块声明契约 κ_m=(In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)；每周期 EDF 调度，超时即注入中立元 v_m^⊥（该端口聚合算子的恒等元）。v8 的四级退化链由此变成契约表的一个**数据实例**（引理 83 证明逐位等价复现）。退化从"代码"变成"配置"，组合正确性从人工验证变成代数性质。
 
-**灵感 3（情感计算 → 情感调节的奖励权重）**
-直觉：人类操作员的情绪状态直接影响决策偏好。焦虑时倾向保守（增大安全权重），自信时倾向冒进（增大效率权重）。情感计算模块实时检测操作员情感（通过语音基频、语速、文本情感关键词），动态调节 wᵢ(s) 的软 prior，形成‘情感-权重-指令’的闭环。
+**灵感 3（动作分块 → 分块证书执行）**
+直觉：50Hz 逐步决策让重模块每周期全额燃烧算力，预算利用率近 1.0，正是 v8 抖动风险的根源。ACT 思想：一次生成 K 步动作块 ζ=(a^{1:K}, Ĉ, P)——Ĉ 为块证书（前向模型预测的块内指标最坏界，留余量 β），P 为满足停车不变式的中止点集。5Hz 生成块，50Hz 只跑廉价守卫；违规时切换到最近中止点安全停驻。核心创新：**分块证书执行器（ActionChunkCertifier, AC）**；且有效块长 K_eff 由 Δ_dom、risk_SLAM 连续门控——域越陌生块越短，极端时 K=1 退回 v8 逐步模式。分块使决策预算利用率从 ~1.0 降至 ~0.3，直接给 v8 的"抖动→虚假退化风暴"风险上保险。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（在线阈值自适应）**：如何设计在线学习算法，在≤3控制周期内收敛到适当的判据向量，同时不触发频繁退化？
-- **Q2（抓取规划集成）**：如何在现有指标层级框架中，引入抓取几何与接触力矩指标，并确保与语音指令、奖励函数的兼容性？
-- **Q3（情感可逆映射）**：情感状态如何通过可逆映射调节奖励权重，且映射结果符合人类预期的‘保守-冒进’连续体？
+- **Q1（分块证书可靠性）**：如何设计块证书与中止点集，使「信任域内前向模型误差 ≤ β」假设下，中块突变的安全性与逐步执行统计等价？信任域门控能否消除模型误差与域偏移的相关性风险？
+- **Q2（契约化退化）**：如何将 v8 四级退化链编码为中立元代数，使"模块失效（超时）"与"显式退化"在可观测日志层面逐位不可区分？
+- **Q3（提炼安全边界）**：消融归因与状态机在什么资格谓词 φ^elig 下保证蒸馏永不触碰安全不变式？双阈迟滞能否根除休眠-唤醒抖振？
 
-## 2. 设计原则（在 P4–P6 基础上升级为 P7–P9）
+## 2. 设计原则（在 P7–P9 基础上新增 P10–P12）
 
-**P7 在线阈值调节（Online Threshold Ladder, OTL）**
-指标阈向量 τᵢ 不再固定，而是由在线学习算法实时调节：
-```
-τᵢ(t) = clip( τᵢ(0) + η · θ(t), ε_min, ε_max )
-```
-其中 θ(t) 为在线学习输出的调节量，η 为学习率，clip 保证阈值在物理意义范围内。
+**P10 分块证书律（Chunked-Certificate Execution, AC）**
+决策以块为单位：ζ_t = (a^{1:K}, Ĉ_t, P_t)。证书 Ĉ_t 携带前向模型误差余量 β；中止点 p ∈ P_t 满足停车不变式 d_stop(p)。50Hz 守卫只做廉价检查（证书失效检测 + 停车不变式），重规划只在块边界发生。有效块长受信任域门控：K_eff(t) = 1 若 Δ_dom ≥ τ_dom 或 risk_SLAM ≥ τ_SLAM，否则 K_eff = max(1, ⌊K_max·(1−Δ_dom/τ_dom)⌋)。
 
-**P8 抓取指令类型化（Grasp Command Typing）**
-在 VoiceCommandTyping 之上增加抓取语义解析：语音识别到的指令若包含抓取动作，进一步解析目标物体属性（大小、质感、位置），生成抓取几何约束，作为 M₂ 的实时判据输入。
+**P11 中立元退化律（Neutral-Element Degradation, MW）**
+每模块输出端口定义聚合算子 ⊕ 与中立元 v^⊥（恒等元：x ⊕ v^⊥ = x）。模块在截止期内完成则输出 x_m(t)，超时/失效则注入 v^⊥。系统退化行为 = 中立元组合，由契约表声明，不再手写分支。
 
-**P9 情感权重调节（Emotional Weight Modulation）**
-情感状态评分 emo(s) ∈ [−1, 1]（负值=焦虑/保守，正值=自信/冒进），通过 softmax 与风险信号混合调节：
-```
-w'_i(s) = softmax(α · risk(s) + β · emo(s) · ᦬_i) 
-```
-其中 ᦬_i 为预设的情感导向向量（安全、效率、完美）。
+**P12 提炼不删码律（Distill-Not-Delete, ID）**
+蒸馏只改变调度（计算分配），不改变代码可达性：dormant/frozen 模块保留在契约表中，其 v^⊥ 路径随时可用；φ^elig=false 的安全关键模块（M₀ 硬检查、SpatialCert、FaultCert、MW 自身、AC 证书检查）永不消融；Δ_dom 越阈强制全模块唤醒。
 
 ## 3. 与基线的接口（如何退化）
 
-- 在线学习模块失效 ⇒ 退回固定 τᵢ，等价于 MetricVoiceGauge v6；
-- 抓取规划模块失效 ⇒ 退回无抓取几何检查的基础语音指令；
-- 情感计算模块失效 ⇒ 退回固定权重 W₀，等价于 InstructGauge-RTDI。
+- AC 失效（前向模型超差 / 证书连续失效）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- MW 失效 ⇒ 切换 v8 手写网关代码路径（代码保留、非契约驱动），等价 v8 集成方式；
+- ID 失效 ⇒ 全模块 active、c_m 冻结不再更新，等价 v8（全模块常开）；
+- v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- 全部失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
 ## 4. 预期贡献
 
-1. **在线指标阈值自适应**框架，实现指标体系在动态环境中的平滑调节；
-2. **抓取规划几何指标**的层级化集成，实现语音指令对抓取成功的实时评估；
-3. **情感计算模块**，实现操作员情感态→奖励权重的可逆映射；
-4. 完整的 **价值-行动-反馈-情感** 四元闭环：E513–E530 覆盖在线阈值学习、抓取几何评估、情感调节、跨模态鲁棒。
+1. **分块证书执行**框架：块级证书 + 中止点集 + 信任域门控块长，在保持安全论证局部化的同时将决策算力利用率降一个量级；
+2. **契约中间件**：退化链的代数化——中立元恒等性使组合退化正确性从枚举验证变为代数性质（v9 引理 83）；
+3. **创新点蒸馏器**：IP 清单的实证化与算力的自适应再分配，附"陌生域强制唤醒"反脆弱设计；
+4. **预算-安全-自省三闭环**：分块释放的算力反哺 DA/SPR/Cal 的余量；E551–E570 覆盖块长扫描、中止功效、契约等价、归因精度、抖振抑制、陌生域唤醒与端到端任务。
 
 ## 5. 本轮最大风险
 
-**一句话**：在线学习的阈值调节可能过度激进，导致频繁触发软→硬退化，频繁退化会削弱系统有效性；抓取几何指标的建模假设（如物体尺寸范围）在未知环境下可能失效；情感计算的误识别可能导致奖励权重向错误方向偏移——三者合卷下，「系统因过度试图“适应人类情绪”而产生不稳定的退化频率」。
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 8 轮产物 · 创新点清单 v8：**MetricVoiceGauge-DA-SPR-Cal**（Metric Voice Gauge Domain-Adaptive SLAM-PerceptionRisk Calibration）
+# 第 9 轮产物 · 创新点清单 v9：**MetricVoiceGauge-ACMD**（Metric Voice Gauge with Action-Chunk Certificates, Contract Middleware & Innovation Distillation）
 
-> 背景：第 7 轮 MetricVoiceGauge-OTL-GC-ER（定义 493–525；引理 69–76；实验 E513–E530）。
-> 本轮灵感：「真实世界泛化」×「同步定位与建图」×「传感器标定」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 MetricVoiceGauge-OTL-GC-ER v7。
+> 背景：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮灵感：「创新点提炼」×「中间件」×「动作分块」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留；v8 的 DA-ML/SPR/Cal 三模块原样继承。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格等价退回 v8 行为（引理 83），而非行为漂移。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-OTL-GC-ER v7） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-DA-SPR-Cal v8） |
 |---|---|---|---|
-| IP-340 | MetricLadder 指标层级闭合 | 核心模块 | 升级：M = (M₀,M₁,M₂,M₃,M_dom,M_SLAM) 六层，M_dom 域不变指标、M_SLAM 感知风险指标 |
-| IP-341 | VoiceCommandTyping 语音指令类型化 | 核心模块 | 保留自 v7 |
-| IP-342 | RewardDecomposer 奖励可逆向性 | 核心模块 | 升级：风险向量扩展为 5 维，含 risk_SLAM |
-| IP-343 | SoftCert 软证书 | 核心模块 | 升级：δ_trigger 含域偏移与 SLAM 不确定条件 |
-| IP-344 | MetaWeight 元权重调节 | 核心模块 | 升级：softmax 作用于 5 维风险向量 |
-| IP-345 | Voice-RTDI-7C 闭环 | 设计模式 | 升级：感知-标定-域泛化-指标-动作-情感六元闭环 |
-| IP-346 | MetricVoiceGauge 主闭环 | 集成 | 保留 50Hz WCET；新增感知侧 ≤2ms 预算 |
-| IP-347 | OnlineThresholdLadder 在线阈值梯度 | 核心模块 | 升级：τᵢ(t) 注入 κᵢ·Δ_dom(t) 域偏移项 |
-| IP-348 | GraspCommandTyping 抓取命令类型化 | 核心模块 | 保留自 v7 |
-| IP-349 | EmotionalReweighting 情感重权模块 | 核心模块 | 保留自 v7，兼容 5 维风险 |
-| IP-350 | DomainAdaptiveMetricLadder 域自适应指标梯度 | 新增模块 | DA-ML：实时估计 Δ_dom(t) = MMD(φ(s_t), φ(s_ref))，注入 τᵢ 收紧 |
-| IP-351 | SLAMRiskPropagation SLAM-风险传播 | 新增模块 | SPR：risk_SLAM = λ_pose·trace(Σ_pose)+λ_map·H(map)+λ_loop·loop_res 直接注入 MetaWeight |
-| IP-352 | OnlineCalibrationFaultIsolation 在线标定故障隔离 | 新增模块 | OnlineCalib-FI：一致性图 G_calib 实现 检测-隔离-补偿，降权而非硬屏蔽 |
+| IP-340–353 | v8 全部模块 | 继承 | 语义不变；接线方式改由 MW 契约表声明（IP-355） |
+| IP-346 | MetricVoiceGauge 主闭环 | 集成升级 | WCET 从"贴满 20ms"变为"分块摊销后典型 ≤8ms、p99 ≤20ms"（引理 86） |
+| IP-354 | ActionChunkCertifier 分块证书执行器 | 新增核心模块 | 5Hz 生成 ζ=(a^{1:K}, Ĉ, P)：K 步动作、带余量 β 的块证书、满足停车不变式的中止点集；50Hz 廉价守卫；K_eff 由 Δ_dom/risk_SLAM 门控 |
+| IP-355 | ContractMiddleware 实时契约中间件 | 新增核心模块 | 契约 κ_m=(In,Out,D_m,Ŵ_m,v_m^⊥,π_m,φ^elig)；周期内 EDF 调度；超时注入中立元 v^⊥；v8 四级退化链成为契约表数据实例 |
+| IP-356 | InnovationDistiller 创新点蒸馏器 | 新增核心模块 | 滑窗消融归因 c_m；Schmitt 双阈 active/dormant/frozen 状态机；Δ_dom 越阈强制全唤醒；dormant ≡ 注入 v^⊥（等价 v8 退化级） |
 
-**退化链声明（四级）：**
-- Level-1：DA-ML 失效 ⇒ Δ_dom ≡ 0，τᵢ 退回 OTL 仅性能驱动，等价于 v7；
-- Level-2：SPR 失效 ⇒ risk_SLAM ≡ 0，风险向量退回 4 维，等价于 v7；
-- Level-3：OnlineCalib-FI 失效 ⇒ δ_calib ≡ 0，sensor_weight 全 1，等价于 v7；
-- Level-4：三模块全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
+**退化链声明（v9 契约化五级）：**
+- Level-1：AC 证书失效或信任域破坏（Δ_dom ≥ τ_dom ∨ risk_SLAM ≥ τ_SLAM）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- Level-2：MW 失效 ⇒ 切换 v8 手写网关代码路径（保留于代码库，非契约驱动），等价 v8 集成方式；
+- Level-3：ID 失效 ⇒ 全模块 active、归因冻结，等价 v8 全模块常开；
+- Level-4：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- Level-5：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-## 1. 符号体系增量（定义 493–540）
+## 1. 符号体系增量（定义 532–539）
 
 | 符号 | 含义 |
 |---|---|
-| `M = (M₀, M₁, M₂, M₃, M_dom, M_SLAM)` | 六层指标体系：M₀ 硬约束、M₁ 安全、M₂ 效能、M₃ 完善、M_dom 域不变、M_SLAM 感知风险 |
-| `τᵢ(t)` | 第 i 层判据向量，含域偏移项：τᵢ(t) = clip(τᵢ(0) + η·θ(t) + κᵢ·Δ_dom(t), ε_min,i, ε_max,i) |
-| `Δ_dom(t)` | 域偏移量：MMD(φ(s_t), φ(s_ref))，φ 为冻结特征提取器 |
-| `κ = (κ₀, κ₁, κ₂, κ₃, κ_dom, κ_SLAM)` | 层级域敏感度系数，κ₀,κ₁ 大，κ₂,κ₃ 小 |
-| `Σ_pose(t) ∈ ℝ⁶ˣ⁶` | SLAM 位姿协方差矩阵 (x,y,z,roll,pitch,yaw) |
-| `H(map)` | 地图熵：占据栅格信息熵或关键帧位姿图熵 |
-| `loop_res` | 回环检测残差：回环约束的 Mahalanobis 距离 |
-| `risk_SLAM(s)` | SLAM 风险分量：λ_pose·trace(Σ_pose) + λ_map·H(map) + λ_loop·loop_res |
-| `risk(s) ∈ ℝ⁵` | 扩展风险向量：[risk_SEN, risk_SEM, risk_EFF, risk_PERF, risk_SLAM] |
-| `δ_calib^j` | 第 j 传感器标定偏移：||T_est^j - T_nom^j||_F |
-| `ε_calib` | 标定偏移报警阈值（如 0.05m / 2°） |
-| `sensor_weight[j]` | 第 j 传感器融合权重，降权而非硬屏蔽 |
-| `G_calib = (V, E)` | 传感器一致性图：V={传感器}，E_ij=一致性分数 ∈ [0,1] |
+| ζ_t = (a^{1:K}, Ĉ_t, P_t) | 动作块：K 步动作序列、块证书、中止点集（P_t ⊆ {1..K}） |
+| Ĉ_t = (ĝ_min, ê_max, γ̂_grasp) | 块证书：前向模型 F̂ 预测的块内指标最坏界，含模型误差余量 β |
+| d_stop(p) | 停车不变式：dist(s_t, O) − \|traj_{p:end}\| ≥ d_brake(v_p) + d_safe |
+| K_eff(t) | 有效块长：K_max 经信任域门控（定义 539） |
+| U_t | 前向模型信任域：{Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM} |
+| κ_m = (In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig) | 模块契约：输入输出模式、截止期、WCET 上界、中立元、优先级、蒸馏资格谓词 |
+| v_m^⊥ | 中立元：模块失效时注入其输出端口，为其聚合算子 ⊕ 的恒等元（x ⊕ v^⊥ = x） |
+| c_m(t) ∈ [0,1] | 模块贡献向量：滑窗消融归因的 EMA（定义 537） |
+| st_m ∈ {active, dormant, frozen} | 提炼状态机（定义 538） |
+| τ_off < τ_on | Schmitt 双阈：休眠阈 < 唤醒阈，保证迟滞 |
+| T_abl, H_off | 消融回合周期（500 控制周期）与休眠确认回合数 |
 
-**新增定义 526（域偏移量 DomainShift）** 基于最大均值差异（MMD）的实时域偏移估计：
+**新增定义 532（动作块 ActionChunk）** 一次决策的输出单元：ζ_t = (a_t^{1:K}, Ĉ_t, P_t)，a ∈ A 为 K 步动作，K = K_eff(t) ≤ K_max = 10（50Hz 下 200ms 时域）。块在 5Hz 节拍生成，逐周期执行第 k 步。
+
+**新增定义 533（块证书 ChunkCertificate）** 由冻结前向模型 F̂（轻量 LSTM-MPC 代理，输入状态-动作、输出指标轨迹）预测块内各软层指标最坏界并留余量：
 ```
-Δ_dom(t) = MMD²( φ(s_{t-W+1:t}), φ(s_{ref}) )
-        = || 1/W Σ_{k=t-W+1}^t φ(s_k) - 1/|R| Σ_{r∈R} φ(s_r) ||²_ℋ
+ĝ_min = min_{k≤K} F̂_clearance(s,a^{1:k}) − β,   ê_max = max_{k≤K} F̂_effort + β
 ```
-其中 φ: S → ℋ 为冻结的特征映射（ResNet-18 stage3，输出 256 维），W=20 为滑动窗口，R 为参考域数据集（离线固定）。
+证书有效 ⇔ ĝ_min ≥ d_safe ∧ ê_max ≤ τ_eff ∧ γ̂_grasp = valid ∧（用当前 τᵢ(t) 复核各层）。β 由 E554 标定（信任域内经验误差上界 ×1.2 安全系数）。
 
-**新增定义 527（SLAM 风险分量 SLAMRiskComponent）** 将感知不确定性形式化为风险向量第 5 维：
+**新增定义 534（中止点与停车不变式 AbortPoint）** 前缀索引 p ∈ P_t 满足：从第 p 步末执行安全停驻（速度指数衰减）所需刹停距离不超过当前间隙余量：
 ```
-risk_SLAM(s) = λ_pose · trace(Σ_pose(s)) + λ_map · H(map(s)) + λ_loop · loop_closure_residual(s)
+d_brake(v_p) + d_safe ≤ dist(s_p, O) − |traj_{p:K}|
 ```
-其中 λ_pose, λ_map, λ_loop ≥ 0 为可调系数，Σ_pose 来自 SLAM 后端优化协方差，H(map) 为地图熵，loop_res 为最近回环残差。
+骨架中候选块的 P_t 为空即拒绝该候选；故"无点可退"仅发生于 K=1 fallback（等价 v8 逐步语义）。中块违规时切换到 ≤ 当前执行步的最大中止点 p*。
 
-**新增定义 528（标定偏移与一致性图 CalibrationDrift & ConsistencyGraph）** 多传感器标定在线监测：
+**新增定义 535（中间件契约 MiddlewareContract）** 每模块 m 声明 κ_m = (In_m, Out_m, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)。部署期静态验证 Σ_m Ŵ_m ≤ B_dec（决策预算 20ms）与 EDF 可行性；运行期 deadline_guard 强制执行 Ŵ_m。默认契约表（感知侧 ≤2ms + 决策侧 ≤20ms）：
+
+| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
+|---|---|---|---|---|
+| DA-ML（域偏移） | 1.0 | 1.0 | 0.0（Δ_dom≡0） | ✗ |
+| SPR（SLAM 风险） | 0.2 | 0.2 | 0.0（risk_SLAM≡0） | ✗ |
+| Calib-FI（标定隔离） | 0.1 | 0.1 | 恒等（weight≡1, κ 基准） | ✗ |
+| GCT/ER/OTL | 各 ≤1 | 各 ≤1 | 各自 v8 退化值 | ✗ |
+| AC 块生成（5Hz） | 12 | 12 | 单步 fallback 动作 | ✗ |
+| AC 中块守卫（50Hz） | 0.5 | 0.3 | continue（持当前步） | ✗ |
+| ID 归因 | 0.2 | 0.1 | 跳过本回合 | ✓ |
+
+**新增定义 536（中立元退化实例表 NeutralElementTable）** 每行：模块 → v^⊥ → 等价 v8 退化级。例：DA-ML: v^⊥=0 ⇒ Level-1（Δ_dom≡0）；SPR: v^⊥=0 ⇒ risk_SLAM≡0；Calib-FI: v^⊥=恒等 ⇒ sensor_weight≡1；ID dormant: v^⊥ 注入 ⇒ 该模块"缺席"＝对应显式退化分支。AC 端口的中立元为安全停驻序列 a^⊥（速度衰减到 0），吸收元性质（后续块不再执行）而非恒等元，单独验证。
+
+**新增定义 537（贡献向量滑窗消融 WindowedAblation）** 每 T_abl=500 周期进行一次消融回合（H=20 周期）：仅对 φ^elig 模块 m，交替运行 with/without m 的块，得分 J = 任务进展 − 安全罚（块级聚合）：
 ```
-δ_calib^j(t) = || T_est^j(t) - T_nom^j ||_F
-E_ij(t) = exp( -|| residual_ij(t) ||² / σ²_consistency )
+c_m ← clip( 0.9·c_m + 0.1·norm(J_with − J_base), 0, 1 )
 ```
-其中 residual_ij 为传感器 i 与 j 的互检残差（如视觉-IMU 预积分残差、激光-视觉 ICP 残差、音频 TDOA 一致性）。
+安全关键模块不参与消融（φ^elig=false），其"贡献"记为 ∞。
 
-**新增定义 529（域自适应阈值调节 DA-ThresholdUpdate）** OTL 扩展版，注入域偏移项：
+**新增定义 538（提炼状态机 DistillFSM）** st_m: active → dormant（c_m < τ_off=0.01 持续 H_off=3 回合）；dormant → active（c_m ≥ τ_on=0.03 或 Δ_dom ≥ τ_dom 强制唤醒）；dormant → frozen（dormant 持续 20 回合）；frozen 仅可由离线证据解冻。dormant 执行 = MW 将该模块输出置为 v^⊥ 并跳过其计算。
+
+**新增定义 539（有效块长门控 EffectiveChunkLength）**
 ```
-τᵢ(t) = clip( τᵢ(0) + η · θ(t) + κᵢ · Δ_dom(t), ε_min,i, ε_max,i )
+K_eff(t) = 1                                   若 U_t 不成立
+         = max(1, ⌊K_max·(1 − min(1, Δ_dom(t)/τ_dom))⌋)   否则
 ```
-其中 θ(t) 为性能趋势项（同 v7），κᵢ ≥ 0 为层级敏感度（默认：κ₀=1.0, κ₁=0.8, κ₂=0.3, κ₃=0.2, κ_dom=0.5, κ_SLAM=0.5）。
+域越陌生块越短；risk_SLAM ≥ τ_SLAM 时 U_t 直接破坏，K_eff=1。
 
-**新增定义 530（标定故障隔离与补偿 CalibFaultIsolation）** 单传感器故障“检测-隔离-补偿”：
-```
-if δ_calib^j > ε_calib:
-    # 隔离：降权
-    sensor_weight[j] ← max(0.1, sensor_weight[j] * 0.5)
-    # 补偿：对应层级收紧系数加倍
-    for i in layers_affected_by_sensor(j):
-        κᵢ ← min(κᵢ * 2, κ_max)
-    # 异步触发重标定
-    calib_scheduler.submit(recalibrate_sensor_j)
-```
+## 2. 形式化定义（要点与升级）
 
-**新增定义 531（六元闭环标识）** 完整系统标识：
-```
-Φ_DA-SPR-Cal = {τᵢ adaptative+domain, risk 5-dim+SLAM, calib online+fault-isolated}
-Φ_v7         = {τᵢ adaptative,     risk 4-dim,        calib fixed}
-```
-
-## 2. 形式化定义（要点）
-
-**定义 493（指标层级闭合 MetricLadder，升级版）** M 扩展为六层，M_dom 监控 Δ_dom(t) < τ_dom，M_SLAM 监控 risk_SLAM < τ_SLAM，均具备到 M₀ 的退化映射 δ_dom, δ_SLAM。
-
-**定义 494（语音指令类型化 VoiceCommandTyping）** 保留自 v7，GCT 不变。
-
-**定义 495（奖励可逆向性 RewardDecomposer，升级版）** w'_i(s) = softmax(α·risk_i(s) + β·emo(s)·Ṽ_i)_{i=0..4}，risk ∈ ℝ⁵ 含 risk_SLAM。
-
-**定义 496（软证书 SoftCert，升级版）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}，四条件同一尺度设计。
-
-**定义 497（MetaWeight 动态调节，升级版）** 基础风险权重扩展为 5 维：w_i(s) = softmax(α · risk(s))_i，i=0..4。
-
-**定义 524（情感调节，升级版）** w'_i(s) = softmax(α·risk_i(s) + β·emo(s)·Ṽ_i)_{i=0..4}，Ṽ ∈ [0,1]⁵ 增加 Ṽ_SLAM 分量。
-
-**定义 521（在线阈值调节，升级版 DA-OTL）** τᵢ(t) = clip(τᵢ(0) + η·θ(t) + κᵢ·Δ_dom(t), ε_min,i, ε_max,i)，Δ_dom 来自 DA-ML 模块。
-
-**定义 528（抓取命令类型化）** 保留自 v7。
-
-**新增定义 526（域偏移量 DomainShift）** 如前，MMD 基于冻结特征提取器，W=20 滑动窗口，计算延迟 ≤ 1ms（GPU 批处理）。
-
-**新增定义 527（SLAM 风险分量）** risk_SLAM 直接注入风险向量第 5 维，与 MetaWeight/ER/OTL 无缝兼容。
-
-**新增定义 528（标定偏移与一致性图）** 多传感器互检残差构建一致性图，边权为指数核一致性分数。
-
-**新增定义 529（域自适应阈值调节）** OTL 扩展版，κᵢ 为层级敏感度，M₀/M₁ 设大保安全。
-
-**新增定义 530（标定故障隔离）** 降权而非硬屏蔽，κᵢ 加倍补偿，异步重标定不阻塞主环。
-
-**新增定义 531（软硬约束无缝衔接，六层版）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}，保证任一条件触发 → 退化到 M₀，M₀ 判据 τ₀ 同尺度设计。
+**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
+**定义 495/524（MetaWeight/情感，5 维）** 继承 v8 不变。
+**定义 521（DA-OTL）** 继承 v8 不变；τᵢ(t) 在 K_eff>1 时以块证书替代逐层逐步复核。
+**升级定义 496（软证书，v9）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM ∧ Ĉ_t valid}，五条件同尺度设计；块证书失效与单步条件同样触发 M₀ 硬检查，无"块内软通过硬失"空洞（引理 82+81 联合）。
+**升级定义 531（软硬约束衔接）** M₀ 判据增加块级入口：任一中块守卫违规 ⇒ 立即切换 p* 或安全停驻，不等块边界。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-350 DomainAdaptiveMetricLadder：域自适应指标梯度
-class DomainAdaptiveMetricLadder:
-    def __init__(self, feature_extractor, reference_features, 
-                 W=20, kappa=None, device='cuda'):
-        self.phi = feature_extractor  # 冻结 ResNet-18 stage3
-        self.ref_features = reference_features  # (N_ref, 256) 预计算
-        self.W = W
-        self.device = device
-        self.window_features = []  # 滑动窗口特征
-        self.kappa = kappa or {0: 1.0, 1: 0.8, 2: 0.3, 3: 0.2, 4: 0.5, 5: 0.5}
-        self._to_device()
-    
-    def _to_device(self):
-        self.ref_features = torch.tensor(self.ref_features, device=self.device)
-        self.phi.eval()
-        for p in self.phi.parameters():
-            p.requires_grad = False
-    
-    def update(self, state_obs):
-        """state_obs: 当前观测（RGB-D、点云等），提取特征并更新窗口"""
-        with torch.no_grad():
-            feat = self.phi(state_obs).cpu().numpy().flatten()  # (256,)
-        self.window_features.append(feat)
-        if len(self.window_features) > self.W:
-            self.window_features.pop(0)
-    
-    def compute_domain_shift(self):
-        """计算 Δ_dom(t) = MMD²(窗口均值, 参考域均值)"""
-        if len(self.window_features) < self.W:
-            return 0.0  # 预热期返回 0
-        window_mean = np.mean(self.window_features, axis=0)  # (256,)
-        ref_mean = self.ref_features.mean(axis=0).cpu().numpy()  # (256,)
-        # 线性核 MMD² = ||μ_w - μ_r||²
-        delta = float(np.sum((window_mean - ref_mean) ** 2))
-        return delta
-    
-    def get_kappa(self):
-        return self.kappa
+# IP-354 ActionChunkCertifier：分块证书执行器
+class ActionChunkCertifier:
+    def __init__(self, forward_model, policy, K_max=10, beta=0.02,
+                 d_safe=0.15, d_brake_fn=None, dt=0.02):
+        self.F = forward_model        # 冻结 LSTM-MPC 代理，输出指标轨迹
+        self.policy = policy
+        self.K_max, self.beta, self.d_safe = K_max, beta, d_safe
+        self.d_brake = d_brake_fn or (lambda v: 0.5 * v * v / 2.0)
+
+    def effective_K(self, delta_dom, tau_dom, trust_ok):
+        if not trust_ok:
+            return 1
+        return max(1, int(self.K_max * (1 - min(1.0, delta_dom / tau_dom))))
+
+    def generate_chunk(self, state, delta_dom, tau_dom, trust_ok):
+        K = self.effective_K(delta_dom, tau_dom, trust_ok)
+        if K == 1:
+            return self._single_step_fallback(state)      # 等价 v8 逐步
+        best = None
+        for cand in self.policy.sample_sequences(state, K, n=64):   # MPC 采样
+            pred = self.F.rollout(state, cand)            # 指标轨迹预测
+            g_min = pred.min_clearance - self.beta        # 留余量（定义 533）
+            e_max = pred.max_effort + self.beta
+            if g_min < self.d_safe or e_max > state.tau_eff:
+                continue
+            pts = self._abort_points(state, cand, pred)   # 定义 534
+            if not pts:                                   # 无中止点 → 拒绝
+                continue
+            score = self.policy.score(cand, pred)
+            if best is None or score > best.score:
+                best = Chunk(cand, Cert(g_min, e_max), pts, score)
+        return best or self._single_step_fallback(state)
+
+    def _abort_points(self, state, actions, pred):
+        pts = []
+        for p in range(1, len(actions)):
+            remaining = pred.path_len[p:]                 # 剩余轨迹长
+            margin = (pred.clearance[p]
+                      - self.d_brake(pred.speed[p]) - self.d_safe)
+            if margin >= remaining:                       # 停车不变式成立
+                pts.append(p)
+        return pts
+
+    def midchunk_guard(self, chunk, k_exec, live_obs):
+        """50Hz 廉价守卫；返回 ('continue', k+1) 或 ('abort', p*)"""
+        if not chunk.cert_still_valid(live_obs):          # 证书失效检测
+            return self._nearest_abort(chunk, k_exec)
+        stop_inv = (live_obs.nearest_clearance
+                    - self.d_brake(live_obs.speed) - self.d_safe)
+        if stop_inv < chunk.remaining_len(k_exec):        # 停车不变式破坏
+            return self._nearest_abort(chunk, k_exec)
+        return ('continue', k_exec + 1)
 
 
-# IP-351 SLAMRiskPropagation：SLAM-风险传播
-class SLAMRiskPropagation:
-    def __init__(self, lambda_pose=1.0, lambda_map=0.5, lambda_loop=0.3):
-        self.lambda_pose = lambda_pose
-        self.lambda_map = lambda_map
-        self.lambda_loop = lambda_loop
-        self.last_loop_residual = 0.0
-    
-    def compute_risk_slam(self, slam_state):
-        """
-        slam_state: dict with keys:
-            - 'pose_cov': (6,6) 位姿协方差矩阵
-            - 'map_entropy': float 地图熵
-            - 'loop_residual': float 最近回环残差（可选）
-        """
-        pose_cov = slam_state.get('pose_cov', np.eye(6) * 0.01)
-        map_entropy = slam_state.get('map_entropy', 0.0)
-        loop_res = slam_state.get('loop_residual', self.last_loop_residual)
-        self.last_loop_residual = loop_res
-        
-        risk_pose = self.lambda_pose * np.trace(pose_cov)
-        risk_map = self.lambda_map * map_entropy
-        risk_loop = self.lambda_loop * loop_res
-        
-        risk_slam = risk_pose + risk_map + risk_loop
-        return risk_slam, {'pose': risk_pose, 'map': risk_map, 'loop': risk_loop}
-    
-    def get_risk_vector_5d(self, base_risk_4d, slam_state):
-        """将 4 维基础风险扩展为 5 维（追加 risk_SLAM）"""
-        risk_slam, _ = self.compute_risk_slam(slam_state)
-        return np.array([*base_risk_4d, risk_slam])
+# IP-355 ContractMiddleware：实时契约中间件
+@dataclass
+class Contract:
+    name: str; deadline_ms: float; wcet_ms: float
+    fail_value: object; priority: int; distill_eligible: bool
+
+class ContractMiddleware:
+    def __init__(self, contracts):
+        self.contracts = {c.name: c for c in contracts}
+        self.strikes = defaultdict(int)
+
+    def run_cycle(self, runners, ctx):
+        results = {}
+        for c in sorted(self.contracts.values(),
+                        key=lambda c: c.deadline_ms):     # 周期内 EDF
+            t0 = now_ms()
+            try:
+                with deadline_guard(c.deadline_ms):
+                    if not self.is_dormant(c.name):       # ID 休眠则跳过计算
+                        results[c.name] = runners[c.name](ctx)
+                    else:
+                        results[c.name] = c.fail_value    # dormant ≡ v^⊥
+            except DeadlineOverrun:
+                results[c.name] = c.fail_value            # 中立元注入
+                self.strikes[c.name] += 1
+                log_overrun(c.name, now_ms() - t0)        # 日志可区分性审计
+            ctx[c.name] = results[c.name]
+        return results
 
 
-# IP-352 OnlineCalibrationFaultIsolation：在线标定故障隔离
-class OnlineCalibrationFaultIsolation:
-    def __init__(self, sensor_names, nominal_calibs, epsilon_calib=0.05,
-                 consistency_sigma=0.1, kappa_max=2.0):
-        self.sensor_names = sensor_names  # ['camera', 'lidar', 'imu', 'mic_array']
-        self.nominal_calibs = nominal_calibs  # {name: T_nom (4,4)}
-        self.epsilon_calib = epsilon_calib
-        self.consistency_sigma = consistency_sigma
-        self.kappa_max = kappa_max
-        self.current_calibs = dict(nominal_calibs)
-        self.sensor_weights = {name: 1.0 for name in sensor_names}
-        self.kappa = {0: 1.0, 1: 0.8, 2: 0.3, 3: 0.2, 4: 0.5, 5: 0.5}
-        self.consistency_graph = {name: {} for name in sensor_names}
-        self.recalib_pending = set()
-    
-    def update_calibration(self, sensor_name, T_est):
-        """更新第 j 传感器的估计标定（来自 SLAM 回环/视觉-IMU/音频 TDOA）"""
-        self.current_calibs[sensor_name] = T_est
-        delta = np.linalg.norm(T_est - self.nominal_calibs[sensor_name], 'fro')
-        if delta > self.epsilon_calib:
-            self._isolate_and_compensate(sensor_name, delta)
-    
-    def update_consistency(self, sensor_i, sensor_j, residual):
-        """更新两传感器间的一致性残差（如 ICP 残差、预积分残差、TDOA 残差）"""
-        score = np.exp(-residual**2 / (2 * self.consistency_sigma**2))
-        self.consistency_graph[sensor_i][sensor_j] = score
-        self.consistency_graph[sensor_j][sensor_i] = score
-    
-    def _isolate_and_compensate(self, sensor_name, delta):
-        """故障隔离：降权 + 收紧 κ + 异步重标定"""
-        # 1. 降权（而非硬屏蔽，保留微弱信号用于后续恢复判断）
-        self.sensor_weights[sensor_name] = max(0.1, self.sensor_weights[sensor_name] * 0.5)
-        
-        # 2. 收紧受影响层级的 κ
-        affected_layers = self._layers_affected_by(sensor_name)
-        for layer in affected_layers:
-            self.kappa[layer] = min(self.kappa[layer] * 1.5, self.kappa_max)
-        
-        # 3. 标记异步重标定（不阻塞主环）
-        self.recalib_pending.add(sensor_name)
-    
-    def _layers_affected_by(self, sensor_name):
-        """不同传感器故障影响不同指标层级"""
-        mapping = {
-            'camera': [0, 1, 2, 4],      # 视觉影响硬约束、安全、效能、域
-            'lidar': [0, 1, 5],          # 激光影响硬约束、安全、SLAM
-            'imu': [1, 5],               # IMU 影响安全、SLAM
-            'mic_array': [2, 3, 4],      # 麦克风影响效能、完善、域（语音指令质量）
-        }
-        return mapping.get(sensor_name, [1])
-    
-    def get_sensor_weights(self):
-        return self.sensor_weights
-    
-    def get_kappa(self):
-        return self.kappa
-    
-    def has_pending_recalib(self):
-        return len(self.recalib_pending) > 0
-    
-    def mark_recalib_done(self, sensor_name):
-        if sensor_name in self.recalib_pending:
-            self.recalib_pending.remove(sensor_name)
-            # 恢复权重（渐进）
-            self.sensor_weights[sensor_name] = min(1.0, self.sensor_weights[sensor_name] * 1.2)
-            # 恢复 κ（渐进）
-            for layer in self._layers_affected_by(sensor_name):
-                self.kappa[layer] = max(self.kappa[layer] / 1.2, 
-                                        {0:1.0,1:0.8,2:0.3,3:0.2,4:0.5,5:0.5}[layer])
+# IP-356 InnovationDistiller：创新点蒸馏器
+class InnovationDistiller:
+    def __init__(self, mw, tau_on=0.03, tau_off=0.01,
+                 T_abl=500, abl_len=20, H_off=3):
+        self.mw, self.ema = mw, {}
+        self.state = {}                                   # 仅 eligible 模块
+        self.tau_on, self.tau_off = tau_on, tau_off
+        self.T_abl, self.abl_len, self.H_off = T_abl, abl_len, H_off
+        self.dormant_count = defaultdict(int)
+
+    def attribute(self, module, J_with, J_base):
+        delta = max(0.0, normalize(J_with - J_base))      # 定义 537
+        self.ema[module] = 0.9 * self.ema.get(module, delta) + 0.1 * delta
+
+    def step(self, cycle_idx, ctx):
+        if ctx.delta_dom >= ctx.tau_dom:                  # 陌生域强制全唤醒
+            self.wake_all(); return
+        if cycle_idx % self.T_abl == 0:
+            self.run_one_ablation_episode()               # 仅 eligible 模块
+        for m, c in self.ema.items():
+            if self.state[m] == 'active' and c < self.tau_off:
+                self.dormant_count[m] += 1
+                if self.dormant_count[m] >= self.H_off:   # Schmitt 迟滞
+                    self.state[m] = 'dormant'             # ≡ 注入 v^⊥
+                    self.mw.set_dormant(m)
+            elif self.state[m] == 'dormant' and c >= self.tau_on:
+                self.state[m] = 'active'
+                self.mw.set_active(m)
+                self.dormant_count[m] = 0
 
 
-# IP-347 OnlineThresholdLadder（升级版 DA-OTL）
-class OnlineThresholdLadder:
-    def __init__(self, initial_thresholds, eta=0.05, N=5, 
-                 epsilon_min=None, epsilon_max=None, kappa=None):
-        self.base_thresholds = dict(initial_thresholds)
-        self.current_thresholds = dict(initial_thresholds)
-        self.eta = eta
-        self.N = N
-        self.epsilon_min = epsilon_min or {i: -float('inf') for i in range(6)}
-        self.epsilon_max = epsilon_max or {i: float('inf') for i in range(6)}
-        self.history = {i: [] for i in range(6)}
-        self.kappa = kappa or {0:1.0, 1:0.8, 2:0.3, 3:0.2, 4:0.5, 5:0.5}
-        self.delta_dom = 0.0
-    
-    def update_domain_shift(self, delta_dom):
-        self.delta_dom = delta_dom
-    
-    def update(self, metrics, layer):
-        satisfied = metrics.get(f'layer_{layer}_satisfied', 0)
-        self.history[layer].append(1 if satisfied else 0)
-        if len(self.history[layer]) > self.N:
-            self.history[layer].pop(0)
-        if len(self.history[layer]) < 2:
-            return
-        trend = self.history[layer][-1] - self.history[layer][-2]
-        direction = -1 if trend < 0 else 1
-        adjustment = self.eta * direction
-        domain_adjustment = self.kappa[layer] * self.delta_dom
-        tau = self.current_thresholds[layer]
-        new_tau = np.clip(tau + adjustment + domain_adjustment,
-                          self.epsilon_min[layer], self.epsilon_max[layer])
-        self.current_thresholds[layer] = new_tau
-    
-    def get_thresholds(self):
-        return self.current_thresholds
-    
-    def update_kappa(self, new_kappa):
-        self.kappa.update(new_kappa)
-    
-    def reset(self):
-        self.current_thresholds = dict(self.base_thresholds)
-        self.history = {i: [] for i in range(6)}
-        self.delta_dom = 0.0
+# 主闭环集成：MetricVoiceGauge-ACMD
+def metricvoicegauge_round_9(M, s, obs, audio_stream=None, ell=None, ...):
+    ctx = mw_default_ctx()
+    # ---- MW 驱动感知侧（契约预算 ≤2ms，超时即中立元，5 级退化见表 536）----
+    results = middleware.run_cycle(runners={
+        'DA_ML':  lambda c: domain_adapter.update_and_measure(obs),
+        'SPR':    lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
+        'CAL_FI': lambda c: calib_fi.get_weights_kappa(),
+        'OTL':    lambda c: online_learner.update_and_thresholds(c),
+    }, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
 
+    # ---- 5Hz 块生成（重计算，摊销进决策预算；受 ID 状态影响候选池）----
+    if current_chunk is None or current_chunk.exhausted:
+        current_chunk = chunker.generate_chunk(
+            ctx.state, ctx.delta_dom, ctx.tau_dom,
+            trust_ok=(ctx.delta_dom < ctx.tau_dom
+                      and ctx.risk_slam < M.tau_slam))
 
-# IP-353 主闭环集成关键片段：MetricVoiceGauge-DA-SPR-Cal
-def metricvoicegauge_round_8(M, s, obs, audio_stream=None, ell=None,
-                            online_learner=None, grasp_typing=None,
-                            emotional_reweighter=None,
-                            domain_adapter=None, slam_risk=None,
-                            calib_fi=None):
-    """50Hz WCET 保全主路径，感知侧预算 ≤ 2ms，叠加 DA+SPR+Cal 三大增强"""
-    
-    # --- 0. 感知侧预处理（≤ 2ms，并行化） ---
-    slam_state = {'pose_cov': np.eye(6)*0.01, 'map_entropy': 0.0, 'loop_residual': 0.0}
-    if hasattr(M, 'slam_backend') and M.slam_backend is not None:
-        # SLAM 后端运行在独立线程，此处仅读取最新状态（无锁读取）
-        slam_state = M.slam_backend.get_latest_state()
-    
-    # --- 1. 域自适应阈值调节 (DA-ML + DA-OTL) ---
-    if domain_adapter is not None:
-        domain_adapter.update(obs)  # 提取特征、更新滑动窗口
-        delta_dom = domain_adapter.compute_domain_shift()  # ≤ 1ms GPU
-        if online_learner is not None:
-            online_learner.update_domain_shift(delta_dom)
+    # ---- 50Hz 中块守卫（廉价 ≤0.3ms）----
+    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec, live_obs)
+    if verdict == 'abort':
+        current_chunk.execute_safe_stop_at(k_next)        # 定义 534
+        current_chunk = None
     else:
-        delta_dom = 0.0
-    
-    if online_learner is not None:
-        metrics = M.metric_ladder.compute_metrics(len(M.inflight) > 0)
-        for layer in range(6):  # 现在 6 层
-            online_learner.update(metrics, layer)
-        tau_current = online_learner.get_thresholds()
-    else:
-        tau_current = M.metric_ladder.thresholds
-    
-    # --- 2. SLAM 风险传播 (SPR) ---
-    risk_slam = 0.0
-    if slam_risk is not None:
-        risk_slam, _ = slam_risk.compute_risk_slam(slam_state)
-    
-    # --- 3. 在线标定故障隔离 (OnlineCalib-FI) ---
-    sensor_weights = {name: 1.0 for name in ['camera', 'lidar', 'imu', 'mic_array']}
-    kappa_override = {}
-    if calib_fi is not None:
-        sensor_weights = calib_fi.get_sensor_weights()
-        kappa_override = calib_fi.get_kappa()
-        if online_learner is not None:
-            online_learner.update_kappa(kappa_override)
-        # 传感器权重注入感知融合（简化：此处仅记录，实际融合在感知模块内部使用）
-        M.perception_fusion.set_sensor_weights(sensor_weights)
-    
-    # --- 4. 语音指令处理 (GCT) ---
-    if audio_stream is not None and grasp_typing is not None:
-        iota_voice, voice_ok, log = grasp_typing.process(audio_stream)
-        if not voice_ok:
-            iota_seq = [M.default_iota]
-        else:
-            iota_seq = [iota_voice]
-    else:
-        iota_seq = [M.default_iota]
-    
-    # --- 5. 情感提取与权重调节 (ER) ---
-    emo = 0.0
-    V_vector = [0.25, 0.25, 0.25, 0.25, 0.1]  # 新增 SLAM 维度情感导向
-    if emotional_reweighter is not None and audio_stream is not None:
-        audio_feats = {'f0_mean': 180.0, 'speech_rate': 200.0}
-        text_sentiment = 0.1
-        emo = emotional_reweighter.extract_emotion(audio_feats, {'sentiment': text_sentiment})
-        V_vector = [0.3, 0.4, 0.2, 0.1, 0.1]  # SLAM 风险情感导向设低
-    
-    # --- 6. 奖励计算（含 risk_SLAM 的 5 维风险向量） ---
-    base_risk_4d = M.reward_decomposer._compute_risk(M.env.state)
-    if slam_risk is not None:
-        risk_5d = slam_risk.get_risk_vector_5d(base_risk_4d, slam_state)
-    else:
-        risk_5d = np.array([*base_risk_4d, 0.0])
-    
-    w_prime = emotional_reweighter.compute_emotional_weights(risk_5d, emo, V_vector) \
-        if emotional_reweighter is not None else \
-        M.reward_decomposer.w_5d(risk_5d)  # 需扩展 MetaWeight 到 5 维
-    
-    # --- 7. 继承自 v7 的核心流程（WCET ≤ 20ms，总计 ≤ 22ms）---
-    # 步骤：Hypothesis 生成 → IAC 分块规划 → RT-CVC 任务建模
-    #       指标体系监控（使用 tau_current，6 层阈值）
-    #       SpatialCert 验证 → FaultCert 诊断 → 恢复计划
-    #       软硬约束检查（δ_trigger 含 Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM）
-    #       奖励计算（使用 w_prime 5 维权重）
-    #       软校准信号 σ_R 生成
-    #       ROS 发布证书
-    
-    # 占位：返回基础 v7 结果（实际集成时替换为完整流程）
-    C, spatial_cert, claims, metrics, rewards = M.metricvoicegauge_round_7(
-        M, s, obs, audio_stream, ell=ell)
-    
-    # after v7 基础流程，应用 DA/SPR/Cal 微调
-    # ... (省略 20 行实际集成代码)
-    
+        execute(current_chunk.actions[k_next])
+
+    # ---- v8 继承路径（契约化调用）：GCT/ER/5 维风险/奖励 ----
+    #      δ_trigger 五条件：σ<τ_safe ∧ γ_grasp ∧ Δ_dom<τ_dom
+    #                        ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t valid
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
+
+    # ---- ID：块级归因与状态迁移（每 500 周期一次消融回合）----
+    distiller.step(cycle_idx, ctx)
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 77（域偏移注入单调性）** Δ_dom(t) ≥ 0 且 κᵢ ≥ 0，故 τᵢ(t) 中的域偏移项 κᵢ·Δ_dom(t) ≥ 0。对于 M₀/M₁（κ 大），域偏移增大 → τᵢ 收紧（阈值变大/变严），迫使软约束更难满足 → 更早触发退化到硬约束，保证陌生域优先保安全。单调性保证域偏移不会错误地“放宽”安全阈值。
+**引理 82（块证书可靠性与中止安全性）** 设信任域 U_t 内前向模型一致误差 ‖F̂−F‖∞ ≤ β_true ≤ β。则 (i) ∀k≤K: g_k ≥ ĝ_min（证书保守有效）；(ii) 若块内某时刻真实间隙跌破 d_safe，则必可切换 p* ∈ P_t 安全停驻。证明：(i) 由一致误差界 min_k g_k ≥ min_k F̂g_k − β_true ≥ ĝ_min + β − β_true ≥ ĝ_min；(ii) 定义 534 的停车不变式给出从 p* 停驻的所需距离 d_brake(v_p*) ≤ dist(s_p,O) − |traj_{p*:K}| − d_safe，刹车轨迹终点距障碍 ≥ d_safe；骨架保证 P_t 非空才接受块，"无点可退"仅发生在 K=1 fallback（等价 v8 语义）。∎
 
-**引理 78（SLAM 风险传播有界性）** risk_SLAM = λ_pose·trace(Σ_pose) + λ_map·H(map) + λ_loop·loop_res。SLAM 后端保证 Σ_pose ≽ 0，trace(Σ_pose) ≥ 0；地图熵 H(map) ≥ 0；回环残差 loop_res ≥ 0。故 risk_SLAM ≥ 0。若 λ 系数有界且 SLAM 协方差不发散（正常 SLAM 保证），则 risk_SLAM 有界，注入 MetaWeight 不会导致权重数值爆炸。
+**引理 83（中立元退化与 v8 逐位等价）** 对契约表 535 每行，注入 v_m^⊥ 后下游端口读数与 v8 对应显式退化分支的读数逐位一致（表 536 给出映射：DA-ML→Δ_dom≡0、SPR→risk_SLAM≡0、Calib-FI→weight≡1/κ 基准、ID dormant→对应模块缺席）；MW 仅改变调度顺序、不改变取值集合，故可观测行为与 v8 对应退化级等价。∎
 
-**引理 79（标定故障隔离安全性）** 单传感器故障时：① sensor_weight 降至 ≥0.1，保留微弱信号用于后续一致性恢复判断，避免“单点故障 → 全模态失效”；② κᵢ 加倍收紧对应层级阈值，补偿感知质量下降导致的指标判据不可靠；③ 异步重标定不阻塞主环，WCET 不受影响。三步组合保证“检测-隔离-补偿”不破坏实时性与安全性。
+**引理 84（蒸馏安全不变式）** ID 仅能迁移 φ^elig=true 的模块；每次 dormant 迁移在行为上等价于"该模块超时"（引理 83 的 v^⊥ 注入）；φ^elig=false 的安全关键模块永不消融；Δ_dom ≥ τ_dom 触发强制全唤醒，消除"陌生域缺模块"。故任意蒸馏状态下的系统行为 ∈ v8 退化格点，安全性由 v8 引理 80–81 传递成立。∎
 
-**引理 80（四级退化正确性）** 任意单模块失效：DA-ML 失效 ⇒ Δ_dom≡0，OTL 退回仅性能驱动；SPR 失效 ⇒ risk_SLAM≡0，风险向量退回 4 维；Calib-FI 失效 ⇒ sensor_weight 全 1，κ 退回基准。任意两模块失效：组合上述退化，互不干扰。三模块全失效：完整退回 v7。证明：各模块接口正交（DA-ML 只改 τᵢ，SPR 只改 risk 向量，Calib-FI 只改 sensor_weight 与 κ），无级联副作用。
+**引理 85（双阈防抖 / 无 Zeno）** τ_off < τ_on 且归因每 T_abl 回合更新一次、每次迁移需 H_off 回合确认 ⇒ 相邻状态迁移间隔 ≥ T_abl 个控制周期，翻转率 ≤ 1/(T_abl·Δt)，有限时间内迁移次数有限，无抖振。∎
 
-**引理 81（六层软硬约束无空洞）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}。设计时 τ_dom, τ_SLAM 与 τ_safe 同一物理尺度（均为“违背概率上界”或“风险上界”），且 M_dom、M_SLAM 到 M₀ 的退化映射 δ_dom, δ_SLAM 均定义为“直接触发 M₀ 硬约束检查”。故任一软层违背 → 必经 M₀，无“软通过硬失”空洞。
+**引理 86（EDF 可行性与 50Hz 守恒）** 部署期静态校验 Σ_m Ŵ_m ≤ B_dec（决策 20ms）与链式约束 D_m ≤ B_dec；运行期 deadline_guard 强制 Ŵ_m，超时模块贡献 v^⊥ 而非延长周期 ⇒ 每周期总执行 ≤ 感知 2ms + 决策 20ms，50Hz 保持；分块摊销使典型利用率降至 ~0.3（块生成 12ms/10 周期 + 守卫 0.3ms + 契约调用 ~1ms + v8 继承路径 ~4ms）。∎
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| MetricLadder 检查（6 层） | 在线 | O(|Mᵢ|) 常数 | O(1) | 定义 493 升级版 |
-| DA-ML 域偏移计算 | 在线 | ≤ 1ms (GPU 批处理 MMD) | O(W·d) W=20, d=256 | 定义 526 |
-| DA-OTL 阈值更新 | 在线 | O(1) 趋势+域项 | O(N) 历史窗口 | 定义 529 |
-| SPR SLAM 风险计算 | 在线 | O(1) trace+熵+残差 | O(1) | 定义 527 |
-| OnlineCalib-FI 更新 | 在线 | O(|E|) 一致性图边数 ≤ 6 | O(|V|²) ≤ 16 | 定义 528, 530 |
-| GCT 抓取几何检查 | 在线 | O(|text|) 正则 | O(1) | 定义 528 (v7) |
-| ER 情感权重 (5 维) | 在线 | O(5) softmax | O(1) | 定义 524 升级版 |
-| Voice-RTDI-7C 闭环 | 主路径 | WCET ≤ 22ms (感知 ≤2ms + 决策 ≤20ms) | 不变 | 引理 69-72, 75-81 |
+| AC 块生成（5Hz） | 在线 | ≤12ms/次，摊销 ≤1.2ms/cycle | O(n·K·d_a) 候选缓存 n=64 | 定义 532/533 |
+| AC 中块守卫（50Hz） | 在线 | ≤0.3ms（距离查询+证书检测） | O(1) | 定义 534 |
+| MW 周期调度 | 在线 | O(M log M)，M≈16 → ≤0.05ms | O(M) 契约表 | 定义 535, 引理 86 |
+| ID 归因 | 在线 | O(1)/cycle + 每 T_abl 一回合 | O(|eligible|) | 定义 537/538 |
+| v8 继承路径（6 层指标+5 维权重+GCT/ER） | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
+| 决策侧合计 | 在线 | 典型 ≤8ms，p99 ≤20ms（块生成周期 ≤16.5ms） | — | 引理 86 |
+| 感知侧合计 | 在线 | ≤2ms（v8 不变） | — | v8 定义 526–530 |
 
-## 6. 实验设计 E531–E550
+## 6. 实验设计 E551–E570
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E531 | 域偏移检测灵敏度 | Δ_dom 在分布偏移（光照/纹理/动态障碍）下 ↑ 3×，τ₀/τ₁ 收紧 ≥ 15% |
-| E532 | 域自适应安全性 | 陌生域（未见光照/地面）下，M₀ 违背率 ≤ 1%（v7 基线 5%） |
-| E533 | SLAM 风险传播有效性 | 人为增大 Σ_pose 5×，risk_SLAM ↑ 4×，w₀/w₁ 权重 ↑ ≥ 20%，速度自动降低 ≥ 30% |
-| E534 | SLAM-指标耦合无空洞 | risk_SLAM 超阈值 → 必触发 M₀ 硬约束检查，0 次软通过硬失 |
-| E535 | 标定漂移检测延迟 | 单传感器标定偏移 > ε_calib，检测延迟 ≤ 3 周期（≤ 60ms） |
-| E536 | 故障隔离补偿有效性 | 相机标定漂移 10cm/5°，隔离后 M₁ 安全指标满足率从 60% 恢复至 ≥ 90% |
-| E537 | 异步重标定不阻塞 | 重标定任务耗时 500ms，主环 50Hz WCET 无抖动（≤ 22ms） |
-| E538 | 三模块联合压力测试 | 同时注入：域偏移+SLAM协方差发散+双传感器标定漂移，系统仍保持 50Hz、0 碰撞 |
-| E539 | 四级退化等价性验证 | 关闭 DA/SPR/Cal 任意组合，行为等价对应退化级别基线 |
-| E540 | 端到端真实机器人任务 | 真实室内导航+抓取（未见场景），完成率 ≥ 85%，0 安全违背 |
-| E541 | 跨域泛化基准 | 从仿真迁移到真实（Sim2Real），零样本成功率 ≥ 70% |
-| E542 | 长时运行标定稳定性 | 连续运行 8 小时，标定偏移自动修正，累计漂移 < 2cm/1° |
-| E543 | 情感-SLAM 交互 | 情感从焦虑→自信时，SLAM 风险高环境下仍适度提速（安全未下降） |
-| E544 | 反事实推理 | 设定 Δ_dom、Σ_pose、δ_calib 变化，预测 τᵢ、w'_i、sensor_weight 变化方向 |
-| E545 | 形式化验证 | 用 CBMC 验证 DA-OTL τᵢ 变化范围在 ε_min/ε_max、κᵢ·Δ_dom 单调性 |
-| E546 | 功耗分析 | 新增 DA+SPR+Cal 功耗增量 ≤ 12W（相对 v7 的 13W，总 ≤ 25W） |
-| E547 | 计算预算剖析 | 感知侧 ≤ 2ms（MMD 1ms + SLAM 读取 0.2ms + 标定图 0.1ms），决策侧 ≤ 20ms |
-| E548 | 多机协同扩展 | 双机共享 Δ_dom 与 SLAM 地图，协同导航完成率 ↑ 10% |
-| E549 | 对抗域偏移 | 对抗性光照/纹理贴纸攻击，Δ_dom 检测触发收紧，安全违背率 ≤ 2% |
-| E550 | 综合竞赛模拟 | 模拟 RoboCup@Home 全任务，得分 ≥ v7 基线 + 15% |
+| E551 | 块长扫描 K∈{1,2,5,10,20} | 成功率-时延-中止延迟 Pareto；K=10 为默认 |
+| E552 | 中块突变障碍注入 | 中止成功率 ≥99%，0 碰撞 |
+| E553 | 中止点密度 vs 中止成功率 | 确定最小密度 p*，指导 P_t 构造 |
+| E554 | 前向模型误差标定 | β 经验值 vs 理论；Δ_dom-β 相关曲线验证信任域门控必要性 |
+| E555 | MW 超时注入 | 超时模块当周期被 v^⊥ 替换，0 越界、0 崩溃 |
+| E556 | 契约退化 ≡ v8 四级链 | 日志逐位等价（E539 的契约驱动复刻） |
+| E557 | 全模块激活 50Hz 保持 | WCET p99 ≤20ms；对比 v8 抖动分布 p99 ↓ ≥50% |
+| E558 | 突发负载/背压 | 感知风暴下主环 0 丢拍 |
+| E559 | 蒸馏归因精度 | 与全因子离线消融相关性 ≥0.8 |
+| E560 | 休眠降耗 | eligible 模块休眠后决策算力 ↓≥40%，总功耗 ≤25W |
+| E561 | 抖振抑制 | Schmitt 双阈下翻转率 ≤1 次/模块/10min |
+| E562 | 陌生域强制唤醒 | 注入大 Δ_dom，dormant 模块 1 周期内回到 active |
+| E563 | 端到端仿真全任务 | RoboCup@Home 仿真 ≥ v8 + 10% |
+| E564 | Chunk×DA 耦合 | Δ_dom 越阈后 K_eff 收缩至 1 的过渡平滑性（无指令跳变） |
+| E565 | Chunk×ER 边界生效 | 情感变化在块边界生效延迟 ≤200ms，操作员评分 ≥4/5 |
+| E566 | MW 调度器形式化验证 | CBMC 验证 EDF 可行性、无优先级反转、v^⊥ 注入路径可达 |
+| E567 | 8h 长跑 | 块证书失效触发率、中止点命中率、休眠占比统计 |
+| E568 | 双机共享契约表 | 契约表与块证书跨机共享，协同任务完成率 ↑≥10% |
+| E569 | 对抗时序攻击 | 恶意制造模块超时 ⇒ 系统 v^⊥ 退化而非 crash，安全违背 ≤2% |
+| E570 | 综合竞赛模拟 | ≥ v8 + 15% |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 域偏移检测（E531） | Δ_dom 偏移下 ↑ 3×，τ₀/τ₁ 收紧 ≥ 15% | 调大 κ₀/κ₁、扩充参考域数据集、更换特征提取器 |
-| 域自适应安全性（E532） | 陌生域 M₀ 违背率 ≤ 1% | 增大 ε_max 允许更大收紧、引入域对抗训练特征提取器 |
-| SLAM 风险传播（E533） | Σ_pose 5× → w₀/w₁ ↑ 20% 且速度 ↓ 30% | 调大 λ_pose、检查 MetaWeight α 是否过小 |
-| SLAM-指标无空洞（E534） | 0 次软通过硬失 | 检查 δ_trigger 与 τ₀ 尺度对齐、τ_dom/τ_SLAM 设置 |
-| 标定漂移检测（E535） | 检测延迟 ≤ 3 周期 | 增加一致性图更新频率、降低 ε_calib |
-| 故障隔离补偿（E536） | 漂移后 M₁ 恢复 ≥ 90% | 调大 κ 加倍系数、优化 sensor_weight 降权曲线 |
-| 异步重标定（E537） | 主环 WCET 无抖动 | 重标定任务绑定独立 CPU 核心、降低优先级 |
-| 三模块压力测试（E538） | 50Hz、0 碰撞 | 精简各模块计算、检查是否有锁竞争 |
-| 四级退化（E539） | 任意组合等价对应基线 | 单元测试每个退化接口、检查正交性 |
-| 真实机器人任务（E540） | 完成率 ≥ 85%、0 安全违背 | 实机调参：κ、λ、ε_calib、η |
-| 跨域泛化（E541） | Sim2Real 零样本 ≥ 70% | 域随机化训练特征提取器、增大参考域多样性 |
-| 长时标定（E542） | 8h 漂移 < 2cm/1° | 增加周期性全局重标定触发条件 |
-| 情感-SLAM 交互（E543） | 焦虑→自信时 SLAM 高风险环境仍适度提速 | 调整 Ṽ_SLAM、β、ω_v/ω_t |
-| 反事实推理（E544） | 变化方向可预测 | 检查梯度计算数值稳定性 |
-| 形式化验证（E545） | DA-OTL 单调性、边界验证通过 | 修正 clip 参数、κ 非负约束 |
-| 功耗（E546） | 总功耗 ≤ 25W | 模块量化、降低 MMD 计算频率 |
-| 计算预算（E547） | 感知 ≤ 2ms、决策 ≤ 20ms | 算子融合、GPU 流水线、减少内存拷贝 |
-| 多机协同（E548） | 协同完成率 ↑ 10% | 优化通信协议、共享 Δ_dom 压缩 |
-| 对抗域偏移（E549） | 攻击下安全违背 ≤ 2% | 引入对抗检测头、增大 τ_dom 余量 |
-| 竞赛模拟（E550） | 得分 ≥ v7 + 15% | 综合调参、分析失分瓶颈 |
+| 块长扫描（E551） | K=10 时成功率不降且时延 ↓ | 调 K_max、候选数 n、评分函数 |
+| 中块突变（E552） | 中止成功 ≥99%、0 碰撞 | 提高中止点密度、减小 β 余量步进、缩短 K_max |
+| 中止点密度（E553） | 存在 p* 使成功率 ≥99% | 放宽停车不变式冗余、增加每步中止点 |
+| 模型误差标定（E554） | β 覆盖 ≥99% 经验误差 | 换更强前向模型、增大 β 安全系数 |
+| MW 超时（E555） | 0 越界 | 检查 deadline_guard 实现、收紧 Ŵ_m |
+| 契约等价（E556） | 日志逐位等价 | 逐行审计表 536 映射、修 v^⊥ 定义 |
+| WCET（E557） | p99 ≤20ms 且抖动 ↓≥50% | 块生成移独立线程、精简继承路径 |
+| 背压（E558） | 0 丢拍 | 契约表加过载降级行、感知批量化 |
+| 归因精度（E559） | 相关性 ≥0.8 | 增大消融回合 H、改归因得分聚合 |
+| 降耗（E560） | 算力 ↓≥40% | 扩大 eligible 集（仍受 φ^elig 约束） |
+| 抖振（E561） | 翻转 ≤1/模块/10min | 增大 τ_on−τ_off 间隔、提高 H_off |
+| 强制唤醒（E562） | 1 周期内唤醒 | 唤醒路径移出 EDF 低优先级、预载权重 |
+| 端到端（E563） | ≥ v8 + 10% | 回退 K_eff 上限、调 β |
+| Chunk×DA（E564） | 过渡无跳变 | K_eff 收缩插值平滑、块边界重规划 |
+| Chunk×ER（E565） | 延迟 ≤200ms 且评分 ≥4/5 | 缩短 K_max、情感变化触发即时块终止 |
+| 形式化（E566） | CBMC 全通过 | 修调度器实现、补 v^⊥ 路径断言 |
+| 长跑（E567） | 中止命中率趋势稳定 | 复盘 β 标定漂移、加周期性 β 重标定 |
+| 多机（E568） | 完成率 ↑≥10% | 契约表版本化、冲突消解协议 |
+| 对抗时序（E569） | v^⊥ 退化而非 crash、违背 ≤2% | 增加异常检测、契约表完整性校验 |
+| 竞赛（E570） | ≥ v8 + 15% | 综合调参、分析失分瓶颈 |
 
 ## 8. 本轮最大风险
 
-**一句话**：域偏移估计（MMD）与 SLAM 协方差传播在计算预算极紧（≤2ms 额外开销）下可能引入显著延迟抖动，导致 OTL 读取到“延迟污染的性能指标”进而错误收紧 τᵢ；在线标定的异步重标定任务若抢占 CPU 核心，会破坏 50Hz WCET 硬实时保证——三者合卷下，「感知侧计算抖动经由风险向量传播至指标层，引发虚假退化风暴」。
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- ARTIFACT:END -->
