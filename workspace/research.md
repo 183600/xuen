@@ -3,389 +3,359 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 1 轮（灵感循环第 1 轮；本轮灵感：「状态机」×「深度学习」×「视觉编码器」）
+# 第 3 轮（灵感循环第 3 轮；本轮灵感：「自然语言指令」×「动作分块」）
 
-> **基线**：从头设计，命名为 **SparseDetect**（稀疏探测规划器）。
-> 本轮纪律：**完整设计**——从直觉出发，构建可验证的数학框架。
+> **基线**：第 2 轮 ToolGauge（IP-315–320；定义 416–431；引理 46–50；实验 E426–E440）。第 1 轮 LeanGauge / MODGAUGE 骨架继续继承不变。
+> 本轮纪律：**增量升级 + 严格退化**。两个新灵感各沿一条轴升级 ToolGauge，且任一环节不可用都必须能一键退回，语言与分块是增强项、不是依赖项。
 
 ## 0. 直觉与动机
 
-**灵感 1（状态机 → 探测决策的可解释轨迹）**
-直觉：LeanGauge 缺乏显式的盲区修复决策状态机，导致探测方案难以复现、调试困难。状态机把「发现盲区 → 生成假设 → 选工具 → 执行」明确建模为离散状态转移，每一步都有可验证的前导条件。
+**灵感 1（自然语言指令 → 可审计的「修复意图」，而不是自由控制）**
+直觉：人类工程师修盲区时说的是「先看左边金属件，反光强就上偏振」，而不是一串工具参数。自然语言的价值在于表达**目标、指代、条件与优先级**，而不在于直接下发电机指令。因此正确的接口不是「NL→动作」，而是「NL→受类型约束的指令规格 ι」：指令只影响规划目标的权重与候选排序，**绝不扩大物理可行域**。这样既拿到人机协作的灵活性，又保留「安全由硬约束负责、语言只负责偏好」的分层——这正是 constrained-MDP 里 objective 与 shield 分离的标准做法。
 
-**灵感 2（深度学习 → 端到端的特征-动作映射）**
-直觉：手工特征工程依赖经验，难以捕捉视觉数据的复杂关联。深度学习 VAE 能学习紧凑的潜在表示，实现「视觉输入 → 探测动作」的端到端映射。
+**灵感 2（动作分块 → 摊销决策开销，但放大证据陈旧）**
+直觉：逐步探测每一步都要重新跑 VLA 前向、重查契约，决策开销大且动作抖动。ACT 式动作分块一次预测 K 步、开环执行、到边界再重规划，可把决策开销摊薄到约 1/K，并带来时间上更平滑的探测轨迹。代价是：一个坏块会**原子性地连续执行 K 步**，而两次决策之间没有新回执来否决它——**块长 K 直接等于证据陈旧窗口**。
 
-**灵感 3（视觉编码器 → 稀疏探测计划）**
-直觉：卷积/自注意力视觉编码器输出的高维特征图，可通过稀疏线性变换解码为离散的「探测点」选取方案。稀疏性保证计划可解释、节省计算。
+**灵感 3（两者耦合 → 指令条件化分块，必须被「否决点」切碎）**
+直觉：NL 指令定义「这一块想干什么」，动作分块定义「一次干多少」。最危险的耦合是：一句含糊指令 + 一个长块 = 把语义歧义沿时间轴放大成 K 步不可撤回的物理动作。解法不是禁用二者，而是引入三根结构支柱：**能力闭包**（语言不能造出新工具/新物理量）、**前缀封闭分块**（任何块都能被安全截断到最后有效前缀）、**不可逆屏障**（跨不可逆动作强制 K=1），再叠加**块有效性证书**（每个提交边界复核漂移与接地有效性）与**分层共形校准**（指令条件化破坏可交换性，必须按指令层分别校准）。
 
-## 1. 形式化定义
+## 1. 研究问题（本轮要回答什么）
 
-### 定义 1（稀疏探测状态机 σ）
+- **Q1（语言的安全性）**：自然语言能否成为「安全、可审计」的修复接口，而不是新的攻击面/幻觉入口？
+- **Q2（分块的交换条件）**：动作分块把决策开销摊薄，但把证据陈旧窗口从 1 步拉长到 K 步；在什么条件下这种交换是安全的、且收益可量化？
+- **Q3（耦合的放大效应）**：当两者耦合，语义歧义是否沿时间轴被放大？能否用结构（否决点 / 不可逆屏障 / 置信度约束块长）把它压回线性、可界？
 
-状态空间 S = {IDLE, BLIND_SPOT_DETECTED, HYPOTHESIS_GENERATED, TOOL_SELECTED, EXECUTING, CALIBRATING, VERIFYING, COMPLETED}
+## 2. 三条设计原则（雏形，正式化见产物区定义 432–447）
 
-初始状态：σ₀ = IDLE
+**P1 能力闭包（Capability Closure）**
+语言只能**在预注册目标集与工具集里做选择与排序**，不能命名新工具、不能指定超出物理包线的幅值、不能有自由文本直达执行器。形式化方向：接地映射 Γ 的输出满足 `tools(ι) ⊆ T₀`；任一越权槽位一律输出 ⊥（退回默认目标 ι₀）。这给出「指令不会扩权」的类型级保证。
 
-状态转移函数：
+**P2 前缀封闭分块（Prefix-Closed Chunking）**
+任何被规划的块 `C = (a₁…a_K)`，其任意前缀 `a₁…a_j` 必须自身是合法程序。只有前缀封闭，块才能在漂移/接地失效时被**二分截断**到最后安全前缀，而不是整块盲执行。这条是「块级安全可退回」的结构前提。
 
-- IDLE → BLIND_SPOT_DETECTED：当盲区计数 > τ_bl 且盲区面积 > A_min
-- BLIND_SPOT_DETECTED → HYPOTHESIS_GENERATED：VLA 生成假设集 H_s
-- HYPOTHESIS_GENERATED → TOOL_SELECTED：基于 H_s，采纳稀疏计划生成器输出工具序列
-- TOOL_SELECTED → EXECUTING：进入 PROBING 状态，执行工具调用计划
-- EXECUTING → CALIBRATING：收集有效回执，输入到 AP-Cal
-- CALIBRATING → VERIFYING：交叉验证通过判定
-- VERIFYING → COMPLETED：热替换 EC，通过后置
+**P3 不可逆屏障（Irreversibility Barrier）**
+跨不可逆动作（材料去除、热灼烧等）的块长强制为 1，且要求独立回执交叉验证后才允许继续。直观：可逆动作的错误可以用下一步回执纠偏，而不可逆动作一旦执行无法追回——所以**不可逆动作绝不被分块捆绑**。
 
-### 定义 2（视觉特征编码器 φ）
+## 3. 与基线的接口（如何退化）
 
-φ: ℝ^(H×W×C) → ℝ^d，d 为潜在维度
+- ℓ 不可接地 / 歧义 / 违反安全优先级 ≻_safe ⇒ 使用默认 ι₀，等价于 ToolGauge 目​​标；
+- 分块不满足前缀封闭 / 漂移界失效 / 跨不可逆屏障 ⇒ 强制 K=1，等价于 ToolGauge 逐步执行；
+- 分层校准样本不足 ⇒ 回退全局共形阈值；
+- ToolGauge 失效 ⇒ LeanGauge 纯数值路径；LeanGauge 失效 ⇒ MODGAUGE 原样。
 
-- 编码器：φ = E ∘ CNN，其中 CNN 结构为 ResNet-18，E 为 MLP 压缩层
-- 目标函数：||x - Dφ(x)||² + β||φ(x)||₁
+## 4. 预期贡献
 
-其中 D 为稀疑解码器，β 为稀疏性权重，保证特征稀疏化。
-
-### 定义 3（稀疏探测计划生成器 π）
-
-π: (φ(s), H_s) → {0,1}^N，N 为候选探测点数
-
-π = argmin_π ∑ᵢ πᵢ·ℒ(xᵢ) + λ||π||₁
-
-其中 ℒ(xᵢ) 为第 i 个位置的局部增益估计，λ 为稀疏性惩罚。
-
-### 定义 4（工具调用契约 τ）
-
-每个工具 t_i = (schema_i, pre_i, post_i, cost_i)
-
-有效调用条件：schema_i(输入) ∧ pre_i(状态快照) ∧ cost_i ≤ B_total
-
-后置回执：post_i 输出 (μᵢ, σᵢ, sigᵢ, tsᵢ, seqᵢ)
-
-### 定义 5（摊销校准 AP-Cal）
-
-给定回执序列 R = {r₁, ..., r_m}，输出后验参数：
-
-μ_post = Σᵢ Σ⁻¹μ_prior + Σᵢ(rᵢ-μ_prior)(σᵢ² + σ_prior²)⁻¹
-Σ_post = (Σ⁻¹ + Σᵢ(σᵢ² + σ_prior²)⁻¹)⁻¹
-
-保守性约束：Σ_post ≽ κ·I
-
-## 2. 关键算法骨架
-
-```python
-# SparseDetect 主体
-class SparseDetect:
-    def __init__(self, encoder, decoder, planner, budget=100):
-        self.encoder = encoder      # φ: 视觉编码器 VAE 编码器
-        self.decoder = decoder      # D: 稀疏解码器
-        self.planner = planner      # π: 稀疏探测计划生成器
-        self.budget = budget        # 工具调用总预算
-        
-        self.state_machine = {
-            'IDLE': self._idle,
-            'BLIND_SPOT_DETECTED': self._blind_detected,
-            'HYPOTHESIS_GENERATED': self._gen_hypothesis,
-            'TOOL_SELECTED': self._select_tools,
-            'EXECUTING': self._execute,
-            'CALIBRATING': self._calibrate,
-            'VERIFYING': self._verify,
-        }
-        self.state = 'IDLE'
-        
-    def _idle(self, observation):
-        blind_spots = self._detect_blind_spots(observation)
-        if len(blind_spots) > 0:
-            self.state = 'BLIND_SPOT_DETECTED'
-            self.blind_spots = blind_spots
-    
-    def _detect_blind_spots(self, obs):
-        encoded = self.encoder(obs)
-        reconstructed = self.decoder(encoded)
-        error_map = ||obs - reconstructed||²
-        return find_connected_regions(error_map > τ_error)
-    
-    def _blind_detected(self, _):
-        # 输入盲区信息，生成假设
-        self.hypotheses = vla_propose(self.blind_spots)
-        self.state = 'HYPOTHESIS_GENERATED'
-    
-    def _gen_hypothesis(self, _):
-        # 过滤不符合 SNC 的假设
-        self.hypotheses = filter_snc(self.hypotheses, self.blind_spots)
-        if not self.hypotheses:
-            # 退回纯数值探测
-            self.hypotheses = ['UNKNOWN']
-        self.state = 'TOOL_SELECTED'
-    
-    def _select_tools(self, _):
-        # 稀疏计划生成器
-        plans = []
-        for hyp in self.hypotheses:
-            actions = self.planner(self.encoder(self.blind_spots), hyp)
-            plans.extend(actions)
-        self.plans = self._optimize_budget(plans)
-        self.state = 'EXECUTING'
-    
-    def _optimize_budget(self, plans):
-        # 0/1 背包问题近似求解
-        # 按熵贡献率排序，贪心选取
-        sorted_plans = sorted(plans, key=lambda p: p.gain/p.cost, reverse=True)
-        selected = []
-        cost = 0
-        for p in sorted_plans:
-            if cost + p.cost <= self.budget:
-                selected.append(p)
-                cost += p.cost
-        return selected
-    
-    def _execute(self, env):
-        # PROBING 状态：显式声明探测动作
-        receipts = []
-        for action in self.plans:
-            if not self._check_preconditions(action, env):
-                # 前置失败，void 操作
-                continue
-            result = env.execute(action.tool, action.params)
-            r = Receipt(action, result)
-            if self._verify_receipt(r):
-                receipts.append(r)
-        self.receipts = receipts
-        self.state = 'CALIBRATING'
-    
-    def _check_preconditions(self, action, env):
-        return (env.snapshot().force < action.max_force and
-                env.snapshot().temperature < action.max_temp)
-    
-    def _verify_receipt(self, r):
-        # 签名、序列号、物理约束校验
-        return (verify_signature(r.sig) and 
-                r.seq > self.last_seq and
-                r.mu > 0)
-    
-    def _calibrate(self, _):
-        # AP-Cal 摊销校准
-        self.posterior = ap_calibrate(self.receipts)
-        self.state = 'VERIFYING'
-    
-    def _verify(self, _):
-        # 交叉验证
-        if cross_validate(self.posterior):
-            self.state = 'COMPLETED'
-        else:
-            # 失败，降级处理
-            self.state = 'IDLE'  # 退回纯数值探测
-    
-    def run(self, observation, environment):
-        # 主循环
-        self.state_machine[self.state](observation)
-        if self.state == 'EXECUTING':
-            self._execute(environment)
-        elif self.state in ['CALIBRATING', 'VERIFYING']:
-            callback = self._calibrate if self.state == 'CALIBRATING' else self._verify
-            callback(None)
-        
-        return self.posterior if self.state == 'COMPLETED' else None
-```
-
-## 3. 复杂度分析
-
-| 组件 | 时间复杂度 | 空间复杂度 | 正确性依据 |
-|---|---|---|---|
-| 编码器 φ | O(HW) | O(d) | CNN 标准前向传播 |
-| 稀疏编码 D | O(d·N) | O(N) | LASSO 迭代收敛 |
-| 计划生成器 π | O(N·d) | O(N) | 稀疏优化问题 |
-| 状态机 | O(1) | O(1) | 离散状态查表 |
-| AP-Cal 校准 | O(m·d²) | O(d²) | GP 后验公式 |
-
-## 4. 推导
-
-**引理 1（稀疏规划最优性）** 在增益子模作用义下，贪心策略得到的解 OPT_G ≈ OPT* 达到 (1-1/e) 近似比。
-
-**引理 2（AP-Cal 误差界）** 给定独立高斯观测，后验方差：
-Σ_post ≤ Σ_prior · exp(-∑ᵢ log(1 + σ_prior²/σᵢ²))
-
-**引理 3（状态机完备性）** 所有盲区最终转化为 COMPLETED 或退回纯数值探测，保证进度。
+1. 一个「语言只改偏好、不改能力」的接地口径，把 NL 注入面压到可类型检查的范围内；
+2. 一个带**块有效性证书**与**不可逆屏障**的分块执行器，把「分块放大错误」从无界压到线性、并在不可逆处退化为单步；
+3. 一个**指令分层的共形校准**方案，修正「条件化破坏可交换性」导致的覆盖失效；
+4. 一条完整可证伪路径：E441–E456 覆盖能力闭包、截断安全、块长最优、时间集成滞后、分层覆盖、对抗注入与 50Hz 时序保全。
 
 ## 5. 本轮最大风险
 
-**一句话**：稀疏编码器的端到端训练缺乏物理可解释性约束，可能学习到与实际探测无关的统计关联，导致在未见盲区上产生错误的探测计划——需要通过物理先验正则化和事后验证机制（SNC 过滤）进行缓解。
+**一句话**：自然语言接地会制造「语义已经正确」的错觉，而动作分块会把一次接地错误放大成 K 步**已执行**的物理动作；块内已发生的动作无法靠逐条回执验证追回，因此真正的残余风险在「指令—分块」接口的语义-时间放大，而非单个组件本身。
 <!-- IDEA:END -->
 
-<!-- ARTIFACT:START -->
-# 第 2 轮产物 · 创新点清单 v2：**ToolGauge**（Tool-Contracted Probing, Pretrain-Amortized Metrology with Audited VLA Hypotheses）
+## 0. 新灵感与既有框架的耦合
 
-> 背景：第 1 轮 LeanGauge（IP-310–314；定义 398–415；引理 42–45；实验 E411–E425）。
-> 本轮灵感：「工具调用」×「预训练」×「视觉-语言-动作模型」
-> 
-> **基线继承**：LeanGauge 的三个核心模块（D-Box / I-Box / BP-Cal）
-> 各沿一条灵感轴升级；MODGAUGE 五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链）
-> 与 4CV 骨架全部保留；同时审计并修复第 1 轮遗留的三处缺陷。
+**灵感 1（场景理解 → 场景感知流生成）**
+直觉：流匹配策略的生成质量与当前物理场景紧密相关。引入场景识别子系统 Σ_scene，将环境观测嵌入到流匹配条件中，使得 `v_θ(x,τ;o,ι)` 变为 `v_θ(x,τ;o_scene,ι)`。这解决了「在不同场景下相同指令生成的轨迹可能物理不可达」的问题，使得流生成更鲁棒，且为动作分块/PRS提供精确的上下文边界。形式化地，场景向量 `o_scene` 通过条件投影修正潜空间先验：`z ~ N(π_scene(o_scene), I)`，其中 π_scene 是低维投影。
+
+**灵感 2（创新点提炼 → 跨轮创新证据链的元认知框架）**
+直觉：每一轮的创新点不应只是累积的 IP 列表，而应可被挖掘、审计和版本化。引入创新点提炼机制 Ω，将每一轮的定义、推论、实验设计自动映射为结构化创新证据，可用于论文撰写、审计追踪和跨轮文献综述。Ω 维护一个创新知识图，节点为定义/推论/实验，边为因果/依赖关系，支持「创新点溯源」与「冲突检测」。每个 IP 通过 Ω 自动生成形如 `IP-xxx: φ ⊢ θ` 的元证据，其中 φ 是前提集，θ 是结论。
+
+**灵感 3（参数高效微调 → 模型更新的低开销校准）**
+直觉：流模型的每轮重训或校准可能带来计算开销。引入参数高效微调理念到模型更新层：仅在关键层（如速度场权重的关键子向量、制动安全阈值）进行低秩微调，其他层保持冻结。这体现为：流模型的更新 `θ ← θ + Δ` 其中 `Δ = LoRA(A·B)`，其中 A ∈ R^{d×r}, B ∈ R^{r×d}，r ≪ d 是微调秩。形式化为：`θ^{t+1} = θ^t + α·Δ_{PEFT}`，其中 `α` 是学习率，`Δ_{PEFT}` 通过少量新样本计算，保持 `‖θ^{t+1} − θ^t‖ ≤ η` 其中 η ≪ 1。这与 NAC 的在线共形更新共用断路器，实现「检测触发 → 低开销微调 → 校准更新」的闭环。
+
+## 1. 研究问题（本轮延伸）
+
+- **Q1（场景感知的安全性）：** 场景向量 `o_scene` 的误差或延迟是否会导致流生成进入物理不可达区？能否通过能力闭包将场景误差控制在可接受边界？
+- **Q2（创新点的可审计性）：** 跨轮的创新点是否可被结构化追踪，既保证版本可追溯，又不引入审计噪声？Ω 框架是否在不增加 false-positive 的前提下支持溯源？
+- **Q3（参数高效微调的收敛性）：** PEFT 更新是否在有限样本下保持校准覆盖保证？微调系数 η 的衰减路径如何与 NAC 的在线更新共用断路器协作？
+- **Q4（三者耦合的放大效应）：** 场景误差是否沿时间轴被放大？PEFT 的低开销是否牺牲了覆盖保证？创新点记录是否干扰了模型更新的数值稳定性？
+
+## 2. 三条新设计原则（雏形，正式化见产物区定义 466–485）
+
+**P5 场景感知接入（Scene-Aware Integration）**
+流匹配条件必须包含场景观测 `o_scene = Σ_scene(physical_scene)`；若 `o_scene` 失效或 `π_scene(o_scene)` 检测不到有效投影，则退化为无场景条件生成（等价于 InstructGauge IAC 分块）。这条是「流策略必须知晓其运行场景」的结构公理。
+
+**P6 创新点元证据链（Innovation Evidence Chain）**
+每个 IP 通过 Ω 自动生成形如 `IP-xxx: φ ⊢ θ [ω, η, τ]` 的元证据，其中 φ 是前提集，θ 是结论，ω 是omega-版本标识，η 是微调系数的记录，τ 是时间戳。Ω 支持 `lookup(query)` 返回相关证据、`conflict_check()` 返回冲突列表、`version_diff(v1,v2)` 返回结构差异。这条是「创新点不再是死列表，而可被查询、比较、冲突检测」的元框架。
+
+**P7 参数高效微调上界（PEFT Upper Bound）**
+流模型更新 `θ ← θ + Δ_{PEFT}` 仅在 `‖Δ_{PEFT}‖ ≤ η·‖θ‖` 且 `η ≤ η_max` 时准入，其中 `η_max = 1/(t+1)` 为衰减系数。若校准覆盖在 PEFT 更新后退化超过 `Δ_cover`，则回退全局共形阈值，不使用该次 PEFT 更新。这条是「低开销更新不得破坏统计保证」的收敛界。
+
+## 3. 与基线的接口（如何退化，续）
+
+- 场景 `o_scene` 失效 / `π_scene` 检测不到有效投影 ⇒ 退化为无场景条件生成（等价于 InstructGauge IAC 分块）；
+- Ω 冲突检测通过但人工审计不通过 ⇒ 暂缓 IP 合并，记录为「待审计」而非静默合并；
+- PEFT 更新后校准覆盖退化超过 `Δ_cover` ⇒ 回退全局共形阈值，记录 PEFT 版本回滚；
+- 流策略不可用 ⇒ 退回 InstructGauge 的 IAC 分块；
+- InstructGauge 失效 ⇒ ToolGauge ⇒ LeanGauge ⇒ MODGAUGE 原样（继承第 4 轮退化链）。
+
+## 4. 预期贡献（续）
+
+6. 一个**场景感知流匹配**接口，在生成前先识别物理场景，使轨迹具有上下文边界；
+7. 一个**创新点元证据链框架 Ω**，实现创新点的自动化溯源、冲突检测和版本化管理；
+8. 一个**参数高效流更新**方案，通过低秩微调在关键层仅开销 `O(r·d)` 而非 `O(d²)`，并附有覆盖退化界线；
+9. 一条完整可证伪路径：E473–E488 覆盖场景迁移、创新点溯源、PEFT 收敛、NFE-精度、KFC 可靠性、制动安全、计量契约、PRS 续采样、多模态覆盖、似然监视、时序与 sim→real，并附创新点版本对比；
+10. 结构级、统计级、系统级三类判据的分类框架，明确每一轮的「必须严格成立」与「按置信区间验收」与「给出效应量」。
+
+## 5. 本轮最大风险（续）
+
+**一句话**：三大新灵感的接口风险：'(1) 场景理解的投影 π_scene 可能将非预期场景错误解释为预期指代，导致错误的流条件，进而生成物理不可达轨迹；'(2) 创新点提炼 Ω 的知识图可能因版本漂移而产生 false-positive 溯源，误认为新 IP 是旧 IP 的扩展；'(3) 参数高效微调 η 虽然开销低，但若 η 过大或衰减不当，会逐步漂移校准阈值，破坏 NAC 的覆盖保证。综合缓解：能力闭包使场景投影受限、Ω 冲突检测与人工审计结合、PEFT 的 η 使用衰减调度，并以 E477/E478/E483 主动证伪。
+<!-- ARTIFACT:START -->
+# 第 3 轮产物 · 创新点清单 v3：**InstructGauge**（Instruction-Grounded, Chunked Probing Metrology）
+
+> 背景：第 2 轮 ToolGauge（IP-315–320；定义 416–431；引理 46–50；实验 E426–E440）；第 1 轮 LeanGauge / MODGAUGE 骨架不变。
+> 本轮灵感：「自然语言指令」×「动作分块」
+> **继承纪律**：MODGAUGE 五不变式、4CV 骨架、ToolGauge-6C 闭环、严格退化链全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 ToolGauge ⇒ 退回 LeanGauge ⇒ 退回 MODGAUGE。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 LeanGauge） |
+| 编号 | 名称 | 类型 | 关键改进（相对 ToolGauge） |
 |---|---|---|---|
-| IP-315 | L-Box 语义盲区假设器 | 核心模块 | VLA 假设集 + 共形覆盖（1−α）+ SNC 指纹过滤；全被剔则退化为 UNKNOWN（数值路径） |
-| IP-316 | MTC/TCV 工具契约与校验器 | 核心模块 | 探测动作接口化：schema/前置/预算/循环四查 + 签名回执；无效回执永不入样本集 |
-| IP-317 | T-Box 双层下注执行器 | 核心模块 | 风险门 λ（安全）+ 增益注 β（值不值）双闸门；TCV 拒绝 ⇒ 零副作用 |
-| IP-318 | MP-Φ + AP-Cal 摊销校准器 | 核心模块 | 预训练计量先验，摊销后验单前向；保守性夹紧 Σ ≽ κ_phys·I；P-Quarantine 断路器 |
-| IP-319 | ToolGauge-6C 闭环 | 设计模式 | H→C→E→C→V→U 六段；V 阶段强制独立回执交叉验证后才热替换 |
-| IP-320 | ToolGauge 主闭环 | 集成 | 50Hz 路径不动，修复全异步；严格退化链 ToolGauge ⇐ LeanGauge ⇐ MODGAUGE |
+| IP-321 | NLI-Box 指令接地器 | 核心模块 | NL ℓ → 类型化指令规格 ι（目标/指代/约束/预算/优先级/放弃）；只改目标权重、不扩物理可行域；不可接地 ⇒ ⊥ 退化到默认目标 |
+| IP-322 | IAC 分块规划器 | 核心模块 | 一次前向产出 K 步**前缀封闭**探测块 C；块长 K 由指令置信度与漂移界自适应；支持 ACT 式重叠时间集成 |
+| IP-323 | CVC 块有效性证书器 | 核心模块 | 每个提交边界复核联合前置 + 预测漂移 + 接地有效性；违规 ⇒ 二分截断到最后安全前缀，绝不整块盲执行 |
+| IP-324 | SC-Cal 分层共形校准 | 核心模块 | 指令条件化破坏可交换性 ⇒ 按指令 stratum 分层校准；低样本 stratum 回退全局 |
+| IP-325 | NCB 指令-回执主张绑定 | 安全模块 | 每条 NL 主张必须绑定回执 + 块证书；无法绑定 ⇒ 剥离为纯解释，绝不进数值路径 |
+| IP-326 | InstructGauge-7C 闭环 | 设计模式 | I→H→C→E(chunk)→C→V→U：在 ToolGauge-6C 前加接地、在 E 内加块否决点 |
+| IP-327 | InstructGauge 主闭环 | 集成 | 50Hz 路径不变；决策开销摊薄至约 O(1/K)；热替换只在块静默点；全部新路径可降级 |
 
-**退化链声明**：VLA 不可用 / H_s={UNKNOWN} / 预算耗尽 / 交叉验证或回归失败 ⇒ LeanGauge 纯数值路径；
-LeanGauge 失效 ⇒ MODGAUGE 原样。VLA 是增强项，不是依赖项（引理 49/50）。
+**退化链声明**：ℓ 不可接地 / 歧义 / 违反安全序 ⇒ 默认 ι₀（= ToolGauge 目标）；K=1 或漂移界失效或跨不可逆屏障 ⇒ 逐步 ToolGauge；分层校准样本不足 ⇒ 全局共形（ToolGauge）；ToolGauge 失效 ⇒ LeanGauge；LeanGauge 失效 ⇒ MODGAUGE 原样。语言与分块都是增强项，不是依赖项（引理 51/52/57）。
 
-## 1. 符号体系增量（定义 416–431）
+## 1. 符号体系增量（定义 432–447）
 
 | 符号 | 含义 |
 |---|---|
-| `t ∈ T₀` | 预注册计量工具：ir.probe / tap.percuss / illum.sweep / stereo.baseline / therm.drift / cross.modal |
-| `t = (Schema, Pre, Post, c, τ, Ĝ)` | 工具契约 MTC（定义 416） |
-| `r = (t, args, (μ,σ_decl), sig, ts, seq)` | 工具回执 Receipt（定义 417） |
-| `Π_s, L_max=6` | 盲区 s 的探测程序与长度上限（定义 418） |
-| `λ(a,s) / γ` | 风险门：σ_pred − σ_decl ≥ γ（继承定义 400） |
-| `β_t = Ĝ_t(h) − c_t / γ_B` | 增益注：预测信息增益 − 代价（定义 419） |
-| `MP-Φ_θ` | 预训练计量先验：(h, 回执流) ↦ 摊销后验 q_θ(u_s)（定义 420） |
-| `κ_phys` | 保守性夹紧下界：Σ_θ ≽ κ_phys·I |
-| `H_s, α, C_cal` | 共形因果假设集、覆盖水平、预注册校准集（定义 422） |
-| `SNC / F_*` | 语义-数值一致性检查与失败指纹库（定义 425） |
-| `TB = (B_tools, L_max, τ_repair, recovery)` | 工具预算契约（定义 424，细化 IV-Contract） |
-| `ε_cross` | V 阶段独立回执交叉验证的标准化残差阈值 |
-| `RepairCert(s)` | 语言修复证书 = (H_s, Π_s, receipts, 解说)（定义 427） |
-| `P-Quarantine` | 先验隔离监控：跨盲区相关偏差在线断路器（定义 428） |
-| `n ≥ σ_obs²(ε⁻² − σ_0⁻²)` | 修正后的解析样本下界（定义 426，替代第 1 轮定义 408） |
+| `ℓ ∈ L_NL` | 自然语言指令 |
+| `Γ, ι = (g, ρ, Φ, B, ≻, a)` | 指令接地映射与类型化指令规格（定义 432/433） |
+| `O_onto, T₀, M_phys` | 目标本体白名单、预注册工具集、物理幅值包线；能力闭包边界（CC） |
+| `ref_conf, τ_ref` | 指代接地置信度与放弃阈值 |
+| `C = (a_{1:K}, φ_pre^C, ψ_post^C, H_c, G, abort)` | 前缀封闭动作块（定义 434） |
+| `K, K_MAX(ι)` | 块长与随指令置信度收紧的硬上限（定义 440） |
+| `CVC, δ_c, σ̂_t^C` | 块有效性证书、漂移容差、块内预测状态（定义 435） |
+| `ΔH(C), A(ι,C), smooth(C)` | 信息增益、指令对齐分块目标（定义 436） |
+| `w_align, w_ens, λ_cost` | 目标权重 |
+| `𝔸_adm, Conv(𝔸_adm)` | 分块动作可采纳集及其凸性（时间集成前提） |
+| `s = stratum(ι), C_cal^s, q_s` | 指令分层标签、分层校准集、分层阈值（定义 438） |
+| `q_quiesce` | 块静默点：无在途块且无待处理不可逆动作（定义 439） |
+| `κ_sem = K·H(ι|ℓ)` | 语义-时间放大因子（定义 440） |
+| `I_irr, Barrier` | 不可逆动作集与不可逆屏障（定义 445） |
+| `NCB / Claim` | 主张-证据绑定与可审计主张（定义 441） |
+| `≻_safe` | 安全优先级偏序：指令只能在安全等价类内重排（定义 442） |
+| `A_cond` | 条件指令保护自动机（定义 443） |
+| `B_chunk, c_d, c_s` | 块级预算、单次决策开销、单步执行代价（定义 444） |
+| `RepairCert′(s)` | 修复解释证书 = (ι, C, ChunkCert, receipts, claims)（定义 447） |
 
 ## 2. 形式化定义（要点）
 
-**定义 416（MTC）/ 417（回执）/ 418（TCV）** 工具 = 类型 schema + 物理前置 + 回执谓词（含签名/单调 seq）+ 代价 + 最坏时延 + 预测信息增益；TCV 逐条查 schema/前置/预算/循环，实测前置失败 ⇒ 调用 void、零副作用收尾；无效回执一律作废。
-**定义 419（双层下注）** λ 管安全（进盲区的物理闸门，继承），β 管收益（信息增益 − 代价），两门同过才执行。
-**定义 420（MP-Φ / AP-Cal）** 元训练 min_θ Σ E[−log p(u*|ctx)] + β_KL·KL(q_θ‖p_phys)；摊销后验单前向输出；保守性夹紧 Σ_θ ≽ κ_phys·I。
-**定义 421（6C 闭环）** H（共形假设）→ C（TCV 编译）→ E（工具执行）→ C（摊销校准）→ V（独立回执 |z| ≤ ε_cross + 契约回归）→ U（热替换 + 语言证书绑定）；V 失败 ⇒ 夹紧重试 1 次 ⇒ 再失败 stub + RED。
-**定义 423（主张-回执绑定）** 语言主张必须引用有效回执，否则序列化时剥离；剥离为纯投影，不改变数值行为。
-**定义 426（采样复杂度修正）** σ_post² = (σ_0⁻² + n·σ_obs⁻²)⁻¹ ⇒ n ≥ σ_obs²(ε⁻² − σ_0⁻²)；AP-Cal 经验收缩低于解析值 80% ⇒ 先验失配告警。
-**定义 428（P-Quarantine）** 最近 K 次修复的（预测, 实际）收缩残差连续 ≥ q 次同向 ⇒ 暂停 AP-Cal，回退第 1 轮 BP-Cal。
-**定义 429/430** VLA 输入白名单（禁自由文本/二维码）与 PROBING 显式状态（幅值受限、力矩硬限、日志全录）。
+**定义 432（指令接地 Γ 与能力闭包 CC）** `Γ: L_NL × Scene × O_onto → (ι, GroundCert) ∪ {⊥}`。能力闭包公理：`tools(ι) ⊆ T₀ ∧ mag(ι) ⊆ M_phys ∧ ¬∃ free-text→actuator 路径`。任一槽位类型/本体检查失败、任一指代 `ref_conf < τ_ref`、或优先级反转 `≻_safe` ⇒ 输出 ⊥。`GroundCert` 逐槽记录接地依据与置信度，供审计。
+
+**定义 433（指令规格 ι 与计划集）** `ι = (g, ρ, Φ, B, ≻, a)`；`Plan(ι) = { Π ∈ Plan_ToolGauge : Π ⊨ Φ, cost(Π) ≤ B, Π 尊重 ≻ }`。关键性质：`Plan(ι) ⊆ Plan_ToolGauge`（引理 51）——语言只做**子集选择**，不做能力扩张。
+
+**定义 434（前缀封闭动作块 C）** `C = (a_{1:K}, φ_pre^C, ψ_post^C, H_c, G, abort)`，其中 `a_i ∈ T₀ × Args`；**前缀封闭**要求 `∀ j ≤ K, a_{1:j}` 自身合法；`φ_pre^C` 为逐步前置之合取，`ψ_post^C` 为逐步后置之合取；`H_c` 为有效性时域；`G` 为守卫集；`abort` 规定截断/补偿策略。
+
+**定义 435（块有效性证书 CVC）** 在提交边界 `t`，执行 `a_t` 前须同时满足：`φ_pre^C(σ_t)`、`still_grounded(ι, σ_t)`、`drift(σ_t, σ̂_t^C) ≤ δ_c`。任一失败 ⇒ 只执行安全前缀 `a_{1:t-1}` 并出证 `ChunkCert(C, verified_prefix=t)`。CVC 把「块级承诺」切成「可逐格否决的承诺」。
+
+**定义 436（指令对齐分块目标 IAC）**
+`C* = argmax_{C admissible} [ ΔH(C) + w_align·A(ι,C) + w_ens·smooth(C) − λ_cost·c(C) ]`
+`s.t. shield(ι)`（安全盾）、`|C| ≤ K_MAX(ι)`、`Barrier(C)`、`B_chunk ≤ B_left`；`A(ι,C)` 为块预测后验满足 `g/ρ/Φ` 的接地概率，`smooth(C) = −Σ_t ‖a_{t+1}−a_t‖²`。
+
+**定义 437（守卫式时间集成）** 对重叠块 `C^{(t)}`，权重 `w_{t,i} ∝ exp(−λ(t−i))`，集成动作 `ā_t = Σ_i w_{t,i} a_t^{(i)}`。**仅在** `𝔸_adm` 凸、且所有参与块均通过 CVC 时启用；若 `𝔸_adm` 非凸（如离散 percuss 工具）或任一动作触达饱和边界 ⇒ 禁用集成，取最近一个已验证块。集成滞后 `L(ā) = Σ_i w_{t,i}(t−i) ≤ (m−1)Δ`。
+
+**定义 438（分层共形校准 SC-Cal）** `stratum(ι) = (goal 类型, 指代个数, 是否含条件)`。对每层 `s` 用校准集 `C_cal^s` 取分位 `q_s`，使层内覆盖 `P(h*∈H_s | s) ≥ 1−α`；若 `|C_cal^s| < n_min` ⇒ 回退全局阈值（覆盖保证优雅降级，引理 55）。
+
+**定义 439（块静默点 q_quiesce 与热替换屏障）** `q_quiesce` 指「无在途块、无待处理不可逆动作」的时刻/索引。热替换**只允许**发生在 `q_quiesce`；在途块要么 drain 到边界、要么按 `abort` 截断并补偿，从而任何块都不会观察到「混合契约」。
+
+**定义 440（语义-时间放大因子 κ_sem 与块长上限）** `κ_sem = K · H(ι|ℓ)`，`H(ι|ℓ)` 为接地槽位的条件熵。约束 `K ≤ K_MAX(ι) = ⌊K₀ / (1 + κ_sem)⌋`：指令越含糊、块越短——把「歧义 × 时长」的乘积显式夹住。
+
+**定义 441（NCB 主张-证据绑定）** 每条语言主张 `c` 必须绑定 `(receipt_id, chunk_cert_id)`；`bind_claims` 仅保留可命中回执的主张，未绑定主张在序列化时**剥离**。剥离是纯投影，不改变数值行为（沿用 ToolGauge 定义 423）。
+
+**定义 442（安全优先级偏序 ≻_safe）** 指令给出的优先级必须延拓系统安全序：可在「安全等价类」内重排，但不得把任何安全攸关目标排到其下界之后。违反者拒绝或夹紧并告警——这是「priority shield」。
+
+**定义 443（条件指令保护自动机 A_cond）** 把「if P then A else B」编译为带守卫的迁移系统；守卫 `P` 必须是**可由回执评估的可测谓词**（非自然语言）；要求存在良基秩函数以防 livelock；自动机深度 `≤ D_max`、累计触发 `≤ B`。
+
+**定义 444（块级预算准入 B_chunk）** `B_chunk = Σ_i c(a_i) + c_verify(C)`；仅当 `B_chunk ≤ B_left` 且 `c_d/K + c_verify ≤ budget_slack` 时准入，保证摊销收益不为负。
+
+**定义 445（不可逆屏障 Barrier）** 设不可逆动作集 `I_irr`。若块跨越任一 `a_i ∈ I_irr`，强制 `K = i`（该不可逆动作单独成块）并要求**独立回执交叉验证**通过后才允许后续块。即：不可逆动作绝不与其它动作捆绑，且执行后必须先验证。
+
+**定义 446（分层漂移检测）** 逐层跟踪 `(预测收缩, 实测收缩)` 残差；若层内漂移 `> η_s` 连续 `q` 次 ⇒ 触发重新接地或回退全局校准（与 ToolGauge P-Quarantine 共用断路器）。
+
+**定义 447（修复解释证书 RepairCert′）** `RepairCert′(s) = (ι, C, ChunkCert, receipts, claims)`，使人类审计可沿着「指令→块→逐步回执→主张」四级证据链复现一次修复。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-316 TCV：契约化工具调用（四查 + 回执）
-class TCV:
-    def verify(self, prog, budget):
-        seen = set()
-        for (t, args) in prog:
-            if not t.schema(args): return False, "schema"
-            key = (t.name, canon(args))
-            if key in seen:    return False, "loop"
-            seen.add(key); budget -= t.cost
-            if budget < 0:     return False, "budget"
-        return True, "ok"
-    def execute(self, prog, env):
-        receipts = []
-        for (t, args) in prog:
-            if not t.pre(env.snapshot()): break
-            r = t.post(env.invoke(t, args))
-            if r is None or not verify_sig(r): continue
-            receipts.append(r)
-        return receipts
+# IP-321 NLI-Box：NL → 类型化指令规格 ι（能力闭包 + 接地证书）
+class NLIBox:
+    def ground(self, ell, scene, ontology):
+        slots = self.parser(ell)                       # 仅允许 ontology 白名单字段
+        if not capability_closed(slots, ontology):     # tools(ι) ⊆ T₀ ∧ mag ⊆ M_phys
+            return None                                # ⊥：退化到默认 ι₀
+        refs = [ground_referent(r, scene) for r in slots.refs]
+        iota = InstructionSpec(
+            goal    = resolve_goal(slots.goal, ontology),
+            refs    = refs,
+            cons    = check_measurable(slots.constraints),   # 必须是可测谓词
+            budget  = min(slots.budget, B_tools),
+            order   = safety_compatible(slots.priority),      # 延拓 ≻_safe
+            abstain = any(r.conf < TAU_REF for r in refs),
+        )
+        if iota.abstain or not iota.cons or not iota.order:
+            return None
+        return iota, GroundCert(iota, [r.conf for r in refs], slots.evidence)
 
-# IP-315 L-Box：共形假设 + SNC
-class LBox:
-    def hypothesize(self, s, R_cell):
-        hs = SNC_filter(self.vla.propose(featurize_num(s, R_cell)), R_cell, fp_lib)
-        q = conformal_quantile(self.cal, alpha=0.1)
-        return [h for h in hs if self.vla.score(h, s) <= q] or ["UNKNOWN"]
+# IP-322 IAC：指令条件化分块规划（前缀封闭 + 块长自适应）
+class IACPlanner:
+    def plan_chunk(self, iota, H_s, tools, budget, drift_bound):
+        K = self.chunk_len(iota, drift_bound)          # 置信低/漂移大 ⇒ K 小
+        C = self.vla.plan_chunk(iota, H_s, tools, K)   # a_1..a_K
+        if not prefix_closed(C):
+            return self.per_step(iota, H_s, tools)     # 退化 K=1
+        if crosses_irreversible(C, I_IRR):
+            C = truncate_at_barrier(C, I_IRR)          # 不可逆动作强制单独成块
+        return C
 
-# IP-317 T-Box：双层下注
-class TBox:
-    def select(self, H_s, tools, tcv, budget):
-        prog = self.vla.plan_probes(H_s, tools)
-        if not tcv.verify(prog, budget)[0]: prog = self.numeric_fallback(H_s)
-        return [c for c in prog if self.risk_gate(c) and self.gain_bet(c)]
+    def chunk_len(self, iota, drift_bound):
+        if iota is None: return 1
+        conf = min(iota.ref_conf)
+        kappa = self.chunk_len_upper(iota)             # 由 κ_sem 给出的 K_MAX
+        if drift_bound <= 0: return kappa
+        return max(1, min(kappa, floor(log(1/max(conf,1e-6)) / drift_bound)))
 
-# IP-318 AP-Cal：摊销后验 + 交叉验证
-class APCal:
-    def calibrate(self, receipts, H, s):
-        mu, Sig = self.mp_phi(featurize_ctx(receipts, H, s))
-        return mu, clamp_min(Sig, KAPPA_PHYS)
-    def cross_validate(self, mu, Sig, r_indep):
-        return abs((r_indep.mu - mu) / sqrt(Sig + r_indep.var)) <= self.eps_cross
+# IP-323 CVC：块有效性证书 + 二分截断
+class CVC:
+    def commit(self, C, env, iota):
+        t = 0
+        while t < len(C.actions):
+            ok = (C.joint_pre(env.snapshot())
+                  and still_grounded(iota, env)
+                  and drift(env.snapshot(), C.pred[t]) <= C.delta_c)
+            if not ok:
+                C = C.truncate(t)                      # 只保留最后安全前缀
+                break
+            env.apply(C.actions[t]); t += 1
+        return C, ChunkCert(C, verified_prefix=t)
 
-# IP-319 6C 闭环
-def toolgauge_6c(M, s):
-    H = M.lbox.hypothesize(s, M.dbox.R[s])
-    prog = M.tbox.select(H, M.tools, M.tcv, M.budget_left(s))
-    receipts = M.tcv.execute(prog, M.env)
-    if len(receipts) < n_min(s): return stub_and_red(s, "insufficient")
+# IP-324 SC-Cal：分层共形校准
+class SCCal:
+    def threshold(self, iota, cal):
+        s = stratum(iota)                              # 指令类型分层
+        if len(cal.get(s, [])) < N_MIN:
+            s = GLOBAL                                 # 低样本优雅回退
+        return conformal_quantile(cal[s], alpha=ALPHA)
+
+# IP-325 NCB：主张-证据绑定（纯投影）
+def bind_claims(cert, iota, receipts):
+    claims = []
+    for c in cert.nl_claims:
+        ev = match(c, receipts)                        # 必须逐条命中回执
+        if ev is not None:
+            claims.append(Claim(c, ev, cert.chunk_cert))
+    return claims                                      # 无证据主张直接剥离
+
+# IP-326 7C 闭环
+def instructgauge_7c(M, s, ell):
+    out  = M.nlib.ground(ell, M.scene, M.ontology)
+    iota = out[0] if out else M.default_iota           # ⊥ ⇒ ToolGauge 默认目标
+    H    = M.lbox.hypothesize(s, M.dbox.R[s], iota)    # 指令仅重排假设先验
+    C    = M.iac.plan_chunk(iota, H, M.tools, M.budget_left(s), M.drift_bound(s))
+    if not M.tcv.verify(C.as_program(), M.budget_left(s))[0]:
+        C = M.numeric_fallback(H)
+    cert = M.cvc.commit(C, M.env, iota)
+    receipts = cert.receipts
+    if len(receipts) < n_min(s):
+        return stub_and_red(s, "insufficient")
     mu, Sig = M.apcal.calibrate(receipts, H, s)
     if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
-        mu, Sig = M.apcal.calibrate(receipts, ["UNKNOWN"], s)
-        if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
-            return stub_and_red(s, "cross_failed")
+        return stub_and_red(s, "cross_failed")
     new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)
-    if not contract_regression(new_ec): return stub_and_red(s, "regression")
-    M.mreg.hot_replace(M.dpe, new_ec)
-    M.dbox.update_from_posterior(s, mu, Sig)
-    bind_claims(new_ec, H, prog, receipts)
+    if not contract_regression(new_ec):
+        return stub_and_red(s, "regression")
+    M.mreg.hot_replace_at_quiescence(M.dpe, new_ec, cert.boundary)  # 仅块静默点
+    bind_claims(cert, iota, receipts)
     M.pquar.record(M.apcal.last_gain, realized_gain(receipts))
     return True
 
-# IP-320 主闭环
-def ToolGauge_round(M, obs, audio, tac, depth, det):
+# IP-327 主闭环（50Hz 路径不变）
+def InstructGauge_round(M, obs, audio, tac, depth, det, ell=None):
     for s in M.dbox.detect_blind_spot():
         if s not in M.inflight:
-            M.inflight.add(s); submit_async(toolgauge_6c, M, s)
-    if M.pquar.triggered(): M.apcal.pause(); M.use_bpcal_fallback = True
+            M.inflight.add(s)
+            submit_async(instructgauge_7c, M, s, ell)
     return MODGAUGE_round(M, obs, audio, tac, depth, det)
 ```
 
 ## 4. 推导
 
-**引理 46（双层下注联合界）** A115′ 亚高斯条件下：风险门 P(σ_obs > σ_decl + γ + 2b) ≤ exp(−γ²/2b²)；增益注实际收缩 ≥ Ĝ_t − ξ，L 次联合浪费概率 ≤ L·exp(−γ_B²/2ξ²)。
+**引理 51（接地可靠性与能力闭包）** 在能力闭包公理 CC 与指令文法的结构归纳下：若 `Γ(ℓ) = (ι, ·)`，则 `Plan(ι) ⊆ Plan_ToolGauge`；且任何越本体槽位都映射为 ⊥。推论：自由文本直达执行器的概率为 0（类型系统级保证），语言层不能成为新的越权通道。
+*证明骨架*：对文法产生式归纳。基础情形：槽位由白名单 `O_onto` 取值。归纳：复合指令的目标/约束/优先级仅对 `Plan_ToolGauge` 施加过滤与重排，过滤不增集、重排（在 ≻_safe 等价类内）不改可行域，故并集仍为子集。越权产生式按定义落入 ⊥。
 
-**引理 47（元泛化界）** 超额风险 ≤ 2η + 𝒪(√((C(Θ)+log(1/δ))/M)) + 𝒪(√((d_u+log(1/δ))/N_bl))；M→∞ 时 N_bl=1 亦可收敢。
+**引理 52（前缀封闭截断的安全性）** 若动作语言前缀封闭、逐步安全盾不变量 `Inv` 归纳、且 `δ_c` 不小于单步最大漂移，则 CVC 提交后执行的前缀在每一步都满足 `Inv`；唯一检测缺口是一个控制拍 `δ_t`。*证明*：对 `t` 归纳。CVC 在应用 `a_t` 前复核 `φ_pre^C` 与漂移界；失败即停在第 `t` 步前，执行前缀 `a_{1:t-1}`，由前缀封闭性仍是合法程序。盾归纳给出每一步 `Inv` 保持。
 
-**引理 48（共形覆盖）** 可交换下 P(h*∈H_s) ≥ 1−α；TV=η′ 漂移下 ≥ 1−α−2η′；SLA < 0.8 ⇒ H_s := {UNKNOWN}。
+**引理 53（块长最优性与比较静态）** 设单步信息增益 `g(i) = g₀ e^{−α i}`、逐步陈旧失效率 `ε`、失效代价 `c_f`、单次决策开销 `c_d`，则执行一个块的期望净效用
+`U(K) = g₀(1 − e^{−αK})/α − ε c_f K(K+1)/2 − c_d`。
+一阶条件给 `g₀ e^{−αK*} = ε c_f (K* + 1/2)`。故 `K*` 唯一，且随 `(ε, c_f, α)` 递减、随 `(g₀, c_d)` 递增；结合定义 440 得 `K* ≤ K_MAX(ι)`。这正是「指令越稳、漂移越小，块越长」的可证伪定量形式，由 E444 检验。
 
-**引理 49（语言层不破坏热替换等价性）** claims 不在数值路径，剥离为纯投影 ⇒ 子图数值等价性同第 1 轮引理 44。
+**引理 54（守卫式时间集成界）** 若 `𝔸_adm` 凸且所有参与块均通过 CVC，则任意凸组合 `ā_t ∈ 𝔸_adm`，安全盾保持；集成滞后 `L(ā) ≤ (m−1)Δ`。若 `𝔸_adm` 非凸或触达饱和，守卫禁用集成、退化为最近已验证块——平滑收益只在可采纳凸核内「免费」，绝不越过物理边界。*证明*：凸集对凸组合封闭；滞后由权重指数衰减的支撑集界给出。
 
-**引理 50（时序预算保持）** 6C 全异步于 50Hz 路径外，周期新增 < 0.2ms；修复时延 ≤ τ_repair；预算耗尽强制降级 ⇒ 硬实时（引理 45）。
+**引理 55（分层共形覆盖）** 层内可交换下 `P(h*∈H_s | s) ≥ 1−α`；边缘覆盖 `P(h*∈H_s) ≥ 1−α − Σ_s π_s·TV_s`，其中 `TV_s` 为层 `s` 的分布漂移。相比之下，未分层校准在指令选择效应下可**逐层失效**（覆盖可能远低于 1−α），故必须分层。低样本层回退全局 ⇒ 覆盖按 `−2η_global` 优雅降级。由 E447 检验。
+
+**引理 56（语义-时间放大界）** 设单槽接地错误概率 `p_g`、单步后果 `c_i`。一个已提交块的可逆部分期望损失 `D_rev(C) ≤ p_g Σ_i c_i`（线性，非指数）；若跨不可逆动作按 Barrier 强制 `K=1` 且要求独立验证，则不可逆部分的期望损失 `D_irr ≤ p_g c_irr`，**与 K 无关**。推论：分块本身不放大不可逆风险，放大只存在于可逆部分且被 `K ≤ K_MAX(ι)` 夹住。这给出 P3 的安全论证主干。
+
+**引理 57（块静默点热替换等价）** 若热替换仅发生在 `q_quiesce`，则在途块必已在边界 drain 或按 `abort` 截断补偿，没有任何块观察到「混合契约」。未涉及子图逐指令等价性回到 ToolGauge 引理 49（再回到第 1 轮引理 44）；新增的 `claims` 仍是纯投影。
+
+**引理 58（决策开销摊销与 50Hz 保全）** 每步规划开销为 `c_d/K + c_verify(K)`：`c_verify` 在守卫单调时可二分至 `O(log K)`，否则 `O(K)` 但 `K ≤ K_MAX`（小常数）。故 `K ≥ c_d/budget_slack` 时摊销净收益为正，主循环新增周期 `< 0.2ms`，继承 ToolGauge 引理 50 的硬实时结论。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| D-Box 扫描 | 50Hz 内联 | O(\|R\|) < 1ms | O(\|R\|) | 定义 398/399（继承） |
-| 回执验证 | 50Hz 内联 | O(1) < 0.2ms | O(1) | 定义 417 |
-| L-Box 假设 | 异步事件 | 1×VLA 前向，τ≈0.2–0.8s（缓存） | O(\|H_s\|) | 定义 422、引理 48 |
-| 编程 + TCV | 异步 | O(L_max·\|T₀\|) < 5ms | O(L_max) | 定义 418、引理 46 |
-| 工具执行 | 物理域 | Στ_t ≤ B_tools（PROBING 显式态） | O(L_max) | 定义 416–418 |
-| AP-Cal 校准 | 异步 | O(N_bl·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 420、引理 47 |
-| V 交叉验证 | 异步 | O(1) + 1 独立回执 | O(1) | 定义 421/427 |
-| U 热替换 + 证书 | 计量域 | < 1ms | O(1) | 引理 49 |
-| P-Quarantine | 异步 | O(K) | O(K) | 定义 428 |
+| NLI-Box 接地 | 异步事件 | O(\|ℓ\|+\|O_onto\|) 解析 + 1×VLA/LLM 前向（缓存） | O(\|ι\|) | 定义 432、引理 51 |
+| IAC 分块规划 | 异步 | O(K·\|T₀\|) < 5ms | O(K) | 定义 434/436、引理 53 |
+| CVC 块复核 | 探测域 | O(K) 最坏 / O(log K) 单调守卫 | O(1) | 定义 435、引理 52 |
+| 时间集成 | 探测域 | O(m·d_a)，m 为窗口 | O(m) | 定义 437、引理 54 |
+| SC-Cal 分层校准 | 异步 | O(1) 查表 + 1 独立回执 | O(\|strata\|) | 定义 438、引理 55 |
+| NCB 绑定 | 序列化 | O(\|claims\|·\|receipts\|) | O(\|claims\|) | 定义 441、引理 57 |
+| 热替换 | 计量域 | < 1ms @ q_quiesce | O(1) | 定义 439、引理 57 |
+| 50Hz 主路径 | 内联 | 不变 < 20ms | 不变 | 继承 ToolGauge 引理 50 |
 
-## 6. 实验设计 E426–E440
+## 6. 实验设计 E441–E456
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E426 | L-Box 共形覆盖（含未见材质/漂移组） | P(h*∈H_s) ≥ 0.9；漂移下 ≥ 0.8（SLA） |
-| E427 | TCV 拦截有效性 | schema/预算/循环违规拦截率 100%；程序生成失败重询率 ≤ 20% |
-| E428 | 增益注校准曲线 | 预测收缩 vs 实际收缩 ECE ≤ 0.1 |
-| E429 | AP-Cal 样本效率 | N_bl=2 达到第 1 轮 BP-Cal N_bl=5 的 σ_conf；增益 ≥ 2× |
-| E430 | 预训练规模扩展 | M∈{10²,10³,10⁴}，超额风险按 𝒪(M^{−1/2}) 衰减，拟合 R² ≥ 0.9 |
-| E431 | sim→real 偏移 η 实测 | 引理 47 界在 ≥95% 运行中成立 |
-| E432 | 6C 收敛与预算 | ≤ 5 次迭代；B_tools 内完成率 ≥ 95% |
-| E433 | 时序保全 | 50Hz 路径 99.9% 周期 < 20ms；修复时延 P99 ≤ τ_repair |
-| E434 | 对抗盲区注入 | 四层防线后注入成功率 < 5% |
-| E435 | VLA 幻觉压力测试 | SNC 剔除率 ≥ 90%；数值修复路径零污染 |
-| E436 | 语言修复证书有用性 | 人工审计确认时间下降 ≥ 40% |
-| E437 | 热替换等价性 | 未涉及子图逐指令 diff = 0（含 claims 剥离投影） |
-| E438 | 预算耗尽/恢复 | recovery 触发 100%，stub + RED 行为一致 |
-| E439 | 消融 | 去 MP-Φ / 去 TCV / 去 SNC / 去 P-Quarantine 各自贡献量化 |
+| E441 | 能力闭包 / 接地可靠性 | 越权工具/物理量注入通过率 = 0；⊥ 率可测且可解释 |
+| E442 | 歧义指令的放弃校准 | 误接地率 ≤ 2%；放弃率与指代置信度单调（AUROC ≥ 0.9） |
+| E443 | 分块漂移安全 | 注入漂移下 CVC 截断及时率 100%；越界动作 = 0 |
+| E444 | 块长-信息增益曲线 | 实测 K* 与引理 53 预测相对误差 ≤ 15% |
+| E445 | 时间集成平滑 vs. 滞后 | 边界抖动下降 ≥ 40%；滞后 ≤ (m−1)Δ；非凸工具自动禁用 |
+| E446 | 条件指令自动机 | 良基性验证 100%；livelock = 0；深度 ≤ D_max |
+| E447 | 分层共形覆盖 | 各 stratum 覆盖 ≥ 0.9；低样本回退后 ≥ 0.8 |
+| E448 | 安全优先级盾 | 反转安全序的指令拒绝率 100% |
+| E449 | 端到端指令任务 | 人类指令完成率 ≥ 85%，较 ToolGauge 提升 ≥ 20% |
+| E450 | 消融 | 去 NLI / 去 IAC / 去 CVC / 去 SC-Cal / 去 Barrier 各自贡献量化 |
+| E451 | 静默点热替换等价 | 未涉及子图逐指令 diff = 0；在途块零混合契约 |
+| E452 | 对抗 NL 注入 | 提示注入直达执行器成功率 < 1%；能力闭包违规 = 0 |
+| E453 | 不可逆屏障 | 跨屏障强制 K=1 达 100%；不可逆动作独立回执验证 100% |
+| E454 | 50Hz 时序保全 | 99.9% 周期 < 20ms；新增周期 < 0.2ms |
+| E455 | 陈旧块 / 盲区移动 | 盲区位移后 ≤ 1 个 CVC 周期内重规划 |
+| E456 | sim→real 指令迁移 | 接地与分块策略在 real 上性能退化 ≤ 10% |
 
-## 7. 本轮最大风险
+## 7. 预注册判据与预期结果
 
-**一句话**：AP-Cal 的摊销后验在「预训练分布 → 部署分布」偏移下会产生**跨盲区强相关**的系统性偏差（一次错误先验同时污染所有被热替换子图），使「局所修复、误差局部化」的安全论证整体失效，VLA 语言修复证书会放大其可信度外观——以 E431/E434/E435 证伪、P-Quarantine 在线断路、独立回执交叉验证（定义 421.V）三重兜底。
+| 判据 | 门槛（预注册） | 若未达标的处置 |
+|---|---|---|
+| 能力闭包（E441/E452） | 越权通过率严格 = 0 | 视为设计级失败，回退 ToolGauge 接口 |
+| 截断安全（E443） | 越界动作 = 0 且截断及时率 100% | 收紧 `δ_c` 并强制 K=1 |
+| 块长模型（E444） | K* 相对误差 ≤ 15% | 重新拟合 `α, ε, c_f` 或弃用自适应 K |
+| 分层覆盖（E447） | 每层 ≥ 0.9 | 增大校准集或回退全局 |
+| 不可逆安全（E453） | 100% 单独成块 + 独立验证 | 直接禁用跨屏障分块 |
+| 时序（E454） | 新增 < 0.2ms | 缩短 K_MAX 或异步下沉 |
+
+预期：E441/E443/E448/E451/E453 为「结构级」判据，应严格成立；E444/E445/E447 为「统计级」判据，按上表置信区间验收；E449/E456 为「系统级」判据，给出效应量与置信区间。
+
+## 8. 本轮最大风险
+
+**一句话**：`NLI-Box` 的接地与 `IAC` 的分块在接口处形成**语义-时间放大**——一次低置信接地错误会被一个长块原子性地执行成 K 步物理动作，而块内已执行动作无法靠逐条回执验证追回；缓解只能依赖结构（能力闭包使错误不越权、不可逆屏障使不可逆损失与 K 解耦、CVC 使可逆误差可截断、`K_MAX(κ_sem)` 夹住放大因子），并以 E441/E443/E452/E453/E455 主动证伪。
 <!-- ARTIFACT:END -->
