@@ -1,0 +1,53 @@
+{
+  "declared_model": "Mechanism check for TwinLoop (round 3): closed-loop vs one-shot repair.",
+  "A_closed_vs_open": {
+    "open": {
+      "accepted": 54.55,
+      "bad_accept": 0.3742078765593594,
+      "mae": 0.5329844357715434,
+      "coverage": 0.6981130586459605,
+      "probes": 240.0,
+      "chatter": 1.0
+    },
+    "closed": {
+      "accepted": 51.7,
+      "bad_accept": 0.17696552274756056,
+      "mae": 0.35097614812050815,
+      "coverage": 0.8929927547942252,
+      "probes": 232.5,
+      "chatter": 1.003
+    }
+  },
+  "B_pquarantine_vs_cusum": {
+    "v1_false_alarm": 0.855,
+    "v1_post_onset_detect": 0.02,
+    "cusum_false_alarm": 0.01,
+    "cusum_post_onset_detect": 0.99
+  },
+  "C_twin_gap_inflation": {
+    "0.0": {
+      "naive_bad_accept": 0.1981772900114936,
+      "naive_coverage": 0.8632821774196662,
+      "inflated_bad_accept": 0.19808099017958938,
+      "inflated_coverage": 0.8586224811592477
+    },
+    "0.3": {
+      "naive_bad_accept": 0.235984080480043,
+      "naive_coverage": 0.8325093972447479,
+      "inflated_bad_accept": 0.220167884805997,
+      "inflated_coverage": 0.8915456989018192
+    },
+    "0.6": {
+      "naive_bad_accept": 0.3196380233216048,
+      "naive_coverage": 0.7636217380082708,
+      "inflated_bad_accept": 0.22832040735270326,
+      "inflated_coverage": 0.9273179156076268
+    },
+    "1.0": {
+      "naive_bad_accept": 0.452065761560381,
+      "naive_coverage": 0.6172441311168232,
+      "inflated_bad_accept": 0.2487723060939901,
+      "inflated_coverage": 0.9435317101331513
+    }
+  }
+}
