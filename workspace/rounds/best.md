@@ -3,248 +3,379 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 70 轮（UniBot 参赛创新研究循环 · 第 1 轮；本轮灵感：「专利布局」×「Isaac Sim」×「通用机器人」）
+# 第 9 轮（新灵感循环第 1 轮；本轮灵感：「创新点提炼」×「中间件」×「动作分块」）
+> **基线**：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮纪律：**分块执行 + 契约中间件 + 创新提炼**。三个灵感分别治理 v8 的三种债：算力债（50Hz 逐步重计算无余量）、集成债（手写退化网关靠约定不靠机制）、叙事债（14 个 IP 无实证机制）。必须通过**中立元契约退化链**保证任一新模块失效时注入恒等元、严格等价退回 v8，而非行为漂移。
 
-> **主题切换声明**：自本轮起，研究主任务由 RAS 闭环（R66–R69 FLUID-RAS）切换为「宇树物理 AI UniBot 世界挑战赛」参赛创新研究。旧资产迁移而非丢弃：R69 的 aleatoric/epistemic 二分 → 干扰证据二分触发器（IP-U04）；模态校准门 MCG → 世界模型打分器置信门控（IP-U05）；参与式审计 → 评测可信度工程（IP-U08）。本轮为该循环第 1 轮，创新点清单从 v1 起建；后续轮次遵守「深化与修剪优先于推倒重来」。
->
-> 歧义消解：检索确认「UniBot」在本任务中指宇树挑战赛（unibot.unitree.com），而非 GitHub 同名的游戏辅助（vike256/Unibot）、QQ 机器人或 Uniswap 交易机器人。
+## 0. 直觉与动机
 
-## 0. 赛事事实底座（本轮检索核实；所有条目检索日均为 2026-11-15）
+**灵感 1（创新点提炼 → 模块贡献归因与蒸馏）**
+直觉：系统已堆叠 14 个 IP 模块，严谨的研究者必须回答"哪些组件真正挣得它们的算力"。核心创新：**创新点蒸馏器（InnovationDistiller, ID）**：滑窗消融归因产出贡献向量 c_m(t)，Schmitt 双阈把模块置入 active/dormant/frozen 状态机。关键安全设计：dormant 行为严格等价于 v8 对应退化级（注入中立元），故"提炼"只是计算再分配、不是功能删除——**P12 提炼不删码律**。附带产出：IP 清单从论文叙事升级为带消融证据的活文档（每项 IP 附 c_m 曲线）。
 
-| # | 事实 | 来源 | 置信 |
-|---|---|---|---|
-| F1 | 赛事 2026-07-10 官宣，全称「物理 AI UniBot 世界挑战赛」，直击具身智能大模型泛化性不足；单模型多任务、真实硬件统一评测 | 新浪科技/搜狐 https://www.sohu.com/a/1048635684_122014422 ；凤凰网科技/腾讯 https://news.qq.com/rain/a/20260710A09S2Q00 | 高 |
-| F2 | 平台 Unitree G1；任务集核心为 DAPTO 2 挑战套；32 项真实桌面任务（抓取/放置/双手协调）；32,000 演示样本、169 小时真机数据 | 官网 https://unibot.unitree.com/challenges.html （32/32000/169 为官方数字）；zhizaozx.cn 转载（DAPTO 2）https://zhizaozx.cn/articles/2qv-unitree-unibot-physical-ai-world-challenge.html | 高/中 |
-| F3 | 五类泛化场景：位置变化、干扰物存在、桌面背景差异、未见物品、人为干扰 | zhizaozx.cn 与 alixixi.com 转载一致（https://www.alixixi.com/wz/466644.html ）；官网任务页为动态加载未能直读 | 中高 |
-| F4 | 计分=平均成功率 + 步骤分综合排序；任务页示「得分点（满分 100）」逐任务设置 | 官网 index/leaderboard/challenges.html | 高 |
-| F5 | 数据集：HF 集合 32 个子数据集（每任务一集，G1_Dex1_*），每集约 1.0k episodes（HangCup：1.04k eps / 194,564 帧 / 8.8GB，推算每条约 6.2s）；LeRobot v3.0、30fps、4 相机（head_stereo L/R + wrist L/R）640×480 AV1；状态/动作含双臂 7DoF、EE 位姿（base/torso 系）、Dex1 夹爪（5.5→0.0 开→合）、lower_body 15、waist 3、base_command 4、pivot 7；Apache-2.0 | https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；单任务数据卡 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup | 高 |
-| F6 | 提交接口：PolicyService（msgpack+websockets）；control_space joint/ee 互斥；obs_delta_indices 同时决定「传哪些观测 + 时间堆叠」；image_resize 可降分辨率；action_chunk_size 固定于 metadata、每次调用返回 (T_a,…) 且被完整执行；token 逐步校验；评测 N 台真机随机序接入 → 须开放 8765 起 N 个连续端口（一端口一实例，或共享后端并发+状态隔离）；README §6：每步响应延迟与波动、动作统计规律将被记录，可能随结果公布（可信度指标） | https://github.com/unitreerobotics/unibot_submission （2026-06-26 建，2 commits）README | 高 |
-| F7 | 宇树自家模型生态公开：UnifoLM-WMA-0-Base/Dual（世界模型，2025-09）、UnifoLM-VLA-0、UnifoLM-WLA-1.0 | https://huggingface.co/collections/unitreerobotics/unifolm-wma-0 等 | 高 |
-| F8 | **排行榜当前显示「即将发布 Coming Soon」，公开榜单未上线**；「榜首成功率 <30%」来自任务方提示，公开渠道暂无法核实 → 本文按「待核实工作假设」处理 | https://unibot.unitree.com/leaderboard.html （检索 2026-11-15） | — |
-| F9 | 规则手册为飞书文档（JS 渲染），本轮未能抓取正文 → 干扰强度、测试次数、步骤分细则、模型/延迟上限缺失，列入下轮补齐 | https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh | — |
+**灵感 2（中间件 → 退化链的声明化）**
+直觉：v8 主闭环中模块接线与退化逻辑是手写 if-else 网关，模块越多越脆。中间件思想：把"接线、时限、失效语义"升级为一等公民。核心创新：**实时契约中间件（ContractMiddleware, MW）**：每模块声明契约 κ_m=(In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)；每周期 EDF 调度，超时即注入中立元 v_m^⊥（该端口聚合算子的恒等元）。v8 的四级退化链由此变成契约表的一个**数据实例**（引理 83 证明逐位等价复现）。退化从"代码"变成"配置"，组合正确性从人工验证变成代数性质。
 
-## 1. 三个灵感的合成逻辑（直觉与动机）
+**灵感 3（动作分块 → 分块证书执行）**
+直觉：50Hz 逐步决策让重模块每周期全额燃烧算力，预算利用率近 1.0，正是 v8 抖动风险的根源。ACT 思想：一次生成 K 步动作块 ζ=(a^{1:K}, Ĉ, P)——Ĉ 为块证书（前向模型预测的块内指标最坏界，留余量 β），P 为满足停车不变式的中止点集。5Hz 生成块，50Hz 只跑廉价守卫；违规时切换到最近中止点安全停驻。核心创新：**分块证书执行器（ActionChunkCertifier, AC）**；且有效块长 K_eff 由 Δ_dom、risk_SLAM 连续门控——域越陌生块越短，极端时 K=1 退回 v8 逐步模式。分块使决策预算利用率从 ~1.0 降至 ~0.3，直接给 v8 的"抖动→虚假退化风暴"风险上保险。
 
-**灵感 1「Isaac Sim」→ 数据是当前唯一可控的杠杆。**
-每任务 ~1000 条、每条仅 ~6 秒的干净短示教（F5），而评测按五类泛化轴计分（F3）——位置变化、干扰物、背景、未见物品、人为干扰恰好都是 32k 演示里覆盖最薄的方向，「人为干扰」轴在官方数据里甚至没有任何恢复片段。结论：**泛化轴就是数据需求说明书**。Isaac Sim/Isaac Lab 把评测协议反变成数据生成协议：把五类场景显式编码为五个随机化轴（GA-DR），对每条真机 demo 做任务级场景重建后定向扩增。这是与「32k demo 直接微调 VLA」的社区主流路线最大的差异点。
+## 1. 研究问题（轮次升级版）
 
-**灵感 2「通用机器人」→ 瓶颈大概率不在「会不会做」，而在「换了也不慌」。**
-32 任务各有 1k demos，任务内技能可学；把 <30%（待核实，F8）的失败按五轴分解，失分应集中在未见物品/人为干扰/背景三轴。架构主线因此是「物体中心 + 双系统 + 世界模型前瞻」的混合通才策略，而非更大的端到端 Transformer：像素级端到端对背景脆弱；单次前向选 chunk 对干扰是盲打。更关键的是，本评测的接口形态（F6：chunk 间有网络间隙、允许每步重规划、观测/动作 chunk 化）天然给「想一想再动」留了算力窗口——这是本赛事特有、连续控制场景里没有的可乘之机；官方 WMA-0 世界模型（F7）同平台同格式，微调成本低。
+- **Q1（分块证书可靠性）**：如何设计块证书与中止点集，使「信任域内前向模型误差 ≤ β」假设下，中块突变的安全性与逐步执行统计等价？信任域门控能否消除模型误差与域偏移的相关性风险？
+- **Q2（契约化退化）**：如何将 v8 四级退化链编码为中立元代数，使"模块失效（超时）"与"显式退化"在可观测日志层面逐位不可区分？
+- **Q3（提炼安全边界）**：消融归因与状态机在什么资格谓词 φ^elig 下保证蒸馏永不触碰安全不变式？双阈迟滞能否根除休眠-唤醒抖振？
 
-**灵感 3「专利布局」→ 用专利性当创新点的筛选器与护栏。**
-参赛产出不止名次：GA-DR、干扰算子合成、动作块级 WM 前瞻选择、干扰证据二分触发器、稳态尾动作块，都是「方法+系统」可写权利要求的组件。同时必须 FTO：Physical Intelligence、NVIDIA（GR00T）、字节等在 VLA/世界模型方向已有大量申请，创新点须落在「组合差异」上（新触发条件、新损失、新接口语义）。本轮先立专利候选清单与公开时序纪律（先申请、后开源/发论文，防自毁新颖性），专利检索留待下轮。
+## 2. 设计原则（在 P7–P9 基础上新增 P10–P12）
 
-## 2. 竞争格局与瓶颈判断
+**P10 分块证书律（Chunked-Certificate Execution, AC）**
+决策以块为单位：ζ_t = (a^{1:K}, Ĉ_t, P_t)。证书 Ĉ_t 携带前向模型误差余量 β；中止点 p ∈ P_t 满足停车不变式 d_stop(p)。50Hz 守卫只做廉价检查（证书失效检测 + 停车不变式），重规划只在块边界发生。有效块长受信任域门控：K_eff(t) = 1 若 Δ_dom ≥ τ_dom 或 risk_SLAM ≥ τ_SLAM，否则 K_eff = max(1, ⌊K_max·(1−Δ_dom/τ_dom)⌋)。
 
-- 榜单未上线（F8）→ 无法直接分析头部方案；改用**协议反推**：组织方按五轴设计评测，说明其判断这五轴是当前通才模型的失败面（与 OpenVLA/π0 系论文自述 OOD 弱点一致）。
-- 接口层信息（F6）暴露两个被低估的得分点：(a) **延迟稳定性是明牌可信度指标**；(b) obs_delta_indices / image_resize / action_chunk_size 的选择空间是一整套无人竞争的「推理工程策略」。
-- 数据侧：官方数据集与官方模型（WMA-0）同格式同平台 → 起点成本低，**组合官方资产 + 仿真扩增**是性价比最高的差异化路线。
+**P11 中立元退化律（Neutral-Element Degradation, MW）**
+每模块输出端口定义聚合算子 ⊕ 与中立元 v^⊥（恒等元：x ⊕ v^⊥ = x）。模块在截止期内完成则输出 x_m(t)，超时/失效则注入 v^⊥。系统退化行为 = 中立元组合，由契约表声明，不再手写分支。
 
-## 3. 主线方案骨架 UNIBOT-STACK（三层 + 一护栏）
+**P12 提炼不删码律（Distill-Not-Delete, ID）**
+蒸馏只改变调度（计算分配），不改变代码可达性：dormant/frozen 模块保留在契约表中，其 v^⊥ 路径随时可用；φ^elig=false 的安全关键模块（M₀ 硬检查、SpatialCert、FaultCert、MW 自身、AC 证书检查）永不消融；Δ_dom 越阈强制全模块唤醒。
 
-| 层 | 内容 | 承载 IP |
-|---|---|---|
-| L1 数据引擎 | Isaac Sim 重建 32 任务场景 + GA-DR 五轴随机化 + 干扰算子注入/恢复合成 + LeRobot v3 同构导出 | IP-U01 / 02 / 07 |
-| L2 策略 | 底座选型（WMA-0 / VLA-0 / GR00T N1.5）→ 物体中心检索增强表征 OCRA → 双系统（快 chunk 策略 + 慢 VLM 重规划）+ 干扰证据二分触发器 | IP-U10 / 03 / 04 |
-| L3 推理工程 | 动作块级 WM 前瞻验证选择；稳态尾 chunk 结构；分辨率压缩与历史堆叠优化；N 端口共享后端；延迟确定性工程 | IP-U05 / 06 / 08 |
-| 护栏 | 专利地图与 FTO；公开时序纪律 | IP-U09 |
+## 3. 与基线的接口（如何退化）
 
-## 4. 与现有方案差异（一览）
+- AC 失效（前向模型超差 / 证书连续失效）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- MW 失效 ⇒ 切换 v8 手写网关代码路径（代码保留、非契约驱动），等价 v8 集成方式；
+- ID 失效 ⇒ 全模块 active、c_m 冻结不再更新，等价 v8（全模块常开）；
+- v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- 全部失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-- vs 社区主流「32k demo 直接微调 VLA」：加五轴定向合成数据 + 干扰恢复对，攻的正是计分面。
-- vs 盲目域随机化：GA-DR 以评测协议为蓝本、以真机 demo 为校准锚，随机化有方向。
-- vs 纯端到端：物体中心表征 + 检索增强 + 双系统，专治背景/未见物品/人为干扰三轴。
-- vs 单次前向出 chunk：动作块级 WM 前瞻 + 置信门控，评测接口的独有红利。
-- vs 只管模型：可信度工程与接口参数最优化是无人区。
+## 4. 预期贡献
 
-## 5. 资源与实时预算（估算）
+1. **分块证书执行**框架：块级证书 + 中止点集 + 信任域门控块长，在保持安全论证局部化的同时将决策算力利用率降一个量级；
+2. **契约中间件**：退化链的代数化——中立元恒等性使组合退化正确性从枚举验证变为代数性质（v9 引理 83）；
+3. **创新点蒸馏器**：IP 清单的实证化与算力的自适应再分配，附"陌生域强制唤醒"反脆弱设计；
+4. **预算-安全-自省三闭环**：分块释放的算力反哺 DA/SPR/Cal 的余量；E551–E570 覆盖块长扫描、中止功效、契约等价、归因精度、抖振抑制、陌生域唤醒与端到端任务。
 
-- 合成数据引擎：Isaac Lab 开源免费；8×RTX4090 约 2 周产 ~10 万条合成 episode（每任务 3–5k 估）；人力：场景重建 3–4 人周，Dex1 夹爪近似为最大不确定项。
-- 训练：底座微调 8×H100 × 3–7 天量级（按 π0/GR00T 公开微调配置外推）；OCRA 蒸馏 4×4090 × 2 天。
-- 推理：System-1 单次前向 + FAISS 检索（毫秒级）+ 稳态尾生成，目标单步 P99 < 300ms；WM 前瞻仅在 chunk 间隙或低置信时启用 K≤3。
-- 待补：若规则限模型体积/延迟上限（F9 缺失），预算表需重排。
+## 5. 本轮最大风险
 
-## 6. 实验设计（E-U 序列，本轮起建，优先可离线执行）
-
-| 编号 | 问题 | 指标 | 依赖 |
-|---|---|---|---|
-| E-U01 | 32 任务数据解剖：时长/速度/双手协同率/夹爪时机分布 | 每任务画像表 + 任务簇聚类（预期 6–8 簇） | HF 数据（现成） |
-| E-U02 | 任务簇 × 官网得分点映射 | 难度-步骤分矩阵；数据配比表 v1 | 官网任务页（需登录） |
-| E-U03 | Isaac 场景重建保真度 | demo 重放 vs 真机：视觉 FID、关节轨迹 MSE | Isaac Lab |
-| E-U04 | WMA-0 rollout 可用性 | 1s 视野单步预测误差；幻觉率 | WMA-0 权重 |
-| E-U05 | 合成数据毒性边界 | 混训比例扫描：sim-only vs mixed 五轴评测差 | L1 + 小底座 |
-| E-U06 | 干扰恢复学习增益 | 注入 vs 不注入：干扰轴成功率差 | E-U05 |
-| E-U07 | 服务延迟确定性 | 单步 P99、抖动、零 NaN 率 | L3 |
-| E-U08 | GA-DR 五轴消融 | 每轴开/关对对应轴评测的增益 | E-U05 |
-
-## 7. 本轮最大风险
-
-**一句话**：五类泛化场景目前只有官方的定性描述（规则手册抓不到、任务页需登录，F3/F9），**数据引擎可能在为「想象中的评测」造数据**——干扰物是什么、人手怎么干扰、位置扰动多大、未见物品池多广全靠猜；猜错方向，合成数据越多毒性越大。
-**缓解**：(1) 用官方 demo 的场景/物体元数据反推真实分布；(2) 立即申请账号与 Submit Test 档期，把每次真实评测设计成「分布探测实验」；(3) GA-DR 各轴强度参数化，一次探测后整体重标定。
-
-## 8. 本轮押注（一句话）
-
-**当前最值得押注的创新点：IP-U01+IP-U02（GA-DR 泛化轴数据引擎 + 干扰算子恢复合成）**——它直接供给五轴计分面，可行性最高、专利性最强，且双系统、WM 前瞻、OCRA 等下游组件都依赖它产出的数据。
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 70 轮产物 · UniBot 创新点清单 v1
+# 第 9 轮产物 · 创新点清单 v9：**MetricVoiceGauge-ACMD**（Metric Voice Gauge with Action-Chunk Certificates, Contract Middleware & Innovation Distillation）
 
-**UNIBOT-STACK：GA-DR 泛化轴数据引擎 × 物体中心双系统通才策略 × 动作块级世界模型前瞻；专利布局作筛选护栏**
+> 背景：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
+> 本轮灵感：「创新点提炼」×「中间件」×「动作分块」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留；v8 的 DA-ML/SPR/Cal 三模块原样继承。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格等价退回 v8 行为（引理 83），而非行为漂移。
 
-> 循环第 1 轮起建清单（IP-U01~IP-U10）。每条含【动机 / 与现有方案差异 / 技术可行性 / 所需资源 / 落地步骤 / 风险 / 专利性】。事实来源与检索日期（2026-11-15）见想法区 §0；赛事=宇树物理 AI UniBot 世界挑战赛（unibot.unitree.com，G1 平台，32 任务，成功率+步骤分，五类泛化场景）。
+## 0. 核心 IP 设计
 
-## 0. 清单总览（按「预期得分贡献 × 可行性 × 专利性」排序）
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-DA-SPR-Cal v8） |
+|---|---|---|---|
+| IP-340–353 | v8 全部模块 | 继承 | 语义不变；接线方式改由 MW 契约表声明（IP-355） |
+| IP-346 | MetricVoiceGauge 主闭环 | 集成升级 | WCET 从"贴满 20ms"变为"分块摊销后典型 ≤8ms、p99 ≤20ms"（引理 86） |
+| IP-354 | ActionChunkCertifier 分块证书执行器 | 新增核心模块 | 5Hz 生成 ζ=(a^{1:K}, Ĉ, P)：K 步动作、带余量 β 的块证书、满足停车不变式的中止点集；50Hz 廉价守卫；K_eff 由 Δ_dom/risk_SLAM 门控 |
+| IP-355 | ContractMiddleware 实时契约中间件 | 新增核心模块 | 契约 κ_m=(In,Out,D_m,Ŵ_m,v_m^⊥,π_m,φ^elig)；周期内 EDF 调度；超时注入中立元 v^⊥；v8 四级退化链成为契约表数据实例 |
+| IP-356 | InnovationDistiller 创新点蒸馏器 | 新增核心模块 | 滑窗消融归因 c_m；Schmitt 双阈 active/dormant/frozen 状态机；Δ_dom 越阈强制全唤醒；dormant ≡ 注入 v^⊥（等价 v8 退化级） |
 
-| 编号 | 名称 | 层 | 预期贡献 | 可行性 | 专利性 | 状态 |
-|---|---|---|---|---|---|---|
-| IP-U01 | 泛化轴定向域随机化数据引擎（GA-DR） | L1 | ★★★ | 高 | ★★★ | 本轮立项 |
-| IP-U02 | 干扰算子注入与失败恢复合成 | L1 | ★★★ | 中高 | ★★★ | 本轮立项 |
-| IP-U04 | 双系统 + 干扰证据二分重规划触发器 | L2 | ★★★ | 高 | ★★★ | 本轮立项（承接 R69） |
-| IP-U05 | 动作块级世界模型前瞻验证（VLA×WM 混合） | L3 | ★★☆ | 中 | ★★★ | 本轮立项 |
-| IP-U03 | 物体中心检索增强观测（OCRA） | L2 | ★★☆ | 中 | ★★ | 本轮立项 |
-| IP-U06 | 稳态尾动作块 + 接口参数最优化 | L3 | ★★ | 高 | ★★ | 本轮立项 |
-| IP-U07 | 合成-真机混合课程与任务簇配比诊断 | L1/L2 | ★★ | 高 | ★ | 本轮立项 |
-| IP-U10 | 底座选型与官方生态吸收（WMA-0/VLA-0） | L2 | ★★ | 高 | — | 本轮立项 |
-| IP-U08 | 评测可信度工程（延迟确定性/异常抑制） | L3 | ★☆ | 高 | ★ | 本轮立项 |
-| IP-U09 | 专利地图与 FTO 护栏 | 护栏 | — | — | — | 本轮立项，下轮检索深化 |
+**退化链声明（v9 契约化五级）：**
+- Level-1：AC 证书失效或信任域破坏（Δ_dom ≥ τ_dom ∨ risk_SLAM ≥ τ_SLAM）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
+- Level-2：MW 失效 ⇒ 切换 v8 手写网关代码路径（保留于代码库，非契约驱动），等价 v8 集成方式；
+- Level-3：ID 失效 ⇒ 全模块 active、归因冻结，等价 v8 全模块常开；
+- Level-4：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- Level-5：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-## 1. 核心条目详述
+## 1. 符号体系增量（定义 532–539）
 
-### IP-U01 泛化轴定向域随机化数据引擎（GA-DR）
-- **动机**：每任务仅 ~1k 条 ~6s 干净短示教，五类泛化轴覆盖极薄（尤其人为干扰轴零恢复数据）；评测按轴计分，数据是最大杠杆。
-- **差异**：主流路线被动接受官方数据分布；GA-DR 把评测协议显式反变为数据生成协议——五个随机化轴（位置/干扰物/背景/未见物品/人为干扰）各有参数化算子与强度课程，并用真机 demo 做分布校准锚（Sim-Real 特征 FID + 抓取行为一致性双指标）。
-- **可行性**：高。Isaac Lab 开源、G1 官方 Isaac 资产存在；Dex1 夹爪资产需自建近似（平行夹爪替代 + 指形修正）。
-- **资源**：8×4090 渲染 2 周（~10 万条合成 episode）；资产制作 3–4 人周；导出与官方 LeRobot v3 同构（同键名/分辨率/帧率），混合训练零摩擦。
-- **步骤**：① demo 反演 32 任务场景模板（物体/布局/得分点）→ ② G1+Dex1 装配与遥操作重放验证（E-U03）→ ③ 五轴随机化算子库 → ④ 合成扩增 → ⑤ E-U05/E-U08 校准与消融。
-- **风险**：sim2real 视觉域差（用真图背景合成 + 照明随机化缓解）；Dex1 手建模失真；官方五轴真实强度未知（想法区 §7 主风险）。
-- **专利性**：★★★ 方法专利候选：「泛化轴定向域随机化 + 真机分布校准闭环」。
+| 符号 | 含义 |
+|---|---|
+| ζ_t = (a^{1:K}, Ĉ_t, P_t) | 动作块：K 步动作序列、块证书、中止点集（P_t ⊆ {1..K}） |
+| Ĉ_t = (ĝ_min, ê_max, γ̂_grasp) | 块证书：前向模型 F̂ 预测的块内指标最坏界，含模型误差余量 β |
+| d_stop(p) | 停车不变式：dist(s_t, O) − \|traj_{p:end}\| ≥ d_brake(v_p) + d_safe |
+| K_eff(t) | 有效块长：K_max 经信任域门控（定义 539） |
+| U_t | 前向模型信任域：{Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM} |
+| κ_m = (In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig) | 模块契约：输入输出模式、截止期、WCET 上界、中立元、优先级、蒸馏资格谓词 |
+| v_m^⊥ | 中立元：模块失效时注入其输出端口，为其聚合算子 ⊕ 的恒等元（x ⊕ v^⊥ = x） |
+| c_m(t) ∈ [0,1] | 模块贡献向量：滑窗消融归因的 EMA（定义 537） |
+| st_m ∈ {active, dormant, frozen} | 提炼状态机（定义 538） |
+| τ_off < τ_on | Schmitt 双阈：休眠阈 < 唤醒阈，保证迟滞 |
+| T_abl, H_off | 消融回合周期（500 控制周期）与休眠确认回合数 |
 
-### IP-U02 干扰算子注入与失败恢复合成
-- **动机**：官方 demo 无恢复片段，评测中干扰必然打断 chunk 执行；失败恢复能力决定成功率下限。
-- **差异**：现有 VLA 训练几乎不造显式恢复数据；本点把「干扰」建模为可复现扰动算子（推移物体、遮挡相机、人手伸入/拨动、目标移位），对每条真机轨迹注入生成「中断-恢复」对，并自动产出 chunk 级 early-abort 标签（供 IP-U04/06 用）。
-- **可行性**：中高（全 sim 生成；真机 demo 时序扰动增强作廉价补充）。
-- **资源**：算子库 ≥8 类；复用 IP-U01 管线；无额外硬件。
-- **步骤**：算子库 → 注入分布设计（对照五轴定性描述保守取值）→ 恢复对合成 → 混训配比课程 → E-U06。
-- **风险**：注入分布与真实干扰统计不匹配（缓解同主风险）；恢复数据比例过高伤正常性能（配比课程控制）。
-- **专利性**：★★★ 「操作任务干扰算子化数据合成方法」。
+**新增定义 532（动作块 ActionChunk）** 一次决策的输出单元：ζ_t = (a_t^{1:K}, Ĉ_t, P_t)，a ∈ A 为 K 步动作，K = K_eff(t) ≤ K_max = 10（50Hz 下 200ms 时域）。块在 5Hz 节拍生成，逐周期执行第 k 步。
 
-### IP-U03 物体中心检索增强观测（OCRA）
-- **动机**：「未见物品」「背景差异」两轴直指像素级端到端的脆弱性；物体级表征对背景天然不变，未见物品靠物体先验库泛化。
-- **差异**：主流微调直接吃 4 路 RGB；本点在策略前加物体接口层（开放词汇分割 + DINOv2 物体 embedding + 语言指代对齐），并以当前场景 embedding 从 32k 官方 demo（FAISS）检索最近轨迹簇条件化动作头——「给 VLA 一个对象数据库」。
-- **可行性**：中。SAM2 在线分割开销大 → 训练时用其伪标签蒸馏轻量场景编码器（单次前向）；检索毫秒级。
-- **资源**：开源分割/特征模型；FAISS；蒸馏 4×4090×2 天。
-- **步骤**：物体先验库（32 任务资产 + OXE/DROID 物体 + 合成渲染）→ 蒸馏场景编码器 → 检索条件化动作头 → 五轴仿真评测验证两轴增益。
-- **风险**：分割失败反噬（遮挡/透明物）→ 保留 RGB 残差通路门控融合；延迟预算超支。
-- **专利性**：★★ 权利要求需写「任务指令引导的检索 + 动作头条件化」组合以区别现有 RAG-VLA 文献。
+**新增定义 533（块证书 ChunkCertificate）** 由冻结前向模型 F̂（轻量 LSTM-MPC 代理，输入状态-动作、输出指标轨迹）预测块内各软层指标最坏界并留余量：
+```
+ĝ_min = min_{k≤K} F̂_clearance(s,a^{1:k}) − β,   ê_max = max_{k≤K} F̂_effort + β
+```
+证书有效 ⇔ ĝ_min ≥ d_safe ∧ ê_max ≤ τ_eff ∧ γ̂_grasp = valid ∧（用当前 τᵢ(t) 复核各层）。β 由 E554 标定（信任域内经验误差上界 ×1.2 安全系数）。
 
-### IP-U04 双系统 + 干扰证据二分重规划触发器（承接 R69）
-- **动机**：30Hz 下端到端大模型延迟不现实（接口要求延迟稳定，F6）；干扰场景需要「察觉-暂停-重规划」循环。
-- **差异**：HiRT/π0.5 式双系统按定周期切换；本点把 R69 的 aleatoric/epistemic 二分迁移为触发准则——外部证据（非自运动区域前后帧差分：场景被外界改变）与内部证据（策略熵/多模态分歧）分别对应 epistemic（触发 System-2 重规划）与 aleatoric（仅降速不重规划），触发器为轻量检测器，用 IP-U02 的注入数据自动获得标签。
-- **可行性**：高。纯服务内逻辑，检测器毫秒级。
-- **资源**：标注自动；训练算力小。
-- **步骤**：变化检测器 → 双系统集成 → 「人为干扰」轴专项评测。
-- **风险**：误触发消耗步骤分 → 阈值按步骤分代价校准。
-- **专利性**：★★★ 「干扰证据二分驱动的双系统重规划触发器」。
+**新增定义 534（中止点与停车不变式 AbortPoint）** 前缀索引 p ∈ P_t 满足：从第 p 步末执行安全停驻（速度指数衰减）所需刹停距离不超过当前间隙余量：
+```
+d_brake(v_p) + d_safe ≤ dist(s_p, O) − |traj_{p:K}|
+```
+骨架中候选块的 P_t 为空即拒绝该候选；故"无点可退"仅发生于 K=1 fallback（等价 v8 逐步语义）。中块违规时切换到 ≤ 当前执行步的最大中止点 p*。
 
-### IP-U05 动作块级世界模型前瞻验证（VLA×WM 混合）
-- **动机**：单次前向选 chunk 在未见物品/干扰下是盲打；官方 UnifoLM-WMA-0（G1 世界模型，F7）同平台可直接微调；评测协议 chunk 间有间隙，天然容许「先想后动」。
-- **差异**：社区主流无候选验证；WM 规划文献多为连续控制；本点做动作块级选择——生成 K≤3 候选 chunk → WMA-0 rollout 末端观测 → 打分器评「子目标达成/干扰物是否被碰倒」→ 选最高分。
-- **可行性**：中。WMA-0 权重开源、rollout 质量待 E-U04 实测；延迟预算需管理（仅低置信时启用）。
-- **资源**：WMA-0 微调 4×H100×2 天；打分器可先 VLM zero-shot 再蒸馏轻量头。
-- **步骤**：E-U04 可用性 → 打分器 → 置信门控（ECE 校准，承 R69 MCG：门控不过则退回直通策略）→ 集成。
-- **风险**：WM 幻觉 rollout 误导选择（校准门控兜底）；延迟翻倍。
-- **专利性**：★★★ 「动作块级世界模型前瞻选择 + 置信门控系统」。
+**新增定义 535（中间件契约 MiddlewareContract）** 每模块 m 声明 κ_m = (In_m, Out_m, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)。部署期静态验证 Σ_m Ŵ_m ≤ B_dec（决策预算 20ms）与 EDF 可行性；运行期 deadline_guard 强制执行 Ŵ_m。默认契约表（感知侧 ≤2ms + 决策侧 ≤20ms）：
 
-### IP-U06 稳态尾动作块 + 接口参数最优化
-- **动机**：action_chunk_size 固定于 metadata 且整块执行（F6）→ 无法中途改主意；chunk 间衔接误差与每步网络延迟都是隐性扣分点。
-- **差异**：社区固定 chunk 直出；本点：① chunk 尾部 1–2 步收敛为「速度/持握保持」的稳态尾，使中断衔接误差最小、也为截断执行留兼容；② image_resize 降分辨率（320×240）压缩传输与推理延迟；③ obs_delta_indices 选择性堆叠（速度估计 3 帧）而非全量观测；④ N 端口共享后端并发调度（README 明示允许）。
-- **可行性**：高，纯工程。**资源**：无额外。
-- **步骤**：稳态尾生成器 → 接口参数网格（本地 run_client 全链路压测 E-U07）→ 部署。
-- **风险**：低。
-- **专利性**：★★ 「稳态尾动作块生成方法与系统」。
+| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
+|---|---|---|---|---|
+| DA-ML（域偏移） | 1.0 | 1.0 | 0.0（Δ_dom≡0） | ✗ |
+| SPR（SLAM 风险） | 0.2 | 0.2 | 0.0（risk_SLAM≡0） | ✗ |
+| Calib-FI（标定隔离） | 0.1 | 0.1 | 恒等（weight≡1, κ 基准） | ✗ |
+| GCT/ER/OTL | 各 ≤1 | 各 ≤1 | 各自 v8 退化值 | ✗ |
+| AC 块生成（5Hz） | 12 | 12 | 单步 fallback 动作 | ✗ |
+| AC 中块守卫（50Hz） | 0.5 | 0.3 | continue（持当前步） | ✗ |
+| ID 归因 | 0.2 | 0.1 | 跳过本回合 | ✓ |
 
-### IP-U07 合成-真机混合课程与任务簇配比诊断
-- **动机**：混训比例决定合成数据是增益还是毒药；32 任务应聚成技能簇按簇配比。
-- **差异**：拍脑袋 1:1 混 vs 按「簇难度 × 泛化轴脆弱度」动态配比；先用官方 32k demo 做运动学画像与聚类（抓-移-放/插入/堆叠/倒/双手协同），对齐官网逐任务得分点。
-- **可行性**：高（离线即起步，E-U01/E-U02 现在就能做）。**资源**：CPU/GPU 少量。
-- **步骤**：E-U01 → E-U02 → 配比表 v1 → 随实测迭代。
-- **风险**：低。**专利性**：★（工具性，并入 U01 权利要求）。
+**新增定义 536（中立元退化实例表 NeutralElementTable）** 每行：模块 → v^⊥ → 等价 v8 退化级。例：DA-ML: v^⊥=0 ⇒ Level-1（Δ_dom≡0）；SPR: v^⊥=0 ⇒ risk_SLAM≡0；Calib-FI: v^⊥=恒等 ⇒ sensor_weight≡1；ID dormant: v^⊥ 注入 ⇒ 该模块"缺席"＝对应显式退化分支。AC 端口的中立元为安全停驻序列 a^⊥（速度衰减到 0），吸收元性质（后续块不再执行）而非恒等元，单独验证。
 
-### IP-U08 评测可信度工程
-- **动机**：README §6 明示每步延迟及波动、动作统计规律将被记录并可能随结果公布（F6）——这是明牌评分维度。
-- **差异**：多数队伍只管模型；本点把「服务确定性」当一等公民：预分配显存、固定 batch、CUDA Graph、GC 抖动抑制、动作裁剪/NaN 防护、超时降级（安全持稳兜底动作）。
-- **可行性**：高，纯工程。**步骤**：E-U07 全链路压测 → 上线基线。
-- **风险**：低。**专利性**：★（并入 IP-U06 系统权利要求）。
+**新增定义 537（贡献向量滑窗消融 WindowedAblation）** 每 T_abl=500 周期进行一次消融回合（H=20 周期）：仅对 φ^elig 模块 m，交替运行 with/without m 的块，得分 J = 任务进展 − 安全罚（块级聚合）：
+```
+c_m ← clip( 0.9·c_m + 0.1·norm(J_with − J_base), 0, 1 )
+```
+安全关键模块不参与消融（φ^elig=false），其"贡献"记为 ∞。
 
-### IP-U09 专利地图与 FTO 护栏
-- **动机**：比赛同时是 IP 构建窗口；先申请后公开防新颖性自毁；避开 PI/NVIDIA 等已有申请的核心权利要求。
-- **内容**：候选专利包 = U01+U02（数据引擎）> U04（触发器）> U05（WM 前瞻）> U06（稳态尾）；公开时序纪律（开源/论文前完成交底）。
-- **下轮**：Google Patents/智慧芽检索「domain randomization manipulation」「world model action selection」「VLA 干扰鲁棒」现有申请，收敛权利要求差异点。
-- **风险**：专利撰写挤占研究时间（用技术交底书先行）。
+**新增定义 538（提炼状态机 DistillFSM）** st_m: active → dormant（c_m < τ_off=0.01 持续 H_off=3 回合）；dormant → active（c_m ≥ τ_on=0.03 或 Δ_dom ≥ τ_dom 强制唤醒）；dormant → frozen（dormant 持续 20 回合）；frozen 仅可由离线证据解冻。dormant 执行 = MW 将该模块输出置为 v^⊥ 并跳过其计算。
 
-### IP-U10 底座选型与官方生态吸收
-- **动机**：从零训不可行；宇树自家 UnifoLM 系列（WMA-0 世界模型 / VLA-0 / WLA-1.0，F7）同平台同格式，社区还有 GR00T N1.5（官方支持 G1）、π0 系。
-- **差异**：选型打分制：输入模态匹配度（4 相机+language）、动作空间匹配度（数据动作含 EE 位姿目标 → ee 控制空间最贴合）、许可证、算力。
-- **步骤**：下载 WMA-0-Base + VLA-0 → 3 任务离线复现评估 → 决定底座（决策门 D1）。
-- **风险**：许可条款限制；社区底座对 Dex1 手支持不足。
+**新增定义 539（有效块长门控 EffectiveChunkLength）**
+```
+K_eff(t) = 1                                   若 U_t 不成立
+         = max(1, ⌊K_max·(1 − min(1, Δ_dom(t)/τ_dom))⌋)   否则
+```
+域越陌生块越短；risk_SLAM ≥ τ_SLAM 时 U_t 直接破坏，K_eff=1。
 
-## 2. 主服务骨架（伪代码，对照 unibot_submission §1–§6 接口）
+## 2. 形式化定义（要点与升级）
+
+**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
+**定义 495/524（MetaWeight/情感，5 维）** 继承 v8 不变。
+**定义 521（DA-OTL）** 继承 v8 不变；τᵢ(t) 在 K_eff>1 时以块证书替代逐层逐步复核。
+**升级定义 496（软证书，v9）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM ∧ Ĉ_t valid}，五条件同尺度设计；块证书失效与单步条件同样触发 M₀ 硬检查，无"块内软通过硬失"空洞（引理 82+81 联合）。
+**升级定义 531（软硬约束衔接）** M₀ 判据增加块级入口：任一中块守卫违规 ⇒ 立即切换 p* 或安全停驻，不等块边界。
+
+## 3. 关键算法骨架
 
 ```python
-class UniBotPolicy:                                   # 部署为 PolicyService，N 端口共享后端
-    def __init__(self):
-        self.s1   = ChunkPolicy(base=...)             # IP-U10 底座 + OCRA 场景编码器
-        self.det  = InterferenceDetector()            # IP-U04 干扰证据二分
-        self.wm   = WMScorer(unifolm_wma0)            # IP-U05 前瞻打分（ECE 门控）
-        self.sched= ChunkScheduler()                  # IP-U06 稳态尾/压缩/堆叠
-        self.mem  = FAISSDemoMemory(official_32k)     # IP-U03 检索增强
+# IP-354 ActionChunkCertifier：分块证书执行器
+class ActionChunkCertifier:
+    def __init__(self, forward_model, policy, K_max=10, beta=0.02,
+                 d_safe=0.15, d_brake_fn=None, dt=0.02):
+        self.F = forward_model        # 冻结 LSTM-MPC 代理，输出指标轨迹
+        self.policy = policy
+        self.K_max, self.beta, self.d_safe = K_max, beta, d_safe
+        self.d_brake = d_brake_fn or (lambda v: 0.5 * v * v / 2.0)
 
-    @property
-    def metadata(self):
-        return {"control_space": "ee",                # 与数据 EE 位姿目标对齐
-                "obs_delta_indices": {"cam_*": [0], "state.*": [-3,-2,-1,0]},
-                "image_resize": {"cam_*": [240, 320]},# IP-U06 延迟压缩
-                "action_chunk_size": 4, "token": TOKEN}
+    def effective_K(self, delta_dom, tau_dom, trust_ok):
+        if not trust_ok:
+            return 1
+        return max(1, int(self.K_max * (1 - min(1.0, delta_dom / tau_dom))))
 
-    def get_action(self, obs):
-        z    = self.s1.encode(obs)
-        near = self.mem.topk(z, k=8)                  # 检索最近 demo 轨迹簇
-        ev   = self.det(obs, entropy=self.s1.entropy(z))
-        if ev.epistemic_high and self.wm.calibrated:  # 干扰/未见 → 先想后动
-            cands  = [self.s1.propose(z, near, temp=t) for t in (0, .5, 1.)]
-            scores = [self.wm.rollout_score(c, obs, near) for c in cands]
-            chunk  = cands[argmax(scores)]
-        else:                                         # aleatoric/常规 → 直通
-            chunk = self.s1.propose(z, near)
-        return self.sched.stabilize_tail(chunk, obs)  # 稳态尾 + 裁剪 + NaN 防护
+    def generate_chunk(self, state, delta_dom, tau_dom, trust_ok):
+        K = self.effective_K(delta_dom, tau_dom, trust_ok)
+        if K == 1:
+            return self._single_step_fallback(state)      # 等价 v8 逐步
+        best = None
+        for cand in self.policy.sample_sequences(state, K, n=64):   # MPC 采样
+            pred = self.F.rollout(state, cand)            # 指标轨迹预测
+            g_min = pred.min_clearance - self.beta        # 留余量（定义 533）
+            e_max = pred.max_effort + self.beta
+            if g_min < self.d_safe or e_max > state.tau_eff:
+                continue
+            pts = self._abort_points(state, cand, pred)   # 定义 534
+            if not pts:                                   # 无中止点 → 拒绝
+                continue
+            score = self.policy.score(cand, pred)
+            if best is None or score > best.score:
+                best = Chunk(cand, Cert(g_min, e_max), pts, score)
+        return best or self._single_step_fallback(state)
 
-    def reset(self): self.det.reset(); self.mem.reset()
+    def _abort_points(self, state, actions, pred):
+        pts = []
+        for p in range(1, len(actions)):
+            remaining = pred.path_len[p:]                 # 剩余轨迹长
+            margin = (pred.clearance[p]
+                      - self.d_brake(pred.speed[p]) - self.d_safe)
+            if margin >= remaining:                       # 停车不变式成立
+                pts.append(p)
+        return pts
+
+    def midchunk_guard(self, chunk, k_exec, live_obs):
+        """50Hz 廉价守卫；返回 ('continue', k+1) 或 ('abort', p*)"""
+        if not chunk.cert_still_valid(live_obs):          # 证书失效检测
+            return self._nearest_abort(chunk, k_exec)
+        stop_inv = (live_obs.nearest_clearance
+                    - self.d_brake(live_obs.speed) - self.d_safe)
+        if stop_inv < chunk.remaining_len(k_exec):        # 停车不变式破坏
+            return self._nearest_abort(chunk, k_exec)
+        return ('continue', k_exec + 1)
+
+
+# IP-355 ContractMiddleware：实时契约中间件
+@dataclass
+class Contract:
+    name: str; deadline_ms: float; wcet_ms: float
+    fail_value: object; priority: int; distill_eligible: bool
+
+class ContractMiddleware:
+    def __init__(self, contracts):
+        self.contracts = {c.name: c for c in contracts}
+        self.strikes = defaultdict(int)
+
+    def run_cycle(self, runners, ctx):
+        results = {}
+        for c in sorted(self.contracts.values(),
+                        key=lambda c: c.deadline_ms):     # 周期内 EDF
+            t0 = now_ms()
+            try:
+                with deadline_guard(c.deadline_ms):
+                    if not self.is_dormant(c.name):       # ID 休眠则跳过计算
+                        results[c.name] = runners[c.name](ctx)
+                    else:
+                        results[c.name] = c.fail_value    # dormant ≡ v^⊥
+            except DeadlineOverrun:
+                results[c.name] = c.fail_value            # 中立元注入
+                self.strikes[c.name] += 1
+                log_overrun(c.name, now_ms() - t0)        # 日志可区分性审计
+            ctx[c.name] = results[c.name]
+        return results
+
+
+# IP-356 InnovationDistiller：创新点蒸馏器
+class InnovationDistiller:
+    def __init__(self, mw, tau_on=0.03, tau_off=0.01,
+                 T_abl=500, abl_len=20, H_off=3):
+        self.mw, self.ema = mw, {}
+        self.state = {}                                   # 仅 eligible 模块
+        self.tau_on, self.tau_off = tau_on, tau_off
+        self.T_abl, self.abl_len, self.H_off = T_abl, abl_len, H_off
+        self.dormant_count = defaultdict(int)
+
+    def attribute(self, module, J_with, J_base):
+        delta = max(0.0, normalize(J_with - J_base))      # 定义 537
+        self.ema[module] = 0.9 * self.ema.get(module, delta) + 0.1 * delta
+
+    def step(self, cycle_idx, ctx):
+        if ctx.delta_dom >= ctx.tau_dom:                  # 陌生域强制全唤醒
+            self.wake_all(); return
+        if cycle_idx % self.T_abl == 0:
+            self.run_one_ablation_episode()               # 仅 eligible 模块
+        for m, c in self.ema.items():
+            if self.state[m] == 'active' and c < self.tau_off:
+                self.dormant_count[m] += 1
+                if self.dormant_count[m] >= self.H_off:   # Schmitt 迟滞
+                    self.state[m] = 'dormant'             # ≡ 注入 v^⊥
+                    self.mw.set_dormant(m)
+            elif self.state[m] == 'dormant' and c >= self.tau_on:
+                self.state[m] = 'active'
+                self.mw.set_active(m)
+                self.dormant_count[m] = 0
+
+
+# 主闭环集成：MetricVoiceGauge-ACMD
+def metricvoicegauge_round_9(M, s, obs, audio_stream=None, ell=None, ...):
+    ctx = mw_default_ctx()
+    # ---- MW 驱动感知侧（契约预算 ≤2ms，超时即中立元，5 级退化见表 536）----
+    results = middleware.run_cycle(runners={
+        'DA_ML':  lambda c: domain_adapter.update_and_measure(obs),
+        'SPR':    lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
+        'CAL_FI': lambda c: calib_fi.get_weights_kappa(),
+        'OTL':    lambda c: online_learner.update_and_thresholds(c),
+    }, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
+
+    # ---- 5Hz 块生成（重计算，摊销进决策预算；受 ID 状态影响候选池）----
+    if current_chunk is None or current_chunk.exhausted:
+        current_chunk = chunker.generate_chunk(
+            ctx.state, ctx.delta_dom, ctx.tau_dom,
+            trust_ok=(ctx.delta_dom < ctx.tau_dom
+                      and ctx.risk_slam < M.tau_slam))
+
+    # ---- 50Hz 中块守卫（廉价 ≤0.3ms）----
+    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec, live_obs)
+    if verdict == 'abort':
+        current_chunk.execute_safe_stop_at(k_next)        # 定义 534
+        current_chunk = None
+    else:
+        execute(current_chunk.actions[k_next])
+
+    # ---- v8 继承路径（契约化调用）：GCT/ER/5 维风险/奖励 ----
+    #      δ_trigger 五条件：σ<τ_safe ∧ γ_grasp ∧ Δ_dom<τ_dom
+    #                        ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t valid
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
+
+    # ---- ID：块级归因与状态迁移（每 500 周期一次消融回合）----
+    distiller.step(cycle_idx, ctx)
+    return C, spatial_cert, claims, metrics, rewards
 ```
 
-## 3. 关键论证（两条）
+## 4. 推导
 
-- **引理 U1（GA-DR 覆盖半径）**：若评测场景族可用五轴参数空间的有界子集描述、官方数据仅覆盖其点状子集，则仅用官方数据训练的策略的期望成功率随覆盖半径退化；GA-DR 以轴向采样把覆盖半径从「demo 密度半径」压到「随机化范围半径」，成立前提是 sim-real 系统差 δ_sys < 轴内扰动幅度——这给出随机化强度下界的工程准则（强度必须压过 sim2real gap），也是「校准锚」存在的理由。
-- **引理 U2（前瞻选择风险单调下降）**：设单 chunk 失败率 p_f、打分器区分好坏 chunk 的 AUC ≥ 0.5+γ（γ>0），则从 K 候选中选最高分使失败率单调不增（K=3 时乐观相对下降 ≥ f(γ)·p_f）；前提是打分器经 ECE 校准——未校准的 WM 幻觉会把「选择」变成「赌局」（承 R69 MCG 门控思想）。
+**引理 82（块证书可靠性与中止安全性）** 设信任域 U_t 内前向模型一致误差 ‖F̂−F‖∞ ≤ β_true ≤ β。则 (i) ∀k≤K: g_k ≥ ĝ_min（证书保守有效）；(ii) 若块内某时刻真实间隙跌破 d_safe，则必可切换 p* ∈ P_t 安全停驻。证明：(i) 由一致误差界 min_k g_k ≥ min_k F̂g_k − β_true ≥ ĝ_min + β − β_true ≥ ĝ_min；(ii) 定义 534 的停车不变式给出从 p* 停驻的所需距离 d_brake(v_p*) ≤ dist(s_p,O) − |traj_{p*:K}| − d_safe，刹车轨迹终点距障碍 ≥ d_safe；骨架保证 P_t 非空才接受块，"无点可退"仅发生在 K=1 fallback（等价 v8 语义）。∎
 
-## 4. 落地路线图（周级）
+**引理 83（中立元退化与 v8 逐位等价）** 对契约表 535 每行，注入 v_m^⊥ 后下游端口读数与 v8 对应显式退化分支的读数逐位一致（表 536 给出映射：DA-ML→Δ_dom≡0、SPR→risk_SLAM≡0、Calib-FI→weight≡1/κ 基准、ID dormant→对应模块缺席）；MW 仅改变调度顺序、不改变取值集合，故可观测行为与 v8 对应退化级等价。∎
 
-| 周 | 里程碑 |
-|---|---|
-| W1–2 | E-U01 数据解剖；账号/Submit Test 申请；WMA-0/VLA-0 下载冒烟（IP-U10 D1 前置） |
-| W3–6 | Isaac 重建 4 个代表任务（每簇 1 个）+ Dex1 近似；E-U03 |
-| W7–10 | GA-DR 算子库 + 干扰注入 + LeRobot v3 合成导出管线（IP-U01/02） |
-| W11–14 | 底座微调 v0（32k 真机 only）→ v1（+合成）；E-U05/06/08 |
-| W15–16 | 推理工程（稳态尾/压缩/N 端口）；E-U07；首次真实 Submit Test 分布探测 |
-| W17+ | 按探测结果重标定五轴强度与配比；OCRA 蒸馏；WM 前瞻集成；专利交底 |
+**引理 84（蒸馏安全不变式）** ID 仅能迁移 φ^elig=true 的模块；每次 dormant 迁移在行为上等价于"该模块超时"（引理 83 的 v^⊥ 注入）；φ^elig=false 的安全关键模块永不消融；Δ_dom ≥ τ_dom 触发强制全唤醒，消除"陌生域缺模块"。故任意蒸馏状态下的系统行为 ∈ v8 退化格点，安全性由 v8 引理 80–81 传递成立。∎
 
-## 5. 下轮深化与修剪计划
+**引理 85（双阈防抖 / 无 Zeno）** τ_off < τ_on 且归因每 T_abl 回合更新一次、每次迁移需 H_off 回合确认 ⇒ 相邻状态迁移间隔 ≥ T_abl 个控制周期，翻转率 ≤ 1/(T_abl·Δt)，有限时间内迁移次数有限，无抖振。∎
 
-- **深化**：IP-U01（五轴强度表 v0 + 校准指标定稿）、IP-U05（WMA-0 rollout 实测，E-U04）、IP-U09（专利检索与权利要求差异点收敛）、补齐规则手册全文（F9：延迟/模型上限、测试次数、步骤分细则）与 32 任务得分点明细。
-- **修剪候选**：IP-U03 若蒸馏后五轴增益 <2pp 降级为消融项；IP-U06 若规则限制调用频率则并入 IP-U08。
-- **榜单上线后必做**：头部方案逐项对标（其 obs_delta_indices/chunk 大小若可推断，反推其推理工程策略）。
+**引理 86（EDF 可行性与 50Hz 守恒）** 部署期静态校验 Σ_m Ŵ_m ≤ B_dec（决策 20ms）与链式约束 D_m ≤ B_dec；运行期 deadline_guard 强制 Ŵ_m，超时模块贡献 v^⊥ 而非延长周期 ⇒ 每周期总执行 ≤ 感知 2ms + 决策 20ms，50Hz 保持；分块摊销使典型利用率降至 ~0.3（块生成 12ms/10 周期 + 守卫 0.3ms + 契约调用 ~1ms + v8 继承路径 ~4ms）。∎
 
-## 6. 押注（一句话）
+## 5. 复杂度分析
 
-**当前最值得押注的创新点：IP-U01+IP-U02「GA-DR 泛化轴数据引擎 + 干扰算子恢复合成」**——直接供给五轴计分面、可行性最高、专利性最强，且双系统、WM 前瞻、OCRA 等下游组件全部依赖其产出数据。
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
+|---|---|---|---|---|
+| AC 块生成（5Hz） | 在线 | ≤12ms/次，摊销 ≤1.2ms/cycle | O(n·K·d_a) 候选缓存 n=64 | 定义 532/533 |
+| AC 中块守卫（50Hz） | 在线 | ≤0.3ms（距离查询+证书检测） | O(1) | 定义 534 |
+| MW 周期调度 | 在线 | O(M log M)，M≈16 → ≤0.05ms | O(M) 契约表 | 定义 535, 引理 86 |
+| ID 归因 | 在线 | O(1)/cycle + 每 T_abl 一回合 | O(|eligible|) | 定义 537/538 |
+| v8 继承路径（6 层指标+5 维权重+GCT/ER） | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
+| 决策侧合计 | 在线 | 典型 ≤8ms，p99 ≤20ms（块生成周期 ≤16.5ms） | — | 引理 86 |
+| 感知侧合计 | 在线 | ≤2ms（v8 不变） | — | v8 定义 526–530 |
+
+## 6. 实验设计 E551–E570
+
+| 实验 | 核心问题 | 关键目标 |
+|---|---|---|
+| E551 | 块长扫描 K∈{1,2,5,10,20} | 成功率-时延-中止延迟 Pareto；K=10 为默认 |
+| E552 | 中块突变障碍注入 | 中止成功率 ≥99%，0 碰撞 |
+| E553 | 中止点密度 vs 中止成功率 | 确定最小密度 p*，指导 P_t 构造 |
+| E554 | 前向模型误差标定 | β 经验值 vs 理论；Δ_dom-β 相关曲线验证信任域门控必要性 |
+| E555 | MW 超时注入 | 超时模块当周期被 v^⊥ 替换，0 越界、0 崩溃 |
+| E556 | 契约退化 ≡ v8 四级链 | 日志逐位等价（E539 的契约驱动复刻） |
+| E557 | 全模块激活 50Hz 保持 | WCET p99 ≤20ms；对比 v8 抖动分布 p99 ↓ ≥50% |
+| E558 | 突发负载/背压 | 感知风暴下主环 0 丢拍 |
+| E559 | 蒸馏归因精度 | 与全因子离线消融相关性 ≥0.8 |
+| E560 | 休眠降耗 | eligible 模块休眠后决策算力 ↓≥40%，总功耗 ≤25W |
+| E561 | 抖振抑制 | Schmitt 双阈下翻转率 ≤1 次/模块/10min |
+| E562 | 陌生域强制唤醒 | 注入大 Δ_dom，dormant 模块 1 周期内回到 active |
+| E563 | 端到端仿真全任务 | RoboCup@Home 仿真 ≥ v8 + 10% |
+| E564 | Chunk×DA 耦合 | Δ_dom 越阈后 K_eff 收缩至 1 的过渡平滑性（无指令跳变） |
+| E565 | Chunk×ER 边界生效 | 情感变化在块边界生效延迟 ≤200ms，操作员评分 ≥4/5 |
+| E566 | MW 调度器形式化验证 | CBMC 验证 EDF 可行性、无优先级反转、v^⊥ 注入路径可达 |
+| E567 | 8h 长跑 | 块证书失效触发率、中止点命中率、休眠占比统计 |
+| E568 | 双机共享契约表 | 契约表与块证书跨机共享，协同任务完成率 ↑≥10% |
+| E569 | 对抗时序攻击 | 恶意制造模块超时 ⇒ 系统 v^⊥ 退化而非 crash，安全违背 ≤2% |
+| E570 | 综合竞赛模拟 | ≥ v8 + 15% |
+
+## 7. 预注册判据
+
+| 判据 | 门槛（预注册） | 若未达标的处置 |
+|---|---|---|
+| 块长扫描（E551） | K=10 时成功率不降且时延 ↓ | 调 K_max、候选数 n、评分函数 |
+| 中块突变（E552） | 中止成功 ≥99%、0 碰撞 | 提高中止点密度、减小 β 余量步进、缩短 K_max |
+| 中止点密度（E553） | 存在 p* 使成功率 ≥99% | 放宽停车不变式冗余、增加每步中止点 |
+| 模型误差标定（E554） | β 覆盖 ≥99% 经验误差 | 换更强前向模型、增大 β 安全系数 |
+| MW 超时（E555） | 0 越界 | 检查 deadline_guard 实现、收紧 Ŵ_m |
+| 契约等价（E556） | 日志逐位等价 | 逐行审计表 536 映射、修 v^⊥ 定义 |
+| WCET（E557） | p99 ≤20ms 且抖动 ↓≥50% | 块生成移独立线程、精简继承路径 |
+| 背压（E558） | 0 丢拍 | 契约表加过载降级行、感知批量化 |
+| 归因精度（E559） | 相关性 ≥0.8 | 增大消融回合 H、改归因得分聚合 |
+| 降耗（E560） | 算力 ↓≥40% | 扩大 eligible 集（仍受 φ^elig 约束） |
+| 抖振（E561） | 翻转 ≤1/模块/10min | 增大 τ_on−τ_off 间隔、提高 H_off |
+| 强制唤醒（E562） | 1 周期内唤醒 | 唤醒路径移出 EDF 低优先级、预载权重 |
+| 端到端（E563） | ≥ v8 + 10% | 回退 K_eff 上限、调 β |
+| Chunk×DA（E564） | 过渡无跳变 | K_eff 收缩插值平滑、块边界重规划 |
+| Chunk×ER（E565） | 延迟 ≤200ms 且评分 ≥4/5 | 缩短 K_max、情感变化触发即时块终止 |
+| 形式化（E566） | CBMC 全通过 | 修调度器实现、补 v^⊥ 路径断言 |
+| 长跑（E567） | 中止命中率趋势稳定 | 复盘 β 标定漂移、加周期性 β 重标定 |
+| 多机（E568） | 完成率 ↑≥10% | 契约表版本化、冲突消解协议 |
+| 对抗时序（E569） | v^⊥ 退化而非 crash、违背 ≤2% | 增加异常检测、契约表完整性校验 |
+| 竞赛（E570） | ≥ v8 + 15% | 综合调参、分析失分瓶颈 |
+
+## 8. 本轮最大风险
+
+**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
 <!-- ARTIFACT:END -->
