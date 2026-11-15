@@ -3,387 +3,248 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 69 轮（承接第 68 轮「CALM-RAS 标定感知自监督多任务闭环」IP-243~252；灵感循环新循环第 2 轮；本轮灵感：「多模态交互」×「流匹配策略」）
+# 第 70 轮（UniBot 参赛创新研究循环 · 第 1 轮；本轮灵感：「专利布局」×「Isaac Sim」×「通用机器人」）
 
-> R68 给闭环补上了「计量层」，问出「我的测量还准吗」，并用一条铁律回答所有不确定性：**任何不确定 → 只收紧（λ_floor）**。但这条铁律把两种本质不同的东西混为一谈——**aleatoric（噪声，不可约，收紧是对的）** 与 **epistemic（歧义，可约，收紧只是权宜）**。当策略面对两个都合理的动作（绕左还是绕右、接住还是避让、把「笑」读成开心还是紧张），R68 的答案是「都慢下来」；这既保守又不学习：系统永远不知道自己错在哪，也永远不会去**问**。更糟的是，R68 自陈的最大风险（缓变故障被标定吸收而隐形）说明「只收紧」这条通道本身可能被标定层骗过。
+> **主题切换声明**：自本轮起，研究主任务由 RAS 闭环（R66–R69 FLUID-RAS）切换为「宇树物理 AI UniBot 世界挑战赛」参赛创新研究。旧资产迁移而非丢弃：R69 的 aleatoric/epistemic 二分 → 干扰证据二分触发器（IP-U04）；模态校准门 MCG → 世界模型打分器置信门控（IP-U05）；参与式审计 → 评测可信度工程（IP-U08）。本轮为该循环第 1 轮，创新点清单从 v1 起建；后续轮次遵守「深化与修剪优先于推倒重来」。
 >
-> 本轮两个灵感正好补上两块缺失：
-> - **流匹配策略**给出一个天然多模态、可算精确似然的动作生成器——歧义不再被高斯均值糊掉，而是显式呈现为多个动作模态及其权重；
-> - **多模态交互**给出「消除歧义的动作」——看、问、触、等，都是可以生成、可以认证、可以被审计的物理/语言动作。
->
-> 核心命题：**把「不确定性」拆成 aleatoric 与 epistemic；aleatoric 沿用 R68 的保守铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」去主动消解；只有在预算内消解不了（或不可信、或被投毒）时，才退化为 R68 的纯保守。** 命名 **FLUID-RAS**（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation）。
->
-> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
+> 歧义消解：检索确认「UniBot」在本任务中指宇树挑战赛（unibot.unitree.com），而非 GitHub 同名的游戏辅助（vike256/Unibot）、QQ 机器人或 Uniswap 交易机器人。
 
-## 0. 直觉与动机
+## 0. 赛事事实底座（本轮检索核实；所有条目检索日均为 2026-11-15）
 
-**灵感 1（流匹配策略 → 不确定性本来就有形状）**
-直觉：R68 的风险缩放 λ 是在一个「已经选好的动作」上做标量收缩，前提是策略只吐出一个动作。但真实决策常常是**多峰**的：人犹豫时不会「以 0.5 的速度同时走两条路」，而是先停在岔口看清。流匹配（rectified flow）把策略表示为从噪声到动作轨迹的速度场，采样天然产生 K 个假设；聚类即得模态、权重、模态内方差、模态间距。于是「歧义」从一个标量 U 变成一个**有形状的对象**（几个候选 + 权重 + 可分性 + 各自风险）。这把 R68 的「不确定就一起慢」升级为「先看清是哪种不确定、值不值得查」。
-
-**灵感 2（多模态交互 → 消除歧义本身是一个动作）**
-直觉：R68 里模态只是被动融合的输入；但人类解决歧义靠的是**交互**——看不清楚就凑近看，拿不准就问一句，质感不明就摸一下，情绪不明就看表情+语气+姿态是否自洽。这些「信息动作」与信息论的 value-of-information 是同一件事：选一个动作，使「做完之后我对模态的判断」期望上最确定。关键是，这些动作**也能被策略生成**：注视方向、探针方向/力度、问句的软提示——把它们和任务动作拼进同一个动作空间，用同一个流匹配模型联合生成，就得到「边做边问」的连续轨迹。多模态交互由此从「融合」升级为「探询」。
-
-**灵感 3（二分 → R68 的铁律是二分的退化情形）**
-直觉：R68 的 λ_floor 对 aleatoric 是对的（噪声再问也问不出来），对 epistemic 是把可解的题当死题做。把 U 拆成 (U_ale, U_epi)：U_ale 直接进 λ floor；U_epi 先算 VoI，值钱就去交互，交互后残余的 U_epi 才当作 U_ale 兜底。这样 R68 不是被推翻，而是被**包含为边界情形**（VoI ≤ 成本时逐指令退化为 R68）。这是本轮最重要的理论姿态：**新层必须是旧层的严格泛化，而不是并列替代**——否则每加一层就多一个需要独立信任的黑箱。
-
-**灵感 4（对偶通道 → 正面回应 R68 的最大风险）**
-直觉：R68 的慢变故障可以被标定「解释掉」（r_res≈0），因为它只看**传感器残差**。但流策略还提供一条独立通道：**动作轨迹在策略密度下的似然**。即使标定把传感器残差抹平，只要观测被偏置，策略就被条件在一个「错的世界」上，生成的动作会滑向低密度区，瞬时变分给出的 −log p_θ(ξ|o) 会升高。残差通道测「传感器自洽」，似然通道测「行为自洽」；标定只能吸收前者，吸收不了后者。这是对 R68 最脆弱处的正面回应——用一条不能被标定吸收的冗余通道做第二意见。
-
-**灵感 5（交互是双刃剑 → 需要新的威胁模型）**
-直觉：一旦系统会「问」，就有了新的攻击面。人会撒谎、会给「看起来很合理」的错误答案、会用提问做社交工程；流模型也会幻觉出不存在的模态，让系统去追问一个幻影。**主动交互会把「诚实的不知道」升级成「被证实的错误」**。所以本轮必须同时交付：模态校准（模态权重可信吗）、交互投毒干扰集、交互动作的安全认证、「单次交互不得单独定案」的证据纪律。否则 R69 不是进步，而是给 R68 的保守主义装了一个会撒谎的嘴巴。
-
-## 1. 形式化定义（增量：定义 293–309）
-
-**定义 293（FLUID-RAS 总览）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)。三不变式：
-(i) **实时流零学习写操作**（继承 R68 定义 276-i）；
-(ii) **交互预算硬约束**：单位时间信息动作 ≤ 1 次、物理位移 ≤ ε_g、社交打扰成本 ≤ c_max，且信息动作必须通过与任务动作相同的 C-RAS-WM 认证；
-(iii) **证据纪律**：单次交互/单模态回答不得单独定案，需至少两个正交证据源一致（或 VoI 增益超过高置信阈值），否则 U_epi 保持未消解并走 R68 兜底。
-
-**定义 294（增广动作空间）** 任务动作 a ∈ 𝒜_task ⊂ ℝ^{d_a}；信息动作 g = (g_gaze, g_probe, g_ask) ∈ 𝒜_info，其中 g_gaze ∈ S²×[0,1]（注视方向与停留时长）、g_probe ∈ ℝ³×[0,f_max]（触/力探针方向与力度）、g_ask ∈ ℝ^{d_q}（问句软提示）。增广动作 ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info。策略目标 π_θ(ξ_{t:t+H} | o_t)。
-
-**定义 295（流匹配策略 FMP）** 归一化动作块 x_1 = ξ_{t:t+H}，噪声 x_0 ~ 𝒩(0,I)，线性路径 x_s = (1−s)x_0 + s x_1。速度场 v_θ(x_s, s | o_t)（条件编码器复用 R68 MTM trunk 得到的 z_t）。目标 L_FM = E_{s,x_0,x_1}‖v_θ(x_s,s|o_t) − (x_1−x_0)‖²。采样：dx/ds = v_θ，s:0→1，Heun N_step=2（rectified，1–2 步即可）。语言问句由 g_ask 经冻结 LLM 解码，梯度不回传语言模型（符号接地与安全过滤在解码侧）。
-
-**定义 296（模态分解）** K 个采样 {ξ^{(j)}}，轨迹空间聚类（DTW / Fréchet 均值）得 K̂ 个模态 {m_k}、权重 ŵ_k = |m_k|/K、原型 ξ̄_k、模态内协方差 Σ_k。模态熵 H_mode = −Σ_k ŵ_k log ŵ_k；模态最小间距 Δ_min = min_{i≠j} W_2(ξ̄_i, ξ̄_j)/√(tr Σ_max)。
-
-**定义 297（不确定性二分）** U_ale = Σ_k ŵ_k tr(Σ_k)（模态内、不可约）；U_epi = H_mode · g(Δ_min)（模态间、可约，更严格版本用模态身份 M 与未来观测的互信息 I(M; y)）。二者语义不同，不做简单加和；只有各自进入不同通道（定义 307）。
-
-**定义 298（VoI 交互控制器 MINT）** 候选信息动作 g 的信息增益 VoI(g) = H(M|o) − E_{y~p(·|g,o)}[H(M|o,y)]。选择 g* = argmax_g [VoI(g) − c(g)]，s.t. risk(g) ≤ ε_int 且预算未超（c(g) 为物理/社交成本）。若 max[VoI−c] ≤ 0：不交互，走 R68 兜底。
-
-**定义 299（交互增强采样）** 联合采样允许轨迹内插入 g。问句 q = Decode_LLM(g_ask)。「看—问—做」是 ξ 的一个模态；C-RAS-WM 前缀认证对 (a,g) 整体进行，g 不得提前越出安全包络。
-
-**定义 300（跨模态主动对齐 CIA）** 把 R68 的残差五元组升级为可选择的证据集 ℰ = {r_geo, r_sync, r_zero, r_emo, r_wm}；主动选判别力最大的模态对：pair* = argmax_{i,j} IG(M; r_{ij} | g*)。R68 的被动环一致性成为「不交互」的特例。
-
-**定义 301（流似然异常分 FMA）** 瞬时变分：log p_θ(ξ|o) = log p_0(x_0) − ∫_0^1 ∇·v_θ(x_s,s|o) ds（Hutchinson 估计）。a_score = −log p_θ(ξ_obs|o)。定义「标定不可吸收」的第二意见：Δa = |a_score(o) − a_score(o_cal)|，其中 o_cal 为标定校正后的观测。**Δa 高而 r_res 低 ⇒ 疑似缓变故障被标定吸收**（对偶判据，定义 309）。
-
-**定义 302（信息动作安全）** g 的控制指令过 C-RAS-WM 前缀认证；注视不得诱发危险转身、探针不得越力/位包络、等待不得使时间窗过期。任一不过 ⇒ g 作废，U_epi 视为未消解。
-
-**定义 303（参与式审计 VQAuditor-I）** 审计对象新增交互决策：问句是否诱导、证据是否被恰当加权、回答是否被单源采纳、注入的幻影模态是否被追问。结论回灌 AuditBuf，成为下一轮 MINT 的成本先验。
-
-**定义 304（交互投毒干扰集 ℰ_poison）** 人类/环境的误导性回答、跨模态共谋欺骗（表情+语气一起演）、以提问为名的社交工程、模型幻觉模态诱发的无效追问。并入 AIC：ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（流采样故障 / 模态坍缩 / ODE 数值发散）。
-
-**定义 305（证书 J_FLUID）** J_FLUID = (J_CALM, mode_calibration_ece, U_epi_before, U_epi_after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)。Valid ⇔ Valid(J_CALM) ∧ ECE ≤ τ_ece ∧ 证据纪律满足 ∧ 交互预算未越界。
-
-**定义 306（模态校准门 MCG）** 模态权重需校准：可靠图与 ECE。ECE > τ_ece ⇒ 禁用 VoI 决策，退化为 R68 纯保守——不让不可信的模态分布驱动交互（对应 R68 表征坍缩的「下游版」）。
-
-**定义 307（两级保守退避，含 Resolution Bonus）** 若 U_epi 在预算内消解：λ = λ_floor(U_ale)（获得 resolution bonus，比 R68 更不保守但不更低安全）；若未消解/超时/被投毒/ECE 越界：λ = λ_floor(U_ale + U_epi)（未消解的 epistemic 视同 aleatoric）。⇒ R68 恰为「永不交互」边界，安全侧永不弱于 R68。
-
-**定义 308（时序耦合与自适应 K）** 默认 K=1、N_step=2，用 mode_head(z_t) 廉价预测 H_mode；仅当 mode_head 报歧义或 FMA 异常时升 K=4。K 的选择本身是预算与置信的折中，保证 P99 实时预算。
-
-**定义 309（交互-校准对偶）** 标定窗口内可吸收的慢变分量在 r_res 中消失，但在 Δa（定义 301）中保留一部分；即「标定吸收」与「策略密度」构成对偶观测，(r_res, Δa) 的联合分布可分离「真漂移」与「缓变故障」。这是 R68 反吸收引理（引理 13）在行为侧的镜像。
-
-## 2. 关键算法骨架
-
-```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk，零重复训练）
-class FlowMatchingPolicy:
-    def __init__(self, trunk, velocity_net, mode_head, llm_decoder, N_step=2):
-        self.trunk, self.v = trunk, velocity_net      # v(x_s, s, z)
-        self.mode_head = mode_head                    # z -> H_mode 的廉价预测
-        self.llm = llm_decoder                        # 冻结，只解码问句
-
-    def sample(self, o_t, K, N_step=2):
-        z  = self.trunk(o_t)                          # 复用 CALM-RAS 的 z_t
-        xs = randn(K, D)
-        for i in range(N_step):                       # Heun/RK2，rectified 1~2 步
-            s  = i / N_step
-            xs = xs + (1.0 / N_step) * self.v(xs, s, z)
-        return [self.decode(x) for x in xs]           # ξ = (a, g)
-
-    def log_likelihood(self, xi, o):                  # 瞬时变分 + Hutchinson
-        z = self.trunk(o)
-        return -hutchinson_divergence_integral(self.v, xi, z)
-
-# IP-254 AUD：aleatoric / epistemic 分解（含廉价 mode_head 决定是否升 K）
-def decompose(samples, z, mode_head):
-    modes  = cluster_trajectories(samples)            # DTW / Fréchet 均值
-    w      = mode_weights(modes)
-    U_ale  = sum(w[k] * trace(cov(modes[k])) for k in modes)
-    h_mode = entropy(w)
-    U_epi  = h_mode * sep_factor(modes)               # 可分性越大越可约
-    return U_ale, U_epi, modes, mode_head(z)          # h_hat 用于自适应 K
-
-# IP-255 MINT：value-of-information 交互决策（无利可图即退化 R68）
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):           # gaze / probe / ask
-        if not budget.allow(g):              continue
-        if not c_ras_wm.certify_info(g, o_t): continue   # 信息动作也要过安全认证
-        voi   = entropy(w) - expected_entropy(w, g, o_t)
-        score = voi - social_physical_cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None  # VoI<=成本 → 不交互
-
-# IP-256 CIA：主动选最有判别力的模态对，并把回答并入后验
-def active_cross_modal(modes, evidence):
-    pair = argmax((i, j), mutual_info(mode_identity, evidence[i] - evidence[j]))
-    return pair
-
-def update_belief(modes, answer):                     # 需 k>=2 源一致才定案
-    return bayes_update(modes, answer, discipline='k_orthogonal_agree')
-
-# IP-257 FMA：流似然第二意见（标定不可吸收）
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    a_o   = -policy.log_likelihood(xi_obs, o)         # 行为自洽
-    a_cal = -policy.log_likelihood(xi_obs, o_cal)
-    return abs(a_o - a_cal)                           # Δa 高 + r_res 低 = 缓变故障疑
-
-# IP-263 主闭环（继承 R68，仅在不确定性处置处插入 FLUID 层）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...)                         # R68 一次前向
-    c, U_cal, thr = M.cof.step(...)                   # R68 标定
-    # 1) 廉价歧义预测；仅歧义时多采样
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    # 2) 第二意见：标定不可吸收的行为似然通道
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow_fault_suspect = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    # 3) 可约则交互，不可约/被污染则保守（R68 边界）
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow_fault_suspect) else None)
-    if g is not None:
-        answer      = M.cia.execute(g)                # 看/问/触，带认证 + 证据纪律
-        U_epi_after = M.cia.update_belief(modes, answer)
-    else:
-        U_epi_after = U_epi
-    # 4) 风险缩放：只对 aleatoric + 未消解 epistemic 收紧
-    U_floor = U_ale + (U_epi_after if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    A = M.ach.propose(x_prime, H=M.vista.H)
-    k = M.c_ras_wm.certified_prefix(A, ..., wm_preds)
-    if slow_fault_suspect:
-        lam = max(lam, 0.8); k = min(k, k_cal_shrink(A, U_cal))  # 回 R68 最保守
-    # 5) 选最安全且证据一致的模态执行
-    mode = select_mode(modes, U_epi_after, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    # 6) 参与式审计 + 证书
-    M.vqa_i.submit_async(g, answer, U_epi, U_epi_after, a_hat)
-    return k, lam, mode, (U_ale, U_epi_after)
-```
-
-## 3. 推导
-
-**引理 16（模态分离下的信息增益）** 设真实模态 m*，观测后模态后验权重 w，原型间距 Δ_min，模态内标准差 σ_in。在 A95（Δ_min ≥ 3σ_in，模态可分）下，执行信息动作 g 使后验熵降低 ΔH，则相较直接按 w 采样，期望任务误差下降 ≥ c·Δ_min·(1 − e^{−ΔH})。要点：选错模态的损失正比于模态间距离，而消歧把选错概率按后验熵指数压低。系：**歧义越大、模态越分得开，交互越值钱**——VoI 是「可分的歧义」的函数，不是「模糊」本身的函数；模糊而不可分（Δ_min 小）时交互无益，应直接保守。
-
-**定理 16（FLUID 严格包含 R68）** 在 A95–A97 下，FLUID 的两阶段策略（先判定可否消歧，再交互或保守）在任意状态 s 上的期望风险 ≤ R68 单阶段策略；且当 VoI(g*) ≤ c(g*)、ECE > τ_ece 或 slow_fault_suspect 时，两者**逐指令相同**（定义 306–307）。因此 R68 是 FLUID 在「永不交互」边界上的退化：安全侧不做任何让步，效率侧获得 resolution bonus。
-
-**引理 17（流似然的标定不可吸收性）** 设标定校正 o_cal = o − r_cal(ĉ)。慢变故障若被 COF 吸收，则 r_res ≈ 0（R68 通道失效）；但若偏移方向不在策略训练分布的主脊上，条件编码 z = Φ(o_cal) 偏离，动作似然的期望上升量 ≥ L_z·‖o − o_cal‖ − √(trΣ_flow)（A98：策略密度对条件 Lipschitz，常数 L_z 有界）。故 **(r_res↓, Δa↑) 是「缓变故障」的判别性联合模式**，弥补 R68 最脆弱处。
-
-**引理 18（交互投毒上界）** 单源采纳时，若欺骗率 δ_p，则错误模态采纳率 ≥ δ_p。采用「k 个正交证据源多数一致」纪律、各源欺骗相关 ρ<1，则错误采纳率 ≤ δ_p·ρ^{k−1} + ε_σ。系：定义 293-iii 的证据纪律把「问一次」变成「问到一个可验证的一致」；单次交互永远只提供似然、不单独定案。
-
-**定理 17（交互安全与无突变）** 信息动作 g 经 C-RAS-WM 认证（定义 302）后，其物理风险 ≤ ε_int；交互只改变「选哪个模态」，不改变安全包络；交互失败/超时/投毒时 λ 单调不降地退化为 R68；提交/换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
-
-## 4. 复杂度分析
-
-| 组件 | 时间 | 空间 | 正确性保证 |
+| # | 事实 | 来源 | 置信 |
 |---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认路径 |
-| mode_head 廉价歧义预测 | < 0.02ms | <1MB | 定义 308；决定是否升 K |
-| 模态分解（K≤4，轨迹聚类） | < 0.3ms | O(K·H) | 定义 296；仅歧义时触发 |
-| MINT VoI 枚举（候选 ≤ 5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对选择 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA（Hutchinson，1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| 实时环路总延迟 | **< 2.6ms**（K=1 常规路径，与 R68 持平；K=4 歧义路径 < 3.4ms，允许一次性预算超支） | — | 定理 16–17 |
+| F1 | 赛事 2026-07-10 官宣，全称「物理 AI UniBot 世界挑战赛」，直击具身智能大模型泛化性不足；单模型多任务、真实硬件统一评测 | 新浪科技/搜狐 https://www.sohu.com/a/1048635684_122014422 ；凤凰网科技/腾讯 https://news.qq.com/rain/a/20260710A09S2Q00 | 高 |
+| F2 | 平台 Unitree G1；任务集核心为 DAPTO 2 挑战套；32 项真实桌面任务（抓取/放置/双手协调）；32,000 演示样本、169 小时真机数据 | 官网 https://unibot.unitree.com/challenges.html （32/32000/169 为官方数字）；zhizaozx.cn 转载（DAPTO 2）https://zhizaozx.cn/articles/2qv-unitree-unibot-physical-ai-world-challenge.html | 高/中 |
+| F3 | 五类泛化场景：位置变化、干扰物存在、桌面背景差异、未见物品、人为干扰 | zhizaozx.cn 与 alixixi.com 转载一致（https://www.alixixi.com/wz/466644.html ）；官网任务页为动态加载未能直读 | 中高 |
+| F4 | 计分=平均成功率 + 步骤分综合排序；任务页示「得分点（满分 100）」逐任务设置 | 官网 index/leaderboard/challenges.html | 高 |
+| F5 | 数据集：HF 集合 32 个子数据集（每任务一集，G1_Dex1_*），每集约 1.0k episodes（HangCup：1.04k eps / 194,564 帧 / 8.8GB，推算每条约 6.2s）；LeRobot v3.0、30fps、4 相机（head_stereo L/R + wrist L/R）640×480 AV1；状态/动作含双臂 7DoF、EE 位姿（base/torso 系）、Dex1 夹爪（5.5→0.0 开→合）、lower_body 15、waist 3、base_command 4、pivot 7；Apache-2.0 | https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；单任务数据卡 https://huggingface.co/datasets/unitreerobotics/G1_Dex1_HangCup | 高 |
+| F6 | 提交接口：PolicyService（msgpack+websockets）；control_space joint/ee 互斥；obs_delta_indices 同时决定「传哪些观测 + 时间堆叠」；image_resize 可降分辨率；action_chunk_size 固定于 metadata、每次调用返回 (T_a,…) 且被完整执行；token 逐步校验；评测 N 台真机随机序接入 → 须开放 8765 起 N 个连续端口（一端口一实例，或共享后端并发+状态隔离）；README §6：每步响应延迟与波动、动作统计规律将被记录，可能随结果公布（可信度指标） | https://github.com/unitreerobotics/unibot_submission （2026-06-26 建，2 commits）README | 高 |
+| F7 | 宇树自家模型生态公开：UnifoLM-WMA-0-Base/Dual（世界模型，2025-09）、UnifoLM-VLA-0、UnifoLM-WLA-1.0 | https://huggingface.co/collections/unitreerobotics/unifolm-wma-0 等 | 高 |
+| F8 | **排行榜当前显示「即将发布 Coming Soon」，公开榜单未上线**；「榜首成功率 <30%」来自任务方提示，公开渠道暂无法核实 → 本文按「待核实工作假设」处理 | https://unibot.unitree.com/leaderboard.html （检索 2026-11-15） | — |
+| F9 | 规则手册为飞书文档（JS 渲染），本轮未能抓取正文 → 干扰强度、测试次数、步骤分细则、模型/延迟上限缺失，列入下轮补齐 | https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh | — |
 
-## 5. 实验设计 E286–E300
+## 1. 三个灵感的合成逻辑（直觉与动机）
 
-| 实验 | 核心问题 | 关键目标 |
+**灵感 1「Isaac Sim」→ 数据是当前唯一可控的杠杆。**
+每任务 ~1000 条、每条仅 ~6 秒的干净短示教（F5），而评测按五类泛化轴计分（F3）——位置变化、干扰物、背景、未见物品、人为干扰恰好都是 32k 演示里覆盖最薄的方向，「人为干扰」轴在官方数据里甚至没有任何恢复片段。结论：**泛化轴就是数据需求说明书**。Isaac Sim/Isaac Lab 把评测协议反变成数据生成协议：把五类场景显式编码为五个随机化轴（GA-DR），对每条真机 demo 做任务级场景重建后定向扩增。这是与「32k demo 直接微调 VLA」的社区主流路线最大的差异点。
+
+**灵感 2「通用机器人」→ 瓶颈大概率不在「会不会做」，而在「换了也不慌」。**
+32 任务各有 1k demos，任务内技能可学；把 <30%（待核实，F8）的失败按五轴分解，失分应集中在未见物品/人为干扰/背景三轴。架构主线因此是「物体中心 + 双系统 + 世界模型前瞻」的混合通才策略，而非更大的端到端 Transformer：像素级端到端对背景脆弱；单次前向选 chunk 对干扰是盲打。更关键的是，本评测的接口形态（F6：chunk 间有网络间隙、允许每步重规划、观测/动作 chunk 化）天然给「想一想再动」留了算力窗口——这是本赛事特有、连续控制场景里没有的可乘之机；官方 WMA-0 世界模型（F7）同平台同格式，微调成本低。
+
+**灵感 3「专利布局」→ 用专利性当创新点的筛选器与护栏。**
+参赛产出不止名次：GA-DR、干扰算子合成、动作块级 WM 前瞻选择、干扰证据二分触发器、稳态尾动作块，都是「方法+系统」可写权利要求的组件。同时必须 FTO：Physical Intelligence、NVIDIA（GR00T）、字节等在 VLA/世界模型方向已有大量申请，创新点须落在「组合差异」上（新触发条件、新损失、新接口语义）。本轮先立专利候选清单与公开时序纪律（先申请、后开源/发论文，防自毁新颖性），专利检索留待下轮。
+
+## 2. 竞争格局与瓶颈判断
+
+- 榜单未上线（F8）→ 无法直接分析头部方案；改用**协议反推**：组织方按五轴设计评测，说明其判断这五轴是当前通才模型的失败面（与 OpenVLA/π0 系论文自述 OOD 弱点一致）。
+- 接口层信息（F6）暴露两个被低估的得分点：(a) **延迟稳定性是明牌可信度指标**；(b) obs_delta_indices / image_resize / action_chunk_size 的选择空间是一整套无人竞争的「推理工程策略」。
+- 数据侧：官方数据集与官方模型（WMA-0）同格式同平台 → 起点成本低，**组合官方资产 + 仿真扩增**是性价比最高的差异化路线。
+
+## 3. 主线方案骨架 UNIBOT-STACK（三层 + 一护栏）
+
+| 层 | 内容 | 承载 IP |
 |---|---|---|
-| E286 多模态动作分布 | FMP 能否覆盖真实多峰动作 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重是否可信 | ECE < 0.05；可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 任务成功率 +12%，平均完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别缓变故障 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导回答/共谋欺骗 | 单源采纳错误率 ≤ 5%；k-一致纪律下 ≤ 1% |
-| E291 信息动作安全 | 看/问/触本身是否越界 | 交互诱发违规 = 0，物理风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 是否守时 | 常规 P99 < 2.6ms，歧义路径 < 3.4ms |
-| E293 对 R68 的严格包含 | 退化边界是否逐指令一致 | VoI≤成本/ECE 越界时行为差 = 0 |
-| E294 语言问句质量 | 问句是否清晰、无诱导 | 人类理解率 ≥ 95%，诱导性评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别力增益 ≥ 被动环一致性 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 各自贡献 | 去 MINT 退化 R68；去 FMA 缓变故障检出 −40% |
-| E297 24h 长时程 | 交互疲劳与漂移叠加 | 交互次数随时间稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然是否可用 | OOD 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算的最优档位 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发无效追问 | 追问幻影的比例 ≤ 5%，且被证据纪律拦截 |
+| L1 数据引擎 | Isaac Sim 重建 32 任务场景 + GA-DR 五轴随机化 + 干扰算子注入/恢复合成 + LeRobot v3 同构导出 | IP-U01 / 02 / 07 |
+| L2 策略 | 底座选型（WMA-0 / VLA-0 / GR00T N1.5）→ 物体中心检索增强表征 OCRA → 双系统（快 chunk 策略 + 慢 VLM 重规划）+ 干扰证据二分触发器 | IP-U10 / 03 / 04 |
+| L3 推理工程 | 动作块级 WM 前瞻验证选择；稳态尾 chunk 结构；分辨率压缩与历史堆叠优化；N 端口共享后端；延迟确定性工程 | IP-U05 / 06 / 08 |
+| 护栏 | 专利地图与 FTO；公开时序纪律 | IP-U09 |
 
-## 6. 本轮最大风险
+## 4. 与现有方案差异（一览）
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布是可信的」这一前提上——**若模态权重未校准（rectified flow 在有限数据上幻觉出不存在的模态、或把真模态坍缩掉），VoI 就是在错误的信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 那种「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+- vs 社区主流「32k demo 直接微调 VLA」：加五轴定向合成数据 + 干扰恢复对，攻的正是计分面。
+- vs 盲目域随机化：GA-DR 以评测协议为蓝本、以真机 demo 为校准锚，随机化有方向。
+- vs 纯端到端：物体中心表征 + 检索增强 + 双系统，专治背景/未见物品/人为干扰三轴。
+- vs 单次前向出 chunk：动作块级 WM 前瞻 + 置信门控，评测接口的独有红利。
+- vs 只管模型：可信度工程与接口参数最优化是无人区。
 
-**次级风险与缓解**：
-1. **信息动作本身不安全**（注视诱导转身、探针越力包络）→ 定义 302 认证 + 定理 17 无突变；
-2. **交互投毒/共谋欺骗** → k 个正交证据源一致纪律 + 引理 18 上界 + ℰ_poison 对抗训练；
-3. **实时预算被 K 采样击穿** → mode_head 廉价门控 + 自适应 K + K=4 仅歧义路径；
-4. **语言接地幻觉**（问句与真实意图错位）→ 冻结 LLM + 解码侧安全过滤 + E294 人类研究；
-5. **模态坍缩（下游版）** → MCG 校准门 + ECE 越界即退回 R68 纯保守，绝不让不可信模态驱动交互。
-<!-- IDEA:END -->
+## 5. 资源与实时预算（估算）
 
-<!-- ARTIFACT:START -->
-# 第 69 轮产物 · 创新点清单 v1：FLUID-RAS（Flow-matching, Language-grounded Uncertainty-aware Interactive Disambiguation：流匹配多模态策略 × 主动多模态交互的不确定性二分闭环；FMP×AUD×MINT×CIA×FMA×RAS-WM†）
+- 合成数据引擎：Isaac Lab 开源免费；8×RTX4090 约 2 周产 ~10 万条合成 episode（每任务 3–5k 估）；人力：场景重建 3–4 人周，Dex1 夹爪近似为最大不确定项。
+- 训练：底座微调 8×H100 × 3–7 天量级（按 π0/GR00T 公开微调配置外推）；OCRA 蒸馏 4×4090 × 2 天。
+- 推理：System-1 单次前向 + FAISS 检索（毫秒级）+ 稳态尾生成，目标单步 P99 < 300ms；WM 前瞻仅在 chunk 间隙或低置信时启用 K≤3。
+- 待补：若规则限模型体积/延迟上限（F9 缺失），预算表需重排。
 
-> 承接第 68 轮 IP-243~252（CALM-RAS）。R68 用「任何不确定 → 只收紧」的 λ_floor 统一收编了情绪欺骗、WM 漂移、标定失败，却把 **aleatoric（不可约噪声）** 与 **epistemic（可约歧义）** 混为一谈：对前者收紧是对的，对后者收紧只是权宜，且让系统永远不学习、不提问。更关键的是，R68 自陈的最大风险——缓变故障被标定「解释掉」——说明只靠传感器残差这一条通道会被标定层骗过。
->
-> 本轮把不确定性**一分为二**：aleatoric 沿用 R68 铁律，epistemic 交给「流匹配多模态策略 + 主动多模态交互」消解。定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「**我该向谁求证、还能问什么**」——不确定性不只是刹车踏板，也可以是一句提问、一次注视、一次轻触。
->
-> IP 编号：IP-253~IP-263（共 11 个），全部为 FLUID-RAS 核心组件；理论姿态为「R68 是本轮在『永不交互』边界上的严格退化」，安全侧不做任何让步。
+## 6. 实验设计（E-U 序列，本轮起建，优先可离线执行）
 
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进（相对第 68 轮） |
+| 编号 | 问题 | 指标 | 依赖 |
 |---|---|---|---|
-| IP-253 | FMP Flow-Matching Policy | 新增 | 流匹配速度场生成多模态动作块；条件编码复用 R68 MTM trunk，零重复训练；1–2 步采样 |
-| IP-254 | AUD Aleatoric/Epistemic Decomposer | 新增 | 把 R68 的标量 U 拆成 (U_ale, U_epi)；轨迹聚类得模态、权重、间距；mode_head 廉价预测歧义 |
-| IP-255 | MINT Multimodal Interactive value-of-Info controller | 新增 | 信息动作空间（注视/探针/问句）+ VoI−成本最优选择；无利可图即退化 R68 |
-| IP-256 | CIA Cross-modal Interactive Alignment | 升级被动环一致 | 主动选择最有判别力的模态对做探询；R68 的被动 r_t 成为「不交互」特例 |
-| IP-257 | FMA Flow-Matching Anomaly | 新增 | 瞬时变分算动作似然；(r_res↓, Δa↑) 判别缓变故障——标定不可吸收的第二意见 |
-| IP-258 | IBG Interaction Budget & Evidence Governor | 新增 | 交互频率/位移/社交成本硬约束 + 「k 个正交证据源一致」证据纪律 |
-| IP-259 | VQAuditor-I | 升级 VQAuditor-C | 审计交互决策：问句诱导性、单源采纳、幻影模态追问；结论回灌 AuditBuf |
-| IP-260 | AIC-FLUID | 升级 AIC-CALM | ℰ_FLUID = ℰ_CALM × ℰ_poison × ℰ_flow（投毒 / 模态坍缩 / ODE 数值发散） |
-| IP-261 | J_FLUID | 升级 J_CALM | + mode_calibration_ece、U_epi_before/after、voi_ratio、interaction_log_hash、a_score_p95 |
-| IP-262 | MCG Mode Calibration Gate | 新增 | 模态权重校准（ECE）；越界即禁用 VoI 决策，退回 R68 纯保守 |
-| IP-263 | FLUID-RAS Pipeline | 新增 | R68 闭环 + 「廉价歧义预测 → 自适应多采样 → 交互/保守 → 似然第二意见 → 参与式审计」 |
-
-## 1. 符号体系增量（定义 293–309）
-
-| 符号 | 含义 |
-|---|---|
-| `FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)` | 交互消歧风险自适应闭环 |
-| `ξ = (a, g) ∈ 𝒜_+ = 𝒜_task × 𝒜_info` | 增广动作（任务动作 × 信息动作） |
-| `g = (g_gaze, g_probe, g_ask)` | 注视 / 探针 / 问句软提示 |
-| `v_θ(x_s, s | o_t)` | 流匹配速度场（条件编码复用 R68 的 z_t） |
-| `{m_k}, ŵ_k, ξ̄_k, Σ_k` | 模态 / 模态权重 / 原型 / 模态内协方差 |
-| `H_mode, Δ_min` | 模态熵 / 模态最小间距（可约性度量） |
-| `U_ale = Σ_k ŵ_k tr(Σ_k)` | 模态内不可约不确定性（→ R68 λ floor） |
-| `U_epi = H_mode·g(Δ_min)` | 模态间可约不确定性（→ 交互消解） |
-| `VoI(g) = H(M|o) − E[H(M|o,y)]` | 信息动作的信息增益 |
-| `Δa = |a_score(o) − a_score(o_cal)|` | 流似然差（标定不可吸收的第二意见） |
-| `a_score = −log p_θ(ξ_obs|o)` | 动作轨迹负对数似然 |
-| `λ_floor(U_ale + 未消解 U_epi)` | 两级保守退避（消解则仅用 U_ale） |
-| `ECE` | 模态权重校准误差（MCG 门控） |
-| `J_FLUID = (J_CALM, ECE, U_epi_before/after, voi_ratio, interaction_log_hash, a_score_p95, fluid_ver)` | 证书 |
-
-## 2. 形式化定义（要点版）
-
-**定义 293（总览与三不变式）** FLUID-RAS = (FMP, AUD, MINT, CIA, FMA, RAS-WM†)；零学习写操作继承；交互预算硬约束（≤1 次/单位时间、位移 ≤ ε_g、成本 ≤ c_max、信息动作也过 C-RAS-WM 认证）；证据纪律（单源/单次交互不得定案，需 k 个正交源一致）。
-
-**定义 294–295（增广动作与 FMP）** `ξ=(a,g)`；流匹配 `x_s=(1−s)x_0+s x_1`，回归 `x_1−x_0`，Heun `N_step=2`；问句由冻结 LLM 从 `g_ask` 解码。
-
-**定义 296–297（模态分解与二分）** 轨迹聚类得模态/权重/协方差；`U_ale=Σŵ trΣ`，`U_epi=H_mode·g(Δ_min)`；二者不做简单加和，分通道处置。
-
-**定义 298–299（MINT 与交互采样）** `g*=argmax[VoI−c]`，s.t. 安全与预算；`VoI−c≤0` 则不交互、走 R68；「看—问—做」是 ξ 的一个模态。
-
-**定义 300（CIA）** 主动选 `pair*=argmax IG(M; r_{ij}|g*)`；R68 被动环一致 = 「不交互」特例。
-
-**定义 301–302（FMA 与信息动作安全）** `a_score=−log p_θ(ξ|o)`（瞬时变分 + Hutchinson）；`Δa=|a−a_cal|`；`Δa↑ ∧ r_res↓ ⇒ 缓变故障疑`；信息动作过 C-RAS-WM 认证，不过则 U_epi 未消解。
-
-**定义 303–305（审计/干扰/证书）** VQAuditor-I 审交互决策；ℰ_FLUID=ℰ_CALM×ℰ_poison×ℰ_flow；J_FLUID 并入 ECE、U_epi 前后、VoI 比、似然分位。
-
-**定义 306–307（MCG 与两级退避）** ECE>τ_ece ⇒ 禁用 VoI 决策、退回 R68；消解成功 `λ=λ_floor(U_ale)`（resolution bonus），失败/超时/投毒 `λ=λ_floor(U_ale+U_epi)`。
-
-**定义 308–309（时序与对偶）** 自适应 K（K=1 常规、K=4 歧义）；(r_res, Δa) 联合分布分离真漂移与缓变故障。
-
-## 3. 关键算法伪代码
-
-```python
-# IP-253 FMP：流匹配多模态策略（条件编码复用 R68 MTM trunk）
-class FlowMatchingPolicy:
-    def sample(self, o_t, K, N_step=2):
-        z, xs = self.trunk(o_t), randn(K, D)
-        for i in range(N_step):
-            xs = xs + (1.0/N_step) * self.v(xs, i/N_step, z)   # rectified, 1~2 步
-        return [self.decode(x) for x in xs]                     # ξ=(a,g)
-
-    def log_likelihood(self, xi, o):                            # 瞬时变分 + Hutchinson
-        return -hutchinson_divergence_integral(self.v, xi, self.trunk(o))
-
-# IP-254 AUD：不确定性二分
-def decompose(samples, z, mode_head):
-    modes = cluster_trajectories(samples); w = mode_weights(modes)
-    U_ale = sum(w[k]*trace(cov(modes[k])) for k in modes)
-    U_epi = entropy(w) * sep_factor(modes)
-    return U_ale, U_epi, modes, mode_head(z)                    # h_hat 决定升 K
-
-# IP-255 MINT：VoI 交互决策
-def choose_interaction(modes, w, o_t, budget):
-    best = None
-    for g in info_action_candidates(modes):
-        if not budget.allow(g) or not c_ras_wm.certify_info(g, o_t): continue
-        score = (entropy(w) - expected_entropy(w, g, o_t)) - cost(g)
-        if best is None or score > best.score: best = (g, score)
-    return best if best and best.score > 0 else None           # 无利可图 → R68
-
-# IP-257 FMA：标定不可吸收的似然第二意见
-def flow_anomaly(policy, xi_obs, o, o_cal):
-    return abs(-policy.log_likelihood(xi_obs, o)
-               + policy.log_likelihood(xi_obs, o_cal))
-
-# IP-263 主闭环（继承 R68）
-def FLUID_RAS_round(M, obs):
-    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
-    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
-    samples = M.fmp.sample(o, K)
-    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
-    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
-    slow  = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
-    g = (M.mint.choose_interaction(modes, o, M.budget)
-         if (U_epi > TAU_EPI and not slow) else None)
-    if g is not None: U_epi = M.cia.update_belief(modes, M.cia.execute(g))
-    U_floor = U_ale + (U_epi if g is None else 0.0)
-    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
-    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
-    if slow: lam = max(lam, 0.8); k = min(k, k_cal_shrink(x_prime, U_cal))
-    mode = select_mode(modes, U_epi, lam)
-    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
-    M.vqa_i.submit_async(g, U_epi, a_hat)
-    return k, lam, mode, (U_ale, U_epi)
-```
-
-## 4. 推导
-
-**引理 16（模态分离下的信息增益）** A95（`Δ_min ≥ 3σ_in`）下，信息动作使后验熵降低 ΔH，则相较按后验直接采样，期望任务误差下降 ≥ `c·Δ_min·(1−e^{−ΔH})`。系：VoI 是「可分的歧义」的函数——歧义大且分得开，交互才值钱；模糊不可分时应直接保守。
-
-**引理 17（流似然的标定不可吸收性）** 若慢变故障被 COF 吸收（`r_res≈0`），而偏移方向偏离策略主脊，则 `a_score` 期望上升 ≥ `L_z‖o−o_cal‖ − √(trΣ_flow)`（A98：策略密度对条件 Lipschitz）。故 `(r_res↓, Δa↑)` 为缓变故障的判别性联合模式，补 R68 最脆弱处。
-
-**引理 18（交互投毒上界）** 单源采纳错误率 ≥ δ_p；k 个正交源（欺骗相关 ρ<1）多数一致时错误率 ≤ `δ_p·ρ^{k−1}+ε_σ`。系：证据纪律把「问一次」变为「问到一个可验证的一致」。
-
-**定理 16（FLUID 严格包含 R68）** A95–A97 下，FLUID 任意状态期望风险 ≤ R68；且当 `VoI(g*)≤c(g*)`、`ECE>τ_ece` 或 `slow_fault_suspect` 时两者逐指令相同。R68 = 「永不交互」边界；安全不让步，效率获 resolution bonus。
-
-**定理 17（交互安全与无突变）** 信息动作过 C-RAS-WM 认证后物理风险 ≤ ε_int；交互只改模态选择、不改安全包络；失败/超时/投毒时 λ 单调不降地退化为 R68；换装不变式（R68 定理 15）保持 ⇒ 控制连续、无突变。
-
-## 5. 复杂度分析
-
-| 组件 | 时间 | 空间 | 正确性保证 |
-|---|---|---|---|
-| FMP 单样本 N_step=2（复用 trunk） | P99 < 0.8ms | 40MB | 定义 295；K=1 默认 |
-| mode_head 歧义预测 | < 0.02ms | <1MB | 定义 308；门控升 K |
-| 模态分解（K≤4） | < 0.3ms | O(K·H) | 定义 296；仅歧义触发 |
-| MINT VoI（候选 ≤5） | < 0.1ms | O(1) | 定义 298 |
-| CIA 主动模态对 | < 0.05ms | O(|ℰ|²) | 定义 300 |
-| FMA Hutchinson（1 次回放） | < 0.4ms | O(1) | 定义 301、引理 17 |
-| **实时环路总延迟** | **< 2.6ms**（K=1，与 R68 持平）；K=4 歧义路径 < 3.4ms | — | 定理 16–17 |
-
-## 6. 实验设计 E286–E300
-
-| 实验 | 核心问题 | 关键目标 |
-|---|---|---|
-| E286 多模态动作分布 | FMP 覆盖真实多峰 | 模态覆盖率 ≥ 90%，模式召回 ≥ 85% |
-| E287 模态校准 | 模态权重可信度 | ECE < 0.05，可靠图单调 |
-| E288 VoI 交互收益 | 交互 vs 直接保守 | 成功率 +12%，完成时间 −8% |
-| E289 缓变故障第二意见 | FMA 补 R68 的洞 | (r_res↓,Δa↑) 判别 AUC ≥ 0.85 |
-| E290 交互投毒鲁棒 | 误导/共谋欺骗 | 单源错误 ≤ 5%；k-一致 ≤ 1% |
-| E291 信息动作安全 | 看/问/触是否越界 | 交互诱发违规 = 0，风险 ≤ ε_int |
-| E292 实时预算 | 自适应 K 守时 | 常规 P99 < 2.6ms，歧义 < 3.4ms |
-| E293 对 R68 严格包含 | 退化边界逐指令一致 | 退化时行为差 = 0 |
-| E294 语言问句质量 | 清晰、无诱导 | 理解率 ≥ 95%，诱导评分 < 阈值 |
-| E295 主动模态对选择 | CIA 是否选对证据 | 判别增益 ≥ 被动 +30% |
-| E296 消融 | FMP/AUD/MINT/CIA/FMA 贡献 | 去 MINT 退 R68；去 FMA 缓变故障 −40% |
-| E297 24h 长时程 | 交互疲劳 × 漂移 | 交互次数稳定，零交互诱发违规 |
-| E298 分布外场景 | OOD 下流似然可用性 | 检出 ≥ 90%，误报 ≤ 5% |
-| E299 成本-收益 Pareto | 交互预算最优档 | 给出 VoI/成本曲线拐点 |
-| E300 幻影模态攻击 | 幻觉模态诱发追问 | 追问幻影 ≤ 5%，被证据纪律拦截 |
+| E-U01 | 32 任务数据解剖：时长/速度/双手协同率/夹爪时机分布 | 每任务画像表 + 任务簇聚类（预期 6–8 簇） | HF 数据（现成） |
+| E-U02 | 任务簇 × 官网得分点映射 | 难度-步骤分矩阵；数据配比表 v1 | 官网任务页（需登录） |
+| E-U03 | Isaac 场景重建保真度 | demo 重放 vs 真机：视觉 FID、关节轨迹 MSE | Isaac Lab |
+| E-U04 | WMA-0 rollout 可用性 | 1s 视野单步预测误差；幻觉率 | WMA-0 权重 |
+| E-U05 | 合成数据毒性边界 | 混训比例扫描：sim-only vs mixed 五轴评测差 | L1 + 小底座 |
+| E-U06 | 干扰恢复学习增益 | 注入 vs 不注入：干扰轴成功率差 | E-U05 |
+| E-U07 | 服务延迟确定性 | 单步 P99、抖动、零 NaN 率 | L3 |
+| E-U08 | GA-DR 五轴消融 | 每轴开/关对对应轴评测的增益 | E-U05 |
 
 ## 7. 本轮最大风险
 
-**一句话**：FLUID-RAS 的全部效率收益押在「流模型的模态分布可信」这一前提上——**若模态权重未校准（rectified flow 幻觉出不存在模态、或坍缩掉真模态），VoI 就在错误信念上计算，系统会自信地追问一个幻影、或把人类一个误导性回答盖上「已验证」的章**；主动交互于是把 R68 的「诚实的不知道」升级成「被证实的错误」——**问错，比不问更危险**。
+**一句话**：五类泛化场景目前只有官方的定性描述（规则手册抓不到、任务页需登录，F3/F9），**数据引擎可能在为「想象中的评测」造数据**——干扰物是什么、人手怎么干扰、位置扰动多大、未见物品池多广全靠猜；猜错方向，合成数据越多毒性越大。
+**缓解**：(1) 用官方 demo 的场景/物体元数据反推真实分布；(2) 立即申请账号与 Submit Test 档期，把每次真实评测设计成「分布探测实验」；(3) GA-DR 各轴强度参数化，一次探测后整体重标定。
 
-**次级风险与缓解**：信息动作越界（定义 302 认证 + 定理 17）；交互投毒/共谋（k 正交一致 + 引理 18 + ℰ_poison 对抗训练）；实时预算被 K 采样击穿（mode_head 门控 + 自适应 K）；语言接地幻觉（冻结 LLM + 解码侧过滤 + E294）；模态坍缩下游版（MCG 校准门，ECE 越界即退回 R68 纯保守）。
+## 8. 本轮押注（一句话）
+
+**当前最值得押注的创新点：IP-U01+IP-U02（GA-DR 泛化轴数据引擎 + 干扰算子恢复合成）**——它直接供给五轴计分面，可行性最高、专利性最强，且双系统、WM 前瞻、OCRA 等下游组件都依赖它产出的数据。
+<!-- IDEA:END -->
+
+<!-- ARTIFACT:START -->
+# 第 70 轮产物 · UniBot 创新点清单 v1
+
+**UNIBOT-STACK：GA-DR 泛化轴数据引擎 × 物体中心双系统通才策略 × 动作块级世界模型前瞻；专利布局作筛选护栏**
+
+> 循环第 1 轮起建清单（IP-U01~IP-U10）。每条含【动机 / 与现有方案差异 / 技术可行性 / 所需资源 / 落地步骤 / 风险 / 专利性】。事实来源与检索日期（2026-11-15）见想法区 §0；赛事=宇树物理 AI UniBot 世界挑战赛（unibot.unitree.com，G1 平台，32 任务，成功率+步骤分，五类泛化场景）。
+
+## 0. 清单总览（按「预期得分贡献 × 可行性 × 专利性」排序）
+
+| 编号 | 名称 | 层 | 预期贡献 | 可行性 | 专利性 | 状态 |
+|---|---|---|---|---|---|---|
+| IP-U01 | 泛化轴定向域随机化数据引擎（GA-DR） | L1 | ★★★ | 高 | ★★★ | 本轮立项 |
+| IP-U02 | 干扰算子注入与失败恢复合成 | L1 | ★★★ | 中高 | ★★★ | 本轮立项 |
+| IP-U04 | 双系统 + 干扰证据二分重规划触发器 | L2 | ★★★ | 高 | ★★★ | 本轮立项（承接 R69） |
+| IP-U05 | 动作块级世界模型前瞻验证（VLA×WM 混合） | L3 | ★★☆ | 中 | ★★★ | 本轮立项 |
+| IP-U03 | 物体中心检索增强观测（OCRA） | L2 | ★★☆ | 中 | ★★ | 本轮立项 |
+| IP-U06 | 稳态尾动作块 + 接口参数最优化 | L3 | ★★ | 高 | ★★ | 本轮立项 |
+| IP-U07 | 合成-真机混合课程与任务簇配比诊断 | L1/L2 | ★★ | 高 | ★ | 本轮立项 |
+| IP-U10 | 底座选型与官方生态吸收（WMA-0/VLA-0） | L2 | ★★ | 高 | — | 本轮立项 |
+| IP-U08 | 评测可信度工程（延迟确定性/异常抑制） | L3 | ★☆ | 高 | ★ | 本轮立项 |
+| IP-U09 | 专利地图与 FTO 护栏 | 护栏 | — | — | — | 本轮立项，下轮检索深化 |
+
+## 1. 核心条目详述
+
+### IP-U01 泛化轴定向域随机化数据引擎（GA-DR）
+- **动机**：每任务仅 ~1k 条 ~6s 干净短示教，五类泛化轴覆盖极薄（尤其人为干扰轴零恢复数据）；评测按轴计分，数据是最大杠杆。
+- **差异**：主流路线被动接受官方数据分布；GA-DR 把评测协议显式反变为数据生成协议——五个随机化轴（位置/干扰物/背景/未见物品/人为干扰）各有参数化算子与强度课程，并用真机 demo 做分布校准锚（Sim-Real 特征 FID + 抓取行为一致性双指标）。
+- **可行性**：高。Isaac Lab 开源、G1 官方 Isaac 资产存在；Dex1 夹爪资产需自建近似（平行夹爪替代 + 指形修正）。
+- **资源**：8×4090 渲染 2 周（~10 万条合成 episode）；资产制作 3–4 人周；导出与官方 LeRobot v3 同构（同键名/分辨率/帧率），混合训练零摩擦。
+- **步骤**：① demo 反演 32 任务场景模板（物体/布局/得分点）→ ② G1+Dex1 装配与遥操作重放验证（E-U03）→ ③ 五轴随机化算子库 → ④ 合成扩增 → ⑤ E-U05/E-U08 校准与消融。
+- **风险**：sim2real 视觉域差（用真图背景合成 + 照明随机化缓解）；Dex1 手建模失真；官方五轴真实强度未知（想法区 §7 主风险）。
+- **专利性**：★★★ 方法专利候选：「泛化轴定向域随机化 + 真机分布校准闭环」。
+
+### IP-U02 干扰算子注入与失败恢复合成
+- **动机**：官方 demo 无恢复片段，评测中干扰必然打断 chunk 执行；失败恢复能力决定成功率下限。
+- **差异**：现有 VLA 训练几乎不造显式恢复数据；本点把「干扰」建模为可复现扰动算子（推移物体、遮挡相机、人手伸入/拨动、目标移位），对每条真机轨迹注入生成「中断-恢复」对，并自动产出 chunk 级 early-abort 标签（供 IP-U04/06 用）。
+- **可行性**：中高（全 sim 生成；真机 demo 时序扰动增强作廉价补充）。
+- **资源**：算子库 ≥8 类；复用 IP-U01 管线；无额外硬件。
+- **步骤**：算子库 → 注入分布设计（对照五轴定性描述保守取值）→ 恢复对合成 → 混训配比课程 → E-U06。
+- **风险**：注入分布与真实干扰统计不匹配（缓解同主风险）；恢复数据比例过高伤正常性能（配比课程控制）。
+- **专利性**：★★★ 「操作任务干扰算子化数据合成方法」。
+
+### IP-U03 物体中心检索增强观测（OCRA）
+- **动机**：「未见物品」「背景差异」两轴直指像素级端到端的脆弱性；物体级表征对背景天然不变，未见物品靠物体先验库泛化。
+- **差异**：主流微调直接吃 4 路 RGB；本点在策略前加物体接口层（开放词汇分割 + DINOv2 物体 embedding + 语言指代对齐），并以当前场景 embedding 从 32k 官方 demo（FAISS）检索最近轨迹簇条件化动作头——「给 VLA 一个对象数据库」。
+- **可行性**：中。SAM2 在线分割开销大 → 训练时用其伪标签蒸馏轻量场景编码器（单次前向）；检索毫秒级。
+- **资源**：开源分割/特征模型；FAISS；蒸馏 4×4090×2 天。
+- **步骤**：物体先验库（32 任务资产 + OXE/DROID 物体 + 合成渲染）→ 蒸馏场景编码器 → 检索条件化动作头 → 五轴仿真评测验证两轴增益。
+- **风险**：分割失败反噬（遮挡/透明物）→ 保留 RGB 残差通路门控融合；延迟预算超支。
+- **专利性**：★★ 权利要求需写「任务指令引导的检索 + 动作头条件化」组合以区别现有 RAG-VLA 文献。
+
+### IP-U04 双系统 + 干扰证据二分重规划触发器（承接 R69）
+- **动机**：30Hz 下端到端大模型延迟不现实（接口要求延迟稳定，F6）；干扰场景需要「察觉-暂停-重规划」循环。
+- **差异**：HiRT/π0.5 式双系统按定周期切换；本点把 R69 的 aleatoric/epistemic 二分迁移为触发准则——外部证据（非自运动区域前后帧差分：场景被外界改变）与内部证据（策略熵/多模态分歧）分别对应 epistemic（触发 System-2 重规划）与 aleatoric（仅降速不重规划），触发器为轻量检测器，用 IP-U02 的注入数据自动获得标签。
+- **可行性**：高。纯服务内逻辑，检测器毫秒级。
+- **资源**：标注自动；训练算力小。
+- **步骤**：变化检测器 → 双系统集成 → 「人为干扰」轴专项评测。
+- **风险**：误触发消耗步骤分 → 阈值按步骤分代价校准。
+- **专利性**：★★★ 「干扰证据二分驱动的双系统重规划触发器」。
+
+### IP-U05 动作块级世界模型前瞻验证（VLA×WM 混合）
+- **动机**：单次前向选 chunk 在未见物品/干扰下是盲打；官方 UnifoLM-WMA-0（G1 世界模型，F7）同平台可直接微调；评测协议 chunk 间有间隙，天然容许「先想后动」。
+- **差异**：社区主流无候选验证；WM 规划文献多为连续控制；本点做动作块级选择——生成 K≤3 候选 chunk → WMA-0 rollout 末端观测 → 打分器评「子目标达成/干扰物是否被碰倒」→ 选最高分。
+- **可行性**：中。WMA-0 权重开源、rollout 质量待 E-U04 实测；延迟预算需管理（仅低置信时启用）。
+- **资源**：WMA-0 微调 4×H100×2 天；打分器可先 VLM zero-shot 再蒸馏轻量头。
+- **步骤**：E-U04 可用性 → 打分器 → 置信门控（ECE 校准，承 R69 MCG：门控不过则退回直通策略）→ 集成。
+- **风险**：WM 幻觉 rollout 误导选择（校准门控兜底）；延迟翻倍。
+- **专利性**：★★★ 「动作块级世界模型前瞻选择 + 置信门控系统」。
+
+### IP-U06 稳态尾动作块 + 接口参数最优化
+- **动机**：action_chunk_size 固定于 metadata 且整块执行（F6）→ 无法中途改主意；chunk 间衔接误差与每步网络延迟都是隐性扣分点。
+- **差异**：社区固定 chunk 直出；本点：① chunk 尾部 1–2 步收敛为「速度/持握保持」的稳态尾，使中断衔接误差最小、也为截断执行留兼容；② image_resize 降分辨率（320×240）压缩传输与推理延迟；③ obs_delta_indices 选择性堆叠（速度估计 3 帧）而非全量观测；④ N 端口共享后端并发调度（README 明示允许）。
+- **可行性**：高，纯工程。**资源**：无额外。
+- **步骤**：稳态尾生成器 → 接口参数网格（本地 run_client 全链路压测 E-U07）→ 部署。
+- **风险**：低。
+- **专利性**：★★ 「稳态尾动作块生成方法与系统」。
+
+### IP-U07 合成-真机混合课程与任务簇配比诊断
+- **动机**：混训比例决定合成数据是增益还是毒药；32 任务应聚成技能簇按簇配比。
+- **差异**：拍脑袋 1:1 混 vs 按「簇难度 × 泛化轴脆弱度」动态配比；先用官方 32k demo 做运动学画像与聚类（抓-移-放/插入/堆叠/倒/双手协同），对齐官网逐任务得分点。
+- **可行性**：高（离线即起步，E-U01/E-U02 现在就能做）。**资源**：CPU/GPU 少量。
+- **步骤**：E-U01 → E-U02 → 配比表 v1 → 随实测迭代。
+- **风险**：低。**专利性**：★（工具性，并入 U01 权利要求）。
+
+### IP-U08 评测可信度工程
+- **动机**：README §6 明示每步延迟及波动、动作统计规律将被记录并可能随结果公布（F6）——这是明牌评分维度。
+- **差异**：多数队伍只管模型；本点把「服务确定性」当一等公民：预分配显存、固定 batch、CUDA Graph、GC 抖动抑制、动作裁剪/NaN 防护、超时降级（安全持稳兜底动作）。
+- **可行性**：高，纯工程。**步骤**：E-U07 全链路压测 → 上线基线。
+- **风险**：低。**专利性**：★（并入 IP-U06 系统权利要求）。
+
+### IP-U09 专利地图与 FTO 护栏
+- **动机**：比赛同时是 IP 构建窗口；先申请后公开防新颖性自毁；避开 PI/NVIDIA 等已有申请的核心权利要求。
+- **内容**：候选专利包 = U01+U02（数据引擎）> U04（触发器）> U05（WM 前瞻）> U06（稳态尾）；公开时序纪律（开源/论文前完成交底）。
+- **下轮**：Google Patents/智慧芽检索「domain randomization manipulation」「world model action selection」「VLA 干扰鲁棒」现有申请，收敛权利要求差异点。
+- **风险**：专利撰写挤占研究时间（用技术交底书先行）。
+
+### IP-U10 底座选型与官方生态吸收
+- **动机**：从零训不可行；宇树自家 UnifoLM 系列（WMA-0 世界模型 / VLA-0 / WLA-1.0，F7）同平台同格式，社区还有 GR00T N1.5（官方支持 G1）、π0 系。
+- **差异**：选型打分制：输入模态匹配度（4 相机+language）、动作空间匹配度（数据动作含 EE 位姿目标 → ee 控制空间最贴合）、许可证、算力。
+- **步骤**：下载 WMA-0-Base + VLA-0 → 3 任务离线复现评估 → 决定底座（决策门 D1）。
+- **风险**：许可条款限制；社区底座对 Dex1 手支持不足。
+
+## 2. 主服务骨架（伪代码，对照 unibot_submission §1–§6 接口）
+
+```python
+class UniBotPolicy:                                   # 部署为 PolicyService，N 端口共享后端
+    def __init__(self):
+        self.s1   = ChunkPolicy(base=...)             # IP-U10 底座 + OCRA 场景编码器
+        self.det  = InterferenceDetector()            # IP-U04 干扰证据二分
+        self.wm   = WMScorer(unifolm_wma0)            # IP-U05 前瞻打分（ECE 门控）
+        self.sched= ChunkScheduler()                  # IP-U06 稳态尾/压缩/堆叠
+        self.mem  = FAISSDemoMemory(official_32k)     # IP-U03 检索增强
+
+    @property
+    def metadata(self):
+        return {"control_space": "ee",                # 与数据 EE 位姿目标对齐
+                "obs_delta_indices": {"cam_*": [0], "state.*": [-3,-2,-1,0]},
+                "image_resize": {"cam_*": [240, 320]},# IP-U06 延迟压缩
+                "action_chunk_size": 4, "token": TOKEN}
+
+    def get_action(self, obs):
+        z    = self.s1.encode(obs)
+        near = self.mem.topk(z, k=8)                  # 检索最近 demo 轨迹簇
+        ev   = self.det(obs, entropy=self.s1.entropy(z))
+        if ev.epistemic_high and self.wm.calibrated:  # 干扰/未见 → 先想后动
+            cands  = [self.s1.propose(z, near, temp=t) for t in (0, .5, 1.)]
+            scores = [self.wm.rollout_score(c, obs, near) for c in cands]
+            chunk  = cands[argmax(scores)]
+        else:                                         # aleatoric/常规 → 直通
+            chunk = self.s1.propose(z, near)
+        return self.sched.stabilize_tail(chunk, obs)  # 稳态尾 + 裁剪 + NaN 防护
+
+    def reset(self): self.det.reset(); self.mem.reset()
+```
+
+## 3. 关键论证（两条）
+
+- **引理 U1（GA-DR 覆盖半径）**：若评测场景族可用五轴参数空间的有界子集描述、官方数据仅覆盖其点状子集，则仅用官方数据训练的策略的期望成功率随覆盖半径退化；GA-DR 以轴向采样把覆盖半径从「demo 密度半径」压到「随机化范围半径」，成立前提是 sim-real 系统差 δ_sys < 轴内扰动幅度——这给出随机化强度下界的工程准则（强度必须压过 sim2real gap），也是「校准锚」存在的理由。
+- **引理 U2（前瞻选择风险单调下降）**：设单 chunk 失败率 p_f、打分器区分好坏 chunk 的 AUC ≥ 0.5+γ（γ>0），则从 K 候选中选最高分使失败率单调不增（K=3 时乐观相对下降 ≥ f(γ)·p_f）；前提是打分器经 ECE 校准——未校准的 WM 幻觉会把「选择」变成「赌局」（承 R69 MCG 门控思想）。
+
+## 4. 落地路线图（周级）
+
+| 周 | 里程碑 |
+|---|---|
+| W1–2 | E-U01 数据解剖；账号/Submit Test 申请；WMA-0/VLA-0 下载冒烟（IP-U10 D1 前置） |
+| W3–6 | Isaac 重建 4 个代表任务（每簇 1 个）+ Dex1 近似；E-U03 |
+| W7–10 | GA-DR 算子库 + 干扰注入 + LeRobot v3 合成导出管线（IP-U01/02） |
+| W11–14 | 底座微调 v0（32k 真机 only）→ v1（+合成）；E-U05/06/08 |
+| W15–16 | 推理工程（稳态尾/压缩/N 端口）；E-U07；首次真实 Submit Test 分布探测 |
+| W17+ | 按探测结果重标定五轴强度与配比；OCRA 蒸馏；WM 前瞻集成；专利交底 |
+
+## 5. 下轮深化与修剪计划
+
+- **深化**：IP-U01（五轴强度表 v0 + 校准指标定稿）、IP-U05（WMA-0 rollout 实测，E-U04）、IP-U09（专利检索与权利要求差异点收敛）、补齐规则手册全文（F9：延迟/模型上限、测试次数、步骤分细则）与 32 任务得分点明细。
+- **修剪候选**：IP-U03 若蒸馏后五轴增益 <2pp 降级为消融项；IP-U06 若规则限制调用频率则并入 IP-U08。
+- **榜单上线后必做**：头部方案逐项对标（其 obs_delta_indices/chunk 大小若可推断，反推其推理工程策略）。
+
+## 6. 押注（一句话）
+
+**当前最值得押注的创新点：IP-U01+IP-U02「GA-DR 泛化轴数据引擎 + 干扰算子恢复合成」**——直接供给五轴计分面、可行性最高、专利性最强，且双系统、WM 前瞻、OCRA 等下游组件全部依赖其产出数据。
 <!-- ARTIFACT:END -->
