@@ -4353,3 +4353,15 @@
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-093959-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 11:26:56"}
 {"event": "candidate", "id": "20261115-112738-r1", "round": 1, "changed": ["artifact"], "ts": "2026-11-15 11:27:38"}
 {"event": "verdict", "id": "20261115-112738-r1", "round": 1, "verifier": "ai", "score": 9.5, "result": "adopted", "reason": "AI 评分 9.5（阈值 7）", "ts": "2026-11-15 11:28:10"}
+{"event": "candidate", "id": "20261115-120059-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-15 12:00:59"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-112738-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 12:01:00"}
+{"event": "candidate", "id": "20261115-120707-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-15 12:07:07"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-112738-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 12:07:08"}
+{"event": "verdict", "id": "20261115-120059-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-15 12:10:59"}
+{"event": "candidate", "id": "20261115-121457-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-15 12:14:57"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-112738-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 12:14:58"}
+{"event": "candidate", "id": "20261115-121852-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-15 12:18:52"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-112738-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 12:18:53"}
+{"event": "candidate", "id": "20261115-122125-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-15 12:21:25"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261115-112738-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 12:21:26"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-15 12:22:07"}
