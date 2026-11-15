@@ -3,597 +3,490 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 3 轮（灵感循环第 3 轮；本轮灵感：「具身智能」×「数据增强」）
+# 第 2 轮（灵感循环第 2 轮；本轮灵感：「工具调用」×「预训练」×「视觉-语言-动作模型」）
 
-> **基线继承**：第 2 轮 **ToolGauge**（IP-315–320；定义 416–431；引理 46–50；实验 E426–E440）。
-> 本轮纪律：**在 ToolGauge 上继续增量升级，不推倒重来**——L-Box / T-Box+TCV / MP-Φ+AP-Cal
-> 分别沿「具身」与「增强」两条轴升级；MODGAUGE 五不变式与 ToolGauge 的四层探测防线全部保留；
-> 同时审计并修复第 2 轮遗留的七处过度主张与实现缺口（§5）。
-> 集成链延长为：**MODGAUGE ⊃ LeanGauge ⊃ ToolGauge ⊃ EmbodiedGauge**。
+> **基线继承**：第 1 轮 **LeanGauge**（IP-310–314；定义 398–415；引理 42–45；实验 E411–E425）。
+> 本轮纪律：**在前人基础上改进，而不是推倒重来**——LeanGauge 的三个核心模块（D-Box / I-Box / BP-Cal）
+> 各沿一条灵感轴升级；MODGAUGE 五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链）
+> 与 4CV 骨架全部保留；同时审计并修复第 1 轮遗留的三处缺陷（见 §5）。
 
-## 双轴映射（升级而非重写）
+## 三位一体映射（升级而非重写）
 
-| 灵感词 | 第 2 轮对象 | 升级为 | 一句话动机 |
+| 灵感词 | 第 1 轮对象 | 升级为 | 一句话动机 |
 |---|---|---|---|
-| 具身智能 | L-Box 只从外部回执猜原因；T-Box 只探测外部世界 | **E-Box**：覆盖矩阵扩为 R_emb = R_world × R_body；自运动即自我测量，身体参数 θ_body 与外部世界联合标定 | 第一把没标定的尺子是身体；身体坐标系错了，外部探测再准也表达在错坐标系里 |
-| 数据增强 | MP-Φ 用固定仿真集预训练；AP-Cal 只用少量有效回执 | **A-Box + EA-Cal**：增强 = 规范群作用，只接受带「等变证书」的增强；具身重观测提供真实新噪声实现 | 数字增强买方差、不买信息；只有身体能制造新的独立测量 |
+| 视觉-语言-动作模型 | IP-310 D-Box：只知道「格子没验证过」 | **L-Box**：VLA 把数值盲区翻译成共形校准的「因果假设集」 | 盲区不仅要被发现，还要被**理解**——镜面反射、透明玻璃、形变表面对应完全不同的探测工具与校准先验 |
+| 工具调用 | IP-311 I-Box：χ_R 闭式下注，观测无差别接受 | **T-Box + TCV**：探测动作升级为带类型契约、前置/后置条件与签名回执的「计量工具调用程序」 | 堵住第 1 轮最大风险：任何观测都被无条件当成有效证据 |
+| 预训练 | IP-312 BP-Cal：每盲区从零拟合物理先验 GP | **MP-Φ + AP-Cal**：预训练计量先验，摊销后验，跨盲区复用经验 | 「物理先验足够好」本身不可审计；预训练让先验质量第一次有了样本复杂度上界 |
 
-**核心命题**：把 ToolGauge 的「外部盲区 → 契约化外部探测 → 摊销校准」升级为
-「**身体先标定 → 具身重观测制造信息 → 规范群内增强只做正则 → 证据溯源可传递失效**」。
-一句话：**先标定身体，再标定世界；增强只在规范群内合法，且数字增强不创造信息。**
+**核心命题**：把 LeanGauge 的「数值盲区 + 数值探测 + 逐盲区校准」升级为
+「**语义假设 → 契约化工具调用 → 摊销校准 → 交叉验证后局部热替换**」：
+VLA 只做三件被审计的事（提假设、选工具、写主张），数值真值仍由计量层独占；
+预训练先验把「每盲区从零学习」变为「跨盲区摊销学习」，并用元泛化界把先验质量变成可测量、可告警的量。
 
 **不变式保持声明**：
-- MODGAUGE 五不变式（契约完整性、组合单调性、反作用通道完备、主张绑定、严格退化链）全部保留；
-- **新增不变式 I6（增强可容许性）**：任何进入校准/预训练证据集的增强必须携带有效证书 Cert_aug；未认证增强只能进入「正则项」，不得进入「证据项」；
-- **新增不变式 I7（溯源真值维护）**：证据图中任一祖先（回执、证书、body_calibration_version）失效，其后代证据必须传递性失效，且不得继续支撑热替换；
-- **严格退化链延长**：EmbodiedGauge 失效（身体不可辨识 / ASE 违规 / 证书全失效 / n_eff 不足 / A-Quarantine 暂停）⇒ ToolGauge（只做外部物理探测，不做自探测与增强）⇒ LeanGauge ⇒ MODGAUGE。身体与增强都是增强项，不是依赖项。
+- MODGAUGE 五不变式全部保留；
+- 主张绑定不变式的**语言扩展**：语言主张必须引用有效数值回执，否则在契约序列化时剥离（定义 423）；
+- **严格退化链延长**：ToolGauge 失效（VLA 不可用 / 假设全被 SNC 剔除 / 预算耗尽）⇒ 退回 LeanGauge 纯数值探测 ⇒ 再失效退回 MODGAUGE。VLA 是增强项，不是依赖项。
 
 ## 0. 直觉与动机
 
-### 灵感 1（具身智能 → 身体是第一等测量通道）
+**灵感 1（工具调用 → 探测动作的「接口化与回执化」）**
+直觉：LeanGauge 的 I-Box 用 χ_R 闭式 σ_pred 决定「要不要进盲区」，但探测动作本身没有接口约束——
+任何返回值都被无差别接受为样本，这正是第 1 轮最大风险（「迭代采样被误判为已覆盖」）的根源。
+LLM 工具调用的工程智慧恰好是解药：**工具 = 类型化 schema + 物理前置条件 + 后置回执 + 来源签名**。
+我们把每个计量探测（IR 补测、敲击激励、光照扫描、双目基线、热漂移、跨通道互检）包装成「计量工具」，
+探测方案由 VLA 编译成程序 Π_s，由工具调用校验器 TCV 逐条验证（schema / 前置 / 预算 / 循环）后才执行，
+每条回执携带签名与声明的 σ。盲区注入攻击者现在必须**同时**伪造四层：schema、物理前置、签名回执、
+语义一致性（SNC）——攻击面从 1 层变 4 层。
 
-直觉：ToolGauge 把盲区全部放在「外部世界」的覆盖矩阵里，默认机器人自己的身体是已知、稳定、免费的测量平台。
-但真实具身系统里，**运动学偏置、连杆柔顺、IMU 零偏、相机外参、工具磨损、负载与温漂**共同定义了
-「动作 → 观测」的映射；这个映射一旦错了，所有外部回执都会被表达在错误的坐标系里。
-具身智能的第一条工程启示因此是：**身体本身就是一把未标定的尺子，自运动是最便宜也最容易被忽视的测量动作。**
+**灵感 2（预训练 → 先验质量从「信仰」变为「可审计量」）**
+直觉：BP-Cal 的物理先验 GP 隐含假设「物理尺度先验足够好」，但该假设本身不可审计，且每个盲区从零拟合——
+第 2 个盲区学不到第 1 个盲区的任何经验。预训练的启示有三：
+(a) 在海量仿真（域随机化的材质×光照×干扰组合）+ 自监督真实数据（多视一致性、敲击响应动力学、热漂移）上
+元训练「计量先验 MP-Φ」，输入（假设 h，已收到的回执流）直接输出契约参数的**摊销后验**——少样本适应被摊销；
+(b) 元泛化界（引理 47）给出「M 个预训练环境 + N_bl 条上下文」的超额风险上界，**先验质量第一次可测量**；
+(c) 预训练阶段的失败模式可以**预先进入测试集**：在仿真里扫过 10⁴ 种组合，已知失败模式写进 SNC 指纹库。
+同时保留物理先验作为 KL 锚与方差下界（保守性夹紧），防止预训练先验漂离物理或输出过度自信。
 
-由此得到三个设计决定：
-(a) 覆盖矩阵从 R_world 扩展为 R_emb = R_world × R_body，身体格子 b=(关节/传感通道/工况) 与外部格子同级；
-(b) 新增自探测工具库 T_self（重力姿态、关节换向、腕部旋转、自接触、负载移位、双目自检），
-   用持续激励（persistent excitation）让身体参数可辨识；
-(c) 身体标定带版本号 body_version；身体漂移时，所有依赖旧版本的增强证书与校准证据**传递性失效**。
+**灵感 3（视觉-语言-动作模型 → 盲区的「语义化」与 VLA 的「降格审计」）**
+直觉：D-Box 的覆盖矩阵只知道「格子 (d,m,i) 没验证过」，不知道「为什么没验证」。
+不同根因（镜面反射 / 透明 / 形变 / 热漂移）对应不同的探测工具组合与不同的校准先验——
+VLA 的语义能力恰好补上这一层：把格子翻译成共形校准的因果假设集 H_s，再针对性编译探测程序。
+但 VLA 以「自信地胡说」著称——恰是 R73/LeanGauge 最怕的「自信地组合错误世界」。
+因此 ToolGauge 中 VLA 被降格为三个**被审计的角色**：
+假设器（共形覆盖 1−α，定义 422）、编程器（只能选预注册工具、参数限物理包络内）、
+解说器（文字主张必须引用数值回执，否则剥离，定义 423）。
+**语言永远不进入数值通道**；VLA 整体失效时系统按退化链原样运行。
 
-### 灵感 2（数据增强 → 增强是规范群作用，不是免费样本）
+## 1. 形式化定义（增量：定义 416–431）
 
-直觉：数据增强在数据稀缺时几乎总是「有效」的，但它有两种完全不同的作用，工程上经常混为一谈：
-(i) **正则/先验**：让模型对 nuisance 变换不变，改善泛化；
-(ii) **证据**：把增强样本当成独立观测去收缩后验。
-把 (ii) 当真的后果是灾难性的——**伪样本会缩小报告方差，却不缩小真实误差**，这正是 ToolGauge 最怕的「自信地组合错误世界」的增强版。
+**定义 416（计量工具与工具契约 MTC）** 计量工具 t = (Schema_t, Pre_t, Post_t, c_t, τ_t, Ĝ_t)：
+- Schema_t：类型化参数与返回值，如 `illum.sweep(ω∈[−60°,60°], I∈[0,2klx]) → (Δz: μ, σ_decl)`；
+- Pre_t：物理前置谓词（力/温/时序包络，第 0 层兜底的工具级实例化）；
+- Post_t：后置回执谓词：返回必须含 (μ, σ_decl, 来源签名 sig, 时间戳 ts, 单调序号 seq)；
+- c_t：归一化调用代价（时间+磨损+风险）；τ_t：最坏执行时延；
+- Ĝ_t(h)：给定假设 h 的预测信息增益（nats）。高斯观测下闭式 Ĝ = ½·log(1 + σ²_prior/σ²_obs)，其余由 MP-Φ 查询。
+工具库 T₀ = {ir.probe, tap.percuss, illum.sweep, stereo.baseline, therm.drift, cross.modal}，全部预注册物理包络与失败指纹。
 
-严谨化的关键是把增强看成**测量算子的规范变换**：g 可容许 ⇔ 存在表示 ρ(g) 使 M(g·x) = ρ(g)·M(x)。
-水平翻转在量测对象有手性/文字时不可容许；颜色抖动在颜色本身是 measurand 时不可容许；任意裁剪在会切掉被测物时不可容许。
-更关键的是一个「不免费」引理：**对已知可逆变换，已观测样本的增强不增加关于参数的 Fisher 信息**（引理 52）——
-增强只能通过「未知 nuisance 边缘化」或「正则」起作用，不能降低 Cramér–Rao 下界。真正的新信息只能来自**具身重观测**：
-身体换一个位姿/光照/接触方式重新测一次，得到新的独立噪声实现。
+**定义 417（工具回执与有效性）** r = (t, args, obs=(μ,σ_decl), sig, ts, seq)；
+valid(r) ⇔ Schema_t(args) ∧ Pre_t(执行时刻快照) ∧ Post_t(obs) ∧ Verify(sig) ∧ seq 单调。
+无效回执一律作废并计入失败计数；**作废回执永不进入校准样本集**。
 
-### 灵感 3（合流：身体制造信息，增强只做正则）
+**定义 418（探测程序与 TCV）** Π_s = ((t₁,a₁),…,(t_L,a_L))，L ≤ L_max = 6，允许 DAG 依赖（后调用参数可引用前回执）。
+TCV(Π_s) 逐条检查：① Schema；② Pre（对预估执行时刻外推包络）；③ 预算 Σc_t ≤ B_tools；
+④ 循环拒绝（同一 (t,args) 不重复）。执行语义：任一条 Pre 实测失败 ⇒ 该调用 void、程序以完成前缀收尾（零副作用保证）。
 
-合流后的系统不是「给 ToolGauge 加一个增强模块」，而是重新分工：
-- **E-Box** 负责「身体是否可信」与「去哪里动一下能获得最多身体信息」；
-- **A-Box** 负责「哪些增强是规范变换」与「证书是否仍有效」；
-- **EA-Cal** 负责「把具身重观测当证据、把合成增强当正则」，用轨道加权与 n_eff 防止伪样本冒充独立证据；
-- **MP-Φ^G** 负责「规范等变」的预训练先验：增强只进等变正则项，物理锚仍是 KL 锚；
-- **7C** 把 A（Augment）作为一等阶段插在 E 与 C(alibrate) 之间，并在 V 阶段做「增强一致性」检查。
+**定义 419（双层下注，推广定义 400）**
+- **风险门 λ（继承）**：λ(a,s) = σ_pred(a|s) − σ_decl(a) ≥ γ 才允许进入盲区——管「这条探测**安不安全**」；
+- **增益注 β（新增）**：β_t = Ĝ_t(h) − c_t ≥ γ_B 才值得调用——管「这条探测**值不值**」。
+两门同过才执行；任一门失败不产生物理副作用。
 
-这样两个灵感词不是并列的两个模块，而是**一条因果链**：身体重观测生产信息 → 证书界定哪些数字变换合法 →
-合法增强改善先验与鲁棒性 → 溯源图保证一旦身体错了，所有派生证据一起作废。
+**定义 420（预训练计量先验 MP-Φ 与摊销校准 AP-Cal）**
+MP-Φ_θ : (h, {r_j}_{≤k}) ↦ q_θ(u_s) = 𝒩(μ_θ, Σ_θ)，契约参数 u_s 的（低秩）摊销后验；
+元训练目标：min_θ Σ_{m=1..M} E[−log p(u*_m | ctx_m)] + β_KL·KL(q_θ ‖ p_phys)——物理先验作为 KL 锚。
+**保守性夹紧**：Σ_θ ≽ κ_phys·I（预测 σ 不得低于物理噪声底），禁止预训练过度自信进入契约。
 
-## 1. 形式化定义（增量：定义 432–447）
+**定义 421（ToolGauge 六段闭环 6C）** 修复循环 = H(ypothesize) → C(ompile) → E(xecute) → C(alibrate) → V(erify) → U(pdate)：
+1. H：D-Box（定义 398/399，继承）发现盲区 s ⇒ L-Box 生成共形假设集 H_s；
+2. C：VLA 编程器对 H_s 编译 Π_s，TCV 验证；
+3. E：逐工具执行，双层闸门 + 回执校验，产出有效回执流；
+4. C：AP-Cal 以回执流为上下文输出 q_θ(u_s)；
+5. V：**独立回执交叉验证**——q_θ(u_s) 对至少一条未参与拟合的 cross.modal 回执的标准化残差 |z| ≤ ε_cross；再跑契约回归测试（继承第 1 轮）；
+6. U：通过 ⇒ 局部热替换 M_ver 子图 + 语言修复证书（定义 427）绑定进 EC；不通过 ⇒ 夹紧方差重试 1 次，再失败 ⇒ stub + RED（严格退化）。
 
-**定义 432（具身覆盖与体感盲区）** 具身覆盖矩阵 R_emb = R_world × R_body，
-R_body 以格子 b=(j,k,e) 索引：j 为关节/连杆，k 为传感通道，e=(负载, 温度, 磨损, 速度, 接触模式) 为工况。
-身体模型 h_body(a, θ_body) 预测在动作 a 下的本体/外感受观测；body 格子 b 覆盖 ⇔ 存在有效回执 r 使
-‖r.obs − h_body(a_r, θ_body)‖ ≤ κ_body·σ_r，且该回执的 body_version 与当前版本一致。
-不满足者为**体感盲区** B ⊆ R_body。θ_body ∈ Θ_body ⊂ ℝ^{d_b} 包括运动学偏置、连杆柔顺、IMU 零偏、
-相机外参、工具磨损与负载参数。
+**定义 422（共形假设覆盖）** 预注册校准集 C_cal = {(s_i, h_i*)}（部署前由交叉通道真值标注），假设分数取 1−α 分位 τ_h；
+运行时 H_s = {h : score(h) ≤ τ_h}；保证 P(h* ∈ H_s) ≥ 1−α（可交换性下；漂移下按引理 48 修正）。
 
-**定义 433（自探测工具与本体契约）** 自探测工具 t_self = (Schema, Pre, Post, c, τ, ASE, O_t)：
-- Schema/Pre/Post 继承定义 416，但 Pre 额外包含关节限位、力矩上限、工作空间、自碰撞与负载包络；
-- ASE 为具身安全包络（定义 446）；O_t 为可观测性算子；
-- 自探测轨迹 ξ = (a_1,…,a_H) 的观测矩阵 O(ξ) = Σ_{t=1..H} J_tᵀ Σ_obs^{-1} J_t，J_t = ∂h_body/∂θ_body|_{a_t}。
-  **持续激励条件**：λ_min(O(ξ)) ≥ ε_obs；不满足则不得宣称任何身体格子被覆盖（防止「动了就算标定」的假覆盖）。
-工具库 T_self = {gravity.pose, joint.reversal, wrist.rotate, self.contact, mass.shift, stereo.selfcheck}。
+**定义 423（语言主张-回执绑定）** EC 新增字段 claims：每条语言主张 c 必须携带 receipts(c) ⊆ 有效回执集；
+无引用或引用无效回执的主张在契约序列化时剥离；剥离是纯投影，不改变任何数值行为（主张绑定不变式的语言扩展）。
 
-**定义 434（增强规范群与可容许性缺陷）** 设测量算子 M 把场景状态 x 映为观测 y；增强群 G_aug 中元素 g 可容许 ⇔
-存在已知可逆表示 ρ(g) 使对所有 x∈D_probe 有 M(g·x)=ρ(g)·M(x)，且标签变换已知。
-**可容许性缺陷** δ(g)=sup_{x∈D_probe} ‖M(g·x) − ρ(g)M(x)‖ / scale(x)。
-给定阈值 δ*，G_cert = {g : δ(g) ≤ δ*}。D_probe 必须是**物理执行**得到的配对样本（身体真的执行了 g），而不是数字伪造的配对。
+**定义 424（工具预算契约 TB-Contract）** TB = (B_tools, L_max, τ_repair, recovery)：
+单盲区修复预算、程序长度上限、修复总时延上限、恢复条件（预算耗尽 / V 连续 2 次失败 ⇒ stub + RED + 排队人工）。
+TB-Contract 是 IV-Contract（定义 407）的工具级细化，时序结论继承引理 45。
 
-**定义 435（增强证书与再验证）** Cert_aug(g) = (g, ρ, D_probe, δ̂(g), CI_δ, n_probe, body_version, expiry, sig)。
-证书只在同一 body_version 与未过期时有效；身体漂移（定义 444）或到期触发再验证。
-**未认证增强只能进入正则项，不得进入证据项**（不变式 I6）。
+**定义 425（语义-数值一致性 SNC）** H_s 中的材质/光照/干扰标签必须与 R 的格子语义及回执观测模式一致
+（例：h=「镜面反射」⇔ cross.modal 的 IR/RGB 残差符号模式匹配预注册指纹 F_specular）。
+不一致 ⇒ 该假设剔除；全部被剔 ⇒ H_s = {UNKNOWN}，退回 LeanGauge 纯数值探测路径（退化链第 1 级）。
 
-**定义 436（具身增强与合成增强）** 对同一场景 x 的轨道 O(x)：
-- **具身增强**：g 由身体物理执行，回执含实际动作、测得变换、时间戳、签名 ⇒ 标签变换由本体感觉精确给出，provenance 完整；
-- **合成增强**：g 数字作用于已存观测，必须由 Cert_aug 担保；其证据权重按定义 437 折减。
-证据集 E = E_phys ⊎ E_syn（物理重观测 ≻ 合成增强），两类样本在溯源图中带不同节点类型。
+**定义 426（修正后的采样复杂度，替代第 1 轮定义 408）** 独立高斯观测（σ_obs 已知）、先验方差 σ_0²、保守性夹紧下，
+将盲区点后验 σ 压至 ε 需 n ≥ σ_obs²·(ε⁻² − σ_0⁻²)（由 σ_post² = (σ_0⁻² + n·σ_obs⁻²)⁻¹ 直接解出）。
+AP-Cal 的经验收缩率若低于该解析值的 80%，触发先验-现实失配告警（联动定义 428）。
 
-**定义 437（轨道加权与有效样本量）** 物理样本 i 的轨道 O_i={g·x_i : g∈G_cert}，m_i=|O_i|。
-权重 w_{i,g}=1/m_i（或 w_{i,g}=1/(1+(m_i−1)ρ_intra)，ρ_intra 为轨内相关系数）；
-有效样本量 n_eff = (Σ_{i,g} w_{i,g})² / Σ_{i,g} w_{i,g}²。
-**报告方差不得低于 σ²/n_eff 与物理噪声底 κ_phys 的较大者**；n_eff 小于 N_min 时不得热替换（AugContract）。
+**定义 427（语言修复证书）** RepairCert(s) = (H_s, Π_s, receipts, 文字解说)，绑定进 EC.claims；
+解说中每个数值必须逐字引自 receipts，否则整条剥离。证书服务于人工审计与事故复盘（E436）。
 
-**定义 438（轨道共形覆盖）** 在轨道可交换性下（物理样本 i.i.d.；g 的选取独立于标签且 g∈G_cert），
-用权重 w 的加权 split-conformal 分位数构造预测集 C，则 P(Y_new∈C) ≥ 1−α；
-若每个 g 的可容许缺陷 ≤ δ*，则覆盖 ≥ 1−α−L_M·δ*，L_M 为 score 对观测扰动的 Lipschitz 常数。
-覆盖跌破 SLA（继承第 2 轮引理 48 的 1−α−2η′ 口径）⇒ H_s:={UNKNOWN}，退化到 ToolGauge 纯物理路径。
+**定义 428（先验隔离监控 P-Quarantine）** 维护最近 K 次修复的（预测收缩, 实际收缩）残差符号序列；
+连续 ≥ q 次（默认 K=q=3）同向 ⇒ 判定摊销先验出现**跨盲区相关偏差**：暂停 AP-Cal，
+回退第 1 轮 BP-Cal 逐盲区校准，直至重训/再校准完成。这是对「预训练把局部误差变成系统性误差」的在线断路器。
 
-**定义 439（规范等变预训练先验 MP-Φ^G）**
-元训练目标：min_θ Σ_m E[−log p(u*_m|ctx_m)] + λ_eq·E_{g∈G_cert}[d(q_θ(g·ctx), ρ(g)q_θ(ctx))] + β_KL·KL(q_θ‖p_phys)。
-第一项为任务损失，第二项为规范等变正则，第三项为物理锚。**增强只进入第二项**；
-训练数据仍以具身重观测为主，合成增强按 n_eff 降权。保守性夹紧 Σ_θ ≽ κ_phys·I 继承定义 420。
-η（sim→real 偏移）由预注册配对校准集估计 η̂，并给出置信区间（修复第 2 轮缺陷 6）。
+**定义 429（语义输入白名单）** VLA 的输入仅允许：数值张量（R 格子、回执统计）、固定枚举 schema；
+**禁止**环境中出现的自由文本/二维码/OCR 结果进入 VLA 上下文（提示注入防御；E435 验证）。
 
-**定义 440（EA-Cal 具身增强校准）** EA-Cal(receipts, E, certs, body_version)：
-① 过滤 body_version 不一致或证书失效的证据；② 构建轨道并按定义 437 加权；③ 计算 n_eff 与报告方差下限；
-④ 调 MP-Φ^G 得 (μ,Σ)；⑤ 用定义 438 的加权共形给出预测集与覆盖审计；⑥ 通过 A-Quarantine（定义 443）后输出。
-任一环节失败 ⇒ 返回 None，触发退化链，不产生 stub 之外的数值写入。
+**定义 430（探测显式状态 PROBING）** 工具执行期间系统进入显式 PROBING 状态：动作幅值受限、
+力矩硬限制、日志全录、（人机协作场景）对操作者可见。探测是「系统公开声明的一等行为」，不是隐式副作用。
 
-**定义 441（7C 闭环）** 修复循环 = H → C → E → A → C → V → U：
-1. H：发现世界盲区 s 与体感盲区 b；L-Box 给外部假设，E-Box 给身体假设；
-2. C：编译 Π_s（可含 T_self）并由 TCV+ASE 验证；
-3. E：在 PROBING 态执行，收集物理回执与具身重观测；
-4. A：A-Box 认证/复用证书，构建轨道，去重，计算 n_eff，跑 A-Quarantine；
-5. C：EA-Cal 输出摊销后验与共形预测集；
-6. V：**三条独立检查**——跨通道独立回执、增强一致性（后验在 G_cert 下等变）、契约回归；
-7. U：热替换 + 语言修复证书（定义 427 扩展为引用回执与证书）+ 溯源图更新。
-V 失败 ⇒ 夹紧重试 1 次 ⇒ 再失败 stub + RED。
-
-**定义 442（AugContract 增强预算契约）** AC = (B_aug, m_max, n_eff_min, τ_aug, recovery)：
-增强探针预算、单轨最大长度、最小有效样本量、增强阶段时延上限、恢复条件（预算耗尽 / n_eff 不足 / 证书全失效 ⇒ stub + RED + 排队）。
-AC 是 TB-Contract（定义 424）的增强级细化，时序结论继承引理 50 与引理 56。
-
-**定义 443（A-Quarantine 增强泄漏监控）** 维护两个统计量：
-(i) **收缩比** ρ_shrink = 报告方差下降 / 物理证据支持的方差下降；
-(ii) **物理留出覆盖率** ĉov = 在未参与拟合的物理回执上的经验覆盖率。
-用双侧 CUSUM/SPRT 监控 (ρ_shrink−1) 与 (ĉov−(1−α))；若 ρ_shrink>1+τ 或 ĉov<1−α−ε，
-判定合成增强正在伪造证据：丢弃全部 E_syn，只用 E_phys 重新校准；连续 q 次触发 ⇒ 暂停 A-Box 并重认证。
-A-Quarantine 是「增强版 P-Quarantine」，专防**伪样本冒充独立证据**。
-
-**定义 444（B-Quarantine 体感漂移监控）** 对 θ_body 的后验残差序列做双侧 CUSUM；漂移超包络 ⇒
-body_version ← body_version+1，**所有依赖旧 body_version 的回执、证书、增强样本、校准后验传递性失效**；
-系统退回 ToolGauge，直到重新自标定通过定义 433 的持续激励门槛。这是「身体错了，所有增强一起错」的在线断路器。
-
-**定义 445（证据溯源图与真值维护）** 证据图 DAG 节点类型：
-physical_receipt、self_probe_receipt、aug_certificate、augmented_point、body_calibration、posterior、claim。
-边表示「由…派生」。每个节点记录祖先集合与最小 body_version。
-失效规则：任一祖先失效 ⇒ 后代递归失效；失效为单调操作（失效节点不得被后续步骤重新激活，除非显式重测并生成新节点）。
-**热替换的前置条件**：支撑该替换的所有证据节点均有效，且至少有一条 physical_receipt 不在任何增强轨道内。
-
-**定义 446（具身安全包络 ASE 与有界残余副作用）**
-自探测/物理增强必须满足：关节力矩 ≤ τ_max、速度 ≤ v_max、工作空间 ⊆ W_safe、接触力 ≤ F_max、无自碰撞；
-执行期间系统处于显式 PROBING 态（继承定义 430），带看门狗与可中断点。
-**修正第 2 轮「零副作用」的过度主张**：任何真实探测都有副作用；我们只保证「无未登记副作用」，
-且中止后的残余运动/扰动 ≤ RS-Envelope（由 ASE 与制动距离给出上界），并写入回执。
-
-**定义 447（退化链与继承）** 未被重定义的第 2 轮记号沿用定义 416–431。
-退化条件与顺序：EmbodiedGauge 失效（身体不可辨识 / ASE 违规 / 证书全失效 / n_eff<n_eff_min / A-Quarantine 暂停）
-⇒ ToolGauge（仅外部物理探测，G={id}，无自探测）⇒ LeanGauge ⇒ MODGAUGE。
-形式化退化：令 T_self=∅、G_cert={id}、body_version 固定且 λ_min(O)<ε_obs ⇒ EmbodiedGauge ≡ ToolGauge。
+**定义 431（继承与编号约定）** 未被本轮重定义的第 1 轮记号（R、s、λ、γ、M_ver、N_bl、EC、MReg 等）沿用定义 398–415；
+本文所有增量定义以 LeanGauge 为退化特例：令 VLA=∅、T₀={被动观测}、MP-Φ=物理先验 GP ⇒ ToolGauge ≡ LeanGauge。
 
 ## 2. 关键算法骨架
 
 ```python
-# IP-321 E-Box：体感盲区 + 自标定（含可辨识性门槛）
+# IP-316 MTC + TCV：计量工具契约与工具调用校验器
 @dataclass
-class SelfProbe:
+class MetrologyTool:
     name: str
-    schema: Callable[[dict], bool]
-    pre: Callable[[Snapshot], bool]          # 含 ASE：力矩/限位/自碰撞
-    post: Callable[[Raw], "Receipt | None"]
-    cost: float; tau: float
-    jacobian: Callable[[dict, "ThetaBody"], "Matrix"]
+    schema: Callable[[dict], bool]            # ① 参数类型/范围
+    pre:   Callable[[Snapshot], bool]         # ② 物理前置（力/温/时序包络）
+    post:  Callable[[Raw], "Receipt | None"]  # ③ 回执构造 (μ, σ_decl, sig, ts, seq)
+    cost:  float
+    tau:   float
+    info_gain: Callable[["Hyp", "MPPhi"], float]   # Ĝ_t(h)
 
-class EBox:
-    def detect(self, R_world, R_body, body_version):
-        return [b for b in R_body
-                if (not covered(b, body_version))
-                or body_residual(b) > KAPPA_BODY * sigma(b)]      # 定义 432
+class TCV:
+    def verify(self, prog, budget):
+        seen = set()
+        for (t, args) in prog:
+            if not t.schema(args): return False, "schema"
+            key = (t.name, canon(args))
+            if key in seen:           return False, "loop"       # ④ 循环拒绝
+            seen.add(key)
+            budget -= t.cost
+            if budget < 0:            return False, "budget"     # ③ 预算
+        return True, "ok"
 
-    def plan_self_calibration(self, B, budget):
-        xi = argmax_xi(expected_info(theta_body, y_xi))           # 信息增益
-        if lambda_min(observability(xi)) < EPS_OBS:
-            return None                                           # 不可辨识 ⇒ 保持盲区
-        if (not ase_ok(xi)) or cost(xi) > budget:
-            return None                                           # 定义 433/446
-        return xi
+    def execute(self, prog, env):
+        receipts = []
+        for (t, args) in prog:
+            if not t.pre(env.snapshot()): break    # void：前缀完成态，零副作用
+            r = t.post(env.invoke(t, args))
+            if r is None or not verify_sig(r):
+                self.fail += 1; continue           # 作废回执永不进入样本集
+            receipts.append(r)
+        return receipts
 
-# IP-322 A-Box：增强规范群 + 证书
-class ABox:
-    def certify(self, g, probe_pairs, body_version):
-        d_hat, ci = equivariance_residual(g, probe_pairs)         # 定义 434
-        if d_hat + ci > DELTA_STAR:
-            return None                                           # 不可容许
-        return Cert(g=g, rho=g.rho, d_hat=d_hat, ci=ci,
-                    n=len(probe_pairs), body_version=body_version,
-                    expiry=NOW + TTL, sig=sign(g, d_hat))
+# IP-315 L-Box：语义盲区假设器（VLA + 共形 + SNC）
+class LBox:
+    def hypothesize(self, s, R_cell):
+        hs = self.vla.propose(featurize_num(s, R_cell))   # 输入=白名单数值（定义 429）
+        hs = SNC_filter(hs, R_cell, fingerprint_lib)      # 定义 425
+        q  = conformal_quantile(self.cal, alpha=0.1)
+        H  = [h for h in hs if self.vla.score(h, s) <= q] # 定义 422
+        return H or ["UNKNOWN"]                           # 全被剔 ⇒ 退化链第 1 级
 
-    def build_orbit(self, x, certs):
-        return [(c.g, c.rho @ x, c) for c in certs if valid(c)]   # 定义 436/437
+# IP-317 T-Box：双层下注的程序化探测
+class TBox:
+    def select(self, H_s, tools, tcv, budget):
+        prog = self.vla.plan_probes(H_s, tools)           # VLA 编程器（只选预注册工具）
+        ok, why = tcv.verify(prog, budget)
+        if not ok: prog = self.numeric_fallback(H_s)      # 退化：LeanGauge 数值探测
+        return [c for c in prog
+                if self.risk_gate(c) and self.gain_bet(c)]  # λ ≥ γ 且 β ≥ γ_B（定义 419）
 
-# IP-323 EA-Cal：轨道加权 + 有效样本量 + 覆盖审计
-class EACal:
-    def calibrate(self, receipts, orbits, certs, body_version):
-        ev = [e for e in merge(receipts, orbits)
-              if (not e.is_syn)
-              or (valid(e.cert) and e.body_version == body_version)]  # 定义 440.①
-        if not ev:
-            return None
-        w = orbit_weights(ev)                                     # w = 1/m_i
-        n_eff = (sum(w) ** 2) / sum(wi ** 2 for wi in w)          # 定义 437
-        if n_eff < self.contract.n_eff_min:
-            return None                                           # AugContract
-        mu, Sig = self.mp_phi_G(featurize_ctx(ev, receipts))      # 定义 439
-        Sig = clamp_min(Sig, max(KAPPA_PHYS, SIGMA2 / n_eff))     # 方差下限
-        cov = weighted_conformal(ev, w, alpha=self.alpha)         # 定义 438
-        if not self.aquar.check(Sig, n_eff, cov):
-            return None                                           # 定义 443
-        return mu, Sig, cov
+# IP-318 MP-Φ / AP-Cal：预训练先验 + 摊销校准 + 交叉验证
+class APCal:
+    def calibrate(self, receipts, H, s):
+        mu, Sig = self.mp_phi(featurize_ctx(receipts, H, s))  # 单前向摊销后验
+        Sig = clamp_min(Sig, KAPPA_PHYS)                      # 保守性夹紧（定义 420）
+        return mu, Sig
+    def cross_validate(self, mu, Sig, r_indep):               # 定义 421.5（V 阶段）
+        z = (r_indep.mu - mu) / sqrt(Sig + r_indep.var)
+        return abs(z) <= self.eps_cross
 
-# IP-324 MP-Φ^G：规范等变预训练（增强只进正则项）
-class MPPhiG:
-    def loss(self, batch):
-        task = -log_likelihood(self.theta, batch.ctx, batch.u_star)
-        eq   = mean(d(self.theta(g @ batch.ctx), g.rho @ self.theta(batch.ctx))
-                    for g in batch.certified)
-        kl   = kl(self.theta, PHYSICAL_PRIOR)
-        return task + LAMBDA_EQ * eq + BETA_KL * kl                # 定义 439
-
-# IP-325 7C 闭环（含 A 阶段与溯源失效）
-def embodied_7c(M, s):
-    H_world = M.lbox.hypothesize(s, M.dbox.R_world[s])            # H
-    B_body  = M.ebox.detect(M.dbox.R_world, M.dbox.R_body, M.body_version)
-    prog    = M.tbox.compile(H_world, B_body, M.tools, M.t_self)  # C
-    if not (tcv_ok(prog) and ase_ok(prog)):                        # 定义 441.2/446
-        return stub_and_red(s, "unsafe_or_invalid_program")
-    receipts, embodied = M.tcv.execute(prog, M.env)                # E（PROBING）
-    certs    = M.abox.certify_or_reuse(embodied, M.body_version)   # A
-    orbits   = M.abox.build_orbit_from(receipts, certs)
-    ea       = M.eacal.calibrate(receipts, orbits, certs, M.body_version)  # C
-    if ea is None:
-        return stub_and_red(s, "insufficient_effective_evidence")
-    mu, Sig, cov = ea
-    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)
-    if not (M.apcal.cross_validate(mu, Sig, M.cross_receipt_indep(s))      # V.1
-            and M.eacal.aug_consistent(mu, Sig, certs)                     # V.2
-            and contract_regression(new_ec)):                              # V.3
-        return stub_and_red(s, "verification_failed")
-    M.mreg.hot_replace(M.dpe, new_ec)                              # U
-    M.dbox.update_from_posterior(s, mu, Sig)
-    M.provenance.bind(new_ec, receipts, certs, orbits, M.body_version)   # 定义 445
-    bind_claims(new_ec, H_world, B_body, receipts, certs)          # 定义 427 扩展
-    M.aquar.record(reported_shrink(Sig, n_eff), physical_shrink(receipts), cov)
+# IP-319 6C 闭环（含先验隔离）
+def toolgauge_6c(M, s):
+    H        = M.lbox.hypothesize(s, M.dbox.R[s])                  # H
+    prog     = M.tbox.select(H, M.tools, M.tcv, M.budget_left(s))  # C
+    receipts = M.tcv.execute(prog, M.env)                          # E（PROBING 态，定义 430）
+    if len(receipts) < n_min(s):                                   # 定义 426 解析门槛
+        return stub_and_red(s, reason="insufficient_evidence")
+    mu, Sig = M.apcal.calibrate(receipts, H, s)                    # C
+    if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):    # V
+        mu, Sig = M.apcal.calibrate(receipts, ["UNKNOWN"], s)      #   夹紧重试 1 次
+        if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+            return stub_and_red(s, reason="cross_check_failed")    #   严格退化
+    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)            # U
+    if not contract_regression(new_ec):
+        return stub_and_red(s, reason="regression_failed")
+    M.mreg.hot_replace(M.dpe, new_ec)
+    M.dbox.update_from_posterior(s, mu, Sig)      # 修复第 1 轮缺陷：σ_conf 由后验分位数写入
+    bind_claims(new_ec, H, prog, receipts)        # 定义 427 语言修复证书
+    M.pquar.record(M.apcal.last_gain, realized_gain(receipts))   # 定义 428
     return True
 
-# IP-326 主闭环：身体漂移 ⇒ 版本升级 + 传递失效
-def EmbodiedGauge_round(M, obs, audio, tac, depth, det):
-    if M.bquar.triggered():                                        # 定义 444
-        M.body_version += 1
-        M.provenance.invalidate_older_than(M.body_version)         # 传递失效
-        M.abox.invalidate_all(); M.eacal.use_physical_only = True
-        M.ebox.request_recalibration()
-    for s in M.dbox.detect_blind_spot():
+# IP-320 主闭环：50Hz 路径不动，修复全异步 + 先验隔离
+def ToolGauge_round(M, obs, audio, tac, depth, det):
+    for s in M.dbox.detect_blind_spot():          # 继承定义 398/399
         if s not in M.inflight:
-            M.inflight.add(s); submit_async(embodied_7c, M, s)     # 离开 50Hz
-    return MODGAUGE_round(M, obs, audio, tac, depth, det)          # 主控不变
+            M.inflight.add(s)
+            submit_async(toolgauge_6c, M, s)      # 偏离 50Hz 路径（引理 50）
+    if M.pquar.triggered():
+        M.apcal.pause(); M.use_bpcal_fallback = True   # 定义 428 断路器
+    return MODGAUGE_round(M, obs, audio, tac, depth, det)   # 主控不变
 ```
 
 ## 3. 推导
 
-**引理 51（自标定的可辨识性与误差界）** 设 y_t = h_body(a_t, θ*) + ε_t，ε_t 独立 σ-亚高斯，
-J_t=∂h_body/∂θ_body。若轨迹 ξ 满足 λ_min(O(ξ)) ≥ ε_obs > 0，则加权最小二乘估计 θ̂ 满足
-‖θ̂−θ*‖₂ ≤ (2σ/λ_min(O))·√(d_b·log(2d_b/δ)) + O(ℓ·r²)
-以概率 ≥1−δ，其中 ℓ 为 h_body 的 Lipschitz 常数、r 为线性化半径。
-证明：局部线性化 → 加权最小二乘 → 矩阵 Chernoff 下界 λ_min(O) → 二次型控制；非线性项由 ℓ、r 吸收。
-系：λ_min<ε_obs 的自探测**不得**把任何 body 格子标记为已覆盖；不可辨识参数只能留在先验中。
-这把第 2 轮「有回执即证据」的漏洞堵到身体层：动了不等于标定成功。
+**引理 46（双层下注的安全-增益联合界）** 在亚高斯稳健条件 A115′（观测噪声关于 χ_R 反作用通道亚高斯，参数 b）下：
+(a) 风险门：P(σ_obs > σ_decl + γ + 2b) ≤ exp(−γ²/2b²)（继承引理 42 形式）；
+(b) 增益注：若保守性夹紧成立且 MP-Φ 增益预测误差 ≤ ξ，则每次调用的实际后验收缩 ≥ Ĝ_t − ξ，
+L 次调用的联合浪费概率 ≤ L·exp(−γ_B²/2ξ²)（union bound）。
+系：TCV 拒绝或闸门未过的程序不产生物理副作用 ⇒ 探测安全下界为「零副作用」。
 
-**引理 52（已知可逆增强的信息中性）** 设 g 已知、ρ(g) 可逆，且 y'=ρ(g)y 是 y 的确定性函数。
-则 Fisher 信息 I(θ; y, y') = I(θ; y)，增强似然 p(y|θ)p(y'|θ) 的 Fisher 矩阵只增加一个秩亏项。
-故**对固定数据集的数字增强不能降低 θ 的 Cramér–Rao 下界**。
-证明：y' 不含超出 y 的新随机性；对 (y,y') 的联合分布做变量替换即可。
-系 52.1：数字增强只能通过 (i) 未知 nuisance 的边缘化、(ii) 正则/先验、(iii) 鲁棒性起作用；
-真正的信息增量只能来自**新的物理噪声实现**——这正是 E-Box 与具身重观测的理论依据。
-系 52.2：若增强 g 的分布依赖 θ（例如 g 由含噪执行产生且噪声与 θ 耦合），则信息可能增加；
-该情形必须显式建模，不能默默把增强当独立样本。
+**引理 47（摊销校准的元泛化界）** 设预训练 episode i.i.d. 采自环境族 𝒟_env，部署环境 TV(𝒟_dep, 𝒟_env) ≤ η，
+M 个预训练 episode、N_bl 条上下文回执、后验族复杂度 C(Θ)、参数维 d_u：
+超额风险 R̄(q_θ) − R̄(q*) ≤ 2η + 𝒪(√((C(Θ)+log(1/δ))/M)) + 𝒪(√((d_u+log(1/δ))/N_bl))。
+证明思路：元级 PAC-Bayes（先验=物理锚 p_phys）给前两项；任务内 Bernstein 给第三项；夹紧保证似然可辨识。
+**推论 47.1**：M→∞ 时 N_bl=1 亦可收敛——「预训练买样本效率」的形式化；η 项不可消除，必须由 E431 实测并计入风险账本。
 
-**引理 53（轨道共形的覆盖保持）** 在轨道可交换性下，加权 split-conformal（权重 w=1/m_i）满足
-P(Y_new∈C) ≥ 1−α；若所有 g∈G_cert 的缺陷 ≤δ*，则覆盖 ≥ 1−α−L_M·δ*。
-证明：加权可交换性给出加权分位数的有限样本覆盖；缺陷把 score 的最大扰动限制为 L_M·δ*，用三角不等式吸收。
-系：δ*=0 时退化为标准共形（第 2 轮引理 48）；δ*>0 时覆盖保证按可容许性缺陷线性折减，
-因此证书的 CI_δ 必须进入覆盖账本，而不是只报告名义 1−α。
+**引理 48（共形覆盖与漂移敏感度）** 可交换性下 P(h*∈H_s) ≥ 1−α；校准-部署 TV = η′ 时覆盖 ≥ 1−α−2η′，
+加权共形可恢复至 1−α−η′·L′。系：α=0.1、η′≤0.05 ⇒ 覆盖 ≥ 0.8，作为 L-Box 运行期 SLA；
+SLA 跌破 ⇒ H_s := {UNKNOWN}（退化链第 1 级）。
 
-**引理 54（增强泄漏的偏差-方差界）** 设有效证据中合成增强占比 p，合成样本共享偏差 b 与轨内相关 ρ_intra，
-物理样本 n_phys、噪声 σ。则后验均值误差满足
-E‖μ̂−μ*‖ ≤ (1−p)·σ/√n_phys + p·b + O(ρ_intra)，
-而报告方差可低至 σ²/n_eff（n_eff 最高约 n_phys/(1−p)）。
-故当 b>0 时，**更多增强不能把均值误差压到 p·b 以下**；报告方差却可以继续缩小——这就是「增强泄漏」。
-证明：偏差-方差分解 + 轨内相关系数对 n_eff 的折减；偏差项与样本量无关。
-系：必须用物理留出集做覆盖率审计（A-Quarantine），否则系统会对伪证据过度自信。
+**引理 49（语言层不破坏热替换等价性）** U 仅当 V 通过才触发；EC 变更仅限 (u_fields, χ_R, claims)，
+claims 不在任何数值计算路径上 ⇒ 子图数值等价性与第 1 轮引理 44 相同；claims 剥离（定义 423）为纯投影；
+SNC 失败 ⇒ 不替换（stub），退化链保持 ⇒ 系统级性质保持。
 
-**引理 55（具身重观测的样本效率优势）** 场景潜变量 z 共享，观测 y=z+ε，Var(z)=τ²，Var(ε)=σ²，
-轨内相关 ρ=τ²/(τ²+σ²)。m 次独立重观测的均值有效样本量 n_eff^emb = m/(1+(m−1)ρ)；
-而数字增强副本共享同一 ε，ρ=1 ⇒ n_eff^syn=1。
-故 n_eff^emb ≥ n_eff^syn，等号仅当 m=1 或 ρ=1。
-证明：随机效应方差分解 / 设计效应（design effect）。
-系：具身重观测的价值不是「多了一个变换」，而是「多了一次独立噪声实现」；
-这也解释了为什么 A-Box 必须给合成增强降权、为什么 E-Box 是信息源而 A-Box 只是合法化器。
-
-**引理 56（7C 的时序、预算与安全）** 自探测与增强证书都在 50Hz 路径之外异步执行；
-50Hz 周期只新增回执验证与 body_version 比较，O(1)<0.2ms；
-单盲区 7C 时延 ≤ Στ_self + τ_probe + τ_cert + τ_EA ≤ τ_aug + τ_repair（AugContract 界定）；
-ASE 违规或看门狗触发时中止，残余扰动 ≤ RS-Envelope。
-**修正**：不存在「零副作用」；存在的是「有界且已登记的残余副作用」。硬实时（引理 45）与预算不变式保持。
-
-**引理 57（五不变式与退化链保持）** 增强节点只在 A 阶段进入，且必须带有效证书或仅进入正则项；
-溯源失效是单调的，不会重新激活旧证据；V 阶段三条检查全过才允许热替换；
-退化映射 T_self=∅、G_cert={id} ⇒ EmbodiedGauge ≡ ToolGauge，故 MODGAUGE 五不变式与第 2 轮引理 49/50 全部保持。
-证明：对 7C 各阶段做结构归纳；数值路径只读取通过有效性过滤的证据节点；claims 仍为纯投影。
+**引理 50（时序与预算保持）** 6C 全部位于 50Hz 计量路径之外（事件驱动、异步、每盲区至多一次在飞）；
+50Hz 周期新增开销仅为回执验证 O(1) < 0.2ms；单盲区修复时延 ≤ L_max·max τ_t + τ_VLA + τ_AP ≤ τ_repair（TB-Contract 界定），
+预算耗尽由 TB-Contract 强制降级 ⇒ 硬实时（引理 45）与预算不变式保持。
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| body 覆盖扫描 | 50Hz 内联 | O(1) 残差查表 + O(\|R_body\|) 异步 | O(\|R_body\|) | 定义 432 |
-| 自探测规划 | 异步 | O(H·d_b² + \|T_self\|·d_b) ≈ 10–50ms | O(d_b²) | 定义 433、引理 51 |
-| 物理探测 | 物理域 | Στ ≤ B_aug（秒级） | O(H) | ASE、定义 446 |
-| 证书验证 | 异步 | O(n_probe·d) 每 g，缓存 | O(\|G_cert\|) | 定义 434/435 |
-| 轨道构建 | 异步 | O(N·m) | O(N·m) | 定义 437 |
-| EA-Cal | 异步 | O(n_eff·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 440、引理 53 |
-| A/B Quarantine | 异步 | O(1) CUSUM | O(K) | 定义 443/444 |
-| 溯源失效 | 异步 | 摊还 O(\|D\|)（版本索引） | O(\|D\|) | 定义 445 |
-| U 热替换 | 计量域 | < 1ms | O(1) | 引理 57 |
+| D-Box 扫描 | 50Hz 内联 | O(\|R\|)，位图加速 < 1ms | O(\|R\|) | 定义 398/399（继承） |
+| 回执验证 | 50Hz 内联 | O(1) < 0.2ms | O(1) | 定义 417 |
+| L-Box 假设 | 异步事件 | 1×VLA 前向，τ≈0.2–0.8s（缓存） | O(\|H_s\|) | 定义 422、引理 48 |
+| 编程 + TCV | 异步 | O(L_max·\|T₀\|) < 5ms | O(L_max) | 定义 418、引理 46 |
+| 工具执行 | 物理域 | Σ τ_t ≤ B_tools（秒级，PROBING 显式态） | O(L_max) | 定义 416–418 |
+| AP-Cal 校准 | 异步 | O(N_bl·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 420、引理 47 |
+| V 交叉验证 | 异步 | O(1) + 1 条独立回执 | O(1) | 定义 421/427 |
+| U 热替换 + 证书 | 计量域 | < 1ms | O(1) | 引理 49 |
+| P-Quarantine | 异步 | O(K) | O(K) | 定义 428 |
 
-**相对第 2 轮**：50Hz 路径没有新增重计算（只多一次 body_version 比较）；新增成本集中在异步的自探测、证书验证与轨道构建。
-物理探测是「真信息」的代价，不能像数字增强那样免费复制；AugContract 用预算显式买这份信息。
+**相对第 1 轮的关键改进**：BP-Cal O(N_bl²) Cholesky（N_bl=8 时 ≈50ms）→ AP-Cal O(N_bl·d_ctx) 单前向（<10ms），
+且先验质量随预训练规模 M 可证提升（引理 47）；探测动作从「无接口观测」→「四层校验的契约化工具调用」。
+总增开销：50Hz 路径 ≤ 0.2ms/周期（仅回执验证）；修复事件全异步，单事件 ≤ τ_repair，稀疏触发。
 
-## 5. 对第 2 轮缺陷的审计与修复清单
+## 5. 对第 1 轮缺陷的审计与修复清单
 
-| # | 第 2 轮缺陷 | 本轮处置 |
+| # | 第 1 轮缺陷 | 本轮处置 |
 |---|---|---|
-| 1 | 引理 46 系「TCV 拒绝/闸门未过 ⇒ 零副作用」过度主张：探测本身有物理副作用，前缀执行也有 | 定义 446：ASE + RS-Envelope，改称「无未登记副作用」；引理 56 给界 |
-| 2 | V 阶段「独立回执」只断言未定义；cross.modal 与主通道可能共模 | 定义 445：provenance-disjoint + 通道独立；共模偏差 b_cm 进入覆盖账本 |
-| 3 | TCV 伪代码只查扁平列表，定义 418 允许 DAG，但未做引用存在性/类型校验 | 定义 433/441：类型化数据流图验证，未解析引用直接拒绝；循环检测按声明等价类 |
-| 4 | AP-Cal cross_validate 用标量 z，Sig 实为协方差；`last_gain` 未赋值 | 定义 440/443：Mahalanobis 距离；预测/实际收缩比显式计算并记录 |
-| 5 | P-Quarantine 只看符号游程，忽略幅度与慢漂移，K=q=3 未校准，且无恢复准则 | 定义 443/444：双侧 CUSUM/SPRT + ARL 校准 + 恢复条件；新增 B-Quarantine |
-| 6 | 引理 47 的 η 只声明不估计；M→∞、N_bl=1 的表述掩盖 d_u 与有限样本修正 | 定义 439：η̂ 估计协议（配对校准集 + 有效样本量 + CI）；CI 过宽则判定界不可用，不得进入安全论证 |
-| 7 | 定义 426 在 ε≥σ_0 时右侧为负，且 σ_obs 未知时不可用；「证据不足」无饥饿界 | 定义 437：n_eff/σ_obs 在线估计，n_min=max(0,·)+夹紧；给出预算内饥饿概率上界 |
+| 1 | 定义 408 公式 (σ_prior²−ε²)/(KL≥δ) 维度不成立、非良定义不等式 | 定义 426：干净闭式 n ≥ σ_obs²(ε⁻² − σ_0⁻²) |
+| 2 | BP-Cal 伪代码 `mu_post = prior_mean(X) @ alpha` 数学错误 | 正确 GP 后验 μ_post = k*ᵀ(K+σ²I)⁻¹y、Σ_post = k** − k*ᵀ(K+σ²I)⁻¹k*；且被 AP-Cal 摊销前向替代 |
+| 3 | IBox 静态调用 `DBox.update` 且使用未定义局部变量 | 依赖注入 coverage-store，显式传参（见 IP-317/319 骨架） |
+| 4 | 「迭代采样被误判为已覆盖」仅有单层防线 | 回执签名 + seq 单调 + SNC + 双层闸门，四层攻击面（E434） |
+| 5 | R 的 σ_conf 更新逻辑缺失 | U 阶段由 AP-Cal 后验分位数直接写入 R[s]（IP-319） |
+| 6 | 第 1 轮风险 2「采样不充分」未预注册量化门槛 | 定义 426 解析 n_min 进入 V 阶段门槛；不足即不校准、不替换 |
 
 ## 6. 本轮最大风险（一句话）
 
-**一句话**：EmbodiedGauge 的**证书-先验-溯源三层共享同一个 body_version 依赖**——一次未被 B-Quarantine 及时捕获的身体标定偏差，
-会同时污染所有以该版本签发的增强证书、规范等变先验与校准后验，使「局部修复、误差局部化」的安全论证整体失效；
-而证书与溯源图会让这些伪证据显得比裸猜测更可信（E443/E446/E452/E454 为证伪实验，B-Quarantine + A-Quarantine + 物理留出覆盖审计为三重断路器）。
+**一句话**：AP-Cal 的摊销后验在「预训练分布 → 部署分布」偏移下会产生**跨盲区强相关**的系统性偏差
+（例如预训练世界缺少某种后向反射材质时，所有含该材质的盲区的后验会同时向同一错误方向收缩），
+使第 1 轮「局部修复、误差局部化」的安全论证整体失效——一次错误的先验会同时污染所有被热替换的子图，
+而 VLA 生成的语言修复证书会让这种污染显得格外可信（E431/E434/E435 为证伪实验，P-Quarantine 为在线断路器）。
 
 **次级风险与缓解**：
-1. **身体不可辨识** → 引理 51 门槛直接保持盲区，不产生假覆盖；
-2. **增强泄漏** → A-Quarantine + 物理留出覆盖率审计 + n_eff 方差下限；
-3. **证书过期/漂移** → TTL + body_version + 再认证；
-4. **自探测物理风险** → ASE + PROBING 显式态 + 看门狗 + RS-Envelope；
-5. **溯源图爆炸** → 版本索引 + 轨道去重 + 摊还失效；
-6. **过度依赖合成增强的正则价值** → MP-Φ^G 的 λ_eq 与物理锚 KL 夹紧；
-7. **退化切换抖动** → 滞回 + 最小驻留时间。
+1. **相关性污染** → V 阶段强制独立回执交叉验证 + P-Quarantine 断路器 + 定期盲区抽样重验；
+2. **VLA 提示注入**（环境二维码/文本）→ 定义 429 输入白名单 + 输出 schema 校验（E435）；
+3. **共形可交换性失效** → 加权共形 + η′ 在线估计，SLA 跌破 0.8 ⇒ H_s := {UNKNOWN}（E426 漂移组）；
+4. **探测工具物理风险**（敲击/变光可能扰动物品）→ Pre 包络 + PROBING 显式状态（定义 430）+ 力矩硬限制；
+5. **回执伪造** → 签名 + 单调 seq + 传感器原始数据绑定（定义 417）；
+6. **预算赌博循环** → TB-Contract 硬顶 + (t,args) 重复拒绝（定义 418.④）；
+7. **VLA 时延抖动/不可用** → 异步 + 假设缓存 + 数值路径独立可跑（退化链，引理 50）。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 3 轮产物 · 创新点清单 v3：**EmbodiedGauge**（Embodied Re-observation with Gauge-Certified Augmentation）
+# 第 2 轮产物 · 创新点清单 v2：**ToolGauge**（Tool-Contracted Probing, Pretrain-Amortized Metrology with Audited VLA Hypotheses）
 
-> 背景：第 2 轮 ToolGauge（IP-315–320）把 LeanGauge 的盲区修复升级为「语义假设 → 契约化工具调用 → 摊销校准」，
-> 但仍遗留三个结构性弱点：**身体被默认为已知且稳定的测量平台**；**数据增强只被当作数据量，未被审计**；
-> **证据独立性只靠断言**。本轮以「具身智能 × 数据增强」为灵感，在 ToolGauge 之上做增量升级：
+> 背景：第 1 轮 LeanGauge（IP-310–314）解决了「数据稀缺下盲区的发现与修复」，但遗留三个结构性弱点：
+> 探测动作无接口约束（任何观测都被当有效证据，第 1 轮最大风险的根源）、物理先验「足够好」不可审计、
+> 逐盲区从零校准不复用经验。本轮以「工具调用 × 预训练 × 视觉-语言-动作模型」为灵感，
+> **在 LeanGauge 之上**升级三个模块并延长退化链：
 >
-> **集成链：MODGAUGE ⊃ LeanGauge ⊃ ToolGauge ⊃ EmbodiedGauge。**
-> 身体是第一等测量通道（E-Box），增强是带证书的规范群作用（A-Box），
-> 具身重观测生产新信息、数字增强只做正则与合法化（EA-Cal / MP-Φ^G），
-> 证据溯源图保证身体版本一变、所有派生证据传递性失效。
-> IP 编号：IP-321–326（共 6 个）。定义增量 432–447；引理增量 51–57；实验增量 E441–E456。
-> 理论姿态：不改变 MODGAUGE 五不变式，新增 I6（增强可容许性）与 I7（溯源真值维护），退化链延长一级。
+> **集成链：MODGAUGE ⊃ LeanGauge ⊃ ToolGauge**。
+> VLA 只做三件被审计的事（提假设 / 选工具 / 写主张），数值真值由计量层独占；
+> 预训练先验使少样本适应摊销化，先验质量由元泛化界（引理 47）量化，并由 P-Quarantine（定义 428）在线断路。
+> IP 编号：IP-315–320（共 6 个）。定义增量 416–431；引理增量 46–50；实验增量 E426–E440。
+> 理论姿态：不改变五不变式，新增「语言模态扩展」（定义 423）与「严格退化链延长」。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 ToolGauge） |
+| 编号 | 名称 | 类型 | 关键改进（相对 LeanGauge） |
 |---|---|---|---|
-| IP-321 | E-Box 具身覆盖与自标定 | 核心模块 | 覆盖矩阵扩为 R_world×R_body；自探测轨迹受可观测性门槛 λ_min(O)≥ε_obs 约束；不可辨识就不覆盖 |
-| IP-322 | A-Box 增强规范群与证书 | 核心模块 | 增强 = 测量算子规范变换；δ(g)≤δ* 才发证书；未认证增强只进正则、不进证据 |
-| IP-323 | EA-Cal 轨道感知具身增强校准 | 核心模块 | 轨道加权 + n_eff + 方差下限 + 物理留出覆盖率审计；防止伪样本冒充独立证据 |
-| IP-324 | MP-Φ^G 规范等变预训练先验 | 核心模块 | 增强只进等变正则项；物理锚 KL 保留；η̂ 有估计协议与 CI；先验质量可审计 |
-| IP-325 | EmbodiedGauge-7C 闭环 | 设计模式 | H→C→E→A→C→V→U；A 为一等阶段；V 增加「增强一致性」检查；语言证书引用回执+证书 |
-| IP-326 | EmbodiedGauge 主闭环 | 集成 | 50Hz 路径不动；B-Quarantine 触发 body_version 升级与传递失效；退化链 EmbodiedGauge→ToolGauge→LeanGauge→MODGAUGE |
+| IP-315 | L-Box 语义盲区假设器 | 核心模块 | VLA 假设集 + 共形覆盖（1−α）+ SNC 指纹过滤；全被剔则退化为 UNKNOWN（数值路径） |
+| IP-316 | MTC/TCV 工具契约与校验器 | 核心模块 | 探测动作接口化：schema/前置/预算/循环四查 + 签名回执；无效回执永不入样本集 |
+| IP-317 | T-Box 双层下注执行器 | 核心模块 | 风险门 λ（安全）+ 增益注 β（值不值）双闸门；TCV 拒绝 ⇒ 零副作用 |
+| IP-318 | MP-Φ + AP-Cal 摊销校准器 | 核心模块 | 预训练计量先验，摊销后验单前向；保守性夹紧 Σ ≽ κ_phys·I；P-Quarantine 断路器 |
+| IP-319 | ToolGauge-6C 闭环 | 设计模式 | H→C→E→C→V→U 六段；V 阶段强制独立回执交叉验证后才热替换 |
+| IP-320 | ToolGauge 主闭环 | 集成 | 50Hz 路径不动，修复全异步；严格退化链 ToolGauge ⇐ LeanGauge ⇐ MODGAUGE |
 
-**退化链声明**：身体不可辨识 / ASE 违规 / 证书全失效 / n_eff 不足 / A-Quarantine 暂停 ⇒ ToolGauge（仅外部物理探测，G={id}）；
-ToolGauge 再失效 ⇒ LeanGauge ⇒ MODGAUGE。身体与增强都是增强项，不是依赖项（引理 57）。
+**退化链声明**：VLA 不可用 / H_s={UNKNOWN} / 预算耗尽 / 交叉验证或回归失败 ⇒ LeanGauge 纯数值路径；
+LeanGauge 失效 ⇒ MODGAUGE 原样。VLA 是增强项，不是依赖项（引理 49/50）。
 
-**一句话主张**：**先标定身体，再标定世界；增强只在规范群内合法，且数字增强不创造信息。**
-
-## 1. 符号体系增量（定义 432–447）
+## 1. 符号体系增量（定义 416–431）
 
 | 符号 | 含义 |
 |---|---|
-| `R_emb = R_world × R_body` | 具身覆盖矩阵；body 格子 `b=(j,k,e)` = 关节/传感通道/工况（定义 432） |
-| `θ_body, Θ_body, d_b` | 身体参数（运动学偏置、柔顺、IMU 零偏、外参、磨损、负载）及其空间/维度 |
-| `h_body(a, θ_body)` | 身体模型：动作 → 本体/外感受预测 |
-| `T_self` | 自探测工具库：gravity.pose / joint.reversal / wrist.rotate / self.contact / mass.shift / stereo.selfcheck |
-| `O(ξ), λ_min(O), ε_obs` | 自探测轨迹的可观测性 Gramian、最小特征值与持续激励门槛（定义 433） |
-| `G_aug, ρ(g), δ(g), δ*` | 增强群、表示、可容许性缺陷与阈值；`G_cert={g:δ(g)≤δ*}`（定义 434） |
-| `Cert_aug(g)` | 增强证书 `(g,ρ,δ̂,CI_δ,n_probe,body_version,expiry,sig)`（定义 435） |
-| `E_phys / E_syn` | 具身重观测证据 / 合成增强证据（定义 436） |
-| `O_i, m_i, w_{i,g}, n_eff` | 轨道、轨道长度、轨道权重、有效样本量（定义 437） |
-| `MP-Φ^G` | 规范等变预训练先验（定义 439） |
-| `EA-Cal` | 具身增强校准器（定义 440） |
-| `7C` | H→C→E→A→C→V→U 七段闭环（定义 441） |
-| `AC=(B_aug,m_max,n_eff_min,τ_aug,recovery)` | AugContract 增强预算契约（定义 442） |
-| `A-Quarantine / B-Quarantine` | 增强泄漏监控 / 体感漂移监控（定义 443/444） |
-| `DAG(D), body_version` | 证据溯源图与身体标定版本（定义 445） |
-| `ASE, RS-Envelope` | 具身安全包络与有界残余副作用（定义 446） |
-| `ρ_intra` | 轨内相关系数；`n_eff = (Σw)²/Σw²` |
+| `t ∈ T₀` | 预注册计量工具：ir.probe / tap.percuss / illum.sweep / stereo.baseline / therm.drift / cross.modal |
+| `t = (Schema, Pre, Post, c, τ, Ĝ)` | 工具契约 MTC（定义 416） |
+| `r = (t, args, (μ,σ_decl), sig, ts, seq)` | 工具回执 Receipt（定义 417） |
+| `Π_s, L_max=6` | 盲区 s 的探测程序与长度上限（定义 418） |
+| `λ(a,s) / γ` | 风险门：σ_pred − σ_decl ≥ γ（继承定义 400） |
+| `β_t = Ĝ_t(h) − c_t / γ_B` | 增益注：预测信息增益 − 代价（定义 419） |
+| `MP-Φ_θ` | 预训练计量先验：(h, 回执流) ↦ 摊销后验 q_θ(u_s)（定义 420） |
+| `κ_phys` | 保守性夹紧下界：Σ_θ ≽ κ_phys·I |
+| `H_s, α, C_cal` | 共形因果假设集、覆盖水平、预注册校准集（定义 422） |
+| `SNC / F_*` | 语义-数值一致性检查与失败指纹库（定义 425） |
+| `TB = (B_tools, L_max, τ_repair, recovery)` | 工具预算契约（定义 424，细化 IV-Contract） |
+| `ε_cross` | V 阶段独立回执交叉验证的标准化残差阈值 |
+| `RepairCert(s)` | 语言修复证书 = (H_s, Π_s, receipts, 解说)（定义 427） |
+| `P-Quarantine` | 先验隔离监控：跨盲区相关偏差在线断路器（定义 428） |
+| `n ≥ σ_obs²(ε⁻² − σ_0⁻²)` | 修正后的解析样本下界（定义 426，替代第 1 轮定义 408） |
 
 ## 2. 形式化定义（要点）
 
-**定义 432（具身覆盖/体感盲区）** body 格子 b 覆盖 ⇔ 存在有效回执 r 使 `‖r.obs−h_body(a_r,θ_body)‖ ≤ κ_body·σ_r` 且 `r.body_version` 为当前版本；否则 b 属于体感盲区 B。
-**定义 433（自探测契约）** 自探测 = 带 ASE 前置条件的工具调用；轨迹必须满足 `λ_min(O(ξ))≥ε_obs`，否则不得宣称覆盖（动了 ≠ 标定成功）。
-**定义 434（增强可容许性）** g 可容许 ⇔ `M(g·x)=ρ(g)M(x)`（ρ 已知可逆、标签变换已知）；缺陷 `δ(g)=sup‖M(g·x)−ρ(g)M(x)‖/scale`；D_probe 必须物理执行得到。
-**定义 435（增强证书）** 证书绑定 g、ρ、δ̂、CI_δ、探针数、body_version、TTL 与签名；过期或 body_version 变化即失效。
-**定义 436（具身 vs 合成增强）** 具身增强由身体真实执行、provenance 完整；合成增强必须持证，且证据权重按 n_eff 折减。
-**定义 437（轨道加权/n_eff）** `w=1/m_i` 或 `1/(1+(m_i−1)ρ_intra)`；`n_eff=(Σw)²/Σw²`；报告方差 ≥ max(κ_phys, σ²/n_eff)。
-**定义 438（轨道共形）** 轨道可交换下覆盖 ≥1−α；缺陷 δ* 使覆盖折减为 ≥1−α−L_M·δ*；跌破 SLA ⇒ H_s={UNKNOWN}。
-**定义 439（MP-Φ^G）** `min_θ Σ E[−log p(u*|ctx)] + λ_eq·E_g[d(q_θ(g·ctx),ρ(g)q_θ(ctx))] + β_KL·KL(q_θ‖p_phys)`；增强只进第二项；η̂ 带 CI。
-**定义 440（EA-Cal）** 过滤失效证据 → 轨道加权 → n_eff 与方差下限 → MP-Φ^G → 加权共形 → A-Quarantine 通过才输出。
-**定义 441（7C）** H（世界+身体假设）→ C（TCV+ASE 编译）→ E（PROBING 执行）→ A（认证/建轨/去重/审计）→ C（EA-Cal）→ V（跨通道独立回执 + 增强一致性 + 回归）→ U（热替换 + 语言证书 + 溯源更新）。
-**定义 442（AugContract）** 增强预算 B_aug、轨长 m_max、n_eff_min、时延 τ_aug、恢复条件；TB-Contract 的增强级细化。
-**定义 443（A-Quarantine）** 监控收缩比 ρ_shrink 与物理留出覆盖率 ĉov；异常 ⇒ 丢弃 E_syn，只用 E_phys 重校准；连续 q 次 ⇒ 暂停 A-Box。
-**定义 444（B-Quarantine）** 对 θ_body 残差做双侧 CUSUM；漂移 ⇒ body_version+1，旧版本派生证据传递性失效，退回 ToolGauge。
-**定义 445（溯源真值维护）** 证据 DAG 节点含 physical_receipt / self_probe_receipt / aug_certificate / augmented_point / body_calibration / posterior / claim；祖先失效 ⇒ 后代递归失效；热替换要求至少一条非轨道内物理回执。
-**定义 446（ASE/RS-Envelope）** 力矩、速度、工作空间、接触力、自碰撞约束；PROBING 态 + 看门狗 + 可中断；无「零副作用」，只有「无未登记副作用」与有界残余。
-**定义 447（退化链/继承）** `T_self=∅, G_cert={id}` ⇒ EmbodiedGauge ≡ ToolGauge；再退化到 LeanGauge / MODGAUGE。
+**定义 416（MTC）/ 417（回执）/ 418（TCV）** 工具 = 类型 schema + 物理前置 + 回执谓词（含签名/单调 seq）+ 代价 + 最坏时延 + 预测信息增益；TCV 逐条查 schema/前置/预算/循环，实测前置失败 ⇒ 调用 void、零副作用收尾；无效回执一律作废。
+**定义 419（双层下注）** λ 管安全（进盲区的物理闸门，继承），β 管收益（信息增益 − 代价），两门同过才执行。
+**定义 420（MP-Φ / AP-Cal）** 元训练 min_θ Σ E[−log p(u*|ctx)] + β_KL·KL(q_θ‖p_phys)；摊销后验单前向输出；保守性夹紧 Σ_θ ≽ κ_phys·I。
+**定义 421（6C 闭环）** H（共形假设）→ C（TCV 编译）→ E（工具执行）→ C（摊销校准）→ V（独立回执 |z| ≤ ε_cross + 契约回归）→ U（热替换 + 语言证书绑定）；V 失败 ⇒ 夹紧重试 1 次 ⇒ 再失败 stub + RED。
+**定义 423（主张-回执绑定）** 语言主张必须引用有效回执，否则序列化时剥离；剥离为纯投影，不改变数值行为。
+**定义 426（采样复杂度修正）** σ_post² = (σ_0⁻² + n·σ_obs⁻²)⁻¹ ⇒ n ≥ σ_obs²(ε⁻² − σ_0⁻²)；AP-Cal 经验收缩低于解析值 80% ⇒ 先验失配告警。
+**定义 428（P-Quarantine）** 最近 K 次修复的（预测, 实际）收缩残差连续 ≥ q 次同向 ⇒ 暂停 AP-Cal，回退第 1 轮 BP-Cal。
+**定义 429/430** VLA 输入白名单（禁自由文本/二维码）与 PROBING 显式状态（幅值受限、力矩硬限、日志全录）。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-321 E-Box：体感盲区 + 可辨识性约束的自标定
-class EBox:
-    def detect(self, R_world, R_body, body_version):
-        return [b for b in R_body
-                if (not covered(b, body_version))
-                or body_residual(b) > KAPPA_BODY * sigma(b)]
-    def plan_self_calibration(self, B, budget):
-        xi = argmax_xi(expected_info(theta_body, y_xi))
-        if lambda_min(observability(xi)) < EPS_OBS: return None   # 不可辨识 ⇒ 保持盲区
-        if (not ase_ok(xi)) or cost(xi) > budget: return None
-        return xi
+# IP-316 TCV：契约化工具调用（四查 + 回执）
+class TCV:
+    def verify(self, prog, budget):
+        seen = set()
+        for (t, args) in prog:
+            if not t.schema(args): return False, "schema"
+            key = (t.name, canon(args))
+            if key in seen:    return False, "loop"
+            seen.add(key); budget -= t.cost
+            if budget < 0:     return False, "budget"
+        return True, "ok"
+    def execute(self, prog, env):
+        receipts = []
+        for (t, args) in prog:
+            if not t.pre(env.snapshot()): break       # void，零副作用
+            r = t.post(env.invoke(t, args))
+            if r is None or not verify_sig(r): continue
+            receipts.append(r)
+        return receipts
 
-# IP-322 A-Box：规范群 + 证书（未认证只进正则）
-class ABox:
-    def certify(self, g, probe_pairs, body_version):
-        d_hat, ci = equivariance_residual(g, probe_pairs)
-        if d_hat + ci > DELTA_STAR: return None
-        return Cert(g, g.rho, d_hat, ci, len(probe_pairs),
-                    body_version, expiry=NOW+TTL, sig=sign(g, d_hat))
-    def build_orbit(self, x, certs):
-        return [(c.g, c.rho @ x, c) for c in certs if valid(c)]
+# IP-315 L-Box：共形假设 + SNC
+class LBox:
+    def hypothesize(self, s, R_cell):
+        hs = SNC_filter(self.vla.propose(featurize_num(s, R_cell)), R_cell, fp_lib)
+        q = conformal_quantile(self.cal, alpha=0.1)
+        return [h for h in hs if self.vla.score(h, s) <= q] or ["UNKNOWN"]
 
-# IP-323 EA-Cal：轨道加权 + n_eff + 覆盖审计
-class EACal:
-    def calibrate(self, receipts, orbits, certs, body_version):
-        ev = [e for e in merge(receipts, orbits)
-              if (not e.is_syn) or (valid(e.cert) and e.body_version == body_version)]
-        if not ev: return None
-        w = orbit_weights(ev)                                   # 1/m_i
-        n_eff = (sum(w) ** 2) / sum(wi ** 2 for wi in w)
-        if n_eff < self.contract.n_eff_min: return None
-        mu, Sig = self.mp_phi_G(featurize_ctx(ev, receipts))
-        Sig = clamp_min(Sig, max(KAPPA_PHYS, SIGMA2 / n_eff))
-        cov = weighted_conformal(ev, w, alpha=self.alpha)
-        return (mu, Sig, cov) if self.aquar.check(Sig, n_eff, cov) else None
+# IP-317 T-Box：双层下注
+class TBox:
+    def select(self, H_s, tools, tcv, budget):
+        prog = self.vla.plan_probes(H_s, tools)
+        if not tcv.verify(prog, budget)[0]: prog = self.numeric_fallback(H_s)
+        return [c for c in prog if self.risk_gate(c) and self.gain_bet(c)]
 
-# IP-324 MP-Φ^G：增强只进等变正则
-def mp_phi_g_loss(theta, batch):
-    task = -log_likelihood(theta, batch.ctx, batch.u_star)
-    eq   = mean(d(theta(g @ batch.ctx), g.rho @ theta(batch.ctx))
-                for g in batch.certified)
-    return task + LAMBDA_EQ * eq + BETA_KL * kl(theta, PHYSICAL_PRIOR)
+# IP-318 AP-Cal：摊销后验 + 交叉验证
+class APCal:
+    def calibrate(self, receipts, H, s):
+        mu, Sig = self.mp_phi(featurize_ctx(receipts, H, s))
+        return mu, clamp_min(Sig, KAPPA_PHYS)
+    def cross_validate(self, mu, Sig, r_indep):
+        return abs((r_indep.mu - mu) / sqrt(Sig + r_indep.var)) <= self.eps_cross
 
-# IP-325 7C 闭环
-def embodied_7c(M, s):
-    H = M.lbox.hypothesize(s, M.dbox.R_world[s])                  # H
-    B = M.ebox.detect(M.dbox.R_world, M.dbox.R_body, M.body_version)
-    prog = M.tbox.compile(H, B, M.tools, M.t_self)                # C
-    if not (tcv_ok(prog) and ase_ok(prog)):
-        return stub_and_red(s, "unsafe_or_invalid_program")
-    receipts, embodied = M.tcv.execute(prog, M.env)               # E（PROBING）
-    certs  = M.abox.certify_or_reuse(embodied, M.body_version)    # A
-    orbits = M.abox.build_orbit_from(receipts, certs)
-    ea     = M.eacal.calibrate(receipts, orbits, certs, M.body_version)  # C
-    if ea is None: return stub_and_red(s, "insufficient_effective_evidence")
-    mu, Sig, cov = ea
-    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)
-    if not (M.apcal.cross_validate(mu, Sig, M.cross_receipt_indep(s))    # V.1
-            and M.eacal.aug_consistent(mu, Sig, certs)                   # V.2
-            and contract_regression(new_ec)):                            # V.3
-        return stub_and_red(s, "verification_failed")
-    M.mreg.hot_replace(M.dpe, new_ec)                             # U
+# IP-319 6C 闭环
+def toolgauge_6c(M, s):
+    H = M.lbox.hypothesize(s, M.dbox.R[s])                        # H
+    prog = M.tbox.select(H, M.tools, M.tcv, M.budget_left(s))     # C
+    receipts = M.tcv.execute(prog, M.env)                         # E
+    if len(receipts) < n_min(s): return stub_and_red(s, "insufficient")
+    mu, Sig = M.apcal.calibrate(receipts, H, s)                   # C
+    if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+        mu, Sig = M.apcal.calibrate(receipts, ["UNKNOWN"], s)
+        if not M.apcal.cross_validate(mu, Sig, M.cross_receipt(s)):
+            return stub_and_red(s, "cross_failed")                # V 失败 ⇒ 退化
+    new_ec = M.apcal.update_contract(M.dpe, mu, Sig, s)           # U
+    if not contract_regression(new_ec): return stub_and_red(s, "regression")
+    M.mreg.hot_replace(M.dpe, new_ec)
     M.dbox.update_from_posterior(s, mu, Sig)
-    M.provenance.bind(new_ec, receipts, certs, orbits, M.body_version)
-    bind_claims(new_ec, H, B, receipts, certs)
-    M.aquar.record(reported_shrink(Sig, n_eff), physical_shrink(receipts), cov)
+    bind_claims(new_ec, H, prog, receipts)                        # 定义 427
+    M.pquar.record(M.apcal.last_gain, realized_gain(receipts))    # 定义 428
     return True
 
-# IP-326 主闭环：body 漂移 ⇒ 版本升级 + 传递失效
-def EmbodiedGauge_round(M, obs, audio, tac, depth, det):
-    if M.bquar.triggered():
-        M.body_version += 1
-        M.provenance.invalidate_older_than(M.body_version)
-        M.abox.invalidate_all(); M.eacal.use_physical_only = True
-        M.ebox.request_recalibration()
+# IP-320 主闭环
+def ToolGauge_round(M, obs, audio, tac, depth, det):
     for s in M.dbox.detect_blind_spot():
         if s not in M.inflight:
-            M.inflight.add(s); submit_async(embodied_7c, M, s)
+            M.inflight.add(s); submit_async(toolgauge_6c, M, s)
+    if M.pquar.triggered(): M.apcal.pause(); M.use_bpcal_fallback = True
     return MODGAUGE_round(M, obs, audio, tac, depth, det)
 ```
 
 ## 4. 推导
 
-**引理 51（自标定可辨识性）** 在局部线性化与 σ-亚高斯噪声下，若 `λ_min(O(ξ))≥ε_obs`，则
-`‖θ̂−θ*‖₂ ≤ (2σ/λ_min(O))√(d_b log(2d_b/δ)) + O(ℓr²)` 以概率 ≥1−δ。
-系：`λ_min<ε_obs` 的自探测不得标记任何 body 格子为已覆盖；不可辨识参数只能留在先验中。
-
-**引理 52（已知可逆增强的信息中性）** 对已知可逆 g，`y'=ρ(g)y` 是 y 的确定性函数，故
-`I(θ;y,y')=I(θ;y)`；增强似然只增加秩亏 Fisher 项。**数字增强不能降低 Cramér–Rao 下界。**
-系 52.1：数字增强只通过未知 nuisance 边缘化、正则/先验、鲁棒性起作用；真正信息增量来自新的物理噪声实现。
-系 52.2：若 g 的分布依赖 θ（含噪执行且噪声与 θ 耦合），信息可能增加；必须显式建模，不能默默当独立样本。
-
-**引理 53（轨道共形覆盖）** 轨道可交换 + 权重 1/m_i ⇒ 覆盖 ≥1−α；可容许缺陷 ≤δ* ⇒ 覆盖 ≥1−α−L_M·δ*。
-系：δ*=0 退化为第 2 轮引理 48；证书 CI_δ 必须进入覆盖账本。
-
-**引理 54（增强泄漏偏差-方差界）** 合成增强占比 p、共享偏差 b、轨内相关 ρ_intra、物理样本 n_phys、噪声 σ：
-`E‖μ̂−μ*‖ ≤ (1−p)σ/√n_phys + p·b + O(ρ_intra)`，而报告方差可低至 σ²/n_eff（n_eff≤n_phys/(1−p)）。
-系：b>0 时增强不能把均值误差压到 p·b 以下；必须做物理留出覆盖率审计（A-Quarantine）。
-
-**引理 55（具身重观测样本效率）** 共享场景潜变量 z、独立噪声 ε，轨内相关 ρ=τ²/(τ²+σ²)；
-m 次具身重观测 `n_eff^emb=m/(1+(m−1)ρ)`，而数字增强副本 ρ=1 ⇒ `n_eff^syn=1`。故 `n_eff^emb≥n_eff^syn`。
-系：具身重观测的价值是「新的独立噪声实现」，不是「多了一个变换」。
-
-**引理 56（7C 时序/预算/安全）** 自探测与证书全异步于 50Hz 路径外；周期新增 O(1)<0.2ms；
-单盲区时延 ≤ τ_aug+τ_repair；ASE/看门狗中止后残余扰动 ≤ RS-Envelope。修正「零副作用」为「有界且已登记的残余副作用」。
-
-**引理 57（不变式/退化链）** 增强只在 A 阶段进入且受证书门控；溯源失效单调；V 三检查全过才热替换；
-`T_self=∅, G_cert={id}` ⇒ EmbodiedGauge≡ToolGauge；故五不变式与第 2 轮引理 49/50 保持。
+**引理 46（双层下注联合界）** A115′ 亚高斯条件下：风险门 P(σ_obs > σ_decl + γ + 2b) ≤ exp(−γ²/2b²)（继承引理 42）；
+增益注实际收缩 ≥ Ĝ_t − ξ，L 次联合浪费概率 ≤ L·exp(−γ_B²/2ξ²)；TCV 拒绝 ⇒ 零副作用。
+**引理 47（元泛化界）** 超额风险 ≤ 2η + 𝒪(√((C(Θ)+log(1/δ))/M)) + 𝒪(√((d_u+log(1/δ))/N_bl))；
+元级 PAC-Bayes（先验=物理锚）+ 任务内 Bernstein + 夹紧保证似然可辨识。
+推论 47.1：M→∞ 时 N_bl=1 亦可收敛；η 项不可消除，由 E431 实测计入风险账本。
+**引理 48（共形覆盖）** 可交换下 P(h*∈H_s) ≥ 1−α；TV=η′ 漂移下 ≥ 1−α−2η′（加权共形可恢复至 1−α−η′L′）；
+SLA < 0.8 ⇒ H_s := {UNKNOWN}（退化链第 1 级）。
+**引理 49（语言层不破坏热替换等价性）** claims 不在数值路径，剥离为纯投影 ⇒ 子图数值等价性同第 1 轮引理 44；SNC 失败 ⇒ stub ⇒ 系统级性质保持。
+**引理 50（时序预算保持）** 6C 全异步于 50Hz 路径外，周期新增 < 0.2ms；修复时延 ≤ τ_repair；预算耗尽强制降级 ⇒ 硬实时（引理 45）与预算不变式保持。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| body 覆盖扫描 | 50Hz 内联 | O(1) 查表 + O(\|R_body\|) 异步 | O(\|R_body\|) | 定义 432 |
-| 自探测规划 | 异步 | O(H·d_b²+\|T_self\|d_b) ≈10–50ms | O(d_b²) | 定义 433、引理 51 |
-| 物理探测 | 物理域 | Στ≤B_aug（秒级） | O(H) | 定义 446 |
-| 证书验证 | 异步 | O(n_probe·d)/g，缓存 | O(\|G_cert\|) | 定义 434/435 |
-| 轨道构建 | 异步 | O(N·m) | O(N·m) | 定义 437 |
-| EA-Cal | 异步 | O(n_eff·d_ctx)<10ms | O(d_ctx) | 定义 440、引理 53 |
-| A/B Quarantine | 异步 | O(1) CUSUM | O(K) | 定义 443/444 |
-| 溯源失效 | 异步 | 摊还 O(\|D\|) | O(\|D\|) | 定义 445 |
-| U 热替换 | 计量域 | <1ms | O(1) | 引理 57 |
+| D-Box 扫描 | 50Hz 内联 | O(\|R\|) < 1ms | O(\|R\|) | 定义 398/399（继承） |
+| 回执验证 | 50Hz 内联 | O(1) < 0.2ms | O(1) | 定义 417 |
+| L-Box 假设 | 异步事件 | 1×VLA 前向，τ≈0.2–0.8s（缓存） | O(\|H_s\|) | 定义 422、引理 48 |
+| 编程 + TCV | 异步 | O(L_max·\|T₀\|) < 5ms | O(L_max) | 定义 418、引理 46 |
+| 工具执行 | 物理域 | Στ_t ≤ B_tools（PROBING 显式态） | O(L_max) | 定义 416–418 |
+| AP-Cal 校准 | 异步 | O(N_bl·d_ctx) 单前向 < 10ms | O(d_ctx) | 定义 420、引理 47 |
+| V 交叉验证 | 异步 | O(1) + 1 独立回执 | O(1) | 定义 421/427 |
+| U 热替换 + 证书 | 计量域 | < 1ms | O(1) | 引理 49 |
+| P-Quarantine | 异步 | O(K) | O(K) | 定义 428 |
 
-**相对第 2 轮**：50Hz 路径无新增重计算；新增成本在异步的自探测、证书、轨道与溯源。
-数字增强可免费复制但信息中性；物理重观测有成本但带来真信息，AugContract 用预算显式购买后者。
+**相对第 1 轮**：BP-Cal O(N_bl²) Cholesky（N_bl=8 时 ≈50ms）→ AP-Cal 单前向（<10ms），
+且先验质量随预训练规模 M 可证提升；探测动作从「无接口观测」→「四层校验的契约化工具调用」。
+总增开销：50Hz 路径 ≤ 0.2ms/周期；修复事件全异步、稀疏触发。
 
-## 6. 实验设计 E441–E456（RAS-Baselines v4 协议）
+## 6. 实验设计 E426–E440（RAS-Baselines v4 协议）
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E441 | 体感盲区检测与自标定收敛 | θ_body 误差按 1/√n 下降；body 盲区召回 ≥95% |
-| E442 | 可辨识性门槛 | λ_min<ε_obs 时不产生假覆盖；不可辨识参数 0 误报 |
-| E443 | 增强证书有效性 | 不可容许变换拒绝率 ≥95%；δ̂ 的 CI 覆盖率 ≥90% |
-| E444 | 数字增强信息中性验证 | 固定数据集增强不改善 CRLB；与引理 52 一致 |
-| E445 | 具身 vs 合成增强 | 同预算下 n_eff^emb ≥ 2× n_eff^syn；样本效率显著 |
-| E446 | 增强泄漏/覆盖审计 | 伪证据注入下 A-Quarantine 检出 ≥90%，覆盖不膨胀 |
-| E447 | 轨道共形覆盖 | 名义 ≥0.9；δ*>0 时按 L_M·δ* 折减且不低于 SLA |
-| E448 | MP-Φ^G 泛化 | M_eff 随认证增强提升；η̂ 与实测偏移一致 |
-| E449 | 7C 收敛与预算 | ≤5 次迭代；AugContract 内完成率 ≥95% |
-| E450 | 时序保全 | 50Hz 99.9% 周期<20ms；修复时延 P99≤τ_repair |
-| E451 | 对抗盲区/伪造/注入 | 四层防线 + 溯源后注入成功率<5% |
-| E452 | B-Quarantine 体感漂移 | 磨损/温漂/负载阶跃 3 次内告警；旧证据传递失效 100% |
-| E453 | A-Quarantine 在线检测 | ARL0/ARL1 校准；慢漂移与幅度异常均可检出 |
-| E454 | 溯源失效传递 | body_version 升级后旧证书/增强点/后验全部失效，无残留 |
-| E455 | ASE 安全性 | 力矩/接触/工作空间违规 0；中止残余 ≤ RS-Envelope |
-| E456 | 消融 | 去 E-Box / A-Box / EA-Cal / MP-Φ^G / 溯源 各自贡献量化 |
+| E426 | L-Box 共形覆盖（含未见材质/漂移组） | P(h*∈H_s) ≥ 0.9；漂移下 ≥ 0.8（SLA） |
+| E427 | TCV 拦截有效性 | schema/预算/循环违规拦截率 100%；程序生成失败重询率 ≤ 20% |
+| E428 | 增益注校准曲线 | 预测收缩 vs 实际收缩 ECE ≤ 0.1 |
+| E429 | AP-Cal 样本效率 | N_bl=2 达到第 1 轮 BP-Cal N_bl=5 的 σ_conf；增益 ≥ 2× |
+| E430 | 预训练规模扩展 | M∈{10²,10³,10⁴}，超额风险按 𝒪(M^{−1/2}) 衰减，拟合 R² ≥ 0.9 |
+| E431 | sim→real 偏移 η 实测 | 引理 47 界在 ≥95% 运行中成立（界不空谈） |
+| E432 | 6C 收敛与预算 | ≤ 5 次迭代；B_tools 内完成率 ≥ 95% |
+| E433 | 时序保全 | 50Hz 路径 99.9% 周期 < 20ms；修复时延 P99 ≤ τ_repair |
+| E434 | 对抗盲区注入 | 四层防线后注入成功率 < 5%（对照第 1 轮单层基线） |
+| E435 | VLA 幻觉压力测试（提示注入/错误假设） | SNC 剔除率 ≥ 90%；数值修复路径零污染 |
+| E436 | 语言修复证书有用性 | 人工审计确认时间下降 ≥ 40% |
+| E437 | 热替换等价性 | 未涉及子图逐指令 diff = 0（含 claims 剥离投影） |
+| E438 | 预算耗尽/恢复 | recovery 触发 100%，stub + RED 行为一致 |
+| E439 | 消融 | 去 MP-Φ / 去 TCV / 去 SNC / 去 P-Quarantine 各自贡献量化 |
 
-## 7. 与第 2 轮的差异与继承
+## 7. 与第 1 轮的差异与继承
 
-- **继承**：R/盲区判定（定义 398/399）、风险门 λ（400）、M_ver（401）、热替换（引理 44）、IV/TB-Contract（407/424）、6C（421，扩展为 7C）、契约回归、L-Box/T-Box/TCV/AP-Cal/P-Quarantine 全部保留。
-- **修复（第 2 轮缺陷）**：零副作用 → ASE+RS-Envelope；V 独立性 → provenance-disjoint；TCV DAG 引用未校验 → 类型化数据流图；标量 z/last_gain → Mahalanobis + 显式收缩比；P-Quarantine 符号游程 → CUSUM/SPRT + 恢复；η 只声明 → η̂+CI；定义 426 边界/饥饿 → n_min 夹紧 + 饥饿界。
-- **新增**：E-Box 具身自标定、A-Box 增强证书、EA-Cal 轨道校准、MP-Φ^G 规范等变先验、A/B-Quarantine、证据溯源 DAG、7C、AugContract、I6/I7 不变式。
+- **继承**：R/盲区判定（定义 398/399）、风险门 λ（定义 400）、M_ver（401）、热替换定理（引理 44）、IV-Contract（407，细化为 TB-Contract 424）、4CV → 6C（421）、契约回归测试。
+- **修复（第 1 轮缺陷审计）**：定义 408 公式不成立 → 定义 426 闭式；BP-Cal 后验均值 bug（`mu_post = prior_mean(X) @ alpha`）→ 正确 GP 后验式并被 AP-Cal 替代；IBox/DBox 耦合 bug → 依赖注入；R 的 σ_conf 更新缺失 → U 阶段由后验分位数写入；「采样不充分」无量化门槛 → 定义 426 解析 n_min 进 V 阶段。
+- **新增**：工具契约层（IP-315–317）、预训练摊销层（IP-318）、语言审计层（定义 423/427/429）、相关性断路器（定义 428）。
 
 ## 8. 本轮最大风险
 
-**一句话**：EmbodiedGauge 的证书-先验-溯源三层共享同一个 `body_version` 依赖，一次未被及时捕获的身体标定偏差会同时污染该版本下所有增强证书、等变先验与校准后验，使「局部修复、误差局部化」的整体安全论证失效；而证书与溯源图会让伪证据显得比裸猜测更可信。
-**兜底**：B-Quarantine（体感漂移）+ A-Quarantine（增强泄漏）+ 物理留出覆盖率审计 + 引理 51 可辨识性门槛 + E443/E446/E452/E454 证伪实验。
+**一句话**：AP-Cal 的摊销后验在预训练→部署分布偏移下会产生**跨盲区强相关**的系统性偏差
+（一次错误先验同时污染所有被热替换子图），使「局部修复、误差局部化」的安全论证整体失效，
+且 VLA 语言修复证书会放大其可信度外观——以 E431/E434/E435 证伪、
+P-Quarantine（定义 428）在线断路、独立回执交叉验证（定义 421.V）三重兜底。
 <!-- ARTIFACT:END -->
