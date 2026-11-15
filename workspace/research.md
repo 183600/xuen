@@ -3,379 +3,337 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 9 轮（新灵感循环第 1 轮；本轮灵感：「创新点提炼」×「中间件」×「动作分块」）
-> **基线**：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
-> 本轮纪律：**分块执行 + 契约中间件 + 创新提炼**。三个灵感分别治理 v8 的三种债：算力债（50Hz 逐步重计算无余量）、集成债（手写退化网关靠约定不靠机制）、叙事债（14 个 IP 无实证机制）。必须通过**中立元契约退化链**保证任一新模块失效时注入恒等元、严格等价退回 v8，而非行为漂移。
+# 第 10 轮（新灵感循环；本轮灵感：「基准测试」×「场景泛化」）
+> **基线**：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
+> 本轮纪律：**测量科学 + 泛化几何 + 单调收紧**。v9 用三个模块还了算力债、集成债、叙事债，却留下两笔新债：**评估债**（“+10%/+15%”建立在一个静态、未分层、可被在线学习污染的测试清单上）与**泛化债**（DA-ML 只能事后反应域偏移，系统从未陈述“性能在哪个场景区域内有界”）。新模块一律设计为**单调收紧算子**——只许缩短块长、唤醒模块、限制动作集；其失效注入**恒等收紧 ⊥**，故严格退回 v9，不引入新失效模式（引理 90）。
 
 ## 0. 直觉与动机
 
-**灵感 1（创新点提炼 → 模块贡献归因与蒸馏）**
-直觉：系统已堆叠 14 个 IP 模块，严谨的研究者必须回答"哪些组件真正挣得它们的算力"。核心创新：**创新点蒸馏器（InnovationDistiller, ID）**：滑窗消融归因产出贡献向量 c_m(t)，Schmitt 双阈把模块置入 active/dormant/frozen 状态机。关键安全设计：dormant 行为严格等价于 v8 对应退化级（注入中立元），故"提炼"只是计算再分配、不是功能删除——**P12 提炼不删码律**。附带产出：IP 清单从论文叙事升级为带消融证据的活文档（每项 IP 附 c_m 曲线）。
+**灵感 1（基准测试 → 把测量仪器做成一等公民）**
+直觉：一个堆到 17 个 IP 的系统，最脆弱的往往不是控制器，而是“我们凭什么相信它更好”这句话。现有 E551–E570 是静态清单：难例被易例稀释（未分层）、样本量与效应量未预注册（统计功效未知）、在线学习可能早已看过测试分布（污染）。核心创新：**基准锻造器（BenchmarkForge, BF）**——在因子化场景空间上维护自适应采样分布 q_t，把有限 episode 预算集中到“能力边界”（失败邻近度 × 证书不确定度）；同时用**开发/留出族整族隔离 + 承诺哈希账本 + 序贯 α 消耗**保证报告的泛化差距 Ĝ 不被自适应采样自身夸大。BF 的产出不是分数，而是带分层、置信区间、可复现承诺的测量报告。
 
-**灵感 2（中间件 → 退化链的声明化）**
-直觉：v8 主闭环中模块接线与退化逻辑是手写 if-else 网关，模块越多越脆。中间件思想：把"接线、时限、失效语义"升级为一等公民。核心创新：**实时契约中间件（ContractMiddleware, MW）**：每模块声明契约 κ_m=(In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)；每周期 EDF 调度，超时即注入中立元 v_m^⊥（该端口聚合算子的恒等元）。v8 的四级退化链由此变成契约表的一个**数据实例**（引理 83 证明逐位等价复现）。退化从"代码"变成"配置"，组合正确性从人工验证变成代数性质。
+**灵感 2（场景泛化 → 场景代数与单元证书）**
+直觉：v9 的泛化是“检测到偏移就缩短块”，被动且滞后。可陈述的泛化应当是几何的：把场景分解为因子（光照、杂乱度、材质透明性、物体类别、动力学、传感器退化），在因子空间定义距离；在单元（cell）的**锚点网**上实测，若性能对场景是 L-Lipschitz，则单元内部性能有可计算下界。核心创新：**场景代数（ScenarioAlgebra, SA）**——场景 = 因子向量 + 组合语法（family）；证书 = 单元证书 (L̂, ε, δ, 审计样本)；审计违例即**细分单元**（branch-and-bound），得到**已认证区域 R_cert**。R_cert 之外不是“未知但大概没事”，而是**外推 = 无保证**，必须收紧（定义 543/549）。这把“泛化”从口号变成一张可查询、可反驳的区域图。
 
-**灵感 3（动作分块 → 分块证书执行）**
-直觉：50Hz 逐步决策让重模块每周期全额燃烧算力，预算利用率近 1.0，正是 v8 抖动风险的根源。ACT 思想：一次生成 K 步动作块 ζ=(a^{1:K}, Ĉ, P)——Ĉ 为块证书（前向模型预测的块内指标最坏界，留余量 β），P 为满足停车不变式的中止点集。5Hz 生成块，50Hz 只跑廉价守卫；违规时切换到最近中止点安全停驻。核心创新：**分块证书执行器（ActionChunkCertifier, AC）**；且有效块长 K_eff 由 Δ_dom、risk_SLAM 连续门控——域越陌生块越短，极端时 K=1 退回 v8 逐步模式。分块使决策预算利用率从 ~1.0 降至 ~0.3，直接给 v8 的"抖动→虚假退化风暴"风险上保险。
+**灵感 3（测量与泛化的闭环 → 泛化差距监视器）**
+直觉：基准若只离线跑，是论文附录；泛化若只离线证，管不住运行中的机器人。需要一个在线、廉价、只收紧不放宽的桥。核心创新：**泛化差距监视器（GeneralizationGapMonitor, GGM）**——用嵌入执行流的 canary 探针（有已知期望结果的小任务）在线估计性能，与单元证书给出的期望下界比较；差距超阈即触发收紧（K_eff↓、全模块唤醒、请求 BF 重采样）。关键的是，外推指示 E(s) 由**当前因子向量即时几何判定**，不依赖 20 帧滑窗——这正是对 v9 遗留风险“DA 滑窗滞后于真实跳变”的结构性回应（引理 91）。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（分块证书可靠性）**：如何设计块证书与中止点集，使「信任域内前向模型误差 ≤ β」假设下，中块突变的安全性与逐步执行统计等价？信任域门控能否消除模型误差与域偏移的相关性风险？
-- **Q2（契约化退化）**：如何将 v8 四级退化链编码为中立元代数，使"模块失效（超时）"与"显式退化"在可观测日志层面逐位不可区分？
-- **Q3（提炼安全边界）**：消融归因与状态机在什么资格谓词 φ^elig 下保证蒸馏永不触碰安全不变式？双阈迟滞能否根除休眠-唤醒抖振？
+- **Q1（基准有效性）**：自适应采样如何既把预算压在能力边界，又不让被评系统“对着考试复习”（Goodhart）？留出族整族隔离与序贯 α 消耗能把 Ĝ 的偏差与假阳性压到什么程度？
+- **Q2（泛化证书可靠性）**：操作任务的性能在场景因子空间上有多 Lipschitz？抓取/接触这类阈值事件的不连续面能否被审计与细分**定位**，还是会产生“锚点全过、内部塌陷”的假安全？
+- **Q3（收紧闭环的安全性）**：SA/BF/GGM 作为单调收紧算子，如何形式化保证“中性元 = 恒等 ⇒ 逐位退回 v9”，并在 E(s)、Ĝ、v9 门控三个信号之间不发生抖振？
 
-## 2. 设计原则（在 P7–P9 基础上新增 P10–P12）
+## 2. 设计原则（在 P10–P12 基础上新增 P13–P15）
 
-**P10 分块证书律（Chunked-Certificate Execution, AC）**
-决策以块为单位：ζ_t = (a^{1:K}, Ĉ_t, P_t)。证书 Ĉ_t 携带前向模型误差余量 β；中止点 p ∈ P_t 满足停车不变式 d_stop(p)。50Hz 守卫只做廉价检查（证书失效检测 + 停车不变式），重规划只在块边界发生。有效块长受信任域门控：K_eff(t) = 1 若 Δ_dom ≥ τ_dom 或 risk_SLAM ≥ τ_SLAM，否则 K_eff = max(1, ⌊K_max·(1−Δ_dom/τ_dom)⌋)。
+**P13 测量隔离律（Benchmark Isolation, BF）**
+留出场景族 H 在 t0 承诺哈希入只追加账本；H 永不被 BF 采样、永不被任何在线更新/标定读取（由执行沙箱强制）。任何用于调参/标定/在线学习的场景永久打标 dev。报告必须同时给出 dev 与 held-out 的 Ĝ 及配对置信区间；污染一旦被审计发现，整族作废并公开重承诺。
 
-**P11 中立元退化律（Neutral-Element Degradation, MW）**
-每模块输出端口定义聚合算子 ⊕ 与中立元 v^⊥（恒等元：x ⊕ v^⊥ = x）。模块在截止期内完成则输出 x_m(t)，超时/失效则注入 v^⊥。系统退化行为 = 中立元组合，由契约表声明，不再手写分支。
+**P14 场景单元证书律（Cell-Certificate Generalization, SA）**
+场景空间带因子距离 d_S；单元 C 以覆盖半径 ε 的锚点网采样；若 J 在 C 上 L-Lipschitz 且估计 L̂ ≥ L，则 ∀s∈C: J(s) ≥ min_{a∈A}J(a) − L̂ε − δ。审计样本违例 ⇒ 细分；无法认证的区域标记未认证，并映射为**外推指示 E(s)=1**（无保证，而非乐观）。
 
-**P12 提炼不删码律（Distill-Not-Delete, ID）**
-蒸馏只改变调度（计算分配），不改变代码可达性：dormant/frozen 模块保留在契约表中，其 v^⊥ 路径随时可用；φ^elig=false 的安全关键模块（M₀ 硬检查、SpatialCert、FaultCert、MW 自身、AC 证书检查）永不消融；Δ_dom 越阈强制全模块唤醒。
+**P15 单调收紧律（Monotone Tightening, GGM/SA）**
+新模块只允许收缩可行动作集、缩短 K_eff、唤醒模块、请求重采样；绝不放宽 v9 的任何门控。失效时注入恒等收紧 ⊥（不做任何额外收紧），故 v10 的有效动作集 ⊆ v9 的，安全性由 v9 传递（引理 90）。
 
 ## 3. 与基线的接口（如何退化）
 
-- AC 失效（前向模型超差 / 证书连续失效）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
-- MW 失效 ⇒ 切换 v8 手写网关代码路径（代码保留、非契约驱动），等价 v8 集成方式；
-- ID 失效 ⇒ 全模块 active、c_m 冻结不再更新，等价 v8（全模块常开）；
-- v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
+- BF 失效 ⇒ 退回 v9 的静态 E551–E570 套件与既定预注册判据（测量退化为清单，结论口径回 v9）；
+- SA 失效 ⇒ E(s)≡0、单元证书退化为单个全局未认证单元，不覆盖也不放松 v9 门控，行为 = v9；
+- GGM 失效 ⇒ 无在线差距信号，门控完全交回 v9 的 DA/SPR/Cal；
+- SA/BF/GGM 与 v9 组件同时失效 ⇒ 先退 v9，再按 v9 五级链退 v7、v6；
 - 全部失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
 ## 4. 预期贡献
 
-1. **分块证书执行**框架：块级证书 + 中止点集 + 信任域门控块长，在保持安全论证局部化的同时将决策算力利用率降一个量级；
-2. **契约中间件**：退化链的代数化——中立元恒等性使组合退化正确性从枚举验证变为代数性质（v9 引理 83）；
-3. **创新点蒸馏器**：IP 清单的实证化与算力的自适应再分配，附"陌生域强制唤醒"反脆弱设计；
-4. **预算-安全-自省三闭环**：分块释放的算力反哺 DA/SPR/Cal 的余量；E551–E570 覆盖块长扫描、中止功效、契约等价、归因精度、抖振抑制、陌生域唤醒与端到端任务。
+1. **基准锻造**：自适应、分层、隔离、序贯有效的评测框架，把“更好”从点估计升级为带承诺与 CI 的可复现命题；
+2. **场景代数与单元证书**：用因子几何 + Lipschitz 把泛化变成可查询的已认证区域 R_cert，并诚实标注外推区；
+3. **单调收紧闭环**：GGM 把在线性能与证书下界对齐，E(s) 提供不依赖滑窗的外推先导信号，正面回应 v9 遗留风险；
+4. **测量—泛化—控制三环**：E571–E590 覆盖分层、污染审计、统计功效、证书健全性、不连续定位、外推先导、Goodhart 轨迹与端到端任务。
 
 ## 5. 本轮最大风险
 
-**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
+**一句话**：单元证书的健全性以“任务性能在场景因子空间上 Lipschitz 连续”为前提，而抓取/接触成功本质是阈值事件，其不连续面可能藏在透明材质、反光光照或特定抓取角度的孤立面上；若该面恰好落在单元内部而审计样本未命中，锚点全过、证书被判有效，系统就会在“已认证”单元里以 K_eff>1 运行——泛化保证恰在最罕见的灾难样本处失效。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 9 轮产物 · 创新点清单 v9：**MetricVoiceGauge-ACMD**（Metric Voice Gauge with Action-Chunk Certificates, Contract Middleware & Innovation Distillation）
+# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-BSG**（Metric Voice Gauge with Benchmark Science & Scenario Generalization）
 
-> 背景：第 8 轮 MetricVoiceGauge-DA-SPR-Cal（定义 493–531；引理 69–81；实验 E531–E550）。
-> 本轮灵感：「创新点提炼」×「中间件」×「动作分块」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留；v8 的 DA-ML/SPR/Cal 三模块原样继承。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格等价退回 v8 行为（引理 83），而非行为漂移。
+> 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
+> 本轮灵感：「基准测试」×「场景泛化」
+> **继承纪律**：MetricVoiceGauge 九不变式 + v9 的 AC/MW/ID 三模块原样继承（定义 532–539、引理 82–86）。新增 BF/SA/GGM 一律为**可选增强**且是**单调收紧算子**：失效 ⇒ 注入恒等收紧 ⊥ ⇒ 逐位退回 v9（引理 90），而非行为漂移。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-DA-SPR-Cal v8） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
 |---|---|---|---|
-| IP-340–353 | v8 全部模块 | 继承 | 语义不变；接线方式改由 MW 契约表声明（IP-355） |
-| IP-346 | MetricVoiceGauge 主闭环 | 集成升级 | WCET 从"贴满 20ms"变为"分块摊销后典型 ≤8ms、p99 ≤20ms"（引理 86） |
-| IP-354 | ActionChunkCertifier 分块证书执行器 | 新增核心模块 | 5Hz 生成 ζ=(a^{1:K}, Ĉ, P)：K 步动作、带余量 β 的块证书、满足停车不变式的中止点集；50Hz 廉价守卫；K_eff 由 Δ_dom/risk_SLAM 门控 |
-| IP-355 | ContractMiddleware 实时契约中间件 | 新增核心模块 | 契约 κ_m=(In,Out,D_m,Ŵ_m,v_m^⊥,π_m,φ^elig)；周期内 EDF 调度；超时注入中立元 v^⊥；v8 四级退化链成为契约表数据实例 |
-| IP-356 | InnovationDistiller 创新点蒸馏器 | 新增核心模块 | 滑窗消融归因 c_m；Schmitt 双阈 active/dormant/frozen 状态机；Δ_dom 越阈强制全唤醒；dormant ≡ 注入 v^⊥（等价 v8 退化级） |
+| IP-340–356 | v9 全部模块 | 继承 | 语义不变；AC/MW/ID 原样保留 |
+| IP-357 | BenchmarkForge 基准锻造器 | 新增核心模块 | 因子化场景空间上的自适应采样 q_t（失败邻近度×证书不确定度）；开发/留出族整族隔离；承诺哈希只追加账本；序贯 α 消耗与配对 CI；输出分层测量报告与 Ĝ |
+| IP-358 | ScenarioAlgebra 场景代数与单元证书 | 新增核心模块 | 因子距离 d_S、单元 C 与 ε-锚点网、Lipschitz 单元证书 (L̂,ε,δ,j_min,m)、审计违例细分、已认证区域 R_cert 与外推指示 E(s) |
+| IP-359 | GeneralizationGapMonitor 泛化差距监视器 | 新增核心模块 | canary 探针在线性能估计 Ĵ_canary；与证书下界比较得 Ĝ(t)；超阈触发**单调收紧** T（K_eff←1、全模块唤醒、动作集限制） |
 
-**退化链声明（v9 契约化五级）：**
-- Level-1：AC 证书失效或信任域破坏（Δ_dom ≥ τ_dom ∨ risk_SLAM ≥ τ_SLAM）⇒ K_eff ← 1，逐步执行，等价 v8 决策粒度；
-- Level-2：MW 失效 ⇒ 切换 v8 手写网关代码路径（保留于代码库，非契约驱动），等价 v8 集成方式；
+**退化链声明（v10 契约化六级）：**
+- Level-0（新增，最外层收紧）：E(s)=1 ∨ Ĝ>τ_gap ∨ 审计违例率>τ_audit ⇒ 强制 K_eff←1、全模块唤醒、动作集限制到已认证邻域；只能收紧，先于 v9 门控生效；
+- Level-1：AC 证书失效或信任域破坏（Δ_dom ≥ τ_dom ∨ risk_SLAM ≥ τ_SLAM）⇒ K_eff ← 1，等价 v8 决策粒度（v9 继承）；
+- Level-2：MW 失效 ⇒ 切换 v8 手写网关代码路径，等价 v8 集成方式；
 - Level-3：ID 失效 ⇒ 全模块 active、归因冻结，等价 v8 全模块常开；
 - Level-4：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7；
 - Level-5：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-## 1. 符号体系增量（定义 532–539）
+## 1. 符号体系增量（定义 540–549）
 
 | 符号 | 含义 |
 |---|---|
-| ζ_t = (a^{1:K}, Ĉ_t, P_t) | 动作块：K 步动作序列、块证书、中止点集（P_t ⊆ {1..K}） |
-| Ĉ_t = (ĝ_min, ê_max, γ̂_grasp) | 块证书：前向模型 F̂ 预测的块内指标最坏界，含模型误差余量 β |
-| d_stop(p) | 停车不变式：dist(s_t, O) − \|traj_{p:end}\| ≥ d_brake(v_p) + d_safe |
-| K_eff(t) | 有效块长：K_max 经信任域门控（定义 539） |
-| U_t | 前向模型信任域：{Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM} |
-| κ_m = (In, Out, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig) | 模块契约：输入输出模式、截止期、WCET 上界、中立元、优先级、蒸馏资格谓词 |
-| v_m^⊥ | 中立元：模块失效时注入其输出端口，为其聚合算子 ⊕ 的恒等元（x ⊕ v^⊥ = x） |
-| c_m(t) ∈ [0,1] | 模块贡献向量：滑窗消融归因的 EMA（定义 537） |
-| st_m ∈ {active, dormant, frozen} | 提炼状态机（定义 538） |
-| τ_off < τ_on | Schmitt 双阈：休眠阈 < 唤醒阈，保证迟滞 |
-| T_abl, H_off | 消融回合周期（500 控制周期）与休眠确认回合数 |
+| s ∈ S, φ(s) ∈ ∏F_i | 场景与因子映射（光照/杂乱度/透明性/类别/动力学/传感器退化） |
+| d_S(s,s') | 加权因子距离，跨组合语法族另加常数下界 w_fam |
+| family(s) | 场景语法族标识（组合产生式 id），留出集按整族切分 |
+| C = ∏[a_i,b_i] | 因子空间中的单元（超矩形） |
+| A_ε(C), ε(C) | 单元 C 的 ε-锚点网与覆盖半径 sup_s min_a d_S(s,a) |
+| cert_C = (L̂,ε,δ,j_min,m) | 单元泛化证书：Lipschitz 估计、覆盖半径、样本误差、锚点最小性能、审计样本数 |
+| R_cert, E(s) | 已认证区域（有效单元并集）与外推指示 1[s∉R_cert] |
+| q_t, u_t, β_B, ρ | 自适应采样分布、边界度、逆温系数、单族质量上限 |
+| H, h0, Ledger | 留出族集合、承诺哈希、只追加审计账本 |
+| Ĝ, CI, α_k | 泛化差距 J_dev−J_H、置信区间、第 k 次中期分析的 α 消耗 |
+| canary, Ĵ_canary, τ_gap, τ_audit | canary 探针、在线性能估计、差距阈、审计违例率阈 |
+| T, ⊥ | 单调收紧算子与恒等收紧（不做额外限制） |
 
-**新增定义 532（动作块 ActionChunk）** 一次决策的输出单元：ζ_t = (a_t^{1:K}, Ĉ_t, P_t)，a ∈ A 为 K 步动作，K = K_eff(t) ≤ K_max = 10（50Hz 下 200ms 时域）。块在 5Hz 节拍生成，逐周期执行第 k 步。
-
-**新增定义 533（块证书 ChunkCertificate）** 由冻结前向模型 F̂（轻量 LSTM-MPC 代理，输入状态-动作、输出指标轨迹）预测块内各软层指标最坏界并留余量：
+**新增定义 540（场景因子空间与距离）** 场景 s 由因子向量 φ(s)=(f_1,…,f_n)∈∏F_i 与族 g(s)∈G 表示。距离：
 ```
-ĝ_min = min_{k≤K} F̂_clearance(s,a^{1:k}) − β,   ê_max = max_{k≤K} F̂_effort + β
+d_S(s,s') = Σ_i w_i·d_i(f_i,f'_i) + w_fam·1[g(s)≠g(s')],   Σ_i w_i + w_fam = 1,  d_i∈[0,1]
 ```
-证书有效 ⇔ ĝ_min ≥ d_safe ∧ ê_max ≤ τ_eff ∧ γ̂_grasp = valid ∧（用当前 τᵢ(t) 复核各层）。β 由 E554 标定（信任域内经验误差上界 ×1.2 安全系数）。
+w_fam 取足够大使任意跨族距离 ≥ d_fam。d_i 对连续因子用归一化差，对类别因子用 0/1 或语义树距离。距离是 SA 全部证书的唯一度量前提。
 
-**新增定义 534（中止点与停车不变式 AbortPoint）** 前缀索引 p ∈ P_t 满足：从第 p 步末执行安全停驻（速度指数衰减）所需刹停距离不超过当前间隙余量：
+**新增定义 541（场景单元与锚点网）** 单元 C=∏_i[a_i,b_i]；锚点网 A_ε(C)⊂C 满足覆盖半径 ε(C)=sup_{s∈C} min_{a∈A} d_S(s,a) ≤ ε。构造采用每因子 κ 分位格点 + 对角补充（预算 O(nκ)），对高维用因子重要度剪枝；ε 为理论上界，不依赖采样。
+
+**新增定义 542（单元泛化证书 CellCertificate）** 设性能 J 在 C 上对 d_S 为 L-Lipschitz，L̂_C ≥ L 为经验估计（锚点对差商取最大并加先验下限），δ_C 为有限样本误差（Hoeffding：δ=√(ln(1/α)/(2m))）。则证书声明
 ```
-d_brake(v_p) + d_safe ≤ dist(s_p, O) − |traj_{p:K}|
+∀s∈C:  J(s) ≥ j_min(C) − L̂_C·d_S(s, A_ε(C)) − δ_C,   j_min(C)=min_{a∈A} J(a)
 ```
-骨架中候选块的 P_t 为空即拒绝该候选；故"无点可退"仅发生于 K=1 fallback（等价 v8 逐步语义）。中块违规时切换到 ≤ 当前执行步的最大中止点 p*。
+证书**有效** ⇔ 独立审计集 Audit(C)（不落在锚点网上）中所有 s′ 满足下式；任一违例 ⇒ 沿违例密度最高的因子二分（branch-and-bound），违例子单元标记**未认证**。
 
-**新增定义 535（中间件契约 MiddlewareContract）** 每模块 m 声明 κ_m = (In_m, Out_m, D_m, Ŵ_m, v_m^⊥, π_m, φ_m^elig)。部署期静态验证 Σ_m Ŵ_m ≤ B_dec（决策预算 20ms）与 EDF 可行性；运行期 deadline_guard 强制执行 Ŵ_m。默认契约表（感知侧 ≤2ms + 决策侧 ≤20ms）：
+**新增定义 543（已认证区域与外推指示）** R_cert = ∪_{cert_C valid} C。外推指示 E(s)=1[s∉R_cert]，由空间索引 O(log N_cell) 查询。关键区别于 DA：E(s) 由当前因子向量**当帧几何判定**，无滑窗滞后；E(s)=1 表示“此处无泛化保证”，不是“此处一定失败”。未认证单元（含违例）同样计入 E=1。
 
-| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
-|---|---|---|---|---|
-| DA-ML（域偏移） | 1.0 | 1.0 | 0.0（Δ_dom≡0） | ✗ |
-| SPR（SLAM 风险） | 0.2 | 0.2 | 0.0（risk_SLAM≡0） | ✗ |
-| Calib-FI（标定隔离） | 0.1 | 0.1 | 恒等（weight≡1, κ 基准） | ✗ |
-| GCT/ER/OTL | 各 ≤1 | 各 ≤1 | 各自 v8 退化值 | ✗ |
-| AC 块生成（5Hz） | 12 | 12 | 单步 fallback 动作 | ✗ |
-| AC 中块守卫（50Hz） | 0.5 | 0.3 | continue（持当前步） | ✗ |
-| ID 归因 | 0.2 | 0.1 | 跳过本回合 | ✓ |
-
-**新增定义 536（中立元退化实例表 NeutralElementTable）** 每行：模块 → v^⊥ → 等价 v8 退化级。例：DA-ML: v^⊥=0 ⇒ Level-1（Δ_dom≡0）；SPR: v^⊥=0 ⇒ risk_SLAM≡0；Calib-FI: v^⊥=恒等 ⇒ sensor_weight≡1；ID dormant: v^⊥ 注入 ⇒ 该模块"缺席"＝对应显式退化分支。AC 端口的中立元为安全停驻序列 a^⊥（速度衰减到 0），吸收元性质（后续块不再执行）而非恒等元，单独验证。
-
-**新增定义 537（贡献向量滑窗消融 WindowedAblation）** 每 T_abl=500 周期进行一次消融回合（H=20 周期）：仅对 φ^elig 模块 m，交替运行 with/without m 的块，得分 J = 任务进展 − 安全罚（块级聚合）：
+**新增定义 544（自适应基准分布）** 单元权重
 ```
-c_m ← clip( 0.9·c_m + 0.1·norm(J_with − J_base), 0, 1 )
+q_t(C) ∝ exp(β_B·u_t(C))·w_task(C),   u_t(C)=max(近失败度(C), 证书不确定度(C))
 ```
-安全关键模块不参与消融（φ^elig=false），其"贡献"记为 ∞。
+近失败度由最近观测失败场景的核密度给出（距离越近越大）；证书不确定度取 δ_C 或预测方差。每 T_bf=50 episode 重加权；单族质量上限 ρ=0.3，防止采样退化为“只考一族”。
 
-**新增定义 538（提炼状态机 DistillFSM）** st_m: active → dormant（c_m < τ_off=0.01 持续 H_off=3 回合）；dormant → active（c_m ≥ τ_on=0.03 或 Δ_dom ≥ τ_dom 强制唤醒）；dormant → frozen（dormant 持续 20 回合）；frozen 仅可由离线证据解冻。dormant 执行 = MW 将该模块输出置为 v^⊥ 并跳过其计算。
+**新增定义 545（承诺账本与污染隔离）** 留出族 H 在 t0 计算 h0=SHA256(serialize(sorted(H))⊕salt) 写入只追加账本。规则：任何进入在线更新/β 标定/K_max 调参/BF 采样的场景永久打标 dev；H 在最终评估前对系统不可见（执行沙箱强制）。报告 Ĝ=J_dev−J_H 与配对自助 95% CI；审计若发现 H 场景出现在 dev 路径 ⇒ 整族作废、公开重承诺。
 
-**新增定义 539（有效块长门控 EffectiveChunkLength）**
+**新增定义 546（序贯有效统计）** 自适应采样使固定样本检验失效，故采用 α-spending 的序贯检验：第 k 次中期分析分配 α_k（O’Brien–Fleming 型），Σα_k≤α=0.05；任意时刻报告有效 CI。最小可检测效应 MDE 预注册，n_min 由配对方差与 power=0.8 反解。
+
+**新增定义 547（canary 探针与在线性能估计）** 按泊松过程在执行流中注入有已知正确结果的廉价探针（如“回到已知位姿”“确认抓取点可见性”），期望结果 r* 与场景无关。Ĵ_canary(t) = 最近 T_c 窗口探针成功率；作为当前场景性能下界代理。
+
+**新增定义 548（泛化差距与单调收紧）** Ĝ(t) = Ĵ_cert_lower(t) − Ĵ_canary(t)。触发收紧当
 ```
-K_eff(t) = 1                                   若 U_t 不成立
-         = max(1, ⌊K_max·(1 − min(1, Δ_dom(t)/τ_dom))⌋)   否则
+E(s)=1  ∨  Ĝ(t) > τ_gap  ∨  audit_viol_rate(t) > τ_audit
 ```
-域越陌生块越短；risk_SLAM ≥ τ_SLAM 时 U_t 直接破坏，K_eff=1。
+收紧 T：K_eff←1；ID 全模块唤醒；动作集限制到 R_cert 内最近已认证配置的邻域；向 BF 请求该单元优先采样。T 只收缩可行集；⊥=identity。
+
+**新增定义 549（认证区域与 v9 门控的合成）** v10 的有效块长是 v9 门控与收紧信号的**合取**（只会更保守）：
+```
+K_eff^v10(t) = 1                         若 E(s_t)=1 ∨ tighten(t)
+             = K_eff^v9(t)               否则
+```
 
 ## 2. 形式化定义（要点与升级）
 
-**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
-**定义 495/524（MetaWeight/情感，5 维）** 继承 v8 不变。
-**定义 521（DA-OTL）** 继承 v8 不变；τᵢ(t) 在 K_eff>1 时以块证书替代逐层逐步复核。
-**升级定义 496（软证书，v9）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM ∧ Ĉ_t valid}，五条件同尺度设计；块证书失效与单步条件同样触发 M₀ 硬检查，无"块内软通过硬失"空洞（引理 82+81 联合）。
-**升级定义 531（软硬约束衔接）** M₀ 判据增加块级入口：任一中块守卫违规 ⇒ 立即切换 p* 或安全停驻，不等块边界。
+**定义 493/495/521/532–539** 继承 v9 不变。
+**升级定义 496（软证书，v10）** δ_trigger 增至七条件：σ<τ_safe ∧ γ_grasp valid ∧ Δ_dom<τ_dom ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t valid ∧ **E(s)=0** ∧ **Ĝ≤τ_gap**。后两条只增加否决，不增加放行，故保持“软通过必不掩盖硬失”（引理 87+82 联合）。
+**升级定义 539（有效块长，v10）** 按定义 549 与 v9 门控取合取；仅当 SA/GGM 均不可用时自动退化为 v9 门控。
+**升级定义 531（软硬约束衔接）** 块级入口增加外推入口：E(s)=1 立即触发 M₀ 硬检查与安全停驻，不等块边界。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-354 ActionChunkCertifier：分块证书执行器
-class ActionChunkCertifier:
-    def __init__(self, forward_model, policy, K_max=10, beta=0.02,
-                 d_safe=0.15, d_brake_fn=None, dt=0.02):
-        self.F = forward_model        # 冻结 LSTM-MPC 代理，输出指标轨迹
-        self.policy = policy
-        self.K_max, self.beta, self.d_safe = K_max, beta, d_safe
-        self.d_brake = d_brake_fn or (lambda v: 0.5 * v * v / 2.0)
+# IP-357 BenchmarkForge：基准锻造器（重活离线/异步，主环只读）
+class BenchmarkForge:
+    def __init__(self, grammar, metric, heldout_families,
+                 beta_B=2.0, rho=0.3, T_bf=50, alpha=0.05):
+        self.grammar, self.d = grammar, metric
+        self.H = frozenset(heldout_families)
+        self.h0 = sha256(serialize(sorted(self.H)) + SALT)
+        self.ledger = AppendOnlyLedger(); self.ledger.append(('commit', self.h0))
+        self.beta_B, self.rho, self.T_bf, self.alpha = beta_B, rho, T_bf, alpha
+        self.q = None
 
-    def effective_K(self, delta_dom, tau_dom, trust_ok):
-        if not trust_ok:
-            return 1
-        return max(1, int(self.K_max * (1 - min(1.0, delta_dom / tau_dom))))
+    def update_weights(self, cells, failures, cert_uncertainty):
+        w = {C: math.exp(self.beta_B * max(near_failure(C, failures, self.d),
+                                          cert_uncertainty[C]))
+             for C in cells}
+        w = cap_family_mass(w, self.rho)          # 单族占比 ≤ ρ
+        self.q = normalize(w)
 
-    def generate_chunk(self, state, delta_dom, tau_dom, trust_ok):
-        K = self.effective_K(delta_dom, tau_dom, trust_ok)
-        if K == 1:
-            return self._single_step_fallback(state)      # 等价 v8 逐步
-        best = None
-        for cand in self.policy.sample_sequences(state, K, n=64):   # MPC 采样
-            pred = self.F.rollout(state, cand)            # 指标轨迹预测
-            g_min = pred.min_clearance - self.beta        # 留余量（定义 533）
-            e_max = pred.max_effort + self.beta
-            if g_min < self.d_safe or e_max > state.tau_eff:
+    def sample_batch(self, n):
+        out = []
+        while len(out) < n:
+            C = sample_from(self.q)
+            s = self.grammar.sample_in(C)
+            if s.family in self.H:                 # 硬隔离：留出族永不被采样
                 continue
-            pts = self._abort_points(state, cand, pred)   # 定义 534
-            if not pts:                                   # 无中止点 → 拒绝
-                continue
-            score = self.policy.score(cand, pred)
-            if best is None or score > best.score:
-                best = Chunk(cand, Cert(g_min, e_max), pts, score)
-        return best or self._single_step_fallback(state)
+            s.tag = 'dev'; out.append(s)
+        return out
 
-    def _abort_points(self, state, actions, pred):
-        pts = []
-        for p in range(1, len(actions)):
-            remaining = pred.path_len[p:]                 # 剩余轨迹长
-            margin = (pred.clearance[p]
-                      - self.d_brake(pred.speed[p]) - self.d_safe)
-            if margin >= remaining:                       # 停车不变式成立
-                pts.append(p)
-        return pts
+    def report(self, J_dev, J_H):
+        G = mean(J_dev) - mean(J_H)
+        lo, hi = paired_bootstrap_ci(J_dev, J_H, alpha=self.alpha)
+        return Report(G=G, ci=(lo, hi), strata=by_factor_slice(J_dev),
+                      commitment=self.h0)
+```
 
-    def midchunk_guard(self, chunk, k_exec, live_obs):
-        """50Hz 廉价守卫；返回 ('continue', k+1) 或 ('abort', p*)"""
-        if not chunk.cert_still_valid(live_obs):          # 证书失效检测
-            return self._nearest_abort(chunk, k_exec)
-        stop_inv = (live_obs.nearest_clearance
-                    - self.d_brake(live_obs.speed) - self.d_safe)
-        if stop_inv < chunk.remaining_len(k_exec):        # 停车不变式破坏
-            return self._nearest_abort(chunk, k_exec)
-        return ('continue', k_exec + 1)
+```python
+# IP-358 ScenarioAlgebra：场景代数与单元证书（离线/异步构建，在线只查 E）
+class ScenarioAlgebra:
+    def __init__(self, factors, metric, L_prior=1.0, eps=0.1, delta=0.02):
+        self.factors, self.d = factors, metric
+        self.L_prior, self.eps, self.delta = L_prior, eps, delta
+        self.cells = [UnitCell(domain=full_domain(factors))]
 
+    def certify(self, C, J, audit):
+        A, eps = lattice_net(C, self.eps, self.d)
+        jmin = min(J(a) for a in A)
+        Lhat = max(self.L_prior, max_pairwise_slope(J, A, self.d))
+        lower = lambda s: jmin - Lhat * self.d(s, nearest(A, s, self.d)) - self.delta
+        bad = [s for s in audit if J(s) < lower(s)]
+        if not bad:
+            return Cert(C, Lhat, eps, self.delta, jmin, len(audit), valid=True)
+        return Cert(C, Lhat, eps, self.delta, jmin, len(audit), valid=False), bad
 
-# IP-355 ContractMiddleware：实时契约中间件
-@dataclass
-class Contract:
-    name: str; deadline_ms: float; wcet_ms: float
-    fail_value: object; priority: int; distill_eligible: bool
+    def refine(self, C, bad):
+        f = argmax_factor_violation(bad)           # 违例最集中的因子
+        return bisect(C, f)                        # 违例子单元保持未认证
 
-class ContractMiddleware:
-    def __init__(self, contracts):
-        self.contracts = {c.name: c for c in contracts}
-        self.strikes = defaultdict(int)
+    def E(self, s):
+        return 0 if any(c.valid and s in c.C for c in self.cells) else 1
 
-    def run_cycle(self, runners, ctx):
-        results = {}
-        for c in sorted(self.contracts.values(),
-                        key=lambda c: c.deadline_ms):     # 周期内 EDF
-            t0 = now_ms()
-            try:
-                with deadline_guard(c.deadline_ms):
-                    if not self.is_dormant(c.name):       # ID 休眠则跳过计算
-                        results[c.name] = runners[c.name](ctx)
-                    else:
-                        results[c.name] = c.fail_value    # dormant ≡ v^⊥
-            except DeadlineOverrun:
-                results[c.name] = c.fail_value            # 中立元注入
-                self.strikes[c.name] += 1
-                log_overrun(c.name, now_ms() - t0)        # 日志可区分性审计
-            ctx[c.name] = results[c.name]
-        return results
+    def certified_lower(self, s):
+        c = nearest_valid_cell(s)
+        return c.jmin - c.Lhat * self.d(s, nearest(c.A, s, self.d)) - c.delta
+```
 
+```python
+# IP-359 GeneralizationGapMonitor：在线差距与单调收紧
+class GeneralizationGapMonitor:
+    def __init__(self, sa, tau_gap=0.10, tau_audit=0.02, T_c=250):
+        self.sa, self.tau_gap, self.tau_audit, self.T_c = sa, tau_gap, tau_audit, T_c
 
-# IP-356 InnovationDistiller：创新点蒸馏器
-class InnovationDistiller:
-    def __init__(self, mw, tau_on=0.03, tau_off=0.01,
-                 T_abl=500, abl_len=20, H_off=3):
-        self.mw, self.ema = mw, {}
-        self.state = {}                                   # 仅 eligible 模块
-        self.tau_on, self.tau_off = tau_on, tau_off
-        self.T_abl, self.abl_len, self.H_off = T_abl, abl_len, H_off
-        self.dormant_count = defaultdict(int)
+    def step(self, t, s, j_canary, audit_viol_rate):
+        gap = self.sa.certified_lower(s) - j_canary
+        active = (self.sa.E(s) == 1 or gap > self.tau_gap
+                  or audit_viol_rate > self.tau_audit)
+        return TightenSignal(active=active, gap=gap,
+                             reason=('extrapolation' if self.sa.E(s) else
+                                     'gap' if gap > self.tau_gap else 'audit'))
+```
 
-    def attribute(self, module, J_with, J_base):
-        delta = max(0.0, normalize(J_with - J_base))      # 定义 537
-        self.ema[module] = 0.9 * self.ema.get(module, delta) + 0.1 * delta
-
-    def step(self, cycle_idx, ctx):
-        if ctx.delta_dom >= ctx.tau_dom:                  # 陌生域强制全唤醒
-            self.wake_all(); return
-        if cycle_idx % self.T_abl == 0:
-            self.run_one_ablation_episode()               # 仅 eligible 模块
-        for m, c in self.ema.items():
-            if self.state[m] == 'active' and c < self.tau_off:
-                self.dormant_count[m] += 1
-                if self.dormant_count[m] >= self.H_off:   # Schmitt 迟滞
-                    self.state[m] = 'dormant'             # ≡ 注入 v^⊥
-                    self.mw.set_dormant(m)
-            elif self.state[m] == 'dormant' and c >= self.tau_on:
-                self.state[m] = 'active'
-                self.mw.set_active(m)
-                self.dormant_count[m] = 0
-
-
-# 主闭环集成：MetricVoiceGauge-ACMD
-def metricvoicegauge_round_9(M, s, obs, audio_stream=None, ell=None, ...):
+```python
+# 主闭环集成：MetricVoiceGauge-BSG（只增加收紧，不放宽任何 v9 门控）
+def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
     ctx = mw_default_ctx()
-    # ---- MW 驱动感知侧（契约预算 ≤2ms，超时即中立元，5 级退化见表 536）----
-    results = middleware.run_cycle(runners={
+    results = middleware.run_cycle(runners={          # v9 感知侧，原样
         'DA_ML':  lambda c: domain_adapter.update_and_measure(obs),
         'SPR':    lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
         'CAL_FI': lambda c: calib_fi.get_weights_kappa(),
         'OTL':    lambda c: online_learner.update_and_thresholds(c),
     }, ctx=ctx)
-    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
 
-    # ---- 5Hz 块生成（重计算，摊销进决策预算；受 ID 状态影响候选池）----
-    if current_chunk is None or current_chunk.exhausted:
-        current_chunk = chunker.generate_chunk(
-            ctx.state, ctx.delta_dom, ctx.tau_dom,
-            trust_ok=(ctx.delta_dom < ctx.tau_dom
-                      and ctx.risk_slam < M.tau_slam))
+    # ---- 在线收紧查询（≤0.1ms；SA/BF 重活在离线/异步线程）----
+    s_now = factorize(obs)                            # 当前因子向量
+    E_s = sa.E(s_now)                                 # 定义 543，无滑窗
+    tighten = ggm.step(cycle_idx, s_now, j_canary(), audit_viol_rate())
+    trust_v9 = (ctx.delta_dom < M.tau_dom and ctx.risk_slam < M.tau_slam)
 
-    # ---- 50Hz 中块守卫（廉价 ≤0.3ms）----
-    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec, live_obs)
-    if verdict == 'abort':
-        current_chunk.execute_safe_stop_at(k_next)        # 定义 534
-        current_chunk = None
+    # ---- P15：与 v9 门控合取，只能更保守 ----
+    if E_s or tighten.active or not trust_v9:
+        K = 1
     else:
-        execute(current_chunk.actions[k_next])
+        K = chunker.effective_K(ctx.delta_dom, M.tau_dom, trust_v9)
+    if tighten.active:
+        distiller.wake_all()                          # 陌生域强制全唤醒
+        action_mask = sa.safe_action_neighborhood(s_now)
+    else:
+        action_mask = ALL_ACTIONS
 
-    # ---- v8 继承路径（契约化调用）：GCT/ER/5 维风险/奖励 ----
-    #      δ_trigger 五条件：σ<τ_safe ∧ γ_grasp ∧ Δ_dom<τ_dom
-    #                        ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t valid
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
-
-    # ---- ID：块级归因与状态迁移（每 500 周期一次消融回合）----
-    distiller.step(cycle_idx, ctx)
+    # ---- v9 块生成 / 中块守卫 / 继承路径，均带 action_mask ----
+    ...  # 与 v9 metricvoicegauge_round_9 相同，仅动作采样受 mask 限制
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 82（块证书可靠性与中止安全性）** 设信任域 U_t 内前向模型一致误差 ‖F̂−F‖∞ ≤ β_true ≤ β。则 (i) ∀k≤K: g_k ≥ ĝ_min（证书保守有效）；(ii) 若块内某时刻真实间隙跌破 d_safe，则必可切换 p* ∈ P_t 安全停驻。证明：(i) 由一致误差界 min_k g_k ≥ min_k F̂g_k − β_true ≥ ĝ_min + β − β_true ≥ ĝ_min；(ii) 定义 534 的停车不变式给出从 p* 停驻的所需距离 d_brake(v_p*) ≤ dist(s_p,O) − |traj_{p*:K}| − d_safe，刹车轨迹终点距障碍 ≥ d_safe；骨架保证 P_t 非空才接受块，"无点可退"仅发生在 K=1 fallback（等价 v8 语义）。∎
+**引理 87（单元证书的 Lipschitz 下界）** 设 J 在单元 C 上对 d_S 为 L-Lipschitz，A 为 ε-锚点网，δ 为概率 ≥1−α 的有限样本误差上界。则概率 ≥1−α 下 ∀s∈C：J(s) ≥ min_{a∈A}J(a) − L·ε − δ；用 L̂≥L 替换 L 仍成立。证明：取 a*=argmin_{a∈A}d_S(s,a)，则 d_S(s,a*)≤ε，由 Lipschitz 性 J(s) ≥ J(a*)−L d_S(s,a*) ≥ min_A J − Lε；再扣样本误差 δ。L̂≥L 时右侧更小，界仍有效。∎
 
-**引理 83（中立元退化与 v8 逐位等价）** 对契约表 535 每行，注入 v_m^⊥ 后下游端口读数与 v8 对应显式退化分支的读数逐位一致（表 536 给出映射：DA-ML→Δ_dom≡0、SPR→risk_SLAM≡0、Calib-FI→weight≡1/κ 基准、ID dormant→对应模块缺席）；MW 仅改变调度顺序、不改变取值集合，故可观测行为与 v8 对应退化级等价。∎
+**引理 88（细分只保证“可认证区域”健全，不保证“不连续面”可检测）** 若 J 在 C 上连续且存在有效 L 界，则对任意 ε′>0，有限次细分后保留单元直径 <ε′，R_cert 上证书健全。但若 C 内含 J 的不连续面 Σ，且锚点与审计样本全落在 Σ 的同一侧，则 cert_C 可被错误判为 valid（假安全）：取 J 在 C\Σ 上为常数、跨 Σ 跳变即可构造。故 SA 的保证是**条件性**的；P14/P15 以“未认证即收紧”把不可证区域转为保守行为，但不能把假安全概率降为 0——这正是本轮最大风险。∎
 
-**引理 84（蒸馏安全不变式）** ID 仅能迁移 φ^elig=true 的模块；每次 dormant 迁移在行为上等价于"该模块超时"（引理 83 的 v^⊥ 注入）；φ^elig=false 的安全关键模块永不消融；Δ_dom ≥ τ_dom 触发强制全唤醒，消除"陌生域缺模块"。故任意蒸馏状态下的系统行为 ∈ v8 退化格点，安全性由 v8 引理 80–81 传递成立。∎
+**引理 89（隔离下的 Ĝ 偏差来源）** 若 H 未进入 BF 采样、在线更新、β 标定与 K_max 调参路径（沙箱 + 账本可审计强制），则 J_H 的样本分布与 dev 自适应采样策略无关；因此 Ĝ 的偏差只来自“声明族分布 vs 真实部署分布”的定义差异，自适应采样只改变 Var(Ĝ)、不改变 E[J_H]。故 Goodhart 被结构性阻断（依赖隔离实现无旁路；E574 用泄漏注入检验）。∎
 
-**引理 85（双阈防抖 / 无 Zeno）** τ_off < τ_on 且归因每 T_abl 回合更新一次、每次迁移需 H_off 回合确认 ⇒ 相邻状态迁移间隔 ≥ T_abl 个控制周期，翻转率 ≤ 1/(T_abl·Δt)，有限时间内迁移次数有限，无抖振。∎
+**引理 90（单调收紧保持 v9 安全域，中性元逐位退回）** T 为收缩算子：Admissible(T(x))⊆Admissible(x)，且 T 只可能令 K_eff 减小、唤醒集合增大、动作集减小。故 v9 引理 80–86 的不变式在 T 的像上保持；⊥=identity ⇒ T(x)=x。因此 SA/BF/GGM 任一失效时系统逐位等价 v9，不新增失效模式。∎
 
-**引理 86（EDF 可行性与 50Hz 守恒）** 部署期静态校验 Σ_m Ŵ_m ≤ B_dec（决策 20ms）与链式约束 D_m ≤ B_dec；运行期 deadline_guard 强制 Ŵ_m，超时模块贡献 v^⊥ 而非延长周期 ⇒ 每周期总执行 ≤ 感知 2ms + 决策 20ms，50Hz 保持；分块摊销使典型利用率降至 ~0.3（块生成 12ms/10 周期 + 守卫 0.3ms + 契约调用 ~1ms + v8 继承路径 ~4ms）。∎
+**引理 91（外推指示对渐变边界漂移的先导性）** 设场景沿因子空间连续漂移并在 t* 越过 R_cert 边界。因子向量由单帧观测解析，E(s) 在 t*+δ_φ（δ_φ≤1 控制周期）翻转。v9 的 Δ_dom 为 W_dom=20 帧滑窗统计；对渐变漂移，其越阈确认时刻 t_DA ≥ t*+W_dom·Δt（需滑窗累积）。故 t_DA−(t*+δ_φ) ≥ W_dom·Δt−δ_φ ≈ 380ms。对**突变**，DA 单帧统计量可能同样快，此时两信号为 OR 互补而非替代。∎
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| AC 块生成（5Hz） | 在线 | ≤12ms/次，摊销 ≤1.2ms/cycle | O(n·K·d_a) 候选缓存 n=64 | 定义 532/533 |
-| AC 中块守卫（50Hz） | 在线 | ≤0.3ms（距离查询+证书检测） | O(1) | 定义 534 |
-| MW 周期调度 | 在线 | O(M log M)，M≈16 → ≤0.05ms | O(M) 契约表 | 定义 535, 引理 86 |
-| ID 归因 | 在线 | O(1)/cycle + 每 T_abl 一回合 | O(|eligible|) | 定义 537/538 |
-| v8 继承路径（6 层指标+5 维权重+GCT/ER） | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
-| 决策侧合计 | 在线 | 典型 ≤8ms，p99 ≤20ms（块生成周期 ≤16.5ms） | — | 引理 86 |
-| 感知侧合计 | 在线 | ≤2ms（v8 不变） | — | v8 定义 526–530 |
+| BF 自适应采样/报告 | 离线/异步 | 每 T_bf=50 episode 重权 O(\|cells\|)；报告 O(n_boot·n) | O(\|cells\|) | 定义 544–546 |
+| SA 证书构建/细分 | 离线/异步 | 锚点 O(nκ) 次 rollout + 细分 O(log(1/ε)) 层 | O(Σ cells) | 定义 541/542, 引理 87/88 |
+| E(s) 查询 | 在线 | O(log N_cell)（单元空间索引） | O(N_cell) | 定义 543 |
+| GGM 在线 | 在线 | O(1)/cycle；canary 每 T_c=250 周期 | O(1) | 定义 547/548 |
+| v10 新增在线开销 | 在线 | ≤0.1ms（查询+比较） | — | 引理 90/91 |
+| v9 继承路径 | 在线 | ≤8ms 典型 / ≤20ms p99（不变） | — | v9 引理 86 |
+| 50Hz 守恒 | 在线 | 重活全离线/异步，主环预算 20ms 不变 | — | v9 引理 86 + 本轮 |
 
-## 6. 实验设计 E551–E570
+## 6. 实验设计 E571–E590
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E551 | 块长扫描 K∈{1,2,5,10,20} | 成功率-时延-中止延迟 Pareto；K=10 为默认 |
-| E552 | 中块突变障碍注入 | 中止成功率 ≥99%，0 碰撞 |
-| E553 | 中止点密度 vs 中止成功率 | 确定最小密度 p*，指导 P_t 构造 |
-| E554 | 前向模型误差标定 | β 经验值 vs 理论；Δ_dom-β 相关曲线验证信任域门控必要性 |
-| E555 | MW 超时注入 | 超时模块当周期被 v^⊥ 替换，0 越界、0 崩溃 |
-| E556 | 契约退化 ≡ v8 四级链 | 日志逐位等价（E539 的契约驱动复刻） |
-| E557 | 全模块激活 50Hz 保持 | WCET p99 ≤20ms；对比 v8 抖动分布 p99 ↓ ≥50% |
-| E558 | 突发负载/背压 | 感知风暴下主环 0 丢拍 |
-| E559 | 蒸馏归因精度 | 与全因子离线消融相关性 ≥0.8 |
-| E560 | 休眠降耗 | eligible 模块休眠后决策算力 ↓≥40%，总功耗 ≤25W |
-| E561 | 抖振抑制 | Schmitt 双阈下翻转率 ≤1 次/模块/10min |
-| E562 | 陌生域强制唤醒 | 注入大 Δ_dom，dormant 模块 1 周期内回到 active |
-| E563 | 端到端仿真全任务 | RoboCup@Home 仿真 ≥ v8 + 10% |
-| E564 | Chunk×DA 耦合 | Δ_dom 越阈后 K_eff 收缩至 1 的过渡平滑性（无指令跳变） |
-| E565 | Chunk×ER 边界生效 | 情感变化在块边界生效延迟 ≤200ms，操作员评分 ≥4/5 |
-| E566 | MW 调度器形式化验证 | CBMC 验证 EDF 可行性、无优先级反转、v^⊥ 注入路径可达 |
-| E567 | 8h 长跑 | 块证书失效触发率、中止点命中率、休眠占比统计 |
-| E568 | 双机共享契约表 | 契约表与块证书跨机共享，协同任务完成率 ↑≥10% |
-| E569 | 对抗时序攻击 | 恶意制造模块超时 ⇒ 系统 v^⊥ 退化而非 crash，安全违背 ≤2% |
-| E570 | 综合竞赛模拟 | ≥ v8 + 15% |
+| E571 | 基准分层有效性 | 分层难度单调；相邻层成功率差 ≥15pp |
+| E572 | 自适应 vs 静态（等预算） | 每 100 episode 发现失败数 ↑≥2× |
+| E573 | 留出族整族切分的 Ĝ 稳定性 | 重复切分间 Ĝ 波动 ≤10% |
+| E574 | 污染注入审计 | 注入泄漏检出率 ≥95%，Ĝ 被标红而非照报 |
+| E575 | 统计功效与 CI 覆盖 | 95% CI 实际覆盖 ≥93%，MDE 达预注册值 |
+| E576 | Lipschitz 估计标定 | 信任域内 L̂≥L 的经验比例 ≥99% |
+| E577 | 不连续面定位（透明/反光） | 未认证单元召回 ≥90%，假安全 ≤1% |
+| E578 | 细分收敛与预算 | ε 减半所需审计样本增长符合理论阶 |
+| E579 | 认证区域覆盖率 vs 锚点数 | 达 90% 覆盖所需锚点预算 ≤ 上限 |
+| E580 | 外推先导时间 | 渐变漂移下 E 领先 DA ≥300ms（引理 91） |
+| E581 | GGM 灵敏度/误报 | 触发召回 ≥95%，误报 ≤5% |
+| E582 | Goodhart 轨迹 | 仅 dev 优化时 J_H 不降；若降则审计报警 |
+| E583 | 泛化差距-因子距离曲线 | 随距离单调不增，拐点可解释 |
+| E584 | 跨族零样本 | 留出族成功率 ≥ dev −15% |
+| E585 | SA 失效 → v9 等价 | E(s)≡0，日志逐位等价 |
+| E586 | BF 失效 → 静态套件等价 | 报告口径与 v9 E551–E570 一致 |
+| E587 | 基准在环端到端 | 无 overfit 迹象且 ≥ v9 |
+| E588 | 在线开销 | 新增 ≤0.1ms，50Hz 0 丢拍 |
+| E589 | 单元内对抗场景生成 | 找到证书违例样本 ≤N 次查询 |
+| E590 | 综合竞赛模拟 | ≥ v9 +10% 且 held-out 不塌 |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 块长扫描（E551） | K=10 时成功率不降且时延 ↓ | 调 K_max、候选数 n、评分函数 |
-| 中块突变（E552） | 中止成功 ≥99%、0 碰撞 | 提高中止点密度、减小 β 余量步进、缩短 K_max |
-| 中止点密度（E553） | 存在 p* 使成功率 ≥99% | 放宽停车不变式冗余、增加每步中止点 |
-| 模型误差标定（E554） | β 覆盖 ≥99% 经验误差 | 换更强前向模型、增大 β 安全系数 |
-| MW 超时（E555） | 0 越界 | 检查 deadline_guard 实现、收紧 Ŵ_m |
-| 契约等价（E556） | 日志逐位等价 | 逐行审计表 536 映射、修 v^⊥ 定义 |
-| WCET（E557） | p99 ≤20ms 且抖动 ↓≥50% | 块生成移独立线程、精简继承路径 |
-| 背压（E558） | 0 丢拍 | 契约表加过载降级行、感知批量化 |
-| 归因精度（E559） | 相关性 ≥0.8 | 增大消融回合 H、改归因得分聚合 |
-| 降耗（E560） | 算力 ↓≥40% | 扩大 eligible 集（仍受 φ^elig 约束） |
-| 抖振（E561） | 翻转 ≤1/模块/10min | 增大 τ_on−τ_off 间隔、提高 H_off |
-| 强制唤醒（E562） | 1 周期内唤醒 | 唤醒路径移出 EDF 低优先级、预载权重 |
-| 端到端（E563） | ≥ v8 + 10% | 回退 K_eff 上限、调 β |
-| Chunk×DA（E564） | 过渡无跳变 | K_eff 收缩插值平滑、块边界重规划 |
-| Chunk×ER（E565） | 延迟 ≤200ms 且评分 ≥4/5 | 缩短 K_max、情感变化触发即时块终止 |
-| 形式化（E566） | CBMC 全通过 | 修调度器实现、补 v^⊥ 路径断言 |
-| 长跑（E567） | 中止命中率趋势稳定 | 复盘 β 标定漂移、加周期性 β 重标定 |
-| 多机（E568） | 完成率 ↑≥10% | 契约表版本化、冲突消解协议 |
-| 对抗时序（E569） | v^⊥ 退化而非 crash、违背 ≤2% | 增加异常检测、契约表完整性校验 |
-| 竞赛（E570） | ≥ v8 + 15% | 综合调参、分析失分瓶颈 |
+| 分层（E571） | 层间成功率差 ≥15pp | 调整分层因子/难度定义 |
+| 自适应效率（E572） | 等预算失败发现 ↑≥2× | 调 β_B、ρ、近失败核宽 |
+| Ĝ 稳定（E573） | 波动 ≤10% | 增大留出族数/样本量 |
+| 污染审计（E574） | 检出 ≥95% | 强化沙箱、账本哈希链 |
+| 统计有效（E575） | CI 覆盖 ≥93% | 修正 α-spending、增大 n |
+| Lipschitz 标定（E576） | L̂≥L 比例 ≥99% | 增大先验 L、加密锚点 |
+| 不连续定位（E577） | 召回 ≥90%、假安全 ≤1% | 提高审计密度、按敏感因子加密 |
+| 细分收敛（E578） | 增长符合理论阶 | 改二分策略/因子排序 |
+| 覆盖率（E579） | 90% 覆盖在预算内 | 因子降维/重要度剪枝 |
+| 外推先导（E580） | 领先 ≥300ms | 提高因子解析频率、边界缓冲 |
+| GGM（E581） | 召回 ≥95%、误报 ≤5% | 调 τ_gap/τ_audit/T_c |
+| Goodhart（E582） | J_H 不随 dev 优化下降 | 隔离实现审计、冻结 H |
+| 差距曲线（E583） | 单调不增 | 重定义 d_S 权重 |
+| 跨族（E584） | ≥ dev−15% | 扩展训练族、改 SA 锚点 |
+| SA 等价（E585） | 逐位等价 | 审计 E(s) 与动作 mask 路径 |
+| BF 等价（E586） | 口径一致 | 恢复静态套件为默认 |
+| 基准在环（E587） | 无 overfit 且 ≥v9 | 冻结 H、缩短 dev 复用 |
+| 在线开销（E588） | ≤0.1ms、0 丢拍 | 索引换缓存、异步化 |
+| 对抗生成（E589） | 违例样本 ≤N 查询 | 引入梯度/贝叶斯优化 |
+| 竞赛（E590） | ≥v9+10% 且 held-out 不塌 | 综合调参、分析失分瓶颈 |
 
 ## 8. 本轮最大风险
 
-**一句话**：块证书的可靠性以「信任域内前向模型误差 ≤ β」为前提，而 DA-ML 检测到的域偏移恰恰是模型误差最大化的时刻——若 Δ_dom 的 20 帧滑窗滞后于真实分布跳变，K_eff 会在一个证书已失效的块上仍取大值，中块中止可能迟到，即「分块执行在最需要安全的时刻暴露最不可靠的证书」。
+**一句话**：单元证书的健全性以“任务性能在场景因子空间上 Lipschitz 连续”为前提，而抓取/接触成功本质是阈值事件，其不连续面可能藏在透明材质、反光光照或特定抓取角度的孤立面上；若该面恰好落在单元内部而审计样本未命中，锚点全过、证书被判有效，系统就会在“已认证”单元里以 K_eff>1 运行——泛化保证恰在最罕见的灾难样本处失效。
 <!-- ARTIFACT:END -->
