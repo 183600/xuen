@@ -4241,3 +4241,4 @@
 {"event": "verdict", "id": "20261115-065528-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-15 07:05:28"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261115-040007-r1", "changed": ["idea", "artifact"], "ts": "2026-11-15 07:05:28"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-15 07:06:16"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-15 08:04:59"}
