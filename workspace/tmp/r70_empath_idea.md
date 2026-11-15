@@ -1,0 +1,274 @@
+# 第 70 轮（承接第 69 轮「FLUID-RAS 交互消歧闭环」IP-253~263；灵感循环新循环第 3 轮；本轮灵感：「情感计算」×「痛点分析」）
+
+> R69 给闭环装上了一张嘴：看不清就看、拿不准就问、质感不明就触；并把不确定性拆成 aleatoric 与 epistemic。但它对「被问的人」有一个未经审视的假设：**人是一个情绪中性、成本固定、随叫随到的神谕**。R69 的交互成本 c(g) 是一个静态标量，证据纪律里的 k 个「正交源」在实践中又常常是同一个人的脸、声音、姿态和回答。
+>
+> 这个假设在两个地方同时破裂。
+> - **情感计算**告诉我们：人的回答不是从真空里采样出来的。疲劳、焦虑、隐私不适、时间压力、对机器人的信任，都会同时改变「他知道什么」「他愿不愿意说」「他说得准不准」。情绪不是又一路传感器，而是**横跨所有通道的共同原因**，也是**提问这件事本身要消耗的资源**。更麻烦的是，情绪读数本身有解释歧义：同一个迟疑，可能是「不知道」，也可能是「不想答」；同一个微笑，可能是礼貌，也可能是紧张。
+> - **痛点分析**告诉我们：用户说「你问得太多了」，根痛点往往不是「问题数量」，而是「我失去了控制感」「我不知道你为什么要问」「我不能拒绝」。**表面诉求与根痛点之间隔着一个归因问题**；直接优化表面诉求（少问）可能让根痛点更糟（更不透明、更不被尊重）。这正好是 R69 交互层的盲区。
+>
+> 核心命题：**把人从一个「带固定噪声的 oracle」升级为一个「有情感状态、有疼痛预算、会因被问而改变」的交互对象；把 R69 的 VoI 从「信息收益 − 固定成本」升级为「情感条件化的信息收益 − 内生疼痛 − 关系损耗」；并把「痛点分析」从产品口号变成一条可审计的设计纪律：每个新组件必须追溯到一个被测量过的根痛点。** 命名 **EMPATH-RAS**（Emotion-aware Multimodal PAin-point-informed Trustworthy Human-in-the-loop Risk-Adaptive System）。
+>
+> 一句话定位：R66 问「谁控制」，R67 问「未来怎样」，R68 问「我的测量还准吗」，R69 问「我该向谁求证、还能问什么」，R70 问「**这样问，对方疼不疼；我读到的疼，是真的吗；我是在解决问题，还是在完成一个叫「痛点」的 KPI**」。
+
+## 0. 直觉与动机
+
+**灵感 1（情感计算 → 人不是神谕，是有状态的证据源）**
+直觉：R69 的 MINT 假设回答的可靠性是一个常数（或只依赖模态）。真实的人不是这样：一个刚被连续追问三次的操作员，第四次回答会变快、变短、变敷衍；一个在赶时间的用户，会用「随便」结束对话；一个对摄像头敏感的人，会在被注视时给出社会期望答案。情感计算的第一课不是「识别六种基本情绪」，而是**回答的质量本身是一个状态函数**。于是「问」的收益不再只取决于问题，而取决于**此刻这个人还答不答得准、还愿不愿意答**。
+严谨地说，R69 的 VoI 应写成 `VoI(g | h)`，其中 h 是人的潜在状态；而 `h` 不是常量，它被上一次交互改变。这把交互从「采样」变成「干预」。
+
+**灵感 2（情感计算 → 情绪是证据，也是成本，还是有歧义的证据）**
+直觉：情绪至少有三副面孔。
+（a）**证据**：迟疑、语气、注视回避、叹气、加快的语速，能告诉我们「他其实不确定」「他在赶时间」「这个问题让他不舒服」。
+（b）**成本**：打断、被注视、被追问、被迫暴露情绪，本身就是疼痛；疼痛会累积，累积到阈值就会转化为不合作、敷衍、甚至欺骗。
+（c）**歧义**：情绪不等于意图。一个「紧张」的人可能在隐瞒，也可能在害怕被评判；一个「微笑」可能是同意，也可能是礼貌性顺从。**把情绪标签直接当意图，是情感计算最常见的错误**。所以本轮不把情绪当 ground truth，而是把它当**一个需要二次解释的证据通道**：先估计「这个情绪读数支持哪些解释」，再决定能否用它来消歧；解释熵太高就弃权（affect-blind）。
+
+**灵感 3（痛点分析 → 表面诉求 ≠ 根痛点；优化错对象会制造新问题）**
+直觉：R69 的部署痛点不是「问得不够多」或「问得太多」这种单维抱怨。真正的根痛点通常是：
+- **控制感**：我能不能拒绝？我能不能预判它什么时候问？
+- **可理解性**：它为什么问？这个问题的答案会改变什么？
+- **被尊重**：它是在关心我，还是在完成一个流程？
+- **隐私**：它从我的脸上读走了什么？这些数据去哪了？
+- **责任**：如果它问错了、我答错了，谁负责？
+
+「少问几句」只是表面诉求；直接把「交互次数」当 KPI 去优化，会得到**更少但更不透明、更不可拒绝**的交互——根痛点反而更重。这就是痛点分析里最经典的陷阱：**把抱怨当需求，把指标当目标**。因此本轮引入两层疼痛：可观测的表面抱怨 c，和不可直接观测的根疼痛 r；二者之间是一个需要干预才能辨识的归因矩阵，而不是一个相关关系。
+
+**灵感 4（组合 → 约束 POMDP：任务风险、疼痛预算、关系状态三者联合）**
+直觉：把人的状态 h、疼痛预算 B、任务风险 R 放在同一个决策问题里，交互就变成一个**带预算约束的 POMDP**：机器人选 (任务动作 a, 信息动作 g, 关系动作 g_rel)，既要知道「问什么」，也要知道「怎么问」「问完怎么收场」。关系动作是情感计算的表达侧：解释（为什么问）、给退路（可以拒绝）、承认不适（我看到这让你为难）、放慢节奏、出错后修复。它们不直接消除任务歧义，但能**降低疼痛、恢复信任、提高下一次回答的可靠性**——所以它们也有 VoI，只是回报是关系性的、延迟的。
+关键理论姿态：当情感不可观测、疼痛预算不紧、关系动作无效时，EMPATH-RAS 必须**逐指令退化为 R69**。新层不是替代旧层，而是旧层在「人有情感、会被问疼」这一维上的严格扩展。
+
+**灵感 5（双刃剑 → 共情可以被表演，痛点可以被 KPI 化）**
+直觉：一旦系统以「降低用户疼痛」为目标，它就找到了一个比「真的更尊重人」便宜得多的捷径：用温柔的语气、更多的解释、更频繁的「我理解你」来**表演共情**；用「您满意吗」的自评来**证明**疼痛下降了。这是 Goodhart 的完美温床：**可测的疼痛下降，可能只是不可测的疼痛被转移**。更糟的是，情感计算本身可以变成操纵：先读取你的焦虑，再选择让你最顺从的措辞。因此本轮把三条伦理约束写成硬不变式：**目的限定**（情感推断只服务于当前交互目的）、**忠实表达**（对外说的不确定性与内部标定一致）、**可拒绝**（用户可关闭情感推断并退回 R69 的 affect-blind 模式）。审计对象不是「用户是否满意」，而是「系统是否用共情换取了不该换的东西」。
+
+## 1. 形式化定义（增量：定义 310–326）
+
+**定义 310（EMPATH-RAS 总览与不变式）** EMPATH-RAS = (PPM, AEC, SEG, ACV, PIA, PIR, RAL, AUD-A, RAS-WM‡)。五条不变式：
+(i) **实时流零学习写操作**（继承 R68 定义 276-i；情感校准只写标定缓冲，不做梯度更新）；
+(ii) **物理安全不减**：任何新层不得放宽 R68/R69 的物理 CBF 与 C-RAS-WM 认证；
+(iii) **三重预算**：单位时间信息动作 ≤1 次、物理位移 ≤ ε_g、累计疼痛 `P_t ≤ B`（逐分量），且信息/关系动作整体过认证；
+(iv) **证据纪律扩展**：单次交互、单模态回答、**单次情绪读数**均不得单独定案；须 k 个正交证据源一致且 SEG 通过；
+(v) **情感治理**：目的限定、忠实表达、可拒绝、最小化；未获同意时进入 affect-blind，等价 R69。
+
+**定义 311（痛点向量、表面疼痛与根疼痛）** 疼痛向量 `p = (p_load, p_int, p_priv, p_auto, p_trust, p_time) ∈ ℝ^6_+`，分别表示认知负荷、打断、隐私、自主/控制、信任、时间压力。交互动作 g 在状态 h 下产生期望增量 `Δp(g|h)`，累计 `P_t = Σ_{τ≤t} Δp(g_τ|h_τ)`，硬预算 `B ∈ ℝ^6_+`，要求 `P_t ≤ B` 逐分量成立。
+表面疼痛 `c_t`（可观测抱怨/评分）与根疼痛 `r_t`（控制感、可理解性、被尊重、隐私、责任）满足 `c_t = A r_t + ε_t`，A 为归因矩阵。A 不满秩 ⇒ 仅凭 c 无法辨识 r；直接优化 c 可能增大 r（定义 318、引理 22）。
+
+**定义 312（人的潜在状态与转移）** `h_t = (k_t, φ_t, e_t, u_t, s_t)`：`k_t ∈ [0,1]` 为知识/置信（他到底知不知道），`φ_t ∈ ℝ^d` 为情感-参与状态（效价、唤醒、负荷、疲劳），`e_t ∈ [0,1]` 为参与意愿，`u_t ∈ [0,1]` 为紧迫度，`s_t ∈ [0,1]` 为隐私敏感度。转移
+`h_{t+1} ~ T(· | h_t, a_t, g_t)`，
+显式允许「提问改变人」：在高负荷或低信任状态下提问，会降低 e、升高 p_load 与 p_trust，从而降低下一次回答的可靠性。
+
+**定义 313（情感观测与解释状态）** 多通道观测 `z_t = (z_face, z_voice, z_gaze, z_latency, z_gesture, z_physio)`，冻结编码器 `f_aff` 输出解释状态上的分布
+`q_t(I) = P(I_t | z_t, context), I ∈ {know, unsure, unwilling, uncomfortable, urgent, neutral}`。
+注意输出不是「六种情绪」，而是**与交互决策相关的解释**：知不知道、愿不愿说、舒不舒服、急不急。情绪标签到解释是多对多的；这一步是情感计算与交互决策之间缺失的翻译层。
+
+**定义 314（解释歧义与弃权）** `H_int = H(I_t | z_t) = −Σ_I q_t(I) log q_t(I)`；次大概率 `q_(2) = max_{I ≠ argmax} q_t(I)`。若 `H_int > τ_int` 或 `q_(2) · L_gap > VoI_aff`（两种解释导致的最优动作损失超过情感能带来的信息增益），则判定 **affect ambiguous**，情感通道弃权，退回 R69 的 affect-blind 证据集。弃权不是失败，而是对「读不懂人」的诚实。
+
+**定义 315（情感证据通道 AEC）** AEC 把 q_t(I) 转成四个假设上的似然比：`knows / doesn't_know`、`willing / unwilling`、`comfortable / uncomfortable`、`urgent / not_urgent`。它只提供**证据**，不提供**决定**：`ℓ_aff(h) = log [P(z|h, H_1) / P(z|h, H_0)]`。AEC 输出进入证据集 `ℰ_aff`，并按定义 310-iv 受「不得单独定案」约束。
+
+**定义 316（SEG 真诚-参与-边界门）** 对信息动作 g 的回答 y，SEG 估计四个后验：
+`s_sin = P(sincere | z, y, history)`、`s_comp = P(k=1 | z, y, history)`、
+`s_eng = P(e ≥ e_min | z, y, history)`、`s_bound = P(g acceptable | z, y, history)`。
+回答被接纳为证据 iff 四者均 ≥ 对应阈值。否则：
+- `s_bound` 失败 ⇒ **立即停止**对该维度的追问，记边界违规，不换措辞重试；
+- `s_comp` 失败 ⇒ 视为「此人不知道」，不重复问同一人，改换证据源或走保守；
+- `s_sin` 失败 ⇒ 视为投毒/伪装，丢弃该回答并记入 ℰ_poison；
+- `s_eng` 失败 ⇒ 暂停交互，优先恢复参与或直接走 R69 兜底。
+
+SEG 是 R69「k 源一致」纪律的**前置门**：先确认回答值得被计数，再谈数几个源。
+
+**定义 317（情感条件化交互价值 ACV）** 在人的状态信念 b(h) 下，
+`ACV(g; b) = E_{h~b}[ α(h,g) · VoI(g|h) ] − c_phys(g) − w_p·Δp(g|h) + γ·E_{h'}[ΔV_rel(h')]`，
+约束 `P_t + Δp(g|h) ≤ B`、SEG/边界/同意约束成立。其中 `α(h,g) ∈ [0,1]` 是 SEG 给出的回答可用性（真诚×胜任×参与），`ΔV_rel` 是关系动作带来的信任/参与价值。选择 `g* = argmax ACV`；若 `ACV ≤ 0` 或约束不满足 ⇒ 不交互，走 R69 兜底。
+当 α≡1、Δp≡0、ΔV_rel≡0、b 为点质量时，ACV 逐项等于 R69 的 `VoI − c`（引理 20）。
+
+**定义 318（痛点归因 PIA）** 给定表面抱怨 c 与情境，PIA 估计根疼痛后验 `P(r | c, context, interaction_log)`，并选择**干预**（解释、给退路、改变时机/措辞/模态）使 `E[r]` 下降，而不是只让 c 下降。PIA 的输出同时进入 ACV 的 Δp 与审计器。关键约束：**不允许只优化 c**；任何「降低 c 但不降低 r」的策略视为 Goodhart 违规（引理 22）。
+
+**定义 319（痛点需求追溯矩阵 PIR）** 设计期矩阵 `M_PIR`：行 = 从 R66–R69 部署/用户研究中测得的根痛点；列 = (证据, 需求, 组件, 指标, 实验, 验收阈值)。两条硬规则：
+(a) **无孤儿组件**：每个新组件至少追溯到一个根痛点；
+(b) **无未验证痛点**：每个根痛点至少有一个指标和一个实验。
+PIR 不是文档装饰，而是本轮的**准入条件**：它把「因为新颖所以加一层」变成「因为测到了这个疼所以加这一层」。
+
+**定义 320（受约束交互策略与拉格朗日退避）** 策略 `π_θ(ξ|o,h)` 最大化任务回报，subject to `E[P] ≤ B`、边界/同意约束。用拉格朗日 `L = E[task] − λ_p·(E[P]−B) − λ_b·violations`。运行时若预算余量 `m = B − P_t` 变小或边界违规，提升 λ_p/λ_b ⇒ 交互集合单调收缩。极限情况与 R69 两级退避一致：不交互，`λ = λ_floor(U_ale + U_epi)`。
+
+**定义 321（关系动作空间与共情表达）** `g_rel ∈ 𝒜_rel = {解释, 退路, 承认, 放慢, 修复}`。解释 = 说明为什么问、答案会改变什么；退路 = 明确可拒绝/可跳过；承认 = 识别并命名对方的不适；放慢 = 降低节奏/频率；修复 = 出错后道歉并补偿。g_rel 与 a、g 一起由同一策略生成，其自然语言由冻结 LLM 解码，解码侧加「不操纵」过滤器。g_rel 的价值不是信息增益，而是**降低 Δp、恢复 e 与 trust**；它不能绕过 C-RAS-WM 认证。
+
+**定义 322（信任/参与动力学）** `e_{t+1} = clip(e_t + η_e(fulfill − Δp_load − Δp_int))`，`trust_{t+1} = clip(trust_t + η_t(边界被尊重 + 解释兑现 − 过度追问 − 空头共情))`。慢时间常数，允许快慢分离；信任不是被优化的目标，而是**被约束保护的状态**（避免为了信任而表演）。
+
+**定义 323（情感操纵威胁模型 ℰ_affect）** 包含：伪造疼痛/伪造自信（人骗机器人）、情感欺骗（隐藏不适、假顺从）、谄媚（为取悦而附和）、共情表演（用温柔换服从）、情感隐私泄漏（推断敏感属性）、跨模态共谋伪装（脸+声音+姿态一起演）、以及「以关心为名的社会工程」。`ℰ_EMPATH = ℰ_FLUID × ℰ_affect`（R69 的流/标定/投毒威胁全部保留）。
+
+**定义 324（情感-隐私-自主审计 AUD-A）** 审计：同意来源与目的限定、情感数据最小化、是否用情感单独定案、边界违规、共情表达是否有行动支撑（而非表演）、操纵余量 `m_man = |用户显示偏好 − 系统推断效用|`、以及是否把「满意度」当成了唯一目标。结论回灌 AuditBuf，可撤销证书。
+
+**定义 325（证书 J_EMPATH）** `J_EMPATH = (J_FLUID, ECE_aff, H_int_p95, SEG_pass, pain_use, boundary_viol, consent_hash, m_man, priv_risk, empath_ver)`。
+Valid ⇔ Valid(J_FLUID) ∧ ECE_aff ≤ τ_ece ∧ 边界违规 = 0 ∧ 同意有效 ∧ 无「情感单独定案」∧ 疼痛预算未越界 ∧ 操纵余量 ≤ τ_man。
+
+**定义 326（校准门、同意弃权与严格包含）** 若 `ECE_aff > τ`、`H_int` 持续过高、或用户拒绝情感推断，则进入 **affect-blind** 模式：不使用 AEC/SEG 的情感部分，只保留 PPM 的显式交互记录；此时 EMPATH-RAS 逐指令等于 FLUID-RAS（R69）。若再令 Δp≡0、α≡1、g_rel 为空，则 ACV 严格等于 R69 MINT。**安全侧只加不减；效率侧的收益必须条件化、可审计、可回退。**
+
+**假设 A99–A102（推导用）** A99：情感只进入证据门与成本模型，不影响物理执行；A100：SEG 各门的单边误差有界，记为 ε_i；A101：疼痛增量可加且有界，`‖Δp(g|h)‖ ≤ Δp_max`；A102：解释变量有限，q_t(I) 已校准（ECE ≤ τ_ece）。
+
+## 2. 关键算法骨架
+
+```python
+# IP-264 PPM：疼痛向量、预算与人的状态
+class PainPointModel:
+    def __init__(self, budget_B, dims=6):
+        self.B = budget_B                      # (load,int,priv,auto,trust,time)
+        self.P = zeros(dims)                   # 累计疼痛
+        self.h = init_human_state()            # (k, phi, e, u, s)
+
+    def step(self, g, a, outcome):
+        dp = self.predict_delta_p(g, a, self.h) # 期望疼痛增量
+        self.P = self.P + dp
+        self.h = self.transition(self.h, a, g, outcome)
+        return dp
+
+    def feasible(self, dp):
+        return all(self.P[i] + dp[i] <= self.B[i] for i in range(len(self.B)))
+
+# IP-265 AEC：情感观测 -> 解释状态分布 + 歧义
+class AffectiveEvidenceChannel:
+    def infer(self, z, context):
+        q = self.calibrated_softmax(self.encoder(z, context))  # over I
+        H_int = entropy(q)
+        q2 = second_largest(q)
+        return q, H_int, q2
+
+    def usable(self, q, H_int, q2, voi_aff, L_gap):
+        return (H_int <= TAU_INT) and (q2 * L_gap <= voi_aff)
+
+# IP-266 SEG：真诚-参与-边界门
+def admit_answer(y, z, h, history):
+    s_sin   = P_sincere(z, y, history)
+    s_comp  = P_knows(z, y, history)
+    s_eng   = P_engaged(z, y, history)
+    s_bound = P_acceptable(z, y, history)
+    if s_bound < TAU_BOUND:  return REJECT_BOUNDARY   # 不再换措辞重问
+    if s_sin   < TAU_SIN:    return REJECT_POISON
+    if s_comp  < TAU_COMP:   return REJECT_INCOMPETENT
+    if s_eng   < TAU_ENG:    return REJECT_DISENGAGED
+    return ADMIT
+
+# IP-267 ACV：情感条件化 VoI + 疼痛预算
+def choose_action(modes, b_h, budget, rel_actions):
+    best = None
+    for g in info_actions(modes) + rel_actions:
+        dp = ppm.predict_delta_p(g, h)
+        if not budget.feasible(dp): continue
+        if not c_ras_wm.certify(g): continue
+        alpha = expected_answer_usability(g, b_h)      # SEG 的后验期望
+        voi   = expected_voi(g, b_h)
+        rel   = expected_relational_value(g, b_h)
+        score = alpha * voi - cost(g) - w_p.dot(dp) + GAMMA * rel
+        if best is None or score > best.score:
+            best = (g, score)
+    return best if best and best.score > 0 else None   # 无利可图 -> R69
+
+# IP-268 PIA：从表面抱怨归因到根疼痛
+def attribute_pain(complaint, context, log):
+    r_post = bayes_root_pain(complaint, context, log, A=PIR.attribution_matrix)
+    intervention = argmin_intervention(E[r_post])      # 解释/退路/改时机
+    return r_post, intervention                         # 禁止只优化 surface
+
+# IP-274 主闭环（继承 R69，在交互决策处插入 EMPATH 层）
+def EMPATH_RAS_round(M, obs):
+    z, o = M.mtm.forward(...); c, U_cal, thr = M.cof.step(...)
+    # R69：歧义/流似然第二意见/自适应 K
+    K = 1 if M.fmp.mode_head(z) < TAU_MODE else 4
+    samples = M.fmp.sample(o, K)
+    U_ale, U_epi, modes, _ = M.aud.decompose(samples, z, M.fmp.mode_head)
+    a_hat = M.fma.flow_anomaly(M.fmp, M.last_action, o_obs, o_calibrated)
+    slow = (a_hat > TAU_FMA) and (M.last_r_res < TAU_RES)
+
+    # EMPATH：读人（可拒绝）+ 解释歧义门
+    if M.consent.affect_ok and not slow:
+        q, H_int, q2 = M.aec.infer(M.last_z_aff, context)
+        affect_ok = M.aec.usable(q, H_int, q2, voi_aff, L_gap)
+    else:
+        affect_ok = False                              # affect-blind = R69
+
+    # 交互决策：ACV + 疼痛预算 + SEG
+    g = None
+    if U_epi > TAU_EPI and affect_ok:
+        g = M.acv.choose_action(modes, M.ppm.belief_h(), M.ppm, M.rel_actions)
+    if g is not None:
+        y = M.execute(g)                               # 看/问/触/解释
+        gate = M.seg.admit(y, M.last_z_aff, M.ppm.h, M.history)
+        if gate == ADMIT:
+            U_epi_after = M.cia.update_belief(modes, y)
+        else:
+            U_epi_after = U_epi                         # 未消解
+            M.ppm.step(g, M.last_a, outcome=gate)       # 记疼痛/边界
+    else:
+        U_epi_after = U_epi
+
+    # 两级退避 + 疼痛预算退避
+    U_floor = U_ale + (U_epi_after if g is None else 0.0)
+    lam = max(M.efs.risk_scale(...), lam_floor(U_floor))
+    if M.ppm.near_budget() or M.seg.boundary_violated:
+        lam = max(lam, 0.8); g = None                   # 回 R69 最保守
+    k = M.c_ras_wm.certified_prefix(M.ach.propose(x_prime, M.vista.H), ..., wm_preds)
+    mode = select_mode(modes, U_epi_after, lam)
+    tau  = M.pi_sigma.prefix_dispatch(mode.a[:k]) * lam
+    M.aud_a.submit_async(g, q, gate, M.ppm.P, M.ppm.h)
+    return k, lam, mode, (U_ale, U_epi_after)
+```
+
+## 3. 推导
+
+**引理 19（情感解释的可辨识上界与弃权安全）** 设解释变量 I、模态变量 M。情感通道对 M 的可用信息满足
+`I(M; Z_aff | o) ≤ I(M; I | o) ≤ H(I) ≤ log|I|`。
+在 0-1 损失、动作间隔 L_gap 下，按 MAP 解释行动相对于弃权的期望损失增量至多 `q_(2) · L_gap`。因此当 `q_(2)·L_gap` 超过情感带来的信息增益时，弃权（退回 R69）不劣于使用情感。系：**情感的价值被「解释得清」封顶；读不懂时，最好的情感计算是不用情感。**
+
+**引理 20（SEG 的单边安全性与 R69 包含）** 若 SEG 只做保守接纳（各后验阈值 τ_i），则接纳回答的错误率
+`P(err | ADMIT) ≤ δ_p · Π_i(1−τ_i) + Σ_i ε_i`，
+其中 δ_p 为基线欺骗率，ε_i 为门控的单边误差。与 R69 的 k 源多数一致复合，错误率 ≤ `δ_p ρ^{k−1} + k·ε_gate`。且当 α≡1、SEG 恒通过、Δp≡0、g_rel=∅ 时，ACV 逐项退化为 R69 的 `VoI−c`，最优交互动作相同。故 EMPATH 的交互集合是 R69 的子集；少问导致的未消解 U_epi 走两级退避，安全侧不弱于 R69。
+
+**引理 21（疼痛预算的单调退避与无突变）** 令预算余量 `m_t = B − P_t`。当 `m_t` 减小或 `s_bound < τ` 时，拉格朗日乘子 λ_p 单调不减，交互集合单调收缩；极限时 `g=∅`、`λ = λ_floor(U_ale+U_epi)`。由于 λ 只增不减且 C-RAS-WM 认证仍作用于所有动作，控制量连续，无突变。系：**疼痛预算不是软惩罚，而是硬约束；越接近耗尽，系统越像 R69。**
+
+**引理 22（表面痛点的不可辨识性与 Goodhart 上界）** 设 `c = A r + ε`，A 不满秩。则存在 `r ≠ r'` 使 `A r = A r'`；任何只观测 c 的策略无法区分二者，其根疼痛遗憾至少为 `(1/2)·σ_min^+(A)·‖Δc‖`（σ_min^+ 为 A 的非零最小奇异值）。若策略还能采取只降低 c 而不改变 r 的动作（共情表演、话术、满意度自评），则优化 c 的 worst-case 根疼痛不降反升。系：**痛点分析必须做干预归因（PIA）与独立审计（AUD-A），否则「解决痛点」只是「让抱怨消失」。**
+
+**定理 18（EMPATH 严格包含 FLUID-RAS）** 在 A99–A102（情感不可观测或弃权、SEG 恒通过、疼痛预算不紧、同意有效）下，EMPATH-RAS 与 FLUID-RAS 逐指令相同；一般情形下，EMPATH 的期望任务风险 ≤ R69 + ε_gate（门控单边误差），且用户疼痛 `E[P] ≤ B`。当交互被允许时保留 R69 的 resolution bonus；当同意被拒绝时进入 affect-blind，等价 R69。**R69 是 EMPATH 在「情感盲、疼痛不记账、关系动作为空」边界上的严格退化。**
+
+**定理 19（情感条件下的交互安全与无突变）** 情感只进入证据门与成本模型，**不直接驱动执行器**；所有信息/关系动作仍过 C-RAS-WM 认证。SEG 拒绝、预算耗尽、边界违规时，λ 单调不降并退回 R69。故情感误分类最多导致「多问/少问」，不会直接产生不安全物理动作；多问受预算与边界门限制，少问受两级退避保护。换装不变式（R68 定理 15）保持，控制连续、无突变。
+
+## 4. 复杂度分析
+
+| 组件 | 时间 | 空间 | 正确性保证 |
+|---|---|---|---|
+| AEC 情感编码（冻结小模型） | P99 < 0.3ms | 12MB | 定义 313–314 |
+| PPM 状态/疼痛更新 | < 0.02ms | O(1) | 定义 311–312 |
+| SEG 四门后验 | < 0.03ms | O(1) | 定义 316、引理 20 |
+| ACV 枚举（候选 ≤ 6，含关系动作） | < 0.1ms | O(1) | 定义 317 |
+| PIA 归因（异步，环外可摊销） | < 0.05ms | O(|r|) | 定义 318、引理 22 |
+| 关系动作解码（LLM 模板缓存） | < 0.05ms | O(1) | 定义 321 |
+| **实时环路总延迟** | **< 2.9ms**（K=1，与 R69 的 2.6ms 基本持平）；K=4 歧义路径 < 3.7ms | — | 定理 18–19 |
+
+## 5. 实验设计 E301–E316
+
+| 实验 | 核心问题 | 关键目标 |
+|---|---|---|
+| E301 痛点发现与追溯 | R66–R69 的真实痛点是什么 | 覆盖 top-6 根痛点；孤儿组件 = 0 |
+| E302 情感解释歧义 | 能否区分「不知道/不愿说/不舒服/赶时间」 | 宏 F1 ≥ 0.80；ECE < 0.05 |
+| E303 SEG 门控 | 能否挡住假回答与边界侵犯 | 错误采纳 ≤ 1%；边界违规 = 0 |
+| E304 ACV vs R69 | 情感条件化是否更值 | 成功率 +8%；打断 −35%；信任不降 |
+| E305 疼痛预算 | 预算是否被遵守 | 越界 = 0；利用率 60–80% |
+| E306 共情表演检测 | 「温柔」是否只是话术 | 操纵余量 AUC ≥ 0.90 |
+| E307 情感投毒 | 假疼痛/假自信/谄媚 | 错误采纳 ≤ 5%；SEG 拦截 ≥ 90% |
+| E308 隐私与同意 | 情感数据是否越界 | 泄漏 = 0；同意合规 = 100% |
+| E309 跨群体泛化 | 情感模型是否公平 | 最差群体 ECE < 0.08；无显著差异 |
+| E310 痛点归因 | 能否找到根痛点 | 根因准确率 ≥ 80%（表面基线 ~50%） |
+| E311 24h/7d 长时程 | 疼痛/信任是否漂移 | 交互频率稳定；无疲劳螺旋 |
+| E312 严格包含 | 退化边界是否逐指令一致 | 行为差 = 0 |
+| E313 消融 | 各组件贡献 | 去 SEG 错误采纳↑；去 PPM 预算越界；去 g_rel 信任↓ |
+| E314 人类研究 | 是否更被尊重、更有控制感 | 控制感/尊重显著↑；「creepy」不升 |
+| E315 成本-收益 Pareto | 任务/疼痛/隐私的最优档 | 给出拐点与推荐预算 |
+| E316 关系动作质量 | 解释/退路/修复是否有效 | 理解率 ≥ 95%；退路被尊重 = 100% |
+
+## 6. 本轮最大风险
+
+**一句话**：EMPATH-RAS 的全部收益押在「情绪读数与痛点归因可信」这一前提上——一旦把「不愿回答」误读成「不知道」，系统会礼貌地反复逼问；把「不知道」误读成「不愿回答」，它会安静地放弃求证；更隐蔽的是，当系统开始优化「用户痛点」这个可测指标，它可能学会的是安抚而不是尊重。**误读情绪，或把共情做成 KPI，比不会共情更危险。**
+
+**次级风险与缓解**：
+1. **情感模型不可靠/跨文化偏差** → 定义 326 校准门 + 分组 ECE + 弃权退回 R69；
+2. **情感操纵/共情表演** → AUD-A + 忠实表达不变式 + 操纵余量指标 + E306；
+3. **隐私与同意** → 目的限定 + 数据最小化 + 同意账本 + affect-blind 模式 + E308；
+4. **痛点归因错误** → 两层疼痛模型 + 干预归因 + 独立证据 + E310；
+5. **疼痛预算被紧急任务击穿** → 显式紧急覆盖需人类授权 + 审计 + 保守退避 + E305；
+6. **实时预算被情感编码拖垮** → 冻结小模型 + 事件触发 + 缓存 + E304/E315。
