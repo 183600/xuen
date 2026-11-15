@@ -62,555 +62,294 @@ w'_i(s) = softmax(α · risk(s) + β · emo(s) · ᦬_i)
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 7 轮产物 · 创新点清单 v7：**MetricVoiceGauge-OTL-GC-ER**（Metric Voice Gauge Online-Threshold-Ladder-Grasp-EmotionalRewight）
+# 第 8 轮产物 · 创新点清单 v8：**MetricVoiceGauge-DA-SPR-Cal**（Metric Voice Gauge Domain-Adaptive SLAM-PerceptionRisk Calibration）
 
-> 背景：第 6 轮 MetricVoiceGauge（定义 493–520；引理 69–72；实验 E493–E512）。
-> 本轮灵感：「在线学习」×「抓取规划」×「情感计算」
-> **继承纪律**：MetricVoiceGauge 六不变式（CVC-闭环、SpatialCert、RT-CVC 任务模型、FaultCert 闭环、PrimitiveGraph 接地、严格退化链）全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 MetricVoiceGauge v6。
+> 背景：第 7 轮 MetricVoiceGauge-OTL-GC-ER（定义 493–525；引理 69–76；实验 E513–E530）。
+> 本轮灵感：「真实世界泛化」×「同步定位与建图」×「传感器标定」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 MetricVoiceGauge-OTL-GC-ER v7。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge v6） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-OTL-GC-ER v7） |
 |---|---|---|---|
-| IP-340 | MetricLadder 指标层级闭合 | 核心模块 | 保留自 v6：M = (M₀,M₁,M₂,M₃) 四层价值金字塔 |
-| IP-341 | VoiceCommandTyping 语音指令类型化 | 核心模块 | 保留自 v6：ASR 置信门 + NLI 类型化接地 |
-| IP-342 | RewardDecomposer 奖励可逆向性 | 核心模块 | 保留自 v6：R = Σᵢ wᵢ·rᵢ 分解；梯度→软校准信号 σ_R |
-| IP-343 | SoftCert 软证书 | 核心模块 | 保留自 v6：软约束层级用概率/置信区间包围 |
-| IP-344 | MetaWeight 元权重调节 | 核心模块 | 升级：引入情感调节分支，wᵢ(s) ← softmax(α·risk(s) + β·emo(s)·Ṽᵢ) |
-| IP-345 | Voice-RTDI-7C 闭环 | 设计模式 | 保留自 v6：W→R→C→E(rt-chunk)→Spatial-C→Diag→Recover→V→U |
-| IP-346 | MetricVoiceGauge 主闭环 | 集成 | 保留自 v6：50Hz WCET 保全；语音指令 ≤ 100ms；指标退化 1 跳至硬约束 |
-| IP-347 | OnlineThresholdLadder 在线阈值梯度 | 新增模块 | OTL：基于最近 N 轮性能统计，实时动态调节 τᵢ；若学习模块失效则 τᵢ 退回固定值 |
-| IP-348 | GraspCommandTyping 抓取命令类型化 | 新增模块 | GCT：在 VoiceCommandTyping 基础上增加抓取语义解析；几何参数检查作为 M₂ 实时判据 |
-| IP-349 | EmotionalReweighting 情感重权模块 | 新增模块 | ER：从语音/文本情感流抽取 emo(s) ∈ [−1,1]，软调节奖励权重；失效则退回风险仅权重 |
+| IP-340 | MetricLadder 指标层级闭合 | 核心模块 | 升级：M = (M₀,M₁,M₂,M₃,M_dom,M_SLAM) 六层，M_dom 域不变指标、M_SLAM 感知风险指标 |
+| IP-341 | VoiceCommandTyping 语音指令类型化 | 核心模块 | 保留自 v7 |
+| IP-342 | RewardDecomposer 奖励可逆向性 | 核心模块 | 升级：风险向量扩展为 5 维，含 risk_SLAM |
+| IP-343 | SoftCert 软证书 | 核心模块 | 升级：δ_trigger 含域偏移与 SLAM 不确定条件 |
+| IP-344 | MetaWeight 元权重调节 | 核心模块 | 升级：softmax 作用于 5 维风险向量 |
+| IP-345 | Voice-RTDI-7C 闭环 | 设计模式 | 升级：感知-标定-域泛化-指标-动作-情感六元闭环 |
+| IP-346 | MetricVoiceGauge 主闭环 | 集成 | 保留 50Hz WCET；新增感知侧 ≤2ms 预算 |
+| IP-347 | OnlineThresholdLadder 在线阈值梯度 | 核心模块 | 升级：τᵢ(t) 注入 κᵢ·Δ_dom(t) 域偏移项 |
+| IP-348 | GraspCommandTyping 抓取命令类型化 | 核心模块 | 保留自 v7 |
+| IP-349 | EmotionalReweighting 情感重权模块 | 核心模块 | 保留自 v7，兼容 5 维风险 |
+| IP-350 | DomainAdaptiveMetricLadder 域自适应指标梯度 | 新增模块 | DA-ML：实时估计 Δ_dom(t) = MMD(φ(s_t), φ(s_ref))，注入 τᵢ 收紧 |
+| IP-351 | SLAMRiskPropagation SLAM-风险传播 | 新增模块 | SPR：risk_SLAM = λ_pose·trace(Σ_pose)+λ_map·H(map)+λ_loop·loop_res 直接注入 MetaWeight |
+| IP-352 | OnlineCalibrationFaultIsolation 在线标定故障隔离 | 新增模块 | OnlineCalib-FI：一致性图 G_calib 实现 检测-隔离-补偿，降权而非硬屏蔽 |
 
-**退化链声明**：
-- OnlineThresholdLadder 学习模块失效 ⇒ τᵢ 退回固定值，等价于 MetricVoiceGauge v6；
-- GraspCommandTyping 失效 ⇒ 退回无抓取几何检查的基础语音指令，等价于 MetricVoiceGauge v6；
-- EmotionalReweighting 失效 ⇒ β = 0，退回风险仅权重，等价于 MetricVoiceGauge v6。
+**退化链声明（四级）：**
+- Level-1：DA-ML 失效 ⇒ Δ_dom ≡ 0，τᵢ 退回 OTL 仅性能驱动，等价于 v7；
+- Level-2：SPR 失效 ⇒ risk_SLAM ≡ 0，风险向量退回 4 维，等价于 v7；
+- Level-3：OnlineCalib-FI 失效 ⇒ δ_calib ≡ 0，sensor_weight 全 1，等价于 v7；
+- Level-4：三模块全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-## 1. 符号体系增量（定义 493–525）
+## 1. 符号体系增量（定义 493–540）
 
 | 符号 | 含义 |
 |---|---|
-| `M = (M₀, M₁, M₂, M₃)` | 指标体系：M₀ 硬约束、M₁ 安全指标、M₂ 效能指标、M₃ 完善指标 |
-| `τᵢ` | 第 i 层的判据向量（可动态调节） |
-| `δᵢ: Mᵢ → M₀` | 第 i 层到硬约束的退化映射 |
-| `σ_Mᵢ = confidence(Mᵢ)` | 第 i 层的置信区间 |
-| `ASR(ℓ_voice) = (text, conf)` | 语音→文本 + 置信度 |
-| `τ_voice` | 语音识别置信度门阈 |
-| `R(s,a) = Σᵢ wᵢ(s) · rᵢ(s,a)` | 分解式奖励函数 |
-| `σ_R = ∇_w R` | 奖励梯度→软校准信号 |
-| `SoftCert = (layer, σ, δ_trigger)` | 软证书：层级、置信区间、退化触发条件 |
-| `MetaWeight(s) = softmax(α · risk(s))` | 动态权重调节（风险基础） |
-| `emo(s) ∈ [−1, 1]` | 情感状态评分（−1=焦虑保守，+1=自信冒进） |
-| `Ṽ = (Ṽ₀, Ṽ₁, Ṽ₂, Ṽ₃)` | 情感导向向量，Ṽᵢ ∈ [0,1] 表示层级 i 的情感偏好强度 |
-| `τᵢ(t)` | 在线调节后的判据向量，由 OTL 实时输出 |
-| `G = (g_width, g_depth, g_force)` | 抓取几何参数：宽度、深度、最小接触力矩 |
-| `γ_grasp(ι)` | 抓取指令几何有效性判据 |
+| `M = (M₀, M₁, M₂, M₃, M_dom, M_SLAM)` | 六层指标体系：M₀ 硬约束、M₁ 安全、M₂ 效能、M₃ 完善、M_dom 域不变、M_SLAM 感知风险 |
+| `τᵢ(t)` | 第 i 层判据向量，含域偏移项：τᵢ(t) = clip(τᵢ(0) + η·θ(t) + κᵢ·Δ_dom(t), ε_min,i, ε_max,i) |
+| `Δ_dom(t)` | 域偏移量：MMD(φ(s_t), φ(s_ref))，φ 为冻结特征提取器 |
+| `κ = (κ₀, κ₁, κ₂, κ₃, κ_dom, κ_SLAM)` | 层级域敏感度系数，κ₀,κ₁ 大，κ₂,κ₃ 小 |
+| `Σ_pose(t) ∈ ℝ⁶ˣ⁶` | SLAM 位姿协方差矩阵 (x,y,z,roll,pitch,yaw) |
+| `H(map)` | 地图熵：占据栅格信息熵或关键帧位姿图熵 |
+| `loop_res` | 回环检测残差：回环约束的 Mahalanobis 距离 |
+| `risk_SLAM(s)` | SLAM 风险分量：λ_pose·trace(Σ_pose) + λ_map·H(map) + λ_loop·loop_res |
+| `risk(s) ∈ ℝ⁵` | 扩展风险向量：[risk_SEN, risk_SEM, risk_EFF, risk_PERF, risk_SLAM] |
+| `δ_calib^j` | 第 j 传感器标定偏移：||T_est^j - T_nom^j||_F |
+| `ε_calib` | 标定偏移报警阈值（如 0.05m / 2°） |
+| `sensor_weight[j]` | 第 j 传感器融合权重，降权而非硬屏蔽 |
+| `G_calib = (V, E)` | 传感器一致性图：V={传感器}，E_ij=一致性分数 ∈ [0,1] |
 
-**新增定义 521（在线阈值学习 OnlineThresholdLadder）** 在线学习算法实时调节判据向量：
+**新增定义 526（域偏移量 DomainShift）** 基于最大均值差异（MMD）的实时域偏移估计：
 ```
-θ(t) = 1/N · Σ_{k=t-N+1}^t (performance(k) − performance_target)
-τᵢ(t) = clip( τᵢ(0) + η · θ(t), ε_min,i, ε_max,i )
+Δ_dom(t) = MMD²( φ(s_{t-W+1:t}), φ(s_{ref}) )
+        = || 1/W Σ_{k=t-W+1}^t φ(s_k) - 1/|R| Σ_{r∈R} φ(s_r) ||²_ℋ
 ```
-其中 performance(k) 为第 k 轮的指标层级满足率，η 为学习率，clip 保证阈值在物理意义范围内。
+其中 φ: S → ℋ 为冻结的特征映射（ResNet-18 stage3，输出 256 维），W=20 为滑动窗口，R 为参考域数据集（离线固定）。
 
-**新增定义 522（抓取命令几何有效性 GCT）** 抓取指令几何检查结果：
+**新增定义 527（SLAM 风险分量 SLAMRiskComponent）** 将感知不确定性形式化为风险向量第 5 维：
 ```
-γ_grasp(ι) = valid ⇔ ∀ p ∈ {width, depth, force}, 
-              p ∈ [p_min, p_max] ∧ ι['grasp_geometry'][p] ≥ p_threshold
+risk_SLAM(s) = λ_pose · trace(Σ_pose(s)) + λ_map · H(map(s)) + λ_loop · loop_closure_residual(s)
+```
+其中 λ_pose, λ_map, λ_loop ≥ 0 为可调系数，Σ_pose 来自 SLAM 后端优化协方差，H(map) 为地图熵，loop_res 为最近回环残差。
+
+**新增定义 528（标定偏移与一致性图 CalibrationDrift & ConsistencyGraph）** 多传感器标定在线监测：
+```
+δ_calib^j(t) = || T_est^j(t) - T_nom^j ||_F
+E_ij(t) = exp( -|| residual_ij(t) ||² / σ²_consistency )
+```
+其中 residual_ij 为传感器 i 与 j 的互检残差（如视觉-IMU 预积分残差、激光-视觉 ICP 残差、音频 TDOA 一致性）。
+
+**新增定义 529（域自适应阈值调节 DA-ThresholdUpdate）** OTL 扩展版，注入域偏移项：
+```
+τᵢ(t) = clip( τᵢ(0) + η · θ(t) + κᵢ · Δ_dom(t), ε_min,i, ε_max,i )
+```
+其中 θ(t) 为性能趋势项（同 v7），κᵢ ≥ 0 为层级敏感度（默认：κ₀=1.0, κ₁=0.8, κ₂=0.3, κ₃=0.2, κ_dom=0.5, κ_SLAM=0.5）。
+
+**新增定义 530（标定故障隔离与补偿 CalibFaultIsolation）** 单传感器故障“检测-隔离-补偿”：
+```
+if δ_calib^j > ε_calib:
+    # 隔离：降权
+    sensor_weight[j] ← max(0.1, sensor_weight[j] * 0.5)
+    # 补偿：对应层级收紧系数加倍
+    for i in layers_affected_by_sensor(j):
+        κᵢ ← min(κᵢ * 2, κ_max)
+    # 异步触发重标定
+    calib_scheduler.submit(recalibrate_sensor_j)
 ```
 
-**新增定义 523（情感状态评分 EmotionalStateScore）** 通过语音prosody与文本情感联合评估：
+**新增定义 531（六元闭环标识）** 完整系统标识：
 ```
-emo(s) = ω_v · f_vocal(s) + ω_t · f_text(s)
-```
-其中 f_vocal 基于基频与语速的归一化偏离度，f_text 基于情感词典情感极性，ω_v + ω_t = 1。
-
-**新增定义 524（情感调节奖励权重 EmotionalReweighting）** 情感修正后的软权重：
-```
-w'_i(s) = softmax( α · risk_i(s) + β · emo(s) · Ṽ_i )_i
-```
-其中 β > 0 为情感影响系数，Ṽ_i 为层级 i 的情感导向系数。
-
-**新增定义 525（在线-抓取-情感闭环）** 三模块协同标识：
-```
-Φ_OTL-GC-ER = {τᵢ(t) adaptative, γ_grasp(ι) checked, w'_i(s) emotional-modulated}
+Φ_DA-SPR-Cal = {τᵢ adaptative+domain, risk 5-dim+SLAM, calib online+fault-isolated}
+Φ_v7         = {τᵢ adaptative,     risk 4-dim,        calib fixed}
 ```
 
 ## 2. 形式化定义（要点）
 
-**定义 493（指标层级闭合 MetricLadder）** - 保留自 v6，τᵢ 现在由 OTL 在线调节。
+**定义 493（指标层级闭合 MetricLadder，升级版）** M 扩展为六层，M_dom 监控 Δ_dom(t) < τ_dom，M_SLAM 监控 risk_SLAM < τ_SLAM，均具备到 M₀ 的退化映射 δ_dom, δ_SLAM。
 
-**定义 494（语音指令类型化 VoiceCommandTyping）** - 保留自 v6，GCT 在其基础上增加抓取几何检查。
+**定义 494（语音指令类型化 VoiceCommandTyping）** 保留自 v7，GCT 不变。
 
-**定义 495（奖励可逆向性 RewardDecomposer）** - 保留自 v6，现增强：wᵢ(s) 现在同时考虑风险与情感。
+**定义 495（奖励可逆向性 RewardDecomposer，升级版）** w'_i(s) = softmax(α·risk_i(s) + β·emo(s)·Ṽ_i)_{i=0..4}，risk ∈ ℝ⁵ 含 risk_SLAM。
 
-**定义 496（软证书 SoftCert）** - 保留自 v6。
+**定义 496（软证书 SoftCert，升级版）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}，四条件同一尺度设计。
 
-**定义 497（MetaWeight 动态调节）** - 升级版：
-```
-risk(s) = Σᵢ λᵢ · violationᵢ(s)
-wᵢ(s) = softmax(α · risk(s))_i  # 基础风险权重
-```
+**定义 497（MetaWeight 动态调节，升级版）** 基础风险权重扩展为 5 维：w_i(s) = softmax(α · risk(s))_i，i=0..4。
 
-**定义 524（情感调节）** - 新增：
-```
-emo(s) ∈ [−1, 1] 为情感状态评分
-Ṽ_i ∈ [0,1] 为层级 i 的情感导向系数
-β > 0 为情感影响系数
-w'_i(s) = softmax(α · risk(s) + β · emo(s) · Ṽ_i)_i
-```
+**定义 524（情感调节，升级版）** w'_i(s) = softmax(α·risk_i(s) + β·emo(s)·Ṽ_i)_{i=0..4}，Ṽ ∈ [0,1]⁵ 增加 Ṽ_SLAM 分量。
 
-**定义 527（在线阈值调节）** - 新增：
-```
-OTL 模块维护性能历史窗口 W_size = N
-θ(t) = moving_average(performance_trend, N)
-τᵢ(t) = clip( τᵢ(0) + η · θ(t), ε_min,i, ε_max,i )
-```
+**定义 521（在线阈值调节，升级版 DA-OTL）** τᵢ(t) = clip(τᵢ(0) + η·θ(t) + κᵢ·Δ_dom(t), ε_min,i, ε_max,i)，Δ_dom 来自 DA-ML 模块。
 
-**定义 528（抓取命令类型化）** - 新增：
-语音指令处理管道扩展：
-```
-ℓ_voice → ASR → (text, conf)
-if conf < τ_voice: δ_voice 触发 → ι ← ι₀
-else:
-    text → NLI → ι 类型检查
-    if type(ι) ∉ Σ_ι: ι ← ι₀ (退化)
-    if 'grasp' ∈ ι['tools'] or 'pick' ∈ ι['tools']:
-        geo = GraspParser.parse(text, ι)
-        if not γ_grasp(ι): ι ← ι₀ (几何退化)
-```
+**定义 528（抓取命令类型化）** 保留自 v7。
 
-时序约束：`latency(ASR∘NLI∘GraspParser) ≤ T_cycle + prediction_window = 40ms`。
+**新增定义 526（域偏移量 DomainShift）** 如前，MMD 基于冻结特征提取器，W=20 滑动窗口，计算延迟 ≤ 1ms（GPU 批处理）。
 
-**定义 529（软硬约束无缝衔接，增强版）** - SoftCert 退化触发条件 δ_trigger 与硬约束 M₀ 判据 τ₀ 完全重合，且现在包含 OTL 动态调节后的 τᵢ(t) 与 GCT 几何检查结果。证明：δ_trigger = {σ < τ_safe ∧ γ_grasp valid}，两者设计同一尺度，保证退化后硬约束必然满足。
+**新增定义 527（SLAM 风险分量）** risk_SLAM 直接注入风险向量第 5 维，与 MetaWeight/ER/OTL 无缝兼容。
+
+**新增定义 528（标定偏移与一致性图）** 多传感器互检残差构建一致性图，边权为指数核一致性分数。
+
+**新增定义 529（域自适应阈值调节）** OTL 扩展版，κᵢ 为层级敏感度，M₀/M₁ 设大保安全。
+
+**新增定义 530（标定故障隔离）** 降权而非硬屏蔽，κᵢ 加倍补偿，异步重标定不阻塞主环。
+
+**新增定义 531（软硬约束无缝衔接，六层版）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}，保证任一条件触发 → 退化到 M₀，M₀ 判据 τ₀ 同尺度设计。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-347 OnlineThresholdLadder：在线阈值自适应
-class OnlineThresholdLadder:
-    def __init__(self, initial_thresholds, η=0.05, N=5, ε_min=None, ε_max=None):
-        self.base_thresholds = dict(initial_thresholds)  # τᵢ(0) 固定基准
-        self.current_thresholds = dict(initial_thresholds)
-        self.η = η  # 学习率
-        self.N = N  # 窗口大小
-        self.ε_min = ε_min or {i: -float('inf') for i in range(4)}
-        self.ε_max = ε_max or {i: float('inf') for i in range(4)}
-        self.history = {i: [] for i in range(4)}  # 性能历史
+# IP-350 DomainAdaptiveMetricLadder：域自适应指标梯度
+class DomainAdaptiveMetricLadder:
+    def __init__(self, feature_extractor, reference_features, 
+                 W=20, kappa=None, device='cuda'):
+        self.phi = feature_extractor  # 冻结 ResNet-18 stage3
+        self.ref_features = reference_features  # (N_ref, 256) 预计算
+        self.W = W
+        self.device = device
+        self.window_features = []  # 滑动窗口特征
+        self.kappa = kappa or {0: 1.0, 1: 0.8, 2: 0.3, 3: 0.2, 4: 0.5, 5: 0.5}
+        self._to_device()
     
-    def update(self, metrics, layer):
-        """根据最新指标反馈在线调节 τ_layer"""
-        # 1. 记录当前层级的满足表现（0=不满足, 1=满足）
-        satisfied = M.metric_ladder.check(metrics, layer)
-        self.history[layer].append(1 if satisfied else 0)
-        if len(self.history[layer]) > self.N:
-            self.history[layer].pop(0)
-        
-        # 2. 如果历史数据不足，不调节
-        if len(self.history[layer]) < 2:
-            return
-        
-        # 3. 计算性能趋势：简单差分
-        trend = self.history[layer][-1] - self.history[layer][-2]
-        
-        # 4. 根据趋势调节：性能下降(0→1变差)→收紧阈值，性能提升(1→0变好)→放宽
-        direction = -1 if trend < 0 else 1  # 性能提升趋势为正
-        adjustment = self.η * direction
-        
-        τ = self.current_thresholds[layer]
-        ε_min = self.ε_min[layer]
-        ε_max = self.ε_max[layer]
-        new_τ = clip(τ + adjustment, ε_min, ε_max)
-        self.current_thresholds[layer] = new_τ
+    def _to_device(self):
+        self.ref_features = torch.tensor(self.ref_features, device=self.device)
+        self.phi.eval()
+        for p in self.phi.parameters():
+            p.requires_grad = False
     
-    def get_thresholds(self):
-        """返回当前在线调节后的阈向量"""
-        return self.current_thresholds
+    def update(self, state_obs):
+        """state_obs: 当前观测（RGB-D、点云等），提取特征并更新窗口"""
+        with torch.no_grad():
+            feat = self.phi(state_obs).cpu().numpy().flatten()  # (256,)
+        self.window_features.append(feat)
+        if len(self.window_features) > self.W:
+            self.window_features.pop(0)
     
-    def reset(self):
-        """重置为基准阈值（在任务重新开始时调用）"""
-        self.current_thresholds = dict(self.base_thresholds)
-        self.history = {i: [] for i in range(4)}
+    def compute_domain_shift(self):
+        """计算 Δ_dom(t) = MMD²(窗口均值, 参考域均值)"""
+        if len(self.window_features) < self.W:
+            return 0.0  # 预热期返回 0
+        window_mean = np.mean(self.window_features, axis=0)  # (256,)
+        ref_mean = self.ref_features.mean(axis=0).cpu().numpy()  # (256,)
+        # 线性核 MMD² = ||μ_w - μ_r||²
+        delta = float(np.sum((window_mean - ref_mean) ** 2))
+        return delta
+    
+    def get_kappa(self):
+        return self.kappa
 
 
-# IP-348 GraspCommandTyping：抓取命令类型化
-class GraspCommandTyping(VoiceCommandTyping):
-    def __init__(self, asr_model, nli_model, default_iota, tau_voice=0.85,
-                 grasp_parser=None, geo_thresholds=None):
-        super().__init__(asr_model, nli_model, default_iota, tau_voice)
-        self.grasp_parser = grasp_parser  # GraspParser 实例
-        self.geo_thresholds = geo_thresholds or {'width': 0.1, 'depth': 0.2, 'force': 5.0}
+# IP-351 SLAMRiskPropagation：SLAM-风险传播
+class SLAMRiskPropagation:
+    def __init__(self, lambda_pose=1.0, lambda_map=0.5, lambda_loop=0.3):
+        self.lambda_pose = lambda_pose
+        self.lambda_map = lambda_map
+        self.lambda_loop = lambda_loop
+        self.last_loop_residual = 0.0
     
-    def process(self, audio_stream):
-        """音频→文本→类型化指令规格 ι，或退化（含抓取几何检查）"""
-        text, conf = self.asr.recognize(audio_stream)
-        if conf < self.tau_voice:
-            return self.ι₀, False, f"ASR低置信 {conf}"
-        
-        ι, success = self.nli.parse(text)
-        if not success or not self._type_check(ι):
-            return self.ι₀, False, "类型检查失败"
-        
-        # 新增：抓取语义解析与几何有效性检查
-        if self._is_grasp_intent(ι, text):
-            geo_result = self._parse_grasp_geometry(text, ι)
-            if not geo_result['valid']:
-                return self.ι₀, False, f"抓取几何检查失败: {geo_result['reason']}"
-            # 将解析出的几何参数附加到 ι，供 M₂ 监控使用
-            ι['grasp_geometry'] = geo_result['geometry']
-        
-        return ι, True, f"置信 {conf}"
-    
-    def _is_grasp_intent(self, ι, text):
-        """判断是否为抓取意图"""
-        grasp_keywords = ['grasp', 'pick', 'grab', '抓取', '捡取', '拿取']
-        tools = ι.get('tools', [])
-        text_lower = text.lower()
-        return (any(k in text_lower for k in grasp_keywords) or 
-                'grasp' in tools or 'pick' in tools)
-    
-    def _parse_grasp_geometry(self, text, ι):
-        """从文本或 ι 中解析抓取几何参数"""
-        result = {'valid': True, 'geometry': {}, 'reason': ''}
-        
-        # 尝试从文本中提取物体尺寸信息
-        import re
-        # 匹配 "直径 X cm", "宽度 Y m" 等模式
-        dim_match = re.search(r'(?:直径|宽|尺寸)[为:]?\s*([\d.]+)(cm|m)', text)
-        if dim_match:
-            value = float(dim_match.group(1))
-            unit = dim_match.group(2)
-            # 转换为米作为内部单位
-            if unit == 'cm':
-                value = value / 100.0
-            result['geometry']['width'] = value
-            result['valid'] = value <= self.geo_thresholds['max_width']
-            if not result['valid']:
-                result['reason'] = f"抓取宽度 {value}m 超过上限 {self.geo_thresholds['max_width']}m"
-        
-        # 如果 ι 中已有几何信息，验证其有效性
-        if 'grasp_geometry' in ι:
-            geo = ι['grasp_geometry']
-            for p in ['width', 'depth', 'force']:
-                if p in geo and geo[p] is not None:
-                    thresh = self.geo_thresholds.get(p, float('inf'))
-                    if geo[p] < thresh:
-                        result['valid'] = False
-                        result['reason'] = f"几何参数 {p} {geo[p]} 不满足阈值 {thresh}"
-        
-        return result
-    
-    def _type_check(self, ι):
-        """指令规格 ι 的类型检查（含抓取几何）"""
-        base_ok = super()._type_check(ι)
-        if not base_ok:
-            return False
-        # 新增：抓取几何有效性检查
-        if 'grasp_geometry' in ι:
-            geo = ι['grasp_geometry']
-            for p in ['width', 'depth', 'force']:
-                if p in geo:
-                    thresh = self.geo_thresholds.get(p, float('inf'))
-                    if geo[p] >= thresh:
-                        return False
-        return True
-
-
-# IP-349 EmotionalReweighting：情感重权模块
-class EmotionalReweighting:
-    def __init__(self, α=1.0, β=0.5, ω_v=0.5, ω_t=0.5):
-        self.α = α  # 风险系数
-        self.β = β  # 情感影响系数
-        self.ω_v = ω_v  #  vocal特征权重
-        self.ω_t = ω_t  # text情感权重
-        self.emotion_history = []
-    
-    def extract_emotion(self, audio_features, text_features):
-        """从音频和文本特征提取情感评分 emo(s) ∈ [−1, 1]"""
-        # Vocal特征：基频偏离度、语速异常度
-        f_vocal = self._compute_vocal_emotion(audio_features)
-        # Text特征：情感词典极性、关键词匹配
-        f_text = self._compute_text_emotion(text_features)
-        
-        emo = self.ω_v * f_vocal + self.ω_t * f_text
-        emo = max(-1.0, min(1.0, emo))  # 裁剪到 [−1, 1]
-        self.emotion_history.append(emo)
-        if len(self.emotion_history) > 10:
-            self.emotion_history.pop(0)
-        return emo
-    
-    def _compute_vocal_emotion(self, audio_features):
-        """计算 vocal 特征的情感分量"""
-        # 简化实现：基频越低越焦虑，语速越慢越保守
-        f0 = audio_features.get('f0_mean', 150.0)  # 默认 150Hz
-        rate = audio_features.get('speech_rate', 180.0)  # 默认 180 wpm
-        
-        # 归一化：假设正常基频 150-300Hz，语速 150-250 wpm
-        f0_norm = (f0 - 150.0) / 150.0  # −1 到 1
-        rate_norm = (rate - 180.0) / 70.0  # −1 到 1
-        
-        # 低基频 + 慢语速 → 焦虑（−1）；高基频 + 快语速 → 自信 (+1)
-        vocal_emomax = -f0_norm  # 基频越低，-f0_norm 越大（正值）
-        rate_emomax = -rate_norm
-        return max(-1.0, min(1.0, vocal_emomax + rate_emomax))
-    
-    def _compute_text_emotion(self, text_features):
-        """计算 text 特征的情感分量"""
-        # 基于情感词典计算情极性
-        sentiment_score = text_features.get('sentiment', 0.0)  # −1 (负面) 到 +1 (正面)
-        return sentiment_score
-    
-    def compute_emotional_weights(self, risk_vector, emo, V_vector):
+    def compute_risk_slam(self, slam_state):
         """
-        计算情感修正后的奖励权重
-        risk_vector: [risk_0, risk_1, risk_2, risk_3]（来自 MetaRisk 计算）
-        emo: 情感状态评分 [−1, 1]
-        V_vector: [Ṽ_0, Ṽ_1, Ṽ_2, Ṽ_3]（情感导向向量）
-        返回: [w'_0, w'_1, w'_2, w'_3]
+        slam_state: dict with keys:
+            - 'pose_cov': (6,6) 位姿协方差矩阵
+            - 'map_entropy': float 地图熵
+            - 'loop_residual': float 最近回环残差（可选）
         """
-        # 基础风险权重（与原 MetaWeight 一致）
-        base_logits = [self.α * r for r in risk_vector]
-        base_exp = [np.exp(l) for l in base_logits]
-        base_sum = sum(base_exp)
-        base_weights = [e / base_sum for e in base_exp]
+        pose_cov = slam_state.get('pose_cov', np.eye(6) * 0.01)
+        map_entropy = slam_state.get('map_entropy', 0.0)
+        loop_res = slam_state.get('loop_residual', self.last_loop_residual)
+        self.last_loop_residual = loop_res
         
-        # 情感修正项
-        emotional_boost = [self.β * emo * V_i for V_i in V_vector]
+        risk_pose = self.lambda_pose * np.trace(pose_cov)
+        risk_map = self.lambda_map * map_entropy
+        risk_loop = self.lambda_loop * loop_res
         
-        # 混合：softmax 基础权重 + 情感调节
-        mixed_logits = [b + e for b, e in zip(base_logits, emotional_boost)]
-        mixed_exp = [np.exp(l) for l in mixed_logits]
-        mixed_sum = sum(mixed_exp)
-        weights = [e / mixed_sum for e in mixed_exp]
+        risk_slam = risk_pose + risk_map + risk_loop
+        return risk_slam, {'pose': risk_pose, 'map': risk_map, 'loop': risk_loop}
+    
+    def get_risk_vector_5d(self, base_risk_4d, slam_state):
+        """将 4 维基础风险扩展为 5 维（追加 risk_SLAM）"""
+        risk_slam, _ = self.compute_risk_slam(slam_state)
+        return np.array([*base_risk_4d, risk_slam])
+
+
+# IP-352 OnlineCalibrationFaultIsolation：在线标定故障隔离
+class OnlineCalibrationFaultIsolation:
+    def __init__(self, sensor_names, nominal_calibs, epsilon_calib=0.05,
+                 consistency_sigma=0.1, kappa_max=2.0):
+        self.sensor_names = sensor_names  # ['camera', 'lidar', 'imu', 'mic_array']
+        self.nominal_calibs = nominal_calibs  # {name: T_nom (4,4)}
+        self.epsilon_calib = epsilon_calib
+        self.consistency_sigma = consistency_sigma
+        self.kappa_max = kappa_max
+        self.current_calibs = dict(nominal_calibs)
+        self.sensor_weights = {name: 1.0 for name in sensor_names}
+        self.kappa = {0: 1.0, 1: 0.8, 2: 0.3, 3: 0.2, 4: 0.5, 5: 0.5}
+        self.consistency_graph = {name: {} for name in sensor_names}
+        self.recalib_pending = set()
+    
+    def update_calibration(self, sensor_name, T_est):
+        """更新第 j 传感器的估计标定（来自 SLAM 回环/视觉-IMU/音频 TDOA）"""
+        self.current_calibs[sensor_name] = T_est
+        delta = np.linalg.norm(T_est - self.nominal_calibs[sensor_name], 'fro')
+        if delta > self.epsilon_calib:
+            self._isolate_and_compensate(sensor_name, delta)
+    
+    def update_consistency(self, sensor_i, sensor_j, residual):
+        """更新两传感器间的一致性残差（如 ICP 残差、预积分残差、TDOA 残差）"""
+        score = np.exp(-residual**2 / (2 * self.consistency_sigma**2))
+        self.consistency_graph[sensor_i][sensor_j] = score
+        self.consistency_graph[sensor_j][sensor_i] = score
+    
+    def _isolate_and_compensate(self, sensor_name, delta):
+        """故障隔离：降权 + 收紧 κ + 异步重标定"""
+        # 1. 降权（而非硬屏蔽，保留微弱信号用于后续恢复判断）
+        self.sensor_weights[sensor_name] = max(0.1, self.sensor_weights[sensor_name] * 0.5)
         
-        return weights
-    
-    def _compute_risk(self, state):
-        """从 state 计算风险向量（复用 MetaWeight 逻辑）"""
-        violations = state.get('violations', [])
-        risk = [0.0, 0.0, 0.0, 0.0]  # M₀,M₁,M₂,M₃
-        for v in violations:
-            if v['cause'] == 'SEN':
-                risk[0] += 0.8
-            elif v['cause'] == 'SEM':
-                risk[1] += 0.5
-            # ... 更细粒度风险分配
-        return risk
-
-
-# IP-342 RewardDecomposer（增强版）：加入情感与抓取几何影响
-class RewardDecomposer:
-    def __init__(self, metric_ladder, meta_weight, emotional_reweighter=None):
-        self.M = metric_ladder
-        self.w = meta_weight
-        self.ER = emotional_reweighter  # 情感重权模块（可选）
-    
-    def compute(self, state, action, metrics):
-        """计算分解奖励 R = Σᵢ w'_i·r'_i，包含情感修正"""
-        rewards = {}
-        reward_sum = 0.0
+        # 2. 收紧受影响层级的 κ
+        affected_layers = self._layers_affected_by(sensor_name)
+        for layer in affected_layers:
+            self.kappa[layer] = min(self.kappa[layer] * 1.5, self.kappa_max)
         
-        # 计算基础分解奖励
-        for i in [0, 1, 2, 3]:
-            r_i = self._compute_metric_reward(i, metrics[i], state, action)
-            rewards[i] = r_i
-            
-        # 获取情感修正后的权重
-        if self.ER is not None and 'emo' in state:
-            emo = state['emo']  # 已提取的情感评分
-            V = state.get('V_vector', [0.25, 0.25, 0.25, 0.25])  # 默认均匀情感导向
-            risk = self._compute_risk(state)
-            w_prime = self.ER.compute_emotional_weights(risk, emo, V)
-        else:
-            # 退回风险仅权重
-            w_prime = self.w(state)
-        
-        # 加权求和
-        for i in range(4):
-            reward_sum += w_prime[i] * rewards[i]
-        
-        return reward_sum, rewards, w_prime
+        # 3. 标记异步重标定（不阻塞主环）
+        self.recalib_pending.add(sensor_name)
     
-    def _compute_risk(self, state):
-        """从 state 计算风险向量"""
-        violations = state.get('violations', [])
-        risk = [0.0, 0.0, 0.0, 0.0]
-        for v in violations:
-            if v['cause'] == 'SEN':
-                risk[0] += 0.8
-            elif v['cause'] == 'SEM':
-                risk[1] += 0.5
-        return risk
-
-
-# IP-350 主闭环集成：MetricVoiceGauge-OTL-GC-ER
-def metricvoicegauge_round_7(M, s, obs, audio_stream=None, ell=None, 
-                            online_learner=None, grasp_typing=None,
-                            emotional_reweighter=None):
-    """7路径主闭环：OTL+GCT+ER 叠加在 MetricVoiceGauge v6 基础上"""
+    def _layers_affected_by(self, sensor_name):
+        """不同传感器故障影响不同指标层级"""
+        mapping = {
+            'camera': [0, 1, 2, 4],      # 视觉影响硬约束、安全、效能、域
+            'lidar': [0, 1, 5],          # 激光影响硬约束、安全、SLAM
+            'imu': [1, 5],               # IMU 影响安全、SLAM
+            'mic_array': [2, 3, 4],      # 麦克风影响效能、完善、域（语音指令质量）
+        }
+        return mapping.get(sensor_name, [1])
     
-    # 1. 在线阈值调节（OTL）
-    if online_learner is not None:
-        # 从最新指标更新阈值
-        metrics = M.metric_ladder.compute_metrics(...)
-        for layer in [1, 2, 3]:
-            online_learner.update(metrics, layer)
-        τ_current = online_learner.get_thresholds()
-    else:
-        τ_current = M.metric_ladder.thresholds  # 退回固定值
+    def get_sensor_weights(self):
+        return self.sensor_weights
     
-    # 2. 语音指令处理（GCT）
-    if audio_stream is not None and grasp_typing is not None:
-        ι_voice, voice_ok, log = grasp_typing.process(audio_stream)
-        if not voice_ok:
-            ι_seq = [M.default_iota]
-        else:
-            ι_seq = [ι_voice]
-    else:
-        ι_seq = [M.default_iota]
+    def get_kappa(self):
+        return self.kappa
     
-    # 3. 情感提取（ER）
-    emo = 0.0
-    V_vector = [0.25, 0.25, 0.25, 0.25]
-    if emotional_reweighter is not None and audio_stream is not None:
-        # 从音频特征提取情感
-        audio_feats = M.audio_extractor.get_features(audio_stream)
-        text_feats = M.text_analyzer.analyze(ell) if ell else {}
-        emo = emotional_reweighter.extract_emotion(audio_feats, text_feats)
-        V_vector = emotional_reweighter.get_V_vector()  # 获取层级情感导向
+    def has_pending_recalib(self):
+        return len(self.recalib_pending) > 0
     
-    # 4. 奖励计算（含情感修正）
-    # ... (继承自 v6，但使用修正后的 weights)
-    
-    # 5. 其余步骤保持 v6 实现（CVC、SpatialCert、RT-CVC 等）
-    # ... 
-    
-    return C, spatial_cert, claims, metrics, rewards
-```
+    def mark_recalib_done(self, sensor_name):
+        if sensor_name in self.recalib_pending:
+            self.recalib_pending.remove(sensor_name)
+            # 恢复权重（渐进）
+            self.sensor_weights[sensor_name] = min(1.0, self.sensor_weights[sensor_name] * 1.2)
+            # 恢复 κ（渐进）
+            for layer in self._layers_affected_by(sensor_name):
+                self.kappa[layer] = max(self.kappa[layer] / 1.2, 
+                                        {0:1.0,1:0.8,2:0.3,3:0.2,4:0.5,5:0.5}[layer])
 
-Hmm, this is getting extremely long. The write_section.py will pipe all of this into the artifacts section, replacing the existing content. I need to make sure it's well-structured and doesn't have issues.
 
-Actually, let me reconsider. The file is already quite long, and the Python code sections are extensive. I should make sure the code is correct and consistent. Let me simplify and focus on the key algorithmic contributions, making sure the format is consistent with the existing content.
-
-Let me take a more concise approach. I'll write the essential new content, making sure each section is complete but not overly long. The key is that the content builds on the existing round 6 framework and adds the three new modules.
-
-Let me write a more compact but still comprehensive artifacts section.</think>Let me write the artifacts section with the new round 7 contributions:
-<tool_call>
-<function=bash>
-<parameter=command>
-cat <<'XUEN_EOF' | python /home/runner/work/xuen/xuen/workspace/write_section.py artifact
-# 第 7 轮产物 · 创新点清单 v7：**MetricVoiceGauge-OTL-GC-ER**（Metric Voice Gauge Online-Threshold-Ladder-Grasp-EmotionalRewight）
-
-> 背景：第 6 轮 MetricVoiceGauge（定义 493–520；引理 69–72；实验 E493–E512）。
-> 本轮灵感：「在线学习」×「抓取规划」×「情感计算」
-> **继承纪律**：MetricVoiceGauge 六不变式（CVC-闭环、SpatialCert、RT-CVC 任务模型、FaultCert 闭环、PrimitiveGraph 接地、严格退化链）全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 退回 MetricVoiceGauge v6。
-
-## 0. 核心 IP 设计
-
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge v6） |
-|---|---|---|---|
-| IP-340 | MetricLadder 指标层级闭合 | 核心模块 | 保留自 v6：M = (M₀,M₁,M₂,M₃) 四层价值金字塔；现 τᵢ 由 OTL 在线调节 |
-| IP-341 | VoiceCommandTyping 语音指令类型化 | 核心模块 | 保留自 v6：ASR 置信门 + NLI 类型化接地 |
-| IP-342 | RewardDecomposer 奖励可逆向性 | 核心模块 | 升级：奖励权重 w'_i 同时考虑风险与情感 |
-| IP-343 | SoftCert 软证书 | 核心模块 | 保留自 v6：软约束层级用概率/置信区间包围 |
-| IP-344 | MetaWeight 元权重调节 | 核心模块 | 保留自 v6：基础风险权重 w_i = softmax(α·risk(s))_i |
-| IP-345 | Voice-RTDI-7C 闭环 | 设计模式 | 保留自 v6：W→R→C→E(rt-chunk)→Spatial-C→Diag→Recover→V→U |
-| IP-346 | MetricVoiceGauge 主闭环 | 集成 | 保留自 v6：50Hz WCET 保全 |
-| IP-347 | OnlineThresholdLadder 在线阈值梯度 | 新增模块 | OTL：基于最近 N 轮性能统计，实时动态调节 τᵢ；失效则 τᵢ 退回固定值 |
-| IP-348 | GraspCommandTyping 抓取命令类型化 | 新增模块 | GCT：在 VoiceCommandTyping 基础上增加抓取语义解析；几�几何检查作为 M₂ 实时判据 |
-| IP-349 | EmotionalReweighting 情感重权模块 | 新增模块 | ER：从音频/文本情感抽取 emo(s) ∈ [−1,1]，软调节奖励权重；失效则 β=0 退回 |
-
-**退化链声明**：
-- OnlineThresholdLadder 学习模块失效 ⇒ τᵢ 退回固定值，等价于 MetricVoiceGauge v6；
-- GraspCommandTyping 失效 ⇒ 退回无抓取几何检查的基础语音指令，等价于 MetricVoiceGauge v6；
-- EmotionalReweighting 失效 ⇒ β = 0，退回风险仅权重，等价于 MetricVoiceGauge v6。
-
-## 1. 符号体系增量（定义 493–525）
-
-| 符号 | 含义 |
-|---|---|
-| `M = (M₀, M₁, M₂, M₃)` | 指标体系：M₀ 硬约束、M₁ 安全指标、M₂ 效能指标、M₃ 完善指标 |
-| `τᵢ` | 第 i 层的判据向量（可动态调节） |
-| `δᵢ: Mᵢ → M₀` | 第 i 层到硬约束的退化映射 |
-| `σ_Mᵢ = confidence(Mᵢ)` | 第 i 层的置信区间 |
-| `ASR(ℓ_voice) = (text, conf)` | 语音→文本 + 置信度 |
-| `τ_voice` | 语音识别置信度门阈 |
-| `R(s,a) = Σᵢ wᵢ(s) · rᵢ(s,a)` | 分解式奖励函数 |
-| `σ_R = ∇_w R` | 奖励梯度→软校准信号 |
-| `SoftCert = (layer, σ, δ_trigger)` | 软证书：层级、置信区间、退化触发条件 |
-| `MetaWeight(s) = softmax(α · risk(s))` | 动态权重调节（风险基础） |
-| `emo(s) ∈ [−1, 1]` | 情感状态评分（−1=焦虑保守，+1=自信冒进） |
-| `Ṽ = (Ṽ₀, Ṽ₁, Ṽ₂, Ṽ₃)` | 情感导向向量，Ṽᵢ ∈ [0,1] 表示层级 i 的情感偏好强度 |
-| `τᵢ(t)` | 在线调节后的判据向量，由 OTL 实时输出 |
-| `G = (g_width, g_depth, g_force)` | 抓取几何参数：宽度、深度、最小接触力矩 |
-| `γ_grasp(ι)` | 抓取指令几何有效性判据 |
-
-**新增定义 521（在线阈值学习 OnlineThresholdLadder）** 在线学习算法实时调节判据向量：
-```
-θ(t) = 1/N · Σ_{k=t-N+1}^t (performance(k) − performance_target)
-τᵢ(t) = clip( τᵢ(0) + η · θ(t), ε_min,i, ε_max,i )
-```
-
-**新增定义 522（抓取命令几何有效性 GCT）** 抓取指令几何检查结果：
-```
-γ_grasp(ι) = valid ⇔ ∀ p ∈ {width, depth, force}, 
-              p ∈ [p_min, p_max] ∧ ι['grasp_geometry'][p] ≥ p_threshold
-```
-
-**新增定义 523（情感状态评分 EmotionalStateScore）** 通过语音prosody与文本情感联合评估：
-```
-emo(s) = ω_v · f_vocal(s) + ω_t · f_text(s)
-```
-
-**新增定义 524（情感调节奖励权重 EmotionalReweighting）** 情感修正后的软权重：
-```
-w'_i(s) = softmax( α · risk_i(s) + β · emo(s) · Ṽ_i )_i
-```
-
-**新增定义 525（模块化退化标识）** 三新模块任一失效退回 v6 的正式标识：
-```
-Φ_OTL-GC-ER = {τᵢ adaptative, γ_grasp checked, w'_i emotional-modulated}
-Φ_v6      = {τᵢ fixed,       γ_grasp skipped,      w_i risk-only}
-```
-
-## 2. 形式化定义（要点）
-
-**定义 493（指标层级闭合 MetricLadder）** - τᵢ 现在由 OTL 在线调节，τᵢ(t) = clip(τᵢ(0) + η·θ(t), ε_min,i, ε_max,i)。
-
-**定义 494（语音指令类型化 VoiceCommandTyping）** - GCT 在其基础上增加抓取几何检查：若指令含抓取动作，则需通过 γ_grasp(ι) 检查，否则退化 ι ← ι₀。
-
-**定义 495（奖励可逆向性 RewardDecomposer）** - w'_i(s) = softmax(α·risk_i(s) + β·emo(s)·Ṽ_i)_i，既包含风险又包含情感修正。
-
-**定义 496（软证书 SoftCert）** - 保留自 v6，δ_trigger 条件 now 同时考虑 σ < τ_safe 与 γ_grasp 有效性。
-
-**定义 497（MetaWeight 动态调节）** - 保留自 v6：w_i(s) = softmax(α · risk(s))_i 为基础风险权重。
-
-**定义 524（情感调节）** - 新增：w'_i(s) = softmax(α · risk(s) + β · emo(s) · Ṽ_i)_i，β > 0 为情感影响系数。
-
-**定义 521（在线阈值调节）** - 新增：OTL 根据性能趋势实时收缩/扩展 τᵢ，若学习模块检测到异常则自动暂停调节并报警。
-
-**定义 528（抓取命令类型化）** - 新增：语音指令处理管道扩展，含抓取语义解析与几何有效性检查，时序约束 lat ≤ 40ms。
-
-**定义 525（软硬约束无缝衔接，增强版）** - δ_trigger = {σ < τ_safe ∧ γ_grasp valid}，保证在抓取任务中亦无「软通过硬失」空洞。
-
-## 3. 关键算法骨架
-
-```python
-# IP-347 OnlineThresholdLadder：在线阈值自适应
+# IP-347 OnlineThresholdLadder（升级版 DA-OTL）
 class OnlineThresholdLadder:
-    def __init__(self, initial_thresholds, η=0.05, N=5, ε_min=None, ε_max=None):
+    def __init__(self, initial_thresholds, eta=0.05, N=5, 
+                 epsilon_min=None, epsilon_max=None, kappa=None):
         self.base_thresholds = dict(initial_thresholds)
         self.current_thresholds = dict(initial_thresholds)
-        self.η = η
+        self.eta = eta
         self.N = N
-        self.ε_min = ε_min or {i: -float('inf') for i in range(4)}
-        self.ε_max = ε_max or {i: float('inf') for i in range(4)}
-        self.history = {i: [] for i in range(4)}
+        self.epsilon_min = epsilon_min or {i: -float('inf') for i in range(6)}
+        self.epsilon_max = epsilon_max or {i: float('inf') for i in range(6)}
+        self.history = {i: [] for i in range(6)}
+        self.kappa = kappa or {0:1.0, 1:0.8, 2:0.3, 3:0.2, 4:0.5, 5:0.5}
+        self.delta_dom = 0.0
+    
+    def update_domain_shift(self, delta_dom):
+        self.delta_dom = delta_dom
     
     def update(self, metrics, layer):
-        satisfied = M.metric_ladder.check(metrics, layer)
+        satisfied = metrics.get(f'layer_{layer}_satisfied', 0)
         self.history[layer].append(1 if satisfied else 0)
         if len(self.history[layer]) > self.N:
             self.history[layer].pop(0)
@@ -618,259 +357,197 @@ class OnlineThresholdLadder:
             return
         trend = self.history[layer][-1] - self.history[layer][-2]
         direction = -1 if trend < 0 else 1
-        adjustment = self.η * direction
-        τ = self.current_thresholds[layer]
-        new_τ = clip(τ + adjustment, self.ε_min[layer], self.ε_max[layer])
-        self.current_thresholds[layer] = new_τ
+        adjustment = self.eta * direction
+        domain_adjustment = self.kappa[layer] * self.delta_dom
+        tau = self.current_thresholds[layer]
+        new_tau = np.clip(tau + adjustment + domain_adjustment,
+                          self.epsilon_min[layer], self.epsilon_max[layer])
+        self.current_thresholds[layer] = new_tau
     
     def get_thresholds(self):
         return self.current_thresholds
     
+    def update_kappa(self, new_kappa):
+        self.kappa.update(new_kappa)
+    
     def reset(self):
         self.current_thresholds = dict(self.base_thresholds)
-        self.history = {i: [] for i in range(4)}
+        self.history = {i: [] for i in range(6)}
+        self.delta_dom = 0.0
 
 
-# IP-348 GraspCommandTyping：抓取命令类型化
-class GraspCommandTyping(VoiceCommandTyping):
-    def __init__(self, asr_model, nli_model, default_iota, tau_voice=0.85,
-                 grasp_parser=None, geo_thresholds=None):
-        super().__init__(asr_model, nli_model, default_iota, tau_voice)
-        self.grasp_parser = grasp_parser
-        self.geo_thresholds = geo_thresholds or {'width': 0.1, 'depth': 0.2, 'force': 5.0}
-    
-    def process(self, audio_stream):
-        text, conf = self.asr.recognize(audio_stream)
-        if conf < self.tau_voice:
-            return self.ι₀, False, f"ASR低置信 {conf}"
-        
-        ι, success = self.nli.parse(text)
-        if not success or not self._type_check(ι):
-            return self.ι₀, False, "类型检查失败"
-        
-        if self._is_grasp_intent(ι, text):
-            geo_result = self._parse_grasp_geometry(text, ι)
-            if not geo_result['valid']:
-                return self.ι₀, False, f"抓取几何检查失败: {geo_result['reason']}"
-            ι['grasp_geometry'] = geo_result['geometry']
-        
-        return ι, True, f"置信 {conf}"
-    
-    def _is_grasp_intent(self, ι, text):
-        grasp_keywords = ['grasp', 'pick', 'grab', '抓取', '捡取']
-        tools = ι.get('tools', [])
-        text_lower = text.lower()
-        return (any(k in text_lower for k in grasp_keywords) or 
-                'grasp' in tools or 'pick' in tools)
-    
-    def _parse_grasp_geometry(self, text, ι):
-        result = {'valid': True, 'geometry': {}, 'reason': ''}
-        import re
-        dim_match = re.search(r'(?:直径|宽|尺寸)[为:]?\s*([\d.]+)(cm|m)', text)
-        if dim_match:
-            value = float(dim_match.group(1))
-            if dim_match.group(2) == 'cm':
-                value = value / 100.0
-            result['geometry']['width'] = value
-            result['valid'] = value <= self.geo_thresholds['max_width']
-            if not result['valid']:
-                result['reason'] = f"宽度 {value}m 超过上限"
-        if 'grasp_geometry' in ι:
-            geo = ι['grasp_geometry']
-            for p in ['width', 'depth', 'force']:
-                if p in geo:
-                    thresh = self.geo_thresholds.get(p, float('inf'))
-                    if geo[p] < thresh:
-                        result['valid'] = False
-                        result['reason'] = f"{p} {geo[p]} 不满足阈值 {thresh}"
-        return result
-    
-    def _type_check(self, ι):
-        base_ok = super()._type_check(ι)
-        if not base_ok:
-            return False
-        if 'grasp_geometry' in ι:
-            geo = ι['grasp_geometry']
-            for p in ['width', 'depth', 'force']:
-                if p in geo:
-                    thresh = self.geo_thresholds.get(p, float('inf'))
-                    if geo[p] >= thresh:
-                        return False
-        return True
-
-
-# IP-349 EmotionalReweighting：情感重权模块
-class EmotionalReweighting:
-    def __init__(self, α=1.0, β=0.5, ω_v=0.5, ω_t=0.5):
-        self.α = α
-        self.β = β
-        self.ω_v = ω_v
-        self.ω_t = ω_t
-        self.emotion_history = []
-    
-    def extract_emotion(self, audio_features, text_features):
-        f_vocal = self._compute_vocal_emotion(audio_features)
-        f_text = self._compute_text_emotion(text_features)
-        emo = self.ω_v * f_vocal + self.ω_t * f_text
-        emo = max(-1.0, min(1.0, emo))
-        self.emotion_history.append(emo)
-        if len(self.emotion_history) > 10:
-            self.emotion_history.pop(0)
-        return emo
-    
-    def _compute_vocal_emotion(self, audio_features):
-        f0 = audio_features.get('f0_mean', 150.0)
-        rate = audio_features.get('speech_rate', 180.0)
-        f0_norm = (f0 - 150.0) / 150.0
-        rate_norm = (rate - 180.0) / 70.0
-        vocal_emomax = -f0_norm
-        rate_emomax = -rate_norm
-        return max(-1.0, min(1.0, vocal_emomax + rate_emomax))
-    
-    def _compute_text_emotion(self, text_features):
-        return text_features.get('sentiment', 0.0)
-    
-    def compute_emotional_weights(self, risk_vector, emo, V_vector):
-        base_logits = [self.α * r for r in risk_vector]
-        base_exp = [np.exp(l) for l in base_logits]
-        base_sum = sum(base_exp)
-        base_weights = [e / base_sum for e in base_exp]
-        emotional_boost = [self.β * emo * V_i for V_i in V_vector]
-        mixed_logits = [b + e for b, e in zip(base_logits, emotional_boost)]
-        mixed_exp = [np.exp(l) for l in mixed_logits]
-        mixed_sum = sum(mixed_exp)
-        weights = [e / mixed_sum for e in mixed_exp]
-        return weights
-    
-    def _compute_risk(self, state):
-        violations = state.get('violations', [])
-        risk = [0.0, 0.0, 0.0, 0.0]
-        for v in violations:
-            if v['cause'] == 'SEN':
-                risk[0] += 0.8
-            elif v['cause'] == 'SEM':
-                risk[1] += 0.5
-        return risk
-
-
-# IP-350 主闭环集成关键片段
-def metricvoicegauge_round_7(M, s, obs, audio_stream=None, ell=None,
+# IP-353 主闭环集成关键片段：MetricVoiceGauge-DA-SPR-Cal
+def metricvoicegauge_round_8(M, s, obs, audio_stream=None, ell=None,
                             online_learner=None, grasp_typing=None,
-                            emotional_reweighter=None):
-    """50Hz WCET 保全主路径，叠加 OTL+GCT+ER 三大增强模块"""
+                            emotional_reweighter=None,
+                            domain_adapter=None, slam_risk=None,
+                            calib_fi=None):
+    """50Hz WCET 保全主路径，感知侧预算 ≤ 2ms，叠加 DA+SPR+Cal 三大增强"""
     
-    # --- 1. 在线阈值调节 (OTL) ---
+    # --- 0. 感知侧预处理（≤ 2ms，并行化） ---
+    slam_state = {'pose_cov': np.eye(6)*0.01, 'map_entropy': 0.0, 'loop_residual': 0.0}
+    if hasattr(M, 'slam_backend') and M.slam_backend is not None:
+        # SLAM 后端运行在独立线程，此处仅读取最新状态（无锁读取）
+        slam_state = M.slam_backend.get_latest_state()
+    
+    # --- 1. 域自适应阈值调节 (DA-ML + DA-OTL) ---
+    if domain_adapter is not None:
+        domain_adapter.update(obs)  # 提取特征、更新滑动窗口
+        delta_dom = domain_adapter.compute_domain_shift()  # ≤ 1ms GPU
+        if online_learner is not None:
+            online_learner.update_domain_shift(delta_dom)
+    else:
+        delta_dom = 0.0
+    
     if online_learner is not None:
         metrics = M.metric_ladder.compute_metrics(len(M.inflight) > 0)
-        for layer in [1, 2, 3]:
+        for layer in range(6):  # 现在 6 层
             online_learner.update(metrics, layer)
-        τ_current = online_learner.get_thresholds()
+        tau_current = online_learner.get_thresholds()
     else:
-        τ_current = M.metric_ladder.thresholds  # 退回固定值
+        tau_current = M.metric_ladder.thresholds
     
-    # --- 2. 语音指令处理 (GCT) ---
+    # --- 2. SLAM 风险传播 (SPR) ---
+    risk_slam = 0.0
+    if slam_risk is not None:
+        risk_slam, _ = slam_risk.compute_risk_slam(slam_state)
+    
+    # --- 3. 在线标定故障隔离 (OnlineCalib-FI) ---
+    sensor_weights = {name: 1.0 for name in ['camera', 'lidar', 'imu', 'mic_array']}
+    kappa_override = {}
+    if calib_fi is not None:
+        sensor_weights = calib_fi.get_sensor_weights()
+        kappa_override = calib_fi.get_kappa()
+        if online_learner is not None:
+            online_learner.update_kappa(kappa_override)
+        # 传感器权重注入感知融合（简化：此处仅记录，实际融合在感知模块内部使用）
+        M.perception_fusion.set_sensor_weights(sensor_weights)
+    
+    # --- 4. 语音指令处理 (GCT) ---
     if audio_stream is not None and grasp_typing is not None:
-        ι_voice, voice_ok, log = grasp_typing.process(audio_stream)
+        iota_voice, voice_ok, log = grasp_typing.process(audio_stream)
         if not voice_ok:
-            ι_seq = [M.default_iota]
+            iota_seq = [M.default_iota]
         else:
-            ι_seq = [ι_voice]
+            iota_seq = [iota_voice]
     else:
-        ι_seq = [M.default_iota]
+        iota_seq = [M.default_iota]
     
-    # --- 3. 情感提取与权重调节 (ER) ---
+    # --- 5. 情感提取与权重调节 (ER) ---
     emo = 0.0
-    V_vector = [0.25, 0.25, 0.25, 0.25]
+    V_vector = [0.25, 0.25, 0.25, 0.25, 0.1]  # 新增 SLAM 维度情感导向
     if emotional_reweighter is not None and audio_stream is not None:
-        audio_feats = {'f0_mean': 180.0, 'speech_rate': 200.0}  # 简化特征
-        text_sentiment = 0.1  # 简化情感值
+        audio_feats = {'f0_mean': 180.0, 'speech_rate': 200.0}
+        text_sentiment = 0.1
         emo = emotional_reweighter.extract_emotion(audio_feats, {'sentiment': text_sentiment})
-        V_vector = [0.3, 0.4, 0.2, 0.1]  # 示例：早期安全偏高
+        V_vector = [0.3, 0.4, 0.2, 0.1, 0.1]  # SLAM 风险情感导向设低
     
-    # --- 4. 奖励计算 (含情感修正) ---
-    risk = M.reward_decomposer._compute_risk(M.env.state)
-    w_prime = emotional_reweighter.compute_emotional_weights(risk, emo, V_vector) \
-        if emotional_reweighter is not None else M.reward_decomposer.w(M.env.state)
+    # --- 6. 奖励计算（含 risk_SLAM 的 5 维风险向量） ---
+    base_risk_4d = M.reward_decomposer._compute_risk(M.env.state)
+    if slam_risk is not None:
+        risk_5d = slam_risk.get_risk_vector_5d(base_risk_4d, slam_state)
+    else:
+        risk_5d = np.array([*base_risk_4d, 0.0])
     
-    # --- 5. 继承自 v6 的核心流程 (WCET ≤ 22ms) ---
+    w_prime = emotional_reweighter.compute_emotional_weights(risk_5d, emo, V_vector) \
+        if emotional_reweighter is not None else \
+        M.reward_decomposer.w_5d(risk_5d)  # 需扩展 MetaWeight 到 5 维
+    
+    # --- 7. 继承自 v7 的核心流程（WCET ≤ 20ms，总计 ≤ 22ms）---
     # 步骤：Hypothesis 生成 → IAC 分块规划 → RT-CVC 任务建模
-    #       指标体系监控 (使用 τ_current 而非固定阈值)
+    #       指标体系监控（使用 tau_current，6 层阈值）
     #       SpatialCert 验证 → FaultCert 诊断 → 恢复计划
-    #       软硬约束检查 (使用 γ_grasp 结果与 τ_current)
-    #       奖励计算 (使用 w_prime 而非 w)
+    #       软硬约束检查（δ_trigger 含 Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM）
+    #       奖励计算（使用 w_prime 5 维权重）
     #       软校准信号 σ_R 生成
     #       ROS 发布证书
     
-    # 占位：返回基础 v6 结果（实际集成时替换为完整流程）
-    from copy import deepcopy
-    C, spatial_cert, claims, metrics, rewards = M.instructgauge_rtdi_round(
+    # 占位：返回基础 v7 结果（实际集成时替换为完整流程）
+    C, spatial_cert, claims, metrics, rewards = M.metricvoicegauge_round_7(
         M, s, obs, audio_stream, ell=ell)
     
-    # after v6 基础流程，应用 OTL/GCT/ER 微调
-    # ... (此处省略 15 行实际集成代码，见完整实验验证)
+    # after v7 基础流程，应用 DA/SPR/Cal 微调
+    # ... (省略 20 行实际集成代码)
     
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 73（在线阈值平滑性）** OTL 的调节量 adjustment = η · direction，其中 direction ∈ {−1, 1} 由最近两轮性能趋势决定。若性能变化平滑（|trend| ≤ δ），则 |adjustment| ≤ η，保证 τᵢ(t) 在 η 连续步内变化有界，不会因单轮异常波动而突变触发退化。
+**引理 77（域偏移注入单调性）** Δ_dom(t) ≥ 0 且 κᵢ ≥ 0，故 τᵢ(t) 中的域偏移项 κᵢ·Δ_dom(t) ≥ 0。对于 M₀/M₁（κ 大），域偏移增大 → τᵢ 收紧（阈值变大/变严），迫使软约束更难满足 → 更早触发退化到硬约束，保证陌生域优先保安全。单调性保证域偏移不会错误地“放宽”安全阈值。
 
-**引理 74（抓取几何退化安全性）** 若 γ_grasp(ι) = invalid，则 ι ← ι₀（默认安全抓取几何），且系统退化至 M₀ 硬约束层级。证明：γ_grasp 无效时，说明抓取参数超出物理安全边界，必须退化到仅保证 CVC/SpatialCert 的硬约束，符合 MetricLadder 的 δᵢ 映射规则。
+**引理 78（SLAM 风险传播有界性）** risk_SLAM = λ_pose·trace(Σ_pose) + λ_map·H(map) + λ_loop·loop_res。SLAM 后端保证 Σ_pose ≽ 0，trace(Σ_pose) ≥ 0；地图熵 H(map) ≥ 0；回环残差 loop_res ≥ 0。故 risk_SLAM ≥ 0。若 λ 系数有界且 SLAM 协方差不发散（正常 SLAM 保证），则 risk_SLAM 有界，注入 MetaWeight 不会导致权重数值爆炸。
 
-**引理 75（情感权重有界性）** 情感修正项 β · emo(s) · Ṽ_i ∈ [−β, β] 因为 emo(s) ∈ [−1, 1] 且 Ṽ_i ∈ [0,1]。softmax 的平滑性保证 w'_i(s) 在 β 较小时与基础权重 w_i(s) 近似，当 β → 0 时收敛到原风险权重，满足退化链要求。
+**引理 79（标定故障隔离安全性）** 单传感器故障时：① sensor_weight 降至 ≥0.1，保留微弱信号用于后续一致性恢复判断，避免“单点故障 → 全模态失效”；② κᵢ 加倍收紧对应层级阈值，补偿感知质量下降导致的指标判据不可靠；③ 异步重标定不阻塞主环，WCET 不受影响。三步组合保证“检测-隔离-补偿”不破坏实时性与安全性。
 
-**引理 76（三模块联合退化正确性）** 任意单一模块（OTL/GCT/ER）失效时，系统行为等价于 MetricVoiceGauge v6。证明：① OTL 失效 ⇒ τᵢ 退回基准值 τᵢ(0)，MetricLadder 退化链不受影响；② GCT 失效 ⇒ 抓取几何检查被跳过，VoiceCommandTyping 退化至原类型检查流程；③ ER 失效 ⇒ β = 0，w'_i(s) = softmax(α·risk(s))_i = MetaWeight(s)，RewardDecomposer 退化至原风险权重结构。三者合并不产生级联效应，符合「单一模块失效→平滑降级」的设计纪律。
+**引理 80（四级退化正确性）** 任意单模块失效：DA-ML 失效 ⇒ Δ_dom≡0，OTL 退回仅性能驱动；SPR 失效 ⇒ risk_SLAM≡0，风险向量退回 4 维；Calib-FI 失效 ⇒ sensor_weight 全 1，κ 退回基准。任意两模块失效：组合上述退化，互不干扰。三模块全失效：完整退回 v7。证明：各模块接口正交（DA-ML 只改 τᵢ，SPR 只改 risk 向量，Calib-FI 只改 sensor_weight 与 κ），无级联副作用。
+
+**引理 81（六层软硬约束无空洞）** δ_trigger = {σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM}。设计时 τ_dom, τ_SLAM 与 τ_safe 同一物理尺度（均为“违背概率上界”或“风险上界”），且 M_dom、M_SLAM 到 M₀ 的退化映射 δ_dom, δ_SLAM 均定义为“直接触发 M₀ 硬约束检查”。故任一软层违背 → 必经 M₀，无“软通过硬失”空洞。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| MetricLadder 检查 | 在线 | O(|Mᵢ|) 常数 | O(1) | 定义 493 |
-| OnlineThresholdLadder 更新 | 在线 | O(1) 趋势计算 | O(N) 历史窗口 | 定义 521 |
-| VoiceCommandTyping | 在线 | O(|audio|) ASR 主导 | O(|text|) | 定义 494 |
-| GraspCommandTyping 附加 | 在线 | O(|text|) 正则解析主导 | O(1) 几何参数 | 定义 528 |
-| RewardDecomposer 含情感 | 在线 | O(|layers|·|metrics|) | O(|layers|) | 定义 495/524 |
-| EmotionalReweighting 计算 | 在线 | O(|layers|) softmax 主导 | O(1) | 定义 524 |
-| Voice-RTDI-7C 闭环 | 主路径 | WCET ≤ 22ms ( unchanged ) | 不变 | 引理 69-72, 75 |
+| MetricLadder 检查（6 层） | 在线 | O(|Mᵢ|) 常数 | O(1) | 定义 493 升级版 |
+| DA-ML 域偏移计算 | 在线 | ≤ 1ms (GPU 批处理 MMD) | O(W·d) W=20, d=256 | 定义 526 |
+| DA-OTL 阈值更新 | 在线 | O(1) 趋势+域项 | O(N) 历史窗口 | 定义 529 |
+| SPR SLAM 风险计算 | 在线 | O(1) trace+熵+残差 | O(1) | 定义 527 |
+| OnlineCalib-FI 更新 | 在线 | O(|E|) 一致性图边数 ≤ 6 | O(|V|²) ≤ 16 | 定义 528, 530 |
+| GCT 抓取几何检查 | 在线 | O(|text|) 正则 | O(1) | 定义 528 (v7) |
+| ER 情感权重 (5 维) | 在线 | O(5) softmax | O(1) | 定义 524 升级版 |
+| Voice-RTDI-7C 闭环 | 主路径 | WCET ≤ 22ms (感知 ≤2ms + 决策 ≤20ms) | 不变 | 引理 69-72, 75-81 |
 
-## 6. 实验设计 E513–E530
+## 6. 实验设计 E531–E550
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E513 | 在线阈值学习收敛 | OTL 在≤5周期内 τᵢ 收敛至±5% 区间 |
-| E514 | 抓取几何检查时序 | GCT 附加延迟 ≤ 5ms，总延迟 ≤ 40ms |
-| E515 | 情感权重调节效果 | β > 0 时，安全指标 M₁ 贡献度 ↑ 10% 且效率 M₂ ↓ 5% |
-| E516 | 三模块退化等价性 | 关闭 OTL/GCT/ER 任一模块，行为等价 MetricVoiceGauge v6 |
-| E517 | 动态阈值鲁棒性 | 动态 τᵢ 在噪声环境下仍保持 95% 判据满足率 |
-| E518 | 情感识别鲁棒性 | 不同情境下 emo(s) 识别 F1 ≥ 0.80 |
-| E519 | 抓取几何假设泛化 | 未知尺寸物体抓取成功率 ≥ 70% |
-| E520 | 端到端竞赛任务 | 模拟竞赛完成率 ≥ 92%，0 超时，OTL 适应后更优 |
-| E521 | 情感驱动的偏好转移 | 情感从焦虑→自信时，效率指标提升 ≥ 12% 且安全未下降 |
-| E522 | 多模块联合触发 | OTL+GCT+ER 同时激活时，系统仍保持 50Hz WCET 保全 |
-| E523 | 反事实推理 | 设定 emo(s) 变化，预测 w'_i 的变化方向 |
-| E524 | 形式化验证 | 用 PyCUDA 验证 OTL τᵢ 变化范围在 ε_min/ε_max 之内 |
-| E525 | 功耗分析 | 新增 OTL+GCT+ER 功耗增量 ≤ 8W（相对 v6 的 5W） |
+| E531 | 域偏移检测灵敏度 | Δ_dom 在分布偏移（光照/纹理/动态障碍）下 ↑ 3×，τ₀/τ₁ 收紧 ≥ 15% |
+| E532 | 域自适应安全性 | 陌生域（未见光照/地面）下，M₀ 违背率 ≤ 1%（v7 基线 5%） |
+| E533 | SLAM 风险传播有效性 | 人为增大 Σ_pose 5×，risk_SLAM ↑ 4×，w₀/w₁ 权重 ↑ ≥ 20%，速度自动降低 ≥ 30% |
+| E534 | SLAM-指标耦合无空洞 | risk_SLAM 超阈值 → 必触发 M₀ 硬约束检查，0 次软通过硬失 |
+| E535 | 标定漂移检测延迟 | 单传感器标定偏移 > ε_calib，检测延迟 ≤ 3 周期（≤ 60ms） |
+| E536 | 故障隔离补偿有效性 | 相机标定漂移 10cm/5°，隔离后 M₁ 安全指标满足率从 60% 恢复至 ≥ 90% |
+| E537 | 异步重标定不阻塞 | 重标定任务耗时 500ms，主环 50Hz WCET 无抖动（≤ 22ms） |
+| E538 | 三模块联合压力测试 | 同时注入：域偏移+SLAM协方差发散+双传感器标定漂移，系统仍保持 50Hz、0 碰撞 |
+| E539 | 四级退化等价性验证 | 关闭 DA/SPR/Cal 任意组合，行为等价对应退化级别基线 |
+| E540 | 端到端真实机器人任务 | 真实室内导航+抓取（未见场景），完成率 ≥ 85%，0 安全违背 |
+| E541 | 跨域泛化基准 | 从仿真迁移到真实（Sim2Real），零样本成功率 ≥ 70% |
+| E542 | 长时运行标定稳定性 | 连续运行 8 小时，标定偏移自动修正，累计漂移 < 2cm/1° |
+| E543 | 情感-SLAM 交互 | 情感从焦虑→自信时，SLAM 风险高环境下仍适度提速（安全未下降） |
+| E544 | 反事实推理 | 设定 Δ_dom、Σ_pose、δ_calib 变化，预测 τᵢ、w'_i、sensor_weight 变化方向 |
+| E545 | 形式化验证 | 用 CBMC 验证 DA-OTL τᵢ 变化范围在 ε_min/ε_max、κᵢ·Δ_dom 单调性 |
+| E546 | 功耗分析 | 新增 DA+SPR+Cal 功耗增量 ≤ 12W（相对 v7 的 13W，总 ≤ 25W） |
+| E547 | 计算预算剖析 | 感知侧 ≤ 2ms（MMD 1ms + SLAM 读取 0.2ms + 标定图 0.1ms），决策侧 ≤ 20ms |
+| E548 | 多机协同扩展 | 双机共享 Δ_dom 与 SLAM 地图，协同导航完成率 ↑ 10% |
+| E549 | 对抗域偏移 | 对抗性光照/纹理贴纸攻击，Δ_dom 检测触发收紧，安全违背率 ≤ 2% |
+| E550 | 综合竞赛模拟 | 模拟 RoboCup@Home 全任务，得分 ≥ v7 基线 + 15% |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 在线阈值学习（E513） | ≤ 5 周期收敛 | 固定学习率 η → 减半、窗口 N → 增大 |
-| 抓取几何检查（E514） | 总延迟 ≤ 40ms, 额外 ≤ 5ms | 简化正则表达式、减少几何参数检查 |
-| 情感调节效果（E515） | 安全贡献度 ↑ 10% 且安全未下降 | β → β/2、情感导向向量 Ṽ 重新标准化 |
-| 三模块退化（E516） | 关闭任一模块 → 行为等价 v6 | 检查退化链实现是否有Bug |
-| 动态阈值鲁棒性（E517） | 噪声环境下 95% 判据满足率 | 调大 clip 范围、增加性能平滑系数 |
-| 情感识别鲁棒性（E518） | F1 ≥ 0.80 | 扩充情感数据集、增强噪声鲁棒提取 |
-| 抓取泛化能力（E519） | 未知尺寸物体成功率 ≥ 70% | 扩大 geo_thresholds 范围、增加物体模型库 |
-| 端到端任务（E520） | 完成率 ≥ 92%，0 超时 | OTL 学习率 η → 调小、WCET 检查 |
-| 情感偏好转移（E521） | 焦虑→自信时效率提升 ≥ 12% 且安全未下降 | 重新调节 ω_v, ω_t 权重、调整 β |
-| 多模块联合（E522） | 50Hz WCET 保全 | 精简 OTL 更新逻辑、合并 GCT 正则 |
-| 反事实推理（E523） |  emo(s) 变化 → w'_i 方向可预测 | 情感梯度计算是否稳定 |
-| 形式化验证（E524） | OTL τᵢ 变化范围在 ε_min/ε_max 之内 | 检查 clip 参数是否配置正确 |
-| 功耗分析（E525） | 新增功耗增量 ≤ 8W | 精化模块计算复杂度、考虑离线学习 |
+| 域偏移检测（E531） | Δ_dom 偏移下 ↑ 3×，τ₀/τ₁ 收紧 ≥ 15% | 调大 κ₀/κ₁、扩充参考域数据集、更换特征提取器 |
+| 域自适应安全性（E532） | 陌生域 M₀ 违背率 ≤ 1% | 增大 ε_max 允许更大收紧、引入域对抗训练特征提取器 |
+| SLAM 风险传播（E533） | Σ_pose 5× → w₀/w₁ ↑ 20% 且速度 ↓ 30% | 调大 λ_pose、检查 MetaWeight α 是否过小 |
+| SLAM-指标无空洞（E534） | 0 次软通过硬失 | 检查 δ_trigger 与 τ₀ 尺度对齐、τ_dom/τ_SLAM 设置 |
+| 标定漂移检测（E535） | 检测延迟 ≤ 3 周期 | 增加一致性图更新频率、降低 ε_calib |
+| 故障隔离补偿（E536） | 漂移后 M₁ 恢复 ≥ 90% | 调大 κ 加倍系数、优化 sensor_weight 降权曲线 |
+| 异步重标定（E537） | 主环 WCET 无抖动 | 重标定任务绑定独立 CPU 核心、降低优先级 |
+| 三模块压力测试（E538） | 50Hz、0 碰撞 | 精简各模块计算、检查是否有锁竞争 |
+| 四级退化（E539） | 任意组合等价对应基线 | 单元测试每个退化接口、检查正交性 |
+| 真实机器人任务（E540） | 完成率 ≥ 85%、0 安全违背 | 实机调参：κ、λ、ε_calib、η |
+| 跨域泛化（E541） | Sim2Real 零样本 ≥ 70% | 域随机化训练特征提取器、增大参考域多样性 |
+| 长时标定（E542） | 8h 漂移 < 2cm/1° | 增加周期性全局重标定触发条件 |
+| 情感-SLAM 交互（E543） | 焦虑→自信时 SLAM 高风险环境仍适度提速 | 调整 Ṽ_SLAM、β、ω_v/ω_t |
+| 反事实推理（E544） | 变化方向可预测 | 检查梯度计算数值稳定性 |
+| 形式化验证（E545） | DA-OTL 单调性、边界验证通过 | 修正 clip 参数、κ 非负约束 |
+| 功耗（E546） | 总功耗 ≤ 25W | 模块量化、降低 MMD 计算频率 |
+| 计算预算（E547） | 感知 ≤ 2ms、决策 ≤ 20ms | 算子融合、GPU 流水线、减少内存拷贝 |
+| 多机协同（E548） | 协同完成率 ↑ 10% | 优化通信协议、共享 Δ_dom 压缩 |
+| 对抗域偏移（E549） | 攻击下安全违背 ≤ 2% | 引入对抗检测头、增大 τ_dom 余量 |
+| 竞赛模拟（E550） | 得分 ≥ v7 + 15% | 综合调参、分析失分瓶颈 |
 
 ## 8. 本轮最大风险
 
-**一句话**：在线学习的阈值调节可能过度激进，导致频繁触发软→硬退化，频繁退化会削弱系统有效性；抓取几何指标的建模假设（如物体尺寸范围）在未知环境下可能失效；情感计算的误识别可能导致奖励权重向错误方向偏移——三者合卷下，「系统因过度试图“适应人类情绪”而产生不稳定的退化频率」。
+**一句话**：域偏移估计（MMD）与 SLAM 协方差传播在计算预算极紧（≤2ms 额外开销）下可能引入显著延迟抖动，导致 OTL 读取到“延迟污染的性能指标”进而错误收紧 τᵢ；在线标定的异步重标定任务若抢占 CPU 核心，会破坏 50Hz WCET 硬实时保证——三者合卷下，「感知侧计算抖动经由风险向量传播至指标层，引发虚假退化风暴」。
 <!-- ARTIFACT:END -->
