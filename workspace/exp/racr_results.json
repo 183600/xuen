@@ -1,0 +1,110 @@
+{
+  "note": "synthetic mechanism checks; not benchmark evidence",
+  "A_mondrian_beta": {
+    "alpha": 0.01,
+    "beta_global": 3.9388,
+    "min_cell_coverage_global": 0.9509,
+    "min_cell_coverage_mondrian": 0.9849,
+    "mean_beta_global": 3.9388,
+    "mean_beta_mondrian": 2.6437,
+    "cells": [
+      {
+        "cell": 0,
+        "scale": 0.4,
+        "beta_global": 3.9388,
+        "beta_mondrian": 1.0356,
+        "coverage_global": 1.0,
+        "coverage_mondrian": 0.9916
+      },
+      {
+        "cell": 1,
+        "scale": 0.6,
+        "beta_global": 3.9388,
+        "beta_mondrian": 1.481,
+        "coverage_global": 1.0,
+        "coverage_mondrian": 0.9849
+      },
+      {
+        "cell": 2,
+        "scale": 0.8,
+        "beta_global": 3.9388,
+        "beta_mondrian": 2.0131,
+        "coverage_global": 1.0,
+        "coverage_mondrian": 0.9896
+      },
+      {
+        "cell": 3,
+        "scale": 1.0,
+        "beta_global": 3.9388,
+        "beta_mondrian": 2.5867,
+        "coverage_global": 1.0,
+        "coverage_mondrian": 0.9905
+      },
+      {
+        "cell": 4,
+        "scale": 1.4,
+        "beta_global": 3.9388,
+        "beta_mondrian": 3.6012,
+        "coverage_global": 0.9947,
+        "coverage_mondrian": 0.9896
+      },
+      {
+        "cell": 5,
+        "scale": 2.0,
+        "beta_global": 3.9388,
+        "beta_mondrian": 5.1444,
+        "coverage_global": 0.9509,
+        "coverage_mondrian": 0.9907
+      }
+    ]
+  },
+  "B_survivorship": {
+    "scale": 1.0,
+    "log_threshold": 1.5,
+    "true_99pct_residual": 2.5618,
+    "beta_from_clean_store": 1.4604,
+    "beta_from_full_store": 2.5076,
+    "coverage_clean_store": 0.8556,
+    "coverage_full_store": 0.989,
+    "stored_fraction_of_tail": 0.1352
+  },
+  "C_roadmap_duality": {
+    "good": {
+      "ok": true,
+      "order": [
+        "L0-v6",
+        "L1-v7",
+        "L2-v8",
+        "L3-v9-AC",
+        "L4-v9-MW",
+        "L5-v9-ID",
+        "L6-RAC-beta",
+        "L7-RAC-recov",
+        "L8-RC"
+      ],
+      "bad_edges": [],
+      "n_promotion_edges": 11
+    },
+    "broken": {
+      "ok": false,
+      "order": [
+        "L0-v6",
+        "L1-v7",
+        "L2-v8",
+        "L3-v9-AC",
+        "L4-v9-MW",
+        "L5-v9-ID",
+        "L6-RAC-beta",
+        "L7-RAC-recov",
+        "L8-RC"
+      ],
+      "bad_edges": [
+        {
+          "edge": "L6-RAC-beta->L6-RAC-beta^-",
+          "why": "no_rollback"
+        }
+      ],
+      "n_promotion_edges": 11
+    }
+  }
+}

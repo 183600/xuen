@@ -1,0 +1,77 @@
+{
+  "transparent_obstacle": {
+    "n": 40000,
+    "v10_negative_evidence_collision": 0.363425,
+    "v11_positive_single_modality_collision": 0.554925,
+    "v11_positive_concordance_collision": 0.1257,
+    "v11_abstain_to_unknown": 0.8743
+  },
+  "occlusion_shadow": {
+    "n": 40000,
+    "d_brake_m": 0.5,
+    "reveal_range_m": [
+      0.1,
+      1.1
+    ],
+    "v10_negative_evidence_collision": 0.398925,
+    "v11_positive_evidence_collision": 0.0,
+    "v11_extra_stops_at_shadow_frontier": 1.0
+  },
+  "few_shot_conformal": {
+    "delta": 0.05,
+    "lambda_fixed": 0.0,
+    "fixed_baseline": {
+      "source_false_free": 0.158845,
+      "source_free_accept": 0.976795,
+      "shift_false_free": 0.84015,
+      "shift_free_accept": 0.976795
+    },
+    "few_shot_curve": [
+      {
+        "n_cal": 10,
+        "feasible": false,
+        "lambda_crc": null,
+        "source_false_free": 0.0,
+        "source_free_accept": 0.0,
+        "shift_false_free": 0.0,
+        "shift_free_accept": 0.0
+      },
+      {
+        "n_cal": 20,
+        "feasible": true,
+        "lambda_crc": -0.980562450358694,
+        "source_false_free": 0.023865,
+        "source_free_accept": 0.84477,
+        "shift_false_free": 0.50747,
+        "shift_free_accept": 0.84477
+      },
+      {
+        "n_cal": 40,
+        "feasible": true,
+        "lambda_crc": -0.780529277822362,
+        "source_false_free": 0.03721,
+        "source_free_accept": 0.88752,
+        "shift_false_free": 0.58647,
+        "shift_free_accept": 0.88752
+      },
+      {
+        "n_cal": 100,
+        "feasible": true,
+        "lambda_crc": -0.6145101973761136,
+        "source_false_free": 0.05275,
+        "source_free_accept": 0.915915,
+        "shift_false_free": 0.6494,
+        "shift_free_accept": 0.915915
+      }
+    ],
+    "shifted_adaptive": {
+      "aci_long_run_false_free": 0.05326,
+      "aci_mean_lambda_second_half": -2.649218850352968,
+      "aci_free_accept": 0.25569
+    },
+    "theoretical": {
+      "phi_0_src_occ": 0.15865525393145707,
+      "phi_0_shift_occ": 0.8413447460685429
+    }
+  }
+}
