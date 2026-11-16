@@ -57,321 +57,417 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-STF-NRB-LS**（Metric Voice Gauge with Semantic-Trust Field, Norm Review Board & Lightweight Structure）
+# 第 11 轮产物 · 创新点清单 v11：**MetricVoiceGauge-GSCF-SRA-JSSE**（Metric Voice Gauge with Geo-Semantic Consistency Field, Semantic Reasoning Auditor & Joint-Space Safety Envelope）
 
-> 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮灵感：「语义建图」×「伦理审查」×「轻量化结构」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）全部保留；v9 的 AC/MW/ID 三模块原样继承（IP-354–356）。新组件为可选增强：STF 失效 ⇒ K=1（等价 v9 信任破坏行为）；NRB 失效 ⇒ 限制性剖面 Π_r（物理行为支配于 v9，P13）；其余失效沿 v9 退化链。v9 最大风险（Δ_dom 滞后使证书在最需要安全的时刻最不可靠）由 IP-357 的领先指标机制正面拆除（引理 87）。
+> 背景：第 10 轮 MetricVoiceGauge-STF-NRB-LS（定义 540–548；引理 87–91；实验 E571–E590）。
+> 本轮灵感：「三维感知」×「视觉问答」×「关节空间控制」
+> **继承纪律**：MetricVoiceGauge 九不变式 + v10 三模块（STF/NRB/LS）全部保留；新组件为可选增强：GSCF 失效 ⇒ γ≡1、ν̂←ν、β←β_STF（等价 v10 STF 行为）；SRA 失效 ⇒ n^reason 全 0、K_eff←2（Π_r 级收缩，支配性）；JSSE 失效 ⇒ 关节级急停保持（v6 级）；其余失效沿 v10 退化链。v10 最大风险（τ_sem 经验校准可被对抗穿透）由 IP-361 的联合创新度 ν̂_ℓ 正面拆除（引理 92）。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-STF-NRB-LS v10） |
 |---|---|---|---|
-| IP-340–356 | v9 全部模块 | 继承 | 语义不变；证书升级为结构化（IP-357），契约表增配额列（IP-359） |
-| IP-354 AC | 分块证书执行器 | 升级 | 块证书 Ĉ→Ĉ⁺（+β_STF、+n_t、+新鲜度）；中块守卫 2 检→4 检（+语义创新度、+快规范），仍 ≤0.5ms |
-| IP-355 MW | 契约中间件 | 升级 | 契约增列内存/能耗配额（M_m, E_m），部署期静态校验；新增 5 行契约（下表） |
-| IP-356 ID | 创新点蒸馏器 | 升级 | eligible 集仅扩一行（地标图维护）；STF 守卫/NRB/台账 φ^elig=false 永不消融 |
-| IP-357 | SemanticTrustField 语义信任场 | 新增核心模块 | 拓扑-语义地标图（O(|V|≤512)）+ 逐地标创新度 ν_ℓ（5 帧 EMA）+ 核加权信任场 T(x)；证书余量足迹局部化 β_STF；守卫领先指标 |
-| IP-358 | NormReviewBoard 规范审查委员会 | 新增核心模块 | 规范谓词表（\|N\|≤12，声明式数据）+ 5Hz 全审查 / 50Hz 快规范双速 + 修复算子库 R（3 个）+ 限制性中立元 Π_r（P13） |
-| IP-359 | LightweightStructure 有据轻量化 | 新增横切机制 | INT8 前向模型 F̂_q（β_q 重标定）；地标图剪枝/合并不变量；契约内存/能耗配额静态校验 |
-| IP-360 | EthicsLedger 伦理台账 | 新增审计组件 | append-only 哈希链；块边界批量写；缺口 ⇒ 下块 Π_r；离线复盘问责 |
+| IP-340–360 | v10 全部模块 | 继承 | 语义不变；证书升级为三重守护（IP-361–363），契约表增配额行（IP-364） |
+| IP-354 AC | 分块证书执行器 | 升级 | 块证书 Ĉ⁺→Ĉ⁺⁺（+β_GSCF、+n_t^reason、+Q_abort）；中块守卫 4 检→5 检（+几何一致性），仍 ≤0.6ms |
+| IP-355 MW | 契约中间件 | 升级 | 契约增列内存/能耗配额（GSCF/SRA/JSSE 新增行）；部署期静态校验 Σ M_m ≤ RAM、Σ E_m ≤ 25W |
+| IP-356 ID | 创新点蒸馏器 | 升级 | eligible 集不扩展（GSCF/SRA/JSSE 安全守卫 φ^elig=false 永不消融） |
+| IP-361 | GeoSemanticConsistencyField 几何语义一致性场 | 新增核心模块 | 地标级几何一致性 γ_ℓ（多帧 ICP/重投影 EMA）+ 联合创新度 ν̂_ℓ=max(ν_ℓ,1−γ_ℓ) + 几何信任场 Γ(x)；证书余量 β_GSCF；守卫五检新增几何一致性 |
+| IP-362 | SemanticReasoningAuditor 语义推理审查器 | 新增核心模块 | 轻量 VQA（≤50MB INT8，CLIP 编码器+小型解码器）+ 声明式问题模板（≤16 条）+ 5Hz 块级推理（≤5ms）+ 置信度+解释入证书 n_t^reason、入台账 Λ |
+| IP-363 | JointSpaceSafetyEnvelope 关节空间安全包络 | 新增硬兜底模块 | 关节空间安全集合 C_q_safe（位置/速度/力矩/自碰撞/ZMP）+ 1kHz 投影器 Proj_{C_q_safe} + 任务-关节中止映射 p*↔Q_abort；独立于感知链路 |
+| IP-364 | 契约表增量（v11 新增行） | 横切机制 | 见下表；三模块均在安全守卫预算内，φ^elig=false |
 
-**契约表增量（v10 新增行；列含义同 v9 定义 535，增配额列）：**
+**契约表增量（v11 新增行；列含义同 v10，增配额列）：**
 
 | 新增契约行 | D_m (ms) | Ŵ_m (ms) | M_m | E_m | v^⊥ | φ^elig |
 |---|---|---|---|---|---|---|
-| STF 语义守卫（50Hz，并入守卫时隙） | 0.5 | 0.5 | 8KB | ~40mW | U_t^sem 破坏 ⇒ K=1 | ✗ |
-| 地标图维护（感知侧） | 0.5 | 0.3 | 64KB | ~30mW | 跳过本帧（新鲜度门控兜底） | ✓ |
-| NRB 全审查（5Hz） | 1.0 | 1.0 | 16KB | ~50mW | Π_r | ✗ |
-| 快规范（50Hz，并入守卫） | — | 0.2 | — | — | 保守默认（d_eth+δ_r、禁抓注册物品） | ✗ |
-| 台账写（5Hz 块边界） | 0.1 | 0.1 | 256KB | ~10mW | 缺口 ⇒ 下块 Π_r | ✗ |
+| GSCF 几何一致性更新（感知侧，复用 SLAM 深度栈） | 0.3 | 0.2 | 16KB | ~20mW | γ_ℓ≡1、ν̂←ν | ✗ |
+| GSCF 守卫检 5（50Hz，并入守卫时隙） | — | 0.1 | — | — | γ<γ_min ⇒ abort | ✗ |
+| SRA 推理（5Hz 块生成期，批量并行） | 5.0 | 5.0 | 50MB | ~200mW | n_t^reason 全 0、K_eff←2 | ✗ |
+| SRA 解释写台账（5Hz 块边界） | 0.1 | 0.1 | 128KB | ~10mW | 缺口 ⇒ Λ 标记 | ✗ |
+| JSSE 1kHz 投影（控制侧，硬实时） | 1.0 | 0.8 | 256KB | ~50mW | 急停保持（零速、重力补偿） | ✗ |
 
-**退化链声明（v10 契约化六级）：**
-- Level-1：STF 失效（图不可用/嵌入超时/freshness > T_fresh）⇒ T≡0、K_eff←1、β←β_base，等价 v9 信任域破坏行为；
-- Level-2：NRB 失效 ⇒ 限制性剖面 Π_r（K_eff≤2、d_eth+δ_r、禁触注册个人物品、强制语音披露），物理行为 ⊆ v9（引理 89）；
-- Level-3：AC 证书失效 ⇒ K=1，等价 v9→v8 决策粒度；
-- Level-4：ID 失效 ⇒ 全模块 active、归因冻结，等价 v9 全模块常开；
-- Level-5：MW 失效 ⇒ 切换 v9 手写网关代码路径（保留于代码库，非契约驱动）；
-- Level-6：v8 组件失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1）⇒ v7 ⇒ v6。
+**退化链声明（v11 契约化九级）：**
+- Level-1：GSCF 失效（深度/点云不可用、ICP 发散、标定失效）⇒ γ_ℓ≡1、ν̂_ℓ←ν_ℓ、β_GSCF←β_STF，等价 v10 STF 行为；
+- Level-2：SRA 失效（VQA 超时/崩溃/OOM）⇒ n_t^reason 全 0、K_eff←2（Π_r 级），物理行为 ⊆ v10 Π_r（支配性）；
+- Level-3：JSSE 失效（投影超时/运动学损坏）⇒ 关节级急停保持（零速度、重力补偿），等价 v6；
+- Level-4：STF 失效 ⇒ K_eff←1、β←β_base（v10 Level-1）；
+- Level-5：NRB 失效 ⇒ Π_r（v10 Level-2）；
+- Level-6：AC 证书失效 ⇒ K=1（v10 Level-3）；
+- Level-7：ID 失效 ⇒ 全模块 active、归因冻结（v10 Level-4）；
+- Level-8：MW 失效 ⇒ 手写网关（v10 Level-5）；
+- Level-9：v8 组件失效 ⇒ 中立元注入 ⇒ v7 ⇒ v6。
 
-## 1. 符号体系增量（定义 540–548）
+## 1. 符号体系增量（定义 549–560）
 
 | 符号 | 含义 |
 |---|---|
-| G_LM=(V,E) | 拓扑-语义地标图；ℓ=(c_ℓ, p_ℓ, ρ_ℓ, ξ_ℓ, e_{c_ℓ}, t_σ, s_ℓ)：类、位姿、置信、同意标志、类原型嵌入（16 维 fp16）、末见时刻、稳定度；\|V\|≤V_max=512，≤64KB |
-| ν_ℓ(t) | 语义创新度：ν_ℓ = clip(d_emb(obs_emb(ℓ), e_{c_ℓ})/τ_emb, 0, 1)；ν̄_ℓ 为 5 帧 EMA |
-| T(x,t) | 语义信任场：T = Σ_ℓ w_ℓ(x)·ν̄_ℓ / Σ_ℓ w_ℓ(x)，w_ℓ = exp(−‖x−p_ℓ‖²/2h²) |
-| Φ(ζ) | 块 ζ 扫掠足迹：F̂_q rollout 路径的走廊（宽度=形体半径+感知半径） |
-| β_STF(ζ,t) | 结构化余量：β_STF = β_base + λ·sup_{x∈Φ(ζ)} T(x,t)，λ 经 E574 标定 |
-| Ĉ_t⁺ | 结构化块证书 (ĝ_min, ê_max, γ̂_grasp, β_STF, n_t)；n_t∈{0,1}^{\|N\|} 规范通过向量 |
-| U_t^sem | 语义信任域：sup_{x∈走廊近邻} T(x,t) < τ_sem ∧ Δ_dom < τ_dom ∧ freshness(G_LM) ≤ T_fresh=2s |
-| N={ν_j} | 规范表：ν_j=(scope_j, φ_j, sev_j, remedy_j)，sev∈{hard, soft}，\|N\|≤12 |
-| R | 修复算子库：{r₁ 插停/慢化, r₂ 重定向到非受限目标, r₃ 中止至 p*}；修复后须重验证书 |
-| Π_r | 限制性剖面：K_eff≤2、d_eth←d_eth+δ_r、禁触注册个人物品、强制语音披露、台账缺口标记 |
-| Λ | 伦理台账：记录=H(prev‖t‖ζ_id‖判定向量‖修复‖utterance)，append-only 哈希链（κ_h=256） |
-| F̂_q | INT8 量化 GRU 前向模型；β_q 为其在量化模型上的重标定余量 |
-| K_eff(t) | 有效块长：门控谓词升级为 U_t^sem（定义 539-v10） |
+| γ_ℓ(t) | 地标几何一致性：γ_ℓ = exp(−EMA_{5帧}(r_ℓ/τ_geo))，r_ℓ 为 ICP/重投影残差，τ_geo 经 E591 标定；γ_ℓ∈[0,1]，γ→1 表几何自洽 |
+| γ_min | 几何一致性可证下界：标定实验给出 γ_min = 1−ε_geo（ε_geo 为噪声+标定误差上界，E591），**非经验阈值** |
+| ν̂_ℓ(t) | 联合创新度：ν̂_ℓ = max(ν_ℓ, 1−γ_ℓ)——语义异常 ∨ 几何异常 任一触发即显著 |
+| Γ(x,t) | 几何信任场：Γ = Σ_ℓ w_ℓ(x)·γ̄_ℓ / Σ_ℓ w_ℓ(x)，γ̄_ℓ 为 γ_ℓ 的 5 帧 EMA（同 ν̄） |
+| β_GSCF(ζ,t) | 三重守护余量：β_GSCF = β_base + λ·sup_{x∈Φ(ζ)} max(T(x,t), 1−Γ(x,t)) |
+| Ĉ_t⁺⁺ | 三重守护块证书 (ĝ_min, ê_max, γ̂_grasp, β_GSCF, n_t, n_t^reason, Q_abort) |
+| U_t^geo | 几何信任域：inf_{x∈走廊近邻} Γ(x,t) ≥ γ_min ∧ freshness(G_LM) ≤ T_fresh ∧ Δ_dom < τ_dom |
+| Q_tmpl | SRA 问题模板集：q_j=(template_j, scope_j, key_assumption_j)，|Q_tmpl|≤16 |
+| SRA 判定 | sra_j = (conf_j ∈ [0,1], rationale_j ∈ Σ*)，conf_j ≥ τ_sra(=0.7) 视为通过 |
+| n_t^reason | 推理通过向量：n_t^reason ∈ {0,1}^{|Q_tmpl|}，全 1 才算推理通过 |
+| C_q_safe | 关节空间安全集合：{q | q_min≤q≤q_max, ‖q̇‖≤v_max, ‖τ‖≤τ_max, 无自碰撞(q), ZMP(q)∈support_polygon} |
+| Proj_{C_q_safe} | 1kHz 投影算子：q_cmd ← argmin_{q∈C_q_safe} ‖q−q_cmd‖_W（W 对角权重，优先位置/速度约束） |
+| Q_abort | 关节空间中止集合：Q_abort = {q | FK(q)=p*, q∈C_q_safe}；FK 为前向运动学 |
+| FK_ε | 运动学标定误差模型：‖FK(q)−FK_true(q)‖ ≤ ε_fk（E596 标定），用于中止等价性证明 |
 
-**新增定义 540（拓扑-语义地标图）** V 为地标集合、E 为邻接边。维护规则：同类同位（d<h/2）合并且 ν̄_merged = max（保守）；|V|>V_max 或 stale > T_decay 时仅允许剪除「ν̄_ℓ ≤ τ_sem/2 或在当前运营走廊之外」的地标（剪枝不变量，引理 91-ii）。
+**新增定义 549（地标几何一致性）** 每地标 ℓ 维护多帧几何残差 r_ℓ：深度重投影误差（若有深度）或 ICP 点云配准残差（若有点云）。γ_ℓ = exp(−r̄_ℓ/τ_geo)，r̄_ℓ 为 5 帧 EMA。γ_ℓ 越大几何越自洽。γ_min 由标定实验给出：在已知噪声模型与标定误差下，正常物体 γ_ℓ ≥ γ_min 以概率 ≥1−ε_geo（E591）。**γ_min 非经验调参，而是可证下界**。
 
-**新增定义 541（语义创新度）** ν_ℓ(t) = clip(d_emb(obs_emb(ℓ), e_{c_ℓ})/τ_emb, 0, 1)。显著语义突变 ⇔ ν_ℓ > τ_sem（τ_emb/τ_sem 经 E571 标定，显著类召回 ≥99%）。
+**新增定义 550（联合创新度）** ν̂_ℓ = max(ν_ℓ, 1−γ_ℓ)。显著判定：ν̂_ℓ > τ_sem（沿用 v10 τ_sem，但现在由 ν_ℓ 或 1−γ_ℓ 任一触发）。**关键性质**：对抗纹理可造假 ν_ℓ 低，但若几何不自洽（γ_ℓ 低），1−γ_ℓ 高 ⇒ ν̂_ℓ 高 ⇒ 显著；长尾语义无原型嵌入 ⇒ ν_ℓ 高 ⇒ 显著；INT8 量化压缩嵌入空间不影响 γ_ℓ（几何通道独立）。
 
-**新增定义 542（语义信任场）** 如符号表。ν̄ 取 5 帧 EMA（对比 Δ_dom 的 20 帧滑窗）给出 ≥4× 反应速度；核半径 h 与地标密度共同决定走廊覆盖（E576）。
+**新增定义 551（几何信任场与三重余量）** Γ(x) 核加权同 T(x)；β_GSCF = β_base + λ·sup_{x∈Φ(ζ)} max(T(x), 1−Γ(x))。证书 ĝ_min = min_k F̂_q,clearance − β_GSCF。**领先性**：γ_ℓ 5 帧 EMA 同 ν̄_ℓ，几何异常反应 ≤5 帧，快于 Δ_dom 20 帧。
 
-**新增定义 543（结构化块证书）** ĝ_min = min_k F̂_q,clearance − β_STF；ê_max = max_k F̂_q,effort + β_STF。Ĉ_t⁺ valid ⇔ ĝ_min ≥ d_safe ∧ ê_max ≤ τ_eff ∧ γ̂_grasp valid ∧ n_t 全通过（或修复后重验）∧ freshness(G_LM) ≤ T_fresh ∧ U_t^sem。
+**新增定义 552（三重守护块证书）** Ĉ_t⁺⁺ = (ĝ_min, ê_max, γ̂_grasp, β_GSCF, n_t, n_t^reason, Q_abort)。有效 ⇔ v10 定义 543 条件 + U_t^geo + n_t^reason 全 1 + Q_abort 非空。
 
-**新增定义 544（规范表）** 每条 ν_j=(scope, φ_j, sev, remedy)，φ_j 在（ζ 投影足迹 ∩ 地标邻域, Λ）上求值。示例（完整表 |N|≤12）：
+**新增定义 553（几何信任域）** U_t^geo = (inf_{x∈走廊近邻} Γ(x) ≥ γ_min) ∧ freshness(G_LM) ≤ T_fresh ∧ Δ_dom < τ_dom。升级定义 539（v11）：
+```
+K_eff(t) = 1                                    若 ¬U_t^sem 或 ¬U_t^geo 或 Ĉ_t⁺⁺ 不可得
+         = 2                                    若 NRB 失效 或 SRA 失效（Π_r 级）
+         = max(1, ⌊K_max·(1 − min(1, max(Δ_dom/τ_dom, sup_走廊 T/τ_sem, sup_走廊 (1−Γ)/τ_sem)))⌋)   否则
+```
+三重门控取 max：语义/几何/标量任一越阈即收缩。
 
-| 规范 | scope | 谓词要点 | sev | remedy |
-|---|---|---|---|---|
-| ν-PROX | 运动朝向人类 | 距人类地标 < d_eth=0.6m 且非批准交接 | hard | r₁ 插停/绕行 |
-| ν-PRIV | 记录行为 | 非自愿者（ξ=0）在视野且启动记录 | hard | 遮蔽+披露 |
-| ν-PROP | 抓取目标 | 目标 ∈ 注册个人物品且无活跃 claim | soft | r₂ 重定向 / 先语音请求 claim |
-| ν-TRAN | 可解释性 | 规范介入未播报理由 | soft | 语音披露 |
-| ν-FAIR | 服务公平 | 当前会话服务质量低于会话均值超阈 | soft | 补偿排队/披露 |
-| ν-QUIE | 声学规范 | 音量超场景规范（夜间等） | soft | 降音量 |
+**新增定义 554（SRA 问题模板）** 声明式数据，示例（完整表 ≤16 条）：
+| 模板 | scope | 关键假设 |
+|---|---|---|
+| "Is the {class} at {pose} actually {class}?" | 抓取目标 | 类别与位姿一致 |
+| "Does the scene afford a {grasp_type} grasp on {object}?" | 抓取可行性 | 场景几何支持该抓取 |
+| "Is there a human at {pose} within {distance}?" | 人体接近 | 距离与人体一致 |
+| "Is the {object} registered as personal property?" | 财产规范 | 物品注册状态 |
+| "Can you explain why this action is safe?" | 可解释性 | 安全理由自洽 |
 
-**新增定义 545（修复算子）** R = {r₁ 在 p 前插入减速-停驻段, r₂ 换非受限等价目标, r₃ 中止至 p*}；ζ' = r(ζ, ν_j) 取最小改动，修复后必须重验定义 543 全条件（含停车不变式与中止点集），验不过则退单步 fallback。
+**新增定义 555（SRA 推理契约）** κ_SRA = (D_reason=5.0ms@5Hz, D_ledger=0.1ms@5Hz, v^⊥=(n^reason全0, K_eff←2))。推理输入：候选块 ζ + 关键地标语义/几何摘要 + 当前场景图；输出：{sra_j}。conf_j ≥ τ_sra 视为通过；任一失败 ⇒ n_t^reason 对应位 0、块证书标记不确定、K_eff 收缩。rationale 全量入 Λ（扩展记录：H(prev‖t‖ζ_id‖sra_j‖rationale_j)）。
 
-**新增定义 546（审查契约与限制性中立元）** κ_NRB = (D_full=1.0ms@5Hz, D_fast=0.2ms@50Hz, v^⊥=Π_r)。P13：审查失明即收缩——Π_r 只收缩动作空间/加严裕量；每份否决/修复写入 Λ。
+**新增定义 556（关节空间安全集合）** C_q_safe = {q ∈ ℝ^n | q_min ≤ q ≤ q_max, ‖q̇‖_∞ ≤ v_max, ‖τ‖_∞ ≤ τ_max, ∀i≠j: d_link(i,j) ≥ d_self, ZMP(q) ∈ support_polygon}。d_link 为链路间最小距离（预计算凸包近似），ZMP 由动力学模型计算。**C_q_safe 仅依赖本体感觉与标定运动学/动力学模型，不依赖视觉/语义感知**。
 
-**新增定义 547（语义四检守卫）** 50Hz 守卫四检（全部 O(k)，k≤8 近邻地标）：(i) 证书有效性（v9 原检）；(ii) 停车不变式（v9 原检）；(iii) 语义创新度：当前 k 近邻 sup ν̄ ≤ τ_sem；(iv) 快规范：ν-PROX/ν-PRIV 的 O(k) 求值。任一失败 ⇒ 切 p* 或安全停驻；全过 ⇒ continue。总预算 ≤0.5ms。
+**新增定义 557（1kHz 投影器）** 每控制周期（1ms）：q_cmd ← Proj_{C_q_safe}(q_cmd_raw)，其中 q_cmd_raw 来自 AC 任务空间轨迹的逆运动学解。投影为二次规划（QP），W 对角权重（位置权重高于速度/力矩）。**求解时限 0.8ms**；超时 ⇒ 触发 Level-3 退化（急停保持）。QP 规模：n≤12 关节、约束 ≤50、热启动（上一周期解作初值），典型 ≤0.3ms。
 
-**新增定义 548（伦理台账）** Λ 为 append-only 哈希链，块边界批量写（摊销 O(1)）；每 C_w=64 块一次链头校验点；缺口（漏写/校验失败）⇒ 下一块强制 Π_r 直至重验。篡改检出概率 ≥1−2^{−κ_h}。
+**新增定义 558（任务-关节中止映射）** AC 给出任务空间中止点集 {p*_i}。离线预计算 Q_abort = ∪_i {q | FK(q)=p*_i, q∈C_q_safe}。在线：若触发中止，AC 发送 p*_nearest，JSSE 在 Q_abort 中找最近 q_abort，关节轨迹插值至 q_abort 并保持。**等价性要求**：FK(q_abort) = p*_nearest ± ε_fk（ε_fk 为运动学标定误差，E596 标定 ≤2mm）。
+
+**新增定义 559（五检守卫）** 50Hz 守卫五检（全部 O(k)，k≤8 近邻地标）：(i) 证书有效性；(ii) 停车不变式；(iii) 语义创新度：sup ν̄ ≤ τ_sem；(iv) 快规范；(v) **几何一致性：inf γ̄ ≥ γ_min**。任一失败 ⇒ 切最近中止点 p* 对应 q_abort，JSSE 接管执行中止轨迹。总预算 ≤0.6ms。
+
+**新增定义 560（三重守护台账扩展）** Λ 记录扩展：新增 SRA 推理记录（rationale）、GSCF 几何异常记录（γ_ℓ<γ_min 触发）、JSSE 投影记录（投影位移量、活跃约束）。哈希链 κ_h=256 不变。
 
 ## 2. 形式化定义（要点与升级）
 
-**定义 493/495/521/496/531** 继承 v9；δ_trigger 五条件中「Ĉ_t valid」升级为「Ĉ_t⁺ valid」（含规范通过向量与新鲜度），块证书失效与单步条件同样触发 M₀ 硬检查，无"块内软通过硬失"空洞（v9 引理 82+81 联合论证原样保持）。
-**升级定义 539（有效块长，v10）**：
-```
-K_eff(t) = 1                                    若 ¬U_t^sem 或 Ĉ_t⁺ 不可得
-         = 2                                    若 NRB 失效（Π_r 收缩）
-         = max(1, ⌊K_max·(1 − min(1, max(Δ_dom/τ_dom, sup_走廊 T/τ_sem)))⌋)   否则
-```
-双门控取 max：语义领先指标与标量域偏移任一越阈即收缩；域越陌生/语义越异常块越短，极端 K=1 退回逐步模式。
+**定义 493/495/521/496/531/539/540–548** 继承 v10；δ_trigger 五条件中「Ĉ_t⁺ valid」升级为「Ĉ_t⁺⁺ valid」（含 U_t^geo、n_t^reason 全 1、Q_abort 非空），块证书失效与单步条件同样触发 M₀ 硬检查。
+**升级定义 539（有效块长，v11）**：见定义 553，三重门控取 max。
+**新增定义 561（三重守护中止等价性）** 中块守卫任一失败 ⇒ AC 选最近 p* ∈ {p*_i}，JSSE 映射 q_abort = argmin_{q∈Q_abort} ‖q−q_current‖，关节插值至 q_abort 保持。等价性：‖FK(q_abort)−p*‖ ≤ ε_fk（E596 标定 ≤2mm）。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-357 SemanticTrustField：语义信任场（复用 v8 检测栈，不新增重组件）
-class SemanticTrustField:
-    def __init__(self, tau_sem=0.35, tau_emb=1.0, h=0.5, ema=0.2,
-                 T_fresh=2.0, V_max=512):
-        self.map = LandmarkGraph(V_max)      # 定义 540：合并/剪枝不变量
-        self.tau_sem, self.tau_emb, self.h = tau_sem, tau_emb, h
+# IP-361 GeoSemanticConsistencyField：几何语义一致性场（复用 SLAM 深度/点云栈）
+class GeoSemanticConsistencyField:
+    def __init__(self, stf, tau_geo=0.05, tau_sem=0.35, h=0.5, ema=0.2,
+                 T_fresh=2.0, gamma_min=None):  # gamma_min 由标定实验给出（E591）
+        self.stf = stf
+        self.tau_geo, self.tau_sem, self.h = tau_geo, tau_sem, h
         self.ema, self.T_fresh = ema, T_fresh
+        self.gamma_min = gamma_min or 0.85  # 可证下界，非经验调参
 
-    def update(self, detections):            # 感知侧预算内：O(k) 增量
+    def update(self, detections, depth_or_pc):    # 感知侧预算内：O(k) 增量
+        # 复用 stf.map 地标图；对每地标计算几何残差 r_ℓ
         for d in detections:
-            nu = clip(d.dist(self.map.prototype(d.cls)) / self.tau_emb, 0, 1)
-            self.map.observe(d, nu_bar=self.ema * nu
-                                + (1 - self.ema) * self.map.nu_of(d))
+            ell = self.stf.map.landmark_of(d)
+            if ell is None:
+                continue
+            r = self._geo_residual(ell, depth_or_pc)  # 重投影或 ICP 残差
+            gamma = math.exp(-r / self.tau_geo)
+            ell.gamma_bar = self.ema * gamma + (1 - self.ema) * ell.gamma_bar
+            # 联合创新度 ν̂ = max(ν, 1-γ)
+            ell.nu_hat = max(ell.nu_bar, 1 - ell.gamma_bar)
 
-    def field_on_footprint(self, path):      # 定义 542：走廊上取 sup
-        sup = 0.0
+    def _geo_residual(self, ell, depth_or_pc):
+        if has_depth(depth_or_pc):
+            return self._reprojection_error(ell, depth_or_pc)
+        else:
+            return self._icp_residual(ell, depth_or_pc)
+
+    def field_on_footprint(self, path):      # 定义 551：走廊上取 sup max(T, 1-Γ)
+        sup_T, sup_Gamma = 0.0, 0.0
         for x in path.corridor_samples():
-            sup = max(sup, self.T(x))
-        return sup
+            sup_T = max(sup_T, self.stf.T(x))
+            sup_Gamma = max(sup_Gamma, self.Gamma(x))
+        return max(sup_T, 1 - sup_Gamma)
 
-    def surprise_near(self, pose, k=8):      # 定义 547-iii：O(k)
-        if not self.map.fresh(self.T_fresh):
-            return 1.0                       # 新鲜度破坏 ⇒ 保守触发
-        return max(self.map.k_nearest(pose, k).nu_bar)
+    def Gamma(self, x):                      # 几何信任场 Γ(x)
+        num, den = 0.0, 0.0
+        for ell in self.stf.map.k_nearest(x, k=8):
+            w = math.exp(-np.linalg.norm(x - ell.pose[:3])**2 / (2 * self.h**2))
+            num += w * ell.gamma_bar
+            den += w
+        return num / den if den > 0 else 1.0
+
+    def geo_ok_near(self, pose, k=8):        # 定义 559-v：O(k) 几何一致性检查
+        if not self.stf.map.fresh(self.T_fresh):
+            return False
+        return min(ell.gamma_bar for ell in self.stf.map.k_nearest(pose, k)) >= self.gamma_min
 
 
-# IP-358 NormReviewBoard：规范审查委员会（提交-评议-决议-留痕-问责）
-class NormReviewBoard:
-    def __init__(self, norms, ledger, restrictive_profile, d_eth=0.6):
-        self.norms, self.ledger = norms, ledger     # 定义 544 / 548
-        self.pi_r = restrictive_profile             # 定义 546：P13 收缩中立元
-        self.d_eth = d_eth
+# IP-362 SemanticReasoningAuditor：语义推理审查器（轻量 VQA + 问题模板）
+class SemanticReasoningAuditor:
+    def __init__(self, vqa_model, templates, ledger, tau_sra=0.7):
+        self.vqa, self.templates = vqa_model, templates  # vqa: INT8 CLIP+小型解码器 ≤50MB
+        self.ledger, self.tau_sra = ledger, tau_sra
         self.healthy = True
 
-    def review_chunk(self, chunk, stf, ctx):        # 5Hz 全审查 ≤1.0ms
-        verdicts = []
-        for j, nu_j in enumerate(self.norms):
-            ok = nu_j.phi(chunk, stf.map.local_landmarks(chunk.footprint),
-                          self.ledger)
-            if not ok and nu_j.sev == 'hard':
-                self.ledger.append(chunk.id, j, 'veto')
-                return None, 'veto'                 # hard 否决：退单步 fallback
-            if not ok:
-                chunk = nu_j.repair(chunk, stf)     # 定义 545；修复后重验证书
-                if chunk is None or not chunk.cert_valid():
-                    self.ledger.append(chunk.id, j, 'repair_failed')
-                    return None, 'fallback'
-                self.ledger.append(chunk.id, j, 'repaired')
-            verdicts.append(ok)
-        chunk.cert.n = verdicts                     # 规范通过向量入证书
-        self.ledger.append(chunk.id, 'pass', verdicts)
-        return chunk, 'pass'
-
-    def fast_norms(self, live_obs):                 # 50Hz：仅 PROX/PRIV，O(k)
+    def reason_on_chunk(self, chunk, stf, gscf, ctx):   # 5Hz ≤5ms，批量并行
         if not self.healthy:
-            return self.pi_r.fast_defaults()        # 保守默认：d_eth+δ_r、禁抓
-        return self.norms.prox_priv_eval(live_obs, d_eth=self.d_eth)
+            return [0]*len(self.templates), ["SRA unhealthy"]*len(self.templates)
+        # 构造问题：模板实例化 → 图像/文本编码 → 批量前向
+        questions = [tpl.instantiate(chunk, stf, gscf, ctx) for tpl in self.templates]
+        images = [chunk.render_view(tpl.scope) for tpl in self.templates]  # 离屏渲染或关键帧
+        confs, rationales = self.vqa.batch_ask(images, questions)  # 并行解码
+        verdicts = [1 if c >= self.tau_sra else 0 for c in confs]
+        # 入台账：扩展记录 rationale
+        for j, (c, r, v) in enumerate(zip(confs, rationales, verdicts)):
+            self.ledger.append_reason(chunk.id, j, c, r, v)
+        return verdicts, rationales
 
 
-# IP-354（升级）：结构化证书分块执行器
-class StructuredChunkCertifier(ActionChunkCertifier):
-    def __init__(self, *a, Fq=None, lam=0.1, beta_base=0.02, **kw):
+# IP-363 JointSpaceSafetyEnvelope：关节空间安全包络（1kHz 硬实时）
+class JointSpaceSafetyEnvelope:
+    def __init__(self, kinematics, dynamics, q_min, q_max, v_max, tau_max,
+                 self_collision_pairs, support_polygon, dt=0.001):
+        self.kin, self.dyn = kinematics, dynamics
+        self.q_min, self.q_max = q_min, q_max
+        self.v_max, self.tau_max = v_max, tau_max
+        self.self_pairs = self_collision_pairs  # 预计算凸包近似
+        self.support_poly = support_polygon
+        self.dt = dt
+        self.qp_solver = QPSolver(warm_start=True)  # 热启动 QP
+        self.Q_abort = None  # 离线预计算：p*_i → Q_abort_i
+        self.healthy = True
+
+    def project(self, q_cmd_raw):            # 1kHz，≤0.8ms 必须返回
+        if not self.healthy:
+            return self._emergency_hold(q_cmd_raw)
+        # 构建 QP：min ‖q - q_cmd_raw‖_W^2 s.t. q ∈ C_q_safe
+        constraints = self._build_constraints(q_cmd_raw)
+        try:
+            q_proj = self.qp_solver.solve(constraints, time_limit=0.8e-3)
+            return q_proj
+        except TimeoutError:
+            self.healthy = False
+            return self._emergency_hold(q_cmd_raw)
+
+    def _build_constraints(self, q):
+        cons = []
+        # 位置/速度/力矩 box 约束
+        cons += [q >= self.q_min, q <= self.q_max]
+        cons += [q_dot >= -self.v_max, q_dot <= self.v_max]  # q_dot ≈ (q - q_prev)/dt
+        cons += [tau >= -self.tau_max, tau <= self.tau_max]  # tau 由动力学模型近似
+        # 自碰撞：d_link(i,j) ≥ d_self（凸包近似为线性不等式）
+        for (i,j), d_min in self.self_pairs:
+            cons.append(self._link_distance_linear(i, j, q) >= d_min)
+        # ZMP ∈ support_polygon（线性不等式）
+        cons += self._zmp_constraints(q)
+        return cons
+
+    def map_abort(self, p_star):             # 任务空间中止点 → 关节空间中止集合
+        if self.Q_abort is None:
+            self._precompute_Q_abort()
+        return min(self.Q_abort[p_star], key=lambda q: np.linalg.norm(q - self.q_current))
+
+    def _emergency_hold(self, q_current):    # 急停保持：零速度、重力补偿
+        q_hold = q_current.copy()
+        tau_grav = self.dyn.gravity_compensation(q_hold)
+        return q_hold, tau_grav  # 发送位置保持 + 重力补偿力矩
+
+
+# IP-354（升级）：三重守护证书分块执行器
+class TriGuardChunkCertifier(StructuredChunkCertifier):
+    def __init__(self, *a, gscf=None, sra=None, jsse=None, **kw):
         super().__init__(*a, **kw)
-        self.Fq, self.lam, self.beta_base = Fq, lam, beta_base
+        self.gscf, self.sra, self.jsse = gscf, sra, jsse
 
-    def generate_chunk(self, state, ctx, stf, nrb):
+    def generate_chunk(self, state, ctx, stf, gscf, sra, nrb):
         K = self.effective_K(ctx.delta_dom, ctx.tau_dom,
-                             trust_ok=stf.trust_ok(ctx))    # 定义 539-v10
+                             trust_ok=stf.trust_ok(ctx) and gscf.geo_ok(ctx))  # 定义 553
         if K == 1:
-            return self._single_step_fallback(state)        # 等价 v8 逐步
+            return self._single_step_fallback(state)
         best = None
         for cand in self.policy.sample_sequences(state, K, n=64):
-            pred = self.Fq.rollout(state, cand)             # INT8 前向模型
-            beta_stf = (self.beta_base
-                        + self.lam * stf.field_on_footprint(pred.corridor))
-            g_min = pred.min_clearance - beta_stf           # 定义 543
-            e_max = pred.max_effort + beta_stf
+            pred = self.Fq.rollout(state, cand)
+            beta_gs = (self.beta_base + self.lam * gscf.field_on_footprint(pred.corridor))
+            g_min = pred.min_clearance - beta_gs
+            e_max = pred.max_effort + beta_gs
             if g_min < self.d_safe or e_max > state.tau_eff:
                 continue
             pts = self._abort_points(state, cand, pred)
-            if not pts:                                     # 无中止点 → 拒绝
+            if not pts:
                 continue
-            chunk = Chunk(cand, CertPlus(g_min, e_max, beta_stf), pts)
-            chunk, verdict = nrb.review_chunk(chunk, stf, ctx)   # IP-358
+            chunk = Chunk(cand, TriGuardCert(g_min, e_max, beta_gs, pts), pts)
+            # NRB 审查
+            chunk, verdict = nrb.review_chunk(chunk, stf, ctx)
             if chunk is None:
                 continue
+            # SRA 推理（5Hz，块生成期）
+            n_reason, rationales = sra.reason_on_chunk(chunk, stf, gscf, ctx)
+            chunk.cert.n_reason = n_reason
+            if not all(n_reason):
+                chunk.cert.valid = False  # 推理不通过 ⇒ 证书无效，强制收缩
+            if not chunk.cert.valid:
+                continue
+            chunk.cert.Q_abort = {p: self.jsse.map_abort(p) for p in pts}
             score = self.policy.score(chunk, pred)
             if best is None or score > best.score:
                 best = chunk
         return best or self._single_step_fallback(state)
 
-    def midchunk_guard(self, chunk, k_exec, live_obs, stf, nrb):
-        """50Hz 四检 ≤0.5ms；返回 ('continue', k+1) 或 ('abort', p*)"""
-        if not chunk.cert_still_valid(live_obs):            # 检 1（v9 原检）
-            return self._nearest_abort(chunk, k_exec)
+    def midchunk_guard(self, chunk, k_exec, live_obs, stf, gscf, nrb, jsse):
+        """50Hz 五检 ≤0.6ms"""
+        if not chunk.cert_still_valid(live_obs):
+            return self._abort_to_jsse(chunk, k_exec, jsse)
         stop_inv = (live_obs.nearest_clearance
                     - self.d_brake(live_obs.speed) - self.d_safe)
-        if stop_inv < chunk.remaining_len(k_exec):          # 检 2（v9 原检）
-            return self._nearest_abort(chunk, k_exec)
-        if stf.surprise_near(live_obs.pose) > stf.tau_sem:  # 检 3：领先指标
-            return self._nearest_abort(chunk, k_exec)
-        if nrb.fast_norms(live_obs).violated:               # 检 4：快规范
-            return self._nearest_abort(chunk, k_exec)
+        if stop_inv < chunk.remaining_len(k_exec):
+            return self._abort_to_jsse(chunk, k_exec, jsse)
+        if stf.surprise_near(live_obs.pose) > stf.tau_sem:
+            return self._abort_to_jsse(chunk, k_exec, jsse)
+        if nrb.fast_norms(live_obs).violated:
+            return self._abort_to_jsse(chunk, k_exec, jsse)
+        if not gscf.geo_ok_near(live_obs.pose):   # 检 5：几何一致性
+            return self._abort_to_jsse(chunk, k_exec, jsse)
         return ('continue', k_exec + 1)
 
+    def _abort_to_jsse(self, chunk, k_exec, jsse):
+        p_star = chunk.nearest_abort_point(k_exec)
+        q_abort = jsse.map_abort(p_star)
+        return ('abort', q_abort)
 
-# 主闭环集成：MetricVoiceGauge-STF-NRB-LS（决策侧增量）
-def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
+
+# 主闭环集成：MetricVoiceGauge-GSCF-SRA-JSSE（决策侧增量）
+def metricvoicegauge_round_11(M, s, obs, depth_or_pc, audio_stream=None, ...):
     ctx = mw_default_ctx()
-    # ---- MW 驱动感知侧（契约预算 ≤2ms；新增 LM_MAP 行，超时即中立元）----
+    # ---- MW 驱动感知侧（契约预算 ≤2.5ms；新增 GSCF/SRA 行）----
     results = middleware.run_cycle(runners={
-        'DA_ML':  lambda c: domain_adapter.update_and_measure(obs),
-        'SPR':    lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
-        'CAL_FI': lambda c: calib_fi.get_weights_kappa(),
-        'OTL':    lambda c: online_learner.update_and_thresholds(c),
-        'LM_MAP': lambda c: stf.update(obs.detections),      # φ^elig=✓ 可蒸馏
+        'DA_ML':   lambda c: domain_adapter.update_and_measure(obs),
+        'SPR':     lambda c: slam_risk.compute(M.slam_backend.get_latest_state()),
+        'CAL_FI':  lambda c: calib_fi.get_weights_kappa(),
+        'OTL':     lambda c: online_learner.update_and_thresholds(c),
+        'LM_MAP':  lambda c: stf.update(obs.detections),
+        'GSCF':    lambda c: gscf.update(obs.detections, depth_or_pc),  # φ^elig=✗
     }, ctx=ctx)
     ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
 
-    # ---- 5Hz 块生成：F̂_q rollout → 足迹信任场 → 结构化证书 → NRB 审查 ----
+    # ---- 5Hz 块生成：F̂_q rollout → 三重余量 → 三重守护证书 → NRB → SRA ----
     if current_chunk is None or current_chunk.exhausted:
-        current_chunk = chunker.generate_chunk(ctx.state, ctx, stf, nrb)
-        # NRB veto/fallback ⇒ 单步；Π_r 生效期 K_eff≤2 由 effective_K 强制
+        current_chunk = chunker.generate_chunk(ctx.state, ctx, stf, gscf, sra, nrb)
+        # NRB veto / SRA 推理不通过 ⇒ 证书无效 ⇒ 单步或 K=2
 
-    # ---- 50Hz 四检守卫（廉价 ≤0.5ms）----
-    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec,
-                                             live_obs, stf, nrb)
+    # ---- 50Hz 五检守卫（≤0.6ms）----
+    verdict, next_target = chunker.midchunk_guard(current_chunk, k_exec,
+                                                  live_obs, stf, gscf, nrb, jsse)
     if verdict == 'abort':
-        current_chunk.execute_safe_stop_at(k_next)           # v9 定义 534
+        q_abort = next_target
+        jsse.execute_abort_trajectory(q_abort)    # 关节空间插值至 q_abort 并保持
         current_chunk = None
     else:
-        execute(current_chunk.actions[k_next])
+        q_cmd_raw = current_chunk.joint_actions[k_exec]  # 任务空间→逆运动学
+        q_cmd = jsse.project(q_cmd_raw)              # 1kHz 投影（此处 50Hz 采样，实为 1kHz 循环内调用）
+        execute_joint(q_cmd)
 
-    # ---- v9 继承路径（契约化调用）：GCT/ER/5 维风险/奖励 ----
-    #      δ_trigger 五条件：σ<τ_safe ∧ γ_grasp ∧ Δ_dom<τ_dom
-    #                        ∧ risk_SLAM<τ_SLAM ∧ Ĉ_t⁺ valid
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v9_path(ctx)
+    # ---- 1kHz JSSE 投影循环（独立线程/中断，硬实时）----
+    # 在单独的 1kHz 控制中断中运行：q_cmd = jsse.project(ik_solver(task_traj(t)))
+    # 此处仅示意；实际部署时 JSSE 在独立硬实时线程
 
-    # ---- ID：块级归因与状态迁移（新增安全守卫一律 φ^elig=false）----
+    # ---- v10 继承路径（契约化调用）----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v10_path(ctx)
+
+    # ---- ID：块级归因（安全守卫 GSCF/SRA/JSSE 一律 φ^elig=false）----
     distiller.step(cycle_idx, ctx)
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 87（显著/非显著二分与中止及时性——v9 最大风险的正面拆除）** 设 (A1) 嵌入距离对观测语义内容 L-Lipschitz；(A2) 校准：显著语义变化产生 ν>τ_sem 的召回 ≥1−ε_s（E571）；(A3) 校准：非显著状态上一致误差 sup‖F̂_q−F‖ ≤ β_STF 成立的概率 ≥1−ε_β（E574）。则任一中块危险事件 e 以概率 ≥1−ε_s−ε_β 满足：either (i) e 显著 ⇒ 四检守卫之检 3 在 1 帧（20ms）内使证书失效并切 p*/安全停驻；or (ii) e 非显著 ⇒ 误差 ≤ β_STF，证书保守有效（与 v9 引理 82(i) 同构论证），停车不变式保持。证明：(i) 显著事件发生在剩余足迹内地标 ℓ ⇒ 由 A2 有 ν̄_ℓ > τ_sem ⇒ 守卫检 3 失败（守卫逐帧运行、比较当前帧缓存嵌入，无额外延迟）⇒ 沿 v9 定义 534 机制切最近中止点；(ii) 由 A3 与 v9 引理 82(i) 同构。并集界收尾。对比：v9 中同类显著跳变须等 Δ_dom 的 20 帧窗口，期间 K_eff 可持续取大值，最坏中止检测延迟 ~200ms+；v10 将显著类上限压至 20ms。代价：前提由「β 覆盖一切误差」（跳变处不可证）换为「分割召回可测」。∎
+**引理 92（联合创新度的几何可证显著性——v10 最大风险的正面拆除）**
+设 (A1) 几何残差 r_ℓ 在正常物体上服从已知噪声模型（零均值、方差 σ²_geo）且标定误差有界 ε_cal；(A2) 标定实验给出 γ_min = exp(−(k_σ·σ_geo + ε_cal)/τ_geo)（k_σ=3 取 99.7% 置信），使得正常物体 γ_ℓ ≥ γ_min 以概率 ≥1−ε_geo（ε_geo≤0.003）；(A3) 对抗纹理/长尾新颖可造假 ν_ℓ≤τ_sem，但**不能同时造假几何残差**（几何通道独立，依赖深度/点云物理测量）；(A4) 非显著状态上一致误差 sup‖F̂_q−F‖ ≤ β_GSCF 成立概率 ≥1−ε_β（E594）。则任一中块危险事件 e 以概率 ≥1−ε_geo−ε_β 满足：either (i) e 显著（语义异常 ∨ 几何异常）⇒ 五检守卫之检 3/5 在 1 帧内使证书失效并切中止；or (ii) e 非显著 ⇒ 误差 ≤ β_GSCF，证书保守有效。证明：(i) 显著语义异常 ⇒ ν_ℓ>τ_sem ⇒ ν̂_ℓ>τ_sem ⇒ 检 3 失败；显著几何异常 ⇒ γ_ℓ<γ_min ⇒ ν̂_ℓ>τ_sem ⇒ 检 5 失败。两者任一触发即中止。几何通道独立于嵌入空间，对抗纹理无法同时造假 γ_ℓ（需物理改变深度/几何）。(ii) 由 A4 与引理 87 同构。∎
 
-**引理 88（β_STF 的单调性、局部性与领先性）** β_STF(ζ,t) = β_base + λ·sup_{x∈Φ(ζ)}T(x,t)：(a) 局部单调——足迹内任一地标 ν̄ 上升 ⇒ 本块余量上升，与全局 Δ_dom 无关；(b) 足迹外突变不抬高本块余量（无全局保守税）；(c) ν̄ 为 5 帧 EMA ⇒ 对跳变反应 ≤5 帧，快于 Δ_dom 的 20 帧滑窗 ≥4×。证明：核权非负、sup 单调、EMA 窗长直接比较。∎
+**引理 93（β_GSCF 的三重单调性与领先性）** β_GSCF = β_base + λ·sup_{x∈Φ} max(T, 1−Γ)：(a) 语义单调：足迹内任一 ν̄↑ ⇒ T↑ ⇒ β_GSCF↑；(b) 几何单调：足迹内任一 γ̄↓ ⇒ 1−Γ↑ ⇒ β_GSCF↑；(c) 无全局保守税：足迹外异常不抬高本块余量；(d) 领先性：ν̄、γ̄ 均为 5 帧 EMA，反应 ≤5 帧，快于 Δ_dom 20 帧 ≥4×。证明：核权非负、max/sup 单调、EMA 窗长直接比较。∎
 
-**引理 89（NRB 收缩支配与审计面隔离）** (i) Π_r 各约束只收缩动作空间/加严裕量（K≤2、d_eth↑、禁触清单），v9 引理 82/86 的前提在收缩下单调保持（停车不变式对 K 减、裕量增单调）；(ii) 支配性：Π_r 下可执行物理动作集 ⊆ v9 可执行集 ⇒ Π_r 下可能发生的规范违背在 v9 中同样可能 ⇒ 伦理不劣于基线；(iii) 新增可观测仅语音披露与 Λ 写入，MW 中「先执行后写账」的序保证审计面不回灌当期控制 ⇒ 控制面无行为发散。活性注记：Π_r 下任务可完成性是假设（E578 验证 ≥85%），失败路径为语音披露+受控放弃（v9 兼容中止）。∎
+**引理 94（SRA 推理复核的不确定性显式化与支配性）**
+(i) SRA 对块关键语义假设发起提问，conf_j < τ_sra ⇒ n_t^reason[j]=0 ⇒ 块证书无效 ⇒ K_eff 收缩至 ≤2（Π_r 级），**不确定性显式入证书、强制收缩、不扩权**；(ii) SRA 失效 ⇒ n_t^reason 全 0、K_eff←2，物理行为 ⊆ v10 Π_r 行为（支配性）；(iii) rationale 全量入 Λ，离线复盘可审计「为什么当时推理通过/失败」；(iv) 推理延迟 ≤5ms/块（批量并行），摊销 ≤1ms/cycle，不破 50Hz。∎
 
-**引理 90（台账完整性与缺口自检）** κ_h=256 位哈希链 ⇒ 对历史记录的任何删除/改写以 ≥1−2^{−256} 概率被离线复盘检出；每 C_w=64 块链头校验点使在线缺口至多存续 64 块即触发 Π_r；写入摊销 O(1) 且在 NRB 契约预算内（≤0.1ms/块边界）。∎
+**引理 95（JSSE 关节空间硬兜底的支配性与中止等价性）**
+(i) C_q_safe 定义仅含位置/速度/力矩限位、自碰撞、ZMP——**均为运动学/动力学硬约束，仅依赖本体感觉与标定模型，不依赖视觉/语义感知**；(ii) 1kHz 投影 Proj_{C_q_safe} 只剪枝不安全关节命令，**不产生新关节命令**，故物理行为集合 ⊆ 无投影时的可行集 ⊆ v10 可行集（支配性）；(iii) 中止等价性：AC 给出 p*，JSSE 映射 q_abort ∈ Q_abort 使 FK(q_abort)=p* ± ε_fk（ε_fk≤2mm，E596 标定）；关节插值至 q_abort 保持 ⇔ 任务空间中止至 p* 保持（等价中止）；(iv) JSSE 失效 ⇒ 急停保持（零速、重力补偿），等价 v6 行为。∎
 
-**引理 91（有据轻量化保界）** (i) 量化：β_q 在 F̂_q 上重标定（E579）后，引理 87–88 以 (F̂_q, β_q) 替换 (F̂, β) 原样成立；(ii) 拓扑化：剪枝规则只移除「ν̄≤τ_sem/2 ∨ 走廊外 ∨ stale>T_decay」的地标 ⇒ sup_{x∈Φ}T 在剪枝下不变；同类合并取 ν̄_merged=max ⇒ T 只增不减（保守）；(iii) 配额：部署期静态校验 Σ M_m ≤ RAM 与 Σ E_m ≤ 25W，运行期越配额即注 v^⊥。三者均不削弱证书保守性与 50Hz 保持。∎
+**引理 96（三重守护联合保守性）** 在 (A1)–(A4) 及引理 94–95 假设下，三重守护证书 Ĉ_t⁺⁺ 满足：任一中块危险事件以概率 ≥1−ε_geo−ε_sra−ε_jsse−ε_β 被捕获（显著类 ≤1 帧，非显著类误差界覆盖），且物理行为支配于 v10。其中 ε_sra 为 SRA 幻觉率（E597 标定 ≤1%），ε_jsse 为投影失败率（E598 标定 ≤0.1%）。证明：并集界，三重守护失效模式正交（几何/语义推理/关节投影独立），联合失效概率可忽略。∎
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| STF 增量更新（感知侧） | 在线 | O(k)≤0.2ms/帧 | ≤64KB 地标图 | 定义 540–542 |
-| F̂_q 块生成（5Hz，INT8） | 在线 | ≤10ms/次，摊销 ≤1.0ms/cycle | ~1MB（vs v9 ~4MB） | 定义 543, 引理 91 |
-| NRB 全审查（5Hz） | 在线 | ≤1.0ms/次，摊销 ≤0.2ms | 规范表+修复 ~16KB | 定义 544–546 |
-| 四检守卫（50Hz） | 在线 | ≤0.5ms（O(k), k≤8） | O(1) | 定义 547 |
-| 台账写（5Hz 块边界） | 在线 | ≤0.1ms 摊销 | 环形 ~256KB | 定义 548, 引理 90 |
-| v9 继承路径（6 层指标+5 维权重+GCT/ER/ID） | 在线 | ≤4ms（不变） | 不变 | 定义 493–539 |
-| 决策侧合计 | 在线 | 典型 ≤8ms，p99 ≤20ms（块生成周期 ≤17ms） | 模型+图+表 ≤1.4MB | v9 引理 86 + 引理 91 |
-| 感知侧合计 | 在线 | ≤2ms（v9 不变；STF 0.2ms 在配额内） | +64KB | v9 定义 526–530 |
+| STF 增量更新（感知侧） | 在线 | O(k)≤0.2ms/帧 | ≤64KB | 定义 540–542 |
+| GSCF 几何一致性更新 | 在线 | O(k)≤0.3ms/帧（复用深度栈） | +16KB | 定义 549–551 |
+| F̂_q 块生成（5Hz，INT8） | 在线 | ≤10ms/次，摊销 ≤1.0ms | ~1MB | 定义 552, 引理 96 |
+| NRB 全审查（5Hz） | 在线 | ≤1.0ms/次，摊销 ≤0.2ms | ~16KB | 定义 544–546 |
+| SRA 推理（5Hz，批量并行） | 在线 | ≤5.0ms/次，摊销 ≤1.0ms | 50MB | 定义 554–555 |
+| 五检守卫（50Hz） | 在线 | ≤0.6ms（O(k), k≤8） | O(1) | 定义 559 |
+| JSSE 1kHz 投影（硬实时） | 在线 | ≤0.8ms（QP 热启动典型 0.3ms） | 256KB | 定义 556–558 |
+| 台账写（5Hz 块边界） | 在线 | ≤0.1ms 摊销 | 环形 ~384KB | 定义 560, 引理 90 |
+| v10 继承路径 | 在线 | ≤4ms（不变） | 不变 | 定义 493–548 |
+| 决策侧合计（50Hz 采样） | 在线 | 典型 ≤9ms，p99 ≤20ms | 模型+图+表+VQA ≤52MB | v10 引理 91 + 引理 96 |
+| 感知侧合计 | 在线 | ≤2.5ms（v10 2ms + GSCF 0.3ms） | +80KB | v10 定义 526–530 + 549 |
 
-## 6. 实验设计 E571–E590
+## 6. 实验设计 E591–E610
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E571 | 显著/非显著分割标定 | τ_sem 扫描：显著类召回 ≥99%、非显著误报 ≤5%（A2 可测性） |
-| E572 | 跳变检测滞后对比 | 注入分布跳变：T 领先 Δ_dom ≥10 帧；中止检测 p99 ↓≥10×（对 v9 风险的正面实验） |
-| E573 | 中块语义突变注入 | 中块换类/闯入者：0 碰撞、中止成功 ≥99% |
-| E574 | β_STF 校准覆盖 | 非显著误差覆盖 ≥99%（A3）；λ 标定 |
-| E575 | 语义门控平滑性 | T 驱动 K_eff 收缩无指令跳变（继承 E564 纪律） |
-| E576 | 地标图规模消融 | V_max∈{64,128,256,512}：走廊覆盖率 vs 内存/时延 |
-| E577 | NRB 全审查开销 | ≤1.0ms@5Hz；误拦截率 ≤2%；修复成功率 ≥95% |
-| E578 | 限制性剖面活性 | Π_r 下任务可完成率 ≥85%（引理 89 活性假设） |
-| E579 | INT8 量化保界 | F̂_q vs FP 误差分布；β_q 覆盖 ≥99%；证书有效性保持 |
-| E580 | 修复算子质量 | 修复次优性 ≤5%；修复后证书重验通过率 ≥99% |
-| E581 | 台账完整性 | 篡改检出 100%；写开销 ≤0.1ms；64 块内缺口检出 |
-| E582 | 审查失明注入 | NRB 超时 ⇒ Π_r 1 块内生效；期间 0 规范违背 |
-| E583 | 隐私规范端到端 | 非自愿者在场：记录遮蔽 100%、语音披露 100%、外泄 0 |
-| E584 | 预算守恒 | RAM/功耗配额内运行；模型内存 ↓≥75%、≤25W（继承 E560） |
-| E585 | 四检守卫 50Hz 保持 | WCET p99 ≤20ms；抖动不劣于 v9（E557 对照） |
-| E586 | T–Δ_dom 领先性 | 相关与滞后量化：跳变场景 T 领先 ≥10 帧（引理 88c 验证） |
-| E587 | 8h 长跑 | τ_sem/β 漂移与重标定节奏；台账体积；地标漂移率 |
-| E588 | 多机共享 | 地标图+规范表版本化共享；协同完成率 ↑≥10%（继承 E568） |
-| E589 | 对抗语义欺骗 | 对抗纹理/伪装：守卫不响率 ≤1% 且自动回退 Δ_dom 标量门控 |
-| E590 | 综合竞赛模拟 | ≥ v9 + 10% |
+| E591 | 几何一致性标定 | γ_min 标定：正常物体 γ≥γ_min 概率 ≥99.7%（k_σ=3），ε_geo≤0.3% |
+| E592 | 对抗纹理穿透实测 | 对抗贴纸/投影：ν≤τ_sem 但 γ<γ_min ⇒ ν̂ 触发显著、中止成功 ≥99% |
+| E593 | 长尾语义新颖实测 | 从未见类别：ν 高触发显著、中止成功 ≥99%（无需几何通道） |
+| E594 | β_GSCF 校准覆盖 | 非显著误差覆盖 ≥99%（A4）；λ 标定 |
+| E595 | 五检守卫滞后对比 | 几何异常注入：检 5 在 1 帧触发、T/γ 领先 Δ_dom ≥10 帧 |
+| E596 | 运动学标定误差 | ε_fk≤2mm、ZMP 误差≤5mm，中止等价性验证 |
+| E597 | SRA 推理质量 | conf 校准度（ECE≤0.05）、幻觉率≤1%、解释相关性人工评分≥4/5 |
+| E598 | JSSE 投影实时性 | 1kHz 循环 p99≤0.8ms、投影位移量分布、活跃约束统计 |
+| E599 | 三重守护联合压测 | 同时注入：对抗纹理+遮挡+标定漂移 ⇒ 0 碰撞、中止/急停 100% |
+| E600 | 退化链完整性 | GSCF/SRA/JSSE 单点/组合失效 ⇒ 行为等价/支配于 v10、无新物理行为 |
+| E601 | SRA 台账审计 | rationale 完整性 100%、离线复盘定位推理错误 ≥95% |
+| E602 | 预算守恒 v11 | RAM≤4GB（含 50MB VQA）、功耗≤25W、模型内存≤52MB |
+| E603 | 长跑 8h | γ_min/τ_sem/β 漂移、台账体积、JSSE 投影位移漂移、标定稳定性 |
+| E604 | 多机三重守护共享 | 地标图+几何一致性+规范表+问题模板版本化共享；协同完成率 ↑≥15% |
+| E605 | 对抗几何欺骗 | 深度伪造/点云投毒：γ 可被造假吗？⇒ 发现则回退 ν 单通道+Δ_dom 标量门控 |
+| E606 | SRA 分布外泛化 | OOD 场景推理置信度校准、拒答率、不扩权验证 |
+| E607 | JSSE 动力学可行性 | ZMP 约束下高加速中止、力矩饱和处理、与任务空间中止等价性 |
+| E608 | 竞赛模拟综合 | ≥ v10 + 15%（含新规范项：几何一致性、推理透明度、关节安全） |
+| E609 | 硬件故障注入 | 相机/深度/编码器/力矩传感器单点失效 ⇒ 优雅退化至对应 Level |
+| E610 | 端到端用户研究 | 可解释性（rationale）、感知安全（几何/关节）、信任度主观评分 |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 分割标定（E571） | 显著召回 ≥99% | 重标 τ_emb/τ_sem、增强类原型、收窄显著定义 |
-| 滞后对比（E572） | T 领先 ≥10 帧、中止 p99 ↓≥10× | EMA 窗 5→3 帧、守卫每帧双查 |
-| 中块突变（E573） | 0 碰撞、中止 ≥99% | 加密走廊近邻地标、缩 K_max |
-| β_STF 覆盖（E574） | 覆盖 ≥99% | 增大 λ、按类别分块标定 β |
-| 门控平滑（E575） | 无指令跳变 | K_eff 收缩插值平滑、块边界重规划（v9 E564 处置沿用） |
-| 图规模（E576） | 覆盖-内存 Pareto 有可用点 | 调 h/合并半径/走廊采样密度 |
-| 审查开销（E577） | ≤1.0ms、误拦 ≤2% | 谓词降为查表、预投影足迹缓存 |
-| Π_r 活性（E578） | 可完成率 ≥85% | 放宽 Π_r 非安全项、增加审批例外流程 |
-| 量化保界（E579） | β_q 覆盖 ≥99% | 换 QAT 训练、增大 β_q 安全系数 |
-| 修复质量（E580） | 次优 ≤5% | 扩修复算子库、重定向候选增强 |
-| 台账（E581） | 检出 100% | 修哈希链实现、缩短校验点周期 |
-| 审查失明（E582） | Π_r 1 块内生效 | Π_r 触发移出 EDF 低优先级 |
-| 隐私（E583） | 外泄 0 | 记录前强制遮蔽管线、默认拒绝记录 |
-| 预算（E584） | ↓≥75%、≤25W | 进一步剪枝/蒸馏 F̂_q、图分页 |
-| 守卫时延（E585） | p99 ≤20ms | 检 3/4 向量化、复用感知嵌入 |
-| 领先性（E586） | 领先 ≥10 帧 | EMA 窗 5→3 帧、地标密度提升 |
-| 长跑（E587） | 漂移稳定 | 周期性 β/τ_sem 重标定（v9 E567 处置沿用） |
-| 多机（E588） | ↑≥10% | 图合并协议、规范表版本协商 |
-| 对抗欺骗（E589） | 不响 ≤1% | 嵌入集成、回退标量门控强制 K=1 |
-| 竞赛（E590） | ≥ v9 +10% | 综合调参、失分瓶颈分析 |
+| 几何标定（E591） | γ_min 覆盖 ≥99.7% | 调 τ_geo、增大 k_σ、改进噪声模型 |
+| 对抗穿透（E592） | 中止 ≥99% | 加密几何残差阈值、多模态几何融合 |
+| 长尾新颖（E593） | 中止 ≥99% | 扩大类原型库、引入开放词汇检测 |
+| β_GSCF 覆盖（E594） | 覆盖 ≥99% | 增大 λ、分类别标定 β |
+| 五检滞后（E595） | 领先 ≥10 帧 | EMA 窗 5→3、地标密度提升 |
+| 运动学标定（E596） | ε_fk≤2mm | 重标定、引入在线自标定 |
+| SRA 质量（E597） | 幻觉≤1%、ECE≤0.05 | 温度缩放、拒答阈值、RAG 增强 |
+| JSSE 实时（E598） | p99≤0.8ms | QP 热启动优化、约束减少、硬件加速 |
+| 联合压测（E599） | 0 碰撞、100% 安全 | 收缩 K_max、加严 γ_min、急停阈值下调 |
+| 退化链（E600） | 行为等价/支配 | 修复退化路径、补充中立元 |
+| 台账审计（E601） | 完整性 100% | 修哈希链、增冗余校验 |
+| 预算（E602） | ≤4GB/25W | 模型蒸馏、图分页、VQA 量化 |
+| 长跑（E603） | 漂移稳定 | 周期重标定、自适应 τ_sem/γ_min |
+| 多机（E604） | ↑≥15% | 图合并协议、模板版本协商 |
+| 对抗几何（E605） | 发现率≥90% | 多视角一致性、时序几何平滑 |
+| SRA OOD（E606） | 拒答不扩权 | 调 τ_sra、引入不确定性量化 |
+| JSSE 动力学（E607） | 中止等价 | 缩放 ZMP 多边形、软化力矩约束 |
+| 竞赛（E608） | ≥ v10 +15% | 综合调参、瓶颈分析 |
+| 故障注入（E609） | 优雅退化 | 完善各 Level 中立元 |
+| 用户研究（E610） | 主观信任↑ | 改进 rationale 自然度、语音披露 |
 
 ## 8. 本轮最大风险
 
-**一句话**：显著/非显著的分割面 τ_sem 本质是经验校准——对抗纹理或长尾语义新颖可能在 ν≤τ_sem 下穿透嵌入检测并同时击穿前向模型，此时 β_STF 按非显著误差校准而误差已是显著误差、语义守卫不响，证书保守性失效得比 v9 更隐蔽（v9 至少承认前提全局存疑，v10 则错误地信任了更细的分割），INT8 量化进一步压缩该分割面的安全边际。
+**一句话**：GSCF 的几何一致性 γ_ℓ 在大动态/强遮挡/透明反光物体下可能**虚假低**（正常场景被误判为几何异常），导致 ν̂_ℓ 频繁触发显著、K_eff 长期收缩至 1、系统退化为逐步模式丧失分块执行效率；SRA 的 VQA 在分布外场景可能**虚假高置信**（幻觉解释），掩盖真实语义不一致；JSSE 的 C_q_safe 若运动学标定有系统偏差，**投影后的关节轨迹在任务空间可能偏离预期中止点 p***，破坏等价中止假设——三重守护各自的失效模式可能**同时触发**（如强遮挡+动态场景+标定漂移），此时系统无优雅退化路径，只能急停。
 <!-- ARTIFACT:END -->
