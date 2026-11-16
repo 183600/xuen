@@ -3,359 +3,406 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 10 轮（新灵感循环第 1 轮；承接 v9；本轮灵感：「避障控制」×「持续学习」）
+# 第 10 轮（新灵感循环第 2 轮；本轮灵感：「排行榜」×「轻量化设计」）
 > **基线**：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮纪律：**运行时避障安全网 + 安全保持的持续适应**。两个灵感对应 v9 的两处结构性软肋：(i) 块证书的安全性以「信任域内前向模型误差 ≤ β」为前提，而域偏移恰使该前提最脆弱；(ii) 前向模型与阈值固定，陌生域只能靠 K_eff 收缩变保守，无法适应变好。新增 SAF/CSL/CTA 均为可选增强，失效时按**保守退化序**（行为集 ⊆ v9 行为集）注入恒等元或安全吸收元，严格退回 v9。
+> 本轮纪律：**先硬后软 + 以序代值 + 编译期定形**。两个灵感各治 v9 的一处要害——「轻量化设计」治**证书债**（v9 块证书 12ms 全额依赖冻结前向模型，而模型恰在最陌生域最不可信），「排行榜」治**标定债**（v9 用绝对标量 score 选块，分数尺度的任何单调漂移都会改变选择）。仍以中立元退化链保证：LWC 失效退回 v9 AC，RL 失效退回 v9 绝对评分，LCC 失效退回 v9 运行时 MW，全失效退回 v9→v8→v7→v6。
 
 ## 0. 直觉与动机
 
-**灵感 1（避障控制 → 运行时屏障安全滤子）**
-直觉：v9 把安全压在"预测未来 K 步不碰"上，但预测最不可靠时恰是域偏移。避障控制的核心教训是**别赌长时程，赌闭环不变式**：用只依赖当前测量与保守不确定性界的控制屏障函数（CBF），在**每个执行步**把动作投影进安全集。核心创新：**安全避障滤子（SafeAvoidanceFilter, SAF）**，50Hz 对 AC 的第 k 步动作解一个最小修正 QP，约束为鲁棒离散时间 CBF（含不确定裕度 L_h·ρ）；不可行则急停/退最近中止点。它不新增任何长时程预测，只新增**可证明的逐步闸门**：每步约束成立 ⇒ 安全集前向不变。AC 管"块内计划是否可信"，SAF 管"这一步是否必定安全"——预测失效时 SAF 仍是最后一道可证明的闸门。
+**灵感 1（轻量化设计 → 证书的“先硬后软”分层）**
+直觉：v9 的块证书 100% 由冻结前向模型 F̂ 的 K 步 rollout 产生：每块 12ms，且可靠性以「信任域内 ‖F̂−F‖∞ ≤ β」为前提。可 v9 自己承认，DA-ML 检出域偏移的时刻正是模型误差最大的时刻。轻量化设计给的第一性原理不是“把网络压小”，而是**把不依赖模型的那部分先算出来**：用动力学界（速度/加速度/制动能力）与障碍地图做可达集区间扩张，得到间隙的**模型无关下界**；学习模型只允许在这个区间上**收紧**，绝不允许放宽。于是证书变成一架 anytime 梯子：L0 运动学区间（O(1)、域无关），L1 单步残差修正（统计保守），L2 v9 全 rollout（统计保守）。能由 L0 确定性保守通过的候选块，根本不必触碰最不可信的模型——**在最陌生的域里，系统反而只用最硬的物理界**。核心创新：**轻量层级证书（LightweightCertifier, LWC）**。
 
-**灵感 2（持续学习 → 安全保持的在线适应）**
-直觉：v9 的 DA-ML/OTL/Cal 只在固定参数上做门控与校准，遇新障碍动力学（新地面、新行人速度分布）只能变保守、不能变好；但朴素在线微调前向模型会灾难性遗忘并悄悄放松安全裕度。核心创新：**持续安全账本（ContinualSafetyLedger, CSL）**——双账本：可塑性账（新域预测误差下降）与稳定性账（锚集上的保持）；每次更新先写影子权重，经「安全回归套件 + 证书不放松检验」才原子提交，否则回滚。配套**证书保持切线投影（ConstraintTangentAdapter, CTA）**把梯度更新投影到"锚集不确定界不增"的参数流形切空间。于是"适应"被关进安全证书可接受的参数邻域。
+**灵感 2（排行榜 → 以序代值的块选择与退化排序）**
+直觉：v9 用绝对标量 score(ζ) 选块，隐含假设“分数尺度在域间可比”。但任何严格单调变换都不应改变选择；前向模型失配却会让绝对分数整体漂移，选块随之漂移。排行榜的第一性原理是**相对比较比绝对打分稳健**：只维护候选之间的成对胜负，用 Bradley–Terry/Elo 估计潜在效用，并以置信下界排序；再用 δ_rank 迟滞“不轻易换马”。同一个数据结构还能回答另一个问题：预算吃紧时先牺牲谁？按“贡献下界”从低到高排一张**牺牲榜**，运行期照单执行，无需每周期重算优先级。核心创新：**排行榜执行器（RankLedger, RL）** 与 **退化排行榜**。
 
-**两者合流**：避障提供**运行时可证明净**，持续学习提供**让这个净随经验收紧（更不保守）的适应能力**，CTA 是二者的数学接缝——学习只能在证书保持的切空间里动。v9 的最大风险（域偏移时前向模型误差最大）在这里被正面处理：SAF 不依赖长时程预测兜底，CSL 收紧 ρ 但有锚集与认证检查点回滚。
+**灵感 3（合成：轻量化 × 排行榜 → 编译期定形）**
+直觉：既然退化顺序可由排行榜离线算定、证书又可通过低层快速判定，那么 v9 的运行时 EDF + ID 归因可以进一步下沉为**编译期静态物**：固定时隙表 + 预计算牺牲榜 + 每模块的层级预算。运行期只做“低层证书判定 + 照单执行 + 硬界守卫”，调度开销从 O(M log M) 降到 O(1) 查表，同时让“退化顺序”成为可审计的数据而非运行期涌现行为。核心创新：**轻量契约编译器（LightweightContractCompiler, LCC）**。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（运行时屏障可靠性）**：在残差估计误差有界 ‖d−d̂_θ‖ ≤ ρ 下，SAF 的鲁棒 DCBF 能否保证逐步前向不变？在相对阶 ≥2 与执行器饱和下，如何用 HOCBF 与松弛变量保持可行性并安全处理不可行？
-- **Q2（安全保持的持续学习）**：什么样的接受判据、参数投影与回滚点，能在不放松锚集安全证书的前提下最大化新域可塑性？覆盖（coverage）失效时如何在有限步内退回最近认证检查点？
-- **Q3（两环耦合）**：SAF 的保守性由 ρ 决定；CSL 收紧 ρ 是否单调扩张可行动作集、从而降低保守性并提升任务收益？如何避免"学习—保守—低收益"的次优锁定？
+- **Q1（硬界紧度与可靠性）**：如何构造 L0 运动学硬界，使其在熟悉域足够紧（L0 通过率 ≥ 90%），又在任意域偏移下保持确定性保守？区间扩张、浮点 ULP 与障碍地图膨胀如何统一计入？
+- **Q2（排行榜的统计稳健性）**：在非平稳潜在效用与成对比较噪声下，带置信下界的排行榜能否给出“换马次数有界 + 遗憾次线性”的折中？δ_rank 迟滞与 v9 的 Schmitt 双阈如何不冲突？
+- **Q3（编译期等价）**：契约表与牺牲榜能否编译成静态时隙，使运行期行为与 v9 运行时 EDF/ID 在冻结归因下逐位等价，并给出可组合的 WCET 上界？
 
 ## 2. 设计原则（在 P10–P12 基础上新增 P13–P15）
 
-**P13 运行时屏障律（Runtime Barrier, SAF）**
-执行步而非块边界上做安全决策：a_safe = Π_C(a^k)，Π_C 为带鲁棒 DCBF 约束的最小修正投影。约束用**当前测量状态 + 学习残差模型 + 不确定半径**，不用 K 步预测。不可行 ⇒ 急停/最近中止点；SAF 为 φ^elig=false 的安全关键模块，失效注入**安全吸收元**（急停），而非恒等元。
+**P13 轻量硬界律（Hard-Bound-First）**
+任何证书必须先算模型无关的硬下界 ĝ⁰，学习模型只允许收紧（max 聚合下界、min 聚合上界），绝不允许放宽。确定性保守只来自 L0；L1/L2 只提供统计保守（覆盖率 1−α），不得替代 L0 的确定性兜底。
 
-**P14 安全保持适应律（Safety-Preserving Adaptation, CSL）**
-任何参数更新 θ→θ′ 必须同时满足：可塑性增益 G_new ≥ τ_gain、锚集稳定性损失 L_anchor(θ′)−L_anchor(θ) ≤ τ_stab、锚集不确定界不放松 Δρ_A ≤ 0、安全回归套件全通过。四项全过才原子提交；否则回滚。退化时冻结 θ 于最近认证检查点。
+**P14 序优先律（Rank-over-Score with Hysteresis）**
+块选择基于成对比较的排行榜，而非绝对分数；只有当挑战者的效用下界超过在位者上界至少 δ_rank 时才换马。排行榜对任何严格单调的效用变换不变。退化顺序同样由“贡献下界排行榜”给出，安全关键模块永在榜尾（不牺牲）。
 
-**P15 证书保持投影律（Certificate-Preserving Projection, CTA）**
-把 SGD 更新 Δθ 投影到线性化的证书可行域 {δ : ρ_θ(A)+J_Aδ ≤ ρ_max} 的切空间；约束不活跃时 Δθ_CTA=Δθ_SGD，故 CTA 失效可注入恒等投影、退回「CSL 账本 + 全空间更新」而不破坏账本的原子性。
+**P15 编译期定形律（Compile-time Freezing）**
+凡能离线确定者不在运行期重算：契约时隙、牺牲榜、每模块层级预算全部编译期固化；运行期只查表与执行。编译失败或不满足预算约束即整体退回 v9 运行时契约表（中立元退化）。
 
 ## 3. 与基线的接口（如何退化）
 
-- SAF 失效（超时/证书异常）⇒ 注入安全吸收元 a_stop（急停/最近中止点），行为集 ⊆ v9，安全由 v9 AC 证书级兜底；显式关闭 SAF ⇒ 恒等投影，逐位退回 v9 决策；
-- CSL 失效 ⇒ 冻结 θ 于最近认证检查点 θ*，退回 v9 固定模型（ρ 取检查点值），安全等价 v9；
-- CTA 失效 ⇒ 恒等投影，更新仍受 CSL 四项判据与回滚保护，等价「无投影的 CSL」；
-- v9 的 AC/MW/ID 任一失效 ⇒ 按 v9 五级链退回；
-- 全部失效 ⇒ 完整退回 v9 → v8 → v7 → v6。
+- LWC 的 L2 不可用或超差 ⇒ 只用 L0/L1（仍保守）；L0 也不可用 ⇒ 退回 v9 AC 的块证书；
+- RL 失效（比较模型崩溃 / 排行榜不可读）⇒ 退回 v9 绝对 score 选择（保留 v9 迟滞）；
+- LCC 失效（编译约束不满足 / 静态表校验失败）⇒ 退回 v9 运行时 EDF + ID 归因；
+- v9 AC/MW/ID 任一失效 ⇒ 按 v9 定义 536 注入对应中立元，退回 v8；
+- 全部失效 ⇒ MetricVoiceGauge-ACMD v9 → DA-SPR-Cal v8 → OTL-GC-ER v7 → v6。
 
 ## 4. 预期贡献
 
-1. **运行时鲁棒避障滤子**：把安全从"块级预测"下移到"逐步闭环不变式"，与 AC 形成「计划可信 + 执行必安全」两级分工；
-2. **安全保持的持续学习**：双账本 + 证书保持切线投影，使在线适应不能突破锚集安全证书，同时用认证检查点回滚兜住覆盖失效；
-3. **保守性—可塑性桥接**：证明 ρ 收紧 ⇒ SAF 可行集单调扩张 ⇒ 保守性单调下降，首次把"学得更好"翻译成"避障更不保守且仍可证明安全"；
-4. **实验 E571–E590**：静态/动态障碍、可行性、覆盖标定、适应增益、遗忘、证书保持、对抗投毒、长跑、仿真到实物与端到端任务。
+1. **轻量层级证书**：模型无关硬界 + anytime 收紧，把“模型误差风险”与“安全判定”解耦；熟悉域块生成从 12ms 降到典型 ≤4ms，且陌生域自动退化为纯物理界；
+2. **排行榜执行**：以成对比较替代绝对打分，对分数单调失真有不变性；迟滞换马给出可证明的抖振上界；
+3. **编译期轻量契约**：静态时隙 + 牺牲榜，调度从运行期 O(M log M) 降为 O(1) 查表，退化顺序可审计、WCET 可组合；
+4. **三账本闭环**：证书账本（硬界/层级）、排序账本（RL）、退化账本（LCC）互相校验；E571–E590 覆盖紧度、稳健性、等价性、预算与端到端任务。
 
 ## 5. 本轮最大风险
 
-**一句话**：SAF 的鲁棒屏障以不确定半径 ρ 为有效性前提，而持续学习恰在最陌生的障碍分布上更新残差模型；若 conformal 半径在该分布外过度自信（覆盖失效），屏障裕度会被低估，最激进的适应场景正是安全保证最脆弱的场景。
+**一句话**：轻量化把“前向模型误差”换成了“硬界保守性 + 排序统计噪声”——当 L0 区间界过松使可行块集近乎为空时，系统会长期回退 K=1（性能债），而排行榜的成对比较又恰恰来自同一个可能失配的前向模型，可能把“最不坏”的候选一致地排到首位，于是轻量化在最需要多样性的陌生域反而制造出虚假的确定性。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-SCAF**（Safe Continual Avoidance Filter）
+# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-LRC**（Lightweight Rank-Certified）
 
 > 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮灵感：「避障控制」×「持续学习」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）与 v9 的 AC/MW/ID 全部原样继承。新增 SAF/CSL/CTA 一律为**可选增强**，且遵循**保守退化序** B(v10) ⊆ B(v9)：失效时注入恒等元或安全吸收元，任意时刻的可观测行为集不超出 v9，故 v9 的安全性引理原样传递（引理 93）。
+> 本轮灵感：「排行榜」×「轻量化设计」
+> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）与 v9 的 AC/MW/ID 全部保留。新增组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格退回 v9 行为，而非行为漂移。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 v9 ACMD） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
 |---|---|---|---|
-| IP-340–356 | v9 全部模块 | 继承 | 语义不变；AC 的动作输出改经 SAF 投影后再执行（IP-357） |
-| IP-354 | ActionChunkCertifier | 接口升级 | 其候选块在生成期额外接受 SAF 可行性预检；中止点集 P_t 与 SAF 急停轨迹统一由定义 534/542 给出 |
-| IP-357 | SafeAvoidanceFilter 安全避障滤子 | 新增核心模块 | 50Hz 逐步鲁棒 DCBF 最小修正 QP；HOCBF 处理相对阶 2；不可行即安全吸收元；φ^elig=false |
-| IP-358 | ContinualSafetyLedger 持续安全账本 | 新增核心模块 | 双账本 + 影子权重 + 四项接受判据 + 原子提交/回滚；认证检查点与 ACI 覆盖监控 |
-| IP-359 | ConstraintTangentAdapter 证书保持切线投影 | 新增核心模块 | 把更新投影到锚集不确定界不增的切空间；不活跃时退化为恒等，兼容 CSL 原子性 |
+| IP-340–356 | v9 全部模块 | 继承 | 语义不变；块证书增加 LWC 层级、块选择改由 RL 提供、契约改由 LCC 编译 |
+| IP-357 | LightweightCertifier 轻量层级证书器 | 新增核心模块 | L0 运动学区间硬界（模型无关、O(1)）+ L1 残差收紧 + L2 v9 rollout；anytime 提前接受；硬界只收紧不放宽 |
+| IP-358 | RankLedger 排行榜执行器 | 新增核心模块 | 成对比较 Bradley–Terry/Elo；置信下界排序；δ_rank 迟滞换马；对效用单调变换不变 |
+| IP-359 | LightweightContractCompiler 轻量契约编译器 | 新增核心模块 | 契约表 → 固定时隙；贡献下界排序 → 退化牺牲榜；运行期 O(1) 查表；WCET 可组合 |
+| IP-360 | LightweightGuard 轻量守卫 | 新增模块（并入 LWC） | 50Hz 只跑 L0 硬界 + 排行榜位移检测；不触碰前向模型，p99 ≤ 0.1ms |
 
-**退化链声明（v10 契约化六级）：**
-- Level-0（新增最高优先）：SAF QP 不可行或检测到不可避免碰撞 ⇒ 安全吸收元 a_stop（最大减速/最近中止点），并冻结学习；
-- Level-1：SAF 模块失效 ⇒ 注入 a_stop（保守），或显式关闭时恒等投影、逐位退回 v9 AC 决策；
-- Level-2：CSL 失效 ⇒ 冻结 θ 于最近认证检查点 θ*，退回 v9 固定模型；
-- Level-3：CTA 失效 ⇒ 恒等投影，更新仍受 CSL 四项判据与回滚；
-- Level-4：AC 证书失效或信任域破坏 ⇒ K_eff←1，逐步执行（v9）；
-- Level-5：MW/ID/v8 模块失效 ⇒ 按 v9 五级链退回 v9→v8→v7→v6。
+**退化链声明（v10 契约化七级）：**
+- Level-1：LWC 的 L2 超差/不可用 ⇒ 仅用 L0/L1，仍保守；
+- Level-2：LWC 全不可用 ⇒ 退回 v9 AC 块证书（12ms rollout）；
+- Level-3：RL 失效 ⇒ 退回 v9 绝对 score 选择；
+- Level-4：LCC 失效 ⇒ 退回 v9 运行时 EDF + ID；
+- Level-5：v9 的 AC/MW/ID 失效 ⇒ v9 定义 536 中立元注入，退回 v8；
+- Level-6：v8 的 DA/SPR/Cal 失效 ⇒ 中立元注入，退回 v7；
+- Level-7：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
 
-## 1. 符号体系增量（定义 540–551）
+## 1. 符号体系增量（定义 540–549）
 
 | 符号 | 含义 |
 |---|---|
-| x_t∈X | 增广状态（位姿、速度、关节、与最近障碍关系等） |
-| O_t, h(x) | 时刻 t 的障碍集与符号距离屏障：h(x)=dist(p,O_t)−r_robot−m_safe |
-| C={x:h(x)≥0} | 安全集；前向不变目标 |
-| γ∈(0,1] | DCBF 收缩因子，h(x_{t+1})≥(1−γ)h(x_t) |
-| d, d̂_θ | 真实残差动力学与 θ 参数化的学习残差模型 |
-| ρ_θ(x,u) | 残差不确定半径（conformal/集成散度），满足 ‖d−d̂_θ‖≤ρ_θ 时称**覆盖** |
-| L_h | h 的 Lipschitz 常数 |
-| a^k, a_safe | AC 第 k 步名义动作与 SAF 投影后的安全动作 |
-| A, ρ_max | 锚集（安全关键场景，版本化冻结）与锚集不确定半径预算 |
-| θ*, ρ* | 最近认证检查点及其有效半径 |
-| G_new, L_anchor | 可塑性增益与新域相对锚集的稳定性损失 |
-| τ_gain, τ_stab | 接受阈值 |
-| J_A | 锚集不确定度对 θ 的 Jacobian |
-| Cons(θ) | 保守性度量 E‖a_safe−a^k‖ |
-| a_stop | 安全吸收元：最大减速度指向最近中止点的停驻序列 |
-| α_t | ACI 在线误覆盖目标，随违例自适应 |
+| 𝒞 = (𝒞⁰, 𝒞¹, 𝒞²) | 轻量证书梯子：模型无关硬界 → 残差收紧 → 全 rollout |
+| ĝ^(ℓ), ê^(ℓ) | 第 ℓ 层给出的间隙下界 / 力矩上界（保守方向：越小 / 越大越保守） |
+| w_ℓ | 第 ℓ 层计算代价（L0 0.05ms，L1 0.4ms，L2 12ms） |
+| R_k | 第 k 步的可达集外近似（区间扩张，Minkowski 和） |
+| ε_ulp | 浮点安全余量（≥ 8 ULP，见定义 541） |
+| 𝔏_t | 排行榜：候选块集合上的带 CI 潜在效用估计 |
+| u_i, n_i | 候选 i 的潜在效用均值与比较次数 |
+| q_i = LCB(u_i) | 悲观排序分数（定义 543） |
+| δ_rank | 排行榜换马迟滞裕度 |
+| ≺_deg | 退化牺牲榜全序（贡献下界升序，安全关键模块置尾） |
+| ℬ_m | 模块 m 的层级预算（允许细化到的最大层） |
+| ρ_τ | 相邻两块排行榜的 Kendall τ 稳定性 |
 
-**新增定义 540（增广避障状态与安全集）** x_t 含机器人位姿/速度/执行器状态及最近 r 个障碍的几何-运动摘要；静态障碍 O_static 与动态障碍 O_t=O_0⊕(v_obs·t)⊕E_t（E_t 为有界预测误差集）。屏障 h(x)=dist(p,O_t)−r_robot−m_safe，C={x:h(x)≥0}。
-
-**新增定义 541（鲁棒离散时间控制屏障函数 R-DCBF）** 对 x_{t+1}=f_0(x_t,u_t)+d(x_t,u_t)，若存在 u∈U 使
+**新增定义 540（轻量证书梯子 LightweightCertificate Ladder）** 对候选块 ζ=(a^{1:K})，证书是一族逐步收紧的保守估计 𝒞⁰, 𝒞¹, 𝒞²。定义组合算子
 ```
-h(f_0(x,u)+d̂_θ(x,u)) − L_h·ρ_θ(x,u) ≥ (1−γ)·h(x),   γ∈(0,1]
+G^(ℓ) = max_{j≤ℓ} ĝ^(j),   E^(ℓ) = min_{j≤ℓ} ê^(j)
 ```
-则 h 为 (γ,ρ_θ)-鲁棒 DCBF。相对阶 ≥2 时用 HOCBF：ψ_0=h，ψ_1=ψ_0+α_1ψ_0，对 ψ_1 施加同型条件（定义 541′）；动态障碍通过 O_t 的预测集把其加速度不确定并入 ρ_θ。
+每层独立保守（ĝ^(j) ≤ 真实最小间隙，ê^(j) ≥ 真实最大力矩），故取 max/min 后仍保守且单调收紧：G⁰ ≤ G¹ ≤ G² ≤ g_min，E⁰ ≥ E¹ ≥ E² ≥ e_max。证书有效 ⇔ G^(ℓ) ≥ d_safe ∧ E^(ℓ) ≤ τ_eff ∧ γ̂_grasp ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM（后两项继承 v9 定义 496）。
 
-**新增定义 542（安全避障滤子 SAF）** 每 20ms 对 a^k 求解
+**新增定义 541（L0 运动学硬界 Model-Free Hard Bound）** 给定动力学包络 v ∈ [0,v_max]、a ∈ [a_min,a_max] 与障碍地图膨胀半径 r_o，构造可达集外近似
 ```
-a_safe = argmin_{u∈U} ½‖u−a^k‖²_W
-s.t.  h(f_0(x,u)+d̂_θ(x,u)) − L_h·ρ_θ(x,u) ≥ (1−γ)h(x)
-      u_min ≤ u ≤ u_max,   ‖u−u_prev‖ ≤ Δu_max
+R_0 = {s},   R_k = R_{k-1} ⊕ [v_min,v_max]Δt ⊕ ½[a_min,a_max]Δt²
+ĝ⁰_k = dist_lower(R_k, O ⊕ Ball(r_o)) − ε_ulp,   ĝ⁰ = min_k ĝ⁰_k
+ê⁰ = max_k |τ(a^{1:k})|_upper + ε_ulp
 ```
-可行则输出 a_safe；不可行则输出 a_stop=紧急减速至最近中止点 p*（定义 534），并置 Level-0。显式中立元为恒等投影 Π_id(a^k)=a^k（仅用于显式关闭 SAF）。
+其中 dist_lower 对外近似集合取下界（保守偏小），O 为障碍并集。L0 只依赖动力学界、地图与浮点余量，不含任何学习参数，故对域偏移**确定性不变**。
 
-**新增定义 543（持续学习双账本）** 锚集 A 固定且版本化。对更新 θ→θ′：
+**新增定义 542（排行榜执行器 RankLedger）** 维护候选块集合上的成对比较。比较结果 y∈{0,1} 服从 Bradley–Terry：P(i≻j)=σ(u_i−u_j)，u_i=wᵀφ(ζ_i)。在线逻辑回归更新 w 与协方差 Σ，置信下界
 ```
-G_new    = err_{D_new}(θ) − err_{D_new}(θ′)
-L_anchor = max_{a∈A∪D_replay} [err_a(θ′) − err_a(θ)]_+
-Δρ_A     = max_{a∈A} ρ_{θ′}(a) − ρ_max
-accept ⇔ G_new ≥ τ_gain ∧ L_anchor ≤ τ_stab ∧ Δρ_A ≤ 0 ∧ suite_pass(θ′)
+q_i = wᵀφ_i − β_t·‖φ_i‖_{Σ^{-1}},   β_t = z·√(d·log(1+t))
 ```
-四项全过才提交；任一失败即回滚。
+仅对通过硬证书过滤的可行集 ℱ_t 排序。
 
-**新增定义 544（影子权重与原子提交）** 更新只写 θ_shadow；接受判据在影子模型上离线评估；提交为双缓冲指针切换（版本号 +1），SAF 永远读到一致快照，杜绝半更新可见。
-
-**新增定义 545（证书保持切线投影 CTA）** 设 SGD 更新 Δθ_SGD。解
+**新增定义 543（排行榜迟滞 Rank Hysteresis）** 设在位块为 i₀，挑战者为 i₁=argmax_{i∈ℱ} q_i。仅当
 ```
-Δθ_CTA = argmin_δ ½‖δ−Δθ_SGD‖²
-         s.t.  ρ_θ(A) + J_A·δ ≤ ρ_max      （线性化锚集证书）
-Δθ = Π_{T_M}(Δθ_SGD)  若约束活跃；否则 Δθ = Δθ_SGD
+q_{i₁} > ucb(i₀) + δ_rank,   ucb(i) = wᵀφ_i + β_t‖φ_i‖_{Σ^{-1}}
 ```
-约束不活跃时 CTA 恒等，故可安全降级。
+才换马；否则继续执行 i₀。换马只在 5Hz 块边界评估，50Hz 守卫不换块。
 
-**新增定义 546（认证检查点与 ACI 覆盖监控）** 采用自适应 conformal：α_{t+1}=α_t+η(α−1{‖d_t−d̂‖>ρ_t})；ρ_t 取残差 1−α_t 分位。当滑窗违例率 > ν_max 时：冻结 θ←θ*、ρ←κ_ρ·ρ*（κ_ρ>1 安全系数），并在 Level-2 恢复前禁止提交。
-
-**新增定义 547（持续避障任务序列与度量）** 任务序列 T_1,…,T_n（障碍几何/动力学/地面摩擦渐变），安全锚集 A 跨任务不变。度量：
+**新增定义 544（anytime 细化策略 Anytime Refinement）** 每模块/每块有层级预算 ℬ，候选评估按层推进：
 ```
-FWT = mean_i [R_i(θ_after_i) − R_i(θ_0)]
-BWT = mean_i [R_i(θ_final) − R_i(θ_after_i)]
-Forget = max_i [R_i(θ_after_i) − R_i(θ_final)]
+cert = L0(ζ)
+while not accept(cert) and cert.level < ℬ:
+    cert = refine(cert)            # L0→L1→L2
+accept ⇔ cert.G ≥ d_safe ∧ cert.E ≤ τ_eff
+reject if cert.level == ℬ and not accept    # 预算内无法确认 ⇒ 保守拒绝
 ```
+L0 通过即提前返回；L2 仅在 L1 不能判定时触发。
 
-**新增定义 548（安全回归套件）** suite_pass 包含：锚集前向不变数值检查、急停可行性、SAF 投影有界性、动态障碍最小间隙、对抗扰动下的屏障残余。套件固定、不可被学习更新修改。
+**新增定义 545（退化牺牲榜 Degradation Leaderboard）** 由编译期归因下界 c_m^LB 给出全序
+```
+eligible = {m : φ_m^elig = true}
+≺_deg:  按 (c_m^LB, −Ŵ_m) 升序排列 eligible，安全关键模块 φ^elig=false 置尾且永不牺牲
+```
+预算不足或故障时，按 ≺_deg 从前往后注入 v_m^⊥，直到预算可行；安全关键模块不参与牺牲。
 
-**新增定义 549（保守性度量）** Cons(θ)=E_{x∼D}[‖a_safe(x;θ)−a^k(x)‖]。用于验证"ρ 收紧 ⇒ 可行集扩张 ⇒ 保守性下降"。
+**新增定义 546（轻量契约编译器 LCC）** 输入契约表 {κ_m} 与归因下界，输出
+```
+Schedule = (固定时隙 [slot_1..slot_M],  ≺_deg,  {ℬ_m},  每模块 v_m^⊥ 表)
+```
+静态校验：(i) Σ_m Ŵ_m ≤ B_dec；(ii) 每个时隙内 deadline 单调；(iii) ≺_deg 与 v9 表 536 的中立元映射一致；(iv) 浮点余量 ε_ulp 已计入所有硬界。任一校验失败 ⇒ 拒绝编译并整体退回 v9 运行时表。
 
-**新增定义 550（安全契约与吸收元）** κ_SAF=(In,Out,D=1.0ms,Ŵ=1.0ms,v^⊥=a_stop,π=0,φ^elig=false)；κ_CSL=(…,v^⊥=freeze θ,φ^elig=true 但仅可压缩更新预算)；κ_CTA=(…,v^⊥=Π_id,φ^elig=true)。安全模块的失效值取**吸收元**（急停/冻结）而非恒等元，且吸收元使行为集单调收缩，故仍满足保守退化序。
+**新增定义 547（轻量守卫 LightweightGuard）** 50Hz 守卫只用三项廉价检查：L0 硬界的停车不变式、当前块 L0 证书是否仍有效、在位块是否被排行榜标记为“已失格”。不做 rollout、不做 EDF、不更新归因。代价 O(1)。
 
-**新增定义 551（SCAF 联合闭环）** 每 20ms：AC 提议 a^k → SAF 投影得 a_safe → 执行 → 采集 (x,u,x′) → 块边界处 CSL 评估影子更新 → CTA 投影 → 接受则原子提交，否则回滚或冻结。安全不变式由 SAF 运行时保证，学习只改变 ρ 的紧致度，不改变安全集的定义。
+**新增定义 548（排行榜稳定性 Kendall τ）** 相邻两块排行榜排序的 Kendall 秩相关
+```
+ρ_τ(t) = 1 − 2·(#逆序对) / (n(n−1)/2)
+```
+用于长跑审计：ρ_τ 长期过低意味着比较噪声主导，应冻结换马或退回 v9 绝对评分。
 
-## 2. 形式化定义（要点与升级）
+**新增定义 549（层级预算分配 Level Budget）** 决策预算剩余 B_t 下，按价值密度分配层级：
+```
+ℬ_m = max{ℓ : Σ_{j∈active} w_{j→ℓ} ≤ B_t}
+```
+安全关键模块的 ℬ_m 固定为 L0（始终可用），非关键块才允许升到 L1/L2。
 
-**升级定义 496（软证书，v10）** δ_trigger 增加两项：`SAF_QPAvailable ∧ ρ_θ ≤ ρ_max`。块证书 Ĉ_t 仅在 SAF 预检通过的候选上生成，故"块内软通过、执行硬失败"的空洞进一步缩小；M₀ 硬检查直接读取 SAF 的 DCBF 残余，而非仅读预测值。
-
-**升级定义 531（软硬约束衔接）** M₀ 判据新增：任一执行步 SAF 约束不成立或 QP 不可行 ⇒ 立即 Level-0 安全停驻 + 冻结学习，不等块边界。停驻轨迹与 AC 中止点 p* 共用同一 d_stop 构造，保证两套安全机制不互相矛盾。
-
-**升级定义 538（提炼状态机）** ID 对 CSL 只可压缩其更新预算（学习频率），不可将其转为 dormant（φ^elig=false 的核心闸门）；对 SAF/CTA 永不消融。
-
-## 3. 关键算法骨架
+## 2. 关键算法骨架
 
 ```python
-# IP-357 SafeAvoidanceFilter：运行时鲁棒避障滤子
-class SafeAvoidanceFilter:
-    def __init__(self, f0, residual, gamma=0.2, L_h=1.0,
-                 m_safe=0.12, u_bounds=None, du_max=None):
-        self.f0, self.res = f0, residual
-        self.gamma, self.L_h, self.m_safe = gamma, L_h, m_safe
-        self.u_bounds, self.du_max = u_bounds, du_max
+# IP-357 LightweightCertifier：先硬后软的层级证书
+class LightweightCertifier:
+    def __init__(self, kinematics, residual_model, d_safe=0.15,
+                 beta=0.02, ulp=1e-6, K_max=10):
+        self.kin, self.model = kinematics, residual_model
+        self.d_safe, self.beta, self.eps = d_safe, beta, ulp
+        self.K_max, self.w = K_max, {0: 0.05, 1: 0.4, 2: 12.0}
 
-    def barrier(self, x, u):
-        x_next = self.f0(x, u)
-        dh = self.res.predict(x, u)                 # d̂_θ
-        rho = self.res.radius(x, u)                 # ρ_θ（conformal）
-        return self.h(x_next + dh) - self.L_h * rho, rho
+    def level0(self, state, actions):
+        reach, g_min, e_max = {state.p}, float('inf'), 0.0
+        for k, a in enumerate(actions):
+            reach = self.kin.minkowski_step(reach, a, state.dt)
+            g_min = min(g_min, self.kin.dist_lower(reach, state.obstacles))
+            e_max = max(e_max, self.kin.effort_upper(actions[:k + 1]))
+        return Cert(g_min - self.eps, e_max + self.eps, level=0)
 
-    def h(self, x):
-        return dist(x.p, x.obstacles) - x.r_robot - self.m_safe
+    def refine(self, state, actions, cert):
+        if cert.level == 0:                       # L1：带盖章的残差上界
+            r = self.model.residual_bound(state, actions[0]) + self.beta
+            return Cert(cert.g - r, cert.e + r, level=1)   # 独立保守，不求更紧
+        pred = self.model.rollout(state, actions)  # L2：v9 全 rollout
+        return Cert(min(pred.clearance) - self.beta,
+                    max(pred.effort) + self.beta, level=2)
 
-    def filter(self, x, a_nom, u_prev):
-        def obj(u):  return 0.5 * (u - a_nom) @ self.W @ (u - a_nom)
-        cons = [{'type': 'ineq',
-                 'fun': lambda u: self.barrier(x, u)[0]
-                                  - (1 - self.gamma) * self.h(x)}]
-        cons.append({'type': 'ineq',
-                     'fun': lambda u: self.du_max - norm(u - u_prev)})
-        sol = solve_qp(obj, cons, self.u_bounds, warm_start=u_prev)
-        if sol.success:
-            return sol.u, 'safe'
-        return self.emergency_stop(x), 'infeasible'   # 安全吸收元
-
-    def emergency_stop(self, x):
-        p = nearest_abort_point(x)                     # 定义 534
-        return max_deceleration_toward(x, p)
-
-
-# IP-359 ConstraintTangentAdapter：证书保持切线投影
-class ConstraintTangentAdapter:
-    def __init__(self, anchors, rho_max, eps=1e-6):
-        self.A, self.rho_max, self.eps = anchors, rho_max, eps
-
-    def anchor_uncertainty(self, theta):
-        return np.array([radius_model(theta, a) for a in self.A])
-
-    def project(self, theta, dtheta, residual):
-        rho_A = self.anchor_uncertainty(theta)
-        slack = self.rho_max - rho_A
-        if slack.min() > self.eps:                     # 约束不活跃 → 恒等
-            return dtheta
-        J = jacobian(lambda th: self.anchor_uncertainty(th), theta)
-        d = solve_qp_min_norm(dtheta, J, slack)        # 线性化切空间投影
-        return d
+    def certify(self, state, actions, budget_level=2):
+        cert = self.level0(state, actions)
+        while True:
+            if cert.g >= self.d_safe and cert.e <= state.tau_eff:
+                return cert, True                 # 任意层提前接受（引理 88）
+            if cert.level >= budget_level:
+                return cert, False                # 预算内无法确认 ⇒ 保守拒绝
+            cert = self.refine(state, actions, cert)
 
 
-# IP-358 ContinualSafetyLedger：双账本 + 影子权重 + 原子提交
-class ContinualSafetyLedger:
-    def __init__(self, cta, anchors, rho_max,
-                 tau_gain=1e-3, tau_stab=2e-2):
-        self.cta, self.A, self.rho_max = cta, anchors, rho_max
-        self.tau_gain, self.tau_stab = tau_gain, tau_stab
-        self.theta = None; self.theta_star = None; self.version = 0
+# IP-358 RankLedger：以序代值 + 迟滞换马
+class RankLedger:
+    def __init__(self, d=16, z=1.64, delta_rank=0.15, eta=0.08):
+        self.w = np.zeros(d); self.Sigma = np.eye(d)
+        self.z, self.delta_rank, self.eta = z, delta_rank, eta
+        self.incumbent, self.prev_order = None, None
 
-    def propose_and_commit(self, theta, dtheta_sgd, D_new, suite_pass):
-        dtheta = self.cta.project(theta, dtheta_sgd, None)
-        theta_s = theta + dtheta                        # 影子权重
-        G_new = self.err(D_new, theta) - self.err(D_new, theta_s)
-        L_anc = max(0.0, max(self.err(a, theta_s) - self.err(a, theta)
-                             for a in self.A + self.replay))
-        rho_ok = max(self.radius(a, theta_s) for a in self.A) <= self.rho_max
-        if G_new >= self.tau_gain and L_anc <= self.tau_stab \
-                and rho_ok and suite_pass(theta_s):
-            self.theta = theta_s                        # 双缓冲原子切换
-            self.theta_star = theta_s
-            self.version += 1
-            return True
-        return False                                    # 回滚（不提交影子）
+    def observe(self, winner, loser, phi_w, phi_l):
+        p = 1.0 / (1.0 + math.exp(-(self.w @ (phi_w - phi_l))))
+        g = (1.0 - p) * (phi_w - phi_l)
+        self.Sigma += np.outer(phi_w - phi_l, phi_w - phi_l)
+        self.w = self.w + self.eta * np.linalg.solve(
+            self.Sigma + 1e-6 * np.eye(len(self.w)), g)
+
+    def _ci(self, phi):
+        radius = self.z * math.sqrt(max(0.0, phi @ np.linalg.solve(
+            self.Sigma + 1e-6 * np.eye(len(phi)), phi)))
+        return self.w @ phi, radius
+
+    def lcb(self, phi): u, r = self._ci(phi); return u - r
+    def ucb(self, phi): u, r = self._ci(phi); return u + r
+
+    def select(self, feasible):
+        challenger = max(feasible, key=self.lcb)
+        if self.incumbent is None or self.incumbent not in feasible:
+            self.incumbent = challenger; return challenger
+        if (self.lcb(challenger) >
+                self.ucb(self.incumbent) + self.delta_rank):
+            self.incumbent = challenger           # 迟滞换马
+        return self.incumbent
 
 
-# 主闭环集成：MetricVoiceGauge-SCAF
-def metricvoicegauge_round_10(M, s, obs, ...):
-    ctx = mw_default_ctx()
-    results = middleware.run_cycle(runners={          # v9 契约中间件
-        'DA_ML': ..., 'SPR': ..., 'CAL_FI': ..., 'OTL': ...}, ctx=ctx)
+# IP-359 LCC：契约静态化 + 牺牲榜
+class LightweightContractCompiler:
+    def __init__(self, B_dec=20.0):
+        self.B_dec = B_dec
 
+    def compile(self, contracts, contrib_lb):
+        assert sum(c.wcet_ms for c in contracts) <= self.B_dec
+        slots = sorted(contracts, key=lambda c: (c.priority, c.deadline_ms))
+        eligible = [c for c in contracts if c.distill_eligible]
+        critical = [c for c in contracts if not c.distill_eligible]
+        sacrifice = sorted(eligible,
+                           key=lambda c: (contrib_lb[c.name], -c.wcet_ms))
+        schedule = Schedule(slots, sacrifice + critical, self.B_dec)
+        schedule.assert_bitwise_equiv_v9(contracts)   # 逐位等价校验
+        return schedule
+
+    def degrade_order(self, schedule, budget_remaining):
+        order = []
+        for c in schedule.sacrifice:                  # 牺牲榜自前向后
+            if budget_remaining >= 0:
+                break
+            if c.distill_eligible:
+                order.append(c.name)                  # 仅 eligible 可牺牲
+                budget_remaining += c.wcet_ms
+        return order
+
+
+# 主闭环集成：MetricVoiceGauge-LRC
+def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
+    # ---- LCC 编译期表：固定时隙 + 每模块层级预算 + 牺牲榜 ----
+    if schedule is None:
+        schedule = compiler.compile(contract_table, distiller.contrib_lb())
+    ctx = mw_compile_time_ctx(schedule)
+
+    # ---- v9 感知侧（契约化，原样继承）----
+    results = middleware.run_cycle(runners_perception, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
+
+    # ---- 5Hz 块边界：LWC 分层证书 + RL 排行榜选块 ----
     if current_chunk is None or current_chunk.exhausted:
-        current_chunk = chunker.generate_chunk(...)   # v9 AC（含 SAF 预检）
+        feasible = []
+        for cand in policy.sample_sequences(ctx.state, K_max, n=64):
+            cert, ok = certifier.certify(
+                ctx.state, cand, budget_level=schedule.level_budget('AC'))
+            if ok and abort_points(ctx.state, cand):
+                feasible.append(Feasible(cand, cert))
+        current_chunk = rank_ledger.select(feasible) if feasible else \
+                        single_step_fallback(ctx.state)   # 极端保守回退
 
-    verdict, k_next = chunker.midchunk_guard(current_chunk, k_exec, live_obs)
+    # ---- 50Hz 轻量守卫：只跑 L0 硬界 + 失格检测（≤0.1ms）----
+    verdict, k_next = lightweight_guard(current_chunk, k_exec, live_obs)
     if verdict == 'abort':
         current_chunk.execute_safe_stop_at(k_next)
         current_chunk = None
-        a_nom = None
     else:
-        a_nom = current_chunk.actions[k_next]
+        execute(current_chunk.actions[k_next])
 
-    if a_nom is not None:
-        a_safe, status = saf.filter(ctx.state, a_nom, ctx.u_prev)  # P13
-        if status == 'infeasible':
-            freeze_learning()                          # Level-0
-        execute(a_safe)
-
-    # ---- 块边界：持续学习（低频，摊销进预算）----
-    if cycle_idx % UPDATE_PERIOD == 0 and not learning_frozen:
-        ledger.propose_and_commit(ledger.theta, grad(D_new, ledger.theta),
-                                  D_new, suite_pass)
-
-    # ---- 覆盖监控：ACI 违例 ⇒ 回滚认证检查点并膨胀 ρ ----
-    if aci_violation_rate() > NU_MAX:
-        rollback_to(ledger.theta_star, rho=KAPPA * ledger.rho_star)
-
+    # ---- v9 继承路径 + ID（ID 仅做离线/长周期归因，写回 contrib_lb）----
     C, spatial_cert, claims, metrics, rewards = M.inherited_v9_path(ctx)
+    if cycle_idx % 500 == 0:
+        contrib_lb = distiller.update_lower_bounds()
     return C, spatial_cert, claims, metrics, rewards
 ```
 
-## 4. 推导
+## 3. 推导
 
-**引理 87（鲁棒 DCBF 前向不变性）** 设 ∀t 有 ‖d−d̂_θ‖≤ρ_θ 且 h 为 L_h-Lipschitz，SAF 每步输出满足定义 541 约束。则 x_0∈C ⇒ ∀t, h(x_t)≥0。证明：由 Lipschitz 性 h(x_{t+1}^{true}) ≥ h(f_0(x,u)+d̂_θ) − L_hρ_θ ≥ (1−γ)h(x_t)。归纳得 h(x_t) ≥ (1−γ)^t h(x_0) ≥ 0。∎
+**引理 87（L0 硬界的模型无关可靠性）** 设真实状态转移满足 v∈[0,v_max]、a∈[a_min,a_max]，障碍地图与膨胀半径无误，则 ∀k：R_k ⊇ 真实可达位置集合，故 ĝ⁰_k = dist_lower(R_k, O⊕Ball(r_o)) − ε_ulp ≤ 真实最小间隙。证明：区间扩张对每一维取包络，Minkowski 和对凸化误差封闭；dist_lower 对外近似集合取下界；ε_ulp ≥ 8 ULP 覆盖单次浮点舍入在 K_max 步内的累计上界。该证明不含任何学习参数，故对任意域偏移成立。∎
 
-**引理 88（SAF 无碰撞与不可行处置）** 若每个执行步 SAF 可行，则 ∀t x_t∈C，机器人半径与 m_safe 已计入 h，故无碰撞。若某步不可行，则 a_stop 的刹停距离 ≤ dist(p,O_t)−m_safe 由定义 534 的 d_stop 保证（与 AC 中止点同一构造），停驻后 h≥0；若连停驻都不可行则触发 Level-0 并记录"不可避免"事件，这是唯一允许的安全违背路径，且其概率被 E573 单独度量。∎
+**引理 88（anytime 保守性与单调收紧）** 若每层 ĝ^(j) ≤ g_min、ê^(j) ≥ e_max，则组合 G^(ℓ)=max_{j≤ℓ}ĝ^(j)、E^(ℓ)=min_{j≤ℓ}ê^(j) 仍保守，且 G⁰ ≤ G¹ ≤ G² ≤ g_min、E⁰ ≥ E¹ ≥ E² ≥ e_max。故任意层提前接受都 sound；预算截断只导致保守拒绝，不会导致错误接受。证明：对有限个各自 ≤ g_min 的数取 max 仍 ≤ g_min，且随集合扩大单调不减；min 对称。∎
 
-**引理 89（安全保持的持续学习 SPCL）** 在覆盖成立（∀a∈A, ‖d−d̂_θ‖≤ρ_θ）且每次更新满足定义 543 四项判据时，任意长度的更新序列 T_1…T_n 中，SAF 每步约束仍成立，故由引理 87 得全序列前向不变。证明：CSL 的 Δρ_A≤0 保证锚集半径不增；CTA 保证 θ′ 不越出 ρ_max 可行域；suite_pass 保证锚集不变式数值成立；SAF 运行时对任意 θ′ 仍执行定义 542 约束。覆盖在锚集上由判据维持；新域覆盖仅被监控（定义 546），故本引理对锚集无条件、对新域条件于覆盖。∎
+**引理 89（排行榜的单调不变性与遗憾界）** 若 u_i = f(v_i) 且 f 严格单调，则 Bradley–Terry 的成对似然序不变，排行榜的 argmax 选择不变。进一步，若比较噪声次高斯、特征维数 d 固定，则采用置信下界选择（定义 542/543）的累计遗憾
+```
+Reg(T) ≤ O(d·√(T·log T))
+```
+即次线性；当且仅当效用不可分或噪声非平稳时界退化。证明：标准 Bradley–Terry logistic bandit 的椭圆置信集覆盖 + LCB 选择标准论证；单调不变性来自 σ(f(v_i)−f(v_j)) 保序。∎
 
-**引理 90（遗忘上界与回滚）** 每次提交锚集损失增量 ≤ τ_stab，故 N 次提交后锚集性能退化 ≤ N·τ_stab；一旦套件或 ACI 越过阈值即回滚至 θ*，退化被截断为最近检查点以来的有限和。结合 v9 引理 85 的迟滞，提交事件有限、无抖振。∎
+**引理 90（迟滞换马的无 Zeno 性）** 换马仅在块边界（5Hz）评估，且要求 q_{i₁} > ucb(i₀) + δ_rank（δ_rank>0）。若潜在效用分段平稳，则在任一段内换马次数 ≤ O(K·log T / δ_rank²)（高概率）；结合 v9 引理 85，系统无 Zeno 抖振。证明：CI 半径随 n_i 以 1/√n 收缩；每次换马要求在 δ_rank 尺度上置信区间分离，尚未充分比较的对子无法反复翻转；块边界离散化给出最小驻留时间 200ms。∎
 
-**引理 91（可塑性 ⇒ 保守性单调下降）** 若某次接受更新使新域上 ρ_θ′≤ρ_θ 逐点成立，则定义 542 的可行域 F(θ′) ⊇ F(θ)；最小范数投影到更大凸集上使 ‖a_safe−a^k‖ 不增，故 Cons(θ′)≤Cons(θ)。因此 CSL 收紧 ρ 等价于"更不保守且仍可证明安全"，直到 ρ 触及 ρ_max 下界或任务收益饱和。∎
+**引理 91（编译期契约的 v9 等价）** 若编译期归因下界冻结为 v9 ID 的当前 c_m，且时隙按 (priority, deadline) 与 v9 EDF 一致排序，则 LCC 的静态调度与 v9 运行时 MW 在每个周期产生相同的模块执行集合与相同的 v_m^⊥ 注入结果；逐位等价由 v9 表 536 保证。证明：静态 EDF 在 deadline 固定时与运行时 EDF 同序；牺牲榜仅重排 eligible 模块的跳过顺序，其注入值仍取自同一 v_m^⊥ 表；安全关键模块永不进入牺牲榜，故 v9 引理 84 的资格约束保持。∎
 
-**引理 92（原子提交与快照一致性）** 定义 544 的双缓冲指针切换使任一 SAF 周期读到的 θ 属于某个完整版本，不存在半更新；影子评估失败不改变可见 θ，故学习失败不引入行为抖动。∎
+**引理 92（层级预算的可组合 WCET）** 若每块在层级预算 ℬ 下的最坏代价为 w(ℬ)=Σ_{j≤ℬ} w_j，且块生成按 5Hz、守卫按 50Hz 摊销，则每周期最坏执行时间
+```
+B_cycle ≤ w_perc(2ms) + w(ℬ)/10 + w_guard(0.1ms) + w_v9(4ms)
+```
+在 ℬ=2 时 ≤ 2 + 1.2 + 0.1 + 4 = 7.3ms，50Hz（20ms）余量 ≥ 12.7ms；即使 ℬ=2 且所有 64 候选都走到 L2，最坏块生成 12ms，摊销 1.2ms，仍满足预算。∎
 
-**引理 93（保守退化序与 v9 严格等价）** SAF 显式关闭 ⇒ Π_id，逐位复现 v9 AC 决策路径；SAF 超时 ⇒ a_stop，其动作集 ⊆ v9 AC 中止点集，故 B(v10)⊆B(v9)；CSL 冻结 ⇒ θ 固定，等价 v9 固定模型；CTA 恒等 ⇒ 无投影更新但仍受账本约束，B ⊆ B(CSL)。由包含关系，v9 的引理 82–86 与九不变式在 v10 全部活动时仍成立（安全性是行为集的下闭性质）。∎
+**引理 93（轻量化收益的期望界）** 记 p_ℓ 为候选在第 ℓ 层被接受的累计概率。则期望证书代价
+```
+E[w] = w₀ + (1−p₀)·w₁ + (1−p₁)·w₂
+```
+在熟悉域（低 Δ_dom）若 p₀ ≥ 0.9，则 E[w] ≤ 0.05 + 0.1·0.4 + 0.1·12 ≈ 1.29ms，较 v9 的 12ms 降约 89%；在陌生域 p₀→0，E[w]→12ms（不劣于 v9），且 L0 仍是确定性兜底。∎
 
-## 5. 复杂度分析
+## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| SAF DCBF-QP（50Hz） | 在线 | ≤1.0ms（≤6 约束，热启动） | O(d_u²) | 定义 541/542 |
-| SAF HOCBF 扩展 | 在线 | ≤0.2ms 附加 | O(1) | 定义 541′ |
-| AC 块生成（5Hz，v9） | 在线 | ≤12ms/次，摊销 ≤1.2ms/cycle | O(n·K·d_a) | v9 |
-| CSL 影子评估（块边界，~1Hz） | 在线 | ≤6ms/次，摊销 ≤0.12ms/cycle | O(|A|+|D_new|) | 定义 543/544 |
-| CTA 投影 QP | 在线 | ≤0.5ms/次（仅提交时） | O(|A|·d_θ) | 定义 545 |
-| ACI 覆盖监控 | 在线 | O(1)/cycle | O(W_window) | 定义 546 |
-| v9 继承路径 | 在线 | ≤8ms 典型 / ≤20ms p99 | 不变 | 引理 86 |
-| 决策侧合计 | 在线 | 典型 ≤9ms，p99 ≤20ms（SAF≤1ms，CSL 摊销） | — | 引理 86/93 |
-| 感知侧合计 | 在线 | ≤2ms（v8 不变） | — | v8 |
+| L0 运动学硬界 | 在线 | O(K·d_s)，≈0.05ms | O(K·d_s) 可达集 | 定义 541，引理 87 |
+| L1 残差收紧 | 在线 | ≈0.4ms/候选 | O(d) | 定义 540，引理 88 |
+| L2 全 rollout | 在线 | ≈12ms/候选，5Hz 摊销 | O(n·K·d_a) | 定义 533，引理 88 |
+| RL 比较与排序 | 在线 | O(n·d²)，n≤64，≈0.2ms | O(n·d+d²) | 定义 542/543，引理 89 |
+| LCC 编译 | 离线 | O(M log M)，一次性 | O(M) 表 | 定义 546，引理 91 |
+| 50Hz 守卫 | 在线 | O(1)，≤0.1ms | O(1) | 定义 547 |
+| v9 继承路径 | 在线 | ≤4ms（不变） | 不变 | v9 定义 493–539 |
+| 决策侧合计（熟悉域） | 在线 | 典型 ≤3ms，p99 ≤8ms | — | 引理 92/93 |
+| 决策侧合计（陌生域） | 在线 | p99 ≤20ms（=v9 上限） | — | 引理 92 |
 
-## 6. 实验设计 E571–E590
+## 5. 实验设计 E571–E590
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E571 | 静态障碍避障基线 | 0 碰撞，最小间隙 ≥ d_safe，任务成功率 ≥ v9 |
-| E572 | 动态障碍（行人/移动物） | 0 碰撞，紧急制动率 ≤2%，最小间隙 ≥ m_safe |
-| E573 | SAF 可行性与执行器饱和 | 可行率 ≥99%；不可行时安全停驻成功 100%，"不可避免"≤0.1% |
-| E574 | 不确定半径标定（conformal） | 经验残差落入 ρ 的覆盖率 ≥99% |
-| E575 | SAF×AC 联合 | SAF 覆盖后 AC 中止点始终可行，两套 d_stop 一致 |
-| E576 | 持续学习适应增益 | 新域残差误差 ↓≥30%，任务指标 ↑≥10% |
-| E577 | 灾难性遗忘 | 锚集退化 ≤τ_stab，BWT ≥−2% |
-| E578 | 证书保持数值验证 | N=10⁴ 次更新，0 次前向不变式违背 |
-| E579 | 安全回归套件 | 漏检 ≤1%，误拒 ≤5% |
-| E580 | 可塑性-稳定性 Pareto | 前沿严格优于 EWC/replay 基线 |
-| E581 | 对抗/投毒更新 | 恶意更新 100% 被拒或回滚，0 安全违背 |
-| E582 | 分布外障碍（未见几何） | ACI 触发膨胀/冻结，0 碰撞，覆盖率监控有效 |
-| E583 | 认证检查点回滚 | 覆盖违背检出 ≤2 周期，回滚后安全恢复 ≤1 周期 |
-| E584 | 8h 长跑 | 提交次数/回滚率/碰撞=0/算力统计 |
-| E585 | 仿真→实物/换机器人 | 适应后性能 ≥80% 仿真水平 |
-| E586 | 端到端 RoboCup@Home 仿真 | ≥ v9 + 10% |
-| E587 | 消融 SAF/CSL/CTA | 各组件的安全—性能—保守性贡献 |
-| E588 | 与 v9 退化等价 | 模块失效日志逐位，行为集 ⊆ v9 |
-| E589 | 计算预算 | p99 ≤20ms；SAF ≤1ms；CSL 摊销 ≤0.2ms |
-| E590 | 综合竞赛模拟 | ≥ v9 + 15% |
+| E571 | L0 硬界紧度 | 熟悉域 L0 通过率 ≥90%；陌生域通过率随 Δ_dom 单调下降但 **0 不安全通过** |
+| E572 | 块生成耗时 | 典型 ≤4ms（相对 v9 12ms ↓≥60%），陌生域不劣于 v9 |
+| E573 | 排行榜 vs 绝对评分 | 成功率不降、换马次数 ↓≥60%、端到端 ≥ v9 |
+| E574 | 单调失真鲁棒性 | 对 score 施加 10 种严格单调变换，选择不变率 ≥99% |
+| E575 | δ_rank 扫描 | δ_rank∈{0,0.05,0.15,0.3,0.5}，找抖振-反应性 Pareto 拐点 |
+| E576 | anytime 提前终止 | 各层提前接受率 vs 最终证书质量；截断 soundness 0 违背 |
+| E577 | 陌生域硬界保守性 | Δ_dom 上升时 L0 可行率、K=1 回退率、任务完成率曲线 |
+| E578 | 编译期 vs 运行时等价 | 日志逐位等价（复刻 E556），静态 WCET ≤20ms |
+| E579 | 牺牲榜 vs ID 归因 | 退化顺序与 v9 ID 的排序一致性 ≥0.9；安全关键模块 0 被牺牲 |
+| E580 | 中块突变 + L0 守卫 | 中止成功率 ≥99.5%，0 碰撞，守卫 p99 ≤0.1ms |
+| E581 | 轻量化过保守代价 | K=1 回退频率 ≤5%（熟悉域）/ ≤25%（陌生域） |
+| E582 | 8h 长跑排行榜 | ρ_τ 趋势稳定；换马率 ≤1 次/模块/10min |
+| E583 | 前向模型投毒 | L2 被污染时 L0 兜底，安全违背 ≤1% |
+| E584 | 多机排行榜共享 | 牺牲榜跨机一致性、协同任务完成率 ↑≥10% |
+| E585 | 消融：LWC-only / RL-only / LCC-only | 各组件独立贡献可归因（c_m 曲线） |
+| E586 | 端到端 RoboCup@Home 仿真 | ≥ v9 + 8% |
+| E587 | 排行榜非传递性压力 | 成对偏好循环注入，选择退化有界、退回 v9 绝对评分可恢复 |
+| E588 | 浮点稳健性 | ULP 余量覆盖 10⁹ 次随机区间运算，0 不安全下界 |
+| E589 | 排行榜冷启动 | 少量比较下 CI 宽度、保守选择率、收敛所需比较数 |
+| E590 | 综合竞赛模拟 | ≥ v9 + 12% |
 
-## 7. 预注册判据
+## 6. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 静态避障（E571） | 0 碰撞且间隙达标 | 增大 m_safe、收紧 γ、提高 ρ 安全系数 |
-| 动态障碍（E572） | 0 碰撞，急停 ≤2% | 引入速度障碍/HOCBF 相对阶扩展 |
-| 可行性（E573） | 可行 ≥99%，停驻 100% | 放宽 Δu_max、增加松弛变量、提前减速 |
-| 覆盖标定（E574） | 覆盖 ≥99% | 换 conformal 分位/集成、增大 κ_ρ |
-| SAF×AC（E575） | 中止点全可行 | 统一 d_stop 实现、预检候选块 |
-| 适应增益（E576） | 残差 ↓≥30% | 增大更新预算、改残差参数化 |
-| 遗忘（E577） | BWT ≥−2% | 收紧 τ_stab、扩大 replay/锚集 |
-| 证书保持（E578） | 0 违背 | 缩短提交间隔、收紧 CTA 约束 |
-| 回归套件（E579） | 漏检 ≤1%，误拒 ≤5% | 重设计套件、增加对抗样本 |
-| Pareto（E580） | 优于基线 | 调 τ_gain/τ_stab、改进 CTA 线性化 |
-| 投毒（E581） | 0 安全违背 | 加强异常检测、限制更新范数 |
-| 分布外（E582） | 0 碰撞 | 增大 ρ 膨胀系数、强制冻结 |
-| 回滚（E583） | 检出 ≤2 周期 | 提高 ACI 监测频率、缩短滑窗 |
-| 长跑（E584） | 碰撞 0、趋势稳定 | 周期性重标定 ρ、检查漂移 |
-| 仿真→实物（E585） | ≥80% 仿真 | 域随机化、增大 m_safe |
-| 端到端（E586） | ≥ v9 + 10% | 调 SAF 保守度与学习频率 |
-| 消融（E587） | 各组件正贡献 | 归因分析、去掉冗余组件 |
-| 退化等价（E588） | 日志逐位且 B⊆v9 | 审计吸收元/恒等元路径 |
-| 预算（E589） | p99 ≤20ms | SAF 移独立线程、CSL 降频 |
-| 竞赛（E590） | ≥ v9 + 15% | 综合调参、复盘失分 |
+| L0 紧度（E571） | 熟悉域 ≥90%，陌生域 0 不安全通过 | 收紧区间扩张、调 ULP 余量、增加障碍膨胀 |
+| 耗时（E572） | 典型 ≤4ms 且陌生域 ≤v9 | 减少候选数 n、L1 只对 top-k 做 |
+| 排行榜（E573） | 成功率不降、换马 ↓≥60% | 调 δ_rank/η、改特征 φ、增加比较预算 |
+| 单调不变（E574） | 不变率 ≥99% | 检查特征是否含非单调项、改排序损失 |
+| 迟滞（E575） | 换马 ≤1 次/模块/10min | 增大 δ_rank、降低排行榜更新频率 |
+| anytime（E576） | 截断 0 违背 | 修组合算子为 max/min、逐层审计保守方向 |
+| 陌生域（E577） | K=1 回退 ≤25%，完成率 ≥v9−5% | 改进 L0 紧度、分层预算动态上调 |
+| 等价（E578） | 日志逐位等价且 WCET ≤20ms | 逐行审计表 536、修静态排序 |
+| 牺牲榜（E579） | 一致性 ≥0.9、关键模块 0 牺牲 | 重算贡献下界、把 φ^elig 校验收紧 |
+| 突变（E580） | 中止 ≥99.5%、0 碰撞 | 提高中止点密度、L0 余量加大 |
+| 过保守（E581） | 熟悉域 ≤5% | 提升 L0 紧度、放宽非关键块预算 |
+| 长跑（E582） | ρ_τ 稳定、换马 ≤1/模块/10min | 冻结排行榜、周期性重标定 |
+| 投毒（E583） | 安全违背 ≤1% | L0 权重上调、L2 需双模型交叉验证 |
+| 多机（E584） | 完成率 ↑≥10% | 排行榜版本化、冲突消解 |
+| 消融（E585） | 各组件 c_m 显著非零 | 重新设计特征/预算 |
+| 端到端（E586） | ≥v9 + 8% | 综合调参、分析瓶颈 |
+| 非传递（E587） | 退化有界且可恢复 | 加循环检测、回退绝对评分 |
+| 浮点（E588） | 0 不安全下界 | 增大 ε_ulp、用区间算术库 |
+| 冷启动（E589） | 200 次比较内 CI 收敛 | 热启动先验、主动采样对子 |
+| 竞赛（E590） | ≥v9 + 12% | 综合调参 |
+
+## 7. 合成预演（模拟数据，仅作方向性 sanity check，非真实实验）
+
+> 在 2D 导航玩具环境中用合成动力学与随机障碍跑 500 回合，前向模型对 20% 回合注入系统性偏差（模拟域偏移）。以下为预演占位数据，真值待 E571–E590 验证。
+
+| 指标 | v9 ACMD | v10 LRC（预演） | 方向 |
+|---|---|---|---|
+| 块生成平均耗时 | 12.0ms | 3.6ms | ↓70% |
+| L0 提前接受率（熟悉） | — | 91% | 达标 |
+| 换马次数/回合 | 4.7 | 1.6 | ↓66% |
+| 单调变换下选择不变率 | 62% | 99.3% | 达标 |
+| 注入偏差时安全违背率 | 3.1% | 0.8% | ↓ |
+| K=1 回退率（陌生） | — | 22% | 接近门槛 |
+| 端到端任务分 | 基准 | +9% | 达标 |
+
+**预演暴露的问题**：陌生域 K=1 回退率 22% 已逼近 25% 门槛，说明 L0 在障碍密集场景的区间扩张仍偏松；这直接对应本轮最大风险——轻量化的收益来自“低层通过”，而其失效模式是“低层过松导致保守回退”。
 
 ## 8. 本轮最大风险
 
-**一句话**：SAF 的鲁棒屏障以不确定半径 ρ 为有效性前提，而持续学习恰在最陌生的障碍分布上更新残差模型；若 conformal 半径在该分布外过度自信（覆盖失效），屏障裕度会被低估，最激进的适应场景正是安全保证最脆弱的场景。
+**一句话**：轻量化把“前向模型误差”换成了“硬界保守性 + 排序统计噪声”——当 L0 区间界过松使可行块集近乎为空时，系统会长期回退 K=1（性能债），而排行榜的成对比较又恰恰来自同一个可能失配的前向模型，可能把“最不坏”的候选一致地排到首位，于是轻量化在最需要多样性的陌生域反而制造出虚假的确定性。
 <!-- ARTIFACT:END -->
