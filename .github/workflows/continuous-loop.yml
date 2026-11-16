@@ -61,8 +61,11 @@ jobs:
           # 组内是否已有「另一个」排队中的 run（排除当前 run 自己：
           # 它刚启动时 API 状态可能还是 pending，不能当成后继）
           pending_other() {
+            # 忽略超过 6 小时的陈旧排队记录（Actions 禁用期遗留的僵尸 queued：
+            # 既无法取消也永不启动，不过滤会让 hand-off 误判“已有后继”而断链）
+            PC_CUTOFF=$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "2026-11-15T00:00:00Z")
             gh api "repos/${GH_REPO}/actions/workflows/${WF_FILE}/runs?per_page=30" \
-              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' \
+              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested") | select(.created_at > "'"${PC_CUTOFF}"'")] | length' \
               2>/dev/null
           }
           Q="$(pending_other)"
@@ -1083,8 +1086,11 @@ jobs:
           # 防重派：若队列中已有后继 run（含心跳排队的），不再重复 dispatch，
           # 避免并发组不断产生被替换/取消的多余 run 记录。
           pending_other() {
+            # 忽略超过 6 小时的陈旧排队记录（Actions 禁用期遗留的僵尸 queued：
+            # 既无法取消也永不启动，不过滤会让 hand-off 误判“已有后继”而断链）
+            PC_CUTOFF=$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "2026-11-15T00:00:00Z")
             gh api "repos/${GH_REPO}/actions/workflows/${WF_FILE}/runs?per_page=30" \
-              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' \
+              --jq '[.workflow_runs[] | select((.id|tostring) != "'"${RUN_ID}"'") | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested") | select(.created_at > "'"${PC_CUTOFF}"'")] | length' \
               2>/dev/null
           }
           Q="$(pending_other)"
