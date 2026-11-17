@@ -1,0 +1,942 @@
+{
+    "codebase_version": "v3.0",
+    "robot_type": "unitree_g1",
+    "total_episodes": 1060,
+    "total_frames": 624447,
+    "total_tasks": 1,
+    "chunks_size": 1000,
+    "data_files_size_in_mb": 100,
+    "video_files_size_in_mb": 200,
+    "fps": 30,
+    "splits": {
+        "train": "0:1060"
+    },
+    "data_path": "data/chunk-{chunk_index:03d}/file-{file_index:03d}.parquet",
+    "video_path": "videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4",
+    "features": {
+        "observation.images.head_stereo_left": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channel"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "av1",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 30,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.images.head_stereo_right": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channel"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "av1",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 30,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.images.wrist_left": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channel"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "av1",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 30,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.images.wrist_right": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channel"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "av1",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 30,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.state.left_arm": {
+            "dtype": "float32",
+            "shape": [
+                7
+            ],
+            "names": [
+                "shoulder_pitch",
+                "shoulder_roll",
+                "shoulder_yaw",
+                "elbow",
+                "wrist_yaw",
+                "wrist_roll",
+                "wrist_pitch"
+            ]
+        },
+        "observation.state.right_arm": {
+            "dtype": "float32",
+            "shape": [
+                7
+            ],
+            "names": [
+                "shoulder_pitch",
+                "shoulder_roll",
+                "shoulder_yaw",
+                "elbow",
+                "wrist_yaw",
+                "wrist_roll",
+                "wrist_pitch"
+            ]
+        },
+        "observation.state.left_gripper": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": [
+                "gripper_pos"
+            ]
+        },
+        "observation.state.right_gripper": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": [
+                "gripper_pos"
+            ]
+        },
+        "observation.state.lower_body": {
+            "dtype": "float32",
+            "shape": [
+                15
+            ],
+            "names": [
+                "left_hip_pitch",
+                "left_hip_roll",
+                "left_hip_yaw",
+                "left_knee",
+                "left_ankle_pitch",
+                "left_ankle_roll",
+                "right_hip_pitch",
+                "right_hip_roll",
+                "right_hip_yaw",
+                "right_knee",
+                "right_ankle_pitch",
+                "right_ankle_roll",
+                "waist_yaw",
+                "waist_roll",
+                "waist_pitch"
+            ]
+        },
+        "observation.state.left_leg": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "hip_pitch",
+                "hip_roll",
+                "hip_yaw",
+                "knee",
+                "ankle_pitch",
+                "ankle_roll"
+            ]
+        },
+        "observation.state.right_leg": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "hip_pitch",
+                "hip_roll",
+                "hip_yaw",
+                "knee",
+                "ankle_pitch",
+                "ankle_roll"
+            ]
+        },
+        "observation.state.left_ee_pose_gripper_base": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.right_ee_pose_gripper_base": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.state_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.state_d435": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.left_ee_pose_gripper_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.right_ee_pose_gripper_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "observation.state.waist_state_joint": {
+            "dtype": "float32",
+            "shape": [
+                3
+            ],
+            "names": [
+                "yaw",
+                "roll",
+                "pitch"
+            ]
+        },
+        "observation.state.recomputed_ee_valid": {
+            "dtype": "int8",
+            "shape": [
+                1
+            ],
+            "names": [
+                "valid"
+            ]
+        },
+        "action.left_arm": {
+            "dtype": "float32",
+            "shape": [
+                7
+            ],
+            "names": [
+                "shoulder_pitch",
+                "shoulder_roll",
+                "shoulder_yaw",
+                "elbow",
+                "wrist_yaw",
+                "wrist_roll",
+                "wrist_pitch"
+            ]
+        },
+        "action.right_arm": {
+            "dtype": "float32",
+            "shape": [
+                7
+            ],
+            "names": [
+                "shoulder_pitch",
+                "shoulder_roll",
+                "shoulder_yaw",
+                "elbow",
+                "wrist_yaw",
+                "wrist_roll",
+                "wrist_pitch"
+            ]
+        },
+        "action.left_gripper": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": [
+                "gripper_pos"
+            ]
+        },
+        "action.right_gripper": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": [
+                "gripper_pos"
+            ]
+        },
+        "action.lower_body": {
+            "dtype": "float32",
+            "shape": [
+                15
+            ],
+            "names": [
+                "left_hip_pitch",
+                "left_hip_roll",
+                "left_hip_yaw",
+                "left_knee",
+                "left_ankle_pitch",
+                "left_ankle_roll",
+                "right_hip_pitch",
+                "right_hip_roll",
+                "right_hip_yaw",
+                "right_knee",
+                "right_ankle_pitch",
+                "right_ankle_roll",
+                "waist_yaw",
+                "waist_roll",
+                "waist_pitch"
+            ]
+        },
+        "action.pivot": {
+            "dtype": "float32",
+            "shape": [
+                7
+            ],
+            "names": [
+                "vx",
+                "vy",
+                "angle_z",
+                "pivot_3",
+                "pivot_4",
+                "pivot_5",
+                "height"
+            ]
+        },
+        "action.gripper_controls": {
+            "dtype": "float32",
+            "shape": [
+                4
+            ],
+            "names": [
+                "left_trigger",
+                "left_squeeze",
+                "right_trigger",
+                "right_squeeze"
+            ]
+        },
+        "action.left_leg": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "hip_pitch",
+                "hip_roll",
+                "hip_yaw",
+                "knee",
+                "ankle_pitch",
+                "ankle_roll"
+            ]
+        },
+        "action.right_leg": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "hip_pitch",
+                "hip_roll",
+                "hip_yaw",
+                "knee",
+                "ankle_pitch",
+                "ankle_roll"
+            ]
+        },
+        "action.base_command": {
+            "dtype": "float32",
+            "shape": [
+                4
+            ],
+            "names": [
+                "vx",
+                "vy",
+                "angle_z",
+                "height"
+            ]
+        },
+        "action.left_ee_pose_gripper_base": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.right_ee_pose_gripper_base": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.action_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.action_d435": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.left_ee_pose_gripper_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.right_ee_pose_gripper_torso": {
+            "dtype": "float32",
+            "shape": [
+                6
+            ],
+            "names": [
+                "x",
+                "y",
+                "z",
+                "roll",
+                "pitch",
+                "yaw"
+            ]
+        },
+        "action.waist_action_joint": {
+            "dtype": "float32",
+            "shape": [
+                3
+            ],
+            "names": [
+                "yaw",
+                "roll",
+                "pitch"
+            ]
+        },
+        "timestamp": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "frame_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "episode_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "task_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        }
+    },
+    "camera_params": {
+        "head_stereo": {
+            "camera_matrix_left": [
+                [
+                    296.1497811741628,
+                    0.0,
+                    304.05950631291665
+                ],
+                [
+                    0.0,
+                    264.0514813091815,
+                    346.9727335639461
+                ],
+                [
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "camera_matrix_right": [
+                [
+                    298.0507065737445,
+                    0.0,
+                    326.38976812839053
+                ],
+                [
+                    0.0,
+                    271.61505898289585,
+                    339.5642227202459
+                ],
+                [
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "dist_coeffs_left": [
+                0.0869226042563963,
+                -0.0799889301793546,
+                0.0018440159572957998,
+                -0.0029230171402472157,
+                0.01949165562450689
+            ],
+            "dist_coeffs_right": [
+                0.10428997486098986,
+                -0.08699847688642157,
+                0.007867931405060726,
+                -0.0028993059176273517,
+                0.0218975641987752
+            ],
+            "R": [
+                [
+                    0.9999957345281336,
+                    6.859516668776335e-06,
+                    -0.0029207667633061613
+                ],
+                [
+                    7.913655379513972e-05,
+                    0.9995664918165132,
+                    0.029441843947589034
+                ],
+                [
+                    0.00291970254383153,
+                    -0.029441949503648066,
+                    0.9995622276509253
+                ]
+            ],
+            "T": [
+                -63.235896740014844,
+                9.279745257037652,
+                -11.065350925662154
+            ],
+            "rectified": true
+        },
+        "wrist_left": {
+            "color": {
+                "camera_matrix": [
+                    [
+                        437.4856262207031,
+                        0.0,
+                        316.7523193359375
+                    ],
+                    [
+                        0.0,
+                        436.36669921875,
+                        241.61398315429688
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    -0.05399736762046814,
+                    0.055884044617414474,
+                    0.0003873317036777735,
+                    3.0142107789288275e-05,
+                    -0.018288912251591682
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.inverse_brown_conrady"
+            },
+            "ir1": {
+                "camera_matrix": [
+                    [
+                        389.95989990234375,
+                        0.0,
+                        315.4903869628906
+                    ],
+                    [
+                        0.0,
+                        389.95989990234375,
+                        237.54241943359375
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.brown_conrady",
+                "extrinsics_to_color": {
+                    "rotation": [
+                        0.9999967217445374,
+                        0.0025536969769746065,
+                        3.0807881557848305e-05,
+                        -0.0025537379551678896,
+                        0.9999957084655762,
+                        0.0014161394210532308,
+                        -2.7191361368750222e-05,
+                        -0.0014162135776132345,
+                        0.9999989867210388
+                    ],
+                    "translation": [
+                        9.740829227666836e-06,
+                        1.0000000656873453e-05,
+                        6.678134923276957e-06
+                    ]
+                }
+            },
+            "ir2": {
+                "camera_matrix": [
+                    [
+                        389.95989990234375,
+                        0.0,
+                        315.4903869628906
+                    ],
+                    [
+                        0.0,
+                        389.95989990234375,
+                        237.54241943359375
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.brown_conrady",
+                "extrinsics_to_color": {
+                    "rotation": [
+                        0.9999967217445374,
+                        0.0025536969769746065,
+                        3.0807881557848305e-05,
+                        -0.0025537379551678896,
+                        0.9999957084655762,
+                        0.0014161394210532308,
+                        -2.7191361368750222e-05,
+                        -0.0014162135776132345,
+                        0.9999989867210388
+                    ],
+                    "translation": [
+                        0.01801314577460289,
+                        5.597538984147832e-05,
+                        7.232783445942914e-06
+                    ]
+                },
+                "extrinsics_to_ir1": {
+                    "rotation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "translation": [
+                        0.018003463745117188,
+                        0.0,
+                        0.0
+                    ]
+                }
+            }
+        },
+        "wrist_right": {
+            "color": {
+                "camera_matrix": [
+                    [
+                        435.8076171875,
+                        0.0,
+                        321.5814208984375
+                    ],
+                    [
+                        0.0,
+                        435.17010498046875,
+                        240.2491455078125
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    -0.050719115883111954,
+                    0.06198549643158913,
+                    0.00024307107378263026,
+                    0.0014461256796494126,
+                    -0.021537018939852715
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.inverse_brown_conrady"
+            },
+            "ir1": {
+                "camera_matrix": [
+                    [
+                        389.55206298828125,
+                        0.0,
+                        325.1436767578125
+                    ],
+                    [
+                        0.0,
+                        389.55206298828125,
+                        240.23992919921875
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.brown_conrady",
+                "extrinsics_to_color": {
+                    "rotation": [
+                        0.9999808073043823,
+                        -0.0019136304035782814,
+                        -0.005888769403100014,
+                        0.0019211536273360252,
+                        0.9999973177909851,
+                        0.001272151479497552,
+                        0.0058863190934062,
+                        -0.0012834403896704316,
+                        0.9999818801879883
+                    ],
+                    "translation": [
+                        -1.2573943422466982e-05,
+                        4.552999143925263e-06,
+                        0.00010116615158040076
+                    ]
+                }
+            },
+            "ir2": {
+                "camera_matrix": [
+                    [
+                        389.55206298828125,
+                        0.0,
+                        325.1436767578125
+                    ],
+                    [
+                        0.0,
+                        389.55206298828125,
+                        240.23992919921875
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        1.0
+                    ]
+                ],
+                "dist_coeffs": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "width": 640,
+                "height": 480,
+                "model": "distortion.brown_conrady",
+                "extrinsics_to_color": {
+                    "rotation": [
+                        0.9999808073043823,
+                        -0.0019136304035782814,
+                        -0.005888769403100014,
+                        0.0019211536273360252,
+                        0.9999973177909851,
+                        0.001272151479497552,
+                        0.0058863190934062,
+                        -0.0012834403896704316,
+                        0.9999818801879883
+                    ],
+                    "translation": [
+                        0.01800045184791088,
+                        -2.9917937354184687e-05,
+                        -4.91044920636341e-06
+                    ]
+                },
+                "extrinsics_to_ir1": {
+                    "rotation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "translation": [
+                        0.018013373017311096,
+                        0.0,
+                        0.0
+                    ]
+                }
+            }
+        }
+    }
+}

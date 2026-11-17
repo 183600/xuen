@@ -1,0 +1,790 @@
+{
+  "source": "exp/r16_leaderboard_data.json (teaser, transcribed)",
+  "n_models": 8,
+  "n_tasks": 32,
+  "baseline_model": "MolmoAct2",
+  "oracle_avg_gain_vs_baseline": 4.258,
+  "oracle_in_task_points": 136.27,
+  "winner_counts": {
+    "DreamZero": 6,
+    "DM0": 2,
+    "MolmoAct2": 8,
+    "Spirit-v1.5": 5,
+    "WALL-OSS-0.5": 7,
+    "PI-0.5": 2,
+    "GR00T N1.5": 1,
+    "GigaBrain-0": 1
+  },
+  "winner_hhi": 0.1797,
+  "winner_hhi_min_for_8": 0.125,
+  "winner_entropy_bits": 2.663,
+  "winner_max_entropy_bits": 3.0,
+  "mean_contestable_within_1pt": 1.03,
+  "mean_moat_best_minus_2nd": 3.483,
+  "mean_moat_best_minus_median": 8.877,
+  "target_plus3_avg": 3.0,
+  "target_plus3_task_points": 96.0,
+  "hard6_deficit_from_base_to_100": 437.4,
+  "hard6_reachable_gain_from_base_to_best": 20.3,
+  "hard6_avg_gain_from_base_to_best": 3.38,
+  "step_success_slope": 1.3374,
+  "step_success_intercept": 0.0929,
+  "step_success_r": 0.9977,
+  "within_task_duration_success_corr_mean": -0.0108,
+  "mean_duration_sec": 44.38,
+  "per_task": [
+    {
+      "task": "Place Photo Frames",
+      "mean": 27.977,
+      "std": 7.801,
+      "best": 42.0,
+      "best_model": "DreamZero",
+      "second": 34.22,
+      "base": 24.33,
+      "headroom_vs_base": 17.67,
+      "headroom_pts": 0.5522,
+      "moat_best_minus_2nd": 7.78,
+      "moat_best_minus_median": 14.935,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.279
+    },
+    {
+      "task": "Disconnect Ethernet",
+      "mean": 26.815,
+      "std": 4.13,
+      "best": 33.44,
+      "best_model": "Spirit-v1.5",
+      "second": 31.73,
+      "base": 21.29,
+      "headroom_vs_base": 12.15,
+      "headroom_pts": 0.3797,
+      "moat_best_minus_2nd": 1.71,
+      "moat_best_minus_median": 7.845,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.154
+    },
+    {
+      "task": "Hang the Cup",
+      "mean": 22.955,
+      "std": 9.496,
+      "best": 38.43,
+      "best_model": "DreamZero",
+      "second": 32.89,
+      "base": 27.29,
+      "headroom_vs_base": 11.14,
+      "headroom_pts": 0.3481,
+      "moat_best_minus_2nd": 5.54,
+      "moat_best_minus_median": 14.495,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.414
+    },
+    {
+      "task": "Plug Charger",
+      "mean": 25.57,
+      "std": 7.542,
+      "best": 38.17,
+      "best_model": "WALL-OSS-0.5",
+      "second": 34.5,
+      "base": 30.51,
+      "headroom_vs_base": 7.66,
+      "headroom_pts": 0.2394,
+      "moat_best_minus_2nd": 3.67,
+      "moat_best_minus_median": 14.68,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.295
+    },
+    {
+      "task": "Stack Bowls",
+      "mean": 24.111,
+      "std": 7.577,
+      "best": 36.28,
+      "best_model": "Spirit-v1.5",
+      "second": 29.66,
+      "base": 29.28,
+      "headroom_vs_base": 7.0,
+      "headroom_pts": 0.2188,
+      "moat_best_minus_2nd": 6.62,
+      "moat_best_minus_median": 10.885,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.314
+    },
+    {
+      "task": "Pick Out Battery",
+      "mean": 23.306,
+      "std": 3.624,
+      "best": 30.03,
+      "best_model": "Spirit-v1.5",
+      "second": 25.44,
+      "base": 23.46,
+      "headroom_vs_base": 6.57,
+      "headroom_pts": 0.2053,
+      "moat_best_minus_2nd": 4.59,
+      "moat_best_minus_median": 6.575,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.155
+    },
+    {
+      "task": "Remove Pinned Note",
+      "mean": 27.302,
+      "std": 8.15,
+      "best": 40.28,
+      "best_model": "WALL-OSS-0.5",
+      "second": 33.75,
+      "base": 33.75,
+      "headroom_vs_base": 6.53,
+      "headroom_pts": 0.2041,
+      "moat_best_minus_2nd": 6.53,
+      "moat_best_minus_median": 11.885,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.299
+    },
+    {
+      "task": "Store Racket",
+      "mean": 25.571,
+      "std": 4.32,
+      "best": 34.23,
+      "best_model": "DreamZero",
+      "second": 28.49,
+      "base": 28.49,
+      "headroom_vs_base": 5.74,
+      "headroom_pts": 0.1794,
+      "moat_best_minus_2nd": 5.74,
+      "moat_best_minus_median": 9.38,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.169
+    },
+    {
+      "task": "Arrange Test Tubes",
+      "mean": 24.15,
+      "std": 6.386,
+      "best": 34.38,
+      "best_model": "WALL-OSS-0.5",
+      "second": 30.65,
+      "base": 28.93,
+      "headroom_vs_base": 5.45,
+      "headroom_pts": 0.1703,
+      "moat_best_minus_2nd": 3.73,
+      "moat_best_minus_median": 10.58,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.264
+    },
+    {
+      "task": "Spell robot",
+      "mean": 21.824,
+      "std": 6.135,
+      "best": 33.99,
+      "best_model": "WALL-OSS-0.5",
+      "second": 28.62,
+      "base": 28.62,
+      "headroom_vs_base": 5.37,
+      "headroom_pts": 0.1678,
+      "moat_best_minus_2nd": 5.37,
+      "moat_best_minus_median": 13.94,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.281
+    },
+    {
+      "task": "Organize Pencil Case",
+      "mean": 24.08,
+      "std": 4.995,
+      "best": 30.3,
+      "best_model": "DreamZero",
+      "second": 28.7,
+      "base": 24.95,
+      "headroom_vs_base": 5.35,
+      "headroom_pts": 0.1672,
+      "moat_best_minus_2nd": 1.6,
+      "moat_best_minus_median": 5.39,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.207
+    },
+    {
+      "task": "Conveyor Food Sorting",
+      "mean": 29.124,
+      "std": 6.517,
+      "best": 37.55,
+      "best_model": "GigaBrain-0",
+      "second": 35.38,
+      "base": 32.26,
+      "headroom_vs_base": 5.29,
+      "headroom_pts": 0.1653,
+      "moat_best_minus_2nd": 2.17,
+      "moat_best_minus_median": 7.905,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.224
+    },
+    {
+      "task": "Fold Towel",
+      "mean": 24.081,
+      "std": 5.093,
+      "best": 32.15,
+      "best_model": "WALL-OSS-0.5",
+      "second": 30.54,
+      "base": 27.19,
+      "headroom_vs_base": 4.96,
+      "headroom_pts": 0.155,
+      "moat_best_minus_2nd": 1.61,
+      "moat_best_minus_median": 9.385,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.211
+    },
+    {
+      "task": "Unlock",
+      "mean": 20.105,
+      "std": 6.4,
+      "best": 28.17,
+      "best_model": "PI-0.5",
+      "second": 24.35,
+      "base": 23.52,
+      "headroom_vs_base": 4.65,
+      "headroom_pts": 0.1453,
+      "moat_best_minus_2nd": 3.82,
+      "moat_best_minus_median": 6.31,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 4,
+      "cv": 0.318
+    },
+    {
+      "task": "Store Earphones",
+      "mean": 27.883,
+      "std": 2.511,
+      "best": 32.3,
+      "best_model": "Spirit-v1.5",
+      "second": 29.85,
+      "base": 27.73,
+      "headroom_vs_base": 4.57,
+      "headroom_pts": 0.1428,
+      "moat_best_minus_2nd": 2.45,
+      "moat_best_minus_median": 4.26,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 6,
+      "cv": 0.09
+    },
+    {
+      "task": "Fruit Basket Collection",
+      "mean": 27.794,
+      "std": 3.143,
+      "best": 32.38,
+      "best_model": "DM0",
+      "second": 30.91,
+      "base": 27.85,
+      "headroom_vs_base": 4.53,
+      "headroom_pts": 0.1416,
+      "moat_best_minus_2nd": 1.47,
+      "moat_best_minus_median": 4.53,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 5,
+      "cv": 0.113
+    },
+    {
+      "task": "Pack Phone",
+      "mean": 23.884,
+      "std": 4.213,
+      "best": 31.86,
+      "best_model": "DreamZero",
+      "second": 27.39,
+      "base": 27.39,
+      "headroom_vs_base": 4.47,
+      "headroom_pts": 0.1397,
+      "moat_best_minus_2nd": 4.47,
+      "moat_best_minus_median": 8.375,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.176
+    },
+    {
+      "task": "Stack Cups",
+      "mean": 30.32,
+      "std": 4.829,
+      "best": 35.48,
+      "best_model": "Spirit-v1.5",
+      "second": 34.59,
+      "base": 31.44,
+      "headroom_vs_base": 4.04,
+      "headroom_pts": 0.1262,
+      "moat_best_minus_2nd": 0.89,
+      "moat_best_minus_median": 3.84,
+      "contestable_within_1pt": 2,
+      "contestable_within_5pt": 6,
+      "cv": 0.159
+    },
+    {
+      "task": "Fruit Sorting",
+      "mean": 27.012,
+      "std": 5.757,
+      "best": 35.5,
+      "best_model": "DreamZero",
+      "second": 32.24,
+      "base": 31.76,
+      "headroom_vs_base": 3.74,
+      "headroom_pts": 0.1169,
+      "moat_best_minus_2nd": 3.26,
+      "moat_best_minus_median": 8.135,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.213
+    },
+    {
+      "task": "Pack Bag",
+      "mean": 25.284,
+      "std": 4.502,
+      "best": 31.38,
+      "best_model": "DM0",
+      "second": 28.77,
+      "base": 28.77,
+      "headroom_vs_base": 2.61,
+      "headroom_pts": 0.0816,
+      "moat_best_minus_2nd": 2.61,
+      "moat_best_minus_median": 5.435,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 4,
+      "cv": 0.178
+    },
+    {
+      "task": "Organize Stationery",
+      "mean": 22.467,
+      "std": 7.705,
+      "best": 33.06,
+      "best_model": "WALL-OSS-0.5",
+      "second": 30.9,
+      "base": 30.9,
+      "headroom_vs_base": 2.16,
+      "headroom_pts": 0.0675,
+      "moat_best_minus_2nd": 2.16,
+      "moat_best_minus_median": 9.615,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.343
+    },
+    {
+      "task": "Clear Plates",
+      "mean": 25.896,
+      "std": 5.089,
+      "best": 34.36,
+      "best_model": "GR00T N1.5",
+      "second": 32.72,
+      "base": 32.72,
+      "headroom_vs_base": 1.64,
+      "headroom_pts": 0.0513,
+      "moat_best_minus_2nd": 1.64,
+      "moat_best_minus_median": 9.86,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.197
+    },
+    {
+      "task": "Open Pill Bottle",
+      "mean": 22.726,
+      "std": 6.261,
+      "best": 30.09,
+      "best_model": "WALL-OSS-0.5",
+      "second": 28.57,
+      "base": 28.57,
+      "headroom_vs_base": 1.52,
+      "headroom_pts": 0.0475,
+      "moat_best_minus_2nd": 1.52,
+      "moat_best_minus_median": 5.965,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 4,
+      "cv": 0.276
+    },
+    {
+      "task": "Syringe Water Transfer",
+      "mean": 24.566,
+      "std": 3.133,
+      "best": 29.35,
+      "best_model": "PI-0.5",
+      "second": 27.89,
+      "base": 27.89,
+      "headroom_vs_base": 1.46,
+      "headroom_pts": 0.0456,
+      "moat_best_minus_2nd": 1.46,
+      "moat_best_minus_median": 5.28,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.128
+    },
+    {
+      "task": "Pack the Doll",
+      "mean": 26.136,
+      "std": 6.361,
+      "best": 37.01,
+      "best_model": "MolmoAct2",
+      "second": 33.37,
+      "base": 37.01,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 3.64,
+      "moat_best_minus_median": 12.145,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.243
+    },
+    {
+      "task": "Color Arrangement",
+      "mean": 27.116,
+      "std": 7.063,
+      "best": 37.32,
+      "best_model": "MolmoAct2",
+      "second": 32.78,
+      "base": 37.32,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 4.54,
+      "moat_best_minus_median": 9.635,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.26
+    },
+    {
+      "task": "Organize Bookshelf",
+      "mean": 26.619,
+      "std": 4.008,
+      "best": 33.02,
+      "best_model": "MolmoAct2",
+      "second": 30.05,
+      "base": 33.02,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 2.97,
+      "moat_best_minus_median": 6.97,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.151
+    },
+    {
+      "task": "Toolbox Storage",
+      "mean": 25.819,
+      "std": 2.508,
+      "best": 30.71,
+      "best_model": "MolmoAct2",
+      "second": 28.67,
+      "base": 30.71,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 2.04,
+      "moat_best_minus_median": 5.36,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.097
+    },
+    {
+      "task": "Organize Tools",
+      "mean": 25.936,
+      "std": 5.205,
+      "best": 37.2,
+      "best_model": "MolmoAct2",
+      "second": 29.29,
+      "base": 37.2,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 7.91,
+      "moat_best_minus_median": 11.795,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 1,
+      "cv": 0.201
+    },
+    {
+      "task": "Zip Up",
+      "mean": 23.388,
+      "std": 6.97,
+      "best": 33.42,
+      "best_model": "MolmoAct2",
+      "second": 31.36,
+      "base": 33.42,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 2.06,
+      "moat_best_minus_median": 12.895,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 3,
+      "cv": 0.298
+    },
+    {
+      "task": "Paper Cup Stacking",
+      "mean": 28.049,
+      "std": 6.262,
+      "best": 35.28,
+      "best_model": "MolmoAct2",
+      "second": 34.03,
+      "base": 35.28,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 1.25,
+      "moat_best_minus_median": 6.085,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 4,
+      "cv": 0.223
+    },
+    {
+      "task": "Plug In Ethernet",
+      "mean": 17.725,
+      "std": 5.419,
+      "best": 27.54,
+      "best_model": "MolmoAct2",
+      "second": 22.9,
+      "base": 27.54,
+      "headroom_vs_base": 0.0,
+      "headroom_pts": 0.0,
+      "moat_best_minus_2nd": 4.64,
+      "moat_best_minus_median": 9.695,
+      "contestable_within_1pt": 1,
+      "contestable_within_5pt": 2,
+      "cv": 0.306
+    }
+  ],
+  "allocation_curve": [
+    {
+      "k": 0,
+      "avg_gain": 0.0
+    },
+    {
+      "k": 1,
+      "avg_gain": 0.552
+    },
+    {
+      "k": 2,
+      "avg_gain": 0.932
+    },
+    {
+      "k": 3,
+      "avg_gain": 1.28
+    },
+    {
+      "k": 4,
+      "avg_gain": 1.519
+    },
+    {
+      "k": 5,
+      "avg_gain": 1.738
+    },
+    {
+      "k": 6,
+      "avg_gain": 1.943
+    },
+    {
+      "k": 7,
+      "avg_gain": 2.147
+    },
+    {
+      "k": 8,
+      "avg_gain": 2.327
+    },
+    {
+      "k": 9,
+      "avg_gain": 2.497
+    },
+    {
+      "k": 10,
+      "avg_gain": 2.665
+    },
+    {
+      "k": 11,
+      "avg_gain": 2.832
+    },
+    {
+      "k": 12,
+      "avg_gain": 2.998
+    },
+    {
+      "k": 13,
+      "avg_gain": 3.153
+    },
+    {
+      "k": 14,
+      "avg_gain": 3.298
+    },
+    {
+      "k": 15,
+      "avg_gain": 3.441
+    },
+    {
+      "k": 16,
+      "avg_gain": 3.582
+    },
+    {
+      "k": 17,
+      "avg_gain": 3.722
+    },
+    {
+      "k": 18,
+      "avg_gain": 3.848
+    },
+    {
+      "k": 19,
+      "avg_gain": 3.965
+    },
+    {
+      "k": 20,
+      "avg_gain": 4.047
+    },
+    {
+      "k": 21,
+      "avg_gain": 4.114
+    },
+    {
+      "k": 22,
+      "avg_gain": 4.165
+    },
+    {
+      "k": 23,
+      "avg_gain": 4.213
+    },
+    {
+      "k": 24,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 25,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 26,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 27,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 28,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 29,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 30,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 31,
+      "avg_gain": 4.258
+    },
+    {
+      "k": 32,
+      "avg_gain": 4.258
+    }
+  ],
+  "corr_taskmean_vs_headroom": 0.133,
+  "best_level_median": 33.72,
+  "headroom_median": 4.5,
+  "quadrants": {
+    "proven-quickwin": {
+      "n": 9,
+      "tasks": [
+        "Place Photo Frames",
+        "Hang the Cup",
+        "Plug Charger",
+        "Stack Bowls",
+        "Remove Pinned Note",
+        "Store Racket",
+        "Arrange Test Tubes",
+        "Spell robot",
+        "Conveyor Food Sorting"
+      ],
+      "headroom_sum": 71.85
+    },
+    "frontier-rd": {
+      "n": 7,
+      "tasks": [
+        "Disconnect Ethernet",
+        "Pick Out Battery",
+        "Organize Pencil Case",
+        "Fold Towel",
+        "Unlock",
+        "Store Earphones",
+        "Fruit Basket Collection"
+      ],
+      "headroom_sum": 42.78
+    },
+    "frontier-nobody": {
+      "n": 9,
+      "tasks": [
+        "Pack Phone",
+        "Pack Bag",
+        "Organize Stationery",
+        "Open Pill Bottle",
+        "Syringe Water Transfer",
+        "Organize Bookshelf",
+        "Toolbox Storage",
+        "Zip Up",
+        "Plug In Ethernet"
+      ],
+      "headroom_sum": 12.22
+    },
+    "commodity": {
+      "n": 7,
+      "tasks": [
+        "Stack Cups",
+        "Fruit Sorting",
+        "Clear Plates",
+        "Pack the Doll",
+        "Color Arrangement",
+        "Organize Tools",
+        "Paper Cup Stacking"
+      ],
+      "headroom_sum": 9.42
+    }
+  },
+  "proven_headroom_best_ge_30": 130.16,
+  "proven_headroom_share": 0.955,
+  "conversion_scenarios": {
+    "25%": 1.065,
+    "40%": 1.703,
+    "70%": 2.981,
+    "100%": 4.258
+  },
+  "hard6_detail": {
+    "Plug In Ethernet": {
+      "base": 27.54,
+      "best": 27.54,
+      "headroom": 0.0,
+      "winner": "MolmoAct2"
+    },
+    "Unlock": {
+      "base": 23.52,
+      "best": 28.17,
+      "headroom": 4.65,
+      "winner": "PI-0.5"
+    },
+    "Spell robot": {
+      "base": 28.62,
+      "best": 33.99,
+      "headroom": 5.37,
+      "winner": "WALL-OSS-0.5"
+    },
+    "Organize Stationery": {
+      "base": 30.9,
+      "best": 33.06,
+      "headroom": 2.16,
+      "winner": "WALL-OSS-0.5"
+    },
+    "Open Pill Bottle": {
+      "base": 28.57,
+      "best": 30.09,
+      "headroom": 1.52,
+      "winner": "WALL-OSS-0.5"
+    },
+    "Pick Out Battery": {
+      "base": 23.46,
+      "best": 30.03,
+      "headroom": 6.57,
+      "winner": "Spirit-v1.5"
+    }
+  }
+}
