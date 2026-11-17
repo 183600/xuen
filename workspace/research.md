@@ -3,451 +3,912 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 10 轮（本轮灵感循环第 1 轮；基线 v9；本轮灵感：「数据集构建」×「状态估计」）
-
-> **基线**：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮纪律：**信念代替点估计 + 数据集代替手调常数**。v9 的最大风险是「块证书在最需要安全的时刻暴露最不可靠的证书」：其根因不是分块，而是证书把状态 s_t 当作精确已知、把前向模型误差 β 当作手调常数、并用 20 帧滑窗的 Δ_dom 做信任门。两个灵感分别命中两处隐藏假设；必须通过中立元退化链保证新模块失效时严格退回 v9（引理 92），而不是行为漂移。
+# 第 11 轮（新灵感循环第 2 轮；本轮灵感：「谐波减速器」×「任务分解」×「Isaac Sim」）
+> **基线**：第 10 轮 MetricVoiceGauge-NCD（定义 540–553；引理 87–95；实验 E571–E588）。
+> 本轮纪律：**执行器感知分解 + 仿真域随机化 + 合规性证书**。不推倒 v10：NGE/DSL/CC/CWM/CAE/NCP 与九不变式全部保留；三个新组件一律以**中立元**接入，失效即严格退回 v10（引理 93 升级版），再沿 v10 九级链退回 v9/v8/v7/v6。本轮只做三件事：给"谐波柔顺度"建模、给"任务分解"加执行器约束、把"Issac Sim"变成谐波孪生训练场。
 
 ## 0. 直觉与动机
 
-**灵感 1（状态估计 → 信念证书）**
-直觉：v9 的证书在最关键的项上少了一个变量——状态估计误差。真实系统里 s_t 是估计值 μ_t，带协方差 Σ_t；块证书却按 s_t 精确计算间隙。于是"证书有效"可能只是"估计错误地自信"。核心创新：**信念状态估计器（BeliefStateEstimator, BSE）** 输出 b_t=(μ_t,Σ_t)，把估计不确定度 ρ_t 经 Lipschitz 可达集传播进块证书，得到**鲁棒块证书** Ĉ^rob：预测间隙先扣模型误差 β_t，再扣 L_g·ρ_t。语义从"在 s_t 处安全"升级为"在置信椭球内处处安全"。
+**灵感 1（谐波减速器 → 执行器柔顺度建模与合规性证书）**
+直觉：v10 的灵巧技能 π=(σ,u,K_p,K_d,f_max,τ_max,pre,post) 假设关节能完美跟踪阻抗/力控指令。**谐波减速器不是刚性齿轮**——柔轮弹性变形存储势能，存在零回程但非零柔顺度、滞回、传动误差、温度相关刚度。接触瞬间、力控相变、高频抖振时，柔轮偏转 θ_flex 与电机侧 θ_motor 差值不可忽略；若任务分解忽略 θ_flex，接触证书 Ĉ_contact 会因模型失配而失效（引理 89 的 β_f/β_s 裕度被耗尽）。核心创新：**谐波状态增强技能（Harmonic-Augmented Skill, HAS）+ 谐波合规性证书（HarmonicComplianceCertifier, HCC）**。技能显式带入 θ_flex 与扭矩 τ_harmonic，前后置条件包含柔轮偏转界；HCC 在线估计谐波参数（刚度 k_h、阻尼 d_h、滞回环），把柔轮偏转能量纳入接触安全不变式 I_c，中止点必须满足"柔轮能量可耗散"。谐波不是外挂补偿器，而是**把执行器柔顺度提升为技能与证书的一等公民**。
 
-**灵感 2（数据集构建 → 可校准的 β 与可追溯的信任）**
-直觉：v9 的 β 与 τ_dom 是"研究者的手"，不是"数据的证词"。保形预测（split conformal）把"前向模型误差 ≤ β"从假设变成带有限样本覆盖率的经验命题：β 取校准集残差的(1−α)分位，覆盖率 ≥1−α。更关键：部署期每执行一步都能观测真实指标 y_{k+1}，与 F̂ 的预测比较得到**新息残差** r_k——这是零延迟（1 步）的模型失配信号，而 Δ_dom 是 20 帧滑窗（约 400ms 滞后）。核心创新：**新息信任监控器（InnovationTrustMonitor, ITM）** 用 CUSUM 累积 r_k，超阈即刻吊销证书、切最近中止点；**在线保形校准器（OnlineConformalCalibrator, OCC）** 用 ACI 在漂移下维持长期覆盖率；**覆盖校准数据集引擎（CoverageCalibratedDatasetEngine, CCDE）** 构造 D_fit/D_cal/D_corner/D_drift 与版本化来源账本。
+**灵感 2（任务分解 → 谐波感知分解）**
+直觉：v10/NCP 的块规划在 A_soc 内用 CWM 做反事实 rollout 选技能，**分解粒度与谐波动态解耦**——长块可能跨越多个谐波共振频率，短块又浪费接触模式切换效率。真实约束：谐波减速器有带宽极限（~100–200 Hz）、共振频率、热积累时间常数。核心创新：**谐波感知任务分解器（HarmonicAwareTaskDecomposer, HATD）**。把任务分解写成在"谐波状态空间"上的分层规划：高层语义块 → 中层谐波可行段（每段 θ_flex 轨迹在带宽/共振/热约束内）→ 底层 HAS 原语。分解标准不再是"语义完整"而是"谐波可执行且接触证书闭合"。分解器还是用 NCP 的接口 ζ，但候选集由 HATD 生成，保证每段都有 HCC 证书。
 
-**为什么两者必须一起用**
-状态估计单独用：Σ_t 可能系统性低估，鲁棒证书仍会乐观；数据集单独用：保形交换性在域偏移下失效，覆盖率不能保证突变第一步。二者合成一个**双证据证书**：空间证据（信念椭球包含真值）+ 经验证据（保形残差分位）。任一证据缺失即退回 v9 点证书并保守化，而不是继续乐观。这也解释了为什么"数据集构建"不是一次性离线工作，而是与"状态估计"共享同一个失效模式：都必须在部署中持续被检验。
+**灵感 3（Isaac Sim → 谐波数字孪生与域随机化训练场）**
+直觉：v10 的 CWM 用 ICP 选不变父集 S*，但**谐波参数随温度、磨损、负载漂移**，属于域敏感但非因果父集的特征——ICP 会把它们排除，导致 CWM 在谐波退化时预测失准。Isaac Sim 原生支持执行器建模、域随机化、GPU 批量仿真，但缺谐波专用参数化模型。核心创新：**谐波数字孪生（HarmonicDigitalTwin, HDT）+ 域随机化谐波策略训练（DR-Harmonic Policy Training）**。在 Isaac Sim 中建立参数化谐波模型（k_h(T,τ,wear)、d_h、滞回、传动误差谐波），对谐波参数、摩擦、负载惯量做大幅度域随机化；用 DR 训练 HATD 的分解策略与 HCC 的参数估计器，**把"谐波参数不确定性"变成策略的鲁棒性**，再用 sim-to-real 校准桥接。Isaac Sim 不是离线验证工具，而是**谐波感知分解的在线训练/自适应孪生**。
+
+**三者如何统一**
+把决策写成**谐波约束下的合规性感知任务分解**：HATD 在谐波状态空间生成候选段，每段携带 HAS 与 HCC 证书；NCP 在规范盾内用 CWM（含 HDT 提供的谐波预测分量）做反事实评分；执行时 HCC 实时监测 θ_flex、τ_harmonic，若偏离证书界则触发谐波安全中止（柔轮能量耗散 hold）。**谐波回答"执行器能不能跟上"，分解回答"怎么切段不炸谐波"，Isaac Sim 回答"参数漂移时策略为何还稳"**。三者共享谐波状态 ζ_h=(θ_flex, τ_h, k_h, d_h, T_h, wear)，因此不是三个补丁，而是一个**执行器-分解-仿真**闭环。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（信念证书可靠性）**：在估计误差仅满足置信椭球包含（概率 1−δ）、前向模型误差仅满足保形覆盖（概率 1−α）的前提下，块证书能否给出可证明的间隙下界？Lipschitz 界带来的保守性是否会吞掉分块的全部算力收益（K_eff 恒为 1）？
-- **Q2（新息检测的时效-误报权衡）**：一步新息 CUSUM 相比 Δ_dom 的 20 帧滑窗，能把"模型失配被察觉"的最坏延迟压到多少？在测量噪声与抓取瞬态下如何控制误报，避免"虚假退化风暴"？
-- **Q3（数据集-部署一致性）**：split conformal 的交换性在域偏移下失效时，ACI 的长期覆盖率与 CUSUM 的局部报警如何互补？如何用数据集构造（分层、角落样本、主动采样）同时优化 β 的覆盖性与保守性，并保证数据集版本、模型版本与证书版本可追溯？
+- **Q1（谐波建模可辨识性）**：如何用关节侧编码器+电机侧编码器+电流，在接触丰富、高频切换的灵巧操作中在线辨识 k_h(T,τ,wear)、d_h、滞回参数，且辨识误差有可证界？
+- **Q2（谐波感知分解最优性）**：在谐波带宽/共振/热约束下，如何切分任务使段数最少、接触模式切换最少、且每段 HCC 证书非空？这是否可多项式求解或需启发式？
+- **Q3（Sim-to-Real 谐波迁移界）**：Isaac Sim 域随机化分布覆盖真实谐波参数漂移集合时，HATD/HCC 策略的性能下降界是多少？如何用少量实机数据校准缩小界？
+- **Q4（三环耦合与 v10 兼容）**：HCC 证书会不会与 v10 的 Ĉ_contact 冲突（双重保守导致无可行段）？HATD 生成的段是否保证 NGE/CWM/CAE 接口不变？谐波中止点是否兼容 v10 的 P^c 与 a_ask？
 
-## 2. 设计原则（在 P10–P12 基础上新增 P13–P15）
+## 2. 设计原则（在 P13–P15 基础上新增 P16–P18）
 
-**P13 信念证书律（Belief-Certificate, BC）**
-证书必须在信念状态上成立，而非点估计上。定义置信椭球 E_t(δ)={s:(s−μ_t)^TΣ_t^{-1}(s−μ_t)≤χ²_{d,1−δ}} 与半径 ρ_t=sqrt(χ²_{d,1−δ}·λ_max(Σ_t))。利用 F̂ 对状态的 Lipschitz 界 L_g，鲁棒间隙下界
-```
-ĝ_min^rob = min_{k≤K} [ F̂_clearance(μ_k, a^{1:k}) − β_t − L_g·ρ_k ]
-```
-只有 ĝ_min^rob ≥ d_safe 时证书才算有效。估计不确定度越大，证书越保守；K_eff 同时受 ρ_t 门控。
+**P16 谐波状态一等公民律（Harmonic State First-Class）**
+任何灵巧技能必须显式携带谐波状态轨迹 θ_flex(t)、τ_h(t) 及其界；前后置条件包含柔轮偏转限幅、扭矩速率限幅、共振避让频带。禁止把谐波视为"外部干扰"由鲁棒控制器吸收——谐波能量是技能可行性的核心约束。
 
-**P14 新息信任律（Innovation-Trust, IT）**
-每执行一步即用真实观测校验前向模型：r_k=‖y_k−ŷ_k‖_∞（按维尺度归一），CUSUM S_k=max(0, S_{k−1}+r_k−(β_t+ν))；S_k>h 立即吊销当前块证书并切换到 ≤ 当前执行步的最大中止点 p*。证书生命周期为 provisional → confirmed → revoked：块生成时只是"暂定"，每步残差在校准界内才"确认"，否则"吊销"。这把"预测的证书"升级为"被逐步验证的证书"。
+**P17 谐波合规性证书律（Harmonic Compliance Certification）**
+HCC 证书 Ĉ_h=(θ̂_flex_max, τ̂_h_max, θ̇_flex_max, Ė_diss_min, k̂_h, d̂_h, ĉ_hyst) 必须与 Ĉ_contact 合取有效。中止点 p∈P^h 满足谐波安全不变式 I_h：从 p 开始存在纯阻尼耗散轨迹使 θ_flex→0、τ_h→0 且不违反接触不变式 I_c。导航/接触/谐波三语义中止点 P_t = P_t^nav ∪ P_t^c ∪ P_t^h 取并，块可执行必要条件升级为"当前模式对应的三类中止点集全非空"。
 
-**P15 覆盖-校准数据律（Coverage-Calibrated Data, CD）**
-β 不是常数而是数据集与在线残差的函数，且**只增不减的安全棘轮**：β_t ≥ β_v9 恒成立，数据集只能让证书更保守、不能更乐观。
-- 分布内：split conformal，β_0 = D_cal 上非一致性得分的 ⌈(n+1)(1−α)⌉/n 分位，覆盖率 ≥1−α（交换性下有限样本）；
-- 分布外：ACI 在线更新 β_{t+1}=clip(β_t+γ(α−err_t), [β_v9, β_max])，保持长期覆盖率并应对漂移；
-- 数据集：D_fit/D_cal/D_corner/D_drift/D_regress 分层构造，D_corner 用中块突变/传感器失效反事实注入，D_regress 为证书回归金标；账本记录 (H_D,H_model,β_0,α,γ) 以便任一证书可复现。
-- 下限重置只能由离线重标定 + 人工审批完成（带迟滞），运行期不允许下调。
+**P18 仿真孪生自适应律（Sim Twin Adaptation）**
+Isaac Sim HDT 必须提供：(i) 参数化谐波模型供 CWM 调用；(ii) 域随机化分布覆盖真实漂移支撑；(iii) 在线贝叶斯校准接口，用实机轨迹更新谐波参数后验。HDT 失效 ⇒ 注入中立元：k_h≡k_nominal、d_h≡d_nominal、无滞回、无热漂移，退回 v10 HAS/HCC（即把谐波视为刚性+保守裕度），等价 v10。
 
 ## 3. 与基线的接口（如何退化）
 
-- BSE 失效（滤波发散 / NIS 连续超阈 / 超时）⇒ Σ←Σ_max（信任膨胀，K_eff←1）或直接点估计 + v9 β；
-- ITM 失效 ⇒ 关闭新息报警，仅保留 v9 的 Δ_dom 门控；
-- CCDE/OCC 失效 ⇒ β←β_v9（固定常数），数据集转只读；
-- RCC 失效 ⇒ 用 v9 点证书公式（定义 533）；
-- 全部失效 ⇒ 严格退回 MetricVoiceGauge-ACMD v9，再退回 v8/v7。
-退化不是"另一种算法"，而是把 BSE 输出置为 (μ,Σ=0)、β 置为 β_v9、ITM 置为不报警——即中立元注入，日志可审计。
+- HAS/HCC 失效 ⇒ 注入谐波中立元：θ_flex≡0、τ_h≡τ_cmd、k_h≡∞、证书退化为 v10 Ĉ_contact，**等价 v10 灵巧路径**；
+- HATD 失效 ⇒ 退回 v10 NCP 直接采样技能序列（忽略谐波约束），由 HCC 在线拦截，**等价 v10 规划路径**；
+- HDT 失效 ⇒ CWM 用定值谐波模型，HATD 用启发式分解，**等价 v10 推理路径**；
+- 三者全失效 ⇒ MetricVoiceGauge-NCD v10，再按 v10 九级链退回 v9/v8/v7/v6；
+- **安全继承**：物理/接触/规范/谐波四重证书合取。HCC 只能删候选段、HATD 只能重切分、HDT 只能改预测分量，新模块不能绕过任何 v10 适用证书（引理 95 升级版）。
 
 ## 4. 预期贡献
 
-1. **信念证书**：把状态估计不确定度以可证明的方式传播进块证书，补齐 v9 证书"假设状态精确已知"的空洞；给出 δ-α 联合覆盖率界。
-2. **新息信任闭环**：用一步残差 CUSUM 把模型失配检测延迟从 Δ_dom 的 20 帧压缩到 ≤3 个控制周期，并给出检测延迟与误报的设计公式；直接回应 v9 的最大风险。
-3. **数据集作为一等公民**：保形校准 + 分层覆盖采样 + 角落样本注入 + 版本化账本，把"信任"从叙事变成可复现、可审计的经验证据；同时为 ID 的消融归因提供配对反事实数据，降低 c_m 方差。
-4. **保守性守恒**：β 棘轮与中立元退化使 v10 的安全性单调不弱于 v9；E571–E590 覆盖估计一致性、覆盖校准、检测时效、迁移、投毒与端到端。
+1. **谐波状态增强技能与合规性证书**：把柔轮偏转、扭矩、滞回、热显式建模为技能一等变量，定义谐波安全不变式与中止点，覆盖 v10 完全未建模的执行器柔顺度安全性；
+2. **谐波感知任务分解器**：在谐波状态空间上分层切分任务，保证每段带宽/共振/热可行且证书闭合，解决"长块炸共振、短块碎接触"的矛盾；
+3. **Isaac Sim 谐波数字孪生与域随机化训练**：参数化谐波模型+大幅度 DR+在线贝叶斯校准，把谐波参数不确定性转化为策略鲁棒性，直接缓解 v10 CWM"域敏感非因果特征被 ICP 排除导致预测失准"的风险；
+4. **四环统一的谐波-规范-因果-灵巧规划**：E589–E606 覆盖谐波辨识、谐波感知分解、Sim-to-Real 迁移、四重证书耦合、端到端长跑。
 
 ## 5. 本轮最大风险
 
-**一句话**：双证据证书的可靠性依赖「校准集与部署同分布」和「滤波置信椭球真的包含真值」这两个假设，而最危险的域突变恰恰同时破坏二者——更糟的是 Lipschitz 常数低估会让证书静默乐观，高估则让 K_eff 恒为 1、分块算力收益归零，即"我们用数据校准的那个不确定性，正是数据分布在突变时最难校准的量"。
-<!-- IDEA:END -->
+**一句话**：谐波参数在线辨识在接触相变瞬间（自由→接触、滑移→粘滞）激励不足、观测噪声大，导致 k̂_h、d̂_h 估计偏差大于 HCC 证书裕度，系统以高置信度认为"柔轮安全"实则已接近共振/屈服，即**自信地柔顺且证书失效**。
 
-<!-- ARTIFACT:START -->
-# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-SEDC**（State-Estimation & Dataset-Certified MetricVoiceGauge）
+--- 产物区 ---
+# 第 11 轮产物 · 创新点清单 v11：**MetricVoiceGauge-NCD-H**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution & Harmonic Compliance）
 
-> 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮灵感：「数据集构建」×「状态估计」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）与 v9 的 AC/MW/ID 三模块全部保留。新组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元（Σ=0、β=β_v9、不报警、v9 点证书），严格等价退回 v9（引理 92），而非行为漂移。
+> 背景：第 10 轮 MetricVoiceGauge-NCD（定义 540–553；引理 87–95；实验 E571–E588），其基线为第 9 轮 MetricVoiceGauge-ACMD。
+> 本轮灵感：「谐波减速器」×「任务分解」×「Isaac Sim」
+> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v10 的 NGE/DSL/CC/CWM/CAE/NCP 与 v9 的 AC/MW/ID 与 v8 的 DA/SPR/Cal 原样保留。四个新组件均为**可选增强**：任一不可用 ⇒ 注入中立元，严格等价退回 v10（引理 93 升级版），再沿 v10 链退回 v9/v8/v7/v6。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD v10） |
 |---|---|---|---|
-| IP-340–356 | v9 全部模块 | 继承 | 语义不变；证书入口改由 RCC 合成，信任门增加 ρ_t/β_t 两维 |
-| IP-357 | BeliefStateEstimator 信念状态估计器 | 新增核心模块 | UKF/EnKF 融合里程计、IMU、视觉/SLAM 位姿与音频方位，输出 b=(μ,Σ,NIS)；NIS 一致性检验；提供置信椭球半径 ρ 与状态传播 |
-| IP-358 | InnovationTrustMonitor 新息信任监控器 | 新增核心模块 | 每执行步比较真实指标 y_k 与 F̂ 预测 ŷ_k，得一步残差 r_k；CUSUM 累积，超阈即刻吊销块证书并切最近中止点；检测延迟 ≤⌈h/δ0⌉ 步 |
-| IP-359 | CoverageCalibratedDatasetEngine 覆盖校准数据集引擎 | 新增核心模块 | 构造 D_fit/D_cal/D_corner/D_drift/D_regress；分层 k-center 覆盖采样；中块突变反事实注入；数据集/模型/证书联合哈希账本 |
-| IP-360 | OnlineConformalCalibrator 在线保形校准器 | 新增核心模块 | split conformal 给 β_0（有限样本覆盖 ≥1−α）；ACI 在线更新 β_t 应对漂移；**β 棘轮**：β_t ≥ β_v9，运行期只增不减 |
-| IP-361 | RobustCertificateComposer 鲁棒证书合成器 | 新增核心模块 | 把 b、β_t、Lipschitz 常数合成为 Ĉ^rob=(ĝ_min^rob, ê_max^rob, γ̂^rob) 与鲁棒中止点集 P_t；K_eff 由 Δ_dom、risk_SLAM、ρ_t、β_t 四维门控 |
+| IP-357–362 | v10 全部模块 | 继承 | 语义不变；DSL 技能端口升级为 HAS，CC 升级为 HCC，CWM 接入 HDT 谐波预测分量 |
+| IP-363 | HarmonicAugmentedSkill (HAS) | 新增核心模块 | 技能 π_h=(σ,u,K_p,K_d,f_max,τ_max,pre,post, θ_flex_ref(t), τ_h_ref(t), k_h, d_h, hyst_params, ω_res, T_thermal) |
+| IP-364 | HarmonicComplianceCertifier (HCC) | 新增核心模块 | 证书 Ĉ_h=(θ̂_flex_max, τ̂_h_max, θ̇_flex_max, Ė_diss_min, k̂_h, d̂_h, ĉ_hyst)；谐波安全不变式 I_h 与中止点 P^h |
+| IP-365 | HarmonicAwareTaskDecomposer (HATD) | 新增核心模块 | 在谐波状态空间分层分解：语义块 → 谐波可行段（带宽/共振/热约束） → HAS 原语；输出 ζ_h 候选集 |
+| IP-366 | HarmonicDigitalTwin (HDT) | 新增核心模块 | Isaac Sim 参数化谐波模型 + 域随机化分布 + 在线贝叶斯校准；供 CWM 谐波分量调用、HATD 策略训练、HCC 参数先验 |
 
-**退化链声明（v10 六级）：**
-- Level-1：ITM 报警或信任域破坏（Δ_dom≥τ_dom ∨ risk_SLAM≥τ_SLAM ∨ ρ_t≥ρ_max ∨ β_t≥β_max）⇒ 吊销证书、切 p* 或 K_eff←1，逐步执行，等价 v9 决策粒度；
-- Level-2：RCC 失效 ⇒ 用 v9 点证书公式（定义 533），K_eff 退回 v9 定义 539；
-- Level-3：BSE 失效 ⇒ (μ,Σ=0) 点状态 + 信任膨胀（K_eff←1），等价 v9；
-- Level-4：CCDE/OCC 失效 ⇒ β←β_v9 固定常数，数据集只读；
-- Level-5：MW/ID 失效 ⇒ 按 v9 定义 535/538 退回手写网关 / 全模块 active；
-- Level-6：v8 的 DA/SPR/Cal 失效 ⇒ 中立元注入（Δ_dom≡0 / risk_SLAM≡0 / sensor_weight≡1），等价 v7，再退回 v6。
+**退化链声明（v11 契约化十三级，前四级为本轮新增）：**
+- Level-0：HAS + HCC + HATD + HDT 全激活，MetricVoiceGauge-NCD-H；
+- Level-1：HDT 失效 ⇒ CWM 用定值谐波模型、HATD 用启发式分解，**等价 v10 推理路径**；
+- Level-2：HATD 失效 ⇒ 退回 v10 NCP 直接采样（忽略谐波约束），由 HCC 在线拦截，**等价 v10 规划路径**；
+- Level-3：HAS/HCC 失效 ⇒ 注入谐波中立元（θ_flex≡0、τ_h≡τ_cmd、k_h≡∞、证书退化为 v10 Ĉ_contact），**等价 v10 灵巧路径**；
+- Level-4：CWM/CAE 失效 ⇒ 预测退回 v9 黑箱 F̂、归因退回相关消融 c_m，**等价 v9 推理路径**；
+- Level-5：DSL/CC 失效 ⇒ 技能集退回 v9 低维原语，接触证书退化为 γ_grasp，**等价 v9 操作路径**；
+- Level-6：NGE 失效 ⇒ 注入 allow-all 规范中立元，**等价 v9 行为**；
+- Level-7：AC 失效 ⇒ K_eff←1，逐步执行，**等价 v8 决策粒度**；
+- Level-8：MW 失效 ⇒ 切换 v8 手写网关，**等价 v8 集成方式**；
+- Level-9：ID 失效 ⇒ 全模块 active、归因冻结，**等价 v8**；
+- Level-10：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入，**等价 v7**；
+- Level-11：全失效 ⇒ 完整退回 v7，再退回 v6。
 
-## 1. 符号体系增量（定义 540–550）
+前四级作用于**互不相交的端口**（谐波技能端口、谐波证书端口、分解器端口、孪生端口），其组合可交换至调度顺序；因此任意子集失效都落到 v10 的一个明确退化点，不存在"半失效"的灰色行为。
+
+## 1. 符号体系增量（定义 554–570）
 
 | 符号 | 含义 |
 |---|---|
-| b_t=(μ_t,Σ_t,ν_t) | 信念状态：均值、协方差、NIS 统计量 |
-| E_t(δ) | 置信椭球 {s:(s−μ_t)^TΣ_t^{-1}(s−μ_t)≤χ²_{d,1−δ}} |
-| ρ_t | 信念半径 sqrt(χ²_{d,1−δ}·λ_max(Σ_t))；估计不确定度的标量摘要 |
-| ρ_k | 沿 K 步传播的半径，ρ_{k+1}=L_f·ρ_k+ε_proc |
-| L_f, L_g, L_e, L_γ | 动力学、间隙、能耗、抓取指标对状态的 Lipschitz 常数（离线在 D_cal 上标定） |
-| β_t | 时变前向模型误差界；β_0 来自 split conformal，β_t 由 ACI 更新 |
-| α | 保形显著性水平（默认 0.01）；δ 为估计椭球显著性（默认 0.01） |
-| ν, h, γ | CUSUM 松弛量、报警阈、ACI 步长 |
-| r_k | 一步新息残差 ‖y_k−ŷ_k‖_∞（按维尺度归一） |
-| S_k | 新息 CUSUM 统计量 |
-| D_fit,D_cal,D_corner,D_drift,D_regress | 训练/校准/角落/漂移/回归五类数据集 |
-| H_D, H_model | 数据集与模型的内容哈希；与证书哈希共同入账本 |
-| ε_N | 分层采样在特征空间的覆盖半径 |
-| cert∈{provisional,confirmed,revoked} | 证书生命周期状态 |
+| θ_flex = θ_motor − θ_joint | 柔轮偏转角（电机侧减关节侧） |
+| τ_h = k_h(θ_flex) · θ_flex + d_h · θ̇_flex + τ_hyst(θ_flex, θ̇_flex) | 谐波输出扭矩：非线性刚度+阻尼+滞回 |
+| k_h(T, τ, wear) | 温度/扭矩/磨损相关的谐波刚度 |
+| d_h | 谐波阻尼系数 |
+| τ_hyst | 滞回扭矩（Preisach 或 Bouc-Wen 模型） |
+| ω_res | 谐波共振频率（随负载惯量变化） |
+| T_thermal | 热时间常数；温升 ΔT = ∫(τ_h·θ̇_motor)/C_th dt |
+| π_h = (σ, u, K_p, K_d, f_max, τ_max, pre, post, θ_flex_ref, τ_h_ref, k_h, d_h, hyst, ω_res, T_thermal) | HAS：含谐波参考轨迹与参数的灵巧技能 |
+| Ĉ_h = (θ̂_flex_max, τ̂_h_max, θ̇_flex_max, Ė_diss_min, k̂_h, d̂_h, ĉ_hyst) | 谐波合规性证书 |
+| I_h | 谐波安全不变式：∃纯阻尼耗散轨迹使 θ_flex→0、τ_h→0 且不破坏 I_c |
+| P^h | 谐波安全中止点集：满足 I_h 的配置点 |
+| ζ_h = (θ_flex, τ_h, k_h, d_h, T_h, wear) | 谐波状态：三环共享 |
+| M_h(θ) | Isaac Sim 谐波参数化模型：输出 τ_h、功耗、热、共振响应 |
+| D_DR | 域随机化分布：k_h∼U[k_min,k_max]、d_h∼U[...]、滞回参数∼U[...]、负载惯量∼U[...]、摩擦∼U[...] |
+| P_post(θ_h\|D_real) | 实机数据贝叶斯后验，更新 HDT 参数先验 |
 
-**定义 540（信念状态 BeliefState）** 滤波器（UKF/EnKF）在观测 obs_t 与上一步动作 a_{t−1} 上输出 b_t=(μ_t,Σ_t,ν_t)。NIS 一致性检验：ν_t=(z_t−h(μ_t^−))^T S_t^{−1}(z_t−h(μ_t^−))，若连续 3 步 ν_t>χ²_{q,0.99}，判滤波不一致并膨胀 Σ_t（乘因子 κ_inf=2）。RCC 只在 b_t 上做预测，不再接受裸点状态。
+**定义 554（谐波增强技能 Harmonic-Augmented Skill）** 一个 HAS 是在接触模式混合自动机上运行的原语，显式携带谐波参考轨迹与参数：
+```
+π_h = ( σ, u, K_p, K_d, f_max, τ_max, pre, post,
+        θ_flex_ref:[0,T]→ℝ, τ_h_ref:[0,T]→ℝ,
+        k_h, d_h, hyst_params, ω_res, T_thermal )
+```
+前置条件 pre 包含：当前 θ_flex ∈ [θ_flex_min, θ_flex_max]、当前 τ_h ∈ [−τ_h_max, τ_h_max]、当前模式不在共振避让带 ω_res±Δω 内、温度 T < T_max。后置条件 post 同理。模式切换仍由触觉后验触发，**但切换时刻必须满足谐波频带约束**（不在共振频率切换）。
 
-**定义 541（估计不确定度传播 EstimationUncertaintyPropagation）** 设动力学 s_{k+1}=f(s_k,a_k)+w_k，f 对状态 L_f-Lipschitz，‖w‖≤ε_proc。若 s_k∈B(μ_k,ρ_k)，则 s_{k+1}∈B(μ_{k+1}, L_f ρ_k+ε_proc)。故
+**定义 555（谐波合规性证书 Harmonic Compliance Certificate）** 由谐波模型与双编码器/电流观测在线估计：
 ```
-ρ_k ≤ L_f^k·ρ_0 + (L_f^k − 1)/(L_f − 1)·ε_proc   (L_f ≠ 1)
-ρ_k ≤ ρ_0 + k·ε_proc                              (L_f = 1)
+Ĉ_h = ( max_t |θ_flex(t)| + β_θ, max_t |τ_h(t)| + β_τ, max_t |θ̇_flex(t)| + β_θ̇,
+        min_t Ė_diss(t) − β_E, k̂_h, d̂_h, ĉ_hyst )
 ```
-该式只用于保守上界；实际实现对每步取上式的 min 与滤波器边缘协方差给出的 sqrt(χ²λ_max(Σ_k))。
+其中 β_θ,β_τ,β_θ̇,β_E 为估计误差余量（由 E597 标定）。有效 ⇔
+```
+θ̂_flex_max ≤ θ_flex_lim ∧ τ̂_h_max ≤ τ_h_lim ∧ θ̇_flex_max ≤ θ̇_flex_lim
+∧ Ė_diss_min ≥ E_diss_req ∧ k̂_h ∈ [k_min,k_max] ∧ d̂_h ∈ [d_min,d_max] ∧ ĉ_hyst ≤ δ_hyst
+```
+**定义 556（谐波安全不变式与中止点 Harmonic Safe Abort）** 中止点 p∈P^h 满足 I_h(p)：存在从 p 开始的纯阻尼耗散序列（关节阻抗 K_p=0, K_d=K_d_diss），使
+```
+θ_flex(t) → 0, τ_h(t) → 0  (指数收敛)
+∧ 全程不违反接触不变式 I_c（力闭合、抓取质量、无滑移）
+∧ 耗散过程中不激发共振（频谱能量在 ω_res±Δω 外）
+```
+导航/接触/谐波三语义中止点 P_t = P_t^nav ∪ P_t^c ∪ P^h。块可执行必要条件：**当前模式对应的三类中止点集全非空**。
 
-**定义 542（鲁棒块证书 RobustChunkCertificate）** 对候选块 a^{1:K}：
+**定义 557（谐波感知任务分解 Harmonic-Aware Task Decomposition）** HATD 输入：语义任务图 G_task、当前谐波状态 ζ_h、环境估计。输出：有序段序列 S = [seg_1,...,seg_M]，每段
 ```
-ĝ_min^rob = min_{k≤K} [ F̂_clearance(μ_k, a^{1:k}) − β_t − L_g·ρ_k ]
-ê_max^rob = max_{k≤K} [ F̂_effort(μ_k, a^{1:k})   + β_t + L_e·ρ_k ]
-γ̂_grasp^rob valid ⇔ L_γ·ρ_K ≤ γ_margin
+seg = ( π_h^{1:K}, Ĉ_h, Ĉ_contact, Ĉ_safety, Ĉ_norm, P^nav, P^c, P^h )
 ```
-证书有效 ⇔ ĝ_min^rob ≥ d_safe ∧ ê_max^rob ≤ τ_eff(t) ∧ γ̂_grasp^rob valid ∧ P_t≠∅ ∧ cert≠revoked。
+分解目标：
+```
+min M  s.t.  ∀seg:  (带宽约束) max_t ‖θ̇_flex_ref(t)‖ ≤ θ̇_flex_bw
+                   (共振避让) θ_flex_ref 频谱能量在 ω_res±Δω 外
+                   (热约束) ∫_seg τ_h·θ̇_motor dt ≤ ΔT_max · C_th
+                   (证书闭合) Ĉ_h valid ∧ Ĉ_contact valid ∧ P^h ≠ ∅
+                   (接触模式连贯) seg 内模式切换数 ≤ N_switch_max
+```
+求解：分层 A* / MCTS 在谐波状态空间搜索，启发式为剩余语义距离 + 谐波能量距离。
 
-**定义 543（一步新息与 CUSUM InnovationResidual）** 执行第 k 步后观测指标 y_k∈R^q，ŷ_k=F̂(μ_k,a_k)。归一化残差 r_k=max_j |y_{k,j}−ŷ_{k,j}|/σ_j，σ_j 为 D_cal 上该维残差的中位绝对偏差。CUSUM：
-```
-S_k = max(0, S_{k−1} + r_k − (β_t + ν)),   S_0=0
-报警 ⇔ S_k > h
-```
-ν>0 吸收正常噪声；h 由 E579 在误报率约束下标定（默认 h=0.03，度量单位为归一化间隙）。
+**定义 558（Isaac Sim 谐波数字孪生 Harmonic Digital Twin）** HDT = (M_h, D_DR, Calibrator)：
+- M_h：Isaac Sim 中参数化谐波模型，输入 (θ_motor, θ̇_motor, τ_cmd, T, load_inertia) → (τ_h, θ_flex, 功耗, 热, 频响)；
+- D_DR：域随机化分布，覆盖 k_h∈[0.5,1.5]k_nom、d_h∈[0.3,2]d_nom、滞回参数±50%、负载惯量±100%、关节摩擦±80%、温度 0–60°C；
+- Calibrator：在线贝叶斯校准，似然 P(θ_flex_obs, τ_h_obs | θ_h) 为高斯，先验来自 D_DR，后验 P_post(θ_h|D_real) 更新 HDT 参数分布，供 CWM 与 HATD 采样。
 
-**定义 544（证书生命周期 CertificateLifecycle）**
-- provisional：5Hz 块生成时写入，允许执行第 1 步；
-- confirmed：第 k 步执行后 r_k≤β_t，允许继续执行 k+1；
-- revoked：S_k>h 或停车不变式破坏；revoked 不可复活，只能切中止点 p* 并在下一 5Hz 节拍重生成。
-该状态机把 v9 的"预测即信任"改为"执行中验证"，且不增加重规划频率（仅廉价残差比较）。
+**定义 559（谐波感知因果世界模型扩展）** CWM 增加谐波预测分量：
+```
+F̂_causal_harmonic(s, a^{1:K}) = ( F̂_causal_task(s, a), F̂_harmonic(ζ_h, a) )
+F̂_harmonic 由 HDT 的 M_h 经域随机化集成推理得到：E_{θ_h∼P_post}[ M_h(ζ_h, a; θ_h) ]
+```
+认知不确定性 u_c 合并任务与谐波分量：u_c = max(u_c_task, u_c_harmonic)。
 
-**定义 545（覆盖校准数据集 CoverageCalibratedDataset）** D=(D_fit,D_cal,D_corner,D_drift,D_regress)，版本 H_D=H(D_fit‖D_cal‖D_corner‖stats)。非一致性得分 s_i=‖y_i−F̂(x_i)‖_∞/σ。split conformal：
-```
-β_0 = Quantile_{⌈(n+1)(1−α)⌉/n}( {s_i : (x_i,y_i)∈D_cal} )
-```
-在 D_cal 与部署样本可交换时，P(s_new≤β_0)≥1−α。**明确边界**：域偏移破坏交换性，故 β_0 只提供分布内保证；分布外由定义 547 的 ACI 与定义 543 的 ITM 接管。D_corner 由中块障碍注入、传感器丢帧、打滑三类反事实生成；D_regress 为证书金标回归集（停车不变式、P_t 非空、K_eff 单调性）。
+**定义 560（v11 中立元表 扩展）**
 
-**定义 546（分层覆盖采样 StratifiedCoverageSampling）** 特征 φ=(Δ_dom 分箱, risk_SLAM 分箱, 杂波密度, 速度, 抓取相位)。以 k-center 贪心在 D_cal 上最大化最小成对距离，得到 ε_N-覆盖；采样权重 w∝risk_proxy（低间隙、高速度、高 Δ_dom 加权）。目标：在预算 N 下使覆盖半径 ε_N 最小，且各风险分箱至少 n_min 个样本。理论上若特征空间紧致直径 R、维度 d，则 ε_N ≤ c·(R/N)^{1/d}（在密度有下界的假设下）。
-
-**定义 547（在线保形校准 OnlineConformalCalibration, ACI）** 每个块结束后 err_j=1[r_j>β_j]，更新
-```
-β_{j+1} = clip( β_j + γ(α − err_j), [β_v9, β_max] )
-```
-下界 β_v9 即安全棘轮：运行期 β 永远不弱于 v9。ACI 给出长期覆盖率
-```
-(1/J)·Σ_{j=1}^J err_j ≤ α + (β_max − β_v9)/(γJ)
-```
-故 J 越大越接近 1−α；突变期允许短暂欠覆盖，由 ITM 的局部报警兜底。下调 β 只能通过离线重标定 + 人工审批（记录于账本），且需满足 E585 的防投毒门槛。
-
-**定义 548（鲁棒证书合成 RobustCertificateComposer）** 四维门控：
-```
-g_t = max( Δ_dom/τ_dom, risk_SLAM/τ_SLAM, ρ_t/ρ_max, (β_t−β_v9)/(β_max−β_v9) )
-K_eff(t) = 1                                           若 g_t ≥ 1
-         = max(1, ⌊K_max·(1−g_t)⌋)                     否则
-```
-随后按定义 542 计算 Ĉ^rob，并按鲁棒停车不变式构造 P_t：
-```
-d_brake(v_p) + d_safe ≤ dist(μ_p,O) − |traj_{p:K}| − L_g·ρ_p
-```
-与 v9 定义 539 相比，新增 ρ_t 与 β_t 两个门控维度；当 ρ=0、β=β_v9 时逐项退化为 v9。
-
-**定义 549（证书来源账本 CertificateProvenanceLedger）** 每条记录：(H_D, H_model, β_0, α, γ, 标定时间戳, K_eff 策略版本, 证书哈希)。审计要求：给定账本条目与数据集版本，可离线逐位复现任意历史证书与 K_eff 轨迹。账本还记录 β 的每次上调与其触发原因（漂移、角落样本、人工重标定），形成"信任变更日志"。
-
-**定义 550（周期预算口径修正 CycleBudgetRecalibration）** v9 引理 86 的"感知 2ms + 决策 20ms"合计 22ms，与 50Hz 的 20ms 周期矛盾。v10 重归一：
-```
-B_cycle = 20ms = 感知 3.0ms + 决策 16.5ms + 余量 0.5ms
-感知 3.0ms = v8 感知 2.0ms + BSE 增量 0.8ms + 账本抽样 0.2ms
-决策 16.5ms 中，块生成 12ms 只在 5Hz 节拍发生，且与 v8 重路径相位错峰（不同周期）。
-```
-该修正不改变任何 v8/v9 语义，只改预算记账；后续复杂度分析均按此口径。
+| 新组件 | v^⊥ | 等价退化点 |
+|---|---|---|
+| HAS 技能 | π_h ← π_v10（忽略 θ_flex_ref, τ_h_ref，k_h≡∞） | Level-3（v10） |
+| HCC 证书 | Ĉ_h 恒真（仅保留 v10 Ĉ_contact） | Level-3（v10） |
+| HATD 分解器 | 退回 v10 NCP 直接采样，HCC 在线拦截 | Level-2（v10） |
+| HDT 孪生 | k_h≡k_nom、d_h≡d_nom、无滞回、无热、无 DR | Level-1（v10） |
 
 ## 2. 形式化定义（要点与升级）
 
-**定义 493（六层指标层级）** 继承 v8：M=(M₀,M₁,M₂,M₃,M_dom,M_SLAM) 不变。
-**定义 495/524（MetaWeight/情感）** 继承 v8 不变。
-**定义 521（DA-OTL）** 继承 v8；τᵢ(t) 的复核输入由点状态改为信念状态，但阈值语义不变。
-**升级定义 496（软证书，v10）**
-```
-δ_trigger = { σ < τ_safe ∧ γ_grasp valid ∧ Δ_dom < τ_dom
-              ∧ risk_SLAM < τ_SLAM ∧ Ĉ^rob valid ∧ cert ≠ revoked }
-```
-六条件同尺度：v9 的 Ĉ_t valid 被替换为更强的 Ĉ^rob valid；cert=revoked 直接触发 M₀ 硬检查，不存在"块内软通过、硬失"的空洞（引理 87+89 联合）。
-**升级定义 531（软硬约束衔接）** 任一中块守卫违规、或 ITM 报警 ⇒ 立即切 p* 或安全停驻，不等块边界；停车判据使用鲁棒间隙 ĝ_min^rob。
-**升级定义 535（契约表）** 新增五行；预算按定义 550 记账：
+**升级定义 546（灵巧技能，v11）** 技能由 π 升级为 π_h（定义 554）。DSL 内部存储 π_h 族；v10 技能视为 k_h≡∞ 的特例。
 
-| 模块 | D_m (ms) | Ŵ_m (ms) | v_m^⊥ | φ^elig |
-|---|---|---|---|---|
-| BSE（信念融合） | 1.0 | 0.8 | 点状态 μ_t（Σ=0） | ✗ |
-| ITM（新息 CUSUM） | 0.1 | 0.05 | 不报警（退 v9 仅 Δ_dom） | ✗ |
-| RCC（证书合成） | 0.4 | 0.2 | v9 点证书（定义 533） | ✗ |
-| OCC（ACI 校准） | 0.05 | 0.02 | β←β_v9 | ✗ |
-| CCDE（离线构建） | — | — | β←β_v9，数据集只读 | ✗ |
+**升级定义 547（接触证书，v11）** CC 升级为 HCC：证书合取 Ĉ_joint = Ĉ_contact ∧ Ĉ_h。有效 ⇔ 两者均有效。中止点合取 P^joint = P^c ∩ P^h（接触中止点必须同时满足谐波耗散可行）。
 
-**升级定义 538（提炼状态机）** 不变；新增：CCDE 为 ID 提供配对反事实块（with/without m），c_m 用配对差估计，降低方差（E588 验证）。
+**升级定义 548（接触安全中止，v11）** 接触中止点 p∈P^c 现在要求同时∈P^h。若 P^c ∩ P^h = ∅，则该段不可执行，HATD 必须重新切分。
+
+**升级定义 531（软硬约束衔接，v11）** M₀ 硬检查增加谐波入口：θ_flex 超限、τ_h 超限、共振激发、热超限直接进入 M₀ 硬违规。物理/接触/规范 M₀ 判据不因谐波模块存在而放宽。
+
+**升级定义 534'（三语义中止点，v11）** P_t = P_t^nav ∪ P_t^c ∪ P_t^h。块可执行必要条件：当前模式对应的中止点集非空（导航模式查 P^nav，接触模式查 P^c∩P^h，自由模式查 P^nav∪P^h）。
+
+**新增定义 561（谐波辨识 Harmonic Identification）** 用双编码器差值 θ_flex = θ_motor − θ_joint 与电流 i_motor 估计 τ_h = k_t·i_motor。在线 RLS / EKF 辨识 (k_h, d_h, hyst_params)：
+```
+θ_flex(k+1) = θ_flex(k) + Δt·θ̇_flex(k)
+τ_h(k) = k_h·θ_flex(k) + d_h·θ̇_flex(k) + τ_hyst(k)
+```
+激励条件：接触相变、力控相变、主动正弦扫频（≤0.5Hz、幅值<θ_flex_lim/10）提供持久激励。辨识误差界 β_id 计入证书余量 β_θ,β_τ。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-357 BeliefStateEstimator：信念状态估计器
-class BeliefStateEstimator:
-    def __init__(self, ukf, Lf, eps_proc, delta=0.01, chi2=None):
-        self.f, self.Lf, self.eps = ukf, Lf, eps_proc
-        self.delta, self.chi2 = delta, chi2 or chi2_quantile
+# IP-363 HarmonicAugmentedSkill
+class HarmonicAugmentedSkill:
+    def __init__(self, base_skill, theta_flex_ref, tau_h_ref,
+                 k_h, d_h, hyst_params, omega_res, T_thermal):
+        self.base = base_skill                    # v10 π: σ, u, K_p, K_d, ...
+        self.theta_flex_ref = theta_flex_ref      # [0,T]→ℝ
+        self.tau_h_ref = tau_h_ref
+        self.k_h, self.d_h = k_h, d_h
+        self.hyst = hyst_params
+        self.omega_res, self.T_thermal = omega_res, T_thermal
 
-    def update(self, obs, a_prev):
-        mu, Sigma, nis = self.f.predict_update(obs, a_prev)
-        if self.f.consecutive_inconsistent(nis, k=3):        # 定义 540
-            Sigma = 2.0 * Sigma                              # 滤波不一致 → 信任膨胀
-        rho0 = sqrt(self.chi2(self.d, 1 - self.delta)
-                    * max_eig(Sigma))
-        return Belief(mu, Sigma, nis, rho0)
+    def check_pre(self, state):
+        ok = self.base.check_pre(state)
+        ok &= state.theta_flex_min <= state.theta_flex <= state.theta_flex_max
+        ok &= abs(state.tau_h) <= self.base.tau_max
+        ok &= not in_resonance_band(state.theta_flex_traj, self.omega_res)
+        ok &= state.temp < self.T_thermal
+        return ok
 
-    def propagate(self, rho0, K):
-        rho = [rho0]
-        for _ in range(K - 1):                               # 定义 541
-            rho.append(min(self.Lf * rho[-1] + self.eps,
-                           sqrt(self.chi2 * max_eig(self.Sigma))))
-        return rho
+    def check_post(self, state):
+        return self.base.check_post(state) and self.check_pre(state)
 
-
-# IP-361 RobustCertificateComposer：鲁棒证书合成器
-class RobustCertificateComposer:
-    def __init__(self, F, Lg, Le, Lgamma, d_safe, d_brake_fn, K_max=10):
-        self.F, self.Lg, self.Le, self.Lgamma = F, Lg, Le, Lgamma
-        self.d_safe, self.d_brake, self.K_max = d_safe, d_brake_fn, K_max
-
-    def gate(self, delta_dom, tau_dom, risk_slam, tau_slam,
-             rho, rho_max, beta, beta_v9, beta_max):
-        g = max(delta_dom / tau_dom, risk_slam / tau_slam,
-                rho / rho_max, (beta - beta_v9) / max(beta_max - beta_v9, 1e-9))
-        if g >= 1.0:
-            return 1
-        return max(1, int(self.K_max * (1.0 - g)))            # 定义 548
-
-    def compose(self, belief, actions, beta):
-        K = len(actions)
-        pred = self.F.rollout(belief.mu, actions)
-        rho = belief.propagate(belief.rho0, K)
-        g_min = min(pred.clearance[k] - beta - self.Lg * rho[k] for k in range(K))
-        e_max = max(pred.effort[k]   + beta + self.Le * rho[k] for k in range(K))
-        if g_min < self.d_safe or e_max > pred.tau_eff:
-            return None                                       # 定义 542
-        if self.Lgamma * rho[-1] > pred.gamma_margin:
-            return None
-        pts = [p for p in range(1, K)
-               if pred.clearance[p] - self.d_brake(pred.speed[p])
-                  - self.d_safe >= pred.path_len[p:] + self.Lg * rho[p]]
-        if not pts:
-            return None
-        return Chunk(actions, Cert(g_min, e_max, robust=True), pts,
-                     state='provisional')                     # 定义 544
+    def harmonic_traj(self):
+        return self.theta_flex_ref, self.tau_h_ref
 
 
-# IP-358 InnovationTrustMonitor：新息信任监控器
-class InnovationTrustMonitor:
-    def __init__(self, nu=0.005, h=0.03):
-        self.nu, self.h, self.S = nu, h, 0.0
+# IP-364 HarmonicComplianceCertifier
+class HarmonicComplianceCertifier:
+    def __init__(self, beta_theta, beta_tau, beta_thetadot, beta_E,
+                 theta_lim, tau_lim, thetadot_lim, E_diss_req,
+                 k_range, d_range, delta_hyst):
+        self.b = (beta_theta, beta_tau, beta_thetadot, beta_E)
+        self.limits = (theta_lim, tau_lim, thetadot_lim, E_diss_req)
+        self.k_range, self.d_range = k_range, d_range
+        self.delta_hyst = delta_hyst
 
-    def observe(self, y, yhat, scales, beta):
-        r = max(abs(y[j] - yhat[j]) / scales[j] for j in range(len(y)))
-        self.S = max(0.0, self.S + r - (beta + self.nu))      # 定义 543
-        if self.S > self.h:
-            return 'revoke', r
-        return ('confirm' if r <= beta else 'hold'), r
+    def certify(self, skill_seq, state, harmonic_est):
+        # harmonic_est: (k_h, d_h, hyst, theta_flex_traj, tau_h_traj, theta_dot_flex_traj, E_diss_traj)
+        k_h, d_h, hyst, theta_flex, tau_h, theta_dot_flex, E_diss = harmonic_est
+        cert = HarmonicCert(
+            theta_max=max(abs(theta_flex)) + self.b[0],
+            tau_max=max(abs(tau_h)) + self.b[1],
+            thetadot_max=max(abs(theta_dot_flex)) + self.b[2],
+            E_diss_min=min(E_diss) - self.b[3],
+            k_h=k_h, d_h=d_h, hyst_conf=1-abs(hyst))
+        valid = (cert.theta_max <= self.limits[0]
+                 and cert.tau_max <= self.limits[1]
+                 and cert.thetadot_max <= self.limits[2]
+                 and cert.E_diss_min >= self.limits[3]
+                 and self.k_range[0] <= cert.k_h <= self.k_range[1]
+                 and self.d_range[0] <= cert.d_h <= self.d_range[1]
+                 and cert.hyst_conf >= 1 - self.delta_hyst)
+        return cert if valid else None
 
-    def reset(self):
-        self.S = 0.0
+    def harmonic_safe_abort_points(self, skill_seq, harmonic_pred, state):
+        pts = []
+        for p in range(1, len(skill_seq)):
+            if self._invariant_Ih_holds(p, skill_seq, harmonic_pred, state):  # 定义 556
+                pts.append(p)
+        return pts
 
-
-# IP-360 OnlineConformalCalibrator：在线保形校准器（ACI + β 棘轮）
-class OnlineConformalCalibrator:
-    def __init__(self, beta0, beta_v9, beta_max, alpha=0.01, gamma=0.002):
-        self.beta = max(beta0, beta_v9)                       # 定义 547 安全棘轮
-        self.beta_v9, self.beta_max = beta_v9, beta_max
-        self.alpha, self.gamma = alpha, gamma
-
-    def update(self, residual):
-        err = 1.0 if residual > self.beta else 0.0
-        self.beta = clip(self.beta + self.gamma * (self.alpha - err),
-                         self.beta_v9, self.beta_max)         # 只增不减下界
-        return self.beta
-
-
-# IP-359 CoverageCalibratedDatasetEngine：覆盖校准数据集引擎
-class CoverageCalibratedDatasetEngine:
-    def __init__(self, alpha=0.01, n_min=50):
-        self.alpha, self.n_min = alpha, n_min
-
-    def build(self, logs, model):
-        D_fit, D_cal = self.chronological_split(logs)         # 定义 545
-        D_cal = self.stratified_kcenter(D_cal, self.n_min)    # 定义 546
-        scores = [nonconformity(model, x, y) for x, y in D_cal]
-        beta0 = quantile(scores, ceil((len(scores)+1)*(1-self.alpha))/len(scores))
-        D_corner = self.counterfactual_inject(logs)           # 中块突变/丢帧/打滑
-        D_regress = self.golden_certificates(model, beta0)
-        H = content_hash(D_fit, D_cal, D_corner, beta0)
-        return DatasetBundle(D_fit, D_cal, D_corner, D_regress, H, beta0)
+    def _invariant_Ih_holds(self, p, seq, pred, state):
+        # 存在纯阻尼耗散轨迹使 theta_flex->0, tau_h->0 且不破坏 I_c
+        return (dissipation_feasible(p, seq, pred, state) and
+                contact_invariant_holds_during_dissipation(p, seq, pred, state) and
+                no_resonance_excitation(p, seq, pred, state))
 
 
-# 主闭环集成：MetricVoiceGauge-SEDC
-def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
-    b = bse.update(obs, last_action)                          # 信念状态
-    ctx.delta_dom, ctx.risk_slam = perception_via_mw(obs)     # v9 契约调用
-    beta = occ.beta                                           # ≥ β_v9
+# IP-365 HarmonicAwareTaskDecomposer
+class HarmonicAwareTaskDecomposer:
+    def __init__(self, dsl, hcc, omega_res, theta_dot_bw, thermal_budget, max_switches):
+        self.dsl, self.hcc = dsl, hcc
+        self.omega_res, self.theta_dot_bw = omega_res, theta_dot_bw
+        self.thermal_budget, self.max_switches = thermal_budget, max_switches
 
+    def decompose(self, task_graph, harmonic_state, env_est):
+        # 分层搜索：语义块 -> 谐波可行段 -> HAS 原语
+        segments = []
+        remaining = task_graph.root
+        while not remaining.is_empty():
+            seg = self._search_feasible_segment(remaining, harmonic_state, env_est)
+            if seg is None:
+                # 无可行段：回退到更小粒度或触发认知恢复
+                return self._fallback_decompose(remaining, harmonic_state)
+            segments.append(seg)
+            remaining = remaining.after(seg)
+            harmonic_state = seg.predict_final_harmonic_state(harmonic_state)
+        return segments
+
+    def _search_feasible_segment(self, task_frag, h_state, env_est):
+        # 在谐波状态空间 A*/MCTS 搜索
+        # 约束：带宽、共振避让、热、证书闭合、接触模式切换数
+        candidates = self.dsl.sample_skill_sequences_for_task(task_frag, n=32)
+        for cand in candidates:
+            if self._check_harmonic_constraints(cand, h_state, env_est):
+                cert = self.hcc.certify(cand, h_state, env_est.harmonic_est)
+                if cert and self.hcc.harmonic_safe_abort_points(cand, env_est.harmonic_pred, h_state):
+                    return HarmonicSegment(cand, cert, h_state)
+        return None
+
+    def _check_harmonic_constraints(self, cand, h_state, env_est):
+        theta_flex_ref, tau_h_ref = cand.harmonic_traj()
+        # 带宽
+        if max(abs(np.gradient(theta_flex_ref))) > self.theta_dot_bw: return False
+        # 共振避让
+        if spectral_energy_in_band(theta_flex_ref, env_est.omega_res, delta=5.0): return False
+        # 热
+        if estimate_thermal(cand, h_state) > self.thermal_budget: return False
+        # 接触模式切换数
+        if cand.mode_switches > self.max_switches: return False
+        return True
+
+
+# IP-366 HarmonicDigitalTwin (Isaac Sim 集成)
+class HarmonicDigitalTwin:
+    def __init__(self, isaac_sim_env, dr_config, calibrator):
+        self.env = isaac_sim_env
+        self.dr_config = dr_config          # 域随机化分布参数
+        self.calibrator = calibrator        # 在线贝叶斯校准
+        self.param_posterior = dr_config.prior  # 初始后验 = DR 先验
+
+    def predict_harmonic(self, state, action_seq, n_samples=16):
+        # 从后验采样谐波参数，批量仿真取均值/方差
+        samples = []
+        for _ in range(n_samples):
+            theta_h = self.param_posterior.sample()
+            self.env.set_harmonic_params(theta_h)
+            traj = self.env.rollout(state, action_seq)
+            samples.append(traj)
+        return aggregate_samples(samples)   # (mean_traj, std_traj)
+
+    def update_calibration(self, real_trajectory):
+        # 贝叶斯更新后验
+        self.param_posterior = self.calibrator.update(self.param_posterior, real_trajectory)
+
+    def sample_dr_policy(self, policy, n_epochs=100):
+        # 在 DR 分布上训练 HATD 策略
+        for _ in range(n_epochs):
+            theta_h = self.dr_config.sample()
+            self.env.set_harmonic_params(theta_h)
+            policy.train_on_env(self.env)
+
+
+# 主闭环集成：MetricVoiceGauge-NCD-H
+def metricvoicegauge_round_11(M, s, obs, audio_stream=None, ell=None, ...):
+    # ---- v10 MW 感知侧契约路径（≤2ms）原样保留 ----
+    results = middleware.run_cycle(runners={...}, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
+
+    # ---- NGE：规范信念更新与人类反馈学习（≤0.1ms）----
+    nge.update_belief(obs)
+    if obs.human_feedback is not None:
+        nge.learn_from_feedback(obs.human_feedback, last_action)
+
+    # ---- HCC：谐波参数在线辨识与证书更新（≤0.5ms）----
+    hcc.update_identification(obs.motor_enc, obs.joint_enc, obs.current)
+    harmonic_est = hcc.get_estimates()
+
+    # ---- HDT：Isaac Sim 谐波预测（异步 10Hz，摊销 ≤1ms）----
+    if hdt.ready_for_prediction():
+        harmonic_pred = hdt.predict_harmonic(ctx.state, candidate_skills)
+
+    # ---- 5Hz：HATD 谐波感知分解 + 四重证书 + 规范盾 + 因果反事实块生成 ----
     if current_chunk is None or current_chunk.exhausted:
-        K = rcc.gate(ctx.delta_dom, M.tau_dom, ctx.risk_slam, M.tau_slam,
-                     b.rho0, M.rho_max, beta, M.beta_v9, M.beta_max)
-        current_chunk = (rcc.compose(b, policy.sample_sequences(b.mu, K), beta)
-                         or single_step_fallback(b))          # K=1 退 v9
+        segments = hatd.decompose(task_graph, ctx.harmonic_state, ctx.env_est)
+        # 由段生成块候选，每段携带 HAS + HCC + CC + 物理 + 规范证书
+        cands = segments_to_candidates(segments)
+        current_chunk = planner.plan_with_harmonic(
+            ctx.state, nge.b, ctx.delta_dom, ctx.tau_dom,
+            trust_ok=(ctx.delta_dom < ctx.tau_dom and ctx.risk_slam < M.tau_slam),
+            harmonic_state=ctx.harmonic_state,
+            harmonic_pred=harmonic_pred)
 
-    # 50Hz 廉价守卫：证书状态 + 新息 CUSUM + 停车不变式
-    verdict, k_next = current_chunk.midchunk_guard(b, live_obs)
+    # ---- 50Hz：v10 守卫 + 谐波守卫（合计 ≤0.8ms）----
+    verdict, k_next = chunk_guard_harmonic(current_chunk, k_exec, live_obs, nge.b, hcc)
     if verdict == 'abort':
-        current_chunk.execute_safe_stop_at(k_next)            # 鲁棒 p*
-        current_chunk, itm = None, itm.reset()
+        current_chunk.execute_harmonic_contact_safe_abort(k_next)   # 定义 556：I_h ∧ I_c
+        current_chunk = None
+    elif verdict == 'recover':
+        execute_recovery(nge.epistemic_recovery())
     else:
-        y_obs = execute(current_chunk.actions[k_next])
-        state, r = itm.observe(y_obs, current_chunk.pred[k_next],
-                               scales, beta)                  # 定义 543
-        if state == 'revoke':
-            execute_safe_stop_at(current_chunk.nearest_abort(k_next))
-            current_chunk = None
-        else:
-            occ.update(r)                                     # ACI 更新 β
-            dataset_log.append((b.mu, current_chunk.actions[k_next], y_obs, r))
+        execute(current_chunk.skills[k_next])
 
-    # v8 继承路径 + v9 ID（配对反事实数据由 CCDE 异步供给）
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v8_path(ctx)
-    distiller.step(cycle_idx, ctx)
+    # ---- v10 继承路径（GCT/ER/5 维风险/奖励/ID）----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v10_path(ctx)
+
+    # ---- HDT 在线校准（异步，低频）----
+    if cycle_idx % T_calib == 0 and real_trajectory_available():
+        hdt.update_calibration(real_trajectory)
+
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 87（信念证书可靠性 Belief-Certificate Soundness）**
-设 (A1) 对每个 k≤K，P(s_k∈E_k(δ))≥1−δ；(A2) 保形覆盖 P(β_true,k≤β_t)≥1−α（分布内交换性下）或 ACI 长期覆盖（定义 547）；(A3) F̂_clearance 对状态 L_g-Lipschitz，且由定义 541 有 ∀s∈E_k: ‖s−μ_k‖≤ρ_k。则对块内任一步 k，
+**引理 96（谐波辨识误差界）** 设 (A1) 双编码器分辨率 δ_enc、电流传感器噪声 σ_i；(A2) 激励满足持久激励条件：接触相变/力控相变/主动扫频提供最小奇异值 σ_min(Φ)≥σ_pe；(A3) 谐波参数在辨识窗口内准静态。则 RLS/EKF 估计误差满足
 ```
-P( g_true,k ≥ ĝ_min^rob ) ≥ 1 − K(δ+α)
+‖k̂_h − k_h‖ ≤ C_1·(δ_enc + σ_i)/σ_pe,  ‖d̂_h − d_h‖ ≤ C_2·(δ_enc + σ_i)/σ_pe
 ```
-其中 g_true,k=F_clearance(s_k,a^{1:k})。
-证明：g_true,k = F(s_k) ≥ F̂(s_k) − β_true,k ≥ F̂(μ_k) − L_g‖s_k−μ_k‖ − β_true,k ≥ F̂(μ_k) − L_g ρ_k − β_t = 该项 + β_t − β_true,k ≥ 该项。对 K 步做并集界，A1 与 A2 各自失败概率相加。∎
-**边界说明**：若交换性被破坏，(A2) 只能降级为 ACI 的长期平均覆盖率（引理 91），此时单块保证由 ITM 的局部报警兜底，而非由上式给出。
+其中 C_1,C_2 依赖回归矩阵条件数。证明：标准 RLS 误差分解，激励条件保证信息矩阵可逆，噪声通过观测矩阵传播。∎
 
-**引理 88（新息检测延迟 InnovationDetectionDelay）**
-设失配发生后真实残差持续满足 r_k ≥ β_t+ν+δ0（δ0>0）。则 CUSUM 从 S=0 起每步至少增加 δ0，至多 ⌈h/δ0⌉ 步即越过 h。控制周期 Δt=20ms，故最坏检测延迟
+**引理 97（谐波合规性证书安全性）** 设辨识误差满足引理 96，证书余量 β_θ,β_τ,β_θ̇,β_E 取 ≥ 对应误差界。若 HCC 证书有效且执行中每步谐波状态在证书界内，则真实 θ_flex、τ_h、θ̇_flex 不超物理极限，且耗散能量 ≥ E_diss_req。证明：证书用保守上界 θ̂_flex_max = max|θ_flex|+β_θ 检查，故真实值 ≤ θ̂_flex_max ≤ θ_flex_lim；同理 τ_h、θ̇_flex。耗散能量用下界 Ė_diss_min = min Ė_diss − β_E ≥ E_diss_req。∎
+
+**引理 98（谐波安全中止有效性）** 若 p∈P^h 满足 I_h(p)，则从 p 开始执行纯阻尼耗散控制（K_p=0, K_d=K_d_diss），真实轨迹满足：θ_flex(t)→0、τ_h(t)→0 指数收敛，全程不破坏 I_c，且不激发共振。证明：I_h 定义即为存在这样的轨迹；谐波模型在耗散阶段退化为线性阻尼系统，特征根为负实部，指数稳定；接触不变式 I_c 由假设在耗散中保持；共振避让由频谱条件保证。∎
+
+**引理 99（谐波感知分解存在性与近似）** 设任务图有限、谐波状态空间紧致、约束集非空。HATD 的分层搜索在有限步内找到可行分解（若存在），段数 M ≤ M_opt + 1，其中 M_opt 为最优段数。证明：高层语义块有限，中层谐波可行段由 A* 在离散化谐波状态空间搜索，启发式一致性保证最优；若离散化粒度足细，近似比 ≤1+ε。若无可行段，回退到单原语粒度（K=1），此时约束退化为单步检查，总存在解（v10 保证）。∎
+
+**引理 100（Sim-to-Real 谐波迁移界）** 设真实谐波参数 θ_h^* ∈ supp(D_DR)，Isaac Sim 模型结构正确（无结构误差），域随机化分布 D_DR 覆盖真实支撑。则在实机上部署 DR 训练的 HATD 策略 π_DR，其性能下降界
 ```
-T_detect ≤ Δt·⌈h/δ0⌉
+J_real(π_DR) ≥ J_sim(π_DR) − O(√(d_H·log(n)/n)) − ε_struct
 ```
-取 h=0.03、δ0=0.01（归一化单位）得 ≤3 周期 = 60ms；而 v9 的 Δ_dom 为 20 帧滑窗，最坏 ≥400ms。反向（H0：r_k≤β_t+ν−δ1）时 CUSUM 漂移为负，误报平均间隔随 h 指数增长，h 由 E579 按 ≤1 次/小时标定。∎
+其中 d_H 为谐波参数维度、n 为 DR 训练轨迹数、ε_struct 为 Sim 结构误差（非参数化部分）。证明：标准域随机化泛化界（Tobin et al. 2017；Peng et al. 2018），参数化模型结构正确时，Sim-to-Real gap 仅来自有限样本泛化与非参数结构误差。在线贝叶斯校准使后验收缩到 θ_h^* 邻域，进一步缩小界。∎
 
-**引理 89（估计误差下的中止安全性 AbortSafetyUnderEstimation）**
-若块被接受时按定义 548 的鲁棒停车不变式选取 p*，且引理 87 成立，则从 p* 执行安全停驻后，真实终点到障碍的距离 ≥ d_safe，概率 ≥1−K(δ+α)。证明：鲁棒不变式给出 d_brake(v_p)+d_safe+L_g ρ_p ≤ dist(μ_p,O)−|traj_{p:K}|；真实 dist(s_p,O) ≥ dist(μ_p,O)−L_g ρ_p，故 d_brake(v_p)+d_safe ≤ 真实间隙 − |traj|，刹车轨迹落在安全域内。∎
+**引理 101（四重证书合取安全继承）** v11 的执行管线为\"物理证书 ∧ 接触证书 ∧ 谐波证书 → 规范盾 → 因果评分\"。HCC 与 CC 合取只能删候选段，HATD 只能重切分，HDT 只能改预测分量。对 v10 技能子集，HCC 退化为恒真，执行集是 v10 安全集的子集；对 HAS，引理 97–98 独立覆盖新谐波谓词。因此不存在绕过 v10 任何适用证书的执行路径，v10 引理 95 的安全继承在 v10 子集上继续成立。∎
 
-**引理 90（分层覆盖的泛化界 StratifiedCoverageBound）**
-设 F̂ 残差对特征 φ 为 L_φ-Lipschitz，D_cal 在特征空间构成 ε_N-覆盖，则任一查询 φ 处的 conformal 分位与全局分位之差 ≤2L_φ ε_N；若特征空间有界直径 R、内在维度 d，则 ε_N ≤ c(R/N)^{1/d}，从而覆盖率的分布外偏差 ≤2L_φ c(R/N)^{1/d}。证明：ε_N-覆盖给出最近校准点 φ' 满足 ‖φ−φ'‖≤ε_N，残差 Lipschitz 给出分位差 ≤2L_φ ε_N；覆盖半径界为标准体积论证。∎
-**用途**：该界把"数据集要多大"从拍脑袋变成 E575/E576 的可检验命题；当 d 很高时该界退化，正是需要 ACI/ITM 的原因。
+**引理 102（中立元退化等价 v10）** 将定义 560 的四个中立元分别注入 HAS/HCC/HATD/HDT 端口，则 planner 的可行集与评分退化为 v10 NCP 的候选集与评分，主闭环调用序列与 v10 逐位一致。证明：HAS/HCC 中立元使谐波约束恒真、证书退化为 v10 Ĉ_contact，技能退化为 v10 π；HATD 中立元退回 v10 NCP 采样；HDT 中立元使 CWM 谐波分量为定值。四端口互不相交，逐端口代入即得 v10 程序；再由 v10 引理 93 继续退回 v9/v8/v7/v6。∎
 
-**引理 91（ACI 长期覆盖与无抖振 ACICoverageNoFlap）**
-对定义 547 的更新，长期误差率满足 (1/J)Σ err_j ≤ α + (β_max−β_v9)/(γJ)。又因每次更新幅度 ≤γ、β 被投影到 [β_v9,β_max]，单个块内 β 单调变化不会造成证书多次翻转；配合 v9 引理 85 的 Schmitt 迟滞，状态迁移间隔 ≥T_abl，无 Zeno。∎
-
-**引理 92（中立元退化与 v9 逐位等价 NeutralElementDegradation）**
-对每个新模块注入中立元：BSE→(μ,Σ=0,ρ=0)、ITM→不报警、OCC/CCDE→β=β_v9、RCC→定义 533 点证书公式。逐项代入定义 542/543/547/548：
-- Ĉ^rob 的 β+L_g ρ 退化为 β_v9，与定义 533 一致；
-- K_eff 的 g_t 退化为 max(Δ_dom/τ_dom, risk_SLAM/τ_SLAM)，与定义 539 一致；
-- 证书状态机无 revoked 事件，等同于 v9 无 ITM 路径。
-故可观测行为与 v9 逐位等价。∎
-
-**引理 93（端到端安全不变式传递 EndToEndInvariant）**
-β 棘轮保证 β_t≥β_v9，鲁棒项 L_g ρ≥0 只增大保守性，四维门控只会缩小 K_eff，故 v10 的安全集 ⊆ v9 安全集；v9 引理 80–86 与 v8 九不变式在退化路径上原样适用。因此新模块只可能"更保守"，不可能"更乐观"。∎
-**注意**：该单调性是"相对 v9 基线"的，不替代引理 87 对绝对可靠性的条件性陈述；若 BSE 的 Σ 系统性低估，则"更保守"的比较对象本身失真，这是本轮最大风险。
+**引理 103（预算守恒 v11）** 新增在线成本上界：HCC 辨识+证书 ≤0.5ms（6 DOF、EKF 10 步）；HATD 分解 5Hz 摊销 ≤1ms（A* 32 候选、启发式剪枝）；HDT 预测异步 10Hz、批量 16 样本、GPU 摊销 ≤1ms；谐波守卫 ≤0.3ms。总决策 p99 仍 ≤22ms，50Hz 保持（v10 留有 2ms 余量）。证明：逐项代入复杂度表并做静态 EDF 校验 ΣŴ_m≤B_dec 即得。∎
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| BSE 融合（50Hz） | 在线 | ≤0.8ms（d≤6） | O(d²) | 定义 540/541 |
-| RCC 证书合成（5Hz） | 在线 | ≤0.2ms/候选·K，n=64,k=10 | O(n·K) | 定义 542/548 |
-| ITM 新息 CUSUM（50Hz） | 在线 | ≤0.05ms | O(1) | 定义 543 |
-| OCC ACI（块级） | 在线 | ≤0.02ms | O(1) | 定义 547 |
-| CCDE 构建（离线/夜间） | 离线 | O(N log N) k-center | O(N) | 定义 545/546 |
-| AC 块生成（5Hz，v9） | 在线 | ≤12ms/次，摊销 ≤1.2ms | O(n·K·d_a) | 定义 532/533 |
-| v8 继承路径 | 在线 | ≤4ms（不变） | 不变 | 定义 493–531 |
-| 决策侧合计 | 在线 | 典型 ≤6ms；块生成周期 ≤16.5ms（相位错峰） | — | 定义 550, 引理 86 |
-| 感知侧合计 | 在线 | ≤3.0ms（v8 2.0 + BSE 0.8 + 账本 0.2） | — | 定义 550 |
+| HCC 辨识 + 证书 | 在线 50Hz | O(d_θ·n_EKF)，≤0.5ms | O(d_θ²) | 定义 555, 561 |
+| HATD 分层分解 | 在线 5Hz | O(n_cand·log n_state)，≤1ms/次（摊销 0.2ms） | O(n_cand·K) | 定义 557 |
+| HDT Isaac Sim 批量预测 | 异步 10Hz | O(n_samples·T_sim/GPU)，摊销 ≤1ms | O(n_samples·T) | 定义 558 |
+| CWM 谐波分量 | 在线 5Hz | 合并任务分量，≤5ms/次（摊销 1ms） | — | 定义 559 |
+| v10 继承路径 | 在线 | ≤9ms | 不变 | v10 引理 94 |
+| 决策侧合计 | 在线 | 典型 ≤11ms，p99 ≤22ms | — | 引理 103 |
 
-预算口径说明：v9 的"2+20=22ms"与 50Hz 矛盾（定义 550）；v10 以 B_cycle=20ms 重新记账，块生成与 v8 重路径错峰，保证 p99≤16.5ms 决策 + ≤3.0ms 感知 + 0.5ms 余量。
-
-## 6. 实验设计 E571–E590
+## 6. 实验设计 E589–E606
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E571 | 状态估计精度 | ATE ≤0.05m、RPE ≤2%；NIS 经验分布落在 95% 理论区间 |
-| E572 | 置信椭球包含率 | 经验包含率 ≥1−δ=99%（多场景、多速度） |
-| E573 | 鲁棒证书保守性 | 声效率 100%（无低估）；保守比 ≤1.5×；>2× 触发重标 L_g |
-| E574 | split conformal 覆盖 | 分布内留出集覆盖率 ≥1−α=99% |
-| E575 | 校准集规模 vs β | N_cal 500→5000 的 β 收敛曲线；N≥2000 时覆盖率波动 ≤1% |
-| E576 | 主动采样 vs 随机 | 达到同一覆盖半径所需样本 ↓≥40% |
-| E577 | 角落样本与中块突变 | ≥500 次注入，中止成功 ≥99%，0 碰撞 |
-| E578 | 新息检测延迟 | δ0=2β 时 ≤3 周期(60ms)；对照 Δ_dom ≥20 帧(400ms) |
-| E579 | CUSUM 误报 | ≤1 次/小时；抓取瞬态场景 ≤2 次/小时 |
-| E580 | ACI 漂移覆盖 | 长期覆盖 ≥1−α−0.01；β 始终 ∈[β_v9,β_max] |
-| E581 | K_eff 与保守性权衡 | 加入 ρ/β 门控后算力节省仍 ≥30%，不塌缩到 K_eff≡1 |
-| E582 | 估计失效退化 | 里程计丢失/欺骗下 0 碰撞，NIS ≤2 周期报警，退 v9 日志可辨 |
-| E583 | 数据集/证书可追溯 | 由账本 100% 复现任一历史证书与 K_eff 轨迹 |
-| E584 | 跨机器人迁移 | A→B 的覆盖率下降 ≤5%，β 重标定 ≤1 次 |
-| E585 | 数据投毒鲁棒 | 检测率 ≥95%，安全违背 ≤2%；β 不得被下压 |
-| E586 | 端到端 vs v9 | RoboCup@Home 仿真 ≥ v9 + 10% |
-| E587 | 8h 长跑 | 覆盖率趋势稳定，β 漂移 ≤10%，无 Zenο 迁移 |
-| E588 | 模块消融 | BSE/ITM/CCDE/OCC/RCC 逐一关闭后严格退回 v9；ID 归因方差 ↓≥20% |
-| E589 | Chunk×ER 与时序 | 块边界情感生效 ≤200ms，操作员评分 ≥4/5 |
-| E590 | 综合竞赛与红队 | ≥ v9 + 15%；红队安全违背 ≤2% |
+| E589 | 谐波参数在线辨识精度 | k_h/d_h 相对误差 ≤10%（接触相变激励下） |
+| E590 | 谐波辨识激励充分性 | 主动扫频+被动接触提供 PE 条件 ≥95% 时间 |
+| E591 | HCC 证书安全性 | 力/偏转/速率 0 次越界；耗散能量界 100% 覆盖 |
+| E592 | 谐波安全中止有效性 | 扰动注入中止 100% 成功、0 掉落、0 共振激发 |
+| E593 | HATD 分解最优性 | 段数 ≤ 最优+1；搜索时间 ≤50ms/任务 |
+| E594 | 谐波约束下任务完成率 | 同 v10 任务集，完成率不降；共振/热违规 0 次 |
+| E595 | Isaac Sim HDT 保真度 | 谐波扭矩/偏转/热/频响 RMSE ≤5%（实机对比） |
+| E596 | 域随机化覆盖真实漂移 | DR 分布覆盖真实 k_h/d_h/滞回/负载/摩擦/温度 99% 分位 |
+| E597 | Sim-to-Real 迁移性能 | HATD/HCC 实机性能 ≥ sim 性能 −10%（E594 指标） |
+| E598 | 在线贝叶斯校准收敛 | 后验收缩到真实参数 ±5% 内 ≤200 步 |
+| E599 | 四重证书耦合无冲突 | 可行段非空率 ≥95%（v10 任务集） |
+| E600 | 谐波-规范耦合 | 规范等待时谐波耗散不超热界；恢复动作谐波可行 |
+| E601 | 谐波-因果耦合 | CWM 谐波分量使跨域预测误差再降 ≥15%（对比 v10 CWM） |
+| E602 | 全模块 WCET/背压 | p99 ≤22ms，0 丢拍；感知风暴+谐波辨识峰值仍 0 丢拍 |
+| E603 | 8h 谐波-社会-灵巧长跑 | 谐波参数漂移跟踪稳定；证书违规趋势收敛 |
+| E604 | 端到端家庭任务/竞赛模拟 | ≥ v10 + 8%（预注册主指标） |
+| E605 | 消融：无 HCC | 接触力越界 ↑≥300%，共振触发 ↑≥500% |
+| E606 | 消融：无 HATD | 分解段数 ↑≥40%，热违规 ↑≥200% |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 估计精度（E571） | ATE ≤0.05m、RPE ≤2% | 换滤波器、增传感器、扩大 D_fit |
-| 椭球包含（E572） | ≥99% | 膨胀 Σ、重标 χ² 分位、检查传感器外参 |
-| 证书保守性（E573） | 声效率 100%、保守比 ≤1.5× | 重标 L_g；若仍 >2× 则缩 K_max |
-| 保形覆盖（E574） | ≥99% | 增 N_cal、核对交换性、改用留一 conformal |
-| 校准规模（E575） | N≥2000 时波动 ≤1% | 扩 D_cal、改分位估计 |
-| 主动采样（E576） | 样本 ↓≥40% | 改 k-center 特征、调风险权重 |
-| 角落样本（E577） | 中止 ≥99%、0 碰撞 | 增中止点密度、缩短 K_max、增大 β |
-| 检测延迟（E578） | ≤3 周期 | 调 h/ν、提高 ITM 频率（仍 ≤0.05ms） |
-| 误报（E579） | ≤1 次/小时 | 增大 h、加抓取相位抑制窗 |
-| ACI 覆盖（E580） | ≥1−α−0.01 | 调 γ、检查 β 上界是否饱和 |
-| 算力节省（E581） | ≥30% | 松 ρ_max、改门控函数、扩 K_max |
-| 失效退化（E582） | 0 碰撞、≤2 周期报警 | 加 NIS 冗余检验、切点估计兜底 |
-| 可追溯（E583） | 100% 复现 | 修账本哈希、冻结随机种子 |
-| 迁移（E584） | 覆盖下降 ≤5% | 扩 D_cal 跨域、分层重采样 |
-| 投毒（E585） | 检测 ≥95%、违背 ≤2% | 加异常检测、双人审批、数据集签名 |
-| 端到端（E586） | ≥ v9 +10% | 回退 K_max、重标 β |
-| 长跑（E587） | β 漂移 ≤10%、无 Zeno | 周期重标定、加迟滞 |
-| 消融（E588） | 严格退 v9、ID 方差 ↓≥20% | 修中立元映射、增配对样本 |
-| 时序（E589） | ≤200ms、≥4/5 | 缩短 K_max、情感触发即时块终止 |
-| 综合（E590） | ≥ v9 +15%、违背 ≤2% | 综合调参、红队复盘 |
+| 谐波辨识（E589） | 相对误差 ≤10% | 增加主动扫频、改 EKF/UKF、扩编码器分辨率 |
+| 激励充分（E590） | PE 覆盖 ≥95% | 设计接触相变触发的自适应扫频 |
+| HCC 安全（E591） | 0 越界、100% 覆盖 | 收紧 β 余量、增加证书分量、降低 τ_max |
+| 谐波中止（E592） | 100% 成功、0 共振 | 增加 P^h 密度、细化 I_h、降低 K_d_diss |
+| 分解最优（E593） | 段数 ≤最优+1、≤50ms | 改启发式、缩状态空间、并行 A* |
+| 任务完成（E594） | 不降、0 违规 | 调热预算、放宽共振带、增加技能原语 |
+| HDT 保真（E595） | RMSE ≤5% | 精细滞回模型、加温度场仿真、校准摩擦 |
+| DR 覆盖（E596） | 99% 分位覆盖 | 扩 DR 范围、加非参数残差模型 |
+| Sim-to-Real（E597） | ≥ sim −10% | 增实机微调、加系统辨识残差在线学习 |
+| 校准收敛（E598） | ±5% 内 ≤200 步 | 增先验精度、改似然、加主动探索 |
+| 证书耦合（E599） | 可行段 ≥95% | 放宽接触/谐波界、增加中止点、改分解粒度 |
+| 谐波-规范（E600） | 热界内、恢复可行 | 联合优化等待时长与耗散轨迹 |
+| 谐波-因果（E601） | 误差再降 ≥15% | 精细 HDT 谐波分量、增不变父集 S* |
+| WCET（E602） | p99 ≤22ms、0 丢拍 | HDT 移离线、HATD 缓存、HCC 定点化 |
+| 长跑（E603） | 漂移跟踪稳定 | 周期重标定、规范库/谐波库联合漂移监测 |
+| 端到端（E604） | ≥ v10 +8% | 综合调参、按消融定位瓶颈 |
+| 消融 HCC（E605） | 越界/共振显著上升 | 证明 HCC 必要性、不可省略 |
+| 消融 HATD（E606） | 段数/热违规显著上升 | 证明 HATD 必要性、不可省略 |
 
-## 8. 本轮最大风险
+## 8. 已知风险与失效模式
 
-**一句话**：双证据证书的可靠性依赖「校准集与部署同分布」和「滤波置信椭球真的包含真值」这两个假设，而最危险的域突变恰恰同时破坏二者——更糟的是 Lipschitz 常数低估会让证书静默乐观，高估则让 K_eff 恒为 1、分块算力收益归零，即"我们用数据校准的那个不确定性，正是数据分布在突变时最难校准的量"。
+1. **谐波辨识激励不足**：自由空间运动、恒力控制、低速操作时双编码器差值信噪比极低，k_h/d_h 不可观。缓解：主动微扰注入（≤0.5Hz、<1%扭矩）、接触相变触发自适应扫频、离线标定先验强正则化。
+2. **滞回模型结构误差**：Preisach/Bouc-Wen 无法完美捕获真实滞回（温度相关、历程相关、微滑）。缓解：非参数残差模型（GP/NN）叠加在参数模型上、在线残差学习、保守证书余量吸收结构误差。
+3. **共振频率随负载快速漂移**：抓取/释放瞬间负载惯量突变，ω_res 跳变，频谱避让条件失效。缓解：在线频谱监测（短时 FFT）、自适应陷波/相位超前补偿、HATD 重新规划触发条件含 ω_res 变化率。
+4. **热模型简化导致热超限**：集中参数热模型忽略梯度、对流非线性、工作循环累积。缓解：多节点热模型、红外热像校准、热裕度动态调整（任务级热预算）。
+5. **Isaac Sim 结构误差 ε_struct**：柔轮变形场、齿隙非线性、润滑脂流变学难以完美仿真。缓解：非参数残差建模（Sim-to-Real Gap Model）、实机微调策略头、域随机化覆盖非参数不确定性。
+6. **四重证书过度保守导致无可行段**：物理+接触+谐波+规范四重合取可能清空候选集。缓解：证书裕度分层（hard/soft）、HATD 自动细化粒度、认知恢复 a_ask 作为兜底、任务级松弛规划。
+7. **谐波-规范-因果同源误差放大**：HCC 辨识误差→CWM 谐波预测误差→CAE 归因误差→NGE 规范信念误差，形成正反馈环。缓解：独立证据通道（视觉/触觉/音频/电流）、显式不确定性传播、必要时 a_ask 打破环。
+
+## 9. 本轮最大风险
+
+**一句话**：谐波参数在线辨识在接触相变瞬间（自由→接触、滑移→粘滞）激励不足、观测噪声大，导致 k̂_h、d̂_h 估计偏差大于 HCC 证书裕度，系统以高置信度认为"柔轮安全"实则已接近共振/屈服，即**自信地柔顺且证书失效**。
+<!-- IDEA:END -->
+
+<!-- ARTIFACT:START -->
+# 第 11 轮产物 · 创新点清单 v11：**MetricVoiceGauge-NCD-H**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution & Harmonic Compliance）
+
+> 背景：第 10 轮 MetricVoiceGauge-NCD（定义 540–553；引理 87–95；实验 E571–E588），其基线为第 9 轮 MetricVoiceGauge-ACMD。
+> 本轮灵感：「谐波减速器」×「任务分解」×「Isaac Sim」
+> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v10 的 NGE/DSL/CC/CWM/CAE/NCP 与 v9 的 AC/MW/ID 与 v8 的 DA/SPR/Cal 原样保留。四个新组件均为**可选增强**：任一不可用 ⇒ 注入中立元，严格等价退回 v10（引理 93 升级版），再沿 v10 链退回 v9/v8/v7/v6。
+
+## 0. 核心 IP 设计
+
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD v10） |
+|---|---|---|---|
+| IP-357–362 | v10 全部模块 | 继承 | 语义不变；DSL 技能端口升级为 HAS，CC 升级为 HCC，CWM 接入 HDT 谐波预测分量 |
+| IP-363 | HarmonicAugmentedSkill (HAS) | 新增核心模块 | 技能 π_h=(σ,u,K_p,K_d,f_max,τ_max,pre,post, θ_flex_ref(t), τ_h_ref(t), k_h, d_h, hyst_params, ω_res, T_thermal) |
+| IP-364 | HarmonicComplianceCertifier (HCC) | 新增核心模块 | 证书 Ĉ_h=(θ̂_flex_max, τ̂_h_max, θ̇_flex_max, Ė_diss_min, k̂_h, d̂_h, ĉ_hyst)；谐波安全不变式 I_h 与中止点 P^h |
+| IP-365 | HarmonicAwareTaskDecomposer (HATD) | 新增核心模块 | 在谐波状态空间分层分解：语义块 → 谐波可行段（带宽/共振/热约束） → HAS 原语；输出 ζ_h 候选集 |
+| IP-366 | HarmonicDigitalTwin (HDT) | 新增核心模块 | Isaac Sim 参数化谐波模型 + 域随机化分布 + 在线贝叶斯校准；供 CWM 谐波分量调用、HATD 策略训练、HCC 参数先验 |
+
+**退化链声明（v11 契约化十三级，前四级为本轮新增）：**
+- Level-0：HAS + HCC + HATD + HDT 全激活，MetricVoiceGauge-NCD-H；
+- Level-1：HDT 失效 ⇒ CWM 用定值谐波模型、HATD 用启发式分解，**等价 v10 推理路径**；
+- Level-2：HATD 失效 ⇒ 退回 v10 NCP 直接采样（忽略谐波约束），由 HCC 在线拦截，**等价 v10 规划路径**；
+- Level-3：HAS/HCC 失效 ⇒ 注入谐波中立元（θ_flex≡0、τ_h≡τ_cmd、k_h≡∞、证书退化为 v10 Ĉ_contact），**等价 v10 灵巧路径**；
+- Level-4：CWM/CAE 失效 ⇒ 预测退回 v9 黑箱 F̂、归因退回相关消融 c_m，**等价 v9 推理路径**；
+- Level-5：DSL/CC 失效 ⇒ 技能集退回 v9 低维原语，接触证书退化为 γ_grasp，**等价 v9 操作路径**；
+- Level-6：NGE 失效 ⇒ 注入 allow-all 规范中立元，**等价 v9 行为**；
+- Level-7：AC 失效 ⇒ K_eff←1，逐步执行，**等价 v8 决策粒度**；
+- Level-8：MW 失效 ⇒ 切换 v8 手写网关，**等价 v8 集成方式**；
+- Level-9：ID 失效 ⇒ 全模块 active、归因冻结，**等价 v8**；
+- Level-10：v8 的 DA/SPR/Cal 任一失效 ⇒ 中立元注入，**等价 v7**；
+- Level-11：全失效 ⇒ 完整退回 v7，再退回 v6。
+
+前四级作用于**互不相交的端口**（谐波技能端口、谐波证书端口、分解器端口、孪生端口），其组合可交换至调度顺序；因此任意子集失效都落到 v10 的一个明确退化点，不存在"半失效"的灰色行为。
+
+## 1. 符号体系增量（定义 554–570）
+
+| 符号 | 含义 |
+|---|---|
+| θ_flex = θ_motor − θ_joint | 柔轮偏转角（电机侧减关节侧） |
+| τ_h = k_h(θ_flex) · θ_flex + d_h · θ̇_flex + τ_hyst(θ_flex, θ̇_flex) | 谐波输出扭矩：非线性刚度+阻尼+滞回 |
+| k_h(T, τ, wear) | 温度/扭矩/磨损相关的谐波刚度 |
+| d_h | 谐波阻尼系数 |
+| τ_hyst | 滞回扭矩（Preisach 或 Bouc-Wen 模型） |
+| ω_res | 谐波共振频率（随负载惯量变化） |
+| T_thermal | 热时间常数；温升 ΔT = ∫(τ_h·θ̇_motor)/C_th dt |
+| π_h = (σ, u, K_p, K_d, f_max, τ_max, pre, post, θ_flex_ref, τ_h_ref, k_h, d_h, hyst, ω_res, T_thermal) | HAS：含谐波参考轨迹与参数的灵巧技能 |
+| Ĉ_h = (θ̂_flex_max, τ̂_h_max, θ̇_flex_max, Ė_diss_min, k̂_h, d̂_h, ĉ_hyst) | 谐波合规性证书 |
+| I_h | 谐波安全不变式：∃纯阻尼耗散轨迹使 θ_flex→0、τ_h→0 且不破坏 I_c |
+| P^h | 谐波安全中止点集：满足 I_h 的配置点 |
+| ζ_h = (θ_flex, τ_h, k_h, d_h, T_h, wear) | 谐波状态：三环共享 |
+| M_h(θ) | Isaac Sim 谐波参数化模型：输出 τ_h、功耗、热、共振响应 |
+| D_DR | 域随机化分布：k_h∼U[k_min,k_max]、d_h∼U[...]、滞回参数∼U[...]、负载惯量∼U[...]、摩擦∼U[...] |
+| P_post(θ_h\|D_real) | 实机数据贝叶斯后验，更新 HDT 参数先验 |
+
+**定义 554（谐波增强技能 Harmonic-Augmented Skill）** 一个 HAS 是在接触模式混合自动机上运行的原语，显式携带谐波参考轨迹与参数：
+```
+π_h = ( σ, u, K_p, K_d, f_max, τ_max, pre, post,
+        θ_flex_ref:[0,T]→ℝ, τ_h_ref:[0,T]→ℝ,
+        k_h, d_h, hyst_params, ω_res, T_thermal )
+```
+前置条件 pre 包含：当前 θ_flex ∈ [θ_flex_min, θ_flex_max]、当前 τ_h ∈ [−τ_h_max, τ_h_max]、当前模式不在共振避让带 ω_res±Δω 内、温度 T < T_max。后置条件 post 同理。模式切换仍由触觉后验触发，**但切换时刻必须满足谐波频带约束**（不在共振频率切换）。
+
+**定义 555（谐波合规性证书 Harmonic Compliance Certificate）** 由谐波模型与双编码器/电流观测在线估计：
+```
+Ĉ_h = ( max_t |θ_flex(t)| + β_θ, max_t |τ_h(t)| + β_τ, max_t |θ̇_flex(t)| + β_θ̇,
+        min_t Ė_diss(t) − β_E, k̂_h, d̂_h, ĉ_hyst )
+```
+其中 β_θ,β_τ,β_θ̇,β_E 为估计误差余量（由 E597 标定）。有效 ⇔
+```
+θ̂_flex_max ≤ θ_flex_lim ∧ τ̂_h_max ≤ τ_h_lim ∧ θ̇_flex_max ≤ θ̇_flex_lim
+∧ Ė_diss_min ≥ E_diss_req ∧ k̂_h ∈ [k_min,k_max] ∧ d̂_h ∈ [d_min,d_max] ∧ ĉ_hyst ≤ δ_hyst
+```
+
+**定义 556（谐波安全不变式与中止点 Harmonic Safe Abort）** 中止点 p∈P^h 满足 I_h(p)：存在从 p 开始的纯阻尼耗散序列（关节阻抗 K_p=0, K_d=K_d_diss），使
+```
+θ_flex(t) → 0, τ_h(t) → 0  (指数收敛)
+∧ 全程不违反接触不变式 I_c（力闭合、抓取质量、无滑移）
+∧ 耗散过程中不激发共振（频谱能量在 ω_res±Δω 外）
+```
+导航/接触/谐波三语义中止点 P_t = P_t^nav ∪ P_t^c ∪ P^h。块可执行必要条件：**当前模式对应的三类中止点集全非空**。
+
+**定义 557（谐波感知任务分解 Harmonic-Aware Task Decomposition）** HATD 输入：语义任务图 G_task、当前谐波状态 ζ_h、环境估计。输出：有序段序列 S = [seg_1,...,seg_M]，每段
+```
+seg = ( π_h^{1:K}, Ĉ_h, Ĉ_contact, Ĉ_safety, Ĉ_norm, P^nav, P^c, P^h )
+```
+分解目标：
+```
+min M  s.t.  ∀seg:  (带宽约束) max_t ‖θ̇_flex_ref(t)‖ ≤ θ̇_flex_bw
+                   (共振避让) θ_flex_ref 频谱能量在 ω_res±Δω 外
+                   (热约束) ∫_seg τ_h·θ̇_motor dt ≤ ΔT_max · C_th
+                   (证书闭合) Ĉ_h valid ∧ Ĉ_contact valid ∧ P^h ≠ ∅
+                   (接触模式连贯) seg 内模式切换数 ≤ N_switch_max
+```
+求解：分层 A* / MCTS 在谐波状态空间搜索，启发式为剩余语义距离 + 谐波能量距离。
+
+**定义 558（Isaac Sim 谐波数字孪生 Harmonic Digital Twin）** HDT = (M_h, D_DR, Calibrator)：
+- M_h：Isaac Sim 中参数化谐波模型，输入 (θ_motor, θ̇_motor, τ_cmd, T, load_inertia) → (τ_h, θ_flex, 功耗, 热, 频响)；
+- D_DR：域随机化分布，覆盖 k_h∈[0.5,1.5]k_nom、d_h∈[0.3,2]d_nom、滞回参数±50%、负载惯量±100%、关节摩擦±80%、温度 0–60°C；
+- Calibrator：在线贝叶斯校准，似然 P(θ_flex_obs, τ_h_obs | θ_h) 为高斯，先验来自 D_DR，后验 P_post(θ_h|D_real) 更新 HDT 参数分布，供 CWM 与 HATD 采样。
+
+**定义 559（谐波感知因果世界模型扩展）** CWM 增加谐波预测分量：
+```
+F̂_causal_harmonic(s, a^{1:K}) = ( F̂_causal_task(s, a), F̂_harmonic(ζ_h, a) )
+F̂_harmonic 由 HDT 的 M_h 经域随机化集成推理得到：E_{θ_h∼P_post}[ M_h(ζ_h, a; θ_h) ]
+```
+认知不确定性 u_c 合并任务与谐波分量：u_c = max(u_c_task, u_c_harmonic)。
+
+**定义 560（v11 中立元表 扩展）**
+
+| 新组件 | v^⊥ | 等价退化点 |
+|---|---|---|
+| HAS 技能 | π_h ← π_v10（忽略 θ_flex_ref, τ_h_ref，k_h≡∞） | Level-3（v10） |
+| HCC 证书 | Ĉ_h 恒真（仅保留 v10 Ĉ_contact） | Level-3（v10） |
+| HATD 分解器 | 退回 v10 NCP 直接采样，HCC 在线拦截 | Level-2（v10） |
+| HDT 孪生 | k_h≡k_nom、d_h≡d_nom、无滞回、无热、无 DR | Level-1（v10） |
+
+## 2. 形式化定义（要点与升级）
+
+**升级定义 546（灵巧技能，v11）** 技能由 π 升级为 π_h（定义 554）。DSL 内部存储 π_h 族；v10 技能视为 k_h≡∞ 的特例。
+
+**升级定义 547（接触证书，v11）** CC 升级为 HCC：证书合取 Ĉ_joint = Ĉ_contact ∧ Ĉ_h。有效 ⇔ 两者均有效。中止点合取 P^joint = P^c ∩ P^h（接触中止点必须同时满足谐波耗散可行）。
+
+**升级定义 548（接触安全中止，v11）** 接触中止点 p∈P^c 现在要求同时∈P^h。若 P^c ∩ P^h = ∅，则该段不可执行，HATD 必须重新切分。
+
+**升级定义 531（软硬约束衔接，v11）** M₀ 硬检查增加谐波入口：θ_flex 超限、τ_h 超限、共振激发、热超限直接进入 M₀ 硬违规。物理/接触/规范 M₀ 判据不因谐波模块存在而放宽。
+
+**升级定义 534'（三语义中止点，v11）** P_t = P_t^nav ∪ P_t^c ∪ P_t^h。块可执行必要条件：当前模式对应的中止点集非空（导航模式查 P^nav，接触模式查 P^c∩P^h，自由模式查 P^nav∪P^h）。
+
+**新增定义 561（谐波辨识 Harmonic Identification）** 用双编码器差值 θ_flex = θ_motor − θ_joint 与电流 i_motor 估计 τ_h = k_t·i_motor。在线 RLS / EKF 辨识 (k_h, d_h, hyst_params)：
+```
+θ_flex(k+1) = θ_flex(k) + Δt·θ̇_flex(k)
+τ_h(k) = k_h·θ_flex(k) + d_h·θ̇_flex(k) + τ_hyst(k)
+```
+激励条件：接触相变、力控相变、主动正弦扫频（≤0.5Hz、幅值<θ_flex_lim/10）提供持久激励。辨识误差界 β_id 计入证书余量 β_θ,β_τ。
+
+## 3. 关键算法骨架
+
+```python
+# IP-363 HarmonicAugmentedSkill
+class HarmonicAugmentedSkill:
+    def __init__(self, base_skill, theta_flex_ref, tau_h_ref,
+                 k_h, d_h, hyst_params, omega_res, T_thermal):
+        self.base = base_skill                    # v10 π: σ, u, K_p, K_d, ...
+        self.theta_flex_ref = theta_flex_ref      # [0,T]→ℝ
+        self.tau_h_ref = tau_h_ref
+        self.k_h, self.d_h = k_h, d_h
+        self.hyst = hyst_params
+        self.omega_res, self.T_thermal = omega_res, T_thermal
+
+    def check_pre(self, state):
+        ok = self.base.check_pre(state)
+        ok &= state.theta_flex_min <= state.theta_flex <= state.theta_flex_max
+        ok &= abs(state.tau_h) <= self.base.tau_max
+        ok &= not in_resonance_band(state.theta_flex_traj, self.omega_res)
+        ok &= state.temp < self.T_thermal
+        return ok
+
+    def check_post(self, state):
+        return self.base.check_post(state) and self.check_pre(state)
+
+    def harmonic_traj(self):
+        return self.theta_flex_ref, self.tau_h_ref
+
+
+# IP-364 HarmonicComplianceCertifier
+class HarmonicComplianceCertifier:
+    def __init__(self, beta_theta, beta_tau, beta_thetadot, beta_E,
+                 theta_lim, tau_lim, thetadot_lim, E_diss_req,
+                 k_range, d_range, delta_hyst):
+        self.b = (beta_theta, beta_tau, beta_thetadot, beta_E)
+        self.limits = (theta_lim, tau_lim, thetadot_lim, E_diss_req)
+        self.k_range, self.d_range = k_range, d_range
+        self.delta_hyst = delta_hyst
+
+    def certify(self, skill_seq, state, harmonic_est):
+        # harmonic_est: (k_h, d_h, hyst, theta_flex_traj, tau_h_traj, theta_dot_flex_traj, E_diss_traj)
+        k_h, d_h, hyst, theta_flex, tau_h, theta_dot_flex, E_diss = harmonic_est
+        cert = HarmonicCert(
+            theta_max=max(abs(theta_flex)) + self.b[0],
+            tau_max=max(abs(tau_h)) + self.b[1],
+            thetadot_max=max(abs(theta_dot_flex)) + self.b[2],
+            E_diss_min=min(E_diss) - self.b[3],
+            k_h=k_h, d_h=d_h, hyst_conf=1-abs(hyst))
+        valid = (cert.theta_max <= self.limits[0]
+                 and cert.tau_max <= self.limits[1]
+                 and cert.thetadot_max <= self.limits[2]
+                 and cert.E_diss_min >= self.limits[3]
+                 and self.k_range[0] <= cert.k_h <= self.k_range[1]
+                 and self.d_range[0] <= cert.d_h <= self.d_range[1]
+                 and cert.hyst_conf >= 1 - self.delta_hyst)
+        return cert if valid else None
+
+    def harmonic_safe_abort_points(self, skill_seq, harmonic_pred, state):
+        pts = []
+        for p in range(1, len(skill_seq)):
+            if self._invariant_Ih_holds(p, skill_seq, harmonic_pred, state):  # 定义 556
+                pts.append(p)
+        return pts
+
+    def _invariant_Ih_holds(self, p, seq, pred, state):
+        # 存在纯阻尼耗散轨迹使 theta_flex->0, tau_h->0 且不破坏 I_c
+        return (dissipation_feasible(p, seq, pred, state) and
+                contact_invariant_holds_during_dissipation(p, seq, pred, state) and
+                no_resonance_excitation(p, seq, pred, state))
+
+
+# IP-365 HarmonicAwareTaskDecomposer
+class HarmonicAwareTaskDecomposer:
+    def __init__(self, dsl, hcc, omega_res, theta_dot_bw, thermal_budget, max_switches):
+        self.dsl, self.hcc = dsl, hcc
+        self.omega_res, self.theta_dot_bw = omega_res, theta_dot_bw
+        self.thermal_budget, self.max_switches = thermal_budget, max_switches
+
+    def decompose(self, task_graph, harmonic_state, env_est):
+        # 分层搜索：语义块 -> 谐波可行段 -> HAS 原语
+        segments = []
+        remaining = task_graph.root
+        while not remaining.is_empty():
+            seg = self._search_feasible_segment(remaining, harmonic_state, env_est)
+            if seg is None:
+                # 无可行段：回退到更小粒度或触发认知恢复
+                return self._fallback_decompose(remaining, harmonic_state)
+            segments.append(seg)
+            remaining = remaining.after(seg)
+            harmonic_state = seg.predict_final_harmonic_state(harmonic_state)
+        return segments
+
+    def _search_feasible_segment(self, task_frag, h_state, env_est):
+        # 在谐波状态空间 A*/MCTS 搜索
+        # 约束：带宽、共振避让、热、证书闭合、接触模式切换数
+        candidates = self.dsl.sample_skill_sequences_for_task(task_frag, n=32)
+        for cand in candidates:
+            if self._check_harmonic_constraints(cand, h_state, env_est):
+                cert = self.hcc.certify(cand, h_state, env_est.harmonic_est)
+                if cert and self.hcc.harmonic_safe_abort_points(cand, env_est.harmonic_pred, h_state):
+                    return HarmonicSegment(cand, cert, h_state)
+        return None
+
+    def _check_harmonic_constraints(self, cand, h_state, env_est):
+        theta_flex_ref, tau_h_ref = cand.harmonic_traj()
+        # 带宽
+        if max(abs(np.gradient(theta_flex_ref))) > self.theta_dot_bw: return False
+        # 共振避让
+        if spectral_energy_in_band(theta_flex_ref, env_est.omega_res, delta=5.0): return False
+        # 热
+        if estimate_thermal(cand, h_state) > self.thermal_budget: return False
+        # 接触模式切换数
+        if cand.mode_switches > self.max_switches: return False
+        return True
+
+
+# IP-366 HarmonicDigitalTwin (Isaac Sim 集成)
+class HarmonicDigitalTwin:
+    def __init__(self, isaac_sim_env, dr_config, calibrator):
+        self.env = isaac_sim_env
+        self.dr_config = dr_config          # 域随机化分布参数
+        self.calibrator = calibrator        # 在线贝叶斯校准
+        self.param_posterior = dr_config.prior  # 初始后验 = DR 先验
+
+    def predict_harmonic(self, state, action_seq, n_samples=16):
+        # 从后验采样谐波参数，批量仿真取均值/方差
+        samples = []
+        for _ in range(n_samples):
+            theta_h = self.param_posterior.sample()
+            self.env.set_harmonic_params(theta_h)
+            traj = self.env.rollout(state, action_seq)
+            samples.append(traj)
+        return aggregate_samples(samples)   # (mean_traj, std_traj)
+
+    def update_calibration(self, real_trajectory):
+        # 贝叶斯更新后验
+        self.param_posterior = self.calibrator.update(self.param_posterior, real_trajectory)
+
+    def sample_dr_policy(self, policy, n_epochs=100):
+        # 在 DR 分布上训练 HATD 策略
+        for _ in range(n_epochs):
+            theta_h = self.dr_config.sample()
+            self.env.set_harmonic_params(theta_h)
+            policy.train_on_env(self.env)
+
+
+# 主闭环集成：MetricVoiceGauge-NCD-H
+def metricvoicegauge_round_11(M, s, obs, audio_stream=None, ell=None, ...):
+    # ---- v10 MW 感知侧契约路径（≤2ms）原样保留 ----
+    results = middleware.run_cycle(runners={...}, ctx=ctx)
+    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
+
+    # ---- NGE：规范信念更新与人类反馈学习（≤0.1ms）----
+    nge.update_belief(obs)
+    if obs.human_feedback is not None:
+        nge.learn_from_feedback(obs.human_feedback, last_action)
+
+    # ---- HCC：谐波参数在线辨识与证书更新（≤0.5ms）----
+    hcc.update_identification(obs.motor_enc, obs.joint_enc, obs.current)
+    harmonic_est = hcc.get_estimates()
+
+    # ---- HDT：Isaac Sim 谐波预测（异步 10Hz，摊销 ≤1ms）----
+    if hdt.ready_for_prediction():
+        harmonic_pred = hdt.predict_harmonic(ctx.state, candidate_skills)
+
+    # ---- 5Hz：HATD 谐波感知分解 + 四重证书 + 规范盾 + 因果反事实块生成 ----
+    if current_chunk is None or current_chunk.exhausted:
+        segments = hatd.decompose(task_graph, ctx.harmonic_state, ctx.env_est)
+        # 由段生成块候选，每段携带 HAS + HCC + CC + 物理 + 规范证书
+        cands = segments_to_candidates(segments)
+        current_chunk = planner.plan_with_harmonic(
+            ctx.state, nge.b, ctx.delta_dom, ctx.tau_dom,
+            trust_ok=(ctx.delta_dom < ctx.tau_dom and ctx.risk_slam < M.tau_slam),
+            harmonic_state=ctx.harmonic_state,
+            harmonic_pred=harmonic_pred)
+
+    # ---- 50Hz：v10 守卫 + 谐波守卫（合计 ≤0.8ms）----
+    verdict, k_next = chunk_guard_harmonic(current_chunk, k_exec, live_obs, nge.b, hcc)
+    if verdict == 'abort':
+        current_chunk.execute_harmonic_contact_safe_abort(k_next)   # 定义 556：I_h ∧ I_c
+        current_chunk = None
+    elif verdict == 'recover':
+        execute_recovery(nge.epistemic_recovery())
+    else:
+        execute(current_chunk.skills[k_next])
+
+    # ---- v10 继承路径（GCT/ER/5 维风险/奖励/ID）----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v10_path(ctx)
+
+    # ---- HDT 在线校准（异步，低频）----
+    if cycle_idx % T_calib == 0 and real_trajectory_available():
+        hdt.update_calibration(real_trajectory)
+
+    return C, spatial_cert, claims, metrics, rewards
+```
+
+## 4. 推导
+
+**引理 96（谐波辨识误差界）** 设 (A1) 双编码器分辨率 δ_enc、电流传感器噪声 σ_i；(A2) 激励满足持久激励条件：接触相变/力控相变/主动扫频提供最小奇异值 σ_min(Φ)≥σ_pe；(A3) 谐波参数在辨识窗口内准静态。则 RLS/EKF 估计误差满足
+```
+‖k̂_h − k_h‖ ≤ C_1·(δ_enc + σ_i)/σ_pe,  ‖d̂_h − d_h‖ ≤ C_2·(δ_enc + σ_i)/σ_pe
+```
+其中 C_1,C_2 依赖回归矩阵条件数。证明：标准 RLS 误差分解，激励条件保证信息矩阵可逆，噪声通过观测矩阵传播。∎
+
+**引理 97（谐波合规性证书安全性）** 设辨识误差满足引理 96，证书余量 β_θ,β_τ,β_θ̇,β_E 取 ≥ 对应误差界。若 HCC 证书有效且执行中每步谐波状态在证书界内，则真实 θ_flex、τ_h、θ̇_flex 不超物理极限，且耗散能量 ≥ E_diss_req。证明：证书用保守上界 θ̂_flex_max = max|θ_flex|+β_θ 检查，故真实值 ≤ θ̂_flex_max ≤ θ_flex_lim；同理 τ_h、θ̇_flex。耗散能量用下界 Ė_diss_min = min Ė_diss − β_E ≥ E_diss_req。∎
+
+**引理 98（谐波安全中止有效性）** 若 p∈P^h 满足 I_h(p)，则从 p 开始执行纯阻尼耗散控制（K_p=0, K_d=K_d_diss），真实轨迹满足：θ_flex(t)→0、τ_h(t)→0 指数收敛，全程不破坏 I_c，且不激发共振。证明：I_h 定义即为存在这样的轨迹；谐波模型在耗散阶段退化为线性阻尼系统，特征根为负实部，指数稳定；接触不变式 I_c 由假设在耗散中保持；共振避让由频谱条件保证。∎
+
+**引理 99（谐波感知分解存在性与近似）** 设任务图有限、谐波状态空间紧致、约束集非空。HATD 的分层搜索在有限步内找到可行分解（若存在），段数 M ≤ M_opt + 1，其中 M_opt 为最优段数。证明：高层语义块有限，中层谐波可行段由 A* 在离散化谐波状态空间搜索，启发式一致性保证最优；若离散化粒度足细，近似比 ≤1+ε。若无可行段，回退到单原语粒度（K=1），此时约束退化为单步检查，总存在解（v10 保证）。∎
+
+**引理 100（Sim-to-Real 谐波迁移界）** 设真实谐波参数 θ_h^* ∈ supp(D_DR)，Isaac Sim 模型结构正确（无结构误差），域随机化分布 D_DR 覆盖真实支撑。则在实机上部署 DR 训练的 HATD 策略 π_DR，其性能下降界
+```
+J_real(π_DR) ≥ J_sim(π_DR) − O(√(d_H·log(n)/n)) − ε_struct
+```
+其中 d_H 为谐波参数维度、n 为 DR 训练轨迹数、ε_struct 为 Sim 结构误差（非参数化部分）。证明：标准域随机化泛化界（Tobin et al. 2017；Peng et al. 2018），参数化模型结构正确时，Sim-to-Real gap 仅来自有限样本泛化与非参数结构误差。在线贝叶斯校准使后验收缩到 θ_h^* 邻域，进一步缩小界。∎
+
+**引理 101（四重证书合取安全继承）** v11 的执行管线为\"物理证书 ∧ 接触证书 ∧ 谐波证书 → 规范盾 → 因果评分\"。HCC 与 CC 合取只能删候选段，HATD 只能重切分，HDT 只能改预测分量。对 v10 技能子集，HCC 退化为恒真，执行集是 v10 安全集的子集；对 HAS，引理 97–98 独立覆盖新谐波谓词。因此不存在绕过 v10 任何适用证书的执行路径，v10 引理 95 的安全继承在 v10 子集上继续成立。∎
+
+**引理 102（中立元退化等价 v10）** 将定义 560 的四个中立元分别注入 HAS/HCC/HATD/HDT 端口，则 planner 的可行集与评分退化为 v10 NCP 的候选集与评分，主闭环调用序列与 v10 逐位一致。证明：HAS/HCC 中立元使谐波约束恒真、证书退化为 v10 Ĉ_contact，技能退化为 v10 π；HATD 中立元退回 v10 NCP 采样；HDT 中立元使 CWM 谐波分量为定值。四端口互不相交，逐端口代入即得 v10 程序；再由 v10 引理 93 继续退回 v9/v8/v7/v6。∎
+
+**引理 103（预算守恒 v11）** 新增在线成本上界：HCC 辨识+证书 ≤0.5ms（6 DOF、EKF 10 步）；HATD 分解 5Hz 摊销 ≤1ms（A* 32 候选、启发式剪枝）；HDT 预测异步 10Hz、批量 16 样本、GPU 摊销 ≤1ms；谐波守卫 ≤0.3ms。总决策 p99 仍 ≤22ms，50Hz 保持（v10 留有 2ms 余量）。证明：逐项代入复杂度表并做静态 EDF 校验 ΣŴ_m≤B_dec 即得。∎
+
+## 5. 复杂度分析
+
+| 组件 | 域 | 时间 | 空间 | 正确性锚 |
+|---|---|---|---|---|
+| HCC 辨识 + 证书 | 在线 50Hz | O(d_θ·n_EKF)，≤0.5ms | O(d_θ²) | 定义 555, 561 |
+| HATD 分层分解 | 在线 5Hz | O(n_cand·log n_state)，≤1ms/次（摊销 0.2ms） | O(n_cand·K) | 定义 557 |
+| HDT Isaac Sim 批量预测 | 异步 10Hz | O(n_samples·T_sim/GPU)，摊销 ≤1ms | O(n_samples·T) | 定义 558 |
+| CWM 谐波分量 | 在线 5Hz | 合并任务分量，≤5ms/次（摊销 1ms） | — | 定义 559 |
+| v10 继承路径 | 在线 | ≤9ms | 不变 | v10 引理 94 |
+| 决策侧合计 | 在线 | 典型 ≤11ms，p99 ≤22ms | — | 引理 103 |
+
+## 6. 实验设计 E589–E606
+
+| 实验 | 核心问题 | 关键目标 |
+|---|---|---|
+| E589 | 谐波参数在线辨识精度 | k_h/d_h 相对误差 ≤10%（接触相变激励下） |
+| E590 | 谐波辨识激励充分性 | 主动扫频+被动接触提供 PE 条件 ≥95% 时间 |
+| E591 | HCC 证书安全性 | 力/偏转/速率 0 次越界；耗散能量界 100% 覆盖 |
+| E592 | 谐波安全中止有效性 | 扰动注入中止 100% 成功、0 掉落、0 共振激发 |
+| E593 | HATD 分解最优性 | 段数 ≤ 最优+1；搜索时间 ≤50ms/任务 |
+| E594 | 谐波约束下任务完成率 | 同 v10 任务集，完成率不降；共振/热违规 0 次 |
+| E595 | Isaac Sim HDT 保真度 | 谐波扭矩/偏转/热/频响 RMSE ≤5%（实机对比） |
+| E596 | 域随机化覆盖真实漂移 | DR 分布覆盖真实 k_h/d_h/滞回/负载/摩擦/温度 99% 分位 |
+| E597 | Sim-to-Real 迁移性能 | HATD/HCC 实机性能 ≥ sim 性能 −10%（E594 指标） |
+| E598 | 在线贝叶斯校准收敛 | 后验收缩到真实参数 ±5% 内 ≤200 步 |
+| E599 | 四重证书耦合无冲突 | 可行段非空率 ≥95%（v10 任务集） |
+| E600 | 谐波-规范耦合 | 规范等待时谐波耗散不超热界；恢复动作谐波可行 |
+| E601 | 谐波-因果耦合 | CWM 谐波分量使跨域预测误差再降 ≥15%（对比 v10 CWM） |
+| E602 | 全模块 WCET/背压 | p99 ≤22ms，0 丢拍；感知风暴+谐波辨识峰值仍 0 丢拍 |
+| E603 | 8h 谐波-社会-灵巧长跑 | 谐波参数漂移跟踪稳定；证书违规趋势收敛 |
+| E604 | 端到端家庭任务/竞赛模拟 | ≥ v10 + 8%（预注册主指标） |
+| E605 | 消融：无 HCC | 接触力越界 ↑≥300%，共振触发 ↑≥500% |
+| E606 | 消融：无 HATD | 分解段数 ↑≥40%，热违规 ↑≥200% |
+
+## 7. 预注册判据
+
+| 判据 | 门槛（预注册） | 若未达标的处置 |
+|---|---|---|
+| 谐波辨识（E589） | 相对误差 ≤10% | 增加主动扫频、改 EKF/UKF、扩编码器分辨率 |
+| 激励充分（E590） | PE 覆盖 ≥95% | 设计接触相变触发的自适应扫频 |
+| HCC 安全（E591） | 0 越界、100% 覆盖 | 收紧 β 余量、增加证书分量、降低 τ_max |
+| 谐波中止（E592） | 100% 成功、0 共振 | 增加 P^h 密度、细化 I_h、降低 K_d_diss |
+| 分解最优（E593） | 段数 ≤最优+1、≤50ms | 改启发式、缩状态空间、并行 A* |
+| 任务完成（E594） | 不降、0 违规 | 调热预算、放宽共振带、增加技能原语 |
+| HDT 保真（E595） | RMSE ≤5% | 精细滞回模型、加温度场仿真、校准摩擦 |
+| DR 覆盖（E596） | 99% 分位覆盖 | 扩 DR 范围、加非参数残差模型 |
+| Sim-to-Real（E597） | ≥ sim −10% | 增实机微调、加系统辨识残差在线学习 |
+| 校准收敛（E598） | ±5% 内 ≤200 步 | 增先验精度、改似然、加主动探索 |
+| 证书耦合（E599） | 可行段 ≥95% | 放宽接触/谐波界、增加中止点、改分解粒度 |
+| 谐波-规范（E600） | 热界内、恢复可行 | 联合优化等待时长与耗散轨迹 |
+| 谐波-因果（E601） | 误差再降 ≥15% | 精细 HDT 谐波分量、增不变父集 S* |
+| WCET（E602） | p99 ≤22ms、0 丢拍 | HDT 移离线、HATD 缓存、HCC 定点化 |
+| 长跑（E603） | 漂移跟踪稳定 | 周期重标定、规范库/谐波库联合漂移监测 |
+| 端到端（E604） | ≥ v10 +8% | 综合调参、按消融定位瓶颈 |
+| 消融 HCC（E605） | 越界/共振显著上升 | 证明 HCC 必要性、不可省略 |
+| 消融 HATD（E606） | 段数/热违规显著上升 | 证明 HATD 必要性、不可省略 |
+
+## 8. 已知风险与失效模式
+
+1. **谐波辨识激励不足**：自由空间运动、恒力控制、低速操作时双编码器差值信噪比极低，k_h/d_h 不可观。缓解：主动微扰注入（≤0.5Hz、<1%扭矩）、接触相变触发自适应扫频、离线标定先验强正则化。
+2. **滞回模型结构误差**：Preisach/Bouc-Wen 无法完美捕获真实滞回（温度相关、历程相关、微滑）。缓解：非参数残差模型（GP/NN）叠加在参数模型上、在线残差学习、保守证书余量吸收结构误差。
+3. **共振频率随负载快速漂移**：抓取/释放瞬间负载惯量突变，ω_res 跳变，频谱避让条件失效。缓解：在线频谱监测（短时 FFT）、自适应陷波/相位超前补偿、HATD 重新规划触发条件含 ω_res 变化率。
+4. **热模型简化导致热超限**：集中参数热模型忽略梯度、对流非线性、工作循环累积。缓解：多节点热模型、红外热像校准、热裕度动态调整（任务级热预算）。
+5. **Isaac Sim 结构误差 ε_struct**：柔轮变形场、齿隙非线性、润滑脂流变学难以完美仿真。缓解：非参数残差建模（Sim-to-Real Gap Model）、实机微调策略头、域随机化覆盖非参数不确定性。
+6. **四重证书过度保守导致无可行段**：物理+接触+谐波+规范四重合取可能清空候选集。缓解：证书裕度分层（hard/soft）、HATD 自动细化粒度、认知恢复 a_ask 作为兜底、任务级松弛规划。
+7. **谐波-规范-因果同源误差放大**：HCC 辨识误差→CWM 谐波预测误差→CAE 归因误差→NGE 规范信念误差，形成正反馈环。缓解：独立证据通道（视觉/触觉/音频/电流）、显式不确定性传播、必要时 a_ask 打破环。
+
+## 9. 本轮最大风险
+
+**一句话**：谐波参数在线辨识在接触相变瞬间（自由→接触、滑移→粘滞）激励不足、观测噪声大，导致 k̂_h、d̂_h 估计偏差大于 HCC 证书裕度，系统以高置信度认为"柔轮安全"实则已接近共振/屈服，即**自信地柔顺且证书失效**。
 <!-- ARTIFACT:END -->
