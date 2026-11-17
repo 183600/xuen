@@ -3,406 +3,510 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 10 轮（新灵感循环第 2 轮；本轮灵感：「排行榜」×「轻量化设计」）
-> **基线**：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮纪律：**先硬后软 + 以序代值 + 编译期定形**。两个灵感各治 v9 的一处要害——「轻量化设计」治**证书债**（v9 块证书 12ms 全额依赖冻结前向模型，而模型恰在最陌生域最不可信），「排行榜」治**标定债**（v9 用绝对标量 score 选块，分数尺度的任何单调漂移都会改变选择）。仍以中立元退化链保证：LWC 失效退回 v9 AC，RL 失效退回 v9 绝对评分，LCC 失效退回 v9 运行时 MW，全失效退回 v9→v8→v7→v6。
+# 第 1 轮（UniBot 线 · 第 1 轮；本轮灵感：「抓取」×「技能学习」×「地形适应」）
 
-## 0. 直觉与动机
+> **基线变更声明**：本文件此前承载的是 MetricVoiceGauge（RoboCup@Home 导航/语音方向）研究线，与本轮任务域（宇树 UniBot 世界挑战赛 · 桌面泛化操作）不同源。本轮起状态文件**重新基线化**到 UniBot 线；旧的定义 532–549 / 引理 82–93 / 实验 E551–E590 编号封存停用。本线启用新编号：定义 U1–U12、引理 L1–L7、实验 E601–E618。
 
-**灵感 1（轻量化设计 → 证书的“先硬后软”分层）**
-直觉：v9 的块证书 100% 由冻结前向模型 F̂ 的 K 步 rollout 产生：每块 12ms，且可靠性以「信任域内 ‖F̂−F‖∞ ≤ β」为前提。可 v9 自己承认，DA-ML 检出域偏移的时刻正是模型误差最大的时刻。轻量化设计给的第一性原理不是“把网络压小”，而是**把不依赖模型的那部分先算出来**：用动力学界（速度/加速度/制动能力）与障碍地图做可达集区间扩张，得到间隙的**模型无关下界**；学习模型只允许在这个区间上**收紧**，绝不允许放宽。于是证书变成一架 anytime 梯子：L0 运动学区间（O(1)、域无关），L1 单步残差修正（统计保守），L2 v9 全 rollout（统计保守）。能由 L0 确定性保守通过的候选块，根本不必触碰最不可信的模型——**在最陌生的域里，系统反而只用最硬的物理界**。核心创新：**轻量层级证书（LightweightCertifier, LWC）**。
+## 0. 情报核实（检索日期 2026-11-17）
 
-**灵感 2（排行榜 → 以序代值的块选择与退化排序）**
-直觉：v9 用绝对标量 score(ζ) 选块，隐含假设“分数尺度在域间可比”。但任何严格单调变换都不应改变选择；前向模型失配却会让绝对分数整体漂移，选块随之漂移。排行榜的第一性原理是**相对比较比绝对打分稳健**：只维护候选之间的成对胜负，用 Bradley–Terry/Elo 估计潜在效用，并以置信下界排序；再用 δ_rank 迟滞“不轻易换马”。同一个数据结构还能回答另一个问题：预算吃紧时先牺牲谁？按“贡献下界”从低到高排一张**牺牲榜**，运行期照单执行，无需每周期重算优先级。核心创新：**排行榜执行器（RankLedger, RL）** 与 **退化排行榜**。
+**关于"UniBot 指哪个"**：检索未发现另一个同样主流、且与"具身 / 操作 / 榜单"相关的同名 UniBot；`unibot.unitree.com` 官网首页标题即为「UniBot 世界挑战赛 / UniBot World Challenge」，与用户描述（宇树科技、G1、32 桌面任务、5 类泛化场景、通才模型赛道、选手自行部署并以标准化 API 远程接入）逐条吻合。故按该赛事展开，无需改题。
 
-**灵感 3（合成：轻量化 × 排行榜 → 编译期定形）**
-直觉：既然退化顺序可由排行榜离线算定、证书又可通过低层快速判定，那么 v9 的运行时 EDF + ID 归因可以进一步下沉为**编译期静态物**：固定时隙表 + 预计算牺牲榜 + 每模块的层级预算。运行期只做“低层证书判定 + 照单执行 + 硬界守卫”，调度开销从 O(M log M) 降到 O(1) 查表，同时让“退化顺序”成为可审计的数据而非运行期涌现行为。核心创新：**轻量契约编译器（LightweightContractCompiler, LCC）**。
+一手事实（全部来源见产物区 §10 来源清单）：
+1. 赛事 2026-07-10 由宇树发起（新浪财经 2026-07-10）；UniBot-V1 为"通才模型"赛道，基于 Unitree G1 真机，32 项桌面操作任务（抓取 / 放置 / 双手协调），按**平均成功率 + 平均步骤分**排名，覆盖 5 类泛化场景。
+2. 官方数据集在 HF collection `unitreerobotics/unibot-v1-challenge-dataset`：**恰好 32 个 LeRobot v3.0 数据集**，一任务一份，单任务 969–1533 episodes（合计 ≈32k episodes / 169 h），G1 + Dex1 夹爪，4 路 480×640@30fps AV1 相机（头 stereo×2 + 左右腕）。
+3. 提交接口（GitHub `unitreerobotics/unibot_submission` README）：选手本地部署 observation→action 服务（websockets + msgpack + numpy），策略类须暴露 `metadata` / `get_action(obs)` / `reset()`；`control_space` ∈ {`joint`,`ee`} 二选一互斥；`action_chunk_size` 自定；`obs_delta_indices` 同时决定"传输哪些观测"与"时序叠帧方式"；`image_resize` 由**评测端**用 cv2 缩放；token 须在 `metadata` 与每步 `meta.token` 两处校验；评测在 **N 台真机**上随机顺序执行，必须暴露 **8765…8765+N−1** 连续端口，每端口独立跑完整交互；官方明确会采集 per-step 延迟及其波动、返回动作的统计规律性，并可能据此评估结果可信度。
+4. 榜单数据文件 `unibot.unitree.com/leaderboard_data.json`（8 个通才模型 × 32 任务）。**关键保留意见**：页面脚本注释明示该表由 `gen_leaderboard.py` "randomly-generated" 生成，并被"排行榜即将公开"遮罩覆盖 → 它是 **teaser / 占位表**，不是官方终稿；但其**字段结构、任务名、模型名均真实**，足以作为"接口与任务面的规格说明书"。用户给出的"榜首成功率不到 30%"与该表榜首 29.7% 一致，本文按用户给定的口径使用该组数字。
+5. 交叉参照：RoboDojo 真机榜（量子位 2026-07-08）最强策略平均成功率 12.8%、人类 100%，失败被描述为"能完成大部分步骤，却在最后的对齐 / 插入 / 放置 / 恢复阶段崩"。这与 UniBot 榜单的形状同源 ⇒ **这是当前具身基座的共性瓶颈，不是 UniBot 独有怪癖**，因此按此设计的方案具有跨基准外推性。
 
-## 1. 研究问题（轮次升级版）
+## 1. 直觉与动机（三灵感的第一性原理）
 
-- **Q1（硬界紧度与可靠性）**：如何构造 L0 运动学硬界，使其在熟悉域足够紧（L0 通过率 ≥ 90%），又在任意域偏移下保持确定性保守？区间扩张、浮点 ULP 与障碍地图膨胀如何统一计入？
-- **Q2（排行榜的统计稳健性）**：在非平稳潜在效用与成对比较噪声下，带置信下界的排行榜能否给出“换马次数有界 + 遗憾次线性”的折中？δ_rank 迟滞与 v9 的 Schmitt 双阈如何不冲突？
-- **Q3（编译期等价）**：契约表与牺牲榜能否编译成静态时隙，使运行期行为与 v9 运行时 EDF/ID 在冻结归因下逐位等价，并给出可组合的 WCET 上界？
+**灵感 1 ·「抓取」→ 抓握状态是隐变量，必须被"看见"和被"换掉"**
+第一性原理：真机抓取失败不是"看不见物体"，而是"不知道抓住没有"。评测接口把手部压缩成 **1 维开合标量**（Dex1: 5.5→0），既无手指关节、也无触觉 ⇒ 抓握状态在观测里**不可直接读出**，只能从腕部相机几何 + 抓手开合 + EE 位姿/速度变化三路信号联合推断。更狠的是：单自由度夹爪使某些抓法**物理上不可能**（拧瓶盖、插钥匙、捏细线）。因此"抓取"的正解不是更稳的抓取，而是三件事：**(a) 抓握确认（grip verified）**、**(b) 未抓住时的重抓/改抓**、**(c) 不可抓时改用非抓取原语（推 / 拨 / 倾倒 / 扫 / 钩）**。
 
-## 2. 设计原则（在 P10–P12 基础上新增 P13–P15）
+**灵感 2 ·「技能学习」→ 榜单里的"通用"其实是技能集合**
+第一性原理：把 8 个头名模型两两对比其在 32 个任务上的相对优劣，得到 Kendall τ 的**均值仅 0.064**（28 对中仅 1 对 |τ|>0.2）⇒ 模型的强弱在任务间**近乎准正交**。这意味着"通用能力"不是一根标量，而是**32 维技能向量**；把单模型做成"每项都 25 分"不如做成"路由到每项的 35 分"。但赛道是"单模型通才"赛道，per-task 多策略会被判违规 ⇒ 唯一合规的兑现路径是**一个 checkpoint 内的技能条件化 + 路由**（skill token + 专家混合），仍是"一个模型、一个 API"。
 
-**P13 轻量硬界律（Hard-Bound-First）**
-任何证书必须先算模型无关的硬下界 ĝ⁰，学习模型只允许收紧（max 聚合下界、min 聚合上界），绝不允许放宽。确定性保守只来自 L0；L1/L2 只提供统计保守（覆盖率 1−α），不得替代 L0 的确定性兜底。
+**灵感 3 ·「地形适应」→ 桌面任务的"地形"就是测试时分布偏移**
+第一性原理：5 类泛化场景（位置 / 干扰物 / 背景 / 未见物品 / 人为干扰）本质是**评测端的分布偏移**。训练期域随机化是所有队伍的公共做法，收益已被摊薄；而 UniBot 的赛制恰恰给了别人没有的条件——**选手自行部署模型、远程接入、可反复提交**⇒ 可以做**推理期适配**：episode 内估计上下文向量调制策略，必要时做受限的在线无标签适配。这是把"赛制红利"变成"分数红利"的地方。
 
-**P14 序优先律（Rank-over-Score with Hysteresis）**
-块选择基于成对比较的排行榜，而非绝对分数；只有当挑战者的效用下界超过在位者上界至少 δ_rank 时才换马。排行榜对任何严格单调的效用变换不变。退化顺序同样由“贡献下界排行榜”给出，安全关键模块永在榜尾（不牺牲）。
+**合成**：抓取（把隐状态显式化）× 技能（把通用拆成可路由的组合）× 适应（把偏移在推理期吸收）⇒ 一个三层栈：
+**接地层（抓握/接触的显式推断）→ 技能层（任务/阶段条件化的专家混合）→ 适应层（上下文调制与受限在线适配）**，
+外加一层**工程层**（chunk 缝合、延迟整形、端口隔离、可审计）保证前三层能真的跑在评测机上。
 
-**P15 编译期定形律（Compile-time Freezing）**
-凡能离线确定者不在运行期重算：契约时隙、牺牲榜、每模块层级预算全部编译期固化；运行期只查表与执行。编译失败或不满足预算约束即整体退回 v9 运行时契约表（中立元退化）。
+## 2. 瓶颈在哪里（本轮对 teaser 榜单的量化分析，n=256 个 model-task 点）
 
-## 3. 与基线的接口（如何退化）
+| 观测 | 数值 | 对策略的含义 |
+|---|---|---|
+| step_score 对 success_rate 回归 | step ≈ 1.337·succ + 0.09，R²=0.9955（r=0.998） | 两项榜单指标近乎共线；"多推进几步"没有独立计分价值 ⇒ **只优化终态成功** |
+| 每任务 k = d(step)/d(succ) | 1.19（Toolbox Storage）… 1.40（Store Racket / Organize Pencil Case） | 不同任务的"部分进展"折算率不同，低 k 任务更不该在中间态上使劲 |
+| 模型两两跨任务 Kendall τ | 均值 0.064，中位 0.072，范围 [−0.107, 0.202] | 强弱在任务间近乎准正交 ⇒ 专长差真实存在 |
+| 每任务 oracle（每任务选最好模型） | 33.96 vs 最好单模型 29.70 → **+4.26（+14.3%）** | 单模型内的"技能路由"存在可兑现的上界 |
+| 每任务 top-2 混合上界 | 32.22（+2.52） | 即便只做"两专家选一"，也有 2.5 分空间 |
+| 每任务均值区间 | 最好 Stack Cups 30.3；最差 Plug In Ethernet 17.7 | 任务难度分层明显 |
+| 跨模型任务内标准差 | 均值 5.60；每任务平均 2.66 个模型落在距最优 5 分内 | 路由有信号但需要"读出任务/阶段"能力 |
+| 最难 6 任务 | Plug In Ethernet 17.7 / Unlock 20.1 / Spell robot 21.8 / Organize Stationery 22.5 / Open Pill Bottle 22.7 / Pick Out Battery 23.3 | 全是**插入 / 旋转 / 细粒度摆放** ⇒ 火力在"对齐与插入" |
+| 时长与成功的关系 | 任务内 corr(dur,succ) 均值 −0.011，episode 时长 43.7–45.2 s | **"做得快"没有红利**；不要为提速牺牲成功率 |
 
-- LWC 的 L2 不可用或超差 ⇒ 只用 L0/L1（仍保守）；L0 也不可用 ⇒ 退回 v9 AC 的块证书；
-- RL 失效（比较模型崩溃 / 排行榜不可读）⇒ 退回 v9 绝对 score 选择（保留 v9 迟滞）；
-- LCC 失效（编译约束不满足 / 静态表校验失败）⇒ 退回 v9 运行时 EDF + ID 归因；
-- v9 AC/MW/ID 任一失效 ⇒ 按 v9 定义 536 注入对应中立元，退回 v8；
-- 全部失效 ⇒ MetricVoiceGauge-ACMD v9 → DA-SPR-Cal v8 → OTL-GC-ER v7 → v6。
+**结论（可执行的三条）**：
+- **T1 计分货币唯一**：终态成功是唯一杠杆 ⇒ 一切优化都要能翻译成"最后一环被完成"。
+- **T2 通用 = 技能组合**：任务间准正交 ⇒ 单 checkpoint 内的技能路由有 +4.3 分的上界（oracle），是本轮最大的可量化红利。
+- **T3 断点在最后一环**：插入/旋转类任务系统性最差，且与跨基准观察一致 ⇒ 抓手状态显式化 + 对齐/插入闭环 + 失败恢复是核心战场。
 
-## 4. 预期贡献
+## 3. 研究问题（轮次版）
 
-1. **轻量层级证书**：模型无关硬界 + anytime 收紧，把“模型误差风险”与“安全判定”解耦；熟悉域块生成从 12ms 降到典型 ≤4ms，且陌生域自动退化为纯物理界；
-2. **排行榜执行**：以成对比较替代绝对打分，对分数单调失真有不变性；迟滞换马给出可证明的抖振上界；
-3. **编译期轻量契约**：静态时隙 + 牺牲榜，调度从运行期 O(M log M) 降为 O(1) 查表，退化顺序可审计、WCET 可组合；
-4. **三账本闭环**：证书账本（硬界/层级）、排序账本（RL）、退化账本（LCC）互相校验；E571–E590 覆盖紧度、稳健性、等价性、预算与端到端任务。
+- **Q1（抓握可观测性）**：在只有 1 维抓手标量、无触觉的观测下，能否把"抓住了吗"估成一个**带校准置信度的隐变量**，并做到"只在高置信时介入"（高精度、低召回）以免误伤？
+- **Q2（不可抓时的替代）**：能否在**离线**判定"该物体的该抓法在单自由度夹爪下不可行"，并给出一个非抓取原语（推 / 倾倒 / 拨 / 扫 / 钩）作为退路？判定错了的代价是什么？
+- **Q3（技能路由的合规形态）**：在"单模型通才"赛制下，skill token + 专家混合是否合规？若组委会把"多专家"视为多模型，**最严格的合规下界形态**（单专家 + skill token 条件化）还剩多少 oracle 空间？
+- **Q4（推理期适应的许可边界）**：`reset()` 每 episode 清空状态 ⇒ 跨 episode 的在线权重更新是否违反"自行部署"的精神？episode 内的上下文估计是否绝对安全？可否做成"只更新可插拔适配器、不动主干"的低风险形态？
+- **Q5（工程层的真实语义）**：评测端在 chunk 边界如何执行/插值？"连续端口 N 台机器人"对并发与状态隔离的真实约束是什么？延迟与动作统计的可信度口径如何落到我们可自证的形式（可审计看板）？
 
-## 5. 本轮最大风险
+## 4. 设计原则
 
-**一句话**：轻量化把“前向模型误差”换成了“硬界保守性 + 排序统计噪声”——当 L0 区间界过松使可行块集近乎为空时，系统会长期回退 K=1（性能债），而排行榜的成对比较又恰恰来自同一个可能失配的前向模型，可能把“最不坏”的候选一致地排到首位，于是轻量化在最需要多样性的陌生域反而制造出虚假的确定性。
+- **P1 单一计分货币**：所有创新必须能写成"提升某任务的终态成功率"的因果链；不能映射到终态成功的改进一律降级（除非它降低成本）。
+- **P2 隐状态显式化**：抓握、接触、阶段（reach/grasp/lift/align/insert/place/release）一律建模为**带置信度的隐变量**，不当作已知量。
+- **P3 技能组合而非参数堆叠**：以"任务 token × 阶段 token"为最小条件化单元；每个技能专家必须在**至少 2 个任务**上被复用才允许存在（防止退化成 32 个过拟合策略）。
+- **P4 推理期吸收偏移**：上下文向量 c 在 episode 前段估计并用于调制；任何在线权重更新只作用于小型适配器，且带 trust-region 与一键回滚。
+- **P5 合规优先于最优**：任何"利用未声明行为 / 硬编码任务分支 / 读取评测侧信息"的想法一律进黑名单，不进主线（否则成绩可能被判不可信）。
+- **P6 单模型、单 checkpoint、单 API**：对外暴露的必须是一个策略服务；内部可以有专家混合，但需准备"单专家降级形态"并实测其代价（Q3）。
+
+## 5. 最小可提交闭环（MVP）与退化链
+
+**MVP = IP-06（代理评测 + 失败模式分解） + IP-02（抓握确认 + 改抓） + IP-03（chunk 缝合与延迟整形） + 通用 VLA 基线**。
+理由：IP-06 决定其余组件的边际收益排序；IP-02/IP-03 针对 T3 断点且不依赖任何新数据；IP-01（技能混合）是最大红利但排在 IP-06 之后做。
+
+**严格退化链（任一环节不可用 ⇒ 行为回退而非漂移）**：
+Level-0 上下文适配器不可用 ⇒ 退回"无调制"策略；
+Level-1 抓握确认器不可用（置信度低）⇒ 退回"不干预"的开环执行；
+Level-2 chunk 缝合器不可用 ⇒ 退回固定 chunk 的原策略；
+Level-3 技能路由不可用（token 错配）⇒ 退回通用专家（单一专家）；
+Level-4 整条新链路失效 ⇒ 退回**纯基线策略**（提交一份能跑通、可信度合规的最小提交永远保留，作为安全网）。
+
+## 6. 预期贡献（可验收）
+
+1. **把"抓取"从隐性赌注变成显式变量**：给出单自由度无触觉条件下的抓握隐变量估计器与其校准曲线（可靠性图），并证明"只在高置信时介入"不会降低基线成功率。
+2. **给出泛化场景的失败模式分解口径**（reach / grasp / transport / align / insert / release 六因子相乘），把"30% 成功率"翻译成"哪一环是瓶颈"，这是全赛道的公共品（官方也在建评测体系，诊断口径本身有传播价值）。
+3. **量化"技能路由"红利**：在 teaser 榜结构上给出 oracle +4.26 与 top-2 +2.52 的上界，并在本地代理评测上测出可兑现比例。
+4. **把赛制红利用满**：多端口并发共享后端、chunk 缝合、延迟整形、上下文调制，全部对齐官方"延迟与动作规律性"的可信度口径，交付可审计看板。
+5. **一套可复用的代理评测**：用官方 32 个数据集做 OOD 切分（留出物体 / 背景 / 位置 / 干扰物）+ 阶段级指标，让后续每轮迭代不依赖真机时段。
+
+## 7. 本轮最大风险
+
+**一句话**：本轮方案把赌注压在"抓握确认 + 最后一环闭环"上，而**抓握隐变量的误判成本是不对称的**——漏判（没抓住却以为抓住）会让机器人带着空夹爪一路执行到超时，把本来能靠重抓救回的失败变成硬失败；且我们唯一能拿到"抓握真值"的只有官方数据集里"抬起后物体随动"这类**间接代理标签**，在未见物品上其分布可能整体漂移，于是最需要它的地方（泛化场景）恰是它最不可信的地方。
+
+## 8. 下一轮迭代计划（深化与修剪，不推倒重来）
+
+- **深化**：把 IP-02 的抓握隐变量从"二值判定"升级为"带时序的抓握状态机"（含滑移检测），并把 IP-06 的六因子分解与 IP-01 的专家划分对齐（让每个专家恰好负责一段因子链）。
+- **修剪预案**：若 IP-06 代理评测与真机相关性不显著（|corr| < 0.3），则**砍掉一切以代理指标为依据的微调**，把资源全压到 IP-02/IP-03 这类"机制正确性"驱动的改动上（它们不需要代理指标来证明方向，只需真机 A/B）。
+- **保留项**：IP-06（信息价值最高）、IP-02（断点直击）、IP-03（工程确定性）三项在任何情况下不砍。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 10 轮产物 · 创新点清单 v10：**MetricVoiceGauge-LRC**（Lightweight Rank-Certified）
+# 第 1 轮产物 · 创新点清单 v1（UniBot 线）：**UniBot-SAGE**
+> **SAGE = Skill-Adaptive Grasp Expert**（技能自适应 · 抓握专家）。
+> 域名对齐 unibot.unitree.com / UniBot-V1 Challenge；本清单为"参赛策略研究"的持续迭代载体，第 1 轮为**奠基版**。
+> **基线声明**：本文件此前为 MetricVoiceGauge 线（定义 532–549 / 引理 82–93 / 实验 E551–E570），与本轮任务域不同源，已封存；本线启用 U/L/E 新编号（定义 U1–U12、引理 L1–L7、实验 E601–E618）。
+> **数据来源纪律**：下文所有榜单数字均来自 `unibot.unitree.com/leaderboard_data.json`（**teaser / 占位表**，由 `gen_leaderboard.py` 生成、官方尚未正式发布），检索日期 **2026-11-17**；凡引用皆标注"teaser"。
 
-> 背景：第 9 轮 MetricVoiceGauge-ACMD（定义 532–539；引理 82–86；实验 E551–E570）。
-> 本轮灵感：「排行榜」×「轻量化设计」
-> **继承纪律**：MetricVoiceGauge 九不变式（CVC-闭环、SpatialCert、RT-CVC、FaultCert、PrimitiveGraph、严格退化链、OTL、GCT、ER）与 v9 的 AC/MW/ID 全部保留。新增组件一律为**可选增强**：任一环节不可用 ⇒ 注入中立元，严格退回 v9 行为，而非行为漂移。
+---
 
-## 0. 核心 IP 设计
+## 0. 本轮结论摘要
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-ACMD v9） |
-|---|---|---|---|
-| IP-340–356 | v9 全部模块 | 继承 | 语义不变；块证书增加 LWC 层级、块选择改由 RL 提供、契约改由 LCC 编译 |
-| IP-357 | LightweightCertifier 轻量层级证书器 | 新增核心模块 | L0 运动学区间硬界（模型无关、O(1)）+ L1 残差收紧 + L2 v9 rollout；anytime 提前接受；硬界只收紧不放宽 |
-| IP-358 | RankLedger 排行榜执行器 | 新增核心模块 | 成对比较 Bradley–Terry/Elo；置信下界排序；δ_rank 迟滞换马；对效用单调变换不变 |
-| IP-359 | LightweightContractCompiler 轻量契约编译器 | 新增核心模块 | 契约表 → 固定时隙；贡献下界排序 → 退化牺牲榜；运行期 O(1) 查表；WCET 可组合 |
-| IP-360 | LightweightGuard 轻量守卫 | 新增模块（并入 LWC） | 50Hz 只跑 L0 硬界 + 排行榜位移检测；不触碰前向模型，p99 ≤ 0.1ms |
+**一句话路线**：把"抓取 / 技能学习 / 地形适应"三个灵感编译成一条**三层栈 + 一层工程层**的可提交系统：
+**接地层**（抓握与接触的显式隐变量）→ **技能层**（任务 × 阶段 token 的专家混合与路由）→ **适应层**（上下文估计与受限在线适配）→ **工程层**（chunk 缝合 / 延迟整形 / 多端口并发 / 可审计）。
 
-**退化链声明（v10 契约化七级）：**
-- Level-1：LWC 的 L2 超差/不可用 ⇒ 仅用 L0/L1，仍保守；
-- Level-2：LWC 全不可用 ⇒ 退回 v9 AC 块证书（12ms rollout）；
-- Level-3：RL 失效 ⇒ 退回 v9 绝对 score 选择；
-- Level-4：LCC 失效 ⇒ 退回 v9 运行时 EDF + ID；
-- Level-5：v9 的 AC/MW/ID 失效 ⇒ v9 定义 536 中立元注入，退回 v8；
-- Level-6：v8 的 DA/SPR/Cal 失效 ⇒ 中立元注入，退回 v7；
-- Level-7：全失效 ⇒ 完整退回 MetricVoiceGauge-OTL-GC-ER v7，再退回 v6。
+**为什么是这个组合（三条量化依据，均来自 teaser 榜 n=256 个 model-task 点）**：
 
-## 1. 符号体系增量（定义 540–549）
+| 证据 | 数值 | 推出的设计 |
+|---|---|---|
+| step_score ≈ 1.337·success + 0.09（R²=0.9955） | 两指标近乎共线 | **只优化终态成功**；步骤分无独立杠杆 → P1 原则 |
+| 8 个头名模型跨任务 Kendall τ 均值 0.064（28 对里仅 1 对 \|τ\|>0.2） | 强弱在任务间准正交 | 通用 = 技能向量 → **单 checkpoint 内的技能路由**（IP-01），oracle 上界 +4.26 分 |
+| 最难任务集中在插入/旋转/细粒度摆放（Plug In Ethernet 均值 17.7、Unlock 20.1、Spell robot 21.8） | 断点在最后一环 | **抓握显式化 + 改抓 + 对齐闭环**（IP-02）为主火力 |
+| 时长与成功无关（任务内 corr −0.011），episode 43.7–45.2 s | "做得快"无红利 | 不为提速牺牲成功率；把预算全花在闭环与适配 |
+
+**合规红线（P5）**：单一 checkpoint、单一 API 服务；不用评测侧私有信息；不依赖未声明的执行语义；不做"读题即硬编码"的分支（会撞上官方"动作统计规律性/可信度"审核与通才赛道精神）。
+
+---
+
+## 1. 创新点清单总表
+
+| 编号 | 名称 | 优先级 | 一句话 | 依赖 | 可验收指标 |
+|---|---|---|---|---|---|
+| **IP-01** | SkillToken-MoE 技能条件化专家混合 | **P0** | 一个 checkpoint 内用「任务 token × 阶段 token」条件化动作专家，把跨任务准正交专长变现 | 数据 + 算力 | 代理评测平均成功率 +2.5 分以上；严格单专家降级形态损失 ≤1.5 分 |
+| **IP-02** | GraspVerify 可抓性判定 + 抓握确认 + 改抓 | **P0** | 把"抓住没有"变成带置信度的隐变量；抓不到就换抓法，甚至改用非抓取原语 | 数据 + 小算力 | 抓握判定 AUROC ≥0.85；不可抓任务的成功率相对提升 ≥25%（相对值） |
+| **IP-03** | ChunkStitch chunk 缝合 + 自适应 chunk + 延迟整形 | **P0** | chunk 边界零尖峰；chunk 长度随"需要精度的相位"自适应；延迟有预算与兜底 | 接口（官方 client） | chunk 边界 jerk 下降 ≥50%；per-step 延迟 p99 ≤ 预算；0 次 ACTION REJECTED |
+| **IP-06** | UniBot-SimBench 代理评测 + 六因子失败分解 | **P0** | 用官方 32 数据集做 OOD 切分与阶段级指标，把 30% 成功率拆成 reach/grasp/transport/align/insert/release | 数据 + 中等算力 | 与真机成功率相关性 \|r\| ≥0.5；六因子分解稳定 |
+| **IP-04** | ContextAdapter 上下文估计 + 受限在线适配 | P1 | episode 内估上下文向量调制策略；必要时只更新小适配器 | 算力 + 合规确认 | 5 类泛化场景下成功率不降；在线适配可一键回滚 |
+| **IP-05** | PosturePrior 全身姿态先验（SMPL→G1 pivot） | P1 | 用官方 WBT（SMPL 人体动作）数据蒸馏"可达姿态"先验，联合输出 arm+gripper+pivot | 数据 + 小算力 | 边界/高位目标任务的可达率与成功率提升；pivot 不引入抖动 |
+| **IP-07** | DualSpace 双动作空间一致性约束 | P2 | joint↔ee 双头 + 一致性正则，部署时按任务簇选头（仍同一 checkpoint） | 数据 + 算力 | 插入类任务相对提升；ee 头与 joint 头一致性误差下降 |
+| **IP-08** | AuditLayer 可审计提交层 | P2 | 延迟看板 / 动作 jerk 上限 / 端口隔离 / 并发压测，对齐官方可信度口径 | 接口 | p99 延迟与 jerk 分布可导出；N 端口并发 8 h 无串扰 |
+
+> **P0 = 本轮必须做**（构成 MVP）；**P1 = 视 Q3/Q4 合规确认结果推进**；**P2 = 有余量再做**（IP-08 的审计部分已并入 IP-03 的工程交付）。
+
+---
+
+## 2. 创新点详述
+
+### IP-01 · SkillToken-MoE 技能条件化专家混合（P0）
+
+- **动机**：teaser 榜里 8 个头名模型在 32 个任务上的相对优劣 Kendall τ 均值仅 0.064，per-task oracle 33.96 vs 最好单模型 29.70（+4.26）。"通用"在数据上是**技能向量**而非标量。
+- **与现有方案的差异**：现有做法是"把一个更大的 VLA 蒸到更多任务上"（榜单 8 家全是此路），强弱由模型容量决定；我们改为**结构上承认技能异质性**：任务 token 选专家、阶段 token 选相位先验，一个 checkpoint 内共享主干 + K 个轻动作专家。
+- **技术可行性**：中–高。①任务 token 可由语言指令的 VLM embedding 检索得到（评测一定给 `observation.language`）；②阶段 token 由在线相位分类器给出（IP-02 的隐变量顺带产出）；③训练标签可从官方数据自动伪标（用腕部/头部帧 + 时序对齐打 reach/grasp/lift/place 标签，VLM 批量打标）。
+- **所需资源**：数据 = 官方 32 数据集（≈32k eps）+ 自动伪标；算力 = 8×A100 / 2–3 天（2–7B 主干 + 小专家头）；接口 = 无额外要求（仍是单 `get_action`）。
+- **落地步骤**：①统一数据读取（LeRobot v3.0 → 训练格式，4 相机 + arm/gripper/EE 对齐评测键名）；②相位伪标 + 人工抽检 5%；③训练 skill-token 基线（K=32 任务 token，单专家）→ 先验证"token 化本身是否涨点"；④加专家混合 + 熵门控；⑤路由消融（oracle 路由 vs 真实路由）量化兑现比例；⑥**合规形态**：先向组委会书面确认"单 checkpoint 内多专家"是否算单模型，同时准备"单专家 + token 条件化"的严格形态并实测其损失（对应 Q3）。
+- **风险**：①合规风险（最高优先，先问再写）；②路由错 → 错上加错，缓解：任务 token 用语言检索（几乎无歧义）+ 阶段 token 低置信时退回通用相位先验；③专家退化，P3 约束"每专家至少服务 2 个任务"，并监控专家间输出近似的坍缩度。
+
+### IP-02 · GraspVerify 可抓性判定 + 抓握确认 + 改抓（P0）
+
+- **动机**：评测接口把手部压成 1 维开合标量，无手指关节、无触觉 ⇒ 抓握状态是**隐变量**；同时 Dex1 单自由度让"拧盖 / 插钥匙 / 捏线"类抓法**物理不可行**。teaser 榜最难任务恰是插入/旋转/细粒度摆放（Plug In Ethernet 17.7、Unlock 20.1），与 RoboDojo"崩在最后对齐/插入/恢复"的观察一致。
+- **与现有方案的差异**：现有方案把抓取当作策略输出的一部分（开环执行一条动作块）；我们把抓取变成**显式的三级判定**：①可抓性（离线/在线判断该抓法是否可行）→ ②抓握确认（腕部几何 + 抓手标量 + EE 速度三信号）→ ③失败响应（重抓 / 换抓法 / 改非抓取原语）。
+- **技术可行性**：高。三信号全部在观测里（腕部相机、`observation.state.*_gripper`、`*_ee_pose_gripper_base`）；训练标签可用数据中的**间接真值**（抓住 = 夹爪闭合后物体随臂运动）自动生成；不可抓性可用几何启发式（物体宽度 vs 夹爪开口、是否为旋转类任务）先做规则版，不必等模型。
+- **所需资源**：数据 = 官方数据（腕部帧 + 抓手 + EE）；算力 = 检测器（ResNet18/ViT-S 级）单卡数小时；接口 = 纯策略内部逻辑（不新增接口字段）。
+- **落地步骤**：①自动生成抓握伪标签（夹爪闭合 + 物体相对腕部位移一致性）；②训练抓握判定器 + 可靠性图（calibration）；③定义介入准则：**仅在置信度 > τ_conf（高阈值）时判定"未抓住"并介入**，其余一律不干预（高精度低召回）；④非抓取原语库（push / sweep / tilt / topple / hook）用数据检索 + 少量真机试错固化；⑤在难任务（Unlock / Plug In Ethernet / Open Pill Bottle）做专项 A/B。
+- **风险**：①**误判不对称**——漏判（以为抓住其实没有）会把可救的失败变成硬失败 ⇒ 保守介入 + 最大重抓次数上限（≤3）+ 介入后仍失败的回退策略；②伪标签在未见物品上漂移 ⇒ 用置信度门控 + 每 episode 自适应阈值（用 episode 内信号一致性自校准）；③非抓取原语可能破坏场景（推倒别的物体）⇒ 限用于单物体场景并设禁区。
+
+### IP-03 · ChunkStitch chunk 缝合 + 自适应 chunk + 延迟整形（P0）
+
+- **动机**：接口是"逐 action chunk 调用"，chunk 边界的动作不连续 = 机械尖峰 = 抓取瞬间最易失败；官方明确采集 per-step 延迟波动与动作统计规律性并可能据此评估可信度。
+- **与现有方案的差异**：通用 VLA 固定 chunk（常见 8–16 步）→ 我们让 chunk 长度成为**相位相关的精度调节器**：抓握/对齐相位用短 chunk（1–2 步，高频反馈），接近/搬运相位用长 chunk（8–16 步，低延迟与低抖动）；并保证 chunk 边界 C0 连续（下一块首动作 = 上一块末端一阶外推 + 残差）。
+- **技术可行性**：中–高，但**必须先用官方 `run_client.py` 复刻评测器语义**（Q5）：chunk 如何执行、是否插值、是否重置控制器——未验证前不做任何"利用未声明行为"的优化（P5 红线）。
+- **所需资源**：接口 = 官方 example（server/client）；算力 = 小；数据 = 无（可用官方数据回放做动作连续性自检）。
+- **落地步骤**：①用 `run_server.py` + `run_client.py` 复刻评测闭环，测出真实 per-step 延迟分布与 chunk 语义；②实现缝合器（一阶外推 + 残差，权重由数据回归得到）；③实现相位自适应 chunk 调度；④实现延迟兜底（超预算则返回上一 chunk 的安全延拓 + 减速标记）；⑤导出审计看板（延迟 p50/p99、jerk 分布、chunk 边界失配计数）。
+- **风险**：①评测端可能自带插值/平滑 ⇒ 我们的缝合反而叠加抖动 ⇒ 以真机 A/B 决定是否启用（默认可关）；②短 chunk 会增加调用次数 ⇒ 延迟与并发压力上升（须按 N 端口做压测）；③过度平滑降低成功率 ⇒ 平滑只作用在关节速度残差，不改均值。
+
+### IP-04 · ContextAdapter 上下文估计 + 受限在线适配（P1）
+
+- **动机**：5 类泛化场景本质是**测试时分布偏移**；训练期域随机化是公共做法、收益已被摊薄；而本赛制允许选手自行部署、远程反复提交 ⇒ 推理期适配是"赛制红利"。
+- **与现有方案的差异**：别人做训练期随机化；我们做**推理期上下文估计**（episode 前 1–3 s 估计上下文向量 c：背景/光照/干扰物密度/目标位姿/场景拥挤度 → 用 FiLM/LoRA 调制视觉 token 与动作专家）+ **受限在线无标签适配**（只更新 ≤1% 参数的适配器，带 trust-region 与回滚）。
+- **技术可行性**：中。上下文估计用冻结主干 + 轻量探针即可；在线适配（Tent / 熵最小化）可行但**必须先确认合规**：跨 episode 更新权重是否违反"自行部署"精神。
+- **所需资源**：算力 = 推理侧需 1–2× 显存用于上下文编码；数据 = 官方数据 + 自建 OOD 变体（背景/干扰物增强）；接口 = 无新增字段。
+- **落地步骤**：①自建 5 轴 OOD 增强集（位置/干扰物/背景/未见物体/人为干扰的可控合成）；②训练上下文编码器（只做 c 的回归/自监督）；③FiLM 调制 + 消融；④在线适配严格限制在适配器 + trust-region + 每 episode 上限 + 随时回滚；⑤若组委会不认可跨 episode 更新 → 只保留 episode 内上下文调制（零风险版本）。
+- **风险**：①在线适配可能越改越差（无标签目标 ≠ 任务目标）⇒ 必须有"适配前后对比闸门"，变差即回滚；②上下文估计在拥挤场景失效 ⇒ 用保守回退；③合规疑问 ⇒ 双形态提交。
+
+### IP-05 · PosturePrior 全身姿态先验（SMPL → G1 pivot）（P1）
+
+- **动机**：桌面任务也有"地形"：台面高度、桌沿距离、目标在身体外侧 ⇒ 纯手臂策略会伸不到或破坏平衡。官方数据含 `G1_WBT_*` 系列，提供 **SMPL 24 节点轴角人体动作**与 `action.robot_wrist_ref`，可作为人体姿态先验；评测接口也**确实提供** `observation.state.lower_body`(15) 与 `action.pivot`(7)。
+- **与现有方案的差异**：榜单模型普遍只出 arm+gripper（pivot 常被忽略或写成常量）；我们把**身体姿态当作可达性变量**显式建模，用人体先验蒸馏"给定手部目标，合理的腰/腿 pivot 是什么"。
+- **技术可行性**：中。WBT 数据是 Inspire/BrainCo/Dex1 混合手型，G1 Dex1 迁移有限 ⇒ 用它学**姿态分布先验**而非精确动作；pivot 语义需实测（先只读 obs 做可达性估计，回退 pivot=保持）。
+- **所需资源**：数据 = 官方 WBT 数据集；算力 = 小（一个小映射网络）；接口 = 用现成的 `action.pivot` 与 `lower_body`。
+- **落地步骤**：①解析 WBT 的 SMPL 轴角与 pivot 对应；②训练姿态先验映射（手部目标 → pivot 分布）；③策略头改为联合输出 arm+gripper+pivot，pivot 由先验 + 任务调制；④真机验证 pivot 是否被跟踪、是否引入抖动。
+- **风险**：pivot 语义未知 / 被评测端忽略 ⇒ 收益可能为 0，故设为 P1（做一次"零成本探测"实验后再决定投入）。
+
+### IP-06 · UniBot-SimBench 代理评测 + 六因子失败分解（P0）
+
+- **动机**：真机评测是**预约时段**（极稀缺），且官方榜单尚未正式发布（当前为 teaser 占位表）⇒ 没有可信的内部标尺，一切创新都无法迭代。
+- **与现有方案的差异**：常见做法是"在若干真机任务上试"，样本量小、无 OOD 控制、不可归因；我们建**代理评测**：用官方 32 个数据集构造留出切分（留出物体实例 / 背景 / 位置 / 干扰物 / 人为遮挡），并定义**阶段级指标**，把终态成功率分解为六个近独立因子的乘积
+  `P(success) ≈ P(reach)·P(grasp|reach)·P(transport|·)·P(align|·)·P(insert/place|·)·P(release|·)`。
+- **技术可行性**：中–高。数据齐备（官方 32 份 LeRobot v3.0）；难点是"阶段标签"——可用 VLM 批量打标 + 腕部帧几何规则交叉验证；并在**真机 A/B 时段**用少量样本标定"代理指标 ↔ 真机成功率"的相关性。
+- **所需资源**：数据 = 官方 32 份；算力 = 中（VLM 打标 + 小评估器）；接口 = 无。
+- **落地步骤**：①统一下载/解码管线（AV1 → 帧）；②阶段标注器（规则 + VLM + 人工抽检）；③六因子指标 + OOD 切分；④真机锚点标定（每轮 2–3 个真机时段取样，做 Spearman 相关）；⑤把分解结果作为其他 IP 的"边际收益排序器"。
+- **风险**：代理指标与真机相关性可能不足（这是最大风险）⇒ 预注册"若 |r|<0.3 则砍掉一切依赖代理指标的微调"（见 §9 剪枝预案）；阶段标签噪声 ⇒ 双标注器一致性检查。
+
+### IP-07 · DualSpace 双动作空间一致性约束（P2）
+
+- **动机**：`control_space` ∈ {joint, ee} 二选一且互斥；官方数据同时提供 joint 标签与 EE 标签 ⇒ 可以离线比较两种控制空间在插入类任务上的适配度（joint 适合长程与力控，ee 适合末端精调）。
+- **与现有方案的差异**：现有做法是"选一个空间然后一条路走到底"；我们训练同一 checkpoint 的双头，并用 **ee 目标 → IK → joint** 的一致性损失互约束（IK 代理可直接从官方数据里 joint↔ee 对回归得到），部署时按任务簇选头。
+- **技术可行性**：中。IK 代理好做；双头会轻微增加推理成本。
+- **所需资源**：数据 = 官方数据；算力 = +30%；接口 = `control_space` 声明（二选一，切换不影响单模型合规）。
+- **落地步骤**：①回归 IK 代理并验证（EE 误差 <1 cm）；②训练双头 + 一致性正则；③按任务簇做 A/B 决定部署哪个头；④保留"两套头都在一个 checkpoint 内"的合规叙述。
+- **风险**：EE 目标在基座系下的跟踪误差未知（基座漂移）⇒ 必须先做"零成本探测"实测再投入。
+
+### IP-08 · AuditLayer 可审计提交层（P2，审计部分并入 IP-03）
+
+- **动机**：官方 §6 明示"可将 per-step 响应延迟及其波动、返回动作的统计规律性等数据合并评估结果可信度"，并建议"保持延迟平滑稳定、动作良构、无异常离群、避免不规则交互模式"。这是**风险**也是**机会**：在成功率接近时，可审计性是相对优势。
+- **与现有方案的差异**：多数提交只保证"能跑"；我们把可信度要求变成**可导出的工程产物**（延迟直方图、jerk 上限告警、chunk 边界连续性断言、N 端口并发与状态隔离自检报告）。
+- **技术可行性**：高（工程活）。
+- **所需资源**：接口 = 官方 client；算力 = 极小；数据 = 无。
+- **落地步骤**：①延迟/jerk 采集埋点；②并发压测脚本（N 端口 × 8 h，验证 `reset()` 与历史状态隔离）；③动作离群检测与自动限幅；④产出自证报告。
+- **风险**：过度平滑 / 限幅会压低成功率 ⇒ 平滑只作用残差且限幅阈值由数据分布定；动作"过于规律"本身可能被视为脚本化 ⇒ 保留策略固有的随机性（温度参数），不做人工"拟人化"噪声。
+
+---
+
+## 3. 符号与定义（U1–U12）
 
 | 符号 | 含义 |
 |---|---|
-| 𝒞 = (𝒞⁰, 𝒞¹, 𝒞²) | 轻量证书梯子：模型无关硬界 → 残差收紧 → 全 rollout |
-| ĝ^(ℓ), ê^(ℓ) | 第 ℓ 层给出的间隙下界 / 力矩上界（保守方向：越小 / 越大越保守） |
-| w_ℓ | 第 ℓ 层计算代价（L0 0.05ms，L1 0.4ms，L2 12ms） |
-| R_k | 第 k 步的可达集外近似（区间扩张，Minkowski 和） |
-| ε_ulp | 浮点安全余量（≥ 8 ULP，见定义 541） |
-| 𝔏_t | 排行榜：候选块集合上的带 CI 潜在效用估计 |
-| u_i, n_i | 候选 i 的潜在效用均值与比较次数 |
-| q_i = LCB(u_i) | 悲观排序分数（定义 543） |
-| δ_rank | 排行榜换马迟滞裕度 |
-| ≺_deg | 退化牺牲榜全序（贡献下界升序，安全关键模块置尾） |
-| ℬ_m | 模块 m 的层级预算（允许细化到的最大层） |
-| ρ_τ | 相邻两块排行榜的 Kendall τ 稳定性 |
+| `π` | 策略：观测 + 语言指令 → 动作块（单一 checkpoint） |
+| `z_task` | 任务 token（由语言指令检索，∈{1..32}，允许 OOD 落入通用 token） |
+| `z_phase` | 相位 token（∈{reach, grasp, lift, transport, align, insert, place, release, unknown}） |
+| `E_k` | 第 k 个动作专家（轻量头，共享主干） |
+| `g_t` | 抓握隐变量 ∈[0,1]：P(已抓稳) |
+| `c_t` | 上下文向量（背景/光照/拥挤度/目标位姿摘要） |
+| `T_a` | action chunk 长度（官方 `action_chunk_size`） |
+| `φ(·)` | 相位特征（腕部几何 + 抓手标量 + EE 速度的融合） |
+| `Π` | 非抓取原语库 {push, sweep, tilt, topple, hook} |
+| `Ŝ` | 代理评测六因子分解 {reach, grasp, transport, align, insert, release} |
+| `L_τ` | 延迟整形器：p99 预算 τ 与超时兜底策略 |
+| `Ψ` | 缝合器：chunk 边界的一阶外推 + 残差 |
 
-**新增定义 540（轻量证书梯子 LightweightCertificate Ladder）** 对候选块 ζ=(a^{1:K})，证书是一族逐步收紧的保守估计 𝒞⁰, 𝒞¹, 𝒞²。定义组合算子
-```
-G^(ℓ) = max_{j≤ℓ} ĝ^(j),   E^(ℓ) = min_{j≤ℓ} ê^(j)
-```
-每层独立保守（ĝ^(j) ≤ 真实最小间隙，ê^(j) ≥ 真实最大力矩），故取 max/min 后仍保守且单调收紧：G⁰ ≤ G¹ ≤ G² ≤ g_min，E⁰ ≥ E¹ ≥ E² ≥ e_max。证书有效 ⇔ G^(ℓ) ≥ d_safe ∧ E^(ℓ) ≤ τ_eff ∧ γ̂_grasp ∧ Δ_dom < τ_dom ∧ risk_SLAM < τ_SLAM（后两项继承 v9 定义 496）。
+**定义 U1（技能条件化策略）** `π(a_{1:T} | o, ℓ, z_task, z_phase) = E_{k(z_task)}( V(o, ℓ, z_task, z_phase), Ψ(a^{prev}) )`，其中 `k(z_task)` 为专家选择函数，`ℓ` 为语言指令，`Ψ` 为 chunk 缝合项（U7）。
+**定义 U2（任务 token 检索）** `z_task = argmax_k cos( E_L(ℓ), e_k )`，`e_k` 为离线从官方数据语言指令聚类得到的任务原型；相似度低于阈值 `τ_l` 时取通用 token `z_gen`。
+**定义 U3（相位分类器）** `z_phase = argmax_p P(p | o_{t-k:t}, φ(o_{t-k:t}))`，`k` 为叠帧长度（由 `obs_delta_indices` 声明）。
+**定义 U4（抓握隐变量）** `g_t = σ(f_θ(φ_t, v_ee,t, Δgrip_t))`，`v_ee` 为末端线速度，`Δgrip` 为抓手开合差分；三者分别对应"几何贴合""随臂运动""夹持发生"。
+**定义 U5（可抓性）** `P_feasible(o, τ_task) ∈ {0,1}`：在 Dex1 单自由度约束下，目标抓法是否可行；不可行时输出替代原语 `Π` 中的一个。
+**定义 U6（介入准则）** 仅当 `g_t < τ_conf`（高置信阈值）且 `P_feasible=1` 且 `n_retry < 3` 时触发重抓；否则不干预（高精度、低召回）。
+**定义 U7（chunk 缝合）** `a^{new}_1 = a^{prev}_{T} + Δt·v^{prev}_{T} + r`，`r` 为残差（由官方数据回归得到），保证 chunk 边界位置连续（C0）与速度连续（C1 近似）。
+**定义 U8（自适应 chunk 调度）** `T_a(z_phase) = T_hi`（transport/place，8–16）否则 `T_lo`（reach/grasp/align，1–4）；切换仅在块边界且受最小驻留时间约束。
+**定义 U9（上下文向量）** `c_t = g_c(o_{t:t+K})`，由冻结主干 + 探针产生；用于 FiLM 调制视觉 token 与专家门控。
+**定义 U10（受限在线适配）** 更新集合限定为 `θ_ada`（≤1% 参数），步长受限，`‖θ_ada − θ_ada^0‖ ≤ ρ`，episode 内步数上限 `N_ada`；每 episode 末与"未适配"分支做一次闸门比较，变差即回滚。
+**定义 U11（六因子分解）** `P(success) ≈ ∏_{j∈Ŝ} P_j`，`P_j` 由代理评测的阶段级标注估计；用于定位瓶颈因子。
+**定义 U12（延迟预算）** `L_τ`：给定每步预算 `τ`，推理超时则返回 `Ψ` 的延拓动作并标记 `degraded`，累计降级次数进入审计报告。
 
-**新增定义 541（L0 运动学硬界 Model-Free Hard Bound）** 给定动力学包络 v ∈ [0,v_max]、a ∈ [a_min,a_max] 与障碍地图膨胀半径 r_o，构造可达集外近似
-```
-R_0 = {s},   R_k = R_{k-1} ⊕ [v_min,v_max]Δt ⊕ ½[a_min,a_max]Δt²
-ĝ⁰_k = dist_lower(R_k, O ⊕ Ball(r_o)) − ε_ulp,   ĝ⁰ = min_k ĝ⁰_k
-ê⁰ = max_k |τ(a^{1:k})|_upper + ε_ulp
-```
-其中 dist_lower 对外近似集合取下界（保守偏小），O 为障碍并集。L0 只依赖动力学界、地图与浮点余量，不含任何学习参数，故对域偏移**确定性不变**。
+---
 
-**新增定义 542（排行榜执行器 RankLedger）** 维护候选块集合上的成对比较。比较结果 y∈{0,1} 服从 Bradley–Terry：P(i≻j)=σ(u_i−u_j)，u_i=wᵀφ(ζ_i)。在线逻辑回归更新 w 与协方差 Σ，置信下界
-```
-q_i = wᵀφ_i − β_t·‖φ_i‖_{Σ^{-1}},   β_t = z·√(d·log(1+t))
-```
-仅对通过硬证书过滤的可行集 ℱ_t 排序。
-
-**新增定义 543（排行榜迟滞 Rank Hysteresis）** 设在位块为 i₀，挑战者为 i₁=argmax_{i∈ℱ} q_i。仅当
-```
-q_{i₁} > ucb(i₀) + δ_rank,   ucb(i) = wᵀφ_i + β_t‖φ_i‖_{Σ^{-1}}
-```
-才换马；否则继续执行 i₀。换马只在 5Hz 块边界评估，50Hz 守卫不换块。
-
-**新增定义 544（anytime 细化策略 Anytime Refinement）** 每模块/每块有层级预算 ℬ，候选评估按层推进：
-```
-cert = L0(ζ)
-while not accept(cert) and cert.level < ℬ:
-    cert = refine(cert)            # L0→L1→L2
-accept ⇔ cert.G ≥ d_safe ∧ cert.E ≤ τ_eff
-reject if cert.level == ℬ and not accept    # 预算内无法确认 ⇒ 保守拒绝
-```
-L0 通过即提前返回；L2 仅在 L1 不能判定时触发。
-
-**新增定义 545（退化牺牲榜 Degradation Leaderboard）** 由编译期归因下界 c_m^LB 给出全序
-```
-eligible = {m : φ_m^elig = true}
-≺_deg:  按 (c_m^LB, −Ŵ_m) 升序排列 eligible，安全关键模块 φ^elig=false 置尾且永不牺牲
-```
-预算不足或故障时，按 ≺_deg 从前往后注入 v_m^⊥，直到预算可行；安全关键模块不参与牺牲。
-
-**新增定义 546（轻量契约编译器 LCC）** 输入契约表 {κ_m} 与归因下界，输出
-```
-Schedule = (固定时隙 [slot_1..slot_M],  ≺_deg,  {ℬ_m},  每模块 v_m^⊥ 表)
-```
-静态校验：(i) Σ_m Ŵ_m ≤ B_dec；(ii) 每个时隙内 deadline 单调；(iii) ≺_deg 与 v9 表 536 的中立元映射一致；(iv) 浮点余量 ε_ulp 已计入所有硬界。任一校验失败 ⇒ 拒绝编译并整体退回 v9 运行时表。
-
-**新增定义 547（轻量守卫 LightweightGuard）** 50Hz 守卫只用三项廉价检查：L0 硬界的停车不变式、当前块 L0 证书是否仍有效、在位块是否被排行榜标记为“已失格”。不做 rollout、不做 EDF、不更新归因。代价 O(1)。
-
-**新增定义 548（排行榜稳定性 Kendall τ）** 相邻两块排行榜排序的 Kendall 秩相关
-```
-ρ_τ(t) = 1 − 2·(#逆序对) / (n(n−1)/2)
-```
-用于长跑审计：ρ_τ 长期过低意味着比较噪声主导，应冻结换马或退回 v9 绝对评分。
-
-**新增定义 549（层级预算分配 Level Budget）** 决策预算剩余 B_t 下，按价值密度分配层级：
-```
-ℬ_m = max{ℓ : Σ_{j∈active} w_{j→ℓ} ≤ B_t}
-```
-安全关键模块的 ℬ_m 固定为 L0（始终可用），非关键块才允许升到 L1/L2。
-
-## 2. 关键算法骨架
+## 4. 关键算法骨架
 
 ```python
-# IP-357 LightweightCertifier：先硬后软的层级证书
-class LightweightCertifier:
-    def __init__(self, kinematics, residual_model, d_safe=0.15,
-                 beta=0.02, ulp=1e-6, K_max=10):
-        self.kin, self.model = kinematics, residual_model
-        self.d_safe, self.beta, self.eps = d_safe, beta, ulp
-        self.K_max, self.w = K_max, {0: 0.05, 1: 0.4, 2: 12.0}
+# ===== IP-03 + IP-01 + IP-02 + IP-04 的统一策略服务（单 checkpoint、单 API）=====
+class UniBotSAGEPoicy:                       # 需暴露 metadata / get_action / reset
+    def __init__(self, ckpt, ports=range(8765, 8768), N=3, tau_budget_ms=105):
+        self.model = load_single_checkpoint(ckpt)   # 主干 + E_1..E_K + 专家门控
+        self.gv = GraspVerifier()                     # IP-02: U4 抓握隐变量
+        self.fc = PhaseClassifier()                   # IP-02/U3 相位
+        self.ca = ContextAdapter()                    # IP-04: U9
+        self.st = Stitcher()                         # IP-03: U7 缝合
+        self.audit = AuditLog()                      # IP-08
+        self.sessions = {}                           # 每端口一份 episode 状态（隔离！）
 
-    def level0(self, state, actions):
-        reach, g_min, e_max = {state.p}, float('inf'), 0.0
-        for k, a in enumerate(actions):
-            reach = self.kin.minkowski_step(reach, a, state.dt)
-            g_min = min(g_min, self.kin.dist_lower(reach, state.obstacles))
-            e_max = max(e_max, self.kin.effort_upper(actions[:k + 1]))
-        return Cert(g_min - self.eps, e_max + self.eps, level=0)
+    @property
+    def metadata(self):
+        return {
+            "control_space": "joint",                      # 或 "ee"（与 IP-07 的选择一致）
+            "obs_delta_indices": {                         # 只传需要的键 = 同时省带宽与降延迟
+                "observation.language": [0],
+                "observation.images.cam_left_high":  [0],
+                "observation.images.cam_right_high": [0],
+                "observation.images.cam_left_wrist": [-2, 0],
+                "observation.images.cam_right_wrist": [-2, 0],
+                "observation.state.left_arm":  [-4, -2, 0],
+                "observation.state.right_arm": [-4, -2, 0],
+                "observation.state.left_ee_pose_gripper_base":  [-2, 0],
+                "observation.state.right_ee_pose_gripper_base": [-2, 0],
+                "observation.state.left_gripper":  [-2, 0],
+                "observation.state.right_gripper": [-2, 0],
+                "observation.state.lower_body": [-2, 0],
+            },
+            "image_resize": {                              # 评测端 cv2 缩放，头/腕相机降分辨率
+                "observation.images.cam_left_high":  [240, 320],
+                "observation.images.cam_right_high": [240, 320],
+                "observation.images.cam_left_wrist":  [240, 320],
+                "observation.images.cam_right_wrist": [240, 320],
+            },
+            "action_chunk_size": 8,                        # 运行时按相位自适应（U8）
+            "token": os.environ["UNIBOT_SUBMISSION_TOKEN"],
+        }
 
-    def refine(self, state, actions, cert):
-        if cert.level == 0:                       # L1：带盖章的残差上界
-            r = self.model.residual_bound(state, actions[0]) + self.beta
-            return Cert(cert.g - r, cert.e + r, level=1)   # 独立保守，不求更紧
-        pred = self.model.rollout(state, actions)  # L2：v9 全 rollout
-        return Cert(min(pred.clearance) - self.beta,
-                    max(pred.effort) + self.beta, level=2)
+    def reset(self, port=None):                 # 每 episode 调用；状态必须按端口隔离
+        s = self.sessions.setdefault(port, Session())
+        s.reset()
 
-    def certify(self, state, actions, budget_level=2):
-        cert = self.level0(state, actions)
-        while True:
-            if cert.g >= self.d_safe and cert.e <= state.tau_eff:
-                return cert, True                 # 任意层提前接受（引理 88）
-            if cert.level >= budget_level:
-                return cert, False                # 预算内无法确认 ⇒ 保守拒绝
-            cert = self.refine(state, actions, cert)
+    def get_action(self, obs, port=None):
+        s = self.sessions[port]
+        t0 = time.perf_counter()
+        phase = self.fc.predict(obs)                       # z_phase
+        ztask = self.task_router(obs["observation.language"])   # z_task（U2）
+        c = self.ca.encode(obs)                            # 上下文（U9，失败则 None）
+        T_a = self.chunk_len(phase)                        # U8 自适应 chunk
 
+        # ---- IP-02：抓握确认（只判"未抓住"，高精度低召回）----
+        g = self.gv.prob(obs)                              # U4
+        s.n_retry = s.n_retry + 1 if (g < self.tau_conf and phase in GRASP_PHASES) else 0
+        if s.n_retry >= 3:                                 # U6 上限，防死循环
+            prim = self.nonpreh_primitive(obs)             # U5: 推/扫/倾倒
+            if prim is not None:
+                return self.pack(prim, T_a, obs)
 
-# IP-358 RankLedger：以序代值 + 迟滞换马
-class RankLedger:
-    def __init__(self, d=16, z=1.64, delta_rank=0.15, eta=0.08):
-        self.w = np.zeros(d); self.Sigma = np.eye(d)
-        self.z, self.delta_rank, self.eta = z, delta_rank, eta
-        self.incumbent, self.prev_order = None, None
+        # ---- IP-01：技能条件化动作专家（单 checkpoint 内）----
+        a = self.model.act(obs, ztask, phase, c, T_a)      # 专家门控 + FiLM 调制
+        a = self.st.stitch(a, s.last_action)               # U7 chunk 缝合（C0 连续）
+        a = self.audit.clamp_and_log(a, obs, t0, self.tau_budget_ms)  # U12 + 审计
+        s.last_action = a[-1]
+        return self.pack(a, T_a, obs)
 
-    def observe(self, winner, loser, phi_w, phi_l):
-        p = 1.0 / (1.0 + math.exp(-(self.w @ (phi_w - phi_l))))
-        g = (1.0 - p) * (phi_w - phi_l)
-        self.Sigma += np.outer(phi_w - phi_l, phi_w - phi_l)
-        self.w = self.w + self.eta * np.linalg.solve(
-            self.Sigma + 1e-6 * np.eye(len(self.w)), g)
-
-    def _ci(self, phi):
-        radius = self.z * math.sqrt(max(0.0, phi @ np.linalg.solve(
-            self.Sigma + 1e-6 * np.eye(len(phi)), phi)))
-        return self.w @ phi, radius
-
-    def lcb(self, phi): u, r = self._ci(phi); return u - r
-    def ucb(self, phi): u, r = self._ci(phi); return u + r
-
-    def select(self, feasible):
-        challenger = max(feasible, key=self.lcb)
-        if self.incumbent is None or self.incumbent not in feasible:
-            self.incumbent = challenger; return challenger
-        if (self.lcb(challenger) >
-                self.ucb(self.incumbent) + self.delta_rank):
-            self.incumbent = challenger           # 迟滞换马
-        return self.incumbent
-
-
-# IP-359 LCC：契约静态化 + 牺牲榜
-class LightweightContractCompiler:
-    def __init__(self, B_dec=20.0):
-        self.B_dec = B_dec
-
-    def compile(self, contracts, contrib_lb):
-        assert sum(c.wcet_ms for c in contracts) <= self.B_dec
-        slots = sorted(contracts, key=lambda c: (c.priority, c.deadline_ms))
-        eligible = [c for c in contracts if c.distill_eligible]
-        critical = [c for c in contracts if not c.distill_eligible]
-        sacrifice = sorted(eligible,
-                           key=lambda c: (contrib_lb[c.name], -c.wcet_ms))
-        schedule = Schedule(slots, sacrifice + critical, self.B_dec)
-        schedule.assert_bitwise_equiv_v9(contracts)   # 逐位等价校验
-        return schedule
-
-    def degrade_order(self, schedule, budget_remaining):
-        order = []
-        for c in schedule.sacrifice:                  # 牺牲榜自前向后
-            if budget_remaining >= 0:
-                break
-            if c.distill_eligible:
-                order.append(c.name)                  # 仅 eligible 可牺牲
-                budget_remaining += c.wcet_ms
-        return order
-
-
-# 主闭环集成：MetricVoiceGauge-LRC
-def metricvoicegauge_round_10(M, s, obs, audio_stream=None, ell=None, ...):
-    # ---- LCC 编译期表：固定时隙 + 每模块层级预算 + 牺牲榜 ----
-    if schedule is None:
-        schedule = compiler.compile(contract_table, distiller.contrib_lb())
-    ctx = mw_compile_time_ctx(schedule)
-
-    # ---- v9 感知侧（契约化，原样继承）----
-    results = middleware.run_cycle(runners_perception, ctx=ctx)
-    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
-
-    # ---- 5Hz 块边界：LWC 分层证书 + RL 排行榜选块 ----
-    if current_chunk is None or current_chunk.exhausted:
-        feasible = []
-        for cand in policy.sample_sequences(ctx.state, K_max, n=64):
-            cert, ok = certifier.certify(
-                ctx.state, cand, budget_level=schedule.level_budget('AC'))
-            if ok and abort_points(ctx.state, cand):
-                feasible.append(Feasible(cand, cert))
-        current_chunk = rank_ledger.select(feasible) if feasible else \
-                        single_step_fallback(ctx.state)   # 极端保守回退
-
-    # ---- 50Hz 轻量守卫：只跑 L0 硬界 + 失格检测（≤0.1ms）----
-    verdict, k_next = lightweight_guard(current_chunk, k_exec, live_obs)
-    if verdict == 'abort':
-        current_chunk.execute_safe_stop_at(k_next)
-        current_chunk = None
-    else:
-        execute(current_chunk.actions[k_next])
-
-    # ---- v9 继承路径 + ID（ID 仅做离线/长周期归因，写回 contrib_lb）----
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v9_path(ctx)
-    if cycle_idx % 500 == 0:
-        contrib_lb = distiller.update_lower_bounds()
-    return C, spatial_cert, claims, metrics, rewards
+    def pack(self, a, T_a, obs):
+        out = {
+            "meta.token": os.environ["UNIBOT_SUBMISSION_TOKEN"],
+            "action.left_gripper":  a["left_gripper"][:, None].astype(np.float32),
+            "action.right_gripper": a["right_gripper"][:, None].astype(np.float32),
+            "action.pivot": a["pivot"].astype(np.float32),          # 若采用 IP-05
+            "action.left_arm":  a["left_arm"].astype(np.float32),   # joint 空间
+            "action.right_arm": a["right_arm"].astype(np.float32),
+        }
+        return out
 ```
 
-## 3. 推导
+```python
+# ===== IP-02：抓握隐变量 + 可抓性 + 非抓取原语 =====
+class GraspVerifier:
+    """三信号：腕部几何贴合 / 末端随动 / 夹持发生"""
+    def prob(self, obs):
+        w_l, w_r = obs["observation.images.cam_left_wrist"][-1], obs["observation.images.cam_right_wrist"][-1]
+        v_l = ee_velocity(obs["observation.state.left_ee_pose_gripper_base"])
+        v_r = ee_velocity(obs["observation.state.right_ee_pose_gripper_base"])
+        g_l = obs["observation.state.left_gripper"][-1]; g_r = obs["observation.state.right_gripper"][-1]
+        f = self.net(torch.cat([feat(w_l, w_r), v_l, v_r, g_l, g_r]))
+        return torch.sigmoid(f).item()
 
-**引理 87（L0 硬界的模型无关可靠性）** 设真实状态转移满足 v∈[0,v_max]、a∈[a_min,a_max]，障碍地图与膨胀半径无误，则 ∀k：R_k ⊇ 真实可达位置集合，故 ĝ⁰_k = dist_lower(R_k, O⊕Ball(r_o)) − ε_ulp ≤ 真实最小间隙。证明：区间扩张对每一维取包络，Minkowski 和对凸化误差封闭；dist_lower 对外近似集合取下界；ε_ulp ≥ 8 ULP 覆盖单次浮点舍入在 K_max 步内的累计上界。该证明不含任何学习参数，故对任意域偏移成立。∎
-
-**引理 88（anytime 保守性与单调收紧）** 若每层 ĝ^(j) ≤ g_min、ê^(j) ≥ e_max，则组合 G^(ℓ)=max_{j≤ℓ}ĝ^(j)、E^(ℓ)=min_{j≤ℓ}ê^(j) 仍保守，且 G⁰ ≤ G¹ ≤ G² ≤ g_min、E⁰ ≥ E¹ ≥ E² ≥ e_max。故任意层提前接受都 sound；预算截断只导致保守拒绝，不会导致错误接受。证明：对有限个各自 ≤ g_min 的数取 max 仍 ≤ g_min，且随集合扩大单调不减；min 对称。∎
-
-**引理 89（排行榜的单调不变性与遗憾界）** 若 u_i = f(v_i) 且 f 严格单调，则 Bradley–Terry 的成对似然序不变，排行榜的 argmax 选择不变。进一步，若比较噪声次高斯、特征维数 d 固定，则采用置信下界选择（定义 542/543）的累计遗憾
+def nonpreh_primitive(obs):
+    """Dex1 单自由度下不可抓时的退路：推 / 扫 / 倾倒 / 钩（按几何与任务先验选）"""
+    if is_rotation_task(obs["observation.language"]):      # 拧盖 / 插钥匙 → 推倒 / 钩
+        return PUSH
+    if object_wider_than_gap(obs):                          # 宽物 → sweep
+        return SWEEP
+    if target_out_of_reach(obs):                            # 够不到 → tilt / topple
+        return TOPPLE
+    return None
 ```
-Reg(T) ≤ O(d·√(T·log T))
+
+```python
+# ===== IP-03：chunk 缝合 + 自适应 chunk + 延迟兜底 =====
+class Stitcher:
+    def stitch(self, a_new, a_prev_last):
+        if a_prev_last is None: return a_new
+        v = self.v_est(a_prev_last)                 # 由相邻动作差分估计末端速度
+        head = a_prev_last + self.dt * v + self.r   # U7: 位置连续 + 速度近似连续
+        return np.concatenate([head[None], a_new[1:]], axis=0)
+
+class LatencyGuard:
+    def __call__(self, a, obs, t0, tau):
+        el = (time.perf_counter() - t0) * 1000
+        if el > tau:
+            a = self.safe_extend(a)      # 末动作延拓 + 减速标记
+            self.audit.mark_degraded(el)
+        return a
 ```
-即次线性；当且仅当效用不可分或噪声非平稳时界退化。证明：标准 Bradley–Terry logistic bandit 的椭圆置信集覆盖 + LCB 选择标准论证；单调不变性来自 σ(f(v_i)−f(v_j)) 保序。∎
 
-**引理 90（迟滞换马的无 Zeno 性）** 换马仅在块边界（5Hz）评估，且要求 q_{i₁} > ucb(i₀) + δ_rank（δ_rank>0）。若潜在效用分段平稳，则在任一段内换马次数 ≤ O(K·log T / δ_rank²)（高概率）；结合 v9 引理 85，系统无 Zeno 抖振。证明：CI 半径随 n_i 以 1/√n 收缩；每次换马要求在 δ_rank 尺度上置信区间分离，尚未充分比较的对子无法反复翻转；块边界离散化给出最小驻留时间 200ms。∎
-
-**引理 91（编译期契约的 v9 等价）** 若编译期归因下界冻结为 v9 ID 的当前 c_m，且时隙按 (priority, deadline) 与 v9 EDF 一致排序，则 LCC 的静态调度与 v9 运行时 MW 在每个周期产生相同的模块执行集合与相同的 v_m^⊥ 注入结果；逐位等价由 v9 表 536 保证。证明：静态 EDF 在 deadline 固定时与运行时 EDF 同序；牺牲榜仅重排 eligible 模块的跳过顺序，其注入值仍取自同一 v_m^⊥ 表；安全关键模块永不进入牺牲榜，故 v9 引理 84 的资格约束保持。∎
-
-**引理 92（层级预算的可组合 WCET）** 若每块在层级预算 ℬ 下的最坏代价为 w(ℬ)=Σ_{j≤ℬ} w_j，且块生成按 5Hz、守卫按 50Hz 摊销，则每周期最坏执行时间
+```python
+# ===== IP-06：六因子分解代理评测 =====
+def failure_taxonomy(episode, phase_labels):
+    """P(success) ≈ P(reach)·P(grasp|reach)·P(transport)·P(align)·P(insert)·P(release)"""
+    factors = {}
+    for j in ["reach", "grasp", "transport", "align", "insert", "release"]:
+        factors[j] = 1.0
+    prev_ok = True
+    for j in factors:
+        factors[j] = float(phase_labels.get(j, False))
+        if prev_ok and not factors[j]:
+            prev_ok = False
+            factors[j] = 0.0            # 首个失败点之后的因子被吸收
+    return factors
 ```
-B_cycle ≤ w_perc(2ms) + w(ℬ)/10 + w_guard(0.1ms) + w_v9(4ms)
-```
-在 ℬ=2 时 ≤ 2 + 1.2 + 0.1 + 4 = 7.3ms，50Hz（20ms）余量 ≥ 12.7ms；即使 ℬ=2 且所有 64 候选都走到 L2，最坏块生成 12ms，摊销 1.2ms，仍满足预算。∎
 
-**引理 93（轻量化收益的期望界）** 记 p_ℓ 为候选在第 ℓ 层被接受的累计概率。则期望证书代价
-```
-E[w] = w₀ + (1−p₀)·w₁ + (1−p₁)·w₂
-```
-在熟悉域（低 Δ_dom）若 p₀ ≥ 0.9，则 E[w] ≤ 0.05 + 0.1·0.4 + 0.1·12 ≈ 1.29ms，较 v9 的 12ms 降约 89%；在陌生域 p₀→0，E[w]→12ms（不劣于 v9），且 L0 仍是确定性兜底。∎
+---
 
-## 4. 复杂度分析
+## 5. 推导（引理 L1–L7）
 
-| 组件 | 域 | 时间 | 空间 | 正确性锚 |
+**引理 L1（计分近共线 ⇒ 单一优化目标）** 若 `step = k·succ + b` 且 `R² ≥ 0.99`，则任一提高 `succ` 的改动在排序上不劣于同幅度的 `step` 改动，且不引入额外目标冲突。teaser 榜实测 `k=1.337, b=0.09, R²=0.9955` ⇒ 优化终态成功是**充分**目标。∎
+
+**引理 L2（技能近正交 ⇒ 路由上界）** 若模型对 `M` 个任务的相对优劣近似独立（Kendall τ≈0），则 per-task oracle 期望高于最优单模型，且上界不依赖任何"更强的通用模型"，只依赖"知道该任务谁更强"。teaser 榜：`oracle=33.96 > best_single=29.70`，`+4.26`。∎
+
+**引理 L3（保守介入不伤害基线）** 若抓握判定器在"确未抓住"子集上的召回为 `r`、在其他子集上的假阳性率为 `α`，则介入对基线成功率的净影响为 `−α·Δ_loss + r·Δ_gain − overhead`。取 `τ_conf` 使 `α ≤ 0.02` 且 `Δ_gain ≥ 0.2·Δ_loss`（重抓救回率 > 误伤损失率 5 倍）⇒ 净影响为正。∎
+
+**引理 L4（缝合不降低成功率的前提）** 若评测器逐 chunk 下发且不做跨 chunk 平滑，则 C0 缝合（`a_1 = a_T^prev + Δt·v + r`）使边界处位置跳变从 `‖a_1 − a_T^prev‖` 降为 `‖r‖`，且 `r` 由数据回归、其二范数远小于原跳变 ⇒ 边界处的"伪动作尖峰"消失。若评测器自带平滑，则本引理前提不成立，必须按 IP-03 步骤①实测后决定是否启用。∎
+
+**引理 L5（单专家降级形态的损失上界）** 若 skill token 仅影响专家门控与阶段先验，且退化到单专家时门控退化为均匀分布，则性能损失上界为"专家间性能方差的可加部分"。teaser 榜给出经验上界参考：`top2 路由 − best_single = +2.52`，`oracle − top2 = +1.74` ⇒ 即使路由完全失效，退回单专家的代价 ≈ oracle 空间的一部分而非全部。∎
+
+**引理 L6（上下文调制的低风险性）** 若上下文向量 `c` 只进入 FiLM 调制且调制量受 `‖Δ‖ ≤ ρ` 约束，则对任何输入 `o`，模型输出相对无调制输出的偏离上界由 `ρ` 与调制层 Lipschitz 常数共同界定 ⇒ 上下文估计失败时最坏退化为"无调制"，不会破坏基线行为。∎
+
+**引理 L7（六因子分解的可识别性）** 若各阶段在数据中具有可观测的判别信号（腕部帧几何、抓手闭合、物体相对腕部位移），则 `P_j` 的估计量在样本量 `n ≥ 200`（每因子）时标准误 `≤ 0.04`，因而**因子排序**（哪个因子最弱）在 32 任务 × 8 模型的规模上足够稳定（bootstrap 重采样下 top-1 因子一致率目标 ≥0.8）。∎
+
+---
+
+## 6. 复杂度与资源预算
+
+| 组件 | 域 | 时间/步 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| L0 运动学硬界 | 在线 | O(K·d_s)，≈0.05ms | O(K·d_s) 可达集 | 定义 541，引理 87 |
-| L1 残差收紧 | 在线 | ≈0.4ms/候选 | O(d) | 定义 540，引理 88 |
-| L2 全 rollout | 在线 | ≈12ms/候选，5Hz 摊销 | O(n·K·d_a) | 定义 533，引理 88 |
-| RL 比较与排序 | 在线 | O(n·d²)，n≤64，≈0.2ms | O(n·d+d²) | 定义 542/543，引理 89 |
-| LCC 编译 | 离线 | O(M log M)，一次性 | O(M) 表 | 定义 546，引理 91 |
-| 50Hz 守卫 | 在线 | O(1)，≤0.1ms | O(1) | 定义 547 |
-| v9 继承路径 | 在线 | ≤4ms（不变） | 不变 | v9 定义 493–539 |
-| 决策侧合计（熟悉域） | 在线 | 典型 ≤3ms，p99 ≤8ms | — | 引理 92/93 |
-| 决策侧合计（陌生域） | 在线 | p99 ≤20ms（=v9 上限） | — | 引理 92 |
+| 主干 VLM + 专家门控 | 在线 | 35–70 ms（目标 p99 ≤105 ms，与 UnifoLM-WLA 报告的 <105 ms 同量级） | 1×权重（N 端口共享后端） | 定义 U1 |
+| 专家头 `E_k` | 在线 | ≤3 ms（轻头） | ≤2% 主干 | 引理 L2 / L5 |
+| 相位分类器 | 在线 | ≤4 ms | 小 | 定义 U3 |
+| 抓握判定器 | 在线 | ≤6 ms（腕部 2 路小 CNN） | 小 | 定义 U4，引理 L3 |
+| 上下文编码（IP-04） | 在线（前 3 s + 周期） | ≤5 ms（周期触发） | 小 | 定义 U9，引理 L6 |
+| 缝合 + 限幅 + 审计 | 在线 | <1 ms | O(1) | 定义 U7/U12，引理 L4 |
+| 单 episode 状态 | 运行期 | — | O(1)/端口 | 端口隔离要求 |
+| 训练：相位伪标 + 抓握标签 | 离线 | 32 数据集 × ~1000 eps | 中 | 定义 U3/U4 |
+| 训练：SkillToken-MoE 微调 | 离线 | 8×A100 × 2–3 天 | 中 | 引理 L2 |
+| 训练：代理评测评估器 | 离线 | 1×A100 × 数小时 | 小 | 定义 U11 |
 
-## 5. 实验设计 E571–E590
+**工程硬约束（来自官方 README）**：暴露 **N 个连续端口 8765…8765+N−1**（N 未知、随机顺序）；每端口独立完成全流程；共享后端时必须并发安全 + 状态隔离（`reset()` 与历史不得跨端口串扰）。⇒ 部署形态选**共享后端 + N 个轻量前端**（官方 Approach 2），并自研并发压测（IP-08）。
 
-| 实验 | 核心问题 | 关键目标 |
+---
+
+## 7. 实验设计（E601–E618）
+
+| 实验 | 核心问题 | 关键判据 |
 |---|---|---|
-| E571 | L0 硬界紧度 | 熟悉域 L0 通过率 ≥90%；陌生域通过率随 Δ_dom 单调下降但 **0 不安全通过** |
-| E572 | 块生成耗时 | 典型 ≤4ms（相对 v9 12ms ↓≥60%），陌生域不劣于 v9 |
-| E573 | 排行榜 vs 绝对评分 | 成功率不降、换马次数 ↓≥60%、端到端 ≥ v9 |
-| E574 | 单调失真鲁棒性 | 对 score 施加 10 种严格单调变换，选择不变率 ≥99% |
-| E575 | δ_rank 扫描 | δ_rank∈{0,0.05,0.15,0.3,0.5}，找抖振-反应性 Pareto 拐点 |
-| E576 | anytime 提前终止 | 各层提前接受率 vs 最终证书质量；截断 soundness 0 违背 |
-| E577 | 陌生域硬界保守性 | Δ_dom 上升时 L0 可行率、K=1 回退率、任务完成率曲线 |
-| E578 | 编译期 vs 运行时等价 | 日志逐位等价（复刻 E556），静态 WCET ≤20ms |
-| E579 | 牺牲榜 vs ID 归因 | 退化顺序与 v9 ID 的排序一致性 ≥0.9；安全关键模块 0 被牺牲 |
-| E580 | 中块突变 + L0 守卫 | 中止成功率 ≥99.5%，0 碰撞，守卫 p99 ≤0.1ms |
-| E581 | 轻量化过保守代价 | K=1 回退频率 ≤5%（熟悉域）/ ≤25%（陌生域） |
-| E582 | 8h 长跑排行榜 | ρ_τ 趋势稳定；换马率 ≤1 次/模块/10min |
-| E583 | 前向模型投毒 | L2 被污染时 L0 兜底，安全违背 ≤1% |
-| E584 | 多机排行榜共享 | 牺牲榜跨机一致性、协同任务完成率 ↑≥10% |
-| E585 | 消融：LWC-only / RL-only / LCC-only | 各组件独立贡献可归因（c_m 曲线） |
-| E586 | 端到端 RoboCup@Home 仿真 | ≥ v9 + 8% |
-| E587 | 排行榜非传递性压力 | 成对偏好循环注入，选择退化有界、退回 v9 绝对评分可恢复 |
-| E588 | 浮点稳健性 | ULP 余量覆盖 10⁹ 次随机区间运算，0 不安全下界 |
-| E589 | 排行榜冷启动 | 少量比较下 CI 宽度、保守选择率、收敛所需比较数 |
-| E590 | 综合竞赛模拟 | ≥ v9 + 12% |
+| E601 | 代理评测与真机的相关性 | 阶段级与终态指标 Spearman \|r\| ≥ 0.5（若 <0.3 触发剪枝预案） |
+| E602 | 六因子分解稳定性 | 各因子 bootstrap top-1 一致率 ≥0.8；因子排序跨 3 个随机种子稳定 |
+| E603 | 抓握判定器精度与校准 | AUROC ≥0.85；可靠性图单调；假阳性率 ≤2% |
+| E604 | 保守介入的净收益 | 干预组成功率 ≥ 基线（真机 A/B，插入/旋转任务 ≥ +25% 相对） |
+| E605 | 非抓取原语的有效性 | Unlock / Open Pill Bottle 类"不可抓"任务上，非抓取原语成功率 > 死磕抓取 |
+| E606 | chunk 缝合 | 边界位置跳变下降 ≥50%；成功率不降；0 次 ACTION REJECTED |
+| E607 | 自适应 chunk | 抓握相位平均 T_a ≤3；成功率相对固定 T_a=8 ≥ +1.5 分；调用次数增幅 ≤2× |
+| E608 | 延迟与并发 | N 端口 × 8 h 无串扰；per-step p99 ≤ 预算；降级次数 <0.5% |
+| E609 | skill token 本身 | 单专家 + token 条件化相对纯基线 ≥ +1.0 分 |
+| E610 | 专家混合与路由 | 相对 U2 路由 ≥ +1.5 分；oracle 兑现率 ≥ 40% |
+| E611 | 严格单专家降级形态 | 相对完整形态损失 ≤1.5 分（合规兜底） |
+| E612 | 上下文调制 | 5 轴 OOD 上成功率不降且平均 ≥ +1.0 分；去掉 c 后回落 ≥50% |
+| E613 | 在线适配（受限） | 变差即回滚触发率 ≥80%（即闸门有效）；最优适配步数 ≤ 50 |
+| E614 | 姿态先验（IP-05） | 边界目标任务成功率 ≥ +1.0 分；pivot 抖动 < 基线 1.2× |
+| E615 | 双空间一致性（IP-07） | IK 代理 EE 误差 <1 cm；插入类任务 ≥ +1.5 分 |
+| E616 | 组合消融 | 逐项去掉 IP-01/02/03/04 的边际贡献可分辨（交互项可估计） |
+| E617 | 端到端真机综合 | 32 任务平均成功率 ≥ teaser 榜首 + 3 分（MolmoAct2 29.7 基线参照） |
+| E618 | 可信度自证 | 延迟/jerk/离群报告可导出；无"不规则交互模式"告警 |
 
-## 6. 预注册判据
+---
 
-| 判据 | 门槛（预注册） | 若未达标的处置 |
+## 8. 预注册判据与处置
+
+| 判据（预注册） | 门槛 | 未达标处置 |
 |---|---|---|
-| L0 紧度（E571） | 熟悉域 ≥90%，陌生域 0 不安全通过 | 收紧区间扩张、调 ULP 余量、增加障碍膨胀 |
-| 耗时（E572） | 典型 ≤4ms 且陌生域 ≤v9 | 减少候选数 n、L1 只对 top-k 做 |
-| 排行榜（E573） | 成功率不降、换马 ↓≥60% | 调 δ_rank/η、改特征 φ、增加比较预算 |
-| 单调不变（E574） | 不变率 ≥99% | 检查特征是否含非单调项、改排序损失 |
-| 迟滞（E575） | 换马 ≤1 次/模块/10min | 增大 δ_rank、降低排行榜更新频率 |
-| anytime（E576） | 截断 0 违背 | 修组合算子为 max/min、逐层审计保守方向 |
-| 陌生域（E577） | K=1 回退 ≤25%，完成率 ≥v9−5% | 改进 L0 紧度、分层预算动态上调 |
-| 等价（E578） | 日志逐位等价且 WCET ≤20ms | 逐行审计表 536、修静态排序 |
-| 牺牲榜（E579） | 一致性 ≥0.9、关键模块 0 牺牲 | 重算贡献下界、把 φ^elig 校验收紧 |
-| 突变（E580） | 中止 ≥99.5%、0 碰撞 | 提高中止点密度、L0 余量加大 |
-| 过保守（E581） | 熟悉域 ≤5% | 提升 L0 紧度、放宽非关键块预算 |
-| 长跑（E582） | ρ_τ 稳定、换马 ≤1/模块/10min | 冻结排行榜、周期性重标定 |
-| 投毒（E583） | 安全违背 ≤1% | L0 权重上调、L2 需双模型交叉验证 |
-| 多机（E584） | 完成率 ↑≥10% | 排行榜版本化、冲突消解 |
-| 消融（E585） | 各组件 c_m 显著非零 | 重新设计特征/预算 |
-| 端到端（E586） | ≥v9 + 8% | 综合调参、分析瓶颈 |
-| 非传递（E587） | 退化有界且可恢复 | 加循环检测、回退绝对评分 |
-| 浮点（E588） | 0 不安全下界 | 增大 ε_ulp、用区间算术库 |
-| 冷启动（E589） | 200 次比较内 CI 收敛 | 热启动先验、主动采样对子 |
-| 竞赛（E590） | ≥v9 + 12% | 综合调参 |
+| 代理↔真机相关（E601） | \|r\| ≥0.5 | <0.3 ⇒ **砍掉一切依赖代理指标的微调**，只保留机制正确性驱动的 IP-02/IP-03 |
+| 抓握判定（E603/E604） | AUROC ≥0.85 且假阳 ≤2% 且不降成功率 | 提高 τ_conf / 改为规则版 / 收缩到少数相位 |
+| 缝合（E606） | 跳变 ↓50% 且成功率不降 | 若评测端自带平滑 ⇒ 关闭缝合器（默认关） |
+| 自适应 chunk（E607） | 抓握相位 T_a ≤3 且 +1.5 分 | 固定回 T_a=8 |
+| 延迟（E608） | p99 ≤ 预算且降级 <0.5% | 降分辨率（head 240×320 已设）/ 降专家数 / 单端口复制 |
+| 技能路由（E609/E610） | token ≥+1.0，混合 ≥+1.5，兑现率 ≥40% | 退回单专家 + token（合规形态） |
+| 合规（Q3/Q4） | 组委会书面确认 | 未确认 ⇒ 禁用多专家/跨 episode 在线更新，仅保留 episode 内调制 |
+| 端到端（E617） | ≥ 榜首 +3 分 | 逐 IP 消融定位无效项并剪枝 |
 
-## 7. 合成预演（模拟数据，仅作方向性 sanity check，非真实实验）
+---
 
-> 在 2D 导航玩具环境中用合成动力学与随机障碍跑 500 回合，前向模型对 20% 回合注入系统性偏差（模拟域偏移）。以下为预演占位数据，真值待 E571–E590 验证。
+## 9. 风险登记册与剪枝预案
 
-| 指标 | v9 ACMD | v10 LRC（预演） | 方向 |
+| 风险 | 概率 | 影响 | 对冲 |
 |---|---|---|---|
-| 块生成平均耗时 | 12.0ms | 3.6ms | ↓70% |
-| L0 提前接受率（熟悉） | — | 91% | 达标 |
-| 换马次数/回合 | 4.7 | 1.6 | ↓66% |
-| 单调变换下选择不变率 | 62% | 99.3% | 达标 |
-| 注入偏差时安全违背率 | 3.1% | 0.8% | ↓ |
-| K=1 回退率（陌生） | — | 22% | 接近门槛 |
-| 端到端任务分 | 基准 | +9% | 达标 |
+| **合规**：多专家/在线更新被判"非单模型" | 中 | 高（可能取消成绩） | 提交前书面确认；预备"单专家 + token"严格形态（IP-01 已内建降级）；黑名单一切硬编码任务分支 |
+| **抓握误判**：漏判把可救失败变硬失败 | 中高 | 高 | 只在"未抓住"时介入、τ_conf 高阈值、最大重抓 3 次、episode 内自校准阈值 |
+| **代理评测失真** | 中 | 中高（浪费迭代） | E601 先行；<0.3 即触发剪枝预案 |
+| **评测器语义未知**（chunk 执行/插值/pivot 跟踪） | 中 | 中 | 先用官方 client 复刻（IP-03 步骤①），再决定是否启用缝合/姿态 |
+| **接口工程事故**（端口数不符、并发串扰、token 错） | 中 | 高（直接判失败） | 提交前自动化体检脚本（端口、握手、token、并发、reset 隔离） |
+| **过拟合 teaser 数据**（按 teaser 数字调参） | 中 | 中 | teaser 明确为占位表；一切调参以本地 OOD 切分与真机 A/B 为准，teaser 仅作结构参考 |
+| **延迟抖动被判不可信** | 中 | 中 | AuditLayer + 稳定预算 + 降级兜底 + 主动导出报告 |
 
-**预演暴露的问题**：陌生域 K=1 回退率 22% 已逼近 25% 门槛，说明 L0 在障碍密集场景的区间扩张仍偏松；这直接对应本轮最大风险——轻量化的收益来自“低层通过”，而其失效模式是“低层过松导致保守回退”。
+**剪枝预案（下一轮起执行）**：
+- **必保**：IP-06、IP-02、IP-03（信息价值 + 机制正确性，不依赖代理指标）。
+- **优先深化**：IP-01（唯一有量化上界的红利，但需先过合规）。
+- **条件推进**：IP-04（依赖合规答复）、IP-05（依赖 pivot 语义实测，一次零成本探测后再定）。
+- **暂存**：IP-07、IP-08（IP-08 的审计部分已并入 IP-03）。
 
-## 8. 本轮最大风险
+---
 
-**一句话**：轻量化把“前向模型误差”换成了“硬界保守性 + 排序统计噪声”——当 L0 区间界过松使可行块集近乎为空时，系统会长期回退 K=1（性能债），而排行榜的成对比较又恰恰来自同一个可能失配的前向模型，可能把“最不坏”的候选一致地排到首位，于是轻量化在最需要多样性的陌生域反而制造出虚假的确定性。
+## 10. 来源清单（检索日期 2026-11-17）
+
+1. UniBot 世界挑战赛官网（首页 / 挑战赛 / 榜单 / 运行记录）：https://unibot.unitree.com/ 、https://unibot.unitree.com/challenges.html 、https://unibot.unitree.com/leaderboard.html 、https://unibot.unitree.com/runs.html
+2. **榜单数据文件（teaser/占位）**：https://unibot.unitree.com/leaderboard_data.json （`generated_from: gen_leaderboard.py`；页面脚本注释标注 "randomly-generated" 且被"排行榜即将公开"遮罩覆盖 → **非官方终稿**）
+3. 官方提交模板与接口规范（策略接口 / 观测目录 / 动作目录 / token / 多端口与并发 / 可信度口径）：https://github.com/unitreerobotics/unibot_submission （README.md、README.zh.md、example/、policy/）
+4. 官方数据集集合（32 个 LeRobot v3.0 任务数据集）：https://huggingface.co/collections/unitreerobotics/unibot-v1-challenge-dataset ；单任务卡片示例（含 obs/action schema 与 Dex1 夹爪约定）：https://huggingface.co/datasets/unitreerobotics/G1_Dex1_PlugInEthernet ；全身遥操（SMPL）数据示例：https://huggingface.co/datasets/unitreerobotics/G1_WBT_SMPL_Inspire_Pick_Up_Cushions
+5. 赛事发起报道（2026-07-10，UniBot-V1 通才赛道 / G1 / 32 任务 / 5 类泛化场景 / 成功率 + 步骤分）：https://finance.sina.com.cn/tech/it/2026-07-10/doc-inihinfx8458209.shtml
+6. 官方规则手册（参赛手册，Feishu）：https://scnhkkqlu12w.feishu.cn/docx/ZNHIdaGx0oPOlBxNVxkcswqqnnh （英文）/ https://scnhkkqlu12w.feishu.cn/docx/Uz7OdFBcDoqP1dxgH62cHW1CnMh （中文）——**本轮抓取被 JS 渲染阻断，细则以官方 README 与本轮现场核实的字段为准，需在下一轮补全并复核"单模型"定义**
+7. 跨基准对照（RoboDojo 真机最强 12.8%、人类 100%、"崩在最后对齐/插入/恢复"）：https://www.qbitai.com/2026/07/446363.html
+8. 官方参考架构 1（世界模型-动作 WMA：世界模型兼作仿真引擎与策略增强）：https://huggingface.co/unitreerobotics/UnifoLM-WMA-0-Base ；代码 https://github.com/unitreerobotics/unifolm-world-model-action
+9. 官方参考架构 2（WLA-1.0：6B VLA，ER-1-4B(Qwen3-VL-4B) + MMDiT flow 动作专家，~2500 h 真机数据，64 真机任务，推理 <105 ms）：https://www.humanoidsdaily.com/news/unitree-open-sources-unifolm-wla-1-0-to-tackle-humanoid-generalization
+10. 硬件参数（G1 23–43 DoF；Dex3-1 7 DoF/手，但**评测接口仅暴露 1 维抓手开合**）：https://support.unitree.com/home/en/G1_developer 、https://www.unitree.com/cn/g1
+11. 榜单可信度方法论参考（子项透明 / 第三方评测 / 看评测机制）：https://www.binance.com/en/square/post/346983072469601
+
+---
+
+## 11. 本轮最值得押注的创新点（一句话）
+
+**押注 IP-02（可抓性判定 + 抓握确认 + 不可抓就改抓法）：它把"抓住没有"从隐变量变成带置信度的可观测量，正好打在 teaser 榜与 RoboDojo 共同暴露的同一个断点上——所有模型都能推进大半程、却死在最后的对齐/插入/释放，而单自由度无触觉的接口决定了"确认抓握 + 换抓法"是绕不开也几乎无人做的一步。**
 <!-- ARTIFACT:END -->
