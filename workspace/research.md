@@ -3,508 +3,513 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 12 轮（新灵感循环第 3 轮；本轮灵感：「通用操作」×「虚实迁移」）
+# 第 13 轮（新灵感循环第 4 轮；本轮灵感：「实时推理」×「模型蒸馏」）
 
-> **基线**：第 11 轮 MetricVoiceGauge-NCD-H（定义 554–570；引理 96–103；实验 E589–E606）。
-> 本轮纪律：**通用性覆盖证书 + 逐段迁移间隙预算 + 双向锚定对齐**。不推倒 v11：HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID、v8 的 DA/SPR/Cal 与九不变式全部保留。三个新组件——USG（通用技能文法）、TGC（迁移间隙证书）、BAA（双向锚定对齐）——一律以**中立元**接入，失效即严格退回 v11（引理 110），再沿 v11 十三级链退回 v10/v9/v8/v7/v6。本轮只做三件事：把"通用"变成可证的覆盖、把"虚实迁移"变成逐段可花费的间隙预算、把"仿真"从单向训练场变成被真实锚点持续校正的双向孪生。
+> **基线**：第 12 轮 MetricVoiceGauge-NCD-HUT（定义 571–582；引理 104–112；实验 E607–E626）。
+> 本轮纪律：**保守起点的随时推理证书 + 只弱不强的证书保持蒸馏 + 单调时限蒸馏阶梯**。不推倒 v12：v11 的 HAS/HCC/HATD/HDT、v12 的 USG/TGC/BAA/GAGP/UC、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID、v8 的 DA/SPR/Cal 与九不变式全部保留。三个新组件——AIO（随时推理算子，含 RTIC）、CPD（证书保持蒸馏，含 DGC）、DDL（时限蒸馏阶梯）——一律以**中立元**接入，失效即严格退回 v12（引理 118），再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6。本轮只做三件事：把"实时"从平均延迟改写为逐帧可证的截止期与退化语义、把"蒸馏"从精度压缩改写为**授权子集**压缩、把二者合成一条"时间越紧、授权越保守"的单调阶梯。
 
 ## 0. 直觉与动机
 
-**灵感 1（通用操作 → 通用操作技能文法与通用性证书）**
-直觉：v11 的灵巧技能是**任务专用**的：一个 HAS 的 `u, K_p, K_d, pre, post` 绑定在具体物体、具体本体、具体接触模式上。换一个杯子、换一只手、换一台机器人，就要重新示范、重新标定、重新发证书。所谓"通用操作"不是训练一个包打天下的黑箱大策略——那既不可证也不可退化；它应当是**可组合、可替换、可复用的技能文法**：原语带类型（抓、推、旋、插、递、铰接、形变）与效果签名，组合子保证接触模式连贯、前后置条件闭合，跨对象/跨本体时按"操作等价类"替换绑定而不改变技能语义。核心创新：**通用操作技能文法（Universal Skill Grammar, USG）+ 通用性证书（Universality Certificate, UC）**。USG 生成的是 v11 认证器可以逐个检验的**类型化技能项**，UC 则回答"这套文法在给定任务族、对象分布、本体集合上到底覆盖了多少"——通用性不是形容词，而是带 PAC 覆盖下界的证书。
+**灵感 1（实时推理 → 保守起点的随时算子与截止期证书）**
+直觉：v12 已经宣称 50Hz/p99≤22ms，但那是**静态 WCET 预算加摊销**：把 USG 枚举、TGC 共形查询、HDT 谐波推演、BAA 残差更新的最坏成本相加，再指望它们不在同一帧里同时变重。现实恰好相反——越新奇的场景越需要深枚举、越多校准、越复杂推演，计算尖峰与安全需求同相到达。于是"实时"退化为两种坏结果：丢拍（执行旧计划）或超时（执行迟到却仍被当成有效的结果）。核心创新：**随时推理算子（Anytime Inference Operator, AIO）+ 实时推理证书（Real-Time Inference Certificate, RTIC）**。AIO 把每个重模块改写为可中断的单调算子；RTIC 逐帧认证"在截止期内至少能返回哪一档、该档的质量下界、以及无档可用时的认证回退"。关键反直觉点：**安全关键路径上的 anytime 必须从最保守集合出发向上扩张，而不是从粗近似出发向下修正**——先返回"只允许回退动作/空可行集"，再逐段加入已被证书验证的候选；这样任何早退都只会更保守，绝不会更冒险。
 
-**灵感 2（虚实迁移 → 逐段迁移间隙证书与间隙预算规划）**
-直觉：v11 的 HDT 会做参数化谐波孪生与域随机化，但 sim-to-real gap 仍被当作**全局性能差**：一个数字、一次评测、事后汇报。通用操作恰好把这个问题放大——技能库越大、复用面越广，就越可能在某类物体/本体上出现"仿真里 95%、实机上 40%"的静默失败。真实可操作的量不是"平均 gap"，而是**每一类技能、每一个段、在给定支撑集上的 gap 上界**。核心创新：**迁移间隙证书（Transfer Gap Certificate, TGC）**：用共形预测给出该技能类型在真实分布上的单侧 gap 上界，证书 `Ĉ_gap=(ĝ,U_gap,coverage,support)` 作为与 v11 物理/接触/谐波/规范证书**并列的附加过滤条件**；规划时把 `U_gap` 当作只能消耗、不能透支的**迁移预算 B_transfer**。TGC 只删候选、不放宽任何 v11 证书：超预算的段只能拒绝、重规划或触发锚定探测。
+**灵感 2（模型蒸馏 → 证书保持蒸馏与蒸馏间隙证书）**
+直觉：v12 的重计算完全可以蒸馏——把 HDT 的谐波推演、TGC 的共形查询、USG 的搜索先验、BAA 的残差模型压成一个共享骨干、多出口的轻量学生。但普通知识蒸馏对齐的是**输出/动作**，不是**证书判决**：学生可以在平均动作上几乎一样，却在一条极薄的接触边界上把"不安全"判成"安全"。这类错误在平均值里看不见，在实机上却是灾难。核心创新：**证书保持蒸馏（Certificate-Preserving Distillation, CPD）+ 蒸馏间隙证书（Distillation Gap Certificate, DGC）**。学生蒸馏的标签是教师的**证书判决与边界余量**，而非动作；训练采用非对称代价（假接受远重于假拒绝），并要求学生的授权集是教师授权集的**单侧子集** `Acc_S ⊆ Acc_T`。DGC 用共形分位给出"学生对教师有多乐观"的单侧上界 `U_d`，学生只有在其边界余量 `m_S ≥ U_d` 时才被允许自主放行。于是蒸馏**只弱不强**：它买来速度，代价是更保守的授权与更多假拒绝，而不是新增任何权限。
 
-**灵感 3（通用×虚实 → 双向锚定对齐与主动锚点选择）**
-直觉：通用文法带来一个残酷的资源问题——需要真实标定的技能类型远多于真实数据预算；而 gap 的主要来源往往不是"参数没随机化够"，而是仿真器**结构性缺失**的接触、摩擦、形变、执行器残差。只做 sim→real 的单向迁移，等于把仿真器的偏差当成信仰。核心创新：**双向锚定对齐（Bidirectional Anchored Alignment, BAA）**：从真实轨迹辨识 real→sim 残差 `r=f_real−f_sim`，回写 HDT 的结构项与 USG 的类型先验；同时把"选哪一段真实数据做锚点"当成主动学习问题，最大化单位真实成本的 gap 信息增益。BAA 只改仿真器、先验与候选生成，不改真实证书阈值；它让 gap 上界**收缩**，而不是让阈值**变宽**。
+**灵感 3（实时×蒸馏 → 时限蒸馏阶梯、推测—验证与安全塌缩）**
+直觉：既然学生可以更保守，就不该只蒸馏"一个学生"，而应蒸馏**一族按计算预算排序、授权集单调嵌套的学生**：算得越多，放行得越多，但永远不超过教师。运行时路由器按本帧剩余时间挑"负担得起的最富档位"；时间一紧就沿阶梯向更保守的档位塌缩，而不是超时或丢拍。更进一步，借用大模型推理里的"推测—验证"：学生先快速**推测**一个决定，教师用剩余预算**验证**；验证完成则采纳，验证超时则只接受学生**已被 DGC 认证的子集**，否则退回安全回退。核心创新：**时限蒸馏阶梯（Deadline Distillation Ladder, DDL）+ 实时证书路由器（Real-Time Certificate Router, RTCR）**。这把"实时推理"和"模型蒸馏"合成同一个对象：一条**以毫秒为索引的证书族**。毫秒与安全余量都是货币，路由器只做同一件事——把有限的毫秒花在边际安全/进度增益最大的那一档上。
 
 **三者如何统一**
-统一为**通用性覆盖约束下的 gap 预算闭环规划**：USG 在类型化技能空间生成可组合的技能项；TGC 为每个技能类型/段给出共形 gap 上界并消耗 `B_transfer`；BAA 用真实锚点更新 HDT 残差与类型先验，从而缩小后续 `U_gap`；NCP 在 v11 证书与 gap 预算的双重可行集内做最终选择；CAE 解释"为什么这个通用组合在真实侧仍被认证"。共享状态 `ζ_u=(τ, β, P(Δ|A), B_transfer, r̂, coverage)`（技能类型、对象/本体绑定、gap 后验、剩余预算、残差模型、覆盖证书）。**USG 回答"能组合出什么"，TGC 回答"哪些组合有资格跨越现实间隙"，BAA 回答"下一份真实数据该花在哪"**。三者不是三个补丁，而是一条"文法—证书—锚定"的通用迁移链。
+统一为 **v12 语义层之上的实时实现层**：v12 回答"哪些动作在语义上被允许"（`Exec_v12`），v13 回答"在给定毫秒预算内，这些允许的动作里能安全地实现多少、由哪个学生实现"（`Exec_v13`）。AIO 把重模块变成可中断的保守扩张；CPD 把教师证书压成带 DGC 的轻量学生；DDL 把学生排成单调嵌套的授权阶梯；RTCR 在 `B_time` 内选档、推测—验证、必要时安全塌缩。共享状态 `ζ_rt=(B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode)`。**AIO 回答"还剩多少时间时依然安全"，CPD 回答"用哪个更弱但更快的证书替代教师"，DDL/RTCR 回答"这一帧到底该跑到哪一档"**。三者不是三个加速补丁，而是"时限—蒸馏—路由"的实现链。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（通用性的可证边界）**：如何定义技能文法的"通用"才既可组合又可证？在任务族、对象分布、本体集合上，UC 的覆盖下界如何随文法复杂度、绑定数量与样本数变化？"类型等价"在接触丰富任务中何时失效？
-- **Q2（逐段 gap 证书与组合）**：如何在非独立、非可交换的真实部署分布上，为每个技能类型给出有覆盖保证的 gap 上界？多个段组合后，组合 gap 能否由分段 gap 加交互项界定？交互项如何估计而不至于把预算吃光？
-- **Q3（主动锚定的样本效率）**：在真实样本昂贵、且锚点选择本身受安全约束（不能为了辨识去撞、去摔、去激发共振）时，如何选锚点使 gap 后验收缩最快？real→sim 残差模型的结构误差如何计入 TGC 余量？
-- **Q4（与 v11 的兼容与活性）**：USG 生成的组合会不会绕过 v11 的 HAS/HCC/HATD？TGC 只做过滤会不会把可行集清空？BAA 更新 HDT 后，v11 的谐波证书与四重合取是否仍然成立？新增模块能否守住 50Hz/p99≤22ms？
+- **Q1（随时推理的可证语义）**：如何定义安全关键 anytime 才使"任意时刻中断都有效"？从保守集合向上扩张的质量/授权单调性在组合模块（USG→TGC→HDT→BAA）上如何保持？截止期错过时的认证回退如何与 v12 的中止点语义衔接而不产生"迟到但已执行"的缝隙？
+- **Q2（证书保持蒸馏的可证边界）**：如何蒸馏"证书判决"而不是"动作"才能在薄边界上不产生假接受？单侧包含 `Acc_S⊆Acc_T` 在协变量漂移、边界样本稀缺、教师本身有误时还能保持吗？DGC 的共形保证需要怎样的支撑与加权修正？假拒绝导致的活动性损失如何定量并纳入预算？
+- **Q3（阶梯与路由的最优性）**：在给定硬件与教师下，如何训练/构造嵌套单调的学生阶梯？路由器如何在未知的本帧计算耗时下做在线选档，使"超时率—进度—假拒绝"三者最优？"推测—验证"的验证预算如何分配才不退化为无谓等待？
+- **Q4（与 v12 的兼容与活性）**：学生是否可能绕过 v12 的 TGC/UC/四重证书？DGC 与 TGC 的误差是否会相加而在新场景里共同低估？阶梯塌缩到第 0 档是否会清空可行集、导致频繁 `a_ask`？新增模块能否守住 50Hz/p99≤22ms，并严格退回 v12？
 
-## 2. 设计原则（在 P16–P18 基础上新增 P19–P21）
+## 2. 设计原则（在 P19–P21 基础上新增 P22–P24）
 
-**P19 通用性即可证覆盖律（Universality as Certified Coverage）**
-禁止不加限定地宣称"通用"。任何"通用技能"必须携带 UC：任务族 T、对象分布 O、本体集合 E 上的覆盖下界与拒绝域。未覆盖的绑定只能走 v11 专用技能、降级为 `a_ask` 或明确标记为"未认证通用"，不得进入主执行路径。
+**P22 时限即硬约束律（Deadline as Hard Constraint）**
+不存在"平均实时"。每个被执行的决定必须携带 RTIC：截止期、超时概率上界、该档质量下界、以及认证回退。安全关键 anytime 必须**从最保守可行集开始**向上扩张；任何阶段的中断结果只能是更保守，不能是未验证。若在截止期内没有达到可执行档，只能执行 `P^rt` 中的认证回退或 `a_ask`，**不得执行迟到结果**。
 
-**P20 迁移间隙预算律（Transfer Gap Budget）**
-每个可执行段必须携带 TGC 的共形 gap 上界 `U_gap`，并与 v11 物理/接触/谐波/规范证书**合取**。`B_transfer` 只能被消耗、不能被"任务需要"透支；`U_gap>B_remaining` 的段只能被删除、重规划或转为锚定探测。TGC 不得修改任何 v11 阈值。
+**P23 蒸馏只弱不强律（Distillation Weakens, Never Strengthens）**
+学生的授权集必须在支撑域上单侧包含于教师：`Acc_S(U_d) ⊆ Acc_T`。蒸馏只能产生**更保守**的证书；DGC 必须与 v12 的 TGC/UC/四重证书合取，不得替代或放宽任何教师阈值。学生只能做"快速放行已认证子集"或"快速预筛"，子集之外的任何决定必须回到教师 anytime 路径或回退。
 
-**P21 双向锚定非放宽律（Bidirectional Anchoring, No Relaxation）**
-BAA 只能更新仿真器结构项、参数后验、技能类型先验与候选生成；真实锚点只能用于**缩小** gap 上界或扩大 UC 覆盖，不得用于放宽真实侧证书阈值，也不得把"调参后仿真更像"当作"实机更安全"。
+**P24 阶梯单调退化律（Monotone Ladder Degradation）**
+部署的学生族必须构成授权单调嵌套的阶梯：`Acc_0⊆Acc_1⊆…⊆Acc_m⊆Acc_T`，且 `w_0<…<w_m`。剩余预算收缩时只能沿阶梯**向更保守方向**移动，禁止跨档跳到未认证/非嵌套的学生；检测到分布漂移或 DGC 失效时必须**安全塌缩**到第 0 档并触发重校准，而不是继续用旧档"赌一把"。
 
 ## 3. 与基线的接口（如何退化）
 
-- USG 失效 ⇒ 注入文法中立元：只保留 v11 DSL 的任务专用 HAS 技能项，无类型替换、无跨对象/跨本体组合，**等价 v11 灵巧/技能路径**；
-- TGC 失效 ⇒ 注入 gap 中立元：`U_gap≡0`、`B_transfer≡∞`、`Ĉ_gap≡⊤`，规划器忽略 gap 项，**等价 v11 规划路径**（安全证书不变）；
-- BAA 失效 ⇒ HDT 退回 v11 固定 DR 先验，无 real→sim 残差、无主动锚点，**等价 v11 孪生/推理路径**；
-- 三者全失效 ⇒ MetricVoiceGauge-NCD-H v11，再沿 v11 十三级链退回 v10/v9/v8/v7/v6；
-- **安全继承**：USG 只能生成候选、TGC 只能删除候选、BAA 只能改仿真器与先验。新模块不能放宽 v11 任何适用证书；四重证书合取仍由 v11 原语检查（引理 109 升级引理 101）。
+- AIO 失效 ⇒ 注入固定档中立元：每帧只运行 v12 的教师模块一次，无阶段中断、无保守扩张，RTIC 退化为 v12 静态 WCET 预算，**等价 v12 计算路径**；
+- CPD 失效 ⇒ 无学生：`U_d≡0`、`Acc_S≡∅`，只保留教师 anytime 路径，**等价 v12（+AIO）证书路径**；
+- DDL 失效 ⇒ 单档学生 + 教师回退，无嵌套、无塌缩，**等价"v12 证书 + 单个保守学生"**；
+- RTCR 失效 ⇒ 由 v12 静态调度器按固定顺序调用模块，学生仅作事后预筛，**等价 v12 调度路径**；
+- 四者全失效 ⇒ MetricVoiceGauge-NCD-HUT v12，再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6；
+- **安全继承**：AIO 只扩张已被证书验证的集合，CPD 只产生教师的授权子集，DDL 只做嵌套，RTCR 只做选档。四端口互不相交，均不能新增授权或放宽任何阈值；`Exec_v13⊆Exec_v12` 由引理 117 保证。
 
 ## 4. 预期贡献
 
-1. **可证通用性的技能文法**：把"通用操作"从"一个更大的策略"改写为"类型化、可组合、带覆盖证书的技能文法"，给出跨对象/跨本体的操作等价类与 PAC 覆盖界，覆盖 v11 完全未定义的"复用边界"；
-2. **逐段迁移间隙证书与预算规划**：把 sim-to-real gap 从全局事后指标变成逐技能类型、逐段的共形上界与可花费预算，解决"平均迁移很好、关键技能静默失败"的评估盲区；
-3. **双向锚定与主动锚点选择**：real→sim 残差回写 + 受安全约束的信息增益选点，把真实数据预算花在最能缩小 gap 的技能类型上，而不是均匀撒点；
-4. **通用-迁移-安全统一闭环**：E607–E626 覆盖通用性覆盖、跨对象/本体迁移、gap 证书校准、组合间隙、主动锚定、证书耦合与端到端长跑。
+1. **保守起点的随时推理证书**：把"实时"从平均延迟指标改写为逐帧、可中断、带质量下界与认证回退的语义，解决新颖场景下"计算尖峰与安全需求同相到达"的结构性矛盾；
+2. **证书保持蒸馏**：把蒸馏目标从动作匹配改写为证书判决与边界余量的单侧保持，给出 `Acc_S⊆Acc_T` 的共形保证与假拒绝代价，填补"蒸馏在安全关键系统里不可证"的空白；
+3. **时限蒸馏阶梯与推测—验证路由**：把学生族做成以毫秒为索引的嵌套证书族，使系统能在未知/突发耗时下单调退化而不是超时或丢拍；
+4. **语义层—实现层分离**：v12 管"允许什么"，v13 管"在时限内能实现多少"，用 `Exec_v13⊆Exec_v12` 把加速与安全解耦；E627–E646 覆盖任意时有效性、DGC 覆盖/紧致、阶梯嵌套、漂移塌缩、端到端与消融。
 
 ## 5. 本轮最大风险
 
-**一句话**：UC 只在有限任务/对象/本体上校准，而 TGC 的共形保证依赖可交换性；遇到真正的新接触机制（新本体、新物体、新工具）时，USG 会以"类型等价"自信组合，TGC 的 gap 上界却因分布漂移而系统性低估，最终在"每个技能都通过迁移认证"的表象下组合出真实 gap 超预算的动作——即**证书齐全的通用迁移失败**。
+**一句话**：DGC 只在"学生不超出教师"的相对意义上成立，而教师本身可能在分布漂移下已经错了；当新颖场景同时触发计算尖峰与分布漂移时，路由器为赶上截止期会选中低档学生，DGC 又因校准集未覆盖该边界而低估蒸馏间隙，最终在"每帧都按时、每个学生都在教师子集内"的表象下执行了一个教师与学生共同错判的动作——即**按时的、蒸馏自洽的、却绝对错误的安全决定**。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 12 轮产物 · 创新点清单 v12：**MetricVoiceGauge-NCD-HUT**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution, Harmonic Compliance, Universal Skills & Transfer Certification）
+# 第 13 轮产物 · 创新点清单 v13：**MetricVoiceGauge-NCD-HUTD**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution, Harmonic Compliance, Universal Skills, Transfer Certification & **D**eadline-aware **D**istillation）
 
-> 背景：第 11 轮 MetricVoiceGauge-NCD-H（定义 554–570；引理 96–103；实验 E589–E606），其基线为第 10 轮 MetricVoiceGauge-NCD。
-> 本轮灵感：「通用操作」×「虚实迁移」
-> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v11 的 HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID 与 v8 的 DA/SPR/Cal 原样保留。三个新组件均为**可选增强**：任一不可用 ⇒ 注入中立元；三者全不可用 ⇒ 严格等价退回 v11（引理 110），再沿 v11 十三级链退回 v10/v9/v8/v7/v6。
+> 背景：第 12 轮 MetricVoiceGauge-NCD-HUT（定义 571–582；引理 104–112；实验 E607–E626），其基线为第 11 轮 MetricVoiceGauge-NCD-H。
+> 本轮灵感：「实时推理」×「模型蒸馏」
+> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v12 的 USG/TGC/BAA/GAGP/UC、v11 的 HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID 与 v8 的 DA/SPR/Cal 原样保留。三个新组件均为**可选增强**：任一不可用 ⇒ 注入中立元；三者全不可用 ⇒ 严格等价退回 v12（引理 118），再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6。v13 是 v12 之上的**实时实现层**，只决定"在时限内能安全实现多少"，绝不新增授权。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-H v11） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUT v12） |
 |---|---|---|---|
-| IP-357–366 | v11 全部模块 | 继承 | 语义不变；HAS 端口升级为类型化技能项 π_u，CC/HCC 端口追加 gap 证书过滤，HDT 接收 real→sim 残差回写 |
-| IP-367 | UniversalSkillGrammar (USG) | 新增核心模块 | 类型化技能文法：原语 `π_u=(τ,β,π_h,effect,pre,post)`、组合子 `seq/par/cond/retry`、操作等价类与绑定替换；输出可被 v11 认证器逐项检验的技能项 |
-| IP-368 | TransferGapCertifier (TGC) | 新增核心模块 | 逐技能类型/段的共形 gap 证书 `Ĉ_gap=(ĝ,U_gap,coverage,support)`；间隙预算 B_transfer；组合 gap 三角界与交互项 |
-| IP-369 | BidirectionalAnchoredAligner (BAA) | 新增核心模块 | real→sim 残差辨识 `r̂=f_real−f_sim` + 受安全约束的主动锚点选择（信息增益/成本）+ HDT 后验与 USG 类型先验回写 |
-| IP-370 | GapAwareGeneralistPlanner (GAGP) | 新增集成层 | 在 USG 生成的组合上做"进度/预算/信息价值"联合搜索；只排序与选择，不新增或放宽证书 |
+| IP-357–370 | v12 全部模块 | 继承 | 语义不变；USG/TGC/HDT/BAA 被包成随时算子，NCP/GAGP 读取实时路由档位与三预算 |
+| IP-371 | AnytimeInferenceOperator (AIO) | 新增核心模块 | 从最保守可行集出发的**单调保守扩张**随时算子 + 实时推理证书 RTIC；早退只更保守 |
+| IP-372 | CertificatePreservingDistiller (CPD) | 新增核心模块 | 以**证书判决与边界余量**为标签的非对称蒸馏；单侧包含 `Acc_S⊆Acc_T`；蒸馏间隙证书 DGC |
+| IP-373 | DeadlineDistillationLadder (DDL) | 新增核心模块 | 按预算排序、授权集单调嵌套的学生阶梯；第 0 档为**无需学习的零假设安全回退** |
+| IP-374 | RealTimeCertificateRouter (RTCR) | 新增集成层 | 剩余时间选档 + 推测—验证 + 漂移安全塌缩；只选档，不造证书、不放宽阈值 |
 
-**退化链声明（v12 契约化，新增前三级）：**
-- Level-0：USG + TGC + BAA + GAGP 全激活，MetricVoiceGauge-NCD-HUT；
-- Level-1：BAA 失效 ⇒ HDT 只用 v11 固定 DR 先验，TGC 用先验 gap 上界，**等价 v11 孪生/推理路径 + 静态 gap 过滤**；
-- Level-2：TGC 失效 ⇒ `U_gap≡0, B_transfer≡∞, Ĉ_gap≡⊤`，USG 仍只生成 v11 可认证技能项，**等价 v11 规划路径**；
-- Level-3：USG 失效 ⇒ 文法退化为 v11 DSL 的任务专用技能项（无类型替换、无跨对象/本体组合），**等价 v11 技能/灵巧路径**；
-- Level-4：GAGP 失效 ⇒ 由 v11 NCP 对 USG 候选做选择，gap 仅作为事后审计，**等价 v11 NCP 决策路径**；
-- Level-5：USG/TGC/BAA/GAGP 全失效 ⇒ MetricVoiceGauge-NCD-H v11；
-- Level-6 起：进入 v11 既有退化链（HDT→v10 推理、HATD→v10 规划、HAS/HCC→v10 灵巧、CWM/CAE→v9、DSL/CC→v9、NGE→v9、AC→v8、MW→v8、ID→v8、DA/SPR/Cal→v7、全失效→v6）。
+**退化链声明（v13 契约化，新增前五级）：**
+- Level-0：AIO + CPD + DDL + RTCR 全激活，MetricVoiceGauge-NCD-HUTD；
+- Level-1：RTCR 失效 ⇒ v12 静态调度顺序，AIO 仍可中断、学生仅作事后预筛，**等价 v12 调度 + 随时教师**；
+- Level-2：DDL 失效 ⇒ 单档学生 + 教师回退（无嵌套、无塌缩），**等价 v12 证书 + 单个保守学生**；
+- Level-3：CPD 失效 ⇒ 无学生（`U_d≡0, Acc_S≡∅`），只走教师 anytime 路径，**等价 v12 + AIO**；
+- Level-4：AIO 失效 ⇒ 固定档一次运行、无中断/无保守扩张、RTIC 退化为静态 WCET，**等价 v12 计算路径**；
+- Level-5：四者全失效 ⇒ MetricVoiceGauge-NCD-HUT v12；
+- Level-6 起：进入 v12 既有退化链（GAGP→v11 NCP、BAA→v11 孪生、TGC→v11 规划、USG→v11 技能，再沿 v11 十三级链退回 v10/v9/v8/v7/v6）。
 
-前四端口（USG 候选生成、TGC 候选删除、BAA 预测更新、GAGP 排序）**互不相交**：USG 不能删证、TGC 不能生成、BAA 不能改真实阈值、GAGP 不能改证书。因此任意子集失效都落到一个明确的 v11 退化点或"v11 证书 + 静态过滤"点，不存在半失效的灰色执行路径。
+前四端口（AIO 保守扩张、CPD 证书压缩、DDL 阶梯嵌套、RTCR 选档）**互不相交**：AIO 不能新增授权、CPD 不能放宽教师阈值、DDL 不能扩大教师授权集、RTCR 不能改变任何证书。因此任意子集失效都落到一个明确的 v12 退化点，不存在"半失效的灰色执行路径"。
 
-## 1. 符号体系增量（定义 571–582）
+## 1. 符号体系增量（定义 583–594）
 
 | 符号 | 含义 |
 |---|---|
-| π_u=(τ,β,π_h,effect,pre,post) | 类型化通用技能项：类型 τ、对象/本体绑定 β、v11 HAS π_h、效果签名、前后置条件 |
-| G=(V,Σ,R,S) | 技能文法：非终结符、类型化原语、组合规则、起始符 |
-| ⟦g⟧ | 技能项 g 的语义：在绑定与扰动下可达的效果/轨迹集合 |
-| ≃_ε | ε-操作等价：效果签名在允许扰动下差异 ≤ε |
-| (T,O,E) | 通用性论域：任务族、对象分布、本体集合 |
-| UC=(T,O,E,1−ε_cov,δ_cov) | 通用性证书：在论域上的 PAC 覆盖下界 |
-| Δ(π) | 迁移间隙：真实指标减仿真指标（越大越危险） |
-| Ĉ_gap=(ĝ,U_gap,cov_gap,support) | 迁移间隙证书：点估计、共形上界、校准覆盖、支撑条件 |
-| B_transfer | 一个任务/episode 可消耗的迁移间隙预算 |
-| A | 真实锚点集（受 v11 证书约束的真实轨迹） |
-| r̂=f_real−f_sim | real→sim 结构残差模型（可为 GP/NN/混合） |
-| ζ_u=(τ,β,P(Δ\|A),B_transfer,r̂,UC) | 通用-迁移共享状态：USG/TGC/BAA/NCP 共用 |
-| P^g | 迁移安全中止点：存在 v11 认证且 gap 在剩余预算内的回退技能 |
+| A=(f_0,…,f_m;w_0<…<w_m) | 随时推理算子：保守起点、逐阶段扩张、验证 WCET |
+| Acc_k(x) | 第 k 阶段返回的**已认证授权集**，满足 `Acc_0⊆Acc_1⊆…⊆Acc_m⊆Exec_v12` |
+| c_k, q_k | 第 k 阶段的证书与质量（授权价值）下界 |
+| RTIC=(D,δ_t,{w_k,q_k},B_safe,fallback) | 实时推理证书：截止期、超时概率、质量下界、安全切片、认证回退 |
+| T, S | 教师（v12 重模块）与蒸馏学生；`Cert_T(x,a)=1[m_T(x,a)≥0]` |
+| m_T,m_S | 教师/学生的证书边界余量 |
+| Acc_S(U_d) | 学生授权集 `{(x,a):m_S(x,a)≥U_d}` |
+| U_d, Ĉ_dis=(ĝ_d,U_d,cov_d,support) | 蒸馏间隙与其共形证书（学生对教师的"乐观上界"） |
+| L=(S_0,…,S_m;w_0<…<w_m;θ_i=U_{d,i}) | 时限蒸馏阶梯，授权集单调嵌套 |
+| ζ_rt=(B_time,B_safe,i*,U_{d,i*},RTIC,drift,mode) | 实时路由共享状态 |
+| B_transfer, B_distill, B_time | 迁移预算（v12）、蒸馏预算、每帧时间预算；三预算不可挪用 |
+| P^rt | 实时安全回退集：认证且在本帧截止期内可完成的回退 |
+| π_rt(x;B) | 在预算 B 下的实时执行策略 |
 
-**定义 571（类型化通用技能项 Universal Skill Item）** 一个通用技能项是
+**定义 583（随时推理算子 Anytime Inference Operator）** 一个随时推理算子是
 ```
-π_u = ( τ, β, π_h, effect, pre_u, post_u )
+A = ( f_0, f_1, …, f_m ; w_0 < w_1 < … < w_m ; Cap )
+f_0 : x ↦ (Acc_0(x)=Fallback(x), c_0)          # 恒有效的保守起点
+f_k : (x, Acc_{k-1}) ↦ (Acc_k, c_k),  k=1..m
 ```
-其中 τ 为技能类型（抓取/推/旋/插/递/铰接/形变等），β∈B_ind 为对象-本体绑定（物体几何/质量/摩擦、末端执行器、运动学参数），π_h 为 v11 HAS，effect 为效果签名（位姿变化、接触力范围、物体状态谓词、可观察结果）。语义 `⟦π_u⟧` 为在绑定 β 与允许扰动下 π_h 产生的效果集合。π_u 必须能展开为 v11 的 π_h 并接受 HAS/HCC 的全部前后置检查。
+要求：
+1. **可靠性**：`Acc_k` 中每个动作在证书 `c_k` 下有效（soundness）；
+2. **单调扩张**：`Acc_{k-1} ⊆ Acc_k`；
+3. **授权上界**：`Acc_k ⊆ Exec_v12(x)`（v13 永不新增 v12 未允许的动作）；
+4. **可中断**：在任一 k 之后停止都返回有效的 `(Acc_k,c_k)`；
+5. **可验证 WCET**：`w_k` 为硬件在环测得的保守上界。
+质量 `q_k=E_{x∼D}[value(Acc_k(x)∩U(x))]` 单调不减。注意：安全关键 anytime 必须**从最保守集合向上扩张**，而不是从粗近似向下修正——`f_0` 只返回安全回退/空可行集，故任意早退只会更保守。
 
-**定义 572（通用操作技能文法 Universal Skill Grammar）** 文法 G=(V,Σ,R,S) 是类型化项文法：
-- 终结符 Σ={π_u}，每个终结符带类型 τ 与所需效果签名；
-- 组合规则 R 包含顺序 `g1;g2`、并行/双手 `g1‖g2`、条件 `if c then g1 else g2`、重试 `retry(g,n)`、以及绑定替换 `subst(g,β→β')`；
-- 组合的类型规则强制**接触模式连贯**：`g1;g2` 要求 g2 的 pre 与 g1 的 post 在 v11 接触模式混合自动机上兼容；`g1‖g2` 要求两侧共享的物体/本体资源不冲突且接触力证书可合取。
-文法生成的项集合记作 L(G)。L(G) 是**候选生成器**，不是安全证明器：任何 g∈L(G) 仍须逐段通过 v11 的 HAS/HCC/CC/规范检查。
+**定义 584（实时推理证书 RTIC）** 
+```
+RTIC = ( D, δ_t, {(w_k,q_k)}_{k=0..m}, B_safe, fallback )
+```
+有效当且仅当：
+1. 在已验证 WCET 与硬件在环条件下，`P(latency ≤ D) ≥ 1−δ_t`；
+2. 每个可能的中断档 k 返回的动作满足 `Acc_k⊆Exec_v12` 且 `q_k≥q_floor(D)`；
+3. 若无 k≥1 档能在 `D` 内完成，则执行 `fallback∈P^rt`（安全保持/柔顺停止/`a_ask`），**不得执行迟到结果**；
+4. 组合：对模块 DAG，`Σ_k w_k + overhead ≤ B_time`，且安全切片 `B_safe` 被硬预留、不可被性能模块挪用。
+RTIC 是**截止期证书**，不是平均延迟统计量。
 
-**定义 573（操作等价与绑定替换 Operational Equivalence）** 给定扰动集 Ξ 与效果度量 d_eff，两个绑定 β,β' 在类型 τ 下 ε-等价，记 β≃_ε β'，若对任意允许的 π_u 实例与 ξ∈Ξ，
+**定义 585（证书保持蒸馏 Certificate-Preserving Distillation）** 设教师 `T` 的证书谓词 `Cert_T(x,a)=1[m_T(x,a)≥0]`，学生 `S` 的边界余量为 `m_S`。若在论域 X 上
 ```
-sup_{ξ} d_eff( ⟦π_u(τ,β)⟧_ξ , ⟦π_u(τ,β')⟧_ξ ) ≤ ε .
+Acc_S(U) := {(x,a): m_S(x,a) ≥ U} ⊆ Acc_T := {(x,a): m_T(x,a) ≥ 0} ,
 ```
-等价类 [β]_τ 给出"可替换绑定"的商空间。跨对象/跨本体迁移只允许在已认证的等价类内做替换；等价类之外的绑定必须重新示范或走 v11 专用技能。
+则称 S 在 X 上以间隙 U **证书保持**。训练目标是**非对称**的：
+```
+L_CPD = E[ ℓ_task(S(x), a_T) ]
+      + λ_FA · E[ 1{Cert_S(x,a)=1 ∧ Cert_T(x,a)=0} ]     # 假接受：重罚
+      + λ_FR · E[ 1{Cert_S(x,a)=0 ∧ Cert_T(x,a)=1} ]     # 假拒绝：轻罚（活动性）
+      + λ_m  · E[ (m_S(x,a) − m_T(x,a))_+^2 ]            # 只惩罚"比教师乐观"
+```
+其中 `λ_FA ≫ λ_FR`。标签是教师的**证书判决与边界余量**，而不仅是动作；因为动作蒸馏可以在平均意义上匹配，却漏掉极薄的不可接受区域。
 
-**定义 574（通用性证书 Universality Certificate）** 对论域 (T,O,E)、技能文法 G、覆盖半径 ε_cov 与置信度 1−δ_cov，UC 声明
+**定义 586（蒸馏间隙证书 DGC）** 在类型/区域分层校准集上定义非一致性分数
 ```
-P_{ (T_i,O_i,E_i)∼D }[ ∃g∈L(G): g 在 (T_i,O_i,E_i) 上满足效果容差 ] ≥ 1−ε_cov
+g_i = m_S(x_i,a_i) − m_T(x_i,a_i)          # 学生相对教师的乐观量
+U_d(α_d) = Quantile_{1−α_d}( {g_i} ∪ {+∞} )  （有限样本修正，取 ⌈(1−α_d)(n+1)⌉ 阶）
 ```
-且该下界由有限样本校准得到（引理 106）。UC 有效还要求：覆盖样本来自与部署同分布的 T/O/E，且拒绝域（未覆盖的绑定/任务）被显式记录；**未认证通用的项不得以"通用"名义进入主执行路径**。
+证书 `Ĉ_dis=(ĝ_d,U_d,cov_d,support)`。有效条件：(i) 校准与部署在支撑域内可交换（或已做加权共形）；(ii) 部署绑定落在 `support` 内；(iii) `U_d ≤ B_distill`。有效时以概率 ≥1−α_d 有 `sup g ≤ U_d`，于是学生取阈值 `θ_S=U_d` 即得 `Acc_S(θ_S)⊆Acc_T`。DGC 只删除/收紧，不替代 v12 的 TGC；二者必须合取。
 
-**定义 575（迁移间隙与证书 Transfer Gap Certificate）** 对技能类型 τ（或具体项 π_u）定义间隙随机变量
+**定义 587（时限蒸馏阶梯 Deadline Distillation Ladder）** 
 ```
-Δ_τ = J_real(π_u) − J_sim(π_u)      （J 为预注册的真实/仿真指标，越大越差）
+L = ( S_0, S_1, …, S_m ; w_0<…<w_m ; θ_i=U_{d,i} )
+Acc_i = {(x,a): m_{S_i}(x,a) ≥ θ_i}
 ```
-在类型分层校准集 A_τ 上计算非一致性分数 s_i=Δ_i，取共形分位数
-```
-U_gap(τ;α) = Quantile_{1−α}( {Δ_i : i∈A_τ} ∪ {+∞} )  （有限样本修正）
-```
-证书 `Ĉ_gap=(ĝ,U_gap,cov_gap,support)`。`Ĉ_gap` 有效 ⇔ (i) 校准集与部署在类型内可交换（或已用加权共形校正）; (ii) 部署绑定落在 UC/支撑集内; (iii) `U_gap ≤ B_remaining`。有效时以 ≥1−α 的概率有 `J_real ≥ J_sim − U_gap`。TGC 只删除候选，不改变 v11 的任何证书。
+要求 `Acc_0⊆Acc_1⊆…⊆Acc_m⊆Acc_T`。若学生是独立网络，用**并集门**强制嵌套 `Acc_i ← ∪_{j≤i}Acc_j`（每个 `Acc_j⊆Acc_T`，故并集仍安全）；若用共享骨干多出口网络，则直接以单调罚项训练嵌套。`S_0` 是**无需学习的零假设安全回退**（安全保持/柔顺停止/`a_ask`），在教师失效或严重漂移时仍由物理构造保证安全。预算越多 ⇒ 授权集（弱）单调越大，但永不超过教师。
 
-**定义 576（组合间隙与迁移预算 Compositional Gap）** 对组合 `g=g1;g2` 定义
+**定义 588（实时路由状态）**
 ```
-Δ(g) ≤ Δ(g1)+Δ(g2)+I(g1,g2)
+ζ_rt = ( B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode )
+mode ∈ {fast, speculate-verify, teacher-only, fallback}
 ```
-其中 I 为交互项（接触模式切换、共享物体状态、双手耦合、执行器热/谐波记忆）。交互项由同类型组合的锚点残差估计；若 I 不可估计或上界超预算，则组合被 TGC 拒绝。一个 episode 的预算约束为
-```
-Σ_seg U_gap(seg) + Σ_inter I_hat ≤ B_transfer
-```
-预算只能在任务级预注册值内分配，不能因"想完成任务"而透支。
+RTCR 只读 `ζ_rt` 选档；档位证书由 AIO/CPD/DDL 预先产生。
 
-**定义 577（双向锚定对齐 Bidirectional Anchored Alignment）** BAA 由三部分组成：
-- **残差辨识**：用真实锚点 A 拟合 `r̂=f_real−f_sim`（特征含接触模式、相对速度、法向力、温度、谐波状态 ζ_h），回写 HDT 的结构项与 USG 的类型先验；
-- **主动锚点选择**：从候选段（重放缓冲、规划器可执行的 v11 认证段、低速微扰）中选
+**定义 589（时限条件蒸馏目标）**
 ```
-a* = argmax_{a∈A_cand}  E[ H(P(Δ_τ|A)) − H(P(Δ_τ|A∪{a})) ] / cost(a)
-    s.t.  a 通过 v11 物理/接触/谐波/规范证书
+min_{S_0..S_m}  E[ ℓ_task(S_{i(x)}(x)) ] + λ_t Σ_i π_i w_i + λ_s Σ_i π_i U_{d,i}
+s.t.  Acc_0⊆…⊆Acc_m⊆Acc_T ,
+      w_i ≤ B_time − B_safe ,
+      U_{d,i} ≤ B_distill ,
 ```
-即单位真实成本的最大后验熵下降，且锚点本身必须安全；
-- **后验回写**：`P_post(θ_h, r̂ | A∪{a*})` 更新 HDT 参数后验与 `U_gap`，下一轮 TGC 使用收缩后的上界。BAA 不修改真实侧的证书阈值。
+`π_i` 为路由占用分布，`λ_t` 是"时间价格"、`λ_s` 是"安全余量价格"。最优阶梯使各档的**单位毫秒边际进度增益**相等；这给出离线训练/构造的对偶解释，RTCR 则是在线原始决策。
 
-**定义 578（通用-迁移共享状态）**
+**定义 590（实时安全回退集 P^rt）** 在 v12 的 `P^g` 基础上，
 ```
-ζ_u = ( τ, β, P(Δ|A), B_transfer, r̂, UC )
+p ∈ P^rt ⇔ ∃ π_f : π_f ∈ Exec_v12
+                 ∧ w(π_f) ≤ B_time(p)
+                 ∧ U_gap(π_f) + U_dis(π_f) ≤ B_remaining(p)
+                 ∧ 执行 π_f 不破坏 I_c、I_h 与规范硬约束
 ```
-USG 读 (τ,β,UC) 生成候选；TGC 读 `P(Δ|A),B_transfer` 删除候选；BAA 读锚点并回写 `P(Δ|A),r̂`；GAGP/NCP 在 `ζ_u` 上做排序与选择。四者共享同一状态，避免"文法、证书、锚定"各自维护一份不一致的迁移假设。
+可执行段的必要条件升级为 `P^g≠∅ ∧ P^rt≠∅`；`P^rt` 中必须有至少一个**无需学习证书**的零假设回退（定义 587 的 `S_0`）。
 
-**定义 579（迁移安全中止点 Transfer-Safe Abort Point）** 在 v11 的 `P_t=P_t^nav∪P_t^c∪P_t^h` 基础上增加迁移语义：点 p∈P^g 当且仅当存在一个回退技能 π_u^back，使得
-```
-π_u^back 通过 v11 全部适用证书
-∧ π_u^back 的绑定 β^back 在 UC 的支撑集内
-∧ U_gap(π_u^back) ≤ B_remaining(p)
-∧ 从 p 执行 π_u^back 不破坏 I_c、I_h 与规范硬约束
-```
-可执行段的必要条件升级为：当前模式下 v11 中止点集非空 **且** 迁移回退集 P^g 非空。
-
-**定义 580（中立元表 v12 扩展）**
+**定义 591（中立元表 v13 扩展）**
 
 | 新组件 | v^⊥ | 等价退化点 |
 |---|---|---|
-| USG | L(G)←v11 DSL 的任务专用 π_h 集合（无替换、无跨对象/本体组合） | Level-3（v11 技能路径） |
-| TGC | Ĉ_gap≡⊤，U_gap≡0，B_transfer≡∞ | Level-2（v11 规划路径） |
-| BAA | r̂≡0，A 仅作日志，HDT 用 v11 固定先验 | Level-1（v11 孪生路径） |
-| GAGP | 由 v11 NCP 直接选择 USG 候选，gap 仅事后审计 | Level-4（v11 NCP） |
+| AIO | 固定档一次运行，无中断/无保守扩张，RTIC 退化为静态 WCET | Level-4（v12 计算路径） |
+| CPD | `Acc_S≡∅, U_d≡0`，只走教师 | Level-3（v12+AIO 证书路径） |
+| DDL | 单档学生 + 教师回退，无嵌套/无塌缩 | Level-2（v12 证书 + 单学生） |
+| RTCR | v12 静态调度顺序，学生仅事后预筛 | Level-1（v12 调度 + 随时教师） |
 
-**定义 581（通用操作技能，升级定义 554）** v11 的 HAS π_h 升级为 π_u：保留 σ,u,K_p,K_d,f_max,τ_max,pre,post,θ_flex_ref,τ_h_ref,k_h,d_h,hyst,ω_res,T_thermal，并追加 `(τ,β,effect,pre_u,post_u)`。v11 技能是 `τ=task_specific, β=fixed, UC=⊥` 的特例。
+**定义 592（升级定义 582 的时限—蒸馏感知选择）** 
+```
+max_g   E[Progress(g)]
+        − λ_risk · ( U_gap(g) + U_dis(g) )
+        − λ_time · E[latency(g)]
+        − λ_ask  · E[false_reject(g)]
+s.t.    v11/v12 物理/接触/谐波/规范/gap 证书全部有效
+        Σ_seg (U_gap+U_dis) ≤ B_total
+        W_p99(g) ≤ D ,  P^rt(g) ≠ ∅
+        Acc_i(g) ⊆ Acc_T(g)，替换仅在已认证等价类内
+```
+若某组合的 `U_dis` 超预算但信息价值高，只能转为**离线校准/蒸馏采样**，不能直接执行任务段。
 
-**定义 582（gap 感知选择 Gap-Aware Selection）** GAGP 在候选组合 g∈L(G) 上求解
+**定义 593（三预算不可挪用 Three-Budget Non-Fungibility）**
 ```
-max_g   E[ Progress(g) ] − λ_risk · U_gap(g) + λ_info · InfoValue(after g)
-s.t.    v11 物理/接触/谐波/规范证书全部有效
-        Σ U_gap ≤ B_transfer
-        P^g(g) ≠ ∅
-        g 的类型替换仅在已认证等价类内
+B_total = B_transfer + B_distill        # 真实侧误差可加，见引理 121
+B_time  = B_safe + B_infer              # 安全切片硬预留
 ```
-其中 `InfoValue` 是该段执行后可提供的锚定信息价值；若 `U_gap` 超预算但 `InfoValue` 很高，只能转为**锚定探测**（低速、短时、v11 认证），不能直接执行任务段。
+三类预算（迁移/蒸馏/时间）各自独立，**不得互相冲抵**：蒸馏间隙不能拿迁移预算买单，时间也不能拿安全余量买单。任一预算耗尽时，唯一允许的动作是沿阶梯更保守、触发 `a_ask` 或认证回退。
+
+**定义 594（实时执行策略与语义保持 Real-Time Policy）**
+```
+π_rt(x; B) = argmax_{a ∈ Acc_{i*(B)}(x)} value(a),
+i*(B) = max{ i : w_i ≤ B − B_safe , Ĉ_dis,i 有效 }
+```
+且要求对所有 x、B 有 `π_rt(x;B) ∈ Exec_v12(x)`。RTCR 的推测—验证只是实现 `π_rt` 的一种方式：学生放行仅当 `(x,a)∈Acc_{i*(B)}`；否则在剩余预算足够时由教师 anytime 验证，验证不完成则退回 `P^rt`。
 
 ## 2. 形式化升级（要点）
 
-**升级定义 546/554（灵巧/通用技能）** π_h→π_u。USG 内部的终结符全部展开为 v11 HAS，故 HCC/CC 仍可逐项检查；类型与绑定只是**索引**，不构成新的执行语义。
+**升级定义 582（gap 感知选择）** 增加 `−λ_time·E[latency]`、`−λ_ask·E[false_reject]` 与 `W_p99≤D, P^rt≠∅` 约束；不改变 v12 的任何证书项。
 
-**升级定义 547/548（接触/谐波证书）** 证书合取升级为
-```
-Ĉ_joint = Ĉ_contact ∧ Ĉ_h ∧ Ĉ_gap
-P^joint = P^c ∩ P^h ∩ P^g
-```
-`Ĉ_gap` 是附加过滤项，不替代任何 v11 证书；`P^g` 是回退可行性，不替代接触/谐波中止点。
+**升级定义 579/590（中止点）** `P_t=P_t^nav∪P_t^c∪P_t^h` 之外要求 `P^rt≠∅`；四类中止点分别回答"能不能导航停""接触能不能安全停""谐波能不能耗散停""真实侧有没有按时可执行的认证回退"。
 
-**升级定义 531（软硬约束衔接）** M₀ 硬检查保持 v11 全部判据；新增的 gap 超预算进入**执行门**（不可执行），而不是物理硬违规。物理/接触/谐波/规范的硬违规定义不变。
+**升级定义 531（软硬约束衔接）** v12 的物理/接触/谐波/规范硬检查原样保留；新增的"截止期不可达""DGC 失效""预算耗尽"进入**执行门**（不可执行），不是物理硬违规。物理硬违规的定义不变。
 
-**升级定义 534'（多语义中止点）** `P_t=P_t^nav∪P_t^c∪P_t^h`，执行段还须 `P^g≠∅`；四类中止点分别回答"能不能导航停""接触能不能安全停""谐波能不能耗散停""真实侧有没有认证回退"。
+**升级定义 580（中立元）** 见定义 591；四个中立元注入后调用序列与 v12 逐位一致。
+
+**升级定义 554/571（技能与通用项）** 不变；AIO/CPD/DDL 只是在技能项展开为 v11 HAS 序列之后，对**计算实现**做优化，不改变技能语义、绑定、效果签名或前后置条件。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-367 UniversalSkillGrammar
-class UniversalSkillGrammar:
-    def __init__(self, primitives, type_rules, max_depth=6):
-        self.prims = primitives          # {tau: [pi_u, ...]}
-        self.rules = type_rules          # seq/par/cond/retry 的类型规则
-        self.max_depth = max_depth
+# IP-371 AnytimeInferenceOperator：从最保守集合向上扩张
+class AnytimeInferenceOperator:
+    def __init__(self, stages, wcet, fallback):
+        self.stages = stages          # [f0, f1, ..., fm]；f0 只返回 fallback/拒绝
+        self.wcet = wcet              # 硬件在环验证的逐阶段 WCET
+        self.fallback = fallback
 
-    def enumerate(self, task, uc, zeta_u, n=64):
-        # 只生成候选，不做安全证明；每个项保留可展开的 v11 HAS
-        frontier = [self._match(task, zeta_u, uc)]
-        out = []
-        for depth in range(self.max_depth):
-            nxt = []
-            for g in frontier:
-                for rule in self.rules.applicable(g, task):
-                    g2 = rule.compose(g, self.prims, zeta_u)
-                    if g2 is None:
-                        continue
-                    if not self._contact_mode_coherent(g2):   # 定义 572
-                        continue
-                    if not self._bindings_certified(g2, uc):  # 定义 573/574
-                        continue
-                    nxt.append(g2)
-            out.extend(nxt)
-            if len(out) >= n:
+    def run(self, x, deadline):
+        acc, cert = self.stages[0](x)                 # Acc_0 = Fallback(x)
+        assert self._sound(x, acc, cert)
+        spent = self.wcet[0]
+        for k in range(1, len(self.stages)):
+            if spent + self.wcet[k] > deadline:       # 下一阶段放不下：停在上一档
                 break
-            frontier = nxt
-        return rank_by_effect(out, task)[:n]
-
-    def expand(self, g):
-        # 展开为 v11 HAS 序列；保证不绕过 HAS/HCC/CC
-        return flatten(g, kind="has")
-
-
-# IP-368 TransferGapCertifier
-class TransferGapCertifier:
-    def __init__(self, alpha=0.1, min_calib=30, support_model=None):
-        self.alpha = alpha
-        self.min_calib = min_calib
-        self.calib = {}                  # tau -> [Delta_i]
-        self.support = support_model     # UC/支撑集查询
-
-    def update(self, tau, delta_samples):
-        self.calib.setdefault(tau, []).extend(delta_samples)
-
-    def certify(self, skill_or_composition, zeta_u, B_remaining):
-        scores = self._scores(skill_or_composition, zeta_u)
-        if len(scores) < self.min_calib or not self.support.covers(skill_or_composition):
-            return None                   # 无证书，不得执行
-        U = conformal_upper(scores, alpha=self.alpha)
-        U += self._interaction_bound(skill_or_composition, zeta_u)  # 定义 576
-        if U > B_remaining:
-            return None
-        return GapCert(g_hat=mean(scores), U_gap=U,
-                       coverage=1 - self.alpha, support=True)
-
-    def _scores(self, g, zeta_u):
-        # 按技能类型分层取校准分数；组合取分段分数 + 交互项
-        taus = skill_types(g)
-        return [d for tau in taus for d in self.calib.get(tau, [])]
+            acc_k, cert_k = self.stages[k](x, acc)
+            if not (acc <= acc_k <= Exec_v12(x)
+                    and self._sound(x, acc_k, cert_k)
+                    and self._monotone_value(acc, acc_k)):
+                break                                  # 任一不变量破坏即回退上一档
+            acc, cert = acc_k, cert_k
+            spent += self.wcet[k]
+        return acc, cert, spent
 
 
-# IP-369 BidirectionalAnchoredAligner
-class BidirectionalAnchoredAligner:
-    def __init__(self, hdt, residual_model, safety_guard, cost_model):
-        self.hdt = hdt
-        self.r = residual_model         # GP/NN/linear hybrid
-        self.guard = safety_guard       # v11 证书检查
-        self.cost = cost_model
+# IP-372 CertificatePreservingDistiller：只弱不强
+class CertificatePreservingDistiller:
+    def __init__(self, teacher, alpha_d=0.1, lam_fa=50.0, lam_fr=1.0, lam_m=1.0):
+        self.T = teacher
+        self.alpha_d, self.lam = alpha_d, (lam_fa, lam_fr, lam_m)
 
-    def select_anchor(self, candidates, posterior, tau):
-        best, best_score = None, -1.0
-        for a in candidates:
-            if not self.guard.certifies(a):        # 锚点必须安全
-                continue
-            gain = entropy(posterior[tau]) - expected_entropy(posterior[tau], a)
-            score = gain / max(self.cost(a), 1e-6)
-            if score > best_score:
-                best, best_score = a, score
-        return best
-
-    def update(self, anchor):
-        # real -> sim：残差回写，不修改真实证书阈值
-        f_real = anchor.observed_trajectory
-        f_sim = self.hdt.rollout(anchor.state, anchor.actions)
-        self.r.fit(features(anchor), f_real - f_sim)
-        self.hdt.inject_residual(self.r)
-        self.hdt.update_calibration(f_real)
-
-    def gap_posterior(self, tau, anchors):
-        # 用残差与锚点更新类型级 gap 后验，供 TGC 取共形分位
-        return posterior_over_gap(tau, anchors, self.r)
+    def fit(self, S, train, calib):
+        for x, a in train:
+            m_T = self.T.margin(x, a)
+            m_S = S.margin(x, a)
+            cert_T = (m_T >= 0)
+            loss = (task_loss(S(x), self.T.action(x))
+                    + self.lam[0] * false_accept(S, cert_T)
+                    + self.lam[1] * false_reject(S, cert_T)
+                    + self.lam[2] * relu(m_S - m_T) ** 2)      # 只惩罚更乐观
+            loss.backward()
+        g = [S.margin(x, a) - self.T.margin(x, a) for x, a in calib]
+        U_d = conformal_upper(g, alpha=self.alpha_d)           # 定义 586
+        return DistilledStudent(S, theta=U_d, gap=U_d)
 
 
-# IP-370 GapAwareGeneralistPlanner (集成层)
-class GapAwareGeneralistPlanner:
-    def __init__(self, usg, tgc, baa, v11_ncp, budget):
-        self.usg, self.tgc, self.baa = usg, tgc, baa
-        self.ncp = v11_ncp
-        self.B = budget
+# IP-373 DeadlineDistillationLadder：授权集单调嵌套
+class DeadlineDistillationLadder:
+    def __init__(self, students, wcet, U_d):
+        self.S, self.w, self.theta = students, wcet, U_d
 
-    def plan(self, task, zeta_u, v11_certs):
-        cands = self.usg.enumerate(task, zeta_u.UC, zeta_u, n=64)
-        feasible = []
-        B_rem = self.B
-        for g in cands:
-            cert = self.tgc.certify(g, zeta_u, B_rem)      # 只删不加
-            if cert is None:
-                continue
-            if not self._v11_certs_hold(g, v11_certs):     # 引理 109
-                continue
-            if not self._abort_points_nonempty(g, zeta_u):
-                continue
-            feasible.append((g, cert))
-        if not feasible:
-            return self._fallback(task, zeta_u)             # v11 路径 / a_ask
-        return self.ncp.rank(feasible, zeta_u)               # 排序不改证书
+    def build(self):
+        for i in range(1, len(self.S)):
+            self.S[i] = UnionGate(self.S[i], self.S[:i], self.theta[:i + 1])
+            assert self.acc(i - 1) <= self.acc(i) <= self.acc_teacher()
+        return self
+
+    def acc(self, i):
+        return {(x, a) for (x, a) in self.support
+                if self.S[i].margin(x, a) >= self.theta[i]}
+
+    def rung(self, i):
+        return self.S[i], self.theta[i]
 
 
-# 主闭环集成：MetricVoiceGauge-NCD-HUT
-def metricvoicegauge_round_12(M, s, obs, audio_stream=None, ell=None, ...):
-    # ---- v11 主路径（MW→NGE→HCC→HDT→HATD→NCP→守卫）原样保留 ----
+# IP-374 RealTimeCertificateRouter：选档 + 推测-验证 + 塌缩
+class RealTimeCertificateRouter:
+    def __init__(self, ladder, rtic, teacher_aio):
+        self.L, self.rtic, self.T = ladder, rtic, teacher_aio
+
+    def route(self, x, B_time, drift):
+        if drift:
+            return self.L.rung(0)                     # 安全塌缩：零假设回退
+        budget = B_time - self.rtic.B_safe            # 安全切片不可挪用
+        for i in reversed(range(len(self.L.S))):
+            if self.L.w[i] <= budget and self.L.cert_valid(i):
+                return self.L.rung(i)
+        return self.L.rung(0)                         # 认证回退 / 立即 a_ask
+
+    def speculate_verify(self, x, B_time):
+        S_i, theta_i = self.route(x, B_time, drift=False)
+        a_hat = S_i.act(x)
+        if S_i.margin(x, a_hat) >= theta_i:           # 学生已认证子集：快速放行
+            return a_hat
+        spare = B_time - self.L.w[self.L.index(S_i)]
+        if spare >= self.T.wcet[1]:                   # 剩余时间够：教师 anytime 验证
+            verdict = self.T.verify(x, a_hat)
+            return a_hat if verdict.sound else self.T.fallback(x)
+        return self.T.fallback(x)                     # 验证预算不足：不赌
+
+
+# 主闭环集成：MetricVoiceGauge-NCD-HUTD
+def metricvoicegauge_round_13(M, s, obs, audio_stream=None, ell=None, ...):
+    # ---- v12 主路径（MW→NGE→HCC→HDT→HATD→NCP→守卫）原样保留 ----
     results = middleware.run_cycle(runners={...}, ctx=ctx)
-    ctx.delta_dom, ctx.tau_dom = results['DA_ML'], M.tau_dom
     nge.update_belief(obs)
     hcc.update_identification(obs.motor_enc, obs.joint_enc, obs.current)
-    harmonic_est = hcc.get_estimates()
     harmonic_pred = hdt.predict_harmonic(ctx.state, candidate_skills) if hdt.ready() else None
 
-    # ---- USG：类型化通用候选生成（5Hz，摊销 ≤1ms）----
-    uc = usg.universality_certificate(ctx.task_family, ctx.object_dist, ctx.embodiment_set)
-    u_cands = usg.enumerate(ctx.task_graph, uc, ctx.zeta_u, n=64)
+    # ---- AIO：重模块改为保守扩张（5Hz，摊销 ≤1ms）----
+    u_cands, uc_cert, t_usg = aio_usg.run(ctx.task_graph, deadline=ctx.B_time)
+    gap_certs, dgc_by_tau, t_tgc = aio_tgc.run(u_cands, ctx.zeta_u, ctx.B_time)
 
-    # ---- TGC：逐类型/逐段 gap 证书（5Hz，摊销 ≤0.5ms）----
-    gap_certs = {}
-    for g in u_cands:
-        c = tgc.certify(g, ctx.zeta_u, B_remaining=ctx.B_transfer)
-        if c is not None:
-            gap_certs[g.id] = c
+    # ---- RTCR：选档 / 推测-验证（50Hz，≤0.05ms）----
+    rung, theta = rtcr.route(ctx.state, ctx.B_time, drift=ctx.drift_flag)
+    if rtcr.mode(ctx.state) == "speculate-verify":
+        a_student = rtcr.speculate_verify(ctx.state, ctx.B_time)
 
-    # ---- GAGP + v11 NCP：只排序/选择，不改任何证书 ----
+    # ---- v12 GAGP/NCP + v13 时间/蒸馏约束（5Hz，摊销 ≤1ms）----
     if current_chunk is None or current_chunk.exhausted:
-        plan = gagp.plan(ctx.task_graph, ctx.zeta_u, ctx.v11_certs)
-        current_chunk = planner.plan_with_harmonic_and_gap(
+        plan = gagp.plan(ctx.task_graph, ctx.zeta_u, ctx.v11_certs,
+                         rung=rung, U_dis=theta, B_time=ctx.B_time)
+        current_chunk = planner.plan_with_harmonic_gap_time(
             ctx.state, nge.b, ctx.delta_dom, ctx.tau_dom,
-            harmonic_state=ctx.harmonic_state, harmonic_pred=harmonic_pred,
-            gap_certs=gap_certs, B_transfer=ctx.B_transfer)
+            harmonic_pred=harmonic_pred, gap_certs=gap_certs,
+            B_transfer=ctx.B_transfer, B_time=ctx.B_time)
 
-    # ---- v11 守卫 + gap 守卫（50Hz，合计 ≤0.8ms）----
-    verdict, k_next = chunk_guard_harmonic_gap(current_chunk, k_exec, live_obs, nge.b, hcc, tgc)
+    # ---- v12 守卫 + 实时守卫（50Hz，合计 ≤0.8ms）----
+    verdict, k_next = chunk_guard_harmonic_gap_time(
+        current_chunk, k_exec, live_obs, nge.b, hcc, tgc, rtcr)
     if verdict == 'abort':
-        current_chunk.execute_transfer_safe_abort(k_next)   # 定义 579：I_c ∧ I_h ∧ P^g
+        current_chunk.execute_transfer_safe_abort(k_next)      # P^g ∩ P^rt
         current_chunk = None
+    elif verdict == 'degrade':
+        current_chunk = rtcr.rung(0)                           # 安全塌缩
     elif verdict == 'recover':
         execute_recovery(nge.epistemic_recovery())
     else:
         execute(current_chunk.skills[k_next])
 
-    # ---- BAA：主动锚点选择 + real→sim 残差回写（低频异步）----
-    if cycle_idx % T_anchor == 0 and budget_left():
-        a = baa.select_anchor(anchor_candidates(ctx), ctx.gap_posterior, tau=ctx.tau)
-        if a is not None and v11_guard.certifies(a):
-            baa.update(a)                                   # 只改仿真/先验
+    # ---- CPD/DGC：低频异步蒸馏与重校准；只改学生，不改教师阈值 ----
+    if cycle_idx % T_distill == 0:
+        baa_snapshot = hdt.snapshot()
+        students = cpd.fit(ladder_arch, train=distill_buffer, calib=boundary_calib)
+        ladder = ddl.build(students, wcet=measured_wcet, U_d=students.gap)
+        if drift_detector.fired():
+            rtcr.collapse_to_zero()                            # 安全塌缩 + 重校准
 
-    # ---- v11 继承路径（GCT/ER/5 维风险/奖励/ID）----
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v11_path(ctx)
+    # ---- v12 继承路径 ----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v12_path(ctx)
     return C, spatial_cert, claims, metrics, rewards
 ```
 
 ## 4. 推导
 
-**引理 104（绑定替换的误差传播）** 设技能项在类型 τ 下对绑定扰动 L-Lipschitz，β≃_ε β'，且 π_h 自身的 v11 模型误差为 δ_h。则替换后的真实效果差满足
-```
-‖J_real(π_u(τ,β)) − J_real(π_u(τ,β'))‖ ≤ L·ε + 2δ_h .
-```
-证明：由 ε-等价定义，效果度量差 ≤ε；Lipschitz 性把它放大到任务指标；两侧各自叠加 π_h 的模型误差 δ_h。∎
+**引理 113（随时算子的中断安全性）** 若 A 满足定义 583 的可靠性、单调扩张与授权上界，且 `f_0` 只返回 `Fallback(x)⊆Exec_v12`，则对任意中断档 k，`(Acc_k,c_k)` 有效且 `Acc_k⊆Exec_v12`；且若 `f_k` 的加入不降低授权价值，则 `q_0≤…≤q_m`。证明：对 k 归纳。k=0 由 `f_0` 定义。若 `(Acc_{k-1},c_{k-1})` 有效，定义 583 的条件 1–3 直接给出 `Acc_k` 有效、`Acc_{k-1}⊆Acc_k⊆Exec_v12`，故中断在 k 仍有效。质量单调由定义 583 的 `q_k` 单调性。∎ 推论：**安全性不依赖 WCET 是否精确，只依赖"能否按时执行到某一档"**；WCET 误差只影响及时性/性能，不会把早退变成不安全。
 
-**引理 105（通用性证书的 PAC 覆盖界）** 设技能文法 G 的有效复杂度为 d_G（覆盖数意义），从 (T,O,E) 独立采样 n 个任务/对象/本体实例。则以概率 ≥1−δ_cov，
+**引理 114（DGC 的单侧覆盖与包含）** 若校准分数 `{g_i}` 与部署分数在支撑域内可交换，`U_d` 取有限样本修正的 `⌈(1−α_d)(n+1)⌉` 阶次序统计量，则
 ```
-Coverage_G ≥ 1 − ε_cov − O( sqrt( (d_G·log n + log(1/δ_cov)) / n ) ) .
+P( g_{n+1} ≤ U_d ) ≥ 1−α_d .
 ```
-证明：对 L(G) 的 ε_cov-覆盖做一致收敛（covering number + 对称化），标准 PAC 界。∎ 推论：UC 是**样本相关**的；文法越复杂、d_G 越大，达到同一覆盖下界所需的真实/仿真评测样本越多，这与"通用即免费"的直觉相反。
+因此当 `m_S(x,a)≥U_d` 时，`m_T(x,a)=m_S(x,a)−g(x,a)≥U_d−U_d=0`，即 `Acc_S(U_d)⊆Acc_T`。若部署发生协变量漂移但满足支撑覆盖与密度比有界，加权共形给出 `1−α_d−ε_shift` 的保守下界。证明：标准分裂共形 + 加权共形定理；支撑外无保证，故 DGC 必须与 v12 UC 的支撑条件合取。∎ 推论：**蒸馏的代价是假拒绝，不是假接受**；`U_d` 越大，学生越保守、活动性越差，但永不超过教师。
 
-**引理 106（组合间隙的三角界）** 对任意组合 `g=g1;g2` 与任意真实/仿真指标 J，
+**引理 115（阶梯嵌套的随时安全与退化代价）** 对嵌套阶梯 `Acc_0⊆…⊆Acc_m⊆Acc_T`，路由器取 `i*(B)=max{i:w_i≤B−B_safe, Ĉ_dis,i 有效}`。则：(i) 在 RTIC 有效时，`P(latency≤D)≥1−δ_t`；(ii) 输出 `π_rt(x;B)∈Exec_v12`；(iii) 期望授权价值 `v(B)=E[value(Acc_{i*(B)})]` 关于 B 单调不减；(iv) 相对满档 `m` 的期望退化满足
 ```
-Δ(g) ≤ Δ(g1) + Δ(g2) + I(g1,g2),
+E[v_m − v(B)] ≤ Σ_{i=0}^{m-1} P(B < w_{i+1}+B_safe) · (v_{i+1} − v_i) .
 ```
-其中 `I(g1,g2)=J_real(g1;g2)−J_real(g1)−J_real(g2) − [J_sim(g1;g2)−J_sim(g1)−J_sim(g2)]` 是真实与仿真交互项之差。证明：把 Δ(g) 展开为分段项与交互项，重新组合即得；交互项正是"分段 gap 可加"失效的部分。∎ 推论：**分段都通过 TGC 不保证组合通过**；必须显式估计 I 或为组合保留交互预算。
+证明：(i)(ii) 由 RTIC 与引理 113/117；(iii) 由嵌套与 `i*(B)` 单调；(iv) 对指标函数做伸缩求和：`v_m−v(B)=Σ_{i=i*(B)}^{m-1}(v_{i+1}−v_i)`，取期望并按 `{B<w_{i+1}+B_safe}` 事件放缩。∎ 推论：**退化是连续的、可预算的**；只要 `w_0≤B_safe`，最坏情况也落在零假设回退上，不会出现"无档可跑"。
 
-**引理 107（TGC 的共形可靠性）** 若对每个类型 τ，校准分数 `{Δ_i}` 与部署分数在类型内可交换，`U_gap` 取有限样本修正的 `⌈(1−α)(n+1)⌉` 分位，则
+**引理 116（时限—保真—容量三难下界）** 存在教师/论域对，使任何学生族若满足每帧计算 `w_i≤D`、单侧假接受 ≤α_d、且在支撑域内证书保持，则其蒸馏间隙满足
 ```
-P( Δ_τ ≤ U_gap(τ;α) ) ≥ 1−α .
+U_d ≥ Ω( sqrt( (d_eff + log(1/δ)) / n ) + ε_appr(c, D) ) ,
 ```
-若部署分布发生协变量漂移但满足支撑覆盖与密度比有界，则用加权共形得到 `1−α−ε_shift` 的保守下界，其中 ε_shift 由密度比偏差估计。证明：标准分裂共形 + 加权共形定理；支撑外无保证，故 TGC 必须与 UC 的支撑条件合取。∎
+其中 `d_eff` 为教师证书边界的有效维度、`ε_appr(c,D)` 为容量 c/时限 D 下的逼近误差；并且若阶梯只有 m 档、`w_m≤D`，则存在预算分布使
+```
+E[v_m − v(B)] ≥ Ω( (v_m−v_0)/m )  或   m = Ω(D/Δw) .
+```
+证明：第一项由边界函数的非参数 minimax 下界（Le Cam 方法）给出；第二项把"中断认证"视为对阶梯档位的信息约束，构造一个只在相邻档之间切换的预算分布，使少于 m 档时必然在某个预算区间错配，伸缩求和给出下界。∎ 推论：**"实时 + 蒸馏 + 零代价"不可能同时成立**；必须用 `B_distill`、档数 m、或活动性（假拒绝）三者显式交换。
 
-**引理 108（主动锚定的收缩率）** 设残差 r 在特征空间中对类型 τ 的 Fisher 信息矩阵为 `I_τ(a)`，锚点选择近似 D-最优，且 r 的局部线性近似误差 ≤ε_r。则 n 个锚点后的 gap 后验方差满足
+**引理 117（安全继承与不可绕过性）** v13 的执行集为
 ```
-tr(Cov_n) ≤ (1+ε_r) · tr( (Σ_0^{-1} + Σ_{i=1}^n I_τ(a_i))^{-1} ) ,
+Exec_v13 = { a : a∈Acc_{i*(B)}(x) 对某有效档 i*
+                ∧ v11 物理/接触/谐波/规范证书有效
+                ∧ U_gap+U_dis ≤ B_total
+                ∧ P^rt≠∅ } .
 ```
-且达到 `tr(Cov_n)≤ε` 所需的锚点数 `n=O(d_τ/ε)`（d_τ 为有效残差维度）。证明：贝叶斯线性回归/后验协方差更新；D-最优使每步信息增益最大；局部线性误差以乘性因子进入。∎ 推论：**不是所有真实数据都一样值钱**；安全约束下选错锚点，样本复杂度会退化为均匀采样的 O(1/ε²)。
+则 `Exec_v13 ⊆ Exec_v12`。证明：定义 583(3) 给出 AIO 的 `Acc_k⊆Exec_v12`；引理 114 给出 CPD 的 `Acc_S⊆Acc_T⊆Exec_v12`；DDL 只做并集/嵌套，仍 ⊆ v12；RTCR 只在上述集合中选档；`P^rt` 要求 `π_f∈Exec_v12`。故任一被执行动作属于 v12 执行集；v12 的 gap 证书合取只进一步缩小集合。∎ 因此 v12 引理 109/101 与 v11 的安全继承在 v13 上继续成立。
 
-**引理 109（安全继承与不可绕过性）** v12 的执行集为
-```
-Exec = { g∈L(G) : v11 物理/接触/谐波/规范证书有效
-                 ∧ Ĉ_gap 有效 ∧ ΣU_gap≤B_transfer
-                 ∧ P^g≠∅ } .
-```
-则 `Exec ⊆ Exec_v11`（按展开后的 v11 技能序列比较）。USG 只能在类型规则内生成候选，TGC 只能删除，BAA 只能改 HDT/先验，GAGP 只能排序。证明：任一 g∈Exec 展开为 v11 HAS 序列且逐项通过 v11 证书，故属于 v11 执行集；TGC 的合取只进一步缩小集合；BAA/GAGP 不写真实证书。∎ 因此 v11 引理 101/95 的安全继承在 v12 上继续成立。
+**引理 118（中立元退化等价 v12）** 将定义 591 的四个中立元注入 AIO/CPD/DDL/RTCR 端口，则随时算子退化为固定档教师、学生集为空、阶梯退化为单档、路由器退化为 v12 静态调度；主闭环调用序列与 v12 逐位一致，再沿 v12 链退回 v11/v10/v9/v8/v7/v6。证明：逐端口代入定义 591，并用定义 583–594 的边界条件核对；四端口互不相交且中立元不改变 v12 任何证书检查。∎
 
-**引理 110（中立元退化等价 v11）** 将定义 580 的四个中立元分别注入 USG/TGC/BAA/GAGP 端口，则候选生成退化为 v11 DSL 技能集、gap 约束恒真、HDT 用 v11 固定先验、选择退化为 v11 NCP；主闭环调用序列与 v11 逐位一致，再沿 v11 链退回 v10/v9/v8/v7/v6。证明：逐端口代入定义 580 即得；四端口互不相交，且中立元不改变 v11 的任何证书检查。∎
+**引理 119（预算守恒 v13）** 新增在线成本上界：AIO 阶段调度与不变量检查 ≤0.3ms；RTCR 选档 O(log m) ≤0.05ms；学生前向 ≤0.2ms（共享骨干多出口，单出口 ≤0.2ms）；DGC 查表 ≤0.05ms；测—验证复用教师 anytime，已计入 AIO。总决策 p99 仍 ≤22ms，50Hz 保持；离线 CPD 训练/共形校准不在关键路径，按 `T_distill` 异步执行。证明：逐项代入复杂度表并做静态 EDF 校验 `ΣŴ_m≤B_dec`；安全切片 `B_safe` 硬预留保证路由器不会把时间花光。∎
 
-**引理 111（预算守恒 v12）** 新增在线成本上界：USG 生成 ≤1ms（64 候选、深度 6、类型剪枝，5Hz 摊销 0.2ms）；TGC 证书 ≤0.5ms（分层共形查表 + 交互项上界，5Hz 摊销 0.1ms）；GAGP 排序 ≤1ms；gap 守卫 ≤0.3ms；BAA 异步 0.5Hz，锚点选择与残差更新 ≤20ms/次（摊销 ≤0.1ms）。总决策 p99 仍 ≤22ms，50Hz 保持（v11 留有 2ms 余量）。证明：逐项代入复杂度表并做静态 EDF 校验 `ΣŴ_m≤B_dec`。∎
+**引理 120（漂移下的安全塌缩）** 设漂移检测器在分布偏离支撑时触发；触发后 RTCR 只允许第 0 档 `S_0`（零假设回退，不依赖任何学习证书）。则：碰撞/越界等物理硬违规概率不高于 v12 的对应回退；活动性损失满足
+```
+P(无可执行认证动作) ≤ P(drift) + P(DGC 失效 | drift) + P(a_ask 预算耗尽) .
+```
+证明：`S_0` 由物理构造保证安全（停/柔顺/`a_ask`），且 `P^rt` 要求其在本帧截止期内可完成；漂移时 DGC 在支撑外无保证，故禁止使用 i≥1 档。∎ 推论：**漂移不是用更快的档位去赌，而是用最保守的档位去买重校准时间**。
 
-**引理 112（通用性与迁移预算的权衡下界）** 对复杂度为 d_G 的技能文法，若要求 UC 覆盖 ≥1−ε_cov 且 TGC 的 gap 上界 ≤B，则存在论域分布使所需真实/仿真评测样本数满足
+**引理 121（迁移间隙与蒸馏间隙的联合可加界）** 记
 ```
-n ≥ Ω( (d_G + d_Δ) · log(1/ε_cov) / B^2 ) ,
+Δ_tr = J_real(T) − J_sim(T) ,   Δ_dis = J_real(S) − J_real(T) .
 ```
-其中 d_Δ 为 gap 模型有效维度。证明：把覆盖与 gap 估计联合视为对 L(G)×Δ 空间的一致收敛问题；构造一个使覆盖样本与 gap 样本不可复用的分布（不同绑定上的 gap 各不相同），由 minimax 下界得到。∎ 推论：v12 不能同时免费获得"无限通用"与"零迁移预算"；必须用 UC 的拒绝域、B_transfer 与锚点预算三者显式交换。
+则
+```
+J_real(S) − J_sim(T) = Δ_tr + Δ_dis ≤ U_gap + U_dis   （w.h.p.）
+```
+若考虑理想上限 `J*`，再叠加接触/组合交互项 `I_cross`：
+```
+J_real(S) − J* ≤ U_gap + U_dis + I_cross + δ_approx .
+```
+证明：代数展开；`Δ_tr` 由 v12 TGC 的单侧共形覆盖，`Δ_dis` 由 v13 DGC 的单侧共形覆盖；两项各自以 ≥1−α 成立，联合用并集界得到 `1−α_gap−α_dis`。负的 `Δ_dis`（学生偶然更好）不计入收益，因为安全界只取 `max(0,Δ_dis)`。∎ 推论：**蒸馏间隙不能拿迁移预算冲抵**，`B_total=B_transfer+B_distill` 必须是加性的；新场景中两个间隙可能同时被低估，这是 v13 的根本脆弱点。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| USG 候选生成 | 在线 5Hz | O(n_cand·depth·|R|)，≤1ms/次（摊销 0.2ms） | O(n_cand·K) | 定义 571–574 |
-| TGC 分层共形 | 在线 5Hz | O(|τ|·log n_calib + n_seg)，≤0.5ms/次（摊销 0.1ms） | O(Σ|A_τ|) | 定义 575–576, 引理 106–107 |
-| GAGP 排序/搜索 | 在线 5Hz | O(n_cand·log n_cand + n_cand·K)，≤1ms | O(n_cand) | 定义 582 |
-| BAA 锚点选择 + 残差回写 | 异步 0.5Hz | O(n_anchor·d_τ²)，≤20ms/次（摊销 ≤0.1ms） | O(d_τ² + |A|) | 定义 577, 引理 108 |
-| v11 继承路径 | 在线 | ≤9ms | 不变 | v11 引理 103 |
-| 决策侧合计 | 在线 | 典型 ≤12ms，p99 ≤22ms | — | 引理 111 |
+| AIO 阶段调度 + 不变量检查 | 在线 50Hz | O(m + |Acc|)，overhead ≤0.3ms | O(|Acc|) | 定义 583, 引理 113 |
+| RTCR 选档 + 推测—验证 | 在线 50Hz | O(log m) + 学生前向，≤0.25ms | O(m) | 定义 587–588, 引理 115 |
+| DGC 查表/阈值 | 在线 50Hz | O(1)（预计算），≤0.05ms | O(Σ|A_τ|) | 定义 586, 引理 114 |
+| CPD 蒸馏训练 | 离线/异步 | O(n·(d_T+d_S)·E)，不在关键路径 | O(d_T·d_S) | 定义 585 |
+| DDL 构建/嵌套校验 | 离线/低频 | O(m·n_calib·d_S) | O(m·|Acc|) | 定义 587 |
+| v12 继承路径 | 在线 | ≤9ms | 不变 | v12 引理 111 |
+| 决策侧合计 | 在线 | 典型 ≤10ms，p99 ≤22ms | — | 引理 119 |
 
-## 6. 实验设计 E607–E626
+## 6. 实验设计 E627–E646
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E607 | USG 组合成功率 | 在标准操作任务族上，文法组合的 v11 认证通过率 ≥90% |
-| E608 | 跨对象绑定替换 | 同类新物体上零样本/单样本成功率 ≥ v11 专用技能 −10% |
-| E609 | 跨本体绑定替换 | 换末端执行器/臂长后类型替换成功率 ≥80%，无证书越界 |
-| E610 | 通用性证书覆盖校准 | UC 声明的覆盖下界在留出论域上 100% 不超估（保守覆盖） |
-| E611 | TGC 共形覆盖率 | 类型分层 gap 上界的经验覆盖 ≥1−α（α=0.1） |
-| E612 | TGC 上界紧致性 | 平均 `U_gap` 不超过真实 gap 的 2×，且 0 次低估导致越界 |
-| E613 | gap 预算规划任务完成率 | 同 v11 任务集，完成率不降；预算超支 0 次 |
-| E614 | 组合间隙三角界 | 组合 gap 的交互项估计覆盖 ≥95% 的真实交互差 |
-| E615 | BAA 残差辨识精度 | real→sim 残差 RMSE ≤5%（相对真实轨迹幅值） |
-| E616 | 主动锚定样本效率 | 达到同等 gap 收缩比随机锚定少用 ≥40% 真实样本 |
-| E617 | gap 后验校准收敛 | 后验 90% 可信区间覆盖真实 gap ≥90%，≤200 锚点 |
-| E618 | real→sim 回写后的仿真保真 | 更新后 HDT 的实机轨迹 RMSE ≤5%（对比 v11 HDT） |
-| E619 | 通用-迁移耦合泛化 | 新对象+新本体组合上任务成功率 ≥ v11 专用迁移 +15% |
-| E620 | 安全继承压力测试 | 对抗性组合/分布漂移下，v11 四重证书 0 次被放宽 |
-| E621 | 证书耦合可行性 | v11 证书 + gap 证书 + P^g 的可行段非空率 ≥95% |
-| E622 | WCET/背压 | p99 ≤22ms，0 丢拍；USG 候选风暴 + BAA 峰值仍 0 丢拍 |
-| E623 | 8h 通用-迁移长跑 | gap 上界与 UC 覆盖随漂移稳定，证书违规趋势收敛 |
-| E624 | 端到端家庭任务/竞赛模拟 | ≥ v11 +8%（预注册主指标） |
-| E625 | 消融：无 TGC | 真实侧 gap 超预算的静默失败率 ↑≥300%，无安全越界但完成率显著下降 |
-| E626 | 消融：无 USG 或 BAA | 跨对象/本体泛化 ↓≥25%；达到同等 gap 的真实样本 ↑≥2× |
+| E627 | 任意时算子的中断有效性 | 所有可能中断档 100% sound，0 次返回未认证动作 |
+| E628 | RTIC 截止期与质量下界 | p99≤22ms、0 超时执行、质量下界达成 ≥95% |
+| E629 | 新颖场景计算尖峰压力 | 深枚举/重校准同相到达时 0 丢拍，完成率 ≥ v12 −3% |
+| E630 | CPD 假接受率 | 留出集 FAR ≤ α_d=0.1，压力测试 0 次不安全放行 |
+| E631 | CPD 假拒绝与活动性 | 常见集 FRR ≤5%，任务完成率 ≥ v12 −5% |
+| E632 | DGC 共形覆盖 | 经验 `P(g≤U_d)` ≥1−α_d |
+| E633 | DGC 紧致性 | `U_d` ≤2× 真实间隙，0 次低估导致越界 |
+| E634 | 阶梯授权嵌套 | `Acc_0⊆…⊆Acc_m⊆Acc_T` 100% 成立 |
+| E635 | 推测—验证收益 | 教师调用减少 ≥30%，0 次不安全接受 |
+| E636 | 突发耗时下的路由 | 0 截止期错过，0 跨档跳到未认证学生 |
+| E637 | 蒸馏加速/保真 Pareto | HDT/TGC/USG 上 ≥4× 加速，决策损失 ≤2% |
+| E638 | 边界蒸馏 vs logit 蒸馏 | 固定 FRR 下 FAR 降低 ≥5× |
+| E639 | 漂移安全塌缩 | 漂移触发后 0 次不安全放行，完成率 ≥ v12 −8% |
+| E640 | 安全继承压力测试 | 对抗输入/组合下 v11/v12 证书 0 次被放宽 |
+| E641 | 三预算联合可行性 | 可行段非空率 ≥95%，0 次跨预算挪用 |
+| E642 | WCET/背压 | p99≤22ms、0 丢拍；BAA 峰值 + 蒸馏尖峰仍 0 丢拍 |
+| E643 | 8h 长跑 | `U_d`、RTIC、嵌套关系稳定，违规趋势收敛 |
+| E644 | 端到端家庭任务/竞赛 | ≥ v12 +5%（预注册主指标） |
+| E645 | 消融：无 AIO/CPD | 计算尖峰下超时/丢拍 ↑≥300% 或完成率 ↓≥15% |
+| E646 | 消融：无 DGC/DDL | 不安全接受 ↑≥300%，漂移场景失效 ↑显著 |
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| USG 组合（E607） | 认证通过率 ≥90% | 收紧类型规则、减少组合深度、增加专用原语 |
-| 跨对象（E608） | ≥ v11 −10% | 细化绑定特征、增加等价类校准、回退专用技能 |
-| 跨本体（E609） | 成功率 ≥80%、0 越界 | 增加本体绑定维度、限制替换范围、重标定 |
-| UC 覆盖（E610） | 不超估覆盖 | 扩大校准集、提高 ε_cov、缩小宣称论域 |
-| TGC 覆盖（E611） | 经验覆盖 ≥1−α | 增大校准集、加权共形、收紧 α |
-| TGC 紧致（E612） | ≤2× 且 0 低估 | 改进交互项、分层更细、增大安全余量 |
-| 预算规划（E613） | 不降、0 超支 | 调整预算分配、增加锚点、降低组合粒度 |
-| 组合间隙（E614） | 交互覆盖 ≥95% | 显式建模双手/接触耦合、保守交互上界 |
-| BAA 残差（E615） | RMSE ≤5% | 增加残差特征、换 GP/混合模型、增加锚点 |
-| 锚点效率（E616） | 样本 ≤60% | 改采集函数、加主动微扰、利用仿真先验 |
-| 后验校准（E617） | 覆盖 ≥90%、≤200 步 | 改似然/先验、增加类型分层、扩大锚点候选 |
-| 仿真保真（E618） | RMSE ≤5% | 增加结构项、校准接触/摩擦/形变 |
-| 通用迁移（E619） | ≥ v11 +15% | 联合调文法与 gap 模型、增加绑定多样性 |
-| 安全继承（E620） | 0 次放宽 | 审计证书合取路径、拒绝任何阈值旁路 |
-| 证书耦合（E621） | 可行段 ≥95% | 放宽 gap 预算、细化类型、增加回退技能 |
-| WCET（E622） | p99 ≤22ms、0 丢拍 | USG 缓存、TGC 预计算、BAA 移离线 |
-| 长跑（E623） | 趋势收敛 | 周期重校准、UC/gap 联合漂移监测 |
-| 端到端（E624） | ≥ v11 +8% | 按消融定位瓶颈、调预算与文法深度 |
-| 消融 TGC（E625） | 失败率显著上升 | 证明 TGC 必要性、不可省略 |
-| 消融 USG/BAA（E626） | 泛化↓、样本↑ | 证明文法与双向锚定的必要性 |
+| 任意时有效性（E627） | 100% sound | 缩短阶段、加入不变量断言、禁止未验证 join |
+| RTIC（E628） | p99≤22ms、0 超时执行 | 增大安全切片、降低 m、硬件在环重测 WCET |
+| 尖峰压力（E629） | 0 丢拍、≥v12−3% | 增加保守档、异步化重模块、扩大 B_safe |
+| CPD 假接受（E630） | FAR≤α_d、0 压力越界 | 提高 λ_FA、扩大边界校准、收紧 θ_S |
+| CPD 假拒绝（E631） | FRR≤5%、≥v12−5% | 下调 λ_FR/θ_S、增大容量、增加常见档 |
+| DGC 覆盖（E632） | ≥1−α_d | 增大校准集、加权共形、缩小宣称支撑 |
+| DGC 紧致（E633） | ≤2× 且 0 低估 | 边界主动采样、EVT 尾部修正、增大余量 |
+| 阶梯嵌套（E634） | 100% | 并集门/共享骨干单调训练，拒绝非嵌套阶梯 |
+| 推测—验证（E635） | 教师调用 ≤70%、0 越界 | 调整验证预算、收紧学生子集 |
+| 路由（E636） | 0 错过、0 跨档 | 选档加锁、证书有效期检查、保守塌缩 |
+| 加速/保真（E637） | ≥4×、损失≤2% | 增大容量、改多出口、分层蒸馏 |
+| 边界蒸馏（E638） | FAR ≤1/5 | 边界重采样、margin loss 权重上调 |
+| 漂移塌缩（E639） | 0 越界、≥v12−8% | 提前漂移检测、扩大回退集、缩短重校准 |
+| 安全继承（E640） | 0 次放宽 | 审计证书合取路径、拒绝任何阈值旁路 |
+| 三预算（E641） | 非空 ≥95%、0 挪用 | 调整预算分配、增加档位、降低组合粒度 |
+| WCET（E642） | p99≤22ms、0 丢拍 | 学生缓存、DGC 预计算、CPD 移离线 |
+| 长跑（E643） | 趋势收敛 | 周期重校准、DGC/RTIC 联合漂移监测 |
+| 端到端（E644） | ≥v12+5% | 按消融定位瓶颈、调档位数与 B_safe |
+| 消融 AIO/CPD（E645） | 超时/丢拍显著↑ | 证明随时推理与蒸馏必要性 |
+| 消融 DGC/DDL（E646） | 不安全接受显著↑ | 证明单侧证书与阶梯必要性 |
 
 ## 8. 已知风险与失效模式
 
-1. **共形交换性破裂**：新对象/新本体/新工具使部署分布偏离校准分布，TGC 的 `1−α` 覆盖失效且可能系统性低估 gap。缓解：加权共形/密度比估计、UC 支撑集硬门、分布漂移检测、漂移时自动降级到 v11 专用技能。
-2. **组合交互项不可加**：接触丰富的 `g1;g2` 或双手 `g1‖g2` 的交互项可能远大于分段 gap 之和，尤其滑移、卡滞、形变耦合时。缓解：显式交互项模型、组合级锚点、保守交互预算、禁止未估计交互的组合。
-3. **"类型等价"过度自信**：USG 把几何相似但接触机制不同的对象归入同一等价类（如光滑杯 vs 磨砂杯），导致绑定替换后效果突变。缓解：接触机制感知的等价类、等价类边界主动探测、UC 拒绝域、替换后强制短程验证。
-4. **主动锚点选择受安全约束而欠激励**：为了辨识 gap 需要激发某些接触模式，但这些模式可能接近证书边界，导致锚点分布与任务分布错位，残差模型外推失效。缓解：安全约束下的 D-optimal/约束贝叶斯实验设计、仿真预筛选、把"不可安全锚定"显式记入 TGC 无证书。
-5. **real→sim 残差回写的结构误差**：GP/NN 残差只能拟合已见特征，未建模的润滑、磨损、温漂、齿隙会被"平均掉"，使更新后的 HDT 在长尾上仍失真。缓解：残差不确定性传播进 U_gap、非参数残差 + 参数模型混合、保守余量、周期重标定。
-6. **文法组合爆炸与规划时延**：类型化组合的空间随深度指数增长，5Hz 内可能只能搜索小子集，导致错过可行组合或超时。缓解：类型剪枝、效果签名索引、beam search、缓存、把 USG 生成移入异步预计算。
-7. **过度保守导致活性下降**：UC 覆盖不足 + TGC 预算紧张 + P^g 非空要求可能清空可行集，机器人频繁 `a_ask`/回退，任务完成率下降。缓解：分层预算、保守度可调但只收紧不放松、增加回退技能、把"可安全探测"纳入规划。
+1. **教师本身错了（相对安全的幻觉）**：DGC 只保证"学生不超过教师"，教师若在漂移下已错，学生会忠实地继承这个错误。缓解：保留 v12 TGC/UC 的绝对检查、周期真值锚定、漂移检测、把 `S_0` 做成不依赖教师的物理回退；必要时用真实锚点重训教师。
+2. **anytime 质量度量错配**：若 `q_k` 用"候选数量"而非"认证价值"衡量，调度器会偏爱能快速堆候选的模块，饿死真正重要的安全阶段。缓解：分层/字典序预算，安全关键阶段硬预留；质量定义预注册并与端到端指标对齐。
+3. **阶梯嵌套训练失败**：独立蒸馏出的学生不天然满足 `Acc_i⊆Acc_{i+1}`，若强行部署，塌缩可能跳到错误档位。缓解：并集门、共享骨干多出口 + 单调罚项、部署前 100% 嵌套校验，不满足即退回单档。
+4. **假拒绝导致活动性塌缩**：`U_d` 偏大或边界样本稀缺时，学生几乎不放行，系统频繁 `a_ask`/回退。缓解：非对称代价可调但只影响训练不影响证书、增加常见档、把假拒绝显式计入 `B_distill`/任务预算。
+5. **边界样本稀缺使 DGC 低估**：安全边界是低概率区域，校准集可能几乎不覆盖；共形分位在尾部外推不可靠。缓解：边界主动采样、对抗/最坏情形校准、EVT 尾部分位、保守 `U_d` 余量、漂移时禁用高档。
+6. **WCET 测量误差**：缓存、温度、频率缩放、内存带宽会使实测超出离线 WCET，RTIC 不再 sound。缓解：硬件在环压力测试、最坏情形执行路径、watchdog + 强制塌缩、保留 `B_safe` 与额外余量。
+7. **共享骨干的相关失效**：所有档位共享同一骨干时，一个结构性缺陷会同时击穿所有学生与教师，形成单点。缓解：多骨干/异构学生、教师异步影子抽查、关键场景保留纯教师路径、故障注入测试。
+8. **迁移间隙与蒸馏间隙联合低估**：新场景同时进入 v12 的分布外与 v13 的校准外，`U_gap` 与 `U_dis` 可能同向偏低。缓解：联合三角界（引理 121）、三预算加性、双重漂移检测、任一间隙失效即触发 `a_ask`/最低档。
 
 ## 9. 本轮最大风险
 
-**一句话**：UC 只在有限任务/对象/本体上校准，而 TGC 的共形保证依赖可交换性；遇到真正的新接触机制（新本体、新物体、新工具）时，USG 会以"类型等价"自信组合，TGC 的 gap 上界却因分布漂移而系统性低估，最终在"每个技能都通过迁移认证"的表象下组合出真实 gap 超预算的动作——即**证书齐全的通用迁移失败**。
+**一句话**：DGC 只在"学生不超出教师"的相对意义上成立，而教师本身可能在分布漂移下已经错了；当新颖场景同时触发计算尖峰与分布漂移时，路由器为赶上截止期会选中低档学生，DGC 又因校准集未覆盖该边界而低估蒸馏间隙，最终在"每帧都按时、每个学生都在教师子集内"的表象下执行了一个教师与学生共同错判的动作——即**按时的、蒸馏自洽的、却绝对错误的安全决定**。
 <!-- ARTIFACT:END -->
