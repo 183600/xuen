@@ -4632,3 +4632,5 @@
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261117-010813-r1", "changed": ["idea", "artifact"], "ts": "2026-11-18 04:37:49"}
 {"event": "verdict", "id": "20261118-042916-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-18 04:39:16"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-18 04:46:31"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-18 14:14:50"}
+{"event": "restored", "round": 1, "why": "轮次失败（超时）", "best": "20261117-010813-r1", "changed": ["idea", "artifact"], "ts": "2026-11-18 14:14:50"}
