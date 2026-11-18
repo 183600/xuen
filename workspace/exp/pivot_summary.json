@@ -1,0 +1,42 @@
+{
+ "data": {
+  "tasks": 15,
+  "episodes": 91,
+  "frames": 42800,
+  "control_hz": 30
+ },
+ "body": {
+  "pivot_within_std": 0.00012543492335436945,
+  "pivot_across_std": 0.0002815005877014916,
+  "lower_within_std": 0.0036165739833720284,
+  "waist_within_std": 0.0055682123486834765,
+  "var_share_arm": 0.999096086695953,
+  "var_share_pivot": 1.9752588661265298e-05,
+  "var_share_lower": 0.0008841607153857873
+ },
+ "frame_kabsch": {
+  "res_mean_mm": 4.090802391080429,
+  "res_min_mm": 1.7660582423839897,
+  "res_max_mm": 7.491859152832336,
+  "angle_deg_mean": 9.925997906220681
+ },
+ "pose_gap": {
+  "same_frame_mm_mean": 16.497997970691458,
+  "same_frame_p90_mm_mean": 28.244129364115555,
+  "ori_deg_mean": 4.336880919191756,
+  "best_lag_frames_median": 3,
+  "best_lag_res_mm_mean": 13.896651793111397,
+  "const_corrected_rms_mm": 15.32967761278985,
+  "velocity_model_r2": 0.5022634279687267,
+  "velocity_model_rms_mm": 10.81515624072298,
+  "raw_rms_mm": 19.04346899718224
+ },
+ "workspace": {
+  "r_xy_mean_m": 0.35672177423901924,
+  "z_span_min_m": 0.1538846343755722,
+  "z_span_max_m": 0.3354704678058624
+ },
+ "virtual_base": {
+  "leverage_cm_per_10deg": 6.218070237612831
+ }
+}

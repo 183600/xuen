@@ -1,0 +1,242 @@
+{
+ "ArrangePlates": {
+  "same_offset_mm": 15.504948116112024,
+  "same_offset_p90_mm": 25.167393636261835,
+  "same_offset_std_mm": 7.87054414790681,
+  "ori_offset_deg": 4.118804940472975,
+  "best_lag": 3,
+  "best_lag_res_mm": 13.94554880781632,
+  "offset_mean": [
+   -0.002999080143868923,
+   -0.0005146547455375791,
+   0.01300805431480209
+  ],
+  "offset_dir_consistency": 0.837267935400628,
+  "lb_mean": 25.9,
+  "difficulty": "Easy"
+ },
+ "ArrangeTestTubes": {
+  "same_offset_mm": 13.44478747654359,
+  "same_offset_p90_mm": 21.387931980425634,
+  "same_offset_std_mm": 7.5853530743427875,
+  "ori_offset_deg": 3.911219642504236,
+  "best_lag": 3,
+  "best_lag_res_mm": 11.960283635795593,
+  "offset_mean": [
+   -0.0015512329836686453,
+   1.4588069801296418e-05,
+   0.010293088511874278
+  ],
+  "offset_dir_consistency": 0.7335639367469796,
+  "lb_mean": 24.15,
+  "difficulty": "Easy"
+ },
+ "ColorArrangement": {
+  "same_offset_mm": 14.31268229248938,
+  "same_offset_p90_mm": 27.643959928635915,
+  "same_offset_std_mm": 9.448255376694902,
+  "ori_offset_deg": 3.9476533764241806,
+  "best_lag": 2,
+  "best_lag_res_mm": 10.287096412074426,
+  "offset_mean": [
+   -0.0018615186636646588,
+   -0.0005258937036789272,
+   0.008519498124718666
+  ],
+  "offset_dir_consistency": 0.6355066960206167,
+  "lb_mean": 27.12,
+  "difficulty": "Easy"
+ },
+ "ConveyorSorting": {
+  "same_offset_mm": 13.259983775811847,
+  "same_offset_p90_mm": 21.322659988403537,
+  "same_offset_std_mm": 6.052302437503358,
+  "ori_offset_deg": 3.444768120681408,
+  "best_lag": 3,
+  "best_lag_res_mm": 11.478668399832411,
+  "offset_mean": [
+   -0.001433801646033923,
+   0.0012402550211797158,
+   0.010797658998519182
+  ],
+  "offset_dir_consistency": 0.8374042327151715,
+  "lb_mean": 29.12,
+  "difficulty": "Medium"
+ },
+ "DisconnectEthernet": {
+  "same_offset_mm": 17.153331381061435,
+  "same_offset_p90_mm": 26.91920616695243,
+  "same_offset_std_mm": 8.13350435765887,
+  "ori_offset_deg": 4.555826308808522,
+  "best_lag": 3,
+  "best_lag_res_mm": 13.98884777585699,
+  "offset_mean": [
+   -0.0020432889809211094,
+   0.00040736199216917155,
+   0.013518181391060353
+  ],
+  "offset_dir_consistency": 0.7900960933745489,
+  "lb_mean": 26.81,
+  "difficulty": "Hard"
+ },
+ "FoldTowel": {
+  "same_offset_mm": 17.849531816257237,
+  "same_offset_p90_mm": 29.78116001837803,
+  "same_offset_std_mm": 8.684809346505762,
+  "ori_offset_deg": 4.4764924798423005,
+  "best_lag": 2,
+  "best_lag_res_mm": 15.233459476297888,
+  "offset_mean": [
+   0.0028644860362013183,
+   1.2391319027907836e-05,
+   0.013338915087127437
+  ],
+  "offset_dir_consistency": 0.753539172642157,
+  "lb_mean": 24.08,
+  "difficulty": "Hard"
+ },
+ "FruitCollection": {
+  "same_offset_mm": 17.620732969484205,
+  "same_offset_p90_mm": 34.448679798407,
+  "same_offset_std_mm": 11.678557922604389,
+  "ori_offset_deg": 4.616774675180092,
+  "best_lag": 3,
+  "best_lag_res_mm": 12.773393368344625,
+  "offset_mean": [
+   -0.0028282127529382704,
+   -3.65531573673555e-05,
+   0.011625829324126244
+  ],
+  "offset_dir_consistency": 0.6892585128860305,
+  "lb_mean": 27.79,
+  "difficulty": "Easy"
+ },
+ "HangCup": {
+  "same_offset_mm": 17.88387196254454,
+  "same_offset_p90_mm": 27.78148891210872,
+  "same_offset_std_mm": 10.3530758178853,
+  "ori_offset_deg": 4.3804424889336735,
+  "best_lag": 3,
+  "best_lag_res_mm": 14.063539930535727,
+  "offset_mean": [
+   -0.0017165205205480257,
+   0.000883609551936388,
+   0.013566038613518079
+  ],
+  "offset_dir_consistency": 0.7858801533679836,
+  "lb_mean": 22.95,
+  "difficulty": "Easy"
+ },
+ "OrganizeBookshelf": {
+  "same_offset_mm": 18.839177735329784,
+  "same_offset_p90_mm": 33.32259899144214,
+  "same_offset_std_mm": 14.277256691981338,
+  "ori_offset_deg": 4.623223916909448,
+  "best_lag": 3,
+  "best_lag_res_mm": 17.30657138204792,
+  "offset_mean": [
+   -0.003875224282965064,
+   -0.002716412251138536,
+   0.01113980141468346
+  ],
+  "offset_dir_consistency": 0.6865995527288472,
+  "lb_mean": 26.62,
+  "difficulty": "Easy"
+ },
+ "PlugCharger": {
+  "same_offset_mm": 15.454615296929816,
+  "same_offset_p90_mm": 26.017490404292218,
+  "same_offset_std_mm": 11.416992915717449,
+  "ori_offset_deg": 3.93075397990606,
+  "best_lag": 3,
+  "best_lag_res_mm": 14.517346436151994,
+  "offset_mean": [
+   -0.0014107644185423851,
+   -0.0018712924599337082,
+   0.0016638672401507696
+  ],
+  "offset_dir_consistency": 0.24330206404612587,
+  "lb_mean": 25.57,
+  "difficulty": "Hard"
+ },
+ "PlugInEthernet": {
+  "same_offset_mm": 15.965360524671045,
+  "same_offset_p90_mm": 30.034426171403176,
+  "same_offset_std_mm": 10.584105775704897,
+  "ori_offset_deg": 4.372949428334235,
+  "best_lag": 3,
+  "best_lag_res_mm": 12.927080097198203,
+  "offset_mean": [
+   -0.0014269602199395498,
+   -0.00039419955627378536,
+   0.00870264515808473
+  ],
+  "offset_dir_consistency": 0.6398834260119243,
+  "lb_mean": 17.73,
+  "difficulty": "Medium"
+ },
+ "PourOutMedicine": {
+  "same_offset_mm": 15.876697589054876,
+  "same_offset_p90_mm": 26.698770840749795,
+  "same_offset_std_mm": 7.85847713816825,
+  "ori_offset_deg": 4.701978094380687,
+  "best_lag": 3,
+  "best_lag_res_mm": 13.912556234085665,
+  "offset_mean": [
+   -0.003997422084212303,
+   -0.0008496859668060399,
+   0.011706173436095316
+  ],
+  "offset_dir_consistency": 0.7896823050455732,
+  "lb_mean": 22.73,
+  "difficulty": "Hard"
+ },
+ "SyringeWaterTransfer": {
+  "same_offset_mm": 20.025573927160128,
+  "same_offset_p90_mm": 36.52273423264839,
+  "same_offset_std_mm": 11.808223277192278,
+  "ori_offset_deg": 5.068933456095345,
+  "best_lag": 2,
+  "best_lag_res_mm": 16.4020727518526,
+  "offset_mean": [
+   -0.00517833924293518,
+   0.0008069081547684315,
+   0.013300736464560032
+  ],
+  "offset_dir_consistency": 0.6875142370420847,
+  "lb_mean": 24.57,
+  "difficulty": "Medium"
+ },
+ "Unlock": {
+  "same_offset_mm": 16.26257900315244,
+  "same_offset_p90_mm": 23.795987031393697,
+  "same_offset_std_mm": 6.6044767334046535,
+  "ori_offset_deg": 4.122492114669139,
+  "best_lag": 3,
+  "best_lag_res_mm": 15.147202239795119,
+  "offset_mean": [
+   -0.002614306191603343,
+   -0.000451118684373796,
+   0.013783944688737393
+  ],
+  "offset_dir_consistency": 0.8330232340664723,
+  "lb_mean": 20.11,
+  "difficulty": "Hard"
+ },
+ "ZipUp": {
+  "same_offset_mm": 18.01609569376951,
+  "same_offset_p90_mm": 32.81745236023077,
+  "same_offset_std_mm": 10.746341169460091,
+  "ori_offset_deg": 4.78090076473404,
+  "best_lag": 2,
+  "best_lag_res_mm": 14.506109948985522,
+  "offset_mean": [
+   -0.0025507764716943106,
+   0.00024025213833374438,
+   0.011598248727619649
+  ],
+  "offset_dir_consistency": 0.6525125842141438,
+  "lb_mean": 23.39,
+  "difficulty": "Medium"
+ }
+}

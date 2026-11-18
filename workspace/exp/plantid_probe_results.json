@@ -1,0 +1,150 @@
+{
+  "delay_frames": 3,
+  "tasks": {
+    "ArrangePlates": {
+      "n": 5984,
+      "n_train": 4188,
+      "n_test": 1796,
+      "rmse_model": 0.009266570763846325,
+      "rmse_persist": 0.010802588190099513,
+      "rmse_last_cmd": 0.021927020450784634,
+      "r2": 0.999696018556206
+    },
+    "ArrangeTestTubes": {
+      "n": 5968,
+      "n_train": 4177,
+      "n_test": 1791,
+      "rmse_model": 0.011366141260582054,
+      "rmse_persist": 0.015702429486002072,
+      "rmse_last_cmd": 0.028366430329913435,
+      "r2": 0.9995314688100073
+    },
+    "ColorArrangement": {
+      "n": 5936,
+      "n_train": 4155,
+      "n_test": 1781,
+      "rmse_model": 0.01112837824699643,
+      "rmse_persist": 0.016053349029550416,
+      "rmse_last_cmd": 0.029964465560288322,
+      "r2": 0.9996348979960515
+    },
+    "ConveyorSorting": {
+      "n": 5944,
+      "n_train": 4160,
+      "n_test": 1784,
+      "rmse_model": 0.0073147402550711,
+      "rmse_persist": 0.008793235766416848,
+      "rmse_last_cmd": 0.019373964733415676,
+      "r2": 0.9997888578269891
+    },
+    "DisconnectEthernet": {
+      "n": 5936,
+      "n_train": 4155,
+      "n_test": 1781,
+      "rmse_model": 0.012908144644965822,
+      "rmse_persist": 0.013610895761548447,
+      "rmse_last_cmd": 0.02094248609712344,
+      "r2": 0.9995320334179122
+    },
+    "FoldTowel": {
+      "n": 5976,
+      "n_train": 4183,
+      "n_test": 1793,
+      "rmse_model": 0.00896715233161631,
+      "rmse_persist": 0.011830622394806043,
+      "rmse_last_cmd": 0.024408784309823166,
+      "r2": 0.9996835493212873
+    },
+    "FruitCollection": {
+      "n": 5928,
+      "n_train": 4149,
+      "n_test": 1779,
+      "rmse_model": 0.010815581260354474,
+      "rmse_persist": 0.015429701805514317,
+      "rmse_last_cmd": 0.028673184766962734,
+      "r2": 0.9994521484685358
+    },
+    "HangCup": {
+      "n": 5856,
+      "n_train": 4099,
+      "n_test": 1757,
+      "rmse_model": 0.008470940671428284,
+      "rmse_persist": 0.012474406575242658,
+      "rmse_last_cmd": 0.025141583924156656,
+      "r2": 0.9996375490064139
+    },
+    "OrganizeBookshelf": {
+      "n": 1584,
+      "n_train": 1108,
+      "n_test": 476,
+      "rmse_model": 0.022719612717588985,
+      "rmse_persist": 0.015115199738162817,
+      "rmse_last_cmd": 0.037165008346083,
+      "r2": 0.9980119967019172
+    },
+    "PlugCharger": {
+      "n": 5952,
+      "n_train": 4166,
+      "n_test": 1786,
+      "rmse_model": 0.007837134657043566,
+      "rmse_persist": 0.009689346541355197,
+      "rmse_last_cmd": 0.02439856748732123,
+      "r2": 0.999834910653225
+    },
+    "PlugInEthernet": {
+      "n": 5968,
+      "n_train": 4177,
+      "n_test": 1791,
+      "rmse_model": 0.011980093605140733,
+      "rmse_persist": 0.014127390443617794,
+      "rmse_last_cmd": 0.023882225300855344,
+      "r2": 0.9994827371677929
+    },
+    "PourOutMedicine": {
+      "n": 5968,
+      "n_train": 4177,
+      "n_test": 1791,
+      "rmse_model": 0.006532821645791124,
+      "rmse_persist": 0.00660901439122222,
+      "rmse_last_cmd": 0.020746416360282603,
+      "r2": 0.9998068042490836
+    },
+    "SyringeWaterTransfer": {
+      "n": 5960,
+      "n_train": 4172,
+      "n_test": 1788,
+      "rmse_model": 0.013821078151158054,
+      "rmse_persist": 0.015602449847390587,
+      "rmse_last_cmd": 0.030281014668186838,
+      "r2": 0.9994043641122354
+    },
+    "Unlock": {
+      "n": 5968,
+      "n_train": 4177,
+      "n_test": 1791,
+      "rmse_model": 0.006769891955106514,
+      "rmse_persist": 0.006583642992195582,
+      "rmse_last_cmd": 0.020255131182459276,
+      "r2": 0.9997697237752055
+    },
+    "ZipUp": {
+      "n": 5944,
+      "n_train": 4160,
+      "n_test": 1784,
+      "rmse_model": 0.01277000930256927,
+      "rmse_persist": 0.014722461677762436,
+      "rmse_last_cmd": 0.027418263619462025,
+      "r2": 0.9993152100069133
+    }
+  },
+  "summary": {
+    "model_med": 0.010815581260354474,
+    "persist_med": 0.013610895761548447,
+    "last_cmd_med": 0.024408784309823166,
+    "improve_vs_persist": 0.1519952921982931,
+    "improve_vs_last_cmd": 0.6224448451454627,
+    "n_tasks_model_better_persist": 13,
+    "n_tasks_model_better_last_cmd": 15,
+    "n_tasks": 15
+  }
+}
