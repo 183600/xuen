@@ -1,0 +1,131 @@
+{
+  "meta": {
+    "purpose": "synthetic mechanism checks, NOT UniBot benchmark evidence",
+    "seed": 20261118,
+    "note": "A tests when resampling/critic helps vs perception floor; B tests path planning as recovery in clutter."
+  },
+  "funnel": {
+    "clearance_mm": [
+      0.5,
+      1.0,
+      2.0,
+      3.0,
+      5.0
+    ],
+    "sigma_mm": {
+      "mono_lit": 1.0,
+      "mono": 3.0,
+      "mono_hard": 5.0,
+      "stereo": 1.2
+    },
+    "success": {
+      "mono_lit": {
+        "0.5": 0.1175,
+        "1.0": 0.3935,
+        "2.0": 0.8647,
+        "3.0": 0.9889,
+        "5.0": 1.0
+      },
+      "mono": {
+        "0.5": 0.0138,
+        "1.0": 0.054,
+        "2.0": 0.1993,
+        "3.0": 0.3935,
+        "5.0": 0.7506
+      },
+      "mono_hard": {
+        "0.5": 0.005,
+        "1.0": 0.0198,
+        "2.0": 0.0769,
+        "3.0": 0.1647,
+        "5.0": 0.3935
+      },
+      "stereo": {
+        "0.5": 0.0831,
+        "1.0": 0.2934,
+        "2.0": 0.7506,
+        "3.0": 0.9561,
+        "5.0": 0.9998
+      }
+    }
+  },
+  "best_of_k": {
+    "c_mm": 2.0,
+    "sigma_true_mm": 4.0,
+    "n_trials": 200000,
+    "success": {
+      "obs/true=0.0": {
+        "1": 0.1182,
+        "2": 0.2207,
+        "4": 0.3928,
+        "8": 0.6318,
+        "16": 0.8639
+      },
+      "obs/true=0.25": {
+        "1": 0.1171,
+        "2": 0.212,
+        "4": 0.3442,
+        "8": 0.507,
+        "16": 0.6543
+      },
+      "obs/true=0.5": {
+        "1": 0.1171,
+        "2": 0.1891,
+        "4": 0.2691,
+        "8": 0.3404,
+        "16": 0.3963
+      },
+      "obs/true=1.0": {
+        "1": 0.1184,
+        "2": 0.1532,
+        "4": 0.1811,
+        "8": 0.1992,
+        "16": 0.2099
+      },
+      "obs/true=2.0": {
+        "1": 0.1167,
+        "2": 0.1298,
+        "4": 0.1363,
+        "8": 0.1414,
+        "16": 0.141
+      }
+    }
+  },
+  "clutter": {
+    "0.05": {
+      "local_success": 0.467,
+      "astar_success": 1.0,
+      "local_avg_steps": 122.3,
+      "astar_avg_steps": 73.4,
+      "trials": 60
+    },
+    "0.1": {
+      "local_success": 0.217,
+      "astar_success": 1.0,
+      "local_avg_steps": 102.1,
+      "astar_avg_steps": 76.8,
+      "trials": 60
+    },
+    "0.15": {
+      "local_success": 0.017,
+      "astar_success": 1.0,
+      "local_avg_steps": 77.8,
+      "astar_avg_steps": 79.1,
+      "trials": 60
+    },
+    "0.2": {
+      "local_success": 0.0,
+      "astar_success": 1.0,
+      "local_avg_steps": 69.7,
+      "astar_avg_steps": 83.7,
+      "trials": 60
+    },
+    "0.25": {
+      "local_success": 0.0,
+      "astar_success": 1.0,
+      "local_avg_steps": 64.0,
+      "astar_avg_steps": 87.8,
+      "trials": 60
+    }
+  }
+}

@@ -1,0 +1,286 @@
+{
+  "n_models": 8,
+  "n_tasks": 32,
+  "models": [
+    "MolmoAct2",
+    "WALL-OSS-0.5",
+    "DreamZero",
+    "Spirit-v1.5",
+    "DM0",
+    "PI-0.5",
+    "GigaBrain-0",
+    "GR00T N1.5"
+  ],
+  "tasks": [
+    "Hang the Cup",
+    "Fruit Basket Collection",
+    "Pack the Doll",
+    "Fruit Sorting",
+    "Disconnect Ethernet",
+    "Color Arrangement",
+    "Place Photo Frames",
+    "Organize Bookshelf",
+    "Toolbox Storage",
+    "Plug Charger",
+    "Pick Out Battery",
+    "Unlock",
+    "Arrange Test Tubes",
+    "Open Pill Bottle",
+    "Organize Tools",
+    "Fold Towel",
+    "Organize Stationery",
+    "Pack Bag",
+    "Zip Up",
+    "Paper Cup Stacking",
+    "Clear Plates",
+    "Spell robot",
+    "Store Racket",
+    "Conveyor Food Sorting",
+    "Stack Cups",
+    "Plug In Ethernet",
+    "Stack Bowls",
+    "Store Earphones",
+    "Pack Phone",
+    "Remove Pinned Note",
+    "Organize Pencil Case",
+    "Syringe Water Transfer"
+  ],
+  "forensics": {
+    "best_integer_trial_n": 4,
+    "mean_abs_dev_from_integer_counts": 0.19403437499999998,
+    "verdict": "not consistent with any integer trial count (synthetic values)",
+    "example_values": [
+      27.29,
+      27.85,
+      37.01,
+      31.76,
+      21.29,
+      37.32
+    ]
+  },
+  "pairwise_tau": {
+    "observed_mean": 0.06379002803468199,
+    "observed_sd": 0.09129750391922628,
+    "null_mean": 0.028402537892423137,
+    "null_sd": 0.006493230385683164,
+    "null_p95": 0.039367340904184325,
+    "perm_p_one_sided": 0.00024993751562109475,
+    "z_vs_null": 5.4499052151736755,
+    "additive_null_mean": 0.0636000887396808,
+    "additive_null_sd": 0.007015808468180206,
+    "additive_null_p95": 0.07540122669125779,
+    "p_vs_additive_null": 0.48317227590803064
+  },
+  "anova": {
+    "grand_mean": 25.174765625000003,
+    "var_model_effect": 9.55106666870117,
+    "var_task_effect": 6.736531683349608,
+    "var_residual": 24.67567815551758,
+    "sd_model_effect": 3.0904800061966378,
+    "sd_task_effect": 2.595482938366116,
+    "sd_residual": 4.967461943036663,
+    "frac_model": 0.23316168732099635,
+    "frac_task": 0.16445295048859115,
+    "frac_resid": 0.6023853621904125
+  },
+  "model_mean_reliability": {
+    "split_half_r_mean": 0.8643408629457298,
+    "split_half_r_p05": 0.7396890884748816,
+    "spearman_brown_full": 0.9272347993060005,
+    "null_split_half_mean": -0.007234725858437766,
+    "perm_p": 0.00399800099950025
+  },
+  "oracle": {
+    "observed_gain_pp": 4.258437499999996
+  },
+  "oracle_replication": {
+    "observed_one_shot_gain_pp": 4.258437499999996,
+    "sd_residual_pp": 4.967461943036663,
+    "curve": [
+      {
+        "noise_fraction_f": 0.0,
+        "replicable_oracle_gain_pp_mean": 3.8891371809525532,
+        "replicable_oracle_gain_pp_p05": 2.7880643662924522,
+        "replicable_oracle_gain_pp_p95": 4.939912531219649
+      },
+      {
+        "noise_fraction_f": 0.25,
+        "replicable_oracle_gain_pp_mean": 2.4107667306845593,
+        "replicable_oracle_gain_pp_p05": 1.1742611110193344,
+        "replicable_oracle_gain_pp_p95": 3.670130257674261
+      },
+      {
+        "noise_fraction_f": 0.5,
+        "replicable_oracle_gain_pp_mean": 0.8714216680004964,
+        "replicable_oracle_gain_pp_p05": -0.5971350160622485,
+        "replicable_oracle_gain_pp_p95": 2.153307278007336
+      },
+      {
+        "noise_fraction_f": 0.75,
+        "replicable_oracle_gain_pp_mean": -0.6668825593192043,
+        "replicable_oracle_gain_pp_p05": -2.2483220751661324,
+        "replicable_oracle_gain_pp_p95": 0.7342696756275491
+      },
+      {
+        "noise_fraction_f": 1.0,
+        "replicable_oracle_gain_pp_mean": -2.1028868353554455,
+        "replicable_oracle_gain_pp_p05": -3.808659825585218,
+        "replicable_oracle_gain_pp_p95": -0.5072452441579799
+      }
+    ],
+    "note": "with one evaluation per (model,task) cell, f is not identifiable; the observed +4.26pp is reproduced by every f, but only f=0 cashes out"
+  },
+  "power": {
+    "pooled_success_pct": 25.174765625,
+    "mean_episode_sec": 44.375507812500004,
+    "z_factor_80pct_2sided": 2.8015852181129683,
+    "mde_unpaired_pp": {
+      "5": 13.570243763926953,
+      "10": 9.595611387827207,
+      "20": 6.785121881963477,
+      "30": 5.540028817801076,
+      "50": 4.291287869770547,
+      "100": 3.0343987527383267
+    },
+    "mde_paired_pp_pi_0.10": {
+      "5": 7.003963045282421,
+      "10": 4.952549764499182,
+      "20": 3.5019815226412105,
+      "30": 2.8593559397086206,
+      "50": 2.214847587074149,
+      "100": 1.5661337481147932
+    },
+    "mde_paired_pp_pi_0.20": {
+      "5": 9.905099528998363,
+      "10": 7.003963045282421,
+      "20": 4.952549764499182,
+      "30": 4.043739949587997,
+      "50": 3.1322674962295864,
+      "100": 2.214847587074149
+    },
+    "mde_paired_pp_pi_0.30": {
+      "5": 12.13121984876399,
+      "10": 8.578067819125861,
+      "20": 6.065609924381995,
+      "30": 4.952549764499182,
+      "50": 3.8362285518337593,
+      "100": 2.7126232231831
+    },
+    "n_for_mde_unpaired": {
+      "1.0_pp": 29465,
+      "1.5_pp": 13096,
+      "3.0_pp": 3274,
+      "5.0_pp": 1179
+    },
+    "n_for_mde_paired": {
+      "pi_0.1": {
+        "1.0_pp": 246,
+        "1.5_pp": 110,
+        "3.0_pp": 28,
+        "5.0_pp": 10
+      },
+      "pi_0.2": {
+        "1.0_pp": 491,
+        "1.5_pp": 219,
+        "3.0_pp": 55,
+        "5.0_pp": 20
+      },
+      "pi_0.3": {
+        "1.0_pp": 736,
+        "1.5_pp": 328,
+        "3.0_pp": 82,
+        "5.0_pp": 30
+      }
+    },
+    "robo_hours_unpaired": {
+      "5": 1.972244791666667,
+      "10": 3.944489583333334,
+      "20": 7.888979166666668,
+      "30": 11.833468750000002,
+      "50": 19.722447916666667,
+      "100": 39.444895833333334
+    },
+    "robo_hours_two_arm_paired": {
+      "5": 3.944489583333334,
+      "10": 7.888979166666668,
+      "20": 15.777958333333336,
+      "30": 23.666937500000003,
+      "50": 39.444895833333334,
+      "100": 78.88979166666667
+    }
+  },
+  "selection_inflation": {
+    "note": "if a team re-submits k times and keeps the best, the reported mean success rate is biased upward by E[max_k]*SE under pure luck",
+    "E_max_of_k_normal": {
+      "1": -0.0023614843339215086,
+      "2": 0.5616068706423932,
+      "3": 0.8466471306188,
+      "5": 1.1633273116724163,
+      "10": 1.5383601004645402,
+      "20": 1.8666858361228678
+    },
+    "se_pp_by_n": {
+      "5": 3.4250649688573143,
+      "10": 2.4218866654834983,
+      "20": 1.7125324844286571,
+      "30": 1.3982769182636627,
+      "50": 1.083100643564279,
+      "100": 0.7658678097718155
+    },
+    "inflation_pp_n10": {
+      "1": -0.005719247419072682,
+      "2": 1.360148191252728,
+      "3": 2.0504833960155375,
+      "5": 2.8174469037321908,
+      "10": 3.7257338140269245,
+      "20": 4.5209015351528885
+    }
+  },
+  "leverage": {
+    "d_avg_d_p_task": 0.03125,
+    "one_task_plus_10pp_to_avg_pp": 0.3125,
+    "one_task_needed_for_plus_3pp": 96.0,
+    "hard6_mean_pct": 21.300416666666667,
+    "hard6_plus25pct_relative_to_avg_pp": 0.9984570312500001
+  },
+  "rank_stability": {
+    "leader": "MolmoAct2",
+    "p_leader_stays_rank1": 0.0,
+    "p_leader_stays_top3": 1.0,
+    "mean_rank_of_each_model": {
+      "MolmoAct2": -1.18525,
+      "WALL-OSS-0.5": -2.2265,
+      "DreamZero": -2.73775,
+      "Spirit-v1.5": -3.919,
+      "DM0": -5.51375,
+      "PI-0.5": -6.16175,
+      "GigaBrain-0": -6.3545,
+      "GR00T N1.5": -7.9015
+    }
+  },
+  "step_score_redundancy": {
+    "pearson_success_vs_step": 0.997736367291739,
+    "spearman_model_rank": 1.0,
+    "rank_identical": true
+  },
+  "neyman": {
+    "sigma_min": 0.3818801349900254,
+    "sigma_max": 0.4596409033147507,
+    "uniform_over_neyman_variance_ratio": 0.9986883834881842,
+    "variance_reduction_from_optimal_allocation_pct": 0.1311616511815772
+  },
+  "ip_budget": {
+    "hard6_tasks": [
+      "Plug In Ethernet",
+      "Unlock",
+      "Spell robot",
+      "Organize Stationery",
+      "Open Pill Bottle",
+      "Hang the Cup"
+    ],
+    "hard6_mean_pct": 21.300416666666667,
+    "if_plus25pct_relative_on_hard6_gain_pp": 0.9984570312500001,
+    "if_plus3pp_absolute_on_all_32_gain_pp": 3.0,
+    "mde_note": "each round-1 IP threshold (1.0-1.5pp) is below the 80%-power MDE at realistic n; only the combined system clears resolution"
+  }
+}

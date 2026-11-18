@@ -1,0 +1,167 @@
+{
+ "source": "exp/unibot_states/*.npz (real successful demos, 12 tasks)",
+ "warning": "detector characterisation on successful demos with synthetic step perturbations; NOT benchmark evidence",
+ "n_episode_hand_rollouts": 30,
+ "nominal_false_alarm_rate": {
+  "4": 0.9667,
+  "6": 0.9667,
+  "8": 0.9667,
+  "10": 0.9667
+ },
+ "nominal_z_p99_median": 8.55,
+ "nominal_z_p99_p90": 18.4,
+ "detection_at_delta": {
+  "0.01": {
+   "h_4": {
+    "rate": 0.0333,
+    "median_delay_frames": 23,
+    "p90_delay_frames": 23
+   },
+   "h_6": {
+    "rate": 0.0333,
+    "median_delay_frames": 34,
+    "p90_delay_frames": 34
+   },
+   "h_8": {
+    "rate": 0.0333,
+    "median_delay_frames": 37,
+    "p90_delay_frames": 37
+   },
+   "h_10": {
+    "rate": 0.0,
+    "median_delay_frames": null,
+    "p90_delay_frames": null
+   }
+  },
+  "0.02": {
+   "h_4": {
+    "rate": 0.0333,
+    "median_delay_frames": 4,
+    "p90_delay_frames": 4
+   },
+   "h_6": {
+    "rate": 0.0667,
+    "median_delay_frames": 4,
+    "p90_delay_frames": 5
+   },
+   "h_8": {
+    "rate": 0.0667,
+    "median_delay_frames": 5,
+    "p90_delay_frames": 7
+   },
+   "h_10": {
+    "rate": 0.0667,
+    "median_delay_frames": 7,
+    "p90_delay_frames": 10
+   }
+  },
+  "0.05": {
+   "h_4": {
+    "rate": 0.0333,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_6": {
+    "rate": 0.0667,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_8": {
+    "rate": 0.0667,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_10": {
+    "rate": 0.0667,
+    "median_delay_frames": 1,
+    "p90_delay_frames": 1
+   }
+  },
+  "0.1": {
+   "h_4": {
+    "rate": 0.0333,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_6": {
+    "rate": 0.0333,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_8": {
+    "rate": 0.0333,
+    "median_delay_frames": 0,
+    "p90_delay_frames": 0
+   },
+   "h_10": {
+    "rate": 0.0333,
+    "median_delay_frames": 1,
+    "p90_delay_frames": 1
+   }
+  }
+ },
+ "per_task_nominal": {
+  "ArrangeTestTubes": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "ConveyorSorting": {
+   "n": 16,
+   "alarm_rate": 1.0
+  },
+  "FoldTowel": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "HangCup": {
+   "n": 8,
+   "alarm_rate": 0.5
+  },
+  "OrganizeTools": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "PackDoll": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "PlugInEthernet": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "SpellRobot": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "StackBowls": {
+   "n": 16,
+   "alarm_rate": 1.0
+  },
+  "ToolboxStorage": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "Unlock": {
+   "n": 8,
+   "alarm_rate": 1.0
+  },
+  "ZipUp": {
+   "n": 16,
+   "alarm_rate": 1.0
+  }
+ },
+ "toy_net_success_gain": {
+  "h4_c0.0": 0.0117,
+  "h4_c0.1": -0.0173,
+  "h4_c0.3": -0.0753,
+  "h6_c0.0": 0.0233,
+  "h6_c0.1": -0.0057,
+  "h6_c0.3": -0.0637,
+  "h8_c0.0": 0.0233,
+  "h8_c0.1": -0.0057,
+  "h8_c0.3": -0.0637,
+  "h10_c0.0": 0.0233,
+  "h10_c0.1": -0.0057,
+  "h10_c0.3": -0.0637
+ }
+}
