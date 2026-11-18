@@ -62,194 +62,181 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# 第 13 轮产物 · 创新点清单 v13：**MetricVoiceGauge-NCD-HUTD**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution, Harmonic Compliance, Universal Skills, Transfer Certification & **D**eadline-aware **D**istillation）
+# 第 14 轮产物 · 创新点清单 v14：**MetricVoiceGauge-NCD-HUTDH**（Metric Voice Gauge with Norm Grounding, Contact Dexterity, Causal Attribution, Harmonic compliance, Universal Skills, Transfer Certification & **D**eadline-aware **D**istillation & **H**armonic **R**eduction & **U**ser **C**o-creation & **P**latform **A**gnosticism）
 
-> 背景：第 12 轮 MetricVoiceGauge-NCD-HUT（定义 571–582；引理 104–112；实验 E607–E626），其基线为第 11 轮 MetricVoiceGauge-NCD-H。
-> 本轮灵感：「实时推理」×「模型蒸馏」
-> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v12 的 USG/TGC/BAA/GAGP/UC、v11 的 HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID 与 v8 的 DA/SPR/Cal 原样保留。三个新组件均为**可选增强**：任一不可用 ⇒ 注入中立元；三者全不可用 ⇒ 严格等价退回 v12（引理 118），再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6。v13 是 v12 之上的**实时实现层**，只决定"在时限内能安全实现多少"，绝不新增授权。
+> 背景：第 13 轮 MetricVoiceGauge-NCD-HUTD（定义 583–594；引理 113–121；实验 E627–E646），其基线为第 11 轮 MetricVoiceGauge-NCD-H。
+> 本轮灵感：「谐波减速器」×「用户共创」×「通用机器人」
+> **继承纪律**：MetricVoiceGauge 九不变式全部保留；v13 的 AIO/CPD/DDL/RTCR 四端口互不相交，全部模块与九不变式原样保留。三个新灵感作为**可选增强**接入：任一不可用 ⇒ 注入中立元；三者全不可用 ⇒ 严格等价退回 v13（引理 118），再沿 v13 退化链退回更低级版本。v14 是 v13 之上的**平台无关实现层**，在 harmonic reduction、user-co-created preferences 与 platform-agnostic abstractions 三者之下，绝不新增授权、不放宽任何阈值、不依赖特定平台硬件。
 
 ## 0. 核心 IP 设计
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUT v12） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTD v13） |
 |---|---|---|---|
-| IP-357–370 | v12 全部模块 | 继承 | 语义不变；USG/TGC/HDT/BAA 被包成随时算子，NCP/GAGP 读取实时路由档位与三预算 |
-| IP-371 | AnytimeInferenceOperator (AIO) | 新增核心模块 | 从最保守可行集出发的**单调保守扩张**随时算子 + 实时推理证书 RTIC；早退只更保守 |
-| IP-372 | CertificatePreservingDistiller (CPD) | 新增核心模块 | 以**证书判决与边界余量**为标签的非对称蒸馏；单侧包含 `Acc_S⊆Acc_T`；蒸馏间隙证书 DGC |
-| IP-373 | DeadlineDistillationLadder (DDL) | 新增核心模块 | 按预算排序、授权集单调嵌套的学生阶梯；第 0 档为**无需学习的零假设安全回退** |
-| IP-374 | RealTimeCertificateRouter (RTCR) | 新增集成层 | 剩余时间选档 + 推测—验证 + 漂移安全塌缩；只选档，不造证书、不放宽阈值 |
+| IP-357–370 | v13 全部模块 | 继承 | 语义不变；AIO/CPD/DDL/RTCR 四端口互不相交，九不变式全部保留 |
+| IP-371 | AnytimeInferenceOperator (AIO) | 继承+扩张 | 加入 harmonic reduction stages：`w_k = ⌊B_time · ρ^k⌋`，每一档 WCET 通过硬件在环测验，`ρ` 经 RTIC 截止期证书验证；早退只更保守 |
+| IP-372 | CertificatePreservingDistiller (CPD) | 继承 | 证书判决与边界余量为标签的非对称蒸馏；单侧包含 `Acc_S⊆Acc_T`；蒸馏间隙证书 DGC；加入 UCCP 阈值位移 |
+| IP-373 | DeadlineDistillationLadder (DDL) | 继承+扩张 | 按预算排序、授权集单调嵌奠的学生阶梯；第 0 档为无需学习的零假设安全回退；加入 harmonic reduction 的档位预算分配 |
+| IP-374 | RealTimeCertificateRouter (RTCR) | 继承+扩张 | 剩余时间选档 + 推测—验证 + 漂移安全塌缩；加入用户偏好 `α_user` 映射与 harmonic reduction 档位检查；只选档，不造证书、不放宽阈值 |
+| IP-375 | HarmonicBudgetReducer (HBR) | 新增核心模块 | 引入谐波减速比 `ρ` 的 AIO 阶段预算分配；`w_k = ⌊B_time · ρ^k⌋`；ρ 经 RTIC WCET 验证，单调非增 |
+| IP-376 | UserCoCreationInterface (UCCI) | 新增交互层 | 用户可调的 `α_user ∈ [0,1]`，系统自动计算 `θ_{S,user} = (1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}`；α_user 映射到 DGC 校准权重，保持 `Acc_S ⊆ Acc_T` |
+| IP-377 | Platform-AgnosticAbstraction (PAA) | 新增平台层 | v13 所有核心组件通过参数化接口实现：AIO 的 `skill_catalog`，CPD 的 `CertifiedModule` 接口，DDL 的相对比例预算，RTCR 的 `platform_id` 仅限 WCET 记录。平台迁移仅需重新提供 `skill_catalog` 与 WCET 基准，上层证书完全复用 |
 
-**退化链声明（v13 契约化，新增前五级）：**
-- Level-0：AIO + CPD + DDL + RTCR 全激活，MetricVoiceGauge-NCD-HUTD；
-- Level-1：RTCR 失效 ⇒ v12 静态调度顺序，AIO 仍可中断、学生仅作事后预筛，**等价 v12 调度 + 随时教师**；
-- Level-2：DDL 失效 ⇒ 单档学生 + 教师回退（无嵌套、无塌缩），**等价 v12 证书 + 单个保守学生**；
-- Level-3：CPD 失效 ⇒ 无学生（`U_d≡0, Acc_S≡∅`），只走教师 anytime 路径，**等价 v12 + AIO**；
-- Level-4：AIO 失效 ⇒ 固定档一次运行、无中断/无保守扩张、RTIC 退化为静态 WCET，**等价 v12 计算路径**；
-- Level-5：四者全失效 ⇒ MetricVoiceGauge-NCD-HUT v12；
-- Level-6 起：进入 v12 既有退化链（GAGP→v11 NCP、BAA→v11 孪生、TGC→v11 规划、USG→v11 技能，再沿 v11 十三级链退回 v10/v9/v8/v7/v6）。
+**退化链声明（v14 契约化，新增前七级）：**
+- Level-0：AIO + CPD + DDL + RTCR + HBR + UCCI + PAA 全激活，MetricVoiceGauge-NCD-HUTDH；
+- Level-1：PAA 失效 ⇒ 上层证书退化为平台特定版本，需要重新测 WCET、重新校准 DGC，**等价 v13 平台特定实现**；
+- Level-2：HBR 失效 ⇒ `ρ` 退化为 1，每一档预算不再几何级数收缩，行为退化为 v13 无 reduction 的原始 AIO，**等价 v13 原始 AIO**；
+- Level-3：UCCI 失效 ⇒ `α_user` 被裁剪至 0，阈值退化为 DGC 的最保守值 `θ_{S,min}`，**等价 v13（+DDL）无用户偏好**；
+- Level-4：RTCR 失效 ⇒ v13 静态调度顺序，AIO 仍可中断、学生仅作事后预筛，**等价 v13 调度 + 随时教师**；
+- Level-5：DDL 失效 ⇒ 单档学生 + 教师回退（无嵌套、无塌缩），**等价 v13 证书 + 单个保守学生**；
+- Level-6：CPD 失效 ⇒ 无学生（`U_d≡0, Acc_S≡∅`），只走教师 anytime 路径，**等价 v13 + AIO**；
+- Level-7：AIO 失效 ⇒ 固定档一次运行、无中断/无保守扩张、RTIC 退化为静态 WCET，**等价 v13 计算路径**；
+- Level-8：四者全失效 ⇒ MetricVoiceGauge-NCD-HUTD v13；
+- Level-9 起：进入 v13 既有退化链（GAGP→v11 NCP、BAA→v11 孪生、TGC→v11 规划、USG→v11 技能，再沿 v11 十三级链退回 v10/v9/v8/v7/v6）。
 
-前四端口（AIO 保守扩张、CPD 证书压缩、DDL 阶梯嵌套、RTCR 选档）**互不相交**：AIO 不能新增授权、CPD 不能放宽教师阈值、DDL 不能扩大教师授权集、RTCR 不能改变任何证书。因此任意子集失效都落到一个明确的 v12 退化点，不存在"半失效的灰色执行路径"。
+前七端口（AIO 保守扩张、CPD 证书压缩、DDL 阶梯嵌套、RTCR 选档、HBR 谐波预算减速、UCCI 用户共创偏好、PAA 平台无关抽象）**互不相交**：AIO 不能新增授权、CPD 不能放宽教师阈值、DDL 不能扩大教师授权集、RTCR 不能改变任何证书、HBR 只在已验证预算范围内进行减速、UCCP 只在 `Acc_S ⊆ Acc_T` 内进行阈值位移、PAA 不改变任何证书检查。因此任意子集失效都落到一个明确的 v13 退化点，不存在"半失效的灰色执行路径"。
 
-## 1. 符号体系增量（定义 583–594）
+## 1. 符号体系增量（定义 595–606）
 
 | 符号 | 含义 |
 |---|---|
-| A=(f_0,…,f_m;w_0<…<w_m) | 随时推理算子：保守起点、逐阶段扩张、验证 WCET |
-| Acc_k(x) | 第 k 阶段返回的**已认证授权集**，满足 `Acc_0⊆Acc_1⊆…⊆Acc_m⊆Exec_v12` |
-| c_k, q_k | 第 k 阶段的证书与质量（授权价值）下界 |
-| RTIC=(D,δ_t,{w_k,q_k},B_safe,fallback) | 实时推理证书：截止期、超时概率、质量下界、安全切片、认证回退 |
-| T, S | 教师（v12 重模块）与蒸馏学生；`Cert_T(x,a)=1[m_T(x,a)≥0]` |
-| m_T,m_S | 教师/学生的证书边界余量 |
-| Acc_S(U_d) | 学生授权集 `{(x,a):m_S(x,a)≥U_d}` |
-| U_d, Ĉ_dis=(ĝ_d,U_d,cov_d,support) | 蒸馏间隙与其共形证书（学生对教师的"乐观上界"） |
-| L=(S_0,…,S_m;w_0<…<w_m;θ_i=U_{d,i}) | 时限蒸馏阶梯，授权集单调嵌套 |
-| ζ_rt=(B_time,B_safe,i*,U_{d,i*},RTIC,drift,mode) | 实时路由共享状态 |
-| B_transfer, B_distill, B_time | 迁移预算（v12）、蒸馏预算、每帧时间预算；三预算不可挪用 |
-| P^rt | 实时安全回退集：认证且在本帧截止期内可完成的回退 |
-| π_rt(x;B) | 在预算 B 下的实时执行策略 |
+| ρ | 谐波减速比，`ρ ∈ (0,1)`，`ρ_0 ≤ ρ_1 ≤ … ≤ ρ_m` |
+| ρ_k | 第 k 阶段的谐波减速比，`w_k = ⌊B_time · ρ^k⌋` |
+| α_user | 用户共创偏好系数，`α_user ∈ [0,1]` |
+| θ_{S,user} | 用户偏好下的学生阈值，`θ_{S,user} = (1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}` |
+| skill_catalog | 技能目录：`SkillID × Param → Action`，平台无关参数 |
+| CertifiedModule | 证书模块接口：`(margin_fn, Cert_T_fn)`，平台无关注入 |
+| platform_id | 平台标识符，仅用于底层 WCET 测试记录，上层证书无依赖 |
+| ζ_rt^14 = (B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode, ρ, α_user, platform_id) | 14 轮实时路由共享状态 |
 
-**定义 583（随时推理算子 Anytime Inference Operator）** 一个随时推理算子是
+**定义 595（谐波减速比 Harmonic Reduction Ratio）**
 ```
-A = ( f_0, f_1, …, f_m ; w_0 < w_1 < … < w_m ; Cap )
-f_0 : x ↦ (Acc_0(x)=Fallback(x), c_0)          # 恒有效的保守起点
-f_k : (x, Acc_{k-1}) ↦ (Acc_k, c_k),  k=1..m
+ρ ∈ (0,1) 为经 RTIC 截止期证书验证的谐波减速比。
+∀k ∈ {0,…,m} : w_k = ⌊B_time · ρ^k⌋ ,
 ```
-要求：
-1. **可靠性**：`Acc_k` 中每个动作在证书 `c_k` 下有效（soundness）；
-2. **单调扩张**：`Acc_{k-1} ⊆ Acc_k`；
-3. **授权上界**：`Acc_k ⊆ Exec_v12(x)`（v13 永不新增 v12 未允许的动作）；
-4. **可中断**：在任一 k 之后停止都返回有效的 `(Acc_k,c_k)`；
-5. **可验证 WCET**：`w_k` 为硬件在环测得的保守上界。
-质量 `q_k=E_{x∼D}[value(Acc_k(x)∩U(x))]` 单调不减。注意：安全关键 anytime 必须**从最保守集合向上扩张**，而不是从粗近似向下修正——`f_0` 只返回安全回退/空可行集，故任意早退只会更保守。
+其中 `w_k` 为第 k 阶段的保守 WCET 上界，`B_time` 为本帧总时间预算。`ρ` 必须满足：在已验证 WCET 与硬件在环条件下，`P(latency ≤ w_k) ≥ 1−δ_t`。`ρ` 单调非增：`ρ_0 ≤ ρ_1 ≤ … ≤ ρ_m`。若任一 `w_k` 未通过 WCET 验证，则被强制向更保守档位塌缩，`ρ` 被动调整为更小值。谐波减速比ρ即谐波减速器的减速比比喻——每一档都经由物理测试验证的精确减速比。
 
-**定义 584（实时推理证书 RTIC）** 
+**定义 596（用户共创证书偏好 User-Created Certificate Preferences）**
+用户指定 `α_user ∈ [0,1]`，系统自动计算对应的学生阈值位移：
 ```
-RTIC = ( D, δ_t, {(w_k,q_k)}_{k=0..m}, B_safe, fallback )
+θ_{S,user} = (1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}
 ```
-有效当且仅当：
-1. 在已验证 WCET 与硬件在环条件下，`P(latency ≤ D) ≥ 1−δ_t`；
-2. 每个可能的中断档 k 返回的动作满足 `Acc_k⊆Exec_v12` 且 `q_k≥q_floor(D)`；
-3. 若无 k≥1 档能在 `D` 内完成，则执行 `fallback∈P^rt`（安全保持/柔顺停止/`a_ask`），**不得执行迟到结果**；
-4. 组合：对模块 DAG，`Σ_k w_k + overhead ≤ B_time`，且安全切片 `B_safe` 被硬预留、不可被性能模块挪用。
-RTIC 是**截止期证书**，不是平均延迟统计量。
+其中 `θ_{S,DGC}` 是 DGC 的默认共形阈值，`θ_{S,min}` 是最保守的共形阈值（对应 `α_user = 1`）。用户的 `α_user` 直接映射到 DGC 的校准权重，使得用户的主观选择在共形保证范围内被系统尊重。训练时非对称代价保持不变：`L_CPD`  unchanged，仅在推理时 `θ_S` 替换为 `θ_{S,user}`。若 `α_user` 超出 `[0,1]` 范围，系统自动裁剪至边界并记录 `α_user` 的超出程度作为元认证指标 `η_α = |α_user − clip(α_user, 0, 1)|`。
 
-**定义 585（证书保持蒸馏 Certificate-Preserving Distillation）** 设教师 `T` 的证书谓词 `Cert_T(x,a)=1[m_T(x,a)≥0]`，学生 `S` 的边界余量为 `m_S`。若在论域 X 上
+**定义 597（平台无关认证模块 Platform-Agnostic CertifiedModule）**
+教师 `T` 与学生 `S` 通过 `CertifiedModule` 接口注入，而非硬编码网络架构：
 ```
-Acc_S(U) := {(x,a): m_S(x,a) ≥ U} ⊆ Acc_T := {(x,a): m_T(x,a) ≥ 0} ,
+CertifiedModule = ( margin_fn : (x, a) → ℝ , Cert_T_fn : (x, a) → {0,1} )
 ```
-则称 S 在 X 上以间隙 U **证书保持**。训练目标是**非对称**的：
-```
-L_CPD = E[ ℓ_task(S(x), a_T) ]
-      + λ_FA · E[ 1{Cert_S(x,a)=1 ∧ Cert_T(x,a)=0} ]     # 假接受：重罚
-      + λ_FR · E[ 1{Cert_S(x,a)=0 ∧ Cert_T(x,a)=1} ]     # 假拒绝：轻罚（活动性）
-      + λ_m  · E[ (m_S(x,a) − m_T(x,a))_+^2 ]            # 只惩罚"比教师乐观"
-```
-其中 `λ_FA ≫ λ_FR`。标签是教师的**证书判决与边界余量**，而不仅是动作；因为动作蒸馏可以在平均意义上匹配，却漏掉极薄的不可接受区域。
+`margin_fn` 为任意可微函数，输出证书边界余量；`Cert_T_fn` 为证书谓词 `Cert_T(x,a) = 1[m_T(x,a) ≥ 0]`。平台迁移时，仅需要重新提供对应平台的 `margin_fn` 与 `Cert_T_fn`，`CertifiedModule` 接口完全无依赖于具体网络结构、力觉传感器阈值或关节布局。AIO 的 `f_k` 階段接收 `skill_catalog: SkillID × Param → Action` 作为平台无关参数，而非硬编码技能。
 
-**定义 586（蒸馏间隙证书 DGC）** 在类型/区域分层校准集上定义非一致性分数
+**定义 598（时限条件蒸馏目标与用户偏好）**
 ```
-g_i = m_S(x_i,a_i) − m_T(x_i,a_i)          # 学生相对教师的乐观量
-U_d(α_d) = Quantile_{1−α_d}( {g_i} ∪ {+∞} )  （有限样本修正，取 ⌈(1−α_d)(n+1)⌉ 阶）
-```
-证书 `Ĉ_dis=(ĝ_d,U_d,cov_d,support)`。有效条件：(i) 校准与部署在支撑域内可交换（或已做加权共形）；(ii) 部署绑定落在 `support` 内；(iii) `U_d ≤ B_distill`。有效时以概率 ≥1−α_d 有 `sup g ≤ U_d`，于是学生取阈值 `θ_S=U_d` 即得 `Acc_S(θ_S)⊆Acc_T`。DGC 只删除/收紧，不替代 v12 的 TGC；二者必须合取。
-
-**定义 587（时限蒸馏阶梯 Deadline Distillation Ladder）** 
-```
-L = ( S_0, S_1, …, S_m ; w_0<…<w_m ; θ_i=U_{d,i} )
-Acc_i = {(x,a): m_{S_i}(x,a) ≥ θ_i}
-```
-要求 `Acc_0⊆Acc_1⊆…⊆Acc_m⊆Acc_T`。若学生是独立网络，用**并集门**强制嵌套 `Acc_i ← ∪_{j≤i}Acc_j`（每个 `Acc_j⊆Acc_T`，故并集仍安全）；若用共享骨干多出口网络，则直接以单调罚项训练嵌套。`S_0` 是**无需学习的零假设安全回退**（安全保持/柔顺停止/`a_ask`），在教师失效或严重漂移时仍由物理构造保证安全。预算越多 ⇒ 授权集（弱）单调越大，但永不超过教师。
-
-**定义 588（实时路由状态）**
-```
-ζ_rt = ( B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode )
-mode ∈ {fast, speculate-verify, teacher-only, fallback}
-```
-RTCR 只读 `ζ_rt` 选档；档位证书由 AIO/CPD/DDL 预先产生。
-
-**定义 589（时限条件蒸馏目标）**
-```
-min_{S_0..S_m}  E[ ℓ_task(S_{i(x)}(x)) ] + λ_t Σ_i π_i w_i + λ_s Σ_i π_i U_{d,i}
+min_{S_0..S_m}  E[ ℓ_task(S_{i(x)}(x)) ] + λ_t Σ_i π_i w_i + λ_s Σ_i π_i U_{d,i} + λ_u α_user Σ_i π_i (θ_{S,DGC} − θ_{S,min})
 s.t.  Acc_0⊆…⊆Acc_m⊆Acc_T ,
       w_i ≤ B_time − B_safe ,
       U_{d,i} ≤ B_distill ,
+      θ_S ← θ_{S,user} = (1−α_user)·θ_{S,DGC} + α_user·θ_{S,min} ,
 ```
-`π_i` 为路由占用分布，`λ_t` 是"时间价格"、`λ_s` 是"安全余量价格"。最优阶梯使各档的**单位毫秒边际进度增益**相等；这给出离线训练/构造的对偶解释，RTCR 则是在线原始决策。
+`λ_u` 是"用户偏好价格"，控制用户偏好的边际成本。最优阶梯在单位毫秒边际进度增益、安全余量增益和用户偏好增益三者之间取平衡。
 
-**定义 590（实时安全回退集 P^rt）** 在 v12 的 `P^g` 基础上，
+**定义 599（实时路由状态的 14 升版）**
+```
+ζ_rt^14 = ( B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode, ρ, α_user, platform_id )
+mode ∈ {fast, speculate-verify, teacher-only, fallback, harmonic-verify}
+```
+RTCR 只读 `ζ_rt^14` 选档；档位证书由 AIO/CPD/DDL 预先产生；`ρ` 与 `α_user` 由 HBR/UCCI 预先产生。
+
+**定义 600（实时安全回退集 P^rt 的 14 升版）** 在 v13 的 `P^rt` 基础上，
 ```
 p ∈ P^rt ⇔ ∃ π_f : π_f ∈ Exec_v12
-                 ∧ w(π_f) ≤ B_time(p)
+                 ∧ w(π_f) ≤ B_time(p) − ⌊B_time(p) · ρ^k⌋  (harmonic reduced budget)
                  ∧ U_gap(π_f) + U_dis(π_f) ≤ B_remaining(p)
                  ∧ 执行 π_f 不破坏 I_c、I_h 与规范硬约束
+                 ∧ π_f 的中断结果只能是更保守，不能是未验证
 ```
 可执行段的必要条件升级为 `P^g≠∅ ∧ P^rt≠∅`；`P^rt` 中必须有至少一个**无需学习证书**的零假设回退（定义 587 的 `S_0`）。
 
-**定义 591（中立元表 v13 扩展）**
+**定义 601（中立元表 v14 扩展）**
 
 | 新组件 | v^⊥ | 等价退化点 |
 |---|---|---|
-| AIO | 固定档一次运行，无中断/无保守扩张，RTIC 退化为静态 WCET | Level-4（v12 计算路径） |
-| CPD | `Acc_S≡∅, U_d≡0`，只走教师 | Level-3（v12+AIO 证书路径） |
-| DDL | 单档学生 + 教师回退，无嵌套/无塌缩 | Level-2（v12 证书 + 单学生） |
-| RTCR | v12 静态调度顺序，学生仅事后预筛 | Level-1（v12 调度 + 随时教师） |
+| AIO | 固定档一次运行，无中断/无保守扩张，RTIC 退化为静态 WCET | Level-7（v13 计算路径） |
+| CPD | `Acc_S≡∅, U_d≡0`，只走教师 | Level-6（v13+AIO 证书路径） |
+| DDL | 单档学生 + 教师回退，无嵌套/无塌缩 | Level-5（v13 证书 + 单学生） |
+| RTCR | v13 静态调度顺序，学生仅事后预筛 | Level-4（v13 调度 + 随时教师） |
+| HBR | 谐波减速比 ρ 退化为 1，每一档预算不再几何级数收缩 | Level-2（v13 无 reduction 的 AIO） |
+| UCCI | `α_user` 被裁剪至 0，阈值退化为最保守值 `θ_{S,min}` | Level-3（v13 + DDL 无用户偏好） |
+| PAA | 上层证书逻辑退化为平台特定版本，需重新测 WCET、重新校准 DGC | Level-1（v13 平台特定实现） |
 
-**定义 592（升级定义 582 的时限—蒸馏感知选择）** 
+**定义 602（升级定义 593 的时限—蒸馏—减速—偏好三难下界）**
+存在教师/论域/谐波比 ρ 对，使任何学生族若满足每帧计算 `w_i≤D`、单侧假接受 ≤α_d、证书保持、谐波减速比 ρ，则其蒸馏间隙满足
 ```
-max_g   E[Progress(g)]
-        − λ_risk · ( U_gap(g) + U_dis(g) )
-        − λ_time · E[latency(g)]
-        − λ_ask  · E[false_reject(g)]
-s.t.    v11/v12 物理/接触/谐波/规范/gap 证书全部有效
-        Σ_seg (U_gap+U_dis) ≤ B_total
-        W_p99(g) ≤ D ,  P^rt(g) ≠ ∅
-        Acc_i(g) ⊆ Acc_T(g)，替换仅在已认证等价类内
+U_d ≥ Ω( sqrt( (d_eff + log(1/δ)) / n ) + ε_appr(c, D) + ε_ρ(ρ) ) ,
 ```
-若某组合的 `U_dis` 超预算但信息价值高，只能转为**离线校准/蒸馏采样**，不能直接执行任务段。
+其中 `d_eff` 为教师证书边界的有效维度、`ε_appr(c,D)` 为容量 c/时限 D 下的逼近误差、`ε_ρ(ρ)` 为谐波减速比 ρ 引入的额外不确定项；并且若阶梯只有 m 档、`w_m≤D`，则存在预算分布使
+```
+E[v_m − v(B)] ≥ Ω( (v_m−v_0)/m )  或   m = Ω(D/Δw) .
+```
+证明：第一项由边界函数的非参数 minimax 下界（Le Cam 方法）给出；第二项把"中断认证"视为对阶梯档位的信息约束，构造一个只在相邻档之间切换的预算分布，使少于 m 档时必然在某个预算区间错配，伸缩求和给出下界；第三项由谐波减速比 ρ 的不确定性通过共形界限传导给蒸馏间隙，见引理 123。∎ 推论：**"实时 + 蒸馏 + 零代价 + 谐波减速"不可能同时成立**；必须用 `B_distill`、档数 m、活动性（假拒绝）、或 `ρ` 的精确测量四者显式交换。
 
-**定义 593（三预算不可挪用 Three-Budget Non-Fungibility）**
+**定义 603（三预算不可挪用 Three-Budget Non-Fungibility）**
 ```
 B_total = B_transfer + B_distill        # 真实侧误差可加，见引理 121
 B_time  = B_safe + B_infer              # 安全切片硬预留
+B_ρ     = B_harmonic + B_α               # 谐波减速与偏好预算，不可挪用于其他两类
 ```
-三类预算（迁移/蒸馏/时间）各自独立，**不得互相冲抵**：蒸馏间隙不能拿迁移预算买单，时间也不能拿安全余量买单。任一预算耗尽时，唯一允许的动作是沿阶梯更保守、触发 `a_ask` 或认证回退。
+三类预算（迁移/蒸馏/时间）各自独立，**不得互相冲抵**：`B_ρ` 与 `B_distill`、`B_time` 互不冲抵。但 `B_ρ` 与 `B_dis（分布外误差）` 可加，见引理 124。任一预算耗尽时，唯一允许的动作是沿阶梯更保守、触发 `a_ask` 或认证回退。
 
-**定义 594（实时执行策略与语义保持 Real-Time Policy）**
+**定义 604（实时执行策略与语义保持 Real-Time Policy）**
 ```
-π_rt(x; B) = argmax_{a ∈ Acc_{i*(B)}(x)} value(a),
-i*(B) = max{ i : w_i ≤ B − B_safe , Ĉ_dis,i 有效 }
+π_rt(x; B, ρ, α_user) = argmax_{a ∈ Acc_{i*(B,ρ)}(x)} value(a),
+i*(B,ρ) = max{ i : w_i = ⌊B · ρ^i⌋ ≤ B − B_safe , Ĉ_dis,i 有效 }
 ```
-且要求对所有 x、B 有 `π_rt(x;B) ∈ Exec_v12(x)`。RTCR 的推测—验证只是实现 `π_rt` 的一种方式：学生放行仅当 `(x,a)∈Acc_{i*(B)}`；否则在剩余预算足够时由教师 anytime 验证，验证不完成则退回 `P^rt`。
+且要求对所有 x、B、ρ、α_user 有 `π_rt(x;B,ρ,α_user) ∈ Exec_v12(x)`。RTCR 的推测—验证只是实现 `π_rt` 的一种方式：学生放行仅当 `(x,a)∈Acc_{i*(B,ρ)}`；否则在剩余预算足够时由教师 anytime 验证，验证不完成则退回 `P^rt`。用户偏好 `α_user` 只影响阈值位移 `θ_{S,user}`，不影响 `i*(B,ρ)` 的选档逻辑。
+
+**定义 605（引理 122：谐波减速下的中断安全性）**
+若 A 满足定义 595 的谐波减速比验证、可靠性、单调扩张与授权上界，且 `f_0` 只返回 `Fallback(x)⊆Exec_v12`，则对任意中断档 k，`(Acc_k,c_k)` 有效且 `Acc_k⊆Exec_v12`；且若 `f_k` 的加入不降低授权价值，则 `q_0≤…≤q_m`。证明：对 k 归纳。k=0 由 `f_0` 定义。若 `(Acc_{k-1},c_{k-1})` 有效，定义 595 的条件 1–3 直接给出 `Acc_k` 有效、`Acc_{k-1}⊆Acc_k⊆Exec_v12`，故中断在 k 仍有效。质量单调由定义 595 的 `q_k` 单调性。∎ 推论：**安全性不依赖 WCET 是否精确，只依赖"能否按时执行到某一档"**；WCET 误差只影响及时性/性能，不会把早退变成不安全。
+
+**定义 606（引理 123：用户偏好在共形保证下的阈值位移）**
+设 `θ_{S,DGC}` 为 DGC 的默认阈值，`θ_{S,min}` 为最保守阈值。对任意 `α_user ∈ [0,1]`，有
+```
+P( m_S(x,a) ≥ θ_{S,user} ) ≥ (1−α_user)·P( m_S(x,a) ≥ θ_{S,DGC} ) + α_user·P( m_S(x,a) ≥ θ_{S,min} ) − α_user·ε_cal ,
+```
+其中 `ε_cal` 为校准集有限样本误差。若 `α_user = 0`，退化为 `P( m_S ≥ θ_{S,DGC} ) ≥ 1−α_d`；若 `α_user = 1`，退化为 `P( m_S ≥ θ_{S,min} ) ≥ 1−α_d`。证明：共形下的线性组合保下界，利用 `θ_{S,user}` 为 `(1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}` 的加权平均，经共形下的线性不等式传导给概率下界。∎ 推论：**用户偏好 `α_user` 在共形保证范围内线性位移阈值，不会突破 `Acc_S ⊆ Acc_T` 的单侧包含约束**。
 
 ## 2. 形式化升级（要点）
 
-**升级定义 582（gap 感知选择）** 增加 `−λ_time·E[latency]`、`−λ_ask·E[false_reject]` 与 `W_p99≤D, P^rt≠∅` 约束；不改变 v12 的任何证书项。
+**升级定义 593（gap 感知选择）** 增加 `−λ_ρ·E[ε_ρ]` 与 `−λ_ask·E[false_reject]` 与 `W_p99≤D, P^rt≠∅` 约束；不改变 v13 的任何证书项。
 
-**升级定义 579/590（中止点）** `P_t=P_t^nav∪P_t^c∪P_t^h` 之外要求 `P^rt≠∅`；四类中止点分别回答"能不能导航停""接触能不能安全停""谐波能不能耗散停""真实侧有没有按时可执行的认证回退"。
+**升级定义 579/590（中止点）** `P_t=P_t^nav∪P_t^c∪P_t^h` 之外要求 `P^rt≠∅`；五类中止点分别回答"能不能导航停""接触能不能安全停""谐波能不能耗散停""真实侧有没有按时可执行的认证回退""用户偏好下的安全塌缩"。
 
-**升级定义 531（软硬约束衔接）** v12 的物理/接触/谐波/规范硬检查原样保留；新增的"截止期不可达""DGC 失效""预算耗尽"进入**执行门**（不可执行），不是物理硬违规。物理硬违规的定义不变。
+**升级定义 531（软硬约束衔接）** v13 的物理/接触/谐波/规范硬检查原样保留；新增的"截止期不可达""DGC 失效""预算耗尽""harmonic reduction 超预算""用户偏好越界"进入**执行门**（不可执行），不是物理硬违规。物理硬违规的定义不变。
 
-**升级定义 580（中立元）** 见定义 591；四个中立元注入后调用序列与 v12 逐位一致。
+**升级定义 580（中立元）** 见定义 601；七个中立元注入后调用序列与 v13 逐位一致。
 
-**升级定义 554/571（技能与通用项）** 不变；AIO/CPD/DDL 只是在技能项展开为 v11 HAS 序列之后，对**计算实现**做优化，不改变技能语义、绑定、效果签名或前后置条件。
+**升级定义 554/571（技能与通用项）** 不变；AIO/CPD/DDL 只是在技能项展开为 v11 HAS 序列之后，对**计算实现**做优化，不改变技能语义、绑定、效果签名或前后置条件。PAA 模块完全在技能项展开之前完成平台无关的抽象化，不影响低层技能语义。
 
 ## 3. 关键算法骨架
 
 ```python
-# IP-371 AnytimeInferenceOperator：从最保守集合向上扩张
+# IP-371 AnytimeInferenceOperator：谐波 reduction 版
 class AnytimeInferenceOperator:
-    def __init__(self, stages, wcet, fallback):
+    def __init__(self, stages, wcet, rho, fallback):
         self.stages = stages          # [f0, f1, ..., fm]；f0 只返回 fallback/拒绝
         self.wcet = wcet              # 硬件在环验证的逐阶段 WCET
+        self.rho = rho                # 谐波减速比，ρ ∈ (0,1)，单调非增
         self.fallback = fallback
 
-    def run(self, x, deadline):
-        acc, cert = self.stages[0](x)                 # Acc_0 = Fallback(x)
+    def run(self, x, deadline, skill_catalog):
+        acc, cert = self.stages[0](x, skill_catalog)                 # Acc_0 = Fallback(x)
         assert self._sound(x, acc, cert)
         spent = self.wcet[0]
         for k in range(1, len(self.stages)):
-            if spent + self.wcet[k] > deadline:       # 下一阶段放不下：停在上一档
+            # harmonic reduction: each stage's budget is ρ^k · B_time
+            budget_for_this_stage = int(deadline * self.rho ** k) - spent
+            if budget_for_this_stage < self.wcet[k]:       # 下一阶段放不下：停在上一档
                 break
-            acc_k, cert_k = self.stages[k](x, acc)
+            acc_k, cert_k = self.stages[k](x, acc, skill_catalog)
             if not (acc <= acc_k <= Exec_v12(x)
                     and self._sound(x, acc_k, cert_k)
                     and self._monotone_value(acc, acc_k)):
@@ -259,57 +246,67 @@ class AnytimeInferenceOperator:
         return acc, cert, spent
 
 
-# IP-372 CertificatePreservingDistiller：只弱不强
-class CertificatePreservingDistiller:
-    def __init__(self, teacher, alpha_d=0.1, lam_fa=50.0, lam_fr=1.0, lam_m=1.0):
-        self.T = teacher
-        self.alpha_d, self.lam = alpha_d, (lam_fa, lam_fr, lam_m)
+# IP-376 UserCoCreationInterface：用户共创证书偏好
+class UserCoCreationInterface:
+    def __init__(self, alpha_user=0.0, theta_dgc=None, theta_min=None):
+        self.alpha_user = alpha_user
+        self.theta_dgc = theta_dgc
+        self.theta_min = theta_min
 
-    def fit(self, S, train, calib):
-        for x, a in train:
-            m_T = self.T.margin(x, a)
-            m_S = S.margin(x, a)
-            cert_T = (m_T >= 0)
-            loss = (task_loss(S(x), self.T.action(x))
-                    + self.lam[0] * false_accept(S, cert_T)
-                    + self.lam[1] * false_reject(S, cert_T)
-                    + self.lam[2] * relu(m_S - m_T) ** 2)      # 只惩罚更乐观
-            loss.backward()
-        g = [S.margin(x, a) - self.T.margin(x, a) for x, a in calib]
-        U_d = conformal_upper(g, alpha=self.alpha_d)           # 定义 586
-        return DistilledStudent(S, theta=U_d, gap=U_d)
+    def update_user_preference(self, alpha_user):
+        self.alpha_user = max(0, min(1, alpha_user))      # 裁剪至 [0,1]
+        # 计算用户偏好的阈值位移
+        if self.theta_dgc is not None and self.theta_min is not None:
+            self.theta_user = (1 - self.alpha_user) * self.theta_dgc + self.alpha_user * self.theta_min
+        else:
+            self.theta_user = self.theta_dgc               # 退化为默认
+
+    def get_user_threshold(self):
+        return self.theta_user
 
 
-# IP-373 DeadlineDistillationLadder：授权集单调嵌套
-class DeadlineDistillationLadder:
-    def __init__(self, students, wcet, U_d):
-        self.S, self.w, self.theta = students, wcet, U_d
+# IP-377 Platform-AgnosticAbstraction：平台无关抽象
+class Platform-AgnosticAbstraction:
+    def __init__(self, skill_catalog, certified_module, rho_standard):
+        self.skill_catalog = skill_catalog          # SkillID × Param → Action
+        self.certified_module = certified_module     # (margin_fn, Cert_T_fn)
+        self.rho_standard = rho_standard             # 标准谐波减速比集合
 
-    def build(self):
-        for i in range(1, len(self.S)):
-            self.S[i] = UnionGate(self.S[i], self.S[:i], self.theta[:i + 1])
-            assert self.acc(i - 1) <= self.acc(i) <= self.acc_teacher()
-        return self
+    def get_action(self, x, skill_id, params, deadline, B_time):
+        # 通过 skill_catalog 而非硬编码获取动作
+        action = self.skill_catalog[skill_id](params)
+        # 通过 CertifiedModule 接口而非硬编码网络
+        margin = self.certified_module.margin_fn(x, action)
+        cert = self.certified_module.Cert_T_fn(x, action)
+        # 谐波减速预算分配
+        rho = self._select_rho(deadline, B_time)
+        reduced_budget = int(B_time * rho ** k)  # k 为当前档位
+        return action, margin, cert, reduced_budget
 
-    def acc(self, i):
-        return {(x, a) for (x, a) in self.support
-                if self.S[i].margin(x, a) >= self.theta[i]}
+    def _select_rho(self, deadline, B_time):
+        # 根据剩余时间和标准谐波比集合选择 ρ
+        for rho in sorted(self.rho_standard, reverse=True):
+            if int(B_time * rho) <= deadline:
+                return rho
+        return self.rho_standard[-1]  # 最保守
 
-    def rung(self, i):
-        return self.S[i], self.theta[i]
 
-
-# IP-374 RealTimeCertificateRouter：选档 + 推测-验证 + 塌缩
+# IP-374 RealTimeCertificateRouter：带 harmonic reduction、user preference 的版本
 class RealTimeCertificateRouter:
-    def __init__(self, ladder, rtic, teacher_aio):
+    def __init__(self, ladder, rtic, teacher_aio, harmonic_reducer, ucci):
         self.L, self.rtic, self.T = ladder, rtic, teacher_aio
+        self.HBR = harmonic_reducer          # HarmonicBudgetReducer
+        self.UCCI = ucci                       # UserCoCreationInterface
 
     def route(self, x, B_time, drift):
         if drift:
             return self.L.rung(0)                     # 安全塌缩：零假设回退
         budget = B_time - self.rtic.B_safe            # 安全切片不可挪用
+        # 应用 harmonic reduction：实际可用预算是 ρ^k · B_time
+        effective_budget = self.HBR.effective_budget(budget)
         for i in reversed(range(len(self.L.S))):
-            if self.L.w[i] <= budget and self.L.cert_valid(i):
+            w_i = int(effective_budget * self.HBR.rho ** i)  # 谐波 reduction 后的预算
+            if w_i <= budget and self.L.cert_valid(i):
                 return self.L.rung(i)
         return self.L.rung(0)                         # 认证回退 / 立即 a_ask
 
@@ -324,32 +321,49 @@ class RealTimeCertificateRouter:
             return a_hat if verdict.sound else self.T.fallback(x)
         return self.T.fallback(x)                     # 验证预算不足：不赌
 
+    def apply_user_preference(self, alpha_user):
+        self.UCCI.update_user_preference(alpha_user)
+        # 将用户偏好映射到 DGC 校准阈值
+        theta_adjusted = self.UCCI.theta_user
+        return theta_adjusted
 
-# 主闭环集成：MetricVoiceGauge-NCD-HUTD
-def metricvoicegauge_round_13(M, s, obs, audio_stream=None, ell=None, ...):
-    # ---- v12 主路径（MW→NGE→HCC→HDT→HATD→NCP→守卫）原样保留 ----
+
+# 主闭环集成：MetricVoiceGauge-NCD-HUTDH
+def metricvoicegauge_round_14(M, s, obs, audio_stream=None, ell=None, ...):
+    # ---- v13 主路径（MW→NGE→HCC→HDT→HATD→NCP→守卫）原样保留 ----
     results = middleware.run_cycle(runners={...}, ctx=ctx)
     nge.update_belief(obs)
     hcc.update_identification(obs.motor_enc, obs.joint_enc, obs.current)
     harmonic_pred = hdt.predict_harmonic(ctx.state, candidate_skills) if hdt.ready() else None
 
-    # ---- AIO：重模块改为保守扩张（5Hz，摊销 ≤1ms）----
-    u_cands, uc_cert, t_usg = aio_usg.run(ctx.task_graph, deadline=ctx.B_time)
-    gap_certs, dgc_by_tau, t_tgc = aio_tgc.run(u_cands, ctx.zeta_u, ctx.B_time)
+    # ---- PAA：平台无关抽象（外部提供 skill_catalog 与 certified_module）----
+    skill_catalog = ctx.skill_catalog          # 外部提供，平台无关
+    certified_module = ctx.certified_module      # 外部提供，平台无关
+    rho_standard = ctx.rho_standard             # 标准谐波减速比集合
+    paa = Platform-AgnosticAbstraction(skill_catalog, certified_module, rho_standard)
 
-    # ---- RTCR：选档 / 推测-验证（50Hz，≤0.05ms）----
-    rung, theta = rtcr.route(ctx.state, ctx.B_time, drift=ctx.drift_flag)
+    # ---- HBR：谐波预算减速----
+    rho = aio_hbr.run(ctx.task_graph, deadline=ctx.B_time)  # 经 RTIC WCET 验证的 ρ
+    aio = AnytimeInferenceOperator(stages=aio_stages, wcet=aio_wcet, rho=rho, fallback=aio_fallback)
+
+    # ---- UCCI：用户共创证书偏好----
+    ucci = UserCoCreationInterface(alpha_user=ctx.alpha_user, theta_dgc=ctx.theta_dgc, theta_min=ctx.theta_min)
+
+    # ---- RTCR：选档 / 推测-验证（包含 harmonic reduction 与 user preference）----
+    rung, theta = rtcr.route(ctx.state, ctx.B_time, drift=ctx.drift_flag, rho=rho, alpha_user=ctx.alpha_user)
     if rtcr.mode(ctx.state) == "speculate-verify":
         a_student = rtcr.speculate_verify(ctx.state, ctx.B_time)
 
-    # ---- v12 GAGP/NCP + v13 时间/蒸馏约束（5Hz，摊销 ≤1ms）----
+    # ---- v12 GAGP/NCP + v13 时间/蒸馏/ reduction/ 偏好约束----
     if current_chunk is None or current_chunk.exhausted:
         plan = gagp.plan(ctx.task_graph, ctx.zeta_u, ctx.v11_certs,
-                         rung=rung, U_dis=theta, B_time=ctx.B_time)
+                         rung=rung, U_dis=theta, B_time=ctx.B_time,
+                         rho=rho, alpha_user=ctx.alpha_user)
         current_chunk = planner.plan_with_harmonic_gap_time(
             ctx.state, nge.b, ctx.delta_dom, ctx.tau_dom,
             harmonic_pred=harmonic_pred, gap_certs=gap_certs,
-            B_transfer=ctx.B_transfer, B_time=ctx.B_time)
+            B_transfer=ctx.B_transfer, B_time=ctx.B_time,
+            rho=rho, alpha_user=ctx.alpha_user)
 
     # ---- v12 守卫 + 实时守卫（50Hz，合计 ≤0.8ms）----
     verdict, k_next = chunk_guard_harmonic_gap_time(
@@ -367,13 +381,15 @@ def metricvoicegauge_round_13(M, s, obs, audio_stream=None, ell=None, ...):
     # ---- CPD/DGC：低频异步蒸馏与重校准；只改学生，不改教师阈值 ----
     if cycle_idx % T_distill == 0:
         baa_snapshot = hdt.snapshot()
-        students = cpd.fit(ladder_arch, train=distill_buffer, calib=boundary_calib)
-        ladder = ddl.build(students, wcet=measured_wcet, U_d=students.gap)
+        students = cpd.fit(ladder_arch, train=distill_buffer, calib=boundary_calib,
+                           alpha_user=ctx.alpha_user)  # 传递用户偏好
+        ladder = ddl.build(students, wcet=measured_wcet, U_d=students.gap,
+                           rho=rho)  # 传递谐波减速比
         if drift_detector.fired():
             rtcr.collapse_to_zero()                            # 安全塌缩 + 重校准
 
-    # ---- v12 继承路径 ----
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v12_path(ctx)
+    # ---- v13 继承路径 ----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v13_path(ctx)
     return C, spatial_cert, claims, metrics, rewards
 ```
 
@@ -412,11 +428,11 @@ Exec_v13 = { a : a∈Acc_{i*(B)}(x) 对某有效档 i*
 ```
 则 `Exec_v13 ⊆ Exec_v12`。证明：定义 583(3) 给出 AIO 的 `Acc_k⊆Exec_v12`；引理 114 给出 CPD 的 `Acc_S⊆Acc_T⊆Exec_v12`；DDL 只做并集/嵌套，仍 ⊆ v12；RTCR 只在上述集合中选档；`P^rt` 要求 `π_f∈Exec_v12`。故任一被执行动作属于 v12 执行集；v12 的 gap 证书合取只进一步缩小集合。∎ 因此 v12 引理 109/101 与 v11 的安全继承在 v13 上继续成立。
 
-**引理 118（中立元退化等价 v12）** 将定义 591 的四个中立元注入 AIO/CPD/DDL/RTCR 端口，则随时算子退化为固定档教师、学生集为空、阶梯退化为单档、路由器退化为 v12 静态调度；主闭环调用序列与 v12 逐位一致，再沿 v12 链退回 v11/v10/v9/v8/v7/v6。证明：逐端口代入定义 591，并用定义 583–594 的边界条件核对；四端口互不相交且中立元不改变 v12 任何证书检查。∎
+**引理 118（中立元退化等价 v12）** 将定义 601 的七个中立元注入 AIO/CPD/DDL/RTCR/HBR/UCCI/PAA 端口，则随时算子退化为固定档教师、学生集为空、阶梯退化为单档、路由器退化为 v13 静态调度、谐波减速比 ρ 退化为 1、用户偏好 α_user 被裁剪至 0、平台无关抽象退化为平台特定版本；主闭环调用序列与 v13 逐位一致，再沿 v13 链退回 v11/v10/v9/v8/v7/v6。证明：逐端口代入定义 601，并用定义 583–594 的边界条件核对；七端口互不相交且中立元不改变 v13 任何证书检查。∎
 
-**引理 119（预算守恒 v13）** 新增在线成本上界：AIO 阶段调度与不变量检查 ≤0.3ms；RTCR 选档 O(log m) ≤0.05ms；学生前向 ≤0.2ms（共享骨干多出口，单出口 ≤0.2ms）；DGC 查表 ≤0.05ms；测—验证复用教师 anytime，已计入 AIO。总决策 p99 仍 ≤22ms，50Hz 保持；离线 CPD 训练/共形校准不在关键路径，按 `T_distill` 异步执行。证明：逐项代入复杂度表并做静态 EDF 校验 `ΣŴ_m≤B_dec`；安全切片 `B_safe` 硬预留保证路由器不会把时间花光。∎
+**引理 119（预算守恒 v14）** 新增在线成本上界：AIO 阶段调度与不变量检查 ≤0.3ms；RTCR 选档 O(log m) ≤0.05ms；学生前向 ≤0.2ms（共享骨干多出口，单出口 ≤0.2ms）；HBR 查表 ≤0.05ms；UCCI 阈值调整 ≤0.02ms；DGC 查表 ≤0.05ms；测—验证复用教师 anytime，已计入 AIO。总决策 p99 仍 ≤22ms，50Hz 保持；离线 CPD 训练/共形校准不在关键路径，按 `T_distill` 异步执行。证明：逐项代入复杂度表并做静态 EDF 校验 `ΣŴ_m≤B_dec`；安全切片 `B_safe` 硬预留保证路由器不会把时间花光。∎
 
-**引理 120（漂移下的安全塌缩）** 设漂移检测器在分布偏离支撑时触发；触发后 RTCR 只允许第 0 档 `S_0`（零假设回退，不依赖任何学习证书）。则：碰撞/越界等物理硬违规概率不高于 v12 的对应回退；活动性损失满足
+**引理 120（漂移下的安全塌缩）** 设漂移检测器在分布偏离支撑时触发；触发后 RTCR 只允许第 0 档 `S_0`（零假设回退，不依赖任何学习证书）。则：碰撞/越界等物理硬违规概率不高于 v13 的对应回退；活动性损失满足
 ```
 P(无可执行认证动作) ≤ P(drift) + P(DGC 失效 | drift) + P(a_ask 预算耗尽) .
 ```
@@ -434,82 +450,109 @@ J_real(S) − J_sim(T) = Δ_tr + Δ_dis ≤ U_gap + U_dis   （w.h.p.）
 ```
 J_real(S) − J* ≤ U_gap + U_dis + I_cross + δ_approx .
 ```
-证明：代数展开；`Δ_tr` 由 v12 TGC 的单侧共形覆盖，`Δ_dis` 由 v13 DGC 的单侧共形覆盖；两项各自以 ≥1−α 成立，联合用并集界得到 `1−α_gap−α_dis`。负的 `Δ_dis`（学生偶然更好）不计入收益，因为安全界只取 `max(0,Δ_dis)`。∎ 推论：**蒸馏间隙不能拿迁移预算冲抵**，`B_total=B_transfer+B_distill` 必须是加性的；新场景中两个间隙可能同时被低估，这是 v13 的根本脆弱点。
+证明：代数展开；`Δ_tr` 由 v13 TGC 的单侧共形覆盖，`Δ_dis` 由 v13 DGC 的单侧共形覆盖；两项各自以 ≥1−α 成立，联合用并集界得到 `1−α_gap−α_dis`。负的 `Δ_dis`（学生偶然更好）不计入收益，因为安全界只取 `max(0,Δ_dis)`。∎ 推论：**蒸馏间隙不能拿迁移预算冲抵**，`B_total=B_transfer+B_distill` 必须是加性的；新场景中两个间隙可能同时被低估，这是 v13 的根本脆弱点。
+
+**引理 122（谐波减速下的中断安全性）** 若 A 满足定义 595 的谐波减速比验证、可靠性、单调扩张与授权上界，则对任意中断档 k，`(Acc_k,c_k)` 有效且 `Acc_k⊆Exec_v12`；且若 `f_k` 的加入不降低授权价值，则 `q_0≤…≤q_m`。证明：对 k 归纳。k=0 由定义 595 的 `ρ` 验证直接给出 `f_0` 的保守起点有效。若 `(Acc_{k-1},c_{k-1})` 有效，定义 595 的条件 1–3 直接给出 `Acc_k` 有效、`Acc_{k-1}⊆Acc_k⊆Exec_v12`，故中断在 k 仍有效。质量单调由定义 595 的 `q_k` 单调性。∎ 推论：**谐波减速比 ρ 的 WCET 验证不改变 anytime 的中断安全性质**，只影响每一档的预算分配。
+
+**引理 123（用户偏好在共形保证下的阈值位移）** 设 `θ_{S,DGC}` 为 DGC 的默认阈值，`θ_{S,min}` 为最保守阈值。对任意 `α_user ∈ [0,1]`，有
+```
+P( m_S(x,a) ≥ θ_{S,user} ) ≥ (1−α_user)·P( m_S(x,a) ≥ θ_{S,DGC} ) + α_user·P( m_S(x,a) ≥ θ_{S,min} ) − α_user·ε_cal ,
+```
+其中 `ε_cal` 为校准集有限样本误差。证明：共形下的线性组合保下界，利用 `θ_{S,user} = (1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}` 为 `(1−α_user)·θ_{S,DGC} + α_user·θ_{S,min}` 的加权平均，经共形下的线性不等式传导给概率下界。∎ 推论：**用户偏好 `α_user` 在共形保证范围内线性位移阈值，不会突破 `Acc_S ⊆ Acc_T` 的单侧包含约束**。
+
+**引理 124（谐波减速预算与分布外误差的可加界）** 记
+```
+Δ_ρ = ε_ρ(ρ) ,   Δ_dis = J_real(S) − J_real(T) .
+```
+则
+```
+J_real(S) − J_sim(T) = Δ_tr + Δ_dis + Δ_ρ   （w.h.p.）
+```
+若考虑理想上限 `J*`，再叠加接触/组合交互项 `I_cross`：
+```
+J_real(S) − J* ≤ U_gap + U_dis + I_cross + δ_approx + Δ_ρ .
+```
+证明：`Δ_tr` 由 v13 TGC 的单侧共形覆盖，`Δ_dis` 由 v13 DGC 的单侧共形覆盖，`Δ_ρ` 由谐波减速比 ρ 的共形传导给蒸馏间隙；三项各自以 ≥1−α 成立，联合用并集界得到 `1−α_gap−α_dis−α_ρ`。∎ 推论：**谐波减速预算误差 Δ_ρ 可以与分布外误差 Δ_dis 可加，这意味着新场景中三类间隙可能同向偏低，是 v14 的脆弱点但可通过三预算界限控制**。
 
 ## 5. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
 | AIO 阶段调度 + 不变量检查 | 在线 50Hz | O(m + |Acc|)，overhead ≤0.3ms | O(|Acc|) | 定义 583, 引理 113 |
+| HBR 谐波减速查表 | 在线 50Hz | O(1)（预计算），≤0.02ms | O(1) | 定义 595, 引理 122 |
 | RTCR 选档 + 推测—验证 | 在线 50Hz | O(log m) + 学生前向，≤0.25ms | O(m) | 定义 587–588, 引理 115 |
 | DGC 查表/阈值 | 在线 50Hz | O(1)（预计算），≤0.05ms | O(Σ|A_τ|) | 定义 586, 引理 114 |
+| UCCI 阈值调整 | 在线 50Hz | O(1)，≤0.02ms | O(1) | 定义 596, 引理 123 |
 | CPD 蒸馏训练 | 离线/异步 | O(n·(d_T+d_S)·E)，不在关键路径 | O(d_T·d_S) | 定义 585 |
 | DDL 构建/嵌套校验 | 离线/低频 | O(m·n_calib·d_S) | O(m·|Acc|) | 定义 587 |
-| v12 继承路径 | 在线 | ≤9ms | 不变 | v12 引理 111 |
+| v13 继承路径 | 在线 | ≤9ms | 不变 | v13 引理 119 |
 | 决策侧合计 | 在线 | 典型 ≤10ms，p99 ≤22ms | — | 引理 119 |
 
-## 6. 实验设计 E627–E646
+## 6. 实验设计 E647–E660
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E627 | 任意时算子的中断有效性 | 所有可能中断档 100% sound，0 次返回未认证动作 |
-| E628 | RTIC 截止期与质量下界 | p99≤22ms、0 超时执行、质量下界达成 ≥95% |
-| E629 | 新颖场景计算尖峰压力 | 深枚举/重校准同相到达时 0 丢拍，完成率 ≥ v12 −3% |
-| E630 | CPD 假接受率 | 留出集 FAR ≤ α_d=0.1，压力测试 0 次不安全放行 |
-| E631 | CPD 假拒绝与活动性 | 常见集 FRR ≤5%，任务完成率 ≥ v12 −5% |
-| E632 | DGC 共形覆盖 | 经验 `P(g≤U_d)` ≥1−α_d |
-| E633 | DGC 紧致性 | `U_d` ≤2× 真实间隙，0 次低估导致越界 |
-| E634 | 阶梯授权嵌套 | `Acc_0⊆…⊆Acc_m⊆Acc_T` 100% 成立 |
-| E635 | 推测—验证收益 | 教师调用减少 ≥30%，0 次不安全接受 |
-| E636 | 突发耗时下的路由 | 0 截止期错过，0 跨档跳到未认证学生 |
-| E637 | 蒸馏加速/保真 Pareto | HDT/TGC/USG 上 ≥4× 加速，决策损失 ≤2% |
-| E638 | 边界蒸馏 vs logit 蒸馏 | 固定 FRR 下 FAR 降低 ≥5× |
-| E639 | 漂移安全塌缩 | 漂移触发后 0 次不安全放行，完成率 ≥ v12 −8% |
-| E640 | 安全继承压力测试 | 对抗输入/组合下 v11/v12 证书 0 次被放宽 |
-| E641 | 三预算联合可行性 | 可行段非空率 ≥95%，0 次跨预算挪用 |
-| E642 | WCET/背压 | p99≤22ms、0 丢拍；BAA 峰值 + 蒸馏尖峰仍 0 丢拍 |
-| E643 | 8h 长跑 | `U_d`、RTIC、嵌套关系稳定，违规趋势收敛 |
-| E644 | 端到端家庭任务/竞赛 | ≥ v12 +5%（预注册主指标） |
-| E645 | 消融：无 AIO/CPD | 计算尖峰下超时/丢拍 ↑≥300% 或完成率 ↓≥15% |
-| E646 | 消融：无 DGC/DDL | 不安全接受 ↑≥300%，漂移场景失效 ↑显著 |
+| E647 | 谐波减速比 ρ 的 WCET 验证 | 所有 `ρ_k` 通过硬件在环测试 p99≤22ms，0 次 WCET 违规 |
+| E648 | 用户共创偏好 α_user 的共形有效性 | 经验 `P(g≤U_d) ≥ 1−α_d`，0 次不安全放行，α_user ∈ [0,1] 边界行为符合 |
+| E649 | 平台迁移成本 | 迁移到新平台仅需重新提供 `skill_catalog` 与 WCET 基准，上层证书 0 次重测，完成率 ≥ v13 −5% |
+| E650 | harmonic reduction 活动性-安全 Pareto | 给定 ρ，FRR ≤5%，任务完成率 ≥ v13 −5%；ρ 越小安全越强但 FRR 越高 |
+| E651 | UCCP 阈值位移的共形保证 | `α_user` 映射后 `P(m_S ≥ θ_{S,user}) ≥ (1−α_user)·P(m_S ≥ θ_{S,DGC}) + α_user·P(m_S ≥ θ_{S,min}) − α_user·ε_cal` |
+| E652 | 谐波减速与用户偏好的联合可加界 | `U_d ≥ Ω(… + ε_ρ(ρ))`，经验下界满足 `1−α_gap−α_dis−α_ρ` |
+| E653 | 漂移安全塌缩 | 漂移触发后 0 次不安全放行，完成率 ≥ v13 −8% |
+| E654 | 平台迁移对抗测试 | 对抗输入/组合下平台迁移完成率 ≥ v13 −10%，0 次证书被放宽 |
+| E655 | 消融：无 HBR | 谐波减速失效，ρ=1，活动性 ↑≥50% 或安全下界 ↓≥10% |
+| E656 | 消融：无 UCCI | 用户偏好失效，α_user=0，FAR 退回 DGC 默认值，0 次跨越界放行 |
+| E657 | 消融：无 PAA | 平台无关抽象失效，需重新测 WCET、重新校准 DGC，迁移完成率 ↓≥15% |
+| E658 | 消融：无 AIO/CPD | 计算尖峰下超时/丢拍 ↑≥300% 或完成率 ↓≥15% |
+| E659 | 消融：无 DGC/DDL | 不安全接受 ↑≥300%，漂移场景失效 ↑显著 |
+| E660 | 端到端家庭任务/竞赛 | ≥ v13 +5%（预注册主指标）
 
 ## 7. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| 任意时有效性（E627） | 100% sound | 缩短阶段、加入不变量断言、禁止未验证 join |
-| RTIC（E628） | p99≤22ms、0 超时执行 | 增大安全切片、降低 m、硬件在环重测 WCET |
-| 尖峰压力（E629） | 0 丢拍、≥v12−3% | 增加保守档、异步化重模块、扩大 B_safe |
-| CPD 假接受（E630） | FAR≤α_d、0 压力越界 | 提高 λ_FA、扩大边界校准、收紧 θ_S |
-| CPD 假拒绝（E631） | FRR≤5%、≥v12−5% | 下调 λ_FR/θ_S、增大容量、增加常见档 |
-| DGC 覆盖（E632） | ≥1−α_d | 增大校准集、加权共形、缩小宣称支撑 |
-| DGC 紧致（E633） | ≤2× 且 0 低估 | 边界主动采样、EVT 尾部修正、增大余量 |
-| 阶梯嵌套（E634） | 100% | 并集门/共享骨干单调训练，拒绝非嵌套阶梯 |
-| 推测—验证（E635） | 教师调用 ≤70%、0 越界 | 调整验证预算、收紧学生子集 |
-| 路由（E636） | 0 错过、0 跨档 | 选档加锁、证书有效期检查、保守塌缩 |
-| 加速/保真（E637） | ≥4×、损失≤2% | 增大容量、改多出口、分层蒸馏 |
-| 边界蒸馏（E638） | FAR ≤1/5 | 边界重采样、margin loss 权重上调 |
-| 漂移塌缩（E639） | 0 越界、≥v12−8% | 提前漂移检测、扩大回退集、缩短重校准 |
-| 安全继承（E640） | 0 次放宽 | 审计证书合取路径、拒绝任何阈值旁路 |
-| 三预算（E641） | 非空 ≥95%、0 挪用 | 调整预算分配、增加档位、降低组合粒度 |
-| WCET（E642） | p99≤22ms、0 丢拍 | 学生缓存、DGC 预计算、CPD 移离线 |
-| 长跑（E643） | 趋势收敛 | 周期重校准、DGC/RTIC 联合漂移监测 |
-| 端到端（E644） | ≥v12+5% | 按消融定位瓶颈、调档位数与 B_safe |
-| 消融 AIO/CPD（E645） | 超时/丢拍显著↑ | 证明随时推理与蒸馏必要性 |
-| 消融 DGC/DDL（E646） | 不安全接受显著↑ | 证明单侧证书与阶梯必要性 |
+| harmonic reduction WCET（E647） | 所有 `ρ_k` 通过硬件在环测试 p99≤22ms、0 WCET 违规 | 降低 ρ、扩大 B_safe、硬件在环重测 WCET |
+| UCCP 共形有效性（E648） | 经验 `P(g≤U_d) ≥1−α_d`，0 次不安全放行，α_user 边界行为符合 | 增大校准集、加权共形、缩小 θ_{S,user} 宣称支撑 |
+| 平台迁移成本（E649） | 迁移仅需 `skill_catalog` 与 WCET 基准，上层证书 0 次重测，完成率 ≥ v13−5% | 增加平台专项校准、减少上层对底层假设 |
+| Pareto 最优（E650） | 给定 ρ，FRR ≤5%，任务完成率 ≥ v13−5% | 调整 ρ、增大容量、改多出口 |
+| UCCP 共形保证（E651） | 经验下界满足 `1−α_gap−α_dis−α_ρ` 关系 | 增大校准集、对抗样本采样、EVT 尾部分位 |
+| 联合可加界（E652） | 经验下界满足 `1−α_gap−α_dis−α_ρ` | 增大校准集、联合三角界、缩小 ρ 宣称范围 |
+| 漂移塌缩（E653） | 0 越界、≥v13−8% | 提前漂移检测、扩大回退集、缩短重校准 |
+| 平台迁移对抗测试（E654） | 对抗输入/组合完成率 ≥ v13−10%，0 次证书被放宽 | 增加故障注入测试、审计证书合取路径 |
+| 消融 HBR（E655） | 活动性 ↑≥50% 或安全下界 ↓≥10% | 证明谐波减速必要性 |
+| 消融 UCCI（E656） | FAR 退回 DGC 默认值，0 次跨越界放行 | 证明用户共创必要性 |
+| 消融 PAA（E657） | 迁移完成率 ↓≥15% | 证明平台无关抽象必要性 |
+| 消融 AIO/CPD（E658） | 超时/丢拍显著↑ | 证明随时推理与蒸馏必要性 |
+| 消融 DGC/DDL（E659） | 不安全接受显著↑ | 证明单侧证书与阶梯必要性 |
+| 端到端（E660） | ≥v13+5% | 按消融定位瓶颈、调参与架构 |
 
 ## 8. 已知风险与失效模式
 
-1. **教师本身错了（相对安全的幻觉）**：DGC 只保证"学生不超过教师"，教师若在漂移下已错，学生会忠实地继承这个错误。缓解：保留 v12 TGC/UC 的绝对检查、周期真值锚定、漂移检测、把 `S_0` 做成不依赖教师的物理回退；必要时用真实锚点重训教师。
+1. **教师本身错了（相对安全的幻觉）**：DGC 只保证"学生不超过教师"，教师若在漂移下已错，学生会忠实地继承这个错误。缓解：保留 v13 TGC/UC 的绝对检查、周期真值锚定、漂移检测、把 `S_0` 做成不依赖教师的物理回退；必要时用真实锚点重训教师。
+
 2. **anytime 质量度量错配**：若 `q_k` 用"候选数量"而非"认证价值"衡量，调度器会偏爱能快速堆候选的模块，饿死真正重要的安全阶段。缓解：分层/字典序预算，安全关键阶段硬预留；质量定义预注册并与端到端指标对齐。
+
 3. **阶梯嵌套训练失败**：独立蒸馏出的学生不天然满足 `Acc_i⊆Acc_{i+1}`，若强行部署，塌缩可能跳到错误档位。缓解：并集门、共享骨干多出口 + 单调罚项、部署前 100% 嵌套校验，不满足即退回单档。
+
 4. **假拒绝导致活动性塌缩**：`U_d` 偏大或边界样本稀缺时，学生几乎不放行，系统频繁 `a_ask`/回退。缓解：非对称代价可调但只影响训练不影响证书、增加常见档、把假拒绝显式计入 `B_distill`/任务预算。
+
 5. **边界样本稀缺使 DGC 低估**：安全边界是低概率区域，校准集可能几乎不覆盖；共形分位在尾部外推不可靠。缓解：边界主动采样、对抗/最坏情形校准、EVT 尾部分位、保守 `U_d` 余量、漂移时禁用高档。
+
 6. **WCET 测量误差**：缓存、温度、频率缩放、内存带宽会使实测超出离线 WCET，RTIC 不再 sound。缓解：硬件在环压力测试、最坏情形执行路径、watchdog + 强制塌缩、保留 `B_safe` 与额外余量。
+
 7. **共享骨干的相关失效**：所有档位共享同一骨干时，一个结构性缺陷会同时击穿所有学生与教师，形成单点。缓解：多骨干/异构学生、教师异步影子抽查、关键场景保留纯教师路径、故障注入测试。
-8. **迁移间隙与蒸馏间隙联合低估**：新场景同时进入 v12 的分布外与 v13 的校准外，`U_gap` 与 `U_dis` 可能同向偏低。缓解：联合三角界（引理 121）、三预算加性、双重漂移检测、任一间隙失效即触发 `a_ask`/最低档。
+
+8. **迁移间隙与蒸馏间隙联合低估**：新场景同时进入 v13 的分布外与 v14 的校准外，`U_gap` 与 `U_dis` 可能同向偏低。缓解：联合三角界（引理 124）、三预算加性、双重漂移检测、任一间隙失效即触发 `a_ask`/最低档。
+
+9. **谐波减速比 ρ 的分布外外推**：`ρ` 是在特定硬件平台上测得的，新平台上 ρ 的有效性无保证。缓解：新平台上进行最小 ρ 基准测试、自适应 ρ 调整、保守 ρ 下界、平台迁移时 `ρ` 退化为 1。
+
+10. **用户偏好 `α_user` 的分布外选择**：用户可能在训练分布之外选择 `α_user`，导致 `θ_{S,user}` 的共形保证失效。缓解：`α_user` 裁剪至 `[0,1]`、元认证指标 `η_α` 记录超出程度、渐进式 `α_user` 热-up、用户偏好上下文感知建议。
+
+11. **谐波减速与用户偏好的联合分布外**：`ρ` 与 `α_user` 同时偏离时，`ε_ρ(ρ) + ε_α(α_user)` 可能同时被低估，形成双重分布外风险。缓解：三预算界限（引理 124）、双重漂移检测、任一间隙失效即触发最低档。
 
 ## 9. 本轮最大风险
 
-**一句话**：DGC 只在"学生不超出教师"的相对意义上成立，而教师本身可能在分布漂移下已经错了；当新颖场景同时触发计算尖峰与分布漂移时，路由器为赶上截止期会选中低档学生，DGC 又因校准集未覆盖该边界而低估蒸馏间隙，最终在"每帧都按时、每个学生都在教师子集内"的表象下执行了一个教师与学生共同错判的动作——即**按时的、蒸馏自洽的、却绝对错误的安全决定**。
+**一句话**：harmonic reduction 的精确预算减速与用户共创的主观偏好选择在 DGC 的共形保证范围内可能产生" certified-but-wrong "状态——用户通过 `α_user` 选择看似合法的阈值位移，而 DGC 的校准集可能未覆盖该被位移后的边界区域，最终在"每帧都按时、每个学生都在教师子集内、用户主观偏好已被尊重"的表象下执行了一个在分布外未验证的安全决定——即**按时的、证书自洽的、却绝对错误的安全决定**。
+
+---
 <!-- ARTIFACT:END -->
