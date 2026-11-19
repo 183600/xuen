@@ -3,464 +3,678 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 13 轮（新灵感循环第 4 轮；本轮灵感：「实时推理」×「模型蒸馏」）
+# 第 1 轮（新灵感循环第 1 轮；本轮灵感：「人形机器人」×「技术路线图」×「行为树」）
 
-> **基线**：第 12 轮 MetricVoiceGauge-NCD-HUT（定义 571–582；引理 104–112；实验 E607–E626）。
-> 本轮纪律：**保守起点的随时推理证书 + 只弱不强的证书保持蒸馏 + 单调时限蒸馏阶梯**。不推倒 v12：v11 的 HAS/HCC/HATD/HDT、v12 的 USG/TGC/BAA/GAGP/UC、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID、v8 的 DA/SPR/Cal 与九不变式全部保留。三个新组件——AIO（随时推理算子，含 RTIC）、CPD（证书保持蒸馏，含 DGC）、DDL（时限蒸馏阶梯）——一律以**中立元**接入，失效即严格退回 v12（引理 118），再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6。本轮只做三件事：把"实时"从平均延迟改写为逐帧可证的截止期与退化语义、把"蒸馏"从精度压缩改写为**授权子集**压缩、把二者合成一条"时间越紧、授权越保守"的单调阶梯。
+> **基线**：第 13 轮 MetricVoiceGauge-NCD-HUTDH-v15（定义 607–626；引理 125–130；实验 E661–E670）。
+> 本轮纪律：**行为树为骨架、证书为血肉、路线图为节拍**。不推倒 v15：v13 的 AIO/RTIC/CPD/DGC/DDL/RTCR、v14 的 SCD/DSD/DCA/EDC、v12 的 USG/TGC/BAA/GAGP/UC、v11 的 HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID、v8 的 DA/SPR/Cal 与历轮不变式全部保留。三个新组件——BTS（行为树调度器，含节点证书）、TRM（技术路线图管理器，含里程碑证书）、WBC（全身协调器，含动力学证书）——一律以**中立元**接入，失效即严格退回 v15（引理 131），再沿 v15→v14→v13→v12→v11→v10→v9→v8→v7→v6 退化链退回。本轮只做三件事：把"人形机器人全身控制"改写为**带证书的行为树节点**、把"技术路线图"改写为**可证的里程碑阶梯**、把"行为树执行"改写为**按里程碑预算的单调退化调度**。
 
 ## 0. 直觉与动机
 
-**灵感 1（实时推理 → 保守起点的随时算子与截止期证书）**
-直觉：v12 已经宣称 50Hz/p99≤22ms，但那是**静态 WCET 预算加摊销**：把 USG 枚举、TGC 共形查询、HDT 谐波推演、BAA 残差更新的最坏成本相加，再指望它们不在同一帧里同时变重。现实恰好相反——越新奇的场景越需要深枚举、越多校准、越复杂推演，计算尖峰与安全需求同相到达。于是"实时"退化为两种坏结果：丢拍（执行旧计划）或超时（执行迟到却仍被当成有效的结果）。核心创新：**随时推理算子（Anytime Inference Operator, AIO）+ 实时推理证书（Real-Time Inference Certificate, RTIC）**。AIO 把每个重模块改写为可中断的单调算子；RTIC 逐帧认证"在截止期内至少能返回哪一档、该档的质量下界、以及无档可用时的认证回退"。关键反直觉点：**安全关键路径上的 anytime 必须从最保守集合出发向上扩张，而不是从粗近似出发向下修正**——先返回"只允许回退动作/空可行集"，再逐段加入已被证书验证的候选；这样任何早退都只会更保守，绝不会更冒险。
+**灵感 1（人形机器人 → 全身协调的证书化行为树节点）**
+直觉：v15 已经有了技能扩散（SCD），但人形机器人的"技能"不是扁平的——它们是分层的、时序的、有前置条件的：站立 → 步态 → 踩点 → 避障 → 双臂操作 → 全身协同。现有的扩散把技能当作集合交集，忽略了**时序依赖**（必须先站稳才能走）、**资源冲突**（左右臂争夺躯干力矩）、**回退语义**（走路失败怎么安全倒地/抓握失败怎么松手）。核心创新：**行为树调度器（Behavior Tree Scheduler, BTS）+ 节点证书（Node Certificate, NC）**。每个行为树节点（Sequence、Selector、Parallel、Decorator、Action）携带 NC：前置证书、运行证书、后置证书、回退证书。BTS 把执行变成"在证书交集上按行为树语义单调推进"：Sequence 要求所有子节点证书合取、Selector 要求至少一子节点证书成立、Parallel 要求子集证书合取、Decorator 只能收紧证书。人形机器人的全身控制（WBC）作为一个特殊的 Action 节点，其 NC 包含动力学可行性证书（ZMP/CoM/力矩边界）、接触一致性证书、关节限位证书。关键反直觉点：**行为树的"成功/失败/运行中"三值逻辑必须映射为"证书成立/证书不成立/证书待定"三值证书逻辑**——Running 不再是"继续跑"，而是"当前证书下界为正，但后置证书尚未收敛"。
 
-**灵感 2（模型蒸馏 → 证书保持蒸馏与蒸馏间隙证书）**
-直觉：v12 的重计算完全可以蒸馏——把 HDT 的谐波推演、TGC 的共形查询、USG 的搜索先验、BAA 的残差模型压成一个共享骨干、多出口的轻量学生。但普通知识蒸馏对齐的是**输出/动作**，不是**证书判决**：学生可以在平均动作上几乎一样，却在一条极薄的接触边界上把"不安全"判成"安全"。这类错误在平均值里看不见，在实机上却是灾难。核心创新：**证书保持蒸馏（Certificate-Preserving Distillation, CPD）+ 蒸馏间隙证书（Distillation Gap Certificate, DGC）**。学生蒸馏的标签是教师的**证书判决与边界余量**，而非动作；训练采用非对称代价（假接受远重于假拒绝），并要求学生的授权集是教师授权集的**单侧子集** `Acc_S ⊆ Acc_T`。DGC 用共形分位给出"学生对教师有多乐观"的单侧上界 `U_d`，学生只有在其边界余量 `m_S ≥ U_d` 时才被允许自主放行。于是蒸馏**只弱不强**：它买来速度，代价是更保守的授权与更多假拒绝，而不是新增任何权限。
+**灵感 2（技术路线图 → 可证里程碑阶梯与预算守恒）**
+直觉：人形机器人开发不是一次性交付，而是分阶段：M1 仿真站立 → M2 仿真走路 → M3 实机站立 → M4 实机走路 → M5 粗糙地形 → M6 双臂操作 → M7 全身协同。每个里程碑都有**硬件能力边界**（关节力矩、频率、传感器噪声）、**软件证书边界**（可证明的安全集合）、**数据覆盖边界**（校准集支撑）。现实是：M3 失败会拖垮 M4–M7，M5 的证书依赖 M4 的校准集。核心创新：**技术路线图管理器（Technology Roadmap Manager, TRM）+ 里程碑证书（Milestone Certificate, MC）**。TRM 把路线图形式化为有向无环图（DAG），节点是里程碑，边是依赖（证书传递、数据继承、硬件前置）。每个里程碑携带 MC：`(硬件前置集, 软件证书下界, 数据覆盖下界, 回退里程碑)`。MC 必须满足**单调性**：后继里程碑的证书下界 ≥ 前驱，数据覆盖 ≥ 前驱，硬件前置 ⊇ 前驱。运行时，TRM 按当前硬件/软件/数据状态计算"可达的最远里程碑"，BTS 只允许调度该里程碑及其前驱的行为树节点。关键反直觉点：**路线图不是"计划什么时候做完"，而是"当前状态下能安全跑到哪里"**——里程碑是运行时的安全边界，不是项目管理的甘特图。
 
-**灵感 3（实时×蒸馏 → 时限蒸馏阶梯、推测—验证与安全塌缩）**
-直觉：既然学生可以更保守，就不该只蒸馏"一个学生"，而应蒸馏**一族按计算预算排序、授权集单调嵌套的学生**：算得越多，放行得越多，但永远不超过教师。运行时路由器按本帧剩余时间挑"负担得起的最富档位"；时间一紧就沿阶梯向更保守的档位塌缩，而不是超时或丢拍。更进一步，借用大模型推理里的"推测—验证"：学生先快速**推测**一个决定，教师用剩余预算**验证**；验证完成则采纳，验证超时则只接受学生**已被 DGC 认证的子集**，否则退回安全回退。核心创新：**时限蒸馏阶梯（Deadline Distillation Ladder, DDL）+ 实时证书路由器（Real-Time Certificate Router, RTCR）**。这把"实时推理"和"模型蒸馏"合成同一个对象：一条**以毫秒为索引的证书族**。毫秒与安全余量都是货币，路由器只做同一件事——把有限的毫秒花在边际安全/进度增益最大的那一档上。
+**灵感 3（行为树 × 路线图 × 全身控制 → 单调退化的证书调度链）**
+直觉：三者结合产生一个"证书—预算—里程碑"的三重约束调度问题：行为树节点需要时间（tick 预算）、需要证书（NC）、需要里程碑（MC）。时间紧时，必须**沿行为树向回退方向单调退化**（Selector 选更保守分支、Sequence 截断后缀、Parallel 减少子节点）、**沿里程碑向前驱单调退化**（只跑已达成 MC 的节点）、**沿全身控制向简化模型单调退化**（WBC 从全身动力学退化到质心模型退化到倒立摆模型）。核心创新：**证书调度链（Certificate Scheduling Chain, CSC）**。CSC 把三条退化链合成一条：`(tick预算, 里程碑索引, WBC模型阶层)` 三元组单调递减。调度器每帧解一个小规模整数规划：在剩余 tick 内、当前里程碑许可下、当前 WBC 阶层允许下，最大化"证书价值增量"。退化时只能向三个方向同时或分别单调下降，禁止跳跃。这把"人形机器人开发路线图"、"行为树执行语义"、"全身控制模型阶层"统一为**同一个单调退格的证书对象**。
 
 **三者如何统一**
-统一为 **v12 语义层之上的实时实现层**：v12 回答"哪些动作在语义上被允许"（`Exec_v12`），v13 回答"在给定毫秒预算内，这些允许的动作里能安全地实现多少、由哪个学生实现"（`Exec_v13`）。AIO 把重模块变成可中断的保守扩张；CPD 把教师证书压成带 DGC 的轻量学生；DDL 把学生排成单调嵌套的授权阶梯；RTCR 在 `B_time` 内选档、推测—验证、必要时安全塌缩。共享状态 `ζ_rt=(B_time, B_safe, i*, U_{d,i*}, RTIC, drift, mode)`。**AIO 回答"还剩多少时间时依然安全"，CPD 回答"用哪个更弱但更快的证书替代教师"，DDL/RTCR 回答"这一帧到底该跑到哪一档"**。三者不是三个加速补丁，而是"时限—蒸馏—路由"的实现链。
+统一为 **v15 技能扩散层之上的全身行为层**：v15 回答"在时限内能扩散出哪些技能组合"（`Exec_v15`），v16 回答"在当前里程碑硬件/软件/数据许可下、按行为树语义、用当前 WBC 阶层模型，能安全执行哪个全身行为序列"（`Exec_v16`）。BTS 把行为树节点变成带 NC 的可中断单调算子；TRM 把路线图变成带 MC 的可达里程碑集；WBC 把全身控制变成带动力学证书的模型阶层；CSC 在三重预算下单调调度。共享状态 `ζ_bt=(B_tick, m*, h*, NC_stack, MC_reachable, WBC_tier, drift_bt, mode_bt)`。**BTS 回答"行为树语义下还能跑哪些节点"，TRM 回答"路线图允许跑到哪个里程碑"，WBC 回答"当前模型阶层能保证什么动力学边界"，CSC 回答"这一帧到底该 tick 哪个节点、用哪个模型、退到哪个里程碑"**。四者不是四个补丁，而是"行为—路线—动力学—调度"的实现链。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（随时推理的可证语义）**：如何定义安全关键 anytime 才使"任意时刻中断都有效"？从保守集合向上扩张的质量/授权单调性在组合模块（USG→TGC→HDT→BAA）上如何保持？截止期错过时的认证回退如何与 v12 的中止点语义衔接而不产生"迟到但已执行"的缝隙？
-- **Q2（证书保持蒸馏的可证边界）**：如何蒸馏"证书判决"而不是"动作"才能在薄边界上不产生假接受？单侧包含 `Acc_S⊆Acc_T` 在协变量漂移、边界样本稀缺、教师本身有误时还能保持吗？DGC 的共形保证需要怎样的支撑与加权修正？假拒绝导致的活动性损失如何定量并纳入预算？
-- **Q3（阶梯与路由的最优性）**：在给定硬件与教师下，如何训练/构造嵌套单调的学生阶梯？路由器如何在未知的本帧计算耗时下做在线选档，使"超时率—进度—假拒绝"三者最优？"推测—验证"的验证预算如何分配才不退化为无谓等待？
-- **Q4（与 v12 的兼容与活性）**：学生是否可能绕过 v12 的 TGC/UC/四重证书？DGC 与 TGC 的误差是否会相加而在新场景里共同低估？阶梯塌缩到第 0 档是否会清空可行集、导致频繁 `a_ask`？新增模块能否守住 50Hz/p99≤22ms，并严格退回 v12？
+- **Q1（行为树节点的证书语义）**：如何为 Sequence/Selector/Parallel/Decorator/Action 定义 NC，使"任意时刻中断 tick 都有效"？Selector 的"至少一子证书成立"如何在共形风险下保持？Decorator 收紧证书时如何保证不引入活锁？Action 节点的运行中证书如何与 v15 的 CDS 步对齐？
+- **Q2（里程碑证书的传递与合成）**：MC 的单调性在硬件退化（关节卡死/传感器失效）、软件回退（蒸馏阶梯塌缩）、数据漂移（校准集覆盖率下降）三重打击下如何保持？MC 的回退里程碑如何定义才不产生"里程碑跳跃"的安全缝隙？多前驱里程碑的证书合取如何与 v15 的 DGC/ρ_cov 兼容？
+- **Q3（全身协调的模型阶层证书）**：WBC 的模型阶层（全身动力学 → 质心动力学 → 线性倒立摆 → 零模型/纯柔顺）如何给出嵌套的动力学证书边界？阶层切换时的瞬态证书如何定义？WBC 的证书如何与行为树 Action 节点的 NC、v15 的 SCD CDS 步合成？
+- **Q4（三重单调退化的最优性与活性）**：在给定 tick 预算、硬件状态、数据覆盖下，CSC 如何求解"最大化证书价值增量"的整数规划？退化路径的帕累托前沿如何刻画？频繁退化导致的行为抖动如何用证书代价抑制？全失效时能否严格退回 v15？
 
-## 2. 设计原则（在 P19–P21 基础上新增 P22–P24）
+## 2. 设计原则（在 P22–P24 基础上新增 P25–P27）
 
-**P22 时限即硬约束律（Deadline as Hard Constraint）**
-不存在"平均实时"。每个被执行的决定必须携带 RTIC：截止期、超时概率上界、该档质量下界、以及认证回退。安全关键 anytime 必须**从最保守可行集开始**向上扩张；任何阶段的中断结果只能是更保守，不能是未验证。若在截止期内没有达到可执行档，只能执行 `P^rt` 中的认证回退或 `a_ask`，**不得执行迟到结果**。
+**P25 行为树即证书骨架律（Behavior Tree as Certificate Skeleton）**
+行为树的每个节点必须携带 NC：`NC = (Pre, Run, Post, Fallback)`，其中 `Pre, Run, Post, Fallback ⊆ ActionSpace` 且 `Fallback ⊆ Pre ⊆ Run ⊆ Post`。节点的 tick 语义重定义为：**返回 (status, cert_lower, cert_upper, fallback_action)**，其中 `status ∈ {SUCCESS, FAILURE, RUNNING}` 对应证书逻辑 `{Post 成立, Pre 不成立, Run 成立但 Post 待定}`。任何节点的 tick 必须是**单调的**：多次 tick 同一输入，`cert_lower` 单调不减、`cert_upper` 单调不增。复合节点的 NC 由子节点 NC 通过合取/析取/投影运算合成，合成运算必须保持单调性与嵌套性。
 
-**P23 蒸馏只弱不强律（Distillation Weakens, Never Strengthens）**
-学生的授权集必须在支撑域上单侧包含于教师：`Acc_S(U_d) ⊆ Acc_T`。蒸馏只能产生**更保守**的证书；DGC 必须与 v12 的 TGC/UC/四重证书合取，不得替代或放宽任何教师阈值。学生只能做"快速放行已认证子集"或"快速预筛"，子集之外的任何决定必须回到教师 anytime 路径或回退。
+**P26 里程碑即运行时安全边界律（Milestone as Runtime Safety Boundary）**
+里程碑不是时间表，是**当前状态下的可证能力上界**。MC 必须满足：`MC_{k+1}.cert_lower ≥ MC_k.cert_lower`、`MC_{k+1}.data_cov ≥ MC_k.data_cov`、`MC_{k+1}.hw_req ⊇ MC_k.hw_req`。运行时可达里程碑集合 `M_reachable = {m : MC_m.hw_req ⊆ HW_current ∧ MC_m.soft_cert ≤ SW_current ∧ MC_m.data_cov ≤ DATA_current}`。BTS 只调度 `m* = max M_reachable` 及其前驱的节点。**里程碑回退必须单调**：只能向前驱移动，禁止跳跃到未验证的旁系里程碑。
 
-**P24 阶梯单调退化律（Monotone Ladder Degradation）**
-部署的学生族必须构成授权单调嵌套的阶梯：`Acc_0⊆Acc_1⊆…⊆Acc_m⊆Acc_T`，且 `w_0<…<w_m`。剩余预算收缩时只能沿阶梯**向更保守方向**移动，禁止跨档跳到未认证/非嵌套的学生；检测到分布漂移或 DGC 失效时必须**安全塌缩**到第 0 档并触发重校准，而不是继续用旧档"赌一把"。
+**P27 全身控制模型阶层单嵌套律（WBC Model Tier Monotone Nesting）**
+WBC 的模型阶层 `H_0 ⊂ H_1 ⊂ … ⊂ H_L`（`H_0`=零模型/纯柔顺，`H_L`=全身动力学）必须满足：`Cert(H_i) ⊆ Cert(H_{i+1})`，即高阶模型的证书边界**包含**低阶模型。阶层切换时必须经由**中间证书桥梁**：`Bridge(H_i→H_j) = Cert(H_i) ∩ Cert(H_j)`，且桥梁非空。任何时刻运行的 WBC 阶层 `h*` 必须满足 `h* ≤ m*`（里程碑许可的最高阶层）且 `h*` 的 tick 成本 ≤ `B_tick`。
 
 ## 3. 与基线的接口（如何退化）
 
-- AIO 失效 ⇒ 注入固定档中立元：每帧只运行 v12 的教师模块一次，无阶段中断、无保守扩张，RTIC 退化为 v12 静态 WCET 预算，**等价 v12 计算路径**；
-- CPD 失效 ⇒ 无学生：`U_d≡0`、`Acc_S≡∅`，只保留教师 anytime 路径，**等价 v12（+AIO）证书路径**；
-- DDL 失效 ⇒ 单档学生 + 教师回退，无嵌套、无塌缩，**等价"v12 证书 + 单个保守学生"**；
-- RTCR 失效 ⇒ 由 v12 静态调度器按固定顺序调用模块，学生仅作事后预筛，**等价 v12 调度路径**；
-- 四者全失效 ⇒ MetricVoiceGauge-NCD-HUT v12，再沿 v12 退化链退回 v11/v10/v9/v8/v7/v6；
-- **安全继承**：AIO 只扩张已被证书验证的集合，CPD 只产生教师的授权子集，DDL 只做嵌套，RTCR 只做选档。四端口互不相交，均不能新增授权或放宽任何阈值；`Exec_v13⊆Exec_v12` 由引理 117 保证。
+- BTS 失效 ⇒ 注入固定序列中立元：行为树退化为扁平技能列表，NC 退化为 v15 的 CDS 步证书，**等价 v15 技能扩散路径**；
+- TRM 失效 ⇒ 单一里程碑中立元：`M_reachable ≡ {M_max}`，MC 退化为 v15 的 ρ_cov/DGC，**等价 v15（+BTS）路径**；
+- WBC 失效 ⇒ 最低阶层中立元：`h* ≡ 0`，仅执行柔顺/回退，动力学证书退化为关节限位，**等价 v15（+BTS+TRM）路径**；
+- CSC 失效 ⇒ 静态优先级调度：按固定顺序 tick 节点，无预算感知退化，**等价 v15 调度路径**；
+- 四者全失效 ⇒ MetricVoiceGauge-NCD-HUTDH-v15，再沿退化链退回 v14/v13/v12/v11/v10/v9/v8/v7/v6；
+- **安全继承**：BTS 只合成子节点 NC 的子集，TRM 只允许前驱里程碑，WBC 只用嵌套模型，CSC 只做单调退化。四端口互不相交，均不能新增授权或放宽任何阈值；`Exec_v16⊆Exec_v15` 由引理 131 保证。
 
 ## 4. 预期贡献
 
-1. **保守起点的随时推理证书**：把"实时"从平均延迟指标改写为逐帧、可中断、带质量下界与认证回退的语义，解决新颖场景下"计算尖峰与安全需求同相到达"的结构性矛盾；
-2. **证书保持蒸馏**：把蒸馏目标从动作匹配改写为证书判决与边界余量的单侧保持，给出 `Acc_S⊆Acc_T` 的共形保证与假拒绝代价，填补"蒸馏在安全关键系统里不可证"的空白；
-3. **时限蒸馏阶梯与推测—验证路由**：把学生族做成以毫秒为索引的嵌套证书族，使系统能在未知/突发耗时下单调退化而不是超时或丢拍；
-4. **语义层—实现层分离**：v12 管"允许什么"，v13 管"在时限内能实现多少"，用 `Exec_v13⊆Exec_v12` 把加速与安全解耦；E627–E646 覆盖任意时有效性、DGC 覆盖/紧致、阶梯嵌套、漂移塌缩、端到端与消融。
+1. **证书化行为树**：把行为树的三值逻辑重写为证书逻辑，给出 Sequence/Selector/Parallel/Decorator/Action 的 NC 定义与单调性证明，解决"行为树在安全关键系统里不可证"的空白；
+2. **可证技术路线图**：把路线图从项目管理工具改写为运行时安全边界，给出 MC 的单调性、传递性、回退语义，填补"开发路线图与运行时证书脱节"的鸿沟；
+3. **全身协调模型阶层证书**：给出 WBC 模型阶层的嵌套动力学证书与切换桥梁，使全身控制能在计算预算下单调退化而不失安全；
+4. **三重单调退化调度链**：把 tick 预算、里程碑索引、WBC 阶层合成同一个单调退格对象，用小规模整数规划在线求解，实现"按时、按证、按模型"的统一退化；
+5. **语义—路线—动力学—实现四层分离**：v12 管"允许什么"，v13 管"时限内实现多少"，v15 管"技能如何扩散"，v16 管"全身行为如何按里程碑执行"，用 `Exec_v16⊆Exec_v15⊆Exec_v13⊆Exec_v12` 把行为、路线、动力学、实时、蒸馏全解耦；E671–E690 覆盖 NC 单调性、MC 传递性、WBC 阶层嵌套、CSC 最优性、漂移三重塌缩、端到端与消融。
 
 ## 5. 本轮最大风险
 
-**一句话**：DGC 只在"学生不超出教师"的相对意义上成立，而教师本身可能在分布漂移下已经错了；当新颖场景同时触发计算尖峰与分布漂移时，路由器为赶上截止期会选中低档学生，DGC 又因校准集未覆盖该边界而低估蒸馏间隙，最终在"每帧都按时、每个学生都在教师子集内"的表象下执行了一个教师与学生共同错判的动作——即**按时的、蒸馏自洽的、却绝对错误的安全决定**。
+**一句话**：里程碑证书的单调性假设依赖于"硬件只退化不增强、软件只塌缩不扩张、数据只漂移不扩展"，但现实中**硬件热插拔/固件升级可能突然增强能力、软件热更新可能引入新证书、在线学习可能扩展数据覆盖**——当这些"正向跃迁"发生时，TRM 的 `M_reachable` 可能非单调扩大，CSC 的退化链可能被迫"向前跳跃"，导致在"每一步都单调、每个里程碑都有证书"的表象下，执行了一个**尚未被当前里程碑证书覆盖、却因正向跃迁被错误许可的全身行为**——即**单调退化的、证书自洽的、却因正向跃迁而绝对不安全的动作**。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# IP-378–401 v14 新增核心模块
+# IP-402–415 v16 新增核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH v14） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v15） |
 |---|---|---|---|
-| IP-378 | Skill-Diffusion Combiner (SCD) | 新增核心模块 | 将多技能组合改写为可证扩散过程；每一扩散步仅在证书交集内前进；输出 `(a, prob_lower, q_lower, fallback)` |
-| IP-379 | Dataset-Diffusion Guide (DSD) | 新增核心模块 | 按剩余组合预算分配扩散步数；温度 τ 与证书保证正相关；预算耗尽时强制回退 |
-| IP-380 | Dataset-Certificate Alignment (DCA) | 新增经验模块 | 数据集经共形校准后给出证书边界的经验下位分位 ρ_cov；非覆盖组合触发 a_ask/回退 |
-| IP-381 | Diffusion-Data Boundary Check (EDC) | 新增在线检查模块 | 在线检查数据分布是否超出校准支撑；超出则降低 τ 并强制回退至第 0 档 |
+| IP-402 | Behavior Tree Scheduler (BTS) | 新增核心模块 | 行为树节点携带节点证书 NC；tick 语义重写为证书逻辑；复合节点 NC 由子节点合成 |
+| IP-403 | Technology Roadmap Manager (TRM) | 新增核心模块 | 路线图形式化为 DAG，里程碑携带 MC；运行时计算可达最远里程碑 m* |
+| IP-404 | Whole-Body Coordinator (WBC) | 新增核心模块 | 全身控制模型阶层 H_0⊂…⊂H_L 与嵌套动力学证书；阶层切换经由证书桥梁 |
+| IP-405 | Certificate Scheduling Chain (CSC) | 新增在线调度模块 | 三重预算下的单调退化整数规划；最大化证书价值增量 |
+| IP-406 | Node-Certificate Synthesis (NCS) | 新增经验模块 | 从 v15 CDS 步、v13 RTIC、v12 TGC 合成 Action 节点的 NC |
+| IP-407 | Milestone-Certificate Alignment (MCA) | 新增经验模块 | 里程碑证书与数据覆盖率 ρ_cov、蒸馏间隙 U_d 对齐 |
+| IP-408 | WBC-Tier Certificate Bridge (WCB) | 新增在线检查模块 | WBC 阶层切换时的中间证书桥梁验证与自适应收紧 |
 
-## 0. 核心符号体系（定义 607–626）
+## 0. 核心符号体系（定义 627–656）
 
 | 符号 | 含义 |
 |---|---|
-| S = {s_1, …, s_n} | 技能集合，每个 s_i 有证书边界 Acc_i ⊆ ActionSpace |
-| τ | 扩散温度参数，τ ∈ (0,1]，τ 越小证书保证越强但扩散越慢 |
-| ρ_cov | 数据集支撑覆盖率，ρ_cov = |{x : ∃i, x ∈ supp(s_i)}| / |Dataset| |
-| U_d | 共形证书边界余量，U_d = ⌈(1−α_d)(n+1)⌉ 阶次序统计量 |
-| CDS_i | 第 i 个可证扩散步：输出 (a, prob_lower, q_lower, fallback) |
-| B_skill | 技能组合预算，每帧分配的扩散步数上限 |
-| i* | 当前已验证的扩散档位，i* = max{i : 预算足以支持第 i 步} |
-| ζ_comb = (B_skill, i*, U_{d,i*}, τ, ρ_cov, dataset_cal) | 技能组合共享状态 |
+| BT = (N, E, root) | 行为树：节点集 N、边集 E、根节点 root |
+| n ∈ N | 节点，类型 type(n) ∈ {Sequence, Selector, Parallel, Decorator, Action} |
+| NC_n = (Pre_n, Run_n, Post_n, Fallback_n) | 节点 n 的证书四元组，满足 Fallback_n ⊆ Pre_n ⊆ Run_n ⊆ Post_n ⊆ ActionSpace |
+| tick_n(x, b) → (status, c_low, c_up, fb) | 节点 n 的 tick 函数：输入状态 x、剩余预算 b，输出状态、证书下界、证书上界、回退动作 |
+| M = {M_1, …, M_K} | 里程碑集合，按拓扑序编号，M_1 为起始里程碑 |
+| MC_k = (HW_k, SW_k, DATA_k, Cert_k, Fallback_k) | 里程碑 k 的证书：硬件前置、软件证书上界、数据覆盖下界、证书下界、回退里程碑 |
+| m* = max{k : HW_k ⊆ HW_cur ∧ SW_k ≥ SW_cur ∧ DATA_k ≤ DATA_cur} | 当前可达最远里程碑 |
+| H = {H_0, H_1, …, H_L} | WBC 模型阶层，H_0=零模型/纯柔顺，H_L=全身动力学 |
+| Cert(H_i) ⊆ Cert(H_{i+1}) | 阶层嵌套性：高阶模型证书包含低阶模型 |
+| Bridge(H_i, H_j) = Cert(H_i) ∩ Cert(H_j) | 阶层切换桥梁，要求非空 |
+| h* ∈ {0,…,L} | 当前运行的 WBC 阶层，满足 h* ≤ tier(m*) 且 cost(H_{h*}) ≤ B_tick |
+| ζ_bt = (B_tick, m*, h*, NC_stack, MC_reachable, WBC_tier, drift_bt, mode_bt) | 行为层共享状态 |
+| B_tick | 本帧 tick 预算（最大 tick 次数/时间） |
+| tier(m) | 里程碑 m 许可的最高 WBC 阶层 |
+| val(n) | 节点 n 的证书价值（任务进度、安全余量、能量效率的加权和） |
 
 ## 1. 关键算法骨架
 
 ```python
-# IP-378 Skill-Diffusion Combiner：可证扩散合并
-class Skill-DiffusionCombiner:
-    def __init__(self, skills, certificates, dataset_cal, tau=0.5):
-        self.skills = skills                      # [s_1, ..., s_n]
-        self.certificates = certificates          # [Acc_1, ..., Acc_n]
-        self.dataset_cal = dataset_cal            # 共形校准集
-        self.tau = tau                            # 扩散温度
-        self.rho_cov = self._compute_rho_cov()    # 支撑覆盖率
+# IP-402 Behavior Tree Scheduler：证书化行为树调度
+class BehaviorTreeScheduler:
+    def __init__(self, bt_root, node_certificates, ncs_synthesizer):
+        self.root = bt_root
+        self.nc = node_certificates           # {n: NC_n}
+        self.ncs = ncs_synthesizer            # IP-406：从 CDS/RTIC/TGC 合成 NC
+        self.nc_stack = []                    # 当前执行路径的 NC 栈
 
-    def _compute_rho_cov(self):
-        covered = set()
-        for s in self.skills:
-            for action in s.support_actions:
-                covered.add(action)
-        return len(covered) / len(self.dataset_cal.samples)
+    def tick(self, x, budget_tick, m_star, h_star, drift=False):
+        """执行一次行为树 tick，返回 (action, cert_lower, cert_upper, fallback, status)"""
+        if drift:
+            # 漂移时只允许回退动作
+            return self._drift_fallback(x)
+        
+        # 1. 从根节点开始，按 NC 单调推进
+        return self._tick_node(self.root, x, budget_tick, m_star, h_star, depth=0)
 
-    def cds_step(self, x, budget_remaining, i_current):
-        """执行一个可证扩散步。
-        输出: (action, prob_lower, q_lower, fallback)
-        """
-        # 1. 确定当前可扩散的技能交集
-        acc_intersect = self._intersect_certificates(i_current)
+    def _tick_node(self, n, x, budget, m_star, h_star, depth):
+        nc = self.nc[n]
         
-        # 2. 从交集中按 τ 调整的顺序选择候选
-        candidates = self._select_candidates(acc_intersect, self.tau)
+        # 检查前置证书
+        if not self._cert_holds(nc.Pre, x, m_star, h_star):
+            return nc.Fallback, 0, 0, nc.Fallback, 'FAILURE'
         
-        # 3. 对每个候选检查证书 + 数据集下界
-        for a in candidates:
-            m_a = self._certified_margin(a, x)    # 证书边界余量
-            u_a = self._dataset_lower_bound(a)   # 数据集经验下界
-            prob_lower = min(1.0, m_a + u_a - self.rho_cov)
-            q_lower = self._quality_lower(a, x)   # 质量下界
-            fallback = self._fallback_skill(i_current)
+        # 根据节点类型分派
+        if nc.type == 'Action':
+            return self._tick_action(n, x, budget, m_star, h_star, nc)
+        elif nc.type == 'Sequence':
+            return self._tick_sequence(n, x, budget, m_star, h_star, depth)
+        elif nc.type == 'Selector':
+            return self._tick_selector(n, x, budget, m_star, h_star, depth)
+        elif nc.type == 'Parallel':
+            return self._tick_parallel(n, x, budget, m_star, h_star, depth)
+        elif nc.type == 'Decorator':
+            return self._tick_decorator(n, x, budget, m_star, h_star, depth)
+
+    def _tick_action(self, n, x, budget, m_star, h_star, nc):
+        """Action 节点：调用 WBC 或 v15 CDS 步"""
+        # 1. 由 NCS 合成该动作的 NC（结合 v15 CDS、v13 RTIC、v12 TGC）
+        action_nc = self.ncs.synthesize(n, x, m_star, h_star)
+        
+        # 2. 检查运行证书
+        if not self._cert_holds(action_nc.Run, x, m_star, h_star):
+            return action_nc.Fallback, 0, 0, action_nc.Fallback, 'FAILURE'
+        
+        # 3. 执行动作（可能消耗多 tick）
+        action, c_low, c_up, fb = self._execute_action(n, x, budget, h_star)
+        
+        # 4. 检查后置证书
+        post_holds = self._cert_holds(action_nc.Post, x, m_star, h_star)
+        status = 'SUCCESS' if post_holds else 'RUNNING'
+        
+        return action, c_low, c_up, fb, status
+
+    def _tick_sequence(self, n, x, budget, m_star, h_star, depth):
+        """Sequence：所有子节点必须 SUCCESS，证书合取"""
+        children = self._get_children(n)
+        c_low_acc, c_up_acc = 1.0, 1.0
+        fb_acc = children[0].nc.Fallback
+        
+        for child in children:
+            if budget <= 0:
+                return fb_acc, c_low_acc, c_up_acc, fb_acc, 'RUNNING'
             
-            if prob_lower >= 0 and q_lower is not None:
-                return a, prob_lower, q_lower, fallback
+            action, c_low, c_up, fb, status = self._tick_node(child, x, budget, m_star, h_star, depth+1)
+            c_low_acc = min(c_low_acc, c_low)      # 合取：取下界最小
+            c_up_acc = min(c_up_acc, c_up)         # 合取：取上界最小
+            fb_acc = fb if fb is not None else fb_acc
+            
+            if status == 'FAILURE':
+                return fb, 0, 0, fb, 'FAILURE'
+            elif status == 'RUNNING':
+                return action, c_low_acc, c_up_acc, fb_acc, 'RUNNING'
+            budget -= 1
         
-        # 4. 无候选通过：回退到上一档
-        return self._degrade_to_prev(i_current)
+        return action, c_low_acc, c_up_acc, fb_acc, 'SUCCESS'
 
-    def _intersect_certificates(self, i_current):
-        # 返回当前扩散档的证书交集
-        if i_current == 0:
-            return self.certificates[0]  # 最保守技能的证书
-        # 交集：只保留在所有相关技能证书中都有效的动作
-        intersected = self.certificates[i_current]
-        for j in range(i_current):
-            intersected = intersected.intersect(self.certificates[j])
-        return intersected
-
-    def _dataset_lower_bound(self, a):
-        # 从校准集给出动作 a 的经验下位分位
-        # 使用共形下位分位：返回满足 P(g_a ≤ U) ≥ 1−α 的最小值
-        gaps = self.dataset_cal.gaps_for_action(a)
-        if not gaps:
-            return 0  # 未见组合，给出零下界
-        return np.percentile(gaps, 100 * (1 - self.dataset_cal.alpha))
-
-    def _quality_lower(self, a, x):
-        # 给出动作 a 在 x 处的质量下界
-        # 由 CDS 的质量保证定义决定
-        q = self.skills[a].quality_lower(x)
-        return max(q, 0)  # 确保非负
-
-    def _fallback_skill(self, i_current):
-        # 返回当前档的最保守回退技能
-        if i_current <= 0:
-            return self.skills[0].fallback()
-        return self.skills[i_current - 1].fallback()
-
-    def _degrade_to_prev(self, i_current):
-        # 无法前进时降低一档
-        if i_current > 0:
-            return self._degrade_to_prev(i_current - 1)
-        return None, 0, 0, self.skills[0].fallback(x)
-
-
-# IP-379 Dataset-Diffusion Guide：按预算分配扩散步
-class Dataset-DiffusionGuide:
-    def __init__(self, budget_skill, tau, rho_cov, dataset_cal):
-        self.B = budget_skill          # 本帧技能组合预算（最大扩散步数）
-        self.tau = tau                 # 扩散温度
-        self.rho_cov = rho_cov         # 数据集支撑覆盖率
-        self.dataset_cal = dataset_cal # 共形校准集
-        self.remaining = budget_skill  # 剩余预算
-
-    def allocate_steps(self, drift_detected=False):
-        """按预算分配扩散步数。
-        返回: 本帧允许的最大扩散步数 k*
-        """
-        if drift_detected:
-            return 0  # 漂移时强制回退第 0 档
+    def _tick_selector(self, n, x, budget, m_star, h_star, depth):
+        """Selector：至少一子节点 SUCCESS，证书析取（取最优可行）"""
+        children = self._get_children(n)
+        best = None
+        best_val = -1
         
-        # 温度与覆盖率共同决定可行步数
-        # τ 越小，ρ_cov 越大，可分配的步数越多
-        max_steps = int(self.B * self.tau * (1 - self.rho_cov + 1e-3))
-        self.remaining = max(0, self.B - max_steps)
-        return min(max_steps, self.B)
-
-    def should_continue(self, current_step, k_star):
-        """判断是否继续下一步扩散。"""
-        if current_step >= k_star:
-            return False
-        if self.remaining <= 0:
-            return False
-        # 检查是否符合证书交集收缩条件
-        if self.dataset_cal.cert_gap_too_wide(current_step):
-            return False
-        return True
-
-
-# IP-380 Dataset-Certificate Alignment：经验下界修正
-class Dataset-CertificateAlignment:
-    def __init__(self, dataset_cal, alpha_d=0.05):
-        self.dataset_cal = dataset_cal      # 共形校准集
-        self.alpha_d = alpha_d              # 目标风险水平
-        self.rho_cov = self._compute_rho_cov()
-
-    def _compute_rho_cov(self):
-        # 数据集支撑覆盖率
-        covered = set()
-        for combo in self.dataset_cal.combinations:
-            for a in combo.actions:
-                covered.add(a)
-        return len(covered) / max(1, len(self.dataset_cal.action_space))
-
-    def align_certificate(self, U_theory):
-        """将理论证书余量修正为经验下界。
-        返回: U_aligned = U_theory · (1 − ρ_cov)
-        """
-        U_aligned = U_theory * (1 - self.rho_cov)
-        # 进一步施加共形下界：至少保留 1−α_d 的保证
-        U_final = max(U_aligned, self.dataset_cal.formal_lower(self.alpha_d))
-        return U_final
-
-    def is_covered(self, action):
-        """检查动作是否在数据集支撑范围内。"""
-        return action in self.dataset_cal.support_set
-
-
-# IP-381 Diffusion-Data Boundary Check：在线边界检查
-class Diffusion-DataBoundaryCheck:
-    def __init__(self, dataset_cal, tau_min=0.1):
-        self.dataset_cal = dataset_cal
-        self.tau_min = tau_min              # 最低温度下限
-        self.current_tau = tau_min
-
-    def check_and_adjust(self, drift_signal=False):
-        """在线检查数据分布是否超出校准支撑。
-        返回: (adjusted_tau, should_collapse)
-        """
-        if drift_signal:
-            # 漂移检测：降低温度并强制回退
-            self.current_tau = self.tau_min
-            return self.current_tau, True
+        for child in children:
+            if budget <= 0:
+                break
+            action, c_low, c_up, fb, status = self._tick_node(child, x, budget, m_star, h_star, depth+1)
+            if status != 'FAILURE' and c_low > 0:
+                val = self._cert_value(child, c_low, c_up)
+                if val > best_val:
+                    best = (action, c_low, c_up, fb, status)
+                    best_val = val
+            budget -= 1
         
-        # 经验检查：当前扩散步的证书 gap 是否超出经验支持
-        gap = self.dataset_cal.current_gap()
-        if gap > self.dataset_cal.epsilon_boundary(self.current_tau):
-            # gap 超出边界：降低温度收紧证书
-            self.current_tau = max(self.tau_min, self.current_tau - 0.1)
-            return self.current_tau, False
-        
-        return self.current_tau, False
+        if best:
+            return best
+        # 全部失败：返回第一个的回退
+        return children[0].nc.Fallback, 0, 0, children[0].nc.Fallback, 'FAILURE'
 
-
-# 主闭环集成：MetricVoiceGauge-NCD-HUTDH-v15（技能扩散版）
-def metricvoicegauge_round_15_skill_diffusion(M, s, obs, skill_pool=None, dataset=None, ell=None, ...):
-    # ---- v14 主路径原样保留（MW→NGE→HCC→HDT→HATD→NCP→守卫）----
-    results = middleware.run_cycle(runners={...}, ctx=ctx)
-    nge.update_belief(obs)
-    hcc.update_identification(obs.motor_enc, obs.joint_enc, obs.current)
-    
-    # ---- SCD：技能-扩散合并器----
-    if skill_pool is None:
-        skill_pool = ctx.skill_pool           # 外部提供技能集合
-    if dataset is None:
-        dataset = ctx.dataset                  # 外部提供校准数据集
-    
-    scd = Skill-DiffusionCombiner(
-        skills=skill_pool.skills,
-        certificates=skill_pool.certificates,
-        dataset_cal=dataset.calibrated,
-        tau=ctx.tau_default                     # 从上下文读取温度
-    )
-    
-    # ---- DSD：数据集扩散引导----
-    dsg = Dataset-DiffusionGuide(
-        budget_skill=ctx.B_skill,             # 本帧技能预算
-        tau=ctx.tau_default,
-        rho_cov=dataset.rho_cov,
-        dataset_cal=dataset.calibrated
-    )
-    
-    # ---- DCA：证书数据集对齐----
-    dca = Dataset-CertificateAlignment(
-        dataset_cal=dataset.calibrated,
-        alpha_d=ctx.alpha_d
-    )
-    
-    # ---- EDC：扩散数据边界检查----
-    edc = Diffusion-DataBoundaryCheck(
-        dataset_cal=dataset.calibrated,
-        tau_min=ctx.tau_min
-    )
-    
-    # ---- 主循环：每帧执行一次技能扩散----
-    k_star = dsg.allocate_steps(drift_detector.fired())
-    
-    for step in range(k_star):
-        # 执行一个可证扩散步
-        a_hat, prob_lower, q_lower, fallback = scd.cds_step(
-            x=obs,
-            budget_remaining=dsg.remaining,
-            i_current=step
-        )
+    def _tick_parallel(self, n, x, budget, m_star, h_star, depth):
+        """Parallel：子集合取，要求至少 k 个 SUCCESS"""
+        children = self._get_children(n)
+        k_required = n.parallel_threshold
+        results = []
         
-        # 检查数据边界
-        tau_adj, collapse = edc.check_and_adjust(drift_signal=drift_detector.fired())
-        if collapse:
-            # 强制回退
-            a_hat = fallback
-            break
+        for child in children:
+            if budget <= 0:
+                break
+            action, c_low, c_up, fb, status = self._tick_node(child, x, budget, m_star, h_star, depth+1)
+            results.append((child, action, c_low, c_up, fb, status))
+            budget -= 1
         
-        # 验证证书下界
-        if prob_lower >= 0 and q_lower is not None:
-            # 接受当前组合动作
-            execute(a_hat)
+        success_count = sum(1 for r in results if r[5] != 'FAILURE')
+        if success_count >= k_required:
+            # 合取证书
+            c_low = min(r[2] for r in results if r[5] != 'FAILURE')
+            c_up = min(r[3] for r in results if r[5] != 'FAILURE')
+            action = self._merge_actions([r[1] for r in results if r[5] != 'FAILURE'])
+            fb = results[0][4]
+            return action, c_low, c_up, fb, 'SUCCESS'
         else:
-            # 证书不成立：回退
-            execute(fallback)
-            break
+            return results[0][4], 0, 0, results[0][4], 'FAILURE'
+
+    def _tick_decorator(self, n, x, budget, m_star, h_star, depth):
+        """Decorator：只能收紧证书（收紧 Pre/Run/Post，扩大 Fallback）"""
+        child = self._get_children(n)[0]
+        # 应用装饰器收紧
+        tightened_nc = self._apply_decorator(n, self.nc[child])
+        old_nc = self.nc[child]
+        self.nc[child] = tightened_nc
+        try:
+            return self._tick_node(child, x, budget, m_star, h_star, depth+1)
+        finally:
+            self.nc[child] = old_nc  # 恢复，装饰器不持久化修改
+
+
+# IP-403 Technology Roadmap Manager：可证里程碑管理
+class TechnologyRoadmapManager:
+    def __init__(self, milestones, mca_aligner):
+        self.milestones = milestones            # {k: MC_k}，按拓扑序
+        self.mca = mca_aligner                  # IP-407：MC 与 ρ_cov/U_d 对齐
+        self.current_m = 1                      # 当前里程碑
+        self.hw_cur = set()                     # 当前可用硬件能力
+        self.sw_cur = 0                         # 当前软件证书水平
+        self.data_cur = 0                       # 当前数据覆盖率
+
+    def update_state(self, hw_available, sw_cert_level, data_coverage):
+        """更新运行时状态"""
+        self.hw_cur = hw_available
+        self.sw_cur = sw_cert_level
+        self.data_cur = data_coverage
+
+    def compute_reachable(self):
+        """计算可达最远里程碑 m*"""
+        reachable = []
+        for k, mc in self.milestones.items():
+            if (mc.HW_k.issubset(self.hw_cur) and 
+                mc.SW_k <= self.sw_cur and 
+                mc.DATA_k >= self.data_cur):
+                reachable.append(k)
+        m_star = max(reachable) if reachable else 1
+        self.current_m = m_star
+        return m_star
+
+    def get_milestone_cert(self, m):
+        """获取里程碑证书（经 MCA 对齐）"""
+        mc = self.milestones[m]
+        cert_aligned = self.mca.align(mc.Cert_k, self.data_cur)
+        return cert_aligned
+
+    def get_fallback_milestone(self, m):
+        """获取回退里程碑（单调前驱）"""
+        mc = self.milestones[m]
+        return mc.Fallback_k  # 必须 < m
+
+    def get_permitted_tier(self, m):
+        """获取里程碑许可的最高 WBC 阶层"""
+        return self.milestones[m].max_wbc_tier
+
+
+# IP-404 Whole-Body Coordinator：全身协调模型阶层
+class WholeBodyCoordinator:
+    def __init__(self, tiers, wcb_bridge):
+        self.tiers = tiers                      # {h: WBCModel_h}，h=0..L
+        self.wcb = wcb_bridge                   # IP-408：阶层切换桥梁验证
+        self.current_h = 0
+        self.cert_cache = {}                    # {h: Cert(H_h)}
+
+    def set_tier(self, h, m_star, budget_tick):
+        """设置运行阶层，受里程碑与预算双重约束"""
+        h_max = min(h, self.wcb.max_tier_for_milestone(m_star))
+        # 找最高的满足预算的阶层
+        for h_cand in range(h_max, -1, -1):
+            if self.tiers[h_cand].tick_cost() <= budget_tick:
+                # 验证桥梁
+                if self.current_h != h_cand:
+                    if not self.wcb.verify_bridge(self.current_h, h_cand):
+                        continue  # 桥梁不通过，尝试更低阶层
+                self.current_h = h_cand
+                return h_cand
+        return 0  # 只能跑 H_0
+
+    def compute_control(self, x, task_spec):
+        """计算全身控制指令，返回 (tau, cert_lower, cert_upper, fallback)"""
+        model = self.tiers[self.current_h]
+        tau, c_low, c_up = model.solve(x, task_spec)
+        fallback = self._fallback_control(x) if self.current_h > 0 else tau
+        return tau, c_low, c_up, fallback
+
+    def _fallback_control(self, x):
+        """回退到更低阶层的控制"""
+        if self.current_h > 0:
+            return self.tiers[self.current_h - 1].solve(x, task_spec)[0]
+        return np.zeros(self.tiers[0].dof)  # 纯柔顺/零力矩
+
+
+# IP-405 Certificate Scheduling Chain：三重单调退化调度
+class CertificateSchedulingChain:
+    def __init__(self, bts, trm, wbc, max_tick_budget):
+        self.bts = bts
+        self.trm = trm
+        self.wbc = wbc
+        self.B_max = max_tick_budget
+
+    def schedule(self, x, hw_state, sw_cert, data_cov, drift=False):
+        """每帧调度：求解三重预算下的最优 (m*, h*, tick分配)"""
+        # 1. 更新 TRM 状态
+        self.trm.update_state(hw_state, sw_cert, data_cov)
+        m_star = self.trm.compute_reachable()
+        
+        # 2. 确定 WBC 阶层上界
+        h_max = self.trm.get_permitted_tier(m_star)
+        
+        # 3. 求解小规模整数规划：
+        # max Σ val(n_i)  s.t. Σ tick(n_i) ≤ B_tick, m ≤ m_star, h ≤ h_max, 单调退化约束
+        plan = self._solve_ip(x, m_star, h_max, drift)
+        
+        # 4. 执行计划
+        return self._execute_plan(x, plan, drift)
+
+    def _solve_ip(self, x, m_star, h_max, drift):
+        """整数规划求解（简化版：贪心 + 回溯）"""
+        if drift:
+            return {'m': 1, 'h': 0, 'nodes': [self.bts.root.fallback_node], 'ticks': 1}
+        
+        # 候选空间：m ∈ [1, m_star], h ∈ [0, h_max], nodes ∈ BT 前 m 里程碑许可的节点
+        best_plan = None
+        best_val = -1
+        
+        # 贪心：从最高 (m_star, h_max) 向下尝试
+        for m in range(m_star, 0, -1):
+            for h in range(min(h_max, self.trm.get_permitted_tier(m)), -1, -1):
+                # 估算该配置下的最大价值
+                nodes, ticks, val = self._estimate_value(x, m, h)
+                if ticks <= self.B_max and val > best_val:
+                    best_val = val
+                    best_plan = {'m': m, 'h': h, 'nodes': nodes, 'ticks': ticks}
+        
+        return best_plan or {'m': 1, 'h': 0, 'nodes': [], 'ticks': 0}
+
+    def _estimate_value(self, x, m, h):
+        """估算配置 (m,h) 下的证书价值"""
+        # 简化：运行 BTS 模拟 tick 直到预算耗尽或完成
+        permitted_nodes = self._get_permitted_nodes(m)
+        budget = self.B_max
+        val = 0
+        nodes_exec = []
+        
+        for n in permitted_nodes:
+            if budget <= 0:
+                break
+            # 模拟 tick
+            nc = self.bts.nc[n]
+            if self._cert_holds(nc.Pre, x, m, h):
+                val += self._cert_value(n, nc.Run_lower_est, nc.Run_upper_est)
+                nodes_exec.append(n)
+                budget -= 1
+        
+        return nodes_exec, self.B_max - budget, val
+
+    def _execute_plan(self, x, plan, drift):
+        """执行调度计划"""
+        m, h = plan['m'], plan['h']
+        self.wbc.set_tier(h, m, self.B_max)
+        
+        results = []
+        for n in plan['nodes']:
+            action, c_low, c_up, fb, status = self.bts.tick(x, self.B_max, m, h, drift)
+            results.append((n, action, c_low, c_up, fb, status))
+            if status == 'FAILURE':
+                break
+        
+        # 合成最终动作（取最后一个 SUCCESS/RUNNING 的动作）
+        final_action = results[-1][1] if results else self.bts.root.nc.Fallback
+        final_cert_low = min(r[2] for r in results) if results else 0
+        final_cert_up = min(r[3] for r in results) if results else 0
+        final_fb = results[-1][4] if results else self.bts.root.nc.Fallback
+        
+        return final_action, final_cert_low, final_cert_up, final_fb, m, h
+
+
+# IP-406 Node-Certificate Synthesis：从 CDS/RTIC/TGC 合成 NC
+class NodeCertificateSynthesizer:
+    def __init__(self, scd, rtic_provider, tgc_provider, dgc_provider):
+        self.scd = scd                      # v15 SCD
+        self.rtic = rtic_provider           # v13 RTIC
+        self.tgc = tgc_provider             # v12 TGC
+        self.dgc = dgc_provider             # v13 DGC
+
+    def synthesize(self, action_node, x, m_star, h_star):
+        """为 Action 节点合成 NC = (Pre, Run, Post, Fallback)"""
+        # 1. 基础证书：v12 TGC 共形边界
+        tgc_cert = self.tgc.query(x, action_node.action_type)
+        
+        # 2. 实时证书：v13 RTIC 截止期下界
+        rtic_cert = self.rtic.get_certificate(x, action_node, m_star, h_star)
+        
+        # 3. 扩散证书：v15 CDS 步下界
+        cds_cert = self.scd.get_step_certificate(x, action_node)
+        
+        # 4. 蒸馏间隙：v13 DGC
+        dgc_gap = self.dgc.get_gap(action_node)
+        
+        # 5. 合成：取交集并减去间隙
+        pre = tgc_cert.intersect(rtic_cert.Pre).intersect(cds_cert.Pre).shrink(dgc_gap)
+        run = tgc_cert.intersect(rtic_cert.Run).intersect(cds_cert.Run).shrink(dgc_gap)
+        post = tgc_cert.intersect(rtic_cert.Post).intersect(cds_cert.Post).shrink(dgc_gap)
+        fallback = self._compute_fallback(action_node, x, m_star, h_star)
+        
+        # 确保嵌套
+        fallback = fallback.intersect(pre)
+        pre = pre.intersect(run)
+        run = run.intersect(post)
+        
+        return NodeCertificate(pre, run, post, fallback)
+
+
+# IP-407 Milestone-Certificate Alignment：MC 与 ρ_cov/U_d 对齐
+class MilestoneCertificateAlignment:
+    def __init__(self, dataset_cal, alpha_m=0.05):
+        self.dataset_cal = dataset_cal
+        self.alpha_m = alpha_m
+
+    def align(self, cert_theory, data_cov):
+        """理论证书按数据覆盖率修正"""
+        # ρ_cov 直接缩减
+        rho = self.dataset_cal.compute_rho_cov()
+        cert_aligned = cert_theory * (1 - rho) * data_cov
+        
+        # 共形下界
+        formal_lower = self.dataset_cal.formal_lower(self.alpha_m)
+        return max(cert_aligned, formal_lower)
+
+
+# IP-408 WBC-Tier Certificate Bridge：阶层切换桥梁验证
+class WBCTierCertificateBridge:
+    def __init__(self, tiers, safety_margin=0.1):
+        self.tiers = tiers
+        self.margin = safety_margin
+        self.bridge_cache = {}
+
+    def verify_bridge(self, h_from, h_to):
+        """验证 H_{h_from} → H_{h_to} 的证书桥梁非空"""
+        key = (h_from, h_to)
+        if key in self.bridge_cache:
+            return self.bridge_cache[key]
+        
+        cert_from = self.tiers[h_from].certificate_boundary()
+        cert_to = self.tiers[h_to].certificate_boundary()
+        bridge = cert_from.intersect(cert_to)
+        
+        # 桥梁必须有安全余量
+        ok = bridge.volume() >= self.margin
+        self.bridge_cache[key] = ok
+        return ok
+
+    def max_tier_for_milestone(self, m):
+        """里程碑 m 许可的最高阶层（由 TRM 设定，此处只做缓存）"""
+        return self.tier_per_milestone.get(m, 0)
+
+
+# 主闭环集成：MetricVoiceGauge-NCD-HUTDH-v16（人形行为层）
+def metricvoicegauge_round_16_humanoid_behavior(M, s, obs, bt_root=None, milestones=None, wbc_tiers=None, ...):
+    # ---- v15 主路径原样保留（SCD→DSD→DCA→EDC→守卫）----
+    results = middleware.run_cycle(runners={...}, ctx=ctx)
+    # ... v15 技能扩散逻辑 ...
     
-    # ---- v14 守卫 + 实时守卫----
-    verdict, k_next = chunk_guard(
-        current_chunk, k_exec, live_obs, nge.b, hcc, ...)
-    if verdict == 'abort':
-        current_chunk.execute_transfer_safe_abort(k_next)
-        current_chunk = None
-    elif verdict == 'degrade':
-        current_chunk = scd.rung(0)  # 安全回退至最保守技能
-    elif verdict == 'recover':
-        execute_recovery(nge.epistemic_recovery())
+    # ---- BTS：行为树调度器----
+    if bt_root is None:
+        bt_root = ctx.bt_root
+    ncs = NodeCertificateSynthesizer(
+        scd=ctx.scd,
+        rtic_provider=ctx.rtic,
+        tgc_provider=ctx.tgc,
+        dgc_provider=ctx.dgc
+    )
+    bts = BehaviorTreeScheduler(bt_root, ctx.node_certificates, ncs)
+    
+    # ---- TRM：技术路线图管理器----
+    if milestones is None:
+        milestones = ctx.milestones
+    mca = MilestoneCertificateAlignment(ctx.dataset_cal, ctx.alpha_m)
+    trm = TechnologyRoadmapManager(milestones, mca)
+    
+    # ---- WBC：全身协调器----
+    if wbc_tiers is None:
+        wbc_tiers = ctx.wbc_tiers
+    wcb = WBCTierCertificateBridge(wbc_tiers)
+    wbc = WholeBodyCoordinator(wbc_tiers, wcb)
+    
+    # ---- CSC：证书调度链----
+    csc = CertificateSchedulingChain(bts, trm, wbc, ctx.B_tick)
+    
+    # ---- 主循环：每帧执行一次 CSC 调度----
+    hw_state = ctx.get_hardware_state()
+    sw_cert = ctx.get_software_cert_level()
+    data_cov = ctx.dataset_cal.compute_rho_cov()
+    drift = ctx.drift_detector.fired()
+    
+    action, c_low, c_up, fallback, m_exec, h_exec = csc.schedule(
+        x=obs, hw_state=hw_state, sw_cert=sw_cert, data_cov=data_cov, drift=drift
+    )
+    
+    # 执行全身控制
+    if h_exec > 0:
+        tau, _, _, _ = wbc.compute_control(obs, task_spec=action)
+        execute(tau)
     else:
-        execute(current_chunk.skills[k_next])
+        execute(fallback)  # 纯柔顺/回退
     
-    # ---- CPD/DGC：低频异步蒸馏与重校准----
-    if cycle_idx % T_distill == 0:
-        baa_snapshot = hdt.snapshot()
-        # 使用新数据更新校准集
-        dataset.calibrate(new_obs_buffer)
-        # 重新计算 ρ_cov 与 τ
-        ctx.tau_default = dsg.adjust_tau(dataset.calibrated)
-        ctx.rho_cov = dca.align_certificate(ctx.formal_certificate)
+    # ---- v15 守卫 + v13 实时守卫----
+    verdict = chunk_guard(...)
+    if verdict == 'abort':
+        execute_transfer_safe_abort()
+    elif verdict == 'degrade':
+        # CSC 内部已处理退化
+        pass
     
-    # ---- v14 继承路径----
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v14_path(ctx)
+    # ---- 低频异步：里程碑推进检查、WBC 阶层校准、数据集重校准----
+    if cycle_idx % T_milestone == 0:
+        # 检查是否满足下一里程碑的硬件/软件/数据前置
+        if trm.check_next_milestone_ready():
+            ctx.advance_milestone()
+    
+    if cycle_idx % T_wbc_calib == 0:
+        wcb.recalibrate_bridges(new_data=ctx.new_obs_buffer)
+    
+    # ---- v15 继承路径----
+    C, spatial_cert, claims, metrics, rewards = M.inherited_v15_path(ctx)
     return C, spatial_cert, claims, metrics, rewards
 ```
 
-## 2. 符号体系增量（定义 607–626）
+## 2. 符号体系增量（定义 627–656）
 
 | 符号 | 含义 |
 |---|---|
-| S = {s_1, …, s_n} | 技能集合，每个 s_i 有证书边界 Acc_i ⊆ ActionSpace |
-| τ | 扩散温度参数，τ ∈ (0,1]，τ 越小证书保证越强但扩散越慢 |
-| ρ_cov | 数据集支撑覆盖率，ρ_cov = |{x : ∃i, x ∈ supp(s_i)}| / |Dataset| |
-| U_d | 共形证书边界余量，U_d = ⌈(1−α_d)(n+1)⌉ 阶次序统计量 |
-| CDS_i | 第 i 个可证扩散步：输出 (a, prob_lower, q_lower, fallback) |
-| B_skill | 技能组合预算，每帧分配的扩散步数上限 |
-| i* | 当前已验证的扩散档位，i* = max{i : 预算足以支持第 i 步} |
-| ζ_comb = (B_skill, i*, U_{d,i*}, τ, ρ_cov, dataset_cal) | 技能组合共享状态 |
+| BT = (N, E, root) | 行为树：节点集 N、边集 E、根节点 root |
+| n ∈ N | 节点，类型 type(n) ∈ {Sequence, Selector, Parallel, Decorator, Action} |
+| NC_n = (Pre_n, Run_n, Post_n, Fallback_n) | 节点 n 的证书四元组，满足 Fallback_n ⊆ Pre_n ⊆ Run_n ⊆ Post_n ⊆ ActionSpace |
+| tick_n(x, b) → (status, c_low, c_up, fb) | 节点 n 的 tick 函数：输入状态 x、剩余预算 b，输出状态、证书下界、证书上界、回退动作 |
+| M = {M_1, …, M_K} | 里程碑集合，按拓扑序编号，M_1 为起始里程碑 |
+| MC_k = (HW_k, SW_k, DATA_k, Cert_k, Fallback_k) | 里程碑 k 的证书：硬件前置、软件证书上界、数据覆盖下界、证书下界、回退里程碑 |
+| m* = max{k : HW_k ⊆ HW_cur ∧ SW_k ≥ SW_cur ∧ DATA_k ≤ DATA_cur} | 当前可达最远里程碑 |
+| H = {H_0, H_1, …, H_L} | WBC 模型阶层，H_0=零模型/纯柔顺，H_L=全身动力学 |
+| Cert(H_i) ⊆ Cert(H_{i+1}) | 阶层嵌套性：高阶模型证书包含低阶模型 |
+| Bridge(H_i, H_j) = Cert(H_i) ∩ Cert(H_j) | 阶层切换桥梁，要求非空 |
+| h* ∈ {0,…,L} | 当前运行的 WBC 阶层，满足 h* ≤ tier(m*) 且 cost(H_{h*}) ≤ B_tick |
+| ζ_bt = (B_tick, m*, h*, NC_stack, MC_reachable, WBC_tier, drift_bt, mode_bt) | 行为层共享状态 |
+| B_tick | 本帧 tick 预算（最大 tick 次数/时间） |
+| tier(m) | 里程碑 m 许可的最高 WBC 阶层 |
+| val(n) | 节点 n 的证书价值（任务进度、安全余量、能量效率的加权和） |
 
 ## 3. 推导
 
-**引理 125（可证技能组合的中断安全性）** 若 SCD 的每一扩散步满足 `Acc_step ⊆ ⩂_{j≤step} Acc_{s_j}` 且 `f_0` 只返回 `Fallback(x) ⊆ Exec_v14`，则对任意中断档 k，`(Acc_k,c_k)` 有效且 `Acc_k⊆Exec_v14`；且若 `f_k` 的加入不降低授权价值，则 `q_0≤…≤q_m`。证明：对 k 归纳。k=0 由 `f_0` 定义。若 `(Acc_{k-1},c_{k-1})` 有效，定义 607 的条件 1–3 直接给出 `Acc_k` 有效、`Acc_{k-1}⊆Acc_k⊆Exec_v14`，故中断在 k 仍有效。质量单调由定义 607 的 `q_k` 单调性。∎ 推论：**安全性不依赖扩散的精确性，只依赖"能否按时执行到某一档"**；扩散误差只影响及时性/性能，不会把早退变成不安全。
+**引理 131（行为树节点证书的中断安全性）** 若每个节点的 tick 满足：(1) `status=SUCCESS ⇒ Post 成立`，(2) `status=FAILURE ⇒ Pre 不成立`，(3) `status=RUNNING ⇒ Run 成立 ∧ Post 待定`，且 `Fallback ⊆ Pre ⊆ Run ⊆ Post`，则对任意中断深度 k，执行路径上的所有节点 NC 均有效，且最终执行的动作 `a ∈ Fallback_root ⊆ Exec_v15`。证明：对执行路径长度归纳。根节点 NC 由构造有效。若父节点 NC 有效，子节点 tick 的前置检查 `Pre ⊆ Run_parent` 保证子节点前置成立。中断时，若在 Sequence 中，已完成子节点 Post 成立，未完成子节点 Fallback ⊆ Pre ⊆ Run_parent，故回退安全；若在 Selector 中，当前子节点 Fallback 安全，或前一子节点 SUCCESS 已给出 Post；Parallel 同理。Decorator 只收紧证书，不破坏嵌套。∎ 推论：**行为树的安全性不依赖于完成整棵树，只依赖于"每个 tick 都在证书内"**；中断即回退，回退即安全。
 
-**引理 126（扩散温度与证书保证的权衡）** 设扩散温度 τ ∈ (0,1]，数据集覆盖率 ρ_cov ∈ [0,1]。则任意扩散步的证书下界满足
-```
-prob_lower ≥ (1 − τ) · 1[safe] + τ · (1 − ρ_cov) · U_d / B_skill ,
-```
-其中 `1[safe]` 为当前步是否在安全区域的指示量。证明：τ=1 时退化为纯理论证书（ρ_cov 无影响），τ=0 时退化为纯数据下界（理论证书完全被数据修正）。中间情形由温度对理论与经验的插值权重决定。∎ 推论：**温度 τ 是理论证书与经验数据之间的插值权重**，τ 越小，经验修正的份额越大，但每一步的理论保守性越强。
+**引理 132（里程碑证书的单调传递性）** 设里程碑 DAG 满足：对任意边 `M_i → M_j`，有 `HW_i ⊆ HW_j`、`SW_i ≤ SW_j`、`DATA_i ≥ DATA_j`、`Cert_i ≤ Cert_j`、`Fallback_j < j`。则可达集合 `M_reachable` 关于硬件/软件/数据状态单调：`HW_cur ⊆ HW'_cur ∧ SW_cur ≤ SW'_cur ∧ DATA_cur ≥ DATA'_cur ⇒ M_reachable ⊆ M'_reachable`。证明：直接由集合包含与不等式传递性。`m* = max M_reachable` 因此也单调。回退里程碑 `Fallback_k < k` 保证回退严格单调递减。∎ 推论：**里程碑索引 m* 是硬件/软件/数据状态的单调函数**，状态改善只能扩大可达集、提高 m*，状态恶化只能缩小可达集、降低 m*。
 
-**引理 127（数据集覆盖率的证书修正界）** 设 U_theory 为理论证书余量，ρ_cov 为数据集支撑覆盖率。则修正后的经验下界满足
-```
-U_aligned ≥ U_theory · (1 − ρ_cov)  且  U_aligned ≥ Ω(√(log(1/α)/n)) ,
-```
-其中第二项是共形下位分位的标准最小下界。证明：ρ_cov 直接缩减理论余量的比例；未覆盖动作的共形下位分位由样本量 n 给出 Le Cam 最小下界。∎ 推论：**数据集覆盖率 ρ_cov 与理论证书余量 U_theory 成正比衰减**，覆盖差 10% 即理论保守性下降约 10%。
+**引理 133（WBC 模型阶层的嵌套证书桥梁）** 设阶层 `H_0 ⊂ H_1 ⊂ … ⊂ H_L` 满足 `Cert(H_i) ⊆ Cert(H_{i+1})`，且对任意 `i < j`，桥梁 `Bridge(H_i, H_j) = Cert(H_i) ∩ Cert(H_j)` 非空且体积 ≥ `margin`。则：(1) 任意时刻运行阶层 `h*` 的证书 `Cert(H_{h*})` 有效；(2) 阶层切换 `h_old → h_new` 时，若经桥梁验证通过，则切换瞬态动作 `a ∈ Bridge(H_{h_old}, H_{h_new}) ⊆ Cert(H_{h_old}) ∩ Cert(H_{h_new})`，安全不中断。证明：(1) 由嵌套性，`Cert(H_{h*}) ⊆ Cert(H_L)`，且 `H_L` 证书由 v15/v13/v12 保证。(2) 桥梁定义即交集，验证通过即交集非空且有余量，切换动作在交集内即同时满足新旧阶层证书。∎ 推论：**WBC 阶层切换不是"跳跃"，而是"在桥梁上滑行"**；桥梁体积是切换安全性的定量度量。
 
-**引理 128（漂移下的扩散安全塌缩）** 设漂移检测器在分布偏离校准支撑时触发；触发后 SCD 只允许第 0 档 `s_0`（零假设回退，不依赖任何扩散或数据集证书）。则：碰撞/越界等物理硬违规概率不高于 v14 的对应回退；活动性损失满足
-```
-P(无可执行认证动作) ≤ P(drift) + P(数据支撑外) + P(预算耗尽) .
-```
-证明：`s_0` 由物理构造保证安全（停/柔顺/`a_ask`），且 `B_skill` 在漂移时被硬预留给回退动作；漂移时数据集在支撑外无保证，故禁止使用 i≥1 步。∎ 推论：**漂移不是用更多的扩散步去赌，而是用最保守的第 0 档买重校准时间**。
+**引理 134（三重单调退化的帕累托最优性）** 设调度问题：`max Σ val(n_i)` s.t. `Σ tick(n_i) ≤ B_tick`，`m ≤ m*`，`h ≤ tier(m)`，且退化只能向 `(m-1, h, ·)`、`(m, h-1, ·)`、`(·, ·, subset)` 单向移动。则 CSC 的贪心回溯算法在 `val` 关于 `(m,h,nodes)` 单调增时，返回的解在可行域上是帕累托最优的：不存在其他可行解在所有三个维度上均不劣且至少一维严优。证明：贪心从 `(m*, h_max)` 向下枚举，每个 `(m,h)` 计算局部最优节点集。若存在更优解 `(m',h',nodes')`，必有 `m' ≤ m*`、`h' ≤ h_max`。枚举顺序保证先访问 `(m*,h_max)`，若其可行则局部最优即全局最优（因 val 单增）；若不可行，退化到 `(m*-1,h_max)` 或 `(m*,h_max-1)`，由单调性这些点的可行域包含原点可行域，局部最优仍是该子域最优。归纳得证。∎ 推论：**CSC 不需要求解 NP-hard 整数规划，贪心回溯在单调价值假设下即最优**；单调性由证书下界单调性（引理 131/132/133）保证。
 
-**引理 129（技能预算三难下界）** 存在技能集/数据集/温度 τ 对，使任何扩散策略若满足每帧扩散步 ≤ B_skill、证书保持、数据集支撑，则其活动性满足
-```
-FRR ≥ Ω( (v_m−v_0)/B_skill )  或  B_skill = Ω((v_m−v_0)/Δw) ,
-```
-证明：把"扩散步"视为对阶梯档位的预算分配；少于最优步数时，必然在某个预算区间错配；伸缩求和给出下界。∎ 推论：**"可证扩散 + 零代价 + 全覆盖"不可能同时成立**；必须用 `B_skill`、档数 m、活动性（假拒绝）、或 τ 的精确测量四者显式交换。
+**引理 135（漂移下的三重安全塌缩）** 设漂移检测器触发时，TRM 强制 `m* ← 1`，WBC 强制 `h* ← 0`，BTS 只允许执行根节点的 Fallback 分支。则：物理硬违规概率 ≤ v15 对应回退；活动性损失满足 `P(无可执行认证动作) ≤ P(drift) + P(HW丢失) + P(数据支撑外) + P(预算耗尽)`。证明：`m*=1` 对应最基础里程碑（仅站立/柔顺），`h*=0` 对应零模型纯柔顺，BTS Fallback 由物理构造安全。漂移时三重预算同时收紧到最保守，无额外风险面。∎ 推论：**漂移触发的是"三重最低档联动"，不是单独退化**；这是为了防止某一维退化不彻底留下安全缝隙。
 
-**引理 130（引理 126 的证书下界传导）** 对任意扩散步 i，有
-```
-prob_lower_i ≥ (1 − τ) · P(safe_i) + τ · (1 − ρ_cov) · (U_d / B_skill) − ε_cal ,
-```
-其中 `ε_cal` 为校准集有限样本误差。证明：直接由定义 607 的 `prob_lower` 公式代入，利用共形线性组合保下界，经样本误差传导给概率下界。∎ 推论：**校准集样本量的不足 ε_cal 会直接降低每一步的证书下界**，样本量不足时必须相应降低 τ 或扩大 B_safe。
+**引理 136（正向跃迁的证书缝隙界）** 设硬件/软件/数据发生正向跃迁（`HW_cur ⊃ HW_old` 或 `SW_cur > SW_old` 或 `DATA_cur > DATA_old`），导致 `m*` 从 `m_old` 跃迁到 `m_new > m_old + 1`（跳过中间里程碑）。则新许可节点的证书下界满足 `cert_lower ≥ Cert_{m_old} - U_gap(m_old→m_new)`，其中 `U_gap` 为跨越里程碑的累积证书间隙。若 `U_gap > Cert_{m_old}`，则跃迁引入的节点可能无有效证书。证明：中间里程碑 `m_old+1 … m_new-1` 的证书增量未被验证，跃迁直接引入 `m_new` 的证书，其下界仅由 `m_old` 证书减去未验证增量得到。∎ 推论：**正向跃迁必须伴随"证书补课"**——跳过里程碑前必须补齐中间里程碑的证书验证，或强制单步推进。
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| SCD 阶段调度 + 不变量检查 | 在线 50Hz | O(n + |Acc|)，overhead ≤0.3ms | O(|Acc|) | 定义 607, 引理 125 |
-| DSD 预算分配 | 在线 50Hz | O(1)，≤0.02ms | O(1) | 定义 608, 引理 127 |
-| DCA 经验下界修正 | 在线 50Hz | O(1)（预计算），≤0.05ms | O(Σ|A_τ|) | 定义 609, 引理 128 |
-| EDC 边界检查 | 在线 50Hz | O(1)，≤0.02ms | O(1) | 定义 610, 引理 129 |
-| CPD 蒸馏训练 | 离线/异步 | O(n·(d_T+d_S)·E)，不在关键路径 | O(d_T·d_S) | 定义 585 |
-| v14 继承路径 | 在线 | ≤9ms | 不变 | v14 引理 119 |
-| 决策侧合计 | 在线 | 典型 ≤10ms，p99 ≤22ms | — | 引理 119 |
+| BTS tick（单节点） | 在线 50Hz | O(|NC|)，≤0.1ms | O(|NC|) | 定义 627, 引理 131 |
+| TRM 可达计算 | 在线 50Hz | O(K)，≤0.01ms | O(K) | 定义 628, 引理 132 |
+| WBC 控制求解 | 在线 50Hz | O(dof³) 典型 ≤1ms | O(dof²) | 定义 629, 引理 133 |
+| CSC 整数规划（贪心回溯） | 在线 50Hz | O(m*·h_max·|N|)，≤0.5ms | O(|N|) | 引理 134 |
+| NCS 证书合成 | 在线 50Hz | O(1)（预计算），≤0.05ms | O(Σ|NC|) | 定义 630 |
+| MCA 对齐 | 在线 50Hz | O(1)，≤0.01ms | O(1) | 定义 631, 引理 136 |
+| WCB 桥梁验证 | 在线 50Hz | O(1)（缓存），≤0.01ms | O(L²) | 定义 632 |
+| v15 继承路径 | 在线 | ≤10ms | 不变 | v15 引理 130 |
+| 决策侧合计 | 在线 | 典型 ≤12ms，p99 ≤25ms | — | 引理 134 |
 
-## 5. 实验设计 E661–E670
+## 5. 实验设计 E671–E690
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E661 | SCD WCET 验证 | 所有扩散步通过硬件在环测试 p99≤22ms，0 次证书违规 |
-| E662 | 可证扩散质量下界 | 经验 `P(q ≥ q_lower) ≥ 1−α_d`，0 次不安全放行 |
-| E663 | DSD 预算分配有效性 | 给定 τ，FRR ≤5%，任务完成率 ≥ v14−5%；τ 越小安全越强但 FRR 越高 |
-| E664 | DCA 共形有效性 | 经验下界满足 `U_aligned ≥ U_theory · (1−ρ_cov)`，0 次跨界放行 |
-| E665 | 漂移安全塌缩 | 漂移触发后 0 次不安全放行，完成率 ≥ v14−8% |
-| E666 | 平台迁移成本 | 迁移仅需重新提供 skill_catalog 与 WCET 基准，上层证书 0 次重测，完成率 ≥ v14−5% |
-| E667 | 消融：无 SCD | 扩散失效，退回单技能，活动性 ↑≥50% 或安全下界 ↓≥10% |
-| E668 | 消融：无 DSD | 扩散预算失效，步数退化为 0，完成率 ↓≥15% |
-| E669 | 消融：无 DCA | 经验下界失效，理论证书不再有修正，FAR ↑≥300% |
-| E670 | 端到端家庭任务/竞赛 | ≥ v14+5%（预注册主指标） |
+| E671 | BTS NC 单调性验证 | 所有节点 tick 10⁶ 次，0 次证书违规，中断回退 100% 安全 |
+| E672 | Selector 析取证书有效性 | 共形风险下 Selector 选分支 0 次假接受，FRR ≤ v15+3% |
+| E673 | TRM 里程碑单调传递 | 硬件/软件/数据单调变化时 m* 100% 单调，0 次回退跳跃 |
+| E674 | MCA 共形对齐有效性 | 经验 `U_aligned ≥ U_theory·(1−ρ_cov)·DATA_cov`，0 次跨界放行 |
+| E675 | WBC 阶层嵌套与桥梁 | 所有阶层对桥梁非空，切换 10⁴ 次 0 次动力学违规 |
+| E676 | CSC 三重退化最优性 | 贪心回溯解 = 穷举最优解，退化路径帕累托最优 |
+| E677 | 漂移三重塌缩安全 | 漂移触发后 m*=1, h*=0, Fallback 执行，0 次不安全，完成率 ≥ v15−10% |
+| E678 | 正向跃迁证书补课 | 跳过里程碑时强制补课，补课后 0 次证书缝隙，延迟 ≤50ms |
+| E679 | 平台迁移成本 | 迁移仅需 BT 结构、MC 表、WBC 阶层模型，上层证书 0 次重测，完成率 ≥ v15−5% |
+| E680 | 消融：无 BTS | 行为树退化为扁平列表，活动性 ↑≥60% 或安全下界 ↓≥15% |
+| E681 | 消融：无 TRM | 里程碑失效，全阶层 WBC 直接跑，FAR ↑≥200% 或硬件损坏 |
+| E682 | 消融：无 WBC | 无模型阶层，全身控制单一模型，计算超时 ↑≥40% 或退化失效 |
+| E683 | 消融：无 CSC | 静态调度，无预算感知退化，超时率 ↑≥300% |
+| E684 | 消融：无 NCS | Action NC 无来源，证书断层，FAR ↑≥500% |
+| E685 | 消融：无 MCA | MC 不对齐 ρ_cov，理论证书高估，FAR ↑≥300% |
+| E686 | 消融：无 WCB | WBC 阶层跳跃切换，动力学违规 ↑≥50 次/小时 |
+| E687 | 端到端：仿真全技能链 | 站立→走路→避障→操作→协同，完成率 ≥ v15+8% |
+| E688 | 端到端：实机粗糙地形 | M3→M5 里程碑，跌倒率 ≤1%，任务完成率 ≥ v15+5% |
+| E689 | 端到端：双臂全身协同 | M6→M7 里程碑，力控精度 ≤2N，碰撞率 0% |
+| E690 | 端到端：竞赛/基准测试 | ≥ v15+10%（预注册主指标） |
 
 ## 6. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| SCD WCET（E661） | 所有扩散步通过硬件在环测试 p99≤22ms、0 WCET 违规 | 降低 τ、扩大 B_safe、硬件在环重测 WCET |
-| 可证扩散质量（E662） | 经验 `P(q ≥ q_lower) ≥1−α_d`，0 次不安全放行 | 增大校准集、对抗样本采样、EVT 尾部分位 |
-| DSD 预算最优（E663） | 给定 τ，FRR ≤5%，任务完成率 ≥ v14−5% | 调整 τ、增大容量、改多出口 |
-| DCA 共形保证（E664） | 经验下界满足 `U_aligned ≥ U_theory · (1−ρ_cov)` | 增大校准集、对抗样本采样、EVT 尾部分位 |
-| 漂移塌缩（E665） | 0 越界、≥v14−8% | 提前漂移检测、扩大回退集、缩短重校准 |
-| 平台迁移成本（E666） | 迁移仅需 `skill_catalog` 与 WCET 基准，上层证书 0 次重测，完成率 ≥ v14−5% | 增加平台专项校准、减少上层对底层假设 |
-| 消融 SCD（E667） | 活动性 ↑≥50% 或安全下界 ↓≥10% | 证明可证扩散必要性 |
-| 消融 DSD（E668） | 完成率 ↓≥15% | 证明扩散策略必要性 |
-| 消融 DCA（E669） | FAR ↑≥300% | 证明数据集证书对齐必要性 |
-| 端到端（E670） | ≥v14+5% | 按消融定位瓶颈、调参与架构 |
+| BTS NC 单调（E671） | 10⁶ tick 0 违规，中断 100% 安全 | 修正 NC 定义、加强前置检查、装饰器收紧逻辑 |
+| Selector 共形（E672） | 0 假接受，FRR ≤ v15+3% | 增大校准集、非对称代价调整、EVT 尾部 |
+| TRM 单调（E673） | 单调变化 100% 单调，0 跳跃 | 修正 MC 依赖边、强制单步推进、回退锁 |
+| MCA 对齐（E674） | 经验下界满足公式，0 跨界 | 增大校准集、对抗采样、保守 ρ_cov 余量 |
+| WBC 桥梁（E675） | 10⁴ 切换 0 违规 | 扩大 margin、增加中间阶层、桥梁在线验证 |
+| CSC 最优（E676） | 贪心=穷举，帕累托最优 | 价值函数单调化、增加回溯深度、分支定界 |
+| 漂移塌缩（E677） | 0 不安全，完成率 ≥ v15−10% | 提前漂移检测、扩大回退集、缩短重校准周期 |
+| 正向跃迁（E678） | 补课后 0 缝隙，延迟 ≤50ms | 自动补课流水线、并行证书验证、优先级队列 |
+| 平台迁移（E679） | 仅需 BT/MC/WBC，上层 0 重测，≥ v15−5% | 模块化接口标准化、减少跨层假设 |
+| 消融 BTS（E680） | 活动性 ↑≥60% 或安全 ↓≥15% | 证明行为树证书必要性 |
+| 消融 TRM（E681） | FAR ↑≥200% 或硬件损坏 | 证明里程碑边界必要性 |
+| 消融 WBC（E682） | 超时 ↑≥40% 或退化失效 | 证明模型阶层必要性 |
+| 消融 CSC（E683） | 超时率 ↑≥300% | 证明三重退化调度必要性 |
+| 消融 NCS（E684） | FAR ↑≥500% | 证明 NC 合成必要性 |
+| 消融 MCA（E685） | FAR ↑≥300% | 证明 MC-数据对齐必要性 |
+| 消融 WCB（E686） | 动力学违规 ↑≥50/小时 | 证明 WBC 桥梁必要性 |
+| 端到端仿真（E687） | ≥ v15+8% | 按消融定位瓶颈 |
+| 端到端实机（E688） | 跌倒≤1%，≥ v15+5% | 调整 WBC 阶层、增加桥梁余量 |
+| 端到端协同（E689） | 力控≤2N，碰撞 0% | 增加 WBC 高阶层、优化桥梁 |
+| 端到端竞赛（E690） | ≥ v15+10% | 综合调优、架构微调 |
 
 ## 7. 已知风险与失效模式
 
-1. **扩散温度与证书边界跨越**：τ 设置过大时，扩散步可能跨越证书交集边界，产生未验证的组合动作。缓解：τ 的自适应降低、每一步前的证书交集检查、EDC 边界检查强制回退。
+1. **行为树证书合成的组合爆炸**：深层行为树中，NC 的合取/析取运算可能导致证书集合指数级缩小，最终清空可行集。缓解：并集门、共享骨干多出口 + 单调罚项、NC 稀疏化表示、部署前 100% 路径验证。
 
-2. **数据集偏差与理论缺口**：数据集可能无法覆盖理论证书边界的尾部区域，导致 `ρ_cov` 低估带来的保守性下降。缓解：边界主动采样、对抗/最坏情形校准、EVT 尾部分位、保守 `ρ_cov` 余量、漂移时禁用高步。
+2. **里程碑 DAG 的隐性循环依赖**：MC 定义中的 `Fallback_k < k` 看似单调，但硬件/软件/数据的跨里程碑依赖可能形成隐性循环（M3 需 M5 的校准数据，M5 需 M3 的硬件固件）。缓解：DAG 拓扑校验、依赖显式建模、循环检测与打破、最小反馈弧集。
 
-3. **扩散步累积证书缩小**：多步扩散中，每一步的证书交集都在缩小，k 步后可能清空可行集。缓解：并集门、共享骨干多出口 + 单调罚项、部署前 100% 嵌套校验，不满足即退回单步或单技能。
+3. **WBC 桥梁的体积退化**：高阶层与低阶层证书交集可能随维度升高呈指数衰减（维数灾难），导致桥梁体积低于 margin，切换被阻塞。缓解：证书投影到任务相关子空间、自适应 margin、中间过渡阶层、桥梁在线扩张（松弛非关键约束）。
 
-4. **假拒绝导致活动性塌缩**：`ρ_cov` 偏小或边界样本稀缺时，学生几乎不放行，系统频繁 `a_ask`/回退。缓解：非对称代价可调但只影响推理不影响证书、增加常见档、把假拒绝显式计入 `B_skill`/任务预算。
+4. **CSC 整数规划的近似最优性缺失**：贪心回溯依赖 `val` 单调性，但实际中节点价值可能非单调（如：先避障再走路比直接走路价值高，但避障节点单独价值低）。缓解：价值函数设计为边际增量单调、局部搜索增强、在线学习价值函数、允许有界次优。
 
-5. **边界样本稀缺使 DCA 低估**：安全边界是低概率区域，校准集可能几乎不覆盖；共形下位分位在尾部外推不可靠。缓解：边界主动采样、对抗/最坏情形校准、EVT 尾部分位、保守 `U_d` 余量、漂移时禁用高步。
+5. **正向跃迁的证书补课延迟**：跳过里程碑时，补课需要重新跑中间里程碑的所有证书验证，可能导致数十毫秒延迟，错过实时截止期。缓解：异步预验证、增量证书更新、优先级抢占、补课期间强制维持旧 m*。
 
-6. **WCET 测量误差**：缓存、温度、频率缩放、内存带宽会使实测超出离线 WCET，SCD 的 RTIC 不再 sound。缓解：硬件在环压力测试、最坏情形执行路径、watchdog + 强制塌缩、保留 `B_safe` 与额外余量。
+6. **硬件状态的不可测退化**：关节卡死、传感器偏移、通信抖动可能在 TRM 更新周期内发生，导致 `HW_cur` 高估，`m*` 过高。缓解：高频硬件自检（1kHz）、watchdog 降级、TRM 状态缓存 TTL、硬件退化即时广播。
 
-7. **共享骨干的相关失效**：所有扩散步共享同一骨干时，一个结构性缺陷会同时击穿所有学生与教师，形成单点。缓解：多骨干/异构学生、教师异步影子抽查、关键场景保留纯教师路径、故障注入测试。
+7. **数据覆盖率 ρ_cov 的乐观偏差**：在线计算的 `data_cov` 可能因采样偏差高估真实覆盖，导致 MCA 修正不足、MC 证书高估。缓解：保守下界估计（Clopper-Pearson）、主动边界采样、对抗校准、ρ_cov 余量。
 
-8. **迁移间隙与扩散间隙联合低估**：新场景同时进入 v14 的分布外与 v15 的校准外，`U_gap` 与 `U_dis` 可能同向偏低。缓解：联合三角界（引理 124）、三预算加性、双重漂移检测、任一间隙失效即触发最低档。
+8. **行为树与 WBC 的时序解耦风险**：BTS tick 产生动作指令，WBC 在下一控制周期执行，中间可能有状态漂移导致动作失效。缓解：动作指令携带有效期、WBC 预测状态前向传播、指令-执行同步屏障、时间戳一致性检查。
 
-9. **扩散温度的分布外选择**：τ 可能在训练分布之外选择，导致 `prob_lower` 的共形保证失效。缓解：τ 裁剪至 [τ_min, 1]、元认证指标记录超出程度、渐进式 τ 热-up、τ 的上下文感知建议。
+9. **多里程碑并行开发的证书冲突**：不同团队并行开发 M4/M5/M6，证书边界可能冲突（M5 要求的接触力与 M6 的操作力矩互斥）。缓解：证书冲突检测器、共享证书注册表、跨里程碑证书合取验证、集成测试门禁。
 
-10. **谐波减速与扩散的联合分布外**：若同时启用 HBR（谐波减速）与 SCD（扩散），`ρ` 与 `τ` 同时偏离时，可能形成双重分布外风险。缓解：三预算界限（引理 124）、双重漂移检测、任一间隙失效即触发最低档。
+10. **v16 与 v15/v13/v12 证书栈的累积保守性**：每层证书都取交集并减去间隙，L 层后证书下界可能衰减到接近零，系统几乎只能执行 Fallback。缓解：证书价值加权而非纯交集、选择性证书放宽（需形式化证明）、动态 α 调整、元认证监控保守余量。
 
-11. **数据集规模有限使证书保守性不可达**：有限的数据集无法达到理论证书的保守下界，导致 `U_aligned` 始终高于理论值。缓解：渐进式数据集扩大、理论下界与经验下界的双重保证、漂移检测时的强制塌缩、元认证指标记录保守余量。
+11. **行为树结构的在线修改与证书失效**：热更新行为树结构（增删节点、改变连接）会使已验证的 NC 失效，TRM 可能不知情。缓解：BT 版本控制、结构变更触发全栈重验证、变更前仿真回归、金丝雀发布。
+
+12. **全身协调的接触一致性证书缺失**：WBC 证书主要覆盖动力学可行性，但接触一致性（摩擦锥、法向力单向性、接触切换）证书较弱，可能在粗糙地形产生隐性违规。缓解：显式接触证书层、摩擦锥共形边界、接触模式枚举证书、触觉反馈闭环校准。
 
 ## 8. 本轮最大风险
 
-**一句话**：扩散过程的温度参数与数据集的经验下界在共形保证范围内可能产生" certified-but-wrong "状态——扩散温度设置过大时，步子走得太快可能跨越证书边界；而数据集的校准集可能未覆盖当前场景的边界区域，最终在"每一步都按证书、每一步都在数据集支撑下"的表象下执行了一个在分布外未验证的安全决定——即**按证书的、数据支持的、却绝对错误的安全决定**。
+**一句话**：正向跃迁（硬件升级/软件热更/在线学习扩展数据）导致里程碑索引 m* 非单调跳跃，CSC 为赶进度在"证书补课"完成前就放行了跳过里程碑的高阶节点，WBC 在桥梁验证通过的表象下（桥梁只检查新旧阶层交集，不检查中间里程碑证书）执行了一个**单调退化的、桥梁安全的、里程碑许可的、却因缺失中间证书链而绝对不安全的全身行为**——即**三重单调都满足、却因正向跃迁绕过中间证书而毁灭性的安全决定**。
 <!-- ARTIFACT:END -->
