@@ -30,6 +30,13 @@ def end_marker(name: str) -> str:
 
 
 def scaffold(task: str) -> str:
+    """生成 research.md 的初始脚手架。
+
+    包含 IDEA 和 ARTIFACT 两个跨轮保留的区块，标记行由
+    <!-- IDEA:START --> / <!-- IDEA:END --> 与
+    <!-- ARTIFACT:START --> / <!-- ARTIFACT:END --> 组成。
+    用户编辑时请保留这些标记行，否则后续写入会失效。
+    """
     title_task = task.replace("\r", " ").replace("\n", " ")
     return (
         f"# 玄 · {title_task}\n\n"

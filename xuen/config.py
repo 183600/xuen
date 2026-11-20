@@ -332,7 +332,19 @@ def _config_dict_to_obj(raw: Any) -> Config:
 
 
 def _validate(cfg: Config) -> None:
-    """Validate all Config fields: types and value ranges."""
+    """Validate all Config fields: types and value ranges.
+
+    Validation categories (in order):
+      1. words: count, batch, pick (int >= 0, not bool), reuse (bool)
+      2. loop: iterations (optional int >= 1 or None)
+      3. rounds: enabled (bool), verify (enum), fallback (enum),
+           adopt_score (0-10 float), timeout/verify_timeout (positive finite)
+      4. agent: command (nonempty str), timeout (positive finite)
+      5. prompt: max_state_chars (int > 0)
+      6. structured: extra_notes (must not be None), workspace (str, not list/dict)
+      7. Windows-specific: agent.command & rounds.judge_command with $prompt/$prompt_file
+      8. rounds: dir, repo, judge_command must be non-None
+    """
 
     for name in ("count", "batch", "pick"):
         val = getattr(cfg.words, name)
