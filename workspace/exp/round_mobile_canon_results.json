@@ -1,0 +1,205 @@
+{
+  "part_a_position_canonicalization": [
+    {
+      "sigma": 0.08,
+      "delta_sem": 0.0,
+      "succ_fixed": 0.9139,
+      "succ_active": 0.9862,
+      "abs_gain": 0.0723,
+      "kappa_emp": 0.8401
+    },
+    {
+      "sigma": 0.08,
+      "delta_sem": 0.3,
+      "succ_fixed": 0.6398,
+      "succ_active": 0.6904,
+      "abs_gain": 0.0506,
+      "kappa_emp": 0.1405
+    },
+    {
+      "sigma": 0.08,
+      "delta_sem": 0.6,
+      "succ_fixed": 0.3656,
+      "succ_active": 0.3945,
+      "abs_gain": 0.0289,
+      "kappa_emp": 0.0456
+    },
+    {
+      "sigma": 0.15,
+      "delta_sem": 0.0,
+      "succ_fixed": 0.7676,
+      "succ_active": 0.9858,
+      "abs_gain": 0.2182,
+      "kappa_emp": 0.9389
+    },
+    {
+      "sigma": 0.15,
+      "delta_sem": 0.3,
+      "succ_fixed": 0.5374,
+      "succ_active": 0.6901,
+      "abs_gain": 0.1527,
+      "kappa_emp": 0.3301
+    },
+    {
+      "sigma": 0.15,
+      "delta_sem": 0.6,
+      "succ_fixed": 0.3071,
+      "succ_active": 0.3943,
+      "abs_gain": 0.0873,
+      "kappa_emp": 0.1259
+    },
+    {
+      "sigma": 0.25,
+      "delta_sem": 0.0,
+      "succ_fixed": 0.5843,
+      "succ_active": 0.983,
+      "abs_gain": 0.3987,
+      "kappa_emp": 0.9591
+    },
+    {
+      "sigma": 0.25,
+      "delta_sem": 0.3,
+      "succ_fixed": 0.409,
+      "succ_active": 0.6881,
+      "abs_gain": 0.2791,
+      "kappa_emp": 0.4723
+    },
+    {
+      "sigma": 0.25,
+      "delta_sem": 0.6,
+      "succ_fixed": 0.2337,
+      "succ_active": 0.3932,
+      "abs_gain": 0.1595,
+      "kappa_emp": 0.2081
+    },
+    {
+      "sigma": 0.35,
+      "delta_sem": 0.0,
+      "succ_fixed": 0.4567,
+      "succ_active": 0.9609,
+      "abs_gain": 0.5042,
+      "kappa_emp": 0.928
+    },
+    {
+      "sigma": 0.35,
+      "delta_sem": 0.3,
+      "succ_fixed": 0.3197,
+      "succ_active": 0.6726,
+      "abs_gain": 0.3529,
+      "kappa_emp": 0.5188
+    },
+    {
+      "sigma": 0.35,
+      "delta_sem": 0.6,
+      "succ_fixed": 0.1827,
+      "succ_active": 0.3843,
+      "abs_gain": 0.2017,
+      "kappa_emp": 0.2468
+    },
+    {
+      "sigma": 0.5,
+      "delta_sem": 0.0,
+      "succ_fixed": 0.3397,
+      "succ_active": 0.8798,
+      "abs_gain": 0.5401,
+      "kappa_emp": 0.818
+    },
+    {
+      "sigma": 0.5,
+      "delta_sem": 0.3,
+      "succ_fixed": 0.2378,
+      "succ_active": 0.6159,
+      "abs_gain": 0.3781,
+      "kappa_emp": 0.496
+    },
+    {
+      "sigma": 0.5,
+      "delta_sem": 0.6,
+      "succ_fixed": 0.1359,
+      "succ_active": 0.3519,
+      "abs_gain": 0.216,
+      "kappa_emp": 0.25
+    }
+  ],
+  "part_b_base_arm_coupling": [
+    {
+      "delta_base_m": 0.0,
+      "p_hold_uncompensated": 1.0,
+      "p_hold_compensated_10pct_residual": 1.0
+    },
+    {
+      "delta_base_m": 0.02,
+      "p_hold_uncompensated": 0.8825,
+      "p_hold_compensated_10pct_residual": 0.9988
+    },
+    {
+      "delta_base_m": 0.05,
+      "p_hold_uncompensated": 0.4578,
+      "p_hold_compensated_10pct_residual": 0.9922
+    },
+    {
+      "delta_base_m": 0.1,
+      "p_hold_uncompensated": 0.0439,
+      "p_hold_compensated_10pct_residual": 0.9692
+    },
+    {
+      "delta_base_m": 0.2,
+      "p_hold_uncompensated": 0.0,
+      "p_hold_compensated_10pct_residual": 0.8825
+    },
+    {
+      "delta_base_m": 0.3,
+      "p_hold_uncompensated": 0.0,
+      "p_hold_compensated_10pct_residual": 0.7548
+    },
+    {
+      "delta_base_m": 0.5,
+      "p_hold_uncompensated": 0.0,
+      "p_hold_compensated_10pct_residual": 0.4578
+    }
+  ],
+  "part_c_peek_value": [
+    {
+      "post_held_q": 0.05,
+      "succ_act_now": 0.695,
+      "succ_peek_then_act": 0.6685,
+      "peek_gain": -0.0265
+    },
+    {
+      "post_held_q": 0.2,
+      "succ_act_now": 0.68,
+      "succ_peek_then_act": 0.694,
+      "peek_gain": 0.014
+    },
+    {
+      "post_held_q": 0.4,
+      "succ_act_now": 0.66,
+      "succ_peek_then_act": 0.728,
+      "peek_gain": 0.068
+    },
+    {
+      "post_held_q": 0.55,
+      "succ_act_now": 0.645,
+      "succ_peek_then_act": 0.7535,
+      "peek_gain": 0.1085
+    },
+    {
+      "post_held_q": 0.667,
+      "succ_act_now": 0.6336,
+      "succ_peek_then_act": 0.7734,
+      "peek_gain": 0.1398
+    },
+    {
+      "post_held_q": 0.8,
+      "succ_act_now": 0.74,
+      "succ_peek_then_act": 0.808,
+      "peek_gain": 0.068
+    },
+    {
+      "post_held_q": 0.95,
+      "succ_act_now": 0.86,
+      "succ_peek_then_act": 0.847,
+      "peek_gain": -0.013
+    }
+  ]
+}
