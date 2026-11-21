@@ -1,0 +1,122 @@
+{
+  "ArrangePlates": {
+    "close_blocked_frac": 0.9813664596273292,
+    "close_pos_resid_mean": 0.4032620688052906,
+    "close_pos_resid_p90": 0.4829084873199463,
+    "slip_frac": 0.025331724969843185,
+    "n_close": 161,
+    "n_trans": 829
+  },
+  "ArrangeTestTubes": {
+    "close_blocked_frac": 1.0,
+    "close_pos_resid_mean": 0.425631400346756,
+    "close_pos_resid_p90": 0.48902277946472167,
+    "slip_frac": 0.0,
+    "n_close": 100,
+    "n_trans": 270
+  },
+  "ColorArrangement": {
+    "close_blocked_frac": 1.0,
+    "close_pos_resid_mean": 0.3107762381248949,
+    "close_pos_resid_p90": 0.3433985710144043,
+    "slip_frac": 0.0,
+    "n_close": 241,
+    "n_trans": 0
+  },
+  "ConveyorSorting": {
+    "close_blocked_frac": 0.9473684210526315,
+    "close_pos_resid_mean": 0.40095120286691543,
+    "close_pos_resid_p90": 0.4714733064174652,
+    "slip_frac": 0.009876543209876543,
+    "n_close": 76,
+    "n_trans": 810
+  },
+  "DisconnectEthernet": {
+    "close_blocked_frac": 1.0,
+    "close_pos_resid_mean": 0.30735352621055567,
+    "close_pos_resid_p90": 0.3402435302734375,
+    "slip_frac": 0.01925722145804677,
+    "n_close": 468,
+    "n_trans": 727
+  },
+  "FoldTowel": {
+    "close_blocked_frac": 0.9641025641025641,
+    "close_pos_resid_mean": 0.28408602049144416,
+    "close_pos_resid_p90": 0.3291035771369934,
+    "slip_frac": 0.013761467889908258,
+    "n_close": 195,
+    "n_trans": 1090
+  },
+  "FruitCollection": {
+    "close_blocked_frac": 0.9915611814345991,
+    "close_pos_resid_mean": 0.432683721947079,
+    "close_pos_resid_p90": 0.4926293849945068,
+    "slip_frac": 0.003745318352059925,
+    "n_close": 237,
+    "n_trans": 267
+  },
+  "HangCup": {
+    "close_blocked_frac": 0.9649122807017544,
+    "close_pos_resid_mean": 0.4084040797778476,
+    "close_pos_resid_p90": 0.4742422103881836,
+    "slip_frac": 0.009693053311793215,
+    "n_close": 171,
+    "n_trans": 619
+  },
+  "OrganizeBookshelf": {
+    "close_blocked_frac": 1.0,
+    "close_pos_resid_mean": 0.4352216515374386,
+    "close_pos_resid_p90": 0.4917187213897705,
+    "slip_frac": 0.052845528455284556,
+    "n_close": 59,
+    "n_trans": 246
+  },
+  "PlugCharger": {
+    "close_blocked_frac": 1.0,
+    "close_pos_resid_mean": 0.3067716370298438,
+    "close_pos_resid_p90": 0.3435077667236328,
+    "slip_frac": 0.1111111111111111,
+    "n_close": 146,
+    "n_trans": 18
+  },
+  "PlugInEthernet": {
+    "close_blocked_frac": 0.9932203389830508,
+    "close_pos_resid_mean": 0.30677495240470615,
+    "close_pos_resid_p90": 0.34143819808959963,
+    "slip_frac": 0.004054054054054054,
+    "n_close": 295,
+    "n_trans": 740
+  },
+  "PourOutMedicine": {
+    "close_blocked_frac": 0.9789473684210527,
+    "close_pos_resid_mean": 0.2963368842476293,
+    "close_pos_resid_p90": 0.345075798034668,
+    "slip_frac": 0.0,
+    "n_close": 95,
+    "n_trans": 0
+  },
+  "SyringeWaterTransfer": {
+    "close_blocked_frac": 0.9870689655172413,
+    "close_pos_resid_mean": 0.41440269849584277,
+    "close_pos_resid_p90": 0.4918471693992615,
+    "slip_frac": 0.08080808080808081,
+    "n_close": 232,
+    "n_trans": 99
+  },
+  "Unlock": {
+    "close_blocked_frac": 0.9923371647509579,
+    "close_pos_resid_mean": 0.41795289634380817,
+    "close_pos_resid_p90": 0.4901164770126343,
+    "slip_frac": 0.015,
+    "n_close": 261,
+    "n_trans": 600
+  },
+  "ZipUp": {
+    "close_blocked_frac": 0.9897610921501706,
+    "close_pos_resid_mean": 0.3987358385417293,
+    "close_pos_resid_p90": 0.4810193538665772,
+    "slip_frac": 0.05185185185185185,
+    "n_close": 293,
+    "n_trans": 1080
+  }
+}

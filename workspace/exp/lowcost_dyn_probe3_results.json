@@ -1,0 +1,122 @@
+{
+  "ArrangePlates": {
+    "n": 2046,
+    "stall_med": 0.06745705008506775,
+    "stall_mean": 0.04645527578559854,
+    "blocked_frac": 0.25268817204301075,
+    "open_offset_mean": -0.005245411070446781,
+    "open_offset_med": -0.007668018341064453
+  },
+  "ArrangeTestTubes": {
+    "n": 0,
+    "stall_med": 0.0,
+    "stall_mean": 0.0,
+    "blocked_frac": 0.0,
+    "open_offset_mean": -0.005421775559331497,
+    "open_offset_med": -0.006779193878173828
+  },
+  "ColorArrangement": {
+    "n": 0,
+    "stall_med": 0.0,
+    "stall_mean": 0.0,
+    "blocked_frac": 0.0,
+    "open_offset_mean": -0.02168205858440745,
+    "open_offset_med": -0.021185874938964844
+  },
+  "ConveyorSorting": {
+    "n": 1015,
+    "stall_med": -0.00131283700466156,
+    "stall_mean": 0.0032861128886857672,
+    "blocked_frac": 0.003940886699507389,
+    "open_offset_mean": 0.000192368674226765,
+    "open_offset_med": -0.009839057922363281
+  },
+  "DisconnectEthernet": {
+    "n": 864,
+    "stall_med": 0.3479712922126055,
+    "stall_mean": 0.2938910695870786,
+    "blocked_frac": 0.8530092592592593,
+    "open_offset_mean": -0.011600539584721493,
+    "open_offset_med": -0.014041900634765625
+  },
+  "FoldTowel": {
+    "n": 1719,
+    "stall_med": 0.09789982438087463,
+    "stall_mean": 0.09901182542735786,
+    "blocked_frac": 0.4997091332169866,
+    "open_offset_mean": -0.016845453486723058,
+    "open_offset_med": -0.01658916473388672
+  },
+  "FruitCollection": {
+    "n": 197,
+    "stall_med": 0.464380718767643,
+    "stall_mean": 0.4291433332781047,
+    "blocked_frac": 1.0,
+    "open_offset_mean": -0.0041619918700329045,
+    "open_offset_med": -0.008327960968017578
+  },
+  "HangCup": {
+    "n": 1105,
+    "stall_med": 0.09694630466401577,
+    "stall_mean": 0.09595627799225609,
+    "blocked_frac": 0.3375565610859729,
+    "open_offset_mean": 0.008186093276018276,
+    "open_offset_med": 0.006927490234375
+  },
+  "OrganizeBookshelf": {
+    "n": 289,
+    "stall_med": -0.0035524405539035797,
+    "stall_mean": 0.1315585050633609,
+    "blocked_frac": 0.3460207612456747,
+    "open_offset_mean": -0.0072496367209906026,
+    "open_offset_med": -0.011043071746826172
+  },
+  "PlugCharger": {
+    "n": 17,
+    "stall_med": 0.09293323755264282,
+    "stall_mean": 0.09331085401422837,
+    "blocked_frac": 0.0,
+    "open_offset_mean": -0.01628806530712354,
+    "open_offset_med": -0.01594400405883789
+  },
+  "PlugInEthernet": {
+    "n": 1841,
+    "stall_med": 0.33433035761117935,
+    "stall_mean": 0.30866015495531085,
+    "blocked_frac": 0.9103747963063552,
+    "open_offset_mean": -0.015311031183087213,
+    "open_offset_med": -0.015223503112792969
+  },
+  "PourOutMedicine": {
+    "n": 0,
+    "stall_med": 0.0,
+    "stall_mean": 0.0,
+    "blocked_frac": 0.0,
+    "open_offset_mean": -0.01621064969787711,
+    "open_offset_med": -0.009560108184814453
+  },
+  "SyringeWaterTransfer": {
+    "n": 713,
+    "stall_med": 0.3086445927619934,
+    "stall_mean": 0.28608638494370864,
+    "blocked_frac": 0.9915848527349228,
+    "open_offset_mean": -0.0038151504505891136,
+    "open_offset_med": 0.006101131439208984
+  },
+  "Unlock": {
+    "n": 1981,
+    "stall_med": 0.07869040220975876,
+    "stall_mean": 0.2296981854180456,
+    "blocked_frac": 0.4502776375567895,
+    "open_offset_mean": -0.00658861783777912,
+    "open_offset_med": -0.012715339660644531
+  },
+  "ZipUp": {
+    "n": 2945,
+    "stall_med": 0.22735076397657394,
+    "stall_mean": 0.225776545131296,
+    "blocked_frac": 0.8920203735144312,
+    "open_offset_mean": 0.0002061765752762967,
+    "open_offset_med": 1.430511474609375e-06
+  }
+}
