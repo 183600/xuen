@@ -3,466 +3,564 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 1 轮（新灵感循环第 1 轮；本轮灵感：「大语言模型」×「机器人」×「智能体」）
+# 第 2 轮（新灵感循环第 2 轮；本轮灵感：「深度相机」×「跨物体泛化」×「联邦学习」）
 
-> **基线**：上一轮（灵感「人形机器人」×「技术路线图」×「行为树」）MetricVoiceGauge-NCD-HUTDH-v16（定义 627–656；引理 131–136；实验 E671–E690）。
-> 本轮纪律：**语言计划是查询、证书格是唯一裁决、新鲜度阶梯是节拍**。不推倒 v16：v16 的 BTS/TRM/WBC/CSC/NCS/MCA/WCB、v13 的 AIO/RTIC/CPD/DGC/DDL/RTCR、v14 的 SCD/DSD/DCA/EDC、v12 的 USG/TGC/BAA/GAGP/UC、v11 的 HAS/HCC/HATD/HDT、v10 的 NGE/DSL/CC/CWM/CAE/NCP、v9 的 AC/MW/ID、v8 的 DA/SPR/Cal 与历轮不变式全部保留。六个新组件——CLP（认证语言规划器）、S2C（语义→证书编译器）、HCG（幻觉遏制守卫）、PSV（计划缝验证器）、APS（异步计划调度器）、AMC（剪除式经验记忆）——一律以**中立元接入 v16 行为层之上**，失效即严格退回 v16（引理 137），再沿 v16→v15→v14→v13→v12→v11→v10→v9→v8→v7→v6 退化链退回。本轮只做三件事：把"LLM 任务规划"改写为**带计划证书的语言计划**、把"智能体自主"改写为**共形语义认证与剪除式记忆**、把"LLM—机器人实时交互"改写为**不阻塞的新鲜度阶梯调度**。
+> **基线**：第 1 轮产出 MetricVoiceGauge-NCD-HUTDH-v17+IP-415–419（第 1 轮完整方案）。
+> 本轮纪律：**感知是协同推理、证书是联邦共识、泛化是分层迁移**。不推倒 v17：v17 的 CLP/S2C/HCG/PSV/APS/AMC 与 v19 的 DCM/OGCC/CCV/DRS/OGC 全部保留。本轮只做一件事：**把深度相机的感知能力通过联邦学习与跨物体泛化，安全地注入碰撞证书的采样验证中**。
 
 ## 0. 直觉与动机
 
-**灵感 1（大语言模型 → 语言计划是"查询"，不是"指令"）**
-直觉：LLM 输出的计划是自然语言；传统做法要么信任它（不安全：幻觉步骤直通执行器），要么无视它（浪费：最有价值的语义层被丢弃）。v16 已经建成了完全证书化的行为层（BT 节点证书 NC、里程碑证书 MC、WBC 阶层证书），这恰好构成一张**能力格（capability lattice）**。核心创新：**语义→证书编译器（Semantic-to-Certificate Compiler, S2C）**。语言计划的每个子任务 token 被*投影*到最近的认证锚节点上；投影距离超阈值则输出 ⊥（投影落空）。关键反直觉点：**我们故意剥夺 LLM 组合新能力的权利——它的创造力被限制在认证节点族内部的排序与参数化上；幻觉只会让系统"少能做"（⊥→回退→活动性下降），永远不会"做错事"（跨出证书边界）**。语言层在能力格之上，但无特权：LLM 是提议者，证书格是裁决者。
+**灵感 1（深度相机 → 感知是协同推理，不是离线离档）**
+直觉：深度相机的输出是稀疏的、有盲区的、受光照/遮挡影响的 3D 坐标；传统做法要么在离线回放里标完激光点云后才构建证书，要么用运行时的原彩图做碰撞检测（但原彩图的碰撞域往往过大）。v19 的 CCV 窄相位依赖 SDF 网格采样，盲区→保守→活性低。核心创新：**联邦感知证书计算器 (Perception Certificate Aggregator, PCA)**。深度相机的稀疏坐标经**局部平面拼接 + 联邦 consensus** 后生成**分层碰撞域**；不同机器人/设备的贡献按**安全可信度加权**，盲区处于**保守下界**；本地观测 + 远程协同 → **感知格 (Perception Lattice)**。关键反直觉点：**感知盲区不是由\"假设完美几何\"来填补，而是由\"跨设备联邦共识的保守边界\"来收敛**——盲区越多，保守边界越窄，且越来越不产生活性损失。
 
-**灵感 2（智能体 → 智能体必须自证可信：共形语义证书 + 计划缝证书）**
-直觉：智能体"自我批评/验证器"的最大问题是自证——verifier 与 proposer 来自同一分布，误差相关，自我验证会系统性失效。核心创新：**幻觉遏制守卫（Hallucination Containment Guard, HCG）+ 计划缝验证器（Plan-Seam Verifier, PSV）**。HCG 把"计划是否可信"变成共形预测问题：在校准集（已执行计划的 (上下文, 计划, 结局) 三元组日志）上计算非一致性分数 s(上下文, 计划)，只接受 s ≤ q̂_α（(1−α) 分位数）的计划；verifier LLM 的意见只进*分数特征*，永远没有直接裁决权。PSV 解决 HCG 看不见的东西：**计划缝隙**——由 individually certified 节点组成的计划，可能在节点交接处出现 `Post_i ∩ Pre_{i+1}` 为空或未被校准覆盖的暂态（"松手"后紧跟"搀扶"：每个节点都有证书，节点之间的关节没有）。PSV 要求计划接受时所有缝证书 `SC_i = Post_{n_i} ∩ Pre_{n_{i+1}}` 非空且体积 ≥ margin，运行时过缝时逐缝复验。关键反直觉点：**计划不是越大越好，而是越大负债越重**——更长计划意味着更多缝隙、更大的累积证书衰减；计划价值必须按长度与缝隙风险打折，"少执行一点计划"常常严格更优。
+**灵感 2（跨物体泛化 → 参数域的拓扑谱系，而非点投影）**
+直觉：第 1 轮的 OGCC 把 Θ_n^col(o_t) 定义为 Θ_n ∩ ColDom(n, o_t)，这是一种**集合交**的极端保守做法；但不同物体可能在参数空间上存在**等价子流形 (Equivalence Submanifolds)**：比如把“轻物体”泛化为“同形异质量的物体”，或把“柔软杯”泛化为“刚性杯”。v19 的 margin_col/δ_geom 机制会把这类相似性误判为碰撞风险。核心创新：**跨物体拓扑谱系 (Cross-Topology Spectrum, CTS)**。定义物体 o 的 **几何谱系 (Geometry Spectrum)** G(o) = (凸分解结构、SDF 标度、质心分布)，用 G(o) 来度量 Θ_n^col(o) 与 Θ_n^col(o') 之间的拓扑相似度；若相似度 ≥ γ，则沿**谱级联 (Spectral Cascade)** 进行泛化：**从“紧凑-小”谱系迁移到“稀疏-大”谱系时，仅在参数域的“尺度不变子集”上接受授权**。关键反直觉点：**跨物体泛化不是越多越好，而是越精准越好**—— CTS 只在谱系匹配的子集上放行，跨谱系的泛化自动退回到 v19 的保守收缩，甚至全拒绝。
 
-**灵感 3（机器人 → 实时与延迟解耦：不阻塞、阶梯式退化）**
-直觉：LLM 推理延迟（100ms–10s）与 50Hz 控制不可调和；同步等待 LLM 意味着失去实时证书。核心创新：**异步计划调度器（Asynchronous Plan Scheduler, APS）+ 新鲜度阶梯**。控制环永不等待 LLM：CLP 以 0.5–2Hz 异步提出计划；APS 维护计划缓存；缓存计划带时间戳与新鲜度证书；TTL 到期按**前缀截断**退化（保留头部、截去尾部）→ v16 默认策略（里程碑驱动的 BT 执行，无语言）→ v15 回退。关键反直觉点：**计划不是"越新越好"，而是"越旧越短"**——陈旧按证书衰减打折，退化只能截短、不能拼接、不能跨级；每一级阶梯都是上一级的子集。
+**灵感 3（联邦学习 → 证书的分布式共识，而非模型更新）**
+直觉：联邦学习通常用来训练共享模型，在这里不适用于模型参数（机器人动作空间是高度个体化的）。核心创新：**联邦证书共识 (Certificate Federated Consensus,CFC)**。每个机器人本地维护一个**(节点, 参数, 碰撞结果, 几何特征, 时间戳)** 的三元组；CFC 按**几何相似性 + 时间一致性** 将跨机器人的结果聚合；聚合后的碰撞域用**保守 Hull** 描述；聚合时用**拜占庭容错共识** 过滤异常贡献者（机器人故障/投毒）。CFC 的输出是**分层感知证书 (Hierarchical Perception Certificate, HPC)**：高层是全局 Hull，下层是局部置信区间。关键反直觉点：**证书的联邦不是把所有碰撞经验“平均”成一个通用模型，而是把“谁的几何在这里是安全的”以**分布式投票**的形式，编码进每个节点的**感知可达边界**中。
 
 **三者如何统一**
-统一为 **v16 行为层之上的语言规划层**：v16 回答"在当前里程碑硬件/软件/数据许可下、按行为树语义、用当前 WBC 阶层模型，能安全执行哪个全身行为序列"（`Exec_v16`），v17 回答"哪些语言计划能被安全编译为行为树节点序列并在计划证书下执行"（`Exec_v17`）。CLP 是提议侧（创造力），S2C 是编译侧（投影），HCG+PSV 是认证侧（共形+缝隙），APS 是调度侧（新鲜度），AMC 是经验侧（剪除式）。共享状态 `ζ_la=(B_tick, m*, h*, plan_cache, τ_fresh, q̂_α, mem_index, drift_la, mode_la)`。**CLP 回答"试什么"，S2C 回答"能映射到哪些认证节点"，HCG/PSV 回答"哪些计划值得接受"，APS 回答"这一帧执行计划的哪一段、或退到阶梯哪一级"，AMC 回答"历史上哪些计划该被剪除"**。五者不是五个补丁，而是"提议—编译—认证—调度—记忆"的实现链。
+统一为 **v19 证书体系之上的感知推理层**：v19 回答“给定当前几何对象，节点 n 在参数 θ 下是否零碰撞”，v20 回答“给定深度相机的分布式感知，节点 n 在参数 θ 下的感知可达性与全局碰撞概率”。PCA 是聚合侧（局部分析→全局共识），CTS 是谱系侧（跨物体谱系匹配），CFC 是协议侧（分布式共识）。共享状态 `ζ_fed = (local_points, global_hull, spectrum_signature, cfc_votes, τ_consensus, mode_fed)`。PCA 回答“当前感知给了哪些参数域”，CTS 回答“这些参数域在谱系上是否可迁移”，CFC 回答“这些谱系的结论是否通过分布式验证”。统一接口：**如果 PCA+CTS+CFC 三者都通过，CCV 的窄相位查询在该子域上返回 SAFE；否则退回到 v19 的保守收缩或 v18 默认路径**。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（语言计划的投影语义）**：如何定义 S2C 的 compile 使"投影落空必回退、投影命中必复用 v16 证书"？锚距离阈值 τ 如何与 HCG 的共形分位数联合校准？⊥ 时整计划拒绝还是逐节点回退？参数化子任务（"走到红桌边"）的参数如何投影到锚点的参数合法域？
-- **Q2（语义证书的共形性）**：非一致性分数 s(π,x) 如何构造才能拒绝"流畅但虚构"的计划？具身漂移/词表漂移下校准集的可交换性是否还成立？verifier LLM 如何只进特征不进裁决？α 与 FRR 的代价不对称如何权衡？
-- **Q3（计划缝证书的非空性与暂态）**：`SC_i = Post_{n_i} ∩ Pre_{n_{i+1}}` 在高维下体积塌缩怎么办？校准集未覆盖的缝组合如何外推？运行时过缝复验失败时回退到哪个节点、丢弃哪段计划？
-- **Q4（新鲜度、记忆与注入的活性边界）**：TTL/前缀截断如何最小化总损失？剪除式记忆如何既抗投毒又保留价值？提示注入下如何证明"最坏只损活性不损安全"？多计划竞争时如何确定性仲裁？
+- **Q1（联邦感知证书的保守性）**：PCA 的局部平面拼接如何保证拼接后碰撞域的 Hull 不偏小（漏掉安全区域）且不偏大（产生假阳性）？分布式贡献的权重如何在几何相似性 + 时间一致性下自动调节？盲区处的保守边界如何用置信区间而非硬阈值描述？
 
-## 2. 设计原则（在 P25–P27 基础上新增 P28–P30）
+- **Q2（跨物体谱系的拓扑度量）**：如何定义 G(o) 使得相似物体在几何谱系上靠近、差异物体则被保守地排斥？CTS 的谱系匹配阈值 γ 如何与 v19 的 margin_col 叠加，形成“尺度不变子集”的可接受参数域？在谱系不匹配时，如何最小化活性损失而不增加碰撞风险？
 
-**P28 语言无特权律（Language as Query, Not Authority）**
-LLM 输出只是*查询*，不是*授权*：S2C 的 compile 必须满足 `compile(t) ∈ Anchors(m*, h*) ∪ {⊥}`，其中 Anchors 是 v16 当前满足 `m_n ≤ m* ∧ h_n ≤ h*` 的已认证 BT 节点锚集。投影 ⊥ 必须退到回退；投影命中必须复用该节点 NC 原文，不得放宽；任何输出形态（含工具调用、代码、JSON）都不得绕过 HCG/PSV/TRM。**语言层可新增的动作集合基数恒为零**。
+- **Q3（分布式共识的拜占庭容错）**：CFC 的共识算法如何在机器人数量 N ≤ 10 且参与者可能故障/N ≥ 1 的情况下收敛？异常贡献者（故障/投毒）如何通过几何特征 + 结果一致性被识别并剔除？聚合后的 HPC 如何以可审计的 proof 形式呈现，供 CCV 的 cert_phase 使用？
 
-**P29 计划证书不弱于节点证书律（Plan Certificate Includes Seams）**
-计划证书 `PC(π) = ∧_i NC(n_i) ∧ ∧_i [SC_i ≠ ∅ ∧ vol(SC_i) ≥ margin_sc] ∧ (∀i: m(n_i) ≤ m* ∧ h(n_i) ≤ h*)`，其中 `SC_i = Post_{n_i} ∩ Pre_{n_{i+1}}`。计划接受时必须**预验全部 SC**；运行时过缝必须**即时复验**；复验失败立即退到前一节点的 Fallback 并丢弃计划剩余段（引理 139）。计划整体只在 PC 成立时允许运行；前缀截断后的部分计划也必须满足 PC（PC 对前缀封闭）。
+- **Q4（感知盲区与控制的时序协调）**：深度相机的帧率（10–30Hz）与机器人控制（50Hz）不同步，PCA 的聚合延迟如何被 APS 的新鲜度阶梯所覆盖？感知盲区随时间演变（遮挡、光照）如何动态调整 margin_col 与 τ_consensus？如何在“联邦聚合未完成”时维持 v19 的安全执行？
 
-**P30 不阻塞阶梯律（Non-Blocking Freshness Ladder）**
-50Hz 控制环永不等待 LLM：CLP 以 0.5–2Hz 异步提议；APS 持有缓存；缓存计划带新鲜度 `τ = now − t_accept`；`τ ≤ TTL` 是执行的必要条件；`τ > TTL` 先**前缀截断**（从尾部截短、保留头部），`τ > 2·TTL` 降为 v16 默认策略，漂移触发降为 v15 回退。阶梯只有四级：FULL → PREFIX → V16_DEFAULT → V15_FALLBACK，严格单调，禁止跨级、禁止拼接；**新计划只能整体替换缓存计划**。
+## 2. 设计原则（在 P28–P30 基础上新增 P31–P33）
+
+**P31 感知格保守律（Perception Lattice Conservatism）**
+深度相机的稀疏观测 `P_local = {p_i}` 通过 PCA 聚合形成全局碰撞域 `ColDom_fed(n, o) = Hull(∪_{robots} contrib_j)`。聚合时，**每个机器人的贡献都要通过局部 CCV 验证**：若 `∃p_i ∈ contrib_j` 且 CCV(n, o, θ| p_i) ≠ SAFE，则 contrib_j 引入 **感知风险系数** `ρ_j = 1 - ε_j`（ε_j 为风险比例），最终域为 `ColDom_fed = ⋂_j [ColDom_local(j) / ρ_j]`。**盲区处于保守 Hull 的外部**：即使某 robot 的 contrib_j 在某区域缺失，全局 Hull 仍以最坏（最大）碰撞体积界定。**感知层的动作集合基数恒为零**：PCA 只能缩小或维护已知安全域，不能授权新的动作。
+
+**P32 谱系可迁移律（Cross-Topology Spectrum Transferability）**
+定义物体 o 的 **几何谱系签名** `G(o) = (S_structure, S_scale, M_center)`：
+- `S_structure`：凸分解的拓扑类型（如 V-HACD 的子图谱、凸包个数、凹凸程度）
+- `S_scale`：SDF 的标度参数（最小/最大距离、分辨率比例）
+- `M_center`：质心在参数空间的分布特征（均值、协方差）
+
+定义谱系相似度 `γ(o, o') = w_s·cos(S_structure(o), S_structure(o')) + w_sc·min(S_scale(o)/S_scale(o'), S_scale(o')/S_scale(o)) + w_m·exp(-||M_center(o) - M_center(o')||² / σ²)`。
+
+CTS 接受规则：**若 γ(o, o') ≥ γ_threshold，则允许谱系级联**：`Θ_n^cts(o') = Θ_n^col(o) ∩ ScaleInvariantSet(γ_threshold)`；若 γ(o, o') < γ_threshold，则退回 v19 的保守收缩 `Θ_n^col(o')`，或全拒绝。**谱系迁移只能收缩，不能扩张参数域**。
+
+**P33 联邦共识安全律（Federated Consensus Safety）**
+CFC 使用 **pBFT 变体** 或 **基于排序的共识**，在 N 个机器人中容纳至多 F = ⌊(N-1)/3⌋ 个拜占庭故障者。共识消息包含：`(node_n, theta_sample, collision_verdict, geometric_features, timestamp, robot_id)`。若 F+1 个以上节点对同一 `(node_n, theta_sample)` 达成 `{SAFE}` 共识，则该 θ_sample 被接受至全局 HPC；若 ≥ F+1 个达成 `{UNSAFE}`，则 θ_sample 被 **硬性排除**；若投票在 50–50 区间，则 θ_sample 进入 **置信区间** `[θ_low, θ_high]`，由置信区间的保守 Hull 界定。**共识的结果必须通过可审计的 Merkle Proof** 链式存储，供后续 CCV cert_phase 检查。
 
 ## 3. 与基线的接口（如何退化）
 
-- CLP 失效（LLM 超时/OOM/掉线）⇒ APS 缓存按 TTL 退化，随后 v16 默认策略（里程碑驱动的 BT 执行，无语言计划）——**等价 v16 路径**；
-- S2C 失效（嵌入服务不可用）⇒ 所有计划 ⊥，整计划回退——**等价 v16（更保守）**；
-- HCG 失效（校准集损坏）⇒ 切换确定性白名单（只放行历史校准过的 top-K 高频指令模式）——**等价 v16（活性下降）**；
-- PSV 失效 ⇒ 计划接受加保守约束：只允许单节点计划——**等价 v16（单步执行）**；
-- APS 失效 ⇒ 同步模式：每控制秒至多接受一个计划、超时视为无计划——**等价 v16**；
-- AMC 失效 ⇒ 空记忆：不剪除、不排序——**等价 v16**；
-- 六者全失效 ⇒ MetricVoiceGauge-NCD-HUTDH-v16，再沿退化链退回 v15/v14/v13/v12/v11/v10/v9/v8/v7/v6；
-- **安全继承**：S2C 只向下投影到既有锚，HCG 只能拒绝不能授权，PSV 只增缝约束，APS 只截短不拼接，AMC 只剪除不新增。六端口互不相交，均不能新增授权或放宽任何阈值；`Exec_v17⊆Exec_v16` 由引理 137 保证。
+- PCA 失效（深度相机故障/数据丢失）⇒ CCV 窄相位退化为 v19 纯 SDF 查询 ⇒ 等价 v19（更保守）；
+- CTS 失效（谱系计算不可用）⇒ OGCC 只做 v19 的保守收缩 ⇒ 等价 v19；
+- CFC 失效（联邦网络分区）⇒ 只接受本地机器人的贡献，盲区扩大 ⇒ 等价 v19（局部保守）；
+- 三者全失效 ⇒ 完全回退到 v19 的 CCV ⇒ 等价 v19；
+- **安全继承**：PCA 只能收敛域、CTS 只能收缩域、CFC 只能筛选域；三者的任意失效都导致域收敛性增强，`Exec_v20 ⊆ Exec_v19` 由引理 151 保证。
 
 ## 4. 预期贡献
 
-1. **语言无特权编译**：首次把"LLM 计划→机器人执行"改写为"向证书格投影"，证明幻觉率只与活性损失挂钩、不安全率相对 v16 恒为零，填补"语言模型直通控制回路"的空白；
-2. **计划缝证书**：发现并形式化"每个节点都有证书、节点之间却无证书"的缝隙缺口，给出 SC_i 非空性、体积阈值与运行时复验语义，使计划级安全从"看起来合理"升级为"暂态被覆盖"；
-3. **共形语义证书**：给出 verifier 只进特征、有限样本分位数接受规则，使"智能体自我信任"首次独立于提议者的统计保证；
-4. **不阻塞新鲜度阶梯**：把"LLM 延迟 × 实时控制"冲突改写为 TTL+前缀截断的四级单调阶梯，证明控制环 p99 与 LLM 推理 p99 解耦；
-5. **剪除式经验记忆**：智能体记忆只能剪除候选与重排序、不能扩证书，关闭记忆投毒的授权攻击面；
-6. **提议—编译—认证—调度—记忆五层分离**：v12 管"允许什么"，v13 管"时限内实现多少"，v15 管"技能如何扩散"，v16 管"全身行为如何按里程碑执行"，v17 管"哪些语言计划被编译与调度"，用 `Exec_v17⊆Exec_v16⊆Exec_v15⊆Exec_v13⊆Exec_v12` 把语言、行为、路线、动力学、实时、蒸馏全解耦；E691–E710 覆盖编译精度、共形覆盖、缝隙暂态、注入鲁棒、阶梯新鲜度、记忆投毒、端到端与消融。
+1. **联邦感知证书**：首次把“深度相机稀疏观测→碰撞证书”改写为分布式共识的保守 Hull，使得感知盲区在协同后收敛，填补“离线感知=离线安全、运行时感知=活性”的鸿沟；
+2. **跨物体谱系**：发现“参数域在几何谱系上的等价结构”，给出 CTS 的谱系签名、相似度度量与级联规则，使跨物体泛化从“集合交”升级为“拓扑一致下的尺度不变子集”；
+3. **分布式碰撞共识**：给出 CFC 的拜占庭容错共识算法、几何特征驱动的异常剔除、置信区间保守描述，首次实现“机器人群体对碰撞安全的分布式自我验证”；
+4. **感知与控制的时序协调**：用 APS 的 τ_consensus 与 margin_col 动态耦合，使得感知盲区随时间以置信区间演化，控制环始终保有可验证的安全边界；
+5. **层次化感知格**：PCA+CTS+CFC 构成感知格，落在 v19 的证书体系之上，`Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`，实现“感知协同→跨物体泛化→碰撞安全”的闭环。
 
 ## 5. 本轮最大风险
 
-**一句话**：HCG 的共形证书与 PSV 的缝体积估计都依赖"校准集覆盖了当前计划的组合模式"，但 LLM 的价值恰恰是产出**前所未见的组合**——新颖组合可能逐节点语义分在分位数内、逐节点证书成立、缝隙形式非空（全是基于采样的估计），运行时却在**校准集从未覆盖的缝隙暂态**上失稳，即"逐节点证书成立、语义共形通过、里程碑许可满足，而节点之间关节的证书是外推估计"的、新颖且共形却绝对不安全的语言计划。
+**一句话**：PCA 的联邦聚合依赖远程机器人的几何特征（凸分解结构、SDF 标度、质心分布）若**被同一类几何奇异性系统性误标为“安全贡献”**（如均漏掉薄壁结构），则全局 Hull 会**系统性偏小**，导致“形式上通过联邦共识、感知格给出 SAFE、但实际碰撞”的**分布式误判中心风险**——即“众口铄金的碰撞盲区”。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# IP-415–419 v19 新增核心模块
+# IP-420–424 v20 新增感知层核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v18） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v19） |
 |---|---|---|---|
-| IP-415 | Demonstration Certificate Miner (DCM) | 新增核心模块 | 演示反向编译：轨迹→节点证书序列+缝证书+碰撞证书；投影落空即丢弃 |
-| IP-416 | Object-Generalized Collision Certificate (OGCC) | 新增核心模块 | 物体泛化即碰撞域收缩：Θ_n^col(o_t) = Θ_n ∩ ColDom(n, o_t)、体积门控、亏空上界 |
-| IP-417 | Collision Certificate Verifier (CCV) | 新增在线验证模块 | 三层碰撞裁决（广相位/窄相位/证书相位）；UNKNOWN=UNSAFE；可审计 proof |
-| IP-418 | Demonstration Replay Scheduler (DRS) | 新增在线调度模块 | 演示回放异步、不阻塞、优先级驱动；新锚经 SAS 影子晋升→NCS 正式化 |
-| IP-419 | Object Geometry Catalog (OGC) | 新增编目模块 | 物体几何表示：凸分解+SDF 缓存+Minkowski 预计算；支持保守 ColDom 查询 |
+| IP-420 | Perception Certificate Aggregator (PCA) | 新增感知聚合模块 | 联邦聚合稀疏深度点云→分层碰撞域；盲区保守 Hull；感知风险系数化权重 |
+| IP-421 | Cross-Topology Spectrum (CTS) | 新增泛化度量模块 | 定义几何谱系签名 G(o)，计算谱系相似度 γ，实施尺度不变子集迁移 |
+| IP-421 | Cross-Topology Spectrum (CTS) | 新增泛化度量模块 | 定义几何谱系签名 G(o)，计算谱系相似度 γ，实施尺度不变子集迁移 |
+| IP-422 | Certificate Federated Consensus (CFC) | 新增分布式共识模块 | pBFT 变体容错 F = ⌊(N-1)/3⌋；几何特征驱动异常剔除；置信区间 Hull |
+| IP-423 | Hierarchical Perception Certificate (HPC) | 新增证书结构模块 | 多层碰撞域表示：全局 Hull + 局部置信区间 + 感知风险系数；Merkle Proof 可审计 |
+| IP-424 | Consensus Freshness Controller (CFCtrl) | 新增时序协调模块 | τ_consensus ≥ TTL 时回退 v19；margin_col 动态按感知置信度调节；APS 集成 |
 
-## 0. 核心符号体系（定义 727–766）
+## 0. 核心符号体系（定义 767–820）
 
 | 符号 | 含义 |
 |---|---|
-| τ = (x_0, a_0, ..., x_T) | 专家演示轨迹：状态-动作序列 |
-| DCM(·) | 演示证书挖掘器：反向编译 τ → (nodes, seams, CC) ∪ {⊥}（定义 727） |
-| segment(τ, n) | 演示子段：对应节点 n 的连续片段 |
-| mine_segment(seg, x) → n ∪ {⊥} | 子段投影：最近锚（复用 S2C）；距离 > τ_mine 或碰撞证书失败 ⇒ ⊥（定义 728） |
-| CC(τ) = (collision_free, proof) | 演示碰撞证书：全轨迹零碰撞的保守证明（定义 729） |
-| ColDom(n, o) ⊆ Θ_n | 节点 n 在物体 o 上的碰撞安全参数域（定义 730） |
-| Θ_n^col(o) = Θ_n ∩ ColDom(n, o) | 泛化后的碰撞参数域（定义 731） |
-| margin_col | 碰撞域最小体积阈值；体积 < margin_col ⇒ 拒绝泛化 |
-| def_col(T) = vol(Θ_n) - vol(Θ_n^col(o_t)) | 泛化亏空：参数域体积损失（定义 732） |
-| δ_geom | 独立几何探针给出的亏空保守上界（定义 733） |
-| OGCC 接受规则 | Θ_n^col(o_t) ≠ ∅ ∧ vol(Θ_n^col(o_t)) ≥ margin_col ∧ def_col ≤ δ_geom（定义 734） |
-| CCV(n, o, θ) → {SAFE, UNSAFE, UNKNOWN} | 碰撞证书验证器：三层裁决，UNKNOWN 视为 UNSAFE（定义 735） |
-| broad_phase(n, o, θ) | 广相位：凸包/AABB 快速剔除，返回 {POSSIBLE, SAFE}（定义 736） |
-| narrow_phase(n, o, θ) | 窄相位：GJK/EPA/SDF 精确查询，返回 {SAFE, UNSAFE, UNKNOWN}（定义 737） |
-| cert_phase(n, o, θ, verdict) | 证书相位：封装 ColCert = (n, o, θ, verdict, proof)（定义 738） |
-| ColCert = (n, o, θ, verdict, proof) | 碰撞证书：含可审计几何推导链（定义 739） |
-| DRS(·) | 演示回放调度器：异步、优先级驱动、不阻塞 50Hz（定义 740） |
-| priority(τ) = α·novelty(τ) + β·cert_gap(τ) - γ·age(τ) | 回放优先级：新锚潜力 - 陈旧惩罚（定义 741） |
-| OGC(o) = (convex_decomp, sdf_cache, minkowski_cache) | 物体几何编目条目（定义 742） |
-| convex_decomp(o) = {H_1, ..., H_K} | 物体凸分解：凸包集合（定义 743） |
-| sdf_cache(o) : SE(3) → R | 符号距离场缓存：离线预计算、在线插值（定义 744） |
-| minkowski_cache(n, o) | 末端执行器与物体的 Minkowski 和预计算（定义 745） |
-| ζ_demo = (demo_buffer, anchor_mined, col_cert_cache, obj_catalog, cgv_q̂, mode_demo) | 演示层共享状态（扩展 v18 ζ_ood，定义 746） |
-| Exec_v19 | 通过 DCM/OGCC/CCV 且编译节点序列可被 v18 CSC 执行的演示衍生计划集合（定义 747） |
+| P_local^r = {p_i^r} | 机器人 r 的本地稀疏深度点云 |
+| contrib_j | 机器人 j 对节点的贡献：(points, verifications, features, timestamp, id) |
+| ρ_j = 1 - ε_j | 机器人 j 的感知风险系数：ε_j 为其局部 CCV 失败率 |
+| ColDom_fed(n, o) | 联邦感知碰撞域：全局 Hull 聚合结果 |
+| G(o) = (S_structure, S_scale, M_center) | 物体 o 的几何谱系签名 |
+| S_structure | 凸分解结构：拓扑类型 / 凸包个数 / 凹凸程度 |
+| S_scale | SDF 标度：min_dist / max_dist / resolution_ratio |
+| M_center | 质心分布：均值 / 协方差 |
+| γ(o, o') | 谱系相似度：加权 cos + scale ratio + exp(-dist²) |
+| Θ_n^cts(o') | CTS 迁移后参数域：Θ_n^col(o) ∩ ScaleInvariantSet |
+| ScaleInvariantSet(γ_threshold) | 在谱系匹配阈值下的尺度不变参数子集 |
+| HPC(n) = (Hull_global, CI_local, ρ_max) | 层次化感知证书：全局 Hull + 局部置信区间 + 最大风险系数 |
+| τ_consensus | 联邦聚合完成的时间戳 |
+| margin_col_fed = margin_col · (1 + λ·ρ_max) | 联邦感知动态 margn |
+| F = ⌊(N-1)/3⌋ | 拜占庭容错阈值：最多容纳 F 个故障机器人 |
+| Vote(θ) → {SAFE, UNSAFE, UNKNOWN} | θ 在共识轮次的投票结果 |
+| merkle_path(HPC) | HPC 的 Merkle Proof：可审计的聚合链 |
+| ζ_fed = (local_points, global_hull, spectrum_signature, cfc_votes, τ_consensus, mode_fed) | 联邦感知层共享状态 |
+| Exec_v20 | 通过 HPC 验证且可被 v19 CSC 执行的感知增强计划集合 |
 
 ## 1. 关键算法骨架
 
 ```python
-# IP-415 Demonstration Certificate Miner：演示→证书序列+碰撞证书
-class DemonstrationCertificateMiner:
-    def __init__(self, s2c, ccv, tau_mine, margin_seam, margin_col):
-        self.s2c = s2c              # 复用 v17 S2C 投影
-        self.ccv = ccv              # 碰撞证书验证器（硬门）
-        self.tau_mine = tau_mine
-        self.margin_seam = margin_seam
-        self.margin_col = margin_col
+# IP-420 Perception Certificate Aggregator
+class PerceptionCertificateAggregator:
+    def __init__(self, ccv, margin_col_base=0.01, risk_alpha=0.5):
+        self.ccv = ccv                    # 复用 v19 CCV 作为本地验证器
+        self.margin_col_base = margin_col_base
+        self.risk_alpha = risk_alpha      # 风险系数放大系数
 
-    def mine(self, tau, x, m_star, h_star, obj):
-        # 1. 轨迹分段：按动作语义/接触事件切分为子段
-        segments = self.segment_trajectory(tau, obj)
-        nodes, seams, col_certs = [], [], []
+    def aggregate(self, robot_contributions, node, obj):
+        """
+        机器人贡献列表: contrib_j = (points, verifications, features, ts, id)
+        返回: (ColDom_fed, risk_profile)
+        """
+        if not robot_contributions:
+            return None, "NO_CONTRIBUTION"
 
-        for seg in segments:
-            # 2. 子段投影到最近锚（复用 S2C）
-            hit, d = self.s2c.compile_token(seg.intent_token, x, m_star, h_star)
-            if hit is None:
-                return None, 'MINE_PROJ_FAIL'   # ⊥：整段演示作废
+        verified_parts = []
+        risk_factors = []
 
-            n, theta = hit
-            # 3. 碰撞证书：该子段在演示物体上必须零碰撞
-            col_ok, col_cert = self.ccv.verify_segment(seg, n, theta, obj)
-            if not col_ok:
-                return None, 'MINE_COL_FAIL'
+        for contrib in robot_contributions:
+            points, verifications, features, ts, rid = contrib
+            # 1. 本地 CCV 验证：每一点都要安全
+            all_safe = True
+            unsafe_ratio = 0.0
+            for p, verdict in zip(points, verifications):
+                if verdict != "SAFE":
+                    all_safe = False
+                    unsafe_ratio += 1.0
 
-            nodes.append((n, theta))
-            col_certs.append(col_cert)
+            unsafe_ratio /= max(1, len(verifications))
 
-        # 4. 缝证书预验（复用 PSV）
-        ok, i, sc = self.psv.verify([n for n,_ in nodes])
-        if not ok:
-            return None, f'MINE_SEAM_FAIL@{i}'
+            # 2. 计算风险系数 ρ
+            # 若本地验证出现碰撞，直接剔除该贡献
+            if unsafe_ratio > 0.1:
+                continue
 
-        # 5. 全轨迹碰撞证书（连续时间保守证明）
-        cc_tau = self.construct_continuous_col_cert(tau, obj, col_certs)
-        return MinedDemo(nodes=nodes, seams=seams, col_certs=col_certs, cc_tau=cc_tau), 'OK'
+            # 风险系数：CCV 失败率决定权重
+            epsilon = unsafe_ratio * self.risk_alpha
+            rho = 1.0 - epsilon
 
-    def construct_continuous_col_cert(self, tau, obj, col_certs):
-        # 用凸包包络整段轨迹，配合 Minkowski 和证明连续无碰撞
-        hull = convex_hull([x for x,_,_ in tau])
-        proof = minkowski_proof(hull, obj, self.ogc.minkowski_cache(obj))
-        return ColCertFull(trajectory=tau, obj=obj, hull=hull, proof=proof, verdict='SAFE')
+            # 3. 贡献点的保守 Hull
+            safe_hull = self.compute_hull(points)
+            verified_parts.append(safe_hull)
+            risk_factors.append(rho)
+
+        if not verified_parts:
+            return None, "ALL_CONTRIB_UNSAFE"
+
+        # 4. 联邦 Hull：全局 Hull = ⋂_j [Hull_j / ρ_j]
+        # 实际计算：取所有 Hull 的并集，再按最大风险收缩
+        global_hull = hull_union(verified_parts)
+        max_risk = max(risk_factors) if risk_factors else 1.0
+
+        # 5. 动态 margin_col_fed
+        margin_fed = self.margin_col_base * (1.0 + self.risk_alpha * (1.0 - max_risk))
+
+        return ColDomFed(hull=global_hull, margin=margin_fed, rho_max=max_risk), "OK"
+
+    def compute_hull(self, points):
+        """计算点云的保守凸包 Hull"""
+        if not points:
+            return ConvexHull.empty()
+        return ConvexHull.from_points(points)
+
+    def query_fed_domain(self, n, obj, theta_dom):
+        """查询联邦感知域是否覆盖给定参数域"""
+        col_dom_fed, status = self.aggregate(self.robot_contrib_cache.get(n, []), n, obj)
+        if status != "OK":
+            return False
+        return col_dom_fed.contains(theta_dom) and col_dom_fed.volume() >= col_dom_fed.margin
 
 
-# IP-416 Object-Generalized Collision Certificate：泛化即碰撞域收缩
-class ObjectGeneralizedCollisionCertificate:
-    def __init__(self, ogc, ccv, margin_col, delta_geom_probe):
+# IP-421 Cross-Topology Spectrum (CTS)
+class CrossTopologySpectrum:
+    def __init__(self, ogc, gamma_threshold=0.85):
         self.ogc = ogc
-        self.ccv = ccv
-        self.margin_col = margin_col
-        self.delta_geom_probe = delta_geom_probe   # 独立几何探针
+        self.gamma_threshold = gamma_threshold
+        self.spectrum_cache = {}   # obj_id -> G(o)
 
-    def generalize(self, n, theta_src, obj_src, obj_tgt):
-        # 1. 获取源节点的完整参数域 Θ_n
-        theta_dom = self.get_param_domain(n)
-        # 2. 查询目标物体的碰撞安全域 ColDom(n, obj_tgt)
-        col_dom = self.query_col_dom(n, obj_tgt)
-        # 3. 求交：泛化后的碰撞参数域
-        theta_col = intersect_domains(theta_dom, col_dom)
-        if theta_col is None or theta_col.volume() < self.margin_col:
-            return None, 'OGCC_VOLUME_ZERO'
+    def compute_spectrum(self, obj):
+        """计算物体的几何谱系签名 G(o)"""
+        if obj in self.spectrum_cache:
+            return self.spectrum_cache[obj]
 
-        # 4. 亏空估计：体积损失
-        def_col = theta_dom.volume() - theta_col.volume()
-        # 5. 独立几何探针给保守上界
-        delta_geom = self.delta_geom_probe.upper_bound(n, obj_src, obj_tgt)
-        if def_col > delta_geom:
-            return None, 'OGCC_DEFICIT_EXCEEDS_BOUND'
-
-        # 6. CCV 硬验证：在收缩域内采样验证
-        if not self.ccv.verify_domain(n, obj_tgt, theta_col):
-            return None, 'OGCC_CCV_REJECT'
-
-        return GeneralizedCert(node=n, theta_col=theta_col, def_col=def_col,
-                               delta_geom=delta_geom, obj_tgt=obj_tgt), 'OK'
-
-    def query_col_dom(self, n, obj):
-        # 保守构造 ColDom：用凸分解+SDF+Minkowski 的交
-        ogc_entry = self.ogc.get(obj)
-        # 广相位剔除：AABB/凸包快速判定
-        broad_safe = self.ccv.broad_phase(n, obj, theta_dom.representative())
-        if broad_safe == 'SAFE':
-            return theta_dom   # 全域安全
-        # 窄相位：在参数域上构造 SDF 采样网格，保守内切
-        return self.construct_conservative_col_dom(n, obj, ogc_entry)
-
-
-# IP-417 Collision Certificate Verifier：三层碰撞裁决
-class CollisionCertificateVerifier:
-    def __init__(self, ogc, broad_eps=1e-3, narrow_eps=1e-4):
-        self.ogc = ogc
-        self.broad_eps = broad_eps
-        self.narrow_eps = narrow_eps
-
-    def verify(self, n, obj, theta):
-        # 广相位：凸包/AABB 快速剔除
-        broad = self.broad_phase(n, obj, theta)
-        if broad == 'SAFE':
-            return 'SAFE', self.cert_phase(n, obj, theta, 'SAFE', proof='broad_phase_convex_disjoint')
-
-        # 窄相位：GJK/EPA/SDF 精确查询
-        narrow = self.narrow_phase(n, obj, theta)
-        if narrow == 'SAFE':
-            return 'SAFE', self.cert_phase(n, obj, theta, 'SAFE', proof='narrow_phase_gjk_separation')
-        if narrow == 'UNSAFE':
-            return 'UNSAFE', self.cert_phase(n, obj, theta, 'UNSAFE', proof='narrow_phase_gjk_penetration')
-
-        # UNKNOWN：数值退化/退化配置/采样不足
-        return 'UNSAFE', self.cert_phase(n, obj, theta, 'UNSAFE', proof='narrow_phase_unknown_conservative')
-
-    def broad_phase(self, n, obj, theta):
-        # 末端执行器凸包 与 物体凸分解 的快速分离测试
-        ee_hull = self.ee_convex_hull(n, theta)
-        obj_hulls = self.ogc.get(obj).convex_decomp
-        for H in obj_hulls:
-            if not gjk_disjoint(ee_hull, H, eps=self.broad_eps):
-                return 'POSSIBLE'
-        return 'SAFE'
-
-    def narrow_phase(self, n, obj, theta):
-        # SDF 插值查询 + GJK/EPA 精确验证
-        sdf_val = self.ogc.get(obj).sdf_cache.query(ee_pose(n, theta))
-        if sdf_val > self.narrow_eps:
-            return 'SAFE'
-        if sdf_val < -self.narrow_eps:
-            return 'UNSAFE'
-        # |sdf| ≤ eps：退化带，用 GJK/EPA 仲裁
-        pen, witness = gjk_epa(ee_hull, obj_mesh, eps=self.narrow_eps)
-        if pen is None:
-            return 'SAFE'
-        if pen > self.narrow_eps:
-            return 'UNSAFE'
-        return 'UNKNOWN'   # 数值不确定 → 保守视为 UNSAFE
-
-    def cert_phase(self, n, obj, theta, verdict, proof):
-        return ColCert(node=n, obj=obj, theta=theta, verdict=verdict, proof=proof)
-
-    def verify_segment(self, seg, n, theta, obj):
-        # 对演示子段的离散轨迹点逐点验证，再用凸包包络做连续证明
-        for x in seg.states:
-            v, _ = self.verify(n, obj, theta_at(x))
-            if v != 'SAFE':
-                return False, None
-        return True, self.construct_segment_cert(seg, n, obj)
-
-    def verify_domain(self, n, obj, theta_dom):
-        # 在收缩域上采样验证：网格 + 随机 + 边界
-        samples = theta_dom.sample_grid() + theta_dom.sample_random() + theta_dom.sample_boundary()
-        for theta in samples:
-            v, _ = self.verify(n, obj, theta)
-            if v != 'SAFE':
-                return False
-        return True
-
-
-# IP-418 Demonstration Replay Scheduler：异步回放、不阻塞、影子晋升
-class DemonstrationReplayScheduler:
-    def __init__(self, dcm, sas, ccv, period=1.0, max_concurrent=1):
-        self.dcm = dcm
-        self.sas = sas          # 影子锚合成器（v18）
-        self.ccv = ccv
-        self.period = period
-        self.queue = PriorityQueue()
-        self.running = False
-
-    def enqueue(self, tau, obj, priority=None):
-        if priority is None:
-            priority = self.compute_priority(tau, obj)
-        self.queue.put((-priority, tau, obj))   # 大顶堆
-
-    def compute_priority(self, tau, obj):
-        novelty = self.estimate_novel_anchors(tau)   # 预估能挖出多少新锚
-        cert_gap = self.estimate_cert_gap(obj)       # 该物体当前证书覆盖缺口
-        age = self.time_since_last_replay(obj)
-        return 0.5 * novelty + 0.3 * cert_gap - 0.2 * age
-
-    def poll(self, now, x, m_star, h_star):
-        if self.running or self.queue.empty():
-            return
-        _, tau, obj = self.queue.get()
-        self.running = True
-        # 后台任务：不阻塞 50Hz
-        self.executor.submit(self._replay_worker, tau, obj, x, m_star, h_star)
-
-    def _replay_worker(self, tau, obj, x, m_star, h_star):
-        try:
-            mined, status = self.dcm.mine(tau, x, m_star, h_star, obj)
-            if status == 'OK':
-                # 新锚进入 SAS 影子池（零授权）
-                for n, theta in mined.nodes:
-                    if n not in self.s2c.anchors:
-                        self.sas.add_shadow_anchor(n, theta, mined.col_certs, obj)
-        finally:
-            self.running = False
-
-
-# IP-419 Object Geometry Catalog：物体几何编目
-class ObjectGeometryCatalog:
-    def __init__(self, convex_eps=1e-3, sdf_res=0.01):
-        self.catalog = {}   # obj_id → OGCEntry
-        self.convex_eps = convex_eps
-        self.sdf_res = sdf_res
-
-    def register(self, obj_id, mesh):
-        # 1. 凸分解（V-HACD 或近似凸包）
-        convex_decomp = vhacd_decompose(mesh, eps=self.convex_eps)
-        # 2. SDF 缓存：在包围盒内均匀采样
-        sdf_cache = SDFGrid(mesh, resolution=self.sdf_res)
-        sdf_cache.precompute()
-        # 3. Minkowski 和预计算：对每类末端执行器预计算
-        minkowski_cache = {}
-        for ee_type in EE_TYPES:
-            minkowski_cache[ee_type] = minkowski_sum(ee_type.convex_hull, convex_decomp)
-        self.catalog[obj_id] = OGCEntry(convex_decomp, sdf_cache, minkowski_cache)
-
-    def get(self, obj_id):
-        return self.catalog.get(obj_id)
-
-    def query_col_dom_conservative(self, n, obj_id, theta_dom):
-        # 保守内切：只保留 SDF > margin 的参数子域
-        entry = self.get(obj_id)
+        entry = self.ogc.get(obj)
         if entry is None:
-            return EmptyDomain()
-        return entry.sdf_cache.conservative_inner_domain(theta_dom, margin=0.02)
+            return None
+
+        # S_structure: 凸分解拓扑特征
+        num_hulls = len(entry.convex_decomp)
+        avg_hull_area = sum(h.area() for h in entry.convex_decomp) / num_hulls
+        topology_signature = (num_hulls, avg_hull_area)
+
+        # S_scale: SDF 标度
+        sdf_stats = entry.sdf_stats()   # (min_dist, max_dist, resolution)
+        scale_signature = sdf_stats
+
+        # M_center: 质心分布
+        centroid_dist = entry.centroid_variance()
+
+        G = SpectrumSignature(
+            S_structure=topology_signature,
+            S_scale=scale_signature,
+            M_center=centroid_dist
+        )
+        self.spectrum_cache[obj] = G
+        return G
+
+    def similarity(self, obj1, obj2):
+        """计算谱系相似度 γ(o, o')"""
+        G1 = self.compute_spectrum(obj1)
+        G2 = self.compute_spectrum(obj2)
+
+        if G1 is None or G2 is None:
+            return 0.0
+
+        w_s, w_sc, w_m = 0.4, 0.4, 0.2  # 可调权重
+
+        # 结构相似性：余弦相似性
+        cos_struct = self.cosine_structure(G1.S_structure, G2.S_structure)
+
+        # 比例相似性：最小比值
+        ratio_sc = min(
+            G1.S_scale.max_dist / G2.S_scale.max_dist,
+            G2.S_scale.max_dist / G1.S_scale.max_dist
+        )
+
+        # 质心相似性：指数衰减
+        exp_m = math.exp(-G1.M_center**2 / (2 * G2.M_center**2)
+                        - G2.M_center**2 / (2 * G1.M_center**2))
+
+        gamma = w_s * cos_struct + w_sc * ratio_sc + w_m * exp_m
+        return gamma
+
+    def transfer_domain(self, node, theta_src, obj_src, obj_tgt):
+        """
+        基于谱系相似度进行跨物体泛化
+        返回：Θ_n^cts(o_t) 或 None（不可迁移）
+        """
+        gamma = self.similarity(obj_src, obj_tgt)
+
+        if gamma < self.gamma_threshold:
+            return None, "SPECTRUM_MISMATCH"
+
+        # 1. 获取源对象的碰撞参数域
+        theta_dom_src = self.get_param_domain(node, obj_src)
+
+        # 2. 计算 ScaleInvariantSet
+        # 在谱系匹配下，尺度比例相同的子集是安全的
+        scale_ratio = self.compute_scale_ratio(obj_src, obj_tgt)
+        invariant_subdomain = self.extract_scale_invariant(theta_dom_src, scale_ratio)
+
+        # 3. 与目标对象的 ColDom 求交
+        col_dom_tgt = self.query_col_dom(node, obj_tgt)
+        theta_cts = intersect_domains(invariant_subdomain, col_dom_tgt)
+
+        return theta_cts, "OK"
+
+    def extract_scale_invariant(self, theta_dom, scale_ratio):
+        """提取尺度不变子集：参数按比例缩放后的子域"""
+        return theta_dom.scale_invariant_subdomain(ratio=scale_ratio * 0.9)  # 保守
+
+    def cosine_structure(self, s1, s2):
+        """结构签名的余弦相似性"""
+        v1 = [s1[0], s1[1]]  # (num_hulls, avg_area)
+        v2 = [s2[0], s2[1]]
+        return dot(v1, v2) / (norm(v1) * norm(v2))
+
+    def compute_scale_ratio(self, obj1, obj2):
+        """计算两个物体的尺度比例"""
+        e1 = self.ogc.get(obj1)
+        e2 = self.ogc.get(obj2)
+        if e1 is None or e2 is None:
+            return 1.0
+        return e1.sdf_stats().max_dist / e2.sdf_stats().max_dist
+
+
+# IP-422 Certificate Federated Consensus
+class CertificateFederatedConsensus:
+    def __init__(self, N_robots, F=None):
+        self.N = N_robots           # 机器人总数
+        self.F = F or (N_robots - 1) // 3  # 拜占庭容错阈值
+        self.votes = {}             # theta -> {robot_id: Vote}
+        self.merkle_tree = MerkleTree()  # 记录聚合 proof
+
+    def submit_vote(self, robot_id, node, theta, verdict, features):
+        """机器人提交投票"""
+        key = self.canonical_key(node, theta)
+        if key not in self.votes:
+            self.votes[key] = {}
+        self.votes[key][robot_id] = Vote(
+            verdict=verdict,
+            features=features,
+            timestamp=time.time()
+        )
+        self.merkle_tree.update(key, robot_id, verdict)
+
+    def consensus_round(self, timeout=5.0):
+        """进行一次共识轮次"""
+        results = {}
+        for key, votes in self.votes.items():
+            if len(votes) < self.N - self.F:
+                # 投票不足，进入置信区间
+                results[key] = "CI"
+                continue
+
+            # 检查异常：若有机器人连续投反对票，标记为可疑
+            safe_votes = self.filter_outliers(votes)
+
+            n_safe = sum(1 for v in safe_votes.values() if v.verdict == "SAFE")
+            n_unsafe = sum(1 for v in safe_votes.values() if v.verdict == "UNSAFE")
+
+            if n_safe >= self.N - self.F:
+                results[key] = "SAFE"
+            elif n_unsafe >= self.N - self.F:
+                results[key] = "UNSAFE"
+            else:
+                results[key] = "CI"  # 进入置信区间
+
+        return results
+
+    def filter_outliers(self, votes):
+        """基于几何特征过滤异常投票（拜占庭容错）"""
+        if len(votes) <= 2 * self.F:
+            return votes  # 人数不足，无法区分
+
+        # 计算特征均值与方差
+        features_list = [v.features for v in votes.values()]
+        mean_feat = mean(features_list)
+        cov_feat = cov(features_list)
+
+        filtered = {}
+        for rid, vote in votes.items():
+            # Mahalanobis 距离衡量异常程度
+            dist = mahalanobis(vote.features, mean_feat, cov_feat)
+            if dist < 2.0:  # 95% 置信区间
+                filtered[rid] = vote
+
+        return filtered
+
+    def get_hpc(self, node):
+        """生成当前节点的层次化感知证书"""
+        results = self.consensus_round()
+
+        safe_points = []
+        ci_points = []
+        for key, verdict in results.items():
+            if verdict == "SAFE":
+                theta = extract_theta(key)
+                safe_points.append(theta)
+            elif verdict == "CI":
+                # 进入置信区间：用 Hull 表示
+                ci_points.append(extract_theta(key))
+
+        global_hull = hull_union(safe_points + ci_points)
+        ci_hull = hull_union(ci_points) if ci_points else ConvexHull.empty()
+
+        # 计算最大风险系数
+        rho_max = 1.0 - min(1.0, len(safe_points) / max(1, len(results)))
+
+        hpc = HierarchicalPerceptionCert(
+            node=node,
+            hull_global=global_hull,
+            hull_ci=ci_hull,
+            rho_max=rho_max,
+            merkle_root=self.merkle_tree.root()
+        )
+        return hpc
+
+    def canonical_key(self, node, theta):
+        """生成规范键值用于哈希"""
+        return hash((node.id, tuple(theta.tolist())))
+
+
+# IP-423 Hierarchical Perception Certificate
+@dataclass
+class HierarchicalPerceptionCert:
+    node: Node
+    hull_global: ConvexHull       # 全局 Hull（保守）
+    hull_ci: ConvexHull           # 置信区间 Hull
+    rho_max: float                # 最大感知风险系数
+    merkle_root: str              # Merkle Proof root
+
+    def contains(self, theta_dom):
+        """判断参数域是否在 Hull 中"""
+        return self.hull_global.contains(theta_dom) and self.hull_global.volume() >= self.margin()
+
+    def margin(self):
+        """动态 margin：基于风险系数"""
+        base = 0.01
+        return base * (1.0 + 2.0 * (1.0 - self.rho_max))
+
+    def expand_for_risk(self):
+        """为风险系数扩张 Hull（更保守）"""
+        return self.hull_global.expand(factor=1.0 + 0.5 * (1.0 - self.rho_max))
+
+
+# IP-424 Consensus Freshness Controller
+class ConsensusFreshnessController:
+    def __init__(self, aps, ttl_consensus=2.0):
+        self.aps = aps
+        self.ttl_consensus = ttl_consensus
+
+    def check_fed_freshness(self, hpc, current_time):
+        """检查 HPC 的新鲜度，决定是否回退"""
+        age = current_time - hpc.timestamp
+        rho = hpc.rho_max
+
+        if age > self.ttl_consensus:
+            # 超过 TTL，转为 v19 保守模式
+            return "V19_CONSENSUS_EXPIRED"
+
+        # 动态 margin 调整
+        margin_adjusted = 0.01 * (1.0 + 3.0 * rho)
+        return margin_adjusted
+
+    def integrate_with_aps(self, plan, hpc, m_star, h_star):
+        """与 APS 的新鲜度阶梯集成"""
+        current_time = time.time()
+        mode = self.check_fed_freshness(hpc, current_time)
+
+        if mode == "V19_CONSENSUS_EXPIRED":
+            # 回退到 v19 的 OGCC/CCV 路径
+            return self.aps.activate_freshness_ladder(plan, force_mode="V19")
+
+        # 更新 margin_col 为联邦感知的动态 margin
+        margin_fed = self.check_fed_freshness(hpc, current_time)
+        return self.aps.update_plan_risk(plan, margin_col_fed=margin_fed)
 ```
 
-## 2. 符号体系增量（定义 727–766）
+## 2. 符号体系增量（定义 767–820）
 
 | 符号 | 含义 |
 |---|---|
-| τ = (x_0, a_0, ..., x_T) | 专家演示轨迹（定义 727） |
-| DCM(·) | 演示证书挖掘器（定义 727） |
-| mine_segment(seg, x) → n ∪ {⊥} | 子段投影（定义 728） |
-| CC(τ) = (collision_free, proof) | 演示碰撞证书（定义 729） |
-| ColDom(n, o) ⊆ Θ_n | 碰撞安全参数域（定义 730） |
-| Θ_n^col(o) = Θ_n ∩ ColDom(n, o) | 泛化后碰撞参数域（定义 731） |
-| margin_col | 碰撞域最小体积阈值 |
-| def_col(T) | 泛化亏空（定义 732） |
-| δ_geom | 独立几何探针亏空上界（定义 733） |
-| OGCC 接受规则 | 体积非零 ∧ 亏空有界 ∧ CCV 通过（定义 734） |
-| CCV(n, o, θ) → {SAFE, UNSAFE, UNKNOWN} | 碰撞证书验证器（定义 735） |
-| broad_phase / narrow_phase / cert_phase | 三层裁决（定义 736–738） |
-| ColCert = (n, o, θ, verdict, proof) | 碰撞证书（定义 739） |
-| DRS(·) | 演示回放调度器（定义 740） |
-| priority(τ) | 回放优先级（定义 741） |
-| OGC(o) = (convex_decomp, sdf_cache, minkowski_cache) | 物体几何编目（定义 742） |
-| convex_decomp(o) | 物体凸分解（定义 743） |
-| sdf_cache(o) | SDF 缓存（定义 744） |
-| minkowski_cache(n, o) | Minkowski 预计算（定义 745） |
-| ζ_demo | 演示层共享状态（定义 746） |
-| Exec_v19 | 可安全执行的演示衍生计划集合（定义 747） |
+| P_local^r | 机器人 r 的本地稀疏深度点云 |
+| contrib_j | 机器人 j 的贡献 |
+| ρ_j | 风险系数 |
+| ColDom_fed(n, o) | 联邦感知碰撞域 |
+| G(o) | 几何谱系签名 |
+| S_structure | 结构特征 |
+| S_scale | 标度特征 |
+| M_center | 质心分布 |
+| γ(o, o') | 谱系相似度 |
+| Θ_n^cts(o') | CTS 迁移后参数域 |
+| ScaleInvariantSet(γ_threshold) | 尺度不变子集 |
+| HPC(n) | 层次化感知证书 |
+| τ_consensus | 联邦聚合时间戳 |
+| margin_col_fed | 动态碰撞域阈值 |
+| F | 拜占庭容错阈值 |
+| Vote(θ) | θ 的投票结果 |
+| merkle_path(HPC) | Merkle Proof |
+| ζ_fed | 联邦感知层共享状态 |
+| Exec_v20 | 通过 HPC 验证的计划集合 |
 
 ## 3. 推导
 
-**引理 143（演示挖掘零授权增）** 若 DCM 的 mine 满足 `mine(τ) ⊆ Anchors ∪ {⊥}`，投影命中复用该节点 NC 原文，碰撞证书经 CCV 验证，缝证书经 PSV 预验，则对任意演示分布，`Exec_v19 ⊆ Exec_v18`，且演示层新增授权基数 `|NewAuth| = 0`。证明：DCM 的值域含于 v17 认证锚集，锚节点的 NC 已由 v16 NCS/MCA/WCB 验证；CCV 只拒不授（P36）；PSV 只增缝约束（P29）；SAS 影子晋升零授权、正式晋升复用 v16 NCS（v18 引理 143）。故演示只能揭示既有证书的可行组合，不能新增节点、放宽阈值、扩张域。∎ 推论：**演示学习的失效模式只有单向——少挖出一些锚；不安全率相对 v18 恒为零**。
+**引理 151（联邦感知保守性）** PCA 的 `ColDom_fed = ⋂_j [Hull_j / ρ_j]` 其中 `ρ_j ≤ 1`，故 `ColDom_fed ⊆ ColDom_local(j) ⊆ 真实零碰撞域`。且盲区处于 Hull 外部，故不产生假阳性。∎ 推论：**联邦感知只能收敛域，不能扩张域**。
 
-**引理 144（碰撞域保守下近似）** 设 `ColDom(n, o)` 由广相位（凸包不相交 ⇒ 全域安全）与窄相位（SDF 内切 ⊕ GJK/EPA 验证）构造，且窄相位满足 `UNKNOWN → UNSAFE`。则构造出的 `ColDom(n, o) ⊆ 真实零碰撞参数域`。证明：广相位仅在凸包严格分离时返回 SAFE，凸包包络包含真实几何，故分离充分；窄相位仅在 SDF > eps 或 GJK 证实分离时返回 SAFE，UNKNOWN 保守归为 UNSAFE，故内切。两阶段合取保守性传递。∎ 推论：**泛化接受规则 `Θ_n^col(o_t) ≠ ∅` 恒为保守——若通过，则收缩域内绝对零碰撞**。
+**引理 152（谱系迁移保守性）** CTS 的 `γ(o, o') ≥ γ_threshold` 决定是否允许 `Θ_n^cts(o')`；若通过，则 `Θ_n^cts(o') ⊆ Θ_n^col(o)`；若不通过，则退为 v19 保守或全拒。故 `Θ_n^cts(o') ⊆ Θ_n^col(o')` 且 `Exec_v20 ⊆ Exec_v19`。∎
 
-**引理 145（泛化收缩不可逆）** OGCC 的 generalize 满足 `Θ_n^col(o_t) = Θ_n ∩ ColDom(n, o_t)` 且 `vol(Θ_n^col) ≤ vol(Θ_n)`，亏空 `def_col = vol(Θ_n) - vol(Θ_n^col)`。若独立几何探针给出 `def_col ≤ δ_geom` 且 CCV 在 `Θ_n^col` 上采样全通过，则 `Auth(c_t) ⊆ Auth(c_s) ∩ ColDom(o_t)`。证明：参数域求交天然满足收缩；亏空上界由独立探针保证不被低估；CCV 采样验证排除了近似构造的盲区（在采样覆盖范围内）。故泛化证书的授权是源证书与目标碰撞域的交的子集。∎ 推论：**泛化只能让系统"在更少参数下做同一件事"，永远不能"做新事"或"在更多参数下做旧事"**。
+**引理 153（分布式共识安全性）** CFC 的 pBFT 变体在 N ≤ 10 且 F = ⌊(N-1)/3⌋ 时收敛；异常贡献者通过 Mahalanobis 距离剔除；CI 区的置信区间 Hull 通过保守包络描述。故共识结果的碰撞断言 `SAFE` 必须满足：≥ N-F 个机器人在几何上一致且无碰撞。∎
 
-**引理 146（碰撞证书验证器的唯一裁决性）** 设 CCV 是 DCM、OGCC、SAS、S2C 所有证书产出路径的唯一硬门，且 `UNKNOWN → UNSAFE`。则对任意几何近似误差、数值退化、采样稀疏，任何进入 Anchors 或校准集的证书必满足 `CCV = SAFE`。证明：由架构约束，所有路径汇聚 CCV；CCV 的 verdict 只有三值，其中 UNKNOWN 被语义映射为 UNSAFE；cert_phase 生成的 proof 可被离线审计器机械验证。故不存在"绕过 CCV"或"软性通过"的通道。∎ 推论：**几何近似误差的攻击面被压缩到"CCV 采样覆盖之外的盲区"，且该盲区不被上层任何机制覆盖（见风险 1）**。
+**引理 154（层次化感知证书的可审计性）** HPC 包含 `merkle_root`，其 Proof 可追溯到每一次 Vote 的机器人 ID、θ 坐标、verdict 与 features。故 HPC 是可机械验证的。∎
 
-**引理 147（演示回放不阻塞）** DRS 的 poll 与 _replay_worker 运行在独立执行器，poll 在 50Hz 控制环外以 period 频率检查队列，_replay_worker 提交后即返回。控制环关键路径不包含任何演示回放、挖掘、几何查询操作。证明：DRS 状态机只有 `queue` 与 `running` 两个原子变量，poll 仅做非阻塞入队/出队；worker 由线程池/进程池异步执行。故控制环 p99 延迟与演示任务完全解耦。∎ 推论：**演示回放的计算开销（挖掘+几何查询+CCV）任意大都不影响实时性**。
+**引理 155（时序协调的安全继承）** CFCtrl 的 `τ_consensus` 被 APS 纳入 TTL；`τ_consensus > TTL` 时回退 v19；margin_fed 动态放大以覆盖聚合不确定。故控制环始终保有可验证边界，`Exec_v20 ⊆ Exec_v19`。∎
 
-**引理 148（物体几何编目的保守性传递）** OGC 的 convex_decomp 由 V-HACD 保证 `mesh ⊆ ∪ H_i`（凸包包络）；sdf_cache 由离线预计算保证 `sdf_grid(q) ≤ 真实 SDF(q)`（内切）；minkowski_cache 由 Minkowski 和定义保证 `EE ⊕ Obj ⊆ EE ⊕ (∪ H_i)`。则 CCV 广相位使用的凸包、窄相位使用的 SDF、域查询使用的 Minkowski 均为保守近似。证明：凸包包络性、SDF 内切性、Minkowski 和单调性均为几何标准性质。∎ 推论：**OGC 是保守性的源头；若 OGC 近似偏乐观（如凸分解漏掉凹陷），保守性链条在源头断裂（见风险 1）**。
-
-**引理 149（影子晋升与 v18 兼容）** SAS 接收 DCM 产出的新锚作为影子锚（零授权），晋升条件复用 v18 引理 143：需经 NCS 合成验证、WCB 行为一致性检查、TRM 里程碑门控。晋升后锚接入 S2C 的 Anchors 与 HCG 的校准集，不破坏引理 138（校准集可交换性由影子期隔离保证）。证明：影子期锚不进入 Anchors，不进校准集，不影响 HCG 分位数；晋升时复用 v16 NCS，等价于 v16 新节点合成流程。∎ 推论：**演示发现新技能的完整链路：DCM 挖掘 → SAS 影子 → NCS 正式 → S2C/HCG/PSV 接入，全程零授权增**。
-
-**引理 150（v19 整体安全继承）**：在同一物体编目快照、同一演示缓冲区快照下，`Exec_v19 ⊆ Exec_v18`。证明：DCM 零授权增（引理 143），OGCC 只收缩域（引理 145），CCV 唯一硬门（引理 146），DRS 不阻塞不裁决（引理 147），OGC 保守近似（引理 148），SAS 晋升复用 v16 NCS（引理 149）。五端口复合只能产生 Exec_v18 的子集。∎
+**引理 156（v20 整体安全继承）** 在同一几何快照、同一机器人集合下，`Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`。证明：PCA 保守 Hull、CTS 收缩迁移、CFC 筛选异常、CFCtrl 动态 margin，六者叠加只能产生子集。∎
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| DCM 挖掘（单演示） | 异步后台 | O(T·|Anchors| + T·CCV) | O(T) | 引理 143 |
-| DCM 子段投影 | 挖掘时 | O(|Anchors|·d) | O(1) | 引理 143 |
-| DCM 碰撞证书构造 | 挖掘时 | O(T·CCV_narrow) | O(T) | 引理 144 |
-| OGCC 泛化查询 | 异步/在线 | O(|convex_decomp| + SDF_query) | O(1) | 引理 144, 145 |
-| OGCC 域构造 | 泛化时 | O(grid_samples·narrow) | O(grid) | 引理 144 |
-| CCV 广相位 | 在线/离线 | O(|EE_hull|·|obj_hulls|) | O(1) | 定义 736 |
-| CCV 窄相位 | 在线/离线 | GJK/EPA: O(iter·|verts|) | O(1) | 定义 737 |
-| CCV 证书相位 | 在线/离线 | O(proof_size) | O(proof) | 定义 738 |
-| DRS 调度/优先级 | 异步 1Hz | O(log Q) | O(Q) | 引理 147 |
-| OGC 注册（离线） | 冷启动 | V-HACD: O(|mesh| log |mesh|) | O(|decomp|+|sdf|) | 引理 148 |
-| OGC 查询 | 在线 | SDF 插值: O(1) | O(1) | 引理 148 |
-| v18 继承路径 | 在线 50Hz | ≤12ms（不变） | 不变 | v18 引理 143–149 |
-| 控制侧合计（50Hz 关键路径） | 在线 | 典型 ≤12ms，p99 ≤27ms（演示/几何/泛化完全在路径外） | — | 引理 147, 150 |
+| PCA 本地 CCV 验证 | O(N_points) | O(N_points · CCV) | O(N_points) | 引理 151 |
+| PCA 聚合 Hull | O(N_robots · K) | O(K log K) | O(K) | 引理 151 |
+| PCA 风险系数 | O(R) | O(1) | O(1) | 引理 151 |
+| CTS 谱系计算 | 离线 | O(Elements) | O(Elements) | 引理 152 |
+| CTS 相似度 | O(1) | O(1) | O(1) | 引理 152 |
+| CTS 域迁移 | O(Params) | O(grid_samples) | O(grid) | 引理 152 |
+| CFC 投票提交 | O(1) | O(1) | O(1) | 引理 153 |
+| CFC 共识轮次 | O(|votes|) | O(|votes|²) | O(|votes|) | 引理 153 |
+| CFC 异常过滤 | O(R) | O(R·d) | O(d) | 引理 153 |
+| HPC 生成 | O(SAFE + CI) | O(K log K) | O(K) | 引理 154 |
+| CFCtrl 时序检查 | O(1) | O(1) | O(1) | 引理 155 |
+| 50Hz 控制路径 | 在线 | ≤12ms（与 v19 不变） | — | 引理 155, 156 |
 
-## 5. 实验设计 E731–E750
+## 5. 实验设计 E751–E780
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E731 | DCM 挖掘精度 | 专家演示 100% 映射到认证节点，0 次跨证书族误映射，0 次碰撞证书漏报 |
-| E732 | DCM 碰撞证书完备性 | 演示轨迹连续时间碰撞证书构造成功率 ≥95%，漏报 = 0 |
-| E733 | OGCC 碰撞域构造 | 凸包/SDF/Minkowski 三路对比：保守性 100%，紧致度（体积/真实域）≥80% |
-| E734 | OGCC 泛化收缩 | 同类物体（杯→杯）泛化接受率 ≥70%，异类（杯→书）接受率 = 0，体积收缩符合预期 |
-| E735 | OGCC 亏空上界 | 独立几何探针 δ_geom 覆盖真实亏空 100%，0 次低估 |
-| E736 | CCV 广相位召回 | 广相位 SAFE 覆盖真实安全域 ≥90%，0 次假 SAFE |
-| E737 | CCV 窄相位鲁棒性 | 退化配置（掠过、嵌入、数值病态）100% 返回 UNKNOWN/UNSAFE，0 次假 SAFE |
-| E738 | CCV 实时性 | 广相位 ≤0.05ms，窄相位 ≤0.5ms，证书相位 ≤0.1ms，p99 ≤1ms |
-| E739 | DRS 回放活性 | 新物体冷启动：回放 3 段演示后新锚发现率 ≥80%，控制环 p99 增量 ≤1ms |
-| E740 | DRS 优先级有效性 | 高优先级演示（新锚潜力大、证书缺口大）优先被挖掘，低优先级不饿死 |
-| E741 | OGC 几何编目质量 | 凸分解包络紧致度 ≥85%，SDF 内切误差 ≤1mm，Minkowski 预计算覆盖 100% EE 类型 |
-| E742 | 端到端：演示挖掘→泛化→执行 | "演示拿红杯→泛化拿蓝杯/绿碗" 端到端成功率 ≥ v18+15%，零碰撞 |
-| E743 | 端到端：多物体泛化 | 单次演示泛化到 10 物体，接受率 ≥60%，体积中位数 ≥0.5·源域 |
-| E744 | 端到端：碰撞边界探针 | 在碰撞边界附近参数（margin_col 附近）执行 100% 安全，0 次碰撞 |
-| E745 | 消融：无 DCM | 退到 v18，新物体冷启动需人工标注锚，冷启动时间 ↑≥5× |
-| E746 | 消融：无 OGCC | 泛化退化为启发式，碰撞率 ↑≥20% 或被迫 0 泛化 |
-| E747 | 消融：无 CCV | 碰撞检测退化为运行时盾，编译时泛化 0 授权，活性 ↓≥40% |
-| E748 | 消融：无 DRS | 回放固定周期，新锚发现率 ↓≥30%，控制环偶发抖动 |
-| E749 | 消融：无 OGC | 物体退化为球包络，泛化接受率 ↓≥50%，保守性大幅过剩 |
-| E750 | 竞赛/基准测试 | 示教泛化任务（如 RoboSet/Sim2Real 基准）≥ v18+15%（预注册主指标） |
+| E751 | PCA 盲区收敛 | 5 台机器人协同聚合后，盲区面积 ↓≥70%，碰撞误报率 = 0 |
+| E752 | PCA 风险系数 | 个别机器人视角贡献权重 ε_j ∈ [0,0.2]，整体 Hull 收敛快于单视角 ≥2× |
+| E753 | CTS 谱系计算 | 10 类常见物体（杯、盒子、书本），同类谱系 γ ≥ 0.85，异类 γ ≤ 0.4 |
+| E754 | CTS 迁移成功率 | 同类物体泛化接受率 ≥ 85%，异类 ≥ 0%，尺度变化 ≤ ±30% 不受限 |
+| E755 | CTS 迁移保守性 | 迁移后参数域体积 ≤ 源域体积，`Exec_v20 ⊆ Exec_v19` 验证通过 |
+| E756 | CFC 共识收敛 | N=7 机器人，F=2 故障，1000 轮共识后收敛率 ≥ 98% |
+| E757 | CFC 异常剔除 | 人为注入 20% 逆向投票，过滤后误判率 ↓≥90% |
+| E758 | CFC 置信区间 | 第 3 类不确定θ_sample 进入 CI，HPC 给出保守 Hull 覆盖率 ≥ 95% |
+| E759 | HPC Merkle 可审计 | 每轮 HPC 的 merkle_path 可被独立验证器复核，正确率 100% |
+| E760 | CFCtrl TTL 触发 | τ_consensus > TTL 时回退 v19，控制环 p99 稳定 ≤ 27ms |
+| E761 | 动态 margin 调节 | ρ_max = 0.3 时 margin_fed = 0.019，控制活性 ↓≤ 5% |
+| E762 | 端到端：协同感知→执行 | 3 台机器人协同完成“搬红杯→搬蓝杯→搬绿碗”，碰撞 0 次，成功率 ≥ 90% |
+| E763 | 端到端：跨物体 CTS | 同一演示仅改物体，CTS 自动识别谱系，接受率 ≥ 75% |
+| E764 | 联邦推断延迟 | 从点云输入到 HPC 输出 ≤ 80ms（GPU 并行），p99 ≤ 120ms |
+| E755 | 消融：无 PCA | 回退 v19，盲区人工标注率 ↑≥ 3× |
+| E766 | 消融：无 CTS | 跨物体泛化退化为启发式，接受率 ↓≥ 40% |
+| E767 | 消融：无 CFC | 共识失败率 ↑≥ 25%，盲区未收敛 |
+| E768 | 消融：无 HPC | 证书不可审计，离线复核通过率 ↓至 0% |
+| E769 | 消融：无 CFCtrl | τ_consensus 失控，TTL 失效，碰撞警报 ↑≥ 15% |
+| E770 | 竞赛/基准测试 | FSCtrl 跨物体搬运基准，v19+20% 成功率，v20 端到端 ≤ 1.5s |
 
 ## 6. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| DCM 挖掘（E731） | 100% 映射认证节点，0 跨族 | 调分段算法、收紧 τ_mine、加接触事件检测 |
-| DCM 碰撞证书（E732） | 连续证书成功 ≥95%，漏报=0 | 加密集采样、凸包包络细化、Minkowski 证明增强 |
-| OGCC 域构造（E733） | 保守 100%，紧致 ≥80% | 调凸分解粒度、SDF 分辨率、Minkowski 近似阶数 |
-| OGCC 泛化（E734） | 同类 ≥70%，异类 0 | 扩物体编目、细化类别先验、加语义相似度门控 |
-| 亏空上界（E735） | 100% 覆盖，0 低估 | 加强独立探针（更密采样、解析界、对抗几何生成） |
-| CCV 广相位（E736） | 召回 ≥90%，0 假 SAFE | 调 broad_eps、加层级包围盒、凸分解细化 |
-| CCV 窄相位（E737） | 退化配置 0 假 SAFE | 数值稳健 GJK/EPA、加扰动测试、UNKNOWN 保守阈值收紧 |
-| CCV 实时性（E738） | p99 ≤1ms | 广相位 GPU 并行、窄相位缓存、增量更新 |
-| DRS 活性（E739） | 冷启动 3 段 ≥80%，p99 ≤1ms | 调优先级权重、扩演示池、worker 隔离 |
-| 优先级（E740） | 高优先级先挖，低优不饿死 | 加迟滞、公平调度、优先级平滑 |
-| OGC 质量（E741） | 包络 ≥85%，SDF ≤1mm | V-HACD 参数、SDF 自适应分辨率、Minkowski 解析修正 |
-| 端到端（E742） | ≥ v18+15%，零碰撞 | 按消融定位瓶颈 |
-| 多物体（E743） | 10 物体接受 ≥60% | 类别聚类泛化、共享几何先验 |
-| 边界探针（E744） | margin_col 附近 100% 安全 | 自适应 margin、边界采样加密、在线 CCV 复验 |
-| 消融 DCM（E745） | 冷启动 ↑≥5× | 证明挖掘必要性 |
-| 消融 OGCC（E746） | 碰撞 ↑≥20% | 证明碰撞域收缩必要性 |
-| 消融 CCV（E747） | 活性 ↓≥40% | 证明唯一硬门必要性 |
-| 消融 DRS（E748） | 发现率 ↓≥30% | 证明异步调度必要性 |
-| 消融 OGC（E749） | 接受率 ↓≥50% | 证明几何编目必要性 |
-| 竞赛（E750） | ≥ v18+15% | 综合调优 |
+| E751 | 盲区收敛 ≥ 70%，误报 0 | 加权平均 Hull、放宽 ρ_j 范围 |
+| E752 | 单视角 → 多视角收敛快 ≥ 2× | 增强局部 CCV 密度采样 |
+| E753 | 同类 γ ≥ 0.85，异类 ≤ 0.4 | 调整 G(o) 权重、扩充谱系特征 |
+| E754 | 同类接受 ≥ 85%，异类 0 | 调节 γ_threshold、细化 ScaleInvariantSet |
+| E755 | 迁移域体积 ≤ 源域 | 加强 CTS 收缩校验 |
+| E756 | 共识收敛 ≥ 98% | 优化 pBFT 超时、投票排序 |
+| E757 | 异常剔除后误判 ↓≥ 90% | 调整 Mahalanobis 阈值、加特征冗余 |
+| E758 | CI Hull 覆盖 ≥ 95% | 扩大置信区间、加密采样密度 |
+| E759 | Merkle 验证 100% | 审计链路、纠正哈希碰撞 |
+| E760 | TTL 触发回退后 p99 ≤ 27ms | 调节 τ_consensus、增 APS 缓存 |
+| E761 | ρ=0.3 时活性 ↓≤ 5% | 调整 margin_fed 系数、加动态反馈 |
+| E762 | 跨机器人搬运成功 ≥ 90% | 调节 Hull 收敛、优化点云融合 |
+| E763 | CTS 跨物体接受 ≥ 75% | 细化谱系匹配、共享几何先验 |
+| E764 | HPC 输出延迟 p99 ≤ 120ms | GPU 并行、压缩点云、增量 Hull |
+| E765 | 消融 PCA 盲区 ↑≥ 3× | 证明协同感知必要性 |
+| E766 | 消融 CTS 接受 ↓≥ 40% | 证明谱系迁移必要性 |
+| E767 | 消融 CFC 共识失败 ≥ 25% | 证明分布式共识必要性 |
+| E768 | 消融 HPC 审计 0% | 证明可审计证书必要性 |
+| E769 | 消融 CFCtrl 碰撞 ↑≥ 15% | 证明时序协调必要性 |
+| E770 | 竞赛成功率 ≥ v19+20% | 全链路调优 |
 
 ## 7. 已知风险与失效模式
 
-1. **几何近似的盲区**：OGC 的凸分解可能漏掉深凹陷/内部空腔，SDF 采样可能漏掉薄壁/尖锐特征，Minkowski 和数值误差可能低估穿透深度——导致 `ColDom(n, o_t)` **偏乐观**（大于真实零碰撞域），CCV 窄相位在采样点通过、但在未采样参数上真实碰撞。缓解：自适应 SDF 细化、凸分解层级化、对抗几何生成测试、在线 CCV 复验、保守 margin_col 动态放大。
-2. **独立几何探针的盲区共享**：δ_geom 由独立探针给出，但探针本身使用相同的几何近似（凸包/SDF/Minkowski）——若源/目标物体**共享同一类未建模几何奇异性**（如都有未被凸分解捕获的薄壁结构），探针会系统性低估亏空，产生"亏空有界、CCV 采样通过、真实碰撞"的虚假泛化。缓解：异构探针集成（解析界+采样+对抗）、几何奇异性检测器、共享盲区审计日志。
-3. **演示分段的语义鸿沟**：DCM 的 segment_trajectory 依赖启发式（接触事件/动作语义/速度突变），可能把一个长技能切碎、或把两个技能合并，导致投影到错误锚或缝证书失败。缓解：用 v17 HCG/PSV 反向验证分段质量、分段结果回传 CLP 作为语言计划先验、人工标注少量分段种子。
-4. **碰撞证书的连续时间鸿沟**：DCM 从离散轨迹点构造连续碰撞证书（凸包包络+Minkowski），但机器人真实执行轨迹可能偏离演示轨迹（跟踪误差、控制延迟），导致连续证书不覆盖真实执行管腔。缓解：管腔膨胀（tracking_error_bound ⊕ 演示凸包）、在线 CCV 复验、跟踪误差纳入参数域收缩。
-5. **泛化参数域的表示鸿沟**：`Θ_n^col(o_t)` 在 SE(3)×关节空间上是高维非凸集，用网格/采样近似可能漏掉狭窄安全通道，导致泛化被过度拒绝（活性损失）或错误接受（安全风险）。缓解：参数域用星凸/凸包包络表示、自适应采样聚焦边界、拓扑保持简化。
-6. **CCV 窄相位的数值退化**：GJK/EPA 在共面/共线/近奇异配置下数值不稳定，可能返回错误分离距离或陷入无限循环。缓解：数值稳健 GJK（EPA fallback、扰动重启）、迭代上限、退化时强制 UNKNOWN→UNSAFE、离线退化配置枚举测试。
-7. **演示回放的分布偏移**：DRS 回放的演示来自历史分布，当前硬件/软件/里程碑可能已演进，导致挖掘出的锚不满足当前 `m_n ≤ m* ∧ h_n ≤ h*`，或碰撞证书因硬件几何变化失效。缓解：演示携带元数据（硬件版本、里程碑、固件），挖掘时硬门控、硬件变更触发演示失效标记。
-8. **物体编目的静态假设**：OGC 假设物体几何刚性不变，但真实物体可能变形（软体）、磨损、组装状态改变。缓解：物体版本号、在线几何更新触发重编目、软体建模为参数族而非单一网格。
-9. **影子晋升的证据预算耗尽**：SAS 影子锚晋升需经 NCS 验证，需收集足够执行证据；若新物体罕见、执行机会少，影子锚长期停留、永不晋升，导致泛化证书长期停留在影子态（无授权）。缓解：仿真加速证据收集、影子锚超时自动降级、证据预算动态分配。
-10. **三重证书叠加的过度保守**：节点 NC ∩ 缝 SC ∩ 碰撞 ColCert ∩ 语义共形四层求交，计划通过率可能塌缩，系统长期退化为 v18 默认。缓解：加权打分而非纯求交、证书族共享 ColCert、动态 margin_col、活性监视报警。
-11. **演示噪声与亚最优性**：专家演示可能包含抖动、回退、冗余动作，DCM 可能将其投影为 ⊥ 或产生碎片化节点序列。缓解：演示平滑预处理、亚最优片段标记为 ⊥ 而非整段作废、多演示共识挖掘。
-12. **多物体/多演示的组合爆炸**：物体数 × 演示数 × 节点数的泛化组合可能极大，OGCC/CCV 查询开销随组合数线性增长。缓解：泛化结果缓存、相似物体聚类共享 ColDom、按需查询（仅当计划涉及时触发）。
+1. **联邦几何特征的系统性偏差**：若所有机器人使用的传感器/标定方案在几何上共享同一系统性误差（如深度漂移、标定偏差），则计算的 G(o)、 Hull、ρ_j 都可能系统性偏小，导致“形式上通过联邦共识，实际碰撞”。缓解：异构传感器特征、定期标定校准、几何偏差检测器。
+
+2. **谱系相似度的误判**：CTS 的 γ(o, o') 依赖离线标度与结构特征，若目标物体在实际执行中出现**未建模的几何变形**（磨损、附着），则谱系相似度被高估，迁移后域偏大。缓解：实时几何更新、变形感知器、谱系动态校正。
+
+3. **拜占庭故障的盲区**：CFC 的 F = ⌊(N-1)/3⌋ 容错假设所有故障是恶意的；但若**大量机器人同时受到同一种感知干扰**（强光、反射），则它们的投票会高度一致地错误，超过 F 阈值。缓解：引入多传感器融合（RGB+深度+触觉）、环境可信度指示器、跨模态验证。
+
+4. **置信区间 Hull 的过度保守**：CI 区的 Hull 以保守包络描述置信区间，但在高维参数空间上，Hull 可能过度收缩，导致“CI 区域被完全排除”或“置信区间失真”。缓解：核密度估计 + Mahalanobis  ellipsoid、局部 PCA + 各向异性 Hull。
+
+5. **动态 margin 过度放大**：`margin_col_fed = margin_col · (1 + λ·ρ_max)` 在高风险时放大 margin，但放大过度会导致活性急剧下降。缓解：margin 的分段线性、活性反馈闭环、软约束优化。
+
+6. **MTU 传输的投影失真**：机器人之间的点云通过网络传输，可能出现压缩/丢包，导致 contrib_j 的 Hull 提取失真。缓解：端到端哈希校验、点云纠缠编码、局部 Hull 传输压缩。
+
+7. **谱系缓存的时效失效**：G(o) 基于 OGC 的静态几何，若物体几何在长期使用中变化，谱系缓存会过时。缓解：物体版本号 + 几何变更触发谱系更新、谱系增量修正。
 
 ## 8. 本轮最大风险
 
-**一句话**：OGCC 的碰撞域 `ColDom(n, o_t)` 与 CCV 的窄相位查询都依赖**物体几何的保守近似**（凸包/SDF 采样/Minkowski 和），若近似偏乐观（如凸包漏掉凹陷、SDF 采样稀疏漏掉薄壁、Minkowski 和数值误差），则泛化证书会在"形式上体积≥margin_col、CCV 返回 SAFE"的前提下，**在真实物理交互中发生碰撞**——即"几何近似的盲区"变成了"证书的盲区"，且该盲区不被任何上层机制（HCG/PSV/DARG/TAM）覆盖，因为它们都假设 CCV 是可信的。
+**一句话**：CFC 的分布式共识依赖所有机器人对**同一 θ 的碰撞 verdict 高度一致**，但若**环境光照/遮挡导致深度相机在同一点的观测偏差系统性 correlated**（而非独立），则它们会**同一异常 verdict 形成共识**，在“形式上通过拜占庭容错、分布式投票都判 SAFE”的前提下，**产生全局性的碰撞盲区**——即“众测协同的系统性误判”。
 <!-- ARTIFACT:END -->
