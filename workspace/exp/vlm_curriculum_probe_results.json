@@ -1,0 +1,52 @@
+{
+  "n_models": 8,
+  "n_tasks": 32,
+  "difficulty_consistency": {
+    "kendall_w": 0.058052488086510264,
+    "mean_pairwise_spearman": 0.09774550014621321,
+    "min_pairwise_spearman": -0.1545229591312495,
+    "max_pairwise_spearman": 0.29126569639330424
+  },
+  "cheap_metadata_predictor": {
+    "features": [
+      "rubric_steps",
+      "name_word_count"
+    ],
+    "loo_r2": -0.2224433692169101,
+    "spearman_pred_vs_true": -0.3104838709677419,
+    "with_duration_loo_r2": -0.2908968220641974,
+    "with_duration_spearman": -0.4002932551319648
+  },
+  "learnability_gating": {
+    "spearman_difficulty_vs_headroom": 0.1975806451612903,
+    "spearman_difficulty_vs_max_success": -0.5370234604105572,
+    "hard_quartile_mean_headroom": 10.02921875,
+    "easy_quartile_mean_headroom": 8.378124999999999,
+    "oracle_gain_share_in_hard_quartile": 0.28546078788903023
+  },
+  "variance_decomposition_from_prev": {
+    "task_effect_frac": 0.1644,
+    "model_effect_frac": 0.2332,
+    "interaction_frac": 0.6024
+  },
+  "hard_tasks": [
+    "Plug In Ethernet",
+    "Unlock",
+    "Spell robot",
+    "Organize Stationery",
+    "Open Pill Bottle",
+    "Hang the Cup",
+    "Pick Out Battery",
+    "Zip Up"
+  ],
+  "easy_tasks": [
+    "Color Arrangement",
+    "Remove Pinned Note",
+    "Fruit Basket Collection",
+    "Store Earphones",
+    "Place Photo Frames",
+    "Paper Cup Stacking",
+    "Conveyor Food Sorting",
+    "Stack Cups"
+  ]
+}

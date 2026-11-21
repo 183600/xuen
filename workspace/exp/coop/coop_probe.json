@@ -1,0 +1,39 @@
+{
+  "baseline_lexical_top1": 30,
+  "alias_aware_top1": 32,
+  "hard_misses": [
+    [
+      "ArrangePlates",
+      "Clear Plates",
+      "Arrange Test Tubes"
+    ],
+    [
+      "PourOutMedicine",
+      "Open Pill Bottle",
+      "Pack Phone"
+    ]
+  ],
+  "n_tasks": 32,
+  "consensus": {
+    "K1": {
+      "indep": 0.94078125,
+      "corr": 0.94078125
+    },
+    "K3": {
+      "indep": 0.9746875,
+      "corr": 0.94078125
+    },
+    "K5": {
+      "indep": 0.98984375,
+      "corr": 0.94078125
+    },
+    "K9": {
+      "indep": 0.99765625,
+      "corr": 0.94078125
+    },
+    "K15": {
+      "indep": 0.99984375,
+      "corr": 0.94078125
+    }
+  }
+}
