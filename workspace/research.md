@@ -66,380 +66,403 @@ LLM 输出只是*查询*，不是*授权*：S2C 的 compile 必须满足 `compil
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# IP-409–414 v17 新增核心模块
+# IP-415–419 v19 新增核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v16） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v18） |
 |---|---|---|---|
-| IP-409 | Certified Language Planner (CLP) | 新增核心模块 | LLM 规划器：有界解码、异步 0.5–2Hz、verifier 只进特征；提议与裁决分离 |
-| IP-410 | Semantic-to-Certificate Compiler (S2C) | 新增核心模块 | 语言→能力格投影：最近认证锚 + 距离阈值 + ⊥ 落空语义 + 参数合法域投影 |
-| IP-411 | Hallucination Containment Guard (HCG) | 新增在线认证模块 | 语义非一致性分数 + 有限样本共形分位数接受；校准集为已执行计划日志 |
-| IP-412 | Plan-Seam Verifier (PSV) | 新增在线认证模块 | 缝证书 SC_i=Post_i∩Pre_{i+1}：接受时预验 + 运行时逐缝复验 + 失缝截断 |
-| IP-413 | Asynchronous Plan Scheduler (APS) | 新增在线调度模块 | 计划缓存、TTL、四级新鲜度阶梯（FULL→PREFIX→V16默认→V15回退）、不阻塞 |
-| IP-414 | Agent Memory Curator (AMC) | 新增经验模块 | 剪除式情景记忆：只能剪除/重排序候选，里程碑打标，抗投毒 |
+| IP-415 | Demonstration Certificate Miner (DCM) | 新增核心模块 | 演示反向编译：轨迹→节点证书序列+缝证书+碰撞证书；投影落空即丢弃 |
+| IP-416 | Object-Generalized Collision Certificate (OGCC) | 新增核心模块 | 物体泛化即碰撞域收缩：Θ_n^col(o_t) = Θ_n ∩ ColDom(n, o_t)、体积门控、亏空上界 |
+| IP-417 | Collision Certificate Verifier (CCV) | 新增在线验证模块 | 三层碰撞裁决（广相位/窄相位/证书相位）；UNKNOWN=UNSAFE；可审计 proof |
+| IP-418 | Demonstration Replay Scheduler (DRS) | 新增在线调度模块 | 演示回放异步、不阻塞、优先级驱动；新锚经 SAS 影子晋升→NCS 正式化 |
+| IP-419 | Object Geometry Catalog (OGC) | 新增编目模块 | 物体几何表示：凸分解+SDF 缓存+Minkowski 预计算；支持保守 ColDom 查询 |
 
-## 0. 核心符号体系（定义 657–686）
+## 0. 核心符号体系（定义 727–766）
 
 | 符号 | 含义 |
 |---|---|
-| π = (t_1, …, t_T) | LLM 发出的语言计划：子任务 token 的有序序列 |
-| CLP(·) | 认证语言规划器：有界解码、异步、返回 π ∪ {timeout}（定义 657） |
-| Anchors(x, m*, h*) | 认证锚集 {(n, μ_n, NC_n, m_n, h_n, Θ_n)}：v16 中满足 m_n ≤ m* ∧ h_n ≤ h* 的 BT 节点（定义 658） |
-| φ(t, x) ∈ R^d | token t 在上下文 x 中的语义嵌入（定义 659） |
-| d(t, n) = ‖φ(t,x) − μ_n‖ | token 到锚 n 的语义距离 |
-| compile(t, x) → n ∪ {⊥} | S2C 投影：最近锚；min 距离 > τ_compile 或参数投影失败 ⇒ ⊥（定义 660） |
-| proj_Θ(θ) → Θ_n ∪ {⊥} | 子任务参数到锚参数合法域 Θ_n 的投影（定义 661） |
-| Π(π, x) = (n_1,…,n_T) ∪ {⊥} | 整计划编译：任一 token ⊥ 且修复预算用尽 ⇒ 整计划 ⊥（定义 662） |
-| NC_n = (Pre, Run, Post, Fallback) | v16 节点证书（嵌套 Fallback⊆Pre⊆Run⊆Post，定义 627 原样复用） |
-| SC_i = Post_{n_i} ∩ Pre_{n_{i+1}} | 缝证书：节点 i 后置与节点 i+1 前置的交（定义 663） |
-| PC(π) | 计划证书：∧_i NC(n_i) ∧ ∧_i[SC_i ≠ ∅ ∧ vol(SC_i) ≥ margin_sc] ∧ 里程碑/阶层门控（定义 664） |
-| s(π, x) ∈ R≥0 | 语义非一致性分数：w₁(1−语义一致性) + w₂·缝隙风险 + w₃·长度罚（定义 665） |
-| q̂_α | 有限样本 (1−α) 共形分位数：校准分数第 ⌈(N+1)(1−α)⌉ 次序统计量（定义 666） |
-| HCG 接受规则 | s(π,x) ≤ q̂_α ∧ PC(π) 预验通过（定义 667） |
-| τ = now − t_accept | 缓存计划的新鲜度（年龄）（定义 668） |
-| TTL | 计划最大可执行年龄 |
-| Ladder(τ) | 四级阶梯：τ≤TTL 全计划；τ≤2·TTL 前缀截断；τ>2·TTL v16 默认；drift ⇒ v15 回退（定义 669） |
-| mem = {(ctx, π, o, r, m_tag)} | AMC 记忆记录：上下文、计划、结局、证书残差、里程碑标（定义 670） |
-| prune(·) | 剪除式记忆算子：只能移除/重排序候选，不能新增（定义 671） |
-| V(π) | 计划价值：Σ val(n_i) − 缝隙风险 − 陈旧折扣（定义 672） |
-| ζ_la = (B_tick, m*, h*, plan_cache, τ_fresh, q̂_α, mem_index, drift_la, mode_la) | 语言层共享状态（扩展 v16 ζ_bt，定义 673） |
-| Exec_v17 | 通过 HCG+PSV 且编译节点序列可被 v16 CSC 执行的语言计划集合（定义 674） |
+| τ = (x_0, a_0, ..., x_T) | 专家演示轨迹：状态-动作序列 |
+| DCM(·) | 演示证书挖掘器：反向编译 τ → (nodes, seams, CC) ∪ {⊥}（定义 727） |
+| segment(τ, n) | 演示子段：对应节点 n 的连续片段 |
+| mine_segment(seg, x) → n ∪ {⊥} | 子段投影：最近锚（复用 S2C）；距离 > τ_mine 或碰撞证书失败 ⇒ ⊥（定义 728） |
+| CC(τ) = (collision_free, proof) | 演示碰撞证书：全轨迹零碰撞的保守证明（定义 729） |
+| ColDom(n, o) ⊆ Θ_n | 节点 n 在物体 o 上的碰撞安全参数域（定义 730） |
+| Θ_n^col(o) = Θ_n ∩ ColDom(n, o) | 泛化后的碰撞参数域（定义 731） |
+| margin_col | 碰撞域最小体积阈值；体积 < margin_col ⇒ 拒绝泛化 |
+| def_col(T) = vol(Θ_n) - vol(Θ_n^col(o_t)) | 泛化亏空：参数域体积损失（定义 732） |
+| δ_geom | 独立几何探针给出的亏空保守上界（定义 733） |
+| OGCC 接受规则 | Θ_n^col(o_t) ≠ ∅ ∧ vol(Θ_n^col(o_t)) ≥ margin_col ∧ def_col ≤ δ_geom（定义 734） |
+| CCV(n, o, θ) → {SAFE, UNSAFE, UNKNOWN} | 碰撞证书验证器：三层裁决，UNKNOWN 视为 UNSAFE（定义 735） |
+| broad_phase(n, o, θ) | 广相位：凸包/AABB 快速剔除，返回 {POSSIBLE, SAFE}（定义 736） |
+| narrow_phase(n, o, θ) | 窄相位：GJK/EPA/SDF 精确查询，返回 {SAFE, UNSAFE, UNKNOWN}（定义 737） |
+| cert_phase(n, o, θ, verdict) | 证书相位：封装 ColCert = (n, o, θ, verdict, proof)（定义 738） |
+| ColCert = (n, o, θ, verdict, proof) | 碰撞证书：含可审计几何推导链（定义 739） |
+| DRS(·) | 演示回放调度器：异步、优先级驱动、不阻塞 50Hz（定义 740） |
+| priority(τ) = α·novelty(τ) + β·cert_gap(τ) - γ·age(τ) | 回放优先级：新锚潜力 - 陈旧惩罚（定义 741） |
+| OGC(o) = (convex_decomp, sdf_cache, minkowski_cache) | 物体几何编目条目（定义 742） |
+| convex_decomp(o) = {H_1, ..., H_K} | 物体凸分解：凸包集合（定义 743） |
+| sdf_cache(o) : SE(3) → R | 符号距离场缓存：离线预计算、在线插值（定义 744） |
+| minkowski_cache(n, o) | 末端执行器与物体的 Minkowski 和预计算（定义 745） |
+| ζ_demo = (demo_buffer, anchor_mined, col_cert_cache, obj_catalog, cgv_q̂, mode_demo) | 演示层共享状态（扩展 v18 ζ_ood，定义 746） |
+| Exec_v19 | 通过 DCM/OGCC/CCV 且编译节点序列可被 v18 CSC 执行的演示衍生计划集合（定义 747） |
 
 ## 1. 关键算法骨架
 
 ```python
-# IP-410 Semantic-to-Certificate Compiler：语言→能力格投影
-class SemanticToCertificateCompiler:
-    def __init__(self, anchors, embedder, tau_compile, repair_budget=1):
-        self.anchors = anchors          # [(n, mu_n, NC_n, m_n, h_n, Theta_n)]
-        self.embed = embedder
-        self.tau = tau_compile
-        self.repair_budget = repair_budget
+# IP-415 Demonstration Certificate Miner：演示→证书序列+碰撞证书
+class DemonstrationCertificateMiner:
+    def __init__(self, s2c, ccv, tau_mine, margin_seam, margin_col):
+        self.s2c = s2c              # 复用 v17 S2C 投影
+        self.ccv = ccv              # 碰撞证书验证器（硬门）
+        self.tau_mine = tau_mine
+        self.margin_seam = margin_seam
+        self.margin_col = margin_col
 
-    def compile_token(self, t, x, m_star, h_star):
-        e = self.embed(t, x)
-        best, best_d, best_dom = None, float('inf'), None
-        for (n, mu, nc, m_n, h_n, dom) in self.anchors:
-            if m_n > m_star or h_n > h_star:
-                continue                # P28：永不向上投影
-            d = distance(e, mu)
-            if d < best_d:
-                best, best_d, best_dom = n, d, dom
-        if best is None or best_d > self.tau:
-            return None, best_d         # ⊥：投影落空 ⇒ 回退
-        theta = project(best_dom, param_of(t))   # 参数合法域投影
-        if theta is None:
-            return None, best_d + self.param_penalty
-        return (best, theta), best_d
+    def mine(self, tau, x, m_star, h_star, obj):
+        # 1. 轨迹分段：按动作语义/接触事件切分为子段
+        segments = self.segment_trajectory(tau, obj)
+        nodes, seams, col_certs = [], [], []
 
-    def compile_plan(self, pi, x, m_star, h_star, repairs=0):
-        nodes, misses = [], []
-        for t in pi.tokens:
-            hit, d = self.compile_token(t, x, m_star, h_star)
-            (nodes.append(hit) if hit is not None else misses.append(t))
-        if misses:
-            if repairs >= self.repair_budget:
-                return None             # 整计划 ⊥（计划原子性）
-            pi2 = self.clp.requery(pi, misses)   # 唯一一次有界重问
-            return self.compile_plan(pi2, x, m_star, h_star, repairs + 1)
-        return nodes
+        for seg in segments:
+            # 2. 子段投影到最近锚（复用 S2C）
+            hit, d = self.s2c.compile_token(seg.intent_token, x, m_star, h_star)
+            if hit is None:
+                return None, 'MINE_PROJ_FAIL'   # ⊥：整段演示作废
 
+            n, theta = hit
+            # 3. 碰撞证书：该子段在演示物体上必须零碰撞
+            col_ok, col_cert = self.ccv.verify_segment(seg, n, theta, obj)
+            if not col_ok:
+                return None, 'MINE_COL_FAIL'
 
-# IP-411 Hallucination Containment Guard：共形语义证书
-class HallucinationContainmentGuard:
-    def __init__(self, calib_log, alpha=0.05, weights=(0.5, 0.3, 0.2)):
-        self.scores = [rec.score for rec in calib_log]   # 已执行计划日志
-        self.alpha = alpha
-        self.q = finite_sample_quantile(self.scores, 1 - alpha)
+            nodes.append((n, theta))
+            col_certs.append(col_cert)
 
-    def score(self, pi, x, psv):
-        sem = semantic_consistency(pi, x)   # verifier LLM 只进特征，不裁决
-        seam = psv.aggregate_risk(pi)       # 缝体积估计 / 缝隙风险
-        leng = length_penalty(len(pi.tokens))
-        return self.w[0] * (1 - sem) + self.w[1] * seam + self.w[2] * leng
+        # 4. 缝证书预验（复用 PSV）
+        ok, i, sc = self.psv.verify([n for n,_ in nodes])
+        if not ok:
+            return None, f'MINE_SEAM_FAIL@{i}'
 
-    def accept(self, pi, x, psv):
-        return self.score(pi, x, psv) <= self.q
+        # 5. 全轨迹碰撞证书（连续时间保守证明）
+        cc_tau = self.construct_continuous_col_cert(tau, obj, col_certs)
+        return MinedDemo(nodes=nodes, seams=seams, col_certs=col_certs, cc_tau=cc_tau), 'OK'
 
-    def recalibrate(self, recent_log):
-        # 漂移触发的滑动窗重校准：新日志必须经 AMC 投毒过滤
-        self.scores = [r.score for r in self.pf.filter(recent_log)]
-        self.q = finite_sample_quantile(self.scores, 1 - self.alpha)
+    def construct_continuous_col_cert(self, tau, obj, col_certs):
+        # 用凸包包络整段轨迹，配合 Minkowski 和证明连续无碰撞
+        hull = convex_hull([x for x,_,_ in tau])
+        proof = minkowski_proof(hull, obj, self.ogc.minkowski_cache(obj))
+        return ColCertFull(trajectory=tau, obj=obj, hull=hull, proof=proof, verdict='SAFE')
 
 
-# IP-412 Plan-Seam Verifier：计划缝证书
-class PlanSeamVerifier:
-    def __init__(self, nc_table, margin_sc=0.1):
-        self.nc = nc_table
-        self.margin = margin_sc
+# IP-416 Object-Generalized Collision Certificate：泛化即碰撞域收缩
+class ObjectGeneralizedCollisionCertificate:
+    def __init__(self, ogc, ccv, margin_col, delta_geom_probe):
+        self.ogc = ogc
+        self.ccv = ccv
+        self.margin_col = margin_col
+        self.delta_geom_probe = delta_geom_probe   # 独立几何探针
 
-    def verify(self, nodes):
-        seams = []
-        for i in range(len(nodes) - 1):
-            sc = intersect(self.nc[nodes[i]].Post, self.nc[nodes[i + 1]].Pre)
-            if sc is None or sc.volume() < self.margin:
-                return False, i, sc
-            seams.append(sc)
-        return True, None, seams
+    def generalize(self, n, theta_src, obj_src, obj_tgt):
+        # 1. 获取源节点的完整参数域 Θ_n
+        theta_dom = self.get_param_domain(n)
+        # 2. 查询目标物体的碰撞安全域 ColDom(n, obj_tgt)
+        col_dom = self.query_col_dom(n, obj_tgt)
+        # 3. 求交：泛化后的碰撞参数域
+        theta_col = intersect_domains(theta_dom, col_dom)
+        if theta_col is None or theta_col.volume() < self.margin_col:
+            return None, 'OGCC_VOLUME_ZERO'
 
-    def runtime_recheck(self, nodes, x, i):
-        # 过缝 i 时即时复验：x 必须在 SC_i 内
-        sc = intersect(self.nc[nodes[i]].Post, self.nc[nodes[i + 1]].Pre)
-        return sc is not None and sc.contains(x)
+        # 4. 亏空估计：体积损失
+        def_col = theta_dom.volume() - theta_col.volume()
+        # 5. 独立几何探针给保守上界
+        delta_geom = self.delta_geom_probe.upper_bound(n, obj_src, obj_tgt)
+        if def_col > delta_geom:
+            return None, 'OGCC_DEFICIT_EXCEEDS_BOUND'
 
-    def runtime_guard(self, nodes, x):
-        for i in range(len(nodes) - 1):
-            if not self.runtime_recheck(nodes, x, i):
-                return nodes[:i + 1], ('SEAM_FAIL', i)   # 丢尾，退前一节点 Fallback
-        return nodes, ('OK', None)
+        # 6. CCV 硬验证：在收缩域内采样验证
+        if not self.ccv.verify_domain(n, obj_tgt, theta_col):
+            return None, 'OGCC_CCV_REJECT'
+
+        return GeneralizedCert(node=n, theta_col=theta_col, def_col=def_col,
+                               delta_geom=delta_geom, obj_tgt=obj_tgt), 'OK'
+
+    def query_col_dom(self, n, obj):
+        # 保守构造 ColDom：用凸分解+SDF+Minkowski 的交
+        ogc_entry = self.ogc.get(obj)
+        # 广相位剔除：AABB/凸包快速判定
+        broad_safe = self.ccv.broad_phase(n, obj, theta_dom.representative())
+        if broad_safe == 'SAFE':
+            return theta_dom   # 全域安全
+        # 窄相位：在参数域上构造 SDF 采样网格，保守内切
+        return self.construct_conservative_col_dom(n, obj, ogc_entry)
 
 
-# IP-413 Asynchronous Plan Scheduler：缓存、新鲜度阶梯、不阻塞
-class AsynchronousPlanScheduler:
-    def __init__(self, ttl):
-        self.cache = None               # (nodes, t_accept)
-        self.ttl = ttl
+# IP-417 Collision Certificate Verifier：三层碰撞裁决
+class CollisionCertificateVerifier:
+    def __init__(self, ogc, broad_eps=1e-3, narrow_eps=1e-4):
+        self.ogc = ogc
+        self.broad_eps = broad_eps
+        self.narrow_eps = narrow_eps
 
-    def poll(self, now, x, m_star, h_star, clp, hcg, s2c, psv):
-        pi = clp.latest_nonblocking()   # 永不阻塞控制环
-        if pi is None:
+    def verify(self, n, obj, theta):
+        # 广相位：凸包/AABB 快速剔除
+        broad = self.broad_phase(n, obj, theta)
+        if broad == 'SAFE':
+            return 'SAFE', self.cert_phase(n, obj, theta, 'SAFE', proof='broad_phase_convex_disjoint')
+
+        # 窄相位：GJK/EPA/SDF 精确查询
+        narrow = self.narrow_phase(n, obj, theta)
+        if narrow == 'SAFE':
+            return 'SAFE', self.cert_phase(n, obj, theta, 'SAFE', proof='narrow_phase_gjk_separation')
+        if narrow == 'UNSAFE':
+            return 'UNSAFE', self.cert_phase(n, obj, theta, 'UNSAFE', proof='narrow_phase_gjk_penetration')
+
+        # UNKNOWN：数值退化/退化配置/采样不足
+        return 'UNSAFE', self.cert_phase(n, obj, theta, 'UNSAFE', proof='narrow_phase_unknown_conservative')
+
+    def broad_phase(self, n, obj, theta):
+        # 末端执行器凸包 与 物体凸分解 的快速分离测试
+        ee_hull = self.ee_convex_hull(n, theta)
+        obj_hulls = self.ogc.get(obj).convex_decomp
+        for H in obj_hulls:
+            if not gjk_disjoint(ee_hull, H, eps=self.broad_eps):
+                return 'POSSIBLE'
+        return 'SAFE'
+
+    def narrow_phase(self, n, obj, theta):
+        # SDF 插值查询 + GJK/EPA 精确验证
+        sdf_val = self.ogc.get(obj).sdf_cache.query(ee_pose(n, theta))
+        if sdf_val > self.narrow_eps:
+            return 'SAFE'
+        if sdf_val < -self.narrow_eps:
+            return 'UNSAFE'
+        # |sdf| ≤ eps：退化带，用 GJK/EPA 仲裁
+        pen, witness = gjk_epa(ee_hull, obj_mesh, eps=self.narrow_eps)
+        if pen is None:
+            return 'SAFE'
+        if pen > self.narrow_eps:
+            return 'UNSAFE'
+        return 'UNKNOWN'   # 数值不确定 → 保守视为 UNSAFE
+
+    def cert_phase(self, n, obj, theta, verdict, proof):
+        return ColCert(node=n, obj=obj, theta=theta, verdict=verdict, proof=proof)
+
+    def verify_segment(self, seg, n, theta, obj):
+        # 对演示子段的离散轨迹点逐点验证，再用凸包包络做连续证明
+        for x in seg.states:
+            v, _ = self.verify(n, obj, theta_at(x))
+            if v != 'SAFE':
+                return False, None
+        return True, self.construct_segment_cert(seg, n, obj)
+
+    def verify_domain(self, n, obj, theta_dom):
+        # 在收缩域上采样验证：网格 + 随机 + 边界
+        samples = theta_dom.sample_grid() + theta_dom.sample_random() + theta_dom.sample_boundary()
+        for theta in samples:
+            v, _ = self.verify(n, obj, theta)
+            if v != 'SAFE':
+                return False
+        return True
+
+
+# IP-418 Demonstration Replay Scheduler：异步回放、不阻塞、影子晋升
+class DemonstrationReplayScheduler:
+    def __init__(self, dcm, sas, ccv, period=1.0, max_concurrent=1):
+        self.dcm = dcm
+        self.sas = sas          # 影子锚合成器（v18）
+        self.ccv = ccv
+        self.period = period
+        self.queue = PriorityQueue()
+        self.running = False
+
+    def enqueue(self, tau, obj, priority=None):
+        if priority is None:
+            priority = self.compute_priority(tau, obj)
+        self.queue.put((-priority, tau, obj))   # 大顶堆
+
+    def compute_priority(self, tau, obj):
+        novelty = self.estimate_novel_anchors(tau)   # 预估能挖出多少新锚
+        cert_gap = self.estimate_cert_gap(obj)       # 该物体当前证书覆盖缺口
+        age = self.time_since_last_replay(obj)
+        return 0.5 * novelty + 0.3 * cert_gap - 0.2 * age
+
+    def poll(self, now, x, m_star, h_star):
+        if self.running or self.queue.empty():
             return
-        nodes = s2c.compile_plan(pi, x, m_star, h_star)
-        if nodes is None:
-            return                      # ⊥：保留旧缓存，不授权
-        ok, _, _ = psv.verify(nodes)
-        if not ok or not hcg.accept(pi, x, psv):
-            return
-        self.cache = (nodes, now)       # P30：整体替换，禁止拼接
+        _, tau, obj = self.queue.get()
+        self.running = True
+        # 后台任务：不阻塞 50Hz
+        self.executor.submit(self._replay_worker, tau, obj, x, m_star, h_star)
 
-    def current(self, now, drift):
-        if drift:
-            return None, 'V15_FALLBACK'                  # 第 4 级
-        if self.cache is None:
-            return None, 'V16_DEFAULT'                   # 第 3 级
-        tau = now - self.cache[1]
-        if tau <= self.ttl:
-            return self.cache[0], 'FULL'                 # 第 1 级
-        if tau <= 2 * self.ttl:
-            k = max(1, len(self.cache[0]) - int((tau - self.ttl) / self.ttl))
-            return self.cache[0][:k], 'PREFIX'           # 第 2 级：前缀截断
-        self.cache = None
-        return None, 'V16_DEFAULT'
+    def _replay_worker(self, tau, obj, x, m_star, h_star):
+        try:
+            mined, status = self.dcm.mine(tau, x, m_star, h_star, obj)
+            if status == 'OK':
+                # 新锚进入 SAS 影子池（零授权）
+                for n, theta in mined.nodes:
+                    if n not in self.s2c.anchors:
+                        self.sas.add_shadow_anchor(n, theta, mined.col_certs, obj)
+        finally:
+            self.running = False
 
 
-# IP-409 Certified Language Planner：有界解码、异步、verifier 只进特征
-class CertifiedLanguagePlanner:
-    def __init__(self, llm, verifier, poison_filter, token_budget, period):
-        self.llm = llm
-        self.ver = verifier
-        self.pf = poison_filter
-        self.budget = token_budget
-        self.period = period            # 0.5–2Hz
-        self.pending = None
+# IP-419 Object Geometry Catalog：物体几何编目
+class ObjectGeometryCatalog:
+    def __init__(self, convex_eps=1e-3, sdf_res=0.01):
+        self.catalog = {}   # obj_id → OGCEntry
+        self.convex_eps = convex_eps
+        self.sdf_res = sdf_res
 
-    def propose_async(self, x, task, amc):
-        # 后台任务，有界解码；记忆只能剪除候选（P28 推论）
-        cand = amc.prune_candidates(self.llm.decode_stream(task, x,
-                                                          max_tokens=self.budget))
-        crit = self.ver.annotate(cand)  # verifier 只输出注记/分数
-        self.pending = Plan(tokens=cand, critique=crit)
+    def register(self, obj_id, mesh):
+        # 1. 凸分解（V-HACD 或近似凸包）
+        convex_decomp = vhacd_decompose(mesh, eps=self.convex_eps)
+        # 2. SDF 缓存：在包围盒内均匀采样
+        sdf_cache = SDFGrid(mesh, resolution=self.sdf_res)
+        sdf_cache.precompute()
+        # 3. Minkowski 和预计算：对每类末端执行器预计算
+        minkowski_cache = {}
+        for ee_type in EE_TYPES:
+            minkowski_cache[ee_type] = minkowski_sum(ee_type.convex_hull, convex_decomp)
+        self.catalog[obj_id] = OGCEntry(convex_decomp, sdf_cache, minkowski_cache)
 
-    def latest_nonblocking(self):
-        p, self.pending = self.pending, None
-        return p
+    def get(self, obj_id):
+        return self.catalog.get(obj_id)
 
-    def requery(self, pi, misses):
-        return self.llm.repair(pi, misses, max_tokens=self.budget // 2)
-
-
-# IP-414 Agent Memory Curator：剪除式记忆
-class AgentMemoryCurator:
-    def __init__(self, store, milestone_tagger, poison_filter):
-        self.store = store
-        self.tag = milestone_tagger
-        self.pf = poison_filter
-
-    def record(self, ctx, pi, outcome, cert_residual, m_star):
-        if self.pf.suspect(ctx, pi, outcome):
-            return                      # 疑似投毒：不入库
-        self.store.append((ctx, pi, outcome, cert_residual, self.tag(m_star)))
-
-    def prune_candidates(self, plans):
-        neg = self.store.negative_index()   # 历史结局 unsafe 的计划指纹
-        return [p for p in plans if not neg.matches(p)]   # 只能移除
-
-    def rank(self, plans):
-        prior = self.store.success_prior()
-        return sorted(plans, key=lambda p: prior.score(p), reverse=True)  # 只重排序
-
-
-# 主闭环集成：MetricVoiceGauge-NCD-HUTDH-v17（语言-智能体行为层）
-def metricvoicegauge_round_17_language_agent(M, s, obs, ...):
-    # ---- v16 主路径原样保留（BTS/TRM/WBC/CSC/NCS/MCA/WCB + 守卫）----
-    results = middleware.run_cycle(runners={...}, ctx=ctx)
-
-    # ---- v16 行为层状态 ----
-    hw_state, sw_cert, data_cov = ctx.get_runtime_state()
-    drift = ctx.drift_detector.fired()
-    m_star = ctx.trm.compute_reachable()
-    h_max = ctx.trm.get_permitted_tier(m_star)
-
-    # ---- CLP：异步计划提议（0.5–2Hz，不进 50Hz 关键路径）----
-    if ctx.cycle_idx % ctx.clp_period == 0:
-        ctx.clp.propose_async(obs, task=ctx.task, amc=ctx.amc)
-
-    # ---- APS：接受（S2C ∧ PSV ∧ HCG）与新鲜度阶梯 ----
-    ctx.aps.poll(now(), obs, m_star, h_max, ctx.clp, ctx.hcg, ctx.s2c, ctx.psv)
-    plan_nodes, rung = ctx.aps.current(now(), drift)
-
-    # ---- 过缝复验：FAIL 即截断，剩余段丢弃 ----
-    if rung in ('FULL', 'PREFIX'):
-        plan_nodes, seam_state = ctx.psv.runtime_guard(plan_nodes, obs)
-
-    # ---- CSC 调度：plan_nodes=None ⇒ v16 默认（里程碑驱动 BT）----
-    action, c_low, c_up, fb, m_exec, h_exec = ctx.csc.schedule(
-        x=obs, plan_nodes=plan_nodes,
-        hw_state=hw_state, sw_cert=sw_cert, data_cov=data_cov, drift=drift
-    )
-    tau_cmd = ctx.wbc.compute_control(obs, task_spec=action)
-    execute(tau_cmd if h_exec > 0 else fb)
-
-    # ---- AMC：结局入库（抗投毒），低频 ----
-    if ctx.cycle_idx % ctx.mem_period == 0:
-        ctx.amc.record(ctx, ctx.last_plan, outcome(ctx), ctx.cert_residual, m_star)
-
-    # ---- v16/v13/v12 守卫与低频维护（原样）----
-    verdict = chunk_guard(...)
-    if verdict == 'abort':
-        execute_transfer_safe_abort()
-    if ctx.cycle_idx % T_milestone == 0:
-        ctx.trm.check_next_milestone_ready()
-    if ctx.cycle_idx % T_recalib == 0:
-        ctx.hcg.recalibrate(ctx.amc.store.recent(k))   # 重校准过投毒过滤
-
-    C, spatial_cert, claims, metrics, rewards = M.inherited_v16_path(ctx)
-    return C, spatial_cert, claims, metrics, rewards
+    def query_col_dom_conservative(self, n, obj_id, theta_dom):
+        # 保守内切：只保留 SDF > margin 的参数子域
+        entry = self.get(obj_id)
+        if entry is None:
+            return EmptyDomain()
+        return entry.sdf_cache.conservative_inner_domain(theta_dom, margin=0.02)
 ```
 
-## 2. 符号体系增量（定义 657–686）
+## 2. 符号体系增量（定义 727–766）
 
 | 符号 | 含义 |
 |---|---|
-| π = (t_1, …, t_T) | LLM 发出的语言计划：子任务 token 的有序序列 |
-| CLP(·) | 认证语言规划器：有界解码、异步、返回 π ∪ {timeout}（定义 657） |
-| Anchors(x, m*, h*) | 认证锚集 {(n, μ_n, NC_n, m_n, h_n, Θ_n)}（定义 658） |
-| φ(t, x) ∈ R^d | token 语义嵌入（定义 659） |
-| d(t, n) = ‖φ(t,x) − μ_n‖ | token 到锚 n 的语义距离 |
-| compile(t, x) → n ∪ {⊥} | S2C 投影编译（定义 660） |
-| proj_Θ(θ) → Θ_n ∪ {⊥} | 参数合法域投影（定义 661） |
-| Π(π, x) = (n_1,…,n_T) ∪ {⊥} | 整计划编译（定义 662） |
-| SC_i = Post_{n_i} ∩ Pre_{n_{i+1}} | 缝证书（定义 663） |
-| PC(π) | 计划证书：∧NC ∧ ∧[SC_i 非空 ∧ vol ≥ margin_sc] ∧ 门控（定义 664） |
-| s(π, x) ∈ R≥0 | 语义非一致性分数（定义 665） |
-| q̂_α | 有限样本 (1−α) 共形分位数（定义 666） |
-| HCG 接受规则 | s(π,x) ≤ q̂_α ∧ PC 预验通过（定义 667） |
-| τ = now − t_accept | 缓存计划新鲜度（定义 668） |
-| Ladder(τ) | FULL→PREFIX→V16_DEFAULT→V15_FALLBACK 四级阶梯（定义 669） |
-| mem / prune(·) | 记忆记录 / 剪除式记忆算子（定义 670–671） |
-| V(π) | 计划价值（定义 672） |
-| ζ_la | 语言层共享状态（定义 673） |
-| Exec_v17 | 可安全执行的语言计划集合（定义 674） |
+| τ = (x_0, a_0, ..., x_T) | 专家演示轨迹（定义 727） |
+| DCM(·) | 演示证书挖掘器（定义 727） |
+| mine_segment(seg, x) → n ∪ {⊥} | 子段投影（定义 728） |
+| CC(τ) = (collision_free, proof) | 演示碰撞证书（定义 729） |
+| ColDom(n, o) ⊆ Θ_n | 碰撞安全参数域（定义 730） |
+| Θ_n^col(o) = Θ_n ∩ ColDom(n, o) | 泛化后碰撞参数域（定义 731） |
+| margin_col | 碰撞域最小体积阈值 |
+| def_col(T) | 泛化亏空（定义 732） |
+| δ_geom | 独立几何探针亏空上界（定义 733） |
+| OGCC 接受规则 | 体积非零 ∧ 亏空有界 ∧ CCV 通过（定义 734） |
+| CCV(n, o, θ) → {SAFE, UNSAFE, UNKNOWN} | 碰撞证书验证器（定义 735） |
+| broad_phase / narrow_phase / cert_phase | 三层裁决（定义 736–738） |
+| ColCert = (n, o, θ, verdict, proof) | 碰撞证书（定义 739） |
+| DRS(·) | 演示回放调度器（定义 740） |
+| priority(τ) | 回放优先级（定义 741） |
+| OGC(o) = (convex_decomp, sdf_cache, minkowski_cache) | 物体几何编目（定义 742） |
+| convex_decomp(o) | 物体凸分解（定义 743） |
+| sdf_cache(o) | SDF 缓存（定义 744） |
+| minkowski_cache(n, o) | Minkowski 预计算（定义 745） |
+| ζ_demo | 演示层共享状态（定义 746） |
+| Exec_v19 | 可安全执行的演示衍生计划集合（定义 747） |
 
 ## 3. 推导
 
-**引理 137（语言无特权投影安全）** 若 S2C 的 compile 满足 `compile(t,x) ∈ Anchors(x,m*,h*) ∪ {⊥}`，⊥ 必退回退，投影命中复用该节点 NC 原文，且 APS 只接受通过 HCG∧PSV 的计划并整体替换，则对任意输入分布（含对抗输入），v17 可执行动作集满足 `Exec_v17 ⊆ Exec_v16`，且语言层新增授权基数 `|NewAuth| = 0`。证明：compile 的值域含于 v16 认证锚集，锚节点的 NC 已由 v16 的 NCS/MCA/WCB 验证、由 CSC 在引理 131–134 约束下调度；回退动作由 v16 引理 131 保证 `Fallback ⊆ Exec_v16`。HCG 只能拒绝（对 Exec_v16 的子集过滤），PSV 只增 SC 约束，APS 只做前缀截断，三者复合只能产生 Exec_v16 的子集，不存在任何通道新增节点或放宽阈值。∎ 推论：**语言层的失效模式只有单向——活动性下降；不安全率相对 v16 恒为零**。
+**引理 143（演示挖掘零授权增）** 若 DCM 的 mine 满足 `mine(τ) ⊆ Anchors ∪ {⊥}`，投影命中复用该节点 NC 原文，碰撞证书经 CCV 验证，缝证书经 PSV 预验，则对任意演示分布，`Exec_v19 ⊆ Exec_v18`，且演示层新增授权基数 `|NewAuth| = 0`。证明：DCM 的值域含于 v17 认证锚集，锚节点的 NC 已由 v16 NCS/MCA/WCB 验证；CCV 只拒不授（P36）；PSV 只增缝约束（P29）；SAS 影子晋升零授权、正式晋升复用 v16 NCS（v18 引理 143）。故演示只能揭示既有证书的可行组合，不能新增节点、放宽阈值、扩张域。∎ 推论：**演示学习的失效模式只有单向——少挖出一些锚；不安全率相对 v18 恒为零**。
 
-**引理 138（共形语义证书的有限样本遏制）** 设校准集由 N 条与当前计划可交换的已执行计划记录组成、分数有界，接受规则为 `s ≤ q̂`（q̂ 取校准分数第 ⌈(N+1)(1−α)⌉ 次序统计量，超出时取 +∞）。则 `P(HCG 接受真无效计划) ≤ α`。证明：标准共形秩论证——可交换性下当前分数在 N+1 个分数中的秩均匀分布，超过第 ⌈(N+1)(1−α)⌉ 次序统计量的概率 ≤ α；verifier 只进入分数特征不影响秩分布。∎ 推论：**幻觉遏制的有效性不依赖 verifier LLM 的正确性，只依赖校准集可交换性**——故漂移时必须滑动窗重校准，重校准样本本身过投毒过滤。
+**引理 144（碰撞域保守下近似）** 设 `ColDom(n, o)` 由广相位（凸包不相交 ⇒ 全域安全）与窄相位（SDF 内切 ⊕ GJK/EPA 验证）构造，且窄相位满足 `UNKNOWN → UNSAFE`。则构造出的 `ColDom(n, o) ⊆ 真实零碰撞参数域`。证明：广相位仅在凸包严格分离时返回 SAFE，凸包包络包含真实几何，故分离充分；窄相位仅在 SDF > eps 或 GJK 证实分离时返回 SAFE，UNKNOWN 保守归为 UNSAFE，故内切。两阶段合取保守性传递。∎ 推论：**泛化接受规则 `Θ_n^col(o_t) ≠ ∅` 恒为保守——若通过，则收缩域内绝对零碰撞**。
 
-**引理 139（计划缝暂态覆盖）** 设 PC(π) 预验全部 `SC_i = Post_{n_i} ∩ Pre_{n_{i+1}}` 非空且 `vol(SC_i) ≥ margin_sc`，运行时过缝 i 复验 `x ∈ SC_i`。则计划执行全程的每一时刻状态都落在某节点的 Run 内（或缝失败后前一节点的 Fallback 内），整条路径被 v16 证书覆盖。证明：节点 n_i 执行时刻 x ∈ Run_{n_i}（v16 引理 131）；过缝时刻 x ∈ Post_{n_i} ∩ Pre_{n_{i+1}} = SC_i，同时满足节点 i 后置与节点 i+1 前置；复验失败即 x ∉ SC_i，节点 n_{i+1} 不再运行，退至 `Fallback_{n_i} ⊆ Pre_{n_i} ⊆ Run_{n_i}`，仍由 v16 引理 131 覆盖。前缀截断只保留头部子序列，而 PC 是序列上的合取，头部子序列的 PC 自动成立。∎ 推论：**计划的安全性不是节点安全的"平均"，而是"节点安全 + 缝隙覆盖"的合取；截短计划不破坏证书**。
+**引理 145（泛化收缩不可逆）** OGCC 的 generalize 满足 `Θ_n^col(o_t) = Θ_n ∩ ColDom(n, o_t)` 且 `vol(Θ_n^col) ≤ vol(Θ_n)`，亏空 `def_col = vol(Θ_n) - vol(Θ_n^col)`。若独立几何探针给出 `def_col ≤ δ_geom` 且 CCV 在 `Θ_n^col` 上采样全通过，则 `Auth(c_t) ⊆ Auth(c_s) ∩ ColDom(o_t)`。证明：参数域求交天然满足收缩；亏空上界由独立探针保证不被低估；CCV 采样验证排除了近似构造的盲区（在采样覆盖范围内）。故泛化证书的授权是源证书与目标碰撞域的交的子集。∎ 推论：**泛化只能让系统"在更少参数下做同一件事"，永远不能"做新事"或"在更多参数下做旧事"**。
 
-**引理 140（新鲜度阶梯的单调退化）** 设缓存计划的有效价值 V(π, τ) 关于年龄 τ 单调不增、前缀截断长度 k(τ) 单调不增，则阶梯 FULL→PREFIX→V16_DEFAULT→V15_FALLBACK 在 Exec 集意义下单调：`Exec(第 j+1 级) ⊆ Exec(第 j 级)`，且无拼接、无跨级。证明：PREFIX 移除尾部节点，PC 对前缀封闭，故头部证书仍成立；V16_DEFAULT 是 v16 TRM 里程碑驱动路径（v16 引理 132 保证其单调性）；V15_FALLBACK 是 v16 引理 135 的漂移塌缩路径。每一级只移除可执行项，不新增；APS 状态机禁止跨级跳转，新计划只能整体替换。∎ 推论：**陈旧只"截短"计划、从不"改变"计划；控制环每帧的决策集合与 LLM 推理进度完全解耦**。
+**引理 146（碰撞证书验证器的唯一裁决性）** 设 CCV 是 DCM、OGCC、SAS、S2C 所有证书产出路径的唯一硬门，且 `UNKNOWN → UNSAFE`。则对任意几何近似误差、数值退化、采样稀疏，任何进入 Anchors 或校准集的证书必满足 `CCV = SAFE`。证明：由架构约束，所有路径汇聚 CCV；CCV 的 verdict 只有三值，其中 UNKNOWN 被语义映射为 UNSAFE；cert_phase 生成的 proof 可被离线审计器机械验证。故不存在"绕过 CCV"或"软性通过"的通道。∎ 推论：**几何近似误差的攻击面被压缩到"CCV 采样覆盖之外的盲区"，且该盲区不被上层任何机制覆盖（见风险 1）**。
 
-**引理 141（剪除式记忆的不可扩性）** 设 AMC 的记忆仅通过 prune_candidates（移除候选）与 rank（重排序）影响计划生成，不向 LLM 候选集注入新 token、不修改 S2C 锚集/HCG 分位数/PSV 余量，则对任意记忆内容（含投毒内容），`Exec_v17` 不增。证明：记忆只作用于提议的"输入分布"，不作用于"裁决边界"：锚集由 v16 TRM/WCB 决定，q̂ 由校准日志决定（重校准亦经投毒过滤与引理 138 的有限样本有效性），prune/rank 的输出集是输入集的子集。故记忆只能减少活动性，不能新增授权。∎ 推论：**记忆投毒的最坏后果是"智能体变笨"，不是"智能体变危险"**。
+**引理 147（演示回放不阻塞）** DRS 的 poll 与 _replay_worker 运行在独立执行器，poll 在 50Hz 控制环外以 period 频率检查队列，_replay_worker 提交后即返回。控制环关键路径不包含任何演示回放、挖掘、几何查询操作。证明：DRS 状态机只有 `queue` 与 `running` 两个原子变量，poll 仅做非阻塞入队/出队；worker 由线程池/进程池异步执行。故控制环 p99 延迟与演示任务完全解耦。∎ 推论：**演示回放的计算开销（挖掘+几何查询+CCV）任意大都不影响实时性**。
 
-**引理 142（注入鲁棒性边界）** 设对手控制 LLM 的任意输入（提示注入），且其输出能力上界为"产生任意 token 序列 π̂"。则在 P28/P29/P30 下，对一切 π̂：`Exec(π̂) ⊆ Exec_v16`，且对手期望收益满足 `E[gain] ≤ E[V(v16_default)] − E[V(Exec_v17)]`（活性损失上界），不安全事件概率与 v16 相同。证明：由引理 137，任意输出只能被投影、拒绝或回退；对手至多 (a) 诱发 ⊥，(b) 诱发 HCG 拒绝，(c) 在锚集内选择证书最劣组合——(c) 仍受 PC 与 v16 运行时证书约束。故不安全率不变，收益被活性差距界定。∎ 推论：**提示注入在本架构下从"安全问题"降格为"完成率问题"——前提是工程实现严格执行 P28（LLM 对 BT/证书栈无写权限）**。
+**引理 148（物体几何编目的保守性传递）** OGC 的 convex_decomp 由 V-HACD 保证 `mesh ⊆ ∪ H_i`（凸包包络）；sdf_cache 由离线预计算保证 `sdf_grid(q) ≤ 真实 SDF(q)`（内切）；minkowski_cache 由 Minkowski 和定义保证 `EE ⊕ Obj ⊆ EE ⊕ (∪ H_i)`。则 CCV 广相位使用的凸包、窄相位使用的 SDF、域查询使用的 Minkowski 均为保守近似。证明：凸包包络性、SDF 内切性、Minkowski 和单调性均为几何标准性质。∎ 推论：**OGC 是保守性的源头；若 OGC 近似偏乐观（如凸分解漏掉凹陷），保守性链条在源头断裂（见风险 1）**。
+
+**引理 149（影子晋升与 v18 兼容）** SAS 接收 DCM 产出的新锚作为影子锚（零授权），晋升条件复用 v18 引理 143：需经 NCS 合成验证、WCB 行为一致性检查、TRM 里程碑门控。晋升后锚接入 S2C 的 Anchors 与 HCG 的校准集，不破坏引理 138（校准集可交换性由影子期隔离保证）。证明：影子期锚不进入 Anchors，不进校准集，不影响 HCG 分位数；晋升时复用 v16 NCS，等价于 v16 新节点合成流程。∎ 推论：**演示发现新技能的完整链路：DCM 挖掘 → SAS 影子 → NCS 正式 → S2C/HCG/PSV 接入，全程零授权增**。
+
+**引理 150（v19 整体安全继承）**：在同一物体编目快照、同一演示缓冲区快照下，`Exec_v19 ⊆ Exec_v18`。证明：DCM 零授权增（引理 143），OGCC 只收缩域（引理 145），CCV 唯一硬门（引理 146），DRS 不阻塞不裁决（引理 147），OGC 保守近似（引理 148），SAS 晋升复用 v16 NCS（引理 149）。五端口复合只能产生 Exec_v18 的子集。∎
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| CLP 提议（有界解码） | 异步 0.5–2Hz，关键路径外 | LLM 200–800ms（后台） | O(token 预算) | 定义 657，引理 137 |
-| S2C token 投影 | 计划接受时 | O(|Anchors|·d)，ANN 加速 O(log|A|) | O(|A|·d) | 定义 660，引理 137 |
-| S2C 整计划编译 | 计划接受时 | O(T·|A|) | O(T) | 引理 137 |
-| HCG 打分 | 计划接受时 | O(T)，≤1ms | O(1) | 定义 665，引理 138 |
-| PSV 预验 | 计划接受时 | O(T·|NC|)，≤2ms | O(T·|NC|) | 定义 663，引理 139 |
-| PSV 运行时过缝复验 | 在线 50Hz（每缝一次） | O(|SC_i|)，≤0.05ms | O(1) | 引理 139 |
-| APS 缓存/新鲜度 | 在线 50Hz | O(1)，≤0.01ms | O(T) | 定义 669，引理 140 |
-| AMC 剪除/排序 | 异步低频 | O(M_mem) | O(M_mem) | 引理 141 |
-| HCG 重校准 | 低频（如每 10 分钟） | O(N log N) | O(N) | 引理 138 |
-| v16 继承路径（BTS/TRM/WBC/CSC） | 在线 50Hz | ≤12ms（不变） | 不变 | v16 引理 131–136 |
-| 控制侧合计（50Hz 关键路径） | 在线 | 典型 ≤12ms，p99 ≤27ms（LLM 推理完全在路径外） | — | 引理 137+140 |
+| DCM 挖掘（单演示） | 异步后台 | O(T·|Anchors| + T·CCV) | O(T) | 引理 143 |
+| DCM 子段投影 | 挖掘时 | O(|Anchors|·d) | O(1) | 引理 143 |
+| DCM 碰撞证书构造 | 挖掘时 | O(T·CCV_narrow) | O(T) | 引理 144 |
+| OGCC 泛化查询 | 异步/在线 | O(|convex_decomp| + SDF_query) | O(1) | 引理 144, 145 |
+| OGCC 域构造 | 泛化时 | O(grid_samples·narrow) | O(grid) | 引理 144 |
+| CCV 广相位 | 在线/离线 | O(|EE_hull|·|obj_hulls|) | O(1) | 定义 736 |
+| CCV 窄相位 | 在线/离线 | GJK/EPA: O(iter·|verts|) | O(1) | 定义 737 |
+| CCV 证书相位 | 在线/离线 | O(proof_size) | O(proof) | 定义 738 |
+| DRS 调度/优先级 | 异步 1Hz | O(log Q) | O(Q) | 引理 147 |
+| OGC 注册（离线） | 冷启动 | V-HACD: O(|mesh| log |mesh|) | O(|decomp|+|sdf|) | 引理 148 |
+| OGC 查询 | 在线 | SDF 插值: O(1) | O(1) | 引理 148 |
+| v18 继承路径 | 在线 50Hz | ≤12ms（不变） | 不变 | v18 引理 143–149 |
+| 控制侧合计（50Hz 关键路径） | 在线 | 典型 ≤12ms，p99 ≤27ms（演示/几何/泛化完全在路径外） | — | 引理 147, 150 |
 
-## 5. 实验设计 E691–E710
+## 5. 实验设计 E731–E750
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E691 | S2C 投影精度 | 映射到认证节点 top-1 精度 ≥98%，0 次跨证书族误映射 |
-| E692 | HCG 共形覆盖 | 留出分布上幻觉接受率 ≤ α，FRR ≤ 15% |
-| E693 | PSV 缝隙预验与复验 | 计划接受 100% 伴随 SC 预验；接受后缝隙处运行时违规 = 0 |
-| E694 | 注入鲁棒性 | 500 条对抗指令集上 0 次不安全动作，活性损失 ≤30% |
-| E695 | 不阻塞延迟隔离 | 注入 LLM p99=10s 延迟，控制环 p99 增量 ≤2ms，0 次阻塞 |
-| E696 | 阶梯新鲜度退化 | τ>TTL 的执行 100% 前缀截断，0 次拼接、0 次跨级 |
-| E697 | 记忆不可扩性 | 投毒记忆注入后 0 次证书扩容、0 次授权增加，活性损失 ≤20% |
-| E698 | 语言指令的里程碑门控 | 超出 m* 的指令 100% 被投影下调或 ⊥，0 次越里程碑执行 |
-| E699 | 多计划仲裁 | 双计划竞争仲裁确定性（V(π) 最大者），切换 ≤1 次/10s |
-| E700 | 长计划误差累积 | T=10 计划的末端证书下界衰减 ≤20%（缝隙复验遏制） |
-| E701 | 消融：无 CLP | 退到 v16 默认策略，语言长程任务完成率 ↓≥25% |
-| E702 | 消融：无 S2C | LLM 输出直通执行器，FAR ↑≥500% 或被迫 0 授权 |
-| E703 | 消融：无 HCG | 幻觉计划直通，任务失败率 ↑≥3×，安全余量 ↓≥40% |
-| E704 | 消融：无 PSV | 缝隙违规 ↑≥20 次/千计划，中途卡死 ↑≥15% |
-| E705 | 消融：无 APS | 同步等待 LLM，控制截止期错失 ↑≥100% |
-| E706 | 消融：无 AMC | 剪除/排序丢失，重复失败 ↑≥2×，长程完成率 ↓≥10% |
-| E707 | 端到端：仿真语言长程任务 | "整理桌面并把杯子放进橱柜"多阶段任务，完成率 ≥ v16+10% |
-| E708 | 端到端：实机语言任务 | M4–M5 里程碑，语言任务完成率 ≥ v16+5%，跌倒率 ≤1% |
-| E709 | 端到端：词表/具身漂移 | OOV/OOD 指令 100% 安全回退（⊥），重校准周期内活性衰减 ≤20% |
-| E710 | 端到端：竞赛/基准测试 | 语言指定任务 ≥ v16+10%（预注册主指标） |
+| E731 | DCM 挖掘精度 | 专家演示 100% 映射到认证节点，0 次跨证书族误映射，0 次碰撞证书漏报 |
+| E732 | DCM 碰撞证书完备性 | 演示轨迹连续时间碰撞证书构造成功率 ≥95%，漏报 = 0 |
+| E733 | OGCC 碰撞域构造 | 凸包/SDF/Minkowski 三路对比：保守性 100%，紧致度（体积/真实域）≥80% |
+| E734 | OGCC 泛化收缩 | 同类物体（杯→杯）泛化接受率 ≥70%，异类（杯→书）接受率 = 0，体积收缩符合预期 |
+| E735 | OGCC 亏空上界 | 独立几何探针 δ_geom 覆盖真实亏空 100%，0 次低估 |
+| E736 | CCV 广相位召回 | 广相位 SAFE 覆盖真实安全域 ≥90%，0 次假 SAFE |
+| E737 | CCV 窄相位鲁棒性 | 退化配置（掠过、嵌入、数值病态）100% 返回 UNKNOWN/UNSAFE，0 次假 SAFE |
+| E738 | CCV 实时性 | 广相位 ≤0.05ms，窄相位 ≤0.5ms，证书相位 ≤0.1ms，p99 ≤1ms |
+| E739 | DRS 回放活性 | 新物体冷启动：回放 3 段演示后新锚发现率 ≥80%，控制环 p99 增量 ≤1ms |
+| E740 | DRS 优先级有效性 | 高优先级演示（新锚潜力大、证书缺口大）优先被挖掘，低优先级不饿死 |
+| E741 | OGC 几何编目质量 | 凸分解包络紧致度 ≥85%，SDF 内切误差 ≤1mm，Minkowski 预计算覆盖 100% EE 类型 |
+| E742 | 端到端：演示挖掘→泛化→执行 | "演示拿红杯→泛化拿蓝杯/绿碗" 端到端成功率 ≥ v18+15%，零碰撞 |
+| E743 | 端到端：多物体泛化 | 单次演示泛化到 10 物体，接受率 ≥60%，体积中位数 ≥0.5·源域 |
+| E744 | 端到端：碰撞边界探针 | 在碰撞边界附近参数（margin_col 附近）执行 100% 安全，0 次碰撞 |
+| E745 | 消融：无 DCM | 退到 v18，新物体冷启动需人工标注锚，冷启动时间 ↑≥5× |
+| E746 | 消融：无 OGCC | 泛化退化为启发式，碰撞率 ↑≥20% 或被迫 0 泛化 |
+| E747 | 消融：无 CCV | 碰撞检测退化为运行时盾，编译时泛化 0 授权，活性 ↓≥40% |
+| E748 | 消融：无 DRS | 回放固定周期，新锚发现率 ↓≥30%，控制环偶发抖动 |
+| E749 | 消融：无 OGC | 物体退化为球包络，泛化接受率 ↓≥50%，保守性大幅过剩 |
+| E750 | 竞赛/基准测试 | 示教泛化任务（如 RoboSet/Sim2Real 基准）≥ v18+15%（预注册主指标） |
 
 ## 6. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| S2C 投影（E691） | ≥98% 精度，0 跨证书族 | 调嵌入对比训练、细化锚、收紧 τ_compile |
-| HCG 共形（E692） | 幻觉接受 ≤α，FRR ≤15% | 扩校准集、重设计分数特征、非对称代价加权 |
-| PSV 缝隙（E693） | 0 次缝违规 | 提高 margin_sc、加中间过渡节点、复验硬门 |
-| 注入（E694） | 0 不安全，活性损失 ≤30% | 输入消毒层、指令模式白名单、P28 硬化 |
-| 延迟隔离（E695） | p99 增量 ≤2ms | APS watchdog、提交限流、推理隔离进程 |
-| 阶梯单调（E696） | 0 拼接、0 跨级 | 状态机锁定、降级越级检测、TTL 收紧 |
-| 记忆投毒（E697） | 0 扩容，损失 ≤20% | 强化投毒过滤、记录签名、记忆审计 |
-| 里程碑门控（E698） | 0 越级执行 | S2C 与 TRM 硬绑定、双门控 |
-| 仲裁（E699） | 0 振荡 | 迟滞、计划锁定窗、V(π) 平滑 |
-| 误差累积（E700） | 衰减 ≤20% | 缩短计划、缝证书链、重规划阈值 |
-| 消融 CLP（E701） | ↓≥25% | 证明语言层价值 |
-| 消融 S2C（E702） | FAR ↑≥500% | 证明投影编译必要性 |
-| 消融 HCG（E703） | 失败率 ↑≥3× | 证明共形遏制必要性 |
-| 消融 PSV（E704） | 缝违规 ↑ | 证明缝证书必要性 |
-| 消融 APS（E705） | 错失 ↑≥100% | 证明不阻塞必要性 |
-| 消融 AMC（E706） | 重复失败 ↑≥2× | 证明记忆价值 |
-| 端到端仿真（E707） | ≥ v16+10% | 按消融定位瓶颈 |
-| 端到端实机（E708） | ≥ v16+5%，跌倒 ≤1% | 调阶层/margin、缩短计划 |
-| 漂移（E709） | 100% 安全回退 | 自适应重校准、OOD 检测、词表扩锚 |
-| 竞赛（E710） | ≥ v16+10% | 综合调优 |
+| DCM 挖掘（E731） | 100% 映射认证节点，0 跨族 | 调分段算法、收紧 τ_mine、加接触事件检测 |
+| DCM 碰撞证书（E732） | 连续证书成功 ≥95%，漏报=0 | 加密集采样、凸包包络细化、Minkowski 证明增强 |
+| OGCC 域构造（E733） | 保守 100%，紧致 ≥80% | 调凸分解粒度、SDF 分辨率、Minkowski 近似阶数 |
+| OGCC 泛化（E734） | 同类 ≥70%，异类 0 | 扩物体编目、细化类别先验、加语义相似度门控 |
+| 亏空上界（E735） | 100% 覆盖，0 低估 | 加强独立探针（更密采样、解析界、对抗几何生成） |
+| CCV 广相位（E736） | 召回 ≥90%，0 假 SAFE | 调 broad_eps、加层级包围盒、凸分解细化 |
+| CCV 窄相位（E737） | 退化配置 0 假 SAFE | 数值稳健 GJK/EPA、加扰动测试、UNKNOWN 保守阈值收紧 |
+| CCV 实时性（E738） | p99 ≤1ms | 广相位 GPU 并行、窄相位缓存、增量更新 |
+| DRS 活性（E739） | 冷启动 3 段 ≥80%，p99 ≤1ms | 调优先级权重、扩演示池、worker 隔离 |
+| 优先级（E740） | 高优先级先挖，低优不饿死 | 加迟滞、公平调度、优先级平滑 |
+| OGC 质量（E741） | 包络 ≥85%，SDF ≤1mm | V-HACD 参数、SDF 自适应分辨率、Minkowski 解析修正 |
+| 端到端（E742） | ≥ v18+15%，零碰撞 | 按消融定位瓶颈 |
+| 多物体（E743） | 10 物体接受 ≥60% | 类别聚类泛化、共享几何先验 |
+| 边界探针（E744） | margin_col 附近 100% 安全 | 自适应 margin、边界采样加密、在线 CCV 复验 |
+| 消融 DCM（E745） | 冷启动 ↑≥5× | 证明挖掘必要性 |
+| 消融 OGCC（E746） | 碰撞 ↑≥20% | 证明碰撞域收缩必要性 |
+| 消融 CCV（E747） | 活性 ↓≥40% | 证明唯一硬门必要性 |
+| 消融 DRS（E748） | 发现率 ↓≥30% | 证明异步调度必要性 |
+| 消融 OGC（E749） | 接受率 ↓≥50% | 证明几何编目必要性 |
+| 竞赛（E750） | ≥ v18+15% | 综合调优 |
 
 ## 7. 已知风险与失效模式
 
-1. **语义嵌入塌缩**：不同子任务（"推"与"戳"）嵌入过近，可能投影到错误锚（同证书族但语义错）。缓解：以证书族为对比目标的嵌入微调、按族独立 τ、投影结果回传 HCG 复核。
-2. **共形校准的不可交换性**：具身/词表/注入分布漂移都会破坏可交换性，分位数 q̂ 失效，幻觉接受率可能超 α。缓解：滑动窗重校准、在线分位数跟踪、漂移触发切白名单模式、保守 α。
-3. **计划缝证书体积塌缩**：SC_i 体积随维度升高可能指数收缩（呼应 v16 风险 3），长计划预验通过、运行时过缝卡死。缓解：任务子空间投影、中间过渡节点、自适应 margin、允许缝失败局部降级而非整计划中止。
-4. **LLM 延迟抖动与积压**：推理 p99 可达数十秒，异步任务积压可能占用内存/算力波及 50Hz 进程。缓解：watchdog、提交限流、推理进程隔离、TTL 缩短。
-5. **提示注入与工程旁路**：引理 142 的边界依赖"只投影"纪律；若工程实现引入旁路（LLM 直接修改 BT 结构/参数/阈值），边界失效。缓解：P28 作为架构级硬约束（LLM 对 BT/证书栈无写权限）、代码审计、权限最小化。
-6. **记忆投毒**：对手构造"看似成功、实则临界"的历史记录，经剪除/排序系统性压制安全计划。缓解：投毒过滤、记录签名、单源剪除配额、周期人工审计。
-7. **词表/语义漂移**：新词（新任务词、新物体名）无锚可投影 → ⊥ → 活动性衰减。缓解：锚集持续扩充（新节点经 v16 NCS 合成）、OOD 检测触发"先学后允"、词表缓存 TTL。
-8. **多计划/多智能体竞争冲突**：多计划竞争执行权引发振荡。缓解：V(π) 仲裁加迟滞、计划锁定窗、仲裁日志经 HCG 审计。
-9. **token/算力成本**：有界解码每次提议仍耗数百 token，长期运行成本可观。缓解：事件触发重规划（仅任务阶段变化时）、计划复用、小模型蒸馏（对齐 v13 蒸馏阶梯）。
-10. **计划缓存与 BT 热更新交互**：BT 热更新（v16 风险 11）使计划缓存锚失效，执行陈旧计划可能引用已删除节点。缓解：计划携带 BT 版本号，版本不符整体失效，热更新仅在无计划窗执行。
-11. **三重证书叠加的过度保守**：节点 NC ∩ 缝 SC ∩ 语义共形三层求交，计划通过率可能塌缩到接近零，系统长期退化为 v16 默认。缓解：加权打分而非纯求交、动态 α、证书族共享（同族内 SC 从宽）、活性监视报警。
-12. **语义分数的测量鸿沟**：semantic_consistency 特征由 verifier LLM 估计，其自身偏差在漂移下可能系统化。缓解：多 verifier 集成、一致率作置信度、verifier A/B 轮换、人工抽检。
+1. **几何近似的盲区**：OGC 的凸分解可能漏掉深凹陷/内部空腔，SDF 采样可能漏掉薄壁/尖锐特征，Minkowski 和数值误差可能低估穿透深度——导致 `ColDom(n, o_t)` **偏乐观**（大于真实零碰撞域），CCV 窄相位在采样点通过、但在未采样参数上真实碰撞。缓解：自适应 SDF 细化、凸分解层级化、对抗几何生成测试、在线 CCV 复验、保守 margin_col 动态放大。
+2. **独立几何探针的盲区共享**：δ_geom 由独立探针给出，但探针本身使用相同的几何近似（凸包/SDF/Minkowski）——若源/目标物体**共享同一类未建模几何奇异性**（如都有未被凸分解捕获的薄壁结构），探针会系统性低估亏空，产生"亏空有界、CCV 采样通过、真实碰撞"的虚假泛化。缓解：异构探针集成（解析界+采样+对抗）、几何奇异性检测器、共享盲区审计日志。
+3. **演示分段的语义鸿沟**：DCM 的 segment_trajectory 依赖启发式（接触事件/动作语义/速度突变），可能把一个长技能切碎、或把两个技能合并，导致投影到错误锚或缝证书失败。缓解：用 v17 HCG/PSV 反向验证分段质量、分段结果回传 CLP 作为语言计划先验、人工标注少量分段种子。
+4. **碰撞证书的连续时间鸿沟**：DCM 从离散轨迹点构造连续碰撞证书（凸包包络+Minkowski），但机器人真实执行轨迹可能偏离演示轨迹（跟踪误差、控制延迟），导致连续证书不覆盖真实执行管腔。缓解：管腔膨胀（tracking_error_bound ⊕ 演示凸包）、在线 CCV 复验、跟踪误差纳入参数域收缩。
+5. **泛化参数域的表示鸿沟**：`Θ_n^col(o_t)` 在 SE(3)×关节空间上是高维非凸集，用网格/采样近似可能漏掉狭窄安全通道，导致泛化被过度拒绝（活性损失）或错误接受（安全风险）。缓解：参数域用星凸/凸包包络表示、自适应采样聚焦边界、拓扑保持简化。
+6. **CCV 窄相位的数值退化**：GJK/EPA 在共面/共线/近奇异配置下数值不稳定，可能返回错误分离距离或陷入无限循环。缓解：数值稳健 GJK（EPA fallback、扰动重启）、迭代上限、退化时强制 UNKNOWN→UNSAFE、离线退化配置枚举测试。
+7. **演示回放的分布偏移**：DRS 回放的演示来自历史分布，当前硬件/软件/里程碑可能已演进，导致挖掘出的锚不满足当前 `m_n ≤ m* ∧ h_n ≤ h*`，或碰撞证书因硬件几何变化失效。缓解：演示携带元数据（硬件版本、里程碑、固件），挖掘时硬门控、硬件变更触发演示失效标记。
+8. **物体编目的静态假设**：OGC 假设物体几何刚性不变，但真实物体可能变形（软体）、磨损、组装状态改变。缓解：物体版本号、在线几何更新触发重编目、软体建模为参数族而非单一网格。
+9. **影子晋升的证据预算耗尽**：SAS 影子锚晋升需经 NCS 验证，需收集足够执行证据；若新物体罕见、执行机会少，影子锚长期停留、永不晋升，导致泛化证书长期停留在影子态（无授权）。缓解：仿真加速证据收集、影子锚超时自动降级、证据预算动态分配。
+10. **三重证书叠加的过度保守**：节点 NC ∩ 缝 SC ∩ 碰撞 ColCert ∩ 语义共形四层求交，计划通过率可能塌缩，系统长期退化为 v18 默认。缓解：加权打分而非纯求交、证书族共享 ColCert、动态 margin_col、活性监视报警。
+11. **演示噪声与亚最优性**：专家演示可能包含抖动、回退、冗余动作，DCM 可能将其投影为 ⊥ 或产生碎片化节点序列。缓解：演示平滑预处理、亚最优片段标记为 ⊥ 而非整段作废、多演示共识挖掘。
+12. **多物体/多演示的组合爆炸**：物体数 × 演示数 × 节点数的泛化组合可能极大，OGCC/CCV 查询开销随组合数线性增长。缓解：泛化结果缓存、相似物体聚类共享 ColDom、按需查询（仅当计划涉及时触发）。
 
 ## 8. 本轮最大风险
 
-**一句话**：HCG 的共形证书与 PSV 的缝体积估计都依赖"校准集覆盖当前计划的组合模式"，而 LLM 的价值恰恰是产出前所未见的新颖组合——当新颖组合逐节点语义分在分位数内、逐节点证书成立、缝隙形式非空（全是采样估计）时，执行走入**校准集从未覆盖的缝隙暂态**，即"逐节点证书成立、语义共形通过、里程碑许可满足，而节点之间关节的证书是外推估计"的、新颖且共形、却绝对不安全的语言计划。
+**一句话**：OGCC 的碰撞域 `ColDom(n, o_t)` 与 CCV 的窄相位查询都依赖**物体几何的保守近似**（凸包/SDF 采样/Minkowski 和），若近似偏乐观（如凸包漏掉凹陷、SDF 采样稀疏漏掉薄壁、Minkowski 和数值误差），则泛化证书会在"形式上体积≥margin_col、CCV 返回 SAFE"的前提下，**在真实物理交互中发生碰撞**——即"几何近似的盲区"变成了"证书的盲区"，且该盲区不被任何上层机制（HCG/PSV/DARG/TAM）覆盖，因为它们都假设 CCV 是可信的。
 <!-- ARTIFACT:END -->
