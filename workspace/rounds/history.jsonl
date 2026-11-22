@@ -4854,3 +4854,17 @@
 {"event": "verdict", "id": "20261122-024955-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-22 02:59:55"}
 {"event": "verdict", "id": "20261122-025050-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-22 03:00:50"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-22 03:18:01"}
+{"event": "candidate", "id": "20261122-100758-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:07:58"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:07:59"}
+{"event": "candidate", "id": "20261122-101332-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:13:32"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:13:33"}
+{"event": "candidate", "id": "20261122-101726-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:17:26"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:17:27"}
+{"event": "verdict", "id": "20261122-100758-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-22 10:17:58"}
+{"event": "candidate", "id": "20261122-102114-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:21:14"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:21:15"}
+{"event": "candidate", "id": "20261122-102305-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:23:05"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:23:06"}
+{"event": "candidate", "id": "20261122-102449-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-22 10:24:49"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261121-164632-r1", "changed": ["idea", "artifact"], "ts": "2026-11-22 10:24:50"}
+{"event": "heartbeat", "round": 1, "ts": "2026-11-22 10:27:06"}
