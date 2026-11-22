@@ -3,564 +3,412 @@
 > 本文件由 xuen 维护：『想法区』『产物区』跨轮保留，每次写入会整体覆盖对应区块。编辑时请保留标记行。
 
 <!-- IDEA:START -->
-# 第 2 轮（新灵感循环第 2 轮；本轮灵感：「深度相机」×「跨物体泛化」×「联邦学习」）
+# 第 3 轮（灵感驱动研究循环·新灵感三元组第 1 轮；本轮灵感：「目标检测」×「伦理与合规」×「手势识别」）
 
-> **基线**：第 1 轮产出 MetricVoiceGauge-NCD-HUTDH-v17+IP-415–419（第 1 轮完整方案）。
-> 本轮纪律：**感知是协同推理、证书是联邦共识、泛化是分层迁移**。不推倒 v17：v17 的 CLP/S2C/HCG/PSV/APS/AMC 与 v19 的 DCM/OGCC/CCV/DRS/OGC 全部保留。本轮只做一件事：**把深度相机的感知能力通过联邦学习与跨物体泛化，安全地注入碰撞证书的采样验证中**。
+> **基线**：第 2 轮产出 MetricVoiceGauge-NCD-HUTDH-v20+IP-420–424（第 2 轮完整方案；其上承 v19 证书体系 DCM/OGCC/CCV/DRS/OGC 与 v17 感知链 CLP/S2C/HCG/PSV/APS/AMC）。
+> 本轮纪律：**检测是带类型与误差界的证据、合规是可审计的义务逻辑、意图是非对称门槛的动态规范**。不推倒 v20：PCA/CTS/CFC/HPC/CFCtrl 全部保留，v19/v17 各模块全部保留。本轮只做一件事：**在 v20 的联邦感知证书之上加一层"语义-规范"层，把"几何安全"升级为"类型化证据 + 规范化合规 + 意图条件化"的可审计证书体系，并顺手封堵 v20 的最大风险（相关性误判共识）**。
 
 ## 0. 直觉与动机
 
-**灵感 1（深度相机 → 感知是协同推理，不是离线离档）**
-直觉：深度相机的输出是稀疏的、有盲区的、受光照/遮挡影响的 3D 坐标；传统做法要么在离线回放里标完激光点云后才构建证书，要么用运行时的原彩图做碰撞检测（但原彩图的碰撞域往往过大）。v19 的 CCV 窄相位依赖 SDF 网格采样，盲区→保守→活性低。核心创新：**联邦感知证书计算器 (Perception Certificate Aggregator, PCA)**。深度相机的稀疏坐标经**局部平面拼接 + 联邦 consensus** 后生成**分层碰撞域**；不同机器人/设备的贡献按**安全可信度加权**，盲区处于**保守下界**；本地观测 + 远程协同 → **感知格 (Perception Lattice)**。关键反直觉点：**感知盲区不是由\"假设完美几何\"来填补，而是由\"跨设备联邦共识的保守边界\"来收敛**——盲区越多，保守边界越窄，且越来越不产生活性损失。
+**灵感 1（目标检测 → 感知证据的类型化、误差界与"负信息"）**
+直觉：v20 的 PCA 把稀疏点云聚合成 Hull，但 Hull 是"无名"的——它不知道那是一把杯子还是一个人的手，更不知道"没检测到"意味着什么（盲区只能永远保守）。目标检测的输出天然是 (类别, 框, 置信度) 三元组，恰好补上三件 v20 缺失的东西：**可标定的定位误差界**（膨胀成以 ≥1-δ 概率包含真物的可靠包围盒 CertBox）、**类条件几何先验**（"杯有把手"——CTS 的谱系签名从逐物体统计升级为类先验，先验收紧只在尺度不变子集上做）、以及最重要的**负信息**：在召回率下界 κ_c 假设下，"覆盖区内无人"本身可以是一张**缺席证书 (Absence Certificate)**——这正是 v20 保守性叠加导致活性坍缩的解药。核心创新：**语义检测证书 (Semantic Detection Certificate, SDC) + 覆盖与缺席证书 (Coverage & Absence Certificate, CAC)**。关键反直觉点：**检测不是"多了一种障碍物来源"，而是一套单调证据系统——障碍物只能被检测增补（只增不减），自由空间只能被缺席证书"赎回"（有偿释放）**。副产品：跨机器人 NMS 式证据去重（同 (类别, 框) 只算一份证据）直接打击 v20"众口铄金"的共识风险面。
 
-**灵感 2（跨物体泛化 → 参数域的拓扑谱系，而非点投影）**
-直觉：第 1 轮的 OGCC 把 Θ_n^col(o_t) 定义为 Θ_n ∩ ColDom(n, o_t)，这是一种**集合交**的极端保守做法；但不同物体可能在参数空间上存在**等价子流形 (Equivalence Submanifolds)**：比如把“轻物体”泛化为“同形异质量的物体”，或把“柔软杯”泛化为“刚性杯”。v19 的 margin_col/δ_geom 机制会把这类相似性误判为碰撞风险。核心创新：**跨物体拓扑谱系 (Cross-Topology Spectrum, CTS)**。定义物体 o 的 **几何谱系 (Geometry Spectrum)** G(o) = (凸分解结构、SDF 标度、质心分布)，用 G(o) 来度量 Θ_n^col(o) 与 Θ_n^col(o') 之间的拓扑相似度；若相似度 ≥ γ，则沿**谱级联 (Spectral Cascade)** 进行泛化：**从“紧凑-小”谱系迁移到“稀疏-大”谱系时，仅在参数域的“尺度不变子集”上接受授权**。关键反直觉点：**跨物体泛化不是越多越好，而是越精准越好**—— CTS 只在谱系匹配的子集上放行，跨谱系的泛化自动退回到 v19 的保守收缩，甚至全拒绝。
+**灵感 2（伦理与合规 → 从"物理安全"到义务逻辑上的可审计安全）**
+直觉：v20 的证书只回答"会不会碰"，不回答"该不该做"：靠近人必须减速（义务）、禁区禁行（禁止）、交接时被允许接近（许可）。合规的本质是**义务逻辑 (Deontic Logic)** 的 O/F/P 三模态，且必须可审计（引用规则编号、留证据链、规则库版本化）。核心创新：**义务合规层 (Deontic Compliance Layer, DCL)**：把规则库 R 编译为约束——F 规则 = 与执行域求交（收缩）；O 规则 = **带期限的计划过滤器**（"存在 ≤τ 的前缀进入让位状态"），不是新的自由空间——这是安全继承得以保持的关键技巧；P 规则 = 只解除 DCL 自身此前施加的限制，永不越过 v20 几何证书的边界。冲突消解取最严者（交）；义务不可满足 → 触发可审计的 SafeStop 升级，绝不静默死锁。关键反直觉点：**义务是"必须做"的正向要求，但形式化为"期限约束下的存在性过滤"后，它仍然只是计划集上的一个过滤器**——正向义务与 Exec_v21 ⊆ Exec_v20 并不矛盾。
 
-**灵感 3（联邦学习 → 证书的分布式共识，而非模型更新）**
-直觉：联邦学习通常用来训练共享模型，在这里不适用于模型参数（机器人动作空间是高度个体化的）。核心创新：**联邦证书共识 (Certificate Federated Consensus,CFC)**。每个机器人本地维护一个**(节点, 参数, 碰撞结果, 几何特征, 时间戳)** 的三元组；CFC 按**几何相似性 + 时间一致性** 将跨机器人的结果聚合；聚合后的碰撞域用**保守 Hull** 描述；聚合时用**拜占庭容错共识** 过滤异常贡献者（机器人故障/投毒）。CFC 的输出是**分层感知证书 (Hierarchical Perception Certificate, HPC)**：高层是全局 Hull，下层是局部置信区间。关键反直觉点：**证书的联邦不是把所有碰撞经验“平均”成一个通用模型，而是把“谁的几何在这里是安全的”以**分布式投票**的形式，编码进每个节点的**感知可达边界**中。
+**灵感 3（手势识别 → 意图是非对称门槛的规范输入，兼作人体在场的独立证据）**
+直觉：静态合规太僵硬（人一进工作区就全局降速、活性坍缩），而人的手势（停止/让位/交接）表达了**动态规范意图**。但手势识别的两类错误风险不对称：把"伸手"误读为"交接"（假许可）会**解锁**危险接近，而把"交接"误读为"无手势"只损失活性。核心创新：**手势意图调节器 (Gesture Intent Conditioner, GIC)**：用 **conformal 校准**保证真意图以 ≥1-α 概率落在预测集 Γ 内；**义务/急停走低门槛**（q ≥ q_low 即触发，fail-safe），**许可走高门槛**（Γ ⊆ {意图} 且置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL，过期回落最严默认；STOP 可被任一通道触发且优先级最高。关键反直觉点（副产品的妙处）：**任何被识别出的手势都构造性地蕴含"有人在场"——手不会凭空出现**。于是手势通道成为人体检测器漏检时的独立召回冗余：CAC 在签发缺席证书前必须先查手势通道，一旦有手势在场证据，缺席证书拒绝签发并翻转为"有人"。
 
 **三者如何统一**
-统一为 **v19 证书体系之上的感知推理层**：v19 回答“给定当前几何对象，节点 n 在参数 θ 下是否零碰撞”，v20 回答“给定深度相机的分布式感知，节点 n 在参数 θ 下的感知可达性与全局碰撞概率”。PCA 是聚合侧（局部分析→全局共识），CTS 是谱系侧（跨物体谱系匹配），CFC 是协议侧（分布式共识）。共享状态 `ζ_fed = (local_points, global_hull, spectrum_signature, cfc_votes, τ_consensus, mode_fed)`。PCA 回答“当前感知给了哪些参数域”，CTS 回答“这些参数域在谱系上是否可迁移”，CFC 回答“这些谱系的结论是否通过分布式验证”。统一接口：**如果 PCA+CTS+CFC 三者都通过，CCV 的窄相位查询在该子域上返回 SAFE；否则退回到 v19 的保守收缩或 v18 默认路径**。
+统一为 **v20 联邦感知证书之上的"语义-规范"层**：SDC/CAC 回答"那里有什么 / 凭什么说没什么"，DCL 回答"规范上禁止/要求/允许什么"，GIC 回答"人此刻的意图如何动态改写规范状态"。共享状态 ζ_fed 扩展为 **ζ_sem = ζ_fed ∪ (D_t, Cov_t, σ_dcl, g_state, cc_proofs)**。统一准入门：**HPC+ = (HPC, CC, AbsCert) 三证一体**——只有"几何 SAFE（v20 HPC）∧ 规范允许（CC）∧ 负信息可靠（AbsCert 或人距上限生效）"才进入执行；任一缺失退回 v20 的保守收缩，再退 v19/v18。SDC 的 NMS 去重与 CFC 升级版 **CFC+（仲裁条件 = 计数 ≥ N-F ∧ 模态数 ≥ 2）**直接针对第 2 轮最大风险：单模态相关故障产生的"一致 SAFE 票"在结构上不再构成共识。
 
 ## 1. 研究问题（轮次升级版）
 
-- **Q1（联邦感知证书的保守性）**：PCA 的局部平面拼接如何保证拼接后碰撞域的 Hull 不偏小（漏掉安全区域）且不偏大（产生假阳性）？分布式贡献的权重如何在几何相似性 + 时间一致性下自动调节？盲区处的保守边界如何用置信区间而非硬阈值描述？
+- **Q1（检测证据的可靠性界）**：如何标定定位误差界 ε_loc(s) 使 CertBox 以 ≥1-δ 概率包含真实物体？类条件几何先验在什么条件下可安全收紧 Hull 而不引入假自由空间（先验收紧与 CTS 尺度不变子集如何衔接）？跨机器人 NMS 去重的等价类定义（类别相同 ∧ IoU ≥ 阈值）在什么情形会误删真正的独立证据？
 
-- **Q2（跨物体谱系的拓扑度量）**：如何定义 G(o) 使得相似物体在几何谱系上靠近、差异物体则被保守地排斥？CTS 的谱系匹配阈值 γ 如何与 v19 的 margin_col 叠加，形成“尺度不变子集”的可接受参数域？在谱系不匹配时，如何最小化活性损失而不增加碰撞风险？
+- **Q2（负信息的可靠性）**：覆盖图 Cov_t 如何由传感器视锥并集 + 遮挡掩码 + 召回率下界 κ_c 严格导出？AbsCert 在召回假设被违反时如何失效安全（fail-safe 退化为全域"假设有人"）？手势通道的"在场翻转"条款如何保证：漏检人体 ∧ 识别出手势 → 状态必须翻转为"有人在场"且缺席证书拒发？
 
-- **Q3（分布式共识的拜占庭容错）**：CFC 的共识算法如何在机器人数量 N ≤ 10 且参与者可能故障/N ≥ 1 的情况下收敛？异常贡献者（故障/投毒）如何通过几何特征 + 结果一致性被识别并剔除？聚合后的 HPC 如何以可审计的 proof 形式呈现，供 CCV 的 cert_phase 使用？
+- **Q3（义务逻辑的编译与活性）**：F/O/P 三类规则如何统一编译为域收缩/期限过滤/条件解锁？带期限义务（τ 内让位）在多机器人资源竞争下如何避免死锁（不可满足 → SafeStop 升级路径的触发与滞回）？规则冲突的最严消解与规则库版本化如何落地为 merkle 审计链？
 
-- **Q4（感知盲区与控制的时序协调）**：深度相机的帧率（10–30Hz）与机器人控制（50Hz）不同步，PCA 的聚合延迟如何被 APS 的新鲜度阶梯所覆盖？感知盲区随时间演变（遮挡、光照）如何动态调整 margin_col 与 τ_consensus？如何在“联邦聚合未完成”时维持 v19 的安全执行？
+- **Q4（意图门槛与时序协调）**：手势识别延迟（100–300ms）与 50Hz 控制环如何协调——DCL/GIC 状态机以事件方式（10Hz 注入 + TTL）离线于控制路径，控制路径仅做 O(1) 状态查询？conformal 预测集的在线重校准如何在分布漂移（新用户/新手势/衣着变化）下维持 1-α 覆盖？非对称阈值 q_low/q_high 与 v20 的 margin_col_fed、τ_consensus、APS 新鲜度阶梯如何叠加而不互相破坏？
 
-## 2. 设计原则（在 P28–P30 基础上新增 P31–P33）
+## 2. 设计原则（在 P31–P33 基础上新增 P34–P36）
 
-**P31 感知格保守律（Perception Lattice Conservatism）**
-深度相机的稀疏观测 `P_local = {p_i}` 通过 PCA 聚合形成全局碰撞域 `ColDom_fed(n, o) = Hull(∪_{robots} contrib_j)`。聚合时，**每个机器人的贡献都要通过局部 CCV 验证**：若 `∃p_i ∈ contrib_j` 且 CCV(n, o, θ| p_i) ≠ SAFE，则 contrib_j 引入 **感知风险系数** `ρ_j = 1 - ε_j`（ε_j 为风险比例），最终域为 `ColDom_fed = ⋂_j [ColDom_local(j) / ρ_j]`。**盲区处于保守 Hull 的外部**：即使某 robot 的 contrib_j 在某区域缺失，全局 Hull 仍以最坏（最大）碰撞体积界定。**感知层的动作集合基数恒为零**：PCA 只能缩小或维护已知安全域，不能授权新的动作。
+**P34 语义证据单调律（Semantic Evidence Monotonicity）**
+检测证据只能**增补**障碍物：`Obs_t = Hull_points ∪ ⋃_k CertBox_k`，其中 `CertBox_k = inflate(b_k, ε_loc(s_k))`；类先验收紧只允许在 CTS 的尺度不变子集上进行，先验失配即回退原 CertBox。**自由空间只能被缺席证书赎回**：仅当 `x ∈ Cov_t` 且 AbsCert 有效时，才允许解除"人可能在此"的保守假设；Cov_t 之外一律保守。障碍集合在快照内**单调不减**；任何失效（检测器故障/标定漂移/覆盖图失效）都使 Obs_t 只增不减、速度上限只降不升。
 
-**P32 谱系可迁移律（Cross-Topology Spectrum Transferability）**
-定义物体 o 的 **几何谱系签名** `G(o) = (S_structure, S_scale, M_center)`：
-- `S_structure`：凸分解的拓扑类型（如 V-HACD 的子图谱、凸包个数、凹凸程度）
-- `S_scale`：SDF 的标度参数（最小/最大距离、分辨率比例）
-- `M_center`：质心在参数空间的分布特征（均值、协方差）
+**P35 义务即约束律（Obligations-as-Constraints）**
+DCL 把规则编译为三类过滤器：F → `Θ ∩ Θ_F^c`（域收缩）；O → `Θ_O = {plan : ∃t' ≤ τ_rule, state(t') ∈ YieldSet}`（带期限的存在性过滤，**不是新自由空间**）；P → 仅当高置信意图 ∧ AbsCert ∧ 模态佐证成立时解除 DCL **自身**的限制，可达集 ⊆ v20 几何域。冲突消解 = **交**（最严者胜）；义务在某计划集上不可满足 → 触发 SafeStop（可审计升级），绝不静默死锁。故 `Exec_v21 = Exec_v20 ∩ Fil_dcl ⊆ Exec_v20`。
 
-定义谱系相似度 `γ(o, o') = w_s·cos(S_structure(o), S_structure(o')) + w_sc·min(S_scale(o)/S_scale(o'), S_scale(o')/S_scale(o)) + w_m·exp(-||M_center(o) - M_center(o')||² / σ²)`。
-
-CTS 接受规则：**若 γ(o, o') ≥ γ_threshold，则允许谱系级联**：`Θ_n^cts(o') = Θ_n^col(o) ∩ ScaleInvariantSet(γ_threshold)`；若 γ(o, o') < γ_threshold，则退回 v19 的保守收缩 `Θ_n^col(o')`，或全拒绝。**谱系迁移只能收缩，不能扩张参数域**。
-
-**P33 联邦共识安全律（Federated Consensus Safety）**
-CFC 使用 **pBFT 变体** 或 **基于排序的共识**，在 N 个机器人中容纳至多 F = ⌊(N-1)/3⌋ 个拜占庭故障者。共识消息包含：`(node_n, theta_sample, collision_verdict, geometric_features, timestamp, robot_id)`。若 F+1 个以上节点对同一 `(node_n, theta_sample)` 达成 `{SAFE}` 共识，则该 θ_sample 被接受至全局 HPC；若 ≥ F+1 个达成 `{UNSAFE}`，则 θ_sample 被 **硬性排除**；若投票在 50–50 区间，则 θ_sample 进入 **置信区间** `[θ_low, θ_high]`，由置信区间的保守 Hull 界定。**共识的结果必须通过可审计的 Merkle Proof** 链式存储，供后续 CCV cert_phase 检查。
+**P36 非对称意图门槛律（Asymmetric Intent Thresholds）**
+义务/急停以**低门槛**触发（q ≥ q_low，fail-safe：假阳性的代价只是活性）；许可以**高门槛**触发（conformal 预测集 Γ ⊆ {意图} 于置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL_intent，过期回落最严默认；STOP 具最高优先级，可由检测/手势/急停按钮任一通道触发。
 
 ## 3. 与基线的接口（如何退化）
 
-- PCA 失效（深度相机故障/数据丢失）⇒ CCV 窄相位退化为 v19 纯 SDF 查询 ⇒ 等价 v19（更保守）；
-- CTS 失效（谱系计算不可用）⇒ OGCC 只做 v19 的保守收缩 ⇒ 等价 v19；
-- CFC 失效（联邦网络分区）⇒ 只接受本地机器人的贡献，盲区扩大 ⇒ 等价 v19（局部保守）；
-- 三者全失效 ⇒ 完全回退到 v19 的 CCV ⇒ 等价 v19；
-- **安全继承**：PCA 只能收敛域、CTS 只能收缩域、CFC 只能筛选域；三者的任意失效都导致域收敛性增强，`Exec_v20 ⊆ Exec_v19` 由引理 151 保证。
+- SDC 失效（检测器故障）⇒ 障碍只剩 v20 点云 Hull，类先验收紧不可用 ⇒ 等价 v20（更保守）；
+- CAC 失效（覆盖图不可信）⇒ 全域保守假设"可能有人" ⇒ 比 v20 更保守（人形共享区限速），安全继承方向不变；
+- DCL 失效（规则引擎崩溃）⇒ 进入**最大限制模式**（共享区停机 + 非共享区按静态人距上限）⇒ `Exec_v21 ⊆ Exec_v20` 仍成立；
+- GIC 失效 ⇒ 无许可解锁、义务回落静态合规默认 ⇒ 子集；
+- CFC+ 模态多样性无法满足（仅单模态可用）⇒ 仲裁退回 v20 的 CFC 行为 ⇒ 等价 v20；
+- 三者全失效 ⇒ 完全回退 v20 ⇒ `Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`（引理 162）。
+- **安全继承**：SDC 只增障碍、CAC 只赎回有证的自由空间且失效向保守、DCL 只交/过滤、GIC 只在自家限制内解锁；任意失效都向更保守方向退化。DCL/GIC 状态机以事件方式接入 v17 APS 新鲜度阶梯：每次迁移携带时间戳，TTL 过期回落最严默认，控制路径仅 O(1) 查询。
 
 ## 4. 预期贡献
 
-1. **联邦感知证书**：首次把“深度相机稀疏观测→碰撞证书”改写为分布式共识的保守 Hull，使得感知盲区在协同后收敛，填补“离线感知=离线安全、运行时感知=活性”的鸿沟；
-2. **跨物体谱系**：发现“参数域在几何谱系上的等价结构”，给出 CTS 的谱系签名、相似度度量与级联规则，使跨物体泛化从“集合交”升级为“拓扑一致下的尺度不变子集”；
-3. **分布式碰撞共识**：给出 CFC 的拜占庭容错共识算法、几何特征驱动的异常剔除、置信区间保守描述，首次实现“机器人群体对碰撞安全的分布式自我验证”；
-4. **感知与控制的时序协调**：用 APS 的 τ_consensus 与 margin_col 动态耦合，使得感知盲区随时间以置信区间演化，控制环始终保有可验证的安全边界；
-5. **层次化感知格**：PCA+CTS+CFC 构成感知格，落在 v19 的证书体系之上，`Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`，实现“感知协同→跨物体泛化→碰撞安全”的闭环。
+1. **类型化感知证书**：首次把目标检测的 (类别, 框, 置信度) 变成带误差界的碰撞证据，类先验与 CTS 谱系统一，给出"障碍只增、自由有偿赎回"的单调证据系统；
+2. **缺席证书**：给出"覆盖区内无人"的可靠性形式化（召回下界 κ_c + 覆盖图 Cov_t），首次把负感知信息变成可审计证书，并以手势通道作为人体在场的独立召回冗余；
+3. **义务逻辑编译**：F/O/P 规则到域收缩/期限过滤/条件解锁的统一编译、带期限义务的活性保障（不可满足→SafeStop 升级）、规则库 merkle 版本审计，使碰撞证书从"物理安全"升级为"可审计的规范安全"；
+4. **非对称意图门槛**：conformal 意图预测集 + 低门槛义务/高门槛许可的失稳不对称设计，给出"意图→规范状态→参数域"的动态改写协议，假许可概率有显式上界 α；
+5. **封堵 v20 最大风险**：NMS 证据去重 + CFC+ 模态多样性仲裁，使"单模态相关系统误判"在计数与结构上都无法形成共识；
+6. **三证一体 HPC+**：HPC ∪ CC ∪ AbsCert 统一准入门，`Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 闭环。
 
 ## 5. 本轮最大风险
 
-**一句话**：PCA 的联邦聚合依赖远程机器人的几何特征（凸分解结构、SDF 标度、质心分布）若**被同一类几何奇异性系统性误标为“安全贡献”**（如均漏掉薄壁结构），则全局 Hull 会**系统性偏小**，导致“形式上通过联邦共识、感知格给出 SAFE、但实际碰撞”的**分布式误判中心风险**——即“众口铄金的碰撞盲区”。
+**一句话**：AbsCert 的全部可靠性押在检测器召回率下界 κ_c 这一**经验假设**上，若检测器对某类人体形态（儿童、轮椅、蹲姿、非常规衣着/强逆光）存在**系统性漏检**，则"覆盖区内无人"的证书会形式成立而事实为假，机器人将**合规地、可审计地、撞上没被看见的人**——即"合规的缺席幻觉"。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# IP-420–424 v20 新增感知层核心模块
+# IP-425–430 v21 新增语义-合规层核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v19） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v20） |
 |---|---|---|---|
-| IP-420 | Perception Certificate Aggregator (PCA) | 新增感知聚合模块 | 联邦聚合稀疏深度点云→分层碰撞域；盲区保守 Hull；感知风险系数化权重 |
-| IP-421 | Cross-Topology Spectrum (CTS) | 新增泛化度量模块 | 定义几何谱系签名 G(o)，计算谱系相似度 γ，实施尺度不变子集迁移 |
-| IP-421 | Cross-Topology Spectrum (CTS) | 新增泛化度量模块 | 定义几何谱系签名 G(o)，计算谱系相似度 γ，实施尺度不变子集迁移 |
-| IP-422 | Certificate Federated Consensus (CFC) | 新增分布式共识模块 | pBFT 变体容错 F = ⌊(N-1)/3⌋；几何特征驱动异常剔除；置信区间 Hull |
-| IP-423 | Hierarchical Perception Certificate (HPC) | 新增证书结构模块 | 多层碰撞域表示：全局 Hull + 局部置信区间 + 感知风险系数；Merkle Proof 可审计 |
-| IP-424 | Consensus Freshness Controller (CFCtrl) | 新增时序协调模块 | τ_consensus ≥ TTL 时回退 v19；margin_col 动态按感知置信度调节；APS 集成 |
+| IP-425 | Semantic Detection Certificate (SDC) | 新增类型化感知模块 | (类别,框,置信度)→带误差界 CertBox；类先验经 CTS 接口收紧；跨机器人 NMS 证据去重 |
+| IP-426 | Coverage & Absence Certificate (CAC) | 新增负信息证书模块 | 覆盖图 Cov_t 由视锥+遮挡+召回下界导出；AbsCert 有偿赎回自由空间；手势通道独立在场证据 |
+| IP-427 | Deontic Compliance Layer (DCL) | 新增义务合规模块 | F/O/P 规则编译为域收缩/期限过滤/条件解锁；最严消解；不可满足→SafeStop 升级；规则库 merkle 版本化 |
+| IP-428 | Gesture Intent Conditioner (GIC) | 新增意图调节模块 | conformal 意图预测集；低门槛义务/高门槛许可非对称触发；TTL 意图状态机；手势=在场证据 |
+| IP-429 | HPC+ (Perception-Compliance Certificate) | 证书结构升级 | HPC ∪ CC ∪ AbsCert 三证一体统一准入门；规则/投票/缺席证明全链可机械复核 |
+| IP-430 | CFC+ (Modality-Diverse Consensus) | 共识协议升级 | 仲裁条件 = 计数 ≥N-F ∧ 模态数 ≥2；同源(类别,框)证据只计一票；结构性封堵相关性误判共识 |
 
-## 0. 核心符号体系（定义 767–820）
+## 0. 核心符号体系（定义 821–875）
 
 | 符号 | 含义 |
 |---|---|
-| P_local^r = {p_i^r} | 机器人 r 的本地稀疏深度点云 |
-| contrib_j | 机器人 j 对节点的贡献：(points, verifications, features, timestamp, id) |
-| ρ_j = 1 - ε_j | 机器人 j 的感知风险系数：ε_j 为其局部 CCV 失败率 |
-| ColDom_fed(n, o) | 联邦感知碰撞域：全局 Hull 聚合结果 |
-| G(o) = (S_structure, S_scale, M_center) | 物体 o 的几何谱系签名 |
-| S_structure | 凸分解结构：拓扑类型 / 凸包个数 / 凹凸程度 |
-| S_scale | SDF 标度：min_dist / max_dist / resolution_ratio |
-| M_center | 质心分布：均值 / 协方差 |
-| γ(o, o') | 谱系相似度：加权 cos + scale ratio + exp(-dist²) |
-| Θ_n^cts(o') | CTS 迁移后参数域：Θ_n^col(o) ∩ ScaleInvariantSet |
-| ScaleInvariantSet(γ_threshold) | 在谱系匹配阈值下的尺度不变参数子集 |
-| HPC(n) = (Hull_global, CI_local, ρ_max) | 层次化感知证书：全局 Hull + 局部置信区间 + 最大风险系数 |
-| τ_consensus | 联邦聚合完成的时间戳 |
-| margin_col_fed = margin_col · (1 + λ·ρ_max) | 联邦感知动态 margn |
-| F = ⌊(N-1)/3⌋ | 拜占庭容错阈值：最多容纳 F 个故障机器人 |
-| Vote(θ) → {SAFE, UNSAFE, UNKNOWN} | θ 在共识轮次的投票结果 |
-| merkle_path(HPC) | HPC 的 Merkle Proof：可审计的聚合链 |
-| ζ_fed = (local_points, global_hull, spectrum_signature, cfc_votes, τ_consensus, mode_fed) | 联邦感知层共享状态 |
-| Exec_v20 | 通过 HPC 验证且可被 v19 CSC 执行的感知增强计划集合 |
+| D_t = {(c_k, b_k, s_k, mod_k)} | t 时刻检测集：类别 c、框 b、置信度 s、证据模态 mod |
+| ε_loc(s) | 标定的定位误差界：P(err ≤ ε_loc(s) \| score=s) ≥ 1-δ |
+| CertBox_k = inflate(b_k, ε_loc(s_k)) | 带误差界的可靠包围盒（引理 157） |
+| Prior_c | 类 c 的几何先验谱系（V-HACD 子图统计/SDF 标度），经 v20 CTS 接口注入 |
+| Obs_t | 障碍集合 = v20 点云 Hull ∪ ⋃ CertBox_k（快照内单调不减，P34） |
+| Cov_t | 覆盖区域：若人在场，检测集成以 ≥κ_c 概率报出 |
+| AbsCert(Cov') = (Cov', κ_c, δ_abs) | 缺席证书：Cov' 内无人（以 ≥1-δ_abs），δ_abs = 1-κ_c |
+| κ_c | 类 c 检测召回率下界（**经验假设，全方案最薄弱环节**） |
+| R = {(rid, Pre, Op, C)} | 版本化规则库：Op ∈ {F 禁止, O 义务, P 许可} |
+| Θ_F / Θ_O / Θ_P | F 收缩域 / O 期限过滤 / P 条件解锁 |
+| YieldSet, τ_rule | 让位安全状态集与义务期限（如 0.5s 内让位） |
+| σ_dcl, SafeStop | DCL 规范状态机；义务不可满足时的可审计停机升级 |
+| g_t, î, q, Γ(q) | 手势流、识别意图、置信度、conformal 预测集（⊇{î} w.p. ≥1-α） |
+| q_low / q_high | 非对称门槛：义务 ~0.3 / 许可 ~0.9（P36） |
+| TTL_intent | 意图状态时效；过期回落最严默认 |
+| CC(n) = (F_ids, O_ids+τ, P_ids, proofs) | 合规证书：已守禁止/已满足义务/已引用许可 + 证明链 |
+| HPC+ = (HPC, CC, AbsCert) | 三证一体：几何 SAFE ∧ 规范允许 ∧ 负信息可靠 |
+| Mod(v) | 投票 v 的证据模态（depth/RGB/tactile/gesture） |
+| Quorum+ = {#votes ≥ N-F} ∧ {\|Mod\| ≥ 2} | CFC+ 仲裁条件（引理 161） |
+| ζ_sem = ζ_fed ∪ (D_t, Cov_t, σ_dcl, g_state, cc_proofs) | 语义-合规层共享状态（ζ_fed 原样保留） |
+| Exec_v21 = Exec_v20 ∩ Fil_dcl | 通过 HPC+ 验证的计划集合 |
 
 ## 1. 关键算法骨架
 
 ```python
-# IP-420 Perception Certificate Aggregator
-class PerceptionCertificateAggregator:
-    def __init__(self, ccv, margin_col_base=0.01, risk_alpha=0.5):
-        self.ccv = ccv                    # 复用 v19 CCV 作为本地验证器
-        self.margin_col_base = margin_col_base
-        self.risk_alpha = risk_alpha      # 风险系数放大系数
+# IP-425 Semantic Detection Certificate
+class SemanticDetectionCertificate:
+    def __init__(self, cts, calibration, iou_dedup=0.5):
+        self.cts = cts                      # 复用 v20 CTS：类先验走谱系接口
+        self.calibration = calibration      # 置信度→定位误差分位数表
+        self.iou_dedup = iou_dedup
 
-    def aggregate(self, robot_contributions, node, obj):
-        """
-        机器人贡献列表: contrib_j = (points, verifications, features, ts, id)
-        返回: (ColDom_fed, risk_profile)
-        """
-        if not robot_contributions:
-            return None, "NO_CONTRIBUTION"
+    def issue_certboxes(self, detections_raw):
+        """detections_raw: [(cls, box, score, robot_id, modality)]"""
+        # 1. 跨机器人 NMS 去重：同 (cls, box) 只算一份证据（封堵相关性误判）
+        deduped = []
+        for det in sorted(detections_raw, key=lambda d: -d[2]):
+            if all(det.cls != d.cls or self._iou(det.box, d.box) < self.iou_dedup
+                   for d in deduped):
+                deduped.append(det)
+        # 2. 误差界膨胀：CertBox 以 ≥1-δ 概率包含真实物体（引理 157）
+        return [CertBox(cls=c, box=inflate(b, self.calibration.loc_quantile(c, s)),
+                        score=s, modality=m) for c, b, s, _, m in deduped]
 
-        verified_parts = []
-        risk_factors = []
+    def merge_obstacles(self, point_hulls, certboxes):
+        """P34：障碍单调增——point_hulls 来自 v20 PCA，原样接入，只并不删"""
+        obs = point_hulls
+        for cb in certboxes:
+            obs = union(obs, cb.as_obstacle())
+        return obs   # Obs_t
 
-        for contrib in robot_contributions:
-            points, verifications, features, ts, rid = contrib
-            # 1. 本地 CCV 验证：每一点都要安全
-            all_safe = True
-            unsafe_ratio = 0.0
-            for p, verdict in zip(points, verifications):
-                if verdict != "SAFE":
-                    all_safe = False
-                    unsafe_ratio += 1.0
+    def tighten_with_prior(self, certbox):
+        """类先验收紧：仅限 CTS 尺度不变子集；先验不可信即回退原 CertBox"""
+        gamma = self.cts.similarity_to_class_prior(certbox.cls, certbox)
+        if gamma >= self.cts.gamma_threshold:
+            return intersect(certbox, self.cts.class_prior_domain(certbox.cls))
+        return certbox    # 保守回退
 
-            unsafe_ratio /= max(1, len(verifications))
-
-            # 2. 计算风险系数 ρ
-            # 若本地验证出现碰撞，直接剔除该贡献
-            if unsafe_ratio > 0.1:
-                continue
-
-            # 风险系数：CCV 失败率决定权重
-            epsilon = unsafe_ratio * self.risk_alpha
-            rho = 1.0 - epsilon
-
-            # 3. 贡献点的保守 Hull
-            safe_hull = self.compute_hull(points)
-            verified_parts.append(safe_hull)
-            risk_factors.append(rho)
-
-        if not verified_parts:
-            return None, "ALL_CONTRIB_UNSAFE"
-
-        # 4. 联邦 Hull：全局 Hull = ⋂_j [Hull_j / ρ_j]
-        # 实际计算：取所有 Hull 的并集，再按最大风险收缩
-        global_hull = hull_union(verified_parts)
-        max_risk = max(risk_factors) if risk_factors else 1.0
-
-        # 5. 动态 margin_col_fed
-        margin_fed = self.margin_col_base * (1.0 + self.risk_alpha * (1.0 - max_risk))
-
-        return ColDomFed(hull=global_hull, margin=margin_fed, rho_max=max_risk), "OK"
-
-    def compute_hull(self, points):
-        """计算点云的保守凸包 Hull"""
-        if not points:
-            return ConvexHull.empty()
-        return ConvexHull.from_points(points)
-
-    def query_fed_domain(self, n, obj, theta_dom):
-        """查询联邦感知域是否覆盖给定参数域"""
-        col_dom_fed, status = self.aggregate(self.robot_contrib_cache.get(n, []), n, obj)
-        if status != "OK":
-            return False
-        return col_dom_fed.contains(theta_dom) and col_dom_fed.volume() >= col_dom_fed.margin
+    def _iou(self, a, b):
+        return iou(a, b)
 
 
-# IP-421 Cross-Topology Spectrum (CTS)
-class CrossTopologySpectrum:
-    def __init__(self, ogc, gamma_threshold=0.85):
-        self.ogc = ogc
-        self.gamma_threshold = gamma_threshold
-        self.spectrum_cache = {}   # obj_id -> G(o)
+# IP-426 Coverage & Absence Certificate
+class CoverageAbsenceCertifier:
+    def __init__(self, sensor_models, recall_lower_bound, gesture_conditioner):
+        self.sensors = sensor_models        # 视锥/遮挡模型（depth+RGB）
+        self.kappa = recall_lower_bound     # κ_c：召回率下界（经验假设）
+        self.gic = gesture_conditioner      # GIC：独立人体在场证据通道
 
-    def compute_spectrum(self, obj):
-        """计算物体的几何谱系签名 G(o)"""
-        if obj in self.spectrum_cache:
-            return self.spectrum_cache[obj]
+    def coverage_map(self, t, occlusion_mask):
+        """Cov_t = 视锥并集 ∧ 未被遮挡；遮挡/视锥外一律不覆盖 → 保守"""
+        return subtract(union_view_frusta(self.sensors, t), occlusion_mask)
 
-        entry = self.ogc.get(obj)
-        if entry is None:
-            return None
+    def issue_absence(self, cov, detections, gestures):
+        # 手势优先条款（引理 158）：任何有效手势 ⇒ 那里有"手"⇒ 有人在场，
+        # 缺席证书拒发并翻转为 HUMAN_PRESENT
+        for g in gestures:
+            if self.gic.is_valid_human_evidence(g):
+                return None, "HUMAN_PRESENT_BY_GESTURE"
+        if not any(d.in(cov) for d in detections):
+            return AbsCert(cov=cov, kappa=self.kappa,
+                           delta=1.0 - self.kappa), "OK"
+        return None, "DETECTION_IN_COV"
 
-        # S_structure: 凸分解拓扑特征
-        num_hulls = len(entry.convex_decomp)
-        avg_hull_area = sum(h.area() for h in entry.convex_decomp) / num_hulls
-        topology_signature = (num_hulls, avg_hull_area)
+    def covers(self, region):
+        """供 GIC 许可门槛查询：目标区域是否处于有效覆盖内"""
+        return region.in(self.current_cov)
 
-        # S_scale: SDF 标度
-        sdf_stats = entry.sdf_stats()   # (min_dist, max_dist, resolution)
-        scale_signature = sdf_stats
-
-        # M_center: 质心分布
-        centroid_dist = entry.centroid_variance()
-
-        G = SpectrumSignature(
-            S_structure=topology_signature,
-            S_scale=scale_signature,
-            M_center=centroid_dist
-        )
-        self.spectrum_cache[obj] = G
-        return G
-
-    def similarity(self, obj1, obj2):
-        """计算谱系相似度 γ(o, o')"""
-        G1 = self.compute_spectrum(obj1)
-        G2 = self.compute_spectrum(obj2)
-
-        if G1 is None or G2 is None:
-            return 0.0
-
-        w_s, w_sc, w_m = 0.4, 0.4, 0.2  # 可调权重
-
-        # 结构相似性：余弦相似性
-        cos_struct = self.cosine_structure(G1.S_structure, G2.S_structure)
-
-        # 比例相似性：最小比值
-        ratio_sc = min(
-            G1.S_scale.max_dist / G2.S_scale.max_dist,
-            G2.S_scale.max_dist / G1.S_scale.max_dist
-        )
-
-        # 质心相似性：指数衰减
-        exp_m = math.exp(-G1.M_center**2 / (2 * G2.M_center**2)
-                        - G2.M_center**2 / (2 * G1.M_center**2))
-
-        gamma = w_s * cos_struct + w_sc * ratio_sc + w_m * exp_m
-        return gamma
-
-    def transfer_domain(self, node, theta_src, obj_src, obj_tgt):
-        """
-        基于谱系相似度进行跨物体泛化
-        返回：Θ_n^cts(o_t) 或 None（不可迁移）
-        """
-        gamma = self.similarity(obj_src, obj_tgt)
-
-        if gamma < self.gamma_threshold:
-            return None, "SPECTRUM_MISMATCH"
-
-        # 1. 获取源对象的碰撞参数域
-        theta_dom_src = self.get_param_domain(node, obj_src)
-
-        # 2. 计算 ScaleInvariantSet
-        # 在谱系匹配下，尺度比例相同的子集是安全的
-        scale_ratio = self.compute_scale_ratio(obj_src, obj_tgt)
-        invariant_subdomain = self.extract_scale_invariant(theta_dom_src, scale_ratio)
-
-        # 3. 与目标对象的 ColDom 求交
-        col_dom_tgt = self.query_col_dom(node, obj_tgt)
-        theta_cts = intersect_domains(invariant_subdomain, col_dom_tgt)
-
-        return theta_cts, "OK"
-
-    def extract_scale_invariant(self, theta_dom, scale_ratio):
-        """提取尺度不变子集：参数按比例缩放后的子域"""
-        return theta_dom.scale_invariant_subdomain(ratio=scale_ratio * 0.9)  # 保守
-
-    def cosine_structure(self, s1, s2):
-        """结构签名的余弦相似性"""
-        v1 = [s1[0], s1[1]]  # (num_hulls, avg_area)
-        v2 = [s2[0], s2[1]]
-        return dot(v1, v2) / (norm(v1) * norm(v2))
-
-    def compute_scale_ratio(self, obj1, obj2):
-        """计算两个物体的尺度比例"""
-        e1 = self.ogc.get(obj1)
-        e2 = self.ogc.get(obj2)
-        if e1 is None or e2 is None:
-            return 1.0
-        return e1.sdf_stats().max_dist / e2.sdf_stats().max_dist
+    def on_failure(self):
+        """CAC 失效：全域保守假设有人 ⇒ 比默认更保守（fail-safe 方向）"""
+        return ConservativeMode(human_everywhere=True)
 
 
-# IP-422 Certificate Federated Consensus
-class CertificateFederatedConsensus:
-    def __init__(self, N_robots, F=None):
-        self.N = N_robots           # 机器人总数
-        self.F = F or (N_robots - 1) // 3  # 拜占庭容错阈值
-        self.votes = {}             # theta -> {robot_id: Vote}
-        self.merkle_tree = MerkleTree()  # 记录聚合 proof
+# IP-427 Deontic Compliance Layer
+class DeonticComplianceLayer:
+    def __init__(self, rule_base, aps):
+        self.rules = rule_base              # 版本化规则库（merkle 锚定）
+        self.aps = aps                      # v17 APS：新鲜度阶梯
+        self.state = DeonticStateMachine()  # σ_dcl：事件化，10Hz 注入+TTL
 
-    def submit_vote(self, robot_id, node, theta, verdict, features):
-        """机器人提交投票"""
-        key = self.canonical_key(node, theta)
-        if key not in self.votes:
-            self.votes[key] = {}
-        self.votes[key][robot_id] = Vote(
-            verdict=verdict,
-            features=features,
-            timestamp=time.time()
-        )
-        self.merkle_tree.update(key, robot_id, verdict)
+    def evaluate(self, semantic_state):
+        """semantic_state = (detections, abs_cert, gesture_state, zones)"""
+        active_F, active_O, active_P = [], [], []
+        for rule in self.rules.active():
+            if rule.precondition(semantic_state):
+                {"F": active_F, "O": active_O, "P": active_P}[rule.op].append(rule)
+        # 冲突消解：最严者胜（交）；P 只能解除 DCL 自身限制
+        self.state.transition(active_F, active_O, active_P)
+        return self.state
+
+    def compile_filters(self, theta_dom, plan, state):
+        dom = theta_dom
+        for rule in state.F:                        # F：域收缩
+            dom = intersect(dom, complement(rule.forbidden_domain()))
+        feasible = []
+        for cand in plan.candidates:                # O：带期限的存在性过滤
+            if all(self._deadline_ok(cand, r) for r in state.O):
+                feasible.append(cand)
+        if state.O and not feasible:
+            return None, None, "OBLIGATION_UNSATISFIABLE->SafeStop"
+        for rule in state.P:                        # P：条件解锁（仅 DCL 自身限制）
+            if rule.unlock_conditions_met():
+                dom = rule.reenable(dom)
+        return dom, feasible, "OK"
+
+    def _deadline_ok(self, cand, rule):
+        return exists_prefix_within(cand, rule.tau, rule.yield_set)
+
+    def on_failure(self):
+        """DCL 失效：最大限制模式（共享区停机+静态人距上限）⊆ v20"""
+        return MaxRestrictionMode()
+
+
+# IP-428 Gesture Intent Conditioner
+class GestureIntentConditioner:
+    def __init__(self, conformal_calibrator, cac, q_low=0.3, q_high=0.9,
+                 alpha=0.01, ttl_intent=1.0):
+        self.calib = conformal_calibrator   # Γ(q) ⊇ {î} w.p. ≥1-α
+        self.cac = cac                      # 覆盖与缺席证书（许可需覆盖佐证）
+        self.q_low, self.q_high = q_low, q_high
+        self.alpha = alpha
+        self.ttl = ttl_intent
+
+    def update(self, gesture_stream, t_now):
+        intent, q = self.calib.classify(gesture_stream)
+        gamma_set = self.calib.conformal_set(gesture_stream, alpha=self.alpha)
+        # 非对称触发（P36）：义务/急停低门槛 fail-safe
+        if intent == "STOP" or (q >= self.q_low
+                                and intent in OBLIGATION_INTENTS):
+            return IntentState(intent, mode="OBLIGATION", ttl=self.ttl)
+        # 许可高门槛：conformal 集 ⊆ {意图} ∧ 目标区覆盖有效
+        if (q >= self.q_high and gamma_set <= {intent}
+                and self.cac.covers(intent.target_region)):
+            return IntentState(intent, mode="PERMISSION_CANDIDATE",
+                               ttl=self.ttl)
+        return self.expire_if_stale(t_now)   # 过期 → 最严默认
+
+    def is_valid_human_evidence(self, g):
+        """手势即人体在场证据（独立召回冗余通道，引理 158）"""
+        return g.confidence >= self.q_low
+
+
+# IP-429 HPC+ 三证一体（v20 HPC 原样保留，只加门）
+@dataclass
+class ComplianceCert:
+    rule_base_version: str
+    f_respected: list       # 已守禁止规则 id
+    o_met: list             # 已满足义务 [(rid, deadline_ok)]
+    p_invoked: list         # 已引用许可 [(rid, gamma_set, abs_cert_ref)]
+    merkle_root: str        # 规则库版本 + 证明链（引理 154 同构）
+
+    def all_obligations_met(self, theta_dom):
+        return all(ok for (_, ok) in self.o_met)
+
+    def human_proximity_caps_active(self):
+        return self.caps_active   # AbsCert 缺席时的人距上限兜底
+
+@dataclass
+class HPCPlus:
+    hpc: HierarchicalPerceptionCert   # v20 几何证书（原样）
+    cc: ComplianceCert                # 新增：合规证书
+    abs_cert: AbsCert                 # 新增：缺席证书（可为 None）
+
+    def admits(self, theta_dom):
+        return (self.hpc.contains(theta_dom)
+                and self.cc.all_obligations_met(theta_dom)
+                and (self.abs_cert is not None
+                     or self.cc.human_proximity_caps_active()))
+
+
+# IP-430 CFC+：在 v20 CFC 之上只加严，不改基线行为
+class CertificateFederatedConsensusPlus(CertificateFederatedConsensus):
+    M_MIN_MODALITIES = 2
 
     def consensus_round(self, timeout=5.0):
-        """进行一次共识轮次"""
         results = {}
         for key, votes in self.votes.items():
-            if len(votes) < self.N - self.F:
-                # 投票不足，进入置信区间
-                results[key] = "CI"
-                continue
-
-            # 检查异常：若有机器人连续投反对票，标记为可疑
-            safe_votes = self.filter_outliers(votes)
-
-            n_safe = sum(1 for v in safe_votes.values() if v.verdict == "SAFE")
-            n_unsafe = sum(1 for v in safe_votes.values() if v.verdict == "UNSAFE")
-
-            if n_safe >= self.N - self.F:
-                results[key] = "SAFE"
-            elif n_unsafe >= self.N - self.F:
-                results[key] = "UNSAFE"
+            count_ok = len(votes) >= self.N - self.F
+            modalities = {v.modality for v in votes.values()}
+            # CFC+：计数够了还不够，模态必须多样（封堵单模态相关故障）
+            if count_ok and len(modalities) >= self.M_MIN_MODALITIES:
+                results[key] = self._majority_with_outlier_filter(votes)
             else:
-                results[key] = "CI"  # 进入置信区间
-
+                results[key] = "CI"   # 仲裁不足 → 置信区间 → 保守
         return results
-
-    def filter_outliers(self, votes):
-        """基于几何特征过滤异常投票（拜占庭容错）"""
-        if len(votes) <= 2 * self.F:
-            return votes  # 人数不足，无法区分
-
-        # 计算特征均值与方差
-        features_list = [v.features for v in votes.values()]
-        mean_feat = mean(features_list)
-        cov_feat = cov(features_list)
-
-        filtered = {}
-        for rid, vote in votes.items():
-            # Mahalanobis 距离衡量异常程度
-            dist = mahalanobis(vote.features, mean_feat, cov_feat)
-            if dist < 2.0:  # 95% 置信区间
-                filtered[rid] = vote
-
-        return filtered
-
-    def get_hpc(self, node):
-        """生成当前节点的层次化感知证书"""
-        results = self.consensus_round()
-
-        safe_points = []
-        ci_points = []
-        for key, verdict in results.items():
-            if verdict == "SAFE":
-                theta = extract_theta(key)
-                safe_points.append(theta)
-            elif verdict == "CI":
-                # 进入置信区间：用 Hull 表示
-                ci_points.append(extract_theta(key))
-
-        global_hull = hull_union(safe_points + ci_points)
-        ci_hull = hull_union(ci_points) if ci_points else ConvexHull.empty()
-
-        # 计算最大风险系数
-        rho_max = 1.0 - min(1.0, len(safe_points) / max(1, len(results)))
-
-        hpc = HierarchicalPerceptionCert(
-            node=node,
-            hull_global=global_hull,
-            hull_ci=ci_hull,
-            rho_max=rho_max,
-            merkle_root=self.merkle_tree.root()
-        )
-        return hpc
-
-    def canonical_key(self, node, theta):
-        """生成规范键值用于哈希"""
-        return hash((node.id, tuple(theta.tolist())))
-
-
-# IP-423 Hierarchical Perception Certificate
-@dataclass
-class HierarchicalPerceptionCert:
-    node: Node
-    hull_global: ConvexHull       # 全局 Hull（保守）
-    hull_ci: ConvexHull           # 置信区间 Hull
-    rho_max: float                # 最大感知风险系数
-    merkle_root: str              # Merkle Proof root
-
-    def contains(self, theta_dom):
-        """判断参数域是否在 Hull 中"""
-        return self.hull_global.contains(theta_dom) and self.hull_global.volume() >= self.margin()
-
-    def margin(self):
-        """动态 margin：基于风险系数"""
-        base = 0.01
-        return base * (1.0 + 2.0 * (1.0 - self.rho_max))
-
-    def expand_for_risk(self):
-        """为风险系数扩张 Hull（更保守）"""
-        return self.hull_global.expand(factor=1.0 + 0.5 * (1.0 - self.rho_max))
-
-
-# IP-424 Consensus Freshness Controller
-class ConsensusFreshnessController:
-    def __init__(self, aps, ttl_consensus=2.0):
-        self.aps = aps
-        self.ttl_consensus = ttl_consensus
-
-    def check_fed_freshness(self, hpc, current_time):
-        """检查 HPC 的新鲜度，决定是否回退"""
-        age = current_time - hpc.timestamp
-        rho = hpc.rho_max
-
-        if age > self.ttl_consensus:
-            # 超过 TTL，转为 v19 保守模式
-            return "V19_CONSENSUS_EXPIRED"
-
-        # 动态 margin 调整
-        margin_adjusted = 0.01 * (1.0 + 3.0 * rho)
-        return margin_adjusted
-
-    def integrate_with_aps(self, plan, hpc, m_star, h_star):
-        """与 APS 的新鲜度阶梯集成"""
-        current_time = time.time()
-        mode = self.check_fed_freshness(hpc, current_time)
-
-        if mode == "V19_CONSENSUS_EXPIRED":
-            # 回退到 v19 的 OGCC/CCV 路径
-            return self.aps.activate_freshness_ladder(plan, force_mode="V19")
-
-        # 更新 margin_col 为联邦感知的动态 margin
-        margin_fed = self.check_fed_freshness(hpc, current_time)
-        return self.aps.update_plan_risk(plan, margin_col_fed=margin_fed)
 ```
 
-## 2. 符号体系增量（定义 767–820）
+## 2. 符号体系增量（定义 821–875）
 
-| 符号 | 含义 |
-|---|---|
-| P_local^r | 机器人 r 的本地稀疏深度点云 |
-| contrib_j | 机器人 j 的贡献 |
-| ρ_j | 风险系数 |
-| ColDom_fed(n, o) | 联邦感知碰撞域 |
-| G(o) | 几何谱系签名 |
-| S_structure | 结构特征 |
-| S_scale | 标度特征 |
-| M_center | 质心分布 |
-| γ(o, o') | 谱系相似度 |
-| Θ_n^cts(o') | CTS 迁移后参数域 |
-| ScaleInvariantSet(γ_threshold) | 尺度不变子集 |
-| HPC(n) | 层次化感知证书 |
-| τ_consensus | 联邦聚合时间戳 |
-| margin_col_fed | 动态碰撞域阈值 |
-| F | 拜占庭容错阈值 |
-| Vote(θ) | θ 的投票结果 |
-| merkle_path(HPC) | Merkle Proof |
-| ζ_fed | 联邦感知层共享状态 |
-| Exec_v20 | 通过 HPC 验证的计划集合 |
+| 编号段 | 新增符号（本轮） | 继承符号（v20，保持不变） |
+|---|---|---|
+| 821–830 | D_t, CertBox_k, ε_loc(s), Prior_c | ζ_fed, ColDom_fed, ρ_j |
+| 831–840 | Obs_t, Cov_t, AbsCert, κ_c, δ_abs | HPC, hull_global, hull_ci |
+| 841–850 | R, Θ_F/Θ_O/Θ_P, YieldSet, τ_rule | margin_col_fed, τ_consensus |
+| 851–860 | σ_dcl, SafeStop, CC(n), proofs | cfc_votes, merkle_path |
+| 861–870 | g_t, î, q, Γ(q), q_low/q_high, TTL_intent | Vote(θ), F = ⌊(N-1)/3⌋ |
+| 871–875 | Mod(v), Quorum+, HPC+, ζ_sem, Exec_v21 | Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18 |
 
 ## 3. 推导
 
-**引理 151（联邦感知保守性）** PCA 的 `ColDom_fed = ⋂_j [Hull_j / ρ_j]` 其中 `ρ_j ≤ 1`，故 `ColDom_fed ⊆ ColDom_local(j) ⊆ 真实零碰撞域`。且盲区处于 Hull 外部，故不产生假阳性。∎ 推论：**联邦感知只能收敛域，不能扩张域**。
+**引理 157（检测证书可靠性）** 若标定满足 P(err ≤ ε_loc(s) | score=s) ≥ 1-δ，则 CertBox = inflate(b, ε_loc(s)) ⊇ 真实物体以概率 ≥1-δ。类先验收紧仅在 v20 CTS 尺度不变子集上进行（P34），先验失配即回退原 CertBox；故障碍合并 `Obs_t = Hull ∪ ⋃CertBox` 只增不减，不引入假自由空间。∎
 
-**引理 152（谱系迁移保守性）** CTS 的 `γ(o, o') ≥ γ_threshold` 决定是否允许 `Θ_n^cts(o')`；若通过，则 `Θ_n^cts(o') ⊆ Θ_n^col(o)`；若不通过，则退为 v19 保守或全拒。故 `Θ_n^cts(o') ⊆ Θ_n^col(o')` 且 `Exec_v20 ⊆ Exec_v19`。∎
+**引理 158（缺席证书的可靠性与手势冗余）** 若召回率 ≥ κ_c（假设 A-recall），则 P(覆盖区内有人 ∧ 零检测) ≤ 1-κ_c = δ_abs，AbsCert 以 ≥1-δ_abs 可靠。手势条款：任何被 GIC 以 q ≥ q_low 识别的手势事件构造性蕴含人体在场（手必属于人），此时 AbsCert 拒发并翻转为 HUMAN_PRESENT。假设 A-recall 被违反或 CAC 失效时，退化方向为全域保守（更严），安全继承不变。∎
 
-**引理 153（分布式共识安全性）** CFC 的 pBFT 变体在 N ≤ 10 且 F = ⌊(N-1)/3⌋ 时收敛；异常贡献者通过 Mahalanobis 距离剔除；CI 区的置信区间 Hull 通过保守包络描述。故共识结果的碰撞断言 `SAFE` 必须满足：≥ N-F 个机器人在几何上一致且无碰撞。∎
+**引理 159（义务编译的收缩性）** F 规则过滤为域交；O 规则 `Θ_O = {plan : ∃t'≤τ_rule, state(t') ∈ YieldSet}` 是计划集上的过滤器（子集选择），不引入新动作；P 规则仅解除 DCL 自身限制，其可达集 ⊆ v20 几何域。故 `Exec_v21 = Exec_v20 ∩ Fil_dcl ⊆ Exec_v20`。义务不可满足时触发 SafeStop（可审计升级），排除静默死锁。∎
 
-**引理 154（层次化感知证书的可审计性）** HPC 包含 `merkle_root`，其 Proof 可追溯到每一次 Vote 的机器人 ID、θ 坐标、verdict 与 features。故 HPC 是可机械验证的。∎
+**引理 160（非对称门槛的失稳界）** 义务误触发率 ≤ P(q ≥ q_low | 无意图)（代价仅为活性）；许可误解锁率 ≤ P(Γ ⊆ {î} | 真意图 ≠ î) ≤ α（conformal 覆盖保证）。取 α=0.01、q_low=0.3：假许可概率 ≤1%，假急停仅损失活性——错误方向与危害方向对齐。∎
 
-**引理 155（时序协调的安全继承）** CFCtrl 的 `τ_consensus` 被 APS 纳入 TTL；`τ_consensus > TTL` 时回退 v19；margin_fed 动态放大以覆盖聚合不确定。故控制环始终保有可验证边界，`Exec_v20 ⊆ Exec_v19`。∎
+**引理 161（模态多样性共识抗相关性）** CFC+ 仲裁要求 `#votes ≥ N-F ∧ |Mod(votes)| ≥ 2`。单模态相关故障（同型深度相机同点同错）产生的"一致 SAFE 票"因 |Mod|=1 不满足 Quorum+，落入 CI/保守——第 2 轮最大风险（众口铄金）在计数与结构上被双重封堵；代价：单模态系统退化为 v20 行为（活性损失可控）。∎
 
-**引理 156（v20 整体安全继承）** 在同一几何快照、同一机器人集合下，`Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`。证明：PCA 保守 Hull、CTS 收缩迁移、CFC 筛选异常、CFCtrl 动态 margin，六者叠加只能产生子集。∎
+**引理 162（v21 整体安全继承）** 同一几何快照、同一规则库与机器人集合下：SDC 只增障碍（157）、CAC 只赎回有证自由且失效向保守（158）、DCL 只交/过滤（159）、GIC 只在自家限制内解锁（160）、CFC+ 只加严仲裁（161）。故 `Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`。∎
 
 ## 4. 复杂度分析
 
 | 组件 | 域 | 时间 | 空间 | 正确性锚 |
 |---|---|---|---|---|
-| PCA 本地 CCV 验证 | O(N_points) | O(N_points · CCV) | O(N_points) | 引理 151 |
-| PCA 聚合 Hull | O(N_robots · K) | O(K log K) | O(K) | 引理 151 |
-| PCA 风险系数 | O(R) | O(1) | O(1) | 引理 151 |
-| CTS 谱系计算 | 离线 | O(Elements) | O(Elements) | 引理 152 |
-| CTS 相似度 | O(1) | O(1) | O(1) | 引理 152 |
-| CTS 域迁移 | O(Params) | O(grid_samples) | O(grid) | 引理 152 |
-| CFC 投票提交 | O(1) | O(1) | O(1) | 引理 153 |
-| CFC 共识轮次 | O(|votes|) | O(|votes|²) | O(|votes|) | 引理 153 |
-| CFC 异常过滤 | O(R) | O(R·d) | O(d) | 引理 153 |
-| HPC 生成 | O(SAFE + CI) | O(K log K) | O(K) | 引理 154 |
-| CFCtrl 时序检查 | O(1) | O(1) | O(1) | 引理 155 |
-| 50Hz 控制路径 | 在线 | ≤12ms（与 v19 不变） | — | 引理 155, 156 |
+| SDC NMS 去重 | O(D)，D≤50 | O(D²) | O(D) | 引理 157 |
+| SDC 膨胀+合并 | O(D + P) | O(D + P log P) | O(D + P) | 引理 157 |
+| 类先验收紧 | O(1) | O(1)（查 v20 谱系缓存） | O(1) | 引理 157, 152 |
+| CAC 覆盖图 | O(S) | O(S·视锥裁剪) | O(体素) | 引理 158 |
+| AbsCert 签发 | O(D + G) | O(D + G) | O(1) | 引理 158 |
+| DCL 规则评估 | O(\|R_active\|) | O(\|R_active\|·pred) | O(\|R_active\|) | 引理 159 |
+| DCL 域编译 | O(Params) | O(grid_samples) | O(grid) | 引理 159 |
+| GIC conformal 查询 | 在线 O(1) | O(1) 查表 | O(\|calib\|) | 引理 160 |
+| GIC 状态机 | O(1) | O(1) | O(1) | 引理 160 |
+| CFC+ 仲裁 | O(\|votes\|) | O(\|votes\|²) | O(\|votes\|) | 引理 161 |
+| HPC+ 组装 | O(1) | O(1)（引用三证） | O(1) | 引理 162 |
+| 50Hz 控制路径 | 在线 | ≤12ms（与 v19/v20 不变；语义层 10Hz 事件化注入） | — | 引理 155, 162 |
 
-## 5. 实验设计 E751–E780
+## 5. 实验设计 E771–E800
 
 | 实验 | 核心问题 | 关键目标 |
 |---|---|---|
-| E751 | PCA 盲区收敛 | 5 台机器人协同聚合后，盲区面积 ↓≥70%，碰撞误报率 = 0 |
-| E752 | PCA 风险系数 | 个别机器人视角贡献权重 ε_j ∈ [0,0.2]，整体 Hull 收敛快于单视角 ≥2× |
-| E753 | CTS 谱系计算 | 10 类常见物体（杯、盒子、书本），同类谱系 γ ≥ 0.85，异类 γ ≤ 0.4 |
-| E754 | CTS 迁移成功率 | 同类物体泛化接受率 ≥ 85%，异类 ≥ 0%，尺度变化 ≤ ±30% 不受限 |
-| E755 | CTS 迁移保守性 | 迁移后参数域体积 ≤ 源域体积，`Exec_v20 ⊆ Exec_v19` 验证通过 |
-| E756 | CFC 共识收敛 | N=7 机器人，F=2 故障，1000 轮共识后收敛率 ≥ 98% |
-| E757 | CFC 异常剔除 | 人为注入 20% 逆向投票，过滤后误判率 ↓≥90% |
-| E758 | CFC 置信区间 | 第 3 类不确定θ_sample 进入 CI，HPC 给出保守 Hull 覆盖率 ≥ 95% |
-| E759 | HPC Merkle 可审计 | 每轮 HPC 的 merkle_path 可被独立验证器复核，正确率 100% |
-| E760 | CFCtrl TTL 触发 | τ_consensus > TTL 时回退 v19，控制环 p99 稳定 ≤ 27ms |
-| E761 | 动态 margin 调节 | ρ_max = 0.3 时 margin_fed = 0.019，控制活性 ↓≤ 5% |
-| E762 | 端到端：协同感知→执行 | 3 台机器人协同完成“搬红杯→搬蓝杯→搬绿碗”，碰撞 0 次，成功率 ≥ 90% |
-| E763 | 端到端：跨物体 CTS | 同一演示仅改物体，CTS 自动识别谱系，接受率 ≥ 75% |
-| E764 | 联邦推断延迟 | 从点云输入到 HPC 输出 ≤ 80ms（GPU 并行），p99 ≤ 120ms |
-| E755 | 消融：无 PCA | 回退 v19，盲区人工标注率 ↑≥ 3× |
-| E766 | 消融：无 CTS | 跨物体泛化退化为启发式，接受率 ↓≥ 40% |
-| E767 | 消融：无 CFC | 共识失败率 ↑≥ 25%，盲区未收敛 |
-| E768 | 消融：无 HPC | 证书不可审计，离线复核通过率 ↓至 0% |
-| E769 | 消融：无 CFCtrl | τ_consensus 失控，TTL 失效，碰撞警报 ↑≥ 15% |
-| E770 | 竞赛/基准测试 | FSCtrl 跨物体搬运基准，v19+20% 成功率，v20 端到端 ≤ 1.5s |
+| E771 | CertBox 膨胀可靠性 | 注入定位误差后包含率 ≥99%（δ=0.01） |
+| E772 | 类先验收紧 | Hull 体积 ↓≥30% 且零包含违例 |
+| E773 | NMS 证据去重 | 跨机器人重复证据计数=1，冗余票 ↓≥90% |
+| E774 | AbsCert 可靠性 | 覆盖区放人必检出（召回模拟），假缺席 ≤1% |
+| E775 | 覆盖图动态性 | 遮挡发生→Cov 收缩→限速 ≤100ms 内生效 |
+| E776 | DCL 规则编译 | 20 条规则 × 10k 计划零违例 |
+| E777 | 带期限义务 | τ 内让位满足率 ≥99%，零死锁 |
+| E778 | 手势 STOP 响应 | 识别→最严行为 ≤150ms，全停 ≤300ms |
+| E779 | 假许可率 | conformal α=0.01 下误解锁 ≤1% |
+| E780 | 手势在场冗余 | 人体漏检+手势在场 → 翻转"有人" ≥95% |
+| E781 | CFC+ 抗相关攻击 | 单模态相关误判：v20 假 SAFE，v21 拦截 100% |
+| E782 | HPC+ 审计 | 规则/投票/缺席证明离线复放正确率 100% |
+| E783 | 意图 TTL 过期 | 过期→最严默认，零越权动作 |
+| E784 | 端到端 hand-over | 手势交接：合规速度接近，成功 ≥90%，零违例 |
+| E785 | 端到端人流混行 | 3 机器人 2 行人：义务让位达成 ≥95%，零死锁 |
+| E786 | 消融：无 SDC | 障碍全靠点云 Hull，人形场景误报/漏防暴露 |
+| E787 | 消融：无 CAC | 无缺席赎回：人形区永远保守，活性 ↓≥25% |
+| E788 | 消融：无 DCL | 合规违例（近人超速等）↑≥100% |
+| E789 | 消融：无 GIC | 动态让位退化为静态限速，任务时长 ↑≥30% |
+| E790 | 消融：无 CFC+ | 相关性攻击下假 SAFE 复现（=v20 风险） |
+| E791 | 语义层延迟 | 事件化注入，控制路径 p99 ≤12ms |
+| E792 | conformal 覆盖 | 经验覆盖率 ≥99%（漂移后重校准） |
+| E793 | 规则冲突 | 最严消解正确率 100%，无不可满足循环 |
+| E794 | 隐私合规 | 原始图像零出域，仅证书/几何特征外传 |
+| E795 | 基准对比 | vs v20：成功率持平+，合规违例=0，活性损失 ≤8% |
+| E796 | 手势欺骗抵抗 | 假手势无覆盖/佐证时不可解锁，拦截 100% |
+| E797 | 规则库版本审计 | 规则变更 merkle 链可回放，审计通过 100% |
+| E798 | 召回漂移监控 | κ_c 在线监测，跌破→自动全域保守化 ≤1s |
+| E799 | 义务死锁压力 | 3 机器人互让位：SafeStop 升级 ≤2s，无振荡 |
+| E800 | 全栈竞赛 | 人机共享搬运基准：v21 端到端 ≤1.6s，违例=0 |
 
 ## 6. 预注册判据
 
 | 判据 | 门槛（预注册） | 若未达标的处置 |
 |---|---|---|
-| E751 | 盲区收敛 ≥ 70%，误报 0 | 加权平均 Hull、放宽 ρ_j 范围 |
-| E752 | 单视角 → 多视角收敛快 ≥ 2× | 增强局部 CCV 密度采样 |
-| E753 | 同类 γ ≥ 0.85，异类 ≤ 0.4 | 调整 G(o) 权重、扩充谱系特征 |
-| E754 | 同类接受 ≥ 85%，异类 0 | 调节 γ_threshold、细化 ScaleInvariantSet |
-| E755 | 迁移域体积 ≤ 源域 | 加强 CTS 收缩校验 |
-| E756 | 共识收敛 ≥ 98% | 优化 pBFT 超时、投票排序 |
-| E757 | 异常剔除后误判 ↓≥ 90% | 调整 Mahalanobis 阈值、加特征冗余 |
-| E758 | CI Hull 覆盖 ≥ 95% | 扩大置信区间、加密采样密度 |
-| E759 | Merkle 验证 100% | 审计链路、纠正哈希碰撞 |
-| E760 | TTL 触发回退后 p99 ≤ 27ms | 调节 τ_consensus、增 APS 缓存 |
-| E761 | ρ=0.3 时活性 ↓≤ 5% | 调整 margin_fed 系数、加动态反馈 |
-| E762 | 跨机器人搬运成功 ≥ 90% | 调节 Hull 收敛、优化点云融合 |
-| E763 | CTS 跨物体接受 ≥ 75% | 细化谱系匹配、共享几何先验 |
-| E764 | HPC 输出延迟 p99 ≤ 120ms | GPU 并行、压缩点云、增量 Hull |
-| E765 | 消融 PCA 盲区 ↑≥ 3× | 证明协同感知必要性 |
-| E766 | 消融 CTS 接受 ↓≥ 40% | 证明谱系迁移必要性 |
-| E767 | 消融 CFC 共识失败 ≥ 25% | 证明分布式共识必要性 |
-| E768 | 消融 HPC 审计 0% | 证明可审计证书必要性 |
-| E769 | 消融 CFCtrl 碰撞 ↑≥ 15% | 证明时序协调必要性 |
-| E770 | 竞赛成功率 ≥ v19+20% | 全链路调优 |
+| E771 | 包含率 ≥99% | 增大 ε_loc 分位数、加最坏情形误差项 |
+| E772 | 体积 ↓≥30% 零违例 | 收紧先验适用条件、回退原 Hull |
+| E773 | 冗余票 ↓≥90% | 调 iou_dedup、引入类条件 IoU |
+| E774 | 假缺席 ≤1% | 下调 κ_c、收缩 Cov_t、加密传感器 |
+| E775 | ≤100ms 生效 | 视锥预计算、遮挡检测提速 |
+| E776 | 零违例 | 规则单测补全、编译器形式验证 |
+| E777 | ≥99% 零死锁 | τ 自适应、义务优先级重排 |
+| E778 | ≤150/300ms | 手势模型蒸馏、事件优先通道 |
+| E779 | ≤1% | 提高 α 严格度、加佐证模态 |
+| E780 | 翻转率 ≥95% | 手势敏感度调优、多通道并联 |
+| E781 | 拦截 100% | 模态权重再平衡、仲裁条件加严 |
+| E782 | 复放 100% | 修复审计链、哈希规范化 |
+| E783 | 零越权 | TTL 语义收紧、默认态加严 |
+| E784 | ≥90% 零违例 | 许可门槛/接近速度联合调优 |
+| E785 | ≥95% 零死锁 | 义务调度器改进、区域分区 |
+| E786–790 | 各消融显著退化 | 证明各模块必要性 |
+| E791 | p99 ≤12ms | 事件化程度加深、预算重分配 |
+| E792 | 覆盖 ≥99% | 在线重校准、漂移检测器 |
+| E793 | 100% 无循环 | 冲突图静态检查、规则 lint |
+| E794 | 零出域 | 数据流审计、特征最小化 |
+| E795 | 持平+ 且违例=0 | 全链路调优、规则-活性联合优化 |
+| E796 | 拦截 100% | 挑战-响应确认、多因子佐证 |
+| E797 | 审计 100% | 版本链修复、签名规范化 |
+| E798 | ≤1s 保守化 | κ 监控采样加密、看门狗 |
+| E799 | ≤2s 无振荡 | 升级路径滞回、随机化退避 |
+| E800 | ≤1.6s 违例=0 | 端到端联合调优 |
 
 ## 7. 已知风险与失效模式
 
-1. **联邦几何特征的系统性偏差**：若所有机器人使用的传感器/标定方案在几何上共享同一系统性误差（如深度漂移、标定偏差），则计算的 G(o)、 Hull、ρ_j 都可能系统性偏小，导致“形式上通过联邦共识，实际碰撞”。缓解：异构传感器特征、定期标定校准、几何偏差检测器。
-
-2. **谱系相似度的误判**：CTS 的 γ(o, o') 依赖离线标度与结构特征，若目标物体在实际执行中出现**未建模的几何变形**（磨损、附着），则谱系相似度被高估，迁移后域偏大。缓解：实时几何更新、变形感知器、谱系动态校正。
-
-3. **拜占庭故障的盲区**：CFC 的 F = ⌊(N-1)/3⌋ 容错假设所有故障是恶意的；但若**大量机器人同时受到同一种感知干扰**（强光、反射），则它们的投票会高度一致地错误，超过 F 阈值。缓解：引入多传感器融合（RGB+深度+触觉）、环境可信度指示器、跨模态验证。
-
-4. **置信区间 Hull 的过度保守**：CI 区的 Hull 以保守包络描述置信区间，但在高维参数空间上，Hull 可能过度收缩，导致“CI 区域被完全排除”或“置信区间失真”。缓解：核密度估计 + Mahalanobis  ellipsoid、局部 PCA + 各向异性 Hull。
-
-5. **动态 margin 过度放大**：`margin_col_fed = margin_col · (1 + λ·ρ_max)` 在高风险时放大 margin，但放大过度会导致活性急剧下降。缓解：margin 的分段线性、活性反馈闭环、软约束优化。
-
-6. **MTU 传输的投影失真**：机器人之间的点云通过网络传输，可能出现压缩/丢包，导致 contrib_j 的 Hull 提取失真。缓解：端到端哈希校验、点云纠缠编码、局部 Hull 传输压缩。
-
-7. **谱系缓存的时效失效**：G(o) 基于 OGC 的静态几何，若物体几何在长期使用中变化，谱系缓存会过时。缓解：物体版本号 + 几何变更触发谱系更新、谱系增量修正。
+1. **召回率假设的系统性违反**（最大风险，见第 8 节）：κ_c 是经验假设；对儿童/轮椅/蹲姿等非常规形态的漏检使 AbsCert 形式成立而事实为假。缓解：κ_c 在线监控+跌破即全域保守（E798）、手势独立在场通道（E780）、覆盖图宁小勿大、未覆盖区限速。
+2. **规则冲突与义务死锁**：多机器人互相让位的义务可能循环互斥。缓解：最严消解+不可满足即 SafeStop 升级+滞回与随机退避（E799）。
+3. **手势欺骗与误读**：伪造/误读手势解锁许可。缓解：conformal 高门槛+模态佐证+TTL+挑战式确认（E796）。
+4. **保守性叠加的活性坍缩**：v20 盲区保守 + v21 覆盖保守 + 义务过滤叠加，人流密集区活性可能趋零。缓解：缺席证书正是为此设计（有偿赎回），以 E795 监控活性损失 ≤8%。
+5. **合规层延迟**：规则评估若侵入控制路径会破坏 12ms 预算。缓解：语义层完全事件化（10Hz 注入+TTL），控制路径只查状态机（E791）。
+6. **隐私与伦理成本**：人体检测处理生物特征图像。缓解：原始图像不出设备、只传证书与几何特征（E794）、处理最小化。
+7. **先验收紧的谱系过时**：类先验与实例漂移（磨损、附着物）不符时，收紧可能引入假自由空间。缓解：仅在尺度不变子集收紧+实例级 γ 复核（引理 157 回退条款）。
 
 ## 8. 本轮最大风险
 
-**一句话**：CFC 的分布式共识依赖所有机器人对**同一 θ 的碰撞 verdict 高度一致**，但若**环境光照/遮挡导致深度相机在同一点的观测偏差系统性 correlated**（而非独立），则它们会**同一异常 verdict 形成共识**，在“形式上通过拜占庭容错、分布式投票都判 SAFE”的前提下，**产生全局性的碰撞盲区**——即“众测协同的系统性误判”。
+**一句话**：AbsCert 把"没看见"变成"证明没有"，而其全部可靠性押在检测器召回下界 κ_c 这一经验假设上——若检测器对某类人体形态系统性漏检（儿童、轮椅、蹲姿、强逆光），机器人将在形式上合规、审计上通过、事实上撞人：**"合规的缺席幻觉"**。
 <!-- ARTIFACT:END -->
