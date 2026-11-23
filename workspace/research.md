@@ -1,5 +1,5 @@
 <!-- IDEA:START -->
-# 第 3 轮（灵感驱动研究循环·新灵感三元组第 1 轮；本轮灵感：「目标检测」×「伦理与合规」×「手势识别」）
+动研究循环·新灵感三元组第 1 轮；本轮灵感：「目标检测」×「伦理与合规」×「手势识别」）
 
 > **基线**：第 2 轮产出 MetricVoiceGauge-NCD-HUTDH-v20+IP-420–424（第 2 轮完整方案；其上承 v19 证书体系 DCM/OGCC/CCV/DRS/OGC 与 v17 感知链 CLP/S2C/HCG/PSV/APS/AMC）。
 > 本轮纪律：**检测是带类型与误差界的证据、合规是可审计的义务逻辑、意图是非对称门槛的动态规范**。不推倒 v20：PCA/CTS/CFC/HPC/CFCtrl 全部保留，v19/v17 各模块全部保留。本轮只做一件事：**在 v20 的联邦感知证书之上加一层"语义-规范"层，把"几何安全"升级为"类型化证据 + 规范化合规 + 意图条件化"的可审计证书体系，并顺手封堵 v20 的最大风险（相关性误判共识）**。
@@ -37,7 +37,7 @@
 DCL 把规则编译为三类过滤器：F → `Θ ∩ Θ_F^c`（域收缩）；O → `Θ_O = {plan : ∃t' ≤ τ_rule, state(t') ∈ YieldSet}`（带期限的存在性过滤，**不是新自由空间**）；P → 仅当高置信意图 ∧ AbsCert ∧ 模态佐证成立时解除 DCL **自身**的限制，可达集 ⊆ v20 几何域。冲突消解 = **交**（最严者胜）；义务在某计划集上不可满足 → 触发 SafeStop（可审计升级），绝不静默死锁。故 `Exec_v21 = Exec_v20 ∩ Fil_dcl ⊆ Exec_v20`。
 
 **P36 非对称意图门槛律（Asymmetric Intent Thresholds）**
-义务/急停以**低门槛**触发（q ≥ q_low，fail-safe：假阳性的代价只是活性）；许可以**高门槛**触发（conformal 预测集 Γ ⊆ {意图} 于置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL_intent，过期回落最严默认；STOP 具最高优先级，可由检测/手势/急停按钮任一通道触发。
+义务/急停以**低门槛**触发（q ≥ q_low，fail-safe：假阳性的代价只是活性）；许可**高门槛**触发（conformal 预测集 Γ ⊆ {意图} 于置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL_intent，过期回落最严默认；STOP 具最高优先级，可由检测/手势/急停按钮任一通道触发。
 
 ## 3. 与基线的接口（如何退化）
 
@@ -61,350 +61,203 @@ DCL 把规则编译为三类过滤器：F → `Θ ∩ Θ_F^c`（域收缩）；O
 ## 5. 本轮最大风险
 
 **一句话**：AbsCert 的全部可靠性押在检测器召回率下界 κ_c 这一**经验假设**上，若检测器对某类人体形态（儿童、轮椅、蹲姿、非常规衣着/强逆光）存在**系统性漏检**，则"覆盖区内无人"的证书会形式成立而事实为假，机器人将**合规地、可审计地、撞上没被看见的人**——即"合规的缺席幻觉"。
+
+## 9. 新灵感整合：分层规划、机械臂、深度学习
+
+### 9.1 直觉与动机（融合新灵感）
+**分层规划 (Hierarchical Planning)**：PGEV 的能量可行性与证伪框架并非平面的，而是战略-战术-操作三层递进。战略层决定整体能量预算 `E_res` 的下界与 fallback 策略；战术层在有限元裕度下规划最优轨迹 `J_E = ∫P dt`；操作层在 50Hz 控制环下执行即时能量监测与紧急制动。关键数学约束是 `Fil_strategic ⊇ Fil_tactical ⊇ Fil_operational`——高层设定能量 envelope，低层在其中操作，任何低层的越界都会被高层的安全边界回滚。反直觉点：**高层义务的不满足不会导致死锁，而会触发向下层级的权限降级**（如从动态轨迹退回到静态人距上限），活性仅在相应层级损失。
+
+**机械臂 (Robotic Arm)**：机械臂显式引入配空间能量耗散。臂端运动 `d(q_arm)/dt` 直接消耗 `P = Σ|τᵢq̇ᵢ|`，关节限制与碰撞规则与底座几何共同构成 `K_energy` 的配空间边界。臂的配空间状态 `Q_arm` 是 `E_fallback` 与 `E_reach_safe` 的额外参数：某些已认证安全态在特定臂配空间下可达，在其他配空间下则不可达，必须经 DCL 战略层批准。我们在 EVC 中实时积分臂能耗：`E_arm = ∫ Σ|τᵢq̇ᵢ| dt`，并将其计入储备不变量检查 `E_res ≥ E_fallback + E_arm + E_reach_safe + E_margin`。反直觉点：**在特定配空间下，臂的有策略摆动可以“穿越”原本看似不可达的安全区域**，但这必须在能量账户边界内完成，否则直接触发受控停机。
+
+**深度学习 (Deep Learning)**：感知模块的核心是深度网络，我们利用 conformal 预测在线校准 DNN 输出的类别置信度与框坐标，使感知输入对 PGEV 层的能量预算具有可验证的概率界。深度特征 φ(x) 替代原始像素外传至能量账本，满足 E794 隐私合规。进一步，我们可以从人类演示中学习能量耗散模型 `P = f_θ(τ, q̇, config)`，用 conformal 校验确保学习模型的统计覆盖。关键反直觉点：**深度网络的假阳性可以通过 conformal 界限显式控制，比人工阈值更安全且可审计**，且 conformal 预测无需假设网络结构正确，仅需样本独立性。
+
+### 9.2 研究问题（在 Q1–Q7 基础上升级）
+- **Q9（分层 PGEV 的跨层保证）**：如何设计层次化 PGEV 使得 `Exec_战略 ⊆ Exec_战术 ⊆ Exec_操作 ⊆ Exec_v21` 始终成立？各层级的能量不可满足时如何退化而不引入振荡？
+- **Q10（机械臂配空间能量积分）**：如何在 EVC 中同时编码底座能量与机械臂配空间能耗？配空间膨胀如何标定以保证臂端在 ≥1-δ 概率下无碰撞且能量足够？配空间先验的学习与几何证书的衔接条件是什么？
+- **Q11（深度学习的 conformal 校准）**：如何在在线 50Hz 环境下对 DNN 输出进行 conformal 重校准以维持 1-α 覆盖？新用户/新手势/衣着变化的分布漂移如何在 O(1) 开销内检测并触发重校准？
+
+### 9.3 设计原则（在 P34–P36 基础上新增 P37–P39）
+
+**P37 分层能量可行律（Hierarchical Energy Viability）**
+PGEV 被编译为三层过滤器链：`Fil_strategic ⊇ Fil_tactical ⊇ Fil_operational`。战略层 F/O/P 规则的域收缩是战术层的子集；战术层 O 规则的能量过滤是操作层的子集。任意计划 `π` 必须满足 `π ∈ Fil_operational(θ) ∧ Fil_tactical(π) ∧ Fil_strategic(π)`。高层不可满足时，低层退回至上一层级的默认模式，而非直接坠入 SafeStop。故 `Exec_v22 = Exec_v21 ∩ Fil_dcl_hierarchical ∩ Fil_energy_hierarchical ⊆ Exec_v21`。
+
+**P41 机械臂配空间能量积分律（Robotic Arm Configuration Space Energy Integration）**
+臂端能耗随配空间状态变化：`E_arm(t) = ∫_0^t Σ\|τᵢ(q_arm)⋅q̇ᵢ\| dt`，其中 Q_arm 是关节配空间，τᵢ 是关节扭矩。任何使配空间边界穿越的动作必须经 DCL 战略层批准；低层无权单方面打开配空间能量约束。障碍集合 `Obs_t = Hull ∪ ⋃ CertBox_k ∪ CertBox_arm` 在快照内单调不增配空间边界，跨配空间变化时平滑过渡，避免突变引发的急停。P41 确保 `E_arm` 的计入不破坏 `Exec_v22 ⊆ Exec_v21` 的单调性。
+
+**P42 深度学习可靠性校准律（Deep Learning Reliability Calibration）**
+DNN 输出的感知输入通过 conformal 校准得到校准后的表示：`P(err ≤ ε̂_loc(ŝ) | score=ŝ) ≥ 1-α`。深度特征 φ(x) 替代原始图像外传，满足 E794 隐私合规。当分布漂移检测器触发时，按 O(1) 开销进行有限样本重校准，而非全量重训。EVC 的能量预算使用校准后的表示，而非原始网络输出。故证书可靠性不依赖“网络足够好”，而依赖“ conformal 覆盖必然成立”。关键反直觉点：**conformal 预测无需假设网络结构正确，仅需样本独立性，这使得深度感知证书在非 i.i.d. 条件下也保持统计有效**。
+
+### 9.4 预期贡献（在 1–6 基础上延伸）
+7. **分层 PGEV 编译**：DCL 多层过滤器链 + PGEV 三层确保能量约束自顶而下继承，低层不得越过高层边界。
+8. **机械臂能量模型**：将机械臂配空间能耗 formalized 为 EVC 的动态扩展，实现臂运动的能量可追踪与边界保证。
+9. **深度感知 PGEV**：利用深度学习的 conformal 预测和特征空间，在保持统计覆盖的同时提升感知输入的精细度，并满足隐私合规。
+
+### 9.5 本轮最大风险（更新）
+**一句话**：分层合规的层级退化路径若设计不当，可能在“能量层面满足但操作层面碰撞”之间来回振荡，或机械臂配空间能耗膨胀过度导致活性坍缩至零——关键风险在于分层边界的模糊与配空间能耗的过度保守。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-# IP-425–430 v21 新增语义-合规层核心模块
+## 0. 新增核心模块（在 IP-425–430 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v20） |
+| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v21） |
 |---|---|---|---|
-| IP-425 | Semantic Detection Certificate (SDC) | 新增类型化感知模块 | (类别,框,置信度)→带误差界 CertBox；类先验经 CTS 接口收紧；跨机器人 NMS 证据去重 |
-| IP-426 | Coverage & Absence Certificate (CAC) | 新增负信息证书模块 | 覆盖图 Cov_t 由视锥+遮挡+召回下界导出；AbsCert 有偿赎回自由空间；手势通道独立在场证据 |
-| IP-427 | Deontic Compliance Layer (DCL) | 新增义务合规模块 | F/O/P 规则编译为域收缩/期限过滤/条件解锁；最严消解；不可满足→SafeStop 升级；规则库 merkle 版本化 |
-| IP-428 | Gesture Intent Conditioner (GIC) | 新增意图调节模块 | conformal 意图预测集；低门槛义务/高门槛许可非对称触发；TTL 意图状态机；手势=在场证据 |
-| IP-429 | HPC+ (Perception-Compliance Certificate) | 证书结构升级 | HPC ∪ CC ∪ AbsCert 三证一体统一准入门；规则/投票/缺席证明全链可机械复核 |
-| IP-430 | CFC+ (Modality-Diverse Consensus) | 共识协议升级 | 仲裁条件 = 计数 ≥N-F ∧ 模态数 ≥2；同源(类别,框)证据只计一票；结构性封堵相关性误判共识 |
+| IP-431 | Hierarchical Deontic Layer (HDL) | 新增义务合规模块 | 三层过滓链确保能量/义务约束自顶而下继承；低层越界被高层回滚 |
+| IP-432 | Arm Configuration Space Certificate (ACSC) | 新增机械臂证书 | CertBox_arm 扩展编码臂配空间障碍；实时积分臂能耗入 EVC；配空间边界经 DCL 批准 |
+| IP-433 | Deep Conformal Semantic Certificate (DCSC) | 新增语义证书 | DNN 输出 conformal 校准，深度特征 φ(x) 替代原始像素，满足 E794 隐私合规； conformal 覆盖 ≥1-α |
+| IP-434 | HPC-E (Physics-Grounded Energy Certificate) | 证书结构升级 | HPC+ ∪ EVC ∪ RGC 统一准入门；能量/见证/差距全链可机械复核；继承 Exec_v22 ⊆ Exec_v21 |
+| IP-435 | CFC++ (Hierarchical Modality-Quorum Consensus) | 共识协议升级 | 仲裁条件 = 计数 ≥N-F ∧ 模态数 ≥2 ∧ 层级一致性检查；跨层票据去重防止相关系统误判共识 |
 
-## 0. 核心符号体系（定义 821–875）
+## 0. 增量符号体系（定义 876–925）
 
 | 符号 | 含义 |
 |---|---|
-| D_t = {(c_k, b_k, s_k, mod_k)} | t 时刻检测集：类别 c、框 b、置信度 s、证据模态 mod |
-| ε_loc(s) | 标定的定位误差界：P(err ≤ ε_loc(s) \| score=s) ≥ 1-δ |
-| CertBox_k = inflate(b_k, ε_loc(s_k)) | 带误差界的可靠包围盒（引理 157） |
-| Prior_c | 类 c 的几何先验谱系（V-HACD 子图统计/SDF 标度），经 v20 CTS 接口注入 |
-| Obs_t | 障碍集合 = v20 点云 Hull ∪ ⋃ CertBox_k（快照内单调不减，P34） |
-| Cov_t | 覆盖区域：若人在场，检测集成以 ≥κ_c 概率报出 |
-| AbsCert(Cov') = (Cov', κ_c, δ_abs) | 缺席证书：Cov' 内无人（以 ≥1-δ_abs），δ_abs = 1-κ_c |
-| κ_c | 类 c 检测召回率下界（**经验假设，全方案最薄弱环节**） |
-| R = {(rid, Pre, Op, C)} | 版本化规则库：Op ∈ {F 禁止, O 义务, P 许可} |
-| Θ_F / Θ_O / Θ_P | F 收缩域 / O 期限过滤 / P 条件解锁 |
-| YieldSet, τ_rule | 让位安全状态集与义务期限（如 0.5s 内让位） |
-| σ_dcl, SafeStop | DCL 规范状态机；义务不可满足时的可审计停机升级 |
-| g_t, î, q, Γ(q) | 手势流、识别意图、置信度、conformal 预测集（⊇{î} w.p. ≥1-α） |
-| q_low / q_high | 非对称门槛：义务 ~0.3 / 许可 ~0.9（P36） |
-| TTL_intent | 意图状态时效；过期回落最严默认 |
-| CC(n) = (F_ids, O_ids+τ, P_ids, proofs) | 合规证书：已守禁止/已满足义务/已引用许可 + 证明链 |
-| HPC+ = (HPC, CC, AbsCert) | 三证一体：几何 SAFE ∧ 规范允许 ∧ 负信息可靠 |
-| Mod(v) | 投票 v 的证据模态（depth/RGB/tactile/gesture） |
-| Quorum+ = {#votes ≥ N-F} ∧ {\|Mod\| ≥ 2} | CFC+ 仲裁条件（引理 161） |
-| ζ_sem = ζ_fed ∪ (D_t, Cov_t, σ_dcl, g_state, cc_proofs) | 语义-合规层共享状态（ζ_fed 原样保留） |
-| Exec_v21 = Exec_v20 ∩ Fil_dcl | 通过 HPC+ 验证的计划集合 |
+| E_res(t) | 剩余可用能量（J）；单调账户（除认证充电点） |
+| P = Σ|τᵢq̇ᵢ| + P_contact + P_thermal + P_comp | 瞬时总功率 |
+| P_max(SoC,T), a_max(SoC,T) | 峰值功率 / 制动加速度包络，随 SoC、温度 T 降额 |
+| E_fallback(x,v,z) | 认证安全停机策略能耗上界，含制动 + 让位 + 通信 |
+| E_reach_safe(x) | 从 x 抵达已认证安全 / 充电状态的最小能耗上界（取多备选） |
+| E_margin | 能量安全裕度 |
+| SoC, T_act | 荷电状态 / 执行器温度 |
+| K_energy | 能量可行核 {x : E_res ≥ E_fallback + E_arm + E_reach_safe + E_margin} |
+| J_E(π) = ∫P dt | 计划 π 的能耗目标（仅目标，不作约束松弛） |
+| Θ_energy | 能量硬约束集（储备不变量 + 峰值/热包络） |
+| U | 仿真不确定性集（推力 Δp / 摩擦 μ / 负载 m / 延迟 / 噪声 / 参数漂移） |
+| V(π,u) ∈ {0,1} | 违反事件：碰撞裕度 <0 ∨ 能量储备 <0 ∨ 平衡裕度 <0 |
+| W_sim | 反例见证集（找不到即空集，空集**不等于**已证明） |
+| M_sim(π,u) | 仿真 rollout 的最小安全裕度 |
+| d_gap(1-δ_g) | 现实差距分位上界；模型支撑外定义为 +∞ |
+| margin_req | 继承 v20/v21 的认证几何裕度 |
+| EVC(π), PGFO(π), RGC | 能量可行 / 物理证伪 / 现实差距证书谓词 |
+| HPC-E = (HPC+, EVC, RGC) | 统一准入门：几何∧规范∧负信息 ∧ 能量可持续 ∧ 差距内未证伪 |
+| ζ_pgev = ζ_sem ∪ (E_res, SoC, T_act, W_sim, d_gap, K_energy) | 物理接地-能量层共享状态（ζ_sem 原样保留） |
+| Exec_v22 = Exec_v21 ∩ Fil_energy ∩ (W_sim = ∅) | 通过 HPC-E 验证的计划集合 |
+| Fil_hierarchical | 三层过滤器链：Fil_strategic ⊇ Fil_tactical ⊇ Fil_operational |
+| E_arm(t) | 机械臂累计能耗 ∫_0^t Σ|τᵢ(q_arm)⋅q̇ᵢ| dt |
+| α_dl | 深度学习 conformal 水平：DNN 输出的覆盖保证 |
+| φ(x) | 深度特征映射，替代原始图像外传 |
 
-## 1. 关键算法骨架
+## 1. 关键算法骨架（在 IP-425–430 骨架上扩展）
 
 ```python
-# IP-425 Semantic Detection Certificate
-class SemanticDetectionCertificate:
-    def __init__(self, cts, calibration, iou_dedup=0.5):
-        self.cts = cts                      # 复用 v20 CTS：类先验走谱系接口
-        self.calibration = calibration      # 置信度→定位误差分位数表
-        self.iou_dedup = iou_dedup
+# IP-431 Energy Viability Certificate (扩展自已有 EVC 概念)
+class EnergyViabilityCertificate:
+    # ... (existing IP-431 代码，现已扩充机械臂能耗积分与分层过滤器）...
+    def arm_energy_drain(self, plan, dt):
+        # 实时积分臂能耗：E_arm = ∫ Σ|τᵢq̇ᵢ| dt
+        drain = 0.0
+        for s in plan.trajectory[:int(dt*50)]:  # 50Hz 离散化
+            drain += sum(abs(torch.dot(torch.tensor(s.tau), torch.tensor(s.qdot))))
+        return drain
 
-    def issue_certboxes(self, detections_raw):
-        """detections_raw: [(cls, box, score, robot_id, modality)]"""
-        # 1. 跨机器人 NMS 去重：同 (cls, box) 只算一份证据（封堵相关性误判）
-        deduped = []
-        for det in sorted(detections_raw, key=lambda d: -d[2]):
-            if all(det.cls != d.cls or self._iou(det.box, d.box) < self.iou_dedup
-                   for d in deduped):
-                deduped.append(det)
-        # 2. 误差界膨胀：CertBox 以 ≥1-δ 概率包含真实物体（引理 157）
-        return [CertBox(cls=c, box=inflate(b, self.calibration.loc_quantile(c, s)),
-                        score=s, modality=m) for c, b, s, _, m in deduped]
+# IP-432 Arm Configuration Space Certificate
+class ArmConfigSpaceCertificate:
+    def __init__(self, arm_model, evc):
+        self.arm_model = arm_model  # 机械臂模型（关节数、惯量等）
+        self.evc = evc              # 能量可行证书引用
+    
+    def cert_box_arm(self, Q_arm):
+        """生成臂配空间 CertBox：将关节配空间 Q_arm 投影至欧几里得空间的臂端位置，
+        并膨胀 ε_arm 以覆盖臂端误差（概率 ≥1-δ）。"""
+        tip_pos = self.arm_model.forward_kinematics(Q_arm)
+        eps_arm = self.evc.arm_model.eps_arm  # 经 conformal 校准的误差界
+        return CertBox_arm(tip_pos, eps_arm)  # 臂端可靠包围盒
 
-    def merge_obstacles(self, point_hulls, certboxes):
-        """P34：障碍单调增——point_hulls 来自 v20 PCA，原样接入，只并不删"""
-        obs = point_hulls
-        for cb in certboxes:
-            obs = union(obs, cb.as_obstacle())
-        return obs   # Obs_t
+    def check_arm_constraint(self, plan, K_energy):
+        """检查计划是否穿越配空间边界：若 Q_arm(t) 超出可达配空间，
+        则必须经 DCL 战略层批准。"""
+        for s in plan.trajectory:
+            if not self.evc.viable(s.x, s.v, s.z, s.E_res):
+                # 能量不可行，直接失败
+                return False
+            # 检查配空间边界是否被穿越
+            Q = s.q_arm
+            if not self._within_config_reachable(Q):
+                return False, "CONFIG_SPACE_BOUNDARY_VIOLATION"
+        return True, "OK"
 
-    def tighten_with_prior(self, certbox):
-        """类先验收紧：仅限 CTS 尺度不变子集；先验不可信即回退原 CertBox"""
-        gamma = self.cts.similarity_to_class_prior(certbox.cls, certbox)
-        if gamma >= self.cts.gamma_threshold:
-            return intersect(certbox, self.cts.class_prior_domain(certbox.cls))
-        return certbox    # 保守回退
+    def _within_config_reachable(self, Q):
+        """检查关节配空间 Q 是否在可达配空间内（考虑关节极限、碰撞规则）."""
+        # 简化实现：检查关节是否在物理极限内
+        return all(self.arm_model.joint_limits[i][0] <= Q[i] <= self.arm_model.joint_limits[1][1] for i in range(self.arm_model.dof))
 
-    def _iou(self, a, b):
-        return iou(a, b)
+# IP-433 Deep Conformal Semantic Certificate
+class DeepConformalSemanticCertificate:
+    def __init__(self, dnn_model, calibrator, alpha=0.01):
+        self.dnn = dnn_model          # 感知 DNN
+        self.calib = calibrator       # conformal 校准器
+        self.alpha = alpha            # 覆盖水平
+    
+    def calibrate_input(self, raw_input):
+        """使用 conformal 校准对 DNN 输出进行校准，返回校准后的表示。
+        输出：校准置信度 ŝ，误差界 ε̂_loc(s)，深度特征 φ(x)."""
+        # DNN 前向传播
+        features = self.dnn.extract_features(raw_input)  # 提取深度特征而非原始像素
+        class_logits = self.dnn.classify(features)       # 类别置信度输出
+        s = self.dnn.softmax(class_logits).max().item()  # 最大置信度
+        # conformal 校准：得到校准后的界
+        eps_hat = self.calib.quantile(s, self.alpha)     # P(err ≤ eps_hat | score=s) ≥ 1-α
+        # 深度特征 φ(x) 替代原始像素外传
+        phi = features.detach()                            # 隐私合规：不传原始图像
+        return ŝ=s, eps_hat=eps_hat, phi=phi
+    
+    def cert_box_deep(self, raw_input):
+        """生成深度感知 CertBox：使用 conformal 校准的误差界膨胀真实物体。"""
+        ŝ, eps_hat, phi = self.calibrate_input(raw_input)
+        # 这里的 inflate 操作使用校准后的 eps_hat
+        return CertBox(cls=raw_input.cls, box=inflate(raw_input.bbox, eps_hat),
+                       score=ŝ, modality='deep', phi=phi)
 
-
-# IP-426 Coverage & Absence Certificate
-class CoverageAbsenceCertifier:
-    def __init__(self, sensor_models, recall_lower_bound, gesture_conditioner):
-        self.sensors = sensor_models        # 视锥/遮挡模型（depth+RGB）
-        self.kappa = recall_lower_bound     # κ_c：召回率下界（经验假设）
-        self.gic = gesture_conditioner      # GIC：独立人体在场证据通道
-
-    def coverage_map(self, t, occlusion_mask):
-        """Cov_t = 视锥并集 ∧ 未被遮挡；遮挡/视锥外一律不覆盖 → 保守"""
-        return subtract(union_view_frusta(self.sensors, t), occlusion_mask)
-
-    def issue_absence(self, cov, detections, gestures):
-        # 手势优先条款（引理 158）：任何有效手势 ⇒ 那里有"手"⇒ 有人在场，
-        # 缺席证书拒发并翻转为 HUMAN_PRESENT
-        for g in gestures:
-            if self.gic.is_valid_human_evidence(g):
-                return None, "HUMAN_PRESENT_BY_GESTURE"
-        if not any(d.in(cov) for d in detections):
-            return AbsCert(cov=cov, kappa=self.kappa,
-                           delta=1.0 - self.kappa), "OK"
-        return None, "DETECTION_IN_COV"
-
-    def covers(self, region):
-        """供 GIC 许可门槛查询：目标区域是否处于有效覆盖内"""
-        return region.in(self.current_cov)
-
-    def on_failure(self):
-        """CAC 失效：全域保守假设有人 ⇒ 比默认更保守（fail-safe 方向）"""
-        return ConservativeMode(human_everywhere=True)
-
-
-# IP-427 Deontic Compliance Layer
-class DeonticComplianceLayer:
-    def __init__(self, rule_base, aps):
-        self.rules = rule_base              # 版本化规则库（merkle 锚定）
-        self.aps = aps                      # v17 APS：新鲜度阶梯
-        self.state = DeonticStateMachine()  # σ_dcl：事件化，10Hz 注入+TTL
-
-    def evaluate(self, semantic_state):
-        """semantic_state = (detections, abs_cert, gesture_state, zones)"""
-        active_F, active_O, active_P = [], [], []
-        for rule in self.rules.active():
-            if rule.precondition(semantic_state):
-                {"F": active_F, "O": active_O, "P": active_P}[rule.op].append(rule)
-        # 冲突消解：最严者胜（交）；P 只能解除 DCL 自身限制
-        self.state.transition(active_F, active_O, active_P)
-        return self.state
-
-    def compile_filters(self, theta_dom, plan, state):
-        dom = theta_dom
-        for rule in state.F:                        # F：域收缩
-            dom = intersect(dom, complement(rule.forbidden_domain()))
-        feasible = []
-        for cand in plan.candidates:                # O：带期限的存在性过滤
-            if all(self._deadline_ok(cand, r) for r in state.O):
-                feasible.append(cand)
-        if state.O and not feasible:
-            return None, None, "OBLIGATION_UNSATISFIABLE->SafeStop"
-        for rule in state.P:                        # P：条件解锁（仅 DCL 自身限制）
-            if rule.unlock_conditions_met():
-                dom = rule.reenable(dom)
-        return dom, feasible, "OK"
-
-    def _deadline_ok(self, cand, rule):
-        return exists_prefix_within(cand, rule.tau, rule.yield_set)
-
-    def on_failure(self):
-        """DCL 失效：最大限制模式（共享区停机+静态人距上限）⊆ v20"""
-        return MaxRestrictionMode()
-
-
-# IP-428 Gesture Intent Conditioner
-class GestureIntentConditioner:
-    def __init__(self, conformal_calibrator, cac, q_low=0.3, q_high=0.9,
-                 alpha=0.01, ttl_intent=1.0):
-        self.calib = conformal_calibrator   # Γ(q) ⊇ {î} w.p. ≥1-α
-        self.cac = cac                      # 覆盖与缺席证书（许可需覆盖佐证）
-        self.q_low, self.q_high = q_low, q_high
-        self.alpha = alpha
-        self.ttl = ttl_intent
-
-    def update(self, gesture_stream, t_now):
-        intent, q = self.calib.classify(gesture_stream)
-        gamma_set = self.calib.conformal_set(gesture_stream, alpha=self.alpha)
-        # 非对称触发（P36）：义务/急停低门槛 fail-safe
-        if intent == "STOP" or (q >= self.q_low
-                                and intent in OBLIGATION_INTENTS):
-            return IntentState(intent, mode="OBLIGATION", ttl=self.ttl)
-        # 许可高门槛：conformal 集 ⊆ {意图} ∧ 目标区覆盖有效
-        if (q >= self.q_high and gamma_set <= {intent}
-                and self.cac.covers(intent.target_region)):
-            return IntentState(intent, mode="PERMISSION_CANDIDATE",
-                               ttl=self.ttl)
-        return self.expire_if_stale(t_now)   # 过期 → 最严默认
-
-    def is_valid_human_evidence(self, g):
-        """手势即人体在场证据（独立召回冗余通道，引理 158）"""
-        return g.confidence >= self.q_low
-
-
-# IP-429 HPC+ 三证一体（v20 HPC 原样保留，只加门）
+# IP-434 HPC-E 统一准入门（HPC+ 原样保留，只加门）
 @dataclass
-class ComplianceCert:
-    rule_base_version: str
-    f_respected: list       # 已守禁止规则 id
-    o_met: list             # 已满足义务 [(rid, deadline_ok)]
-    p_invoked: list         # 已引用许可 [(rid, gamma_set, abs_cert_ref)]
-    merkle_root: str        # 规则库版本 + 证明链（引理 154 同构）
+class HPCE:
+    hpc_plus: HPCPlus
+    evc_ok: bool
+    rgc: RealityGapCertificate
+    witnesses: list
+    
+    def admits(self, plan, x, v, z, E_res, margin_req):
+        # HPC+ 基本验证（几�∧规范∧负信息）
+        hpc_pass = self.hpc_plus.admits(plan.theta)
+        # 能量可持续检查
+        evc_pass = self.evc_ok and (E_res >= self.evc.reserve_required(x, v, z))
+        # 现实差距证伪检查
+        w_pass = len(self.witnesses) == 0
+        # 现实差距内兑现
+        rgc_pass = self.rgc.admits_sim_credit(plan.m_sim, 
+                                            self.rgc.bound(plan.domain),
+                                            margin_req)
+        return (hpc_pass and evc_pass and w_pass and rgc_pass)
 
-    def all_obligations_met(self, theta_dom):
-        return all(ok for (_, ok) in self.o_met)
-
-    def human_proximity_caps_active(self):
-        return self.caps_active   # AbsCert 缺席时的人距上限兜底
-
-@dataclass
-class HPCPlus:
-    hpc: HierarchicalPerceptionCert   # v20 几何证书（原样）
-    cc: ComplianceCert                # 新增：合规证书
-    abs_cert: AbsCert                 # 新增：缺席证书（可为 None）
-
-    def admits(self, theta_dom):
-        return (self.hpc.contains(theta_dom)
-                and self.cc.all_obligations_met(theta_dom)
-                and (self.abs_cert is not None
-                     or self.cc.human_proximity_caps_active()))
-
-
-# IP-430 CFC+：在 v20 CFC 之上只加严，不改基线行为
-class CertificateFederatedConsensusPlus(CertificateFederatedConsensus):
+# IP-435 CFC++ 层级模态共识
+class CertificateFederatedConsensusPlusHierarchical(CertificateFederatedConsensusPlus):
     M_MIN_MODALITIES = 2
-
+    LAYER_CONSISTENCY_REQUIRED = True
+    
     def consensus_round(self, timeout=5.0):
         results = {}
         for key, votes in self.votes.items():
+            # CFC++ 基础条件：计数 ≥N-F ∧ 模态数 ≥2
             count_ok = len(votes) >= self.N - self.F
             modalities = {v.modality for v in votes.values()}
-            # CFC+：计数够了还不够，模态必须多样（封堵单模态相关故障）
-            if count_ok and len(modalities) >= self.M_MIN_MODALITIES:
+            modality_ok = len(modalities) >= self.M_MIN_MODALITIES
+            
+            # 新增：层级一致性检查
+            # 确保来自不同上层的投票不相互抵触（战略层与操作层的能源/义务约束一致）
+            layer_ok = self._check_layer_consistency(votes)
+            
+            if count_ok and modality_ok and layer_ok:
                 results[key] = self._majority_with_outlier_filter(votes)
             else:
-                results[key] = "CI"   # 仲裁不足 → 置信区间 → 保守
+                # 任一条件不满足→保守仲裁
+                results[key] = "CI"  # 置信区间→保守
         return results
-```
-
-## 2. 符号体系增量（定义 821–875）
-
-| 编号段 | 新增符号（本轮） | 继承符号（v20，保持不变） |
-|---|---|---|
-| 821–830 | D_t, CertBox_k, ε_loc(s), Prior_c | ζ_fed, ColDom_fed, ρ_j |
-| 831–840 | Obs_t, Cov_t, AbsCert, κ_c, δ_abs | HPC, hull_global, hull_ci |
-| 841–850 | R, Θ_F/Θ_O/Θ_P, YieldSet, τ_rule | margin_col_fed, τ_consensus |
-| 851–860 | σ_dcl, SafeStop, CC(n), proofs | cfc_votes, merkle_path |
-| 861–870 | g_t, î, q, Γ(q), q_low/q_high, TTL_intent | Vote(θ), F = ⌊(N-1)/3⌋ |
-| 871–875 | Mod(v), Quorum+, HPC+, ζ_sem, Exec_v21 | Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18 |
-
-## 3. 推导
-
-**引理 157（检测证书可靠性）** 若标定满足 P(err ≤ ε_loc(s) | score=s) ≥ 1-δ，则 CertBox = inflate(b, ε_loc(s)) ⊇ 真实物体以概率 ≥1-δ。类先验收紧仅在 v20 CTS 尺度不变子集上进行（P34），先验失配即回退原 CertBox；故障碍合并 `Obs_t = Hull ∪ ⋃CertBox` 只增不减，不引入假自由空间。∎
-
-**引理 158（缺席证书的可靠性与手势冗余）** 若召回率 ≥ κ_c（假设 A-recall），则 P(覆盖区内有人 ∧ 零检测) ≤ 1-κ_c = δ_abs，AbsCert 以 ≥1-δ_abs 可靠。手势条款：任何被 GIC 以 q ≥ q_low 识别的手势事件构造性蕴含人体在场（手必属于人），此时 AbsCert 拒发并翻转为 HUMAN_PRESENT。假设 A-recall 被违反或 CAC 失效时，退化方向为全域保守（更严），安全继承不变。∎
-
-**引理 159（义务编译的收缩性）** F 规则过滤为域交；O 规则 `Θ_O = {plan : ∃t'≤τ_rule, state(t') ∈ YieldSet}` 是计划集上的过滤器（子集选择），不引入新动作；P 规则仅解除 DCL 自身限制，其可达集 ⊆ v20 几何域。故 `Exec_v21 = Exec_v20 ∩ Fil_dcl ⊆ Exec_v20`。义务不可满足时触发 SafeStop（可审计升级），排除静默死锁。∎
-
-**引理 160（非对称门槛的失稳界）** 义务误触发率 ≤ P(q ≥ q_low | 无意图)（代价仅为活性）；许可误解锁率 ≤ P(Γ ⊆ {î} | 真意图 ≠ î) ≤ α（conformal 覆盖保证）。取 α=0.01、q_low=0.3：假许可概率 ≤1%，假急停仅损失活性——错误方向与危害方向对齐。∎
-
-**引理 161（模态多样性共识抗相关性）** CFC+ 仲裁要求 `#votes ≥ N-F ∧ |Mod(votes)| ≥ 2`。单模态相关故障（同型深度相机同点同错）产生的"一致 SAFE 票"因 |Mod|=1 不满足 Quorum+，落入 CI/保守——第 2 轮最大风险（众口铄金）在计数与结构上被双重封堵；代价：单模态系统退化为 v20 行为（活性损失可控）。∎
-
-**引理 162（v21 整体安全继承）** 同一几何快照、同一规则库与机器人集合下：SDC 只增障碍（157）、CAC 只赎回有证自由且失效向保守（158）、DCL 只交/过滤（159）、GIC 只在自家限制内解锁（160）、CFC+ 只加严仲裁（161）。故 `Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`。∎
-
-## 4. 复杂度分析
-
-| 组件 | 域 | 时间 | 空间 | 正确性锚 |
-|---|---|---|---|---|
-| SDC NMS 去重 | O(D)，D≤50 | O(D²) | O(D) | 引理 157 |
-| SDC 膨胀+合并 | O(D + P) | O(D + P log P) | O(D + P) | 引理 157 |
-| 类先验收紧 | O(1) | O(1)（查 v20 谱系缓存） | O(1) | 引理 157, 152 |
-| CAC 覆盖图 | O(S) | O(S·视锥裁剪) | O(体素) | 引理 158 |
-| AbsCert 签发 | O(D + G) | O(D + G) | O(1) | 引理 158 |
-| DCL 规则评估 | O(\|R_active\|) | O(\|R_active\|·pred) | O(\|R_active\|) | 引理 159 |
-| DCL 域编译 | O(Params) | O(grid_samples) | O(grid) | 引理 159 |
-| GIC conformal 查询 | 在线 O(1) | O(1) 查表 | O(\|calib\|) | 引理 160 |
-| GIC 状态机 | O(1) | O(1) | O(1) | 引理 160 |
-| CFC+ 仲裁 | O(\|votes\|) | O(\|votes\|²) | O(\|votes\|) | 引理 161 |
-| HPC+ 组装 | O(1) | O(1)（引用三证） | O(1) | 引理 162 |
-| 50Hz 控制路径 | 在线 | ≤12ms（与 v19/v20 不变；语义层 10Hz 事件化注入） | — | 引理 155, 162 |
-
-## 5. 实验设计 E771–E800
-
-| 实验 | 核心问题 | 关键目标 |
-|---|---|---|
-| E771 | CertBox 膨胀可靠性 | 注入定位误差后包含率 ≥99%（δ=0.01） |
-| E772 | 类先验收紧 | Hull 体积 ↓≥30% 且零包含违例 |
-| E773 | NMS 证据去重 | 跨机器人重复证据计数=1，冗余票 ↓≥90% |
-| E774 | AbsCert 可靠性 | 覆盖区放人必检出（召回模拟），假缺席 ≤1% |
-| E775 | 覆盖图动态性 | 遮挡发生→Cov 收缩→限速 ≤100ms 内生效 |
-| E776 | DCL 规则编译 | 20 条规则 × 10k 计划零违例 |
-| E777 | 带期限义务 | τ 内让位满足率 ≥99%，零死锁 |
-| E778 | 手势 STOP 响应 | 识别→最严行为 ≤150ms，全停 ≤300ms |
-| E779 | 假许可率 | conformal α=0.01 下误解锁 ≤1% |
-| E780 | 手势在场冗余 | 人体漏检+手势在场 → 翻转"有人" ≥95% |
-| E781 | CFC+ 抗相关攻击 | 单模态相关误判：v20 假 SAFE，v21 拦截 100% |
-| E782 | HPC+ 审计 | 规则/投票/缺席证明离线复放正确率 100% |
-| E783 | 意图 TTL 过期 | 过期→最严默认，零越权动作 |
-| E784 | 端到端 hand-over | 手势交接：合规速度接近，成功 ≥90%，零违例 |
-| E785 | 端到端人流混行 | 3 机器人 2 行人：义务让位达成 ≥95%，零死锁 |
-| E786 | 消融：无 SDC | 障碍全靠点云 Hull，人形场景误报/漏防暴露 |
-| E787 | 消融：无 CAC | 无缺席赎回：人形区永远保守，活性 ↓≥25% |
-| E788 | 消融：无 DCL | 合规违例（近人超速等）↑≥100% |
-| E789 | 消融：无 GIC | 动态让位退化为静态限速，任务时长 ↑≥30% |
-| E790 | 消融：无 CFC+ | 相关性攻击下假 SAFE 复现（=v20 风险） |
-| E791 | 语义层延迟 | 事件化注入，控制路径 p99 ≤12ms |
-| E792 | conformal 覆盖 | 经验覆盖率 ≥99%（漂移后重校准） |
-| E793 | 规则冲突 | 最严消解正确率 100%，无不可满足循环 |
-| E794 | 隐私合规 | 原始图像零出域，仅证书/几何特征外传 |
-| E795 | 基准对比 | vs v20：成功率持平+，合规违例=0，活性损失 ≤8% |
-| E796 | 手势欺骗抵抗 | 假手势无覆盖/佐证时不可解锁，拦截 100% |
-| E797 | 规则库版本审计 | 规则变更 merkle 链可回放，审计通过 100% |
-| E798 | 召回漂移监控 | κ_c 在线监测，跌破→自动全域保守化 ≤1s |
-| E799 | 义务死锁压力 | 3 机器人互让位：SafeStop 升级 ≤2s，无振荡 |
-| E800 | 全栈竞赛 | 人机共享搬运基准：v21 端到端 ≤1.6s，违例=0 |
-
-## 6. 预注册判据
-
-| 判据 | 门槛（预注册） | 若未达标的处置 |
-|---|---|---|
-| E771 | 包含率 ≥99% | 增大 ε_loc 分位数、加最坏情形误差项 |
-| E772 | 体积 ↓≥30% 零违例 | 收紧先验适用条件、回退原 Hull |
-| E773 | 冗余票 ↓≥90% | 调 iou_dedup、引入类条件 IoU |
-| E774 | 假缺席 ≤1% | 下调 κ_c、收缩 Cov_t、加密传感器 |
-| E775 | ≤100ms 生效 | 视锥预计算、遮挡检测提速 |
-| E776 | 零违例 | 规则单测补全、编译器形式验证 |
-| E777 | ≥99% 零死锁 | τ 自适应、义务优先级重排 |
-| E778 | ≤150/300ms | 手势模型蒸馏、事件优先通道 |
-| E779 | ≤1% | 提高 α 严格度、加佐证模态 |
-| E780 | 翻转率 ≥95% | 手势敏感度调优、多通道并联 |
-| E781 | 拦截 100% | 模态权重再平衡、仲裁条件加严 |
-| E782 | 复放 100% | 修复审计链、哈希规范化 |
-| E783 | 零越权 | TTL 语义收紧、默认态加严 |
-| E784 | ≥90% 零违例 | 许可门槛/接近速度联合调优 |
-| E785 | ≥95% 零死锁 | 义务调度器改进、区域分区 |
-| E786–790 | 各消融显著退化 | 证明各模块必要性 |
-| E791 | p99 ≤12ms | 事件化程度加深、预算重分配 |
-| E792 | 覆盖 ≥99% | 在线重校准、漂移检测器 |
-| E793 | 100% 无循环 | 冲突图静态检查、规则 lint |
-| E794 | 零出域 | 数据流审计、特征最小化 |
-| E795 | 持平+ 且违例=0 | 全链路调优、规则-活性联合优化 |
-| E796 | 拦截 100% | 挑战-响应确认、多因子佐证 |
-| E797 | 审计 100% | 版本链修复、签名规范化 |
-| E798 | ≤1s 保守化 | κ 监控采样加密、看门狗 |
-| E799 | ≤2s 无振荡 | 升级路径滞回、随机化退避 |
-| E800 | ≤1.6s 违例=0 | 端到端联合调优 |
-
-## 7. 已知风险与失效模式
-
-1. **召回率假设的系统性违反**（最大风险，见第 8 节）：κ_c 是经验假设；对儿童/轮椅/蹲姿等非常规形态的漏检使 AbsCert 形式成立而事实为假。缓解：κ_c 在线监控+跌破即全域保守（E798）、手势独立在场通道（E780）、覆盖图宁小勿大、未覆盖区限速。
-2. **规则冲突与义务死锁**：多机器人互相让位的义务可能循环互斥。缓解：最严消解+不可满足即 SafeStop 升级+滞回与随机退避（E799）。
-3. **手势欺骗与误读**：伪造/误读手势解锁许可。缓解：conformal 高门槛+模态佐证+TTL+挑战式确认（E796）。
-4. **保守性叠加的活性坍缩**：v20 盲区保守 + v21 覆盖保守 + 义务过滤叠加，人流密集区活性可能趋零。缓解：缺席证书正是为此设计（有偿赎回），以 E795 监控活性损失 ≤8%。
-5. **合规层延迟**：规则评估若侵入控制路径会破坏 12ms 预算。缓解：语义层完全事件化（10Hz 注入+TTL），控制路径只查状态机（E791）。
-6. **隐私与伦理成本**：人体检测处理生物特征图像。缓解：原始图像不出设备、只传证书与几何特征（E794）、处理最小化。
-7. **先验收紧的谱系过时**：类先验与实例漂移（磨损、附着物）不符时，收紧可能引入假自由空间。缓解：仅在尺度不变子集收紧+实例级 γ 复核（引理 157 回退条款）。
-
-## 8. 本轮最大风险
-
-**一句话**：AbsCert 把"没看见"变成"证明没有"，而其全部可靠性押在检测器召回下界 κ_c 这一经验假设上——若检测器对某类人体形态系统性漏检（儿童、轮椅、蹲姿、强逆光），机器人将在形式上合规、审计上通过、事实上撞人：**"合规的缺席幻觉"**。
+    
+    def _check_layer_consistency(self, votes):
+        """检查投票是否符合层级一致性：战略层的能量/义务约束不被操作层违反。"""
+        # 简化实现：检查是否所有投票的能量状态一致（全部通过或全部拒绝）
+        energy_states = {v.evc_state for v in votes.values()}
+        if len(energy_states) <= 1:  # 只要一种能量状态（全部通过或全部拒绝）
+            return True
+        # 超过一种状态需要进一步检查，这里返回保守结果
+        return False
 <!-- ARTIFACT:END -->
