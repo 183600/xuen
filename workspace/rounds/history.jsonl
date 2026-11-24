@@ -4837,3 +4837,17 @@
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-23 08:50:42"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-23 08:54:01"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-23 08:55:03"}
+{"event": "candidate", "id": "20261124-050002-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-24 05:00:02"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-24 05:00:03"}
+{"event": "candidate", "id": "20261124-050526-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-24 05:05:26"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-24 05:05:27"}
+{"event": "verdict", "id": "20261124-050002-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-24 05:10:02"}
+{"event": "candidate", "id": "20261124-051029-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-24 05:10:29"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-24 05:10:30"}
+{"event": "candidate", "id": "20261124-051554-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-24 05:15:54"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-24 05:15:55"}
+{"event": "verdict", "id": "20261124-051029-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-24 05:20:29"}
+{"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-24 05:20:29"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-24 05:45:55"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-24 05:50:29"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-24 05:50:29"}
