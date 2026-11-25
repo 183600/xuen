@@ -4879,3 +4879,19 @@
 {"event": "verdict", "id": "20261125-101549-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-25 10:25:49"}
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 10:27:20"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-25 10:57:20"}
+{"event": "candidate", "id": "20261125-200751-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-25 20:07:51"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 20:07:53"}
+{"event": "candidate", "id": "20261125-201246-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-25 20:12:46"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 20:12:48"}
+{"event": "candidate", "id": "20261125-201714-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-25 20:17:14"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 20:17:16"}
+{"event": "verdict", "id": "20261125-200751-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-25 20:17:51"}
+{"event": "candidate", "id": "20261125-202151-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-25 20:21:51"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 20:21:53"}
+{"event": "candidate", "id": "20261125-202236-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-25 20:22:36"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261123-003309-r1", "changed": ["idea", "artifact"], "ts": "2026-11-25 20:22:38"}
+{"event": "verdict", "id": "20261125-201714-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-25 20:27:14"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-25 20:51:53"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-25 20:52:38"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-25 20:57:14"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-25 20:57:25"}
