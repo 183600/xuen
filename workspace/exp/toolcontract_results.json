@@ -1,0 +1,82 @@
+{
+  "main": {
+    "naive": {
+      "name": "naive",
+      "unsafe_per_1k_traces": 300.9,
+      "unsafe_per_1k_calls": 106.60006376873207,
+      "task_complete_pct": 51.67,
+      "safe_success_pct": 48.615,
+      "denial_per_trace": 0.0589,
+      "executed_per_trace": 2.8227,
+      "reasons": {
+        "pre_violation": 4517,
+        "stale": 525,
+        "emergent": 508,
+        "blind": 468
+      }
+    },
+    "tcc": {
+      "name": "tcc",
+      "unsafe_per_1k_traces": 41.55,
+      "unsafe_per_1k_calls": 16.566985645933013,
+      "task_complete_pct": 50.82,
+      "safe_success_pct": 48.1,
+      "denial_per_trace": 0.4611,
+      "executed_per_trace": 2.508,
+      "reasons": {
+        "emergent": 344,
+        "blind": 463,
+        "stale": 24
+      }
+    },
+    "tcc_cct": {
+      "name": "tcc_cct",
+      "unsafe_per_1k_traces": 22.35,
+      "unsafe_per_1k_calls": 9.32804674457429,
+      "task_complete_pct": 47.55,
+      "safe_success_pct": 46.07,
+      "denial_per_trace": 0.49525,
+      "executed_per_trace": 2.396,
+      "reasons": {
+        "blind": 447
+      }
+    }
+  },
+  "sweep": [
+    {
+      "p_blind": 0.0,
+      "tcc_unsafe_per_1k": 17.45,
+      "tcc_safe_success_pct": 49.96,
+      "tcc_cct_unsafe_per_1k": 0.0,
+      "tcc_cct_safe_success_pct": 48.02
+    },
+    {
+      "p_blind": 0.02,
+      "tcc_unsafe_per_1k": 32.15,
+      "tcc_safe_success_pct": 48.97,
+      "tcc_cct_unsafe_per_1k": 14.5,
+      "tcc_cct_safe_success_pct": 47.17
+    },
+    {
+      "p_blind": 0.05,
+      "tcc_unsafe_per_1k": 54.65,
+      "tcc_safe_success_pct": 47.57,
+      "tcc_cct_unsafe_per_1k": 36.45,
+      "tcc_cct_safe_success_pct": 45.78
+    },
+    {
+      "p_blind": 0.1,
+      "tcc_unsafe_per_1k": 91.55,
+      "tcc_safe_success_pct": 44.59,
+      "tcc_cct_unsafe_per_1k": 72.65,
+      "tcc_cct_safe_success_pct": 42.97
+    },
+    {
+      "p_blind": 0.2,
+      "tcc_unsafe_per_1k": 161.35,
+      "tcc_safe_success_pct": 40.2,
+      "tcc_cct_unsafe_per_1k": 141.05,
+      "tcc_cct_safe_success_pct": 38.69
+    }
+  ]
+}
