@@ -77,7 +77,12 @@ _WORD_CHAR = re.compile(r"[A-Za-z0-9_]")
 
 
 def _cmd_caret_escaped_at(text: str, pos: int) -> bool:
-    """pos 处字符是否被 cmd 引号外的 ^ 转义（引号内 ^ 只是字面量）。"""
+    """Check if character at *pos* is escaped by a caret (^) outside quotes in cmd.exe.
+
+    cmd.exe treats ^ as an escape character only outside double-quote contexts.
+    This function scans left-to-right, tracking quote state, to determine whether
+    the character at position *pos* is covered by an odd number of unescaped carets.
+    """
     i = 0
     in_quotes = False
     while i < pos:
@@ -94,7 +99,13 @@ def _cmd_caret_escaped_at(text: str, pos: int) -> bool:
 
 
 def _windows_placeholder_starts(tpl: str, ph: str):
-    """Windows 模板中会兑现的占位符起点（按 $$ 两两配对、cmd ^ 转义判断）。"""
+    """Yield start positions of placeholders ($prompt / $prompt_file) in a Windows template.
+
+    The template is scanned left-to-right, tracking double-quote state and
+    ^ escape sequences. The $$ pair is treated as a literal PID, not a placeholder
+    start. Yields the index of each placeholder that is a 'complete word' (not
+    preceded/followed by word characters), respecting cmd's ^ escape convention.
+    """
     i = 0
     in_quotes = False
     n = len(tpl)
@@ -122,8 +133,6 @@ def _windows_placeholder_starts(tpl: str, ph: str):
         if dollars:
             if dollars % 2 == 0:
                 yield i
-        elif k < 0 or not _WORD_CHAR.match(tpl[k]):
-            yield i
         i = end
 
 
@@ -164,15 +173,18 @@ def _prev_effective_pos(tpl: str, i: int,
 
 
 def _directly_after_placeholder(tpl: str, i: int, prev_ph_end: int) -> bool:
-    """i 是否紧跟在上一个被兑现的占位符之后（中间只隔着续行）。
+    """Check whether position *i* immediately follows a previously fulfilled placeholder.
 
-    「完整词」边界检查挡住的是模板里紧贴占位符的字面单词字符
-    （`x$prompt` 不替换，见 _placeholder_at）；但上一个占位符的替换结果
-    不是模板字面量：`$prompt$prompt` 里第二个占位符紧贴的是第一个的兑现
-    结果，shell 会把两段展开拼成同一个词，第二个必须照常替换，否则会以
-    字面量留在命令里被 shell 当空变量展开（提示词被静默丢弃一半）。
-    续行（反斜杠-换行）在分词前被删除，`$prompt\\<换行>$prompt` 与紧邻
-    写法等价，同样按相邻处理。
+    The placeholder boundary check prevents single-word suffixes from being
+    mistaken for part of the placeholder (e.g. `x$prompt` is not replaced).
+    However, the replacement result of the previous placeholder IS part of the
+    template text: in `$prompt$prompt`, the second placeholder directly abuts
+    the first's expanded text, and shell will concatenate them into one word.
+    The second must therefore be replaced normally, otherwise it would remain
+    as a bare literal and silently discard half the prompt.
+    Continuations (backslash‑newline) are stripped before shell word splitting,
+    so `$prompt\\n$prompt` is equivalent to `$prompt$prompt`; the check handles
+    this by looking at the effective text after continuation removal.
     """
     if prev_ph_end < 0 or prev_ph_end > i:
         return False
@@ -183,21 +195,27 @@ def _directly_after_placeholder(tpl: str, i: int, prev_ph_end: int) -> bool:
 
 
 def _dollar_starts_expansion(tpl: str, i: int,
-                             commented_backslashes: Optional[Set[int]] = None
-                             ) -> bool:
-    """位置 i 处的 $ 是否开启新展开（紧邻的 $ 会被 shell 两两配成 $$）。
+                              commented_backslashes: Optional[Set[int]] = None
+                              ) -> bool:
+    """Determine whether the $ at position *i* starts a new expansion.
 
-    shell 从左到右扫描连续未转义的 $：前两个配成一个 $$（PID），落单的
-    那个才是 `$名字` 展开的开始——`$$prompt` 里 `prompt` 只是字面量，
-    `$$$prompt` 才是 `$$` 加真正的 `$prompt` 展开（bash/dash 行为一致）。
-    被反斜杠转义的 $ 是字面量、不参与配对：连续 $ 段的首个 $ 前有奇数个
-    反斜杠时，未转义段从第二个 $ 起算（`\\$$prompt` 里 $$ 仍是 PID）。
-    续行在分词前被删掉，跨行相邻关系按删除后的文本判断：`$\\<换行>
-    $prompt` 就是 `$$prompt`，第二个 $ 只是前一个 $$ 的后半、不是展开。
-    返回 False 表示 i 处的 $ 只是前一个 $$ 的后半，不是展开的开始。
-    commented_backslashes 透传给 _prev_effective_pos：注释吞掉的反斜杠
-    不续行，注释里的 $ 段不参与跨行配对（`#\\<换行>$prompt` 的 $ 是
-    新展开，按注释内相邻关系会误算成 $$ 的后半）。
+    Shell scans consecutive unescaped $ from left to right: the first pair
+    configures as $$ (PID), a solitary one is the start of `$name` expansion.
+
+    - `$$prompt` : the two $ form a PID, `prompt` is a literal.
+    - `$$$prompt`: the third $ starts the real `$prompt` expansion
+      (bash/dash behavior is consistent).
+    - A $ preceded by an odd number of backslashes is a literal, not part
+      of a pair: `\\$$prompt` treats $$ as PID, the last $ is escaped.
+    - Continuations (backslash‑newline) are stripped before word splitting:
+      `$\\<newline>$prompt` becomes `$$prompt`, where the second $ is
+      part of the first pair, not a new expansion.
+    - Comments consume their own line: `#\\<newline>$prompt` has $ inside
+      a comment, which does not participate in cross-line pairing; the $
+      is treated as a new expansion.
+
+    *commented_backslashes*, if given, is a set of positions of comments‑internal
+    backslashes that should not be treated as continuation indicators.
     """
     run = 0  # i 左侧紧邻的连续 $ 个数（按删除续行后的相邻关系）
     k = i
@@ -216,10 +234,14 @@ def _dollar_starts_expansion(tpl: str, i: int,
 
 
 def _escaped_at(tpl: str, pos: int) -> bool:
-    """pos 处字符是否被紧邻的奇数个反斜杠转义（不跨续行判断）。
+    """Check whether the character at *pos* is escaped by an odd number of
+    preceding backslashes, without crossing continuation (backslash-newline)
+    boundaries.
 
-    续行（反斜杠-换行）在分词前被删除，`\\>\\<换行>&` 里 `>` 紧跟的
-    换行不是转义、`>` 是字面量；直接数物理相邻的反斜杠即可。
+    Continuations (backslash‑newline) are stripped before shell word splitting,
+    so physical backslash-newline sequences do not count as escapes: `\\<newline>`
+    does not escape the following character. This function counts only physical
+    backslashes left-to-right from *pos*‑1, stopping at the line start.
     """
     k = pos - 1
     cnt = 0
