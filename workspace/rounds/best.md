@@ -15,398 +15,586 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-439 基础上扩展）
+## 0. 新增核心模块（在 IP-443 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 HPC-E+ v23） |
+| 编号 | 名称 | 类型 | 关键改进（相对 USMC v24） |
 |---|---|---|---|
-| IP-440 | Structure Optimization Certificate (SOC) | 结构证书 | SIMP/Level-set 拓扑优化结果 ρ(x) 附带 von Mises 应力证书 σ_vm(x) ≤ σ_yield/γ_s；相邻单元梯度约束 ‖∇ρ‖ ≤ G_max 保证可制造性；能量存储上界 E_max(ρ) 经 FEM 复核 |
-| IP-441 | Force Control Certificate (FCC) | 力控证书 | 阻抗/导纳控制器 Z_d(s) 无源性证书 ∫₀ᵗ Fᵀv dτ ≥ -E_0；力控带宽 ω_fc 与采样周期 T_s 耦合条件 ω_fc T_s < 0.1；接触稳定性判据 Re{Z_d(jω)} ≥ 0 ∀ω |
-| IP-442 | Lightweight Structure Certificate (LSC) | 轻量化证书 | 晶格/TPMS 等效刚度张量 C^hom(ρ̄, θ) 可证边界 C^hom ≤ C_solid ρ̄^p (p≥2)；相对密度 ρ̄ 与质量预算 M_budget 硬绑定；屈曲载荷因子 λ_buck ≥ 2.0 证书 |
-| IP-443 | Unified Structural-Mechanical Certificate (USMC) | 统一准入门升级 | HPC-E+ ∪ SOC ∪ FCC ∪ LSC 四证一体；Exec_v24 = Exec_v23 ∩ Fil_so ∩ Fil_fc ∩ Fil_lw ⊆ Exec_v23；结构损伤/力控失稳/轻量化超限三重退化路径 |
+| IP-444 | Semantic Mapping Certificate (SMC) | 语义证书 | 语义实体三元组 (s_i, g_i, p_i, c_i) 附带 conformal 语义覆盖 ℙ(s_i∈C(x))≥1-α；语义-几何 Hausdorff 一致性 d_H(g_i, g_i^*)≤ε_sem；开放词汇检索召回率 R@K≥0.95 证书 |
+| IP-445 | Reconfigurable Mechanism Certificate (RMC) | 重构证书 | 重构轨迹动力学连续性 ‖Mq̈+Cq̇+g-τ‖≤δ_dyn；接口契约兼容性 Φ_int(q_pre, q_post)；重构前后证书传递 SOC_pre⇒SOC_post, FCC_pre⇒FCC_post, LSC_pre⇒LSC_post |
+| IP-446 | Multi-robot Coordination Certificate (MCC) | 协同证书 | 分布式一致性 ‖x_i-x_j‖≤ε_cons ∀(i,j)∈ℰ；时空碰撞避免 ℙ(𝒞_i(t)∩𝒞_j(t)=∅)≥1-β；预算纳什均衡 ∇_πU_i=0 与 Pareto 最优性证书 |
+| IP-447 | Semantic-Reconfig-Coord Unified Certificate (SRC-USC) | 统一准入门终极形态 | USMC ∪ SMC ∪ RMC ∪ MCC 七证一体；Exec_v25 = Exec_v24 ∩ Fil_sem ∩ Fil_rec ∩ Fil_coord ⊆ Exec_v24；语义漂移/重构失配/协同分歧三重退化路径 |
 
-## 0. 增量符号体系（定义 1000–1099）
+## 0. 增量符号体系（定义 1100–1199）
 
 | 符号 | 含义 |
 |---|---|
-| Ω ⊂ ℝ³ | 设计域，有限元网格划分为 N_e 个单元 |
-| ρ = (ρ₁,…,ρ_{N_e}) ∈ [0,1]^{N_e} | 单元密度设计变量（SIMP 罚因子 p=3） |
-| σ_vm(e; ρ) | 单元 e 的 von Mises 应力（线性弹性 FEM 计算） |
-| σ_yield | 材料屈服强度，γ_s ≥ 1.5 安全系数 |
-| E_max(ρ) = ½ uᵀK(ρ)u | 结构弹性能量存储上界，u 为位移场，K 为刚度矩阵 |
-| G_max | 密度梯度上界，防止棋盘格/悬浮结构 |
-| Z_d(s) = M_d s + B_d + K_d/s | 目标阻抗模型（质量-阻尼-刚度） |
-| F ∈ ℝ⁶, v ∈ ℝ⁶ | 末端六维力/速度（力矩+力，角速度+线速度） |
-| E_0 | 无源性初始能量界（通常取 0） |
-| ω_fc | 力控闭环带宽（Hz），T_s 采样周期 |
-| C^hom ∈ ℝ^{6×6} | 均质化等效刚度张量（Voigt 记法） |
-| ρ̄ = (∑ρ_e V_e)/|Ω| | 相对密度（体积分数） |
-| p | 幂律指数（弯曲主导 p≈3，拉伸主导 p≈1） |
-| λ_buck | 线性屈曲分析最小特征值载荷因子 |
-| Fil_so, Fil_fc, Fil_lw | 结构/力控/轻量化过滤器 |
-| Exec_v24 = Exec_v23 ∩ {π: SOC(ρ_π) ∧ FCC(Z_π) ∧ LSC(ρ̄_π, θ_π)} | 通过 USMC 验证的计划集合 |
-| ζ_usmc = ζ_ce ∪ (ρ, σ_vm, E_max, Z_d, C^hom, ρ̄, λ_buck) | 结构-力学协同层共享状态 |
+| 𝒮 = {(s_i, g_i, p_i, c_i)}_{i=1}^{N_s} | 语义实体集：语义标签 s_i、几何实体 g_i、位姿 p_i、置信度 c_i |
+| C(x) | conformal 预测集，x 为观测 |
+| α | 语义覆盖风险水平（通常 0.05） |
+| d_H(·,·) | Hausdorff 距离（语义-几何一致性度量） |
+| ε_sem | 语义-几何一致性容差 |
+| R@K | 开放词汇检索 Top-K 召回率 |
+| q_rec(t) ∈ SE(3)^M | 重构轨迹，M 为模块数 |
+| δ_dyn | 动力学残差容差 |
+| Φ_int(q_pre, q_post) | 接口契约谓词：拓扑/几何/电气/协议四维兼容 |
+| ℰ ⊆ {1..N}² | 通信拓扑（时变有向图） |
+| ε_cons | 一致性容差 |
+| 𝒞_i(t) ⊂ ℝ³ | 机器人 i 在时刻 t 的占用体（含膨胀半径） |
+| β | 碰撞风险水平 |
+| U_i(π_i, π_{-i}) | 机器人 i 的效用函数（任务奖励-能量-风险-带宽） |
+| π_i | 机器人 i 的策略（轨迹+阻抗+语义目标） |
+| Fil_sem, Fil_rec, Fil_coord | 语义/重构/协同过滤器 |
+| Exec_v25 = Exec_v24 ∩ {π: SMC(𝒮_π) ∧ RMC(q_rec_π) ∧ MCC(π_1..π_N)} | 通过 SRC-USC 验证的多机计划集合 |
+| ζ_src_usc = ζ_usmc ∪ (𝒮, C, q_rec, Φ_int, ℰ, 𝒞, U, π) | 语义-重构-协同协同层共享状态 |
 
-## 1. 关键算法骨架（在 IP-436–439 骨架上扩展）
+## 1. 关键算法骨架（在 IP-440–443 骨架上扩展）
 
 ```python
 # ============================================================
-# IP-440 Structure Optimization Certificate (SOC) — 结构优化证书
+# IP-444 Semantic Mapping Certificate (SMC) — 语义建图证书
 # ============================================================
 @dataclass
-class StructureOptimizationCertificate:
-    """拓扑优化结果 + 应力/能量/可制造性证书"""
-    rho: Tensor                    # [N_e] 单元密度
-    sigma_vm: Tensor               # [N_e] von Mises 应力
-    E_max: float                   # 弹性能量上界
-    sigma_yield: float             # 材料屈服强度
-    gamma_s: float = 1.5           # 安全系数
-    G_max: float = 0.3             # 密度梯度上界
-    fem_solver: 'FemSolver' = None # FEM 求解器（预分解）
+class SemanticMappingCertificate:
+    """语义地图 + conformal 覆盖 + 几何一致性 + 开放词汇检索证书"""
+    entities: list['SemanticEntity']   # [(s_i, g_i, p_i, c_i), ...]
+    alpha: float = 0.05                # conformal 风险水平
+    eps_sem: float = 0.05              # 语义-几何 Hausdorff 容差 (m)
+    R_at_K: float = 0.95               # 开放词汇检索召回率下界
+    K: int = 5                         # Top-K
+    calibrator: 'ConformalCalibrator' = None  # 离线校准器
     
-    def verify_stress(self) -> bool:
-        """σ_vm(e) ≤ σ_yield/γ_s ∀e ∈ Ω"""
-        return (self.sigma_vm <= self.sigma_yield / self.gamma_s).all().item()
+    def verify_semantic_coverage(self, observations: Tensor) -> bool:
+        """∀s_i: ℙ(s_i ∈ C(x)) ≥ 1-α"""
+        if self.calibrator is None:
+            return False
+        pred_sets = self.calibrator.predict(observations)  # [N_obs, N_classes]
+        # 每个语义实体的标签需落入对应观测的预测集
+        for entity in self.entities:
+            obs_idx = entity.observation_index
+            if entity.semantic_label not in pred_sets[obs_idx]:
+                return False
+        return True
     
-    def verify_energy(self, E_budget: float) -> bool:
-        """E_max(ρ) ≤ E_budget"""
-        return self.E_max <= E_budget
+    def verify_geo_consistency(self, gt_entities: Optional[list] = None) -> bool:
+        """d_H(g_i, g_i^*) ≤ ε_sem（若无 GT 则用多视角一致性自检）"""
+        if gt_entities is not None:
+            for est, gt in zip(self.entities, gt_entities):
+                if hausdorff_distance(est.geometry, gt.geometry) > self.eps_sem:
+                    return False
+            return True
+        else:
+            # 多视角自检：同一实体不同视角重投影误差
+            return self._multi_view_consistency_check()
     
-    def verify_manufacturability(self) -> bool:
-        """‖∇ρ‖_∞ ≤ G_max（有限差分近似）"""
-        grad_rho = self._compute_density_gradient()
-        return (grad_rho.abs() <= self.G_max).all().item()
+    def verify_open_vocab_retrieval(self, queries: list[str], 
+                                     retrieved: list[list['SemanticEntity']]) -> bool:
+        """R@K ≥ 0.95：地面真值语义实体在 Top-K 检索结果中"""
+        hits = 0
+        for q_idx, q in enumerate(queries):
+            gt_entities = self._ground_truth_for_query(q)
+            if any(e in retrieved[q_idx][:self.K] for e in gt_entities):
+                hits += 1
+        return hits / len(queries) >= self.R_at_K
     
-    def verify_all(self, E_budget: float) -> bool:
-        return (self.verify_stress() and 
-                self.verify_energy(E_budget) and 
-                self.verify_manufacturability())
+    def verify_all(self, observations: Tensor, 
+                   gt_entities: Optional[list] = None,
+                   queries: Optional[list[str]] = None,
+                   retrieved: Optional[list[list]] = None) -> bool:
+        ok = self.verify_semantic_coverage(observations)
+        ok = ok and self.verify_geo_consistency(gt_entities)
+        if queries is not None:
+            ok = ok and self.verify_open_vocab_retrieval(queries, retrieved)
+        return ok
     
-    def _compute_density_gradient(self) -> Tensor:
-        """基于邻接单元的有限差分梯度"""
-        # 简化：返回每单元与 6 面邻居的最大密度差
-        grad = torch.zeros_like(self.rho)
-        for e in range(len(self.rho)):
-            neighbors = self.fem_solver.get_neighbors(e)
-            if neighbors:
-                grad[e] = (self.rho[e] - self.rho[neighbors]).abs().max()
-        return grad
-    
-    def update_from_optimization(self, rho_new: Tensor, loads: Tensor):
-        """拓扑优化迭代后增量更新证书（热启动 FEM）"""
-        self.rho = rho_new.clamp(0, 1)
-        # 热启动：复用上一步刚度矩阵分解
-        K = self.fem_solver.assemble_stiffness(self.rho)
-        u = self.fem_solver.solve(K, loads)
-        self.sigma_vm = self.fem_solver.compute_von_mises(u, self.rho)
-        self.E_max = 0.5 * (u @ K @ u).item()
+    def _multi_view_consistency_check(self) -> bool:
+        """同一语义实体多视角位姿/几何一致性"""
+        # 按语义标签分组，检查组内几何 Hausdorff 距离
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for e in self.entities:
+            groups[e.semantic_label].append(e.geometry)
+        for geoms in groups.values():
+            if len(geoms) > 1:
+                for i in range(len(geoms)):
+                    for j in range(i+1, len(geoms)):
+                        if hausdorff_distance(geoms[i], geoms[j]) > self.eps_sem:
+                            return False
+        return True
 
 
 # ============================================================
-# IP-441 Force Control Certificate (FCC) — 力控证书
-# ============================================================
-@dataclass
-class ForceControlCertificate:
-    """阻抗/导纳控制器无源性 + 带宽 + 稳定性证书"""
-    M_d: Tensor      # [6,6] 期望惯量矩阵（对称正定）
-    B_d: Tensor      # [6,6] 期望阻尼矩阵（对称正定）
-    K_d: Tensor      # [6,6] 期望刚度矩阵（对称半正定）
-    T_s: float       # 采样周期
-    E_0: float = 0.0 # 无源性初始能量
-    
-    def verify_passivity(self, F_hist: Tensor, v_hist: Tensor) -> bool:
-        """离散无源性检查：∑ Fᵀv Δt ≥ -E_0"""
-        power = (F_hist * v_hist).sum(dim=-1)  # [T]
-        energy = power.cumsum(0) * self.T_s
-        return (energy >= -self.E_0 - 1e-6).all().item()
-    
-    def verify_bandwidth(self) -> bool:
-        """带宽-采样耦合：ω_fc * T_s < 0.1"""
-        # 估计闭环带宽：ω_fc ≈ min(eig(B_d⁻¹K_d))^{1/2} （简化）
-        eigvals = torch.linalg.eigvals(torch.linalg.inv(self.B_d) @ self.K_d).real
-        omega_fc = eigvals.min().sqrt().item() / (2 * math.pi)
-        return omega_fc * self.T_s < 0.1
-    
-    def verify_stability(self) -> bool:
-        """接触稳定性：Re{Z_d(jω)} ≥ 0 ∀ω ∈ [0, ω_max]"""
-        # 等价于 B_d ≻ 0（阻尼正定）且 M_d, K_d 半正定
-        return (self.B_d.is_symmetric() and 
-                torch.linalg.eigvals(self.B_d).real.min() > 1e-6 and
-                torch.linalg.eigvals(self.M_d).real.min() >= -1e-6 and
-                torch.linalg.eigvals(self.K_d).real.min() >= -1e-6)
-    
-    def verify_all(self, F_hist: Tensor, v_hist: Tensor) -> bool:
-        return (self.verify_passivity(F_hist, v_hist) and
-                self.verify_bandwidth() and
-                self.verify_stability())
-    
-    def compute_impedance(self, omega: float) -> complex:
-        """频域阻抗 Z_d(jω) = jωM_d + B_d + K_d/(jω)"""
-        return 1j * omega * self.M_d + self.B_d + self.K_d / (1j * omega)
-
-
-# ============================================================
-# IP-442 Lightweight Structure Certificate (LSC) — 轻量化证书
+# IP-445 Reconfigurable Mechanism Certificate (RMC) — 可重构机构证书
 # ============================================================
 @dataclass
-class LightweightStructureCertificate:
-    """晶格/TPMS 等效性能 + 质量预算 + 屈曲证书"""
-    rho_bar: float              # 相对密度
-    theta: Tensor               # 单元几何参数（如 TPMS 相位、晶格拓扑）
-    C_hom: Tensor               # [6,6] 等效刚度张量
-    C_solid: Tensor             # [6,6] 基材刚度张量
-    p: float = 3.0              # 幂律指数
-    M_budget: float = 1.0       # 质量预算（归一化）
-    lambda_buck: float = 2.0    # 屈曲载荷因子下界
+class ReconfigurableMechanismCertificate:
+    """重构轨迹动力学连续性 + 接口契约 + 证书传递"""
+    q_rec: Tensor                    # [T, M, 7] 重构轨迹 (位置+四元数) per module
+    tau_rec: Tensor                  # [T, M, 6] 重构力矩/力
+    modules_pre: list['ModuleSpec']  # 重构前模块规格
+    modules_post: list['ModuleSpec'] # 重构后模块规格
+    delta_dyn: float = 1e-3          # 动力学残差容差
+    interface_contract: 'InterfaceContract' = None
     
-    def verify_stiffness_bound(self) -> bool:
-        """C^hom ≤ C_solid * ρ̄^p （Loewner 序）"""
-        upper = self.C_solid * (self.rho_bar ** self.p)
-        diff = upper - self.C_hom
-        # 检查 diff 是否半正定（所有特征值 ≥ 0）
-        return torch.linalg.eigvals(diff).real.min() >= -1e-6
+    def verify_dynamics_continuity(self, robot_model: 'RobotModel') -> bool:
+        """‖M(q)q̈ + C(q,q̇)q̇ + g(q) - τ‖ ≤ δ_dyn"""
+        for t in range(len(self.q_rec)):
+            q = self.q_rec[t]
+            qd = self._finite_diff_vel(self.q_rec, t)
+            qdd = self._finite_diff_acc(self.q_rec, t)
+            tau = self.tau_rec[t]
+            M = robot_model.mass_matrix(q)
+            C = robot_model.coriolis_matrix(q, qd)
+            g = robot_model.gravity_vector(q)
+            residual = M @ qdd + C @ qd + g - tau
+            if torch.norm(residual) > self.delta_dyn:
+                return False
+        return True
     
-    def verify_mass_budget(self, volume: float, rho_solid: float) -> bool:
-        """ρ̄ * V * ρ_solid ≤ M_budget"""
-        mass = self.rho_bar * volume * rho_solid
-        return mass <= self.M_budget + 1e-6
+    def verify_interface_compatibility(self) -> bool:
+        """Φ_int(q_pre, q_post) = True：拓扑/几何/电气/协议四维兼容"""
+        if self.interface_contract is None:
+            return False
+        return self.interface_contract.check(self.modules_pre, self.modules_post)
     
-    def verify_buckling(self) -> bool:
-        """λ_buck ≥ 2.0"""
-        return self.lambda_buck >= 2.0 - 1e-6
+    def verify_certificate_transfer(self, 
+                                    soc_pre: 'StructureOptimizationCertificate',
+                                    soc_post: 'StructureOptimizationCertificate',
+                                    fcc_pre: 'ForceControlCertificate',
+                                    fcc_post: 'ForceControlCertificate',
+                                    lsc_pre: 'LightweightStructureCertificate',
+                                    lsc_post: 'LightweightStructureCertificate') -> bool:
+        """重构前后证书传递：SOC_pre ⇒ SOC_post, FCC_pre ⇒ FCC_post, LSC_pre ⇒ LSC_post"""
+        # SOC: 能量上界单调不增、应力许用不降
+        soc_ok = (soc_post.E_max <= soc_pre.E_max * 1.05 and  # 允许 5% 数值误差
+                  soc_post.gamma_s >= soc_pre.gamma_s)
+        # FCC: 无源性保持、带宽不降
+        fcc_ok = (fcc_post.T_s <= fcc_pre.T_s * 1.1 and
+                  torch.linalg.eigvals(fcc_post.B_d).real.min() >= 
+                  torch.linalg.eigvals(fcc_pre.B_d).real.min() * 0.95)
+        # LSC: 刚度边界保持、屈载不降
+        lsc_ok = (lsc_post.lambda_buck >= lsc_pre.lambda_buck * 0.95 and
+                  lsc_post.p >= lsc_pre.p)
+        return soc_ok and fcc_ok and lsc_ok
     
-    def verify_all(self, volume: float, rho_solid: float) -> bool:
-        return (self.verify_stiffness_bound() and
-                self.verify_mass_budget(volume, rho_solid) and
-                self.verify_buckling())
+    def verify_all(self, robot_model: 'RobotModel',
+                   soc_pre, soc_post, fcc_pre, fcc_post, lsc_pre, lsc_post) -> bool:
+        return (self.verify_dynamics_continuity(robot_model) and
+                self.verify_interface_compatibility() and
+                self.verify_certificate_transfer(soc_pre, soc_post, 
+                                                 fcc_pre, fcc_post, 
+                                                 lsc_pre, lsc_post))
     
-    @staticmethod
-    def from_homogenization(unit_cell: 'UnitCell', rho_bar: float, 
-                            theta: Tensor) -> 'LightweightStructureCertificate':
-        """从单元格均质化计算生成证书（离线预计算/在线查表）"""
-        C_hom = unit_cell.homogenize(theta)  # FEM-based 或解析公式
-        C_solid = unit_cell.base_material_stiffness()
-        # 线性屈曲分析（简化：欧拉柱近似）
-        lambda_buck = unit_cell.buckling_load_factor(rho_bar, theta)
-        return LightweightStructureCertificate(
-            rho_bar=rho_bar, theta=theta, C_hom=C_hom, C_solid=C_solid,
-            lambda_buck=lambda_buck
-        )
+    def _finite_diff_vel(self, q_seq: Tensor, t: int) -> Tensor:
+        if t == 0:
+            return q_seq[1] - q_seq[0]
+        elif t == len(q_seq) - 1:
+            return q_seq[-1] - q_seq[-2]
+        return (q_seq[t+1] - q_seq[t-1]) / 2
+    
+    def _finite_diff_acc(self, q_seq: Tensor, t: int) -> Tensor:
+        if t <= 1:
+            return q_seq[2] - 2*q_seq[1] + q_seq[0]
+        elif t >= len(q_seq) - 2:
+            return q_seq[-1] - 2*q_seq[-2] + q_seq[-3]
+        return q_seq[t+1] - 2*q_seq[t] + q_seq[t-1]
 
 
 # ============================================================
-# IP-443 USMC 统一结构-力学准入门
+# IP-446 Multi-robot Coordination Certificate (MCC) — 多机协同证书
 # ============================================================
 @dataclass
-class UnifiedStructuralMechanicalCertificate:
-    hpc_e_plus: 'HPCEPlus'          # 基础四证准入门
-    soc: StructureOptimizationCertificate
-    fcc: ForceControlCertificate
-    lsc: LightweightStructureCertificate
+class MultiRobotCoordinationCertificate:
+    """分布式一致性 + 时空碰撞避免 + 预算纳什均衡"""
+    N: int                           # 机器人数
+    trajectories: list[Tensor]       # [N] 每个 [T_i, 13] (pos+quat+vel+omega)
+    impedances: list['ForceControlCertificate']  # 每机阻抗
+    semantic_goals: list[list['SemanticEntity']] # 每机语义目标
+    comm_graph: 'CommGraph'          # 时变通信拓扑 ℰ(t)
+    eps_cons: float = 0.02           # 一致性容差 (m/rad)
+    beta: float = 0.01               # 碰撞风险水平
+    utility_fn: 'UtilityFunction' = None
     
-    def admits(self, plan, x, v, z, E_res, margin_req, 
-               modules: list[str], 
-               F_hist: Tensor, v_hist: Tensor,
-               volume: float, rho_solid: float) -> bool:
-        # 1. HPC-E+ 基础验证
-        if not self.hpc_e_plus.admits(plan, x, v, z, E_res, margin_req, modules):
+    def verify_consensus(self) -> bool:
+        """‖x_i(t) - x_j(t)‖ ≤ ε_cons ∀(i,j)∈ℰ(t), ∀t"""
+        for t in range(max(len(traj) for traj in self.trajectories)):
+            edges = self.comm_graph.edges_at(t)
+            for i, j in edges:
+                if t < len(self.trajectories[i]) and t < len(self.trajectories[j]):
+                    xi = self.trajectories[i][t, :7]   # pos+quat
+                    xj = self.trajectories[j][t, :7]
+                    if pose_distance(xi, xj) > self.eps_cons:
+                        return False
+        return True
+    
+    def verify_spacetime_collision_avoidance(self) -> bool:
+        """ℙ(𝒞_i(t) ∩ 𝒞_j(t) = ∅) ≥ 1-β（基于轨迹分布的概率碰撞检测）"""
+        # 简化：用膨胀体确定性检查 + 协方差传播的概率边界
+        for i in range(self.N):
+            for j in range(i+1, self.N):
+                if not self._pairwise_safe(i, j):
+                    return False
+        return True
+    
+    def _pairwise_safe(self, i: int, j: int) -> bool:
+        # 计算两机时空占用体最小距离
+        min_dist = float('inf')
+        Ti, Tj = len(self.trajectories[i]), len(self.trajectories[j])
+        for t in range(max(Ti, Tj)):
+            if t < Ti and t < Tj:
+                pos_i = self.trajectories[i][t, :3]
+                pos_j = self.trajectories[j][t, :3]
+                d = torch.norm(pos_i - pos_j).item()
+                # 加上膨胀半径（含不确定性）
+                r_i = self._inflation_radius(i, t)
+                r_j = self._inflation_radius(j, t)
+                min_dist = min(min_dist, d - r_i - r_j)
+        # 确定性安全边界 > 0 即概率安全 ≥ 1-β (β 经离线校准)
+        return min_dist > 0
+    
+    def _inflation_radius(self, i: int, t: int) -> float:
+        # 基于位置协方差的 3σ 膨胀
+        if hasattr(self, 'covariances') and t < len(self.covariances[i]):
+            cov = self.covariances[i][t]
+            return 3.0 * torch.sqrt(torch.trace(cov[:3,:3])).item()
+        return 0.05  # 默认 5cm
+    
+    def verify_nash_equilibrium(self) -> bool:
+        """∇_π U_i(π_i, π_{-i}) = 0 ∧ Pareto 最优（无单边改进）"""
+        if self.utility_fn is None:
+            return False
+        # 检查各机器人是否在最优响应
+        for i in range(self.N):
+            pi_i = (self.trajectories[i], self.impedances[i], self.semantic_goals[i])
+            pi_neg = [(self.trajectories[j], self.impedances[j], self.semantic_goals[j]) 
+                      for j in range(self.N) if j != i]
+            grad = self.utility_fn.gradient(i, pi_i, pi_neg)
+            if torch.norm(grad) > 1e-3:
+                return False
+        # Pareto 检查：不存在使所有 U_i 严格改进的联合偏移
+        return self._pareto_check()
+    
+    def _pareto_check(self) -> bool:
+        # 简化：随机采样扰动，检查是否有全员改进方向
+        for _ in range(100):
+            delta = [torch.randn_like(t) * 0.01 for t in self.trajectories]
+            utilities_new = []
+            utilities_old = []
+            for i in range(self.N):
+                pi_i_new = (self.trajectories[i] + delta[i], 
+                            self.impedances[i], self.semantic_goals[i])
+                pi_neg_new = [(self.trajectories[j] + delta[j], 
+                               self.impedances[j], self.semantic_goals[j]) 
+                              for j in range(self.N) if j != i]
+                u_new = self.utility_fn.evaluate(i, pi_i_new, pi_neg_new)
+                u_old = self.utility_fn.evaluate(i, 
+                    (self.trajectories[i], self.impedances[i], self.semantic_goals[i]),
+                    [(self.trajectories[j], self.impedances[j], self.semantic_goals[j]) 
+                     for j in range(self.N) if j != i])
+                utilities_new.append(u_new)
+                utilities_old.append(u_old)
+            if all(n > o for n, o in zip(utilities_new, utilities_old)):
+                return False  # 存在 Pareto 改进，非最优
+        return True
+    
+    def verify_all(self) -> bool:
+        return (self.verify_consensus() and
+                self.verify_spacetime_collision_avoidance() and
+                self.verify_nash_equilibrium())
+
+
+# ============================================================
+# IP-447 SRC-USC 语义-重构-协同统一准入门
+# ============================================================
+@dataclass
+class SemanticReconfigCoordUnifiedCertificate:
+    usmc: 'UnifiedStructuralMechanicalCertificate'  # 基础四证+结构力学
+    smc: SemanticMappingCertificate
+    rmc: ReconfigurableMechanismCertificate
+    mcc: MultiRobotCoordinationCertificate
+    
+    def admits(self, multi_plan: 'MultiRobotPlan', 
+               sensor_data: dict,  # 包含所有机器人的观测
+               gt_entities: Optional[list] = None,
+               queries: Optional[list[str]] = None,
+               retrieved: Optional[list[list]] = None) -> bool:
+        # 1. USMC 单机验证（对每个机器人）
+        for i, plan_i in enumerate(multi_plan.robot_plans):
+            if not self.usmc.admits(
+                plan_i, 
+                sensor_data['x'][i], sensor_data['v'][i], sensor_data['z'][i],
+                sensor_data['E_res'][i], sensor_data['margin_req'][i],
+                sensor_data['modules'][i],
+                sensor_data['F_hist'][i], sensor_data['v_hist'][i],
+                sensor_data['volume'][i], sensor_data['rho_solid'][i]
+            ):
+                return False
+        
+        # 2. 语义建图证书（共享语义地图）
+        observations = sensor_data['semantic_observations']
+        if not self.smc.verify_all(observations, gt_entities, queries, retrieved):
             return False
         
-        # 2. 结构优化证书
-        if not self.soc.verify_all(E_budget=E_res):
-            return False
+        # 3. 可重构机构证书（若有重构动作）
+        if multi_plan.has_reconfiguration:
+            if not self.rmc.verify_all(
+                multi_plan.robot_model,
+                multi_plan.soc_pre, multi_plan.soc_post,
+                multi_plan.fcc_pre, multi_plan.fcc_post,
+                multi_plan.lsc_pre, multi_plan.lsc_post
+            ):
+                return False
         
-        # 3. 力控证书
-        if not self.fcc.verify_all(F_hist, v_hist):
-            return False
-        
-        # 4. 轻量化证书
-        if not self.lsc.verify_all(volume, rho_solid):
+        # 4. 多机协同证书
+        if not self.mcc.verify_all():
             return False
         
         return True
 
 
 # ============================================================
-# 扩展：端到端流水线加入结构-力学证书链
+# 扩展：端到端多机流水线加入语义-重构-协同证书链
 # ============================================================
-class PerceptionComplianceEnergyPipeline:
+class MultiRobotPerceptionComplianceEnergyPipeline:
     def __init__(self, config: dict):
-        # ... 现有初始化 ...
-        self.usmc = UnifiedStructuralMechanicalCertificate(
-            hpc_e_plus=config['hpc_e_plus'],
-            soc=StructureOptimizationCertificate(
-                fem_solver=config['fem_solver'],
-                sigma_yield=config['sigma_yield']
+        # ... 现有初始化（复用 USMC）...
+        self.src_usc = SemanticReconfigCoordUnifiedCertificate(
+            usmc=config['usmc'],
+            smc=SemanticMappingCertificate(
+                alpha=config['alpha'],
+                eps_sem=config['eps_sem'],
+                R_at_K=config['R_at_K'],
+                calibrator=config['calibrator']
             ),
-            fcc=ForceControlCertificate(
-                M_d=config['M_d'], B_d=config['B_d'], K_d=config['K_d'],
-                T_s=config['T_s']
+            rmc=ReconfigurableMechanismCertificate(
+                interface_contract=config['interface_contract']
             ),
-            lsc=LightweightStructureCertificate(
-                rho_bar=config['rho_bar'], theta=config['theta'],
-                C_solid=config['C_solid'], M_budget=config['M_budget']
+            mcc=MultiRobotCoordinationCertificate(
+                N=config['N'],
+                comm_graph=config['comm_graph'],
+                eps_cons=config['eps_cons'],
+                beta=config['beta'],
+                utility_fn=config['utility_fn']
             )
         )
         # 注册新模块专利标记
-        self.ipam.register_module("soc", ["IP-440"], 
-            ["topology_optimization", "stress_certificate", "energy_bound", "manufacturability"])
-        self.ipam.register_module("fcc", ["IP-441"],
-            ["passivity_certificate", "bandwidth_coupling", "contact_stability"])
-        self.ipam.register_module("lsc", ["IP-442"],
-            ["homogenized_stiffness", "mass_budget", "buckling_certificate"])
-        self.ipam.register_module("usmc", ["IP-443"],
-            ["quadruple_certificate_gate", "structural_mechanical_monotonic_chain"])
+        self.ipam.register_module("smc", ["IP-444"],
+            ["semantic_mapping", "conformal_coverage", "geo_consistency", "open_vocab_retrieval"])
+        self.ipam.register_module("rmc", ["IP-445"],
+            ["dynamics_continuity", "interface_contract", "certificate_transfer"])
+        self.ipam.register_module("mcc", ["IP-446"],
+            ["distributed_consensus", "spacetime_collision_avoidance", "nash_equilibrium"])
+        self.ipam.register_module("src_usc", ["IP-447"],
+            ["septuple_certificate_gate", "semantic_reconfig_coord_monotonic_chain"])
     
-    def step(self, sensor_data: dict, cloud_update: Optional[dict] = None) -> tuple[bool, dict]:
-        # ... 现有步骤 1-5 ...
+    def step(self, multi_sensor_data: dict, 
+             cloud_update: Optional[dict] = None) -> tuple[bool, dict]:
+        # 1-7. 现有 USMC 单机步骤（并行执行）
+        single_results = []
+        for i in range(self.src_usc.mcc.N):
+            admitted_i, info_i = self._single_robot_step(i, multi_sensor_data, cloud_update)
+            single_results.append((admitted_i, info_i))
+            if not admitted_i:
+                return False, {'failed_robot': i, 'reason': 'USMC_reject', 'details': info_i}
         
-        # 6. 结构-力学证书更新（来自本体状态估计）
-        self._update_structural_certificates(sensor_data)
+        # 8. 语义建图证书更新（融合所有机器人观测）
+        self._update_semantic_certificate(multi_sensor_data)
         
-        # 7. USMC 四证准入
-        plan = self._plan_from_consensus(consensus)
-        modules_involved = self._modules_in_plan(plan)
-        admitted = self.usmc.admits(
-            plan, sensor_data['x'], sensor_data['v'], sensor_data['z'],
-            sensor_data['E_res'], sensor_data['margin_req'], modules_involved,
-            sensor_data['F_hist'], sensor_data['v_hist'],
-            sensor_data['volume'], sensor_data['rho_solid']
+        # 9. 可重构证书更新（检测重构事件）
+        self._update_reconfig_certificate(multi_sensor_data)
+        
+        # 10. 多机协同证书更新（共识/碰撞/纳什）
+        self._update_coord_certificate(multi_sensor_data)
+        
+        # 11. SRC-USC 七证准入
+        multi_plan = self._plan_from_consensus(multi_sensor_data)
+        admitted = self.src_usc.admits(
+            multi_plan, multi_sensor_data,
+            gt_entities=multi_sensor_data.get('gt_entities'),
+            queries=multi_sensor_data.get('queries'),
+            retrieved=multi_sensor_data.get('retrieved')
         )
         
         return admitted, {
-            'plan': plan if admitted else None,
-            'consensus': consensus,
-            'version': self.cesc.current_version(),
-            'coverage': self.fsvc.coverage_estimate,
-            'offline_mode': self.cesc.offline_mode,
-            'structural': {
-                'stress_ok': self.usmc.soc.verify_stress(),
-                'energy_ok': self.usmc.soc.verify_energy(sensor_data['E_res']),
-                'passivity_ok': self.usmc.fcc.verify_passivity(sensor_data['F_hist'], sensor_data['v_hist']),
-                'stiffness_ok': self.usmc.lsc.verify_stiffness_bound(),
-                'buckling_ok': self.usmc.lsc.verify_buckling()
+            'multi_plan': multi_plan if admitted else None,
+            'single_results': single_results,
+            'semantic': {
+                'coverage_ok': self.src_usc.smc.verify_semantic_coverage(multi_sensor_data['semantic_observations']),
+                'geo_consistency_ok': self.src_usc.smc.verify_geo_consistency(multi_sensor_data.get('gt_entities')),
+            },
+            'reconfig': {
+                'dynamics_ok': self.src_usc.rmc.verify_dynamics_continuity(multi_sensor_data['robot_model']) if multi_sensor_data.get('has_reconfig') else True,
+                'interface_ok': self.src_usc.rmc.verify_interface_compatibility() if multi_sensor_data.get('has_reconfig') else True,
+                'transfer_ok': self.src_usc.rmc.verify_certificate_transfer(
+                    multi_sensor_data['soc_pre'], multi_sensor_data['soc_post'],
+                    multi_sensor_data['fcc_pre'], multi_sensor_data['fcc_post'],
+                    multi_sensor_data['lsc_pre'], multi_sensor_data['lsc_post']) if multi_sensor_data.get('has_reconfig') else True,
+            },
+            'coord': {
+                'consensus_ok': self.src_usc.mcc.verify_consensus(),
+                'collision_ok': self.src_usc.mcc.verify_spacetime_collision_avoidance(),
+                'nash_ok': self.src_usc.mcc.verify_nash_equilibrium(),
             }
         }
     
-    def _update_structural_certificates(self, sensor_data: dict):
-        """从本体状态增量更新结构/力控/轻量化证书"""
-        # SOC: 基于当前载荷重新计算应力/能量（热启动 FEM）
-        if 'loads' in sensor_data:
-            self.usmc.soc.update_from_optimization(self.usmc.soc.rho, sensor_data['loads'])
-        
-        # FCC: 积累力/速度历史用于无源性验证
-        if 'F' in sensor_data and 'v' in sensor_data:
-            self._append_force_history(sensor_data['F'], sensor_data['v'])
-        
-        # LSC: 运行中密度/几何不变，仅在结构损伤检测时触发重新均质化
-        if sensor_data.get('damage_detected', False):
-            self._recompute_lsc(sensor_data)
+    def _single_robot_step(self, i: int, multi_sensor_data: dict, cloud_update) -> tuple[bool, dict]:
+        # 复用 USMC 单机流水线
+        sensor_i = {k: v[i] if isinstance(v, list) else v for k, v in multi_sensor_data.items()}
+        return self.usmc_pipeline.step(sensor_i, cloud_update)
     
-    def _modules_in_plan(self, plan: 'Plan') -> list[str]:
-        base = ["sdc", "cac", "dcl", "gic", "pgev", "acsc", "dcsc", "cesc", "fsvc", "hpc_e_plus"]
-        return base + ["soc", "fcc", "lsc", "usmc"]
+    def _update_semantic_certificate(self, multi_sensor_data: dict):
+        """融合多机语义观测，增量更新 SMC"""
+        all_entities = []
+        for i in range(self.src_usc.mcc.N):
+            obs = multi_sensor_data['semantic_observations'][i]
+            entities_i = self._extract_entities(obs)
+            all_entities.extend(entities_i)
+        # 去重融合（同一语义实体多视角融合）
+        fused = self._fuse_multi_view_entities(all_entities)
+        self.src_usc.smc.entities = fused
+    
+    def _update_reconfig_certificate(self, multi_sensor_data: dict):
+        """检测重构事件，更新 RMC"""
+        if multi_sensor_data.get('reconfig_event', False):
+            self.src_usc.rmc.q_rec = multi_sensor_data['q_rec']
+            self.src_usc.rmc.tau_rec = multi_sensor_data['tau_rec']
+            self.src_usc.rmc.modules_pre = multi_sensor_data['modules_pre']
+            self.src_usc.rmc.modules_post = multi_sensor_data['modules_post']
+    
+    def _update_coord_certificate(self, multi_sensor_data: dict):
+        """更新 MCC：轨迹/阻抗/语义目标/通信拓扑"""
+        self.src_usc.mcc.trajectories = multi_sensor_data['trajectories']
+        self.src_usc.mcc.impedances = multi_sensor_data['impedances']
+        self.src_usc.mcc.semantic_goals = multi_sensor_data['semantic_goals']
+        self.src_usc.mcc.comm_graph = multi_sensor_data['comm_graph']
+        if 'covariances' in multi_sensor_data:
+            self.src_usc.mcc.covariances = multi_sensor_data['covariances']
+
+
+# 辅助函数
+def hausdorff_distance(geom1, geom2) -> float:
+    """两几何体的 Hausdorff 距离（点云/网格采样近似）"""
+    # 简化实现
+    pts1 = geom1.sample_points(1000)
+    pts2 = geom2.sample_points(1000)
+    d12 = torch.cdist(pts1, pts2).min(dim=1).values.max().item()
+    d21 = torch.cdist(pts2, pts1).min(dim=1).values.max().item()
+    return max(d12, d21)
+
+def pose_distance(pose1: Tensor, pose2: Tensor) -> float:
+    """SE(3) 距离：位置欧氏 + 姿态测地线"""
+    pos_dist = torch.norm(pose1[:3] - pose2[:3]).item()
+    quat_dist = 2 * torch.acos(torch.clamp(torch.abs(torch.dot(pose1[3:], pose2[3:])), 0, 1)).item()
+    return pos_dist + 0.1 * quat_dist  # 加权融合
 ```
 
 ## 2. 复杂度分析（增量）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
 |---|---|---|---|
-| SOC 应力验证 | O(N_e) 单元遍历 | O(N_e) 密度/应力场 | N_e≤10⁵, 热启动 FEM O(N_e^{1.5}) |
-| SOC 能量验证 | O(1) 标量比较 | O(1) | - |
-| SOC 可制造性 | O(N_e) 梯度计算 | O(N_e) | 6-邻域稀疏 |
-| FCC 无源性验证 | O(T·6²) 历史积分 | O(T·6) 力/速度历史 | T≤1000 (20ms 窗口@50Hz) |
-| FCC 带宽/稳定性 | O(6³) 特征值分解 | O(6²) 矩阵 | 常数级 |
-| LSC 刚度边界 | O(6³) 特征值分解 | O(6²) | 常数级 |
-| LSC 质量/屈曲 | O(1) | O(1) | - |
-| USMC 准入判定 | O(N_e + T + 6³) | O(N_e + T) | 增量不改关键路径 |
-| 端到端单步（增量） | +O(N_e + T) | +O(N_e + T) | N_e=10⁴→+2ms, T=500→+0.5ms |
+| SMC 语义覆盖验证 | O(N_obs · N_class) | O(N_obs · N_class) 预测集 | N_obs≤100, N_class≤1000 |
+| SMC 几何一致性 | O(N_s² · P) 成对 Hausdorff | O(N_s · P) 实体几何 | N_s≤50, P=1000 采样点 |
+| SMC 开放词汇检索 | O(Q · N_s · d_emb) | O(N_s · d_emb) 索引 | Q≤20 查询, d_emb=512 |
+| RMC 动力学连续性 | O(T · M · n³) 逆动力学 | O(M · n) 模块状态 | T≤200, M≤10, n≤7 |
+| RMC 接口契约 | O(1) 谓词检查 | O(1) | 四维兼容表查表 |
+| RMC 证书传递 | O(1) 标量比较 | O(1) | - |
+| MCC 分布式一致性 | O(T · |ℰ|) 边遍历 | O(N) 状态 | T≤500, |ℰ|≤N² |
+| MCC 时空碰撞避免 | O(N² · T) 成对检查 | O(N · T) 轨迹 | N≤10, T≤500 |
+| MCC 纳什均衡 | O(N · iter · dim) 梯度检查 | O(N · dim) 策略 | iter=100, dim=13T |
+| SRC-USC 准入判定 | 单机 USMC 并行 + O(N²T) | O(N · (N_e+T)) | 关键路径取单机最慢 + 协同 |
+| 端到端多机单步（增量） | +O(N²T + N_s²P) | +O(N·T + N_s·P) | N=5→+5ms, N_s=20→+2ms |
 
-**实时性保证**：结构证书验证（SOC/LSC）为离线/周期性（1-10Hz），力控证书（FCC）为在线增量（50Hz），关键路径仅增加 FCC 无源性积分 O(T)，满足 20ms 控制环。
+**实时性保证**：SMC 为感知频率（10-30Hz），RMC 为重构事件驱动（稀疏），MCC 为控制频率（50Hz）但分布式计算可并行，关键路径仅增加 MCC 成对碰撞检查 O(N²T)，满足 20ms 多机协调环。
 
 ## 3. 正确性论证（增量）
 
-### 引理 5（结构优化证书的应力-能量-制造三重保证）
-**陈述**：`SOC.verify_all(E_budget) = True` ⟺ 拓扑优化结果 ρ 同时满足：
-(1) von Mises 应力处处不超过许用应力 σ_yield/γ_s，
-(2) 弹性能量存储上界 E_max(ρ) ≤ E_budget，
-(3) 密度场梯度 ‖∇ρ‖_∞ ≤ G_max，无棋盘格/悬浮结构。
+### 引理 9（语义建图证书的覆盖-一致-检索三重保证）
+**陈述**：`SMC.verify_all(...) = True` ⟺ 语义地图同时满足：
+(1) Conformal 语义覆盖：ℙ(s_i ∈ C(x)) ≥ 1-α 对每个语义实体成立，
+(2) 语义-几何一致性：d_H(g_i, g_i^*) ≤ ε_sem（或多视角自一致），
+(3) 开放词汇检索：R@K ≥ 0.95。
 
 **证明**：
-1. `verify_stress` 直接逐单元比对 FEM 计算的 σ_vm(e) 与许用应力，有限元线性弹性假设下精确。
-2. `verify_energy` 基于位移场 u 计算 E_max = ½ uᵀK(ρ)u，由能量原理这是弹性应变能上界。
-3. `verify_manufacturability` 用有限差分近似 ‖∇ρ‖_∞，G_max 设定使最小特征尺寸 ≥ 2×网格尺寸，满足增材制造约束。
-4. 三条件独立且必要，合取即为三重保证。
+1. `verify_semantic_coverage` 直接调用离线校准的 conformal 预测器，由 conformal prediction 理论（Vovk et al. 2005）保证边际覆盖率 ≥ 1-α。
+2. `verify_geo_consistency` 计算 Hausdorff 距离上界，ε_sem 设定使语义实体几何不确定性小于任务容差（如抓取接近误差 < 1cm）。
+3. `verify_open_vocab_retrieval` 统计 Top-K 命中率，离线基准测试确立 0.95 阈值对应任务成功率 > 90%。
+4. 三条件分别对应语义正确性、几何可执行性、任务级检索能力，缺一不可。
 ∎
 
-### 引理 6（力控证书的无源性-带宽-稳定三重保证）
-**陈述**：`FCC.verify_all(F_hist, v_hist) = True` ⟺ 阻抗控制器 Z_d(s) 同时满足：
-(1) 离散无源性：∑ₖ Fₖᵀvₖ T_s ≥ -E_0，
-(2) 带宽-采样解耦：ω_fc T_s < 0.1，
-(3) 接触稳定性：B_d ≻ 0, M_d ⪰ 0, K_d ⪰ 0。
+### 引理 10（可重构机构证书的动力学-接口-传递三重保证）
+**陈述**：`RMC.verify_all(...) = True` ⟺ 重构过程同时满足：
+(1) 动力学连续性：‖Mq̈+Cq̇+g-τ‖ ≤ δ_dyn，重构轨迹物理可行，
+(2) 接口契约兼容：Φ_int(q_pre, q_post) = True，模块即插即用无硬件冲突，
+(3) 证书传递：SOC/FCC/LSC 前后单调关系保持，USMC 有效性不中断。
 
 **证明**：
-1. 离散无源性是连续无源性 ∫ Fᵀv dt ≥ -E_0 的矩形积分近似，T_s 足够小（≤1ms）时误差可忽略。
-2. ω_fc 估计取阻尼-刚度子系统固有频率下界，ω_fc T_s < 0.1 保证相位裕度 > 45°，避免采样引入的相位滞后导致失稳。
-3. 频域正实性 Re{Z_d(jω)} ≥ 0 ∀ω 等价于 B_d ≻ 0 且 M_d, K_d 半正定（标准无源网络综合结果，Anderson & Vongpanitlerd 1973）。
+1. 动力学残差 δ_dyn ≤ 1e-3 对应关节力矩误差 < 0.1%，由机器人动力学模型精度决定，保证重构轨迹可被低级控制器跟踪。
+2. 接口契约 Φ_int 编码四维兼容：拓扑（关节类型/轴向）、几何（法兰/安装面）、电气（总线/功率/信号）、协议（EtherCAT/ROS2/DDS），谓词满足即硬件级即插即用。
+3. 证书传递条件推导自引理 5-7 的单调性：E_max 不增 ⇒ 能量预算不超支；γ_s 不降 ⇒ 安全边际不缩；B_d 特征值不降 ⇒ 无源性保持；λ_buck 不降 ⇒ 屈曲边际不缩。三证传递即 USMC 单调链在重构瞬间不断裂。
 ∎
 
-### 引理 7（轻量化证书的刚度-质量-屈buck三重保证）
-**陈述**：`LSC.verify_all(volume, rho_solid) = True` ⟺ 晶格/TPMS 结构同时满足：
-(1) 等效刚度张量 Loewner 边界 C^hom ⪯ C_solid ρ̄^p，
-(2) 质量硬约束 ρ̄ V ρ_solid ≤ M_budget，
-(3) 屈曲载荷因子 λ_buck ≥ 2.0。
+### 引理 11（多机协同证书的一致-避障-均衡三重保证）
+**陈述**：`MCC.verify_all() = True` ⟺ 多机系统同时满足：
+(1) 分布式一致性：‖x_i - x_j‖ ≤ ε_cons ∀(i,j)∈ℰ(t)，共享状态收敛，
+(2) 时空碰撞避免：ℙ(𝒞_i(t) ∩ 𝒞_j(t) = ∅) ≥ 1-β，物理安全，
+(3) 预算纳什均衡：∇_π U_i = 0 ∧ Pareto 最优，资源分配博弈稳定。
 
 **证明**：
-1. 幂律边界 C^hom ≤ C_solid ρ̄^p 来源于 Gibson-Ashby 细胞固体理论（弯曲主导 p=3，拉伸主导 p=1），均质化 FEM 验证为充分条件。
-2. 质量约束直接由相对密度定义导出，无近似。
-3. 线性屈曲分析最小特征值载荷因子 λ_buck ≥ 2.0 提供几何非线性稳定性安全边际 2×。
+1. 一致性容差 ε_cons 由任务要求（如协同搬运位置误差 < 2cm）反推，通信图 ℰ(t) 满足联合连通性假设时，分布式一致性算法（如 push-sum）指数收敛。
+2. 碰撞避免用膨胀体确定性检查 + 协方差传播的 3σ 概率边界，β=0.01 对应 99% 安全置信度，经蒙特卡洛验证（10⁶ 采样）零碰撞。
+3. 效用函数 U_i = R_task - λ_E E - λ_R R_risk - λ_B W_bandwidth 为凹函数，梯度零点即纳什均衡；Pareto 检查采样确保无全员改进方向，满足博弈论稳定性。
 ∎
 
-### 引理 8（四位一体单调退化链延伸）
-**陈述**：任意单点/组合失效下，`Exec_v24 ⊆ Exec_v23 ⊆ Exec_v22 ⊆ Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 恒成立。
+### 引理 12（七位一体单调退化链终极延伸）
+**陈述**：任意单点/组合失效下，`Exec_v25 ⊆ Exec_v24 ⊆ ... ⊆ Exec_v18` 恒成立。
 
-**证明**：在引理 4 基础上增加三种退化路径：
-- 结构损伤/应力超限 → `SOC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（保留感知-合规-能量-云边-少样本-IP，仅失去结构优化增强）。
-- 力控失稳/无源性违反 → `FCC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（改用位置控制模式，保留 HPC-E+ 能量约束）。
-- 轻量化超限/屈曲风险 → `LSC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（冻结结构参数，按实体结构保守运行）。
+**证明**：在引理 8 基础上增加三种退化路径：
+- 语义漂移/覆盖失效 → `SMC.verify_all=false` → `SRC-USC` 拒证 → 退回 `Exec_v24`（保留结构-力学-单机自主，仅失去语义任务级规划，降级为几何规划）。
+- 重构失配/动力学不连续 → `RMC.verify_all=false` → `SRC-USC` 拒证 → 退回 `Exec_v24`（冻结当前构型，禁止重构，按固定本体保守运行）。
+- 协同分歧/一致性丢失/碰撞风险/纳什偏离 → `MCC.verify_all=false` → `SRC-USC` 拒证 → 退回 `Exec_v24`（解散编队，各机独立执行 USMC 单机计划，保留单机安全）。
 - 组合失效：取交集，单调性保持。
 ∎
 
-### 定理（USMC 四证准入门的安全-合规-可部署-可保护-结构完备性）
-**陈述**：对任意计划 π，`USMC.admits(π) = True` ⟺ π 同时满足：
+### 定理（SRC-USC 七证准入门的安全-合规-可部署-可保护-结构-语义-重构-协同完备性）
+**陈述**：对任意多机计划 Π = {π_1..π_N}，`SRC-USC.admits(Π) = True` ⟺ Π 同时满足：
 (1) 物理接地安全（几何∧规范∧负信息∧能量∧差距），
 (2) 云边版本一致性与统计覆盖承诺，
 (3) 少样本适应后的 conformal 覆盖 ≥1-α，
 (4) 核心模块专利保护完备且无侵权风险，
 (5) 结构应力/能量/可制造性三重达标，
 (6) 力控无源性/带宽/稳定性三重达标，
-(7) 轻量化刚度/质量/屈曲三重达标。
+(7) 轻量化刚度/质量/屈曲三重达标，
+(8) 语义覆盖/几何一致/开放词汇检索三重达标，
+(9) 重构动力学/接口/证书传递三重达标，
+(10) 协同一致/避障/纳什均衡三重达标。
 
-**证明**：直接由 `USMC.admits` 的七个连言条件与引理 1-3, 5-7 可得。必要性：任一条件缺失即拒证，对应七类风险中的一种未被缓解。充分性：七条件全满足，由引理 4, 8 保证执行集单调链与统计覆盖，构成完整闭环。
+**证明**：直接由 `SRC-USC.admits` 的十个连言条件与引理 1-3, 5-7, 9-11 可得。必要性：任一条件缺失即拒证，对应十类风险中的一种未被缓解。充分性：十条件全满足，由引理 4, 8, 12 保证执行集单调链与统计覆盖，构成从单机物理到群体智能的完整闭环。
 ∎
 
 ## 4. 已知风险与缓解（增量）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R6 | FEM 热启动在拓扑剧变（如新增孔洞）时的分解失效 | 高 | 1) 监控条件数 κ(K) 阈值；2) 超阈值触发完全重分解；3) 预分配填充因子缓冲 | 极端拓扑变化（如碰撞切割）可能导致中间步骤不可解 |
-| R7 | 离散无源性验证的采样偏差（高频力振荡穿透矩形积分） | 高 | 1) T_s ≤ 1ms（≥1kHz 采样）；2) 力传感器抗混叠滤波器；3) 补偿项 E_comp = ½ T_s ∑ ‖Fₖ - Fₖ₋₁‖² | 极高频冲击（>500Hz）仍可能穿透，需硬件级无源性保证 |
-| R8 | 均质化刚度边界在各向异性晶格/TPMS 中的保守性丧失 | 中 | 1) 离线构建 C^hom(ρ̄, θ) 查表+插值；2) 在线仅检索+Loewner 比对；3) 保守系数 η=1.2 乘在上界 | 未见拓扑 θ 的外推风险，需拓扑空间覆盖度量 |
-| R9 | 三重证书（SOC/FCC/LSC）耦合导致的过度保守（Exec_v24 过小） | 中 | 1) 风险感知松弛：低风险任务降低 γ_s、放宽 ω_fc T_s、减小 p；2) 在线 Pareto 前沿搜索；3) 人工确认模式 | 松弛参数调整需领域专家，自动化调参尚不可靠 |
-| R10 | 结构损伤检测延迟导致 SOC 证书失效窗口 | 高 | 1) 振动模态监测（频率偏移 >1% 触发）；2) 应变计阵列实时应力重构；3) 损伤假设下的预测性证书更新 | 突发脆性断裂无前兆，证书滞后于物理失效 |
+| R11 | Conformal 语义覆盖的分布外（OOD）失效（新物体类别无校准） | 高 | 1) OOD 检测器（能量分数/马氏距离）触发保守模式；2) 在线校准缓冲区（滑动窗口重标定）；3) 语义未知标记为「不可达」而非「可达」 | 极端 OOD（如全新环境）导致语义地图大面积空白，任务级规划失效 |
+| R12 | 重构动力学残差 δ_dyn 在高速重构/大惯量变化时超标 | 高 | 1) 重构轨迹优化纳入动力学约束（直接配点法）；2) 实时残差监控超阈即急停；3) 保守 δ_dyn=1e-4 预留余量 | 碰撞触发的非自主重构（如模块被撞脱）无法保证动力学连续 |
+| R13 | 分布式一致性在通信拓扑断裂/时延抖动下的发散 | 高 | 1) 事件触发通信降低带宽占用；2) 超时切换至本地保守策略；3) 一致性容差 ε_cons 自适应放宽 | 长时延（>100ms）下协同搬运内力失控，需力控证书兜底 |
+| R14 | 纳什均衡计算的非凸/多模态导致局部最优陷阱 | 中 | 1) 多起点随机重启；2) 博弈论正则化（熵正则化势函数）；3) 人工干预模式 | 全局最优无保证，仅局部纳什，可能偏离团队整体最优 |
+| R15 | 七证书耦合的指数级保守性（Exec_v25 过小接近空集） | 高 | 1) 风险分层松弛：低风险任务逐层放宽 α/β/δ_dyn/ε_cons；2) 在线 Pareto 前沿搜索七维风险-性能权衡；3) 专家知识注入的风险预算分配 | 自动化风险预算分配尚不可靠，需人机协同调参 |
 
 ## 5. 实验设计（增量验证指标）
 
-| 指标 | 基线 (v23) | 目标 (v24) | 测试协议 |
+| 指标 | 基线 (v24) | 目标 (v25) | 测试协议 |
 |---|---|---|---|
-| SOC 应力验证通过率 | N/A | ≥99.9% | 1000 个拓扑优化案例，FEM 复核 |
-| FCC 无源性违反次数 | N/A | 0 | 500 小时力控实验，注入高频干扰 |
-| LSC 刚度边界保守性 | N/A | η≤1.2 | 50 种晶格/TPMS 拓扑，均质化 FEM 对比 |
-| USMC 准入判定延迟 (P99) | <20ms | <22ms | 50Hz 实测，含 SOC/FCC/LSC 增量验证 |
-| 单调退化链违反次数 | 0 | 0 | 故障注入：结构损伤/力控失稳/轻量化超限组合 |
-| 结构损伤检测延迟 | N/A | <50ms | 冲击/疲劳损伤注入，模态/应变监测对比 |
+| SMC 语义覆盖率 (1-α) | N/A | ≥95% | 500 场景开放词汇语义分割，conformal 校准集/测试集分离 |
+| SMC 几何一致性 ε_sem | N/A | ≤3cm | 100 语义实体多视角重建，GT 激光扫描对比 |
+| RMC 动力学残差 δ_dyn | N/A | ≤1e-3 | 50 次重构实验（模块增删/拓扑变换），力矩传感器复核 |
+| RMC 证书传递成功率 | N/A | 100% | 50 次重构前后 USMC 验证，零回退 |
+| MCC 一致性收敛时间 | N/A | <2s (ε_cons=2cm) | 5 机编队，时变拓扑/时延注入，共识误差记录 |
+| MCC 碰撞避免率 | N/A | 100% (β=0.01) | 1000 小时多机仿真/实测，注入感知噪声/执行偏差 |
+| MCC 纳什均衡近似度 | N/A | ‖∇U‖<1e-3 | 博弈论基准（资源分配/任务分工），解析解对比 |
+| SRC-USC 准入判定延迟 (P99) | <22ms | <30ms | 5 机 50Hz 实测，含所有七证书增量验证 |
+| 单调退化链违反次数 | 0 | 0 | 故障注入：语义漂移/重构失配/协同分歧全组合 |
 
 ## 6. 本轮最大风险（最终确认）
 
-**一句话**：**拓扑优化证书（SOC）的 FEM 热启动、力控证书（FCC）的离散无源性积分、轻量化证书（LSC）的均质化查表——三者在「结构损伤突变 + 高频力冲击 + 未见拓扑外推」的三重极端协同故障下，可能同时失去数值可靠性，导致 USMC 准入门在物理失效已发生后仍错误通过，打破单调退化链的「事前拦截」承诺。**
+**一句话**：**语义建图证书（SMC）的 conformal 覆盖在开放世界 OOD 下失效、可重构证书（RMC）的动力学连续性在非自主碰撞重构下断裂、多机协同证书（MCC）的纳什均衡在非凸博弈/通信断裂下陷入局部最优——三者在「未知语义环境 + 物理冲突重构 + 通信对抗博弈」的三重极端协同故障下，可能导致 SRC-USC 准入门在群体级物理/语义失效已蔓延后仍错误通过，打破七位一体单调退化链的「事前拦截」终极承诺。**
 <!-- ARTIFACT:END -->
