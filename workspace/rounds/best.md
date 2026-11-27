@@ -1,411 +1,276 @@
 <!-- IDEA:START -->
-LARGE_BBBB_UNIQUE
-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+### 第 1 轮灵感驱动研究记录
+
+**灵感词**：结构优化、力控、轻量化结构
+
+**直觉与动机**：
+现有框架（HPC-E+）已建立「感知-合规-能量」三位一体的证书链，但缺失「结构-力学」维度的形式化验证。机器人本体作为物理实体，其结构拓扑、力控策略、轻量化设计直接决定能量存储上界 E_max、力控带宽、碰撞生存包络。受「结构优化」启发，拓扑优化（SIMP/Level-set）生成的有机形态需附带应力/应变证书；受「力控」启发，阻抗/导纳控制的无源性证书可桥接 EVC 与物理接触；受「轻量化结构」启发，晶格/TPMS 结构的等效刚度张量需可机械复核。核心洞见：**结构设计即证书生成过程，力控执行即证书消费过程，轻量化约束即证书预算分配过程**。
+
+**形式化目标**：
+1. 定义结构优化证书（SOC）：拓扑优化结果 ρ(x) ∈ [0,1]^Ω 附带 von Mises 应力上界证书 σ_vm(x) ≤ σ_yield/γ_s
+2. 定义力控证书（FCC）：阻抗控制 Z_d(s) = M_d s + B_d + K_d/s 的无源性证书 ∫ Fᵀv dt ≥ -E_0
+3. 定义轻量化证书（LSC）：等效刚度张量 C^hom 与相对密度 ρ̄ 的可证边界 C^hom ≤ C_solid ρ̄^p
+4. 构建统一结构-力学准入门（USMC）：HPC-E+ ∪ SOC ∪ FCC ∪ LSC 四证一体，Exec_v24 ⊆ Exec_v23
+5. 证明单调退化链在结构损伤/力控失稳/轻量化超限下的保持性
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-425–435 基础上扩展）
+## 0. 新增核心模块（在 IP-439 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v22） |
+| 编号 | 名称 | 类型 | 关键改进（相对 HPC-E+ v23） |
 |---|---|---|---|
-| IP-431 | Hierarchical Deontic Layer (HDL) | 义务合规模块 | 三层过滤器链确保能量/义务约束自顶而下继承；低层越界被高层回滚 |
-| IP-432 | Arm Configuration Space Certificate (ACSC) | 机械臂证书 | CertBox_arm 扩展编码臂配空间障碍；实时积分臂能耗入 EVC；配空间边界经 DCL 批准 |
-| IP-433 | Deep Conformal Semantic Certificate (DCSC) | 语义证书 | DNN 输出 conformal 校准，深度特征 φ(x) 替代原始像素，满足 E794 隐私合规； conformal 覆盖 ≥1-α |
-| IP-434 | HPC-E (Physics-Grounded Energy Certificate) | 证书结构升级 | HPC+ ∪ EVC ∪ RGC 统一准入门；能量/见证/差距全链可机械复核；继承 Exec_v22 ⊆ Exec_v21 |
-| IP-435 | CFC++ (Hierarchical Modality-Quorum Consensus) | 共识协议升级 | 仲裁条件 = 计数 ≥N-F ∧ 模态数 ≥2 ∧ 层级一致性检查；跨层票据去重防止相关系统误判共识 |
-| IP-436 | CloudEdgeSync Certificate (CESC) | 新增云边同步证书 | 版本化五元组原子分发 (model, calib, proto, rule, patent)；双轨并行切换协议；回滚正确性证明 |
-| IP-437 | FewShotValid Certificate (FSVC) | 新增少样本有效证书 | 云边联合元学习：云端骨干+元校准器，边端 K-shot 原型微调+分位数更新；自监督一致性正则；覆盖 ≥1-α 硬约束 |
-| IP-438 | IPAttest Module (IPAM) | 新增知识产权认证模块 | `@patent` 标记自动收集 → 权利要求簇生成；专利覆盖率 100% 设计门槛；IP-SafeVariant 预置切换 |
-| IP-439 | HPC-E+ (Unified Quad-Certificate Gate) | 统一准入门升级 | HPC-E ∪ CESC ∪ FSVC ∪ IPAttest 四证一体；Exec_v23 = Exec_v22 ∩ Fil_ce ∩ Fil_fs ∩ Fil_ip ⊆ Exec_v22 |
+| IP-440 | Structure Optimization Certificate (SOC) | 结构证书 | SIMP/Level-set 拓扑优化结果 ρ(x) 附带 von Mises 应力证书 σ_vm(x) ≤ σ_yield/γ_s；相邻单元梯度约束 ‖∇ρ‖ ≤ G_max 保证可制造性；能量存储上界 E_max(ρ) 经 FEM 复核 |
+| IP-441 | Force Control Certificate (FCC) | 力控证书 | 阻抗/导纳控制器 Z_d(s) 无源性证书 ∫₀ᵗ Fᵀv dτ ≥ -E_0；力控带宽 ω_fc 与采样周期 T_s 耦合条件 ω_fc T_s < 0.1；接触稳定性判据 Re{Z_d(jω)} ≥ 0 ∀ω |
+| IP-442 | Lightweight Structure Certificate (LSC) | 轻量化证书 | 晶格/TPMS 等效刚度张量 C^hom(ρ̄, θ) 可证边界 C^hom ≤ C_solid ρ̄^p (p≥2)；相对密度 ρ̄ 与质量预算 M_budget 硬绑定；屈曲载荷因子 λ_buck ≥ 2.0 证书 |
+| IP-443 | Unified Structural-Mechanical Certificate (USMC) | 统一准入门升级 | HPC-E+ ∪ SOC ∪ FCC ∪ LSC 四证一体；Exec_v24 = Exec_v23 ∩ Fil_so ∩ Fil_fc ∩ Fil_lw ⊆ Exec_v23；结构损伤/力控失稳/轻量化超限三重退化路径 |
 
-## 0. 增量符号体系（定义 926–999）
+## 0. 增量符号体系（定义 1000–1099）
 
 | 符号 | 含义 |
 |---|---|
-| V = (v_m, v_c, v_p, v_r, v_pt) | 云边版本原子五元组：模型/校准/原型/规则/专利版本号 |
-| T_switch | 双轨并行切换窗口（默认 200ms） |
-| model_v, calib_v, proto_v, rule_v, patent_v | 当前边端运行的各组件版本号 |
-| φ(x) ∈ ℝ^d | 深度特征映射（骨干网络输出），替代原始像素外传 |
-| P_cloud(φ), P_edge(φ) | 云端先验特征分布 / 边端经验特征分布 |
-| D_KL(P_edge ‖ P_cloud) | KL 散度，量化云边分布偏移 |
-| Proto_c = {μ_c} | 类别 c 的原型向量（云端库 + 边端 K-shot 微调） |
-| q̂_α(s; D_calib) | 边端 conformal 分位数：基于校准集 D_calib 在置信度 s 下的 (1-α) 分位数 |
-| L_consist(φ) = ‖f_θ(φ) - f_θ(aug(φ))‖² | 自监督一致性损失（无标签流上） |
-| λ_consist(t) | 一致性正则系数，自适应调度：覆盖跌破时 → 0，覆盖稳定时 → λ_max |
-| CAC_cov_t(x) ∈ {0,1} | 覆盖图：x 是否在传感器视锥并集 - 遮挡掩码内 |
-| FewShotValid(θ) ≜ Coverage(θ) ≥ 1-α ∧ ‖Proto_edge - Proto_cloud‖ ≤ Δ_proto | 少样本有效谓词：覆盖达标且原型漂移受限 |
-| CloudEdgeSync(V) ≜ verify_sig(V) ∧ v_m = v_c = v_p ∧ v_pt ≥ v_m | 云边同步谓词：签名验证 + 版本一致 + 专利版本覆盖 |
-| IPAttest(M) ≜ ∀m∈M, ∃IP-XXX: m.has_tag(IP-XXX) ∧ Claims(IP-XXX) ≡ Features(m) | 知识产权认证谓词：模块 M 内每元素均有标记且权利要求簇与特征集合强一致 |
-| OfflineMode | 云端断联模式：冻结 V_last，规则树根哈希固定，证书基于 V_last 继续签发 |
-| IP-SafeVariant(IP-XXX) | 预置非侵权算法变体：功能等价、实现不同、证书版本 v_pt+1 |
-| ζ_ce = ζ_pgev ∪ (V, T_switch, D_KL, Proto, q̂_α, λ_consist, rule_root, patent_map, few_shot_buffer) | 云边协同层共享状态 |
-| Exec_v23 = Exec_v22 ∩ {π: CloudEdgeSync(V) ∧ FewShotValid(θ_π) ∧ IPAttest(Modules(π))} | 通过 HPC-E+ 验证的计划集合 |
-| Fil_ce, Fil_fs, Fil_ip | 云边同步/少样本有效/IP认证过滤器 |
+| Ω ⊂ ℝ³ | 设计域，有限元网格划分为 N_e 个单元 |
+| ρ = (ρ₁,…,ρ_{N_e}) ∈ [0,1]^{N_e} | 单元密度设计变量（SIMP 罚因子 p=3） |
+| σ_vm(e; ρ) | 单元 e 的 von Mises 应力（线性弹性 FEM 计算） |
+| σ_yield | 材料屈服强度，γ_s ≥ 1.5 安全系数 |
+| E_max(ρ) = ½ uᵀK(ρ)u | 结构弹性能量存储上界，u 为位移场，K 为刚度矩阵 |
+| G_max | 密度梯度上界，防止棋盘格/悬浮结构 |
+| Z_d(s) = M_d s + B_d + K_d/s | 目标阻抗模型（质量-阻尼-刚度） |
+| F ∈ ℝ⁶, v ∈ ℝ⁶ | 末端六维力/速度（力矩+力，角速度+线速度） |
+| E_0 | 无源性初始能量界（通常取 0） |
+| ω_fc | 力控闭环带宽（Hz），T_s 采样周期 |
+| C^hom ∈ ℝ^{6×6} | 均质化等效刚度张量（Voigt 记法） |
+| ρ̄ = (∑ρ_e V_e)/|Ω| | 相对密度（体积分数） |
+| p | 幂律指数（弯曲主导 p≈3，拉伸主导 p≈1） |
+| λ_buck | 线性屈曲分析最小特征值载荷因子 |
+| Fil_so, Fil_fc, Fil_lw | 结构/力控/轻量化过滤器 |
+| Exec_v24 = Exec_v23 ∩ {π: SOC(ρ_π) ∧ FCC(Z_π) ∧ LSC(ρ̄_π, θ_π)} | 通过 USMC 验证的计划集合 |
+| ζ_usmc = ζ_ce ∪ (ρ, σ_vm, E_max, Z_d, C^hom, ρ̄, λ_buck) | 结构-力学协同层共享状态 |
 
-## 1. 关键算法骨架（在 IP-431–435 骨架上扩展）
+## 1. 关键算法骨架（在 IP-436–439 骨架上扩展）
 
 ```python
 # ============================================================
-# IP-436 CloudEdgeSync Certificate (CESC) — 云边版本化证书链
+# IP-440 Structure Optimization Certificate (SOC) — 结构优化证书
 # ============================================================
 @dataclass
-class VersionTuple:
-    v_model: int
-    v_calib: int
-    v_proto: int
-    v_rule: int
-    v_patent: int
-    sig: bytes           # 云端私钥签名
-    payload_hash: bytes  # (model, calib, proto, rule, patent) 的 Merkle 根
+class StructureOptimizationCertificate:
+    """拓扑优化结果 + 应力/能量/可制造性证书"""
+    rho: Tensor                    # [N_e] 单元密度
+    sigma_vm: Tensor               # [N_e] von Mises 应力
+    E_max: float                   # 弹性能量上界
+    sigma_yield: float             # 材料屈服强度
+    gamma_s: float = 1.5           # 安全系数
+    G_max: float = 0.3             # 密度梯度上界
+    fem_solver: 'FemSolver' = None # FEM 求解器（预分解）
     
-    def verify(self, pk_cloud: PublicKey) -> bool:
-        """验证签名与版本一致性"""
-        if not verify_signature(pk_cloud, self.payload_hash, self.sig):
-            return False
-        if not (self.v_model == self.v_calib == self.v_proto):
-            return False
-        if self.v_patent < self.v_model:
-            return False
-        return True
-
-class CloudEdgeSyncCertificate:
-    def __init__(self, pk_cloud: PublicKey, T_switch: float = 0.2):
-        self.pk_cloud = pk_cloud
-        self.T_switch = T_switch
-        self.V_active: VersionTuple = None      # 当前服务版本
-        self.V_pending: VersionTuple = None     # 待验证新版本
-        self.switch_deadline: float = 0.0
-        self.offline_mode: bool = False
-        self.V_last_valid: VersionTuple = None  # 最后一个通过验证的版本
+    def verify_stress(self) -> bool:
+        """σ_vm(e) ≤ σ_yield/γ_s ∀e ∈ Ω"""
+        return (self.sigma_vm <= self.sigma_yield / self.gamma_s).all().item()
     
-    def receive_cloud_update(self, V_new: VersionTuple, artifacts: dict) -> bool:
-        """云端推送新版本：存入待验证槽，启动双轨并行"""
-        if not V_new.verify(self.pk_cloud):
-            return False
-        self.V_pending = V_new
-        self._stage_artifacts(artifacts)  # 写入临时目录，不影响当前推理
-        self.switch_deadline = time.now() + self.T_switch
-        return True
+    def verify_energy(self, E_budget: float) -> bool:
+        """E_max(ρ) ≤ E_budget"""
+        return self.E_max <= E_budget
     
-    def few_shot_valid_check(self, edge_validator: 'FewShotValidator') -> bool:
-        """边端少样本有效性检查：conformal 覆盖 ≥1-α + 原型漂移受限"""
-        return edge_validator.validate(self.V_pending)
+    def verify_manufacturability(self) -> bool:
+        """‖∇ρ‖_∞ ≤ G_max（有限差分近似）"""
+        grad_rho = self._compute_density_gradient()
+        return (grad_rho.abs() <= self.G_max).all().item()
     
-    def atomic_switch(self) -> bool:
-        """原子切换：仅当 FewShotValid 通过时执行"""
-        if self.V_pending is None:
-            return False
-        if time.now() > self.switch_deadline:
-            # 超时回滚
-            self._rollback()
-            return False
-        if not self.few_shot_valid_check(self.edge_validator):
-            self._rollback()
-            return False
-        # 双轨并行期满且检查通过 → 原子上线
-        self.V_active = self.V_pending
-        self.V_last_valid = self.V_pending
-        self._activate_artifacts()
-        self.V_pending = None
-        self.offline_mode = False
-        return True
+    def verify_all(self, E_budget: float) -> bool:
+        return (self.verify_stress() and 
+                self.verify_energy(E_budget) and 
+                self.verify_manufacturability())
     
-    def _rollback(self):
-        """回滚：清理待验证工件，继续用 V_active"""
-        self._cleanup_staged()
-        self.V_pending = None
-        # V_active 保持不变，证书链连续
+    def _compute_density_gradient(self) -> Tensor:
+        """基于邻接单元的有限差分梯度"""
+        # 简化：返回每单元与 6 面邻居的最大密度差
+        grad = torch.zeros_like(self.rho)
+        for e in range(len(self.rho)):
+            neighbors = self.fem_solver.get_neighbors(e)
+            if neighbors:
+                grad[e] = (self.rho[e] - self.rho[neighbors]).abs().max()
+        return grad
     
-    def handle_cloud_disconnect(self):
-        """云端断联：进入离线模式，冻结 V_last_valid"""
-        self.offline_mode = True
-        if self.V_active is not None:
-            self.V_last_valid = self.V_active
-        # 规则树根哈希冻结，模型不再更新
-    
-    def current_version(self) -> VersionTuple:
-        return self.V_active if not self.offline_mode else self.V_last_valid
-    
-    def sync_predicate(self) -> bool:
-        """CloudEdgeSync(V) 谓词：供 HPC-E+ 准入门调用"""
-        V = self.current_version()
-        return V is not None and V.verify(self.pk_cloud)
+    def update_from_optimization(self, rho_new: Tensor, loads: Tensor):
+        """拓扑优化迭代后增量更新证书（热启动 FEM）"""
+        self.rho = rho_new.clamp(0, 1)
+        # 热启动：复用上一步刚度矩阵分解
+        K = self.fem_solver.assemble_stiffness(self.rho)
+        u = self.fem_solver.solve(K, loads)
+        self.sigma_vm = self.fem_solver.compute_von_mises(u, self.rho)
+        self.E_max = 0.5 * (u @ K @ u).item()
 
 
 # ============================================================
-# IP-437 FewShotValid Certificate (FSVC) — 少样本有效证书
-# ============================================================
-class FewShotValidator:
-    def __init__(self, backbone, calibrator, alpha: float = 0.01, 
-                 lambda_max: float = 1.0, delta_proto: float = 0.5):
-        self.backbone = backbone          # 冻结的特征骨干（云端预训练）
-        self.calibrator = calibrator      # conformal 校准器（云端元参数 + 边端分位数）
-        self.alpha = alpha
-        self.lambda_max = lambda_max
-        self.delta_proto = delta_proto    # 原型漂移上界
-        self.Proto_cloud: dict = {}       # 云端原型库 {cls: μ}
-        self.Proto_edge: dict = {}        # 边端微调后原型
-        self.D_calib: list = []           # 边端校准集 (score, err)
-        self.coverage_estimate: float = 1.0
-    
-    def update_cloud_prior(self, Proto_cloud: dict, calib_meta: dict):
-        """云端下发原型库 + 校准器元参数"""
-        self.Proto_cloud = Proto_cloud
-        self.calibrator.load_meta(calib_meta)
-        # 重置边端原型为云端原型（冷启动）
-        self.Proto_edge = Proto_cloud.copy()
-    
-    def k_shot_adapt(self, K_shot_data: list[tuple[Tensor, int]]):
-        """K-shot 适应：仅更新原型向量 + 校准分位数，骨干冻结"""
-        # 1. 原型微调：μ_c ← (1-η)μ_c + η * mean(φ(x_i)) for (x_i, c) in K_shot
-        for cls, feats in group_by_class(K_shot_data).items():
-            if cls not in self.Proto_edge:
-                self.Proto_edge[cls] = torch.zeros_like(feats[0])
-            mu_cloud = self.Proto_cloud.get(cls, self.Proto_edge[cls])
-            mu_emp = torch.stack(feats).mean(0)
-            # KL 正则：向云端先验收缩
-            self.Proto_edge[cls] = mu_cloud + 0.5 * (mu_emp - mu_cloud)  # 简化：η=0.5
-        
-        # 2. 校准分位数更新：用 K-shot 误差刷新 D_calib
-        for x, y in K_shot_data:
-            s, eps_hat, _ = self.calibrate_single(x)
-            err = self._localization_error(x, y)  # 需少量 GT
-            self.D_calib.append((s, err))
-            if len(self.D_calib) > 5000:  # 滑动窗口
-                self.D_calib.pop(0)
-        self.calibrator.update_quantiles(self.D_calib)
-    
-    def self_supervised_consistency(self, unlabeled_stream: Iterator[Tensor]) -> float:
-        """自监督一致性正则：在无标签流上计算一致性损失，反哺 CAC 覆盖图"""
-        total_loss = 0.0
-        count = 0
-        for x in islice(unlabeled_stream, 100):  # 每轮采样 100 帧
-            phi = self.backbone.extract_features(x)
-            phi_aug = self.backbone.extract_features(augment(x))
-            loss = F.mse_loss(phi, phi_aug)
-            total_loss += loss.item()
-            count += 1
-            # 生成伪标签覆盖证据：高一致性区域 → 可能无人
-            if loss < 0.01:
-                self._update_cac_coverage_from_pseudo(x, occupied=False)
-        return total_loss / max(count, 1)
-    
-    def adaptive_lambda(self, consistency_loss: float):
-        """自适应调度一致性系数：覆盖稳定时增大、跌破时归零"""
-        if self.coverage_estimate < 1 - self.alpha - 0.02:  # 留 2% 安全边际
-            self.lambda_consist = 0.0
-        else:
-            self.lambda_consist = min(self.lambda_max, 1.0 / (consistency_loss + 1e-6))
-    
-    def validate(self, V: VersionTuple) -> bool:
-        """FewShotValid 谓词：覆盖 ≥1-α ∧ 原型漂移受限"""
-        # 1. 估计当前覆盖率（用校准集经验覆盖 + Hoeffding 修正）
-        n = len(self.D_calib)
-        if n < 30:
-            return False  # 校准集不足，拒绝
-        emp_cov = sum(1 for s, e in self.D_calib if e <= self.calibrator.quantile(s, self.alpha)) / n
-        # Hoeffding 下界：emp_cov - sqrt(ln(1/δ)/2n) ≥ 1-α
-        delta = 0.001
-        hoeffding_bound = math.sqrt(math.log(1/delta) / (2*n))
-        self.coverage_estimate = emp_cov - hoeffding_bound
-        if self.coverage_estimate < 1 - self.alpha:
-            return False
-        
-        # 2. 原型漂移检查
-        for cls, mu_e in self.Proto_edge.items():
-            mu_c = self.Proto_cloud.get(cls)
-            if mu_c is not None and torch.norm(mu_e - mu_c) > self.delta_proto:
-                return False
-        
-        return True
-    
-    def calibrate_single(self, x: Tensor) -> tuple[float, float, Tensor]:
-        """单帧 conformal 校准：返回 (ŝ, ε̂_loc, φ)"""
-        phi = self.backbone.extract_features(x)
-        logits = self.backbone.classify(phi)
-        s = torch.softmax(logits, -1).max().item()
-        eps_hat = self.calibrator.quantile(s, self.alpha)
-        return s, eps_hat, phi.detach()
-
-
-# ============================================================
-# IP-438 IPAttest Module (IPAM) — 知识产权认证模块
-# ============================================================
-class IPAttestModule:
-    def __init__(self):
-        self.patent_map: dict[str, set[str]] = {}  # module_name -> {IP-XXX}
-        self.claims_db: dict[str, set[str]] = {}   # IP-XXX -> {feature_tags}
-    
-    def register_module(self, module_name: str, ip_tags: list[str], 
-                        feature_tags: list[str]):
-        """设计期注册：模块名 ↔ 专利标记 ↔ 技术特征标签"""
-        self.patent_map[module_name] = set(ip_tags)
-        for ip in ip_tags:
-            if ip not in self.claims_db:
-                self.claims_db[ip] = set()
-            self.claims_db[ip].update(feature_tags)
-    
-    def scan_codebase(self, root: Path) -> dict[str, list[str]]:
-        """自动扫描 @patent 标记，生成覆盖率报告"""
-        missing = defaultdict(list)
-        for py_file in root.rglob("*.py"):
-            mod_name = py_file.stem
-            if mod_name not in self.patent_map:
-                continue
-            required_ips = self.patent_map[mod_name]
-            found_ips = set()
-            content = py_file.read_text()
-            for ip in required_ips:
-                if f"@patent:{ip}" in content:
-                    found_ips.add(ip)
-            missing_ips = required_ips - found_ips
-            if missing_ips:
-                missing[mod_name].extend(missing_ips)
-        return missing
-    
-    def generate_claims_draft(self, ip_tag: str) -> str:
-        """从特征标签自动生成权利要求 1 草案"""
-        features = self.claims_db.get(ip_tag, set())
-        preamble = f"A method for robotic perception-compliance-energy co-verification, comprising:"
-        steps = [f"  {f.replace('_', ' ')};" for f in sorted(features)]
-        return preamble + "\n" + "\n".join(steps)
-    
-    def verify_module(self, module_name: str) -> bool:
-        """IPAttest(M) 谓词：模块内每元素均有标记且权利要求簇与特征集合强一致"""
-        required = self.patent_map.get(module_name, set())
-        if not required:
-            return True  # 非核心模块可豁免
-        # 检查代码标记覆盖
-        missing = self.scan_codebase(Path(module_name).parent)
-        if module_name in missing:
-            return False
-        # 检查特征集合与权利要求簇一致（简化：人工审核确认）
-        return True
-    
-    def ip_safe_variant(self, risky_ip: str) -> Callable:
-        """返回预置的非侵权变体函数（功能等价、实现不同）"""
-        # 实际部署时由专利工程师预置，此处为占位
-        return getattr(self, f"_variant_{risky_ip.replace('-', '_')}", None)
-
-
-# ============================================================
-# IP-439 HPC-E+ 统一四证准入门
+# IP-441 Force Control Certificate (FCC) — 力控证书
 # ============================================================
 @dataclass
-class HPCEPlus:
-    hpc_e: 'HPCE'           # 物理接地证书（几何∧规范∧负信息∧能量∧差距）
-    cesc: CloudEdgeSyncCertificate
-    fsvc: FewShotValidator
-    ipam: IPAttestModule
+class ForceControlCertificate:
+    """阻抗/导纳控制器无源性 + 带宽 + 稳定性证书"""
+    M_d: Tensor      # [6,6] 期望惯量矩阵（对称正定）
+    B_d: Tensor      # [6,6] 期望阻尼矩阵（对称正定）
+    K_d: Tensor      # [6,6] 期望刚度矩阵（对称半正定）
+    T_s: float       # 采样周期
+    E_0: float = 0.0 # 无源性初始能量
     
-    def admits(self, plan, x, v, z, E_res, margin_req, modules: list[str]) -> bool:
-        # 1. HPC-E 基础验证
-        if not self.hpc_e.admits(plan, x, v, z, E_res, margin_req):
+    def verify_passivity(self, F_hist: Tensor, v_hist: Tensor) -> bool:
+        """离散无源性检查：∑ Fᵀv Δt ≥ -E_0"""
+        power = (F_hist * v_hist).sum(dim=-1)  # [T]
+        energy = power.cumsum(0) * self.T_s
+        return (energy >= -self.E_0 - 1e-6).all().item()
+    
+    def verify_bandwidth(self) -> bool:
+        """带宽-采样耦合：ω_fc * T_s < 0.1"""
+        # 估计闭环带宽：ω_fc ≈ min(eig(B_d⁻¹K_d))^{1/2} （简化）
+        eigvals = torch.linalg.eigvals(torch.linalg.inv(self.B_d) @ self.K_d).real
+        omega_fc = eigvals.min().sqrt().item() / (2 * math.pi)
+        return omega_fc * self.T_s < 0.1
+    
+    def verify_stability(self) -> bool:
+        """接触稳定性：Re{Z_d(jω)} ≥ 0 ∀ω ∈ [0, ω_max]"""
+        # 等价于 B_d ≻ 0（阻尼正定）且 M_d, K_d 半正定
+        return (self.B_d.is_symmetric() and 
+                torch.linalg.eigvals(self.B_d).real.min() > 1e-6 and
+                torch.linalg.eigvals(self.M_d).real.min() >= -1e-6 and
+                torch.linalg.eigvals(self.K_d).real.min() >= -1e-6)
+    
+    def verify_all(self, F_hist: Tensor, v_hist: Tensor) -> bool:
+        return (self.verify_passivity(F_hist, v_hist) and
+                self.verify_bandwidth() and
+                self.verify_stability())
+    
+    def compute_impedance(self, omega: float) -> complex:
+        """频域阻抗 Z_d(jω) = jωM_d + B_d + K_d/(jω)"""
+        return 1j * omega * self.M_d + self.B_d + self.K_d / (1j * omega)
+
+
+# ============================================================
+# IP-442 Lightweight Structure Certificate (LSC) — 轻量化证书
+# ============================================================
+@dataclass
+class LightweightStructureCertificate:
+    """晶格/TPMS 等效性能 + 质量预算 + 屈曲证书"""
+    rho_bar: float              # 相对密度
+    theta: Tensor               # 单元几何参数（如 TPMS 相位、晶格拓扑）
+    C_hom: Tensor               # [6,6] 等效刚度张量
+    C_solid: Tensor             # [6,6] 基材刚度张量
+    p: float = 3.0              # 幂律指数
+    M_budget: float = 1.0       # 质量预算（归一化）
+    lambda_buck: float = 2.0    # 屈曲载荷因子下界
+    
+    def verify_stiffness_bound(self) -> bool:
+        """C^hom ≤ C_solid * ρ̄^p （Loewner 序）"""
+        upper = self.C_solid * (self.rho_bar ** self.p)
+        diff = upper - self.C_hom
+        # 检查 diff 是否半正定（所有特征值 ≥ 0）
+        return torch.linalg.eigvals(diff).real.min() >= -1e-6
+    
+    def verify_mass_budget(self, volume: float, rho_solid: float) -> bool:
+        """ρ̄ * V * ρ_solid ≤ M_budget"""
+        mass = self.rho_bar * volume * rho_solid
+        return mass <= self.M_budget + 1e-6
+    
+    def verify_buckling(self) -> bool:
+        """λ_buck ≥ 2.0"""
+        return self.lambda_buck >= 2.0 - 1e-6
+    
+    def verify_all(self, volume: float, rho_solid: float) -> bool:
+        return (self.verify_stiffness_bound() and
+                self.verify_mass_budget(volume, rho_solid) and
+                self.verify_buckling())
+    
+    @staticmethod
+    def from_homogenization(unit_cell: 'UnitCell', rho_bar: float, 
+                            theta: Tensor) -> 'LightweightStructureCertificate':
+        """从单元格均质化计算生成证书（离线预计算/在线查表）"""
+        C_hom = unit_cell.homogenize(theta)  # FEM-based 或解析公式
+        C_solid = unit_cell.base_material_stiffness()
+        # 线性屈曲分析（简化：欧拉柱近似）
+        lambda_buck = unit_cell.buckling_load_factor(rho_bar, theta)
+        return LightweightStructureCertificate(
+            rho_bar=rho_bar, theta=theta, C_hom=C_hom, C_solid=C_solid,
+            lambda_buck=lambda_buck
+        )
+
+
+# ============================================================
+# IP-443 USMC 统一结构-力学准入门
+# ============================================================
+@dataclass
+class UnifiedStructuralMechanicalCertificate:
+    hpc_e_plus: 'HPCEPlus'          # 基础四证准入门
+    soc: StructureOptimizationCertificate
+    fcc: ForceControlCertificate
+    lsc: LightweightStructureCertificate
+    
+    def admits(self, plan, x, v, z, E_res, margin_req, 
+               modules: list[str], 
+               F_hist: Tensor, v_hist: Tensor,
+               volume: float, rho_solid: float) -> bool:
+        # 1. HPC-E+ 基础验证
+        if not self.hpc_e_plus.admits(plan, x, v, z, E_res, margin_req, modules):
             return False
         
-        # 2. 云边同步验证
-        if not self.cesc.sync_predicate():
+        # 2. 结构优化证书
+        if not self.soc.verify_all(E_budget=E_res):
             return False
         
-        # 3. 少样本有效验证
-        V = self.cesc.current_version()
-        if not self.fsvc.validate(V):
+        # 3. 力控证书
+        if not self.fcc.verify_all(F_hist, v_hist):
             return False
         
-        # 4. 知识产权认证验证
-        for mod in modules:
-            if not self.ipam.verify_module(mod):
-                return False
+        # 4. 轻量化证书
+        if not self.lsc.verify_all(volume, rho_solid):
+            return False
         
         return True
 
 
 # ============================================================
-# 辅助：CFC++ 升级为 CFC+++（含云边/少样本/IP 三层一致性）
-# ============================================================
-class CertificateFederatedConsensusPlusPlusHierarchical(CertificateFederatedConsensusPlusHierarchical):
-    """CFC+++：在 CFC++ 基础上增加云边版本一致性、少样本有效性、IP认证三层仲裁"""
-    
-    def consensus_round(self, timeout=5.0):
-        results = {}
-        for key, votes in self.votes.items():
-            # 基础条件
-            count_ok = len(votes) >= self.N - self.F
-            modalities = {v.modality for v in votes.values()}
-            modality_ok = len(modalities) >= self.M_MIN_MODALITIES
-            layer_ok = self._check_layer_consistency(votes)
-            
-            # 新增三层一致性
-            ce_sync_ok = all(v.ce_version == votes[next(iter(votes))].ce_version 
-                           for v in votes.values())
-            fs_valid_ok = all(v.few_shot_valid for v in votes.values())
-            ip_attest_ok = all(v.ip_attested for v in votes.values())
-            
-            if all([count_ok, modality_ok, layer_ok, ce_sync_ok, fs_valid_ok, ip_attest_ok]):
-                results[key] = self._majority_with_outlier_filter(votes)
-            else:
-                results[key] = "CI"
-        return results
-
-
-# ============================================================
-# 端到端流水线：从感知到执行的完整证书链
+# 扩展：端到端流水线加入结构-力学证书链
 # ============================================================
 class PerceptionComplianceEnergyPipeline:
     def __init__(self, config: dict):
-        # 核心证书模块
-        self.cesc = CloudEdgeSyncCertificate(config['pk_cloud'])
-        self.fsvc = FewShotValidator(config['backbone'], config['calibrator'])
-        self.ipam = IPAttestModule()
-        self.hpc_e_plus = HPCEPlus(
-            hpc_e=config['hpc_e'],
-            cesc=self.cesc,
-            fsvc=self.fsvc,
-            ipam=self.ipam
+        # ... 现有初始化 ...
+        self.usmc = UnifiedStructuralMechanicalCertificate(
+            hpc_e_plus=config['hpc_e_plus'],
+            soc=StructureOptimizationCertificate(
+                fem_solver=config['fem_solver'],
+                sigma_yield=config['sigma_yield']
+            ),
+            fcc=ForceControlCertificate(
+                M_d=config['M_d'], B_d=config['B_d'], K_d=config['K_d'],
+                T_s=config['T_s']
+            ),
+            lsc=LightweightStructureCertificate(
+                rho_bar=config['rho_bar'], theta=config['theta'],
+                C_solid=config['C_solid'], M_budget=config['M_budget']
+            )
         )
-        self.cfc = CertificateFederatedConsensusPlusPlusHierarchical(config['N'], config['F'])
-        
-        # 注册核心模块专利标记（设计期一次性完成）
-        self._register_patents()
-    
-    def _register_patents(self):
-        self.ipam.register_module("sdc", ["IP-425"], ["typed_evidence", "error_bounded_certbox", "class_prior_cts"])
-        self.ipam.register_module("cac", ["IP-426"], ["absence_certificate", "coverage_graph", "recall_lower_bound"])
-        self.ipam.register_module("dcl", ["IP-427"], ["deontic_compilation", "obligation_deadline_filter", "permission_unlock"])
-        self.ipam.register_module("gic", ["IP-428"], ["asymmetric_threshold", "conformal_intent", "gesture_presence_flip"])
-        self.ipam.register_module("pgev", ["IP-431", "IP-434"], ["hierarchical_energy", "energy_viability_kernel"])
-        self.ipam.register_module("acsc", ["IP-432"], ["config_space_certbox", "arm_energy_integral"])
-        self.ipam.register_module("dcsc", ["IP-433"], ["deep_conformal", "phi_privacy", "calibration_coverage"])
-        self.ipam.register_module("cesc", ["IP-436"], ["versioned_certificate_chain", "atomic_switch", "dual_track"])
-        self.ipam.register_module("fsvc", ["IP-437"], ["few_shot_meta_learning", "self_supervised_consistency", "coverage_hard_constraint"])
-        self.ipam.register_module("ipam", ["IP-438"], ["patent_boundary", "claims_generation", "ip_safe_variant"])
-        self.ipam.register_module("hpc_e_plus", ["IP-439"], ["quad_certificate_gate", "monotonic_exec_chain"])
+        # 注册新模块专利标记
+        self.ipam.register_module("soc", ["IP-440"], 
+            ["topology_optimization", "stress_certificate", "energy_bound", "manufacturability"])
+        self.ipam.register_module("fcc", ["IP-441"],
+            ["passivity_certificate", "bandwidth_coupling", "contact_stability"])
+        self.ipam.register_module("lsc", ["IP-442"],
+            ["homogenized_stiffness", "mass_budget", "buckling_certificate"])
+        self.ipam.register_module("usmc", ["IP-443"],
+            ["quadruple_certificate_gate", "structural_mechanical_monotonic_chain"])
     
     def step(self, sensor_data: dict, cloud_update: Optional[dict] = None) -> tuple[bool, dict]:
-        """单步执行：感知 → 证书生成 → 共识 → 准入 → 执行决策"""
-        # 1. 处理云端更新（异步，非阻塞）
-        if cloud_update:
-            self.cesc.receive_cloud_update(cloud_update['V'], cloud_update['artifacts'])
+        # ... 现有步骤 1-5 ...
         
-        # 2. 边端感知 + 证书生成
-        certs = self._generate_certificates(sensor_data)
+        # 6. 结构-力学证书更新（来自本体状态估计）
+        self._update_structural_certificates(sensor_data)
         
-        # 3. 联邦共识（CFC+++）
-        consensus = self.cfc.consensus_round()
-        
-        # 4. 尝试原子切换（若有待验证版本）
-        if self.cesc.V_pending:
-            self.cesc.atomic_switch()
-        
-        # 5. 自监督一致性正则（后台，反哺 CAC）
-        self.fsvc.self_supervised_consistency(sensor_data.get('unlabeled_stream', []))
-        
-        # 6. HPC-E+ 四证准入
+        # 7. USMC 四证准入
         plan = self._plan_from_consensus(consensus)
         modules_involved = self._modules_in_plan(plan)
-        admitted = self.hpc_e_plus.admits(
+        admitted = self.usmc.admits(
             plan, sensor_data['x'], sensor_data['v'], sensor_data['z'],
-            sensor_data['E_res'], sensor_data['margin_req'], modules_involved
+            sensor_data['E_res'], sensor_data['margin_req'], modules_involved,
+            sensor_data['F_hist'], sensor_data['v_hist'],
+            sensor_data['volume'], sensor_data['rho_solid']
         )
         
         return admitted, {
@@ -413,135 +278,135 @@ class PerceptionComplianceEnergyPipeline:
             'consensus': consensus,
             'version': self.cesc.current_version(),
             'coverage': self.fsvc.coverage_estimate,
-            'offline_mode': self.cesc.offline_mode
+            'offline_mode': self.cesc.offline_mode,
+            'structural': {
+                'stress_ok': self.usmc.soc.verify_stress(),
+                'energy_ok': self.usmc.soc.verify_energy(sensor_data['E_res']),
+                'passivity_ok': self.usmc.fcc.verify_passivity(sensor_data['F_hist'], sensor_data['v_hist']),
+                'stiffness_ok': self.usmc.lsc.verify_stiffness_bound(),
+                'buckling_ok': self.usmc.lsc.verify_buckling()
+            }
         }
     
-    def _generate_certificates(self, sensor_data: dict) -> dict:
-        """生成 SDC、CAC、DCSC、ACSC 等感知证书"""
-        certs = {}
-        # SDC: 语义检测证书
-        for det in sensor_data['detections']:
-            certs[f"SDC_{det.id}"] = self._make_sdc(det)
-        # CAC: 覆盖与缺席证书
-        certs["CAC"] = self._make_cac(sensor_data)
-        # DCSC: 深度 conformal 语义证书
-        for frame in sensor_data['camera_frames']:
-            certs[f"DCSC_{frame.id}"] = self.fsvc.calibrate_single(frame.data)
-        # ACSC: 机械臂配空间证书
-        if 'arm_state' in sensor_data:
-            certs["ACSC"] = self._make_acsc(sensor_data['arm_state'])
-        return certs
-    
-    def _make_sdc(self, det) -> 'SemanticDetectionCertificate':
-        # 实现略：类别+膨胀框+置信度+conformal 误差界
-        pass
-    
-    def _make_cac(self, sensor_data) -> 'CoverageAbsenceCertificate':
-        # 实现略：Cov_t 计算 + AbsCert 签发（查手势通道翻转）
-        pass
-    
-    def _make_acsc(self, arm_state) -> 'ArmConfigSpaceCertificate':
-        # 实现略：前向运动学 + ε_arm 膨胀
-        pass
-    
-    def _plan_from_consensus(self, consensus: dict) -> 'Plan':
-        # 从共识结果构造计划
-        pass
+    def _update_structural_certificates(self, sensor_data: dict):
+        """从本体状态增量更新结构/力控/轻量化证书"""
+        # SOC: 基于当前载荷重新计算应力/能量（热启动 FEM）
+        if 'loads' in sensor_data:
+            self.usmc.soc.update_from_optimization(self.usmc.soc.rho, sensor_data['loads'])
+        
+        # FCC: 积累力/速度历史用于无源性验证
+        if 'F' in sensor_data and 'v' in sensor_data:
+            self._append_force_history(sensor_data['F'], sensor_data['v'])
+        
+        # LSC: 运行中密度/几何不变，仅在结构损伤检测时触发重新均质化
+        if sensor_data.get('damage_detected', False):
+            self._recompute_lsc(sensor_data)
     
     def _modules_in_plan(self, plan: 'Plan') -> list[str]:
-        # 返回计划涉及的模块名列表，供 IPAttest 检查
-        return ["sdc", "cac", "dcl", "gic", "pgev", "acsc", "dcsc", "cesc", "fsvc", "hpc_e_plus"]
+        base = ["sdc", "cac", "dcl", "gic", "pgev", "acsc", "dcsc", "cesc", "fsvc", "hpc_e_plus"]
+        return base + ["soc", "fcc", "lsc", "usmc"]
 ```
 
-## 2. 复杂度分析
+## 2. 复杂度分析（增量）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
 |---|---|---|---|
-| CESC 原子切换 | O(1) 验签 + O(|artifacts|) 校验 | O(|V| + |artifacts|) | T_switch=200ms, |artifacts|≈50MB |
-| FSVC K-shot 适应 | O(K·d + |D_calib|) | O(|D_calib| + |Proto|) | K≤5, d=256, |D_calib|≤5000 |
-| FSVC 自监督一致性 | O(B·d) / 帧 (B=采样帧数) | O(1) 增量 | B=100, d=256 |
-| IPAM 扫描/验证 | O(|codebase|) 离线 / O(|modules|) 在线 | O(|patent_map| + |claims_db|) | 模块数≤20 |
-| HPCE+ 准入判定 | O(|modules| + log|rules|) | O(1) 增量 | Merkle 路径长度 log|rules| |
-| CFC+++ 共识轮 | O(N·M·L) | O(N·M) | N=机器人数, M=模态数, L=层数(3) |
-| 端到端单步 | O(|detections|·d + K·d + B·d) | O(|D_calib| + |Proto|) | 50Hz 实时约束 <20ms |
+| SOC 应力验证 | O(N_e) 单元遍历 | O(N_e) 密度/应力场 | N_e≤10⁵, 热启动 FEM O(N_e^{1.5}) |
+| SOC 能量验证 | O(1) 标量比较 | O(1) | - |
+| SOC 可制造性 | O(N_e) 梯度计算 | O(N_e) | 6-邻域稀疏 |
+| FCC 无源性验证 | O(T·6²) 历史积分 | O(T·6) 力/速度历史 | T≤1000 (20ms 窗口@50Hz) |
+| FCC 带宽/稳定性 | O(6³) 特征值分解 | O(6²) 矩阵 | 常数级 |
+| LSC 刚度边界 | O(6³) 特征值分解 | O(6²) | 常数级 |
+| LSC 质量/屈曲 | O(1) | O(1) | - |
+| USMC 准入判定 | O(N_e + T + 6³) | O(N_e + T) | 增量不改关键路径 |
+| 端到端单步（增量） | +O(N_e + T) | +O(N_e + T) | N_e=10⁴→+2ms, T=500→+0.5ms |
 
-**实时性保证**：边端关键路径（CESC.sync_predicate + FSVC.validate + HPCE+ admits）均为 O(1) 或 O(|modules|) 级，无阻塞 I/O，云端交互完全异步，满足 50Hz 控制环。
+**实时性保证**：结构证书验证（SOC/LSC）为离线/周期性（1-10Hz），力控证书（FCC）为在线增量（50Hz），关键路径仅增加 FCC 无源性积分 O(T)，满足 20ms 控制环。
 
-## 3. 正确性论证
+## 3. 正确性论证（增量）
 
-### 引理 1（云边版本原子性保证安全单调性）
-**陈述**：若 `CloudEdgeSync(V)` 成立，则边端运行的模型/校准/原型版本三元组一致，且专利版本覆盖模型版本。切换协议保证 `Exec_v23 ⊆ Exec_v22`。
+### 引理 5（结构优化证书的应力-能量-制造三重保证）
+**陈述**：`SOC.verify_all(E_budget) = True` ⟺ 拓扑优化结果 ρ 同时满足：
+(1) von Mises 应力处处不超过许用应力 σ_yield/γ_s，
+(2) 弹性能量存储上界 E_max(ρ) ≤ E_budget，
+(3) 密度场梯度 ‖∇ρ‖_∞ ≤ G_max，无棋盘格/悬浮结构。
 
 **证明**：
-1. `verify_sig(V)` 确保版本元组未被篡改，来源可信。
-2. `v_m = v_c = v_p` 确保模型权重、校准器分位数、原型库同步来自同一训练/校准流程，conformal 覆盖承诺基于同一分布假设。
-3. `v_pt ≥ v_m` 确保专利组合覆盖当前模型实现，无新侵权风险引入。
-4. 双轨并行：`T_switch` 内 `V_active` 继续服务，`Exec_v23` 基于 `V_active` 不变；仅当 `FewShotValid(V_pending)` 通过才原子切换，新版本覆盖 ≥1-α 由 FSVC 硬约束保证。
-5. 回滚/断联：任一检查失败或云端断联，立即回退 `V_active`/`V_last_valid`，`Exec_v23` 单调不增。
+1. `verify_stress` 直接逐单元比对 FEM 计算的 σ_vm(e) 与许用应力，有限元线性弹性假设下精确。
+2. `verify_energy` 基于位移场 u 计算 E_max = ½ uᵀK(ρ)u，由能量原理这是弹性应变能上界。
+3. `verify_manufacturability` 用有限差分近似 ‖∇ρ‖_∞，G_max 设定使最小特征尺寸 ≥ 2×网格尺寸，满足增材制造约束。
+4. 三条件独立且必要，合取即为三重保证。
 ∎
 
-### 引理 2（少样本适应的覆盖硬约束）
-**陈述**：`FewShotValid(θ) ⇒ P(err ≤ ε̂_loc(s) | score=s) ≥ 1-α - δ_hoeffding`，其中 `δ_hoeffding = sqrt(ln(1/δ)/2n)`。
+### 引理 6（力控证书的无源性-带宽-稳定三重保证）
+**陈述**：`FCC.verify_all(F_hist, v_hist) = True` ⟺ 阻抗控制器 Z_d(s) 同时满足：
+(1) 离散无源性：∑ₖ Fₖᵀvₖ T_s ≥ -E_0，
+(2) 带宽-采样解耦：ω_fc T_s < 0.1，
+(3) 接触稳定性：B_d ≻ 0, M_d ⪰ 0, K_d ⪰ 0。
 
 **证明**：
-1. Conformal 预测的有限样本覆盖保证：`P(覆盖) ≥ 1-α - δ_hoeffding`（标准结果，Vovk et al. 2005）。
-2. FSVC.validate 要求 `emp_cov - δ_hoeffding ≥ 1-α`，即经验覆盖扣除统计波动后仍达标。
-3. 原型漂移约束 `‖Proto_edge - Proto_cloud‖ ≤ Δ_proto` 确保特征分布偏移受限，KL 正则进一步收缩 `D_KL(P_edge ‖ P_cloud)`，使校准集分布假设近似成立。
-4. 自监督一致性正则 `λ_consist` 仅在覆盖稳定时激活，覆盖跌破时 `λ_consist=0`，不引入额外分布偏移。
+1. 离散无源性是连续无源性 ∫ Fᵀv dt ≥ -E_0 的矩形积分近似，T_s 足够小（≤1ms）时误差可忽略。
+2. ω_fc 估计取阻尼-刚度子系统固有频率下界，ω_fc T_s < 0.1 保证相位裕度 > 45°，避免采样引入的相位滞后导致失稳。
+3. 频域正实性 Re{Z_d(jω)} ≥ 0 ∀ω 等价于 B_d ≻ 0 且 M_d, K_d 半正定（标准无源网络综合结果，Anderson & Vongpanitlerd 1973）。
 ∎
 
-### 引理 3（专利边界与模块边界强一致）
-**陈述**：`IPAttest(M)` 成立 ⟺ 模块 M 的代码边界与权利要求 1 的技术特征集合一一对应。
+### 引理 7（轻量化证书的刚度-质量-屈buck三重保证）
+**陈述**：`LSC.verify_all(volume, rho_solid) = True` ⟺ 晶格/TPMS 结构同时满足：
+(1) 等效刚度张量 Loewner 边界 C^hom ⪯ C_solid ρ̄^p，
+(2) 质量硬约束 ρ̄ V ρ_solid ≤ M_budget，
+(3) 屈曲载荷因子 λ_buck ≥ 2.0。
 
 **证明**：
-1. 设计期 `register_module` 强制录入：模块名 → {IP 标记} → {特征标签}。
-2. 代码中 `@patent:IP-XXX` 标记覆盖率 100% 由自动扫描强制门槛，缺标记即编译/部署失败。
-3. `claims_db` 记录的特征标签集合 = 权利要求 1 的技术特征集合（由专利工程师人工确认一次，后续自动比对）。
-4. 因此代码结构变更（增/删/改标记函数）必触发专利覆盖率检查，保持强一致。
+1. 幂律边界 C^hom ≤ C_solid ρ̄^p 来源于 Gibson-Ashby 细胞固体理论（弯曲主导 p=3，拉伸主导 p=1），均质化 FEM 验证为充分条件。
+2. 质量约束直接由相对密度定义导出，无近似。
+3. 线性屈曲分析最小特征值载荷因子 λ_buck ≥ 2.0 提供几何非线性稳定性安全边际 2×。
 ∎
 
-### 引理 4（三位一体单调退化链）
-**陈述**：任意单点/组合失效下，`Exec_v23 ⊆ Exec_v22 ⊆ Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 恒成立。
+### 引理 8（四位一体单调退化链延伸）
+**陈述**：任意单点/组合失效下，`Exec_v24 ⊆ Exec_v23 ⊆ Exec_v22 ⊆ Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 恒成立。
 
-**证明**：
-- 云端断联 → `OfflineMode`：冻结 `V_last_valid`，`CESC.sync_predicate()` 仍基于有效旧版本通过，`FSVC.validate` 基于旧版本通过，`IPAttest` 无云端依赖 → `Exec_v23` 退化为基于 `V_last_valid` 的子集 ⊆ `Exec_v22`。
-- 专利风险触发 → `IP-SafeVariant`：预置变体功能等价、实现不同、证书版本 `v_pt+1`，`IPAttest` 通过新变体，`CESC` 版本一致性检查通过（`v_pt+1 ≥ v_m`），`FSVC` 复用旧校准/原型（变体不改感知骨干） → `Exec_v23` 退化为变体对应的子集 ⊆ `Exec_v22`。
-- 少样本覆盖失效 → `FewShotValid=false` → `HPCE+` 拒证 → 直接退回 `Exec_v22`（纯 PGEV+语义-规范，无云边增强）。
+**证明**：在引理 4 基础上增加三种退化路径：
+- 结构损伤/应力超限 → `SOC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（保留感知-合规-能量-云边-少样本-IP，仅失去结构优化增强）。
+- 力控失稳/无源性违反 → `FCC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（改用位置控制模式，保留 HPC-E+ 能量约束）。
+- 轻量化超限/屈曲风险 → `LSC.verify_all=false` → `USMC` 拒证 → 退回 `Exec_v23`（冻结结构参数，按实体结构保守运行）。
 - 组合失效：取交集，单调性保持。
 ∎
 
-### 定理（HPC-E+ 四证准入门的安全-合规-可部署-可保护完备性）
-**陈述**：对任意计划 π，`HPCEPlus.admits(π) = True` ⟺ π 同时满足：
+### 定理（USMC 四证准入门的安全-合规-可部署-可保护-结构完备性）
+**陈述**：对任意计划 π，`USMC.admits(π) = True` ⟺ π 同时满足：
 (1) 物理接地安全（几何∧规范∧负信息∧能量∧差距），
 (2) 云边版本一致性与统计覆盖承诺，
 (3) 少样本适应后的 conformal 覆盖 ≥1-α，
-(4) 核心模块专利保护完备且无侵权风险。
+(4) 核心模块专利保护完备且无侵权风险，
+(5) 结构应力/能量/可制造性三重达标，
+(6) 力控无源性/带宽/稳定性三重达标，
+(7) 轻量化刚度/质量/屈曲三重达标。
 
-**证明**：直接由 `HPCEPlus.admits` 的四个连言条件与引理 1-3 可得。必要性：任一条件缺失即拒证，对应四类风险中的一种未被缓解。充分性：四条件全满足，由引理 1-4 保证执行集单调链与统计覆盖，构成完整闭环。
+**证明**：直接由 `USMC.admits` 的七个连言条件与引理 1-3, 5-7 可得。必要性：任一条件缺失即拒证，对应七类风险中的一种未被缓解。充分性：七条件全满足，由引理 4, 8 保证执行集单调链与统计覆盖，构成完整闭环。
 ∎
 
-## 4. 已知风险与缓解
+## 4. 已知风险与缓解（增量）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R1 | 版本一致性协议与统计覆盖在极端协同故障下的共振崩塌 | 最高 | 1) `T_switch` 设为 200ms（<控制环 20ms × 10）；2) 离线模式预置 `V_last_valid` 保底；3) 覆盖跌破时 `λ_consist=0` 冻结适应 | 极端分布漂移+云端断联同时发生时，旧模型覆盖可能已失效 |
-| R2 | 专利风险触发导致算法变体切换时的证书链中断 | 高 | 预置 `IP-SafeVariant` 完整证书链（含各自校准集、原型库），版本号 `v_pt+1` 确保 `CESC` 通过 | 变体性能劣化可能导致 `FSVC.validate` 失败，二次退回 `Exec_v22` |
-| R3 | K-shot 适应在非平稳流（持续分布漂移）下的覆盖渐进失效 | 高 | 1) 滑动窗口 `D_calib` 持续刷新；2) Hoeffding 下界实时监控；3) 覆盖跌破触发人工标注请求 + 云端重校准 | 长尾分布漂移（如季节性光照变化）可能超出滑动窗口捕获范围 |
-| R4 | 自监督一致性伪标签污染 CAC 覆盖图（假阴性→假自由空间） | 中 | 1) 仅高一致性（loss<0.01）区域生成伪标签；2) 伪标签置信度加权，不直接覆盖 AbsCert；3) AbsCert 签发仍需手势通道翻转确认 | 极端对抗环境（如镜面反射）可能产生高一致性假阴性 |
-| R5 | 专利覆盖率 100% 门槛导致研发迭代阻力（新增函数未打标即失败） | 中 | 1) IDE 插件实时提示缺失标记；2) 非核心模块可豁免；3) 重构时批量补标工具 | 早期原型期可能降低探索速度，建议设置"探索模式"暂停强制检查 |
+| R6 | FEM 热启动在拓扑剧变（如新增孔洞）时的分解失效 | 高 | 1) 监控条件数 κ(K) 阈值；2) 超阈值触发完全重分解；3) 预分配填充因子缓冲 | 极端拓扑变化（如碰撞切割）可能导致中间步骤不可解 |
+| R7 | 离散无源性验证的采样偏差（高频力振荡穿透矩形积分） | 高 | 1) T_s ≤ 1ms（≥1kHz 采样）；2) 力传感器抗混叠滤波器；3) 补偿项 E_comp = ½ T_s ∑ ‖Fₖ - Fₖ₋₁‖² | 极高频冲击（>500Hz）仍可能穿透，需硬件级无源性保证 |
+| R8 | 均质化刚度边界在各向异性晶格/TPMS 中的保守性丧失 | 中 | 1) 离线构建 C^hom(ρ̄, θ) 查表+插值；2) 在线仅检索+Loewner 比对；3) 保守系数 η=1.2 乘在上界 | 未见拓扑 θ 的外推风险，需拓扑空间覆盖度量 |
+| R9 | 三重证书（SOC/FCC/LSC）耦合导致的过度保守（Exec_v24 过小） | 中 | 1) 风险感知松弛：低风险任务降低 γ_s、放宽 ω_fc T_s、减小 p；2) 在线 Pareto 前沿搜索；3) 人工确认模式 | 松弛参数调整需领域专家，自动化调参尚不可靠 |
+| R10 | 结构损伤检测延迟导致 SOC 证书失效窗口 | 高 | 1) 振动模态监测（频率偏移 >1% 触发）；2) 应变计阵列实时应力重构；3) 损伤假设下的预测性证书更新 | 突发脆性断裂无前兆，证书滞后于物理失效 |
 
-## 5. 实验设计（验证指标）
+## 5. 实验设计（增量验证指标）
 
-| 指标 | 基线 (v22) | 目标 (v23) | 测试协议 |
+| 指标 | 基线 (v23) | 目标 (v24) | 测试协议 |
 |---|---|---|---|
-| 云端更新切换成功率 | N/A | ≥99.9% | 1000 次模拟更新，注入网络抖动/断联 |
-| 少样本覆盖达标率 (K=1,5) | N/A | K=1: ≥90%, K=5: ≥99% | 50 个新环境，每环境 K-shot 适应，统计 conformal 覆盖 |
-| 专利覆盖率门槛通过率 | N/A | 100% (核心模块) | 全量代码扫描，CI 集成 |
-| 端到端单步延迟 (P99) | <20ms | <20ms (不退化) | 50Hz 实测，含 CESC/FSVC/IPAM 判定 |
-| 安全单调性违反次数 | 0 | 0 | 故障注入测试：云端断联/专利触发/覆盖失效组合 |
-| CAC 缺席幻觉率 (κ_c 违反时) | 未量化 | <10⁻⁴ / 小时 | 对抗漏检数据集（儿童/轮椅/蹲姿/逆光） |
+| SOC 应力验证通过率 | N/A | ≥99.9% | 1000 个拓扑优化案例，FEM 复核 |
+| FCC 无源性违反次数 | N/A | 0 | 500 小时力控实验，注入高频干扰 |
+| LSC 刚度边界保守性 | N/A | η≤1.2 | 50 种晶格/TPMS 拓扑，均质化 FEM 对比 |
+| USMC 准入判定延迟 (P99) | <20ms | <22ms | 50Hz 实测，含 SOC/FCC/LSC 增量验证 |
+| 单调退化链违反次数 | 0 | 0 | 故障注入：结构损伤/力控失稳/轻量化超限组合 |
+| 结构损伤检测延迟 | N/A | <50ms | 冲击/疲劳损伤注入，模态/应变监测对比 |
 
 ## 6. 本轮最大风险（最终确认）
 
-**一句话**：云边版本原子切换的 `T_switch` 窗口内，若边端同时遭遇**分布剧变（导致 conformal 覆盖瞬时跌破）与云端断联**，将面临"旧模型覆盖失效、新模型无法验证、回滚无可用版本"的三重失效——即**版本一致性协议与统计覆盖承诺在极端协同故障下的共振崩塌**。
+**一句话**：**拓扑优化证书（SOC）的 FEM 热启动、力控证书（FCC）的离散无源性积分、轻量化证书（LSC）的均质化查表——三者在「结构损伤突变 + 高频力冲击 + 未见拓扑外推」的三重极端协同故障下，可能同时失去数值可靠性，导致 USMC 准入门在物理失效已发生后仍错误通过，打破单调退化链的「事前拦截」承诺。**
 <!-- ARTIFACT:END -->
