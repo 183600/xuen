@@ -207,6 +207,11 @@ def _validate_windows_command(field: str, command: str, workspace: str) -> None:
 
 
 def _parse_words_config(raw, section):
+    """Parse words configuration from raw YAML dict.
+
+    Supported fields: count (int >= 1), batch (int >= 1),
+    pick (int >= 0), reuse (bool, 0, 1, or True/False).
+    """
     if raw is None:
         raw = {}
     count = _parse_int(_config_value(raw, "count", 1000), "words.count")
@@ -230,6 +235,11 @@ def _parse_words_config(raw, section):
 
 
 def _parse_loop_config(raw, section):
+    """Parse loop configuration from raw YAML dict.
+
+    iterations: positive integer (>=1) or omitted (default 5).
+    Writing 'inf' or 'infinite' etc. is handled by CLI overload.
+    """
     if raw is None:
         raw = {}
     iterations_raw = _config_value(raw, "iterations")
@@ -245,6 +255,11 @@ def _parse_loop_config(raw, section):
 
 
 def _parse_agent_config(raw, section):
+    """Parse agent configuration from raw YAML dict.
+
+    Required: command (non-empty str).
+    Optional: timeout (positive finite float, default 1800).
+    """
     if raw is None:
         raw = {}
     command = _parse_str(_config_value(raw, "command", ""), "agent.command")
@@ -259,6 +274,8 @@ def _parse_rounds_config(raw, section):
     dir_val = _parse_str(_config_value(raw, "dir", "rounds"), "rounds.dir")
 
     verify_value = _config_value(raw, "verify", "auto")
+    # 显式设置 verify: false 时，把其视为 "off" 模式；
+    # 未显式设置或其他值则按字符串解析（auto / tests / user / ai / off）
     if verify_value is False and "verify" in raw:
         verify = "off"
     else:
