@@ -25,663 +25,319 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-455~461 基础上扩展）
+## 0. 新增核心模块（在 IP-455~466 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 v27） |
+| 编号 | 名称 | 类型 | 关键改进（相对 v28） |
 |---|---|---|---|
-| IP-462 | Interpretability-Enhanced Knowledge Certificate (IEKC) | 常识证书 | 在 KC 基础上增加 explanation metadata：IEKC = (P, Q, φ, σ, H) 其中 σ ∈ [0,1] 为激活显著性；输出时同步生成解释报告 ExpReport(kc, traj) |
-| IP-463 | Cross-Task Knowledge Transfer Protocol (CTKTP) | 知识协议 | 源任务 τ_s 到目标任务 τ_t 的 KC 迁移协议；定义迁移因子 μ_i = sim(τ_s, τ_t) · ρ(φ_i) · κ_decay；输出迁移验证证书 TCV |
-| IP-464 | Adaptive Knowledge Weight Adjustment (AKWA) | 控制算法 | 基于实时违规指标的 λ_i 动态调整：λ_i(k+1) = λ_i(k) · (1 + η · δ_violation)；下界 λ_min, 上界 λ_max 防止惩罚炸裂/消失 |
-| IP-465 | Knowledge-Transilient MPC (KT-MPC) | 控制算法 | KEMPC ∪ IEKC ∪ CTKTP ∪ AKWA 四位一体；Exec_v28 = Exec_v27 ∩ Fil_knowledge ∩ Fil_dynamics ∩ Fil_interp ∩ Fil_transfer ⊂ Exec_v27 |
-| IP-466 | Knowledge-Transilient Cert Gate (KTCG) | 准入门终极形态 | KTCG = KACG ∪ IEKC ∪ CTKTP ∪ AKWA 九证一体；Exec_v28 = Exec_v27 ∩ {π: IEKC(π) ∧ CTKTP(π) ∧ AKWA(π)} ⊆ Exec_v27 |
+| IP-467 | Human Value Preference Model (HVPM) | 价值模型 | 成对人类偏好 + Bradley-Terry 训练 V_ψ: (x,u)→[0,1]；K_v 集成输出均值 V̄ 与下置信界 V_LCB = V̄ − z·std；在线估计对 u 的 Lipschitz 常数 L |
+| IP-468 | Value-Aligned Objective Synthesizer (VAOS) | 目标合成器 | 把 V_ψ 以「违约罚」形式并入 KT-MPC 代价（约束式而非塑形式，防 Goodhart）；V_min = 教师轨迹价值分位数 Q_τ；对齐裕度 γ_m = L·ε |
+| IP-469 | Scenario Generator & Distillation Corpus (SGDC) | 数据引擎 | 主动场景生成（DSCA 标出的覆盖缺口定向采样）+ 教师 rollout 采集；仅保留九证准入的 (s, a*_T) 对，产出 D_bc ∪ D_pref |
+| IP-470 | Data Scale & Coverage Auditor (DSCA) | 数据审计器 | 覆盖度 C(D)、未覆盖尾部质量 m_0、scaling law ε(N)=c·N^(-α) 拟合（含 R² 报告）；Hoeffding 违规率上界；输出数据充分性证书 DSC |
+| IP-471 | Value-Aligned Distilled Policy (VADP) | 学生策略 | MLP 学生 π_θ + 集成动作标准差 u_ens + 独立骨干 OOD 打分器；前向 <0.1ms；仅作否决器，非安全证明 |
+| IP-472 | Value-Aligned Distillation Cert Gate (VAD-KTCG) | 准入门 | v28 九证（KTCG 原样复用，新增 rollout 级复查接口 admits_rollout）+ VAC/DGC/CCC = 十二证；学生先行-证书裁决-教师兜底 |
 
-## 1. 增量符号体系（定义 1500–1599）
+## 1. 增量符号体系（定义 1600–1664）
 
 | 符号 | 含义 |
 |---|---|
-| σ_i | IEKC 的激活显著性，σ_i ∈ [0,1]，反映规则 c_i 在当前状态下的重要性 |
-| μ_i | 跨任务迁移因子，μ_i ∈ [0,1]，μ_i = 1 为完全迁移，μ_i = 0 为无迁移 |
-| sim(τ_s, τ_t) | 任务相似度度量，基于 MDP 需似度或几何近似度 |
-| ρ(φ_i) | 推理路径相关性，ρ(φ_i) = cos-sim(φ_i^s, φ_i^t) |
-| κ_decay | 时域衰减因子，κ_decay = e^(-γ·Δt)，γ > 0 为老化率 |
-| δ_violation | 违规指标：δ_violation = (1/T) · Σ_{k=T-T+1}^T I[c_i 违规 at step k] |
-| η | 学习率，η ∈ (0, 1] 控制 λ_i 调整速度 |
-| λ_min, λ_max | λ_i 的下/上界，防止数值异常 |
-| ExpReport | 可解释性报告：哪些规则激活、权重贡献、决策路径可视化 |
-| Fil_interp | KTCG 的可解释性过滤器 |
-| Fil_transfer | KTCG 的跨任务迁移过滤器 |
+| V_ψ: (x,u)→[0,1] | 人类价值模型；V_ψ^j 为第 j 个集成成员，K_v=5 |
+| V̄, V_LCB | 集成均值；下置信界 V_LCB = V̄ − z_conf·std（z_conf=1.96） |
+| V_min | 价值下界：教师轨迹价值的离线 τ 分位（τ=0.1） |
+| γ_m = L·ε | 对齐裕度：动作保真换算价值安全的桥梁（引理 26） |
+| L | V_LCB 对 u 的 Lipschitz 常数（校准集在线估计，取 L̂+2·SE 保守值） |
+| ε | 蒸馏动作偏差上界，相对 ‖·‖₂/u_max 归一，缺省 0.05 |
+| π_θ, a*_T(s) | 学生策略动作 / 教师（KT-MPC）动作 |
+| D_bc, D_pref | 行为克隆语料 (s, a*_T) / 偏好对语料 (s, u_a, u_b, y) |
+| β_BT | Bradley-Terry 温度（P(a≻b)=σ(β_BT(V(a)−V(b)))），缺省 4.0 |
+| λ_v | 价值违约罚权重（并入 KT-MPC 代价） |
+| C(D), n_min, c_min | 覆盖度 = 有效 cell 占比；有效 cell 最小样本数 n_min=20；阈值 c_min=0.85 |
+| m_0, m_max | 未覆盖 cell 的部署分布质量及其上界（缺省 0.05） |
+| ρ_max | 已覆盖 cell 上部署/训练密度比上界 |
+| ε_viol, ε̂_v, N_eff | 真实/经验违规率；时序相关下的有效样本量 |
+| α, c | scaling law ε(N)=c·N^(-α) 的指数与系数；α_min=0.4 |
+| u_ens | 集成动作标准差（学生自评不确定度），阈值 u_ens_max=0.10 |
+| ood | OOD 打分（独立骨干：ResNet 式编码器 + Mahalanobis 距离），阈值 0.30 |
+| p_check | DGC 随机教师抽查概率，缺省 0.05 |
+| DSC, VAC, DGC, CCC | 数据充分性 / 价值对齐 / 蒸馏保真 / 覆盖置信 证书 |
+| Exec_v29 | VAD-KTCG 十二证执行集，⊆ Exec_v28 |
 
-## 2. 关键算法骨架（在 IP-451~461 骨架上扩展）
+## 2. 关键算法骨架（在 IP-451~466 骨架上扩展）
 
-### IP-462 Interpretability-Enhanced Knowledge Certificate (IEKC)
+### IP-467 Human Value Preference Model (HVPM)
 
 ```python
 @dataclass
-class InterpretabilityEnhancedKnowledgeCertificate:
-    """IEKC：在 KC 基础上增加 explanation metadata"""
-    name: str                       # 常识规则名称
-    precond: Callable               # 前置条件 P(x)
-    postcond: Callable              # 后置条件 Q(x)
-    phi: str = ""                   # 推理路径描述（可查阅、可复现）
-    H: int = 10                     # 预测时域步数
-    is_active: bool = True          # 当前是否激活
-    violation_count: int = 0        # 违规次数统计
-    sigma: float = 1.0              # IEKC 激活显著性，σ ∈ [0,1]
-    explanation_history: list = field(default_factory=list)  # 解释历史
-    
-    def check_violation(self, trajectory: Tensor, dt: float, 
-                        dynamics: Callable) -> bool:
-        """检查常识在给定轨迹上是否被违反"""
-        x_k = trajectory[0]
-        x_H = trajectory[min(len(trajectory)-1, self.H-1)]
-        if not self.precond(x_k):
-            return False  # 前置不满足，规则不适用
-        return not self.postcond(x_H)
-    
-    def verify(self, initial_state: Tensor, dynamics: Callable, 
-               horizon: int = None) -> bool:
-        """存在性验证：∃π: P(x_k) ⇒ Q(x_{k+H})"""
-        H = horizon if horizon is not None else self.H
-        for traj in self._sample_trajectories(initial_state, dynamics, H, n_samples=100):
-            if self.postcond(traj[-1]) and not self.check_violation(traj, 1/dynamics.dt, dynamics):
-                return True
-        return False
-    
-    def generate_explanation(self, trajectory: Tensor, dt: float, 
-                            dynamics: Callable, x0: Tensor) -> 'ExplanationReport':
-        """生成解释报告：规则激活情况、权重贡献、关键状态"""
-        active_preconds = []
-        postcond_results = []
-        for k in range(min(len(trajectory), self.H)):
-            x_k = trajectory[k]
-            pre = self.precond(x_k)
-            active_preconds.append(pre)
-            if k == min(len(trajectory)-1, self.H-1):
-                post = self.postcond(x_k)
-                postcond_results.append(post)
-        
-        # 计算权重贡献
-        penalty = self._compute_penalty_contribution(trajectory, dt, dynamics)
-        
-        report = ExplanationReport(
-            rule_name=self.name,
-            precond_active=active_preconds,
-            postcond_final=postcond_results[-1] if postcond_results else True,
-            sigma=self.sigma,
-            knowledge_penalty=penalty,
-            critical_states=self._identify_critical_states(trajectory),
-            phi=self.phi
-        )
-        self.explanation_history.append(report)
-        return report
-    
-    def _compute_penalty_contribution(self, trajectory: Tensor, dt: float, 
-                                        dynamics: Callable) -> float:
-        """计算该规则对总知识惩罚的贡献"""
-        x_H = trajectory[min(len(trajectory)-1, self.H-1)]
-        pre_ok = self.precond(x_H[0]) if len(x_H) > 0 else True
-        if not pre_ok:
-            return 0.0  # 前置不满足，不计入惩罚
-        viol = not self.postcond(x_H)
-        return (1.0 - float(self.sigma)) if viol else 0.0
-    
-    def _identify_critical_states(self, trajectory: Tensor) -> list:
-        """识别导致违规/激活的关键状态"""
-        critical = []
-        for k in range(min(len(trajectory), self.H)):
-            x_k = trajectory[k]
-            if not self.precond(x_k):
-                critical.append(("precond_fail", k, x_k.tolist()))
-        return critical
+class HumanValuePreferenceModel:
+    \"\"\"HVPM：从成对人类偏好学习价值模型 V_ψ: (x,u) → [0,1]\"\"\"
+    ensemble: list          # K_v 个独立初始化的价值网络
+    beta_bt: float = 4.0    # Bradley-Terry 温度
+    z_conf: float = 1.96    # 下置信界分位
+    u_max: float = 1.0      # 控制幅值（归一化基准）
 
-@dataclass
-class ExplanationReport:
-    """可解释性报告：用于人机交互和诊断"""
-    rule_name: str
-    precond_active: list[bool]
-    postcond_final: bool
-    sigma: float
-    knowledge_penalty: float
-    critical_states: list[tuple[str, int, list[float]]]
-    phi: str
-    timestamp: float = field(default_factory=time.time)
+    def train(self, pref_pairs, lr=1e-3, epochs=50):
+        \"\"\"pref_pairs: [(x, u_a, u_b, y)]，y=1 表示 a ≻ b\"\"\"
+        for vnet in self.ensemble:
+            opt = torch.optim.Adam(vnet.parameters(), lr=lr)
+            for _ in range(epochs):
+                for (x, ua, ub, y) in pref_pairs:
+                    va, vb = vnet(x, ua), vnet(x, ub)
+                    loss = F.binary_cross_entropy_with_logits(
+                        self.beta_bt * (va - vb), torch.tensor(float(y)))
+                    opt.zero_grad(); loss.backward(); opt.step()
+
+    def lcb(self, x, u) -> float:
+        \"\"\"下置信界 V_LCB：对齐证书一律用保守值，不用均值\"\"\"
+        with torch.no_grad():
+            vals = torch.stack([vnet(x, u) for vnet in self.ensemble])
+            return float(vals.mean() - self.z_conf * vals.std(unbiased=False))
+
+    def estimate_lipschitz_u(self, calib_set, eps=1e-2) -> float:
+        \"\"\"校准集估计 L（保守值 L̂ + 2·SE），供 γ_m = L·ε 使用\"\"\"
+        ratios = []
+        for (x, u1, u2) in calib_set:
+            d = abs(self.lcb(x, u1) - self.lcb(x, u2))
+            n = max(np.linalg.norm(u1 - u2) / self.u_max, eps)
+            ratios.append(d / n)
+        return float(np.mean(ratios) + 2.0 * np.std(ratios) / np.sqrt(len(ratios)))
 ```
 
-### IP-463 Cross-Task Knowledge Transfer Protocol (CTKTP)
-
-```python
-class CrossTaskKnowledgeTransferProtocol:
-    """CTKTP：源任务 τ_s 到目标任务 τ_t 的 KC 迁移协议"""
-    
-    def __init__(self, source_task_id: str, target_task_id: str,
-                 kc_list_source: list['KnowledgeCertificate']):
-        self.src = source_task_id
-        self.tgt = target_task_id
-        self.kc_src = kc_list_source
-        self.migration_factors = {}  # c_i name -> μ_i
-        self.transfer_validation_results = {}
-    
-    def compute_migration_factor(self, kc: 'KnowledgeCertificate', 
-                                 source_dynamics: Callable, 
-                                 target_dynamics: Callable) -> float:
-        """计算单个 KC 的迁移因子 μ_i"""
-        # 1. 任务相似度：基于状态空间和动力学模型的几何近似
-        sim_task = self._compute_task_similarity(source_dynamics, target_dynamics)
-        
-        # 2. 推理路径相关性：比较 φ 逻辑链的相似度
-        phi_s = kc.phi if hasattr(kc, 'phi') and kc.phi else "default"
-        phi_t = self._infer_target_phi(kc, target_dynamics)
-        rho_path = self._compute_path_correlation(phi_s, phi_t)
-        
-        # 3. 时域衰减：考虑任务间时间差Δt
-        delta_t = self._estimate_task_domain_shift()
-        kappa_decay = math.exp(-0.01 * delta_t)  # γ=0.01 的指数衰减
-        
-        mu = sim_task * rho_path * kappa_decay
-        mu = max(0.0, min(1.0, mu))  # 截断到 [0,1]
-        return mu
-    
-    def _compute_task_similarity(self, source_dyn: Callable, 
-                                 target_dyn: Callable) -> float:
-        """计算任务相似度（简化实现）"""
-        # 实际中应比较 MDP 的奖励函数、转移概率等
-        # 此处使用几何近似：比较状态空间的径向基函数覆盖情况
-        # 假设已知源/目标的状态协方差矩阵
-        sim = 0.8  # placeholder：经验值，实际应从模型比对计算
-        return sim
-    
-    def _infer_target_phi(self, kc: 'KnowledgeCertificate', 
-                          target_dynamics: Callable) -> str:
-        """在目标任务上推断等价的推理路径"""
-        # 利用目标任务的动力学模型，推断 KC 的 φ 在新语境下的对应形式
-        return f"transfer_from_{kc.name}_to_{self.tgt}"
-    
-    def _compute_path_correlation(self, phi_s: str, phi_t: str) -> float:
-        """计算推理路径相关性（余弦相似度近似）"""
-        # 简化：相同命名规则相关性高，不同则低
-        if phi_s == phi_t:
-            return 1.0
-        # 基于关键词匹配的相似度
-        keywords_s = set(re.findall(r'[a-z_]+', phi_s))
-        keywords_t = set(re.findall(r'[a-z_]+', phi_t))
-        if keywords_s and keywords_t:
-            intersection = keywords_s & keywords_t
-            union = keywords_s | keywords_t
-            return len(intersection) / len(union) if union else 0.0
-        return 0.0
-    
-    def _estimate_task_domain_shift(self) -> float:
-        """估计任务域偏移的时长 Δt"""
-        # 简化：使用源任务开始到现在的近似时间
-        # 实际中应从元数据或任务日志中获取
-        return 10.0  # placeholder
-    
-    def transfer_kc(self, kc: 'KnowledgeCertificate') -> 'TransferredKnowledgeCertificate':
-        """迁移单个 KC，产生带有 μ_i 的转移证书"""
-        mu = self.compute_migration_factor(kc, ..., ...)
-        return TransferredKnowledgeCertificate(
-            name=kc.name,
-            precond=kc.precond,
-            postcond=kc.postcond,
-            mu=mu,
-            phi=f"transferred_{kc.phi}" if kc.phi else "",
-            source_task=self.src,
-            target_task=self.tgt,
-            is_validated=False
-        )
-    
-    def validate_transfer(self, kc_transferred: 'TransferredKnowledgeCertificate',
-                          target_init_state: Tensor, 
-                          target_dynamics: Callable,
-                          n_samples: int = 50) -> bool:
-        """验证迁移后的 KC 在目标任务上的有效性"""
-        # 采样目标任务轨迹，检查 postcond 是否仍然成立
-        H = kc_transferred.H
-        success_count = 0
-        for _ in range(n_samples):
-            u_seq = [target_dynamics.input_limits.sample() for _ in range(H)]
-            traj = target_dynamics.simulate(target_init_state, u_seq, H)
-            if kc_transferred.postcond(traj[-1]):
-                success_count += 1
-        validation_rate = success_count / n_samples
-        kc_transferred.is_validated = validation_rate > 0.7  # 70% 及通过率阈值
-        return kc_transferred.is_validated
-    
-    def get_active_transferred_kcs(self, mode: str, terrain: dict,
-                                   kc_min_mu: float = 0.3) -> list:
-        """获取在目标任务/模式/地形下激活的迁移 KC（μ_i ≥ 阈值）"""
-        active = []
-        for kc in self.kc_src:
-            mu = self.migration_factors.get(kc.name, 0.0)
-            if mu >= kc_min_mu:
-                # 检查前置条件在当前模式下的适用性
-                if self._precond_applies(kc.precond, mode, terrain):
-                    active.append(kc)
-        return active
-    
-    def _precond_applies(self, precond: Callable, mode: str, 
-                         terrain: dict) -> bool:
-        """检查前置条件在当前模式/地形下是否适用"""
-        try:
-            result = precond({"mode": mode, **terrain})
-            return bool(result)
-        except Exception:
-            return True  # 默认适用
-```
-
-### IP-464 Adaptive Knowledge Weight Adjustment (AKWA)
+### IP-468 Value-Aligned Objective Synthesizer (VAOS)
 
 ```python
 @dataclass
-class AdaptiveKnowledgeWeightAdjustment:
-    """AKWA：基于实时违规指标的 λ_i 动态调整"""
-    base_weights: dict  # {kc_name: λ_i 初始值}
-    eta: float = 0.05   # 学习率 η ∈ (0, 1]
-    lambda_min: float = 0.1  # λ_i 下界
-    lambda_max: float = 100.0  # λ_i 上界
-    violation_window: int = 20  # T 步违规窗口
-    adaptation_enabled: bool = True
-    
-    def __post_init__(self):
-        self.lambda_current = dict(self.base_weights)  # 当前激活的 λ_i
-        self.violation_history: dict = {}  # {kc_name: [bool, bool, ...]}
-    
-    def update_weights(self, kc_list: list['KnowledgeCertificate'], 
-                       recent_violations: dict[str, bool],
-                       current_time_step: int) -> dict:
-        """根据最近 T 步的违规情况更新所有 λ_i"""
-        for kc in kc_list:
-            name = kc.name
-            if name not in self.violation_history:
-                self.violation_history[name] = []
-            
-            # 记录当前步的违规情况
-            vi now = recent_violations.get(name, False)
-            self.violation_history[name].append(vi now)
-            
-            # 保持窗口长度 T
-            if len(self.violation_history[name]) > self.violation_window:
-                self.violation_history[name] = self.violation_history[name][-self.violation_window:]
-            
-            # 计算违规指标 δ_violation
-            violation_rate = sum(self.violation_history[name]) / len(self.violation_history[name])
-            
-            # 动态调整 λ_i
-            lambda_old = self.lambda_current.get(name, 
-                                              self.base_weights.get(name, 1.0))
-            
-            # 调整规则：违规率高 → 增大 λ；违规率低 → 逐渐降低 λ
-            if violation_rate > 0.5:
-                # 高违规：增大权重，使优化更规避该规则所代表的违规状态
-                lambda_new = lambda_old * (1 + self.eta * (violation_rate - 0.5))
+class ValueAlignedObjectiveSynthesizer:
+    \"\"\"VAOS：V_ψ 以违约罚形式并入 KT-MPC；V_min 校准 + γ_m 计算\"\"\"
+    hvpm: HumanValuePreferenceModel
+    v_min_quantile: float = 0.1
+    eps_fidelity: float = 0.05      # 蒸馏动作偏差上界 ε
+
+    def calibrate(self, teacher_value_samples):
+        \"\"\"teacher_value_samples: 教师九证准入轨迹上 V_LCB 的采样值\"\"\"
+        vals = sorted(teacher_value_samples)
+        self.v_min = vals[max(0, int(self.v_min_quantile * len(vals)))]
+        self.L = self.hvpm.estimate_lipschitz_u(self._calib_states)
+        self.gamma_m = self.L * self.eps_fidelity   # 引理 26：裕度 = L·ε
+        return self.v_min, self.gamma_m
+
+    def value_penalty(self, x, u) -> float:
+        \"\"\"违约才罚（max 形式）：达标区不受影响，抑制 Goodhart\"\"\"
+        return max(0.0, self.v_min + self.gamma_m - self.hvpm.lcb(x, u))
+
+    # KT-MPC 代价中的接入点（IP-465.solve 内，仅此一处增量）：
+    #   cost += self.weights['knowledge'] * kc_penalty        # 原有
+    #   cost += lambda_v * value_penalty(X[k+1], U[k])        # 新增（k=0..N-1）
+```
+
+### IP-469 Scenario Generator & Distillation Corpus (SGDC)
+
+```python
+class ScenarioGeneratorDistillationCorpus:
+    \"\"\"SGDC：覆盖缺口定向采样 + 教师采集，产出 D_bc ∪ D_pref\"\"\"
+    def __init__(self, teacher: 'KnowledgeTransilientMPC',
+                 vaos: ValueAlignedObjectiveSynthesizer,
+                 dsca: 'DataScaleCoverageAuditor'):
+        self.teacher, self.vaos, self.dsca = teacher, vaos, dsca
+        self.D_bc, self.D_pref, self.viol_hist = [], [], []
+
+    def collect_round(self, n_scenarios=500):
+        # 1) 覆盖缺口 → 定向生成场景（主动学习式闭环）
+        gaps = self.dsca.coverage_gaps()
+        scenarios = self._sample_scenarios(bias_toward=gaps, n=n_scenarios)
+        # 2) 教师 rollout：仅保留被九证准入的轨迹（标签质量由 v28 门保证）
+        for sc in scenarios:
+            traj = self.teacher.rollout_with_certs(sc.init_state)
+            if traj.admitted:
+                self.D_bc += self._state_action_pairs(traj)
+                self.D_pref += self._pairwise_perturbations(traj)
+                self.viol_hist.append(
+                    (len(self.D_bc), traj.value_violation_rate))
+        self.dsca.update(self.D_bc)
+        return len(self.D_bc), len(self.D_pref)
+```
+
+### IP-470 Data Scale & Coverage Auditor (DSCA)
+
+```python
+@dataclass
+class DataScaleCoverageAuditor:
+    \"\"\"DSCA：把数据规模变成可证书化的量\"\"\"
+    feature_fn: Callable        # ψ(s)：状态 → 低维特征（分格用）
+    grid_res: int = 32
+    n_min: int = 20
+    c_min: float = 0.85
+    m_max: float = 0.05
+    alpha_min: float = 0.4
+
+    def update(self, D_bc):
+        cells = self._grid(self.feature_fn, D_bc)
+        occupied = {c for c, n in cells.items() if n >= self.n_min}
+        self.C_D = len(occupied) / max(len(cells), 1)
+        self.m_0 = self._estimate_tail_mass()       # 部署分布估计器给出
+        return self.C_D, self.m_0
+
+    def fit_scaling_law(self, viol_hist):
+        \"\"\"log-log 最小二乘拟合 ε(N)=c·N^(-α)，报告 R² 与外推区间\"\"\"
+        xs = np.log([n for n, _ in viol_hist])
+        ys = np.log([e for _, e in viol_hist])
+        slope, _ = np.polyfit(xs, ys, 1)
+        self.alpha = -slope
+        self.fit_r2 = self._r2(xs, ys, slope)
+        self.dsc_pass = (self.C_D >= self.c_min and self.m_0 <= self.m_max
+                         and self.alpha >= self.alpha_min
+                         and self.fit_r2 >= 0.9)
+        return self.dsc_pass
+
+    def violation_bound(self, eps_hat, N, delta=0.01):
+        \"\"\"引理 27：数据规模 → 违规率上界（时序相关时以 N_eff 修正）\"\"\"
+        return eps_hat + math.sqrt(math.log(1.0 / delta) / (2 * N))
+
+    def coverage_gaps(self):
+        \"\"\"低覆盖/未覆盖 cell 列表，供 SGDC 定向补数据\"\"\"
+        return self._cells_below(self.n_min)
+```
+
+### IP-471 Value-Aligned Distilled Policy (VADP)
+
+```python
+@dataclass
+class ValueAlignedDistilledPolicy:
+    \"\"\"VADP：学生策略 + 运行时自评估（仅作否决器，非安全证明）\"\"\"
+    policy_net: torch.nn.Module     # π_θ: s → u（相对 u_max 归一）
+    hvpm: HumanValuePreferenceModel
+    vaos: ValueAlignedObjectiveSynthesizer
+    u_ens_max: float = 0.10
+    ood_max: float = 0.30
+
+    def propose(self, s):
+        \"\"\"返回 (u_stu, u_ens, ood)；MLP 2×128 ≈ 33k 参数，前向 <0.1ms\"\"\"
+        with torch.no_grad():
+            u = self.policy_net(s)
+            u_ens = self._ensemble_action_std(s, n_boot=4)
+            ood = self.ood_scorer(s)    # 独立骨干，与学生网络无共享参数
+        return u, float(u_ens), float(ood)
+
+    def quick_reject(self, s, u, u_ens, ood) -> bool:
+        \"\"\"学生侧快速否决：不确定度 / OOD / 价值 LCB 任一越界\"\"\"
+        if u_ens > self.u_ens_max or ood > self.ood_max:
+            return True
+        return self.hvpm.lcb(s, u) < self.vaos.v_min    # VAC 违约
+```
+
+### IP-472 Value-Aligned Distillation Cert Gate (VAD-KTCG)
+
+```python
+@dataclass
+class ValueAlignedDistillationCertGate:
+    \"\"\"VAD-KTCG：v28 九证 + VAC/DGC/CCC；学生先行-证书裁决-教师兜底\"\"\"
+    ktcg: 'KnowledgeTransilientCertificationGate'   # v28 九证门（教师）
+    vadp: ValueAlignedDistilledPolicy
+    dsca: DataScaleCoverageAuditor
+    eps_fidelity: float = 0.05
+    p_check: float = 0.05
+
+    def admits(self, robot_plan, sensor_data):
+        \"\"\"返回 (admitted, u_cmd, path)；path ∈ {student, teacher, fallback}\"\"\"
+        # 0) CCC(a)：数据侧 DSC（离线重训后更新，在线只读）
+        if not self.dsca.dsc_pass:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        s = robot_plan.init_state
+        u_stu, u_ens, ood = self.vadp.propose(s)
+
+        # 1) VAC：价值下置信界达标
+        if self.vadp.hvpm.lcb(s, u_stu) < self.vadp.vaos.v_min:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        # 2) DGC：随机教师抽查——保真失败即教师动作直接接管
+        if random.random() < self.p_check:
+            a_T = self.ktcg.kempc.solve_teacher_action(s)
+            if np.linalg.norm(u_stu - a_T) <= self.eps_fidelity * self.u_max:
+                u_cmd = u_stu
             else:
-                # 低违规：逐渐降低权重，避免过度保守
-                lambda_new = lambda_old * (1 - self.eta * (0.5 - violation_rate))
-            
-            # 截断到 [λ_min, λ_max]
-            lambda_new = max(self.lambda_min, min(self.lambda_max, lambda_new))
-            self.lambda_current[name] = lambda_new
-        
-        return self.lambda_current
-    
-    def get_current_weights(self) -> dict:
-        """返回当前的 λ_i 权重字典"""
-        return dict(self.lambda_current)
-    
-    def reset(self):
-        """重置为基础权重"""
-        self.lambda_current = dict(self.base_weights)
-        self.violation_history.clear()
+                u_cmd = a_T
+        else:
+            u_cmd = u_stu
+
+        # 3) 九证重放：学生短视界 rollout 上执行 v28 全部检查（无优化器，
+        #    仅前向模拟：KC 违规、DCC κ、IEKC 解释、CTKTP、AKWA 边界等）
+        traj_stu = self._short_rollout(s, u_cmd, H=10)
+        if not self.ktcg.admits_rollout(robot_plan, sensor_data, traj_stu, u_cmd):
+            return self._teacher_path(robot_plan, sensor_data)
+
+        # 4) CCC(b)：学生自评（必要条件）
+        if u_ens > self.vadp.u_ens_max or ood > self.vadp.ood_max:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        return True, u_cmd, \"student\"
+
+    def _teacher_path(self, robot_plan, sensor_data):
+        \"\"\"教师路径 = v28 语义原样：KT-MPC 求解 + KTCG.admits\"\"\"
+        ok = self.ktcg.admits(robot_plan, sensor_data)
+        return ok, self.ktcg.last_u_cmd, (\"teacher\" if ok else \"fallback\")
 ```
 
-### IP-465 Knowledge-Transilient MPC (KT-MPC)
-
-```python
-@dataclass
-class KnowledgeTransilientMPC:
-    """KT-MPC：KEMPC ∪ IEKC ∪ CTKTP ∪ AKWA 四位一体"""
-    dynamics: Callable             # 机器人动力学模型
-    horizon: int = 20              # 预测时域
-    dt: float = 0.01               # 控制周期
-    weights: dict                  # 各代价项权重
-    kc_list: list['InterpretabilityEnhancedKnowledgeCertificate']  # IEKC 列表
-    cttp: CrossTaskKnowledgeTransferProtocol | None = None  # CTKTP 实例
-    akwa: AdaptiveKnowledgeWeightAdjustment | None = None  # AKWA 实例
-    x_bounds: Tensor = None          # 状态约束
-    u_bounds: Tensor = None          # 控制约束
-    terrain_map: Callable = None     # 地形/障碍 ESDF
-    slack_var: bool = True           # 是否启用软约束松弛变量
-    interpretability_enabled: bool = True
-    adaptation_enabled: bool = True
-    
-    def compute_knowledge_penalty(self, x: Tensor, kc_idx: int = None) -> float:
-        """W_kc(x) = Σ_i λ_i·(1-c_i)·σ_i，包含 IEKC 的 σ_i 显著性"""
-        penalty = 0.0
-        lambdas = self.akwa.get_current_weights() if self.akwa else {}
-        for i, kc in enumerate(self.kc_list):
-            c_i = 1.0 if kc.is_active else 0.0
-            sigma_i = kc.sigma  # IEKC 的显著性
-            lambda_i = lambdas.get(kc.name, self.weights.get('knowledge', 10.0))
-            # 加权惩罚：λ_i · (1 - c_i) · σ_i
-            penalty += lambda_i * (1.0 - c_i) * sigma_i
-        return penalty * self.weights.get('knowledge', 10.0)
-    
-    def solve(self, x0: Tensor) -> tuple[Tensor, 'InterpretabilityEnhancedKnowledgeCertificate', 
-                                          'DynamicConsistencyCertificate', 
-                                          ExplanationReport]:
-        """求解 KT-MPC，输出控制序列及同步证书和解释报告"""
-        N = self.horizon
-        n_x = len(x0)
-        n_u = self._control_dim()
-        
-        import cvxpy as cp
-        X = cp.Variable((N+1, n_x))
-        U = cp.Variable((N, n_u))
-        s = cp.Variable(N) if self.slack_var else None
-        
-        cost = 0.0
-        constraints = []
-        
-        # 初始约束
-        constraints.append(X[0] == x0)
-        
-        for k in range(N):
-            # 动力学约束
-            x_next = self.dynamics(X[k], U[k])
-            constraints.append(X[k+1] == x_next)
-            
-            # 状态约束
-            if self.x_bounds is not None:
-                constraints.append(X[k+1] >= self.x_bounds[0])
-                constraints.append(X[k+1] <= self.x_bounds[1])
-            
-            # 控制约束
-            if self.u_bounds is not None:
-                constraints.append(U[k] >= self.u_bounds[0])
-                constraints.append(U[k] <= self.u_bounds[1])
-            
-            # 地形约束
-            if self.terrain_map is not None:
-                z_clear = self.terrain_map(X[k+1, :2])
-                constraints.append(X[k+1, 2] >= z_clear + 0.1)
-            
-            # 常识权重场 (含 IEKC σ_i)
-            kc_penalty = self.compute_knowledge_penalty(X[k+1])
-            cost += kc_penalty
-            
-            # 经验成本
-            cost += cp.quad_form(U[k], self.weights.get('control', 0.01) * cp.eye(n_u))
-            
-            # 软约束
-            if s is not None:
-                cost += self.weights.get('slack', 100.0) * s[k]
-                constraints.append(X[k+1, 2] >= self.terrain_map(X[k+1, :2]) + 0.05 - s[k])
-        
-        # 目标函数
-        obj = cp.Minimize(cost)
-        prob = cp.Problem(obj, constraints)
-        
-        try:
-            prob.solve(solver='OSQP', warm_start=True)
-            if prob.status != 'optimal':
-                return self._fallback_solve(x0)
-            
-            u_seq = U.value
-            x_traj = X.value
-            
-            # 同步生成证书
-            kc = self._synthesize_knowledge_certificate(x0, x_traj)
-            dcc = self._synthesize_dyn_consistency_certificate(x0, x_traj)
-            explanation = self._generate_explanation(x0, x_traj) if self.interpretability_enabled else None
-            
-            return u_seq[0], kc, dcc, explanation
-        except Exception as e:
-            return self._fallback_solve(x0)
-    
-    def _generate_explanation(self, x0: Tensor, traj: Tensor) -> ExplanationReport:
-        """生成解释报告：汇总所有 IEKC 的激活情况和权重贡献"""
-        penalty_breakdown = []
-        for kc in self.kc_list:
-            contrib = kc._compute_penalty_contribution(traj, self.dt, self.dynamics)
-            penalty_breakdown.append({
-                "rule": kc.name,
-                "sigma": kc.sigma,
-                "penalty_contribution": contrib
-            })
-        
-        # 按贡献排序，前 3 条最重要的规则
-        sorted_rules = sorted(penalty_breakdown, key=lambda x: x["penalty_contribution"], reverse=True)[:3]
-        
-        return ExplanationReport(
-            rule_name="multi_rule_analysis",
-            precond_active=[True],  # placeholder
-            postcond_final=True,
-            sigma=sum(r["sigma"] for r in penalty_breakdown) / len(penalty_breakdown) if penalty_breakdown else 0.0,
-            knowledge_penalty=sum(r["penalty_contribution"] for r in penalty_breakdown),
-            critical_states=[],
-            phi="KT-MPC optimization",
-            timestamp=time.time()
-        )
-    
-    def _fallback_solve(self, x0: Tensor) -> tuple:
-        """KT-MPC 回退策略"""
-        u_fallback = self._generate_fallback_control(x0)
-        x_traj = self._simulate_trajectory(x0, u_fallback)
-        kc = InterpretabilityEnhancedKnowledgeCertificate(
-            name="fallback_safety",
-            precond=lambda x: True,
-            postcond=lambda x: True,
-            sigma=1.0,
-            H=self.horizon
-        )
-        dcc = DynamicConsistencyCertificate("conservative", [0.1] * len(x0))
-        explanation = ExplanationReport(
-            rule_name="fallback",
-            precond_active=[],
-            postcond_final=True,
-            sigma=1.0,
-            knowledge_penalty=0.0,
-            critical_states=[],
-            phi="fallback control",
-            timestamp=time.time()
-        )
-        return u_fallback, kc, dcc, explanation
-    
-    def _generate_fallback_control(self, x0: Tensor) -> Tensor:
-        """生成保守控制：站立+缓慢前进"""
-        n_u = self._control_dim()
-        u = np.zeros((self.horizon, n_u))
-        u[:5, 0] = 0.1
-        return u
-    
-    def _control_dim(self) -> int:
-        return 6
-    
-    def _simulate_trajectory(self, x0: Tensor, u_seq: np.ndarray) -> Tensor:
-        x = x0.clone()
-        traj = [x]
-        for u in u_seq:
-            x = self.dynamics(x, u)
-            traj.append(x)
-        return torch.stack(traj)
-    
-    def _synthesize_knowledge_certificate(self, x0: Tensor, traj: Tensor) -> 'InterpretabilityEnhancedKnowledgeCertificate':
-        """从优化结果合成 IEKC"""
-        violations = []
-        for kc in self.kc_list:
-            if kc.check_violation(traj, self.dt, self.dynamics):
-                violations.append(kc.name)
-        
-        # 计算平均显著性
-        avg_sigma = sum(kc.sigma for kc in self.kc_list) / len(self.kc_list) if self.kc_list else 1.0
-        
-        return InterpretabilityEnhancedKnowledgeCertificate(
-            name="synthesized",
-            precond=lambda x: True,
-            postcond=lambda x: len(violations) == 0,
-            phi=f"KT-MPC synthesis, violations: {violations}",
-            H=self.horizon,
-            sigma=avg_sigma,
-            is_active=len(violations) == 0
-        )
-    
-    def _synthesize_dyn_consistency_certificate(self, x0: Tensor, traj: Tensor) -> 'DynamicConsistencyCertificate':
-        """从轨迹计算 DCC"""
-        kappa = torch.std(traj, dim=0).max().item() * 0.1
-        return DynamicConsistencyCertificate("synth_dcc", kappa)
-```
-
-### IP-466 Knowledge-Transilient Cert Gate (KTCG)
-
-```python
-@dataclass
-class KnowledgeTransilientCertificationGate:
-    """KTCG：KACG ∪ IEKC ∪ CTKTP ∪ AKWA 九证一体"""
-    usmc: 'UnifiedStructuralMechanicalCertificate'  # 前轮 USMC
-    smc: 'SemanticMappingCertificate'               # 语义证书
-    kempc: KnowledgeTransilientMPC                    # KT-MPC 控制器
-    kc_list: list['InterpretabilityEnhancedKnowledgeCertificate']  # IEKC 列表
-    dcc: DynamicConsistencyCertificate              # 动态一致性证书
-    wlkb: WalkingLocomotionKnowledgeBase            # walking 知识库
-    sskl: 'StandingStanceKnowledgeLibrary'          # standing 知识库
-    tkp: 'TransitionKnowledgeProtocol'             # transition 协议
-    cttp: CrossTaskKnowledgeTransferProtocol        # 跨任务迁移协议
-    akwa: AdaptiveKnowledgeWeightAdjustment         # 自适应权重调整
-    
-    def admits(self, robot_plan: 'RobotPlan', sensor_data: dict) -> bool:
-        """九证联合准入"""
-        # 1. USMC 单机验证
-        if not self.usmc.admits(robot_plan.single_plan, sensor_data):
-            return False
-        
-        # 2. SMC 语义地图验证
-        if not self.smc.verify_all(sensor_data['observations']):
-            return False
-        
-        # 3. KT-MPC 求解 & 证书生成
-        try:
-            u_cmd, kc, dcc, explanation = self.kempc.solve(robot_plan.init_state)
-        except Exception:
-            return False
-        
-        # 4. IEKC 验证（可解释性检查）
-        if explanation is not None:
-            # 检查是否有异常的规则激活模式
-            if not self._check_iekc_pattern(explanation):
-                return False
-        
-        # 5. CTKTP 跨任务迁移验证
-        if self.cttp is not None:
-            active_transferred = self.cttp.get_active_transferred_kcs(
-                robot_plan.mode, sensor_data['terrain']
-            )
-            for kc_trans in active_transferred:
-                if not kc_trans.is_validated:
-                    return False
-        
-        # 6. AKWA 自适应权重验证
-        if self.akwa is not None:
-            current_lambdas = self.akwa.get_current_weights()
-            # 检查权重是否在合理边界内
-            for name, lam in current_lambdas.items():
-                if lam < self.akwa.lambda_min or lam > self.akwa.lambda_max:
-                    return False
-        
-        # 7. KC 验证 (原有逻辑)
-        active_rules = self.wlkb.get_active_rules(robot_plan.mode, sensor_data['terrain'])
-        for kc_rule in active_rules:
-            if not kc_rule.verify(robot_plan.init_state, robot_plan.dynamics):
-                return False
-        
-        # 8. DCC 验证
-        if not dcc.verify(robot_plan.nominal_traj, robot_plan.actual_traj, 
-                         robot_plan.dynamics):
-            return False
-        
-        # 9. 知识库一致性
-        if not self._verify_knowledge_consistency(robot_plan):
-            return False
-        
-        return True
-    
-    def _check_iekc_pattern(self, explanation: 'ExplanationReport') -> bool:
-        """检查 IEKC 激活模式是否异常"""
-        # 如果单一规则的 sigma 极高（>0.9）且惩罚贡献也极高，
-        # 可能表明知识库过于单一，缺乏覆盖
-        if explanation.sigma > 0.9 and explanation.knowledge_penalty > 5.0:
-            # 警告：单一规则主导，建议扩展知识库
-            return True  # 仍准入，但触发警告标志
-        return True
-    
-    def _verify_knowledge_consistency(self, plan: 'RobotPlan') -> bool:
-        """知识库模式一致性检查"""
-        mode = plan.mode
-        if mode == "walking":
-            return self.wlkb.get_active_rules(mode, plan.terrain)
-        elif mode == "standing":
-            return self.sskl.get_active_rules(plan.com_position)
-        elif mode == "transition":
-            return self.tkp.verify_transition(plan.from_mode, plan.to_mode)
-        return True
-```
+**与 v28 的接口约定**：KTCG 新增 `admits_rollout(plan, sensor, traj, u0)` 与 `solve_teacher_action(s)` 两个只读增量接口；原 `admits` 语义不变。AKWA/CTKTP/IEKC 全部原样复用。
 
 ## 3. 复杂度分析（增量更新）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
 |---|---|---|---|
-| IEKC 验证 + 解释生成 | O(N_rule · H) | O(T_exp) | N_rule≤50, H≤20, T_exp=解释历史长度 |
-| CTKTP 迁移因子计算 | O(1) per KC (涉及任务相似度计算) | O(N_kc) | N_kc≤50, 相似度计算 O(n_x²) |
-| AKWA 权重更新 | O(N_rule) | O(N_rule) | N_rule≤50, 违规窗口 T=20 |
-| KT-MPC 求解 | O(N·n_x³ + N·n_u²·m + N_rule·σ) | O(N·n_x + N_rule) | N=20, 增加 σ 因子求解开销 <5% |
-| KTCG 总体 | O(N·n_x³ + Σ_rule·H + CTKTP_overhead) | O(N·n_x + N_rule + CTKTP_state) | 关键路径仍为 KEMPC 求解 |
+| HVPM 训练 | O(epochs·\|D_pref\|·K_v)（离线） | O(K_v·n_params) | K_v=5, \|D_pref\|~1e5 |
+| L 估计（校准） | O(\|calib\|·K_v)（离线一次） | O(1) | \|calib\|=1000 |
+| VAC 在线检查 | O(K_v) | O(1) | K_v=5，<0.05ms |
+| 学生前向 + 自评 | O(n_params) | O(n_params) | 33k 参数，<0.1ms |
+| DGC 随机抽查 | p_check × O(教师求解) | O(1) | 期望摊销 0.05×10ms=0.5ms |
+| 九证 rollout 复查 | O(H_roll·(N_rule+N_dyn)) | O(H_roll) | H_roll=10，无优化器，<1ms |
+| SGDC 采集轮 | O(n_sc·(教师求解+证书)) | O(\|D_bc\|+\|D_pref\|) | 离线，1e4 条轨迹 ≈ 200s |
+| DSCA 更新 + 拟合 | O(\|D_bc\|)（离线/轮） | O(网格数) | 网格 32^d 截断至活跃维 |
+| VAD-KTCG 单步 | 期望 <1ms；最坏 = 教师 15-20ms | O(n_params + H_roll) | 学生先行-教师兜底 |
 
-**实时性**：KT-MPC 求解为主瓶颈，N=20, n_x=12, n_u=6 时典型求解 5-15ms；IEKC 解释生成 <2ms；CTKTP 迁移因子计算 <5ms；AKWA 权重更新 <1ms。总体单步 20ms 以内，满足 50Hz 控制周期。解释生成的额外开销可在非实时周期或关键事件触发时进行。
+**实时性**：典型单步从 v28 的 5-15ms 降至 <1ms（p_check 抽查期望摊销 0.5ms）；最坏情形（连续升级教师）与 v28 持平，不劣化。训练侧成本全部离线。
 
 ## 4. 正确性论证（增量更新）
 
-### 引理 23（IEKC 解释报告的完备性）
+### 引理 26（对齐裕度的保真-价值换算）
 
-**陈述**：IEKC.generate_explanation() 输出的 ExplanationReport 包含该规则在当前轨迹上所有关键状态信息，若规则激活（c_i=1）则 precond_active 中至少应有一条为 True，若规则违规则 postcond_final 为 False。
+**陈述**：设 V_LCB 对 u 满足 L-Lipschitz（相对 ‖·‖₂/u_max 度量），且学生动作满足 ‖π_θ(s) − a*_T(s)‖₂ ≤ ε·u_max。若教师动作在 s 处满足 V_LCB(s, a*_T) ≥ V_min + γ_m，则 V_LCB(s, π_θ(s)) ≥ V_min + γ_m − L·ε；取 γ_m = L·ε 时 VAC 必然通过。
 
-**证明**：由 generate_explanation 遍历整个轨迹前 H 步，逐步计算 precond(x_k) 和 postcond(x_H)，将结果填入 precond_active 和 postcond_final。若 c_i=1 且规则有效，则 precond 在初始状态成立，postcond 在终态成立，故报告的 precond_active 和 postcond_final 正确反映了规则的前后状态一致性。∎
+**证明**：由 Lipschitz 条件，|V_LCB(s,π_θ(s)) − V_LCB(s,a*_T)| ≤ L·‖π_θ(s)−a*_T(s)‖₂/u_max ≤ L·ε。于是 V_LCB(s,π_θ(s)) ≥ V_LCB(s,a*_T) − L·ε ≥ V_min + γ_m − L·ε = V_min。∎
 
-### 引理 24（CTKTP 迁移因子的下界性）
+**工程含义**：γ_m = L·ε 把「对齐质量」与「蒸馏保真度」合并为单一可调参数；训练损失中的违约罚以 V_min + γ_m 为界，正是为此裕度服务。
 
-**陈述**：CTKTP.compute_migration_factor() 输出的 μ_i ∈ [0,1]，且 μ_i ≤ sim(τ_s, τ_t) · ρ(φ_i) · κ_decay ≤ 1。
+### 引理 27（数据规模的统计证书 / Hoeffding）
 
-**证明**：由 μ_i 的定义为三个因子的乘积，每个因子均归一化到 [0,1] 区间（任务相似度通过角度相似度或核间距离归一化，路径相关性通过余弦相似度归一化，时域衰减因子 κ_decay = e^(-γ·Δt) ∈ (0,1]。故 μ_i 的乘积也必然 ∈ (0,1]。∎
+**陈述**：设留出集含 N 个相对部署分布独立同分布的状态，经验违规率 ε̂_v = (1/N)·Σ I[V(x, π_θ(x)) < V_min]。则以概率 ≥ 1−δ，真实违规率 ε_viol ≤ ε̂_v + √(ln(1/δ)/(2N))。取 N=10⁴、δ=0.01，加性间隙 ≈ 0.015。
 
-### 引理 25（AKWA 权重调整的收敛性）
+**证明**：Hoeffding 不等式对指示变量（有界 [0,1]）的直接应用。∎
 
-**陈述**：在连续运行 K 步后，AKWA 更新的 λ_i(k) 若违规率稳定于 ρ*，则 λ_i(k) 收敛于 λ_i^* = λ_i(0) · (1 + η·(ρ* - 0.5))^k。
+**注意**：时序相关下独立样本量退化为 N_eff = N/(2τ_corr)（τ_corr 为自相关时间），DSCA.violation_bound 以 N_eff 修正。
 
-**证明**：由 λ_i(k+1) = λ_i(k) · (1 + η·(δ_violation - 0.5)) 且 δ_violation → ρ*。展开得 λ_i(k) = λ_i(0) · Π_{j=0}^{k-1} (1 + η·(δ_violation(j) - 0.5))。当 δ_violation(j) → ρ* 时，项趋于常数（1 + η·(ρ* - 0.5)），故 λ_i(k) 指数级收敛于 λ_i^*。受 λ_min, λ_max 约束后仍保持在可数范围内。∎
+### 引理 28（覆盖条件下的部署域违规上界）
 
-### 定理（KT-MPC-九证准入门的增强安全性）
+**陈述**：设 P_deploy 在已覆盖 cell 上相对 P_train 的密度比 ≤ ρ_max，未覆盖 cell 的部署质量 ≤ m_0，则 ε_viol^{deploy} ≤ ρ_max·ε_viol^{train} + m_0。
 
-**陈述**：对任意双足机器人计划 Π，`KTCG.admits(Π) = True` ⟺ Π 同时满足：
-1. 结构力学约束（USMC）
-2. 语义一致性（SMC）
-3. 动力学可行性（KT-MPC）
-4. 可解释性报告合规（IEKC + Fil_interp）
-5. 跨任务迁移有效性（CTKTP + Fil_transfer）
-6. 自适应权重合规（AKWA + Fil_dynamics）
-7. walking/staying/transition 知识库一致性
+**证明**：按覆盖分解部署质量：已覆盖部分的违规质量 ≤ ρ_max·ε_viol^{train}（密度比逐 cell 放大训练侧违规率并求和）；未覆盖部分最坏全部违规，贡献 ≤ m_0。两者相加即得。∎
 
-**证明**：由 KTCG.admits 的九项合取定义，逐项调用前一轮及本轮新增的验证函数。IEKC 与 KACG 的 KC 验证逻辑一致，增加了 σ_i 显著性检查；CTKTP 的迁移验证确保跨任务规则的适用性；AKWA 的权重边界检查防止 λ_i 极端值导致的数值不稳定。∎
+**推论**：仅增大 N 不能压缩 m_0 项——必须由 SGDC 对未覆盖 cell 定向补数据。这把「数据规模」与「覆盖扩张」绑定为同一证书（DSC/CCC）的两个坐标，防止「N 很大 → 安全」的错觉。
+
+### 定理（VAD-KTCG 十二证准入门的执行集收缩）
+
+**陈述**：VAD-KTCG.admits(Π)=True ⟺ Π 经由学生路径（九证重放 ∧ VAC ∧ DGC ∧ CCC）或教师路径（v28 九证原语义）被准入，故 Exec_v29 = (Exec_v28 ∩ {π: VAC(π) ∧ DGC(π) ∧ CCC(π)} ∩ student-path) ∪ (Exec_v28 ∩ teacher-path) ⊆ Exec_v28。
+
+**证明**：学生路径第 3 步在学生的短视界 rollout 上显式重放 v28 的全部九项检查（KC 违规、DCC、IEKC、CTKTP、AKWA、知识库一致性等），证书的轨迹级语义保持不变，仅轨迹生成器由「KT-MPC 优化」换成「学生前向 + 抽查修正」；再叠加 VAC（第 1 步）、DGC（第 2 步）、CCC（第 0/4 步）三个合取项。教师路径逐字节复用 KTCG.admits。两条路径的输出均为 Exec_v28 子集，其并集仍 ⊆ Exec_v28。∎
+
+**诚实声明（证书强度的边界）**：引理 26 的 L 是估计量（取 L̂+2·SE 保守化）；引理 27 的 iid 由 SGDC 去相关采样协议近似保证；引理 28 的 ρ_max、m_0 自身有置信区间，应并入阈值。三者均为「概率性证书」，非绝对安全证明——这正是 R26 风险的根源。
 
 ## 5. 已知风险与缓解（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R19 | 常识库覆盖粗糙导致误导优化 | 高 | 1) 知识库持续学习 + 人类反馈标注；2) 事后验证器检测常识-实际偏差；3) 动态调整 λ_i 权重 | 罕见新情景（如极端滑坡）仍可能闭塞 |
-| R20 | KEMPC/QP 求解器数值不稳定 | 中 | 1) 多求解器切换（OSQP → ECOS → 手动PD控制）；2) 软约束自动放宽；3) 热身初始化 | 大规模障碍（>50）时求解超时 |
-| R21 | DCC κ 估计偏小导致误判 | 中 | 1) 在线 δ_f, δ_g 估计 + κ 自适应放大；2) 事故缓冲区；3) 失效时降级到经验控制 | 急剧模型漂移时缓冲仍可能不足 |
-| **R22** | **跨任务迁移的负外部性** | **高** | **1) CTKTP 迁移因子 μ_i 的双向验证（源任务回测 + 目标任务前测）；2) μ_i < 阈值时自动禁用迁移规则；3) 维护迁移日志记录 μ_i 演化轨迹** | **当源任务与目标任务差异极大时，仍可能产生误导性迁移** |
-| **R23** | **AKWA 权重调整过激导致系统震荡** | **中** | **1) 引入权重变化下限 Δλ_min；2) 连续 N 步无违规才允许 λ_i 衰减；3) 热启动期前 K 步锁定 λ_i** | **非平稳环境下 λ_i 可能仍频繁变化，需调参** |
-| **R24** | 解释报告生成开销影响实时性 | 低 | 1) 解释报告异步生成，不参与控制决策核心分支；2) 关键事件再生成；3) 简化模式下关闭解释功能 | 解释功能开关未被及时切换时的延迟 |
+| R19–R24 | v28 全部既有风险 | — | 随 KTCG 九证原样继承 | 不变 |
+| R25 | 价值模型偏好偏差 / Goodhart（学生学会欺骗 V_ψ 而非真正对齐） | 高 | 1) VAC 用 K_v 集成 LCB 而非均值；2) 多标注者加权去偏；3) 对抗性探测集（V_ψ 高分但人工评审低分的样本）回流重训；4) 违约罚取 max 形式限制可被权衡的空间 | 标注者群体系统性偏斜时集成无法消除共享偏差 |
+| R26 | 学生尾部失效 + 证书自证循环（学生偏差、V_ψ、OOD 打分在尾部同时失真） | 高 | 1) DGC 随机教师抽查（p_check=0.05），抽查失败后强制教师接管 K 步；2) 保真阈值 ε 在对抗/尾部留出集上用 split conformal 校准；3) OOD 打分器采用独立骨干，与学生网络无共享参数 | 尾部状态上三证书同时「绿灯」的概率非零，抽查仅有 p_check 拦截概率 |
+| R27 | 数据规模的虚假安全感（scaling law 在分布内外推失效、m_0 低估） | 中 | 1) DSC 显式要求 m_0 ≤ m_max ∧ α ≥ α_min ∧ R² ≥ 0.9，拒绝只报 N；2) SGDC 覆盖缺口定向采样闭环；3) 部署侧在线重估 ρ_max/m_0 | 部署分布漂移使密度比估计过期，重估滞后窗口内无保护 |
 
 ## 6. 本轮最大风险（最终确认）
 
-**一句话**：**跨任务迁移的负外部性**——当源任务的知识迁移到目标任务时，若任务差异过大却因 μ_i 计算不精确而产生「满迁移假象」（μ_i ≈ 1），KEMPC 会根据误导性的迁移规则规避实际需要的控制动作，导致在目标任务下比无知识约束时更不安全。这种风险比单纯的知识闭塞更隐蔽，因为系统表现「正常」（未违规常识），但实际上丧失了应对任务特异性危机（如湿滑地面、剧烈负载变化）的能力，且难以在线检测，是当前方案最大的安全隐患。
+**一句话**：**蒸馏的自证循环**——VAC/DGC/CCC 三张新证书的判据全部来自学习组件（V_ψ、学生集成、覆盖估计），若在分布外尾部状态上三者同时失真，证书会一致地放行一个实际价值失调且不安全的动作，而随机教师抽查只能以 p_check 的小概率拦截；相比 v28「误导性迁移」的单一来源失效，这是把安全性外包给统计模型后出现的**多组件共因失效**，更隐蔽且难以在线归因。
 <!-- ARTIFACT:END -->

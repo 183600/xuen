@@ -25,348 +25,319 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 v28 / IP-462~466 基础上扩展）
+## 0. 新增核心模块（在 IP-455~466 基础上扩展）
 
 | 编号 | 名称 | 类型 | 关键改进（相对 v28） |
 |---|---|---|---|
-| IP-467 | Usability Evaluation Protocol (UEP) + Usability Certificate (UC) | 人因证书 | 把可用性做成可测量证书：UC = (C, L, T, B, U)，几何加权防止单一指标补偿；`usable(π)` 作为准入门条件 |
-| IP-468 | Fleet Joint Knowledge Certificate (FJKC) | 舰队证书 | 共享资源时空占用 O_i、知识一致性 A_ij（版本+λ/μ 剖面）、一致性阈值 A_min；输出舰队一致性证明 |
-| IP-469 | Certificate Conflict Graph (CCG) | 冲突/死锁分析 | 节点=机器人，边=让行关系；给出「无环 + 静态优先序 + 已验证等待计划 ⟹ 无死锁」充分条件 |
-| IP-470 | Fleet Certification Gate (KTCG-Fleet) | 准入舰队长形态 | KTCG-Fleet = KTCG ∪ UEP ∪ FJKC ∪ CCG；Exec_v29 = Exec_v28 ∩ Fil_usability ∩ Fil_fleet ⊆ Exec_v28 |
-| IP-471 | Multi-Robot Evaluation Benchmark (MREB) | 评测基准 | N∈{1,2,5,10} 场景族 + 六维指标；可复现地度量单机/舰队/可用性三重效果 |
+| IP-467 | Human Value Preference Model (HVPM) | 价值模型 | 成对人类偏好 + Bradley-Terry 训练 V_ψ: (x,u)→[0,1]；K_v 集成输出均值 V̄ 与下置信界 V_LCB = V̄ − z·std；在线估计对 u 的 Lipschitz 常数 L |
+| IP-468 | Value-Aligned Objective Synthesizer (VAOS) | 目标合成器 | 把 V_ψ 以「违约罚」形式并入 KT-MPC 代价（约束式而非塑形式，防 Goodhart）；V_min = 教师轨迹价值分位数 Q_τ；对齐裕度 γ_m = L·ε |
+| IP-469 | Scenario Generator & Distillation Corpus (SGDC) | 数据引擎 | 主动场景生成（DSCA 标出的覆盖缺口定向采样）+ 教师 rollout 采集；仅保留九证准入的 (s, a*_T) 对，产出 D_bc ∪ D_pref |
+| IP-470 | Data Scale & Coverage Auditor (DSCA) | 数据审计器 | 覆盖度 C(D)、未覆盖尾部质量 m_0、scaling law ε(N)=c·N^(-α) 拟合（含 R² 报告）；Hoeffding 违规率上界；输出数据充分性证书 DSC |
+| IP-471 | Value-Aligned Distilled Policy (VADP) | 学生策略 | MLP 学生 π_θ + 集成动作标准差 u_ens + 独立骨干 OOD 打分器；前向 <0.1ms；仅作否决器，非安全证明 |
+| IP-472 | Value-Aligned Distillation Cert Gate (VAD-KTCG) | 准入门 | v28 九证（KTCG 原样复用，新增 rollout 级复查接口 admits_rollout）+ VAC/DGC/CCC = 十二证；学生先行-证书裁决-教师兜底 |
 
-## 1. 增量符号体系（定义 1600–1699）
+## 1. 增量符号体系（定义 1600–1664）
 
 | 符号 | 含义 |
 |---|---|
-| C | 可理解性：操作员依据 ExpReport 预测机器人下一步动作的准确率，C ∈ [0,1] |
-| L | 决策时延：从报告呈现到操作员决策的中位时延（秒） |
-| T | 信任校准：T = 1 − ECE(confidence, correctness) ∈ [0,1] |
-| B | 干预负担：窗口内被操作员 override 的决策比例，B ∈ [0,1] |
-| U | 综合可用性：U = Π_k p_k^{w_k}（几何加权），w = (0.35,0.20,0.30,0.15) |
-| O_i(π_i) | 机器人 i 的时空占用集合 {(p,t): p=position(π_i,t)} 外扩 safety_margin |
-| A_ij | 机器人 i,j 的知识一致性 ∈ [0,1]；A = min_{i<j} A_ij（取最差对） |
-| A_min | 舰队知识一致性阈值，默认 0.7 |
-| G_c | 证书冲突图：节点为机器人，边 i→j 表示 i 需向 j 让行 |
-| FleetExec | 舰队可执行集 = ∩_i Exec_i ∩ ConflictFree ∩ KnowledgeConsistent |
-| MREB | 多机评测基准（场景族 + 指标聚合器） |
-| Fil_usability | 可用性过滤器（UC 未达标则拒绝） |
-| Fil_fleet | 舰队过滤器（一致性/冲突/死锁任一失败则拒绝） |
+| V_ψ: (x,u)→[0,1] | 人类价值模型；V_ψ^j 为第 j 个集成成员，K_v=5 |
+| V̄, V_LCB | 集成均值；下置信界 V_LCB = V̄ − z_conf·std（z_conf=1.96） |
+| V_min | 价值下界：教师轨迹价值的离线 τ 分位（τ=0.1） |
+| γ_m = L·ε | 对齐裕度：动作保真换算价值安全的桥梁（引理 26） |
+| L | V_LCB 对 u 的 Lipschitz 常数（校准集在线估计，取 L̂+2·SE 保守值） |
+| ε | 蒸馏动作偏差上界，相对 ‖·‖₂/u_max 归一，缺省 0.05 |
+| π_θ, a*_T(s) | 学生策略动作 / 教师（KT-MPC）动作 |
+| D_bc, D_pref | 行为克隆语料 (s, a*_T) / 偏好对语料 (s, u_a, u_b, y) |
+| β_BT | Bradley-Terry 温度（P(a≻b)=σ(β_BT(V(a)−V(b)))），缺省 4.0 |
+| λ_v | 价值违约罚权重（并入 KT-MPC 代价） |
+| C(D), n_min, c_min | 覆盖度 = 有效 cell 占比；有效 cell 最小样本数 n_min=20；阈值 c_min=0.85 |
+| m_0, m_max | 未覆盖 cell 的部署分布质量及其上界（缺省 0.05） |
+| ρ_max | 已覆盖 cell 上部署/训练密度比上界 |
+| ε_viol, ε̂_v, N_eff | 真实/经验违规率；时序相关下的有效样本量 |
+| α, c | scaling law ε(N)=c·N^(-α) 的指数与系数；α_min=0.4 |
+| u_ens | 集成动作标准差（学生自评不确定度），阈值 u_ens_max=0.10 |
+| ood | OOD 打分（独立骨干：ResNet 式编码器 + Mahalanobis 距离），阈值 0.30 |
+| p_check | DGC 随机教师抽查概率，缺省 0.05 |
+| DSC, VAC, DGC, CCC | 数据充分性 / 价值对齐 / 蒸馏保真 / 覆盖置信 证书 |
+| Exec_v29 | VAD-KTCG 十二证执行集，⊆ Exec_v28 |
 
-## 2. 关键算法骨架
+## 2. 关键算法骨架（在 IP-451~466 骨架上扩展）
 
-### IP-467 Usability Evaluation Protocol (UEP)
-
-```python
-@dataclass
-class UsabilityCertificate:
-    """UC：把「证书是否可用」变成可测量、可准入的证书"""
-    robot_id: str
-    comprehensibility: float = 0.0    # C
-    decision_latency: float = 0.0     # L (s)
-    trust_calibration: float = 0.0    # T
-    intervention_burden: float = 0.0  # B
-    u_min: float = 0.75
-    L_max: float = 2.0
-    T_min: float = 0.70
-    B_max: float = 0.30
-
-    def score(self) -> float:
-        eps = 1e-6
-        w = (0.35, 0.20, 0.30, 0.15)
-        parts = (
-            max(self.comprehensibility, eps),
-            1.0 - min(self.decision_latency / self.L_max, 1.0) + eps,
-            max(self.trust_calibration, eps),
-            1.0 - min(self.intervention_burden / self.B_max, 1.0) + eps,
-        )
-        return float(np.exp(sum(wi * np.log(p) for wi, p in zip(w, parts))))
-
-    def usable(self) -> bool:
-        return (self.score() >= self.u_min
-                and self.decision_latency <= self.L_max
-                and self.trust_calibration >= self.T_min
-                and self.intervention_burden <= self.B_max)
-
-
-class UsabilityEvaluationProtocol:
-    """UEP：从人机交互日志在线估计 UC"""
-    def __init__(self, window: int = 100):
-        self.window = window
-        self.events = []  # (report, action, correct_action, confidence, latency)
-
-    def ingest(self, report, action, correct_action, confidence, latency):
-        self.events.append((report, action, correct_action, confidence, latency))
-        self.events = self.events[-self.window:]
-
-    def evaluate(self, robot_id: str) -> UsabilityCertificate:
-        ev = self.events
-        if not ev:
-            return UsabilityCertificate(robot_id)
-        # C：操作员据报告预测的下一步动作是否正确
-        C = sum(a == c for (_, a, c, _, _) in ev) / len(ev)
-        # L：报告→决策的中位时延
-        L = float(np.median([lat for (*_, lat) in ev]))
-        # T：1 − 分桶期望校准误差 ECE
-        confs = np.array([cf for (_, _, _, cf, _) in ev])
-        corrs = np.array([a == c for (_, a, c, _, _) in ev], dtype=float)
-        bins = np.linspace(0.0, 1.0, 11)
-        ece = 0.0
-        for lo, hi in zip(bins[:-1], bins[1:]):
-            m = (confs >= lo) & (confs < hi)
-            if m.any():
-                ece += (m.mean()) * abs(corrs[m].mean() - confs[m].mean())
-        T = float(np.clip(1.0 - ece, 0.0, 1.0))
-        # B：override 比例（action != 系统建议动作）
-        B = sum(a != c for (_, a, c, _, _) in ev) / len(ev)
-        return UsabilityCertificate(robot_id, C, L, T, B)
-```
-
-### IP-468 Fleet Joint Knowledge Certificate (FJKC)
+### IP-467 Human Value Preference Model (HVPM)
 
 ```python
 @dataclass
-class FleetJointKnowledgeCertificate:
-    """FJKC：舰队级共享知识一致性证明"""
-    fleet_id: str
-    kc_versions: dict[str, str]          # robot_id -> 共享知识库版本哈希
-    lambda_profiles: dict[str, dict]     # robot_id -> {kc_name: λ_i}
-    mu_profiles: dict[str, dict]         # robot_id -> {kc_name: μ_i}
-    A_min: float = 0.70
-    lam_scale: float = 10.0
-    mu_scale: float = 1.0
+class HumanValuePreferenceModel:
+    \"\"\"HVPM：从成对人类偏好学习价值模型 V_ψ: (x,u) → [0,1]\"\"\"
+    ensemble: list          # K_v 个独立初始化的价值网络
+    beta_bt: float = 4.0    # Bradley-Terry 温度
+    z_conf: float = 1.96    # 下置信界分位
+    u_max: float = 1.0      # 控制幅值（归一化基准）
 
-    def pairwise_consistency(self, i: str, j: str) -> float:
-        # 版本一致 + λ/μ 剖面接近，逐规则聚合
-        keys = set(self.lambda_profiles[i]) | set(self.lambda_profiles[j])
-        if not keys:
-            return 1.0
-        acc = 0.0
-        for k in keys:
-            v_ok = 1.0 if self.kc_versions.get(i) == self.kc_versions.get(j) else 0.0
-            dl = abs(self.lambda_profiles[i].get(k, 1.0)
-                     - self.lambda_profiles[j].get(k, 1.0))
-            dm = abs(self.mu_profiles[i].get(k, 1.0)
-                     - self.mu_profiles[j].get(k, 1.0))
-            acc += v_ok * math.exp(-dl / self.lam_scale) * math.exp(-dm / self.mu_scale)
-        return acc / len(keys)
+    def train(self, pref_pairs, lr=1e-3, epochs=50):
+        \"\"\"pref_pairs: [(x, u_a, u_b, y)]，y=1 表示 a ≻ b\"\"\"
+        for vnet in self.ensemble:
+            opt = torch.optim.Adam(vnet.parameters(), lr=lr)
+            for _ in range(epochs):
+                for (x, ua, ub, y) in pref_pairs:
+                    va, vb = vnet(x, ua), vnet(x, ub)
+                    loss = F.binary_cross_entropy_with_logits(
+                        self.beta_bt * (va - vb), torch.tensor(float(y)))
+                    opt.zero_grad(); loss.backward(); opt.step()
 
-    def consistency(self) -> float:
-        ids = list(self.kc_versions)
-        if len(ids) < 2:
-            return 1.0
-        # 取最差对：舰队安全由最薄弱的共识决定
-        return min(self.pairwise_consistency(a, b)
-                   for ai, a in enumerate(ids) for b in ids[ai + 1:])
+    def lcb(self, x, u) -> float:
+        \"\"\"下置信界 V_LCB：对齐证书一律用保守值，不用均值\"\"\"
+        with torch.no_grad():
+            vals = torch.stack([vnet(x, u) for vnet in self.ensemble])
+            return float(vals.mean() - self.z_conf * vals.std(unbiased=False))
 
-    def check_consistency(self) -> bool:
-        return self.consistency() >= self.A_min
+    def estimate_lipschitz_u(self, calib_set, eps=1e-2) -> float:
+        \"\"\"校准集估计 L（保守值 L̂ + 2·SE），供 γ_m = L·ε 使用\"\"\"
+        ratios = []
+        for (x, u1, u2) in calib_set:
+            d = abs(self.lcb(x, u1) - self.lcb(x, u2))
+            n = max(np.linalg.norm(u1 - u2) / self.u_max, eps)
+            ratios.append(d / n)
+        return float(np.mean(ratios) + 2.0 * np.std(ratios) / np.sqrt(len(ratios)))
 ```
 
-### IP-469 Certificate Conflict Graph (CCG)
-
-```python
-class CertificateConflictGraph:
-    """CCG：时空冲突检测 + 无死锁充分条件"""
-    def __init__(self, safety_margin: float = 0.20):
-        self.margin = safety_margin
-
-    def occupancy(self, plan) -> set:
-        # 轨迹离散化为 (cell_x, cell_y, cell_z, t) 集合，按 margin 外扩
-        return plan.space_time_cells(inflation=self.margin)
-
-    def conflict_free(self, plans: dict[str, 'RobotPlan']) -> bool:
-        occ = {rid: self.occupancy(p) for rid, p in plans.items()}
-        ids = list(occ)
-        for ai, i in enumerate(ids):
-            for j in ids[ai + 1:]:
-                if occ[i] & occ[j]:
-                    return False
-        return True
-
-    def build(self, plans: dict[str, 'RobotPlan'],
-              priority: dict[str, int]) -> 'nx.DiGraph':
-        import networkx as nx
-        g = nx.DiGraph()
-        g.add_nodes_from(plans)
-        occ = {rid: self.occupancy(p) for rid, p in plans.items()}
-        ids = list(plans)
-        for ai, i in enumerate(ids):
-            for j in ids[ai + 1:]:
-                if occ[i] & occ[j]:
-                    # 低优先级向高优先级让行（边指向高优先级）
-                    lo, hi = (i, j) if priority[i] > priority[j] else (j, i)
-                    g.add_edge(lo, hi)
-        return g
-
-    def deadlock_free(self, graph, plans) -> bool:
-        import networkx as nx
-        # 充分条件：(1) 让行图无环（静态总序保证无循环等待）
-        if not nx.is_directed_acyclic_graph(graph):
-            return False
-        # (2) 每个机器人都有已验证的等待/站立计划（可安全让行）
-        return all(p.has_certified_wait_plan for p in plans.values())
-```
-
-### IP-470 Fleet Certification Gate (KTCG-Fleet)
+### IP-468 Value-Aligned Objective Synthesizer (VAOS)
 
 ```python
 @dataclass
-class FleetCertificationGate:
-    """KTCG-Fleet：单机九证 ∪ 可用性 ∪ 舰队一致性 ∪ 冲突/死锁"""
-    single_gates: dict[str, 'KnowledgeTransilientCertificationGate']
-    uep: UsabilityEvaluationProtocol
-    fjkc: FleetJointKnowledgeCertificate
-    ccg: CertificateConflictGraph
-    priority: dict[str, int]
+class ValueAlignedObjectiveSynthesizer:
+    \"\"\"VAOS：V_ψ 以违约罚形式并入 KT-MPC；V_min 校准 + γ_m 计算\"\"\"
+    hvpm: HumanValuePreferenceModel
+    v_min_quantile: float = 0.1
+    eps_fidelity: float = 0.05      # 蒸馏动作偏差上界 ε
 
-    def admits(self, fleet_plan: dict[str, 'RobotPlan'],
-               sensor_data: dict) -> bool:
-        # 1. 单机九证（沿用 v28 KTCG）
-        for rid, plan in fleet_plan.items():
-            if not self.single_gates[rid].admits(plan, sensor_data[rid]):
-                return False
-        # 2. 可用性证书（Fil_usability）
-        for rid in fleet_plan:
-            if not self.uep.evaluate(rid).usable():
-                return False
-        # 3. 舰队知识一致性（Fil_fleet）
-        if not self.fjkc.check_consistency():
-            return False
-        # 4. 时空无冲突
-        if not self.ccg.conflict_free(fleet_plan):
-            return False
-        # 5. 无死锁（无环 + 已验证等待计划）
-        g = self.ccg.build(fleet_plan, self.priority)
-        if not self.ccg.deadlock_free(g, fleet_plan):
-            return False
-        return True
+    def calibrate(self, teacher_value_samples):
+        \"\"\"teacher_value_samples: 教师九证准入轨迹上 V_LCB 的采样值\"\"\"
+        vals = sorted(teacher_value_samples)
+        self.v_min = vals[max(0, int(self.v_min_quantile * len(vals)))]
+        self.L = self.hvpm.estimate_lipschitz_u(self._calib_states)
+        self.gamma_m = self.L * self.eps_fidelity   # 引理 26：裕度 = L·ε
+        return self.v_min, self.gamma_m
+
+    def value_penalty(self, x, u) -> float:
+        \"\"\"违约才罚（max 形式）：达标区不受影响，抑制 Goodhart\"\"\"
+        return max(0.0, self.v_min + self.gamma_m - self.hvpm.lcb(x, u))
+
+    # KT-MPC 代价中的接入点（IP-465.solve 内，仅此一处增量）：
+    #   cost += self.weights['knowledge'] * kc_penalty        # 原有
+    #   cost += lambda_v * value_penalty(X[k+1], U[k])        # 新增（k=0..N-1）
 ```
 
-### IP-471 Multi-Robot Evaluation Benchmark (MREB)
+### IP-469 Scenario Generator & Distillation Corpus (SGDC)
 
 ```python
-class MultiRobotEvaluationBenchmark:
-    """MREB：可复现的多机评测聚合器"""
-    def __init__(self, n_robots: int, scenarios: list[str], seeds: int = 20):
-        self.n = n_robots
-        self.scenarios = scenarios
-        self.seeds = seeds
-        self.records = []
+class ScenarioGeneratorDistillationCorpus:
+    \"\"\"SGDC：覆盖缺口定向采样 + 教师采集，产出 D_bc ∪ D_pref\"\"\"
+    def __init__(self, teacher: 'KnowledgeTransilientMPC',
+                 vaos: ValueAlignedObjectiveSynthesizer,
+                 dsca: 'DataScaleCoverageAuditor'):
+        self.teacher, self.vaos, self.dsca = teacher, vaos, dsca
+        self.D_bc, self.D_pref, self.viol_hist = [], [], []
 
-    def run(self, gate, policy) -> dict:
-        for scen in self.scenarios:
-            for seed in range(self.seeds):
-                env = make_fleet_env(scen, self.n, seed)
-                plan = policy.plan(env)
-                admitted = gate.admits(plan, env.sensor_data)
-                roll = env.execute(plan, admitted=admitted)
-                self.records.append({
-                    "scenario": scen, "seed": seed, "admitted": admitted,
-                    "success": roll.success, "conflict": roll.conflict,
-                    "deadlock": roll.deadlock,
-                    "correlated_violation": roll.correlated_violation,
-                    "cert_agreement": roll.cert_agreement,
-                })
-        return self.aggregate()
-
-    def aggregate(self) -> dict:
-        r = self.records
-        n = len(r)
-        return {
-            "joint_success": sum(x["success"] for x in r) / n,
-            "conflict_rate": sum(x["conflict"] for x in r) / n,
-            "deadlock_rate": sum(x["deadlock"] for x in r) / n,
-            "correlated_violation_rate": sum(x["correlated_violation"] for x in r) / n,
-            "cert_agreement": sum(x["cert_agreement"] for x in r) / n,
-            "admission_rate": sum(x["admitted"] for x in r) / n,
-        }
+    def collect_round(self, n_scenarios=500):
+        # 1) 覆盖缺口 → 定向生成场景（主动学习式闭环）
+        gaps = self.dsca.coverage_gaps()
+        scenarios = self._sample_scenarios(bias_toward=gaps, n=n_scenarios)
+        # 2) 教师 rollout：仅保留被九证准入的轨迹（标签质量由 v28 门保证）
+        for sc in scenarios:
+            traj = self.teacher.rollout_with_certs(sc.init_state)
+            if traj.admitted:
+                self.D_bc += self._state_action_pairs(traj)
+                self.D_pref += self._pairwise_perturbations(traj)
+                self.viol_hist.append(
+                    (len(self.D_bc), traj.value_violation_rate))
+        self.dsca.update(self.D_bc)
+        return len(self.D_bc), len(self.D_pref)
 ```
 
-## 3. 复杂度分析（增量）
+### IP-470 Data Scale & Coverage Auditor (DSCA)
+
+```python
+@dataclass
+class DataScaleCoverageAuditor:
+    \"\"\"DSCA：把数据规模变成可证书化的量\"\"\"
+    feature_fn: Callable        # ψ(s)：状态 → 低维特征（分格用）
+    grid_res: int = 32
+    n_min: int = 20
+    c_min: float = 0.85
+    m_max: float = 0.05
+    alpha_min: float = 0.4
+
+    def update(self, D_bc):
+        cells = self._grid(self.feature_fn, D_bc)
+        occupied = {c for c, n in cells.items() if n >= self.n_min}
+        self.C_D = len(occupied) / max(len(cells), 1)
+        self.m_0 = self._estimate_tail_mass()       # 部署分布估计器给出
+        return self.C_D, self.m_0
+
+    def fit_scaling_law(self, viol_hist):
+        \"\"\"log-log 最小二乘拟合 ε(N)=c·N^(-α)，报告 R² 与外推区间\"\"\"
+        xs = np.log([n for n, _ in viol_hist])
+        ys = np.log([e for _, e in viol_hist])
+        slope, _ = np.polyfit(xs, ys, 1)
+        self.alpha = -slope
+        self.fit_r2 = self._r2(xs, ys, slope)
+        self.dsc_pass = (self.C_D >= self.c_min and self.m_0 <= self.m_max
+                         and self.alpha >= self.alpha_min
+                         and self.fit_r2 >= 0.9)
+        return self.dsc_pass
+
+    def violation_bound(self, eps_hat, N, delta=0.01):
+        \"\"\"引理 27：数据规模 → 违规率上界（时序相关时以 N_eff 修正）\"\"\"
+        return eps_hat + math.sqrt(math.log(1.0 / delta) / (2 * N))
+
+    def coverage_gaps(self):
+        \"\"\"低覆盖/未覆盖 cell 列表，供 SGDC 定向补数据\"\"\"
+        return self._cells_below(self.n_min)
+```
+
+### IP-471 Value-Aligned Distilled Policy (VADP)
+
+```python
+@dataclass
+class ValueAlignedDistilledPolicy:
+    \"\"\"VADP：学生策略 + 运行时自评估（仅作否决器，非安全证明）\"\"\"
+    policy_net: torch.nn.Module     # π_θ: s → u（相对 u_max 归一）
+    hvpm: HumanValuePreferenceModel
+    vaos: ValueAlignedObjectiveSynthesizer
+    u_ens_max: float = 0.10
+    ood_max: float = 0.30
+
+    def propose(self, s):
+        \"\"\"返回 (u_stu, u_ens, ood)；MLP 2×128 ≈ 33k 参数，前向 <0.1ms\"\"\"
+        with torch.no_grad():
+            u = self.policy_net(s)
+            u_ens = self._ensemble_action_std(s, n_boot=4)
+            ood = self.ood_scorer(s)    # 独立骨干，与学生网络无共享参数
+        return u, float(u_ens), float(ood)
+
+    def quick_reject(self, s, u, u_ens, ood) -> bool:
+        \"\"\"学生侧快速否决：不确定度 / OOD / 价值 LCB 任一越界\"\"\"
+        if u_ens > self.u_ens_max or ood > self.ood_max:
+            return True
+        return self.hvpm.lcb(s, u) < self.vaos.v_min    # VAC 违约
+```
+
+### IP-472 Value-Aligned Distillation Cert Gate (VAD-KTCG)
+
+```python
+@dataclass
+class ValueAlignedDistillationCertGate:
+    \"\"\"VAD-KTCG：v28 九证 + VAC/DGC/CCC；学生先行-证书裁决-教师兜底\"\"\"
+    ktcg: 'KnowledgeTransilientCertificationGate'   # v28 九证门（教师）
+    vadp: ValueAlignedDistilledPolicy
+    dsca: DataScaleCoverageAuditor
+    eps_fidelity: float = 0.05
+    p_check: float = 0.05
+
+    def admits(self, robot_plan, sensor_data):
+        \"\"\"返回 (admitted, u_cmd, path)；path ∈ {student, teacher, fallback}\"\"\"
+        # 0) CCC(a)：数据侧 DSC（离线重训后更新，在线只读）
+        if not self.dsca.dsc_pass:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        s = robot_plan.init_state
+        u_stu, u_ens, ood = self.vadp.propose(s)
+
+        # 1) VAC：价值下置信界达标
+        if self.vadp.hvpm.lcb(s, u_stu) < self.vadp.vaos.v_min:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        # 2) DGC：随机教师抽查——保真失败即教师动作直接接管
+        if random.random() < self.p_check:
+            a_T = self.ktcg.kempc.solve_teacher_action(s)
+            if np.linalg.norm(u_stu - a_T) <= self.eps_fidelity * self.u_max:
+                u_cmd = u_stu
+            else:
+                u_cmd = a_T
+        else:
+            u_cmd = u_stu
+
+        # 3) 九证重放：学生短视界 rollout 上执行 v28 全部检查（无优化器，
+        #    仅前向模拟：KC 违规、DCC κ、IEKC 解释、CTKTP、AKWA 边界等）
+        traj_stu = self._short_rollout(s, u_cmd, H=10)
+        if not self.ktcg.admits_rollout(robot_plan, sensor_data, traj_stu, u_cmd):
+            return self._teacher_path(robot_plan, sensor_data)
+
+        # 4) CCC(b)：学生自评（必要条件）
+        if u_ens > self.vadp.u_ens_max or ood > self.vadp.ood_max:
+            return self._teacher_path(robot_plan, sensor_data)
+
+        return True, u_cmd, \"student\"
+
+    def _teacher_path(self, robot_plan, sensor_data):
+        \"\"\"教师路径 = v28 语义原样：KT-MPC 求解 + KTCG.admits\"\"\"
+        ok = self.ktcg.admits(robot_plan, sensor_data)
+        return ok, self.ktcg.last_u_cmd, (\"teacher\" if ok else \"fallback\")
+```
+
+**与 v28 的接口约定**：KTCG 新增 `admits_rollout(plan, sensor, traj, u0)` 与 `solve_teacher_action(s)` 两个只读增量接口；原 `admits` 语义不变。AKWA/CTKTP/IEKC 全部原样复用。
+
+## 3. 复杂度分析（增量更新）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
 |---|---|---|---|
-| UEP 在线评估 | O(W) | O(W) | W ≤ 200 事件窗口 |
-| FJKC 一致性 | O(N²·K) | O(N·K) | N ≤ 10，K ≤ 50 共享规则 |
-| CCG 占用/冲突 | O(N²·H·M) | O(N·H·M) | H ≤ 20，M 为离散格数（可用区间加速） |
-| CCG 死锁检测 | O(N + E) | O(N + E) | E ≤ N²，DAG 判定 |
-| KTCG-Fleet | O(N·(H·n_x³)) + O(N²·K) + O(N²·H·M) | O(N·H·n_x + N·K) | 主导项仍为 N 次单机 KTCG 求解 |
+| HVPM 训练 | O(epochs·\|D_pref\|·K_v)（离线） | O(K_v·n_params) | K_v=5, \|D_pref\|~1e5 |
+| L 估计（校准） | O(\|calib\|·K_v)（离线一次） | O(1) | \|calib\|=1000 |
+| VAC 在线检查 | O(K_v) | O(1) | K_v=5，<0.05ms |
+| 学生前向 + 自评 | O(n_params) | O(n_params) | 33k 参数，<0.1ms |
+| DGC 随机抽查 | p_check × O(教师求解) | O(1) | 期望摊销 0.05×10ms=0.5ms |
+| 九证 rollout 复查 | O(H_roll·(N_rule+N_dyn)) | O(H_roll) | H_roll=10，无优化器，<1ms |
+| SGDC 采集轮 | O(n_sc·(教师求解+证书)) | O(\|D_bc\|+\|D_pref\|) | 离线，1e4 条轨迹 ≈ 200s |
+| DSCA 更新 + 拟合 | O(\|D_bc\|)（离线/轮） | O(网格数) | 网格 32^d 截断至活跃维 |
+| VAD-KTCG 单步 | 期望 <1ms；最坏 = 教师 15-20ms | O(n_params + H_roll) | 学生先行-教师兜底 |
 
-**实时性**：N=10、单机 KTCG 单步 15ms 时，舰队串行求解约 150ms；可采用「并行单机求解 + 集中冲突裁决」把关键路径压到约 20–30ms。UEP 与 FJKC 可低频异步更新（1–5Hz），CCG 在规划层（10Hz）运行，不进入 50Hz 内环。
+**实时性**：典型单步从 v28 的 5-15ms 降至 <1ms（p_check 抽查期望摊销 0.5ms）；最坏情形（连续升级教师）与 v28 持平，不劣化。训练侧成本全部离线。
 
-## 4. 正确性论证（增量）
+## 4. 正确性论证（增量更新）
 
-### 引理 26（UC 的崩塌敏感性）
+### 引理 26（对齐裕度的保真-价值换算）
 
-**陈述**：U ∈ (0,1]，且当任一子指标趋近其最差值（C→0、L→L_max、T→0、B→B_max）时，U→0。
+**陈述**：设 V_LCB 对 u 满足 L-Lipschitz（相对 ‖·‖₂/u_max 度量），且学生动作满足 ‖π_θ(s) − a*_T(s)‖₂ ≤ ε·u_max。若教师动作在 s 处满足 V_LCB(s, a*_T) ≥ V_min + γ_m，则 V_LCB(s, π_θ(s)) ≥ V_min + γ_m − L·ε；取 γ_m = L·ε 时 VAC 必然通过。
 
-**证明**：U 为各归一化子项的正权重几何平均，指数权重 w_k>0。若某项 p_k→0，则 log U = Σ w_j log p_j → −∞，故 U→0；而几何平均 ≤ 算术平均保证 U≤1，eps 保证非零下界。因此任一维度的崩塌都无法被其他维度的满分线性补偿。∎
+**证明**：由 Lipschitz 条件，|V_LCB(s,π_θ(s)) − V_LCB(s,a*_T)| ≤ L·‖π_θ(s)−a*_T(s)‖₂/u_max ≤ L·ε。于是 V_LCB(s,π_θ(s)) ≥ V_LCB(s,a*_T) − L·ε ≥ V_min + γ_m − L·ε = V_min。∎
 
-### 引理 27（舰队准入的可靠性/单调性）
+**工程含义**：γ_m = L·ε 把「对齐质量」与「蒸馏保真度」合并为单一可调参数；训练损失中的违约罚以 V_min + γ_m 为界，正是为此裕度服务。
 
-**陈述**：`KTCG-Fleet.admits(Π)=True ⟹ ∀i, KTCG_i.admits(π_i)=True`，即 FleetExec ⊆ ∩_i Exec_i ⊆ Exec_v28。
+### 引理 27（数据规模的统计证书 / Hoeffding）
 
-**证明**：`admits` 的第一段逐机调用单机 KTCG，任一失败即返回 False；后续四段只做额外合取，不放松任何单机约束。故通过舰队准入蕴含逐机通过。∎
+**陈述**：设留出集含 N 个相对部署分布独立同分布的状态，经验违规率 ε̂_v = (1/N)·Σ I[V(x, π_θ(x)) < V_min]。则以概率 ≥ 1−δ，真实违规率 ε_viol ≤ ε̂_v + √(ln(1/δ)/(2N))。取 N=10⁴、δ=0.01，加性间隙 ≈ 0.015。
 
-### 引理 28（CCG 冲突检测的可靠性）
+**证明**：Hoeffding 不等式对指示变量（有界 [0,1]）的直接应用。∎
 
-**陈述**：若 `conflict_free(Π)=True`，则任意 i≠j 的时空占用集合满足 O_i ∩ O_j = ∅（在 margin 外扩后），即任意时刻任意两机间距 ≥ margin。
+**注意**：时序相关下独立样本量退化为 N_eff = N/(2τ_corr)（τ_corr 为自相关时间），DSCA.violation_bound 以 N_eff 修正。
 
-**证明**：`conflict_free` 对所有机器人对做 O_i∩O_j 的穷举判定，仅当全部为空才返回 True；占用集合已按 margin 外扩，故交集为空等价于原始轨迹距离大于 margin。∎
+### 引理 28（覆盖条件下的部署域违规上界）
 
-### 引理 29（无死锁的充分条件）
+**陈述**：设 P_deploy 在已覆盖 cell 上相对 P_train 的密度比 ≤ ρ_max，未覆盖 cell 的部署质量 ≤ m_0，则 ε_viol^{deploy} ≤ ρ_max·ε_viol^{train} + m_0。
 
-**陈述**：若让行图 G_c 无环，且每台机器人持有已验证的等待/站立计划，则舰队执行不会发生循环等待型死锁。
+**证明**：按覆盖分解部署质量：已覆盖部分的违规质量 ≤ ρ_max·ε_viol^{train}（密度比逐 cell 放大训练侧违规率并求和）；未覆盖部分最坏全部违规，贡献 ≤ m_0。两者相加即得。∎
 
-**证明**：死锁的必要条件之一是资源等待图中存在环（循环等待）。静态优先序使每条冲突边的方向由低优先级指向高优先级，若 G_c 无环，则不存在循环等待；又因每台被让行方都能执行已验证的等待计划（不会因等待本身违反单机安全证书），系统可在有限冲突时长后推进。∎
+**推论**：仅增大 N 不能压缩 m_0 项——必须由 SGDC 对未覆盖 cell 定向补数据。这把「数据规模」与「覆盖扩张」绑定为同一证书（DSC/CCC）的两个坐标，防止「N 很大 → 安全」的错觉。
 
-### 定理（KTCG-Fleet 的三重增强安全性）
+### 定理（VAD-KTCG 十二证准入门的执行集收缩）
 
-**陈述**：对任意舰队计划 Π，`KTCG-Fleet.admits(Π)=True` ⟹ Π 同时满足：(1) 每台机器人通过 v28 九证；(2) 每个操作员的 UC 可用（U≥u_min 且 L≤L_max、T≥T_min、B≤B_max）；(3) 舰队知识一致（A≥A_min）；(4) 时空无冲突；(5) 无死锁（G_c 无环且等待计划已验证）。
+**陈述**：VAD-KTCG.admits(Π)=True ⟺ Π 经由学生路径（九证重放 ∧ VAC ∧ DGC ∧ CCC）或教师路径（v28 九证原语义）被准入，故 Exec_v29 = (Exec_v28 ∩ {π: VAC(π) ∧ DGC(π) ∧ CCC(π)} ∩ student-path) ∪ (Exec_v28 ∩ teacher-path) ⊆ Exec_v28。
 
-**证明**：由 `admits` 的五段合取定义逐项对应引理 27–29；可用性段直接由 `UC.usable()` 的合取定义给出；一致性段由 `check_consistency` 的阈值判定给出。故结论成立，且 Exec_v29 = Exec_v28 ∩ Fil_usability ∩ Fil_fleet ⊆ Exec_v28。∎
+**证明**：学生路径第 3 步在学生的短视界 rollout 上显式重放 v28 的全部九项检查（KC 违规、DCC、IEKC、CTKTP、AKWA、知识库一致性等），证书的轨迹级语义保持不变，仅轨迹生成器由「KT-MPC 优化」换成「学生前向 + 抽查修正」；再叠加 VAC（第 1 步）、DGC（第 2 步）、CCC（第 0/4 步）三个合取项。教师路径逐字节复用 KTCG.admits。两条路径的输出均为 Exec_v28 子集，其并集仍 ⊆ Exec_v28。∎
 
-## 5. 实验设计（MREB + 人因研究）
+**诚实声明（证书强度的边界）**：引理 26 的 L 是估计量（取 L̂+2·SE 保守化）；引理 27 的 iid 由 SGDC 去相关采样协议近似保证；引理 28 的 ρ_max、m_0 自身有置信区间，应并入阈值。三者均为「概率性证书」，非绝对安全证明——这正是 R26 风险的根源。
 
-**场景族**：平地、斜坡、湿滑、楼梯、窄通道（强制共享）、动态障碍；N ∈ {1,2,5,10}；每配置 20 seeds。
-**对照组**：
-- B0：v28 单机九证 + 贪心多机（无舰队协调、无可用性门）；
-- B1：v29 去掉可用性门（只做舰队一致性/冲突/死锁）；
-- B2：v29 完整（KTCG-Fleet）。
-
-**预期/模拟结果（N=10，窄通道+动态障碍，均值）**：
-
-| 指标 | B0 (v28) | B1 (无可用性门) | B2 (KTCG-Fleet) |
-|---|---|---|---|
-| 联合成功率 | 0.71 | 0.86 | 0.91 |
-| 冲突率 | 0.18 | 0.03 | 0.01 |
-| 死锁率 | 0.12 | 0.04 | 0.008 |
-| 相关违规率 | 0.09 | 0.05 | 0.02 |
-| 证书一致率 | 0.62 | 0.81 | 0.93 |
-| 准入率 | 0.88 | 0.74 | 0.69 |
-
-**人因研究（12 名操作员，3 条件 × 30 次决策，被试内设计）**：
-
-| 条件 | C | L(s) | T | B | U |
-|---|---|---|---|---|---|
-| 原始证书（无解释） | 0.52 | 3.6 | 0.48 | 0.41 | 0.43 |
-| v28 ExpReport | 0.71 | 2.1 | 0.66 | 0.29 | 0.63 |
-| v29 UC 门控+解释 | 0.84 | 1.4 | 0.79 | 0.22 | 0.78 |
-
-**关键观察（待验证假设）**：可用性门会降低准入率（0.88→0.69），但把「被操作员误用的证书」挡在门外，换来更高的联合成功率与更低的相关违规率——即「少而可用」优于「多而不可用」。多机相关违规率的下降主要来自 FJKC 的版本/λ/μ 对齐，而非单纯冲突检测。
-
-## 6. 已知风险与缓解（增量）
+## 5. 已知风险与缓解（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R25 | 可用性指标 Goodhart 化（操作员为分数而表演） | 高 | 1) 隐藏部分指标、随机抽检；2) 以真实任务成功率做外锚；3) 定期更换评估场景防过拟合 | 长期部署后操作员行为漂移仍会污染指标 |
-| R26 | 多机组合覆盖不完备，相关失效落在盲区 | 高 | 1) 场景族分层抽样 + 对抗性生成；2) 故障注入（共享知识污染）；3) 影子模式线上回放 | 组合爆炸下无法穷尽，极端协同失效仍可能漏检 |
-| R27 | FJKC/CCG 的 O(N²) 实时开销 | 中 | 1) 空间分簇后只在邻域内做配对；2) 一致性低频异步；3) 增量更新冲突图 | 超大规模舰队（N>50）仍需分层调度 |
-| R28 | 静态优先序导致低优先级机器人饿死/效率下降 | 中 | 1) 带 aging 的优先级；2) 定期重排但保证无环；3) 饥饿检测触发重规划 | 动态重排可能引入瞬时循环等待 |
-| R29 | 人因实验样本小、外部效度低 | 中 | 1) 多中心复现；2) 混合在线 A/B；3) 报告置信区间而非点估计 | 实验室结论到实环仍有落差 |
+| R19–R24 | v28 全部既有风险 | — | 随 KTCG 九证原样继承 | 不变 |
+| R25 | 价值模型偏好偏差 / Goodhart（学生学会欺骗 V_ψ 而非真正对齐） | 高 | 1) VAC 用 K_v 集成 LCB 而非均值；2) 多标注者加权去偏；3) 对抗性探测集（V_ψ 高分但人工评审低分的样本）回流重训；4) 违约罚取 max 形式限制可被权衡的空间 | 标注者群体系统性偏斜时集成无法消除共享偏差 |
+| R26 | 学生尾部失效 + 证书自证循环（学生偏差、V_ψ、OOD 打分在尾部同时失真） | 高 | 1) DGC 随机教师抽查（p_check=0.05），抽查失败后强制教师接管 K 步；2) 保真阈值 ε 在对抗/尾部留出集上用 split conformal 校准；3) OOD 打分器采用独立骨干，与学生网络无共享参数 | 尾部状态上三证书同时「绿灯」的概率非零，抽查仅有 p_check 拦截概率 |
+| R27 | 数据规模的虚假安全感（scaling law 在分布内外推失效、m_0 低估） | 中 | 1) DSC 显式要求 m_0 ≤ m_max ∧ α ≥ α_min ∧ R² ≥ 0.9，拒绝只报 N；2) SGDC 覆盖缺口定向采样闭环；3) 部署侧在线重估 ρ_max/m_0 | 部署分布漂移使密度比估计过期，重估滞后窗口内无保护 |
 
-## 7. 本轮最大风险（最终确认）
+## 6. 本轮最大风险（最终确认）
 
-**一句话**：**评测的 Goodhart 化与覆盖幻觉**——一旦可用性分数与多机基准成为优化目标，系统会优先「通过评测」而非「真正可被使用、真正安全」，而多机组合的覆盖永远不完备，最危险的跨机相关失效恰好落在基准盲区，最终用一份漂亮的评测报告掩盖了真实风险。
+**一句话**：**蒸馏的自证循环**——VAC/DGC/CCC 三张新证书的判据全部来自学习组件（V_ψ、学生集成、覆盖估计），若在分布外尾部状态上三者同时失真，证书会一致地放行一个实际价值失调且不安全的动作，而随机教师抽查只能以 p_check 的小概率拦截；相比 v28「误导性迁移」的单一来源失效，这是把安全性外包给统计模型后出现的**多组件共因失效**，更隐蔽且难以在线归因。
 <!-- ARTIFACT:END -->
