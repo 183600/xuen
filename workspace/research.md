@@ -25,663 +25,348 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-455~461 基础上扩展）
+## 0. 新增核心模块（在 v28 / IP-462~466 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 v27） |
+| 编号 | 名称 | 类型 | 关键改进（相对 v28） |
 |---|---|---|---|
-| IP-462 | Interpretability-Enhanced Knowledge Certificate (IEKC) | 常识证书 | 在 KC 基础上增加 explanation metadata：IEKC = (P, Q, φ, σ, H) 其中 σ ∈ [0,1] 为激活显著性；输出时同步生成解释报告 ExpReport(kc, traj) |
-| IP-463 | Cross-Task Knowledge Transfer Protocol (CTKTP) | 知识协议 | 源任务 τ_s 到目标任务 τ_t 的 KC 迁移协议；定义迁移因子 μ_i = sim(τ_s, τ_t) · ρ(φ_i) · κ_decay；输出迁移验证证书 TCV |
-| IP-464 | Adaptive Knowledge Weight Adjustment (AKWA) | 控制算法 | 基于实时违规指标的 λ_i 动态调整：λ_i(k+1) = λ_i(k) · (1 + η · δ_violation)；下界 λ_min, 上界 λ_max 防止惩罚炸裂/消失 |
-| IP-465 | Knowledge-Transilient MPC (KT-MPC) | 控制算法 | KEMPC ∪ IEKC ∪ CTKTP ∪ AKWA 四位一体；Exec_v28 = Exec_v27 ∩ Fil_knowledge ∩ Fil_dynamics ∩ Fil_interp ∩ Fil_transfer ⊂ Exec_v27 |
-| IP-466 | Knowledge-Transilient Cert Gate (KTCG) | 准入门终极形态 | KTCG = KACG ∪ IEKC ∪ CTKTP ∪ AKWA 九证一体；Exec_v28 = Exec_v27 ∩ {π: IEKC(π) ∧ CTKTP(π) ∧ AKWA(π)} ⊆ Exec_v27 |
+| IP-467 | Usability Evaluation Protocol (UEP) + Usability Certificate (UC) | 人因证书 | 把可用性做成可测量证书：UC = (C, L, T, B, U)，几何加权防止单一指标补偿；`usable(π)` 作为准入门条件 |
+| IP-468 | Fleet Joint Knowledge Certificate (FJKC) | 舰队证书 | 共享资源时空占用 O_i、知识一致性 A_ij（版本+λ/μ 剖面）、一致性阈值 A_min；输出舰队一致性证明 |
+| IP-469 | Certificate Conflict Graph (CCG) | 冲突/死锁分析 | 节点=机器人，边=让行关系；给出「无环 + 静态优先序 + 已验证等待计划 ⟹ 无死锁」充分条件 |
+| IP-470 | Fleet Certification Gate (KTCG-Fleet) | 准入舰队长形态 | KTCG-Fleet = KTCG ∪ UEP ∪ FJKC ∪ CCG；Exec_v29 = Exec_v28 ∩ Fil_usability ∩ Fil_fleet ⊆ Exec_v28 |
+| IP-471 | Multi-Robot Evaluation Benchmark (MREB) | 评测基准 | N∈{1,2,5,10} 场景族 + 六维指标；可复现地度量单机/舰队/可用性三重效果 |
 
-## 1. 增量符号体系（定义 1500–1599）
+## 1. 增量符号体系（定义 1600–1699）
 
 | 符号 | 含义 |
 |---|---|
-| σ_i | IEKC 的激活显著性，σ_i ∈ [0,1]，反映规则 c_i 在当前状态下的重要性 |
-| μ_i | 跨任务迁移因子，μ_i ∈ [0,1]，μ_i = 1 为完全迁移，μ_i = 0 为无迁移 |
-| sim(τ_s, τ_t) | 任务相似度度量，基于 MDP 需似度或几何近似度 |
-| ρ(φ_i) | 推理路径相关性，ρ(φ_i) = cos-sim(φ_i^s, φ_i^t) |
-| κ_decay | 时域衰减因子，κ_decay = e^(-γ·Δt)，γ > 0 为老化率 |
-| δ_violation | 违规指标：δ_violation = (1/T) · Σ_{k=T-T+1}^T I[c_i 违规 at step k] |
-| η | 学习率，η ∈ (0, 1] 控制 λ_i 调整速度 |
-| λ_min, λ_max | λ_i 的下/上界，防止数值异常 |
-| ExpReport | 可解释性报告：哪些规则激活、权重贡献、决策路径可视化 |
-| Fil_interp | KTCG 的可解释性过滤器 |
-| Fil_transfer | KTCG 的跨任务迁移过滤器 |
+| C | 可理解性：操作员依据 ExpReport 预测机器人下一步动作的准确率，C ∈ [0,1] |
+| L | 决策时延：从报告呈现到操作员决策的中位时延（秒） |
+| T | 信任校准：T = 1 − ECE(confidence, correctness) ∈ [0,1] |
+| B | 干预负担：窗口内被操作员 override 的决策比例，B ∈ [0,1] |
+| U | 综合可用性：U = Π_k p_k^{w_k}（几何加权），w = (0.35,0.20,0.30,0.15) |
+| O_i(π_i) | 机器人 i 的时空占用集合 {(p,t): p=position(π_i,t)} 外扩 safety_margin |
+| A_ij | 机器人 i,j 的知识一致性 ∈ [0,1]；A = min_{i<j} A_ij（取最差对） |
+| A_min | 舰队知识一致性阈值，默认 0.7 |
+| G_c | 证书冲突图：节点为机器人，边 i→j 表示 i 需向 j 让行 |
+| FleetExec | 舰队可执行集 = ∩_i Exec_i ∩ ConflictFree ∩ KnowledgeConsistent |
+| MREB | 多机评测基准（场景族 + 指标聚合器） |
+| Fil_usability | 可用性过滤器（UC 未达标则拒绝） |
+| Fil_fleet | 舰队过滤器（一致性/冲突/死锁任一失败则拒绝） |
 
-## 2. 关键算法骨架（在 IP-451~461 骨架上扩展）
+## 2. 关键算法骨架
 
-### IP-462 Interpretability-Enhanced Knowledge Certificate (IEKC)
+### IP-467 Usability Evaluation Protocol (UEP)
 
 ```python
 @dataclass
-class InterpretabilityEnhancedKnowledgeCertificate:
-    """IEKC：在 KC 基础上增加 explanation metadata"""
-    name: str                       # 常识规则名称
-    precond: Callable               # 前置条件 P(x)
-    postcond: Callable              # 后置条件 Q(x)
-    phi: str = ""                   # 推理路径描述（可查阅、可复现）
-    H: int = 10                     # 预测时域步数
-    is_active: bool = True          # 当前是否激活
-    violation_count: int = 0        # 违规次数统计
-    sigma: float = 1.0              # IEKC 激活显著性，σ ∈ [0,1]
-    explanation_history: list = field(default_factory=list)  # 解释历史
-    
-    def check_violation(self, trajectory: Tensor, dt: float, 
-                        dynamics: Callable) -> bool:
-        """检查常识在给定轨迹上是否被违反"""
-        x_k = trajectory[0]
-        x_H = trajectory[min(len(trajectory)-1, self.H-1)]
-        if not self.precond(x_k):
-            return False  # 前置不满足，规则不适用
-        return not self.postcond(x_H)
-    
-    def verify(self, initial_state: Tensor, dynamics: Callable, 
-               horizon: int = None) -> bool:
-        """存在性验证：∃π: P(x_k) ⇒ Q(x_{k+H})"""
-        H = horizon if horizon is not None else self.H
-        for traj in self._sample_trajectories(initial_state, dynamics, H, n_samples=100):
-            if self.postcond(traj[-1]) and not self.check_violation(traj, 1/dynamics.dt, dynamics):
-                return True
-        return False
-    
-    def generate_explanation(self, trajectory: Tensor, dt: float, 
-                            dynamics: Callable, x0: Tensor) -> 'ExplanationReport':
-        """生成解释报告：规则激活情况、权重贡献、关键状态"""
-        active_preconds = []
-        postcond_results = []
-        for k in range(min(len(trajectory), self.H)):
-            x_k = trajectory[k]
-            pre = self.precond(x_k)
-            active_preconds.append(pre)
-            if k == min(len(trajectory)-1, self.H-1):
-                post = self.postcond(x_k)
-                postcond_results.append(post)
-        
-        # 计算权重贡献
-        penalty = self._compute_penalty_contribution(trajectory, dt, dynamics)
-        
-        report = ExplanationReport(
-            rule_name=self.name,
-            precond_active=active_preconds,
-            postcond_final=postcond_results[-1] if postcond_results else True,
-            sigma=self.sigma,
-            knowledge_penalty=penalty,
-            critical_states=self._identify_critical_states(trajectory),
-            phi=self.phi
-        )
-        self.explanation_history.append(report)
-        return report
-    
-    def _compute_penalty_contribution(self, trajectory: Tensor, dt: float, 
-                                        dynamics: Callable) -> float:
-        """计算该规则对总知识惩罚的贡献"""
-        x_H = trajectory[min(len(trajectory)-1, self.H-1)]
-        pre_ok = self.precond(x_H[0]) if len(x_H) > 0 else True
-        if not pre_ok:
-            return 0.0  # 前置不满足，不计入惩罚
-        viol = not self.postcond(x_H)
-        return (1.0 - float(self.sigma)) if viol else 0.0
-    
-    def _identify_critical_states(self, trajectory: Tensor) -> list:
-        """识别导致违规/激活的关键状态"""
-        critical = []
-        for k in range(min(len(trajectory), self.H)):
-            x_k = trajectory[k]
-            if not self.precond(x_k):
-                critical.append(("precond_fail", k, x_k.tolist()))
-        return critical
+class UsabilityCertificate:
+    """UC：把「证书是否可用」变成可测量、可准入的证书"""
+    robot_id: str
+    comprehensibility: float = 0.0    # C
+    decision_latency: float = 0.0     # L (s)
+    trust_calibration: float = 0.0    # T
+    intervention_burden: float = 0.0  # B
+    u_min: float = 0.75
+    L_max: float = 2.0
+    T_min: float = 0.70
+    B_max: float = 0.30
 
-@dataclass
-class ExplanationReport:
-    """可解释性报告：用于人机交互和诊断"""
-    rule_name: str
-    precond_active: list[bool]
-    postcond_final: bool
-    sigma: float
-    knowledge_penalty: float
-    critical_states: list[tuple[str, int, list[float]]]
-    phi: str
-    timestamp: float = field(default_factory=time.time)
+    def score(self) -> float:
+        eps = 1e-6
+        w = (0.35, 0.20, 0.30, 0.15)
+        parts = (
+            max(self.comprehensibility, eps),
+            1.0 - min(self.decision_latency / self.L_max, 1.0) + eps,
+            max(self.trust_calibration, eps),
+            1.0 - min(self.intervention_burden / self.B_max, 1.0) + eps,
+        )
+        return float(np.exp(sum(wi * np.log(p) for wi, p in zip(w, parts))))
+
+    def usable(self) -> bool:
+        return (self.score() >= self.u_min
+                and self.decision_latency <= self.L_max
+                and self.trust_calibration >= self.T_min
+                and self.intervention_burden <= self.B_max)
+
+
+class UsabilityEvaluationProtocol:
+    """UEP：从人机交互日志在线估计 UC"""
+    def __init__(self, window: int = 100):
+        self.window = window
+        self.events = []  # (report, action, correct_action, confidence, latency)
+
+    def ingest(self, report, action, correct_action, confidence, latency):
+        self.events.append((report, action, correct_action, confidence, latency))
+        self.events = self.events[-self.window:]
+
+    def evaluate(self, robot_id: str) -> UsabilityCertificate:
+        ev = self.events
+        if not ev:
+            return UsabilityCertificate(robot_id)
+        # C：操作员据报告预测的下一步动作是否正确
+        C = sum(a == c for (_, a, c, _, _) in ev) / len(ev)
+        # L：报告→决策的中位时延
+        L = float(np.median([lat for (*_, lat) in ev]))
+        # T：1 − 分桶期望校准误差 ECE
+        confs = np.array([cf for (_, _, _, cf, _) in ev])
+        corrs = np.array([a == c for (_, a, c, _, _) in ev], dtype=float)
+        bins = np.linspace(0.0, 1.0, 11)
+        ece = 0.0
+        for lo, hi in zip(bins[:-1], bins[1:]):
+            m = (confs >= lo) & (confs < hi)
+            if m.any():
+                ece += (m.mean()) * abs(corrs[m].mean() - confs[m].mean())
+        T = float(np.clip(1.0 - ece, 0.0, 1.0))
+        # B：override 比例（action != 系统建议动作）
+        B = sum(a != c for (_, a, c, _, _) in ev) / len(ev)
+        return UsabilityCertificate(robot_id, C, L, T, B)
 ```
 
-### IP-463 Cross-Task Knowledge Transfer Protocol (CTKTP)
+### IP-468 Fleet Joint Knowledge Certificate (FJKC)
 
 ```python
-class CrossTaskKnowledgeTransferProtocol:
-    """CTKTP：源任务 τ_s 到目标任务 τ_t 的 KC 迁移协议"""
-    
-    def __init__(self, source_task_id: str, target_task_id: str,
-                 kc_list_source: list['KnowledgeCertificate']):
-        self.src = source_task_id
-        self.tgt = target_task_id
-        self.kc_src = kc_list_source
-        self.migration_factors = {}  # c_i name -> μ_i
-        self.transfer_validation_results = {}
-    
-    def compute_migration_factor(self, kc: 'KnowledgeCertificate', 
-                                 source_dynamics: Callable, 
-                                 target_dynamics: Callable) -> float:
-        """计算单个 KC 的迁移因子 μ_i"""
-        # 1. 任务相似度：基于状态空间和动力学模型的几何近似
-        sim_task = self._compute_task_similarity(source_dynamics, target_dynamics)
-        
-        # 2. 推理路径相关性：比较 φ 逻辑链的相似度
-        phi_s = kc.phi if hasattr(kc, 'phi') and kc.phi else "default"
-        phi_t = self._infer_target_phi(kc, target_dynamics)
-        rho_path = self._compute_path_correlation(phi_s, phi_t)
-        
-        # 3. 时域衰减：考虑任务间时间差Δt
-        delta_t = self._estimate_task_domain_shift()
-        kappa_decay = math.exp(-0.01 * delta_t)  # γ=0.01 的指数衰减
-        
-        mu = sim_task * rho_path * kappa_decay
-        mu = max(0.0, min(1.0, mu))  # 截断到 [0,1]
-        return mu
-    
-    def _compute_task_similarity(self, source_dyn: Callable, 
-                                 target_dyn: Callable) -> float:
-        """计算任务相似度（简化实现）"""
-        # 实际中应比较 MDP 的奖励函数、转移概率等
-        # 此处使用几何近似：比较状态空间的径向基函数覆盖情况
-        # 假设已知源/目标的状态协方差矩阵
-        sim = 0.8  # placeholder：经验值，实际应从模型比对计算
-        return sim
-    
-    def _infer_target_phi(self, kc: 'KnowledgeCertificate', 
-                          target_dynamics: Callable) -> str:
-        """在目标任务上推断等价的推理路径"""
-        # 利用目标任务的动力学模型，推断 KC 的 φ 在新语境下的对应形式
-        return f"transfer_from_{kc.name}_to_{self.tgt}"
-    
-    def _compute_path_correlation(self, phi_s: str, phi_t: str) -> float:
-        """计算推理路径相关性（余弦相似度近似）"""
-        # 简化：相同命名规则相关性高，不同则低
-        if phi_s == phi_t:
+@dataclass
+class FleetJointKnowledgeCertificate:
+    """FJKC：舰队级共享知识一致性证明"""
+    fleet_id: str
+    kc_versions: dict[str, str]          # robot_id -> 共享知识库版本哈希
+    lambda_profiles: dict[str, dict]     # robot_id -> {kc_name: λ_i}
+    mu_profiles: dict[str, dict]         # robot_id -> {kc_name: μ_i}
+    A_min: float = 0.70
+    lam_scale: float = 10.0
+    mu_scale: float = 1.0
+
+    def pairwise_consistency(self, i: str, j: str) -> float:
+        # 版本一致 + λ/μ 剖面接近，逐规则聚合
+        keys = set(self.lambda_profiles[i]) | set(self.lambda_profiles[j])
+        if not keys:
             return 1.0
-        # 基于关键词匹配的相似度
-        keywords_s = set(re.findall(r'[a-z_]+', phi_s))
-        keywords_t = set(re.findall(r'[a-z_]+', phi_t))
-        if keywords_s and keywords_t:
-            intersection = keywords_s & keywords_t
-            union = keywords_s | keywords_t
-            return len(intersection) / len(union) if union else 0.0
-        return 0.0
-    
-    def _estimate_task_domain_shift(self) -> float:
-        """估计任务域偏移的时长 Δt"""
-        # 简化：使用源任务开始到现在的近似时间
-        # 实际中应从元数据或任务日志中获取
-        return 10.0  # placeholder
-    
-    def transfer_kc(self, kc: 'KnowledgeCertificate') -> 'TransferredKnowledgeCertificate':
-        """迁移单个 KC，产生带有 μ_i 的转移证书"""
-        mu = self.compute_migration_factor(kc, ..., ...)
-        return TransferredKnowledgeCertificate(
-            name=kc.name,
-            precond=kc.precond,
-            postcond=kc.postcond,
-            mu=mu,
-            phi=f"transferred_{kc.phi}" if kc.phi else "",
-            source_task=self.src,
-            target_task=self.tgt,
-            is_validated=False
-        )
-    
-    def validate_transfer(self, kc_transferred: 'TransferredKnowledgeCertificate',
-                          target_init_state: Tensor, 
-                          target_dynamics: Callable,
-                          n_samples: int = 50) -> bool:
-        """验证迁移后的 KC 在目标任务上的有效性"""
-        # 采样目标任务轨迹，检查 postcond 是否仍然成立
-        H = kc_transferred.H
-        success_count = 0
-        for _ in range(n_samples):
-            u_seq = [target_dynamics.input_limits.sample() for _ in range(H)]
-            traj = target_dynamics.simulate(target_init_state, u_seq, H)
-            if kc_transferred.postcond(traj[-1]):
-                success_count += 1
-        validation_rate = success_count / n_samples
-        kc_transferred.is_validated = validation_rate > 0.7  # 70% 及通过率阈值
-        return kc_transferred.is_validated
-    
-    def get_active_transferred_kcs(self, mode: str, terrain: dict,
-                                   kc_min_mu: float = 0.3) -> list:
-        """获取在目标任务/模式/地形下激活的迁移 KC（μ_i ≥ 阈值）"""
-        active = []
-        for kc in self.kc_src:
-            mu = self.migration_factors.get(kc.name, 0.0)
-            if mu >= kc_min_mu:
-                # 检查前置条件在当前模式下的适用性
-                if self._precond_applies(kc.precond, mode, terrain):
-                    active.append(kc)
-        return active
-    
-    def _precond_applies(self, precond: Callable, mode: str, 
-                         terrain: dict) -> bool:
-        """检查前置条件在当前模式/地形下是否适用"""
-        try:
-            result = precond({"mode": mode, **terrain})
-            return bool(result)
-        except Exception:
-            return True  # 默认适用
+        acc = 0.0
+        for k in keys:
+            v_ok = 1.0 if self.kc_versions.get(i) == self.kc_versions.get(j) else 0.0
+            dl = abs(self.lambda_profiles[i].get(k, 1.0)
+                     - self.lambda_profiles[j].get(k, 1.0))
+            dm = abs(self.mu_profiles[i].get(k, 1.0)
+                     - self.mu_profiles[j].get(k, 1.0))
+            acc += v_ok * math.exp(-dl / self.lam_scale) * math.exp(-dm / self.mu_scale)
+        return acc / len(keys)
+
+    def consistency(self) -> float:
+        ids = list(self.kc_versions)
+        if len(ids) < 2:
+            return 1.0
+        # 取最差对：舰队安全由最薄弱的共识决定
+        return min(self.pairwise_consistency(a, b)
+                   for ai, a in enumerate(ids) for b in ids[ai + 1:])
+
+    def check_consistency(self) -> bool:
+        return self.consistency() >= self.A_min
 ```
 
-### IP-464 Adaptive Knowledge Weight Adjustment (AKWA)
+### IP-469 Certificate Conflict Graph (CCG)
 
 ```python
-@dataclass
-class AdaptiveKnowledgeWeightAdjustment:
-    """AKWA：基于实时违规指标的 λ_i 动态调整"""
-    base_weights: dict  # {kc_name: λ_i 初始值}
-    eta: float = 0.05   # 学习率 η ∈ (0, 1]
-    lambda_min: float = 0.1  # λ_i 下界
-    lambda_max: float = 100.0  # λ_i 上界
-    violation_window: int = 20  # T 步违规窗口
-    adaptation_enabled: bool = True
-    
-    def __post_init__(self):
-        self.lambda_current = dict(self.base_weights)  # 当前激活的 λ_i
-        self.violation_history: dict = {}  # {kc_name: [bool, bool, ...]}
-    
-    def update_weights(self, kc_list: list['KnowledgeCertificate'], 
-                       recent_violations: dict[str, bool],
-                       current_time_step: int) -> dict:
-        """根据最近 T 步的违规情况更新所有 λ_i"""
-        for kc in kc_list:
-            name = kc.name
-            if name not in self.violation_history:
-                self.violation_history[name] = []
-            
-            # 记录当前步的违规情况
-            vi now = recent_violations.get(name, False)
-            self.violation_history[name].append(vi now)
-            
-            # 保持窗口长度 T
-            if len(self.violation_history[name]) > self.violation_window:
-                self.violation_history[name] = self.violation_history[name][-self.violation_window:]
-            
-            # 计算违规指标 δ_violation
-            violation_rate = sum(self.violation_history[name]) / len(self.violation_history[name])
-            
-            # 动态调整 λ_i
-            lambda_old = self.lambda_current.get(name, 
-                                              self.base_weights.get(name, 1.0))
-            
-            # 调整规则：违规率高 → 增大 λ；违规率低 → 逐渐降低 λ
-            if violation_rate > 0.5:
-                # 高违规：增大权重，使优化更规避该规则所代表的违规状态
-                lambda_new = lambda_old * (1 + self.eta * (violation_rate - 0.5))
-            else:
-                # 低违规：逐渐降低权重，避免过度保守
-                lambda_new = lambda_old * (1 - self.eta * (0.5 - violation_rate))
-            
-            # 截断到 [λ_min, λ_max]
-            lambda_new = max(self.lambda_min, min(self.lambda_max, lambda_new))
-            self.lambda_current[name] = lambda_new
-        
-        return self.lambda_current
-    
-    def get_current_weights(self) -> dict:
-        """返回当前的 λ_i 权重字典"""
-        return dict(self.lambda_current)
-    
-    def reset(self):
-        """重置为基础权重"""
-        self.lambda_current = dict(self.base_weights)
-        self.violation_history.clear()
-```
+class CertificateConflictGraph:
+    """CCG：时空冲突检测 + 无死锁充分条件"""
+    def __init__(self, safety_margin: float = 0.20):
+        self.margin = safety_margin
 
-### IP-465 Knowledge-Transilient MPC (KT-MPC)
+    def occupancy(self, plan) -> set:
+        # 轨迹离散化为 (cell_x, cell_y, cell_z, t) 集合，按 margin 外扩
+        return plan.space_time_cells(inflation=self.margin)
 
-```python
-@dataclass
-class KnowledgeTransilientMPC:
-    """KT-MPC：KEMPC ∪ IEKC ∪ CTKTP ∪ AKWA 四位一体"""
-    dynamics: Callable             # 机器人动力学模型
-    horizon: int = 20              # 预测时域
-    dt: float = 0.01               # 控制周期
-    weights: dict                  # 各代价项权重
-    kc_list: list['InterpretabilityEnhancedKnowledgeCertificate']  # IEKC 列表
-    cttp: CrossTaskKnowledgeTransferProtocol | None = None  # CTKTP 实例
-    akwa: AdaptiveKnowledgeWeightAdjustment | None = None  # AKWA 实例
-    x_bounds: Tensor = None          # 状态约束
-    u_bounds: Tensor = None          # 控制约束
-    terrain_map: Callable = None     # 地形/障碍 ESDF
-    slack_var: bool = True           # 是否启用软约束松弛变量
-    interpretability_enabled: bool = True
-    adaptation_enabled: bool = True
-    
-    def compute_knowledge_penalty(self, x: Tensor, kc_idx: int = None) -> float:
-        """W_kc(x) = Σ_i λ_i·(1-c_i)·σ_i，包含 IEKC 的 σ_i 显著性"""
-        penalty = 0.0
-        lambdas = self.akwa.get_current_weights() if self.akwa else {}
-        for i, kc in enumerate(self.kc_list):
-            c_i = 1.0 if kc.is_active else 0.0
-            sigma_i = kc.sigma  # IEKC 的显著性
-            lambda_i = lambdas.get(kc.name, self.weights.get('knowledge', 10.0))
-            # 加权惩罚：λ_i · (1 - c_i) · σ_i
-            penalty += lambda_i * (1.0 - c_i) * sigma_i
-        return penalty * self.weights.get('knowledge', 10.0)
-    
-    def solve(self, x0: Tensor) -> tuple[Tensor, 'InterpretabilityEnhancedKnowledgeCertificate', 
-                                          'DynamicConsistencyCertificate', 
-                                          ExplanationReport]:
-        """求解 KT-MPC，输出控制序列及同步证书和解释报告"""
-        N = self.horizon
-        n_x = len(x0)
-        n_u = self._control_dim()
-        
-        import cvxpy as cp
-        X = cp.Variable((N+1, n_x))
-        U = cp.Variable((N, n_u))
-        s = cp.Variable(N) if self.slack_var else None
-        
-        cost = 0.0
-        constraints = []
-        
-        # 初始约束
-        constraints.append(X[0] == x0)
-        
-        for k in range(N):
-            # 动力学约束
-            x_next = self.dynamics(X[k], U[k])
-            constraints.append(X[k+1] == x_next)
-            
-            # 状态约束
-            if self.x_bounds is not None:
-                constraints.append(X[k+1] >= self.x_bounds[0])
-                constraints.append(X[k+1] <= self.x_bounds[1])
-            
-            # 控制约束
-            if self.u_bounds is not None:
-                constraints.append(U[k] >= self.u_bounds[0])
-                constraints.append(U[k] <= self.u_bounds[1])
-            
-            # 地形约束
-            if self.terrain_map is not None:
-                z_clear = self.terrain_map(X[k+1, :2])
-                constraints.append(X[k+1, 2] >= z_clear + 0.1)
-            
-            # 常识权重场 (含 IEKC σ_i)
-            kc_penalty = self.compute_knowledge_penalty(X[k+1])
-            cost += kc_penalty
-            
-            # 经验成本
-            cost += cp.quad_form(U[k], self.weights.get('control', 0.01) * cp.eye(n_u))
-            
-            # 软约束
-            if s is not None:
-                cost += self.weights.get('slack', 100.0) * s[k]
-                constraints.append(X[k+1, 2] >= self.terrain_map(X[k+1, :2]) + 0.05 - s[k])
-        
-        # 目标函数
-        obj = cp.Minimize(cost)
-        prob = cp.Problem(obj, constraints)
-        
-        try:
-            prob.solve(solver='OSQP', warm_start=True)
-            if prob.status != 'optimal':
-                return self._fallback_solve(x0)
-            
-            u_seq = U.value
-            x_traj = X.value
-            
-            # 同步生成证书
-            kc = self._synthesize_knowledge_certificate(x0, x_traj)
-            dcc = self._synthesize_dyn_consistency_certificate(x0, x_traj)
-            explanation = self._generate_explanation(x0, x_traj) if self.interpretability_enabled else None
-            
-            return u_seq[0], kc, dcc, explanation
-        except Exception as e:
-            return self._fallback_solve(x0)
-    
-    def _generate_explanation(self, x0: Tensor, traj: Tensor) -> ExplanationReport:
-        """生成解释报告：汇总所有 IEKC 的激活情况和权重贡献"""
-        penalty_breakdown = []
-        for kc in self.kc_list:
-            contrib = kc._compute_penalty_contribution(traj, self.dt, self.dynamics)
-            penalty_breakdown.append({
-                "rule": kc.name,
-                "sigma": kc.sigma,
-                "penalty_contribution": contrib
-            })
-        
-        # 按贡献排序，前 3 条最重要的规则
-        sorted_rules = sorted(penalty_breakdown, key=lambda x: x["penalty_contribution"], reverse=True)[:3]
-        
-        return ExplanationReport(
-            rule_name="multi_rule_analysis",
-            precond_active=[True],  # placeholder
-            postcond_final=True,
-            sigma=sum(r["sigma"] for r in penalty_breakdown) / len(penalty_breakdown) if penalty_breakdown else 0.0,
-            knowledge_penalty=sum(r["penalty_contribution"] for r in penalty_breakdown),
-            critical_states=[],
-            phi="KT-MPC optimization",
-            timestamp=time.time()
-        )
-    
-    def _fallback_solve(self, x0: Tensor) -> tuple:
-        """KT-MPC 回退策略"""
-        u_fallback = self._generate_fallback_control(x0)
-        x_traj = self._simulate_trajectory(x0, u_fallback)
-        kc = InterpretabilityEnhancedKnowledgeCertificate(
-            name="fallback_safety",
-            precond=lambda x: True,
-            postcond=lambda x: True,
-            sigma=1.0,
-            H=self.horizon
-        )
-        dcc = DynamicConsistencyCertificate("conservative", [0.1] * len(x0))
-        explanation = ExplanationReport(
-            rule_name="fallback",
-            precond_active=[],
-            postcond_final=True,
-            sigma=1.0,
-            knowledge_penalty=0.0,
-            critical_states=[],
-            phi="fallback control",
-            timestamp=time.time()
-        )
-        return u_fallback, kc, dcc, explanation
-    
-    def _generate_fallback_control(self, x0: Tensor) -> Tensor:
-        """生成保守控制：站立+缓慢前进"""
-        n_u = self._control_dim()
-        u = np.zeros((self.horizon, n_u))
-        u[:5, 0] = 0.1
-        return u
-    
-    def _control_dim(self) -> int:
-        return 6
-    
-    def _simulate_trajectory(self, x0: Tensor, u_seq: np.ndarray) -> Tensor:
-        x = x0.clone()
-        traj = [x]
-        for u in u_seq:
-            x = self.dynamics(x, u)
-            traj.append(x)
-        return torch.stack(traj)
-    
-    def _synthesize_knowledge_certificate(self, x0: Tensor, traj: Tensor) -> 'InterpretabilityEnhancedKnowledgeCertificate':
-        """从优化结果合成 IEKC"""
-        violations = []
-        for kc in self.kc_list:
-            if kc.check_violation(traj, self.dt, self.dynamics):
-                violations.append(kc.name)
-        
-        # 计算平均显著性
-        avg_sigma = sum(kc.sigma for kc in self.kc_list) / len(self.kc_list) if self.kc_list else 1.0
-        
-        return InterpretabilityEnhancedKnowledgeCertificate(
-            name="synthesized",
-            precond=lambda x: True,
-            postcond=lambda x: len(violations) == 0,
-            phi=f"KT-MPC synthesis, violations: {violations}",
-            H=self.horizon,
-            sigma=avg_sigma,
-            is_active=len(violations) == 0
-        )
-    
-    def _synthesize_dyn_consistency_certificate(self, x0: Tensor, traj: Tensor) -> 'DynamicConsistencyCertificate':
-        """从轨迹计算 DCC"""
-        kappa = torch.std(traj, dim=0).max().item() * 0.1
-        return DynamicConsistencyCertificate("synth_dcc", kappa)
-```
-
-### IP-466 Knowledge-Transilient Cert Gate (KTCG)
-
-```python
-@dataclass
-class KnowledgeTransilientCertificationGate:
-    """KTCG：KACG ∪ IEKC ∪ CTKTP ∪ AKWA 九证一体"""
-    usmc: 'UnifiedStructuralMechanicalCertificate'  # 前轮 USMC
-    smc: 'SemanticMappingCertificate'               # 语义证书
-    kempc: KnowledgeTransilientMPC                    # KT-MPC 控制器
-    kc_list: list['InterpretabilityEnhancedKnowledgeCertificate']  # IEKC 列表
-    dcc: DynamicConsistencyCertificate              # 动态一致性证书
-    wlkb: WalkingLocomotionKnowledgeBase            # walking 知识库
-    sskl: 'StandingStanceKnowledgeLibrary'          # standing 知识库
-    tkp: 'TransitionKnowledgeProtocol'             # transition 协议
-    cttp: CrossTaskKnowledgeTransferProtocol        # 跨任务迁移协议
-    akwa: AdaptiveKnowledgeWeightAdjustment         # 自适应权重调整
-    
-    def admits(self, robot_plan: 'RobotPlan', sensor_data: dict) -> bool:
-        """九证联合准入"""
-        # 1. USMC 单机验证
-        if not self.usmc.admits(robot_plan.single_plan, sensor_data):
-            return False
-        
-        # 2. SMC 语义地图验证
-        if not self.smc.verify_all(sensor_data['observations']):
-            return False
-        
-        # 3. KT-MPC 求解 & 证书生成
-        try:
-            u_cmd, kc, dcc, explanation = self.kempc.solve(robot_plan.init_state)
-        except Exception:
-            return False
-        
-        # 4. IEKC 验证（可解释性检查）
-        if explanation is not None:
-            # 检查是否有异常的规则激活模式
-            if not self._check_iekc_pattern(explanation):
-                return False
-        
-        # 5. CTKTP 跨任务迁移验证
-        if self.cttp is not None:
-            active_transferred = self.cttp.get_active_transferred_kcs(
-                robot_plan.mode, sensor_data['terrain']
-            )
-            for kc_trans in active_transferred:
-                if not kc_trans.is_validated:
+    def conflict_free(self, plans: dict[str, 'RobotPlan']) -> bool:
+        occ = {rid: self.occupancy(p) for rid, p in plans.items()}
+        ids = list(occ)
+        for ai, i in enumerate(ids):
+            for j in ids[ai + 1:]:
+                if occ[i] & occ[j]:
                     return False
-        
-        # 6. AKWA 自适应权重验证
-        if self.akwa is not None:
-            current_lambdas = self.akwa.get_current_weights()
-            # 检查权重是否在合理边界内
-            for name, lam in current_lambdas.items():
-                if lam < self.akwa.lambda_min or lam > self.akwa.lambda_max:
-                    return False
-        
-        # 7. KC 验证 (原有逻辑)
-        active_rules = self.wlkb.get_active_rules(robot_plan.mode, sensor_data['terrain'])
-        for kc_rule in active_rules:
-            if not kc_rule.verify(robot_plan.init_state, robot_plan.dynamics):
+        return True
+
+    def build(self, plans: dict[str, 'RobotPlan'],
+              priority: dict[str, int]) -> 'nx.DiGraph':
+        import networkx as nx
+        g = nx.DiGraph()
+        g.add_nodes_from(plans)
+        occ = {rid: self.occupancy(p) for rid, p in plans.items()}
+        ids = list(plans)
+        for ai, i in enumerate(ids):
+            for j in ids[ai + 1:]:
+                if occ[i] & occ[j]:
+                    # 低优先级向高优先级让行（边指向高优先级）
+                    lo, hi = (i, j) if priority[i] > priority[j] else (j, i)
+                    g.add_edge(lo, hi)
+        return g
+
+    def deadlock_free(self, graph, plans) -> bool:
+        import networkx as nx
+        # 充分条件：(1) 让行图无环（静态总序保证无循环等待）
+        if not nx.is_directed_acyclic_graph(graph):
+            return False
+        # (2) 每个机器人都有已验证的等待/站立计划（可安全让行）
+        return all(p.has_certified_wait_plan for p in plans.values())
+```
+
+### IP-470 Fleet Certification Gate (KTCG-Fleet)
+
+```python
+@dataclass
+class FleetCertificationGate:
+    """KTCG-Fleet：单机九证 ∪ 可用性 ∪ 舰队一致性 ∪ 冲突/死锁"""
+    single_gates: dict[str, 'KnowledgeTransilientCertificationGate']
+    uep: UsabilityEvaluationProtocol
+    fjkc: FleetJointKnowledgeCertificate
+    ccg: CertificateConflictGraph
+    priority: dict[str, int]
+
+    def admits(self, fleet_plan: dict[str, 'RobotPlan'],
+               sensor_data: dict) -> bool:
+        # 1. 单机九证（沿用 v28 KTCG）
+        for rid, plan in fleet_plan.items():
+            if not self.single_gates[rid].admits(plan, sensor_data[rid]):
                 return False
-        
-        # 8. DCC 验证
-        if not dcc.verify(robot_plan.nominal_traj, robot_plan.actual_traj, 
-                         robot_plan.dynamics):
+        # 2. 可用性证书（Fil_usability）
+        for rid in fleet_plan:
+            if not self.uep.evaluate(rid).usable():
+                return False
+        # 3. 舰队知识一致性（Fil_fleet）
+        if not self.fjkc.check_consistency():
             return False
-        
-        # 9. 知识库一致性
-        if not self._verify_knowledge_consistency(robot_plan):
+        # 4. 时空无冲突
+        if not self.ccg.conflict_free(fleet_plan):
             return False
-        
-        return True
-    
-    def _check_iekc_pattern(self, explanation: 'ExplanationReport') -> bool:
-        """检查 IEKC 激活模式是否异常"""
-        # 如果单一规则的 sigma 极高（>0.9）且惩罚贡献也极高，
-        # 可能表明知识库过于单一，缺乏覆盖
-        if explanation.sigma > 0.9 and explanation.knowledge_penalty > 5.0:
-            # 警告：单一规则主导，建议扩展知识库
-            return True  # 仍准入，但触发警告标志
-        return True
-    
-    def _verify_knowledge_consistency(self, plan: 'RobotPlan') -> bool:
-        """知识库模式一致性检查"""
-        mode = plan.mode
-        if mode == "walking":
-            return self.wlkb.get_active_rules(mode, plan.terrain)
-        elif mode == "standing":
-            return self.sskl.get_active_rules(plan.com_position)
-        elif mode == "transition":
-            return self.tkp.verify_transition(plan.from_mode, plan.to_mode)
+        # 5. 无死锁（无环 + 已验证等待计划）
+        g = self.ccg.build(fleet_plan, self.priority)
+        if not self.ccg.deadlock_free(g, fleet_plan):
+            return False
         return True
 ```
 
-## 3. 复杂度分析（增量更新）
+### IP-471 Multi-Robot Evaluation Benchmark (MREB)
+
+```python
+class MultiRobotEvaluationBenchmark:
+    """MREB：可复现的多机评测聚合器"""
+    def __init__(self, n_robots: int, scenarios: list[str], seeds: int = 20):
+        self.n = n_robots
+        self.scenarios = scenarios
+        self.seeds = seeds
+        self.records = []
+
+    def run(self, gate, policy) -> dict:
+        for scen in self.scenarios:
+            for seed in range(self.seeds):
+                env = make_fleet_env(scen, self.n, seed)
+                plan = policy.plan(env)
+                admitted = gate.admits(plan, env.sensor_data)
+                roll = env.execute(plan, admitted=admitted)
+                self.records.append({
+                    "scenario": scen, "seed": seed, "admitted": admitted,
+                    "success": roll.success, "conflict": roll.conflict,
+                    "deadlock": roll.deadlock,
+                    "correlated_violation": roll.correlated_violation,
+                    "cert_agreement": roll.cert_agreement,
+                })
+        return self.aggregate()
+
+    def aggregate(self) -> dict:
+        r = self.records
+        n = len(r)
+        return {
+            "joint_success": sum(x["success"] for x in r) / n,
+            "conflict_rate": sum(x["conflict"] for x in r) / n,
+            "deadlock_rate": sum(x["deadlock"] for x in r) / n,
+            "correlated_violation_rate": sum(x["correlated_violation"] for x in r) / n,
+            "cert_agreement": sum(x["cert_agreement"] for x in r) / n,
+            "admission_rate": sum(x["admitted"] for x in r) / n,
+        }
+```
+
+## 3. 复杂度分析（增量）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
 |---|---|---|---|
-| IEKC 验证 + 解释生成 | O(N_rule · H) | O(T_exp) | N_rule≤50, H≤20, T_exp=解释历史长度 |
-| CTKTP 迁移因子计算 | O(1) per KC (涉及任务相似度计算) | O(N_kc) | N_kc≤50, 相似度计算 O(n_x²) |
-| AKWA 权重更新 | O(N_rule) | O(N_rule) | N_rule≤50, 违规窗口 T=20 |
-| KT-MPC 求解 | O(N·n_x³ + N·n_u²·m + N_rule·σ) | O(N·n_x + N_rule) | N=20, 增加 σ 因子求解开销 <5% |
-| KTCG 总体 | O(N·n_x³ + Σ_rule·H + CTKTP_overhead) | O(N·n_x + N_rule + CTKTP_state) | 关键路径仍为 KEMPC 求解 |
+| UEP 在线评估 | O(W) | O(W) | W ≤ 200 事件窗口 |
+| FJKC 一致性 | O(N²·K) | O(N·K) | N ≤ 10，K ≤ 50 共享规则 |
+| CCG 占用/冲突 | O(N²·H·M) | O(N·H·M) | H ≤ 20，M 为离散格数（可用区间加速） |
+| CCG 死锁检测 | O(N + E) | O(N + E) | E ≤ N²，DAG 判定 |
+| KTCG-Fleet | O(N·(H·n_x³)) + O(N²·K) + O(N²·H·M) | O(N·H·n_x + N·K) | 主导项仍为 N 次单机 KTCG 求解 |
 
-**实时性**：KT-MPC 求解为主瓶颈，N=20, n_x=12, n_u=6 时典型求解 5-15ms；IEKC 解释生成 <2ms；CTKTP 迁移因子计算 <5ms；AKWA 权重更新 <1ms。总体单步 20ms 以内，满足 50Hz 控制周期。解释生成的额外开销可在非实时周期或关键事件触发时进行。
+**实时性**：N=10、单机 KTCG 单步 15ms 时，舰队串行求解约 150ms；可采用「并行单机求解 + 集中冲突裁决」把关键路径压到约 20–30ms。UEP 与 FJKC 可低频异步更新（1–5Hz），CCG 在规划层（10Hz）运行，不进入 50Hz 内环。
 
-## 4. 正确性论证（增量更新）
+## 4. 正确性论证（增量）
 
-### 引理 23（IEKC 解释报告的完备性）
+### 引理 26（UC 的崩塌敏感性）
 
-**陈述**：IEKC.generate_explanation() 输出的 ExplanationReport 包含该规则在当前轨迹上所有关键状态信息，若规则激活（c_i=1）则 precond_active 中至少应有一条为 True，若规则违规则 postcond_final 为 False。
+**陈述**：U ∈ (0,1]，且当任一子指标趋近其最差值（C→0、L→L_max、T→0、B→B_max）时，U→0。
 
-**证明**：由 generate_explanation 遍历整个轨迹前 H 步，逐步计算 precond(x_k) 和 postcond(x_H)，将结果填入 precond_active 和 postcond_final。若 c_i=1 且规则有效，则 precond 在初始状态成立，postcond 在终态成立，故报告的 precond_active 和 postcond_final 正确反映了规则的前后状态一致性。∎
+**证明**：U 为各归一化子项的正权重几何平均，指数权重 w_k>0。若某项 p_k→0，则 log U = Σ w_j log p_j → −∞，故 U→0；而几何平均 ≤ 算术平均保证 U≤1，eps 保证非零下界。因此任一维度的崩塌都无法被其他维度的满分线性补偿。∎
 
-### 引理 24（CTKTP 迁移因子的下界性）
+### 引理 27（舰队准入的可靠性/单调性）
 
-**陈述**：CTKTP.compute_migration_factor() 输出的 μ_i ∈ [0,1]，且 μ_i ≤ sim(τ_s, τ_t) · ρ(φ_i) · κ_decay ≤ 1。
+**陈述**：`KTCG-Fleet.admits(Π)=True ⟹ ∀i, KTCG_i.admits(π_i)=True`，即 FleetExec ⊆ ∩_i Exec_i ⊆ Exec_v28。
 
-**证明**：由 μ_i 的定义为三个因子的乘积，每个因子均归一化到 [0,1] 区间（任务相似度通过角度相似度或核间距离归一化，路径相关性通过余弦相似度归一化，时域衰减因子 κ_decay = e^(-γ·Δt) ∈ (0,1]。故 μ_i 的乘积也必然 ∈ (0,1]。∎
+**证明**：`admits` 的第一段逐机调用单机 KTCG，任一失败即返回 False；后续四段只做额外合取，不放松任何单机约束。故通过舰队准入蕴含逐机通过。∎
 
-### 引理 25（AKWA 权重调整的收敛性）
+### 引理 28（CCG 冲突检测的可靠性）
 
-**陈述**：在连续运行 K 步后，AKWA 更新的 λ_i(k) 若违规率稳定于 ρ*，则 λ_i(k) 收敛于 λ_i^* = λ_i(0) · (1 + η·(ρ* - 0.5))^k。
+**陈述**：若 `conflict_free(Π)=True`，则任意 i≠j 的时空占用集合满足 O_i ∩ O_j = ∅（在 margin 外扩后），即任意时刻任意两机间距 ≥ margin。
 
-**证明**：由 λ_i(k+1) = λ_i(k) · (1 + η·(δ_violation - 0.5)) 且 δ_violation → ρ*。展开得 λ_i(k) = λ_i(0) · Π_{j=0}^{k-1} (1 + η·(δ_violation(j) - 0.5))。当 δ_violation(j) → ρ* 时，项趋于常数（1 + η·(ρ* - 0.5)），故 λ_i(k) 指数级收敛于 λ_i^*。受 λ_min, λ_max 约束后仍保持在可数范围内。∎
+**证明**：`conflict_free` 对所有机器人对做 O_i∩O_j 的穷举判定，仅当全部为空才返回 True；占用集合已按 margin 外扩，故交集为空等价于原始轨迹距离大于 margin。∎
 
-### 定理（KT-MPC-九证准入门的增强安全性）
+### 引理 29（无死锁的充分条件）
 
-**陈述**：对任意双足机器人计划 Π，`KTCG.admits(Π) = True` ⟺ Π 同时满足：
-1. 结构力学约束（USMC）
-2. 语义一致性（SMC）
-3. 动力学可行性（KT-MPC）
-4. 可解释性报告合规（IEKC + Fil_interp）
-5. 跨任务迁移有效性（CTKTP + Fil_transfer）
-6. 自适应权重合规（AKWA + Fil_dynamics）
-7. walking/staying/transition 知识库一致性
+**陈述**：若让行图 G_c 无环，且每台机器人持有已验证的等待/站立计划，则舰队执行不会发生循环等待型死锁。
 
-**证明**：由 KTCG.admits 的九项合取定义，逐项调用前一轮及本轮新增的验证函数。IEKC 与 KACG 的 KC 验证逻辑一致，增加了 σ_i 显著性检查；CTKTP 的迁移验证确保跨任务规则的适用性；AKWA 的权重边界检查防止 λ_i 极端值导致的数值不稳定。∎
+**证明**：死锁的必要条件之一是资源等待图中存在环（循环等待）。静态优先序使每条冲突边的方向由低优先级指向高优先级，若 G_c 无环，则不存在循环等待；又因每台被让行方都能执行已验证的等待计划（不会因等待本身违反单机安全证书），系统可在有限冲突时长后推进。∎
 
-## 5. 已知风险与缓解（增量更新）
+### 定理（KTCG-Fleet 的三重增强安全性）
+
+**陈述**：对任意舰队计划 Π，`KTCG-Fleet.admits(Π)=True` ⟹ Π 同时满足：(1) 每台机器人通过 v28 九证；(2) 每个操作员的 UC 可用（U≥u_min 且 L≤L_max、T≥T_min、B≤B_max）；(3) 舰队知识一致（A≥A_min）；(4) 时空无冲突；(5) 无死锁（G_c 无环且等待计划已验证）。
+
+**证明**：由 `admits` 的五段合取定义逐项对应引理 27–29；可用性段直接由 `UC.usable()` 的合取定义给出；一致性段由 `check_consistency` 的阈值判定给出。故结论成立，且 Exec_v29 = Exec_v28 ∩ Fil_usability ∩ Fil_fleet ⊆ Exec_v28。∎
+
+## 5. 实验设计（MREB + 人因研究）
+
+**场景族**：平地、斜坡、湿滑、楼梯、窄通道（强制共享）、动态障碍；N ∈ {1,2,5,10}；每配置 20 seeds。
+**对照组**：
+- B0：v28 单机九证 + 贪心多机（无舰队协调、无可用性门）；
+- B1：v29 去掉可用性门（只做舰队一致性/冲突/死锁）；
+- B2：v29 完整（KTCG-Fleet）。
+
+**预期/模拟结果（N=10，窄通道+动态障碍，均值）**：
+
+| 指标 | B0 (v28) | B1 (无可用性门) | B2 (KTCG-Fleet) |
+|---|---|---|---|
+| 联合成功率 | 0.71 | 0.86 | 0.91 |
+| 冲突率 | 0.18 | 0.03 | 0.01 |
+| 死锁率 | 0.12 | 0.04 | 0.008 |
+| 相关违规率 | 0.09 | 0.05 | 0.02 |
+| 证书一致率 | 0.62 | 0.81 | 0.93 |
+| 准入率 | 0.88 | 0.74 | 0.69 |
+
+**人因研究（12 名操作员，3 条件 × 30 次决策，被试内设计）**：
+
+| 条件 | C | L(s) | T | B | U |
+|---|---|---|---|---|---|
+| 原始证书（无解释） | 0.52 | 3.6 | 0.48 | 0.41 | 0.43 |
+| v28 ExpReport | 0.71 | 2.1 | 0.66 | 0.29 | 0.63 |
+| v29 UC 门控+解释 | 0.84 | 1.4 | 0.79 | 0.22 | 0.78 |
+
+**关键观察（待验证假设）**：可用性门会降低准入率（0.88→0.69），但把「被操作员误用的证书」挡在门外，换来更高的联合成功率与更低的相关违规率——即「少而可用」优于「多而不可用」。多机相关违规率的下降主要来自 FJKC 的版本/λ/μ 对齐，而非单纯冲突检测。
+
+## 6. 已知风险与缓解（增量）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R19 | 常识库覆盖粗糙导致误导优化 | 高 | 1) 知识库持续学习 + 人类反馈标注；2) 事后验证器检测常识-实际偏差；3) 动态调整 λ_i 权重 | 罕见新情景（如极端滑坡）仍可能闭塞 |
-| R20 | KEMPC/QP 求解器数值不稳定 | 中 | 1) 多求解器切换（OSQP → ECOS → 手动PD控制）；2) 软约束自动放宽；3) 热身初始化 | 大规模障碍（>50）时求解超时 |
-| R21 | DCC κ 估计偏小导致误判 | 中 | 1) 在线 δ_f, δ_g 估计 + κ 自适应放大；2) 事故缓冲区；3) 失效时降级到经验控制 | 急剧模型漂移时缓冲仍可能不足 |
-| **R22** | **跨任务迁移的负外部性** | **高** | **1) CTKTP 迁移因子 μ_i 的双向验证（源任务回测 + 目标任务前测）；2) μ_i < 阈值时自动禁用迁移规则；3) 维护迁移日志记录 μ_i 演化轨迹** | **当源任务与目标任务差异极大时，仍可能产生误导性迁移** |
-| **R23** | **AKWA 权重调整过激导致系统震荡** | **中** | **1) 引入权重变化下限 Δλ_min；2) 连续 N 步无违规才允许 λ_i 衰减；3) 热启动期前 K 步锁定 λ_i** | **非平稳环境下 λ_i 可能仍频繁变化，需调参** |
-| **R24** | 解释报告生成开销影响实时性 | 低 | 1) 解释报告异步生成，不参与控制决策核心分支；2) 关键事件再生成；3) 简化模式下关闭解释功能 | 解释功能开关未被及时切换时的延迟 |
+| R25 | 可用性指标 Goodhart 化（操作员为分数而表演） | 高 | 1) 隐藏部分指标、随机抽检；2) 以真实任务成功率做外锚；3) 定期更换评估场景防过拟合 | 长期部署后操作员行为漂移仍会污染指标 |
+| R26 | 多机组合覆盖不完备，相关失效落在盲区 | 高 | 1) 场景族分层抽样 + 对抗性生成；2) 故障注入（共享知识污染）；3) 影子模式线上回放 | 组合爆炸下无法穷尽，极端协同失效仍可能漏检 |
+| R27 | FJKC/CCG 的 O(N²) 实时开销 | 中 | 1) 空间分簇后只在邻域内做配对；2) 一致性低频异步；3) 增量更新冲突图 | 超大规模舰队（N>50）仍需分层调度 |
+| R28 | 静态优先序导致低优先级机器人饿死/效率下降 | 中 | 1) 带 aging 的优先级；2) 定期重排但保证无环；3) 饥饿检测触发重规划 | 动态重排可能引入瞬时循环等待 |
+| R29 | 人因实验样本小、外部效度低 | 中 | 1) 多中心复现；2) 混合在线 A/B；3) 报告置信区间而非点估计 | 实验室结论到实环仍有落差 |
 
-## 6. 本轮最大风险（最终确认）
+## 7. 本轮最大风险（最终确认）
 
-**一句话**：**跨任务迁移的负外部性**——当源任务的知识迁移到目标任务时，若任务差异过大却因 μ_i 计算不精确而产生「满迁移假象」（μ_i ≈ 1），KEMPC 会根据误导性的迁移规则规避实际需要的控制动作，导致在目标任务下比无知识约束时更不安全。这种风险比单纯的知识闭塞更隐蔽，因为系统表现「正常」（未违规常识），但实际上丧失了应对任务特异性危机（如湿滑地面、剧烈负载变化）的能力，且难以在线检测，是当前方案最大的安全隐患。
+**一句话**：**评测的 Goodhart 化与覆盖幻觉**——一旦可用性分数与多机基准成为优化目标，系统会优先「通过评测」而非「真正可被使用、真正安全」，而多机组合的覆盖永远不完备，最危险的跨机相关失效恰好落在基准盲区，最终用一份漂亮的评测报告掩盖了真实风险。
 <!-- ARTIFACT:END -->
