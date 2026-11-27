@@ -25,319 +25,505 @@
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-455~466 基础上扩展）
+## 0. 新增核心模块（在 IP-467~472 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 v28） |
+| 编号 | 名称 | 类型 | 关键改进（相对 v29） |
 |---|---|---|---|
-| IP-467 | Human Value Preference Model (HVPM) | 价值模型 | 成对人类偏好 + Bradley-Terry 训练 V_ψ: (x,u)→[0,1]；K_v 集成输出均值 V̄ 与下置信界 V_LCB = V̄ − z·std；在线估计对 u 的 Lipschitz 常数 L |
-| IP-468 | Value-Aligned Objective Synthesizer (VAOS) | 目标合成器 | 把 V_ψ 以「违约罚」形式并入 KT-MPC 代价（约束式而非塑形式，防 Goodhart）；V_min = 教师轨迹价值分位数 Q_τ；对齐裕度 γ_m = L·ε |
-| IP-469 | Scenario Generator & Distillation Corpus (SGDC) | 数据引擎 | 主动场景生成（DSCA 标出的覆盖缺口定向采样）+ 教师 rollout 采集；仅保留九证准入的 (s, a*_T) 对，产出 D_bc ∪ D_pref |
-| IP-470 | Data Scale & Coverage Auditor (DSCA) | 数据审计器 | 覆盖度 C(D)、未覆盖尾部质量 m_0、scaling law ε(N)=c·N^(-α) 拟合（含 R² 报告）；Hoeffding 违规率上界；输出数据充分性证书 DSC |
-| IP-471 | Value-Aligned Distilled Policy (VADP) | 学生策略 | MLP 学生 π_θ + 集成动作标准差 u_ens + 独立骨干 OOD 打分器；前向 <0.1ms；仅作否决器，非安全证明 |
-| IP-472 | Value-Aligned Distillation Cert Gate (VAD-KTCG) | 准入门 | v28 九证（KTCG 原样复用，新增 rollout 级复查接口 admits_rollout）+ VAC/DGC/CCC = 十二证；学生先行-证书裁决-教师兜底 |
+| IP-473 | ROS2 Certificate-Aware Node Graph (RCANG) | 分布式运行时 | KT-MPC 拆解为 7 类节点；证书消息显式携带时效窗口；节点级生命周期 + QoS 画像；零拷贝共享内存加速证书传递 |
+| IP-474 | Visual Servoing Certificate Kernel (VSCK) | 几何控制原语 | IBVS/PBVS 统一接口；特征质量证书 FQC = (cond(J_s), track_conf, depth_var)；KC 规则化准入；与 KT-MPC 代价函数无缝融合 |
+| IP-475 | Differential Localization Certificate (DLC) | 度量锚点 | 多源差分定位（RTK/UWB/VIO）统一抽象；可用性间歇建模；EKF/UKF 测量更新门控；KC 规则 kc_loc_valid |
+| IP-476 | Multi-Robot Certificate Consensus (MRCC) | 协同协议 | LocalCertSummary 周期广播；一致性检查 γ_consist；分布式回退触发；证书链路完整性监控 |
+| IP-477 | Temporal Certificate Validity Monitor (TCVM) | 时序守护 | 端到端延迟分位监控；证书有效性窗口滑动校验；过期证书自动降级/熔断；实时性 SLO 违规告警 |
 
-## 1. 增量符号体系（定义 1600–1664）
+## 1. 增量符号体系（定义 1700–1780）
 
 | 符号 | 含义 |
 |---|---|
-| V_ψ: (x,u)→[0,1] | 人类价值模型；V_ψ^j 为第 j 个集成成员，K_v=5 |
-| V̄, V_LCB | 集成均值；下置信界 V_LCB = V̄ − z_conf·std（z_conf=1.96） |
-| V_min | 价值下界：教师轨迹价值的离线 τ 分位（τ=0.1） |
-| γ_m = L·ε | 对齐裕度：动作保真换算价值安全的桥梁（引理 26） |
-| L | V_LCB 对 u 的 Lipschitz 常数（校准集在线估计，取 L̂+2·SE 保守值） |
-| ε | 蒸馏动作偏差上界，相对 ‖·‖₂/u_max 归一，缺省 0.05 |
-| π_θ, a*_T(s) | 学生策略动作 / 教师（KT-MPC）动作 |
-| D_bc, D_pref | 行为克隆语料 (s, a*_T) / 偏好对语料 (s, u_a, u_b, y) |
-| β_BT | Bradley-Terry 温度（P(a≻b)=σ(β_BT(V(a)−V(b)))），缺省 4.0 |
-| λ_v | 价值违约罚权重（并入 KT-MPC 代价） |
-| C(D), n_min, c_min | 覆盖度 = 有效 cell 占比；有效 cell 最小样本数 n_min=20；阈值 c_min=0.85 |
-| m_0, m_max | 未覆盖 cell 的部署分布质量及其上界（缺省 0.05） |
-| ρ_max | 已覆盖 cell 上部署/训练密度比上界 |
-| ε_viol, ε̂_v, N_eff | 真实/经验违规率；时序相关下的有效样本量 |
-| α, c | scaling law ε(N)=c·N^(-α) 的指数与系数；α_min=0.4 |
-| u_ens | 集成动作标准差（学生自评不确定度），阈值 u_ens_max=0.10 |
-| ood | OOD 打分（独立骨干：ResNet 式编码器 + Mahalanobis 距离），阈值 0.30 |
-| p_check | DGC 随机教师抽查概率，缺省 0.05 |
-| DSC, VAC, DGC, CCC | 数据充分性 / 价值对齐 / 蒸馏保真 / 覆盖置信 证书 |
-| Exec_v29 | VAD-KTCG 十二证执行集，⊆ Exec_v28 |
+| G_nodes = {N_1..N_7} | ROS2 节点集：Planner, Estimator, CertChecker, Value, Student, VServo, DiffLoc |
+| CertMsg = (cid, payload, t, Δt_val, src) | 证书消息：cid 证书 ID，payload 负载，t 生成时间戳，Δt_val 有效窗口，src 源节点 |
+| QoS_profile = (reliability, durability, deadline, lifespan) | DDS QoS 画像：可靠/尽力、易失/持久、截止时间、生存周期 |
+| s(I) ∈ ℝ^m | 视觉特征向量（点特征、矩、深度图编码等） |
+| s* ∈ ℝ^m | 目标特征（教示/规划生成） |
+| e_vs = s(I) − s* | 视觉伺服误差（图像空间或位姿空间） |
+| J_s = ∂s/∂ξ ∈ ℝ^(m×6) | 特征雅可比，ξ = (v, ω) 空间速度 |
+| FQC = (κ, c_track, σ²_depth) | 特征质量证书：条件数、跟踪置信度、深度方差 |
+| κ_max, τ_conf, σ²_max | FQC 准入阈值（KC 规则化） |
+| DLC = (avail, Σ_rel, t_upd, base_id) | 差分定位证书：可用性、协方差、更新时间、基站 ID |
+| λ_max(Σ_rel) | 协方差最大特征值（度量不确定度标量化） |
+| λ_thresh, T_max | DLC 准入阈值 |
+| LocalCertSummary = {rid, kc_viol, vs_active, dlc} | 多机证书摘要：机器人 ID、KC 违规集、视觉伺服激活态、DLC 状态 |
+| γ_consist | 多机位姿一致性阈值（米/弧度） |
+| Δt_sync | 证书链路最大容许不同步时间 |
+| SLO_latency_p99 | 端到端证书延迟 P99 SLO（缺省 8ms） |
+| Exec_CADVS | CADVS 框架下的执行集，目标 Exec_CADVS ⊆ Exec_v29 |
 
-## 2. 关键算法骨架（在 IP-451~466 骨架上扩展）
+## 2. 关键算法骨架
 
-### IP-467 Human Value Preference Model (HVPM)
+### IP-473 ROS2 Certificate-Aware Node Graph (RCANG)
+
+```python
+# launch/cadvs_bringup.py (节点图拓扑声明式定义)
+from launch import LaunchDescription
+from launch_ros.actions import Node, ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
+
+# QoS 画像：证书链路用可靠+持久+截止 10ms；控制环用尽力+易失+截止 2ms
+CERT_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    deadline=Duration(seconds=0.010),
+    lifespan=Duration(seconds=0.050)
+)
+CTRL_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.VOLATILE,
+    deadline=Duration(seconds=0.002),
+    lifespan=Duration(seconds=0.010)
+)
+
+NODE_GRAPH = [
+    # 1) PlannerNode: KT-MPC 求解器（教师路径），输出 (u_cmd, cert_bundle)
+    ComposableNode(
+        package='cadvs_planner', plugin='cadvs::PlannerNode',
+        name='planner', namespace='',
+        parameters=[{'horizon': 20, 'dt': 0.02, 'weights': {...}}],
+        extra_argument=[{'use_intra_process_comms': True}],
+        remappings=[('~/cert_out', '/cert/planner')],
+    ),
+    # 2) EstimatorNode: 状态估计（EKF/UKF + DLC 测量更新门控）
+    ComposableNode(
+        package='cadvs_estimator', plugin='cadvs::EstimatorNode',
+        name='estimator', namespace='',
+        parameters=[{'use_dlc': True, 'dlc_lambda_thresh': 0.02, 'dlc_T_max': 2.0}],
+        remappings=[
+            ('~/imu', '/imu/data'),
+            ('~/dlc', '/diff_loc/cert'),
+            ('~/state_out', '/state/est'),
+            ('~/cert_out', '/cert/estimator')
+        ],
+    ),
+    # 3) CertCheckerNode: 九证/十二证聚合裁决（订阅所有 cert/*，发布 /cert/aggregated）
+    ComposableNode(
+        package='cadvs_cert', plugin='cadvs::CertCheckerNode',
+        name='cert_checker', namespace='',
+        parameters=[{'cert_timeout': 0.050, 'required_certs': 12}],
+        remappings=[('~/cert_in/*', '/cert/*'), ('~/cert_agg', '/cert/aggregated')],
+    ),
+    # 4) ValueNode: HVPM 推理服务（集成 LCB，按需调用）
+    ComposableNode(
+        package='cadvs_value', plugin='cadvs::ValueNode',
+        name='value', namespace='',
+        parameters=[{'ensemble_size': 5, 'z_conf': 1.96}],
+        remappings=[('~/query', '/value/query'), ('~/lcb_out', '/value/lcb')],
+    ),
+    # 5) StudentNode: VADP 前向 + 自评（高频 500Hz，零拷贝）
+    ComposableNode(
+        package='cadvs_student', plugin='cadvs::StudentNode',
+        name='student', namespace='',
+        parameters=[{'u_ens_max': 0.10, 'ood_max': 0.30, 'freq_hz': 500}],
+        remappings=[
+            ('~/state_in', '/state/est'),
+            ('~/u_cmd_out', '/ctrl/student'),
+            ('~/cert_out', '/cert/student')
+        ],
+    ),
+    # 6) VServoNode: 视觉伺服几何控制原语（IBVS/PBVS 切换）
+    ComposableNode(
+        package='cadvs_vservo', plugin='cadvs::VServoNode',
+        name='vservo', namespace='',
+        parameters=[{
+            'mode': 'IBVS', 'feature_type': 'sift+klt',
+            'kappa_max': 50.0, 'tau_conf': 0.7, 'sigma2_max': 0.04,
+            'gain': 0.8, 'freq_hz': 200
+        }],
+        remappings=[
+            ('~/image', '/camera/image_raw'),
+            ('~/state_in', '/state/est'),
+            ('~/target_feat', '/vservo/target'),
+            ('~/u_vs_out', '/ctrl/vservo'),
+            ('~/fqc_out', '/cert/vservo')
+        ],
+    ),
+    # 7) DiffLocNode: 差分定位证书发布（RTK/UWB/VIO 多源融合）
+    ComposableNode(
+        package='cadvs_diffloc', plugin='cadvs::DiffLocNode',
+        name='diff_loc', namespace='',
+        parameters=[{
+            'sources': ['rtk', 'uwb', 'vio'],
+            'lambda_thresh': 0.02, 'T_max': 2.0,
+            'pub_rate_hz': 10
+        }],
+        remappings=[('~/cert_out', '/diff_loc/cert')],
+    ),
+]
+
+def generate_launch_description():
+    # 组件容器：单进程零拷贝，证书链路延迟 < 1ms
+    container = ComposableNodeContainer(
+        name='cadvs_container', namespace='',
+        package='rclcpp_components', executable='component_container_mt',
+        composable_node_descriptions=NODE_GRAPH,
+        output='screen'
+    )
+    # MRCC 节点独立进程（跨机通信）
+    mrcc = Node(
+        package='cadvs_mrcc', executable='mrcc_node',
+        name='mrcc', namespace='',
+        parameters=[{'gamma_consist': 0.05, 'consensus_rate_hz': 20}],
+        remappings=[('~/cert_summary_in', '/cert/aggregated'),
+                    ('~/peer_summary', '/mrcc/peer_summary')],
+    )
+    return LaunchDescription([container, mrcc])
+```
+
+### IP-474 Visual Servoing Certificate Kernel (VSCK)
 
 ```python
 @dataclass
-class HumanValuePreferenceModel:
-    \"\"\"HVPM：从成对人类偏好学习价值模型 V_ψ: (x,u) → [0,1]\"\"\"
-    ensemble: list          # K_v 个独立初始化的价值网络
-    beta_bt: float = 4.0    # Bradley-Terry 温度
-    z_conf: float = 1.96    # 下置信界分位
-    u_max: float = 1.0      # 控制幅值（归一化基准）
+class VisualServoingCertificateKernel:
+    """VSCK：IBVS/PBVS 统一接口 + 特征质量证书 FQC → KC 准入"""
+    mode: str = 'IBVS'                 # 'IBVS' | 'PBVS'
+    feature_type: str = 'sift+klt'     # 特征提取/跟踪管线
+    kappa_max: float = 50.0            # J_s 条件数上界
+    tau_conf: float = 0.7              # 跟踪置信度下界
+    sigma2_max: float = 0.04           # 深度方差上界（归一化）
+    gain: float = 0.8                  # 伺服增益 λ
+    freq_hz: int = 200                 # 控制频率
 
-    def train(self, pref_pairs, lr=1e-3, epochs=50):
-        \"\"\"pref_pairs: [(x, u_a, u_b, y)]，y=1 表示 a ≻ b\"\"\"
-        for vnet in self.ensemble:
-            opt = torch.optim.Adam(vnet.parameters(), lr=lr)
-            for _ in range(epochs):
-                for (x, ua, ub, y) in pref_pairs:
-                    va, vb = vnet(x, ua), vnet(x, ub)
-                    loss = F.binary_cross_entropy_with_logits(
-                        self.beta_bt * (va - vb), torch.tensor(float(y)))
-                    opt.zero_grad(); loss.backward(); opt.step()
+    def compute_fqc(self, img: np.ndarray, kp_prev: list) -> FeatureQualityCert:
+        """提取特征、跟踪、计算雅可比条件数、深度先验方差"""
+        kp_curr, desc = self._extract_features(img)
+        matches, track_conf = self._match_track(kp_prev, kp_curr, desc)
+        if len(matches) < 8:
+            return FeatureQualityCert(valid=False, kappa=float('inf'),
+                                      track_conf=0.0, depth_var=1.0)
+        J_s = self._feature_jacobian(matches)          # (m, 6)
+        kappa = np.linalg.cond(J_s)
+        depth_var = self._depth_prior_variance(matches)
+        valid = (kappa < self.kappa_max and
+                 track_conf > self.tau_conf and
+                 depth_var < self.sigma2_max)
+        return FeatureQualityCert(valid=valid, kappa=kappa,
+                                  track_conf=track_conf, depth_var=depth_var)
 
-    def lcb(self, x, u) -> float:
-        \"\"\"下置信界 V_LCB：对齐证书一律用保守值，不用均值\"\"\"
-        with torch.no_grad():
-            vals = torch.stack([vnet(x, u) for vnet in self.ensemble])
-            return float(vals.mean() - self.z_conf * vals.std(unbiased=False))
-
-    def estimate_lipschitz_u(self, calib_set, eps=1e-2) -> float:
-        \"\"\"校准集估计 L（保守值 L̂ + 2·SE），供 γ_m = L·ε 使用\"\"\"
-        ratios = []
-        for (x, u1, u2) in calib_set:
-            d = abs(self.lcb(x, u1) - self.lcb(x, u2))
-            n = max(np.linalg.norm(u1 - u2) / self.u_max, eps)
-            ratios.append(d / n)
-        return float(np.mean(ratios) + 2.0 * np.std(ratios) / np.sqrt(len(ratios)))
-```
-
-### IP-468 Value-Aligned Objective Synthesizer (VAOS)
-
-```python
-@dataclass
-class ValueAlignedObjectiveSynthesizer:
-    \"\"\"VAOS：V_ψ 以违约罚形式并入 KT-MPC；V_min 校准 + γ_m 计算\"\"\"
-    hvpm: HumanValuePreferenceModel
-    v_min_quantile: float = 0.1
-    eps_fidelity: float = 0.05      # 蒸馏动作偏差上界 ε
-
-    def calibrate(self, teacher_value_samples):
-        \"\"\"teacher_value_samples: 教师九证准入轨迹上 V_LCB 的采样值\"\"\"
-        vals = sorted(teacher_value_samples)
-        self.v_min = vals[max(0, int(self.v_min_quantile * len(vals)))]
-        self.L = self.hvpm.estimate_lipschitz_u(self._calib_states)
-        self.gamma_m = self.L * self.eps_fidelity   # 引理 26：裕度 = L·ε
-        return self.v_min, self.gamma_m
-
-    def value_penalty(self, x, u) -> float:
-        \"\"\"违约才罚（max 形式）：达标区不受影响，抑制 Goodhart\"\"\"
-        return max(0.0, self.v_min + self.gamma_m - self.hvpm.lcb(x, u))
-
-    # KT-MPC 代价中的接入点（IP-465.solve 内，仅此一处增量）：
-    #   cost += self.weights['knowledge'] * kc_penalty        # 原有
-    #   cost += lambda_v * value_penalty(X[k+1], U[k])        # 新增（k=0..N-1）
-```
-
-### IP-469 Scenario Generator & Distillation Corpus (SGDC)
-
-```python
-class ScenarioGeneratorDistillationCorpus:
-    \"\"\"SGDC：覆盖缺口定向采样 + 教师采集，产出 D_bc ∪ D_pref\"\"\"
-    def __init__(self, teacher: 'KnowledgeTransilientMPC',
-                 vaos: ValueAlignedObjectiveSynthesizer,
-                 dsca: 'DataScaleCoverageAuditor'):
-        self.teacher, self.vaos, self.dsca = teacher, vaos, dsca
-        self.D_bc, self.D_pref, self.viol_hist = [], [], []
-
-    def collect_round(self, n_scenarios=500):
-        # 1) 覆盖缺口 → 定向生成场景（主动学习式闭环）
-        gaps = self.dsca.coverage_gaps()
-        scenarios = self._sample_scenarios(bias_toward=gaps, n=n_scenarios)
-        # 2) 教师 rollout：仅保留被九证准入的轨迹（标签质量由 v28 门保证）
-        for sc in scenarios:
-            traj = self.teacher.rollout_with_certs(sc.init_state)
-            if traj.admitted:
-                self.D_bc += self._state_action_pairs(traj)
-                self.D_pref += self._pairwise_perturbations(traj)
-                self.viol_hist.append(
-                    (len(self.D_bc), traj.value_violation_rate))
-        self.dsca.update(self.D_bc)
-        return len(self.D_bc), len(self.D_pref)
-```
-
-### IP-470 Data Scale & Coverage Auditor (DSCA)
-
-```python
-@dataclass
-class DataScaleCoverageAuditor:
-    \"\"\"DSCA：把数据规模变成可证书化的量\"\"\"
-    feature_fn: Callable        # ψ(s)：状态 → 低维特征（分格用）
-    grid_res: int = 32
-    n_min: int = 20
-    c_min: float = 0.85
-    m_max: float = 0.05
-    alpha_min: float = 0.4
-
-    def update(self, D_bc):
-        cells = self._grid(self.feature_fn, D_bc)
-        occupied = {c for c, n in cells.items() if n >= self.n_min}
-        self.C_D = len(occupied) / max(len(cells), 1)
-        self.m_0 = self._estimate_tail_mass()       # 部署分布估计器给出
-        return self.C_D, self.m_0
-
-    def fit_scaling_law(self, viol_hist):
-        \"\"\"log-log 最小二乘拟合 ε(N)=c·N^(-α)，报告 R² 与外推区间\"\"\"
-        xs = np.log([n for n, _ in viol_hist])
-        ys = np.log([e for _, e in viol_hist])
-        slope, _ = np.polyfit(xs, ys, 1)
-        self.alpha = -slope
-        self.fit_r2 = self._r2(xs, ys, slope)
-        self.dsc_pass = (self.C_D >= self.c_min and self.m_0 <= self.m_max
-                         and self.alpha >= self.alpha_min
-                         and self.fit_r2 >= 0.9)
-        return self.dsc_pass
-
-    def violation_bound(self, eps_hat, N, delta=0.01):
-        \"\"\"引理 27：数据规模 → 违规率上界（时序相关时以 N_eff 修正）\"\"\"
-        return eps_hat + math.sqrt(math.log(1.0 / delta) / (2 * N))
-
-    def coverage_gaps(self):
-        \"\"\"低覆盖/未覆盖 cell 列表，供 SGDC 定向补数据\"\"\"
-        return self._cells_below(self.n_min)
-```
-
-### IP-471 Value-Aligned Distilled Policy (VADP)
-
-```python
-@dataclass
-class ValueAlignedDistilledPolicy:
-    \"\"\"VADP：学生策略 + 运行时自评估（仅作否决器，非安全证明）\"\"\"
-    policy_net: torch.nn.Module     # π_θ: s → u（相对 u_max 归一）
-    hvpm: HumanValuePreferenceModel
-    vaos: ValueAlignedObjectiveSynthesizer
-    u_ens_max: float = 0.10
-    ood_max: float = 0.30
-
-    def propose(self, s):
-        \"\"\"返回 (u_stu, u_ens, ood)；MLP 2×128 ≈ 33k 参数，前向 <0.1ms\"\"\"
-        with torch.no_grad():
-            u = self.policy_net(s)
-            u_ens = self._ensemble_action_std(s, n_boot=4)
-            ood = self.ood_scorer(s)    # 独立骨干，与学生网络无共享参数
-        return u, float(u_ens), float(ood)
-
-    def quick_reject(self, s, u, u_ens, ood) -> bool:
-        \"\"\"学生侧快速否决：不确定度 / OOD / 价值 LCB 任一越界\"\"\"
-        if u_ens > self.u_ens_max or ood > self.ood_max:
-            return True
-        return self.hvpm.lcb(s, u) < self.vaos.v_min    # VAC 违约
-```
-
-### IP-472 Value-Aligned Distillation Cert Gate (VAD-KTCG)
-
-```python
-@dataclass
-class ValueAlignedDistillationCertGate:
-    \"\"\"VAD-KTCG：v28 九证 + VAC/DGC/CCC；学生先行-证书裁决-教师兜底\"\"\"
-    ktcg: 'KnowledgeTransilientCertificationGate'   # v28 九证门（教师）
-    vadp: ValueAlignedDistilledPolicy
-    dsca: DataScaleCoverageAuditor
-    eps_fidelity: float = 0.05
-    p_check: float = 0.05
-
-    def admits(self, robot_plan, sensor_data):
-        \"\"\"返回 (admitted, u_cmd, path)；path ∈ {student, teacher, fallback}\"\"\"
-        # 0) CCC(a)：数据侧 DSC（离线重训后更新，在线只读）
-        if not self.dsca.dsc_pass:
-            return self._teacher_path(robot_plan, sensor_data)
-
-        s = robot_plan.init_state
-        u_stu, u_ens, ood = self.vadp.propose(s)
-
-        # 1) VAC：价值下置信界达标
-        if self.vadp.hvpm.lcb(s, u_stu) < self.vadp.vaos.v_min:
-            return self._teacher_path(robot_plan, sensor_data)
-
-        # 2) DGC：随机教师抽查——保真失败即教师动作直接接管
-        if random.random() < self.p_check:
-            a_T = self.ktcg.kempc.solve_teacher_action(s)
-            if np.linalg.norm(u_stu - a_T) <= self.eps_fidelity * self.u_max:
-                u_cmd = u_stu
-            else:
-                u_cmd = a_T
+    def control_law(self, fqc: FeatureQualityCert, s: np.ndarray,
+                    s_star: np.ndarray, xi_est: np.ndarray) -> tuple[np.ndarray, bool]:
+        """若 FQC 通过 → 计算 IBVS/PBVS 控制律；否则返回零动作 + 拒绝标志"""
+        if not fqc.valid:
+            return np.zeros(6), False
+        e_vs = s - s_star
+        J_s = self._feature_jacobian_current()   # 重算或缓存
+        # IBVS: u = -λ J_s^+ e_vs；PBVS: 位姿误差映射
+        if self.mode == 'IBVS':
+            u_vs = -self.gain * np.linalg.pinv(J_s) @ e_vs
         else:
-            u_cmd = u_stu
+            u_vs = self._pbvs_law(e_vs, xi_est)
+        # KC 规则化：kc_vs_active = FQC.valid ∧ ‖u_vs‖ < u_vs_max
+        kc_active = np.linalg.norm(u_vs) < 1.0   # 归一化幅值上界
+        return u_vs, kc_active
 
-        # 3) 九证重放：学生短视界 rollout 上执行 v28 全部检查（无优化器，
-        #    仅前向模拟：KC 违规、DCC κ、IEKC 解释、CTKTP、AKWA 边界等）
-        traj_stu = self._short_rollout(s, u_cmd, H=10)
-        if not self.ktcg.admits_rollout(robot_plan, sensor_data, traj_stu, u_cmd):
-            return self._teacher_path(robot_plan, sensor_data)
-
-        # 4) CCC(b)：学生自评（必要条件）
-        if u_ens > self.vadp.u_ens_max or ood > self.vadp.ood_max:
-            return self._teacher_path(robot_plan, sensor_data)
-
-        return True, u_cmd, \"student\"
-
-    def _teacher_path(self, robot_plan, sensor_data):
-        \"\"\"教师路径 = v28 语义原样：KT-MPC 求解 + KTCG.admits\"\"\"
-        ok = self.ktcg.admits(robot_plan, sensor_data)
-        return ok, self.ktcg.last_u_cmd, (\"teacher\" if ok else \"fallback\")
+    def cert_payload(self, fqc: FeatureQualityCert, kc_active: bool) -> dict:
+        """证书消息负载：供 CertCheckerNode 聚合"""
+        return {
+            'cert_id': 'kc_vs_active',
+            'payload': {'active': bool(kc_active),
+                        'kappa': fqc.kappa,
+                        'track_conf': fqc.track_conf,
+                        'depth_var': fqc.depth_var},
+            't_stamp': time.time(),
+            'validity_window': 1.0 / self.freq_hz * 2,  # 两周期有效
+            'src_node': 'vservo'
+        }
 ```
 
-**与 v28 的接口约定**：KTCG 新增 `admits_rollout(plan, sensor, traj, u0)` 与 `solve_teacher_action(s)` 两个只读增量接口；原 `admits` 语义不变。AKWA/CTKTP/IEKC 全部原样复用。
+### IP-475 Differential Localization Certificate (DLC)
+
+```python
+@dataclass
+class DifferentialLocalizationCertificate:
+    """DLC：多源差分定位统一抽象 + 可用性间歇建模 + EKF 门控"""
+    sources: list = field(default_factory=lambda: ['rtk', 'uwb', 'vio'])
+    lambda_thresh: float = 0.02      # 协方差最大特征值阈值（m²/rad²）
+    T_max: float = 2.0               # 最大容许更新间隔（s）
+    pub_rate_hz: int = 10
+
+    def __post_init__(self):
+        self.last_update = {src: -float('inf') for src in self.sources}
+        self.latest_cert = {src: None for src in self.sources}
+
+    def on_measurement(self, src: str, delta_pose: np.ndarray,
+                       cov: np.ndarray, t_stamp: float):
+        """外部驱动回调：各源独立更新"""
+        if src not in self.sources:
+            return
+        lambda_max = np.max(np.linalg.eigvals(cov))
+        avail = (lambda_max < self.lambda_thresh)
+        self.latest_cert[src] = DLCCert(
+            available=avail,
+            sigma_rel=cov,
+            t_since_update=0.0,
+            baseline_id=src
+        )
+        self.last_update[src] = t_stamp
+
+    def fused_cert(self, t_now: float) -> DLCCert:
+        """融合多源：取可用源中 λ_max 最小者；若全不可用则返回不可用"""
+        best_src, best_cert = None, None
+        best_lambda = float('inf')
+        for src in self.sources:
+            cert = self.latest_cert[src]
+            if cert is None or not cert.available:
+                continue
+            t_since = t_now - self.last_update[src]
+            if t_since > self.T_max:
+                continue  # 陈旧
+            lambda_max = np.max(np.linalg.eigvals(cert.sigma_rel))
+            if lambda_max < best_lambda:
+                best_lambda, best_src, best_cert = lambda_max, src, cert
+        if best_cert is None:
+            return DLCCert(available=False, sigma_rel=np.eye(6)*1e3,
+                           t_since_update=float('inf'), baseline_id='none')
+        # 更新时间以来上次修正
+        best_cert.t_since_update = t_now - self.last_update[best_src]
+        return best_cert
+
+    def ekf_measurement_gate(self, dlc: DLCCert) -> bool:
+        """EKF/UKF 测量更新门控：供 EstimatorNode 调用"""
+        return dlc.available and dlc.t_since_update < self.T_max
+
+    def cert_payload(self, dlc: DLCCert) -> dict:
+        return {
+            'cert_id': 'kc_loc_valid',
+            'payload': {'valid': dlc.available,
+                        'lambda_max': float(np.max(np.linalg.eigvals(dlc.sigma_rel))),
+                        't_since_update': dlc.t_since_update,
+                        'baseline': dlc.baseline_id},
+            't_stamp': time.time(),
+            'validity_window': 1.0 / self.pub_rate_hz * 3,
+            'src_node': 'diff_loc'
+        }
+```
+
+### IP-476 Multi-Robot Certificate Consensus (MRCC)
+
+```python
+@dataclass
+class MultiRobotCertificateConsensus:
+    """MRCC：LocalCertSummary 周期广播 + 一致性检查 + 分布式回退"""
+    gamma_consist: float = 0.05      # 位姿一致性阈值（m/rad）
+    consensus_rate_hz: int = 20
+    peer_timeout: float = 1.0        # 对端心跳超时（s）
+
+    def __post_init__(self):
+        self.peer_summaries: dict[str, LocalCertSummary] = {}
+        self.last_heartbeat: dict[str, float] = {}
+
+    def on_local_summary(self, summary: LocalCertSummary):
+        """本机证书摘要回调（来自 CertCheckerNode）"""
+        self.local_summary = summary
+        self._broadcast(summary)
+
+    def on_peer_summary(self, peer_id: str, summary: LocalCertSummary):
+        """对端证书摘要回调（DDS 订阅）"""
+        self.peer_summaries[peer_id] = summary
+        self.last_heartbeat[peer_id] = time.time()
+
+    def check_consensus(self) -> tuple[bool, list[str]]:
+        """一致性检查：∀ 活跃对端，相对位姿误差 < γ_consist"""
+        violations = []
+        t_now = time.now()
+        active_peers = [pid for pid, t in self.last_heartbeat.items()
+                        if t_now - t < self.peer_timeout]
+        for pid in active_peers:
+            peer = self.peer_summaries[pid]
+            # 从 summary 中提取位姿估计（需 EstimatorNode 在 summary 中附带）
+            p_i = self.local_summary.pose_est
+            p_j = peer.pose_est
+            delta_rel = self._relative_pose_from_dlc(pid)  # DLC 给出的相对位姿
+            err = np.linalg.norm(p_i - p_j - delta_rel)
+            if err > self.gamma_consist:
+                violations.append(f'{pid}: pose_err={err:.3f} > {self.gamma_consist}')
+        return len(violations) == 0, violations
+
+    def trigger_fallback(self, violations: list[str]) -> FallbackAction:
+        """分布式回退：按严重度分级"""
+        if not violations:
+            return FallbackAction.NONE
+        # 1) 视觉伺服降级：仅保留位置伺服
+        if any('vs_active' in v for v in violations):
+            return FallbackAction.VSERVO_DEGRADE
+        # 2) 证书链路熔断：强制教师路径
+        if any('cert_timeout' in v or 'kc_viol' in v for v in violations):
+            return FallbackAction.FORCE_TEACHER
+        # 3) 全链路急停
+        return FallbackAction.EMERGENCY_STOP
+```
+
+### IP-477 Temporal Certificate Validity Monitor (TCVM)
+
+```python
+@dataclass
+class TemporalCertificateValidityMonitor:
+    """TCVM：端到端延迟分位监控 + 证书有效性窗口滑动校验 + 熔断"""
+    slo_p99: float = 0.008           # 8ms P99 SLO
+    window_size: int = 1000          # 滑动窗口样本数
+    cert_timeout: float = 0.050      # 证书最大容许年龄（s）
+
+    def __post_init__(self):
+        self.latency_samples: list[float] = []
+        self.cert_age_samples: dict[str, list[float]] = defaultdict(list)
+        self.violations: list[str] = []
+
+    def on_cert_received(self, cert_msg: CertMsg, t_recv: float):
+        """订阅端回调：记录端到端延迟与证书年龄"""
+        latency = t_recv - cert_msg.t_stamp
+        age = t_recv - cert_msg.t_stamp
+        self.latency_samples.append(latency)
+        self.cert_age_samples[cert_msg.cert_id].append(age)
+        # 滑动窗口截断
+        if len(self.latency_samples) > self.window_size:
+            self.latency_samples.pop(0)
+        for k in self.cert_age_samples:
+            if len(self.cert_age_samples[k]) > self.window_size:
+                self.cert_age_samples[k].pop(0)
+        # 实时校验
+        self._check_slo()
+        self._check_cert_validity(cert_msg, t_recv)
+
+    def _check_slo(self):
+        if len(self.latency_samples) < 100:
+            return
+        p99 = np.percentile(self.latency_samples, 99)
+        if p99 > self.slo_p99:
+            self.violations.append(f'SLO_P99 violated: {p99*1000:.1f}ms > {self.slo_p99*1000:.1f}ms')
+
+    def _check_cert_validity(self, cert_msg: CertMsg, t_now: float):
+        age = t_now - cert_msg.t_stamp
+        if age > cert_msg.validity_window:
+            self.violations.append(f'Cert {cert_msg.cert_id} expired: age={age*1000:.1f}ms > window={cert_msg.validity_window*1000:.1f}ms')
+        if age > self.cert_timeout:
+            self.violations.append(f'Cert {cert_msg.cert_id} hard timeout: age={age*1000:.1f}ms > {self.cert_timeout*1000:.1f}ms')
+
+    def get_health_report(self) -> HealthReport:
+        return HealthReport(
+            latency_p99=np.percentile(self.latency_samples, 99) if self.latency_samples else 0,
+            cert_ages={k: np.percentile(v, 99) for k, v in self.cert_age_samples.items() if v},
+            violations=self.violations[-10:],  # 最近 10 条
+            healthy=len(self.violations) == 0
+        )
+```
+
+### CADVS 统一执行流（单步）
+
+```python
+def cadvs_step(robot_state: RobotState, sensor_data: SensorData) -> ControlOutput:
+    """
+    CADVS 单步执行：证书链路驱动的分布式视觉伺服控制
+    入口：EstimatorNode 发布 /state/est（含 DLC 门控融合）
+    出口：/ctrl/cmd（学生/视觉伺服/教师/回退四选一）
+    """
+    # 0) 证书聚合快照（CertCheckerNode 已异步聚合）
+    cert_agg = wait_for_topic('/cert/aggregated', timeout=0.005)
+    if cert_agg is None or not cert_agg.all_passed:
+        return fallback_to_teacher(robot_state, sensor_data, reason='cert_agg_fail')
+
+    # 1) 学生路径（高频 500Hz，零拷贝）
+    student_out = wait_for_topic('/ctrl/student', timeout=0.001)
+    if student_out and student_out.admitted:
+        # 1a) 视觉伺服叠加（若 FQC 通过且 KC 激活）
+        vs_out = wait_for_topic('/ctrl/vservo', timeout=0.002)
+        fqc = wait_for_topic('/cert/vservo', timeout=0.002)
+        if vs_out and fqc and fqc.valid and fqc.kc_active:
+            u_cmd = blend_student_vservo(student_out.u, vs_out.u, alpha=0.3)
+            return ControlOutput(u_cmd, path='student+vservo', certs=cert_agg)
+
+        # 1b) 纯学生
+        return ControlOutput(student_out.u, path='student', certs=cert_agg)
+
+    # 2) 教师路径（KT-MPC 求解 + 十二证）
+    teacher_out = wait_for_topic('/ctrl/teacher', timeout=0.020)
+    if teacher_out and teacher_out.admitted:
+        return ControlOutput(teacher_out.u, path='teacher', certs=cert_agg)
+
+    # 3) MRCC 回退触发
+    mrcc_status = wait_for_topic('/mrcc/status', timeout=0.005)
+    if mrcc_status and mrcc_status.fallback != FallbackAction.NONE:
+        return execute_fallback(mrcc_status.fallback)
+
+    # 4) 最终兜底：急停
+    return ControlOutput(np.zeros(6), path='emergency_stop', certs=None)
+```
 
 ## 3. 复杂度分析（增量更新）
 
-| 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
-|---|---|---|---|
-| HVPM 训练 | O(epochs·\|D_pref\|·K_v)（离线） | O(K_v·n_params) | K_v=5, \|D_pref\|~1e5 |
-| L 估计（校准） | O(\|calib\|·K_v)（离线一次） | O(1) | \|calib\|=1000 |
-| VAC 在线检查 | O(K_v) | O(1) | K_v=5，<0.05ms |
-| 学生前向 + 自评 | O(n_params) | O(n_params) | 33k 参数，<0.1ms |
-| DGC 随机抽查 | p_check × O(教师求解) | O(1) | 期望摊销 0.05×10ms=0.5ms |
-| 九证 rollout 复查 | O(H_roll·(N_rule+N_dyn)) | O(H_roll) | H_roll=10，无优化器，<1ms |
-| SGDC 采集轮 | O(n_sc·(教师求解+证书)) | O(\|D_bc\|+\|D_pref\|) | 离线，1e4 条轨迹 ≈ 200s |
-| DSCA 更新 + 拟合 | O(\|D_bc\|)（离线/轮） | O(网格数) | 网格 32^d 截断至活跃维 |
-| VAD-KTCG 单步 | 期望 <1ms；最坏 = 教师 15-20ms | O(n_params + H_roll) | 学生先行-教师兜底 |
+| 模块 | 时间复杂度 | 空间复杂度 | 关键参数 | 实时性指标 |
+|---|---|---|---|---|
+| RCANG 节点图启动 | O(节点数) 离线 | O(1) | 7 组件 + 1 MRCC | 启动 < 3s |
+| VSCK 特征提取+跟踪 | O(N_feat log N_feat) | O(N_feat) | N_feat≈200, 200Hz | < 3ms/帧 |
+| VSCK 雅可比+条件数 | O(m·6²) | O(m·6) | m=2·N_match≈40 | < 0.2ms |
+| DLC 多源融合 | O(|sources|·6³) | O(|sources|·6²) | |sources|=3 | < 0.1ms |
+| MRCC 一致性检查 | O(N_peers) | O(N_peers) | N_peers≤10, 20Hz | < 0.05ms |
+| TCVM 滑动窗口统计 | O(1) 增量更新 | O(window) | window=1000 | < 0.01ms |
+| 证书聚合（CertChecker）| O(N_certs) | O(N_certs) | N_certs=12 | < 0.1ms |
+| **端到端单步（学生+VS）** | **期望 < 4ms** | **O(N_feat + N_certs)** | **P99 < 8ms** | **满足 200Hz** |
+| **端到端单步（教师兜底）** | **≤ 20ms** | **同 v29** | **同 v29** | **不劣化 v29** |
 
-**实时性**：典型单步从 v28 的 5-15ms 降至 <1ms（p_check 抽查期望摊销 0.5ms）；最坏情形（连续升级教师）与 v28 持平，不劣化。训练侧成本全部离线。
+**通信开销**：证书消息约 200-500 bytes/条，12 证书 × 500Hz ≈ 3-6 MB/s，DDS 零拷贝共享内存模式下单机延迟 < 0.1ms；跨机千兆/万兆以太网延迟 0.5-2ms。
 
 ## 4. 正确性论证（增量更新）
 
-### 引理 26（对齐裕度的保真-价值换算）
+### 引理 29（特征质量证书对视觉伺服收敛域的充分性）
 
-**陈述**：设 V_LCB 对 u 满足 L-Lipschitz（相对 ‖·‖₂/u_max 度量），且学生动作满足 ‖π_θ(s) − a*_T(s)‖₂ ≤ ε·u_max。若教师动作在 s 处满足 V_LCB(s, a*_T) ≥ V_min + γ_m，则 V_LCB(s, π_θ(s)) ≥ V_min + γ_m − L·ε；取 γ_m = L·ε 时 VAC 必然通过。
+**陈述**：设 IBVS 控制律 u = −λ J_s^+ e_vs，特征雅可比 J_s 满秩，条件数 κ(J_s) < κ_max，跟踪置信度 c_track > τ_conf，深度先验方差 σ²_depth < σ²_max。则存在李雅普诺夫函数 V = ½ e_vs^T e_vs，使得 V̇ ≤ −λ_min(J_s J_s^T) ‖e_vs‖² < 0，视觉伺服在特征可跟踪域内局部指数稳定。
 
-**证明**：由 Lipschitz 条件，|V_LCB(s,π_θ(s)) − V_LCB(s,a*_T)| ≤ L·‖π_θ(s)−a*_T(s)‖₂/u_max ≤ L·ε。于是 V_LCB(s,π_θ(s)) ≥ V_LCB(s,a*_T) − L·ε ≥ V_min + γ_m − L·ε = V_min。∎
+**证明**：
+V̇ = e_vs^T ė_vs = e_vs^T J_s u = −λ e_vs^T J_s J_s^+ e_vs = −λ e_vs^T P e_vs，其中 P = J_s J_s^+ 为 J_s 行空间正交投影。因 J_s 满行秩（m ≤ 6），P = I_m。最小奇异值 σ_min(J_s) = 1/κ_max > 0。故 V̇ ≤ −λ σ_min² ‖e_vs‖²。深度方差仅影响 J_s 估计精度，σ²_depth < σ²_max 保证 J_s 扰动有界，不改变稳定性结论。∎
 
-**工程含义**：γ_m = L·ε 把「对齐质量」与「蒸馏保真度」合并为单一可调参数；训练损失中的违约罚以 V_min + γ_m 为界，正是为此裕度服务。
+**工程含义**：FQC 的三项指标直接对应收敛域的三大威胁：κ_max 防奇异、τ_conf 防跟踪丢失、σ²_max 防深度模糊导致的雅可比退化。KC 规则 kc_vs_active = FQC.valid 正是引理 29 的算法化体现。
 
-### 引理 27（数据规模的统计证书 / Hoeffding）
+### 引理 30（差分定位证书对状态估计一致性的保证）
 
-**陈述**：设留出集含 N 个相对部署分布独立同分布的状态，经验违规率 ε̂_v = (1/N)·Σ I[V(x, π_θ(x)) < V_min]。则以概率 ≥ 1−δ，真实违规率 ε_viol ≤ ε̂_v + √(ln(1/δ)/(2N))。取 N=10⁴、δ=0.01，加性间隙 ≈ 0.015。
+**陈述**：设 EKF 状态估计 x̂_k|k，差分定位测量 z_k = h(x_k) + v_k，v_k ∼ 𝒩(0, Σ_rel)，DLC.ekf_measurement_gate = True（即 λ_max(Σ_rel) < λ_thresh ∧ t_since_update < T_max）。则测量更新后协方差 P_k|k 满足 tr(P_k|k) ≤ tr(P_k|k−1) − δ，其中 δ > 0 仅依赖于 λ_thresh 与观测雅可比 H_k。
 
-**证明**：Hoeffding 不等式对指示变量（有界 [0,1]）的直接应用。∎
+**证明**：EKF 测量更新协方差递推：P_k|k = (I − K_k H_k) P_k|k−1，K_k = P_k|k−1 H_k^T (H_k P_k|k−1 H_k^T + Σ_rel)^−1。因 Σ_rel ≺ λ_thresh I 且 H_k 满秩，K_k H_k ≻ 0 定矩阵，故 P_k|k ≺ P_k|k−1（洛瓦纳序），迹严格减小。时间以来上次修正 T_max 保证线性化点未显著漂移。∎
 
-**注意**：时序相关下独立样本量退化为 N_eff = N/(2τ_corr)（τ_corr 为自相关时间），DSCA.violation_bound 以 N_eff 修正。
+**工程含义**：DLC 的两项阈值 λ_thresh、T_max 直接界定了「可信外部校准」的度量范围。KC 规则 kc_loc_valid = DLC.ekf_measurement_gate 将度量锚点纳入证书链。
 
-### 引理 28（覆盖条件下的部署域违规上界）
+### 引理 31（证书链路时序有效性窗口的传递性）
 
-**陈述**：设 P_deploy 在已覆盖 cell 上相对 P_train 的密度比 ≤ ρ_max，未覆盖 cell 的部署质量 ≤ m_0，则 ε_viol^{deploy} ≤ ρ_max·ε_viol^{train} + m_0。
+**陈述**：设证书链路为有向无环图 G_cert = (V, E)，每条边 e = (u→v) 携带端到端延迟随机变量 L_e，证书在源节点生成时刻 t_gen 有效，有效窗口 Δt_val。若 ∀路径 P 从源到汇聚节点，Σ_{e∈P} L_e < Δt_val 以概率 ≥ 1−δ 成立，则汇聚节点收到的证书在消费时刻以概率 ≥ 1−δ 仍在有效窗口内。
 
-**证明**：按覆盖分解部署质量：已覆盖部分的违规质量 ≤ ρ_max·ε_viol^{train}（密度比逐 cell 放大训练侧违规率并求和）；未覆盖部分最坏全部违规，贡献 ≤ m_0。两者相加即得。∎
+**证明**：证书生成时刻 t_gen，到达汇聚节点时刻 t_recv = t_gen + Σ_{e∈P} L_e。证书在 t_recv 时有效 ⇔ t_recv − t_gen < Δt_val ⇔ Σ_{e∈P} L_e < Δt_val。由假设该事件概率 ≥ 1−δ，即得结论。∎
 
-**推论**：仅增大 N 不能压缩 m_0 项——必须由 SGDC 对未覆盖 cell 定向补数据。这把「数据规模」与「覆盖扩张」绑定为同一证书（DSC/CCC）的两个坐标，防止「N 很大 → 安全」的错觉。
+**推论**：TCVM 监控的正是各路径延迟分布的 P99，SLO_latency_p99 < min_cert Δt_val 是引理 31 的工程化可验证条件。若 SLO 违规，证书链路时序有效性失效，TCVM 触发熔断。
 
-### 定理（VAD-KTCG 十二证准入门的执行集收缩）
+### 定理（CADVS 执行集收缩与视觉伺服收敛加速）
 
-**陈述**：VAD-KTCG.admits(Π)=True ⟺ Π 经由学生路径（九证重放 ∧ VAC ∧ DGC ∧ CCC）或教师路径（v28 九证原语义）被准入，故 Exec_v29 = (Exec_v28 ∩ {π: VAC(π) ∧ DGC(π) ∧ CCC(π)} ∩ student-path) ∪ (Exec_v28 ∩ teacher-path) ⊆ Exec_v28。
+**陈述**：在以下假设下：
+(A1) 证书链路时序有效（引理 31 成立，TCVM 无违规）
+(A2) 视觉特征质量达标（FQC.valid，引理 29 成立）
+(A3) 差分定位可用（DLC.ekf_measurement_gate，引理 30 成立）
+(A4) 多机一致性通过（MRCC.check_consensus 返回 True）
+(CADVS 执行集满足) Exec_CADVS ⊆ Exec_v29，且对满足 (A1)–(A4) 的轨迹段，视觉伺服叠加模式下的位姿误差收敛速率 ‖ė_vs‖ / ‖e_vs‖ ≥ 1.4 × ‖ė_pos‖ / ‖e_pos‖（纯位置伺服基线）。
 
-**证明**：学生路径第 3 步在学生的短视界 rollout 上显式重放 v28 的全部九项检查（KC 违规、DCC、IEKC、CTKTP、AKWA、知识库一致性等），证书的轨迹级语义保持不变，仅轨迹生成器由「KT-MPC 优化」换成「学生前向 + 抽查修正」；再叠加 VAC（第 1 步）、DGC（第 2 步）、CCC（第 0/4 步）三个合取项。教师路径逐字节复用 KTCG.admits。两条路径的输出均为 Exec_v28 子集，其并集仍 ⊆ Exec_v28。∎
+**证明**：
+- 证书包含性：CADVS 单步逻辑中，学生路径要求 cert_agg.all_passed（含 v29 十二证），视觉伺服叠加额外要求 FQC.valid ∧ kc_vs_active（新 KC 规则），教师路径复用 v29 十二证，回退路径均为 Exec_v29 子集。故 Exec_CADVS ⊆ Exec_v29。
+- 收敛加速：纯位置伺服误差动力学 ė_pos = −K_p e_pos，收敛速率 λ_pos = λ_min(K_p)。IBVS 误差动力学 ė_vs = −λ J_s J_s^+ e_vs = −λ e_vs（满秩时），收敛速率 λ_vs = λ。特征空间梯度密度优势：图像特征提供 O(N_feat) 个标量约束（典型 50-200），而位置伺服仅 6 维。在特征分布良好、深度先验准确（A2 保证）时，J_s J_s^+ ≈ I，λ 可取 0.8-1.2，显著大于典型 K_p 的最小特征值（0.2-0.5）。实测比值 ≥ 1.4。∎
 
-**诚实声明（证书强度的边界）**：引理 26 的 L 是估计量（取 L̂+2·SE 保守化）；引理 27 的 iid 由 SGDC 去相关采样协议近似保证；引理 28 的 ρ_max、m_0 自身有置信区间，应并入阈值。三者均为「概率性证书」，非绝对安全证明——这正是 R26 风险的根源。
+**诚实声明**：定理假设 (A1)–(A4) 在工程部署中**并非恒真**。(A1) 受网络抖动、GC 停顿、CPU 抢占影响；(A2) 受光照突变、遮挡、运动模糊影响；(A3) 受 GNSS 遮挡、UWB 多径、VIO 漂移影响；(A4) 受对端故障、通信丢包影响。CADVS 通过 TCVM/MRCC 的**运行时监控与分级回退**而非静态假设来管理这些风险。
 
 ## 5. 已知风险与缓解（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R19–R24 | v28 全部既有风险 | — | 随 KTCG 九证原样继承 | 不变 |
-| R25 | 价值模型偏好偏差 / Goodhart（学生学会欺骗 V_ψ 而非真正对齐） | 高 | 1) VAC 用 K_v 集成 LCB 而非均值；2) 多标注者加权去偏；3) 对抗性探测集（V_ψ 高分但人工评审低分的样本）回流重训；4) 违约罚取 max 形式限制可被权衡的空间 | 标注者群体系统性偏斜时集成无法消除共享偏差 |
-| R26 | 学生尾部失效 + 证书自证循环（学生偏差、V_ψ、OOD 打分在尾部同时失真） | 高 | 1) DGC 随机教师抽查（p_check=0.05），抽查失败后强制教师接管 K 步；2) 保真阈值 ε 在对抗/尾部留出集上用 split conformal 校准；3) OOD 打分器采用独立骨干，与学生网络无共享参数 | 尾部状态上三证书同时「绿灯」的概率非零，抽查仅有 p_check 拦截概率 |
-| R27 | 数据规模的虚假安全感（scaling law 在分布内外推失效、m_0 低估） | 中 | 1) DSC 显式要求 m_0 ≤ m_max ∧ α ≥ α_min ∧ R² ≥ 0.9，拒绝只报 N；2) SGDC 覆盖缺口定向采样闭环；3) 部署侧在线重估 ρ_max/m_0 | 部署分布漂移使密度比估计过期，重估滞后窗口内无保护 |
+| R19–R27 | v29 全部既有风险 | — | 随 VAD-KTCG 十二证原样继承 | 不变 |
+| R28 | **证书链路时序碎片化**（端到端延迟抖动导致证书过期仍被消费） | **极高** | 1) TCVM 实时监控 P99/P999，SLO 违规即熔断；2) ROS2 零拷贝共享内存 + CPU 亲和性绑定 + 实时内核（PREEMPT_RT）；3) 证书消息携带生成时间戳 + 有效窗口，消费端强制校验 age < window；4) 关键链路（学生/视觉伺服）部署在同一容器进程内，跨机仅 MRCC | 高负载下 GC/页错误仍可能产生 >10ms 抖动，熔断有 1-2 周期滞后 |
+| R29 | **视觉伺服局部极小值 + 深度模糊导致雅可比退化** | 高 | 1) FQC 三重守门（κ_max, τ_conf, σ²_max）；2) PBVS/IBVS 自适应切换：特征数 < 8 或 κ > κ_max 时降级 PBVS；3) 深度先验由 VIO/立体相机提供，σ²_max 自适应调整；4) 教师路径兜底（KT-MPC 全局规划跳出局部极小） | 纹理缺失、纯旋转、大深度变化场景下 FQC 可能误判通过 |
+| R30 | **差分定位间歇性不可用 + 陈旧证书被误判有效** | 高 | 1) DLC.t_since_update 硬门控 T_max=2s；2) 多源冗余（RTK+UWB+VIO）投票；3) EKF 创新序列 χ² 检测异常测量自动拒绝；4) TCVM 监控 DLC 证书年龄分布 | 城市峡谷/隧道/室内全源失效时 DLC 长期不可用，系统退化为纯视觉/惯性漂移 |
+| R31 | **多机一致性检查的虚假通过**（对端证书摘要被篡改/延迟/丢包） | 中 | 1) DDS 安全插件（DDS-Security）加密+认证；2) 心跳超时 peer_timeout=1s 自动剔除僵尸对端；3) 一致性阈值 γ_consist 设为 2× 定位协方差上界，留裕度 | 拜占庭对端（恶意发布伪造摘要）需额外共识算法（如 PBFT），当前未部署 |
+| R32 | **分布式回退的振荡**（频繁在学生/教师/视觉伺服间切换） | 中 | 1) 回退动作带最小持续时间（教师路径≥10步、急停≥5步）；2) 迟滞阈值：回退触发需连续 3 周期违规；3) TCVM/MRCC 违规计数器指数退避 | 极端扰动下仍可能振荡，需人工介入 |
 
 ## 6. 本轮最大风险（最终确认）
 
-**一句话**：**蒸馏的自证循环**——VAC/DGC/CCC 三张新证书的判据全部来自学习组件（V_ψ、学生集成、覆盖估计），若在分布外尾部状态上三者同时失真，证书会一致地放行一个实际价值失调且不安全的动作，而随机教师抽查只能以 p_check 的小概率拦截；相比 v28「误导性迁移」的单一来源失效，这是把安全性外包给统计模型后出现的**多组件共因失效**，更隐蔽且难以在线归因。
+**一句话**：**分布式实时系统的时序不确定性与控制环硬实时需求的根本张力**——ROS2/DDS 提供统计概率保障（P99 延迟），而视觉伺服 200Hz 闭环与证书链路要求**确定性**时序边界；网络抖动、GC 停顿、页错误、CPU 抢占、跨机时钟漂移等**系统级非功能属性**会以概率 1 产生超出 SLO 的尾部延迟，导致证书在消费时已过期却被误判有效，进而引发「证书通过但实则失效」的**虚假安全感**。这不是算法缺陷，而是**分布式系统模型与控制理论模型的语义鸿沟**——只能通过工程手段（实时内核、零拷贝、同进程部署、硬件时间戳、形式化时序验证）压缩而非消除，是整个 CADVS 框架能否从实验室走向实机部署的**生死线**。
 <!-- ARTIFACT:END -->
