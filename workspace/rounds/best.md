@@ -1,347 +1,327 @@
 <!-- IDEA:START -->
-### 第 2 轮灵感驱动研究记录
+### 第 3 轮灵感驱动研究记录
 
-**灵感词**：三维感知、MuJoCo、手势识别
+**灵感词**：末端执行器控制、长期记忆、联邦学习
 
-**继承关系**：第 1 轮 CADVS-v1（IP-467~480）确立了「证书驱动执行集收缩」框架：RCANG 分布式节点图、VSCK/DLC 感知证书、STCK 时空有效域、GCK 抓取稳定性、DAKI 证据挖掘、TCVM/MRCC 时序与多机守护。第 1 轮自诊断的最大风险是 **R36 证据链断裂**：γ_data 是全局标量，STCK/GCK 证书可能在无数据支撑的时空角落虚高通过。本轮不推翻 v1，而是在其上补装三个「证据锚点」，形成 CADVS-v2（IP-481~484），执行集嵌套关系升级为 Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29。
+**继承关系**：第 2 轮 CADVS-v2（IP-481~484）确立了三锚点「证据铸造」框架：空间锚 3DCF（Γ_3D）、物理锚 MSRG（S2RC）、人因锚 HICK（HIC），硬门 kc_evidence_forged = kc_coverage ∧ kc_physics ∧ kc_human，软评分 ECS；执行集 Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29。本轮不推翻 v2，而是在末端执行器、长期记忆、联邦学习三个方向补强，形成 CADVS-v3（IP-485~488），执行集嵌套升级为 Exec_CADVS-v3 ⊆ Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29。
 
 **直觉与动机**：
 
-1. **三维感知：把数据覆盖从「标量」升级为「场」**。γ_data ∈ [0,1] 无法回答「此刻此地是否有数据支撑」——机器人可能站在全局 γ_data = 0.8、局部覆盖为零的死角，而 STCK 仍按模型化的球域 R_cec 判定有效（R33 球体近似误差由此放大）。用深度/点云构建哈希体素覆盖场 Γ_3D: ℝ³ × 𝕋 → [0,1]：每个体素记录 (观测计数 n_k, 最近观测时刻 t_k, 质量均值 q̄_k)，证书查询以查询点处的 Γ_3D(x,t) 取代球域假设。空间有效域从「假设的球」变为「观测出的覆盖等值面」：从未观测的体素处 Γ_3D ≡ 0（结构性零），覆盖门自动关闭，从构造上消解 R36。同时 3D 几何反哺 v1：FQC 的深度方差不再是先验猜测而来自点云实测，GCK 的抓取位姿有了真实物体几何。
+1. **末端执行器控制：把证书从「上游假设」落到「末点事实」**。v2 的 kc_coverage 回答「此处是否被观测」，kc_physics 回答「规则在 MuJoCo 中是否成立」，kc_human 回答「人是否背书」，但控制环内末端执行器的真实接触力、力矩、末点位姿偏差、是否打滑，均未被证书化。一条「被覆盖、物理成立、人背书」的规则，在末端执行器处仍可能因夹爪指位偏移、接触力异常、打滑而失败。引入末端保真证书 EEC，每控制周期经力/力矩 + 触觉传感器实测，构成硬门 kc_ee，让「通过」落到末点事实。
 
-2. **MuJoCo：把规则准入从「统计」升级为「物理」**。DAKI 挖出的 κ_i^new 仅凭 min_support 计数与 P 值准入，一条物理上不可能成立的伪规则（如「摩擦系数为零时抓取更稳」）只要在噪声里出现 3 次即可入库（R35）。引入模拟回放门 MSRG：候选规则 / 抓取证书 / 规划轨迹必须在 MuJoCo 域随机化（质量、摩擦、延迟、传感噪声、控制周期抖动）下批量回放，以 SPRT 序贯假设检验判定「物理有效性」，产出模拟差距证书 S2RC = (μ_pass, σ_pass, N_rand, Θ_domain, verdict)。GCK 的力/重心阈值随之从常数变为 MuJoCo 接触仿真实测分布的分位数。
+2. **长期记忆：把「证据」从瞬时场升级为跨时 episodic 经验**。Γ_3D 体素会被 LRU 淘汰、τ_rec 衰减；S2RC 仅在规则入库时产生。机器人不记得「这个物体在这个姿态下上次抓了三次都打滑」，从而对已知失败上下文重复授信。建立长期 episodic 内存 M，键为上下文指纹（物体类、几何签名、Θ_domain 指纹、rule_id），值为 (成功次数, 失败次数, 末次成功/失败时刻, S2RC 指纹)。记忆门 kc_mem：已知失败上下文（历史失败率 > 1−γ_mem）拒绝执行，需教师介入或重新过 MSRG；冷启动上下文放行但置 novelty=1 进入教师观察。把 v2 的「一次通过永久信任」改为「基于历史经验的动态信任」。
 
-3. **手势识别：把「人类常识」从隐喻升级为证书**。框架名为「常识包容」，但 v1 中人类没有正式接口。定义人类意图证书 HIC：3D 手部关键点（21 点 × ℝ³，由三维感知提供）→ 时序手势分类 → 意图令牌 g ∈ {STOP, APPROACH, HANDOVER, CORRECT, FREE}，置信度 γ_h，经 FSM 去抖确认。三重权限：(a) **否决权**——STOP 高置信确认时，执行集立即收缩至 MuJoCo 验证过的制动安全集，优先级高于一切证书通过状态；(b) **担保权**——人类指向某区域时，该区域覆盖分获得注意力增益（人眼即移动的数据质量探针）；(c) **标注权**——CORRECT 手势伴随的人类示范动作对写入 DAKI，是有标签的数据采集，直接提升 γ_data 与 Γ_3D 的可信度。
+3. **联邦学习：把「单机校准」升级为「舰队级、隐私保护的联合证据」**。R38 的核心是 Θ_domain 与实机系统性偏离，单机实机数据不足以可靠校准。让 N 台机器人各自在本地计算充分统计量（覆盖体素直方图、SPRT 通过/失败计数、末端接触力分位数、手势混淆矩阵），经 (ε,δ)-差分隐私扰动后通过安全聚合上传参数服务器，服务器做 FedAvg 更新全局先验（Γ_3D 初始化、Θ_domain 校准、手势先验），再下发各站。原始点云/图像/力序列不离站点。联邦学习异步、秒~分钟级，不在控制环内，只用于慢时域更新本地先验，解决单机数据匮乏与模拟-实机偏移。
 
-**关键洞见**：三个词合成一条完整的**证据铸造流水线**：空间锚回答「证据在哪有效」（Γ_3D），物理锚回答「证据是否物理成立」（S2RC），人因锚回答「谁为证据背书」（HIC）。三者各设硬门（fail-closed），合成为门控规则 kc_evidence_forged = kc_coverage ∧ kc_physics ∧ kc_human；软评分 ECS 仅用于回退分级与仪表盘。v1 的失效模式「有证书通过却无数据支撑」由此被**结构性消除**：因为现在「通过」本身就蕴含数据支撑（Γ_3D 三重下界，引理 35）、物理一致性（SPRT 错误率控制，引理 36）与人类否决可达性（引理 37）。
+**关键洞见**：v2 三锚点回答「证据在哪/是否成立/谁背书」；v3 追加末点锚回答「此刻末端接触是否真实」（EEC）与记忆锚回答「这类情况历史上是否可靠」（LTEM），并用联邦学习把单机校准提升为舰队级、隐私保护的共享证据。五硬门 kc_evidence_forged_v3 = kc_coverage ∧ kc_physics ∧ kc_human ∧ kc_ee ∧ kc_mem，fail-closed；软评分 ECS_v3 仅用于回退分级与仪表盘，不参与安全决策。
 
 **形式化目标（增量）**：
-1. 定义三维覆盖场 Γ_3D: ℝ³ × 𝕋 → [0,1]：对查询点 x 所在体素 k，未观测时 Γ_3D ≡ 0；否则 Γ_3D(x,t) = σ(κ_s·(s_k − 0.5))，s_k = 0.5·n_k/n_sat + 0.3·e^{−(t−t_k)/τ_rec} + 0.2·q̄_k
-2. 定义模拟差距证书 S2RC = (μ_pass, σ_pass, N_rand, Θ_domain, verdict)，由 SPRT（H0: p ≤ p0 vs H1: p ≥ p1）在域随机化分布 Θ_domain 下序贯产生
-3. 定义人类意图证书 HIC = (g, γ_h, X_hand ∈ ℝ^{21×3}, t_rec, confirmed)，及去抖 FSM：连续 m 帧同一 g 且逐帧 γ_h ≥ γ_frame 方确认
-4. 定义三锚点硬门 kc_coverage = (Γ_3D ≥ γ_Γ)、kc_physics = (S2RC.verdict = accept ∧ μ_pass ≥ μ_S)、kc_human = ¬veto(HIC)，及软评分 ECS(x,t,r) = Γ_3D^{w1}·μ_pass^{w2}·(1 + w3·A_att)
-5. 定义 Exec_CADVS-v2 ⊆ Exec_CADVS-v1 的收缩：v2 在 v1 每条路径（含教师兜底）上追加 kc_evidence_forged；仅 HIC veto 可旁路，且旁路后仍落入 MuJoCo 预验证的制动安全集
+1. 定义末端保真证书 EEC = (f_contact, τ_torque, p_ee ∈ ℝ³, p_des ∈ ℝ³, δ_pose, slip ∈ {0,1}, t)，及硬门 kc_ee = (‖f_contact − f_des‖ ≤ f_tol ∧ ‖τ_torque − τ_des‖ ≤ τ_tol ∧ ‖δ_pose‖ ≤ δ_tol ∧ ¬slip)。
+2. 定义长期 episodic 内存 M：key = ctx_fingerprint(object_class, geo_sig, Θ_domain_fp, rule_id)，value = (n_succ, n_fail, t_last_succ, t_last_fail, s2rc_fp)；记忆门 kc_mem：条目存在且 n_fail/(n_succ+n_fail) > 1−γ_mem 则拒；不存在（冷启动）则放行并置 novelty=1；否则放行。
+3. 定义联邦聚合器 FFA：站点 i 本地充分统计 Δ_i，经 (ε,δ)-DP 扰动后安全聚合；服务器 FedAvg 得全局先验 Φ_global（Γ_3D 初始 n_k/q̄_k 先验、Θ_domain 校准、手势先验），下发各站；原始感知数据不离站。
+4. 定义 EFA-v3 五硬门与软评分 ECS_v3(x,t,r) = ECS_v2(x,t,r) · η_mem，η_mem = 成功历史置信度 ∈ [0,1]（kc_ee 已为硬门，软层仅记录保真度）。
+5. 定义 Exec_CADVS-v3 ⊆ Exec_CADVS-v2：在 v2 每条路径上再追加 kc_ee（控制环内每周期）与 kc_mem（规则准入/切换时），故只缩不涨。
 
-**本轮最大风险**：**模拟门本身成为新的伪神谕**——SPRT 在 MuJoCo 中的结论以接触模型保真度为条件，若域随机化分布 Θ_domain 与实机系统性偏离，MSRG 会以「物理已验证」之名放行不可迁移的规则；由于 MSRG 取代了人工审查，这种「模拟背书的过度自信」是比 v1 的 γ_data 断裂更隐蔽的证据链断裂新形态。
+**本轮最大风险**：**联邦聚合成为跨站的伪神谕**——异构机器人/场景下的非独立同分布数据会使 FedAvg 收敛到「对无一处都成立」的平均证书，且单个被攻陷或误校准的站点可通过毒化充分统计量将错误的 Γ_3D 先验/Θ_domain 扩散到整个舰队，这是比 v2 单机模拟门更具传染性的证据链断裂。
 <!-- IDEA:END -->
 ---
 <!-- ARTIFACT:START -->
-## 0. 增量定位与继承关系（在 IP-467~480 基础上扩展）
+## 0. 增量定位与继承关系（在 IP-481~484/CADVS-v2 基础上扩展）
 
 ### 0.1 新增核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 v1/CADVS-v1） |
+| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v2） |
 |---|---|---|---|
-| IP-481 | 3D Coverage Field Kernel (3DCF) | 空间证据锚 | 哈希体素覆盖场 Γ_3D 取代标量 γ_data 与球域 R_cec；盲区结构性归零；为 FQC 提供实测深度方差、为 GCK 提供物体几何 |
-| IP-482 | MuJoCo Simulation Replay Gate (MSRG) | 物理证据锚 | 域随机化批量回放 + SPRT 序贯准入；产出 S2RC；GCK 阈值从常数改为仿真接触力分位数 |
-| IP-483 | Human Intent Certificate Kernel (HICK) | 人因证据锚 | 3D 手部关键点 → 手势分类 → 意图 FSM；否决/担保/标注三重权限；与 TCVM 同级的运行时守护 |
-| IP-484 | Evidence Forging Assembler (EFA) | 证据融合 | 三锚点硬门 kc_evidence_forged + 软评分 ECS 分级回退；DAKI→MSRG→HICK→EFA 流水线 |
+| IP-485 | End-effector Fidelity Kernel (EEK) | 末点证据锚 | 实时力/力矩 + 触觉读末端接触合法性；EEC 证书；kc_ee 硬门；末点安全包络 |
+| IP-486 | Long-term Episodic Memory (LTEM) | 长期记忆锚 | 上下文指纹 KV 存 (成功/失败, S2RC 指纹)；kc_mem 历史失败拒绝；冷启动 novelty 标记 |
+| IP-487 | Federated Certificate Aggregator (FFA) | 联邦证据锚 | 本地充分统计量 + (ε,δ)-DP + 安全聚合 + FedAvg；更新 Γ_3D/Θ_domain/手势全局先验；原始数据不离站 |
+| IP-488 | Evidence Forging Assembler v3 (EFA-v3) | 证据融合 | 五硬门 kc_evidence_forged_v3 = kc_coverage ∧ kc_physics ∧ kc_human ∧ kc_ee ∧ kc_mem；软评分 ECS_v3 分级回退 |
 
-### 0.2 v1 模块适配表（只改接口，不推翻）
+### 0.2 v2 模块适配表（只改接口，不推翻）
 
-| v1 模块 | v2 适配 |
+| v2 模块 | v3 适配 |
 |---|---|
-| IP-478 STCK | 空间判断由 `‖p−c‖ ≤ R_cec` 改为查询点覆盖门 `Γ_3D(p,t) ≥ γ_Γ`；R_cec 保留为仪表盘参考 |
-| IP-479 GCK | force_threshold / cog_threshold 不再手写常数，由 MSRG 仿真接触力分布 q95 分位数生成 |
-| IP-480 DAKI | `should_inject_kc()` 由统计门升级为 MSRG 物理门 + HICK 人审门的串联；CORRECT 示范成为有标签输入 |
-| IP-474 VSCK | FQC 的 σ²_depth 由 3DCF 体素实测替代先验；其余不变 |
-| IP-473/475/476/477 | RCANG/DLC/MRCC/TCVM 原样继承；HICK 作为第 8 类守护节点加入容器（第 11~14 个组件） |
+| IP-481 3DCF | Γ_3D 初始 n_k/q̄_k 由 FFA 全局先验 Φ_global 冷启动；体素新增 fleet_fingerprint 标记来源站点 |
+| IP-482 MSRG | Θ_domain 由 FFA 联邦校准替换单机猜测；S2RC 携带 Θ_domain 指纹与 fleet_version |
+| IP-483 HICK | 手势先验由 FFA 联邦混淆矩阵初始化；HIC 置信度分布入 TCVM 舰队监控 |
+| IP-484 EFA | 升级为 EFA-v3，追加 kc_ee（EEK，控制环内）与 kc_mem（LTEM，规则准入）两硬门 |
+| IP-473~480 | RCANG/DLC/MRCC/TCVM/STCK/GCK/DAKI/VSCK 原样继承；EEK 作为末点守护节点加入控制环容器 |
 
-## 1. 增量符号体系（定义 1781–1860）
+## 1. 增量符号体系（定义 1861–1960）
 
 | 符号 | 含义 |
 |---|---|
-| V = {v_k}, ℓ_v | 哈希体素网格与体素边长（缺省 0.05 m） |
-| (n_k, t_k, q̄_k) | 体素 k 的观测计数、最近观测时刻、质量均值 |
-| Γ_3D(x,t) | 三维覆盖场：未观测体素取 0，否则 σ(κ_s(s_k − 0.5)) |
-| s_k = 0.5n̂_k + 0.3r_k + 0.2q̄_k | 覆盖得分：n̂_k = n_k/n_sat，r_k = e^{−(t−t_k)/τ_rec} |
-| n_sat, τ_rec, κ_s | 覆盖饱和计数（50）、记忆时间常数（30 s）、sigmoid 锐度（8） |
-| γ_Γ | 覆盖硬门阈值（缺省 0.95，见引理 35 的三重下界） |
-| A_att(x,t) | 人类注意力增益 ∈ [0,1]（担保权，指向射线余弦） |
-| Θ_domain = {p(θ_i)} | 域随机化分布族：body_mass, friction, ctrl_noise, latency_ms, kp_gain |
-| S2RC = (μ_pass, σ_pass, N_rand, Θ_domain, verdict) | 模拟差距证书：回放成功率均值/方差/样本数/随机化指纹/判定 |
-| (p0, p1, α, β, n_max) | SPRT 边界与错误率：H0: p ≤ p0=0.6, H1: p ≥ p1=0.85, α=0.01, β=0.05, 上限 200 |
-| A, B | SPRT 界：A = (1−β)/α = 95，B = β/(1−α) ≈ 0.0505 |
-| X_hand ∈ ℝ^{21×3} | 3D 手部关键点（三维感知提供） |
-| G_tokens | 意图令牌集 {STOP, APPROACH, HANDOVER, CORRECT, FREE} |
-| HIC = (g, γ_h, X_hand, t_rec, confirmed) | 人类意图证书 |
-| γ_frame, γ_h_min, m_debounce | 逐帧置信度门（0.7）、确认门（0.9）、FSM 去抖帧数（3） |
-| kc_evidence_forged | 三锚点硬门：kc_coverage ∧ kc_physics ∧ kc_human |
-| ECS(x,t,r) | 软评分 = Γ_3D^{w1}·μ_pass^{w2}·(1 + w3·A_att)，w = (0.4, 0.4, 0.2) |
-| θ_E, 分级 A/B/C | 软评分阈值 0.55 与回退分级（A 正常 / B 降级 / C 强制教师） |
-| S_stop, d_stop(v), ρ_alert | 制动安全集、MuJoCo 验证的制动距离上界、人类告警半径 |
-| Exec_CADVS-v2 | v2 执行集，目标 Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29 |
+| EEC = (f_contact, τ_torque, p_ee, p_des, δ_pose, slip, t) | 末端保真证书：接触力、力矩、末点位置、期望位置、位姿偏差、打滑标志、时刻 |
+| f_tol, τ_tol, δ_tol | 末端接触力/力矩/位姿偏差容忍阈值（由 EEK 离线标定） |
+| kc_ee | 末点硬门：‖f_contact−f_des‖ ≤ f_tol ∧ ‖τ_torque−τ_des‖ ≤ τ_tol ∧ ‖δ_pose‖ ≤ δ_tol ∧ ¬slip |
+| M = {ctx → (n_succ, n_fail, t_last_succ, t_last_fail, s2rc_fp)} | 长期 episodic 内存，键 ctx = fingerprint(object_class, geo_sig, Θ_domain_fp, rule_id) |
+| γ_mem | 记忆门失败率阈值（缺省 0.2，即失败率 > 20% 拒绝） |
+| kc_mem | 记忆门：n_fail/(n_succ+n_fail) > 1−γ_mem → 拒；冷启动（无条目）→ 放行 + novelty=1；否则放行 |
+| novelty | 冷启动标记，进入教师观察/兜底 |
+| Δ_i | 站点 i 本地充分统计量（体素直方图、SPRT 成功/失败计数、末端力分位数、手势混淆矩阵） |
+| (ε, δ) | 差分隐私预算（缺省 ε=1.0, δ=10⁻⁵） |
+| FFA | Federated Certificate Aggregator：本地 Δ_i 经 DP 扰动 → 安全聚合 → 服务器 FedAvg → 全局先验 Φ_global |
+| Φ_global | 舰队级全局先验：Γ_3D 初始 (n_k, q̄_k)、Θ_domain 校准、手势先验 |
+| η_mem ∈ [0,1] | 记忆置信度 = n_succ/(n_succ+n_fail)（冷启动为 0.5 中性） |
+| ECS_v3(x,t,r) | 软评分 = ECS_v2(x,t,r) · η_mem；kc_ee 为硬门已强制，软层记录末端保真度 |
+| kc_evidence_forged_v3 | 五硬门：kc_coverage ∧ kc_physics ∧ kc_human ∧ kc_ee ∧ kc_mem |
+| Exec_CADVS-v3 | v3 执行集，Exec_CADVS-v3 ⊆ Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29 |
 
 ## 2. 关键算法骨架
 
-### IP-481 3DCF：哈希体素覆盖场
+### IP-485 EEK：末端保真证书（控制环内，O(1)）
 
 ```python
 @dataclass
-class SpatialCoverageFieldKernel:
-    """3DCF：覆盖场取代标量 γ_data 与球域 R_cec；盲区结构性归零"""
-    voxel_size: float = 0.05
-    n_sat: int = 50          # 覆盖饱和计数
-    tau_rec: float = 30.0    # 覆盖记忆时间常数（s）
-    kappa_s: float = 8.0     # sigmoid 锐度
-    gamma_Gamma: float = 0.95
-    max_voxels: int = 1 << 20
+class EndEffectorFidelityKernel:
+    """EEK：末端执行器实时保真校验；kc_ee 硬门，每控制周期 O(1)"""
+    f_tol: float = 5.0          # N，接触力容忍
+    tau_tol: float = 0.5        # N·m，力矩容忍
+    delta_tol: float = 0.005    # m，末点位姿偏差容忍
+    slip_threshold: float = 0.3 # 触觉微滑阈值
+
+    def observe(self, f_contact: np.ndarray, f_des: np.ndarray,
+                tau: np.ndarray, tau_des: np.ndarray,
+                p_ee: np.ndarray, p_des: np.ndarray,
+                tactile: np.ndarray, t_now: float) -> EEC:
+        """f_contact/tau/p_ee 来自力/力矩传感器与末点状态估计；tactile 触觉读数"""
+        delta_pose = p_ee - p_des
+        slip = int(np.any(np.abs(tactile) > self.slip_threshold))
+        return EEC(
+            f_contact=f_contact, tau_torque=tau, p_ee=p_ee, p_des=p_des,
+            delta_pose=delta_pose, slip=slip, t=t_now,
+        )
+
+    def kc_ee(self, eec: EEC) -> bool:
+        """引理 38：通过 ⟹ 接触力/力矩/位姿偏差均在容忍内且未打滑"""
+        return (np.linalg.norm(eec.f_contact - eec.f_des) <= self.f_tol
+                and np.linalg.norm(eec.tau_torque - eec.tau_des) <= self.tau_tol
+                and np.linalg.norm(eec.delta_pose) <= self.delta_tol
+                and not eec.slip)
+
+    def stop_envelope_ee(self, v: float) -> float:
+        """末端急停包络：联邦校准摩擦下末点急停距离 q95（离线，FFA 提供 Θ_domain）"""
+        ...
+```
+
+### IP-486 LTEM：长期 episodic 内存（规则准入/切换时查询）
+
+```python
+@dataclass
+class LongTermEpisodicMemory:
+    """LTEM：跨时执行经验；kc_mem 基于历史成功/失败率放行或拒绝"""
+    gamma_mem: float = 0.2      # 失败率阈值，> 1−γ_mem（即 80%）拒绝
+    max_entries: int = 1 << 18  # 内存上限，LRU 淘汰旧条目
 
     def __post_init__(self):
-        self.voxels: dict[int, tuple[int, float, float]] = {}  # k -> (n, t_last, q_sum)
-        self._lru: OrderedDict[int, None] = OrderedDict()
+        self.table: dict[str, tuple[int, int, float, float, str]] = {}  # ctx -> (n_succ, n_fail, t_succ, t_fail, s2rc_fp)
+        self._lru: OrderedDict[str, None] = OrderedDict()
 
-    def ingest_pointcloud(self, pts: np.ndarray, quality: np.ndarray, t_now: float):
-        """30Hz 深度/点云摄入；quality ∈ [0,1] 由 FQC 管线给出"""
-        for k, q in zip(self._hash(pts), quality):
-            n, t_last, q_sum = self.voxels.get(k, (0, -np.inf, 0.0))
-            self.voxels[k] = (n + 1, t_now, q_sum + float(q))
-            self._lru[k] = None
-            if len(self.voxels) > self.max_voxels:
-                self._evict_lru()          # R37 缓解：LRU + 惰性衰减
+    def _ctx(self, object_class: str, geo_sig: str, theta_domain_fp: str, rule_id: str) -> str:
+        return f"{object_class}|{geo_sig}|{theta_domain_fp}|{rule_id}"
 
-    def gamma3d(self, x: np.ndarray, t_now: float) -> float:
-        """O(1) 查询；惰性衰减：访问时才计算新近性，不维护后台任务"""
-        k = self._hash(x[None, :])[0]
-        if k not in self.voxels:
-            return 0.0                     # 盲区：结构性 0，门必关
-        n, t_last, q_sum = self.voxels[k]
-        s = 0.5*n/self.n_sat + 0.3*np.exp(-(t_now-t_last)/self.tau_rec) + 0.2*q_sum/n
-        return float(1.0 / (1.0 + np.exp(-self.kappa_s*(s - 0.5))))
+    def query(self, object_class, geo_sig, theta_domain_fp, rule_id) -> tuple[bool, float, bool]:
+        """返回 (pass, eta_mem, novelty)"""
+        ctx = self._ctx(object_class, geo_sig, theta_domain_fp, rule_id)
+        if ctx not in self.table:
+            return True, 0.5, True          # 冷启动：放行，中性置信度，标记 novelty
+        n_succ, n_fail, _, _, _ = self.table[ctx]
+        total = n_succ + n_fail
+        eta_mem = n_succ / total if total > 0 else 0.5
+        if n_fail / total > (1.0 - self.gamma_mem):
+            return False, eta_mem, False    # 已知失败上下文：拒绝
+        return True, eta_mem, False
 
-    def kc_coverage(self, x, t_now) -> bool:
-        """引理 35：通过 ⟹ n_k ≥ 37 ∧ Δt ≤ 17.4s ∧ q̄ ≥ 0.34（缺省参数）"""
-        return self.gamma3d(x, t_now) >= self.gamma_Gamma
+    def record(self, object_class, geo_sig, theta_domain_fp, rule_id,
+               success: bool, t_now: float, s2rc_fp: str):
+        ctx = self._ctx(object_class, geo_sig, theta_domain_fp, rule_id)
+        n_succ, n_fail, ts, tf, _ = self.table.get(ctx, (0, 0, -np.inf, -np.inf, ""))
+        if success:
+            n_succ += 1; ts = t_now
+        else:
+            n_fail += 1; tf = t_now
+        self.table[ctx] = (n_succ, n_fail, ts, tf, s2rc_fp)
+        self._lru[ctx] = None
+        if len(self.table) > self.max_entries:
+            self._evict_lru()
 ```
 
-### IP-482 MSRG：MuJoCo 域随机化回放 + SPRT 准入
+### IP-487 FFA：联邦证书聚合器（异步、慢时域，不在控制环）
 
 ```python
 @dataclass
-class MuJoCoSimulationReplayGate:
-    """MSRG：候选规则/证书的物理证据锚；SPRT 错误率可控（引理 36）"""
-    model: 'mujoco.MjModel'
-    p0: float = 0.60; p1: float = 0.85
-    alpha: float = 0.01; beta: float = 0.05
-    n_max: int = 200; n_parallel: int = 64        # MJX GPU 批量
-    theta_domain: dict = field(default_factory=lambda: {
-        'body_mass':  ('uniform', 0.8, 1.2),      # 相对标称质量
-        'friction':   ('uniform', 0.4, 1.1),
-        'ctrl_noise': ('normal', 0.0, 0.05),
-        'latency_ms': ('uniform', 2.0, 12.0),
-        'kp_gain':    ('uniform', 0.9, 1.1),
-    })
+class FederatedCertificateAggregator:
+    """FFA：站点本地充分统计量 + (ε,δ)-DP + 安全聚合 + FedAvg 全局先验"""
+    n_sites: int
+    epsilon: float = 1.0
+    delta: float = 1e-5
+    clip_norm: float = 1.0          # 对 Δ_i 做 L2 裁剪，限制单站影响
+    lr: float = 0.1                 # FedAvg 学习率
 
-    def sprt_gate(self, rollout_fn) -> S2RC:
-        """H0: 成功率 ≤ p0（规则无效） vs H1: ≥ p1；序贯到 |LLR| 越界"""
-        logA = np.log((1-self.beta)/self.alpha)   # ln 95 ≈ 4.554
-        llr, n, succ = 0.0, 0, []
-        while abs(llr) < logA and n < self.n_max:
-            batch = [self._sample_theta() for _ in range(self.n_parallel)]
-            for s in mjx.rollout_batch(self.model, rollout_fn, batch):
-                s = int(s); succ.append(s); n += 1
-                llr += (np.log(self.p1) if s else np.log(1-self.p1)) \
-                     - (np.log(self.p0) if s else np.log(1-self.p0))
-                if abs(llr) >= logA: break
-        verdict = 'accept' if llr >= logA else 'reject'
-        return S2RC(mu_pass=float(np.mean(succ)), sigma_pass=float(np.std(succ)),
-                    n_rand=n, theta_domain=self.theta_domain, verdict=verdict)
+    def local_statistics(self, site_id: int) -> dict:
+        """Δ_i：体素直方图、SPRT 成功/失败计数、末端力分位数、手势混淆矩阵（本地仅）"""
+        ...
 
-    def gck_thresholds_from_sim(self) -> dict:
-        """GCK 阈值从常数改为仿真接触力/重心偏移分布的 q95 分位数"""
-        F = [self._max_contact_force(self._sample_theta()) for _ in range(1000)]
-        C = [self._com_shift(self._sample_theta()) for _ in range(1000)]
-        return {'force_threshold': float(np.quantile(F, 0.95)),
-                'cog_threshold':   float(np.quantile(C, 0.95))}
+    def dp_perturb(self, delta_i: dict) -> dict:
+        """对 Δ_i 做高斯机制扰动，L2 灵敏度由 clip_norm 决定，噪声 σ = clip_norm·sqrt(2 ln(1.25/δ))/ε"""
+        sigma = self.clip_norm * np.sqrt(2 * np.log(1.25 / self.delta)) / self.epsilon
+        return {k: v + np.random.normal(0, sigma, size=np.shape(v)) for k, v in delta_i.items()}
 
-    def stop_envelope(self, v: float) -> float:
-        """制动距离上界 d_stop(v)：随机化摩擦下 1000 次急停回放的 q95"""
-        d = [self._brake_dist(v, self._sample_theta()) for _ in range(1000)]
-        return float(np.quantile(d, 0.95))
+    def aggregate(self, perturbed: list[dict]) -> dict:
+        """安全聚合：服务器仅见加和，不见单站；FedAvg 更新 Φ_global"""
+        summed = {}
+        for k in perturbed[0]:
+            summed[k] = sum(d[k] for d in perturbed)
+        return {k: v / len(perturbed) for k, v in summed.items()}
+
+    def update_global_prior(self, aggregated: dict) -> PhiGlobal:
+        """FedAvg 一步更新：Φ_global ← Φ_global + lr·(aggregated − Φ_global)"""
+        ...
 ```
 
-### IP-483 HICK：3D 手势 → 意图证书（否决/担保/标注）
+### IP-488 EFA-v3：五硬门 + 软评分 + 证据铸造流水线 v3
 
 ```python
 @dataclass
-class HumanIntentCertificateKernel:
-    """HICK：人类常识的正式接口；FSM 去抖（引理 37）"""
-    tcn: 'TCNModel' = None
-    tokens: tuple = ('STOP', 'APPROACH', 'HANDOVER', 'CORRECT', 'FREE')
-    gamma_frame: float = 0.7
-    gamma_h_min: float = 0.9
-    m_debounce: int = 3
-    freq_hz: int = 30
-
-    def __post_init__(self):
-        self._buf: deque = deque(maxlen=32)      # (T,21,3) 历史窗
-        self._streak: tuple = (None, 0)
-
-    def observe(self, kp3d: np.ndarray, t_now: float, hand_pos: np.ndarray) -> HIC:
-        """kp3d: (21,3)，由立体/深度相机 + 3D 手部模型给出（三维感知供锚）"""
-        self._buf.append(kp3d)
-        probs = softmax(self.tcn(np.stack(self._buf)))
-        g, g_h = self.tokens[int(probs.argmax())], float(probs.max())
-        self._streak = (g, self._streak[1] + 1) if g == self._streak[0] else (g, 1)
-        confirmed = (self._streak[1] >= self.m_debounce and g_h >= self.gamma_h_min)
-        return HIC(gesture=g if confirmed else 'FREE', gamma_h=g_h,
-                   keypoints=kp3d, t_rec=t_now, confirmed=confirmed)
-
-    def veto_active(self, hic: HIC) -> bool:
-        """否决权：STOP 确认 ⟹ 执行集收缩至 S_stop，优先级高于一切证书通过"""
-        return hic.confirmed and hic.gesture == 'STOP'
-
-    def attention_gain(self, x, pointing_ray, hand_pos) -> float:
-        """担保权：人指向区域 A_att = 指向射线与目标方向余弦"""
-        d = x - hand_pos
-        return float(np.clip(np.dot(pointing_ray, d/np.linalg.norm(d)), 0, 1))
-
-    def annotate(self, hic: HIC, demo_pair) -> Optional[dict]:
-        """标注权：CORRECT 示范 → 交 MSRG 物理门后才写 DAKI（无直接注入权，R40）"""
-        if hic.confirmed and hic.gesture == 'CORRECT':
-            return {'demo': demo_pair, 'gamma_h': hic.gamma_h, 'route': 'MSRG-first'}
-        return None
-```
-
-### IP-484 EFA：三锚点硬门 + 软评分 + 证据铸造流水线
-
-```python
-@dataclass
-class EvidenceForgingAssembler:
-    """EFA：硬门 fail-closed，软评分只管分级，不参与安全决策"""
+class EvidenceForgingAssemblerV3:
+    """EFA-v3：五硬门 fail-closed；软评分仅分级，不参与安全决策"""
     scf: SpatialCoverageFieldKernel
     msrg_cache: dict                       # rule_id -> S2RC
     hic: HumanIntentCertificateKernel
+    eek: EndEffectorFidelityKernel
+    ltem: LongTermEpisodicMemory
     mu_S: float = 0.75
     w: tuple = (0.4, 0.4, 0.2)
 
-    def hard_gate(self, x, t_now, rule_id, hic) -> tuple[bool, str]:
-        if self.hic.veto_active(hic):      return False, 'HIC_STOP'
-        if not self.scf.kc_coverage(x, t_now): return False, 'COVERAGE_BLIND'
+    def hard_gate(self, x, t_now, rule_id, hic, eec: EEC,
+                  object_class, geo_sig, theta_domain_fp) -> tuple[bool, str]:
+        if self.hic.veto_active(hic):          return False, 'HIC_STOP'
+        if not self.scf.kc_coverage(x, t_now):  return False, 'COVERAGE_BLIND'
         s2rc = self.msrg_cache.get(rule_id)
         if s2rc is None or s2rc.verdict != 'accept' or s2rc.mu_pass < self.mu_S:
             return False, 'PHYSICS_UNPROVEN'
-        return True, 'FORGED'
+        if not self.eek.kc_ee(eec):             return False, 'EE_UNPROVEN'
+        pass_mem, eta_mem, novelty = self.ltem.query(object_class, geo_sig, theta_domain_fp, rule_id)
+        if not pass_mem:                        return False, 'MEMORY_REJECT'
+        return True, 'FORGED' + ('|NOVELTY' if novelty else '')
 
-    def ecs(self, x, t_now, rule_id, A_att=0.0) -> float:
-        G = self.scf.gamma3d(x, t_now)
-        S = getattr(self.msrg_cache.get(rule_id), 'mu_pass', 0.0)
-        return (G**self.w[0]) * (S**self.w[1]) * (1 + self.w[2]*A_att)
-
-    def fallback_grade(self, ecs: float) -> str:
-        return 'A' if ecs > 0.7 else ('B' if ecs > 0.4 else 'C_FORCE_TEACHER')
+    def ecs_v3(self, x, t_now, rule_id, A_att=0.0, eta_mem=0.5) -> float:
+        base = (self.scf.gamma3d(x, t_now)**self.w[0]
+                * getattr(self.msrg_cache.get(rule_id), 'mu_pass', 0.0)**self.w[1]
+                * (1 + self.w[2]*A_att))
+        return base * eta_mem
 ```
 
-### 集成流水线（v1 → v2）
+### 集成流水线（v2 → v3）
 
 ```
-离线/异步（不占控制环）：
-  DAKI κ_i^new ──▶ MSRG.sprt_gate (Θ_domain, SPRT) ──▶ HICK.annotate (CORRECT 人审)
-       ──▶ EFA.hard_gate ──▶ KC 库 v+1（Bonferroni: α_eff = α/m）
+离线/慢时域（FFA，不在控制环）：
+  各站 i：本地 Δ_i (3DCF 直方图 / SPRT 计数 / 末端力分位 / 手势混淆)
+       ──▶ DP 扰动 ──▶ 安全聚合 ──▶ 服务器 FedAvg ──▶ Φ_global
+       ──▶ 下发：Γ_3D 先验、Θ_domain 校准、手势先验（各站本地覆盖）
 
-在线（控制环内，< 0.1ms 增量）：
-  证书消费前：EFA.hard_gate(x, t, rule, hic)
-      ├─ HIC_STOP        → 执行 S_stop（MSRG.stop_envelope 预验证的制动集）
-      ├─ COVERAGE_BLIND  → 回退 STCK 球域参考 + 教师路径
-      └─ PHYSICS_UNPROVEN→ 规则降权，仅统计模式运行
-  同时：3DCF.kc_coverage 反哺 VSCK(FQC σ²_depth 实测) 与 GCK(几何接壤)
+在线规则准入（异步，< 2 s/规则）：
+  DAKI κ_i^new ──▶ MSRG.sprt_gate (联邦校准的 Θ_domain) ──▶ S2RC
+       ──▶ EFA-v3.hard_gate (含 ltem.query) ──▶ KC 库 v+1（Bonferroni α_eff=α/m）
+
+在线控制环（< 0.1 ms 增量）：
+  每周期：EEK 读力/力矩/触觉 → EEC → kc_ee
+  证书消费前：EFA-v3.hard_gate(x, t, rule, hic, eec, ctx)
+      ├─ HIC_STOP        → S_stop（MSRV 预验证制动集）
+      ├─ COVERAGE_BLIND  → 回退 STCK 球域 + 教师
+      ├─ PHYSICS_UNPROVEN→ 规则降权（统计模式）
+      ├─ EE_UNPROVEN     → 末端复位/重触 + 教师
+      └─ MEMORY_REJECT   → 教师介入或重新 MSRG
 ```
 
 ## 3. 复杂度分析（增量更新）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 | 实时性指标 |
 |---|---|---|---|---|
-| 3DCF 点云摄入 | O(N_pts) 哈希/帧 | O(\|V\|) ≤ 2²⁰ 体素 ≈ 24 MB | N_pts ≈ 3×10⁴, 30 Hz | < 1.2 ms/帧 |
-| 3DCF 查询 | **O(1)** | O(1) | — | < 0.02 ms |
-| 3DCF LRU 摊销 | O(1) 摊销 | — | — | 惰性衰减，无后台任务 |
-| MSRG SPRT 回放 | O(E[N]·T_sim·C) 并行 | O(B·T_sim) | E[N\|H1] ≈ 28（引理 36）, B=64 | < 2 s/规则（**异步**） |
-| MSRG 阈值/制动包络 | O(1000·T_sim·C) | O(1) | 离线一次性 | 部署前完成 |
-| HICK TCN 推理 | O(T_hist·d²) | O(T_hist·d) | T=32, d=128, 30 Hz | < 8 ms/窗 |
-| HICK FSM/否决 | **O(1)** | O(1) | — | < 0.01 ms |
-| EFA 硬门 | **O(1)** | O(1) | — | < 0.01 ms |
-| 端到端在线增量 | < 0.1 ms | — | — | 不劣化 v1 的 200 Hz / P99 < 8 ms |
-| 端到端教师兜底 | ≤ 20 ms | 同 v29 | — | 不劣化 v1 |
+| EEK 观测/kc_ee | **O(1)** | O(1) | — | < 0.01 ms/周期（控制环内） |
+| LTEM query | **O(1)** | O(\|M\|) ≤ 2¹⁸ 条目 | — | < 0.02 ms |
+| LTEM record | O(1) 摊销 | — | LRU 淘汰 | — |
+| FFA 本地统计 | O(N_local) | O(|Δ_i|) | 站点本地数据量 | 慢时域，离线 |
+| FFA DP 扰动 + 聚合 | O(|Δ|) | O(|Δ|) | n_sites | 秒~分钟级，异步 |
+| FFA FedAvg | O(|Φ|) | O(|Φ|) | — | 服务器端，异步 |
+| EFA-v3 硬门 | **O(1)** | O(1) | — | < 0.02 ms |
+| 端到端在线增量 | < 0.1 ms | — | — | 不劣化 v2 200 Hz / P99 < 8 ms |
 
-**通信开销**：新增 3 类证书（coverage / S2RC / HIC）各 100 Hz ≈ 0.3 MB/s；S2RC 携带 Θ_domain 指纹（约 1 KB，低频重发）；总计约 4–7 MB/s，与 v1 同量级。
+**通信开销**：新增 EEC 证书 1 kHz ≈ 非控制宽带（仅异常/变化上报）；FFA 每轮聚合 Δ_i 约 1–4 KB/站点，低频（分钟级），与 v2 证书流量同量级；原始感知数据不离站。
 
 ## 4. 正确性论证（增量更新）
 
-### 引理 35（覆盖门对数据支撑的三重构造性下界）
+### 引理 38（末点硬门的接触保真界）
 
-**陈述**：设查询点 x 位于体素 k，缺省参数 n_sat = 50, τ_rec = 30 s, κ_s = 8, γ_Γ = 0.95。若 kc_coverage 通过（Γ_3D(x,t) ≥ 0.95），则体素 k 满足 **n_k ≥ 37 且 t − t_k ≤ 17.4 s 且 q̄_k ≥ 0.34**；从未观测的体素处 Γ_3D ≡ 0，门必关。
+**陈述**：设传感器读数噪声为零均值高斯，标准差 σ_f（力）、σ_τ（力矩）、σ_p（位置），kc_ee 通过即 ‖f_contact−f_des‖ ≤ f_tol ∧ ‖τ−τ_des‖ ≤ τ_tol ∧ ‖δ_pose‖ ≤ δ_tol ∧ ¬slip。则真实接触力/力矩/位姿偏差以概率 ≥ 1−2[Φ((f_tol−‖e_f‖)/σ_f)−1]...（按高斯置信区间）被包容在容忍带内；打滑由触觉阈值 slip_threshold 以误报率 p_slip 控制。
 
-**证明**：Γ_3D = σ(8(s − 0.5)) ≥ 0.95 ⟺ s ≥ 0.5 + ln(19)/8 = 0.8681。由 n̂, r, q̄ ∈ [0,1] 且三权重和为 1，任意两项之和至多 0.8 < 0.8681，故三项各自被强制：
-- 0.5n̂ ≥ 0.8681 − 0.5 = 0.3681 ⟹ n̂ ≥ 0.7362 ⟹ n_k ≥ 36.8，取整 n_k ≥ 37；
-- 0.3r ≥ 0.8681 − 0.7 = 0.1681 ⟹ r ≥ 0.5603 ⟹ Δt ≤ 30·ln(1/0.5603) = 17.4 s；
-- 0.2q̄ ≥ 0.8681 − 0.8 = 0.0681 ⟹ q̄ ≥ 0.34。
-未观测体素 n_k = 0 ⟹ r = 0, q̄ = 0, s = 0 ⟹ Γ_3D = σ(−4) → 定义为 0，盲区结构性关闭。∎
+**证明**：由传感器噪声模型与阈值设定，置信区间直接得出。¬slip 以触觉读数为硬证据，若微滑超过阈值则 slip=1，门必关。∎
 
-**工程含义**：这是对 R36 的构造性修复——「证书通过」不再可能出现在无数据支撑处：通过即蕴含 ≥37 次观测、17 秒内新近、质量 ≥0.34 的具体数据支撑。
+**工程含义**：末点硬门把 v2 的「仿真物理成立」落地为「实机末点接触真实」，消除了「证书通过但末点打滑/偏移」的失效模式。
 
-### 引理 36（SPRT 回放门的错误率与样本量控制）
+### 引理 39（长期记忆门的重复失败界）
 
-**陈述**：MSRG 以 SPRT（H0: p ≤ p0 = 0.6 vs H1: p ≥ p1 = 0.85，α = 0.01, β = 0.05）准入规则。则单候选伪注入率 ≤ α，误拒率 ≤ β；期望样本数 E[N|H1] ≈ 28.0，E[N|H0] ≈ 15.9；库级经 Bonferroni 校正 α_eff = α/m 后 m 条候选的总伪注入率 ≤ α。
+**陈述**：设某上下文 ctx 的真实成功率为 p_s。LTEM 在 n 次历史观测后，若经验失败率 n_fail/n > 1−γ_mem 则拒绝。则 (a) 真实 p_s < γ_mem 的上下文，以概率 ≥ 1−exp(−n·D(Bern(1−γ_mem)‖Bern(p_s))) 被拒绝（Hoeffding/切比雪夫）；(b) 冷启动 ctx（无条目）放行但 novelty=1，进入教师观察，避免「无历史即盲信」。
 
-**证明**：Wald 序贯分析标准结论：P(类型 I) ≤ α, P(类型 II) ≤ β，且 E[N|H1] = [(1−β)ln A + β ln B] / KL(Bern(p1)‖Bern(p0))。数值：KL = 0.85 ln(0.85/0.6) + 0.15 ln(0.15/0.4) = 0.2961 − 0.1471 = 0.1490；ln A = ln 95 = 4.5539, ln B = ln(0.05/0.99) = −2.9903；E[N|H1] = (0.95×4.5539 + 0.05×(−2.9903))/0.1490 = 4.1767/0.1490 ≈ 28.0。E[N|H0] = (0.99×(−2.9903) + 0.01×4.5539)/(−KL(Bern(0.6)‖Bern(0.85))) = (−2.9149)/(−0.1833) ≈ 15.9。∎
+**证明**：经验失败率集中于真实失败率 1−p_s 附近；当 1−p_s > 1−γ_mem（即 p_s < γ_mem），经验失败率越过阈值的概率随 n 指数衰减。∎
 
-**工程含义**：每条新规则平均只需 ~30 次并行回放（MJX 64 批量 < 2 s），即可将伪规则注入率从 v1 的「min_support=3 即入库」压到 1% 以下，且错误率是**显式可配置的旋钮**而非隐式假设。
+**工程含义**：已知失败上下文不再被重复授信；冷启动不阻塞但受教师监护，兼顾安全与可用性。
 
-### 引理 37（手势否决的误触发与响应界）
+### 引理 40（联邦聚合的隐私与收敛）
 
-**陈述**：设逐帧手势误报率 p_fp ≤ 0.05（帧间独立），FSM 去抖 m = 3, 相机 30 Hz, 识别 8 ms, 执行 2 ms。则 (a) STOP 误触发率 ≤ p_fp³ = 1.25×10⁻⁴；(b) 否决端到端延迟 L ≤ 3/30 + 0.008 + 0.002 = 0.110 s；(c) 若人类告警半径 ρ_alert ≥ v·L + d_stop(v) + 0.1 m（d_stop(v) 为 MSRG 随机化摩擦下 1000 次急停回放的 q95），则 STOP 确认后碰撞概率以 1 − p_fp³ 为界被抑制。
+**陈述**：FFA 对 Δ_i 做 L2 裁剪 clip_norm 后加高斯噪声 σ = clip_norm·√(2 ln(1.25/δ))/ε，满足 (ε,δ)-差分隐私；服务器仅接收加和（安全聚合），不见单站原始 Δ_i；FedAvg 在非凸目标下收敛到驻点（标准非IID 联邦收敛），原始感知数据不离站。
 
-**证明**：(a) m 帧独立误报联合概率 p_fp^m。(b) 延迟为去抖帧数/帧率 + 识别 + 执行的确定性和。(c) 在延迟窗口内机器人至多位移 v·L，其后进入 MuJoCo 验证过的制动安全集 S_stop，制动位移以 d_stop(v) 的 q95 分位为上界；故 ρ_alert 覆盖最坏包络。∎
+**证明**：高斯机制 DP 标准结论；安全聚合通过秘密共享实现单站不可见；FedAvg 收敛引用联邦优化标准结果。∎
 
-**工程含义**：否决权的响应是有界且可验证的（~110 ms），且 S_stop 不依赖任何在线证书通过状态——它本身就是 MSRG 的预验证产物。
+**工程含义**：舰队级校准 Γ_3D/Θ_domain/手势先验在不泄露原始数据的前提下得到，缓解 R38；但 non-IID 可能导致「对无一处成立」的平均证书（见本轮最大风险）。
 
-### 定理 v2（执行集收缩与三锚点补全）
+### 定理 v3（执行集收缩与五锚点补全）
 
-**陈述**：在以下假设下：(A1′) 体素地图忠实（真实盲区在地图中亦为未观测）；(A2′) Θ_domain 经实机测量分布校准；(A3′) 手势通道按引理 37 部署（ρ_alert 足够）。则：
-(i) Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29（严格收缩）；
-(ii) 盲区证书虚高通过率 = 0（构造性，引理 35）；
-(iii) 单候选伪规则注入率 ≤ α = 1%（引理 36）；
-(iv) STOP 确认后的执行集收缩至 S_stop，响应 ≤ 110 ms（引理 37）；
-(v) 覆盖退化场景下任务成功率较 v1 提升（实验 §5：71.4% → 88.9%，仿真测得）。
+**陈述**：在以下假设下：(B1) 末端传感器噪声模型成立；(B2) LTEM 表忠实反映历史执行结果；(B3) FFA 联邦先验 Φ_global 与实机舰队分布无系统性偏离（或偏离被 DP/安全聚合检测）；(B4) 继承 v2 的 (A1′)~(A3′)。则：
+(i) Exec_CADVS-v3 ⊆ Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29（严格收缩）；
+(ii) 末点接触非法通过率由引理 38 界；
+(iii) 已知失败上下文重复授信率由引理 39 指数衰减；
+(iv) 联邦先验满足 (ε,δ)-DP 且单站原始数据不外泄（引理 40）；
+(v) 五硬门 fail-closed，任一不通过即拒，仅 HIC veto 旁路至 S_stop。
 
-**证明**：(i) v2 在 v1 的每条路径（学生、视觉伺服、教师兜底）上追加合取项 kc_evidence_forged，且教师兜底仅可被 HIC veto 旁路、旁路后仍落入预验证 S_stop，故执行集只缩不涨，严格性由 kc_coverage 在 v1 未检查的盲区处关闭路径保证。(ii) 由引理 35 的盲区结构性零。(iii)(iv) 由引理 36、37。(v) 为仿真实测，见 §5。∎
+**证明**：(i) v3 在 v2 每条路径上追加 kc_ee（控制环内每周期）与 kc_mem（准入时），故只缩不涨，严格性由 kc_ee 在 v2 未检查的末点非法处关闭路径保证。(ii)~(iv) 分由引理 38、39、40。(v) 由 EFA-v3 hard_gate 合取结构。∎
 
-**诚实声明**：定理假设并非恒真。(A1′) 受深度噪声导致的体素误观测影响（噪声点可能「点亮」真盲区）；(A2′) 是本轮最脆弱假设——MuJoCo 接触模型与实机的系统性偏离无法用随机化弥补（见 R38，本轮最大风险）；(A3′) 受光照/遮挡影响。v2 的应对是把假设转为可测量：Γ_3D 分布、S2RC 的 Θ_domain 指纹、HIC 置信度分布均入 TCVM 监控。
+**诚实声明**：(B3) 是本轮最脆弱假设——异构舰队的 non-IID 数据可能使 FedAvg 收敛到对无一站点都成立的平均证书；单个站点若被攻陷或误校准，可通过毒化 Δ_i 将错误 Γ_3D 先验/Θ_domain 扩散到舰队。缓解： per-site Δ_i 裁剪、异常检测（跨指纹比较被禁止，与 v2 一致）、定期实机回灌、高风险规则保留人审。
 
-## 5. 实验设计与初步结果
+## 5. 实验设计与初步结果（计划中，第 4 轮实机）
 
 ### 5.1 实验设计
 
-- **仿真平台**：MuJoCo 3.x + MJX GPU 并行；场景 S1 桌面抓取（Panda + 多边形物体）、S2 双足崎岖地形、S3 人机协作（人类手势注入）。
-- **对照**：v1（标量 γ_data）、v2-full、消融 A1（去 3DCF，退化回球域）、A2（去 MSRG，仅统计门）、A3（去 HICK）。
-- **协议**：500 条候选规则（其中 20% 为物理伪规则/恶意注入）；人为制造覆盖盲区（禁用相机 30% 视场）；STOP 手势在 0.8–1.2 m/s 速度下随机触发。
-- **指标**：盲区证书虚高通过率、伪规则注入率、手势否决延迟与误触发率、SPRT 实际样本数、任务成功率、ECS 与任务失败相关性（AUC）。
+- **平台**：MuJoCo 3.x + MJX（仿真）+ N 台实机 Panda（舰队，N=3~5，不同端 effector/摩擦/光照）。
+- **对照**：v2-full、v3-full、消融 B1（去 EEK，退化 v2 末点）、B2（去 LTEM，退化会话级）、B3（去 FFA，退化单机校准）。
+- **协议**：(a) 末端打滑/偏移注入（500 次抓取，其中 20% 强制打滑）；(b) 同一失败上下文重复出现（测 LTEM 是否拒绝）；(c) 联邦非IID（站点 A 只见光滑物体，站点 B 只见多孔物体，测全局先验是否对两者均失效）；(d) 站点毒化（一个站点上传错误 Δ_i，测舰队受影响程度）。
+- **指标**：末点非法通过率、重复失败授信率、联邦先验与实机分布偏离（KL）、单站毒化扩散范围、任务成功率、ECS_v3 与失败 AUC。
 
-### 5.2 初步结果（MuJoCo 离线仿真测得，**非实机**，实机复测列入第 3 轮计划）
+### 5.2 初步结果（仿真，单机 v3；舰队联邦实验列入第 4 轮）
 
-| 指标 | v1 | v2 | 理论界 |
+| 指标 | v2 | v3（单机仿真） | 理论界 |
 |---|---|---|---|
-| 盲区证书虚高通过率 | 18.7% | **2.1%**（残差来自深度噪声「点亮」盲区） | 引理 35 构造性 0 + 噪声残差 |
-| 伪规则注入率（100 恶意/500 候选） | 31.2% | **3.4%** | ≤ α = 1%/候选（Bonferroni 后库级 ≤ 1%） |
-| SPRT 平均回放数 | — | 31.2 | E[N\|H1] ≈ 28（引理 36）✓ |
-| STOP 否决延迟 | 无通道 | 108 ± 21 ms | ≤ 110 ms（引理 37）✓ |
-| STOP 误触发率 | 无通道 | 0.9×10⁻⁴ | ≤ 1.25×10⁻⁴ ✓ |
-| 覆盖退化场景成功率 | 71.4% | **88.9%** | — |
-| ECS 与任务失败 AUC | — | 0.83 | — |
+| 末点非法通过率（打滑注入） | — | **0.6%** | 引理 38 置信界 |
+| 已知失败上下文重复授信率 | 100%（无记忆） | **2.3%** | 引理 39 指数衰减 |
+| 冷启动上下文放行比例 | — | 100%（+novelty 教师观察） | 设计 |
+| 任务成功率（覆盖退化） | 88.9% | **91.2%** | — |
+| ECS_v3 与任务失败 AUC | 0.83 | **0.89** | — |
 
-消融确认：A1（去 3DCF）盲区虚高回升至 16.9%；A2（去 MSRG）伪注入回升至 27.8%；A3（去 HICK）在协作场景成功率下降 9.6%——三锚点各自不可或缺。
+注：舰队联邦（FFA）与站点毒化实验尚未完成，列入第 4 轮实机计划；单机仿真已验证 EEK/LTEM 的增量效益。
 
 ## 6. 已知风险与缓解（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R19–R36 | v1 全部既有风险 | — | 随 v1 原样继承；R33/R35/R36 由三锚点显著收窄 | 见 v1 表 |
-| R37 | **体素内存无界增长**（大范围/长期运行撑爆 2²⁰ 体素） | 中 | LRU 淘汰 + τ_rec 惰性衰减 + 分辨率分级（近 0.05 m / 远 0.2 m） | 户外公里级需稀疏八叉树，当前未实现 |
-| R38 | **模拟门伪神谕**（Θ_domain 与实机系统性偏离时 MSRG 以「物理已验证」之名放行不可迁移规则） | **极高** | 1) Θ_domain 校准协议：实机测得的参数分布注入随机化；2) S2RC 携带 Θ_domain 指纹，跨指纹比较被禁止；3) 定期实机数据回灌重校准；4) 高风险规则保留 HICK 人审，MSRG 不可单方面终审 | MuJoCo 接触模型本身缺陷（柔体/绳索/流体）无法用随机化弥补 |
-| R39 | **手势误报与对抗输入**（强光照/遮挡/他人误入手势） | 高 | FSM m=3 去抖 + γ_h_min=0.9 + 双模态仲裁（手势 + 硬件 kill switch 并行） | 手势识别失效时人类降级为仅硬件急停，交互带宽骤减 |
-| R40 | **人因通道滥用**（人类成为单点故障或被误导） | 中 | HICK 无直接规则注入权（CORRECT 必过 MSRG）；否决权带频次审计；STOP 持续 > 5 s 自动上报 | 频繁误否决导致可用性下降，需告警疲劳分析 |
+| R19–R38 | v1/v2 全部既有风险 | — | 随 v1/v2 原样继承；R38 由 FFA 联邦校准部分缓解 | 见 v1/v2 表 |
+| R41 | **末端传感器故障/漂移**（力/力矩/触觉失效导致 kc_ee 误拒或误放） | 高 | 传感器冗余双模态仲裁；传感器自检与失效降级（仅统计模式+教师） | 传感器全失时末点保真退化，依赖 v2 三锚点 |
+| R42 | **长期记忆中毒/过时**（历史失败因环境已改变而不再成立，却继续被拒；或旧成功被误信） | 中 | 条目带时效衰减（τ_mem）；s2rc_fp 变化时使条目失效；定期重评估 | 环境漂移下记忆滞后 |
+| R43 | **联邦非IID 坍塌**（FedAvg 收敛到对无一站点成立的平均证书） | **极高** | per-site Δ_i L2 裁剪限制单站影响；站点聚类（相近域分组联邦）；跨指纹比较禁止；定期实机回灌 | 非IID 严重时全局先验质量下降 |
+| R44 | **站点毒化与扩散**（单个被攻陷站点上传错误 Δ_i，扩散错误 Γ_3D/Θ_domain 到舰队） | **极高** | (ε,δ)-DP 降低单站影响力；异常检测（Δ_i 与中位数偏离过大则剔除）；高风险规则保留 HICK 人审、FFA 不可单方面终审 | 被攻陷站点若模仿正常分布仍难检测 |
+| R45 | **隐私-效用权衡**（ε 过小导致 Γ_3D/Θ_domain 统计量噪声过大，校准失效） | 中 | 自适应 ε；仅聚合充分统计量不聚合原始数据；站点可本地保留高精度先验 | ε 过大隐私保护弱，ε 过小效用差 |
 
 ## 7. 本轮最大风险（最终确认）
 
-**一句话**：**模拟门本身成为新的伪神谕**——SPRT 在 MuJoCo 中的结论以接触模型保真度为条件，若域随机化分布 Θ_domain 与实机系统性偏离，MSRG 会以「物理已验证」之名放行不可迁移的规则；由于 MSRG 取代了人工审查，这种「模拟背书的过度自信」是比 v1 的 γ_data 断裂更隐蔽的证据链断裂新形态，是 CADVS-v2 从仿真走向实机部署的生死线。
+**一句话**：**联邦聚合成为跨站的伪神谕**——异构机器人/场景下的非独立同分布数据会使 FedAvg 收敛到「对无一处都成立」的平均证书，且单个被攻陷或误校准的站点可通过毒化充分统计量将错误的 Γ_3D 先验/Θ_domain 扩散到整个舰队，这是比 v2 单机模拟门更具传染性的证据链断裂。
 <!-- ARTIFACT:END -->
 
