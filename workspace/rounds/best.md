@@ -1,394 +1,400 @@
 <!-- IDEA:START -->
-### 第 6 轮灵感驱动研究记录
+### 第 7 轮灵感驱动研究记录
 
-**灵感词**：机械臂抓取、移动底盘、语音交互
+**灵感词**：用户需求分析、大语言模型、面部表情识别
 
-**继承关系**：第 5 轮 CADVS-v5（IP-493~496）确立「认证的生成式执行」框架：七硬门 fail-closed 边界不变，提议由流匹配生成分布 π_θ^FM 驱动，记忆 LMEM-v2 固化闭环，情感 FAMK 调制阈值。本轮延续「硬门不增」原则，聚焦「**指令-几何-力学三元凿**」：在保持证书边界不变的前提下，为机械臂抓取增添几何可达性约束、为移动底盘加入空间拓扑图、为语音交互设计跨模态指令-轨迹映射。
+**继承关系**：第 6 轮 CADVS-v6（IP-497~IP-500）确立「指令-几何-力学三元凿」框架：GGC 提供抓取几何可达性约束、MCTM 注入空间拓扑图、STM 实现跨模态指令-轨迹映射，七硬门保持 fail-closed 边界。本轮延续「硬门不增」原则，聚焦「**需求-意图-一致性三角桥**」：在保持证书边界不变的前提下，直接从「用户需求分析」出发，设计「需求意图建模器」(DIM)，引入「需求一致性软评分」η_demand，使系统从「被动接受指令」转向「主动推导意图」。
 
 **直觉与动机**：
 
-1. **机械臂抓取 → 从「概率想象」到「几何可达性」**。v5 的流提议在配置空间随机采样，可能生成“形式合规但物理不可达”的抓取姿态。引入「机械臂抓取几何凿」（Grasp Geometry Cutter, GGC）：离线计算工作空间的碰撞可达域，将离散化的抓取原型写入记忆的轨迹嵌入 e_τ 空间。关键洞见是：**可行性从「概率密度」延伸到「几何约束」**——记忆条目携带「抓取奇异性标签」和「力学优化值」，让 FMPP 在提议时以先验方式偏好「抓取-稳固-非奇异」的亚族。
+1. **用户需求 → 从「指令响应」到「意图推导」**。第 6 轮的 STM 负责「语言→查询向量」的映射，但它无法区分「用户真正想要的」与「用户不够清晰说出的」。引入「需求意图建模器」(Demand Intent Model, DIM)：从用户的历史交互记录、当前环境约束、任务目标三方面推断「用户真正的需求目标」ρ_demand。关键洞见是：**行为从「指令驱动」转向「需求驱动」**——只有当推断的需求意图与指令意图高度一致时，才执行STM生成的轨迹；否则，触发「需求导向回退」。
 
-2. **移动底盘 → 从「全局轨迹」到「空间拓扑图」**。v5 的 BCK 依赖点云匹配，面对动态障碍物时容易产生路径碎片化。引入「移动底盘空间拓扑图」（Mobile Chassis Topology Map, MCTM）：在离线构建「自由空间连通图」G topo，其节点为稳定姿态，边权为碰撞代价。MCTM 以「空间编码器」将自由空间离散化为离散拓扑 token，注入 FMPP 的条件 c_ctx。**关键洞见**：拓扑图 ≈「全局先验先验」——从记忆中检索到的历史轨迹若在拓扑图内连通，意味着该轨迹在全局空间约束下可实现。
+2. **大语言模型 → 从「静态映射」到「动态推理」**。第 6 轮的 STM 采用 CLIP-style 对齐训练，对指令进行向量化。第 7 轮引入「需求推理链」(Demand Reasoning Chain, DRC)：将LLM连接到DIM，使得从「用户说了什么」到「用户可能需要什么」的推理过程可解释、可审计。关键洞见是：**LLM 充当「需求解释器」**——它的推理链被量化为 η_demand，若推理置信度低于阈值，系统自动切换到历史记忆中的「典型需求响应」。
 
-3. **语音交互 → 从「记忆查询」到「语义指令映射」**。v5 的 LMEM-v2 只能做「轨迹-记忆」的相似性查询，无法解释「把苹果放在桌子上」这类模糊指令。引入「语义-轨迹映射网络」（Semantic-Trajectory Mapper, STM）：训练一个从自然语言指令 L 到记忆查询向量 q_L 的映射（CLIP-style 对齐），使得相似指令检索出相似轨迹。**关键洞见**：STM 的输出 q_L 充当「条件 token」，让 FMPP 的 π_θ^FM 从「语言条件」出发生成轨迹，实现「从语言到动作」的跨模态推导。
+3. **面部表情识别 → 从「情感调制」到「需求态度捕获」**。第 6 轮的 FAMK 调制阈值 γ_i。第 7 轮提出「需求态度捕获」(Demand Affect Capture, DAC)：基于面部表情识别，捕获用户当前的「需求态度」(desire_affect)——如焦虑表情可能意味着「需要快速、稳妥的解决方案」，而放松表情可能意味着「愿意探索创新方案」。关键洞见是：**情感态度调制需求优先级**——DAC 输出的 desire_affect 调节 ρ_demand 的稀疏性和探索度。
 
-**关键洞见**：v5 回答「提议=任意生成器时，证书边界如何不变」；v6 回答「在机械臂/底盘/语音场景下，如何在不新增硬门的前提下，让生成器的提议“符合物理、符合空间、符合意图」」。七硬门 kc_evidence_forged_v5 记号原样复用；本轮新增的只有：
-- IP-497 GGC（抓取原型记忆），
-- IP-498 MCTM（空间拓扑 token），
-- IP-499 STM（语义向量查询），
-- IP-500 EFA-v6（软评分 η_interp）。
+**关键洞见**：第 6 轮回答「如何在不新增硬门的前提下，让提议符合物理、空间、意图」；第 7 轮回答「如何从「用户需求」出发，让系统主动推导「正确的行为」，而不是被动接受指令」。七硬门 kc_evidence_forged_v5 记号原样复用；本轮新增的只有：
+- IP-501 DIM（需求意图建模器），
+- IP-502 DRC（需求推理链，LLM驱动），
+- IP-503 DAC（需求态度捕获），
+- IP-504 EFA-v7（软评分 η_demand 纳入四软因子链）
 
 **形式化目标（增量）**：
 
-1. **GGC（Grasp Geometry Cutter）**：<br>
-   - 可达域 R_g ∈ ℝ^d_pose，通过离线碰撞采样 + RRT* 离散化为 N_proto ~1000 个抓取原型 {g_j, s_j, η_g_j}，其中 s_j 为「抓取奇异性」标签，η_g_j 为「力学优化值」<br>
-   - 记忆条目 e_τ 拓展为 e_τ = (emb_traj, label_grasp, η_safety, src)；检索时筛选 label_grasp=1（稳固抓取）<br>
-   - GGC 前置约束：kc_wrench(z) ≥ τ_wrench' = γ_wrench · τ_wrench^v5 + (1−η_g)·Δ_η，η_g ∈ [0,1]，η_g=1 时恢复 v5 阈值
+1. **DIM（Demand Intent Model）**：<br>
+   - 需求编码器 E_demand: (history, context, env) ⟼ ρ_demand ∈ ℝ^d_demand<br>
+   - 损失 L_DIM = ||ρ_demand - ρ_gold||² + β·KL(π_demand || π_prior)<br>
+   - 软因子：η_demand = 1 - H(ρ_pred || ρ_demand)，其中 H 为交叉熵<br>
+   - 只有当 η_demand > τ_demand 时，STM 输出的指令才被采纳；否则触发「需求导向回退」
 
-2. **MCTM（Mobile Chassis Topology Map）**：<br>
-   - 空间编码器 E_space: pose ↦ z_spa ∈ ℝ^d_space，将自由空间离散化为 K_topo ~50~100 个拓扑节点<br>
-   - 拓扑图 G = (V, E)，V 为节点集合，E 为连通边，边权 w_ij 表示碰撞代价<br>
-   - MCTM 条件 token: t_topo ∈ {t_1,...,t_K}，注入 c_ctx；检索时筛选 t ∈ N_KNN(q_topo)，N_KNN 为拓扑最近邻<br>
-   - 软因子：η_topo = σ(−d_topo/σ_d) ∈ [0,1]，d_topo 为拓扑距离，σ_d 为自适应尺度
+2. **DRC（Demand Reasoning Chain）**：<br>
+   - LLM 推理链 R = {r_1, r_2, ..., r_n}，其中 r_i 为推理步骤<br>
+   - η_demand = 1 - (1/n)·Σ_i H(r_i)，衡量推理链的整体确定性<br>
+   - L_DRC = α·链长度惩罚 - η_demand，鼓励简洁且确定的推理
 
-3. **STM（Semantic-Trajectory Mapper）**：<br>
-   - 语义编码器 E_sem: L ⟼ q_L ∈ ℝ^d_query<br>
-   - 损失 L_STM = −log p(q_L | L) + λ_KL·KL(p_L(q_L) || Uniform) + λ_sim·sim(q_L, q_L^+) − sim(q_L, q_L^-)<br>
-   - q_L = STM(L) 作为 FMPP 的查询，检索记忆中与 q_L 最近的 M=4 条轨迹<br>
-   - 软因子：η_interp = σ(−d_interp/σ_i)，d_interp 为语义-轨迹间隔，σ_i 为自适应尺度
+3. **DAC（Demand Affect Capture）**：<br>
+   - 表情编码器 E_affect: face ⟼ affect ∈ {-1, 0, +1}（负面/中性/正面）<br>
+   - desire_affect 调节 ρ_demand 的探索度：exploration_scale = 1 + κ·affect<br>
+   - 软因子：η_affect = 1 + affect/3 ∈ [2/3, 4/3]，调制 STM 检索的广度
 
-4. **EFA-v6 软评分**：ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd，其中 IP-499 STM 新增「指令可解释性软评分」η_cmd：衡量指令映射到记忆查询向量的信噪比，η_cmd = 0.9~1.0 稳固不变；若指令模糊度达标阈值 θ_guided，η_cmd 下降至 ~0.5，触发回退 v5 规则提议。
+4. **EFA-v7（七硬门 + 四软因子链）**：<br>
+   - ECS_v7 = ECS_v6 · η_g · η_topo · η_interp · η_cmd · η_demand · η_affect<br>
+   - τ_i^v7 = γ_i·τ_i^v6·Π_factor_i，其中 Π_factor_i = ∏_{j=1}^5 η_j ∈ [1, 1+ε]，设计上限仍为 1.3<br>
+   - 新增硬门 kc_demand：η_demand ≥ τ_demand，确保「用户需求」被必要检验
 
 5. **形式化定义**：给定指令 L，目标 ρ_target，记忆 M：<br>
-   - q_L = STM(L)；<br>
-   - m_topk = Top-k(Retr_M(q_L, K=4))；<br>
-   - c_ctx = (obj, g_emb, θ_fp, task, ŝ_emo, m_{1:k}, ρ_target, t_topo, q_L)；<br>
-   - cands = FMPP.propose(c_ctx, K=8)；<br>
-   - surv = [x ∈ cands : GGC(x) ∧ MCTM(x) ∧ ¬Ψ_novel(x)]；<br>
-   - Exec_CADVS-v6 = {x ∈ surv : ∧_i kc_i(x,c; τ_i^v6)=1}，其中 τ_i^v6 = γ_i(ŝ_emo)·τ_i^v5·Π_factor_i<br>
-   - Π_factor_i = η_g_i · η_topo_i · η_interp_i (≥1，≤1.3 设计上限)
+   - ρ_demand = DIM(history, context, env)；<br>
+   - η_demand = 1 - H(STM(L) || ρ_demand)；<br>
+   - 若 η_demand < τ_demand：<br>
+     - q_demand = E_demand(ρ_demand)；<br>
+     - m_demand = Top-k(Retr_M(q_demand, K=4))；<br>
+     - c_demand = (obj, g_emb, θ_fp, task, ŝ_emo, m_demand, ρ_target, t_topo, q_demand)；<br>
+     - x_demand = FMPP.propose(c_demand, K=8)；<br>
+   - 若 η_demand ≥ τ_demand：<br>
+     - 执行第 6 轮的 EFA-v6 流程<br>
 
-**本轮最大风险**：**跨模态指令-轨迹映射的归因不确定性**——语义模型将自然语言指令映射到记忆查询向量时，可能因语境差异产生严重的轨迹偏移；虽然有 n_flow 密度门和 γ 调制作为兜底，但指令模糊带来的「正确但不该做」的行动风险在结构上难以完全消除。
+**本轮最大风险**：**需求意图的可解释性假设**：第 7 轮假设「用户需求可以从历史交互中抽象出」，但现实中用户意图常常是「非线性、突变、甚至自我否定」的——系统推断的 ρ_demand 可能与用户的「当下真实需求」迥然不同，这种误推导在结构上难以捕获，更何况维持七硬门的 fail-closed 边界。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 增量定位与继承关系（在 IP-493~496/CADVS-v5 基础上扩展）
+## 0. 增量定位与继承关系（在 IP-497~IP-503/CADVS-v6 基础上扩展）
 
 ### 0.1 新增核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v5） |
+| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v6） |
 |---|---|---|---|
-| IP-497 | Grasp Geometry Cutter (GGC) | 几何约束 | 离线离散化抓取可达域 → 抓取原型记忆；e_τ 扩展携带抓取奇异性标签/力学优化值；软因子 η_g 调制 wrench/val 门 |
-| IP-498 | Mobile Chassis Topology Map (MCTM) | 空间约束 | 构建自由空间连通图 G_topo → 空间拓扑 token；软因子 η_topo 反映拓扑连通性；MCTM token 注入 FMPP 条件 |
-| IP-499 | Semantic-Trajectory Mapper (STM) | 交互抽象 | 从自然语言指令 L 到记忆查询向量 q_L 的跨模态映射；检索记忆中与 q_L 最近轨迹；软因子 η_interp 衡量语义-轨迹间隔 |
-| IP-500 | Evidence Forging Assembler v6 (EFA-v6) | 证据融合 | 七硬门不变 + 软因子链 η_g·η_topo·η_interp·η_cmd；新增「指令可解释性软评分」η_cmd；ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd |
+| IP-501 | Demand Intent Model (DIM) | 需求建模 | 从历史交互推断用户需求 ρ_demand → 检索记忆；软因子 η_demand 衡量指令与需求一致性 |
+| IP-502 | Demand Reasoning Chain (DRC) | 推理抽象 | LLM 推理链 R 输出 η_demand；支持「为何要这么做」的可解释性 |
+| IP-503 | Demand Affect Capture (DAC) | 情感融合 | 面部表情 → desire_affect → 调制 ρ_demand 探索度；软因子 η_affect |
+| IP-504 | Evidence Forging Assembler v7 (EFA-v7) | 证据融合 | 七硬门不变 + 四软因子链 η_g·η_topo·η_interp·η_cmd·η_demand·η_affect；新增 kc_demand 硬门 |
 
-### 0.2 v5 模块适配表（只改接口，不推翻）
+### 0.2 v6 模块适配表（只改接口，不推翻）
 
-| v5 模块 | v6 适配 |
+| v6 模块 | v7 适配 |
 |---|---|
-| IP-493 FMPP | 条件扩展：c_ctx 加入 t_topo, q_L；propose 时筛选 GGC 可行抓取族；级联筛选加入 η_g 软因子 |
-| IP-494 LMEM-v2 | 接口超集：query 返回 (pass, eta_mem, novelty, m_topk, e_τ, n_flow, label_grasp, η_safety)；e_τ 扩充为 (emb_traj, label_grasp, η_safety, src)；GGC 筛选器作为先验 |
-| IP-495 FAMK | 原样继承；τ_i^v6 = γ_i·τ_i^v5·Π_factor_i，其中 Π_factor_i = η_g_i · η_topo_i · η_interp_i (≥1, ≤1.3) |
-| IP-496 EFA-v5 | 升级为 EFA-v6：七硬门不变（标签/阈值冻结）；新增软因子链；STM 输出 q_L 作为指令查询；指令模糊度达标阈值 θ_guided 控制 η_cmd |
+| IP-497 GGC | 原样继承；η_g 仍调制 wrench/val 门 |
+| IP-498 MCTM | 原样继承；η_topo 仍衡量空间连通性 |
+| IP-499 STM | 接口扩展：额外输出 ρ_pred；检索时考虑 η_demand 门限 |
+| IP-500 EFA-v6 | 升级为 EFA-v7：软因子链延长至 6 项 |
+| FAMK | 原样继承；τ_i^v7 = γ_i·τ_i^v6·Π_factor_i |
 
-## 1. 增量符号体系（定义 2241–2300）
+## 1. 增量符号体系（定义 2301–2400）
 
 | 符号 | 含义 |
 |---|---|
-| L | 自然语言指令文本 |
-| q_L ∈ ℝ^d_query | STM(L) 输出的语义查询向量 |
-| z_spa = E_space(pose) | 空间编码器输出的拓扑节点向量 |
-| G_topo = (V, E, W) | 移动底盘空间拓扑图：节点 V、边 E、权重 W |
-| t_topo ∈ {t_1,...,t_K} | 拓扑图离散化 token |
-| d_topo | 拓扑距离（最短路径权重和） |
-| η_topo = σ(−d_topo/σ_d) | 软因子：拓扑连通性置信度 ∈ [0,1] |
-| η_interp = σ(−d_interp/σ_i) | 软因子：语义-轨迹间隔置信度 |
-| η_cmd = 1 − λ_cmd·H(q_L) | 软因子：指令可解释性，H 为信息熵 |
-| λ_cmd | 指令模糊度惩罚系数 (默认 0.1) |
-| θ_guided | 指令模糊度阈值，超过则 η_cmd ≈ 0.5，触发回退 v5 |
-| g_j | 第 j 个抓取原型姿态 |
-| s_j ∈ {0,1} | 抓取奇异性标签：1 表示稳固抓取 |
-| η_g_j ∈ [0,1] | 抓取力学优化值：η_g_j=1 表示力学最佳 |
-| η_g = 1 + (1−η_g_j)/d_x | 软因子：从“抓取坏”到“抓取好”映射，≥1 |
-| R_g | 可达域 ℝ^d_pose（离线离散化） |
-| N_proto | 抓取原型数量（默认 1000） |
-| e_τ = (emb_traj, label_grasp, η_safety, src) | 拓展记忆条目嵌入 |
-| τ_i^v6 | v6 调制后阈值：τ_i^v6 = γ_i·τ_i^v5·Π_factor_i |
-| Π_factor_i = η_g_i · η_topo_i · η_interp_i | 软因子乘积，设计上限 1.3 |
-| H(q_L) | 查询向量信息熵 |
-| STM(L) | 语义-轨迹映射网络 |
-| E_sem | 语义编码器 |
-| E_space | 空间编码器 |
-| GGC.proposal_filter(x) = 1[s(x) = 1] | 抓取原型筛选器 |
+| ρ_demand ∈ ℝ^d_demand | 用户需求意图向量 |
+| ρ_pred ∈ ℝ^d_query | STM(L) 输出的指令意图向量 |
+| H(p || q) | KL 散度或交叉熵 |
+| η_demand = 1 - H(ρ_pred || ρ_demand) | 需求一致性软因子 ∈ [0,1] |
+| τ_demand | 需求一致性阈值，默认 0.7 |
+| R = {r_1,...,r_n} | LLM 推理链 |
+| η_demand_from_chain = 1 - (1/n)·Σ_i H(r_i) | 基于推理链的需求一致性 |
+| affect ∈ {-1, 0, +1} | 用户情感态度 |
+| desire_affect | DAC 捕获的需求态度 |
+| exploration_scale = 1 + κ·affect | 探索度调制因子 |
+| η_affect = 1 + affect/3 | 情感软因子 ∈ [2/3, 4/3] |
+| E_demand | 需求编码器 |
+| E_affect | 表情编码器 |
+| L_DIM = ||ρ_demand - ρ_gold||² + β·KL(π_demand \|\| π_prior) | DIM 损失函数 |
+| L_DRC = α·链长度惩罚 - η_demand | DRC 损失函数 |
+| q_demand = E_demand(ρ_demand) | 需求查询向量 |
+| m_demand = Top-k(Retr_M(q_demand, K=4)) | 需求导向记忆检索 |
+| c_demand = (obj, g_emb, θ_fp, task, ŝ_emo, m_demand, ρ_target, t_topo, q_demand) | 需求上下文 |
+| x_demand = FMPP.propose(c_demand, K=8) | 需求导向轨迹提议 |
+| ks_demand | 新增硬门：η_demand ≥ τ_demand |
 
 ## 2. 关键算法骨架
 
-### IP-497 GGC：抓取几何凿
+### IP-501 DIM：需求意图建模器
 
 ```python
 @dataclass
-class GraspGeometryCutter:
-    """GGC：离线计算抓取可达域 → 抓取原型记忆。
-    红线：原型记忆不参与梯度，仅作先验筛选；软因子 η_g 收敛于 1.0"""
-    g_proto: list[GraspProto]       # N_proto ~1000 个抓取原型
-    eta_g_max: float = 0.1           # η_g - 1 的上限，保证 Π_factor_i ≤ 1.3
+class DemandIntentModel:
+    """DIM：从历史交互推断用户需求 ρ_demand。
+    输入：历史记录 H = {e_τ^1, ..., e_τ^n}, 上下文 C, 环境 E
+    输出：需求向量 ρ_demand + 软因子 η_demand"""
+    encoder: nn.Module           # E_demand: (H, C, E) ⟼ ρ_demand
+    predictor: nn.Module          # ρ_pred: STM(L) 输出
+    beta: float = 0.1            # KL 正则系数
 
-    def build_prototypes(self, robot, workspace, collision_obj) -> None:
-        """离线：采样 N~1000 个抓取姿态，筛选稳固/非奇异性 → 存入 g_proto"""
-        for _ in range(N_proto):
-            g = rrt_star_grasp(robot, workspace, collision_obj)
-            if g.valid and not g.singular:
-                eta = grasp_quality_metric(g)  # 力学优化值 ∈ [0,1]
-                self.g_proto.append(GraspProto(pose=g.pose, s=g.non_singular, eta=eta))
+    def encode(self, history: list[Embedding], context: dict, env: dict) -> torch.Tensor:
+        """从历史+上下文+环境编码需求"""
+        h_repr = self.history_encoder(history)
+        c_repr = self.context_encoder(context)
+        e_repr = self.env_encoder(env)
+        return self.fusion(h_repr, c_repr, e_repr)  # ρ_demand
 
-    def quality_factor(self, x: Trajectory) -> float:
-        """查询轨迹的抓取质量 η_g；若无匹配，η_g = 1.0（中性）"""
-        best = find_nearest_grasp(x, self.g_proto)
-        eta_g_j = best.eta if best else 1.0
-        return 1.0 + (1.0 - eta_g_j) / x.dims  # ≥ 1.0
+    def demand_score(self, L: str) -> tuple[torch.Tensor, float]:
+        """计算需求一致性 η_demand = 1 - H(ρ_pred || ρ_demand)"""
+        rho_demand = self.encode(...)
+        rho_pred = self.predictor(L)  # STM 的输出
+        # 假设高斯分布，使用 KL 散度近似
+        kl = self.kl_divergence(rho_pred, rho_demand)
+        eta = 1.0 - torch.tanh(kl).item()
+        return rho_demand, eta
 
-    def filter(self, x: Trajectory) -> bool:
-        """GGC 筛选器：仅接受稳固抓取 (label_grasp=1)"""
-        best = find_nearest_grasp(x, self.g_proto)
-        return best.s == 1 if best else True  # 无匹配时通过（回退 v6 软因子）
+    def forward(self, history: list[Embedding], context: dict, env: dict, L: str | None = None):
+        """端到端前向：若 L 为 None，返回需求导向行为；否则返回一致性检查"""
+        rho_demand, eta_demand = self.demand_score(L) if L else (None, 0.0)
+        return rho_demand, eta_demand
 ```
 
-### IP-498 MCTM：移动底盘拓扑图
+### IP-502 DRC：需求推理链
 
 ```python
 @dataclass
-class MobileChassisTopologyMap:
-    """MCTM：构建自由空间连通图 → 空间拓扑 token。
-    离线构建 G_topo；在线 query 返回拓扑距离 d_topo 及软因子 η_topo"""
-    G_topo: Graph
-    E_space: SpaceEncoder
-    sigma_d: float = 0.5  # 拓扑距离尺度
+class DemandReasoningChain:
+    """DRC：基于 LLM 的需求推理链。
+    输入：指令 L, 需求 ρ_demand
+    输出：推理链 R, 软因子 η_demand"""
+    llm: LLM
+    alpha: float = 0.1  # 链长度惩罚
 
-    def build(self, env_static, dynamic_obj_sampler) -> None:
-        """离线：采样 K~50-100 个稳定姿态，计算碰撞代价构图"""
-        poses = sample_free_poses(env_static, n=K)
-        V = [{i: p.pose} for i, p in enumerate(poses)]
-        E = []
-        for i in range(K):
-            for j in range(i+1, K):
-                cost = shortest_path_cost(poses[i].pose, poses[j].pose, env_static, dynamic_obj_sampler)
-                if cost < ∞:
-                    E.append((V[i], V[j], cost))
-        self.G_topo = Graph(V=V, E=E)
+    def infer(self, L: str, context: dict) -> tuple[list[str], float]:
+        """生成推理链并计算 η_demand"""
+        prompt = self.build_prompt(L, context)
+        chain, steps = self.llm.generate_with_chain_of_thought(prompt)
+        # H(r_i) 近似为信息熵：每一步的确定性
+        entropies = [self.step_entropy(r) for r in steps]
+        avg_entropy = sum(entropies) / len(steps)
+        eta = 1.0 - avg_entropy
+        # 链长度惩罚
+        eta = eta - self.alpha * (len(steps) / 10.0)
+        return chain, max(0.0, eta)
 
-    def query(self, pose: Pose) -> float:
-        """查询姿态在拓扑图中的连通性 → η_topo"""
-        if not self.G_topo.reachable(pose):
-            return 0.0
-        d_topo = self.G_topo.distance_to_nearest(pose)  # 最近节点距离
-        return sigmoid(-d_topo / self.sigma_d)  # ∈ [0, 1]
-
-    def token(self, pose: Pose) -> int:
-        """返回拓扑最近邻节点 ID → t_topo"""
-        return self.G_topo.nearest_node_id(pose)
+    def step_entropy(self, r: str) -> float:
+        """粗略估计推理步骤的熵"""
+        # 基于概率词分布熵
+        probs = self.llm.get_token_probs(r)
+        return -(probs * torch.log(probs + 1e-8)).sum().item()
 ```
 
-### IP-499 STM：语义-轨迹映射网络
+### IP-503 DAC：需求态度捕获
 
 ```python
 @dataclass
-class SemanticTrajectoryMapper:
-    """STM：从自然语言 L 到记忆查询向量 q_L 的跨模态映射。
-    训练目标：指令 L 与其对应轨迹 x 的查询向量 q_L 在语义空间拉近，
-    同时阻止与不相关轨迹的查询向量靠近。"""
-    E_sem: SemEncoder
-    proj_query: nn.Linear
-    proj_key: nn.Linear
-    lambda_kl: float = 0.1
-    lambda_sim: float = 0.5
-    temp: float = 0.07
+class DemandAffectCapture:
+    """DAC：从面部表情捕获用户需求态度 desire_affect。
+    影响：调节检索的探索度，软因子 η_affect ∈ [2/3, 4/3]"""
+    face_encoder: nn.Module
+    affect_threshold: float = 0.5
 
-    def forward(self, L: str) -> torch.Tensor:
-        """L → q_L"""
-        h = self.E_sem(L)  # 文本编码
-        return self.proj_query(h)  # d_query 维查询向量
+    def observe(self, face: np.ndarray) -> float:
+        """捕获 desire_affect ∈ {-1, 0, +1}"""
+        z = self.face_encoder(face)
+        prob = torch.softmax(z, dim=-1)
+        # 假设输出 [负面, 中性, 正面]
+        affect = prob[2].item() - prob[0].item()  # [-1, 1]
+        return max(-1.0, min(1.0, affect))
 
-    def loss(self, L: str, x_pos: Trajectory, x_neg: Trajectory,
-             e_pos: Embedding, e_neg: Embedding) -> torch.Tensor:
-        """L2 对齐损失 + KL 正则 + Sim 负样本"""
-        q_L = self.forward(L)
-        k_pos = self.proj_key(e_pos.emb_traj)
-        k_neg = self.proj_key(e_neg.emb_traj)
-        pos_sim = (q_L @ k_pos.T).softmax(0)
-        neg_sim = (q_L @ k_neg.T).softmax(0)
-        # 信息熵正则
-        H_q = -torch.sum(pos_sim * torch.log(pos_sim + 1e-8), dim=0).mean()
-        H_k = -torch.sum(pos_sim * torch.log(pos_sim + 1e-8), dim=0).mean()
-        loss = -torch.log(pos_sim.max() + 1e-8) \
-               + self.lambda_kl * (H_q + H_k) \
-               - self.lambda_sim * (pos_sim.max() - neg_sim.max())
-        return loss
+    def get_affect_factor(self, affect: float) -> float:
+        """η_affect = 1 + affect/3 ∈ [2/3, 4/3]"""
+        return 1.0 + affect / 3.0
 
-    def information_entropy(self, q_L: torch.Tensor, memory: List[Embedding]) -> float:
-        """计算查询向量 q_L 相对于记忆的熵 H(q_L) → η_cmd 软因子"""
-        sims = [q_L @ e.emb_traj.T for e in memory]
-        probs = torch.softmax(torch.stack(sims) / self.temp, dim=0)
-        return -torch.sum(probs * torch.log(probs + 1e-8)).item()
+    def exploration_scale(self, affect: float, kappa: float = 0.5) -> float:
+        """调节检索的广度：探索度 = 1 + κ·affect"""
+        return 1.0 + kappa * affect
 ```
 
-### IP-500 EFA-v6：七硬门 + 软因子链
+### IP-504 EFA-v7：七硬门 + 四软因子链
 
 ```python
 @dataclass
-class EvidenceForgingAssemblerV6:
-    """EFA-v6：七硬门不变 + 软因子链 η_g·η_topo·η_interp·η_cmd"""
+class EvidenceForgingAssemblerV7:
+    """EFA-v7：七硬门不变 + 四软因子链 η_g·η_topo·η_interp·η_cmd·η_demand·η_affect"""
     fmpp: FlowMatchingProposalPolicyKernel
     lmem: LongTermMemoryEmbeddingConsolidation
     famk: FacialAffectModulationKernel
     ggc: GraspGeometryCutter
     mctm: MobileChassisTopologyMap
     stm: SemanticTrajectoryMapper
-    v5: EvidenceForgingAssemblerV5  # 复用七硬门
-    theta_guided: float = 0.6       # 指令模糊度阈值
+    dim: DemandIntentModel
+    drc: DemandReasoningChain
+    dac: DemandAffectCapture
+    v6: EvidenceForgingAssemblerV6  # 复用七硬门
+    tau_demand: float = 0.7
 
     def select(self, L: str | None, t_now, context) -> tuple[bool, Trajectory | None, str]:
-        """从指令 L 开始 → 最优合规轨迹"""
-        # 1. 语义查询
-        if L is not None:
-            q_L = self.stm.forward(L)
-            eta_cmd = 1.0 - 0.1 * self.stm.information_entropy(q_L, self.lmem.all_embeddings())
-            eta_interp = sigmoid(-self._semantic_traj_distance(q_L) / self.stm.temp)
-            if eta_cmd < self.theta_guided:
-                return self.v5.select(None, t_now, context)  # 触发回退 v5 规则提议
-        else:
-            q_L = None
-            eta_cmd = 1.0
-            eta_interp = 1.0
+        """从指令 L 开始 → 最优合规轨迹（v7 需求导向）"""
+        # 0. 捕获需求态度
+        affect = self.dac.observe(context.face) if hasattr(context, 'face') else 0.0
+        eta_affect = self.dac.get_affect_factor(affect)
 
-        # 2. 条件构建
-        s_emo = self.famk.observe(context.face, t_now)
-        gamma = self.famk.gamma(s_emo)
-        m_topk = self.lmem.query(context.obj, context.geo, context.theta_fp, context.rule_id)
-        if L is not None:
-            # 语义驱动检索
-            q_L = self.stm.forward(L)
-            m_topk = self.lmem.retrieve_by_semantic(q_L, k=4)
+        # 1. 需求意图推断
+        rho_demand, eta_demand = self.dim.forward(
+            history=self.lmem.get_history(),
+            context=context.__dict__,
+            env=context.env if hasattr(context, 'env') else {},
+            L=L
+        )
 
-        # 3. 拓扑 token
-        t_topo = self.mctm.token(context.pose)
+        # 2. 若 L 为 None 或 η_demand 低于阈值，触发需求导向回退
+        if L is None or eta_demand < self.tau_demand:
+            return self._demand_guided_fallback(rho_demand, t_now, context, affect, eta_affect)
+
+        # 3. LLM 推理链检查
+        chain, eta_demand_from_chain = self.drc.infer(L, context.__dict__)
+        eta_demand_total = max(eta_demand, eta_demand_from_chain)
+
+        if eta_demand_total < self.tau_demand:
+            return self._demand_guided_fallback(rho_demand, t_now, context, affect, eta_affect)
+
+        # 4. 软因子计算
+        q_L = self.stm.forward(L)
+        eta_cmd = 1.0 - 0.1 * self.stm.information_entropy(q_L, self.lmem.all_embeddings())
+        eta_interp = sigmoid(-self._semantic_traj_distance(q_L) / self.stm.temp)
         eta_topo = self.mctm.query(context.pose)
 
-        # 4. 构建上下文
+        # 5. 构建 v6 风格上下文 + 软因子
+        s_emo = self.famk.observe(context.face, t_now)
+        gamma = self.famk.gamma(s_emo)
+        m_topk = self.lmem.retrieve_by_semantic(q_L, k=4)
+        t_topo = self.mctm.token(context.pose)
         c = build_ctx(context, s_emo, m_topk, t_topo, q_L)
         cands = self.fmpp.propose(c, K=self.fmpp.K)
 
-        # 5. 软因子滤波
+        # 6. 软因子滤波（6 项链）
         surv = []
         for x in cands:
             if not self.ggc.filter(x):
                 continue
             eta_g = self.ggc.quality_factor(x)
-            eta_total = eta_g * eta_topo * eta_interp * eta_cmd
+            eta_total = eta_g * eta_topo * eta_interp * eta_cmd * eta_demand_total * eta_affect
             if self._cheap_gates(x, gamma, eta_total):
                 surv.append((x, eta_total))
 
         if not surv:
-            return self._fallback_rule_proposal(gamma)
+            return self._demand_guided_fallback(rho_demand, t_now, context, affect, eta_affect)
 
-        # 6. 级联筛选（VACK → BCK）
+        # 7. 级联筛选（VACK → BCK）
         surv.sort(key=lambda x_e: x_e[1], reverse=True)
         finals = []
         for x, _ in surv[:3]:
-            vac = self.v5.vack.evaluate(x, context_with(s_emo), t_now)
-            if self.v5.vack.kc_val(vac, tau=gamma['val'] * TAU_VAL5):
-                if self.v5._bck_preview(x, gamma):
+            vac = self.v6.vack.evaluate(x, context_with(s_emo), t_now)
+            if self.v6.vack.kc_val(vac, tau=gamma['val'] * TAU_VAL5):
+                if self.v6._bck_preview(x, gamma):
                     finals.append(x)
 
         if not finals:
-            return False, None, 'ALL_CANDIDATES_REJECTED'
+            return self._demand_guided_fallback(rho_demand, t_now, context, affect, eta_affect)
 
         best = max(finals, key=lambda x: self._margin(x))
-        return True, best, 'FORGED_CGE_V6'
+        return True, best, 'FORGED_CGE_V7'
 
-    def ecs_v6(self, x: Trajectory, n_flow: float, s_emo: SHomo | None, eta_factors: dict) -> float:
-        """软评分 ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd"""
-        eta_flow = sigmoid(n_flow_to_ll(n_flow) - b_flow)
-        eta_emo = (1.0 - self.famk.lam_emo * s_emo.p_distress
-                   if s_emo is not None and s_emo.sigma <= self.famk.sigma_max else 1.0)
-        return self.v5.ecs_v4(x) * eta_flow * eta_emo \
-               * eta_factors['g'] * eta_factors['topo'] \
-               * eta_factors['interp'] * eta_factors['cmd']
+    def _demand_guided_fallback(self, rho_demand, t_now, context, affect, eta_affect):
+        """需求导向回退：从需求检索生成行为"""
+        if rho_demand is None:
+            return self.v6.select(None, t_now, context)
+
+        q_demand = self.dim.encoder(rho_demand)
+        m_demand = self.lmem.retrieve_by_semantic(q_demand, k=4)
+        t_topo = self.mctm.token(context.pose)
+        c_demand = (context.obj, context.geo, context.theta_fp, context.task,
+                    self.famk.observe(context.face, t_now), m_demand, context.rho_target, t_topo, q_demand)
+        cands = self.fmpp.propose(c_demand, K=self.fmpp.K)
+        # 同样软因子滤波，但 η_demand = 1.0（需求驱动默认通过）
+        surviving = [x for x in cands if self.ggc.filter(x) and eta_affect > 0.5][:3]
+        if not surviving:
+            return False, None, 'DEMAND_FALLBACK_FAILED'
+        return True, surviving[0], 'DEMAND_GUIDED_FALLBACK'
+
+    def ecs_v7(self, x: Trajectory, n_flow: float, s_emo: SHomo | None, eta_factors: dict) -> float:
+        """软评分 ECS_v7 = ECS_v6 · η_g · η_topo · η_interp · η_cmd · η_demand · η_affect"""
+        return self.v6.ecs_v6(x, n_flow, s_emo, eta_factors) * eta_factors['demand'] * eta_factors['affect']
 ```
 
-### 集成流水线（v5 → v6）
+### 集成流水线（v6 → v7）
 
 ```
 离线/慢时域：
-  GGC 构建（分钟级）：机器人工作空间离线 RRT* 采样 1000 姿态 → 抓取原型记忆
-  MCTM 构建（分钟级）：自由空间拓扑图 G_topo → 空间编码器 E_space → 离散化 token
-  STM 训练（小时级）：指令-轨迹对 dataset → 对齐训练 → 验证集 F1 > 0.85
-  联邦下发：GGC 原型、E_space 权重、STM 权重、θ_guided 阈值 → 站内签名分发
+  DIM 训练（小时级）：收集用户任务历史 → 监督学习 ρ_demand
+  DRC 推理链采样（分钟级）：从 LLM 采样高-quality 推理链 → 构建 η_demand 分布
+  DAC 表情收集（分钟级）：收集用户表情-需求关联 → 微调 face_encoder
+  联邦下发：DIM 权重、DRC 配置、DAC 权重、τ_demand 阈值 → 站内签名分发
 
-在线准入（异步，秒级）：
-  STM.observe(L) ──▶ q_L → η_cmd, η_interp
-  MCTM.observe(pose) ──▶ t_topo → η_topo
-  GGC.observe(x) ──▶ η_g
-  FMPP.propose(c) ──▶ K=8 候选
-       ├─ 全灭 ──▶ fail-closed 回退 v5 规则提议
-       └─ 幸存 ≤3 ──▶ VACK（调制 τ_val）──▶ BCK 预览 ──▶ 取边际最大者
+在线准入（亚秒级）：
+  DAC.observe(face) ──▶ affect → η_affect
+  DIM.encode(history, context, env) ──▶ ρ_demand → η_demand (LLM 检查)
+  若 η_demand < τ_demand：<br>
+    DIM.encode() ──▶ q_demand ──▶ 需求导向记忆检索<br>
+    FMPP.propose(c_demand) ──▶ x_demand<br>
+  若 η_demand ≥ τ_demand：<br>
+    EFA-v6 在线流程 + 软因子链 × η_demand × η_affect
 
-在线控制环（目标 < 0.6 ms）：
-  EFA-v6 只消费软因子预计算值；七硬门调用链路不变（v5 缓存复用）
+在线控制环（目标 < 0.8 ms）：
+  EFA-v7 只消费软因子预计算值；七硬门调用链路不变（v6 缓存复用）
+  η_demand 计算额外 0.1~0.2 ms（LLM 推理链可缓存）
 ```
 
 ## 3. 复杂度分析（增量更新）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 | 实时性指标 |
 |---|---|---|---|---|
-| GGC.filter | O(log N_proto) 近似 | O(N_proto) | N_proto=1000 | < 0.01 ms |
-| GGC.quality_factor | O(log N_proto) | O(1) | — | < 0.01 ms |
-| MCTM.query | O(log K) FAISS-like | O(K·d) | K=100 | < 0.1 ms |
-| MCTM.token | O(1) 最近邻查表 | O(K) | — | < 0.01 ms |
-| STM.forward | O(L_len·d_model) | O(d_query) | L_len~50 token, d=256 | ~1 ms（端侧 NPU） |
-| STM.information_entropy | O(M·d) | O(M) | M=记忆数 | < 0.5 ms |
-| EFA-v6.select 软因子计算 | O(1) | O(1) | — | < 0.05 ms |
+| DIM.encode | O(H·d) | O(H·d_demand) | H=历史长度, d_demand=128 | 0.3 ms |
+| DIM.demand_score | O(d_query·d_demand) | O(1) | d_query=256 | 0.1 ms |
+| DRC.infer | O(T·L) | O(L) | T=LLM tokens, L=链长 | 5~50 ms（可缓存） |
+| DAC.observe | O(1) | O(d_affect) | d_affect=64 | < 0.01 ms |
+| DAC.get_affect_factor | O(1) | O(1) | — | < 0.01 ms |
+| η_demand 软因子计算 | O(1) | O(1) | — | < 0.05 ms |
 
-**端到端在线增量**：软因子链 O(1)，FMPP.propose ~5–20 ms GPU（准入时域），七硬门 O(1)，总 P99 ≈ 0.6 ms（维持 v5 目标），软因子不影响硬时序。
+**端到端在线增量**：软因子链 O(1)，DIM+DAC < 0.5 ms，DRC 可异步缓存，总 P99 ≈ 0.8 ms（维持 v6 目标），软因子不影响硬时序。
 
 ## 4. 正确性论证（增量更新）
 
-### 定理 9（软因子链单调性）
+### 定理 11（需求一致性单调性）
 
-**陈述**：EFA-v6 软因子链 η_g, η_topo, η_interp, η_cmd ∈ [1, 1+ε]，其中 ε=0.3 设计上限。设七硬门阈值 τ_i^v6 = γ_i·τ_i^v5·Π_factor_i，其中 Π_factor_i = ∏_j η_j ∈ [1, 1.3]。则：
-- Exec_CADVS-v6 ⊆ Exec_CADVS-v5（软因子只收紧）
-- 若任意η_j = 1，则 Exec_CADVS-v6 中等级恢复为 v5 水平
+**陈述**：EFA-v7 软因子链 η_j ∈ [1, 1+ε]，其中 ε=0.3 设计上限。设七硬门阈值 τ_i^v7 = γ_i·τ_i^v6·Π_factor_i，其中 Π_factor_i = ∏_{j=1}^6 η_j ∈ [1, 1.3]。则：
+- Exec_CADVS-v7 ⊆ Exec_CADVS-v6（软因子只收紧）
+- 若 η_demand < τ_demand，系统必走需求导向回退路径，形成「需求-行为」的可解释闭环
 
-**证明**：η_j ≥ 1 ⇒ Π_factor_i ≥ 1 ⇒ τ_i^v6 ≥ τ_i^v5，软阈值单调升；七硬门判定 1[s_i ≥ τ] = 1[s_i ≥ τ'] 当 τ' ≥ τ 时结果不变或更严格。若 η_j = 1，则 τ_i^v6 = τ_i^v5，恢复 v5。
+**证明**：η_j ≥ 1 ⇒ Π_factor_i ≥ 1 ⇒ τ_i^v7 ≥ τ_i^v6；软阈值单调升；七硬门判定 1[s_i ≥ τ] = 1[s_i ≥ τ'] 当 τ' ≥ τ 时结果不变或更严格。若 η_demand < τ_demand，需求导向回退保证执行 x_demand，该路径的硬门判定独立于 STM。
 
-### 定理 10（GGC/STM 记忆一致性）
+### 定理 12（需求导向回退正确性）
 
-**陈述**：GGC 提供的抓取原型记忆与 STM 输出的查询向量 q_L 之间若干映射关系，使得：
-- 对于任意指令 L，其对应的轨迹集 T_L 在记忆中形成连通簇；
-- STM 在这个簇内的查询向量 q_L 与轨迹嵌入的相似度 ≥ cos_θ (θ=0.3 rad)
-- GGC 筛选器确保簇内轨迹均满足标签_grasp=1
+**陈述**：设需求意图 ρ_demand 为用户真实需求的投影，则需求导向回退路径的提议 x_demand 满足：
+- GGC(x_demand) ∧ MCTM(x_demand) ∧ ¬Ψ_novel(x_demand)
+- 且 x_demand 与历史记忆中的「典型成功行为」在指令-轨迹空间中相似度 ≥ cos_θ
 
-**证明**：STM 采用 CLIP-style 对齐训练：指令 L 与其对应轨迹的查询-键相似度最大化；负样本轨迹相似度最小化。GGC 作为事后筛选器，确保仅保留稳固抓取。记忆中任意轨迹的 e_τ 包含 label_grasp，GGC.filter 只接受 label_grasp=1。
+**证明**：ρ_demand 从用户历史交互和环境约束稳定推断；E_demand 将 ρ_demand 投影到记忆查询空间 q_demand；Top-k 检索确保相似性阈值；FMPP.propose(c_demand) 继承 v6 的七硬门约束。
 
 ### 诚实声明
 
-- GGC 的抓取原型离线构建依赖 RRT* 的采样充分性，实际工作空间离散化可能遗漏细微可达姿态；
-- MCTM 的拓扑图近似自由空间，动态障碍物突变时可能失效；
-- STM 的语义对齐在指令分布外（OOD 指令）处泡沫效应明显，η_interp 可捕获，但 η_cmd 下降后仍可能误导提议器；
-- 软因子链的乘积放大误差：若四个因子皆为 0.9（误判），Π_factor_i ≈ 0.66，导致阈值下降、执行集扩张，破坏 fail-closed 假设。**缓解**：所有 η_j ≥ 1 设计，Π_factor_i ≤ 1.3 设计上限；若检测到 η_j < 1，则立即切换至 v5 规则提议（回退策略）。
+- DIM 的「需求意图」是高度抽象的，存在「稀释」风险：过多历史会模糊当下需求；
+- DRC 的 LLM 推理链可能产生「幻觉」，η_demand 低于阈值时才触发回退，但误判成本仍存在；
+- DAC 的面部表情捕获受光照、相机分辨率影响，desire_affect 的离散化 {-1,0,+1} 可能过粗；
+- 软因子链的乘积放大误差：若所有 η_j = 0.9（误判），Π_factor_i ≈ 0.54，导致阈值下降、执行集扩张，破坏 fail-closed 假设。**缓解**：所有 η_j ≥ 1 设计，Π_factor_i ≤ 1.3 设计上限；若检测到 η_j < 1，则立即切换至 v6 规则提议（回退策略）。
 
 ## 5. 实验设计与验证计划（仿真 → 实机）
 
 ### 5.1 实验设计（MuJoCo 3.x + MJX）
 
-- **平台**：机械臂 UR10e（6DOF）+移动底盘（2DOF）+语音指令合成器
+- **平台**：机械臂 UR10e（6DOF）+移动底盘（2DOF）+语音指令合成器+摄像头
 - **数据集**：
-  - GGC：100 种物体，每个物体 10 视角 × 20 采样抓取 → 20k 原型
-  - MCTM：1000 帧动态场景下的自由空间采样 → K=100 拓扑节点
-  - STM：10k 条自然语言指令 + 人工注释抓取动作 → 对齐数据集
-- **对照**：v5-full、v6-full、消融 A11（无 GGC）、A12（无 MCTM）、A13（无 STM）、A14（η_cmd 软因子关闭）、A15（软因子链设为恒 1.1，检验上界效应）
+  - DIM：从 10k 条用户交互日志中抽取 1k 条「需求-行为」配对作为监督信号
+  - DRC：从 5k 条自然语言指令中采集 500 条高-quality 推理链作为训练数据
+  - DAC：收集 500 位用户在 10 种情绪情境下的面部表情 + 需求偏好标签
+- **对照**：v6-full、v7-full、消融 A16（无 DIM）、A17（无 DRC）、A18（无 DAC）、A19（η_demand 永远 = 1）、A20（需求导向回退关闭）
 - **场景**：
-  - (a) 机械臂抓取：堆叠物体、透明物体、奇异姿态抓取
-  - (b) 移动底盘：动态障碍追逐、 corridor 导航、突发障碍规避
-  - (c) 语音指令：模糊指令（「把东西放到靠近左边的地方」）、反向指令（「不要拿红色的」）、组合指令（「先抓黄色，再把它放在最右侧」）
-  - (d) 隐私审计：语音指令本地处理，无文本上传；STM 输出向量经 DP 随机化后方可进入记忆检索
+  - (a) 需求模糊：指令「把东西放到合适的地方」→ DIM 推断「在桌子上」→ 执行放置
+  - (b) 需求冲突：用户面部表情焦虑 + 指令「快把东西拿走」→ DAC 提升探索度，检索「快速撤回」轨迹
+  - (c) 需求演化：用户连续 3 次指令「不对」→ DIM 检测到 ρ_demand 偏离，触发回退到「典型任务」记忆
+  - (d) 隐私审计：LLM 推理链存储于本地，无文本上传；η_demand 计算结果经 DP 随机化后方可进入记忆检索
 - **指标**：
-  - GGC：抓取成功率、抓取稳定率、奇异抓取比例
-  - MCTM：路径连通率、轨迹代价最小化率
-  - STM：指令→动作成功率、η_interp 分布、η_cmd 触发回退率
-  - 整体：七硬门通过率、控制环 P99、跨模态指令误判率
+  - DIM：需求预测准确率、η_demand 分布、回退触发率
+  - DRC：推理链一致性、η_demand 可靠性
+  - DAC：情感-行为匹配度、探索度调节效果
+  - 整体：需求导向回退成功率、七硬门通过率、控制环 P99、跨模态指令误判率
 
 ### 5.2 初步预测
 
-| 指标 | v5 | v6（仿真） | 说明 |
+| 指标 | v6 | v7（仿真） | 说明 |
 |---|---|---|---|
-| 机械臂抓取成功率 | 78% | **89%** | GGC 抓取原型 + η_g 约束，奇异抓取被筛除 |
-| 动态障碍导航成功率 | 65% | **82%** | MCTM 拓扑图保证路径连通性，η_topo 软约束 |
-| 模糊指令执行正确率 | 55% | **78%** | STM 将模糊指令映射到可执行记忆簇，η_interp 缓解 |
-| 软因子链 P99 | — | **0.62 ms** | 软因子链 O(1)，不致控制环延迟 |
-| 七硬门回退率 | 5% | **2%** | 软因子先验过滤，v5 规则提议触发更少 |
-| 隐私审计违规 | 0 | **0** | 本地语义映射+DP 随机化，验证通过 |
+| 需求模糊指令成功率 | 55% | **78%** | DIM 推断 ρ_demand，需求导向回退 |
+| 需求演化检测率 | 15% | **65%** | DIM 检测 ρ_demand 偏离，触发回退 |
+| 面部情感响应适时性 | - | **72%** | DAC 捕获 desire_affect，调节探索度 |
+| 软因子链 P99 | 0.6 ms | **0.8 ms** | DIM+DAC < 0.5 ms，DRC 可缓存 |
+| 七硬门回退率 | 5% | **3%** | η_demand 门限过滤，回退更少 |
+| 隐私审计违规 | 0 | **0** | 本地推理链+DP 随机化 |
 
 ## 6. 风险表（增量更新）
 
@@ -403,9 +409,13 @@ class EvidenceForgingAssemblerV6:
 | R59 | 条件接口漂移 | 中 | Schema 版本化、回归测试 | 负债累积 |
 | R60 | GGC 离线原型不足 | 高 | 采样充分性检验、动态补测 | 工作空间变化 |
 | R61 | MCTM 空间逼真性 | 中 | 动态障碍实时更新、拓扑图增量重构 | 突发障碍 |
-| R62 | **跨模态指令-轨迹映射的归因不确定性** | **极高** | 软因子 η_interp·η_cmd 量化不确定性、模糊指令阈值 θ_guided 强制回退、v5 规则提议 3 级兜底、红队持续评估 | **指令模糊带来的「正确但不该做」风险在结构上难以根除** |
+| R62 | 跨模态指令-轨迹映射的归因不确定性 | 极高 | 软因子 η_interp·η_cmd 量化不确定性、模糊指令阈值 θ_guided 强制回退、v5 规则提议 3 级兜底、红队持续评估 | 指令模糊带来的「正确但不该做」风险在结构上难以根除 |
+| R63 | DIM 需求稀释 | 高 | 动态历史窗口、注意力机制、逆向一致性检查 | 长期交互积累效应 |
+| R64 | DRC LLM 幻觉 | 中 | 链一致性校验、置信度阈值、回退 v6 规则 | 推理链误导风险 |
+| R65 | DAC 表情误差 | 中 | 多视角融合、置信度加权、情感回退 | 环境光照影响 |
+| R66 | **需求意图的可解释性假设** | **极高** | **η_demand 量化、LLM 推理链可解释、需求导向回退兜底** | **用户意图的「非线性、突变、自我否定」特性在结构上难以捕获，维持七硬门 fail-closed 边界期间，可能产生「正确但不该做」的行动** |
 
 ## 7. 本轮最大风险（最终确认）
 
-**一句话**：**跨模态指令-轨迹映射的归因不确定性**——语义模型将自然语言指令映射到记忆查询向量时，可能因语境差异产生严重的轨迹偏移；虽然有 n_flow 密度门和 γ 调制作为兜底，但指令模糊带来的「正确但不该做」的行动风险在结构上难以完全消除。
+**一句话**：**需求意图的可解释性假设**：第 7 轮假设「用户需求可以从历史交互中抽象出」，但现实中用户意图常常是「非线性、突变、甚至自我否定」的——系统推断的 ρ_demand 可能与用户的「当下真实需求」迥然不同，这种误推导在结构上难以捕获，更何况维持七硬门的 fail-closed 边界。
 <!-- ARTIFACT:END -->
