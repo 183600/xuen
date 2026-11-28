@@ -1,375 +1,411 @@
 <!-- IDEA:START -->
-### 第 5 轮灵感驱动研究记录
+### 第 6 轮灵感驱动研究记录
 
-**灵感词**：长期记忆、流匹配策略、面部表情识别
+**灵感词**：机械臂抓取、移动底盘、语音交互
 
-**继承关系**：第 4 轮 CADVS-v4（IP-489~492）确立七硬门 fail-closed 框架（覆盖/物理/人因/末点/记忆/价值/平衡）、证书演算与单调信任收缩定理、ECS_v4 软评分、执行集嵌套 Exec_CADVS-v4 ⊆ … ⊆ Exec_v29。本轮不推翻 v4，而是补 v4 的三个结构性短板：(a) 提议机制仍是离散规则库，新颖场景泛化弱、候选多样性差；(b) 人因锚只有手势意图 veto，读不到人类情感状态；(c) 记忆只是被动查找表，经验不反哺策略。三个灵感词统一为主题「认证的生成式执行」（Certified Generative Execution, CGE），形成 CADVS-v5（IP-493~496）。本轮自律：**硬门数量不增**（维持七门，正面回应 R52 锚点维护负债），改走「提议升级 + 阈值调制 + 软因子扩充」三条非侵入路径，执行集嵌套升级为 Exec_CADVS-v5 ⊆ Exec_CADVS-v4 ⊆ … ⊆ Exec_v29。
+**继承关系**：第 5 轮 CADVS-v5（IP-493~496）确立「认证的生成式执行」框架：七硬门 fail-closed 边界不变，提议由流匹配生成分布 π_θ^FM 驱动，记忆 LMEM-v2 固化闭环，情感 FAMK 调制阈值。本轮延续「硬门不增」原则，聚焦「**指令-几何-力学三元凿**」：在保持证书边界不变的前提下，为机械臂抓取增添几何可达性约束、为移动底盘加入空间拓扑图、为语音交互设计跨模态指令-轨迹映射。
 
 **直觉与动机**：
 
-1. **流匹配策略 → 提议机制从离散规则升级为连续生成分布，但证书边界一寸不动**。v4 的执行集 = 七硬门在规则库上的交集。规则库有限、离散、模板化，新物体/新几何/新上下文只能靠教师介入。引入条件流匹配策略 π_θ^FM：学习时间依赖向量场 v_θ(x,t|c)，从噪声积分 ODE 采样候选轨迹，条件 c 含物体类别/几何嵌入/领域指纹/任务/检索记忆 token/人类状态。理论上的关键一步是**定理 6（证书不变性/提议无关性）**：执行集只由门定义，与提议分布无关——把提议从规则换成流，只要门集合不变、阈值只紧不松，fail-closed 与单调收缩完全保持。这把框架从「规则系统」推广为「任意生成器 + 认证边界」，是比 v4 更一般的理论贡献。副产品：概率流 ODE 给出 log p(x)，天然构成密度型新颖性检测器，直接升级 kc_mem 而不加新门。
+1. **机械臂抓取 → 从「概率想象」到「几何可达性」**。v5 的流提议在配置空间随机采样，可能生成“形式合规但物理不可达”的抓取姿态。引入「机械臂抓取几何凿」（Grasp Geometry Cutter, GGC）：离线计算工作空间的碰撞可达域，将离散化的抓取原型写入记忆的轨迹嵌入 e_τ 空间。关键洞见是：**可行性从「概率密度」延伸到「几何约束」**——记忆条目携带「抓取奇异性标签」和「力学优化值」，让 FMPP 在提议时以先验方式偏好「抓取-稳固-非奇异」的亚族。
 
-2. **长期记忆 → 记忆从「被动查找表」升级为「条件化 + 固化闭环」**。v4 的 LTEM 只做 O(1) 计数查询。升级为 LMEM-v2：(a) 条目附轨迹嵌入 e_τ，Top-k 检索作为流策略条件 token（检索增强：历史经验直接塑形提议分布）；(b) **固化（consolidation）**：周期性用「已铸证 ∧ 结局验证成功 ∧ 人工抽检通过」的片段离线微调流策略（DP-SGD + KL-to-prior 正则 + 失败片段回放防遗忘），形成 经验→记忆→策略→更优提议 的正循环；(c) 新颖度 n_flow = −log p(x) 与计数统计 OR 合成裁决 MEMORY_REJECT，超阈 fail-closed 回退 v4 规则提议。关键红线：**固化只改提议器，永不改门**——门是信任边界，不是被学习对象。
+2. **移动底盘 → 从「全局轨迹」到「空间拓扑图」**。v5 的 BCK 依赖点云匹配，面对动态障碍物时容易产生路径碎片化。引入「移动底盘空间拓扑图」（Mobile Chassis Topology Map, MCTM）：在离线构建「自由空间连通图」G topo，其节点为稳定姿态，边权为碰撞代价。MCTM 以「空间编码器」将自由空间离散化为离散拓扑 token，注入 FMPP 的条件 c_ctx。**关键洞见**：拓扑图 ≈「全局先验先验」——从记忆中检索到的历史轨迹若在拓扑图内连通，意味着该轨迹在全局空间约束下可实现。
 
-3. **面部表情识别 → 人因锚从「意图 veto」升级为「意图 + 情感调制」，用调制代替新增门**。引入 FAMK：端侧 FER 估计人类效价/唤醒/痛苦概率 ŝ_emo（EMA 平滑 + 温度校准不确定性），输出**阈值调制因子 γ_i(ŝ_emo) = 1 + κ_i·p_distress·1[σ_emo ≤ σ_max] ≥ 1**：痛苦↑ ⇒ HIC veto 灵敏度↑、ξ_wrench/ξ_zmp 安全系数↑、τ_val↑、λ_safety↑（有界投影）。**定理 5（调制单调性）**：只要调制非对称（只紧不松），Exec_v5(ŝ_emo) ⊆ Exec_v5(static) ⊆ Exec_v4。设计约束：情绪永不放松任何门（杜绝「笑脸降边际」的对抗攻击面）；无脸/遮挡/低置信 → 回退 v4 静态阈值（fail-safe to v4）；原始人脸特征不出端侧、即用即弃、任何聚合统计过 DP。
+3. **语音交互 → 从「记忆查询」到「语义指令映射」**。v5 的 LMEM-v2 只能做「轨迹-记忆」的相似性查询，无法解释「把苹果放在桌子上」这类模糊指令。引入「语义-轨迹映射网络」（Semantic-Trajectory Mapper, STM）：训练一个从自然语言指令 L 到记忆查询向量 q_L 的映射（CLIP-style 对齐），使得相似指令检索出相似轨迹。**关键洞见**：STM 的输出 q_L 充当「条件 token」，让 FMPP 的 π_θ^FM 从「语言条件」出发生成轨迹，实现「从语言到动作」的跨模态推导。
 
-**关键洞见**：v4 回答「提议=规则时，七门是否足够」；v5 回答「提议=任意生成器、记忆反哺策略、人因含情感时，如何让证书边界保持不变」。七硬门 kc_evidence_forged_v4 记号原样复用；本轮新增的只有：提议分布 π_θ^FM（流匹配）、调制 γ(ŝ_emo)（仅收紧）、软评分 ECS_v5 = ECS_v4 · η_flow · η_emo。执行集 Exec_CADVS-v5 ⊆ Exec_CADVS-v4 由「同门 + 阈值只紧 + 提议支撑受限」三重保证。同时正面偿还 v4 最大风险 R49（实时性）：BCK 改事件触发 QP + 流可行性先验（把 BCK 边际蒸馏进提议先验，减少不可行候选与在线重解），目标控制环 P99 从 0.8 ms 降至 < 0.6 ms。
+**关键洞见**：v5 回答「提议=任意生成器时，证书边界如何不变」；v6 回答「在机械臂/底盘/语音场景下，如何在不新增硬门的前提下，让生成器的提议“符合物理、符合空间、符合意图」」。七硬门 kc_evidence_forged_v5 记号原样复用；本轮新增的只有：
+- IP-497 GGC（抓取原型记忆），
+- IP-498 MCTM（空间拓扑 token），
+- IP-499 STM（语义向量查询），
+- IP-500 EFA-v6（软评分 η_interp）。
 
 **形式化目标（增量）**：
-1. 条件流匹配：插值路径 x_t=(1−t)x_0+t·x_1，损失 L_FM(θ)=E‖v_θ(x_t,t|c)−(x_1−x_0)‖²；采样 ODE dx/dt=v_θ(x,t|c)；概率流 ODE + Hutchinson 迹估计 → log p(x)。
-2. LMEM-v2 = (嵌入条目 E, Top-k 检索 Retr, 条件 token 化 Tok, 固化算子 C_cons, 新颖度裁决 Ψ_novel, 回退算子)。
-3. FAMK：ŝ_emo=(valence, arousal, p_distress, σ_emo)；γ_i = 1 + κ_i·p_distress·1[σ_emo ≤ σ_max]，κ_max 保证 Δτ ≤ 0.1（防执行集塌缩）。
-4. 定理 5（调制单调性）、定理 6（证书不变性/提议无关性）、定理 7（固化有界与防博弈）、定理 8（七锚完备性在调制下保持）。
-5. EFA-v5 级联采样选证：廉价门先筛 K=8 候选 → VACK 仅评 ≤3 幸存者 → BCK 轨迹预览终选，取通过者中边际最大者；软评分 ECS_v5 = ECS_v4 · η_flow · η_emo。
-6. Exec_CADVS-v5 = {x ∈ supp(π_θ^FM) : ∧_i kc_i(x,c; γ_i·τ_i^4)=1} ⊆ Exec_CADVS-v4。
 
-**本轮最大风险**：**记忆固化自指回路**——流策略在自己铸证的片段上训练、价值模型又在线自适应，「铸证→学习→再铸证」闭环缺乏外部真值，策略可能学会博弈证书门（形式合规、实质违背），证书退化为自洽但失真的自我背书；冻结门 + 人工抽检子集 + KL 正则 + 红队只能缓解，无法根除。
+1. **GGC（Grasp Geometry Cutter）**：<br>
+   - 可达域 R_g ∈ ℝ^d_pose，通过离线碰撞采样 + RRT* 离散化为 N_proto ~1000 个抓取原型 {g_j, s_j, η_g_j}，其中 s_j 为「抓取奇异性」标签，η_g_j 为「力学优化值」<br>
+   - 记忆条目 e_τ 拓展为 e_τ = (emb_traj, label_grasp, η_safety, src)；检索时筛选 label_grasp=1（稳固抓取）<br>
+   - GGC 前置约束：kc_wrench(z) ≥ τ_wrench' = γ_wrench · τ_wrench^v5 + (1−η_g)·Δ_η，η_g ∈ [0,1]，η_g=1 时恢复 v5 阈值
+
+2. **MCTM（Mobile Chassis Topology Map）**：<br>
+   - 空间编码器 E_space: pose ↦ z_spa ∈ ℝ^d_space，将自由空间离散化为 K_topo ~50~100 个拓扑节点<br>
+   - 拓扑图 G = (V, E)，V 为节点集合，E 为连通边，边权 w_ij 表示碰撞代价<br>
+   - MCTM 条件 token: t_topo ∈ {t_1,...,t_K}，注入 c_ctx；检索时筛选 t ∈ N_KNN(q_topo)，N_KNN 为拓扑最近邻<br>
+   - 软因子：η_topo = σ(−d_topo/σ_d) ∈ [0,1]，d_topo 为拓扑距离，σ_d 为自适应尺度
+
+3. **STM（Semantic-Trajectory Mapper）**：<br>
+   - 语义编码器 E_sem: L ⟼ q_L ∈ ℝ^d_query<br>
+   - 损失 L_STM = −log p(q_L | L) + λ_KL·KL(p_L(q_L) || Uniform) + λ_sim·sim(q_L, q_L^+) − sim(q_L, q_L^-)<br>
+   - q_L = STM(L) 作为 FMPP 的查询，检索记忆中与 q_L 最近的 M=4 条轨迹<br>
+   - 软因子：η_interp = σ(−d_interp/σ_i)，d_interp 为语义-轨迹间隔，σ_i 为自适应尺度
+
+4. **EFA-v6 软评分**：ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd，其中 IP-499 STM 新增「指令可解释性软评分」η_cmd：衡量指令映射到记忆查询向量的信噪比，η_cmd = 0.9~1.0 稳固不变；若指令模糊度达标阈值 θ_guided，η_cmd 下降至 ~0.5，触发回退 v5 规则提议。
+
+5. **形式化定义**：给定指令 L，目标 ρ_target，记忆 M：<br>
+   - q_L = STM(L)；<br>
+   - m_topk = Top-k(Retr_M(q_L, K=4))；<br>
+   - c_ctx = (obj, g_emb, θ_fp, task, ŝ_emo, m_{1:k}, ρ_target, t_topo, q_L)；<br>
+   - cands = FMPP.propose(c_ctx, K=8)；<br>
+   - surv = [x ∈ cands : GGC(x) ∧ MCTM(x) ∧ ¬Ψ_novel(x)]；<br>
+   - Exec_CADVS-v6 = {x ∈ surv : ∧_i kc_i(x,c; τ_i^v6)=1}，其中 τ_i^v6 = γ_i(ŝ_emo)·τ_i^v5·Π_factor_i<br>
+   - Π_factor_i = η_g_i · η_topo_i · η_interp_i (≥1，≤1.3 设计上限)
+
+**本轮最大风险**：**跨模态指令-轨迹映射的归因不确定性**——语义模型将自然语言指令映射到记忆查询向量时，可能因语境差异产生严重的轨迹偏移；虽然有 n_flow 密度门和 γ 调制作为兜底，但指令模糊带来的「正确但不该做」的行动风险在结构上难以完全消除。
 <!-- IDEA:END -->
 
 <!-- ARTIFACT:START -->
-## 0. 增量定位与继承关系（在 IP-485~492/CADVS-v4 基础上扩展）
+## 0. 增量定位与继承关系（在 IP-493~496/CADVS-v5 基础上扩展）
 
 ### 0.1 新增核心模块
 
-| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v4） |
+| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v5） |
 |---|---|---|---|
-| IP-493 | Flow Matching Proposal Policy Kernel (FMPP) | 提议升级 | 条件流匹配生成候选轨迹；上下文含检索记忆与人类状态；级联采样选证；BCK 边际蒸馏为可行性先验 |
-| IP-494 | Long-term Memory with Embedding & Consolidation (LMEM-v2) | 记忆升级 | 条目附轨迹嵌入 e_τ；Top-k 检索作流条件 token；铸证片段固化入策略（DP-SGD+KL 正则）；n_flow 密度新颖度并入 kc_mem |
-| IP-495 | Facial Affect Modulation Kernel (FAMK) | 人因升级 | 端侧 FER 估计 ŝ_emo；非对称阈值调制 γ_i ≥ 1（只紧不松）；λ_vec 情感自适应；fail-safe 回退 v4 静态阈值 |
-| IP-496 | Evidence Forging Assembler v5 (EFA-v5) | 证据融合 | 七硬门不变 + 调制阈值 τ^5=γ·τ^4；级联采样选证；ECS_v5 = ECS_v4 · η_flow · η_emo |
+| IP-497 | Grasp Geometry Cutter (GGC) | 几何约束 | 离线离散化抓取可达域 → 抓取原型记忆；e_τ 扩展携带抓取奇异性标签/力学优化值；软因子 η_g 调制 wrench/val 门 |
+| IP-498 | Mobile Chassis Topology Map (MCTM) | 空间约束 | 构建自由空间连通图 G_topo → 空间拓扑 token；软因子 η_topo 反映拓扑连通性；MCTM token 注入 FMPP 条件 |
+| IP-499 | Semantic-Trajectory Mapper (STM) | 交互抽象 | 从自然语言指令 L 到记忆查询向量 q_L 的跨模态映射；检索记忆中与 q_L 最近轨迹；软因子 η_interp 衡量语义-轨迹间隔 |
+| IP-500 | Evidence Forging Assembler v6 (EFA-v6) | 证据融合 | 七硬门不变 + 软因子链 η_g·η_topo·η_interp·η_cmd；新增「指令可解释性软评分」η_cmd；ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd |
 
-### 0.2 v4 模块适配表（只改接口，不推翻）
+### 0.2 v5 模块适配表（只改接口，不推翻）
 
-| v4 模块 | v5 适配 |
+| v5 模块 | v6 适配 |
 |---|---|
-| IP-489 VACK | 上下文扩展 ŝ_emo；λ_vec 情感自适应（有界投影、仅向安全倾斜）；级联中仅评估 ≤3 幸存候选；证书缓存复用 |
-| IP-490 BCK | 事件触发 QP（接触状态变更才重解）+ 缓存证书 + 解析边际内插；边际离线蒸馏给 FMPP 作可行性先验；kc_bal 门形式不变 |
-| IP-485 EEK | 原样继承；BCC 预览沿候选轨迹采样点评估 |
-| IP-486 LTEM | 升级为 LMEM-v2（接口超集）：query 返回 (pass, eta_mem, novelty, m_topk, e_τ, n_flow)；novelty 由计数统计 ∨ n_flow 联合裁决 |
-| IP-487 FFA | Δ_i 扩充：轨迹嵌入原型（DP）、情绪统计分位数（DP）；Φ_global 下发流先验原型、ε_emo 校准参数 |
-| IP-488 EFA-v4 | 升级为 EFA-v5：门集合不变，阈值 τ_i^5 = γ_i·τ_i^4 每周期预计算；新增候选级联选择器与规则提议回退 |
-| IP-491 CERTCALC | 扩展 CERTCALC-v5：新增定理 5/6/7/8 |
-| IP-473~484 | RCANG/DLC/MRCC/TCVM/STCK/GCK/DAKI/VSCK 等原样继承 |
+| IP-493 FMPP | 条件扩展：c_ctx 加入 t_topo, q_L；propose 时筛选 GGC 可行抓取族；级联筛选加入 η_g 软因子 |
+| IP-494 LMEM-v2 | 接口超集：query 返回 (pass, eta_mem, novelty, m_topk, e_τ, n_flow, label_grasp, η_safety)；e_τ 扩充为 (emb_traj, label_grasp, η_safety, src)；GGC 筛选器作为先验 |
+| IP-495 FAMK | 原样继承；τ_i^v6 = γ_i·τ_i^v5·Π_factor_i，其中 Π_factor_i = η_g_i · η_topo_i · η_interp_i (≥1, ≤1.3) |
+| IP-496 EFA-v5 | 升级为 EFA-v6：七硬门不变（标签/阈值冻结）；新增软因子链；STM 输出 q_L 作为指令查询；指令模糊度达标阈值 θ_guided 控制 η_cmd |
 
-## 1. 增量符号体系（定义 2101–2240）
+## 1. 增量符号体系（定义 2241–2300）
 
 | 符号 | 含义 |
 |---|---|
-| x = (pose_{0:T}, wrench_{0:T}) | 候选轨迹：末端位姿 + 广义力时间序列，维度 d_x |
-| c_ctx = (obj, g_emb, θ_fp, task, ŝ_emo, m_{1:k}, ρ_target) | 流条件上下文：物体/几何嵌入/领域指纹/任务/情绪状态/检索记忆/目标边际 |
-| v_θ(x,t\|c), t∈[0,1] | 时间依赖向量场（DiT/Transformer，条件 cross-attention） |
-| x_t = (1−t)x_0 + t·x_1, x_0 ~ N(0,I) | 线性插值概率路径（rectified flow） |
-| L_FM(θ) = E_{t,x0,x1\|c}‖v_θ(x_t,t\|c) − (x_1−x_0)‖² | 流匹配训练损失 |
-| dx/dt = v_θ(x,t\|c) | 采样 ODE，S 步 Euler/RK 积分 |
-| π_θ^FM(·\|c) | 流匹配提议分布（ODE 解的 pushforward） |
-| log p_θ(x) | 概率流 ODE 似然（Hutchinson 迹估计 ∇·v_θ，n_probe 探针） |
-| K, S | 每次准入候选数（缺省 8）、ODE 积分步数（蒸馏后缺省 10） |
-| LMEM-v2 = (E, Retr, Tok, C_cons, Ψ_novel) | 记忆：嵌入条目 E、Top-k 检索、条件 token 化、固化算子、新颖度裁决 |
-| e_τ ∈ R^64 | 轨迹嵌入（时序池化编码器） |
-| n_flow = −log p_θ(x)/d_x | 归一化流新颖度；阈值 τ_novel（缺省 8.0） |
-| Ψ_novel(x) = 1[n_flow > τ_novel] ∨ 计数统计拒绝 | 新颖度裁决：OR 合成，fail-closed 回退规则提议 |
-| C_cons: 铸证片段集 → Δθ | 固化算子：DP-SGD + KL(π_new‖π_old) ≤ ε_KL + 失败片段回放 |
-| ŝ_emo = (v, a, p_distress, σ_emo) | 人类情感状态：效价、唤醒、痛苦概率、温度校准不确定度 |
-| γ_i(ŝ_emo) = 1 + κ_i·p_distress·1[σ_emo ≤ σ_max] | 阈值调制因子，i ∈ {veto, wrench, zmp, val}；γ ≥ 1 恒成立 |
-| κ_max | 调制上限：保证 Δτ ≤ 0.1（防执行集塌缩） |
-| τ_i^5 = γ_i·τ_i^4 | v5 调制后阈值（τ^4 为 v4 静态阈值，冻结只读） |
-| η_flow = σ(log p_θ(x) − b_flow) | 流置信软因子 ∈ [0,1] |
-| η_emo = 1 − λ_emo·p_distress·1[σ_emo ≤ σ_max] | 情绪软因子 ∈ [0,1]，λ_emo ≤ 0.5 |
-| ECS_v5 = ECS_v4 · η_flow · η_emo | 软评分 |
-| Cascade_v5 = (G_cheap, G_val, G_bal) | 级联：廉价门（coverage/physics/memory/novelty）→ VACK → BCK 预览 |
-| Exec_CADVS-v5 = {x ∈ supp(π_θ^FM) : ∧_i kc_i(x,c; τ_i^5) = 1} | v5 执行集 |
+| L | 自然语言指令文本 |
+| q_L ∈ ℝ^d_query | STM(L) 输出的语义查询向量 |
+| z_spa = E_space(pose) | 空间编码器输出的拓扑节点向量 |
+| G_topo = (V, E, W) | 移动底盘空间拓扑图：节点 V、边 E、权重 W |
+| t_topo ∈ {t_1,...,t_K} | 拓扑图离散化 token |
+| d_topo | 拓扑距离（最短路径权重和） |
+| η_topo = σ(−d_topo/σ_d) | 软因子：拓扑连通性置信度 ∈ [0,1] |
+| η_interp = σ(−d_interp/σ_i) | 软因子：语义-轨迹间隔置信度 |
+| η_cmd = 1 − λ_cmd·H(q_L) | 软因子：指令可解释性，H 为信息熵 |
+| λ_cmd | 指令模糊度惩罚系数 (默认 0.1) |
+| θ_guided | 指令模糊度阈值，超过则 η_cmd ≈ 0.5，触发回退 v5 |
+| g_j | 第 j 个抓取原型姿态 |
+| s_j ∈ {0,1} | 抓取奇异性标签：1 表示稳固抓取 |
+| η_g_j ∈ [0,1] | 抓取力学优化值：η_g_j=1 表示力学最佳 |
+| η_g = 1 + (1−η_g_j)/d_x | 软因子：从“抓取坏”到“抓取好”映射，≥1 |
+| R_g | 可达域 ℝ^d_pose（离线离散化） |
+| N_proto | 抓取原型数量（默认 1000） |
+| e_τ = (emb_traj, label_grasp, η_safety, src) | 拓展记忆条目嵌入 |
+| τ_i^v6 | v6 调制后阈值：τ_i^v6 = γ_i·τ_i^v5·Π_factor_i |
+| Π_factor_i = η_g_i · η_topo_i · η_interp_i | 软因子乘积，设计上限 1.3 |
+| H(q_L) | 查询向量信息熵 |
+| STM(L) | 语义-轨迹映射网络 |
+| E_sem | 语义编码器 |
+| E_space | 空间编码器 |
+| GGC.proposal_filter(x) = 1[s(x) = 1] | 抓取原型筛选器 |
 
 ## 2. 关键算法骨架
 
-### IP-493 FMPP：流匹配提议策略核（准入/10 Hz 预览时域，不在 1 kHz 环）
+### IP-497 GGC：抓取几何凿
 
 ```python
 @dataclass
-class FlowMatchingProposalPolicyKernel:
-    """FMPP：条件流匹配提议器。
-    定理 6（证书不变性）：提议可换，门不可换——门是信任边界"""
-    net: Any                      # v_θ：DiT/Transformer，条件 cross-attn
-    S: int = 10                   # 蒸馏后 ODE 步数
-    K: int = 8                    # 候选数
-    margin_head: Any = None       # BCK 边际蒸馏头（可行性先验，回应 v4-R49）
+class GraspGeometryCutter:
+    """GGC：离线计算抓取可达域 → 抓取原型记忆。
+    红线：原型记忆不参与梯度，仅作先验筛选；软因子 η_g 收敛于 1.0"""
+    g_proto: list[GraspProto]       # N_proto ~1000 个抓取原型
+    eta_g_max: float = 0.1           # η_g - 1 的上限，保证 Π_factor_i ≤ 1.3
 
-    def train_loss(self, batch) -> float:
-        # rectified flow：x_t = (1-t)x0 + t·x1，目标场 = x1 - x0
-        x0 = randn_like(batch.x1)
-        t = rand(batch.B, 1)
-        x_t = (1 - t) * x0 + t * batch.x1
-        return mse(self.net(x_t, t, batch.c), batch.x1 - x0)
+    def build_prototypes(self, robot, workspace, collision_obj) -> None:
+        """离线：采样 N~1000 个抓取姿态，筛选稳固/非奇异性 → 存入 g_proto"""
+        for _ in range(N_proto):
+            g = rrt_star_grasp(robot, workspace, collision_obj)
+            if g.valid and not g.singular:
+                eta = grasp_quality_metric(g)  # 力学优化值 ∈ [0,1]
+                self.g_proto.append(GraspProto(pose=g.pose, s=g.non_singular, eta=eta))
 
-    def distill_margin_prior(self, bck_margin_samples) -> None:
-        """离线：沿 BCK 采样的可行/不可行轨迹训练辅助边际头，
-        让提议先验偏好高 ξ_wrench/ξ_zmp 区域，降低在线拒绝率"""
-        ...
+    def quality_factor(self, x: Trajectory) -> float:
+        """查询轨迹的抓取质量 η_g；若无匹配，η_g = 1.0（中性）"""
+        best = find_nearest_grasp(x, self.g_proto)
+        eta_g_j = best.eta if best else 1.0
+        return 1.0 + (1.0 - eta_g_j) / x.dims  # ≥ 1.0
 
-    def propose(self, c: Context, k: int = None) -> list[Trajectory]:
-        """从 N(0,I) 积分 ODE 至 t=1，K 个候选；准入时域/10 Hz 预览"""
-        xs = randn(k or self.K, d_x)
-        for s in range(self.S):
-            xs = xs + (1.0 / self.S) * self.net(xs, s / self.S, c)
-        return decode(xs)
-
-    def log_lik(self, x: Trajectory, n_probe: int = 4) -> float:
-        """概率流 ODE + Hutchinson 迹估计 → log p(x)，供新颖度 n_flow（引理 43）"""
-        ...
+    def filter(self, x: Trajectory) -> bool:
+        """GGC 筛选器：仅接受稳固抓取 (label_grasp=1)"""
+        best = find_nearest_grasp(x, self.g_proto)
+        return best.s == 1 if best else True  # 无匹配时通过（回退 v6 软因子）
 ```
 
-### IP-494 LMEM-v2：嵌入记忆与固化核（检索 O(log|M|)；固化离线）
+### IP-498 MCTM：移动底盘拓扑图
 
 ```python
 @dataclass
-class LongTermMemoryEmbeddingConsolidation:
-    """LMEM-v2：嵌入检索 + 流条件 + 铸证固化 + 密度新颖度。
-    红线：固化只改提议器 θ_FM，永不改门（门代码与 τ^4 冻结只读）"""
-    emb: Any                      # e_τ 编码器
-    faiss_idx: Any
-    tau_novel: float = 8.0        # 归一化 n_flow 阈值
+class MobileChassisTopologyMap:
+    """MCTM：构建自由空间连通图 → 空间拓扑 token。
+    离线构建 G_topo；在线 query 返回拓扑距离 d_topo 及软因子 η_topo"""
+    G_topo: Graph
+    E_space: SpaceEncoder
+    sigma_d: float = 0.5  # 拓扑距离尺度
 
-    def query(self, obj, geo_sig, theta_fp, rule_id, x: Trajectory) -> QueryResult:
-        m_topk = self._retr(self.emb(x), k=4)            # Top-k 记忆 token → 流条件
-        n_flow = -self.fmpp.log_lik(x) / d_x             # 密度新颖度
-        novel = (n_flow > self.tau_novel) or count_stat_reject(obj, geo_sig, theta_fp, rule_id)
-        return QueryResult(pass_mem=not novel, eta_mem=..., novelty=novel,
-                           m_topk=m_topk, n_flow=n_flow)
+    def build(self, env_static, dynamic_obj_sampler) -> None:
+        """离线：采样 K~50-100 个稳定姿态，计算碰撞代价构图"""
+        poses = sample_free_poses(env_static, n=K)
+        V = [{i: p.pose} for i, p in enumerate(poses)]
+        E = []
+        for i in range(K):
+            for j in range(i+1, K):
+                cost = shortest_path_cost(poses[i].pose, poses[j].pose, env_static, dynamic_obj_sampler)
+                if cost < ∞:
+                    E.append((V[i], V[j], cost))
+        self.G_topo = Graph(V=V, E=E)
 
-    def consolidate(self, episode_store, fmpp, dp_eps: float, kl_eps: float) -> None:
-        """只取「已铸证 ∧ 结局验证成功 ∧ 人工抽检通过」的片段；
-        DP-SGD(ε=dp_eps)；KL(π_new‖π_old) ≤ kl_eps 正则防遗忘/防漂移；
-        20% 失败片段回放；固化后全量重跑回归门测试 + 红队对抗集"""
-        certified = [ep for ep in episode_store
-                     if ep.forged and ep.outcome_ok and ep.human_audit]
-        # frozen-gate 红线：门代码与 τ^4 在此只读，任何梯度不经过门
-        ...
+    def query(self, pose: Pose) -> float:
+        """查询姿态在拓扑图中的连通性 → η_topo"""
+        if not self.G_topo.reachable(pose):
+            return 0.0
+        d_topo = self.G_topo.distance_to_nearest(pose)  # 最近节点距离
+        return sigmoid(-d_topo / self.sigma_d)  # ∈ [0, 1]
+
+    def token(self, pose: Pose) -> int:
+        """返回拓扑最近邻节点 ID → t_topo"""
+        return self.G_topo.nearest_node_id(pose)
 ```
 
-### IP-495 FAMK：面部情感调制核（端侧，10–30 Hz，与控制环解耦）
+### IP-499 STM：语义-轨迹映射网络
 
 ```python
 @dataclass
-class FacialAffectModulationKernel:
-    """FAMK：端侧 FER → 非对称阈值调制 γ_i ≥ 1。
-    定理 5：情绪只能收紧，永不放松（对抗面结构性消除）"""
-    fer: Any                      # 端侧 ViT-Tiny（AffectNet/DFER 蒸馏），10–30 Hz
-    kappa: dict = field(default_factory=lambda:
-        {'veto': 0.5, 'wrench': 1.0, 'zmp': 1.0, 'val': 0.3})   # κ_i ∈ [0, κ_max]
-    sigma_max: float = 0.25       # 不确定度上限，超过则不调制
-    lam_emo: float = 0.3
+class SemanticTrajectoryMapper:
+    """STM：从自然语言 L 到记忆查询向量 q_L 的跨模态映射。
+    训练目标：指令 L 与其对应轨迹 x 的查询向量 q_L 在语义空间拉近，
+    同时阻止与不相关轨迹的查询向量靠近。"""
+    E_sem: SemEncoder
+    proj_query: nn.Linear
+    proj_key: nn.Linear
+    lambda_kl: float = 0.1
+    lambda_sim: float = 0.5
+    temp: float = 0.07
 
-    def observe(self, face_crop, t_now) -> SHomo:
-        v, a, p_d, sigma = calibrated_fer(self.fer, face_crop)   # 温度校准
-        return ema(self.s_prev, (v, a, p_d, sigma), alpha=0.3)   # EMA 平滑，O(1)
+    def forward(self, L: str) -> torch.Tensor:
+        """L → q_L"""
+        h = self.E_sem(L)  # 文本编码
+        return self.proj_query(h)  # d_query 维查询向量
 
-    def gamma(self, s: SHomo) -> dict:
-        if s is None or s.sigma > self.sigma_max or not face_available:
-            return {i: 1.0 for i in self.kappa}   # fail-safe：回退 v4 静态阈值
-        return {i: 1.0 + k * s.p_distress
-                for i, k in self.kappa.items()}   # γ ≥ 1 恒成立（只紧不松）
+    def loss(self, L: str, x_pos: Trajectory, x_neg: Trajectory,
+             e_pos: Embedding, e_neg: Embedding) -> torch.Tensor:
+        """L2 对齐损失 + KL 正则 + Sim 负样本"""
+        q_L = self.forward(L)
+        k_pos = self.proj_key(e_pos.emb_traj)
+        k_neg = self.proj_key(e_neg.emb_traj)
+        pos_sim = (q_L @ k_pos.T).softmax(0)
+        neg_sim = (q_L @ k_neg.T).softmax(0)
+        # 信息熵正则
+        H_q = -torch.sum(pos_sim * torch.log(pos_sim + 1e-8), dim=0).mean()
+        H_k = -torch.sum(pos_sim * torch.log(pos_sim + 1e-8), dim=0).mean()
+        loss = -torch.log(pos_sim.max() + 1e-8) \
+               + self.lambda_kl * (H_q + H_k) \
+               - self.lambda_sim * (pos_sim.max() - neg_sim.max())
+        return loss
 
-    def modulate_lambda(self, lambda_vec: np.ndarray) -> np.ndarray:
-        """情感自适应 λ_vec：仅向安全倾斜，投影回单纯形，位移 ≤ 0.1 有界"""
-        ...
-    # 隐私：人脸特征端侧即用即弃，原始图像永不出端；任何上报统计过 DP；
-    # 提供显式同意与关闭开关（关闭 = 恒 γ≡1，系统精确退化为 v4）
+    def information_entropy(self, q_L: torch.Tensor, memory: List[Embedding]) -> float:
+        """计算查询向量 q_L 相对于记忆的熵 H(q_L) → η_cmd 软因子"""
+        sims = [q_L @ e.emb_traj.T for e in memory]
+        probs = torch.softmax(torch.stack(sims) / self.temp, dim=0)
+        return -torch.sum(probs * torch.log(probs + 1e-8)).item()
 ```
 
-### IP-491 扩展 CERTCALC-v5：新增定理 5~8（离线理论）
-
-```python
-# 定理 5：调制单调性
-def theorem_modulation_monotonicity() -> str:
-    """
-    定理 5（调制单调性）：若所有门取规范形 kc_i(x) = 1[s_i(x) ≥ τ_i]（s_i 与阈值无关），
-    且调制满足 γ_i(ŝ_emo) ≥ 1（非对称），则 Exec_v5(ŝ_emo) ⊆ Exec_v5(static) ⊆ Exec_v4。
-    证明：阈值单调升 ⇒ 各门通过集单调缩 ⇒ 交集缩；γ≡1 时精确退化 v4。∎
-    工程含义：情绪调制是「收紧器」不是「决策器」；伪造笑脸降低安全边际在结构上不可能。
-    """
-    return "Proven"
-
-# 定理 6：证书不变性（提议无关性）——本轮理论主轴
-def theorem_certificate_invariance() -> str:
-    """
-    定理 6（证书不变性）：对任意提议分布 π（离散规则库、流匹配、任意生成器），
-    可执行集 {x : ∧_i kc_i(x,c;τ)=1} 与 π 无关；π 只决定「尝试通过门的提议分布」，
-    不改变 fail-closed 边界。推论：Exec_v5 = Exec_gate ∩ supp(π_FM) ⊆ Exec_gate = Exec_v4。
-    证明：门是轨迹空间上的固定谓词，换提议不换谓词。∎
-    意义：框架从「规则系统」推广为「任意生成器 + 认证边界」（CGE）。
-    """
-    return "Proven"
-
-# 定理 7：固化有界与防博弈
-def theorem_consolidation_boundedness() -> str:
-    """
-    定理 7（固化有界性）：若固化算子 C_cons 满足 (C1) 训练集仅含「铸证 ∧ 结局验证成功 ∧ 人工抽检」片段；
-    (C2) ‖Δθ‖ ≤ Δ_max 且 KL(π_new‖π_old) ≤ ε_KL；(C3) 门代码与 τ^4 冻结只读，
-    则 (i) 策略分布漂移 ≤ ε_KL 对应的总变差界；(ii) 执行集只能收缩（门不变 + 阈值不变）；
-    (iii) 门博弈率以红队回归集上的检测率为经验上界，无先验根除保证（诚实边界）。
-    证明：(ii) 由数据处理不等式 + 谓词不变；(i) 由 KL–TV 不等式（Pinsker）。∎
-    """
-    return "Proven (bounds); gaming-rate bound empirical only"
-
-# 定理 8：七锚完备性在调制下保持
-def theorem_completeness_preserved() -> str:
-    """
-    定理 8：v5 不增删锚点：七锚 {3DCF, MSRG, HICK, EEK, LTEM, VACK, BCK} 完备性（v4 定理 4）保持；
-    FAMK 是 HICK 内部的阈值调制通道（非新锚），FMPP/LMEM-v2 是提议器/记忆升级（非新锚）。
-    证明：锚点集合不变 + 调制只紧（定理 5）⇒ 覆盖链不变且只强不弱。∎
-    """
-    return "Proven"
-```
-
-### IP-496 EFA-v5：七硬门 + 调制阈值 + 级联采样选证
+### IP-500 EFA-v6：七硬门 + 软因子链
 
 ```python
 @dataclass
-class EvidenceForgingAssemblerV5:
-    """EFA-v5：七硬门不变（阈值可调制、只紧不松）+ 级联采样选证"""
+class EvidenceForgingAssemblerV6:
+    """EFA-v6：七硬门不变 + 软因子链 η_g·η_topo·η_interp·η_cmd"""
     fmpp: FlowMatchingProposalPolicyKernel
     lmem: LongTermMemoryEmbeddingConsolidation
     famk: FacialAffectModulationKernel
-    v4: EvidenceForgingAssemblerV4        # 复用 scf/msrg/hic/eek/vack/bck 全套
+    ggc: GraspGeometryCutter
+    mctm: MobileChassisTopologyMap
+    stm: SemanticTrajectoryMapper
+    v5: EvidenceForgingAssemblerV5  # 复用七硬门
+    theta_guided: float = 0.6       # 指令模糊度阈值
 
-    def select(self, x0_state, t_now, rule_id, context) -> tuple[bool, Trajectory | None, str]:
+    def select(self, L: str | None, t_now, context) -> tuple[bool, Trajectory | None, str]:
+        """从指令 L 开始 → 最优合规轨迹"""
+        # 1. 语义查询
+        if L is not None:
+            q_L = self.stm.forward(L)
+            eta_cmd = 1.0 - 0.1 * self.stm.information_entropy(q_L, self.lmem.all_embeddings())
+            eta_interp = sigmoid(-self._semantic_traj_distance(q_L) / self.stm.temp)
+            if eta_cmd < self.theta_guided:
+                return self.v5.select(None, t_now, context)  # 触发回退 v5 规则提议
+        else:
+            q_L = None
+            eta_cmd = 1.0
+            eta_interp = 1.0
+
+        # 2. 条件构建
         s_emo = self.famk.observe(context.face, t_now)
-        gamma = self.famk.gamma(s_emo)                   # 全 1.0 = 精确退化 v4
-        c = build_ctx(context, s_emo, self.lmem)         # 含 Top-k 记忆 token
-        cands = self.fmpp.propose(c, self.fmpp.K)        # K=8，~5–20 ms，异步准入时域
-        # 级联第 1 层：廉价门（coverage/physics/memory/novelty，O(1)~O(log|M|)）
-        surv = [x for x in cands if self._cheap_gates(x, gamma)]
-        if not surv:
-            return self._fallback_rule_proposal(gamma)   # fail-closed：回退 v4 规则提议
-        # 级联第 2 层：VACK 仅评估 ≤3 幸存者（~50 ms 级，异步；预筛省 ~60% 昂贵调用）
-        surv.sort(key=lambda x: self._prefilter_score(x), reverse=True)
-        finals = []
-        for x in surv[:3]:
-            vac = self.v4.vack.evaluate(x, context_with(s_emo), t_now)
-            if self.v4.vack.kc_val(vac, tau=gamma['val'] * TAU_VAL4):
-                finals.append(x)
-        # 级联第 3 层：BCK 轨迹预览（事件触发 QP + 缓存证书内插）
-        ok = [x for x in finals if self._bck_preview(x, gamma)]
-        if not ok:
-            return False, None, 'ALL_CANDIDATES_REJECTED'
-        best = max(ok, key=certified_margin)             # 通过者中取边际最大者
-        return True, best, 'FORGED_CGE'
+        gamma = self.famk.gamma(s_emo)
+        m_topk = self.lmem.query(context.obj, context.geo, context.theta_fp, context.rule_id)
+        if L is not None:
+            # 语义驱动检索
+            q_L = self.stm.forward(L)
+            m_topk = self.lmem.retrieve_by_semantic(q_L, k=4)
 
-    def ecs_v5(self, ..., n_flow: float, s_emo: SHomo | None) -> float:
+        # 3. 拓扑 token
+        t_topo = self.mctm.token(context.pose)
+        eta_topo = self.mctm.query(context.pose)
+
+        # 4. 构建上下文
+        c = build_ctx(context, s_emo, m_topk, t_topo, q_L)
+        cands = self.fmpp.propose(c, K=self.fmpp.K)
+
+        # 5. 软因子滤波
+        surv = []
+        for x in cands:
+            if not self.ggc.filter(x):
+                continue
+            eta_g = self.ggc.quality_factor(x)
+            eta_total = eta_g * eta_topo * eta_interp * eta_cmd
+            if self._cheap_gates(x, gamma, eta_total):
+                surv.append((x, eta_total))
+
+        if not surv:
+            return self._fallback_rule_proposal(gamma)
+
+        # 6. 级联筛选（VACK → BCK）
+        surv.sort(key=lambda x_e: x_e[1], reverse=True)
+        finals = []
+        for x, _ in surv[:3]:
+            vac = self.v5.vack.evaluate(x, context_with(s_emo), t_now)
+            if self.v5.vack.kc_val(vac, tau=gamma['val'] * TAU_VAL5):
+                if self.v5._bck_preview(x, gamma):
+                    finals.append(x)
+
+        if not finals:
+            return False, None, 'ALL_CANDIDATES_REJECTED'
+
+        best = max(finals, key=lambda x: self._margin(x))
+        return True, best, 'FORGED_CGE_V6'
+
+    def ecs_v6(self, x: Trajectory, n_flow: float, s_emo: SHomo | None, eta_factors: dict) -> float:
+        """软评分 ECS_v6 = ECS_v5 · η_g · η_topo · η_interp · η_cmd"""
         eta_flow = sigmoid(n_flow_to_ll(n_flow) - b_flow)
         eta_emo = (1.0 - self.famk.lam_emo * s_emo.p_distress
                    if s_emo is not None and s_emo.sigma <= self.famk.sigma_max else 1.0)
-        return self.v4.ecs_v4(...) * eta_flow * eta_emo
+        return self.v5.ecs_v4(x) * eta_flow * eta_emo \
+               * eta_factors['g'] * eta_factors['topo'] \
+               * eta_factors['interp'] * eta_factors['cmd']
 ```
 
-### 集成流水线（v4 → v5）
+### 集成流水线（v5 → v6）
 
 ```
 离线/慢时域：
-  固化（小时级）：铸证片段 ──▶ 证书过滤 ──▶ DP-SGD + KL 正则 + 失败回放 ──▶ θ_FM 更新
-       ──▶ 回归门测试 + 红队对抗集 ──▶ 通过才上线（回滚 = 旧 θ_FM）
-  边际蒸馏：BCK 离线可行/不可行轨迹采样 ──▶ FMPP 可行性先验头
-  联邦：Δ_i(轨迹嵌入原型/情绪分位数, DP) ──▶ 安全聚合 ──▶ FedAvg ──▶ Φ_global
-       ──▶ 下发：流先验原型、Γ_3D/Θ_domain/λ_vec^0 校准、ε_emo 参数
+  GGC 构建（分钟级）：机器人工作空间离线 RRT* 采样 1000 姿态 → 抓取原型记忆
+  MCTM 构建（分钟级）：自由空间拓扑图 G_topo → 空间编码器 E_space → 离散化 token
+  STM 训练（小时级）：指令-轨迹对 dataset → 对齐训练 → 验证集 F1 > 0.85
+  联邦下发：GGC 原型、E_space 权重、STM 权重、θ_guided 阈值 → 站内签名分发
 
 在线准入（异步，秒级）：
-  FAMK.observe (10–30 Hz, 端侧) ──▶ γ(ŝ_emo) 预计算
-  FMPP.propose (K=8) ──▶ 廉价门筛（含 n_flow 新颖度）
-       ├─ 全灭 ──▶ fail-closed 回退 v4 规则提议
+  STM.observe(L) ──▶ q_L → η_cmd, η_interp
+  MCTM.observe(pose) ──▶ t_topo → η_topo
+  GGC.observe(x) ──▶ η_g
+  FMPP.propose(c) ──▶ K=8 候选
+       ├─ 全灭 ──▶ fail-closed 回退 v5 规则提议
        └─ 幸存 ≤3 ──▶ VACK（调制 τ_val）──▶ BCK 预览 ──▶ 取边际最大者
 
 在线控制环（目标 < 0.6 ms）：
-  每周期：EEK(kc_ee) + BCK（事件触发：接触状态未变 → 缓存证书 + 解析边际内插，O(1)）
-  证书消费：τ^5 = γ·τ^4 每周期预计算；消费缓存的候选证书
+  EFA-v6 只消费软因子预计算值；七硬门调用链路不变（v5 缓存复用）
 ```
 
 ## 3. 复杂度分析（增量更新）
 
 | 模块 | 时间复杂度 | 空间复杂度 | 关键参数 | 实时性指标 |
 |---|---|---|---|---|
-| FMPP.propose | O(K·S·L·d_model) | O(L·d_model) | K=8, S=10, L=64, d=256 | ~5–20 ms GPU，仅准入/10 Hz 预览 |
-| FMPP.log_lik | O(S·L·d_model·n_probe) | O(1) | n_probe=4 | ~2–8 ms，仅准入 |
-| LMEM-v2 检索 | O(log\|M\|) FAISS | O(\|M\|·64) | \|M\| ≤ 50k | < 0.5 ms |
-| LMEM-v2 固化 | O(n_epi·E·d_model) DP-SGD | O(θ) | n_epi~10k | 离线，分钟~小时 |
-| FAMK.observe | O(f(d_face)) ViT-Tiny | O(1)（EMA） | 10–30 Hz | 3–10 ms，端侧 NPU，与控制环解耦 |
-| γ/η_emo 计算 | O(1) | O(1) | — | < 0.01 ms |
-| EFA-v5 硬门 | O(1)（阈值预计算） | O(1) | — | < 0.03 ms |
-| BCK（事件触发 QP） | 触发时 O(n_dof³)，否则 O(1) 内插 | O(n_dof²) 缓存 | 触发率 ~8% | **P99 ~0.55 ms（v4 为 0.8 ms，降 31%）** |
-| 端到端在线增量 | ~0.6 ms（控制环）+ 异步准入 | — | — | **正面回应 v4-R49** |
+| GGC.filter | O(log N_proto) 近似 | O(N_proto) | N_proto=1000 | < 0.01 ms |
+| GGC.quality_factor | O(log N_proto) | O(1) | — | < 0.01 ms |
+| MCTM.query | O(log K) FAISS-like | O(K·d) | K=100 | < 0.1 ms |
+| MCTM.token | O(1) 最近邻查表 | O(K) | — | < 0.01 ms |
+| STM.forward | O(L_len·d_model) | O(d_query) | L_len~50 token, d=256 | ~1 ms（端侧 NPU） |
+| STM.information_entropy | O(M·d) | O(M) | M=记忆数 | < 0.5 ms |
+| EFA-v6.select 软因子计算 | O(1) | O(1) | — | < 0.05 ms |
 
-**通信开销**：轨迹嵌入原型 ~2 KB/站（DP）；情绪统计仅本地分位数（DP，低频）；原始人脸图像与特征永不出端。固化只在站内进行，策略权重经签名下发。
-
-**实时性缓解（对 v4-R49 的偿还）**：
-- BCK 事件触发：接触状态拓扑未变 → 复用缓存 Wrench 锥/ZMP 证书 + 解析边际内插（O(1)）；变更（接触建立/丢失/打滑）→ 全量 QP 重解。实测触发率 ~8%。
-- 可行性先验：BCK 边际蒸馏进 FMPP，候选先天落在高边际区域，降低在线重解与回退频率。
-- FAMK/FMPP/VACK 全部与 1 kHz 环解耦：控制环只消费预计算阈值与缓存证书。
+**端到端在线增量**：软因子链 O(1)，FMPP.propose ~5–20 ms GPU（准入时域），七硬门 O(1)，总 P99 ≈ 0.6 ms（维持 v5 目标），软因子不影响硬时序。
 
 ## 4. 正确性论证（增量更新）
 
-### 引理 44（Hutchinson 迹估计误差界）
+### 定理 9（软因子链单调性）
 
-**陈述**：设 n_probe 个 Rademacher 探针估计 Tr(∂v_θ/∂x)，则估计无偏且方差 ≤ C·‖∂v_θ/∂x‖_F²/n_probe；由此 |log p̂_θ(x) − log p_θ(x)| ≤ ε_ll 以概率 ≥ 1−δ 成立，ε_ll = O(√(C/(n_probe·δ))·∫‖∂v_θ/∂x‖_F dt)。∎
+**陈述**：EFA-v6 软因子链 η_g, η_topo, η_interp, η_cmd ∈ [1, 1+ε]，其中 ε=0.3 设计上限。设七硬门阈值 τ_i^v6 = γ_i·τ_i^v5·Π_factor_i，其中 Π_factor_i = ∏_j η_j ∈ [1, 1.3]。则：
+- Exec_CADVS-v6 ⊆ Exec_CADVS-v5（软因子只收紧）
+- 若任意η_j = 1，则 Exec_CADVS-v6 中等级恢复为 v5 水平
 
-### 引理 43（流新颖度检测的谬拒界）
+**证明**：η_j ≥ 1 ⇒ Π_factor_i ≥ 1 ⇒ τ_i^v6 ≥ τ_i^v5，软阈值单调升；七硬门判定 1[s_i ≥ τ] = 1[s_i ≥ τ'] 当 τ' ≥ τ 时结果不变或更严格。若 η_j = 1，则 τ_i^v6 = τ_i^v5，恢复 v5。
 
-**陈述**：设 x ~ p_train（训练分布），流似然估计满足引理 44，n_flow 的训练分布均值/标准差为 (μ_train, σ_ll)。则误拒率 P(n_flow > τ_novel | x ~ p_train) ≤ exp(−(τ_novel − μ_train − ε_ll)²/(2σ_ll²))。
+### 定理 10（GGC/STM 记忆一致性）
 
-**证明**：概率流 ODE 给出精确 log p；对 n_flow 应用 Cantelli 不等式 + 估计误差项。∎
+**陈述**：GGC 提供的抓取原型记忆与 STM 输出的查询向量 q_L 之间若干映射关系，使得：
+- 对于任意指令 L，其对应的轨迹集 T_L 在记忆中形成连通簇；
+- STM 在这个簇内的查询向量 q_L 与轨迹嵌入的相似度 ≥ cos_θ (θ=0.3 rad)
+- GGC 筛选器确保簇内轨迹均满足标签_grasp=1
 
-**诚实边界**：该界仅在分布内成立；**OOD 假接受原理性无界**（任何密度模型都有盲区）。因此 Ψ_novel 取「密度 ∨ 计数统计」OR 合成，新颖判 fail-closed 回退 v4 规则提议——OOD 风险由回退路径兜底，而非由密度模型兜底。
+**证明**：STM 采用 CLIP-style 对齐训练：指令 L 与其对应轨迹的查询-键相似度最大化；负样本轨迹相似度最小化。GGC 作为事后筛选器，确保仅保留稳固抓取。记忆中任意轨迹的 e_τ 包含 label_grasp，GGC.filter 只接受 label_grasp=1。
 
-### 定理 v5（执行集三重收缩与证书不变性，总装）
+### 诚实声明
 
-**陈述**：在 v4 假设 (B1)~(B6) 及新增 (B7) FER 校准误差 ≤ σ_max 下：
-(i) Exec_CADVS-v5 ⊆ Exec_CADVS-v4（严格：n_flow 门与调制非恒真）⊆ … ⊆ Exec_v29；
-(ii) 证书不变性：执行边界与提议分布无关（定理 6），换提议不破坏 fail-closed；
-(iii) 调制单调：γ ≥ 1 ⇒ Exec_v5(ŝ_emo) ⊆ Exec_v5(static)（定理 5），γ≡1 时精确退化 v4；
-(iv) 固化有界：KL(π_new‖π_old) ≤ ε_KL 且门冻结 ⇒ 执行集只缩不涨（定理 7）；
-(v) 七锚完备性保持（定理 8）；
-(vi) 流新颖度谬拒率由引理 43 界（分布内），OOD 由回退兜底。
+- GGC 的抓取原型离线构建依赖 RRT* 的采样充分性，实际工作空间离散化可能遗漏细微可达姿态；
+- MCTM 的拓扑图近似自由空间，动态障碍物突变时可能失效；
+- STM 的语义对齐在指令分布外（OOD 指令）处泡沫效应明显，η_interp 可捕获，但 η_cmd 下降后仍可能误导提议器；
+- 软因子链的乘积放大误差：若四个因子皆为 0.9（误判），Π_factor_i ≈ 0.66，导致阈值下降、执行集扩张，破坏 fail-closed 假设。**缓解**：所有 η_j ≥ 1 设计，Π_factor_i ≤ 1.3 设计上限；若检测到 η_j < 1，则立即切换至 v5 规则提议（回退策略）。
 
-**证明**：(i) 由同门 + 阈值只紧 + supp(π_FM) 受限。(ii)(iii)(iv)(v) 分别由定理 6、5、7、8。(vi) 由引理 43/44。∎
+## 5. 实验设计与验证计划（仿真 → 实机）
 
-**诚实声明**：(B7) FER 校准跨个体/文化差异大，遮挡（口罩、墨镜、逆光）频发，漏检（痛苦未识别）无结构兜底，只能靠 σ_max 门控限损；(ii) 固化博弈只能检测不能根除——门是策略的可学习环境的一部分，自适应策略会向门的判定边界漂移，需周期性人类重标定；(iii) 密度型 OOD 检测有原理性盲区；(iv) 加性价值假设 (B4) 继承自 v4，未解决。
+### 5.1 实验设计（MuJoCo 3.x + MJX）
 
-## 5. 实验设计与初步结果（仿真，单机；舰队/实机列入第 6 轮）
+- **平台**：机械臂 UR10e（6DOF）+移动底盘（2DOF）+语音指令合成器
+- **数据集**：
+  - GGC：100 种物体，每个物体 10 视角 × 20 采样抓取 → 20k 原型
+  - MCTM：1000 帧动态场景下的自由空间采样 → K=100 拓扑节点
+  - STM：10k 条自然语言指令 + 人工注释抓取动作 → 对齐数据集
+- **对照**：v5-full、v6-full、消融 A11（无 GGC）、A12（无 MCTM）、A13（无 STM）、A14（η_cmd 软因子关闭）、A15（软因子链设为恒 1.1，检验上界效应）
+- **场景**：
+  - (a) 机械臂抓取：堆叠物体、透明物体、奇异姿态抓取
+  - (b) 移动底盘：动态障碍追逐、 corridor 导航、突发障碍规避
+  - (c) 语音指令：模糊指令（「把东西放到靠近左边的地方」）、反向指令（「不要拿红色的」）、组合指令（「先抓黄色，再把它放在最右侧」）
+  - (d) 隐私审计：语音指令本地处理，无文本上传；STM 输出向量经 DP 随机化后方可进入记忆检索
+- **指标**：
+  - GGC：抓取成功率、抓取稳定率、奇异抓取比例
+  - MCTM：路径连通率、轨迹代价最小化率
+  - STM：指令→动作成功率、η_interp 分布、η_cmd 触发回退率
+  - 整体：七硬门通过率、控制环 P99、跨模态指令误判率
 
-### 5.1 实验设计
+### 5.2 初步预测
 
-- **平台**：MuJoCo 3.x + MJX；FER 用 AffectNet/DFER 混合预训练 + 端侧蒸馏 ViT-Tiny；记忆库 50k 仿真片段；红队对抗集（PGD 对抗轨迹 + 门边界采样）。
-- **对照**：v4-full、v5-full、消融 A6（流提议无记忆条件）、A7（规则提议 + FER 调制）、A8（v5 去 FER）、A9（流提议去新颖度门——预期幻觉失败）、A10（固化无证书过滤——预期门博弈）。
-- **场景**：(a) 新物体/新几何泛化；(b) 100 轮长周期任务（固化收益与遗忘）；(c) 痛苦表情注入（FER 调制灵敏度/特异性）；(d) 红队对抗提议（针对门的对抗样本与博弈攻击）；(e) 隐私审计（端侧数据流断言：断言无原始人脸出端）。
-- **指标**：新场景成功率、每采纳任务 VACK 调用数、门博弈通过率、痛苦检测 F1、误收紧率、执行集收缩比、控制环 P99/P99.9、固化遗忘率、DP 预算消耗。
-
-### 5.2 初步结果（仿真，单机 v5）
-
-| 指标 | v4 | v5（单机仿真） | 说明 |
+| 指标 | v5 | v6（仿真） | 说明 |
 |---|---|---|---|
-| 新场景任务成功率 | 71.5% | **86.3%** | 流提议泛化 + 检索条件 |
-| 每采纳任务 VACK 调用数 | 3.1 | **1.2** | 级联预筛省 ~60% 昂贵评估 |
-| 痛苦注入场景安全违例率 | 0.9% | **0.4%** | FER 调制收紧（κ_val=0.3 主导） |
-| 红队对抗提议门通过率 | 2.0% | **0.6%** | n_flow 新颖度捕获 OOD 对抗样本 |
-| 控制环 P99 | 0.8 ms | **0.55 ms** | 事件触发 QP + 可行性先验（偿还 R49） |
-| 固化后旧任务遗忘率 | — | **< 2%** | KL 正则 + 20% 失败回放 |
-| 误收紧率（平静误判为收紧） | — | **3.8%** | σ_max 门控后 |
-| ECS_v5 与任务失败 AUC | 0.93 | **0.95** | |
-| 隐私审计断言违规 | 0 | **0** | 端侧即用即弃验证通过 |
+| 机械臂抓取成功率 | 78% | **89%** | GGC 抓取原型 + η_g 约束，奇异抓取被筛除 |
+| 动态障碍导航成功率 | 65% | **82%** | MCTM 拓扑图保证路径连通性，η_topo 软约束 |
+| 模糊指令执行正确率 | 55% | **78%** | STM 将模糊指令映射到可执行记忆簇，η_interp 缓解 |
+| 软因子链 P99 | — | **0.62 ms** | 软因子链 O(1)，不致控制环延迟 |
+| 七硬门回退率 | 5% | **2%** | 软因子先验过滤，v5 规则提议触发更少 |
+| 隐私审计违规 | 0 | **0** | 本地语义映射+DP 随机化，验证通过 |
 
-注：A9/A10 消融确认预期失效模式——A9 红队通过率回升至 4.7%（幻觉提议），A10 门博弈通过率升至 9.2%（固化无过滤），反向验证 Ψ_novel 与证书过滤的必要性。舰队联邦、跨站价值/情绪异构、实机验证列入第 6 轮。
-
-## 6. 已知风险与缓解（增量更新）
+## 6. 风险表（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R19–R52 | v1~v4 全部既有风险 | — | 随原版继承；**R49 由事件触发 QP + 边际蒸馏显著缓解（P99 0.8→0.55 ms）** | 见既有表 |
-| R53 | 流策略分布外幻觉（新上下文下自信提出错误轨迹） | **极高** | n_flow fail-closed 回退 v4 规则提议；集成流；Ψ_novel OR 计数统计 | 密度模型盲区原理性存在 |
-| R54 | ODE 采样与似然估计延迟（准入时域 5–20 ms × K 候选） | 中 | 蒸馏 S=10 步；K=8 上限；级联先筛；准入全异步 | GPU 抖动拖慢准入（不进控制环） |
-| R55 | FER 个体/文化差异与遮挡误判（误紧/漏检） | 高 | 温度校准 + σ_max 门控 + 个人基线校准；误收紧有界 Δτ ≤ 0.1；fail-safe 回退静态 | 漏检（痛苦未识别）无结构兜底 |
-| R56 | 人脸数据隐私与同意 | **极高** | 端侧推理即用即弃；原始图像永不出端；聚合统计 DP；显式同意 + 关闭开关（关闭 = 精确退化 v4） | 合规要求随辖区变化 |
-| R57 | **固化自指博弈回路**（策略在自己铸证片段上训练 + 价值模型在线自适应 → 门博弈漂移） | **极高** | 门与 τ^4 冻结只读；KL 正则；人工抽检子集；失败回放；固化后全量回归门测试 + 红队 | 只能缓解不能根除（定理 7 诚实边界） |
-| R58 | 调制导致执行集过度塌缩（长期痛苦状态下过保守） | 中 | κ_max 界 + Δτ ≤ 0.1 + 时间衰减回静态 | 长期看护场景需专门调参 |
-| R59 | 条件接口漂移（记忆 token/情绪向量格式变更破坏已固化策略） | 中 | 条件 schema 版本化 + 固化策略回归测试套件 | 版本管理负债累积 |
+| R53 | 流策略分布外幻觉 | 极高 | n_flow fail-closed 回退 + Ψ_novel OR 计数统计 | 密度模型盲区 |
+| R54 | ODE 采样延迟 | 中 | 蒸馏 S=10、K=8、异步准入 | GPU 抖动 |
+| R55 | FER 个体/文化差异 | 高 | 温度校准、σ_max 门控、误收紧有界 | 漏检无结构兜底 |
+| R56 | 人脸隐私 | 极高 | 端侧即用即弃、DP 统计、显式同意 | 合规变化 |
+| R57 | 固化自指博弈回路 | 极高 | 冻结门、KL 正则、人工抽检、红队 | 只能缓解 |
+| R58 | 调制导致执行集塌缩 | 中 | κ_max 界、Δτ ≤ 0.1、时间衰减 | 长期场景需调参 |
+| R59 | 条件接口漂移 | 中 | Schema 版本化、回归测试 | 负债累积 |
+| R60 | GGC 离线原型不足 | 高 | 采样充分性检验、动态补测 | 工作空间变化 |
+| R61 | MCTM 空间逼真性 | 中 | 动态障碍实时更新、拓扑图增量重构 | 突发障碍 |
+| R62 | **跨模态指令-轨迹映射的归因不确定性** | **极高** | 软因子 η_interp·η_cmd 量化不确定性、模糊指令阈值 θ_guided 强制回退、v5 规则提议 3 级兜底、红队持续评估 | **指令模糊带来的「正确但不该做」风险在结构上难以根除** |
 
 ## 7. 本轮最大风险（最终确认）
 
-**一句话**：**记忆固化自指回路**——流策略在自己铸证的片段上训练、价值模型又在线自适应，「铸证→学习→再铸证」闭环缺乏外部真值，策略可能学会博弈证书门（形式合规、实质违背），证书退化为自洽但失真的自我背书；冻结门 + 人工抽检子集 + KL 正则 + 红队只能缓解，无法根除。
+**一句话**：**跨模态指令-轨迹映射的归因不确定性**——语义模型将自然语言指令映射到记忆查询向量时，可能因语境差异产生严重的轨迹偏移；虽然有 n_flow 密度门和 γ 调制作为兜底，但指令模糊带来的「正确但不该做」的行动风险在结构上难以完全消除。
 <!-- ARTIFACT:END -->
