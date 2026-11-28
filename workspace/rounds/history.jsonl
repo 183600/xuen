@@ -5742,29 +5742,41 @@
 {"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 04:20:14"}
 {"event": "verdict", "id": "20261128-041527-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 04:25:27"}
 {"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 04:25:27"}
-{"event": "candidate", "id": "20261128-045418-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 04:54:18"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 04:54:20"}
-{"event": "candidate", "id": "20261128-045752-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 04:57:52"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 04:57:54"}
-{"event": "candidate", "id": "20261128-050154-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:01:54"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:01:55"}
-{"event": "verdict", "id": "20261128-045418-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:04:18"}
-{"event": "candidate", "id": "20261128-050535-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:05:35"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:05:36"}
-{"event": "candidate", "id": "20261128-050829-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:08:29"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:08:31"}
-{"event": "candidate", "id": "20261128-050854-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:08:54"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:08:55"}
-{"event": "verdict", "id": "20261128-050154-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:11:54"}
-{"event": "candidate", "id": "20261128-051244-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:12:44"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:12:45"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:14:57"}
-{"event": "heartbeat", "round": 1, "ts": "2026-11-28 05:15:03"}
-{"event": "candidate", "id": "20261128-051514-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:15:14"}
-{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:15:15"}
-{"event": "verdict", "id": "20261128-050854-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:18:54"}
-{"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:18:54"}
-{"event": "heartbeat", "round": 1, "ts": "2026-11-28 05:18:56"}
-{"event": "verdict", "id": "20261128-051244-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:22:44"}
-{"event": "verdict", "id": "20261128-051514-r2", "round": 2, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:25:14"}
-{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 05:44:57"}
+{"event": "candidate", "id": "20261128-045731-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 04:57:31"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 04:57:32"}
+{"event": "candidate", "id": "20261128-050339-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:03:39"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:03:40"}
+{"event": "candidate", "id": "20261128-050631-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:06:31"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:06:32"}
+{"event": "verdict", "id": "20261128-045731-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:07:31"}
+{"event": "candidate", "id": "20261128-051022-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:10:22"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:10:23"}
+{"event": "candidate", "id": "20261128-051050-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:10:50"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:10:51"}
+{"event": "verdict", "id": "20261128-050631-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 05:16:31"}
+{"event": "candidate", "id": "20261128-055048-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:50:48"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:50:49"}
+{"event": "candidate", "id": "20261128-055410-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:54:10"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:54:11"}
+{"event": "candidate", "id": "20261128-055750-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 05:57:50"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 05:57:52"}
+{"event": "verdict", "id": "20261128-055048-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 06:00:48"}
+{"event": "candidate", "id": "20261128-060115-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:01:15"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:01:16"}
+{"event": "candidate", "id": "20261128-060452-r2", "round": 2, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:04:52"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:04:54"}
+{"event": "candidate", "id": "20261128-060530-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:05:30"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:05:31"}
+{"event": "verdict", "id": "20261128-055750-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 06:07:50"}
+{"event": "candidate", "id": "20261128-060819-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:08:19"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:08:20"}
+{"event": "candidate", "id": "20261128-060915-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:09:15"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:09:16"}
+{"event": "candidate", "id": "20261128-061058-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 06:10:58"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 06:10:59"}
+{"event": "verdict", "id": "20261128-060530-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 06:15:30"}
+{"event": "verdict", "id": "20261128-060819-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 06:18:19"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-28 06:37:50"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 06:39:16"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 06:40:59"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 06:42:37"}

@@ -688,6 +688,15 @@ def _paired_spans(text, name):
 
 
 
+def _first_span(text, name):
+    """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
+    marker = f"<!-- {name}:START -->"
+    for a, b in _spans(text):
+        if text.startswith(marker, a):
+            return (a, b)
+    return None
+
+
 def _first_section(text, name):
     """第一个有效区块的内容；无有效区块返回 None（与空内容区分）。"""
     span = _first_span(text, name)
@@ -925,7 +934,8 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
         HELPER_TEMPLATE
         .replace("__SCAFFOLD__", repr(scaffold("")))
         .replace("__STATE_FILE__", repr(state_abs))
-        .replace("__SECTION_MARKER_PATTERN__", section_marker_pattern_string())
+        .replace("__SECTION_MARKER_PATTERN__",
+                 repr(section_marker_pattern_string()))
     )
     # 原子替换：写入途中被 kill 时不会留下语法损坏的半成品脚本，
     # 否则外部 agent 执行 write_section.py 会直接 SyntaxError
