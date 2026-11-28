@@ -24,16 +24,21 @@ xuen 通过「随机抽取灵感词」+「外部 agent 思考」模拟人类研�
 
 ## 快速开始
 
-```bash
-# 1. 安装运行时依赖
-python -m pip install -r requirements.txt
+1. 安装运行时依赖：
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
 
-# 2. 从示例复制配置，至少改掉 agent.command
-cp config.example.yaml config.yaml
+2. 复制配置文件并进行必要修改：
+   ```bash
+   cp config.example.yaml config.yaml
+   # 编辑 config.yaml，至少设置 agent.command 为实际使用的外部 agent 命令
+   ```
 
-# 3. 启动 TUI（默认）
-python main.py "设计一个新的优化器"
-```
+3. 启动 TUI（默认）：
+   ```bash
+   python main.py "设计一个新的优化器"
+   ```
 
 可安装为命令行工具：
 
@@ -65,10 +70,13 @@ agent:
 
 `agent.command` 必须包含一个会被实际替换的占位符：
 
-- `$prompt`：整段提示词按 shell 语境转义后替换
-- `$prompt_file`：提示词写入 `workspace` 内的 `.prompt.XXXXXX.md`，占位符替换为文件路径
+- `$prompt`：整段提示词按 shell 语境转义后替换，受系统单参数长度限制
+- `$prompt_file`：提示词写入 `workspace` 内的 `.prompt.XXXXXX.md`，占位符替换为文件路径，跨平台行为一致且不受参数长度限制
 
-**推荐使用 `$prompt_file`**（不受系统参数长度限制，跨平台行为一致）：
+**强烈推荐使用 `$prompt_file`**，因为：
+- 不受系统单参数长度限制
+- 跨平台（Windows/macOS/Linux）行为一致
+- 避免因提示词过长导致命令执行失败
 
 ```yaml
 agent:
