@@ -5800,3 +5800,17 @@
 {"event": "verdict", "id": "20261128-070549-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 07:15:49"}
 {"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-28 07:37:33"}
 {"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 07:40:12"}
+{"event": "candidate", "id": "20261128-074736-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 07:47:36"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 07:47:37"}
+{"event": "candidate", "id": "20261128-075124-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 07:51:24"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 07:51:25"}
+{"event": "candidate", "id": "20261128-075518-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 07:55:18"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 07:55:20"}
+{"event": "verdict", "id": "20261128-074736-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 07:57:36"}
+{"event": "candidate", "id": "20261128-075858-r1", "round": 1, "changed": ["idea", "artifact"], "ts": "2026-11-28 07:58:58"}
+{"event": "restored", "round": 0, "why": "启动时还原未完成轮次", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 07:59:00"}
+{"event": "verdict", "id": "20261128-075518-r1", "round": 1, "verifier": "tests", "score": null, "result": "rejected", "reason": "测试失败｜测试超时（>600s）", "ts": "2026-11-28 08:05:18"}
+{"event": "restored", "round": 1, "why": "候选被拒绝", "best": "20261128-015254-r1", "changed": ["idea", "artifact"], "ts": "2026-11-28 08:05:18"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 08:29:00"}
+{"event": "skipped", "round": 2, "reason": "超时", "ts": "2026-11-28 08:35:18"}
+{"event": "skipped", "round": 1, "reason": "超时", "ts": "2026-11-28 08:37:53"}
