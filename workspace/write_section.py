@@ -23,7 +23,7 @@ SCAFFOLD = '# 玄 · \n\n> 本文件由 xuen 维护：『想法区』『产物�
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
-_SECTION_MARKER_RE = re.compile((?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t\ufeff]*(?=\r\n|\r|\n|$))
+_SECTION_MARKER_RE = re.compile('(?m)(?:(?<=\\r)|^)[ \\t\\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \\t\\ufeff]*(?=\\r\\n|\\r|\\n|$)')
 
 
 def _spans(text):
@@ -142,11 +142,14 @@ def _paired_spans(text, name):
                        for other in candidates)]
 
 
+
+
+
 def _first_span(text, name):
     """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
-    s = f"<!-- {name}:START -->"
+    marker = f"<!-- {name}:START -->"
     for a, b in _spans(text):
-        if text.startswith(s, a):
+        if text.startswith(marker, a):
             return (a, b)
     return None
 

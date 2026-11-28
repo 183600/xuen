@@ -90,11 +90,54 @@ def ensure_state_file(path: Path, task: str) -> str:
     return read_state_file(path)
 
 
+def _spans(text):
+    """所有有效区块（END 在 START 之后配对）的 (start, end) 区间。
+ 
+    标记必须独占一行；区块不能完整吞掉另一区块，否则损坏的外层 END 会
+    与相邻区块内容中的字面量错误配对，并把相邻区块一起覆盖。"""
+    marks = [
+        (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
+        for m in section_marker_pattern().finditer(text)
+    ]
+    marks.sort(key=lambda m: m[0])
+    candidates = []
+    for pos, _, nm, is_start in marks:
+        if not is_start:
+            continue
+        match = next((m for m in marks if m[0] > pos and m[2] == nm and not m[3]),
+                     None)
+        if match is not None:
+            candidates.append((nm, pos, match[1]))
+    candidates = [
+        candidate for candidate in candidates
+        if not any(
+            other != candidate and other[0] == candidate[0]
+            and other[1] < candidate[1] < other[2]
+            for other in candidates
+        )
+    ]
+    invalid = set()
+    for i, candidate in enumerate(candidates):
+        for j, other in enumerate(candidates):
+            if candidate[0] == other[0]:
+                continue
+            if candidate[1] < other[1] and other[2] <= candidate[2]:
+                inner_elsewhere = any(
+                    prior != other and prior[0] == other[0]
+                    and (prior[2] <= candidate[1]
+                         or prior[1] >= candidate[2])
+                    for prior in candidates
+                )
+                invalid.add(j if inner_elsewhere else i)
+    return sorted((a, b) for i, (_, a, b) in enumerate(candidates)
+                  if i not in invalid)
+
+
 def _first_span(text: str, name: str) -> tuple[int, int] | None:
     """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
-    s = start_marker(name)
-    for a, b in _section_spans(text):
-        if text.startswith(s, a):
+    marker = f"<!-- {name}:START -->"
+    for a, b in _spans(text):
+        if text.startswith(marker, a):
             return (a, b)
     return None
 
@@ -642,11 +685,14 @@ def _paired_spans(text, name):
                        for other in candidates)]
 
 
+
+
+
 def _first_span(text, name):
     """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
-    s = f"<!-- {name}:START -->"
+    marker = f"<!-- {name}:START -->"
     for a, b in _spans(text):
-        if text.startswith(s, a):
+        if text.startswith(marker, a):
             return (a, b)
     return None
 
@@ -888,7 +934,8 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
         HELPER_TEMPLATE
         .replace("__SCAFFOLD__", repr(scaffold("")))
         .replace("__STATE_FILE__", repr(state_abs))
-        .replace("__SECTION_MARKER_PATTERN__", section_marker_pattern_string())
+        .replace("__SECTION_MARKER_PATTERN__",
+                 repr(section_marker_pattern_string()))
     )
     # 原子替换：写入途中被 kill 时不会留下语法损坏的半成品脚本，
     # 否则外部 agent 执行 write_section.py 会直接 SyntaxError
