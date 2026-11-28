@@ -8,25 +8,21 @@ from pathlib import Path
 from typing import Iterator, Tuple
 
 from .atomic_io import atomic_write_text
-
-SECTION_IDEA = "IDEA"
-SECTION_ARTIFACT = "ARTIFACT"
+from .section_markers import (
+    SECTION_IDEA,
+    SECTION_ARTIFACT,
+    start_marker,
+    end_marker,
+    section_marker_pattern,
+    section_marker_pattern_string,
+)
 
 HELPER_NAME = "write_section.py"
 
 
 def _atomic_write_text(path: Path, text: str, *, newline=None) -> None:
     """Write UTF-8 text and atomically replace target; no partial artifacts on interruption."""
-    from .atomic_io import atomic_write_text
     atomic_write_text(path, text, newline=newline)
-
-
-def start_marker(name: str) -> str:
-    return f"<!-- {name}:START -->"
-
-
-def end_marker(name: str) -> str:
-    return f"<!-- {name}:END -->"
 
 
 def scaffold(task: str) -> str:
@@ -130,7 +126,7 @@ def _first_section(text: str, name: str) -> str | None:
     s, e = start_marker(name), end_marker(name)
     content = text[a + len(s): b - len(e)]
     content = _normalize_newlines(content)
-    # 标记行允许带首尾空白/BOM（见 _SECTION_MARKER）；这些属于
+    # 标记行允许带首尾空白/BOM（见 section_marker_pattern）；这些属于
     # 标记行本身，不能算进区块内容，否则读出的内容会混入杂质
     return content.strip(" \t\n\ufeff")
 
@@ -147,23 +143,11 @@ def get_section(text: str, name: str) -> str:
     return "" if content is None else content
 
 
-# 区块标记必须独占一行（允许行首/行尾空白）。同一行内出现的标记文本是
-# 普通内容（例如说明写入协议），不能参与区块配对。
-# 行边界同时接受 LF、CRLF 与裸 CR：re.M 的 ^/$ 只认 \n，老式 Mac 编辑器
-# 或手工转换出的 CR-only 状态文件会让所有标记都认不出来，更新一个区块
-# 时另一区块读出内容被悄悄清空（见 test_state_supports_cr_only_line_endings）。
-_SECTION_MARKER = re.compile(
-    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记
-    r"(?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
-    r"[ \t\ufeff]*(?=\r\n|\r|\n|$)"
-)
-
-
 def _section_marks(text: str) -> list:
     """按出现顺序返回标记元组 (标记开始, 标记结束, 区块名, 是否 START)。"""
     marks = [
         (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
-        for m in _SECTION_MARKER.finditer(text)
+        for m in section_marker_pattern().finditer(text)
     ]
     marks.sort(key=lambda m: m[0])
     return marks
@@ -389,10 +373,11 @@ def sanitize_section_content(content: str) -> str:
     必须用本函数规整后再比较，否则含标记字面量的区块在落盘规整后
     永远比较不相等。
     """
+    marker_re = section_marker_pattern()
     return "\n".join(
         line for line in re.split(r"\r\n|\r|\n",
                                   content.strip(" \t\r\n\ufeff"))
-        if not _SECTION_MARKER.match(line)
+        if not marker_re.match(line)
     ).strip(" \t\n\ufeff")
 
 
@@ -476,7 +461,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             # END「抢走」交叉配对，使另一区块整块失效；_preserve_other_section
             # 只能清除另一区块自己的标记，无法修复被抢走的 END
             other = SECTION_ARTIFACT if name == SECTION_IDEA else SECTION_IDEA
-            anchor = next((m.start(1) for m in _SECTION_MARKER.finditer(text)
+            anchor = next((m.start(1) for m in section_marker_pattern().finditer(text)
                            if m.group(2) == other and m.group(3) == "START"),
                           None)
             if anchor is not None:
@@ -538,13 +523,7 @@ SCAFFOLD = __SCAFFOLD__
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
-_SECTION_MARKER_RE = re.compile(
-    # \ufeff：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记。
-    # 行边界同时接受 LF/CRLF/裸 CR，与 xuen.state._SECTION_MARKER 一致：
-    # CR-only 状态文件的所有标记否则都认不出来。
-    r"(?m)(?:(?<=\\r)|^)[ \\t\\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
-    r"[ \\t\\ufeff]*(?=\\r\\n|\\r|\\n|$)"
-)
+_SECTION_MARKER_RE = re.compile(__SECTION_MARKER_PATTERN__)
 
 
 def _spans(text):
@@ -909,6 +888,7 @@ def write_helper_script(workspace: Path, state_path: Path) -> Path:
         HELPER_TEMPLATE
         .replace("__SCAFFOLD__", repr(scaffold("")))
         .replace("__STATE_FILE__", repr(state_abs))
+        .replace("__SECTION_MARKER_PATTERN__", section_marker_pattern_string())
     )
     # 原子替换：写入途中被 kill 时不会留下语法损坏的半成品脚本，
     # 否则外部 agent 执行 write_section.py 会直接 SyntaxError
