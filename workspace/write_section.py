@@ -23,10 +23,7 @@ SCAFFOLD = '# 玄 · \n\n> 本文件由 xuen 维护：『想法区』『产物�
 NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
-_SECTION_MARKER_RE = re.compile(
-    r"(?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
-    r"[ \t\ufeff]*(?=\r\n|\r|\n|$)"
-)
+_SECTION_MARKER_RE = re.compile((?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)[ \t\ufeff]*(?=\r\n|\r|\n|$))
 
 
 def _spans(text):
