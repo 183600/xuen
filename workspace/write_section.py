@@ -142,13 +142,7 @@ def _paired_spans(text, name):
                        for other in candidates)]
 
 
-def _first_span(text, name):
-    """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
-    s = f"<!-- {name}:START -->"
-    for a, b in _spans(text):
-        if text.startswith(s, a):
-            return (a, b)
-    return None
+
 
 
 def _first_section(text, name):
