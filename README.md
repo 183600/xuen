@@ -101,7 +101,7 @@ python main.py "设计一个新的优化器" -c my-config.yaml
 python main.py "设计一个新的优化器" --help
 ```
 
-任务可为位置参数，也可通过 `--task-file` 从 UTF-8 文件读取（支持 UTF-8-BOM）：
+任务可为位置参数，也可通过 `--task-file` 从 UTF-8-BOM 文件读取（支持 UTF-8-BOM）：
 
 ```bash
 python main.py --task-file task.md --no-tui
@@ -121,24 +121,24 @@ python examples/minimal_demo.py
 
 ```text
 python main.py "任务"
-   │
-   ├─ ① 解析命令行 → 读取配置 → 覆盖 → 校验
-   ├─ ② 准备工作区：research.md + write_section.py 写入助手
-   ├─ ③ 构建 ShellAgent：按 agent.command 模板调用
-   ├─ ④ 启动轮次守卫：建立/恢复最佳基线
-   │
-   ├─ ⑤ 准备领域词库（仅 words.pick > 0 时）
-   │      words.txt 存在且 reuse=true → 直接复用
-   │      否则 → 外部 agent 生成 → 解析/清洗/去重 → 原子保存
-   │
-   └─ ⑥ 研究循环 × N 轮
-        1. 随机抽词（不调用模型）
-        2. 收集底部输入框的累计用户输入
-        3. 拼提示词：extra_notes + 任务 + 轮次 + 灵感词 + 用户输入
-           + 想法区/产物区 + 写入指令
-        4. 调用外部 agent
-        5. 重读 research.md，展示变化
-        6. 轮次守卫：快照 → 验证 → 晋升或还原
+    │
+    ├─ ① 解析命令行 → 读取配置 → 覆盖 → 校验
+    ├─ ② 准备工作区：research.md + write_section.py 写入助手
+    ├─ ③ 构建 ShellAgent：按 agent.command 模板调用
+    ├─ ④ 启动轮次守卫：建立/恢复最佳基线
+    │
+    ├─ ⑤ 准备领域词库（仅 words.pick > 0 时）
+    │      words.txt 存在且 reuse=true → 直接复用
+    │      否则 → 外部 agent 生成 → 解析/清洗/去重 → 原子保存
+    │
+    └─ ⑥ 研究循环 × N 轮
+         1. 随机抽词（不调用模型）
+         2. 收集底部输入框的累计用户输入
+         3. 拼提示词：extra_notes + 任务 + 轮次 + 灵感词 + 用户输入
+            + 想法区/产物区 + 写入指令
+         4. 调用外部 agent
+         5. 重读 research.md，展示变化
+         6. 轮次守卫：快照 → 验证 → 晋升或还原
 ```
 
 ## TUI 界面

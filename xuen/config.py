@@ -220,17 +220,7 @@ def _parse_words_config(raw, section):
     if pick < 0:
         raise ValueError("words.pick 必须 >= 0")
     reuse_val = _config_value(raw, "reuse", True)
-    if isinstance(reuse_val, bool):
-        reuse = reuse_val
-    elif isinstance(reuse_val, (int, float)):
-        if reuse_val in (0,):
-            reuse = False
-        elif reuse_val in (1,):
-            reuse = True
-        else:
-            raise ValueError("words.reuse")
-    else:
-        raise ValueError("words.reuse")
+    reuse = _parse_bool(reuse_val, "words.reuse")
     return WordsConfig(count=count, batch=batch, pick=pick, reuse=reuse)
 
 
@@ -247,9 +237,7 @@ def _parse_loop_config(raw, section):
         iterations = 5
     else:
         iterations = _parse_int(iterations_raw, "loop.iterations")
-        if iterations < 0:
-            raise ValueError("loop.iterations 必须是正整数")
-        if iterations == 0:
+        if iterations < 1:
             raise ValueError("loop.iterations 必须在 1 或更多")
     return LoopConfig(iterations=iterations)
 

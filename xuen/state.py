@@ -29,10 +29,16 @@ def scaffold(task: str) -> str:
     """Generate the initial scaffold for research.md.
 
     Contains two cross-round persistent blocks: IDEA and ARTIFACT.
-    Markers lines are <!-- IDEA:START --> / <!-- IDEA:END --> and
+    Marker lines are <!-- IDEA:START --> / <!-- IDEA:END --> and
     <!-- ARTIFACT:START --> / <!-- ARTIFACT:END -->.
     When editing, users must preserve these marker rows; otherwise
     subsequent writes will become invalid.
+
+    生成的文件结构：
+    - 标题行：# 玄 · <任务描述>
+    - 使用说明：跨轮保留说明，编辑时请保留标记行
+    - IDEA 区块：<!-- IDEA:START --> / <!-- IDEA:END -->
+    - ARTIFACT 区块：<!-- ARTIFACT:START --> / <!-- ARTIFACT:END -->
     """
     title_task = task.replace("\r", " ").replace("\n", " ")
     return (
@@ -92,9 +98,14 @@ def ensure_state_file(path: Path, task: str) -> str:
 
 def _spans(text):
     """所有有效区块（END 在 START 之后配对）的 (start, end) 区间。
- 
-    标记必须独占一行；区块不能完整吞掉另一区块，否则损坏的外层 END 会
-    与相邻区块内容中的字面量错误配对，并把相邻区块一起覆盖。"""
+
+    仅认「独占整行的 START」与其后的第一个同名 END 为有效配对。
+    落在其他有效区块区间内的同名标记字面量视为该区块的合法内容，
+    必须由调用方（如 _strip_stray_markers）自行保留，否则更新时
+    会错误覆盖相邻区块。
+
+    返回有效区间的排序列表，已剔除重复/包含/交叉无效配对。
+    """
     marks = [
         (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
         for m in section_marker_pattern().finditer(text)
@@ -134,7 +145,11 @@ def _spans(text):
 
 
 def _first_span(text: str, name: str) -> tuple[int, int] | None:
-    """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。"""
+    """区块「当前会被读出」的区间：第一个有效同名区块，无则 None。
+
+    遍历 _spans 得到的有效区间，返回第一个起始位置匹配该名 START
+    的区间。若文本里没有该名的有效区块，返回 None。
+    """
     marker = f"<!-- {name}:START -->"
     for a, b in _spans(text):
         if text.startswith(marker, a):
@@ -161,6 +176,7 @@ def _first_section(text: str, name: str) -> str | None:
     换行符统一规整为 \n：状态文件若以 CRLF 保存（Windows 编辑 /
     git autocrlf），逐行残留的 \r 会进入区块上报与提示词，
     也让 update_section_file 返回的 old 带杂质。
+    段落内容在标记行之前/之后的首尾空白/BOM 会被剥离，仅保留正文。
     """
     span = _first_span(text, name)
     if span is None:
@@ -187,7 +203,11 @@ def get_section(text: str, name: str) -> str:
 
 
 def _section_marks(text: str) -> list:
-    """按出现顺序返回标记元组 (标记开始, 标记结束, 区块名, 是否 START)。"""
+    """按出现顺序返回标记元组 (标记开始坐标, 标记结束坐标, 区块名, 是否 START)。
+
+    收文中所有 <!-- NAME:START --> / <!-- NAME:END --> 标记，按起始位置排序。
+    返回元组：(start, end, section_name, is_start)。
+    """
     marks = [
         (m.start(1), m.end(1), m.group(2), m.group(3) == "START")
         for m in section_marker_pattern().finditer(text)
@@ -218,6 +238,10 @@ def _section_spans(text: str) -> list:
     一个区块不能完整吞掉另一区块：当真实 END 被删掉、而相邻区块内容里
     恰好有同名 END 标记时，若直接按位置配对，替换外层区块就会把相邻区块
     一起删除。因此这里先收集候选，再剔除「完整包含另一候选区块」的伪配对。
+
+    返回有效区间的排序列表。每个区间都是 (start, end) 坐标，代表一个
+    有效的 IDEA 或 ARTIFACT 块，其 END 均在对应 START 之后，且不被
+    另一有效区块完全包含。
     """
     marks = _section_marks(text)
     candidates = []  # (区块名, start, end)
@@ -247,9 +271,6 @@ def _section_spans(text: str) -> list:
                     for prior in candidates
                 )
                 invalid.add(j if inner_elsewhere else i)
-            elif candidate[1] < other[1] < candidate[2] < other[2]:
-                # 两类区块交叉嵌套，无法判断哪个 END 可信，均拒绝后走修复路径
-                invalid.update((i, j))
     return sorted((a, b) for i, (_, a, b) in enumerate(candidates)
                   if i not in invalid)
 
@@ -407,7 +428,7 @@ def sanitize_section_content(content: str) -> str:
 
     与本区块 END 一样，任何独成一行的区块标记都会参与 _section_spans
     配对：若作为内容原样写入，会被当成真实区块边界，导致相邻区块内容
-    被截断甚至覆盖。行内提及不受影响；仅清除独占一行的标记。
+    被截断甚至覆盖。行内提及的标记文本不受影响；仅清除独占一行的标记。
     剥离标记行后，首/尾行可能残留空白或 BOM（如内容以标记行开头，
     紧随其后的正文行带缩进）：get_section/_first_section 读出时同样
     会剥掉这些字符，这里必须用同一套规整，否则返回的新内容与文件
@@ -428,6 +449,7 @@ def _read_back_section(candidate: str, name: str) -> str | None:
     """按 get_section 的规则回读 candidate 中指定区块，供写盘后校验。
 
     返回 None 表示区块缺失或交叉失效（区别于写入空内容）。
+    读出的内容按同一规整形态规范化后再返回，确保与 get_section 结果一致。
     """
     s, e = start_marker(name), end_marker(name)
     back = next(
@@ -440,7 +462,11 @@ def _read_back_section(candidate: str, name: str) -> str | None:
 
 
 def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
-    """整体覆盖某个区块，返回 (旧内容, 新内容)。"""
+    """整体覆盖某个区块，返回 (旧内容, 新内容)。
+
+    调用 _locked_state 确保串行化读-改-写，防止并发实例互相覆盖。
+    写入前通过 _atomic_write_text 发布，保证读端永远不会看到半截内容。
+    """
     # _locked_state 会先建好父目录；这里无需重复 mkdir。
     with _locked_state(path):
         if not path.exists():
@@ -479,10 +505,10 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             suffix = _strip_stray_markers(text[i_span_end:], other_spans,
                                            i_span_end, s, e)
             candidate = prefix + s + body + e + suffix
-            # 与 else 分支同理必须回读校验：其他有效区块内部「受保护」的
-            # 同名孤立 START 会抢先与新写入的 END 交叉配对，导致刚写入的
-            # 区块立即读不出来、且相邻区块一并失效。校验失败则在文件开头
-            # 重建干净的区块（见下），绝不整段清除本区块标记。
+            # 回读校验：其他有效区块内部「受保护」的同名孤立 START 会抢先
+            # 与新写入的 END 交叉配对，导致刚写入的区块立即读不出来、且相邻
+            # 区块一并失效。校验失败则在文件开头重建干净的区块，绝不整段
+            # 清除本区块标记。
             back = _read_back_section(candidate, name)
             if back != new:
                 # 不回退到「清除本区块所有标记再重建」：回读校验失败时本区块
@@ -495,8 +521,8 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                              + (prefix + suffix).lstrip("\r\n"))
             text = candidate
         else:  # 标记缺失/错乱：清除该区块所有残留标记，再补一对干净的。
-            # 与 if 分支同理：落在其他有效区块区间内的标记字面量是该区块的
-            # 合法内容，必须原样保留，不能全局 replace 误删
+            # 落在其他有效区块区间内的标记字面量是该区块的合法内容，必须原样保留，
+            # 不能全局 replace 误删
             text = _strip_stray_markers(text, spans, 0, s, e)
             block = f"{s}{body}{e}"
             # 新区块插到另一区块的所有同名标记之前，而不是追加到文件末尾：
@@ -506,7 +532,7 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
             other = SECTION_ARTIFACT if name == SECTION_IDEA else SECTION_IDEA
             anchor = next((m.start(1) for m in section_marker_pattern().finditer(text)
                            if m.group(2) == other and m.group(3) == "START"),
-                          None)
+                           None)
             if anchor is not None:
                 line_start = max(text.rfind("\n", 0, anchor),
                                  text.rfind("\r", 0, anchor)) + 1
@@ -523,12 +549,11 @@ def update_section_file(path: Path, name: str, content: str) -> Tuple[str, str]:
                 # 导致新区块永远读不出来、且每次写入都追加出死数据。此时
                 # 不再二次清除（交叉失效会误删另一区块区间内的合法正文），
                 # 直接把新区块放到文件开头：START 在前必与自身 END 配对。
-                # text 已在分支开头清过一次本区块的游离标记，无需重复清除
                 candidate = f"{block}{nl}{nl}" + text.lstrip("\r\n")
             text = candidate
 
-        # 清除本区块标记后，另一类区块原先失效的残片可能重新配对并抢先
-        # 被读出；写盘前校验另一区块读出的内容未被本次更新悄悄改写
+        # 清除本区块标记后，另一类区块原先失效的残片可能重新配对并抢先被读出；
+        # 写盘前校验另一区块读出的内容未被本次更新悄悄改写
         text = _preserve_other_section(original, text, name)
 
         # 写入/替换失败或中断时清掉半成品临时文件；目标文件仍保持

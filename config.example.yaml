@@ -80,6 +80,7 @@ words:
   reuse: true     # words.txt 已存在时是否直接复用；false 强制重新生成
                   # （--regen-words 同样会忽略旧词库）
 
+
 loop:
   # 循环轮数（正整数）；写 inf 表示无限循环。
   # TUI 下输入框为空时按 q 结束；纯终端模式用 Ctrl+C 中断。

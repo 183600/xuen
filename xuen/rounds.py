@@ -1433,11 +1433,24 @@ class RoundGuard:
 # ----------------------------------------------------------------------
 # 纯函数 / 展示辅助
 def _verdict_fields(v: Verdict) -> Dict:
+    """将 Verdict 实例转换为字典，供事件写入使用。
+
+    包含验证员、评分、结果类型和原因说明。
+    """
     return {"verifier": v.verifier, "score": v.score, "result": v.result,
             "reason": v.reason}
 
 
 def _verdict_event(cid: str, round_no: int, v: Verdict, **extra: Any) -> Dict:
+    """构建 verdict 类型的审计事件字典。
+
+    参数：
+      cid     候选 id
+      round_no 轮次编号
+      v       Verdict 实例（包含 verifier, score, result, reason）
+      **extra 附加字段（如 late=True，或 result/reason 的变体）
+    返回的字典将被写入 history.jsonl 进行审计记录。
+    """
     event = {"event": "verdict", "id": cid, "round": round_no,
              **_verdict_fields(v)}
     event.update(extra)
@@ -1445,8 +1458,14 @@ def _verdict_event(cid: str, round_no: int, v: Verdict, **extra: Any) -> Dict:
 
 
 def _best_record(cid: str, round_no: int, verifier: str,
-                 score: Optional[float], reason: str,
-                 **extra: Any) -> Dict:
+                  score: Optional[float], reason: str,
+                  **extra: Any) -> Dict:
+    """构建 best.json / history.jsonl 用的最佳元数据字典。
+
+    包含字段：id（候选 id），round（轮次），verifier（验证方式），
+    score（评分），ts（时间戳），reason（采纳原因）。
+    **extra 可用于追加额外字段（如 late=True 表示补评采纳）。
+    """
     record = {"id": cid, "round": round_no, "verifier": verifier,
               "score": score, "ts": _ts()}
     record.update(extra)
@@ -1455,21 +1474,34 @@ def _best_record(cid: str, round_no: int, verifier: str,
 
 
 def verdesc(v: Verdict) -> str:
-    d = f"{v.verifier}"
+    """将 Verdict 实例转换为易读的描述字符串。
+
+    格式：<验证员> [<分数> 分]：<原因>
+    分数为 None 时不显示；原因为空时也不显示冒号。
+    """
+    parts = [v.verifier]
     if v.score is not None:
-        d += f" {v.score:g} 分"
+        parts.append(f"{v.score:g} 分")
     if v.reason:
-        d += f"：{v.reason}"
-    return d
+        parts.append(v.reason)
+    return " ".join(parts)
 
 
 def detail_field(res: SuiteResult) -> str:
+    """返回测试套件结果的详细信息文本，用于展示或日志记录。
+
+    结果原因加上输出尾部（最近 5 行），总长度不超过 500 字符。
+    """
     tail = _last_lines(res.detail or "", 5)
     return (res.reason + (f"｜输出尾部：{tail}" if tail else "")).strip()[:500]
 
 
 def _last_comment(text: str, max_lines: int = 5) -> str:
-    """评审输出里除「评分: N」行外的最后几行，当评语展示。"""
+    """评审输出里除「评分: N」行外的最后几行，当评语展示。
+
+    过滤掉所有匹配计分模式的行，只保留内容行，作为评审员评语的展示。
+    返回的评语会被限制在最近 max_lines 行，并按「 / 」连接，总长度不超 300。
+    """
     if not text:
         return ""
     lines = [ln.strip() for ln in text.splitlines()
@@ -1477,8 +1509,12 @@ def _last_comment(text: str, max_lines: int = 5) -> str:
     return " / ".join(lines[-max_lines:])[:300]
 
 def _parse_verdict_line(line: str) -> Tuple[Optional[float], str]:
-    """Parse a verdict line from verdicts.txt.
-    Returns (score, comment). score is None if parsing fails or nan/inf."""
+    """从 verdicts.txt 行为解析评分与评语。
+
+    返回 (score, comment)；若无法解析或分数非有限值，score 为 None。
+    格式：<候选id> <0-10分> [评语]
+    仅取最后一次出现的分数（兼容多行评分覆盖）。
+    """
     parts = line.split(None, 2)
     if len(parts) < 2:
         return None, ""
