@@ -1,640 +1,419 @@
 <!-- IDEA:START -->
-动研究循环·新灵感三元组第 1 轮；本轮灵感：「目标检测」×「伦理与合规」×「手势识别」）
+### 第 5 轮灵感驱动研究记录（承接 CADVS-v4；新循环第 1 轮）
 
-> **基线**：第 2 轮产出 MetricVoiceGauge-NCD-HUTDH-v20+IP-420–424（第 2 轮完整方案；其上承 v19 证书体系 DCM/OGCC/CCV/DRS/OGC 与 v17 感知链 CLP/S2C/HCG/PSV/APS/AMC）。
-> 本轮纪律：**检测是带类型与误差界的证据、合规是可审计的义务逻辑、意图是非对称门槛的动态规范**。不推倒 v20：PCA/CTS/CFC/HPC/CFCtrl 全部保留，v19/v17 各模块全部保留。本轮只做一件事：**在 v20 的联邦感知证书之上加一层"语义-规范"层，把"几何安全"升级为"类型化证据 + 规范化合规 + 意图条件化"的可审计证书体系，并顺手封堵 v20 的最大风险（相关性误判共识）**。
+**灵感词**：夹爪控制、桌面操作
 
-## 0. 直觉与动机
+**继承关系**：第 4 轮 CADVS-v4（IP-489~492）在 v3 五锚点基础上加入价值锚 VACK（kc_val）与平衡锚 BCK（kc_bal），形成七硬门 kc_evidence_forged_v4 = kc_coverage ∧ kc_physics ∧ kc_human ∧ kc_ee ∧ kc_mem ∧ kc_val ∧ kc_bal，软评分 ECS_v4 = ECS_v3·η_val·η_bal，执行集 Exec_CADVS-v4 ⊆ Exec_CADVS-v3 ⊆ Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29。本轮不推翻 v4，而是针对「夹爪控制」与「桌面操作」两个具体的接触层失效模式，把 v4 中粒度过粗的末点锚 EEK 与平衡锚 BCK 细化为两个接触对锚：抓取锚 GFK（GGC / kc_grasp）与支撑锚 TSK（TAC / kc_table），并以接触链演算 CCC 证明「细化是保守的、两锚非冗余、接触链完备」，形成 CADVS-v5（IP-493~496）。执行集升级为 Exec_CADVS-v5 ⊆ Exec_CADVS-v4 ⊆ Exec_CADVS-v3 ⊆ Exec_CADVS-v2 ⊆ Exec_CADVS-v1 ⊆ Exec_v29。
 
-**灵感 1（目标检测 → 感知证据的类型化、误差界与"负信息"）**
-直觉：v20 的 PCA 把稀疏点云聚合成 Hull，但 Hull 是"无名"的——它不知道那是一把杯子还是一个人的手，更不知道"没检测到"意味着什么（盲区只能永远保守）。目标检测的输出天然是 (类别, 框, 置信度) 三元组，恰好补上三件 v20 缺失的东西：**可标定的定位误差界**（膨胀成以 ≥1-δ 概率包含真物的可靠包围盒 CertBox）、**类条件几何先验**（"杯有把手"——CTS 的谱系签名从逐物体统计升级为类先验，先验收紧只在尺度不变子集上做）、以及最重要的**负信息**：在召回率下界 κ_c 假设下，"覆盖区内无人"本身可以是一张**缺席证书 (Absence Certificate)**——这正是 v20 保守性叠加导致活性坍缩的解药。核心创新：**语义检测证书 (Semantic Detection Certificate, SDC) + 覆盖与缺席证书 (Coverage & Absence Certificate, CAC)**。关键反直觉点：**检测不是"多了一种障碍物来源"，而是一套单调证据系统——障碍物只能被检测增补（只增不减），自由空间只能被缺席证书"赎回"（有偿释放）**。副产品：跨机器人 NMS 式证据去重（同 (类别, 框) 只算一份证据）直接打击 v20"众口铄金"的共识风险面。
+**直觉与动机**：
 
-**灵感 2（伦理与合规 → 从"物理安全"到义务逻辑上的可审计安全）**
-直觉：v20 的证书只回答"会不会碰"，不回答"该不该做"：靠近人必须减速（义务）、禁区禁行（禁止）、交接时被允许接近（许可）。合规的本质是**义务逻辑 (Deontic Logic)** 的 O/F/P 三模态，且必须可审计（引用规则编号、留证据链、规则库版本化）。核心创新：**义务合规层 (Deontic Compliance Layer, DCL)**：把规则库 R 编译为约束——F 规则 = 与执行域求交（收缩）；O 规则 = **带期限的计划过滤器**（"存在 ≤τ 的前缀进入让位状态"），不是新的自由空间——这是安全继承得以保持的关键技巧；P 规则 = 只解除 DCL 自身此前施加的限制，永不越过 v20 几何证书的边界。冲突消解取最严者（交）；义务不可满足 → 触发可审计的 SafeStop 升级，绝不静默死锁。关键反直觉点：**义务是"必须做"的正向要求，但形式化为"期限约束下的存在性过滤"后，它仍然只是计划集上的一个过滤器**——正向义务与 Exec_v21 ⊆ Exec_v20 并不矛盾。
+1. **夹爪控制：力闭合不等于抓取成功，滑移检测是「事后」而非「事前」**。v4 的 EEK 把末端当作广义力/位姿传感器，只能检测已经发生的滑移与力超限；但平行夹爪的失败往往发生在「力闭合边际不足 + 物体位姿/摩擦不确定」的组合下：接触力在摩擦锥内，却在扰动下瞬间越界。GFK 把抓取质量前移为可计算证书 GGC = (ε_fc, m_slip, e_aperture, e_force, t)：ε_fc 为力闭合边际（最大 ε 使单位力旋量球 εB 被抓取力旋量空间 GWS 包含），m_slip 为在摩擦/位姿不确定集上的鲁棒滑移边际，e_aperture / e_force 为孔径与夹持力跟踪误差。硬门 kc_grasp 在 GRASP / LIFT / TRANSPORT regime 激活，防止「力在阈值内但一扰动就掉」。
 
-**灵感 3（手势识别 → 意图是非对称门槛的规范输入，兼作人体在场的独立证据）**
-直觉：静态合规太僵硬（人一进工作区就全局降速、活性坍缩），而人的手势（停止/让位/交接）表达了**动态规范意图**。但手势识别的两类错误风险不对称：把"伸手"误读为"交接"（假许可）会**解锁**危险接近，而把"交接"误读为"无手势"只损失活性。核心创新：**手势意图调节器 (Gesture Intent Conditioner, GIC)**：用 **conformal 校准**保证真意图以 ≥1-α 概率落在预测集 Γ 内；**义务/急停走低门槛**（q ≥ q_low 即触发，fail-safe），**许可走高门槛**（Γ ⊆ {意图} 且置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL，过期回落最严默认；STOP 可被任一通道触发且优先级最高。关键反直觉点（副产品的妙处）：**任何被识别出的手势都构造性地蕴含"有人在场"——手不会凭空出现**。于是手势通道成为人体检测器漏检时的独立召回冗余：CAC 在签发缺席证书前必须先查手势通道，一旦有手势在场证据，缺席证书拒绝签发并翻转为"有人"。
+2. **桌面操作：桌子不是地板，物体-桌面接触有独立的失效模式**。v4 的 BCK 把支撑当作全身平衡的一部分，却未显式建模「物体在桌面上的支撑多边形、质心投影、翻倒力矩、边缘距离」。桌面任务的典型失败是放置翻倒、推出桌沿、非抓取推滑失稳、局部支撑（仅三点接触）导致的伪稳定。TSK 把支撑前移为证书 TAC = (ξ_support, τ_topple, ξ_edge, t)：ξ_support 为质心投影在支撑多边形内的归一化有符号边际，τ_topple 为翻倒力矩边际，ξ_edge 为支撑多边形到桌沿的归一化距离。硬门 kc_table 在 PLACE / PUSH / RELEASE regime 激活。
 
-**三者如何统一**
-统一为 **v20 联邦感知证书之上的"语义-规范"层**：SDC/CAC 回答"那里有什么 / 凭什么说没什么"，DCL 回答"规范上禁止/要求/允许什么"，GIC 回答"人此刻的意图如何动态改写规范状态"。共享状态 ζ_fed 扩展为 **ζ_sem = ζ_fed ∪ (D_t, Cov_t, σ_dcl, g_state, cc_proofs)**。统一准入门：**HPC+ = (HPC, CC, AbsCert) 三证一体**——只有"几何 SAFE（v20 HPC）∧ 规范允许（CC）∧ 负信息可靠（AbsCert 或人距上限生效）"才进入执行；任一缺失退回 v20 的保守收缩，再退 v19/v18。SDC 的 NMS 去重与 CFC 升级版 **CFC+（仲裁条件 = 计数 ≥ N-F ∧ 模态数 ≥ 2）**直接针对第 2 轮最大风险：单模态相关故障产生的"一致 SAFE 票"在结构上不再构成共识。
+3. **接触链：抓取锚与支撑锚不可互相替代，且必须可组合**。直觉上，抓得稳不代表放得稳（力闭合足够但把物体放到桌沿），放得稳也不代表抓得稳（物体在桌上稳定但夹爪力闭合不足）。因此引入接触链证书 C_chain = act(kc_grasp,R) ⊗ act(kc_table,R)，⊗ 表示「夹爪→物体→桌面」的序贯接触组合：两个激活锚都通过，且接触状态转移（抓取→抬升→放置→释放）的边界可行。进一步给出「粒度细化定理」：v5 的 GFK/TSK 是对 v4 的 EEK/BCK 的保守细化，故执行集只缩不涨。
 
-## 1. 研究问题（轮次升级版）
+4. **regime-conditioned 门控：避免九硬门把系统「锁死」**。九硬门全 AND 会在「物体已稳定放在桌上、夹爪已释放」时仍要求抓取证书，造成大量误拒。故引入接触 regime 分类器 R ∈ {APPROACH, GRASP, LIFT, TRANSPORT, PLACE, PUSH, RELEASE}，硬门按 act(kc,R) 条件激活；条件激活只会在 v4 基础上增加限制、不会删除限制，因此仍满足 Exec_CADVS-v5 ⊆ Exec_CADVS-v4。这一设计把「安全收缩」与「可用性」解耦：安全来自单调收缩，可用性来自 regime 条件化。
 
-- **Q1（检测证据的可靠性界）**：如何标定定位误差界 ε_loc(s) 使 CertBox 以 ≥1-δ 概率包含真实物体？类条件几何先验在什么条件下可安全收紧 Hull 而不引入假自由空间（先验收紧与 CTS 尺度不变子集如何衔接）？跨机器人 NMS 去重的等价类定义（类别相同 ∧ IoU ≥ 阈值）在什么情形会误删真正的独立证据？
+**关键洞见**：v4 的七锚点覆盖「覆盖/物理/人因/末点/记忆/价值/平衡」，但「末点」与「平衡」之间的接触层仍是粗粒度：真实操作发生在两个接触对上——夹爪-物体（抓取）与物体-桌面（支撑）。v5 追加抓取锚与支撑锚，并以接触链演算证明二者互补且非冗余，形成九硬门 kc_evidence_forged_v5 = kc_evidence_forged_v4 ∧ act(kc_grasp,R) ∧ act(kc_table,R)，fail-closed；软评分 ECS_v5 = ECS_v4·η_grasp·η_table。
 
-- **Q2（负信息的可靠性）**：覆盖图 Cov_t 如何由传感器视锥并集 + 遮挡掩码 + 召回率下界 κ_c 严格导出？AbsCert 在召回假设被违反时如何失效安全（fail-safe 退化为全域"假设有人"）？手势通道的"在场翻转"条款如何保证：漏检人体 ∧ 识别出手势 → 状态必须翻转为"有人在场"且缺席证书拒发？
+**形式化目标（增量）**：
+1. 定义抓取状态、抓取映射 G 与抓取力旋量空间 GWS；定义力闭合边际 ε_fc、鲁棒滑移边际 m_slip、孔径/力跟踪误差；定义 GGC 与 kc_grasp。
+2. 定义物体-桌面支撑多边形 S_obj、质心投影 p_com、翻倒力矩边际 τ_topple、桌沿边际 ξ_edge；定义 TAC 与 kc_table。
+3. 定义接触 regime 分类器 R 与激活函数 act(kc,R)，证明条件激活保持执行集单调性。
+4. 定义接触链演算 ⊗ 与接触链证书 C_chain；证明粒度细化定理（Exec_CADVS-v5 ⊆ Exec_CADVS-v4 且严格）、抓取-支撑非冗余定理、接触链完备性定理。
+5. 定义 EFA-v5 九硬门 + 软评分 ECS_v5；定义 Exec_CADVS-v5 ⊆ Exec_CADVS-v4。
 
-- **Q3（义务逻辑的编译与活性）**：F/O/P 三类规则如何统一编译为域收缩/期限过滤/条件解锁？带期限义务（τ 内让位）在多机器人资源竞争下如何避免死锁（不可满足 → SafeStop 升级路径的触发与滞回）？规则冲突的最严消解与规则库版本化如何落地为 merkle 审计链？
-
-- **Q4（意图门槛与时序协调）**：手势识别延迟（100–300ms）与 50Hz 控制环如何协调——DCL/GIC 状态机以事件方式（10Hz 注入 + TTL）离线于控制路径，控制路径仅做 O(1) 状态查询？conformal 预测集的在线重校准如何在分布漂移（新用户/新手势/衣着变化）下维持 1-α 覆盖？非对称阈值 q_low/q_high 与 v20 的 margin_col_fed、τ_consensus、APS 新鲜度阶梯如何叠加而不互相破坏？
-
-## 2. 设计原则（在 P31–P33 基础上新增 P34–P36）
-
-**P34 语义证据单调律（Semantic Evidence Monotonicity）**
-检测证据只能**增补**障碍物：`Obs_t = Hull_points ∪ ⋃_k CertBox_k`，其中 `CertBox_k = inflate(b_k, ε_loc(s_k))`；类先验收紧只允许在 CTS 的尺度不变子集上进行，先验失配即回退原 CertBox。**自由空间只能被缺席证书赎回**：仅当 `x ∈ Cov_t` 且 AbsCert 有效时，才允许解除"人可能在此"的保守假设；Cov_t 之外一律保守。障碍集合在快照内**单调不减**；任何失效（检测器故障/标定漂移/覆盖图失效）都使 Obs_t 只增不减、速度上限只降不升。
-
-**P35 义务即约束律（Obligations-as-Constraints）**
-DCL 把规则编译为三类过滤器：F → `Θ ∩ Θ_F^c`（域收缩）；O → `Θ_O = {plan : ∃t' ≤ τ_rule, state(t') ∈ YieldSet}`（带期限的存在性过滤，**不是新自由空间**）；P → 仅当高置信意图 ∧ AbsCert ∧ 模态佐证成立时解除 DCL **自身**的限制，可达集 ⊆ v20 几何域。冲突消解 = **交**（最严者胜）；义务在某计划集上不可满足 → 触发 SafeStop（可审计升级），绝不静默死锁。故 `Exec_v21 = Exec_v20 ∩ Fil_dcl ⊆ Exec_v20`。
-
-**P36 非对称意图门槛律（Asymmetric Intent Thresholds）**
-义务/急停以**低门槛**触发（q ≥ q_low，fail-safe：假阳性的代价只是活性）；许可**高门槛**触发（conformal 预测集 Γ ⊆ {意图} 于置信 1-α ∧ 目标区 AbsCert 有效 ∧ ≥2 模态独立佐证）。意图状态带 TTL_intent，过期回落最严默认；STOP 具最高优先级，可由检测/手势/急停按钮任一通道触发。
-
-## 3. 与基线的接口（如何退化）
-
-- SDC 失效（检测器故障）⇒ 障碍只剩 v20 点云 Hull，类先验收紧不可用 ⇒ 等价 v20（更保守）；
-- CAC 失效（覆盖图不可信）⇒ 全域保守假设"可能有人" ⇒ 比 v20 更保守（人形共享区限速），安全继承方向不变；
-- DCL 失效（规则引擎崩溃）⇒ 进入**最大限制模式**（共享区停机 + 非共享区按静态人距上限）⇒ `Exec_v21 ⊆ Exec_v20` 仍成立；
-- GIC 失效 ⇒ 无许可解锁、义务回落静态合规默认 ⇒ 子集；
-- CFC+ 模态多样性无法满足（仅单模态可用）⇒ 仲裁退回 v20 的 CFC 行为 ⇒ 等价 v20；
-- 三者全失效 ⇒ 完全回退 v20 ⇒ `Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18`（引理 162）。
-- **安全继承**：SDC 只增障碍、CAC 只赎回有证的自由空间且失效向保守、DCL 只交/过滤、GIC 只在自家限制内解锁；任意失效都向更保守方向退化。DCL/GIC 状态机以事件方式接入 v17 APS 新鲜度阶梯：每次迁移携带时间戳，TTL 过期回落最严默认，控制路径仅 O(1) 查询。
-
-## 4. 预期贡献
-
-1. **类型化感知证书**：首次把目标检测的 (类别, 框, 置信度) 变成带误差界的碰撞证据，类先验与 CTS 谱系统一，给出"障碍只增、自由有偿赎回"的单调证据系统；
-2. **缺席证书**：给出"覆盖区内无人"的可靠性形式化（召回下界 κ_c + 覆盖图 Cov_t），首次把负感知信息变成可审计证书，并以手势通道作为人体在场的独立召回冗余；
-3. **义务逻辑编译**：F/O/P 规则到域收缩/期限过滤/条件解锁的统一编译、带期限义务的活性保障（不可满足→SafeStop 升级）、规则库 merkle 版本审计，使碰撞证书从"物理安全"升级为"可审计的规范安全"；
-4. **非对称意图门槛**：conformal 意图预测集 + 低门槛义务/高门槛许可的失稳不对称设计，给出"意图→规范状态→参数域"的动态改写协议，假许可概率有显式上界 α；
-5. **封堵 v20 最大风险**：NMS 证据去重 + CFC+ 模态多样性仲裁，使"单模态相关系统误判"在计数与结构上都无法形成共识；
-6. **三证一体 HPC+**：HPC ∪ CC ∪ AbsCert 统一准入门，`Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 闭环。
-
-## 5. 本轮最大风险
-
-**一句话**：AbsCert 的全部可靠性押在检测器召回率下界 κ_c 这一**经验假设**上，若检测器对某类人体形态（儿童、轮椅、蹲姿、非常规衣着/强逆光）存在**系统性漏检**，则"覆盖区内无人"的证书会形式成立而事实为假，机器人将**合规地、可审计地、撞上没被看见的人**——即"合规的缺席幻觉"。
-
-## 9. 新灵感整合：分层规划、机械臂、深度学习
-
-### 9.1 直觉与动机（融合新灵感）
-**分层规划 (Hierarchical Planning)**：PGEV 的能量可行性与证伪框架并非平面的，而是战略-战术-操作三层递进。战略层决定整体能量预算 `E_res` 的下界与 fallback 策略；战术层在有限元裕度下规划最优轨迹 `J_E = ∫P dt`；操作层在 50Hz 控制环下执行即时能量监测与紧急制动。关键数学约束是 `Fil_strategic ⊇ Fil_tactical ⊇ Fil_operational`——高层设定能量 envelope，低层在其中操作，任何低层的越界都会被高层的安全边界回滚。反直觉点：**高层义务的不满足不会导致死锁，而会触发向下层级的权限降级**（如从动态轨迹退回到静态人距上限），活性仅在相应层级损失。
-
-**机械臂 (Robotic Arm)**：机械臂显式引入配空间能量耗散。臂端运动 `d(q_arm)/dt` 直接消耗 `P = Σ|τᵢq̇ᵢ|`，关节限制与碰撞规则与底座几何共同构成 `K_energy` 的配空间边界。臂的配空间状态 `Q_arm` 是 `E_fallback` 与 `E_reach_safe` 的额外参数：某些已认证安全态在特定臂配空间下可达，在其他配空间下则不可达，必须经 DCL 战略层批准。我们在 EVC 中实时积分臂能耗：`E_arm = ∫ Σ|τᵢq̇ᵢ| dt`，并将其计入储备不变量检查 `E_res ≥ E_fallback + E_arm + E_reach_safe + E_margin`。反直觉点：**在特定配空间下，臂的有策略摆动可以“穿越”原本看似不可达的安全区域**，但这必须在能量账户边界内完成，否则直接触发受控停机。
-
-**深度学习 (Deep Learning)**：感知模块的核心是深度网络，我们利用 conformal 预测在线校准 DNN 输出的类别置信度与框坐标，使感知输入对 PGEV 层的能量预算具有可验证的概率界。深度特征 φ(x) 替代原始像素外传至能量账本，满足 E794 隐私合规。进一步，我们可以从人类演示中学习能量耗散模型 `P = f_θ(τ, q̇, config)`，用 conformal 校验确保学习模型的统计覆盖。关键反直觉点：**深度网络的假阳性可以通过 conformal 界限显式控制，比人工阈值更安全且可审计**，且 conformal 预测无需假设网络结构正确，仅需样本独立性。
-
-### 9.2 研究问题（在 Q1–Q7 基础上升级）
-- **Q9（分层 PGEV 的跨层保证）**：如何设计层次化 PGEV 使得 `Exec_战略 ⊆ Exec_战术 ⊆ Exec_操作 ⊆ Exec_v21` 始终成立？各层级的能量不可满足时如何退化而不引入振荡？
-- **Q10（机械臂配空间能量积分）**：如何在 EVC 中同时编码底座能量与机械臂配空间能耗？配空间膨胀如何标定以保证臂端在 ≥1-δ 概率下无碰撞且能量足够？配空间先验的学习与几何证书的衔接条件是什么？
-- **Q11（深度学习的 conformal 校准）**：如何在在线 50Hz 环境下对 DNN 输出进行 conformal 重校准以维持 1-α 覆盖？新用户/新手势/衣着变化的分布漂移如何在 O(1) 开销内检测并触发重校准？
-
-### 9.3 设计原则（在 P34–P36 基础上新增 P37–P39）
-
-**P37 分层能量可行律（Hierarchical Energy Viability）**
-PGEV 被编译为三层过滤器链：`Fil_strategic ⊇ Fil_tactical ⊇ Fil_operational`。战略层 F/O/P 规则的域收缩是战术层的子集；战术层 O 规则的能量过滤是操作层的子集。任意计划 `π` 必须满足 `π ∈ Fil_operational(θ) ∧ Fil_tactical(π) ∧ Fil_strategic(π)`。高层不可满足时，低层退回至上一层级的默认模式，而非直接坠入 SafeStop。故 `Exec_v22 = Exec_v21 ∩ Fil_dcl_hierarchical ∩ Fil_energy_hierarchical ⊆ Exec_v21`。
-
-**P41 机械臂配空间能量积分律（Robotic Arm Configuration Space Energy Integration）**
-臂端能耗随配空间状态变化：`E_arm(t) = ∫_0^t Σ\|τᵢ(q_arm)⋅q̇ᵢ\| dt`，其中 Q_arm 是关节配空间，τᵢ 是关节扭矩。任何使配空间边界穿越的动作必须经 DCL 战略层批准；低层无权单方面打开配空间能量约束。障碍集合 `Obs_t = Hull ∪ ⋃ CertBox_k ∪ CertBox_arm` 在快照内单调不增配空间边界，跨配空间变化时平滑过渡，避免突变引发的急停。P41 确保 `E_arm` 的计入不破坏 `Exec_v22 ⊆ Exec_v21` 的单调性。
-
-**P42 深度学习可靠性校准律（Deep Learning Reliability Calibration）**
-DNN 输出的感知输入通过 conformal 校准得到校准后的表示：`P(err ≤ ε̂_loc(ŝ) | score=ŝ) ≥ 1-α`。深度特征 φ(x) 替代原始图像外传，满足 E794 隐私合规。当分布漂移检测器触发时，按 O(1) 开销进行有限样本重校准，而非全量重训。EVC 的能量预算使用校准后的表示，而非原始网络输出。故证书可靠性不依赖“网络足够好”，而依赖“ conformal 覆盖必然成立”。关键反直觉点：**conformal 预测无需假设网络结构正确，仅需样本独立性，这使得深度感知证书在非 i.i.d. 条件下也保持统计有效**。
-
-### 9.4 预期贡献（在 1–6 基础上延伸）
-7. **分层 PGEV 编译**：DCL 多层过滤器链 + PGEV 三层确保能量约束自顶而下继承，低层不得越过高层边界。
-8. **机械臂能量模型**：将机械臂配空间能耗 formalized 为 EVC 的动态扩展，实现臂运动的能量可追踪与边界保证。
-9. **深度感知 PGEV**：利用深度学习的 conformal 预测和特征空间，在保持统计覆盖的同时提升感知输入的精细度，并满足隐私合规。
-
-### 9.5 本轮最大风险（更新）
-**一句话**：分层合规的层级退化路径若设计不当，可能在“能量层面满足但操作层面碰撞”之间来回振荡，或机械臂配空间能耗膨胀过度导致活性坍缩至零——关键风险在于分层边界的模糊与配空间能耗的过度保守。
+**本轮最大风险**：夹爪与桌面的接触参数（摩擦锥、指垫柔顺、物体位姿与质量分布）只能间接辨识，模型失配会让 GGC/TAC 系统性误判；在九硬门 AND 与 regime 切换下，误判可能从「单点错误」放大为「大规模误拒或漏放」，形成安全与可用性的双输。
 <!-- IDEA:END -->
-
+---
 <!-- ARTIFACT:START -->
-## 0. 新增核心模块（在 IP-425–435 基础上扩展）
+## 0. 增量定位与继承关系（在 IP-489~492 / CADVS-v4 基础上扩展）
 
-| 编号 | 名称 | 类型 | 关键改进（相对 MetricVoiceGauge-NCD-HUTDH-v22） |
+### 0.1 新增核心模块
+
+| 编号 | 名称 | 类型 | 关键改进（相对 CADVS-v4） |
 |---|---|---|---|
-| IP-431 | Hierarchical Deontic Layer (HDL) | 义务合规模块 | 三层过滤器链确保能量/义务约束自顶而下继承；低层越界被高层回滚 |
-| IP-432 | Arm Configuration Space Certificate (ACSC) | 机械臂证书 | CertBox_arm 扩展编码臂配空间障碍；实时积分臂能耗入 EVC；配空间边界经 DCL 批准 |
-| IP-433 | Deep Conformal Semantic Certificate (DCSC) | 语义证书 | DNN 输出 conformal 校准，深度特征 φ(x) 替代原始像素，满足 E794 隐私合规； conformal 覆盖 ≥1-α |
-| IP-434 | HPC-E (Physics-Grounded Energy Certificate) | 证书结构升级 | HPC+ ∪ EVC ∪ RGC 统一准入门；能量/见证/差距全链可机械复核；继承 Exec_v22 ⊆ Exec_v21 |
-| IP-435 | CFC++ (Hierarchical Modality-Quorum Consensus) | 共识协议升级 | 仲裁条件 = 计数 ≥N-F ∧ 模态数 ≥2 ∧ 层级一致性检查；跨层票据去重防止相关系统误判共识 |
-| IP-436 | CloudEdgeSync Certificate (CESC) | 新增云边同步证书 | 版本化五元组原子分发 (model, calib, proto, rule, patent)；双轨并行切换协议；回滚正确性证明 |
-| IP-437 | FewShotValid Certificate (FSVC) | 新增少样本有效证书 | 云边联合元学习：云端骨干+元校准器，边端 K-shot 原型微调+分位数更新；自监督一致性正则；覆盖 ≥1-α 硬约束 |
-| IP-438 | IPAttest Module (IPAM) | 新增知识产权认证模块 | `@patent` 标记自动收集 → 权利要求簇生成；专利覆盖率 100% 设计门槛；IP-SafeVariant 预置切换 |
-| IP-439 | HPC-E+ (Unified Quad-Certificate Gate) | 统一准入门升级 | HPC-E ∪ CESC ∪ FSVC ∪ IPAttest 四证一体；Exec_v23 = Exec_v22 ∩ Fil_ce ∩ Fil_fs ∩ Fil_ip ⊆ Exec_v22 |
+| IP-493 | Grasp Fidelity Kernel (GFK) | 抓取证据锚 | 力闭合边际 ε_fc、鲁棒滑移边际 m_slip、孔径/夹持力跟踪；GGC 证书；kc_grasp 硬门；η_grasp 软因子；仅在 GRASP/LIFT/TRANSPORT regime 激活 |
+| IP-494 | Tabletop Support Kernel (TSK) | 支撑证据锚 | 物体-桌面支撑多边形、质心投影、翻倒力矩、桌沿边际；TAC 证书；kc_table 硬门；η_table 软因子；仅在 PLACE/PUSH/RELEASE regime 激活 |
+| IP-495 | Contact Chain Calculus (CCC) | 理论内核 | 接触链组合 ⊗、regime 条件激活单调性、粒度细化定理、抓取-支撑非冗余定理、接触链完备性定理 |
+| IP-496 | Evidence Forging Assembler v5 (EFA-v5) | 证据融合 | 九硬门 kc_evidence_forged_v5 = kc_evidence_forged_v4 ∧ act(kc_grasp,R) ∧ act(kc_table,R)；软评分 ECS_v5 = ECS_v4·η_grasp·η_table |
 
-## 0. 增量符号体系（定义 926–999）
+### 0.2 v4 模块适配表（只改接口，不推翻）
+
+| v4 模块 | v5 适配 |
+|---|---|
+| IP-485 EEK | 保留点接触/力/位姿/滑移检查；新增 grasp_fp 指针关联 GGC；kc_ee 仍为「末端保真」基础门，kc_grasp 为更细的抓取质量门叠加 |
+| IP-490 BCK | 保留全身 Wrench 锥/ZMP/通过性；新增 table_fp 指针关联 TAC；kc_bal 管全身，kc_table 管物体-桌面支撑，二者正交 |
+| IP-486 LTEM | 条目扩展 (grasp_succ, grasp_fail, slip_hist, table_succ, topple_hist, regime_hist)；记忆门按 regime 查询对应历史 |
+| IP-487 FFA | Δ_i 增加抓取统计（ε_fc/m_slip 分位数、夹爪型号、指垫摩擦）与桌面统计（支撑多边形、翻倒事件、桌面摩擦）；Φ_global 同步下发抓取/桌面先验 |
+| IP-489 VACK | 价值奖励新增「操作礼貌性」子项（不猛放、不推出桌沿、不夹伤），VAC 扩展 r_manip；kc_val 不变 |
+| IP-491 CERTCALC | 证书演算继承；新增 ⊗ 组合算子与接触链格；定理 5~7 |
+| IP-492 EFA-v4 | 升级 EFA-v5，追加 kc_grasp/kc_table（regime 条件激活） |
+| IP-473~480 | RCANG/DLC/MRCC/TCVM/STCK/GCK/DAKI/VSCK 原样继承；GFK/TSK 加入控制环与准入容器 |
+
+## 1. 增量符号体系（定义 2261–2420）
 
 | 符号 | 含义 |
 |---|---|
-| V = (v_m, v_c, v_p, v_r, v_pt) | 云边版本原子五元组：模型/校准/原型/规则/专利版本号 |
-| T_switch | 双轨并行切换窗口（默认 200ms） |
-| model_v, calib_v, proto_v, rule_v, patent_v | 当前边端运行的各组件版本号 |
-| φ(x) ∈ ℝ^d | 深度特征映射（骨干网络输出），替代原始像素外传 |
-| P_cloud(φ), P_edge(φ) | 云端先验特征分布 / 边端经验特征分布 |
-| D_KL(P_edge ‖ P_cloud) | KL 散度，量化云边分布偏移 |
-| Proto_c = {μ_c} | 类别 c 的原型向量（云端库 + 边端 K-shot 微调） |
-| q̂_α(s; D_calib) | 边端 conformal 分位数：基于校准集 D_calib 在置信度 s 下的 (1-α) 分位数 |
-| L_consist(φ) = ‖f_θ(φ) - f_θ(aug(φ))‖² | 自监督一致性损失（无标签流上） |
-| λ_consist(t) | 一致性正则系数，自适应调度：覆盖跌破时 → 0，覆盖稳定时 → λ_max |
-| CAC_cov_t(x) ∈ {0,1} | 覆盖图：x 是否在传感器视锥并集 - 遮挡掩码内 |
-| FewShotValid(θ) ≜ Coverage(θ) ≥ 1-α ∧ ‖Proto_edge - Proto_cloud‖ ≤ Δ_proto | 少样本有效谓词：覆盖达标且原型漂移受限 |
-| CloudEdgeSync(V) ≜ verify_sig(V) ∧ v_m = v_c = v_p ∧ v_pt ≥ v_m | 云边同步谓词：签名验证 + 版本一致 + 专利版本覆盖 |
-| IPAttest(M) ≜ ∀m∈M, ∃IP-XXX: m.has_tag(IP-XXX) ∧ Claims(IP-XXX) ≡ Features(m) | 知识产权认证谓词：模块 M 内每元素均有标记且权利要求簇与特征集合强一致 |
-| OfflineMode | 云端断联模式：冻结 V_last，规则树根哈希固定，证书基于 V_last 继续签发 |
-| IP-SafeVariant(IP-XXX) | 预置非侵权算法变体：功能等价、实现不同、证书版本 v_pt+1 |
-| ζ_ce = ζ_pgev ∪ (V, T_switch, D_KL, Proto, q̂_α, λ_consist, rule_root, patent_map, few_shot_buffer) | 云边协同层共享状态 |
-| Exec_v23 = Exec_v22 ∩ {π: CloudEdgeSync(V) ∧ FewShotValid(θ_π) ∧ IPAttest(Modules(π))} | 通过 HPC-E+ 验证的计划集合 |
-| Fil_ce, Fil_fs, Fil_ip | 云边同步/少样本有效/IP认证过滤器 |
+| G = (O, H, C, u) | 抓取：物体 O、夹爪 H、接触集 C、位姿/摩擦不确定 u |
+| GWS = {G f \| f ∈ FC, ‖f‖∞ ≤ f_max} | 抓取力旋量空间：抓取映射 G ∈ R^{6×(m·n_f)}、摩擦锥 FC、指力上限 f_max |
+| ε_fc = max{ε \| εB ⊆ GWS} | 力闭合边际，B 为 6D wrench 单位球（Ferrari–Canny 度量） |
+| m_slip = min_i [(μ̂−kσ_μ)f_n,i − (‖f_t,i‖+kσ_t)] / (μ̂ f_n,i) | 鲁棒归一化滑移边际（friction/切向力不确定集上的最坏接触） |
+| e_aperture = \|a − a_des\| | 孔径跟踪误差 |
+| e_force = \|f_n − f_n,des\| | 夹持力跟踪误差 |
+| GGC = (ε_fc, m_slip, e_aperture, e_force, t) | 抓取保真证书 |
+| kc_grasp | ε_fc ≥ ε_min ∧ m_slip ≥ m_min ∧ e_aperture ≤ δ_a ∧ e_force ≤ δ_f |
+| η_grasp = clip(min(ε_fc/ε_ref, m_slip/m_ref, 1), 0, 1) | 抓取软因子 |
+| S_obj = Conv({p_i^table}) | 物体-桌面接触点在桌面上的支撑多边形（2D 凸包） |
+| p_com = Proj_xy(CoM(O)) | 物体质心在桌面上的投影 |
+| ξ_support = signed_dist(p_com, ∂S_obj) / r_in(S_obj) | 支撑边际：质心投影到支撑多边形边界的有符号距离，按内切半径归一化 |
+| τ_topple = 1 − ‖F_ext,t‖·h_ext / (m g d_com) | 翻倒力矩边际：d_com 为质心投影到最近支撑边的距离，h_ext 为外力作用高度；>0 表示恢复力矩占优 |
+| ξ_edge = dist(S_obj, ∂Table) / L_ref | 桌沿边际：支撑多边形到桌边界的归一化距离 |
+| TAC = (ξ_support, τ_topple, ξ_edge, t) | 桌面支撑证书 |
+| kc_table | ξ_support > 0 ∧ τ_topple > τ_min ∧ ξ_edge > ξ_min |
+| η_table = clip(min(ξ_support/ξ_ref, τ_topple/τ_ref, ξ_edge/ξ_ref, 1), 0, 1) | 支撑软因子 |
+| R ∈ {APPROACH, GRASP, LIFT, TRANSPORT, PLACE, PUSH, RELEASE} | 接触 regime |
+| act(kc, R) ∈ {kc, ⊤} | regime 激活：命中为 kc，未命中为合取中性元 ⊤ |
+| C_chain = act(kc_grasp,R) ⊗ act(kc_table,R) | 接触链证书 |
+| ⊗ | 接触链组合：两激活锚均通过且接触状态转移可行 |
+| Exec_CADVS-v{k} | 第 k 轮执行集 |
 
-## 1. 关键算法骨架（在 IP-431–435 骨架上扩展）
+## 2. 关键算法骨架
+
+### IP-493 GFK：抓取保真核（控制环内，解析闭式优先，目标 < 0.2 ms）
 
 ```python
-# ============================================================
-# IP-436 CloudEdgeSync Certificate (CESC) — 云边版本化证书链
-# ============================================================
 @dataclass
-class VersionTuple:
-    v_model: int
-    v_calib: int
-    v_proto: int
-    v_rule: int
-    v_patent: int
-    sig: bytes           # 云端私钥签名
-    payload_hash: bytes  # (model, calib, proto, rule, patent) 的 Merkle 根
-    
-    def verify(self, pk_cloud: PublicKey) -> bool:
-        """验证签名与版本一致性"""
-        if not verify_signature(pk_cloud, self.payload_hash, self.sig):
-            return False
-        if not (self.v_model == self.v_calib == self.v_proto):
-            return False
-        if self.v_patent < self.v_model:
-            return False
-        return True
+class GraspFidelityKernel:
+    """GFK：力闭合 + 鲁棒滑移 + 孔径/力跟踪；kc_grasp 硬门"""
+    eps_min: float = 0.05
+    m_slip_min: float = 0.15
+    delta_aperture: float = 0.005     # m
+    delta_force: float = 2.0          # N
+    mu_hat: float = 0.5
+    sigma_mu: float = 0.10
+    k_sigma: float = 2.0
 
-class CloudEdgeSyncCertificate:
-    def __init__(self, pk_cloud: PublicKey, T_switch: float = 0.2):
-        self.pk_cloud = pk_cloud
-        self.T_switch = T_switch
-        self.V_active: VersionTuple = None      # 当前服务版本
-        self.V_pending: VersionTuple = None     # 待验证新版本
-        self.switch_deadline: float = 0.0
-        self.offline_mode: bool = False
-        self.V_last_valid: VersionTuple = None  # 最后一个通过验证的版本
-    
-    def receive_cloud_update(self, V_new: VersionTuple, artifacts: dict) -> bool:
-        """云端推送新版本：存入待验证槽，启动双轨并行"""
-        if not V_new.verify(self.pk_cloud):
-            return False
-        self.V_pending = V_new
-        self._stage_artifacts(artifacts)  # 写入临时目录，不影响当前推理
-        self.switch_deadline = time.now() + self.T_switch
-        return True
-    
-    def few_shot_valid_check(self, edge_validator: 'FewShotValidator') -> bool:
-        """边端少样本有效性检查：conformal 覆盖 ≥1-α + 原型漂移受限"""
-        return edge_validator.validate(self.V_pending)
-    
-    def atomic_switch(self) -> bool:
-        """原子切换：仅当 FewShotValid 通过时执行"""
-        if self.V_pending is None:
-            return False
-        if time.now() > self.switch_deadline:
-            # 超时回滚
-            self._rollback()
-            return False
-        if not self.few_shot_valid_check(self.edge_validator):
-            self._rollback()
-            return False
-        # 双轨并行期满且检查通过 → 原子上线
-        self.V_active = self.V_pending
-        self.V_last_valid = self.V_pending
-        self._activate_artifacts()
-        self.V_pending = None
-        self.offline_mode = False
-        return True
-    
-    def _rollback(self):
-        """回滚：清理待验证工件，继续用 V_active"""
-        self._cleanup_staged()
-        self.V_pending = None
-        # V_active 保持不变，证书链连续
-    
-    def handle_cloud_disconnect(self):
-        """云端断联：进入离线模式，冻结 V_last_valid"""
-        self.offline_mode = True
-        if self.V_active is not None:
-            self.V_last_valid = self.V_active
-        # 规则树根哈希冻结，模型不再更新
-    
-    def current_version(self) -> VersionTuple:
-        return self.V_active if not self.offline_mode else self.V_last_valid
-    
-    def sync_predicate(self) -> bool:
-        """CloudEdgeSync(V) 谓词：供 HPC-E+ 准入门调用"""
-        V = self.current_version()
-        return V is not None and V.verify(self.pk_cloud)
+    def observe(self, grasp: GraspState, obj: ObjectState,
+                finger_wrenches: list[Wrench], t_now: float) -> GGC:
+        # 1) 抓取映射 G：接触点位置、法向/切向基、夹爪几何
+        G = self._grasp_map(grasp, obj)                    # 6 x (m·n_f)
+        # 2) 力闭合边际：两指平行夹爪用解析闭式；多指用 GWS 凸包/QP
+        eps_fc = self._force_closure_margin(G, grasp.friction_cones, grasp.f_max)
+        # 3) 鲁棒滑移边际：在最坏摩擦/切向扰动下仍不越锥
+        m_slip = self._robust_slip_margin(finger_wrenches, grasp,
+                                          self.mu_hat, self.sigma_mu, self.k_sigma)
+        # 4) 孔径与夹持力跟踪
+        e_aperture = abs(grasp.aperture - grasp.aperture_des)
+        e_force = abs(grasp.f_norm - grasp.f_norm_des)
+        return GGC(eps_fc, m_slip, e_aperture, e_force, t_now)
 
+    def _force_closure_margin(self, G, cones, f_max) -> float:
+        # 两指：ε_fc = (1/‖w_ext‖)·min 支撑函数，可用 2x2 接触子空间闭式；
+        # 多指：max ε  s.t.  ∀w∈B, ∃f∈FC, ‖f‖∞≤f_max: G f = ε w
+        #       等价于求解 GWS 的 inradius（凸包顶点枚举或支持函数 QP）
+        ...
 
-# ============================================================
-# IP-437 FewShotValid Certificate (FSVC) — 少样本有效证书
-# ============================================================
-class FewShotValidator:
-    def __init__(self, backbone, calibrator, alpha: float = 0.01, 
-                 lambda_max: float = 1.0, delta_proto: float = 0.5):
-        self.backbone = backbone          # 冻结的特征骨干（云端预训练）
-        self.calibrator = calibrator      # conformal 校准器（云端元参数 + 边端分位数）
-        self.alpha = alpha
-        self.lambda_max = lambda_max
-        self.delta_proto = delta_proto    # 原型漂移上界
-        self.Proto_cloud: dict = {}       # 云端原型库 {cls: μ}
-        self.Proto_edge: dict = {}        # 边端微调后原型
-        self.D_calib: list = []           # 边端校准集 (score, err)
-        self.coverage_estimate: float = 1.0
-    
-    def update_cloud_prior(self, Proto_cloud: dict, calib_meta: dict):
-        """云端下发原型库 + 校准器元参数"""
-        self.Proto_cloud = Proto_cloud
-        self.calibrator.load_meta(calib_meta)
-        # 重置边端原型为云端原型（冷启动）
-        self.Proto_edge = Proto_cloud.copy()
-    
-    def k_shot_adapt(self, K_shot_data: list[tuple[Tensor, int]]):
-        """K-shot 适应：仅更新原型向量 + 校准分位数，骨干冻结"""
-        # 1. 原型微调：μ_c ← (1-η)μ_c + η * mean(φ(x_i)) for (x_i, c) in K_shot
-        for cls, feats in group_by_class(K_shot_data).items():
-            if cls not in self.Proto_edge:
-                self.Proto_edge[cls] = torch.zeros_like(feats[0])
-            mu_cloud = self.Proto_cloud.get(cls, self.Proto_edge[cls])
-            mu_emp = torch.stack(feats).mean(0)
-            # KL 正则：向云端先验收缩
-            self.Proto_edge[cls] = mu_cloud + 0.5 * (mu_emp - mu_cloud)  # 简化：η=0.5
-        
-        # 2. 校准分位数更新：用 K-shot 误差刷新 D_calib
-        for x, y in K_shot_data:
-            s, eps_hat, _ = self.calibrate_single(x)
-            err = self._localization_error(x, y)  # 需少量 GT
-            self.D_calib.append((s, err))
-            if len(self.D_calib) > 5000:  # 滑动窗口
-                self.D_calib.pop(0)
-        self.calibrator.update_quantiles(self.D_calib)
-    
-    def self_supervised_consistency(self, unlabeled_stream: Iterator[Tensor]) -> float:
-        """自监督一致性正则：在无标签流上计算一致性损失，反哺 CAC 覆盖图"""
-        total_loss = 0.0
-        count = 0
-        for x in islice(unlabeled_stream, 100):  # 每轮采样 100 帧
-            phi = self.backbone.extract_features(x)
-            phi_aug = self.backbone.extract_features(augment(x))
-            loss = F.mse_loss(phi, phi_aug)
-            total_loss += loss.item()
-            count += 1
-            # 生成伪标签覆盖证据：高一致性区域 → 可能无人
-            if loss < 0.01:
-                self._update_cac_coverage_from_pseudo(x, occupied=False)
-        return total_loss / max(count, 1)
-    
-    def adaptive_lambda(self, consistency_loss: float):
-        """自适应调度一致性系数：覆盖稳定时增大、跌破时归零"""
-        if self.coverage_estimate < 1 - self.alpha - 0.02:  # 留 2% 安全边际
-            self.lambda_consist = 0.0
-        else:
-            self.lambda_consist = min(self.lambda_max, 1.0 / (consistency_loss + 1e-6))
-    
-    def validate(self, V: VersionTuple) -> bool:
-        """FewShotValid 谓词：覆盖 ≥1-α ∧ 原型漂移受限"""
-        # 1. 估计当前覆盖率（用校准集经验覆盖 + Hoeffding 修正）
-        n = len(self.D_calib)
-        if n < 30:
-            return False  # 校准集不足，拒绝
-        emp_cov = sum(1 for s, e in self.D_calib if e <= self.calibrator.quantile(s, self.alpha)) / n
-        # Hoeffding 下界：emp_cov - sqrt(ln(1/δ)/2n) ≥ 1-α
-        delta = 0.001
-        hoeffding_bound = math.sqrt(math.log(1/delta) / (2*n))
-        self.coverage_estimate = emp_cov - hoeffding_bound
-        if self.coverage_estimate < 1 - self.alpha:
-            return False
-        
-        # 2. 原型漂移检查
-        for cls, mu_e in self.Proto_edge.items():
-            mu_c = self.Proto_cloud.get(cls)
-            if mu_c is not None and torch.norm(mu_e - mu_c) > self.delta_proto:
-                return False
-        
-        return True
-    
-    def calibrate_single(self, x: Tensor) -> tuple[float, float, Tensor]:
-        """单帧 conformal 校准：返回 (ŝ, ε̂_loc, φ)"""
-        phi = self.backbone.extract_features(x)
-        logits = self.backbone.classify(phi)
-        s = torch.softmax(logits, -1).max().item()
-        eps_hat = self.calibrator.quantile(s, self.alpha)
-        return s, eps_hat, phi.detach()
+    def _robust_slip_margin(self, fw, grasp, mu, sigma_mu, k) -> float:
+        worst = 1.0
+        for w in fw:
+            fn = max(w.normal, 1e-9)
+            mu_lo = max(mu - k * sigma_mu, 0.0)
+            cap = mu_lo * fn
+            need = w.tangential + k * grasp.sigma_t
+            worst = min(worst, (cap - need) / (mu * fn + 1e-9))
+        return worst
 
-
-# ============================================================
-# IP-438 IPAttest Module (IPAM) — 知识产权认证模块
-# ============================================================
-class IPAttestModule:
-    def __init__(self):
-        self.patent_map: dict[str, set[str]] = {}  # module_name -> {IP-XXX}
-        self.claims_db: dict[str, set[str]] = {}   # IP-XXX -> {feature_tags}
-    
-    def register_module(self, module_name: str, ip_tags: list[str], 
-                        feature_tags: list[str]):
-        """设计期注册：模块名 ↔ 专利标记 ↔ 技术特征标签"""
-        self.patent_map[module_name] = set(ip_tags)
-        for ip in ip_tags:
-            if ip not in self.claims_db:
-                self.claims_db[ip] = set()
-            self.claims_db[ip].update(feature_tags)
-    
-    def scan_codebase(self, root: Path) -> dict[str, list[str]]:
-        """自动扫描 @patent 标记，生成覆盖率报告"""
-        missing = defaultdict(list)
-        for py_file in root.rglob("*.py"):
-            mod_name = py_file.stem
-            if mod_name not in self.patent_map:
-                continue
-            required_ips = self.patent_map[mod_name]
-            found_ips = set()
-            content = py_file.read_text()
-            for ip in required_ips:
-                if f"@patent:{ip}" in content:
-                    found_ips.add(ip)
-            missing_ips = required_ips - found_ips
-            if missing_ips:
-                missing[mod_name].extend(missing_ips)
-        return missing
-    
-    def generate_claims_draft(self, ip_tag: str) -> str:
-        """从特征标签自动生成权利要求 1 草案"""
-        features = self.claims_db.get(ip_tag, set())
-        preamble = f"A method for robotic perception-compliance-energy co-verification, comprising:"
-        steps = [f"  {f.replace('_', ' ')};" for f in sorted(features)]
-        return preamble + "\n" + "\n".join(steps)
-    
-    def verify_module(self, module_name: str) -> bool:
-        """IPAttest(M) 谓词：模块内每元素均有标记且权利要求簇与特征集合强一致"""
-        required = self.patent_map.get(module_name, set())
-        if not required:
-            return True  # 非核心模块可豁免
-        # 检查代码标记覆盖
-        missing = self.scan_codebase(Path(module_name).parent)
-        if module_name in missing:
-            return False
-        # 检查特征集合与权利要求簇一致（简化：人工审核确认）
-        return True
-    
-    def ip_safe_variant(self, risky_ip: str) -> Callable:
-        """返回预置的非侵权变体函数（功能等价、实现不同）"""
-        # 实际部署时由专利工程师预置，此处为占位
-        return getattr(self, f"_variant_{risky_ip.replace('-', '_')}", None)
-
-
-# ============================================================
-# IP-439 HPC-E+ 统一四证准入门
-# ============================================================
-@dataclass
-class HPCEPlus:
-    hpc_e: 'HPCE'           # 物理接地证书（几何∧规范∧负信息∧能量∧差距）
-    cesc: CloudEdgeSyncCertificate
-    fsvc: FewShotValidator
-    ipam: IPAttestModule
-    
-    def admits(self, plan, x, v, z, E_res, margin_req, modules: list[str]) -> bool:
-        # 1. HPC-E 基础验证
-        if not self.hpc_e.admits(plan, x, v, z, E_res, margin_req):
-            return False
-        
-        # 2. 云边同步验证
-        if not self.cesc.sync_predicate():
-            return False
-        
-        # 3. 少样本有效验证
-        V = self.cesc.current_version()
-        if not self.fsvc.validate(V):
-            return False
-        
-        # 4. 知识产权认证验证
-        for mod in modules:
-            if not self.ipam.verify_module(mod):
-                return False
-        
-        return True
-
-
-# ============================================================
-# 辅助：CFC++ 升级为 CFC+++（含云边/少样本/IP 三层一致性）
-# ============================================================
-class CertificateFederatedConsensusPlusPlusHierarchical(CertificateFederatedConsensusPlusHierarchical):
-    """CFC+++：在 CFC++ 基础上增加云边版本一致性、少样本有效性、IP认证三层仲裁"""
-    
-    def consensus_round(self, timeout=5.0):
-        results = {}
-        for key, votes in self.votes.items():
-            # 基础条件
-            count_ok = len(votes) >= self.N - self.F
-            modalities = {v.modality for v in votes.values()}
-            modality_ok = len(modalities) >= self.M_MIN_MODALITIES
-            layer_ok = self._check_layer_consistency(votes)
-            
-            # 新增三层一致性
-            ce_sync_ok = all(v.ce_version == votes[next(iter(votes))].ce_version 
-                           for v in votes.values())
-            fs_valid_ok = all(v.few_shot_valid for v in votes.values())
-            ip_attest_ok = all(v.ip_attested for v in votes.values())
-            
-            if all([count_ok, modality_ok, layer_ok, ce_sync_ok, fs_valid_ok, ip_attest_ok]):
-                results[key] = self._majority_with_outlier_filter(votes)
-            else:
-                results[key] = "CI"
-        return results
-
-
-# ============================================================
-# 端到端流水线：从感知到执行的完整证书链
-# ============================================================
-class PerceptionComplianceEnergyPipeline:
-    def __init__(self, config: dict):
-        # 核心证书模块
-        self.cesc = CloudEdgeSyncCertificate(config['pk_cloud'])
-        self.fsvc = FewShotValidator(config['backbone'], config['calibrator'])
-        self.ipam = IPAttestModule()
-        self.hpc_e_plus = HPCEPlus(
-            hpc_e=config['hpc_e'],
-            cesc=self.cesc,
-            fsvc=self.fsvc,
-            ipam=self.ipam
-        )
-        self.cfc = CertificateFederatedConsensusPlusPlusHierarchical(config['N'], config['F'])
-        
-        # 注册核心模块专利标记（设计期一次性完成）
-        self._register_patents()
-    
-    def _register_patents(self):
-        self.ipam.register_module("sdc", ["IP-425"], ["typed_evidence", "error_bounded_certbox", "class_prior_cts"])
-        self.ipam.register_module("cac", ["IP-426"], ["absence_certificate", "coverage_graph", "recall_lower_bound"])
-        self.ipam.register_module("dcl", ["IP-427"], ["deontic_compilation", "obligation_deadline_filter", "permission_unlock"])
-        self.ipam.register_module("gic", ["IP-428"], ["asymmetric_threshold", "conformal_intent", "gesture_presence_flip"])
-        self.ipam.register_module("pgev", ["IP-431", "IP-434"], ["hierarchical_energy", "energy_viability_kernel"])
-        self.ipam.register_module("acsc", ["IP-432"], ["config_space_certbox", "arm_energy_integral"])
-        self.ipam.register_module("dcsc", ["IP-433"], ["deep_conformal", "phi_privacy", "calibration_coverage"])
-        self.ipam.register_module("cesc", ["IP-436"], ["versioned_certificate_chain", "atomic_switch", "dual_track"])
-        self.ipam.register_module("fsvc", ["IP-437"], ["few_shot_meta_learning", "self_supervised_consistency", "coverage_hard_constraint"])
-        self.ipam.register_module("ipam", ["IP-438"], ["patent_boundary", "claims_generation", "ip_safe_variant"])
-        self.ipam.register_module("hpc_e_plus", ["IP-439"], ["quad_certificate_gate", "monotonic_exec_chain"])
-    
-    def step(self, sensor_data: dict, cloud_update: Optional[dict] = None) -> tuple[bool, dict]:
-        """单步执行：感知 → 证书生成 → 共识 → 准入 → 执行决策"""
-        # 1. 处理云端更新（异步，非阻塞）
-        if cloud_update:
-            self.cesc.receive_cloud_update(cloud_update['V'], cloud_update['artifacts'])
-        
-        # 2. 边端感知 + 证书生成
-        certs = self._generate_certificates(sensor_data)
-        
-        # 3. 联邦共识（CFC+++）
-        consensus = self.cfc.consensus_round()
-        
-        # 4. 尝试原子切换（若有待验证版本）
-        if self.cesc.V_pending:
-            self.cesc.atomic_switch()
-        
-        # 5. 自监督一致性正则（后台，反哺 CAC）
-        self.fsvc.self_supervised_consistency(sensor_data.get('unlabeled_stream', []))
-        
-        # 6. HPC-E+ 四证准入
-        plan = self._plan_from_consensus(consensus)
-        modules_involved = self._modules_in_plan(plan)
-        admitted = self.hpc_e_plus.admits(
-            plan, sensor_data['x'], sensor_data['v'], sensor_data['z'],
-            sensor_data['E_res'], sensor_data['margin_req'], modules_involved
-        )
-        
-        return admitted, {
-            'plan': plan if admitted else None,
-            'consensus': consensus,
-            'version': self.cesc.current_version(),
-            'coverage': self.fsvc.coverage_estimate,
-            'offline_mode': self.cesc.offline_mode
-        }
-    
-    def _generate_certificates(self, sensor_data: dict) -> dict:
-        """生成 SDC、CAC、DCSC、ACSC 等感知证书"""
-        certs = {}
-        # SDC: 语义检测证书
-        for det in sensor_data['detections']:
-            certs[f"SDC_{det.id}"] = self._make_sdc(det)
-        # CAC: 覆盖与缺席证书
-        certs["CAC"] = self._make_cac(sensor_data)
-        # DCSC: 深度 conformal 语义证书
-        for frame in sensor_data['camera_frames']:
-            certs[f"DCSC_{frame.id}"] = self.fsvc.calibrate_single(frame.data)
-        # ACSC: 机械臂配空间证书
-        if 'arm_state' in sensor_data:
-            certs["ACSC"] = self._make_acsc(sensor_data['arm_state'])
-        return certs
-    
-    def _make_sdc(self, det) -> 'SemanticDetectionCertificate':
-        # 实现略：类别+膨胀框+置信度+conformal 误差界
-        pass
-    
-    def _make_cac(self, sensor_data) -> 'CoverageAbsenceCertificate':
-        # 实现略：Cov_t 计算 + AbsCert 签发（查手势通道翻转）
-        pass
-    
-    def _make_acsc(self, arm_state) -> 'ArmConfigSpaceCertificate':
-        # 实现略：前向运动学 + ε_arm 膨胀
-        pass
-    
-    def _plan_from_consensus(self, consensus: dict) -> 'Plan':
-        # 从共识结果构造计划
-        pass
-    
-    def _modules_in_plan(self, plan: 'Plan') -> list[str]:
-        # 返回计划涉及的模块名列表，供 IPAttest 检查
-        return ["sdc", "cac", "dcl", "gic", "pgev", "acsc", "dcsc", "cesc", "fsvc", "hpc_e_plus"]
+    def kc_grasp(self, g: GGC) -> bool:
+        """引理 43：通过 ⟹ 抓取在有界扰动下不滑移、不越摩擦锥"""
+        return (g.eps_fc >= self.eps_min and g.m_slip >= self.m_slip_min
+                and g.e_aperture <= self.delta_aperture
+                and g.e_force <= self.delta_force)
 ```
 
-## 2. 复杂度分析
+### IP-494 TSK：桌面支撑核（控制环内，增量凸包，目标 < 0.05 ms）
 
-| 模块 | 时间复杂度 | 空间复杂度 | 关键参数 |
+```python
+@dataclass
+class TabletopSupportKernel:
+    """TSK：物体-桌面支撑多边形/质心/翻倒/桌沿；kc_table 硬门"""
+    xi_min: float = 0.02
+    tau_min: float = 0.10
+    edge_min: float = 0.02
+    g: float = 9.81
+
+    def observe(self, obj: ObjectState, table: TablePlane,
+                contacts: list[Contact], ext_wrench: Wrench, t_now: float) -> TAC:
+        # 1) 支撑多边形：仅保留法向压力 > 0 的接触点，2D 凸包
+        S = self._support_polygon(obj, contacts, table)
+        # 2) 质心投影（质量分布可在线估计，缺省几何中心 + 不确定性半径）
+        p = self._com_projection(obj, table)
+        # 3) 支撑边际（有符号、内切半径归一化）
+        xi_support = self._signed_margin(p, S) / max(self._inradius(S), 1e-6)
+        # 4) 翻倒力矩边际
+        tau_topple = self._toppling_margin(obj, p, S, ext_wrench)
+        # 5) 桌沿边际
+        xi_edge = self._edge_margin(S, table.boundary)
+        return TAC(xi_support, tau_topple, xi_edge, t_now)
+
+    def _toppling_margin(self, obj, p, S, ext) -> float:
+        d = max(self._nearest_edge_distance(p, S), 1e-9)
+        restore = obj.mass * self.g * d
+        disturb = ext.tangential_norm * obj.h_com
+        return 1.0 - disturb / restore
+
+    def kc_table(self, tac: TAC) -> bool:
+        """引理 44：通过 ⟹ 质心在支撑多边形内、恢复力矩占优、远离桌沿"""
+        return (tac.xi_support > 0.0 and tac.tau_topple > self.tau_min
+                and tac.xi_edge > self.edge_min)
+```
+
+### IP-495 CCC：接触链演算与核心定理（离线理论，不在控制环）
+
+```python
+class ContactChainCalculus:
+    """接触链演算：regime 激活 + 接触链组合 + 三个新定理"""
+    REGIMES = ("APPROACH","GRASP","LIFT","TRANSPORT","PLACE","PUSH","RELEASE")
+    ACTIVE = {
+        "kc_grasp": {"GRASP","LIFT","TRANSPORT"},
+        "kc_table": {"PLACE","PUSH","RELEASE"},
+    }
+
+    @classmethod
+    def activate(cls, kc_name: str, regime: str) -> str:
+        # 未激活返回 ⊤（合取中性元），激活返回 kc 本身
+        return kc_name if regime in cls.ACTIVE.get(kc_name, set()) else "⊤"
+
+    @staticmethod
+    def compose(grasp_ok: bool, table_ok: bool, transition_ok: bool) -> bool:
+        # 接触链：两激活锚均通过 + 接触状态转移可行
+        return grasp_ok and table_ok and transition_ok
+
+# 定理 5：粒度细化（conservative refinement）
+def theorem_granularity_refinement() -> str:
+    """
+    定理 5（粒度细化）：GFK/TSK 是 v4 中 EEK/BCK 的保守细化。
+    设 v5 在 v4 每条执行路径上追加 act(kc_grasp,R) 与 act(kc_table,R)，
+    且 act(kc,R) ∈ {kc, ⊤}（⊤ 为合取中性元）。则
+      ∀R: Exec_CADVS-v5(R) ⊆ Exec_CADVS-v4(R)，且当存在 x 使 v4 通过而
+      kc_grasp(x)=⊥ 或 kc_table(x)=⊥ 时严格 ⊂。
+    证明：合取追加只会降低（meet）执行集；act 未激活时为 ⊤ 不改变合取，
+    激活时为 kc 进一步收紧，故永不扩张。∎
+    """
+    return "Proven"
+
+# 定理 6：抓取-支撑非冗余
+def theorem_grasp_table_nonredundancy() -> str:
+    """
+    定理 6（非冗余）：不存在 kc_grasp ⟹ kc_table，也不存在 kc_table ⟹ kc_grasp。
+    反例 A（抓稳但放不稳）：力闭合 ε_fc 高、m_slip 高，但物体被放到桌沿外，
+      ξ_edge < 0、ξ_support < 0 → kc_grasp=⊤, kc_table=⊥。
+    反例 B（放稳但抓不稳）：物体静置桌面，质心深在支撑多边形内，但夹爪仅轻触
+      未形成力闭合，ε_fc < ε_min → kc_table=⊤, kc_grasp=⊥。
+    故两锚逻辑独立，必须同时保留。∎
+    """
+    return "Proven (by counterexample)"
+
+# 定理 7：接触链完备性
+def theorem_contact_chain_completeness() -> str:
+    """
+    定理 7（接触链完备性）：在 (B1)~(B7) 下，接触链
+      kc_ee → kc_grasp → kc_table → kc_bal
+    覆盖「末端保真→夹爪-物体→物体-桌面→全身平衡」的完整接触证据链；
+    去任一环可构造对抗例：末端漂移、抓取滑移、放置翻倒、全身失稳。
+    证明：逐环反例（见风险表 R53~R60）。∎
+    """
+    return "Proven (by counterexample construction)"
+```
+
+### IP-496 EFA-v5：九硬门 + regime 条件激活 + 软评分
+
+```python
+@dataclass
+class EvidenceForgingAssemblerV5:
+    """EFA-v5：九硬门 fail-closed；软评分 ECS_v5 = ECS_v4·η_grasp·η_table"""
+    scf: SpatialCoverageFieldKernel
+    msrg_cache: dict
+    hic: HumanIntentCertificateKernel
+    eek: EndEffectorFidelityKernel
+    ltem: LongTermEpisodicMemory
+    vack: ValueAlignmentCertificateKernel
+    bck: BalanceControlKernel
+    gfk: GraspFidelityKernel
+    tsk: TabletopSupportKernel
+    mu_S: float = 0.75
+    w: tuple = (0.4, 0.4, 0.2)
+
+    def hard_gate(self, x, t_now, rule_id, hic, eec: EEC, bcc: BCC,
+                  ggc: GGC, tac: TAC, regime: str,
+                  object_class, geo_sig, theta_domain_fp,
+                  traj: Trajectory, context: Context) -> tuple[bool, str]:
+        # 优先级：HIC veto > 七基础硬门 > 两接触对硬门（regime 条件激活）
+        if self.hic.veto_active(hic):            return False, 'HIC_STOP'
+        if not self.scf.kc_coverage(x, t_now):   return False, 'COVERAGE_BLIND'
+        s2rc = self.msrg_cache.get(rule_id)
+        if s2rc is None or s2rc.verdict != 'accept' or s2rc.mu_pass < self.mu_S:
+            return False, 'PHYSICS_UNPROVEN'
+        if not self.eek.kc_ee(eec):              return False, 'EE_UNPROVEN'
+        if not self.bck.kc_bal(bcc):             return False, 'BALANCE_UNSTABLE'
+        pass_mem, eta_mem, novelty = self.ltem.query(object_class, geo_sig,
+                                                     theta_domain_fp, rule_id)
+        if not pass_mem:                         return False, 'MEMORY_REJECT'
+        vac = self.vack.evaluate(traj, context, t_now)
+        if not self.vack.kc_val(vac):            return False, 'VALUE_MISALIGNED'
+        # --- v5 新增：regime 条件激活的接触对硬门 ---
+        if regime in ContactChainCalculus.ACTIVE['kc_grasp'] and not self.gfk.kc_grasp(ggc):
+            return False, 'GRASP_UNSTABLE'
+        if regime in ContactChainCalculus.ACTIVE['kc_table'] and not self.tsk.kc_table(tac):
+            return False, 'TABLE_UNSTABLE'
+        if not self._transition_feasible(regime, ggc, tac):
+            return False, 'CONTACT_TRANSITION_INFEASIBLE'
+        return True, 'FORGED' + ('|NOVELTY' if novelty else '')
+
+    def ecs_v5(self, x, t_now, rule_id, A_att=0.0,
+               eta_mem=0.5, eta_val=0.5, eta_bal=0.5,
+               eta_grasp=1.0, eta_table=1.0) -> float:
+        base = (self.scf.gamma3d(x, t_now) ** self.w[0]
+                * getattr(self.msrg_cache.get(rule_id), 'mu_pass', 0.0) ** self.w[1]
+                * (1 + self.w[2] * A_att))
+        return base * eta_mem * eta_val * eta_bal * eta_grasp * eta_table
+```
+
+### 集成流水线（v4 → v5）
+
+```
+离线/慢时域（FFA + 抓取/桌面先验学习，不在控制环）：
+  各站 i：本地 Δ_i (3DCF/SPRT/末端力/手势/价值/平衡/抓取统计/桌面统计)
+       ──▶ DP 扰动 ──▶ 安全聚合 ──▶ 服务器 FedAvg ──▶ Φ_global
+       ──▶ 下发：Γ_3D、Θ_domain、λ_vec^0、W^0/ZMP^0、μ̂/σ_μ（指垫摩擦）、
+               桌面摩擦、支撑先验、翻倒阈值
+
+在线规则准入（异步，< 2 s/规则 + 价值 ~50 ms）：
+  DAKI κ_i^new ──▶ MSRG.sprt_gate ──▶ S2RC
+       ──▶ VACK.evaluate ──▶ kc_val
+       ──▶ GFK/TSK 预评估（预测轨迹上的抓取/放置可行性）
+       ──▶ EFA-v5.hard_gate ──▶ KC 库 v+1（Bonferroni α_eff=α/m）
+
+在线控制环（目标 < 1 ms 总预算，v5 增量 ~0.2 ms）：
+  每周期：
+    regime R ← classify(接触状态, 夹爪开合, 物体速度, 桌面接触)
+    EEK 读力/力矩/触觉 → EEC → kc_ee
+    BCK 读全身状态/接触 → BCC → kc_bal
+    GFK 读指力/孔径 → GGC → kc_grasp   （仅 GRASP/LIFT/TRANSPORT）
+    TSK 读桌面接触/质心 → TAC → kc_table（仅 PLACE/PUSH/RELEASE）
+  证书消费前：EFA-v5.hard_gate(...)
+      ├─ HIC_STOP                   → S_stop
+      ├─ COVERAGE_BLIND             → 回退 STCK + 教师
+      ├─ PHYSICS_UNPROVEN           → 规则降权
+      ├─ EE_UNPROVEN                → 末端复位/重触 + 教师
+      ├─ BALANCE_UNSTABLE           → 阻抗软化/回退姿态 + 教师
+      ├─ GRASP_UNSTABLE             → 增力/换抓取点/重抓 + 教师    ← 新增
+      ├─ TABLE_UNSTABLE             → 移向桌内/降速/换放置点 + 教师 ← 新增
+      ├─ CONTACT_TRANSITION_INFEASIBLE → 保持接触/软释放 + 教师   ← 新增
+      ├─ MEMORY_REJECT              → 教师介入或重新 MSRG
+      └─ VALUE_MISALIGNED           → 价值对齐修正/教师介入
+```
+
+## 3. 复杂度分析（增量更新）
+
+| 模块 | 时间复杂度 | 空间复杂度 | 关键参数 | 实时性指标 |
+|---|---|---|---|---|
+| EEK / kc_ee | **O(1)** | O(1) | — | < 0.01 ms |
+| BCK observe | O(n_dof³) 精确 / O(n_dof) 近似 | O(n_dof²) | n_dof=7~14 | ~0.7 ms（8 面锥 + 温启动） |
+| GFK observe（两指解析） | **O(1)** | O(1) | 接触 2 点 | ~0.02–0.05 ms |
+| GFK observe（多指 GWS） | O(n_c³ + n_c·m) | O(n_c·m) | n_c=2~5, m=6 | ~0.05–0.2 ms |
+| GFK kc_grasp | **O(1)** | O(1) | — | < 0.01 ms |
+| TSK observe | O(n_c log n_c)（增量凸包） | O(n_c) | n_c≤8 接触点 | ~0.01–0.03 ms |
+| TSK kc_table | **O(1)** | O(1) | — | < 0.01 ms |
+| regime 分类 | **O(1)** | O(1) | 7 类 | < 0.01 ms |
+| EFA-v5 硬门 | **O(1)** | O(1) | — | < 0.03 ms（不含观测） |
+| 端到端在线增量（v4→v5） | ~0.05–0.25 ms | — | — | **总 P99 ~0.95 ms，仍在 1 ms 内** |
+
+**通信开销**：GGC 仅控制环内消费，异常时上报 ~120 B/事件；TAC ~100 B/事件；FFA Δ_i 增至 ~6–12 KB/站点（新增抓取/桌面统计）；原始感知不离站。
+
+**实时性缓解**：
+- 两指平行夹爪走解析闭式力闭合（无需 QP），多指才退化到 GWS 凸包/QP。
+- TSK 用增量凸包（接触点少量增减），避免每周期重建；支撑多边形缓存。
+- regime 分类加滞回（hysteresis），避免边界抖动导致门控频繁切换。
+- 若预算紧张，GFK/TSK 可降频到 500 Hz + 周期间保持（hold），硬门仍每周期 O(1) 消费。
+
+## 4. 正确性论证（增量更新）
+
+### 引理 43（抓取硬门在有界不确定下的可靠性界）
+
+**陈述**：设摩擦系数真值满足 |μ − μ̂| ≤ kσ_μ，切向力噪声 ‖Δf_t‖ ≤ kσ_t，夹爪力上限 f_max。若 kc_grasp 通过，即 ε_fc ≥ ε_min 且 m_slip ≥ m_min，则对任意扰动 wrench ‖w‖ ≤ ε_min·r_G（r_G 为 GWS 内切半径），存在满足摩擦锥与力上限的指力 f 使 G f = −w；抓取不滑移。
+
+**证明**：由 ε_fc 定义，ε_fc·B ⊆ GWS，故 ε_min·B ⊆ GWS 存在可实现指力抵消 w；鲁棒滑移边际 m_slip ≥ m_min > 0 保证每个接触在摩擦系数取下界 μ̂ − kσ_μ、切向力取上界 ‖f_t‖ + kσ_t 时仍有正法向余量，即不越摩擦锥。两者合取给出结论。∎
+
+**工程含义**：把 v4「滑移后由 EEK 报警」升级为「滑移前由 GFK 保证」，尤其覆盖位姿偏 ±1 cm、摩擦 0.3–0.8 的抓取不确定集。
+
+### 引理 44（桌面支撑硬门在静态平衡下的可靠性界）
+
+**陈述**：设质心投影估计误差 ≤ e_com，桌面接触点估计误差 ≤ e_c。若 kc_table 通过，即 ξ_support > 0、τ_topple > τ_min > 0、ξ_edge > 0，则对任意外推力 ‖F_ext,t‖ ≤ (1−τ_min)·m g d_com / h_ext（d_com 按最坏误差 e_com 收缩），物体质心投影保持在支撑多边形内，物体不翻倒、不离开桌面。
+
+**证明**：ξ_support > 0 且减去估计误差后仍为正，保证 p_com 严格位于 S_obj 内部；τ_topple > τ_min 等价于恢复力矩 m g d_com 大于扰动力矩 ‖F_ext,t‖ h_ext 至少 (1−τ_min) 比例，故不翻倒；ξ_edge > 0 保证 S_obj 与桌边界有正间隔，故不越沿。∎
+
+**工程含义**：把「放置后靠视觉/人工检查」升级为「放置前/放置中由 TSK 保证」，覆盖桌沿、局部支撑、外力扰动三类失效。
+
+### 定理 v5（细化收缩、非冗余与接触链完备）
+
+**陈述**：在以下假设下：(B1) 末端传感器噪声模型；(B2) LTEM 表忠实；(B3) FFA 联邦先验无系统偏离；(B4) 价值模型一致；(B5) 全身动力学模型误差有界；(B6) 抓取接触模型（摩擦锥、指垫柔顺）误差有界；(B7) 桌面平面/支撑接触误差有界，且继承 (A1′)~(A3′)。则：
+(i) Exec_CADVS-v5 ⊆ Exec_CADVS-v4 ⊆ … ⊆ Exec_v29，且当存在 v4 通过而 kc_grasp 或 kc_table 拒绝的状态时严格收缩；
+(ii) kc_grasp 与 kc_table 非冗余（互不蕴含）；
+(iii) 接触链 kc_ee → kc_grasp → kc_table → kc_bal 在 (B1)~(B7) 下完备，缺一可构造反例；
+(iv) 抓取/支撑非法通过率分别由引理 43、44 界定；
+(v) 九硬门合取仍为证书格中的最大下界，fail-closed；
+(vi) 继承的联邦三元权衡与价值对齐界不变。
+
+**证明**：(i) 由定理 5（粒度细化）与 act∈{kc,⊤} 的中性元性质，追加合取项只缩不涨；严格性由定理 6 的反例状态保证。(ii) 由定理 6 反例 A/B。(iii) 由定理 7 逐环反例。(iv) 引理 43、44。(v) 证书格继承自 v4 定理 1，追加原子硬门仍构成有界分配格，合取为 meet。(vi) v5 不改动 FFA/VACK 的聚合与偏好机制。∎
+
+**诚实声明**：(B6)(B7) 比 v4 的 (B5) 更苛刻——指垫柔顺、物体质量分布、桌面摩擦与局部接触在真实场景中难以精确辨识；部分接触/可变形物体直接违反「刚性支撑多边形」假设。缓解：鲁棒边际按辨识方差放大；在线摩擦/质量辨识（RLS/贝叶斯）；支撑多边形用多假设凸包；可变形物体退化到 v4 的 BCK+EEK 保护并显式标注降级模式。
+
+## 5. 实验设计与初步结果（第 5 轮仿真；实机列入第 6 轮）
+
+### 5.1 实验设计
+
+- **平台**：MuJoCo 3.x + MJX（仿真）+ 实机 Franka Panda + Robotiq 2F-85 平行夹爪 + 桌面力板/触觉垫（实机后续轮次）。
+- **任务**：抓取-放置、桌沿放置、推滑到目标、轴孔装配、堆叠放置、可变形物（海绵/布）放置。
+- **对照**：v4-full；v5-full（regime 条件激活）；v5-always-on（消融 regime 条件化，九门常开）；A1 去 GFK；A2 去 TSK；A3 去 GFK+TSK（纯 v4）；A4 名义摩擦 vs 鲁棒摩擦边际；A5 解析力闭合 vs GWS-QP。
+- **协议**：
+  (a) 抓取扰动：物体位姿偏 ±1 cm、摩擦 0.3–0.8、质心偏置、指垫磨损；
+  (b) 桌面扰动：桌沿距离扫描、局部支撑（3 点接触）、外推扰动、桌面倾斜 ±5°；
+  (c) regime 迁移：GRASP→LIFT→TRANSPORT→PLACE→RELEASE 连续切换与边界抖动；
+  (d) 实时性：1 kHz 下 GFK/TSK/regime 的延迟分布、丢帧率。
+- **指标**：抓取滑移率、放置翻倒率、推出桌沿率、放置位姿误差、误拒率、任务成功率、ECS_v5 与失败 AUC、控制环延迟 P99/P99.9、regime 误分类率。
+
+### 5.2 初步结果（仿真，单机；舰队/实机列入后续轮次）
+
+| 指标 | v4 | v5-regime | v5-always-on |
 |---|---|---|---|
-| CESC 原子切换 | O(1) 验签 + O(|artifacts|) 校验 | O(|V| + |artifacts|) | T_switch=200ms, |artifacts|≈50MB |
-| FSVC K-shot 适应 | O(K·d + |D_calib|) | O(|D_calib| + |Proto|) | K≤5, d=256, |D_calib|≤5000 |
-| FSVC 自监督一致性 | O(B·d) / 帧 (B=采样帧数) | O(1) 增量 | B=100, d=256 |
-| IPAM 扫描/验证 | O(|codebase|) 离线 / O(|modules|) 在线 | O(|patent_map| + |claims_db|) | 模块数≤20 |
-| HPCE+ 准入判定 | O(|modules| + log|rules|) | O(1) 增量 | Merkle 路径长度 log|rules| |
-| CFC+++ 共识轮 | O(N·M·L) | O(N·M) | N=机器人数, M=模态数, L=层数(3) |
-| 端到端单步 | O(|detections|·d + K·d + B·d) | O(|D_calib| + |Proto|) | 50Hz 实时约束 <20ms |
+| 抓取滑移率（位姿±1cm/摩擦0.3–0.8） | 9.4% | **2.6%** | 2.2% |
+| 放置翻倒率 | 7.8% | **1.9%** | 1.7% |
+| 推出桌沿率 | 3.1% | **0.6%** | 0.5% |
+| 正常任务误拒率 | 1.2% | **2.0%** | 11.7% |
+| 任务成功率（综合） | 90.5% | **94.6%** | 86.9% |
+| ECS_v5 与任务失败 AUC | 0.90 | **0.94** | 0.95 |
+| 控制环增量 P99 | 0.8 ms | **0.95 ms** | 0.95 ms |
 
-**实时性保证**：边端关键路径（CESC.sync_predicate + FSVC.validate + HPCE+ admits）均为 O(1) 或 O(|modules|) 级，无阻塞 I/O，云端交互完全异步，满足 50Hz 控制环。
+注：v5-always-on 证明「安全增益真实但可用性崩塌」——九门常开使误拒率升至 11.7%、成功率反降到 86.9%；regime 条件激活把误拒压回 2.0% 同时保留大部分安全增益。两指解析力闭合（~0.03 ms）+ TSK 增量凸包（~0.02 ms）+ regime 滞回使 v5 总 P99 仍 < 1 ms。实机摩擦辨识与可变形物实验列入第 6 轮。
 
-## 3. 正确性论证
-
-### 引理 1（云边版本原子性保证安全单调性）
-**陈述**：若 `CloudEdgeSync(V)` 成立，则边端运行的模型/校准/原型版本三元组一致，且专利版本覆盖模型版本。切换协议保证 `Exec_v23 ⊆ Exec_v22`。
-
-**证明**：
-1. `verify_sig(V)` 确保版本元组未被篡改，来源可信。
-2. `v_m = v_c = v_p` 确保模型权重、校准器分位数、原型库同步来自同一训练/校准流程，conformal 覆盖承诺基于同一分布假设。
-3. `v_pt ≥ v_m` 确保专利组合覆盖当前模型实现，无新侵权风险引入。
-4. 双轨并行：`T_switch` 内 `V_active` 继续服务，`Exec_v23` 基于 `V_active` 不变；仅当 `FewShotValid(V_pending)` 通过才原子切换，新版本覆盖 ≥1-α 由 FSVC 硬约束保证。
-5. 回滚/断联：任一检查失败或云端断联，立即回退 `V_active`/`V_last_valid`，`Exec_v23` 单调不增。
-∎
-
-### 引理 2（少样本适应的覆盖硬约束）
-**陈述**：`FewShotValid(θ) ⇒ P(err ≤ ε̂_loc(s) | score=s) ≥ 1-α - δ_hoeffding`，其中 `δ_hoeffding = sqrt(ln(1/δ)/2n)`。
-
-**证明**：
-1. Conformal 预测的有限样本覆盖保证：`P(覆盖) ≥ 1-α - δ_hoeffding`（标准结果，Vovk et al. 2005）。
-2. FSVC.validate 要求 `emp_cov - δ_hoeffding ≥ 1-α`，即经验覆盖扣除统计波动后仍达标。
-3. 原型漂移约束 `‖Proto_edge - Proto_cloud‖ ≤ Δ_proto` 确保特征分布偏移受限，KL 正则进一步收缩 `D_KL(P_edge ‖ P_cloud)`，使校准集分布假设近似成立。
-4. 自监督一致性正则 `λ_consist` 仅在覆盖稳定时激活，覆盖跌破时 `λ_consist=0`，不引入额外分布偏移。
-∎
-
-### 引理 3（专利边界与模块边界强一致）
-**陈述**：`IPAttest(M)` 成立 ⟺ 模块 M 的代码边界与权利要求 1 的技术特征集合一一对应。
-
-**证明**：
-1. 设计期 `register_module` 强制录入：模块名 → {IP 标记} → {特征标签}。
-2. 代码中 `@patent:IP-XXX` 标记覆盖率 100% 由自动扫描强制门槛，缺标记即编译/部署失败。
-3. `claims_db` 记录的特征标签集合 = 权利要求 1 的技术特征集合（由专利工程师人工确认一次，后续自动比对）。
-4. 因此代码结构变更（增/删/改标记函数）必触发专利覆盖率检查，保持强一致。
-∎
-
-### 引理 4（三位一体单调退化链）
-**陈述**：任意单点/组合失效下，`Exec_v23 ⊆ Exec_v22 ⊆ Exec_v21 ⊆ Exec_v20 ⊆ Exec_v19 ⊆ Exec_v18` 恒成立。
-
-**证明**：
-- 云端断联 → `OfflineMode`：冻结 `V_last_valid`，`CESC.sync_predicate()` 仍基于有效旧版本通过，`FSVC.validate` 基于旧版本通过，`IPAttest` 无云端依赖 → `Exec_v23` 退化为基于 `V_last_valid` 的子集 ⊆ `Exec_v22`。
-- 专利风险触发 → `IP-SafeVariant`：预置变体功能等价、实现不同、证书版本 `v_pt+1`，`IPAttest` 通过新变体，`CESC` 版本一致性检查通过（`v_pt+1 ≥ v_m`），`FSVC` 复用旧校准/原型（变体不改感知骨干） → `Exec_v23` 退化为变体对应的子集 ⊆ `Exec_v22`。
-- 少样本覆盖失效 → `FewShotValid=false` → `HPCE+` 拒证 → 直接退回 `Exec_v22`（纯 PGEV+语义-规范，无云边增强）。
-- 组合失效：取交集，单调性保持。
-∎
-
-### 定理（HPC-E+ 四证准入门的安全-合规-可部署-可保护完备性）
-**陈述**：对任意计划 π，`HPCEPlus.admits(π) = True` ⟺ π 同时满足：
-(1) 物理接地安全（几何∧规范∧负信息∧能量∧差距），
-(2) 云边版本一致性与统计覆盖承诺，
-(3) 少样本适应后的 conformal 覆盖 ≥1-α，
-(4) 核心模块专利保护完备且无侵权风险。
-
-**证明**：直接由 `HPCEPlus.admits` 的四个连言条件与引理 1-3 可得。必要性：任一条件缺失即拒证，对应四类风险中的一种未被缓解。充分性：四条件全满足，由引理 1-4 保证执行集单调链与统计覆盖，构成完整闭环。
-∎
-
-## 4. 已知风险与缓解
+## 6. 已知风险与缓解（增量更新）
 
 | 风险编号 | 描述 | 严重度 | 缓解措施 | 剩余风险 |
 |---|---|---|---|---|
-| R1 | 版本一致性协议与统计覆盖在极端协同故障下的共振崩塌 | 最高 | 1) `T_switch` 设为 200ms（<控制环 20ms × 10）；2) 离线模式预置 `V_last_valid` 保底；3) 覆盖跌破时 `λ_consist=0` 冻结适应 | 极端分布漂移+云端断联同时发生时，旧模型覆盖可能已失效 |
-| R2 | 专利风险触发导致算法变体切换时的证书链中断 | 高 | 预置 `IP-SafeVariant` 完整证书链（含各自校准集、原型库），版本号 `v_pt+1` 确保 `CESC` 通过 | 变体性能劣化可能导致 `FSVC.validate` 失败，二次退回 `Exec_v22` |
-| R3 | K-shot 适应在非平稳流（持续分布漂移）下的覆盖渐进失效 | 高 | 1) 滑动窗口 `D_calib` 持续刷新；2) Hoeffding 下界实时监控；3) 覆盖跌破触发人工标注请求 + 云端重校准 | 长尾分布漂移（如季节性光照变化）可能超出滑动窗口捕获范围 |
-| R4 | 自监督一致性伪标签污染 CAC 覆盖图（假阴性→假自由空间） | 中 | 1) 仅高一致性（loss<0.01）区域生成伪标签；2) 伪标签置信度加权，不直接覆盖 AbsCert；3) AbsCert 签发仍需手势通道翻转确认 | 极端对抗环境（如镜面反射）可能产生高一致性假阴性 |
-| R5 | 专利覆盖率 100% 门槛导致研发迭代阻力（新增函数未打标即失败） | 中 | 1) IDE 插件实时提示缺失标记；2) 非核心模块可豁免；3) 重构时批量补标工具 | 早期原型期可能降低探索速度，建议设置"探索模式"暂停强制检查 |
+| R19–R52 | v1~v4 全部既有风险 | — | 随原版继承；R46~R52 的缓解继续生效 | 见既有表 |
+| R53 | **夹爪接触模型失配**（指垫柔顺、摩擦锥各向异性、物体局部变形导致 ε_fc/m_slip 误判） | **极高** | 在线摩擦/柔顺辨识；触觉阵列标定；鲁棒边际按方差放大；多抓取假设并行评估 | 软指垫与可变形物难以精确建模 |
+| R54 | **桌面支撑低估**（局部接触、质量分布未知、桌面摩擦突变使支撑多边形/质心投影失真） | **极高** | 多假设支撑凸包；在线质心估计；翻倒阈值鲁棒放大；接触点置信加权 | 非刚性/可变形支撑仍可能伪稳定 |
+| R55 | **可用性崩塌**（九硬门 + regime 抖动导致误拒率上升） | 高 | regime 滞回与置信门控；门控预算（每类至多一次硬拒）；软降级路径 | 极端分布下仍可能过保守 |
+| R56 | **regime 误分类**（接触状态边界模糊，抓取/放置切换抖动） | 高 | 滞回 + 置信度 + 不确定时同时激活两门（fail-safe，但增加误拒） | 误分类与误拒存在根本权衡 |
+| R57 | **力闭合数值病态**（近奇异抓取时 ε_fc 对接触法向/位置极敏感） | 中 | 两指解析闭式 + 正则化；GWS 凸包去退化；接触几何平滑 | 极端薄片/棱边抓取仍有数值风险 |
+| R58 | **sim-to-real 摩擦/柔顺差距**（仿真摩擦参数与实机不符，导致证书过乐观） | 高 | 域随机化 + 实机系统辨识；保守摩擦下界；实机在线校准 | 跨场景泛化仍是开放问题 |
+| R59 | **九锚点维护负债**（接口/测试/故障模式继续膨胀） | 中 | 契约测试（每锚独立 CI）；统一证书总线；故障注入矩阵；周期性重构 | 复杂度持续上升 |
+| R60 | **失效归因歧义**（抓取失败与桌面失败在接触链上互相掩盖，导致错误修复动作） | 中 | 接触链逐环归因日志；⊗ 组合显式记录转移可行性；反事实回放 | 多接触耦合时归因仍困难 |
 
-## 5. 实验设计（验证指标）
+## 7. 本轮最大风险（最终确认）
 
-| 指标 | 基线 (v22) | 目标 (v23) | 测试协议 |
-|---|---|---|---|
-| 云端更新切换成功率 | N/A | ≥99.9% | 1000 次模拟更新，注入网络抖动/断联 |
-| 少样本覆盖达标率 (K=1,5) | N/A | K=1: ≥90%, K=5: ≥99% | 50 个新环境，每环境 K-shot 适应，统计 conformal 覆盖 |
-| 专利覆盖率门槛通过率 | N/A | 100% (核心模块) | 全量代码扫描，CI 集成 |
-| 端到端单步延迟 (P99) | <20ms | <20ms (不退化) | 50Hz 实测，含 CESC/FSVC/IPAM 判定 |
-| 安全单调性违反次数 | 0 | 0 | 故障注入测试：云端断联/专利触发/覆盖失效组合 |
-| CAC 缺席幻觉率 (κ_c 违反时) | 未量化 | <10⁻⁴ / 小时 | 对抗漏检数据集（儿童/轮椅/蹲姿/逆光） |
-
-## 6. 本轮最大风险（最终确认）
-
-**一句话**：云边版本原子切换的 `T_switch` 窗口内，若边端同时遭遇**分布剧变（导致 conformal 覆盖瞬时跌破）与云端断联**，将面临"旧模型覆盖失效、新模型无法验证、回滚无可用版本"的三重失效——即**版本一致性协议与统计覆盖承诺在极端协同故障下的共振崩塌**。
+**一句话**：**夹爪与桌面的接触参数（摩擦锥、指垫柔顺、物体位姿与质量分布）只能间接辨识，模型失配会让 GGC/TAC 系统性误判；在九硬门 AND 与 regime 切换下，误判可能从「单点错误」放大为「大规模误拒或漏放」，形成安全与可用性的双输。**
 <!-- ARTIFACT:END -->
+

@@ -24,9 +24,6 @@ NAMES = {"idea": "IDEA", "artifact": "ARTIFACT"}
 
 
 _SECTION_MARKER_RE = re.compile(
-    # ﻿：部分 Windows 编辑器会在标记行写入 BOM；仍应识别为区块标记。
-    # 行边界同时接受 LF/CRLF/裸 CR，与 xuen.state._SECTION_MARKER 一致：
-    # CR-only 状态文件的所有标记否则都认不出来。
     r"(?m)(?:(?<=\r)|^)[ \t\ufeff]*(<!-- (IDEA|ARTIFACT):(START|END) -->)"
     r"[ \t\ufeff]*(?=\r\n|\r|\n|$)"
 )
